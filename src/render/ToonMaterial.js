@@ -43,7 +43,8 @@ const TUNE = {
   keyIntensity: 2.55,
   ambIntensity: 0.52,
   shadowFloor: 0.155,    // shadow illumination as a fraction of key luminance. AGENTS: never below ~14%
-  shadowWash: 0.34,      // additive part of the shadow light — keeps the hue alive on warm albedo
+  shadowWash: 0.16,      // additive part of the shadow light — keeps the hue alive on warm albedo.
+                         // Unmultiplied by albedo, so at 0.34 it painted flat blue over everything.
   shadowSat: 0.34,       // albedo saturation BOOST inside shadow (not a cut)
 
   /* --- rim --- */
@@ -90,6 +91,9 @@ const PAL = {
   rim: 0x7fd4ff,
   rimNight: 0xa8e0ff,
   shadowHue: 0x2a3f66,
+  /* Ceiling on the shadow light's brightest channel after the floor rescale. Above roughly
+     this the violet-teal clips toward blue and stops reading as shadow. */
+  shadowTintPeak: 0.42,
   haze: 0xe8b878,
   hazeNight: 0x2a3f66,
   hazeSun: 0xffc98a,
@@ -632,7 +636,23 @@ export class Shading {
   _refreshShadowColor() {
     const u = this.uniforms;
     const keyLum = lum(u.uKeyColor.value) * u.uKeyIntensity.value;
-    const k = (this._shadowFloor * keyLum) / Math.max(this._shadowTintLum, 1e-4);
+    let k = (this._shadowFloor * keyLum) / Math.max(this._shadowTintLum, 1e-4);
+
+    /* Cap how far the hue may be scaled.
+     *
+     * With a golden-hour key at intensity 3.3, the floor target alone asks for k ≈ 2.8. Scaling
+     * #2a3f66 that far drives its blue channel to clip while red lags, so the "dark violet-teal"
+     * the palette specifies arrives at the shader as a bright periwinkle (#74a4ff was what was
+     * actually reaching it). Multiplied into warm sandstone and then added again as the wash,
+     * that is what turned every stone surface lavender.
+     *
+     * The floor is a readability rule — keep detail visible in shadow — not a licence to make
+     * the shadow light brighter than the material it falls on. Capping the peak channel keeps
+     * the hue intact and keeps shadow reading as shadow. */
+    const peak = Math.max(this._shadowTint.r, this._shadowTint.g, this._shadowTint.b);
+    const maxK = PAL.shadowTintPeak / Math.max(peak, 1e-4);
+    k = Math.min(k, maxK);
+
     u.uShadowColor.value.copy(this._shadowTint).multiplyScalar(k);
   }
 
