@@ -238,8 +238,24 @@ export const TOON_SHADE = /* glsl */ `
 		float ndv = clamp( dot( N, V ), 0.0, 1.0 );
 
 		/* Shadow map, hardened but not binary: a sliver of penumbra keeps contact shadows
-		   from stair-stepping, and VSM already hands us a soft edge. */
-		float sh = smoothstep( uShadowSharp.x, uShadowSharp.y, getShadowMask() );
+		   from stair-stepping.
+
+		   Must go through LIGHTING's csmShadow(), not getShadowMask(). getShadowMask()
+		   *multiplies* every directional shadow together, but cascaded shadow maps require
+		   selecting exactly one cascade per fragment: the cascade ortho boxes nest, so a near
+		   fragment also lands inside the coarse far cascade, whose depth test fails, and the
+		   product goes to zero. The whole scene reported as fully shadowed — key light
+		   cancelled everywhere, which read as flat ambient-only lighting with no cast shadows
+		   at all. csmShadow() picks the cascade by view depth and blends across the split.
+
+		   LIGHTING injects csmShadow() and #define CSM_CASCADES into this material (its
+		   onBeforeCompile runs after ours), so guard for the un-patched case. */
+		#if defined( CSM_CASCADES ) && defined( USE_SHADOWMAP ) && NUM_DIR_LIGHT_SHADOWS > 0
+			float shadowRaw = csmShadow( vViewPosition.z );
+		#else
+			float shadowRaw = getShadowMask();
+		#endif
+		float sh = smoothstep( uShadowSharp.x, uShadowSharp.y, shadowRaw );
 
 		float ramp = slyRamp( ndl, uBands );
 		float key = ramp * sh;
@@ -328,7 +344,7 @@ export const TOON_SHADE = /* glsl */ `
 		/* Diagnostic: red = getShadowMask(), green = receiveShadow, blue = raw N.L.
 		   Set uDebugShadow > 0.5 to see why the scene has no cast shadows. */
 		if ( uDebugShadow > 0.5 ) {
-			float dbgMask = getShadowMask();
+			float dbgMask = shadowRaw;
 			float dbgRecv = 0.0;
 			#if defined( USE_SHADOWMAP ) && NUM_DIR_LIGHT_SHADOWS > 0
 				dbgRecv = receiveShadow ? 1.0 : 0.0;

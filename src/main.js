@@ -131,6 +131,32 @@ async function boot() {
 
   if (missing.length) fallbackWorld(engine, missing);
 
+  /**
+   * Sweep shadow flags across the world.
+   *
+   * Every module sets castShadow/receiveShadow on the meshes it remembers to, and the result
+   * was 60 of 301 meshes participating — four fifths of the temple neither casting nor
+   * receiving. Rather than chase each module, enforce it centrally: opaque world geometry
+   * casts and receives unless it opts out via userData.
+   *
+   * Opt out with `mesh.userData.noShadow = true` (sky domes, particles, water, ink shells,
+   * light shafts) — anything that would either self-shadow into artefacts or has no business
+   * occluding the sun.
+   */
+  {
+    let cast = 0, recv = 0, skipped = 0;
+    engine.scene.traverse((o) => {
+      if (!o.isMesh && !o.isSkinnedMesh && !o.isInstancedMesh) return;
+      const m = Array.isArray(o.material) ? o.material[0] : o.material;
+      const opaque = m && !m.transparent && m.depthWrite !== false;
+      if (o.userData?.noShadow || o.userData?.isOutlineShell || !opaque) { skipped++; return; }
+      o.castShadow = true;
+      o.receiveShadow = true;
+      cast++; recv++;
+    });
+    console.log(`[boot] shadow sweep: ${cast} meshes cast+receive, ${skipped} opted out`);
+  }
+
   /* ---- frame loop ---- */
   const origRenderFrame = engine.renderFrame.bind(engine);
   engine.renderFrame = (dt) => {
