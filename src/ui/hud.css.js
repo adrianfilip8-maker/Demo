@@ -32,14 +32,16 @@ export const HUD_CSS = /* css */ `
 
   position: fixed;
   inset: 0;
-  z-index: 20;
   pointer-events: none;
   overflow: hidden;
   font-family: 'DejaVu Sans', 'Liberation Sans', ui-sans-serif, system-ui, Arial, sans-serif;
   font-weight: 700;
   color: var(--paint);
   -webkit-font-smoothing: antialiased;
-  contain: layout style;
+  /* Deliberately no z-index and no `contain`: either one would isolate this subtree into its
+     own blending group, and then the damage multiply, the hit-flash screen and the Binocucom
+     backdrop-filter would all composite against nothing instead of against the rendered game.
+     DOM order already puts us above #app, and #boot/#dbg/#err carry explicit higher indices. */
 }
 
 /* The screenshot harness owns this. It must cost zero pixels, instantly. */
@@ -67,7 +69,7 @@ export const HUD_CSS = /* css */ `
 
 /* ============================================================== SHAKE ROOT */
 
-.sly-shake { position: absolute; inset: 0; will-change: transform; }
+.sly-shake { position: absolute; inset: 0; z-index: 4; will-change: transform; }
 
 /* ============================================================= TOP-LEFT HUD */
 
@@ -300,11 +302,11 @@ export const HUD_CSS = /* css */ `
 
 /* ======================================================= DAMAGE / HIT FX */
 
+/* Driven per-frame from HUD._tickFx, so no transition here — it would smear the hit. */
 .sly-vig {
   position: absolute; inset: 0; z-index: 7; opacity: 0;
   background:
     radial-gradient(ellipse 78% 72% at 50% 50%, transparent 42%, rgba(184,69,44,.42) 82%, rgba(90,20,14,.72) 100%);
-  transition: opacity .5s ease;
   mix-blend-mode: multiply;
 }
 .sly-flash {
@@ -325,6 +327,10 @@ export const HUD_CSS = /* css */ `
   backdrop-filter: grayscale(.86) contrast(1.45) brightness(.74);
   background: rgba(22, 30, 52, .3);
 }
+/* Fallback drain that needs no backdrop-filter: a flat grey blended in `saturation` mode
+   strips chroma straight out of whatever the renderer put on the canvas. */
+.sly-tov-desat { position: absolute; inset: 0; background: #8e8e8e; mix-blend-mode: saturation; opacity: .8; }
+.sly-tov-crush { position: absolute; inset: 0; background: rgba(16, 22, 40, .34); mix-blend-mode: multiply; }
 .sly-tov-vig {
   position: absolute; inset: 0;
   background:
@@ -376,6 +382,8 @@ export const HUD_CSS = /* css */ `
   will-change: transform;
 }
 .sly-alert.on { opacity: 1; }
+/* The root carries the projected translate; scale/throb lives on .inner so the two never fight. */
+.sly-alert .inner { position: absolute; inset: 0; }
 .sly-alert svg { width: 100%; height: 100%; }
 .sly-alert-glyph {
   position: absolute; inset: 0;
@@ -384,16 +392,13 @@ export const HUD_CSS = /* css */ `
   color: var(--gold-l);
   transform: skewX(-6deg);
 }
-.sly-alert.full .sly-alert-glyph { color: #fff; font-size: calc(var(--u) * 1.85); }
+.sly-alert.full .sly-alert-glyph { color: #fff; font-size: calc(var(--u) * 1.9); }
 .sly-alert.full .sly-alert-fill { stroke: var(--carn); }
-.sly-alert.full { animation: sly-alert-throb .48s ease-in-out infinite alternate; }
-@keyframes sly-alert-throb { from { transform: translate(var(--x), var(--y)) scale(1) } to { transform: translate(var(--x), var(--y)) scale(1.13) } }
-.sly-alert .arrow {
-  position: absolute; left: 50%; top: 50%; width: calc(var(--u) * 1.1); height: calc(var(--u) * 1.1);
-  margin: calc(var(--u) * -.55) 0 0 calc(var(--u) * -.55);
-  display: none;
-}
-.sly-alert.edge .arrow { display: block; }
+.sly-alert.full .inner { animation: sly-alert-throb .42s ease-in-out infinite alternate; }
+@keyframes sly-alert-throb { from { transform: scale(1) } to { transform: scale(1.14) } }
+/* Pinned to the frame edge: dimmed so an off-screen guard reads as a direction, not a target. */
+.sly-alert.edge { opacity: .8; }
+.sly-alert.edge .inner { transform: scale(.82); }
 
 /* ============================================================== BINOCUCOM */
 
@@ -486,6 +491,8 @@ export const HUD_CSS = /* css */ `
 .bx-bl { left: calc(var(--u) * 1.4); bottom: calc(var(--u) * 1.15); }
 .bx-br { right: calc(var(--u) * 1.4); bottom: calc(var(--u) * 1.15); text-align: right; }
 .bx-mono b { color: var(--gold-l); font-weight: 700; }
+.bx-mono .sig { display: inline-block; height: calc(var(--u) * .82); vertical-align: -.14em; }
+.bx-mono .sig svg { height: 100%; width: auto; }
 
 .bx-rec {
   position: absolute; right: calc(var(--u) * 1.4); top: calc(var(--u) * 1.1);

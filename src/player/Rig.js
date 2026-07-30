@@ -149,6 +149,27 @@ export class PoseBuffer {
     this.posW = this.posW + w;
   }
 
+  /**
+   * Post-multiply a delta onto an already-sampled bone. This is how the additive layers
+   * (breath, lean, squash) bend the authored pose instead of averaging against it — an
+   * additive that went through addQuat would *dilute* the keyframe, which is exactly the
+   * mush this contract exists to avoid.
+   */
+  rotate(name, q) {
+    const cur = this.q[name];
+    if (cur === undefined) return;
+    if (this.w[name] <= 0) { cur.copy(q); this.w[name] = 1; return; }
+    cur.multiply(q);
+  }
+
+  /** Multiplicative scale, for squash and stretch riding on top of an authored scale. */
+  mulScale(name, x, y, z) {
+    const cur = this.s[name];
+    if (cur === undefined) return;
+    if (this.sw[name] <= 0) { cur.set(x, y, z); this.sw[name] = 1; return; }
+    cur.x *= x; cur.y *= y; cur.z *= z;
+  }
+
   /** Override this buffer with another, per bone, by `w` (optionally masked). */
   mix(other, w, mask) {
     if (w <= 0) return;

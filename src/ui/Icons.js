@@ -35,8 +35,16 @@ const FONT = "'DejaVu Sans','Liberation Sans',Arial,sans-serif";
 let _uid = 0;
 const uid = (p) => `${p}${++_uid}`;
 
-const wrap = (vb, inner, cls = '', extra = '') =>
-  `<svg class="${cls}" viewBox="${vb}" ${extra} fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">${inner}</svg>`;
+/**
+ * Every icon carries an explicit `aspect-ratio` taken from its viewBox. Inline SVG sized with
+ * `height: Xem; width: auto` is otherwise at the mercy of intrinsic-ratio resolution, and a
+ * keycap that collapses to zero width takes the whole control reference with it.
+ */
+const wrap = (vb, inner, cls = '', extra = '') => {
+  const [, , w, h] = vb.split(/\s+/).map(Number);
+  return `<svg class="${cls}" viewBox="${vb}" ${extra} style="aspect-ratio:${w}/${h}" fill="none" ` +
+         `xmlns="http://www.w3.org/2000/svg" aria-hidden="true">${inner}</svg>`;
+};
 
 /* ------------------------------------------------------------------ coin */
 

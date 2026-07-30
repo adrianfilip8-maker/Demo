@@ -485,11 +485,15 @@ export function fmBell(ctx, out, t, {
   car.connect(vca);
 
   if (tremolo > 0) {
+    // Multiplicative, not additive: the vibraphone's motor scales whatever the
+    // envelope is doing. Summed into the envelope it would punch through the decay
+    // and leave the note pulsing after it should have died.
+    const trem = gain(ctx, 1);
     const lfo = osc(ctx, 'sine', tremolo);
     const ld = gain(ctx, tremDepth);
-    lfo.connect(ld).connect(vca.gain);     // rides on top of the decay envelope
+    lfo.connect(ld).connect(trem.gain);
     lfo.start(t); lfo.stop(end);
-    vca.connect(out);
+    vca.connect(trem).connect(out);
     mod.start(t); mod.stop(end);
     car.start(t); car.stop(end);
     return { end, srcs: [car, mod, lfo] };
@@ -582,9 +586,11 @@ export function noiseGesture(ctx, out, t, {
   if (hp > 0) node = node.connect(bq(ctx, 'highpass', hp, 0.7));
   if (lp > 0) node = node.connect(bq(ctx, 'lowpass', lp, 0.7));
 
+  // `dur` is always the whole gesture, swell or not, so callers (and the duration
+  // assertions in the analysis harness) can reason about length without arithmetic.
   const vca = gain(ctx, 0);
   const end = curve === 'swell'
-    ? swell(vca.gain, t, attack, hold, dur, g)
+    ? swell(vca.gain, t, attack, hold, Math.max(0.01, dur - attack - hold), g)
     : perc(vca.gain, t, dur, g, attack);
   node.connect(vca).connect(out);
   startAt(nz, t);
@@ -616,12 +622,16 @@ export function metal(ctx, out, t, {
   const end = perc(vca.gain, t, dur, g, attack);
   const filt = bq(ctx, 'highpass', hp, 0.6);
   filt.connect(vca).connect(out);
+  // Partials rise together at the attack, so their gains have to sum to 1 or the
+  // transient overshoots `g` by the number of partials — the classic invisible clip.
+  let sum = 0;
+  for (let i = 0; i < count; i++) sum += 1 / (1 + i * 0.5);
   const srcs = [];
   for (let i = 0; i < count; i++) {
     const o = osc(ctx, 'square', base * (1 + (METAL_RATIOS[i % 6] - 1) * spread));
     // Upper partials of a struck plate die faster than the low ones.
     const pg = gain(ctx, 0);
-    perc(pg.gain, t, dur * (1 - decayTilt * (i / count)), 1 / (1 + i * 0.5), 0.0008);
+    perc(pg.gain, t, dur * (1 - decayTilt * (i / count)), 1 / (1 + i * 0.5) / sum, 0.0008);
     o.connect(pg).connect(filt);
     o.start(t); o.stop(end);
     srcs.push(o);

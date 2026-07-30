@@ -415,7 +415,7 @@ const WALK_UP = {
 };
 
 def('walk', {
-  dur: 1.05, loop: true, stride: 2.55, hold: 0.13,
+  dur: 1.0, loop: true, stride: 2.55, hold: 0.13,
   events: [
     { t: 0.02, n: 'footstep', d: { foot: 'L', power: 0.55 } },
     { t: 0.52, n: 'footstep', d: { foot: 'R', power: 0.55 } },
@@ -492,7 +492,7 @@ def('run', {
   dur: 0.62, loop: true, stride: 4.05, hold: 0.055,
   events: [
     { t: 0.01, n: 'footstep', d: { foot: 'L', power: 1 } },
-    { t: 0.51, n: 'footstep', d: { foot: 'R', power: 1 } },
+    { t: 0.32, n: 'footstep', d: { foot: 'R', power: 1 } },
   ],
   keys: RUN_KEYS(0.62),
 });
@@ -502,7 +502,7 @@ def('run_fast', {
   dur: 0.52, loop: true, stride: 4.85, hold: 0.045,
   events: [
     { t: 0.01, n: 'footstep', d: { foot: 'L', power: 1.25 } },
-    { t: 0.51, n: 'footstep', d: { foot: 'R', power: 1.25 } },
+    { t: 0.27, n: 'footstep', d: { foot: 'R', power: 1.25 } },
   ],
   keys: RUN_KEYS(0.52).map((k, i) => {
     const amp = { hips: 1.25, spine: 1.2, chest: 1.2 };
@@ -581,8 +581,8 @@ const SNEAK_U = {
 def('sneak_walk', {
   dur: 1.5, loop: true, stride: 2.1, hold: 0.2,
   events: [
-    { t: 0.03, n: 'footstep', d: { foot: 'L', power: 0.22 } },
-    { t: 0.53, n: 'footstep', d: { foot: 'R', power: 0.22 } },
+    { t: 0.045, n: 'footstep', d: { foot: 'L', power: 0.22 } },
+    { t: 0.795, n: 'footstep', d: { foot: 'R', power: 0.22 } },
   ],
   keys: [
     { t: 0.000, e: 'out', P: SNEAK_C, pos: [0.014, -0.315, 0.05], cane: CANE.out },
@@ -636,8 +636,8 @@ const CR_P = {
 def('crouch_walk', {
   dur: 1.25, loop: true, stride: 1.55, hold: 0.16,
   events: [
-    { t: 0.03, n: 'footstep', d: { foot: 'L', power: 0.3 } },
-    { t: 0.53, n: 'footstep', d: { foot: 'R', power: 0.3 } },
+    { t: 0.038, n: 'footstep', d: { foot: 'L', power: 0.3 } },
+    { t: 0.663, n: 'footstep', d: { foot: 'R', power: 0.3 } },
   ],
   keys: [
     { t: 0.000, e: 'out', P: CR_C, pos: [0.012, -0.535, 0.08], cane: CANE.tuck },
@@ -663,8 +663,8 @@ const CRAWL_A = P({
 def('crawl', {
   dur: 1.6, loop: true, stride: 1.35, hold: 0.2,
   events: [
-    { t: 0.05, n: 'footstep', d: { foot: 'L', power: 0.18 } },
-    { t: 0.55, n: 'footstep', d: { foot: 'R', power: 0.18 } },
+    { t: 0.08, n: 'footstep', d: { foot: 'L', power: 0.18 } },
+    { t: 0.88, n: 'footstep', d: { foot: 'R', power: 0.18 } },
   ],
   keys: [
     { t: 0.00, e: 'out', P: CRAWL_A, pos: [0.01, -0.86, 0.10], cane: CANE.tuck },
@@ -1059,10 +1059,10 @@ const WR_A = P({
   tailA: [4, 22, 0], tailB: [-6, 30, 0], tailC: [-2, 20, 0], tailD: [18, -12, 0],
 });
 def('wall_run_l', {
-  dur: 0.52, loop: true, stride: 2.5, hold: 0.12,
+  dur: 0.5, loop: true, stride: 2.5, hold: 0.12,
   events: [
     { t: 0.02, n: 'footstep', d: { foot: 'L', power: 0.9 } },
-    { t: 0.52, n: 'footstep', d: { foot: 'R', power: 0.9 } },
+    { t: 0.27, n: 'footstep', d: { foot: 'R', power: 0.9 } },
   ],
   keys: [
     { t: 0.00, e: 'out', P: WR_A, pos: [-0.06, -0.10, 0.02], cane: [96, -34, -10] },
@@ -1354,7 +1354,625 @@ def('hook_release', {
   ],
 });
 
-/* @@MORE@@ */
+/* ========================================================================== */
+/*  8. rails and poles                                                        */
+/* ========================================================================== */
+
+/* Rail slide: side-on, feet fore-and-aft along the rail, knees deep, one arm leading, cane
+   thrown out behind as a counterweight. The sway is authored (§6 wants ±6°), not procedural. */
+const RAIL = P({
+  hips: [22, -52, 4], spine: [-4, 14, -3], chest: [-2, 26, -6], neck: [-16, 8, 4], head: [-18, 24, 8],
+  jaw: [4, 0, 0], earL: [-14, 8, -20], earR: [-10, -8, 22],
+  shoulderL: [-8, 12, -22], upperArmL: [-46, 20, -56], lowerArmL: [-30, -18, -20], handL: [16, -16, -16],
+  shoulderR: [-6, -12, 20], upperArmR: [34, -18, 44], lowerArmR: [-24, 22, 18], handR: [10, 18, 12],
+  upperLegL: [-48, 26, 8], lowerLegL: [58, 0, 0], footL: [-6, -24, 0], toeL: [8, 0, 0],
+  upperLegR: [-30, -22, -8], lowerLegR: [42, 0, 0], footR: [-4, 20, 0], toeR: [8, 0, 0],
+  tailA: [4, -26, 0], tailB: [-6, -34, 0], tailC: [-2, -22, 0], tailD: [18, 14, 0],
+});
+def('rail_slide', {
+  dur: 1.4, loop: true, hold: 0.35,
+  keys: [
+    { t: 0, e: 'smooth', P: RAIL, pos: [0.03, -0.30, 0], cane: [64, -50, -8] },
+    { t: 0.45, e: 'smooth', P: {
+      hips: [24, -52, -6], chest: [-2, 26, 4], head: [-18, 24, -2],
+      upperArmL: [-52, 20, -68], upperArmR: [28, -18, 34],
+      upperLegL: [-42, 26, 8], lowerLegL: [52, 0, 0], upperLegR: [-36, -22, -8], lowerLegR: [48, 0, 0],
+      tailA: [4, -14, 0], tailB: [-6, -20, 0], tailC: [-2, -13, 0], tailD: [18, 8, 0],
+    }, pos: [0.02, -0.335, 0], cane: [68, -38, -8] },
+    { t: 0.95, e: 'smooth', P: {
+      hips: [20, -52, 12], chest: [-2, 26, -12], head: [-18, 24, 14],
+      upperArmL: [-40, 20, -48], upperArmR: [40, -18, 52],
+      upperLegL: [-52, 26, 8], lowerLegL: [62, 0, 0], upperLegR: [-26, -22, -8], lowerLegR: [38, 0, 0],
+      tailA: [4, -34, 0], tailB: [-6, -44, 0], tailC: [-2, -28, 0], tailD: [18, 18, 0],
+    }, pos: [0.04, -0.285, 0], cane: [60, -58, -8] },
+    { t: 1.4, e: 'smooth', P: RAIL, pos: [0.03, -0.30, 0], cane: [64, -50, -8] },
+  ],
+});
+
+/* Rail walk: tightrope. Feet placed exactly in line, arms wide and constantly correcting. */
+const RW_A = P({
+  hips: [8, 2, 5], spine: [-3, -1, -4], chest: [2, -2, -8], neck: [-10, 1, 5], head: [-12, 3, 10],
+  shoulderL: [-6, 4, -22], upperArmL: [-18, 12, -86], lowerArmL: [-14, -12, -22], handL: [8, -14, -24],
+  shoulderR: [-6, -4, 22], upperArmR: [-14, -12, 90], lowerArmR: [-12, 12, 22], handR: [6, 14, 24],
+  upperLegL: [-34, 10, 4], lowerLegL: [40, 0, 0], footL: [-6, -8, 0], toeL: [4, 0, 0],
+  upperLegR: [10, -8, -4], lowerLegR: [18, 0, 0], footR: [6, 6, 0], toeR: [4, 0, 0],
+  tailA: [8, 18, 0], tailB: [2, 26, 0], tailC: [8, 18, 0], tailD: [20, -10, 0],
+});
+def('rail_walk', {
+  dur: 1.4, loop: true, stride: 1.6, hold: 0.3,
+  events: [
+    { t: 0.056, n: 'footstep', d: { foot: 'L', power: 0.25 } },
+    { t: 0.756, n: 'footstep', d: { foot: 'R', power: 0.25 } },
+  ],
+  keys: [
+    { t: 0.00, e: 'out', P: RW_A, pos: [0.01, -0.13, 0], cane: [58, -44, 0] },
+    { t: 0.25, e: 'smooth', P: {
+      hips: [8, 2, -3], chest: [2, -2, 5], head: [-12, 3, -6],
+      upperArmL: [-18, 12, -74], upperArmR: [-14, -12, 100],
+      upperLegL: [-8, 10, 4], lowerLegL: [22, 0, 0], footL: [0, -8, 0],
+      upperLegR: [-16, -8, -4], lowerLegR: [56, 0, 0], footR: [-14, 6, 0],
+      tailA: [8, -10, 0], tailB: [2, -15, 0], tailC: [8, -10, 0], tailD: [20, 6, 0],
+    }, pos: [0, -0.10, 0], cane: [58, -20, 0] },
+    { t: 0.50, e: 'out', P: mir(RW_A), pos: [-0.01, -0.13, 0], cane: [58, -50, 0] },
+    { t: 0.75, e: 'smooth', P: {
+      hips: [8, -2, 3], chest: [2, 2, -5], head: [-12, -3, 6],
+      upperArmL: [-18, 12, -100], upperArmR: [-14, -12, 74],
+      upperLegL: [-16, 8, 4], lowerLegL: [56, 0, 0], footL: [-14, -6, 0],
+      upperLegR: [-8, -10, -4], lowerLegR: [22, 0, 0], footR: [0, 8, 0],
+      tailA: [8, 10, 0], tailB: [2, 15, 0], tailC: [8, 10, 0], tailD: [20, -6, 0],
+    }, pos: [0, -0.10, 0], cane: [58, -20, 0] },
+    { t: 1.00, e: 'out', P: RW_A, pos: [0.01, -0.13, 0], cane: [58, -44, 0] },
+  ].map((k) => ({ ...k, t: k.t * 1.4 })),
+});
+
+/* Pole climb: shinning up. Hands alternate overhead, knees grip and pull, tail wraps round. */
+const PC_A = P({
+  hips: [-14, -8, 0], spine: [6, 4, 0], chest: [10, 8, 0], neck: [-26, -4, 0], head: [-30, -6, 0],
+  shoulderL: [-16, 8, -32], upperArmL: [-16, 18, -114], lowerArmL: [-40, -20, -22], handL: [28, -18, -20],
+  shoulderR: [-8, -8, 18], upperArmR: [-24, -16, 56], lowerArmR: [-96, 22, 20], handR: [24, 18, 16],
+  upperLegL: [-64, 24, 10], lowerLegL: [92, 0, 0], footL: [-6, -18, 0], toeL: [10, 0, 0],
+  upperLegR: [-30, -24, -10], lowerLegR: [58, 0, 0], footR: [-2, 18, 0], toeR: [10, 0, 0],
+  tailA: [-18, 14, 0], tailB: [-26, 20, 0], tailC: [-12, 13, 0], tailD: [10, -9, 0],
+});
+def('pole_climb', {
+  dur: 0.9, loop: true, stride: 1.5, hold: 0.22,
+  events: [
+    { t: 0.027, n: 'footstep', d: { foot: 'L', power: 0.3 } },
+    { t: 0.477, n: 'footstep', d: { foot: 'R', power: 0.3 } },
+  ],
+  keys: [
+    { t: 0.00, e: 'out', P: PC_A, pos: [0, -0.10, 0.08], cane: [130, 26, -10] },
+    { t: 0.25, e: 'smooth', P: {
+      hips: [-6, 0, 0], chest: [10, 0, 0], head: [-30, 0, 0],
+      upperArmL: [-22, 18, -84], lowerArmL: [-80, -20, -22],
+      upperArmR: [-20, -16, 86], lowerArmR: [-56, 22, 20],
+      upperLegL: [-44, 24, 10], lowerLegL: [72, 0, 0], upperLegR: [-48, -24, -10], lowerLegR: [76, 0, 0],
+      tailA: [-18, 0, 0], tailB: [-26, 0, 0], tailC: [-12, 0, 0], tailD: [10, 0, 0],
+    }, pos: [0, -0.06, 0.08] },
+    { t: 0.50, e: 'out', P: mir(PC_A), pos: [0, -0.10, 0.08], cane: [130, 14, -10] },
+    { t: 0.75, e: 'smooth', P: {
+      hips: [-6, 0, 0], chest: [10, 0, 0], head: [-30, 0, 0],
+      upperArmL: [-22, 18, -84], lowerArmL: [-80, -20, -22],
+      upperArmR: [-20, -16, 86], lowerArmR: [-56, 22, 20],
+      upperLegL: [-44, 24, 10], lowerLegL: [72, 0, 0], upperLegR: [-48, -24, -10], lowerLegR: [76, 0, 0],
+      tailA: [-18, 0, 0], tailB: [-26, 0, 0], tailC: [-12, 0, 0], tailD: [10, 0, 0],
+    }, pos: [0, -0.06, 0.08] },
+    { t: 1.00, e: 'out', P: PC_A, pos: [0, -0.10, 0.08], cane: [130, 26, -10] },
+  ].map((k) => ({ ...k, t: k.t * 0.9 })),
+});
+
+/* Pole slide: he lets go and drops, gripping loose, boots squeezing the pole, leaning back. */
+def('pole_slide', {
+  dur: 0.8, loop: true, hold: 0.3,
+  keys: [
+    { t: 0, e: 'smooth', P: P({
+      hips: [-18, -4, 0], spine: [8, 2, 0], chest: [12, 4, 0], neck: [-24, -2, 0], head: [-26, 10, 0],
+      shoulderL: [-16, 8, -34], upperArmL: [-12, 18, -122], lowerArmL: [-30, -20, -22], handL: [30, -18, -20],
+      shoulderR: [-16, -8, 34], upperArmR: [-10, -18, 118], lowerArmR: [-28, 20, 22], handR: [26, 18, 20],
+      upperLegL: [-52, 22, 10], lowerLegL: [76, 0, 0], footL: [-4, -18, 0], toeL: [10, 0, 0],
+      upperLegR: [-52, -22, -10], lowerLegR: [76, 0, 0], footR: [-4, 18, 0], toeR: [10, 0, 0],
+      tailA: [-30, 6, 0], tailB: [-38, 9, 0], tailC: [-20, 6, 0], tailD: [4, -5, 0],
+    }), pos: [0, -0.14, 0.10], cane: [132, 18, -10] },
+    { t: 0.4, e: 'smooth', P: { hips: [-20, 4, 0], head: [-24, -8, 0],
+      tailA: [-32, -6, 0], tailB: [-40, -9, 0], tailC: [-22, -6, 0], tailD: [2, 5, 0] }, pos: [0, -0.12, 0.10] },
+    { t: 0.8, e: 'smooth', P: { hips: [-18, -4, 0], head: [-26, 10, 0],
+      tailA: [-30, 6, 0], tailB: [-38, 9, 0], tailC: [-20, 6, 0], tailD: [4, -5, 0] }, pos: [0, -0.14, 0.10], cane: [132, 18, -10] },
+  ],
+});
+
+/* Pole swing: one glove on the pole, body flung out horizontal, orbiting. */
+def('pole_swing', {
+  dur: 0.85, loop: true, hold: 0.3,
+  keys: [
+    { t: 0, e: 'smooth', P: P({
+      hips: [10, -26, -22], spine: [-4, 8, 6], chest: [-8, 18, 10], neck: [-18, -8, -6], head: [-20, -14, -10],
+      shoulderL: [-16, 10, -36], upperArmL: [-20, 20, -116], lowerArmL: [-34, -20, -24], handL: [28, -18, -22],
+      shoulderR: [-4, -10, 14], upperArmR: [32, -18, 40], lowerArmR: [-34, 24, 18], handR: [12, 18, 12],
+      upperLegL: [-24, 20, 10], lowerLegL: [46, 0, 0], footL: [14, -16, 0], toeL: [12, 0, 0],
+      upperLegR: [-4, -20, -10], lowerLegR: [30, 0, 0], footR: [20, 16, 0], toeR: [12, 0, 0],
+      tailA: [-8, -28, 0], tailB: [-18, -38, 0], tailC: [-8, -25, 0], tailD: [14, 16, 0],
+    }), pos: [-0.04, -0.08, 0.04], cane: [70, -40, -8] },
+    { t: 0.42, e: 'smooth', P: {
+      hips: [10, -26, 22], chest: [-8, 18, -10], head: [-20, -14, 10],
+      upperArmL: [-28, 20, -96], upperArmR: [24, -18, 56],
+      upperLegL: [-8, 20, 10], lowerLegL: [34, 0, 0], upperLegR: [-20, -20, -10], lowerLegR: [42, 0, 0],
+      tailA: [-8, 26, 0], tailB: [-18, 36, 0], tailC: [-8, 24, 0], tailD: [14, -15, 0],
+    }, pos: [0.04, -0.06, 0.04], cane: [70, -22, -8] },
+    { t: 0.85, e: 'smooth', P: {
+      hips: [10, -26, -22], chest: [-8, 18, 10], head: [-20, -14, -10],
+      upperArmL: [-20, 20, -116], upperArmR: [32, -18, 40],
+      upperLegL: [-24, 20, 10], lowerLegL: [46, 0, 0], upperLegR: [-4, -20, -10], lowerLegR: [30, 0, 0],
+      tailA: [-8, -28, 0], tailB: [-18, -38, 0], tailC: [-8, -25, 0], tailD: [14, 16, 0],
+    }, pos: [-0.04, -0.08, 0.04], cane: [70, -40, -8] },
+  ],
+});
+
+/* ========================================================================== */
+/*  9. spire                                                                  */
+/* ========================================================================== */
+
+/* Ninja Spire Landing: he drops onto a point, compresses to almost nothing, then unfolds
+   into a perfectly still one-toe pose. The compression is the whole gag. */
+def('spire_land', {
+  dur: 0.6, loop: false, hold: 0.34,
+  events: [{ t: 0.0, n: 'land', d: { force: 0.6 } }],
+  keys: [
+    { t: 0, e: 'snap', P: P({
+      hips: [10, -6, 2], spine: [2, 3, 1], chest: [4, 8, -2], neck: [-22, -4, 2], head: [-24, -6, 3],
+      upperArmL: [-10, 16, -78], lowerArmL: [-44, -20, -20],
+      upperArmR: [-4, -16, 72], lowerArmR: [-40, 20, 20],
+      upperLegL: [-26, 8, 5], lowerLegL: [36, 0, 0], footL: [8, -6, 0],
+      upperLegR: [-22, -8, -5], lowerLegR: [32, 0, 0], footR: [10, 6, 0],
+      tailA: [-24, -6, 0], tailB: [-34, -9, 0], tailC: [-16, -6, 0], tailD: [8, 5, 0],
+    }), pos: [0, -0.04, 0], cane: [106, -16, -8] },
+    // fully folded onto the point — knees around the ears
+    { t: 0.10, e: 'out', P: {
+      hips: [58, -8, 3], spine: [-14, 4, 2], chest: [-24, 10, -3], neck: [-6, -5, 3], head: [-2, -8, 5],
+      upperArmL: [-56, 18, -30], lowerArmL: [-84, -22, -16], handL: [30, -16, -10],
+      upperArmR: [-30, -20, 44], lowerArmR: [-88, 24, 20],
+      upperLegL: [-126, 14, 8], lowerLegL: [128, 0, 0], footL: [-16, -10, 0], toeL: [14, 0, 0],
+      upperLegR: [-118, -14, -8], lowerLegR: [122, 0, 0], footR: [-14, 10, 0], toeR: [14, 0, 0],
+      tailA: [30, -10, 0], tailB: [18, -14, 0], tailC: [-4, -9, 0], tailD: [-2, 7, 0],
+    }, pos: [0, -0.66, 0.06], sc: { hips: [1.2, 0.72, 1.16], chest: [1.12, 0.84, 1.09] }, cane: [64, -50, -8] },
+    // unfold, overshooting into the poised pose
+    { t: 0.34, e: 'out', P: {
+      hips: [16, 6, -6], spine: [-4, -3, 4], chest: [-2, -8, 6], neck: [-14, 4, -3], head: [-16, 8, -7],
+      shoulderL: [-6, 6, -20], upperArmL: [-20, 14, -80], lowerArmL: [-20, -16, -20], handL: [10, -14, -22],
+      shoulderR: [-6, -6, 20], upperArmR: [-14, -14, 84], lowerArmR: [-18, 16, 20], handR: [8, 14, 22],
+      upperLegL: [-92, 12, 7], lowerLegL: [100, 0, 0], footL: [-10, -9, 0], toeL: [12, 0, 0],
+      upperLegR: [-16, -10, -6], lowerLegR: [24, 0, 0], footR: [-8, 8, 0], toeR: [6, 0, 0],
+      tailA: [12, 12, 0], tailB: [2, 18, 0], tailC: [6, 12, 0], tailD: [22, -8, 0],
+    }, pos: [0, -0.24, 0.02], sc: { hips: [0.96, 1.06, 0.97], chest: [1, 1, 1] }, cane: [58, -34, 0] },
+    { t: 0.6, e: 'soft', P: {
+      hips: [12, 4, -4], chest: [0, -6, 4], head: [-14, 6, -5],
+      upperArmL: [-18, 14, -76], upperArmR: [-12, -14, 80],
+      upperLegL: [-88, 12, 7], lowerLegL: [96, 0, 0], upperLegR: [-14, -10, -6], lowerLegR: [22, 0, 0],
+      tailA: [10, 10, 0], tailB: [0, 15, 0], tailC: [6, 10, 0], tailD: [22, -7, 0],
+    }, pos: [0, -0.22, 0.02], sc: { hips: [1, 1, 1] }, cane: [58, -34, 0] },
+  ],
+});
+
+/* Balancing on the point: one toe down, the other leg folded, arms wide, tail sweeping to
+   counter every wobble. Reads as controlled show-off, not as struggling. */
+const SPIRE = P({
+  hips: [12, 4, -4], spine: [-4, -3, 4], chest: [0, -6, 4], neck: [-14, 4, -3], head: [-14, 6, -5],
+  jaw: [3, 0, 0], earL: [-12, 6, -16], earR: [-8, -6, 18],
+  shoulderL: [-6, 6, -20], upperArmL: [-18, 14, -76], lowerArmL: [-20, -16, -20], handL: [10, -14, -22],
+  shoulderR: [-6, -6, 20], upperArmR: [-12, -14, 80], lowerArmR: [-18, 16, 20], handR: [8, 14, 22],
+  upperLegL: [-88, 12, 7], lowerLegL: [96, 0, 0], footL: [-10, -9, 0], toeL: [12, 0, 0],
+  upperLegR: [-14, -10, -6], lowerLegR: [22, 0, 0], footR: [-8, 8, 0], toeR: [6, 0, 0],
+  tailA: [10, 10, 0], tailB: [0, 15, 0], tailC: [6, 10, 0], tailD: [22, -7, 0],
+});
+def('spire_balance', {
+  dur: 2.4, loop: true, hold: 0.55,
+  keys: [
+    { t: 0, e: 'smooth', P: SPIRE, pos: [0, -0.22, 0.02], cane: [58, -34, 0] },
+    { t: 0.55, e: 'smooth', P: {
+      hips: [12, 4, 7], chest: [0, -6, -8], head: [-14, 6, 9],
+      upperArmL: [-18, 14, -62], upperArmR: [-12, -14, 94],
+      upperLegL: [-82, 12, 7], upperLegR: [-20, -10, -6],
+      tailA: [10, -16, 0], tailB: [0, -24, 0], tailC: [6, -16, 0], tailD: [22, 10, 0],
+    }, pos: [-0.02, -0.20, 0.02], cane: [58, 26, 0] },
+    { t: 1.25, e: 'smooth', P: {
+      hips: [12, 4, -9], chest: [0, -6, 10], head: [-14, 6, -11],
+      upperArmL: [-18, 14, -92], upperArmR: [-12, -14, 64],
+      upperLegL: [-94, 12, 7], upperLegR: [-8, -10, -6],
+      tailA: [10, 22, 0], tailB: [0, 30, 0], tailC: [6, 20, 0], tailD: [22, -13, 0],
+    }, pos: [0.03, -0.24, 0.02], cane: [58, -52, 0] },
+    { t: 2.4, e: 'smooth', P: SPIRE, pos: [0, -0.22, 0.02], cane: [58, -34, 0] },
+  ],
+});
+
+/* ========================================================================== */
+/*  10. combat                                                                */
+/* ========================================================================== */
+
+/**
+ * The three-hit cane combo. Each hit is anticipation → contact → follow-through → recovery,
+ * and each one leaves him wound up for the next, so the three read as one sentence.
+ * `cane_hit` fires on the contact frame.
+ */
+def('cane_combo_1', {
+  dur: 0.46, loop: false, hold: 0.16,
+  events: [{ t: 0.15, n: 'cane_hit', d: { index: 1 } }],
+  keys: [
+    // anticipation: wind back and away, weight onto the back foot, cane cocked behind
+    { t: 0, e: 'in', P: P({
+      hips: [8, 30, -6], spine: [-2, 12, 3], chest: [2, 26, -6], neck: [-10, -14, 4], head: [-8, -22, 8],
+      shoulderL: [-4, 12, -16], upperArmL: [-24, 16, -40], lowerArmL: [-56, -18, -14],
+      shoulderR: [-8, -14, 18], upperArmR: [26, -20, 36], lowerArmR: [-52, 26, 22], handR: [16, 22, 14],
+      upperLegL: [-16, 22, 6], lowerLegL: [30, 0, 0], footL: [-6, -18, 0],
+      upperLegR: [-8, 12, -4], lowerLegR: [22, 0, 0], footR: [-4, 14, 0],
+      tailA: [4, 32, 0], tailB: [-8, 42, 0], tailC: [-2, 28, 0], tailD: [20, -18, 0],
+    }), pos: [0.03, -0.09, -0.03], cane: [122, 46, 0] },
+    // contact: everything fires through the swing, hips leading, chest square
+    { t: 0.15, e: 'snap', P: {
+      hips: [10, -34, 6], spine: [2, -14, -3], chest: [8, -30, 6], neck: [-14, 16, -4], head: [-14, 24, -8],
+      shoulderL: [-2, -10, -10], upperArmL: [-6, -12, -34], lowerArmL: [-40, -14, -10],
+      shoulderR: [-10, 14, 22], upperArmR: [-30, 26, 62], lowerArmR: [-26, -18, 14], handR: [8, -14, 10],
+      upperLegL: [-30, -10, 6], lowerLegL: [40, 0, 0], footL: [-8, 12, 0],
+      upperLegR: [4, -22, -4], lowerLegR: [26, 0, 0], footR: [6, -18, 0],
+      tailA: [8, -34, 0], tailB: [-2, -44, 0], tailC: [2, -30, 0], tailD: [22, 20, 0],
+    }, pos: [-0.02, -0.12, 0.06], sc: { chest: [1.04, 0.98, 1.02] }, cane: [30, -68, 0] },
+    // follow-through past the target, then a settle back into a guard
+    { t: 0.26, e: 'out', P: {
+      hips: [8, -50, 8], chest: [10, -44, 8], head: [-16, 32, -10],
+      upperArmR: [-44, 30, 76], lowerArmR: [-18, -22, 12],
+      upperArmL: [4, -16, -30], tailA: [8, -46, 0], tailB: [-2, -58, 0], tailC: [2, -40, 0],
+    }, pos: [-0.03, -0.11, 0.07], sc: { chest: [1, 1, 1] }, cane: [10, -104, 0] },
+    { t: 0.46, e: 'out', P: {
+      hips: [6, -10, 2], spine: [-2, -4, 2], chest: [4, -10, 4], neck: [-10, 6, -2], head: [-10, 10, -5],
+      shoulderL: [0, 4, -10], upperArmL: [-14, 6, -32], lowerArmL: [-44, -14, -12],
+      shoulderR: [-6, -6, 14], upperArmR: [0, -12, 30], lowerArmR: [-60, 20, 18], handR: [12, 16, 10],
+      upperLegL: [-14, 6, 4], lowerLegL: [22, 0, 0], footL: [-6, -5, 0],
+      upperLegR: [-10, -6, -4], lowerLegR: [18, 0, 0], footR: [-5, 5, 0],
+      tailA: [0, -14, 0], tailB: [-12, -18, 0], tailC: [6, -12, 0], tailD: [24, 8, 0],
+    }, pos: [0, -0.05, 0.02], cane: [70, -30, -6] },
+  ],
+});
+
+/* Hit two: the backhand return, mirrored across the body and faster. */
+def('cane_combo_2', {
+  dur: 0.42, loop: false, hold: 0.14,
+  events: [{ t: 0.13, n: 'cane_hit', d: { index: 2 } }],
+  keys: [
+    { t: 0, e: 'in', P: P({
+      hips: [8, -28, 6], spine: [-2, -10, -3], chest: [4, -26, 6], neck: [-10, 12, -4], head: [-10, 20, -8],
+      shoulderL: [-4, -8, -12], upperArmL: [-10, -10, -36], lowerArmL: [-48, -16, -12],
+      shoulderR: [-10, 12, 24], upperArmR: [-38, 26, 70], lowerArmR: [-22, -20, 14], handR: [10, -16, 10],
+      upperLegL: [-24, -10, 6], lowerLegL: [34, 0, 0], footL: [-6, 12, 0],
+      upperLegR: [0, -20, -4], lowerLegR: [24, 0, 0], footR: [4, -16, 0],
+      tailA: [6, -38, 0], tailB: [-4, -48, 0], tailC: [0, -33, 0], tailD: [22, 18, 0],
+    }), pos: [-0.03, -0.10, 0.04], cane: [16, -96, 0] },
+    { t: 0.13, e: 'snap', P: {
+      hips: [12, 34, -6], spine: [2, 14, 4], chest: [10, 32, -8], neck: [-16, -16, 5], head: [-16, -26, 10],
+      shoulderL: [-8, 14, -22], upperArmL: [-32, 18, -52], lowerArmL: [-30, -18, -14],
+      shoulderR: [-6, -16, 12], upperArmR: [24, -28, 22], lowerArmR: [-58, 30, 26], handR: [18, 24, 16],
+      upperLegL: [-6, 24, 6], lowerLegL: [22, 0, 0], footL: [-2, -20, 0],
+      upperLegR: [-32, 14, -4], lowerLegR: [42, 0, 0], footR: [-8, 16, 0],
+      tailA: [10, 36, 0], tailB: [0, 46, 0], tailC: [4, 32, 0], tailD: [24, -20, 0],
+    }, pos: [0.04, -0.13, 0.06], sc: { chest: [1.04, 0.98, 1.02] }, cane: [104, 70, 0] },
+    { t: 0.23, e: 'out', P: {
+      hips: [12, 50, -8], chest: [12, 46, -10], head: [-18, -34, 12],
+      upperArmR: [40, -32, 8], lowerArmR: [-70, 34, 30],
+      tailA: [10, 50, 0], tailB: [0, 62, 0], tailC: [4, 44, 0],
+    }, pos: [0.05, -0.12, 0.07], sc: { chest: [1, 1, 1] }, cane: [128, 96, 0] },
+    { t: 0.42, e: 'out', P: {
+      hips: [8, 14, -3], spine: [-2, 5, 2], chest: [6, 14, -4], neck: [-10, -7, 3], head: [-10, -12, 5],
+      shoulderL: [0, 6, -12], upperArmL: [-18, 8, -34], lowerArmL: [-46, -16, -12],
+      shoulderR: [-6, -8, 14], upperArmR: [8, -14, 30], lowerArmR: [-58, 22, 20], handR: [14, 18, 12],
+      upperLegL: [-10, 12, 5], lowerLegL: [20, 0, 0], footL: [-5, -10, 0],
+      upperLegR: [-14, 4, -4], lowerLegR: [24, 0, 0], footR: [-6, 6, 0],
+      tailA: [2, 18, 0], tailB: [-10, 24, 0], tailC: [8, 16, 0], tailD: [24, -10, 0],
+    }, pos: [0.01, -0.06, 0.02], cane: [92, 34, -6] },
+  ],
+});
+
+/**
+ * Hit three — the finisher, and the `combat` shot. He winds up overhead, twists, and drives
+ * the cane down and across in a two-handed slam. The impact frame is a deep lunge with one
+ * knee down, both hands driven past the low point, tail flung up behind: one long diagonal
+ * from the raised heel through the hips to the cane tip.
+ */
+def('cane_combo_3', {
+  dur: 0.62, loop: false, hold: 0.22,
+  events: [
+    { t: 0.21, n: 'cane_hit', d: { index: 3 } },
+    { t: 0.21, n: 'land', d: { force: 0.5 } },
+  ],
+  keys: [
+    // wind up: cane thrown high behind, body coiled and stretched tall
+    { t: 0, e: 'in', P: P({
+      hips: [-4, 26, -8], spine: [-8, 10, 4], chest: [-14, 24, -7], neck: [-4, -12, 5], head: [0, -20, 9],
+      shoulderL: [-12, 12, -26], upperArmL: [-30, 18, -78], lowerArmL: [-40, -20, -20], handL: [14, -16, -18],
+      shoulderR: [-16, -14, 30], upperArmR: [-34, -22, 96], lowerArmR: [-44, 28, 26], handR: [20, 22, 20],
+      upperLegL: [-14, 22, 6], lowerLegL: [26, 0, 0], footL: [-4, -18, 0],
+      upperLegR: [-6, 10, -4], lowerLegR: [18, 0, 0], footR: [12, 12, 0], toeR: [10, 0, 0],
+      tailA: [-12, 30, 0], tailB: [-24, 40, 0], tailC: [-12, 27, 0], tailD: [12, -17, 0],
+    }), pos: [0, 0.03, -0.05], sc: { hips: [0.95, 1.08, 0.96] }, cane: [-124, 40, 0] },
+    // impact: everything drives down and through, hips square to the target
+    { t: 0.21, e: 'snap', P: {
+      hips: [42, -22, 6], spine: [-6, -10, -3], chest: [-4, -26, 8], neck: [-16, 14, -5], head: [-14, 22, -10],
+      shoulderL: [10, -8, -6], upperArmL: [-72, -6, -22], lowerArmL: [-34, -12, -8], handL: [26, -10, -6],
+      shoulderR: [8, 10, 10], upperArmR: [-78, 16, 26], lowerArmR: [-30, -14, 10], handR: [22, -10, 6],
+      upperLegL: [-104, -6, 8], lowerLegL: [112, 0, 0], footL: [-12, 10, 0], toeL: [14, 0, 0],
+      upperLegR: [26, -18, -6], lowerLegR: [30, 0, 0], footR: [24, -14, 0], toeR: [18, 0, 0],
+      tailA: [34, -24, 0], tailB: [24, -32, 0], tailC: [2, -22, 0], tailD: [-14, 14, 0],
+    }, pos: [0.02, -0.56, 0.16], sc: { hips: [1.16, 0.80, 1.12], chest: [1.10, 0.86, 1.08] }, cane: [64, -18, 0] },
+    // hold the impact a beat, then unwind into a smug guard
+    { t: 0.30, e: 'smooth', P: { hips: [40, -20, 6], head: [-12, 20, -9] },
+      pos: [0.02, -0.52, 0.15], sc: { hips: [1.1, 0.86, 1.08], chest: [1.05, 0.92, 1.04] } },
+    { t: 0.46, e: 'out', P: {
+      hips: [12, -6, 2], spine: [-4, -3, 2], chest: [2, -10, 5], neck: [-12, 6, -3], head: [-12, 12, -7],
+      shoulderL: [0, 4, -10], upperArmL: [-20, 6, -34], lowerArmL: [-44, -16, -12],
+      shoulderR: [-6, -6, 14], upperArmR: [-8, -14, 34], lowerArmR: [-62, 22, 20], handR: [14, 18, 12],
+      upperLegL: [-40, 4, 5], lowerLegL: [48, 0, 0], footL: [-8, -4, 0], toeL: [4, 0, 0],
+      upperLegR: [-12, -8, -4], lowerLegR: [20, 0, 0], footR: [-4, 6, 0], toeR: [2, 0, 0],
+      tailA: [2, -12, 0], tailB: [-10, -16, 0], tailC: [8, -11, 0], tailD: [24, 8, 0],
+    }, pos: [0, -0.12, 0.04], sc: { hips: [0.98, 1.03, 0.99], chest: [1, 1, 1] }, cane: [74, -22, -6] },
+    { t: 0.62, e: 'soft', P: IDLE_A, pos: [0, -0.014, 0], sc: { hips: [1, 1, 1] }, cane: CANE.shoulder },
+  ],
+});
+
+/* Dive attack (Cane Slam): he flips upside-down over the target and comes down cane-first. */
+def('dive_attack', {
+  dur: 0.5, loop: true, hold: 0.3,
+  keys: [
+    { t: 0, e: 'in', P: P({
+      hips: [-30, -6, 3], spine: [10, 3, 1], chest: [16, 8, -2], neck: [-30, -4, 2], head: [-34, -6, 4],
+      shoulderL: [-16, 14, -30], upperArmL: [-30, 20, -94], lowerArmL: [-40, -22, -22],
+      shoulderR: [-18, -16, 32], upperArmR: [-40, -24, 104], lowerArmR: [-38, 28, 26], handR: [22, 24, 20],
+      upperLegL: [20, 10, 6], lowerLegL: [40, 0, 0], footL: [22, -8, 0], toeL: [14, 0, 0],
+      upperLegR: [26, -10, -6], lowerLegR: [36, 0, 0], footR: [24, 8, 0], toeR: [14, 0, 0],
+      tailA: [-24, 8, 0], tailB: [-34, 12, 0], tailC: [-18, 8, 0], tailD: [6, -6, 0],
+    }), pos: [0, 0.02, -0.06], cane: [-70, 20, 0] },
+    // committed: body vertical, cane speared straight down past his boots
+    { t: 0.18, e: 'out', P: {
+      hips: [36, -4, 2], spine: [-14, 2, 1], chest: [-24, 5, -1], neck: [-2, -3, 1], head: [4, -4, 2],
+      shoulderL: [12, 10, -14], upperArmL: [-104, 12, -18], lowerArmL: [-34, -16, -10], handL: [30, -12, -6],
+      shoulderR: [12, -10, 14], upperArmR: [-108, -12, 18], lowerArmR: [-30, 16, 10], handR: [28, 12, 6],
+      upperLegL: [-52, 8, 5], lowerLegL: [86, 0, 0], footL: [16, -6, 0], toeL: [14, 0, 0],
+      upperLegR: [-46, -8, -5], lowerLegR: [80, 0, 0], footR: [18, 6, 0], toeR: [14, 0, 0],
+      tailA: [-34, -4, 0], tailB: [-42, -6, 0], tailC: [-22, -4, 0], tailD: [2, 3, 0],
+    }, pos: [0, -0.10, 0.02], sc: { hips: [0.94, 1.10, 0.95] }, cane: [176, 0, 0] },
+    { t: 0.5, e: 'smooth', P: { hips: [40, -4, 2], head: [6, -4, 2],
+      upperLegL: [-58, 8, 5], lowerLegL: [92, 0, 0], upperLegR: [-52, -8, -5], lowerLegR: [86, 0, 0],
+      tailA: [-38, 4, 0], tailB: [-46, 6, 0] }, pos: [0, -0.12, 0.02], cane: [178, 0, 0] },
+  ],
+});
+
+/* The slam itself: cane driven into the paving, body folded over it, then a proud rise. */
+def('dive_impact', {
+  dur: 0.7, loop: false, hold: 0.11,
+  events: [
+    { t: 0.0, n: 'cane_hit', d: { index: 4 } },
+    { t: 0.0, n: 'land', d: { force: 1.4 } },
+  ],
+  keys: [
+    { t: 0, e: 'snap', P: P({
+      hips: [30, -4, 2], spine: [-10, 2, 1], chest: [-18, 5, -1], neck: [-6, -3, 1], head: [0, -4, 2],
+      shoulderL: [10, 10, -14], upperArmL: [-96, 12, -18], lowerArmL: [-38, -16, -10], handL: [30, -12, -6],
+      shoulderR: [10, -10, 14], upperArmR: [-100, -12, 18], lowerArmR: [-34, 16, 10], handR: [28, 12, 6],
+      upperLegL: [-48, 8, 5], lowerLegL: [80, 0, 0], footL: [12, -6, 0], toeL: [12, 0, 0],
+      upperLegR: [-44, -8, -5], lowerLegR: [76, 0, 0], footR: [14, 6, 0], toeR: [12, 0, 0],
+      tailA: [-30, -4, 0], tailB: [-40, -6, 0], tailC: [-20, -4, 0], tailD: [4, 3, 0],
+    }), pos: [0, -0.16, 0.02], cane: [176, 0, 0] },
+    // the crater frame: everything crushed down over the cane
+    { t: 0.09, e: 'out', P: {
+      hips: [64, -6, 3], spine: [-18, 3, 2], chest: [-32, 8, -2], neck: [-2, -4, 2], head: [6, -6, 4],
+      upperArmL: [-84, 16, -26], lowerArmL: [-56, -20, -12], handL: [36, -14, -8],
+      upperArmR: [-88, -16, 26], lowerArmR: [-52, 20, 12], handR: [34, 14, 8],
+      upperLegL: [-126, 12, 8], lowerLegL: [130, 0, 0], footL: [-14, -10, 0], toeL: [14, 0, 0],
+      upperLegR: [-120, -12, -8], lowerLegR: [126, 0, 0], footR: [-12, 10, 0], toeR: [14, 0, 0],
+      tailA: [40, -8, 0], tailB: [28, -12, 0], tailC: [4, -8, 0], tailD: [-10, 6, 0],
+    }, pos: [0, -0.72, 0.10], sc: { hips: [1.22, 0.70, 1.18], chest: [1.14, 0.82, 1.1], head: [1.08, 0.9, 1.06] }, cane: [172, 0, 0] },
+    { t: 0.22, e: 'smooth', P: { hips: [58, -6, 3], head: [2, -6, 4] },
+      pos: [0, -0.64, 0.10], sc: { hips: [1.14, 0.8, 1.1], chest: [1.08, 0.88, 1.06], head: [1.03, 0.96, 1.02] } },
+    // rise off the planted cane, chest first — the "and that's that" beat
+    { t: 0.46, e: 'out', P: {
+      hips: [4, 14, -8], spine: [-4, -6, 4], chest: [4, -14, 6], neck: [-12, 8, -4], head: [-14, 16, -8],
+      shoulderL: [0, 6, -10], upperArmL: [-16, 8, -34], lowerArmL: [-40, -16, -12], handL: [12, -14, -10],
+      shoulderR: [-4, -8, 14], upperArmR: [-30, -10, 28], lowerArmR: [-56, 20, 18], handR: [14, 16, 10],
+      upperLegL: [-22, 8, 5], lowerLegL: [28, 0, 0], footL: [-8, -6, 0], toeL: [2, 0, 0],
+      upperLegR: [-14, -8, -5], lowerLegR: [20, 0, 0], footR: [-6, 6, 0], toeR: [2, 0, 0],
+      tailA: [0, 16, 0], tailB: [-12, 22, 0], tailC: [8, 15, 0], tailD: [26, -10, 0],
+    }, pos: [0, -0.08, 0.02], sc: { hips: [0.97, 1.05, 0.98], chest: [1, 1, 1], head: [1, 1, 1] }, cane: [120, 20, -6] },
+    { t: 0.7, e: 'soft', P: IDLE_A, pos: [0, -0.014, 0], sc: { hips: [1, 1, 1] }, cane: CANE.shoulder },
+  ],
+});
+
+/* ========================================================================== */
+/*  11. specials                                                              */
+/* ========================================================================== */
+
+/* Pickpocket: he leans in on tiptoe, two fingers extended, and cannot resist grinning at
+   the camera on the way out. Deliberately slow in, fast out. */
+def('pickpocket', {
+  dur: 1.1, loop: false, hold: 0.42,
+  keys: [
+    { t: 0, e: 'in', P: P({
+      hips: [26, -6, 2], spine: [-4, 3, 1], chest: [-6, 8, -2], neck: [-24, -4, 2], head: [-22, -6, 3],
+      shoulderL: [-8, 8, -18], upperArmL: [-40, 14, -30], lowerArmL: [-58, -18, -16],
+      shoulderR: [-8, -8, 18], upperArmR: [-20, -14, 32], lowerArmR: [-54, 20, 18],
+      upperLegL: [-46, 8, 5], lowerLegL: [58, 0, 0], footL: [-10, -6, 0],
+      upperLegR: [-42, -8, -5], lowerLegR: [54, 0, 0], footR: [-8, 6, 0],
+      tailA: [-4, -6, 0], tailB: [-14, -9, 0], tailC: [4, -6, 0], tailD: [22, 5, 0],
+    }), pos: [0, -0.24, 0.06], cane: CANE.out },
+    // the reach — everything stretches after the hand, tail out for counterbalance
+    { t: 0.42, e: 'out', P: {
+      hips: [34, -14, 4], spine: [-2, 6, 2], chest: [0, 16, -4], neck: [-26, -8, 3], head: [-24, -14, 6],
+      shoulderL: [-6, 20, -26], upperArmL: [-86, 26, -34], lowerArmL: [-34, -22, -14], handL: [30, -20, -8],
+      shoulderR: [-10, -12, 22], upperArmR: [4, -20, 46], lowerArmR: [-48, 26, 22], handR: [16, 22, 14],
+      upperLegL: [-58, 10, 6], lowerLegL: [66, 0, 0], footL: [-4, -8, 0], toeL: [12, 0, 0],
+      upperLegR: [-34, -10, -6], lowerLegR: [50, 0, 0], footR: [16, 8, 0], toeR: [14, 0, 0],
+      tailA: [8, -24, 0], tailB: [-2, -32, 0], tailC: [4, -22, 0], tailD: [24, 14, 0],
+    }, pos: [0.01, -0.28, 0.19], sc: { chest: [0.97, 1.04, 0.98] }, cane: [50, -46, 0] },
+    // snatch and snap back with the prize
+    { t: 0.62, e: 'snap', P: {
+      hips: [22, 10, -4], chest: [-6, -12, 4], head: [-20, 12, -6],
+      upperArmL: [-24, 14, -30], lowerArmL: [-76, -18, -16], handL: [18, -16, -10],
+      tailA: [-6, 18, 0], tailB: [-16, 24, 0], tailC: [2, 16, 0], tailD: [22, -10, 0],
+    }, pos: [-0.01, -0.22, 0.03], sc: { chest: [1, 1, 1] }, cane: [60, -20, 0] },
+    { t: 1.1, e: 'soft', P: IDLE_A, pos: [0, -0.014, 0], cane: CANE.shoulder },
+  ],
+});
+
+/* Paraglide: cane held overhead across the wind, body long, legs trailing, drifting. */
+def('paraglide', {
+  dur: 2.0, loop: true, hold: 0.5,
+  keys: [
+    { t: 0, e: 'smooth', P: P({
+      hips: [-16, -8, 4], spine: [6, 4, 2], chest: [10, 10, -3], neck: [-28, -5, 2], head: [-30, -8, 5],
+      shoulderL: [-18, 10, -34], upperArmL: [-20, 20, -112], lowerArmL: [-26, -22, -24], handL: [26, -18, -22],
+      shoulderR: [-18, -10, 34], upperArmR: [-18, -20, 108], lowerArmR: [-24, 22, 24], handR: [24, 20, 22],
+      upperLegL: [10, 12, 6], lowerLegL: [34, 0, 0], footL: [22, -8, 0], toeL: [14, 0, 0],
+      upperLegR: [18, -12, -6], lowerLegR: [28, 0, 0], footR: [26, 8, 0], toeR: [14, 0, 0],
+      tailA: [-22, 10, 0], tailB: [-32, 14, 0], tailC: [-16, 9, 0], tailD: [8, -7, 0],
+    }), pos: [0, -0.04, -0.04], cane: [-92, 0, 0] },
+    { t: 0.7, e: 'smooth', P: { hips: [-12, 8, -4], chest: [10, -10, 3], head: [-30, 8, -5],
+      upperArmL: [-14, 20, -104], upperArmR: [-24, -20, 116],
+      upperLegL: [16, 12, 6], upperLegR: [10, -12, -6],
+      tailA: [-26, -10, 0], tailB: [-36, -14, 0], tailC: [-18, -9, 0], tailD: [6, 7, 0] }, pos: [0, -0.01, -0.04], cane: [-88, 0, 0] },
+    { t: 1.4, e: 'smooth', P: { hips: [-18, -6, 5], chest: [10, 8, -4], head: [-30, -6, 6],
+      upperArmL: [-24, 20, -116], upperArmR: [-14, -20, 104],
+      upperLegL: [6, 12, 6], upperLegR: [22, -12, -6],
+      tailA: [-20, 12, 0], tailB: [-30, 16, 0], tailC: [-15, 11, 0], tailD: [9, -8, 0] }, pos: [0, -0.05, -0.04], cane: [-96, 0, 0] },
+    { t: 2.0, e: 'smooth', P: { hips: [-16, -8, 4], chest: [10, 10, -3], head: [-30, -8, 5],
+      upperArmL: [-20, 20, -112], upperArmR: [-18, -20, 108],
+      upperLegL: [10, 12, 6], upperLegR: [18, -12, -6],
+      tailA: [-22, 10, 0], tailB: [-32, 14, 0], tailC: [-16, 9, 0], tailD: [8, -7, 0] }, pos: [0, -0.04, -0.04], cane: [-92, 0, 0] },
+  ],
+});
+
+/* Hurt: snapped backwards, spine arched, limbs thrown out, then a wincing recovery. */
+def('hurt', {
+  dur: 0.62, loop: false, hold: 0.1,
+  keys: [
+    { t: 0, e: 'snap', P: P({
+      hips: [-24, 12, -8], spine: [-10, -6, 4], chest: [-22, 14, -8], neck: [16, -8, 5], head: [22, 12, -10],
+      shoulderL: [-14, 14, -30], upperArmL: [-56, 20, -76], lowerArmL: [-24, -22, -24], handL: [22, -20, -24],
+      shoulderR: [-14, -14, 30], upperArmR: [-48, -20, 72], lowerArmR: [-22, 22, 24], handR: [20, 22, 24],
+      upperLegL: [-38, 12, 6], lowerLegL: [50, 0, 0], footL: [8, -8, 0], toeL: [10, 0, 0],
+      upperLegR: [-14, -12, -6], lowerLegR: [26, 0, 0], footR: [16, 8, 0], toeR: [10, 0, 0],
+      tailA: [26, -14, 0], tailB: [16, -20, 0], tailC: [-4, -13, 0], tailD: [8, 9, 0],
+      browL: [0, 0, -14], browR: [0, 0, 12], jaw: [14, 0, 0], earL: [-26, 10, -30], earR: [-22, -10, 34],
+    }), pos: [0.02, -0.10, -0.12], sc: { chest: [1.06, 0.94, 1.04] }, cane: [60, 60, 0] },
+    { t: 0.16, e: 'out', P: {
+      hips: [18, 8, -5], chest: [-8, 10, -5], neck: [-8, -5, 3], head: [-6, 8, -6],
+      upperArmL: [-30, 16, -50], upperArmR: [-24, -16, 46],
+      upperLegL: [-58, 10, 5], lowerLegL: [70, 0, 0], upperLegR: [-40, -10, -5], lowerLegR: [56, 0, 0],
+      tailA: [-2, 10, 0], tailB: [-12, 14, 0], tailC: [4, 9, 0], tailD: [20, -7, 0],
+    }, pos: [0, -0.30, 0.02], sc: { chest: [1, 1, 1] }, cane: [86, 20, 0] },
+    { t: 0.36, e: 'out', P: {
+      hips: [10, 4, -2], chest: [2, 4, -2], head: [-12, 6, -4], jaw: [7, 0, 0],
+      upperArmL: [-18, 10, -36], upperArmR: [-12, -10, 34],
+      upperLegL: [-28, 8, 5], lowerLegL: [36, 0, 0], upperLegR: [-20, -8, -5], lowerLegR: [28, 0, 0],
+    }, pos: [0, -0.12, 0.01] },
+    { t: 0.62, e: 'soft', P: IDLE_A, pos: [0, -0.014, 0], cane: CANE.shoulder },
+  ],
+});
+
+/* KO: he folds, drops, bounces once and sprawls. */
+def('ko', {
+  dur: 1.3, loop: false, hold: 0.9,
+  events: [{ t: 0.34, n: 'land', d: { force: 0.9 } }],
+  keys: [
+    { t: 0, e: 'in', P: P({
+      hips: [-18, 10, -6], spine: [-8, -5, 3], chest: [-18, 12, -6], neck: [12, -6, 4], head: [18, 10, -8],
+      upperArmL: [-48, 18, -66], lowerArmL: [-28, -20, -22],
+      upperArmR: [-40, -18, 62], lowerArmR: [-26, 20, 22],
+      upperLegL: [-30, 10, 5], lowerLegL: [42, 0, 0], upperLegR: [-12, -10, -5], lowerLegR: [24, 0, 0],
+      tailA: [20, -10, 0], tailB: [10, -14, 0], tailC: [-6, -9, 0], tailD: [10, 7, 0],
+      jaw: [16, 0, 0], browL: [0, 0, -16], browR: [0, 0, 14],
+    }), pos: [0, -0.08, -0.08], cane: [70, 50, 0] },
+    { t: 0.34, e: 'out', P: {
+      hips: [86, 6, -4], spine: [-16, -3, 2], chest: [-26, 8, -4], neck: [26, -4, 2], head: [30, 6, -5],
+      upperArmL: [-70, 22, -96], lowerArmL: [-14, -22, -26], handL: [16, -22, -26],
+      upperArmR: [-62, -22, 92], lowerArmR: [-12, 22, 26], handR: [14, 22, 26],
+      upperLegL: [-96, 16, 8], lowerLegL: [104, 0, 0], footL: [-8, -12, 0],
+      upperLegR: [-58, -18, -8], lowerLegR: [70, 0, 0], footR: [-4, 14, 0],
+      tailA: [-10, 16, 0], tailB: [-20, 22, 0], tailC: [-10, 15, 0], tailD: [12, -10, 0],
+    }, pos: [0, -0.86, 0.02], sc: { hips: [1.14, 0.82, 1.12], chest: [1.08, 0.9, 1.06] }, cane: [96, 30, 0] },
+    // a small dead bounce
+    { t: 0.46, e: 'out', P: { hips: [80, 6, -4], head: [26, 6, -5] }, pos: [0, -0.80, 0.02], sc: { hips: [1.06, 0.94, 1.05], chest: [1, 1, 1] } },
+    { t: 0.62, e: 'smooth', P: { hips: [90, 8, -5], head: [34, 8, -7],
+      upperArmL: [-76, 22, -100], upperArmR: [-68, -22, 96],
+      upperLegL: [-88, 16, 8], upperLegR: [-52, -18, -8],
+      tailA: [-14, 20, 0], tailB: [-24, 26, 0] }, pos: [0, -0.90, 0.02], sc: { hips: [1.02, 0.97, 1.02] } },
+    { t: 1.3, e: 'soft', P: { head: [32, 10, -8], jaw: [10, 0, 0],
+      tailA: [-12, 14, 0], tailB: [-22, 20, 0], tailC: [-12, 13, 0], tailD: [14, -9, 0] }, pos: [0, -0.91, 0.02] },
+  ],
+});
+
+/* Victory: cane twirl into a shoulder rest, hip cocked, brim tipped. Pure swagger. */
+def('victory', {
+  dur: 2.2, loop: false, hold: 1.5,
+  keys: [
+    { t: 0, e: 'in', P: P({
+      hips: [4, -12, 4], spine: [-2, 6, -2], chest: [4, -14, 5], neck: [-8, 8, -3], head: [-10, -10, 6],
+      shoulderL: [0, 6, -10], upperArmL: [-16, 8, -34], lowerArmL: [-44, -16, -12],
+      shoulderR: [-8, -10, 20], upperArmR: [-10, -16, 44], lowerArmR: [-56, 24, 22], handR: [14, 20, 14],
+      upperLegL: [-10, 8, 4], lowerLegL: [18, 0, 0], footL: [-5, -6, 0],
+      upperLegR: [-8, -8, -4], lowerLegR: [16, 0, 0], footR: [-4, 6, 0],
+      tailA: [0, -14, 0], tailB: [-10, -20, 0], tailC: [6, -13, 0], tailD: [24, 9, 0],
+    }), pos: [0, -0.03, 0], cane: [70, -30, 0] },
+    // the twirl: two full rotations of the cane, body dips with the wind-up
+    { t: 0.34, e: 'lin', P: { hips: [4, -6, 2], chest: [4, -8, 3], head: [-10, -4, 3],
+      upperArmR: [-26, -14, 58], lowerArmR: [-44, 22, 20] }, pos: [0, -0.05, 0], cane: [70, 330, 0] },
+    { t: 0.68, e: 'out', P: { hips: [4, 6, -3], chest: [4, 8, -4], head: [-8, 8, -4],
+      upperArmR: [4, -18, 30], lowerArmR: [-66, 26, 24] }, pos: [0, -0.02, 0], cane: [70, 690, 0] },
+    // catch it on the shoulder and pop the hip — the pose he holds
+    { t: 0.9, e: 'out', P: Object.assign({}, IDLE_A, {
+      hips: [1, 18, -11], chest: [2, -18, 8], head: [-10, 20, -12], jaw: [6, 0, 0],
+      browL: [0, 0, 14], browR: [0, 0, -10],
+      shoulderR: [-6, -10, 18], upperArmR: [10, -16, 4], lowerArmR: [-80, 32, 24], handR: [-8, 18, 12],
+      upperArmL: [-14, 8, -26], lowerArmL: [-38, -18, -16], handL: [14, -18, -14],
+      tailA: [22, -12, 0], tailB: [26, -17, 0], tailC: [15, 10, 0], tailD: [-14, 22, 0],
+    }), pos: [0.01, -0.02, 0], sc: { chest: [1.03, 1.03, 1.03] }, cane: [-118, -20, 6] },
+    // tip the brim, wink
+    { t: 1.5, e: 'smooth', P: { upperArmL: [-24, 14, -18], lowerArmL: [-84, -26, -18], handL: [24, -20, -10],
+      head: [-8, 22, -14], capBrim: [10, 0, -6], browL: [0, 0, 18], earL: [-16, 8, -20] } },
+    { t: 1.9, e: 'out', P: { upperArmL: [-14, 8, -28], lowerArmL: [-40, -18, -16], handL: [14, -18, -14],
+      head: [-11, 19, -12], capBrim: [2, 0, -3], browL: [0, 0, 10] } },
+    { t: 2.2, e: 'soft', P: IDLE_A, pos: [0, -0.014, 0], sc: { chest: [1, 1, 1] }, cane: CANE.shoulder },
+  ],
+});
+
+/* ========================================================================== */
+/*  12. mirrored variants                                                     */
+/* ========================================================================== */
+
+/** Mirror an entire authored clip. Cheaper than authoring twice and guaranteed symmetric. */
+function defMirror(name, src) {
+  const s = RAW[src];
+  if (!s) return;
+  RAW[name] = {
+    ...s,
+    keys: s.keys.map((k) => {
+      const out = { t: k.t, e: k.e, P: mir(k.P) };
+      if (k.pos) out.pos = mirPos(k.pos);
+      if (k.sc) {
+        out.sc = {};
+        for (const b in k.sc) {
+          const last = b[b.length - 1];
+          const n = last === 'L' ? `${b.slice(0, -1)}R` : last === 'R' ? `${b.slice(0, -1)}L` : b;
+          out.sc[n] = k.sc[b];
+        }
+      }
+      // The cane never changes hands, but its sweep does flip with the body.
+      if (k.cane) out.cane = [k.cane[0], -k.cane[1], -k.cane[2]];
+      return out;
+    }),
+    events: (s.events || []).map((e) => ({
+      ...e,
+      d: e.d ? { ...e.d, foot: e.d.foot === 'L' ? 'R' : e.d.foot === 'R' ? 'L' : e.d.foot } : e.d,
+    })),
+  };
+}
+
+defMirror('turn_r', 'turn_l');
+defMirror('wall_run_r', 'wall_run_l');
+defMirror('ledge_shimmy_r', 'ledge_shimmy_l');
 
 /* ========================================================================== */
 /*  compile                                                                   */
