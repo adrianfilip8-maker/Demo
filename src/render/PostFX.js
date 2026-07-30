@@ -33,17 +33,17 @@ const TUNE = {
   bloomMips: 6,
 
   /* --- grade --- */
-  exposure: 1.0,
-  contrast: 1.06,
-  saturation: 1.14,
-  lift: [0.004, 0.002, 0.012],     // a touch of violet in the toe
-  gain: [1.03, 1.0, 0.96],         // warm the highlights
+  exposure: 1.45,                  // the scene renders dark; lift before the tonemap toe
+  contrast: 1.04,
+  saturation: 1.16,
+  lift: [0.012, 0.010, 0.020],     // open the toe so shadows keep readable detail (§7.3)
+  gain: [1.04, 1.0, 0.95],         // warm the highlights
   splitShadow: 0x2a3f66,           // §2.2 shadow hue
   splitHighlight: 0xffd9a0,        // §2.2 sun
-  splitStrength: 0.16,
+  splitStrength: 0.22,             // hue-only now, so it can afford to be stronger
 
   /* --- finishing --- */
-  vignette: 0.28,
+  vignette: 0.16,                  // was compounding with dark shadows into a black frame
   chroma: 0.0016,         // edge-only chromatic aberration, in uv
   grain: 0.016,
 };
@@ -75,7 +75,10 @@ void main() {
   float dC = slyLinearZ( texture2D( uDepth, vUv + vec2(  o.x, -o.y ) ).x );
   float dD = slyLinearZ( texture2D( uDepth, vUv + vec2( -o.x,  o.y ) ).x );
   float dEdge = ( abs( dA - dB ) + abs( dC - dD ) ) / max( 0.35, z0 );
-  float depthLine = smoothstep( 0.0028 * uParams.x, 0.010 * uParams.x, dEdge );
+  // These thresholds were ~10x too sensitive: a 0.3% relative depth step fired a line, so
+  // every course of masonry got inked and the architecture read as a circuit board. Creases
+  // worth drawing are real steps in the form, not block joints the texture already shows.
+  float depthLine = smoothstep( 0.030 * uParams.x, 0.075 * uParams.x, dEdge );
 
   // Normal discontinuity catches creases between coplanar-depth faces — a wall meeting a
   // wall at 90 degrees has almost no depth step at the corner but a hard normal step.
@@ -85,7 +88,9 @@ void main() {
   vec3 nC = slyDecodeNormal( texture2D( uNormal, vUv + vec2(  o.x, -o.y ) ).xyz );
   vec3 nD = slyDecodeNormal( texture2D( uNormal, vUv + vec2( -o.x,  o.y ) ).xyz );
   float nEdge = ( 1.0 - dot( nA, nB ) ) + ( 1.0 - dot( nC, nD ) );
-  float normalLine = smoothstep( 0.10, 0.10 + ( 1.0 - uParams.y ) * 0.9, nEdge );
+  // Only genuine corners, not the chamfers and facets every block carries. 0.55 is roughly
+  // a 60-degree fold; below that the shading already separates the surfaces.
+  float normalLine = smoothstep( 0.55, 0.55 + ( 1.0 - uParams.y ) * 0.75, nEdge );
 
   float line = max( depthLine, normalLine );
   // Thin the lines out with distance rather than cutting them, or the transition pops.
@@ -193,16 +198,16 @@ void main() {
   scene.g = texture2D( uScene, vUv ).g;
   scene.b = texture2D( uScene, vUv - ca ).b;
 
-  // AO multiplies ambient only. We don't have a separate ambient buffer, so approximate:
-  // occlude proportionally to how *dark* the pixel already is, which leaves lit surfaces
-  // alone and deepens the crevices that were only ever ambient-lit.
+  // AO, applied evenly and gently with a floor.
+  //
+  // This previously scaled occlusion by how *dark* the pixel already was, meaning shadowed
+  // areas received maximum occlusion — a feedback loop straight to black that crushed the
+  // bottom two-thirds of the frame and tripped §7.3's "shadows crush to zero detail".
+  // Occlusion is a property of the geometry, not of the pixel's current brightness.
   if ( uAOEnabled > 0.5 ) {
     float ao = texture2D( uAO, vUv ).r;
-    float lum = slyLuma( scene );
-    float ambientish = 1.0 - smoothstep( 0.10, 0.85, lum );
-    float occ = mix( 1.0, ao, ambientish * 0.9 );
-    // Tint the occlusion violet rather than grey — §7.3 fails grey shadows.
-    scene = mix( scene * occ, uSplitShadow * slyLuma( scene ) * occ, ( 1.0 - occ ) * 0.35 );
+    float occ = mix( 1.0, max( ao, 0.35 ), 0.7 );
+    scene *= occ;
   }
 
   if ( uBloomEnabled > 0.5 ) {
@@ -214,11 +219,14 @@ void main() {
   c = max( vec3( 0.0 ), c + uLift * ( 1.0 - c ) );
   c *= uGain;
 
-  // Split-tone toward the palette's complementary pair. This is the single cheapest thing
-  // that makes a frame read as graded film rather than as raw render output.
+  // Split-tone toward the palette's complementary pair. Normalised so the tint shifts hue
+  // without changing brightness — multiplying by a dark blue like #2a3f66 (as this did) both
+  // darkened and desaturated the whole frame toward lavender, which is why the sandstone
+  // stopped reading as warm stone.
   float l = slyLuma( c );
   vec3 tone = mix( uSplitShadow, uSplitHighlight, smoothstep( 0.08, 0.72, l ) );
-  c = mix( c, c * tone * 1.7, uSplitStrength );
+  tone /= max( 1e-4, slyLuma( tone ) );      // hue only, unit luminance
+  c = mix( c, c * tone, uSplitStrength );
 
   c = mix( vec3( l ), c, uSaturation );
   c = ( c - 0.5 ) * uContrast + 0.5;
@@ -233,9 +241,13 @@ void main() {
   /* ---- ink lines, applied after tonemap so they stay solid black rather than glowing ---- */
   if ( uEdgeEnabled > 0.5 ) {
     float line = texture2D( uEdge, vUv ).r;
+    float lum = slyLuma( c );
+    // Don't ink what's already dark. A black line on a near-black surface adds nothing but
+    // noise, and it was a large part of why the shadowed half of the frame turned to mush.
+    line *= smoothstep( 0.06, 0.22, lum );
     // Warm ink where the surface is lit, violet ink where it's in shadow (§2.1).
-    vec3 ink = mix( uInkCool, uInkWarm, smoothstep( 0.12, 0.55, slyLuma( c ) ) );
-    c = mix( c, ink, clamp( line, 0.0, 1.0 ) );
+    vec3 ink = mix( uInkCool, uInkWarm, smoothstep( 0.12, 0.55, lum ) );
+    c = mix( c, ink, clamp( line, 0.0, 1.0 ) * 0.85 );
   }
 
   /* ---- finishing ---- */

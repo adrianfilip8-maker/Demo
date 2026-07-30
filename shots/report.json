@@ -1,37 +1,21 @@
 {
-  "at": "2026-07-30T12:48:26.474Z",
+  "at": "2026-07-30T13:04:36.697Z",
   "width": 960,
   "height": 540,
   "quality": "med",
   "shots": {
     "hero": {
       "file": "shots/hero.png",
-      "ms": 6.7999999998137355,
-      "fps": 62,
+      "ms": 7.099999999627471,
+      "fps": 67,
       "drawCalls": 413,
       "triangles": 1732921,
       "programs": 54
     },
-    "temple": {
-      "file": "shots/temple.png",
-      "ms": 5.899999999906868,
-      "fps": 56,
-      "drawCalls": 413,
-      "triangles": 1788305,
-      "programs": 54
-    },
-    "dunes": {
-      "file": "shots/dunes.png",
-      "ms": 6.5,
-      "fps": 56,
-      "drawCalls": 387,
-      "triangles": 1613081,
-      "programs": 54
-    },
     "sly-closeup": {
       "file": "shots/sly-closeup.png",
-      "ms": 6.100000000093132,
-      "fps": 60,
+      "ms": 6,
+      "fps": 58,
       "drawCalls": 395,
       "triangles": 1756501,
       "programs": 54
@@ -58,21 +42,20 @@
     "audio": false
   },
   "bootWarnings": [
-    "textures: prewarm took 36.5s at size 1024",
+    "textures: prewarm took 37.9s at size 1024",
     "collision: pole \"unnamed\" has no userData.spline — synthesised one from its bounds",
     "collision: pole \"proxy:pole\" has no userData.spline — synthesised one from its bounds",
     "running with placeholder world; missing modules: props, animation, guards, fx, audio, hud"
   ],
   "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
   "warnings": [
-    "textures: prewarm took 36.5s at size 1024",
+    "textures: prewarm took 37.9s at size 1024",
     "collision: pole \"unnamed\" has no userData.spline — synthesised one from its bounds",
     "collision: pole \"proxy:pole\" has no userData.spline — synthesised one from its bounds",
     "running with placeholder world; missing modules: props, animation, guards, fx, audio, hud"
   ],
   "consoleErrors": [
     "Failed to load resource: the server responded with a status of 404 (Not Found)",
-    "THREE.WebGLProgram: Shader Error 0 - VALIDATE_STATUS false\n\nMaterial Name: postfx.gtao\nMaterial Type: ShaderMaterial\n\nProgram Info Log: Fragment shader is not compiled.\n\u0000\n\nFRAGMENT\n\nERROR: 0:73: 'uNearFar' : redefinition\n\u0000\n\n  68: uniform vec4 uParams;      // x radius(m)  y thickness(m)  z power  w distanceFalloff\n  69: uniform vec2 uFadeRange;   // start, end distance in metres — AO is a contact cue, not a fog\n  70: \n  71: \n  72: uniform mat4 uProjInv;\n> 73: uniform vec2 uNearFar;\n  74: \n  75: float slyLuma( vec3 c ) { return dot( c, vec3( 0.2126, 0.7152, 0.0722 ) ); }\n  76: \n  77: /** Raw depth buffer value -> positive distance along the view axis, in metres. */\n  78: float slyLinearZ( float d ) {\n  79:   // perspectiveDepthToViewZ, sign-flipped so callers deal in positive metres.",
-    "THREE.WebGLProgram: Shader Error 1282 - VALIDATE_STATUS false\n\nMaterial Name: postfx.composite\nMaterial Type: ShaderMaterial\n\nProgram Info Log: Fragment shader is not compiled.\n\u0000\n\nFRAGMENT\n\nERROR: 0:217: 'slyAgX' : no matching overloaded function found\nERROR: 0:217: '=' : dimension mismatch\nERROR: 0:217: 'assign' : cannot convert from 'const mediump float' to 'highp 3-component vector of float'\nERROR: 0:233: 'slyIGN' : no matching overloaded function found\n\u0000\n\n  212:   c = mix( vec3( l ), c, uSaturation );\n  213:   c = ( c - 0.5 ) * uContrast + 0.5;\n  214:   c = max( vec3( 0.0 ), c );\n  215: \n  216:   /* ---- tonemap: exactly once, here ---- */\n> 217:   c = slyAgX( c );\n  218: \n  219:   /* ---- ink lines, applied after tonemap so they stay solid black rather than glowing ---- */\n  220:   if ( uEdgeEnabled > 0.5 ) {\n  221:     float line = texture2D( uEdge, vUv ).r;\n  222:     // Warm ink where the surface is lit, violet ink where it's in shadow (§2.1).\n  223:     vec3 ink = mix( uInkCool, uInkWarm, smoothstep( 0.12, 0.55, slyLuma( c ) ) );"
+    "THREE.WebGLProgram: Shader Error 0 - VALIDATE_STATUS false\n\nMaterial Name: postfx.gtao\nMaterial Type: ShaderMaterial\n\nProgram Info Log: Fragment shader is not compiled.\n\u0000\n\nFRAGMENT\n\nERROR: 0:73: 'uNearFar' : redefinition\n\u0000\n\n  68: uniform vec4 uParams;      // x radius(m)  y thickness(m)  z power  w distanceFalloff\n  69: uniform vec2 uFadeRange;   // start, end distance in metres — AO is a contact cue, not a fog\n  70: \n  71: \n  72: uniform mat4 uProjInv;\n> 73: uniform vec2 uNearFar;\n  74: \n  75: float slyLuma( vec3 c ) { return dot( c, vec3( 0.2126, 0.7152, 0.0722 ) ); }\n  76: \n  77: /** Raw depth buffer value -> positive distance along the view axis, in metres. */\n  78: float slyLinearZ( float d ) {\n  79:   // perspectiveDepthToViewZ, sign-flipped so callers deal in positive metres."
   ]
 }
