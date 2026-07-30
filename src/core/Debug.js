@@ -80,9 +80,20 @@ export class Debug {
        * it captures exactly the rendered frame with no compositor timing involved.
        * (Engine sets preserveDrawingBuffer so the buffer is still valid here.)
        */
-      capture: () => {
+      capture: (mime = 'image/png', quality = 0.92, maxWidth = 0) => {
         engine.renderFrame(0);      // guarantee the buffer holds the current frame
-        return engine.canvas.toDataURL('image/png');
+        const src = engine.canvas;
+        if (!maxWidth || src.width <= maxWidth) return src.toDataURL(mime, quality);
+        // Downscale for the progress page, which embeds every shot as a data URI.
+        const s = maxWidth / src.width;
+        const c = document.createElement('canvas');
+        c.width = Math.round(src.width * s);
+        c.height = Math.round(src.height * s);
+        const g = c.getContext('2d');
+        g.imageSmoothingEnabled = true;
+        g.imageSmoothingQuality = 'high';
+        g.drawImage(src, 0, 0, c.width, c.height);
+        return c.toDataURL(mime, quality);
       },
 
       /** Return the camera to gameplay control. */

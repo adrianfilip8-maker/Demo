@@ -1,0 +1,673 @@
+import * as THREE from 'three';
+
+/**
+ * Kit — the parametric building-block library for the Temple of Ra.
+ *
+ * Every piece here exists because the silhouette matters more than the archaeology:
+ * pylons lean, columns are fat at the base, cornices overhang absurdly, and no two blocks
+ * in a course are the same length. Nothing is textured here — Kit hands back raw
+ * BufferGeometry in *local* space with world-scale UVs, and Architecture merges it.
+ *
+ * Conventions
+ *   - Local space: +X = "along" (length), +Y = up, +Z = "outward" (face normal / thickness).
+ *   - Every geometry has exactly position / normal / uv so merges never fail.
+ *   - UVs are at a consistent world scale: UV_PER_M units per metre (1 unit ≈ 2 m), so
+ *     TEXTURES' `repeat` values behave the same on a paving slab and on a pylon.
+ *   - All randomness arrives as an `rng` from core/Rand.js. Never Math.random.
+ */
+
+/** 1 UV unit per 2 m — the whole project's texel density contract. */
+export const UV_PER_M = 0.5;
+
+const _v = new THREE.Vector3();
+const _m = new THREE.Matrix4();
+const _q = new THREE.Quaternion();
+const _e = new THREE.Euler();
+
+/* ============================ helpers ================================== */
+
+/** Strip everything but position/normal/uv so mergeGeometries never mismatches. */
+export function normaliseAttrs(geo) {
+  for (const k of Object.keys(geo.attributes)) {
+    if (k !== 'position' && k !== 'normal' && k !== 'uv') geo.deleteAttribute(k);
+  }
+  if (!geo.attributes.normal) geo.computeVertexNormals();
+  if (!geo.attributes.uv) {
+    const n = geo.attributes.position.count;
+    geo.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(n * 2), 2));
+  }
+  return geo;
+}
+
+/**
+ * Box-project UVs from the *current* vertex positions using the dominant normal axis.
+ * Because it runs after the geometry is placed, neighbouring blocks share one continuous
+ * projection — the thing that stops merged masonry from looking like a UV patchwork.
+ */
+export function boxProjectUVs(geo, s = UV_PER_M) {
+  const pos = geo.attributes.position, nor = geo.attributes.normal;
+  const uv = geo.attributes.uv || new THREE.BufferAttribute(new Float32Array(pos.count * 2), 2);
+  for (let i = 0; i < pos.count; i++) {
+    const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
+    const nx = Math.abs(nor.getX(i)), ny = Math.abs(nor.getY(i)), nz = Math.abs(nor.getZ(i));
+    let u, v;
+    if (ny >= nx && ny >= nz) { u = x * s; v = z * s; }
+    else if (nx >= nz) { u = z * s; v = y * s; }
+    else { u = x * s; v = y * s; }
+    uv.setXY(i, u, v);
+  }
+  geo.setAttribute('uv', uv);
+  uv.needsUpdate = true;
+  return geo;
+}
+
+/** Place a local-space geometry into world space. Rotations are radians. */
+export function place(geo, { x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0, sx = 1, sy = 1, sz = 1 } = {}) {
+  _e.set(rx, ry, rz, 'YXZ');
+  _q.setFromEuler(_e);
+  _m.compose(_v.set(x, y, z), _q, new THREE.Vector3(sx, sy, sz));
+  geo.applyMatrix4(_m);
+  return geo;
+}
+
+export function mergeAll(list) {
+  const clean = list.filter(Boolean);
+  if (!clean.length) return null;
+  for (const g of clean) normaliseAttrs(g);
+  // Lazily imported to keep this module usable without the example utils at parse time.
+  return clean.length === 1 ? clean[0] : _merge(clean);
+}
+
+let _mergeFn = null;
+export function setMergeFn(fn) { _mergeFn = fn; }
+function _merge(list) {
+  if (!_mergeFn) return list[0];
+  const g = _mergeFn(list, false);
+  for (const x of list) x.dispose?.();
+  return g || list[0];
+}
+
+/* ============================ blocks =================================== */
+
+/**
+ * One masonry block. Corners are grouped by position so the box stays watertight while
+ * every one of them drifts a centimetre or two — the cheapest possible "cut by hand" tell.
+ * `chip` knocks a single corner well in so the silhouette gets a genuine broken bite.
+ */
+export function block(w, h, d, opts = {}) {
+  const { rng, jitter = 0.02, chip = 0, taper = 0, lean = 0 } = opts;
+  const geo = new THREE.BoxGeometry(w, h, d, 1, 1, 1);
+  const pos = geo.attributes.position;
+
+  // corner key -> offset
+  const off = new Map();
+  const key = (x, y, z) => `${x > 0 ? 1 : 0}${y > 0 ? 1 : 0}${z > 0 ? 1 : 0}`;
+  const chipCorner = chip > 0 && rng ? rng.int(0, 7) : -1;
+  for (let cx = 0; cx < 2; cx++) for (let cy = 0; cy < 2; cy++) for (let cz = 0; cz < 2; cz++) {
+    const id = cx * 4 + cy * 2 + cz;
+    let ox = 0, oy = 0, oz = 0;
+    if (rng) {
+      ox = rng.jitter(jitter); oy = rng.jitter(jitter); oz = rng.jitter(jitter);
+    }
+    // Taper: shrink the top face. Lean: shear the whole block sideways with height.
+    if (cy === 1) { const t = taper * 0.5; ox += cx ? -t : t; oz += cz ? -t : t; ox += lean; }
+    if (id === chipCorner) {
+      const c = chip * (rng ? rng.range(0.55, 1.0) : 1);
+      ox += cx ? -c : c; oy += cy ? -c * 0.7 : c * 0.7; oz += cz ? -c : c;
+    }
+    off.set(`${cx}${cy}${cz}`, [ox, oy, oz]);
+  }
+  for (let i = 0; i < pos.count; i++) {
+    const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
+    const o = off.get(key(x, y, z));
+    pos.setXYZ(i, x + o[0], y + o[1], z + o[2]);
+  }
+  geo.computeVertexNormals();
+  return geo;
+}
+
+/* ========================= masonry courses ============================= */
+
+/**
+ * A battered masonry shell: four faces of individually placed blocks around a rectangle,
+ * every course stepped inward so the whole mass leans. This is the shape that makes a
+ * pylon read as Egyptian from a hundred metres away, so the batter is deliberately
+ * exaggerated (default ~7°, roughly double the real thing).
+ *
+ * Returns geometry centred on the footprint, base at y = 0.
+ *
+ * openings: [{ face, a0, a1, y0, y1 }]  face 0=+Z 1=-Z 2=+X 3=-X, `a` is the along-axis
+ * coordinate measured from the footprint centre. Blocks overlapping a hole are dropped.
+ */
+export function masonryShell(o) {
+  const {
+    w, d, h, batter = 0.09, course = 0.62, thick = 0.9, rng,
+    blockLen = [1.15, 2.0], recess = 0.055, chip = 0.16, chipChance = 0.18,
+    gapChance = 0.04, buried = 0, openings = [], quoin = true, courseJitter = 0.018,
+    tiltDeg = 0.3, hollow = true,
+  } = o;
+
+  const out = [];
+  const nCourse = Math.max(1, Math.round(h / course));
+  const ch = h / nCourse;
+
+  for (let c = 0; c < nCourse; c++) {
+    const yb = c * ch, yc = yb + ch * 0.5;
+    const inset = batter * yc;
+    const wc = Math.max(1.2, w - 2 * inset);
+    const dc = Math.max(1.2, d - 2 * inset);
+    // Bottom courses sink into the sand — never let the base sit on a crisp line.
+    const sink = buried > 0 && yb < buried ? (buried - yb) * 0.55 : 0;
+
+    // Quoin interlock: alternate which pair of faces owns the corners.
+    const xOwnsCorner = quoin ? c % 2 === 0 : true;
+    const faces = [
+      { f: 0, len: xOwnsCorner ? wc : wc - 2 * thick, axis: 'x', sign: +1, cross: dc * 0.5 },
+      { f: 1, len: xOwnsCorner ? wc : wc - 2 * thick, axis: 'x', sign: -1, cross: dc * 0.5 },
+      { f: 2, len: xOwnsCorner ? dc - 2 * thick : dc, axis: 'z', sign: +1, cross: wc * 0.5 },
+      { f: 3, len: xOwnsCorner ? dc - 2 * thick : dc, axis: 'z', sign: -1, cross: wc * 0.5 },
+    ];
+
+    for (const face of faces) {
+      if (face.len <= 0.6) continue;
+      let a = -face.len * 0.5;
+      let guard = 0;
+      while (a < face.len * 0.5 - 0.15 && guard++ < 200) {
+        let bl = rng ? rng.range(blockLen[0], blockLen[1]) : (blockLen[0] + blockLen[1]) * 0.5;
+        bl = Math.min(bl, face.len * 0.5 - a);
+        if (bl < 0.45) break;
+        const ac = a + bl * 0.5;
+        a += bl + (rng ? rng.range(0.012, 0.05) : 0.03);
+
+        // hole test
+        let skip = false;
+        for (const op of openings) {
+          if (op.face !== face.f) continue;
+          const y0 = op.y0 ?? -1, y1 = op.y1 ?? 1e3;
+          if (yb + ch > y0 && yb < y1 && ac + bl * 0.5 > op.a0 && ac - bl * 0.5 < op.a1) { skip = true; break; }
+        }
+        if (skip) continue;
+        if (rng && rng.chance(gapChance) && yb > 1.2) continue;   // a block has fallen out
+
+        // Mortar recess: pull most blocks back from the face plane so shadow catches the joint.
+        const rec = rng ? rng.range(0.2, 1.0) * recess : recess * 0.6;
+        const doChip = rng ? rng.chance(chipChance) : false;
+        const g = block(
+          face.axis === 'x' ? bl : thick, ch * 0.985, face.axis === 'x' ? thick : bl,
+          { rng, jitter: courseJitter, chip: doChip ? chip : 0 }
+        );
+        const ry = rng ? THREE.MathUtils.degToRad(rng.jitter(tiltDeg)) : 0;
+        const px = face.axis === 'x' ? ac : face.sign * (face.cross - thick * 0.5 - rec);
+        const pz = face.axis === 'x' ? face.sign * (face.cross - thick * 0.5 - rec) : ac;
+        place(g, {
+          x: px, y: yb + ch * 0.5 - sink, z: pz,
+          ry, rz: rng ? THREE.MathUtils.degToRad(rng.jitter(tiltDeg * 0.6)) : 0,
+        });
+        out.push(g);
+      }
+    }
+
+    if (!hollow) {
+      // Solid core for small masses (piers): one cheap box behind the skin.
+      const core = block(Math.max(0.2, wc - thick * 1.7), ch, Math.max(0.2, dc - thick * 1.7), { rng, jitter: 0.01 });
+      place(core, { y: yb + ch * 0.5 - sink });
+      out.push(core);
+    }
+  }
+  const g = mergeAll(out);
+  return g ? boxProjectUVs(g) : null;
+}
+
+/** Flat slab / lintel / architrave built from a short run of blocks so the joints show. */
+export function beam(len, h, d, opts = {}) {
+  const { rng, pieces = Math.max(1, Math.round(len / 2.2)), crack = 0, chip = 0.1 } = opts;
+  const out = [];
+  let a = -len * 0.5;
+  for (let i = 0; i < pieces; i++) {
+    const bl = (len / pieces) - (i < pieces - 1 ? 0.03 : 0);
+    const g = block(bl, h, d, { rng, jitter: 0.014, chip: rng && rng.chance(0.25) ? chip : 0 });
+    // A cracked lintel: one joint opens and the piece beyond it sags a fraction of a degree.
+    const sag = crack > 0 && i >= pieces / 2 ? crack : 0;
+    place(g, {
+      x: a + bl * 0.5, y: -sag * 0.5,
+      rz: THREE.MathUtils.degToRad(sag * 14 + (rng ? rng.jitter(0.25) : 0)),
+      ry: rng ? THREE.MathUtils.degToRad(rng.jitter(0.3)) : 0,
+    });
+    out.push(g);
+    a += bl + 0.03;
+  }
+  const g = mergeAll(out);
+  return g ? boxProjectUVs(g) : null;
+}
+
+/* ======================= swept mouldings =============================== */
+
+/**
+ * Sweep a 2D profile ([out, up] pairs) along X. Indexed so normals average along the
+ * profile — a cavetto has to read as a smooth hollow, not as a staircase.
+ */
+export function sweep(profile, len, opts = {}) {
+  const { caps = true, s = UV_PER_M } = opts;
+  const n = profile.length;
+  const verts = [], uvs = [], idx = [];
+  // arclength for V so the moulding's texture doesn't stretch through the curve
+  const arc = [0];
+  for (let i = 1; i < n; i++) {
+    arc[i] = arc[i - 1] + Math.hypot(profile[i][0] - profile[i - 1][0], profile[i][1] - profile[i - 1][1]);
+  }
+  for (let i = 0; i < n; i++) {
+    for (let e = 0; e < 2; e++) {
+      const x = (e ? 0.5 : -0.5) * len;
+      verts.push(x, profile[i][1], profile[i][0]);
+      uvs.push(x * s, arc[i] * s);
+    }
+  }
+  for (let i = 0; i < n - 1; i++) {
+    const a = i * 2, b = a + 1, c = a + 2, dd = a + 3;
+    idx.push(a, c, b, b, c, dd);
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
+  geo.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+  geo.setIndex(idx);
+  geo.computeVertexNormals();
+
+  if (!caps) return geo;
+  // End caps: fan the profile so mitred corners don't show daylight.
+  const capGeos = [geo];
+  for (const e of [-0.5, 0.5]) {
+    const cv = [], cu = [], ci = [];
+    for (let i = 0; i < n; i++) {
+      cv.push(e * len, profile[i][1], profile[i][0]);
+      cu.push(profile[i][0] * s, profile[i][1] * s);
+      cv.push(e * len, profile[i][1], 0);
+      cu.push(0, profile[i][1] * s);
+    }
+    for (let i = 0; i < n - 1; i++) {
+      const a = i * 2, b = a + 1, c = a + 2, dd = a + 3;
+      if (e > 0) ci.push(a, c, b, b, c, dd); else ci.push(a, b, c, b, dd, c);
+    }
+    const cg = new THREE.BufferGeometry();
+    cg.setAttribute('position', new THREE.Float32BufferAttribute(cv, 3));
+    cg.setAttribute('uv', new THREE.Float32BufferAttribute(cu, 2));
+    cg.setIndex(ci);
+    cg.computeVertexNormals();
+    capGeos.push(cg);
+  }
+  return mergeAll(capGeos);
+}
+
+/**
+ * The Egyptian cornice profile: a torus roll moulding, then a cavetto hollow flaring out,
+ * capped by a flat fillet. Nearly vertical where it leaves the wall, then it throws itself
+ * outward at the top — that overhang is the whole silhouette, so `flare` is generous.
+ */
+export function corniceProfile({ h = 2.0, flare = 1.15, roll = 0.42, steps = 9 } = {}) {
+  const p = [[0, 0]];
+  // torus roll: half-round bulging out of the wall face
+  for (let i = 0; i <= 6; i++) {
+    const t = i / 6, a = -Math.PI * 0.5 + t * Math.PI;
+    p.push([roll * Math.cos(a) * 0.92 + 0.02, roll + roll * Math.sin(a)]);
+  }
+  const y0 = roll * 2;
+  for (let i = 1; i <= steps; i++) {
+    const t = i / steps;
+    p.push([0.04 + flare * (1 - Math.cos(t * Math.PI * 0.5)), y0 + h * t]);
+  }
+  const top = y0 + h;
+  p.push([flare + 0.2, top]);           // fillet slab, undercut face
+  p.push([flare + 0.2, top + 0.34]);
+  p.push([0, top + 0.34]);              // walkable top, back to the wall plane
+  return { profile: p, height: top + 0.34, flare: flare + 0.2 };
+}
+
+/** Cornice ring around a rectangular mass. Sides overlap at the corners; rolls hide it. */
+export function cornice({ w, d, h = 2.0, flare = 1.15, roll = 0.42 }) {
+  const { profile, height, flare: f } = corniceProfile({ h, flare, roll });
+  const out = [];
+  const ext = f * 2 + 0.1;
+  for (const [len, ry, px, pz] of [
+    [w + ext, 0, 0, d * 0.5], [w + ext, Math.PI, 0, -d * 0.5],
+    [d + ext, Math.PI * 0.5, w * 0.5, 0], [d + ext, -Math.PI * 0.5, -w * 0.5, 0],
+  ]) {
+    const g = sweep(profile, len);
+    place(g, { x: px, z: pz, ry });
+    out.push(g);
+  }
+  const g = mergeAll(out);
+  return { geo: g, height };
+}
+
+/** Vertical torus rolls down the corners of a battered mass — the other half of the motif. */
+export function cornerRolls({ w, d, h, r = 0.4, batter = 0.09, rng }) {
+  const out = [];
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
+    const g = new THREE.CylinderGeometry(r * 0.82, r, h, 9, 1, false);
+    normaliseAttrs(g);
+    // Lean with the batter so the roll hugs the wall for its whole run.
+    const lean = Math.atan(batter);
+    place(g, {
+      x: sx * (w * 0.5 - r * 0.35), y: h * 0.5, z: sz * (d * 0.5 - r * 0.35),
+      rx: sz * lean, rz: -sx * lean,
+    });
+    out.push(g);
+  }
+  const g = mergeAll(out);
+  return g ? boxProjectUVs(g) : null;
+}
+
+/* ========================== columns ==================================== */
+
+/**
+ * A closed-bud papyrus column. Eight shallow lobes run the whole height so the shaft reads
+ * as a bundle of stems, the capital swells to a belly and then closes in again, and the
+ * cord bands under it are cut as real geometry rather than left to the texture.
+ * Fat at the base, hard taper: r 1.9 -> 1.4 per the art bible.
+ */
+export function papyrusColumn(o = {}) {
+  const {
+    hShaft = 13.2, rBase = 1.9, rTop = 1.4, capH = 2.4, abacus = 0.62,
+    seg = 22, lobes = 8, rib = 0.055, rng, bandCount = 5,
+  } = o;
+
+  const prof = [];   // [y, r, ribScale]
+  const push = (y, r, rs = 1) => prof.push([y, r, rs]);
+
+  // base torus + plinth flare — the foot of the column has to look planted
+  push(0, rBase * 1.16, 0.25);
+  push(0.28, rBase * 1.16, 0.35);
+  push(0.42, rBase * 1.02, 0.6);
+  const shaftSegs = 9;
+  for (let i = 0; i <= shaftSegs; i++) {
+    const t = i / shaftSegs;
+    // Entasis: taper accelerates toward the top so it never looks like a straight cone.
+    const r = rBase + (rTop - rBase) * Math.pow(t, 0.78);
+    push(0.42 + (hShaft - 0.42) * t, r, 1);
+  }
+  // cord bands: the papyrus bundle tied under the capital
+  let y = hShaft;
+  for (let b = 0; b < bandCount; b++) {
+    const bh = 0.12;
+    push(y, rTop * 1.05, 0.35); push(y + bh, rTop * 1.08, 0.3);
+    push(y + bh, rTop * 0.985, 0.5); push(y + bh + 0.055, rTop * 0.985, 0.5);
+    y += bh + 0.055;
+  }
+  // closed bud: swell to the belly then draw back in at the top
+  const capBase = y;
+  const bud = [
+    [0.00, 1.02], [0.16, 1.30], [0.34, 1.63], [0.52, 1.83],
+    [0.68, 1.91], [0.82, 1.85], [0.92, 1.66], [1.00, 1.50],
+  ];
+  for (const [t, k] of bud) push(capBase + capH * t, rTop * k, 1.25);
+  const capTop = capBase + capH;
+  push(capTop, rTop * 1.5, 0.2);
+
+  // build the lobed surface of revolution by hand (LatheGeometry can't do angular ribs)
+  const verts = [], nors = [], uvs = [], idx = [];
+  const rows = prof.length;
+  for (let i = 0; i < rows; i++) {
+    const [py, pr, rs] = prof[i];
+    for (let j = 0; j <= seg; j++) {
+      const a = (j / seg) * Math.PI * 2;
+      const lobe = 1 + rib * rs * Math.cos(a * lobes);
+      const r = pr * lobe;
+      verts.push(Math.cos(a) * r, py, Math.sin(a) * r);
+      nors.push(Math.cos(a), 0, Math.sin(a));
+      uvs.push((a * pr) * UV_PER_M, py * UV_PER_M);
+    }
+  }
+  for (let i = 0; i < rows - 1; i++) {
+    for (let j = 0; j < seg; j++) {
+      const a = i * (seg + 1) + j, b = a + 1, c = a + seg + 1, dd = c + 1;
+      idx.push(a, c, b, b, c, dd);
+    }
+  }
+  const shaft = new THREE.BufferGeometry();
+  shaft.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
+  shaft.setAttribute('normal', new THREE.Float32BufferAttribute(nors, 3));
+  shaft.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+  shaft.setIndex(idx);
+  shaft.computeVertexNormals();
+
+  const ab = block(rTop * 3.3, abacus, rTop * 3.3, { rng, jitter: 0.012 });
+  place(boxProjectUVs(ab), { y: capTop + abacus * 0.5 });
+
+  return { geo: mergeAll([shaft, ab]), height: capTop + abacus, capBase, capTop };
+}
+
+/* ========================== obelisk ==================================== */
+
+/** Obelisk: hard-tapered square shaft under a pyramidion. Tagged `pole`, so keep it clean. */
+export function obelisk({ h = 22, base = 2.6, rng, courses = 0 } = {}) {
+  const tipH = base * 1.15;
+  const shaftH = h - tipH;
+  const rt = base * 0.62;
+  const out = [];
+  const g = new THREE.CylinderGeometry(rt * 0.5 * Math.SQRT2, base * 0.5 * Math.SQRT2, shaftH, 4, 1);
+  normaliseAttrs(g);
+  place(g, { y: shaftH * 0.5, ry: Math.PI * 0.25 });
+  out.push(g);
+  const tip = new THREE.CylinderGeometry(0.02, rt * 0.5 * Math.SQRT2, tipH, 4, 1);
+  normaliseAttrs(tip);
+  place(tip, { y: shaftH + tipH * 0.5, ry: Math.PI * 0.25 });
+  out.push(tip);
+  const m = mergeAll(out);
+  return boxProjectUVs(m);
+}
+
+/* =========================== stairs ==================================== */
+
+/**
+ * A flight climbing along +X from the origin. Treads are separate blocks with drifting
+ * front edges — a stair is where "hand-cut" reads hardest because you see every nose.
+ */
+export function stairFlight({ steps = 12, rise = 0.5, run = 0.62, width = 6, rng, cheek = 0 }) {
+  const out = [];
+  for (let i = 0; i < steps; i++) {
+    const g = block(run + 0.06, rise + 0.9, width - (rng ? rng.range(0, 0.06) : 0), { rng, jitter: 0.018, chip: rng && rng.chance(0.2) ? 0.12 : 0 });
+    place(g, {
+      x: (i + 0.5) * run, y: (i + 1) * rise - (rise + 0.9) * 0.5,
+      ry: rng ? THREE.MathUtils.degToRad(rng.jitter(0.22)) : 0,
+    });
+    out.push(g);
+  }
+  if (cheek > 0) {
+    for (const s of [-1, 1]) {
+      const len = steps * run;
+      const g = block(len, cheek, 0.7, { rng, jitter: 0.02 });
+      // The ramped balustrade doubles as a rail line.
+      place(g, {
+        x: len * 0.5, y: steps * rise * 0.5 + cheek * 0.5 - 0.1, z: s * (width * 0.5 + 0.3),
+        rz: Math.atan2(steps * rise, len),
+      });
+      out.push(g);
+    }
+  }
+  const g = mergeAll(out);
+  return boxProjectUVs(g);
+}
+
+/* ========================== paving ===================================== */
+
+/**
+ * Per-slab instance matrices for a paved area. Real slabs, real joints, real height
+ * variation — a single textured plane is the fastest way to look like a WebGL demo.
+ */
+export function pavingMatrices({ x0, x1, z0, z1, y = 0, slab = 2.2, rng, sink = 0.05, holes = [] }) {
+  const list = [];
+  const nx = Math.max(1, Math.round((x1 - x0) / slab));
+  const nz = Math.max(1, Math.round((z1 - z0) / slab));
+  const sx = (x1 - x0) / nx, sz = (z1 - z0) / nz;
+  for (let i = 0; i < nx; i++) {
+    for (let j = 0; j < nz; j++) {
+      const cx = x0 + (i + 0.5) * sx, cz = z0 + (j + 0.5) * sz;
+      let skip = false;
+      for (const hRect of holes) {
+        if (cx > hRect[0] && cx < hRect[1] && cz > hRect[2] && cz < hRect[3]) { skip = true; break; }
+      }
+      if (skip) continue;
+      const jx = rng ? rng.jitter(0.05) : 0, jz = rng ? rng.jitter(0.05) : 0;
+      const dy = rng ? rng.jitter(sink) : 0;
+      const m = new THREE.Matrix4();
+      _e.set(0, rng ? THREE.MathUtils.degToRad(rng.jitter(0.7)) : 0, rng ? THREE.MathUtils.degToRad(rng.jitter(0.35)) : 0, 'YXZ');
+      _q.setFromEuler(_e);
+      m.compose(
+        _v.set(cx + jx, y + dy, cz + jz), _q,
+        new THREE.Vector3((sx - 0.07) / 1, 1, (sz - 0.07) / 1)
+      );
+      list.push(m);
+    }
+  }
+  return list;
+}
+
+/** Unit slab used by the paving InstancedMesh (scaled per instance). */
+export function slabUnit(thick = 0.5, rng) {
+  const g = block(1, thick, 1, { rng, jitter: 0.006 });
+  place(g, { y: -thick * 0.5 });
+  return boxProjectUVs(g, UV_PER_M);
+}
+
+/* ===================== traversal furniture ============================= */
+
+/** Hook ring: a fat torus on a bracket. Chunky because it has to read as grabbable. */
+export function hookRing({ r = 0.62, tube = 0.11, rng } = {}) {
+  const t = new THREE.TorusGeometry(r, tube, 6, 16);
+  normaliseAttrs(t);
+  place(t, { rx: Math.PI * 0.5 });
+  const shackle = new THREE.CylinderGeometry(tube * 1.5, tube * 1.5, 0.42, 6);
+  normaliseAttrs(shackle);
+  place(shackle, { y: r + 0.16 });
+  const g = mergeAll([t, shackle]);
+  return boxProjectUVs(g);
+}
+
+/** Chain from a beam down to a ring: cheap twisted prism, reads as links at distance. */
+export function chain({ len = 1.8, r = 0.075, links = 6 } = {}) {
+  const out = [];
+  for (let i = 0; i < links; i++) {
+    const g = new THREE.BoxGeometry(r * 2.6, len / links * 0.96, r * 1.1);
+    normaliseAttrs(g);
+    place(g, { y: -(i + 0.5) * (len / links), ry: (i % 2) * Math.PI * 0.5 });
+    out.push(g);
+  }
+  return boxProjectUVs(mergeAll(out));
+}
+
+/** Rail: a tube along a curve, plus the tube geometry for the visible mesh. */
+export function railGeo(curve, { r = 0.14, seg = 60, rad = 6 } = {}) {
+  const g = new THREE.TubeGeometry(curve, seg, r, rad, false);
+  normaliseAttrs(g);
+  const pos = g.attributes.position, uv = g.attributes.uv;
+  // TubeGeometry's u runs 0..1 along the whole curve; rescale to world metres.
+  const L = curve.getLength();
+  for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * L * UV_PER_M, uv.getY(i) * 2 * Math.PI * r * UV_PER_M);
+  uv.needsUpdate = true; pos.needsUpdate = true;
+  return g;
+}
+
+/** Spire tip: a squat four-sided pinnacle. The point is the landing target. */
+export function spire({ r = 0.55, h = 2.3, rng } = {}) {
+  const g = new THREE.CylinderGeometry(0.03, r * Math.SQRT2 * 0.5, h, 4, 1);
+  normaliseAttrs(g);
+  place(g, { y: h * 0.5, ry: Math.PI * 0.25 });
+  const collar = block(r * 1.9, 0.34, r * 1.9, { rng, jitter: 0.01 });
+  place(collar, { y: 0.1 });
+  return boxProjectUVs(mergeAll([g, collar]));
+}
+
+/* ============================ sand ===================================== */
+
+/**
+ * A drift piled against a wall: a ribbon whose crest wanders, whose toe wanders, and
+ * which is deliberately tallest where two forms meet. Local X = along the wall, the drift
+ * spills toward +Z.
+ */
+export function sandDrift({ len = 12, h = 1.5, depth = 3.2, seg = 14, rng }) {
+  const verts = [], uvs = [], idx = [];
+  for (let i = 0; i <= seg; i++) {
+    const t = i / seg, x = (t - 0.5) * len;
+    const wob = rng ? rng.jitter(0.5) : 0;
+    const hh = Math.max(0.12, h * (0.55 + 0.45 * Math.sin(t * Math.PI)) + wob * 0.35);
+    const dd = depth * (0.6 + 0.4 * Math.sin(t * Math.PI * 1.3 + 0.7)) + (rng ? rng.jitter(0.4) : 0);
+    verts.push(x, hh, 0.05); uvs.push(x * UV_PER_M, 0);
+    verts.push(x + (rng ? rng.jitter(0.3) : 0), 0.02, dd); uvs.push(x * UV_PER_M, dd * UV_PER_M);
+  }
+  for (let i = 0; i < seg; i++) {
+    const a = i * 2, b = a + 1, c = a + 2, dd = a + 3;
+    idx.push(a, b, c, b, dd, c);
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
+  g.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+  g.setIndex(idx);
+  g.computeVertexNormals();
+  return g;
+}
+
+/* ========================== pyramids =================================== */
+
+/** Stepped background pyramid. Silhouette only — it lives behind 60% haze. */
+export function steppedPyramid({ base = 105, h = 105, courses = 34, rng, casing = 0.22 }) {
+  const out = [];
+  for (let i = 0; i < courses; i++) {
+    const t = i / courses, t2 = (i + 1) / courses;
+    const b0 = base * (1 - t), b1 = base * (1 - t2);
+    const ch = h / courses;
+    const g = new THREE.CylinderGeometry(b1 * 0.5 * Math.SQRT2, b0 * 0.5 * Math.SQRT2, ch, 4, 1);
+    normaliseAttrs(g);
+    // A missing course-edge here and there keeps the profile from being a perfect triangle.
+    place(g, {
+      y: i * ch + ch * 0.5, ry: Math.PI * 0.25 + (rng ? rng.jitter(0.004) : 0),
+      x: rng ? rng.jitter(0.35) : 0, z: rng ? rng.jitter(0.35) : 0,
+    });
+    out.push(g);
+  }
+  // smooth casing survives near the apex — the classic Khafre read
+  if (casing > 0) {
+    const ch = h * casing;
+    const g = new THREE.CylinderGeometry(0.4, base * casing * 0.5 * Math.SQRT2 * 1.02, ch, 4, 1);
+    normaliseAttrs(g);
+    place(g, { y: h * (1 - casing), ry: Math.PI * 0.25 });
+    place(g, { y: ch * 0.5 });
+    out.push(g);
+  }
+  return boxProjectUVs(mergeAll(out), UV_PER_M * 0.25);
+}
+
+/* ====================== collision proxies ============================== */
+
+/**
+ * Simple invisible proxy meshes for COLLISION. The art meshes are merged, chipped and
+ * jittered — great to look at, miserable to sweep a capsule against. Proxies give
+ * MOVEMENT clean planes with the right normals (including the battered wall angle) and
+ * cost zero draw calls.
+ */
+export function proxyBox(w, h, d, mat) {
+  const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+  m.visible = false;
+  return m;
+}
+
+/** Battered wall proxy: tapered box whose faces carry the real lean. */
+export function proxyBattered(w, d, h, batter, mat) {
+  const top = new THREE.Vector2(Math.max(0.4, w - 2 * batter * h), Math.max(0.4, d - 2 * batter * h));
+  const g = new THREE.BufferGeometry();
+  const hw = w * 0.5, hd = d * 0.5, tw = top.x * 0.5, td = top.y * 0.5;
+  const v = [
+    -hw, 0, hd, hw, 0, hd, tw, h, td, -tw, h, td,     // +Z
+    hw, 0, -hd, -hw, 0, -hd, -tw, h, -td, tw, h, -td, // -Z
+    hw, 0, hd, hw, 0, -hd, tw, h, -td, tw, h, td,     // +X
+    -hw, 0, -hd, -hw, 0, hd, -tw, h, td, -tw, h, -td, // -X
+    -tw, h, td, tw, h, td, tw, h, -td, -tw, h, -td,   // top
+  ];
+  const idx = [];
+  for (let f = 0; f < 5; f++) { const a = f * 4; idx.push(a, a + 1, a + 2, a, a + 2, a + 3); }
+  g.setAttribute('position', new THREE.Float32BufferAttribute(v, 3));
+  g.setIndex(idx);
+  g.computeVertexNormals();
+  g.setAttribute('uv', new THREE.Float32BufferAttribute(new Float32Array((v.length / 3) * 2), 2));
+  const m = new THREE.Mesh(g, mat);
+  m.visible = false;
+  return m;
+}

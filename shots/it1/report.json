@@ -1,0 +1,39 @@
+{
+  "at": "2026-07-30T02:35:40.101Z",
+  "width": 800,
+  "height": 450,
+  "quality": "med",
+  "shots": {},
+  "errors": [
+    "hero: page.evaluate: Execution context was destroyed, most likely because of a navigation.",
+    "dunes: page.evaluate: TypeError: Cannot read properties of undefined (reading 'setShot')\n    at eval (eval at evaluate (:311:30), <anonymous>:2:43)\n    at UtilityScript.evaluate (<anonymous>:313:16)\n    at UtilityScript.<anonymous> (<anonymous>:1:44)",
+    "interior: page.evaluate: TypeError: Cannot read properties of undefined (reading 'setShot')\n    at eval (eval at evaluate (:311:30), <anonymous>:2:43)\n    at UtilityScript.evaluate (<anonymous>:313:16)\n    at UtilityScript.<anonymous> (<anonymous>:1:44)",
+    "night: page.evaluate: TypeError: Cannot read properties of undefined (reading 'setShot')\n    at eval (eval at evaluate (:311:30), <anonymous>:2:43)\n    at UtilityScript.evaluate (<anonymous>:313:16)\n    at UtilityScript.<anonymous> (<anonymous>:1:44)"
+  ],
+  "modules": {
+    "shading": false,
+    "postfx": false,
+    "sky": true,
+    "lighting": true,
+    "textures": false,
+    "architecture": false,
+    "props": false,
+    "terrain": false,
+    "collision": false,
+    "character": false,
+    "animation": false,
+    "movement": false,
+    "camera": false,
+    "fx": false,
+    "guards": false,
+    "hud": false,
+    "audio": false
+  },
+  "bootWarnings": [
+    "failed to load ./render/ToonMaterial.js: Unexpected identifier 'k'",
+    "src/core/Rand.js line 36 is a syntax error (`0x5c1y`) — the file cannot be imported by any module. Sky.js mirrors its RNG locally as a stopgap.",
+    "lighting: placeholder world detected — temporary shadow/haze calibration rig added. It removes itself once ARCHITECTURE or TERRAIN lands.",
+    "running with placeholder world; missing modules: textures, shading, terrain, architecture, props, collision, character, animation, movement, camera, guards, fx, audio, hud, postfx"
+  ],
+  "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)"
+}

@@ -1,0 +1,24 @@
+{
+  "started": "2026-07-30T02:05:00.000Z",
+  "wave": 1,
+  "agents": [
+    { "id": "Textures",     "files": "src/textures/**",                              "status": "running", "note": "Procedural material library — sandstone, carved hieroglyphs, gold leaf, fur, sand. Every texel generated in JS." },
+    { "id": "Shading",      "files": "src/render/ToonMaterial.js, Outline.js",       "status": "running", "note": "The cel-shading model and both kinds of ink line: inverted-hull shells plus screen-space creases." },
+    { "id": "Sky+Light",    "files": "src/render/Sky.js, Atmosphere.js, Lighting.js","status": "running", "note": "Scattering sky, painterly clouds, golden-hour sun, cascaded shadows, coloured bounce." },
+    { "id": "Architecture", "files": "src/world/Architecture.js, EgyptLevel.js, Kit.js", "status": "running", "note": "Temple of Ra: courtyard, obelisk, pylons, hypostyle hall, tomb — built as a traversal jungle gym." },
+    { "id": "Terrain",      "files": "src/world/Terrain.js, Vegetation.js, Water.js","status": "running", "note": "Dunes with real slip faces, wind ripples, date palms, papyrus, and the Nile." },
+    { "id": "Character",    "files": "src/player/SlyModel.js, Body.js, Cane.js",     "status": "running", "note": "Sly himself — skinned procedural mesh, cartoon 1:5 proportions, ringed tail, hook cane." },
+    { "id": "Animation",    "files": "src/player/Rig.js, Animation.js, Clips.js",    "status": "queued",  "note": "Hand-authored clip set and the state machine that blends them." },
+    { "id": "Movement",     "files": "src/player/Controller.js, Moveset.js",         "status": "queued",  "note": "Kinematic capsule physics and the full Sly move tech: hooks, rails, spires, wall runs." },
+    { "id": "Collision",    "files": "src/world/Collision.js",                       "status": "queued",  "note": "BVH broadphase, capsule sweeps, surface-tag queries." },
+    { "id": "Camera",       "files": "src/player/CameraRig.js",                      "status": "queued",  "note": "Third-person rig with mouse look, lead, collision, and per-state framing." },
+    { "id": "Props",        "files": "src/world/Props.js, Statues.js",               "status": "queued",  "note": "Colossi, braziers, sarcophagi, banners, urns, treasure." },
+    { "id": "Post FX",      "files": "src/render/PostFX.js",                          "status": "queued",  "note": "Edge-detect creases, SSAO, bloom, volumetric shafts, DOF, grade." },
+    { "id": "FX",           "files": "src/fx/Particles.js, Decals.js, Trails.js",    "status": "queued",  "note": "Sand drift, dust motes in light shafts, embers, impact sparks, cane trails." },
+    { "id": "Guards",       "files": "src/ai/Guard.js, GuardModel.js",               "status": "queued",  "note": "Patrolling guards with vision cones, alert states, and pickpocketable pockets." },
+    { "id": "HUD",          "files": "src/ui/HUD.js",                                 "status": "queued",  "note": "Sly's diegetic UI — Binocucom, coin counter, Thief-o-Vision overlay." },
+    { "id": "Audio",        "files": "src/audio/**",                                  "status": "queued",  "note": "Procedural score and SFX via WebAudio." },
+    { "id": "Critic",       "files": "tools/critic",                                  "status": "queued",  "note": "Adversarial reviewer: blind side-by-side against Mario, Zelda and Sly reference." }
+  ],
+  "critic": []
+}
