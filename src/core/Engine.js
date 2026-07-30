@@ -45,7 +45,11 @@ export class Engine {
     this.renderer.toneMappingExposure = 1.0;
 
     this.renderer.shadowMap.enabled = true;
-    this.renderer.shadowMap.type = THREE.VSMShadowMap;
+    // PCF-soft, not VSM. VSM was the original choice for its cheap wide penumbra, but it
+    // light-bleeds badly across the high-contrast, large-depth-range geometry here — bleeding
+    // reads as "everything is lit", and the courtyard rendered with no cast shadows at all
+    // under a 22° sun. PCF is noisier per-sample but it actually occludes.
+    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer.shadowMap.autoUpdate = true;
 
     this.renderer.autoClear = true;
