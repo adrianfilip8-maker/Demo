@@ -325,7 +325,11 @@ export class TriangleSoup {
 
       const instances = o.isInstancedMesh ? o.count : 1;
       for (let inst = 0; inst < instances; inst++) {
+        // A collider registered with a malformed mesh used to throw here and take down the
+        // whole frame. Skipping it loses one surface; throwing loses the game.
+        if (!o.matrixWorld?.elements) break;
         if (o.isInstancedMesh) {
+          if (!o.instanceMatrix?.array) break;
           _m4.fromArray(o.instanceMatrix.array, inst * 16);
           _m4.premultiply(o.matrixWorld);
         } else {

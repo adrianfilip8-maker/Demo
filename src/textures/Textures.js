@@ -16,7 +16,23 @@ import { MATERIALS, MATERIAL_NAMES, MATERIAL_GROUPS, PREWARM } from './Materials
  * quality-wise and buys back a third of the texture budget.
  */
 
-const _tmpCanvas = new WeakMap();
+/**
+ * Names consumers ask for that aren't catalogue keys. Cheaper to alias than to make every
+ * caller guess the exact recipe name, and it keeps a typo from silently producing an
+ * untextured surface.
+ */
+const ALIASES = {
+  rope_fibre: 'rope',
+  bronze_dark: 'bronze_aged',
+  sand: 'sand_ripples',
+  stone: 'sandstone_block',
+  gold: 'gold_leaf',
+  cloth: 'linen_cloth',
+  wood: 'wood_old',
+  hieroglyphs: 'hieroglyph_wall',
+  water: 'water_nile',
+  sparkle: 'spark_diamond',
+};
 
 export class Textures {
   /** @param {import('../core/Engine.js').Engine} engine */
@@ -76,14 +92,16 @@ export class Textures {
    * @returns {{map, normalMap, roughnessMap, aoMap, metalnessMap, emissiveMap, repeat, normalScale, tile}|null}
    */
   get(name) {
-    const hit = this._cache.get(name);
+    const key = MATERIALS[name] ? name : (ALIASES[name] ?? name);
+    const hit = this._cache.get(key);
     if (hit) return hit;
 
-    const recipe = MATERIALS[name];
+    const recipe = MATERIALS[key];
     if (!recipe) {
       this.engine.warn(`textures: no recipe named "${name}"`);
       return null;
     }
+    name = key;
     if (this._bytes > this._budget) {
       this.engine.warn(`textures: budget exhausted, refusing to build "${name}"`);
       return null;

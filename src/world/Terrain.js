@@ -554,13 +554,28 @@ export class Terrain {
 
   /* ── shared helpers for peers that may not exist yet ─────────────────── */
 
-  /** TEXTURES may not have landed. Never let that be fatal. */
-  tex(name, fallback = null) {
+  /**
+   * TEXTURES may not have landed. Never let that be fatal.
+   *
+   * Per AGENTS.md §4.4 `textures.get()` returns a *bundle* of maps, not a single texture, so
+   * `slot` picks the one we want. It may also hand back a bare THREE.Texture (older shape) —
+   * accept either, since a mismatch here silently produces an untextured world.
+   */
+  tex(name, fallback = null, slot = 'map') {
     const t = this.engine.get('textures');
     if (!t) return fallback;
     try {
       const v = (t.get && t.get(name)) || (t.getTexture && t.getTexture(name)) || null;
-      return v || fallback;
+      if (!v) return fallback;
+      const found = v.isTexture ? v : (v[slot]?.isTexture ? v[slot] : null);
+      if (!found) return fallback;
+      // TEXTURES caches and shares these, and we mutate wrap/repeat/rotation/centre below.
+      // Clone so the sand's transform doesn't leak into every other user of the material.
+      // clone() shares the image data, so this costs no memory.
+      const c = found.clone();
+      c.needsUpdate = true;
+      this._textures.push(c);
+      return c;
     } catch { return fallback; }
   }
 
@@ -638,7 +653,7 @@ Object.assign(Terrain.prototype, {
     // Wind ripples. Requested from TEXTURES first (`sand_ripples`); generated here when
     // that agent hasn't landed, because 0.3 m ripples are *the* close-range sand tell and
     // the terrain must never ship without them.
-    this.rippleMap = this.tex('sand_ripples') || this._makeRippleNormal(512);
+    this.rippleMap = this.tex('sand_ripples', null, 'normalMap') || this._makeRippleNormal(512);
     this.rippleMap.wrapS = this.rippleMap.wrapT = THREE.RepeatWrapping;
     this.rippleMap.anisotropy = aniso;
     this.rippleMap.center.set(0.5, 0.5);

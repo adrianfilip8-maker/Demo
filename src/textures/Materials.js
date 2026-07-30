@@ -1231,7 +1231,8 @@ export const MATERIALS = {
     group: 'sly', tier: 1, tile: [0.34, 0.95], bump: 0.007, rough: 0.62,
     build(s, cx) {
       const base = rgb2hex(mixHex(PAL.shadow, PAL.fill, 0.46));
-      const baseGrey = rgb2hex(mixHex(hex2rgbHex(base), PAL.limeMid, 0.13));
+      // mixHex already takes hex ints, so `base` needs no conversion on the way back in.
+      const baseGrey = rgb2hex(mixHex(base, PAL.limeMid, 0.13));
       const { strand } = fur(s, {
         flow: Math.PI / 2, flowVar: 0.35, strandFreq: 230, along: 0.14, clumpFreq: 12,
         base: baseGrey, tip: rgb2hex(mixHex(baseGrey, PAL.limeLight, 0.55)), root: 0x141c2e,
