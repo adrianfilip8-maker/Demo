@@ -33,7 +33,7 @@ export function rng(seed = 1) {
 }
 
 /** Master seed for the level. Change it and you get a different Temple of Ra. */
-export const WORLD_SEED = 0x5c1y >>> 0 || 20260730;
+export const WORLD_SEED = 0x5c17c00 >>> 0;
 
 /* ---------------------------------------------------------------------------
    Value / gradient noise. Used by TEXTURES for procedural maps and by TERRAIN
