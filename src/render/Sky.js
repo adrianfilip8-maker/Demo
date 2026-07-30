@@ -5,17 +5,15 @@ import {
 } from './Atmosphere.js';
 
 /* ---------------------------------------------------------------------------
-   NOTE FOR THE LEAD — `src/core/Rand.js` does not parse. Line 36 reads
-   `export const WORLD_SEED = 0x5c1y >>> 0 || 20260730;` and `0x5c1y` is not a
-   legal numeric literal, so *any* module that imports Rand.js is dropped at load
-   time (main.js swallows the failure and marks the module missing). Nothing
-   imports it yet, which is why the harness still boots.
+   The Rand.js parse error this file was written around (`0x5c1y` in WORLD_SEED)
+   is fixed, so the warning that used to fire here is gone.
 
-   Rand.js is LOCKED, so rather than break, the deterministic RNG + noise this
-   file needs is mirrored below with the identical algorithms (mulberry32,
-   gradient value-noise fBm, Worley). Swap these three helpers back to the
-   canonical import the moment line 36 is fixed — the seeds and maths match, so
-   the generated cloud texture will be byte-identical.
+   The local RNG + noise mirror below is kept for now: it uses the identical
+   algorithms (mulberry32, gradient value-noise fBm, Worley) and the identical
+   seeds, so the cloud texture it generates is byte-identical to what the
+   canonical import would produce. Collapsing it back onto `../core/Rand.js` is
+   pure de-duplication with no visual change — worth doing, but it is a
+   refactor to verify with a before/after capture, not a blind edit.
 --------------------------------------------------------------------------- */
 const WORLD_SEED = 20260730;
 
@@ -483,9 +481,6 @@ export class Sky {
   async init() {
     const engine = this.engine;
     evalAtmosphere(this.timeOfDay, this.atmosphere);
-
-    engine.warn('src/core/Rand.js line 36 is a syntax error (`0x5c1y`) — the file cannot be ' +
-                'imported by any module. Sky.js mirrors its RNG locally as a stopgap.');
 
     this._noise = buildCloudTexture(TUNE.noiseSize, WORLD_SEED ^ 0x5b1e);
     this._noise.anisotropy = Math.min(4, engine.maxAniso || 1);
