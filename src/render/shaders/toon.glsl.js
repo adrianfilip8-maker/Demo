@@ -100,6 +100,7 @@ uniform float uTermLo;
 uniform float uTermHi;
 uniform float uTermSoft;
 uniform float uShadowSat;
+uniform float uDebugShadow;   // >0.5 → output shadow diagnostics instead of shading
 uniform float uRim;
 uniform vec3  uRimColor;
 uniform float uRimPower;
@@ -323,6 +324,17 @@ export const TOON_SHADE = /* glsl */ `
 		vec3 emissiveTerm = totalEmissiveRadiance;
 
 		outgoingLight = diff + sss + spec + metalEnv + rim + emissiveTerm;
+
+		/* Diagnostic: red = getShadowMask(), green = receiveShadow, blue = raw N.L.
+		   Set uDebugShadow > 0.5 to see why the scene has no cast shadows. */
+		if ( uDebugShadow > 0.5 ) {
+			float dbgMask = getShadowMask();
+			float dbgRecv = 0.0;
+			#if defined( USE_SHADOWMAP ) && NUM_DIR_LIGHT_SHADOWS > 0
+				dbgRecv = receiveShadow ? 1.0 : 0.0;
+			#endif
+			outgoingLight = vec3( dbgMask, dbgRecv, clamp( ndl, 0.0, 1.0 ) );
+		}
 
 		/* Aerial perspective, in linear radiance, before tone mapping. Doing this with
 		   three's flat sRGB-space fog would grey the whole frame out. */

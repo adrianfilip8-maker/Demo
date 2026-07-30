@@ -171,6 +171,9 @@ export class Shading {
       uRimGain:      { value: TUNE.rimGain },
       uShadowSat:    { value: TUNE.shadowSat },
       uMetalGain:    { value: TUNE.metalGain },
+      /* Diagnostic channel. window.__ENGINE.get('shading').debugShadow(true) paints
+         red=getShadowMask, green=receiveShadow, blue=N.L across the scene. */
+      uDebugShadow:  { value: 0 },
     };
 
     this._refreshShadowColor();
@@ -639,6 +642,11 @@ export class Shading {
    * `shadowFloor` x key luminance. Renormalising is what guarantees AGENTS' "never below ~14%
    * of key luminance" holds no matter how dark the chosen hue is.
    */
+  /** Paint shadow diagnostics over the scene: red=getShadowMask, green=receiveShadow, blue=N.L. */
+  debugShadow(on = true) {
+    this.uniforms.uDebugShadow.value = on ? 1 : 0;
+  }
+
   _refreshShadowColor() {
     const u = this.uniforms;
     const keyLum = lum(u.uKeyColor.value) * u.uKeyIntensity.value;
