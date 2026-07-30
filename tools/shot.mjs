@@ -67,7 +67,10 @@ async function startServer(port) {
   const proc = spawn(bin, ['--port', String(port), '--strictPort', '--host', '127.0.0.1'], {
     cwd: ROOT,
     stdio: ['ignore', 'pipe', 'pipe'],
-    env: { ...process.env, NO_COLOR: '1' },
+    // SANDS_NO_HMR: freeze the build for the duration of the capture (see vite.config.js).
+    // Without it, an agent editing src/ mid-capture triggers a reload that destroys the
+    // page's execution context and fails the shot.
+    env: { ...process.env, NO_COLOR: '1', SANDS_NO_HMR: '1' },
   });
   let log = '';
   proc.stdout.on('data', (d) => { log += d; if (VERBOSE) process.stdout.write(`[vite] ${d}`); });

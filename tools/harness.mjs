@@ -49,7 +49,9 @@ async function startServer(port, verbose) {
   const bin = path.join(ROOT, 'node_modules', '.bin', 'vite');
   if (!existsSync(bin)) throw new Error('vite not installed — run npm install');
   const proc = spawn(bin, ['--port', String(port), '--strictPort', '--host', '127.0.0.1'], {
-    cwd: ROOT, stdio: ['ignore', 'pipe', 'pipe'], env: { ...process.env, NO_COLOR: '1' },
+    cwd: ROOT, stdio: ['ignore', 'pipe', 'pipe'],
+    // SANDS_NO_HMR: freeze the build for the duration of the capture (see vite.config.js).
+    env: { ...process.env, NO_COLOR: '1', SANDS_NO_HMR: '1' },
   });
   let log = '';
   const cap = (d) => { log += d; if (verbose) process.stdout.write(`[vite] ${d}`); };
