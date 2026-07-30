@@ -6,6 +6,7 @@
  * it can't break agent runs already in flight; fold it in here once the fan-out is done.
  */
 import { chromium } from 'playwright';
+import { acquire } from './lock.mjs';
 import { spawn } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
@@ -77,6 +78,11 @@ export async function withGame(
   { width = 1280, height = 720, quality = 'high', timeout = 300000, verbose = false } = {},
   fn
 ) {
+  // Serialise with other capture runs — software rendering doesn't parallelise, it thrashes.
+  const release = await acquire({
+    onWait: (ms, pid) => process.stdout.write(`· waiting for capture lock (${(ms / 1000) | 0}s, held by pid ${pid})\n`),
+  });
+
   const port = await freePort();
   const server = await startServer(port, verbose);
   const executablePath = process.env.CHROME_PATH || CHROME_CANDIDATES.find((p) => existsSync(p));
@@ -115,6 +121,7 @@ export async function withGame(
     await browser.close().catch(() => {});
     server.kill('SIGTERM');
     setTimeout(() => server.kill('SIGKILL'), 3000);
+    release();
   }
 }
 

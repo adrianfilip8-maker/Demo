@@ -13,6 +13,7 @@
  * seconds. Timeouts are generous on purpose.
  */
 import { chromium } from 'playwright';
+import { acquire } from './lock.mjs';
 import { spawn } from 'node:child_process';
 import { mkdir, writeFile, rm } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
@@ -95,6 +96,12 @@ async function startServer(port) {
 /* ------------------------------- main ---------------------------------- */
 async function main() {
   await mkdir(OUTDIR, { recursive: true });
+
+  // Serialise with other capture runs — software rendering doesn't parallelise, it thrashes.
+  const release = await acquire({
+    onWait: (ms, pid) => process.stdout.write(`· waiting for capture lock (${(ms / 1000) | 0}s, held by pid ${pid})\n`),
+  });
+  process.on('exit', release);
 
   const port = await freePort();
   process.stdout.write(`· starting dev server on :${port}\n`);
