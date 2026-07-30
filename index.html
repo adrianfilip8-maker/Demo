@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Sly Cooper: Sands of Ra</title>
+  <style>
+    :root { color-scheme: dark; }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: #0a0710; }
+    body { font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; }
+    #app { position: fixed; inset: 0; }
+    canvas { display: block; width: 100%; height: 100%; outline: none; }
+
+    /* ---- Boot / loading veil: styled like a Sly Cooper title card ---- */
+    #boot {
+      position: fixed; inset: 0; z-index: 40;
+      display: grid; place-items: center;
+      background:
+        radial-gradient(ellipse 120% 80% at 50% 120%, #3a2450 0%, transparent 60%),
+        radial-gradient(ellipse 90% 60% at 50% -10%, #1b2f5e 0%, transparent 55%),
+        #0a0710;
+      transition: opacity .6s ease .1s;
+    }
+    #boot.gone { opacity: 0; pointer-events: none; }
+    .bootInner { text-align: center; padding: 0 24px; }
+    .title {
+      font-weight: 900; letter-spacing: .02em; line-height: .88;
+      font-size: clamp(34px, 8.5vw, 92px);
+      color: #f4e2b8;
+      text-shadow: 0 3px 0 #1a1210, 0 6px 24px rgba(255,190,90,.28);
+      transform: rotate(-2.2deg);
+    }
+    .title em {
+      display: block; font-style: normal;
+      font-size: clamp(18px, 3.6vw, 40px); letter-spacing: .3em;
+      color: #8fd8ff; text-shadow: 0 2px 0 #10203a, 0 0 22px rgba(143,216,255,.45);
+      margin-top: .5em; transform: rotate(1.4deg);
+    }
+    .bar {
+      width: min(420px, 74vw); height: 5px; margin: 34px auto 0;
+      background: rgba(255,255,255,.09); border-radius: 99px; overflow: hidden;
+    }
+    .bar i {
+      display: block; height: 100%; width: 8%;
+      background: linear-gradient(90deg, #2a7fd4, #8fd8ff 60%, #ffe9a8);
+      box-shadow: 0 0 14px rgba(143,216,255,.7);
+      border-radius: 99px; transition: width .35s ease;
+    }
+    .hint { margin-top: 16px; font-size: 12.5px; letter-spacing: .16em;
+            text-transform: uppercase; color: #7e8ba8; }
+    .click { margin-top: 26px; font-size: 14px; color: #f4e2b8; opacity: 0; transition: opacity .4s; }
+    .click.on { opacity: 1; animation: pulse 1.9s ease-in-out infinite; }
+    @keyframes pulse { 0%,100%{opacity:.55} 50%{opacity:1} }
+
+    #err {
+      position: fixed; inset: auto 12px 12px 12px; z-index: 60; max-height: 42vh; overflow: auto;
+      display: none; padding: 12px 14px; border-radius: 10px;
+      background: rgba(30,10,14,.94); border: 1px solid #7a2a34; color: #ffd9d0;
+      font-family: ui-monospace, monospace; font-size: 12px; white-space: pre-wrap;
+    }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+
+  <div id="boot">
+    <div class="bootInner">
+      <h1 class="title">SLY COOPER<em>SANDS OF RA</em></h1>
+      <div class="bar"><i id="bootBar"></i></div>
+      <div class="hint" id="bootHint">Loading</div>
+      <div class="click" id="bootClick">Click to play &nbsp;·&nbsp; WASD move &nbsp;·&nbsp; Mouse look &nbsp;·&nbsp; Space jump</div>
+    </div>
+  </div>
+
+  <pre id="err"></pre>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>

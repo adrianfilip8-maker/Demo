@@ -1,0 +1,54 @@
+{
+  "at": "2026-07-30T02:08:38.761Z",
+  "width": 800,
+  "height": 450,
+  "quality": "med",
+  "shots": {
+    "hero": {
+      "file": "shots/hero.png",
+      "ms": 0.40000000002328306,
+      "fps": 0,
+      "drawCalls": 4,
+      "triangles": 6,
+      "programs": 4
+    },
+    "courtyard": {
+      "file": "shots/courtyard.png",
+      "ms": 0.7000000000698492,
+      "fps": 58,
+      "drawCalls": 4,
+      "triangles": 6,
+      "programs": 4
+    }
+  },
+  "errors": [],
+  "modules": {
+    "shading": false,
+    "postfx": false,
+    "sky": false,
+    "lighting": false,
+    "textures": false,
+    "architecture": false,
+    "props": false,
+    "terrain": false,
+    "collision": false,
+    "character": false,
+    "animation": false,
+    "movement": false,
+    "camera": false,
+    "fx": false,
+    "guards": false,
+    "hud": false,
+    "audio": false
+  },
+  "bootWarnings": [
+    "running with placeholder world; missing modules: textures, shading, sky, lighting, terrain, architecture, props, collision, character, animation, movement, camera, guards, fx, audio, hud, postfx"
+  ],
+  "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+  "warnings": [
+    "running with placeholder world; missing modules: textures, shading, sky, lighting, terrain, architecture, props, collision, character, animation, movement, camera, guards, fx, audio, hud, postfx"
+  ],
+  "consoleErrors": [
+    "Failed to load resource: the server responded with a status of 404 (Not Found)"
+  ]
+}

@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.vite/
+*.log
+.DS_Store
+
+# Screenshot iterations from the critic loop — only the latest curated set is committed.
+shots/iter*/
+shots/tmp*/
