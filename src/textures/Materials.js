@@ -49,6 +49,12 @@ function rgb2hex(rgb) {
 function MX(a, b, t) { return rgb2hex(mixHex(a, b, t, MXT)); }
 
 /**
+ * Global damping on per-block colour variation. One knob so the whole masonry family can be
+ * pulled back toward "one material" without editing every recipe's own `spread`.
+ */
+const VARIATION = 0.42;
+
+/**
  * Ashlar masonry base — height and per-block colour. Everything about the way cut stone reads
  * lives here: blocks sit proud or recessed by a few millimetres, faces are very slightly convex,
  * the chamfer at every edge catches the sun, and colour is keyed to the *block index* so
@@ -79,8 +85,18 @@ function ashlar(s, o = {}) {
       - j * groove;                                    // mortar groove
     s.h[i] = h;
 
-    // Colour keyed to the block, then broken up by a >1-tile blotch field.
-    const t = sat(0.40 + (m.id2[i] - 0.5) * spread + (macro[i] - 0.5) * 0.55 + (face[i] - 0.5) * 0.30);
+    /* Colour keyed to the block, then broken up by a >1-tile blotch field.
+     *
+     * These coefficients used to sum to a ±0.8 swing around the midpoint, which took
+     * neighbouring blocks all the way from `dark` to `light` and made a wall read as
+     * high-frequency noise rather than as one material — the frame failed AGENTS §7.3's
+     * squint test because the large shapes stopped reading. Real ashlar varies subtly
+     * block to block; the variation should be legible up close and invisible at distance.
+     * Damped as a group so every recipe's own `spread` keeps its relative weight. */
+    const t = sat(0.44
+      + (m.id2[i] - 0.5) * spread * VARIATION
+      + (macro[i] - 0.5) * 0.55 * VARIATION
+      + (face[i] - 0.5) * 0.30 * VARIATION);
     const col = ramp3(dark, mid, light, t);
     s.r[i] = col[0]; s.g[i] = col[1]; s.b[i] = col[2];
     // Mortar: paler gypsum, grubby, and rougher than the dressed face.

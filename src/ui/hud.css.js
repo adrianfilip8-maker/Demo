@@ -38,10 +38,10 @@ export const HUD_CSS = /* css */ `
   font-weight: 700;
   color: var(--paint);
   -webkit-font-smoothing: antialiased;
-  /* Deliberately no z-index and no `contain`: either one would isolate this subtree into its
-     own blending group, and then the damage multiply, the hit-flash screen and the Binocucom
-     backdrop-filter would all composite against nothing instead of against the rendered game.
-     DOM order already puts us above #app, and #boot/#dbg/#err carry explicit higher indices. */
+  /* Deliberately no z-index and no CSS containment: either one would isolate this subtree
+     into its own blending group, and then the damage multiply, the hit-flash screen and the
+     Binocucom backdrop-filter would composite against nothing instead of against the rendered
+     game. DOM order already puts us above #app, and #boot/#dbg/#err carry higher indices. */
 }
 
 /* The screenshot harness owns this. It must cost zero pixels, instantly. */
@@ -327,7 +327,7 @@ export const HUD_CSS = /* css */ `
   backdrop-filter: grayscale(.86) contrast(1.45) brightness(.74);
   background: rgba(22, 30, 52, .3);
 }
-/* Fallback drain that needs no backdrop-filter: a flat grey blended in `saturation` mode
+/* Fallback drain that needs no backdrop-filter: a flat grey in mix-blend-mode saturation
    strips chroma straight out of whatever the renderer put on the canvas. */
 .sly-tov-desat { position: absolute; inset: 0; background: #8e8e8e; mix-blend-mode: saturation; opacity: .8; }
 .sly-tov-crush { position: absolute; inset: 0; background: rgba(16, 22, 40, .34); mix-blend-mode: multiply; }
