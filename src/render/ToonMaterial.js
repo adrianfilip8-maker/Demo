@@ -94,6 +94,9 @@ const PAL = {
   /* Ceiling on the shadow light's brightest channel after the floor rescale. Above roughly
      this the violet-teal clips toward blue and stops reading as shadow. */
   shadowTintPeak: 0.42,
+  /* How much warm sand bounce is mixed into the shadow light. Desert shadow is sky plus
+     sand bounce; pure sky turns warm albedo mauve. */
+  shadowBounceMix: 0.45,
   haze: 0xe8b878,
   hazeNight: 0x2a3f66,
   hazeSun: 0xffc98a,
@@ -653,7 +656,18 @@ export class Shading {
     const maxK = PAL.shadowTintPeak / Math.max(peak, 1e-4);
     k = Math.min(k, maxK);
 
-    u.uShadowColor.value.copy(this._shadowTint).multiplyScalar(k);
+    /* Mix warm sand bounce into the shadow light.
+     *
+     * A desert shadow is not lit by blue sky alone — it is lit by sky *and* by sunlight
+     * bouncing off the sand all around it. LIGHTING models that with a separate bounce
+     * light, but the shader's shadow term was purely the cool tint, so warm sandstone
+     * albedo multiplied by a blue light neutralised to mauve. Every surface facing away
+     * from the sun came out purple while the sunlit ones read correctly warm.
+     *
+     * Blending toward the bounce colour keeps the palette's violet-teal direction in the
+     * shadow while letting the albedo's warmth survive the multiply. */
+    _col.copy(this._shadowTint).lerp(u.uBounceColor.value, PAL.shadowBounceMix);
+    u.uShadowColor.value.copy(_col).multiplyScalar(k);
   }
 
   /* ======================================================================

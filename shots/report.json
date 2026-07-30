@@ -1,24 +1,24 @@
 {
-  "at": "2026-07-30T13:04:36.697Z",
+  "at": "2026-07-30T23:25:30.704Z",
   "width": 960,
   "height": 540,
   "quality": "med",
   "shots": {
     "hero": {
       "file": "shots/hero.png",
-      "ms": 7.099999999627471,
-      "fps": 67,
-      "drawCalls": 413,
-      "triangles": 1732921,
-      "programs": 54
+      "ms": 7.900000000023283,
+      "fps": 43,
+      "drawCalls": 418,
+      "triangles": 1735197,
+      "programs": 73
     },
-    "sly-closeup": {
-      "file": "shots/sly-closeup.png",
-      "ms": 6,
-      "fps": 58,
-      "drawCalls": 395,
-      "triangles": 1756501,
-      "programs": 54
+    "temple": {
+      "file": "shots/temple.png",
+      "ms": 7.100000000093132,
+      "fps": 43,
+      "drawCalls": 418,
+      "triangles": 1790581,
+      "programs": 73
     }
   },
   "errors": [],
@@ -33,26 +33,28 @@
     "terrain": true,
     "collision": true,
     "character": true,
-    "animation": false,
+    "animation": true,
     "movement": true,
     "camera": true,
-    "fx": false,
+    "fx": true,
     "guards": false,
-    "hud": false,
-    "audio": false
+    "hud": true,
+    "audio": true
   },
   "bootWarnings": [
-    "textures: prewarm took 37.9s at size 1024",
+    "textures: prewarm took 29.7s at size 1024",
     "collision: pole \"unnamed\" has no userData.spline — synthesised one from its bounds",
     "collision: pole \"proxy:pole\" has no userData.spline — synthesised one from its bounds",
-    "running with placeholder world; missing modules: props, animation, guards, fx, audio, hud"
+    "fx: PROPS absent — seeded six tomb torch emitters at the §8.1 sconce positions so the interior shot has fire in it. They yield to PROPS.",
+    "running with placeholder world; missing modules: props, guards"
   ],
   "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
   "warnings": [
-    "textures: prewarm took 37.9s at size 1024",
+    "textures: prewarm took 29.7s at size 1024",
     "collision: pole \"unnamed\" has no userData.spline — synthesised one from its bounds",
     "collision: pole \"proxy:pole\" has no userData.spline — synthesised one from its bounds",
-    "running with placeholder world; missing modules: props, animation, guards, fx, audio, hud"
+    "fx: PROPS absent — seeded six tomb torch emitters at the §8.1 sconce positions so the interior shot has fire in it. They yield to PROPS.",
+    "running with placeholder world; missing modules: props, guards"
   ],
   "consoleErrors": [
     "Failed to load resource: the server responded with a status of 404 (Not Found)",
