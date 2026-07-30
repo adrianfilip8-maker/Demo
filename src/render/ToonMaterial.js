@@ -42,7 +42,8 @@ const TUNE = {
   /* --- key / fill --- */
   keyIntensity: 2.55,
   ambIntensity: 0.52,
-  shadowFloor: 0.155,    // shadow illumination as a fraction of key luminance. AGENTS: never below ~14%
+  shadowFloor: 0.125,    // shadow illumination as a fraction of key luminance. AGENTS: never below ~14%
+                         // of the *tonemapped* result — 0.155 of a raw 3.3 key left the frame flat.
   shadowWash: 0.16,      // additive part of the shadow light — keeps the hue alive on warm albedo.
                          // Unmultiplied by albedo, so at 0.34 it painted flat blue over everything.
   shadowSat: 0.34,       // albedo saturation BOOST inside shadow (not a cut)
@@ -95,8 +96,10 @@ const PAL = {
      this the violet-teal clips toward blue and stops reading as shadow. */
   shadowTintPeak: 0.42,
   /* How much warm sand bounce is mixed into the shadow light. Desert shadow is sky plus
-     sand bounce; pure sky turns warm albedo mauve. */
-  shadowBounceMix: 0.45,
+     sand bounce. Bracketed by capture: 0.0 leaves warm albedo multiplied by pure blue and
+     every shaded face goes mauve; 0.45 removes the cool entirely and the frame turns
+     monochrome orange, losing the warm/cool tension §2.3 requires. */
+  shadowBounceMix: 0.20,
   haze: 0xe8b878,
   hazeNight: 0x2a3f66,
   hazeSun: 0xffc98a,

@@ -1,23 +1,15 @@
 {
-  "at": "2026-07-30T23:25:30.704Z",
+  "at": "2026-07-30T23:31:50.798Z",
   "width": 960,
   "height": 540,
   "quality": "med",
   "shots": {
     "hero": {
       "file": "shots/hero.png",
-      "ms": 7.900000000023283,
+      "ms": 5.699999999953434,
       "fps": 43,
       "drawCalls": 418,
       "triangles": 1735197,
-      "programs": 73
-    },
-    "temple": {
-      "file": "shots/temple.png",
-      "ms": 7.100000000093132,
-      "fps": 43,
-      "drawCalls": 418,
-      "triangles": 1790581,
       "programs": 73
     }
   },
@@ -42,7 +34,7 @@
     "audio": true
   },
   "bootWarnings": [
-    "textures: prewarm took 29.7s at size 1024",
+    "textures: prewarm took 27.8s at size 1024",
     "collision: pole \"unnamed\" has no userData.spline — synthesised one from its bounds",
     "collision: pole \"proxy:pole\" has no userData.spline — synthesised one from its bounds",
     "fx: PROPS absent — seeded six tomb torch emitters at the §8.1 sconce positions so the interior shot has fire in it. They yield to PROPS.",
@@ -50,7 +42,7 @@
   ],
   "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
   "warnings": [
-    "textures: prewarm took 29.7s at size 1024",
+    "textures: prewarm took 27.8s at size 1024",
     "collision: pole \"unnamed\" has no userData.spline — synthesised one from its bounds",
     "collision: pole \"proxy:pole\" has no userData.spline — synthesised one from its bounds",
     "fx: PROPS absent — seeded six tomb torch emitters at the §8.1 sconce positions so the interior shot has fire in it. They yield to PROPS.",
