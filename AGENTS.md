@@ -231,6 +231,98 @@ window.__GAME.warnings       // string[] — push a message here instead of thro
 
 ---
 
+### 4.6 COLLISION query API — binding contract
+
+`COLLISION` owns the BVH and answers these. `MOVEMENT` calls nothing else. All positions are
+world-space `THREE.Vector3`. **Every query must accept a scratch out-param or return a pooled
+object — zero allocation per call**, because MOVEMENT does dozens of these per frame.
+
+```js
+collision.add(rec)                       // { mesh, tag, material, climbable, oneWay } — from engine.registerCollider
+collision.build()                        // (re)build the BVH; called once after init
+collision.ready                          // bool
+
+/** Swept capsule. The workhorse — MOVEMENT resolves all motion through this. */
+collision.capsuleSweep(from, to, radius, height, opts?)
+  // → { hit:bool, position:Vec3, normal:Vec3, distance:num, tag:str, material:str, rec }
+  // opts: { ignoreTags:[], onlyTags:[], skipOneWay:bool }
+
+/** Downward probe for grounding. `slope` in radians from vertical. */
+collision.groundCheck(pos, radius, maxDist)
+  // → { hit:bool, y:num, normal:Vec3, slope:num, tag:str, material:str, rec }
+
+collision.raycast(origin, dir, maxDist, opts?)
+  // → { hit:bool, point:Vec3, normal:Vec3, distance:num, tag:str, rec }
+
+/** Overlap test — used for hazard volumes and vent detection. */
+collision.overlap(pos, radius, tags?)    // → rec[]  (pooled array, don't retain it)
+
+/**
+ * Find the nearest traversal affordance of a given tag. This is how the whole moveset
+ * discovers what it can attach to.
+ * For 'rail'/'pole' returns the closest point on rec.mesh.userData.spline.
+ * For 'hook'/'spire' returns rec.mesh.userData.point.
+ */
+collision.nearest(pos, tag, maxDist, opts?)
+  // → { rec, point:Vec3, t:num, tangent:Vec3, distance:num } | null
+  // opts: { facing:Vec3, maxAngle:rad }  — prefer affordances in front of the player
+
+/** Everything of a tag within radius, sorted near→far. For lock-on UI and Thief-o-Vision. */
+collision.query(pos, radius, tags)       // → [{ rec, point, distance }]
+```
+
+Slope thresholds that define the tags (§4.4) live in COLLISION and are exported as
+`collision.SLOPE = { walkable: 50°, wall: 70° }` so MOVEMENT doesn't hardcode them.
+
+### 4.7 ANIMATION contract — binding
+
+`MOVEMENT` describes *what Sly is doing*; `ANIMATION` decides *what that looks like*. MOVEMENT
+never touches a bone.
+
+```js
+animation.play(clip, { fade = 0.12, loop = true, speed = 1, weight = 1, lock = false })
+animation.stop(clip, fade)
+animation.isPlaying(clip)
+
+/** Continuous locomotion state, pushed every frame. ANIMATION blends the tree from this. */
+animation.setLocomotion({
+  speed,          // horizontal m/s
+  maxSpeed,       // for normalising the walk→run blend
+  grounded, sneaking, crouching, airborne,
+  verticalVelocity,
+  turnRate,       // signed rad/s — drives lean and the turn-in-place clips
+  slope,          // ground slope, radians
+  surface,        // material tag under foot, for footstep events
+})
+
+/** Additive layers, so a look-at or a flinch doesn't fight the base clip. */
+animation.setLookAt(worldPos | null)
+animation.addImpulse({ bone, dir, strength, decay })   // hit reactions, landing jolts
+
+animation.freezePose(name)     // screenshot harness — hold one frame of a clip
+animation.unfreezePose()
+animation.clipNames()          // → string[]
+
+/** ANIMATION emits these; FX and AUDIO subscribe. */
+animation.onEvent(name, fn)    // 'footstep' {surface,foot} · 'cane_hit' {index} · 'land' {force}
+```
+
+**Required clip names.** `Shots.js` freezes on some of these, so these exact strings must exist:
+
+```
+idle_confident  idle_bored  idle_look        perch_idle      balance_idle
+walk  run  run_fast  sneak_idle  sneak_walk  crouch_idle  crouch_walk  crawl
+turn_l  turn_r  skid_stop  roll
+jump_rise  jump_apex  jump_fall  double_jump  land_soft  land_hard  land_roll
+wall_run_l  wall_run_r  wall_jump  wall_cling
+ledge_hang  ledge_shimmy_l  ledge_shimmy_r  ledge_climb
+hook_grab  hook_swing  hook_release
+rail_slide  rail_walk  pole_climb  pole_slide  pole_swing
+spire_land  spire_balance
+cane_combo_1  cane_combo_2  cane_combo_3  dive_attack  dive_impact
+pickpocket  paraglide  hurt  ko  victory
+```
+
 ## 5. Coding Conventions
 
 - ES modules, no build-step magic beyond Vite. No TypeScript.
