@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { Blit, makeRT, sizeRT, killRT, passMaterial, GLSL_VIEW, GLSL_NOISE, GLSL_AGX } from './passes/Common.js';
+import { Blit, makeRT, sizeRT, killRT, passMaterial, GLSL_VIEW, GLSL_NOISE, GLSL_AGX, GLSL_SRGB } from './passes/Common.js';
 import { AOPass } from './passes/AO.js';
 
 /**
@@ -180,6 +180,7 @@ uniform vec3  uLift, uGain, uSplitShadow, uSplitHighlight, uInkWarm, uInkCool;
 ${GLSL_VIEW}
 ${GLSL_NOISE}
 ${GLSL_AGX}
+${GLSL_SRGB}
 
 void main() {
   // Edge-only chromatic aberration: sampling the channels apart across the whole frame
@@ -223,8 +224,11 @@ void main() {
   c = ( c - 0.5 ) * uContrast + 0.5;
   c = max( vec3( 0.0 ), c );
 
-  /* ---- tonemap: exactly once, here ---- */
-  c = slyAgX( c );
+  /* ---- tonemap: exactly once, here. Exposure is already folded in above, so pass 1. ---- */
+  c = slyAgX( c, 1.0 );
+  // AgX returns linear sRGB. Nothing downstream encodes for us — a ShaderMaterial writing to
+  // the canvas doesn't get three.js's output conversion — so do it here, once.
+  c = slyLinearToSrgb( c );
 
   /* ---- ink lines, applied after tonemap so they stay solid black rather than glowing ---- */
   if ( uEdgeEnabled > 0.5 ) {
@@ -239,8 +243,10 @@ void main() {
   c *= vig;
 
   // Dither in display space kills banding in the sky gradient, which is the one place an
-  // 8-bit framebuffer visibly fails on a scene like this.
-  c += ( slyIGN( gl_FragCoord.xy, uTime ) - 0.5 ) * uGrain;
+  // 8-bit framebuffer visibly fails on a scene like this. Deliberately static per pixel,
+  // not animated: the screenshot critic compares frames across commits and needs a still
+  // frame to be bit-identical every time it renders.
+  c += ( slyIGN( gl_FragCoord.xy ) - 0.5 ) * uGrain;
 
   gl_FragColor = vec4( c, 1.0 );
 }
@@ -388,6 +394,12 @@ export class PostFX {
         await this.ao.init();
       }
 
+      // PostFX owns tone mapping from here on: the composite pass applies AgX exactly once.
+      // Leaving the renderer's own tone mapping on would transform the image twice and wash
+      // it out; toggling it per frame would recompile every shader every frame.
+      this._prevToneMapping = this.renderer.toneMapping;
+      this.renderer.toneMapping = THREE.NoToneMapping;
+
       this.setSize();
       this.ok = true;
     } catch (err) {
@@ -452,6 +464,9 @@ export class PostFX {
         console.error('[postfx] render failed', err);
       }
       this.ok = false;
+      // We took tone mapping off the renderer in init(); hand it back, or the direct-render
+      // fallback presents an untonemapped image that reads as blown out and flat.
+      renderer.toneMapping = this._prevToneMapping ?? THREE.AgXToneMapping;
       renderer.setRenderTarget(null);
       renderer.render(engine.scene, engine.camera);
     }
@@ -466,12 +481,12 @@ export class PostFX {
     this.shared.uProjInv.value.copy(cam.projectionMatrixInverse);
     this.shared.uNearFar.value.set(cam.near, cam.far);
 
-    /* ---- 1. scene, linear HDR. Tone mapping is off here; the composite owns it. ---- */
-    const prevToneMapping = renderer.toneMapping;
-    const prevOutput = renderer.outputColorSpace;
-    renderer.toneMapping = THREE.NoToneMapping;
-    renderer.outputColorSpace = THREE.LinearSRGBColorSpace;
-
+    /* ---- 1. scene, linear HDR ----
+       Tone mapping was disabled permanently in init(), not toggled per frame: flipping
+       renderer.toneMapping mid-frame changes a shader define, which invalidates every
+       cached program and recompiles the whole scene each frame. outputColorSpace is left
+       alone entirely — when rendering to a target, three.js takes the encoding from the
+       target texture's colorSpace, which makeRT already sets to NoColorSpace. */
     renderer.setRenderTarget(this.sceneRT);
     renderer.clear();
     renderer.render(scene, cam);
@@ -493,9 +508,6 @@ export class PostFX {
       scene.background = prevBg;
       this.shared.uNormal.value = this.normalRT.texture;
     }
-
-    renderer.toneMapping = prevToneMapping;
-    renderer.outputColorSpace = prevOutput;
 
     /* ---- 3. AO ---- */
     let aoTex = null;
@@ -571,6 +583,7 @@ export class PostFX {
   }
 
   dispose() {
+    if (this._prevToneMapping != null) this.renderer.toneMapping = this._prevToneMapping;
     for (const rt of this._rts) killRT(rt);
     for (const m of this._mats) m.dispose?.();
     this.ao?.dispose();

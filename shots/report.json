@@ -1,14 +1,43 @@
 {
-  "at": "2026-07-30T12:42:53.761Z",
+  "at": "2026-07-30T12:48:26.474Z",
   "width": 960,
   "height": 540,
   "quality": "med",
-  "shots": {},
-  "errors": [
-    "hero: page.evaluate: TypeError: Cannot read properties of undefined (reading 'elements')\n    at Matrix3.copy (http://127.0.0.1:5300/node_modules/.vite/deps/three.module-BKY27AXr.js?v=6f4bd405:5052:16)\n    at refreshTransformUniform (http://127.0.0.1:5300/node_modules/.vite/deps/three.module-BKY27AXr.js?v=6f4bd405:49496:17)\n    at refreshUniformsCommon (http://127.0.0.1:5300/node_modules/.vite/deps/three.module-BKY27AXr.js?v=6f4bd405:49546:4)\n    at Object.refreshMaterialUniforms (http://127.0.0.1:5300/node_modules/.vite/deps/three.module-BKY27AXr.js?v=6f4bd405:49525:44)\n    at setProgram (http://127.0.0.1:5300/node_modules/.vite/deps/three.module-BKY27AXr.js?v=6f4bd405:51884:15)\n    at WebGLRenderer.renderBufferDirect (http://127.0.0.1:5300/node_modules/.vite/deps/three.module-BKY27AXr.js?v=6f4bd405:51233:20)\n    at renderObject (http://127.0.0.1:5300/node_modules/.vite/deps/three.module-BKY27AXr.js?v=6f4bd405:46890:17)\n    at renderObject (http://127.0.0.1:5300/node_modules/.vite/deps/three.module-BKY27AXr.js?v=6f4bd405:46903:52)\n    at renderObject (http://127.0.0.1:5300/node_modules/.vite/deps/three.module-BKY27AXr.js?v=6f4bd405:46903:52)\n    at WebGLShadowMap.render (http://127.0.0.1:5300/node_modules/.vite/deps/three.module-BKY27AXr.js?v=6f4bd405:46798:5)",
-    "temple: page.evaluate: TypeError: Cannot read properties of undefined (reading 'elements')\n    at Matrix3.copy (http://127.0.0.1:5300/node_modules/.vite/deps/three.module-BKY27AXr.js?v=6f4bd405:5052:16)\n    at refreshTransformUniform (http://127.0.0.1:5300/node_modules/.vite/deps/three.module-BKY27AXr.js?v=6f4bd405:49496:17)\n    at refreshUniformsCommon (http://127.0.0.1:5300/node_modules/.vite/deps/three.module-BKY27AXr.js?v=6f4bd405:49546:4)\n    at Object.refreshMaterialUniforms (http://127.0.0.1:5300/node_modules/.vite/deps/three.module-BKY27AXr.js?v=6f4bd405:49525:44)\n    at setProgram (http://127.0.0.1:5300/node_modules/.vite/deps/three.module-BKY27AXr.js?v=6f4bd405:51884:15)\n    at WebGLRenderer.renderBufferDirect (http://127.0.0.1:5300/node_modules/.vite/deps/three.module-BKY27AXr.js?v=6f4bd405:51233:20)\n    at renderObject (http://127.0.0.1:5300/node_modules/.vite/deps/three.module-BKY27AXr.js?v=6f4bd405:46890:17)\n    at renderObject (http://127.0.0.1:5300/node_modules/.vite/deps/three.module-BKY27AXr.js?v=6f4bd405:46903:52)\n    at renderObject (http://127.0.0.1:5300/node_modules/.vite/deps/three.module-BKY27AXr.js?v=6f4bd405:46903:52)\n    at WebGLShadowMap.render (http://127.0.0.1:5300/node_modules/.vite/deps/three.module-BKY27AXr.js?v=6f4bd405:46798:5)",
-    "dunes: page.evaluate: TypeError: Cannot read properties of undefined (reading 'elements')\n    at Matrix3.copy (http://127.0.0.1:5300/node_modules/.vite/deps/three.module-BKY27AXr.js?v=6f4bd405:5052:16)\n    at refreshTransformUniform (http://127.0.0.1:5300/node_modules/.vite/deps/three.module-BKY27AXr.js?v=6f4bd405:49496:17)\n    at refreshUniformsCommon (http://127.0.0.1:5300/node_modules/.vite/deps/three.module-BKY27AXr.js?v=6f4bd405:49546:4)\n    at Object.refreshMaterialUniforms (http://127.0.0.1:5300/node_modules/.vite/deps/three.module-BKY27AXr.js?v=6f4bd405:49525:44)\n    at setProgram (http://127.0.0.1:5300/node_modules/.vite/deps/three.module-BKY27AXr.js?v=6f4bd405:51884:15)\n    at WebGLRenderer.renderBufferDirect (http://127.0.0.1:5300/node_modules/.vite/deps/three.module-BKY27AXr.js?v=6f4bd405:51233:20)\n    at renderObject (http://127.0.0.1:5300/node_modules/.vite/deps/three.module-BKY27AXr.js?v=6f4bd405:46890:17)\n    at renderObject (http://127.0.0.1:5300/node_modules/.vite/deps/three.module-BKY27AXr.js?v=6f4bd405:46903:52)\n    at renderObject (http://127.0.0.1:5300/node_modules/.vite/deps/three.module-BKY27AXr.js?v=6f4bd405:46903:52)\n    at WebGLShadowMap.render (http://127.0.0.1:5300/node_modules/.vite/deps/three.module-BKY27AXr.js?v=6f4bd405:46798:5)"
-  ],
+  "shots": {
+    "hero": {
+      "file": "shots/hero.png",
+      "ms": 6.7999999998137355,
+      "fps": 62,
+      "drawCalls": 413,
+      "triangles": 1732921,
+      "programs": 54
+    },
+    "temple": {
+      "file": "shots/temple.png",
+      "ms": 5.899999999906868,
+      "fps": 56,
+      "drawCalls": 413,
+      "triangles": 1788305,
+      "programs": 54
+    },
+    "dunes": {
+      "file": "shots/dunes.png",
+      "ms": 6.5,
+      "fps": 56,
+      "drawCalls": 387,
+      "triangles": 1613081,
+      "programs": 54
+    },
+    "sly-closeup": {
+      "file": "shots/sly-closeup.png",
+      "ms": 6.100000000093132,
+      "fps": 60,
+      "drawCalls": 395,
+      "triangles": 1756501,
+      "programs": 54
+    }
+  },
+  "errors": [],
   "modules": {
     "shading": true,
     "postfx": true,
@@ -29,60 +58,21 @@
     "audio": false
   },
   "bootWarnings": [
-    "textures: prewarm took 38.6s at size 1024",
+    "textures: prewarm took 36.5s at size 1024",
     "collision: pole \"unnamed\" has no userData.spline — synthesised one from its bounds",
     "collision: pole \"proxy:pole\" has no userData.spline — synthesised one from its bounds",
-    "running with placeholder world; missing modules: props, animation, guards, fx, audio, hud",
-    "postfx: render failed, falling back to direct rendering — Cannot read properties of undefined (reading 'elements')"
+    "running with placeholder world; missing modules: props, animation, guards, fx, audio, hud"
   ],
   "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
   "warnings": [
-    "textures: prewarm took 38.6s at size 1024",
+    "textures: prewarm took 36.5s at size 1024",
     "collision: pole \"unnamed\" has no userData.spline — synthesised one from its bounds",
     "collision: pole \"proxy:pole\" has no userData.spline — synthesised one from its bounds",
-    "running with placeholder world; missing modules: props, animation, guards, fx, audio, hud",
-    "postfx: render failed, falling back to direct rendering — Cannot read properties of undefined (reading 'elements')"
+    "running with placeholder world; missing modules: props, animation, guards, fx, audio, hud"
   ],
   "consoleErrors": [
     "Failed to load resource: the server responded with a status of 404 (Not Found)",
-    "THREE.WebGLProgram: Shader Error 0 - VALIDATE_STATUS false\n\nMaterial Name: \nMaterial Type: MeshDepthMaterial\n\nProgram Info Log: Vertex shader is not compiled.\n\u0000\nVERTEX\n\nERROR: 0:325: 'uvundefined' : undeclared identifier\nERROR: 0:325: 'constructor' : not enough data provided for construction\n\u0000\n\n  320: void main() {\n  321: #if defined( USE_UV ) || defined( USE_ANISOTROPY )\n  322: \tvUv = vec3( uv, 1 ).xy;\n  323: #endif\n  324: #ifdef USE_MAP\n> 325: \tvMapUv = ( mapTransform * vec3( MAP_UV, 1 ) ).xy;\n  326: #endif\n  327: #ifdef USE_ALPHAMAP\n  328: \tvAlphaMapUv = ( alphaMapTransform * vec3( ALPHAMAP_UV, 1 ) ).xy;\n  329: #endif\n  330: #ifdef USE_LIGHTMAP\n  331: \tvLightMapUv = ( lightMapTransform * vec3( LIGHTMAP_UV, 1 ) ).xy;\n",
-    "[postfx] render failed TypeError: Cannot read properties of undefined (reading 'elements')\n    at Matrix3.copy (http://127.0.0.1:5300/node_modules/.vite/deps/three.module-BKY27AXr.js?v=6f4bd405:5052:16)\n    at refreshTransformUniform (http://127.0.0.1:5300/node_modules/.vite/deps/three.module-BKY27AXr.js?v=6f4bd405:49496:17)\n    at refreshUniformsCommon (http://127.0.0.1:5300/node_modules/.vite/deps/three.module-BKY27AXr.js?v=6f4bd405:49546:4)\n    at Object.refreshMaterialUniforms (http://127.0.0.1:5300/node_modules/.vite/deps/three.module-BKY27AXr.js?v=6f4bd405:49525:44)\n    at setProgram (http://127.0.0.1:5300/node_modules/.vite/deps/three.module-BKY27AXr.js?v=6f4bd405:51884:15)\n    at WebGLRenderer.renderBufferDirect (http://127.0.0.1:5300/node_modules/.vite/deps/three.module-BKY27AXr.js?v=6f4bd405:51233:20)\n    at renderObject (http://127.0.0.1:5300/node_modules/.vite/deps/three.module-BKY27AXr.js?v=6f4bd405:46890:17)\n    at renderObject (http://127.0.0.1:5300/node_modules/.vite/deps/three.module-BKY27AXr.js?v=6f4bd405:46903:52)\n    at renderObject (http://127.0.0.1:5300/node_modules/.vite/deps/three.module-BKY27AXr.js?v=6f4bd405:46903:52)\n    at WebGLShadowMap.render (http://127.0.0.1:5300/node_modules/.vite/deps/three.module-BKY27AXr.js?v=6f4bd405:46798:5)",
-    "THREE.WebGLProgram: Shader Error 1282 - VALIDATE_STATUS false\n\nMaterial Name: \nMaterial Type: MeshDepthMaterial\n\nProgram Info Log: Vertex shader is not compiled.\n\u0000\nVERTEX\n\nERROR: 0:325: 'uvundefined' : undeclared identifier\nERROR: 0:325: 'constructor' : not enough data provided for construction\n\u0000\n\n  320: void main() {\n  321: #if defined( USE_UV ) || defined( USE_ANISOTROPY )\n  322: \tvUv = vec3( uv, 1 ).xy;\n  323: #endif\n  324: #ifdef USE_MAP\n> 325: \tvMapUv = ( mapTransform * vec3( MAP_UV, 1 ) ).xy;\n  326: #endif\n  327: #ifdef USE_ALPHAMAP\n  328: \tvAlphaMapUv = ( alphaMapTransform * vec3( ALPHAMAP_UV, 1 ) ).xy;\n  329: #endif\n  330: #ifdef USE_LIGHTMAP\n  331: \tvLightMapUv = ( lightMapTransform * vec3( LIGHTMAP_UV, 1 ) ).xy;\n",
-    "TypeError: Cannot read properties of undefined (reading 'elements')\n    at Matrix3.copy (http://127.0.0.1:5300/node_modules/.vite/deps/three.module-BKY27AXr.js?v=6f4bd405:5052:16)\n    at refreshTransformUniform (http://127.0.0.1:5300/node_modules/.vite/deps/three.module-BKY27AXr.js?v=6f4bd405:49496:17)\n    at refreshUniformsCommon (http://127.0.0.1:5300/node_modules/.vite/deps/three.module-BKY27AXr.js?v=6f4bd405:49546:4)\n    at Object.refreshMaterialUniforms (http://127.0.0.1:5300/node_modules/.vite/deps/three.module-BKY27AXr.js?v=6f4bd405:49525:44)\n    at setProgram (http://127.0.0.1:5300/node_modules/.vite/deps/three.module-BKY27AXr.js?v=6f4bd405:51884:15)\n    at WebGLRenderer.renderBufferDirect (http://127.0.0.1:5300/node_modules/.vite/deps/three.module-BKY27AXr.js?v=6f4bd405:51233:20)\n    at renderObject (http://127.0.0.1:5300/node_modules/.vite/deps/three.module-BKY27AXr.js?v=6f4bd405:46890:17)\n    at renderObject (http://127.0.0.1:5300/node_modules/.vite/deps/three.module-BKY27AXr.js?v=6f4bd405:46903:52)\n    at renderObject (http://127.0.0.1:5300/node_modules/.vite/deps/three.module-BKY27AXr.js?v=6f4bd405:46903:52)\n    at WebGLShadowMap.render (http://127.0.0.1:5300/node_modules/.vite/deps/three.module-BKY27AXr.js?v=6f4bd405:46798:5)",
-    "pageerror: Cannot read properties of undefined (reading 'elements')",
-    "TypeError: Cannot read properties of undefined (reading 'elements')\n    at Matrix3.copy (http://127.0.0.1:5300/node_modules/.vite/deps/three.module-BKY27AXr.js?v=6f4bd405:5052:16)\n    at refreshTransformUniform (http://127.0.0.1:5300/node_modules/.vite/deps/three.module-BKY27AXr.js?v=6f4bd405:49496:17)\n    at refreshUniformsCommon (http://127.0.0.1:5300/node_modules/.vite/deps/three.module-BKY27AXr.js?v=6f4bd405:49546:4)\n    at Object.refreshMaterialUniforms (http://127.0.0.1:5300/node_modules/.vite/deps/three.module-BKY27AXr.js?v=6f4bd405:49525:44)\n    at setProgram (http://127.0.0.1:5300/node_modules/.vite/deps/three.module-BKY27AXr.js?v=6f4bd405:51884:15)\n    at WebGLRenderer.renderBufferDirect (http://127.0.0.1:5300/node_modules/.vite/deps/three.module-BKY27AXr.js?v=6f4bd405:51233:20)\n    at renderObject (http://127.0.0.1:5300/node_modules/.vite/deps/three.module-BKY27AXr.js?v=6f4bd405:46890:17)\n    at renderObject (http://127.0.0.1:5300/node_modules/.vite/deps/three.module-BKY27AXr.js?v=6f4bd405:46903:52)\n    at renderObject (http://127.0.0.1:5300/node_modules/.vite/deps/three.module-BKY27AXr.js?v=6f4bd405:46903:52)\n    at WebGLShadowMap.render (http://127.0.0.1:5300/node_modules/.vite/deps/three.module-BKY27AXr.js?v=6f4bd405:46798:5)",
-    "pageerror: Cannot read properties of undefined (reading 'elements')",
-    "TypeError: Cannot read properties of undefined (reading 'elements')\n    at Matrix3.copy (http://127.0.0.1:5300/node_modules/.vite/deps/three.module-BKY27AXr.js?v=6f4bd405:5052:16)\n    at refreshTransformUniform (http://127.0.0.1:5300/node_modules/.vite/deps/three.module-BKY27AXr.js?v=6f4bd405:49496:17)\n    at refreshUniformsCommon (http://127.0.0.1:5300/node_modules/.vite/deps/three.module-BKY27AXr.js?v=6f4bd405:49546:4)\n    at Object.refreshMaterialUniforms (http://127.0.0.1:5300/node_modules/.vite/deps/three.module-BKY27AXr.js?v=6f4bd405:49525:44)\n    at setProgram (http://127.0.0.1:5300/node_modules/.vite/deps/three.module-BKY27AXr.js?v=6f4bd405:51884:15)\n    at WebGLRenderer.renderBufferDirect (http://127.0.0.1:5300/node_modules/.vite/deps/three.module-BKY27AXr.js?v=6f4bd405:51233:20)\n    at renderObject (http://127.0.0.1:5300/node_modules/.vite/deps/three.module-BKY27AXr.js?v=6f4bd405:46890:17)\n    at renderObject (http://127.0.0.1:5300/node_modules/.vite/deps/three.module-BKY27AXr.js?v=6f4bd405:46903:52)\n    at renderObject (http://127.0.0.1:5300/node_modules/.vite/deps/three.module-BKY27AXr.js?v=6f4bd405:46903:52)\n    at WebGLShadowMap.render (http://127.0.0.1:5300/node_modules/.vite/deps/three.module-BKY27AXr.js?v=6f4bd405:46798:5)",
-    "pageerror: Cannot read properties of undefined (reading 'elements')",
-    "pageerror: Cannot read properties of undefined (reading 'elements')",
-    "pageerror: Cannot read properties of undefined (reading 'elements')",
-    "pageerror: Cannot read properties of undefined (reading 'elements')",
-    "pageerror: Cannot read properties of undefined (reading 'elements')",
-    "pageerror: Cannot read properties of undefined (reading 'elements')",
-    "pageerror: Cannot read properties of undefined (reading 'elements')",
-    "pageerror: Cannot read properties of undefined (reading 'elements')",
-    "pageerror: Cannot read properties of undefined (reading 'elements')",
-    "pageerror: Cannot read properties of undefined (reading 'elements')",
-    "pageerror: Cannot read properties of undefined (reading 'elements')",
-    "pageerror: Cannot read properties of undefined (reading 'elements')",
-    "pageerror: Cannot read properties of undefined (reading 'elements')",
-    "pageerror: Cannot read properties of undefined (reading 'elements')",
-    "pageerror: Cannot read properties of undefined (reading 'elements')",
-    "pageerror: Cannot read properties of undefined (reading 'elements')",
-    "pageerror: Cannot read properties of undefined (reading 'elements')",
-    "pageerror: Cannot read properties of undefined (reading 'elements')",
-    "pageerror: Cannot read properties of undefined (reading 'elements')",
-    "pageerror: Cannot read properties of undefined (reading 'elements')",
-    "pageerror: Cannot read properties of undefined (reading 'elements')",
-    "pageerror: Cannot read properties of undefined (reading 'elements')",
-    "pageerror: Cannot read properties of undefined (reading 'elements')",
-    "pageerror: Cannot read properties of undefined (reading 'elements')",
-    "pageerror: Cannot read properties of undefined (reading 'elements')",
-    "pageerror: Cannot read properties of undefined (reading 'elements')",
-    "pageerror: Cannot read properties of undefined (reading 'elements')",
-    "pageerror: Cannot read properties of undefined (reading 'elements')",
-    "pageerror: Cannot read properties of undefined (reading 'elements')",
-    "pageerror: Cannot read properties of undefined (reading 'elements')",
-    "pageerror: Cannot read properties of undefined (reading 'elements')"
+    "THREE.WebGLProgram: Shader Error 0 - VALIDATE_STATUS false\n\nMaterial Name: postfx.gtao\nMaterial Type: ShaderMaterial\n\nProgram Info Log: Fragment shader is not compiled.\n\u0000\n\nFRAGMENT\n\nERROR: 0:73: 'uNearFar' : redefinition\n\u0000\n\n  68: uniform vec4 uParams;      // x radius(m)  y thickness(m)  z power  w distanceFalloff\n  69: uniform vec2 uFadeRange;   // start, end distance in metres — AO is a contact cue, not a fog\n  70: \n  71: \n  72: uniform mat4 uProjInv;\n> 73: uniform vec2 uNearFar;\n  74: \n  75: float slyLuma( vec3 c ) { return dot( c, vec3( 0.2126, 0.7152, 0.0722 ) ); }\n  76: \n  77: /** Raw depth buffer value -> positive distance along the view axis, in metres. */\n  78: float slyLinearZ( float d ) {\n  79:   // perspectiveDepthToViewZ, sign-flipped so callers deal in positive metres.",
+    "THREE.WebGLProgram: Shader Error 1282 - VALIDATE_STATUS false\n\nMaterial Name: postfx.composite\nMaterial Type: ShaderMaterial\n\nProgram Info Log: Fragment shader is not compiled.\n\u0000\n\nFRAGMENT\n\nERROR: 0:217: 'slyAgX' : no matching overloaded function found\nERROR: 0:217: '=' : dimension mismatch\nERROR: 0:217: 'assign' : cannot convert from 'const mediump float' to 'highp 3-component vector of float'\nERROR: 0:233: 'slyIGN' : no matching overloaded function found\n\u0000\n\n  212:   c = mix( vec3( l ), c, uSaturation );\n  213:   c = ( c - 0.5 ) * uContrast + 0.5;\n  214:   c = max( vec3( 0.0 ), c );\n  215: \n  216:   /* ---- tonemap: exactly once, here ---- */\n> 217:   c = slyAgX( c );\n  218: \n  219:   /* ---- ink lines, applied after tonemap so they stay solid black rather than glowing ---- */\n  220:   if ( uEdgeEnabled > 0.5 ) {\n  221:     float line = texture2D( uEdge, vUv ).r;\n  222:     // Warm ink where the surface is lit, violet ink where it's in shadow (§2.1).\n  223:     vec3 ink = mix( uInkCool, uInkWarm, smoothstep( 0.12, 0.55, slyLuma( c ) ) );"
   ]
 }
