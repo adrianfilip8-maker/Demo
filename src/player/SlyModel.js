@@ -1410,6 +1410,10 @@ export class SlyModel {
     for (const name of Object.keys(wanted)) {
       let t = null;
       try { t = tx?.get?.(name) ?? null; } catch { t = null; }
+      // Per AGENTS.md §4.4 textures.get() hands back a *bundle* of maps, not a texture.
+      // These go into a material's `map` slot, so unwrap the albedo — passing the bundle
+      // through makes three.js read `.matrix` off a plain object and kill the frame.
+      if (t && !t.isTexture) t = t.map?.isTexture ? t.map : null;
       this._shared[name] = t;
     }
     // Own maps are always built: TEXTURES may be absent, and even when present it has no

@@ -236,6 +236,22 @@ export class Shading {
 
   /** Normalise + hash the option bag. */
   _resolve(opts) {
+    // Every texture slot is validated before it reaches a material. A caller that passes a
+    // TEXTURES *bundle* (§4.4 returns {map, normalMap, ...}) instead of a THREE.Texture makes
+    // three.js read `.matrix` off a plain object deep inside refreshMaterialUniforms, which
+    // throws mid-render and takes the whole frame down. Unwrap what we can, drop the rest,
+    // and name the slot so the caller can be found.
+    for (const slot of ['map', 'normalMap', 'roughnessMap', 'aoMap', 'emissiveMap', 'alphaMap', 'metalnessMap']) {
+      const v = opts[slot];
+      if (!v || v.isTexture) continue;
+      const unwrapped = v[slot]?.isTexture ? v[slot] : (v.map?.isTexture ? v.map : null);
+      opts[slot] = unwrapped;
+      this.engine?.warn(
+        `shading.toon: "${slot}" was not a THREE.Texture` +
+        (unwrapped ? ' — unwrapped it from the texture bundle.' : ' — dropped it.')
+      );
+    }
+
     const hasMap = !!opts.map;
     const detailKey = typeof opts.detail === 'string' && opts.detail ? opts.detail : null;
     const preset = detailKey ? DETAIL_PRESETS[detailKey] || DETAIL_PRESETS.generic : null;
