@@ -33,10 +33,13 @@ const TUNE = {
   bloomMips: 6,
 
   /* --- grade --- */
-  exposure: 1.45,                  // the scene renders dark; lift before the tonemap toe
-  contrast: 1.04,
-  saturation: 1.16,
-  lift: [0.012, 0.010, 0.020],     // open the toe so shadows keep readable detail (§7.3)
+  // Was lifted to 1.45 to fight darkness that turned out to be the AO feedback bug below.
+  // With that fixed the lift became a double correction and blew the stone out to white,
+  // which is what AgX then desaturated into pale lavender.
+  exposure: 0.95,
+  contrast: 1.08,
+  saturation: 1.30,                // AgX desaturates hard; the sandstone has to be pushed back
+  lift: [0.006, 0.004, 0.010],     // open the toe just enough to keep shadow detail (§7.3)
   gain: [1.04, 1.0, 0.95],         // warm the highlights
   splitShadow: 0x2a3f66,           // §2.2 shadow hue
   splitHighlight: 0xffd9a0,        // §2.2 sun
@@ -92,7 +95,12 @@ void main() {
   // a 60-degree fold; below that the shading already separates the surfaces.
   float normalLine = smoothstep( 0.55, 0.55 + ( 1.0 - uParams.y ) * 0.75, nEdge );
 
-  float line = max( depthLine, normalLine );
+  // A normal step alone still fires on every masonry joint in a flat wall, which inked the
+  // architecture into a circuit board. Require the normal fold to be corroborated by at
+  // least a hint of depth step, so creases mark real folds in the form while the block
+  // joints are left to the texture, which already draws them.
+  float corroborate = smoothstep( 0.004, 0.020, dEdge );
+  float line = max( depthLine, normalLine * corroborate );
   // Thin the lines out with distance rather than cutting them, or the transition pops.
   line *= 1.0 - smoothstep( uFade.x, uFade.y, z0 );
 
@@ -247,7 +255,7 @@ void main() {
     line *= smoothstep( 0.06, 0.22, lum );
     // Warm ink where the surface is lit, violet ink where it's in shadow (§2.1).
     vec3 ink = mix( uInkCool, uInkWarm, smoothstep( 0.12, 0.55, lum ) );
-    c = mix( c, ink, clamp( line, 0.0, 1.0 ) * 0.85 );
+    c = mix( c, ink, clamp( line, 0.0, 1.0 ) * 0.60 );
   }
 
   /* ---- finishing ---- */
