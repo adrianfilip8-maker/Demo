@@ -160,10 +160,15 @@ export class Textures {
       : null;
 
     // One UV unit of a mesh is one metre by the level's convention, so `tile` (metres the
-    // texture spans) inverts into the repeat.
-    const rep = 1 / Math.max(0.05, recipe.tile ?? 2.0);
+    // texture spans) inverts into the repeat. Recipes may give it anisotropically as [u, v] —
+    // column flutes and tail rings both do — and treating that array as a number silently
+    // produced a NaN repeat, which drops the texture entirely.
+    const tile = recipe.tile ?? 2.0;
+    const tu = Math.max(0.05, Array.isArray(tile) ? tile[0] : tile);
+    const tv = Math.max(0.05, Array.isArray(tile) ? (tile[1] ?? tile[0]) : tile);
+    const rep = [1 / tu, 1 / tv];
     for (const t of [map, normalMap, orm, emissiveMap]) {
-      if (t) t.repeat.set(rep, rep);
+      if (t) t.repeat.set(rep[0], rep[1]);
     }
 
     this.stats.built++;
@@ -177,8 +182,8 @@ export class Textures {
       metalnessMap: orm,
       emissiveMap,
       orm,
-      repeat: [rep, rep],
-      tile: recipe.tile ?? 2.0,
+      repeat: rep,
+      tile,
       normalScale: out.normalStrength,
       rough: recipe.rough ?? 0.85,
       group: recipe.group ?? 'misc',
