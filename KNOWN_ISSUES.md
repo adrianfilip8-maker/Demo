@@ -194,3 +194,38 @@ Recorded so they are not re-derived:
   If LIGHTING wants it back, the lever is `ashlar`'s `tone`, not the grime.
 - **The cel ramp needs geometry, not shader work.** The 3-band quantiser is correct; the scene
   is boxes and faceted cylinders, so there is almost no smooth normal gradient for it to band.
+
+---
+
+## 9. Every character screenshot ever captured was of the wrong pose — **fixed**
+
+`hold` on the frozen clips pointed at *partial in-between keys*. `idle_confident` held at 0.9
+and `perch_idle` at 0.8, where a partial key overrode hips, chest, head and tail. So every
+character capture in this project rendered a breath drift of the pose with those four bones
+reverted, and **anything authored into the base pose on those bones had never reached a single
+frame.** Both are now `hold: 0`.
+
+Two more of the same kind: `run` froze on the contact key — the one frame of a run cycle that
+looks like standing still — and `hook_swing` froze at the bottom of the arc, its straightest,
+least dynamic frame, when the file's own comment already said the front of the arc was "the
+pose the traversal frame wants".
+
+**Read every prior character critique in that light.** "Pose is stiff / A-pose-like" was a real
+observation of a frame nobody intended to render. `idle_confident` *did* have contrapposto
+authored; it also failed for a second, independent reason worth knowing — leg angles are
+measured against the hips, and the hips were already rolled −12°, so a leg authored at +13°
+netted +1° in world and both feet stayed 4 cm apart and vertical.
+
+Still open on the character, honestly scored by the agent that did the work:
+
+- **Proportions improved, not fixed:** 5.53 → 5.29 heads. The head sits on a fixed 1.396 m of
+  legs and torso, so the ratio asymptotes to `1.49 + 1.396/headHeight` and no `headScale` gets
+  to 1:4.5 without a bobblehead. The real lever is a ~0.10 m shorter torso, which touches ~10
+  sites carrying absolute Y coordinates plus three bone positions. Deliberately not attempted;
+  it is the next move if the critic keeps failing this line.
+- **Eye emissive lift is CPU-verified only.** The re-capture was queued behind other agents for
+  32 minutes and the work was reported without it. Check `sly-closeup`, and check `night`
+  (`tod 0.02`) where a warmer, brighter eye emissive previously failed as "two yellow dots".
+- **Fur improved, not proven at close range.** Arms and legs are still fairly smooth tubes.
+- `combat` is still blown to near-white. The pose under it is fixed; the exposure is not the
+  character's to fix.
