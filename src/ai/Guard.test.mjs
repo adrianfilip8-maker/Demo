@@ -15,7 +15,9 @@
  */
 import * as THREE from 'three';
 import { Guards } from './Guard.js';
-import { ROUTES, DETECT, STATE, VISION } from './Patrol.js';
+import { ROUTES, ROSTER, DETECT, STATE, VISION } from './Patrol.js';
+
+const ROSTER_TYPES = ROSTER.map((r) => r.type);
 
 /* ============================ tiny test harness =========================== */
 
@@ -238,15 +240,16 @@ async function main() {
   /* ------------------------------------------------------------------ 3 --- */
   console.log('\nline of sight');
   {
-    // A pillar between guard #0's post and a player standing 7 m in front of him.
-    const pillar = { x0: -1.9, x1: 0.9, y0: 0, y1: 6, z0: 2.6, z1: 5.4 };
-    const { guards, engine } = await makeGuards({ boxes: [pillar] });
+    const { guards, engine, collision } = await makeGuards();
     const g = guards.list[0];
     g.dwell = 1e9; g.dwellAction = 'look';          // hold his post for the duration
 
-    // Park the player dead ahead, behind the pillar.
+    // Drop a pillar squarely between guard #0's post and a player 7 m in front of him.
+    const c = g.position.clone().addScaledVector(g.forward, 3.5);
+    const pillar = { x0: c.x - 1.4, x1: c.x + 1.4, y0: 0, y1: 6, z0: c.z - 1.4, z1: c.z + 1.4 };
+    collision.boxes.push(pillar);
+
     const place = () => {
-      g._eyePosition(new THREE.Vector3());
       const eye = g._eyePosition(new THREE.Vector3());
       engine.movement.position.set(eye.x + g.forward.x * 7, eye.y - 0.95, eye.z + g.forward.z * 7);
     };
@@ -257,11 +260,11 @@ async function main() {
     check('a pillar genuinely blocks line of sight', () => {
       assert(g.senses.suspicion === 0, `suspicion rose to ${g.senses.suspicion.toFixed(3)} through solid stone`);
       assert(g.state === STATE.PATROL, `state went to ${g.state} behind cover`);
-      assert(engine._mods.get('collision').rays > 0, 'no LOS ray was ever cast');
+      assert(collision.rays > 0, 'no LOS ray was ever cast');
     });
 
     // Take the pillar away; the same player must now be seen.
-    engine._mods.get('collision').boxes.length = 0;
+    collision.boxes.length = 0;
     run(guards, engine, 3, 1 / 30, place);
     check('with the pillar gone the same player is seen', () => {
       assert(g.senses.suspicion > DETECT.suspicious,
@@ -397,12 +400,22 @@ async function main() {
       assert(g.senses.suspicion < DETECT.suspicious, 'returned to patrol with a hot meter');
     });
 
-    check('he resumes his route after standing down', () => {
-      const u0 = g.u;
+    check('he walks back to the nearest point of his beat and resumes it', () => {
+      const away = g._offRoute;
+      assert(away > 0.5, 'the chase never took him off his route — the test proves nothing');
+      // _setState(PATROL) re-anchors `u` to the closest point, so the walk home is the
+      // shortest one available rather than a trek back to wherever he abandoned the beat.
+      const stale = new THREE.Vector3();
+      g.route.at(0, stale);
+      assert(away <= Math.hypot(stale.x - g.position.x, stale.z - g.position.z) + 1e-6,
+        're-anchor did not pick the nearest point on the route');
+
       g.dwell = 0;
-      run(guards, engine, 6, 1 / 30);
-      assert(g.u !== u0 || g.dwell > 0, 'never started walking again');
-      assert(g._offRoute < 1.5, `${g._offRoute.toFixed(2)} m off route after the chase`);
+      run(guards, engine, 25, 1 / 30);
+      assert(g._offRoute < 1.2, `still ${g._offRoute.toFixed(2)} m off route after 25 s`);
+      const u0 = g.u;
+      run(guards, engine, 8, 1 / 30);
+      assert(g.u !== u0 || g.dwell > 0, 'never resumed walking the beat');
     });
   }
 
@@ -415,12 +428,36 @@ async function main() {
 
     const prev = guards.list.map((g) => g.position.clone());
     let breached = null;
+    let tunnelled = null;
     let offDeck = null;
     let fell = null;
+    let roofStray = 0;
+    let ledgeStray = 0;
     const roof = guards.list[7];
     const ledge = guards.list[9];
 
+    // Every frame, not just the last one: a guard who crosses the wall and comes back is
+    // still a guard who walked through a wall.
+    const watch = () => {
+      for (let i = 0; i < guards.list.length; i++) {
+        const g = guards.list[i];
+        if (inBox(g.position, wall, -0.02)) breached ||= g.id;
+        // Segment test: did this frame's step pass through the slab?
+        const dx = g.position.x - prev[i].x, dy = g.position.y - prev[i].y, dz = g.position.z - prev[i].z;
+        const len = Math.hypot(dx, dy, dz);
+        if (len > 1e-6) {
+          const t = slab(prev[i].x, prev[i].y + 1.0, prev[i].z, dx / len, dy / len, dz / len, wall);
+          if (t >= 0 && t < len) tunnelled ||= `${g.id} @${prev[i].x.toFixed(1)},${prev[i].z.toFixed(1)}`;
+        }
+        prev[i].copy(g.position);
+      }
+      roofStray = Math.max(roofStray, Math.abs(roof.position.x) - 24, Math.abs(roof.position.z + 34) - 18);
+      ledgeStray = Math.max(ledgeStray, Math.abs(roof.position.y - 17));
+      if (ledge.position.x < 20 || ledge.position.x > 25.5) ledgeStray = Math.max(ledgeStray, 1);
+    };
+
     run(guards, engine, 90, 1 / 30, (t, i) => {
+      watch();
       // Keep the rooftop and ledge guards charging at something well past their edge, so the
       // ledge refusal is actually put under load rather than merely never exercised.
       for (const [g, tx, tz] of [[roof, 40, -34], [ledge, -20, 9]]) {
@@ -443,11 +480,14 @@ async function main() {
     const ledgeOff = (ledge.position.x < 20 || ledge.position.x > 25.5 || Math.abs(ledge.position.y - 9) > 0.6)
       ? ledge.position.toArray().map((v) => v.toFixed(2)).join(', ') : null;
 
-    check('no guard walks through a wall', () => {
+    check('no guard walks through a wall, on any frame', () => {
       assert(!breached, `${breached} ended up inside the wall`);
+      assert(!tunnelled, `${tunnelled} tunnelled through the wall between frames`);
     });
     check('the rooftop patrol never steps off the rooftop', () => {
       assert(!offDeck, `rooftop guard at (${offDeck})`);
+      assert(roofStray <= 0.6, `rooftop guard strayed ${roofStray.toFixed(2)} m past the deck edge`);
+      assert(ledgeStray <= 0.6, `rooftop guard's height wandered ${ledgeStray.toFixed(2)} m`);
     });
     check('the architrave scarab never steps off the ledge', () => {
       assert(!ledgeOff, `ledge scarab at (${ledgeOff})`);
@@ -534,11 +574,43 @@ async function main() {
   /* ------------------------------------------------------------------ 8 --- */
   console.log('\nthe cone');
   {
-    const pillar = { x0: -1.9, x1: 0.9, y0: 0, y1: 6, z0: 2.0, z1: 4.0 };
-    const { guards, engine } = await makeGuards({ boxes: [pillar] });
+    const { guards, engine, collision } = await makeGuards();
     const g = guards.list[0];
     g.dwell = 1e9;
     run(guards, engine, 2, 1 / 30);
+
+    check('the beam instance matches the guard: origin, aim and half-angle', () => {
+      const m = new THREE.Matrix4();
+      guards.beamMesh.getMatrixAt(0, m);
+      const e = m.elements;
+      const origin = new THREE.Vector3(e[12], e[13], e[14]);
+      const axis = new THREE.Vector3(e[8], e[9], e[10]);
+      const lateral = new THREE.Vector3(e[0], e[1], e[2]);
+      const reach = axis.length();
+      near(reach, g.reach, 0.02, 'beam throw');
+      // Half-angle: the lateral scale is tan(halfAngle) × reach by construction.
+      near(Math.atan2(lateral.length(), reach), VISION.temple.halfAngle, 0.02, 'beam half-angle');
+      // Aims where he is looking, tipped slightly down.
+      const flat = axis.clone().setY(0).normalize();
+      assert(flat.dot(g.forward) > 0.99, 'beam does not follow his facing');
+      assert(axis.y < 0, 'beam aims at the sky');
+      // Starts at his head, not his feet or the world origin.
+      assert(origin.y > g.position.y + 1.2 && origin.y < g.position.y + 2.3,
+        `beam apex at y=${(origin.y - g.position.y).toFixed(2)} above his feet`);
+    });
+
+    check('the pool is the beam footprint, flat on the floor at his feet', () => {
+      const m = new THREE.Matrix4();
+      guards.poolMesh.getMatrixAt(0, m);
+      const e = m.elements;
+      const origin = new THREE.Vector3(e[12], e[13], e[14]);
+      const along = new THREE.Vector3(e[8], e[9], e[10]);
+      const across = new THREE.Vector3(e[0], e[1], e[2]);
+      near(origin.y - g.position.y, 0.035, 0.01, 'pool height above the paving');
+      near(along.length(), g.reach, 0.02, 'pool length');
+      near(Math.atan2(across.length(), along.length()), VISION.temple.halfAngle, 0.02, 'pool spread');
+      assert(Math.abs(along.y) < 1e-6 && Math.abs(across.y) < 1e-6, 'the pool is not flat');
+    });
 
     check('every cone instance has a finite transform and colour', () => {
       const m = new THREE.Matrix4();
@@ -554,11 +626,14 @@ async function main() {
     });
 
     check('the beam is clipped by whatever is in front of him', () => {
-      // Aim him straight at the pillar and check the throw shortens to roughly its face.
-      g.yaw = 0; g.forward.set(0, 0, 1);
+      const open = g.reach;
+      assert(open > 10, `unobstructed beam only reached ${open.toFixed(2)} m`);
+      // Drop a pillar 2.5 m in front of his eyes; the throw must shorten to roughly its face.
+      const c = g.position.clone().addScaledVector(g.forward, 2.5);
+      collision.boxes.push({ x0: c.x - 1.2, x1: c.x + 1.2, y0: 0, y1: 6, z0: c.z - 1.2, z1: c.z + 1.2 });
       run(guards, engine, 2, 1 / 30);
-      assert(g.reach < 4.5, `beam still throws ${g.reach.toFixed(2)} m into a pillar 2 m away`);
-      guards._mods; // no-op
+      assert(g.reach < 3.0, `beam still throws ${g.reach.toFixed(2)} m into a pillar 2.5 m away`);
+      collision.boxes.length = 0;
     });
 
     check('the beam turns red as the meter fills and dims when he is down', () => {
@@ -600,17 +675,26 @@ async function main() {
     engine.emit('shot', { name: 'guard' });
     run(guards, engine, 0.5, 1 / 30);
     const g = guards.list[0];
+    // §7.2: camera (3, 2, 4.2) → target (−0.8, 1.5, 0), 38° vertical, 16:9.
+    const CAM = new THREE.Vector3(3, 2, 4.2);
+    const FWD = new THREE.Vector3(-0.8 - 3, 1.5 - 2, 0 - 4.2).normalize();
+    const RIGHT = new THREE.Vector3().crossVectors(FWD, new THREE.Vector3(0, 1, 0)).normalize();
+
     check('roster #0 is parked in frame and held there', () => {
-      near(g.position.x, -1.0, 0.25, 'subject x');
-      near(g.position.z, 0.0, 0.25, 'subject z');
-      near(g.yaw, 1.99, 0.02, 'subject yaw');
+      const to = new THREE.Vector3().subVectors(g.position, CAM);
+      const dist = to.length();
+      assert(dist > 5 && dist < 9, `subject is ${dist.toFixed(1)} m from the lens`);
+      to.normalize();
+      const off = Math.acos(THREE.MathUtils.clamp(to.dot(FWD), -1, 1));
+      assert(off < THREE.MathUtils.degToRad(19), `subject is ${(off * 57.3).toFixed(0)}° off axis`);
       assert(g.speed === 0, 'the subject walked out of frame');
     });
-    check('his beam rakes across the frame, not into the lens', () => {
-      // Camera sits at (3, 2, 4.2) looking at (-0.8, 1.5, 0) — §7.2.
-      const toCam = new THREE.Vector3(3 - g.position.x, 0, 4.2 - g.position.z).normalize();
-      const dot = g.forward.dot(toCam);
-      assert(dot > 0.1 && dot < 0.7, `three-quarter read failed: forward·toCamera = ${dot.toFixed(2)}`);
+    check('his beam rakes across the frame rather than out of it', () => {
+      // Mostly across the lens (big screen-x component), a little toward the viewer.
+      const screenX = g.forward.dot(RIGHT);
+      const depth = g.forward.dot(FWD);
+      assert(screenX < -0.7, `beam only ${screenX.toFixed(2)} across the frame`);
+      assert(depth > -0.6 && depth < 0.3, `beam points ${depth.toFixed(2)} along the lens axis`);
     });
     check('releasing the shot lets him walk again', () => {
       engine.emit('shot', { name: 'hero' });
@@ -618,6 +702,77 @@ async function main() {
       run(guards, engine, 3, 1 / 30);
       assert(guards._shotLock === null, 'still locked');
       assert(g.speed > 0.2, 'never resumed his beat');
+    });
+  }
+
+  /* ----------------------------------------------------------------- 10 --- */
+  console.log('\ndeterminism (AGENTS.md §1)');
+  {
+    const trace = async () => {
+      const { guards, engine } = await makeGuards();
+      run(guards, engine, 30, 1 / 30);
+      return guards.list.map((g) => [
+        +g.position.x.toFixed(6), +g.position.y.toFixed(6), +g.position.z.toFixed(6),
+        +g.yaw.toFixed(6), +g.u.toFixed(6), g.state,
+      ].join(','));
+    };
+    const a = await trace();
+    const b = await trace();
+    check('the same seed rebuilds the identical patrol, frame for frame', () => {
+      for (let i = 0; i < a.length; i++) {
+        assert(a[i] === b[i], `guard ${i} diverged:\n        ${a[i]}\n        ${b[i]}`);
+      }
+    });
+    check('the roster is 6 temple, 3 heavy, 2 scarab', () => {
+      const counts = {};
+      for (const r of ROSTER_TYPES) counts[r] = (counts[r] || 0) + 1;
+      assert(counts.temple === 6 && counts.heavy === 3 && counts.scarab === 2,
+        JSON.stringify(counts));
+    });
+  }
+
+  /* ----------------------------------------------------------------- 11 --- */
+  console.log('\nsoak');
+  {
+    // Five simulated minutes with a player wandering through the courtyard, so every guard
+    // cycles patrol → alert → chase → lost → patrol repeatedly. Nothing may drift or go NaN.
+    const { guards, engine } = await makeGuards();
+    let worstOff = 0;
+    let states = new Set();
+    run(guards, engine, 300, 1 / 30, (t) => {
+      engine.movement.position.set(Math.sin(t * 0.21) * 14, 0, 8 + Math.cos(t * 0.17) * 16);
+      engine.movement.speed = 3.2;
+      engine.movement.stateName = 'move';
+      for (const g of guards.list) {
+        worstOff = Math.max(worstOff, g._offRoute);
+        states.add(g.state);
+      }
+    });
+
+    check('five minutes of live stealth leaves every guard finite and on his feet', () => {
+      for (const g of guards.list) {
+        const p = g.position;
+        assert(Number.isFinite(p.x + p.y + p.z + g.yaw + g.u + g.speed),
+          `${g.id} went non-finite: ${p.toArray()} yaw ${g.yaw} u ${g.u}`);
+        assert(g.u >= 0 && g.u <= 1, `${g.id} route parameter escaped [0,1]: ${g.u}`);
+        assert(Math.abs(g.speed) < 12, `${g.id} is moving at ${g.speed.toFixed(1)} m/s`);
+        assert(g.senses.suspicion >= 0 && g.senses.suspicion <= DETECT.ceiling,
+          `${g.id} meter out of range: ${g.senses.suspicion}`);
+      }
+      assert(worstOff < 40, `a guard wandered ${worstOff.toFixed(1)} m from his route`);
+    });
+
+    check('the whole alert machine is exercised, not just patrol', () => {
+      for (const want of [STATE.PATROL, STATE.SUSPICIOUS, STATE.SEARCHING, STATE.CHASE, STATE.LOST]) {
+        assert(states.has(want), `never entered ${want} in five minutes (saw ${[...states].join(', ')})`);
+      }
+    });
+
+    check('cone instances stay finite through the whole soak', () => {
+      for (const v of guards.beamMesh.instanceMatrix.array) assert(Number.isFinite(v), 'beam matrix NaN');
+      for (const v of guards.beamMesh.instanceColor.array) assert(Number.isFinite(v), 'beam colour NaN');
+      for (const v of guards.poolMesh.instanceMatrix.array) assert(Number.isFinite(v), 'pool matrix NaN');
+      for (const v of guards._poolOnset.array) assert(Number.isFinite(v) && v > 0, 'pool onset NaN');
     });
   }
 

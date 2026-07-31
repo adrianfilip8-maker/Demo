@@ -30,7 +30,9 @@ varying vec2 vUv;
 uniform sampler2D uDepth;
 uniform sampler2D uNormal;
 uniform mat4 uProj;
-uniform vec2 uNearFar;
+// uNearFar and uProjInv come from GLSL_VIEW below — declaring uNearFar here as well was a
+// redefinition, which is why this program has never compiled and the AO pass has silently
+// been a no-op ("Shader Error 0 - VALIDATE_STATUS false" in every capture).
 uniform vec4 uParams;      // x radius(m)  y thickness(m)  z power  w distanceFalloff
 uniform vec2 uFadeRange;   // start, end distance in metres — AO is a contact cue, not a fog
 

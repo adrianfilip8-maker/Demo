@@ -31,15 +31,22 @@ import {
  *      length, a feathered tip so there is no bright end-cap disc, a fade off the apex so it
  *      doesn't emanate from a point inside his skull, and a slow two-octave shimmer for dust
  *      hanging in the beam.
- *   2. **The pool.** A stretched soft ellipse lying on the floor where the beam lands. A beam
- *      with no pool reads as a transparent cone; a beam *with* one reads as a lamp. Quarter
- *      the intensity of the beam and it shortens with the beam when a pillar clips it.
+ *   2. **The pool.** The beam's own footprint, laid flat on the pavement from his feet — a
+ *      wedge that widens at exactly the cone's half-angle and starts exactly where the cone's
+ *      lower rim meets the floor, so the pool's edges *are* the beam's edges. A beam with no
+ *      pool reads as a transparent cone; a beam with one reads as a lamp. A third of the
+ *      beam's intensity, and it shortens with the beam when a pillar clips the throw.
+ *   3. **The lamp.** Four more vertices in the beam's own geometry, flagged and turned into a
+ *      camera-facing card at the apex by the vertex shader. It costs no extra draw call and
+ *      it gives POSTFX's bloom a tight coloured source instead of a grey wash (§7.3).
  *
  * Colour is white-yellow while patrolling and goes red as the meter fills; brightness is
  * driven by `Senses.gain`, so the cone visibly *reacts* the instant it starts filling — the
- * suspicion meter is legible in world space with no HUD element (Patrol.js §detection).
- * A small `lighting.addLocalLight()` handle rides along per humanoid guard so the beam also
- * spills real light onto nearby stone. That is a bonus, not the effect.
+ * suspicion meter is legible in world space with no HUD element (Patrol.js §detection). The
+ * whole effect fades out as the sun comes up: a torch beam is a night-time read, and leaving
+ * it at full strength would hang additive haze over every golden-hour frame in the game.
+ * One `lighting.addLocalLight()` handle — the guard nearest the camera, and only him — spills
+ * a little real light onto nearby stone. That is a garnish, not the effect (see `_updateSpill`).
  *
  * ── Draw budget ──────────────────────────────────────────────────────────────────────────
  * 11 guards × (body + metal + ink shell) = 33, plus 1 beam + 1 pool = **35 draw calls** for
@@ -72,8 +79,10 @@ const TUNE = {
   coneSeg: 26,
   coneRings: [0.02, 0.06, 0.14, 0.27, 0.44, 0.66, 0.85, 1.0],
   conePitch: 0.115,        // radians below horizontal — a guard scans the ground, not the sky
-  coneEyeFwd: 0.22,        // eye sits forward of the head bone
-  coneEyeUp: 0.10,
+  // The apex sits well clear of his own skull: a cone starting inside the head washes an
+  // additive white haze over his chest and kills the very silhouette it should reveal.
+  coneEyeFwd: 0.45,
+  coneEyeUp: 0.08,
 
   /* --- cone look --- */
   colPatrol: 0xfff0c2,     // §2.2 sun, pushed pale: a lamp, not a headlight
@@ -83,16 +92,18 @@ const TUNE = {
   beamGain: 0.85,          // extra brightness per unit of Senses.gain
   beamAlert: 1.55,         // multiplier once he is actually chasing
   beamFlicker: 0.09,
-  poolMix: 0.26,           // pool intensity as a fraction of the beam's
-  poolWidth: 0.68,
-  poolLen: 0.52,
+  glowSize: 0.34,          // radius of the lamp card at the apex, metres at full throw
+  beamDayFloor: 0.26,      // how much of the cone survives full daylight
+  poolMix: 0.34,           // pool intensity as a fraction of the beam's
+  poolRings: [0.03, 0.10, 0.20, 0.34, 0.50, 0.68, 0.85, 1.0],
+  poolLat: 14,
 
   beamLit: 0.85,           // how lit a player standing in another guard's beam counts as
 
-  /* --- local light spill --- */
-  lightRadius: 7.5,
-  lightIntensity: 2.4,
-  lightAhead: 2.6,
+  /* --- local light spill. Only the two guards nearest the camera ever hold a slot. --- */
+  lightRadius: 8.5,
+  lightIntensity: 4.2,
+  lightAhead: 2.2,
 
   /* --- pickpocket --- */
   pocketBack: 0.34,        // the pouch hangs off the back of his belt
@@ -110,19 +121,31 @@ const ITEMS = {
 
 /* Guards never make the shot's subject wait: which roster index each canonical shot
    stars, and how it is posed. Anything not listed keeps patrolling normally. */
+/**
+ * `guard` (§7.2) frames a 38° lens from (3, 2, 4.2) at (−0.8, 1.5, 0). Two things have to
+ * happen in it at once: the character has to read, and his cone has to read as light.
+ *
+ * They pull against each other — the beam comes out of his face, so a shot of his face is a
+ * shot of the beam end-on. The resolution is a three-quarter profile: he stands 7 m down the
+ * lens axis and a third of the way right of centre, turned so the beam rakes across the
+ * frame to the left and 20° toward the viewer. You get his muzzle, nemes, spear and tail in
+ * silhouette on the right, and 15 m of beam plus its pool sweeping the pavement on the left.
+ */
 const SHOT_POSE = {
-  guard: { index: 0, x: -1.0, z: 0.0, yaw: 1.99, clip: 'look_around', t: 1.15, look: [0.34, -0.06] },
+  guard: { index: 0, x: -0.70, z: -1.81, yaw: -0.670, clip: 'look_around', t: 1.15, look: [0.30, -0.05] },
 };
 
 /* ============================ cone shaders ================================ */
 
 const BEAM_VERT = /* glsl */`
-attribute float aT;
+attribute float aT;          // 0→1 along the cone; −1 flags the four lamp-glow corners
+uniform float uGlow;
 varying float vT;
 varying vec3 vN;
 varying vec3 vV;
 varying vec3 vAxis;
 varying vec3 vTint;
+varying vec2 vQuad;
 varying float vSeed;
 
 void main() {
@@ -138,27 +161,47 @@ void main() {
   #endif
 
   mat4 m = modelMatrix * im;
-  vec4 wp4 = m * vec4( position, 1.0 );
   vec3 apex = ( m * vec4( 0.0, 0.0, 0.0, 1.0 ) ).xyz;
   vec3 axis = normalize( ( m * vec4( 0.0, 0.0, 1.0, 0.0 ) ).xyz );
+  vec3 wpos;
 
-  /* The instance scale is anisotropic (radius, radius, length), so the baked cone normal is
-     sheared into nonsense. Rebuild it from the world-space cone instead: the outward normal
-     of a cone is the radial direction tilted back along the axis by its own slope. */
-  vec3 rel = wp4.xyz - apex;
-  float along = dot( rel, axis );
-  vec3 radial = rel - axis * along;
-  float rad = length( radial );
-  vec3 rdir = rad > 1e-4 ? radial / rad : vec3( 0.0 );
-  float slope = rad / max( along, 1e-3 );
-  vN = normalize( rdir - axis * slope );
+  if ( aT < -0.5 ) {
+
+    /* The lamp itself: a camera-facing card at the apex, sized off the throw so a scarab's
+       glow is a spark and a temple guard's is a lantern. It rides in the beam's own draw
+       call, and it exists to give POSTFX's bloom a tight coloured source to grab — §7.3
+       fails a frame whose bloom is a grey wash with nothing bright underneath it. */
+    vec3 camR = vec3( viewMatrix[ 0 ][ 0 ], viewMatrix[ 1 ][ 0 ], viewMatrix[ 2 ][ 0 ] );
+    vec3 camU = vec3( viewMatrix[ 0 ][ 1 ], viewMatrix[ 1 ][ 1 ], viewMatrix[ 2 ][ 1 ] );
+    float R = uGlow * clamp( length( m[ 2 ].xyz ) / 15.0, 0.35, 1.2 );
+    wpos = apex + camR * position.x * R + camU * position.y * R;
+    vN = vec3( 0.0, 0.0, 1.0 );
+    vQuad = position.xy;
+
+  } else {
+
+    wpos = ( m * vec4( position, 1.0 ) ).xyz;
+    vQuad = vec2( 0.0 );
+
+    /* The instance scale is anisotropic (radius, radius, length), so the baked cone normal is
+       sheared into nonsense. Rebuild it from the world-space cone instead: the outward normal
+       of a cone is the radial direction tilted back along the axis by its own slope. */
+    vec3 rel = wpos - apex;
+    float along = dot( rel, axis );
+    vec3 radial = rel - axis * along;
+    float rad = length( radial );
+    vec3 rdir = rad > 1e-4 ? radial / rad : vec3( 0.0, 1.0, 0.0 );
+    float slope = rad / max( along, 1e-3 );
+    vN = normalize( rdir - axis * slope );
+
+  }
 
   vAxis = axis;
-  vV = cameraPosition - wp4.xyz;
+  vV = cameraPosition - wpos;
   vT = aT;
   vSeed = apex.x * 0.71 + apex.z * 1.37;
 
-  gl_Position = projectionMatrix * viewMatrix * wp4;
+  gl_Position = projectionMatrix * viewMatrix * vec4( wpos, 1.0 );
 }
 `;
 
@@ -170,6 +213,7 @@ varying vec3 vN;
 varying vec3 vV;
 varying vec3 vAxis;
 varying vec3 vTint;
+varying vec2 vQuad;
 varying float vSeed;
 
 /* No *_pars_fragment includes here: three already injects the tone-mapping and colour-space
@@ -178,6 +222,17 @@ varying float vSeed;
 
 void main() {
   vec3 V = normalize( vV );
+
+  /* --- the lamp card --- */
+  if ( vT < -0.5 ) {
+    float d = length( vQuad );
+    float ga = pow( max( 0.0, 1.0 - d ), 3.0 ) * 2.6 * uOpacity;
+    ga *= smoothstep( 0.4, 1.6, length( vV ) );
+    gl_FragColor = vec4( vTint * ga, ga );
+    #include <tonemapping_fragment>
+    #include <colorspace_fragment>
+    return;
+  }
 
   /* The whole illusion. A shell weighted by how squarely it faces the eye is bright through
      the middle and vanishes at its own silhouette; front + back shell sum to a soft volume
@@ -189,7 +244,9 @@ void main() {
 
   float t = vT;
   float atten = 1.0 / ( 1.0 + 5.0 * t * t );
-  float near = smoothstep( 0.0, 0.085, t );
+  // The throat of the cone stays faint. It overlaps the guard's own head and shoulders, and
+  // an additive white wash there erases the silhouette the shot exists to show.
+  float near = smoothstep( 0.0, 0.16, t );
   float tip = 1.0 - smoothstep( 0.56, 1.0, t );
 
   /* Dust in the air. Two incommensurable frequencies so it drifts instead of pulsing. */
@@ -210,8 +267,11 @@ void main() {
 `;
 
 const POOL_VERT = /* glsl */`
-attribute float aR;
+attribute vec2 aRT;          // x = |lateral| across the wedge, y = distance along it
+attribute float aOnset;      // per instance: where the cone's lower rim meets the floor
 varying float vR;
+varying float vT;
+varying float vOnset;
 varying vec3 vTint;
 varying vec3 vV;
 varying float vSeed;
@@ -229,7 +289,9 @@ void main() {
   #endif
   mat4 m = modelMatrix * im;
   vec4 wp4 = m * vec4( position, 1.0 );
-  vR = aR;
+  vR = aRT.x;
+  vT = aRT.y;
+  vOnset = aOnset;
   vV = cameraPosition - wp4.xyz;
   vSeed = ( m * vec4( 0.0, 0.0, 0.0, 1.0 ) ).x * 0.83;
   gl_Position = projectionMatrix * viewMatrix * wp4;
@@ -240,14 +302,24 @@ const POOL_FRAG = /* glsl */`
 uniform float uTime;
 uniform float uOpacity;
 varying float vR;
+varying float vT;
+varying float vOnset;
 varying vec3 vTint;
 varying vec3 vV;
 varying float vSeed;
 
 void main() {
+  /* Across the wedge: the same soft-edged falloff the beam has, so the pool's edges are the
+     beam's edges and the two read as one light rather than as a decal under a cone. */
   float f = 1.0 - vR;
   float a = f * f * ( 0.55 + 0.45 * f );
-  a *= 0.88 + 0.12 * sin( vR * 9.0 - uTime * 1.2 + vSeed );
+
+  /* Along it: nothing until the lower rim of the cone actually reaches the floor, then the
+     usual inverse-square falloff and a feathered end. */
+  a *= smoothstep( vOnset * 0.55, vOnset * 1.45 + 0.03, vT );
+  a *= ( 1.0 - smoothstep( 0.58, 1.0, vT ) ) / ( 1.0 + 3.0 * vT * vT );
+
+  a *= 0.88 + 0.12 * sin( vT * 11.0 - uTime * 1.2 + vSeed );
   a *= smoothstep( 0.5, 2.2, length( vV ) ) * uOpacity;
   gl_FragColor = vec4( vTint * a, a );
   #include <tonemapping_fragment>
@@ -265,6 +337,7 @@ const _eye = new THREE.Vector3();
 const _dir = new THREE.Vector3();
 const _rgt = new THREE.Vector3();
 const _up = new THREE.Vector3();
+const _scan = new THREE.Vector3();
 const _mat = new THREE.Matrix4();
 const _col = new THREE.Color();
 const _colA = new THREE.Color();
@@ -525,7 +598,14 @@ class Guard {
     this._oneShot = null;
     if (next === STATE.SEARCHING) this._searchTimer = 0;
     if (next === STATE.LOST) this._lostTimer = DETECT.lostLook;
-    if (next === STATE.PATROL) { this.dwell = 0; this.dwellAction = null; }
+    if (next === STATE.PATROL) {
+      this.dwell = 0;
+      this.dwellAction = null;
+      // Rejoin the beat where he is standing, not where he abandoned it. Without this a
+      // guard who chased 40 m down the hall walks all the way back to a stale `u` first,
+      // which reads as a bug even though it is technically "returning to post".
+      this._reanchor();
+    }
 
     // The pop when he actually spots you: anticipate-and-squat, then run.
     if (next === STATE.CHASE) this._playOneShot('alert');
@@ -722,6 +802,22 @@ class Guard {
     this.position.set(nx, y, nz);
     this.speed = allowed / dt;
     return true;
+  }
+
+  /** Snap `u` to the closest point on the route. Runs once per stand-down, never per frame. */
+  _reanchor() {
+    const N = 192;
+    let bestU = this.u, bestD = Infinity;
+    for (let i = 0; i < N; i++) {
+      const u = i / N;
+      this.route.at(u, _scan);
+      const dx = _scan.x - this.position.x, dz = _scan.z - this.position.z;
+      const d = dx * dx + dz * dz;
+      if (d < bestD) { bestD = d; bestU = u; }
+    }
+    this.u = bestU;
+    this._offRoute = Math.sqrt(bestD);
+    this._routePoint.copy(this.route.at(bestU, _scan));
   }
 
   _place(p) {
@@ -1058,6 +1154,15 @@ export class Guards {
         idx.push(a, b, c, a, c, d);
       }
     }
+    // Four more verts, flagged aT = −1: the vertex shader turns them into a camera-facing
+    // card at the apex — the lamp the beam comes out of. Same geometry, same draw call.
+    const q0 = verts.length / 3;
+    for (const [qx, qy] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) {
+      verts.push(qx, qy, 0);
+      ts.push(-1);
+    }
+    idx.push(q0, q0 + 1, q0 + 2, q0, q0 + 2, q0 + 3);
+
     const beamGeo = new THREE.BufferGeometry();
     beamGeo.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
     beamGeo.setAttribute('aT', new THREE.Float32BufferAttribute(ts, 1));
@@ -1069,7 +1174,7 @@ export class Guards {
       name: 'guard_beam',
       vertexShader: BEAM_VERT,
       fragmentShader: BEAM_FRAG,
-      uniforms: { uTime: { value: 0 }, uOpacity: { value: 1 } },
+      uniforms: { uTime: { value: 0 }, uOpacity: { value: 1 }, uGlow: { value: TUNE.glowSize } },
       transparent: true,
       depthWrite: false,
       depthTest: true,
@@ -1089,29 +1194,37 @@ export class Guards {
     this.beamMesh.userData.noShadow = true;
     this.beamMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
 
-    /* Pool. A unit disc in XZ; the instance matrix stretches it along the beam. */
-    const pRings = [0, 0.3, 0.56, 0.76, 0.9, 1.0];
-    const pSeg = 22;
-    const pv = [], pr = [], pidx = [];
-    pv.push(0, 0, 0); pr.push(0);
-    for (let i = 1; i < pRings.length; i++) {
-      for (let j = 0; j <= pSeg; j++) {
-        const a = (j % pSeg) / pSeg * Math.PI * 2;
-        pv.push(Math.cos(a) * pRings[i], 0, Math.sin(a) * pRings[i]);
-        pr.push(pRings[i]);
+    /* Pool. Not a disc: the footprint of the beam itself, a flat wedge widening as `x = ±z`
+       exactly like the cone, so the pool's edges ARE the cone's edges and the two read as one
+       light. The instance matrix scales it (tan(halfAngle)·reach, 1, reach) from the feet. */
+    const pRings = TUNE.poolRings;
+    const pLat = TUNE.poolLat;
+    const pv = [], prt = [], pidx = [];
+    for (let i = 0; i < pRings.length; i++) {
+      const z = pRings[i];
+      for (let j = 0; j <= pLat; j++) {
+        const u = (j / pLat) * 2 - 1;
+        pv.push(u * z, 0, z);
+        prt.push(Math.abs(u), z);
       }
     }
-    const prow = pSeg + 1;
-    for (let j = 0; j < pSeg; j++) pidx.push(0, 1 + j + 1, 1 + j);
-    for (let i = 1; i < pRings.length - 1; i++) {
-      const o0 = 1 + (i - 1) * prow, o1 = o0 + prow;
-      for (let j = 0; j < pSeg; j++) pidx.push(o0 + j, o0 + j + 1, o1 + j + 1, o0 + j, o1 + j + 1, o1 + j);
+    const prow = pLat + 1;
+    for (let i = 0; i < pRings.length - 1; i++) {
+      for (let j = 0; j < pLat; j++) {
+        const a = i * prow + j, b = a + 1, c = a + prow + 1, d = a + prow;
+        pidx.push(a, b, c, a, c, d);
+      }
     }
     const poolGeo = new THREE.BufferGeometry();
     poolGeo.setAttribute('position', new THREE.Float32BufferAttribute(pv, 3));
-    poolGeo.setAttribute('aR', new THREE.Float32BufferAttribute(pr, 1));
+    poolGeo.setAttribute('aRT', new THREE.Float32BufferAttribute(prt, 2));
     poolGeo.setIndex(pidx);
     poolGeo.computeBoundingSphere();
+    // Per-instance onset: an extra InstancedBufferAttribute rides alongside instanceMatrix,
+    // so each guard's pool starts exactly where his own beam reaches the floor.
+    this._poolOnset = new THREE.InstancedBufferAttribute(new Float32Array(n).fill(0.13), 1);
+    this._poolOnset.setUsage(THREE.DynamicDrawUsage);
+    poolGeo.setAttribute('aOnset', this._poolOnset);
     this._geoms.push(poolGeo);
 
     this._poolMat = new THREE.ShaderMaterial({
@@ -1144,8 +1257,30 @@ export class Guards {
       this.beamMesh.setColorAt(i, _col);
       this.poolMesh.setColorAt(i, _col);
     }
+    this._skipOverridePasses(this.beamMesh, this._beamMat);
+    this._skipOverridePasses(this.poolMesh, this._poolMat);
     this.group.add(this.beamMesh, this.poolMesh);
     this.stats.draws += 2;
+  }
+
+  /**
+   * Keep the light out of every `scene.overrideMaterial` pass.
+   *
+   * POSTFX renders view-space normals by overriding the whole scene's material, and three
+   * does the same for shadow maps. A light beam has no business in either: rendered as an
+   * opaque normal surface it stamps its silhouette into the normal buffer, and the crease
+   * pass then draws an ink line around the cone — which is precisely the "debug overlay"
+   * read the whole effect is trying to avoid. Collapsing the draw range to zero when the
+   * material being handed to us is not ours skips the draw entirely, with no hook into
+   * anybody else's module.
+   */
+  _skipOverridePasses(mesh, own) {
+    mesh.onBeforeRender = (renderer, scene, camera, geometry, material) => {
+      if (material !== own) geometry.setDrawRange(0, 0);
+    };
+    mesh.onAfterRender = (renderer, scene, camera, geometry) => {
+      geometry.setDrawRange(0, Infinity);
+    };
   }
 
   /**
@@ -1346,6 +1481,13 @@ export class Guards {
     this._beamMat.uniforms.uTime.value = t;
     this._poolMat.uniforms.uTime.value = t;
 
+    /* A torch beam is a night-time read. In full sun a visible cone is both physically wrong
+       and a wash of additive haze over somebody else's golden-hour frame, so it fades out as
+       the sky comes up rather than sitting at full strength through every shot. */
+    const day = clamp(1 - (this._light - 0.12) * 1.15, TUNE.beamDayFloor, 1);
+    this._beamMat.uniforms.uOpacity.value = day;
+    this._poolMat.uniforms.uOpacity.value = day;
+
     _colA.setHex(TUNE.colPatrol);
     _colB.setHex(TUNE.colAlert);
 
@@ -1389,32 +1531,65 @@ export class Guards {
       this.beamMesh.setMatrixAt(i, _mat);
       this.beamMesh.setColorAt(i, _col);
 
-      /* --- ground pool: the stretched ellipse the beam lands in --- */
-      const poolLen = reach * TUNE.poolLen;
-      const poolW = Math.max(0.35, r * TUNE.poolWidth);
-      _v1.copy(g.position).addScaledVector(g.forward, reach * 0.44);
-      _v1.y = g.position.y + 0.03;
+      /* --- ground pool: the beam's own footprint, laid flat from his feet --- */
+      _v1.copy(g.position);
+      _v1.y += 0.035;                      // a hair above the paving, or it z-fights
       _rgt.set(g.forward.z, 0, -g.forward.x);
-      _mat.makeBasis(_rgt.multiplyScalar(poolW), _v2.set(0, 1, 0), _v3.copy(g.forward).multiplyScalar(poolLen));
+      _mat.makeBasis(_rgt.multiplyScalar(r), _v2.set(0, 1, 0), _v3.copy(g.forward).multiplyScalar(reach));
       _mat.setPosition(_v1);
       this.poolMesh.setMatrixAt(i, _mat);
       _col.multiplyScalar(TUNE.poolMix);
       this.poolMesh.setColorAt(i, _col);
+      /* Where his lower rim meets the floor, as a fraction of the throw. Below that the beam
+         is still in the air and there is nothing on the pavement to light. */
+      const onset = cfg.eyeHeight / Math.tan(Math.min(1.45, pitch + cfg.halfAngle));
+      this._poolOnset.array[i] = clamp(onset / reach, 0.01, 0.9);
     }
 
     this.beamMesh.instanceMatrix.needsUpdate = true;
     this.poolMesh.instanceMatrix.needsUpdate = true;
+    this._poolOnset.needsUpdate = true;
     if (this.beamMesh.instanceColor) this.beamMesh.instanceColor.needsUpdate = true;
     if (this.poolMesh.instanceColor) this.poolMesh.instanceColor.needsUpdate = true;
+
+    this._updateSpill();
+  }
+
+  /**
+   * Real light spill from the beam.
+   *
+   * Two reasons this is deliberately tiny. LIGHTING's local pool is **4 slots** at `med` and
+   * PROPS already has a dozen braziers competing for them, so nine always-on guard lamps
+   * would quietly evict the courtyard's fires — someone else's shot, broken by my module.
+   * And SHADING's toon material strips `lights_fragment_*` out of the physical shader, so a
+   * point light currently contributes nothing to any toon surface at all; this is here for
+   * the non-toon materials in the scene and for the day SHADING puts that block back.
+   *
+   * So: every guard keeps a handle, exactly one — the closest to the camera — is ever lit.
+   * The cone itself is the effect; this is a garnish that must never cost anybody else a slot.
+   */
+  _updateSpill() {
+    if (!this._lights.length) return;
+    const cam = this.engine.camera;
+    if (cam) cam.getWorldPosition(_v1);
+
+    let a = null, da = Infinity;
+    for (const l of this._lights) {
+      const d = cam ? l.guard.position.distanceToSquared(_v1) : 0;
+      if (d < da) { da = d; a = l; }
+    }
 
     for (const l of this._lights) {
       const g = l.guard;
       const h = l.handle;
+      const on = l === a && g.state !== STATE.KO;
+      h.enabled = on;
+      if (!on) continue;
       h.position.copy(g.position).addScaledVector(g.forward, TUNE.lightAhead);
-      h.position.y += g.vision.eyeHeight * 0.7;
+      h.position.y += g.vision.eyeHeight * 0.55;
       const sus = clamp(g.senses.suspicion / DETECT.chase, 0, 1);
       h.color.setHex(TUNE.colPatrol).lerp(_colB, THREE.MathUtils.smoothstep(sus, 0.12, 0.95));
-      h.intensity = TUNE.lightIntensity * (g.state === STATE.KO ? 0 : 1 + sus * 0.6);
+      h.intensity = TUNE.lightIntensity * (1 + sus * 0.6);
     }
   }
 

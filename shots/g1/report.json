@@ -1,23 +1,31 @@
 {
-  "at": "2026-07-31T01:37:13.689Z",
+  "at": "2026-07-31T01:01:31.953Z",
   "width": 960,
   "height": 540,
   "quality": "med",
   "shots": {
-    "hero": {
-      "file": "shots/hero.png",
-      "ms": 12.799999999813735,
-      "fps": 43,
-      "drawCalls": 452,
-      "triangles": 1849691,
+    "guard": {
+      "file": "shots/g1/guard.png",
+      "ms": 51.10000000009313,
+      "fps": 38,
+      "drawCalls": 461,
+      "triangles": 2037971,
       "programs": 87
     },
     "courtyard": {
-      "file": "shots/courtyard.png",
-      "ms": 12,
-      "fps": 43,
-      "drawCalls": 452,
-      "triangles": 1850089,
+      "file": "shots/g1/courtyard.png",
+      "ms": 19.799999999813735,
+      "fps": 38,
+      "drawCalls": 479,
+      "triangles": 2016833,
+      "programs": 87
+    },
+    "night": {
+      "file": "shots/g1/night.png",
+      "ms": 91.20000000018626,
+      "fps": 60,
+      "drawCalls": 487,
+      "triangles": 2051147,
       "programs": 87
     }
   },
@@ -42,7 +50,7 @@
     "audio": true
   },
   "bootWarnings": [
-    "textures: prewarm took 30.2s at size 1024",
+    "textures: prewarm took 33.4s at size 1024",
     "fx: no emitter named \"embers\"",
     "fx: no emitter named \"embers\"",
     "fx: no emitter named \"embers\"",
@@ -56,7 +64,7 @@
   ],
   "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
   "warnings": [
-    "textures: prewarm took 30.2s at size 1024",
+    "textures: prewarm took 33.4s at size 1024",
     "fx: no emitter named \"embers\"",
     "fx: no emitter named \"embers\"",
     "fx: no emitter named \"embers\"",
@@ -69,6 +77,7 @@
     "collision: pole \"proxy:pole\" has no userData.spline — synthesised one from its bounds"
   ],
   "consoleErrors": [
-    "Failed to load resource: the server responded with a status of 404 (Not Found)"
+    "Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "THREE.WebGLProgram: Shader Error 0 - VALIDATE_STATUS false\n\nMaterial Name: postfx.gtao\nMaterial Type: ShaderMaterial\n\nProgram Info Log: Fragment shader is not compiled.\n\u0000\n\nFRAGMENT\n\nERROR: 0:73: 'uNearFar' : redefinition\n\u0000\n\n  68: uniform vec4 uParams;      // x radius(m)  y thickness(m)  z power  w distanceFalloff\n  69: uniform vec2 uFadeRange;   // start, end distance in metres — AO is a contact cue, not a fog\n  70: \n  71: \n  72: uniform mat4 uProjInv;\n> 73: uniform vec2 uNearFar;\n  74: \n  75: float slyLuma( vec3 c ) { return dot( c, vec3( 0.2126, 0.7152, 0.0722 ) ); }\n  76: \n  77: /** Raw depth buffer value -> positive distance along the view axis, in metres. */\n  78: float slyLinearZ( float d ) {\n  79:   // perspectiveDepthToViewZ, sign-flipped so callers deal in positive metres."
   ]
 }

@@ -472,6 +472,16 @@ export class Shading {
       const shell = buildOutlineShell(mesh, inkMat);
       if (shell) {
         shell.visible = this._outlinesVisible;
+        /* A shell shares its host's geometry and sits at identity, so it is the same surface
+           twice. It must never reach the shadow map: the ink material is BackSide, three
+           flips that to FrontSide for depth rendering, and the map would then hold every lit
+           surface's own depth — every fragment would test against itself and self-shadow.
+           `noShadow` is main.js's documented opt-out and `isOutlineShell` is the key its
+           sweep actually reads; set both so neither the sweep nor a future one re-enables it. */
+        shell.userData.noShadow = true;
+        shell.userData.isOutlineShell = true;
+        shell.castShadow = false;
+        shell.receiveShadow = false;
         this._shells.push(shell);
       }
       return shell;
@@ -642,9 +652,16 @@ export class Shading {
    * `shadowFloor` x key luminance. Renormalising is what guarantees AGENTS' "never below ~14%
    * of key luminance" holds no matter how dark the chosen hue is.
    */
-  /** Paint shadow diagnostics over the scene: red=getShadowMask, green=receiveShadow, blue=N.L. */
-  debugShadow(on = true) {
-    this.uniforms.uDebugShadow.value = on ? 1 : 0;
+  /**
+   * Paint shadow diagnostics over the scene. See TOON_SHADE for the channel key.
+   *   false/0  off
+   *   true/1   R = shadow term, G = receiveShadow, B = N.L
+   *   2        cascade 0 shadow coordinate (xyz after the divide)
+   *   3        stored map depth vs the fragment's projected depth
+   *   4        cascade blend weights
+   */
+  debugShadow(mode = true) {
+    this.uniforms.uDebugShadow.value = mode === true ? 1 : (mode === false ? 0 : (+mode || 0));
   }
 
   _refreshShadowColor() {

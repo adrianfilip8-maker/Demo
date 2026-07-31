@@ -95,11 +95,15 @@ pair, gilded Ra, braziers, banners, treasure and collectibles into 12 merged dra
 
 ---
 
-## 5. One shader still fails to link
+## 5. One shader failed to link — **fixed**
 
-Every capture logs a single `THREE.WebGLProgram: Shader Error 0 - VALIDATE_STATUS false`.
-The frame renders, so it is not on the critical path, but it has not been identified. Worth
-capturing with `--verbose` and reading the full program log.
+The `VALIDATE_STATUS false` in every capture was `postfx.gtao`: `uNearFar` was declared both
+in `passes/AO.js` and in the `GLSL_VIEW` snippet it includes, and GLSL rejects the
+redefinition. The AO program therefore never compiled and the AO pass has never run for a
+single frame — `uAO` sampled as 0, so the composite multiplied the whole image by a flat
+`mix(1, 0.35, 0.7) = 0.545`. That constant darkening is what the exposure/lift tuning in
+`PostFX.TUNE` had been compensating for, so those values are now over-corrected in the other
+direction and want a re-bracket now that occlusion is real.
 
 ---
 

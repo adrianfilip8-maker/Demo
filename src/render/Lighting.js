@@ -27,7 +27,14 @@ const TUNE = {
   /* Cascades */
   shadowNear: 0.5,
   shadowDistance: 420,      // must reach the Great Pyramid at (−150, ·, −190) so it casts
-  splitLambda: 0.90,        // 0 = uniform splits, 1 = logarithmic
+  /* 0 = uniform splits, 1 = logarithmic. 0.90 is the usual figure for a four-cascade rig,
+     but `med` ships two, and at 0.90 that put the c0/c1 seam at 34 m — so everything past
+     the near third of the courtyard fell into a cascade fitted to ±417 m, i.e. 41 cm shadow
+     texels and a 61 cm normal bias. That is what made mid-ground shadows read as vague
+     smudges rather than as edges. 0.78 moves the seam to ~57 m, which puts the whole
+     courtyard and the near hall in c0 at ~5 cm texels; the near field only softens from
+     3 cm to 5 cm, which nothing in frame can resolve. */
+  splitLambda: 0.78,
   cascadeFade: 3.2,         // metres of cross-fade between cascades
   radiusQuantum: 0.25,      // tidy the fitted radius; it is already camera-invariant
   casterPadMin: 34,         // metres of extra depth behind a cascade to catch tall casters

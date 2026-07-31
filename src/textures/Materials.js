@@ -112,8 +112,9 @@ function ashlar(s, o = {}) {
      *
      * The *macro* blotch is deliberately left at full weight relative to the others: it runs at
      * ~3 cycles per tile, i.e. far below the block grid, so it breaks the repeat up without
-     * adding anything the eye has to resolve. Per-block variety is what had to come down. */
-    /* `tone` holds the recipe's *mean albedo* where the art direction wants it while the
+     * adding anything the eye has to resolve. Per-block variety is what had to come down.
+     *
+     * `tone` holds the recipe's *mean albedo* where the art direction wants it while the
      * variation terms are being retuned. Damping the joints and the pitting takes darkening out
      * of a wall as a side effect, and the grade is verified per material — the frequency fix must
      * not quietly relight the level. */
@@ -1859,10 +1860,15 @@ function glyphWall(ctx, size, mode, seed, o = {}) {
    * bands of unequal weight give the eye somewhere to rest and read as deliberate; two equal
    * bands read as wallpaper. */
   {
-    const y0 = size * (0.055 + tall + 0.235);
+    const y0 = size * (0.055 + tall + 0.215);
     const y1 = y0 + size * frieze;
     HG.registerRule(ctx, size, y0 - size * 0.020, rule, mode);
     HG.rowRegister(ctx, 0, y0, size, y1 - y0, seed + 907, HG.POOLS.divine, mode);
+    // A painted stripe under the frieze. Purely horizontal, one repeat per tile: it puts colour
+    // and an edge back on the plain area without giving the eye anything to resolve, which is
+    // the only kind of detail a large wall can carry and still hold its shape when you squint.
+    HG.paintedBand(ctx, -2, y1 + size * 0.020, size + 4, size * 0.045, mode,
+      [PAL.ochre, PAL.red, PAL.white, PAL.lapis]);
   }
 }
 

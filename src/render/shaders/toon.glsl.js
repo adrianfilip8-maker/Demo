@@ -341,15 +341,57 @@ export const TOON_SHADE = /* glsl */ `
 
 		outgoingLight = diff + sss + spec + metalEnv + rim + emissiveTerm;
 
-		/* Diagnostic: red = getShadowMask(), green = receiveShadow, blue = raw N.L.
-		   Set uDebugShadow > 0.5 to see why the scene has no cast shadows. */
+		/* Shadow diagnostics. shading.debugShadow(mode) selects a channel set — each one
+		   isolates a different link in the chain, so a bad frame names its own culprit:
+
+		     1  R = shadow term   G = receiveShadow   B = N.L
+		     2  RGB = cascade 0's shadow coordinate after the perspective divide. Must land
+		        in 0..1 on R and G anywhere the near cascade is meant to cover.
+		     3  R = the depth actually stored in cascade 0's map at this fragment's lookup,
+		        G = the fragment's own projected depth, B = inside the map's [0,1] square.
+		        R > G is lit, R < G is occluded; R flat at 0 or 1 means the map is empty
+		        or the sampler is reading garbage rather than depth.
+		     4  R/G = the cascade blend weights, i.e. which cascade this fragment resolved to. */
 		if ( uDebugShadow > 0.5 ) {
-			float dbgMask = shadowRaw;
 			float dbgRecv = 0.0;
 			#if defined( USE_SHADOWMAP ) && NUM_DIR_LIGHT_SHADOWS > 0
 				dbgRecv = receiveShadow ? 1.0 : 0.0;
 			#endif
-			outgoingLight = vec3( dbgMask, dbgRecv, clamp( ndl, 0.0, 1.0 ) );
+			vec3 dbg = vec3( shadowRaw, dbgRecv, clamp( ndl, 0.0, 1.0 ) );
+
+			#if defined( USE_SHADOWMAP ) && NUM_DIR_LIGHT_SHADOWS > 0
+				vec4 dbgSC = vDirectionalShadowCoord[ 0 ];
+				vec3 dbgP = dbgSC.xyz / dbgSC.w;
+				float dbgIn = ( dbgP.x >= 0.0 && dbgP.x <= 1.0 && dbgP.y >= 0.0 && dbgP.y <= 1.0 ) ? 1.0 : 0.0;
+
+				if ( uDebugShadow > 1.5 && uDebugShadow < 2.5 ) dbg = dbgP;
+
+				#if defined( SHADOWMAP_TYPE_PCF )
+					/* Reconstruct the stored depth through the comparison sampler: summing
+					   32 references spread over 0..1 counts how many fall below the stored
+					   value, which is the stored value itself (the cascade ortho makes depth
+					   linear). It is the only way to *see* a sampler2DShadow. */
+					if ( uDebugShadow > 2.5 && uDebugShadow < 3.5 ) {
+						float dbgAcc = 0.0;
+						for ( int i = 0; i < 32; i ++ ) {
+							dbgAcc += texture( directionalShadowMap[ 0 ], vec3( dbgP.xy, ( float( i ) + 0.5 ) / 32.0 ) );
+						}
+						dbg = vec3( dbgAcc / 32.0, clamp( dbgP.z, 0.0, 1.0 ), dbgIn );
+					}
+				#endif
+			#endif
+
+			#if defined( CSM_CASCADES ) && defined( USE_SHADOWMAP ) && NUM_DIR_LIGHT_SHADOWS > 0
+				if ( uDebugShadow > 3.5 ) {
+					float dbgW1 = 0.0;
+					#if CSM_CASCADES > 1
+						dbgW1 = csmMask( csmSplits[ 1 ], vViewPosition.z );
+					#endif
+					dbg = vec3( csmMask( csmSplits[ 0 ], vViewPosition.z ), dbgW1, 0.0 );
+				}
+			#endif
+
+			outgoingLight = dbg;
 		}
 
 		/* Aerial perspective, in linear radiance, before tone mapping. Doing this with

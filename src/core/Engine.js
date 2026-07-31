@@ -45,11 +45,22 @@ export class Engine {
     this.renderer.toneMappingExposure = 1.0;
 
     this.renderer.shadowMap.enabled = true;
-    // PCF-soft, not VSM. VSM was the original choice for its cheap wide penumbra, but it
-    // light-bleeds badly across the high-contrast, large-depth-range geometry here — bleeding
-    // reads as "everything is lit", and the courtyard rendered with no cast shadows at all
-    // under a 22° sun. PCF is noisier per-sample but it actually occludes.
-    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    /* PCF, not VSM and not PCFSoft.
+     *
+     * VSM was the original choice for its cheap wide penumbra, but it light-bleeds badly
+     * across the high-contrast, large-depth-range geometry here, and bleeding reads as
+     * "everything is lit".
+     *
+     * PCFSoftShadowMap must not be used on three ≥ r185: the constant is deprecated and,
+     * more importantly, `WebGLProgram`'s shadowMapTypeDefines table has no entry for it, so
+     * any program compiled while it is still set gets `SHADOWMAP_TYPE_BASIC` — a plain
+     * sampler2D — while `WebGLShadowMap` silently rewrites the type to PCF and allocates the
+     * depth textures with hardware comparison enabled. main.js warms the whole scene through
+     * renderer.compile() before the first shadow render, so that is exactly when it happens.
+     * Sampling a compare-mode depth texture through a non-shadow sampler is undefined, and it
+     * is the sort of mismatch that reads as a uniformly zero shadow term. Setting the type
+     * three actually implements keeps program and texture in agreement from the first frame. */
+    this.renderer.shadowMap.type = THREE.PCFShadowMap;
     this.renderer.shadowMap.autoUpdate = true;
 
     this.renderer.autoClear = true;
