@@ -1526,13 +1526,14 @@ export const MATERIALS = {
         /* Value. The dish floor is deep, the rim between dishes is hot, and the swathe decides
          * which region of the piece gets to be hot at all — so the bright texels come out as a
          * *connected network of rims inside a lit region*, not as salt-and-pepper. */
-        const t = sat(0.30 + (1 - dish[i]) * 0.34 + rim[i] * 0.46
-          + (swathe[i] - 0.5) * 0.52 + (wrinkle[i] - 0.5) * 0.20 - seam[i] * 0.34);
+        const t = sat(0.52 + (1 - dish[i]) * 0.11 + rim[i] * 0.15
+          + (swathe[i] - 0.5) * 1.10 + (wrinkle[i] - 0.5) * 0.12 - seam[i] * 0.20);
         goldRamp(t, t3);
         s.r[i] = t3[0]; s.g[i] = t3[1]; s.b[i] = t3[2];
-        // Height carries the same structure, so the normal and the value agree about where the
-        // crests are — a highlight that lands somewhere the albedo is dark reads as a decal.
-        s.h[i] = 0.56 - dish[i] * dish[i] * 0.34 + rim[i] * 0.26
+        // Height keeps the full planishing structure even though the albedo gave most of it up:
+        // the crest that catches the specular lobe has to be a real crease, and the value and
+        // the relief still agree in sign, so a highlight never lands where the albedo is dark.
+        s.h[i] = 0.56 - dish[i] * dish[i] * 0.34 + rim[i] * 0.30
           + (wrinkle[i] - 0.5) * 0.16 - seam[i] * 0.30;
         s.rough[i] = goldRough(t);
         // Pinholes where the leaf tore: red bole ground shows, and it is not metal any more.

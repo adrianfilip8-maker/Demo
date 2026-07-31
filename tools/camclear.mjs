@@ -9,10 +9,17 @@ for (const cz of [-22, -30, -38, -46]) for (const sx of [-1, 1])
 for (const cz of [-26, -38]) for (const sx of [-1, 1])
   COLS.push({ x: sx * 16.5, z: cz, y0: 0.34, hShaft: 9.5, rBase: 1.62, rTop: 1.2, plinth: 2.0, kind: 'aisle' });
 
+/* The capital is modelled as `plinth` here, which is optimistic: the nave plinth is 2.35 m but
+   the real papyrus bell reaches 2.85 m including the rib. No canonical camera currently sits at
+   capital height in the hall, so this has never mattered — but it is the check that caught a
+   camera standing inside a column shaft, and a check that under-reports is worth less than one
+   that over-reports. Widened to 2.9 rather than left as a latent false negative. */
+const CAPITAL_R = 2.9;
+
 function radiusAt(c, y) {
   if (y < c.y0) return c.plinth;                       // plinth block, treated as a disc
   const t = Math.min(Math.max((y - c.y0) / c.hShaft, 0), 1);
-  if (y > c.y0 + c.hShaft) return c.plinth;            // capital flares back out
+  if (y > c.y0 + c.hShaft) return CAPITAL_R;           // capital bell, incl. rib
   return c.rBase + (c.rTop - c.rBase) * t;
 }
 

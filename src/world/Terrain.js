@@ -956,6 +956,12 @@ Object.assign(Terrain.prototype, {
     const mesh = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ wireframe: true, color: 0x2fa8a0 }));
     mesh.name = 'sand_collision';
     mesh.visible = false;
+    /* This was reported as a 14k-triangle collision mesh casting shadows. It is not: three's
+       shadow pass returns early on `object.visible === false`, so an invisible proxy has never
+       cast. Marked anyway, because `main.js` sweeps `castShadow = true` onto every opaque mesh
+       and this one turns visible whenever `showColliders` is toggled — at which point a
+       wireframe debug proxy would start occluding the sun. */
+    mesh.userData.noShadow = true;
     mesh.matrixAutoUpdate = false;
     mesh.updateMatrix();
     mesh.userData.terrain = this;
