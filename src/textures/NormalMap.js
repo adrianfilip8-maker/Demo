@@ -104,6 +104,28 @@ export function heightToNormal(h, size, ku = 6, kv = ku) {
  * gives both the tight contact darkening in a mortar joint and the broad softening under a
  * projecting course, which is what the critic means by "AO in crevices / where forms meet".
  *
+ * **The radius weights are the honesty knob, and they were wrong.**
+ *
+ * When cast shadows were suppressed engine-wide (`KNOWN_ISSUES` §1) the baked term was the only
+ * occlusion in the frame, so it was pushed broad and hard to stand in for them. Shadows work
+ * now, and the review caught the consequence exactly: *"occlusion is broad and soft everywhere
+ * and tight and dark nowhere… a broad soft dark wash with no occluder anywhere near it… it
+ * reads as an airbrush smudge, not contact darkening. Real AO gets narrower and darker as
+ * surfaces converge."*
+ *
+ * That symptom is the `radius 30` term. At thirty texels the blur difference on a block face is
+ * dominated by the *face's own gentle dome*, not by anything occluding it — so every block
+ * acquired a soft gradient keyed to its UVs rather than to the geometry around it. Meanwhile the
+ * near radii, which are the ones that actually describe a converging crease, carried barely a
+ * third of the budget between them.
+ *
+ * The weights now put two thirds of the budget inside five texels and taper the broad tail to a
+ * token. What that buys, beyond deleting the smudge: a sunk relief stops rendering as a *filled*
+ * dark stamp (the broad term darkened a whole glyph interior uniformly — §7.3's "carvings look
+ * painted-on") and starts rendering as a shadow that hugs the cut wall and releases across the
+ * floor of the cut, which is what a chisel edge does. The low frequencies belong to the shadow
+ * map and to the GTAO pass; this term owns the contact scale and nothing else.
+ *
  * @returns {Float32Array} 0..1
  */
 export function heightAO(h, size, o = {}) {
@@ -115,8 +137,8 @@ export function heightAO(h, size, o = {}) {
   // `tile` may be [u, v] for anisotropic surfaces; AO has no direction, so take the mean.
   const tm = tileMean(tile);
   const px = tm / size;                         // metres per texel
-  const radii = [2, 5, 13, 30];
-  const weights = [0.34, 0.30, 0.22, 0.14];
+  const radii = [1.5, 4, 10, 22];
+  const weights = [0.47, 0.31, 0.16, 0.06];
 
   for (let ri = 0; ri < radii.length; ri++) {
     const r = Math.max(1, Math.round((radii[ri] * size) / 512));

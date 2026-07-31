@@ -659,6 +659,32 @@ export function weather(s, o = {}) {
     roughGrime = 0.10,
     seed = 11,
     /**
+     * **Patina — the metre-scale term, and the one whose absence the second review named.**
+     *
+     * Every other term here is keyed to the height field, so all of them live at the frequency
+     * of the *detail*: grime in a 6 mm joint, a streak under a 3 cm ledge, dust on a chamfer.
+     * Take the noise out of a material — which the previous pass did, correctly — and what is
+     * left is a face with nothing on it between "chisel mark" and "whole block", because there
+     * was never anything at that scale to begin with. The review: *"its lit face is a large
+     * featureless salmon plane… you did not trade richness for calm; you traded noise for
+     * emptiness"*.
+     *
+     * Patina is a warped low-frequency field (2–3 cycles per tile, i.e. metres, not centimetres)
+     * multiply-blended into the albedo. It is *not* noise turned back up: it is one octave below
+     * the block grid, so the eye groups it into shapes rather than reading it as static, it
+     * survives the mip chain to twenty metres where per-texel detail cannot, and it darkens
+     * without desaturating because it multiplies toward a warm hex.
+     *
+     * Physically it is what it looks like: three thousand years of dust cemented by dew into an
+     * uneven film, heavier where the wall is sheltered and lighter where the wind scours. The
+     * `+ down` bias below is what makes it motivated rather than decorative — the film is
+     * thicker on down-facing and inward-turning surfaces because those are the ones the wind
+     * does not reach.
+     */
+    patina = 0.18,
+    patinaTint = 0x6f523a,
+    patinaFreq = 3,
+    /**
      * Scale on the two *direction-dependent* terms — pale dust on up-facing bevels, darkening
      * on down-facing ones. Both are keyed to `skyward()`, i.e. to the sign of dH/dv, so they
      * bake a fixed top-left light into the albedo.
@@ -692,10 +718,21 @@ export function weather(s, o = {}) {
     const c = sat(conc[i] / cmax);
     src[i] = sat((source ? source[i] * 0.9 : 0) + c * 0.85) * blot[i];
   }
-  const streak = streakDown(src, size, streakDecay, seed + 31);
+  /* `streakDecay` is per *texel*, so the same constant produced a streak twice as long in metres
+   * on a tier-1 half-resolution map as on a tier-0 one — the run length was an accident of the
+   * quality setting rather than a property of the wall. Re-expressed against a 512 reference so
+   * a streak is a fixed fraction of the tile whatever resolution it is built at. */
+  const decayPx = 1 - (1 - streakDecay) * (512 / size);
+  const streak = streakDown(src, size, decayPx, seed + 31);
   const streakSoft = blurWrap(streak, size, Math.max(1, Math.round(size / 380)), 1);
 
   const fine = s.field(2, (u, v) => fbmN(u, v, 24, 3, 0.55, seed + 55) * 0.5 + 0.5);
+
+  /* The metre-scale film. Two octaves of warped noise at `patinaFreq` cycles per tile, squared
+   * into soft patches rather than a sine-like swell, and biased toward down-facing texels. */
+  const pat = patina > 0
+    ? s.field(5, (u, v) => sat(warpN(u, v, Math.max(1, patinaFreq | 0), 4, 1.15, seed + 811) * 1.35 + 0.5))
+    : null;
 
   const dir = sat(directional);
   for (let i = 0; i < n; i++) {
@@ -708,11 +745,17 @@ export function weather(s, o = {}) {
     if (streakAmt > 0) s.stainHex(i, streakTint, st * streakAmt);
     const up = sat(sky[i]);
     if (dustAmt > 0) s.mixHex(i, dust, up * dustAmt * dir * (0.5 + 0.7 * fine[i]));
+    if (pat) {
+      // p² keeps the film off the scoured half of the wall entirely instead of tinting all of it.
+      const p = sat(pat[i] * pat[i] * 1.15 + dn * 0.25);
+      s.stainHex(i, patinaTint, p * patina);
+      s.rough[i] = sat(s.rough[i] + p * 0.06);
+    }
     s.rough[i] = sat(s.rough[i] + (st * 0.6 + c * 0.5) * roughGrime - up * 0.02);
     // Occlusion is geometric, not directional — a recess is occluded whichever way the sun is.
     s.occ[i] *= 1 - sat(c) * 0.30 - dn * 0.12 * dir;
   }
-  return { conc, sky, streak: streakSoft };
+  return { conc, sky, streak: streakSoft, patina: pat };
 }
 
 /** Rec.709 luma of a texel. */
@@ -769,7 +812,15 @@ export function rampFloor(s, o = {}) {
  * to a signature.
  */
 export function chiselMarks(s, o = {}) {
-  const { amount = 0.05, angle = -0.42, freq = 60, jitter = 0.55, seed = 3, mask = null } = o;
+  /* `pale` puts a *little* of the gouge into the albedo as well as the height.
+   *
+   * The height field alone cannot carry this one. A dressing gouge is 2–4 mm deep, which after
+   * the normal pass' slope knee and `microSoft` is a barely-tilted texel, and by mip 2 it is
+   * gone — so "visible chisel character" (§2.1.7) was visible at zero distances. Freshly worked
+   * stone genuinely *is* paler than the weathered skin around it, and that is pigment, not
+   * shading: it does not move when the sun does, so it is not the baked-bevel cheat the review
+   * failed. Small on purpose — this is a tool mark, not a stripe. */
+  const { amount = 0.05, angle = -0.42, freq = 60, jitter = 0.55, seed = 3, mask = null, pale = 0.05, paleHex = PAL.limeLight } = o;
   const [P, Q] = freqVec(freq, angle);
   const marks = s.field(1.5, (u, v) => {
     // Integer frequency vector, so the gouges wrap; the warp makes them wander like tool marks.
@@ -783,6 +834,7 @@ export function chiselMarks(s, o = {}) {
     const m = mask ? mask[i] : 1;
     s.h[i] -= marks[i] * amount * m;
     s.rough[i] = sat(s.rough[i] + marks[i] * 0.05 * m);
+    if (pale > 0) s.mixHex(i, paleHex, sat(marks[i] * 1.3 - 0.25) * pale * m);
   }
   return marks;
 }
@@ -870,7 +922,25 @@ export function brushwork(s, o = {}) {
  * the cut, out of the wind and sun — so surviving pigment is a *function of depth*, not a decal.
  */
 export function paintRemnants(s, cut, paint, o = {}) {
-  const { survival = 0.55, freq = 7, seed = 17, edgeLoss = 0.55, gloss = -0.12, fade = 0 } = o;
+  /**
+   * `peak` caps how much of the stone the surviving pigment is allowed to replace, and the
+   * absence of that cap is why the glyphs kept reading as decals.
+   *
+   * The old `keep` saturated: anywhere inside a cut, `depth·0.65` alone put the expression past
+   * 1.0 before the wear field was even consulted, so pigment covered the *entire* interior of
+   * every glyph at full opacity. A sunk relief filled edge to edge with one flat colour is a
+   * sticker no matter how well the stone under it is carved — the review saw exactly that twice
+   * running (*"flat decals with a hard offset drop shadow"*, *"abstract confetti"*), and it is
+   * also why the carving itself stopped reading: the relief was there, and then something
+   * opaque was laid over it.
+   *
+   * Rebalanced so the wear field does the deciding and roughly half of each glyph loses its
+   * pigment entirely, with `peak` holding the surviving half short of opaque so the stone's own
+   * grain, grime and chisel marks still come through it. What you get is a *painted carving*
+   * rather than a coloured shape — and the colour that remains reads as older and richer for
+   * being partial.
+   */
+  const { survival = 0.55, freq = 7, seed = 17, edgeLoss = 0.55, gloss = -0.12, fade = 0, peak = 0.80 } = o;
   const wearField = s.field(3, (u, v) => sat(warpN(u, v, Math.max(2, freq | 0), 5, 1.0, seed) * 1.25 + 0.5));
   const shelter = blurWrap(cut, s.size, Math.max(1, Math.round(s.size / 200)), 1);
   for (let i = 0; i < s.n; i++) {
@@ -878,7 +948,7 @@ export function paintRemnants(s, cut, paint, o = {}) {
     if (pa <= 0.01) continue;
     // Deep in the cut → sheltered → paint survives. On the exposed lip → scoured away.
     const depth = sat(shelter[i] * 1.15);
-    const keep = sat((wearField[i] * survival + depth * 0.65 - edgeLoss * (1 - depth)) * 1.6) * pa;
+    const keep = sat((wearField[i] * survival * 1.6 + depth * 0.42 - edgeLoss * (1 - depth) - 0.30) * 1.9) * pa * peak;
     if (keep <= 0.002) continue;
     /* `fade` bleaches the surviving pigment toward the stone it sits on before it is laid down.
      *
