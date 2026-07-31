@@ -20,11 +20,19 @@ const TUNE = {
   /* --- ink lines (AGENTS.md §2.1: the interior creases the hull shells can't give us) --- */
   edgeDepth: 1.05,        // depth discontinuity sensitivity, view-distance normalised
   edgeNormal: 0.62,       // normal discontinuity sensitivity (cos threshold)
-  edgeThickness: 1.5,     // px
+  edgeThickness: 1.5,     // px, before the depth weighting below
+  // §2.1.2 + §7.3: line weight must vary with depth. Near geometry inks at 1.8x the base
+  // width, the far field at 0.7x, so a foreground corner reads heavier than a distant wall
+  // instead of every edge in frame carrying the same hairline.
+  edgeNearMul: 1.8,
+  edgeFarMul: 0.70,
+  edgeNearZ: 7,           // m — full weight closer than this
+  edgeFarZ: 55,           // m — minimum weight beyond this
   edgeFadeStart: 45,      // m — lines thin out with distance so the far field isn't a black mess
   edgeFadeEnd: 190,
   inkWarm: 0x1a1210,      // §2.1: lit-side line colour, a warm near-black
   inkCool: 0x161022,      // shadow-side line colour, violet
+  inkStrength: 0.85,      // was 0.60 — with the colour bug fixed the line can be a line
 
   /* --- bloom --- */
   bloomThreshold: 1.02,   // in HDR units; above 1 so only genuinely bright things bloom
@@ -40,10 +48,16 @@ const TUNE = {
   contrast: 1.08,
   saturation: 1.30,                // AgX desaturates hard; the sandstone has to be pushed back
   lift: [0.006, 0.004, 0.010],     // open the toe just enough to keep shadow detail (§7.3)
-  gain: [1.04, 1.0, 0.95],         // warm the highlights
+  // Warm the highlights — but the blue leg was pulled to 0.95, which is a 5% cut on every
+  // blue in the frame including the sky. The warm/cool split is meant to come from the
+  // palette, not from throwing blue away globally.
+  gain: [1.035, 1.0, 0.985],
   splitShadow: 0x2a3f66,           // §2.2 shadow hue
   splitHighlight: 0xffd9a0,        // §2.2 sun
-  splitStrength: 0.22,             // hue-only now, so it can afford to be stronger
+  // 0.22 -> 0.16. The split is hue-only and correct in direction, but at 0.22 it pulled the
+  // whole mid-tone range warm — and the daylight sky lives in the mid-tones, so it was
+  // eating a measurable part of the zenith blue that §2.3's warm/cool tension depends on.
+  splitStrength: 0.16,
 
   /* --- finishing --- */
   vignette: 0.16,                  // was compounding with dark shadows into a black frame
@@ -61,14 +75,21 @@ uniform sampler2D uNormal;
 uniform vec2  uTexel;
 uniform vec4  uParams;     // depthSens, normalSens, thickness, unused
 uniform vec2  uFade;       // fadeStart, fadeEnd (metres)
+uniform vec4  uWeight;     // nearMul, farMul, nearZ(m), farZ(m)
 ${GLSL_VIEW}
 
 void main() {
   float d0 = texture2D( uDepth, vUv ).x;
   if ( slyIsSky( d0 ) ) { gl_FragColor = vec4( 0.0 ); return; }
 
-  vec2 o = uTexel * uParams.z;
   float z0 = slyLinearZ( d0 );
+
+  // Line weight by depth. §7.3 fails a shot for "outlines uniform-thickness regardless of
+  // depth", and this pass was sampling at one fixed pixel offset everywhere, so the near
+  // obelisk corner and the far wall carried an identical hairline. A hand-inked frame gets
+  // heavier on what is close: near geometry samples wider, distant geometry narrower.
+  float weight = mix( uWeight.x, uWeight.y, smoothstep( uWeight.z, uWeight.w, z0 ) );
+  vec2 o = uTexel * uParams.z * weight;
 
   // Roberts cross on depth, in metres and normalised by view distance: a 5 cm step matters
   // at 2 m and is invisible at 80 m, so a fixed threshold would either miss near creases or
@@ -101,6 +122,26 @@ void main() {
   // joints are left to the texture, which already draws them.
   float corroborate = smoothstep( 0.004, 0.020, dEdge );
   float line = max( depthLine, normalLine * corroborate );
+
+  /* Keep only the near side of a silhouette.
+   *
+   * §2.1.2: an ink line is dark and *inside* the shape. A Roberts cross is symmetric, so
+   * every depth step used to paint a band straddling the boundary — half of it landing on
+   * whatever was *behind* the object. That outer half is the "halo outside the edge" the
+   * critic saw: a smear of the foreground's line lying on the background, which is exactly
+   * what a Photoshop edge filter does and an ink line never does.
+   *
+   * Where the 4-tap neighbourhood is nearly coplanar we are on an interior crease, not a
+   * silhouette, and both sides should ink — so the gate is applied in proportion to how
+   * much of a real depth step this is. */
+  float zMin = min( min( dA, dB ), min( dC, dD ) );
+  float zMax = max( max( dA, dB ), max( dC, dD ) );
+  float span = zMax - zMin;
+  float silhouette = smoothstep( 0.010, 0.060, span / max( 0.35, z0 ) );
+  float side = ( z0 - zMin ) / max( 1e-5, span );          // 0 = nearest, 1 = furthest
+  float nearSide = 1.0 - smoothstep( 0.30, 0.70, side );
+  line *= mix( 1.0, nearSide, silhouette );
+
   // Thin the lines out with distance rather than cutting them, or the transition pops.
   line *= 1.0 - smoothstep( uFade.x, uFade.y, z0 );
 
@@ -188,12 +229,14 @@ uniform vec2  uTexel;
 uniform float uTime;
 uniform float uExposure, uContrast, uSaturation;
 uniform float uBloomIntensity, uSplitStrength, uVignette, uChroma, uGrain;
-uniform float uAOEnabled, uEdgeEnabled, uBloomEnabled;
+uniform float uAOEnabled, uEdgeEnabled, uBloomEnabled, uInkStrength;
 uniform vec3  uLift, uGain, uSplitShadow, uSplitHighlight, uInkWarm, uInkCool;
 ${GLSL_VIEW}
 ${GLSL_NOISE}
 ${GLSL_AGX}
 ${GLSL_SRGB}
+
+const float SLY_PIVOT = 0.18;   // scene-linear middle grey; the contrast pivot
 
 void main() {
   // Edge-only chromatic aberration: sampling the channels apart across the whole frame
@@ -237,8 +280,16 @@ void main() {
   c = mix( c, c * tone, uSplitStrength );
 
   c = mix( vec3( l ), c, uSaturation );
-  c = ( c - 0.5 ) * uContrast + 0.5;
-  c = max( vec3( 0.0 ), c );
+
+  // Contrast about a mid-grey PIVOT, in log space — not (c - 0.5) * k + 0.5.
+  //
+  // This is still linear HDR, where 0.5 is not middle grey, so the old form was really a
+  // flat −0.04 offset on every channel followed by a clamp. It silently amputated whole
+  // channels out of anything dark: the §2.2 shadow hue #2a3f66 came out of the grade as
+  // #00358c — red exactly zero — which is both "shadows crush to zero detail" and the
+  // reason the night frames read as pure blue. A power about 0.18 is monotone, never
+  // reaches zero, and leaves the hue alone.
+  c = SLY_PIVOT * pow( max( c, vec3( 1e-6 ) ) / SLY_PIVOT, vec3( uContrast ) );
 
   /* ---- tonemap: exactly once, here. Exposure is already folded in above, so pass 1. ---- */
   c = slyAgX( c, 1.0 );
@@ -246,16 +297,32 @@ void main() {
   // the canvas doesn't get three.js's output conversion — so do it here, once.
   c = slyLinearToSrgb( c );
 
-  /* ---- ink lines, applied after tonemap so they stay solid black rather than glowing ---- */
+  /* ---- ink lines ------------------------------------------------------------------
+     Composited HERE, after slyAgX and after slyLinearToSrgb, so a line is a line and not
+     something the tonemapper can bloom back open.
+
+     Two rules this pass now obeys, and did not:
+
+     1. The ink uniforms arrive already in DISPLAY space (see displayColor() in the module
+        below). They used to be THREE.Color values, which colour management stores as
+        *linear* — so mixing them into an image that had already been sRGB-encoded applied
+        #1a1210 as if it were 0.010/0.006/0.005, i.e. effectively #030201. §2.1.2 says the
+        lines are a warm brown and a dark violet and explicitly not pure black; §7.3 fails a
+        shot for #000000 outlines. They were failing it.
+
+     2. The contribution is strictly SUBTRACTIVE. Mixing toward a fixed colour brightens
+        anything darker than that colour, which is how a night frame with crushed darks got
+        drawn back in as glowing wireframe. A per-channel min() makes it arithmetically
+        impossible for this pass to add light to any pixel, in any channel, ever.  */
   if ( uEdgeEnabled > 0.5 ) {
     float line = texture2D( uEdge, vUv ).r;
     float lum = slyLuma( c );
     // Don't ink what's already dark. A black line on a near-black surface adds nothing but
     // noise, and it was a large part of why the shadowed half of the frame turned to mush.
-    line *= smoothstep( 0.06, 0.22, lum );
+    line *= smoothstep( 0.05, 0.20, lum );
     // Warm ink where the surface is lit, violet ink where it's in shadow (§2.1).
-    vec3 ink = mix( uInkCool, uInkWarm, smoothstep( 0.12, 0.55, lum ) );
-    c = mix( c, ink, clamp( line, 0.0, 1.0 ) * 0.60 );
+    vec3 ink = min( mix( uInkCool, uInkWarm, smoothstep( 0.12, 0.55, lum ) ), c );
+    c = mix( c, ink, clamp( line, 0.0, 1.0 ) * uInkStrength );
   }
 
   /* ---- finishing ---- */
@@ -307,6 +374,21 @@ void main() {
 `;
 
 /* ─────────────────────────────── module ─────────────────────────────── */
+
+/**
+ * A palette hex as raw 0..1 sRGB components — no linearisation.
+ *
+ * `new THREE.Color(0x1a1210)` does NOT give you 0x1a/255: colour management treats the hex
+ * as sRGB and stores the *linear* equivalent, which is ~6x darker. That is exactly right for
+ * anything multiplied into scene radiance and exactly wrong for anything mixed into an image
+ * that has already been encoded for display — the ink lines, which land after the tonemap.
+ * Getting this backwards turned every §2.1.2 ink colour into near-#000000.
+ */
+function displayColor(hex) {
+  return new THREE.Color(
+    ((hex >> 16) & 255) / 255, ((hex >> 8) & 255) / 255, (hex & 255) / 255
+  );
+}
 
 export class PostFX {
   /** @param {import('../core/Engine.js').Engine} engine */
@@ -367,6 +449,7 @@ export class PostFX {
         uTexel: { value: new THREE.Vector2() },
         uParams: { value: new THREE.Vector4() },
         uFade: { value: new THREE.Vector2() },
+        uWeight: { value: new THREE.Vector4() },
       }, EDGE_FRAG));
 
       this.brightMat = this._mat(passMaterial('postfx.bright', {
@@ -397,12 +480,15 @@ export class PostFX {
         uChroma: { value: this.tune.chroma },
         uGrain: { value: this.tune.grain },
         uAOEnabled: { value: 1 }, uEdgeEnabled: { value: 1 }, uBloomEnabled: { value: 1 },
+        uInkStrength: { value: this.tune.inkStrength },
         uLift: { value: new THREE.Vector3(...this.tune.lift) },
         uGain: { value: new THREE.Vector3(...this.tune.gain) },
+        // Split-toning happens while the image is still linear, so these two stay linear.
         uSplitShadow: { value: new THREE.Color(this.tune.splitShadow) },
         uSplitHighlight: { value: new THREE.Color(this.tune.splitHighlight) },
-        uInkWarm: { value: new THREE.Color(this.tune.inkWarm) },
-        uInkCool: { value: new THREE.Color(this.tune.inkCool) },
+        // The ink is mixed in AFTER slyLinearToSrgb, so it must be display-space.
+        uInkWarm: { value: displayColor(this.tune.inkWarm) },
+        uInkCool: { value: displayColor(this.tune.inkCool) },
       }, COMPOSITE_FRAG));
 
       this.fxaaMat = this._mat(passMaterial('postfx.fxaa', {
@@ -516,7 +602,26 @@ export class PostFX {
     /* ---- 2. view-space normals, for AO and for the crease pass ---- */
     const needNormals = (this.passes.edge.enabled || (this.ao && this.passes.ao.enabled));
     if (needNormals) {
-      const normalMat = engine.get('shading')?.normalMaterial ?? this._fallbackNormalMat();
+      /* SHADING publishes beginNormalPass()/endNormalPass() precisely for this, and this
+       * pass was reaching past them straight to `normalMaterial`.
+       *
+       * What that cost: the inverted-hull shells are children of their host meshes and stay
+       * visible, so they were being drawn into the normal buffer too. `overrideMaterial`
+       * replaces the shell's material outright — including its BackSide and its clip-space
+       * expansion — so each shell rendered as a front-facing copy sitting exactly on top of
+       * its host, z-fighting it, and left a ragged band of wrong normals around every
+       * outlined silhouette. The crease pass then read that band as a normal discontinuity
+       * and drew a line hugging the silhouette a second time, on top of the hull shell that
+       * was already there. That is the doubling: shell + screen-space crease on the same
+       * edge, which is what turns a 2.5 px line into a fat smear.
+       *
+       * begin/endNormalPass() hides the shells for the duration. Paired in try/finally so a
+       * throw here can never leave every outline in the game switched off. */
+      const shading = engine.get('shading');
+      const canGate = typeof shading?.beginNormalPass === 'function'
+        && typeof shading?.endNormalPass === 'function';
+      const normalMat = (canGate ? shading.beginNormalPass() : shading?.normalMaterial)
+        ?? this._fallbackNormalMat();
       const prevOverride = scene.overrideMaterial;
       const prevBg = scene.background;
 
@@ -535,15 +640,18 @@ export class PostFX {
       renderer.shadowMap.autoUpdate = false;
       renderer.shadowMap.needsUpdate = false;
 
-      scene.overrideMaterial = normalMat;
-      scene.background = null;
-      renderer.setRenderTarget(this.normalRT);
-      renderer.clear();
-      renderer.render(scene, cam);
-
-      scene.overrideMaterial = prevOverride;
-      scene.background = prevBg;
-      renderer.shadowMap.autoUpdate = prevShadowAuto;
+      try {
+        scene.overrideMaterial = normalMat;
+        scene.background = null;
+        renderer.setRenderTarget(this.normalRT);
+        renderer.clear();
+        renderer.render(scene, cam);
+      } finally {
+        scene.overrideMaterial = prevOverride;
+        scene.background = prevBg;
+        renderer.shadowMap.autoUpdate = prevShadowAuto;
+        if (canGate) { try { shading.endNormalPass(); } catch { /* shells stay hidden at worst */ } }
+      }
       this.shared.uNormal.value = this.normalRT.texture;
     }
 
@@ -556,6 +664,8 @@ export class PostFX {
       const u = this.edgeMat.uniforms;
       u.uParams.value.set(this.tune.edgeDepth, this.tune.edgeNormal, this.tune.edgeThickness, 0);
       u.uFade.value.set(this.tune.edgeFadeStart, this.tune.edgeFadeEnd);
+      u.uWeight.value.set(this.tune.edgeNearMul, this.tune.edgeFarMul,
+        this.tune.edgeNearZ, this.tune.edgeFarZ);
       blit.render(renderer, this.edgeMat, this.edgeRT);
     }
 
@@ -594,6 +704,7 @@ export class PostFX {
     cu.uContrast.value = this.passes.grade.enabled ? this.tune.contrast : 1;
     cu.uSaturation.value = this.passes.grade.enabled ? this.tune.saturation : 1;
     cu.uSplitStrength.value = this.passes.grade.enabled ? this.tune.splitStrength : 0;
+    cu.uInkStrength.value = this.tune.inkStrength;
     cu.uBloomIntensity.value = this.tune.bloomIntensity;
     cu.uVignette.value = this.tune.vignette;
     cu.uChroma.value = this.tune.chroma;

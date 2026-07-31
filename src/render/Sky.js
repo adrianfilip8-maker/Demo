@@ -135,7 +135,11 @@ const TUNE = {
   milkyWidth: 0.30,
   milkyStrength: 1.0,
 
-  horizonBandLift: 0.055,   // thickness of the hot horizon band, in sin(elevation)
+  // Thickness of the hot horizon band, in sin(elevation). Widened from 0.055 so the warm
+  // haze owns the bottom ~8 degrees of sky — §2.3's "horizon warm, zenith cool" needs the
+  // warm end to be a *band* you can see, not a two-pixel line, now that the gradient above
+  // it turns blue much sooner.
+  horizonBandLift: 0.085,
   groundFade: 0.055,
 
   noiseSize: 256,
@@ -320,9 +324,25 @@ const SKY_FRAG = /* glsl */`
     float cosSun = dot(d, uSunDir);
     float cosMoon = dot(d, uMoonDir);
 
-    /* ---- base gradient: the §2.2 anchors, shaped by the scattering profile ---- */
+    /* ---- base gradient: the §2.2 anchors, shaped by the scattering profile ----
+
+       Interpolated as luminance + chromaticity, NOT as a straight RGB lerp.
+
+       This is the fix for "there is no blue in any daylight sky". The two anchors are far
+       apart in brightness — horizon #f0c88a has ~3x the luminance of zenith #3f7fc4 — so a
+       naive mix(horizon, zenith) passes through a desaturated grey at the crossover: at
+       grad 0.5 the result keeps under 15% of the chroma either endpoint carries. Every
+       camera in §7.2 except courtyard and temple looks nearly level, so the visible sky
+       is 0-15 degrees up, which is exactly where that crossover sits — the whole set was
+       being shown the one part of the ramp with the colour wrung out of it.
+
+       Blending the unit-luminance chromaticities and rescaling by the blended luminance
+       holds saturation across the entire ramp and still lands on the anchors exactly at
+       both ends (grad 0 = horizon, grad 1 = zenith), so §2.2 is honoured, not bent. */
     float grad = pow(h, uHorizonPow);
-    vec3 col = mix(uHorizon, uZenith, grad);
+    float lumH = max(1e-5, dot(uHorizon, vec3(0.2126, 0.7152, 0.0722)));
+    float lumZ = max(1e-5, dot(uZenith,  vec3(0.2126, 0.7152, 0.0722)));
+    vec3 col = mix(uHorizon / lumH, uZenith / lumZ, grad) * mix(lumH, lumZ, grad);
 
     // Rayleigh broadens the blue and lifts the whole dome slightly away from the sun.
     float ray = rayleighPhase(cosSun) / rayleighPhase(0.0);

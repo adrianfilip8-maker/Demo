@@ -126,15 +126,22 @@ function anchor(elevation, o) {
 const ANCHORS = [
   /* Deep night: moonlit, everything cool, stars and the Milky Way carry the sky. */
   anchor(-16, {
-    zenith: 0x081227, horizon: 0x18294a, haze: 0x1e2d4a, violet: 0x241f42, groundHaze: 0x141c30,
+    // Lifted off near-black. Measured through the composite, the old triplet resolved to
+    // #000127 at the top of the `night` frame — a void, not a sky, which is §7.3's "empty
+    // sky" and left the stars and the Milky Way with nothing to sit on. These land the
+    // night dome in the #0b2550-#17427c band: still unmistakably night, still well under
+    // any lit surface, but readable and blue rather than absent.
+    zenith: 0x0e1c3c, horizon: 0x233a5e, haze: 0x263a5c, violet: 0x2a2450, groundHaze: 0x1a2440,
     sunDisc: 0x000000, sunGlow: 0x000000, sunColor: 0x9ec4ff,
     hemiSky: 0x2c4f8e, hemiGround: 0x3b3552,
     cloudLit: 0x7e97c4, cloudShadow: 0x141b34, cloudRim: 0x9cc0ff,
     fogColor: 0x1c2b48, fogTint: 0x33507f,
     sunIntensity: 0.0, hemiIntensity: 0.34, bounceIntensity: 0.10,
     fogDensity: 0.0040, fogHeight: 74, inscatter: 0.18,
-    skyGain: 0.62, mieStrength: 0.20, mieG: 0.62, violetAmount: 0.22, horizonPower: 0.55,
-    cloudCover: [0.62, 0.66, 0.60], cloudBright: 0.42, starAmount: 1.0, exposure: 1.0,
+    skyGain: 0.85, mieStrength: 0.20, mieG: 0.62, violetAmount: 0.22, horizonPower: 0.45,
+    // The cumulus deck was ~53% dense at night, which is why `night` has "a mottled/streaky
+    // texture and no stars, no moon". Only ~38% of the night dome was reaching camera.
+    cloudCover: [0.64, 0.69, 0.71], cloudBright: 0.42, starAmount: 1.0, exposure: 1.0,
   }),
 
   /* Civil twilight — the last violet-magenta band before the sun clears the horizon. */
@@ -146,8 +153,8 @@ const ANCHORS = [
     fogColor: 0x5e4256, fogTint: 0xa8615a,
     sunIntensity: 0.22, hemiIntensity: 0.46, bounceIntensity: 0.16,
     fogDensity: 0.0058, fogHeight: 50, inscatter: 0.55,
-    skyGain: 0.80, mieStrength: 0.85, mieG: 0.72, violetAmount: 0.40, horizonPower: 0.42,
-    cloudCover: [0.56, 0.60, 0.56], cloudBright: 0.70, starAmount: 0.55, exposure: 1.0,
+    skyGain: 0.80, mieStrength: 0.85, mieG: 0.72, violetAmount: 0.40, horizonPower: 0.38,
+    cloudCover: [0.62, 0.68, 0.70], cloudBright: 0.70, starAmount: 0.55, exposure: 1.0,
   }),
 
   /* Sunset / sunrise: the disc on the horizon, maximum Mie, hottest horizon. */
@@ -159,8 +166,8 @@ const ANCHORS = [
     fogColor: 0xdb9a68, fogTint: 0xff9a5c,
     sunIntensity: 1.45, hemiIntensity: 0.66, bounceIntensity: 0.30,
     fogDensity: 0.0056, fogHeight: 46, inscatter: 0.82,
-    skyGain: 0.98, mieStrength: 1.35, mieG: 0.78, violetAmount: 0.34, horizonPower: 0.38,
-    cloudCover: [0.52, 0.56, 0.52], cloudBright: 1.05, starAmount: 0.10, exposure: 1.0,
+    skyGain: 0.98, mieStrength: 1.05, mieG: 0.78, violetAmount: 0.34, horizonPower: 0.34,
+    cloudCover: [0.58, 0.66, 0.70], cloudBright: 1.05, starAmount: 0.10, exposure: 1.0,
   }),
 
   /* GOLDEN HOUR — §2.2 verbatim. Most canonical shots resolve to within a few degrees
@@ -175,8 +182,16 @@ const ANCHORS = [
     fogColor: PALETTE.skyHaze, fogTint: 0xffc98a,
     sunIntensity: 3.30, hemiIntensity: 0.88, bounceIntensity: 0.36,
     fogDensity: 0.0047, fogHeight: 58, inscatter: 0.62,
-    skyGain: 1.0, mieStrength: 0.95, mieG: 0.76, violetAmount: 0.22, horizonPower: 0.44,
-    cloudCover: [0.50, 0.55, 0.53], cloudBright: 1.0, starAmount: 0.0, exposure: 1.0,
+    // horizonPower 0.44 -> 0.34: the canonical cameras are near level, so the top of frame
+    // is only 12-15 degrees up. The blue has to arrive by then or the shot never sees it.
+    // mieStrength 0.95 -> 0.70: the forward lobe was adding ~0.09 of warm radiance a full
+    // 45 degrees off the sun, which bleached the blue back out of exactly those frames.
+    skyGain: 1.0, mieStrength: 0.70, mieG: 0.76, violetAmount: 0.22, horizonPower: 0.34,
+    // Cover is a *threshold*: higher = less cloud. These were below the noise's own mean
+    // (0.65), so all three decks were ~100% dense and the "sky" in every daylight shot was
+    // a wall of overcast — measured at 6.5% of the dome gradient surviving to camera.
+    // Retuned to leave ~56% open sky while still layering three painted decks (§2.3).
+    cloudCover: [0.56, 0.65, 0.70], cloudBright: 1.0, starAmount: 0.0, exposure: 1.0,
   }),
 
   /* Midday. Still Egypt: the horizon bleaches to hot dust rather than to grey. */
@@ -188,8 +203,8 @@ const ANCHORS = [
     fogColor: 0xd4c9ad, fogTint: 0xf0dcbc,
     sunIntensity: 4.05, hemiIntensity: 1.02, bounceIntensity: 0.38,
     fogDensity: 0.0031, fogHeight: 92, inscatter: 0.38,
-    skyGain: 1.04, mieStrength: 0.45, mieG: 0.66, violetAmount: 0.10, horizonPower: 0.62,
-    cloudCover: [0.56, 0.58, 0.54], cloudBright: 1.10, starAmount: 0.0, exposure: 0.97,
+    skyGain: 1.04, mieStrength: 0.45, mieG: 0.66, violetAmount: 0.10, horizonPower: 0.34,
+    cloudCover: [0.59, 0.67, 0.71], cloudBright: 1.10, starAmount: 0.0, exposure: 0.97,
   }),
 ];
 

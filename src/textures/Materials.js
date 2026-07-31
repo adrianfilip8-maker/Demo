@@ -24,7 +24,7 @@ import * as HG from './Hieroglyphs.js';
 const {
   PAL, sat, lerp, clamp, smoothstep, tri, mixHex, hexRGB, css, freqVec,
   masonry, weather, chiselMarks, pitting, speckle, brushwork, paintRemnants, grain, flowStreaks,
-  blurWrap, concavity, skyward, streakDown, rasterMask, rasterRGBA,
+  blurWrap, concavity, skyward, streakDown, rasterMask, rasterRGBA, rampFloor,
   nz, nzA, vz, fbmN, fbmA, ridgeN, warpN, worleyN, rng, warpedFbm2,
 } = C;
 
@@ -49,26 +49,52 @@ function rgb2hex(rgb) {
 function MX(a, b, t) { return rgb2hex(mixHex(a, b, t, MXT)); }
 
 /**
- * Global damping on per-block colour variation. One knob so the whole masonry family can be
- * pulled back toward "one material" without editing every recipe's own `spread`.
+ * Per-block colour variation — **amplitude**, now that the frequency is fixed elsewhere.
  *
- * At 0.42 the wall still read as a chequerboard of individually-toned bricks rather than as one
- * quarry's stone. The variation has to be legible at 2 m and gone at 30 m, which means it has to
- * be smaller than the shading difference between a lit and a shaded face — otherwise it competes
- * with form for the eye. 0.26 is roughly that threshold.
+ * The history here is worth keeping, because the first two attempts both treated the wrong
+ * variable. The original recipes swung ±0.8 around the ramp midpoint keyed on `masonry.id2`,
+ * a per-block *white noise*: neighbouring blocks differed as much as distant ones, so the wall
+ * carried its entire tonal range at the highest spatial frequency it could, and AGENTS §7.3's
+ * squint test failed — the big architectural shapes stopped reading through the static. The
+ * first fix damped that global amplitude to 0.42, then to 0.26. It helped, but it is the wrong
+ * knob: turning white noise down does not make it structured, it just makes a flatter wall that
+ * is still, at close range, a chequerboard. The review called this exactly right — *"per-block
+ * hue randomised at maximum spatial frequency; neighbouring blocks differ as much as distant
+ * ones, so there is no larger structure"*.
+ *
+ * The frequency is now fixed at the source: `ashlar` samples a smooth low-frequency field at
+ * each block's *centre* (`masonry.bcu/bcv`) instead of hashing the block index, so blocks near
+ * each other come out of the same bed of stone and the wall grows metre-scale tonal regions —
+ * which is both what real ashlar does and what §2.3's "large simple areas of colour" asks for.
+ * With the frequency correct the amplitude can go back *up*: variation the eye can group into
+ * shapes is depth, variation it cannot is noise.
  */
-const VARIATION = 0.26;
+const VARIATION = 0.62;
 
 /**
- * Damping on the *joint* — the mortar's tonal contrast against the block face.
+ * Damping on the *albedo* half of the joint — the mortar's painted tonal contrast against the
+ * block face. The joint's **height** is not damped by this and should not be.
+ *
+ * Two separate constraints meet here and they pull opposite ways.
  *
  * ARCHITECTURE already builds the masonry as geometry (0.66 m courses, 6 cm recessed joints), so
- * a strong joint in the texture lays a *second*, unaligned rectangular grid over the first. Two
- * rectangle fields at similar frequency beat against each other, and that beat is exactly the
- * "high-frequency rectangular noise" of AGENTS §7.3's squint test. The texture's job is to say
- * "cut sandstone"; the geometry's job is to say "blocks".
+ * a strong painted joint lays a *second*, unaligned rectangular grid over the first. Two
+ * rectangle fields at similar frequency beat against each other, and that beat is the
+ * "high-frequency rectangular noise" of AGENTS §7.3's squint test — the review's *"perfect
+ * running bond of identical blocks with a heavy dark line between each; it reads as LEGO"*.
+ *
+ * But the joint also has to be **darker than the faces either side of it**, always: light
+ * collects on proud surfaces and dirt collects in the gaps. Getting that sign wrong is what
+ * produced the courtyard floor's bright grout.
+ *
+ * The resolution is that those are answers to different questions. The joint is dark *because it
+ * is a recess*, so the darkness belongs in the height field, where `heightAO` turns it into a
+ * contact line that tightens near the joint and fades away from it, and where the normal map
+ * gives it a lit and a shaded wall. Painting it dark in the albedo instead gives a flat band of
+ * constant tone that reads as a drawn line at every distance and in every lighting condition.
+ * So: deep grooves, real AO, and only a light touch of mortar colour on top.
  */
-const JOINT = 0.42;
+const JOINT = 0.24;
 
 /**
  * Ashlar masonry base — height and per-block colour. Everything about the way cut stone reads
@@ -82,12 +108,32 @@ function ashlar(s, o = {}) {
     dark = PAL.sandDark, mid = PAL.sandMid, light = PAL.sandLight,
     mortar = 0x9a8a70, relief = 0.11, groove = 0.30, dome = 0.035,
     grainFreq = 12, spread = 0.80, seed = 1, bondJitter = 0.09, widthJitter = 0.30,
-    rough = 0.86, joint = JOINT, tone = 0,
+    rough = 0.86, joint = JOINT, tone = 0, bedFreq = 2,
   } = o;
   const m = masonry(s.size, { courses, aspect, jointW, chamfer, seed, bondJitter, widthJitter });
   const face = s.field(2, (u, v) => warpN(u, v, grainFreq, 5, 0.95, seed + 3) * 0.5 + 0.5);
   const macro = s.field(6, (u, v) => warpN(u, v, 3, 4, 1.15, seed + 91) * 0.5 + 0.5);
   const mort = s.field(3, (u, v) => fbmN(u, v, 18, 4, 0.55, seed + 41) * 0.5 + 0.5);
+
+  /* The quarry bed: a smooth field, *sampled per block at the block's centre*. Blocks cut from
+   * the same part of the bed share a tone, so the wall reads as courses of related stone rather
+   * than as a chequerboard, and the variation survives being squinted at because it forms
+   * shapes bigger than a block. `bedFreq` cycles per tile — keep it well under the block grid. */
+  const bed = new Float32Array(s.n);
+  {
+    const cache = new Map();
+    for (let i = 0; i < s.n; i++) {
+      // Quantise the centre so every texel of one block hits the same cache entry exactly.
+      const cu = Math.round(m.bcu[i] * 4096), cv = Math.round(m.bcv[i] * 4096);
+      const key = cu * 8192 + cv;
+      let v = cache.get(key);
+      if (v === undefined) {
+        v = warpN(cu / 4096, cv / 4096, bedFreq, 4, 1.25, seed + 613) * 0.5 + 0.5;
+        cache.set(key, v);
+      }
+      bed[i] = v;
+    }
+  }
 
   for (let i = 0; i < s.n; i++) {
     const e = m.edge[i], j = m.joint[i];
@@ -101,35 +147,38 @@ function ashlar(s, o = {}) {
       - j * groove;                                    // mortar groove
     s.h[i] = h;
 
-    /* Colour keyed to the block, then broken up by a >1-tile blotch field.
+    /* Colour: quarry bed first, individual block second.
      *
-     * These coefficients used to sum to a ±0.8 swing around the midpoint, which took
-     * neighbouring blocks all the way from `dark` to `light` and made a wall read as
-     * high-frequency noise rather than as one material — the frame failed AGENTS §7.3's
-     * squint test because the large shapes stopped reading. Real ashlar varies subtly
-     * block to block; the variation should be legible up close and invisible at distance.
-     * Damped as a group so every recipe's own `spread` keeps its relative weight.
+     * `bed` is the *correlated* term and carries most of the amplitude — it is a smooth field
+     * read once per block, so a run of neighbouring blocks shares a tone and the wall grows
+     * tonal regions several metres across. `id2` is the leftover per-block white noise and is
+     * now a small trim on top of the bed, not the main event: a course of stone from one bed is
+     * not uniform, but nor does it jump from `dark` to `light` between two adjacent stones.
+     * `macro` runs at ~3 cycles per tile, below the block grid, and breaks the repeat.
      *
-     * The *macro* blotch is deliberately left at full weight relative to the others: it runs at
-     * ~3 cycles per tile, i.e. far below the block grid, so it breaks the repeat up without
-     * adding anything the eye has to resolve. Per-block variety is what had to come down.
-     *
-     * `tone` holds the recipe's *mean albedo* where the art direction wants it while the
-     * variation terms are being retuned. Damping the joints and the pitting takes darkening out
-     * of a wall as a side effect, and the grade is verified per material — the frequency fix must
-     * not quietly relight the level. */
+     * `tone` holds the recipe's *mean albedo* where the art direction wants it independently of
+     * the variation terms, so retuning frequency never quietly relights the level. */
     const t = sat(0.44 + tone
-      + (m.id2[i] - 0.5) * spread * VARIATION
-      + (macro[i] - 0.5) * 0.80 * VARIATION
-      + (face[i] - 0.5) * 0.30 * VARIATION);
+      + (bed[i] - 0.5) * spread * VARIATION
+      + (m.id2[i] - 0.5) * spread * VARIATION * 0.22
+      + (macro[i] - 0.5) * 0.55 * VARIATION
+      + (face[i] - 0.5) * 0.22 * VARIATION);
     const col = ramp3(dark, mid, light, t);
     s.r[i] = col[0]; s.g[i] = col[1]; s.b[i] = col[2];
-    // Mortar: paler gypsum, grubby, and rougher than the dressed face.
+    /* The joint. It is *mortar in a recess*: darker than the dressed faces either side of it,
+     * always, in every material. Light collects on proud surfaces and dirt collects in the
+     * gaps between them — get that sign wrong and the wall inverts into a grid of bright lines,
+     * which is what the review found on the courtyard paving ("crevices are brighter than the
+     * tile faces… reads as cracked ice"). `mortar` hexes are asserted darker than their ramp's
+     * `mid` at the recipe level; this is the pass that applies them. */
     if (j > 0.01) {
       s.mixHex(i, mortar, j * (0.55 + mort[i] * 0.4) * joint);
       s.rough[i] = rough + j * 0.10;
     } else s.rough[i] = rough;
   }
+  /* Handle for later passes in the same recipe (several already juggle `m` by hand) and for the
+   * joint-sign check in the texture QA report. */
+  s.masonry = m;
   return m;
 }
 
@@ -143,7 +192,11 @@ function ashlar(s, o = {}) {
 function carve(s, cut, line, o = {}) {
   const { depth = 0.34, bevelPx = 3.0, lip = 0.10, bulge = 0.40, lineDepth = 0.55, chatter = 0.03, seed = 5 } = o;
   const size = s.size;
-  const rb = Math.max(1, Math.round((bevelPx * size) / 1024));
+  /* Bevel width scales with resolution so a tier-1 half-size map keeps the same *physical*
+   * chisel edge. It also has a hard floor of 2 texels: at 1 texel the cut wall is a single-texel
+   * cliff, which the normal pass' slope knee flattens back out and the mip chain then averages
+   * away entirely — the carving loses its relief at exactly the distance the player sees it. */
+  const rb = Math.max(2, Math.round((bevelPx * size) / 1024));
   const cb = blurWrap(cut, size, rb, 2);
   const cw = blurWrap(cut, size, rb * 4, 2);
   const chat = chatter > 0
@@ -167,15 +220,29 @@ function carve(s, cut, line, o = {}) {
   return ramp;
 }
 
-/** Freshly cut stone is paler and cooler than the sun-baked face it was cut into. */
+/**
+ * Freshly cut stone is paler and cooler than the sun-baked face it was cut into.
+ *
+ * `wallDark` used to darken every down-facing texel via `skyward()` — a fixed top-left light
+ * painted into the albedo. That is precisely the defect §7.3 lists as "carvings look painted-on
+ * rather than chiselled", and the review named it: *"flat decals with a baked-in fake bevel
+ * (light top-left, dark bottom-right) that does not correspond to the sun direction and does not
+ * change across faces"*. A carving whose highlight is in the albedo looks identical on the sunlit
+ * and the shaded side of the same pylon, which is the tell.
+ *
+ * It is now off by default. The *pale* term stays — that is pigment, not lighting: newly exposed
+ * stone really is a different colour from a face that has sat in the sun for three thousand
+ * years, and it does not move with the sun. All the directional contrast has moved into the
+ * height field (deeper cuts, a narrower bevel), where the normal map and `heightAO` turn it into
+ * relief that actually responds to the key light.
+ */
 function freshCutTint(s, ramp, o = {}) {
-  const { pale = PAL.limeLight, amount = 0.16, wallDark = 0.20 } = o;
-  const sky = skyward(s.h, s.size, Math.max(1, Math.round(s.size / 320)));
+  const { pale = PAL.limeLight, amount = 0.16, wallDark = 0 } = o;
+  const sky = wallDark > 0 ? skyward(s.h, s.size, Math.max(1, Math.round(s.size / 320))) : null;
   for (let i = 0; i < s.n; i++) {
     const r = ramp[i];
     if (r > 0.02) s.mixHex(i, pale, r * amount);
-    const dn = sat(-sky[i]);
-    s.mul(i, 1 - dn * wallDark);
+    if (sky) s.mul(i, 1 - sat(-sky[i]) * wallDark);
   }
 }
 
@@ -320,12 +387,14 @@ export const MATERIALS = {
   sandstone_block: {
     group: 'stone', tier: 0, tile: 3.4, bump: 0.030, rough: 0.86,
     build(s, cx) {
-      const m = ashlar(s, { seed: cx.seed, courses: 4, aspect: 2.15, dome: 0.030, relief: 0.06, groove: 0.20, tone: -0.075 });
+      // `mortar` darker than `sandMid` — the joint is a recess and must read as one.
+      const m = ashlar(s, { seed: cx.seed, courses: 4, aspect: 2.15, dome: 0.030, relief: 0.06, groove: 0.22, tone: -0.075, mortar: 0x7d6a50, bedFreq: 2 });
       chiselMarks(s, { amount: 0.022, angle: -0.38, freq: 40, seed: cx.seed + 1, mask: m.edge });
       pitting(s, { amount: 0.035, freq: 32, density: 0.34, seed: cx.seed + 2, colorDark: PAL.sandDark });
       speckle(s, { freq: 110, seed: cx.seed + 4, colors: [[PAL.limeLight, 0.07, 0.06], [PAL.sandCrev, 0.05, 0.02]], heightDelta: 0.006 });
-      weather(s, { source: m.joint, seed: cx.seed + 6, creviceAmt: 0.44, streakAmt: 0.28, dustAmt: 0.20 });
+      weather(s, { source: m.joint, seed: cx.seed + 6, creviceAmt: 0.44, streakAmt: 0.26, dustAmt: 0.18, directional: 0.7 });
       grain(s, { amount: 0.020, freq: 120, seed: cx.seed + 8, heightAmt: 0.006 });
+      rampFloor(s, { crevice: PAL.sandCrev });
     },
   },
 
@@ -334,8 +403,8 @@ export const MATERIALS = {
     build(s, cx) {
       const m = ashlar(s, {
         seed: cx.seed, courses: 3, aspect: 1.9, chamfer: 0.030, jointW: 0.012,
-        relief: 0.085, dome: 0.02, groove: 0.22, spread: 0.9, tone: -0.035,
-        dark: PAL.sandDark, mid: PAL.sandMid, light: PAL.sandLight,
+        relief: 0.085, dome: 0.02, groove: 0.24, spread: 0.9, tone: -0.035, mortar: 0x776448,
+        dark: PAL.sandDark, mid: PAL.sandMid, light: PAL.sandLight, bedFreq: 2,
       });
       // Wind erosion: ridged noise scoops the face, worst on exposed corners.
       const ero = s.field(2, (u, v) => ridgeN(u, v, 7, 5, 0.55, cx.seed + 17));
@@ -350,8 +419,9 @@ export const MATERIALS = {
         s.rough[i] = sat(s.rough[i] + ero[i] * 0.06);
       }
       pitting(s, { amount: 0.06, freq: 26, density: 0.48, seed: cx.seed + 5, colorDark: PAL.sandCrev });
-      weather(s, { source: m.joint, seed: cx.seed + 6, creviceAmt: 0.50, streakAmt: 0.34, dustAmt: 0.30, streakDecay: 0.982 });
+      weather(s, { source: m.joint, seed: cx.seed + 6, creviceAmt: 0.50, streakAmt: 0.30, dustAmt: 0.24, streakDecay: 0.982, directional: 0.7 });
       grain(s, { amount: 0.026, freq: 120, seed: cx.seed + 9, heightAmt: 0.008 });
+      rampFloor(s, { crevice: PAL.sandCrev });
     },
   },
 
@@ -361,8 +431,10 @@ export const MATERIALS = {
       // Tura casing stone: enormous, tightly jointed, near-white, still faintly polished.
       const m = ashlar(s, {
         seed: cx.seed, courses: 4, aspect: 2.6, jointW: 0.0035, chamfer: 0.006,
-        dark: PAL.limeDark, mid: PAL.limeMid, light: PAL.limeLight, mortar: 0xcfc0a2,
-        relief: 0.05, dome: 0.02, groove: 0.22, spread: 0.55, rough: 0.44, grainFreq: 16,
+        // Tura limestone is laid in very fine joints, but "fine" is not "bright": the mortar hex
+        // has to sit below `limeMid` or the casing reads as a white grid on a white wall.
+        dark: PAL.limeDark, mid: PAL.limeMid, light: PAL.limeLight, mortar: 0x9c8d70,
+        relief: 0.05, dome: 0.02, groove: 0.22, spread: 0.55, rough: 0.44, grainFreq: 16, bedFreq: 2,
       });
       // Sedimentary bedding — faint horizontal banding is what says "limestone" not "plaster".
       const bandF = s.field(2, (u, v) => {
@@ -380,45 +452,67 @@ export const MATERIALS = {
       chiselMarks(s, { amount: 0.012, angle: 0.5, freq: 90, seed: cx.seed + 3, mask: m.edge });
       weather(s, {
         source: m.joint, seed: cx.seed + 6, crevice: 0x6a5f48, creviceAmt: 0.45,
-        streakAmt: 0.26, streakTint: 0x7a6a4c, dustAmt: 0.14, roughGrime: 0.16,
+        streakAmt: 0.26, streakTint: 0x7a6a4c, dustAmt: 0.14, roughGrime: 0.16, directional: 0.7,
       });
       grain(s, { amount: 0.016, freq: 130, seed: cx.seed + 8, heightAmt: 0.004 });
+      rampFloor(s, { crevice: 0x54432c });
     },
   },
 
   granite_pink: {
     group: 'stone', tier: 1, tile: 2.2, bump: 0.006, rough: 0.26,
     build(s, cx) {
-      /* Aswan granite: coarse feldspar/quartz/biotite, polished to a mirror on obelisks.
+      /* Aswan granite: feldspar/quartz/biotite, polished to a mirror on obelisks.
        *
-       * This is the obelisk, the tallest single shape in the `hero` and `courtyard` frames, and
-       * it was the worst offender in the whole catalogue: three crystal hexes ranging from
-       * near-white to near-black gave a luma RMS of 0.19 that barely moved four mip levels down,
-       * so the obelisk read as pink-and-black confetti at every distance instead of as a
-       * monolith. Real granite is a *warm grey-pink* from ten metres; the crystals are a
-       * close-up reward. `UNIFY` pulls each crystal toward the rock's own mean, which keeps the
-       * hue difference that says "granite" and drops the value difference that says "noise". */
-      const UNIFY = 0.52;
+       * This recipe dresses the obelisk, the colossi, the plinths and the rails — the tallest
+       * and the largest shapes in `hero`, `courtyard` and `combat` — and it has been the worst
+       * offender in the catalogue through two rounds of fixes, for the same reason each time:
+       * it was drawing granite as *polygons* instead of as *speckle*.
+       *
+       * Two numbers were wrong and they compounded.
+       *
+       * **Cell size.** 17 Worley cells across a 2.2 m tile is a 13 cm crystal. Real Aswan
+       * granite crystals are 5–15 mm. At 13 cm the cells are not a mineral texture at all, they
+       * are a mosaic of hand-sized plates, and the review read them exactly that way: *"a mosaic
+       * of irregular polygons in salmon, orange, deep violet and tan with a soft emboss… reads
+       * as camouflage netting or crazy paving stood on end"*. 96 cells over 2.2 m is 23 mm,
+       * which is granite, and which is small enough that two mip levels down it resolves into
+       * the single warm grey-pink a monolith is supposed to be.
+       *
+       * **Value spread.** Three crystal hexes spanning near-white to near-black meant every
+       * cell boundary was also a value edge, and the dark cells fell far enough down that the
+       * cel shader's additive shadow wash (`uShadowColor`, the violet-teal `#2a3f66`) had more
+       * weight in them than their own albedo — which is where the off-palette `#5a4a7a` violet
+       * came from. Granite's crystals differ mostly in *hue* and only a little in value; that
+       * is what `UNIFY` encodes, and it is now tight enough that no crystal can fall out of the
+       * palette. The `rampFloor` at the end is the backstop.
+       *
+       * The height field keeps its per-crystal relief, so up close the surface is still crystalline
+       * under a raking light — but at 23 mm that relief is carried by the normal map at a
+       * frequency the eye reads as *material*, not as facets. */
+      const UNIFY = 0.72;
       const base = MX(MX(PAL.carnelian, PAL.limeLight, 0.42), PAL.sandDark, 0.46);
       const fHex = MX(MX(PAL.carnelian, PAL.limeLight, 0.52), base, UNIFY);
-      const qHex = MX(MX(PAL.limeLight, PAL.shadow, 0.34), base, UNIFY);
-      const bHex = MX(MX(PAL.black, PAL.shadow, 0.42), base, UNIFY * 0.85);
+      const qHex = MX(MX(PAL.limeLight, PAL.sandDark, 0.34), base, UNIFY);
+      const bHex = MX(MX(PAL.sandCrev, PAL.sandDark, 0.30), base, UNIFY * 0.72);
       const macro = s.field(5, (u, v) => warpN(u, v, 4, 4, 1.2, cx.seed + 31) * 0.5 + 0.5);
       const size = s.size;
       const wA = {}, wB = {};
+      // Crystal cells, capped so a half-resolution tier still gets ≥6 texels per crystal —
+      // below that the Worley is finer than the mip chain can carry and returns as sparkle.
+      const bigF = Math.max(24, Math.min(96, Math.round(size / 6)));
       for (let y = 0; y < size; y++) {
         const v = (y + 0.5) / size, row = y * size;
         for (let x = 0; x < size; x++) {
           const i = row + x, u = (x + 0.5) / size;
-          // Coarser crystals: bigger cells carry through a mip instead of dissolving into fizz.
-          const big = worleyN(u, v, 17, cx.seed, 1.0, wA);
-          const sm = worleyN(u, v, 38, cx.seed + 7, 1.0, wB);
+          const big = worleyN(u, v, bigF, cx.seed, 1.0, wA);
+          const sm = worleyN(u, v, bigF * 2, cx.seed + 7, 1.0, wB);
           const k = big.id;
           let hex, rgh, hh;
           if (k < 0.46) { hex = fHex; rgh = 0.22; hh = 0.62; }        // pink feldspar
-          else if (k < 0.84) { hex = qHex; rgh = 0.20; hh = 0.60; }   // grey quartz
-          else { hex = bHex; rgh = 0.34; hh = 0.55; }                 // biotite / hornblende
-          const shadeK = 0.90 + big.id * 0.10 + (sm.id - 0.5) * 0.07 + (macro[i] - 0.5) * 0.16;
+          else if (k < 0.86) { hex = qHex; rgh = 0.20; hh = 0.60; }   // grey quartz
+          else { hex = bHex; rgh = 0.34; hh = 0.56; }                 // biotite / hornblende
+          const shadeK = 0.95 + big.id * 0.06 + (sm.id - 0.5) * 0.04 + (macro[i] - 0.5) * 0.10;
           const c = hexRGB(hex);
           s.r[i] = c[0] * shadeK; s.g[i] = c[1] * shadeK; s.b[i] = c[2] * shadeK;
           // Crystals stand a hair apart even after polishing; grain edges catch light.
@@ -431,8 +525,9 @@ export const MATERIALS = {
       // Polishing swirl + the odd deep scratch, so the mirror is not perfect.
       const pol = s.field(2, (u, v) => fbmA(u, v, 128, 40, 3, 0.5, cx.seed + 43) * 0.5 + 0.5);
       for (let i = 0; i < s.n; i++) s.rough[i] = sat(s.rough[i] + (pol[i] - 0.5) * 0.10);
-      speckle(s, { freq: 120, seed: cx.seed + 19, colors: [[PAL.goldSpec, 0.03, 0.15], [PAL.black, 0.035, 0.0]] });
+      speckle(s, { freq: 120, seed: cx.seed + 19, colors: [[PAL.goldSpec, 0.03, 0.15], [PAL.sandCrev, 0.035, 0.0]] });
       grain(s, { amount: 0.014, freq: 130, seed: cx.seed + 23, heightAmt: 0.003 });
+      rampFloor(s, { crevice: MX(PAL.sandCrev, PAL.carnelian, 0.25) });
     },
   },
 
@@ -466,8 +561,9 @@ export const MATERIALS = {
       const salt = s.field(4, (u, v) => sat(warpN(u, v, 5, 4, 1.3, cx.seed + 53) * 1.6 + 0.35));
       for (let i = 0; i < s.n; i++) s.mixHex(i, PAL.white, salt[i] * salt[i] * 0.30);
       pitting(s, { amount: 0.05, freq: 32, density: 0.5, seed: cx.seed + 61, colorDark: 0x5a3820 });
-      weather(s, { source: m.joint, seed: cx.seed + 6, crevice: 0x3d2416, creviceAmt: 0.54, streakAmt: 0.32, dustAmt: 0.26 });
+      weather(s, { source: m.joint, seed: cx.seed + 6, crevice: 0x3d2416, creviceAmt: 0.54, streakAmt: 0.28, dustAmt: 0.20, directional: 0.7 });
       grain(s, { amount: 0.03, freq: 120, seed: cx.seed + 8, heightAmt: 0.010 });
+      rampFloor(s, { crevice: 0x4a2f1c });
     },
   },
 
@@ -478,11 +574,15 @@ export const MATERIALS = {
       const size = s.size;
       // Lime plaster over mud: soft undulation from the float, fine crackle everywhere.
       const undu = s.field(4, (u, v) => warpN(u, v, 5, 4, 1.1, cx.seed) * 0.5 + 0.5);
-      // Crackle at 46 cells per tile is a 22-texel mesh whose *lines* are 2 texels wide — the
-      // lines are the part that aliases, so the net is coarsened rather than merely faded.
+      /* Crackle. Coarsened again, and this time the reason is what it *becomes* rather than how
+       * it aliases: a dense dark web over a whole wall is a field of near-black texels at high
+       * frequency, and the cel shader turns near-black texels violet. `interior`'s walls were
+       * the worst instance of that in the review — "large soft-edged violet blotches on salmon…
+       * reads as mould, lichen or camouflage". 14 cells over a 2.8 m tile is a 20 cm crackle
+       * plate, which is what lime plaster over mud actually does; the old 26 was a 10 cm mesh. */
       const crack = s.field(1.5, (u, v) => {
-        const w = worleyN(u, v, 26, cx.seed + 5, 0.95);
-        return sat(1 - (w.f2 - w.f1) / 0.13) ** 2;
+        const w = worleyN(u, v, 14, cx.seed + 5, 0.95);
+        return sat(1 - (w.f2 - w.f1) / 0.11) ** 2.2;
       });
       const paint = rasterRGBA(size, (ctx) => {
         // A dado band low down, a painted register band above it — real tomb-chapel decoration.
@@ -509,18 +609,23 @@ export const MATERIALS = {
           s.rough[i] = sat(s.rough[i] - keep * 0.14);
           s.h[i] += keep * 0.02;                 // pigment sits on the surface
         }
-        // Flaked-off patches expose the mud render beneath, one plaster-thickness down.
-        const fl = sat((flake[i] - 0.62) * 3.4);
+        /* Flaked-off patches expose the mud render beneath. These were the "camouflage" shapes:
+         * soft-edged blotches covering ~a third of the wall at 85% strength, three value steps
+         * below the plaster around them. Rendered, each one became a violet island. Fewer of
+         * them (a higher threshold), and the exposed render is now only about one value step
+         * down — which is also truer, since what is underneath is mud plaster, not a void. */
+        const fl = sat((flake[i] - 0.72) * 3.4);
         if (fl > 0.01) {
-          s.mixHex(i, 0x7a5330, fl * 0.85);
+          s.mixHex(i, 0x9c7048, fl * 0.62);
           s.h[i] -= fl * 0.20;
           s.rough[i] = sat(s.rough[i] + fl * 0.18);
         }
-        s.stainHex(i, 0x4a3a26, crack[i] * 0.55);
+        s.stainHex(i, 0x6a5a42, crack[i] * 0.42);
       }
       brushwork(s, { tint: PAL.limeMid, amount: 0.10, angle: 0.22, freq: 8, len: 5, seed: cx.seed + 3 });
-      weather(s, { source: crack, seed: cx.seed + 9, crevice: 0x4a3a26, creviceAmt: 0.42, streakAmt: 0.32, dustAmt: 0.16 });
+      weather(s, { source: crack, seed: cx.seed + 9, crevice: 0x4a3a26, creviceAmt: 0.42, streakAmt: 0.28, dustAmt: 0.14, directional: 0.6 });
       grain(s, { amount: 0.018, freq: 120, seed: cx.seed + 11, heightAmt: 0.005 });
+      rampFloor(s, { crevice: 0x53412c });
     },
   },
 
@@ -554,8 +659,9 @@ export const MATERIALS = {
         }
       }
       speckle(s, { freq: 110, seed: cx.seed + 21, colors: [[PAL.limeLight, 0.07, 0.1], [PAL.sandCrev, 0.07, 0.0]], heightDelta: 0.012 });
-      weather(s, { seed: cx.seed + 6, creviceAmt: 0.58, streakAmt: 0.10, dustAmt: 0.30, dust: PAL.sandLight, streakDecay: 0.95 });
+      weather(s, { seed: cx.seed + 6, creviceAmt: 0.58, streakAmt: 0.10, dustAmt: 0.24, dust: PAL.sandLight, streakDecay: 0.95, directional: 0.7 });
       grain(s, { amount: 0.030, freq: 130, seed: cx.seed + 8, heightAmt: 0.010 });
+      rampFloor(s, { crevice: PAL.sandCrev });
     },
   },
 
@@ -566,62 +672,100 @@ export const MATERIALS = {
       // `hero` and `courtyard`, so its pattern frequency sets the whole frame's busyness.
       const m = ashlar(s, {
         seed: cx.seed, courses: 3, aspect: 1.15, jointW: 0.007, chamfer: 0.012,
-        dark: PAL.sandDark, mid: PAL.sandMid, light: PAL.limeMid, mortar: 0x8d7a5c,
-        relief: 0.055, dome: 0.0, groove: 0.20, spread: 0.7, bondJitter: 0.16, tone: -0.040,
+        dark: PAL.sandDark, mid: PAL.sandMid, light: PAL.limeMid, mortar: 0x6a5540,
+        relief: 0.055, dome: 0.0, groove: 0.26, spread: 0.7, bondJitter: 0.16, tone: -0.040,
+        bedFreq: 3,
       });
       // Foot traffic: a wandering path of polished, dished, sand-scoured stone.
       const traffic = s.field(4, (u, v) => sat(warpN(u, v, 3, 4, 1.4, cx.seed + 47) * 1.7 + 0.55));
+      /* The crazing. This was a 12-cell Worley web stained 42% toward `sandCrev` across every
+       * flag — a dark polygon net at higher frequency than the paving pattern itself, laid over
+       * the whole largest surface in the level. That is the "detail-distribution inversion" the
+       * review describes (§2.3 wants "large simple areas of colour, detail concentrated at focal
+       * points") and it is what made the floor read as crazy paving rather than as cut flags.
+       * The crack keeps its full depth in the height field — it is a real crack — but almost all
+       * of its albedo stain is gone; the AO it earns is what should draw it. */
       const crackNet = s.field(1.5, (u, v) => {
-        const w = worleyN(u, v, 12, cx.seed + 51, 0.95);
-        return sat(1 - (w.f2 - w.f1) / 0.075) ** 2.2;
+        const w = worleyN(u, v, 9, cx.seed + 51, 0.95);
+        return sat(1 - (w.f2 - w.f1) / 0.045) ** 2.4;
       });
       for (let i = 0; i < s.n; i++) {
         const bu = m.bu[i] * 2 - 1, bv = m.bv[i] * 2 - 1;
         const dish = (1 - bu * bu) * (1 - bv * bv);
         const wear = traffic[i];
         s.h[i] -= dish * wear * 0.16;                        // worn hollow in the flag
-        s.h[i] -= crackNet[i] * 0.20;
-        s.mixHex(i, PAL.limeLight, dish * wear * 0.16);      // scuffed pale
+        s.h[i] -= crackNet[i] * 0.22;
+        s.mixHex(i, PAL.limeLight, dish * wear * 0.14);      // scuffed pale
         s.rough[i] = sat(s.rough[i] - dish * wear * 0.24 + crackNet[i] * 0.12);
-        s.stainHex(i, PAL.sandCrev, crackNet[i] * 0.42);
+        s.stainHex(i, PAL.sandCrev, crackNet[i] * 0.14);
       }
-      // Sand drifted into the joints, not just dirt.
+      /* Sand drifted into the joints.
+       *
+       * This was the single most visible sign error in the review: the joint was mixed 65%
+       * toward `PAL.sandLight` *and* raised 0.13 in height, so the courtyard floor rendered as
+       * pale flags separated by a raised white grid — "the crevices are *brighter* than the tile
+       * faces… the floor reads as cracked ice", and with the joint standing proud of the flags
+       * the derived AO had nothing to darken either. Both signs were wrong.
+       *
+       * The physics is not ambiguous. A joint is a gap between two stones: it is below the
+       * surface, it is shaded by the stones either side of it, and what collects in it is dirt.
+       * Wind-blown sand does fill it, but sand at the bottom of a 3 cm slot is sand in shadow —
+       * it reads *darker* than the sunlit flag beside it, not lighter. So the drift now darkens
+       * the joint (toward the sand's own shadowed value) and *lowers* it, which is also what
+       * lets `heightAO` put a real contact line between the flags. */
       const sandIn = s.field(3, (u, v) => warpN(u, v, 10, 4, 1.0, cx.seed + 57) * 0.5 + 0.5);
+      const jointSand = MX(PAL.sandDark, PAL.sandCrev, 0.45);
       for (let i = 0; i < s.n; i++) {
         const j = sat(m.joint[i] * 1.2) * (0.4 + sandIn[i] * 0.9);
-        if (j > 0.02) { s.mixHex(i, PAL.sandLight, j * 0.5); s.h[i] += j * 0.10; s.rough[i] = sat(s.rough[i] + j * 0.08); }
+        if (j > 0.02) {
+          s.mixHex(i, jointSand, sat(j) * 0.26);
+          s.h[i] -= sat(j) * 0.07;
+          s.rough[i] = sat(s.rough[i] + j * 0.10);
+          s.occ[i] *= 1 - sat(j) * 0.30;
+        }
       }
       chiselMarks(s, { amount: 0.016, angle: 0.9, freq: 52, seed: cx.seed + 1, mask: m.edge });
       pitting(s, { amount: 0.032, freq: 38, density: 0.42, seed: cx.seed + 2, colorDark: PAL.sandDark });
       speckle(s, { freq: 110, seed: cx.seed + 4, colors: [[PAL.limeLight, 0.06, 0.1], [PAL.sandCrev, 0.055, 0.0]], heightDelta: 0.006 });
-      weather(s, { source: m.joint, seed: cx.seed + 6, creviceAmt: 0.46, streakAmt: 0.12, dustAmt: 0.24, streakDecay: 0.94 });
+      weather(s, { source: m.joint, seed: cx.seed + 6, creviceAmt: 0.50, streakAmt: 0.12, dustAmt: 0.16, streakDecay: 0.94, directional: 0.55 });
       grain(s, { amount: 0.020, freq: 120, seed: cx.seed + 8, heightAmt: 0.006 });
+      rampFloor(s, { crevice: PAL.sandCrev });
     },
   },
 
   /* ===================== carved & decorated ============================= */
 
+  /* `tile` is 6.4 m because the *repeat* is what the review actually saw, not the glyphs: "the
+   * wall is a grid of small blocks each stamped with a flat glyph, and I can count the same pink
+   * oval at least eight times and the same green crescent at least six". At 4.2 m a 20 m pylon
+   * showed the same tile five times across and three times up — fifteen copies of one oval in
+   * one frame. At 6.4 m it is three by two, and the glyphs inside it are correspondingly larger,
+   * so what repeats is a band of readable inscription rather than a stamp. */
   hieroglyph_wall: {
-    group: 'carved', tier: 0, tile: 4.2, bump: 0.038, rough: 0.86,
+    group: 'carved', tier: 0, tile: 6.4, bump: 0.044, rough: 0.86,
     build(s, cx) {
       const size = s.size;
       // Carvings run straight across block joints, exactly as they do on a real temple wall —
       // the masons dressed the wall first and the sculptors came after.
-      const m = ashlar(s, { seed: cx.seed, courses: 4, aspect: 2.6, dome: 0.025, relief: 0.05, groove: 0.20, jointW: 0.006, chamfer: 0.012, tone: -0.045 });
+      const m = ashlar(s, { seed: cx.seed, courses: 6, aspect: 2.6, dome: 0.025, relief: 0.05, groove: 0.20, jointW: 0.006, chamfer: 0.012, tone: -0.045, bedFreq: 2 });
       const layout = (mode) => (ctx) => glyphWall(ctx, size, mode, cx.seed);
       const cut = rasterMask(size, layout('cut'));
       const lines = rasterMask(size, layout('line'));
       const paint = rasterRGBA(size, layout('paint'));
 
-      const ramp = carve(s, cut, lines, { depth: 0.36, bevelPx: 3.6, lip: 0.10, bulge: 0.42, lineDepth: 0.55, seed: cx.seed + 5 });
-      freshCutTint(s, ramp, { amount: 0.18, wallDark: 0.22 });
-      paintRemnants(s, ramp, paint, { survival: 0.62, freq: 6, seed: cx.seed + 9, edgeLoss: 0.5 });
+      /* Deeper cut, tighter bevel, no baked highlight. All of the carving's contrast now lives
+       * in the height field, so the normal map and `heightAO` produce it — which means it turns
+       * with the sun and goes flat in shadow, the way a chisel line does. */
+      const ramp = carve(s, cut, lines, { depth: 0.46, bevelPx: 3.0, lip: 0.12, bulge: 0.42, lineDepth: 0.62, seed: cx.seed + 5 });
+      freshCutTint(s, ramp, { amount: 0.16 });
+      paintRemnants(s, ramp, paint, { survival: 0.34, freq: 6, seed: cx.seed + 9, edgeLoss: 0.72, fade: 0.45 });
       chiselMarks(s, { amount: 0.016, angle: -0.35, freq: 48, seed: cx.seed + 1, mask: m.edge });
       pitting(s, { amount: 0.030, freq: 34, density: 0.34, seed: cx.seed + 2, colorDark: PAL.sandDark });
       const src = new Float32Array(s.n);
       for (let i = 0; i < s.n; i++) src[i] = sat(m.joint[i] * 0.8 + ramp[i] * 0.55);
-      weather(s, { source: src, seed: cx.seed + 6, creviceAmt: 0.44, streakAmt: 0.30, dustAmt: 0.24, roughGrime: 0.12 });
+      weather(s, { source: src, seed: cx.seed + 6, creviceAmt: 0.44, streakAmt: 0.26, dustAmt: 0.20, roughGrime: 0.12, directional: 0.35 });
       grain(s, { amount: 0.020, freq: 120, seed: cx.seed + 8, heightAmt: 0.006 });
+      rampFloor(s, { crevice: PAL.sandCrev });
     },
   },
 
@@ -631,12 +775,13 @@ export const MATERIALS = {
       const size = s.size;
       ashlar(s, {
         seed: cx.seed, courses: 3, aspect: 3.0, dome: 0.02, relief: 0.04, groove: 0.20, jointW: 0.005, chamfer: 0.010,
-        dark: PAL.limeDark, mid: PAL.limeMid, light: PAL.limeLight, mortar: 0xcbbb9a, rough: 0.62,
+        // Mortar darker than `limeMid`: a joint is a recess, so it can never be the bright thing.
+        dark: PAL.limeDark, mid: PAL.limeMid, light: PAL.limeLight, mortar: 0x8a7a5e, rough: 0.62,
       });
       const layout = (mode) => (ctx) => glyphWall(ctx, size, mode, cx.seed + 4, { cols: 3, cartouche: true });
       const cut = rasterMask(size, layout('cut'));
       const lines = rasterMask(size, layout('line'));
-      const ramp = carve(s, cut, lines, { depth: 0.34, bevelPx: 3.0, lip: 0.08, bulge: 0.5, lineDepth: 0.5, seed: cx.seed + 5 });
+      const ramp = carve(s, cut, lines, { depth: 0.42, bevelPx: 2.6, lip: 0.10, bulge: 0.5, lineDepth: 0.56, seed: cx.seed + 5 });
 
       // Gold leaf laid into the sunk glyphs over a red bole ground; the leaf lifts at the arrises.
       const lift = s.field(2, (u, v) => sat(warpN(u, v, 14, 4, 1.1, cx.seed + 31) * 1.4 + 0.5));
@@ -659,23 +804,24 @@ export const MATERIALS = {
   },
 
   relief_figures: {
-    group: 'carved', tier: 0, tile: 4.6, bump: 0.040, rough: 0.86,
+    group: 'carved', tier: 0, tile: 6.2, bump: 0.046, rough: 0.86,
     build(s, cx) {
       const size = s.size;
-      const m = ashlar(s, { seed: cx.seed, courses: 3, aspect: 3.2, dome: 0.02, relief: 0.04, groove: 0.20, jointW: 0.005, chamfer: 0.010, tone: -0.020 });
+      const m = ashlar(s, { seed: cx.seed, courses: 4, aspect: 3.2, dome: 0.02, relief: 0.04, groove: 0.20, jointW: 0.005, chamfer: 0.010, tone: -0.020, bedFreq: 2 });
       const layout = (mode) => (ctx) => figureRegisters(ctx, size, mode, cx.seed);
       const cut = rasterMask(size, layout('cut'));
       const lines = rasterMask(size, layout('line'));
       const paint = rasterRGBA(size, layout('paint'));
-      const ramp = carve(s, cut, lines, { depth: 0.38, bevelPx: 4.0, lip: 0.12, bulge: 0.52, lineDepth: 0.45, seed: cx.seed + 5 });
-      freshCutTint(s, ramp, { amount: 0.20, wallDark: 0.24 });
-      paintRemnants(s, ramp, paint, { survival: 0.58, freq: 5, seed: cx.seed + 9, edgeLoss: 0.55 });
+      const ramp = carve(s, cut, lines, { depth: 0.50, bevelPx: 3.2, lip: 0.14, bulge: 0.52, lineDepth: 0.52, seed: cx.seed + 5 });
+      freshCutTint(s, ramp, { amount: 0.18 });
+      paintRemnants(s, ramp, paint, { survival: 0.32, freq: 5, seed: cx.seed + 9, edgeLoss: 0.74, fade: 0.48 });
       chiselMarks(s, { amount: 0.014, angle: -0.30, freq: 44, seed: cx.seed + 1, mask: m.edge });
       pitting(s, { amount: 0.035, freq: 32, density: 0.36, seed: cx.seed + 2, colorDark: PAL.sandDark });
       const src = new Float32Array(s.n);
       for (let i = 0; i < s.n; i++) src[i] = sat(m.joint[i] * 0.8 + ramp[i] * 0.6);
-      weather(s, { source: src, seed: cx.seed + 6, creviceAmt: 0.46, streakAmt: 0.32, dustAmt: 0.26 });
+      weather(s, { source: src, seed: cx.seed + 6, creviceAmt: 0.46, streakAmt: 0.28, dustAmt: 0.22, directional: 0.35 });
       grain(s, { amount: 0.020, freq: 120, seed: cx.seed + 8, heightAmt: 0.006 });
+      rampFloor(s, { crevice: PAL.sandCrev });
     },
   },
 
@@ -842,9 +988,9 @@ export const MATERIALS = {
         const bm = bandsMask[i];
         if (bm > 0.02) s.h[i] += bm * 0.16;                    // bands stand proud
       }
-      const ramp = carve(s, textCut, textLine, { depth: 0.30, bevelPx: 2.6, lip: 0.07, bulge: 0.45, lineDepth: 0.55, seed: cx.seed + 5 });
-      freshCutTint(s, ramp, { amount: 0.14, wallDark: 0.18 });
-      paintRemnants(s, ramp, paint, { survival: 0.55, freq: 6, seed: cx.seed + 9, edgeLoss: 0.5 });
+      const ramp = carve(s, textCut, textLine, { depth: 0.40, bevelPx: 2.4, lip: 0.09, bulge: 0.45, lineDepth: 0.60, seed: cx.seed + 5 });
+      freshCutTint(s, ramp, { amount: 0.14 });
+      paintRemnants(s, ramp, paint, { survival: 0.34, freq: 6, seed: cx.seed + 9, edgeLoss: 0.70, fade: 0.45 });
       // Band paint survives better than glyph paint — it was thicker and re-applied.
       const bandWear = s.field(3, (u, v) => sat(warpN(u, v, 8, 4, 1.2, cx.seed + 41) * 1.4 + 0.5));
       for (let i = 0; i < s.n; i++) {
@@ -857,8 +1003,14 @@ export const MATERIALS = {
       pitting(s, { amount: 0.030, freq: 38, density: 0.32, seed: cx.seed + 2, colorDark: PAL.sandDark });
       const src = new Float32Array(s.n);
       for (let i = 0; i < s.n; i++) src[i] = sat(groove[i] * 0.7 + ramp[i] * 0.5 + bandsMask[i] * 0.4);
-      weather(s, { source: src, seed: cx.seed + 6, creviceAmt: 0.46, streakAmt: 0.30, dustAmt: 0.22 });
+      /* `directional` is low here for a second reason on top of the fake-bevel one: the column is
+       * a *cylinder*, so `skyward()`'s notion of "up-facing" — which is a fact about the texture's
+       * v axis — sweeps around the shaft as the surface turns. Baking it in paints a fixed light
+       * seam down the column that does not move with the sun, which is part of what the review saw
+       * as "long vertical cyan and white smears running their full height". */
+      weather(s, { source: src, seed: cx.seed + 6, creviceAmt: 0.46, streakAmt: 0.24, dustAmt: 0.16, directional: 0.20 });
       grain(s, { amount: 0.020, freq: 120, seed: cx.seed + 8, heightAmt: 0.006 });
+      rampFloor(s, { crevice: PAL.sandCrev });
     },
   },
 
@@ -1185,7 +1337,9 @@ export const MATERIALS = {
     build(s, cx) {
       const size = s.size;
       const woodPale = MX(PAL.limeMid, PAL.sandLight, 0.5);
-      const silverHex = MX(PAL.limeDark, PAL.shadow, 0.28);
+      // Weathered timber silvers off. Toward a warm neutral, not toward `PAL.shadow` — that is
+      // the *lighting* shadow hue and it has no business being a pigment in a sunlit albedo.
+      const silverHex = MX(PAL.limeDark, PAL.sandCrev, 0.34);
       const nailHex = MX(PAL.goldDark, PAL.black, 0.6);
       const knots = s.field(2, (u, v) => {
         const w = worleyN(u, v, 5, cx.seed + 13, 0.9);
@@ -1217,7 +1371,7 @@ export const MATERIALS = {
       for (let i = 0; i < s.n; i++) {
         s.h[i] -= check[i] * 0.4;
         s.stainHex(i, 0x2a1a10, check[i] * 0.8);
-        // Weathered timber silvers off: grey-lilac over the warm brown.
+        // Weathered timber silvers off: pale warm grey over the brown.
         s.mixHex(i, silverHex, sat(silver[i] - 0.4) * 0.45);
       }
       const nails = s.field(2, (u, v) => {
@@ -1734,8 +1888,16 @@ function sand(s, cx, o = {}) {
       const crest = sat(Math.pow(asym, 1.35) * 0.80 + Math.pow(asym2, 1.5) * 0.32);
       const h = 0.42 + crest * 0.40 * ripple + dune[i] * 0.22 + (fineF[i] - 0.5) * 0.10;
       s.h[i] = h + pebble[i] * 0.16;
-      // Crests are wind-polished pale, troughs hold the coarser dark grains.
-      const t = sat(0.40 + crest * 0.42 * ripple + dune[i] * 0.35 + (fineF[i] - 0.5) * 0.45 + tone);
+      /* Crests are wind-polished pale and troughs hold the coarser dark grains — but only just.
+       * The ripple used to swing the ramp position by ±0.42, i.e. from `sandDark` to
+       * `sandLight`, which painted the ripple pattern into the albedo at full strength. That is
+       * what made the dunes read as "bright salmon and white in horizontal wavy stripes… marbled
+       * endpaper or streaky bacon": a painted stripe stays put when the terrain turns, so it
+       * follows the image plane instead of the dune's form, and the actual form disappears.
+       * Sand is very close to one colour. You see a ripple because of the shadow in its lee,
+       * which is the height field's job — so the ripple keeps all of its relief and a quarter of
+       * its paint. */
+      const t = sat(0.40 + crest * 0.11 * ripple + dune[i] * 0.22 + (fineF[i] - 0.5) * 0.30 + tone);
       const col = ramp3(PAL.sandDark, PAL.sandMid, PAL.sandLight, t);
       s.r[i] = col[0]; s.g[i] = col[1]; s.b[i] = col[2];
       s.rough[i] = sat(0.95 - crest * 0.05);

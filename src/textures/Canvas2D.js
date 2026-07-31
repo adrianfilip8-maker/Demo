@@ -434,6 +434,8 @@ export class Surface {
     this.occ = f32(this.n, 1);
     this.a = null;       // alpha, lazily created (sprites / cutouts)
     this.em = null;      // [r,g,b] emissive, lazily created
+    /** Last `masonry()` layout painted into this surface, if any — joint/edge/block masks. */
+    this.masonry = null;
     this.seed = seed;
     this.rand = rng(seed);
   }
@@ -573,7 +575,7 @@ export function masonry(size, o = {}) {
   }
 
   /* --- per-course vertical joints, as x lookups --- */
-  const colB = [], colD = [], colU = [], nBlk = new Uint16Array(courses);
+  const colB = [], colD = [], colU = [], colC = [], nBlk = new Uint16Array(courses);
   for (let c = 0; c < courses; c++) {
     const hgt = ch[c] / tot;
     const target = Math.max(2, Math.round(1 / Math.max(0.05, hgt * aspect)));
@@ -588,6 +590,7 @@ export function masonry(size, o = {}) {
     bx[target] = 1;
 
     const bi = new Uint16Array(size), bd = new Float32Array(size), bu = new Float32Array(size);
+    const bc = new Float32Array(size);
     for (let x = 0; x < size; x++) {
       const u = ((x + 0.5) / size - off + 1) % 1;
       let k = target - 1;
@@ -595,17 +598,27 @@ export function masonry(size, o = {}) {
       bi[x] = k;
       bd[x] = Math.min(bx[k + 1] - u, u - bx[k]);
       bu[x] = (u - bx[k]) / (bx[k + 1] - bx[k] || 1);
+      // Centre of this block, back in *tile* u (undo the running-bond shift).
+      bc[x] = (((bx[k] + bx[k + 1]) * 0.5 + off) % 1 + 1) % 1;
     }
-    colB.push(bi); colD.push(bd); colU.push(bu); nBlk[c] = target;
+    colB.push(bi); colD.push(bd); colU.push(bu); colC.push(bc); nBlk[c] = target;
   }
 
   const id = new Float32Array(n), id2 = new Float32Array(n);
   const joint = new Float32Array(n), edge = new Float32Array(n);
   const bu = new Float32Array(n), bv = new Float32Array(n);
+  /* Block *centre* in tile coordinates. Per-block randoms (`id`, `id2`) are white noise — they
+   * put the colour difference between two neighbouring blocks at the highest spatial frequency
+   * the wall can carry, which is what makes ashlar read as a chequerboard rather than as one
+   * quarry's stone. Sampling a smooth field at the block centre instead gives per-block variation
+   * that is *spatially correlated*: neighbours are similar, distant blocks differ, and the wall
+   * grows large tonal regions. Same amplitude, a tenth of the frequency. */
+  const bcu = new Float32Array(n), bcv = new Float32Array(n);
 
   for (let y = 0; y < size; y++) {
     const c = rowC[y], dy = rowD[y], vv = rowV[y];
-    const bi = colB[c], bd = colD[c], bux = colU[c];
+    const bi = colB[c], bd = colD[c], bux = colU[c], bcx = colC[c];
+    const cvC = (cy[c] + cy[c + 1]) * 0.5;
     const row = y * size;
     for (let x = 0; x < size; x++) {
       const i = row + x;
@@ -616,9 +629,10 @@ export function masonry(size, o = {}) {
       joint[i] = 1 - smoothstep(jointW, jointW + chamfer, d);
       edge[i] = sat((d - jointW) / (chamfer * 2.2));
       bu[i] = bux[x]; bv[i] = vv;
+      bcu[i] = bcx[x]; bcv[i] = cvC;
     }
   }
-  return { id, id2, joint, edge, bu, bv, courses, blocksPerCourse: nBlk };
+  return { id, id2, joint, edge, bu, bv, bcu, bcv, courses, blocksPerCourse: nBlk };
 }
 
 /* ------------------------------------------------------------------------- */
@@ -644,6 +658,23 @@ export function weather(s, o = {}) {
     downDark = 0.18,           // extra darkening on down-facing bevels
     roughGrime = 0.10,
     seed = 11,
+    /**
+     * Scale on the two *direction-dependent* terms — pale dust on up-facing bevels, darkening
+     * on down-facing ones. Both are keyed to `skyward()`, i.e. to the sign of dH/dv, so they
+     * bake a fixed top-left light into the albedo.
+     *
+     * On a big weathered wall that is honest: dust really does settle on up-facing ledges and
+     * really does not sit under them, and it does not move when the sun does. On a *carving* it
+     * is a lie the review caught precisely — §7.3's "carvings look painted-on rather than
+     * chiselled", reported as "a baked-in fake bevel (light top-left, dark bottom-right) that
+     * does not correspond to the sun direction and does not change across faces". A relief that
+     * carries its own painted highlight cannot be lit; it looks the same on the shaded side of a
+     * pylon as on the sunlit side, which is the single clearest tell that the depth is fake.
+     *
+     * So carved recipes pass a low `directional` and put the contrast into the height field
+     * instead, where the normal map and the AO can turn it into real, sun-dependent relief.
+     */
+    directional = 1.0,
   } = o;
   const size = s.size, n = s.n;
   const rr = Math.max(2, Math.round((creviceRadius * size) / 512));
@@ -666,20 +697,70 @@ export function weather(s, o = {}) {
 
   const fine = s.field(2, (u, v) => fbmN(u, v, 24, 3, 0.55, seed + 55) * 0.5 + 0.5);
 
+  const dir = sat(directional);
   for (let i = 0; i < n; i++) {
     const c = sat(conc[i] / cmax);
     // Crevice grime: multiply-blend, so it darkens and warms instead of washing to grey.
     if (creviceAmt > 0) s.stainHex(i, crevice, sat(c * 1.25) * creviceAmt);
     const dn = sat(-sky[i]);
-    if (downDark > 0) s.mul(i, 1 - dn * downDark);
+    if (downDark > 0) s.mul(i, 1 - dn * downDark * dir);
     const st = sat(streakSoft[i] * (0.65 + 0.7 * fine[i]));
     if (streakAmt > 0) s.stainHex(i, streakTint, st * streakAmt);
     const up = sat(sky[i]);
-    if (dustAmt > 0) s.mixHex(i, dust, up * dustAmt * (0.5 + 0.7 * fine[i]));
+    if (dustAmt > 0) s.mixHex(i, dust, up * dustAmt * dir * (0.5 + 0.7 * fine[i]));
     s.rough[i] = sat(s.rough[i] + (st * 0.6 + c * 0.5) * roughGrime - up * 0.02);
-    s.occ[i] *= 1 - sat(c) * 0.30 - dn * 0.12;
+    // Occlusion is geometric, not directional — a recess is occluded whichever way the sun is.
+    s.occ[i] *= 1 - sat(c) * 0.30 - dn * 0.12 * dir;
   }
   return { conc, sky, streak: streakSoft };
+}
+
+/** Rec.709 luma of a texel. */
+export function lumaAt(s, i) { return s.r[i] * 0.2126 + s.g[i] * 0.7152 + s.b[i] * 0.0722; }
+
+/** Luma of a palette hex. */
+export function lumaHex(hex) {
+  return (((hex >> 16) & 255) * 0.2126 + ((hex >> 8) & 255) * 0.7152 + (hex & 255) * 0.0722) / 255;
+}
+
+/**
+ * Pull a surface into the value range its palette ramp actually declares.
+ *
+ * AGENTS §2.2 names `crevice #4a2f22` as **the darkest value in the sandstone ramp**, and the
+ * stone recipes were running three times darker than that: `hieroglyph_wall` bottomed out at
+ * `#130d0b` (luma 0.05 against the crevice's 0.157), because `carve` + `weather`'s crevice stain
+ * + `pitting`'s stain all multiply and compound with nothing holding the floor.
+ *
+ * That matters far more than "slightly off-spec", because of what the shader does downstream:
+ * the cel model adds a flat `uShadowColor` wash (the violet-teal `#2a3f66`) proportional to
+ * `1 - key`. On a bright texel the warm albedo dominates and the result reads as sandstone; on a
+ * near-black texel there is no albedo left to dominate and the additive violet is *all that is
+ * left*, so the texel renders as `#5a4a7a` — the off-palette violet the review found blotched
+ * across every wall. The blotches are the shape of my dark tail. Holding the floor at the
+ * specified crevice colour removes the violet at its source and costs nothing else: crevices stay
+ * the darkest thing in the material, they just stop falling out of the palette.
+ *
+ * Hue-preserving by construction — a texel below the floor is mixed *toward the crevice hex*,
+ * not lifted in value, so the darkest stone is warm brown rather than grey.
+ */
+export function rampFloor(s, o = {}) {
+  const { crevice = PAL.sandCrev, floor = null, soft = 1.0, ceil = 0, mask = null } = o;
+  const lo = floor == null ? lumaHex(crevice) : floor;
+  const cr = ((crevice >> 16) & 255) / 255, cg = ((crevice >> 8) & 255) / 255, cb = (crevice & 255) / 255;
+  const hi = ceil ? lumaHex(ceil) : 0;
+  for (let i = 0; i < s.n; i++) {
+    const y = s.r[i] * 0.2126 + s.g[i] * 0.7152 + s.b[i] * 0.0722;
+    if (y < lo) {
+      // t = 1 at black, 0 at the floor. `soft` lets a recipe keep a little more of its own tail.
+      const t = sat((lo - y) / lo) * soft * (mask ? mask[i] : 1);
+      s.r[i] += (cr - s.r[i]) * t;
+      s.g[i] += (cg - s.g[i]) * t;
+      s.b[i] += (cb - s.b[i]) * t;
+    } else if (hi && y > hi) {
+      const k = hi / y;
+      s.r[i] *= k; s.g[i] *= k; s.b[i] *= k;
+    }
+  }
 }
 
 /**
@@ -708,7 +789,11 @@ export function chiselMarks(s, o = {}) {
 
 /** Pockmarks — wind-blasted pitting. Worley troughs, not noise, so each pit has a rim. */
 export function pitting(s, o = {}) {
-  const { amount = 0.06, freq = 40, density = 0.45, seed = 9, mask = null, colorDark = 0 } = o;
+  /* `stain` is deliberately much weaker than the height `amount`. A pit is a hole, and a hole
+   * reads as a hole because of its shadow, not because someone painted a dark dot in it — at
+   * pit frequency (30-40 cells per tile) a painted dot is just high-frequency dark speckle, and
+   * dark speckle is what the cel shader converts into violet speckle. Let the AO do it. */
+  const { amount = 0.06, freq = 40, density = 0.45, seed = 9, mask = null, colorDark = 0, stain = 0.20 } = o;
   const pit = s.field(1.5, (u, v) => {
     const w = worleyN(u, v, Math.max(2, Math.round(freq)), seed, 0.95);
     const on = w.id < density ? 1 : 0;
@@ -720,7 +805,8 @@ export function pitting(s, o = {}) {
     if (m <= 0) continue;
     s.h[i] -= m * amount;
     s.rough[i] = sat(s.rough[i] + m * 0.12);
-    if (colorDark) s.stainHex(i, colorDark, m * 0.35);
+    if (colorDark) s.stainHex(i, colorDark, m * stain);
+    s.occ[i] *= 1 - m * 0.22;
   }
   return pit;
 }
@@ -784,7 +870,7 @@ export function brushwork(s, o = {}) {
  * the cut, out of the wind and sun — so surviving pigment is a *function of depth*, not a decal.
  */
 export function paintRemnants(s, cut, paint, o = {}) {
-  const { survival = 0.55, freq = 7, seed = 17, edgeLoss = 0.55, gloss = -0.12 } = o;
+  const { survival = 0.55, freq = 7, seed = 17, edgeLoss = 0.55, gloss = -0.12, fade = 0 } = o;
   const wearField = s.field(3, (u, v) => sat(warpN(u, v, Math.max(2, freq | 0), 5, 1.0, seed) * 1.25 + 0.5));
   const shelter = blurWrap(cut, s.size, Math.max(1, Math.round(s.size / 200)), 1);
   for (let i = 0; i < s.n; i++) {
@@ -794,9 +880,25 @@ export function paintRemnants(s, cut, paint, o = {}) {
     const depth = sat(shelter[i] * 1.15);
     const keep = sat((wearField[i] * survival + depth * 0.65 - edgeLoss * (1 - depth)) * 1.6) * pa;
     if (keep <= 0.002) continue;
-    s.r[i] += (paint.r[i] - s.r[i]) * keep;
-    s.g[i] += (paint.g[i] - s.g[i]) * keep;
-    s.b[i] += (paint.b[i] - s.b[i]) * keep;
+    /* `fade` bleaches the surviving pigment toward the stone it sits on before it is laid down.
+     *
+     * Three-thousand-year-old pigment in a sunk relief is a *ghost* of a colour — and the
+     * saturation matters more than it looks, because a wall of full-strength pigment stops
+     * reading as writing. The review's complaint that "the hieroglyph vocabulary reads as
+     * abstract confetti — green crescents, red lozenges, pink discs" is partly a saturation
+     * problem: at full chroma the eye files each mark as an independent coloured object rather
+     * than as pigment *in* a carving, so the wall reads as pattern and the carving underneath
+     * stops being visible. Fading toward the local stone keeps the hue (you can still tell red
+     * ochre from Egyptian blue) and lets the *relief* carry the read. */
+    let pr = paint.r[i], pg = paint.g[i], pb = paint.b[i];
+    if (fade > 0) {
+      pr += (s.r[i] - pr) * fade;
+      pg += (s.g[i] - pg) * fade;
+      pb += (s.b[i] - pb) * fade;
+    }
+    s.r[i] += (pr - s.r[i]) * keep;
+    s.g[i] += (pg - s.g[i]) * keep;
+    s.b[i] += (pb - s.b[i]) * keep;
     s.rough[i] = sat(s.rough[i] + gloss * keep);
   }
 }

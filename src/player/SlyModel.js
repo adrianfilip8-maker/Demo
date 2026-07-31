@@ -56,16 +56,23 @@ export const TUNE = {
 
 /* ============================ PALETTE ===================================== */
 
+/**
+ * §2.1 material separation. These are *material* colours — the only place hue lives. The
+ * values are deliberately spread apart on a value ladder, because "flat single colour" is an
+ * auto-fail and two materials three points apart in luminance read as one under a cel ramp:
+ *
+ *   cream 0.84 · gold 0.72 · furMid 0.55 · shirt 0.42 · clothDark 0.24 · tailDark 0.14 · ink 0.06
+ */
 const PAL = {
-  furMid: 0x7a8ba8,
-  furShadow: 0x5a6a85,
-  furLight: 0x9dafc9,
-  cream: 0xd7d2c0,        // cream-grey muzzle / chest / tail bands
-  tailDark: 0x323a4c,     // the rings
-  shirt: 0x2f7fc4,
-  shirtDark: 0x245c86,    // gloves, boots, brim — blue with a grey lean
-  gold: 0xe8b942,
-  ink: 0x1a1210,
+  furMid: 0x7a8ba8,       // §2.1 slate blue-grey — the fur
+  furShadow: 0x53627c,
+  furLight: 0xa2b4cd,
+  cream: 0xe4dfcb,        // muzzle, chest V, tail bands — the light end of the ladder
+  tailDark: 0x2a3142,     // the rings; well below the fur so they band at any size
+  shirt: 0x2f7fc4,        // §2.1 cyan-blue cap + shirt
+  shirtDark: 0x1b4f7c,    // gloves, boots, brim — a real value step below the shirt
+  gold: 0xe8b942,         // §2.2 GOLD mid — belt buckle, pouch, cane
+  ink: 0x191113,          // §2.1 never pure black
   eyeWhite: 0xf7f3e6,
 };
 
@@ -106,10 +113,14 @@ const SKELETON = [
   ['footR', 'lowerLegR', [-0.088, 0.082, -0.020]],
   ['toeR', 'footR', [-0.088, 0.038, 0.098]],
 
-  ['tailA', 'hips', [0, 0.898, -0.090]],
-  ['tailB', 'tailA', [0, 0.872, -0.360]],
-  ['tailC', 'tailB', [0, 0.812, -0.640]],
-  ['tailD', 'tailC', [0, 0.742, -0.900]],
+  /* The tail is half the silhouette, so its *bind* already carries the raccoon S — it rises
+     across the chain instead of trailing flat behind him. A horizontal bind tail disappears
+     behind the body from every camera angle except pure side-on, which is how a 1.1 m tail
+     managed to read as "no tail at all". ANIMATION's clip rotations compose on top of this. */
+  ['tailA', 'hips', [0, 0.905, -0.105]],
+  ['tailB', 'tailA', [0, 0.918, -0.410]],
+  ['tailC', 'tailB', [0, 0.995, -0.700]],
+  ['tailD', 'tailC', [0, 1.120, -0.910]],
 ];
 
 /**
@@ -381,7 +392,7 @@ export class SlyModel {
       },
       groupAt: (i) => (T[i][0] >= 1.336 ? 'furCream' : 'cloth'),
       sgAt: (i) => (T[i][0] >= 1.336 ? sgNeck : (T[i][0] >= 1.330 ? sgCollar : sgBody)),
-      colorAt: (i, t, a, p) => furTint(_c.set(PAL.furMid), _c, p.x, p.y, p.z, TUNE.furTintAmount * 0.6),
+      colorAt: (i, t, a, p) => furTint(_c, p.x, p.y, p.z, TUNE.furTintAmount * 0.6),
       weightsAtVert: (i, t, a, p) => this._torsoWeights(p),
       capStart: true,
       uvScale: [3, 1],
@@ -429,7 +440,7 @@ export class SlyModel {
         const k = 1.022;
         return new THREE.Vector3(Math.sin(th) * r.rx * k, y, r.cz + Math.cos(th) * r.rz * k);
       },
-      colorAt: (u, v, p) => furTint(_c.set(PAL.cream), _c, p.x, p.y, p.z, TUNE.furTintAmount),
+      colorAt: (u, v, p) => furTint(_c, p.x, p.y, p.z, TUNE.furTintAmount),
       weightsAtVert: (u, v, p) => ramp(p.y, SlyModel.SPINE_RAMP),
     });
   }
@@ -505,23 +516,29 @@ export class SlyModel {
    */
   _buildTail(mb) {
     const S = TUNE.tailScale;
+    /* Follows the bind bone chain: back off the hips, then sweeping up into a raised hook.
+       Read the profile below with this in mind — the fat part of the tail sits *above* the
+       hips, at head height, where it silhouettes against sky instead of against his own back. */
     const spine = resample([
-      new THREE.Vector3(0, 0.912, -0.060),
-      new THREE.Vector3(0, 0.900, -0.150 * S),
-      new THREE.Vector3(0, 0.876, -0.290 * S),
-      new THREE.Vector3(0, 0.848, -0.430 * S),
-      new THREE.Vector3(0, 0.814, -0.570 * S),
-      new THREE.Vector3(0, 0.780, -0.700 * S),
-      new THREE.Vector3(0, 0.744, -0.830 * S),
-      new THREE.Vector3(0, 0.712, -0.945 * S),
-      new THREE.Vector3(0, 0.688, -1.045 * S),
-      new THREE.Vector3(0, 0.674, -1.120 * S),
-    ], 30);
+      new THREE.Vector3(0, 0.902, -0.055 * S),
+      new THREE.Vector3(0, 0.900, -0.170 * S),
+      new THREE.Vector3(0, 0.905, -0.310 * S),
+      new THREE.Vector3(0, 0.922, -0.450 * S),
+      new THREE.Vector3(0, 0.955, -0.585 * S),
+      new THREE.Vector3(0, 1.005, -0.700 * S),
+      new THREE.Vector3(0, 1.070, -0.800 * S),
+      new THREE.Vector3(0, 1.148, -0.878 * S),
+      new THREE.Vector3(0, 1.232, -0.930 * S),
+      new THREE.Vector3(0, 1.312, -0.955 * S),
+    ], 32);
 
+    /* Girth: at its widest the tail is 0.36 m across — wider than his 0.23 m chest and level
+       with his 0.35 m head. That ratio is not an exaggeration of the reference, it *is* the
+       reference; a tail slimmer than the torso reads as a rope. */
     const radius = (t) => {
       const prof = [
-        [0.00, 0.070], [0.10, 0.106], [0.22, 0.122], [0.38, 0.126],
-        [0.55, 0.118], [0.70, 0.101], [0.84, 0.077], [0.94, 0.048], [1.00, 0.016],
+        [0.00, 0.082], [0.09, 0.132], [0.20, 0.164], [0.36, 0.180],
+        [0.52, 0.176], [0.66, 0.160], [0.80, 0.132], [0.91, 0.092], [1.00, 0.034],
       ];
       for (let i = 0; i < prof.length - 1; i++) {
         if (t <= prof[i + 1][0]) {
@@ -529,12 +546,13 @@ export class SlyModel {
           return THREE.MathUtils.lerp(prof[i][1], prof[i + 1][1], f) * S;
         }
       }
-      return 0.016 * S;
+      return 0.034 * S;
     };
 
     /* Ring bands. Crisp material boundaries at ring positions — no vertex duplication needed,
-       so the surface stays watertight and the normals stay smooth across the colour change. */
-    const BANDS = [[0.20, 0.30], [0.40, 0.495], [0.585, 0.675], [0.755, 0.835], [0.905, 1.001]];
+       so the surface stays watertight and the normals stay smooth across the colour change.
+       Six bands, and the dark ones are the wider pair: a raccoon tail reads dark-dominant. */
+    const BANDS = [[0.14, 0.255], [0.335, 0.445], [0.520, 0.625], [0.700, 0.795], [0.860, 0.935], [0.975, 1.001]];
     const isDark = (t) => BANDS.some(([a, b]) => t >= a && t < b);
 
     const RAMP = [
@@ -570,8 +588,7 @@ export class SlyModel {
       },
       groupAt: (i, t) => (isDark(t) ? 'furDark' : 'furCream'),
       sgAt: () => 700,
-      colorAt: (i, t, a, p) => furTint(_c.set(isDark(t) ? PAL.tailDark : PAL.cream), _c,
-        p.x, p.y, p.z, TUNE.furTintAmount),
+      colorAt: (i, t, a, p) => furTint(_c, p.x, p.y, p.z, TUNE.furTintAmount),
       weightsAt: (i, t) => ramp(t, RAMP),
       capEnd: true,
       uvScale: [3, 1],
@@ -645,7 +662,7 @@ export class SlyModel {
         if (t >= cuffStart) return sgFur;
         return sgSleeve;
       },
-      colorAt: (i, t, a, p) => furTint(_c.set(PAL.furMid), _c, p.x, p.y, p.z, TUNE.furTintAmount * 0.5),
+      colorAt: (i, t, a, p) => furTint(_c, p.x, p.y, p.z, TUNE.furTintAmount * 0.5),
       weightsAt: (i) => ramp(ts[Math.min(i, ts.length - 1)], ARM_RAMP),
       capStart: true,
       uvScale: [2, 1],
@@ -659,7 +676,7 @@ export class SlyModel {
       segTheta: 16, segPhi: 9,
       group: 'cloth', sg: mb.newSg(),
       weights: [[`shoulder${L}`, 0.78], ['chest', 0.22]],
-      colorAt: (u, v, p) => furTint(_c.set(PAL.shirt), _c, p.x, p.y, p.z, 0.03),
+      colorAt: (u, v, p) => furTint(_c, p.x, p.y, p.z, 0.03),
     });
   }
 
@@ -775,7 +792,7 @@ export class SlyModel {
       shape: (a) => superEllipse(a, 1.04),
       groupAt: () => 'fur',
       sgAt: () => 900 + (side > 0 ? 0 : 1),
-      colorAt: (i, t, a, p) => furTint(_c.set(PAL.furMid), _c, p.x, p.y, p.z, TUNE.furTintAmount * 0.7),
+      colorAt: (i, t, a, p) => furTint(_c, p.x, p.y, p.z, TUNE.furTintAmount * 0.7),
       weightsAt: (i) => ramp(ts[Math.min(i, ts.length - 1)], RAMP),
       capStart: true,
       uvScale: [2, 1],
@@ -923,7 +940,7 @@ export class SlyModel {
       },
       groupAt: () => 'fur',
       sgAt: () => 1100,
-      colorAt: (i, t, a, p) => furTint(_c.set(PAL.furMid), _c, p.x, p.y, p.z, TUNE.furTintAmount),
+      colorAt: (i, t, a, p) => furTint(_c, p.x, p.y, p.z, TUNE.furTintAmount),
       weightsAtVert: (i, t, a, p) => this._headWeights(p),
       capStart: true, capEnd: true,
       uvScale: [3, 1],
@@ -950,7 +967,7 @@ export class SlyModel {
       shape: (a) => superEllipse(a, 1.12),
       groupAt: () => 'furCream',
       sgAt: () => 1110,
-      colorAt: (i, t, a, p) => furTint(_c.set(PAL.cream), _c, p.x, p.y, p.z, TUNE.furTintAmount),
+      colorAt: (i, t, a, p) => furTint(_c, p.x, p.y, p.z, TUNE.furTintAmount),
       // The lower half of the snout is the jaw; the bridge stays with the skull.
       weightsAtVert: (i, t, a, p) => {
         const below = Math.max(0, -Math.sin(a));
@@ -1037,7 +1054,7 @@ export class SlyModel {
       basis: { x: lidRight, y: lidUp, z: outward },
       segTheta: 18, segPhi: 6, phi0: 0.18, phi1: Math.PI / 2,
       group: 'fur', sg: mb.newSg(), weights: [['head', 1]],
-      colorAt: (u, v, p) => furTint(_c.set(PAL.furShadow), _c, p.x, p.y, p.z, 0.03),
+      colorAt: (u, v, p) => furTint(_c, p.x, p.y, p.z, 0.03, 4, 0.74),
     });
   }
 
@@ -1140,7 +1157,7 @@ export class SlyModel {
       shape: (a) => superEllipse(a, 1.30),
       groupAt: (i) => (i >= 5 ? 'furDark' : 'fur'),
       sgAt: () => 1300 + (side > 0 ? 0 : 1),
-      colorAt: (i, t, a, p) => furTint(_c.set(t > 0.62 ? PAL.tailDark : PAL.furMid), _c, p.x, p.y, p.z, TUNE.furTintAmount),
+      colorAt: (i, t, a, p) => furTint(_c, p.x, p.y, p.z, TUNE.furTintAmount),
       weightsAt: (i, t) => (t < 0.14
         ? [['head', 0.55], [`ear${L}`, 0.45]]
         : [[`ear${L}`, 1]]),
@@ -1171,8 +1188,10 @@ export class SlyModel {
    */
   _buildCap(mb) {
     const S = TUNE.headScale;
-    const pivot = new THREE.Vector3(0, 1.660, 0.0);
-    const tilt = new THREE.Matrix4().makeRotationX(0.115).premultiply(new THREE.Matrix4().makeRotationZ(0.055));
+    const pivot = new THREE.Vector3(0, 1.640, 0.0);
+    // Tipped down over the brow and cocked to his left. A level, symmetric cap reads as a
+    // swimming hat; the cock is most of what makes it read as *his* cap.
+    const tilt = new THREE.Matrix4().makeRotationX(0.175).premultiply(new THREE.Matrix4().makeRotationZ(0.105));
     const place = (p) => {
       p.sub(pivot).applyMatrix4(tilt).add(pivot);
       p.y = this.headCenter.y + (p.y - this.headCenter.y) * S;
@@ -1180,59 +1199,96 @@ export class SlyModel {
       return p;
     };
 
+    /* y, half-width, half-depth, z-offset.
+     *
+     * The old crown peaked at 0.201 against a 0.171 skull — a 3 cm lip, which is nothing at
+     * silhouette scale and is exactly why the critic recorded "no cap; the head is a bare
+     * rounded lump". This one peaks at 0.262: it *overhangs* the skull by half a head-radius,
+     * so the profile steps out hard above the ears and the cap becomes its own shape rather
+     * than a hat-coloured patch of scalp. It is also pulled back and up into a soft newsboy
+     * lozenge instead of a dome concentric with the cranium.
+     */
     const C = [
-      [1.634, 0.176, 0.190, 0.000],
-      [1.644, 0.190, 0.204, 0.003],
-      [1.670, 0.201, 0.215, 0.007],
-      [1.704, 0.198, 0.211, 0.007],
-      [1.740, 0.181, 0.192, 0.002],
-      [1.772, 0.149, 0.157, -0.005],
-      [1.798, 0.102, 0.108, -0.011],
-      [1.816, 0.046, 0.048, -0.015],
-      [1.823, 0.011, 0.012, -0.016],
+      [1.598, 0.196, 0.206, 0.004],
+      [1.614, 0.232, 0.242, 0.000],
+      [1.640, 0.256, 0.268, -0.006],
+      [1.672, 0.262, 0.274, -0.014],
+      [1.712, 0.253, 0.264, -0.024],
+      [1.756, 0.230, 0.239, -0.034],
+      [1.800, 0.193, 0.199, -0.042],
+      [1.840, 0.140, 0.144, -0.048],
+      [1.868, 0.074, 0.076, -0.052],
+      [1.880, 0.016, 0.017, -0.054],
     ];
     addTube(mb, {
       centers: C.map(([y, , , cz]) => new THREE.Vector3(0, y, cz)), seg: 32,
       rx: (i) => C[i][1], ry: (i) => C[i][2],
       upHint: new THREE.Vector3(0, 0, 1),
       shape: (a, i) => {
-        const s = superEllipse(a, 1.06);
+        const s = superEllipse(a, 1.08);
         // eight soft panels; the seams read as folded cloth, not as facets
-        const panel = 1 + 0.028 * Math.cos(8 * a + 0.35) * (1 - Math.pow(i / (C.length - 1), 2));
-        return { u: s.u * panel, v: s.v * panel };
+        const panel = 1 + 0.040 * Math.cos(8 * a + 0.35) * (1 - Math.pow(i / (C.length - 1), 2));
+        // the crown slumps toward the back-left, so the outline is never bilaterally symmetric
+        const slump = 1 + 0.075 * Math.max(0, -Math.cos(a - 0.5)) * smooth(0.30, 0.95, i / (C.length - 1));
+        return { u: s.u * panel * slump, v: s.v * panel * slump };
       },
       warp: (p) => place(p),
       groupAt: () => 'cloth',
       sgAt: (i) => (i === 0 ? 1400 : 1401),
-      colorAt: (i, t, a, p) => furTint(_c.set(PAL.shirt), _c, p.x, p.y, p.z, 0.035),
+      colorAt: (i, t, a, p) => furTint(_c, p.x, p.y, p.z, 0.035),
       weightsAt: () => [['head', 1]],
       capStart: true, capEnd: true,
       uvScale: [4, 1],
     });
 
-    // crown button
-    const btn = place(new THREE.Vector3(0, 1.826, -0.016));
+    // crown button — the one gold spark at the top of the frame in a close-up
+    const btn = place(new THREE.Vector3(0, 1.882, -0.054));
     addEllipsoid(mb, {
-      center: btn, radii: new THREE.Vector3(0.019 * S, 0.013 * S, 0.019 * S),
+      center: btn, radii: new THREE.Vector3(0.023 * S, 0.016 * S, 0.023 * S),
       segTheta: 12, segPhi: 6, phi0: -0.2,
       group: 'gold', sg: mb.newSg(), weights: [['head', 1]],
     });
 
+    /* Hem band: a hard dark ring around the base of the crown. It splits the cap off the head
+       with a value break as well as a shape break, so the cap survives being backlit. */
+    const HN = 26;
+    const hem = [];
+    for (let i = 0; i <= HN; i++) {
+      const th = (i / HN) * Math.PI * 2;
+      hem.push(place(new THREE.Vector3(Math.sin(th) * 0.200, 1.596 + 0.006 * Math.cos(th), -0.002 + Math.cos(th) * 0.210)));
+    }
+    addTube(mb, {
+      centers: hem, seg: 8, rx: 0.020 * S, ry: 0.026 * S,
+      upHint: new THREE.Vector3(0, 1, 0),
+      shape: (a) => superEllipse(a, 1.8),
+      groupAt: () => 'clothDark',
+      sgAt: () => 1405,
+      weightsAt: () => [['head', 1]],
+      uvScale: [4, 1],
+    });
+
     /* Brim: a flat inclined section swept along the front of the hem. Built as a tube so the
-       top face, the underside and the rounded outer edge come out watertight in one pass. */
-    const N = 22, TH = 1.24;
+       top face, the underside and the rounded outer edge come out watertight in one pass.
+       Wide, deep and dark — with the ears it is the top half of the silhouette test. */
+    const N = 24, TH = 1.40;
     const arc = [];
     for (let i = 0; i <= N; i++) {
       const th = THREE.MathUtils.lerp(-TH, TH, i / N);
-      arc.push(place(new THREE.Vector3(Math.sin(th) * 0.214, 1.629 - 0.008 * Math.pow(Math.abs(th) / TH, 2), 0.006 + Math.cos(th) * 0.232)));
+      const k = Math.abs(th) / TH;
+      arc.push(place(new THREE.Vector3(
+        Math.sin(th) * 0.238,
+        1.594 - 0.020 * Math.pow(k, 2),
+        0.004 + Math.cos(th) * 0.262,
+      )));
     }
     addTube(mb, {
       centers: arc, seg: 12,
-      rx: (i) => 0.062 * S * (1 - 0.30 * Math.pow(Math.abs(i / N * 2 - 1), 2.2)),
-      ry: 0.0115 * S,
+      // deep at the centre, tucking away at the temples — a peak, not a sun-visor ring
+      rx: (i) => 0.094 * S * (1 - 0.62 * Math.pow(Math.abs(i / N * 2 - 1), 1.9)),
+      ry: 0.0150 * S,
       upHint: new THREE.Vector3(0, 1, 0),
       // shear the section so the outer lip dips: a flat brim reads as a frisbee
-      shape: (a) => { const s = superEllipse(a, 1.5); return { u: s.u, v: s.v + 0.62 * s.u }; },
+      shape: (a) => { const s = superEllipse(a, 1.6); return { u: s.u, v: s.v + 0.70 * s.u }; },
       groupAt: () => 'clothDark',
       sgAt: () => 1410,
       weightsAt: () => [['capBrim', 0.85], ['head', 0.15]],
@@ -1251,7 +1307,10 @@ export class SlyModel {
   _buildTufts(mb) {
     const S = TUNE.headScale;
     const D = TUNE.tuftDensity;
-    const put = (o) => addTuft(mb, { sg: mb.newSg(), ...o });
+    /* Tufts carry no colour of their own: like every vertex colour on this model they would
+       MULTIPLY their material (see Body.furTint), so the group owns the hue and they stay
+       neutral. They exist for the ragged silhouette edge, not for tone. */
+    const put = (o) => addTuft(mb, { sg: mb.newSg(), color: 0xffffff, ...o });
 
     for (const side of [1, -1]) {
       /* cheek ruffs — the widest part of his head, so the most valuable place to break up */
@@ -1265,7 +1324,7 @@ export class SlyModel {
         put({
           base, dir, length: (0.050 + 0.030 * (1 - Math.abs(f - 0.45) * 2)) * S,
           width: 0.019 * S, bend: 0.30, bendDir: new THREE.Vector3(0, -1, 0),
-          group: 'fur', color: PAL.furLight, weights: [['head', 1]],
+          group: 'fur', weights: [['head', 1]],
         });
       }
       // cream ruff under the cheek, framing the muzzle
@@ -1277,7 +1336,7 @@ export class SlyModel {
         put({
           base, dir: out.clone().addScaledVector(new THREE.Vector3(0, -1, 0), 0.85).normalize(),
           length: 0.048 * S, width: 0.016 * S, bend: 0.35, bendDir: new THREE.Vector3(0, -1, 0.3),
-          group: 'furCream', color: PAL.cream, weights: [['head', 0.55], ['jaw', 0.45]],
+          group: 'furCream', weights: [['head', 0.55], ['jaw', 0.45]],
         });
       }
       // ear-tip wisp
@@ -1286,7 +1345,7 @@ export class SlyModel {
       put({
         base: et, dir: new THREE.Vector3(side * 0.38, 0.86, -0.34).normalize(),
         length: 0.030 * S, width: 0.009 * S, bend: 0.4,
-        group: 'furDark', color: PAL.tailDark, weights: [[side > 0 ? 'earL' : 'earR', 1]],
+        group: 'furDark', weights: [[side > 0 ? 'earL' : 'earR', 1]],
       });
 
       /* chest ruff bursting out of the open collar */
@@ -1300,7 +1359,7 @@ export class SlyModel {
         put({
           base, dir: new THREE.Vector3(Math.sin(th) * 0.5, 0.72, Math.cos(th) * 0.62).normalize(),
           length: 0.048, width: 0.016, bend: 0.35, bendDir: new THREE.Vector3(0, 0, 1),
-          group: 'furCream', color: PAL.cream, weights: [['chest', 0.6], ['neck', 0.4]],
+          group: 'furCream', weights: [['chest', 0.6], ['neck', 0.4]],
         });
       }
       // neck ruff around the collar
@@ -1312,7 +1371,7 @@ export class SlyModel {
         put({
           base, dir: new THREE.Vector3(Math.sin(th) * 0.75, -0.42, Math.cos(th) * 0.75).normalize(),
           length: 0.042, width: 0.015, bend: 0.3,
-          group: 'furCream', color: PAL.cream, weights: [['neck', 1]],
+          group: 'furCream', weights: [['neck', 1]],
         });
       }
 
@@ -1326,7 +1385,7 @@ export class SlyModel {
           base: c.clone().addScaledVector(back, 0.030),
           dir: back.clone().addScaledVector(new THREE.Vector3(side * -0.5, 0.35, 0), 0.5).normalize(),
           length: 0.042, width: 0.014, bend: 0.3,
-          group: 'fur', color: PAL.furLight,
+          group: 'fur',
           weights: [[side > 0 ? 'lowerArmL' : 'lowerArmR', 1]],
         });
       }
@@ -1337,7 +1396,7 @@ export class SlyModel {
         put({
           base, dir: new THREE.Vector3(side * 0.35, -0.55, -0.76).normalize(),
           length: 0.048, width: 0.016, bend: 0.28,
-          group: 'fur', color: PAL.furLight,
+          group: 'fur',
           weights: [[side > 0 ? 'upperLegL' : 'upperLegR', 1]],
         });
       }
@@ -1348,7 +1407,7 @@ export class SlyModel {
         put({
           base, dir: new THREE.Vector3(Math.sin(a) * 0.55, 0.72, Math.cos(a) * 0.55).normalize(),
           length: 0.036, width: 0.013, bend: 0.3,
-          group: 'fur', color: PAL.furLight,
+          group: 'fur',
           weights: [[side > 0 ? 'lowerLegL' : 'lowerLegR', 1]],
         });
       }
@@ -1374,7 +1433,6 @@ export class SlyModel {
           length: (0.055 + 0.030 * Math.sin(t * 7)) * TUNE.tailScale,
           width: 0.018 * TUNE.tailScale, bend: 0.25, bendDir: tan.clone().negate(),
           group: isDark(t) ? 'furDark' : 'furCream',
-          color: isDark(t) ? PAL.tailDark : PAL.cream,
           weights: ramp(t, this._tailRamp),
         });
       }
@@ -1390,7 +1448,7 @@ export class SlyModel {
         base: tipC.clone().addScaledVector(tipT, -0.010),
         dir: tipT.clone().multiplyScalar(0.75).addScaledVector(perp, 0.65).normalize(),
         length: 0.075 * TUNE.tailScale, width: 0.017 * TUNE.tailScale, bend: 0.2,
-        group: 'furDark', color: PAL.tailDark, weights: [['tailD', 1]],
+        group: 'furDark', weights: [['tailD', 1]],
       });
     }
   }
@@ -1402,19 +1460,24 @@ export class SlyModel {
   _makeTextures() {
     const size = this.engine.quality === 'low' ? 128 : (this.engine.quality === 'ultra' ? 512 : 256);
     const tx = this.engine.get('textures');
-    const wanted = {
-      fur_sly: 'fur', fur_tail_rings: 'fur', cloth_cap_blue: 'cloth',
-      cloth_shirt_blue: 'cloth', leather_boot: 'cloth', gold_cane: 'metal', mask_black: null,
-    };
+    /**
+     * Only *normal* maps are borrowed from TEXTURES, never albedo.
+     *
+     * A `map` multiplies the material colour, so an albedo from the shared library gets a
+     * second, uncontrolled say in the character's hue — and hue is exactly what §2.1 makes
+     * this file responsible for. The library's stone albedos are also currently the project's
+     * biggest defect, and the last thing Sly needs is that violet landing on his fur. His own
+     * detail maps below are authored near-white for the same reason.
+     */
     this._shared = {};
-    for (const name of Object.keys(wanted)) {
-      let t = null;
-      try { t = tx?.get?.(name) ?? null; } catch { t = null; }
+    for (const name of ['fur_sly', 'fur_tail_rings', 'cloth_shirt_blue', 'leather_boot', 'gold_cane']) {
+      let b = null;
+      try { b = tx?.get?.(name) ?? null; } catch { b = null; }
       // Per AGENTS.md §4.4 textures.get() hands back a *bundle* of maps, not a texture.
-      // These go into a material's `map` slot, so unwrap the albedo — passing the bundle
-      // through makes three.js read `.matrix` off a plain object and kill the frame.
-      if (t && !t.isTexture) t = t.map?.isTexture ? t.map : null;
-      this._shared[name] = t;
+      // Passing the bundle into a material slot makes three.js read `.matrix` off a plain
+      // object and kills the frame mid-render, so unwrap the one slot we want.
+      const n = b && !b.isTexture ? b.normalMap : (b?.isTexture ? null : null);
+      this._shared[name] = n?.isTexture ? n : null;
     }
     // Own maps are always built: TEXTURES may be absent, and even when present it has no
     // reason to author strand-flow fur for one character.
@@ -1451,35 +1514,36 @@ export class SlyModel {
 
   _matSpec(group) {
     const F = this._fur, C = this._cloth, M = this._metal, SH = this._shared;
-    const pick = (name, own) => SH[name] || own;
+    // Albedo is always ours (near-white detail); only the normal may come from TEXTURES.
+    const nrm = (name, own) => SH[name] || own;
     switch (group) {
       case 'fur': return {
-        color: PAL.furMid, map: pick('fur_sly', F.detail), normalMap: F.normal,
+        color: PAL.furMid, map: F.detail, normalMap: nrm('fur_sly', F.normal),
         normalScale: 1.15, repeat: [3, 3], sss: TUNE.furSSS, rim: TUNE.rim,
         spec: 0.05, gloss: 10, detail: 'fur',
       };
       case 'furCream': return {
-        color: PAL.cream, map: pick('fur_sly', F.detail), normalMap: F.normal,
+        color: PAL.cream, map: F.detail, normalMap: nrm('fur_sly', F.normal),
         normalScale: 1.05, repeat: [3, 3], sss: TUNE.furSSS + 0.06, rim: TUNE.rim * 0.9,
         spec: 0.04, gloss: 10, detail: 'fur',
       };
       case 'furDark': return {
-        color: PAL.tailDark, map: pick('fur_tail_rings', F.detail), normalMap: F.normal,
+        color: PAL.tailDark, map: F.detail, normalMap: nrm('fur_tail_rings', F.normal),
         normalScale: 1.25, repeat: [3, 3], sss: TUNE.furSSS * 0.6, rim: TUNE.rim * 1.15,
         spec: 0.06, gloss: 12, detail: 'fur',
       };
       case 'cloth': return {
-        color: PAL.shirt, map: pick('cloth_shirt_blue', C.detail), normalMap: C.normal,
+        color: PAL.shirt, map: C.detail, normalMap: nrm('cloth_shirt_blue', C.normal),
         normalScale: 0.75, repeat: [4, 4], sss: 0.14, rim: TUNE.rim * 0.85,
         spec: 0.10, gloss: 22, detail: 'cloth',
       };
       case 'clothDark': return {
-        color: PAL.shirtDark, map: pick('leather_boot', C.detail), normalMap: C.normal,
+        color: PAL.shirtDark, map: C.detail, normalMap: nrm('leather_boot', C.normal),
         normalScale: 0.85, repeat: [4, 4], sss: 0.10, rim: TUNE.rim * 0.95,
         spec: 0.18, gloss: 34, detail: 'cloth',
       };
       case 'gold': return {
-        color: PAL.gold, map: pick('gold_cane', M.detail), normalMap: M.normal,
+        color: PAL.gold, map: M.detail, normalMap: nrm('gold_cane', M.normal),
         normalScale: 0.7, repeat: [2, 2], sss: 0.0, rim: 0.5,
         spec: 0.9, gloss: 96, metal: true, detail: 'metal',
       };

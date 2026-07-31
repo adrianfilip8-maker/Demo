@@ -88,7 +88,8 @@ const TUNE = {
   colPatrol: 0xfff0c2,     // §2.2 sun, pushed pale: a lamp, not a headlight
   colWarn: 0xffb14a,
   colAlert: 0xff3a22,
-  beamBase: 0.42,          // intensity floor while patrolling
+  beamBase: 0.58,          // intensity floor while patrolling. The night frames it has to
+                           // carry are near-black, so the beam is the hero read in them.
   beamGain: 0.85,          // extra brightness per unit of Senses.gain
   beamAlert: 1.55,         // multiplier once he is actually chasing
   beamFlicker: 0.09,
@@ -119,20 +120,29 @@ const ITEMS = {
   scarab: ['lapis chip', 'turquoise bead', null, null],
 };
 
-/* Guards never make the shot's subject wait: which roster index each canonical shot
-   stars, and how it is posed. Anything not listed keeps patrolling normally. */
 /**
- * `guard` (§7.2) frames a 38° lens from (3, 2, 4.2) at (−0.8, 1.5, 0). Two things have to
- * happen in it at once: the character has to read, and his cone has to read as light.
+ * Which canonical shot (§7.2) each guard stars in, and how he is posed. Anything not listed
+ * keeps patrolling normally.
  *
- * They pull against each other — the beam comes out of his face, so a shot of his face is a
- * shot of the beam end-on. The resolution is a three-quarter profile: he stands 7 m down the
- * lens axis and a third of the way right of centre, turned so the beam rakes across the
- * frame to the left and 20° toward the viewer. You get his muzzle, nemes, spear and tail in
- * silhouette on the right, and 15 m of beam plus its pool sweeping the pavement on the left.
+ * The subject is **placed by probing the level**, not by literal coordinates. The `guard`
+ * camera is fixed at (3, 2, 4.2) on a 38° lens, but the geometry in front of it is not mine
+ * and has already moved once: the first attempt at hardcoded coordinates put the guard on a
+ * terrace 2.8 m above the lens, entirely out of frame, because ARCHITECTURE built up where
+ * §8.1 says the courtyard is flat. `_solveShotPose` instead walks out along the lens axis,
+ * ground-probes each candidate, checks the camera can actually see it, and keeps the stand
+ * that frames him best — so the shot survives whatever the level does next.
+ *
+ * `x`/`z` are only the fallback for when COLLISION isn't up.
  */
 const SHOT_POSE = {
-  guard: { index: 0, x: -0.70, z: -1.81, yaw: -0.670, clip: 'look_around', t: 1.15, look: [0.30, -0.05] },
+  guard: {
+    index: 0, clip: 'look_around', t: 1.15, look: [0.30, -0.05],
+    x: -0.70, z: -1.81, yaw: -0.670,
+    /* Aim him so the beam rakes across the frame instead of down the barrel: side-on to the
+       lens, tipped this far back toward the viewer so we still catch his muzzle and nemes. */
+    towardCamera: 0.35, screenSide: -1,
+    minDist: 4.5, maxDist: 17,
+  },
 };
 
 /* ============================ cone shaders ================================ */
@@ -1658,9 +1668,13 @@ export class Guards {
     g.state = STATE.PATROL;
     g.dwell = 99; g.dwellAction = 'look';
     g.u = 0;
-    g.position.set(spec.x, g.position.y, spec.z);
-    g._place(g.position);
-    g.yaw = spec.yaw;
+
+    const solved = this._solveShotPose(g, spec);
+    if (!solved) {
+      g.position.set(spec.x, g.position.y, spec.z);
+      g._place(g.position);
+      g.yaw = spec.yaw;
+    }
     g.forward.set(Math.sin(g.yaw), 0, Math.cos(g.yaw));
     g.speed = 0;
     g.root.position.copy(g.position);
@@ -1670,6 +1684,98 @@ export class Guards {
     g.root.updateMatrixWorld(true);
     g.senses.blockedLength = g.vision.coneLength;
     this._shotLock = g;
+  }
+
+  /**
+   * Stand the subject somewhere the fixed camera can actually see him.
+   *
+   * Walks out along the lens axis, ground-probes each candidate, throws away anything the
+   * camera has no line of sight to, and scores the rest on how well the guard's silhouette
+   * fills the frame — head inside the top edge, feet inside the bottom, body centred. The
+   * winner also decides his heading, computed from the live camera basis so the beam always
+   * rakes across the frame rather than into the lens.
+   *
+   * @returns {boolean} true if it found a stand; false to fall back to the authored one.
+   */
+  _solveShotPose(g, spec) {
+    const cam = this.engine.camera;
+    const col = this.collision;
+    if (!cam || !col?.groundCheck || col.ready === false) return false;
+
+    cam.updateMatrixWorld(true);
+    _v1.setFromMatrixPosition(cam.matrixWorld);          // camera position
+    cam.getWorldDirection(_dir);                          // camera forward
+    _rgt.crossVectors(_dir, WORLD_UP);
+    if (_rgt.lengthSq() < 1e-6) _rgt.set(1, 0, 0);
+    _rgt.normalize();                                     // camera right, in world
+
+    const halfV = THREE.MathUtils.degToRad((cam.fov ?? 50) * 0.5);
+    const height = (TUNE.headTop[g.type] ?? 1.95) + 0.15;
+    const side = spec.screenSide ?? -1;
+
+    /* Two passes. The first insists the camera has clear line of sight to his chest; if the
+       level leaves no such stand at all — the courtyard around the origin is currently walled
+       in, whatever §8.1 says — the second takes the best framing available and lets the
+       geometry occlude what it will. An occluded guard is a bad shot; no guard is worse. */
+    const best = this._shotStand || (this._shotStand = { x: 0, y: 0, z: 0 });
+    let found = false;
+    for (let pass = 0; pass < 2 && !found; pass++) {
+      let bestScore = -Infinity;
+      for (let d = spec.minDist ?? 4.5; d <= (spec.maxDist ?? 17); d += 0.5) {
+        // A third of the way off-centre, on the side the beam is NOT sweeping into.
+        const lateral = -side * 0.34 * d * Math.tan(halfV) * (cam.aspect || 1.78);
+        _v2.copy(_v1).addScaledVector(_dir, d).addScaledVector(_rgt, lateral);
+
+        _v3.set(_v2.x, _v1.y + 6, _v2.z);
+        let gp = null;
+        try { gp = col.groundCheck(_v3, 0.4, 26); } catch { gp = null; }
+        if (!gp?.hit || !Number.isFinite(gp.y)) continue;
+
+        if (pass === 0) {
+          // Can the camera see his chest, or is a terrace in the way?
+          _v3.set(_v2.x, gp.y + height * 0.55, _v2.z).sub(_v1);
+          const reach = _v3.length();
+          let block = null;
+          try { block = col.raycast(_v1, _v3, reach, RAY_OPTS); } catch { block = null; }
+          if (block?.hit && block.distance < reach - 0.6) continue;
+        }
+
+        /* Screen-space fit, −1 (bottom edge) to +1 (top edge) at this depth. */
+        const axis = _v1.y + _dir.y * d;                 // where the lens axis sits at depth d
+        const half = Math.tan(halfV) * d;
+        const feet = (gp.y - axis) / half;
+        const head = (gp.y + height - axis) / half;
+        if (head > 0.94 || feet < -0.96) continue;
+
+        const fill = head - feet;                         // fraction of frame height he covers
+        const centre = Math.abs((head + feet) * 0.5);
+        const score = fill * 1.6 - centre * 1.1;
+        if (score > bestScore) {
+          bestScore = score;
+          best.x = _v2.x; best.y = gp.y; best.z = _v2.z;
+          found = true;
+        }
+      }
+    }
+
+    if (!found) return false;
+    g.position.set(best.x, best.y, best.z);
+    g.hadGround = true;
+
+    /* Heading: side-on to the lens so the beam crosses the frame, then tipped `towardCamera`
+       back at the viewer so his muzzle and nemes read rather than the back of his head.
+       `−camForward` is "toward the lens", so subtracting it is the tip we want. */
+    _v3.set(_rgt.x, 0, _rgt.z);
+    if (_v3.lengthSq() < 1e-6) return true;
+    _v3.normalize().multiplyScalar(side);                  // pure profile, beam to screen-`side`
+    const t = clamp(spec.towardCamera ?? 0.35, 0, 0.9);
+    _v2.set(_dir.x, 0, _dir.z);
+    if (_v2.lengthSq() > 1e-6) _v2.normalize();
+    _v3.multiplyScalar(Math.sqrt(Math.max(0, 1 - t * t))).addScaledVector(_v2, -t);
+    if (_v3.lengthSq() < 1e-6) return true;
+    _v3.normalize();
+    g.yaw = Math.atan2(_v3.x, _v3.z);
+    return true;
   }
 
   /**

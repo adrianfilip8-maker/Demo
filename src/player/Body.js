@@ -611,12 +611,27 @@ export function makeMetalMaps(size = 256, seed = 33) {
   return { normal: heightToNormal(h, size, 1.9), detail: grayTexture(alb, size) };
 }
 
-/** Deterministic per-vertex tone jitter so no fur region is a single flat value. */
-export function furTint(base, out, x, y, z, amount = 0.055, seed = 4) {
+/**
+ * Deterministic per-vertex tone jitter so no fur region is a single flat value.
+ *
+ * **Vertex colour is a MULTIPLIER**, in every shader path three.js offers — it lands as
+ * `diffuseColor *= vColor`. So this returns a value centred on white. Writing an absolute
+ * palette colour here squares the material colour instead of modulating it: shirt-blue
+ * `#2f7fc4` under a shirt-blue material resolves to `#083f97`, fur `#7a8ba8` under fur to
+ * `#3a4c6e`, and every group collapses into the same near-black navy. That is precisely how
+ * a model with a cap, a mask, a ringed tail and a cream chest rendered as one flat purple
+ * mannequin. Hue and value belong to the material; this only breaks up the surface.
+ *
+ * `shift` is an optional deliberate offset on top of the jitter — a number to lift or drop
+ * a region's value, or a THREE.Color to push its hue. Default (null) = pure neutral.
+ */
+export function furTint(out, x, y, z, amount = 0.055, seed = 4, shift = null) {
   const n = fbm2(x * 5.5 + 20, y * 5.5 + z * 3.1, { octaves: 3, seed });
   const m = valueNoise2(y * 13.0, z * 13.0 + x * 7.0, seed + 11);
   const k = 1 + (n - 0.5) * 2 * amount + (m - 0.5) * amount * 0.7;
-  out.setRGB(base.r * k, base.g * k, base.b * k);
+  if (shift === null) out.setRGB(k, k, k);
+  else if (typeof shift === 'number') out.setRGB(k * shift, k * shift, k * shift);
+  else out.setRGB(k * shift.r, k * shift.g, k * shift.b);
   return out;
 }
 

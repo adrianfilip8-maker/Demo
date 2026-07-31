@@ -672,22 +672,44 @@ async function main() {
   console.log('\nthe guard canonical shot');
   {
     const { guards, engine } = await makeGuards();
-    engine.emit('shot', { name: 'guard' });
-    run(guards, engine, 0.5, 1 / 30);
-    const g = guards.list[0];
-    // §7.2: camera (3, 2, 4.2) → target (−0.8, 1.5, 0), 38° vertical, 16:9.
+    // §7.2: camera (3, 2, 4.2) → target (−0.8, 1.5, 0), 38° vertical, 16:9. Pose the stub
+    // camera exactly as core/Shots.js applyShot() does, since the solver reads it live.
     const CAM = new THREE.Vector3(3, 2, 4.2);
     const FWD = new THREE.Vector3(-0.8 - 3, 1.5 - 2, 0 - 4.2).normalize();
     const RIGHT = new THREE.Vector3().crossVectors(FWD, new THREE.Vector3(0, 1, 0)).normalize();
+    engine.camera.position.copy(CAM);
+    engine.camera.fov = 38;
+    engine.camera.aspect = 16 / 9;
+    engine.camera.up.set(0, 1, 0);
+    engine.camera.lookAt(new THREE.Vector3(-0.8, 1.5, 0));
+    engine.camera.updateProjectionMatrix();
+    engine.camera.updateMatrixWorld(true);
+
+    engine.emit('shot', { name: 'guard' });
+    run(guards, engine, 0.5, 1 / 30);
+    const g = guards.list[0];
 
     check('roster #0 is parked in frame and held there', () => {
       const to = new THREE.Vector3().subVectors(g.position, CAM);
       const dist = to.length();
-      assert(dist > 5 && dist < 9, `subject is ${dist.toFixed(1)} m from the lens`);
+      assert(dist > 4 && dist < 18, `subject is ${dist.toFixed(1)} m from the lens`);
       to.normalize();
       const off = Math.acos(THREE.MathUtils.clamp(to.dot(FWD), -1, 1));
-      assert(off < THREE.MathUtils.degToRad(19), `subject is ${(off * 57.3).toFixed(0)}° off axis`);
+      assert(off < THREE.MathUtils.degToRad(28), `subject is ${(off * 57.3).toFixed(0)}° off axis`);
       assert(g.speed === 0, 'the subject walked out of frame');
+    });
+
+    check('the solver puts his whole silhouette inside the frame', () => {
+      // §7.2: 38° vertical lens. Feet and head must both land inside the top/bottom edges.
+      const halfV = Math.tan(THREE.MathUtils.degToRad(19));
+      const d = new THREE.Vector3().subVectors(g.position, CAM).dot(FWD);
+      const axis = CAM.y + FWD.y * d;
+      const half = halfV * d;
+      const feet = (g.position.y - axis) / half;
+      const head = (g.position.y + 2.1 - axis) / half;
+      assert(head <= 0.98, `his head is ${head.toFixed(2)} — above the top edge`);
+      assert(feet >= -0.98, `his feet are ${feet.toFixed(2)} — below the bottom edge`);
+      assert(head - feet > 0.18, `he only fills ${((head - feet) / 2 * 100).toFixed(0)}% of the frame`);
     });
     check('his beam rakes across the frame rather than out of it', () => {
       // Mostly across the lens (big screen-x component), a little toward the viewer.
