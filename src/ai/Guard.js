@@ -78,6 +78,7 @@ const TUNE = {
          the analytic cone normal undefined and NaN varyings bleed into the first band. --- */
   coneSeg: 26,
   coneRings: [0.02, 0.06, 0.14, 0.27, 0.44, 0.66, 0.85, 1.0],
+  coneMinThrow: 0.55,      // never clip the beam below this fraction of its authored length
   conePitch: 0.115,        // radians below horizontal — a guard scans the ground, not the sky
   // The apex sits well clear of his own skull: a cone starting inside the head washes an
   // additive white haze over his chest and kills the very silhouette it should reveal.
@@ -1189,7 +1190,15 @@ export class Guards {
       depthWrite: false,
       depthTest: true,
       blending: THREE.AdditiveBlending,
+      /* Pre-multiplied, or three blends with (SRC_ALPHA, ONE) and the beam lands on screen
+         as colour × alpha² — the shader's own brightness curve squared, which is most of
+         why it read as nothing at all against a night frame. */
+      premultipliedAlpha: true,
       side: THREE.DoubleSide,
+      /* Without this three draws every DoubleSide transparent mesh twice — back then front —
+         flipping `material.side` and setting `needsUpdate` on both, which rebuilds the
+         program every single frame. The GPU rasterises both facings in one pass anyway. */
+      forceSinglePass: true,
       toneMapped: true,
       fog: false,
     });
@@ -1246,7 +1255,15 @@ export class Guards {
       depthWrite: false,
       depthTest: true,
       blending: THREE.AdditiveBlending,
+      /* Pre-multiplied, or three blends with (SRC_ALPHA, ONE) and the beam lands on screen
+         as colour × alpha² — the shader's own brightness curve squared, which is most of
+         why it read as nothing at all against a night frame. */
+      premultipliedAlpha: true,
       side: THREE.DoubleSide,
+      /* Without this three draws every DoubleSide transparent mesh twice — back then front —
+         flipping `material.side` and setting `needsUpdate` on both, which rebuilds the
+         program every single frame. The GPU rasterises both facings in one pass anyway. */
+      forceSinglePass: true,
       toneMapped: true,
       fog: false,
     });
@@ -1512,11 +1529,15 @@ export class Guards {
       const cp = Math.cos(pitch);
       _dir.set(g.forward.x * cp, -Math.sin(pitch), g.forward.z * cp).normalize();
 
-      /* Clip the throw to the first thing in front of him: a beam that shoots through a pylon
-         and reappears beyond it is the single fastest way to look like a debug overlay.
-         Never let it reach zero — a singular instance matrix makes the analytic cone normal
-         NaN and paints the frame white. A dark cone is invisible; a NaN cone is a bug report. */
-      const reach = Math.max(0.05, g.senses.updateReach(
+      /* Clip the throw to the first thing in front of him — a beam that shoots through a pylon
+         and out the far side is the fastest way to look like a debug overlay.
+         But only so far. `Senses.updateReach` casts a single ray straight down the axis, and
+         a 34°-wide cone whose axis happens to clip a doorframe at 2 m is still 90% in open
+         air; collapsing the whole volume to a 1.6 m stub made the beam vanish outright in the
+         cluttered half of the temple. The floor below keeps it readable and lets the depth
+         test do the fine occlusion, which it does per pixel and correctly. */
+      const throwFloor = cfg.coneLength * TUNE.coneMinThrow;
+      const reach = Math.max(throwFloor, g.senses.updateReach(
         this.collision && this.collision.ready !== false ? this.collision : null, _eye, _dir, dt));
       g.reach = reach;
 

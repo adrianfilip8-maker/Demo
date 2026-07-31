@@ -122,6 +122,7 @@ const TUNE = {
   cloudBands: 3,            // cel quantisation of cloud lighting (§2.1.1)
   cloudLightStep: 0.030,    // uv offset toward the sun used for the self-shadow gradient
   cloudRimPower: 3.2,
+  cloudHazeBlend: 0.42,     // how far a receding deck dissolves into the horizon haze
 
   sunCore: 26.0,            // HDR multiplier on the disc — bloom needs headroom, not white
   sunHaloWidth: 15.0,       // in multiples of the disc radius
@@ -310,9 +311,13 @@ const SKY_FRAG = /* glsl */`
     col = mix(col, uCloudShadow * 0.82, (1.0 - lit) * 0.45 * core);
 
     alpha = dens * opacity * smoothstep(0.004, 0.085, d.y);
-    // Decks dissolve into the haze as they recede — same curve as world geometry.
+    // Decks dissolve into the haze as they recede — same curve as world geometry. Pulled
+    // from 0.62 to 0.42: every canonical camera looks 0-15 degrees up, so *all* the cloud
+    // those shots can see sits deep in this term. At 0.62 the low deck resolved to a wall
+    // of warm haze, which measurably dragged the blue back out of the hero band even after
+    // the coverage was cut.
     float far = smoothstep(0.55, 0.03, d.y);
-    col = mix(col, uHaze, far * 0.62 * uCloudFade);
+    col = mix(col, uHaze, far * ${TUNE.cloudHazeBlend.toFixed(2)} * uCloudFade);
     alpha *= mix(1.0, 0.72, far);
     return mix(skyBehind, col, alpha);
   }

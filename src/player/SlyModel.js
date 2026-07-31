@@ -19,6 +19,14 @@ import { Cane } from './Cane.js';
  *   · Bind pose is a relaxed A-pose (arms 40° below horizontal). The *default* pose applied on
  *     top of bind is `idle_confident`, so a frame taken before ANIMATION exists is never a
  *     T-pose mannequin.
+ *
+ * ⚠ ANIMATION please note: because the bind IS an A-pose, `Rig.commit()`'s
+ * `else b.quaternion.identity()` branch renders a literal A-pose for any bone a pose buffer
+ * does not drive. Every clip in `Clips.js` currently drives all 31 bones, so it never fires —
+ * but it means a partially-authored clip fails into the one silhouette §7.3 auto-fails on,
+ * rather than into the previous frame or the default idle. Holding the previous value would
+ * fail soft instead. Changing the bind here is not the fix: every clip is authored as rotations
+ * on top of it, so moving it would shift all 52.
  */
 
 /* ============================ TUNE ======================================== */
@@ -39,7 +47,7 @@ export const TUNE = {
   rimColor: 0x7fd4ff,
   furSSS: 0.38,           // warm wrap-through; the single biggest "this is fur" cue
   bands: 3,
-  furTintAmount: 0.075,   // per-vertex tone break-up so no region is a flat colour
+  furTintAmount: 0.095,   // per-vertex tone break-up so no region is a flat colour
   tuftDensity: 1.0,
 
   /* --- idle life, only used while ANIMATION is absent --- */
@@ -48,10 +56,10 @@ export const TUNE = {
   tailIdleRate: 0.42,
   tailIdleAmp: 0.055,
 
-  segLimb: 14,            // radial segments: limbs
-  segTorso: 22,
-  segHead: 26,
-  segTail: 20,
+  segLimb: 13,            // radial segments: limbs
+  segTorso: 20,
+  segHead: 22,
+  segTail: 18,
 };
 
 /* ============================ PALETTE ===================================== */
@@ -61,7 +69,10 @@ export const TUNE = {
  * values are deliberately spread apart on a value ladder, because "flat single colour" is an
  * auto-fail and two materials three points apart in luminance read as one under a cel ramp:
  *
- *   cream 0.84 · gold 0.72 · furMid 0.55 · shirt 0.42 · clothDark 0.24 · tailDark 0.14 · ink 0.06
+ *   cream 0.87 · gold 0.73 · furMid 0.54 · shirt 0.45 · clothDark 0.28 · tailDark 0.19 · ink 0.07
+ *
+ * These are *material* colours only. Vertex colour on this mesh is a neutral multiplier — see
+ * the contract note on Body.furTint before writing a palette value into a `colorAt`.
  */
 const PAL = {
   furMid: 0x7a8ba8,       // §2.1 slate blue-grey — the fur
@@ -128,9 +139,9 @@ const SKELETON = [
      behind the body from every camera angle except pure side-on, which is how a 1.1 m tail
      managed to read as "no tail at all". ANIMATION's clip rotations compose on top of this. */
   ['tailA', 'hips', [0, 0.898, -0.135]],
-  ['tailB', 'tailA', [0.012, 0.896, -0.445]],
-  ['tailC', 'tailB', [0.032, 0.928, -0.748]],
-  ['tailD', 'tailC', [0.058, 1.008, -0.996]],
+  ['tailB', 'tailA', [0.016, 0.896, -0.445]],
+  ['tailC', 'tailB', [0.044, 0.928, -0.748]],
+  ['tailD', 'tailC', [0.080, 1.008, -0.996]],
 ];
 
 /**
@@ -522,29 +533,33 @@ export class SlyModel {
   /**
    * The tail. Deliberately enormous: the brief calls it half his silhouette and it is the
    * one shape that makes a slate-blue biped read as a raccoon at 40 px tall. Four bones so
-   * ANIMATION can whip it; five dark rings; tufts along the top so the outline is ragged.
+   * ANIMATION can whip it; six dark rings; tufts all the way round so the outline is ragged
+   * on both edges — a tail smooth along one whole side reads as upholstery, not fur.
    */
   _buildTail(mb) {
     const S = TUNE.tailScale;
-    /* Follows the bind bone chain: back off the hips, then sweeping up into a raised hook.
-       Read the profile below with this in mind — the fat part of the tail sits *above* the
-       hips, at head height, where it silhouettes against sky instead of against his own back. */
+    /* Follows the bind bone chain: back off the hips, then sweeping up and a little out to his
+       left. Both departures from "straight behind" are deliberate — a tail that leaves the hips
+       horizontally is hidden by the body from every camera angle except pure side-on, which is
+       how a 1.1 m tail managed to be recorded as "no tail at all". ANIMATION's clip rotations
+       compose on top, so this only has to *start* the arc, not finish it. */
     const spine = resample([
       new THREE.Vector3(0.000, 0.898, -0.070 * S),
-      new THREE.Vector3(0.002, 0.895, -0.200 * S),
-      new THREE.Vector3(0.007, 0.894, -0.340 * S),
-      new THREE.Vector3(0.015, 0.899, -0.480 * S),
-      new THREE.Vector3(0.026, 0.913, -0.618 * S),
-      new THREE.Vector3(0.040, 0.941, -0.748 * S),
-      new THREE.Vector3(0.056, 0.983, -0.864 * S),
-      new THREE.Vector3(0.073, 1.039, -0.958 * S),
-      new THREE.Vector3(0.089, 1.105, -1.024 * S),
-      new THREE.Vector3(0.102, 1.174, -1.066 * S),
+      new THREE.Vector3(0.003, 0.895, -0.200 * S),
+      new THREE.Vector3(0.010, 0.894, -0.340 * S),
+      new THREE.Vector3(0.021, 0.899, -0.480 * S),
+      new THREE.Vector3(0.036, 0.913, -0.618 * S),
+      new THREE.Vector3(0.055, 0.941, -0.748 * S),
+      new THREE.Vector3(0.077, 0.983, -0.864 * S),
+      new THREE.Vector3(0.100, 1.039, -0.958 * S),
+      new THREE.Vector3(0.122, 1.105, -1.024 * S),
+      new THREE.Vector3(0.141, 1.174, -1.066 * S),
     ], 32);
 
-    /* Girth: at its widest the tail is 0.36 m across — wider than his 0.23 m chest and level
-       with his 0.35 m head. That ratio is not an exaggeration of the reference, it *is* the
-       reference; a tail slimmer than the torso reads as a rope. */
+    /* Girth: at its widest the tail is 0.36 m across — wider than his 0.27 m chest and close to
+       his 0.41 m head. That ratio is not an exaggeration of the reference, it *is* the
+       reference; a tail slimmer than the torso reads as a rope. The root stays narrow (0.058)
+       so the fat lobe reads as its own mass rather than as a hump on his back. */
     const radius = (t) => {
       const prof = [
         [0.00, 0.058], [0.09, 0.098], [0.20, 0.150], [0.36, 0.180],
@@ -960,14 +975,13 @@ export class SlyModel {
   _buildMuzzle(mb) {
     const S = TUNE.headScale;
     const key = [
-      [new THREE.Vector3(0, 1.566, 0.040), 0.102, 0.088],
-      [new THREE.Vector3(0, 1.556, 0.118), 0.106, 0.090],
-      [new THREE.Vector3(0, 1.541, 0.192), 0.096, 0.080],
-      [new THREE.Vector3(0, 1.522, 0.258), 0.079, 0.066],
-      [new THREE.Vector3(0, 1.503, 0.312), 0.058, 0.049],
-      [new THREE.Vector3(0, 1.489, 0.352), 0.030, 0.026],
+      [new THREE.Vector3(0, 1.564, 0.040), 0.102, 0.088],
+      [new THREE.Vector3(0, 1.559, 0.118), 0.106, 0.090],
+      [new THREE.Vector3(0, 1.550, 0.192), 0.096, 0.080],
+      [new THREE.Vector3(0, 1.539, 0.258), 0.079, 0.066],
+      [new THREE.Vector3(0, 1.528, 0.312), 0.058, 0.049],
+      [new THREE.Vector3(0, 1.519, 0.352), 0.030, 0.026],
     ];
-    const c = this.headCenter;
     addTube(mb, {
       centers: key.map((k) => new THREE.Vector3(0, hy(k[0].y), hx(k[0].z))),
       seg: 20,
@@ -1034,23 +1048,23 @@ export class SlyModel {
 
     // sclera
     addEllipsoid(mb, {
-      center: c, radii: new THREE.Vector3(0.049 * S, 0.052 * S, 0.050 * S), basis,
-      segTheta: 18, segPhi: 12,
+      center: c, radii: new THREE.Vector3(0.057 * S, 0.060 * S, 0.058 * S), basis,
+      segTheta: 14, segPhi: 9,
       group: 'eye', sg: mb.newSg(), weights: [['head', 1]],
     });
     // pupil — big and cartoon, sitting proud of the sclera so it never z-fights
-    const pc = c.clone().addScaledVector(outward, 0.030 * S).addScaledVector(trueUp, 0.002 * S);
+    const pc = c.clone().addScaledVector(outward, 0.036 * S).addScaledVector(trueUp, 0.002 * S);
     addEllipsoid(mb, {
-      center: pc, radii: new THREE.Vector3(0.026 * S, 0.031 * S, 0.026 * S), basis,
-      segTheta: 14, segPhi: 9,
+      center: pc, radii: new THREE.Vector3(0.031 * S, 0.037 * S, 0.031 * S), basis,
+      segTheta: 12, segPhi: 8,
       group: 'ink', sg: mb.newSg(), weights: [['head', 1]],
     });
     // highlight on the pupil: the "alive" cue. Sits on black, so it reads at any size.
-    const hc = pc.clone().addScaledVector(outward, 0.019 * S)
-      .addScaledVector(trueUp, 0.013 * S).addScaledVector(right, -side * 0.010 * S);
+    const hc = pc.clone().addScaledVector(outward, 0.023 * S)
+      .addScaledVector(trueUp, 0.016 * S).addScaledVector(right, -side * 0.012 * S);
     addEllipsoid(mb, {
-      center: hc, radii: new THREE.Vector3(0.011 * S, 0.011 * S, 0.010 * S), basis,
-      segTheta: 10, segPhi: 7,
+      center: hc, radii: new THREE.Vector3(0.013 * S, 0.013 * S, 0.012 * S), basis,
+      segTheta: 8, segPhi: 5,
       group: 'eye', sg: mb.newSg(), weights: [['head', 1]],
     });
 
@@ -1060,9 +1074,9 @@ export class SlyModel {
     const lidRight = new THREE.Vector3().crossVectors(lidUp, outward).normalize();
     addEllipsoid(mb, {
       center: c.clone().addScaledVector(outward, 0.002 * S),
-      radii: new THREE.Vector3(0.053 * S, 0.056 * S, 0.054 * S),
+      radii: new THREE.Vector3(0.061 * S, 0.064 * S, 0.062 * S),
       basis: { x: lidRight, y: lidUp, z: outward },
-      segTheta: 18, segPhi: 6, phi0: 0.18, phi1: Math.PI / 2,
+      segTheta: 14, segPhi: 5, phi0: 0.18, phi1: Math.PI / 2,
       group: 'fur', sg: mb.newSg(), weights: [['head', 1]],
       colorAt: (u, v, p) => furTint(_c, p.x, p.y, p.z, 0.03, 4, 0.74),
     });
@@ -1070,11 +1084,11 @@ export class SlyModel {
 
   _buildNose(mb) {
     const S = TUNE.headScale;
-    const c = new THREE.Vector3(0, hy(1.502), hx(0.348));
+    const c = new THREE.Vector3(0, hy(1.530), hx(0.348));
     addEllipsoid(mb, {
       center: c,
       radii: new THREE.Vector3(0.031 * S, 0.024 * S, 0.024 * S),
-      segTheta: 14, segPhi: 9,
+      segTheta: 12, segPhi: 7,
       group: 'ink', sg: mb.newSg(), weights: [['head', 1]],
       // narrow the bottom into the triangular raccoon nose
       warp: (p, ft, fp) => {
@@ -1090,14 +1104,14 @@ export class SlyModel {
     const S = TUNE.headScale;
     const P = (x, y, z) => new THREE.Vector3(hx(x), hy(y), hx(z));
     const line = resample([
-      P(-0.070, 1.494, 0.236),
-      P(-0.042, 1.479, 0.294),
-      P(-0.010, 1.474, 0.322),
-      P(0.023, 1.478, 0.320),
-      P(0.055, 1.495, 0.290),
-      P(0.078, 1.516, 0.234),
+      P(-0.070, 1.512, 0.238),
+      P(-0.042, 1.500, 0.296),
+      P(-0.010, 1.496, 0.324),
+      P(0.023, 1.500, 0.322),
+      P(0.055, 1.516, 0.292),
+      P(0.078, 1.534, 0.236),
     ], 16);
-    const muzzleC = P(0, 1.534, 0.180);
+    const muzzleC = P(0, 1.552, 0.180);
     addPatch(mb, {
       segU: 15, segV: 2,
       group: 'ink', sg: mb.newSg(),
@@ -1194,16 +1208,16 @@ export class SlyModel {
   /* ---------------------------- cap ------------------------------------- */
 
   /**
-   * Cyan newsboy cap. Puffy eight-panel crown with a scalloped radius, tipped forward, plus a
-   * stiff dark brim on its own bone so ANIMATION can flick it. With the mask and the tail this
-   * is one of the three shapes that has to survive being filled solid black.
+   * Cyan newsboy cap: puffy eight-panel crown, a hard dark hem band, and a long stiff bill on
+   * its own bone so ANIMATION can flick it. With the mask and the tail this is one of the three
+   * shapes that has to survive being filled solid black — and it is the one that was failing.
    */
   _buildCap(mb) {
     const S = TUNE.headScale;
     const pivot = new THREE.Vector3(0, 1.640, 0.0);   // in *unscaled* head space; place() maps it
     // Tipped down over the brow and cocked to his left. A level, symmetric cap reads as a
     // swimming hat; the cock is most of what makes it read as *his* cap.
-    const tilt = new THREE.Matrix4().makeRotationX(0.175).premultiply(new THREE.Matrix4().makeRotationZ(0.105));
+    const tilt = new THREE.Matrix4().makeRotationX(0.062).premultiply(new THREE.Matrix4().makeRotationZ(0.098));
     const place = (p) => {
       p.sub(pivot).applyMatrix4(tilt).add(pivot);
       p.set(hx(p.x), hy(p.y), hx(p.z));
@@ -1214,10 +1228,10 @@ export class SlyModel {
      *
      * The old crown peaked at 0.201 against a 0.171 skull — a 3 cm lip, which is nothing at
      * silhouette scale and is exactly why the critic recorded "no cap; the head is a bare
-     * rounded lump". This one peaks at 0.262: it *overhangs* the skull by half a head-radius,
-     * so the profile steps out hard above the ears and the cap becomes its own shape rather
-     * than a hat-coloured patch of scalp. It is also pulled back and up into a soft newsboy
-     * lozenge instead of a dome concentric with the cranium.
+     * rounded lump". This one peaks at 0.232 against the same 0.171 skull and is pulled back
+     * and up off the cranium, so the profile steps out hard above the ears and the cap becomes
+     * its own soft newsboy lozenge rather than a hat-coloured patch of scalp. Bigger than this
+     * and it swallows the ears, which cost more silhouette than the extra bulk buys.
      */
     const C = [
       [1.598, 0.180, 0.190, 0.004],
@@ -1232,7 +1246,7 @@ export class SlyModel {
       [1.830, 0.018, 0.019, -0.064],
     ];
     addTube(mb, {
-      centers: C.map(([y, , , cz]) => new THREE.Vector3(0, y, cz)), seg: 32,
+      centers: C.map(([y, , , cz]) => new THREE.Vector3(0, y, cz)), seg: 26,
       rx: (i) => C[i][1], ry: (i) => C[i][2],
       upHint: new THREE.Vector3(0, 0, 1),
       shape: (a, i) => {
@@ -1288,7 +1302,7 @@ export class SlyModel {
       const k = Math.abs(th) / TH;
       arc.push(place(new THREE.Vector3(
         Math.sin(th) * 0.224,
-        1.592 - 0.026 * Math.pow(k, 2),
+        1.610 - 0.030 * Math.pow(k, 2),
         0.004 + Math.cos(th) * 0.292,
       )));
     }
@@ -1333,8 +1347,8 @@ export class SlyModel {
         const out = base.clone().sub(this.headCenter).normalize();
         const dir = out.clone().addScaledVector(new THREE.Vector3(0, -1, -0.55), 0.55).normalize();
         put({
-          base, dir, length: (0.050 + 0.030 * (1 - Math.abs(f - 0.45) * 2)) * S,
-          width: 0.019 * S, bend: 0.30, bendDir: new THREE.Vector3(0, -1, 0),
+          base, dir, length: (0.042 + 0.024 * (1 - Math.abs(f - 0.45) * 2)) * S,
+          width: 0.017 * S, bend: 0.34, bendDir: new THREE.Vector3(0, -1, 0),
           group: 'fur', weights: [['head', 1]],
         });
       }
@@ -1470,28 +1484,19 @@ export class SlyModel {
 
   _makeTextures() {
     const size = this.engine.quality === 'low' ? 128 : (this.engine.quality === 'ultra' ? 512 : 256);
-    const tx = this.engine.get('textures');
     /**
-     * Only *normal* maps are borrowed from TEXTURES, never albedo.
+     * Sly's maps are entirely his own — nothing is pulled from TEXTURES.
      *
-     * A `map` multiplies the material colour, so an albedo from the shared library gets a
-     * second, uncontrolled say in the character's hue — and hue is exactly what §2.1 makes
-     * this file responsible for. The library's stone albedos are also currently the project's
-     * biggest defect, and the last thing Sly needs is that violet landing on his fur. His own
-     * detail maps below are authored near-white for the same reason.
+     * The library has no reason to author strand-flow fur or a helical grip wrap for one
+     * character, and both of its slots actively hurt here: an albedo *multiplies* the material
+     * colour, so a shared map gets a second uncontrolled say in the hue that §2.1 makes this
+     * file responsible for, and a stone normal at stone frequency turns fur into gravel. It
+     * also removes the crash vector — `textures.get()` returns a *bundle*, and handing that
+     * bundle to a material slot makes three.js read `.matrix` off a plain object and kill the
+     * frame mid-render. Nothing to unwrap if nothing is fetched.
+     *
+     * The detail albedos below are authored near-white on purpose: they modulate, never tint.
      */
-    this._shared = {};
-    for (const name of ['fur_sly', 'fur_tail_rings', 'cloth_shirt_blue', 'leather_boot', 'gold_cane']) {
-      let b = null;
-      try { b = tx?.get?.(name) ?? null; } catch { b = null; }
-      // Per AGENTS.md §4.4 textures.get() hands back a *bundle* of maps, not a texture.
-      // Passing the bundle into a material slot makes three.js read `.matrix` off a plain
-      // object and kills the frame mid-render, so unwrap the one slot we want.
-      const n = b && !b.isTexture ? b.normalMap : (b?.isTexture ? null : null);
-      this._shared[name] = n?.isTexture ? n : null;
-    }
-    // Own maps are always built: TEXTURES may be absent, and even when present it has no
-    // reason to author strand-flow fur for one character.
     this._fur = makeFurMaps(size, 7);
     this._cloth = makeClothMaps(size, 21);
     this._metal = makeMetalMaps(Math.min(size, 256), 33);
@@ -1523,46 +1528,54 @@ export class SlyModel {
     return t;
   }
 
+  /**
+   * Note what is *not* here: `detail`. SHADING's triplanar detail layer is projected in world
+   * space, which is wrong twice over for a character — it swims across the surface as he moves,
+   * and it is the same projection the critic recorded smearing along every curved, non-axis-
+   * aligned surface in the set. Sly is nothing but curved, non-axis-aligned surface. His fur
+   * and cloth detail comes from his own UV-mapped maps below, which follow the loft.
+   */
   _matSpec(group) {
-    const F = this._fur, C = this._cloth, M = this._metal, SH = this._shared;
-    // Albedo is always ours (near-white detail); only the normal may come from TEXTURES.
-    const nrm = (name, own) => SH[name] || own;
+    const F = this._fur, C = this._cloth, M = this._metal;
     switch (group) {
       case 'fur': return {
-        color: PAL.furMid, map: F.detail, normalMap: nrm('fur_sly', F.normal),
+        color: PAL.furMid, map: F.detail, normalMap: F.normal,
         normalScale: 1.15, repeat: [3, 3], sss: TUNE.furSSS, rim: TUNE.rim,
-        spec: 0.05, gloss: 10, detail: 'fur',
+        spec: 0.05, gloss: 10,
       };
       case 'furCream': return {
-        color: PAL.cream, map: F.detail, normalMap: nrm('fur_sly', F.normal),
+        color: PAL.cream, map: F.detail, normalMap: F.normal,
         normalScale: 1.05, repeat: [3, 3], sss: TUNE.furSSS + 0.06, rim: TUNE.rim * 0.9,
-        spec: 0.04, gloss: 10, detail: 'fur',
+        spec: 0.04, gloss: 10,
       };
       case 'furDark': return {
-        color: PAL.tailDark, map: F.detail, normalMap: nrm('fur_tail_rings', F.normal),
+        color: PAL.tailDark, map: F.detail, normalMap: F.normal,
         normalScale: 1.25, repeat: [3, 3], sss: TUNE.furSSS * 0.6, rim: TUNE.rim * 1.15,
-        spec: 0.06, gloss: 12, detail: 'fur',
+        spec: 0.06, gloss: 12,
       };
       case 'cloth': return {
-        color: PAL.shirt, map: C.detail, normalMap: nrm('cloth_shirt_blue', C.normal),
+        color: PAL.shirt, map: C.detail, normalMap: C.normal,
         normalScale: 0.75, repeat: [4, 4], sss: 0.14, rim: TUNE.rim * 0.85,
-        spec: 0.10, gloss: 22, detail: 'cloth',
+        spec: 0.10, gloss: 22,
       };
       case 'clothDark': return {
-        color: PAL.shirtDark, map: C.detail, normalMap: nrm('leather_boot', C.normal),
+        color: PAL.shirtDark, map: C.detail, normalMap: C.normal,
         normalScale: 0.85, repeat: [4, 4], sss: 0.10, rim: TUNE.rim * 0.95,
-        spec: 0.18, gloss: 34, detail: 'cloth',
+        spec: 0.18, gloss: 34,
       };
       case 'gold': return {
-        color: PAL.gold, map: M.detail, normalMap: nrm('gold_cane', M.normal),
+        color: PAL.gold, map: M.detail, normalMap: M.normal,
         normalScale: 0.7, repeat: [2, 2], sss: 0.0, rim: 0.5,
-        spec: 0.9, gloss: 96, metal: true, detail: 'metal',
+        spec: 0.9, gloss: 96, metal: true,
       };
       case 'ink': return {
         color: PAL.ink, sss: 0.0, rim: 0.30, spec: 0.05, gloss: 12, flat: true,
       };
       case 'eye': return {
-        color: PAL.eyeWhite, sss: 0.0, rim: 0.22, spec: 0.55, gloss: 80, emissive: 0x2a2418,
+        // A *neutral* whisper of self-illumination, not a warm one. At `tod: 0.02` the old warm
+        // emissive was the brightest thing on him and he read as "a cat in a hedge" — two yellow
+        // dots floating in black. The eyes should catch light, not emit it.
+        color: PAL.eyeWhite, sss: 0.0, rim: 0.22, spec: 0.55, gloss: 80, emissive: 0x121212,
       };
       default: return { color: 0xff00ff };
     }
@@ -1735,26 +1748,12 @@ export class SlyModel {
   /* ====================================================================== */
 
   _buildCane() {
+    /* One material, not two. The grip used to carry its own red-leather material, which cost a
+       draw call the character budget could not spare; it is now the same gold shaded darker by
+       vertex colour, which is honest now that vertex colour is a multiplier (see Body.furTint)
+       and still reads as a bound handle because the helical wrap is *geometry*, not texture. */
     const goldMat = this._material('gold');
-    const gripMat = this._material('grip') || null;
-    void gripMat;
-    const gripSpec = { color: 0xa83828, map: this._cloth.detail, normalMap: this._cloth.normal, repeat: [3, 3], sss: 0.12, rim: 0.45, spec: 0.12, gloss: 20 };
-    let grip;
-    const shading = this.engine.get('shading');
-    if (shading?.toon) {
-      try {
-        grip = shading.toon({
-          color: gripSpec.color, map: gripSpec.map, normalMap: gripSpec.normalMap,
-          bands: TUNE.bands, rim: gripSpec.rim, rimColor: TUNE.rimColor,
-          spec: gripSpec.spec, gloss: gripSpec.gloss, sss: gripSpec.sss, outline: 1.0,
-          skinning: false, vertexColors: true, side: THREE.FrontSide,
-        });
-        if (grip) { this._applyRepeat(gripSpec, grip); this._materials.push(grip); }
-      } catch { grip = null; }
-    }
-    if (!grip) grip = this._fallbackMaterial('grip', gripSpec);
-
-    this.cane = new Cane(this.engine).build([goldMat, grip]);
+    this.cane = new Cane(this.engine).build([goldMat]);
 
     /* A pivot inside the hand so the cane can be re-aimed without touching the hand pose.
        In bind pose a fist grips along ±Z, so the shaft (+Y local) is rotated onto it. */

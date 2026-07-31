@@ -136,6 +136,28 @@ export class Textures {
     const surface = new Surface(size, (recipe.seed ?? hashName(name)) >>> 0);
     recipe.build(surface, { seed: surface.seed, size, name, quality: this.engine.quality });
 
+    /* Joint sign, measured here because it needs the masonry masks, which live only as long as
+     * the Surface does. Two scalars kept, not the masks — a size² Float32Array per material
+     * would cost more than the whole texture budget. Both must come out negative: see
+     * `report()` for why a positive luma delta renders as bright grout. */
+    const joint = (() => {
+      const m = surface.masonry;
+      if (!m) return null;
+      let jy = 0, jh = 0, jn = 0, fy = 0, fh = 0, fn = 0;
+      for (let i = 0; i < surface.n; i++) {
+        const y = surface.r[i] * 0.2126 + surface.g[i] * 0.7152 + surface.b[i] * 0.0722;
+        if (m.joint[i] > 0.6) { jy += y; jh += surface.h[i]; jn++; }
+        else if (m.joint[i] < 0.05) { fy += y; fh += surface.h[i]; fn++; }
+      }
+      if (!jn || !fn) return null;
+      const dY = +((jy / jn) - (fy / fn)).toFixed(4);
+      const dH = +((jh / jn) - (fh / fn)).toFixed(4);
+      if (dY > 0 || dH > 0) {
+        this.engine.warn(`textures: "${name}" has an inverted joint (dLuma ${dY}, dHeight ${dH}) — mortar must be darker and lower than the block faces`);
+      }
+      return { dY, dH };
+    })();
+
     const out = derive(surface, {
       bump: recipe.bump ?? 0.03,
       tile: recipe.tile ?? 2.0,
@@ -192,6 +214,7 @@ export class Textures {
       metalnessMap: orm,
       emissiveMap,
       orm,
+      joint,
       repeat: rep,
       tile,
       normalScale: out.normalStrength,
@@ -285,37 +308,86 @@ export class Textures {
   }
 
   /**
-   * Per-material numbers, for isolating a look problem without a full capture: mean albedo (is
-   * the grade right?), baked normal strength (is the relief sane?), on-screen texel size and
-   * high-frequency luma RMS (does the detail read as material or as noise?).
+   * Per-material numbers, for isolating a look problem without a full capture.
+   *
+   * A capture on this container costs 2–5 minutes and arrives with lighting, post-processing and
+   * every other agent's work mixed in; these numbers come straight off the packed albedo and
+   * answer material questions in isolation. Four of them are worth explaining, because each one
+   * caught a defect in the scoring pass that was invisible in the source and obvious in a frame:
+   *
+   * - `lumaRms` — detail contrast at full resolution. High means "busy".
+   * - `mipRms` — the same measured after averaging 16×16 blocks, i.e. what survives to twenty
+   *   metres. This is the *blotchiness* number, and it is the one that matters for AGENTS §7.3's
+   *   squint test: high-frequency grain averages away and is fine, but a mottle that is still
+   *   there at mip 4 is a patch, and a wall of patches reads as camouflage. `granite_pink`
+   *   scored 0.087 here when the obelisk was reading as pink-and-violet confetti.
+   * - `darkTail` — the fraction of texels below the luminance of §2.2's `crevice #4a2f22`, which
+   *   the palette names as the darkest value in the sandstone ramp. This is the direct predictor
+   *   of the off-palette violet blotching, because the cel shader adds a flat `uShadowColor`
+   *   wash proportional to `1 - key`: on a texel with albedo left to dominate the result reads
+   *   as warm stone, and on a near-black texel the violet is all that is left. Stone recipes
+   *   should report ~0.
+   * - `jointDeltaY` / `jointDeltaH` — the joint-sign invariant, for any recipe built on
+   *   `ashlar`. **Both must be negative.** Mortar and recesses are darker and lower than the
+   *   faces they sit between; light collects on proud surfaces and dirt collects in the gaps.
+   *   `paving_courtyard` shipped with a positive luma delta and rendered as pale flags divided
+   *   by a raised white grid ("the floor reads as cracked ice").
+   *
    * `built` only — pass `all: true` to force the whole catalogue.
    */
   report({ all = false } = {}) {
     const names = all ? MATERIAL_NAMES : [...this._cache.keys()];
+    const CREVICE_LUMA = (0x4a * 0.2126 + 0x2f * 0.7152 + 0x22 * 0.0722) / 255;
     const rows = [];
     for (const name of names) {
       const set = all ? this.get(name) : this._cache.get(name);
       const src = set?.map?.image?.data;
       if (!src) { rows.push({ name, ok: false }); continue; }
       const ss = set.size, n = ss * ss;
-      let r = 0, g = 0, b = 0, l = 0, l2 = 0;
+      let r = 0, g = 0, b = 0, l = 0, l2 = 0, dark = 0;
+      const luma = new Float32Array(n);
       for (let i = 0; i < n; i++) {
         const o = i * 4;
         r += src[o]; g += src[o + 1]; b += src[o + 2];
         const y = (src[o] * 0.2126 + src[o + 1] * 0.7152 + src[o + 2] * 0.0722) / 255;
+        luma[i] = y;
         l += y; l2 += y * y;
+        if (y < CREVICE_LUMA) dark++;
       }
       const mean = l / n;
       const hex = (v) => Math.round(v / n).toString(16).padStart(2, '0');
       const tu = Array.isArray(set.tile) ? set.tile[0] : set.tile;
-      rows.push({
+
+      // Box-average down four levels, then measure again: what is still varying at 20 m.
+      let w = ss, cur = luma;
+      for (let lvl = 0; lvl < 4 && w > 8; lvl++) {
+        const h = w >> 1, next = new Float32Array(h * h);
+        for (let y = 0; y < h; y++) {
+          for (let x = 0; x < h; x++) {
+            const a = 2 * y * w + 2 * x;
+            next[y * h + x] = (cur[a] + cur[a + 1] + cur[a + w] + cur[a + w + 1]) * 0.25;
+          }
+        }
+        cur = next; w = h;
+      }
+      let mm = 0, mm2 = 0;
+      for (let i = 0; i < cur.length; i++) { mm += cur[i]; mm2 += cur[i] * cur[i]; }
+      mm /= cur.length;
+
+      const row = {
         name, ok: true, size: ss, group: set.group,
         albedo: `#${hex(r)}${hex(g)}${hex(b)}`,
         lumaRms: +Math.sqrt(Math.max(0, l2 / n - mean * mean)).toFixed(4),
+        mipRms: +Math.sqrt(Math.max(0, mm2 / cur.length - mm * mm)).toFixed(4),
+        darkTail: +(dark / n).toFixed(4),
         normalStrength: +(set.normalScale ?? 0).toFixed(2),
         mmPerTexel: +((tu / ss) * 1000).toFixed(2),
         tile: set.tile,
-      });
+      };
+
+      // Joint sign, measured at build time while the masonry masks were still alive.
+      if (set.joint) { row.jointDeltaY = set.joint.dY; row.jointDeltaH = set.joint.dH; }
+      rows.push(row);
     }
     return { rows, megabytes: +(this._bytes / 1048576).toFixed(1), built: this.stats.built };
   }

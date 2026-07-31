@@ -32,7 +32,12 @@ const TUNE = {
   edgeFadeEnd: 190,
   inkWarm: 0x1a1210,      // §2.1: lit-side line colour, a warm near-black
   inkCool: 0x161022,      // shadow-side line colour, violet
-  inkStrength: 0.85,      // was 0.60 — with the colour bug fixed the line can be a line
+  // Was 0.60. At that weight a line on a lit surface measured #44241c — a smear of the
+  // surface, not ink. The mask is already antialiased, so the softness of a line should come
+  // from the mask, not from letting the surface show through the middle of it. 0.95 puts the
+  // core of a line on the specified §2.1.2 colour and leaves a trace of the surface so it
+  // never reads as a flat stamp.
+  inkStrength: 0.95,
 
   /* --- bloom ---
      §7.3 wants "a tight coloured halo on bright things", not a wash. At threshold 1.02 with

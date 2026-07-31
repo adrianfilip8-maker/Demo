@@ -39,9 +39,10 @@ export const CANE_TUNE = {
 
 const PAL = {
   gold: 0xe8b942,
-  goldDark: 0x8a6216,
-  red: 0xa83828,
 };
+
+/* module scope: build() must not allocate per vertex */
+const _grip = new THREE.Color();
 
 export class Cane {
   constructor(engine, opts = {}) {
@@ -106,7 +107,6 @@ export class Cane {
       return Math.min(a, b);
     };
 
-    const isGrip = (i) => i < nR && sOf(i) < sHook && gripAmt(centers[i].y) > 0.5;
     const gripK = (i) => (i < nR && sOf(i) < sHook ? gripAmt(centers[i].y) : 0);
 
     addTube(mb, {
@@ -125,8 +125,11 @@ export class Cane {
         }
         return s;
       },
-      groupAt: (i) => (i < 900 && isGrip(i) ? 'grip' : 'gold'),
+      groupAt: () => 'gold',
       sgAt: () => 501,
+      // The grip is the same gold, dropped to a dark bronze. Vertex colour multiplies the
+      // material, so this is a value shift on one surface rather than a second draw call.
+      colorAt: (i) => _grip.setScalar(THREE.MathUtils.lerp(1, 0.34, gripK(i))),
       uvScale: [1, 1],
       capStart: false,
       capEnd: true,
@@ -163,7 +166,7 @@ export class Cane {
     });
 
     /* ---- geometry ------------------------------------------------------- */
-    const geo = mb.toGeometry(['gold', 'grip']);
+    const geo = mb.toGeometry(['gold']);
     geo.deleteAttribute('skinIndex');
     geo.deleteAttribute('skinWeight');
     this.triangles = mb.triangleCount;
@@ -189,12 +192,9 @@ export class Cane {
     const gold = new THREE.MeshStandardMaterial({
       color: PAL.gold, metalness: 0.85, roughness: 0.3, vertexColors: true,
     });
-    const grip = new THREE.MeshStandardMaterial({
-      color: PAL.red, metalness: 0.0, roughness: 0.75, vertexColors: true,
-    });
-    this._disposables.push(gold, grip);
+    this._disposables.push(gold);
     this._owned = true;
-    return [gold, grip];
+    return [gold];
   }
 
   setVisible(v) { this.object.visible = v; }

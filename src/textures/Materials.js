@@ -431,10 +431,17 @@ export const MATERIALS = {
       // Tura casing stone: enormous, tightly jointed, near-white, still faintly polished.
       const m = ashlar(s, {
         seed: cx.seed, courses: 4, aspect: 2.6, jointW: 0.0035, chamfer: 0.006,
-        // Tura limestone is laid in very fine joints, but "fine" is not "bright": the mortar hex
-        // has to sit below `limeMid` or the casing reads as a white grid on a white wall.
-        dark: PAL.limeDark, mid: PAL.limeMid, light: PAL.limeLight, mortar: 0x9c8d70,
-        relief: 0.05, dome: 0.02, groove: 0.22, spread: 0.55, rough: 0.44, grainFreq: 16, bedFreq: 2,
+        /* Tura casing stone was fitted so closely you cannot get a blade between two blocks, so
+         * the joint here has to be a *hairline* — present, correctly signed (below the faces,
+         * never above), and almost invisible. Correcting the inverted-grout bug catalogue-wide
+         * overshot on this recipe in particular: a dark joint at full strength on near-white
+         * limestone is the highest-contrast edge in the material, and a wall of them reads as a
+         * drawn grid rather than as dressed stone — §7.3's "visible texture tiling repetition"
+         * arriving through the other door. `joint` takes the painted contrast down to a third
+         * and the shallow groove leaves just enough for `heightAO` to find. */
+        dark: PAL.limeDark, mid: PAL.limeMid, light: PAL.limeLight, mortar: 0xa4957a,
+        relief: 0.05, dome: 0.02, groove: 0.14, spread: 0.55, rough: 0.44, grainFreq: 16,
+        bedFreq: 2, joint: 0.10,
       });
       // Sedimentary bedding — faint horizontal banding is what says "limestone" not "plaster".
       const bandF = s.field(2, (u, v) => {
@@ -537,9 +544,12 @@ export const MATERIALS = {
       const m = ashlar(s, {
         seed: cx.seed, courses: 6, aspect: 2.05, jointW: 0.016, chamfer: 0.026,
         dark: 0x6f4526, mid: PAL.sandDark, light: PAL.sandMid, mortar: 0x7b5230,
-        relief: 0.10, dome: 0.05, groove: 0.24, spread: 0.85, widthJitter: 0.22,
-        // Mud brick is genuinely laid in thick, visible mud beds — this one earns its joint.
-        joint: 0.72,
+        /* Mud brick is genuinely laid in thick, visible mud beds, so this recipe earns a
+         * stronger joint than the cut stone does — but not a *pillowed* brick. `dome` and
+         * `relief` were high enough that each brick read as an inflated cushion in a deep bed,
+         * which is the chocolate-bar look, not a mud wall. Flatter bricks, same bed. */
+        relief: 0.07, dome: 0.022, groove: 0.20, spread: 0.85, widthJitter: 0.22,
+        joint: 0.52, bedFreq: 3,
       });
       // Hand-moulded bricks: perturb the joint so no edge is straight, and crumble the arrises.
       const wob = s.field(2, (u, v) => fbmN(u, v, 34, 4, 0.55, cx.seed + 29) * 0.5 + 0.5);
@@ -2011,7 +2021,18 @@ function inlay(s, cx, stoneHex, veinHex, fleckHex, fleckAmt) {
  * it is never a dead flat area).
  */
 function glyphWall(ctx, size, mode, seed, o = {}) {
-  const { cols = 4, cartouche = true, tall = 0.40, frieze = 0.13 } = o;
+  /* `cols` and `tall` together set how much of a temple wall is *writing* and how much is plain
+   * dressed stone, and they are the strongest control this file has over §7.3's squint test.
+   *
+   * At 4 columns over 53% of the tile height the hypostyle walls came out as an unbroken lattice
+   * of small bright cells each holding one coloured mark — the review's "wall of postage stamps"
+   * — and the architecture behind it stopped reading, because every square metre carried the same
+   * maximum-frequency detail and nothing was left for the eye to rest on. Three wider columns
+   * over 40% of the tile gives the same amount of *inscription* in larger, more legible signs,
+   * and leaves the majority of the wall as plain stone, which is what §2.3 means by "large
+   * simple areas of colour, detail concentrated at focal points" and what makes the carving read
+   * as carving rather than as pattern. */
+  const { cols = 3, cartouche = true, tall = 0.30, frieze = 0.10 } = o;
   const rule = size * 0.010;
   const rnd = rng((seed ^ 0x5eed) >>> 0);
   HG.registerRule(ctx, size, 0, rule, mode);

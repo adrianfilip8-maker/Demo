@@ -141,7 +141,7 @@ const ANCHORS = [
     skyGain: 0.85, mieStrength: 0.20, mieG: 0.62, violetAmount: 0.22, horizonPower: 0.45,
     // The cumulus deck was ~53% dense at night, which is why `night` has "a mottled/streaky
     // texture and no stars, no moon". Only ~38% of the night dome was reaching camera.
-    cloudCover: [0.64, 0.69, 0.71], cloudBright: 0.42, starAmount: 1.0, exposure: 1.0,
+    cloudCover: [0.67, 0.72, 0.74], cloudBright: 0.42, starAmount: 1.0, exposure: 1.0,
   }),
 
   /* Civil twilight — the last violet-magenta band before the sun clears the horizon. */
@@ -154,7 +154,7 @@ const ANCHORS = [
     sunIntensity: 0.22, hemiIntensity: 0.46, bounceIntensity: 0.16,
     fogDensity: 0.0058, fogHeight: 50, inscatter: 0.55,
     skyGain: 0.80, mieStrength: 0.85, mieG: 0.72, violetAmount: 0.40, horizonPower: 0.38,
-    cloudCover: [0.62, 0.68, 0.70], cloudBright: 0.70, starAmount: 0.55, exposure: 1.0,
+    cloudCover: [0.65, 0.70, 0.73], cloudBright: 0.70, starAmount: 0.55, exposure: 1.0,
   }),
 
   /* Sunset / sunrise: the disc on the horizon, maximum Mie, hottest horizon. */
@@ -166,8 +166,8 @@ const ANCHORS = [
     fogColor: 0xdb9a68, fogTint: 0xff9a5c,
     sunIntensity: 1.45, hemiIntensity: 0.66, bounceIntensity: 0.30,
     fogDensity: 0.0056, fogHeight: 46, inscatter: 0.82,
-    skyGain: 0.98, mieStrength: 1.05, mieG: 0.78, violetAmount: 0.34, horizonPower: 0.34,
-    cloudCover: [0.58, 0.66, 0.70], cloudBright: 1.05, starAmount: 0.10, exposure: 1.0,
+    skyGain: 0.98, mieStrength: 0.95, mieG: 0.78, violetAmount: 0.34, horizonPower: 0.30,
+    cloudCover: [0.60, 0.69, 0.72], cloudBright: 1.05, starAmount: 0.10, exposure: 1.0,
   }),
 
   /* GOLDEN HOUR — §2.2 verbatim. Most canonical shots resolve to within a few degrees
@@ -182,16 +182,17 @@ const ANCHORS = [
     fogColor: PALETTE.skyHaze, fogTint: 0xffc98a,
     sunIntensity: 3.30, hemiIntensity: 0.88, bounceIntensity: 0.36,
     fogDensity: 0.0047, fogHeight: 58, inscatter: 0.62,
-    // horizonPower 0.44 -> 0.34: the canonical cameras are near level, so the top of frame
+    // horizonPower 0.44 -> 0.27: the canonical cameras are near level, so the top of frame
     // is only 12-15 degrees up. The blue has to arrive by then or the shot never sees it.
-    // mieStrength 0.95 -> 0.70: the forward lobe was adding ~0.09 of warm radiance a full
+    // mieStrength 0.95 -> 0.55: the forward lobe was adding ~0.09 of warm radiance a full
     // 45 degrees off the sun, which bleached the blue back out of exactly those frames.
-    skyGain: 1.0, mieStrength: 0.70, mieG: 0.76, violetAmount: 0.22, horizonPower: 0.34,
+    skyGain: 1.0, mieStrength: 0.55, mieG: 0.76, violetAmount: 0.22, horizonPower: 0.27,
     // Cover is a *threshold*: higher = less cloud. These were below the noise's own mean
     // (0.65), so all three decks were ~100% dense and the "sky" in every daylight shot was
     // a wall of overcast — measured at 6.5% of the dome gradient surviving to camera.
-    // Retuned to leave ~56% open sky while still layering three painted decks (§2.3).
-    cloudCover: [0.56, 0.65, 0.70], cloudBright: 1.0, starAmount: 0.0, exposure: 1.0,
+    // Retuned to leave ~71% open sky while still layering three painted decks (§2.3): at 56%
+    // the remaining low deck still dragged the hero band warm, measured on a capture.
+    cloudCover: [0.59, 0.68, 0.72], cloudBright: 1.0, starAmount: 0.0, exposure: 1.0,
   }),
 
   /* Midday. Still Egypt: the horizon bleaches to hot dust rather than to grey. */
@@ -203,8 +204,8 @@ const ANCHORS = [
     fogColor: 0xd4c9ad, fogTint: 0xf0dcbc,
     sunIntensity: 4.05, hemiIntensity: 1.02, bounceIntensity: 0.38,
     fogDensity: 0.0031, fogHeight: 92, inscatter: 0.38,
-    skyGain: 1.04, mieStrength: 0.45, mieG: 0.66, violetAmount: 0.10, horizonPower: 0.34,
-    cloudCover: [0.59, 0.67, 0.71], cloudBright: 1.10, starAmount: 0.0, exposure: 0.97,
+    skyGain: 1.04, mieStrength: 0.45, mieG: 0.66, violetAmount: 0.10, horizonPower: 0.30,
+    cloudCover: [0.61, 0.69, 0.73], cloudBright: 1.10, starAmount: 0.0, exposure: 0.97,
   }),
 ];
 
