@@ -14,13 +14,21 @@
  */
 import { chromium } from 'playwright';
 import { acquire } from './lock.mjs';
-import { spawn } from 'node:child_process';
+import { spawn, execFileSync } from 'node:child_process';
 import { mkdir, writeFile, rm } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import net from 'node:net';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
+
+/** Short SHA plus a dirty flag, or null outside a git checkout. Never throws. */
+function gitDesc() {
+  try {
+    const run = (a) => execFileSync('git', a, { cwd: ROOT, encoding: 'utf8' }).trim();
+    return { sha: run(['rev-parse', '--short', 'HEAD']), dirty: run(['status', '--porcelain']) !== '' };
+  } catch { return null; }
+}
 
 /* ------------------------------- args ---------------------------------- */
 const argv = process.argv.slice(2);
@@ -135,7 +143,18 @@ async function main() {
     ],
   });
 
-  const report = { at: new Date().toISOString(), width: WIDTH, height: HEIGHT, quality: QUALITY, shots: {}, errors: [] };
+  /* Stamp the build these frames came from.
+     A frame in shots/ carries no provenance, and a stale one is indistinguishable from a
+     current one by looking at it. This cost real time: a `temple` PNG was read as evidence of
+     a live sky bug when it was 25 commits old and from a camera position that no longer
+     existed — the camera had been moved out of the column it was standing inside. `dirty`
+     matters as much as the SHA, because agent work is routinely uncommitted when a capture
+     runs. */
+  const report = {
+    at: new Date().toISOString(),
+    commit: gitDesc(),
+    width: WIDTH, height: HEIGHT, quality: QUALITY, shots: {}, errors: [],
+  };
   let failures = 0;
 
   try {

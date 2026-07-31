@@ -7,6 +7,47 @@ import { SHOTS, SHOT_NAMES, applyShot } from './Shots.js';
  * Everything the screenshot harness needs hangs off `window.__GAME`. Treat this as public
  * API: the quality loop breaks if these signatures change (AGENTS.md §4.5).
  */
+const _p = new THREE.Vector3();
+
+/**
+ * What the frame actually contains of the character, as opposed to what the shot asked for.
+ *
+ * Reports three separate things that are easy to conflate, and were:
+ *   asked    where Shots.js staged him
+ *   staged   where he was immediately after staging — differs from `asked` if the staging
+ *            path silently did nothing
+ *   final    where he was when the frame rendered — differs from `staged` if the 17 settle
+ *            frames moved him (gravity, a collider push, a controller state)
+ *
+ * `ndc` and `onScreen` are frustum tests only. **`onScreen: true` is not visibility** — it
+ * cannot see occlusion. Use it to rule a shot out, never to rule one in; settle visibility
+ * with a visible/hidden A/B against a real frame.
+ */
+function _subject(engine, shot, character, staged) {
+  const asked = shot?.player?.pos ?? null;
+  const root = character?.root ?? null;
+  if (!root) return { asked, staged: null, final: null, present: false };
+
+  const final = root.position.clone();
+  _p.copy(final).project(engine.camera);
+  const fwd = new THREE.Vector3();
+  engine.camera.getWorldDirection(fwd);
+  const behind = final.clone().sub(engine.camera.position).dot(fwd) < 0;
+
+  const round3 = (v) => v && [+v.x.toFixed(3), +v.y.toFixed(3), +v.z.toFixed(3)];
+  return {
+    asked,
+    staged: round3(staged),
+    final: round3(final),
+    // Non-zero means the settle steps moved him after staging — usually gravity or a collider.
+    drift: staged ? +staged.distanceTo(final).toFixed(3) : null,
+    visible: root.visible !== false,
+    ndc: [+_p.x.toFixed(3), +_p.y.toFixed(3)],
+    onScreen: !behind && Math.abs(_p.x) <= 1 && Math.abs(_p.y) <= 1,
+    present: true,
+  };
+}
+
 export class Debug {
   constructor(engine, input) {
     this.engine = engine;
@@ -59,11 +100,25 @@ export class Debug {
 
         applyShot(engine, name);
 
+        /* Where the character actually is, recorded before the settle steps run.
+           A projection check can only say "inside the frustum" — it cannot see occlusion and
+           it cannot tell whether staging took effect. `courtyard` passed every projection
+           check while hiding the character changed zero pixels, and the tools said nothing
+           was wrong. Capturing this in the report means the next such question is answered by
+           reading the record instead of re-running the investigation. */
+        const staged = character?.root?.position?.clone?.() ?? null;
+
         // Let particles seed, shadows settle, and any lazily-compiled program warm up.
         await api.step(14);
         applyShot(engine, name);
         await api.step(3);
-        return { name, shot, stats: { ...engine.stats }, warnings: engine.warnings.slice() };
+
+        return {
+          name, shot,
+          subject: _subject(engine, shot, character, staged),
+          stats: { ...engine.stats },
+          warnings: engine.warnings.slice(),
+        };
       },
 
       /** Deterministic fixed-step advance — no reliance on wall clock. */
