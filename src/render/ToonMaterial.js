@@ -44,26 +44,29 @@ const TUNE = {
   ambIntensity: 0.52,
   shadowFloor: 0.125,    // shadow illumination as a fraction of key luminance. AGENTS: never below ~14%
                          // of the *tonemapped* result — 0.155 of a raw 3.3 key left the frame flat.
-  // Additive part of the shadow light. This is the ONLY shadow term not multiplied by the
-  // albedo, so it is the only lever that can pull the final hue toward the palette's shadow
-  // colour rather than toward the surface's own warmth. Raised now that TEXTURES floored the
-  // near-black tail that used to turn this wash into visible violet blotching.
-  // Additive pure tint — the only shadow term not multiplied by albedo. Kept modest: with
-  // shadowSat back near neutral the albedo carries its own warmth again, so the wash only has
-  // to nudge the hue rather than supply all of it. Pushing this to 0.44 measured on-target
-  // (R/G 1.25 vs 1.45 lit) and still looked lavender, because the real cause was elsewhere.
-  shadowWash: 0.20,
-  // Near-neutral, and the reasoning matters because both extremes fail visibly.
-  //
-  // At +0.34 the albedo's warmth was boosted inside shadow, which made shadow measure
-  // *redder* than sunlight — the defect the critic scored. But swinging to −0.18 desaturated
-  // the albedo toward grey, and grey multiplied by the blue shadow light is lavender: it was
-  // the warmth being removed that let the tint take over, not the tint being too strong.
-  // Chasing it with shadowWash was treating the symptom, which is why 0.44 and 0.24 both
-  // stayed purple.
-  //
-  // So: leave the albedo close to its own saturation and let the *light* carry the hue shift.
-  shadowSat: 0.06,
+  /* shadowWash / shadowSat / shadowBounceMix are back at the values the critic scored 4.2 on.
+   *
+   * Critic pass 2 measured this surface at R/G 1.29 lit vs 1.63 shadowed — shadow warmer than
+   * sunlight, where §2.2 wants it cooler — and ranked it the top remaining defect. I tried to
+   * fix it across five capture cycles and failed, so these are reverted rather than left in an
+   * unscored state. The full trail, so the next attempt does not repeat it:
+   *
+   *   wash 0.44           shadow R/G 1.25 vs lit 1.45 — on target, frame went lavender
+   *   wash 0.24           still lavender, so the wash was never the cause
+   *   shadowSat −0.18     hypothesis: desaturating albedo lets the blue tint dominate. Also wrong
+   *   shadowSat 0.06      frame essentially unchanged. Third hypothesis dead
+   *
+   * The method error underneath all four: I adopted the critic's R/G ratio as my metric, but
+   * *purple is a blue-channel phenomenon and R/G cannot see blue at all*. Shadow R/G stayed
+   * near 1.39 — red still above green — while the frame was plainly lavender. I iterated five
+   * times on a number that was structurally incapable of showing the failure I was chasing.
+   *
+   * Whoever picks this up: measure B against max(R,G), look at the frame every iteration, and
+   * check the terms *outside* this file first — PostFX's split-tone pushes dark pixels toward
+   * #2a3f66, and the ambient light is #476d95. Neither is reachable from here, and the purple
+   * survived every value I tried in here, which is itself evidence the cause is elsewhere. */
+  shadowWash: 0.16,
+  shadowSat: 0.34,
 
   /* --- rim --- */
   rim: 0.55,
@@ -112,15 +115,13 @@ const PAL = {
   /* Ceiling on the shadow light's brightest channel after the floor rescale. Above roughly
      this the violet-teal clips toward blue and stops reading as shadow. */
   shadowTintPeak: 0.42,
-  /* How much warm sand bounce is mixed into the shadow light.
-     The old 0.20 was bracketed by eye against two failure modes — 0.0 looked mauve, 0.45
-     looked monochrome — but that bracket was taken while four separate bugs were distorting
-     the frame: AO multiplied everything by a flat 0.545, the grade clipped red to zero in
-     half of all dark pixels, the ink composited as pure black, and the stone's dark tail ran
-     three times deeper than the palette. All four are fixed, so the bracket was measuring
-     those, not this. The palette hue #2a3f66 is itself R/G 0.667 — exactly the target — and
-     blending 20% of warm bounce into it landed the shadow light at 0.95, near-neutral. */
-  shadowBounceMix: 0.05,
+  /* How much warm sand bounce is mixed into the shadow light. Back at the critic-scored value;
+     see the shadowWash/shadowSat note above for why the attempt to move it was reverted.
+     Worth knowing: the palette hue #2a3f66 is itself R/G 0.667, so the *light* is already the
+     right colour — 20% warm bounce lands it at 0.95, near-neutral. If the final surface is
+     still too warm after the real cause is found, this is a legitimate lever; it just was not
+     sufficient on its own. */
+  shadowBounceMix: 0.20,
   haze: 0xe8b878,
   hazeNight: 0x2a3f66,
   hazeSun: 0xffc98a,
