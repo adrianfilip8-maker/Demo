@@ -1,31 +1,31 @@
 {
-  "at": "2026-07-31T03:09:06.251Z",
+  "at": "2026-07-31T03:21:59.335Z",
   "width": 960,
   "height": 540,
   "quality": "med",
   "shots": {
     "hero": {
       "file": "shots/hero.png",
-      "ms": 12.699999999254942,
-      "fps": 40,
+      "ms": 12.299999998882413,
+      "fps": 43,
       "drawCalls": 451,
-      "triangles": 1804705,
+      "triangles": 1804641,
       "programs": 87
     },
     "temple": {
       "file": "shots/temple.png",
-      "ms": 9.799999998882413,
-      "fps": 56,
+      "ms": 9.400000000372529,
+      "fps": 43,
       "drawCalls": 415,
-      "triangles": 1732809,
+      "triangles": 1732745,
       "programs": 87
     },
     "courtyard": {
       "file": "shots/courtyard.png",
-      "ms": 9.399999998509884,
-      "fps": 56,
+      "ms": 7.600000001490116,
+      "fps": 60,
       "drawCalls": 451,
-      "triangles": 1805135,
+      "triangles": 1805103,
       "programs": 87
     }
   },
@@ -50,7 +50,7 @@
     "audio": true
   },
   "bootWarnings": [
-    "textures: prewarm took 30.9s at size 1024",
+    "textures: prewarm took 30.2s at size 1024",
     "fx: no emitter named \"embers\"",
     "fx: no emitter named \"embers\"",
     "fx: no emitter named \"embers\"",
@@ -64,7 +64,7 @@
   ],
   "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
   "warnings": [
-    "textures: prewarm took 30.9s at size 1024",
+    "textures: prewarm took 30.2s at size 1024",
     "fx: no emitter named \"embers\"",
     "fx: no emitter named \"embers\"",
     "fx: no emitter named \"embers\"",
