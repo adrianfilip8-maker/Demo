@@ -558,7 +558,9 @@ export const EMITTERS = {
     batch: 'dust', tile: [TILE.GRAIN, TILE.GRAIN, TILE.DUST3], count: [3, 6], life: [1.3, 2.4],
     speed: [1.2, 3.2], spread: 'cone', cone: 0.30, gravity: 0.45, drag: 0.55, turb: 0.35, wind: 1.6,
     size: [0.22, 1.5], sizeExp: 0.55, spin: [-0.5, 0.5], fadeIn: 0.16, fadeOut: 1.5,
-    alpha: [0.30, 0.5], col0: PAL.sandLight, col1: PAL.haze, jitter: 1.2,
+    /* Bright head, dark tail. A streak that is one value along its whole length reads as a
+       smudge; giving it its own internal value range is what makes it read as a streak. */
+    alpha: [0.32, 0.54], col0: PAL.sandLight, col1: PAL.sandDark, jitter: 1.2,
   },
 };
 
@@ -567,22 +569,33 @@ export const EMITTERS = {
    ========================================================================= */
 export const AMBIENT = {
   /* Low sheets of sand ripping along the ground. Wrapped in a box that follows the
-     camera, so it exists everywhere without ever being simulated. */
+     camera, so it exists everywhere without ever being simulated.
+
+     Retinted `sandLight`/`haze` → `sandMid`/`sandDark`, and `litMix` cut from the 0.72
+     default to 0.44. Both changes are the same fix: these were sand-coloured, key-lit
+     sprites drifting over sand-coloured, key-lit ground, so they landed within a few luma
+     of whatever was behind them and two review passes running reported "no airborne
+     particulate" over a batch of 460 live particles. Alpha sprites cannot out-brighten a
+     sunlit floor — AgX has nothing left to give up there — so they separate *downward*
+     instead: a warm mid-tone veil is darker than lit paving, darker than the sky, and still
+     lighter than shadowed stone, which is the one value that reads against all three. */
   sand_drift: {
     batch: 'sandLow', capacity: 460, tile: [TILE.GRAIN, TILE.GRAIN, TILE.DUST3],
     box: [80, 2.2, 80], yOffset: 0.15, life: [2.6, 5.0],
     size: [0.35, 1.5], sizeExp: 0.7, spin: [-0.35, 0.35], fadeIn: 0.22, fadeOut: 1.3,
-    alpha: [0.14, 0.30], col0: PAL.sandLight, col1: PAL.haze,
+    alpha: [0.18, 0.38], col0: PAL.sandMid, col1: PAL.sandDark, litMix: 0.44,
     wind: [0.9, 1.5], drift: [0.15, 0.5], turb: 0.06,
     fade: [70, 42, 1.6, 5.0],       // farOut, farIn, nearOut, nearIn
   },
   /* Suspended grains hanging in the air column: the airborne particulate that a wide
-     shot needs. Sparse, big, slow, and lit by the key light. */
+     shot needs. Sparse, big, slow, and lit by the key light. Same retint as `sand_drift`
+     and for the same reason — this is the batch that has to read against the *sky*, which
+     is the brightest thing in any exterior frame. */
   sand_haze: {
     batch: 'sandHigh', capacity: 420, tile: [TILE.GRAIN, TILE.MOTE, TILE.DUST3],
     box: [90, 26, 90], yOffset: 11, life: [4.0, 9.0],
     size: [0.20, 0.85], sizeExp: 0.8, spin: [-0.2, 0.2], fadeIn: 0.25, fadeOut: 1.2,
-    alpha: [0.10, 0.26], col0: PAL.haze, col1: PAL.sandLight,
+    alpha: [0.14, 0.32], col0: PAL.sandMid, col1: PAL.bounce, litMix: 0.52,
     wind: [0.5, 1.0], drift: [0.1, 0.35], turb: 0.09,
     fade: [80, 46, 2.2, 7.0],
   },
@@ -600,8 +613,12 @@ export const AMBIENT = {
   air_motes: {
     batch: 'airMotes', capacity: 300, tile: [TILE.MOTE, TILE.MOTE, TILE.GRAIN],
     box: [46, 17, 46], yOffset: 3.0, life: [5.0, 11.0],
-    size: [0.10, 0.20], sizeExp: 0.9, spin: [-0.2, 0.2], fadeIn: 0.22, fadeOut: 1.15,
-    alpha: [0.30, 0.85], col0: PAL.keySun, col1: PAL.haze,
+    size: [0.11, 0.23], sizeExp: 0.9, spin: [-0.2, 0.2], fadeIn: 0.22, fadeOut: 1.15,
+    /* Near-white rather than key-sun: this is the population that has to read against
+       *dark* backdrops, and a mote the same hue as the warm stone it floats in front of
+       separates by nothing. White-hot core cooling to the key colour is both the higher
+       value and the wider hue gap. */
+    alpha: [0.36, 1.0], col0: 0xfff4e2, col1: PAL.keySun, litMix: 0.95,
     wind: [0.28, 0.62], drift: [0.08, 0.26], turb: 0.10,
     fade: [44, 26, 1.8, 6.0],
   },
@@ -635,7 +652,10 @@ export const MOTES = {
   size: [0.10, 0.26], sizeExp: 1.0, fadeIn: 0.2, fadeOut: 1.1,
   alpha: [0.55, 1.5],
   drift: 0.16,          // m/s of lazy convection inside the blade
-  col0: PAL.keySun, col1: PAL.haze,
+  /* Whiter than the blade they turn in. A mote tinted the same key-sun colour as the beam
+     is a slightly brighter patch of the beam; a near-white one is a *speck*, which is the
+     thing that makes a shaft read as full of dust rather than as a painted wedge. */
+  col0: 0xfff4e2, col1: PAL.keySun,
 };
 
 export const TORCH_MOTES = {

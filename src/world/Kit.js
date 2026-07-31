@@ -330,6 +330,25 @@ export function masonryShell(o) {
   const nCourse = Math.max(1, Math.round(h / course));
   const ch = h / nCourse;
 
+  /* ---- The course joint was a through-hole ------------------------------
+   *
+   * Blocks were cut at `ch * 0.985` to leave a mortar joint, which on a 0.72 m course is a
+   * 10.8 mm horizontal gap between every pair of courses. That is fine on a solid mass and
+   * wrong on a shell: both leaves of a wall are laid on the *same* course lines, so their
+   * joints line up and each one is a slot straight through the wall. Measured on the hall's
+   * south facade — a 0.15 m probe grid found 55 openings up to 19 mm tall and at least 120 mm
+   * wide, all of them on course boundaries, none of them a designed opening. It is the same
+   * class of defect as the 26 aisle-roof slots, in the other axis, and it is why daylight
+   * pinholes survive in the interior shots.
+   *
+   * Courses now *overlap* by `weld` instead of parting. The joint line does not disappear with
+   * them: each block is independently pulled back from the face plane by 1.2–6 cm of `recess`,
+   * so consecutive courses still step against each other, and with `chamfer` on, the two
+   * bevels meet as a V-groove — both of which read as a joint far more strongly than a 1 cm
+   * slot ever did. The overlap grows with `sag` to swallow the settle curve's tangent error.
+   */
+  const weld = 0.012 + sag * 0.15;
+
   /* ---- Settlement ------------------------------------------------------
    *
    * §7.3 fails a shot for "geometry silhouettes are straight/symmetric everywhere". Per-block
@@ -414,7 +433,15 @@ export function masonryShell(o) {
         bl = Math.min(bl, face.len * 0.5 - a);
         if (bl < 0.45) break;
         let s0 = a, s1 = a + bl;
-        a += bl + (rng ? rng.range(0.012, 0.05) : 0.03);
+        /* The vertical joint has the same problem the course joint had: `a` used to advance
+           past the block by 1.2–5 cm of daylight, and where a gap on one leaf happened to line
+           up with a gap on the other you could see straight through the wall. Rarer than the
+           course-line slots — 2 places in 48 m rather than 55 — but it is the same hole, and
+           it is a candidate for the skybox that keeps leaking into the interior shots.
+           `a` still advances by the gap, so the coursing pattern is untouched; the block is
+           simply cut long enough to bridge it. */
+        const gapA = rng ? rng.range(0.012, 0.05) : 0.03;
+        a += bl + gapA;
 
         /* Openings *clip* the coursing; they do not delete whole blocks.
            Dropping any block that touched a hole meant the jamb wandered by up to a block
@@ -450,9 +477,13 @@ export function masonryShell(o) {
         // Mortar recess: pull most blocks back from the face plane so shadow catches the joint.
         const rec = rng ? rng.range(0.2, 1.0) * recess : recess * 0.6;
         const doChip = rng ? rng.chance(Math.min(0.6, chipChance * exposure)) : false;
+        /* Overlap the neighbour by `weldA` whatever the two random gaps turn out to be:
+           the worst case is this block drawing a 1.2 cm gap and the next a 5 cm one, which
+           costs half their difference, so the bridge has to beat 1.9 cm. */
+        const blW = bl + gapA + 0.024;
         const mk = chamfer > 0 ? chamferBox : block;
         const g = mk(
-          face.axis === 'x' ? bl : thick, ch * 0.985 + sink, face.axis === 'x' ? thick : bl,
+          face.axis === 'x' ? blW : thick, ch + weld + sink, face.axis === 'x' ? thick : blW,
           { rng, jitter: courseJitter, chip: doChip ? chip : 0, c: chamfer }
         );
         const ry = rng ? THREE.MathUtils.degToRad(rng.jitter(tiltDeg)) : 0;
@@ -588,10 +619,16 @@ export function corniceProfile({ h = 2.0, flare = 1.15, roll = 0.42, steps = 9 }
     p.push([0.04 + flare * (1 - Math.cos(t * Math.PI * 0.5)), y0 + h * t]);
   }
   const top = y0 + h;
-  p.push([flare + 0.2, top]);           // fillet slab, undercut face
-  p.push([flare + 0.2, top + 0.34]);
-  p.push([0, top + 0.34]);              // walkable top, back to the wall plane
-  return { profile: p, height: top + 0.34, flare: flare + 0.2 };
+  /* The fillet *overhangs the cavetto and undercuts back*, instead of continuing straight out.
+     That 8 cm lip is worth more than its two vertices: it is a hard horizontal shadow line
+     under the widest part of the silhouette, running the full length of every cornice in the
+     level, and it is the detail that separates "carved cornice" from "flared box". The
+     underside faces down and slightly outward, so it is always the darkest band on the mass. */
+  p.push([flare + 0.28, top - 0.06]);   // lip, projecting past the cavetto
+  p.push([flare + 0.30, top + 0.06]);
+  p.push([flare + 0.22, top + 0.40]);   // fillet slab, drafted back in
+  p.push([0, top + 0.40]);              // walkable top, back to the wall plane
+  return { profile: p, height: top + 0.40, flare: flare + 0.30 };
 }
 
 /** Cornice ring around a rectangular mass. Sides overlap at the corners; rolls hide it. */

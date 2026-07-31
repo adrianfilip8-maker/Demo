@@ -100,13 +100,22 @@ const TUNE = {
   courtGapZ: [-10.25, -4.75, 0.75, 6.25, 11.75, 17.25, 22.75, 28.25],
   courtGapX: 23,
   courtGapY: 6.55, courtGapH: 2.1, courtGapW: 3.4,
-  courtShaftGain: 0.55,      // open-air blades are quieter than an interior's; see §7.3 note
+  /* Open-air blades used to be deliberately quiet. That was the wrong call: it is the
+     *interior* that has contrast to spare, and these are the blades being asked to survive a
+     sunlit backdrop. They now carry a flanking shadow band (FX's `shaftDark`), which does
+     most of the separating, and the gain is up to match. */
+  courtShaftGain: 0.80,
 
   /* Torch / brazier cones. Built from whatever registered through addLocalLight(), so they
      follow PROPS rather than a second hardcoded list of sconces. */
   coneMax: 26,
-  coneLength: 3.1,           // metres, scaled by the light's radius
-  coneRadius: 0.42,          // end radius as a fraction of length
+  /* `interior` is the shot §7.2 names for volumetrics and it has *no* sun blade in it — no
+     opening in the tomb projects into that frame, checked by projecting the whole published
+     opening set through that camera. Every volumetric it can show is a torch cone, so a cone
+     has to be long enough to reach the floor it lights: 0.30 × radius put a 9 m wall torch's
+     cone at 2.7 m inside a 10 m-high vault. */
+  coneLength: 3.6,           // metres, scaled by the light's radius
+  coneRadius: 0.46,          // end radius as a fraction of length
   coneApex: 0.10,
   coneDayFade: 0.30,         // how much of a cone survives full daylight above ground
   coneFade: [30, 56],        // metres from camera: full → gone
@@ -583,7 +592,7 @@ export class Lighting {
       // at; an open brazier reads as a column of lit smoke going *up*. Ground level decides.
       const down = h.position.y < 0;
       const dir = new THREE.Vector3(0, down ? -1 : 1, 0);
-      const len = THREE.MathUtils.clamp(h.radius * 0.30, 1.6, TUNE.coneLength * 1.6);
+      const len = THREE.MathUtils.clamp(h.radius * 0.42, 1.6, TUNE.coneLength * 1.6);
       const r = len * TUNE.coneRadius;
       const s = this._makeShaft(
         `cone${i}`, 'cone',

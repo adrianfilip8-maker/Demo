@@ -30,8 +30,14 @@ const TUNE = {
   mortarRecess: 0.06,       // geometric joint depth — this is what catches shadow
   chipChance: 0.19,
   fallenBlockChance: 0.05,
-  corniceFlare: 1.25,       // the overhang that makes the silhouette Egyptian
-  corniceHeight: 2.1,
+  /* The overhang that makes the silhouette Egyptian, and the cheapest exaggeration in the
+     level: a cornice is a swept profile, so throwing it 40% further out costs no triangles at
+     all. A real cavetto cornice projects roughly 0.6x its height; this one now projects 1.2x,
+     which is the Sly/Zelda read — the mass leans in as it rises and then throws itself back
+     out over your head. §7.3's "proportions realistic instead of exaggerated-cartoon" is
+     mostly decided by this number and by the capital bell. */
+  corniceFlare: 1.75,
+  corniceHeight: 2.35,
   rollRadius: 0.44,
   ledgeDepth: 1.6,          // grabbable ledges, way over the 0.6 m minimum
   sandHeight: 1.7,

@@ -190,6 +190,55 @@ function rail(A, name, pts, matKey = 'granite_pink', r = 0.16, zone = 'court') {
   return curve;
 }
 
+/* ====================== where the detail is spent ======================= */
+
+/**
+ * The ten §7.2 cameras, in world space. Kept here rather than imported from `core/Shots.js`
+ * so the level does not depend on the shot list at build time — but they are the same numbers
+ * and they should be checked against it if a shot ever moves.
+ */
+const CAMS = [
+  [8.9, 10.28, 17.2],    // hero
+  [3.5, 2.6, -19.0],     // temple
+  [-1.6, 1.45, 33.2],    // sly-closeup
+  [-19.0, 5.6, 30.0],    // courtyard
+  [26.0, 19.5, 84.0],    // dunes
+  [3.2, -9.2, -60.0],    // interior
+  [-11.0, 8.4, 22.0],    // night
+  [12.0, 14.0, 6.0],     // traversal
+  [4.6, 2.35, 31.4],     // combat
+  [-11.5, 2.05, 25.4],   // guard
+];
+
+/** Distance from (x, y, z) to the nearest canonical camera. */
+function camDist(x, y, z) {
+  let best = Infinity;
+  for (const [cx, cy, cz] of CAMS) {
+    const d = Math.hypot(cx - x, cy - y, cz - z);
+    if (d < best) best = d;
+  }
+  return best;
+}
+
+/**
+ * Per-block chamfer, or 0 — the §1 budget decision, made once and by measurement.
+ *
+ * A 3 cm bevel on every masonry block is the difference between "carved" and "box" *when you
+ * can resolve it*, and it costs 3.7x the triangles of a plain block (44 against 12). At the
+ * `hero` camera's 46° over 1600 px, one pixel subtends 7.5 mm at 15 m and 15 mm at 30 m — so
+ * past about 20 m the bevel is a sub-pixel line on every block edge, which is not "carved",
+ * it is the high-frequency noise §7.3 fails separately under the squint test. Spending the
+ * budget there would buy busier frames *and* blow the triangle count.
+ *
+ * So blocks are bevelled only where a camera is close enough to read them, and the mass-scale
+ * silhouette — cornice flare, batter, corner rolls, the settle curve — carries everything
+ * further out. That is the same "smoothness on silhouettes and terminators, not uniformly"
+ * rule the columns follow.
+ */
+function chamferFor(x, y, z, near = 20) {
+  return camDist(x, y, z) < near ? 0.03 : 0;
+}
+
 /* ============================ courtyard ================================ */
 
 function courtyard(A) {
@@ -217,6 +266,9 @@ function courtyard(A) {
     w: t1.x * 2, d: t1.z1 - t1.z0, h: t1.y, batter: 0.05, course: 0.62, thick: 1.0, rng: R,
     blockLen: [1.3, 2.3], recess: 0.06, chipChance: 0.22, gapChance: 0.02, buried: 0.35, hollow: true,
     openings: [{ face: 0, a0: -3.2, a1: 3.2, y0: -1, y1: 3 }],
+    // Closest big mass to `hero`, `night` and `courtyard`: it gets both the settle and the
+    // bevel. `windFace: 0` is the south face, the one the valley wind loads.
+    sag: 0.16, windFace: 0, chamfer: chamferFor(0, t1.y, (t1.z0 + t1.z1) / 2),
   }), { z: (t1.z0 + t1.z1) / 2 }));
   /* Cavetto under each terrace deck. The stages are the biggest plain masses in the lower
      half of `hero`, `night` and `courtyard`, and a cavetto is a continuously curved surface —
@@ -232,6 +284,7 @@ function courtyard(A) {
     w: t2.x * 2, d: t2.z1 - t2.z0, h: t2.y - t1.y + 0.4, batter: 0.06, course: 0.6, thick: 0.95, rng: R,
     blockLen: [1.2, 2.1], recess: 0.06, chipChance: 0.2, gapChance: 0.02, hollow: true,
     openings: [{ face: 0, a0: -2.8, a1: 2.8, y0: -1, y1: 4 }],
+    sag: 0.13, windFace: 0, chamfer: chamferFor(0, t2.y, (t2.z0 + t2.z1) / 2),
   }), { y: t1.y - 0.4, z: (t2.z0 + t2.z1) / 2 }));
   const tc2 = K.cornice({ w: t2.x * 2 + 0.1, d: t2.z1 - t2.z0 + 0.1, h: 0.56, flare: 0.36, roll: 0.18 });
   A.add('court', 'sandstone_worn', K.place(tc2.geo, { x: 0, y: t2.y - tc2.height, z: (t2.z0 + t2.z1) / 2 }));
@@ -382,6 +435,13 @@ function entryPylons(A) {
         { face: 0, a0: 2.9, a1: 3.9, y0: 1.2, y1: 22 },
         { face: 1, a0: -1.6, a1: 1.6, y0: -1, y1: 4.2 },   // service door on the north face
       ],
+      /* The west tower has settled twice as far as the east one and lost twice as many
+         blocks off its windward face. Height and batter already differ; this is what makes
+         the *coursing* differ too, so the pair reads as two buildings that have aged apart
+         rather than as one asset instanced twice. */
+      sag: sx > 0 ? 0.10 : 0.21,
+      windFace: 0, windK: sx > 0 ? 1.7 : 2.4,
+      chamfer: chamferFor(cx, ph * 0.5, p.z),
     }), { x: cx, y: 0, z: p.z }));
     A.add('court', 'sandstone_worn', K.place(
       K.cornerRolls({ w: p.w, d: p.d, h: ph - 1.0, r: A.TUNE.rollRadius, batter: B, rng: R }),
@@ -515,6 +575,12 @@ function hypostyleHall(A) {
       w: 2.1, d: h.z1 - h.z0, h: WALL_H, batter: B, course: 0.74, thick: 1.05, rng: R,
       blockLen: [1.7, 2.7], recess: A.TUNE.mortarRecess, chipChance: A.TUNE.chipChance,
       gapChance: 0.035, buried: 0.6, hollow: true, openings: sideOpen,
+      /* 36 m of unbroken wall on each side of the hall — the longest straight lines in the
+         level and the ones `temple` looks down. Each side settles independently (the seed has
+         advanced between them), so the room is not symmetric about its own axis. The west wall
+         is the one the wind scours. */
+      sag: 0.26, windFace: sx < 0 ? 3 : 2,
+      chamfer: chamferFor(sx * 23.9, WALL_H * 0.5, zc),
     }), { x: sx * 23.9, y: 0, z: zc }));
     wallProxy(A, sx * 23.9 - 1.1, sx * 23.9 + 1.1, 0, WALL_H, h.z0, h.z1);
     /* Window sills, inside and out — narrow `ledge` perches lining the hall. */
@@ -537,6 +603,8 @@ function hypostyleHall(A) {
     w: 48, d: 2.1, h: WALL_H, batter: B, course: 0.74, thick: 1.05, rng: R,
     blockLen: [1.7, 2.7], recess: A.TUNE.mortarRecess, chipChance: A.TUNE.chipChance,
     gapChance: 0.03, buried: 0.5, hollow: true, openings: sOpen,
+    // The facade the approach reads against, and the wall `temple` stands three metres from.
+    sag: 0.24, windFace: 0, chamfer: chamferFor(0, WALL_H * 0.5, h.z1 - 1.05),
   }), { x: 0, y: 0, z: h.z1 - 1.05 }));
   for (const [x0, x1] of [[-24, -17.6], [-14.4, -4.4], [4.4, 14.4], [17.6, 24]]) wallProxy(A, x0, x1, 0, WALL_H, h.z1 - 2.1, h.z1);
   for (const [x0, x1, y] of [[-4.4, 4.4, 9.4], [-17.6, -14.4, 4.8], [14.4, 17.6, 4.8]]) wallProxy(A, x0, x1, y, WALL_H, h.z1 - 2.1, h.z1);
@@ -556,18 +624,40 @@ function hypostyleHall(A) {
     w: 48, d: 2.1, h: WALL_H, batter: B, course: 0.74, thick: 1.05, rng: R,
     blockLen: [1.7, 2.7], recess: A.TUNE.mortarRecess, chipChance: 0.16, gapChance: 0.03, buried: 0.4, hollow: true,
     openings: [0, 1].flatMap((f) => [{ face: f, a0: -3.4, a1: 3.4, y0: -1, y1: 8.2 }]),
+    // Sheltered end of the hall: it settles the least and keeps its blocks.
+    sag: 0.14, windFace: 1, chamfer: chamferFor(0, WALL_H * 0.5, h.z0 + 1.05),
   }), { x: 0, y: 0, z: h.z0 + 1.05 }));
   for (const [x0, x1] of [[-24, -3.4], [3.4, 24]]) wallProxy(A, x0, x1, 0, WALL_H, h.z0, h.z0 + 2.1);
   wallProxy(A, -3.4, 3.4, 8.2, WALL_H, h.z0, h.z0 + 2.1);
 
-  /* ---- 12 papyrus columns: 8 tall in the nave rows, 4 shorter in the aisles. ---- */
+  /* ---- 12 papyrus columns: 8 tall in the nave rows, 4 shorter in the aisles. ----
+     `temple` is a long axial view straight down this colonnade, so these eight columns are the
+     single most-looked-at object in the level and the place §7.3's "straight/symmetric
+     everywhere" is decided.
+
+     Every one of them is now a different column. Height varies by up to 25 cm, the bell by 6%,
+     and each leans in its own direction — most by a fraction of a degree, two of them visibly.
+     The lean is applied *inside* the shaft (`lean`, a shear taken up over the height) rather
+     than as a rigid `rz` tilt, so the foot stays planted on its plinth and only the capital
+     moves, which is what a column that has been pushed out of plumb by three thousand years
+     of settlement actually looks like. `rBase` is untouched: the plinths and pole colliders
+     are contract surfaces.
+
+     `rTop` came down 1.4 -> 1.25 so the taper is 1.52:1 rather than 1.36:1 and the bell over-
+     hangs a visibly thinner neck. The bell's *outer* radius is unchanged and has to be: at
+     x = ±8 it is 2.6 m from the clerestory wall's inner face and there is nowhere to grow. */
   const colProxies = [];
+  const NAVE_LEAN = { '-22': 0.35, '-30': -0.9, '-38': 1.6, '-46': -0.25 };
   for (const cz of naveZ) for (const sx of [-1, 1]) {
     const cx = sx * 8;
-    const col = K.papyrusColumn({ hShaft: 12.3, rBase: 1.9, rTop: 1.4, capH: 2.4, abacus: 0.62, rng: R, bandCount: 4 });
-    /* One column in the room leans — the eye needs a break from perfect verticals. */
-    const lean = (cz === -38 && sx < 0) ? D(1.25) : D(R.jitter(0.28));
-    A.add('hall', 'column_papyrus', K.place(col.geo, { x: cx, y: 0.35, z: cz, rz: lean, ry: D(R.range(0, 45)) }));
+    const hSh = 12.3 + R.jitter(0.25);
+    const col = K.papyrusColumn({
+      hShaft: hSh, rBase: 1.9, rTop: 1.25, capH: 2.4 + R.jitter(0.12), abacus: 0.62,
+      rng: R, bandCount: 4, belly: 2.05 * (1 + R.jitter(0.06)),
+      // Lean away from the nave on the west row, into it on the east: the room bows.
+      lean: D(NAVE_LEAN[String(cz)] ?? 0) * (sx < 0 ? 1 : -0.7) + D(R.jitter(0.22)),
+    });
+    A.add('hall', 'column_papyrus', K.place(col.geo, { x: cx, y: 0.35, z: cz, ry: D(R.range(0, 45)) }));
     vol(A, 'hall', 'sandstone_block', cx - 2.35, cx + 2.35, 0, 0.42, cz - 2.35, cz + 2.35, { jitter: 0.02, chip: 0.12 });
     poleProxy(A, cx, cz, 0.42, 12.6, 1.62);
     colProxies.push([cx, cz, col.height + 0.35]);
@@ -577,8 +667,12 @@ function hypostyleHall(A) {
     const cx = sx * 16.5;
     /* Aisle columns are never nearer than ~14 m to a canonical camera, so they get two
        thirds of the nave columns' radial density — still enough to resolve the ribs. */
-    const col = K.papyrusColumn({ hShaft: 9.5, rBase: 1.62, rTop: 1.2, capH: 1.9, abacus: 0.55, rng: R, bandCount: 3, seg: 32 });
-    A.add('hall', 'column_papyrus', K.place(col.geo, { x: cx, y: 0.34, z: cz, rz: D(R.jitter(0.3)), ry: D(R.range(0, 45)) }));
+    const col = K.papyrusColumn({
+      hShaft: 9.5 + R.jitter(0.2), rBase: 1.62, rTop: 1.07, capH: 1.9, abacus: 0.55,
+      rng: R, bandCount: 3, seg: 32, belly: 2.05 * (1 + R.jitter(0.05)),
+      lean: D(R.jitter(0.75)),
+    });
+    A.add('hall', 'column_papyrus', K.place(col.geo, { x: cx, y: 0.34, z: cz, ry: D(R.range(0, 45)) }));
     vol(A, 'hall', 'sandstone_block', cx - 2.0, cx + 2.0, 0, 0.4, cz - 2.0, cz + 2.0, { jitter: 0.02 });
     poleProxy(A, cx, cz, 0.4, 12.3, 1.38);
     ledgeProxy(A, cx - 1.95, cx + 1.95, col.height + 0.34, cz - 1.95, cz + 1.95, { thick: 0.55 });

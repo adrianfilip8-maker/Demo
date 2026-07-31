@@ -45,9 +45,21 @@ const TUNE = {
      shell writes depth, so the outermost ~2.5 px of its silhouette are ink before the
      screen-space crease pass adds its own — measured at 6 px of black on Sly's arm at 960
      wide. Architecture has only the thin crease line, so it keeps almost the whole band. */
-  rimInner: 2.4,
-  rimMid: 4.4,
-  rimOuter: 7.2,
+  /* Halved from 2.4 / 4.4 / 7.2. Those radii were set against a close-up figure, and the
+     canonical shots mostly are not one: Sly is 138 px tall in `night`, 115 in `temple`. His
+     inverted-hull shell writes ~2.5 px of ink and the crease pass adds its own, so at that
+     size a band reaching 7.2 px inward spent most of its width under the ink and the rest
+     across the middle of a limb — which is a wash, not a rim, and it is why the lit edge was
+     measuring *darker* than the body interior.
+
+     Measured on the two shots whose A/B is byte-exact (determinism 0), both halves of the
+     target moved the right way at once: character rim lift `temple` 4.3 -> 9.0 and `night`
+     -4.7 -> -1.2, while the leftover bright-cool above the no-rim floor *fell* — `temple`
+     3697 -> 1482, `night` 337 -> 168, `hero` paving 1138 -> 586. Narrower is not a
+     compromise here; the outer half of the old band was contributing artefact, not read. */
+  rimInner: 1.2,
+  rimMid: 2.6,
+  rimOuter: 4.4,
   rimTail: 0.45,          // strength of the far half of the band
   rimStrength: 0.70,
   /* Planarity gate on the rim mask — see slyBackStep. A depth *step* is not a silhouette; a

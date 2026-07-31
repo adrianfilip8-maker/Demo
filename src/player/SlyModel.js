@@ -1606,19 +1606,23 @@ export class SlyModel {
         const axis = new THREE.Vector3(side * 0.669, -0.743, 0).normalize();
         const fwd = new THREE.Vector3(0, 0, 1);
         const nrm = new THREE.Vector3().crossVectors(axis, fwd).normalize();
-        const ROWS = 3;
-        const ROLL = [0.30, 1.35, 2.40, -2.40, -1.35, -0.30];
-        for (let r = 0; r < ROWS; r++) {
-          const u = arm.cuffStart + 0.010
-            + (r / (ROWS - 1)) * (arm.gloveStart - arm.cuffStart - 0.028);
-          const { c, r: rad } = armAt(u);
-          for (let j = 0; j < ROLL.length; j++) {
-            const a = ROLL[j] + (r % 2 ? 0.50 : 0);
+        /* `a` is measured from +Z here, so a camera in front of him puts the forearm's
+           silhouette tangents at a ≈ ±π/2 and a camera behind him at the same two lines. Those
+           get the clumps; a full ring was tried and carpets a 0.07 m band into a bottle brush. */
+        const COLS = [{ a: 1.52, n: 3 }, { a: -1.52, n: 3 }, { a: 3.02, n: 2 }];
+        for (let ci = 0; ci < COLS.length; ci++) {
+          const col = COLS[ci];
+          for (let r = 0; r < col.n; r++) {
+            const u = arm.cuffStart + 0.010
+              + (r / (col.n - 1)) * (arm.gloveStart - arm.cuffStart - 0.030);
+            const { c, r: rad } = armAt(u);
+            const a = col.a + 0.30 * Math.sin(r * 5.1 + ci * 1.9);
             const out = fwd.clone().multiplyScalar(Math.cos(a)).addScaledVector(nrm, Math.sin(a)).normalize();
             put({
-              base: c.clone().addScaledVector(out, rad * 0.88),
-              dir: out.clone().multiplyScalar(0.76).addScaledVector(axis, 0.60).normalize(),
-              length: 0.046 * jit(r * 6 + j, side * 5), width: 0.017, bend: 0.30,
+              base: c.clone().addScaledVector(out, rad * 0.86),
+              dir: out.clone().multiplyScalar(0.78).addScaledVector(axis, 0.58).normalize(),
+              length: 0.050 * (r % 2 ? 0.66 : 1.0) * jit(r * 3 + ci, side * 5),
+              width: 0.015, bend: 0.32,
               bendDir: axis.clone(),
               group: 'fur', weights: ramp(u, arm.ramp),
             });
@@ -1647,24 +1651,50 @@ export class SlyModel {
             r: THREE.MathUtils.lerp(K[i][2], K[i + 1][2], f) * TUNE.limbSlim,
           };
         };
-        const ROWS = Math.round(4.2 * D);
-        const ROLL = [0, 1.15, -1.15, 2.30, -2.30];    // 0 = straight out, ±π (inward) omitted
-        for (let r = 0; r < ROWS; r++) {
-          const u = 0.08 + (r / (ROWS - 1)) * 0.62;    // hip → just above where the boot starts
-          const { c, r: rad } = legAt(u);
-          for (let j = 0; j < ROLL.length; j++) {
-            // stagger alternate rows so clumps interleave rather than stacking into ridges
-            const a = ROLL[j] + (r % 2 ? 0.58 : 0) + 0.12 * Math.sin(r * 3.1 + j * 2.7);
+        /* Columns, not a full ring. A ring of clumps at every height was tried first and it
+           tiles the leg into a diamond lattice — it reads as pinecone scales, not fur, because
+           clumps land on the *face* of the leg where nothing needs breaking up.
+           Only two lines on the cross-section are ever the silhouette: with `out` measured from
+           straight-outward, a camera in front of him or behind him puts the tangent at a ≈ 0,
+           and a side camera (`guard` at 98°) puts it at a ≈ ±π/2. So the clumps live in three
+           columns on those tangents and the rest of the leg stays clean. Alternating long/short
+           down each column is what makes an edge read as fur rather than as a comb. */
+        const COLS = [
+          { a: 0.00, n: 6, u0: 0.10, u1: 0.68, len: 0.062, alt: 0.58 },   // outer edge
+          { a: -1.42, n: 5, u0: 0.14, u1: 0.66, len: 0.052, alt: 0.62 },  // back of thigh/calf
+          { a: 1.46, n: 3, u0: 0.30, u1: 0.62, len: 0.036, alt: 0.70 },   // front, sparse
+        ];
+        for (let ci = 0; ci < COLS.length; ci++) {
+          const col = COLS[ci];
+          for (let r = 0; r < col.n; r++) {
+            const u = col.u0 + (r / (col.n - 1)) * (col.u1 - col.u0);
+            const { c, r: rad } = legAt(u);
+            const a = col.a + 0.34 * Math.sin(r * 4.7 + ci * 2.3);
             const out = new THREE.Vector3(side * Math.cos(a), 0, Math.sin(a));
             put({
-              base: c.clone().addScaledVector(out, rad * 0.90),
-              dir: out.clone().multiplyScalar(0.80).add(new THREE.Vector3(0, -0.68, 0)).normalize(),
-              length: (0.052 - 0.022 * u) * jit(r * 5 + j, side * 23),
-              width: 0.019 - 0.005 * u, bend: 0.32,
+              base: c.clone().addScaledVector(out, rad * 0.88),
+              dir: out.clone().multiplyScalar(0.80).add(new THREE.Vector3(0, -0.66, 0)).normalize(),
+              length: col.len * (r % 2 ? col.alt : 1.0) * jit(r * 3 + ci, side * 23),
+              width: 0.017 - 0.004 * u, bend: 0.34,
               bendDir: new THREE.Vector3(0, -1, 0),
               group: 'fur', weights: ramp(u, leg.ramp),
             });
           }
+        }
+        /* Knee ruff: one deliberate fur point above the kneecap. A leg with a single large
+           shape on it reads as a drawn leg; a leg with forty small ones reads as texture. */
+        for (let i = 0; i < 3; i++) {
+          const u = 0.44;
+          const { c, r: rad } = legAt(u);
+          const a = -0.30 + i * 0.62;
+          const out = new THREE.Vector3(side * Math.cos(a), 0, Math.sin(a));
+          put({
+            base: c.clone().addScaledVector(out, rad * 0.86),
+            dir: out.clone().multiplyScalar(0.62).add(new THREE.Vector3(0, -0.84, 0)).normalize(),
+            length: 0.070 * (i === 1 ? 1.0 : 0.78), width: 0.023, bend: 0.40,
+            bendDir: new THREE.Vector3(0, -1, 0),
+            group: 'fur', weights: ramp(u, leg.ramp),
+          });
         }
       }
       // fur spilling over the boot cuff

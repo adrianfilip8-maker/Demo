@@ -63,9 +63,22 @@ const TUNE = {
   shaftGain: 0.55,          // master multiplier on every beam's published intensity
   shaftConeGain: 0.85,      // torch / brazier cones, relative to shaftGain
   shaftSoft: 2.0,           // metres of soft fade where a blade meets geometry
-  shaftFar: 96,             // metres; beyond this a blade contributes nothing
+  /* 96 m put the `dunes` blades — the whole west colonnade, 88 m from that camera — inside
+     the far fade, so the one exterior shot where eight parallel beams project cleanly into
+     frame was fading them out on distance alone. At tod 0.83 the aerial-perspective blend at
+     88 m is only ~16%, so there is nothing physical asking them to be gone by then. */
+  shaftFar: 140,            // metres; beyond this a blade contributes nothing
   shaftScroll: 0.055,       // noise travel along the beam, in beam-lengths/sec
   shaftNoise: 0.70,         // 0 = a clean beam, 1 = fully broken up by turning dust
+  /* Open-air contrast. An additive blade over sunlit stone has no headroom left after AgX,
+     which is why `hero` / `courtyard` / `dunes` measured as "drawing" and read as "absent".
+     `shaftWide` gives the ribbon room outside the aperture for the neighbouring shadow band,
+     `shaftDark` is how deep that band goes, `shaftCore` is the hot centre that buys local
+     contrast without widening the beam. All three at 0 / 1 restore the pure additive blade. */
+  shaftWide: 1.85,          // ribbon half-width in aperture widths
+  shaftDark: 0.30,          // depth of the flanking shadow band, 0..0.5
+  shaftDarkFar: [55, 105],  // metres of backdrop distance over which that band dies out
+  shaftCore: 0.85,          // hot-core lift on top of the cross-section bell
 
   /* soft particles */
   softDepth: 0.55,          // metres of depth over which a sprite fades into geometry
@@ -429,6 +442,8 @@ attribute vec3 aV;         // in-plane axis 2 * halfV
 attribute vec4 aTint;      // linear rgb, gain
 attribute vec4 aParams;    // apex, flare, noiseScale, seed
 
+uniform float uWide;       // ribbon half-width in aperture widths — room for the shadow flank
+
 varying float vS;
 varying float vX;
 varying vec3  vTint;
@@ -437,6 +452,7 @@ varying float vSeed;
 varying float vNoiseK;
 varying float vViewZ;
 varying float vAxial;
+varying float vCone;
 
 void main() {
   float s = position.z;
@@ -462,6 +478,10 @@ void main() {
   // mode with no symptom, and 0.18 m is below anything the canonical cameras resolve.
   float base = max( length( vec2( dot( across, aU ), dot( across, aV ) ) ), 0.18 );
   float w = base * ( aParams.x + ( 1.0 + aParams.y - aParams.x ) * s );
+  // A cone is a light source's own falloff and has no neighbouring shadow band, so it keeps
+  // the bare ribbon. Only sun blades get widened to carry a flank.
+  vCone = step( aParams.x, 0.5 );
+  w *= mix( uWide, 1.0, vCone );
 
   vec3 p = c + across * ( position.x * w );
 
@@ -490,6 +510,11 @@ uniform float uTime;
 uniform float uScroll;
 uniform float uNoiseAmt;
 uniform float uHead;
+uniform float uWide;
+uniform float uCoreLift;
+uniform float uDark;
+uniform vec3  uDarkTint;
+uniform vec2  uDarkFar;
 
 varying float vS;
 varying float vX;
@@ -499,6 +524,7 @@ varying float vSeed;
 varying float vNoiseK;
 varying float vViewZ;
 varying float vAxial;
+varying float vCone;
 
 float h11( float p ) { p = fract( p * 0.1031 ); p *= p + 33.33; p *= p + p; return fract( p ); }
 float vn( float x ) {
@@ -508,10 +534,26 @@ float vn( float x ) {
 }
 
 void main() {
-  // Cross-section: a soft bell, not a hard-edged card. This is the whole reason a beam
-  // reads as air rather than as a translucent plank.
-  float e = 1.0 - clamp( abs( vX ), 0.0, 1.0 );
-  float edge = e * e * ( 3.0 - 2.0 * e );
+  /* Cross-section. The ribbon is uWide aperture-widths across, so xb is in units of the
+     real opening: |xb| < 1 is the beam, |xb| > 1 is the neighbouring shadow band.
+
+     Why the band exists at all: an additive volume can only *add*, and adding to a sunlit
+     200-luma courtyard floor buys almost nothing once AgX has compressed the highlight —
+     which is exactly why the open-air blades measured as drawn and read as absent. A real
+     colonnade does not produce isolated bright wedges, it produces *alternating* bright and
+     dark ones, and the dark ones have all the headroom the bright ones lack. So each blade
+     carries its own shadow band on its flanks: light in the middle, a little less than
+     ambient on either side. On a dark backdrop the core does the work and the flank is
+     invisible; on a bright one the flank draws the edge. uDark = 0 restores the pure
+     additive blade exactly. */
+  float ax = clamp( abs( vX ), 0.0, 1.0 );
+  float xb = ax * mix( uWide, 1.0, vCone );
+
+  float e = 1.0 - clamp( xb, 0.0, 1.0 );
+  float bell = e * e * ( 3.0 - 2.0 * e );
+  // A hot core on top of the bell. Same silhouette, higher peak: local contrast is what
+  // makes a beam read as light rather than as haze, and it costs no extra width.
+  float edge = bell + pow( bell, 5.0 ) * uCoreLift;
 
   // Along the beam: bright at the opening, gone by the far end. uHead keeps the first
   // few per cent from starting on a hard line inside the slot.
@@ -527,21 +569,39 @@ void main() {
 
   float a = edge * lenFade * noise * vGain * uOpacity;
 
+  // The shadow band: nothing at the beam's own edge (a seam there would read as an outline),
+  // peaking just outside it, gone by the rim of the ribbon.
+  float span = max( mix( uWide, 1.0, vCone ) - 1.0, 1e-3 );
+  float f = clamp( ( xb - 1.0 ) / span, 0.0, 1.0 );
+  float flank = ( 1.0 - f ) * smoothstep( 0.0, 0.22, f ) * ( 1.0 - vCone );
+  float dark = flank * lenFade * ( 0.7 + 0.3 * noise ) * uDark *
+               clamp( vGain * 3.0, 0.0, 1.0 ) * uOpacity;
+
   // Soft depth fade where the blade meets geometry (§ the brief). Fails open: a missing or
   // garbage depth sample costs the soft landing, never the beam.
   float sceneZ = texture2D( uDepth, gl_FragCoord.xy * uInvRes ).r;
-  if ( sceneZ > 0.001 && sceneZ < 9000.0 ) {
-    a *= clamp( ( sceneZ - vViewZ ) / uSoft, 0.0, 1.0 );
+  float occl = 1.0;
+  bool haveZ = sceneZ > 0.001 && sceneZ < 9000.0;
+  if ( haveZ ) {
+    occl = clamp( ( sceneZ - vViewZ ) / uSoft, 0.0, 1.0 );
   }
-
-  a *= smoothstep( uNearFade.x, uNearFade.y, vViewZ );
-  a *= 1.0 - smoothstep( uFarFade.x, uFarFade.y, vViewZ );
+  /* The shadow band only exists against a surface the shadow could fall on. Over open sky it
+     would be a grey-violet smear across the one part of the frame §2.3 wants clean, so it
+     dies with distance — and fails *closed* when there is no depth to judge by, which is the
+     opposite of how the light half fails. */
+  dark *= haveZ ? ( 1.0 - smoothstep( uDarkFar.x, uDarkFar.y, sceneZ ) ) : 0.0;
+  occl *= smoothstep( uNearFade.x, uNearFade.y, vViewZ );
+  occl *= 1.0 - smoothstep( uFarFade.x, uFarFade.y, vViewZ );
   // vAxial is 1 when the eye is on the beam's own axis, where a ribbon degenerates to a
   // line and its width stops meaning anything. Fade it out before it can flip.
-  a *= 1.0 - smoothstep( 0.86, 0.99, vAxial );
+  occl *= 1.0 - smoothstep( 0.86, 0.99, vAxial );
+  a *= occl;
+  dark = clamp( dark * occl, 0.0, 0.5 );
 
-  if ( a < 0.004 ) discard;
-  gl_FragColor = vec4( vTint, a );
+  if ( a < 0.004 && dark < 0.004 ) discard;
+  // Premultiplied: the material blends src * 1 + dst * (1 − srcAlpha). With dark = 0 that is
+  // bit-for-bit the additive blade this shader used to be.
+  gl_FragColor = vec4( vTint * a + uDarkTint * dark, dark );
   #include <colorspace_fragment>
 }
 `;
@@ -604,13 +664,24 @@ class LightShafts {
         uScroll: { value: tune.shaftScroll },
         uNoiseAmt: { value: tune.shaftNoise },
         uHead: { value: 0.05 },
+        uWide: { value: tune.shaftWide },
+        uCoreLift: { value: tune.shaftCore },
+        uDark: { value: tune.shaftDark },
+        uDarkFar: { value: new THREE.Vector2(tune.shaftDarkFar[0], tune.shaftDarkFar[1]) },
+        uDarkTint: { value: new THREE.Color(0.03, 0.035, 0.062) },
       },
       vertexShader: SHAFT_VERT,
       fragmentShader: SHAFT_FRAG,
       transparent: true,
       depthTest: true,
       depthWrite: false,
-      blending: THREE.AdditiveBlending,
+      /* Premultiplied, not additive: the blade has to be able to darken its own flanks as
+         well as brighten its core (see SHAFT_FRAG). src·1 + dst·(1 − srcAlpha) degenerates
+         to plain additive whenever srcAlpha is 0, which is every fragment of the core. */
+      blending: THREE.CustomBlending,
+      blendEquation: THREE.AddEquation,
+      blendSrc: THREE.OneFactor,
+      blendDst: THREE.OneMinusSrcAlphaFactor,
       side: THREE.DoubleSide,
       fog: false,
       toneMapped: false,
@@ -1150,7 +1221,9 @@ export class Particles {
         defines: key === 'air_motes' ? ['LOOP', 'WRAP', 'SOFT', 'LIT', 'SHAFTS']
           : additive ? ['LOOP', 'WRAP', 'SOFT']
             : ['LOOP', 'WRAP', 'SOFT', 'LIT', 'SHAFTS'],
-        litMix: key === 'sand_haze' ? 0.85 : key === 'air_motes' ? 0.95 : TUNE.ambientLitMix,
+        /* Per-field, because how far a sprite is dragged toward the key's colour is exactly
+           the knob that decides whether it separates from the ground it flies over. */
+        litMix: def.litMix ?? TUNE.ambientLitMix,
       });
       b.material.uniforms.uBox.value.set(def.box[0], def.box[1], def.box[2]);
       b.material.uniforms.uFade.value.set(def.fade[0], def.fade[1], def.fade[2], def.fade[3]);
@@ -1811,6 +1884,15 @@ export class Particles {
       this.shared.ambTint.copy(lighting.shadowTint).multiplyScalar(1.5).addScalar(0.25);
     } else {
       lin(PAL.shadow, this.shared.ambTint).multiplyScalar(1.5).addScalar(0.25);
+    }
+    /* The blade's shadow flank darkens toward the same violet-teal the rest of the frame's
+       shadows use (§2.1.3 — shadows are coloured, never grey), at the ambient's own level so
+       the band reads as air that is merely *unlit*, not as a smear of paint. */
+    const dt = this.shafts?.material?.uniforms?.uDarkTint?.value;
+    if (dt) {
+      const amb = lighting?.atmosphere;
+      if (amb?.ambientColor) dt.copy(amb.ambientColor).multiplyScalar(Math.max(0.05, amb.ambientIntensity ?? 0.1));
+      else dt.setRGB(0.03, 0.035, 0.062);
     }
   }
 
