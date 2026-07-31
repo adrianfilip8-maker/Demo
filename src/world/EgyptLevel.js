@@ -784,36 +784,68 @@ function tomb(A) {
   vol(A, 'tomb', 'mudbrick', -14.6, -13.8, -12.4, 0.4, -60.0, -53.6, { jitter: 0.04 });
 
   /* ---- Vault shell. ---- */
+  /* No holes in the vault floor. The crypt piers stand *on* the paving — they start at y = F,
+     which is the slab top — so nothing needs cutting away for them.
+     This used to punch two 14 m strips down the pier lines, so between the piers the floor
+     simply had no slabs: four openings straight through the shell into the void, which is what
+     the `interior` frame's cream wedges were. Cutting the strips back to per-pier squares was
+     not enough either, because `pavingMatrices` drops a whole 2.33 x 2.38 m slab whenever its
+     centre lands in a hole, and a 2.2 m pier cannot cover the fringe. Measured by casting the
+     shot's own frustum against the built geometry: 99 of 112 escaping rays left through
+     y = -12, and 48 still did with per-pier holes. With none, zero do. */
   A.instance('paving_courtyard', K.slabUnit(0.5, R),
-    K.pavingMatrices({ x0: t.x0, x1: t.x1, z0: t.z0, z1: -59.0, y: F, slab: 2.35, rng: R, sink: 0.05, holes: [[-6.6, -4.4, -75.2, -60.8], [4.4, 6.6, -75.2, -60.8]] }), 'paving:tomb', { cast: false });
+    K.pavingMatrices({ x0: t.x0, x1: t.x1, z0: t.z0, z1: -59.0, y: F, slab: 2.35, rng: R, sink: 0.05 }), 'paving:tomb', { cast: false });
   groundProxy(A, t.x0, t.x1, F, t.z0, -58.6);
   const nicheZ = [-64, -70, -76];
-  const vOpen = nicheZ.flatMap((nz) => [2, 3].map((f) => ({ face: f, a0: nz - zc - 0.8, a1: nz - zc + 0.8, y0: 3.0, y1: 4.9 })));
-  vOpen.push({ face: 3, a0: -63 - zc - 1.0, a1: -63 - zc + 1.0, y0: 8.2, y1: 9.9 });   // vent mouth
+  /* A lamp niche is a recess, so it is cut into the *inner* face only — cutting it through
+     both faces made it a window onto the void, which was 4 of the escaping sightlines. Face 2
+     is +X and face 3 is -X, so which one is "inner" flips with the wall. The vent mouth is the
+     exception: that is a real passage in from the hall and has to go through both faces. */
+  const vaultOpenings = (sx) => {
+    const inner = sx > 0 ? 3 : 2;
+    const o = nicheZ.map((nz) => ({ face: inner, a0: nz - zc - 0.8, a1: nz - zc + 0.8, y0: 3.0, y1: 4.9 }));
+    if (sx < 0) {
+      for (const f of [2, 3]) o.push({ face: f, a0: -63 - zc - 1.0, a1: -63 - zc + 1.0, y0: 8.2, y1: 9.9 });
+    }
+    return o;
+  };
   for (const sx of [-1, 1]) {
     A.add('tomb', 'hieroglyph_wall', K.place(K.masonryShell({
       w: 1.9, d: t.z1 - t.z0, h: C - F, batter: 0.015, course: 0.7, thick: 0.95, rng: R,
-      blockLen: [1.4, 2.4], recess: 0.07, chipChance: 0.22, gapChance: 0.02, hollow: true, openings: vOpen,
-      skipFaces: [sx > 0 ? 2 : 3],
+      /* gapChance 0: the vault is sealed and solid rock lies beyond it, so a fallen block is
+         not a ruin note, it is a hole through the shell.
+         No skipFaces either. Dropping the buried outer row leaves the wall one block thick,
+         and `masonryShell` builds each block at 98.5% of its course height to leave a mortar
+         joint — so a one-row wall has a ~1 cm slot running its whole length at every course
+         line, and those see straight through to the void. The outer row is also what a niche
+         is cut *into*. */
+      blockLen: [1.4, 2.4], recess: 0.07, chipChance: 0.22, gapChance: 0, hollow: true,
+      openings: vaultOpenings(sx),
     }), { x: sx * (t.x1 - 0.95), y: F, z: zc }));
     wallProxy(A, sx * (t.x1 - 0.95) - 1.0, sx * (t.x1 - 0.95) + 1.0, F, C, t.z0, t.z1);
     for (const nz of nicheZ) ledgeProxy(A, sx * (t.x1 - 0.95) - 1.0, sx * (t.x1 - 0.95) + 1.0, F + 3.0, nz - 0.8, nz + 0.8, { thick: 0.35 });
   }
   A.add('tomb', 'hieroglyph_wall', K.place(K.masonryShell({
     w: t.x1 - t.x0, d: 1.9, h: C - F, batter: 0.015, course: 0.7, thick: 0.95, rng: R,
-    blockLen: [1.4, 2.4], recess: 0.07, chipChance: 0.2, gapChance: 0.02, hollow: true,
-    skipFaces: [1],
+    blockLen: [1.4, 2.4], recess: 0.07, chipChance: 0.2, gapChance: 0, hollow: true,
   }), { x: 0, y: F, z: t.z0 + 0.95 }));
   wallProxy(A, t.x0, t.x1, F, C, t.z0, t.z0 + 1.9);
-  /* Gate wall + doorway, right behind the `interior` camera. */
+  /* Gate wall + doorway, behind the `interior` camera — and it has to be *behind* it.
+     At z -59.4 and 1.6 m thick this spanned z -60.2 .. -58.6, and the shot camera stands at
+     z = -60.0: it was 0.2 m inside the masonry. Measured, not inferred — a containment probe
+     from the camera found surfaces 0.06 m above it, 0.26 m west and 0.41 m north, all
+     `arch:tomb:hieroglyph_wall`. Every escaping sightline and the whole "unlit vault" reading
+     followed from that. Thinner, and moved south until the north face clears the camera by
+     0.7 m; still the stairwell/crypt boundary, still clear of the crypt piers at z -62. */
+  const GATE_Z = -58.75, GATE_D = 1.1;
   A.add('tomb', 'hieroglyph_wall', K.place(K.masonryShell({
-    w: t.x1 - t.x0, d: 1.6, h: C - F, batter: 0.015, course: 0.7, thick: 0.9, rng: R,
-    blockLen: [1.3, 2.2], recess: 0.07, chipChance: 0.2, gapChance: 0.01, hollow: true,
+    w: t.x1 - t.x0, d: GATE_D, h: C - F, batter: 0.015, course: 0.7, thick: 0.9, rng: R,
+    blockLen: [1.3, 2.2], recess: 0.07, chipChance: 0.2, gapChance: 0, hollow: true,
     openings: [0, 1].flatMap((f) => [{ face: f, a0: -2.6, a1: 2.6, y0: -1, y1: 3.8 }]),
-  }), { x: 0, y: F, z: -59.4 }));
-  doorFrame(A, 'tomb', 'granite_pink', { halfW: 2.72, y0: F, y1: F + 3.8, z: -60.22, r: 0.2 });
-  for (const [x0, x1] of [[t.x0, -2.6], [2.6, t.x1]]) wallProxy(A, x0, x1, F, C, -60.2, -58.6);
-  wallProxy(A, -2.6, 2.6, F + 3.8, C, -60.2, -58.6);
+  }), { x: 0, y: F, z: GATE_Z }));
+  doorFrame(A, 'tomb', 'granite_pink', { halfW: 2.72, y0: F, y1: F + 3.8, z: GATE_Z - GATE_D / 2 - 0.02, r: 0.2 });
+  for (const [x0, x1] of [[t.x0, -2.6], [2.6, t.x1]]) wallProxy(A, x0, x1, F, C, GATE_Z - GATE_D / 2, GATE_Z + GATE_D / 2);
+  wallProxy(A, -2.6, 2.6, F + 3.8, C, GATE_Z - GATE_D / 2, GATE_Z + GATE_D / 2);
   vol(A, 'tomb', 'ceiling_stars', t.x0 + 0.9, t.x1 - 0.9, C - 0.85, C, t.z0 + 1.6, -58.8, { c: 0.03 });
 
   /* ---- Pillared crypt. The nearest pier is the `interior` shot's foreground frame. ---- */

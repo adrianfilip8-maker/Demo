@@ -155,9 +155,20 @@ export class Props {
 
     this._treasurePile(L.vault.x + 2.9, L.vault.y, L.vault.z + 1.2);
 
-    // Tomb torches — the interior shot's only motivated light.
-    for (const [x, z] of [[-5.5, -60], [5.5, -60], [-5.5, -70], [5.5, -70], [-5.5, -78], [5.5, -78]]) {
-      this._torch(x, L.vault.y + 2.6, z, x < 0 ? Math.PI / 2 : -Math.PI / 2);
+    /* Tomb torches — the `interior` shot's only motivated light, so they have to be both
+       *in* the vault and *in* that camera's frame.
+       The old line put them at z -60/-70/-78, which matched nothing the tomb is built from:
+       -60 is inside the stairwell gate wall and -78 is a metre behind the north wall, so four
+       of the six burned inside solid masonry. Measured with a containment probe against the
+       built geometry — nearest surface 0.01 m and 0.26 m for the z -60 pair.
+       A sconce also wants something to be mounted on. The crypt piers are at z -62/-68/-74
+       with their inner faces at x = +/-4.4, so the torches now sit on those faces and throw
+       light down the nave: the -62 pair lights the near field from 2.3 m off-frame, and the
+       -68 and -74 pairs sit 10-27 deg off the `interior` axis with clear line of sight. */
+    for (const sx of [-1, 1]) {
+      for (const pz of [-62, -68, -74]) {
+        this._torch(sx * 4.35, L.vault.y + 2.6, pz, sx < 0 ? Math.PI / 2 : -Math.PI / 2);
+      }
     }
   }
 

@@ -332,8 +332,13 @@ export function masonryShell(o) {
 
     for (const face of faces) {
       if (face.len <= 0.6) continue;
-      // A face that is buried in solid earth or backed onto another wall is triangles the
-      // camera can never reach. Faces: 0 = +Z, 1 = −Z, 2 = +X, 3 = −X.
+      /* A face that is buried in solid earth or backed onto another wall is triangles the
+         camera can never reach. Faces: 0 = +Z, 1 = −Z, 2 = +X, 3 = −X.
+         HAZARD, learned the hard way: dropping a face leaves the wall one block thick, and
+         each block is built at 98.5% of its course height to leave a mortar joint — so a
+         one-row wall has a ~1 cm slot at every course line that you can see straight through.
+         Only use where the far side is genuinely never rendered *and* nothing behind the wall
+         is visible through a 1 cm gap. Not currently used anywhere, for that reason. */
       if (skipFaces && skipFaces.includes(face.f)) continue;
       let a = -face.len * 0.5;
       let guard = 0;
