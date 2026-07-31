@@ -13,16 +13,27 @@ import { MeshBuilder, addTube, addEllipsoid, addHardBox, superEllipse } from './
  * `hookPoint` is where a ring sits when the cane catches it.
  */
 
+/**
+ * The hook geometry is the whole point of this prop, so read these two together:
+ *
+ *   · `hookRadius` sets how big the C is. At 0.125 m the crook was smaller than his own hand
+ *     and the critic logged it as "a bangle" and "a detached orange hook". It is now 0.168 —
+ *     as wide as his head is deep, which is the ratio the reference uses.
+ *   · `hookSweep` sets how far round it goes. 4.45 rad is 255°, i.e. very nearly a closed
+ *     ring — which is *why* it read as a bangle rather than a hook. A shepherd's crook has to
+ *     stay visibly **open**: 3.35 rad (192°) leaves a clean gap you can see daylight through,
+ *     and an open C is what makes the silhouette legible at 40 px.
+ */
 export const CANE_TUNE = {
-  length: 1.2,          // butt tip → top of the hook arc
-  shaftR: 0.0165,       // slim shaft so the hook reads as the heavy end
-  hookR: 0.023,         // deliberately chunky: this silhouette is his logo
-  hookRadius: 0.125,    // radius of the C
-  hookSweep: 4.45,      // radians of arc — past a semicircle so the C closes visibly
-  gripLo: -0.115,
-  gripHi: 0.215,
-  gripR: 0.0245,
-  wrapDepth: 0.0042,    // helical leather wrap relief
+  length: 1.30,         // butt tip → top of the hook arc
+  shaftR: 0.0205,       // slim shaft so the hook reads as the heavy end
+  hookR: 0.0375,        // deliberately chunky: this silhouette is his logo
+  hookRadius: 0.168,    // radius of the C
+  hookSweep: 3.35,      // radians of arc — an open C, not a closed ring
+  gripLo: -0.125,
+  gripHi: 0.225,
+  gripR: 0.0295,
+  wrapDepth: 0.0050,    // helical leather wrap relief
   wrapTurns: 9,
 };
 

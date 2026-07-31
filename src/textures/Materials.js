@@ -933,22 +933,38 @@ export const MATERIALS = {
    * to (-1,-1,-1) on all twelve hypostyle columns. Fixed in NormalMap.derive; the bump is now
    * also proportionate (0.10 m of relief across a 3.6 m repeat was a 28× slope scale). */
   column_papyrus: {
-    group: 'carved', tier: 0, tile: [3.6, 4.5], bump: 0.050, rough: 0.84,
+    group: 'carved', tier: 0, tile: [3.6, 4.5], bump: 0.034, rough: 0.84,
     build(s, cx) {
       const size = s.size;
       // A bundled-papyrus column: convex stalks running vertically, V-grooves between them,
       // painted bands ringing it, and a column of text down the front.
+      /* The stalk cross-section.
+       *
+       * It was `sqrt(1 - d²)` — a true semicircle, and therefore a profile whose *derivative is
+       * infinite* at both edges of every stalk. Differentiated at texel spacing and multiplied
+       * by this recipe's slope scale (the largest in the catalogue: 0.05 m of relief across a
+       * 3.6 m repeat), each stalk edge came out as a near-perpendicular facet running the full
+       * height of the shaft. Facets that steep sit on the far side of the cel ramp's terminator
+       * from the stalk face beside them, so every column carried alternating full-height bands
+       * of "fully lit" and "fully shadowed" — which is what the review saw as *"long vertical
+       * cyan and white smears running their full height… they read as melted candle wax"*, and
+       * why it looked like a projection failure rather than fluting.
+       *
+       * `1 - d²` is the same rounded stalk to the eye, has a *finite* slope everywhere, and goes
+       * to zero gradient at the crown, which is where the highlight belongs. Combined with a
+       * wider, softer V between stalks and a smaller `bump`, the flutes now turn with the light
+       * instead of banding against it. */
       const stalks = 9;
       const cross = s.field(1, (u, v) => {
         const wob = fbmN(u, v, 6, 3, 0.5, cx.seed + 11) * 0.010;
         const p = ((u + wob) * stalks) % 1;
         const d = p * 2 - 1;
-        return Math.sqrt(sat(1 - d * d));                       // stalk cross-section
+        return sat(1 - d * d);
       });
       const groove = s.field(1, (u, v) => {
         const wob = fbmN(u, v, 6, 3, 0.5, cx.seed + 11) * 0.010;
         const p = ((u + wob) * stalks) % 1;
-        return sat(1 - Math.abs(p * 2 - 1) / 0.16) ** 1.5;      // the V between stalks
+        return smoothstep(0.28, 0.0, Math.abs(p * 2 - 1) * -1 + 1);   // soft V between stalks
       });
       const stone = s.field(2, (u, v) => warpN(u, v, 12, 5, 1.0, cx.seed) * 0.5 + 0.5);
       const bandsMask = rasterMask(size, (ctx) => {

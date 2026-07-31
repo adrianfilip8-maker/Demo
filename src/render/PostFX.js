@@ -34,11 +34,17 @@ const TUNE = {
   inkCool: 0x161022,      // shadow-side line colour, violet
   inkStrength: 0.85,      // was 0.60 — with the colour bug fixed the line can be a line
 
-  /* --- bloom --- */
-  bloomThreshold: 1.02,   // in HDR units; above 1 so only genuinely bright things bloom
-  bloomKnee: 0.55,
-  bloomIntensity: 0.62,
-  bloomMips: 6,
+  /* --- bloom ---
+     §7.3 wants "a tight coloured halo on bright things", not a wash. At threshold 1.02 with
+     six mips, every sunlit limestone face in a golden-hour frame cleared the bar and the
+     whole pyramid contributed, so the bloom was a low-frequency milky veil over the top of
+     the image — which is precisely the "grey wash" the critic logged on three shots. The
+     sun disc runs at 26x and gold spec well above 2x, so 1.55 still lets everything that
+     should glow, glow; five mips keeps the halo tight instead of screen-wide. */
+  bloomThreshold: 1.55,
+  bloomKnee: 0.45,
+  bloomIntensity: 0.50,
+  bloomMips: 5,
 
   /* --- grade --- */
   // Was lifted to 1.45 to fight darkness that turned out to be the AO feedback bug below.
@@ -61,8 +67,13 @@ const TUNE = {
 
   /* --- finishing --- */
   vignette: 0.16,                  // was compounding with dark shadows into a black frame
-  chroma: 0.0016,         // edge-only chromatic aberration, in uv
-  grain: 0.016,
+  // Chromatic aberration: OFF. Measured at roughly a pixel of R-vs-B split in the outer
+  // third of a 1280-wide frame, which is a coloured fringe on the outside of every
+  // high-contrast edge. §2.1 and §7.3 ask for ink lines; nothing in the bible asks for a
+  // lens. In a game whose edges are supposed to read as *drawn*, a channel split on those
+  // edges is the exact "this is a post-processed render" tell the critic called out.
+  chroma: 0.0,
+  grain: 0.016,           // static dither; the only thing keeping the sky gradient off bands
 };
 
 /* ─────────────────────────────── shaders ─────────────────────────────── */
@@ -239,8 +250,9 @@ ${GLSL_SRGB}
 const float SLY_PIVOT = 0.18;   // scene-linear middle grey; the contrast pivot
 
 void main() {
-  // Edge-only chromatic aberration: sampling the channels apart across the whole frame
-  // reads as a broken display, but a touch at the corners reads as a lens.
+  // Radial chromatic aberration. uChroma is 0 by default (see TUNE) — the taps collapse to
+  // the same texel and this costs nothing, but the plumbing stays so it can be dialled back
+  // in deliberately rather than re-derived.
   vec2 fromCentre = vUv - 0.5;
   float r2 = dot( fromCentre, fromCentre );
   vec2 ca = fromCentre * uChroma * r2 * 4.0;

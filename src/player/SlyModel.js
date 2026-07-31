@@ -27,10 +27,10 @@ export const TUNE = {
   height: 1.80,
 
   /* --- silhouette proportions. These are the cartoon exaggeration knobs. --- */
-  headScale: 1.00,        // cranium size multiplier (1.0 ≈ 4.9 heads tall)
+  headScale: 1.19,        // cranium scale about the neck joint — tuned to ~5 heads tall (§7.3)
   tailScale: 1.00,        // tail length + girth; the tail is half the silhouette
-  handScale: 1.00,        // big thief hands
-  footScale: 1.00,
+  handScale: 1.22,        // big thief hands — they sell every gesture, so they are oversized
+  footScale: 1.18,        // chunky boots give the contrapposto a base to stand on
 
   /* --- shading / line --- */
   outline: 0.0034,        // fraction-of-frame-height thickness ⇒ ~2.5 px at any resolution
@@ -79,6 +79,16 @@ const PAL = {
 /* Material group order — index into the material array, so also the draw-call order. */
 const GROUPS = ['fur', 'furCream', 'furDark', 'cloth', 'clothDark', 'gold', 'ink', 'eye'];
 
+/**
+ * Head space. `headScale` has to move the skull, the face, the cap, the ears *and* the head
+ * bones together or the mask slides off the eyes the moment you touch it — which is why it
+ * had been left at 1.0 and he shipped at 6.1 heads tall (§7.3 fails "realistic instead of
+ * ~1:5 head:body cartoon"). Everything above the neck joint goes through `hy`/`hx`.
+ */
+const HEAD_BASE = 1.396;                                   // the neck joint: the fixed point
+const hy = (y) => HEAD_BASE + (y - HEAD_BASE) * TUNE.headScale;
+const hx = (v) => v * TUNE.headScale;
+
 /* ============================ SKELETON ==================================== */
 
 /** [name, parent, [x,y,z] in bind-pose model space]. His right is −X, forward is +Z. */
@@ -87,13 +97,13 @@ const SKELETON = [
   ['spine', 'hips', [0, 1.010, 0.000]],
   ['chest', 'spine', [0, 1.150, -0.005]],
   ['neck', 'chest', [0, 1.315, 0.010]],
-  ['head', 'neck', [0, 1.420, 0.015]],
-  ['jaw', 'head', [0, 1.478, 0.055]],
-  ['capBrim', 'head', [0, 1.665, 0.090]],
-  ['earL', 'head', [0.112, 1.660, -0.028]],
-  ['earR', 'head', [-0.112, 1.660, -0.028]],
-  ['browL', 'head', [0.064, 1.648, 0.140]],
-  ['browR', 'head', [-0.064, 1.648, 0.140]],
+  ['head', 'neck', [0, hy(1.420), 0.015]],
+  ['jaw', 'head', [0, hy(1.478), hx(0.055)]],
+  ['capBrim', 'head', [0, hy(1.665), hx(0.090)]],
+  ['earL', 'head', [hx(0.128), hy(1.662), hx(-0.022)]],
+  ['earR', 'head', [hx(-0.128), hy(1.662), hx(-0.022)]],
+  ['browL', 'head', [hx(0.064), hy(1.648), hx(0.140)]],
+  ['browR', 'head', [hx(-0.064), hy(1.648), hx(0.140)]],
 
   ['shoulderL', 'chest', [0.052, 1.292, 0.000]],
   ['upperArmL', 'shoulderL', [0.140, 1.278, 0.000]],
@@ -117,10 +127,10 @@ const SKELETON = [
      across the chain instead of trailing flat behind him. A horizontal bind tail disappears
      behind the body from every camera angle except pure side-on, which is how a 1.1 m tail
      managed to read as "no tail at all". ANIMATION's clip rotations compose on top of this. */
-  ['tailA', 'hips', [0, 0.905, -0.105]],
-  ['tailB', 'tailA', [0, 0.918, -0.410]],
-  ['tailC', 'tailB', [0, 0.995, -0.700]],
-  ['tailD', 'tailC', [0, 1.120, -0.910]],
+  ['tailA', 'hips', [0, 0.898, -0.135]],
+  ['tailB', 'tailA', [0.022, 0.896, -0.445]],
+  ['tailC', 'tailB', [0.062, 0.928, -0.748]],
+  ['tailD', 'tailC', [0.116, 1.008, -0.996]],
 ];
 
 /**
@@ -323,22 +333,22 @@ export class SlyModel {
   /* y, half-width, half-depth, z-offset. Wide chest → wasp waist → flared shirt hem: the
      classic thief triangle. */
   static TORSO = [
-    [0.815, 0.100, 0.083, -0.008],
-    [0.848, 0.098, 0.081, -0.006],
-    [0.895, 0.093, 0.076, 0.000],
-    [0.945, 0.084, 0.068, 0.004],
-    [0.995, 0.078, 0.062, 0.006],
-    [1.045, 0.086, 0.067, 0.006],
-    [1.095, 0.099, 0.075, 0.004],
-    [1.145, 0.110, 0.081, 0.000],
-    [1.195, 0.115, 0.083, -0.004],
-    [1.245, 0.111, 0.079, -0.008],
-    [1.290, 0.099, 0.071, -0.008],
-    [1.316, 0.087, 0.064, -0.002],
-    [1.330, 0.094, 0.070, 0.002],   // collar lip flares out
-    [1.337, 0.075, 0.059, 0.005],   // neck fur begins (hard crease here)
-    [1.382, 0.067, 0.056, 0.008],
-    [1.422, 0.065, 0.056, 0.010],
+    [0.815, 0.112, 0.092, -0.008],
+    [0.848, 0.109, 0.089, -0.006],
+    [0.895, 0.101, 0.082, 0.000],
+    [0.945, 0.088, 0.071, 0.004],
+    [0.995, 0.079, 0.063, 0.006],   // the wasp waist stays exactly where it was
+    [1.045, 0.092, 0.071, 0.006],
+    [1.095, 0.112, 0.083, 0.004],
+    [1.145, 0.128, 0.092, 0.000],
+    [1.195, 0.134, 0.095, -0.004],
+    [1.245, 0.128, 0.089, -0.008],
+    [1.290, 0.112, 0.079, -0.008],
+    [1.316, 0.096, 0.071, -0.002],
+    [1.330, 0.104, 0.078, 0.002],   // collar lip flares out
+    [1.337, 0.098, 0.078, 0.005],   // neck fur begins (hard crease here)
+    [1.382, 0.094, 0.076, 0.008],
+    [1.422, 0.092, 0.076, 0.010],
   ];
 
   _torsoRadius(y) {
@@ -520,16 +530,16 @@ export class SlyModel {
        Read the profile below with this in mind — the fat part of the tail sits *above* the
        hips, at head height, where it silhouettes against sky instead of against his own back. */
     const spine = resample([
-      new THREE.Vector3(0, 0.902, -0.055 * S),
-      new THREE.Vector3(0, 0.900, -0.170 * S),
-      new THREE.Vector3(0, 0.905, -0.310 * S),
-      new THREE.Vector3(0, 0.922, -0.450 * S),
-      new THREE.Vector3(0, 0.955, -0.585 * S),
-      new THREE.Vector3(0, 1.005, -0.700 * S),
-      new THREE.Vector3(0, 1.070, -0.800 * S),
-      new THREE.Vector3(0, 1.148, -0.878 * S),
-      new THREE.Vector3(0, 1.232, -0.930 * S),
-      new THREE.Vector3(0, 1.312, -0.955 * S),
+      new THREE.Vector3(0.000, 0.898, -0.070 * S),
+      new THREE.Vector3(0.004, 0.895, -0.200 * S),
+      new THREE.Vector3(0.014, 0.894, -0.340 * S),
+      new THREE.Vector3(0.030, 0.899, -0.480 * S),
+      new THREE.Vector3(0.052, 0.913, -0.618 * S),
+      new THREE.Vector3(0.080, 0.941, -0.748 * S),
+      new THREE.Vector3(0.112, 0.983, -0.864 * S),
+      new THREE.Vector3(0.146, 1.039, -0.958 * S),
+      new THREE.Vector3(0.178, 1.105, -1.024 * S),
+      new THREE.Vector3(0.204, 1.174, -1.066 * S),
     ], 32);
 
     /* Girth: at its widest the tail is 0.36 m across — wider than his 0.23 m chest and level
@@ -537,8 +547,8 @@ export class SlyModel {
        reference; a tail slimmer than the torso reads as a rope. */
     const radius = (t) => {
       const prof = [
-        [0.00, 0.082], [0.09, 0.132], [0.20, 0.164], [0.36, 0.180],
-        [0.52, 0.176], [0.66, 0.160], [0.80, 0.132], [0.91, 0.092], [1.00, 0.034],
+        [0.00, 0.078], [0.09, 0.120], [0.20, 0.156], [0.36, 0.178],
+        [0.52, 0.178], [0.66, 0.163], [0.80, 0.135], [0.91, 0.094], [1.00, 0.034],
       ];
       for (let i = 0; i < prof.length - 1; i++) {
         if (t <= prof[i + 1][0]) {
@@ -605,18 +615,18 @@ export class SlyModel {
 
     // ≥3 rings straddle each joint so the elbow can flex 100° without creasing.
     const key = [
-      [0.00, new THREE.Vector3(side * 0.062, 1.292, 0.000), 0.046],
-      [0.10, new THREE.Vector3(side * 0.104, 1.290, 0.000), 0.056],
-      [0.22, new THREE.Vector3(side * 0.145, 1.279, 0.000), 0.060],
-      [0.34, new THREE.Vector3(side * 0.196, 1.238, 0.000), 0.051],
-      [0.48, new THREE.Vector3(side * 0.252, 1.191, 0.000), 0.045],
-      [0.60, new THREE.Vector3(side * 0.300, 1.150, 0.000), 0.042],
-      [0.68, new THREE.Vector3(side * 0.3315, 1.1173, 0.000), 0.0435],
-      [0.76, new THREE.Vector3(side * 0.366, 1.0835, 0.000), 0.041],
-      [0.86, new THREE.Vector3(side * 0.412, 1.0325, 0.000), 0.037],
-      [0.93, new THREE.Vector3(side * 0.451, 0.9885, 0.000), 0.0345],
-      [0.965, new THREE.Vector3(side * 0.468, 0.9700, 0.000), 0.036],
-      [1.00, new THREE.Vector3(side * 0.482, 0.9535, 0.000), 0.0325],
+      [0.00, new THREE.Vector3(side * 0.062, 1.292, 0.000), 0.052],
+      [0.10, new THREE.Vector3(side * 0.104, 1.290, 0.000), 0.066],
+      [0.22, new THREE.Vector3(side * 0.145, 1.279, 0.000), 0.071],
+      [0.34, new THREE.Vector3(side * 0.196, 1.238, 0.000), 0.060],
+      [0.48, new THREE.Vector3(side * 0.252, 1.191, 0.000), 0.052],
+      [0.60, new THREE.Vector3(side * 0.300, 1.150, 0.000), 0.049],
+      [0.68, new THREE.Vector3(side * 0.3315, 1.1173, 0.000), 0.0505],
+      [0.76, new THREE.Vector3(side * 0.366, 1.0835, 0.000), 0.048],
+      [0.86, new THREE.Vector3(side * 0.412, 1.0325, 0.000), 0.0435],
+      [0.93, new THREE.Vector3(side * 0.451, 0.9885, 0.000), 0.040],
+      [0.965, new THREE.Vector3(side * 0.468, 0.9700, 0.000), 0.042],
+      [1.00, new THREE.Vector3(side * 0.482, 0.9535, 0.000), 0.038],
     ];
     void sh; void el; void wr;
 
@@ -761,16 +771,16 @@ export class SlyModel {
   _buildLeg(mb, side) {
     const L = side > 0 ? 'L' : 'R';
     const key = [
-      [0.00, new THREE.Vector3(side * 0.068, 0.905, 0.000), 0.078],
-      [0.10, new THREE.Vector3(side * 0.074, 0.820, 0.002), 0.068],
-      [0.24, new THREE.Vector3(side * 0.078, 0.708, 0.006), 0.056],
-      [0.40, new THREE.Vector3(side * 0.081, 0.590, 0.010), 0.047],
-      [0.52, new THREE.Vector3(side * 0.083, 0.480, 0.012), 0.0445],  // knee
-      [0.62, new THREE.Vector3(side * 0.084, 0.410, 0.006), 0.0425],
-      [0.72, new THREE.Vector3(side * 0.086, 0.330, -0.002), 0.0435],  // calf
-      [0.82, new THREE.Vector3(side * 0.087, 0.240, -0.010), 0.036],
-      [0.92, new THREE.Vector3(side * 0.088, 0.150, -0.017), 0.0295],
-      [1.00, new THREE.Vector3(side * 0.088, 0.086, -0.021), 0.0275],
+      [0.00, new THREE.Vector3(side * 0.070, 0.905, 0.000), 0.102],
+      [0.10, new THREE.Vector3(side * 0.076, 0.820, 0.002), 0.092],
+      [0.24, new THREE.Vector3(side * 0.080, 0.708, 0.006), 0.077],
+      [0.40, new THREE.Vector3(side * 0.083, 0.590, 0.010), 0.064],
+      [0.52, new THREE.Vector3(side * 0.085, 0.480, 0.012), 0.0595],  // knee
+      [0.62, new THREE.Vector3(side * 0.086, 0.410, 0.006), 0.0605],
+      [0.72, new THREE.Vector3(side * 0.088, 0.330, -0.002), 0.0625],  // calf
+      [0.82, new THREE.Vector3(side * 0.089, 0.240, -0.010), 0.049],
+      [0.92, new THREE.Vector3(side * 0.090, 0.150, -0.017), 0.039],
+      [1.00, new THREE.Vector3(side * 0.090, 0.086, -0.021), 0.036],
     ];
     const ts = key.map((k) => k[0]);
     const RAMP = [
@@ -810,11 +820,11 @@ export class SlyModel {
 
     // shaft, from a flared cuff at mid-calf down to the ankle
     const shaft = [
-      [new THREE.Vector3(x, 0.298, -0.004), 0.058],
-      [new THREE.Vector3(x, 0.278, -0.006), 0.053],
-      [new THREE.Vector3(x, 0.228, -0.010), 0.049],
-      [new THREE.Vector3(x, 0.168, -0.016), 0.046],
-      [new THREE.Vector3(x, 0.120, -0.020), 0.045],
+      [new THREE.Vector3(x, 0.312, -0.004), 0.078],
+      [new THREE.Vector3(x, 0.286, -0.006), 0.070],
+      [new THREE.Vector3(x, 0.232, -0.010), 0.061],
+      [new THREE.Vector3(x, 0.170, -0.016), 0.055],
+      [new THREE.Vector3(x, 0.120, -0.020), 0.053],
     ];
     addTube(mb, {
       centers: shaft.map((s) => s[0]), seg: 16,
@@ -892,7 +902,7 @@ export class SlyModel {
     [1.763, 0.024, 0.028, 0.006],
   ];
 
-  get headCenter() { return new THREE.Vector3(0, 1.588, -0.006); }
+  get headCenter() { return new THREE.Vector3(0, hy(1.588), hx(-0.006)); }
   get headRadii() { return new THREE.Vector3(0.176 * TUNE.headScale, 0.184 * TUNE.headScale, 0.196 * TUNE.headScale); }
 
   /** Point on the idealised head ellipsoid. theta 0 = straight ahead, +theta = his left. */
@@ -907,13 +917,13 @@ export class SlyModel {
 
   _headWeights(p) {
     const w = ramp(p.y, [
-      [1.380, { neck: 0.72, head: 0.28 }],
-      [1.420, { neck: 0.34, head: 0.66 }],
-      [1.462, { head: 1 }],
-      [1.80, { head: 1 }],
+      [hy(1.380), { neck: 0.72, head: 0.28 }],
+      [hy(1.420), { neck: 0.34, head: 0.66 }],
+      [hy(1.462), { head: 1 }],
+      [hy(1.80) + 0.6, { head: 1 }],
     ]);
     // jaw takes over the lower front so ANIMATION can talk / snarl without moving the skull
-    const j = smooth(1.530, 1.430, p.y) * smooth(0.02, 0.10, p.z) * 0.55;
+    const j = smooth(hy(1.530), hy(1.430), p.y) * smooth(hx(0.02), hx(0.10), p.z) * 0.55;
     if (j < 0.02) return w;
     const out = [];
     for (const [b, a] of w) out.push([b, a * (1 - j)]);
@@ -924,7 +934,7 @@ export class SlyModel {
   _buildHead(mb) {
     const H = SlyModel.HEAD;
     const S = TUNE.headScale;
-    const centers = H.map(([y, , , cz]) => new THREE.Vector3(0, 1.396 + (y - 1.396) * S, cz));
+    const centers = H.map(([y, , , cz]) => new THREE.Vector3(0, hy(y), hx(cz)));
     addTube(mb, {
       centers, seg: TUNE.segHead,
       rx: (i) => H[i][1] * S,
@@ -959,7 +969,7 @@ export class SlyModel {
     ];
     const c = this.headCenter;
     addTube(mb, {
-      centers: key.map((k) => new THREE.Vector3(0, c.y + (k[0].y - c.y) * S, k[0].z * S)),
+      centers: key.map((k) => new THREE.Vector3(0, hy(k[0].y), hx(k[0].z))),
       seg: 20,
       rx: (i) => key[i][1] * S,
       ry: (i) => key[i][2] * S,
@@ -971,7 +981,7 @@ export class SlyModel {
       // The lower half of the snout is the jaw; the bridge stays with the skull.
       weightsAtVert: (i, t, a, p) => {
         const below = Math.max(0, -Math.sin(a));
-        const j = 0.62 * below * smooth(0.03, 0.25, p.z);
+        const j = 0.62 * below * smooth(hx(0.03), hx(0.25), p.z);
         return [['head', 1 - j], ['jaw', j]];
       },
       capStart: true, capEnd: true,
@@ -1060,8 +1070,7 @@ export class SlyModel {
 
   _buildNose(mb) {
     const S = TUNE.headScale;
-    const c = new THREE.Vector3(0, 1.504 * 1, 0.268 * S);
-    c.y = this.headCenter.y + (1.504 - this.headCenter.y) * S;
+    const c = new THREE.Vector3(0, hy(1.504), hx(0.268));
     addEllipsoid(mb, {
       center: c,
       radii: new THREE.Vector3(0.031 * S, 0.024 * S, 0.024 * S),
@@ -1079,8 +1088,7 @@ export class SlyModel {
   /** The half-smile. Asymmetric on purpose: one corner up is the whole read on "smug". */
   _buildMouth(mb) {
     const S = TUNE.headScale;
-    const cy = this.headCenter.y;
-    const P = (x, y, z) => new THREE.Vector3(x * S, cy + (y - cy) * S, z * S);
+    const P = (x, y, z) => new THREE.Vector3(hx(x), hy(y), hx(z));
     const line = resample([
       P(-0.066, 1.492, 0.192),
       P(-0.040, 1.478, 0.234),
@@ -1137,18 +1145,22 @@ export class SlyModel {
   _buildEar(mb, side) {
     const S = TUNE.headScale;
     const L = side > 0 ? 'L' : 'R';
-    const base = new THREE.Vector3(side * 0.104 * S, 1.648, -0.026 * S);
-    base.y = this.headCenter.y + (1.648 - this.headCenter.y) * S;
-    const axis = new THREE.Vector3(side * 0.40, 0.87, -0.29).normalize();
-    const thick = new THREE.Vector3(side * 0.86, -0.10, 0.50).normalize();   // faces outward-front
+    /* Pushed outboard and swept out at ~40° from vertical so the tips clear the cap crown by
+       a clear margin. An ear buried under the hat brim is worth nothing in silhouette, and
+       the ear/cap notch is the shape that says "raccoon in a hat" rather than "person". */
+    const base = new THREE.Vector3(hx(side * 0.118), hy(1.646), hx(-0.020));
+    const axis = new THREE.Vector3(side * 0.62, 0.77, -0.16).normalize();
+    const thick = new THREE.Vector3(side * 0.74, -0.24, 0.63).normalize();   // faces outward-front
     const width = new THREE.Vector3().crossVectors(thick, axis).normalize();
 
     const n = 8;
     const centers = [];
-    for (let i = 0; i < n; i++) centers.push(base.clone().addScaledVector(axis, (i / (n - 1)) * 0.152 * S));
+    for (let i = 0; i < n; i++) centers.push(base.clone().addScaledVector(axis, (i / (n - 1)) * 0.196 * S));
+    // published for the tuft pass, which has to grow a wisp off the real tip
+    (this._earTip || (this._earTip = {}))[side] = { p: centers[n - 1].clone(), axis: axis.clone() };
     const F = { T: centers.map(() => axis), R: centers.map(() => width), U: centers.map(() => thick) };
-    const wProf = [0.046, 0.062, 0.072, 0.073, 0.066, 0.050, 0.028, 0.006];
-    const tProf = [0.028, 0.032, 0.032, 0.029, 0.024, 0.017, 0.009, 0.003];
+    const wProf = [0.056, 0.078, 0.092, 0.094, 0.084, 0.062, 0.034, 0.007];
+    const tProf = [0.033, 0.039, 0.039, 0.035, 0.029, 0.020, 0.011, 0.003];
 
     addTube(mb, {
       centers, seg: 12,
@@ -1188,14 +1200,13 @@ export class SlyModel {
    */
   _buildCap(mb) {
     const S = TUNE.headScale;
-    const pivot = new THREE.Vector3(0, 1.640, 0.0);
+    const pivot = new THREE.Vector3(0, 1.640, 0.0);   // in *unscaled* head space; place() maps it
     // Tipped down over the brow and cocked to his left. A level, symmetric cap reads as a
     // swimming hat; the cock is most of what makes it read as *his* cap.
     const tilt = new THREE.Matrix4().makeRotationX(0.175).premultiply(new THREE.Matrix4().makeRotationZ(0.105));
     const place = (p) => {
       p.sub(pivot).applyMatrix4(tilt).add(pivot);
-      p.y = this.headCenter.y + (p.y - this.headCenter.y) * S;
-      p.x *= S; p.z *= S;
+      p.set(hx(p.x), hy(p.y), hx(p.z));
       return p;
     };
 
@@ -1209,16 +1220,16 @@ export class SlyModel {
      * lozenge instead of a dome concentric with the cranium.
      */
     const C = [
-      [1.598, 0.196, 0.206, 0.004],
-      [1.614, 0.232, 0.242, 0.000],
-      [1.640, 0.256, 0.268, -0.006],
-      [1.672, 0.262, 0.274, -0.014],
-      [1.712, 0.253, 0.264, -0.024],
-      [1.756, 0.230, 0.239, -0.034],
-      [1.800, 0.193, 0.199, -0.042],
-      [1.840, 0.140, 0.144, -0.048],
-      [1.868, 0.074, 0.076, -0.052],
-      [1.880, 0.016, 0.017, -0.054],
+      [1.598, 0.180, 0.190, 0.004],
+      [1.614, 0.211, 0.222, 0.000],
+      [1.640, 0.228, 0.240, -0.006],
+      [1.672, 0.232, 0.244, -0.014],
+      [1.712, 0.224, 0.235, -0.024],
+      [1.756, 0.203, 0.212, -0.034],
+      [1.800, 0.170, 0.176, -0.042],
+      [1.840, 0.124, 0.128, -0.048],
+      [1.868, 0.066, 0.068, -0.052],
+      [1.880, 0.014, 0.015, -0.054],
     ];
     addTube(mb, {
       centers: C.map(([y, , , cz]) => new THREE.Vector3(0, y, cz)), seg: 32,
@@ -1255,7 +1266,7 @@ export class SlyModel {
     const hem = [];
     for (let i = 0; i <= HN; i++) {
       const th = (i / HN) * Math.PI * 2;
-      hem.push(place(new THREE.Vector3(Math.sin(th) * 0.200, 1.596 + 0.006 * Math.cos(th), -0.002 + Math.cos(th) * 0.210)));
+      hem.push(place(new THREE.Vector3(Math.sin(th) * 0.186, 1.596 + 0.006 * Math.cos(th), -0.002 + Math.cos(th) * 0.196)));
     }
     addTube(mb, {
       centers: hem, seg: 8, rx: 0.020 * S, ry: 0.026 * S,
@@ -1276,9 +1287,9 @@ export class SlyModel {
       const th = THREE.MathUtils.lerp(-TH, TH, i / N);
       const k = Math.abs(th) / TH;
       arc.push(place(new THREE.Vector3(
-        Math.sin(th) * 0.238,
+        Math.sin(th) * 0.216,
         1.594 - 0.020 * Math.pow(k, 2),
-        0.004 + Math.cos(th) * 0.262,
+        0.004 + Math.cos(th) * 0.240,
       )));
     }
     addTube(mb, {
@@ -1340,11 +1351,11 @@ export class SlyModel {
         });
       }
       // ear-tip wisp
-      const et = new THREE.Vector3(side * 0.104 * S, this.headCenter.y + (1.648 - this.headCenter.y) * S, -0.026 * S)
-        .addScaledVector(new THREE.Vector3(side * 0.40, 0.87, -0.29).normalize(), 0.146 * S);
+      const ear = this._earTip?.[side];
+      const et = ear ? ear.p.clone().addScaledVector(ear.axis, -0.014 * S) : this.headSurf(side * 0.6, 0.9, 1.05);
       put({
-        base: et, dir: new THREE.Vector3(side * 0.38, 0.86, -0.34).normalize(),
-        length: 0.030 * S, width: 0.009 * S, bend: 0.4,
+        base: et, dir: (ear ? ear.axis.clone() : new THREE.Vector3(side * 0.38, 0.86, -0.34)).normalize(),
+        length: 0.040 * S, width: 0.011 * S, bend: 0.4,
         group: 'furDark', weights: [[side > 0 ? 'earL' : 'earR', 1]],
       });
 
@@ -1421,7 +1432,7 @@ export class SlyModel {
       const t = i / (n - 1);
       const c = spine[i];
       const tan = new THREE.Vector3().subVectors(spine[Math.min(n - 1, i + 1)], spine[Math.max(0, i - 1)]).normalize();
-      for (const roll of [-0.9, 0.0, 0.9]) {
+      for (const roll of [-2.5, -1.05, 0.0, 1.05, 2.5]) {
         if (Math.abs(roll) > 0.1 && i % 4 !== 0) continue;
         const up = new THREE.Vector3(Math.sin(roll) * 0.85, Math.cos(roll), 0).normalize();
         const side2 = new THREE.Vector3().crossVectors(tan, up).normalize();
@@ -1430,8 +1441,8 @@ export class SlyModel {
         put({
           base,
           dir: outward.clone().addScaledVector(tan, -0.55).normalize(),
-          length: (0.055 + 0.030 * Math.sin(t * 7)) * TUNE.tailScale,
-          width: 0.018 * TUNE.tailScale, bend: 0.25, bendDir: tan.clone().negate(),
+          length: (0.070 + 0.034 * Math.sin(t * 7)) * TUNE.tailScale,
+          width: 0.021 * TUNE.tailScale, bend: 0.25, bendDir: tan.clone().negate(),
           group: isDark(t) ? 'furDark' : 'furCream',
           weights: ramp(t, this._tailRamp),
         });
