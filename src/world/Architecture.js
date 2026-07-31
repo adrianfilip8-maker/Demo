@@ -70,12 +70,11 @@ const HULL_OUTLINE = new Set(['gold_leaf', 'granite_pink', 'bronze_dark']);
  *                    world and the cascades are fitted around the view.
  *   paving         — 5 cm-relief slabs lying on the ground plane they would shadow.
  *
- * `ceiling_stars` looks like an obvious fourth entry and is not: three of the four painted
- * ceilings do sit directly under a roof slab that already casts, but the tomb's is the only
- * thing between the vault and the sun, and excluding it floods the `interior` shot with
- * daylight. Left casting deliberately.
  * Everything else casts. Cutting a caster that matters is a visible bug, so this list stays
- * short and each entry has to argue for itself.
+ * short and each entry has to argue for itself. `ceiling_stars` looks like an obvious third
+ * entry and is not: three of the four painted ceilings do sit directly under a roof slab that
+ * already casts, but the tomb's is the only thing between the vault and the sun, and excluding
+ * it floods the `interior` shot with daylight. Left casting deliberately.
  *
  * The opt-out is `userData.noShadow`, not `castShadow = false`: main.js sweeps the whole scene
  * after init and turns `castShadow` back on for every opaque mesh, so clearing the flag here
@@ -340,7 +339,7 @@ export class Architecture {
     this._pm?.dispose();
     this.root.removeFromParent();
     this.proxyRoot.removeFromParent();
-    this._geoms.clear(); this._materials.clear();
+    this._geoms.clear(); this._materials.clear(); this._zoneMeshes.clear();
     this._meshes.length = 0; this._colliders.length = 0;
   }
 }
