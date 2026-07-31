@@ -431,7 +431,6 @@ export function masonryShell(o) {
     const t = h > 0 ? yc / h : 0;
     const insetX = batter * yc + bowAt(t, bowPhX);
     const insetZ = batter * yc + bowAt(t, bowPhZ);
-    const inset = Math.min(insetX, insetZ);          // openings scale off the shallower one
     const drX = driftAt(t, drPhX), drZ = driftAt(t, drPhZ);
     const wc = Math.max(1.2, w - 2 * insetX);
     const dc = Math.max(1.2, d - 2 * insetZ);

@@ -465,6 +465,20 @@ function entryPylons(A) {
         { face: 0, a0: -3.9, a1: -2.9, y0: 1.2, y1: 22 },
         { face: 0, a0: 2.9, a1: 3.9, y0: 1.2, y1: 22 },
         { face: 1, a0: -1.6, a1: 1.6, y0: -1, y1: 4.2 },   // service door on the north face
+        /* THE COLLAPSED CORNER, west tower only.
+           Bow and drift move a silhouette by tens of centimetres; this moves it by three
+           metres, and it is the difference between a pair that has aged apart and a pair that
+           is the same mesh twice. Both faces meeting at the tower's outer south corner lose
+           the same eight courses, so the bite is a real corner loss with a returning inside
+           face — not a rectangle punched in one elevation.
+           Placed at mid-height, not at the head: the cornice ring is a single closed sweep
+           and a bite under it would leave a cornice bridging thin air. Placed on the outer
+           corner, not the gate side: the gate reveal is the framing line for `dunes` and
+           `hero` and it wants to stay clean. */
+        ...(sx < 0 ? [
+          { face: 0, a0: -6.2, a1: -3.35, y0: 9.4, y1: 14.6 },
+          { face: 3, a0: 0.55, a1: 3.4, y0: 9.4, y1: 14.6 },
+        ] : []),
       ],
       /* The west tower has settled twice as far as the east one and lost twice as many
          blocks off its windward face. Height and batter already differ; this is what makes
@@ -505,6 +519,23 @@ function entryPylons(A) {
     /* Sand drift on the north (leeward) face. */
     A.add('court', 'sandstone_worn', K.place(K.sandDrift({ len: p.w * 0.95, h: A.TUNE.sandHeight, depth: 4.2, rng: R }),
       { x: cx, z: p.z - p.d / 2, ry: Math.PI }));
+
+    /* The stone that came off the collapsed corner is lying at its foot. A bite with no
+       debris under it reads as a design decision; a bite with a spill of blocks under it
+       reads as an event. Same material key as the tower, so all of it merges into that
+       bucket's existing draw call and the whole spill costs zero draws. */
+    if (sx < 0) {
+      const fx = cx - p.w * 0.5 + 0.4, fz = p.z + p.d * 0.5;
+      for (let i = 0; i < 7; i++) {
+        const s = R.range(0.75, 1.5);
+        const g = K.chamferBox(s * 1.5, s * 0.62, s * 1.1, { rng: R, jitter: 0.03, chip: R.chance(0.5) ? 0.16 : 0, c: 0.05 });
+        K.place(g, {
+          x: fx + R.range(-2.2, 3.4), y: s * 0.31 - R.range(0.05, 0.3), z: fz + R.range(0.4, 4.6),
+          rx: D(R.jitter(14)), ry: D(R.range(0, 360)), rz: D(R.jitter(16)),
+        });
+        A.add('court', 'hieroglyph_wall', K.boxProjectUVs(g));
+      }
+    }
   }
 
   /* Great gate lintel bridging the towers: the frame you see the obelisk through. */
