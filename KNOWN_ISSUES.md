@@ -125,8 +125,62 @@ direction and want a re-bracket now that occlusion is real.
 
 ---
 
-## 6. The critic loop has never run a scoring pass
+## 6. Critic passes — two run, baseline 4.2
 
-`tools/critic.mjs` and `tools/CRITIC.md` are built and working, but no adversarial review
-pass has actually scored the ten canonical shots against the §7.3 fail-list. Everything above
-is my own assessment, not a critic's.
+`tools/critic.mjs` and `tools/CRITIC.md` are built and working. Two adversarial passes have
+scored the ten canonical shots against the §7.3 fail-list; see `progress/critic-pass1.md` and
+`progress/critic-pass2.md`. The pass floor is 8 and the standing baseline is **4.2**.
+
+Note when reading pass 1 and 2: several of their findings were *symptoms with the wrong cause
+attached*, and two were reported against frames that were not showing what anyone thought they
+were showing (see §7). Treat their observations as reliable and their diagnoses as hypotheses.
+
+---
+
+## 7. The canonical shots were not framing what they claimed — **fixed**
+
+Three defects in `Shots.js`, all found with arithmetic rather than by eye, none of which
+produces an error or a warning:
+
+- **`temple` framed from 0.78 m inside a nave column.** The camera sat at `(9, 3.4, -22)`; the
+  nave column at `(8, -22)` has a radius of 1.78 m at that height. A camera inside geometry
+  still renders, so nothing ever complained. Now in the centre of the nave at the south end,
+  3.6 m clear of the nearest column.
+- **`temple` and `courtyard` had the character below the bottom edge of the frame**, at NDC y
+  −1.97 and −1.21. Critic pass 2 reported this as "the character casts no shadow in 4 frames".
+  The shadow was the symptom; the character being off-screen was the defect.
+- **`sly-closeup` was constrained by yaw, not by the camera.** At yaw 0.55 his face pointed
+  128° away from a sun at azimuth 187°, so no camera placement could light it — a sweep of
+  6480 placements failed the face-lighting test on every one, because face lighting is a
+  function of yaw and the sun alone.
+
+All ten shots now put the character's ground contact in frame with ≥50% of his cast shadow
+visible, except `guard`, where he is behind the camera on purpose because the guard is the
+subject. That exception is documented in place so it is not re-reported.
+
+Four checkers are kept in `tools/` — `camclear.mjs`, `shadowframe.mjs`, `framesweep.mjs`,
+`playerplace.mjs`. **None of them boots the renderer**, so they run in about a second where a
+capture costs 2–5 minutes. Run `camclear.mjs` after moving any column or camera.
+
+---
+
+## 8. Open handoffs between modules
+
+Recorded so they are not re-derived:
+
+- **The bright cool contact line is still live.** `guard`: `#598aa2` L129 between surfaces at
+  L87 and L65. `hero`, on *flat open paving* at x=640, y=330→355: `#9ba7b2` L165 and `#c2bdc5`
+  L190 between warm stone at L133–156. Eliminated so far: AO sign error, the rim pass, the
+  albedo authoring (every masonry joint verified darker and lower; the build-time crevice
+  assertion fired zero times across four captures), and kerb geometry (the `hero` measurement
+  is on open floor with no junction). It is added downstream of both textures and geometry.
+  The informative asymmetry: bright **and cool** against warm surroundings — a band that lost
+  its key would be dark and cool, a band that wrongly lost its shadow would be bright and warm.
+- **Dune ripple "chips":** the 3-band ramp plus the rim term quantise a smooth ~30 cm ripple
+  normal into hard bluish quadrilaterals. Slope is now 4.3× shallower than pass 2 and the
+  artefact scales with it but does not go. Belongs to SHADING; it cannot be fixed from inside
+  `src/textures/` without deleting the ripples Terrain asks for.
+- **Stone mean albedo is 4–5% darker family-wide** (granite −13%) since the grime film landed.
+  If LIGHTING wants it back, the lever is `ashlar`'s `tone`, not the grime.
+- **The cel ramp needs geometry, not shader work.** The 3-band quantiser is correct; the scene
+  is boxes and faceted cylinders, so there is almost no smooth normal gradient for it to band.
