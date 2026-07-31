@@ -35,12 +35,18 @@ at identity with a `BackSide` material, which three flips to `FrontSide` for the
 one wrote its host's *lit* surface into the map at coincident depth. `Shading.outline()` now
 sets both keys and clears the flags.
 
-**Still open, and now the real gap:** the shadows are placed correctly but they are rendered as a
-darker, *more saturated* version of the sunlit hue (lit ground `rgb(0.52, 0.26, 0.16)` vs
-shadowed `rgb(0.28, 0.08, 0.06)` — the shadow's red/green ratio is 3.6 against the lit side's
-2.0), so they read as a patch of different stone rather than as shadow. `AGENTS.md §2.2` wants
-violet-teal. That is the `shadowBounceMix` / `shadowSat` / `shadowWash` bracket in §3 below, not
-a shadow-system problem — but it is why the frame still does not *look* like a 22° sun.
+**The hue gap that was open here is now closed — see §3.** The shadows were rendering as a
+darker, *more saturated* version of the sunlit hue. That turned out not to be a tuning question
+at all: `_refreshShadowColor()` was mixing the shadow tint toward the sand bounce in linear
+radiance, where the bounce is ~35x brighter in red, so the shadow *light* itself was leaving
+that function magenta.
+
+**Also settled here:** the character is not excluded from the caster set. Measured in-page —
+`sly_body` is `castShadow`, opaque, `frustumCulled false`, and lands at NDC (0.73, 0.24, 0.69)
+inside cascade 0's ±40 m box; clearing its `castShadow` changes 1.14% of the `sly-closeup`
+frame. What the critic saw is framing: at `tod 0.80` the sun is 21° up and almost due west, so
+his shadow runs east — toward a camera that is standing east of him — and leaves a 34° frame
+behind the near plane. Re-posed with a morning sun the same rig throws a full-length shadow.
 
 ---
 
@@ -57,28 +63,37 @@ high enough frequency on large walls to read as pattern noise rather than carvin
 
 ---
 
-## 3. Warm/cool balance is bracketed but not settled
+## 3. Warm/cool balance — **root cause found; it was never the three knobs**
 
-`PAL.shadowBounceMix` in `ToonMaterial.js` controls how much warm sand bounce mixes into the
-shadow light. Both failure modes are established by capture:
+The shadow hue was chased for five capture cycles through `shadowBounceMix` / `shadowSat` /
+`shadowWash` and every one of them was a dead end, because none of them was the cause.
 
-- `0.00` — warm albedo multiplied by pure blue sky; every shaded face goes mauve
-- `0.45` — cool removed entirely; frame turns monochrome orange, losing §2.3's warm/cool tension
+`_refreshShadowColor()` mixed the palette shadow tint toward the sand bounce **in linear
+radiance**. `#2a3f66` is `(0.023, 0.050, 0.133)` linear; `#e8a852` is `(0.807, 0.392, 0.084)`.
+A 20% lerp between those is not "20% of the way toward warm", it is *swamped* by warm: the
+shadow light left that function at R/G **1.52**, magenta, with green as its darkest channel and
+more red in it than the sun. So every shaded surface was lit by something warmer than the key —
+which is exactly what the critic measured — and turning the wash up simply added more magenta,
+which is what "the frame went lavender" was. The mix now runs at matched luminance, so the
+parameter means what its name says, and the light leaves at `(0.142, 0.189, 0.423)`.
 
-Currently `0.20`. It is defensible but was not itself A/B'd against neighbours; worth a sweep
-once shadows work, since real shadows will change what the right value is.
+Measured on `hero`, same surfaces, before → after:
 
-**Now measurable, because §1 established the shadows are real.** Sampling the hero frame at
-ground-plane normals and splitting on the debug shadow mask: lit ground is
-`rgb(0.522, 0.262, 0.164)` and shadowed ground is `rgb(0.282, 0.079, 0.058)`. The value step is
-fine (2.6:1) — the *hue* is the problem. Red/green is `1.99` on the lit side and `3.57` in
-shadow, i.e. the shadow is a more saturated version of the same orange, which is the opposite of
-§2.2's violet-teal and is why a correctly-placed cast shadow still reads as a patch of different
-stone. Three knobs push on this and they interact: `PAL.shadowBounceMix` (warmth mixed into the
-shadow light), `TUNE.shadowSat` (`0.34`, an albedo *saturation boost* inside shadow that is
-actively fighting the cool tint), and `TUNE.shadowWash` (`0.16`, the unmultiplied additive term
-that is the only part carrying hue independent of the warm albedo). Sweep them together against
-the numbers above rather than one at a time by eye.
+| surface | before | after |
+|---|---|---|
+| shadowed pier | `#9b5146` R/G 1.92 B/max 0.45 | `#594662` R/G 1.26 B/max 1.11 |
+| shadowed wall | `#91514c` R/G 1.78 B/max 0.52 | `#524f6e` R/G 1.04 B/max 1.34 |
+| lit foreground slab | `#ca8157` R/G 1.57 B/max 0.43 | `#c07a59` R/G 1.58 B/max 0.46 |
+
+Two supporting corrections, both in the same direction and both documented at their sites: the
+hemispheric fill was handing every vertical face 50% of an unattenuated sand bounce, and
+`shadowSat` was *raising* albedo saturation before the coloured multiply, which left warm stone
+with no blue for a violet light to work with.
+
+**Method note for whoever tunes this next.** R/G cannot see blue, and the failure mode here is
+a blue-channel one. Measure `B / max(R,G)` alongside it, and put the frame on screen every
+single iteration — this defect has now twice produced numbers that were on target while the
+image was plainly wrong.
 
 ---
 

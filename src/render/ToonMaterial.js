@@ -44,29 +44,67 @@ const TUNE = {
   ambIntensity: 0.52,
   shadowFloor: 0.125,    // shadow illumination as a fraction of key luminance. AGENTS: never below ~14%
                          // of the *tonemapped* result — 0.155 of a raw 3.3 key left the frame flat.
-  /* shadowWash / shadowSat / shadowBounceMix are back at the values the critic scored 4.2 on.
+  /* The daylight shadow hue. **Read the history before moving these.**
    *
-   * Critic pass 2 measured this surface at R/G 1.29 lit vs 1.63 shadowed — shadow warmer than
-   * sunlight, where §2.2 wants it cooler — and ranked it the top remaining defect. I tried to
-   * fix it across five capture cycles and failed, so these are reverted rather than left in an
-   * unscored state. The full trail, so the next attempt does not repeat it:
+   * Critic pass 2 measured one continuous surface at R/G 1.29 lit vs 1.63 shadowed — the
+   * shadow a *redder, more saturated* version of the sunlit hue, where §2.2 wants violet-teal
+   * — and ranked it the top defect in the report. The previous attempt spent five capture
+   * cycles on these two numbers and failed:
    *
    *   wash 0.44           shadow R/G 1.25 vs lit 1.45 — on target, frame went lavender
    *   wash 0.24           still lavender, so the wash was never the cause
-   *   shadowSat −0.18     hypothesis: desaturating albedo lets the blue tint dominate. Also wrong
+   *   shadowSat −0.18     hypothesis: desaturating albedo lets the blue tint dominate. Wrong
    *   shadowSat 0.06      frame essentially unchanged. Third hypothesis dead
    *
-   * The method error underneath all four: I adopted the critic's R/G ratio as my metric, but
-   * *purple is a blue-channel phenomenon and R/G cannot see blue at all*. Shadow R/G stayed
-   * near 1.39 — red still above green — while the frame was plainly lavender. I iterated five
-   * times on a number that was structurally incapable of showing the failure I was chasing.
+   * Its method error, which is worth more than its result: it took the critic's R/G ratio as
+   * its metric, and *purple is a blue-channel phenomenon that R/G cannot see*. Shadow R/G sat
+   * near 1.39 through every iteration while the frame was plainly lavender. Measure B against
+   * max(R,G) as well, and look at the frame every time.
    *
-   * Whoever picks this up: measure B against max(R,G), look at the frame every iteration, and
-   * check the terms *outside* this file first — PostFX's split-tone pushes dark pixels toward
-   * #2a3f66, and the ambient light is #476d95. Neither is reachable from here, and the purple
-   * survived every value I tried in here, which is itself evidence the cause is elsewhere. */
-  shadowWash: 0.16,
-  shadowSat: 0.34,
+   * The cause was neither of these knobs. It was `_refreshShadowColor()` lerping the shadow
+   * tint toward the sand bounce **in linear radiance**: #2a3f66 is (0.023, 0.050, 0.133)
+   * linear and #e8a852 is (0.807, 0.392, 0.084), so a 20% mix does not shift the hue 20% of
+   * the way — it swamps it. The shadow *light* was leaving that function at R/G 1.52, magenta,
+   * with green as its darkest channel. Every symptom follows from that one line: the shadow
+   * came out warmer than the key because the light lighting it was warmer than the key, and
+   * raising the wash added more of a magenta light, which is precisely what lavender is. The
+   * mix is now done at matched luminance, so `shadowBounceMix` means what it says.
+   *
+   * With the light itself finally violet-teal, these two were re-bracketed against captures.
+   * Both had to move, and in opposite directions to the obvious guess:
+   *
+   *   wash 0.34   correct hue, wrong material. The wash is albedo-*independent* — it lands on
+   *               everything the key does not fully reach, which at a 22 degree sun is most of
+   *               the frame — so at that weight it stops being a tint and becomes a coat of
+   *               pale blue paint. Measured shadow R/G 1.09 and B/max 1.19, i.e. numerically
+   *               on target, while `hero` went visibly lavender. This is the same trap the
+   *               previous attempt fell into; the number was right and the frame was wrong.
+   *               It is small on purpose: it exists to keep hue alive where the multiply
+   *               neutralises, not to supply the hue.
+   *
+   *   sat +0.12   "saturation goes up in shadow" is a rule about the finished pixel, and
+   *               applying it to the *albedo* before a coloured multiply does the opposite of
+   *               what it promises. Warm sandstone at +0.34 has almost no blue left (linear
+   *               0.105 -> 0.031), so multiplying by a violet-teal light could only ever
+   *               produce a dark orange. Backing the albedo off toward its own luminance is
+   *               what lets a coloured light read as coloured: the same surface swings from
+   *               R/G 1.38 to 1.22 and from B/max 0.70 to 1.04 on that change alone. The
+   *               chroma in a shadow now comes from the light, which is where it comes from
+   *               in the reference art too. */
+  shadowWash: 0.15,
+  shadowSat: -0.35,
+
+  /* The sand bounce is *bounced* light — sunlight already absorbed once by sand — but it
+     arrives as the palette colour at full radiance, brighter in red than the sun. Attenuating
+     it here is the second half of the shadow-hue fix; see the fill term in toon.glsl.js. */
+  bounceGain: 0.42,
+
+  /* Baked aoMap strength, globally. The maps were authored while cast shadows were suppressed
+     engine-wide (KNOWN_ISSUES §1), so the baked term was carrying the low frequencies as well
+     as the contact scale. Shadows work now and the critic caught the consequence: occlusion
+     "broad and soft everywhere and tight and dark nowhere", a smudge with no occluder near it
+     on the `courtyard` obelisk. The GTAO pass owns contact scale; this is the leftover. */
+  bakedAO: 0.55,
 
   /* --- rim --- */
   rim: 0.55,
@@ -113,14 +151,19 @@ const PAL = {
   rimNight: 0xa8e0ff,
   shadowHue: 0x2a3f66,
   /* Ceiling on the shadow light's brightest channel after the floor rescale. Above roughly
-     this the violet-teal clips toward blue and stops reading as shadow. */
-  shadowTintPeak: 0.42,
-  /* How much warm sand bounce is mixed into the shadow light. Back at the critic-scored value;
-     see the shadowWash/shadowSat note above for why the attempt to move it was reverted.
-     Worth knowing: the palette hue #2a3f66 is itself R/G 0.667, so the *light* is already the
-     right colour — 20% warm bounce lands it at 0.95, near-neutral. If the final surface is
-     still too warm after the real cause is found, this is a legitimate lever; it just was not
-     sufficient on its own. */
+     this the violet-teal clips toward blue and stops reading as shadow. Raised from 0.42 with
+     the hue fix: the peak channel used to be *red* (the mix had gone magenta), so the same cap
+     bound at a much higher luminance. Capping a genuinely blue-dominant tint at 0.42 halved
+     the light in shadow and started crushing detail, which §2.1.3 forbids. */
+  shadowTintPeak: 0.52,
+  /* How much warm sand bounce is mixed into the shadow light — a desert shadow is lit by sky
+     *and* by sun bouncing off the sand around it, and a purely blue shadow light multiplied
+     into warm sandstone neutralises to mauve.
+
+     The mix is done at matched luminance (see _refreshShadowColor). Doing it on raw linear
+     radiance, as it used to, is what broke the shadow hue: the palette hue is R/G 0.667 in
+     sRGB but the *linear* bounce is 35x brighter in red than the linear tint, so 20% of it
+     took the light to R/G 1.52 — warmer than the sun it was meant to contrast with. */
   shadowBounceMix: 0.20,
   haze: 0xe8b878,
   hazeNight: 0x2a3f66,
@@ -175,6 +218,7 @@ export class Shading {
       uKeyIntensity: { value: TUNE.keyIntensity },
       uSkyColor:     { value: new THREE.Color(PAL.fillSky) },
       uBounceColor:  { value: new THREE.Color(PAL.bounce) },
+      uBounceGain:   { value: TUNE.bounceGain },
       uAmbIntensity: { value: TUNE.ambIntensity },
       uShadowColor:  { value: new THREE.Color(0x000000) },
       uShadowWash:   { value: TUNE.shadowWash },
@@ -312,7 +356,10 @@ export class Shading {
       metal: clamp(num(opts.metal ?? opts.metalness, 0), 0, 1),
       sss: clamp(num(opts.sss, TUNE.sss), 0, 1),
       wrapColor: hex(opts.wrapColor ?? opts.sssColor, PAL.wrapWarm),
-      ao: num(opts.ao ?? opts.aoIntensity, 1),
+      /* Baked AO is scaled down globally — see TUNE.bakedAO. A caller asking for 1.0 is
+         asking for "the normal amount of my aoMap", not for a promise that the whole term
+         stays where it was authored when the shadow pipeline was broken. */
+      ao: num(opts.ao ?? opts.aoIntensity, 1) * TUNE.bakedAO,
       haze: num(opts.haze, 1),
 
       detail: detailKey,
@@ -706,17 +753,29 @@ export class Shading {
     const maxK = PAL.shadowTintPeak / Math.max(peak, 1e-4);
     k = Math.min(k, maxK);
 
-    /* Mix warm sand bounce into the shadow light.
+    /* Mix warm sand bounce into the shadow light — **at matched luminance**.
      *
-     * A desert shadow is not lit by blue sky alone — it is lit by sky *and* by sunlight
-     * bouncing off the sand all around it. LIGHTING models that with a separate bounce
-     * light, but the shader's shadow term was purely the cool tint, so warm sandstone
-     * albedo multiplied by a blue light neutralised to mauve. Every surface facing away
-     * from the sun came out purple while the sunlit ones read correctly warm.
+     * A desert shadow is not lit by blue sky alone; it is lit by sky *and* by sunlight
+     * bouncing off the sand all around it, and a purely blue shadow light multiplied into
+     * warm sandstone neutralises to mauve. So the mix itself is right and stays.
      *
-     * Blending toward the bounce colour keeps the palette's violet-teal direction in the
-     * shadow while letting the albedo's warmth survive the multiply. */
-    _col.copy(this._shadowTint).lerp(u.uBounceColor.value, PAL.shadowBounceMix);
+     * What was wrong is that it ran on raw linear radiance. These two colours are nowhere
+     * near the same brightness in linear space — #2a3f66 is (0.023, 0.050, 0.133) and
+     * #e8a852 is (0.807, 0.392, 0.084), 35x more red — so `lerp(tint, bounce, 0.20)` is not
+     * "20% of the way toward warm", it is "swamped by warm": the result left this function at
+     * R/G 1.52 with green as its darkest channel, i.e. a *magenta* light, brighter in red
+     * than the sun it was supposed to sit against. That single line is the whole of the
+     * critic's "the shadow is a redder, more saturated version of the lit hue", and it is
+     * also why raising `shadowWash` turned the frame lavender rather than blue: the wash is
+     * this colour, added unmultiplied.
+     *
+     * Normalising the bounce to the tint's luminance first makes the parameter mean what its
+     * name says — a hue blend — and leaves the scaling to `k`, which is the term that exists
+     * to set how bright a shadow is. */
+    const bounce = u.uBounceColor.value;
+    const bl = lum(bounce);
+    _col.copy(bounce).multiplyScalar(bl > 1e-4 ? this._shadowTintLum / bl : 1);
+    _col.lerp(this._shadowTint, 1 - PAL.shadowBounceMix);
     u.uShadowColor.value.copy(_col).multiplyScalar(k);
   }
 

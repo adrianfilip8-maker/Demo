@@ -114,6 +114,7 @@ uniform float uSss;
 uniform vec3  uSssColor;
 uniform float uAoStrength;
 uniform float uHazeAmount;
+uniform float uBounceGain;    // attenuation on the sand-bounce half of the hemispheric fill
 
 /* One terminator of the ramp. k is its 0-based index; masked off above "steps". */
 float slyTerm( float x, float k, float steps ) {
@@ -271,23 +272,50 @@ export const TOON_SHADE = /* glsl */ `
 		vec3 alb = diffuseColor.rgb;
 		float lumA = slyLum( alb );
 
-		/* Saturation goes UP in shadow, not down. Desaturated shadow is what makes cheap
-		   cel shading look muddy; real ink-and-paint art pushes the hue instead. */
+		/* The albedo the shadow terms multiply, saturation-adjusted (uShadowSat).
+		 *
+		 * This used to push saturation *up*, on the principle that desaturated shadow is what
+		 * makes cheap cel shading look muddy. The principle is right about the finished pixel
+		 * and wrong here: warm sandstone saturated further has effectively no blue left, so
+		 * multiplying it by a violet-teal shadow light can only produce a dark orange, which
+		 * is exactly the defect the critic measured. The chroma in a shadow comes from the
+		 * light; the albedo's job is to let it through and keep the surface's detail legible.
+		 * See TUNE.shadowSat in ToonMaterial.js for the measurements. */
 		vec3 albShadow = clamp( mix( vec3( lumA ), alb, 1.0 + uShadowSat ), 0.0, 1.0 );
 
 		vec3 keyRad = uKeyColor * uKeyIntensity;
 
-		/* Hemispheric fill: cool sky above, hot sand bounce below. */
-		float hemi = 0.5 + 0.5 * Nw.y;
-		vec3 fill = mix( uBounceColor, uSkyColor, hemi ) * uAmbIntensity;
+		/* Hemispheric fill: cool sky above, hot sand bounce below.
+		 *
+		 * On a lit surface the key is ~6x this, so in practice this term decides the hue of
+		 * everything the sun does *not* reach — it is a shadow knob wearing an ambient's name.
+		 * Two things about it were making daylight shadows come out warmer than the sunlight,
+		 * which is the exact inversion of §2.2:
+		 *
+		 * 1. uBounceColor arrives as the palette's sand at full radiance — linear (0.81, 0.39,
+		 *    0.08), i.e. brighter in red than the sun's own colour. It is a *bounce*: sunlight
+		 *    that has already been absorbed once by sand. Arriving unattenuated, it puts more
+		 *    red on a shaded wall than the key puts on a lit one.
+		 * 2. '0.5 + 0.5 * N.y' hands every vertical face 50% of that. A wall in an open desert
+		 *    sees most of the sky dome and only a grazing sliver of hot ground, so the
+		 *    crossover belongs below the horizon, not on it. */
+		float hemi = smoothstep( -0.72, 0.55, Nw.y );
+		vec3 fill = mix( uBounceColor * uBounceGain, uSkyColor, hemi ) * uAmbIntensity;
 
 		float shadowMix = 1.0 - key;
+
+		/* The ambient is part of the shadow, so it gets the shadow albedo too — in proportion,
+		   so a lit surface is untouched. Leaving it on the raw albedo was why uShadowSat
+		   measured as a near-dead knob (-0.30 and -0.10 differ by 0.07 in R/G on a shadowed
+		   pier): the fill is the largest single term on a shaded vertical face and the reddest,
+		   so it was quietly re-warming whatever the shadow terms had just cooled. */
+		vec3 albAmb = mix( alb, albShadow, shadowMix );
 
 		/* Coloured, transparent shadow. The multiplied term keeps albedo detail readable
 		   inside the shadow; the small additive wash keeps the *hue* alive, because a warm
 		   sandstone albedo multiplied by a violet light neutralises to grey otherwise. */
 		vec3 diff = alb * keyRad * key
-		          + alb * fill * ao
+		          + albAmb * fill * ao
 		          + albShadow * uShadowColor * shadowMix * mix( 0.55, 1.0, ao )
 		          + uShadowColor * uShadowWash * shadowMix * ao;
 
@@ -325,17 +353,54 @@ export const TOON_SHADE = /* glsl */ `
 			metalEnv = alb * env * ( uMetal * uMetalGain * ef ) * mix( 0.35, 1.0, sh ) * ao;
 		}
 
-		/* Fresnel rim. Modulated by N.L so it wraps around from the lit side rather than
-		   haloing the whole silhouette — a uniform glow reads as a bad bloom, not as light. */
+		/* Fresnel rim — §2.1.5, "the single biggest AAA tell".
+		 *
+		 * It still wraps from the lit side: full strength where the key grazes the surface,
+		 * dimmer where it does not. What it must not do is gate to *zero* on the shadow
+		 * side, which is what the previous form did. 'mix( 0.22, 1.0, wrapRim )'
+		 * multiplied fres by 0.22 there, and the band that consumed it started at 0.30 — so
+		 * the term was not merely weak on a shadow-side silhouette, it was arithmetically
+		 * incapable of firing at any fresnel value. The critic measured the result exactly: a
+		 * 2 px cyan band on Sly's key-lit edge, +8 luma on his shadow edge. A rim that only
+		 * exists where the key already lights the surface does no separation work at all.
+		 *
+		 * So the wrap is now carried by *amplitude* (mix 0.45 -> 1.0) rather than by a
+		 * threshold the shadow side can never reach: the shadow-side rim is 45% as bright and
+		 * a little narrower, which reads as light bending round the form, and it is never nil.
+		 *
+		 * What this term still cannot do is rim a *flat* face. A box's normal does not turn
+		 * toward grazing at its own silhouette, so fres stays near zero right up to the edge
+		 * and the 'courtyard' obelisk against open sky gets nothing from here at any tuning.
+		 * That case belongs to the screen-space silhouette rim in PostFX, which keys off the
+		 * depth discontinuity instead of the normal. The two are complementary by design:
+		 * this one wraps light around curved forms, that one guarantees every silhouette
+		 * against a background separates. */
 		float fres = pow( 1.0 - ndv, uRimPower );
-		float wrapRim = smoothstep( -0.30, 0.45, ndl );
-		float rimBand = smoothstep( 0.30, 0.60, fres * mix( 0.22, 1.0, wrapRim ) );
-		vec3 rim = uRimColor * ( uRim * uRimGain * rimBand * mix( 0.40, 1.0, sh ) );
+		float wrapRim = smoothstep( -0.35, 0.45, ndl );
+		float rimBand = smoothstep( 0.26, 0.58, fres * mix( 0.60, 1.0, wrapRim ) );
+		vec3 rim = uRimColor * ( uRim * uRimGain * rimBand * mix( 0.55, 1.0, sh ) * mix( 0.45, 1.0, wrapRim ) );
 
-		/* A weak sky-coloured counter-rim on the shadow side. Nothing separates a dark
-		   silhouette from a dark background as cheaply as this. */
-		float skyRimAmt = smoothstep( 0.22, 0.85, fres ) * ( 1.0 - wrapRim ) * ( 0.5 + 0.5 * Nw.y );
-		rim += uSkyColor * ( uRim * uRimGain * 0.55 * skyRimAmt );
+		/* There used to be a second, sky-coloured "counter-rim" here for the shadow side. It
+		   is gone, and its removal is a fix rather than a loss.
+
+		   The bet it made was that a high fresnel means a silhouette. It does not: a *flat
+		   face seen edge-on* reaches fres = 1 for exactly the same reason a silhouette does,
+		   and there is no way to tell them apart from a normal and a view vector alone. So
+		   the term fired hardest on the surfaces that needed it least, and every symptom
+		   followed from that one confusion:
+
+		     · 'guard' — a floor running to the horizon is edge-on at its far end, so the
+		       wall/ground junction drew a saturated cyan line, '#598aa2' at L=129 between
+		       surfaces at L=87 and L=65. A contact brighter than both surfaces it separates.
+		     · 'hero' / 'courtyard' / 'dunes' / 'traversal' — flat top surfaces, viewed from a
+		       standing camera, are all near-grazing: the critic logged every one of them as a
+		       desaturated grey-green, off-palette in both directions.
+		     · the obelisk's oblique shadow face lit up across its *whole* area rather than at
+		       its edge, which is not a rim, it is a wash.
+
+		   The screen-space rim in PostFX answers the question this term could not: it keys off
+		   a depth discontinuity, so it fires on silhouettes and nowhere else, and it carries
+		   its own shadow-side floor. That is where the shadow-side rim lives now. */
 
 		vec3 emissiveTerm = totalEmissiveRadiance;
 
