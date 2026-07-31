@@ -1449,7 +1449,9 @@ export class SlyModel {
       for (let i = 0; i < Math.round(4 * D); i++) {
         const f = (i + 0.5) / Math.round(4 * D);
         const th = side * THREE.MathUtils.lerp(0.66, 1.34, f);
-        const base = this.headSurf(th, THREE.MathUtils.lerp(-0.16, 0.44, f), 0.99);
+        // kept at or below eye level: clumps that climb past it crowd the mask and the face
+        // stops reading as a face at any distance
+        const base = this.headSurf(th, THREE.MathUtils.lerp(-0.30, 0.18, f), 0.99);
         const out = base.clone().sub(this.headCenter).normalize();
         put({
           base, dir: out.clone().addScaledVector(new THREE.Vector3(0, -0.55, -0.35), 0.6).normalize(),

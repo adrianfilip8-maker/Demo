@@ -68,9 +68,12 @@ const HULL_OUTLINE = new Set(['gold_leaf', 'granite_pink', 'bronze_dark']);
  * that is provably true:
  *   `far`          — 150 m+ out behind ≥60% haze; their shadows fall off the far side of the
  *                    world and the cascades are fitted around the view.
- *   ceiling_stars  — painted undersides of roofs. The roof slab immediately above each one is
- *                    already a caster, so the ceiling contributes a coincident duplicate.
  *   paving         — 5 cm-relief slabs lying on the ground plane they would shadow.
+ *
+ * `ceiling_stars` looks like an obvious fourth entry and is not: three of the four painted
+ * ceilings do sit directly under a roof slab that already casts, but the tomb's is the only
+ * thing between the vault and the sun, and excluding it floods the `interior` shot with
+ * daylight. Left casting deliberately.
  * Everything else casts. Cutting a caster that matters is a visible bug, so this list stays
  * short and each entry has to argue for itself.
  *
@@ -79,7 +82,7 @@ const HULL_OUTLINE = new Set(['gold_leaf', 'granite_pink', 'bronze_dark']);
  * on its own is silently undone.
  */
 const NO_CAST_ZONE = new Set(['far']);
-const NO_CAST_MAT = new Set(['ceiling_stars']);
+const NO_CAST_MAT = new Set();
 
 export class Architecture {
   constructor(engine) {

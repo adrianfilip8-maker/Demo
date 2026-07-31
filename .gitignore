@@ -8,10 +8,10 @@ dist/
 # `shots/` is already ~159 MB; agents each produce tens of MB of intermediate frames per run,
 # and none of it is evidence anyone reads twice. The curated top-level shots/*.png and the
 # scored critic sets (shots/pass*/) are the record; everything below is working output.
-shots/iter*/
-shots/tmp*/
-shots/it[0-9]*/
-shots/sw[0-9]*/
-shots/fx[0-9]*/
-shots/diag*/
-shots/ink-ab*/
+#
+# Stated as "ignore every subdirectory, re-include the ones that are evidence" rather than as
+# a list of agent prefixes. Enumerating prefixes fails every time an agent picks a new name —
+# it already missed it0-base/, sw2/, fx0/ and geo0/ in turn.
+shots/*/
+!shots/pass1/
+!shots/pass2/
