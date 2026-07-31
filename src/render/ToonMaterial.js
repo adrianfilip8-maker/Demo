@@ -48,16 +48,22 @@ const TUNE = {
   // albedo, so it is the only lever that can pull the final hue toward the palette's shadow
   // colour rather than toward the surface's own warmth. Raised now that TEXTURES floored the
   // near-black tail that used to turn this wash into visible violet blotching.
-  // 0.44 measured well (shadow R/G 1.25 against lit 1.45) and looked wrong — shadowed faces
-  // went lavender. The wash is additive pure tint, so past a point it stops tinting the stone
-  // and starts *being* the stone. R/G cannot distinguish "cool shadow on warm rock" from
-  // "purple rock"; only the frame can. 0.24 keeps the correction without the colour swap.
-  shadowWash: 0.24,
-  // Was +0.34, a saturation BOOST. On warm sandstone that raises R and lowers G, which is
-  // mechanically why shadow measured *redder* than sunlight (R/G 1.63 shadowed vs 1.49 lit)
-  // when §2.2 wants shadow blue-dominant. A surface lit only by narrow-band skylight should
-  // lose its own hue, not gain it — so this desaturates now.
-  shadowSat: -0.18,
+  // Additive pure tint — the only shadow term not multiplied by albedo. Kept modest: with
+  // shadowSat back near neutral the albedo carries its own warmth again, so the wash only has
+  // to nudge the hue rather than supply all of it. Pushing this to 0.44 measured on-target
+  // (R/G 1.25 vs 1.45 lit) and still looked lavender, because the real cause was elsewhere.
+  shadowWash: 0.20,
+  // Near-neutral, and the reasoning matters because both extremes fail visibly.
+  //
+  // At +0.34 the albedo's warmth was boosted inside shadow, which made shadow measure
+  // *redder* than sunlight — the defect the critic scored. But swinging to −0.18 desaturated
+  // the albedo toward grey, and grey multiplied by the blue shadow light is lavender: it was
+  // the warmth being removed that let the tint take over, not the tint being too strong.
+  // Chasing it with shadowWash was treating the symptom, which is why 0.44 and 0.24 both
+  // stayed purple.
+  //
+  // So: leave the albedo close to its own saturation and let the *light* carry the hue shift.
+  shadowSat: 0.06,
 
   /* --- rim --- */
   rim: 0.55,
