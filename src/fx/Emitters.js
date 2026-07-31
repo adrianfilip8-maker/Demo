@@ -514,11 +514,33 @@ export const EMITTERS = {
     size: [0.075, 0.012], sizeExp: 1.35, spin: [0, 0], fadeIn: 0.10, fadeOut: 1.5,
     alpha: [1.8, 2.8], col0: PAL.emberHot, col1: PAL.emberCool, stretch: 0.03, jitter: 0.08,
   },
+  /**
+   * `embers`, plural, is the name PROPS asks a brazier for (`Props.js:317`), and it was the
+   * one name in this catalogue that did not exist — eight warnings a boot and no fire in any
+   * brazier. It resolves two ways: as a *fire composite* through `Particles._handle`, which
+   * is what a brazier wants (flame core + sparks + smoke), and as this plain burst, so a
+   * one-shot `burst('embers', p)` still means something. Coarser and longer-lived than
+   * `ember` because a brazier's bed throws bigger, lazier sparks than a wall torch's cup.
+   */
+  embers: {
+    batch: 'spark', tile: [TILE.EMBER, TILE.EMBER, TILE.SPARK], count: [2, 3], life: [1.4, 2.8],
+    speed: [0.6, 1.6], spread: 'cone', cone: 0.62, gravity: -1.3, drag: 1.0, turb: 0.34, wind: 0.4,
+    size: [0.095, 0.014], sizeExp: 1.3, spin: [0, 0], fadeIn: 0.08, fadeOut: 1.45,
+    alpha: [2.0, 3.1], col0: PAL.emberHot, col1: PAL.emberCool, stretch: 0.035, jitter: 0.13,
+  },
   fire_core: {
     batch: 'spark', tile: TILE.GLOW, count: [1, 1], life: [0.28, 0.42],
     speed: [0.15, 0.4], spread: 'cone', cone: 0.35, gravity: -0.8, drag: 2.0, turb: 0.05, wind: 0.1,
     size: [0.42, 0.16], sizeExp: 1.2, spin: [0, 0], fadeIn: 0.18, fadeOut: 1.4,
     alpha: [1.5, 2.2], col0: PAL.emberHot, col1: PAL.emberCool, jitter: 0.05,
+  },
+  /* The flame *body* above the core: taller, dimmer, lazier. Two overlapping scales are what
+     stop a fire reading as a single pulsing dot at ten metres. */
+  fire_body: {
+    batch: 'spark', tile: [TILE.GLOW, TILE.SMOKE], count: [1, 1], life: [0.45, 0.75],
+    speed: [0.3, 0.7], spread: 'cone', cone: 0.28, gravity: -1.5, drag: 1.6, turb: 0.10, wind: 0.15,
+    size: [0.30, 0.55], sizeExp: 0.7, spin: [-0.6, 0.6], fadeIn: 0.22, fadeOut: 2.0,
+    alpha: [0.55, 0.95], col0: PAL.emberHot, col1: PAL.emberCool, jitter: 0.07,
   },
   torch_smoke: {
     batch: 'smoke', tile: [TILE.SMOKE, TILE.DUST2], count: [1, 1], life: [1.8, 3.0],
@@ -560,6 +582,25 @@ export const AMBIENT = {
     wind: [0.5, 1.0], drift: [0.1, 0.35], turb: 0.09,
     fade: [80, 46, 2.2, 7.0],
   },
+  /**
+   * Airborne motes — the particulate §7.3 asks for, and the one that actually *reads*.
+   *
+   * `sand_drift` and `sand_haze` are sand-coloured alpha sprites over sand-coloured
+   * geometry, so however many of them there are they measure within a few luma of whatever
+   * is behind them and the frame comes out with "no airborne particulate" for the second
+   * review running. These are the opposite bet: sparse, **additive**, tinted by the key
+   * light, and big enough to survive a 960 px frame (0.16 m at 30 m is ~4 px, where the
+   * 0.05 m shaft motes were sub-pixel). They are what backlit dust actually looks like at
+   * golden hour — specks brighter than the air, not a veil the colour of the ground.
+   */
+  air_motes: {
+    batch: 'airMotes', capacity: 300, tile: [TILE.MOTE, TILE.MOTE, TILE.GRAIN],
+    box: [46, 17, 46], yOffset: 3.0, life: [5.0, 11.0],
+    size: [0.10, 0.20], sizeExp: 0.9, spin: [-0.2, 0.2], fadeIn: 0.22, fadeOut: 1.15,
+    alpha: [0.30, 0.85], col0: PAL.keySun, col1: PAL.haze,
+    wind: [0.28, 0.62], drift: [0.08, 0.26], turb: 0.10,
+    fade: [44, 26, 1.8, 6.0],
+  },
   /* Heat shimmer over hot sand. Not a distortion — POSTFX owns the screen — but a low,
      wide, warm additive band that boils. Reads as air moving above the paving. */
   shimmer: {
@@ -573,18 +614,25 @@ export const AMBIENT = {
 };
 
 /* Light-shaft motes are placed against LIGHTING's published shaft geometry rather than in
-   a box, so they carry their own definition. */
+   a box, so they carry their own definition.
+
+   Sizes were [0.045, 0.075] m. A shaft crosses the `temple` frame at 20–35 m, where the
+   canonical 55° / 540 px camera resolves 1.7 mrad per pixel — so a 0.06 m mote was **1.0 px
+   at best and usually less**, i.e. it existed in the buffer and was invisible in the image.
+   That is the whole of "no airborne particulate" as far as this batch is concerned: not
+   absent, sub-pixel. 0.10–0.26 m puts a mote at 3–6 px in the hall, which is a speck you
+   can see turning, and still a speck rather than a snowflake. */
 export const MOTES = {
-  capacity: 620,
+  capacity: 900,
   tile: [TILE.MOTE, TILE.MOTE, TILE.STAR],
   life: [3.0, 6.5],
-  size: [0.045, 0.075], sizeExp: 1.0, fadeIn: 0.2, fadeOut: 1.1,
-  alpha: [0.9, 2.1],
+  size: [0.10, 0.26], sizeExp: 1.0, fadeIn: 0.2, fadeOut: 1.1,
+  alpha: [0.55, 1.5],
   drift: 0.16,          // m/s of lazy convection inside the blade
   col0: PAL.keySun, col1: PAL.haze,
 };
 
 export const TORCH_MOTES = {
-  life: [2.2, 4.5], size: [0.03, 0.06], alpha: [0.7, 1.6], radius: 1.5, drift: 0.14,
+  life: [2.2, 4.5], size: [0.07, 0.16], alpha: [0.5, 1.2], radius: 1.7, drift: 0.14,
   col0: PAL.emberHot, col1: PAL.rimWarm,
 };

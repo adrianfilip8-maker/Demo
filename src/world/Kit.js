@@ -126,6 +126,141 @@ export function block(w, h, d, opts = {}) {
   return geo;
 }
 
+/**
+ * A chamfered block — the single highest-value shape in this file.
+ *
+ * A plain box has one normal per face, so the 3-band cel ramp lands the whole face in one
+ * band and there is no terminator anywhere in the frame. This adds a narrow bevel along the
+ * arrises whose vertices carry the *adjacent face* normals, so the interpolated normal sweeps
+ * the full 90° across a 3 cm strip: the quantiser draws all three bands inside it and every
+ * edge reads as a lit line. The flat faces keep their flat normals on purpose — that is what
+ * keeps the stone reading as blocked-in colour rather than as a smooth render.
+ *
+ * `c` is the chamfer in metres; `only:'top'` bevels just the top rim (24 tris instead of 44),
+ * which is what anything sitting on the ground wants.
+ */
+export function chamferBox(w, h, d, opts = {}) {
+  const { rng, jitter = 0.0, chip = 0, taper = 0, lean = 0, c = 0.035, only = 'all' } = opts;
+  const W = w * 0.5, H = h * 0.5, D = d * 0.5;
+  const cc = Math.min(c, w * 0.32, h * 0.32, d * 0.32);
+
+  // Per-corner offset (identical scheme to block(), so the two are interchangeable).
+  const off = new Map();
+  const chipCorner = chip > 0 && rng ? rng.int(0, 7) : -1;
+  for (let i = 0; i < 2; i++) for (let j = 0; j < 2; j++) for (let k = 0; k < 2; k++) {
+    let ox = rng ? rng.jitter(jitter) : 0, oy = rng ? rng.jitter(jitter) : 0, oz = rng ? rng.jitter(jitter) : 0;
+    if (j === 1) { const t = taper * 0.5; ox += i ? -t : t; oz += k ? -t : t; ox += lean; }
+    if (i * 4 + j * 2 + k === chipCorner) {
+      const q = chip * (rng ? rng.range(0.55, 1.0) : 1);
+      ox += i ? -q : q; oy += j ? -q * 0.7 : q * 0.7; oz += k ? -q : q;
+    }
+    off.set(i * 4 + j * 2 + k, [ox, oy, oz]);
+  }
+  // 'top' leaves the underside square — nothing sees it and it halves the cost.
+  const cAt = (j) => (only === 'top' && j === 0 ? 0 : cc);
+
+  const pos = [], nor = [], idx = [];
+  const push = (p, n) => { pos.push(p[0], p[1], p[2]); nor.push(n[0], n[1], n[2]); return pos.length / 3 - 1; };
+  const S = (i) => (i ? 1 : -1);
+  // The three bevel vertices at a corner: one pulled off each of the meeting faces.
+  const cor = (i, j, k, axis) => {
+    const o = off.get(i * 4 + j * 2 + k), e = cAt(j);
+    const p = [S(i) * W + o[0], S(j) * H + o[1], S(k) * D + o[2]];
+    if (axis !== 0) p[0] -= S(i) * e;
+    if (axis !== 1) p[1] -= S(j) * e;
+    if (axis !== 2) p[2] -= S(k) * e;
+    return p;
+  };
+  const nrm = (i, j, k, axis) => {
+    const n = [0, 0, 0];
+    n[axis] = axis === 0 ? S(i) : axis === 1 ? S(j) : S(k);
+    return n;
+  };
+
+  /** Emit a polygon, dropping it if the chamfer collapsed it to nothing. */
+  const face = (verts) => {
+    let area = 0;
+    for (let t = 1; t < verts.length - 1; t++) {
+      const a = verts[0].p, b = verts[t].p, e = verts[t + 1].p;
+      const ux = b[0] - a[0], uy = b[1] - a[1], uz = b[2] - a[2];
+      const vx = e[0] - a[0], vy = e[1] - a[1], vz = e[2] - a[2];
+      const cx = uy * vz - uz * vy, cy = uz * vx - ux * vz, cz = ux * vy - uy * vx;
+      area += Math.hypot(cx, cy, cz);
+    }
+    if (area < 1e-9) return;
+    // Orient by the vertex normals rather than by hand-tracking winding per face family.
+    const a = verts[0].p, b = verts[1].p, e = verts[2].p;
+    const ux = b[0] - a[0], uy = b[1] - a[1], uz = b[2] - a[2];
+    const vx = e[0] - a[0], vy = e[1] - a[1], vz = e[2] - a[2];
+    const gx = uy * vz - uz * vy, gy = uz * vx - ux * vz, gz = ux * vy - uy * vx;
+    let ax = 0, ay = 0, az = 0;
+    for (const v of verts) { ax += v.n[0]; ay += v.n[1]; az += v.n[2]; }
+    const flip = gx * ax + gy * ay + gz * az < 0;
+    const ids = verts.map((v) => push(v.p, v.n));
+    for (let t = 1; t < ids.length - 1; t++) {
+      if (flip) idx.push(ids[0], ids[t + 1], ids[t]);
+      else idx.push(ids[0], ids[t], ids[t + 1]);
+    }
+  };
+
+  // Six inset faces.
+  for (let axis = 0; axis < 3; axis++) {
+    for (let s = 0; s < 2; s++) {
+      const quad = [];
+      for (const [u, v] of [[0, 0], [1, 0], [1, 1], [0, 1]]) {
+        const ijk = [0, 0, 0];
+        ijk[axis] = s;
+        ijk[(axis + 1) % 3] = u; ijk[(axis + 2) % 3] = v;
+        quad.push({ p: cor(ijk[0], ijk[1], ijk[2], axis), n: nrm(ijk[0], ijk[1], ijk[2], axis) });
+      }
+      face(quad);
+    }
+  }
+  // Twelve bevel strips: normals step from one face to the next across the strip.
+  for (let axis = 0; axis < 3; axis++) {
+    const a1 = (axis + 1) % 3, a2 = (axis + 2) % 3;
+    for (let s1 = 0; s1 < 2; s1++) for (let s2 = 0; s2 < 2; s2++) {
+      const ends = [0, 1].map((e) => {
+        const ijk = [0, 0, 0];
+        ijk[axis] = e; ijk[a1] = s1; ijk[a2] = s2;
+        return ijk;
+      });
+      face([
+        { p: cor(...ends[0], a1), n: nrm(...ends[0], a1) },
+        { p: cor(...ends[1], a1), n: nrm(...ends[1], a1) },
+        { p: cor(...ends[1], a2), n: nrm(...ends[1], a2) },
+        { p: cor(...ends[0], a2), n: nrm(...ends[0], a2) },
+      ]);
+    }
+  }
+  // Eight corner facets.
+  for (let i = 0; i < 2; i++) for (let j = 0; j < 2; j++) for (let k = 0; k < 2; k++) {
+    face([
+      { p: cor(i, j, k, 0), n: nrm(i, j, k, 0) },
+      { p: cor(i, j, k, 1), n: nrm(i, j, k, 1) },
+      { p: cor(i, j, k, 2), n: nrm(i, j, k, 2) },
+    ]);
+  }
+
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  geo.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
+  geo.setIndex(idx);
+  return geo;
+}
+
+/**
+ * A torus roll. Smooth all the way round both ways, so wherever one of these sits — a column
+ * base, the foot of a pier, a capital astragal — there is a guaranteed terminator. Egyptian
+ * architecture is full of them, which is convenient.
+ */
+export function torusRoll(R, r, { radial = 24, tube = 8, arc = Math.PI * 2 } = {}) {
+  const g = new THREE.TorusGeometry(R, r, tube, radial, arc);
+  normaliseAttrs(g);
+  place(g, { rx: Math.PI * 0.5 });
+  return g;
+}
+
 /* ========================= masonry courses ============================= */
 
 /**
@@ -363,44 +498,65 @@ export function cornerRolls({ w, d, h, r = 0.4, batter = 0.09, rng }) {
  * as a bundle of stems, the capital swells to a belly and then closes in again, and the
  * cord bands under it are cut as real geometry rather than left to the texture.
  * Fat at the base, hard taper: r 1.9 -> 1.4 per the art bible.
+ *
+ * Segment budget, and why it is spent this way round: the shading model quantises N·L into
+ * three bands, so a terminator only exists where the normal *turns*. On a column that is
+ * entirely the radial direction — so `seg` is generous and the vertical profile is as coarse
+ * as the silhouette will tolerate. `seg` must also give each lobe at least ~5 samples or the
+ * rib cosine aliases into a zigzag and the shaft goes back to reading as a faceted tube;
+ * that aliasing (22 segments against 8 lobes = 2.75 samples per lobe) is why this column had
+ * no terminator on it before.
  */
 export function papyrusColumn(o = {}) {
   const {
     hShaft = 13.2, rBase = 1.9, rTop = 1.4, capH = 2.4, abacus = 0.62,
-    seg = 22, lobes = 8, rib = 0.055, rng, bandCount = 5,
+    lobes = 8, rib = 0.075, rng, bandCount = 4, shaftSegs = 4, belly = 1.86, neck = 0.90,
   } = o;
+  // Enough radial samples to resolve the ribs, rounded up to a multiple of the lobe count so
+  // every stem is identical and the seam at a=0 lands on a crest.
+  const seg = o.seg ?? lobes * 6;
 
   const prof = [];   // [y, r, ribScale]
   const push = (y, r, rs = 1) => prof.push([y, r, rs]);
 
-  // base torus + plinth flare — the foot of the column has to look planted
-  push(0, rBase * 1.16, 0.25);
-  push(0.28, rBase * 1.16, 0.35);
-  push(0.42, rBase * 1.02, 0.6);
-  const shaftSegs = 9;
+  // Base: a real half-round torus roll rather than a flare, so the foot of every column
+  // carries a guaranteed terminator at standing eye height.
+  const rollR = rBase * 0.20;
+  for (let i = 0; i <= 3; i++) {
+    const a = -Math.PI * 0.5 + (i / 3) * Math.PI;
+    push(rollR + rollR * Math.sin(a), rBase * 1.04 + rollR * Math.cos(a) * 0.9, 0.15);
+  }
+  const y0 = rollR * 2;
   for (let i = 0; i <= shaftSegs; i++) {
     const t = i / shaftSegs;
-    // Entasis: taper accelerates toward the top so it never looks like a straight cone.
-    const r = rBase + (rTop - rBase) * Math.pow(t, 0.78);
-    push(0.42 + (hShaft - 0.42) * t, r, 1);
+    // Entasis, exaggerated: the shaft stays fat well past half height and then necks in
+    // hard under the capital. A straight cone is the thing that reads as architectural CAD.
+    const r = rBase + (rTop - rBase) * Math.pow(t, 0.62);
+    push(y0 + (hShaft - y0) * t, r, 1);
   }
-  // cord bands: the papyrus bundle tied under the capital
+  // Cord bands: the papyrus bundle tied under the capital, cut as half-round cords so each
+  // one is its own little terminator. They also neck the shaft in below the bell — the
+  // neck-to-belly ratio is what actually reads as "cartoon proportions" at distance, and it
+  // is cheaper to buy by pinching the neck than by growing the bell, which here would run
+  // the capital straight into the clerestory wall at x = ±11.4.
   let y = hShaft;
   for (let b = 0; b < bandCount; b++) {
-    const bh = 0.12;
-    push(y, rTop * 1.05, 0.35); push(y + bh, rTop * 1.08, 0.3);
-    push(y + bh, rTop * 0.985, 0.5); push(y + bh + 0.055, rTop * 0.985, 0.5);
-    y += bh + 0.055;
+    const bh = 0.15;
+    push(y, rTop * neck, 0.5);
+    push(y + bh * 0.5, rTop * (neck + 0.17), 0.3);
+    push(y + bh, rTop * neck, 0.5);
+    y += bh + 0.05;
   }
-  // closed bud: swell to the belly then draw back in at the top
+  // Closed bud: swell to a heavy belly then draw back in at the top.
   const capBase = y;
   const bud = [
-    [0.00, 1.02], [0.16, 1.30], [0.34, 1.63], [0.52, 1.83],
-    [0.68, 1.91], [0.82, 1.85], [0.92, 1.66], [1.00, 1.50],
+    [0.00, 0.96], [0.13, 1.18], [0.28, 1.46], [0.44, 1.68],
+    [0.60, 1.82], [0.74, 1.86], [0.86, 1.74], [1.00, 1.40],
   ];
-  for (const [t, k] of bud) push(capBase + capH * t, rTop * k, 1.25);
+  const bk = belly / 1.86;
+  for (const [t, k] of bud) push(capBase + capH * t, rTop * k * bk, 1.25);
   const capTop = capBase + capH;
-  push(capTop, rTop * 1.5, 0.2);
+  push(capTop, rTop * 1.40 * bk, 0.2);
 
   // build the lobed surface of revolution by hand (LatheGeometry can't do angular ribs)
   const verts = [], nors = [], uvs = [], idx = [];
@@ -428,11 +584,88 @@ export function papyrusColumn(o = {}) {
   shaft.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
   shaft.setIndex(idx);
   shaft.computeVertexNormals();
+  // Weld the a=0 / a=2π seam so the ring of normals is continuous — otherwise there is a
+  // one-quad-wide facet down the column where the two ends of the strip meet unaveraged.
+  const nn = shaft.attributes.normal;
+  for (let i = 0; i < rows; i++) {
+    const a = i * (seg + 1), b = a + seg;
+    const nx = nn.getX(a) + nn.getX(b), ny = nn.getY(a) + nn.getY(b), nz = nn.getZ(a) + nn.getZ(b);
+    const l = Math.hypot(nx, ny, nz) || 1;
+    nn.setXYZ(a, nx / l, ny / l, nz / l);
+    nn.setXYZ(b, nx / l, ny / l, nz / l);
+  }
+  nn.needsUpdate = true;
 
-  const ab = block(rTop * 3.3, abacus, rTop * 3.3, { rng, jitter: 0.012 });
+  const ab = chamferBox(rTop * 3.3, abacus, rTop * 3.3, { rng, jitter: 0.012, c: 0.06 });
   place(boxProjectUVs(ab), { y: capTop + abacus * 0.5 });
 
   return { geo: mergeAll([shaft, ab]), height: capTop + abacus, capBase, capTop };
+}
+
+/**
+ * A square prism with bevelled arrises, given as profile rows [y, half-width, chamfer].
+ * Obelisks, pyramidions and spire tips are all this shape, and all three of them used to be
+ * four-sided cylinders — which is to say, boxes, with one normal per face and nothing for the
+ * ramp to do. The bevels put a lit line down every arris instead.
+ */
+export function bevelPrism(rows, { capBottom = true } = {}) {
+  const pos = [], nor = [], idx = [];
+  const push = (p, n) => { pos.push(p[0], p[1], p[2]); nor.push(n[0], n[1], n[2]); return pos.length / 3 - 1; };
+  // side s: 0 = +X, 1 = +Z, 2 = -X, 3 = -Z. Outward normal tilts with the taper.
+  const dir = [[1, 0], [0, 1], [-1, 0], [0, -1]];
+  const faceN = (s, i) => {
+    const a = rows[Math.max(0, i - 1)], b = rows[Math.min(rows.length - 1, i + 1)];
+    const dh = b[1] - a[1], dy = b[0] - a[0];
+    const [dx, dz] = dir[s];
+    const n = new THREE.Vector3(dx, 0, dz);
+    // outward-and-up by the slope of the face
+    n.multiplyScalar(dy).add(new THREE.Vector3(0, -dh, 0)).normalize();
+    return [n.x, n.y, n.z];
+  };
+  // corner point between side s and s+1, pulled back onto side `on`
+  const pt = (i, s, on) => {
+    const [y, half, c] = rows[i];
+    const [ax, az] = dir[s], [bx, bz] = dir[(s + 1) % 4];
+    const cc = Math.min(c, half * 0.7);
+    const p = [(ax + bx) * half, y, (az + bz) * half];
+    if (on === 0) { p[0] -= bx * cc; p[2] -= bz * cc; }        // stay on side s
+    else { p[0] -= ax * cc; p[2] -= az * cc; }                 // stay on side s+1
+    return p;
+  };
+  for (let i = 0; i < rows.length - 1; i++) {
+    for (let s = 0; s < 4; s++) {
+      const nA = faceN(s, i), nB = faceN(s, i + 1);
+      // the face panel, between the two bevels that flank it
+      const p0 = pt(i, (s + 3) % 4, 1), p1 = pt(i, s, 0);
+      const q0 = pt(i + 1, (s + 3) % 4, 1), q1 = pt(i + 1, s, 0);
+      quad(p0, p1, q1, q0, nA, nA, nB, nB);
+      // the bevel, whose two edges carry the two neighbouring face normals
+      const m0 = pt(i, s, 1), m1 = pt(i + 1, s, 1);
+      quad(p1, m0, m1, q1, nA, faceN((s + 1) % 4, i), faceN((s + 1) % 4, i + 1), nB);
+    }
+  }
+  function quad(a, b, c, d, na, nb, nc, nd) {
+    const ia = push(a, na), ib = push(b, nb), ic = push(c, nc), id = push(d, nd);
+    // orient outward using the averaged vertex normal
+    const ux = b[0] - a[0], uy = b[1] - a[1], uz = b[2] - a[2];
+    const vx = c[0] - a[0], vy = c[1] - a[1], vz = c[2] - a[2];
+    const gx = uy * vz - uz * vy, gy = uz * vx - ux * vz, gz = ux * vy - uy * vx;
+    const ax = na[0] + nb[0] + nc[0], ay = na[1] + nb[1] + nc[1], az = na[2] + nb[2] + nc[2];
+    if (gx * ax + gy * ay + gz * az < 0) idx.push(ia, ic, ib, ia, id, ic);
+    else idx.push(ia, ib, ic, ia, ic, id);
+  }
+  if (capBottom) {
+    const [y, half] = rows[0];
+    const n = [0, -1, 0];
+    const a = push([-half, y, -half], n), b = push([half, y, -half], n);
+    const c = push([half, y, half], n), d = push([-half, y, half], n);
+    idx.push(a, c, b, a, d, c);
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  geo.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
+  geo.setIndex(idx);
+  return geo;
 }
 
 /* ========================== obelisk ==================================== */

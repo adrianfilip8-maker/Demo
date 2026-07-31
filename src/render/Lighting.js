@@ -60,12 +60,36 @@ const TUNE = {
   flickerRate: 5.7,
   flickerPos: 0.055,        // metres of positional wobble — a still flame reads as a lamp
 
-  /* Shafts (§8.1: clerestory slots at y = 15.5, every 8 m in z through the hall) */
-  shaftZ: [-18, -26, -34, -42, -50],
-  shaftY: 15.5,
-  shaftWidth: 1.8,
-  shaftSpanX: 21,
-  shaftMaxLength: 46,
+  /* ── Shafts ──────────────────────────────────────────────────────────────────
+     These were five imaginary blades 42 m wide lying along y = 15.5 at z = −18…−50,
+     which corresponds to no opening ARCHITECTURE ever built: the real hall has four
+     2.6 × 2.3 m slots punched through the nave roof at z = −24…−48 and eight 2.8 × 1.3 m
+     clerestory windows at x = ±11.4. A blade that doesn't line up with a hole reads as
+     fog with no cause (and, since FX distributes its motes through these volumes, it was
+     also seeding dust inside solid stone). The list is now built from
+     `architecture.api.roofSlots` / `.clerestory` and only falls back to these constants
+     when ARCHITECTURE is absent. */
+  shaftMaxLength: 52,
+  shaftFlare: 0.28,          // cross-section growth over the beam's length; 0 = a parallel tube
+  shaftGrazeGain: 0.65,      // how much of the blade's power comes from a *low* sun
+  /* A beam only exists where the opening faces the sun. cos of the widest angle that still
+     counts as "the sun can see through this hole". */
+  shaftFaceCos: 0.12,
+  /* Courtyard peristyle (§8.1 x = ±23, piers every 5.5 m): the gaps between piers, above
+     the temenos wall behind them and below the y = 9.0 architrave. The only motivated
+     opening in an open courtyard, and the one that rakes light past the obelisk. */
+  courtGapZ: [-10.25, -4.75, 0.75, 6.25, 11.75, 17.25, 22.75, 28.25],
+  courtGapX: 23,
+  courtGapY: 6.55, courtGapH: 2.1, courtGapW: 3.4,
+  courtShaftGain: 0.55,      // open-air blades are quieter than an interior's; see §7.3 note
+
+  /* Torch / brazier cones. Built from whatever registered through addLocalLight(), so they
+     follow PROPS rather than a second hardcoded list of sconces. */
+  coneMax: 14,
+  coneLength: 3.1,           // metres, scaled by the light's radius
+  coneRadius: 0.42,          // end radius as a fraction of length
+  coneApex: 0.10,
+  coneDayFade: 0.30,         // how much of a cone survives full daylight above ground
 };
 
 /* ── The cascade shader patch ────────────────────────────────────────────────────
