@@ -323,7 +323,7 @@ export function masonryShell(o) {
     blockLen = [1.15, 2.0], recess = 0.055, chip = 0.16, chipChance = 0.18,
     gapChance = 0.04, buried = 0, openings = [], quoin = true, courseJitter = 0.018,
     tiltDeg = 0.3, hollow = true, chamfer = 0, skipFaces = null,
-    sag = 0, windFace = null, windK = 2.0,
+    sag = 0, windFace = null, windK = 2.0, bow = 0, drift = 0,
   } = o;
 
   const out = [];
@@ -390,11 +390,51 @@ export function masonryShell(o) {
     return amp * 0.5 * Math.PI * Math.sin(Math.PI * t) / (sagWidth * len);
   };
 
+  /* ---- The batter line was a ruler -------------------------------------
+   *
+   * `sag` curves the course *lines*; nothing curved the *silhouette*. Inset was exactly
+   * `batter · y`, so every wall's edge was a straight line to within per-block jitter.
+   * Measured on the two entry pylons, off a least-squares straight batter: the two faces with
+   * no dropped blocks came in at 3.6 cm and 3.9 cm RMS over 26 m — 0.7 px at `dunes`, 1.9 px
+   * at `hero`. That is a CAD extrusion, and it is §7.3's "silhouettes are straight/symmetric
+   * everywhere (no hand-built irregularity)" stated as a number.
+   *
+   * Two low-frequency curves fix it, both free (they move blocks that already exist):
+   *   `bow`   — the mass bellies and dishes over its height. Strictly INWARD of the nominal
+   *             batter, never outward, so the collision proxy (a straight tapered box, and
+   *             not mine) is always at or outside the stone. The failure direction is then a
+   *             capsule stopping a few centimetres early, never one clipping through.
+   *   `drift` — the centreline itself wanders, so the mass is not a straight prism and the
+   *             two silhouette edges stop being mirrors of each other.
+   *
+   * Both are bounded per course by construction: over one 0.66 m course neither can move a
+   * block more than ~2 cm, against a `thick` of ~1 m of overlap with the course below, so
+   * neither can reopen the seams that "Seal the shells" closed.
+   */
+  /* X and Z carry INDEPENDENT curves, and that independence is the point rather than a
+     detail. One shared curve makes the mass thinner and fatter over its height but leaves it
+     a symmetric trapezoid in every elevation — which is the half of §7.3's complaint that
+     says "symmetric", and a critic reading a silhouette catches it before they catch
+     "straight". With separate phases the plan-form wanders too, so the two edges of any one
+     view stop being reflections of each other. Costs nothing: same blocks, different offsets. */
+  const ph = () => rng ? rng.range(0, Math.PI * 2) : 1.1;
+  const bowPhX = ph(), bowPhZ = ph(), drPhX = ph(), drPhZ = ph();
+  // Inward-only, zero at the base and back to zero over the top ~13% so the wall head still
+  // meets the cornice on the nominal batter line.
+  const bowAt = (t, phase) => bow <= 0 ? 0
+    : bow * 0.5 * (1 - Math.cos(t * Math.PI * 2.3 + phase)) * Math.sin(Math.PI * Math.min(1, t * 1.15));
+  const driftAt = (t, phase) => drift <= 0 ? 0
+    : drift * Math.sin(t * Math.PI * 1.7 + phase) * t;
+
   for (let c = 0; c < nCourse; c++) {
     const yb = c * ch, yc = yb + ch * 0.5;
-    const inset = batter * yc;
-    const wc = Math.max(1.2, w - 2 * inset);
-    const dc = Math.max(1.2, d - 2 * inset);
+    const t = h > 0 ? yc / h : 0;
+    const insetX = batter * yc + bowAt(t, bowPhX);
+    const insetZ = batter * yc + bowAt(t, bowPhZ);
+    const inset = Math.min(insetX, insetZ);          // openings scale off the shallower one
+    const drX = driftAt(t, drPhX), drZ = driftAt(t, drPhZ);
+    const wc = Math.max(1.2, w - 2 * insetX);
+    const dc = Math.max(1.2, d - 2 * insetZ);
     /* Bottom courses sink into the sand — never let the base sit on a crisp line.
        The block is *grown downward* rather than translated down: translating it left the
        course above hanging in mid-air, so every buried wall in the level had a horizontal
@@ -500,7 +540,7 @@ export function masonryShell(o) {
         const sl = Math.atan(settleSlope(u, face.len));
         const jz = rng ? THREE.MathUtils.degToRad(rng.jitter(tiltDeg * 0.6)) : 0;
         place(g, {
-          x: px, y: yb + ch * 0.5 - sink * 0.5 + dy, z: pz,
+          x: px + drX, y: yb + ch * 0.5 - sink * 0.5 + dy, z: pz + drZ,
           ry,
           rz: face.axis === 'x' ? jz + sl : jz,
           rx: face.axis === 'z' ? -sl : 0,
@@ -512,7 +552,7 @@ export function masonryShell(o) {
     if (!hollow) {
       // Solid core for small masses (piers): one cheap box behind the skin.
       const core = block(Math.max(0.2, wc - thick * 1.7), ch + sink, Math.max(0.2, dc - thick * 1.7), { rng, jitter: 0.01 });
-      place(core, { y: yb + ch * 0.5 - sink * 0.5 });
+      place(core, { x: drX, y: yb + ch * 0.5 - sink * 0.5, z: drZ });
       out.push(core);
     }
   }
@@ -827,8 +867,16 @@ export function papyrusColumn(o = {}) {
  * Obelisks, pyramidions and spire tips are all this shape, and all three of them used to be
  * four-sided cylinders — which is to say, boxes, with one normal per face and nothing for the
  * ramp to do. The bevels put a lit line down every arris instead.
+ *
+ * `channel: { frac, depth, y0, y1 }` sinks a vertical trough down the middle of each face
+ * between y0 and y1 — the sunk-relief inscription column an obelisk carries on all four sides.
+ * It splits the face panel into margin / wall / floor / wall / margin, so each face gains two
+ * normals perpendicular to itself: one of them faces the sun and one faces away, at every hour
+ * of the day. That is the difference between the obelisk reading as a carved monolith and
+ * reading as the bunker the critic called it — four flat faces have four normals between them,
+ * and a three-band ramp cannot show anything on that. 8 triangles per face per interval.
  */
-export function bevelPrism(rows, { capBottom = true } = {}) {
+export function bevelPrism(rows, { capBottom = true, channel = null } = {}) {
   const pos = [], nor = [], idx = [];
   const push = (p, n) => { pos.push(p[0], p[1], p[2]); nor.push(n[0], n[1], n[2]); return pos.length / 3 - 1; };
   // side s: 0 = +X, 1 = +Z, 2 = -X, 3 = -Z. Outward normal tilts with the taper.
@@ -852,13 +900,38 @@ export function bevelPrism(rows, { capBottom = true } = {}) {
     else { p[0] -= ax * cc; p[2] -= az * cc; }                 // stay on side s+1
     return p;
   };
+  const lerp3 = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+  const norm3 = (v) => { const l = Math.hypot(v[0], v[1], v[2]) || 1; return [v[0] / l, v[1] / l, v[2] / l]; };
+
   for (let i = 0; i < rows.length - 1; i++) {
     for (let s = 0; s < 4; s++) {
       const nA = faceN(s, i), nB = faceN(s, i + 1);
       // the face panel, between the two bevels that flank it
       const p0 = pt(i, (s + 3) % 4, 1), p1 = pt(i, s, 0);
       const q0 = pt(i + 1, (s + 3) % 4, 1), q1 = pt(i + 1, s, 0);
-      quad(p0, p1, q1, q0, nA, nA, nB, nB);
+
+      const inCh = channel && rows[i][0] >= channel.y0 - 1e-6 && rows[i + 1][0] <= channel.y1 + 1e-6;
+      if (!inCh) {
+        quad(p0, p1, q1, q0, nA, nA, nB, nB);
+      } else {
+        const { frac = 0.44, depth = 0.06 } = channel;
+        const t0 = 0.5 - frac * 0.5, t1 = 0.5 + frac * 0.5;
+        const [dx, dz] = dir[s];
+        const sink = (p) => [p[0] - dx * depth, p[1], p[2] - dz * depth];
+        const A0 = lerp3(p0, p1, t0), A1 = lerp3(p0, p1, t1);
+        const B0 = lerp3(q0, q1, t0), B1 = lerp3(q0, q1, t1);
+        const A0i = sink(A0), A1i = sink(A1), B0i = sink(B0), B1i = sink(B1);
+        // Along-face tangent. The two trough walls face each other, so their normals are
+        // ±tangent — perpendicular to the face, which is the whole point of cutting it.
+        const tg = norm3([p1[0] - p0[0], 0, p1[2] - p0[2]]);
+        const tgN = [-tg[0], -tg[1], -tg[2]];
+        quad(p0, A0, B0, q0, nA, nA, nB, nB);          // margin, hinge side
+        quad(A0, A0i, B0i, B0, tg, tg, tg, tg);        // trough wall
+        quad(A0i, A1i, B1i, B0i, nA, nA, nB, nB);      // trough floor — the sunk field
+        quad(A1i, A1, B1, B1i, tgN, tgN, tgN, tgN);    // trough wall
+        quad(A1, p1, q1, B1, nA, nA, nB, nB);          // margin, bevel side
+      }
+
       // the bevel, whose two edges carry the two neighbouring face normals
       const m0 = pt(i, s, 1), m1 = pt(i + 1, s, 1);
       quad(p1, m0, m1, q1, nA, faceN((s + 1) % 4, i), faceN((s + 1) % 4, i + 1), nB);
@@ -895,14 +968,24 @@ export function bevelPrism(rows, { capBottom = true } = {}) {
  * The arrises are bevelled — an obelisk is four flat faces and a point, which is to say a
  * box, and the four lit edges are the only thing that gives it any modelling at all.
  */
-export function obelisk({ h = 22, base = 2.6, rng } = {}) {
+export function obelisk({ h = 22, base = 2.6, rng, relief = true } = {}) {
   const tipH = base * 1.25;
   const shaftH = h - tipH;
   const rt = base * 0.60;
   const c = Math.min(0.075, base * 0.05);
+  /* The inscription column runs from a plinth margin up to a margin under the benben.
+     Its two bounding rows exist only to stop the trough — vertical subdivision buys nothing
+     on a flat face, so there are exactly as many rows as the shape needs and no more. */
+  const cy0 = Math.min(1.1, shaftH * 0.14), cy1 = shaftH - Math.min(0.45, shaftH * 0.06);
+  /* t² not t: the old three-row shaft put its mid-row at 0.75·base + 0.25·rt, which is a
+     convex taper, not a cone. Keep that exactly — an obelisk that tapers linearly reads as a
+     wedge — so this reproduces the old silhouette at t = 0, ½ and 1 and interpolates between. */
+  const halfAt = (y) => { const t = y / shaftH; return 0.5 * (base + (rt - base) * t * t); };
   const g = bevelPrism([
     [0, base * 0.5, c],
-    [shaftH * 0.5, (base * 0.75 + rt * 0.25) * 0.5, c],
+    [cy0, halfAt(cy0), c],
+    [shaftH * 0.5, halfAt(shaftH * 0.5), c],
+    [cy1, halfAt(cy1), c],
     [shaftH, rt * 0.5, c],
     // A benben fillet: the pyramidion sits on a lip rather than growing out of the shaft,
     // so the tip reads as a separate carved stone from a hundred metres.
@@ -910,7 +993,7 @@ export function obelisk({ h = 22, base = 2.6, rng } = {}) {
     [shaftH + 0.22, rt * 0.54, c * 0.8],
     [h - 0.04, base * 0.035, c * 0.3],
     [h, 0.012, c * 0.2],
-  ]);
+  ], relief ? { channel: { frac: 0.46, depth: Math.max(0.045, base * 0.038), y0: cy0, y1: cy1 } } : {});
   place(g, { ry: Math.PI * 0.25 + (rng ? rng.jitter(0.02) : 0) });
   return boxProjectUVs(g);
 }

@@ -617,8 +617,26 @@ export const AMBIENT = {
     /* Near-white rather than key-sun: this is the population that has to read against
        *dark* backdrops, and a mote the same hue as the warm stone it floats in front of
        separates by nothing. White-hot core cooling to the key colour is both the higher
-       value and the wider hue gap. */
-    alpha: [0.36, 1.0], col0: 0xfff4e2, col1: PAL.keySun, litMix: 0.95,
+       value and the wider hue gap.
+
+       ...except `col1` was `keySun`, which is not a hue gap at all. Worked through in
+       linear space, including the `LIT` multiply these sprites take (`col *= mix(uAmbTint,
+       uLightTint * boost, uLitMix)` at 0.95, i.e. essentially the warm key):
+
+         col1              raw hue → lit hue   sat    luma
+         keySun  (was)         36  →  33       0.60   0.673
+         rimCool (now)        200  →  160      0.30   0.474
+         lit sandstone backdrop    30                 0.334
+
+       So the old death colour landed 3° from the stone it floats in front of — two review
+       passes of "no airborne particulate" over a batch that was drawing fine. `rimCool` is
+       §2.2's RIM complement and the only hue in the palette that survives being multiplied
+       by a warm key: 127° of separation from the backdrop, still 1.4× its luma so a mote
+       still reads as a bright speck, and *less* additive energy than before (0.474 vs
+       0.673) so it cannot wash the frame more than the version it replaces. Born warm-white
+       and cooling over its life, the population spans both sides of §2.1.3's warm/cool
+       tension at any instant. */
+    alpha: [0.36, 1.0], col0: 0xfff4e2, col1: PAL.rimCool, litMix: 0.95,
     wind: [0.28, 0.62], drift: [0.08, 0.26], turb: 0.10,
     fade: [44, 26, 1.8, 6.0],
   },

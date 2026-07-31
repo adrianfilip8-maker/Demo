@@ -268,7 +268,8 @@ function courtyard(A) {
     openings: [{ face: 0, a0: -3.2, a1: 3.2, y0: -1, y1: 3 }],
     // Closest big mass to `hero`, `night` and `courtyard`: it gets both the settle and the
     // bevel. `windFace: 0` is the south face, the one the valley wind loads.
-    sag: 0.16, windFace: 0, chamfer: chamferFor(0, t1.y, (t1.z0 + t1.z1) / 2),
+    sag: 0.16, windFace: 0, bow: 0.09, drift: 0.05,
+    chamfer: chamferFor(0, t1.y, (t1.z0 + t1.z1) / 2),
   }), { z: (t1.z0 + t1.z1) / 2 }));
   /* Cavetto under each terrace deck. The stages are the biggest plain masses in the lower
      half of `hero`, `night` and `courtyard`, and a cavetto is a continuously curved surface —
@@ -284,7 +285,8 @@ function courtyard(A) {
     w: t2.x * 2, d: t2.z1 - t2.z0, h: t2.y - t1.y + 0.4, batter: 0.06, course: 0.6, thick: 0.95, rng: R,
     blockLen: [1.2, 2.1], recess: 0.06, chipChance: 0.2, gapChance: 0.02, hollow: true,
     openings: [{ face: 0, a0: -2.8, a1: 2.8, y0: -1, y1: 4 }],
-    sag: 0.13, windFace: 0, chamfer: chamferFor(0, t2.y, (t2.z0 + t2.z1) / 2),
+    sag: 0.13, windFace: 0, bow: 0.08, drift: 0.05,
+    chamfer: chamferFor(0, t2.y, (t2.z0 + t2.z1) / 2),
   }), { y: t1.y - 0.4, z: (t2.z0 + t2.z1) / 2 }));
   const tc2 = K.cornice({ w: t2.x * 2 + 0.1, d: t2.z1 - t2.z0 + 0.1, h: 0.56, flare: 0.36, roll: 0.18 });
   A.add('court', 'sandstone_worn', K.place(tc2.geo, { x: 0, y: t2.y - tc2.height, z: (t2.z0 + t2.z1) / 2 }));
@@ -351,6 +353,10 @@ function courtyard(A) {
     A.add('court', 'sandstone_block', K.place(K.masonryShell({
       w: 8.0, d: 7.0, h: L.colossi.plinth, batter: 0.04, course: 0.65, thick: 1.0, rng: R,
       blockLen: [1.5, 2.6], recess: 0.07, chipChance: 0.24, gapChance: 0.02, buried: 0.4, hollow: false,
+      /* Only 2 m tall, so the amplitudes are small — but the pair is symmetric about the
+         entry axis in `courtyard` and `combat`, which is exactly where a mirrored pair is
+         easiest to catch. Each plinth draws its own phases from the shared stream. */
+      bow: 0.07, drift: 0.05,
     }), { x: cx, y: 0, z: cz }));
     groundProxy(A, cx - 4, cx + 4, L.colossi.plinth, cz - 3.5, cz + 3.5);
     /* Throne: seat block to the knee ledge at 4.5, then the high back slab. */
@@ -412,7 +418,10 @@ function courtyard(A) {
       blockLen: [1.35, 2.15], recess: 0.05, chipChance: 0.26, gapChance: 0.06, buried: 0.6, hollow: true,
       /* Mudbrick, unmaintained, and the longest run in the level: it gets the deepest settle
          of anything here. No chamfer — it is never inside 25 m of a camera. */
-      sag: 0.34, windFace: sx > 0 ? 2 : 3, windK: 2.6,
+      /* Thin wall: `bow` only eats its 1.5 m thickness, which `wc`'s 1.2 m floor clamps away
+         anyway, so this one is all `drift` — the whole run wanders off true, which on 50 m of
+         unmaintained mudbrick is the read. */
+      sag: 0.34, windFace: sx > 0 ? 2 : 3, windK: 2.6, drift: 0.17,
     }), { x: sx * (pe.x + 2.3), y: 0, z: (pe.z0 + pe.z1) / 2 - 0.5 }));
     wallProxy(A, sx * (pe.x + 2.3) - 0.8, sx * (pe.x + 2.3) + 0.8, 0, 5.6, pe.z0 - 1.5, pe.z1 + 1.5);
     ledgeProxy(A, sx * (pe.x + 2.3) - 0.7, sx * (pe.x + 2.3) + 0.7, 5.6, pe.z0 - 1.5, pe.z1 + 1.5);
@@ -463,6 +472,14 @@ function entryPylons(A) {
          rather than as one asset instanced twice. */
       sag: sx > 0 ? 0.10 : 0.21,
       windFace: 0, windK: sx > 0 ? 1.7 : 2.4,
+      /* The tallest silhouettes in the level, and the ones every wide shot reads against.
+         Measured off a least-squares batter line, the two faces of this pair that keep all
+         their blocks were straight to 3.6 and 3.9 cm RMS over 26 m. These two curves take
+         that to tens of centimetres — 22 cm of belly, 18 cm of lean — which is 4 px at
+         `dunes` and 10 px at `hero`, i.e. the first amplitude a critic can actually see.
+         Both are pinned to zero at the base and at the wall head, so the foot still meets the
+         apron and the cornice still lands on the nominal batter. */
+      bow: 0.22, drift: 0.18,
       chamfer: chamferFor(cx, ph * 0.5, p.z),
     }), { x: cx, y: 0, z: p.z }));
     A.add('court', 'sandstone_worn', K.place(
@@ -603,7 +620,7 @@ function hypostyleHall(A) {
          level and the ones `temple` looks down. Each side settles independently (the seed has
          advanced between them), so the room is not symmetric about its own axis. The west wall
          is the one the wind scours. */
-      sag: 0.26, windFace: sx < 0 ? 3 : 2,
+      sag: 0.26, windFace: sx < 0 ? 3 : 2, drift: 0.16,
       chamfer: chamferFor(sx * 23.9, WALL_H * 0.5, zc),
     }), { x: sx * 23.9, y: 0, z: zc }));
     wallProxy(A, sx * 23.9 - 1.1, sx * 23.9 + 1.1, 0, WALL_H, h.z0, h.z1);
@@ -628,7 +645,8 @@ function hypostyleHall(A) {
     blockLen: [1.7, 2.7], recess: A.TUNE.mortarRecess, chipChance: A.TUNE.chipChance,
     gapChance: 0.03, buried: 0.5, hollow: true, openings: sOpen,
     // The facade the approach reads against, and the wall `temple` stands three metres from.
-    sag: 0.24, windFace: 0, chamfer: chamferFor(0, WALL_H * 0.5, h.z1 - 1.05),
+    sag: 0.24, windFace: 0, drift: 0.13,
+    chamfer: chamferFor(0, WALL_H * 0.5, h.z1 - 1.05),
   }), { x: 0, y: 0, z: h.z1 - 1.05 }));
   for (const [x0, x1] of [[-24, -17.6], [-14.4, -4.4], [4.4, 14.4], [17.6, 24]]) wallProxy(A, x0, x1, 0, WALL_H, h.z1 - 2.1, h.z1);
   for (const [x0, x1, y] of [[-4.4, 4.4, 9.4], [-17.6, -14.4, 4.8], [14.4, 17.6, 4.8]]) wallProxy(A, x0, x1, y, WALL_H, h.z1 - 2.1, h.z1);
@@ -649,7 +667,8 @@ function hypostyleHall(A) {
     blockLen: [1.7, 2.7], recess: A.TUNE.mortarRecess, chipChance: 0.16, gapChance: 0.03, buried: 0.4, hollow: true,
     openings: [0, 1].flatMap((f) => [{ face: f, a0: -3.4, a1: 3.4, y0: -1, y1: 8.2 }]),
     // Sheltered end of the hall: it settles the least and keeps its blocks.
-    sag: 0.14, windFace: 1, chamfer: chamferFor(0, WALL_H * 0.5, h.z0 + 1.05),
+    sag: 0.14, windFace: 1, drift: 0.10,
+    chamfer: chamferFor(0, WALL_H * 0.5, h.z0 + 1.05),
   }), { x: 0, y: 0, z: h.z0 + 1.05 }));
   for (const [x0, x1] of [[-24, -3.4], [3.4, 24]]) wallProxy(A, x0, x1, 0, WALL_H, h.z0, h.z0 + 2.1);
   wallProxy(A, -3.4, 3.4, 8.2, WALL_H, h.z0, h.z0 + 2.1);
@@ -869,8 +888,9 @@ function innerPylon(A) {
     gapChance: A.TUNE.fallenBlockChance, buried: 0.5, hollow: true,
     openings: [0, 1].flatMap((f) => [{ face: f, a0: -3.4, a1: 3.4, y0: -1, y1: 8.2 }]),
     // 31.5 m tall and it closes the `temple` vista. The settle is the only thing that stops
-    // its 48 course lines being 48 perfectly parallel horizontals.
-    sag: 0.20, windFace: 0,
+    // its 48 course lines being 48 perfectly parallel horizontals — and the bow is the only
+    // thing that stops its edges being two perfectly straight diagonals.
+    sag: 0.20, windFace: 0, bow: 0.24, drift: 0.16,
   }), { x: p.x, y: 0, z: p.z }));
   A.add('pylon', 'sandstone_worn', K.place(K.cornerRolls({ w: p.w, d: p.d, h: MASS - 0.5, r: 0.48, batter: B, rng: R }), { x: p.x, y: 0, z: p.z }));
 
@@ -904,7 +924,7 @@ function innerPylon(A) {
       { face: f, a0: -7.4, a1: -6.0, y0: 1.4, y1: 21 },     // flagstaff niches
       { face: f, a0: 6.0, a1: 7.4, y0: 1.4, y1: 21 },
     ]),
-    sag: 0.17, windFace: 0, windK: 2.2,
+    sag: 0.17, windFace: 0, windK: 2.2, bow: 0.20, drift: 0.14,
   }), { x: 0, y: 0, z: (sz0 + sz1) / 2 }));
   const sInset = A.TUNE.batterPylon * 24;
   const scor = K.cornice({ w: 21.4 - 2 * sInset, d: (sz1 - sz0) - 2 * sInset + 1.2, h: 0.94, flare: 1.1, roll: 0.4 });

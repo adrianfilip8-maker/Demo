@@ -1111,8 +1111,9 @@ export class SlyModel {
         s.v *= 1 - 0.05 * front * front + 0.035 * brow * front;
         /* Fur lobing, but *only* round the back and sides: the mask, eyes, brows and mouth are
            all placed on the idealised ellipsoid, so lumping the face plane would float them.
-           Across the mask's own span (|θ| ≤ 1.34 ⇒ a ∈ [0.23, 2.91]) `front` never drops below
-           0.228, which caps the lobe at 1.038 — inside the mask plane everywhere it matters. */
+           Across the mask's span (|θ| ≤ TH = 1.44 ⇒ a ∈ [0.13, 3.01]) `front` never drops below
+           0.131, so the lobe caps at 1 + 0.869·0.03025·1.62 = **1.043** — inside the mask patch
+           at 1.058 everywhere the mask exists. Re-check this bound if TH or `furLobe` moves. */
         const back = 1 - Math.max(0, Math.sin(a));
         const k = furLobe(a, H[i][0] * 4, TUNE.furLobe * 0.55 * back, 4, 9);
         s.u *= k; s.v *= k;
@@ -1240,7 +1241,7 @@ export class SlyModel {
      * round the sweep gets before it stops.
      *
      * The inflate lift is margin, not taste. With `_buildHead`'s angle convention corrected the
-     * cranium loft caps at 1.038 across this band, but the brow shelf adds 3.5% of depth on the
+     * cranium loft caps at 1.043 across this band, but the brow shelf adds 3.5% of depth on the
      * face plane on top of that; 1.058 clears both without reaching the eye lens (front ≈ 1.09),
      * so the eye still sits in front of the mask, which is the one ordering that must hold. */
     const TH = 1.44;
@@ -1310,8 +1311,12 @@ export class SlyModel {
       group: 'eye', sg: mb.newSg(), weights: [['head', 1]],
     });
     /* Pupil — big and cartoon, a flatter disc riding on the lens. The offset is what keeps it
-       off the sclera (0.020 + 0.020 clears the sclera's 0.032 by 0.008·S), not a big radius. */
-    const pc = c.clone().addScaledVector(outward, 0.020 * S).addScaledVector(trueUp, 0.002 * S);
+       off the sclera (0.020 + 0.020 clears the sclera's 0.032 by 0.008·S), not a big radius.
+       Raised 0.002 → 0.013 because the lid eats the *top* of the sclera: a pupil centred on the
+       lens centre sits low in the part of the eye you can actually see, and an albedo render of
+       the face read both eyes as droopy for exactly that reason. It is centred in the visible
+       aperture, not in the geometry. */
+    const pc = c.clone().addScaledVector(outward, 0.020 * S).addScaledVector(trueUp, 0.013 * S);
     addEllipsoid(mb, {
       center: pc, radii: new THREE.Vector3(0.042 * S, 0.050 * S, 0.020 * S), basis,
       segTheta: 14, segPhi: 9,
@@ -1344,7 +1349,7 @@ export class SlyModel {
       center: c.clone().addScaledVector(outward, 0.005 * S),
       radii: new THREE.Vector3(0.091 * S, 0.097 * S, 0.033 * S),
       basis: { x: lidRight, y: lidUp, z: outward },
-      segTheta: 16, segPhi: 5, phi0: 0.56, phi1: Math.PI / 2,
+      segTheta: 16, segPhi: 5, phi0: 0.64, phi1: Math.PI / 2,
       group: 'ink', sg: mb.newSg(), weights: [['head', 1]],
       colorAt: (u, v, p) => furTint(_c, p.x, p.y, p.z, 0.03),
     });
@@ -1686,11 +1691,15 @@ export class SlyModel {
           group: 'fur', weights: [['head', 1]],
         });
       }
-      // cream ruff under the cheek, framing the muzzle
+      /* Cream ruff under the cheek, framing the muzzle. It has to ride `muzzleDrop` with the
+         snout it frames: authored against the old snout line it sat *across* the dropped muzzle
+         instead of under it, and an albedo render showed the cream reading as an angular star
+         rather than as a jaw line. Dropped by the same 0.070 of head space, expressed here as
+         the elevation it subtends (0.070/0.184 ≈ 0.38 rad). */
       for (let i = 0; i < Math.round(3 * D); i++) {
         const f = i / (Math.round(3 * D) - 1);
         const th = side * THREE.MathUtils.lerp(0.48, 1.10, f);
-        const base = this.headSurf(th, -0.44 + f * 0.14, 0.96);
+        const base = this.headSurf(th, -0.44 - TUNE.muzzleDrop / 0.184 + f * 0.14, 0.96);
         const out = base.clone().sub(this.headCenter).normalize();
         put({
           base, dir: out.clone().addScaledVector(new THREE.Vector3(0, -1, 0), 0.85).normalize(),
@@ -2029,9 +2038,15 @@ export class SlyModel {
         // neutral and still low — this holds the sclera's value through a shadowed face, it
         // does not make him glow. Worth re-checking on `night`, which is where the previous
         // (warm, brighter) emissive failed.
-        // A wet sphere: a tight bright highlight is correct here and it is a legibility win
-        // at distance. The 0.55/80 is the original; it was collateral in an unrelated edit.
-        color: PAL.eyeWhite, sss: 0.0, rim: 0.22, spec: 0.55, gloss: 80, emissive: 0x282828,
+        /* `spec` 0.55 → 0.26, and the reason is the geometry, not taste. 0.55/80 was tuned for
+         * a *sphere*, where a tight lobe lands on a few pixels because the normal sweeps 90°
+         * across the eye. The sclera is now a shallow lens (see _buildEye), so its normals are
+         * nearly constant over most of its visible area and `pow(ndh, glossP)` either fires
+         * across the whole eye or not at all. On a sphere the char4 capture already read the
+         * sclera as blown-out near-white with grey pupils; at the same spec a lens is strictly
+         * worse. The "alive" cue does not depend on this — it is authored as its own highlight
+         * ellipsoid in the `eye` group, which is what should carry the glint. */
+        color: PAL.eyeWhite, sss: 0.0, rim: 0.22, spec: 0.26, gloss: 80, emissive: 0x282828,
       };
       default: return { color: 0xff00ff };
     }
