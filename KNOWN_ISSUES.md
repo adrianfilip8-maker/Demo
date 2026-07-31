@@ -154,9 +154,23 @@ produces an error or a warning:
   6480 placements failed the face-lighting test on every one, because face lighting is a
   function of yaw and the sun alone.
 
-All ten shots now put the character's ground contact in frame with ≥50% of his cast shadow
-visible, except `guard`, where he is behind the camera on purpose because the guard is the
-subject. That exception is documented in place so it is not re-reported.
+All ten shots now put the character's ground contact **inside the frustum** with ≥50% of his
+cast shadow visible, except `guard`, where he is behind the camera on purpose because the guard
+is the subject. That exception is documented in place so it is not re-reported.
+
+**Correction — "inside the frustum" is not "visible", and I originally wrote this as though it
+were.** A render-based measurement later found that hiding the character in `courtyard` changes
+**zero pixels**: he is not visible in that shot at all, despite passing every projection check.
+The checkers below do pure projection — no occlusion test, and no verification that the staging
+path actually moved him. A character behind a wall, or one the staging never placed, passes them
+identically to one standing in clear view.
+
+Ruled out so far by reading the code: the staging path is wired correctly. `Controller.js` is
+registered as `'movement'` (`main.js:29`) and does have `teleport()` at `Controller.js:1007`, so
+`Debug.js`'s `movement?.teleport` branch fires, and `SlyModel`'s own handler correctly defers to
+it. So this is not a "nothing stages him" bug. Still open: whether he is occluded, or whether
+the 14 physics frames the harness steps after teleporting move him. Settle it with a
+visible/hidden A/B, not with more projection.
 
 Four checkers are kept in `tools/` — `camclear.mjs`, `shadowframe.mjs`, `framesweep.mjs`,
 `playerplace.mjs`. **None of them boots the renderer**, so they run in about a second where a

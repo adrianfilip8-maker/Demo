@@ -13,6 +13,16 @@
  * A yaw that fixes one can easily break the other, which is why this prints both.
  *
  * No renderer boot — runs in about a second. `node tools/charview.mjs [--sweep]`
+ *
+ * **What this cannot tell you.** It projects a point through the shot camera and nothing more.
+ * It does not test occlusion, and it does not verify that the character was actually staged
+ * where the shot asks. So "in frame" here means "not outside the frustum", NOT "visible" —
+ * a character behind a wall, or one the staging path never moved, reports exactly the same.
+ *
+ * This bit me: on the strength of this tool I recorded that all ten shots put the character's
+ * ground contact in frame, and a render-based measurement later found that hiding him in
+ * `courtyard` changed **zero pixels**. Treat a pass here as a necessary condition, and settle
+ * visibility with a visible/hidden A/B against a real frame.
  */
 import * as THREE from 'three';
 import { SHOTS } from '../src/core/Shots.js';
