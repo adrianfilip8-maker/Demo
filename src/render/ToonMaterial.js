@@ -48,7 +48,11 @@ const TUNE = {
   // albedo, so it is the only lever that can pull the final hue toward the palette's shadow
   // colour rather than toward the surface's own warmth. Raised now that TEXTURES floored the
   // near-black tail that used to turn this wash into visible violet blotching.
-  shadowWash: 0.44,
+  // 0.44 measured well (shadow R/G 1.25 against lit 1.45) and looked wrong — shadowed faces
+  // went lavender. The wash is additive pure tint, so past a point it stops tinting the stone
+  // and starts *being* the stone. R/G cannot distinguish "cool shadow on warm rock" from
+  // "purple rock"; only the frame can. 0.24 keeps the correction without the colour swap.
+  shadowWash: 0.24,
   // Was +0.34, a saturation BOOST. On warm sandstone that raises R and lowers G, which is
   // mechanically why shadow measured *redder* than sunlight (R/G 1.63 shadowed vs 1.49 lit)
   // when §2.2 wants shadow blue-dominant. A surface lit only by narrow-band skylight should
