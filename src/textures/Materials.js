@@ -426,7 +426,15 @@ export const MATERIALS = {
   },
 
   limestone_polished: {
-    group: 'stone', tier: 0, tile: 3.8, bump: 0.018, rough: 0.44,
+    /* "Polished" is the quarry finish, not the state it is in three thousand years later, and at
+     * `rough 0.44` this material behaved like one: a broad specular sheen swept across whatever
+     * large flat surface it was on. That is expensive in the composition, because the biggest
+     * surface it dresses is the `hero` foreground slab — the review's "the foreground bottom-left
+     * slab is one of the *brightest* elements in frame, inverting the intended depth read… it
+     * also carries dark blue-grey diagonal smears that read as spilled oil". A dark foreground
+     * frame is §2.3's first depth rule, and a mirror finish cannot be one. 0.68 keeps limestone
+     * distinctly smoother than sandstone (0.86–0.92) without letting it catch a sheet highlight. */
+    group: 'stone', tier: 0, tile: 3.8, bump: 0.018, rough: 0.68,
     build(s, cx) {
       // Tura casing stone: enormous, tightly jointed, near-white, still faintly polished.
       const m = ashlar(s, {
@@ -440,7 +448,7 @@ export const MATERIALS = {
          * arriving through the other door. `joint` takes the painted contrast down to a third
          * and the shallow groove leaves just enough for `heightAO` to find. */
         dark: PAL.limeDark, mid: PAL.limeMid, light: PAL.limeLight, mortar: 0xa4957a,
-        relief: 0.05, dome: 0.02, groove: 0.14, spread: 0.55, rough: 0.44, grainFreq: 16,
+        relief: 0.05, dome: 0.02, groove: 0.14, spread: 0.55, rough: 0.68, grainFreq: 16,
         bedFreq: 2, joint: 0.10,
       });
       // Sedimentary bedding — faint horizontal banding is what says "limestone" not "plaster".
@@ -770,8 +778,22 @@ export const MATERIALS = {
    * fill, so it darkens the inside of a cut whatever the lighting is doing. Raising it makes the
    * carving legible under flat ambient *and* correct once the key returns — unlike putting the
    * contrast back into the albedo, which would rebuild the painted-on look the review failed. */
+  /* `tile` is a compromise between two failures in opposite directions, and it is worth recording
+   * which is which because the first pass of this fix overshot straight into the second.
+   *
+   * Too fine and the *repeat* is what you see rather than the glyphs: at 4.2 m a 20 m pylon shows
+   * the same tile five times across and three times up, and the review counted "the same pink
+   * oval at least eight times and the same green crescent at least six… a wall of postage
+   * stamps". Too coarse and narrow surfaces starve: at 6.4 m the obelisk, whose faces are 2.6 m
+   * wide, sampled well under half a tile and usually landed on the plain-stone part of the
+   * layout, so it rendered as a bare block — §7.3's "any surface reads as flat vertex colour"
+   * arriving as the price of fixing the repetition.
+   *
+   * 5.2 m is still a quarter coarser than the version that failed, and the other two levers —
+   * three wide glyph columns instead of four, and pigment faded toward the stone — carry most of
+   * the anti-repetition work now, because a repeat you cannot pick out is not a repeat. */
   hieroglyph_wall: {
-    group: 'carved', tier: 0, tile: 6.4, bump: 0.044, rough: 0.86,
+    group: 'carved', tier: 0, tile: 5.2, bump: 0.044, rough: 0.86,
     aoStrength: 1.7, aoFloor: 0.10,
     build(s, cx) {
       const size = s.size;
@@ -835,7 +857,7 @@ export const MATERIALS = {
   },
 
   relief_figures: {
-    group: 'carved', tier: 0, tile: 6.2, bump: 0.046, rough: 0.86,
+    group: 'carved', tier: 0, tile: 5.4, bump: 0.046, rough: 0.86,
     aoStrength: 1.7, aoFloor: 0.10,
     build(s, cx) {
       const size = s.size;
