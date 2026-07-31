@@ -56,7 +56,11 @@ const TUNE = {
      contrast around it once it has been graded. Keep the interior blades under the bloom
      threshold and let only their brightest cores cross it. */
   shaftCapacity: 44,
-  shaftGain: 0.62,          // master multiplier on every beam's published intensity
+  /* Bracketed on `temple` at 0.35 / 0.62 / 0.90. At 0.35 the blades are a haze on the
+     ceiling and the shot still fails §7.3; at 0.62 they read unmistakably as light and only
+     start to flatten the pale columns where two of them overlap. 0.55 keeps the read and
+     gives that overlap some headroom. */
+  shaftGain: 0.55,          // master multiplier on every beam's published intensity
   shaftConeGain: 0.85,      // torch / brazier cones, relative to shaftGain
   shaftSoft: 2.0,           // metres of soft fade where a blade meets geometry
   shaftFar: 96,             // metres; beyond this a blade contributes nothing

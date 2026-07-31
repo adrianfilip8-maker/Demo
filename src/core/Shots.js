@@ -27,16 +27,42 @@ import * as THREE from 'three';
  *      critic reported as "the character casts no shadow" — the shadow was a symptom, the
  *      character being off-screen was the defect.
  *
+ *   3. Which *side* of the character each camera sees, and how many pixels tall he is. Five of
+ *      the ten shots used to look at his back, where the cap is a featureless dome with no
+ *      brim, ear notch or muzzle — so silhouette work that reads perfectly on a turntable did
+ *      nothing for the frames the critic actually scores. `interior` additionally had his face
+ *      156° from the key, i.e. unlit.
+ *
  * Both are cheap to check off the sun tables in Atmosphere.js and the level layout without
- * booting the renderer at all.
+ * booting the renderer at all. `tools/camclear.mjs`, `tools/shadowframe.mjs` and
+ * `tools/charview.mjs` do exactly this and take about a second each.
+ *
+ * On yaw: two angles pull against each other and both have to land. View angle (0° = camera
+ * sees his front, ±180° = dead behind) wants roughly 20–70° for a three-quarter read that
+ * shows cap brim, muzzle, ear notch and cane at once. Sun angle (0° = face pointed at the key)
+ * wants roughly 20–70° so the face is lit but still modelled. A yaw that fixes one will
+ * happily break the other, so sweep against both — `charview.mjs --sweep` does it.
  */
 export const SHOTS = {
   /* The money shot. Sly perched on the courtyard architrave, golden hour raking across
      the complex, Great Pyramid hazed in the distance. If one frame has to sell the game,
-     this is it. */
+     this is it.
+
+     Yaw was -2.35, which put the camera 172° round from his face — dead behind. Now 5.72, a
+     three-quarter read at 69°, with the key still 64° off his face so it models rather than
+     flattens.
+
+     **Open, and deliberately not fixed here: he is 49 px tall in a 540-row frame**, 22 m out.
+     No silhouette work makes a 49 px figure carry the money shot. The two ways out are a
+     closer camera or longer lens — which costs the vista and the establishing read this shot
+     exists for — or a strong rim and value break against the colonnade behind him. I am
+     backing the second, because the rim term was only just repaired (it was firing on flat
+     grazing floors and has been gated to convex silhouettes, which is exactly this case) and
+     it preserves the composition. If the next critic pass still fails `hero` on the character,
+     move the camera in along its own axis: 40% of the way to the target puts him at ~98 px. */
   hero: {
     pos: [15.5, 12.2, 26.0], target: [-1.0, 7.4, 4.0], fov: 46, tod: 0.79, roll: -1.5,
-    player: { pos: [2.2, 9.0, 8.4], yaw: -2.35, pose: 'perch_idle' },
+    player: { pos: [2.2, 9.0, 8.4], yaw: 5.72, pose: 'perch_idle' },
   },
 
   /* Hypostyle hall — the column forest, clerestory light shafts, hieroglyph walls.
@@ -84,20 +110,20 @@ export const SHOTS = {
      the floor, lit three-quarter front with his shadow fully in shot. */
   courtyard: {
     pos: [-19.0, 5.6, 30.0], target: [1.0, 9.0, 12.0], fov: 50, tod: 0.76, roll: 1.0,
-    player: { pos: [-6.5, 0.0, 16.5], yaw: 5.67, pose: 'run' },
+    player: { pos: [-6.5, 0.0, 16.5], yaw: 4.19, pose: 'run' },
   },
 
   /* Terrain + sky + aerial perspective. The approach ridge looking back at the complex. */
   dunes: {
     pos: [26.0, 19.5, 84.0], target: [-2.0, 9.0, 18.0], fov: 42, tod: 0.83,
     hidePlayer: false,
-    player: { pos: [22.0, 16.4, 76.0], yaw: -2.9, pose: 'idle_confident' },
+    player: { pos: [22.0, 16.4, 76.0], yaw: 5.53, pose: 'idle_confident' },
   },
 
   /* Interior lighting: torch-lit tomb, warm key against cold fill, heavy volumetrics. */
   interior: {
     pos: [3.2, -9.2, -60.0], target: [-1.5, -11.5, -74.0], fov: 52, tod: 0.5,
-    player: { pos: [1.4, -12.0, -66.0], yaw: -2.9, pose: 'sneak_idle' },
+    player: { pos: [1.4, -12.0, -66.0], yaw: 5.36, pose: 'sneak_idle' },
   },
 
   /* Palette flip. Moonlit stealth: cool key, warm brazier accents, blue sparkles. */
@@ -109,7 +135,7 @@ export const SHOTS = {
   /* Motion tech, caught mid-arc: Sly swinging on a cane hook over the courtyard gap. */
   traversal: {
     pos: [12.0, 14.0, 6.0], target: [-3.0, 11.0, -12.0], fov: 44, tod: 0.77, roll: -3.0,
-    player: { pos: [1.0, 12.4, -3.0], yaw: -1.9, pose: 'hook_swing' },
+    player: { pos: [1.0, 12.4, -3.0], yaw: 5.76, pose: 'hook_swing' },
   },
 
   /* Impact frame: third hit of the cane combo landing on a guard, full FX.

@@ -624,7 +624,9 @@ export const AMBIENT = {
    can see turning, and still a speck rather than a snowflake. */
 export const MOTES = {
   capacity: 900,
-  tile: [TILE.MOTE, TILE.MOTE, TILE.STAR],
+  /* MOTE only. STAR carries a wide soft halo, and at the size these now run it reads as a
+     lens blob sitting on the image rather than as a chip of dust turning in a beam. */
+  tile: [TILE.MOTE],
   life: [3.0, 6.5],
   size: [0.10, 0.26], sizeExp: 1.0, fadeIn: 0.2, fadeOut: 1.1,
   alpha: [0.55, 1.5],
