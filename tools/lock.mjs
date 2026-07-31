@@ -8,19 +8,70 @@
  *
  * Deliberately simple: an exclusive-create lockfile holding the owner's pid, with stale
  * detection so a killed run can't wedge the queue.
+ *
+ * **It is a FIFO queue, not a race.** It used to be a race: every waiter polled on a jittered
+ * timer and whoever happened to call `tryTake()` first when the lock freed won it, so an agent
+ * that had waited forty minutes had exactly the same chance as one that had just arrived. With
+ * six agents contending that starves the patient ones, and an agent correctly observed that
+ * "restarting costs nothing" — true under a race, because there were no places to lose.
+ *
+ * Now each waiter drops a ticket file and only attempts the lock when it holds the oldest live
+ * ticket. `tryTake()` is still the atomic exclusive-create, so the ticket only decides *who
+ * tries*: if two processes ever disagree about who is oldest, the worst case degrades to the
+ * old race rather than to two holders. Correctness never depended on the ordering.
  */
-import { writeFileSync, readFileSync, unlinkSync, existsSync, mkdirSync, openSync, closeSync } from 'node:fs';
+import { writeFileSync, readFileSync, unlinkSync, existsSync, mkdirSync, openSync, closeSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 
 const DIR = process.env.SANDS_LOCK_DIR
   || path.join(os.tmpdir(), 'sands-of-ra');
 const LOCK = path.join(DIR, 'capture.lock');
+const QUEUE = path.join(DIR, 'queue');
 
 const STALE_MS = 20 * 60 * 1000;   // a capture that's held the lock this long is dead or hung
 
 function alive(pid) {
   try { process.kill(pid, 0); return true; } catch { return false; }
+}
+
+/** Ticket files are `<epochMs>-<pid>`; the name is the whole record. */
+function myTicket() { return path.join(QUEUE, `${_ticketAt}-${process.pid}`); }
+let _ticketAt = 0;
+
+function takeTicket() {
+  if (_ticketAt) return;
+  _ticketAt = Date.now();
+  mkdirSync(QUEUE, { recursive: true });
+  try { writeFileSync(myTicket(), ''); } catch { _ticketAt = 0; }
+}
+
+function dropTicket() {
+  if (!_ticketAt) return;
+  try { unlinkSync(myTicket()); } catch {}
+  _ticketAt = 0;
+}
+
+/** True when no live ticket is older than ours. Sweeps dead holders' tickets on the way. */
+function isMyTurn() {
+  if (!_ticketAt) return true;
+  let names;
+  try { names = readdirSync(QUEUE); } catch { return true; }
+  for (const n of names) {
+    const dash = n.lastIndexOf('-');
+    if (dash < 0) continue;
+    const at = parseInt(n.slice(0, dash), 10);
+    const pid = parseInt(n.slice(dash + 1), 10);
+    if (!Number.isFinite(at) || !Number.isFinite(pid)) continue;
+    if (pid === process.pid) continue;
+    if (!alive(pid) || Date.now() - at > STALE_MS + 10 * 60 * 1000) {
+      try { unlinkSync(path.join(QUEUE, n)); } catch {}
+      continue;
+    }
+    // Older ticket, or same ms and a lower pid — deterministic tie-break.
+    if (at < _ticketAt || (at === _ticketAt && pid < process.pid)) return false;
+  }
+  return true;
 }
 
 function readLock() {
@@ -58,10 +109,14 @@ export async function acquire({ timeoutMs = 45 * 60 * 1000, onWait } = {}) {
   const t0 = Date.now();
   let announced = 0;
 
-  while (!tryTake()) {
+  takeTicket();
+  // Only attempt the lock when we hold the oldest live ticket, so waiting is rewarded rather
+  // than merely tolerated. `tryTake()` remains the atomic step; this decides who gets to call it.
+  while (!(isMyTurn() && tryTake())) {
     const waited = Date.now() - t0;
     if (waited > timeoutMs) {
       // Better to render slowly alongside someone else than to fail the agent's check.
+      dropTicket();
       onWait?.(waited, readLock()?.pid ?? 0);
       return () => {};
     }
@@ -71,11 +126,13 @@ export async function acquire({ timeoutMs = 45 * 60 * 1000, onWait } = {}) {
     }
     await new Promise((r) => setTimeout(r, 700 + Math.random() * 600));
   }
+  dropTicket();
 
   let released = false;
   const release = () => {
     if (released) return;
     released = true;
+    dropTicket();
     const held = readLock();
     if (held?.pid === process.pid && existsSync(LOCK)) { try { unlinkSync(LOCK); } catch {} }
   };
