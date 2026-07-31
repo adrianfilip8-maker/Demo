@@ -44,9 +44,16 @@ const TUNE = {
   ambIntensity: 0.52,
   shadowFloor: 0.125,    // shadow illumination as a fraction of key luminance. AGENTS: never below ~14%
                          // of the *tonemapped* result — 0.155 of a raw 3.3 key left the frame flat.
-  shadowWash: 0.16,      // additive part of the shadow light — keeps the hue alive on warm albedo.
-                         // Unmultiplied by albedo, so at 0.34 it painted flat blue over everything.
-  shadowSat: 0.34,       // albedo saturation BOOST inside shadow (not a cut)
+  // Additive part of the shadow light. This is the ONLY shadow term not multiplied by the
+  // albedo, so it is the only lever that can pull the final hue toward the palette's shadow
+  // colour rather than toward the surface's own warmth. Raised now that TEXTURES floored the
+  // near-black tail that used to turn this wash into visible violet blotching.
+  shadowWash: 0.30,
+  // Was +0.34, a saturation BOOST. On warm sandstone that raises R and lowers G, which is
+  // mechanically why shadow measured *redder* than sunlight (R/G 1.63 shadowed vs 1.49 lit)
+  // when §2.2 wants shadow blue-dominant. A surface lit only by narrow-band skylight should
+  // lose its own hue, not gain it — so this desaturates now.
+  shadowSat: -0.18,
 
   /* --- rim --- */
   rim: 0.55,
@@ -95,11 +102,15 @@ const PAL = {
   /* Ceiling on the shadow light's brightest channel after the floor rescale. Above roughly
      this the violet-teal clips toward blue and stops reading as shadow. */
   shadowTintPeak: 0.42,
-  /* How much warm sand bounce is mixed into the shadow light. Desert shadow is sky plus
-     sand bounce. Bracketed by capture: 0.0 leaves warm albedo multiplied by pure blue and
-     every shaded face goes mauve; 0.45 removes the cool entirely and the frame turns
-     monochrome orange, losing the warm/cool tension §2.3 requires. */
-  shadowBounceMix: 0.20,
+  /* How much warm sand bounce is mixed into the shadow light.
+     The old 0.20 was bracketed by eye against two failure modes — 0.0 looked mauve, 0.45
+     looked monochrome — but that bracket was taken while four separate bugs were distorting
+     the frame: AO multiplied everything by a flat 0.545, the grade clipped red to zero in
+     half of all dark pixels, the ink composited as pure black, and the stone's dark tail ran
+     three times deeper than the palette. All four are fixed, so the bracket was measuring
+     those, not this. The palette hue #2a3f66 is itself R/G 0.667 — exactly the target — and
+     blending 20% of warm bounce into it landed the shadow light at 0.95, near-neutral. */
+  shadowBounceMix: 0.05,
   haze: 0xe8b878,
   hazeNight: 0x2a3f66,
   hazeSun: 0xffc98a,
