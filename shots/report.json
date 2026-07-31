@@ -1,16 +1,24 @@
 {
-  "at": "2026-07-30T23:43:16.618Z",
+  "at": "2026-07-31T00:14:32.752Z",
   "width": 960,
   "height": 540,
   "quality": "med",
   "shots": {
     "hero": {
       "file": "shots/hero.png",
-      "ms": 6.5,
-      "fps": 63,
-      "drawCalls": 398,
-      "triangles": 1652757,
-      "programs": 69
+      "ms": 12,
+      "fps": 44,
+      "drawCalls": 342,
+      "triangles": 1474201,
+      "programs": 77
+    },
+    "courtyard": {
+      "file": "shots/courtyard.png",
+      "ms": 7.199999999953434,
+      "fps": 44,
+      "drawCalls": 342,
+      "triangles": 1474599,
+      "programs": 77
     }
   },
   "errors": [],
@@ -21,7 +29,7 @@
     "lighting": true,
     "textures": true,
     "architecture": true,
-    "props": false,
+    "props": true,
     "terrain": true,
     "collision": true,
     "character": true,
@@ -34,19 +42,37 @@
     "audio": true
   },
   "bootWarnings": [
-    "textures: prewarm took 27.6s at size 1024",
+    "textures: prewarm took 46.2s at size 1024",
+    "fx: no emitter named \"embers\"",
+    "fx: no emitter named \"embers\"",
+    "fx: no emitter named \"embers\"",
+    "fx: no emitter named \"embers\"",
+    "fx: no emitter named \"embers\"",
+    "fx: no emitter named \"embers\"",
+    "fx: no emitter named \"embers\"",
+    "fx: no emitter named \"embers\"",
     "collision: pole \"unnamed\" has no userData.spline — synthesised one from its bounds",
     "collision: pole \"proxy:pole\" has no userData.spline — synthesised one from its bounds",
-    "fx: PROPS absent — seeded six tomb torch emitters at the §8.1 sconce positions so the interior shot has fire in it. They yield to PROPS.",
-    "running with placeholder world; missing modules: props, guards"
+    "textures: budget exhausted, refusing to build \"fur_tail_rings\"",
+    "textures: budget exhausted, refusing to build \"leather_boot\"",
+    "running with placeholder world; missing modules: guards"
   ],
   "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
   "warnings": [
-    "textures: prewarm took 27.6s at size 1024",
+    "textures: prewarm took 46.2s at size 1024",
+    "fx: no emitter named \"embers\"",
+    "fx: no emitter named \"embers\"",
+    "fx: no emitter named \"embers\"",
+    "fx: no emitter named \"embers\"",
+    "fx: no emitter named \"embers\"",
+    "fx: no emitter named \"embers\"",
+    "fx: no emitter named \"embers\"",
+    "fx: no emitter named \"embers\"",
     "collision: pole \"unnamed\" has no userData.spline — synthesised one from its bounds",
     "collision: pole \"proxy:pole\" has no userData.spline — synthesised one from its bounds",
-    "fx: PROPS absent — seeded six tomb torch emitters at the §8.1 sconce positions so the interior shot has fire in it. They yield to PROPS.",
-    "running with placeholder world; missing modules: props, guards"
+    "textures: budget exhausted, refusing to build \"fur_tail_rings\"",
+    "textures: budget exhausted, refusing to build \"leather_boot\"",
+    "running with placeholder world; missing modules: guards"
   ],
   "consoleErrors": [
     "Failed to load resource: the server responded with a status of 404 (Not Found)",
