@@ -123,10 +123,15 @@ export class Textures {
   /* ───────────────────────────── building ───────────────────────────── */
 
   _build(name, recipe) {
-    // Small utility maps (sprites, decals) don't need the full budget resolution.
+    /* Tier is the resolution contract (Materials.js header): 0 = detail-critical, gets the full
+     * budget resolution; 1 = standard, half; 2 = sprite/decal, half. Tier 1 was silently being
+     * built at full size, which is where the 350 MB budget went — the catalogue totalled ~500 MB
+     * and `fur_tail_rings` was being refused outright. Half resolution on a tier-1 map is also
+     * a free readability win: it pre-averages exactly the sub-3-texel detail that can only
+     * alias, and it quarters prewarm cost for two thirds of the catalogue. */
     const size = recipe.size
       ? Math.min(recipe.size, this.size)
-      : (recipe.tier === 2 ? Math.max(256, this.size >> 1) : this.size);
+      : (recipe.tier >= 1 ? Math.max(256, this.size >> 1) : this.size);
 
     const surface = new Surface(size, (recipe.seed ?? hashName(name)) >>> 0);
     recipe.build(surface, { seed: surface.seed, size, name, quality: this.engine.quality });
@@ -140,9 +145,14 @@ export class Textures {
       micro: recipe.micro ?? 0.10,
       ormDiv: recipe.ormDiv ?? 2,
       smoothH: recipe.smoothH ?? 0,
+      // Default fractional low-pass on the normal's last octave. Detail below ~3 texels cannot
+      // survive a mip chain; leaving it in only buys shimmer. Recipes may override.
+      microSoft: recipe.microSoft ?? 0.35,
     });
 
-    const aniso = this.engine.maxAniso;
+    // Anisotropy is what stops a grazing wall smearing its mip chain into mush; a driver that
+    // reports 0 would otherwise disable minification filtering quality entirely.
+    const aniso = Math.max(1, this.engine.maxAniso | 0);
     const wrap = recipe.clamp ? THREE.ClampToEdgeWrapping : THREE.RepeatWrapping;
 
     const map = this._tex(out.albedo, size, {
@@ -226,7 +236,12 @@ export class Textures {
     const names = MATERIAL_NAMES;
     const rows = Math.ceil(names.length / cols);
     const label = 14;
-    const canvas = mkCanvas(cols * cell, rows * (cell + label));
+    // Deliberately a DOM canvas, not `mkCanvas`: the sheet exists to be exported by the shot
+    // harness and an OffscreenCanvas has no `toDataURL`. `this.swatchCanvas` is the handle.
+    const canvas = typeof document !== 'undefined'
+      ? Object.assign(document.createElement('canvas'), { width: cols * cell, height: rows * (cell + label) })
+      : mkCanvas(cols * cell, rows * (cell + label));
+    this.swatchCanvas = canvas;
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
 
     ctx.fillStyle = '#140f18';
@@ -269,6 +284,42 @@ export class Textures {
     return t;
   }
 
+  /**
+   * Per-material numbers, for isolating a look problem without a full capture: mean albedo (is
+   * the grade right?), baked normal strength (is the relief sane?), on-screen texel size and
+   * high-frequency luma RMS (does the detail read as material or as noise?).
+   * `built` only — pass `all: true` to force the whole catalogue.
+   */
+  report({ all = false } = {}) {
+    const names = all ? MATERIAL_NAMES : [...this._cache.keys()];
+    const rows = [];
+    for (const name of names) {
+      const set = all ? this.get(name) : this._cache.get(name);
+      const src = set?.map?.image?.data;
+      if (!src) { rows.push({ name, ok: false }); continue; }
+      const ss = set.size, n = ss * ss;
+      let r = 0, g = 0, b = 0, l = 0, l2 = 0;
+      for (let i = 0; i < n; i++) {
+        const o = i * 4;
+        r += src[o]; g += src[o + 1]; b += src[o + 2];
+        const y = (src[o] * 0.2126 + src[o + 1] * 0.7152 + src[o + 2] * 0.0722) / 255;
+        l += y; l2 += y * y;
+      }
+      const mean = l / n;
+      const hex = (v) => Math.round(v / n).toString(16).padStart(2, '0');
+      const tu = Array.isArray(set.tile) ? set.tile[0] : set.tile;
+      rows.push({
+        name, ok: true, size: ss, group: set.group,
+        albedo: `#${hex(r)}${hex(g)}${hex(b)}`,
+        lumaRms: +Math.sqrt(Math.max(0, l2 / n - mean * mean)).toFixed(4),
+        normalStrength: +(set.normalScale ?? 0).toFixed(2),
+        mmPerTexel: +((tu / ss) * 1000).toFixed(2),
+        tile: set.tile,
+      });
+    }
+    return { rows, megabytes: +(this._bytes / 1048576).toFixed(1), built: this.stats.built };
+  }
+
   /* ───────────────────────────── lifecycle ───────────────────────────── */
 
   _flush() {
@@ -276,6 +327,7 @@ export class Textures {
     this._textures.length = 0;
     this._cache.clear();
     this._swatch = null;
+    this.swatchCanvas = null;
     this._bytes = 0;
   }
 

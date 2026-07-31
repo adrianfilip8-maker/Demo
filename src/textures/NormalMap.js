@@ -25,15 +25,38 @@ import { blurWrap, sat, clamp } from './Canvas2D.js';
 /* ------------------------------------------------------------------------- */
 
 /**
+ * Slope knee. Below `SLOPE_KNEE` (≈38°) a texel keeps its true derived slope; above it the
+ * excess is compressed onto an asymptote at `SLOPE_MAX` (≈66°).
+ *
+ * Why: the height field is differentiated at *texel* spacing, so a 2 mm chisel chatter and a
+ * 40 cm block step are amplified by the same factor. Left alone that turns every texel into a
+ * near-perpendicular facet — a shading discontinuity per texel, which is precisely the
+ * high-frequency noise AGENTS §7.3's squint test fails on, and which no amount of mipping can
+ * remove (mips average the *vector*, the shader renormalises, and the tilt comes straight back).
+ * Real stone at 2 mm presents a bevel, not a cliff. The knee is smooth and monotonic so macro
+ * form is untouched and only the pathological tail is pulled in.
+ */
+const SLOPE_KNEE = 0.78;   // tan(38°)
+const SLOPE_MAX = 2.25;    // tan(66°)
+
+/**
  * Sobel the height field into a tangent-space normal map.
+ *
+ * `ku`/`kv` are per-axis slope scales (`bumpMetres * size / tileMetres`); they differ whenever a
+ * recipe declares an anisotropic tile such as `[3.6, 4.5]`, which column flutes, palm bark, rope
+ * and the cane all do.
+ *
  * @param {Float32Array} h height 0..1
  * @param {number} size edge length
- * @param {number} strength slope scale = bumpMetres * size / tileMetres
+ * @param {number} ku slope scale along U
+ * @param {number} kv slope scale along V (defaults to ku)
  * @returns {Uint8Array} RGBA
  */
-export function heightToNormal(h, size, strength = 6) {
+export function heightToNormal(h, size, ku = 6, kv = ku) {
   const out = new Uint8Array(size * size * 4);
-  const k = clamp(strength, 0.25, 64);
+  const kx = clamp(Number.isFinite(ku) ? ku : 6, 0.25, 64);
+  const ky = clamp(Number.isFinite(kv) ? kv : kx, 0.25, 64);
+  const span = SLOPE_MAX - SLOPE_KNEE;
   for (let y = 0; y < size; y++) {
     const y0 = ((y - 1 + size) % size) * size;
     const y1 = y * size;
@@ -50,14 +73,21 @@ export function heightToNormal(h, size, strength = 6) {
       const du = ((h20 + 2 * h21 + h22) - (h00 + 2 * h01 + h02)) * 0.125;
       const dv = ((h02 + 2 * h12 + h22) - (h00 + 2 * h10 + h20)) * 0.125;
 
-      let nx = -du * k, ny = -dv * k, nz = 1;
+      let nx = -du * kx, ny = -dv * ky;
+      // Soft-knee the tangent slope, preserving direction.
+      const m = Math.sqrt(nx * nx + ny * ny);
+      if (m > SLOPE_KNEE) {
+        const lim = SLOPE_KNEE + span * (1 - Math.exp(-(m - SLOPE_KNEE) / span));
+        const g = lim / m;
+        nx *= g; ny *= g;
+      }
       const inv = 1 / Math.sqrt(nx * nx + ny * ny + 1);
-      nx *= inv; ny *= inv; nz = inv;
+      nx *= inv; ny *= inv;
 
       const o = (y1 + x) * 4;
       out[o] = (nx * 0.5 + 0.5) * 255;
       out[o + 1] = (ny * 0.5 + 0.5) * 255;
-      out[o + 2] = (nz * 0.5 + 0.5) * 255;
+      out[o + 2] = (inv * 0.5 + 0.5) * 255;
       out[o + 3] = 255;
     }
   }
@@ -82,7 +112,9 @@ export function heightAO(h, size, o = {}) {
   const ao = new Float32Array(n);
   ao.fill(1);
 
-  const px = tile / size;                       // metres per texel
+  // `tile` may be [u, v] for anisotropic surfaces; AO has no direction, so take the mean.
+  const tm = tileMean(tile);
+  const px = tm / size;                         // metres per texel
   const radii = [2, 5, 13, 30];
   const weights = [0.34, 0.30, 0.22, 0.14];
 
@@ -223,14 +255,33 @@ export function derive(s, o = {}) {
   const {
     bump = 0.02, tile = 2.0, normalScale = 1.0,
     aoStrength = 1.0, aoFloor = 0.16,
-    micro = 0.10, ormDiv = 2, smoothH = 0,
+    micro = 0.10, ormDiv = 2, smoothH = 0, microSoft = 0,
   } = o;
   const size = s.size;
 
-  const h = smoothH > 0 ? blurWrap(s.h, size, smoothH, 1) : s.h;
+  let h = smoothH > 0 ? blurWrap(s.h, size, smoothH, 1) : s.h;
+  if (microSoft > 0) {
+    /* Fractional low-pass for the *normal only*: blend toward a one-texel blur. The last octave
+     * of a height field lives at 2–3 texels, which is below what a mip chain can carry, so it
+     * can only ever contribute aliasing. Taking a fraction of it out keeps the chisel edges
+     * crisp (they are 3+ texels wide) while dropping the shimmer. */
+    const b = blurWrap(h, size, 1, 1);
+    const k = clamp(microSoft, 0, 1);
+    const m = new Float32Array(size * size);
+    for (let i = 0; i < m.length; i++) m[i] = h[i] + (b[i] - h[i]) * k;
+    h = m;
+  }
 
-  const strength = (bump * size) / Math.max(0.05, tile) * normalScale;
-  const normal = heightToNormal(h, size, strength);
+  /* Anisotropic tiles ([u, v]) are declared by column flutes, palm bark, rope, the cane and the
+   * tail rings. `Math.max(0.05, [u,v])` is NaN, which silently baked an all-zero — i.e. black,
+   * i.e. (-1,-1,-1) once decoded — normal map onto every one of those surfaces. Resolve each
+   * axis separately, which is also the physically correct thing to do. */
+  const tu = Math.max(0.05, Array.isArray(tile) ? tile[0] : tile);
+  const tv = Math.max(0.05, Array.isArray(tile) ? (tile[1] ?? tile[0]) : tile);
+  const ku = (bump * size) / tu * normalScale;
+  const kv = (bump * size) / tv * normalScale;
+
+  const normal = heightToNormal(h, size, ku, kv);
   const ao = heightAO(h, size, { bump, tile, strength: aoStrength, occ: s.occ, floor: aoFloor });
   const rough = refineRoughness(s.rough, h, size, { micro });
   const orm = packORM(ao, rough, s.metal, size, ormDiv);
@@ -241,6 +292,15 @@ export function derive(s, o = {}) {
     orm,
     emissive: packEmissive(s),
     size,
-    normalStrength: strength,
+    normalStrength: ku,
+    normalStrengthV: kv,
   };
+}
+
+/** `tile` is a number or [u, v]; collapse it to one scalar for direction-free uses. */
+function tileMean(tile) {
+  if (!Array.isArray(tile)) return Math.max(0.05, tile || 2.0);
+  const a = Math.max(0.05, tile[0] || 2.0);
+  const b = Math.max(0.05, tile[1] ?? tile[0] ?? 2.0);
+  return (a + b) * 0.5;
 }

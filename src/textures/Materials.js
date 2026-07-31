@@ -51,8 +51,24 @@ function MX(a, b, t) { return rgb2hex(mixHex(a, b, t, MXT)); }
 /**
  * Global damping on per-block colour variation. One knob so the whole masonry family can be
  * pulled back toward "one material" without editing every recipe's own `spread`.
+ *
+ * At 0.42 the wall still read as a chequerboard of individually-toned bricks rather than as one
+ * quarry's stone. The variation has to be legible at 2 m and gone at 30 m, which means it has to
+ * be smaller than the shading difference between a lit and a shaded face — otherwise it competes
+ * with form for the eye. 0.26 is roughly that threshold.
  */
-const VARIATION = 0.42;
+const VARIATION = 0.26;
+
+/**
+ * Damping on the *joint* — the mortar's tonal contrast against the block face.
+ *
+ * ARCHITECTURE already builds the masonry as geometry (0.66 m courses, 6 cm recessed joints), so
+ * a strong joint in the texture lays a *second*, unaligned rectangular grid over the first. Two
+ * rectangle fields at similar frequency beat against each other, and that beat is exactly the
+ * "high-frequency rectangular noise" of AGENTS §7.3's squint test. The texture's job is to say
+ * "cut sandstone"; the geometry's job is to say "blocks".
+ */
+const JOINT = 0.42;
 
 /**
  * Ashlar masonry base — height and per-block colour. Everything about the way cut stone reads
@@ -66,7 +82,7 @@ function ashlar(s, o = {}) {
     dark = PAL.sandDark, mid = PAL.sandMid, light = PAL.sandLight,
     mortar = 0x9a8a70, relief = 0.11, groove = 0.30, dome = 0.035,
     grainFreq = 12, spread = 0.80, seed = 1, bondJitter = 0.09, widthJitter = 0.30,
-    rough = 0.86,
+    rough = 0.86, joint = JOINT, tone = 0,
   } = o;
   const m = masonry(s.size, { courses, aspect, jointW, chamfer, seed, bondJitter, widthJitter });
   const face = s.field(2, (u, v) => warpN(u, v, grainFreq, 5, 0.95, seed + 3) * 0.5 + 0.5);
@@ -80,7 +96,7 @@ function ashlar(s, o = {}) {
     let h = 0.60
       + (m.id[i] - 0.5) * relief                       // whole block proud / recessed
       + conv * dome                                    // slightly convex dressed face
-      + (face[i] - 0.5) * 0.075                        // stone grain
+      + (face[i] - 0.5) * 0.055                        // stone grain
       - (1 - e) * groove * 0.55                        // chamfer ramp
       - j * groove;                                    // mortar groove
     s.h[i] = h;
@@ -92,16 +108,24 @@ function ashlar(s, o = {}) {
      * high-frequency noise rather than as one material — the frame failed AGENTS §7.3's
      * squint test because the large shapes stopped reading. Real ashlar varies subtly
      * block to block; the variation should be legible up close and invisible at distance.
-     * Damped as a group so every recipe's own `spread` keeps its relative weight. */
-    const t = sat(0.44
+     * Damped as a group so every recipe's own `spread` keeps its relative weight.
+     *
+     * The *macro* blotch is deliberately left at full weight relative to the others: it runs at
+     * ~3 cycles per tile, i.e. far below the block grid, so it breaks the repeat up without
+     * adding anything the eye has to resolve. Per-block variety is what had to come down. */
+    /* `tone` holds the recipe's *mean albedo* where the art direction wants it while the
+     * variation terms are being retuned. Damping the joints and the pitting takes darkening out
+     * of a wall as a side effect, and the grade is verified per material — the frequency fix must
+     * not quietly relight the level. */
+    const t = sat(0.44 + tone
       + (m.id2[i] - 0.5) * spread * VARIATION
-      + (macro[i] - 0.5) * 0.55 * VARIATION
+      + (macro[i] - 0.5) * 0.80 * VARIATION
       + (face[i] - 0.5) * 0.30 * VARIATION);
     const col = ramp3(dark, mid, light, t);
     s.r[i] = col[0]; s.g[i] = col[1]; s.b[i] = col[2];
     // Mortar: paler gypsum, grubby, and rougher than the dressed face.
     if (j > 0.01) {
-      s.mixHex(i, mortar, j * (0.55 + mort[i] * 0.4));
+      s.mixHex(i, mortar, j * (0.55 + mort[i] * 0.4) * joint);
       s.rough[i] = rough + j * 0.10;
     } else s.rough[i] = rough;
   }
@@ -287,45 +311,51 @@ export const MATERIALS = {
 
   /* ===================== stone & masonry ================================ */
 
+  /* `tile` here is the single most load-bearing number in the file. ARCHITECTURE lays 0.66 m
+   * geometric courses; the texture used to lay 0.48 m courses on top of them (2.4 m ÷ 5), and two
+   * rectangle grids a few centimetres apart in pitch beat into a shimmer. At 3.4 m ÷ 4 the
+   * texture's courses are 0.85 m — comfortably coarser than the geometry rather than adjacent to
+   * it — and one repeat now covers a 20 m wall six times instead of eight. */
   sandstone_block: {
-    group: 'stone', tier: 0, tile: 2.4, bump: 0.055, rough: 0.86,
+    group: 'stone', tier: 0, tile: 3.4, bump: 0.030, rough: 0.86,
     build(s, cx) {
-      const m = ashlar(s, { seed: cx.seed, courses: 5, aspect: 2.35, dome: 0.04, relief: 0.12 });
-      chiselMarks(s, { amount: 0.035, angle: -0.38, freq: 52, seed: cx.seed + 1, mask: m.edge });
-      pitting(s, { amount: 0.05, freq: 46, density: 0.40, seed: cx.seed + 2, colorDark: PAL.sandDark });
-      speckle(s, { freq: 190, seed: cx.seed + 4, colors: [[PAL.limeLight, 0.10, 0.15], [PAL.sandCrev, 0.07, 0.05]], heightDelta: 0.01 });
-      weather(s, { source: m.joint, seed: cx.seed + 6, creviceAmt: 0.58, streakAmt: 0.34, dustAmt: 0.24 });
-      grain(s, { amount: 0.035, freq: 260, seed: cx.seed + 8, heightAmt: 0.014 });
+      const m = ashlar(s, { seed: cx.seed, courses: 4, aspect: 2.15, dome: 0.030, relief: 0.06, groove: 0.20, tone: -0.075 });
+      chiselMarks(s, { amount: 0.022, angle: -0.38, freq: 40, seed: cx.seed + 1, mask: m.edge });
+      pitting(s, { amount: 0.035, freq: 32, density: 0.34, seed: cx.seed + 2, colorDark: PAL.sandDark });
+      speckle(s, { freq: 110, seed: cx.seed + 4, colors: [[PAL.limeLight, 0.07, 0.06], [PAL.sandCrev, 0.05, 0.02]], heightDelta: 0.006 });
+      weather(s, { source: m.joint, seed: cx.seed + 6, creviceAmt: 0.44, streakAmt: 0.28, dustAmt: 0.20 });
+      grain(s, { amount: 0.020, freq: 120, seed: cx.seed + 8, heightAmt: 0.006 });
     },
   },
 
   sandstone_worn: {
-    group: 'stone', tier: 1, tile: 2.8, bump: 0.075, rough: 0.92,
+    group: 'stone', tier: 1, tile: 3.6, bump: 0.050, rough: 0.92,
     build(s, cx) {
       const m = ashlar(s, {
-        seed: cx.seed, courses: 4, aspect: 2.0, chamfer: 0.030, jointW: 0.012,
-        relief: 0.16, dome: 0.02, spread: 0.9, dark: PAL.sandDark, mid: PAL.sandMid, light: PAL.sandLight,
+        seed: cx.seed, courses: 3, aspect: 1.9, chamfer: 0.030, jointW: 0.012,
+        relief: 0.085, dome: 0.02, groove: 0.22, spread: 0.9, tone: -0.035,
+        dark: PAL.sandDark, mid: PAL.sandMid, light: PAL.sandLight,
       });
       // Wind erosion: ridged noise scoops the face, worst on exposed corners.
-      const ero = s.field(2, (u, v) => ridgeN(u, v, 9, 5, 0.55, cx.seed + 17));
+      const ero = s.field(2, (u, v) => ridgeN(u, v, 7, 5, 0.55, cx.seed + 17));
       const bite = s.field(3, (u, v) => {
-        const w = worleyN(u, v, 7, cx.seed + 23, 0.95);
+        const w = worleyN(u, v, 6, cx.seed + 23, 0.95);
         return sat(1 - w.f1 / 0.42) ** 2;
       });
       for (let i = 0; i < s.n; i++) {
         const corner = 1 - m.edge[i];
-        s.h[i] -= ero[i] * 0.16 + bite[i] * 0.22 * (0.35 + corner * 0.9);
-        s.mixHex(i, PAL.sandLight, ero[i] * 0.14);
+        s.h[i] -= ero[i] * 0.11 + bite[i] * 0.16 * (0.35 + corner * 0.9);
+        s.mixHex(i, PAL.sandLight, ero[i] * 0.11);
         s.rough[i] = sat(s.rough[i] + ero[i] * 0.06);
       }
-      pitting(s, { amount: 0.09, freq: 34, density: 0.55, seed: cx.seed + 5, colorDark: PAL.sandCrev });
-      weather(s, { source: m.joint, seed: cx.seed + 6, creviceAmt: 0.62, streakAmt: 0.40, dustAmt: 0.34, streakDecay: 0.982 });
-      grain(s, { amount: 0.04, freq: 240, seed: cx.seed + 9, heightAmt: 0.018 });
+      pitting(s, { amount: 0.06, freq: 26, density: 0.48, seed: cx.seed + 5, colorDark: PAL.sandCrev });
+      weather(s, { source: m.joint, seed: cx.seed + 6, creviceAmt: 0.50, streakAmt: 0.34, dustAmt: 0.30, streakDecay: 0.982 });
+      grain(s, { amount: 0.026, freq: 120, seed: cx.seed + 9, heightAmt: 0.008 });
     },
   },
 
   limestone_polished: {
-    group: 'stone', tier: 0, tile: 3.2, bump: 0.022, rough: 0.44,
+    group: 'stone', tier: 0, tile: 3.8, bump: 0.018, rough: 0.44,
     build(s, cx) {
       // Tura casing stone: enormous, tightly jointed, near-white, still faintly polished.
       const m = ashlar(s, {
@@ -344,24 +374,34 @@ export const MATERIALS = {
         s.rough[i] = sat(s.rough[i] + (bandF[i] - 0.5) * 0.05);
       }
       // Conchoidal chips: shell-like flakes off the arrises.
-      pitting(s, { amount: 0.10, freq: 26, density: 0.16, seed: cx.seed + 13, mask: m.joint, colorDark: PAL.limeDark });
-      speckle(s, { freq: 240, seed: cx.seed + 15, colors: [[PAL.white, 0.14, 0.2], [PAL.limeDark, 0.06, 0.05]] });
-      chiselMarks(s, { amount: 0.012, angle: 0.5, freq: 120, seed: cx.seed + 3, mask: m.edge });
+      pitting(s, { amount: 0.08, freq: 22, density: 0.16, seed: cx.seed + 13, mask: m.joint, colorDark: PAL.limeDark });
+      speckle(s, { freq: 120, seed: cx.seed + 15, colors: [[PAL.white, 0.10, 0.1], [PAL.limeDark, 0.05, 0.02]] });
+      chiselMarks(s, { amount: 0.012, angle: 0.5, freq: 90, seed: cx.seed + 3, mask: m.edge });
       weather(s, {
         source: m.joint, seed: cx.seed + 6, crevice: 0x6a5f48, creviceAmt: 0.45,
         streakAmt: 0.26, streakTint: 0x7a6a4c, dustAmt: 0.14, roughGrime: 0.16,
       });
-      grain(s, { amount: 0.02, freq: 300, seed: cx.seed + 8, heightAmt: 0.006 });
+      grain(s, { amount: 0.016, freq: 130, seed: cx.seed + 8, heightAmt: 0.004 });
     },
   },
 
   granite_pink: {
-    group: 'stone', tier: 1, tile: 1.6, bump: 0.006, rough: 0.26,
+    group: 'stone', tier: 1, tile: 2.2, bump: 0.006, rough: 0.26,
     build(s, cx) {
-      // Aswan granite: coarse feldspar/quartz/biotite, polished to a mirror on obelisks.
-      const fHex = MX(PAL.carnelian, PAL.limeLight, 0.52);
-      const qHex = MX(PAL.limeLight, PAL.shadow, 0.34);
-      const bHex = MX(PAL.black, PAL.shadow, 0.30);
+      /* Aswan granite: coarse feldspar/quartz/biotite, polished to a mirror on obelisks.
+       *
+       * This is the obelisk, the tallest single shape in the `hero` and `courtyard` frames, and
+       * it was the worst offender in the whole catalogue: three crystal hexes ranging from
+       * near-white to near-black gave a luma RMS of 0.19 that barely moved four mip levels down,
+       * so the obelisk read as pink-and-black confetti at every distance instead of as a
+       * monolith. Real granite is a *warm grey-pink* from ten metres; the crystals are a
+       * close-up reward. `UNIFY` pulls each crystal toward the rock's own mean, which keeps the
+       * hue difference that says "granite" and drops the value difference that says "noise". */
+      const UNIFY = 0.52;
+      const base = MX(MX(PAL.carnelian, PAL.limeLight, 0.42), PAL.sandDark, 0.46);
+      const fHex = MX(MX(PAL.carnelian, PAL.limeLight, 0.52), base, UNIFY);
+      const qHex = MX(MX(PAL.limeLight, PAL.shadow, 0.34), base, UNIFY);
+      const bHex = MX(MX(PAL.black, PAL.shadow, 0.42), base, UNIFY * 0.85);
       const macro = s.field(5, (u, v) => warpN(u, v, 4, 4, 1.2, cx.seed + 31) * 0.5 + 0.5);
       const size = s.size;
       const wA = {}, wB = {};
@@ -369,14 +409,15 @@ export const MATERIALS = {
         const v = (y + 0.5) / size, row = y * size;
         for (let x = 0; x < size; x++) {
           const i = row + x, u = (x + 0.5) / size;
-          const big = worleyN(u, v, 26, cx.seed, 1.0, wA);
-          const sm = worleyN(u, v, 60, cx.seed + 7, 1.0, wB);
+          // Coarser crystals: bigger cells carry through a mip instead of dissolving into fizz.
+          const big = worleyN(u, v, 17, cx.seed, 1.0, wA);
+          const sm = worleyN(u, v, 38, cx.seed + 7, 1.0, wB);
           const k = big.id;
           let hex, rgh, hh;
           if (k < 0.46) { hex = fHex; rgh = 0.22; hh = 0.62; }        // pink feldspar
-          else if (k < 0.80) { hex = qHex; rgh = 0.20; hh = 0.60; }   // grey quartz
+          else if (k < 0.84) { hex = qHex; rgh = 0.20; hh = 0.60; }   // grey quartz
           else { hex = bHex; rgh = 0.34; hh = 0.55; }                 // biotite / hornblende
-          const shadeK = 0.86 + big.id * 0.22 + (sm.id - 0.5) * 0.16 + (macro[i] - 0.5) * 0.18;
+          const shadeK = 0.90 + big.id * 0.10 + (sm.id - 0.5) * 0.07 + (macro[i] - 0.5) * 0.16;
           const c = hexRGB(hex);
           s.r[i] = c[0] * shadeK; s.g[i] = c[1] * shadeK; s.b[i] = c[2] * shadeK;
           // Crystals stand a hair apart even after polishing; grain edges catch light.
@@ -389,18 +430,20 @@ export const MATERIALS = {
       // Polishing swirl + the odd deep scratch, so the mirror is not perfect.
       const pol = s.field(2, (u, v) => fbmA(u, v, 128, 40, 3, 0.5, cx.seed + 43) * 0.5 + 0.5);
       for (let i = 0; i < s.n; i++) s.rough[i] = sat(s.rough[i] + (pol[i] - 0.5) * 0.10);
-      speckle(s, { freq: 330, seed: cx.seed + 19, colors: [[PAL.goldSpec, 0.05, 0.3], [PAL.black, 0.06, 0.0]] });
-      grain(s, { amount: 0.02, freq: 400, seed: cx.seed + 23, heightAmt: 0.004 });
+      speckle(s, { freq: 120, seed: cx.seed + 19, colors: [[PAL.goldSpec, 0.03, 0.15], [PAL.black, 0.035, 0.0]] });
+      grain(s, { amount: 0.014, freq: 130, seed: cx.seed + 23, heightAmt: 0.003 });
     },
   },
 
   mudbrick: {
-    group: 'stone', tier: 1, tile: 2.0, bump: 0.05, rough: 0.94,
+    group: 'stone', tier: 1, tile: 2.6, bump: 0.038, rough: 0.94,
     build(s, cx) {
       const m = ashlar(s, {
-        seed: cx.seed, courses: 7, aspect: 2.05, jointW: 0.016, chamfer: 0.026,
+        seed: cx.seed, courses: 6, aspect: 2.05, jointW: 0.016, chamfer: 0.026,
         dark: 0x6f4526, mid: PAL.sandDark, light: PAL.sandMid, mortar: 0x7b5230,
-        relief: 0.18, dome: 0.05, groove: 0.34, spread: 0.85, widthJitter: 0.22,
+        relief: 0.10, dome: 0.05, groove: 0.24, spread: 0.85, widthJitter: 0.22,
+        // Mud brick is genuinely laid in thick, visible mud beds — this one earns its joint.
+        joint: 0.72,
       });
       // Hand-moulded bricks: perturb the joint so no edge is straight, and crumble the arrises.
       const wob = s.field(2, (u, v) => fbmN(u, v, 34, 4, 0.55, cx.seed + 29) * 0.5 + 0.5);
@@ -421,22 +464,24 @@ export const MATERIALS = {
       // Salt efflorescence: pale bloom where groundwater wicked up and dried.
       const salt = s.field(4, (u, v) => sat(warpN(u, v, 5, 4, 1.3, cx.seed + 53) * 1.6 + 0.35));
       for (let i = 0; i < s.n; i++) s.mixHex(i, PAL.white, salt[i] * salt[i] * 0.30);
-      pitting(s, { amount: 0.07, freq: 40, density: 0.5, seed: cx.seed + 61, colorDark: 0x5a3820 });
-      weather(s, { source: m.joint, seed: cx.seed + 6, crevice: 0x3d2416, creviceAmt: 0.62, streakAmt: 0.36, dustAmt: 0.28 });
-      grain(s, { amount: 0.05, freq: 220, seed: cx.seed + 8, heightAmt: 0.02 });
+      pitting(s, { amount: 0.05, freq: 32, density: 0.5, seed: cx.seed + 61, colorDark: 0x5a3820 });
+      weather(s, { source: m.joint, seed: cx.seed + 6, crevice: 0x3d2416, creviceAmt: 0.54, streakAmt: 0.32, dustAmt: 0.26 });
+      grain(s, { amount: 0.03, freq: 120, seed: cx.seed + 8, heightAmt: 0.010 });
     },
   },
 
   plaster_painted: {
-    group: 'stone', tier: 1, tile: 2.2, bump: 0.020, rough: 0.72,
+    group: 'stone', tier: 1, tile: 2.8, bump: 0.014, rough: 0.72,
     build(s, cx) {
       s.fill(PAL.limeLight); s.fillH(0.66);
       const size = s.size;
       // Lime plaster over mud: soft undulation from the float, fine crackle everywhere.
       const undu = s.field(4, (u, v) => warpN(u, v, 5, 4, 1.1, cx.seed) * 0.5 + 0.5);
+      // Crackle at 46 cells per tile is a 22-texel mesh whose *lines* are 2 texels wide — the
+      // lines are the part that aliases, so the net is coarsened rather than merely faded.
       const crack = s.field(1.5, (u, v) => {
-        const w = worleyN(u, v, 46, cx.seed + 5, 0.95);
-        return sat(1 - (w.f2 - w.f1) / 0.10) ** 2;
+        const w = worleyN(u, v, 26, cx.seed + 5, 0.95);
+        return sat(1 - (w.f2 - w.f1) / 0.13) ** 2;
       });
       const paint = rasterRGBA(size, (ctx) => {
         // A dado band low down, a painted register band above it — real tomb-chapel decoration.
@@ -453,7 +498,7 @@ export const MATERIALS = {
       });
       const flake = s.field(3, (u, v) => sat(warpN(u, v, 6, 5, 1.35, cx.seed + 71) * 1.5 + 0.42));
       for (let i = 0; i < s.n; i++) {
-        s.h[i] += (undu[i] - 0.5) * 0.10 - crack[i] * 0.35;
+        s.h[i] += (undu[i] - 0.5) * 0.10 - crack[i] * 0.22;
         s.mixHex(i, PAL.limeMid, (1 - undu[i]) * 0.20);
         if (paint.a[i] > 0.02) {
           const keep = sat((1 - flake[i]) * 1.5) * paint.a[i];
@@ -474,27 +519,29 @@ export const MATERIALS = {
       }
       brushwork(s, { tint: PAL.limeMid, amount: 0.10, angle: 0.22, freq: 8, len: 5, seed: cx.seed + 3 });
       weather(s, { source: crack, seed: cx.seed + 9, crevice: 0x4a3a26, creviceAmt: 0.42, streakAmt: 0.32, dustAmt: 0.16 });
-      grain(s, { amount: 0.028, freq: 300, seed: cx.seed + 11, heightAmt: 0.008 });
+      grain(s, { amount: 0.018, freq: 120, seed: cx.seed + 11, heightAmt: 0.005 });
     },
   },
 
   rubble_ground: {
-    group: 'stone', tier: 1, tile: 1.8, bump: 0.07, rough: 0.94,
+    group: 'stone', tier: 1, tile: 2.6, bump: 0.036, rough: 0.94,
     build(s, cx) {
       const size = s.size;
-      const sandF = s.field(3, (u, v) => warpN(u, v, 12, 4, 1.0, cx.seed + 13) * 0.5 + 0.5);
+      const sandF = s.field(3, (u, v) => warpN(u, v, 10, 4, 1.0, cx.seed + 13) * 0.5 + 0.5);
       for (let y = 0; y < size; y++) {
         const v = (y + 0.5) / size, row = y * size;
         for (let x = 0; x < size; x++) {
           const i = row + x, u = (x + 0.5) / size;
-          // Two stone sizes plus sand fill — a scree of temple debris.
-          const a = worleyN(u, v, 13, cx.seed, 1.0);
-          const b = worleyN(u, v, 30, cx.seed + 3, 1.0);
+          // Two stone sizes plus sand fill — a scree of temple debris. Fewer, larger stones:
+          // a 30-cell layer over a 1.8 m tile is 6 cm gravel, which is pure noise at any
+          // distance the player ever sees the floor from.
+          const a = worleyN(u, v, 10, cx.seed, 1.0);
+          const b = worleyN(u, v, 21, cx.seed + 3, 1.0);
           const ra = 0.26 + a.id * 0.20, rb = 0.22 + b.id * 0.18;
           const da = sat(1 - a.f1 / ra), db = sat(1 - b.f1 / rb);
           const stone = Math.max(da ** 0.7 * (a.id > 0.30 ? 1 : 0), db ** 0.7 * (b.id > 0.45 ? 1 : 0) * 0.7);
           const id = da > db ? a.id : b.id;
-          const t = sat(0.32 + (id - 0.5) * 0.9 + (sandF[i] - 0.5) * 0.4);
+          const t = sat(0.245 + (id - 0.5) * 0.52 + (sandF[i] - 0.5) * 0.4);
           const col = ramp3(PAL.sandCrev, PAL.sandMid, PAL.limeMid, t);
           // Sand fill between the stones.
           const sandCol = mixHex(PAL.sandMid, PAL.sandLight, sandF[i]);
@@ -505,35 +552,37 @@ export const MATERIALS = {
           s.rough[i] = sat(0.96 - stone * 0.10);
         }
       }
-      speckle(s, { freq: 260, seed: cx.seed + 21, colors: [[PAL.limeLight, 0.10, 0.2], [PAL.sandCrev, 0.10, 0.0]], heightDelta: 0.02 });
-      weather(s, { seed: cx.seed + 6, creviceAmt: 0.66, streakAmt: 0.10, dustAmt: 0.30, dust: PAL.sandLight, streakDecay: 0.95 });
-      grain(s, { amount: 0.05, freq: 300, seed: cx.seed + 8, heightAmt: 0.02 });
+      speckle(s, { freq: 110, seed: cx.seed + 21, colors: [[PAL.limeLight, 0.07, 0.1], [PAL.sandCrev, 0.07, 0.0]], heightDelta: 0.012 });
+      weather(s, { seed: cx.seed + 6, creviceAmt: 0.58, streakAmt: 0.10, dustAmt: 0.30, dust: PAL.sandLight, streakDecay: 0.95 });
+      grain(s, { amount: 0.030, freq: 130, seed: cx.seed + 8, heightAmt: 0.010 });
     },
   },
 
   paving_courtyard: {
-    group: 'stone', tier: 0, tile: 3.6, bump: 0.035, rough: 0.80,
+    group: 'stone', tier: 0, tile: 4.4, bump: 0.024, rough: 0.80,
     build(s, cx) {
+      // 4.4 m ÷ 3 courses gives 1.5 m flags. The courtyard floor is the largest single area in
+      // `hero` and `courtyard`, so its pattern frequency sets the whole frame's busyness.
       const m = ashlar(s, {
-        seed: cx.seed, courses: 4, aspect: 1.15, jointW: 0.007, chamfer: 0.012,
+        seed: cx.seed, courses: 3, aspect: 1.15, jointW: 0.007, chamfer: 0.012,
         dark: PAL.sandDark, mid: PAL.sandMid, light: PAL.limeMid, mortar: 0x8d7a5c,
-        relief: 0.10, dome: 0.0, groove: 0.28, spread: 0.7, bondJitter: 0.16,
+        relief: 0.055, dome: 0.0, groove: 0.20, spread: 0.7, bondJitter: 0.16, tone: -0.040,
       });
       // Foot traffic: a wandering path of polished, dished, sand-scoured stone.
       const traffic = s.field(4, (u, v) => sat(warpN(u, v, 3, 4, 1.4, cx.seed + 47) * 1.7 + 0.55));
       const crackNet = s.field(1.5, (u, v) => {
-        const w = worleyN(u, v, 16, cx.seed + 51, 0.95);
-        return sat(1 - (w.f2 - w.f1) / 0.055) ** 2.2;
+        const w = worleyN(u, v, 12, cx.seed + 51, 0.95);
+        return sat(1 - (w.f2 - w.f1) / 0.075) ** 2.2;
       });
       for (let i = 0; i < s.n; i++) {
         const bu = m.bu[i] * 2 - 1, bv = m.bv[i] * 2 - 1;
         const dish = (1 - bu * bu) * (1 - bv * bv);
         const wear = traffic[i];
         s.h[i] -= dish * wear * 0.16;                        // worn hollow in the flag
-        s.h[i] -= crackNet[i] * 0.30;
+        s.h[i] -= crackNet[i] * 0.20;
         s.mixHex(i, PAL.limeLight, dish * wear * 0.16);      // scuffed pale
         s.rough[i] = sat(s.rough[i] - dish * wear * 0.24 + crackNet[i] * 0.12);
-        s.stainHex(i, PAL.sandCrev, crackNet[i] * 0.7);
+        s.stainHex(i, PAL.sandCrev, crackNet[i] * 0.42);
       }
       // Sand drifted into the joints, not just dirt.
       const sandIn = s.field(3, (u, v) => warpN(u, v, 10, 4, 1.0, cx.seed + 57) * 0.5 + 0.5);
@@ -541,52 +590,52 @@ export const MATERIALS = {
         const j = sat(m.joint[i] * 1.2) * (0.4 + sandIn[i] * 0.9);
         if (j > 0.02) { s.mixHex(i, PAL.sandLight, j * 0.5); s.h[i] += j * 0.10; s.rough[i] = sat(s.rough[i] + j * 0.08); }
       }
-      chiselMarks(s, { amount: 0.02, angle: 0.9, freq: 70, seed: cx.seed + 1, mask: m.edge });
-      pitting(s, { amount: 0.045, freq: 52, density: 0.42, seed: cx.seed + 2, colorDark: PAL.sandDark });
-      speckle(s, { freq: 210, seed: cx.seed + 4, colors: [[PAL.limeLight, 0.09, 0.2], [PAL.sandCrev, 0.08, 0.0]], heightDelta: 0.01 });
-      weather(s, { source: m.joint, seed: cx.seed + 6, creviceAmt: 0.55, streakAmt: 0.12, dustAmt: 0.26, streakDecay: 0.94 });
-      grain(s, { amount: 0.03, freq: 280, seed: cx.seed + 8, heightAmt: 0.012 });
+      chiselMarks(s, { amount: 0.016, angle: 0.9, freq: 52, seed: cx.seed + 1, mask: m.edge });
+      pitting(s, { amount: 0.032, freq: 38, density: 0.42, seed: cx.seed + 2, colorDark: PAL.sandDark });
+      speckle(s, { freq: 110, seed: cx.seed + 4, colors: [[PAL.limeLight, 0.06, 0.1], [PAL.sandCrev, 0.055, 0.0]], heightDelta: 0.006 });
+      weather(s, { source: m.joint, seed: cx.seed + 6, creviceAmt: 0.46, streakAmt: 0.12, dustAmt: 0.24, streakDecay: 0.94 });
+      grain(s, { amount: 0.020, freq: 120, seed: cx.seed + 8, heightAmt: 0.006 });
     },
   },
 
   /* ===================== carved & decorated ============================= */
 
   hieroglyph_wall: {
-    group: 'carved', tier: 0, tile: 2.6, bump: 0.075, rough: 0.86,
+    group: 'carved', tier: 0, tile: 4.2, bump: 0.038, rough: 0.86,
     build(s, cx) {
       const size = s.size;
       // Carvings run straight across block joints, exactly as they do on a real temple wall —
       // the masons dressed the wall first and the sculptors came after.
-      const m = ashlar(s, { seed: cx.seed, courses: 4, aspect: 2.6, dome: 0.025, relief: 0.09, jointW: 0.006, chamfer: 0.012 });
+      const m = ashlar(s, { seed: cx.seed, courses: 4, aspect: 2.6, dome: 0.025, relief: 0.05, groove: 0.20, jointW: 0.006, chamfer: 0.012, tone: -0.045 });
       const layout = (mode) => (ctx) => glyphWall(ctx, size, mode, cx.seed);
       const cut = rasterMask(size, layout('cut'));
       const lines = rasterMask(size, layout('line'));
       const paint = rasterRGBA(size, layout('paint'));
 
-      const ramp = carve(s, cut, lines, { depth: 0.42, bevelPx: 3.0, lip: 0.10, bulge: 0.42, lineDepth: 0.6, seed: cx.seed + 5 });
+      const ramp = carve(s, cut, lines, { depth: 0.36, bevelPx: 3.6, lip: 0.10, bulge: 0.42, lineDepth: 0.55, seed: cx.seed + 5 });
       freshCutTint(s, ramp, { amount: 0.18, wallDark: 0.22 });
       paintRemnants(s, ramp, paint, { survival: 0.62, freq: 6, seed: cx.seed + 9, edgeLoss: 0.5 });
-      chiselMarks(s, { amount: 0.022, angle: -0.35, freq: 64, seed: cx.seed + 1, mask: m.edge });
-      pitting(s, { amount: 0.04, freq: 48, density: 0.34, seed: cx.seed + 2, colorDark: PAL.sandDark });
+      chiselMarks(s, { amount: 0.016, angle: -0.35, freq: 48, seed: cx.seed + 1, mask: m.edge });
+      pitting(s, { amount: 0.030, freq: 34, density: 0.34, seed: cx.seed + 2, colorDark: PAL.sandDark });
       const src = new Float32Array(s.n);
       for (let i = 0; i < s.n; i++) src[i] = sat(m.joint[i] * 0.8 + ramp[i] * 0.55);
-      weather(s, { source: src, seed: cx.seed + 6, creviceAmt: 0.50, streakAmt: 0.34, dustAmt: 0.26, roughGrime: 0.12 });
-      grain(s, { amount: 0.03, freq: 260, seed: cx.seed + 8, heightAmt: 0.010 });
+      weather(s, { source: src, seed: cx.seed + 6, creviceAmt: 0.44, streakAmt: 0.30, dustAmt: 0.24, roughGrime: 0.12 });
+      grain(s, { amount: 0.020, freq: 120, seed: cx.seed + 8, heightAmt: 0.006 });
     },
   },
 
   hieroglyph_gilded: {
-    group: 'carved', tier: 1, tile: 2.2, bump: 0.06, rough: 0.70,
+    group: 'carved', tier: 1, tile: 3.2, bump: 0.042, rough: 0.70,
     build(s, cx) {
       const size = s.size;
       ashlar(s, {
-        seed: cx.seed, courses: 3, aspect: 3.0, dome: 0.02, relief: 0.06, jointW: 0.005, chamfer: 0.010,
+        seed: cx.seed, courses: 3, aspect: 3.0, dome: 0.02, relief: 0.04, groove: 0.20, jointW: 0.005, chamfer: 0.010,
         dark: PAL.limeDark, mid: PAL.limeMid, light: PAL.limeLight, mortar: 0xcbbb9a, rough: 0.62,
       });
-      const layout = (mode) => (ctx) => glyphWall(ctx, size, mode, cx.seed + 4, { cols: 4, cartouche: true });
+      const layout = (mode) => (ctx) => glyphWall(ctx, size, mode, cx.seed + 4, { cols: 3, cartouche: true });
       const cut = rasterMask(size, layout('cut'));
       const lines = rasterMask(size, layout('line'));
-      const ramp = carve(s, cut, lines, { depth: 0.38, bevelPx: 2.6, lip: 0.08, bulge: 0.5, lineDepth: 0.5, seed: cx.seed + 5 });
+      const ramp = carve(s, cut, lines, { depth: 0.34, bevelPx: 3.0, lip: 0.08, bulge: 0.5, lineDepth: 0.5, seed: cx.seed + 5 });
 
       // Gold leaf laid into the sunk glyphs over a red bole ground; the leaf lifts at the arrises.
       const lift = s.field(2, (u, v) => sat(warpN(u, v, 14, 4, 1.1, cx.seed + 31) * 1.4 + 0.5));
@@ -604,33 +653,33 @@ export const MATERIALS = {
         s.h[i] += g * 0.03 * wrinkle[i];
       }
       weather(s, { source: ramp, seed: cx.seed + 6, crevice: 0x6a5c42, creviceAmt: 0.40, streakAmt: 0.22, dustAmt: 0.16, roughGrime: 0.08 });
-      grain(s, { amount: 0.02, freq: 300, seed: cx.seed + 8, heightAmt: 0.006 });
+      grain(s, { amount: 0.014, freq: 120, seed: cx.seed + 8, heightAmt: 0.004 });
     },
   },
 
   relief_figures: {
-    group: 'carved', tier: 0, tile: 3.0, bump: 0.075, rough: 0.86,
+    group: 'carved', tier: 0, tile: 4.6, bump: 0.040, rough: 0.86,
     build(s, cx) {
       const size = s.size;
-      const m = ashlar(s, { seed: cx.seed, courses: 3, aspect: 3.2, dome: 0.02, relief: 0.07, jointW: 0.005, chamfer: 0.010 });
+      const m = ashlar(s, { seed: cx.seed, courses: 3, aspect: 3.2, dome: 0.02, relief: 0.04, groove: 0.20, jointW: 0.005, chamfer: 0.010, tone: -0.020 });
       const layout = (mode) => (ctx) => figureRegisters(ctx, size, mode, cx.seed);
       const cut = rasterMask(size, layout('cut'));
       const lines = rasterMask(size, layout('line'));
       const paint = rasterRGBA(size, layout('paint'));
-      const ramp = carve(s, cut, lines, { depth: 0.44, bevelPx: 3.4, lip: 0.12, bulge: 0.52, lineDepth: 0.5, seed: cx.seed + 5 });
+      const ramp = carve(s, cut, lines, { depth: 0.38, bevelPx: 4.0, lip: 0.12, bulge: 0.52, lineDepth: 0.45, seed: cx.seed + 5 });
       freshCutTint(s, ramp, { amount: 0.20, wallDark: 0.24 });
       paintRemnants(s, ramp, paint, { survival: 0.58, freq: 5, seed: cx.seed + 9, edgeLoss: 0.55 });
-      chiselMarks(s, { amount: 0.02, angle: -0.30, freq: 58, seed: cx.seed + 1, mask: m.edge });
-      pitting(s, { amount: 0.05, freq: 44, density: 0.36, seed: cx.seed + 2, colorDark: PAL.sandDark });
+      chiselMarks(s, { amount: 0.014, angle: -0.30, freq: 44, seed: cx.seed + 1, mask: m.edge });
+      pitting(s, { amount: 0.035, freq: 32, density: 0.36, seed: cx.seed + 2, colorDark: PAL.sandDark });
       const src = new Float32Array(s.n);
       for (let i = 0; i < s.n; i++) src[i] = sat(m.joint[i] * 0.8 + ramp[i] * 0.6);
-      weather(s, { source: src, seed: cx.seed + 6, creviceAmt: 0.52, streakAmt: 0.36, dustAmt: 0.28 });
-      grain(s, { amount: 0.03, freq: 250, seed: cx.seed + 8, heightAmt: 0.010 });
+      weather(s, { source: src, seed: cx.seed + 6, creviceAmt: 0.46, streakAmt: 0.32, dustAmt: 0.26 });
+      grain(s, { amount: 0.020, freq: 120, seed: cx.seed + 8, heightAmt: 0.006 });
     },
   },
 
   cartouche_gold: {
-    group: 'carved', tier: 1, tile: 1.4, bump: 0.05, rough: 0.44,
+    group: 'carved', tier: 1, tile: 1.6, bump: 0.032, rough: 0.44,
     build(s, cx) {
       const size = s.size;
       s.fill(PAL.lapis); s.fillH(0.60); s.rough.fill(0.52);
@@ -732,8 +781,12 @@ export const MATERIALS = {
     },
   },
 
+  /* One of seven recipes whose `[u, v]` tile hit `Math.max(0.05, array)` in `derive()` and got a
+   * NaN slope scale — which lands in a `Uint8Array` as 0, i.e. an all-black normal map decoding
+   * to (-1,-1,-1) on all twelve hypostyle columns. Fixed in NormalMap.derive; the bump is now
+   * also proportionate (0.10 m of relief across a 3.6 m repeat was a 28× slope scale). */
   column_papyrus: {
-    group: 'carved', tier: 0, tile: [3.6, 4.5], bump: 0.10, rough: 0.84,
+    group: 'carved', tier: 0, tile: [3.6, 4.5], bump: 0.050, rough: 0.84,
     build(s, cx) {
       const size = s.size;
       // A bundled-papyrus column: convex stalks running vertically, V-grooves between them,
@@ -799,12 +852,12 @@ export const MATERIALS = {
         s.r[i] += (paint.r[i] - s.r[i]) * keep; s.g[i] += (paint.g[i] - s.g[i]) * keep; s.b[i] += (paint.b[i] - s.b[i]) * keep;
         s.rough[i] = sat(s.rough[i] - keep * 0.12);
       }
-      chiselMarks(s, { amount: 0.024, angle: 1.35, freq: 90, seed: cx.seed + 1 });
-      pitting(s, { amount: 0.04, freq: 50, density: 0.32, seed: cx.seed + 2, colorDark: PAL.sandDark });
+      chiselMarks(s, { amount: 0.016, angle: 1.35, freq: 64, seed: cx.seed + 1 });
+      pitting(s, { amount: 0.030, freq: 38, density: 0.32, seed: cx.seed + 2, colorDark: PAL.sandDark });
       const src = new Float32Array(s.n);
       for (let i = 0; i < s.n; i++) src[i] = sat(groove[i] * 0.7 + ramp[i] * 0.5 + bandsMask[i] * 0.4);
-      weather(s, { source: src, seed: cx.seed + 6, creviceAmt: 0.52, streakAmt: 0.34, dustAmt: 0.24 });
-      grain(s, { amount: 0.03, freq: 260, seed: cx.seed + 8, heightAmt: 0.010 });
+      weather(s, { source: src, seed: cx.seed + 6, creviceAmt: 0.46, streakAmt: 0.30, dustAmt: 0.22 });
+      grain(s, { amount: 0.020, freq: 120, seed: cx.seed + 8, heightAmt: 0.006 });
     },
   },
 
@@ -853,7 +906,7 @@ export const MATERIALS = {
   },
 
   gold_hammered: {
-    group: 'metal', tier: 1, tile: 0.7, bump: 0.008, rough: 0.28,
+    group: 'metal', tier: 1, tile: 0.7, bump: 0.0055, rough: 0.28,
     build(s, cx) {
       const size = s.size;
       s.metal.fill(1);
@@ -936,7 +989,7 @@ export const MATERIALS = {
   /* ===================== organic ======================================== */
 
   sand_ripples: {
-    group: 'organic', tier: 0, tile: 2.2, bump: 0.045, rough: 0.95,
+    group: 'organic', tier: 0, tile: 2.6, bump: 0.028, rough: 0.95,
     build(s, cx) { sand(s, cx, { ripple: 1.0, rippleFreq: 15, grainFreq: 300, tone: 0.0 }); },
   },
   sand_fine: {
@@ -951,7 +1004,7 @@ export const MATERIALS = {
   },
 
   palm_bark: {
-    group: 'organic', tier: 1, tile: [1.4, 1.8], bump: 0.06, rough: 0.90,
+    group: 'organic', tier: 1, tile: [1.4, 1.8], bump: 0.022, rough: 0.90,
     build(s, cx) {
       const size = s.size;
       // A date palm trunk is a lattice of old frond bases — rhombic pads with deep grooves.
@@ -1096,7 +1149,7 @@ export const MATERIALS = {
   },
 
   rope: {
-    group: 'organic', tier: 1, tile: [0.28, 0.28], bump: 0.020, rough: 0.90,
+    group: 'organic', tier: 1, tile: [0.28, 0.28], bump: 0.009, rough: 0.90,
     build(s, cx) {
       const size = s.size;
       const strands = 3, twist = 3;
@@ -1183,7 +1236,7 @@ export const MATERIALS = {
   },
 
   nile_mud: {
-    group: 'organic', tier: 1, tile: 1.6, bump: 0.035, rough: 0.92,
+    group: 'organic', tier: 1, tile: 1.9, bump: 0.024, rough: 0.92,
     build(s, cx) {
       const size = s.size;
       const mudPale = MX(PAL.sandLight, PAL.limeMid, 0.4);
@@ -1220,7 +1273,7 @@ export const MATERIALS = {
   /* ===================== Sly's character set ============================ */
 
   fur_sly: {
-    group: 'sly', tier: 0, tile: 0.32, bump: 0.006, rough: 0.62,
+    group: 'sly', tier: 0, tile: 0.32, bump: 0.0038, rough: 0.62,
     build(s, cx) {
       // Sly is slate blue-grey: the shadow hue lifted toward the sky-bounce fill, then greyed.
       const base = MX(PAL.shadow, PAL.fill, 0.46);
@@ -1334,7 +1387,7 @@ export const MATERIALS = {
   },
 
   leather_boot: {
-    group: 'sly', tier: 1, tile: 0.28, bump: 0.006, rough: 0.62,
+    group: 'sly', tier: 1, tile: 0.28, bump: 0.0042, rough: 0.62,
     build(s, cx) {
       const size = s.size;
       const hide = MX(PAL.black, PAL.sandDark, 0.42);
@@ -1579,7 +1632,7 @@ export const MATERIALS = {
   },
 
   decal_crack: {
-    group: 'fx', tier: 1, tile: 1.2, bump: 0.020, rough: 0.92, clamp: true, alpha: true,
+    group: 'fx', tier: 1, tile: 1.2, bump: 0.014, rough: 0.92, clamp: true, alpha: true,
     build(s, cx) {
       const size = s.size, a = s.alpha();
       const rnd = rng(cx.seed >>> 0);
@@ -1759,41 +1812,57 @@ function inlay(s, cx, stoneHex, veinHex, fleckHex, fleckAmt) {
 /* ------------------------------------------------------------------------- */
 
 /**
- * A tiling wall of text: two horizontal registers of vertical glyph columns, separated by incised
- * rules, with a cartouche interrupting one column. Register rules sit exactly on the tile seam so
- * the repeat is hidden inside a line that is supposed to be there.
+ * A tiling wall of text: one tall register of vertical glyph columns and one short frieze
+ * register, separated by incised rules, with a cartouche interrupting one column. Register rules
+ * sit exactly on the tile seam so the repeat is hidden inside a line that is supposed to be there.
+ *
+ * **Negative space is the point.** This used to fill both halves of the tile edge-to-edge with
+ * dense glyph columns; at a 2.6 m tile that put seven or eight repeats of wall-to-wall text on a
+ * 20 m pylon, and the frame lost its large shapes to what read as patterned static. A real temple
+ * wall is mostly *plain dressed stone* with the carving concentrated into bands — which is also
+ * what AGENTS §2.3 means by "colour blocking, detail concentrated at focal points". `plain` is the
+ * fraction of the tile left as bare wall (the ashlar underneath still carries grain and grime, so
+ * it is never a dead flat area).
  */
 function glyphWall(ctx, size, mode, seed, o = {}) {
-  const { cols = 5, cartouche = true } = o;
+  const { cols = 4, cartouche = true, tall = 0.40, frieze = 0.13 } = o;
   const rule = size * 0.010;
   const rnd = rng((seed ^ 0x5eed) >>> 0);
   HG.registerRule(ctx, size, 0, rule, mode);
   HG.registerRule(ctx, size, size, rule, mode);
-  HG.registerRule(ctx, size, size * 0.5, rule, mode);
 
   const pitch = size / cols;
-  const margin = pitch * 0.10;
+  const margin = pitch * 0.12;
   const cartCol = cartouche ? Math.floor(rnd() * cols) : -1;
-  const cartBand = rnd() < 0.5 ? 0 : 1;
 
-  for (let band = 0; band < 2; band++) {
-    const y0 = band * size * 0.5 + size * 0.045;
-    const y1 = (band + 1) * size * 0.5 - size * 0.040;
-    for (let c = 0; c <= cols; c++) {
-      HG.columnRule(ctx, size, c * pitch, rule * 0.6, y0, y1, mode);
-    }
+  /* Band 0 — the tall text register, sitting just under the top rule. */
+  {
+    const y0 = size * 0.055;
+    const y1 = y0 + size * tall;
+    HG.registerRule(ctx, size, y1 + size * 0.020, rule, mode);
+    for (let c = 0; c <= cols; c++) HG.columnRule(ctx, size, c * pitch, rule * 0.6, y0, y1, mode);
     for (let c = 0; c < cols; c++) {
       const x = c * pitch + margin;
       const w = pitch - margin * 2;
-      if (band === cartBand && c === cartCol) {
-        const ch = Math.min((y1 - y0) * 0.62, w * 2.5);
+      if (c === cartCol) {
+        const ch = Math.min((y1 - y0) * 0.58, w * 2.5);
         HG.cartouche(ctx, x, y0, w, ch, seed + c * 31, mode);
-        HG.columnRegister(ctx, x, y0 + ch + size * 0.012, w, y1 - y0 - ch - size * 0.012, seed + c * 17, HG.POOLS.offering, mode);
+        HG.columnRegister(ctx, x, y0 + ch + size * 0.014, w, y1 - y0 - ch - size * 0.014, seed + c * 17, HG.POOLS.offering, mode);
       } else {
         const pool = c % 2 ? HG.POOLS.divine : HG.POOLS.offering;
-        HG.columnRegister(ctx, x, y0, w, y1 - y0, seed + band * 101 + c * 17, pool, mode);
+        HG.columnRegister(ctx, x, y0, w, y1 - y0, seed + c * 17, pool, mode);
       }
     }
+  }
+
+  /* Band 1 — a single short frieze low on the wall, with plain stone above and below it. Two
+   * bands of unequal weight give the eye somewhere to rest and read as deliberate; two equal
+   * bands read as wallpaper. */
+  {
+    const y0 = size * (0.055 + tall + 0.235);
+    const y1 = y0 + size * frieze;
+    HG.registerRule(ctx, size, y0 - size * 0.020, rule, mode);
+    HG.rowRegister(ctx, 0, y0, size, y1 - y0, seed + 907, HG.POOLS.divine, mode);
   }
 }
 
@@ -1803,13 +1872,21 @@ function glyphWall(ctx, size, mode, seed, o = {}) {
  */
 function figureRegisters(ctx, size, mode, seed) {
   const rule = size * 0.012;
+  /* The two figure registers are compressed into the lower 74% of the tile and the top quarter is
+   * left as plain dressed wall under a kheker frieze. Same reasoning as `glyphWall`: full-bleed
+   * relief over a 20 m pylon reads as pattern, not as carving, and the big architectural shapes
+   * stop being legible when you squint. */
+  const PLAIN = 0.26;
+  const bandH = (1 - PLAIN) * 0.5;
   HG.registerRule(ctx, size, 0, rule, mode);
   HG.registerRule(ctx, size, size, rule, mode);
-  HG.registerRule(ctx, size, size * 0.5, rule, mode);
+  HG.khekerFrieze(ctx, 0, size * 0.035, size, size * 0.085, 9, mode);
+  HG.registerRule(ctx, size, size * PLAIN, rule, mode);
+  HG.registerRule(ctx, size, size * (PLAIN + bandH), rule, mode);
 
   for (let band = 0; band < 2; band++) {
-    const top = band * size * 0.5 + size * 0.040;
-    const bh = size * 0.5 - size * 0.085;
+    const top = size * (PLAIN + band * bandH) + size * 0.030;
+    const bh = size * bandH - size * 0.068;
     const base = top + bh;
 
     // ground line the figures stand on

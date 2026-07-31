@@ -878,7 +878,9 @@ function buildLeg(mb, S, side, cfg) {
 
   loft(mb, {
     centers: key.map((k) => k[1]), seg: TUNE.segLimb,
-    rx: (i) => key[i][3],
+    // key rows are [t, centre, radius] — index 3 does not exist, and reading it fed
+    // `undefined` into every ring radius, which made the entire leg NaN.
+    rx: (i) => key[i][2],
     upHint: new THREE.Vector3(0, 0, 1),
     shape: (a) => sect(a, 1.08),
     groupAt: () => 'body',

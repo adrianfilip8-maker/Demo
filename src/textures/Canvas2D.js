@@ -725,10 +725,17 @@ export function pitting(s, o = {}) {
   return pit;
 }
 
-/** Mineral / crystal speckle. `colors` is a list of [hex, probability, tone] triples. */
+/**
+ * Mineral / crystal speckle. `colors` is a list of [hex, probability, tone] triples.
+ *
+ * Cell frequency is capped at size/8 — a speckle whose cells are under ~8 texels has no mip
+ * level that can carry it, so at any distance past arm's length it stops being mica and starts
+ * being per-pixel noise. Capping here rather than at 30 call sites also means a recipe keeps
+ * its intended look when its tier drops it to half resolution.
+ */
 export function speckle(s, o = {}) {
   const { freq = 150, colors = [[PAL.white, 0.3, 0.1]], seed = 21, heightDelta = 0, mask = null } = o;
-  const fq = Math.max(2, Math.round(freq));
+  const fq = Math.max(2, Math.min(Math.round(freq), Math.round(s.size / 8)));
   const s2 = s.size;
   for (let y = 0; y < s2; y++) {
     const v = (y + 0.5) / s2, row = y * s2;
@@ -805,7 +812,8 @@ export function paintRemnants(s, cut, paint, o = {}) {
 export function flowStreaks(s, angle, o = {}) {
   const { freq = 220, taps = 7, len = 0.05, seed = 5, curl = 0.35 } = o;
   const size = s.size;
-  const fq = Math.max(4, Math.round(freq));
+  // Strand pitch finer than ~4 texels can't be carried by a mip, so it reads as fizz, not fur.
+  const fq = Math.max(4, Math.min(Math.round(freq), Math.round(size / 4)));
   const out = new Float32Array(s.n);
   const step = len / Math.max(1, taps - 1);
   for (let y = 0; y < size; y++) {
@@ -830,10 +838,16 @@ export function flowStreaks(s, angle, o = {}) {
   return out;
 }
 
-/** Fine grain — the last 1% that stops big flat areas looking like vector art. */
+/**
+ * Fine grain — the last 1% that stops big flat areas looking like vector art.
+ *
+ * Capped at size/7 for the same reason as `speckle`: grain at 2–4 texels per period is below
+ * what the mip chain can represent, so it survives minification as sparkle instead of fading
+ * out the way real grain does. Detail should be visible at 2 m and gone by 30 m.
+ */
 export function grain(s, o = {}) {
   const { amount = 0.02, freq = 220, seed = 43, heightAmt = 0.012 } = o;
-  const fq = Math.max(2, Math.round(freq));
+  const fq = Math.max(2, Math.min(Math.round(freq), Math.round(s.size / 7)));
   const s2 = s.size;
   for (let y = 0; y < s2; y++) {
     const v = (y + 0.5) / s2, row = y * s2;
