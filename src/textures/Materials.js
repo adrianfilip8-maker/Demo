@@ -181,6 +181,22 @@ const GOLD_HOT = MX(PAL.goldLight, PAL.sun, 0.45);
  * replaces. `t^GOLD_BIAS` pulls the body of the distribution toward `GOLD_DEEP` while leaving
  * the top decile where it was, so the *range* opens instead of the whole surface darkening.
  */
+/**
+ * World metres one repeat of a declared `tile` actually covers on architecture.
+ *
+ * `Kit.UV_PER_M = 0.5`, so ARCHITECTURE and PROPS lay one UV unit every two metres and every
+ * wall, column and pavement in the level shows one repeat per **2 x tile**. Every layout in this
+ * file that wants to size a feature in metres has to go through this, because quoting `tile`
+ * directly is what put three-metre hieroglyphs on the hypostyle walls and what made
+ * `sand_ripples` render at 3.7x its authored slope. Terrain is the exception and sets its own
+ * repeat; it does not use this.
+ */
+const ARCH_UV = 2.0;
+/** Declared tiles that a layout function also needs, so the two can never drift apart. */
+const HG_WALL_TILE = 5.2;
+const HG_GILDED_TILE = 3.2;
+const worldTileOf = (tile) => (Array.isArray(tile) ? tile[0] : tile) * ARCH_UV;
+
 const GOLD_BIAS = 1.75;
 function goldRamp(t, out = T3) {
   const k = Math.pow(sat(t), GOLD_BIAS);
@@ -199,7 +215,43 @@ function goldRamp(t, out = T3) {
  */
 function goldRough(t) {
   const k = Math.pow(sat(t), GOLD_BIAS);
-  return sat(0.62 - k * 0.52);
+  /* **Squared, and off a higher plateau, because `uMetal` is now real.**
+   *
+   * ARCHITECTURE and PROPS were never passing `metal` to `shading.toon()`, so every gilded
+   * surface in the level rendered at `uMetal = 0`; that is fixed (e396c1d) and it changes what
+   * this function is for. `specAmt = uSpec · (1 − 0.75·rgh) · mix(1, 3.4, uMetal)`, so the metal
+   * path multiplies the highlight by **3.04**, and `specTint` becomes `albedo·1.7 + 0.36·white`
+   * instead of flat near-white.
+   *
+   * Measured on the built maps by sweeping the half-vector over a hemisphere — which is what a
+   * curved hook ring or spire presents to one sun — `gold_leaf`'s peak specular went 1.16 → 7.02
+   * and the fraction of the surface blown past 1.0 went 0.2 % → **8.0 %**. The chroma of the
+   * bright specular went 0.185 → 0.676 at the same time, which is the whole point of the fix and
+   * must be kept: the highlight is finally gold rather than white.
+   *
+   * Those two pull against each other, because a highlight that clips in all three channels
+   * desaturates — the same mechanism that turned the dunes into dirty snow. §7.3 asks for a hard
+   * **narrow** specular, and a linear ramp put half the material within a stop of the polished
+   * crest, so half of it was catching the lobe at close to full strength. Squaring holds the true
+   * crests exactly as polished as they were — the peak, the bloom feed and the chroma are
+   * untouched — and lifts everything below them onto a roughness that suppresses `specAmt`.
+   *
+   * **Be honest about what that did and did not buy.** On `bronze_aged`, whose uSpec is 0.6, it
+   * halved the blown area (14.3 % → 7.4 %) at an unchanged peak, which is exactly the intent. On
+   * `gold_leaf` the blown *area* did not move (8.0 % → 8.3 %): at uSpec 0.95 the metal path puts
+   * `specTint · specAmt` above 1.0 wherever the lobe fires at all, so no roughness short of
+   * ~0.95 — which would throw the lobe width away with it — can pull it back under. The
+   * amplitude on gold belongs to `uSpec` (ARCHITECTURE's `RECIPES`, PROPS' `MATERIALS`) and to
+   * the 3.4 metal gain in `toon.glsl`; this file can shape where the highlight lands and how
+   * much of the surface is polished enough to catch it, and that is all. What the change does
+   * buy on gold is a lower `specAmt` over the *body* of the material, which is what stops the
+   * near-white lobe washing the base toward neutral on the gilded recipes that get no `uMetal`.
+   *
+   * It also helps the three gilded recipes that do *not* get `uMetal` (`hieroglyph_gilded`,
+   * `cartouche_gold`, `ceiling_stars` are not flagged `metal` at their call sites): there the
+   * specular is still near-white, and a near-white highlight over half a surface is exactly what
+   * used to measure gold as chromatically neutral in frame. */
+  return sat(0.70 - Math.pow(k, 2.0) * 0.60);
 }
 
 /**
@@ -1126,16 +1178,17 @@ export const MATERIALS = {
    * three wide glyph columns instead of four, and pigment faded toward the stone — carry most of
    * the anti-repetition work now, because a repeat you cannot pick out is not a repeat. */
   hieroglyph_wall: {
-    group: 'carved', tier: 0, tile: 5.2, bump: 0.044, rough: 0.86,
+    group: 'carved', tier: 0, tile: HG_WALL_TILE, bump: 0.044, rough: 0.86,
     aoStrength: 1.15, aoFloor: 0.13,
     build(s, cx) {
       const size = s.size;
       // Carvings run straight across block joints, exactly as they do on a real temple wall —
       // the masons dressed the wall first and the sculptors came after.
       const m = ashlar(s, { seed: cx.seed, courses: 6, aspect: 2.6, dome: 0.025, relief: 0.05, groove: 0.20, jointW: 0.006, chamfer: 0.012, tone: -0.045, bedFreq: 2 });
-      // 10.4 m is this recipe's `tile` through the ×2 consumer factor — quote the world size
-      // the layout is actually laid out at, never the declared tile. See `glyphWall`.
-      const layout = (mode) => (ctx) => glyphWall(ctx, size, mode, cx.seed, { worldTile: 10.4, glyphM: 0.72 });
+      // The world size the layout is actually laid out at, derived from the tile rather than
+      // written out — a literal here would go stale the next time anyone retunes `tile`, which
+      // is precisely the failure `glyphWall`'s note describes. See `worldTileOf`.
+      const layout = (mode) => (ctx) => glyphWall(ctx, size, mode, cx.seed, { worldTile: worldTileOf(HG_WALL_TILE), glyphM: 0.72 });
       const cut = rasterMask(size, layout('cut'));
       const lines = rasterMask(size, layout('line'));
       const paint = rasterRGBA(size, layout('paint'));
@@ -1165,7 +1218,7 @@ export const MATERIALS = {
    * arris — and the thing that makes the carving legible, because it puts the material's whole
    * value range across the two millimetres where the relief is. */
   hieroglyph_gilded: {
-    group: 'carved', tier: 1, tile: 3.2, bump: 0.042, rough: 0.70,
+    group: 'carved', tier: 1, tile: HG_GILDED_TILE, bump: 0.042, rough: 0.70,
     aoStrength: 1.30, aoFloor: 0.07,
     build(s, cx) {
       const size = s.size;
@@ -1174,10 +1227,10 @@ export const MATERIALS = {
         // Mortar darker than `limeMid`: a joint is a recess, so it can never be the bright thing.
         dark: PAL.limeDark, mid: PAL.limeMid, light: PAL.limeLight, mortar: 0x8a7a5e, rough: 0.62,
       });
-      // Same derivation as `hieroglyph_wall`: 3.2 declared × the 2× consumer factor = 6.4 m of
-      // world per repeat, which at `cols: 3` was a 1.62 m sign. Gilded architrave signs run a
-      // little larger than wall text, hence 0.80 rather than 0.72.
-      const layout = (mode) => (ctx) => glyphWall(ctx, size, mode, cx.seed + 4, { worldTile: 6.4, glyphM: 0.80, cartouche: true });
+      // Same derivation as `hieroglyph_wall`: 3.2 declared through the 2x consumer factor is
+      // 6.4 m of world per repeat, which at `cols: 3` was a 1.62 m sign. Gilded architrave signs
+      // run a little larger than wall text, hence 0.80 rather than 0.72.
+      const layout = (mode) => (ctx) => glyphWall(ctx, size, mode, cx.seed + 4, { worldTile: worldTileOf(HG_GILDED_TILE), glyphM: 0.80, cartouche: true });
       const cut = rasterMask(size, layout('cut'));
       const lines = rasterMask(size, layout('line'));
       const ramp = carve(s, cut, lines, { depth: 0.42, bevelPx: 2.6, lip: 0.10, bulge: 0.5, lineDepth: 0.56, seed: cx.seed + 5 });
@@ -1459,6 +1512,16 @@ export const MATERIALS = {
         return smoothstep(0.70, 1.0, Math.abs(p * 2 - 1));
       });
       const stone = s.field(2, (u, v) => warpN(u, v, 12, 5, 1.0, cx.seed) * 0.5 + 0.5);
+      /* Text column geometry, in metres rather than in fractions of a tile.
+       *
+       * `columnRegister` makes its quadrats one box-width square, so the box width *is* the glyph
+       * size. At 0.20 of the tile it was a 1.44 m sign, and widening `tile[0]` to 5.0 above would
+       * have quietly taken it to **2.0 m** — the same over-scale that put three-metre
+       * hieroglyphs on the hypostyle walls, made worse by the fix for the ribs. TXT_W is 0.09 of
+       * the repeat, i.e. 0.90 m: large, as befits a hypostyle column, but a *sign* rather than a
+       * billboard, and it stacks six of them down the shaft instead of showing four. At the near
+       * nave column (~8 m, 8.5 mm/px) that is 106 px and at the far end of the nave 28 px. */
+      const TXT_W = 0.09, TXT_X = 0.5 - TXT_W * 0.5, TXT_Y = 0.20, TXT_H = 0.58;
       const bandsMask = rasterMask(size, (ctx) => {
         ctx.fillStyle = '#fff';
         // Binding bands near the foot and below the capital.
@@ -1474,17 +1537,17 @@ export const MATERIALS = {
         for (const [y, h] of [[0.115, 0.030], [0.80, 0.030]]) {
           ctx.fillStyle = css(PAL.ochre); ctx.fillRect(-2, (1 - y - h) * size, size + 4, h * size);
         }
-        HG.columnRegister(ctx, size * 0.40, size * 0.20, size * 0.20, size * 0.58, cx.seed + 3, HG.POOLS.divine, 'paint');
+        HG.columnRegister(ctx, size * TXT_X, size * TXT_Y, size * TXT_W, size * TXT_H, cx.seed + 3, HG.POOLS.divine, 'paint');
       });
       const textCut = rasterMask(size, (ctx) => {
         ctx.fillStyle = '#fff'; ctx.strokeStyle = '#fff';
-        HG.columnRule(ctx, size, size * 0.385, size * 0.008, size * 0.19, size * 0.79, 'line');
-        HG.columnRule(ctx, size, size * 0.615, size * 0.008, size * 0.19, size * 0.79, 'line');
-        HG.columnRegister(ctx, size * 0.40, size * 0.20, size * 0.20, size * 0.58, cx.seed + 3, HG.POOLS.divine, 'cut');
+        HG.columnRule(ctx, size, size * (TXT_X - 0.018), size * 0.008, size * 0.19, size * 0.79, 'line');
+        HG.columnRule(ctx, size, size * (TXT_X + TXT_W + 0.018), size * 0.008, size * 0.19, size * 0.79, 'line');
+        HG.columnRegister(ctx, size * TXT_X, size * TXT_Y, size * TXT_W, size * TXT_H, cx.seed + 3, HG.POOLS.divine, 'cut');
       });
       const textLine = rasterMask(size, (ctx) => {
         ctx.fillStyle = '#fff'; ctx.strokeStyle = '#fff';
-        HG.columnRegister(ctx, size * 0.40, size * 0.20, size * 0.20, size * 0.58, cx.seed + 3, HG.POOLS.divine, 'line');
+        HG.columnRegister(ctx, size * TXT_X, size * TXT_Y, size * TXT_W, size * TXT_H, cx.seed + 3, HG.POOLS.divine, 'line');
       });
 
       for (let i = 0; i < s.n; i++) {
@@ -1506,10 +1569,27 @@ export const MATERIALS = {
       paintRemnants(s, ramp, paint, { survival: 0.34, freq: 6, seed: cx.seed + 9, edgeLoss: 0.70, fade: 0.45 });
       // Band paint survives better than glyph paint — it was thicker and re-applied.
       const bandWear = s.field(3, (u, v) => sat(warpN(u, v, 8, 4, 1.2, cx.seed + 41) * 1.4 + 0.5));
+      /* Band paint survives better than glyph paint — it was thicker and re-applied — but it was
+       * the one pigment in this file laid at *full chroma*: `keep` reaches 1.0 and, unlike
+       * `paintRemnants`, nothing bleached it toward the stone first. A five-colour band at full
+       * saturation is a hard rainbow stripe, and `tile[1]` is 4.5 (9.0 m of world) against a
+       * 12.3 m shaft, so these bands do not land only at the foot and under the capital — they
+       * repeat once more up the shaft, where a rainbow is both wrong and, being a thin horizontal
+       * line of maximum chroma, the first thing to alias when the column is 30 m away. `BAND_FADE`
+       * keeps the hue and takes the chroma down to something three thousand years old.
+       *
+       * The *registration* half of that is not fixable from here and belongs to ARCHITECTURE: a
+       * tiling texture cannot know where the capital is. If the shaft's v were normalised to
+       * shaft height instead of world metres, this tile would land exactly once and the bands
+       * would sit where the recipe says they sit. */
+      const BAND_FADE = 0.26;
       for (let i = 0; i < s.n; i++) {
         if (bandsMask[i] < 0.02 || paint.a[i] < 0.02) continue;
         const keep = sat((bandWear[i] * 0.8 + 0.35)) * bandsMask[i] * paint.a[i];
-        s.r[i] += (paint.r[i] - s.r[i]) * keep; s.g[i] += (paint.g[i] - s.g[i]) * keep; s.b[i] += (paint.b[i] - s.b[i]) * keep;
+        const pr = paint.r[i] + (s.r[i] - paint.r[i]) * BAND_FADE;
+        const pg = paint.g[i] + (s.g[i] - paint.g[i]) * BAND_FADE;
+        const pb = paint.b[i] + (s.b[i] - paint.b[i]) * BAND_FADE;
+        s.r[i] += (pr - s.r[i]) * keep; s.g[i] += (pg - s.g[i]) * keep; s.b[i] += (pb - s.b[i]) * keep;
         s.rough[i] = sat(s.rough[i] - keep * 0.12);
       }
       chiselMarks(s, { amount: 0.016, angle: 1.35, freq: 64, seed: cx.seed + 1 });
@@ -1760,7 +1840,12 @@ export const MATERIALS = {
         s.h[i] = 0.62 + swell[i] * 0.26 + (cast[i] - 0.5) * 0.10 - blow[i] * 0.40;
         // Roughness tied to value, so the lobe only fires where the albedo is already hot and
         // the additive highlight sums onto bronze instead of onto mud.
-        s.rough[i] = sat(0.66 - k * 0.50 + blow[i] * 0.30);
+        /* Same shape as `goldRough`, and for the same reason: PROPS' bronze is flagged `metal`,
+         * so `specAmt` carries the 3.04× metal multiplier. Swept over the hemisphere this recipe
+         * measured a peak specular of 4.30 with **14.3 %** of the surface blown past 1.0 — a
+         * sheet, not a scatter. Squaring holds the crest roughness where it was and lifts
+         * everything below it, which cuts the blown *area* without touching the glint. */
+        s.rough[i] = sat(0.76 - Math.pow(k, 2.0) * 0.60 + blow[i] * 0.30);
         s.occ[i] *= 1 - blow[i] * 0.55;
       }
       /* Patina grows in the recesses and runs downhill from them — verdigris obeys gravity.
