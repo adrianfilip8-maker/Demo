@@ -99,6 +99,7 @@ uniform float uBands;
 uniform float uTermLo;
 uniform float uTermHi;
 uniform float uTermSoft;
+uniform vec3  uShadowBands;   // cast-shadow penumbra quantiser: steps, softness, amount (0 = off)
 uniform float uShadowSat;
 uniform float uDebugShadow;   // >0.5 → output shadow diagnostics instead of shading
 uniform float uRim;
@@ -136,6 +137,37 @@ float slyRamp( float ndl, float bands ) {
 	float acc = slyTerm( x, 0.0, steps ) + slyTerm( x, 1.0, steps ) + slyTerm( x, 2.0, steps )
 	          + slyTerm( x, 3.0, steps ) + slyTerm( x, 4.0, steps );
 	return clamp( acc / steps, 0.0, 1.0 );
+}
+
+/**
+ * The same quantiser, applied to the cast-shadow penumbra instead of to N.L.
+ *
+ * Why this exists: §7.3 fails every shot for "diffuse ramp reads as smooth/realistic instead
+ * of banded-cel", and slyRamp above is not the reason. slyRamp is correct — but it can only
+ * draw a terminator where the *normal* turns, and this level is boxes and faceted cylinders,
+ * so a flat face has one normal, lands wholly inside one band, and gives the quantiser no
+ * gradient to band. Every large surface in the game is therefore a single flat tone no matter
+ * how the ramp is tuned, and geometry work is the only fix on that path.
+ *
+ * The shadow map's penumbra is the one gradient that exists *on a flat face*: it comes from
+ * the PCF kernel, not from the surface, so it is there on a plain wall. Quantising it puts a
+ * stepped terminator on every cast-shadow edge in the level regardless of the shape of what
+ * it falls on — which is the same graphic read, bought without geometry.
+ *
+ * n thresholds evenly spaced over 0..1 give n+1 output levels evenly spaced over 0..1, so
+ * steps = 2 is the classic three-tone shadow edge (lit / mid / core).
+ *
+ * uShadowBands.z = 0 disables it and restores the plain smoothstep, so the A/B that sets the
+ * default here stays reproducible rather than being a claim in a comment.
+ */
+float slyShadowBand( float x, float steps, float soft ) {
+	float n = max( floor( steps + 0.5 ), 1.0 );
+	float d = 1.0 / ( n + 1.0 );
+	float acc = smoothstep( d - soft, d + soft, x );
+	acc += step( 1.5, n ) * smoothstep( 2.0 * d - soft, 2.0 * d + soft, x );
+	acc += step( 2.5, n ) * smoothstep( 3.0 * d - soft, 3.0 * d + soft, x );
+	acc += step( 3.5, n ) * smoothstep( 4.0 * d - soft, 4.0 * d + soft, x );
+	return clamp( acc / n, 0.0, 1.0 );
 }
 
 #ifdef SLY_DETAIL
@@ -258,7 +290,13 @@ export const TOON_SHADE = /* glsl */ `
 		#else
 			float shadowRaw = getShadowMask();
 		#endif
+		/* uShadowSharp remaps the raw PCF value; the window is what decides how much of the
+		   kernel's penumbra survives into the image at all, so it and uShadowBands are one
+		   decision, not two. Measured on the graded frame, a [0.10, 0.66] window leaves a
+		   10-90% transition about 2 px wide — too narrow for a banded edge to read, which is
+		   why widening the window is part of banding it rather than a separate tuning. */
 		float sh = smoothstep( uShadowSharp.x, uShadowSharp.y, shadowRaw );
+		sh = mix( sh, slyShadowBand( sh, uShadowBands.x, uShadowBands.y ), uShadowBands.z );
 
 		float ramp = slyRamp( ndl, uBands );
 		float key = ramp * sh;

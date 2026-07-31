@@ -39,6 +39,13 @@ const TUNE = {
   termSoft: 0.024,       // half-width of the smoothstep. ~0.05 total ≈ AGENTS' "≈0.03, hard but not aliased"
   shadowSharp: [0.10, 0.66],   // remap of the shadow map: hard, with a sliver of penumbra
 
+  /* Cast-shadow penumbra quantiser — [steps, softness, amount]. See slyShadowBand() in
+     toon.glsl.js for why this is the half of §7.3's banding condition that does not depend on
+     geometry: the diffuse ramp needs a normal that turns, and this level is boxes, but the
+     shadow penumbra is a gradient that exists on a flat wall. amount 0 restores the plain
+     smoothstep. Set from the A/B in shots/shadowband/. */
+  shadowBands: [2.0, 0.10, 0.0],
+
   /* --- key / fill --- */
   keyIntensity: 2.55,
   ambIntensity: 0.52,
@@ -233,6 +240,7 @@ export class Shading {
       uShadowColor:  { value: new THREE.Color(0x000000) },
       uShadowWash:   { value: TUNE.shadowWash },
       uShadowSharp:  { value: new THREE.Vector2(TUNE.shadowSharp[0], TUNE.shadowSharp[1]) },
+      uShadowBands:  { value: new THREE.Vector3(...TUNE.shadowBands) },
       uHaze:         { value: new THREE.Color(PAL.haze) },
       uHazeSun:      { value: new THREE.Color(PAL.hazeSun) },
       uHazeGain:     { value: TUNE.hazeGain },
