@@ -730,8 +730,7 @@ export function bevelPrism(rows, { capBottom = true } = {}) {
  * The arrises are bevelled — an obelisk is four flat faces and a point, which is to say a
  * box, and the four lit edges are the only thing that gives it any modelling at all.
  */
-export function obelisk({ h = 22, base = 2.6, rng, courses = 0 } = {}) {
-  void courses;
+export function obelisk({ h = 22, base = 2.6, rng } = {}) {
   const tipH = base * 1.25;
   const shaftH = h - tipH;
   const rt = base * 0.60;

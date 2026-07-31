@@ -1114,14 +1114,14 @@ export class SlyModel {
        and at the 55 px he occupies in `hero` the eye is either a legible white shape inside
        the black band or it is nothing at all. Each eye is now ~34% of the cranium's width. */
     addEllipsoid(mb, {
-      center: c, radii: new THREE.Vector3(0.066 * S, 0.069 * S, 0.066 * S), basis,
+      center: c, radii: new THREE.Vector3(0.073 * S, 0.076 * S, 0.073 * S), basis,
       segTheta: 14, segPhi: 9,
       group: 'eye', sg: mb.newSg(), weights: [['head', 1]],
     });
     // pupil — big and cartoon, sitting proud of the sclera so it never z-fights
     const pc = c.clone().addScaledVector(outward, 0.041 * S).addScaledVector(trueUp, 0.002 * S);
     addEllipsoid(mb, {
-      center: pc, radii: new THREE.Vector3(0.035 * S, 0.042 * S, 0.035 * S), basis,
+      center: pc, radii: new THREE.Vector3(0.032 * S, 0.039 * S, 0.032 * S), basis,
       segTheta: 12, segPhi: 8,
       group: 'ink', sg: mb.newSg(), weights: [['head', 1]],
     });
@@ -1709,7 +1709,12 @@ export class SlyModel {
         // A *neutral* whisper of self-illumination, not a warm one. At `tod: 0.02` the old warm
         // emissive was the brightest thing on him and he read as "a cat in a hedge" — two yellow
         // dots floating in black. The eyes should catch light, not emit it.
-        color: PAL.eyeWhite, sss: 0.0, rim: 0.22, spec: 0.55, gloss: 80, emissive: 0x121212,
+        // Lifted from 0x121212. Captured at `tod 0.80` the eyes came out dark-on-dark inside
+        // the black mask and the face lost the one feature that identifies him at 40 px. Still
+        // neutral and still low — this holds the sclera's value through a shadowed face, it
+        // does not make him glow. Worth re-checking on `night`, which is where the previous
+        // (warm, brighter) emissive failed.
+        color: PAL.eyeWhite, sss: 0.0, rim: 0.22, spec: 0.35, gloss: 60, emissive: 0x282828,
       };
       default: return { color: 0xff00ff };
     }

@@ -168,18 +168,28 @@ capture costs 2–5 minutes. Run `camclear.mjs` after moving any column or camer
 
 Recorded so they are not re-derived:
 
-- **The bright cool contact line is still live.** `guard`: `#598aa2` L129 between surfaces at
-  L87 and L65. `hero`, on *flat open paving* at x=640, y=330→355: `#9ba7b2` L165 and `#c2bdc5`
-  L190 between warm stone at L133–156. Eliminated so far: AO sign error, the rim pass, the
-  albedo authoring (every masonry joint verified darker and lower; the build-time crevice
-  assertion fired zero times across four captures), and kerb geometry (the `hero` measurement
-  is on open floor with no junction). It is added downstream of both textures and geometry.
-  The informative asymmetry: bright **and cool** against warm surroundings — a band that lost
-  its key would be dark and cool, a band that wrongly lost its shadow would be bright and warm.
-- **Dune ripple "chips":** the 3-band ramp plus the rim term quantise a smooth ~30 cm ripple
-  normal into hard bluish quadrilaterals. Slope is now 4.3× shallower than pass 2 and the
-  artefact scales with it but does not go. Belongs to SHADING; it cannot be fixed from inside
-  `src/textures/` without deleting the ripples Terrain asks for.
+- ~~**The bright cool contact line**~~ — **fixed. It was the surface fresnel rim term.**
+  `fres = pow(1 - N·V, 3.1)` is high both at a silhouette *and* on a flat face merely tilted
+  away from the eye, and a floor running away from a standing camera is the second case over
+  most of its length. Gated on normal-turn-per-screen-height plus a convexity sign test; both
+  are exactly zero on a plane at any grazing angle. `hero` paving 1536 → 107 artefact px,
+  `guard` contact 655 → 4, and the contact is now the darkest thing in its vertical profile.
+
+  **Correct the record on this one.** An earlier pass reported the rim "eliminated — bit-
+  identical across a rim-gate change". That was true and misleading: the test moved *PostFX's
+  screen-space rim*. The surface fresnel is a **separate term** and had never been tested. If
+  you are eliminating "the rim", say which of the two.
+
+  Worth carrying: disabling the shadow wash changed **83.8%** of the frame and left the defect
+  bit-intact. A knob moving the image proves it is connected, not that it is the cause.
+- ~~**Dune ripple "chips"**~~ — **fixed by the same change**, and the shared cause is the
+  point. The ripples are a *normal map*, so the mesh under them is planar and the new gate is
+  identically zero there: 902 artefact px → 0. Reducing the ripple slope 4.3× scaled the
+  artefact down but could never remove it, because slope was never what produced it.
+- **Not yet verified after the rim gate:** `temple`, `interior`, `night`, `traversal`,
+  `combat`, `courtyard`. The change is global to the rim term and only four shots were
+  measured. `courtyard`'s rim sits mostly on edges rather than grazing floors so the effect
+  there should be small, but that is a prediction, not a measurement.
 - **Stone mean albedo is 4–5% darker family-wide** (granite −13%) since the grime film landed.
   If LIGHTING wants it back, the lever is `ashlar`'s `tone`, not the grime.
 - **The cel ramp needs geometry, not shader work.** The 3-band quantiser is correct; the scene

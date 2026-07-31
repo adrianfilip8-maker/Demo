@@ -96,6 +96,8 @@ export class Architecture {
     this.TUNE = TUNE;
 
     this._buckets = new Map();     // "zone|mat" -> BufferGeometry[]
+    this._zoneMeshes = new Map();  // zone -> Mesh[]  (for the tomb portal gate, below)
+    this._tombVisible = null;
     this._meshes = [];
     this._materials = new Map();
     this._geoms = new Set();
@@ -291,6 +293,8 @@ export class Architecture {
       if (!geo) continue;
       const m = new THREE.Mesh(geo, this.mat(matKey));
       m.name = `arch:${zone}:${matKey}`;
+      if (!this._zoneMeshes.has(zone)) this._zoneMeshes.set(zone, []);
+      this._zoneMeshes.get(zone).push(m);
       const cast = !NO_CAST_ZONE.has(zone) && !NO_CAST_MAT.has(matKey);
       m.castShadow = cast; m.receiveShadow = true;
       if (!cast) m.userData.noShadow = true;
@@ -311,8 +315,24 @@ export class Architecture {
     return t;
   }
 
-  /** Static geometry: nothing to do per frame. Kept for the §4.1 contract. */
-  update() {}
+  /**
+   * Portal gate on the tomb.
+   *
+   * The vault is sealed under the desert, but a merged bucket's bounding sphere still
+   * intersects a long view frustum, so all seven tomb meshes were being drawn from every
+   * exterior camera — once for colour, once for POSTFX's normal prepass and once per shadow
+   * cascade. Measured on `hero`: 47 of architecture's 48 meshes passed the frustum test.
+   * The vault is only reachable through the inner pylon gate at z = −52, so anything south
+   * of z = −30 or higher than y = 10 provably cannot see into it.
+   */
+  update() {
+    const cam = this.engine.camera;
+    if (!cam) return;
+    const show = cam.position.z < -30 && cam.position.y < 10;
+    if (show === this._tombVisible) return;
+    this._tombVisible = show;
+    for (const m of this._zoneMeshes.get('tomb') || []) m.visible = show;
+  }
 
   dispose() {
     for (const g of this._geoms) g.dispose?.();

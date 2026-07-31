@@ -216,6 +216,12 @@ function courtyard(A) {
     blockLen: [1.3, 2.3], recess: 0.06, chipChance: 0.22, gapChance: 0.02, buried: 0.35, hollow: true,
     openings: [{ face: 0, a0: -3.2, a1: 3.2, y0: -1, y1: 3 }],
   }), { z: (t1.z0 + t1.z1) / 2 }));
+  /* Cavetto under each terrace deck. The stages are the biggest plain masses in the lower
+     half of `hero`, `night` and `courtyard`, and a cavetto is a continuously curved surface —
+     it hands the ramp a full gradient right where the eye enters the frame, and it is the one
+     profile that says "Egyptian" from any distance. */
+  const tc1 = K.cornice({ w: t1.x * 2 + 0.1, d: t1.z1 - t1.z0 + 0.1, h: 0.62, flare: 0.40, roll: 0.20 });
+  A.add('court', 'sandstone_worn', K.place(tc1.geo, { x: 0, y: t1.y - tc1.height, z: (t1.z0 + t1.z1) / 2 }));
   vol(A, 'court', 'paving_courtyard', -t1.x, t1.x, t1.y - 0.5, t1.y, t1.z0, t1.z1, { jitter: 0.02, c: 0.09 });
   groundProxy(A, -t1.x, t1.x, t1.y, t1.z0, t1.z1);
   ledgeProxy(A, -t1.x, t1.x, t1.y, t1.z0, t1.z0 + 0.9);
@@ -225,6 +231,8 @@ function courtyard(A) {
     blockLen: [1.2, 2.1], recess: 0.06, chipChance: 0.2, gapChance: 0.02, hollow: true,
     openings: [{ face: 0, a0: -2.8, a1: 2.8, y0: -1, y1: 4 }],
   }), { y: t1.y - 0.4, z: (t2.z0 + t2.z1) / 2 }));
+  const tc2 = K.cornice({ w: t2.x * 2 + 0.1, d: t2.z1 - t2.z0 + 0.1, h: 0.56, flare: 0.36, roll: 0.18 });
+  A.add('court', 'sandstone_worn', K.place(tc2.geo, { x: 0, y: t2.y - tc2.height, z: (t2.z0 + t2.z1) / 2 }));
   vol(A, 'court', 'paving_courtyard', -t2.x, t2.x, t2.y - 0.45, t2.y, t2.z0, t2.z1, { jitter: 0.02, c: 0.09 });
   groundProxy(A, -t2.x, t2.x, t2.y, t2.z0, t2.z1);
   ledgeProxy(A, -t2.x, t2.x, t2.y, t2.z0, t2.z0 + 0.9);
