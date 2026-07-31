@@ -50,6 +50,13 @@ const TUNE = {
   rimOuter: 7.2,
   rimTail: 0.45,          // strength of the far half of the band
   rimStrength: 0.70,
+  /* Planarity gate on the rim mask — see slyBackStep. A depth *step* is not a silhouette; a
+     floor running to a wall makes a bigger one than the obelisk against the sky does. These
+     are thresholds on the second difference of inverse depth, which is exactly zero across
+     any plane: 0.04 is roughly a ledge against a floor 3 m behind it at 20 m, 0.20 is a
+     clean silhouette against something far enough back to read as background. The third
+     number is the strength of the gate; 0 restores the old ungated mask. */
+  rimPlanar: [0.04, 0.20, 1.0],
   // The shadow side keeps 45% of the lit side's strength — enough that a dark silhouette
   // always separates, little enough that the light still reads as coming from one direction.
   rimShadowFloor: 0.45,
@@ -118,6 +125,7 @@ uniform vec4  uParams;     // depthSens, normalSens, thickness, unused
 uniform vec2  uFade;       // fadeStart, fadeEnd (metres)
 uniform vec4  uWeight;     // nearMul, farMul, nearZ(m), farZ(m)
 uniform vec4  uRimRadius;  // inner, mid, outer band radius in px; w = tail weight
+uniform vec3  uRimPlanar;  // planarity gate: lo, hi, strength (0 = off, legacy behaviour)
 uniform vec3  uKeyDirView; // unit vector toward the key light, view space
 ${GLSL_VIEW}
 
@@ -155,7 +163,34 @@ vec2 slyBackStep( vec2 uv, float z0, vec2 o ) {
      20 m qualified, and the rim touched 22% of the pixels in 'hero' — decoration, not
      lighting. At 0.05..0.16 it takes a step of 1-3 m at that distance, which is the obelisk
      against the sky, Sly against the wall behind him, a ledge against the courtyard floor. */
-  return vec2( smoothstep( 0.05, 0.16, ( zMax - z0 ) * rel ), frac );
+  float mask = smoothstep( 0.05, 0.16, ( zMax - z0 ) * rel );
+
+  /* ...and a step that large is not enough on its own, because a *floor* produces one.
+   *
+   * A ground plane running away from a standing camera has an enormous depth gradient: the
+   * last few pixels before it meets a wall cover tens of metres, so 'zMax - z0' clears any
+   * threshold set for silhouettes and this pass rims the contact. That is half of the bright
+   * cool line the critic measured at the wall/ground junction in 'guard' — the other half
+   * was the surface fresnel (see toon.glsl.js), and with that one fixed this is what was
+   * left: a band at L=111 lying between a wall at L=59 and a floor at L=60.
+   *
+   * The distinction the pass actually wants is *discontinuity*, not steepness, and there is
+   * an exact test for it. Under a perspective projection, INVERSE depth is an affine
+   * function of screen position across any plane — so for two taps either side of a pixel,
+   * 1/a + 1/b - 2/z0 is identically zero on a plane at any grazing angle whatsoever, and
+   * only departs from zero where the neighbourhood stops being one surface. Positive means
+   * the far side falls away faster than a plane would, which is a silhouette with background
+   * behind it; negative means it comes back toward the eye, which is a concave contact and
+   * must never rim. Depth is stored as a function of 1/z, so this costs no precision.
+   *
+   * uRimPlanar.z = 0 restores the old ungated behaviour for A/B. */
+  float w0 = 1.0 / max( z0, 1e-4 );
+  float bend = max(
+    ( 2.0 * w0 - 1.0 / max( a, 1e-4 ) - 1.0 / max( b, 1e-4 ) ) / w0,
+    ( 2.0 * w0 - 1.0 / max( c, 1e-4 ) - 1.0 / max( d, 1e-4 ) ) / w0 );
+  mask *= mix( 1.0, smoothstep( uRimPlanar.x, uRimPlanar.y, bend ), uRimPlanar.z );
+
+  return vec2( mask, frac );
 }
 
 void main() {
@@ -619,6 +654,7 @@ export class PostFX {
         uFade: { value: new THREE.Vector2() },
         uWeight: { value: new THREE.Vector4() },
         uRimRadius: { value: new THREE.Vector4(this.tune.rimInner, this.tune.rimMid, this.tune.rimOuter, this.tune.rimTail) },
+        uRimPlanar: { value: new THREE.Vector3(...this.tune.rimPlanar) },
         uKeyDirView: { value: new THREE.Vector3(0, 0, 1) },
       }, EDGE_FRAG));
 
@@ -847,6 +883,7 @@ export class PostFX {
       u.uWeight.value.set(this.tune.edgeNearMul, this.tune.edgeFarMul,
         this.tune.edgeNearZ, this.tune.edgeFarZ);
       u.uRimRadius.value.set(this.tune.rimInner, this.tune.rimMid, this.tune.rimOuter, this.tune.rimTail);
+      u.uRimPlanar.value.set(this.tune.rimPlanar[0], this.tune.rimPlanar[1], this.tune.rimPlanar[2]);
 
       /* The rim wraps from the lit side, so this pass needs to know where the key is. SHADING
          holds the one authoritative copy — LIGHTING pushes the sun into it every frame — and
