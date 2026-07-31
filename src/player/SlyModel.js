@@ -128,9 +128,9 @@ const SKELETON = [
      behind the body from every camera angle except pure side-on, which is how a 1.1 m tail
      managed to read as "no tail at all". ANIMATION's clip rotations compose on top of this. */
   ['tailA', 'hips', [0, 0.898, -0.135]],
-  ['tailB', 'tailA', [0.022, 0.896, -0.445]],
-  ['tailC', 'tailB', [0.062, 0.928, -0.748]],
-  ['tailD', 'tailC', [0.116, 1.008, -0.996]],
+  ['tailB', 'tailA', [0.012, 0.896, -0.445]],
+  ['tailC', 'tailB', [0.032, 0.928, -0.748]],
+  ['tailD', 'tailC', [0.058, 1.008, -0.996]],
 ];
 
 /**
@@ -531,15 +531,15 @@ export class SlyModel {
        hips, at head height, where it silhouettes against sky instead of against his own back. */
     const spine = resample([
       new THREE.Vector3(0.000, 0.898, -0.070 * S),
-      new THREE.Vector3(0.004, 0.895, -0.200 * S),
-      new THREE.Vector3(0.014, 0.894, -0.340 * S),
-      new THREE.Vector3(0.030, 0.899, -0.480 * S),
-      new THREE.Vector3(0.052, 0.913, -0.618 * S),
-      new THREE.Vector3(0.080, 0.941, -0.748 * S),
-      new THREE.Vector3(0.112, 0.983, -0.864 * S),
-      new THREE.Vector3(0.146, 1.039, -0.958 * S),
-      new THREE.Vector3(0.178, 1.105, -1.024 * S),
-      new THREE.Vector3(0.204, 1.174, -1.066 * S),
+      new THREE.Vector3(0.002, 0.895, -0.200 * S),
+      new THREE.Vector3(0.007, 0.894, -0.340 * S),
+      new THREE.Vector3(0.015, 0.899, -0.480 * S),
+      new THREE.Vector3(0.026, 0.913, -0.618 * S),
+      new THREE.Vector3(0.040, 0.941, -0.748 * S),
+      new THREE.Vector3(0.056, 0.983, -0.864 * S),
+      new THREE.Vector3(0.073, 1.039, -0.958 * S),
+      new THREE.Vector3(0.089, 1.105, -1.024 * S),
+      new THREE.Vector3(0.102, 1.174, -1.066 * S),
     ], 32);
 
     /* Girth: at its widest the tail is 0.36 m across — wider than his 0.23 m chest and level
@@ -547,7 +547,7 @@ export class SlyModel {
        reference; a tail slimmer than the torso reads as a rope. */
     const radius = (t) => {
       const prof = [
-        [0.00, 0.078], [0.09, 0.120], [0.20, 0.156], [0.36, 0.178],
+        [0.00, 0.058], [0.09, 0.098], [0.20, 0.150], [0.36, 0.180],
         [0.52, 0.178], [0.66, 0.163], [0.80, 0.135], [0.91, 0.094], [1.00, 0.034],
       ];
       for (let i = 0; i < prof.length - 1; i++) {
@@ -960,12 +960,12 @@ export class SlyModel {
   _buildMuzzle(mb) {
     const S = TUNE.headScale;
     const key = [
-      [new THREE.Vector3(0, 1.562, 0.040), 0.099, 0.084],
-      [new THREE.Vector3(0, 1.554, 0.104), 0.103, 0.087],
-      [new THREE.Vector3(0, 1.540, 0.160), 0.094, 0.079],
-      [new THREE.Vector3(0, 1.520, 0.210), 0.078, 0.066],
-      [new THREE.Vector3(0, 1.500, 0.249), 0.057, 0.049],
-      [new THREE.Vector3(0, 1.486, 0.273), 0.031, 0.027],
+      [new THREE.Vector3(0, 1.566, 0.040), 0.102, 0.088],
+      [new THREE.Vector3(0, 1.556, 0.118), 0.106, 0.090],
+      [new THREE.Vector3(0, 1.541, 0.192), 0.096, 0.080],
+      [new THREE.Vector3(0, 1.522, 0.258), 0.079, 0.066],
+      [new THREE.Vector3(0, 1.503, 0.312), 0.058, 0.049],
+      [new THREE.Vector3(0, 1.489, 0.352), 0.030, 0.026],
     ];
     const c = this.headCenter;
     addTube(mb, {
@@ -1070,7 +1070,7 @@ export class SlyModel {
 
   _buildNose(mb) {
     const S = TUNE.headScale;
-    const c = new THREE.Vector3(0, hy(1.504), hx(0.268));
+    const c = new THREE.Vector3(0, hy(1.502), hx(0.348));
     addEllipsoid(mb, {
       center: c,
       radii: new THREE.Vector3(0.031 * S, 0.024 * S, 0.024 * S),
@@ -1090,14 +1090,14 @@ export class SlyModel {
     const S = TUNE.headScale;
     const P = (x, y, z) => new THREE.Vector3(hx(x), hy(y), hx(z));
     const line = resample([
-      P(-0.066, 1.492, 0.192),
-      P(-0.040, 1.478, 0.234),
-      P(-0.010, 1.473, 0.254),
-      P(0.022, 1.477, 0.252),
-      P(0.052, 1.494, 0.230),
-      P(0.074, 1.514, 0.190),
+      P(-0.070, 1.494, 0.236),
+      P(-0.042, 1.479, 0.294),
+      P(-0.010, 1.474, 0.322),
+      P(0.023, 1.478, 0.320),
+      P(0.055, 1.495, 0.290),
+      P(0.078, 1.516, 0.234),
     ], 16);
-    const muzzleC = P(0, 1.532, 0.150);
+    const muzzleC = P(0, 1.534, 0.180);
     addPatch(mb, {
       segU: 15, segV: 2,
       group: 'ink', sg: mb.newSg(),
@@ -1221,15 +1221,15 @@ export class SlyModel {
      */
     const C = [
       [1.598, 0.180, 0.190, 0.004],
-      [1.614, 0.211, 0.222, 0.000],
-      [1.640, 0.228, 0.240, -0.006],
-      [1.672, 0.232, 0.244, -0.014],
-      [1.712, 0.224, 0.235, -0.024],
-      [1.756, 0.203, 0.212, -0.034],
-      [1.800, 0.170, 0.176, -0.042],
-      [1.840, 0.124, 0.128, -0.048],
-      [1.868, 0.066, 0.068, -0.052],
-      [1.880, 0.014, 0.015, -0.054],
+      [1.612, 0.214, 0.226, 0.000],
+      [1.634, 0.234, 0.246, -0.008],
+      [1.664, 0.240, 0.252, -0.018],
+      [1.700, 0.236, 0.246, -0.030],
+      [1.740, 0.222, 0.230, -0.042],
+      [1.776, 0.196, 0.201, -0.052],
+      [1.804, 0.152, 0.155, -0.058],
+      [1.822, 0.088, 0.090, -0.062],
+      [1.830, 0.018, 0.019, -0.064],
     ];
     addTube(mb, {
       centers: C.map(([y, , , cz]) => new THREE.Vector3(0, y, cz)), seg: 32,
@@ -1253,7 +1253,7 @@ export class SlyModel {
     });
 
     // crown button — the one gold spark at the top of the frame in a close-up
-    const btn = place(new THREE.Vector3(0, 1.882, -0.054));
+    const btn = place(new THREE.Vector3(0, 1.832, -0.064));
     addEllipsoid(mb, {
       center: btn, radii: new THREE.Vector3(0.023 * S, 0.016 * S, 0.023 * S),
       segTheta: 12, segPhi: 6, phi0: -0.2,
@@ -1287,16 +1287,16 @@ export class SlyModel {
       const th = THREE.MathUtils.lerp(-TH, TH, i / N);
       const k = Math.abs(th) / TH;
       arc.push(place(new THREE.Vector3(
-        Math.sin(th) * 0.216,
-        1.594 - 0.020 * Math.pow(k, 2),
-        0.004 + Math.cos(th) * 0.240,
+        Math.sin(th) * 0.224,
+        1.592 - 0.026 * Math.pow(k, 2),
+        0.004 + Math.cos(th) * 0.292,
       )));
     }
     addTube(mb, {
       centers: arc, seg: 12,
       // deep at the centre, tucking away at the temples — a peak, not a sun-visor ring
-      rx: (i) => 0.094 * S * (1 - 0.62 * Math.pow(Math.abs(i / N * 2 - 1), 1.9)),
-      ry: 0.0150 * S,
+      rx: (i) => 0.108 * S * (1 - 0.66 * Math.pow(Math.abs(i / N * 2 - 1), 1.9)),
+      ry: 0.0165 * S,
       upHint: new THREE.Vector3(0, 1, 0),
       // shear the section so the outer lip dips: a flat brim reads as a frisbee
       shape: (a) => { const s = superEllipse(a, 1.6); return { u: s.u, v: s.v + 0.70 * s.u }; },

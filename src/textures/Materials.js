@@ -954,6 +954,12 @@ export const MATERIALS = {
        * to zero gradient at the crown, which is where the highlight belongs. Combined with a
        * wider, softer V between stalks and a smaller `bump`, the flutes now turn with the light
        * instead of banding against it. */
+      /* `p` runs 0..1 across one stalk, so `d = 2p-1` is 0 at the stalk's crown and ±1 at the
+       * boundary it shares with its neighbour. The groove therefore has to peak at |d| = 1.
+       * It was written as `sat(1 - |d|/0.16)`, which peaks at |d| = 0 — so the V was being cut
+       * straight down the *crown of every stalk* instead of into the gap between them, giving
+       * each bundle a full-height slot down its front. Nine of those per repeat, on twelve
+       * hypostyle columns, is a large part of why the columns read as vertically streaked. */
       const stalks = 9;
       const cross = s.field(1, (u, v) => {
         const wob = fbmN(u, v, 6, 3, 0.5, cx.seed + 11) * 0.010;
@@ -964,7 +970,7 @@ export const MATERIALS = {
       const groove = s.field(1, (u, v) => {
         const wob = fbmN(u, v, 6, 3, 0.5, cx.seed + 11) * 0.010;
         const p = ((u + wob) * stalks) % 1;
-        return smoothstep(0.28, 0.0, Math.abs(p * 2 - 1) * -1 + 1);   // soft V between stalks
+        return smoothstep(0.70, 1.0, Math.abs(p * 2 - 1));
       });
       const stone = s.field(2, (u, v) => warpN(u, v, 12, 5, 1.0, cx.seed) * 0.5 + 0.5);
       const bandsMask = rasterMask(size, (ctx) => {
@@ -996,8 +1002,9 @@ export const MATERIALS = {
       });
 
       for (let i = 0; i < s.n; i++) {
-        s.h[i] = 0.40 + cross[i] * 0.44 - groove[i] * 0.30 + (stone[i] - 0.5) * 0.07;
-        const t = sat(0.42 + (stone[i] - 0.5) * 0.85 + cross[i] * 0.22);
+        s.h[i] = 0.42 + cross[i] * 0.40 - groove[i] * 0.22 + (stone[i] - 0.5) * 0.07;
+        // Most of the flute read is relief, not paint — a quarter of the tonal swing it had.
+        const t = sat(0.42 + (stone[i] - 0.5) * 0.60 + cross[i] * 0.10);
         const col = ramp3(PAL.sandDark, PAL.sandMid, PAL.sandLight, t);
         s.r[i] = col[0]; s.g[i] = col[1]; s.b[i] = col[2];
         s.rough[i] = 0.84;
