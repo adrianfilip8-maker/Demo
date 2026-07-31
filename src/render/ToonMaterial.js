@@ -48,7 +48,7 @@ const TUNE = {
   // albedo, so it is the only lever that can pull the final hue toward the palette's shadow
   // colour rather than toward the surface's own warmth. Raised now that TEXTURES floored the
   // near-black tail that used to turn this wash into visible violet blotching.
-  shadowWash: 0.30,
+  shadowWash: 0.44,
   // Was +0.34, a saturation BOOST. On warm sandstone that raises R and lowers G, which is
   // mechanically why shadow measured *redder* than sunlight (R/G 1.63 shadowed vs 1.49 lit)
   // when §2.2 wants shadow blue-dominant. A surface lit only by narrow-band skylight should
