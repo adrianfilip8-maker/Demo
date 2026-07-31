@@ -513,12 +513,21 @@ void main() {
 	vec3 ink = mix( uInkShade, uInkSun, lit ) * uInkGain;
 
 	/* Lines obey aerial perspective, or every distant silhouette stays razor sharp and the
-	   depth cue the haze was buying gets thrown away. */
+	   depth cue the haze was buying gets thrown away.
+
+	   But an ink line may only ever be *darker* than what it sits on. Blending toward the
+	   haze colour unconditionally inverted the line wherever haze is brighter than ink —
+	   at night the haze is a lit blue while the ink is near-black, so distant hull outlines
+	   came out as glowing blue wires instead of receding. Clamping the target to the ink's
+	   own luminance keeps the aerial-perspective *fade* (the line washes toward the
+	   background's hue and loses contrast with distance) while making it arithmetically
+	   impossible for a line to add light. Same rule the screen-space crease pass follows. */
 	float dist = length( vSlyViewPos );
 	vec3 wp = slyWorldPos( vSlyViewPos );
 	vec3 rd = dist > 1e-4 ? ( wp - cameraPosition ) / dist : vec3( 0.0, 0.0, -1.0 );
 	float haze = slyHaze( cameraPosition, rd, dist );
-	ink = mix( ink, slyHazeColor( rd ), haze * 0.92 );
+	vec3 hazeInk = min( slyHazeColor( rd ), ink );
+	ink = mix( ink, hazeInk, haze * 0.92 );
 
 	gl_FragColor = vec4( ink, uInkOpacity );
 
