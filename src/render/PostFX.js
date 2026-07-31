@@ -519,13 +519,31 @@ export class PostFX {
       const normalMat = engine.get('shading')?.normalMaterial ?? this._fallbackNormalMat();
       const prevOverride = scene.overrideMaterial;
       const prevBg = scene.background;
+
+      /* Freeze the shadow maps across this pass.
+       *
+       * three.js uses `scene.overrideMaterial` for shadow-map rendering as well as for the
+       * main pass. Without this, the normal pass re-renders every cascade's shadow map using
+       * MeshNormalMaterial, writing normal-encoded colour where depth should be. The
+       * composite then samples those corrupted maps and the depth comparison fails
+       * everywhere, which presents as the entire scene being in shadow — no cast shadows,
+       * no key light, flat ambient-only lighting.
+       *
+       * The scene pass above has already produced correct maps this frame; this pass only
+       * needs geometry, never shadows. */
+      const prevShadowAuto = renderer.shadowMap.autoUpdate;
+      renderer.shadowMap.autoUpdate = false;
+      renderer.shadowMap.needsUpdate = false;
+
       scene.overrideMaterial = normalMat;
       scene.background = null;
       renderer.setRenderTarget(this.normalRT);
       renderer.clear();
       renderer.render(scene, cam);
+
       scene.overrideMaterial = prevOverride;
       scene.background = prevBg;
+      renderer.shadowMap.autoUpdate = prevShadowAuto;
       this.shared.uNormal.value = this.normalRT.texture;
     }
 
