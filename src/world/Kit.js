@@ -140,7 +140,7 @@ export function block(w, h, d, opts = {}) {
  * which is what anything sitting on the ground wants.
  */
 export function chamferBox(w, h, d, opts = {}) {
-  const { rng, jitter = 0.0, chip = 0, taper = 0, lean = 0, c = 0.035, only = 'all' } = opts;
+  const { rng, jitter = 0.0, chip = 0, taper = 0, lean = 0, shear = 0, round = 0, c = 0.035, only = 'all' } = opts;
   const W = w * 0.5, H = h * 0.5, D = d * 0.5;
   const cc = Math.min(c, w * 0.32, h * 0.32, d * 0.32);
 
@@ -149,7 +149,11 @@ export function chamferBox(w, h, d, opts = {}) {
   const chipCorner = chip > 0 && rng ? rng.int(0, 7) : -1;
   for (let i = 0; i < 2; i++) for (let j = 0; j < 2; j++) for (let k = 0; k < 2; k++) {
     let ox = rng ? rng.jitter(jitter) : 0, oy = rng ? rng.jitter(jitter) : 0, oz = rng ? rng.jitter(jitter) : 0;
-    if (j === 1) { const t = taper * 0.5; ox += i ? -t : t; oz += k ? -t : t; ox += lean; }
+    if (j === 1) { const t = taper * 0.5; ox += i ? -t : t; oz += k ? -t : t; ox += lean; oz += shear; }
+    if (round > 0) {
+      ox += (i ? -round : round) * (j ? 1 : 0.35);
+      oz += (k ? -round : round) * (j ? 1 : 0.35);
+    }
     if (i * 4 + j * 2 + k === chipCorner) {
       const q = chip * (rng ? rng.range(0.55, 1.0) : 1);
       ox += i ? -q : q; oy += j ? -q * 0.7 : q * 0.7; oz += k ? -q : q;
@@ -171,11 +175,31 @@ export function chamferBox(w, h, d, opts = {}) {
     if (axis !== 2) p[2] -= S(k) * e;
     return p;
   };
-  const nrm = (i, j, k, axis) => {
+
+  /* Face normals are measured off the *placed* corners rather than assumed axis-aligned:
+     taper, lean and jitter all tilt a face, and a bevel is only worth having if the two
+     normals it interpolates between are the ones the faces are actually shaded with. */
+  const quadOf = (axis, s) => [[0, 0], [1, 0], [1, 1], [0, 1]].map(([u, v]) => {
+    const ijk = [0, 0, 0];
+    ijk[axis] = s; ijk[(axis + 1) % 3] = u; ijk[(axis + 2) % 3] = v;
+    return { ijk, p: cor(ijk[0], ijk[1], ijk[2], axis) };
+  });
+  const FN = [[null, null], [null, null], [null, null]];
+  for (let axis = 0; axis < 3; axis++) for (let s = 0; s < 2; s++) {
+    const q = quadOf(axis, s);
     const n = [0, 0, 0];
-    n[axis] = axis === 0 ? S(i) : axis === 1 ? S(j) : S(k);
-    return n;
-  };
+    for (let t = 0; t < 4; t++) {
+      const a = q[t].p, b = q[(t + 1) % 4].p, c = q[(t + 2) % 4].p;
+      const ux = b[0] - a[0], uy = b[1] - a[1], uz = b[2] - a[2];
+      const vx = c[0] - a[0], vy = c[1] - a[1], vz = c[2] - a[2];
+      n[0] += uy * vz - uz * vy; n[1] += uz * vx - ux * vz; n[2] += ux * vy - uy * vx;
+    }
+    const l = Math.hypot(n[0], n[1], n[2]) || 1;
+    // orient outward
+    const sgn = (axis === 0 ? n[0] : axis === 1 ? n[1] : n[2]) * S(s) < 0 ? -1 : 1;
+    FN[axis][s] = [sgn * n[0] / l, sgn * n[1] / l, sgn * n[2] / l];
+  }
+  const nrm = (i, j, k, axis) => FN[axis][axis === 0 ? i : axis === 1 ? j : k];
 
   /** Emit a polygon, dropping it if the chamfer collapsed it to nothing. */
   const face = (verts) => {
@@ -279,7 +303,7 @@ export function masonryShell(o) {
     w, d, h, batter = 0.09, course = 0.62, thick = 0.9, rng,
     blockLen = [1.15, 2.0], recess = 0.055, chip = 0.16, chipChance = 0.18,
     gapChance = 0.04, buried = 0, openings = [], quoin = true, courseJitter = 0.018,
-    tiltDeg = 0.3, hollow = true,
+    tiltDeg = 0.3, hollow = true, chamfer = 0, skipFaces = null,
   } = o;
 
   const out = [];
@@ -291,51 +315,78 @@ export function masonryShell(o) {
     const inset = batter * yc;
     const wc = Math.max(1.2, w - 2 * inset);
     const dc = Math.max(1.2, d - 2 * inset);
-    // Bottom courses sink into the sand — never let the base sit on a crisp line.
+    /* Bottom courses sink into the sand — never let the base sit on a crisp line.
+       The block is *grown downward* rather than translated down: translating it left the
+       course above hanging in mid-air, so every buried wall in the level had a horizontal
+       slot at its foot with the block tops exposed inside it. */
     const sink = buried > 0 && yb < buried ? (buried - yb) * 0.55 : 0;
 
     // Quoin interlock: alternate which pair of faces owns the corners.
     const xOwnsCorner = quoin ? c % 2 === 0 : true;
     const faces = [
-      { f: 0, len: xOwnsCorner ? wc : wc - 2 * thick, axis: 'x', sign: +1, cross: dc * 0.5 },
-      { f: 1, len: xOwnsCorner ? wc : wc - 2 * thick, axis: 'x', sign: -1, cross: dc * 0.5 },
-      { f: 2, len: xOwnsCorner ? dc - 2 * thick : dc, axis: 'z', sign: +1, cross: wc * 0.5 },
-      { f: 3, len: xOwnsCorner ? dc - 2 * thick : dc, axis: 'z', sign: -1, cross: wc * 0.5 },
+      { f: 0, len: xOwnsCorner ? wc : wc - 2 * thick, axis: 'x', sign: +1, cross: dc * 0.5, len0: xOwnsCorner ? w : w - 2 * thick },
+      { f: 1, len: xOwnsCorner ? wc : wc - 2 * thick, axis: 'x', sign: -1, cross: dc * 0.5, len0: xOwnsCorner ? w : w - 2 * thick },
+      { f: 2, len: xOwnsCorner ? dc - 2 * thick : dc, axis: 'z', sign: +1, cross: wc * 0.5, len0: xOwnsCorner ? d - 2 * thick : d },
+      { f: 3, len: xOwnsCorner ? dc - 2 * thick : dc, axis: 'z', sign: -1, cross: wc * 0.5, len0: xOwnsCorner ? d - 2 * thick : d },
     ];
 
     for (const face of faces) {
       if (face.len <= 0.6) continue;
+      // A face that is buried in solid earth or backed onto another wall is triangles the
+      // camera can never reach. Faces: 0 = +Z, 1 = −Z, 2 = +X, 3 = −X.
+      if (skipFaces && skipFaces.includes(face.f)) continue;
       let a = -face.len * 0.5;
       let guard = 0;
+      /* Openings are given in the footprint's coordinates but a battered wall narrows as it
+         rises, so on a pylon with a 2.7 m inset at the top an absolute 1 m flagstaff niche
+         walked off the edge of the face two thirds of the way up and sliced the corner away.
+         Scaling the opening with the course makes the niches follow the batter, which is what
+         they do on a real pylon anyway. */
+      const oScale = face.len0 > 0.01 ? face.len / face.len0 : 1;
       while (a < face.len * 0.5 - 0.15 && guard++ < 200) {
         let bl = rng ? rng.range(blockLen[0], blockLen[1]) : (blockLen[0] + blockLen[1]) * 0.5;
         bl = Math.min(bl, face.len * 0.5 - a);
         if (bl < 0.45) break;
-        const ac = a + bl * 0.5;
+        let s0 = a, s1 = a + bl;
         a += bl + (rng ? rng.range(0.012, 0.05) : 0.03);
 
-        // hole test
+        /* Openings *clip* the coursing; they do not delete whole blocks.
+           Dropping any block that touched a hole meant the jamb wandered by up to a block
+           length per course, so a 1 m flagstaff niche came out as a ragged diagonal scar
+           twenty metres tall — the "misaligned blocks stepping diagonally, reads as an
+           exploded wall" the critic found in four separate shots. Clipping gives every
+           opening a straight jamb, and gives the door mouldings something to land on. */
         let skip = false;
         for (const op of openings) {
           if (op.face !== face.f) continue;
           const y0 = op.y0 ?? -1, y1 = op.y1 ?? 1e3;
-          if (yb + ch > y0 && yb < y1 && ac + bl * 0.5 > op.a0 && ac - bl * 0.5 < op.a1) { skip = true; break; }
+          if (!(yb + ch > y0 && yb < y1)) continue;
+          const oa0 = op.a0 * oScale, oa1 = op.a1 * oScale;
+          if (s1 <= oa0 || s0 >= oa1) continue;                     // clear of the hole
+          if (s0 >= oa0 && s1 <= oa1) { skip = true; break; }        // wholly inside it
+          if (s0 < oa0 && s1 > oa1) s1 = oa0;                        // spans it: keep the jamb side
+          else if (s0 < oa0) s1 = Math.min(s1, oa0);
+          else s0 = Math.max(s0, oa1);
         }
         if (skip) continue;
         if (rng && rng.chance(gapChance) && yb > 1.2) continue;   // a block has fallen out
+        bl = s1 - s0;
+        if (bl < 0.16) continue;
+        const ac = (s0 + s1) * 0.5;
 
         // Mortar recess: pull most blocks back from the face plane so shadow catches the joint.
         const rec = rng ? rng.range(0.2, 1.0) * recess : recess * 0.6;
         const doChip = rng ? rng.chance(chipChance) : false;
-        const g = block(
-          face.axis === 'x' ? bl : thick, ch * 0.985, face.axis === 'x' ? thick : bl,
-          { rng, jitter: courseJitter, chip: doChip ? chip : 0 }
+        const mk = chamfer > 0 ? chamferBox : block;
+        const g = mk(
+          face.axis === 'x' ? bl : thick, ch * 0.985 + sink, face.axis === 'x' ? thick : bl,
+          { rng, jitter: courseJitter, chip: doChip ? chip : 0, c: chamfer }
         );
         const ry = rng ? THREE.MathUtils.degToRad(rng.jitter(tiltDeg)) : 0;
         const px = face.axis === 'x' ? ac : face.sign * (face.cross - thick * 0.5 - rec);
         const pz = face.axis === 'x' ? face.sign * (face.cross - thick * 0.5 - rec) : ac;
         place(g, {
-          x: px, y: yb + ch * 0.5 - sink, z: pz,
+          x: px, y: yb + ch * 0.5 - sink * 0.5, z: pz,
           ry, rz: rng ? THREE.MathUtils.degToRad(rng.jitter(tiltDeg * 0.6)) : 0,
         });
         out.push(g);
@@ -344,8 +395,8 @@ export function masonryShell(o) {
 
     if (!hollow) {
       // Solid core for small masses (piers): one cheap box behind the skin.
-      const core = block(Math.max(0.2, wc - thick * 1.7), ch, Math.max(0.2, dc - thick * 1.7), { rng, jitter: 0.01 });
-      place(core, { y: yb + ch * 0.5 - sink });
+      const core = block(Math.max(0.2, wc - thick * 1.7), ch + sink, Math.max(0.2, dc - thick * 1.7), { rng, jitter: 0.01 });
+      place(core, { y: yb + ch * 0.5 - sink * 0.5 });
       out.push(core);
     }
   }
@@ -355,12 +406,14 @@ export function masonryShell(o) {
 
 /** Flat slab / lintel / architrave built from a short run of blocks so the joints show. */
 export function beam(len, h, d, opts = {}) {
-  const { rng, pieces = Math.max(1, Math.round(len / 2.2)), crack = 0, chip = 0.1 } = opts;
+  const { rng, pieces = Math.max(1, Math.round(len / 2.2)), crack = 0, chip = 0.1, chamfer = 0.05 } = opts;
   const out = [];
   let a = -len * 0.5;
   for (let i = 0; i < pieces; i++) {
     const bl = (len / pieces) - (i < pieces - 1 ? 0.03 : 0);
-    const g = block(bl, h, d, { rng, jitter: 0.014, chip: rng && rng.chance(0.25) ? chip : 0 });
+    const g = chamfer > 0
+      ? chamferBox(bl, h, d, { rng, jitter: 0.014, chip: rng && rng.chance(0.25) ? chip : 0, c: chamfer })
+      : block(bl, h, d, { rng, jitter: 0.014, chip: rng && rng.chance(0.25) ? chip : 0 });
     // A cracked lintel: one joint opens and the piece beyond it sags a fraction of a degree.
     const sag = crack > 0 && i >= pieces / 2 ? crack : 0;
     place(g, {
@@ -477,7 +530,9 @@ export function cornice({ w, d, h = 2.0, flare = 1.15, roll = 0.42 }) {
 export function cornerRolls({ w, d, h, r = 0.4, batter = 0.09, rng }) {
   const out = [];
   for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
-    const g = new THREE.CylinderGeometry(r * 0.82, r, h, 9, 1, false);
+    // openEnded: both caps are buried in the mass, and 16 radial segments is what turns
+    // this from a nonagonal post into the lit vertical line the pylon silhouette needs.
+    const g = new THREE.CylinderGeometry(r * 0.82, r, h, 16, 1, true);
     normaliseAttrs(g);
     // Lean with the batter so the roll hugs the wall for its whole run.
     const lean = Math.atan(batter);
@@ -659,7 +714,7 @@ export function bevelPrism(rows, { capBottom = true } = {}) {
     const n = [0, -1, 0];
     const a = push([-half, y, -half], n), b = push([half, y, -half], n);
     const c = push([half, y, half], n), d = push([-half, y, half], n);
-    idx.push(a, c, b, a, d, c);
+    idx.push(a, b, c, a, c, d);
   }
   const geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
@@ -670,22 +725,30 @@ export function bevelPrism(rows, { capBottom = true } = {}) {
 
 /* ========================== obelisk ==================================== */
 
-/** Obelisk: hard-tapered square shaft under a pyramidion. Tagged `pole`, so keep it clean. */
+/**
+ * Obelisk: hard-tapered square shaft under a pyramidion. Tagged `pole`, so keep it clean.
+ * The arrises are bevelled — an obelisk is four flat faces and a point, which is to say a
+ * box, and the four lit edges are the only thing that gives it any modelling at all.
+ */
 export function obelisk({ h = 22, base = 2.6, rng, courses = 0 } = {}) {
-  const tipH = base * 1.15;
+  void courses;
+  const tipH = base * 1.25;
   const shaftH = h - tipH;
-  const rt = base * 0.62;
-  const out = [];
-  const g = new THREE.CylinderGeometry(rt * 0.5 * Math.SQRT2, base * 0.5 * Math.SQRT2, shaftH, 4, 1);
-  normaliseAttrs(g);
-  place(g, { y: shaftH * 0.5, ry: Math.PI * 0.25 });
-  out.push(g);
-  const tip = new THREE.CylinderGeometry(0.02, rt * 0.5 * Math.SQRT2, tipH, 4, 1);
-  normaliseAttrs(tip);
-  place(tip, { y: shaftH + tipH * 0.5, ry: Math.PI * 0.25 });
-  out.push(tip);
-  const m = mergeAll(out);
-  return boxProjectUVs(m);
+  const rt = base * 0.60;
+  const c = Math.min(0.075, base * 0.05);
+  const g = bevelPrism([
+    [0, base * 0.5, c],
+    [shaftH * 0.5, (base * 0.75 + rt * 0.25) * 0.5, c],
+    [shaftH, rt * 0.5, c],
+    // A benben fillet: the pyramidion sits on a lip rather than growing out of the shaft,
+    // so the tip reads as a separate carved stone from a hundred metres.
+    [shaftH + 0.10, rt * 0.56, c * 0.8],
+    [shaftH + 0.22, rt * 0.54, c * 0.8],
+    [h - 0.04, base * 0.035, c * 0.3],
+    [h, 0.012, c * 0.2],
+  ]);
+  place(g, { ry: Math.PI * 0.25 + (rng ? rng.jitter(0.02) : 0) });
+  return boxProjectUVs(g);
 }
 
 /* =========================== stairs ==================================== */
@@ -697,7 +760,10 @@ export function obelisk({ h = 22, base = 2.6, rng, courses = 0 } = {}) {
 export function stairFlight({ steps = 12, rise = 0.5, run = 0.62, width = 6, rng, cheek = 0 }) {
   const out = [];
   for (let i = 0; i < steps; i++) {
-    const g = block(run + 0.06, rise + 0.9, width - (rng ? rng.range(0, 0.06) : 0), { rng, jitter: 0.018, chip: rng && rng.chance(0.2) ? 0.12 : 0 });
+    // A chamfered nose is what makes a flight read as cut stone rather than as a ramp of
+    // boxes: every tread edge picks up a lit line along its whole width.
+    const g = chamferBox(run + 0.06, rise + 0.9, width - (rng ? rng.range(0, 0.06) : 0),
+      { rng, jitter: 0.018, chip: rng && rng.chance(0.2) ? 0.12 : 0, c: 0.05, only: 'top' });
     place(g, {
       x: (i + 0.5) * run, y: (i + 1) * rise - (rise + 0.9) * 0.5,
       ry: rng ? THREE.MathUtils.degToRad(rng.jitter(0.22)) : 0,
@@ -707,7 +773,7 @@ export function stairFlight({ steps = 12, rise = 0.5, run = 0.62, width = 6, rng
   if (cheek > 0) {
     for (const s of [-1, 1]) {
       const len = steps * run;
-      const g = block(len, cheek, 0.7, { rng, jitter: 0.02 });
+      const g = chamferBox(len, cheek, 0.7, { rng, jitter: 0.02, c: 0.05 });
       // The ramped balustrade doubles as a rail line.
       place(g, {
         x: len * 0.5, y: steps * rise * 0.5 + cheek * 0.5 - 0.1, z: s * (width * 0.5 + 0.3),
@@ -756,7 +822,11 @@ export function pavingMatrices({ x0, x1, z0, z1, y = 0, slab = 2.2, rng, sink = 
 
 /** Unit slab used by the paving InstancedMesh (scaled per instance). */
 export function slabUnit(thick = 0.5, rng) {
-  const g = block(1, thick, 1, { rng, jitter: 0.006 });
+  /* The chamfer is in *unit* space and the instance matrix scales it by the slab size, so a
+     0.022 unit bevel lands at roughly 5 cm on a 2.4 m slab. Every paving joint then carries a
+     lit rim, which is most of what stops a courtyard floor reading as one flat plane — and it
+     is the largest single surface in five of the ten canonical shots. */
+  const g = chamferBox(1, thick, 1, { rng, jitter: 0.006, c: 0.022, only: 'top' });
   place(g, { y: -thick * 0.5 });
   return boxProjectUVs(g, UV_PER_M);
 }
@@ -799,12 +869,13 @@ export function railGeo(curve, { r = 0.14, seg = 60, rad = 6 } = {}) {
   return g;
 }
 
-/** Spire tip: a squat four-sided pinnacle. The point is the landing target. */
+/** Spire tip: a squat four-sided pinnacle, arrises bevelled. The point is the landing target. */
 export function spire({ r = 0.55, h = 2.3, rng } = {}) {
-  const g = new THREE.CylinderGeometry(0.03, r * Math.SQRT2 * 0.5, h, 4, 1);
-  normaliseAttrs(g);
-  place(g, { y: h * 0.5, ry: Math.PI * 0.25 });
-  const collar = block(r * 1.9, 0.34, r * 1.9, { rng, jitter: 0.01 });
+  const g = bevelPrism([
+    [0, r * 0.62, 0.03], [h * 0.18, r * 0.58, 0.03], [h - 0.03, r * 0.05, 0.012], [h, 0.01, 0.006],
+  ]);
+  place(g, { y: 0, ry: Math.PI * 0.25 });
+  const collar = chamferBox(r * 1.9, 0.34, r * 1.9, { rng, jitter: 0.01, c: 0.045 });
   place(collar, { y: 0.1 });
   return boxProjectUVs(mergeAll([g, collar]));
 }
@@ -818,17 +889,33 @@ export function spire({ r = 0.55, h = 2.3, rng } = {}) {
  */
 export function sandDrift({ len = 12, h = 1.5, depth = 3.2, seg = 14, rng }) {
   const verts = [], uvs = [], idx = [];
+  /* Three rows, not two. A two-row ribbon is a single flat slope with one normal across its
+     whole width, which is the same "nothing for the ramp to quantise" problem the walls had —
+     and a drift sits exactly where a wall meets the ground, which is the most valuable place
+     in the frame for a terminator. The middle row puts a convex shoulder on it. */
+  const ROWS = [
+    [1.00, 0.00],   // crest, hard against the wall
+    [0.45, 0.22],   // the steep face just under the crest — about 50 deg
+    [0.16, 0.58],   // shoulder, about 21 deg
+    [0.00, 1.00],   // toe feathering into the ground, about 10 deg
+  ];
   for (let i = 0; i <= seg; i++) {
     const t = i / seg, x = (t - 0.5) * len;
     const wob = rng ? rng.jitter(0.5) : 0;
     const hh = Math.max(0.12, h * (0.55 + 0.45 * Math.sin(t * Math.PI)) + wob * 0.35);
     const dd = depth * (0.6 + 0.4 * Math.sin(t * Math.PI * 1.3 + 0.7)) + (rng ? rng.jitter(0.4) : 0);
-    verts.push(x, hh, 0.05); uvs.push(x * UV_PER_M, 0);
-    verts.push(x + (rng ? rng.jitter(0.3) : 0), 0.02, dd); uvs.push(x * UV_PER_M, dd * UV_PER_M);
+    for (const [hk, dk] of ROWS) {
+      const jx = hk < 1 ? (rng ? rng.jitter(0.3 * dk) : 0) : 0;
+      verts.push(x + jx, Math.max(0.015, hh * hk), dd * dk);
+      uvs.push(x * UV_PER_M, dd * dk * UV_PER_M);
+    }
   }
+  const R = ROWS.length;
   for (let i = 0; i < seg; i++) {
-    const a = i * 2, b = a + 1, c = a + 2, dd = a + 3;
-    idx.push(a, b, c, b, dd, c);
+    for (let r = 0; r < R - 1; r++) {
+      const a = i * R + r, b = a + 1, c = a + R, dd = c + 1;
+      idx.push(a, b, c, b, dd, c);
+    }
   }
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));

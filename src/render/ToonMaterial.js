@@ -111,6 +111,16 @@ const TUNE = {
   rimPower: 3.1,
   rimGain: 2.05,         // scales the art-directed rim colour into bloom range
 
+  /* Silhouette gate on the fresnel rim — see the long note at the term in toon.glsl.js.
+     [lo, hi] are "normal turn per screen height": zero on any planar patch at any grazing
+     angle, 1-3 on a background dune, 10-40 through the silhouette band of a limb or a head.
+     The third number requires the turn to be *convex*, which is what keeps the rim off the
+     concave contacts §7.3 wants darkened. A fresnel on its own cannot tell a silhouette from
+     a flat face seen edge-on, and measured on `hero` that mistake was laying up to 0.91 of a
+     full-strength cool rim across the open courtyard paving. Set [0, 0, 0] to disable the
+     gate and get the old term back. */
+  rimCurve: [3.0, 10.0, 1.0],
+
   /* --- spec --- */
   spec: 0.25,
   gloss: 32,
@@ -235,6 +245,7 @@ export class Shading {
       uTermLo:       { value: TUNE.termLo },
       uTermHi:       { value: TUNE.termHi },
       uRimGain:      { value: TUNE.rimGain },
+      uRimCurve:     { value: new THREE.Vector3(...TUNE.rimCurve) },
       uShadowSat:    { value: TUNE.shadowSat },
       uMetalGain:    { value: TUNE.metalGain },
       /* Diagnostic channel. window.__ENGINE.get('shading').debugShadow(true) paints

@@ -34,11 +34,26 @@ import { Cane } from './Cane.js';
 export const TUNE = {
   height: 1.80,
 
-  /* --- silhouette proportions. These are the cartoon exaggeration knobs. --- */
-  headScale: 1.19,        // cranium scale about the neck joint — tuned to ~5 heads tall (§7.3)
-  tailScale: 1.00,        // tail length + girth; the tail is half the silhouette
-  handScale: 1.22,        // big thief hands — they sell every gesture, so they are oversized
-  footScale: 1.18,        // chunky boots give the contrapposto a base to stand on
+  /* --- silhouette proportions. These are the cartoon exaggeration knobs. ---
+   *
+   * Measured before this pass, off the skinned mesh rather than off these numbers: chin→crown
+   * 0.349 m against a 1.93 m rendered figure = **5.5 heads**, or 4.4 counting the cap as part
+   * of the head silhouette (which it is). That is the lanky end of stylised-realistic, not the
+   * ~1:5 §7.3 asks for, and at `hero` distance — 55 px — it left him an unreadable column.
+   *
+   * Head count alone is the weakest of the levers, because the head sits on top: growing it
+   * grows the total, so the ratio only asymptotes to 1.49 + 1.396/headHeight. Getting to 4.5
+   * by headScale alone needs S≈1.55 and a bobblehead. The cartoon read actually comes from the
+   * *set*: big head, tiny waist, narrow shoulders, long thin limbs, oversized hands and feet,
+   * and a tail with more mass than the torso. All six move together here.
+   */
+  headScale: 1.31,        // cranium scale about the neck joint (§7.3 "~1:5 head:body")
+  headWide: 1.08,         // extra width-only on the cranium: rounder from the front
+  tailScale: 1.12,        // tail length + girth; the tail is half the silhouette
+  handScale: 1.46,        // big thief hands — they sell every gesture, so they are oversized
+  footScale: 1.34,        // chunky boots give the contrapposto a base to stand on
+  limbSlim: 0.86,         // long thin limbs: every leg/arm radius goes through this
+  shoulderSlim: 0.87,     // narrow shoulders — the deltoid mass, not the bone spacing
 
   /* --- shading / line --- */
   outline: 0.0034,        // fraction-of-frame-height thickness ⇒ ~2.5 px at any resolution
@@ -48,7 +63,15 @@ export const TUNE = {
   furSSS: 0.38,           // warm wrap-through; the single biggest "this is fur" cue
   bands: 3,
   furTintAmount: 0.095,   // per-vertex tone break-up so no region is a flat colour
-  tuftDensity: 1.0,
+
+  /* --- fur, read from the OUTLINE (§7.3 "fur reads as smooth plastic") ---
+   * A cel-shaded character carries no fur information in its shading, so all of it has to be
+   * in the geometry: a shell-fur or noise-normal pass cannot save a silhouette that is a
+   * smooth capsule. Two instruments — clumps that break the edge, and low-frequency lobing
+   * that stops the underlying loft being a capsule in the first place. */
+  tuftDensity: 2.2,       // clump count multiplier
+  tuftWidth: 1.55,        // clumps are broad flat wedges, not needles (needles read as spikes)
+  furLobe: 0.055,         // amplitude of the low-frequency lumpiness on furred lofts
 
   /* --- idle life, only used while ANIMATION is absent --- */
   breathRate: 0.62,
@@ -99,6 +122,17 @@ const GROUPS = ['fur', 'furCream', 'furDark', 'cloth', 'clothDark', 'gold', 'ink
 const HEAD_BASE = 1.396;                                   // the neck joint: the fixed point
 const hy = (y) => HEAD_BASE + (y - HEAD_BASE) * TUNE.headScale;
 const hx = (v) => v * TUNE.headScale;
+/** Cross-body width in head space. Wider than it is deep reads rounder from the front. */
+const hw = (v) => v * TUNE.headScale * TUNE.headWide;
+
+/**
+ * Low-frequency lumpiness for a lofted fur surface. Same trick the tail has always used,
+ * pulled out so every furred loft can have it: two incommensurate ripples around the ring
+ * and along the length, so the outline is never a clean ellipse at any cut. `amp` 0 → off.
+ */
+const furLobe = (a, t, amp, fa = 5, ft = 15) => (amp <= 0 ? 1 : (
+  1 + amp * Math.sin(t * ft + a * fa) + amp * 0.62 * Math.cos(a * (fa + 3) - t * (ft * 0.63))
+));
 
 /* ============================ SKELETON ==================================== */
 
@@ -111,10 +145,10 @@ const SKELETON = [
   ['head', 'neck', [0, hy(1.420), 0.015]],
   ['jaw', 'head', [0, hy(1.478), hx(0.055)]],
   ['capBrim', 'head', [0, hy(1.665), hx(0.090)]],
-  ['earL', 'head', [hx(0.128), hy(1.662), hx(-0.022)]],
-  ['earR', 'head', [hx(-0.128), hy(1.662), hx(-0.022)]],
-  ['browL', 'head', [hx(0.064), hy(1.648), hx(0.140)]],
-  ['browR', 'head', [hx(-0.064), hy(1.648), hx(0.140)]],
+  ['earL', 'head', [hw(0.128), hy(1.662), hx(-0.022)]],
+  ['earR', 'head', [hw(-0.128), hy(1.662), hx(-0.022)]],
+  ['browL', 'head', [hw(0.064), hy(1.648), hx(0.140)]],
+  ['browR', 'head', [hw(-0.064), hy(1.648), hx(0.140)]],
 
   ['shoulderL', 'chest', [0.052, 1.292, 0.000]],
   ['upperArmL', 'shoulderL', [0.140, 1.278, 0.000]],
@@ -612,7 +646,7 @@ export class SlyModel {
       // lumpiness plus a mild vertical squash makes it read as fur over a spine.
       shape: (a, i, t) => {
         const s = superEllipse(a, 1.06);
-        const lump = 1 + 0.05 * Math.sin(t * 26 + a * 3) + 0.035 * Math.cos(a * 5 - t * 11);
+        const lump = furLobe(a, t * 6, TUNE.furLobe * 1.5, 3, 26);
         return { u: s.u * lump * 1.03, v: s.v * lump * 0.94 };
       },
       groupAt: (i, t) => (isDark(t) ? 'furDark' : 'furCream'),
@@ -673,12 +707,24 @@ export class SlyModel {
     const sgSleeve = mb.newSg(), sgFur = mb.newSg(), sgCuff = mb.newSg();
     const cuffStart = 0.86, gloveStart = 0.965;
 
+    /* Slim, and slimmest at the shoulder end. §7.3's cartoon read wants narrow shoulders and
+       long thin limbs; the deltoid below carries what shoulder mass there is. */
+    const slim = (i) => TUNE.limbSlim * (ts[i] < 0.34 ? TUNE.shoulderSlim : 1);
+
     addTube(mb, {
       centers, seg: TUNE.segLimb,
-      rx: (i) => radii[i] * (ts[i] >= gloveStart ? 1.14 : (ts[i] >= cuffStart ? 1.0 : 1.0)),
+      rx: (i) => radii[i] * slim(i) * (ts[i] >= gloveStart ? 1.14 : 1.0),
       framesOverride: undefined,
       upHint: new THREE.Vector3(0, 0, 1),
-      shape: (a) => superEllipse(a, 1.05),
+      shape: (a, i) => {
+        const s = superEllipse(a, 1.05);
+        // the bare forearm band is fur, so it gets the lumpy loft; the sleeve does not
+        if (ts[Math.min(i, ts.length - 1)] >= cuffStart && ts[Math.min(i, ts.length - 1)] < gloveStart) {
+          const k = furLobe(a, i, TUNE.furLobe * 1.3, 4, 11);
+          return { u: s.u * k, v: s.v * k };
+        }
+        return s;
+      },
       groupAt: (i) => {
         const t = ts[Math.min(i, ts.length - 1)];
         if (t >= gloveStart) return 'clothDark';
@@ -700,8 +746,8 @@ export class SlyModel {
     /* Deltoid cap. Automatic weighting cannot invent this volume, and without it a raised arm
        exposes the hole where the sleeve meets the chest. */
     addEllipsoid(mb, {
-      center: new THREE.Vector3(side * 0.132, 1.281, -0.002),
-      radii: new THREE.Vector3(0.062, 0.058, 0.062),
+      center: new THREE.Vector3(side * 0.132 * TUNE.shoulderSlim, 1.281, -0.002),
+      radii: new THREE.Vector3(0.062, 0.058, 0.062).multiplyScalar(TUNE.shoulderSlim),
       segTheta: 16, segPhi: 9,
       group: 'cloth', sg: mb.newSg(),
       weights: [[`shoulder${L}`, 0.78], ['chest', 0.22]],
@@ -816,9 +862,15 @@ export class SlyModel {
 
     addTube(mb, {
       centers: key.map((k) => k[1]), seg: TUNE.segLimb,
-      rx: (i) => key[i][2],
+      rx: (i) => key[i][2] * TUNE.limbSlim,
       upHint: new THREE.Vector3(0, 0, 1),
-      shape: (a) => superEllipse(a, 1.04),
+      // Bare fur leg: lobed, so the outline is never the clean tapered cylinder that reads
+      // as moulded plastic. Amplitude falls off toward the ankle, where the boot takes over.
+      shape: (a, i, t) => {
+        const s = superEllipse(a, 1.04);
+        const k = furLobe(a, i, TUNE.furLobe * (1 - 0.55 * t), 5, 13);
+        return { u: s.u * k, v: s.v * k };
+      },
       groupAt: () => 'fur',
       sgAt: () => 900 + (side > 0 ? 0 : 1),
       colorAt: (i, t, a, p) => furTint(_c, p.x, p.y, p.z, TUNE.furTintAmount * 0.7),
@@ -922,7 +974,10 @@ export class SlyModel {
   ];
 
   get headCenter() { return new THREE.Vector3(0, hy(1.588), hx(-0.006)); }
-  get headRadii() { return new THREE.Vector3(0.176 * TUNE.headScale, 0.184 * TUNE.headScale, 0.196 * TUNE.headScale); }
+  get headRadii() {
+    return new THREE.Vector3(
+      0.176 * TUNE.headScale * TUNE.headWide, 0.184 * TUNE.headScale, 0.196 * TUNE.headScale);
+  }
 
   /** Point on the idealised head ellipsoid. theta 0 = straight ahead, +theta = his left. */
   headSurf(theta, phi, inflate = 1) {
@@ -956,7 +1011,7 @@ export class SlyModel {
     const centers = H.map(([y, , , cz]) => new THREE.Vector3(0, hy(y), hx(cz)));
     addTube(mb, {
       centers, seg: TUNE.segHead,
-      rx: (i) => H[i][1] * S,
+      rx: (i) => H[i][1] * S * TUNE.headWide,
       ry: (i) => H[i][2] * S,
       upHint: new THREE.Vector3(0, 0, 1),
       shape: (a, i) => {
@@ -965,6 +1020,11 @@ export class SlyModel {
         const front = Math.max(0, Math.cos(a));
         const brow = smooth(1.615, 1.660, H[i][0]) * (1 - smooth(1.665, 1.700, H[i][0]));
         s.v *= 1 - 0.05 * front * front + 0.035 * brow * front;
+        /* Fur lobing, but *only* round the back and sides: the mask, eyes, brows and mouth are
+           all placed on the idealised ellipsoid, so lumping the face plane would float them. */
+        const back = 1 - Math.max(0, Math.cos(a));
+        const k = furLobe(a, H[i][0] * 4, TUNE.furLobe * 0.55 * back, 4, 9);
+        s.u *= k; s.v *= k;
         return s;
       },
       groupAt: () => 'fur',
@@ -989,7 +1049,7 @@ export class SlyModel {
     addTube(mb, {
       centers: key.map((k) => new THREE.Vector3(0, hy(k[0].y), hx(k[0].z))),
       seg: 20,
-      rx: (i) => key[i][1] * S,
+      rx: (i) => key[i][1] * S * TUNE.headWide,
       ry: (i) => key[i][2] * S,
       upHint: new THREE.Vector3(0, 1, 0),
       shape: (a) => superEllipse(a, 1.12),
@@ -1050,37 +1110,41 @@ export class SlyModel {
     const trueUp = new THREE.Vector3().crossVectors(outward, right).normalize();
     const basis = { x: right, y: trueUp, z: outward };
 
-    // sclera
+    /* Sclera. Deliberately oversized: §7.3's character read is "huge eyes behind the mask",
+       and at the 55 px he occupies in `hero` the eye is either a legible white shape inside
+       the black band or it is nothing at all. Each eye is now ~34% of the cranium's width. */
     addEllipsoid(mb, {
-      center: c, radii: new THREE.Vector3(0.057 * S, 0.060 * S, 0.058 * S), basis,
+      center: c, radii: new THREE.Vector3(0.066 * S, 0.069 * S, 0.066 * S), basis,
       segTheta: 14, segPhi: 9,
       group: 'eye', sg: mb.newSg(), weights: [['head', 1]],
     });
     // pupil — big and cartoon, sitting proud of the sclera so it never z-fights
-    const pc = c.clone().addScaledVector(outward, 0.036 * S).addScaledVector(trueUp, 0.002 * S);
+    const pc = c.clone().addScaledVector(outward, 0.041 * S).addScaledVector(trueUp, 0.002 * S);
     addEllipsoid(mb, {
-      center: pc, radii: new THREE.Vector3(0.031 * S, 0.037 * S, 0.031 * S), basis,
+      center: pc, radii: new THREE.Vector3(0.035 * S, 0.042 * S, 0.035 * S), basis,
       segTheta: 12, segPhi: 8,
       group: 'ink', sg: mb.newSg(), weights: [['head', 1]],
     });
     // highlight on the pupil: the "alive" cue. Sits on black, so it reads at any size.
-    const hc = pc.clone().addScaledVector(outward, 0.023 * S)
-      .addScaledVector(trueUp, 0.016 * S).addScaledVector(right, -side * 0.012 * S);
+    const hc = pc.clone().addScaledVector(outward, 0.026 * S)
+      .addScaledVector(trueUp, 0.019 * S).addScaledVector(right, -side * 0.014 * S);
     addEllipsoid(mb, {
-      center: hc, radii: new THREE.Vector3(0.013 * S, 0.013 * S, 0.012 * S), basis,
+      center: hc, radii: new THREE.Vector3(0.015 * S, 0.015 * S, 0.014 * S), basis,
       segTheta: 8, segPhi: 5,
       group: 'eye', sg: mb.newSg(), weights: [['head', 1]],
     });
 
     /* Hooded upper lid, tilted outward-down — this is where the *smug* comes from. A wide-open
-       eye reads as surprised; a lid cutting across the top third reads as amused. */
+       eye reads as surprised; a lid cutting across the top third reads as amused. It starts
+       higher than it used to (0.18 → 0.40): the old lid ate most of a now-larger eye, and a
+       covered eye is worth nothing to the identity read. */
     const lidUp = trueUp.clone().applyAxisAngle(outward, side * 0.30).normalize();
     const lidRight = new THREE.Vector3().crossVectors(lidUp, outward).normalize();
     addEllipsoid(mb, {
       center: c.clone().addScaledVector(outward, 0.002 * S),
-      radii: new THREE.Vector3(0.061 * S, 0.064 * S, 0.062 * S),
+      radii: new THREE.Vector3(0.070 * S, 0.073 * S, 0.071 * S),
       basis: { x: lidRight, y: lidUp, z: outward },
-      segTheta: 14, segPhi: 5, phi0: 0.18, phi1: Math.PI / 2,
+      segTheta: 14, segPhi: 5, phi0: 0.40, phi1: Math.PI / 2,
       group: 'fur', sg: mb.newSg(), weights: [['head', 1]],
       colorAt: (u, v, p) => furTint(_c, p.x, p.y, p.z, 0.03, 4, 0.74),
     });
@@ -1091,7 +1155,7 @@ export class SlyModel {
     const c = new THREE.Vector3(0, hy(1.530), hx(0.348));
     addEllipsoid(mb, {
       center: c,
-      radii: new THREE.Vector3(0.031 * S, 0.024 * S, 0.024 * S),
+      radii: new THREE.Vector3(0.031 * S * TUNE.headWide, 0.024 * S, 0.024 * S),
       segTheta: 12, segPhi: 7,
       group: 'ink', sg: mb.newSg(), weights: [['head', 1]],
       // narrow the bottom into the triangular raccoon nose
@@ -1106,7 +1170,7 @@ export class SlyModel {
   /** The half-smile. Asymmetric on purpose: one corner up is the whole read on "smug". */
   _buildMouth(mb) {
     const S = TUNE.headScale;
-    const P = (x, y, z) => new THREE.Vector3(hx(x), hy(y), hx(z));
+    const P = (x, y, z) => new THREE.Vector3(hw(x), hy(y), hx(z));
     const line = resample([
       P(-0.070, 1.512, 0.238),
       P(-0.042, 1.500, 0.296),
@@ -1163,11 +1227,16 @@ export class SlyModel {
   _buildEar(mb, side) {
     const S = TUNE.headScale;
     const L = side > 0 ? 'L' : 'R';
-    /* Pushed outboard and swept out at ~40° from vertical so the tips clear the cap crown by
-       a clear margin. An ear buried under the hat brim is worth nothing in silhouette, and
-       the ear/cap notch is the shape that says "raccoon in a hat" rather than "person". */
-    const base = new THREE.Vector3(hx(side * 0.118), hy(1.646), hx(-0.020));
-    const axis = new THREE.Vector3(side * 0.62, 0.77, -0.16).normalize();
+    /* Swept out at ~48° from vertical so the tips clear the cap crown *laterally*.
+       Worth the arithmetic, because it had never actually been true: at the old 0.62 lean the
+       tip landed at |x| 0.284 against a cap half-width of 0.286, i.e. 2 mm *inside* the widest
+       part of the hat, so the ears vanished into the cap outline from every angle except a
+       narrow frontal cone — and `interior`, `dunes`, `traversal` and `hero` all look at him
+       from behind, where the cap then reads as a featureless dome. At 0.86 the tip clears the
+       crown by 1.7 cm before its tuft, and the ear/cap notch — the shape that says "raccoon in
+       a hat" rather than "person" — survives from any azimuth. */
+    const base = new THREE.Vector3(hw(side * 0.118), hy(1.646), hx(-0.020));
+    const axis = new THREE.Vector3(side * 0.86, 0.77, -0.16).normalize();
     const thick = new THREE.Vector3(side * 0.74, -0.24, 0.63).normalize();   // faces outward-front
     const width = new THREE.Vector3().crossVectors(thick, axis).normalize();
 
@@ -1224,7 +1293,7 @@ export class SlyModel {
     const tilt = new THREE.Matrix4().makeRotationX(0.062).premultiply(new THREE.Matrix4().makeRotationZ(0.098));
     const place = (p) => {
       p.sub(pivot).applyMatrix4(tilt).add(pivot);
-      p.set(hx(p.x), hy(p.y), hx(p.z));
+      p.set(hw(p.x), hy(p.y), hx(p.z));
       return p;
     };
 
@@ -1333,38 +1402,72 @@ export class SlyModel {
    * perfectly smooth outline — the eye reads the *edge* first. These spikes cost ~12 triangles
    * each and they are the difference between fur and a vinyl toy.
    */
+  /**
+   * Fur clumps. §7.3 fails "fur reads as smooth plastic", and under a cel ramp that is decided
+   * entirely by the outline — there is no shading gradient for a fur *texture* to live in, so
+   * a normal map or a shell pass cannot rescue a smooth capsule.
+   *
+   * The previous pass put isolated needles on the edge and the critic read them as "a torn or
+   * burnt edge", which is the correct read: a needle is not what fur looks like. Real fur
+   * clumps are **broad flat wedges that overlap**, so the edge scallops rather than spikes.
+   * Hence `tuftWidth` (wide) with `flat` (thin in the other axis), doubled density, and
+   * neighbouring clumps deliberately jittered in length so no two are the same silhouette.
+   */
   _buildTufts(mb) {
     const S = TUNE.headScale;
     const D = TUNE.tuftDensity;
+    const WF = TUNE.tuftWidth;
     /* Tufts carry no colour of their own: like every vertex colour on this model they would
        MULTIPLY their material (see Body.furTint), so the group owns the hue and they stay
        neutral. They exist for the ragged silhouette edge, not for tone. */
-    const put = (o) => addTuft(mb, { sg: mb.newSg(), color: 0xffffff, ...o });
+    const put = (o) => addTuft(mb, {
+      sg: mb.newSg(), color: 0xffffff, flat: 0.45,
+      ...o,
+      width: (o.width ?? 0.015) * WF,
+    });
+    // deterministic jitter: two clumps the same size next to each other read as a comb
+    const jit = (i, k) => 1 + 0.34 * Math.sin(i * 12.9898 + k * 78.233);
 
     for (const side of [1, -1]) {
       /* cheek ruffs — the widest part of his head, so the most valuable place to break up */
       for (let i = 0; i < Math.round(5 * D); i++) {
-        const f = i / 4;
-        const th = side * THREE.MathUtils.lerp(0.72, 1.30, f);
-        const phi = THREE.MathUtils.lerp(-0.30, 0.20, f);
+        const f = i / (Math.round(5 * D) - 1);
+        const th = side * THREE.MathUtils.lerp(0.60, 1.42, f);
+        const phi = THREE.MathUtils.lerp(-0.38, 0.30, f);
         const base = this.headSurf(th, phi, 0.97);
         const out = base.clone().sub(this.headCenter).normalize();
         const dir = out.clone().addScaledVector(new THREE.Vector3(0, -1, -0.55), 0.55).normalize();
         put({
-          base, dir, length: (0.042 + 0.024 * (1 - Math.abs(f - 0.45) * 2)) * S,
-          width: 0.017 * S, bend: 0.34, bendDir: new THREE.Vector3(0, -1, 0),
+          base, dir,
+          length: (0.052 + 0.030 * (1 - Math.abs(f - 0.45) * 2)) * S * jit(i, side),
+          width: 0.021 * S, bend: 0.34, bendDir: new THREE.Vector3(0, -1, 0),
+          group: 'fur', weights: [['head', 1]],
+        });
+      }
+      /* a second, shorter cheek layer set between the first — overlapping clumps are what
+         turn a row of spikes into a ruff */
+      for (let i = 0; i < Math.round(4 * D); i++) {
+        const f = (i + 0.5) / Math.round(4 * D);
+        const th = side * THREE.MathUtils.lerp(0.66, 1.34, f);
+        const base = this.headSurf(th, THREE.MathUtils.lerp(-0.16, 0.44, f), 0.99);
+        const out = base.clone().sub(this.headCenter).normalize();
+        put({
+          base, dir: out.clone().addScaledVector(new THREE.Vector3(0, -0.55, -0.35), 0.6).normalize(),
+          length: 0.036 * S * jit(i, side + 3), width: 0.024 * S, bend: 0.30,
+          bendDir: new THREE.Vector3(0, -1, 0),
           group: 'fur', weights: [['head', 1]],
         });
       }
       // cream ruff under the cheek, framing the muzzle
       for (let i = 0; i < Math.round(3 * D); i++) {
-        const f = i / 2;
-        const th = side * THREE.MathUtils.lerp(0.55, 1.02, f);
-        const base = this.headSurf(th, -0.42 + f * 0.10, 0.96);
+        const f = i / (Math.round(3 * D) - 1);
+        const th = side * THREE.MathUtils.lerp(0.48, 1.10, f);
+        const base = this.headSurf(th, -0.44 + f * 0.14, 0.96);
         const out = base.clone().sub(this.headCenter).normalize();
         put({
           base, dir: out.clone().addScaledVector(new THREE.Vector3(0, -1, 0), 0.85).normalize(),
-          length: 0.048 * S, width: 0.016 * S, bend: 0.35, bendDir: new THREE.Vector3(0, -1, 0.3),
+          length: 0.054 * S * jit(i, side + 7), width: 0.020 * S, bend: 0.35,
+          bendDir: new THREE.Vector3(0, -1, 0.3),
           group: 'furCream', weights: [['head', 0.55], ['jaw', 0.45]],
         });
       }
@@ -1377,19 +1480,26 @@ export class SlyModel {
         group: 'furDark', weights: [[side > 0 ? 'earL' : 'earR', 1]],
       });
 
-      /* chest ruff bursting out of the open collar */
-      for (let i = 0; i < Math.round(4 * D); i++) {
-        const f = (i + 0.5) / 4;
-        const th = THREE.MathUtils.lerp(-0.5, 0.5, f) + (side > 0 ? 0 : 0);
-        if (side < 0) continue;
-        const y = 1.300 - 0.030 * Math.abs(th);
-        const r = this._torsoRadius(y);
-        const base = new THREE.Vector3(Math.sin(th) * r.rx * 1.02, y, r.cz + Math.cos(th) * r.rz * 1.02);
-        put({
-          base, dir: new THREE.Vector3(Math.sin(th) * 0.5, 0.72, Math.cos(th) * 0.62).normalize(),
-          length: 0.048, width: 0.016, bend: 0.35, bendDir: new THREE.Vector3(0, 0, 1),
-          group: 'furCream', weights: [['chest', 0.6], ['neck', 0.4]],
-        });
+      /* chest ruff bursting out of the open collar. Two rows at different heights so the
+         collar edge is a scalloped mass rather than a single fringe. */
+      if (side > 0) {
+        for (const row of [{ y: 1.300, len: 0.056, w: 0.020, sp: 0.56, k: 1 },
+          { y: 1.268, len: 0.042, w: 0.024, sp: 0.72, k: 2 }]) {
+          const N = Math.round(5 * D);
+          for (let i = 0; i < N; i++) {
+            const f = (i + 0.5) / N;
+            const th = THREE.MathUtils.lerp(-row.sp, row.sp, f);
+            const y = row.y - 0.030 * Math.abs(th);
+            const r = this._torsoRadius(y);
+            const base = new THREE.Vector3(Math.sin(th) * r.rx * 1.02, y, r.cz + Math.cos(th) * r.rz * 1.02);
+            put({
+              base, dir: new THREE.Vector3(Math.sin(th) * 0.5, 0.72, Math.cos(th) * 0.62).normalize(),
+              length: row.len * jit(i, row.k), width: row.w, bend: 0.35,
+              bendDir: new THREE.Vector3(0, 0, 1),
+              group: 'furCream', weights: [['chest', 0.6], ['neck', 0.4]],
+            });
+          }
+        }
       }
       // neck ruff around the collar
       for (let i = 0; i < Math.round(3 * D); i++) {
@@ -1404,38 +1514,46 @@ export class SlyModel {
         });
       }
 
-      /* backs of the forearms — the fur band between sleeve cuff and glove */
-      for (let i = 0; i < Math.round(3 * D); i++) {
-        const f = i / 2;
-        const c = new THREE.Vector3(side * THREE.MathUtils.lerp(0.415, 0.452, f),
-          THREE.MathUtils.lerp(1.030, 0.988, f), 0);
-        const back = new THREE.Vector3(side * -0.35, -0.30, -0.88).normalize();
-        put({
-          base: c.clone().addScaledVector(back, 0.030),
-          dir: back.clone().addScaledVector(new THREE.Vector3(side * -0.5, 0.35, 0), 0.5).normalize(),
-          length: 0.042, width: 0.014, bend: 0.3,
-          group: 'fur',
-          weights: [[side > 0 ? 'lowerArmL' : 'lowerArmR', 1]],
-        });
+      /* Backs of the forearms — §7.3 names this surface explicitly. Two staggered rows
+         wrapping round the ulnar edge, so the arm silhouette is ragged from every angle
+         rather than only from directly behind. */
+      for (const row of [{ off: 0.0, len: 0.050, roll: 0.0 }, { off: 0.5, len: 0.038, roll: 0.85 }]) {
+        const N = Math.round(4 * D);
+        for (let i = 0; i < N; i++) {
+          const f = (i + row.off) / N;
+          const c = new THREE.Vector3(side * THREE.MathUtils.lerp(0.406, 0.458, f),
+            THREE.MathUtils.lerp(1.040, 0.982, f), 0);
+          const back = new THREE.Vector3(side * -0.35, -0.30, -0.88)
+            .applyAxisAngle(new THREE.Vector3(side * 0.669, -0.743, 0).normalize(), row.roll)
+            .normalize();
+          put({
+            base: c.clone().addScaledVector(back, 0.026),
+            dir: back.clone().addScaledVector(new THREE.Vector3(side * -0.5, 0.35, 0), 0.45).normalize(),
+            length: row.len * jit(i, side * 5 + row.roll), width: 0.019, bend: 0.3,
+            group: 'fur',
+            weights: [[side > 0 ? 'lowerArmL' : 'lowerArmR', 1]],
+          });
+        }
       }
       // thigh wisps
-      for (let i = 0; i < Math.round(2 * D); i++) {
-        const y = 0.800 - i * 0.075;
-        const base = new THREE.Vector3(side * 0.076, y, -0.055);
+      for (let i = 0; i < Math.round(3 * D); i++) {
+        const y = 0.812 - i * 0.062;
+        const base = new THREE.Vector3(side * 0.072, y, -0.052);
         put({
           base, dir: new THREE.Vector3(side * 0.35, -0.55, -0.76).normalize(),
-          length: 0.048, width: 0.016, bend: 0.28,
+          length: 0.052 * jit(i, side * 11), width: 0.020, bend: 0.28,
           group: 'fur',
           weights: [[side > 0 ? 'upperLegL' : 'upperLegR', 1]],
         });
       }
       // fur spilling over the boot cuff
-      for (let i = 0; i < Math.round(4 * D); i++) {
-        const a = (i / 4) * Math.PI * 2 + 0.4;
-        const base = new THREE.Vector3(side * 0.088 + Math.sin(a) * 0.045, 0.308, -0.004 + Math.cos(a) * 0.045);
+      for (let i = 0; i < Math.round(5 * D); i++) {
+        const N = Math.round(5 * D);
+        const a = (i / N) * Math.PI * 2 + 0.4;
+        const base = new THREE.Vector3(side * 0.088 + Math.sin(a) * 0.042, 0.308, -0.004 + Math.cos(a) * 0.042);
         put({
           base, dir: new THREE.Vector3(Math.sin(a) * 0.55, 0.72, Math.cos(a) * 0.55).normalize(),
-          length: 0.036, width: 0.013, bend: 0.3,
+          length: 0.042 * jit(i, side * 17), width: 0.018, bend: 0.3,
           group: 'fur',
           weights: [[side > 0 ? 'lowerLegL' : 'lowerLegR', 1]],
         });
@@ -1446,21 +1564,27 @@ export class SlyModel {
        lifting of any shape on the character, so it gets the most tufts. */
     const spine = this._tailSpine, radius = this._tailRadius, isDark = this._tailIsDark;
     const n = spine.length;
-    for (let i = 3; i < n - 2; i += 2) {
+    /* Clumps all the way round every ring, not just along the top: the tail is seen from
+       behind in five of the ten canonical shots (`hero` at 172°, `dunes` 167°, `interior`
+       177°, `traversal` 160°), so a ridge on one edge only would be invisible in half the set.
+       Longest clumps land on the ring boundaries, which is where a real ringed tail parts. */
+    for (let i = 2; i < n - 2; i++) {
       const t = i / (n - 1);
       const c = spine[i];
       const tan = new THREE.Vector3().subVectors(spine[Math.min(n - 1, i + 1)], spine[Math.max(0, i - 1)]).normalize();
-      for (const roll of [-2.5, -1.05, 0.0, 1.05, 2.5]) {
-        if (Math.abs(roll) > 0.1 && i % 4 !== 0) continue;
+      const rings = i % 2 ? [-2.1, -0.7, 0.7, 2.1] : [-2.8, -1.4, 0.0, 1.4, 2.8];
+      for (const roll of rings) {
         const up = new THREE.Vector3(Math.sin(roll) * 0.85, Math.cos(roll), 0).normalize();
         const side2 = new THREE.Vector3().crossVectors(tan, up).normalize();
         const outward = new THREE.Vector3().crossVectors(side2, tan).normalize();
         const base = c.clone().addScaledVector(outward, radius(t) * 0.92);
+        // a band edge gets the longest clumps — that is where fur actually parts
+        const edge = isDark(t) !== isDark(Math.max(0, t - 0.035)) ? 1.35 : 1.0;
         put({
           base,
           dir: outward.clone().addScaledVector(tan, -0.55).normalize(),
-          length: (0.070 + 0.034 * Math.sin(t * 7)) * TUNE.tailScale,
-          width: 0.021 * TUNE.tailScale, bend: 0.25, bendDir: tan.clone().negate(),
+          length: (0.040 + 0.020 * Math.sin(t * 7)) * TUNE.tailScale * edge * jit(i, roll),
+          width: 0.030 * TUNE.tailScale, bend: 0.30, bendDir: tan.clone().negate(),
           group: isDark(t) ? 'furDark' : 'furCream',
           weights: ramp(t, this._tailRamp),
         });
@@ -1542,25 +1666,29 @@ export class SlyModel {
   _matSpec(group) {
     const F = this._fur, C = this._cloth, M = this._metal;
     switch (group) {
+      /* Specular is deliberately near-zero on fur and low on the shirt. The critic's
+         "smooth plastic" read came with "a broad satin specular smear down the left of the
+         shirt" attached, and a wide soft highlight is exactly the cue that says moulded
+         vinyl. Fur scatters; it does not have a highlight to speak of. */
       case 'fur': return {
         color: PAL.furMid, map: F.detail, normalMap: F.normal,
         normalScale: 1.15, repeat: [3, 3], sss: TUNE.furSSS, rim: TUNE.rim,
-        spec: 0.05, gloss: 10,
+        spec: 0.025, gloss: 8,
       };
       case 'furCream': return {
         color: PAL.cream, map: F.detail, normalMap: F.normal,
         normalScale: 1.05, repeat: [3, 3], sss: TUNE.furSSS + 0.06, rim: TUNE.rim * 0.9,
-        spec: 0.04, gloss: 10,
+        spec: 0.02, gloss: 8,
       };
       case 'furDark': return {
         color: PAL.tailDark, map: F.detail, normalMap: F.normal,
         normalScale: 1.25, repeat: [3, 3], sss: TUNE.furSSS * 0.6, rim: TUNE.rim * 1.15,
-        spec: 0.06, gloss: 12,
+        spec: 0.03, gloss: 9,
       };
       case 'cloth': return {
         color: PAL.shirt, map: C.detail, normalMap: C.normal,
         normalScale: 0.75, repeat: [4, 4], sss: 0.14, rim: TUNE.rim * 0.85,
-        spec: 0.10, gloss: 22,
+        spec: 0.055, gloss: 15,
       };
       case 'clothDark': return {
         color: PAL.shirtDark, map: C.detail, normalMap: C.normal,

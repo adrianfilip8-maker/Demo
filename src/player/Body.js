@@ -381,16 +381,27 @@ export function addPatch(mb, o) {
 }
 
 /**
- * A fur tuft: a curved, tapered 4-sided spike.
+ * A fur clump: a curved, lobed wedge.
  *
- * These exist purely for the silhouette. A smooth lofted limb reads as a vinyl toy no
- * matter how good the shader is; a ragged edge reads as fur at any distance, and it is the
- * cheapest possible fix — six triangles each.
+ * These exist purely for the silhouette. A smooth lofted limb reads as a vinyl toy no matter
+ * how good the shader is, and under a cel ramp there is no shading gradient for a fur texture
+ * to live in — so all the fur information there will ever be is in this outline.
+ *
+ * **Why it is a lobe and not a spike.** This used to taper to a single tip vertex, which put a
+ * row of sharp triangles along every edge; the critic read them, correctly, as "a torn or burnt
+ * edge". Real fur clumps are broad and blunt, they overlap, and no two are the same length — so
+ * the edge *scallops*. The profile here is base → wide waist → short blunt tip, and the tip is
+ * an edge rather than a point (`tipW`), which is the whole difference between reading as fur
+ * and reading as a saw.
+ *
+ * `flat` squashes the section in the `up` axis, so a clump is a strap rather than a quill.
  */
 export function addTuft(mb, o) {
   const base = o.base, dir = _v0.copy(o.dir).normalize();
   const len = o.length, w = o.width;
   const bend = o.bend ?? 0.25;
+  const waist = o.waist ?? 0.86;      // how wide the clump still is at half length
+  const tipW = o.tipW ?? 0.34;        // width of the blunt tip edge, as a fraction of `w`
   const side = _v1.crossVectors(dir, o.up || new THREE.Vector3(0, 1, 0));
   if (side.lengthSq() < 1e-8) side.crossVectors(dir, new THREE.Vector3(1, 0, 0));
   side.normalize();
@@ -403,32 +414,33 @@ export function addTuft(mb, o) {
   if (o.color) mb.color(o.color);
 
   const S = side.clone(), Uv = up.clone(), D = dir.clone();
-  const ring = [];
+  const flat = o.flat ?? 1;
   const RN = 4;
-  for (let j = 0; j < RN; j++) {
-    const a = (j / RN) * Math.PI * 2 + Math.PI / 4;
-    const p = new THREE.Vector3().copy(base)
-      .addScaledVector(S, Math.cos(a) * w)
-      .addScaledVector(Uv, Math.sin(a) * w * (o.flat ?? 1));
-    ring.push(mb.vert(p, j / RN, 0));
-  }
-  // mid ring keeps the taper from reading as a pyramid at close range
-  const midC = new THREE.Vector3().copy(base).addScaledVector(D, len * 0.5).addScaledVector(bendV, 0.25);
-  const mid = [];
-  for (let j = 0; j < RN; j++) {
-    const a = (j / RN) * Math.PI * 2 + Math.PI / 4;
-    const p = new THREE.Vector3().copy(midC)
-      .addScaledVector(S, Math.cos(a) * w * 0.55)
-      .addScaledVector(Uv, Math.sin(a) * w * 0.55 * (o.flat ?? 1));
-    mid.push(mb.vert(p, j / RN, 0.5));
-  }
-  const tip = mb.vert(new THREE.Vector3().copy(base).addScaledVector(D, len).add(bendV), 0.5, 1);
+  const ringAt = (centre, sw, uw, v) => {
+    const out = [];
+    for (let j = 0; j < RN; j++) {
+      const a = (j / RN) * Math.PI * 2 + Math.PI / 4;
+      out.push(mb.vert(new THREE.Vector3().copy(centre)
+        .addScaledVector(S, Math.cos(a) * sw)
+        .addScaledVector(Uv, Math.sin(a) * uw), j / RN, v));
+    }
+    return out;
+  };
+
+  const ring = ringAt(base, w, w * flat, 0);
+  const midC = new THREE.Vector3().copy(base).addScaledVector(D, len * 0.52).addScaledVector(bendV, 0.28);
+  const mid = ringAt(midC, w * waist, w * waist * flat, 0.52);
+  const tipC = new THREE.Vector3().copy(base).addScaledVector(D, len).add(bendV);
+  const tip = ringAt(tipC, w * tipW, w * tipW * flat * 0.5, 1);
+
   for (let j = 0; j < RN; j++) {
     const k = (j + 1) % RN;
     mb.quad(ring[j], ring[k], mid[k], mid[j]);
-    mb.tri(mid[j], mid[k], tip);
+    mb.quad(mid[j], mid[k], tip[k], tip[j]);
   }
-  return tip;
+  mb.tri(tip[0], tip[1], tip[2]);
+  mb.tri(tip[0], tip[2], tip[3]);
+  return tip[0];
 }
 
 /** Box with six independent smoothing groups — every edge is hard. Buckles, brims, ferrules. */

@@ -61,6 +61,26 @@ const RECIPES = {
 /** Pieces that deserve an inverted-hull ink line; the rest rely on the post-process pass. */
 const HULL_OUTLINE = new Set(['gold_leaf', 'granite_pink', 'bronze_dark']);
 
+/**
+ * Shadow-caster discipline. At `high` there are three shadow cascades, so every caster is
+ * drawn four times, not once — a mesh whose shadow lands nowhere a canonical camera can see
+ * costs three draw calls and three times its triangles for nothing. These are the cases where
+ * that is provably true:
+ *   `far`          — 150 m+ out behind ≥60% haze; their shadows fall off the far side of the
+ *                    world and the cascades are fitted around the view.
+ *   ceiling_stars  — painted undersides of roofs. The roof slab immediately above each one is
+ *                    already a caster, so the ceiling contributes a coincident duplicate.
+ *   paving         — 5 cm-relief slabs lying on the ground plane they would shadow.
+ * Everything else casts. Cutting a caster that matters is a visible bug, so this list stays
+ * short and each entry has to argue for itself.
+ *
+ * The opt-out is `userData.noShadow`, not `castShadow = false`: main.js sweeps the whole scene
+ * after init and turns `castShadow` back on for every opaque mesh, so clearing the flag here
+ * on its own is silently undone.
+ */
+const NO_CAST_ZONE = new Set(['far']);
+const NO_CAST_MAT = new Set(['ceiling_stars']);
+
 export class Architecture {
   constructor(engine) {
     this.engine = engine;
@@ -171,12 +191,13 @@ export class Architecture {
   }
 
   /** A standalone visible mesh (used where a piece needs its own transform or material). */
-  mesh(matKey, geo, name = 'arch') {
+  mesh(matKey, geo, name = 'arch', { cast = true } = {}) {
     if (!geo) return null;
     K.normaliseAttrs(geo);
     const m = new THREE.Mesh(geo, this.mat(matKey));
     m.name = name;
-    m.castShadow = true; m.receiveShadow = true;
+    m.castShadow = cast; m.receiveShadow = true;
+    if (!cast) m.userData.noShadow = true;
     m.matrixAutoUpdate = false; m.updateMatrix();
     this.root.add(m);
     this._meshes.push(m); this._geoms.add(geo);
@@ -184,13 +205,14 @@ export class Architecture {
   }
 
   /** InstancedMesh for genuinely repeated pieces. One draw call, per-instance jitter intact. */
-  instance(matKey, geo, matrices, name = 'inst') {
+  instance(matKey, geo, matrices, name = 'inst', { cast = true } = {}) {
     if (!geo || !matrices.length) return null;
     K.normaliseAttrs(geo);
     const im = new THREE.InstancedMesh(geo, this.mat(matKey), matrices.length);
     for (let i = 0; i < matrices.length; i++) im.setMatrixAt(i, matrices[i]);
     im.instanceMatrix.needsUpdate = true;
-    im.castShadow = true; im.receiveShadow = true;
+    im.castShadow = cast; im.receiveShadow = true;
+    if (!cast) im.userData.noShadow = true;
     im.name = name;
     im.computeBoundingSphere?.();
     this.root.add(im);
@@ -266,7 +288,9 @@ export class Architecture {
       if (!geo) continue;
       const m = new THREE.Mesh(geo, this.mat(matKey));
       m.name = `arch:${zone}:${matKey}`;
-      m.castShadow = true; m.receiveShadow = true;
+      const cast = !NO_CAST_ZONE.has(zone) && !NO_CAST_MAT.has(matKey);
+      m.castShadow = cast; m.receiveShadow = true;
+      if (!cast) m.userData.noShadow = true;
       m.matrixAutoUpdate = false; m.updateMatrix();
       this.root.add(m);
       this._meshes.push(m); this._geoms.add(geo);

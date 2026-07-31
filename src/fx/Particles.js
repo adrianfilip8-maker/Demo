@@ -49,6 +49,20 @@ const TUNE = {
   groundProbeEvery: 5,      // frames between ground-height probes
   groundLerp: 3.0,          // how fast the sand plane chases a new floor height
 
+  /* light shafts (rendered from lighting.shafts) --------------------------------------
+     `shaftGain` is the one number that decides whether these read as light or as a wash.
+     Everything downstream of FX — AgX, bloom at threshold 1.55, saturation 1.30 — is owned
+     by POSTFX, so a beam that measures beautifully in isolation can still flatten the
+     contrast around it once it has been graded. Keep the interior blades under the bloom
+     threshold and let only their brightest cores cross it. */
+  shaftCapacity: 44,
+  shaftGain: 0.62,          // master multiplier on every beam's published intensity
+  shaftConeGain: 0.85,      // torch / brazier cones, relative to shaftGain
+  shaftSoft: 2.0,           // metres of soft fade where a blade meets geometry
+  shaftFar: 96,             // metres; beyond this a blade contributes nothing
+  shaftScroll: 0.055,       // noise travel along the beam, in beam-lengths/sec
+  shaftNoise: 0.70,         // 0 = a clean beam, 1 = fully broken up by turning dust
+
   /* soft particles */
   softDepth: 0.55,          // metres of depth over which a sprite fades into geometry
   nearFade: [0.28, 0.95],   // don't smear the lens with a particle inside the near plane
@@ -67,11 +81,20 @@ const TUNE = {
   crestPerRing: 9,
   crestRate: 2.4,           // bursts/sec per crest anchor at gust 1
 
+  /* fires (braziers + torches) */
+  fireRate: 7,              // composite ticks/sec — see `_handle`
+  fireCull: 44,             // metres; a place-anchored emitter further out stops entirely
+  firePreroll: [12, 2.4, 34],  // ticks, seconds of history, cull radius — see `_prerollFires`
+  crestPreroll: [34, 2.0],     // bursts, seconds of history — see `_prerollCrests`
+
   /* footstep dead-reckoning when ANIMATION is absent */
   strideLength: 1.5,
 };
 
 const MAX_SHAFTS = 6;
+
+/** Emitter names that mean "a fire", i.e. a composite rather than a single curve. */
+const FIRE_NAMES = new Set(['torch', 'brazier', 'embers', 'fire']);
 
 /* ── shared GLSL ───────────────────────────────────────────────────────────────────────── */
 
@@ -369,6 +392,278 @@ void main() {
   #include <colorspace_fragment>
 }
 `;
+
+/* ── light shafts (§2.3, §7.3 "No volumetric light shafts anywhere they'd be motivated") ──
+   Geometry, not a post-process, and deliberately so:
+
+   · A radial-blur god-ray needs the sun *in frame*, and seven of the ten canonical shots
+     never see it — `temple` is looking at a ceiling, `interior` is twelve metres underground.
+   · Placement is an art direction problem. A blade belongs to a hole somebody built, and
+     LIGHTING publishes exactly those holes (`lighting.shafts`), so a beam can be aimed,
+     lengthened onto the floor it actually lands on, and switched off when the sun swings
+     round behind its opening. Screen space can do none of that.
+
+   Each beam is a **camera-facing ribbon** along the volume's spine rather than an extruded
+   prism. A prism's own surface is the thing you have to shade, and its side walls are by
+   definition its own edge — so seen from the side, which is how every one of these shots
+   sees them, a prism shades its silhouette at zero and disappears. A ribbon carries the
+   cross-section falloff in screen space, so a blade reads the same from any angle.
+
+   No ink outline: this material never enters POSTFX's normal pass (see the draw-range
+   guard below), because an emissive volume with a line round it reads as a sticker —
+   the note at `src/world/Props.js:41`. */
+
+const SHAFT_SEGMENTS = 8;
+
+const SHAFT_VERT = /* glsl */`
+precision highp float;
+
+attribute vec3 aOrigin;
+attribute vec4 aDirLen;    // travel dir.xyz, length
+attribute vec3 aU;         // in-plane axis 1 * halfU
+attribute vec3 aV;         // in-plane axis 2 * halfV
+attribute vec4 aTint;      // linear rgb, gain
+attribute vec4 aParams;    // apex, flare, noiseScale, seed
+
+varying float vS;
+varying float vX;
+varying vec3  vTint;
+varying float vGain;
+varying float vSeed;
+varying float vNoiseK;
+varying float vViewZ;
+varying float vAxial;
+
+void main() {
+  float s = position.z;
+  vec3 d = normalize( aDirLen.xyz );
+  vec3 c = aOrigin + d * ( s * aDirLen.w );
+
+  vec3 toCam = cameraPosition - c;
+  float camDist = length( toCam );
+  toCam = camDist > 1e-4 ? toCam / camDist : vec3( 0.0, 0.0, 1.0 );
+
+  // Ribbon width axis: perpendicular to both the beam and the eye, so the blade always
+  // presents its full cross-section however the shot is framed.
+  vec3 across = cross( d, toCam );
+  float al = length( across );
+  vAxial = 1.0 - clamp( al, 0.0, 1.0 );          // 1 when looking straight down the beam
+  across = al > 1e-3 ? across / al : normalize( aU + vec3( 1e-4 ) );
+
+  // Half-extent of the opening measured along the ribbon axis: an ellipse through the two
+  // in-plane axes. A 2.8 x 1.3 m clerestory slot is therefore wide seen along the wall and
+  // narrow seen across it, which is what a real window does.
+  // Floored: no orientation of these openings actually collapses it (checked against the
+  // §8.1 slot geometry), but a beam that silently becomes zero pixels wide is a failure
+  // mode with no symptom, and 0.18 m is below anything the canonical cameras resolve.
+  float base = max( length( vec2( dot( across, aU ), dot( across, aV ) ) ), 0.18 );
+  float w = base * ( aParams.x + ( 1.0 + aParams.y - aParams.x ) * s );
+
+  vec3 p = c + across * ( position.x * w );
+
+  vec4 mv = modelViewMatrix * vec4( p, 1.0 );
+  vViewZ = -mv.z;
+  vS = s;
+  vX = position.x;
+  vTint = aTint.rgb;
+  vGain = aTint.w;
+  vSeed = aParams.w;
+  vNoiseK = aParams.z;
+  gl_Position = projectionMatrix * mv;
+}
+`;
+
+const SHAFT_FRAG = /* glsl */`
+precision highp float;
+
+uniform sampler2D uDepth;
+uniform vec2  uInvRes;
+uniform float uSoft;
+uniform float uOpacity;
+uniform vec2  uNearFade;
+uniform vec2  uFarFade;
+uniform float uTime;
+uniform float uScroll;
+uniform float uNoiseAmt;
+uniform float uHead;
+
+varying float vS;
+varying float vX;
+varying vec3  vTint;
+varying float vGain;
+varying float vSeed;
+varying float vNoiseK;
+varying float vViewZ;
+varying float vAxial;
+
+float h11( float p ) { p = fract( p * 0.1031 ); p *= p + 33.33; p *= p + p; return fract( p ); }
+float vn( float x ) {
+  float i = floor( x ), f = fract( x );
+  f = f * f * ( 3.0 - 2.0 * f );
+  return mix( h11( i ), h11( i + 1.0 ), f );
+}
+
+void main() {
+  // Cross-section: a soft bell, not a hard-edged card. This is the whole reason a beam
+  // reads as air rather than as a translucent plank.
+  float e = 1.0 - clamp( abs( vX ), 0.0, 1.0 );
+  float edge = e * e * ( 3.0 - 2.0 * e );
+
+  // Along the beam: bright at the opening, gone by the far end. uHead keeps the first
+  // few per cent from starting on a hard line inside the slot.
+  float lenFade = pow( max( 1.0 - vS, 0.0 ), 1.35 ) * smoothstep( 0.0, uHead, vS );
+
+  // Scrolling noise along the blade — the dust turning in it. Two octaves travelling at
+  // different speeds so it never reads as a texture sliding past.
+  float t = uTime * uScroll;
+  float q = vS * vNoiseK + vSeed * 17.0;
+  float n = vn( q + t ) * 0.62 + vn( q * 2.7 - t * 1.63 ) * 0.38;
+  n *= 0.80 + 0.40 * vn( vX * 2.1 + vSeed * 5.0 + t * 0.37 );
+  float noise = mix( 1.0, 0.5 + 1.05 * n, uNoiseAmt );
+
+  float a = edge * lenFade * noise * vGain * uOpacity;
+
+  // Soft depth fade where the blade meets geometry (§ the brief). Fails open: a missing or
+  // garbage depth sample costs the soft landing, never the beam.
+  float sceneZ = texture2D( uDepth, gl_FragCoord.xy * uInvRes ).r;
+  if ( sceneZ > 0.001 && sceneZ < 9000.0 ) {
+    a *= clamp( ( sceneZ - vViewZ ) / uSoft, 0.0, 1.0 );
+  }
+
+  a *= smoothstep( uNearFade.x, uNearFade.y, vViewZ );
+  a *= 1.0 - smoothstep( uFarFade.x, uFarFade.y, vViewZ );
+  // vAxial is 1 when the eye is on the beam's own axis, where a ribbon degenerates to a
+  // line and its width stops meaning anything. Fade it out before it can flip.
+  a *= 1.0 - smoothstep( 0.86, 0.99, vAxial );
+
+  if ( a < 0.004 ) discard;
+  gl_FragColor = vec4( vTint, a );
+  #include <colorspace_fragment>
+}
+`;
+
+/**
+ * One instanced ribbon per published shaft volume. Slabs and cones share a base mesh: the
+ * only difference is the apex scale (a slab starts full width at its opening, a cone starts
+ * at a point) and the tint.
+ */
+class LightShafts {
+  constructor(engine, shared, tune) {
+    this.engine = engine;
+    this.shared = shared;
+    this.capacity = tune.shaftCapacity;
+    this.count = 0;
+
+    const geo = new THREE.InstancedBufferGeometry();
+    const n = SHAFT_SEGMENTS;
+    const pos = new Float32Array((n + 1) * 2 * 3);
+    const idx = [];
+    for (let i = 0; i <= n; i++) {
+      const s = i / n;
+      pos[(i * 2) * 3 + 0] = -1; pos[(i * 2) * 3 + 2] = s;
+      pos[(i * 2 + 1) * 3 + 0] = 1; pos[(i * 2 + 1) * 3 + 2] = s;
+      if (i < n) {
+        const a = i * 2, b = i * 2 + 1, c = (i + 1) * 2, d = (i + 1) * 2 + 1;
+        idx.push(a, b, d, a, d, c);
+      }
+    }
+    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    geo.setIndex(idx);
+    geo.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 1e6);
+    geo.instanceCount = 0;
+
+    const cap = this.capacity;
+    const mk = (name, size) => {
+      const a = new THREE.InstancedBufferAttribute(new Float32Array(cap * size), size);
+      a.setUsage(THREE.DynamicDrawUsage);
+      geo.setAttribute(name, a);
+      return a;
+    };
+    this.aOrigin = mk('aOrigin', 3);
+    this.aDirLen = mk('aDirLen', 4);
+    this.aU = mk('aU', 3);
+    this.aV = mk('aV', 3);
+    this.aTint = mk('aTint', 4);
+    this.aParams = mk('aParams', 4);
+    this.attrs = [this.aOrigin, this.aDirLen, this.aU, this.aV, this.aTint, this.aParams];
+
+    this.material = new THREE.ShaderMaterial({
+      name: 'fx.shafts',
+      uniforms: {
+        uTime: { value: 0 },
+        uDepth: shared.depth,
+        uInvRes: { value: shared.invRes },
+        uSoft: { value: tune.shaftSoft },
+        uOpacity: { value: 1 },
+        uNearFade: { value: new THREE.Vector2(0.4, 2.2) },
+        uFarFade: { value: new THREE.Vector2(tune.shaftFar * 0.65, tune.shaftFar) },
+        uScroll: { value: tune.shaftScroll },
+        uNoiseAmt: { value: tune.shaftNoise },
+        uHead: { value: 0.05 },
+      },
+      vertexShader: SHAFT_VERT,
+      fragmentShader: SHAFT_FRAG,
+      transparent: true,
+      depthTest: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+      side: THREE.DoubleSide,
+      fog: false,
+      toneMapped: false,
+    });
+
+    this.mesh = new THREE.Mesh(geo, this.material);
+    this.mesh.name = 'fx.shafts';
+    this.mesh.frustumCulled = false;
+    this.mesh.castShadow = false;
+    this.mesh.receiveShadow = false;
+    // Under the dust and the sparkles: motes have to read *inside* a blade, not behind it.
+    this.mesh.renderOrder = 7;
+    this.mesh.matrixAutoUpdate = false;
+    this.mesh.userData.noShadow = true;
+
+    /* Same opt-out as the particle batches: POSTFX re-renders the scene with an override
+       material to build its normal buffer, and a light shaft in that buffer inks a hard
+       black outline around a beam of light. */
+    const self = this;
+    this.mesh.onBeforeRender = function (r, s, c, geometry, material) {
+      if (material !== self.material) { self._stash = geometry.instanceCount; geometry.instanceCount = 0; }
+    };
+    this.mesh.onAfterRender = function (r, s, c, geometry, material) {
+      if (material !== self.material && self._stash !== undefined) {
+        geometry.instanceCount = self._stash; self._stash = undefined;
+      }
+    };
+    this.geometry = geo;
+  }
+
+  begin() { this._w = 0; }
+
+  /** Write one beam. Returns false once the buffer is full. */
+  push(s, tint, gain, apex, flare, noiseK, seed) {
+    const i = this._w;
+    if (i >= this.capacity) return false;
+    const o = this.aOrigin.array, dl = this.aDirLen.array;
+    const u = this.aU.array, v = this.aV.array;
+    const c = this.aTint.array, p = this.aParams.array;
+    o[i * 3 + 0] = s.origin.x; o[i * 3 + 1] = s.origin.y; o[i * 3 + 2] = s.origin.z;
+    dl[i * 4 + 0] = s.dir.x; dl[i * 4 + 1] = s.dir.y; dl[i * 4 + 2] = s.dir.z; dl[i * 4 + 3] = s.length;
+    u[i * 3 + 0] = s.axis.x * s.halfU; u[i * 3 + 1] = s.axis.y * s.halfU; u[i * 3 + 2] = s.axis.z * s.halfU;
+    v[i * 3 + 0] = s.axis2.x * s.halfV; v[i * 3 + 1] = s.axis2.y * s.halfV; v[i * 3 + 2] = s.axis2.z * s.halfV;
+    c[i * 4 + 0] = tint.r; c[i * 4 + 1] = tint.g; c[i * 4 + 2] = tint.b; c[i * 4 + 3] = gain;
+    p[i * 4 + 0] = apex; p[i * 4 + 1] = flare; p[i * 4 + 2] = noiseK; p[i * 4 + 3] = seed;
+    this._w++;
+    return true;
+  }
+
+  end() {
+    this.count = this._w;
+    this.geometry.instanceCount = this.count;
+    for (const a of this.attrs) a.needsUpdate = true;
+  }
+
+  dispose() { this.geometry.dispose(); this.material.dispose(); }
+}
 
 /* ── scratch (§5: zero allocation in update) ───────────────────────────────────────────── */
 const _v1 = new THREE.Vector3();
@@ -735,6 +1030,9 @@ export class Particles {
       this._buildAmbient();
       this._buildSparkles();
 
+      this.shafts = new LightShafts(engine, this.shared, TUNE);
+      this.root.add(this.shafts.mesh);
+
       this.decals = new Decals(engine, { atlas: this.shared.atlas });
       this.root.add(this.decals.mesh);
       this.trails = new Trails(engine, { atlas: this.shared.atlas });
@@ -838,13 +1136,17 @@ export class Particles {
 
     for (const key of Object.keys(AMBIENT)) {
       const def = AMBIENT[key];
-      const additive = key === 'shimmer';
+      const additive = key === 'shimmer' || key === 'air_motes';
       const b = this._batch(def.batch, {
         capacity: def.capacity, additive, loop: true,
         renderOrder: additive ? 12 : 9,
         softness: additive ? 1.6 : 0.9,
-        defines: additive ? ['LOOP', 'WRAP', 'SOFT'] : ['LOOP', 'WRAP', 'SOFT', 'LIT', 'SHAFTS'],
-        litMix: key === 'sand_haze' ? 0.85 : TUNE.ambientLitMix,
+        // air_motes are additive *and* lit: they have to take the key's colour and brighten
+        // inside a blade, which is the whole point of them.
+        defines: key === 'air_motes' ? ['LOOP', 'WRAP', 'SOFT', 'LIT', 'SHAFTS']
+          : additive ? ['LOOP', 'WRAP', 'SOFT']
+            : ['LOOP', 'WRAP', 'SOFT', 'LIT', 'SHAFTS'],
+        litMix: key === 'sand_haze' ? 0.85 : key === 'air_motes' ? 0.95 : TUNE.ambientLitMix,
       });
       b.material.uniforms.uBox.value.set(def.box[0], def.box[1], def.box[2]);
       b.material.uniforms.uFade.value.set(def.fade[0], def.fade[1], def.fade[2], def.fade[3]);
@@ -1029,7 +1331,12 @@ export class Particles {
   names() { return Object.keys(EMITTERS); }
 
   _handle(name, opts) {
-    const def = EMITTERS[name] || (name === 'torch' || name === 'brazier' ? null : undefined);
+    /* A fire is a composite, not a single curve: a flame core, a body above it, embers and
+       smoke, all on one handle. `embers` is in this set because that is the name PROPS
+       gives a brazier (`Props.js:317`), and a brazier wants the whole fire — it was the
+       eight-warnings-a-boot gap, and the reason `night` and `guard` had unlit braziers. */
+    const fire = FIRE_NAMES.has(name);
+    const def = EMITTERS[name] || (fire ? null : undefined);
     if (def === undefined) {
       this.engine.warn(`fx: no emitter named "${name}"`);
       return null;
@@ -1042,13 +1349,74 @@ export class Particles {
     h.object = null;
     h.alive = true;
     h.accum = 0;
-    h.scale = opts.scale ?? 1;
+    h.scale = opts.scale ?? (name === 'embers' || name === 'brazier' ? 1.35 : 1);
     h.opts = opts;
-    h.kind = (name === 'torch' || name === 'brazier') ? 'fire' : 'single';
-    h.rate = opts.rate ?? (h.kind === 'fire' ? 1 : 8);
+    h.kind = fire ? 'fire' : 'single';
+    // A fire at rate 1 spawns one 0.3 s core sprite a second, i.e. it is *out* two thirds of
+    // the time. 7/s keeps two or three overlapping, which is what reads as a flame.
+    h.rate = opts.rate ?? (h.kind === 'fire' ? TUNE.fireRate : 8);
     h.position.set(0, 0, 0);
     this.emitters.push(h);
     return h;
+  }
+
+  /** One tick of a fire: core, body, embers, smoke. `age` back-dates it (see `_prerollFires`). */
+  _fireTick(h, age) {
+    _v3.copy(h.position);
+    this._emit('fire_core', _v3, { scale: h.scale, age });
+    this._emit('embers', _v3, { scale: h.scale, dir: UP, age });
+    _v3.y += 0.16 * h.scale;
+    this._emit('fire_body', _v3, { scale: h.scale, dir: UP, age });
+    _v3.y += 0.30 * h.scale;
+    this._emit('torch_smoke', _v3, { scale: h.scale, dir: UP, age });
+  }
+
+  /**
+   * The canonical shots are stills captured 17 frames — 0.28 s — after the camera is posed,
+   * and a continuous emitter has produced almost nothing by then. So when a shot is staged,
+   * every fire near the camera is run *backwards*: a couple of seconds of ticks spawned with
+   * back-dated birth times, which the vertex shader integrates to exactly the plume that
+   * would have been there. Without this, braziers are lit in motion and dark in every
+   * screenshot the critic ever sees.
+   */
+  _prerollFires() {
+    const cam = this.engine.camera;
+    if (!cam) return;
+    cam.getWorldPosition(_cam);
+    const cull2 = TUNE.firePreroll[2] * TUNE.firePreroll[2];
+    for (let i = 0; i < this.emitters.length; i++) {
+      const h = this.emitters[i];
+      if (h.kind !== 'fire' || !h.alive) continue;
+      if (h.object) h.object.getWorldPosition(h.position);
+      if (h.position.distanceToSquared(_cam) > cull2) continue;
+      const ticks = TUNE.firePreroll[0];
+      const span = TUNE.firePreroll[1];
+      for (let k = ticks; k >= 1; k--) this._fireTick(h, (k / ticks) * span);
+    }
+  }
+
+  /**
+   * Same problem, same cure, for sand tearing off the dune crests. `crest_stream` fires at
+   * ~8 bursts a second across the whole ring, so 0.28 s of staged time buys about two of
+   * them — which is why a golden-hour desert wide shot has come back twice now with §7.3's
+   * "no airborne particulate" against it. Back-date two seconds of them instead.
+   */
+  _prerollCrests() {
+    const terrain = this.engine.get('terrain');
+    if (!terrain?.heightAt) return;
+    const frame = this._frame;
+    this._frame = 0;                       // force the crest probe to run this call
+    this._updateCrestWind(0);              // dt 0: probes, emits nothing
+    this._frame = frame;
+    if (!this._crestCount) return;
+    const n = TUNE.crestPreroll[0], span = TUNE.crestPreroll[1];
+    for (let k = n; k >= 1; k--) {
+      const s = this._crests[(this.rand() * this._crestCount) | 0];
+      if (!s) continue;
+      _v3.set(s.x, s.y + 0.25, s.z);
+      _dir.copy(this.windDir).setY(0.35).normalize();
+      this._emit('crest_stream', _v3, { dir: _dir, scale: 0.8 + s.w, age: (k / n) * span });
+    }
   }
 
   /* ================================================================= spawning */
@@ -1100,10 +1468,12 @@ export class Particles {
     const spd0 = def.speed ? def.speed[0] : 0, spd1 = def.speed ? def.speed[1] : 0;
     const speedScale = opts?.speed ?? 1;
     const alphaScale = opts?.alpha ?? 1;
+    const age = opts?.age ?? 0;
 
     for (let i = 0; i < n; i++) {
       const life = R.range(life0, life1);
-      const idx = batch.slot(t + life);
+      if (age >= life) continue;                 // already dead before it was written
+      const idx = batch.slot(t + life - age);
       const s = R.range(0.8, 1.25) * scale;
 
       /* direction */
@@ -1148,7 +1518,9 @@ export class Particles {
       }
 
       const at = batch.aTime.array;
-      at[idx * 4 + 0] = t;
+      // `age` back-dates the birth so a burst can be spawned already part-way through its
+      // life. The motion is integrated analytically from t0, so this is exact, not a fake.
+      at[idx * 4 + 0] = t - age;
       at[idx * 4 + 1] = life;
       at[idx * 4 + 2] = R();
       at[idx * 4 + 3] = (def.wind ?? 0) * (0.6 + R() * 0.8);
@@ -1259,6 +1631,9 @@ export class Particles {
    */
   _stageShot(name) {
     const mv = this.engine.get('movement');
+    this._prerollFires();
+    this._prerollCrests();
+    this._motesBuilt = -1;          // re-seat the dust against whatever this shot is lit by
     if (name === 'combat') {
       _v3.set(0, 1.28, 2.05);
       if (mv?.position) { _v3.copy(mv.position); _v3.y += 1.28; }
@@ -1295,6 +1670,8 @@ export class Particles {
     this._updateCrestWind(dt);
     this._deadReckonFootsteps(dt);
     this._updateSparkles(dt, t);
+
+    if (this.shafts) this.shafts.material.uniforms.uTime.value = t;
 
     const density = this._density();
     let live = 0;
@@ -1438,34 +1815,90 @@ export class Particles {
   _updateShafts() {
     const lighting = this.engine.get('lighting');
     const shafts = lighting?.shafts;
-    const n = Math.min(MAX_SHAFTS, shafts?.length ?? 0);
-    for (let i = 0; i < n; i++) {
-      const s = shafts[i];
-      if (!s?.origin || !s?.dir) continue;
-      this.shared.shaftA[i].set(s.origin.x, s.origin.y, s.origin.z, (s.width ?? 1.8) * 0.5);
+    const list = this._activeShafts(shafts);
+
+    /* --- the dust-boost uniforms: the six nearest live *slab* blades ------------------- */
+    this.engine.camera.getWorldPosition(_cam);
+    const pick = this._shaftPick || (this._shaftPick = []);
+    pick.length = 0;
+    for (let i = 0; i < list.length; i++) {
+      const s = list[i];
+      if (s.kind === 'cone') continue;
+      const d = s.origin.distanceToSquared(_cam);
+      let j = pick.length;
+      if (j >= MAX_SHAFTS && d >= pick[MAX_SHAFTS - 1]._d) continue;
+      s._d = d;
+      pick.push(s);
+      while (j > 0 && pick[j - 1]._d > d) { pick[j] = pick[j - 1]; pick[j - 1] = s; j--; }
+      if (pick.length > MAX_SHAFTS) pick.length = MAX_SHAFTS;
+    }
+    let span = 1.4;
+    for (let i = 0; i < pick.length; i++) {
+      const s = pick[i];
+      this.shared.shaftA[i].set(s.origin.x, s.origin.y, s.origin.z, Math.max(0.4, s.halfV ?? 0.9));
       this.shared.shaftB[i].set(s.dir.x, s.dir.y, s.dir.z, s.length ?? 14);
       const ax = s.axis || _v1.set(1, 0, 0);
       this.shared.shaftC[i].set(ax.x, ax.y, ax.z, s.intensity ?? 0);
+      span = Math.max(span, s.halfU ?? 1.4);
     }
-    const span = (shafts?.[0]?.span ?? 42) * 0.5;
     for (const b of this.batches.values()) {
       const u = b.material.uniforms;
-      if (u.uShaftN) u.uShaftN.value = n;
+      if (u.uShaftN) u.uShaftN.value = pick.length;
       if (u.uShaftSpan) u.uShaftSpan.value = span;
     }
 
-    // Motes are placed *inside* the blades, so they must be rebuilt when the blades move
-    // (time of day) or when LIGHTING first publishes them.
-    const sig = n * 1000 + Math.round((shafts?.[0]?.intensity ?? 0) * 100) +
-                Math.round((shafts?.[0]?.length ?? 0) * 10) + (this._orphans?.length ?? 0);
+    /* --- the blades themselves -------------------------------------------------------- */
+    const sh = this.shafts;
+    if (sh) {
+      // §4.2: respect engine.quality. The `low` tier switches volumetrics off outright.
+      sh.mesh.visible = this.engine.settings?.volumetrics !== false;
+      sh.begin();
+      for (let i = 0; i < list.length; i++) {
+        const s = list[i];
+        const cone = s.kind === 'cone';
+        // `s.color` is already in the linear working space (LIGHTING copies it off the
+        // atmosphere's sun/torch colours), so it goes straight to the shader.
+        _col.copy(s.color);
+        const gain = s.intensity * TUNE.shaftGain * (cone ? TUNE.shaftConeGain : 1);
+        if (gain < 0.006) continue;
+        if (!sh.push(s, _col, gain,
+          cone ? 0.14 : 1.0,
+          cone ? 0.0 : (s.flare ?? 0.25),
+          cone ? 5.5 : 3.2,
+          (i * 0.6180339887) % 1)) break;
+      }
+      sh.end();
+    }
+
+    /* Motes live *inside* the blades, so they are rebuilt whenever the blades move (a time
+       of day change) or when LIGHTING first publishes a real set. Keyed on *lengths*, never
+       on intensity: a cone's intensity carries the fire's flicker and would re-seed nine
+       hundred particles on every single frame. Time of day and shot staging invalidate this
+       explicitly, so it only has to notice the set itself changing. */
+    let sig = list.length * 977;
+    for (let i = 0; i < list.length; i++) sig += Math.round((list[i].length || 0) * 4) * (i + 1);
     if (sig !== this._motesBuilt) {
       this._motesBuilt = sig;
-      this._buildMotes(shafts, n);
+      this._buildMotes(list);
     }
   }
 
-  /** Distribute motes through the published shaft volumes (and around torches). */
-  _buildMotes(shafts, n) {
+  /** Live blades only, in a reused array — `update()` allocates nothing (§5). */
+  _activeShafts(shafts) {
+    const out = this._shaftLive || (this._shaftLive = []);
+    out.length = 0;
+    if (!shafts) return out;
+    for (let i = 0; i < shafts.length; i++) {
+      const s = shafts[i];
+      if (!s?.origin || !s?.dir) continue;
+      if ((s.intensity ?? 0) <= 0.012) continue;
+      out.push(s);
+    }
+    return out;
+  }
+
+  /** Distribute motes through the live shaft volumes: sun blades and torch cones alike. */
+  _buildMotes(list) {
     const b = this.motes;
     if (!b) return;
     const R = rng(0x903e5);
@@ -1474,39 +1907,42 @@ export class Particles {
     const c1 = lin(MOTES.col1, new THREE.Color());
     const tc0 = lin(TORCH_MOTES.col0, new THREE.Color());
     const tc1 = lin(TORCH_MOTES.col1, new THREE.Color());
-    const torches = this._orphans || [];
-    const lit = n > 0 && (shafts[0]?.intensity ?? 0) > 0.02;
-    const sources = (lit ? n : 0) + torches.length;
+    const sources = list.length;
     if (sources === 0) { b._used = 0; b._dirty = true; return; }
 
-    const span = (shafts?.[0]?.span ?? 42) * 0.5;
     for (let i = 0; i < cap; i++) {
-      const src = i % sources;
+      const s = list[i % sources];
+      const cone = s.kind === 'cone';
       const life = R.range(MOTES.life[0], MOTES.life[1]);
       let x, y, z, tint0 = c0, tint1 = c1, alpha, size;
 
-      if (lit && src < n) {
-        const s = shafts[src];
-        const along = R.range(-span * 0.92, span * 0.92);
-        const down = R.range(0.04, 0.98) * (s.length ?? 14);
-        const across = R.jitter((s.width ?? 1.8) * 0.55);
-        const ax = s.axis || UP;
-        x = s.origin.x + s.dir.x * down + ax.x * along + across * 0.6;
-        y = s.origin.y + s.dir.y * down + ax.y * along;
-        z = s.origin.z + s.dir.z * down + ax.z * along + across * 0.6;
-        // Brightest near the top of the blade where the beam is tightest.
-        const k = 1 - down / Math.max(1, s.length ?? 14);
+      if (!cone) {
+        const halfU = s.halfU ?? 1.3, halfV = s.halfV ?? 1.1;
+        const len = s.length ?? 14;
+        const down = R.range(0.03, 0.97) * len;
+        // Widen with the blade, so the dust column is the shape of the light and not a tube.
+        const f = 1 + (s.flare ?? 0.25) * (down / Math.max(1, len));
+        const au = R.range(-1, 1) * halfU * f * 0.92;
+        const av = R.range(-1, 1) * halfV * f * 0.92;
+        const ax = s.axis || UP, ax2 = s.axis2 || UP;
+        x = s.origin.x + s.dir.x * down + ax.x * au + ax2.x * av;
+        y = s.origin.y + s.dir.y * down + ax.y * au + ax2.y * av;
+        z = s.origin.z + s.dir.z * down + ax.z * au + ax2.z * av;
+        // Brightest near the opening where the beam is tightest and least hazed.
+        const k = 1 - down / Math.max(1, len);
         alpha = R.range(MOTES.alpha[0], MOTES.alpha[1]) * (0.45 + 0.75 * k) *
                 THREE.MathUtils.clamp(s.intensity ?? 1, 0.2, 1.4);
         size = R.range(MOTES.size[0], MOTES.size[1]) * (0.8 + 0.5 * k);
       } else {
-        const h = torches[(src - (lit ? n : 0) + torches.length) % torches.length];
-        const p = h?.position || _v1.set(0, 0, 0);
-        const a = R.range(0, 6.2832), rr = Math.sqrt(R()) * TORCH_MOTES.radius;
-        x = p.x + Math.cos(a) * rr;
-        y = p.y + R.range(-0.2, 1.9);
-        z = p.z + Math.sin(a) * rr;
-        alpha = R.range(TORCH_MOTES.alpha[0], TORCH_MOTES.alpha[1]);
+        const len = s.length ?? 2.6;
+        const t = R.range(0.05, 1.0);
+        const rr = Math.sqrt(R()) * Math.max(0.35, (s.halfU ?? 0.8)) * t * 1.6;
+        const a = R.range(0, 6.2832);
+        x = s.origin.x + s.dir.x * len * t + Math.cos(a) * rr;
+        y = s.origin.y + s.dir.y * len * t + (s.dir.y === 0 ? Math.sin(a) * rr : 0);
+        z = s.origin.z + s.dir.z * len * t + Math.sin(a) * rr;
+        alpha = R.range(TORCH_MOTES.alpha[0], TORCH_MOTES.alpha[1]) *
+                THREE.MathUtils.clamp(s.intensity ?? 1, 0.15, 1.3);
         size = R.range(TORCH_MOTES.size[0], TORCH_MOTES.size[1]);
         tint0 = tc0;
         tint1 = tc1;
@@ -1559,6 +1995,12 @@ export class Particles {
         const l = this.engine.get('lighting');
         const day = THREE.MathUtils.clamp((l?.keyLight?.intensity ?? 2) / 2.4, 0, 1);
         b.material.uniforms.uOpacity.value = day * day;
+      } else if (b.name === 'airMotes') {
+        // Backlit dust is a daylight phenomenon. At night it thins to a suggestion rather
+        // than turning the frame into falling snow.
+        const l = this.engine.get('lighting');
+        const night = l?.atmosphere?.nightAmount ?? 0;
+        b.material.uniforms.uOpacity.value = THREE.MathUtils.lerp(1, 0.30, night);
       }
     }
   }
@@ -1572,6 +2014,8 @@ export class Particles {
       this._motesBuilt = -1;
     }
     const density = this._density();
+    this.engine.camera.getWorldPosition(_cam);
+    const cull2 = TUNE.fireCull * TUNE.fireCull;
     for (let i = 0; i < this.emitters.length; i++) {
       const h = this.emitters[i];
       if (!h.alive) continue;
@@ -1579,19 +2023,22 @@ export class Particles {
         h.object.getWorldPosition(h.position);
         if (h.opts?.offset) h.position.add(h.opts.offset);
       }
+      /* The level registers two dozen fires and sixteen wall torches, all emitting all the
+         time. At 8 smoke puffs a second each that is ~300 live smoke particles against a
+         batch capacity of 220, so the ring wraps and the puff nearest the camera gets
+         evicted by one sixty metres away. A place-anchored emitter beyond the cull radius
+         simply stops. (Object-tracked emitters — the player's — are never culled.) */
+      if (!h.object) {
+        if (this._frame % 4 === (i & 3)) h._far = h.position.distanceToSquared(_cam) > cull2;
+        if (h._far) { h.accum = 0; continue; }
+      }
+
       h.accum += dt * h.rate * density;
       let guard = 0;
       while (h.accum >= 1 && guard++ < 6) {
         h.accum -= 1;
-        if (h.kind === 'fire') {
-          _v3.copy(h.position);
-          this._emit('fire_core', _v3, { scale: h.scale });
-          this._emit('ember', _v3, { scale: h.scale, dir: UP });
-          _v3.y += 0.35 * h.scale;
-          this._emit('torch_smoke', _v3, { scale: h.scale, dir: UP });
-        } else {
-          this._emit(h.name, h.position, h.opts);
-        }
+        if (h.kind === 'fire') this._fireTick(h, 0);
+        else this._emit(h.name, h.position, h.opts);
       }
     }
   }
@@ -1707,6 +2154,7 @@ export class Particles {
     this._offs.length = 0;
     for (const b of this.batches.values()) b.dispose();
     this.batches.clear();
+    this.shafts?.dispose();
     this.sparkles?.dispose();
     this.decals?.dispose();
     this.trails?.dispose();

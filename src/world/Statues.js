@@ -80,7 +80,7 @@ function nemes(bag, { w, browY, topY, faceZ, backZ, stripes = 8, rng, lappetDrop
     const t = i / steps, t1 = (i + 1) / steps;
     const ww = w * (1.34 - t * 0.30);
     bag.add(crownKey, chunkAt(-ww / 2, ww / 2, browY + crownH * t, browY + crownH * t1,
-      backZ - 0.10 * w, faceZ - t * 0.16 * w, { rng, jitter: 0.012 * w, round: 0.05 * w }));
+      backZ - 0.10 * w, faceZ - t * 0.16 * w, { rng, jitter: 0.012 * w, round: 0.05 * w, c: 0.055 * w }));
   }
   // Brow band, the fillet the uraeus sits on. Gold, always — it frames the face.
   bag.add('gold', chunkAt(-w * 0.72, w * 0.72, browY - crownH * 0.16, browY + crownH * 0.06,
@@ -92,7 +92,7 @@ function nemes(bag, { w, browY, topY, faceZ, backZ, stripes = 8, rng, lappetDrop
   const drop = lappetDrop ?? crownH * 1.9;
   for (const sx of [-1, 1]) {
     const x0 = sx * w * 0.52, x1 = sx * w * 1.02;
-    const g = chunk(Math.abs(x1 - x0), drop, w * 0.42, { rng, jitter: 0.01 * w, taper: -0.16 * w, chip: sx > 0 ? 0.06 * w : 0 });
+    const g = chunk(Math.abs(x1 - x0), drop, w * 0.42, { rng, jitter: 0.01 * w, taper: -0.16 * w, chip: sx > 0 ? 0.06 * w : 0, c: 0.05 * w });
     place(g, { x: (x0 + x1) / 2, y: browY - drop * 0.5, z: faceZ - w * 0.12, rz: sx * D(2.5) });
     bag.add('gold', g);
     for (let i = 0; i < stripes; i++) {
@@ -129,18 +129,18 @@ export function seatedColossus(opts = {}) {
   for (const sx of [-1, 1]) {
     const cx = sx * 1.72;
     bag.add('stone', chunkAt(cx - 0.86, cx + 0.86, 0.02, LAP - 0.02, 2.3, 3.16,
-      { rng: R, jitter: 0.02, taper: -0.10 }));
+      { rng: R, jitter: 0.02, taper: -0.10, c: 0.11 }));
     // knee: bulges past the shin and past the throne face, so the ledge reads as a knee
     bag.add('stone', chunkAt(cx - 0.92, cx + 0.92, LAP - 0.72, LAP, 2.24, 3.34,
-      { rng: R, jitter: 0.02, round: 0.16 }));
+      { rng: R, jitter: 0.02, round: 0.16, c: 0.16 }));
     // foot
-    bag.add('stone', chunkAt(cx - 0.80, cx + 0.80, 0, 0.46, 2.62, 3.42, { rng: R, jitter: 0.018, chip: worn * 0.14 }));
+    bag.add('stone', chunkAt(cx - 0.80, cx + 0.80, 0, 0.46, 2.62, 3.42, { rng: R, jitter: 0.018, chip: worn * 0.14, c: 0.08 }));
     for (let i = 0; i < 4; i++) {
       bag.add('stone', chunkAt(cx - 0.72 + i * 0.38, cx - 0.40 + i * 0.38, 0, 0.22, 3.30, 3.52, { rng: R, jitter: 0.01 }));
     }
   }
   /* Pleated kilt apron falling between the knees. */
-  bag.add('stone', chunkAt(-0.62, 0.62, LAP - 0.06, HIP, 1.55, 2.72, { rng: R, jitter: 0.02, taper: -0.22 }));
+  bag.add('stone', chunkAt(-0.62, 0.62, LAP - 0.06, HIP, 1.55, 2.72, { rng: R, jitter: 0.02, taper: -0.22, c: 0.09 }));
   for (let i = 0; i < 5; i++) {
     bag.add('stone', chunkAt(-0.58 + i * 0.24, -0.46 + i * 0.24, LAP, HIP - 0.05, 2.66, 2.80, { rng: R, jitter: 0.008 }));
   }
@@ -148,7 +148,7 @@ export function seatedColossus(opts = {}) {
   /* ---- hands flat on the lap, set back so the knee ledge stays landable ---- */
   for (const sx of [-1, 1]) {
     const cx = sx * 1.72;
-    bag.add('stone', chunkAt(cx - 0.70, cx + 0.70, LAP, LAP + 0.34, 0.05, 1.30, { rng: R, jitter: 0.014, round: 0.06 }));
+    bag.add('stone', chunkAt(cx - 0.70, cx + 0.70, LAP, LAP + 0.34, 0.05, 1.30, { rng: R, jitter: 0.014, round: 0.06, c: 0.07 }));
     for (let i = 0; i < 4; i++) {
       bag.add('stone', chunkAt(cx - 0.66 + i * 0.34, cx - 0.38 + i * 0.34, LAP, LAP + 0.30, 1.24, 1.52, { rng: R, jitter: 0.008 }));
     }
@@ -156,14 +156,14 @@ export function seatedColossus(opts = {}) {
   }
 
   /* ---- torso ---- */
-  bag.add('stone', chunkAt(-2.05, 2.05, LAP - 0.1, HIP + 0.35, BACK, 1.15, { rng: R, jitter: 0.022, taper: -0.30 }));
-  bag.add('stone', chunkAt(-2.42, 2.42, HIP + 0.3, CHEST, BACK, 1.30, { rng: R, jitter: 0.025, taper: -0.45 }));
-  bag.add('stone', chunkAt(-HW, HW, CHEST - 0.15, SHO, BACK, 1.12, { rng: R, jitter: 0.02, round: 0.18, chip: worn * 0.18 }));
+  bag.add('stone', chunkAt(-2.05, 2.05, LAP - 0.1, HIP + 0.35, BACK, 1.15, { rng: R, jitter: 0.022, taper: -0.30, c: 0.16 }));
+  bag.add('stone', chunkAt(-2.42, 2.42, HIP + 0.3, CHEST, BACK, 1.30, { rng: R, jitter: 0.025, taper: -0.45, c: 0.20 }));
+  bag.add('stone', chunkAt(-HW, HW, CHEST - 0.15, SHO, BACK, 1.12, { rng: R, jitter: 0.02, round: 0.18, chip: worn * 0.18, c: 0.26 }));
   for (const sx of [-1, 1]) {
-    bag.add('stone', chunkAt(sx * 0.30, sx * 1.85, CHEST - 1.30, CHEST - 0.28, 1.05, 1.42, { rng: R, jitter: 0.015, round: 0.12 }));
+    bag.add('stone', chunkAt(sx * 0.30, sx * 1.85, CHEST - 1.30, CHEST - 0.28, 1.05, 1.42, { rng: R, jitter: 0.015, round: 0.12, c: 0.11 }));
     // upper arm hugging the flank, elbow tucked, then the forearm down onto the thigh
-    bag.add('stone', chunkAt(sx * 1.72, sx * 2.62, HIP - 0.15, CHEST + 0.25, -0.85, 0.60, { rng: R, jitter: 0.02, taper: 0.16 }));
-    const fore = chunk(0.95, 0.92, 1.85, { rng: R, jitter: 0.02, taper: 0.1 });
+    bag.add('stone', chunkAt(sx * 1.72, sx * 2.62, HIP - 0.15, CHEST + 0.25, -0.85, 0.60, { rng: R, jitter: 0.02, taper: 0.16, c: 0.15 }));
+    const fore = chunk(0.95, 0.92, 1.85, { rng: R, jitter: 0.02, taper: 0.1, c: 0.12 });
     place(fore, { x: sx * 2.02, y: LAP + 0.62, z: 0.32, rx: D(28), rz: sx * D(4) });
     bag.add('stone', fore);
     bag.add('gold', chunkAt(sx * 1.70, sx * 2.66, CHEST - 0.62, CHEST - 0.30, -0.80, 0.62, { rng: R, jitter: 0.008 }));  // armlet
@@ -181,14 +181,14 @@ export function seatedColossus(opts = {}) {
   bag.absorb(col);
 
   /* ---- neck and head ---- */
-  bag.add('stone', chunkAt(-0.88, 0.88, SHO - 0.35, CHIN + 0.15, -0.60, 0.86, { rng: R, jitter: 0.015 }));
-  bag.add('stone', chunkAt(-1.18, 1.18, CHIN, 9.34, -1.05, 1.22, { rng: R, jitter: 0.02, round: 0.18 }));
-  bag.add('stone', chunkAt(-0.95, 0.95, CHIN - 0.12, CHIN + 0.62, -0.80, 1.16, { rng: R, jitter: 0.015, round: 0.14 }));   // jaw
+  bag.add('stone', chunkAt(-0.88, 0.88, SHO - 0.35, CHIN + 0.15, -0.60, 0.86, { rng: R, jitter: 0.015, c: 0.09 }));
+  bag.add('stone', chunkAt(-1.18, 1.18, CHIN, 9.34, -1.05, 1.22, { rng: R, jitter: 0.02, round: 0.18, c: 0.15 }));
+  bag.add('stone', chunkAt(-0.95, 0.95, CHIN - 0.12, CHIN + 0.62, -0.80, 1.16, { rng: R, jitter: 0.015, round: 0.14, c: 0.11 }));   // jaw
   /* Face height stops short of the nemes band, so the eyeline sits under the headcloth. */
   carveFace(bag, { w: 2.3, h: 1.42, y0: CHIN, z: 1.20, rng: R });
 
   /* ---- false beard: a straight post off the chin, banded, tied to the collar ---- */
-  const beard = chunk(0.62, 1.78, 0.60, { rng: R, jitter: 0.012, taper: -0.14 });
+  const beard = chunk(0.62, 1.78, 0.60, { rng: R, jitter: 0.012, taper: -0.14, c: 0.06 });
   place(beard, { y: CHIN - 0.82, z: 1.14, rx: D(6) });
   bag.add('stone', beard);
   for (let i = 0; i < 5; i++) {
@@ -201,7 +201,7 @@ export function seatedColossus(opts = {}) {
   uraeus(bag, { s: 1.7, y: BROW - 0.05, z: 1.34, rng: R });
 
   /* ---- back pillar carried up behind the crown (ARCHITECTURE's stops at 7.6) ---- */
-  bag.add('stone', chunkAt(-1.72, 1.72, 7.55, TOP + 0.30, -2.90, -1.10, { rng: R, jitter: 0.02, taper: 0.14 }));
+  bag.add('stone', chunkAt(-1.72, 1.72, 7.55, TOP + 0.30, -2.90, -1.10, { rng: R, jitter: 0.02, taper: 0.14, c: 0.13 }));
   bag.add('gold', chunkAt(-1.60, 1.60, TOP + 0.28, TOP + 0.52, -2.95, -1.05, { rng: R, jitter: 0.01 }));
 
   /* ---- four thousand years of weather ---- */
@@ -224,16 +224,16 @@ export function sphinx(opts = {}) {
   const R = rng;
 
   /* plinth */
-  bag.add('lime', chunkAt(-1.15, 1.15, 0, 0.72, -2.55, 2.35, { rng: R, jitter: 0.03, chip: worn * 0.16 }));
+  bag.add('lime', chunkAt(-1.15, 1.15, 0, 0.72, -2.55, 2.35, { rng: R, jitter: 0.03, chip: worn * 0.16, c: 0.06 }));
   bag.add('lime', chunkAt(-1.22, 1.22, 0.66, 0.84, -2.62, 2.42, { rng: R, jitter: 0.02 }));
 
   /* body: long, low, tapering to the haunch */
-  bag.add('lime', chunkAt(-0.80, 0.80, 0.84, 1.92, -2.05, 0.95, { rng: R, jitter: 0.025, taper: 0.14 }));
-  bag.add('lime', chunkAt(-0.86, 0.86, 0.84, 2.05, -2.15, -0.55, { rng: R, jitter: 0.03, round: 0.18 }));   // haunches
+  bag.add('lime', chunkAt(-0.80, 0.80, 0.84, 1.92, -2.05, 0.95, { rng: R, jitter: 0.025, taper: 0.14, c: 0.10 }));
+  bag.add('lime', chunkAt(-0.86, 0.86, 0.84, 2.05, -2.15, -0.55, { rng: R, jitter: 0.03, round: 0.18, c: 0.14 }));   // haunches
   for (const sx of [-1, 1]) {
-    bag.add('lime', chunkAt(sx * 0.32, sx * 0.92, 0.84, 1.45, -2.30, -1.35, { rng: R, jitter: 0.02, round: 0.12 }));
+    bag.add('lime', chunkAt(sx * 0.32, sx * 0.92, 0.84, 1.45, -2.30, -1.35, { rng: R, jitter: 0.02, round: 0.12, c: 0.08 }));
     /* forelegs run right out to the front of the plinth — the classic sphinx read */
-    bag.add('lime', chunkAt(sx * 0.30, sx * 0.86, 0.84, 1.42, 0.55, 2.18, { rng: R, jitter: 0.02, taper: 0.08 }));
+    bag.add('lime', chunkAt(sx * 0.30, sx * 0.86, 0.84, 1.42, 0.55, 2.18, { rng: R, jitter: 0.02, taper: 0.08, c: 0.07 }));
     bag.add('lime', chunkAt(sx * 0.26, sx * 0.92, 0.84, 1.20, 1.92, 2.34, { rng: R, jitter: 0.015, round: 0.08 }));
     for (let i = 0; i < 3; i++) {
       bag.add('lime', chunkAt(sx * 0.30 + i * sx * 0.19, sx * 0.44 + i * sx * 0.19, 0.84, 1.02, 2.20, 2.40, { rng: R, jitter: 0.008 }));
@@ -246,11 +246,11 @@ export function sphinx(opts = {}) {
   }
 
   /* chest rising into the shoulders */
-  bag.add('lime', chunkAt(-0.78, 0.78, 1.60, 2.30, 0.35, 1.20, { rng: R, jitter: 0.02, taper: -0.14 }));
+  bag.add('lime', chunkAt(-0.78, 0.78, 1.60, 2.30, 0.35, 1.20, { rng: R, jitter: 0.02, taper: -0.14, c: 0.09 }));
 
   /* head — oversized on purpose */
   const CHIN = 2.34, BROW = 3.02, TOP = 3.44;
-  bag.add('lime', chunkAt(-0.50, 0.50, CHIN, 3.10, -0.15, 1.25, { rng: R, jitter: 0.015, round: 0.10 }));
+  bag.add('lime', chunkAt(-0.50, 0.50, CHIN, 3.10, -0.15, 1.25, { rng: R, jitter: 0.015, round: 0.10, c: 0.06 }));
   carveFace(bag, { w: 1.0, h: 0.80, y0: CHIN, z: 1.24, rng: R, brows: false });
   nemes(bag, { w: 1.02, browY: BROW, topY: TOP, faceZ: 1.28, backZ: -0.30, stripes: 5, rng: R, lappetDrop: 1.30 });
   uraeus(bag, { s: 0.7, y: BROW - 0.02, z: 1.34, rng: R });
@@ -269,11 +269,11 @@ export function anubis(opts = {}) {
   const bag = new Bag();
   const R = rng;
 
-  bag.add('dark', chunkAt(-0.85, 0.85, 0, 1.20, -1.05, 1.05, { rng: R, jitter: 0.02, chip: 0.10 }));
+  bag.add('dark', chunkAt(-0.85, 0.85, 0, 1.20, -1.05, 1.05, { rng: R, jitter: 0.02, chip: 0.10, c: 0.06 }));
   bag.add('dark', chunkAt(-0.92, 0.92, 1.14, 1.34, -1.12, 1.12, { rng: R, jitter: 0.015 }));
 
   /* haunches and folded hind legs */
-  bag.add('dark', chunkAt(-0.62, 0.62, 1.34, 2.10, -0.95, 0.05, { rng: R, jitter: 0.02, round: 0.16 }));
+  bag.add('dark', chunkAt(-0.62, 0.62, 1.34, 2.10, -0.95, 0.05, { rng: R, jitter: 0.02, round: 0.16, c: 0.08 }));
   for (const sx of [-1, 1]) {
     bag.add('dark', chunkAt(sx * 0.34, sx * 0.72, 1.34, 1.86, -0.85, 0.35, { rng: R, jitter: 0.015, round: 0.12 }));
     /* straight front legs — the upright, alert line */
@@ -284,18 +284,18 @@ export function anubis(opts = {}) {
     }
   }
   /* torso: a straight sloping back, chest thrown forward */
-  bag.add('dark', chunkAt(-0.52, 0.52, 2.00, 3.10, -0.45, 0.66, { rng: R, jitter: 0.018, taper: 0.12 }));
+  bag.add('dark', chunkAt(-0.52, 0.52, 2.00, 3.10, -0.45, 0.66, { rng: R, jitter: 0.018, taper: 0.12, c: 0.07 }));
   bag.add('dark', chunkAt(-0.36, 0.36, 2.95, 3.42, -0.28, 0.42, { rng: R, jitter: 0.014 }));
 
   /* head + snout */
-  bag.add('dark', chunkAt(-0.36, 0.36, 3.30, 3.78, -0.38, 0.34, { rng: R, jitter: 0.014, round: 0.06 }));
-  const snout = chunk(0.30, 0.30, 1.00, { rng: R, jitter: 0.01, taper: 0.06 });
+  bag.add('dark', chunkAt(-0.36, 0.36, 3.30, 3.78, -0.38, 0.34, { rng: R, jitter: 0.014, round: 0.06, c: 0.05 }));
+  const snout = chunk(0.30, 0.30, 1.00, { rng: R, jitter: 0.01, taper: 0.06, c: 0.04 });
   place(snout, { y: 3.44, z: 0.74, rx: D(-7) });
   bag.add('dark', snout);
   bag.add('paintDark', place(chunk(0.20, 0.16, 0.12, { rng: R, jitter: 0.006 }), { y: 3.46, z: 1.24 }));
   /* ears: tall, tapered, tipped back a few degrees so they are not parallel */
   for (const sx of [-1, 1]) {
-    const ear = chunk(0.24, 0.86, 0.34, { rng: R, jitter: 0.008, taper: 0.14 });
+    const ear = chunk(0.24, 0.86, 0.34, { rng: R, jitter: 0.008, taper: 0.14, c: 0.035 });
     place(ear, { x: sx * 0.26, y: 4.12, z: -0.06, rz: sx * D(9), rx: D(-6) });
     bag.add('dark', ear);
     bag.add('gold', place(chunk(0.13, 0.62, 0.10, { rng: R, jitter: 0.005, taper: 0.08 }),
@@ -341,13 +341,13 @@ export function falconRa(opts = {}) {
       bag.add('gold', chunkAt(sx * 0.12 + i * sx * 0.15, sx * 0.24 + i * sx * 0.15, 0.52, 0.66, 0.54 + adv, 0.68 + adv, { rng: R, jitter: 0.005 }));
     }
   }
-  bag.add('gold', chunkAt(-0.64, 0.64, 1.96, 2.72, -0.44, 0.50, { rng: R, jitter: 0.015, taper: 0.24 }));
+  bag.add('gold', chunkAt(-0.64, 0.64, 1.96, 2.72, -0.44, 0.50, { rng: R, jitter: 0.015, taper: 0.24, c: 0.05 }));
   bag.add('gold', place(wedge(0.46, 0.70, 0.16, { rng: R, tipY: 1, tipW: 0.25 }), { y: 2.28, z: 0.54 }));   // kilt apron
   bag.add('lapis', chunkAt(-0.66, 0.66, 2.62, 2.76, -0.46, 0.52, { rng: R, jitter: 0.008 }));               // belt
 
   /* torso and shoulders */
-  bag.add('gold', chunkAt(-0.60, 0.60, 2.68, 3.56, -0.42, 0.46, { rng: R, jitter: 0.015, taper: -0.26 }));
-  bag.add('gold', chunkAt(-0.88, 0.88, 3.44, 3.80, -0.44, 0.44, { rng: R, jitter: 0.012, round: 0.08 }));
+  bag.add('gold', chunkAt(-0.60, 0.60, 2.68, 3.56, -0.42, 0.46, { rng: R, jitter: 0.015, taper: -0.26, c: 0.06 }));
+  bag.add('gold', chunkAt(-0.88, 0.88, 3.44, 3.80, -0.44, 0.44, { rng: R, jitter: 0.012, round: 0.08, c: 0.07 }));
   for (const sx of [-1, 1]) {
     bag.add('gold', chunkAt(sx * 0.60, sx * 0.90, 2.44, 3.58, -0.24, 0.24, { rng: R, jitter: 0.012, taper: 0.06 }));
     bag.add('gold', chunkAt(sx * 0.56, sx * 0.94, 2.26, 2.52, -0.26, 0.30, { rng: R, jitter: 0.01, round: 0.06 }));   // fist
@@ -366,7 +366,7 @@ export function falconRa(opts = {}) {
   /* falcon head */
   const CHIN = 3.74;
   bag.add('gold', chunkAt(-0.30, 0.30, 3.66, 3.86, -0.30, 0.32, { rng: R, jitter: 0.01 }));                 // neck
-  bag.add('gold', chunkAt(-0.40, 0.40, CHIN, 4.42, -0.38, 0.40, { rng: R, jitter: 0.014, round: 0.12 }));
+  bag.add('gold', chunkAt(-0.40, 0.40, CHIN, 4.42, -0.38, 0.40, { rng: R, jitter: 0.014, round: 0.12, c: 0.05 }));
   /* beak: two wedges, the upper one hooked down over the lower */
   bag.add('gold', place(wedge(0.22, 0.34, 0.42, { rng: R, tipW: 0.35, tipZ: -0.06 }), { y: 4.06, z: 0.52, rx: D(74) }));
   bag.add('dark', place(chunk(0.14, 0.10, 0.16, { rng: R, jitter: 0.005 }), { y: 3.96, z: 0.58, rx: D(14) }));
@@ -419,7 +419,7 @@ export function coffinLid(opts = {}) {
   ];
   for (let i = 0; i < rows.length - 1; i++) {
     const [y0, w0, d0] = rows[i], [y1, w1] = rows[i + 1];
-    const g = chunk((w0 + w1) * L, (y1 - y0) * L + 0.03, d0 * 2 * L, { rng: R, jitter: 0.012, round: 0.06, taper: (w0 - w1) * L });
+    const g = chunk((w0 + w1) * L, (y1 - y0) * L + 0.03, d0 * 2 * L, { rng: R, jitter: 0.012, round: 0.06, taper: (w0 - w1) * L, c: 0.05 * L });
     place(g, { y: (y0 + y1) * 0.5 * L, z: 0 });
     bag.add('goldWorn', g);
   }
@@ -460,8 +460,8 @@ export function fallenHead(opts = {}) {
   const bag = new Bag();
   const R = rng;
   const CHIN = 0, BROW = 1.42, TOP = 2.02;
-  bag.add('stone', chunkAt(-0.82, 0.82, CHIN, 1.62, -0.72, 0.86, { rng: R, jitter: 0.03, round: 0.14, chip: 0.22 }));
-  bag.add('stone', chunkAt(-0.66, 0.66, CHIN - 0.10, CHIN + 0.44, -0.55, 0.80, { rng: R, jitter: 0.02, round: 0.10 }));
+  bag.add('stone', chunkAt(-0.82, 0.82, CHIN, 1.62, -0.72, 0.86, { rng: R, jitter: 0.03, round: 0.14, chip: 0.22, c: 0.10 }));
+  bag.add('stone', chunkAt(-0.66, 0.66, CHIN - 0.10, CHIN + 0.44, -0.55, 0.80, { rng: R, jitter: 0.02, round: 0.10, c: 0.08 }));
   carveFace(bag, { w: 1.6, h: 1.55, y0: CHIN, z: 0.84, rng: R });
   nemes(bag, { w: 1.65, browY: BROW, topY: TOP, faceZ: 0.86, backZ: -0.95, stripes: 6, rng: R, lappetDrop: 1.5 });
   /* the break: a ragged stump where the neck was */

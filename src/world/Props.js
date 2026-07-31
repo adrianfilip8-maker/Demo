@@ -31,11 +31,11 @@ const MATERIALS = {
   gold:      { tex: 'gold_leaf',          color: 0xe8b942, rough: 0.28, metal: true, outline: 1.0, spec: 0.9, gloss: 96 },
   bronze:    { tex: 'bronze_aged',        color: 0x8a6a3a, rough: 0.52, metal: true, outline: 1.0, spec: 0.6, gloss: 48 },
   wood:      { tex: 'wood_old',           color: 0x6b4a2c, rough: 0.9,  outline: 0.85 },
-  rope:      { tex: 'rope',               color: 0xa8875c, rough: 0.95, outline: 0.6 },
+  rope:      { tex: 'rope',               color: 0xa8875c, rough: 0.95, outline: 0.6, noShadow: true },
   cloth:     { tex: 'linen_cloth',        color: 0xe8ddc4, rough: 0.85, outline: 0.8, side: THREE.DoubleSide },
   dark:      { tex: null,                 color: 0x241a16, rough: 0.9,  outline: 0.9 },
-  lapis:     { tex: 'lapis_inlay',        color: 0x1f4f96, rough: 0.35, outline: 0.9 },
-  carnelian: { tex: 'carnelian_inlay',    color: 0xb8452c, rough: 0.4,  outline: 0.9 },
+  lapis:     { tex: 'lapis_inlay',        color: 0x1f4f96, rough: 0.35, outline: 0.9, noShadow: true },
+  carnelian: { tex: 'carnelian_inlay',    color: 0xb8452c, rough: 0.4,  outline: 0.9, noShadow: true },
   glass:     { tex: null,                 color: 0x8fd8ff, rough: 0.15, outline: 0, transparent: true, opacity: 0.55 },
   cork:      { tex: 'wood_old',           color: 0x8a6a42, rough: 0.95, outline: 0.7 },
   // Emissive — fire and embers must not take an ink outline or they read as stickers.
@@ -352,7 +352,12 @@ export class Props {
       const mesh = new THREE.Mesh(merged, this._mat(key));
       mesh.name = `props_${key}`;
       const spec = MATERIALS[key];
-      if (spec.emissive || spec.transparent) mesh.userData.noShadow = true;
+      /* Three shadow cascades at `high` means a caster is drawn four times. Inlay, rope and
+         loose coinage are either lying flat on a surface that already casts or are thin
+         enough that their shadow is a thread — three extra passes each for nothing. The
+         opt-out has to be `userData.noShadow`, because main.js re-enables castShadow on
+         every opaque mesh after init. */
+      if (spec.emissive || spec.transparent || spec.noShadow) mesh.userData.noShadow = true;
       this.group.add(mesh);
       this.stats.draws++;
       this.stats.tris += (merged.index?.count ?? merged.attributes.position.count) / 3;

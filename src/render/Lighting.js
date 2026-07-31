@@ -54,6 +54,25 @@ const TUNE = {
   bounceBoost: 1.0,
   ambientBoost: 1.0,
 
+  /* ── Enclosure ────────────────────────────────────────────────────────────────
+     A sealed room is not lit by the sky, and right now it is: at `interior`'s tod 0.5
+     the tomb — twelve metres underground with a stone ceiling — gets hemi 1.02 and an
+     ambient floor of 0.60, i.e. the full open-desert midday fill, while its six torches
+     put ~0.85 on a wall at two metres. The torches are outnumbered two to one by daylight
+     that has no way in, which is exactly the critic's "the room is lit flat and uniformly
+     ... no falloff, no warm pool" and why `interior` cannot demonstrate the warm/cool
+     tension §7.2 says it exists to prove.
+
+     `encloseStrength` is how much of the sky fill a fully-roofed camera loses. It is 0
+     here on purpose: it changes the exposure of every roofed frame in the game and wants
+     its own bracketed capture before it ships. Raise it there, not here.
+     LIGHTING exposes TUNE on the instance so that bracket can be driven from the harness. */
+  encloseStrength: 0.0,
+  encloseProbe: 30,          // metres straight up; nothing in §8.1 is taller than the pylon
+  encloseEvery: 6,           // frames between probes
+  encloseLerp: 4.0,          // per-second approach, so walking under a roof is not a switch
+  encloseBounce: 0.5,        // the sand bounce dies more slowly than the sky does
+
   /* Local lights */
   localCap: { low: 2, med: 4, high: 6, ultra: 8 },
   localCullDistance: 68,
@@ -85,11 +104,12 @@ const TUNE = {
 
   /* Torch / brazier cones. Built from whatever registered through addLocalLight(), so they
      follow PROPS rather than a second hardcoded list of sconces. */
-  coneMax: 14,
+  coneMax: 26,
   coneLength: 3.1,           // metres, scaled by the light's radius
   coneRadius: 0.42,          // end radius as a fraction of length
   coneApex: 0.10,
   coneDayFade: 0.30,         // how much of a cone survives full daylight above ground
+  coneFade: [30, 56],        // metres from camera: full → gone
 };
 
 /* ── The cascade shader patch ────────────────────────────────────────────────────
@@ -168,6 +188,7 @@ const _corner = new THREE.Vector3();
 const _c1 = new THREE.Color();
 const WORLD_UP = new THREE.Vector3(0, 1, 0);
 const WORLD_FWD = new THREE.Vector3(0, 0, 1);
+const RAY_GROUND = Object.freeze({ onlyTags: ['ground'] });
 
 /** Organic 1-D value noise. Flicker built from a sine reads as a metronome, not a flame. */
 function nz(x) {
@@ -190,9 +211,11 @@ export class Lighting {
   /** @param {import('../core/Engine.js').Engine} engine */
   constructor(engine) {
     this.engine = engine;
+    this.TUNE = TUNE;                   // so the capture harness can bracket a value
 
     this.atmosphere = createAtmosphereState();
     this.timeOfDay = engine.debug.timeOfDay ?? 0.79;
+    this.enclosure = 0;                 // 0 = open sky overhead, 1 = fully roofed
 
     /* ---- published interface (AGENTS.md §4.3 → engine.get('lighting')) ---- */
     this.keyLight = null;              // THREE.DirectionalLight — cascade 0, the lit one
@@ -203,6 +226,14 @@ export class Lighting {
     this.localLights = [];
     this.shadowTint = new THREE.Color(PALETTE.shadowHue);
     this.shadowFloor = SHADOW_FLOOR;
+
+    this._slabCount = 0;
+    this._coneCount = 0;
+    this._localSig = -1;
+    this._archSig = -1;
+    this._shaftPoll = 0;
+    this._rayDone = false;
+    this._shaftSunKey = NaN;
 
     this._cascadeCount = 1;
     this._splits = [];
@@ -446,39 +477,207 @@ export class Lighting {
 
   /* ---------------------------------------------------------------- shafts --- */
 
-  _buildShafts() {
-    // Published as data, not geometry: FX and POSTFX render the volumetrics, but they must
-    // line up with the real openings in §8.1 or the shot reads as fog with no cause.
-    for (let i = 0; i < TUNE.shaftZ.length; i++) {
-      this.shafts.push({
-        id: `clerestory${i}`,
-        origin: new THREE.Vector3(0, TUNE.shaftY, TUNE.shaftZ[i]),
-        dir: new THREE.Vector3(0, -1, 0),      // direction light travels
-        axis: new THREE.Vector3(1, 0, 0),      // the slot's long axis
-        width: TUNE.shaftWidth,
-        span: TUNE.shaftSpanX * 2,             // slot length along axis
-        length: TUNE.shaftY,
-        intensity: 0,
-        color: new THREE.Color(PALETTE.keySun),
-      });
-    }
+  /**
+   * The published shaft list. Each entry is a *volume*, described in the frame of the
+   * opening that motivates it, so FX can extrude geometry straight from it:
+   *
+   *   kind      'slab' (a rectangular opening) | 'cone' (a point source)
+   *   origin    centre of the opening, world space
+   *   normal    the opening's outward normal — a blade only exists while the key can see
+   *             through the hole, which is what makes the *west* clerestory throw beams at
+   *             golden hour and the east one stay dark
+   *   axis/axis2 + halfU/halfV   the opening's two in-plane axes and half-extents
+   *   dir, length                unit travel direction and how far it gets before it lands
+   *   intensity, color           0 = the beam is off this frame
+   *
+   * `width` / `span` / `axis` are kept on every entry because FX's mote placement and its
+   * `shaftBoost()` uniform packing already speak that vocabulary.
+   */
+  _makeShaft(id, kind, origin, normal, axis, axis2, halfU, halfV, gain) {
+    const s = {
+      id, kind, gain,
+      origin: origin.clone(),
+      normal: normal.clone().normalize(),
+      axis: axis.clone().normalize(),
+      axis2: axis2.clone().normalize(),
+      halfU, halfV,
+      dir: new THREE.Vector3(0, -1, 0),
+      length: 12,
+      maxLength: TUNE.shaftMaxLength,
+      flare: TUNE.shaftFlare,
+      intensity: 0,
+      color: new THREE.Color(PALETTE.keySun),
+      /* legacy view of the same volume, for FX's shaftBoost uniforms */
+      width: halfV * 2,
+      span: halfU * 2,
+      _light: null,          // cone shafts only: the local light that owns them
+      _len: 0,               // cached raycast result, invalidated when the sun moves
+    };
+    return s;
   }
 
+  _buildShafts() {
+    this.shafts.length = 0;
+    const api = this.engine.get('architecture')?.api;
+    const V = (x, y, z) => new THREE.Vector3(x, y, z);
+    const X = V(1, 0, 0), Y = V(0, 1, 0), Z = V(0, 0, 1);
+
+    /* --- nave roof slots: horizontal openings, the classic hypostyle blade --- */
+    const slots = (api?.roofSlots?.length ? api.roofSlots : [-24, -32, -40, -48].map((z) => ({
+      center: V(0, 16.6, z), normal: V(0, 1, 0), w: 2.6, h: 2.3,
+    })));
+    slots.forEach((o, i) => {
+      this.shafts.push(this._makeShaft(
+        `roofslot${i}`, 'slab', o.center, o.normal || Y, X, Z,
+        (o.w ?? 2.6) * 0.5, (o.h ?? 2.3) * 0.5, 1.0));
+    });
+
+    /* --- clerestory windows: vertical openings in the band wall, normal ±X --- */
+    const clere = (api?.clerestory?.length ? api.clerestory : [-1, 1].flatMap((sx) =>
+      [-20, -28, -36, -44].map((z) => ({ center: V(sx * 11.4, 15.5, z), normal: V(sx, 0, 0), w: 2.8, h: 1.3 }))));
+    clere.forEach((o, i) => {
+      const n = (o.normal || X).clone().normalize();
+      // In-plane axes of a wall opening: horizontal along the wall, then vertical.
+      const u = _v1.copy(Y).cross(n).normalize();
+      if (u.lengthSq() < 1e-6) u.set(0, 0, 1);
+      this.shafts.push(this._makeShaft(
+        `clerestory${i}`, 'slab', o.center, n, u, Y,
+        (o.w ?? 2.8) * 0.5, (o.h ?? 1.3) * 0.5, 1.0));
+    });
+
+    /* --- courtyard peristyle gaps: §2.3's "shafts through at least one opening in every
+           interior/courtyard", and the beams that rake past the obelisk. --- */
+    for (let i = 0; i < TUNE.courtGapZ.length; i++) {
+      const z = TUNE.courtGapZ[i];
+      for (const sx of [-1, 1]) {
+        this.shafts.push(this._makeShaft(
+          `court${sx > 0 ? 'e' : 'w'}${i}`, 'slab',
+          V(sx * TUNE.courtGapX, TUNE.courtGapY, z), V(sx, 0, 0), Z, Y,
+          TUNE.courtGapW * 0.5, TUNE.courtGapH * 0.5, TUNE.courtShaftGain));
+      }
+    }
+
+    this._slabCount = this.shafts.length;
+    /* `engine.has()` is true from *registration*, not from init, so ARCHITECTURE exists here
+       with an empty api — the openings only appear once its own init() has run. Track the
+       count and re-derive when it changes, rather than latching on the placeholder set. */
+    this._archSig = (api?.roofSlots?.length ?? 0) * 131 + (api?.clerestory?.length ?? 0);
+    this._shaftSunKey = NaN;        // force the length raycasts to re-run
+    this._rebuildCones();
+    this._updateShafts();
+  }
+
+  /**
+   * A cone per registered local light. PROPS registers every brazier and torch through
+   * `addLocalLight`, so this follows the level's real fire rather than a second hardcoded
+   * list of sconces that would drift out of sync with it.
+   */
+  _rebuildCones() {
+    // Drop the previous cone set, keeping the slabs (which are index-stable).
+    this.shafts.length = this._slabCount;
+    const lights = this.localLights;
+    const n = Math.min(TUNE.coneMax, lights.length);
+    for (let i = 0; i < n; i++) {
+      const h = lights[i];
+      // A tomb sconce throws its readable cone *down*, onto the floor the camera is looking
+      // at; an open brazier reads as a column of lit smoke going *up*. Ground level decides.
+      const down = h.position.y < 0;
+      const dir = new THREE.Vector3(0, down ? -1 : 1, 0);
+      const len = THREE.MathUtils.clamp(h.radius * 0.30, 1.6, TUNE.coneLength * 1.6);
+      const r = len * TUNE.coneRadius;
+      const s = this._makeShaft(
+        `cone${i}`, 'cone',
+        _v1.copy(h.position).addScaledVector(dir, down ? 0.15 : -0.05),
+        dir, new THREE.Vector3(1, 0, 0), new THREE.Vector3(0, 0, 1), r, r, 1.0);
+      s.dir.copy(dir);
+      s.length = len;
+      s.maxLength = len;
+      s.flare = 0;                 // a cone already widens; the base mesh carries it
+      s._light = h;
+      s.color.copy(h.color);
+      this.shafts.push(s);
+    }
+    this._coneCount = this.shafts.length - this._slabCount;
+    this._localSig = lights.length;
+  }
+
+  /**
+   * Direction, length and power, every time the sun moves. Lengths come from a real
+   * COLLISION raycast when one is available — a blade that stops on the floor it actually
+   * hits is the difference between a light shaft and a glowing stick through the masonry.
+   */
   _updateShafts() {
     const A = this.atmosphere;
-    // Sun travel direction. A 22° sun through a roof slot throws a long oblique blade
-    // across the hall, which is exactly the shot §2.3 asks for.
+    const col = this.engine.get('collision');
+    const canRay = !!col?.raycast && col.ready !== false;
+
+    /* Sun travel direction. A 22° sun through a roof slot throws a long oblique blade
+       across the hall, which is exactly the shot §2.3 asks for. */
     _lightDir.copy(A.sunDir).multiplyScalar(-1).normalize();
-    const drop = Math.max(0.12, -_lightDir.y);
-    const len = Math.min(TUNE.shaftMaxLength, TUNE.shaftY / drop);
-    // Blades die when the sun is too low to reach the floor, and at night entirely.
     const grazing = THREE.MathUtils.smoothstep(A.sunDir.y, 0.05, 0.45);
-    const power = A.dayAmount * (0.35 + 0.65 * grazing);
-    for (const s of this.shafts) {
+    const power = A.dayAmount * (0.35 + TUNE.shaftGrazeGain * grazing);
+
+    const sunMoved = this._shaftSunKey !== Math.round(A.sunElevation * 4) * 1000 +
+                     Math.round(A.sunAzimuth * 4);
+    if (sunMoved) {
+      this._shaftSunKey = Math.round(A.sunElevation * 4) * 1000 + Math.round(A.sunAzimuth * 4);
+    }
+
+    for (let i = 0; i < this.shafts.length; i++) {
+      const s = this.shafts[i];
+
+      if (s.kind === 'cone') {
+        const h = s._light;
+        if (h) {
+          s.origin.copy(h.position).addScaledVector(s.dir, s.dir.y < 0 ? 0.15 : -0.05);
+          s.color.copy(h.color);
+        }
+        // `_live` carries the flicker for whichever lights won a hardware slot; the rest
+        // fall back to their nominal intensity, so a cone never blinks out just because a
+        // nearer fire took its slot.
+        const live = h ? (h._live > 0 ? h._live : h.intensity) : 0;
+        const norm = THREE.MathUtils.clamp(live / 5.0, 0, 1.4);
+        // Above ground a cone has to compete with the sky, so it mostly belongs to night.
+        const underground = s.origin.y < 0;
+        const day = underground ? 1 : THREE.MathUtils.lerp(TUNE.coneDayFade, 1, A.nightAmount);
+        // Two dozen fires are registered across the level. Only the ones the camera is
+        // actually near have any business adding radiance to the frame.
+        const near = 1 - THREE.MathUtils.smoothstep(Math.sqrt(h?._dist ?? 0), TUNE.coneFade[0], TUNE.coneFade[1]);
+        s.intensity = (h?.enabled === false ? 0 : norm) * day * near;
+        continue;
+      }
+
       s.dir.copy(_lightDir);
-      s.length = len;
-      s.intensity = power;
       s.color.copy(A.sunColor);
+
+      /* Only a hole the sun can see through throws a beam. This is what keeps the east
+         clerestory dark while the west one blazes at golden hour. */
+      const face = s.normal.dot(A.sunDir);
+      const open = THREE.MathUtils.smoothstep(face, TUNE.shaftFaceCos, 0.45);
+      s.intensity = power * open * s.gain;
+
+      if (sunMoved || !s._len) {
+        let len = 0;
+        if (canRay) {
+          try {
+            /* `ground` only, deliberately. A blade *ends* where it lands on a floor; a
+               column standing in the middle of it does not shorten it, it occludes part of
+               it — and the depth test already does that per pixel. Raycasting against
+               everything would truncate half the hall's beams into stubs against the
+               columns they are supposed to rake across. */
+            const hit = col.raycast(s.origin, s.dir, s.maxLength, RAY_GROUND);
+            if (hit?.hit && Number.isFinite(hit.distance)) len = hit.distance;
+          } catch { /* collision not ready; fall through to the analytic length */ }
+        }
+        if (len < 1.0) {
+          // Analytic fallback: drop to the floor plane under the opening.
+          const drop = Math.max(0.08, -s.dir.y);
+          const floor = s.origin.y > 0 ? 0 : -12;
+          len = THREE.MathUtils.clamp((s.origin.y - floor) / drop, 4, s.maxLength);
+        }
+        s._len = Math.min(len + 0.4, s.maxLength);   // a touch past the floor so it lands
+      }
+      s.length = s._len;
     }
   }
 
@@ -548,18 +747,14 @@ export class Lighting {
     if (this._hemi) {
       this._hemi.color.copy(A.hemiSky);
       this._hemi.groundColor.copy(A.hemiGround);
-      this._hemi.intensity = A.hemiIntensity * TUNE.hemiBoost;
     }
     if (this._bounce) {
       this._bounce.color.copy(A.bounceColor);
-      this._bounce.intensity = A.bounceIntensity * TUNE.bounceBoost;
       this._bounce.position.copy(A.bounceDir).multiplyScalar(140);
       this._bounce.target.position.set(0, 0, 0);
     }
-    if (this._ambient) {
-      this._ambient.color.copy(A.ambientColor);
-      this._ambient.intensity = A.ambientIntensity * TUNE.ambientBoost;
-    }
+    if (this._ambient) this._ambient.color.copy(A.ambientColor);
+    this._applyFill();
 
     this.rimDirection.copy(A.rimDir);
     this.rimColor.copy(A.rimColor);
@@ -580,10 +775,81 @@ export class Lighting {
       this._disposeProbe();
     }
 
+    this._updateEnclosure(dt);
+    this._applyFill();
     this._fitCascades();
     this._updateLocalLights(t);
+
+    /* ARCHITECTURE and PROPS both init after this module, so the shaft set is built from the
+       fallback constants first and re-derived from the real openings and the real sconces the
+       moment they exist. Checked on a slow beat: this allocates, and §5 says update() must not. */
+    if ((this._shaftPoll = (this._shaftPoll | 0) + 1) % 8 === 0) {
+      const api = engine.get('architecture')?.api;
+      const sig = (api?.roofSlots?.length ?? 0) * 131 + (api?.clerestory?.length ?? 0);
+      if (sig !== this._archSig) this._buildShafts();
+      else if (this._localSig !== this.localLights.length) this._rebuildCones();
+      // Beam lengths come from a COLLISION raycast; until the BVH is built they are the
+      // analytic fall-back, so re-measure once it can actually answer.
+      const col = engine.get('collision');
+      if (!this._rayDone && col?.raycast && col.ready !== false) {
+        this._rayDone = true;
+        this._shaftSunKey = NaN;
+      }
+    }
+    this._updateShafts();
+
     this._sweepMaterials();
     this._publishKeyLight();
+  }
+
+  /* ---------------------------------------------------------- enclosure --- */
+
+  /**
+   * Is there sky above the camera? One upward ray against COLLISION, on a slow beat and
+   * damped, so walking under an architrave is a dissolve rather than a switch. Nothing is
+   * applied while `encloseStrength` is 0 — see the TUNE note.
+   */
+  _updateEnclosure(dt) {
+    if (TUNE.encloseStrength <= 0) { this.enclosure = 0; return; }
+    const engine = this.engine;
+    if ((this._enclosePoll = (this._enclosePoll | 0) + 1) % TUNE.encloseEvery === 0) {
+      const col = engine.get('collision');
+      let roofed = 0;
+      if (col?.raycast) {
+        engine.camera.getWorldPosition(_camPos);
+        _v3.set(0, 1, 0);
+        try {
+          const hit = col.raycast(_camPos, _v3, TUNE.encloseProbe);
+          if (hit?.hit) roofed = 1;
+        } catch { /* BVH not built yet — treat as open sky */ }
+      }
+      this._encloseTarget = roofed;
+    }
+    const k = Math.min(1, TUNE.encloseLerp * Math.max(dt || 0, 1 / 240));
+    this.enclosure += ((this._encloseTarget || 0) - this.enclosure) * k;
+  }
+
+  /** Sky-fill multiplier for the current enclosure. 1 = open sky. */
+  _encloseFill(bounce) {
+    if (TUNE.encloseStrength <= 0) return 1;
+    const s = TUNE.encloseStrength * this.enclosure * (bounce ? TUNE.encloseBounce : 1);
+    return 1 - THREE.MathUtils.clamp(s, 0, 0.95);
+  }
+
+  /**
+   * Fill intensities, always recomputed from the atmosphere's base values rather than
+   * scaled in place — the enclosure term moves every frame and a multiply-in-place would
+   * compound it away to nothing within a second.
+   */
+  _applyFill() {
+    const A = this.atmosphere;
+    const sky = this._encloseFill(false);
+    const gnd = this._encloseFill(true);
+    if (this._hemi) this._hemi.intensity = A.hemiIntensity * TUNE.hemiBoost * sky;
+    if (this._bounce) this._bounce.intensity = A.bounceIntensity * TUNE.bounceBoost * gnd;
+    if (this._ambient) this._ambient.intensity = A.ambientIntensity * TUNE.ambientBoost * sky;
+    this._fillSky = sky;
+    this._fillGround = gnd;
   }
 
   /* --------------------------------------------------------- cascade fit --- */
@@ -830,9 +1096,14 @@ export class Lighting {
     p.color.copy(A.keyColor);
     p.intensity = A.keyIntensity * TUNE.keyBoost;
     p.ambient.color.copy(A.ambientColor);
-    p.ambient.intensity = A.ambientIntensity * TUNE.ambientBoost;
+    // SHADING consumes this, not the scene lights, so the enclosure term has to reach it
+    // through the payload or half the world would ignore it.
+    p.ambient.intensity = A.ambientIntensity * TUNE.ambientBoost * (this._fillSky ?? 1);
     p.ambient.sky.copy(A.hemiSky);
     p.ambient.ground.copy(A.hemiGround);
+    p.ambient.enclosure = this.enclosure;
+    p.ambient.skyFill = this._fillSky ?? 1;
+    p.ambient.groundFill = this._fillGround ?? 1;
     p.ambient.floor = A.shadowFloor;
     p.rim.strength = A.rimStrength;
     p.timeOfDay = this.timeOfDay;

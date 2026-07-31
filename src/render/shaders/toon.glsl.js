@@ -105,6 +105,8 @@ uniform float uRim;
 uniform vec3  uRimColor;
 uniform float uRimPower;
 uniform float uRimGain;
+uniform vec3  uRimCurve;      // silhouette gate: xy = normal turn per screen height, lo..hi;
+                              // z = how strictly to require convexity (0 = not at all)
 uniform float uSpec;
 uniform vec3  uSpecColor;
 uniform float uGloss;
@@ -368,17 +370,72 @@ export const TOON_SHADE = /* glsl */ `
 		 * threshold the shadow side can never reach: the shadow-side rim is 45% as bright and
 		 * a little narrower, which reads as light bending round the form, and it is never nil.
 		 *
-		 * What this term still cannot do is rim a *flat* face. A box's normal does not turn
-		 * toward grazing at its own silhouette, so fres stays near zero right up to the edge
-		 * and the 'courtyard' obelisk against open sky gets nothing from here at any tuning.
-		 * That case belongs to the screen-space silhouette rim in PostFX, which keys off the
-		 * depth discontinuity instead of the normal. The two are complementary by design:
-		 * this one wraps light around curved forms, that one guarantees every silhouette
-		 * against a background separates. */
+		 * What this term cannot do is rim a flat face *at its own silhouette*. A box's normal
+		 * does not turn toward grazing at its edge, so fres stays near zero right up to it and
+		 * the 'courtyard' obelisk against open sky gets nothing from here at any tuning. That
+		 * case belongs to the screen-space silhouette rim in PostFX, which keys off the depth
+		 * discontinuity instead of the normal. The two are complementary by design: this one
+		 * wraps light around curved forms, that one guarantees every silhouette against a
+		 * background separates.
+		 *
+		 * Read the next block before believing the sentence above says anything reassuring
+		 * about flat faces in general. It does not: a flat face *tilted* away from the eye
+		 * reaches a high fres for a reason that has nothing to do with silhouettes, and that
+		 * is the bug the gate below exists to close. */
 		float fres = pow( 1.0 - ndv, uRimPower );
 		float wrapRim = smoothstep( -0.35, 0.45, ndl );
 		float rimBand = smoothstep( 0.26, 0.58, fres * mix( 0.60, 1.0, wrapRim ) );
-		vec3 rim = uRimColor * ( uRim * uRimGain * rimBand * mix( 0.55, 1.0, sh ) * mix( 0.45, 1.0, wrapRim ) );
+
+		/* The silhouette gate — and the reason the counter-rim's post-mortem above did not go
+		   far enough.
+		 *
+		 * 1 - N.V is high in two unrelated situations: at a silhouette, where the form turns
+		 * away from the eye, and on a *flat face seen edge-on*, where nothing turns at all. The
+		 * counter-rim was deleted for confusing the two. This term makes exactly the same
+		 * confusion, and it is the larger offender of the two, because a floor running away
+		 * from a standing camera is edge-on over most of its visible length. Worked through on
+		 * the 'hero' camera: the open paving spans 11 to 21 degrees of grazing, i.e. N.V 0.19
+		 * to 0.37, so fres runs 0.53 to 0.24 and rimBand from 0.91 down to 0 — nine tenths of a
+		 * full-strength cool rim laid flat across the courtyard at its far edge, fading to
+		 * nothing at the near one. The surface's own normal variation then cuts that gradient
+		 * into the streaks the critic measured, and the same term at the same grazing angles is
+		 * what draws the line at the wall/ground contact in 'guard' and quantises the dune
+		 * ripple field into hard cyan quadrilaterals in 'dunes'.
+		 *
+		 * What separates the two cases is not the value of the fresnel but its *cause*. At a
+		 * silhouette the normal sweeps through ninety degrees within a few pixels; on a plane it
+		 * does not move at all, however grazing the plane is. The screen-space derivative of the
+		 * interpolated normal measures precisely that, and is identically zero on any planar
+		 * patch — which is what makes this a gate and not another tuning knob. Scaled by uRes.y
+		 * it reads as "how far the normal turns per screen height", so a threshold means the
+		 * same thing at any resolution: a courtyard floor is 0, a background dune 1-3, the
+		 * silhouette band of a head or a limb 10-40.
+		 *
+		 * The second half of the gate is the sign of that turn, and it is what §7.3's "no
+		 * ambient occlusion where forms meet" actually needs. A hard edge also turns the normal
+		 * within a pixel, so magnitude alone would keep a rim on every crease — including the
+		 * *concave* ones, which is precisely the wall-meets-ground contact the critic measured
+		 * at '#598aa2', brighter than both surfaces it separates. Light does not rim a concave
+		 * corner; occlusion darkens it. dot(dN, dP) is positive where the surface bulges toward
+		 * the eye and negative where it folds away from it, so requiring it positive keeps the
+		 * rim on chiselled convex edges and takes it off every contact in the game.
+		 *
+		 * uRimCurve = (0,0,0) disables the whole gate and restores the old term — kept as a
+		 * knob so the A/B that established this is reproducible rather than a claim in a
+		 * comment. */
+		#ifdef FLAT_SHADED
+			float slyTurn = 0.0;
+			float slyConvex = 1.0;
+		#else
+			vec3 slyDNx = dFdx( vNormal ), slyDNy = dFdy( vNormal );
+			float slyTurn = ( length( slyDNx ) + length( slyDNy ) ) * uRes.y;
+			float slyFold = dot( slyDNx, dFdx( slyViewPos ) ) + dot( slyDNy, dFdy( slyViewPos ) );
+			float slyConvex = mix( 1.0, step( 0.0, slyFold ), uRimCurve.z );
+		#endif
+		float rimSil = uRimCurve.y > uRimCurve.x
+			? smoothstep( uRimCurve.x, uRimCurve.y, slyTurn ) * slyConvex : 1.0;
+
+		vec3 rim = uRimColor * ( uRim * uRimGain * rimBand * rimSil * mix( 0.55, 1.0, sh ) * mix( 0.45, 1.0, wrapRim ) );
 
 		/* There used to be a second, sky-coloured "counter-rim" here for the shadow side. It
 		   is gone, and its removal is a fix rather than a loss.

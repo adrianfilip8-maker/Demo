@@ -136,7 +136,13 @@ const mirPos = (p) => [-p[0], p[1], p[2]];
 const CANE = {
   down: [78, 0, -6],        // carried, tip toward the ground
   trail: [104, -14, -6],    // dragged back, running
-  shoulder: [-116, -18, 6], // slung over the shoulder — the signature idle
+  /* The signature idle. This used to be [-116,-18,6], which is genuinely "over the shoulder"
+     — and from every camera in `Shots.js` that put the crook directly behind his head, where
+     it foreshortened into a stub and the §7.3 silhouette test lost the one prop in the series
+     nobody could mistake. Chosen by sweeping the aim against three measurable things: the C's
+     plane facing the camera, the shaft lying across the view rather than along it, and the
+     crook clearing both the head and the body outline. */
+  shoulder: [-62, -56, 28],
   fwd: [16, 0, 0],          // levelled, pointing where he is looking
   up: [-96, 0, 0],          // shaft vertical: hook overhead, swinging
   back: [128, 10, 0],       // wound up behind him, cocked to swing
@@ -178,55 +184,80 @@ pickpocket paraglide hurt ko victory
  * through the S of the spine, out along the cane.
  */
 const IDLE_A = P({
-  hips: [1, 13, -8],
-  spine: [-3, -6, 5],
-  chest: [3, -13, 6],
-  neck: [-7, 7, -3],
-  head: [-6, 14, -8],
+  /* The contrapposto was authored here before and did not read, and the reason is worth
+     recording because it is a general one: the *pelvis* was rotated but the *legs* were not,
+     so both feet stayed under the hips, 4 cm apart and vertical, and the silhouette came out
+     as two parallel sticks. A weight shift is only visible when the free leg visibly stops
+     carrying anything — knee folded, thigh turned out, foot pushed away from the weight line.
+
+     Sign conventions (Rig.js): hips −Z roll raises his RIGHT hip; upperLeg +Z swings the foot
+     toward his LEFT. So +Z on both legs walks the right foot in under his centre of mass and
+     the left foot out from it, which is the stance, not just the tilt. */
+  hips: [2, 17, -12],
+  spine: [-3, -8, 10],
+  chest: [5, -17, 14],        // shoulders roll opposite the hips: the S
+  neck: [-8, 9, -7],
+  head: [-9, 17, -12],
   jaw: [4, 0, 0],
   capBrim: [3, 0, -3],
-  earL: [-12, 6, -16],
-  earR: [-4, -7, 22],
+  earL: [-13, 6, -18],
+  earR: [-4, -7, 24],
   browL: [0, 0, 9],
   browR: [0, 0, -6],
 
-  // left arm loose at his side, hand cocked out — the "and what are you going to do" hand
-  shoulderL: [2, 5, -10],
-  upperArmL: [-11, 6, -30],
-  lowerArmL: [-34, -16, -14],
-  handL: [10, -16, -12],
+  /* Left hand on the hip. Two jobs: it closes a triangle of open sky between the arm and the
+     ribs, which is worth more in silhouette than any amount of surface detail, and it stops
+     the arm outline melting into the torso outline the way a hanging arm does. */
+  shoulderL: [3, 7, -16],
+  upperArmL: [-14, 16, -52],
+  lowerArmL: [-74, -36, -26],
+  handL: [22, -28, -14],
 
-  // right arm up, cane resting across the shoulder
-  shoulderR: [-4, -8, 16],
-  upperArmR: [8, -14, 6],
-  lowerArmR: [-74, 30, 22],
-  handR: [-6, 16, 10],
+  // right arm up, cane slung across the shoulder — the signature
+  shoulderR: [-5, -9, 14],
+  upperArmR: [6, -17, -3],
+  lowerArmR: [-88, 34, 26],
+  handR: [-8, 18, 14],
 
-  // weight right: right leg straight and under him, left leg relaxed and turned out
-  upperLegR: [-2, -8, 4],
-  lowerLegR: [4, 0, 0],
-  footR: [-2, 4, -2],
-  upperLegL: [-9, 14, 5],
-  lowerLegL: [16, 0, 0],
-  footL: [-6, -8, 2],
-  toeL: [6, 0, 0],
+  /* Weight right. The leg Z angles look large because they are measured against the *hips*,
+     which are already rolled −12°: that roll tips the whole lower body 12° toward his right,
+     so a leg authored at +13 nets +1° in world and both feet stay under the pelvis. This is
+     exactly why the previous contrapposto measured correct and rendered as parallel sticks.
+     +20 / +24 here net out at roughly +8° and +12°, which is a 22 cm stance. */
+  upperLegR: [-1, -7, 11],
+  lowerLegR: [3, 0, 0],
+  footR: [-2, 5, -1],
+  upperLegL: [-13, 20, 27],
+  lowerLegL: [21, 0, 0],
+  footL: [8, -12, -12],
+  toeL: [10, 0, 0],
 
-  tailA: [16, -9, 2],
-  tailB: [20, -13, 0],
-  tailC: [12, 8, 0],
-  tailD: [-10, 18, 0],
+  /* Tail as counterweight, and — this is the part that is easy to get wrong — on the opposite
+     side of the frame from the cane. Swept to his right it folded in behind the torso and left
+     the silhouette entirely, which costs one of §7.3's four identity cues outright. Out to his
+     left it balances the crook, and the two of them frame the body between them. */
+  tailA: [4, -20, 4],
+  tailB: [14, -28, 0],
+  tailC: [22, 12, 0],
+  tailD: [-12, 26, 0],
 });
 
+/* `hold: 0` on purpose. This clip is what `sly-closeup` and `dunes` freeze on, so the held
+   frame has to be the *designed* pose, not an in-between. It used to hold at 0.9, where a
+   partial key overrode hips / chest / head / tail — which meant every character frame ever
+   captured was a breath drift of the pose, not the pose. Anything authored into IDLE_A that
+   those four bones carried never reached a single screenshot. */
 def('idle_confident', {
-  dur: 3.6, loop: true, hold: 0.9,
+  dur: 3.6, loop: true, hold: 0,
   keys: [
-    { t: 0, e: 'soft', P: IDLE_A, pos: [0, -0.014, 0], cane: CANE.shoulder },
-    // weight rocks a few centimetres onto the back foot and the chest drifts open
-    { t: 0.9, e: 'soft', P: { hips: [1, 15, -9], chest: [2, -15, 7], head: [-8, 17, -9], tailA: [19, -12, 2], tailB: [23, -16, 0], tailD: [-14, 22, 0] }, pos: [0.008, -0.006, 0.004], cane: [-113, -21, 6] },
-    { t: 1.9, e: 'soft', P: { hips: [2, 11, -7], chest: [4, -11, 5], head: [-4, 11, -6], tailA: [13, -6, 2], tailB: [17, -10, 0], tailD: [-6, 14, 0] }, pos: [-0.006, -0.020, -0.004], cane: [-119, -15, 6] },
+    { t: 0, e: 'soft', P: IDLE_A, pos: [-0.026, -0.014, 0], cane: CANE.shoulder },
+    // weight rocks a couple of centimetres and the chest drifts open — a drift off IDLE_A,
+    // never a different pose
+    { t: 0.9, e: 'soft', P: { hips: [1, 19, -14], chest: [3, -19, 16], head: [-11, 20, -14], tailA: [7, -24, 4], tailB: [17, -32, 0], tailD: [-16, 30, 0] }, pos: [-0.018, -0.006, 0.004], cane: [-59, -58, 28] },
+    { t: 1.9, e: 'soft', P: { hips: [3, 14, -10], chest: [6, -14, 12], head: [-6, 13, -9], tailA: [1, -15, 4], tailB: [11, -23, 0], tailD: [-8, 21, 0] }, pos: [-0.032, -0.020, -0.004], cane: [-65, -52, 28] },
     // a slow blink-and-smirk beat: head cocks a little further over, ears flick
-    { t: 2.6, e: 'smooth', P: { head: [-7, 17, -12], earL: [-18, 8, -22], earR: [-2, -9, 27], jaw: [6, 0, 0] } },
-    { t: 3.6, e: 'soft', P: IDLE_A, pos: [0, -0.014, 0], cane: CANE.shoulder },
+    { t: 2.6, e: 'smooth', P: { head: [-10, 20, -16], earL: [-19, 8, -24], earR: [-2, -9, 29], jaw: [6, 0, 0] } },
+    { t: 3.6, e: 'soft', P: IDLE_A, pos: [-0.026, -0.014, 0], cane: CANE.shoulder },
   ],
 });
 
@@ -319,23 +350,32 @@ const PERCH = P({
   footR: [-10, 8, -2],
   toeR: [8, 0, 0],
 
-  tailA: [6, -12, 0],
-  tailB: [-8, -18, 0],
-  tailC: [-14, -10, 0],
-  tailD: [14, 12, 0],
+  /* The `hero` camera looks at him from 172° — almost dead behind. A tail authored to
+     "stream off the back of the ledge" therefore lies straight along the view axis, and at
+     the 55 px he occupies in that frame it foreshortens into the torso and disappears; the
+     same defect the critic logged in `night` as "a striped scarf across his chest". Lifted
+     and swept hard to his left it arcs clear of the back and reads as the one shape in the
+     frame that says raccoon. */
+  tailA: [-16, -32, 0],
+  tailB: [-14, -38, 0],
+  tailC: [-6, 18, 0],
+  tailD: [26, 26, 0],
 });
 
+/* `hold: 0` for the same reason as `idle_confident`: `hero` freezes this clip, and holding at
+   0.8 meant the money shot rendered a breath drift whose partial key silently reverted the
+   tail to its old aim. The held frame is now the authored pose. */
 def('perch_idle', {
-  dur: 3.2, loop: true, hold: 0.8,
+  dur: 3.2, loop: true, hold: 0,
   keys: [
-    { t: 0, e: 'soft', P: PERCH, pos: [0, -0.30, 0.07], cane: [122, -26, 8] },
+    { t: 0, e: 'soft', P: PERCH, pos: [0, -0.30, 0.07], cane: [122, -46, 8] },
     { t: 0.8, e: 'soft', P: { chest: [-17, -13, 5], head: [-21, 18, -8], hips: [28, 11, -5],
-      tailA: [10, -16, 0], tailB: [-4, -22, 0], tailD: [20, 16, 0] }, pos: [0, -0.325, 0.078], cane: [126, -30, 8] },
+      tailA: [-12, -36, 0], tailB: [-10, -42, 0], tailD: [30, 30, 0] }, pos: [0, -0.325, 0.078], cane: [126, -50, 8] },
     { t: 1.7, e: 'soft', P: { chest: [-11, -9, 3], head: [-15, 12, -6], hips: [24, 9, -3],
-      tailA: [2, -8, 0], tailB: [-12, -14, 0], tailD: [8, 8, 0] }, pos: [0, -0.285, 0.062], cane: [118, -22, 8] },
+      tailA: [-21, -27, 0], tailB: [-19, -33, 0], tailD: [21, 21, 0] }, pos: [0, -0.285, 0.062], cane: [118, -42, 8] },
     // a small head-flick as something below catches his eye
     { t: 2.3, e: 'out', P: { head: [-14, 26, -12], neck: [-14, 13, -6], earL: [-20, 8, -24] } },
-    { t: 3.2, e: 'soft', P: PERCH, pos: [0, -0.30, 0.07], cane: [122, -26, 8] },
+    { t: 3.2, e: 'soft', P: PERCH, pos: [0, -0.30, 0.07], cane: [122, -46, 8] },
   ],
 });
 
@@ -449,14 +489,16 @@ const RUN_CONTACT = P({
   shoulderR: [-6, -12, 16], upperArmR: [-58, -10, 22], lowerArmR: [-72, 18, 14], handR: [12, 16, 8],
   upperLegL: [-42, 5, 4], lowerLegL: [16, 0, 0], footL: [-10, -4, 0], toeL: [-2, 0, 0],
   upperLegR: [34, -5, -4], lowerLegR: [30, 0, 0], footR: [22, 4, 0], toeR: [16, 0, 0],
-  tailA: [10, 14, 0], tailB: [2, 20, 0], tailC: [-6, 12, 0], tailD: [14, -10, 0],
+  /* Streaming out behind and to his left, well clear of the torso outline. A tail authored
+     straight back sits along the view axis in a frontal shot and reads as a scarf. */
+  tailA: [4, -26, 0], tailB: [-2, -32, 0], tailC: [2, 18, 0], tailD: [20, 22, 0],
 });
 const RUN_DOWN = {
   hips: [18, -8, 5], spine: [6, 4, 2], chest: [13, 11, -3], head: [-16, -5, 2],
   upperArmL: [38, 10, -24], upperArmR: [-46, -10, 24], lowerArmR: [-64, 18, 14],
   upperLegL: [-22, 5, 4], lowerLegL: [42, 0, 0], footL: [2, -4, 0], toeL: [4, 0, 0],
   upperLegR: [40, -5, -4], lowerLegR: [56, 0, 0], footR: [10, 4, 0], toeR: [24, 0, 0],
-  tailA: [4, 10, 0], tailB: [-4, 15, 0], tailC: [-10, 9, 0],
+  tailA: [0, -22, 0], tailB: [-6, -28, 0], tailC: [0, 15, 0],
 };
 const RUN_PASS = {
   hips: [12, -2, 0], spine: [3, 1, 0], chest: [9, 3, 0], neck: [-16, -1, 0], head: [-12, -2, 0],
@@ -464,7 +506,7 @@ const RUN_PASS = {
   upperArmR: [-22, -8, 28], lowerArmR: [-56, 18, 14],
   upperLegL: [8, 3, 3], lowerLegL: [18, 0, 0], footL: [22, -3, 0], toeL: [14, 0, 0],
   upperLegR: [-14, -3, -3], lowerLegR: [96, 0, 0], footR: [-16, 3, 0], toeR: [2, 0, 0],
-  tailA: [8, 3, 0], tailB: [0, 5, 0], tailC: [-6, 2, 0], tailD: [16, -2, 0],
+  tailA: [2, -18, 0], tailB: [-4, -24, 0], tailC: [0, 12, 0], tailD: [22, 16, 0],
 };
 /* Full extension into the flight phase — the frame that sells the speed. */
 const RUN_AIR = {
@@ -473,7 +515,7 @@ const RUN_AIR = {
   shoulderR: [-6, -8, 18], upperArmR: [38, -6, 26], lowerArmR: [-44, 18, 14],
   upperLegL: [38, 3, 3], lowerLegL: [12, 0, 0], footL: [26, -3, 0], toeL: [18, 0, 0],
   upperLegR: [-50, -3, -3], lowerLegR: [58, 0, 0], footR: [-18, 3, 0], toeR: [0, 0, 0],
-  tailA: [12, -12, 0], tailB: [4, -17, 0], tailC: [-4, -10, 0], tailD: [18, 8, 0],
+  tailA: [8, -30, 0], tailB: [0, -36, 0], tailC: [-2, 20, 0], tailD: [24, 24, 0],
 };
 
 const RUN_KEYS = (h) => ([
@@ -488,8 +530,11 @@ const RUN_KEYS = (h) => ([
   { t: 1.00 * h, e: 'out', P: RUN_CONTACT, pos: [0.02, -0.10, 0.02], sc: { hips: [1.02, 0.98, 1.01] }, cane: CANE.trail },
 ]);
 
+/* `hold` lands on the flight key (0.36 of the cycle), not on the contact key. `courtyard`
+   freezes this clip at 59 px: a contact pose has both feet under the hips and reads as
+   standing still, while full extension reads as a run at any size. */
 def('run', {
-  dur: 0.62, loop: true, stride: 4.05, hold: 0.055,
+  dur: 0.62, loop: true, stride: 4.05, hold: 0.2232,
   events: [
     { t: 0.01, n: 'footstep', d: { foot: 'L', power: 1 } },
     { t: 0.32, n: 'footstep', d: { foot: 'R', power: 1 } },
@@ -535,17 +580,17 @@ const SNEAK_BASE = P({
   shoulderR: [-8, -6, 20], upperArmR: [26, -14, 34], lowerArmR: [-30, 22, 16], handR: [8, 16, 10],
   upperLegL: [-52, 6, 4], lowerLegL: [64, 0, 0], footL: [-14, -5, 0], toeL: [6, 0, 0],
   upperLegR: [-46, -6, -4], lowerLegR: [58, 0, 0], footR: [-12, 5, 0], toeR: [6, 0, 0],
-  tailA: [-2, 0, 0], tailB: [2, 0, 0], tailC: [4, 0, 0], tailD: [10, 0, 0],
+  tailA: [-6, -24, 0], tailB: [-2, -30, 0], tailC: [6, 16, 0], tailD: [16, 20, 0],
 });
 
 def('sneak_idle', {
-  dur: 3.0, loop: true, hold: 0.7,
+  dur: 3.0, loop: true, hold: 0,
   keys: [
     { t: 0, e: 'soft', P: SNEAK_BASE, pos: [0, -0.30, 0.05], cane: CANE.out },
     { t: 0.8, e: 'soft', P: { chest: [-11, -5, 2], head: [-27, 12, -6], neck: [-28, 6, -2],
-      tailA: [-4, -8, 0], tailB: [0, -12, 0], tailC: [2, -8, 0], tailD: [8, 6, 0] }, pos: [0.006, -0.315, 0.055], cane: [56, -40, 0] },
+      tailA: [-8, -30, 0], tailB: [-4, -36, 0], tailC: [4, 20, 0], tailD: [14, 26, 0] }, pos: [0.006, -0.315, 0.055], cane: [56, -40, 0] },
     { t: 1.7, e: 'soft', P: { chest: [-5, 5, -2], head: [-21, -10, 5], neck: [-24, -5, 2],
-      tailA: [0, 8, 0], tailB: [4, 12, 0], tailC: [6, 8, 0], tailD: [12, -6, 0] }, pos: [-0.006, -0.285, 0.045], cane: [60, -26, 0] },
+      tailA: [-4, -18, 0], tailB: [0, -24, 0], tailC: [8, 12, 0], tailD: [18, 14, 0] }, pos: [-0.006, -0.285, 0.045], cane: [60, -26, 0] },
     { t: 3.0, e: 'soft', P: SNEAK_BASE, pos: [0, -0.30, 0.05], cane: CANE.out },
   ],
 });
@@ -556,7 +601,7 @@ const SNEAK_C = Object.assign({}, SNEAK_BASE, {
   upperArmL: [-28, 12, -26], upperArmR: [16, -14, 34],
   upperLegL: [-76, 8, 4], lowerLegL: [46, 0, 0], footL: [12, -5, 0], toeL: [-6, 0, 0],
   upperLegR: [-18, -8, -4], lowerLegR: [48, 0, 0], footR: [-4, 5, 0], toeR: [10, 0, 0],
-  tailA: [-2, 11, 0], tailB: [2, 15, 0], tailC: [4, 10, 0], tailD: [10, -8, 0],
+  tailA: [-6, -14, 0], tailB: [-2, -20, 0], tailC: [6, 22, 0], tailD: [16, 12, 0],
 });
 const SNEAK_D = {
   hips: [32, -6, 3], chest: [-6, 8, -1],
@@ -1293,8 +1338,11 @@ const SWING_BACK = P({
   upperLegR: [34, -8, -6], lowerLegR: [28, 0, 0], footR: [30, 6, 0], toeR: [16, 0, 0],
   tailA: [-8, 6, 0], tailB: [-20, 9, 0], tailC: [-10, 6, 0], tailD: [14, -5, 0],
 });
+/* `hold` is the front of the arc, not the bottom of it. `traversal` freezes this clip, and the
+   bottom-of-arc key is by construction the frame where the body is straightest and most
+   vertical — the one moment in a swing that looks like hanging still. */
 def('hook_swing', {
-  dur: 1.5, loop: true, hold: 0.42,
+  dur: 1.5, loop: true, hold: 0.75,
   keys: [
     { t: 0, e: 'smooth', P: SWING_BACK, pos: [0, -0.02, -0.05], cane: [-96, 4, 0] },
     // through the bottom: body straightens, legs whip through and forward
@@ -1312,7 +1360,7 @@ def('hook_swing', {
       upperArmR: [-36, -18, 100], lowerArmR: [-44, 20, 22],
       upperLegL: [-96, 10, 7], lowerLegL: [72, 0, 0], footL: [-6, -8, 0], toeL: [10, 0, 0],
       upperLegR: [-84, -10, -7], lowerLegR: [64, 0, 0], footR: [-2, 8, 0], toeR: [10, 0, 0],
-      tailA: [-30, 8, 0], tailB: [-38, 12, 0], tailC: [-20, 8, 0], tailD: [6, -6, 0],
+      tailA: [-26, -24, 0], tailB: [-34, -30, 0], tailC: [-14, 18, 0], tailD: [10, 20, 0],
     }, pos: [0, -0.04, 0.10], sc: { hips: [1, 1, 1] }, cane: [-100, 8, 0] },
     { t: 1.1, e: 'lin', P: {
       hips: [16, -3, 2], chest: [-4, 5, -1], head: [-22, -3, 2],
@@ -1690,18 +1738,29 @@ def('cane_combo_3', {
       upperLegR: [-6, 10, -4], lowerLegR: [18, 0, 0], footR: [12, 12, 0], toeR: [10, 0, 0],
       tailA: [-12, 30, 0], tailB: [-24, 40, 0], tailC: [-12, 27, 0], tailD: [12, -17, 0],
     }), pos: [0, 0.03, -0.05], sc: { hips: [0.95, 1.08, 0.96] }, cane: [-124, 40, 0] },
-    // impact: everything drives down and through, hips square to the target
+    /* Impact — the frame `combat` freezes on, so it is the only key in this file that has to
+       survive being looked at as a still.
+
+       It used to be a kneel: 42° of pelvis pitch on top of a 56 cm hip drop, a left knee folded
+       112°, and *both* arms driven down and forward. Four limbs on the floor and the head below
+       the hips is a quadruped, and the critic read the frame exactly that way — "a cat about to
+       be sick". Nothing was wrong with the timing or the FX; the pose was on all fours.
+
+       Now a wide lunge instead of a kneel. One long diagonal from the pushing right toe,
+       through the hips, out along the cane; the free arm is flung back to open the chest and
+       give that diagonal something to read against; the head stays above the shoulders and on
+       the target, which is what stops a lunge reading as a fall. */
     { t: 0.21, e: 'snap', P: {
-      hips: [42, -22, 6], spine: [-6, -10, -3], chest: [-4, -26, 8], neck: [-16, 14, -5], head: [-14, 22, -10],
-      shoulderL: [10, -8, -6], upperArmL: [-72, -6, -22], lowerArmL: [-34, -12, -8], handL: [26, -10, -6],
-      shoulderR: [8, 10, 10], upperArmR: [-78, 16, 26], lowerArmR: [-30, -14, 10], handR: [22, -10, 6],
-      upperLegL: [-104, -6, 8], lowerLegL: [112, 0, 0], footL: [-12, 10, 0], toeL: [14, 0, 0],
-      upperLegR: [26, -18, -6], lowerLegR: [30, 0, 0], footR: [24, -14, 0], toeR: [18, 0, 0],
-      tailA: [34, -24, 0], tailB: [24, -32, 0], tailC: [2, -22, 0], tailD: [-14, 14, 0],
-    }, pos: [0.02, -0.56, 0.16], sc: { hips: [1.16, 0.80, 1.12], chest: [1.10, 0.86, 1.08] }, cane: [64, -18, 0] },
+      hips: [20, -20, 9], spine: [-3, -8, -5], chest: [9, -24, 12], neck: [-19, 13, -7], head: [-17, 19, -12],
+      shoulderL: [-6, -7, -17], upperArmL: [28, -16, -66], lowerArmL: [-36, -20, -16], handL: [16, -22, -20],
+      shoulderR: [11, 9, 15], upperArmR: [-64, 15, 21], lowerArmR: [-20, -11, 7], handR: [18, -9, 4],
+      upperLegL: [-56, 9, 16], lowerLegL: [44, 0, 0], footL: [2, -9, -8], toeL: [6, 0, 0],
+      upperLegR: [33, -11, 9], lowerLegR: [21, 0, 0], footR: [31, 8, 0], toeR: [26, 0, 0],
+      tailA: [30, -16, 0], tailB: [38, -22, 0], tailC: [11, 9, 0], tailD: [-16, 20, 0],
+    }, pos: [0.02, -0.27, 0.15], sc: { hips: [1.14, 0.84, 1.10], chest: [1.09, 0.88, 1.07] }, cane: [40, -34, 12] },
     // hold the impact a beat, then unwind into a smug guard
-    { t: 0.30, e: 'smooth', P: { hips: [40, -20, 6], head: [-12, 20, -9] },
-      pos: [0.02, -0.52, 0.15], sc: { hips: [1.1, 0.86, 1.08], chest: [1.05, 0.92, 1.04] } },
+    { t: 0.30, e: 'smooth', P: { hips: [18, -18, 9], head: [-15, 17, -11] },
+      pos: [0.02, -0.25, 0.14], sc: { hips: [1.09, 0.89, 1.07], chest: [1.05, 0.92, 1.04] } },
     { t: 0.46, e: 'out', P: {
       hips: [12, -6, 2], spine: [-4, -3, 2], chest: [2, -10, 5], neck: [-12, 6, -3], head: [-12, 12, -7],
       shoulderL: [0, 4, -10], upperArmL: [-20, 6, -34], lowerArmL: [-44, -16, -12],

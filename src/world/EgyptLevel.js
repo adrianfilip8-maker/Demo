@@ -74,8 +74,17 @@ const D = THREE.MathUtils.degToRad;
 
 /* ============================ small helpers ============================ */
 
+/**
+ * One built mass. Chamfered by default: a plain box has a single normal per face, so the
+ * 3-band cel ramp puts the whole face in one band and the frame ends up with no terminator
+ * on it anywhere. `c: 0` opts out where the piece is small, far, or fully buried.
+ */
 function box(A, zone, mat, w, h, d, x, y, z, o = {}) {
-  const g = K.block(w, h, d, { rng: A.rng, jitter: o.jitter ?? 0.018, chip: o.chip ?? 0, taper: o.taper ?? 0 });
+  const c = o.c ?? 0.05;
+  const args = { rng: A.rng, jitter: o.jitter ?? 0.018, chip: o.chip ?? 0, taper: o.taper ?? 0 };
+  const g = c > 0
+    ? K.chamferBox(w, h, d, { ...args, c, only: o.only ?? 'all' })
+    : K.block(w, h, d, args);
   K.place(g, { x, y, z, rx: o.rx || 0, ry: o.ry || 0, rz: o.rz || 0 });
   A.add(zone, mat, K.boxProjectUVs(g));
   return g;
@@ -133,15 +142,48 @@ function hookPoint(A, x, y, z) {
   return m;
 }
 
-/** Build a rail: visible tube + a `rail` collider carrying the spline MOVEMENT snaps to. */
+/**
+ * The Egyptian torus door-frame: a roll moulding up both jambs and across the head.
+ *
+ * An opening cut by dropping blocks leaves a raw hole whose edges are the blocks' side faces —
+ * flat, and identical in value to the wall around them, so the biggest dark shape in the frame
+ * has no edge on it. Three cylinders give it a continuous lit line, and a cylinder is one of
+ * the few shapes in the level with a real normal gradient for the cel ramp to band across.
+ */
+function doorFrame(A, zone, mat, { halfW, y0, y1, z, r = 0.26, x = 0 }) {
+  const R = A.rng;
+  for (const sx of [-1, 1]) {
+    const g = new THREE.CylinderGeometry(r * 0.94, r, y1 - y0 + r, 14, 1, true);
+    K.normaliseAttrs(g);
+    A.add(zone, mat, K.boxProjectUVs(K.place(g, {
+      x: x + sx * (halfW + r * 0.75), y: y0 + (y1 - y0 + r) / 2, z, rz: D(R.jitter(0.4)),
+    })));
+  }
+  const head = new THREE.CylinderGeometry(r, r, 2 * (halfW + r * 1.5), 14, 1, true);
+  K.normaliseAttrs(head);
+  // Sit the head roll just *under* the opening's head, not above it: above it is where the
+  // lintel already is, and a roll buried in a lintel is triangles nobody sees.
+  A.add(zone, mat, K.boxProjectUVs(K.place(head, { x, y: y1 - r * 0.5, z, rz: Math.PI / 2 })));
+}
+
+/**
+ * Build a rail: the visible tube goes into the zone's merge bucket like everything else, and
+ * the spline MOVEMENT snaps to rides on an invisible collider. A rail used to be its own mesh
+ * purely so it could carry `userData.spline`, which cost a draw call in the colour pass and
+ * three more in the shadow cascades — for a 14 cm tube whose shadow is a thread.
+ */
 function rail(A, name, pts, matKey = 'granite_pink', r = 0.16, zone = 'court') {
   const curve = new THREE.CatmullRomCurve3(pts.map((p) => new THREE.Vector3(...p)), false, 'catmullrom', 0.35);
-  const geo = K.railGeo(curve, { r, seg: Math.max(24, Math.round(curve.getLength() * 1.4)), rad: 6 });
-  const mesh = A.mesh(matKey, geo, `rail:${name}`);
-  if (mesh) {
-    mesh.userData.spline = curve;
-    A.collide(mesh, { tag: 'rail', material: matKey === 'rope_fibre' ? 'cloth' : 'metal' });
-  }
+  const geo = K.railGeo(curve, { r, seg: Math.max(20, Math.round(curve.getLength() * 1.1)), rad: 5 });
+  A.add(zone, matKey, geo);
+  const box = new THREE.Box3().setFromPoints(curve.getPoints(24));
+  const size = box.getSize(new THREE.Vector3()), mid = box.getCenter(new THREE.Vector3());
+  const proxy = A.proxy(
+    new THREE.BoxGeometry(Math.max(0.3, size.x), Math.max(0.3, size.y), Math.max(0.3, size.z)),
+    { tag: 'rail', material: matKey === 'rope_fibre' ? 'cloth' : 'metal' },
+    { x: mid.x, y: mid.y, z: mid.z });
+  proxy.userData.spline = curve;
+  proxy.name = `rail:${name}`;
   A.api.rails.push({ name, curve });
   return curve;
 }
@@ -158,7 +200,7 @@ function courtyard(A) {
     [-20, -8, 30.6, 34], [8, 20, 30.6, 34],       // entry pylon feet
   ];
   const slabs = K.pavingMatrices({ x0: c.x0, x1: c.x1, z0: c.z0, z1: c.z1, y: 0, slab: 2.45, rng: R, sink: 0.055, holes });
-  A.instance('paving_courtyard', K.slabUnit(0.55, R), slabs, 'paving:court');
+  A.instance('paving_courtyard', K.slabUnit(0.55, R), slabs, 'paving:court', { cast: false });
   groundProxy(A, c.x0, c.x1, 0, c.z0, c.z1, { material: 'stone' });
 
   /* Stylobate apron so the complex is planted rather than floating on TERRAIN's sand. */
@@ -174,7 +216,7 @@ function courtyard(A) {
     blockLen: [1.3, 2.3], recess: 0.06, chipChance: 0.22, gapChance: 0.02, buried: 0.35, hollow: true,
     openings: [{ face: 0, a0: -3.2, a1: 3.2, y0: -1, y1: 3 }],
   }), { z: (t1.z0 + t1.z1) / 2 }));
-  vol(A, 'court', 'paving_courtyard', -t1.x, t1.x, t1.y - 0.5, t1.y, t1.z0, t1.z1, { jitter: 0.02 });
+  vol(A, 'court', 'paving_courtyard', -t1.x, t1.x, t1.y - 0.5, t1.y, t1.z0, t1.z1, { jitter: 0.02, c: 0.09 });
   groundProxy(A, -t1.x, t1.x, t1.y, t1.z0, t1.z1);
   ledgeProxy(A, -t1.x, t1.x, t1.y, t1.z0, t1.z0 + 0.9);
 
@@ -183,7 +225,7 @@ function courtyard(A) {
     blockLen: [1.2, 2.1], recess: 0.06, chipChance: 0.2, gapChance: 0.02, hollow: true,
     openings: [{ face: 0, a0: -2.8, a1: 2.8, y0: -1, y1: 4 }],
   }), { y: t1.y - 0.4, z: (t2.z0 + t2.z1) / 2 }));
-  vol(A, 'court', 'paving_courtyard', -t2.x, t2.x, t2.y - 0.45, t2.y, t2.z0, t2.z1, { jitter: 0.02 });
+  vol(A, 'court', 'paving_courtyard', -t2.x, t2.x, t2.y - 0.45, t2.y, t2.z0, t2.z1, { jitter: 0.02, c: 0.09 });
   groundProxy(A, -t2.x, t2.x, t2.y, t2.z0, t2.z1);
   ledgeProxy(A, -t2.x, t2.x, t2.y, t2.z0, t2.z0 + 0.9);
 
@@ -197,7 +239,7 @@ function courtyard(A) {
 
   /* ---- Obelisk: 22 m, `pole` for its full height per §8.1. ---- */
   const ob = L.obelisk;
-  vol(A, 'court', 'granite_pink', -2.5, 2.5, t2.y - 0.1, t2.y + 1.1, ob.z - 2.5, ob.z + 2.5, { jitter: 0.02, chip: 0.12 });
+  vol(A, 'court', 'granite_pink', -2.5, 2.5, t2.y - 0.1, t2.y + 1.1, ob.z - 2.5, ob.z + 2.5, { jitter: 0.02, chip: 0.12, c: 0.10 });
   const obGeo = K.obelisk({ h: ob.h - (t2.y + 1.1), base: ob.base, rng: R });
   A.add('court', 'granite_pink', K.place(obGeo, { x: ob.x, y: t2.y + 1.1, z: ob.z, ry: D(1.1) }));
   poleProxy(A, ob.x, ob.z, t2.y + 1.1, ob.h - 1.6, 1.5);
@@ -208,10 +250,13 @@ function courtyard(A) {
   const ki = L.kiosk;
   for (const sx of [-1, 1]) for (const pz of [ki.z0, ki.z1]) {
     const px = sx * ki.x;
+    const kh = ki.top - 1.25 - t2.y;
     A.add('court', 'limestone_polished', K.place(K.masonryShell({
-      w: 1.7, d: 1.7, h: ki.top - 1.25 - t2.y, batter: 0.035, course: 0.58, thick: 0.85, rng: R,
+      w: 1.7, d: 1.7, h: kh, batter: 0.045, course: 0.58, thick: 0.85, rng: R,
       blockLen: [1.0, 1.7], recess: 0.05, chipChance: 0.16, gapChance: 0, hollow: false,
-    }), { x: px, y: t2.y, z: pz, ry: D(R.jitter(0.5)) }));
+    }), { x: px, y: t2.y, z: pz, ry: D(R.jitter(0.5)), rz: D(R.jitter(0.7)) }));
+    A.add('court', 'limestone_polished', K.place(
+      K.cornerRolls({ w: 1.7, d: 1.7, h: kh - 0.15, r: 0.16, batter: 0.045, rng: R }), { x: px, y: t2.y + 0.08, z: pz }));
     wallProxy(A, px - 0.9, px + 0.9, t2.y, ki.top - 1.25, pz - 0.9, pz + 0.9);
   }
   /* Lintels: 1.25 m deep, chunky, and the south one is cracked. */
@@ -234,9 +279,9 @@ function courtyard(A) {
     }), { x: cx, y: 0, z: cz }));
     groundProxy(A, cx - 4, cx + 4, L.colossi.plinth, cz - 3.5, cz + 3.5);
     /* Throne: seat block to the knee ledge at 4.5, then the high back slab. */
-    vol(A, 'court', 'sandstone_block', cx - 3.4, cx + 3.4, L.colossi.plinth, L.colossi.knee, cz - 3.0, cz + 2.6, { jitter: 0.03, chip: 0.18 });
+    vol(A, 'court', 'sandstone_block', cx - 3.4, cx + 3.4, L.colossi.plinth, L.colossi.knee, cz - 3.0, cz + 2.6, { jitter: 0.03, chip: 0.18, c: 0.12 });
     ledgeProxy(A, cx - 3.4, cx + 3.4, L.colossi.knee, cz + 1.4, cz + 2.6, { thick: 0.9 });   // the knees
-    vol(A, 'court', 'hieroglyph_wall', cx - 3.2, cx + 3.2, L.colossi.knee, 9.6, cz - 3.0, cz - 1.2, { jitter: 0.035 });
+    vol(A, 'court', 'hieroglyph_wall', cx - 3.2, cx + 3.2, L.colossi.knee, 9.6, cz - 3.0, cz - 1.2, { jitter: 0.035, c: 0.12 });
     wallProxy(A, cx - 3.2, cx + 3.2, L.colossi.knee, 9.6, cz - 3.0, cz - 1.2);
     ledgeProxy(A, cx - 3.2, cx + 3.2, 9.6, cz - 3.0, cz - 1.2, { thick: 0.7 });
     /* Sand banked against the north face — the wind comes down the valley. */
@@ -249,10 +294,23 @@ function courtyard(A) {
   for (let z = pe.z0 + 1; z <= pe.z1 - 1; z += 5.5) pierZ.push(z);
   for (const sx of [-1, 1]) {
     for (const pz of pierZ) {
+      /* Nine identical uprights in a row is the "straight/symmetric everywhere" failure in
+         its purest form, so each pier gets its own batter, its own height and about a degree
+         of lean. The architrave above them stays put, which is what makes the drift read as
+         settlement rather than as noise. */
+      const bat = 0.05 + R.jitter(0.018);
+      const ph = 7.7 + R.jitter(0.22);
+      const tilt = D(R.jitter(0.9));
       A.add('court', 'sandstone_block', K.place(K.masonryShell({
-        w: 2.1, d: 1.9, h: 7.7, batter: 0.03, course: 0.64, thick: 0.85, rng: R,
+        w: 2.15, d: 1.95, h: ph, batter: bat, course: 0.64, thick: 0.85, rng: R,
         blockLen: [1.1, 1.9], recess: 0.06, chipChance: 0.2, gapChance: 0.03, buried: 0.3, hollow: false,
-      }), { x: sx * pe.x, y: 0, z: pz, ry: D(R.jitter(0.45)) }));
+      }), { x: sx * pe.x, y: 0, z: pz, ry: D(R.jitter(0.45)), rz: tilt }));
+      /* Torus rolls down the arrises. Four lit vertical lines turn a masonry box into a
+         modelled mass for ~250 triangles, which is the best terminator-per-triangle in the
+         level — the ramp has an actual gradient to quantise on a cylinder. */
+      A.add('court', 'sandstone_worn', K.place(
+        K.cornerRolls({ w: 2.15, d: 1.95, h: ph - 0.2, r: 0.19, batter: bat, rng: R }),
+        { x: sx * pe.x, y: 0.1, z: pz, rz: tilt }));
       wallProxy(A, sx * pe.x - 1.05, sx * pe.x + 1.05, 0, 7.7, pz - 0.95, pz + 0.95);
     }
     /* Architrave: top face exactly y = 9.0, 1.6 m deep — obviously grabbable. */
@@ -267,7 +325,9 @@ function courtyard(A) {
     /* Temenos wall behind the colonnade: mudbrick, buried, wall-runnable, top a ledge. */
     A.add('court', 'mudbrick', K.place(K.masonryShell({
       w: 1.5, d: pe.z1 - pe.z0 + 3.0, h: 5.6, batter: 0.075, course: 0.5, thick: 0.7, rng: R,
-      blockLen: [0.85, 1.4], recess: 0.05, chipChance: 0.26, gapChance: 0.06, buried: 0.6, hollow: true,
+      /* Longest single run of masonry in the level and it sits behind the colonnade at 25 m+.
+         Halving the brick count here costs nothing that any canonical camera can resolve. */
+      blockLen: [1.35, 2.15], recess: 0.05, chipChance: 0.26, gapChance: 0.06, buried: 0.6, hollow: true,
     }), { x: sx * (pe.x + 2.3), y: 0, z: (pe.z0 + pe.z1) / 2 - 0.5 }));
     wallProxy(A, sx * (pe.x + 2.3) - 0.8, sx * (pe.x + 2.3) + 0.8, 0, 5.6, pe.z0 - 1.5, pe.z1 + 1.5);
     ledgeProxy(A, sx * (pe.x + 2.3) - 0.7, sx * (pe.x + 2.3) + 0.7, 5.6, pe.z0 - 1.5, pe.z1 + 1.5);
@@ -276,9 +336,11 @@ function courtyard(A) {
   for (const sx of [-1, 1]) {
     for (const px of [sx * 18.5]) {
       A.add('court', 'sandstone_block', K.place(K.masonryShell({
-        w: 2.1, d: 1.9, h: 7.7, batter: 0.03, course: 0.64, thick: 0.85, rng: R, hollow: false,
+        w: 2.15, d: 1.95, h: 7.7, batter: 0.05, course: 0.64, thick: 0.85, rng: R, hollow: false,
         blockLen: [1.1, 1.9], recess: 0.06, chipChance: 0.2, gapChance: 0.03, buried: 0.3,
-      }), { x: px, y: 0, z: 31.5 }));
+      }), { x: px, y: 0, z: 31.5, rz: D(R.jitter(0.8)) }));
+      A.add('court', 'sandstone_worn', K.place(
+        K.cornerRolls({ w: 2.15, d: 1.95, h: 7.5, r: 0.19, batter: 0.05, rng: R }), { x: px, y: 0.1, z: 31.5 }));
       wallProxy(A, px - 1.05, px + 1.05, 0, 7.7, 30.5, 32.5);
     }
     const g = K.beam(pe.x - 17.4, 1.3, A.TUNE.ledgeDepth, { rng: R, pieces: 3, chip: 0.14 });
@@ -290,12 +352,18 @@ function courtyard(A) {
 /* ========================== entry pylons =============================== */
 
 function entryPylons(A) {
-  const p = L.pylon, R = A.rng, B = A.TUNE.batterPylon;
+  const p = L.pylon, R = A.rng;
 
   for (const sx of [-1, 1]) {
     const cx = sx * p.x;
+    /* The two towers are not a mirrored pair. The west one is nearly a metre shorter and
+       leans harder, which is the difference between "two towers" and "one tower drawn twice"
+       in the `hero` and `dunes` silhouettes. The east tower keeps §8.1's 26 m because the
+       rooftop-run rail starts on its deck. */
+    const ph = sx > 0 ? p.h : p.h - 0.9;
+    const B = A.TUNE.batterPylon * (sx > 0 ? 1.0 : 1.13);
     A.add('court', 'hieroglyph_wall', K.place(K.masonryShell({
-      w: p.w, d: p.d, h: p.h, batter: B, course: A.TUNE.courseHeight, thick: 1.05, rng: R,
+      w: p.w, d: p.d, h: ph, batter: B, course: A.TUNE.courseHeight, thick: 1.05, rng: R,
       blockLen: [1.4, 2.5], recess: A.TUNE.mortarRecess, chipChance: A.TUNE.chipChance,
       gapChance: A.TUNE.fallenBlockChance, buried: 0.55, hollow: true,
       /* Flagstaff niches: the four vertical grooves down the south face. */
@@ -306,23 +374,23 @@ function entryPylons(A) {
       ],
     }), { x: cx, y: 0, z: p.z }));
     A.add('court', 'sandstone_worn', K.place(
-      K.cornerRolls({ w: p.w, d: p.d, h: p.h - 1.0, r: A.TUNE.rollRadius, batter: B, rng: R }),
+      K.cornerRolls({ w: p.w, d: p.d, h: ph - 1.0, r: A.TUNE.rollRadius, batter: B, rng: R }),
       { x: cx, y: 0, z: p.z }));
 
     /* Cavetto + torus cornice. This silhouette IS Egyptian architecture. */
-    const inset = B * (p.h - 0.4);
+    const inset = B * (ph - 0.4);
     const cw = p.w - 2 * inset, cd = p.d - 2 * inset;
     const cor = K.cornice({ w: cw, d: cd, h: A.TUNE.corniceHeight, flare: A.TUNE.corniceFlare, roll: A.TUNE.rollRadius });
-    A.add('court', 'hieroglyph_gilded', K.place(cor.geo, { x: cx, y: p.h - 0.4, z: p.z }));
+    A.add('court', 'hieroglyph_gilded', K.place(cor.geo, { x: cx, y: ph - 0.4, z: p.z }));
     /* Roof deck on top of the cornice. */
-    vol(A, 'court', 'paving_courtyard', cx - cw / 2, cx + cw / 2, p.h - 0.4 + cor.height - 0.35, p.h - 0.4 + cor.height,
-      p.z - cd / 2, p.z + cd / 2, { jitter: 0.02 });
-    const deckY = p.h - 0.4 + cor.height;
+    vol(A, 'court', 'paving_courtyard', cx - cw / 2, cx + cw / 2, ph - 0.4 + cor.height - 0.35, ph - 0.4 + cor.height,
+      p.z - cd / 2, p.z + cd / 2, { jitter: 0.02, c: 0.08 });
+    const deckY = ph - 0.4 + cor.height;
     groundProxy(A, cx - cw / 2, cx + cw / 2, deckY, p.z - cd / 2, p.z + cd / 2);
     ledgeProxy(A, cx - cw / 2 - A.TUNE.corniceFlare, cx + cw / 2 + A.TUNE.corniceFlare, deckY - 0.36, p.z - cd / 2 - 1.4, p.z - cd / 2 - 0.2);
 
     /* Battered wall-run faces. atan(0.105) = 6.0 deg off vertical -> 84 deg slope, still `wall`. */
-    A.proxy(K.proxyBattered(p.w, p.d, p.h - 0.4, B, A._proxyMat()),
+    A.proxy(K.proxyBattered(p.w, p.d, ph - 0.4, B, A._proxyMat()),
       { tag: 'wall', material: 'stone', climbable: true, batter: B }, { x: cx, y: 0, z: p.z });
 
     /* Sand drift on the north (leeward) face. */
@@ -339,7 +407,7 @@ function entryPylons(A) {
   A.add('court', 'sandstone_block', K.place(gcor.geo, { x: 0, y: 15.6, z: p.z - 0.2 }));
   ledgeProxy(A, -span / 2, span / 2, 15.6 + gcor.height, p.z - 3.2, p.z + 2.8, { thick: 0.5 });
   /* Underside of the gate reads as a dark ceiling in the `dunes` shot. */
-  vol(A, 'court', 'ceiling_stars', -span / 2 + 0.4, span / 2 - 0.4, 14.0, 14.32, p.z - 2.6, p.z + 2.6);
+  vol(A, 'court', 'ceiling_stars', -span / 2 + 0.4, span / 2 - 0.4, 14.0, 14.32, p.z - 2.6, p.z + 2.6, { c: 0.03 });
 }
 
 /* ===================== hooks, cables, entry rail ======================= */
@@ -364,7 +432,7 @@ function courtyardTraversal(A) {
   const cable = new THREE.CatmullRomCurve3(
     [[20.6, 15.75, 27.5], ...hookLine.map(([x, y, z]) => [x, y + 0.85, z]), [-13.4, 13.85, -15.0]]
       .map((p) => new THREE.Vector3(...p)), false, 'catmullrom', 0.4);
-  A.mesh('rope_fibre', K.railGeo(cable, { r: 0.075, seg: 90, rad: 5 }), 'cable:hooks');
+  A.add('court', 'rope_fibre', K.railGeo(cable, { r: 0.075, seg: 64, rad: 4 }));
 
   const ringGeo = K.hookRing({ r: 0.62, tube: 0.115, rng: R });
   const mats = [];
@@ -381,7 +449,7 @@ function courtyardTraversal(A) {
   const cable2 = new THREE.CatmullRomCurve3(
     [[-21.0, 12.9, 26.0], ...low.map(([x, y, z]) => [x, y + 0.85, z]), [2.2, 11.6, 7.0]]
       .map((p) => new THREE.Vector3(...p)), false, 'catmullrom', 0.4);
-  A.mesh('rope_fibre', K.railGeo(cable2, { r: 0.07, seg: 60, rad: 5 }), 'cable:hooks2');
+  A.add('court', 'rope_fibre', K.railGeo(cable2, { r: 0.07, seg: 44, rad: 4 }));
   for (const [x, y, z] of low) {
     const m = new THREE.Matrix4();
     m.compose(new THREE.Vector3(x, y, z), new THREE.Quaternion().setFromEuler(new THREE.Euler(D(R.jitter(2)), D(R.jitter(25)), D(R.jitter(2)), 'YXZ')), new THREE.Vector3(0.94, 0.94, 0.94));
@@ -423,7 +491,7 @@ function hypostyleHall(A) {
   for (const cz of naveZ) for (const sx of [-1, 1]) holes.push([sx * 8 - 2.5, sx * 8 + 2.5, cz - 2.5, cz + 2.5]);
   for (const cz of aisleZ) for (const sx of [-1, 1]) holes.push([sx * 16.5 - 2.3, sx * 16.5 + 2.3, cz - 2.3, cz + 2.3]);
   A.instance('paving_courtyard', K.slabUnit(0.5, R),
-    K.pavingMatrices({ x0: -23, x1: 23, z0: -51, z1: -17, y: 0, slab: 2.3, rng: R, sink: 0.045, holes }), 'paving:hall');
+    K.pavingMatrices({ x0: -23, x1: 23, z0: -51, z1: -17, y: 0, slab: 2.3, rng: R, sink: 0.045, holes }), 'paving:hall', { cast: false });
   groundProxy(A, -23, 23, 0, -51.2, -16.8);
 
   /* ---- Outer walls. Battered, buried at the base, hieroglyph-faced. ---- */
@@ -467,6 +535,10 @@ function hypostyleHall(A) {
   const dcor = K.cornice({ w: 11.2, d: 3.9, h: 0.86, flare: 0.86, roll: 0.3 });
   A.add('hall', 'sandstone_block', K.place(dcor.geo, { x: 0, y: 10.9, z: h.z1 - 0.9 }));
   ledgeProxy(A, -6.4, 6.4, 10.9 + dcor.height, h.z1 - 3.2, h.z1 + 1.2, { thick: 0.6 });
+  doorFrame(A, 'hall', 'sandstone_worn', { halfW: 4.55, y0: 0, y1: 9.4, z: h.z1 - 0.02, r: 0.3 });
+  for (const sx of [-1, 1]) {
+    doorFrame(A, 'hall', 'sandstone_worn', { x: sx * 16, halfW: 1.75, y0: 0, y1: 4.8, z: h.z1 - 0.02, r: 0.2 });
+  }
   A.api.doorways.push({ center: new THREE.Vector3(0, 4.7, h.z1 - 1), w: 8.8, h: 9.4 });
 
   /* North wall, split by the inner pylon gate. */
@@ -482,7 +554,7 @@ function hypostyleHall(A) {
   const colProxies = [];
   for (const cz of naveZ) for (const sx of [-1, 1]) {
     const cx = sx * 8;
-    const col = K.papyrusColumn({ hShaft: 12.3, rBase: 1.9, rTop: 1.4, capH: 2.4, abacus: 0.62, seg: 22, rng: R, bandCount: 5 });
+    const col = K.papyrusColumn({ hShaft: 12.3, rBase: 1.9, rTop: 1.4, capH: 2.4, abacus: 0.62, rng: R, bandCount: 4 });
     /* One column in the room leans — the eye needs a break from perfect verticals. */
     const lean = (cz === -38 && sx < 0) ? D(1.25) : D(R.jitter(0.28));
     A.add('hall', 'column_papyrus', K.place(col.geo, { x: cx, y: 0.35, z: cz, rz: lean, ry: D(R.range(0, 45)) }));
@@ -493,7 +565,9 @@ function hypostyleHall(A) {
   }
   for (const cz of aisleZ) for (const sx of [-1, 1]) {
     const cx = sx * 16.5;
-    const col = K.papyrusColumn({ hShaft: 9.5, rBase: 1.62, rTop: 1.2, capH: 1.9, abacus: 0.55, seg: 20, rng: R, bandCount: 4 });
+    /* Aisle columns are never nearer than ~14 m to a canonical camera, so they get two
+       thirds of the nave columns' radial density — still enough to resolve the ribs. */
+    const col = K.papyrusColumn({ hShaft: 9.5, rBase: 1.62, rTop: 1.2, capH: 1.9, abacus: 0.55, rng: R, bandCount: 3, seg: 32 });
     A.add('hall', 'column_papyrus', K.place(col.geo, { x: cx, y: 0.34, z: cz, rz: D(R.jitter(0.3)), ry: D(R.range(0, 45)) }));
     vol(A, 'hall', 'sandstone_block', cx - 2.0, cx + 2.0, 0, 0.4, cz - 2.0, cz + 2.0, { jitter: 0.02 });
     poleProxy(A, cx, cz, 0.4, 12.3, 1.38);
@@ -529,7 +603,7 @@ function hypostyleHall(A) {
   for (const sx of [-1, 1]) {
     for (let z = h.z0 + 1.4; z < h.z1 - 1.4; z += 2.55) {
       const len = 23.4 - CL;
-      const g = K.block(len, 0.86, 2.42, { rng: R, jitter: 0.02, chip: R.chance(0.12) ? 0.12 : 0 });
+      const g = K.chamferBox(len, 0.86, 2.42, { rng: R, jitter: 0.02, chip: R.chance(0.12) ? 0.12 : 0, c: 0.06 });
       K.place(g, { x: sx * (CL + len / 2), y: 13.06, z: z + 1.27, ry: D(R.jitter(0.3)) });
       A.add('hall', 'sandstone_block', K.boxProjectUVs(g));
     }
@@ -565,7 +639,7 @@ function hypostyleHall(A) {
     const slot = slotZ.find((s) => Math.abs(s - cz) < 1.0);
     const spans = slot ? [[-CL, -1.3], [1.3, CL]] : [[-CL, CL]];
     for (const [x0, x1] of spans) {
-      const g = K.block(x1 - x0, 0.82, 2.3, { rng: R, jitter: 0.02, chip: R.chance(0.1) ? 0.12 : 0 });
+      const g = K.chamferBox(x1 - x0, 0.82, 2.3, { rng: R, jitter: 0.02, chip: R.chance(0.1) ? 0.12 : 0, c: 0.06 });
       K.place(g, { x: (x0 + x1) / 2, y: NAVE - 0.41, z: cz, ry: D(R.jitter(0.25)) });
       A.add('hall', 'sandstone_block', K.boxProjectUVs(g));
       groundProxy(A, x0, x1, NAVE, cz - 1.2, cz + 1.2, { thick: 0.85 });
@@ -576,7 +650,18 @@ function hypostyleHall(A) {
     }
   }
   /* Painted star ceiling on the nave underside — the interior's one cool-hued surface. */
-  vol(A, 'hall', 'ceiling_stars', -CL + 0.4, CL - 0.4, NAVE - 0.86, NAVE - 0.8, h.z0 + 1.6, h.z1 - 1.6);
+  vol(A, 'hall', 'ceiling_stars', -CL + 0.4, CL - 0.4, NAVE - 0.86, NAVE - 0.8, h.z0 + 1.6, h.z1 - 1.6, { c: 0.02 });
+
+  /* Torus rolls down the four outer corners of the hall, the same motif as the pylons. The
+     hall is the biggest single mass in the level and its corners were hard 90° arrises. */
+  for (const sx of [-1, 1]) for (const pz of [h.z0 + 1.05, h.z1 - 1.05]) {
+    const roll = new THREE.CylinderGeometry(0.34, 0.42, WALL_H - 0.3, 16, 1, true);
+    K.normaliseAttrs(roll);
+    A.add('hall', 'sandstone_worn', K.boxProjectUVs(K.place(roll, {
+      x: sx * 23.7, y: (WALL_H - 0.3) / 2, z: pz,
+      rz: -sx * Math.atan(B), rx: (pz > zc ? 1 : -1) * Math.atan(B),
+    })));
+  }
 
   /* ---- Exterior cornice ring at the wall head: silhouette + a ledge all the way round. ---- */
   const ext = K.cornice({ w: 48 - 2 * B * WALL_H, d: (h.z1 - h.z0) - 2 * B * WALL_H, h: 1.3, flare: 1.05, roll: 0.36 });
@@ -620,8 +705,9 @@ function innerPylon(A) {
 
   /* Gate passage through to the tomb stair. */
   groundProxy(A, -3.4, 3.4, 0, p.z - p.d / 2 - 0.2, p.z + p.d / 2 + 0.2);
-  vol(A, 'pylon', 'ceiling_stars', -3.2, 3.2, 8.2, 8.5, p.z - p.d / 2, p.z + p.d / 2);
+  vol(A, 'pylon', 'ceiling_stars', -3.2, 3.2, 8.2, 8.5, p.z - p.d / 2, p.z + p.d / 2, { c: 0.03 });
   A.add('pylon', 'hieroglyph_gilded', K.place(K.beam(8.6, 1.4, p.d + 0.6, { rng: R, pieces: 3, crack: 0.05, chip: 0.16 }), { x: 0, y: 8.9, z: p.z }));
+  doorFrame(A, 'pylon', 'sandstone_worn', { halfW: 3.55, y0: 0, y1: 8.2, z: p.z + p.d / 2 + 0.02, r: 0.28 });
   A.api.doorways.push({ center: new THREE.Vector3(0, 4.1, p.z), w: 6.8, h: 8.2 });
 
   /* Summit: cornice, deck at y = 34 (the §8.1 height), rails, sand-free and windswept. */
@@ -689,7 +775,7 @@ function tomb(A) {
 
   /* ---- Vault shell. ---- */
   A.instance('paving_courtyard', K.slabUnit(0.5, R),
-    K.pavingMatrices({ x0: t.x0, x1: t.x1, z0: t.z0, z1: -59.0, y: F, slab: 2.35, rng: R, sink: 0.05, holes: [[-6.6, -4.4, -75.2, -60.8], [4.4, 6.6, -75.2, -60.8]] }), 'paving:tomb');
+    K.pavingMatrices({ x0: t.x0, x1: t.x1, z0: t.z0, z1: -59.0, y: F, slab: 2.35, rng: R, sink: 0.05, holes: [[-6.6, -4.4, -75.2, -60.8], [4.4, 6.6, -75.2, -60.8]] }), 'paving:tomb', { cast: false });
   groundProxy(A, t.x0, t.x1, F, t.z0, -58.6);
   const nicheZ = [-64, -70, -76];
   const vOpen = nicheZ.flatMap((nz) => [2, 3].map((f) => ({ face: f, a0: nz - zc - 0.8, a1: nz - zc + 0.8, y0: 3.0, y1: 4.9 })));
@@ -698,6 +784,7 @@ function tomb(A) {
     A.add('tomb', 'hieroglyph_wall', K.place(K.masonryShell({
       w: 1.9, d: t.z1 - t.z0, h: C - F, batter: 0.015, course: 0.7, thick: 0.95, rng: R,
       blockLen: [1.4, 2.4], recess: 0.07, chipChance: 0.22, gapChance: 0.02, hollow: true, openings: vOpen,
+      skipFaces: [sx > 0 ? 2 : 3],
     }), { x: sx * (t.x1 - 0.95), y: F, z: zc }));
     wallProxy(A, sx * (t.x1 - 0.95) - 1.0, sx * (t.x1 - 0.95) + 1.0, F, C, t.z0, t.z1);
     for (const nz of nicheZ) ledgeProxy(A, sx * (t.x1 - 0.95) - 1.0, sx * (t.x1 - 0.95) + 1.0, F + 3.0, nz - 0.8, nz + 0.8, { thick: 0.35 });
@@ -705,6 +792,7 @@ function tomb(A) {
   A.add('tomb', 'hieroglyph_wall', K.place(K.masonryShell({
     w: t.x1 - t.x0, d: 1.9, h: C - F, batter: 0.015, course: 0.7, thick: 0.95, rng: R,
     blockLen: [1.4, 2.4], recess: 0.07, chipChance: 0.2, gapChance: 0.02, hollow: true,
+    skipFaces: [1],
   }), { x: 0, y: F, z: t.z0 + 0.95 }));
   wallProxy(A, t.x0, t.x1, F, C, t.z0, t.z0 + 1.9);
   /* Gate wall + doorway, right behind the `interior` camera. */
@@ -713,17 +801,23 @@ function tomb(A) {
     blockLen: [1.3, 2.2], recess: 0.07, chipChance: 0.2, gapChance: 0.01, hollow: true,
     openings: [0, 1].flatMap((f) => [{ face: f, a0: -2.6, a1: 2.6, y0: -1, y1: 3.8 }]),
   }), { x: 0, y: F, z: -59.4 }));
+  doorFrame(A, 'tomb', 'granite_pink', { halfW: 2.72, y0: F, y1: F + 3.8, z: -60.22, r: 0.2 });
   for (const [x0, x1] of [[t.x0, -2.6], [2.6, t.x1]]) wallProxy(A, x0, x1, F, C, -60.2, -58.6);
   wallProxy(A, -2.6, 2.6, F + 3.8, C, -60.2, -58.6);
-  vol(A, 'tomb', 'ceiling_stars', t.x0 + 0.9, t.x1 - 0.9, C - 0.85, C, t.z0 + 1.6, -58.8);
+  vol(A, 'tomb', 'ceiling_stars', t.x0 + 0.9, t.x1 - 0.9, C - 0.85, C, t.z0 + 1.6, -58.8, { c: 0.03 });
 
   /* ---- Pillared crypt. The nearest pier is the `interior` shot's foreground frame. ---- */
   for (const sx of [-1, 1]) {
     for (const pz of [-62, -68, -74]) {
+      const ph = C - F - 1.2;
       A.add('tomb', 'granite_pink', K.place(K.masonryShell({
-        w: 2.2, d: 2.2, h: C - F - 1.2, batter: 0.02, course: 0.72, thick: 1.05, rng: R,
+        w: 2.2, d: 2.2, h: ph, batter: 0.025, course: 0.72, thick: 1.05, rng: R,
         blockLen: [1.1, 2.0], recess: 0.055, chipChance: 0.18, gapChance: 0, hollow: false,
-      }), { x: sx * 5.5, y: F, z: pz, ry: D(R.jitter(0.5)) }));
+      }), { x: sx * 5.5, y: F, z: pz, ry: D(R.jitter(0.5)), rz: D(R.jitter(0.6)) }));
+      /* The nearest of these is the `interior` frame's dark foreground pier. A box in that
+         slot is a black rectangle; the rolls give it four lit arrises against the torchlight. */
+      A.add('tomb', 'granite_pink', K.place(
+        K.cornerRolls({ w: 2.2, d: 2.2, h: ph - 0.12, r: 0.2, batter: 0.025, rng: R }), { x: sx * 5.5, y: F + 0.06, z: pz }));
       wallProxy(A, sx * 5.5 - 1.1, sx * 5.5 + 1.1, F, C - 1.2, pz - 1.1, pz + 1.1);
     }
     A.add('tomb', 'hieroglyph_gilded', K.place(K.beam(15.6, 1.2, 2.4, { rng: R, pieces: 5, crack: 0.04, chip: 0.14 }), { x: sx * 5.5, y: C - 0.6, z: -68, ry: Math.PI / 2 }));
@@ -743,7 +837,7 @@ function tomb(A) {
     w: 3.5, d: 2.1, h: 1.6, batter: 0.02, course: 0.8, thick: 0.55, rng: R,
     blockLen: [1.2, 1.8], recess: 0.04, chipChance: 0.2, gapChance: 0, hollow: false,
   }), { x: sx0, y: sy0 + 0.55, z: sz0 }));
-  const lid = K.block(3.8, 0.5, 2.35, { rng: R, jitter: 0.02, chip: 0.18 });
+  const lid = K.chamferBox(3.8, 0.5, 2.35, { rng: R, jitter: 0.02, chip: 0.18, c: 0.055 });
   K.place(lid, { x: sx0 + 0.55, y: sy0 + 2.4, z: sz0 + 0.3, ry: D(6.5), rz: D(2.2) });
   A.add('tomb', 'gold_leaf', K.boxProjectUVs(lid));
   ledgeProxy(A, sx0 - 1.9, sx0 + 2.6, sy0 + 2.65, sz0 - 1.1, sz0 + 1.5, { thick: 0.5 });
@@ -778,7 +872,7 @@ function background(A) {
   /* A third, distant, half-buried mastaba field staggers the horizon further. */
   for (let i = 0; i < 5; i++) {
     const x = -60 - i * 34 + R.jitter(12), z = -150 - i * 26 + R.jitter(20);
-    box(A, 'far', 'sandstone_worn', 24 + R.range(0, 14), 7 + R.range(0, 5), 16 + R.range(0, 10), x, 2.4, z, { jitter: 0.2, taper: 2.6, ry: D(R.range(-8, 8)) });
+    box(A, 'far', 'sandstone_worn', 24 + R.range(0, 14), 7 + R.range(0, 5), 16 + R.range(0, 10), x, 2.4, z, { jitter: 0.2, taper: 2.6, ry: D(R.range(-8, 8)), c: 0 });
   }
 }
 
@@ -794,9 +888,11 @@ function foreground(A) {
     const inner = sx * 12.5, outer = sx * 21.0;
     for (const px of [inner, outer]) {
       A.add('court', 'hieroglyph_wall', K.place(K.masonryShell({
-        w: 2.6, d: 3.0, h: 12.6, batter: 0.085, course: 0.64, thick: 0.95, rng: R, hollow: true,
+        w: 2.6, d: 3.0, h: 12.6, batter: 0.095, course: 0.64, thick: 0.95, rng: R, hollow: true,
         blockLen: [1.2, 2.1], recess: 0.06, chipChance: 0.22, gapChance: 0.04, buried: 0.4,
-      }), { x: px, y: 0, z: 1.0, ry: D(R.jitter(0.5)) }));
+      }), { x: px, y: 0, z: 1.0, ry: D(R.jitter(0.5)), rz: D(R.jitter(0.8)) }));
+      A.add('court', 'sandstone_worn', K.place(
+        K.cornerRolls({ w: 2.6, d: 3.0, h: 12.3, r: 0.24, batter: 0.095, rng: R }), { x: px, y: 0.12, z: 1.0 }));
       A.proxy(K.proxyBattered(2.6, 3.0, 12.6, 0.085, A._proxyMat()), { tag: 'wall', material: 'stone', climbable: true }, { x: px, y: 0, z: 1.0 });
     }
     const span = Math.abs(outer - inner) + 2.2;
@@ -815,7 +911,7 @@ function foreground(A) {
 
   /* Fallen architrave + column drums in the courtyard's east bay: the `hero` shot's
      lower-left dark mass, and a ruin note that stops the complex looking new-built. */
-  const drum = new THREE.CylinderGeometry(1.72, 1.86, 1.5, 16, 1);
+  const drum = new THREE.CylinderGeometry(1.72, 1.86, 1.5, 22, 1);
   K.normaliseAttrs(drum);
   const drums = [];
   for (const [x, y, z, rz, ry] of [[12.6, 0.95, 20.6, D(88), D(12)], [13.9, 0.9, 18.1, D(84), D(-40)], [11.4, 2.4, 21.3, D(80), D(30)]]) {

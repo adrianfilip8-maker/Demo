@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { chamferBox } from './Kit.js';
 
 /**
  * PropKit — parametric builders for everything smaller than a building.
@@ -155,7 +156,13 @@ export class Bag {
  * This is the workhorse — most props are five to thirty of these.
  */
 export function chunk(w, h, d, opts = {}) {
-  const { rng, jitter = 0.015, chip = 0, taper = 0, lean = 0, shear = 0, round = 0 } = opts;
+  const { rng, jitter = 0.015, chip = 0, taper = 0, lean = 0, shear = 0, round = 0, c = 0 } = opts;
+  /* `c` bevels the arrises. On sculpture this is not a masonry detail — a 12–20 cm bevel on a
+     shoulder or a thigh is the cheapest thing that reads as a *turned* mass, because the
+     bevel's normal sweeps between the two faces and the cel ramp draws its bands across it.
+     Reserve it for masses that carry a silhouette; a bevel on an eyelid is 32 wasted
+     triangles. */
+  if (c > 0) return boxProjectUVs(chamferBox(w, h, d, { rng, jitter, chip, taper, lean, shear, round, c }));
   const geo = new THREE.BoxGeometry(w, h, d, 1, 1, 1);
   const pos = geo.attributes.position;
 
