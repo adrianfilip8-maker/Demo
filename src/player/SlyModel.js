@@ -139,9 +139,9 @@ const SKELETON = [
      behind the body from every camera angle except pure side-on, which is how a 1.1 m tail
      managed to read as "no tail at all". ANIMATION's clip rotations compose on top of this. */
   ['tailA', 'hips', [0, 0.898, -0.135]],
-  ['tailB', 'tailA', [0.016, 0.896, -0.445]],
-  ['tailC', 'tailB', [0.044, 0.928, -0.748]],
-  ['tailD', 'tailC', [0.080, 1.008, -0.996]],
+  ['tailB', 'tailA', [0.038, 0.896, -0.440]],
+  ['tailC', 'tailB', [0.110, 0.928, -0.730]],
+  ['tailD', 'tailC', [0.205, 1.008, -0.962]],
 ];
 
 /**
@@ -538,22 +538,26 @@ export class SlyModel {
    */
   _buildTail(mb) {
     const S = TUNE.tailScale;
-    /* Follows the bind bone chain: back off the hips, then sweeping up and a little out to his
-       left. Both departures from "straight behind" are deliberate — a tail that leaves the hips
-       horizontally is hidden by the body from every camera angle except pure side-on, which is
-       how a 1.1 m tail managed to be recorded as "no tail at all". ANIMATION's clip rotations
-       compose on top, so this only has to *start* the arc, not finish it. */
+    /* Follows the bind bone chain: back off the hips, then sweeping up *and* out to his left.
+       Both departures from "straight behind" are deliberate, and neither is decoration:
+         · The rise gets the tail out from behind his own back. Left horizontal it is occluded
+           from every camera angle except pure side-on — which is how a 1.1 m tail managed to
+           be recorded as "no tail at all".
+         · The lateral flare gets it out from behind his own shoulder. `sly-closeup`'s camera
+           sits 1.8° off his facing direction, so a tail that only rises still stacks up behind
+           the torso in the one shot that exists to prove the character.
+       ANIMATION's clip rotations compose on top, so this only has to *start* the arc. */
     const spine = resample([
       new THREE.Vector3(0.000, 0.898, -0.070 * S),
-      new THREE.Vector3(0.003, 0.895, -0.200 * S),
-      new THREE.Vector3(0.010, 0.894, -0.340 * S),
-      new THREE.Vector3(0.021, 0.899, -0.480 * S),
-      new THREE.Vector3(0.036, 0.913, -0.618 * S),
-      new THREE.Vector3(0.055, 0.941, -0.748 * S),
-      new THREE.Vector3(0.077, 0.983, -0.864 * S),
-      new THREE.Vector3(0.100, 1.039, -0.958 * S),
-      new THREE.Vector3(0.122, 1.105, -1.024 * S),
-      new THREE.Vector3(0.141, 1.174, -1.066 * S),
+      new THREE.Vector3(0.008, 0.895, -0.199 * S),
+      new THREE.Vector3(0.026, 0.894, -0.337 * S),
+      new THREE.Vector3(0.055, 0.899, -0.474 * S),
+      new THREE.Vector3(0.094, 0.913, -0.607 * S),
+      new THREE.Vector3(0.141, 0.941, -0.731 * S),
+      new THREE.Vector3(0.196, 0.983, -0.840 * S),
+      new THREE.Vector3(0.254, 1.039, -0.926 * S),
+      new THREE.Vector3(0.312, 1.105, -0.984 * S),
+      new THREE.Vector3(0.362, 1.174, -1.016 * S),
     ], 32);
 
     /* Girth: at its widest the tail is 0.36 m across — wider than his 0.27 m chest and close to

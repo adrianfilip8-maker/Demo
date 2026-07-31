@@ -676,7 +676,13 @@ export const MATERIALS = {
   },
 
   paving_courtyard: {
-    group: 'stone', tier: 0, tile: 4.4, bump: 0.024, rough: 0.80,
+    /* `rough` was 0.80 and the traffic-polish pass took another 0.24 off it in the worn lanes,
+     * bottoming out near 0.56 — glossy enough that the floor caught a broad specular sheen and
+     * read as "wet ceramic… a bathroom floor". Foot-polished sandstone does get smoother, but it
+     * is still sandstone: the wear now moves roughness within a narrow band near the top of the
+     * range rather than down into the gloss. */
+    group: 'stone', tier: 0, tile: 4.4, bump: 0.024, rough: 0.92,
+    aoStrength: 1.35,
     build(s, cx) {
       // 4.4 m ÷ 3 courses gives 1.5 m flags. The courtyard floor is the largest single area in
       // `hero` and `courtyard`, so its pattern frequency sets the whole frame's busyness.
@@ -684,7 +690,7 @@ export const MATERIALS = {
         seed: cx.seed, courses: 3, aspect: 1.15, jointW: 0.007, chamfer: 0.012,
         dark: PAL.sandDark, mid: PAL.sandMid, light: PAL.limeMid, mortar: 0x6a5540,
         relief: 0.055, dome: 0.0, groove: 0.26, spread: 0.7, bondJitter: 0.16, tone: -0.040,
-        bedFreq: 3,
+        bedFreq: 3, rough: 0.92,
       });
       // Foot traffic: a wandering path of polished, dished, sand-scoured stone.
       const traffic = s.field(4, (u, v) => sat(warpN(u, v, 3, 4, 1.4, cx.seed + 47) * 1.7 + 0.55));
@@ -706,7 +712,7 @@ export const MATERIALS = {
         s.h[i] -= dish * wear * 0.16;                        // worn hollow in the flag
         s.h[i] -= crackNet[i] * 0.22;
         s.mixHex(i, PAL.limeLight, dish * wear * 0.14);      // scuffed pale
-        s.rough[i] = sat(s.rough[i] - dish * wear * 0.24 + crackNet[i] * 0.12);
+        s.rough[i] = sat(s.rough[i] - dish * wear * 0.10 + crackNet[i] * 0.06);
         s.stainHex(i, PAL.sandCrev, crackNet[i] * 0.14);
       }
       /* Sand drifted into the joints.
@@ -907,8 +913,15 @@ export const MATERIALS = {
     group: 'carved', tier: 1, tile: 3.0, bump: 0.014, rough: 0.68,
     build(s, cx) {
       const size = s.size;
-      s.fill(PAL.lapis); s.fillH(0.62); s.rough.fill(0.70);
-      const deepLapis = MX(PAL.lapis, PAL.shadow, 0.55);
+      /* A painted star ceiling is pigment *on plaster*, and the plaster keeps showing through —
+       * real Egyptian ceilings are a mid blue, not a void. This one was mixed 55% toward a
+       * shadowed lapis and then darkened another 50% by the plaster field, which put it three
+       * value steps below every wall in the hall; at full-frame scale it stopped reading as
+       * architecture and read as a hole through the roof to a night sky, in a golden-hour shot.
+       * Lifting the ground keeps §2.2's `LAPIS #1f4f96` as the hue and puts the ceiling back
+       * into the room's value range. */
+      s.fill(MX(PAL.lapis, PAL.limeMid, 0.14)); s.fillH(0.62); s.rough.fill(0.70);
+      const deepLapis = MX(PAL.lapis, PAL.sandCrev, 0.30);
       // Egyptian night ceiling: a deep blue field, gold stars in offset rows, painted border.
       const cols = 6, rows = 6;
       const stars = rasterMask(size, (ctx) => {
@@ -931,7 +944,7 @@ export const MATERIALS = {
       const starSoft = blurWrap(stars, size, Math.max(1, Math.round(size / 300)), 2);
       const wear = s.field(3, (u, v) => sat(warpN(u, v, 11, 4, 1.2, cx.seed + 29) * 1.4 + 0.5));
       for (let i = 0; i < s.n; i++) {
-        s.mixHex(i, deepLapis, (1 - plaster[i]) * 0.5);
+        s.mixHex(i, deepLapis, (1 - plaster[i]) * 0.32);
         s.mixHex(i, PAL.turquoise, sat(plaster[i] - 0.76) * 0.30);
         s.h[i] += (plaster[i] - 0.5) * 0.10;
         const g = sat(starSoft[i] * 1.25);
@@ -946,11 +959,12 @@ export const MATERIALS = {
           s.metal[i] = k * 0.55;
         }
         // Lamp soot: centuries of torches, pooling in the hollows.
-        s.stainHex(i, 0x161018, sat(soot[i] - 0.45) * 0.75);
+        s.stainHex(i, 0x2a2430, sat(soot[i] - 0.55) * 0.55);
       }
       brushwork(s, { tint: MX(PAL.lapis, PAL.white, 0.18), amount: 0.10, angle: 0.1, freq: 7, len: 6, seed: cx.seed + 7 });
-      weather(s, { seed: cx.seed + 6, crevice: 0x0e1626, creviceAmt: 0.4, streakAmt: 0.10, dustAmt: 0.06, roughGrime: 0.08 });
+      weather(s, { seed: cx.seed + 6, crevice: 0x243044, creviceAmt: 0.34, streakAmt: 0.10, dustAmt: 0.06, roughGrime: 0.08, directional: 0.5 });
       grain(s, { amount: 0.024, freq: 320, seed: cx.seed + 8, heightAmt: 0.006 });
+      rampFloor(s, { crevice: 0x2b3a58 });
     },
   },
 

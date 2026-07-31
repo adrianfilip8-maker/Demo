@@ -9,6 +9,10 @@ import { MeshBuilder, addTube, addEllipsoid, addHardBox, superEllipse } from './
  * (hand → back → shoulder), and it is the one part of Sly that is hard-edged metal rather
  * than fur — so it wants its own material and its own outline thickness.
  *
+ * One material, not two: the whole prop draws in a single call and the grip is the same gold
+ * dropped to a dark bronze by vertex colour. The character budget is 12 draw calls and the
+ * body already spends 9 of them.
+ *
  * Local frame: **grip at the origin, shaft along +Y, hook curling toward +Z (forward).**
  * `hookPoint` is where a ring sits when the cane catches it.
  */

@@ -89,14 +89,15 @@ const TUNE = {
   colPatrol: 0xfff0c2,     // §2.2 sun, pushed pale: a lamp, not a headlight
   colWarn: 0xffb14a,
   colAlert: 0xff3a22,
-  beamBase: 0.58,          // intensity floor while patrolling. The night frames it has to
-                           // carry are near-black, so the beam is the hero read in them.
-  beamGain: 0.85,          // extra brightness per unit of Senses.gain
-  beamAlert: 1.55,         // multiplier once he is actually chasing
+  /* Calibrated against a night capture: much above this and the additive volume clips to a
+     flat wedge of solid colour, which reads as a painted decal instead of light. */
+  beamBase: 0.30,          // intensity floor while patrolling
+  beamGain: 0.62,          // extra brightness per unit of Senses.gain
+  beamAlert: 1.28,         // multiplier once he is actually chasing
   beamFlicker: 0.09,
   glowSize: 0.34,          // radius of the lamp card at the apex, metres at full throw
   beamDayFloor: 0.26,      // how much of the cone survives full daylight
-  poolMix: 0.34,           // pool intensity as a fraction of the beam's
+  poolMix: 0.24,           // pool intensity as a fraction of the beam's
   poolRings: [0.03, 0.10, 0.20, 0.34, 0.50, 0.68, 0.85, 1.0],
   poolLat: 14,
 
@@ -237,7 +238,7 @@ void main() {
   /* --- the lamp card --- */
   if ( vT < -0.5 ) {
     float d = length( vQuad );
-    float ga = pow( max( 0.0, 1.0 - d ), 3.0 ) * 2.6 * uOpacity;
+    float ga = pow( max( 0.0, 1.0 - d ), 3.0 ) * 1.7 * uOpacity;
     ga *= smoothstep( 0.4, 1.6, length( vV ) );
     gl_FragColor = vec4( vTint * ga, ga );
     #include <tonemapping_fragment>
@@ -248,13 +249,13 @@ void main() {
   /* The whole illusion. A shell weighted by how squarely it faces the eye is bright through
      the middle and vanishes at its own silhouette; front + back shell sum to a soft volume
      with no visible geometry edge. Weight it the other way and you get a glowing tube. */
-  float body = pow( abs( dot( normalize( vN ), V ) ), 1.22 );
+  float body = pow( abs( dot( normalize( vN ), V ) ), 1.85 );
 
   /* Staring down the beam should be blinding, not blank — the shell is edge-on from there. */
   float glare = pow( max( 0.0, dot( -vAxis, V ) ), 6.0 ) * 0.55;
 
   float t = vT;
-  float atten = 1.0 / ( 1.0 + 5.0 * t * t );
+  float atten = 1.0 / ( 1.0 + 7.0 * t * t );
   // The throat of the cone stays faint. It overlaps the guard's own head and shoulders, and
   // an additive white wash there erases the silhouette the shot exists to show.
   float near = smoothstep( 0.0, 0.16, t );
@@ -1690,12 +1691,9 @@ export class Guards {
     g.dwell = 99; g.dwellAction = 'look';
     g.u = 0;
 
-    const solved = this._solveShotPose(g, spec);
-    if (!solved) {
-      g.position.set(spec.x, g.position.y, spec.z);
-      g._place(g.position);
-      g.yaw = spec.yaw;
-    }
+    /* If no stand in front of the lens is both walkable and visible, leave him on his beat.
+       A guard patrolling where he belongs beats a guard teleported behind a wall. */
+    this._solveShotPose(g, spec);
     g.forward.set(Math.sin(g.yaw), 0, Math.cos(g.yaw));
     g.speed = 0;
     g.root.position.copy(g.position);
@@ -1734,13 +1732,13 @@ export class Guards {
     const height = (TUNE.headTop[g.type] ?? 1.95) + 0.15;
     const side = spec.screenSide ?? -1;
 
-    /* Two passes. The first insists the camera has clear line of sight to his chest; if the
-       level leaves no such stand at all — the courtyard around the origin is currently walled
-       in, whatever §8.1 says — the second takes the best framing available and lets the
-       geometry occlude what it will. An occluded guard is a bad shot; no guard is worse. */
+    /* Line of sight is required, not preferred. The alternative — accepting the best framing
+       and letting geometry occlude it — teleports the subject somewhere the lens cannot see,
+       which is strictly worse than leaving him walking his beat. If this returns false the
+       caller leaves him alone. */
     const best = this._shotStand || (this._shotStand = { x: 0, y: 0, z: 0 });
     let found = false;
-    for (let pass = 0; pass < 2 && !found; pass++) {
+    for (let pass = 0; pass < 1; pass++) {
       let bestScore = -Infinity;
       for (let d = spec.minDist ?? 4.5; d <= (spec.maxDist ?? 17); d += 0.5) {
         // A third of the way off-centre, on the side the beam is NOT sweeping into.
