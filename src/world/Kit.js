@@ -19,6 +19,25 @@ import * as THREE from 'three';
 /** 1 UV unit per 2 m — the whole project's texel density contract. */
 export const UV_PER_M = 0.5;
 
+/**
+ * The one surface in the level whose V is *registered* rather than tiled.
+ *
+ * `column_papyrus` is not a repeating stone: its map paints binding bands at fixed fractions
+ * of the column's height (0.035 / 0.115 near the foot, 0.80 / 0.865 under the capital) and a
+ * text register between them. That only lands where the recipe says it lands if exactly one
+ * repeat covers exactly one column — and V was `y * UV_PER_M`, i.e. world metres, so with
+ * `column_papyrus.tile[1] = 4.5` (one repeat per 9.0 m of world) a 12.3 m shaft got 1.7
+ * repeats: a second set of painted bands two thirds of the way up, in the middle of the shaft,
+ * where a band is both archaeologically wrong and the first thing to alias at 30 m. TEXTURES
+ * damped the chroma so it stopped reading as a rainbow; this is the actual registration fix.
+ *
+ * **This number is one half of a two-file contract** and must equal `column_papyrus.tile[1]`
+ * in `src/textures/Materials.js`. The other half is the rib count: `papyrusColumn`'s
+ * `lobes = 8` is matched by that recipe's `stalks = 8`, deliberately, so changing either one
+ * needs the other changed with it.
+ */
+export const COLUMN_V_TILE = 4.5;
+
 const _v = new THREE.Vector3();
 const _m = new THREE.Matrix4();
 const _q = new THREE.Quaternion();
@@ -304,11 +323,53 @@ export function masonryShell(o) {
     blockLen = [1.15, 2.0], recess = 0.055, chip = 0.16, chipChance = 0.18,
     gapChance = 0.04, buried = 0, openings = [], quoin = true, courseJitter = 0.018,
     tiltDeg = 0.3, hollow = true, chamfer = 0, skipFaces = null,
+    sag = 0, windFace = null, windK = 2.0,
   } = o;
 
   const out = [];
   const nCourse = Math.max(1, Math.round(h / course));
   const ch = h / nCourse;
+
+  /* ---- Settlement ------------------------------------------------------
+   *
+   * §7.3 fails a shot for "geometry silhouettes are straight/symmetric everywhere". Per-block
+   * jitter does not fix that: it is high-frequency, it averages out over a wall, and at
+   * twenty metres it reads as noise rather than as age. What reads is the *low* frequency —
+   * one long dip where the ground under a wall gave way, so every course line above it curves
+   * and the whole mass is visibly not level.
+   *
+   * The dip is a single raised cosine per shell, evaluated in the along-face coordinate and
+   * forced to zero at both ends of every face, so corners and quoins still meet exactly.
+   *
+   * HAZARD — this is the mechanism that "Seal the shells" was about. Offsetting each block
+   * *rigidly* by f(a) opens a horizontal slot wherever two vertically-adjacent blocks sit at
+   * different along-positions: the stagger is up to a block length, and f can change by more
+   * than the 1.5% mortar joint over that distance. So each block is also *rotated* to sit on
+   * the local tangent f'(a). Then every block's top and bottom edges lie on the same pair of
+   * curves and consecutive courses match everywhere, to within the curve's second derivative
+   * over one block — about 5 mm here, well inside the joint. Verified by ray-escape probe, not
+   * by argument: see the seal check in the offline level probe.
+   *
+   * Amplitude scales with face length so a 1.7 m kiosk pier does not fold in half, which also
+   * keeps the gradient constant at roughly 1 cm per metre whatever the wall.
+   */
+  const sagCentre = 0.5 + (rng ? rng.jitter(0.16) : 0);
+  const sagWidth = 0.42 + (rng ? rng.jitter(0.08) : 0);
+  const settle = (u, len) => {
+    if (sag <= 0) return 0;
+    const amp = sag * Math.min(1, len / 14);
+    const t = (u - sagCentre) / sagWidth;
+    if (t <= -1 || t >= 1) return 0;
+    return -amp * 0.5 * (1 + Math.cos(Math.PI * t));
+  };
+  const settleSlope = (u, len) => {
+    if (sag <= 0) return 0;
+    const amp = sag * Math.min(1, len / 14);
+    const t = (u - sagCentre) / sagWidth;
+    if (t <= -1 || t >= 1) return 0;
+    // d/da of the above; `u` is a/len, so divide the chain rule through by len.
+    return amp * 0.5 * Math.PI * Math.sin(Math.PI * t) / (sagWidth * len);
+  };
 
   for (let c = 0; c < nCourse; c++) {
     const yb = c * ch, yc = yb + ch * 0.5;
@@ -374,14 +435,21 @@ export function masonryShell(o) {
           else s0 = Math.max(s0, oa1);
         }
         if (skip) continue;
-        if (rng && rng.chance(gapChance) && yb > 1.2) continue;   // a block has fallen out
+        /* Erosion is directional. The wind comes up the valley and loads one face with sand
+           all year; that face loses blocks and takes chips at twice the rate of the sheltered
+           one. It costs nothing, and because the two entry pylons are seen from the south it
+           is what stops them reading as a mirrored pair. */
+        const exposure = windFace == null ? 1
+          : face.f === windFace ? windK
+          : face.f === (windFace ^ 1) ? 1 / windK : 1;
+        if (rng && rng.chance(Math.min(0.35, gapChance * exposure)) && yb > 1.2) continue;
         bl = s1 - s0;
         if (bl < 0.16) continue;
         const ac = (s0 + s1) * 0.5;
 
         // Mortar recess: pull most blocks back from the face plane so shadow catches the joint.
         const rec = rng ? rng.range(0.2, 1.0) * recess : recess * 0.6;
-        const doChip = rng ? rng.chance(chipChance) : false;
+        const doChip = rng ? rng.chance(Math.min(0.6, chipChance * exposure)) : false;
         const mk = chamfer > 0 ? chamferBox : block;
         const g = mk(
           face.axis === 'x' ? bl : thick, ch * 0.985 + sink, face.axis === 'x' ? thick : bl,
@@ -390,9 +458,21 @@ export function masonryShell(o) {
         const ry = rng ? THREE.MathUtils.degToRad(rng.jitter(tiltDeg)) : 0;
         const px = face.axis === 'x' ? ac : face.sign * (face.cross - thick * 0.5 - rec);
         const pz = face.axis === 'x' ? face.sign * (face.cross - thick * 0.5 - rec) : ac;
+        // Settle: drop onto the dip and rotate onto its tangent, so the course line curves
+        // as one continuous run instead of stepping block to block.
+        /* `a` maps straight onto world X (axis 'x' faces) or world Z (axis 'z' faces) for
+           both signs of the face, so the tangent needs no per-face flip — only the rotation
+           axis differs, and rx runs the opposite way to rz because rotating about +X carries
+           +Z toward −Y. */
+        const u = (ac + face.len * 0.5) / face.len;
+        const dy = settle(u, face.len);
+        const sl = Math.atan(settleSlope(u, face.len));
+        const jz = rng ? THREE.MathUtils.degToRad(rng.jitter(tiltDeg * 0.6)) : 0;
         place(g, {
-          x: px, y: yb + ch * 0.5 - sink * 0.5, z: pz,
-          ry, rz: rng ? THREE.MathUtils.degToRad(rng.jitter(tiltDeg * 0.6)) : 0,
+          x: px, y: yb + ch * 0.5 - sink * 0.5 + dy, z: pz,
+          ry,
+          rz: face.axis === 'x' ? jz + sl : jz,
+          rx: face.axis === 'z' ? -sl : 0,
         });
         out.push(g);
       }
@@ -570,7 +650,8 @@ export function cornerRolls({ w, d, h, r = 0.4, batter = 0.09, rng }) {
 export function papyrusColumn(o = {}) {
   const {
     hShaft = 13.2, rBase = 1.9, rTop = 1.4, capH = 2.4, abacus = 0.62,
-    lobes = 8, rib = 0.075, rng, bandCount = 4, shaftSegs = 4, belly = 1.86, neck = 0.90,
+    lobes = 8, rib = 0.075, rng, bandCount = 4, shaftSegs = 4, belly = 2.05, neck = 0.80,
+    abacusK = 3.68, lean = 0,
   } = o;
   // Enough radial samples to resolve the ribs, rounded up to a multiple of the lobe count so
   // every stem is identical and the seam at a=0 lands on a crest.
@@ -608,28 +689,46 @@ export function papyrusColumn(o = {}) {
     y += bh + 0.05;
   }
   // Closed bud: swell to a heavy belly then draw back in at the top.
+  //
+  // The bell's *maximum radius* is not a free parameter — at x = ±8 in the nave it is 2.6 m
+  // from running into the clerestory wall's inner face at x = ±10.64. So the "heavier capital"
+  // read is bought where it is actually free: the bell now leaves the neck almost vertically
+  // and reaches its widest point lower (t = 0.62 rather than 0.74), which is the overhanging,
+  // top-heavy profile, and the neck it springs from is thinner. Ratio bell/neck was 2.07; it
+  // is now 2.56.
   const capBase = y;
   const bud = [
-    [0.00, 0.96], [0.13, 1.18], [0.28, 1.46], [0.44, 1.68],
-    [0.60, 1.82], [0.74, 1.86], [0.86, 1.74], [1.00, 1.40],
+    [0.00, 1.00], [0.10, 1.34], [0.22, 1.66], [0.36, 1.88],
+    [0.50, 2.00], [0.62, 2.05], [0.78, 1.94], [1.00, 1.44],
   ];
-  const bk = belly / 1.86;
+  const bk = belly / 2.05;
   for (const [t, k] of bud) push(capBase + capH * t, rTop * k * bk, 1.25);
   const capTop = capBase + capH;
-  push(capTop, rTop * 1.40 * bk, 0.2);
+  push(capTop, rTop * 1.44 * bk, 0.2);
+
+  /* V is *registered to the column*, not tiled in world metres — see COLUMN_V_TILE. One
+     texture repeat spans base to the top of the bell, so the painted binding bands land on
+     the cord bundle and just above the base roll, where the recipe draws them, instead of
+     wherever 9.0 m happens to fall. U stays in world arclength: it has to, because the ribs
+     have to keep their world period as the shaft tapers. */
+  const vScale = COLUMN_V_TILE / capTop;
 
   // build the lobed surface of revolution by hand (LatheGeometry can't do angular ribs)
   const verts = [], nors = [], uvs = [], idx = [];
   const rows = prof.length;
   for (let i = 0; i < rows; i++) {
     const [py, pr, rs] = prof[i];
+    // A hand-raised column is not plumb: the whole shaft drifts off vertical by `lean`
+    // radians, taken up smoothly over the height rather than as a rigid tilt, so the foot
+    // stays planted on its plinth while the capital moves.
+    const dx = lean * py;
     for (let j = 0; j <= seg; j++) {
       const a = (j / seg) * Math.PI * 2;
       const lobe = 1 + rib * rs * Math.cos(a * lobes);
       const r = pr * lobe;
-      verts.push(Math.cos(a) * r, py, Math.sin(a) * r);
+      verts.push(Math.cos(a) * r + dx, py, Math.sin(a) * r);
       nors.push(Math.cos(a), 0, Math.sin(a));
-      uvs.push((a * pr) * UV_PER_M, py * UV_PER_M);
+      uvs.push((a * pr) * UV_PER_M, py * vScale);
     }
   }
   for (let i = 0; i < rows - 1; i++) {
@@ -656,10 +755,16 @@ export function papyrusColumn(o = {}) {
   }
   nn.needsUpdate = true;
 
-  const ab = chamferBox(rTop * 3.3, abacus, rTop * 3.3, { rng, jitter: 0.012, c: 0.06 });
-  place(boxProjectUVs(ab), { y: capTop + abacus * 0.5 });
+  // The abacus is deliberately oversized against the neck it sits on — a wide flat plate
+  // capping a narrow bundle is most of what makes an Egyptian capital read as top-heavy.
+  const ab = chamferBox(rTop * abacusK, abacus, rTop * abacusK, { rng, jitter: 0.012, c: 0.06 });
+  place(boxProjectUVs(ab), { x: lean * (capTop + abacus * 0.5), y: capTop + abacus * 0.5 });
 
-  return { geo: mergeAll([shaft, ab]), height: capTop + abacus, capBase, capTop };
+  return {
+    geo: mergeAll([shaft, ab]), height: capTop + abacus, capBase, capTop,
+    // What the caller needs to keep proxies and neighbours clear of the bell.
+    rMax: rTop * belly, rAbacus: rTop * abacusK * 0.5,
+  };
 }
 
 /**

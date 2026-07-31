@@ -747,13 +747,30 @@ export class SlyModel {
     const sgSleeve = mb.newSg(), sgFur = mb.newSg(), sgCuff = mb.newSg();
     const cuffStart = 0.86, gloveStart = 0.965;
 
+    /* Published for the tuft pass so forearm clumps sit on the real loft rather than on a
+       hand-copied pair of coordinates that silently rots when a radius moves. */
+    (this._armInfo || (this._armInfo = {}))[side] = { key, ramp: ARM_RAMP, cuffStart, gloveStart };
+
     /* Slim, and slimmest at the shoulder end. §7.3's cartoon read wants narrow shoulders and
        long thin limbs; the deltoid below carries what shoulder mass there is. */
     const slim = (i) => TUNE.limbSlim * (ts[i] < 0.34 ? TUNE.shoulderSlim : 1);
 
+    /* Cloth silhouette events. A sleeve is not a machined tube — fabric bunches above the
+       elbow and the hem rolls where it ends — and the sleeve is the *second* largest smooth
+       surface on him after the legs, ~35 px wide and 250 px long at `sly-closeup`, with
+       nothing happening on either edge. These are 3–4 px steps, which is about the smallest
+       event that survives the 2.5 px ink hull. Fur clumps are not the instrument here: this
+       surface is cloth, and clumping it would read as a moulting jumper. */
+    const clothSwell = (i) => {
+      const t = ts[i];
+      if (t >= cuffStart) return 1;
+      return 1 + 0.10 * smooth(0.56, 0.68, t) * (1 - smooth(0.70, 0.80, t))
+        + 0.20 * smooth(0.68, 0.76, t);
+    };
+
     addTube(mb, {
       centers, seg: TUNE.segLimb,
-      rx: (i) => radii[i] * slim(i) * (ts[i] >= gloveStart ? 1.14 : 1.0),
+      rx: (i) => radii[i] * slim(i) * clothSwell(i) * (ts[i] >= gloveStart ? 1.14 : 1.0),
       framesOverride: undefined,
       upHint: new THREE.Vector3(0, 0, 1),
       shape: (a, i) => {
@@ -899,6 +916,12 @@ export class SlyModel {
       [0.92, { [`lowerLeg${L}`]: 1 }],
       [1.00, { [`lowerLeg${L}`]: 0.55, [`foot${L}`]: 0.45 }],
     ];
+
+    /* Published for the tuft pass. The leg is the largest single smooth surface on him — at
+       `sly-closeup` he renders 669 px tall, so one leg is ~35 px wide and ~300 px long — and
+       measured off the real projection its outline curvature was 0.26 px/row against 3.9 on the
+       head, i.e. a machined tube. Clumps have to sit exactly on this loft or they float. */
+    (this._legInfo || (this._legInfo = {}))[side] = { key, ramp: RAMP };
 
     addTube(mb, {
       centers: key.map((k) => k[1]), seg: TUNE.segLimb,
@@ -1564,37 +1587,85 @@ export class SlyModel {
         });
       }
 
-      /* Backs of the forearms — §7.3 names this surface explicitly. Two staggered rows
-         wrapping round the ulnar edge, so the arm silhouette is ragged from every angle
-         rather than only from directly behind. */
-      for (const row of [{ off: 0.0, len: 0.050, roll: 0.0 }, { off: 0.5, len: 0.038, roll: 0.85 }]) {
-        const N = Math.round(4 * D);
-        for (let i = 0; i < N; i++) {
-          const f = (i + row.off) / N;
-          const c = new THREE.Vector3(side * THREE.MathUtils.lerp(0.406, 0.458, f),
-            ay(THREE.MathUtils.lerp(1.040, 0.982, f)), 0);
-          const back = new THREE.Vector3(side * -0.35, -0.30, -0.88)
-            .applyAxisAngle(new THREE.Vector3(side * 0.669, -0.743, 0).normalize(), row.roll)
-            .normalize();
-          put({
-            base: c.clone().addScaledVector(back, 0.026),
-            dir: back.clone().addScaledVector(new THREE.Vector3(side * -0.5, 0.35, 0), 0.45).normalize(),
-            length: row.len * jit(i, side * 5 + row.roll), width: 0.019, bend: 0.3,
-            group: 'fur',
-            weights: [[side > 0 ? 'lowerArmL' : 'lowerArmR', 1]],
-          });
+      /* Backs of the forearms — §7.3 names this surface explicitly. Rings now, replacing two
+         ulnar-side rows that covered about 140° of the arm: `combat`, `traversal` and `hero`
+         all catch a forearm from outside that arc, where the edge was clean. Built off the
+         published arm loft so a radius change cannot silently float them. */
+      const arm = this._armInfo?.[side];
+      if (arm) {
+        const armAt = (u) => {
+          const K = arm.key;
+          let i = 0;
+          while (i < K.length - 2 && u > K[i + 1][0]) i++;
+          const f = THREE.MathUtils.clamp((u - K[i][0]) / (K[i + 1][0] - K[i][0] || 1), 0, 1);
+          return {
+            c: K[i][1].clone().lerp(K[i + 1][1], f),
+            r: THREE.MathUtils.lerp(K[i][2], K[i + 1][2], f) * TUNE.limbSlim,
+          };
+        };
+        const axis = new THREE.Vector3(side * 0.669, -0.743, 0).normalize();
+        const fwd = new THREE.Vector3(0, 0, 1);
+        const nrm = new THREE.Vector3().crossVectors(axis, fwd).normalize();
+        const ROWS = 3;
+        const ROLL = [0.30, 1.35, 2.40, -2.40, -1.35, -0.30];
+        for (let r = 0; r < ROWS; r++) {
+          const u = arm.cuffStart + 0.010
+            + (r / (ROWS - 1)) * (arm.gloveStart - arm.cuffStart - 0.028);
+          const { c, r: rad } = armAt(u);
+          for (let j = 0; j < ROLL.length; j++) {
+            const a = ROLL[j] + (r % 2 ? 0.50 : 0);
+            const out = fwd.clone().multiplyScalar(Math.cos(a)).addScaledVector(nrm, Math.sin(a)).normalize();
+            put({
+              base: c.clone().addScaledVector(out, rad * 0.88),
+              dir: out.clone().multiplyScalar(0.76).addScaledVector(axis, 0.60).normalize(),
+              length: 0.046 * jit(r * 6 + j, side * 5), width: 0.017, bend: 0.30,
+              bendDir: axis.clone(),
+              group: 'fur', weights: ramp(u, arm.ramp),
+            });
+          }
         }
       }
-      // thigh wisps
-      for (let i = 0; i < Math.round(3 * D); i++) {
-        const y = 0.812 - i * 0.062;
-        const base = new THREE.Vector3(side * 0.072, y, -0.052);
-        put({
-          base, dir: new THREE.Vector3(side * 0.35, -0.55, -0.76).normalize(),
-          length: 0.052 * jit(i, side * 11), width: 0.020, bend: 0.28,
-          group: 'fur',
-          weights: [[side > 0 ? 'upperLegL' : 'upperLegR', 1]],
-        });
+      /* Whole leg, hip to boot cuff. This replaces a row of seven wisps that all sat on the
+         *back* of the thigh: measured through the real `sly-closeup` projection, the leg
+         outline moved 0.26 px per row — against 3.9 on the head and 1.5 on the tail — so it
+         was a machined tube from every angle the shot list actually uses, and the wisps never
+         touched a silhouette edge.
+         Rings, not a stripe, for the same reason the tail carries rings: the ten shots look at
+         him from every azimuth. The inner ~90° is skipped — clumps there push through the
+         opposite thigh and nothing is ever positioned to see them. Row spacing works out at
+         ~22 px at closeup against a ~10 px clump, so the 2.5 px ink hull leaves a real gap
+         between neighbours instead of welding them into one fat line. */
+      const leg = this._legInfo?.[side];
+      if (leg) {
+        const legAt = (u) => {
+          const K = leg.key;
+          let i = 0;
+          while (i < K.length - 2 && u > K[i + 1][0]) i++;
+          const f = THREE.MathUtils.clamp((u - K[i][0]) / (K[i + 1][0] - K[i][0] || 1), 0, 1);
+          return {
+            c: K[i][1].clone().lerp(K[i + 1][1], f),
+            r: THREE.MathUtils.lerp(K[i][2], K[i + 1][2], f) * TUNE.limbSlim,
+          };
+        };
+        const ROWS = Math.round(4.2 * D);
+        const ROLL = [0, 1.15, -1.15, 2.30, -2.30];    // 0 = straight out, ±π (inward) omitted
+        for (let r = 0; r < ROWS; r++) {
+          const u = 0.08 + (r / (ROWS - 1)) * 0.62;    // hip → just above where the boot starts
+          const { c, r: rad } = legAt(u);
+          for (let j = 0; j < ROLL.length; j++) {
+            // stagger alternate rows so clumps interleave rather than stacking into ridges
+            const a = ROLL[j] + (r % 2 ? 0.58 : 0) + 0.12 * Math.sin(r * 3.1 + j * 2.7);
+            const out = new THREE.Vector3(side * Math.cos(a), 0, Math.sin(a));
+            put({
+              base: c.clone().addScaledVector(out, rad * 0.90),
+              dir: out.clone().multiplyScalar(0.80).add(new THREE.Vector3(0, -0.68, 0)).normalize(),
+              length: (0.052 - 0.022 * u) * jit(r * 5 + j, side * 23),
+              width: 0.019 - 0.005 * u, bend: 0.32,
+              bendDir: new THREE.Vector3(0, -1, 0),
+              group: 'fur', weights: ramp(u, leg.ramp),
+            });
+          }
+        }
       }
       // fur spilling over the boot cuff
       for (let i = 0; i < Math.round(5 * D); i++) {
