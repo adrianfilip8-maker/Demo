@@ -362,6 +362,10 @@ export class Shading {
       aoMap: opts.aoMap || null,
       emissiveMap: opts.emissiveMap || null,
       alphaMap: opts.alphaMap || null,
+      // The ORM blue channel. Accepted by the unwrap loop above since this factory was
+      // written, but never put on the material — so the per-texel gilding masks TEXTURES
+      // authors had no consumer at all. The shader samples it directly (see toon.glsl.js).
+      metalnessMap: opts.metalnessMap || null,
 
       bands: clamp(num(opts.bands, TUNE.bands), 2, 6),
       termSoft: num(opts.bandSoftness, TUNE.termSoft),
@@ -407,7 +411,7 @@ export class Shading {
 
     o.key = [
       o.color, tid(o.map), tid(o.normalMap), tid(o.roughnessMap), tid(o.aoMap),
-      tid(o.emissiveMap), tid(o.alphaMap),
+      tid(o.emissiveMap), tid(o.alphaMap), tid(o.metalnessMap),
       o.bands, r3(o.termSoft), r3(o.rim), o.rimColor, r3(o.rimPower),
       r3(o.spec), o.specColor, r3(o.gloss), r3(o.rough), r3(o.metal),
       r3(o.sss), o.wrapColor, r3(o.ao), r3(o.haze),
@@ -427,6 +431,9 @@ export class Shading {
       map: o.map,
       normalMap: o.normalMap,
       roughnessMap: o.roughnessMap,
+      // Defines USE_METALNESSMAP + vMetalnessMapUv for the sample in TOON_SHADE. `metalness`
+      // stays 0 below, so three's own term is still gone; only our uMetal is masked.
+      metalnessMap: o.metalnessMap,
       aoMap: o.aoMap,
       emissiveMap: o.emissiveMap,
       alphaMap: o.alphaMap,

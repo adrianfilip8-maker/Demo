@@ -46,7 +46,11 @@ const RECIPES = {
   granite_pink:        { color: 0xa9705c, rough: 0.48, spec: 0.42, gloss: 62, detail: 'granite' },
   paving_courtyard:    { color: 0xcfa068, rough: 0.95, spec: 0.10, gloss: 16, detail: 'sandstone' },
   hieroglyph_wall:     { color: 0xd6a874, rough: 0.86, spec: 0.16, gloss: 24, detail: 'sandstone' },
-  hieroglyph_gilded:   { color: 0xdcae5e, rough: 0.55, spec: 0.55, gloss: 64, detail: 'sandstone' },
+  /* `metal` is safe here only because the shader now masks it per texel by the ORM blue
+     channel — this recipe covers limestone as well as its gilding, and before the mask was
+     wired, flagging it would have turned the ground metal. 11.0% of this texture's texels
+     carry the gilding mask. */
+  hieroglyph_gilded:   { color: 0xdcae5e, rough: 0.55, spec: 0.55, gloss: 64, detail: 'sandstone', metal: true },
   column_papyrus:      { color: 0xd8a468, rough: 0.88, spec: 0.15, gloss: 22, detail: 'sandstone' },
   ceiling_stars:       { color: 0x1f4f96, rough: 0.80, spec: 0.20, gloss: 30, detail: 'plaster', emissive: 0x0a1a3a, emissiveIntensity: 0.18 },
   gold_leaf:           { color: 0xe8b942, rough: 0.22, spec: 0.95, gloss: 110, detail: null, metal: true },

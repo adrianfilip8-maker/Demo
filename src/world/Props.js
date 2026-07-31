@@ -392,6 +392,10 @@ export class Props {
       normalMap: tex?.normalMap ?? null,
       roughnessMap: tex?.roughnessMap ?? null,
       aoMap: tex?.aoMap ?? null,
+      /* The ORM blue channel is the per-texel gilding mask. Architecture forwards this by
+         iterating the bundle's slots; this call site hand-lists them, so it silently dropped
+         the one map that decides which texels are metal at all. */
+      metalnessMap: tex?.metalnessMap ?? null,
       bands: 3,
       rim: 0.55,
       rimColor: 0x7fd4ff,

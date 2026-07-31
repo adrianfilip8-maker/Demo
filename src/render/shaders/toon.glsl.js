@@ -359,8 +359,21 @@ export const TOON_SHADE = /* glsl */ `
 		          + albShadow * uShadowColor * shadowMix * mix( 0.55, 1.0, ao )
 		          + uShadowColor * uShadowWash * shadowMix * ao;
 
+		/* uMetal is the art-directed metal *amount*; the ORM texture's blue channel is the
+		   mask that says where on the surface it applies — the gilding on a hieroglyph, the
+		   inlay in a cartouche. three's own metalnessFactor is unusable for this: the
+		   material sets metalness = 0 on purpose (our metal read is stylised, three's PBR
+		   term is gone), so the stock metalnessmap chunk multiplies the map by zero. Sample
+		   it directly instead.
+
+		   Without this the blue channel had no consumer anywhere in the game. */
+		float slyMetal = uMetal;
+		#ifdef USE_METALNESSMAP
+			slyMetal *= texture2D( metalnessMap, vMetalnessMapUv ).b;
+		#endif
+
 		/* Metals have almost no diffuse; that plus a hot lobe is what reads as gold. */
-		diff *= mix( 1.0, 0.20, uMetal );
+		diff *= mix( 1.0, 0.20, slyMetal );
 
 		/* Wrap-around subsurface. Peaks exactly at the terminator and decays into the dark
 		   side — this is the difference between fur and painted plastic. */
@@ -377,20 +390,23 @@ export const TOON_SHADE = /* glsl */ `
 		float glossP = max( uGloss * ( 1.0 - 0.6 * rgh ), 4.0 );
 		float lobe = pow( ndh, glossP );
 		float specStep = smoothstep( 0.30, 0.52, lobe ) + 0.35 * smoothstep( 0.02, 0.30, lobe );
-		float specAmt = uSpec * ( 1.0 - 0.75 * rgh ) * mix( 1.0, 3.4, uMetal );
-		vec3 specTint = mix( uSpecColor, alb * 2.0 + uSpecColor * 0.25, uMetal );
+		float specAmt = uSpec * ( 1.0 - 0.75 * rgh ) * mix( 1.0, 3.4, slyMetal );
+		vec3 specTint = mix( uSpecColor, alb * 2.0 + uSpecColor * 0.25, slyMetal );
 		vec3 spec = specTint * ( specAmt * specStep * sh * step( 0.02, ndl ) );
 
 		/* Cheap stylised environment for metal: a banded sky/sand gradient off the reflection
 		   vector. Without a reflected term gold is just a yellow ball with a dot on it. */
 		vec3 metalEnv = vec3( 0.0 );
+		// Branch on the uniform, not the masked value: control flow stays uniform across the
+		// quad (so the derivatives above keep their meaning) and a non-metal material still
+		// skips the whole block.
 		if ( uMetal > 0.001 ) {
 			vec3 R = reflect( - slyToWorldDir( V ), Nw );
 			float up = smoothstep( -0.25, 0.65, R.y );
 			vec3 env = mix( uBounceColor, uSkyColor, floor( up * 3.0 + 0.5 ) / 3.0 );
 			env = mix( env, uHaze * 0.8, 0.35 * ( 1.0 - abs( R.y ) ) );
 			float ef = mix( 0.25, 1.0, pow( 1.0 - ndv, 3.0 ) );
-			metalEnv = alb * env * ( uMetal * uMetalGain * ef ) * mix( 0.35, 1.0, sh ) * ao;
+			metalEnv = alb * env * ( slyMetal * uMetalGain * ef ) * mix( 0.35, 1.0, sh ) * ao;
 		}
 
 		/* Fresnel rim — §2.1.5, "the single biggest AAA tell".
