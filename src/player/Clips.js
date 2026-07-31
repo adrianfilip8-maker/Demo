@@ -350,12 +350,16 @@ const PERCH = P({
   footR: [-10, 8, -2],
   toeR: [8, 0, 0],
 
-  /* The `hero` camera looks at him from 172° — almost dead behind. A tail authored to
-     "stream off the back of the ledge" therefore lies straight along the view axis, and at
-     the 55 px he occupies in that frame it foreshortens into the torso and disappears; the
-     same defect the critic logged in `night` as "a striped scarf across his chest". Lifted
-     and swept hard to his left it arcs clear of the back and reads as the one shape in the
-     frame that says raccoon. */
+  /* A tail authored to "stream off the back of the ledge" lies along the view axis for any
+     camera behind him, and foreshortens into the torso — the same defect the critic logged in
+     `night` as "a striped scarf across his chest". Lifted and swept hard to his left it arcs
+     clear of the back and reads as the one shape in the frame that says raccoon.
+
+     **Stale number corrected:** this note used to say the `hero` camera looks from 172°,
+     almost dead behind, and at 55 px. `Shots.js` was reframed since (KNOWN_ISSUES §7) and
+     `tools/charview.mjs` now measures `hero` at **view 70°, 166 px** — a three-quarter, not a
+     back view. The sweep here still reads well from 70°, so the pose stands; but anything
+     re-derived from "172°" is being derived from a camera that no longer exists. */
   tailA: [-16, -32, 0],
   tailB: [-14, -38, 0],
   tailC: [-6, 18, 0],
@@ -364,18 +368,33 @@ const PERCH = P({
 
 /* `hold: 0` for the same reason as `idle_confident`: `hero` freezes this clip, and holding at
    0.8 meant the money shot rendered a breath drift whose partial key silently reverted the
-   tail to its old aim. The held frame is now the authored pose. */
+   tail to its old aim. The held frame is now the authored pose.
+ *
+ * **The cane aim changed off a real `hero` capture, and the reason generalises.** It was
+ * `[122,-46,8]` — trailing down behind the hip — which renders a textbook open crook in a
+ * browser-free silhouette and *nothing at all* in the frame. The hook sits at model-space
+ * y −0.10, i.e. **below his own feet**, and he is perched on a ledge: the crook is inside the
+ * stone. `canesweep.mjs` scores that aim near the top of its list because its scorer has no
+ * world in it — only broadside, shaft-across-view and screen gaps to the head and body. Every
+ * one of its top twelve aims for this clip puts the hook under the ledge line.
+ *
+ * Re-swept with a floor on hook height and with the finalists *rendered and looked at*, which
+ * eliminated two more that scored well and drew nothing: `[-174,50,30]` (score 4.14, top of
+ * the list) hides the cane inside the body outline entirely, and `[162,20,30]` lays it along
+ * the tail so the crook is swallowed by the one mass it must not touch. `[-30,30,-30]` puts an
+ * open C clear of the body on the screen-left, mid-height, above the ledge and away from the
+ * tail — and it still reads at the 166 px he actually occupies in that frame. */
 def('perch_idle', {
   dur: 3.2, loop: true, hold: 0,
   keys: [
-    { t: 0, e: 'soft', P: PERCH, pos: [0, -0.30, 0.07], cane: [122, -46, 8] },
+    { t: 0, e: 'soft', P: PERCH, pos: [0, -0.30, 0.07], cane: [-30, 30, -30] },
     { t: 0.8, e: 'soft', P: { chest: [-17, -13, 5], head: [-21, 18, -8], hips: [28, 11, -5],
-      tailA: [-12, -36, 0], tailB: [-10, -42, 0], tailD: [30, 30, 0] }, pos: [0, -0.325, 0.078], cane: [126, -50, 8] },
+      tailA: [-12, -36, 0], tailB: [-10, -42, 0], tailD: [30, 30, 0] }, pos: [0, -0.325, 0.078], cane: [-26, 26, -30] },
     { t: 1.7, e: 'soft', P: { chest: [-11, -9, 3], head: [-15, 12, -6], hips: [24, 9, -3],
-      tailA: [-21, -27, 0], tailB: [-19, -33, 0], tailD: [21, 21, 0] }, pos: [0, -0.285, 0.062], cane: [118, -42, 8] },
+      tailA: [-21, -27, 0], tailB: [-19, -33, 0], tailD: [21, 21, 0] }, pos: [0, -0.285, 0.062], cane: [-34, 34, -30] },
     // a small head-flick as something below catches his eye
     { t: 2.3, e: 'out', P: { head: [-14, 26, -12], neck: [-14, 13, -6], earL: [-20, 8, -24] } },
-    { t: 3.2, e: 'soft', P: PERCH, pos: [0, -0.30, 0.07], cane: [122, -46, 8] },
+    { t: 3.2, e: 'soft', P: PERCH, pos: [0, -0.30, 0.07], cane: [-30, 30, -30] },
   ],
 });
 

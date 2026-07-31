@@ -62,8 +62,11 @@ export const TUNE = {
    * eye centres at 1.612 — a snout taller than the eyes are high, rising to a point *between*
    * them. Measured through the real `sly-closeup` camera it owned 18% of the head box and left
    * the domino mask with nowhere to be: rendering the `ink` group alone produced two pupils, a
-   * nose and a mouth, and no mask at any thickness anywhere on the face. See _buildMask. */
-  muzzleDrop: 0.034,
+   * nose and a mouth, and no mask at any thickness anywhere on the face. See _buildMask.
+   *
+   * 0.034 → 0.070 off a real capture: at 0.034 the snout root still topped out at head-space
+   * 1.598 against eyes that bottom out at 1.536, so it read as a beak rising between them. */
+  muzzleDrop: 0.070,
 
   /* --- shading / line --- */
   outline: 0.0034,        // fraction-of-frame-height thickness ⇒ ~2.5 px at any resolution
@@ -1087,13 +1090,30 @@ export class SlyModel {
       upHint: new THREE.Vector3(0, 0, 1),
       shape: (a, i) => {
         const s = superEllipse(a, 1.10);
-        // flatten the face plane a little and put a brow shelf over the eyes
-        const front = Math.max(0, Math.cos(a));
+        /* **The ring angle is not measured from the face.** `addTube` builds its frame from
+         * `upHint`, and for a +Y tube with `upHint` +Z that gives R = −X, U = +Z — so the
+         * section is `p = c − X·(cos a · rx) + Z·(sin a · ry)`, i.e. `a = 0` is his *right
+         * ear* and the face plane is `a = π/2`. Relating it to the head-ellipsoid theta used
+         * by `headSurf` (θ = 0 straight ahead): **a = π/2 + θ**.
+         *
+         * Both terms below used `cos(a)` and were therefore rotated 90° off their comments.
+         * `front` peaked on his right cheek, where `s.v` is 0, so the face was never flattened
+         * and the brow shelf was never built; and `back` — "back and sides only" — evaluated
+         * to **1 across the whole face plane**, so the lobing ran at full amplitude exactly
+         * where the comment says it must not.
+         *
+         * That is not cosmetic. The lobe peaks at 1 + amp·1.62 = 1.049 of the ideal radius and
+         * the domino mask is a patch at 1.045, so the cranium was pushing *through the mask*
+         * over the face. Measured on the face-plane band: 92 fur verts outside the mask plane
+         * before, and the mask rendered 1062 visible px — 2.4% of the head box. */
+        const front = Math.max(0, Math.sin(a));
         const brow = smooth(1.615, 1.660, H[i][0]) * (1 - smooth(1.665, 1.700, H[i][0]));
         s.v *= 1 - 0.05 * front * front + 0.035 * brow * front;
         /* Fur lobing, but *only* round the back and sides: the mask, eyes, brows and mouth are
-           all placed on the idealised ellipsoid, so lumping the face plane would float them. */
-        const back = 1 - Math.max(0, Math.cos(a));
+           all placed on the idealised ellipsoid, so lumping the face plane would float them.
+           Across the mask's own span (|θ| ≤ 1.34 ⇒ a ∈ [0.23, 2.91]) `front` never drops below
+           0.228, which caps the lobe at 1.038 — inside the mask plane everywhere it matters. */
+        const back = 1 - Math.max(0, Math.sin(a));
         const k = furLobe(a, H[i][0] * 4, TUNE.furLobe * 0.55 * back, 4, 9);
         s.u *= k; s.v *= k;
         return s;
@@ -1113,15 +1133,27 @@ export class SlyModel {
    * apart. The root's *vertical* radius is also cut: at 0.088 it made the snout root taller
    * than the eye line, which is what put a cream wedge between the two eyes and squeezed the
    * mask off the face entirely.
+   *
+   * **Second pass, from a real `sly-closeup` capture rather than a probe.** The snout was still
+   * the loudest thing on the face: a bright cream wedge running from *between the eyes* down to
+   * the chin, which is what the critic read as "a bird skull" and "a pale khaki diagonal band
+   * across the muzzle". The arithmetic behind it — eye centre sits at head-space y 1.612 with a
+   * 0.076 radius, so the eyes bottom out at **1.536**, while the root ring topped out at
+   * 1.564 − 0.034 + 0.068 = **1.598**. The snout root was 6 cm of head-space *above* the bottom
+   * of the eyes, so it drove a cream wedge up the bridge and there was physically nowhere for
+   * the black to cross between the eyes.
+   *
+   * Now every ring tops out below 1.545. The bridge between the eyes is slate fur, which is
+   * what the mask patch needs to sit on, and cream is confined to the snout proper.
    */
   _buildMuzzle(mb) {
     const S = TUNE.headScale;
     const D = TUNE.muzzleDrop;
     const key = [
-      [new THREE.Vector3(0, 1.564 - D, 0.040), 0.096, 0.068],
-      [new THREE.Vector3(0, 1.559 - D, 0.118), 0.102, 0.074],
-      [new THREE.Vector3(0, 1.550 - D, 0.192), 0.094, 0.070],
-      [new THREE.Vector3(0, 1.539 - D, 0.258), 0.079, 0.062],
+      [new THREE.Vector3(0, 1.564 - D, 0.040), 0.092, 0.050],
+      [new THREE.Vector3(0, 1.559 - D, 0.118), 0.098, 0.056],
+      [new THREE.Vector3(0, 1.550 - D, 0.192), 0.092, 0.060],
+      [new THREE.Vector3(0, 1.539 - D, 0.258), 0.078, 0.056],
       [new THREE.Vector3(0, 1.528 - D, 0.312), 0.058, 0.047],
       [new THREE.Vector3(0, 1.519 - D, 0.352), 0.030, 0.026],
     ];
@@ -1197,9 +1229,23 @@ export class SlyModel {
    * material brightness, so it wants a real capture to land — not this probe.
    */
   _buildMask(mb) {
-    const TH = 1.34;
+    /* `TH` 1.34 → 1.44 and the inflate 1.045 → 1.058.
+     *
+     * The band's *middle* is a lost cause and should stop being treated as the target: the eye
+     * lens is 0.086 of a 0.176 cranium half-width, so across the eye there is simply no black
+     * left over — and that is what the reference does too. What carries the identity is the
+     * **temple sweep**, the part of the band outboard of the eye that climbs toward the ear,
+     * plus the bridge between the eyes (which the muzzle drop finally freed). Both live at
+     * large |θ| or small |θ|, neither is occluded by the eye, and TH is what decides how far
+     * round the sweep gets before it stops.
+     *
+     * The inflate lift is margin, not taste. With `_buildHead`'s angle convention corrected the
+     * cranium loft caps at 1.038 across this band, but the brow shelf adds 3.5% of depth on the
+     * face plane on top of that; 1.058 clears both without reaching the eye lens (front ≈ 1.09),
+     * so the eye still sits in front of the mask, which is the one ordering that must hold. */
+    const TH = 1.44;
     addPatch(mb, {
-      segU: 26, segV: 4,
+      segU: 30, segV: 4,
       group: 'ink', sg: mb.newSg(),
       at: (u, v) => {
         const th = THREE.MathUtils.lerp(-TH, TH, u);
@@ -1207,17 +1253,48 @@ export class SlyModel {
         const phic = 0.128 + 0.425 * Math.pow(at, 1.75);
         const half = 0.500 * (1 - 0.80 * Math.pow(at, 3.0)) * (0.70 + 0.30 * smooth(0.0, 0.30, at));
         const phi = phic + (v * 2 - 1) * half;
-        return this.headSurf(th, phi, 1.045);
+        return this.headSurf(th, phi, 1.058);
       },
       weightsAtVert: (u, v, p) => this._headWeights(p),
     });
   }
 
+  /**
+   * The eye, built as a **lens set into the mask** rather than a ball punching through it.
+   *
+   * This is the coupled rebuild `_buildMask` predicted and could not land without a capture.
+   * Every part — sclera, pupil, highlight, lid — was a near-sphere whose radius along the view
+   * normal equalled its radius across the face, so it stood ~17% of a head radius proud of a
+   * mask patch sitting at 1.045. Measured on the model: `eye` verts reached inflate **1.221**
+   * and `ink` (pupil + lid) **1.219**. A hole that size cannot be closed by making the band
+   * taller, which is why sweeping `half` bought nothing.
+   *
+   * Three consequences of flattening, all of them wanted:
+   *   · the mask survives its own eye holes, because the lens crosses back inside 1.045 near
+   *     its rim instead of arcing a whole sphere-diameter in front of it;
+   *   · the pupil stops being fresnel-lifted. A sphere's normal turns through 90° inside a few
+   *     pixels, so `rim 0.30` was firing across most of it and the "black" pupil rendered
+   *     mid-grey against a blown-out sclera — the capture read as goggles, not eyes. A lens
+   *     facing the camera has almost no grazing area, so ink reads as ink;
+   *   · the eye shades with the face rather than as an independent marble, which is what a
+   *     cel-shaded cartoon eye is supposed to do.
+   *
+   * `outward` is now the true head-ellipsoid normal, blended 30% toward straight-ahead. The
+   * normal keeps the lens flush (a tilted lens digs one rim in and lifts the other); the blend
+   * is the old hand-picked direction's actual value, kept because a raccoon whose eyes face
+   * fully sideways stops making eye contact with the camera.
+   */
   _buildEye(mb, side) {
     const S = TUNE.headScale;
-    const th = side * 0.455;
-    const c = this.headSurf(th, 0.165, 0.80);            // sunk into the skull, bulging out
-    const outward = new THREE.Vector3(side * 0.36, 0.10, 1).normalize();
+    const th = side * 0.455, ph = 0.165;
+    const SINK = 0.92;                                   // centre depth, in head-ellipsoid radii
+    const c = this.headSurf(th, ph, SINK);
+    const r = this.headRadii;
+    // ∇((p−c)/r)² — the ellipsoid normal, not a normalised position
+    const nrm = new THREE.Vector3(
+      Math.cos(ph) * Math.sin(th) / r.x, Math.sin(ph) / r.y, Math.cos(ph) * Math.cos(th) / r.z,
+    ).normalize();
+    const outward = nrm.lerp(new THREE.Vector3(0, 0, 1), 0.30).normalize();
     const up = new THREE.Vector3(0, 1, 0);
     const right = new THREE.Vector3().crossVectors(up, outward).normalize();
     const trueUp = new THREE.Vector3().crossVectors(outward, right).normalize();
@@ -1225,44 +1302,49 @@ export class SlyModel {
 
     /* Sclera. Deliberately oversized: §7.3's character read is "huge eyes behind the mask",
        and at the 55 px he occupies in `hero` the eye is either a legible white shape inside
-       the black band or it is nothing at all. Each eye is now ~34% of the cranium's width. */
+       the black band or it is nothing at all. Wide across the face, shallow along the view —
+       `0.032` against `0.078` is the whole point of this function. */
     addEllipsoid(mb, {
-      center: c, radii: new THREE.Vector3(0.073 * S, 0.076 * S, 0.073 * S), basis,
-      segTheta: 14, segPhi: 9,
+      center: c, radii: new THREE.Vector3(0.086 * S, 0.092 * S, 0.032 * S), basis,
+      segTheta: 16, segPhi: 10,
       group: 'eye', sg: mb.newSg(), weights: [['head', 1]],
     });
-    // pupil — big and cartoon, sitting proud of the sclera so it never z-fights
-    const pc = c.clone().addScaledVector(outward, 0.041 * S).addScaledVector(trueUp, 0.002 * S);
+    /* Pupil — big and cartoon, a flatter disc riding on the lens. The offset is what keeps it
+       off the sclera (0.020 + 0.020 clears the sclera's 0.032 by 0.008·S), not a big radius. */
+    const pc = c.clone().addScaledVector(outward, 0.020 * S).addScaledVector(trueUp, 0.002 * S);
     addEllipsoid(mb, {
-      center: pc, radii: new THREE.Vector3(0.041 * S, 0.048 * S, 0.041 * S), basis,
-      segTheta: 12, segPhi: 8,
+      center: pc, radii: new THREE.Vector3(0.042 * S, 0.050 * S, 0.020 * S), basis,
+      segTheta: 14, segPhi: 9,
       group: 'ink', sg: mb.newSg(), weights: [['head', 1]],
     });
     // highlight on the pupil: the "alive" cue. Sits on black, so it reads at any size.
-    const hc = pc.clone().addScaledVector(outward, 0.026 * S)
-      .addScaledVector(trueUp, 0.019 * S).addScaledVector(right, -side * 0.014 * S);
+    const hc = pc.clone().addScaledVector(outward, 0.014 * S)
+      .addScaledVector(trueUp, 0.020 * S).addScaledVector(right, -side * 0.015 * S);
     addEllipsoid(mb, {
-      center: hc, radii: new THREE.Vector3(0.015 * S, 0.015 * S, 0.014 * S), basis,
+      center: hc, radii: new THREE.Vector3(0.016 * S, 0.016 * S, 0.010 * S), basis,
       segTheta: 8, segPhi: 5,
       group: 'eye', sg: mb.newSg(), weights: [['head', 1]],
     });
 
     /* Hooded upper lid, tilted outward-down — this is where the *smug* comes from. A wide-open
-       eye reads as surprised; a lid cutting across the top third reads as amused. It starts
-       higher than it used to (0.18 → 0.40): the old lid ate most of a now-larger eye, and a
-       covered eye is worth nothing to the identity read.
+       eye reads as surprised; a lid cutting across the top third reads as amused.
 
        In the `ink` group, not `fur`. It is the largest surface sitting where the domino mask
        belongs, and as slate fur it was one of the two things measured to be erasing the mask
        entirely (see _buildMask). Sly's lids are inside the black in every reference frame, so
-       this costs nothing in fidelity and it is most of what puts the mask back on screen. */
+       this costs nothing in fidelity and it is most of what puts the mask back on screen.
+
+       Flattened to the same lens profile as the sclera and grown slightly across the face, so
+       it laps the sclera's upper rim instead of doming over it. `phi0` 0.40 → 0.50: at 0.40 the
+       spherical lid plus the sphere sclera together read as a bilobed sleepy eye in the
+       capture, and the lid is worth more as a thin black hood than as a second eyelid. */
     const lidUp = trueUp.clone().applyAxisAngle(outward, side * 0.30).normalize();
     const lidRight = new THREE.Vector3().crossVectors(lidUp, outward).normalize();
     addEllipsoid(mb, {
-      center: c.clone().addScaledVector(outward, 0.002 * S),
-      radii: new THREE.Vector3(0.070 * S, 0.073 * S, 0.071 * S),
+      center: c.clone().addScaledVector(outward, 0.005 * S),
+      radii: new THREE.Vector3(0.091 * S, 0.097 * S, 0.033 * S),
       basis: { x: lidRight, y: lidUp, z: outward },
-      segTheta: 14, segPhi: 5, phi0: 0.40, phi1: Math.PI / 2,
+      segTheta: 16, segPhi: 5, phi0: 0.56, phi1: Math.PI / 2,
       group: 'ink', sg: mb.newSg(), weights: [['head', 1]],
       colorAt: (u, v, p) => furTint(_c, p.x, p.y, p.z, 0.03),
     });
@@ -1497,21 +1579,29 @@ export class SlyModel {
      * character capture in this project has rendered a Sly with no visible eyes for that
      * reason, and no amount of emissive on the eye material could have reached the camera.
      * Verify any change to this with `occlude.mjs`: both rays must report CLEAR. */
+    /* **Shortened off a real capture.** At `0.292 + 0.108` the bill reached head-space z 0.400
+     * against a face plane at ~0.19 — it projected further in front of his face than his face
+     * is deep, and `sly-closeup` read the head as a lampshade with a slot under it. Measured
+     * on the head box, `cloth` + `clothDark` owned **51%** of every pixel of his head and the
+     * entire face 10%; 272 brim verts sat in front of the mask plane. A newsboy bill is short
+     * and stubby, and the identity in this silhouette is the *crown* plus the mask, not the
+     * bill's reach. Now 0.238 + 0.082 = 0.320, a 20% cut in projection, with the wrap round
+     * the temples pulled in from 0.224 to 0.206 so it stops shading the outer eye. */
     const N = 24, TH = 1.40;
     const arc = [];
     for (let i = 0; i <= N; i++) {
       const th = THREE.MathUtils.lerp(-TH, TH, i / N);
       const k = Math.abs(th) / TH;
       arc.push(place(new THREE.Vector3(
-        Math.sin(th) * 0.224,
+        Math.sin(th) * 0.206,
         1.610 + TUNE.brimLift - 0.030 * Math.pow(k, 2),
-        0.004 + Math.cos(th) * 0.292,
+        0.004 + Math.cos(th) * 0.238,
       )));
     }
     addTube(mb, {
       centers: arc, seg: 12,
       // deep at the centre, tucking away at the temples — a peak, not a sun-visor ring
-      rx: (i) => 0.108 * S * (1 - 0.66 * Math.pow(Math.abs(i / N * 2 - 1), 1.9)),
+      rx: (i) => 0.082 * S * (1 - 0.66 * Math.pow(Math.abs(i / N * 2 - 1), 1.9)),
       ry: 0.0165 * S,
       upHint: new THREE.Vector3(0, 1, 0),
       // shear the section so the outer lip dips: a flat brim reads as a frisbee
@@ -1558,10 +1648,17 @@ export class SlyModel {
     const jit = (i, k) => 1 + 0.34 * Math.sin(i * 12.9898 + k * 78.233);
 
     for (const side of [1, -1]) {
-      /* cheek ruffs — the widest part of his head, so the most valuable place to break up */
+      /* cheek ruffs — the widest part of his head, so the most valuable place to break up.
+       *
+       * **Start moved off the face plane.** These began at θ 0.60 against eyes centred at
+       * θ 0.455, so the innermost clumps stood in front of the face at eye height and the
+       * capture read them as black spiky lashes flanking the eyes — clutter exactly where the
+       * identity is. 92 of them sat in front of the mask plane. A tuft earns its triangles by
+       * breaking the *outline*, which needs it at the silhouette edge, not on the face: from
+       * θ 0.86 they are past the eye and doing the job the comment claims. */
       for (let i = 0; i < Math.round(5 * D); i++) {
         const f = i / (Math.round(5 * D) - 1);
-        const th = side * THREE.MathUtils.lerp(0.60, 1.42, f);
+        const th = side * THREE.MathUtils.lerp(0.86, 1.46, f);
         const phi = THREE.MathUtils.lerp(-0.38, 0.30, f);
         const base = this.headSurf(th, phi, 0.97);
         const out = base.clone().sub(this.headCenter).normalize();
@@ -1577,7 +1674,7 @@ export class SlyModel {
          turn a row of spikes into a ruff */
       for (let i = 0; i < Math.round(4 * D); i++) {
         const f = (i + 0.5) / Math.round(4 * D);
-        const th = side * THREE.MathUtils.lerp(0.66, 1.34, f);
+        const th = side * THREE.MathUtils.lerp(0.92, 1.38, f);
         // kept at or below eye level: clumps that climb past it crowd the mask and the face
         // stops reading as a face at any distance
         const base = this.headSurf(th, THREE.MathUtils.lerp(-0.30, 0.18, f), 0.99);

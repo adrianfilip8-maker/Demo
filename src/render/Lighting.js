@@ -265,6 +265,11 @@ export class Lighting {
     this._rayDone = false;
     this._shaftSunKey = NaN;
 
+    /* Animation clock, rebased whenever a canonical shot is staged. Only the flicker uses
+       it, and only the flicker needs it — see the note over `_updateLocalLights`. Zero
+       outside shot mode, where this is the engine clock unchanged. */
+    this._animT0 = 0;
+
     this._cascadeCount = 1;
     this._splits = [];
     this._csmUniforms = null;
@@ -324,6 +329,11 @@ export class Lighting {
     this._offEvents.push(engine.on('quality', () => {
       this._rebuildForQuality();
     }));
+    /* Staging a shot rebases the flicker clock, for the same reason FX rebases its own
+       (`Particles.update`): engine time at the moment `setShot` stops the rAF loop is a
+       function of how long the boot took, so anything animated on it samples at a different
+       phase in every run and the frame comes back different with nothing having changed. */
+    this._offEvents.push(engine.on('shot', () => { this._animT0 = engine.time; }));
 
     this._applyAtmosphere();
   }
@@ -808,7 +818,7 @@ export class Lighting {
     this._updateEnclosure(dt);
     this._applyFill();
     this._fitCascades();
-    this._updateLocalLights(t);
+    this._updateLocalLights(t - this._animT0);
 
     /* ARCHITECTURE and PROPS both init after this module, so the shaft set is built from the
        fallback constants first and re-derived from the real openings and the real sconces the
@@ -973,6 +983,19 @@ export class Lighting {
 
   /* ------------------------------------------------------- local lights --- */
 
+  /**
+   * @param {number} t seconds *since the current shot was staged*, not engine time.
+   *
+   * The distinction is the whole point. The flicker below is two-octave noise sampled at
+   * `t * flickerRate`, and it moves both a light's intensity and its position — up to
+   * `flickerPos * flicker * 4` metres of wobble, which drags the lit pool and every shadow
+   * that light casts along with it. Sampled on the engine clock, the phase at capture is a
+   * function of how long the boot took, so two runs of the same shot come back with the
+   * braziers at different brightnesses and their shadows in different places. That is noise
+   * with no cause in the scene, and it is exactly the noise that makes a real change to a
+   * frame impossible to distinguish from run-to-run drift. FX already rebases its clock at
+   * staging and documents why; this is the same clock and the same reason.
+   */
   _updateLocalLights(t) {
     const engine = this.engine;
     const cam = engine.camera;
