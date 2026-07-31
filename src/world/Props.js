@@ -397,6 +397,9 @@ export class Props {
       rimColor: 0x7fd4ff,
       spec: spec.spec ?? 0.2,
       gloss: spec.gloss ?? 28,
+      // See the note at Architecture.mat(): MATERIALS.gold.metal existed but only ever reached
+      // the fallback MeshStandardMaterial, so the toon path never knew gold was metal.
+      metal: spec.metal ? 0.85 : 0,
       outline: spec.outline ?? 1.0,
       sss: spec.side ? 0.5 : 0.1,
       emissive: spec.emissive ?? 0x000000,

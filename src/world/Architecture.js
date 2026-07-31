@@ -143,6 +143,15 @@ export class Architecture {
           rim: TUNE.rimStrength * (r.metal ? 1.15 : 1.0),
           rimColor: 0x7fd4ff,
           spec: r.spec, gloss: r.gloss,
+          /* Without this, gold is not metal as far as the shader is concerned. `toon()` gates
+             four separate things on `uMetal` — diffuse *= 0.20, specAmt *= 3.4, a specTint
+             that mixes toward the albedo, and the whole stylised metalEnv reflection behind
+             `if (uMetal > 0.001)` — and this call site read `r.metal` for the rim bump above
+             while never passing it. So every gilded surface in the level rendered with an
+             undimmed diffuse under a near-white highlight, which is exactly how a saturated
+             gold albedo measures neutral (#72696b, R/G 1.08) in frame. Not 1.0: at full metal
+             the diffuse term all but vanishes, and §2.1 wants stylised metal, not a mirror. */
+          metal: r.metal ? 0.85 : 0,
           outline: HULL_OUTLINE.has(key) ? 0.85 : 0.0,
           sss: 0.0,
           detail: r.detail ?? null,
