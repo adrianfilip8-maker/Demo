@@ -1495,16 +1495,27 @@ export const MATERIALS = {
       });
       const rim = s.field(2, (u, v) => {
         const w = worleyN(u, v, 20, cx.seed + 71, 0.95, dw);
-        return sat(1 - (w.f2 - w.f1) / 0.13) ** 1.6;
+        return sat(1 - (w.f2 - w.f1) / 0.20) ** 1.2;
       });
       // Fine leaf wrinkle on top of the dishes — kept, but no longer the only structure.
       const wrinkle = s.field(2, (u, v) => warpN(u, v, 34, 4, 1.2, cx.seed + 7) * 0.5 + 0.5);
       /* The low-frequency term the material had none of: which parts of this piece of gold are
-       * catching the room and which are in their own shade. At 3 cycles per repeat that is 80 cm
-       * of world — bigger than most of the objects this dresses, so on a hook ring or a spire it
-       * reads as one side being bright and the other deep, which is exactly how a small metal
-       * object reads and is impossible to get from any amount of grain. */
-      const swathe = s.field(4, (u, v) => warpN(u, v, 3, 4, 1.3, cx.seed + 211) * 0.5 + 0.5);
+       * catching the room and which are in their own shade. At 3 and 1 cycles per repeat that is
+       * 80 cm and 2.4 m of world — bigger than most of the objects this dresses, so on a hook
+       * ring or a spire it reads as one side being bright and the other deep, which is exactly
+       * how a small metal object reads and is impossible to get from any amount of grain.
+       *
+       * **This term carries the amplitude, and the planishing does not.** The first version of
+       * this recipe put the swing on the Worley rim, and it failed the squint test outright: at
+       * an eight-fold downsample the tile was a uniform gold-and-brown mush with no shape in it
+       * at all — a net of bright cell walls is high-frequency randomness, which is the exact
+       * failure the first pass of this whole catalogue was rejected for. The rim keeps its
+       * *height* (a crease is a crease, and that is where the hard glint comes from) and gives
+       * up most of its *paint*. Relief at high frequency, value at low frequency: that is the
+       * division of labour that lets both halves of §7.3 pass at once. */
+      const swathe = s.field(5, (u, v) => sat(
+        warpN(u, v, 1, 3, 1.35, cx.seed + 307) * 0.72
+        + warpN(u, v, 3, 4, 1.3, cx.seed + 211) * 0.40 + 0.5));
       const dust = s.field(4, (u, v) => sat(warpN(u, v, 5, 4, 1.2, cx.seed + 13) * 1.4 + 0.5));
       const hole = s.field(2, (u, v) => {
         const w = worleyN(u, v, 22, cx.seed + 19, 1.0);

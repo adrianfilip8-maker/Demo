@@ -52,16 +52,22 @@ export const SHOTS = {
      three-quarter read at 69°, with the key still 64° off his face so it models rather than
      flattens.
 
-     **Open, and deliberately not fixed here: he is 49 px tall in a 540-row frame**, 22 m out.
-     No silhouette work makes a 49 px figure carry the money shot. The two ways out are a
-     closer camera or longer lens — which costs the vista and the establishing read this shot
-     exists for — or a strong rim and value break against the colonnade behind him. I am
-     backing the second, because the rim term was only just repaired (it was firing on flat
-     grazing floors and has been gated to convex silhouettes, which is exactly this case) and
-     it preserves the composition. If the next critic pass still fails `hero` on the character,
-     move the camera in along its own axis: 40% of the way to the target puts him at ~98 px. */
+     Camera dollied 40% along its own axis toward the target, 22.3 m → 11.1 m, which takes him
+     from 49 px to 99 px. I first bet on the repaired rim carrying him at 49 px instead; that
+     was measured and it lost. The character box means L 77.4 against L 94.7 beside it — a
+     17.3 luma break, with the ink line doing most of the separating — and the specific reason
+     it fails is sharper than "too small": at 49 px the tail is his largest identifying shape
+     and its light/dark ring period is about **2 px**, below the size at which a ring pattern
+     can resolve, so the tail collapses into one dark mass and merges with the 2.5 px ink line.
+     Widening the rings would trade the close-range read for a marginal gain here, which is the
+     wrong trade. Doubling him is the fix that addresses the stated cause.
+
+     Dollying along the view axis rather than shortening the lens is deliberate: FOV and aim
+     are unchanged, so the angular field is identical and the hazed pyramid — which is
+     effectively at infinity — keeps its size. Only the near and mid ground grow. The vista
+     survives; that was the thing worth protecting. */
   hero: {
-    pos: [15.5, 12.2, 26.0], target: [-1.0, 7.4, 4.0], fov: 46, tod: 0.79, roll: -1.5,
+    pos: [8.9, 10.28, 17.2], target: [-1.0, 7.4, 4.0], fov: 46, tod: 0.79, roll: -1.5,
     player: { pos: [2.2, 9.0, 8.4], yaw: 5.72, pose: 'perch_idle' },
   },
 
@@ -107,7 +113,14 @@ export const SHOTS = {
      character to chase a cast shadow would throw away what it is for. The character moves
      instead: he was at NDC y −1.21, i.e. below the bottom edge, entirely out of the frame he
      was meant to give scale to. Now at the same screen position he would have occupied, on
-     the floor, lit three-quarter front with his shadow fully in shot. */
+     the floor, lit three-quarter front with his shadow fully in shot.
+
+     He is 58 px tall here and that is left alone on purpose, unlike `hero`. This shot is named
+     for the obelisk, colossi, braziers, palms and banners; he is the scale figure, not the
+     subject, and a scale figure reads as a person without needing his tail rings to resolve.
+     `hero` got the camera moved because it is the one frame that has to sell the game and he
+     is the subject of it. If a critic faults the character *here*, the answer is the same
+     dolly, but it should be a deliberate decision to change what this shot is about. */
   courtyard: {
     pos: [-19.0, 5.6, 30.0], target: [1.0, 9.0, 12.0], fov: 50, tod: 0.76, roll: 1.0,
     player: { pos: [-6.5, 0.0, 16.5], yaw: 4.19, pose: 'run' },
