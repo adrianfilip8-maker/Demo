@@ -31,10 +31,13 @@ export const SHOTS = {
     player: { pos: [6.0, 0.0, -26.0], yaw: -1.1, pose: 'sneak_idle' },
   },
 
-  /* Character sheet. Tight on Sly: cel bands, ink lines, fur, cloth, cane, face. */
+  /* Character sheet. Tight on Sly: cel bands, ink lines, fur, cloth, cane, face.
+     Staged at the spawn point rather than at world origin — origin is inside the courtyard
+     structure ARCHITECTURE built, so the camera was buried in masonry and the frame had no
+     subject at all. Same relative framing, open ground, sky behind him. */
   'sly-closeup': {
-    pos: [1.9, 1.72, 3.35], target: [0.0, 1.35, 0.0], fov: 34, tod: 0.80,
-    player: { pos: [0, 0, 0], yaw: 0.55, pose: 'idle_confident' },
+    pos: [1.9, 1.72, 33.35], target: [0.0, 1.35, 30.0], fov: 34, tod: 0.80,
+    player: { pos: [0, 0, 30], yaw: 0.55, pose: 'idle_confident' },
   },
 
   /* Composition + props: obelisk, colossi, braziers, palms, banners. */
@@ -68,16 +71,20 @@ export const SHOTS = {
     player: { pos: [1.0, 12.4, -3.0], yaw: -1.9, pose: 'hook_swing' },
   },
 
-  /* Impact frame: third hit of the cane combo landing on a guard, full FX. */
+  /* Impact frame: third hit of the cane combo landing on a guard, full FX.
+     Moved off world origin for the same reason as `sly-closeup` — it was framing bare floor. */
   combat: {
-    pos: [4.6, 2.35, 5.4], target: [-0.6, 1.5, 1.0], fov: 40, tod: 0.74,
-    player: { pos: [0, 0, 2.0], yaw: 0.15, pose: 'cane_combo_3' },
+    pos: [4.6, 2.35, 31.4], target: [-0.6, 1.5, 27.0], fov: 40, tod: 0.74,
+    player: { pos: [0, 0, 28.0], yaw: 0.15, pose: 'cane_combo_3' },
   },
 
-  /* Guard sheet: silhouette, uniform, patrol light cone. */
+  /* Guard sheet: silhouette, uniform, patrol light cone.
+     Staged beside the (-18, 0, 22) courtyard brazier so the subject is actually lit — the
+     old framing was empty ground at midnight and came out ~85% black. Time of day lifted
+     off full dark to keep a readable silhouette while staying a night shot. */
   guard: {
-    pos: [3.0, 2.0, 4.2], target: [-0.8, 1.5, 0.0], fov: 38, tod: 0.06,
-    player: { pos: [-6, 0, 6], yaw: 0.0, pose: 'sneak_idle' },
+    pos: [-11.5, 2.05, 25.4], target: [-15.6, 1.45, 22.0], fov: 38, tod: 0.10,
+    player: { pos: [-9.0, 0, 27.5], yaw: 2.3, pose: 'sneak_idle' },
   },
 };
 

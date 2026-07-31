@@ -6,50 +6,41 @@ hypothesis below cost real time.
 
 ---
 
-## 1. No cast shadows in any shot — **unresolved, highest-value fix**
+## 1. Cast shadows — **root cause found; the shadow term was never zero**
 
-Under a 22° golden-hour sun the courtyard should be crossed by long raking shadows. There are
-none, anywhere. This is the single biggest remaining gap to the AAA bar: raking shadows are
-most of what sells a low-sun read, and `AGENTS.md §7.3` depends on them for form.
+The whole "shadow term ≈ 0 across the frame" reading was an artefact of the diagnostic, not a
+property of the shadow pipeline. `debugShadow()` writes its channels into `outgoingLight`,
+which then goes through the *entire* PostFX chain — AgX, `saturation 1.30`, the split-tone, and
+(at the time) an AO pass that was multiplying every pixel by a flat `0.545` because its shader
+had never compiled. Green (`receiveShadow`, a hard 1.0) survives that; red (the shadow term)
+is compressed toward the floor, so the frame comes out uniformly green and reads as "everything
+is occluded". Read straight off the framebuffer with the chain bypassed, the term over the hero
+frame is `mean 0.470`, and clearing `castShadow` on all 332 casters takes it to `0.981` — so the
+maps, the cascade matrices, the sampler type and the bias were all correct the entire time, and
+every hypothesis previously eliminated was eliminated correctly. Restricted to ground-plane
+normals, 28 % of the visible floor is fully shadowed and 29 % is penumbra, and in the graded
+frame lit ground sits at luma `0.310` against shadowed ground at `0.121` — a 2.6:1 step. What
+was actually missing was *legibility*, and three real bugs were feeding that: everything past
+34 m fell into a cascade fitted to ±417 m (41 cm shadow texels, 61 cm normal bias), so
+mid-ground shadows had no edges — `splitLambda` is now `0.78`, which moves the c0/c1 seam to
+~57 m and puts the whole courtyard in the near cascade at ~5 cm texels; `Engine.js` was setting
+`PCFSoftShadowMap`, which three r185 deprecates and which has no entry in `WebGLProgram`'s
+`shadowMapTypeDefines`, so every program built during `main.js`'s `renderer.compile()` warm-up
+got `SHADOWMAP_TYPE_BASIC` (a plain `sampler2D`) against depth textures allocated with hardware
+comparison — latent, because the first real draw relinks them, but exactly the mismatch that
+produces a uniformly zero term, and now set to `PCFShadowMap`; and `main.js`'s central shadow
+sweep opts out on `userData.isOutlineShell` while `Outline.js` marks shells `userData.slyOutline`,
+so every inverted-hull ink shell was a shadow caster — and since a shell is its host's geometry
+at identity with a `BackSide` material, which three flips to `FrontSide` for the depth pass, each
+one wrote its host's *lit* surface into the map at coincident depth. `Shading.outline()` now
+sets both keys and clears the flags.
 
-**The measured symptom.** `shading.debugShadow(true)` paints red=shadow term, green=receiveShadow,
-blue=N·L. The shadow term reads **≈0 across essentially the whole frame** — everything is
-reported as fully occluded. Because the toon shader computes `key = ramp * sh`, that cancels
-the directional light entirely. This is why the bug presents as *flat ambient-only lighting*
-rather than as a missing-shadow bug, and it is why the colour cast was so hard to tune: the
-shadow term had swallowed the key light.
-
-**Ruled out — each measured at runtime, don't redo any of these:**
-
-- Geometry flags. Now 312 of 328 meshes cast+receive (`main.js` sweeps them centrally).
-  Previously 60 of 301, which was a real bug but not this one.
-- Light config. Cascade 0: `intensity 3.30`, `castShadow true`, `2048×2048` map, `bias −5.4e−4`.
-- Cascade fitting. `_fitCascades()` runs per frame; c0 fits to `±29.8` ortho, `near 0.05 /
-  far 111.3`, positioned at `(−77, 37, −6)`. Sane and it comfortably contains the courtyard.
-- Cascade splits. `csmSplits = [[−10000, 34.1], [34.1, 1000000]]` — correct, and the hero
-  camera sits ~28 m from its subject so the frame resolves to cascade 0 as intended.
-- Cascade selection reaching the shader. Confirmed `CSM_CASCADES` is defined in the compiled
-  program (`toon_sand`), so `csmShadow()` — not the cascade-naive `getShadowMask()` — is the
-  function actually running. Switching the toon shader to `csmShadow()` was a genuine fix
-  (`getShadowMask()` multiplies all cascades, which is wrong for CSM) but did not change this.
-- Material adoption timing. LIGHTING adopted materials only every 20 frames while a capture
-  steps ~17; now forced at boot. Real bug, not this one.
-- Shadow map type. `VSMShadowMap` → `PCFSoftShadowMap`. Changed nothing; kept because PCF is
-  the more robust choice here regardless.
-- Normal-pass corruption. three.js uses `scene.overrideMaterial` for shadow-map rendering too,
-  so PostFX's normal pass was re-rendering every cascade map with `MeshNormalMaterial`. Now
-  frozen across that pass. Real bug, correctly fixed — and still not sufficient.
-
-**Unexplained signal worth starting from.** The runtime reports
-`renderer.shadowMap.type === 1` (`PCFShadowMap`) even though `Engine.js` sets
-`PCFSoftShadowMap` (`2`) and nothing else in `src/` touches it. Something is changing shadow
-state after construction. That matters because a shader compiled for one shadow type reading a
-map rendered for another produces exactly this symptom — a uniformly zero shadow term. Find
-what resets it before looking anywhere else.
-
-Second candidate: dump cascade 0's shadow map to a quad on screen. If it is blank or garbage
-the fault is in the shadow render; if it looks like a correct depth map the fault is in the
-lookup (matrix, bias, or sampler type).
+**Still open, and now the real gap:** the shadows are placed correctly but they are rendered as a
+darker, *more saturated* version of the sunlit hue (lit ground `rgb(0.52, 0.26, 0.16)` vs
+shadowed `rgb(0.28, 0.08, 0.06)` — the shadow's red/green ratio is 3.6 against the lit side's
+2.0), so they read as a patch of different stone rather than as shadow. `AGENTS.md §2.2` wants
+violet-teal. That is the `shadowBounceMix` / `shadowSat` / `shadowWash` bracket in §3 below, not
+a shadow-system problem — but it is why the frame still does not *look* like a 22° sun.
 
 ---
 
@@ -76,6 +67,18 @@ shadow light. Both failure modes are established by capture:
 
 Currently `0.20`. It is defensible but was not itself A/B'd against neighbours; worth a sweep
 once shadows work, since real shadows will change what the right value is.
+
+**Now measurable, because §1 established the shadows are real.** Sampling the hero frame at
+ground-plane normals and splitting on the debug shadow mask: lit ground is
+`rgb(0.522, 0.262, 0.164)` and shadowed ground is `rgb(0.282, 0.079, 0.058)`. The value step is
+fine (2.6:1) — the *hue* is the problem. Red/green is `1.99` on the lit side and `3.57` in
+shadow, i.e. the shadow is a more saturated version of the same orange, which is the opposite of
+§2.2's violet-teal and is why a correctly-placed cast shadow still reads as a patch of different
+stone. Three knobs push on this and they interact: `PAL.shadowBounceMix` (warmth mixed into the
+shadow light), `TUNE.shadowSat` (`0.34`, an albedo *saturation boost* inside shadow that is
+actively fighting the cool tint), and `TUNE.shadowWash` (`0.16`, the unmultiplied additive term
+that is the only part carrying hue independent of the warm albedo). Sweep them together against
+the numbers above rather than one at a time by eye.
 
 ---
 
