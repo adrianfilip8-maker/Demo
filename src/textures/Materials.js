@@ -751,8 +751,22 @@ export const MATERIALS = {
    * showed the same tile five times across and three times up — fifteen copies of one oval in
    * one frame. At 6.4 m it is three by two, and the glyphs inside it are correspondingly larger,
    * so what repeats is a band of readable inscription rather than a stamp. */
+  /* `aoStrength` is pushed hard on every carved recipe, and the reason is worth stating because
+   * it looks like over-tuning. A sunk relief is *supposed* to read through its own cast shadow:
+   * the upper bevel catches the raking sun, the lower one goes black, and the sign turns as the
+   * sun moves. None of that is available right now — the shadow term is suppressed engine-wide
+   * (`KNOWN_ISSUES` §1) and the frames are ambient-lit — so a carving with correct relief and
+   * default AO renders as a completely plain wall, which is how the first pass of this fix came
+   * out: the confetti was gone and §7.3's "any surface reads as flat vertex colour" arrived in
+   * its place.
+   *
+   * Baked AO is the one occlusion term that does not need a key light: it multiplies the ambient
+   * fill, so it darkens the inside of a cut whatever the lighting is doing. Raising it makes the
+   * carving legible under flat ambient *and* correct once the key returns — unlike putting the
+   * contrast back into the albedo, which would rebuild the painted-on look the review failed. */
   hieroglyph_wall: {
     group: 'carved', tier: 0, tile: 6.4, bump: 0.044, rough: 0.86,
+    aoStrength: 1.7, aoFloor: 0.10,
     build(s, cx) {
       const size = s.size;
       // Carvings run straight across block joints, exactly as they do on a real temple wall —
@@ -768,7 +782,7 @@ export const MATERIALS = {
        * with the sun and goes flat in shadow, the way a chisel line does. */
       const ramp = carve(s, cut, lines, { depth: 0.46, bevelPx: 3.0, lip: 0.12, bulge: 0.42, lineDepth: 0.62, seed: cx.seed + 5 });
       freshCutTint(s, ramp, { amount: 0.16 });
-      paintRemnants(s, ramp, paint, { survival: 0.34, freq: 6, seed: cx.seed + 9, edgeLoss: 0.72, fade: 0.45 });
+      paintRemnants(s, ramp, paint, { survival: 0.44, freq: 6, seed: cx.seed + 9, edgeLoss: 0.66, fade: 0.34 });
       chiselMarks(s, { amount: 0.016, angle: -0.35, freq: 48, seed: cx.seed + 1, mask: m.edge });
       pitting(s, { amount: 0.030, freq: 34, density: 0.34, seed: cx.seed + 2, colorDark: PAL.sandDark });
       const src = new Float32Array(s.n);
@@ -781,6 +795,7 @@ export const MATERIALS = {
 
   hieroglyph_gilded: {
     group: 'carved', tier: 1, tile: 3.2, bump: 0.042, rough: 0.70,
+    aoStrength: 1.6, aoFloor: 0.10,
     build(s, cx) {
       const size = s.size;
       ashlar(s, {
@@ -815,6 +830,7 @@ export const MATERIALS = {
 
   relief_figures: {
     group: 'carved', tier: 0, tile: 6.2, bump: 0.046, rough: 0.86,
+    aoStrength: 1.7, aoFloor: 0.10,
     build(s, cx) {
       const size = s.size;
       const m = ashlar(s, { seed: cx.seed, courses: 4, aspect: 3.2, dome: 0.02, relief: 0.04, groove: 0.20, jointW: 0.005, chamfer: 0.010, tone: -0.020, bedFreq: 2 });
@@ -824,7 +840,7 @@ export const MATERIALS = {
       const paint = rasterRGBA(size, layout('paint'));
       const ramp = carve(s, cut, lines, { depth: 0.50, bevelPx: 3.2, lip: 0.14, bulge: 0.52, lineDepth: 0.52, seed: cx.seed + 5 });
       freshCutTint(s, ramp, { amount: 0.18 });
-      paintRemnants(s, ramp, paint, { survival: 0.32, freq: 5, seed: cx.seed + 9, edgeLoss: 0.74, fade: 0.48 });
+      paintRemnants(s, ramp, paint, { survival: 0.42, freq: 5, seed: cx.seed + 9, edgeLoss: 0.68, fade: 0.36 });
       chiselMarks(s, { amount: 0.014, angle: -0.30, freq: 44, seed: cx.seed + 1, mask: m.edge });
       pitting(s, { amount: 0.035, freq: 32, density: 0.36, seed: cx.seed + 2, colorDark: PAL.sandDark });
       const src = new Float32Array(s.n);
@@ -943,7 +959,8 @@ export const MATERIALS = {
    * to (-1,-1,-1) on all twelve hypostyle columns. Fixed in NormalMap.derive; the bump is now
    * also proportionate (0.10 m of relief across a 3.6 m repeat was a 28× slope scale). */
   column_papyrus: {
-    group: 'carved', tier: 0, tile: [3.6, 4.5], bump: 0.034, rough: 0.84,
+    group: 'carved', tier: 0, tile: [3.6, 4.5], bump: 0.042, rough: 0.84,
+    aoStrength: 1.5, aoFloor: 0.12,
     build(s, cx) {
       const size = s.size;
       // A bundled-papyrus column: convex stalks running vertically, V-grooves between them,
