@@ -115,6 +115,93 @@ const VARIATION = 0.62;
  */
 const JOINT = 0.24;
 
+/* ── Cel-shaded metal: the value policy ───────────────────────────────────────────────────────
+ *
+ * §7.3: *"Gold doesn't read as metal (needs hard spec + bloom + dark occlusion)."* Every gold
+ * recipe in this file used to answer that with brightness, and brightness is the one ingredient
+ * that cannot supply it. Measured off the CPU-side albedo before any of this ran, `gold_leaf`
+ * reported luma p01 **0.477**, p50 0.670, p99 0.784 — the whole sheet inside one third of a
+ * stop, with no dark anywhere in it — plus a normal whose 90th-percentile tilt was **5.2°** and
+ * a baked AO whose 1st percentile was **0.773**. A bright, flat, uniformly lit yellow surface is
+ * the definition of painted plaster, and that is what the frame showed: the `hero` hook rings
+ * measure `#72696b`, R/G **1.08**, i.e. chromatically *neutral* — not merely "not metal", not
+ * even gold.
+ *
+ * What actually reads as cel-shaded metal is three things, and two of them are dark:
+ *
+ *   1. **A dark, saturated ground.** Most of a piece of gold is not lit by the key at all; it is
+ *      showing you a dim reflection of the ground and the shaded sky. If the base sits at 0.67
+ *      luma there is nothing for a highlight to be brighter *than*, and the eye reads flat paint.
+ *   2. **A hard, narrow, broken highlight.** The shader already gives a hard one: `glossP` runs
+ *      near 105 on gold, so the lobe is about 8° wide. On a surface whose normals vary by 5°
+ *      that lobe either covers a whole face or misses it entirely — which is why gold currently
+ *      either glows uniformly or does nothing. Relief is what breaks a single lobe into a
+ *      scatter of glints, so `bump` and the height field matter more here than any colour does.
+ *   3. **Occlusion that goes properly dark in the seams**, because the contrast between a black
+ *      crease and a white glint two millimetres away is the entire read.
+ *
+ * So the ramp below moves the mass *down* and keeps a real bright tail, `goldRough` ties
+ * roughness to value so that only the crests can catch the lobe (`specAmt ∝ 1 - 0.75·rough`,
+ * `glossP ∝ 1 - 0.6·rough`), and the gold recipes carry a strong `aoStrength` with a low
+ * `aoFloor`.
+ *
+ * ── On `PAL.goldSpec`, and whether gold wants the substitution sand got ──────────────────────
+ *
+ * It wants a substitution, but not that one, and the reason is worth writing down because the
+ * two cases look identical and are not.
+ *
+ * `sand()` used `PAL.goldSpec` (`#fffbe8`, a near-neutral white) for its grain glints and it was
+ * wrong there because a quartz grain is a **dielectric**: its specular reflection is the colour
+ * of the light, so `PAL.sun` was the correct hex. Gold is a **metal**, and a metal's specular is
+ * tinted by the metal itself (gold reflects roughly 1.00 / 0.77 / 0.34 in R/G/B). A gold
+ * highlight is therefore neither paper-white *nor* the colour of the sun — it is the sun times
+ * gold, which stays unmistakably gold all the way up to the point where it clips.
+ *
+ * The other half of the sand argument does carry over exactly. A near-neutral hex mixed into an
+ * *albedo* is averaged by the mip chain into a desaturating film, and that is what turned the
+ * dunes grey. Gold is the second-warmest surface in the game and can afford that even less. So
+ * `GOLD_HOT` — the crest colour, which lives in the albedo — leans toward `PAL.sun`, past
+ * `goldLight`, *away* from `goldSpec`.
+ *
+ * `PAL.goldSpec` keeps its §2.2 job and only that job: it is the shader's `uSpecColor`, applied
+ * at a hard threshold over a few per cent of a surface, where nothing mips it into the base and
+ * its neutrality reads as the white-hot core of a specular hit. Adding it to an albedo is what
+ * was wrong; the palette entry is not.
+ */
+/** Deep shadowed gold — a recess in gilding, still gold-brown, never neutral and never black. */
+const GOLD_DEEP = MX(PAL.goldDark, PAL.sandCrev, 0.58);
+/** The crest a specular hit lands on. Past `goldLight` toward the *sun*, not toward paper. */
+const GOLD_HOT = MX(PAL.goldLight, PAL.sun, 0.45);
+
+/**
+ * Five-stop gold ramp, `t` biased so the mass falls low and only the tail reaches `GOLD_HOT`.
+ *
+ * The bias is the whole point. Feeding a roughly symmetric field straight into a symmetric ramp
+ * produces a symmetric distribution centred on `goldMid`, which is the bright flat sheet this
+ * replaces. `t^GOLD_BIAS` pulls the body of the distribution toward `GOLD_DEEP` while leaving
+ * the top decile where it was, so the *range* opens instead of the whole surface darkening.
+ */
+const GOLD_BIAS = 1.75;
+function goldRamp(t, out = T3) {
+  const k = Math.pow(sat(t), GOLD_BIAS);
+  if (k < 0.34) return mixHex(GOLD_DEEP, PAL.goldDark, k / 0.34, out);
+  if (k < 0.62) return mixHex(PAL.goldDark, PAL.goldMid, (k - 0.34) / 0.28, out);
+  if (k < 0.86) return mixHex(PAL.goldMid, PAL.goldLight, (k - 0.62) / 0.24, out);
+  return mixHex(PAL.goldLight, GOLD_HOT, (k - 0.86) / 0.14, out);
+}
+
+/**
+ * Roughness for a gold texel at ramp position `t`. Bright crest = planished and polished; deep
+ * recess = dirty and scattering. Correlating the two is what makes the highlight land only where
+ * the albedo is already hot, so the additive white spec sums onto gold instead of onto brown —
+ * and it is the only way to get an albedo-tinted highlight out of a shader whose `uSpecColor` is
+ * a fixed near-white this file cannot reach.
+ */
+function goldRough(t) {
+  const k = Math.pow(sat(t), GOLD_BIAS);
+  return sat(0.62 - k * 0.52);
+}
+
 /**
  * Ashlar masonry base — height and per-block colour. Everything about the way cut stone reads
  * lives here: blocks sit proud or recessed by a few millimetres, faces are very slightly convex,
@@ -1048,9 +1135,17 @@ export const MATERIALS = {
     },
   },
 
+  /* The largest gilded surface in the level by a long way — every cornice, architrave, lintel
+   * and false door in `hero`, `temple`, `courtyard` and `interior` is this recipe. Its gold gets
+   * the same value policy as `gold_leaf` (see `goldRamp`), plus one thing that only applies to
+   * gilding *in a sunk relief*: the ramp position is driven by where the texel sits on the cut
+   * rather than by a noise field, so the floor of every glyph is deep and its bevel is hot.
+   * That is both what leaf over a carved ground actually does — the burnisher can only reach the
+   * arris — and the thing that makes the carving legible, because it puts the material's whole
+   * value range across the two millimetres where the relief is. */
   hieroglyph_gilded: {
     group: 'carved', tier: 1, tile: 3.2, bump: 0.042, rough: 0.70,
-    aoStrength: 1.12, aoFloor: 0.13,
+    aoStrength: 1.30, aoFloor: 0.07,
     build(s, cx) {
       const size = s.size;
       ashlar(s, {
@@ -1066,20 +1161,38 @@ export const MATERIALS = {
       // Gold leaf laid into the sunk glyphs over a red bole ground; the leaf lifts at the arrises.
       const lift = s.field(2, (u, v) => sat(warpN(u, v, 14, 4, 1.1, cx.seed + 31) * 1.4 + 0.5));
       const wrinkle = s.field(2, (u, v) => fbmN(u, v, 55, 3, 0.5, cx.seed + 37) * 0.5 + 0.5);
+      // Which stretches of the inscription were re-gilded and which have gone dark. One cycle
+      // per 1.6 m of world, so a run of glyphs shares a state instead of each one differing.
+      const swathe = s.field(4, (u, v) => warpN(u, v, 4, 4, 1.25, cx.seed + 197) * 0.5 + 0.5);
+      const t3 = [0, 0, 0];
       for (let i = 0; i < s.n; i++) {
         const g = sat(ramp[i] * 1.35 - 0.10);
         if (g <= 0.01) continue;
         const worn = sat((lift[i] - 0.66) * 3.0) * g;
-        const t = sat(0.40 + (wrinkle[i] - 0.5) * 1.1);
-        const col = ramp3(PAL.goldDark, PAL.goldMid, PAL.goldLight, t);
-        s.r[i] += (col[0] - s.r[i]) * g; s.g[i] += (col[1] - s.g[i]) * g; s.b[i] += (col[2] - s.b[i]) * g;
+        /* `4r(1-r)` peaks across the bevel of the cut and falls to zero on both the floor and
+         * the surrounding face — the same profile `freshCutTint` uses for freshly exposed stone,
+         * and for the same reason: it is the surface a chisel leaves and the only part of a sunk
+         * glyph a burnisher can reach. Driving the *value* with it means the recess reads dark,
+         * the arris reads hot, and the two are two millimetres apart. */
+        const bevel = 4 * ramp[i] * (1 - ramp[i]);
+        const t = sat(0.16 + bevel * 0.74 + (swathe[i] - 0.5) * 0.42 + (wrinkle[i] - 0.5) * 0.26);
+        goldRamp(t, t3);
+        s.r[i] += (t3[0] - s.r[i]) * g; s.g[i] += (t3[1] - s.g[i]) * g; s.b[i] += (t3[2] - s.b[i]) * g;
         s.mixHex(i, PAL.red, worn * 0.75);                    // bole showing through
         s.metal[i] = g * (1 - worn * 0.85);
-        s.rough[i] = lerp(s.rough[i], 0.20 + (1 - wrinkle[i]) * 0.14 + worn * 0.4, g);
+        s.rough[i] = lerp(s.rough[i], sat(goldRough(t) + worn * 0.4), g);
         s.h[i] += g * 0.03 * wrinkle[i];
+        // Dirt in the bottom of a gilded recess. This is the dark occlusion §7.3 asks for and
+        // it is albedo, so unlike the baked AO it survives minification and carries no
+        // lighting direction of its own.
+        s.occ[i] *= 1 - g * sat(ramp[i] * 1.2) * 0.40;
       }
-      weather(s, { source: ramp, seed: cx.seed + 6, crevice: 0x6a5c42, creviceAmt: 0.40, streakAmt: 0.22, dustAmt: 0.16, roughGrime: 0.08 });
+      weather(s, { source: ramp, seed: cx.seed + 6, crevice: 0x54441c, creviceAmt: 0.50, streakAmt: 0.22, dustAmt: 0.16, roughGrime: 0.08 });
       grain(s, { amount: 0.014, freq: 120, seed: cx.seed + 8, heightAmt: 0.004 });
+      /* Opening the gold's value range downward put 0.28 % of texels (min luma 0.187) under
+       * §2.2's `crevice` value, where the shader's additive violet wash starts to out-weigh the
+       * albedo. This recipe reported `darkTail 0.0000` before and has to keep doing so. */
+      rampFloor(s, { crevice: GOLD_DEEP });
     },
   },
 
@@ -1138,11 +1251,11 @@ export const MATERIALS = {
       for (let i = 0; i < s.n; i++) {
         const g = sat(ringSoft[i] * 1.3);
         if (g > 0.02) {
-          const t = sat(0.42 + (rope[i] - 0.5) * 1.2);
-          const col = ramp3(PAL.goldDark, PAL.goldMid, PAL.goldLight, t);
+          const t = sat(0.26 + (rope[i] - 0.5) * 1.25 + sat(ringSoft[i] - 0.5) * 0.5);
+          const col = goldRamp(t);
           s.r[i] += (col[0] - s.r[i]) * g; s.g[i] += (col[1] - s.g[i]) * g; s.b[i] += (col[2] - s.b[i]) * g;
           s.metal[i] = g;
-          s.rough[i] = lerp(s.rough[i], 0.18 + (1 - rope[i]) * 0.16, g);
+          s.rough[i] = lerp(s.rough[i], goldRough(t), g);
           s.h[i] += g * 0.30 + g * rope[i] * 0.06;     // the ring stands proud, rope-textured
         }
         // Gold in the sunk glyphs too — a cartouche is always the richest thing on the wall.
@@ -1199,12 +1312,16 @@ export const MATERIALS = {
         const g = sat(starSoft[i] * 1.25);
         if (g > 0.02) {
           const lost = sat((wear[i] - 0.70) * 3.2);
-          const t = sat(0.45 + (plaster[i] - 0.5) * 0.8);
-          const col = ramp3(PAL.goldDark, PAL.goldMid, PAL.goldLight, t);
+          /* Gilded stars on a painted ceiling. `starSoft` falls off across the point of each
+           * star, so driving the ramp with it makes the centre of a star hot and its points
+           * deep — which is what gives a five-pointed leaf star its shape at twenty metres,
+           * where the geometry of the point is well under a pixel. */
+          const t = sat(0.20 + sat(starSoft[i] * 1.15) * 0.68 + (plaster[i] - 0.5) * 0.5);
+          const col = goldRamp(t);
           const k = g * (1 - lost * 0.9);
           s.r[i] += (col[0] - s.r[i]) * k; s.g[i] += (col[1] - s.g[i]) * k; s.b[i] += (col[2] - s.b[i]) * k;
           s.h[i] += g * 0.24;                       // pigment/leaf sits proud of the plaster
-          s.rough[i] = lerp(s.rough[i], 0.34, k);
+          s.rough[i] = lerp(s.rough[i], goldRough(t), k);
           s.metal[i] = k * 0.55;
         }
         // Lamp soot: centuries of torches, pooling in the hollows.
@@ -1329,30 +1446,84 @@ export const MATERIALS = {
 
   /* ===================== metal & precious =============================== */
 
+  /* `tile` 0.9 → 1.2 and `bump` 0.004 → 0.020, both for measured reasons.
+   *
+   * **Scale.** One repeat is `2 x tile` metres of world (Kit's `UV_PER_M = 0.5`; see the note in
+   * Textures._build), so this was 1.8 m and its energy sat at 1–3 cm: the wrinkle field ran 26
+   * cycles per tile (7 cm) and the pinholes 34 Worley cells (5 cm). Gold in the canonical shots
+   * is the hook rings and spire tips at 15–30 m and the sarcophagus and false door at 5–16 m; at
+   * `hero`'s 1.115 mrad/px one pixel is 17–29 mm out there, so **44–73 % of this material's
+   * albedo variance was below a pixel at every distance it is ever seen from.** Same shape as
+   * `MOTES.size` and `sand_ripples`. At 1.2 the repeat is 2.4 m, the leaf sheets are 60 cm and
+   * the planishing dishes 12 cm — both comfortably resolved at 25 m, both still fine enough to
+   * be beaten metal in `interior` at 5 m.
+   *
+   * **Relief.** 4 mm across a 1.8 m repeat gave a 90th-percentile normal tilt of 5.2°, and the
+   * gold specular lobe is about 8° wide. A surface flatter than its own highlight cannot break
+   * that highlight up: it lights uniformly or not at all, which is the "yellow ball with a dot
+   * on it" the shader's own comment warns about. 20 mm across 2.4 m puts the tilt where a
+   * fraction of texels sit inside the lobe at any orientation, which is what a scatter of hard
+   * glints is made of. */
   gold_leaf: {
-    group: 'metal', tier: 1, tile: 0.9, bump: 0.004, rough: 0.20,
+    group: 'metal', tier: 1, tile: 1.2, bump: 0.020, rough: 0.20,
+    // Dark occlusion is half of §7.3's gold line. The catalogue default floor (0.16) is a
+    // *stone* number, set so shadowed sandstone keeps readable detail; on metal the seam
+    // between two beaten sheets should go nearly black, because the glint next to it is what
+    // it has to be read against.
+    aoStrength: 1.45, aoFloor: 0.05,
     build(s, cx) {
       const size = s.size;
-      s.fill(PAL.goldMid); s.fillH(0.62); s.rough.fill(0.18); s.metal.fill(1);
-      // Beaten leaf laid in overlapping squares: the seams are the tell.
+      s.fill(PAL.goldMid); s.fillH(0.62); s.rough.fill(0.30); s.metal.fill(1);
+      // Beaten leaf laid in overlapping squares: the seams are the tell. Four sheets across a
+      // 2.4 m repeat is a 60 cm sheet — the size gold leaf is actually laid in on furniture.
       const sheets = 4;
       const seam = s.field(1.5, (u, v) => {
         const jx = fbmN(u, v, 5, 3, 0.5, cx.seed + 3) * 0.02;
         const a = Math.abs(tri((u + jx) * sheets)), b = Math.abs(tri((v + jx) * sheets));
         return sat(1 - Math.min(a, b) / 0.10) ** 2;
       });
-      const wrinkle = s.field(2, (u, v) => warpN(u, v, 26, 4, 1.2, cx.seed + 7) * 0.5 + 0.5);
-      const dust = s.field(4, (u, v) => sat(warpN(u, v, 6, 4, 1.2, cx.seed + 13) * 1.4 + 0.5));
+      /* Planishing. A gilded core is beaten down onto its ground with a round-faced hammer, and
+       * what that leaves is a field of shallow dishes with sharp rims between them. This is the
+       * term that supplies the *slope*: a Worley dish has a hard boundary, so the rim is a real
+       * crease rather than the gentle undulation the old `warpN` wrinkle gave. 20 cells across
+       * the repeat is a 12 cm blow, which is right for sheet over a wooden core and — the point
+       * — three pixels across at twenty-five metres. */
+      const dw = {};
+      const dish = s.field(2, (u, v) => {
+        const w = worleyN(u, v, 20, cx.seed + 71, 0.95, dw);
+        return sat(1 - w.f1 / (0.42 + w.id * 0.24));
+      });
+      const rim = s.field(2, (u, v) => {
+        const w = worleyN(u, v, 20, cx.seed + 71, 0.95, dw);
+        return sat(1 - (w.f2 - w.f1) / 0.13) ** 1.6;
+      });
+      // Fine leaf wrinkle on top of the dishes — kept, but no longer the only structure.
+      const wrinkle = s.field(2, (u, v) => warpN(u, v, 34, 4, 1.2, cx.seed + 7) * 0.5 + 0.5);
+      /* The low-frequency term the material had none of: which parts of this piece of gold are
+       * catching the room and which are in their own shade. At 3 cycles per repeat that is 80 cm
+       * of world — bigger than most of the objects this dresses, so on a hook ring or a spire it
+       * reads as one side being bright and the other deep, which is exactly how a small metal
+       * object reads and is impossible to get from any amount of grain. */
+      const swathe = s.field(4, (u, v) => warpN(u, v, 3, 4, 1.3, cx.seed + 211) * 0.5 + 0.5);
+      const dust = s.field(4, (u, v) => sat(warpN(u, v, 5, 4, 1.2, cx.seed + 13) * 1.4 + 0.5));
       const hole = s.field(2, (u, v) => {
-        const w = worleyN(u, v, 34, cx.seed + 19, 1.0);
+        const w = worleyN(u, v, 22, cx.seed + 19, 1.0);
         return w.id < 0.10 ? sat(1 - w.f1 / 0.14) ** 2 : 0;
       });
+      const t3 = [0, 0, 0];
       for (let i = 0; i < s.n; i++) {
-        const t = sat(0.46 + (wrinkle[i] - 0.5) * 1.25);
-        const col = ramp3(PAL.goldDark, PAL.goldMid, PAL.goldLight, t);
-        s.r[i] = col[0]; s.g[i] = col[1]; s.b[i] = col[2];
-        s.h[i] = 0.58 + (wrinkle[i] - 0.5) * 0.28 + seam[i] * 0.22;
-        s.rough[i] = sat(0.15 + (1 - wrinkle[i]) * 0.13 + seam[i] * 0.10);
+        /* Value. The dish floor is deep, the rim between dishes is hot, and the swathe decides
+         * which region of the piece gets to be hot at all — so the bright texels come out as a
+         * *connected network of rims inside a lit region*, not as salt-and-pepper. */
+        const t = sat(0.30 + (1 - dish[i]) * 0.34 + rim[i] * 0.46
+          + (swathe[i] - 0.5) * 0.52 + (wrinkle[i] - 0.5) * 0.20 - seam[i] * 0.34);
+        goldRamp(t, t3);
+        s.r[i] = t3[0]; s.g[i] = t3[1]; s.b[i] = t3[2];
+        // Height carries the same structure, so the normal and the value agree about where the
+        // crests are — a highlight that lands somewhere the albedo is dark reads as a decal.
+        s.h[i] = 0.56 - dish[i] * dish[i] * 0.34 + rim[i] * 0.26
+          + (wrinkle[i] - 0.5) * 0.16 - seam[i] * 0.30;
+        s.rough[i] = goldRough(t);
         // Pinholes where the leaf tore: red bole ground shows, and it is not metal any more.
         if (hole[i] > 0.02) {
           s.mixHex(i, PAL.red, hole[i] * 0.9);
@@ -1360,23 +1531,39 @@ export const MATERIALS = {
           s.rough[i] = sat(s.rough[i] + hole[i] * 0.55);
           s.h[i] -= hole[i] * 0.20;
         }
-        // Dust dulls gold faster than anything; without it gold reads as plastic.
+        // Dust dulls gold faster than anything; without it gold reads as plastic. It settles on
+        // the crests, which is also where it does the most good — it stops the bright tail
+        // becoming a uniform bright tail.
         const d = sat(dust[i] - 0.55) * 0.8;
-        s.mixHex(i, PAL.sandLight, d * 0.22);
-        s.rough[i] = sat(s.rough[i] + d * 0.30);
+        s.mixHex(i, PAL.sandLight, d * 0.20);
+        s.rough[i] = sat(s.rough[i] + d * 0.34);
         s.metal[i] *= 1 - d * 0.35;
+        // The seam between two sheets is a gap: dark, dirty, and where the AO has to bite.
+        s.occ[i] *= 1 - seam[i] * 0.45;
       }
-      weather(s, { seed: cx.seed + 6, crevice: 0x5a4418, creviceAmt: 0.42, streakAmt: 0.16, dustAmt: 0.10, dust: PAL.limeMid, roughGrime: 0.14, downDark: 0.10, patina: 0.05 });
-      grain(s, { amount: 0.016, freq: 340, seed: cx.seed + 8, heightAmt: 0.004 });
+      weather(s, { seed: cx.seed + 6, crevice: 0x4a3612, creviceAmt: 0.52, creviceRadius: 7, streakAmt: 0.16, dustAmt: 0.10, dust: PAL.limeMid, roughGrime: 0.14, downDark: 0.12, patina: 0.05 });
+      grain(s, { amount: 0.016, freq: 260, seed: cx.seed + 8, heightAmt: 0.006 });
+      /* The same backstop the stone recipes carry, for the same reason: the cel shader adds a
+       * flat violet wash proportional to `1 - key`, so any texel dark enough that its own albedo
+       * stops dominating renders violet rather than dark. Opening gold's value range downward is
+       * the point of this recipe, so it needs the floor more than the stone does — the crevice
+       * hex here is a *gold* one, so a shadowed seam bottoms out as dark gilding. */
+      rampFloor(s, { crevice: GOLD_DEEP });
     },
   },
 
+  /* Not currently requested by any consumer (nothing in `Architecture.RECIPES` or
+   * `Props.MATERIALS` names it), so this is kept correct rather than tuned in frame. It gets the
+   * same value policy as `gold_leaf` so that whoever reaches for it does not reintroduce the
+   * bright-flat-sheet failure — and the same scale correction: 0.7 was a 1.4 m repeat with a
+   * 6 cm hammer facet, of which 87–98 % was sub-pixel at the distances gold appears at. */
   gold_hammered: {
-    group: 'metal', tier: 1, tile: 0.7, bump: 0.0055, rough: 0.28,
+    group: 'metal', tier: 1, tile: 1.1, bump: 0.016, rough: 0.28,
+    aoStrength: 1.40, aoFloor: 0.06,
     build(s, cx) {
       const size = s.size;
       s.metal.fill(1);
-      const facetF = 22;
+      const facetF = 16;
       const macro = s.field(4, (u, v) => warpN(u, v, 5, 4, 1.2, cx.seed + 11) * 0.5 + 0.5);
       for (let y = 0; y < size; y++) {
         const v = (y + 0.5) / size, row = y * size;
@@ -1388,15 +1575,16 @@ export const MATERIALS = {
           const dish = sat(1 - w.f1 / (0.40 + w.id * 0.22));
           const dish2 = sat(1 - w2.f1 / 0.42);
           s.h[i] = 0.72 - dish * dish * 0.42 - dish2 * dish2 * 0.14;
-          const t = sat(0.40 + (1 - dish) * 0.55 + (macro[i] - 0.5) * 0.5 + (w.id - 0.5) * 0.2);
-          const col = ramp3(PAL.goldDark, PAL.goldMid, PAL.goldLight, t);
+          const t = sat(0.22 + (1 - dish) * 0.62 + (macro[i] - 0.5) * 0.58 + (w.id - 0.5) * 0.2);
+          const col = goldRamp(t);
           s.r[i] = col[0]; s.g[i] = col[1]; s.b[i] = col[2];
-          s.rough[i] = sat(0.22 + dish * 0.20 + (w2.id - 0.5) * 0.08);
+          s.rough[i] = sat(goldRough(t) + dish * 0.18);
         }
       }
-      chiselMarks(s, { amount: 0.02, angle: 0.85, freq: 130, seed: cx.seed + 3 });
+      chiselMarks(s, { amount: 0.02, angle: 0.85, freq: 90, seed: cx.seed + 3 });
       weather(s, { seed: cx.seed + 6, crevice: 0x4e3a14, creviceAmt: 0.50, streakAmt: 0.14, dustAmt: 0.12, dust: PAL.limeMid, roughGrime: 0.18, downDark: 0.12, patina: 0.05 });
-      grain(s, { amount: 0.014, freq: 360, seed: cx.seed + 8, heightAmt: 0.004 });
+      grain(s, { amount: 0.014, freq: 280, seed: cx.seed + 8, heightAmt: 0.004 });
+      rampFloor(s, { crevice: GOLD_DEEP });
     },
   },
 
@@ -2325,11 +2513,15 @@ function inlay(s, cx, stoneHex, veinHex, fleckHex, fleckAmt) {
     s.metal[i] = 0;
     const g = sat(soft[i] * 1.35);
     if (g > 0.02) {
-      const gt = sat(0.5 + (polish[i] - 0.5) * 0.9);
-      const gc = ramp3(PAL.goldDark, PAL.goldMid, PAL.goldLight, gt);
+      /* Same value policy as the rest of the gold (see `goldRamp`): the crown of the cell wall
+       * is hot and its foot, where it meets the stone, is deep. A cloisonné wall is 2 mm of
+       * upstanding gold, so it is *all* edge — if it is uniformly bright the whole grid reads as
+       * a yellow lattice printed on the stone rather than as wire standing off it. */
+      const gt = sat(0.30 + (1 - sat((1 - soft[i]) * 2.2)) * 0.46 + (polish[i] - 0.5) * 0.80);
+      const gc = goldRamp(gt);
       s.r[i] += (gc[0] - s.r[i]) * g; s.g[i] += (gc[1] - s.g[i]) * g; s.b[i] += (gc[2] - s.b[i]) * g;
       s.metal[i] = g;
-      s.rough[i] = lerp(s.rough[i], 0.20, g);
+      s.rough[i] = lerp(s.rough[i], goldRough(gt), g);
       s.h[i] += g * 0.34;                                        // the cell wall stands proud
     }
   }

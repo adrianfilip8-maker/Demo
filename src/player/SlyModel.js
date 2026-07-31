@@ -54,6 +54,8 @@ export const TUNE = {
   footScale: 1.34,        // chunky boots give the contrapposto a base to stand on
   limbSlim: 0.86,         // long thin limbs: every leg/arm radius goes through this
   shoulderSlim: 0.87,     // narrow shoulders — the deltoid mass, not the bone spacing
+  brimLift: 0.050,        // cap brim off the brow — it was covering both eyes, see _buildCap
+  torsoShrink: 0.16,      // see `by()`: hips→neck 0.49 → 0.33 m, 5.29 → 4.88 heads tall
 
   /* --- shading / line --- */
   outline: 0.0034,        // fraction-of-frame-height thickness ⇒ ~2.5 px at any resolution
@@ -120,7 +122,39 @@ const GROUPS = ['fur', 'furCream', 'furDark', 'cloth', 'clothDark', 'gold', 'ink
  * ~1:5 head:body cartoon"). Everything above the neck joint goes through `hy`/`hx`.
  */
 const HEAD_BASE = 1.396;                                   // the neck joint: the fixed point
-const hy = (y) => HEAD_BASE + (y - HEAD_BASE) * TUNE.headScale;
+const HIP_Y = 0.905;                                       // the hips joint: the other fixed point
+
+/**
+ * Body space. **This is the head:body lever**, and it is the one that actually works.
+ *
+ * `headScale` alone asymptotes: the head sits on top of hips + torso, so growing it grows the
+ * total and the ratio only ever approaches `1.49 + 1.396/headHeight`. Reaching 1:4.5 that way
+ * needs headScale ≈ 1.55 and produces a bobblehead. Taking the *torso* out instead moves the
+ * numerator down and the denominator not at all, and it is independently the right cartoon
+ * call: big head, short body, long legs.
+ *
+ * `by(y)` compresses the hips→neck span by `TUNE.torsoShrink` metres and rigidly carries
+ * everything above the neck down by the same amount. Below the hips it is the identity, so
+ * legs, boots and the shirt hem never move. Every absolute Y in body space goes through it —
+ * the bone table, `TORSO`, `SPINE_RAMP`, the chest V, the belt and the body tufts — so the
+ * next person moves one number instead of finding ten.
+ *
+ * Two things deliberately do **not** go through it:
+ *   · the arm chain, which drops rigidly by `armDrop` instead — compressing it would shorten
+ *     his arms, and §7.3 wants them long;
+ *   · the tail, which is authored off the hips and is half the silhouette.
+ */
+const by = (y) => {
+  const s = TUNE.torsoShrink;
+  if (s <= 0 || y <= HIP_Y) return y;
+  if (y >= HEAD_BASE) return y - s;
+  return HIP_Y + (y - HIP_Y) * (1 - s / (HEAD_BASE - HIP_Y));
+};
+/** How far the shoulder moved; the whole arm chain follows it rigidly. */
+const armDrop = () => 1.292 - by(1.292);
+const ay = (y) => y - armDrop();
+
+const hy = (y) => by(HEAD_BASE) + (y - HEAD_BASE) * TUNE.headScale;
 const hx = (v) => v * TUNE.headScale;
 /** Cross-body width in head space. Wider than it is deep reads rounder from the front. */
 const hw = (v) => v * TUNE.headScale * TUNE.headWide;
@@ -138,10 +172,10 @@ const furLobe = (a, t, amp, fa = 5, ft = 15) => (amp <= 0 ? 1 : (
 
 /** [name, parent, [x,y,z] in bind-pose model space]. His right is −X, forward is +Z. */
 const SKELETON = [
-  ['hips', 'root', [0, 0.905, -0.005]],
-  ['spine', 'hips', [0, 1.010, 0.000]],
-  ['chest', 'spine', [0, 1.150, -0.005]],
-  ['neck', 'chest', [0, 1.315, 0.010]],
+  ['hips', 'root', [0, HIP_Y, -0.005]],
+  ['spine', 'hips', [0, by(1.010), 0.000]],
+  ['chest', 'spine', [0, by(1.150), -0.005]],
+  ['neck', 'chest', [0, by(1.315), 0.010]],
   ['head', 'neck', [0, hy(1.420), 0.015]],
   ['jaw', 'head', [0, hy(1.478), hx(0.055)]],
   ['capBrim', 'head', [0, hy(1.665), hx(0.090)]],
@@ -150,14 +184,14 @@ const SKELETON = [
   ['browL', 'head', [hw(0.064), hy(1.648), hx(0.140)]],
   ['browR', 'head', [hw(-0.064), hy(1.648), hx(0.140)]],
 
-  ['shoulderL', 'chest', [0.052, 1.292, 0.000]],
-  ['upperArmL', 'shoulderL', [0.140, 1.278, 0.000]],
-  ['lowerArmL', 'upperArmL', [0.3315, 1.1173, 0.000]],
-  ['handL', 'lowerArmL', [0.4800, 0.9523, 0.000]],
-  ['shoulderR', 'chest', [-0.052, 1.292, 0.000]],
-  ['upperArmR', 'shoulderR', [-0.140, 1.278, 0.000]],
-  ['lowerArmR', 'upperArmR', [-0.3315, 1.1173, 0.000]],
-  ['handR', 'lowerArmR', [-0.4800, 0.9523, 0.000]],
+  ['shoulderL', 'chest', [0.052, ay(1.292), 0.000]],
+  ['upperArmL', 'shoulderL', [0.140, ay(1.278), 0.000]],
+  ['lowerArmL', 'upperArmL', [0.3315, ay(1.1173), 0.000]],
+  ['handL', 'lowerArmL', [0.4800, ay(0.9523), 0.000]],
+  ['shoulderR', 'chest', [-0.052, ay(1.292), 0.000]],
+  ['upperArmR', 'shoulderR', [-0.140, ay(1.278), 0.000]],
+  ['lowerArmR', 'upperArmR', [-0.3315, ay(1.1173), 0.000]],
+  ['handR', 'lowerArmR', [-0.4800, ay(0.9523), 0.000]],
 
   ['upperLegL', 'hips', [0.072, 0.885, 0.000]],
   ['lowerLegL', 'upperLegL', [0.083, 0.480, 0.012]],
@@ -376,7 +410,9 @@ export class SlyModel {
   /* ---------------------------- torso ----------------------------------- */
 
   /* y, half-width, half-depth, z-offset. Wide chest → wasp waist → flared shirt hem: the
-     classic thief triangle. */
+     classic thief triangle. Y is authored in *uncompressed* body space and mapped through
+     `by()` here, so `TUNE.torsoShrink` moves the whole profile without touching these
+     numbers — the silhouette shape is a separate decision from the torso's length. */
   static TORSO = [
     [0.815, 0.112, 0.092, -0.008],
     [0.848, 0.109, 0.089, -0.006],
@@ -394,7 +430,7 @@ export class SlyModel {
     [1.337, 0.098, 0.078, 0.005],   // neck fur begins (hard crease here)
     [1.382, 0.094, 0.076, 0.008],
     [1.422, 0.092, 0.076, 0.010],
-  ];
+  ].map((r) => [by(r[0]), r[1], r[2], r[3]]);
 
   _torsoRadius(y) {
     const T = SlyModel.TORSO;
@@ -411,6 +447,8 @@ export class SlyModel {
     return { rx: T[0][1], rz: T[0][2], cz: T[0][3] };
   }
 
+  /* Same authoring space as TORSO, mapped the same way — the weight ramp has to move with the
+     geometry it weights or a shortened torso shears at the waist. */
   static SPINE_RAMP = [
     [0.80, { hips: 1 }],
     [0.93, { hips: 1 }],
@@ -423,7 +461,7 @@ export class SlyModel {
     [1.345, { neck: 1 }],
     [1.392, { neck: 0.45, head: 0.55 }],
     [1.430, { head: 1 }],
-  ];
+  ].map((r) => [by(r[0]), r[1]]);
 
   _buildTorso(mb) {
     const T = SlyModel.TORSO;
@@ -466,7 +504,7 @@ export class SlyModel {
     const w = ramp(p.y, SlyModel.SPINE_RAMP);
     const ax = Math.abs(p.x);
     const shoulderWin = smooth(0.042, 0.098, ax)
-      * smooth(1.16, 1.25, p.y) * (1 - smooth(1.28, 1.33, p.y));
+      * smooth(by(1.16), by(1.25), p.y) * (1 - smooth(by(1.28), by(1.33), p.y));
     if (shoulderWin > 0.01) {
       const s = shoulderWin * 0.62;
       const name = p.x > 0 ? 'shoulderL' : 'shoulderR';
@@ -481,7 +519,7 @@ export class SlyModel {
   /** The open-collar cream chest. A colour break at the collarbone stops the torso reading
       as one blue tube, and gives the chest tufts something to grow out of. */
   _buildChestV(mb) {
-    const top = 1.322;
+    const top = by(1.322);
     mb.group('furCream').sg(mb.newSg());
     addPatch(mb, {
       segU: 14, segV: 5,
@@ -503,7 +541,7 @@ export class SlyModel {
   /* ---------------------------- belt + pouch ---------------------------- */
 
   _buildBelt(mb) {
-    const y = 0.851;
+    const y = by(0.851);
     const r = this._torsoRadius(y);
     const N = 30;
     const centers = [];
@@ -666,20 +704,22 @@ export class SlyModel {
     const el = this.bp('lowerArmL').clone(); el.x *= side;
     const wr = this.bp('handL').clone(); wr.x *= side;
 
-    // ≥3 rings straddle each joint so the elbow can flex 100° without creasing.
+    /* ≥3 rings straddle each joint so the elbow can flex 100° without creasing.
+       Y through `ay()`: the arm drops rigidly with the shoulder when the torso is shortened,
+       it does not compress with it — a short torso should not also mean short arms. */
     const key = [
-      [0.00, new THREE.Vector3(side * 0.062, 1.292, 0.000), 0.052],
-      [0.10, new THREE.Vector3(side * 0.104, 1.290, 0.000), 0.066],
-      [0.22, new THREE.Vector3(side * 0.145, 1.279, 0.000), 0.071],
-      [0.34, new THREE.Vector3(side * 0.196, 1.238, 0.000), 0.060],
-      [0.48, new THREE.Vector3(side * 0.252, 1.191, 0.000), 0.052],
-      [0.60, new THREE.Vector3(side * 0.300, 1.150, 0.000), 0.049],
-      [0.68, new THREE.Vector3(side * 0.3315, 1.1173, 0.000), 0.0505],
-      [0.76, new THREE.Vector3(side * 0.366, 1.0835, 0.000), 0.048],
-      [0.86, new THREE.Vector3(side * 0.412, 1.0325, 0.000), 0.0435],
-      [0.93, new THREE.Vector3(side * 0.451, 0.9885, 0.000), 0.040],
-      [0.965, new THREE.Vector3(side * 0.468, 0.9700, 0.000), 0.042],
-      [1.00, new THREE.Vector3(side * 0.482, 0.9535, 0.000), 0.038],
+      [0.00, new THREE.Vector3(side * 0.062, ay(1.292), 0.000), 0.052],
+      [0.10, new THREE.Vector3(side * 0.104, ay(1.290), 0.000), 0.066],
+      [0.22, new THREE.Vector3(side * 0.145, ay(1.279), 0.000), 0.071],
+      [0.34, new THREE.Vector3(side * 0.196, ay(1.238), 0.000), 0.060],
+      [0.48, new THREE.Vector3(side * 0.252, ay(1.191), 0.000), 0.052],
+      [0.60, new THREE.Vector3(side * 0.300, ay(1.150), 0.000), 0.049],
+      [0.68, new THREE.Vector3(side * 0.3315, ay(1.1173), 0.000), 0.0505],
+      [0.76, new THREE.Vector3(side * 0.366, ay(1.0835), 0.000), 0.048],
+      [0.86, new THREE.Vector3(side * 0.412, ay(1.0325), 0.000), 0.0435],
+      [0.93, new THREE.Vector3(side * 0.451, ay(0.9885), 0.000), 0.040],
+      [0.965, new THREE.Vector3(side * 0.468, ay(0.9700), 0.000), 0.042],
+      [1.00, new THREE.Vector3(side * 0.482, ay(0.9535), 0.000), 0.038],
     ];
     void sh; void el; void wr;
 
@@ -746,7 +786,7 @@ export class SlyModel {
     /* Deltoid cap. Automatic weighting cannot invent this volume, and without it a raised arm
        exposes the hole where the sleeve meets the chest. */
     addEllipsoid(mb, {
-      center: new THREE.Vector3(side * 0.132 * TUNE.shoulderSlim, 1.281, -0.002),
+      center: new THREE.Vector3(side * 0.132 * TUNE.shoulderSlim, ay(1.281), -0.002),
       radii: new THREE.Vector3(0.062, 0.058, 0.062).multiplyScalar(TUNE.shoulderSlim),
       segTheta: 16, segPhi: 9,
       group: 'cloth', sg: mb.newSg(),
@@ -760,7 +800,7 @@ export class SlyModel {
   /** Big glove mitts. Sly's hands sell every gesture, so they get real fingers and a cuff. */
   _buildHand(mb, side) {
     const L = side > 0 ? 'L' : 'R';
-    const wrist = new THREE.Vector3(side * 0.482, 0.9535, 0);
+    const wrist = new THREE.Vector3(side * 0.482, ay(0.9535), 0);
     const dir = new THREE.Vector3(side * 0.669, -0.743, 0).normalize();   // along the arm
     const fwd = new THREE.Vector3(0, 0, 1);                               // thumb side
     const nrm = new THREE.Vector3().crossVectors(dir, fwd).normalize();   // palm normal
@@ -1121,7 +1161,7 @@ export class SlyModel {
     // pupil — big and cartoon, sitting proud of the sclera so it never z-fights
     const pc = c.clone().addScaledVector(outward, 0.041 * S).addScaledVector(trueUp, 0.002 * S);
     addEllipsoid(mb, {
-      center: pc, radii: new THREE.Vector3(0.032 * S, 0.039 * S, 0.032 * S), basis,
+      center: pc, radii: new THREE.Vector3(0.041 * S, 0.048 * S, 0.041 * S), basis,
       segTheta: 12, segPhi: 8,
       group: 'ink', sg: mb.newSg(), weights: [['head', 1]],
     });
@@ -1367,7 +1407,15 @@ export class SlyModel {
 
     /* Brim: a flat inclined section swept along the front of the hem. Built as a tube so the
        top face, the underside and the rounded outer edge come out watertight in one pass.
-       Wide, deep and dark — with the ears it is the top half of the silhouette test. */
+       Wide, deep and dark — with the ears it is the top half of the silhouette test.
+     *
+     * `brimLift` exists because this brim was **covering both eyes**. Not a lighting problem
+     * and not a guess: a ray cast from each sclera toward the `sly-closeup` camera hit
+     * `clothDark` on the `capBrim` bone 5.8 cm and 8.4 cm out, and the frame sampled `#284375`
+     * at the projected eye centres — brim colour, on a sclera that is 44 px across. Every
+     * character capture in this project has rendered a Sly with no visible eyes for that
+     * reason, and no amount of emissive on the eye material could have reached the camera.
+     * Verify any change to this with `occlude.mjs`: both rays must report CLEAR. */
     const N = 24, TH = 1.40;
     const arc = [];
     for (let i = 0; i <= N; i++) {
@@ -1375,7 +1423,7 @@ export class SlyModel {
       const k = Math.abs(th) / TH;
       arc.push(place(new THREE.Vector3(
         Math.sin(th) * 0.224,
-        1.610 - 0.030 * Math.pow(k, 2),
+        1.610 + TUNE.brimLift - 0.030 * Math.pow(k, 2),
         0.004 + Math.cos(th) * 0.292,
       )));
     }
@@ -1485,8 +1533,8 @@ export class SlyModel {
       /* chest ruff bursting out of the open collar. Two rows at different heights so the
          collar edge is a scalloped mass rather than a single fringe. */
       if (side > 0) {
-        for (const row of [{ y: 1.300, len: 0.056, w: 0.020, sp: 0.56, k: 1 },
-          { y: 1.268, len: 0.042, w: 0.024, sp: 0.72, k: 2 }]) {
+        for (const row of [{ y: by(1.300), len: 0.056, w: 0.020, sp: 0.56, k: 1 },
+          { y: by(1.268), len: 0.042, w: 0.024, sp: 0.72, k: 2 }]) {
           const N = Math.round(5 * D);
           for (let i = 0; i < N; i++) {
             const f = (i + 0.5) / N;
@@ -1506,7 +1554,7 @@ export class SlyModel {
       // neck ruff around the collar
       for (let i = 0; i < Math.round(3 * D); i++) {
         const th = side * (0.95 + i * 0.55);
-        const y = 1.352;
+        const y = by(1.352);
         const r = this._torsoRadius(y);
         const base = new THREE.Vector3(Math.sin(th) * r.rx * 1.02, y, r.cz + Math.cos(th) * r.rz * 1.02);
         put({
@@ -1524,7 +1572,7 @@ export class SlyModel {
         for (let i = 0; i < N; i++) {
           const f = (i + row.off) / N;
           const c = new THREE.Vector3(side * THREE.MathUtils.lerp(0.406, 0.458, f),
-            THREE.MathUtils.lerp(1.040, 0.982, f), 0);
+            ay(THREE.MathUtils.lerp(1.040, 0.982, f)), 0);
           const back = new THREE.Vector3(side * -0.35, -0.30, -0.88)
             .applyAxisAngle(new THREE.Vector3(side * 0.669, -0.743, 0).normalize(), row.roll)
             .normalize();
@@ -1668,10 +1716,21 @@ export class SlyModel {
   _matSpec(group) {
     const F = this._fur, C = this._cloth, M = this._metal;
     switch (group) {
-      /* Specular is deliberately near-zero on fur and low on the shirt. The critic's
-         "smooth plastic" read came with "a broad satin specular smear down the left of the
-         shirt" attached, and a wide soft highlight is exactly the cue that says moulded
-         vinyl. Fur scatters; it does not have a highlight to speak of. */
+      /* Specular is near-zero on fur and moderate on the shirt, and the two halves of that
+         have different evidence behind them, so they are recorded separately.
+       *
+       * Fur: near-zero on physical grounds. Fur scatters; it has no highlight to speak of, and
+       * a wide soft one is exactly the cue that reads as moulded vinyl. That holds regardless
+       * of what else the renderer was doing.
+       *
+       * Shirt: I originally cut this hard (0.10 → 0.055) on the strength of the critic's
+       * "broad satin specular smear down the left of the shirt". That attribution was made
+       * while the fresnel rim was firing on any face angled away from the eye rather than only
+       * at silhouettes — a full-strength `#7fd4ff` wash across flat surfaces, worth ~22 luma on
+       * shadowed verticals. A broad soft cool smear is far more characteristic of that bug than
+       * of a `gloss 22` lobe, so most of the cut was probably aimed at the wrong term. The rim
+       * is now gated; this is a partial revert, kept a little under the original because some
+       * of the sheen was real. §2.1 wants a hard-stepped specular, not none. */
       case 'fur': return {
         color: PAL.furMid, map: F.detail, normalMap: F.normal,
         normalScale: 1.15, repeat: [3, 3], sss: TUNE.furSSS, rim: TUNE.rim,
@@ -1690,7 +1749,7 @@ export class SlyModel {
       case 'cloth': return {
         color: PAL.shirt, map: C.detail, normalMap: C.normal,
         normalScale: 0.75, repeat: [4, 4], sss: 0.14, rim: TUNE.rim * 0.85,
-        spec: 0.055, gloss: 15,
+        spec: 0.085, gloss: 20,
       };
       case 'clothDark': return {
         color: PAL.shirtDark, map: C.detail, normalMap: C.normal,
@@ -1714,7 +1773,9 @@ export class SlyModel {
         // neutral and still low — this holds the sclera's value through a shadowed face, it
         // does not make him glow. Worth re-checking on `night`, which is where the previous
         // (warm, brighter) emissive failed.
-        color: PAL.eyeWhite, sss: 0.0, rim: 0.22, spec: 0.35, gloss: 60, emissive: 0x282828,
+        // A wet sphere: a tight bright highlight is correct here and it is a legibility win
+        // at distance. The 0.55/80 is the original; it was collateral in an unrelated edit.
+        color: PAL.eyeWhite, sss: 0.0, rim: 0.22, spec: 0.55, gloss: 80, emissive: 0x282828,
       };
       default: return { color: 0xff00ff };
     }

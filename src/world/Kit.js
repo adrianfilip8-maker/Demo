@@ -834,10 +834,12 @@ export function slabUnit(thick = 0.5, rng) {
 
 /** Hook ring: a fat torus on a bracket. Chunky because it has to read as grabbable. */
 export function hookRing({ r = 0.62, tube = 0.11, rng } = {}) {
-  const t = new THREE.TorusGeometry(r, tube, 6, 16);
+  // A torus is one of the few shapes here that carries a terminator all the way round in
+  // both directions; at 6 tubular segments it was a hexagonal wire and threw that away.
+  const t = new THREE.TorusGeometry(r, tube, 10, 18);
   normaliseAttrs(t);
   place(t, { rx: Math.PI * 0.5 });
-  const shackle = new THREE.CylinderGeometry(tube * 1.5, tube * 1.5, 0.42, 6);
+  const shackle = new THREE.CylinderGeometry(tube * 1.5, tube * 1.5, 0.42, 10);
   normaliseAttrs(shackle);
   place(shackle, { y: r + 0.16 });
   const g = mergeAll([t, shackle]);

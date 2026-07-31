@@ -34,6 +34,18 @@ const ALIASES = {
   sparkle: 'spark_diamond',
 };
 
+/**
+ * World metres per declared `tile` unit, per consumer. Default 2 — `Kit.UV_PER_M = 0.5` puts
+ * one UV unit every two metres, so everything ARCHITECTURE and PROPS dress shows one repeat per
+ * two tiles. Terrain hands its meshes world-metre UVs and sets `repeat` itself, so those two
+ * recipes get the tile they declare. See `_build()` for why this is documented rather than
+ * compensated for.
+ */
+const CONSUMER_UV_SCALE = {
+  sand_ripples: 1,   // Terrain: UV = metres, repeat 1/9.6
+  sand_fine: 1,      // Terrain: UV = metres, repeat 1/8
+};
+
 export class Textures {
   /** @param {import('../core/Engine.js').Engine} engine */
   constructor(engine) {
@@ -191,10 +203,37 @@ export class Textures {
       ? this._tex(out.emissive, size, { colorSpace: THREE.SRGBColorSpace, wrap, aniso })
       : null;
 
-    // One UV unit of a mesh is one metre by the level's convention, so `tile` (metres the
-    // texture spans) inverts into the repeat. Recipes may give it anisotropically as [u, v] —
-    // column flutes and tail rings both do — and treating that array as a number silently
-    // produced a NaN repeat, which drops the texture entirely.
+    /* `tile` inverts into the repeat. Recipes may give it anisotropically as [u, v] — column
+     * flutes and tail rings both do — and treating that array as a number silently produced a
+     * NaN repeat, which drops the texture entirely.
+     *
+     * **Correct the record on what `tile` means in world metres.** The comment that used to sit
+     * here said "one UV unit of a mesh is one metre by the level's convention". That is true of
+     * exactly one consumer and false of every other, and the discrepancy is the same class of
+     * mistake that made `sand_ripples` render at 3.7x its authored slope:
+     *
+     *   Kit.js / PropKit.js   `UV_PER_M = 0.5` — "1 UV unit per 2 m, the whole project's texel
+     *                         density contract". So every wall, column, prop and pavement in
+     *                         the level shows one repeat per **2 x tile** metres.
+     *   Terrain.js            UVs are world metres and Terrain overrides `repeat` itself
+     *                         (1/9.6 for the ripple normal, 1/8 for `sand_fine`), so those two
+     *                         recipes get exactly the tile they declare.
+     *   Vegetation.js         trunk UVs are 0..1 around the trunk and 0..height/3 up it, i.e.
+     *                         not world-scaled at all — `palm_bark`'s declared [1.4, 1.8] lands
+     *                         at roughly [3.1, 5.4] m on a 9 m palm.
+     *   SlyModel.js           builds its own maps and sets its own repeat; the catalogue's
+     *                         `sly` group is not what dresses the character.
+     *
+     * Nothing here compensates for that, on purpose: the factor is a property of the consumer's
+     * UVs, and halving every repeat to "correct" it would double the tiling frequency of every
+     * surface in the game, which is the failure §7.3 lists two lines above this one. What it
+     * does mean is that **every number in Materials.js quoted "in metres" is half the world
+     * distance it actually covers on architecture**, and that `derive()` therefore encodes
+     * normal slopes for `tile` metres that are then stretched over `2 x tile` — so the relief on
+     * every architectural surface is twice as steep as its `bump` claims. Judged in frames that
+     * reads as "chiselled" rather than "wrong", so it stays; judged in numbers it is a trap, and
+     * the next person to reach for `bump` should know which one they are turning.
+     * `report()` prints the true world period so this cannot be mis-read again. */
     const tile = recipe.tile ?? 2.0;
     const tu = Math.max(0.05, Array.isArray(tile) ? tile[0] : tile);
     const tv = Math.max(0.05, Array.isArray(tile) ? (tile[1] ?? tile[0]) : tile);
@@ -357,6 +396,9 @@ export class Textures {
       const mean = l / n;
       const hex = (v) => Math.round(v / n).toString(16).padStart(2, '0');
       const tu = Array.isArray(set.tile) ? set.tile[0] : set.tile;
+      // World metres one repeat actually covers — see the note in _build(). Quoting `tile`
+      // alone has now cost two separate scale bugs; quote what the frame sees.
+      const wu = tu * (CONSUMER_UV_SCALE[name] ?? 2);
 
       // Box-average down four levels, then measure again: what is still varying at 20 m.
       let w = ss, cur = luma;
@@ -381,7 +423,12 @@ export class Textures {
         mipRms: +Math.sqrt(Math.max(0, mm2 / cur.length - mm * mm)).toFixed(4),
         darkTail: +(dark / n).toFixed(4),
         normalStrength: +(set.normalScale ?? 0).toFixed(2),
-        mmPerTexel: +((tu / ss) * 1000).toFixed(2),
+        // Millimetres of *world* per texel, and metres of world per repeat. A feature has to
+        // clear one screen pixel at the distance its surface is actually seen from or it is
+        // decoration in the source file and nothing in the frame; both `MOTES.size` and
+        // `sand_ripples` were lost exactly here.
+        mmPerTexel: +((wu / ss) * 1000).toFixed(2),
+        worldTile: +wu.toFixed(2),
         tile: set.tile,
       };
 

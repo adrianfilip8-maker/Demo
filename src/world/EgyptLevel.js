@@ -174,7 +174,9 @@ function doorFrame(A, zone, mat, { halfW, y0, y1, z, r = 0.26, x = 0 }) {
  */
 function rail(A, name, pts, matKey = 'granite_pink', r = 0.16, zone = 'court') {
   const curve = new THREE.CatmullRomCurve3(pts.map((p) => new THREE.Vector3(...p)), false, 'catmullrom', 0.35);
-  const geo = K.railGeo(curve, { r, seg: Math.max(20, Math.round(curve.getLength() * 1.1)), rad: 5 });
+  // 8 radial segments, not 5: a rail is a hero traversal affordance seen at arm's length in
+  // `traversal`, and a pentagonal tube has five flat faces and no terminator.
+  const geo = K.railGeo(curve, { r, seg: Math.max(20, Math.round(curve.getLength() * 1.1)), rad: 8 });
   A.add(zone, matKey, geo);
   const box = new THREE.Box3().setFromPoints(curve.getPoints(24));
   const size = box.getSize(new THREE.Vector3()), mid = box.getCenter(new THREE.Vector3());
@@ -326,7 +328,7 @@ function courtyard(A) {
     A.add('court', 'hieroglyph_wall', K.place(g, { x: sx * pe.x, y: pe.ledge - 0.65, z: (pe.z0 + pe.z1) / 2, ry: Math.PI / 2 }));
     ledgeProxy(A, sx * pe.x - 0.8, sx * pe.x + 0.8, pe.ledge, pe.z0 - 1.1, pe.z1 + 1.1, { thick: 1.3 });
     /* Torus roll along the outer face — reads the cornice motif at colonnade scale. */
-    const roll = new THREE.CylinderGeometry(0.3, 0.3, pe.z1 - pe.z0 + 2.2, 8, 1);
+    const roll = new THREE.CylinderGeometry(0.3, 0.3, pe.z1 - pe.z0 + 2.2, 16, 1, true);
     K.normaliseAttrs(roll);
     A.add('court', 'sandstone_worn', K.boxProjectUVs(K.place(roll, { x: sx * (pe.x + 0.82), y: pe.ledge - 1.15, z: (pe.z0 + pe.z1) / 2, rx: Math.PI / 2 })));
 
@@ -425,7 +427,7 @@ function courtyardTraversal(A) {
 
   /* Masts to hang the hook cable from — a cable needs an anchor to be believable. */
   for (const [mx, my, mz] of [[20.6, 15.9, 27.5], [-13.4, 13.9, -15.0]]) {
-    const g = new THREE.CylinderGeometry(0.26, 0.42, my - (mz > 0 ? L.peri.ledge : 13.5), 8, 1);
+    const g = new THREE.CylinderGeometry(0.26, 0.42, my - (mz > 0 ? L.peri.ledge : 13.5), 12, 1);
     K.normaliseAttrs(g);
     const y0 = mz > 0 ? L.peri.ledge : 13.5;
     A.add('court', 'bronze_dark', K.boxProjectUVs(K.place(g, { x: mx, y: (y0 + my) / 2, z: mz, rz: D(R.jitter(0.7)) })));
@@ -474,7 +476,7 @@ function courtyardTraversal(A) {
   }), { x: 10, y: 0, z: 61 }));
   wallProxy(A, 8.3, 11.7, 0, 9, 59.3, 62.7);
   ledgeProxy(A, 8.3, 11.7, 9.0, 59.3, 62.7);
-  const mast = new THREE.CylinderGeometry(0.24, 0.4, 6.6, 8, 1);
+  const mast = new THREE.CylinderGeometry(0.24, 0.4, 6.6, 12, 1);
   K.normaliseAttrs(mast);
   A.add('court', 'bronze_dark', K.boxProjectUVs(K.place(mast, { x: 10, y: 12.3, z: 61 })));
   rail(A, 'approach', [
