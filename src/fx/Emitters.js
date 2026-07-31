@@ -525,7 +525,11 @@ export const EMITTERS = {
   embers: {
     batch: 'spark', tile: [TILE.EMBER, TILE.EMBER, TILE.SPARK], count: [2, 3], life: [1.4, 2.8],
     speed: [0.6, 1.6], spread: 'cone', cone: 0.62, gravity: -1.3, drag: 1.0, turb: 0.34, wind: 0.4,
-    size: [0.095, 0.014], sizeExp: 1.3, spin: [0, 0], fadeIn: 0.08, fadeOut: 1.45,
+    /* 0.095 m was 11 px at the `guard` camera's 7.4 m and 38° lens, which reads as bokeh
+       rather than as embers. Anything authored in metres has to be checked against the
+       angle it subtends at the canonical framings — same class of error as the sub-pixel
+       shaft motes, in the other direction. 0.072 m is ~8 px there and 3 px at 20 m. */
+    size: [0.072, 0.012], sizeExp: 1.3, spin: [0, 0], fadeIn: 0.08, fadeOut: 1.45,
     alpha: [2.0, 3.1], col0: PAL.emberHot, col1: PAL.emberCool, stretch: 0.035, jitter: 0.13,
   },
   fire_core: {
