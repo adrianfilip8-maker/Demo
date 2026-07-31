@@ -57,6 +57,14 @@ export const TUNE = {
   brimLift: 0.050,        // cap brim off the brow — it was covering both eyes, see _buildCap
   torsoShrink: 0.16,      // see `by()`: hips→neck 0.49 → 0.33 m, 5.29 → 4.88 heads tall
 
+  /* Head-space units (pre-`headScale`), applied to the muzzle, the nose and the mouth line
+   * together so they cannot drift apart. The muzzle root used to top out at y 1.652 against
+   * eye centres at 1.612 — a snout taller than the eyes are high, rising to a point *between*
+   * them. Measured through the real `sly-closeup` camera it owned 18% of the head box and left
+   * the domino mask with nowhere to be: rendering the `ink` group alone produced two pupils, a
+   * nose and a mouth, and no mask at any thickness anywhere on the face. See _buildMask. */
+  muzzleDrop: 0.034,
+
   /* --- shading / line --- */
   outline: 0.0034,        // fraction-of-frame-height thickness ⇒ ~2.5 px at any resolution
   outlineColor: 0x1a1210, // §2.1: warm near-black, never pure #000
@@ -1099,15 +1107,23 @@ export class SlyModel {
     });
   }
 
+  /**
+   * The snout. Everything here goes through `TUNE.muzzleDrop`, and so do the nose and the
+   * mouth, because the three are one shape and moving them independently is how a face comes
+   * apart. The root's *vertical* radius is also cut: at 0.088 it made the snout root taller
+   * than the eye line, which is what put a cream wedge between the two eyes and squeezed the
+   * mask off the face entirely.
+   */
   _buildMuzzle(mb) {
     const S = TUNE.headScale;
+    const D = TUNE.muzzleDrop;
     const key = [
-      [new THREE.Vector3(0, 1.564, 0.040), 0.102, 0.088],
-      [new THREE.Vector3(0, 1.559, 0.118), 0.106, 0.090],
-      [new THREE.Vector3(0, 1.550, 0.192), 0.096, 0.080],
-      [new THREE.Vector3(0, 1.539, 0.258), 0.079, 0.066],
-      [new THREE.Vector3(0, 1.528, 0.312), 0.058, 0.049],
-      [new THREE.Vector3(0, 1.519, 0.352), 0.030, 0.026],
+      [new THREE.Vector3(0, 1.564 - D, 0.040), 0.096, 0.068],
+      [new THREE.Vector3(0, 1.559 - D, 0.118), 0.102, 0.074],
+      [new THREE.Vector3(0, 1.550 - D, 0.192), 0.094, 0.070],
+      [new THREE.Vector3(0, 1.539 - D, 0.258), 0.079, 0.062],
+      [new THREE.Vector3(0, 1.528 - D, 0.312), 0.058, 0.047],
+      [new THREE.Vector3(0, 1.519 - D, 0.352), 0.030, 0.026],
     ];
     addTube(mb, {
       centers: key.map((k) => new THREE.Vector3(0, hy(k[0].y), hx(k[0].z))),
@@ -1145,6 +1161,40 @@ export class SlyModel {
    * climbs toward the temples and a half-height that tapers to a point, which is what makes it
    * read as a *bandit mask* rather than a stripe. This is the single strongest silhouette /
    * identity cue on the face, so it is generous and bold rather than subtle.
+   *
+   * **Measured, not guessed: this band was rendering zero pixels.** Rasterising the model
+   * through the real `sly-closeup` camera and keeping only the `ink` material group gives a
+   * picture of literally "the black on his face", and it contained the two pupils, the nose
+   * and the mouth — and no mask at all, anywhere, at any thickness.
+   *
+   * The cause is arithmetic. The band's half-height was 0.335 rad, which on a 0.241 m head is
+   * 0.157 m ≈ 54 px at that camera. Each eyeball is a 0.096 m sphere whose centre sits at
+   * 0.80 of the head radius, so it crosses the mask surface on a circle of apparent diameter
+   * 0.175 m ≈ 61 px. The hole was *bigger than the band was tall*, so at every theta where the
+   * mask had a job the eye punched clean through it, and the leftovers were covered by the
+   * upper lid — which was slate fur sitting exactly where a domino mask goes.
+   *
+   * So: the band is now tall enough to survive its own eye holes, and the lid moved into this
+   * group (see _buildEye), which is also what the reference does — Sly's lids are inside the
+   * black. Keep the taper exponents; they are what make it read as a bandit mask sweeping up
+   * to the temples rather than as a stripe.
+   *
+   * `ink` on the face went 2460 → 3222 px and `eye` 1210 → 1615 px on that measurement, so the
+   * mask is on screen now. **It is still thin, and the remaining cause is structural, so do not
+   * chase it with these numbers.** Two knobs were swept and both are dead ends:
+   *   · `half` past ~0.5 buys nothing. The band is squeezed between the brim's lower edge and
+   *     the muzzle's top, a gap of ~27 px at `sly-closeup`, and the eye is 66 px tall — it
+   *     already overflows the gap in both directions, so extra band height lands under the cap
+   *     or behind the snout.
+   *   · sinking the eyeball shrinks the hole it punches, but 1:1 — at inflate 0.76 the mask
+   *     gains 280 px and the sclera loses 1080. §7.3 wants huge eyes; that is the wrong trade.
+   *
+   * The real fix is that the sclera is a *sphere* protruding through the mask, so it can only
+   * ever punch a hole; in the reference the eye is a flat lens set *into* the black. Flattening
+   * the sclera along `outward` (radii z ~0.073 → ~0.034, centre out to ~0.96 inflate, pupil
+   * offset down to match) makes the mask surround the eye instead of fighting it. That is a
+   * coupled change across sclera, pupil, highlight and lid, and the eye read depends on
+   * material brightness, so it wants a real capture to land — not this probe.
    */
   _buildMask(mb) {
     const TH = 1.34;
@@ -1154,10 +1204,10 @@ export class SlyModel {
       at: (u, v) => {
         const th = THREE.MathUtils.lerp(-TH, TH, u);
         const at = Math.abs(th) / TH;
-        const phic = 0.112 + 0.425 * Math.pow(at, 1.75);
-        const half = 0.335 * (1 - 0.80 * Math.pow(at, 3.0)) * (0.70 + 0.30 * smooth(0.0, 0.30, at));
+        const phic = 0.128 + 0.425 * Math.pow(at, 1.75);
+        const half = 0.500 * (1 - 0.80 * Math.pow(at, 3.0)) * (0.70 + 0.30 * smooth(0.0, 0.30, at));
         const phi = phic + (v * 2 - 1) * half;
-        return this.headSurf(th, phi, 1.020);
+        return this.headSurf(th, phi, 1.045);
       },
       weightsAtVert: (u, v, p) => this._headWeights(p),
     });
@@ -1200,7 +1250,12 @@ export class SlyModel {
     /* Hooded upper lid, tilted outward-down — this is where the *smug* comes from. A wide-open
        eye reads as surprised; a lid cutting across the top third reads as amused. It starts
        higher than it used to (0.18 → 0.40): the old lid ate most of a now-larger eye, and a
-       covered eye is worth nothing to the identity read. */
+       covered eye is worth nothing to the identity read.
+
+       In the `ink` group, not `fur`. It is the largest surface sitting where the domino mask
+       belongs, and as slate fur it was one of the two things measured to be erasing the mask
+       entirely (see _buildMask). Sly's lids are inside the black in every reference frame, so
+       this costs nothing in fidelity and it is most of what puts the mask back on screen. */
     const lidUp = trueUp.clone().applyAxisAngle(outward, side * 0.30).normalize();
     const lidRight = new THREE.Vector3().crossVectors(lidUp, outward).normalize();
     addEllipsoid(mb, {
@@ -1208,14 +1263,14 @@ export class SlyModel {
       radii: new THREE.Vector3(0.070 * S, 0.073 * S, 0.071 * S),
       basis: { x: lidRight, y: lidUp, z: outward },
       segTheta: 14, segPhi: 5, phi0: 0.40, phi1: Math.PI / 2,
-      group: 'fur', sg: mb.newSg(), weights: [['head', 1]],
-      colorAt: (u, v, p) => furTint(_c, p.x, p.y, p.z, 0.03, 4, 0.74),
+      group: 'ink', sg: mb.newSg(), weights: [['head', 1]],
+      colorAt: (u, v, p) => furTint(_c, p.x, p.y, p.z, 0.03),
     });
   }
 
   _buildNose(mb) {
     const S = TUNE.headScale;
-    const c = new THREE.Vector3(0, hy(1.530), hx(0.348));
+    const c = new THREE.Vector3(0, hy(1.530 - TUNE.muzzleDrop), hx(0.348));
     addEllipsoid(mb, {
       center: c,
       radii: new THREE.Vector3(0.031 * S * TUNE.headWide, 0.024 * S, 0.024 * S),
@@ -1233,7 +1288,10 @@ export class SlyModel {
   /** The half-smile. Asymmetric on purpose: one corner up is the whole read on "smug". */
   _buildMouth(mb) {
     const S = TUNE.headScale;
-    const P = (x, y, z) => new THREE.Vector3(hw(x), hy(y), hx(z));
+    /* Rides `muzzleDrop` with the snout it is drawn on — a mouth left behind by a moved
+       muzzle floats in front of the cheek, which is worse than no mouth. */
+    const D = TUNE.muzzleDrop;
+    const P = (x, y, z) => new THREE.Vector3(hw(x), hy(y - D), hx(z));
     const line = resample([
       P(-0.070, 1.512, 0.238),
       P(-0.042, 1.500, 0.296),
@@ -1896,6 +1954,18 @@ export class SlyModel {
           rimColor: TUNE.rimColor,
           spec: spec.spec ?? 0.1,
           gloss: spec.gloss ?? 20,
+          /* `metal` was authored on the gold spec and dropped here, so every gilded surface on
+             the character — cane shaft and crook, belt buckle, cap button — has been running at
+             uMetal 0 for its whole life. The world's gilding was fixed when metal went live;
+             this was the one gold left flat, and §7.3 fails "gold doesn't read as metal"
+             outright. Note for whoever extends this: two more authored fields are *still*
+             dropped by this same pass-through and both are deliberate holds, not oversights —
+             `spec.flat` (would map to toon's `flatShading`, changes pupils/nose/mouth/mask all
+             at once) and `spec.normalScale` (0.70–1.25 across the groups, currently running at
+             three's default 1.0 on every one of them; `_applyRepeat` only clones for `repeat`).
+             Each changes a shading read on every surface it touches, so each wants its own
+             capture rather than being folded in with a geometry pass. */
+          metal: spec.metal ? 1 : 0,
           outline: 1.0,
           sss: spec.sss ?? 0,
           detail: spec.detail ?? null,

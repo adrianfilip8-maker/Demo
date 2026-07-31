@@ -39,9 +39,30 @@ const TUNE = {
   radiusQuantum: 0.25,      // tidy the fitted radius; it is already camera-invariant
   casterPadMin: 34,         // metres of extra depth behind a cascade to catch tall casters
   casterPadMax: 190,
-  maxCascadeMap: 2048,      // VSM burns an RG16F *and* an F32 depth target per cascade
-  vsmRadius: [2.4, 2.0, 1.7, 1.5],
-  vsmBlurSamples: [10, 8, 8, 8],
+  maxCascadeMap: 2048,
+  /* PCF kernel radius per cascade, in shadow-map texels.
+   *
+   * The old name (`vsmRadius`) said this was VSM-only tuning and therefore dead, because
+   * `Engine.js:63` forces `PCFShadowMap` — see KNOWN_ISSUES §1, where VSM was one of the
+   * things that had to go. Checked against the three we actually ship rather than against
+   * that assumption, and it is live: `WebGLLights.js:292` copies `shadow.radius` into
+   * `shadowUniforms.shadowRadius` for every directional light unconditionally, and r185's
+   * `SHADOWMAP_TYPE_PCF` branch of `getShadow()` uses it — `float radius = shadowRadius *
+   * texelSize.x`, scaling a 5-tap Vogel disk rotated per pixel by interleaved gradient
+   * noise. So this is the *only* penumbra knob in the renderer, and it is not dead.
+   *
+   * `blurSamples` next to it genuinely was dead: `WebGLShadowMap.js:379-382` is its sole
+   * reader and that is inside the VSM blur pass, which never runs. Deleted rather than
+   * left to imply that the number 10 means anything here.
+   *
+   * Five taps can only produce six distinct values, so the radius sets how many *pixels*
+   * those six values are spread across. At 2.4 texels on cascade 0's ~5 cm texels that is
+   * a ~12 cm penumbra, and `ToonMaterial`'s [0.10, 0.66] `shadowSharp` window then discards
+   * the outer two levels — which is why the shadow term measures as effectively binary and
+   * why `uShadowBands` has never had anything to quantise (bandsOn moved `night` by 2 px
+   * of 423 644). Raising this is the cheap half of unlocking §7.3's banded-cel read; the
+   * cost is that the 5-tap dither starts to show, so it is bracketed, not guessed. */
+  shadowRadius: [2.4, 2.0, 1.7, 1.5],
   /* Acne is a texel-size problem, so the offset that fixes it has to be measured in
      texels — not in hand-picked constants that only work at one cascade width. */
   normalBiasTexels: 1.7,
@@ -311,8 +332,9 @@ export class Lighting {
 
   _cascadeMapSize(i, base) {
     // Cascade 0 gets the budget; the far ones cover 10× the area and nobody looks at a
-    // 200 m shadow's edge. VSM allocates an RG16F *and* an F32 depth target per cascade,
-    // so this is the difference between 60 MB and 500 MB of shadow memory.
+    // 200 m shadow's edge. (The old note here costed this against VSM's RG16F + F32 pair
+    // per cascade. We render PCF — one DEPTH_COMPONENT target each — so the cap is about
+    // fill rate and texel size, not about the 500 MB VSM would have wanted.)
     const cap = TUNE.maxCascadeMap;
     if (i === 0) return Math.min(base, cap);
     return THREE.MathUtils.clamp(i >= 2 ? base >> 1 : base, 1024, cap);
@@ -333,8 +355,7 @@ export class Lighting {
 
       const size = this._cascadeMapSize(i, base);
       light.shadow.mapSize.set(size, size);
-      light.shadow.radius = TUNE.vsmRadius[i];
-      light.shadow.blurSamples = TUNE.vsmBlurSamples[i];
+      light.shadow.radius = TUNE.shadowRadius[i];
       light.shadow.bias = -0.0004;      // refined per-cascade in _fitCascades()
       light.shadow.normalBias = 0.02;
       light.shadow.camera.near = 0.05;

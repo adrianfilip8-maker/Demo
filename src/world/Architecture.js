@@ -37,7 +37,11 @@ const TUNE = {
      out over your head. §7.3's "proportions realistic instead of exaggerated-cartoon" is
      mostly decided by this number and by the capital bell. */
   corniceFlare: 1.75,
-  corniceHeight: 2.35,
+  /* Left alone on purpose. `cornice()`'s returned `height` is what the pylon roof decks,
+     their ground proxies and their ledge colliders are all positioned from — §8.1 contract
+     surfaces among them — so raising this moves the traversal graph. The exaggeration is
+     bought entirely in `corniceFlare`, which is horizontal and structurally free. */
+  corniceHeight: 2.1,
   rollRadius: 0.44,
   ledgeDepth: 1.6,          // grabbable ledges, way over the 0.6 m minimum
   sandHeight: 1.7,

@@ -87,6 +87,10 @@ export class Decals {
     this.engine = engine;
     this.capacity = capacity;
     this.rand = rng(0xdeca1);
+    /* Birth times are stamped on FX's clock, not the engine's — Particles rebases that clock
+       when a shot is staged so a capture cannot depend on how long the boot took, and a decal
+       stamped with engine time would then be born hundreds of seconds in the future. */
+    this._t = 0;
 
     const geo = new THREE.InstancedBufferGeometry();
     geo.setAttribute('position', new THREE.BufferAttribute(
@@ -159,7 +163,7 @@ export class Decals {
     this._head = (this._head + 1) % this.capacity;
     if (i + 1 > this._used) this._used = i + 1;
 
-    const t = this.engine.time;
+    const t = this._t;
     const life = opts.life ?? def.life;
     this._deathMax = Math.max(this._deathMax, t + life);
 
@@ -200,6 +204,7 @@ export class Decals {
   }
 
   update(dt, t) {
+    this._t = t;
     this.material.uniforms.uTime.value = t;
     if (this._used > 0 && t > this._deathMax) { this._used = 0; this._head = 0; this._deathMax = -1; }
     if (this._dirty) {

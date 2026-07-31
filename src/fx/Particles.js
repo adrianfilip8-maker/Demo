@@ -1045,6 +1045,9 @@ export class Particles {
     this.engine = engine;
     this.rand = rng(0x5c17c00 ^ 0xfada);
     this.TUNE = TUNE;
+    /* The FX clock. Zero outside shot mode, rebased at staging — see `update()`. */
+    this._t0 = 0;
+    this._t = 0;
 
     this.root = new THREE.Group();
     this.root.name = 'fx';
@@ -1519,7 +1522,7 @@ export class Particles {
     if (!batch || !position) return null;
 
     const R = this.rand;
-    const t = this.engine.time;
+    const t = this._t;
     const density = this._density();
     const scale = (opts?.scale ?? 1);
     // Density scales the *count*, never the size: a low-end machine gets a thinner cloud,
@@ -1708,6 +1711,20 @@ export class Particles {
    */
   _stageShot(name) {
     const mv = this.engine.get('movement');
+    /* Rebase the clock and re-seed the stream before anything is emitted, so a staged shot
+       does not inherit either the boot's duration or however many particles happened to be
+       drawn from the RNG before it. See the note in `update()`. */
+    this._t0 = this.engine.time;
+    this._t = 0;
+    if (this.decals) this.decals._t = 0;
+    let h = 0x811c9dc5;
+    for (let i = 0; i < (name || '').length; i++) { h ^= name.charCodeAt(i); h = Math.imul(h, 0x01000193); }
+    this.rand = rng((0x5c17c00 ^ 0xfada ^ h) >>> 0);
+    /* Both of these carried state from before the rebase: the gust direction the crest
+       preroll fires along, and however much of the sparkle refresh interval happened to be
+       left. Neither is visible, and both made the frame depend on the boot. */
+    this._updateWind(0);
+    this._sparkleTimer = 0;
     this._prerollFires();
     this._prerollCrests();
     this._motesBuilt = -1;          // re-seat the dust against whatever this shot is lit by
@@ -1735,11 +1752,29 @@ export class Particles {
 
   update(dt, t) {
     const engine = this.engine;
-    this._frame++;
+
+    /* FX runs on its own clock, rebased whenever a canonical shot is staged.
+       Why: every animated thing here — the looping ambient fields, the wind gust, a
+       back-dated fire plume — is a function of absolute engine time, and engine time at the
+       moment `setShot` stops the rAF loop is a function of *how long the boot took*. So two
+       captures of the same shot from two runs sampled the drifting sand and motes at
+       different phases and came back thousands of bytes apart, with no way to tell a real
+       change from that noise. Rebasing to zero at staging makes the whole subsystem a pure
+       function of (shot, frames-since-staged). Outside shot mode `_t0` is 0 and this is the
+       engine clock unchanged. */
+    t -= this._t0;
+    this._t = t;
+
+    /* A zero-length frame must advance nothing. `capture()` renders one (`renderFrame(0)`)
+       to guarantee the buffer holds the current frame, and the debug pause renders them
+       continuously; anything that moves on one makes the same pose grab differently every
+       time it is grabbed. */
+    const still = !(dt > 0);
+    if (!still) this._frame++;
 
     this._copyDepth();
     this._updateWind(t);
-    this._updateGround();
+    if (!still) this._updateGround();
     this._updateLightTints();
     this._updateShafts();
     this._updateAmbientBoxes();
@@ -1864,8 +1899,12 @@ export class Particles {
       if (best === -Infinity) best = 0;
       this._groundTarget = THREE.MathUtils.clamp(best, _cam.y - 30, _cam.y - 0.3);
     }
+    /* No `Math.max(dt, 1/240)` floor here. That floor let a zero-length frame move the sand
+       plane, so every extra `renderFrame(0)` shifted the ground-bound ambient boxes and the
+       wrapped fields inside them by a hair — a few thousand scattered bytes per grab, on
+       exactly the shots where the probe has two candidate floors to settle between. */
     this.groundY += (this._groundTarget - this.groundY) *
-      Math.min(1, TUNE.groundLerp * Math.max(this.engine.dt, 1 / 240));
+      Math.min(1, TUNE.groundLerp * Math.max(this.engine.dt, 0));
   }
 
   /* -------------------------------------------------------------- light tints */

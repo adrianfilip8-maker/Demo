@@ -28,7 +28,15 @@ import * as THREE from 'three';
 import { SHOTS } from '../src/core/Shots.js';
 import { evalAtmosphere, createAtmosphereState } from '../src/render/Atmosphere.js';
 
-const ASPECT = 16 / 9, ROWS = 540, H = 1.7;
+/* Output resolution. This MUST match the capture you are reasoning about, and defaults to
+   the harness default (1600x900). It used to be hardcoded to 540 rows — a resolution nothing
+   in this project ever captures at — so every "he is N px tall" figure this tool produced was
+   in units nobody uses, including the ones I used to justify moving a camera. The critic
+   captures at 1280x720, the harness at 1600x900; a figure is 1.67x taller in the latter.
+   Pass --rows to match whatever you are comparing against. */
+const ROWS = parseInt((process.argv.includes('--rows')
+  ? process.argv[process.argv.indexOf('--rows') + 1] : '900'), 10);
+const ASPECT = 16 / 9, H = 1.7;
 const deg = (r) => r * 180 / Math.PI;
 const wrap = (d) => { while (d > 180) d -= 360; while (d < -180) d += 360; return d; };
 
@@ -60,7 +68,7 @@ function analyse(s, yaw) {
 }
 
 const sweep = process.argv.includes('--sweep');
-console.log('shot          view°   sun°    px   notes');
+console.log(`shot          view°   sun°    px   notes        (px at ${Math.round(ROWS * ASPECT)}x${ROWS} — pass --rows to change)`);
 for (const [name, s] of Object.entries(SHOTS)) {
   if (!s.player) { console.log(`${name.padEnd(13)} (no player)`); continue; }
   const r = analyse(s, s.player.yaw);

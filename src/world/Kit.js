@@ -522,9 +522,18 @@ export function masonryShell(o) {
 
 /** Flat slab / lintel / architrave built from a short run of blocks so the joints show. */
 export function beam(len, h, d, opts = {}) {
-  const { rng, pieces = Math.max(1, Math.round(len / 2.2)), crack = 0, chip = 0.1, chamfer = 0.05 } = opts;
+  const {
+    rng, pieces = Math.max(1, Math.round(len / 2.2)), crack = 0, chip = 0.1, chamfer = 0.05,
+    tilt = 0, bow = 0,
+  } = opts;
   const out = [];
   let a = -len * 0.5;
+  /* `tilt` sets the whole beam off level, `bow` drops its middle. Both are in degrees /
+     metres and both are meant to be *small* — a lintel one degree out of true is the kind of
+     wrongness that reads as hand-built rather than as broken, and it is the specific thing
+     §7.3 means by "no hand-built irregularity". Above about 1.5° it stops reading as settled
+     masonry and starts reading as a modelling mistake. */
+  const tiltR = THREE.MathUtils.degToRad(tilt);
   for (let i = 0; i < pieces; i++) {
     const bl = (len / pieces) - (i < pieces - 1 ? 0.03 : 0);
     const g = chamfer > 0
@@ -532,9 +541,13 @@ export function beam(len, h, d, opts = {}) {
       : block(bl, h, d, { rng, jitter: 0.014, chip: rng && rng.chance(0.25) ? chip : 0 });
     // A cracked lintel: one joint opens and the piece beyond it sags a fraction of a degree.
     const sag = crack > 0 && i >= pieces / 2 ? crack : 0;
+    const cx = a + bl * 0.5;
+    const u = cx / (len * 0.5);                       // −1 .. +1 along the beam
+    const bowY = -bow * Math.max(0, 1 - u * u);       // parabolic droop, zero at the bearings
+    const bowSlope = bow === 0 ? 0 : Math.atan(2 * bow * u / (len * 0.5));
     place(g, {
-      x: a + bl * 0.5, y: -sag * 0.5,
-      rz: THREE.MathUtils.degToRad(sag * 14 + (rng ? rng.jitter(0.25) : 0)),
+      x: cx, y: -sag * 0.5 + tiltR * cx + bowY,
+      rz: THREE.MathUtils.degToRad(sag * 14 + (rng ? rng.jitter(0.25) : 0)) + tiltR + bowSlope,
       ry: rng ? THREE.MathUtils.degToRad(rng.jitter(0.3)) : 0,
     });
     out.push(g);
@@ -620,15 +633,18 @@ export function corniceProfile({ h = 2.0, flare = 1.15, roll = 0.42, steps = 9 }
   }
   const top = y0 + h;
   /* The fillet *overhangs the cavetto and undercuts back*, instead of continuing straight out.
-     That 8 cm lip is worth more than its two vertices: it is a hard horizontal shadow line
+     That 8 cm lip is worth more than its three vertices: it is a hard horizontal shadow line
      under the widest part of the silhouette, running the full length of every cornice in the
      level, and it is the detail that separates "carved cornice" from "flared box". The
-     underside faces down and slightly outward, so it is always the darkest band on the mass. */
+     underside faces down and slightly outward, so it is always the darkest band on the mass.
+     Deliberately fitted *inside* the original 0.34 m fillet rather than added on top of it:
+     `height` is what every roof deck and ledge in EgyptLevel is positioned from, several of
+     them §8.1 contract surfaces, so this profile may get wider but it may not get taller. */
   p.push([flare + 0.28, top - 0.06]);   // lip, projecting past the cavetto
-  p.push([flare + 0.30, top + 0.06]);
-  p.push([flare + 0.22, top + 0.40]);   // fillet slab, drafted back in
-  p.push([0, top + 0.40]);              // walkable top, back to the wall plane
-  return { profile: p, height: top + 0.40, flare: flare + 0.30 };
+  p.push([flare + 0.30, top + 0.04]);
+  p.push([flare + 0.22, top + 0.34]);   // fillet slab, drafted back in
+  p.push([0, top + 0.34]);              // walkable top, back to the wall plane
+  return { profile: p, height: top + 0.34, flare: flare + 0.30 };
 }
 
 /** Cornice ring around a rectangular mass. Sides overlap at the corners; rolls hide it. */
@@ -687,8 +703,8 @@ export function cornerRolls({ w, d, h, r = 0.4, batter = 0.09, rng }) {
 export function papyrusColumn(o = {}) {
   const {
     hShaft = 13.2, rBase = 1.9, rTop = 1.4, capH = 2.4, abacus = 0.62,
-    lobes = 8, rib = 0.075, rng, bandCount = 4, shaftSegs = 4, belly = 2.05, neck = 0.80,
-    abacusK = 3.68, lean = 0,
+    lobes = 8, rib = 0.075, rng, bandCount = 4, shaftSegs = 4, belly = 1.92, neck = 0.80,
+    abacusK = 3.68, lean = 0, leanZ = 0,
   } = o;
   // Enough radial samples to resolve the ribs, rounded up to a multiple of the lobe count so
   // every stem is identical and the seam at a=0 lands on a crest.
@@ -738,7 +754,7 @@ export function papyrusColumn(o = {}) {
     [0.00, 1.00], [0.10, 1.34], [0.22, 1.66], [0.36, 1.88],
     [0.50, 2.00], [0.62, 2.05], [0.78, 1.94], [1.00, 1.44],
   ];
-  const bk = belly / 2.05;
+  const bk = belly / 2.05;   // `bud` is authored at belly = 2.05; `belly` rescales it
   for (const [t, k] of bud) push(capBase + capH * t, rTop * k * bk, 1.25);
   const capTop = capBase + capH;
   push(capTop, rTop * 1.44 * bk, 0.2);
@@ -758,12 +774,12 @@ export function papyrusColumn(o = {}) {
     // A hand-raised column is not plumb: the whole shaft drifts off vertical by `lean`
     // radians, taken up smoothly over the height rather than as a rigid tilt, so the foot
     // stays planted on its plinth while the capital moves.
-    const dx = lean * py;
+    const dx = lean * py, dz = leanZ * py;
     for (let j = 0; j <= seg; j++) {
       const a = (j / seg) * Math.PI * 2;
       const lobe = 1 + rib * rs * Math.cos(a * lobes);
       const r = pr * lobe;
-      verts.push(Math.cos(a) * r + dx, py, Math.sin(a) * r);
+      verts.push(Math.cos(a) * r + dx, py, Math.sin(a) * r + dz);
       nors.push(Math.cos(a), 0, Math.sin(a));
       uvs.push((a * pr) * UV_PER_M, py * vScale);
     }
@@ -795,7 +811,9 @@ export function papyrusColumn(o = {}) {
   // The abacus is deliberately oversized against the neck it sits on — a wide flat plate
   // capping a narrow bundle is most of what makes an Egyptian capital read as top-heavy.
   const ab = chamferBox(rTop * abacusK, abacus, rTop * abacusK, { rng, jitter: 0.012, c: 0.06 });
-  place(boxProjectUVs(ab), { x: lean * (capTop + abacus * 0.5), y: capTop + abacus * 0.5 });
+  place(boxProjectUVs(ab), {
+    x: lean * (capTop + abacus * 0.5), y: capTop + abacus * 0.5, z: leanZ * (capTop + abacus * 0.5),
+  });
 
   return {
     geo: mergeAll([shaft, ab]), height: capTop + abacus, capBase, capTop,

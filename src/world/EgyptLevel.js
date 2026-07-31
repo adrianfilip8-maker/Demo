@@ -327,7 +327,19 @@ function courtyard(A) {
     [ki.x * 2 + 2.2, 0, 0, ki.z0, 0], [ki.x * 2 + 2.2, 0, 0, ki.z1, 0.05],
     [ki.z1 - ki.z0, Math.PI / 2, -ki.x, (ki.z0 + ki.z1) / 2, 0], [ki.z1 - ki.z0, Math.PI / 2, ki.x, (ki.z0 + ki.z1) / 2, 0],
   ]) {
-    const g = K.beam(len, 1.25, 1.5, { rng: R, pieces: Math.max(2, Math.round(len / 2.4)), crack, chip: 0.14 });
+    /* The four lintels of the kiosk ring are the closest architecture to the `hero` camera.
+       None of them is level: the south one is cracked and sagging, the others each sit a
+       fraction of a degree off, so the ring reads as four stones laid by hand on four piers
+       that have settled differently — not as one extruded rectangle.
+
+       Bounded, because this ring is a §8.1 traversal surface: its `ledge` collider sits at a
+       flat y = 9.0 and MOVEMENT snaps to that, so any deviation of the art from level is a gap
+       between where Sly stands and where the stone is drawn. `tilt x half-span + bow` is held
+       under ~6 cm — inside a foot's thickness, and invisible as a float. */
+    const g = K.beam(len, 1.25, 1.5, {
+      rng: R, pieces: Math.max(2, Math.round(len / 2.4)), crack, chip: 0.14,
+      tilt: R.jitter(0.35), bow: crack > 0 ? 0.04 : 0.014,
+    });
     A.add('court', 'hieroglyph_gilded', K.place(g, { x: px, y: ki.top - 0.625, z: pz, ry }));
   }
   for (const pz of [ki.z0, ki.z1]) ledgeProxy(A, -ki.x - 1.1, ki.x + 1.1, ki.top, pz - 0.75, pz + 0.75, { thick: 1.25 });
@@ -376,8 +388,15 @@ function courtyard(A) {
         { x: sx * pe.x, y: 0.1, z: pz, rz: tilt }));
       wallProxy(A, sx * pe.x - 1.05, sx * pe.x + 1.05, 0, 7.7, pz - 0.95, pz + 0.95);
     }
-    /* Architrave: top face exactly y = 9.0, 1.6 m deep — obviously grabbable. */
-    const g = K.beam(pe.z1 - pe.z0 + 2.2, 1.3, A.TUNE.ledgeDepth, { rng: R, pieces: 12, chip: 0.16 });
+    /* Architrave: top face exactly y = 9.0, 1.6 m deep — obviously grabbable.
+
+       48 m of it. Dead level it is the straightest edge in the level; a 5 cm bow over that run
+       is invisible as a measurement and obvious as a silhouette. Held to ~9 cm total for the
+       same reason as the kiosk ring: the `ledge` collider at y = 9.0 is the §8.1 contract and
+       does not bow with the art. */
+    const g = K.beam(pe.z1 - pe.z0 + 2.2, 1.3, A.TUNE.ledgeDepth, {
+      rng: R, pieces: 12, chip: 0.16, tilt: sx > 0 ? 0.10 : -0.075, bow: 0.05,
+    });
     A.add('court', 'hieroglyph_wall', K.place(g, { x: sx * pe.x, y: pe.ledge - 0.65, z: (pe.z0 + pe.z1) / 2, ry: Math.PI / 2 }));
     ledgeProxy(A, sx * pe.x - 0.8, sx * pe.x + 0.8, pe.ledge, pe.z0 - 1.1, pe.z1 + 1.1, { thick: 1.3 });
     /* Torus roll along the outer face — reads the cornice motif at colonnade scale. */
@@ -391,6 +410,9 @@ function courtyard(A) {
       /* Longest single run of masonry in the level and it sits behind the colonnade at 25 m+.
          Halving the brick count here costs nothing that any canonical camera can resolve. */
       blockLen: [1.35, 2.15], recess: 0.05, chipChance: 0.26, gapChance: 0.06, buried: 0.6, hollow: true,
+      /* Mudbrick, unmaintained, and the longest run in the level: it gets the deepest settle
+         of anything here. No chamfer — it is never inside 25 m of a camera. */
+      sag: 0.34, windFace: sx > 0 ? 2 : 3, windK: 2.6,
     }), { x: sx * (pe.x + 2.3), y: 0, z: (pe.z0 + pe.z1) / 2 - 0.5 }));
     wallProxy(A, sx * (pe.x + 2.3) - 0.8, sx * (pe.x + 2.3) + 0.8, 0, 5.6, pe.z0 - 1.5, pe.z1 + 1.5);
     ledgeProxy(A, sx * (pe.x + 2.3) - 0.7, sx * (pe.x + 2.3) + 0.7, 5.6, pe.z0 - 1.5, pe.z1 + 1.5);
@@ -470,7 +492,9 @@ function entryPylons(A) {
 
   /* Great gate lintel bridging the towers: the frame you see the obelisk through. */
   const span = 2 * (p.x - p.w / 2) + 1.6;
-  const lint = K.beam(span, 2.6, 5.4, { rng: R, pieces: 7, crack: 0.06, chip: 0.2 });
+  // The gate lintel spans 20 m between two towers that have settled by different amounts,
+  // so it cannot be level: it rides 0.5° down toward the west tower, which is the shorter one.
+  const lint = K.beam(span, 2.6, 5.4, { rng: R, pieces: 7, crack: 0.06, chip: 0.2, tilt: -0.35, bow: 0.06 });
   A.add('court', 'hieroglyph_gilded', K.place(lint, { x: 0, y: 14.3, z: p.z - 0.2 }));
   ledgeProxy(A, -span / 2, span / 2, 15.6, p.z - 2.9, p.z + 2.5, { thick: 2.6 });
   const gcor = K.cornice({ w: span, d: 5.6, h: 1.5, flare: 0.95, roll: 0.34 });
@@ -609,7 +633,7 @@ function hypostyleHall(A) {
   for (const [x0, x1] of [[-24, -17.6], [-14.4, -4.4], [4.4, 14.4], [17.6, 24]]) wallProxy(A, x0, x1, 0, WALL_H, h.z1 - 2.1, h.z1);
   for (const [x0, x1, y] of [[-4.4, 4.4, 9.4], [-17.6, -14.4, 4.8], [14.4, 17.6, 4.8]]) wallProxy(A, x0, x1, y, WALL_H, h.z1 - 2.1, h.z1);
   /* Great doorway lintel + its own cornice: the landing pad at the end of the hook chain. */
-  A.add('hall', 'hieroglyph_gilded', K.place(K.beam(10.4, 1.5, 3.4, { rng: R, pieces: 4, crack: 0.045, chip: 0.18 }), { x: 0, y: 10.15, z: h.z1 - 0.9 }));
+  A.add('hall', 'hieroglyph_gilded', K.place(K.beam(10.4, 1.5, 3.4, { rng: R, pieces: 4, crack: 0.045, chip: 0.18, tilt: 0.35, bow: 0.05 }), { x: 0, y: 10.15, z: h.z1 - 0.9 }));
   const dcor = K.cornice({ w: 11.2, d: 3.9, h: 0.86, flare: 0.86, roll: 0.3 });
   A.add('hall', 'sandstone_block', K.place(dcor.geo, { x: 0, y: 10.9, z: h.z1 - 0.9 }));
   ledgeProxy(A, -6.4, 6.4, 10.9 + dcor.height, h.z1 - 3.2, h.z1 + 1.2, { thick: 0.6 });
@@ -644,43 +668,58 @@ function hypostyleHall(A) {
      are contract surfaces.
 
      `rTop` came down 1.4 -> 1.25 so the taper is 1.52:1 rather than 1.36:1 and the bell over-
-     hangs a visibly thinner neck. The bell's *outer* radius is unchanged and has to be: at
-     x = ±8 it is 2.6 m from the clerestory wall's inner face and there is nowhere to grow. */
+     hangs a visibly thinner neck: the neck is 1.00 m where it was 1.26, against a bell of
+     2.40 m. Bell/neck goes 2.07 -> 2.40.
+
+     **The bell has 24 cm of room and the lean has to respect it.** At x = ±8 the clerestory
+     wall's inner face is at ±10.64, and a 1.6° lean moves a capital 40 cm — measured, six of
+     the eight columns pushed *through* the wall on the first attempt. So the cross-nave lean
+     is strictly inward, toward x = 0, which is the direction that has room; the free-signed
+     lean is spent along z, where columns are 8 m apart and nothing is in the way. Leaning
+     inward is also the better picture: the capitals converge over the nave and the hall reads
+     as closing in overhead. Clearance is now a construction guarantee, not a coincidence. */
   const colProxies = [];
-  const NAVE_LEAN = { '-22': 0.35, '-30': -0.9, '-38': 1.6, '-46': -0.25 };
+  const NAVE_LEAN_IN = { '-22': 0.55, '-30': 1.15, '-38': 1.75, '-46': 0.75 };
   for (const cz of naveZ) for (const sx of [-1, 1]) {
     const cx = sx * 8;
     const hSh = 12.3 + R.jitter(0.25);
+    // Inward only (−sx), never less than 0.4°, so the bell always moves away from the wall.
+    const lean = -sx * D(0.4 + NAVE_LEAN_IN[String(cz)] * (sx < 0 ? 1 : 0.7));
+    const leanZ = D(R.jitter(1.1));
     const col = K.papyrusColumn({
       hShaft: hSh, rBase: 1.9, rTop: 1.25, capH: 2.4 + R.jitter(0.12), abacus: 0.62,
-      rng: R, bandCount: 4, belly: 2.05 * (1 + R.jitter(0.06)),
-      // Lean away from the nave on the west row, into it on the east: the room bows.
-      lean: D(NAVE_LEAN[String(cz)] ?? 0) * (sx < 0 ? 1 : -0.7) + D(R.jitter(0.22)),
+      rng: R, bandCount: 4, belly: 1.92 * (1 + R.jitter(0.04)), lean, leanZ,
     });
     A.add('hall', 'column_papyrus', K.place(col.geo, { x: cx, y: 0.35, z: cz, ry: D(R.range(0, 45)) }));
     vol(A, 'hall', 'sandstone_block', cx - 2.35, cx + 2.35, 0, 0.42, cz - 2.35, cz + 2.35, { jitter: 0.02, chip: 0.12 });
     poleProxy(A, cx, cz, 0.42, 12.6, 1.62);
     colProxies.push([cx, cz, col.height + 0.35]);
-    ledgeProxy(A, cx - 2.3, cx + 2.3, col.height + 0.35, cz - 2.3, cz + 2.3, { thick: 0.62 });   // abacus top
+    /* The abacus travels with the lean — up to 47 cm at 2.15° — so the ledge collider has to
+       travel with it, or the top 0.6 m of the capital is art you can see and cannot land on. */
+    const abY = col.capTop + 0.31, ox = lean * abY, oz = leanZ * abY;
+    ledgeProxy(A, cx + ox - 2.3, cx + ox + 2.3, col.height + 0.35, cz + oz - 2.3, cz + oz + 2.3, { thick: 0.62 });
   }
   for (const cz of aisleZ) for (const sx of [-1, 1]) {
     const cx = sx * 16.5;
     /* Aisle columns are never nearer than ~14 m to a canonical camera, so they get two
        thirds of the nave columns' radial density — still enough to resolve the ribs. */
+    // Aisle columns sit against the outer wall, so their lean is spent along z where there
+    // is room, and only a token amount across x.
+    const lean = D(R.jitter(0.35)), leanZ = D(R.jitter(1.0));
     const col = K.papyrusColumn({
       hShaft: 9.5 + R.jitter(0.2), rBase: 1.62, rTop: 1.07, capH: 1.9, abacus: 0.55,
-      rng: R, bandCount: 3, seg: 32, belly: 2.05 * (1 + R.jitter(0.05)),
-      lean: D(R.jitter(0.75)),
+      rng: R, bandCount: 3, seg: 32, belly: 1.92 * (1 + R.jitter(0.05)), lean, leanZ,
     });
     A.add('hall', 'column_papyrus', K.place(col.geo, { x: cx, y: 0.34, z: cz, ry: D(R.range(0, 45)) }));
     vol(A, 'hall', 'sandstone_block', cx - 2.0, cx + 2.0, 0, 0.4, cz - 2.0, cz + 2.0, { jitter: 0.02 });
     poleProxy(A, cx, cz, 0.4, 12.3, 1.38);
-    ledgeProxy(A, cx - 1.95, cx + 1.95, col.height + 0.34, cz - 1.95, cz + 1.95, { thick: 0.55 });
+    const abY = col.capTop + 0.275, ox = lean * abY, oz = leanZ * abY;
+    ledgeProxy(A, cx + ox - 1.98, cx + ox + 1.98, col.height + 0.34, cz + oz - 1.98, cz + oz + 1.98, { thick: 0.55 });
   }
 
   /* ---- Interior tiptoe cornice at y 10.0: the §8.3 ledge circuit round the room. ---- */
   for (const sx of [-1, 1]) {
-    const g = K.beam(h.z1 - h.z0 - 3, 0.62, 0.95, { rng: R, pieces: 14, chip: 0.1 });
+    const g = K.beam(h.z1 - h.z0 - 3, 0.62, 0.95, { rng: R, pieces: 14, chip: 0.1, tilt: sx > 0 ? 0.10 : -0.13, bow: 0.04 });
     A.add('hall', 'limestone_polished', K.place(g, { x: sx * 22.35, y: 9.7, z: zc, ry: Math.PI / 2 }));
     ledgeProxy(A, sx * 22.35 - 0.5, sx * 22.35 + 0.5, 10.01, h.z0 + 2.2, h.z1 - 2.2, { thick: 0.62 });
   }
@@ -692,11 +731,16 @@ function hypostyleHall(A) {
 
   /* ---- Architraves. Nave at 16.2..17.0, aisle at 12.65..13.5. ---- */
   for (const sx of [-1, 1]) {
-    const g = K.beam(h.z1 - h.z0 - 2, 0.8, 3.0, { rng: R, pieces: 13, crack: 0.03, chip: 0.16 });
+    /* The nave architraves run the full 34 m of the shot `temple` is composed around. A
+       10 cm bow and a fifth of a degree of tilt, different on each side, is what stops the
+       two of them converging on the vanishing point as a pair of perfect straight lines. */
+    const g = K.beam(h.z1 - h.z0 - 2, 0.8, 3.0, {
+      rng: R, pieces: 13, crack: 0.03, chip: 0.16, tilt: sx > 0 ? 0.20 : -0.28, bow: 0.11,
+    });
     A.add('hall', 'hieroglyph_gilded', K.place(g, { x: sx * 8, y: 16.6, z: zc, ry: Math.PI / 2 }));
-    const a = K.beam(h.z1 - h.z0 - 2, 0.85, 2.6, { rng: R, pieces: 13, chip: 0.14 });
+    const a = K.beam(h.z1 - h.z0 - 2, 0.85, 2.6, { rng: R, pieces: 13, chip: 0.14, tilt: sx > 0 ? -0.18 : 0.24, bow: 0.09 });
     A.add('hall', 'hieroglyph_wall', K.place(a, { x: sx * 16.5, y: 13.07, z: zc, ry: Math.PI / 2 }));
-    const c = K.beam(h.z1 - h.z0 - 2, 0.85, 1.8, { rng: R, pieces: 13, chip: 0.12 });
+    const c = K.beam(h.z1 - h.z0 - 2, 0.85, 1.8, { rng: R, pieces: 13, chip: 0.12, tilt: sx > 0 ? 0.26 : -0.14, bow: 0.08 });
     A.add('hall', 'hieroglyph_wall', K.place(c, { x: sx * CL, y: 13.07, z: zc, ry: Math.PI / 2 }));
   }
   for (const cz of naveZ) {
@@ -824,6 +868,9 @@ function innerPylon(A) {
     blockLen: [1.5, 2.7], recess: A.TUNE.mortarRecess, chipChance: A.TUNE.chipChance,
     gapChance: A.TUNE.fallenBlockChance, buried: 0.5, hollow: true,
     openings: [0, 1].flatMap((f) => [{ face: f, a0: -3.4, a1: 3.4, y0: -1, y1: 8.2 }]),
+    // 31.5 m tall and it closes the `temple` vista. The settle is the only thing that stops
+    // its 48 course lines being 48 perfectly parallel horizontals.
+    sag: 0.20, windFace: 0,
   }), { x: p.x, y: 0, z: p.z }));
   A.add('pylon', 'sandstone_worn', K.place(K.cornerRolls({ w: p.w, d: p.d, h: MASS - 0.5, r: 0.48, batter: B, rng: R }), { x: p.x, y: 0, z: p.z }));
 
@@ -857,6 +904,7 @@ function innerPylon(A) {
       { face: f, a0: -7.4, a1: -6.0, y0: 1.4, y1: 21 },     // flagstaff niches
       { face: f, a0: 6.0, a1: 7.4, y0: 1.4, y1: 21 },
     ]),
+    sag: 0.17, windFace: 0, windK: 2.2,
   }), { x: 0, y: 0, z: (sz0 + sz1) / 2 }));
   const sInset = A.TUNE.batterPylon * 24;
   const scor = K.cornice({ w: 21.4 - 2 * sInset, d: (sz1 - sz0) - 2 * sInset + 1.2, h: 0.94, flare: 1.1, roll: 0.4 });
