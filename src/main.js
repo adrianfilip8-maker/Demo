@@ -155,6 +155,24 @@ async function boot() {
       cast++; recv++;
     });
     console.log(`[boot] shadow sweep: ${cast} meshes cast+receive, ${skipped} opted out`);
+
+    /**
+     * Adopt every material into the cascaded-shadow setup now, rather than waiting for
+     * LIGHTING's periodic sweep. That sweep runs once every 20 frames, and a canonical
+     * screenshot poses the camera and steps ~17 — so a capture could render before any
+     * material had been patched, silently falling back to the cascade-naive shadow path.
+     */
+    const lighting = engine.get('lighting');
+    if (lighting?.enableCascades) {
+      let adopted = 0;
+      engine.scene.traverse((o) => {
+        const m = o.material;
+        if (!m) return;
+        if (Array.isArray(m)) { for (const mm of m) { lighting.enableCascades(mm); adopted++; } }
+        else { lighting.enableCascades(m); adopted++; }
+      });
+      console.log(`[boot] cascade adoption: ${adopted} materials`);
+    }
   }
 
   /* ---- frame loop ---- */
