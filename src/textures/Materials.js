@@ -886,10 +886,29 @@ export const MATERIALS = {
       // Salt efflorescence: pale bloom where groundwater wicked up and dried.
       const salt = s.field(4, (u, v) => sat(warpN(u, v, 5, 4, 1.3, cx.seed + 53) * 1.6 + 0.35));
       for (let i = 0; i < s.n; i++) s.mixHex(i, PAL.white, salt[i] * salt[i] * 0.30);
-      pitting(s, { amount: 0.05, freq: 60, density: 0.5, seed: cx.seed + 61, colorDark: 0x5a3820, stain: 0.10 });
-      weather(s, { source: m.joint, seed: cx.seed + 6, crevice: 0x3d2416, creviceAmt: 0.54, streakAmt: 0.28, dustAmt: 0.20, directional: 0.7, patina: 0.10 });
+      pitting(s, { amount: 0.05, freq: 60, density: 0.5, seed: cx.seed + 61, colorDark: 0x6a4526, stain: 0.05 });
+      /* **The one stone recipe that broke the `darkTail == 0` invariant** — 0.0076 at shipping
+       * resolution, i.e. three quarters of a per cent of this wall was dark enough for the
+       * shader's additive violet wash to out-weigh its own albedo. Two causes, both here.
+       *
+       * `crevice 0x3d2416` is luma **0.148**, the deepest hex in the recipe, and `creviceAmt`
+       * 0.54 mixed a long way toward it; and the floor below targeted `0x4a2f1c`, luma **0.2014**,
+       * which is 0.0018 *under* §2.2's `sandCrev #4a2f22` — the exact value the invariant is
+       * measured against. So the mop-up pass was aiming fractionally below the line it existed
+       * to clear, and `rampFloor` is asymptotic (a texel at 0.15 only moves a third of the way),
+       * so it could never have got there from a tail that deep anyway.
+       *
+       * Both hexes now sit at or just above crevice luminance and keep the mud hue. The fix
+       * belongs at the source rather than in the floor: the floor can only mop up stragglers. */
+      weather(s, { source: m.joint, seed: cx.seed + 6, crevice: 0x543722, creviceAmt: 0.44, streakAmt: 0.28, dustAmt: 0.20, directional: 0.7, patina: 0.10 });
       grain(s, { amount: 0.03, freq: 120, seed: cx.seed + 8, heightAmt: 0.010 });
-      rampFloor(s, { crevice: 0x4a2f1c });
+      /* Note for the next person tempted to close a dark tail with this call: `rampFloor`'s pull
+       * is `(lo − y)/lo`, which goes to *zero* as a texel approaches the threshold. It mops up
+       * near-black texels and is arithmetically incapable of moving one that sits just under the
+       * line — no value of `soft` fixes that, because `soft` only scales a term that is already
+       * ~0 there. A dark tail has to be closed at the source, which is what the two hexes above
+       * do. Measured, not reasoned: raising `soft` to 2.2 here moved `darkTail` by nothing. */
+      rampFloor(s, { crevice: 0x503322 });
     },
   },
 
@@ -1114,7 +1133,9 @@ export const MATERIALS = {
       // Carvings run straight across block joints, exactly as they do on a real temple wall —
       // the masons dressed the wall first and the sculptors came after.
       const m = ashlar(s, { seed: cx.seed, courses: 6, aspect: 2.6, dome: 0.025, relief: 0.05, groove: 0.20, jointW: 0.006, chamfer: 0.012, tone: -0.045, bedFreq: 2 });
-      const layout = (mode) => (ctx) => glyphWall(ctx, size, mode, cx.seed);
+      // 10.4 m is this recipe's `tile` through the ×2 consumer factor — quote the world size
+      // the layout is actually laid out at, never the declared tile. See `glyphWall`.
+      const layout = (mode) => (ctx) => glyphWall(ctx, size, mode, cx.seed, { worldTile: 10.4, glyphM: 0.72 });
       const cut = rasterMask(size, layout('cut'));
       const lines = rasterMask(size, layout('line'));
       const paint = rasterRGBA(size, layout('paint'));
@@ -1153,7 +1174,10 @@ export const MATERIALS = {
         // Mortar darker than `limeMid`: a joint is a recess, so it can never be the bright thing.
         dark: PAL.limeDark, mid: PAL.limeMid, light: PAL.limeLight, mortar: 0x8a7a5e, rough: 0.62,
       });
-      const layout = (mode) => (ctx) => glyphWall(ctx, size, mode, cx.seed + 4, { cols: 3, cartouche: true });
+      // Same derivation as `hieroglyph_wall`: 3.2 declared × the 2× consumer factor = 6.4 m of
+      // world per repeat, which at `cols: 3` was a 1.62 m sign. Gilded architrave signs run a
+      // little larger than wall text, hence 0.80 rather than 0.72.
+      const layout = (mode) => (ctx) => glyphWall(ctx, size, mode, cx.seed + 4, { worldTile: 6.4, glyphM: 0.80, cartouche: true });
       const cut = rasterMask(size, layout('cut'));
       const lines = rasterMask(size, layout('line'));
       const ramp = carve(s, cut, lines, { depth: 0.42, bevelPx: 2.6, lip: 0.10, bulge: 0.5, lineDepth: 0.56, seed: cx.seed + 5 });
@@ -1221,6 +1245,10 @@ export const MATERIALS = {
 
   cartouche_gold: {
     group: 'carved', tier: 1, tile: 1.6, bump: 0.032, rough: 0.44,
+    // Was on the catalogue defaults (1.0 / 0.16) and measured AO p01 **0.427** against
+    // `gold_leaf`'s 0.047 — no dark anywhere on a panel whose whole subject is gilt on lapis.
+    // The dark occlusion is half of §7.3's gold line and this recipe had none of it.
+    aoStrength: 1.30, aoFloor: 0.07,
     build(s, cx) {
       const size = s.size;
       s.fill(PAL.lapis); s.fillH(0.60); s.rough.fill(0.52);
@@ -1258,16 +1286,39 @@ export const MATERIALS = {
           s.rough[i] = lerp(s.rough[i], goldRough(t), g);
           s.h[i] += g * 0.30 + g * rope[i] * 0.06;     // the ring stands proud, rope-textured
         }
-        // Gold in the sunk glyphs too — a cartouche is always the richest thing on the wall.
+        /* Gold in the sunk glyphs too — a cartouche is always the richest thing on the wall.
+         *
+         * This was the one gilded surface in the file still doing it the old way: a flat mix
+         * toward `goldMid` at a fixed 0.24 roughness, i.e. a bright uniform yellow with a
+         * uniform highlight — the painted-plaster read the note above `goldRamp` exists to
+         * prevent. It gets the same treatment as the ring above it: the ramp position comes from
+         * the *bevel* of the cut (`4r(1−r)` peaks across the cut wall and falls to zero on both
+         * the floor and the surrounding face), so the recess is deep, the arris is hot, and the
+         * two are two millimetres apart. That is what a burnisher can actually reach, and it is
+         * also the only way a 1.6 m tile gets its whole value range across the relief. */
         const gi = sat(ramp[i] * 1.2 - 0.15);
         if (gi > 0.02) {
-          s.mixHex(i, PAL.goldMid, gi * 0.85);
+          const bev = 4 * ramp[i] * (1 - ramp[i]);
+          const tg = sat(0.14 + bev * 0.70 + (rope[i] - 0.5) * 0.30);
+          const cg = goldRamp(tg);
+          s.r[i] += (cg[0] - s.r[i]) * gi; s.g[i] += (cg[1] - s.g[i]) * gi; s.b[i] += (cg[2] - s.b[i]) * gi;
           s.metal[i] = Math.max(s.metal[i], gi * 0.9);
-          s.rough[i] = lerp(s.rough[i], 0.24, gi);
+          s.rough[i] = lerp(s.rough[i], goldRough(tg), gi);
+          // Dirt in the bottom of a gilded recess: albedo, so unlike the baked AO it survives
+          // minification and carries no lighting direction of its own.
+          s.occ[i] *= 1 - gi * sat(ramp[i] * 1.2) * 0.35;
         }
       }
       weather(s, { seed: cx.seed + 6, crevice: 0x101c30, creviceAmt: 0.45, streakAmt: 0.14, dustAmt: 0.10, roughGrime: 0.06, patina: 0.06 });
-      grain(s, { amount: 0.02, freq: 320, seed: cx.seed + 8, heightAmt: 0.006 });
+      /* `freq` 320 → 150. 320 cycles on a 3.2 m world repeat is a 10 mm feature — 0.32 px at the
+       * 30 m `temple` sees this panel from and 0.8 px at `interior`'s 16 m, so it was below the
+       * pixel at every framing it appears in. */
+      grain(s, { amount: 0.02, freq: 150, seed: cx.seed + 8, heightAmt: 0.006 });
+      /* The only gold recipe with no floor, and it reported the catalogue's largest dark tail
+       * outside `mudbrick` (0.0105 at half resolution). The crevice hex is a *lapis* one, so a
+       * shadowed recess on this panel bottoms out as deep blue rather than as the violet the
+       * shader's additive wash leaves on a near-black texel. */
+      rampFloor(s, { crevice: MX(PAL.lapis, PAL.shadow, 0.30) });
     },
   },
 
@@ -1339,7 +1390,9 @@ export const MATERIALS = {
    * to (-1,-1,-1) on all twelve hypostyle columns. Fixed in NormalMap.derive; the bump is now
    * also proportionate (0.10 m of relief across a 3.6 m repeat was a 28× slope scale). */
   column_papyrus: {
-    group: 'carved', tier: 0, tile: [3.6, 4.5], bump: 0.042, rough: 0.84,
+    // tile[0] 3.6 → 5.0: one repeat per 10.0 m of arc, the mid-shaft circumference. See the
+    // rib-matching note in `build`. tile[1] is untouched — it sets the band heights, not the ribs.
+    group: 'carved', tier: 0, tile: [5.0, 4.5], bump: 0.042, rough: 0.84,
     aoStrength: 1.05, aoFloor: 0.14,
     build(s, cx) {
       const size = s.size;
@@ -1367,16 +1420,42 @@ export const MATERIALS = {
        * straight down the *crown of every stalk* instead of into the gap between them, giving
        * each bundle a full-height slot down its front. Nine of those per repeat, on twelve
        * hypostyle columns, is a large part of why the columns read as vertically streaked. */
-      const stalks = 9;
+      /* **The painted rib now matches the rib the geometry already cuts, in count and in phase.**
+       *
+       * `Kit.papyrusColumn` builds the bundle as real geometry: `lobes = 8`, `rib = 0.075`, so
+       * the mesh normal already swings ±31° eight times around the shaft, and `computeVertexNormals`
+       * ships it. The shaft's UVs are `u = arclength × UV_PER_M`, i.e. `arclength × 0.5`, and the
+       * repeat was `1/3.6` — one repeat per 7.2 m of arc. Nine painted stalks in that repeat put
+       * `9·C/7.2` ribs around the column: **14.9 at the base (C = 11.94 m) and 11.0 under the
+       * capital (C = 8.80 m)**, against 8 geometric ones, drifting continuously with the entasis.
+       * Two incommensurate rib grids on one cylinder is the same beat the `JOINT` note describes
+       * for masonry, and it is why twelve hypostyle columns read as corrugation down the nave in
+       * a shot that is now a long axial view of all of them.
+       *
+       * Worse, they were in *anti-phase*. `p = (u·stalks) % 1` makes `d = 2p−1 = −1` at u = 0, so
+       * `cross = 1 − d² = 0` — a painted groove exactly on the geometric crest, which is at a = 0
+       * because `lobe = 1 + rib·cos(8a)` peaks there. The texture was cancelling the geometry at
+       * the one angle where the two are guaranteed to line up.
+       *
+       * `tile[0]` 3.6 → 5.0 makes one repeat 10.0 m of world, which is the circumference at the
+       * mid-shaft radius the entasis gives (r = 1.575 m at t = 0.5, C = 9.90 m); with `stalks = 8`
+       * the painted count is 8 at mid-shaft, 9.6 at the foot and 7.0 at the neck — a slow ±1.3
+       * drift over 12 m instead of a 2:1 beat. The `+0.5` puts a painted *crest* at u = 0.
+       *
+       * Exact agreement is not available: `u` is scaled by the profile radius, so a tapering
+       * column drifts whatever the tile. So the amplitudes come down as well — the geometry owns
+       * the bundle now and the paint only shades it. Where the two do drift apart the painted
+       * term can soften a geometric rib; it can no longer draw a second one. */
+      const stalks = 8;
       const cross = s.field(1, (u, v) => {
         const wob = fbmN(u, v, 6, 3, 0.5, cx.seed + 11) * 0.010;
-        const p = ((u + wob) * stalks) % 1;
+        const p = ((u + wob) * stalks + 0.5) % 1;
         const d = p * 2 - 1;
         return sat(1 - d * d);
       });
       const groove = s.field(1, (u, v) => {
         const wob = fbmN(u, v, 6, 3, 0.5, cx.seed + 11) * 0.010;
-        const p = ((u + wob) * stalks) % 1;
+        const p = ((u + wob) * stalks + 0.5) % 1;
         return smoothstep(0.70, 1.0, Math.abs(p * 2 - 1));
       });
       const stone = s.field(2, (u, v) => warpN(u, v, 12, 5, 1.0, cx.seed) * 0.5 + 0.5);
@@ -1409,9 +1488,13 @@ export const MATERIALS = {
       });
 
       for (let i = 0; i < s.n; i++) {
-        s.h[i] = 0.42 + cross[i] * 0.40 - groove[i] * 0.22 + (stone[i] - 0.5) * 0.07;
-        // Most of the flute read is relief, not paint — a quarter of the tonal swing it had.
-        const t = sat(0.42 + (stone[i] - 0.5) * 0.60 + cross[i] * 0.10);
+        /* Relief and paint both damped, because the mesh already carries this rib (see above).
+         * The groove in particular was a hard dark line 8-15 times around every column on top of
+         * the geometry's 8 — halved, and its albedo contribution taken out of `t` entirely, so
+         * what is left is a shallow trough that deepens the mesh's own valley rather than a
+         * painted stripe that sits wherever the two happen to disagree. */
+        s.h[i] = 0.42 + cross[i] * 0.22 - groove[i] * 0.11 + (stone[i] - 0.5) * 0.07;
+        const t = sat(0.42 + (stone[i] - 0.5) * 0.60 + cross[i] * 0.05);
         const col = ramp3(PAL.sandDark, PAL.sandMid, PAL.sandLight, t);
         s.r[i] = col[0]; s.g[i] = col[1]; s.b[i] = col[2];
         s.rough[i] = 0.84;
@@ -1600,41 +1683,126 @@ export const MATERIALS = {
     },
   },
 
+  /* **The flattest material in the catalogue, and it is a metal.** Measured off the packed
+   * albedo at shipping resolution, before any of the rework below: luma p01 0.316 → p99 0.486,
+   * i.e. the *entire* surface inside 0.6 of a stop; `lumaRms` **0.0315**, lower than every other
+   * recipe except the three deliberately flat cloth maps; baked AO p01 **0.863**, so there is no
+   * occlusion anywhere in it; and a normal whose median tilt is **1.15°** and 90th percentile
+   * 2.95°, against a specular lobe about 8° wide. Those are every number `gold_leaf` was
+   * condemned on in the note above `goldRamp`, and worse on each one. A flat mid-value sheet with
+   * no dark, no highlight and no relief is painted plaster, and this dresses the braziers in
+   * `courtyard`, `night`, `interior` and `guard`.
+   *
+   * There was a scale error under it too, of the shape this file has now hit four times. The one
+   * term with any bite was `grain(freq 340)`, which on a 1.6 m world repeat is a **4.7 mm**
+   * feature — 0.15 px at the 32 m the courtyard braziers are seen from. The relief budget was
+   * being spent an order of magnitude below the pixel.
+   *
+   * So: the same three ingredients the gold policy is built on, at bronze values. A dark ground
+   * (bronze is a much darker metal than gilding and has further to fall), casting relief at
+   * 6–20 cm where a glint can actually resolve, and occlusion that goes properly dark in the
+   * blowholes and under the patina crust. `tile` 0.8 → 1.0 puts the repeat at 2.0 m, which is
+   * bigger than any brazier bowl it dresses, so nothing shows a repeat at all. */
   bronze_aged: {
-    group: 'metal', tier: 1, tile: 0.8, bump: 0.010, rough: 0.42,
+    group: 'metal', tier: 1, tile: 1.0, bump: 0.026, rough: 0.42,
+    // Same reasoning as `gold_leaf`: on metal the seam and the blowhole should go nearly black,
+    // because the glint next to them is what they have to be read against.
+    aoStrength: 1.35, aoFloor: 0.06,
     build(s, cx) {
       const size = s.size;
-      const bronze = mixHex(PAL.goldDark, PAL.black, 0.30).slice();
+      /* A dark, saturated ground. The old base was `goldDark` 30% toward black, which lands at
+       * 0.36 luma and never left it; this one is deeper and greener, so the bright tail below has
+       * something to be brighter *than*. */
+      // Hex, not an rgb triple: `mixHex` bit-shifts its arguments, so handing it the array the
+      // old code kept here silently evaluates to black. Everything in this file that round-trips
+      // a blend back into another blend goes through `MX`/`rgb2hex` for exactly that reason.
+      const bronze = MX(MX(PAL.goldDark, PAL.malachite, 0.22), PAL.black, 0.46);
+      const hot = MX(PAL.goldLight, PAL.sun, 0.30);
       s.metal.fill(1); s.rough.fill(0.40);
       const cast = s.field(2, (u, v) => warpN(u, v, 18, 5, 1.0, cx.seed) * 0.5 + 0.5);
+      /* The two terms that supply the *slope*. Sand-cast bronze is a shallow orange-peel over a
+       * mould, with the odd blowhole; at 9 cells and 26 cells across a 2.0 m repeat that is a
+       * 22 cm swell and an 8 cm pock — 7 px and 2.5 px at 32 m, both resolvable, where the old
+       * 4.7 mm grain was not. */
+      /* Smooth, not Worley. A Worley dish has a hard cell *wall*, which is right for planished
+       * gold leaf where the rim is a real crease, and wrong here: sand-cast bronze is an orange
+       * peel, and 9 hard-edged cells across a 2 m repeat rendered in the lab as a field of dark
+       * leaf-shaped blobs — the cells' shadowed flanks — which reads as leopard print. Only the
+       * blowholes below are allowed a discontinuity, because only they have one. */
+      const swell = s.field(3, (u, v) => warpN(u, v, 9, 4, 1.10, cx.seed + 23) * 0.5 + 0.5);
+      /* Blowholes: 16 cells across the 2.0 m repeat is a 125 mm cell and a ~55 mm pock, which is
+       * 1.8 px at `courtyard`'s 32 m and 5.3 px at `guard`'s 14 m. At the 26 cells this started
+       * from the pock was 34 mm — about one pixel at the far framing, where a scatter of
+       * one-pixel glints is not a scatter of glints, it is a slightly lighter tone. Fewer and
+       * larger is the same relief budget spent where the frame can see it. */
       const blow = s.field(2, (u, v) => {
-        const w = worleyN(u, v, 30, cx.seed + 7, 1.0);
-        return w.id < 0.22 ? sat(1 - w.f1 / 0.20) ** 2 : 0;
+        const w = worleyN(u, v, 16, cx.seed + 7, 1.0);
+        return w.id < 0.30 ? sat(1 - w.f1 / 0.26) ** 2 : 0;
       });
+      /* Which side of the casting is catching the room. One and three cycles per 2 m repeat, so
+       * on a brazier bowl it reads as one flank bright and the other deep — the low-frequency
+       * term that makes a small metal object read as metal, and the one this recipe had none of.
+       * Value at low frequency, relief at high frequency: the same division of labour that lets
+       * `gold_leaf` pass the squint test and the 1:1 crop at once. */
+      const swathe = s.field(5, (u, v) => sat(
+        warpN(u, v, 1, 3, 1.35, cx.seed + 401) * 0.78
+        + warpN(u, v, 3, 4, 1.30, cx.seed + 149) * 0.38 + 0.5));
+      const t3 = [0, 0, 0];
       for (let i = 0; i < s.n; i++) {
-        const t = cast[i];
-        s.r[i] = bronze[0] * (0.72 + t * 0.6); s.g[i] = bronze[1] * (0.72 + t * 0.6); s.b[i] = bronze[2] * (0.72 + t * 0.6);
-        s.h[i] = 0.66 + (t - 0.5) * 0.16 - blow[i] * 0.34;      // cast surface + blowholes
-        s.rough[i] = sat(0.38 + (1 - t) * 0.16 + blow[i] * 0.3);
+        /* Biased low for the same reason `goldRamp` is: a symmetric field through a symmetric
+         * ramp returns the flat mid-value sheet this replaces. The mass sits on the dark ground
+         * and only the swell crests inside a lit swathe reach the tail. */
+        const t = sat(0.30 + swell[i] * 0.32 + (swathe[i] - 0.5) * 1.00 + (cast[i] - 0.5) * 0.26);
+        const k = Math.pow(t, 1.35);
+        if (k < 0.60) mixHex(bronze, PAL.goldDark, k / 0.60, t3);
+        else mixHex(PAL.goldDark, hot, (k - 0.60) / 0.40, t3);
+        s.r[i] = t3[0]; s.g[i] = t3[1]; s.b[i] = t3[2];
+        s.h[i] = 0.62 + swell[i] * 0.26 + (cast[i] - 0.5) * 0.10 - blow[i] * 0.40;
+        // Roughness tied to value, so the lobe only fires where the albedo is already hot and
+        // the additive highlight sums onto bronze instead of onto mud.
+        s.rough[i] = sat(0.66 - k * 0.50 + blow[i] * 0.30);
+        s.occ[i] *= 1 - blow[i] * 0.55;
       }
-      // Patina grows in the recesses and runs downhill from them — verdigris obeys gravity.
+      /* Patina grows in the recesses and runs downhill from them — verdigris obeys gravity.
+       *
+       * **Rebalanced against the image, not against a number.** Raising the casting relief above
+       * made `concavity` find far more concave surface, and feeding `blow` in at 0.8 put a green
+       * blob on *every* blowhole; with the drips on top the tile came out of the lab as dark
+       * green blotches with cyan tails on olive — leopard print, i.e. precisely the
+       * high-frequency-randomness failure the first pass of this catalogue was rejected for. The
+       * value statistics were on target at the time and had nothing to say about it.
+       *
+       * The fix is to keep the patina where a mineral crust actually forms and let it be
+       * subordinate: the *deep* concavities carry it, blowholes only tint, the drips are a
+       * suggestion rather than a feature, and the whole thing is gated on a low-frequency patch
+       * field so roughly a third of the piece is green and the rest is metal. `p` also stops well
+       * short of opaque — a brazier lit for three thousand years is scoured bright where hands
+       * and fuel touch it, and verdigris at full strength is not bronze any more, it is a flat
+       * green mineral with the metal read thrown away. */
       const conc = concavity(s.h, size, Math.max(2, Math.round(size / 90)), 2);
       let cmax = 1e-6;
       for (let i = 0; i < s.n; i++) if (conc[i] > cmax) cmax = conc[i];
+      const patch = s.field(4, (u, v) => sat(warpN(u, v, 4, 4, 1.3, cx.seed + 13) * 1.6 + 0.42));
       const src = new Float32Array(s.n);
-      for (let i = 0; i < s.n; i++) src[i] = sat(conc[i] / cmax * 1.2 + blow[i] * 0.8);
-      const run = streakDown(src, size, 0.975, cx.seed + 3);
-      const patch = s.field(3, (u, v) => sat(warpN(u, v, 7, 4, 1.3, cx.seed + 13) * 1.5 + 0.5));
       for (let i = 0; i < s.n; i++) {
-        const p = sat((src[i] * 0.9 + run[i] * 0.8) * (0.4 + patch[i] * 1.2));
+        // Squared, so the shallow two thirds of the concavity range contributes almost nothing
+        // and only the real hollows nucleate crust.
+        const c = sat(conc[i] / cmax);
+        src[i] = sat(c * c * 1.15 + blow[i] * 0.22);
+      }
+      const run = streakDown(src, size, 0.975, cx.seed + 3);
+      for (let i = 0; i < s.n; i++) {
+        const gate = sat((patch[i] - 0.42) * 1.9);
+        const p = sat((src[i] * 0.85 + run[i] * 0.30) * gate);
         if (p <= 0.01) continue;
-        const green = mixHex(PAL.malachite, PAL.turquoise, 0.35 + patch[i] * 0.4);
-        s.r[i] += (green[0] - s.r[i]) * sat(p * 0.9);
-        s.g[i] += (green[1] - s.g[i]) * sat(p * 0.9);
-        s.b[i] += (green[2] - s.b[i]) * sat(p * 0.9);
-        s.metal[i] *= 1 - sat(p) * 0.85;                        // patina is a mineral, not metal
-        s.rough[i] = sat(s.rough[i] + p * 0.45);
-        s.h[i] += p * 0.06;                                     // crust builds up
+        const green = mixHex(PAL.malachite, PAL.turquoise, 0.30 + patch[i] * 0.35);
+        const q = sat(p * 0.52);
+        s.r[i] += (green[0] - s.r[i]) * q;
+        s.g[i] += (green[1] - s.g[i]) * q;
+        s.b[i] += (green[2] - s.b[i]) * q;
+        s.metal[i] *= 1 - sat(p) * 0.70;                        // patina is a mineral, not metal
+        s.rough[i] = sat(s.rough[i] + p * 0.35);
+        s.h[i] += p * 0.05;                                     // crust builds up
       }
       // Handled edges wear back to bright metal.
       const sky = skyward(s.h, size, Math.max(1, Math.round(size / 300)));
@@ -1644,7 +1812,22 @@ export const MATERIALS = {
         s.rough[i] = sat(s.rough[i] - up * 0.16);
         s.metal[i] = sat(s.metal[i] + up * 0.3);
       }
-      grain(s, { amount: 0.02, freq: 340, seed: cx.seed + 8, heightAmt: 0.005 });
+      /* `freq` 340 → 150. On a 2.0 m world repeat 340 cycles is a **5.9 mm** feature, which is
+       * 0.19 px at the 32 m the `courtyard` braziers are seen from and 0.5 px at the 14 m of
+       * `guard` — it existed in the buffer and could not appear in the image at any framing this
+       * material is used at, while still costing a mip-0 shimmer source. 150 cycles is 13 mm,
+       * about 0.4–1 px close in and honestly gone at distance, which is what a *grain* should be.
+       * The relief that has to survive is the swell and the blowholes, and they are 22 cm and
+       * 8 cm. */
+      grain(s, { amount: 0.02, freq: 150, seed: cx.seed + 8, heightAmt: 0.005 });
+      /* Bronze is the darkest metal in the level, so it is the one most exposed to the shader's
+       * additive violet wash on a near-black texel. Floor it in its own hue — and note that the
+       * floor hex has to sit at *crevice* luminance (§2.2's `#4a2f22` is 0.203), not at the
+       * material's own mid-tone. A first attempt used a 0.44-luma green-gold here and `rampFloor`
+       * duly lifted everything below 0.44, which is most of a dark metal: the value range came
+       * out narrower than the flat sheet this recipe was rewritten to replace. The measurement
+       * caught it; reasoning about it would not have. */
+      rampFloor(s, { crevice: MX(PAL.malachite, PAL.black, 0.70) });
     },
   },
 
@@ -2566,18 +2749,44 @@ function inlay(s, cx, stoneHex, veinHex, fleckHex, fleckAmt) {
  * it is never a dead flat area).
  */
 function glyphWall(ctx, size, mode, seed, o = {}) {
-  /* `cols` and `tall` together set how much of a temple wall is *writing* and how much is plain
-   * dressed stone, and they are the strongest control this file has over §7.3's squint test.
+  /* **The column count is derived from a glyph size in metres, not chosen.** That inversion is
+   * the fix for §7.3's "visible texture tiling repetition" on every inscribed wall in the level,
+   * and the reason is a scale error nobody had checked.
    *
-   * At 4 columns over 53% of the tile height the hypostyle walls came out as an unbroken lattice
-   * of small bright cells each holding one coloured mark — the review's "wall of postage stamps"
-   * — and the architecture behind it stopped reading, because every square metre carried the same
-   * maximum-frequency detail and nothing was left for the eye to rest on. Three wider columns
-   * over 40% of the tile gives the same amount of *inscription* in larger, more legible signs,
-   * and leaves the majority of the wall as plain stone, which is what §2.3 means by "large
-   * simple areas of colour, detail concentrated at focal points" and what makes the carving read
-   * as carving rather than as pattern. */
-  const { cols = 3, cartouche = true, tall = 0.30, frieze = 0.10 } = o;
+   * `columnRegister` fills its box with square quadrats one column wide, so the glyph size is
+   * `0.76 * worldTile / cols`. At `cols = 3` on `hieroglyph_wall`'s 10.4 m world repeat that is
+   * a quadrat **2.63 m wide and 3.12 m tall**, and `round(0.30 / (0.2533 * 1.02)) = 1` — so the
+   * tall register was literally *three three-metre hieroglyphs*, and a wall showed the same three
+   * again every 10.4 m. Rendered as the consumer lays it (three repeats box-downsampled to the
+   * 267 px per repeat the `courtyard` camera sees at 40 m) that is nine identical red stools,
+   * blue beetles and yellow faces in perfect rows. A three-metre sign is not writing, it is a
+   * billboard, and a billboard is the most recognisable thing a repeat can contain.
+   *
+   * Both previous passes tuned `cols` — 4 was rejected as "a wall of postage stamps", 3 was the
+   * answer — and both were arguing about how many billboards to show. At 4 columns the quadrat
+   * was 2.0 m; the lattice complaint was about *large isolated coloured cells*, which is a
+   * different failure from a dense inscription and does not bind here. A temple wall's signs are
+   * 0.3–0.8 m, and a dense field of small varied marks has no landmark in it, so the eye has
+   * nothing to recognise on the next repeat: the repetition is solved by removing the thing that
+   * repeats visibly rather than by making the tile bigger, which was tried at 6.4 m and starved
+   * the obelisk.
+   *
+   * Sub-pixel check, because that is the failure this trades against: 0.72 m is 21 px at
+   * `temple`'s far wall (36 m, 1.067 mrad/px), 19 px at `courtyard`'s 40 m and 78 px on the near
+   * hall wall. The line work inside a glyph is ~1/8 of that, so it dissolves to tone at distance
+   * and resolves close up, which is what it should do.
+   *
+   * `tall`/`frieze` still hold the *proportion* of wall that is writing at 40%, so the majority
+   * is plain dressed stone — §2.3's "large simple areas of colour, detail concentrated at focal
+   * points" is unchanged. Only the sign size moved. */
+  const { worldTile = 10.4, glyphM = 0.72, cartouche = true, tall = 0.30 } = o;
+  const cols = Math.max(2, Math.round((0.76 * worldTile) / glyphM));
+  /* `rowRegister` takes its quadrat size from the band *height*, so the frieze's sign size is
+   * the band height and nothing else. Left at the old fixed 0.10 of the tile it drew 1.04 m
+   * signs — and one of them, a tall green sign, was still legible as the same mark once per
+   * repeat after the tall register had stopped giving the tiling away. Derive it from the same
+   * metre figure so the two bands cannot drift apart again. */
+  const frieze = clamp(glyphM / worldTile, 0.03, 0.12);
   const rule = size * 0.010;
   const rnd = rng((seed ^ 0x5eed) >>> 0);
   HG.registerRule(ctx, size, 0, rule, mode);

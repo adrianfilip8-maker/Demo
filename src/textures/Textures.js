@@ -256,7 +256,25 @@ export class Textures {
       joint,
       repeat: rep,
       tile,
-      normalScale: out.normalStrength,
+      /* **1.0, and it has to be 1.0.** This field used to publish `derive()`'s `ku` — the slope
+       * scale `bump * size / tile`, which runs 0.26 to 8.23 across the catalogue. But `ku` is
+       * applied *inside* `heightToNormal`, before the vector is normalised, so what ships in the
+       * normal map is already the finished, knee-limited normal. The correct `normalScale` for
+       * any consumer of this bundle is therefore unity.
+       *
+       * Nothing reads it today — ARCHITECTURE and PROPS copy six named map slots out of the
+       * bundle and TERRAIN and SlyModel set their own literals — so this was latent rather than
+       * live. It was also one spread operator from being neither: `shading.toon()` accepts
+       * `normalScale`, `Terrain.mat()` forwards `opts.normalScale` straight into a material, and
+       * this key sits two lines from `normalMap` in the object every one of them destructures. A
+       * consumer that wrote `shading.toon({ ...textures.get(name) })` would have multiplied every
+       * tangent xy in the game by up to 8.2 and turned every surface into crumpled foil.
+       *
+       * Same shape as the `Math.max(0.05, [u,v])` NaN: right in one place, wrong and waiting in
+       * another. The slope scale is still published, under a name that says what it is, because
+       * the QA report wants it — see `report()`'s `slopeScale`. */
+      normalScale: 1.0,
+      slopeScale: out.normalStrength,
       rough: recipe.rough ?? 0.85,
       group: recipe.group ?? 'misc',
       size,
@@ -422,7 +440,11 @@ export class Textures {
         lumaRms: +Math.sqrt(Math.max(0, l2 / n - mean * mean)).toFixed(4),
         mipRms: +Math.sqrt(Math.max(0, mm2 / cur.length - mm * mm)).toFixed(4),
         darkTail: +(dark / n).toFixed(4),
-        normalStrength: +(set.normalScale ?? 0).toFixed(2),
+        /* The height-to-slope scale `bump * size / tile`, *not* a normal-map strength — it is
+         * already baked into the shipped normal. Reported because it is the number that says
+         * whether a recipe's relief is proportionate to its footprint; do not hand it to a
+         * material. See the note on `normalScale` in `_build()`. */
+        slopeScale: +(set.slopeScale ?? 0).toFixed(2),
         // Millimetres of *world* per texel, and metres of world per repeat. A feature has to
         // clear one screen pixel at the distance its surface is actually seen from or it is
         // decoration in the source file and nothing in the frame; both `MOTES.size` and

@@ -609,12 +609,20 @@ function hypostyleHall(A) {
     A.add('hall', 'hieroglyph_wall', K.place(K.beam(16.6, 0.8, 2.4, { rng: R, pieces: 5, chip: 0.14 }), { x: 0, y: 16.6, z: cz }));
   }
 
-  /* ---- Aisle roof (deck y 13.5) as individual transverse slabs. ---- */
+  /* ---- Aisle roof (deck y 13.5) as individual transverse slabs. ----
+     The slab is deeper than the pitch so consecutive slabs *overlap*. They used to be laid at
+     a 2.55 m pitch and cut 2.42 m deep, which left a 13 cm slot between every pair running the
+     full 12 m width of the aisle — 26 open slits straight through the roof to the sky, and
+     from a low camera they foreshorten into exactly the pale wedges the critic sees. Measured
+     by firing rays straight up from a 0.35 m grid on the aisle floor: 215 of 6080 probes
+     escaped, none of them through a designed opening. The overlap also has to beat the
+     +/-0.3 deg yaw jitter, which swings a 12 m slab's ends by about 6 cm. */
+  const AISLE_PITCH = 2.55, AISLE_DEPTH = AISLE_PITCH + 0.24;
   for (const sx of [-1, 1]) {
-    for (let z = h.z0 + 1.4; z < h.z1 - 1.4; z += 2.55) {
+    for (let z = h.z0 + 1.4; z < h.z1 - 1.4; z += AISLE_PITCH) {
       const len = 23.4 - CL;
-      const g = K.chamferBox(len, 0.86, 2.42, { rng: R, jitter: 0.02, chip: R.chance(0.12) ? 0.12 : 0, c: 0.06 });
-      K.place(g, { x: sx * (CL + len / 2), y: 13.06, z: z + 1.27, ry: D(R.jitter(0.3)) });
+      const g = K.chamferBox(len, 0.86, AISLE_DEPTH, { rng: R, jitter: 0.02, chip: R.chance(0.12) ? 0.12 : 0, c: 0.06 });
+      K.place(g, { x: sx * (CL + len / 2), y: 13.06, z: z + AISLE_PITCH / 2, ry: D(R.jitter(0.3)) });
       A.add('hall', 'sandstone_block', K.boxProjectUVs(g));
     }
     groundProxy(A, sx > 0 ? CL : -23.4, sx > 0 ? 23.4 : -CL, DECK, h.z0 + 1.4, h.z1 - 1.4);
@@ -644,14 +652,31 @@ function hypostyleHall(A) {
 
   /* ---- Nave roof at y 17, with real slots punched through every 8 m in z. ---- */
   const slotZ = [-24, -32, -40, -48];
-  for (let z = h.z0 + 1.4; z < h.z1 - 1.4; z += 2.42) {
-    const cz = z + 1.21;
-    const slot = slotZ.find((s) => Math.abs(s - cz) < 1.0);
+  /* Same overlap rule as the aisle roof. The nave's 12 cm slots happen to be backed by the
+     painted star ceiling just below, so they do not leak today — but relying on a second
+     surface to cover the first one's gaps is how the aisle roof got away with it for so long. */
+  const NAVE_PITCH = 2.42, NAVE_DEPTH = NAVE_PITCH + 0.22;
+  for (let z = h.z0 + 1.4; z < h.z1 - 1.4; z += NAVE_PITCH) {
+    const cz = z + NAVE_PITCH / 2;
+    /* Half the pitch, not a fixed 1.0 m: the band grid does not land on the nominal slot
+       centres, so at 1.0 m two of the four §8.1 slots matched no band at all and were never
+       cut — while `api.roofSlots` went on advertising four openings to LIGHTING. Half-pitch
+       guarantees each slot claims exactly one band. */
+    const slot = slotZ.find((s) => Math.abs(s - cz) < NAVE_PITCH / 2);
     const spans = slot ? [[-CL, -1.3], [1.3, CL]] : [[-CL, CL]];
     for (const [x0, x1] of spans) {
-      const g = K.chamferBox(x1 - x0, 0.82, 2.3, { rng: R, jitter: 0.02, chip: R.chance(0.1) ? 0.12 : 0, c: 0.06 });
+      const g = K.chamferBox(x1 - x0, 0.82, NAVE_DEPTH, { rng: R, jitter: 0.02, chip: R.chance(0.1) ? 0.12 : 0, c: 0.06 });
       K.place(g, { x: (x0 + x1) / 2, y: NAVE - 0.41, z: cz, ry: D(R.jitter(0.25)) });
       A.add('hall', 'sandstone_block', K.boxProjectUVs(g));
+      /* The painted ceiling is emitted band-by-band with the *same* spans as the roof slab
+         above it, so a slot in the roof is a slot in the ceiling by construction. It used to
+         be one continuous slab across the whole nave, which quietly sealed all four roof
+         slots — `api.roofSlots` advertised four openings to LIGHTING that no ray could pass
+         through. Firing rays up from the nave floor found 0 escapes where there should have
+         been four 2.6 m openings. */
+      const cg = K.chamferBox(x1 - x0 - 0.8, 0.06, NAVE_DEPTH, { rng: R, jitter: 0.01, c: 0.02 });
+      K.place(cg, { x: (x0 + x1) / 2, y: NAVE - 0.83, z: cz });
+      A.add('hall', 'ceiling_stars', K.boxProjectUVs(cg));
       groundProxy(A, x0, x1, NAVE, cz - 1.2, cz + 1.2, { thick: 0.85 });
     }
     if (slot) {
@@ -659,8 +684,6 @@ function hypostyleHall(A) {
       for (const sx of [-1, 1]) ledgeProxy(A, sx * 1.3 - 0.4, sx * 1.3 + 0.4, NAVE, cz - 1.15, cz + 1.15, { thick: 0.5 });
     }
   }
-  /* Painted star ceiling on the nave underside — the interior's one cool-hued surface. */
-  vol(A, 'hall', 'ceiling_stars', -CL + 0.4, CL - 0.4, NAVE - 0.86, NAVE - 0.8, h.z0 + 1.6, h.z1 - 1.6, { c: 0.02 });
 
   /* Torus rolls down the four outer corners of the hall, the same motif as the pylons. The
      hall is the biggest single mass in the level and its corners were hard 90° arrises. */
