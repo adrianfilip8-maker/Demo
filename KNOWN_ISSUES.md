@@ -9,35 +9,47 @@ hypothesis below cost real time.
 ## 1. No cast shadows in any shot — **unresolved, highest-value fix**
 
 Under a 22° golden-hour sun the courtyard should be crossed by long raking shadows. There are
-none, anywhere. This is the single biggest remaining gap between the current frames and the
-AAA bar: raking shadows are most of what sells a low-sun read, and `AGENTS.md §7.3` depends
-on them for form.
+none, anywhere. This is the single biggest remaining gap to the AAA bar: raking shadows are
+most of what sells a low-sun read, and `AGENTS.md §7.3` depends on them for form.
 
-**Ruled out** (each verified, don't redo):
+**The measured symptom.** `shading.debugShadow(true)` paints red=shadow term, green=receiveShadow,
+blue=N·L. The shadow term reads **≈0 across essentially the whole frame** — everything is
+reported as fully occluded. Because the toon shader computes `key = ramp * sh`, that cancels
+the directional light entirely. This is why the bug presents as *flat ambient-only lighting*
+rather than as a missing-shadow bug, and it is why the colour cast was so hard to tune: the
+shadow term had swallowed the key light.
 
-- Geometry flags. `Architecture.js`, `Terrain.js`, `Vegetation.js` and `SlyModel.js` all set
-  `castShadow`/`receiveShadow` correctly.
-- Light config. Cascade lights have `castShadow = true`, real `mapSize`, and `shadow.camera`
-  near/far set (`Lighting.js` ~line 261).
-- Cascade fitting. `_fitCascades()` runs every frame from `update()` and re-fits to the live
-  `engine.camera`, so the posed screenshot camera is tracked correctly.
-- Shader sampling. `toon.glsl.js` genuinely reads shadows:
-  `float sh = smoothstep( uShadowSharp.x, uShadowSharp.y, getShadowMask() );`
-- Shadow map type. Switched `VSMShadowMap` → `PCFSoftShadowMap` in `Engine.js` on the theory
-  that VSM light-bleeding was presenting as "everything lit". **It changed nothing** — the
-  hypothesis was wrong. The switch was kept because PCF is the more robust choice here
-  regardless, but it is not the fix.
+**Ruled out — each measured at runtime, don't redo any of these:**
 
-**Leading untested hypothesis.** `Lighting.js` (~lines 85–110) patches the shadow term
-directly into three.js's lighting loop for its cascade setup, injecting
-`directLight.color *= ... getShadow(...)`. The toon shader separately calls `getShadowMask()`.
-If that patch displaces or bypasses the chunk that `getShadowMask()` depends on, the function
-would return 1.0 (fully lit) everywhere while every other part of the system looks correct —
-which matches the symptom exactly.
+- Geometry flags. Now 312 of 328 meshes cast+receive (`main.js` sweeps them centrally).
+  Previously 60 of 301, which was a real bug but not this one.
+- Light config. Cascade 0: `intensity 3.30`, `castShadow true`, `2048×2048` map, `bias −5.4e−4`.
+- Cascade fitting. `_fitCascades()` runs per frame; c0 fits to `±29.8` ortho, `near 0.05 /
+  far 111.3`, positioned at `(−77, 37, −6)`. Sane and it comfortably contains the courtyard.
+- Cascade splits. `csmSplits = [[−10000, 34.1], [34.1, 1000000]]` — correct, and the hero
+  camera sits ~28 m from its subject so the frame resolves to cascade 0 as intended.
+- Cascade selection reaching the shader. Confirmed `CSM_CASCADES` is defined in the compiled
+  program (`toon_sand`), so `csmShadow()` — not the cascade-naive `getShadowMask()` — is the
+  function actually running. Switching the toon shader to `csmShadow()` was a genuine fix
+  (`getShadowMask()` multiplies all cascades, which is wrong for CSM) but did not change this.
+- Material adoption timing. LIGHTING adopted materials only every 20 frames while a capture
+  steps ~17; now forced at boot. Real bug, not this one.
+- Shadow map type. `VSMShadowMap` → `PCFSoftShadowMap`. Changed nothing; kept because PCF is
+  the more robust choice here regardless.
+- Normal-pass corruption. three.js uses `scene.overrideMaterial` for shadow-map rendering too,
+  so PostFX's normal pass was re-rendering every cascade map with `MeshNormalMaterial`. Now
+  frozen across that pass. Real bug, correctly fixed — and still not sufficient.
 
-Next step: dump `getShadowMask()` straight to `gl_FragColor` in the toon shader and capture.
-If the frame is uniformly white, the mask is the problem and the fix is in how `Lighting.js`
-patches the chunk, not anywhere in the shadow plumbing.
+**Unexplained signal worth starting from.** The runtime reports
+`renderer.shadowMap.type === 1` (`PCFShadowMap`) even though `Engine.js` sets
+`PCFSoftShadowMap` (`2`) and nothing else in `src/` touches it. Something is changing shadow
+state after construction. That matters because a shader compiled for one shadow type reading a
+map rendered for another produces exactly this symptom — a uniformly zero shadow term. Find
+what resets it before looking anywhere else.
+
+Second candidate: dump cascade 0's shadow map to a quad on screen. If it is blank or garbage
+the fault is in the shadow render; if it looks like a correct depth map the fault is in the
+lookup (matrix, bias, or sampler type).
 
 ---
 
@@ -67,11 +79,19 @@ once shadows work, since real shadows will change what the right value is.
 
 ---
 
-## 4. Modules still absent
+## 4. Guards module still absent
 
-`props` and `guards` have supporting files (`Statues.js`, `PropKit.js`, `GuardModel.js`,
-`GuardAnim.js`, `Patrol.js`) but no module entry point, so `main.js` reports them absent.
-They need `src/world/Props.js` exporting `Props` and `src/ai/Guard.js` exporting `Guards`.
+`src/ai/` has a complete supporting library — `GuardModel.js` (`buildGuardAssets()`,
+`instantiate()`), `GuardAnim.js` (`GuardAnim` class, full clip set), `Patrol.js` (`ROSTER`,
+`ROUTES`, `Route`, `Senses`, `stateForSuspicion`, `speedFor`) — but no module entry point, so
+`main.js` reports guards absent and the `guard` canonical shot has no subject.
+
+Needs `src/ai/Guard.js` exporting `Guards`, following the same assembly pattern
+`src/world/Props.js` now uses: walk `ROSTER`, `instantiate()` one rig per entry against shared
+geometry, drive each with a `GuardAnim` and a `Senses`, and register the vision cone.
+
+Props is done — `src/world/Props.js` landed and assembles the colossi, sphinx avenue, Anubis
+pair, gilded Ra, braziers, banners, treasure and collectibles into 12 merged draw calls.
 
 ---
 
