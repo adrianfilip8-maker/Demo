@@ -208,6 +208,18 @@ const TUNE = {
   /* --- rim --- */
   rim: 0.55,
   rimPower: 3.1,
+  /* THIS term owns the two artefacts still standing after the gates (task #8a attribution,
+     scratchpad/plinth2.mjs on the rim1 frames): the `courtyard` plinth-lip pale band (73 px
+     strict, a visible ragged white-cyan edge in the crop) and the dominant share of `night`'s
+     paving streak (base 181 / surfonly 60 / screenonly 0 visible px — PostFX's screen rim
+     alone contributes zero to both). Mechanism, measured at the lip: this rim is added in
+     scene-linear and tonemapped, so on saturated warm stone — norim (135,65,40) — a cool add
+     lands as +3R +73G +105B display; R sits on the AgX shoulder, G/B ride the steep mid, and
+     the lip renders (138,138,145): a pale grey band where §2.2 wants `#7fd4ff`. Any fix is a
+     scene-space colour question AT THIS TERM (e.g. bounding the add against the surface's own
+     radiance so the hue survives the shoulder) — do not chase it in PostFX's display-space
+     rim, whose placement was evaluated and kept (see the headroom note in PostFX.js TUNE),
+     and re-measure `night` first: its silhouettes are what this term's magnitude buys. */
   rimGain: 2.05,         // scales the art-directed rim colour into bloom range
   /* This is NOT the live value. `_applyAutoLight()` republishes `uRimGain = rimGain * (day ?
      1 : 1.45)` every time the clock moves, so on a night shot the uniform reads 2.9725 while

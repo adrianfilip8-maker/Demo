@@ -80,12 +80,22 @@ const TUNE = {
        interior 1028 -> 0     combat 7816 -> 8     temple 53 -> 10
        traversal 104 -> 28    night  511 -> 181    courtyard 239 -> 236
 
-     So five of six are clean and two are unfinished business. `night` keeps a visible cool
-     streak along the paving joints (bottom-left, cells x 128-448 y 512+) — smaller than the
-     ungated build but not gone. `courtyard` is untouched by the gate because its residual is
-     not a grazing plane at all: it is a blown near-white band on the plinth's top-front edge,
-     i.e. a real depth discontinuity, which both gates are supposed to keep. That one is a
-     brightness question (rimStrength / rimTail), not a gating one.
+     So five of six are clean and two are unfinished business — but NEITHER residual belongs
+     to this pass, and an earlier version of this comment said otherwise. Attributed by
+     variant differencing on the rim1 frames (scratchpad/plinth2.mjs, task #8a):
+
+       courtyard 236 = 145 px of cloud drift at the top frame edge (the norim control was
+       captured ~20 s later, the sky moved, and the control's cool test sits at L150 exactly
+       where the zenith sky lands — a metric artefact, not an image defect) + 73 px on the
+       plinth lip + 18 scattered. On the lip, `surfonly` is bit-identical to `base` and
+       `screenonly` is identical to `norim` (box mean add 0.1/0.3/0.3 — nothing): the pale
+       band is entirely the SURFACE fresnel rim, which is scene-linear and goes through AgX.
+       On saturated warm stone (135,65,40) a cool scene add lands as +3R +73G +105B display —
+       R is on the AgX shoulder, G/B ride the steep mid — and the lip turns pale grey
+       (138,138,145). `night`'s streak decomposes the same way: base 181 / surfonly 60 /
+       screenonly 0 visible px in the streak box. This pass's rim, alone, crosses zero
+       artefact thresholds on both shots. The lever for the lip is the surface rim's
+       scene-space colour handling (ToonMaterial), not rimStrength / rimTail here.
 
      One thing this pass does NOT do, and it shows up at night: uRimLit is a constant. PostFX
      has no time-of-day hook of any kind, so the screen-space rim is `#7fd4ff` in all ten shots,
@@ -172,9 +182,20 @@ const TUNE = {
      not been taken — so the lever (post-AgX chroma restore vs. moving `uSaturation` to display
      space) is a proposal, not a conclusion. Do not tune it from this comment alone.
 
-     Related, same file, and it explains the `courtyard` plinth residual: the silhouette rim is
-     added AFTER `slyLinearToSrgb`, in display space. On a surface that is already bright there
-     is no headroom left, so the rim clips toward white instead of reading as `#7fd4ff`. */
+     An earlier version of this comment blamed the `courtyard` plinth band on the silhouette
+     rim being added AFTER `slyLinearToSrgb` ("no headroom left, so it clips toward white").
+     DECIDED, with the rim1 frames as evidence (task #8a): the display-space placement stays,
+     and the premise was a misattribution. Measured, the screen rim contributes 0.1/0.3/0.3
+     mean display units in the plinth box and zero artefact pixels there and in `night`'s
+     streak — the pale band is the SURFACE rim, which is already added before the encode, in
+     scene-linear, and that placement is precisely what produces the band (see the rimPlanar
+     comment above). Moving THIS rim pre-encode was evaluated by arithmetic on the captured
+     pairs (scratchpad/plinth.mjs `premap`): it recreates the surface rim's failure shape and
+     moves the edge-rim population by ~+50%, which re-opens every validated rim measurement,
+     for zero artefact benefit. Display-space caps (`mixcap`/`headcap`) were evaluated too:
+     both change nothing on the residuals, because this rim's contribution there is already
+     zero. The bounded `rim*amt*(1-c)` wrap below is the correct form for a display-space
+     add and is kept. */
   saturation: 1.30,
   lift: [0.006, 0.004, 0.010],     // open the toe just enough to keep shadow detail (§7.3)
   // Warm the highlights — but the blue leg was pulled to 0.95, which is a 5% cut on every
@@ -232,14 +253,21 @@ const TUNE = {
      row above; the pre-recalibration figures were 51/101/124) — the ramp still spans the
      shadow-to-lit transition instead of sitting above the whole image.
 
-     STATUS, stated precisely because an earlier version of this comment overstated it and the
-     overstatement reached a commit message: the numbers above are ARITHMETIC, computed by
-     transcribing this file's grade chain and evaluating it against captured frames. They are
-     not a frame A/B of this change. The A/B is one poke — `splitRange` is pushed to the
-     uniform every frame — and it landed as the `splitold` variant in the six-shot rim1 run
-     (temple / interior / courtyard, one boot): the leg-balance table in
-     shots/rim1/ANALYSIS.txt measures the frames agreeing with the prediction's direction on
-     all three (e.g. temple warm leg 5.2% under [0.08,0.72] vs 24.1% under [0.04,0.24]).
+     STATUS: VERIFIED IN FRAME (task #8b), and the history of how it got there is kept
+     because an earlier version of this comment overstated a weaker state. The tables above
+     are ARITHMETIC — the grade chain transcribed and evaluated against captured frames. The
+     leg-balance table in shots/rim1/ANALYSIS.txt is also not an A/B of this change: it
+     evaluates candidate crossovers against each frame's luma distribution. The direct read
+     (scratchpad/splitread.mjs) differences the captured `base` [0.04,0.24] against
+     `splitold` [0.08,0.72] pairs from the one-boot rim1 run, per pixel, banded by display
+     luma. Result, all three shots agreeing with the pre-registered shape: delta(R-B) is
+     ~0 below L55 (both ranges fully cool), rises to +18.1 (temple) / +17.7 (interior) /
+     +12.6 (courtyard) at L90-110, and returns to ~0 by L190 (both fully warm), with band
+     luma stable (|dL| <= 1 on temple/courtyard — the split is hue-only, as designed).
+     Caveat that stays attached: `interior`'s bands above L130 are flicker-confounded
+     (torch FX, 4.31% of px excluded at |dL|>40, dL to -17 in those rows) and are evidence
+     about nothing; its verdict rests on the mid bands (~850k px). Frames eyeballed: base
+     visibly warmer through the sunlit mid-tones on temple and courtyard, no other change.
 
      A correction to a correction, kept because the full history is the lesson. An earlier
      version of this comment computed 0.72 -> L192; a later pass "corrected" that to L165 and
