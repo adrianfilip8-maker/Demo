@@ -178,9 +178,21 @@ export const SHOTS = {
      A framing check will report this shot as "player feet out of frame, 0% of the player's
      cast shadow visible" — that is correct and intended, not a defect to fix. If the guard
      himself reads as ungrounded, that is a real problem, but it is about the guard's placement
-     (AI owns it), not about this camera. */
+     (AI owns it), not about this camera.
+
+     **The camera was standing on the west colossus plinth, 5 cm above its deck.** The plinth
+     top is y 2.00 and the camera sat at y 2.05, inside an 8x7 m stone deck at (-9.5, 25) —
+     so this was an ankle-height view across a slab. That one placement produced three separate
+     critic complaints: the "bright cyan contact line" is the plinth's far edge (predicted to
+     project at y 255-264, measured at y 260 and 278 with the same left-to-right tilt); the
+     "blank lower 60%" is the deck, at 61% of frame; and the guard has never been in shot
+     because the subject is on the courtyard floor two metres below the camera's feet.
+
+     Raised 2.0 m so the camera stands *over* the plinth rather than on it, with the target
+     lifted equally to keep the original pitch and aim. The plinth itself is an §8.1 contract
+     surface and is correct — nothing about the level needed changing. */
   guard: {
-    pos: [-11.5, 2.05, 25.4], target: [-15.6, 1.45, 22.0], fov: 38, tod: 0.10,
+    pos: [-11.5, 4.05, 25.4], target: [-15.6, 3.45, 22.0], fov: 38, tod: 0.10,
     player: { pos: [-9.0, 0, 27.5], yaw: 2.3, pose: 'sneak_idle' },
   },
 };

@@ -84,9 +84,40 @@ const TUNE = {
      ... no falloff, no warm pool" and why `interior` cannot demonstrate the warm/cool
      tension §7.2 says it exists to prove.
 
-     `encloseStrength` is how much of the sky fill a fully-roofed camera loses. It is 0
-     here on purpose: it changes the exposure of every roofed frame in the game and wants
-     its own bracketed capture before it ships. Raise it there, not here.
+     `encloseStrength` is how much of the sky fill a fully-roofed camera loses.
+
+     **It has now been bracketed on `interior`, and it stays 0, because it is connected and
+     it is not the cause.** Forcing the enclosure to 1 (which is what the fan really measures
+     from that camera — all five rays blocked) and sweeping 0 / 0.45 / 0.65 / 0.90:
+
+       encloseStrength   0.00    0.45    0.65    0.90
+       hemi              1.02    0.561   0.357   0.102     <- a 10x cut, as designed
+       ambient           0.586   0.323   0.205   0.059
+       near floor L      0.281   0.263   0.254   0.242     <- the frame moves 14%
+       unlit pier L      0.254   0.243   0.238   0.234
+       torch pool L      0.434   0.415   0.407   0.397
+       pool : floor      2.99    2.98    2.97    2.92      <- contrast gets *worse*
+
+     Ten times less sky fill changes the tomb by a tenth of a stop and costs it a hair of
+     warm/cool contrast. So the fill was never what the room is made of, and the flat,
+     uniform, falloff-free look the critic reports is not an FX or fill problem.
+
+     Where the light actually comes from: `ToonMaterial._refreshShadowColor()` sets shadow
+     illumination to `shadowFloor (0.125) x lum(keyColor) x keyIntensity` — a function of the
+     **sun**, applied to every shadowed surface in the game. Twelve metres underground with
+     the sun sealed out, that floor *is* the lighting, which is why the measured shadow-to-key
+     ratio sits pinned at 33–34% across the entire bracket and will not move for anything
+     LIGHTING does to hemi, bounce or ambient.
+
+     Owner of the fix: **SHADING / ToonMaterial.js.** The interface for it already exists and
+     is simply not wired — `_publishKeyLight()` sends `ambient.floor` and `ambient.tint` in the
+     payload, and `ToonMaterial.setKeyLight()` reads `ambient.sky`, `.ground`, `.bounce` and
+     `.intensity` and silently ignores both of those. If the floor took a scalar from here, the
+     enclosure term could drive it and this knob would start meaning something.
+
+     Leaving this at 0 deliberately: a non-zero value darkens every roofed frame in the game
+     by ~10% and buys nothing the shot needs. The fan and the bracket harness stay so the
+     experiment is a re-run, not a re-derivation.
      LIGHTING exposes TUNE on the instance so that bracket can be driven from the harness. */
   encloseStrength: 0.0,
   encloseProbe: 30,          // metres straight up; nothing in §8.1 is taller than the pylon
