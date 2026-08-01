@@ -116,9 +116,34 @@ const TUNE = {
      whole pyramid contributed, so the bloom was a low-frequency milky veil over the top of
      the image — which is precisely the "grey wash" the critic logged on three shots. The
      sun disc runs at 26x and gold spec well above 2x, so 1.55 still lets everything that
-     should glow, glow; five mips keeps the halo tight instead of screen-wide. */
-  bloomThreshold: 1.55,
-  bloomKnee: 0.45,
+     should glow, glow; five mips keeps the halo tight instead of screen-wide.
+
+     1.55 -> 2.20, knee 0.45 -> 0.30 (feed onset T-k: 1.10 -> 1.90). The 1.55 rationale above
+     underestimated what a fully keyed DIFFUSE surface reaches: at tod 0.80 the key radiance
+     is (3.29, 2.27, 1.15) (evalAtmosphere x keyBoost 1.0, live values), so any near-white
+     albedo at the top ramp band lands at scene 2.4-2.9 — Sly's sclera at 2.59, sunlit
+     limestone at 2.89 — and at onset 1.10 all of it fed the pyramid (sclera w=0.40,
+     limestone w=0.51). That is the residue of the same "grey wash" class the 1.02 -> 1.55
+     move was fixing, and on cap2/sly-closeup it is what washed the pupil ring to L162 and
+     drew the halo on the fur around two already-saturated eyes.
+
+     What this change does NOT claim: it does not fix the eye hierarchy inversion. Measured
+     offline against the exact AgX+grade chain (scratchpad/bloomcalc.mjs, validated against
+     the captured frame: predicted sclera body no-bloom L224 / with-bloom ~236 vs measured
+     p50 226 / max 234), the sclera displays at ~L224 with bloom OFF entirely — the blow-out
+     is scene radiance on the AgX shoulder (alb 0.79 x keyRad 3.29 = 2.59), owned by the eye
+     material, not by this pass. The "diffuse white lands ~L191" premise came from the L-table
+     in the splitRange comment below, whose top end this measurement contradicts (see report).
+
+     Client table at the new values, w(scene maxch) old -> new: sun disc 26 [0.94 -> 0.91],
+     gold spec glints ~6.8 [0.77 -> 0.67], torch flame 3.0 [0.48 -> 0.375], ember 2.4
+     [0.35 -> 0.14], sparkle cores 1.4-2.5 [taper, authored halo geometry unaffected],
+     sclera 2.59 [0.40 -> 0.145, and 0 once any sclera tint lands it below 1.9], sunlit
+     limestone 2.89 [0.51 -> 0.30]. Every wanted client keeps >=40% of its feed; the bright-
+     diffuse class loses 60-70%. Verified in-frame in shots/bloom1 (base / bloomold /
+     bloomoff, one boot). */
+  bloomThreshold: 2.20,
+  bloomKnee: 0.30,
   bloomIntensity: 0.50,
   bloomMips: 5,
 
@@ -172,11 +197,24 @@ const TUNE = {
      chain (contrast about 0.18, then AgX, then the sRGB encode) and evaluating it exactly:
 
        scene-linear l   0.02   0.05   0.08   0.18   0.35   0.50   0.72   1.00   2.00
-       display L        29     60     78     112    139    153    165    175    188
+       display L        39     69     88     126    159    176    192    205    227
 
-     so the old crossover finished at L165 — above the 95th percentile of every daylight frame
-     measured. AgX is extremely compressive at the top (L160 -> l 0.62, L192 -> l 2.78), which
-     is what made a scene-linear number this large look reasonable. Measured over whole frames,
+     (Grey axis, whole composite minus AO/rim/ink/vignette. This row REPLACES an earlier one
+     that read 29/60/78/112/139/153/165/175/188 — that calibration was never validated against
+     a rendered pixel, and when one finally existed it missed by 27-33 L at the top: Sly's
+     sclera at scene 2.59 renders at p50 218 / max 228.5 with bloom disabled
+     (shots/bloom1/sly-closeup-bloomoff, fixed ROI), where the old row predicts ~191 for
+     scene >= 2. The replacement row is transcribed independently in scratchpad/bloomcalc.mjs
+     and reproduces that frame to within a few L. Two conclusions below survive recalibration
+     UNCHANGED — the old 0.72 crossover now maps even higher (L192, not L165), so "the old
+     pair was a cool filter" only strengthens; and the new band still spans the shadow/lit
+     boundary (0.04 -> L61, 0.24 -> L140 around the measured L~100 seam). Anything else quoting
+     the old row — including the L191 "fully keyed diffuse white" figure that reached a task
+     brief — inherits the error.)
+
+     The old crossover therefore finished at ~L192 — above the 99th percentile of every
+     daylight frame measured. AgX is extremely compressive at the top, which is what made a
+     scene-linear number this large look reasonable. Measured over whole frames,
      fraction taking >=85% of the COOL leg vs >=85% of the warm leg:
 
                     old [0.08,0.72]        new [0.04,0.24]
@@ -190,24 +228,30 @@ const TUNE = {
 
      The new midpoint is not a taste call: it is anchored on the measured shadow/lit boundary.
      `courtyard` reads shadow L69.2 against lit L130.3 (53.1% ratio), so the tonal boundary
-     between them is L~100, and [0.04, 0.24] puts a->L51, midpoint->L101, b->L124 — the ramp
-     spans the shadow-to-lit transition instead of sitting above the whole image.
+     between them is L~100, and [0.04, 0.24] puts a->L61, midpoint->L114, b->L140 (calibrated
+     row above; the pre-recalibration figures were 51/101/124) — the ramp still spans the
+     shadow-to-lit transition instead of sitting above the whole image.
 
      STATUS, stated precisely because an earlier version of this comment overstated it and the
      overstatement reached a commit message: the numbers above are ARITHMETIC, computed by
      transcribing this file's grade chain and evaluating it against captured frames. They are
      not a frame A/B of this change. The A/B is one poke — `splitRange` is pushed to the
-     uniform every frame — and is captured as the `splitold` variant in the six-shot run.
-     Until that lands, treat this as a well-founded prediction, not a verified result.
+     uniform every frame — and it landed as the `splitold` variant in the six-shot rim1 run
+     (temple / interior / courtyard, one boot): the leg-balance table in
+     shots/rim1/ANALYSIS.txt measures the frames agreeing with the prediction's direction on
+     all three (e.g. temple warm leg 5.2% under [0.08,0.72] vs 24.1% under [0.04,0.24]).
 
-     One figure in circulation IS wrong and it came from my own earlier report: scene-linear
-     0.72 maps to display **L165**, not L192. That is a property of the grade chain (contrast
-     1.08 + AgX + sRGB), so it does not depend on which frames were measured — L192 was simply
-     miscomputed, and it is repeated in commit ee28427's message. The conclusion is unaffected:
-     L165 is still above the 95th percentile of every daylight frame, which is the claim doing
-     the work. Separately, the cool-leg fractions quoted there (88.7 / 99.9) versus the table
-     above (86.4 `hero` / 99.3 `interior`) are not a correction — they are the same statistic
-     on different captures, and both say the same thing.
+     A correction to a correction, kept because the full history is the lesson. An earlier
+     version of this comment computed 0.72 -> L192; a later pass "corrected" that to L165 and
+     wrote that L192 "was simply miscomputed, and it is repeated in commit ee28427's message".
+     The frame measurement above settles it the other way: the ORIGINAL L192 was right, the
+     correction was the miscomputation, and it then seeded the L191 sclera premise two tasks
+     downstream. Neither figure had been checked against a rendered pixel when it was written;
+     both were asserted with equal confidence. The conclusion both were serving is unaffected
+     (0.72 is far above frame content either way). Separately, the cool-leg fractions quoted
+     in ee28427 (88.7 / 99.9) versus the table above (86.4 `hero` / 99.3 `interior`) are not a
+     correction — they are the same statistic on different captures, and both say the same
+     thing.
 
      One caveat on that arithmetic, since it is the basis for the change: the display->scene-
      linear step inverts AgX on the neutral axis, which is exact for greys and approximate for
