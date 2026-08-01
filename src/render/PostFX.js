@@ -128,7 +128,29 @@ const TUNE = {
   // which is what AgX then desaturated into pale lavender.
   exposure: 0.95,
   contrast: 1.08,
-  saturation: 1.30,                // AgX desaturates hard; the sandstone has to be pushed back
+  /* AgX desaturates hard; the sandstone has to be pushed back. **But this is applied BEFORE
+     the tonemap** (line ~541, `c = mix(vec3(l), c, uSaturation)`, with `slyAgX` at ~554), so it
+     buys chroma in the shadows and cannot buy any in the highlights — pushing a channel further
+     up the curve before the curve compresses it makes the top-end collapse slightly worse, not
+     better. Measured on the shipped frames, mean HSV saturation by luma band:
+
+       night      L<40 0.669   40-80 0.655   80-120 0.350   120-160 0.234   >160 0.083
+       courtyard  L<40 0.385   40-80 0.370   80-120 0.436   120-160 0.383   >160 0.144
+
+     `night` loses half its chroma above L=80 and is effectively white above 160, which is the
+     "the deck reads daylit" report: it is not the lighting, it is that the brighter side of the
+     seam has no colour left to say what lit it. The same cliff is in `courtyard` but it starts
+     two bands later and lands on 24.5% of the frame rather than 0.3%, so it reads as sun.
+
+     What this measurement does NOT establish: whether AgX desaturated those pixels or they
+     arrived desaturated. Separating the two needs a capture with the grade bypassed, which has
+     not been taken — so the lever (post-AgX chroma restore vs. moving `uSaturation` to display
+     space) is a proposal, not a conclusion. Do not tune it from this comment alone.
+
+     Related, same file, and it explains the `courtyard` plinth residual: the silhouette rim is
+     added AFTER `slyLinearToSrgb`, in display space. On a surface that is already bright there
+     is no headroom left, so the rim clips toward white instead of reading as `#7fd4ff`. */
+  saturation: 1.30,
   lift: [0.006, 0.004, 0.010],     // open the toe just enough to keep shadow detail (§7.3)
   // Warm the highlights — but the blue leg was pulled to 0.95, which is a 5% cut on every
   // blue in the frame including the sky. The warm/cool split is meant to come from the

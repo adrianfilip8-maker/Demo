@@ -540,6 +540,17 @@ export function setMode(ctx, mode, glyph) {
 /**
  * Draw one sign, fitted into a box and centred, preserving its own aspect.
  * `mode === 'line'` draws only the incised interior detail.
+ *
+ * **The census hook is deliberate and is kept.** Setting `globalThis.__GLYPHLOG` to an array
+ * before building a recipe records every sign actually placed — name, position and drawn size in
+ * tile pixels, and paint colour. Nothing sets it at runtime, so this is inert in the game.
+ *
+ * It is here because it is the only instrument that has ever found this class of defect. Twenty-
+ * eight global scalars failed to separate `hieroglyph_wall` from a known-bad control (§13), and
+ * the same twenty-eight would have reported a dense varied inscription while 72 % of the signs on
+ * `column_papyrus` were literally the same falcon — because a statistic over the finished tile
+ * cannot see what the tile is made of. A per-instance list can, and it took about a minute to
+ * read once it existed. Where a texture is assembled from parts, keep a way to count the parts.
  */
 export function drawGlyph(ctx, name, x, y, bw, bh, mode) {
   const g = typeof name === 'string' ? GLYPHS[name] : name;
@@ -547,6 +558,17 @@ export function drawGlyph(ctx, name, x, y, bw, bh, mode) {
   if (mode === 'line' && !g.d) return;
   const k = Math.min(bw / g.w, bh / g.h);
   const ox = x + (bw - g.w * k) * 0.5, oy = y + (bh - g.h * k) * 0.5;
+  if (globalThis.__GLYPHLOG) {
+    /* Transform-aware: `column_papyrus` draws its registers inside `scale(1, BAND_ASPECT)`, so
+       raw `x`/`y` are not tile coordinates there. */
+    const t = ctx.getTransform ? ctx.getTransform() : { a: 1, d: 1, e: 0, f: 0 };
+    globalThis.__GLYPHLOG.push({
+      name: typeof name === 'string' ? name : '?', mode,
+      x: t.a * ox + t.e, y: t.d * oy + t.f,
+      w: g.w * k * t.a, h: g.h * k * t.d,
+      paint: g.paint ?? null,
+    });
+  }
   ctx.save();
   ctx.translate(ox, oy);
   ctx.scale(k, k);
