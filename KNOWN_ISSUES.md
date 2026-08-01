@@ -207,6 +207,17 @@ Four checkers are kept in `tools/` — `camclear.mjs`, `shadowframe.mjs`, `frame
 `playerplace.mjs`. **None of them boots the renderer**, so they run in about a second where a
 capture costs 2–5 minutes. Run `camclear.mjs` after moving any column or camera.
 
+**A fix recorded here had not actually propagated, and the stale number was still being quoted
+months later.** The behind-camera guard — a point behind the lens still projects to a finite
+NDC pair, so `guard` reported a plausible **483 px** for a character who is behind it by design
+— landed in `charview.mjs` and never reached `shotsil.mjs` or `shotsil_vn.mjs`, which went on
+printing the exact figure this section claims was fixed. Both now return null. `charview.mjs`
+carried a second bug of the same family: `ROWS = 540` hardcoded, a resolution nothing in this
+project ever captures at, so every "he is N px tall" figure it produced was in units nobody
+uses — including ones used to justify moving a camera. It now takes `--rows`, defaulting to the
+harness's 900; the critic captures at 720, and a figure is 1.67× taller at 900 than at 540.
+**When a bug has a shape, grep for the shape.** Two tools, same defect, one fix.
+
 ---
 
 ## 8. Open handoffs between modules
@@ -239,6 +250,40 @@ Recorded so they are not re-derived:
   If LIGHTING wants it back, the lever is `ashlar`'s `tone`, not the grime.
 - **The cel ramp needs geometry, not shader work.** The 3-band quantiser is correct; the scene
   is boxes and faceted cylinders, so there is almost no smooth normal gradient for it to band.
+- **The shadow residual is now green, not blue** — and this is the second time the same trap
+  has been walked into from the opposite side. After the `shadowTintPeak` fix, shadow `B/max`
+  went 1.050 → **0.855** (below 1.0 for the first time, blue inversion gone) while `R/G` went
+  1.276 → **1.468** against §2.2's 0.667. Green is now the darkest channel and that is what
+  reads as magenta. §3 below warns "R/G cannot see blue — measure B/max too"; **the inverse now
+  applies, and measuring only B/max would call this solved.** Report R/G, B/max and per-channel
+  means together or you will trade one cast for another. The live hue lever is
+  `shadowBounceMix`; the clamp binds magnitude only.
+- **Gold has no specular path in the shader at all.** `Materials.js`'s `goldSpec` reaches no
+  specular term — `ToonMaterial` declares its own palette and never consults it, so the
+  authored anisotropic gold has never reached a pixel. The albedo is *not* the problem and was
+  eliminated before the GPU: `hieroglyph_gilded` B/max 0.243, `gold_leaf` 0.259, against §2.2's
+  0.284. Through exact material masks in frame the same materials read 1.079/1.165 (`interior`)
+  and 1.385 (`hero`) — darker and bluer than the granite beside them in every environment.
+  Nothing in `src/textures/**` fixes it; it is SHADING's. Size it *after* the split-tone cast
+  is fixed, since a 38% B/R swing lands on gold too and part of that 1.385 is the cast.
+- **The one anti-tiling mechanism is mistuned.** The triplanar detail's second octave sits at
+  `uDetailScale * 0.137`; with `sandstone`'s `scale: 0.62` that is an **11.77 m period against
+  `hieroglyph_wall`'s 10.4 m repeat** — near-unison, beating at 88 m instead of decorrelating.
+  ~0.03 puts it near 52 m. Check the beat against *every* consumer scale before taking a value,
+  not just `sandstone`; landing in unison with a different one costs a frame to discover.
+- **Enlarging `HG_WALL_TILE` is not an improvement — do not take it.** It halves texels per
+  glyph, trading §7.3's tiling condition for §7.3's carving-detail condition. Measured and
+  declined, not overlooked.
+- **`dunes` tiling is unverified and its only mitigation is a prediction.** Repeat periods at
+  all ten framings are 1.5–9.8 across frame (offline rasterisation, real cameras, real
+  resolution); `dunes` runs **6.4–9.2 repeats at 15.3% of frame and has been probed by nobody**.
+  §2.3 asserts ≥60% haze coverage makes it moot — that is an assertion. Settle it from
+  `evalAtmosphere` at that tod, not from the section.
+
+**Tool caveat — `angsize.mjs` assumes the default `UV_PER_M`.** The four documented consumer
+exceptions therefore read wrong in it: the pyramids use `UV_PER_M * 0.25`, making
+`limestone_polished`'s `dunes` count ~11–13, not the 44–54 it prints. Apply the correction by
+hand or do not quote the number.
 
 ---
 
@@ -274,6 +319,21 @@ Still open on the character, honestly scored by the agent that did the work:
 - **Fur improved, not proven at close range.** Arms and legs are still fairly smooth tubes.
 - `combat` is still blown to near-white. The pose under it is fixed; the exposure is not the
   character's to fix.
+- **The cane floats ~19 cm and the aim cannot fix it.** Measured off the render, not the probe:
+  lowest gold pixel 42 px above the lowest boot pixel in a 400 px figure. A full 4×3×3 sweep of
+  `CANE.plant` left tip y **invariant at 0.20** while x and z both moved — the shaft precesses
+  about a fixed cone whose apex is the grip, so tip height is set by grip height and shaft
+  length and the aim has no lever on it. A preset called `plant` that does not plant. The two
+  real levers are arm pose and shaft length.
+- **`perch_idle` (the `hero` pose) has zero lateral line of action** — hips 0.000, chest 0.006,
+  head −0.007. Untouched for lack of capture budget on the money shot, not because it is right.
+- **The guards carry the identical eye defect.** `src/ai/GuardModel.js:76` has its own
+  `eyeWhite: 0xf7f3e6` and reproduces the blown sclera and straddling cel terminator that were
+  just fixed on Sly. `src/ai/**` had no owner (see §4); CHARACTER is now cleared to edit that
+  one file, eye only, using the `_buildEye` pattern.
+- **Seven of ten shots see him at ≥70°.** Only `sly-closeup` (33°), `temple` (35°) and `combat`
+  (45°) are inside a three-quarter read, so face and muzzle work pays off in three frames.
+  `hero` at 111 px carries on tail and cane-hook silhouette alone. Plan capture accordingly.
 
 ---
 
