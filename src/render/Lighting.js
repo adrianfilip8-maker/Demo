@@ -90,7 +90,7 @@ const TUNE = {
      LIGHTING exposes TUNE on the instance so that bracket can be driven from the harness. */
   encloseStrength: 0.0,
   encloseProbe: 30,          // metres straight up; nothing in §8.1 is taller than the pylon
-  encloseEvery: 6,           // frames between probes
+  encloseEvery: 6,           // frames between probe fans (5 rays each — see ENCLOSE_FAN)
   encloseLerp: 4.0,          // per-second approach, so walking under a roof is not a switch
   encloseBounce: 0.5,        // the sand bounce dies more slowly than the sky does
 
@@ -220,6 +220,23 @@ const WORLD_UP = new THREE.Vector3(0, 1, 0);
 const WORLD_FWD = new THREE.Vector3(0, 0, 1);
 const RAY_GROUND = Object.freeze({ onlyTags: ['ground'] });
 
+/**
+ * Sky-occlusion fan for `_updateEnclosure`: straight up plus four rays 34° off vertical.
+ * Fixed and pre-normalised — deterministic, and it allocates nothing at probe time.
+ * 34° because it is wide enough to find a clerestory band from the floor of the nave and
+ * narrow enough that standing in an open courtyard beside a pylon still reads as open sky.
+ */
+const ENCLOSE_FAN = (() => {
+  const t = Math.tan(THREE.MathUtils.degToRad(34));
+  return [
+    new THREE.Vector3(0, 1, 0),
+    new THREE.Vector3(t, 1, 0).normalize(),
+    new THREE.Vector3(-t, 1, 0).normalize(),
+    new THREE.Vector3(0, 1, t).normalize(),
+    new THREE.Vector3(0, 1, -t).normalize(),
+  ];
+})();
+
 /** Organic 1-D value noise. Flicker built from a sine reads as a metronome, not a flame. */
 function nz(x) {
   const i = Math.floor(x), f = x - i;
@@ -235,6 +252,39 @@ function nz(x) {
 /** Two octaves — one slow breath, one fast crackle. */
 function flickerNoise(t, seed) {
   return nz(t * 1.0 + seed) * 0.62 + nz(t * 3.7 + seed * 7.13) * 0.38;
+}
+
+/**
+ * Signature of ARCHITECTURE's published opening set — **positions, not just counts.**
+ *
+ * This used to be `roofSlots.length * 131 + clerestory.length`, and that was a real bug with a
+ * silent failure mode. The fallback constants in `_buildShafts()` are four roof slots and eight
+ * clerestory windows; the hall ARCHITECTURE actually builds is *also* four and eight. So the
+ * fallback set and the real set hashed identically, the poll in `update()` never fired, and the
+ * blades stayed on the placeholder z = −24/−32/−40/−48 forever — while the real slots land on
+ * the nave roof's band grid at z ≈ −25.19/−32.45/−39.71/−46.97, up to 1.2 m away. A 2.6 m slot
+ * displaced 1.2 m is a beam whose top emerges from solid stone.
+ *
+ * It is also latent beyond that case: move an opening without changing how many there are and
+ * the shafts silently keep the old geometry. Folding the centres in costs nothing on a poll
+ * that runs once every 8 frames.
+ */
+function archSignature(api) {
+  let h = 0x9e3779b1;
+  const mix = (v) => { h = Math.imul(h ^ (v | 0), 0x85ebca6b); h ^= h >>> 13; };
+  for (const list of [api?.roofSlots, api?.clerestory]) {
+    mix((list?.length ?? 0) + 0x51ed);
+    if (!list) continue;
+    for (const o of list) {
+      const c = o?.center;
+      if (!c) { mix(0x7fff); continue; }
+      // Centimetre quantisation: finer than any placement difference that matters, coarse
+      // enough that float noise in a rebuilt level cannot make this flap every poll.
+      mix(Math.round(c.x * 100)); mix(Math.round(c.y * 100)); mix(Math.round(c.z * 100));
+      mix(Math.round((o.w ?? 0) * 100) * 1009 + Math.round((o.h ?? 0) * 100));
+    }
+  }
+  return h | 0;
 }
 
 export class Lighting {
@@ -599,9 +649,11 @@ export class Lighting {
 
     this._slabCount = this.shafts.length;
     /* `engine.has()` is true from *registration*, not from init, so ARCHITECTURE exists here
-       with an empty api — the openings only appear once its own init() has run. Track the
-       count and re-derive when it changes, rather than latching on the placeholder set. */
-    this._archSig = (api?.roofSlots?.length ?? 0) * 131 + (api?.clerestory?.length ?? 0);
+       with an empty api — the openings only appear once its own init() has run. Signature the
+       opening *geometry* and re-derive when it changes, rather than latching on the
+       placeholder set (see `archSignature` — counts alone could not tell them apart). */
+    this._archSig = archSignature(api);
+    this._usingFallback = !(api?.roofSlots?.length) && !(api?.clerestory?.length);
     this._shaftSunKey = NaN;        // force the length raycasts to re-run
     this._rebuildCones();
     this._updateShafts();
@@ -829,8 +881,7 @@ export class Lighting {
        moment they exist. Checked on a slow beat: this allocates, and §5 says update() must not. */
     if ((this._shaftPoll = (this._shaftPoll | 0) + 1) % 8 === 0) {
       const api = engine.get('architecture')?.api;
-      const sig = (api?.roofSlots?.length ?? 0) * 131 + (api?.clerestory?.length ?? 0);
-      if (sig !== this._archSig) this._buildShafts();
+      if (archSignature(api) !== this._archSig) this._buildShafts();
       else if (this._localSig !== this.localLights.length) this._rebuildCones();
       // Beam lengths come from a COLLISION raycast; until the BVH is built they are the
       // analytic fall-back, so re-measure once it can actually answer.
@@ -849,25 +900,40 @@ export class Lighting {
   /* ---------------------------------------------------------- enclosure --- */
 
   /**
-   * Is there sky above the camera? One upward ray against COLLISION, on a slow beat and
-   * damped, so walking under an architrave is a dissolve rather than a switch. Nothing is
+   * How much sky is over the camera? A small fan of rays against COLLISION, on a slow beat
+   * and damped, so walking under an architrave is a dissolve rather than a switch. Nothing is
    * applied while `encloseStrength` is 0 — see the TUNE note.
+   *
+   * **Graded, not binary, and the grading is the point.** A single up-ray answers a yes/no
+   * question, and the two roofed shots need different answers: the tomb is sealed stone and
+   * should lose nearly all of its sky fill, while the hypostyle hall is roofed but has eight
+   * clerestory windows, four roof slots and an open south end and genuinely *is* lit by the
+   * sky. One binary term forced one `encloseStrength` to serve both, so any value dark enough
+   * for the tomb turned the hall into a cave. The fan reports the fraction of sky the camera
+   * cannot see, which comes out near 1 in the vault and part-way in the hall by construction,
+   * and one knob then means the same thing in both.
+   *
+   * The offsets are a fixed set, not sampled, so the term is deterministic frame for frame —
+   * the screenshot critic depends on that (§1).
    */
   _updateEnclosure(dt) {
     if (TUNE.encloseStrength <= 0) { this.enclosure = 0; return; }
     const engine = this.engine;
     if ((this._enclosePoll = (this._enclosePoll | 0) + 1) % TUNE.encloseEvery === 0) {
       const col = engine.get('collision');
-      let roofed = 0;
+      let hits = 0, cast = 0;
       if (col?.raycast) {
         engine.camera.getWorldPosition(_camPos);
-        _v3.set(0, 1, 0);
-        try {
-          const hit = col.raycast(_camPos, _v3, TUNE.encloseProbe);
-          if (hit?.hit) roofed = 1;
-        } catch { /* BVH not built yet — treat as open sky */ }
+        for (let i = 0; i < ENCLOSE_FAN.length; i++) {
+          _v3.copy(ENCLOSE_FAN[i]);
+          cast++;
+          try {
+            const hit = col.raycast(_camPos, _v3, TUNE.encloseProbe);
+            if (hit?.hit) hits++;
+          } catch { /* BVH not built yet — treat this ray as open sky */ }
+        }
       }
-      this._encloseTarget = roofed;
+      this._encloseTarget = cast > 0 ? hits / cast : 0;
     }
     const k = Math.min(1, TUNE.encloseLerp * Math.max(dt || 0, 1 / 240));
     this.enclosure += ((this._encloseTarget || 0) - this.enclosure) * k;

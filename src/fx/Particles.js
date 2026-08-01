@@ -755,6 +755,16 @@ const UP = new THREE.Vector3(0, 1, 0);
 
 const lin = (hex, out) => out.setHex(hex, THREE.SRGBColorSpace);
 
+/** Squared distance from `p` to the nearest point on a shaft's spine segment. Allocation-free. */
+function spineDistSq(s, p) {
+  const ox = p.x - s.origin.x, oy = p.y - s.origin.y, oz = p.z - s.origin.z;
+  const len = s.length > 0 ? s.length : 0;
+  let t = ox * s.dir.x + oy * s.dir.y + oz * s.dir.z;
+  t = t < 0 ? 0 : (t > len ? len : t);
+  const rx = ox - s.dir.x * t, ry = oy - s.dir.y * t, rz = oz - s.dir.z * t;
+  return rx * rx + ry * ry + rz * rz;
+}
+
 /* =========================================================================================
    Batch — one draw call, one pooled ring buffer of instances.
    ========================================================================================= */
@@ -1942,14 +1952,27 @@ export class Particles {
     const shafts = lighting?.shafts;
     const list = this._activeShafts(shafts);
 
-    /* --- the dust-boost uniforms: the six nearest live *slab* blades ------------------- */
+    /* --- the dust-boost uniforms: the six nearest live volumes ------------------------- */
+    /* Two corrections here, and the second is the one that matters.
+     *
+     * Ranked by distance to the nearest point on the blade's *spine*, not to its origin. An
+     * origin is the hole in the roof; the beam that comes out of it can pass a metre from the
+     * camera while its origin is fifteen metres up. Ranking on the origin sorted the hall's
+     * blades in almost the opposite order to how near they actually are.
+     *
+     * And cones are eligible. They were skipped, which quietly cost `interior` — the shot
+     * §7.2 names for volumetrics — every bit of its dust boost. No sun blade projects into
+     * that camera at all (checked by projecting the whole published opening set through it),
+     * so its only light volumes are the six tomb torches; with cones excluded, the six slots
+     * were filled by hall blades fifty metres away through solid rock and the motes in the
+     * vault were lit by nothing. `shaftBoost` is what makes a mote read as illuminated dust
+     * rather than as grey dirt in front of the lens, which is exactly §7.3's particulate line. */
     this.engine.camera.getWorldPosition(_cam);
     const pick = this._shaftPick || (this._shaftPick = []);
     pick.length = 0;
     for (let i = 0; i < list.length; i++) {
       const s = list[i];
-      if (s.kind === 'cone') continue;
-      const d = s.origin.distanceToSquared(_cam);
+      const d = spineDistSq(s, _cam);
       let j = pick.length;
       if (j >= MAX_SHAFTS && d >= pick[MAX_SHAFTS - 1]._d) continue;
       s._d = d;

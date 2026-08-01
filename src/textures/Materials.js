@@ -163,10 +163,30 @@ const JOINT = 0.24;
  * `GOLD_HOT` — the crest colour, which lives in the albedo — leans toward `PAL.sun`, past
  * `goldLight`, *away* from `goldSpec`.
  *
- * `PAL.goldSpec` keeps its §2.2 job and only that job: it is the shader's `uSpecColor`, applied
- * at a hard threshold over a few per cent of a surface, where nothing mips it into the base and
- * its neutrality reads as the white-hot core of a specular hit. Adding it to an albedo is what
- * was wrong; the palette entry is not.
+ * **Correct the record on where `PAL.goldSpec` goes.** The note that used to sit here said it
+ * "is the shader's `uSpecColor`", and that is false — it was never checked and it changes the
+ * answer. `ToonMaterial.js` does **not** import this palette; it declares its own private copy
+ * (`ToonMaterial.js:188`, `specColor: hex(opts.specColor, PAL.goldSpec)` against *that* copy), as
+ * does `src/fx/Emitters.js`. So this file's `goldSpec` reaches the specular term of exactly
+ * nothing. Every live consumer of it in this catalogue puts it in an **albedo or an emissive**:
+ * `sand()`'s grain glints, `lapis_inlay`'s flecks, `limestone_polished`'s speckle, and the spark
+ * and ember gradients.
+ *
+ * Which means the desaturating-film argument applies to *all* of them, not just to sand, and
+ * there is no counter-argument left about protecting a specular core — this file has no specular
+ * core to protect. The two remaining albedo uses are already blended (`MX(goldSpec, sandLight,
+ * 0.4)`, `MX(sun, goldSpec, 0.35)`) rather than used neat, which is the shape the sand fix
+ * arrived at, so they are correct as written. The palette entry stays because §2.2 names it and
+ * because `PREWARM`-time emissive gradients want a white-hot stop; what is wrong is the claim
+ * that it is doing shader work.
+ *
+ * So: gold does **not** want the substitution sand got, and it does not want a hex of its own
+ * either. The reason is that the shader already computes gold's highlight colour from the
+ * albedo — `specTint = mix( uSpecColor, alb * 2.0 + uSpecColor * 0.25, slyMetal )` — so on a
+ * surface this file marks metal the highlight is 1.7x the albedo plus a 0.36 white core, i.e.
+ * sun-times-gold, arrived at without any palette entry. The lever that makes gold read is the
+ * **metalness mask** (`s.metal`) and the value range under it, both of which live here. That is
+ * what the rework below is about.
  */
 /** Deep shadowed gold — a recess in gilding, still gold-brown, never neutral and never black. */
 const GOLD_DEEP = MX(PAL.goldDark, PAL.sandCrev, 0.58);
@@ -1347,12 +1367,32 @@ export const MATERIALS = {
         if (g <= 0.01) continue;
         const worn = sat((lift[i] - 0.66) * 3.0) * g;
         /* `4r(1-r)` peaks across the bevel of the cut and falls to zero on both the floor and
-         * the surrounding face — the same profile `freshCutTint` uses for freshly exposed stone,
-         * and for the same reason: it is the surface a chisel leaves and the only part of a sunk
-         * glyph a burnisher can reach. Driving the *value* with it means the recess reads dark,
-         * the arris reads hot, and the two are two millimetres apart. */
+         * the surrounding face — the surface a chisel leaves and the only part of a sunk glyph a
+         * burnisher can reach. It is the right shape for the *hot* end of the ramp.
+         *
+         * **It was the whole ramp, and that is why gilding did not read as gold.** `carve` sets
+         * `ramp = smoothstep(0.10, 0.92, blur(cut, rb))` with `rb = max(2, round(bevelPx·size/1024))`,
+         * which at this recipe's `bevelPx 2.6` and the shipping 512 build is **2 texels**. One
+         * texel here is 12.5 mm of world (6.4 m repeat / 512), so the entire bevel is **25 mm** —
+         * 0.75 px on `temple`'s far wall at 25 m and about 2 px at `interior` and `hero`. `4r(1-r)`
+         * is zero everywhere except in that 25 mm, so the gild mask — which is the *floor* of the
+         * cut, `g = sat(ramp·1.35 − 0.10)`, and is many pixels across — was sitting at `t ≈ 0.16`,
+         * i.e. flat `GOLD_DEEP`, over essentially all of its area.
+         *
+         * Measured on the metal-masked subset before this change: luma p50 **0.290** against
+         * `gold_leaf`'s 0.509, p95 0.634 against 0.775. A surface whose median is `GOLD_DEEP` with
+         * a sub-pixel hot line on it minifies to dull ochre, which is what the catalogue's own
+         * tile render shows and what §7.3 means by "gold doesn't read as metal". This is the same
+         * defect class as `MOTES.size` and `sand_ripples`: the material's whole value range placed
+         * across a feature that subtends less than a pixel at the framings it appears in.
+         *
+         * So the *body* of the cut now sits mid-ramp — leaf covers the whole sunk field, because
+         * that is what gilding a sunk relief means — and the bevel keeps its job of carrying the
+         * top of the range. The dark is not lost: it comes from `swathe`/`wrinkle` (which are
+         * metre-scale, so they survive minification), from the albedo dirt on `s.occ` below, and
+         * from the baked AO. Dark occlusion, not a dark base colour, is what §7.3 asks for. */
         const bevel = 4 * ramp[i] * (1 - ramp[i]);
-        const t = sat(0.16 + bevel * 0.74 + (swathe[i] - 0.5) * 0.42 + (wrinkle[i] - 0.5) * 0.26);
+        const t = sat(0.46 + bevel * 0.50 + (swathe[i] - 0.5) * 0.42 + (wrinkle[i] - 0.5) * 0.26);
         goldRamp(t, t3);
         s.r[i] += (t3[0] - s.r[i]) * g; s.g[i] += (t3[1] - s.g[i]) * g; s.b[i] += (t3[2] - s.b[i]) * g;
         s.mixHex(i, PAL.red, worn * 0.75);                    // bole showing through
@@ -1456,7 +1496,12 @@ export const MATERIALS = {
         const gi = sat(ramp[i] * 1.2 - 0.15);
         if (gi > 0.02) {
           const bev = 4 * ramp[i] * (1 - ramp[i]);
-          const tg = sat(0.14 + bev * 0.70 + (rope[i] - 0.5) * 0.30);
+          /* Same correction, same arithmetic, as `hieroglyph_gilded` — the identical expression
+           * was live in both places. `bevelPx 2.4` at the shipping 512 build is `rb = 2` texels,
+           * and one texel of a 3.2 m repeat is 6.25 mm, so `4r(1−r)` was non-zero over 12.5 mm:
+           * 0.83 px at `interior`'s 12 m. The base moves up so the leaf in the sunk glyph is
+           * gold over its whole area and the bevel keeps the top of the range. */
+          const tg = sat(0.42 + bev * 0.50 + (rope[i] - 0.5) * 0.30);
           const cg = goldRamp(tg);
           s.r[i] += (cg[0] - s.r[i]) * gi; s.g[i] += (cg[1] - s.g[i]) * gi; s.b[i] += (cg[2] - s.b[i]) * gi;
           s.metal[i] = Math.max(s.metal[i], gi * 0.9);

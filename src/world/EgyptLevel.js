@@ -126,6 +126,18 @@ function sandFloor(A, x, z, halfW, halfD = halfW, n = 3) {
   return Number.isFinite(lo) ? lo : 0;
 }
 
+/** Highest sand height over a footprint — the companion to sandFloor, for decks that must
+ *  clear a slope rather than bed into it. */
+function sandCeil(A, x, z, halfW, halfD = halfW, n = 3) {
+  let hi = -Infinity;
+  for (let i = 0; i <= n; i++) {
+    for (let j = 0; j <= n; j++) {
+      hi = Math.max(hi, sand(A, x + (i / n * 2 - 1) * halfW, z + (j / n * 2 - 1) * halfD));
+    }
+  }
+  return Number.isFinite(hi) ? hi : 0;
+}
+
 function groundProxy(A, x0, x1, y, z0, z1, opts = {}) {
   const t = opts.thick ?? 1.0;
   A.proxy(new THREE.BoxGeometry(x1 - x0, t, z1 - z0),
@@ -441,21 +453,70 @@ function courtyard(A) {
     K.normaliseAttrs(roll);
     A.add('court', 'sandstone_worn', K.boxProjectUVs(K.place(roll, { x: sx * (pe.x + 0.82), y: pe.ledge - 1.15, z: (pe.z0 + pe.z1) / 2, rx: Math.PI / 2 })));
 
-    /* Temenos wall behind the colonnade: mudbrick, buried, wall-runnable, top a ledge. */
-    A.add('court', 'mudbrick', K.place(K.masonryShell({
-      w: 1.5, d: pe.z1 - pe.z0 + 3.0, h: 5.6, batter: 0.075, course: 0.5, thick: 0.7, rng: R,
-      /* Longest single run of masonry in the level and it sits behind the colonnade at 25 m+.
-         Halving the brick count here costs nothing that any canonical camera can resolve. */
-      blockLen: [1.35, 2.15], recess: 0.05, chipChance: 0.26, gapChance: 0.06, buried: 0.6, hollow: true,
-      /* Mudbrick, unmaintained, and the longest run in the level: it gets the deepest settle
-         of anything here. No chamfer — it is never inside 25 m of a camera. */
-      /* Thin wall: `bow` only eats its 1.5 m thickness, which `wc`'s 1.2 m floor clamps away
-         anyway, so this one is all `drift` — the whole run wanders off true, which on 50 m of
-         unmaintained mudbrick is the read. */
-      sag: 0.34, windFace: sx > 0 ? 2 : 3, windK: 2.6, drift: 0.17,
-    }), { x: sx * (pe.x + 2.3), y: 0, z: (pe.z0 + pe.z1) / 2 - 0.5 }));
-    wallProxy(A, sx * (pe.x + 2.3) - 0.8, sx * (pe.x + 2.3) + 0.8, 0, 5.6, pe.z0 - 1.5, pe.z1 + 1.5);
-    ledgeProxy(A, sx * (pe.x + 2.3) - 0.7, sx * (pe.x + 2.3) + 0.7, 5.6, pe.z0 - 1.5, pe.z1 + 1.5);
+    /* ---- Temenos wall behind the colonnade: mudbrick, buried, wall-runnable ----
+     *
+     * Built as five runs of differing height with a real breach in the middle, instead of
+     * as one 49 m box of constant 5.6 m.
+     *
+     * §7.3's "silhouettes are straight/symmetric everywhere" is not answered in centimetres.
+     * `sag` and `drift` move this wall's line by ~20 cm over its whole length; at the 25–45 m
+     * it is seen from that is well under a pixel, which is why the condition survived the last
+     * two rounds of curve work. A run that steps 5.6 → 3.9 m, stops dead for three metres, and
+     * comes back at 2.9 m moves the skyline by *metres* — the same class of move as the
+     * collapsed pylon corner, which is the one that did land.
+     *
+     * This is also the wall that matters most: measured by projected frame area over the ten
+     * canonical cameras, it is 88.8% of the `guard` frame — the worst-scoring shot in the set,
+     * where it and the colonnade in front of it are essentially the entire image.
+     *
+     * That measurement also retires the assumption this wall was built on. The old comment
+     * here read "no chamfer — it is never inside 25 m of a camera"; the `guard` camera stands
+     * 14 m from it. It gets the same 3 cm chamfer as everything else a camera can approach,
+     * which is what turns mudbrick from a box into a mass at that distance.
+     */
+    const tx = sx * (pe.x + 2.3);
+    const zA = pe.z0 - 1.5, zB = pe.z1 + 1.5;
+    /* [length, height] — heights in metres, 0 = the collapsed breach. Lengths sum to the
+       full run so the two ends still land exactly on the colonnade's. */
+    const plan = [
+      [13.5 + R.jitter(1.1), 5.6],
+      [11.0 + R.jitter(1.0), 5.6 - R.range(1.4, 2.0)],
+      [3.2 + R.jitter(0.5), 0],
+      [12.0 + R.jitter(1.0), 5.6 - R.range(0.1, 0.5)],
+      [9.3, 5.6 - R.range(2.4, 3.0)],
+    ];
+    const span = plan.reduce((s, p) => s + p[0], 0);
+    let zc = zA;
+    for (const [rawLen, hh] of plan) {
+      const len = rawLen * (zB - zA) / span;      // renormalise so the ends stay put
+      const z0 = zc, z1 = zc + len;
+      zc = z1;
+      if (hh <= 0) {
+        /* The breach: a low mound of collapsed brick, so the gap reads as a failure rather
+           than as a gateway someone left. Same material key, so it merges for free. */
+        for (let i = 0; i < 5; i++) {
+          const s = R.range(0.5, 0.95);
+          const g = K.chamferBox(s * 1.4, s * 0.5, s * 1.0, { rng: R, jitter: 0.03, c: 0.04 });
+          K.place(g, {
+            x: tx + R.range(-1.5, 1.5), y: s * 0.25 - R.range(0.02, 0.16), z: z0 + R.range(0.3, len - 0.3),
+            rx: D(R.jitter(12)), ry: D(R.range(0, 360)), rz: D(R.jitter(14)),
+          });
+          A.add('court', 'mudbrick', K.boxProjectUVs(g));
+        }
+        continue;
+      }
+      A.add('court', 'mudbrick', K.place(K.masonryShell({
+        w: 1.5, d: len, h: hh, batter: 0.075, course: 0.5, thick: 0.7, rng: R,
+        blockLen: [1.35, 2.15], recess: 0.05, chipChance: 0.26, gapChance: 0.06, buried: 0.6,
+        hollow: true, chamfer: 0.03,
+        /* Thin wall: `bow` only eats its 1.5 m thickness, which `wc`'s 1.2 m floor clamps
+           away anyway, so this one is all `drift` — each run wanders off true on its own
+           phase, so the five of them do not line up into one straight wall again. */
+        sag: 0.34, windFace: sx > 0 ? 2 : 3, windK: 2.6, drift: 0.17,
+      }), { x: tx, y: 0, z: (z0 + z1) / 2 }));
+      wallProxy(A, tx - 0.8, tx + 0.8, 0, hh, z0, z1);
+      ledgeProxy(A, tx - 0.7, tx + 0.7, hh, z0, z1);
+    }
   }
   /* Short south returns — enclosure without blocking the entry axis. */
   for (const sx of [-1, 1]) {
@@ -560,8 +621,14 @@ function entryPylons(A) {
       for (let i = 0; i < 7; i++) {
         const s = R.range(0.75, 1.5);
         const g = K.chamferBox(s * 1.5, s * 0.62, s * 1.1, { rng: R, jitter: 0.03, chip: R.chance(0.5) ? 0.16 : 0, c: 0.05 });
+        /* The spill runs z 37.4 … 41.6, straddling the edge of TERRAIN's paving pad
+           (padZ1 37.5): measured, the sand under it climbs from -0.06 to +0.70 over those
+           four metres. Authored flat, the far half of the pile was up to 70 cm underground.
+           Bed every block on the sand at its own position instead of on the y = 0 that only
+           holds inside the stylobate. */
+        const bx = fx + R.range(-2.2, 3.4), bz = fz + R.range(0.4, 4.6);
         K.place(g, {
-          x: fx + R.range(-2.2, 3.4), y: s * 0.31 - R.range(0.05, 0.3), z: fz + R.range(0.4, 4.6),
+          x: bx, y: sand(A, bx, bz) + s * 0.31 - R.range(0.05, 0.3), z: bz,
           rx: D(R.jitter(14)), ry: D(R.range(0, 360)), rz: D(R.jitter(16)),
         });
         A.add('court', 'hieroglyph_wall', K.boxProjectUVs(g));
@@ -632,16 +699,27 @@ function courtyardTraversal(A) {
   }
   A.instance('gold_leaf', ringGeo, mats, 'hooks:rings');
 
-  /* ---- The approach rail: §8.1's "first rail slide down into the complex". ---- */
+  /* ---- The approach rail: §8.1's "first rail slide down into the complex". ----
+     The anchor stands at z 61 — 23.5 m beyond TERRAIN's paving pad (padZ1 37.5) and well
+     past its 16 m fade, out on the open dune ridge. Measured against `Terrain.heightAt`
+     the sand across this 3.4 m footprint runs y 9.97 … 12.41, so the 9 m tower that used
+     to be authored from y = 0 was buried whole: its deck sat 1–3.4 m UNDER the surface and
+     the mast appeared to sprout from bare sand with nothing holding it up. It is 30 m from
+     the `dunes` camera and lands at pixel (452, 570) — dead centre of that frame.
+     Bed the plinth on the measured ridge and let the mast make up the difference, so the
+     §8.1 rail head stays at its contract height of ~15.4. */
+  const ancLo = sandFloor(A, 10, 61, 1.7), ancHi = sandCeil(A, 10, 61, 1.7);
+  const ancBase = ancLo - 1.5, ancDeck = ancHi + 0.35;
   A.add('court', 'sandstone_block', K.place(K.masonryShell({
-    w: 3.4, d: 3.4, h: 9.0, batter: 0.08, course: 0.6, thick: 0.9, rng: R, hollow: false,
+    w: 3.4, d: 3.4, h: ancDeck - ancBase, batter: 0.08, course: 0.6, thick: 0.9, rng: R, hollow: false,
     blockLen: [1.1, 1.8], recess: 0.06, chipChance: 0.22, gapChance: 0.03, buried: 1.2,
-  }), { x: 10, y: 0, z: 61 }));
-  wallProxy(A, 8.3, 11.7, 0, 9, 59.3, 62.7);
-  ledgeProxy(A, 8.3, 11.7, 9.0, 59.3, 62.7);
-  const mast = new THREE.CylinderGeometry(0.24, 0.4, 6.6, 12, 1);
+  }), { x: 10, y: ancBase, z: 61 }));
+  wallProxy(A, 8.3, 11.7, ancBase, ancDeck, 59.3, 62.7);
+  ledgeProxy(A, 8.3, 11.7, ancDeck, 59.3, 62.7);
+  const mastH = Math.max(1.2, 15.62 - ancDeck);
+  const mast = new THREE.CylinderGeometry(0.24, 0.4, mastH, 12, 1);
   K.normaliseAttrs(mast);
-  A.add('court', 'bronze_dark', K.boxProjectUVs(K.place(mast, { x: 10, y: 12.3, z: 61 })));
+  A.add('court', 'bronze_dark', K.boxProjectUVs(K.place(mast, { x: 10, y: ancDeck + mastH * 0.5, z: 61 })));
   rail(A, 'approach', [
     [10.0, 15.3, 61.0], [8.6, 12.0, 51.0], [7.0, 7.6, 42.0],
     [5.2, 3.9, 34.5], [3.4, 1.7, 28.0], [2.2, 1.15, 23.0],
