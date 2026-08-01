@@ -135,6 +135,33 @@ const TUNE = {
   fireRate: 7,              // composite ticks/sec — see `_handle`
   fireCull: 44,             // metres; a place-anchored emitter further out stops entirely
   firePreroll: [12, 2.4, 34],  // ticks, seconds of history, cull radius — see `_prerollFires`
+
+  /* ── the flame body ──────────────────────────────────────────────────────────
+     A persistent billboard per live fire, drawn analytically — *not* a particle.
+
+     Why it is not particles: `fire_core` lives 0.28–0.42 s and the canonical shots are
+     stills grabbed 17 frames after staging, so what reaches a screenshot is whatever
+     `_prerollFires` happens to have back-dated inside that window — two core sprites, both
+     part-faded. That is why three critic passes running have reported `interior` as "a
+     torch-lit tomb with no torch" while sixteen wall torches were emitting every frame. A
+     billboard that is simply *there* is a still-frame guarantee; the particles stay, on top
+     of it, for the motion.
+
+     It is also the one warm source in the build that is independent of the shadow clamp
+     (KNOWN_ISSUES §3): an emissive quad is not a shaded surface, so nothing SHADING does to
+     the shadow term changes it.
+
+     `flameGain` is deliberately generous — a flame is the brightest thing in any frame it
+     is in, and `>L230 = 0.000%` in five of six critic frames means nothing in this build can
+     bloom. The core is meant to cross POSTFX's 1.55 bloom threshold; that is the point. */
+  flameCap: 32,             // billboards; the level registers ~24 fires
+  flameSize: [0.34, 0.62],  // half-width, height in metres at scale 1 (a wall-torch cup)
+  flameGain: 3.4,           // linear radiance multiplier on the core
+  flameHalo: 0.55,          // the soft heat glow around the tongue, 0 = none
+  flameBody: 0.46,          // tongue half-width as a fraction of the quad's
+  flameSoft: 0.16,          // metres of depth fade — small, so a wall sconce does not vanish
+  flameFade: [34, 52],      // metres from camera: full → gone
+  flameLick: 1.9,           // Hz of the fast crackle; the slow breath is a third of it
   crestPreroll: [34, 2.0],     // bursts, seconds of history — see `_prerollCrests`
 
   /* footstep dead-reckoning when ANIMATION is absent */
@@ -143,8 +170,22 @@ const TUNE = {
 
 const MAX_SHAFTS = 6;
 
-/** Emitter names that mean "a fire", i.e. a composite rather than a single curve. */
-const FIRE_NAMES = new Set(['torch', 'brazier', 'embers', 'fire']);
+/**
+ * Emitter names that mean "a fire", i.e. a composite rather than a single curve.
+ *
+ * `torch_smoke` is in this set and that is the whole of why `interior` has been "a torch-lit
+ * tomb with no torch" for three critic passes. `Props.js:340` registers every wall torch in
+ * the game — six in the tomb, ten down the hypostyle hall — under that name, and it resolved
+ * as the plain smoke curve it is also the name of. So sixteen sconces have been emitting a
+ * **smoke plume and nothing else**: no core, no body, no embers, no fire. The brazier path
+ * was fine because PROPS asks for `embers` there, which was added to this set earlier for
+ * exactly the same class of mistake.
+ *
+ * Safe against recursion: `_fireTick` re-enters through `_emit`, which reads `EMITTERS`
+ * directly and never consults this set, so `torch_smoke` still spawns its own smoke curve as
+ * the fourth component of the composite.
+ */
+const FIRE_NAMES = new Set(['torch', 'brazier', 'embers', 'fire', 'torch_smoke']);
 
 /* ── shared GLSL ───────────────────────────────────────────────────────────────────────── */
 
@@ -439,6 +480,163 @@ void main() {
 
   vec3 col = mix( uGlow, uCore, clamp( shape * 0.7 + core * 1.6, 0.0, 1.0 ) );
   gl_FragColor = vec4( col * ( 0.9 + 0.9 * vGain ), a );
+  #include <colorspace_fragment>
+}
+`;
+
+/* ── the flame billboard ───────────────────────────────────────────────────────────────────
+   §7.2 names `interior` for "torch-lit tomb, warm/cool tension, volumetrics" and three critic
+   passes have measured it at 1.9% warm with `heroWarm` exactly 0.00% — not one pixel in
+   921 600 simultaneously warm, bright and saturated. There is a torch cone volumetric in that
+   frame (the "sourceless warm wash on the right wall" the last pass reported *is* the cone),
+   a sconce, a soot stain and a smoke plume. What has never been in it is fire.
+
+   Drawn analytically rather than sampled, for the same reason the sparkle is: a flame has to
+   hold its silhouette at 20 px in `interior` and at 200 px when the player stands next to a
+   brazier, and one atlas tile cannot do both. The tongue is a turbulent teardrop — width
+   profile times two octaves of scrolling value noise, with the centreline swaying more toward
+   the tip, so it licks instead of pulsing.
+
+   No ink outline: same override-material opt-out as the shafts and the batches. An emissive
+   body with a line round it reads as a sticker (`src/world/Props.js:41`). */
+
+const FLAME_VERT = /* glsl */`
+precision highp float;
+attribute vec3 aPos;
+attribute vec4 aData;    // seed, scale, intensity, spare
+attribute vec3 aTint;
+
+uniform float uTime;
+uniform vec2  uSize;     // half-width, height at scale 1
+uniform vec2  uFade;     // metres from camera: full → gone
+uniform float uLick;
+
+varying vec2  vQ;        // x −1..1 across, y 0..1 base→tip
+varying float vGain;
+varying float vSeed;
+varying float vViewZ;
+varying vec3  vTint;
+
+float h11( float n ) {
+  return fract( sin( n * 127.1 ) * 43758.5453123 );
+}
+float vn1( float x ) {
+  float i = floor( x ), f = fract( x );
+  f = f * f * ( 3.0 - 2.0 * f );
+  return mix( h11( i ), h11( i + 1.0 ), f );
+}
+
+void main() {
+  float seed = aData.x;
+  float scale = aData.y;
+
+  /* Two octaves, not a sine: a flame that pulses on one frequency reads as a lamp with a
+     fault. The slow one is the draught, the fast one is the crackle. */
+  float t = uTime * uLick;
+  float breath = vn1( t * 0.33 + seed * 11.0 );
+  float crackle = vn1( t + seed * 37.0 );
+  float flick = 0.72 + 0.34 * crackle + 0.22 * breath;
+
+  vec2 corner = ( uv - 0.5 ) * 2.0;
+  float v = corner.y * 0.5 + 0.5;
+
+  float hw = uSize.x * scale * ( 0.90 + 0.16 * flick );
+  float ht = uSize.y * scale * ( 0.82 + 0.30 * flick );
+
+  vec4 mv = modelViewMatrix * vec4( aPos, 1.0 );
+  /* Screen-aligned, and deliberately *not* view-aligned about Y only: a wall sconce is seen
+     from below as often as from level, and a Y-billboard shears into a lozenge from there. */
+  mv.xy += vec2( corner.x * hw, v * ht );
+
+  vViewZ = -mv.z;
+  vQ = vec2( corner.x, v );
+  vSeed = seed;
+  vTint = aTint;
+  vGain = aData.z * flick * ( 1.0 - smoothstep( uFade.x, uFade.y, vViewZ ) );
+
+  gl_Position = projectionMatrix * mv;
+}
+`;
+
+const FLAME_FRAG = /* glsl */`
+precision highp float;
+
+uniform sampler2D uDepth;
+uniform vec2  uInvRes;
+uniform float uSoft;
+uniform float uTime;
+uniform float uGain;
+uniform float uHalo;
+uniform float uBody;
+uniform float uLick;
+uniform vec3  uCore;
+uniform vec3  uTip;
+
+varying vec2  vQ;
+varying float vGain;
+varying float vSeed;
+varying float vViewZ;
+varying vec3  vTint;
+
+float h11( float n ) {
+  return fract( sin( n * 127.1 ) * 43758.5453123 );
+}
+float vn1( float x ) {
+  float i = floor( x ), f = fract( x );
+  f = f * f * ( 3.0 - 2.0 * f );
+  return mix( h11( i ), h11( i + 1.0 ), f );
+}
+
+void main() {
+  float v = vQ.y;
+  float x = vQ.x;
+  float t = uTime * uLick;
+
+  /* Noise travels *up* the tongue — that is the whole difference between fire and a lava
+     lamp. Two speeds so the surface never reads as one texture sliding. */
+  float q = v * 3.1 + vSeed * 23.0;
+  float n1 = vn1( q - t * 2.3 );
+  float n2 = vn1( q * 2.4 - t * 3.9 + 5.0 );
+
+  // The centreline licks more the further from the fuel it gets.
+  float sway = ( n1 - 0.5 ) * 0.80 * v * v;
+
+  /* Teardrop: narrow in the cup, widest a third of the way up, tapering to a point. */
+  float wp = pow( max( 1.0 - v, 0.0 ), 0.62 ) * ( 0.52 + 0.48 * smoothstep( 0.0, 0.30, v ) );
+  wp *= 0.80 + 0.42 * mix( n1, n2, 0.5 );
+  float half_ = max( wp * uBody, 1e-3 );
+
+  float d = abs( x - sway ) / half_;
+  float body = 1.0 - smoothstep( 0.62, 1.0, d );
+  // Hot at the fuel, cooling as it rises. This is what makes it read as fire and not as a leaf.
+  float core = pow( max( 0.0, 1.0 - d ), 2.4 ) * ( 1.0 - smoothstep( 0.02, 0.52, v ) );
+
+  // A soft heat glow, wider than the tongue and centred low: the bit that survives at 20 px.
+  vec2 hq = vec2( x, ( v - 0.26 ) * 1.45 );
+  float halo = pow( max( 0.0, 1.0 - length( hq ) ), 3.0 ) * uHalo;
+
+  float a = ( body * 0.80 + core * 1.35 + halo ) * vGain;
+  if ( a < 0.004 ) discard;
+
+  /* Fails open, like every other depth fade in this file, and the window is deliberately
+     tight: a wall sconce sits ~0.25 m off its own pier, and the 2.0 m window the shafts use
+     would collapse a flame mounted flush to a wall to nothing. A flame is a body in free air
+     above a cup — it never actually intersects anything, so this only has to stop it from
+     poking through the masonry behind it. */
+  float sceneZ = texture2D( uDepth, gl_FragCoord.xy * uInvRes ).r;
+  if ( sceneZ > 0.001 && sceneZ < 9000.0 ) {
+    a *= clamp( ( sceneZ - vViewZ ) / uSoft, 0.0, 1.0 );
+  }
+  if ( a < 0.004 ) discard;
+
+  vec3 col = mix( uTip, vTint, clamp( body * 0.9 + 0.25, 0.0, 1.0 ) );
+  col = mix( col, uCore, clamp( core * 1.7, 0.0, 1.0 ) );
+
+  /* Additive: the frame receives col * uGain * a. Capped so the hot centre lands a little
+     over POSTFX's 1.55 bloom threshold rather than several stops over it — the ask is a tight
+     coloured halo on a bright thing (§7.3), and an uncapped core would blow to a white disc
+     and take the flame's own silhouette with it. */
+  gl_FragColor = vec4( col * uGain, min( a, 1.6 ) );
   #include <colorspace_fragment>
 }
 `;
@@ -1113,6 +1311,114 @@ class SparkleField {
 }
 
 /* =========================================================================================
+   FlameField — one analytic billboard per live fire. See FLAME_VERT for why this exists.
+   ========================================================================================= */
+
+class FlameField {
+  constructor(engine, shared, capacity) {
+    this.engine = engine;
+    this.capacity = capacity;
+    this.count = 0;
+
+    const geo = new THREE.InstancedBufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(
+      new Float32Array([-1, -1, 0, 1, -1, 0, 1, 1, 0, -1, 1, 0]), 3));
+    geo.setAttribute('uv', new THREE.BufferAttribute(
+      new Float32Array([0, 0, 1, 0, 1, 1, 0, 1]), 2));
+    geo.setIndex([0, 1, 2, 0, 2, 3]);
+    geo.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 1e6);
+    geo.instanceCount = 0;
+
+    const mk = (name, size) => {
+      const a = new THREE.InstancedBufferAttribute(new Float32Array(capacity * size), size);
+      a.setUsage(THREE.DynamicDrawUsage);
+      geo.setAttribute(name, a);
+      return a;
+    };
+    this.aPos = mk('aPos', 3);
+    this.aData = mk('aData', 4);
+    this.aTint = mk('aTint', 3);
+    this.attrs = [this.aPos, this.aData, this.aTint];
+
+    this.material = new THREE.ShaderMaterial({
+      name: 'fx.flames',
+      uniforms: {
+        uTime: { value: 0 },
+        uDepth: shared.depth,
+        uInvRes: { value: shared.invRes },
+        uSoft: { value: TUNE.flameSoft },
+        uSize: { value: new THREE.Vector2(TUNE.flameSize[0], TUNE.flameSize[1]) },
+        uFade: { value: new THREE.Vector2(TUNE.flameFade[0], TUNE.flameFade[1]) },
+        uGain: { value: TUNE.flameGain },
+        uHalo: { value: TUNE.flameHalo },
+        uBody: { value: TUNE.flameBody },
+        uLick: { value: TUNE.flameLick },
+        /* Near-white at the fuel, deep carnelian at the tip. §2.2 has no "flame" entry, so
+           this is the gold/carnelian axis: `goldSpec` #fffbe8 through the ember pair to
+           something close to CARNELIAN #b8452c, which is what a flame's cool tip actually is
+           and keeps it inside the palette. */
+        uCore: { value: lin(0xfff6d8, new THREE.Color()) },
+        uTip: { value: lin(0xc2502a, new THREE.Color()) },
+      },
+      vertexShader: FLAME_VERT,
+      fragmentShader: FLAME_FRAG,
+      transparent: true,
+      depthTest: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+      side: THREE.DoubleSide,
+      fog: false,
+      toneMapped: false,
+    });
+
+    this.mesh = new THREE.Mesh(geo, this.material);
+    this.mesh.name = 'fx.flames';
+    this.mesh.frustumCulled = false;
+    this.mesh.castShadow = false;
+    this.mesh.receiveShadow = false;
+    this.mesh.userData.noShadow = true;
+    // Above the shaft ribbons and the smoke: a flame is never *behind* its own plume.
+    this.mesh.renderOrder = 18;
+    this.mesh.matrixAutoUpdate = false;
+
+    // POSTFX re-renders the scene with an override material for its normal buffer, and a
+    // flame in that buffer gets a hard black ink outline round it.
+    const self = this;
+    this.mesh.onBeforeRender = function (r, s, c, geometry, material) {
+      if (material !== self.material) { self._stash = geometry.instanceCount; geometry.instanceCount = 0; }
+    };
+    this.mesh.onAfterRender = function (r, s, c, geometry, material) {
+      if (material !== self.material && self._stash !== undefined) {
+        geometry.instanceCount = self._stash; self._stash = undefined;
+      }
+    };
+    this.geometry = geo;
+  }
+
+  begin() { this._w = 0; }
+
+  /** One flame. `seed` keeps a given fire's flicker phase stable across frames. */
+  push(x, y, z, scale, intensity, tint, seed) {
+    const i = this._w;
+    if (i >= this.capacity) return false;
+    const p = this.aPos.array, d = this.aData.array, c = this.aTint.array;
+    p[i * 3 + 0] = x; p[i * 3 + 1] = y; p[i * 3 + 2] = z;
+    d[i * 4 + 0] = seed; d[i * 4 + 1] = scale; d[i * 4 + 2] = intensity; d[i * 4 + 3] = 0;
+    c[i * 3 + 0] = tint.r; c[i * 3 + 1] = tint.g; c[i * 3 + 2] = tint.b;
+    this._w++;
+    return true;
+  }
+
+  end() {
+    this.count = this._w;
+    this.geometry.instanceCount = this.count;
+    for (const a of this.attrs) a.needsUpdate = true;
+  }
+
+  dispose() { this.geometry.dispose(); this.material.dispose(); }
+}
+
+/* =========================================================================================
    Particles — the module
    ========================================================================================= */
 
@@ -1170,7 +1476,7 @@ export class Particles {
     this._prevPlayer = new THREE.Vector3();
     this._havePrev = false;
 
-    this.stats = { spawned: 0, live: 0, batches: 0 };
+    this.stats = { spawned: 0, live: 0, batches: 0, flames: 0 };
     this.soft = { available: false, reason: 'not initialised' };
   }
 
@@ -1187,6 +1493,9 @@ export class Particles {
 
       this.shafts = new LightShafts(engine, this.shared, TUNE);
       this.root.add(this.shafts.mesh);
+
+      this.flames = new FlameField(engine, this.shared, TUNE.flameCap);
+      this.root.add(this.flames.mesh);
 
       this.decals = new Decals(engine, { atlas: this.shared.atlas });
       this.root.add(this.decals.mesh);
@@ -1856,11 +2165,13 @@ export class Particles {
     this._updateShafts();
     this._updateAmbientBoxes();
     this._updateEmitters(dt, t);
+    this._updateFlames();
     this._updateCrestWind(dt);
     this._deadReckonFootsteps(dt);
     this._updateSparkles(dt, t);
 
     if (this.shafts) this.shafts.material.uniforms.uTime.value = t;
+    if (this.flames) this.flames.material.uniforms.uTime.value = t;
 
     const density = this._density();
     let live = 0;
@@ -2258,6 +2569,49 @@ export class Particles {
     }
   }
 
+  /**
+   * One flame billboard per live fire emitter.
+   *
+   * Driven off `this.emitters` rather than off `lighting.localLights` on purpose: PROPS
+   * registers a fire with FX and a light with LIGHTING as two separate calls, and it is the
+   * FX registration that says "there is fire here". A brazier that never got a light slot
+   * still burns.
+   *
+   * **Where the flame sits is currently PROPS's mount plate, not its cup.** `PropKit`'s
+   * `wallTorch` publishes `bag.flameAt` at local (0, 0.649, 0.825) — 0.83 m out along the
+   * sconce arm — and `Props.js:_torch` registers the emitter at the wall instead, so the
+   * flame renders against the pier rather than in the bowl on the end of the arm. Costed:
+   * at the `interior` camera it also loses a fifth flame, the nearest one, which sits at
+   * 2.1 m and projects to (1050, 48) from the cup and off the right edge at (1519, 39) from
+   * the mount. `attach()`'s `opts.offset` is honoured here, so the fix is entirely on the
+   * registration side and needs nothing from FX.
+   */
+  _updateFlames() {
+    const f = this.flames;
+    if (!f) return;
+    /* Deliberately *not* gated on `settings.volumetrics` the way the shaft ribbons are. A
+       beam of lit dust is an atmospheric luxury; the flame is the light source itself, and a
+       torch-lit tomb with the torches switched off is a different scene, not a cheaper one. */
+    f.begin();
+    for (let i = 0; i < this.emitters.length; i++) {
+      const h = this.emitters[i];
+      if (!h.alive || h.kind !== 'fire') continue;
+      if (h.object) h.object.getWorldPosition(_v3); else _v3.copy(h.position);
+      if (h.opts?.offset) _v3.add(h.opts.offset);
+      /* Seeded from the position, not from the handle: handles come out of a pool, so a
+         handle-derived seed would re-phase every fire in the level the first time one of them
+         is killed and re-spawned. A fire that does not move keeps its flicker. */
+      const seed = ((Math.imul(Math.round(_v3.x * 32) ^ 0x9e37, 0x85ebca6b)
+                   ^ Math.imul(Math.round(_v3.z * 32) + 0x1b873, 0xc2b2ae35)) >>> 8) / 16777216;
+      _col.setHex(PAL.emberHot, THREE.SRGBColorSpace);
+      // Root it a little into the cup: a tongue whose base floats free reads as a balloon.
+      _v3.y -= TUNE.flameSize[1] * h.scale * 0.10;
+      if (!f.push(_v3.x, _v3.y, _v3.z, h.scale, 1.0, _col, seed)) break;
+    }
+    f.end();
+    this.stats.flames = f.count;
+  }
+
   /* ------------------------------------------------------------ crest wind */
 
   /**
@@ -2370,6 +2724,7 @@ export class Particles {
     for (const b of this.batches.values()) b.dispose();
     this.batches.clear();
     this.shafts?.dispose();
+    this.flames?.dispose();
     this.sparkles?.dispose();
     this.decals?.dispose();
     this.trails?.dispose();
