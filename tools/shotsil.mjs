@@ -135,7 +135,13 @@ function buildTris() {
 
 /* ---- rasteriser --------------------------------------------------------- */
 const KEY = new THREE.Vector3(-0.55, 0.62, 0.56).normalize();
-function render(tris, bodyV, yaw, elev, W, H, { shade = false } = {}) {
+/**
+ * `focus` (a Set of *body* vertex indices, or null) selects what the framing is fitted to
+ * without changing what is drawn. Everything still rasterises — that is the point when the
+ * question is "does the cap separate from the ears", because the answer depends on the head
+ * being drawn together with whatever overlaps it.
+ */
+function render(tris, bodyV, yaw, elev, W, H, { shade = false, focus = null } = {}) {
   const cy = Math.cos(yaw), sy = Math.sin(yaw);
   const ce = Math.cos(elev), se = Math.sin(elev);
   let minX = 1e9, maxX = -1e9, minY = 1e9, maxY = -1e9;
@@ -149,6 +155,7 @@ function render(tris, bodyV, yaw, elev, W, H, { shade = false } = {}) {
       const X = x * cy + z * sy, z1 = -x * sy + z * cy;
       const Y = y * ce - z1 * se, Z = y * se + z1 * ce;   // pitch down onto the subject
       verts.set(k, [X, Y, Z]);
+      if (focus && !(arr === bodyV && focus.has(i))) continue;
       if (X < minX) minX = X; if (X > maxX) maxX = X;
       if (Y < minY) minY = Y; if (Y > maxY) maxY = Y;
     }
@@ -262,6 +269,27 @@ function proportions(bodyV) {
   };
 }
 
+/**
+ * Body vertices whose dominant bone is in the head cluster. Used only to *frame* the head crop:
+ * the cap fails §7.3 at head scale, not at figure scale, and at 185 px (`hero`) the whole head
+ * is 34 px — far too few to tell "cap" from "lump" by eye in the figure silhouette.
+ * Skin indices do not change with pose, so this is computed once.
+ */
+function headFocus() {
+  const g2 = sly.mesh.geometry;
+  const si = g2.attributes.skinIndex, sw = g2.attributes.skinWeight;
+  const bi = {}; sly.boneNames.forEach((n, i) => { bi[n] = i; });
+  const HEADB = new Set(['head', 'jaw', 'capBrim', 'earL', 'earR', 'browL', 'browR'].map((n) => bi[n]));
+  const out = new Set();
+  for (let i = 0; i < g2.attributes.position.count; i++) {
+    let b = -1, bw = -1;
+    for (let k = 0; k < 4; k++) { const w = sw.getComponent(i, k); if (w > bw) { bw = w; b = si.getComponent(i, k); } }
+    if (HEADB.has(b)) out.add(i);
+  }
+  return out;
+}
+const HEADF = headFocus();
+
 /* ---- run ---------------------------------------------------------------- */
 /* Output resolution the pixel figures are quoted in. Defaults to the harness default. */
 const ROWS = parseInt((process.argv.includes('--rows')
@@ -306,6 +334,8 @@ for (const [name, shot] of Object.entries(SHOTS)) {
 
   save(`${name}-sil.png`, render(tris, bodyV, -phi, elev, 300, 400));
   save(`${name}-shade.png`, render(tris, bodyV, -phi, elev, 300, 400, { shade: true }));
+  save(`${name}-head.png`, render(tris, bodyV, -phi, elev, 420, 420, { focus: HEADF }));
+  save(`${name}-headshade.png`, render(tris, bodyV, -phi, elev, 420, 420, { focus: HEADF, shade: true }));
   if (process.env.BIG) save(`${name}-big.png`, render(tris, bodyV, -phi, elev, 900, 1200, { shade: true }));
   const tw = Math.max(12, Math.round(px * 0.72)), th = Math.max(16, px);
   save(`${name}-tiny.png`, magnify(render(tris, bodyV, -phi, elev, tw, th), 6));

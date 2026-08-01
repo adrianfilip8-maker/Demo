@@ -187,9 +187,30 @@ export const SHOTS = {
     player: { pos: [-4.0, 5.2, 12.5], yaw: 1.15, pose: 'sneak_walk' },
   },
 
-  /* Motion tech, caught mid-arc: Sly swinging on a cane hook over the courtyard gap. */
+  /* Motion tech, caught mid-arc: Sly swinging on a cane hook over the courtyard gap.
+
+     Camera pulled 6 m west, on x alone. It was standing inside the cornice mass — the geometry
+     agent measured that cornice at 39.8% of frame at 2.8 m mean depth, and I measured the same
+     thing a different way before moving anything: `arch:court:sandstone_block` fills **41.8% of
+     frame at 4.3 m**, and **41.3% of the entire frame sits closer than 5 m**. Two fifths of a
+     shot about motion was a static slab an arm's length from the lens, with the subject at
+     109 px behind it.
+
+     A 5 m near-field probe over 576 frustum rays, against the original target so the
+     composition is the thing being tested rather than a different shot:
+
+         (12, 14, 6)  near<5m 41.1%   sky 19%   mean depth 17 m   109 px   ndc -0.27
+         ( 6, 14, 6)  near<5m  0.0%   sky 24%   mean depth 28 m   147 px   ndc -0.06
+
+     Target, fov, roll, tod and the player are all untouched, so this is the same shot with the
+     obstruction gone: nothing in the near field at all, mean depth up 65%, the subject 35%
+     larger and centred instead of pushed a quarter-frame off axis. More aggressive positions
+     were available — (3, 14, 3) reaches 238 px — and were **not** taken: they drop sky to 14%
+     and swing the axis far enough that it stops being this shot. The cornice itself is no
+     longer a hole in the frame either; ARCHITECTURE closed it (§10), so this is a framing fix
+     on top of a geometry fix, not instead of one. */
   traversal: {
-    pos: [12.0, 14.0, 6.0], target: [-3.0, 11.0, -12.0], fov: 44, tod: 0.77, roll: -3.0,
+    pos: [6.0, 14.0, 6.0], target: [-3.0, 11.0, -12.0], fov: 44, tod: 0.77, roll: -3.0,
     player: { pos: [1.0, 12.4, -3.0], yaw: 5.76, pose: 'hook_swing' },
   },
 
