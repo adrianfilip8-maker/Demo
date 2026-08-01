@@ -818,7 +818,11 @@ export class Lighting {
     this._updateEnclosure(dt);
     this._applyFill();
     this._fitCascades();
-    this._updateLocalLights(t - this._animT0);
+    /* `|| 0` on purpose: everything after this line in update() — the shaft re-derive poll
+       and `_updateShafts()` — is skipped for the whole frame if anything in here throws,
+       because Engine wraps a module's update() as a unit. A NaN clock must not be able to
+       cost the shafts their update. */
+    this._updateLocalLights(t - (this._animT0 || 0));
 
     /* ARCHITECTURE and PROPS both init after this module, so the shaft set is built from the
        fallback constants first and re-derived from the real openings and the real sconces the
