@@ -1846,12 +1846,25 @@ export class SlyModel {
       rx: (i) => C[i][1], ry: (i) => C[i][2],
       upHint: new THREE.Vector3(0, 0, 1),
       shape: (a, i) => {
+        const tt = i / (C.length - 1);
         const s = superEllipse(a, 1.08);
         // eight soft panels; the seams read as folded cloth, not as facets
-        const panel = 1 + 0.040 * Math.cos(8 * a + 0.35) * (1 - Math.pow(i / (C.length - 1), 2));
+        const panel = 1 + 0.040 * Math.cos(8 * a + 0.35) * (1 - Math.pow(tt, 2));
         // the crown slumps toward the back-left, so the outline is never bilaterally symmetric
-        const slump = 1 + 0.075 * Math.max(0, -Math.cos(a - 0.5)) * smooth(0.30, 0.95, i / (C.length - 1));
-        return { u: s.u * panel * slump, v: s.v * panel * slump };
+        const slump = 1 + 0.075 * Math.max(0, -Math.cos(a - 0.5)) * smooth(0.30, 0.95, tt);
+        /* Ear notches. The frame here is R = −X, U = +Z, so a = 0 is his right and a = π his
+           left; the +0.18 bias puts the dip slightly behind the ear's own backward sweep.
+           This is the shape that separates cap from ear in a solid-black read: without it the
+           ear leaves the crown's outline almost tangentially and the two merge into one lumpy
+           mass, which is the §7.3 line this pass exists to clear. Notched, the ear clears the
+           crown by 6.0 cm at the height it crosses instead of 1.6 cm, so there is white on both
+           sides of it. cos^6 keeps the dip local — at 45° off the ear it is already down to
+           12% — and the ramp holds it off the shelf, which must stay a hard unbroken corner.
+           Checked against `HEAD` that the notched crown still covers the skull at every ring
+           it touches (worst case 1.712: cap 0.179 world against a skull at 0.122). */
+        const earA = Math.max(Math.cos(a + 0.18), Math.cos(a - Math.PI - 0.18));
+        const notch = 1 - 0.20 * Math.pow(Math.max(0, earA), 6) * smooth(0.34, 0.74, tt);
+        return { u: s.u * panel * slump * notch, v: s.v * panel * slump * notch };
       },
       warp: (p) => place(p),
       groupAt: () => 'cloth',

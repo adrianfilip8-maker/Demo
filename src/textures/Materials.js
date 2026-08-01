@@ -312,6 +312,43 @@ const HG_WALL_TILE = 5.2;
 const HG_GILDED_TILE = 3.2;
 const worldTileOf = (tile) => (Array.isArray(tile) ? tile[0] : tile) * ARCH_UV;
 
+/**
+ * World size of one cell of `paintRemnants`' survival field, in **metres**.
+ *
+ * ── §7.3 "visible texture tiling repetition", the part that was actually in this file ──
+ *
+ * `paintRemnants` gates surviving pigment on `warpN(u, v, freq, …)`, and `freq` is *cycles per
+ * tile*. Every call site passed a bare number — 5 here, 4 on `relief_figures`, 6 on
+ * `column_papyrus` — and nothing anywhere converted it to metres. On this recipe's 10.4 m repeat,
+ * `freq: 5` is a **2.08 m** wear cell: pigment survives in force across a 2 m patch where the
+ * field is high and nowhere else, so the paint is not distributed over the inscription, it is
+ * clumped into one or two big saturated blobs per repeat. At the canonical framings that blob is
+ * 50 px (`temple`), 138 px (`courtyard`), 38 px (`dunes`) — and it is the only saturated thing on
+ * a monochrome sandstone field, so it flags every seam. Rendered at `temple`'s own 248 px/repeat
+ * the repeats are countable by eye off the albedo alone.
+ *
+ * **The two NCC metrics could not see it, and the reason generalises.** `tilematch.mjs` scores
+ * this tile 0.482 searching the wrapped tile in 2D on luma; restricted to a horizontal search
+ * (the eye's actual task on a wall that is under 1.7 repeats tall and 3.5–4.3 long) and given
+ * chroma, it scores **0.441 — under the 0.45 threshold**, while the image plainly fails. Both
+ * measure **uniqueness**; the defect is **conspicuity**. A unique patch you cannot pick out of
+ * the field is not a landmark. The quantity that does see it is the strongest chroma blob's
+ * excursion above the tile's own chroma field, low-passed to one glyph: **12.06 sd here against
+ * 7.51 for the next worst recipe in the catalogue** (scratchpad `beacon.mjs`).
+ *
+ * Sized at roughly one glyph (`glyphM` 0.72 m), which redistributes the *same* pigment as many
+ * small accents instead of one or two big ones — the principle `glyphWall`'s own note already
+ * states ("a dense field of small varied marks has no landmark in it"), applied to the paint
+ * layer instead of to the sign size. Expressed in metres and divided into the world repeat at the
+ * call site so it cannot silently become a different physical size the next time `tile` moves,
+ * which is the failure `ARCH_UV` exists to prevent one layer up.
+ *
+ * Measured, control → shipped: beacon peak/sd **12.06 → 4.62**, mean chroma 0.0159 → 0.0157
+ * (−1.3 %, so the pigment is redistributed rather than removed), mip-4 luma rms 0.0348 → 0.0342
+ * (the squint number falls, it does not rise), full-res `lumaRms` 0.0645 → 0.0637.
+ */
+const PAINT_WEAR_M = 0.40;
+
 const GOLD_BIAS = 1.75;
 function goldRamp(t, out = T3) {
   const k = Math.pow(sat(t), GOLD_BIAS);
@@ -1375,7 +1412,10 @@ export const MATERIALS = {
        * with the sun and goes flat in shadow, the way a chisel line does. */
       const ramp = carve(s, cut, lines, { depth: 0.46, bevelPx: 3.0, lip: 0.12, bulge: 0.42, lineDepth: 0.62, seed: cx.seed + 5 });
       freshCutTint(s, ramp, { amount: 0.16 });
-      paintRemnants(s, ramp, paint, { survival: 0.50, freq: 5, seed: cx.seed + 9, edgeLoss: 0.66, fade: 0.42 });
+      /* `freq` derived from a metre figure, not written as a bare cycle count — see
+       * `PAINT_WEAR_M`. At 10.4 m of world per repeat this is 16 cycles/tile against the 5 that
+       * shipped, i.e. a 0.65 m wear cell instead of 2.08 m. */
+      paintRemnants(s, ramp, paint, { survival: 0.50, freq: Math.round(worldTileOf(HG_WALL_TILE) / PAINT_WEAR_M), seed: cx.seed + 9, edgeLoss: 0.66, fade: 0.42 });
       chiselMarks(s, { amount: 0.016, angle: -0.35, freq: 48, seed: cx.seed + 1, mask: m.edge });
       pitting(s, { amount: 0.030, freq: 64, density: 0.34, seed: cx.seed + 2, colorDark: PAL.sandDark, stain: 0.10 });
       const src = new Float32Array(s.n);

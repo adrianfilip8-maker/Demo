@@ -364,4 +364,22 @@ for (const [name, shot] of Object.entries(SHOTS)) {
   save(`${name}-tiny.png`, magnify(render(tris, bodyV, -phi, elev, tw, th), 6));
   console.log(`  ${name.padEnd(13)} view ${(phi * 180 / Math.PI).toFixed(0).padStart(5)}°  elev ${(elev * 180 / Math.PI).toFixed(0).padStart(3)}°  ${(px === null ? 'BEHIND' : String(px) + 'px').padStart(7)}  pose ${shot.player.pose}`);
 }
+/* Fixed-azimuth panels. Every canonical camera that draws Sly is a three-quarter (33°, 45°,
+   70°), and a three-quarter view cannot see a feature whose whole effect is on the left-right
+   axis — an ear notch cut into the side of the crown is occluded by the ear that sits in it.
+   `AZIM=0,90,180` renders the same pose from front / side / back so a change like that is
+   either visible somewhere or is not shipping. Pose defaults to idle_confident. */
+if (process.env.AZIM) {
+  const pose = process.env.AZPOSE || 'idle_confident';
+  if (applyClip(pose)) {
+    const { tris, bodyV } = buildTris();
+    for (const d of process.env.AZIM.split(',')) {
+      const deg = parseFloat(d), rad = deg * Math.PI / 180, elev = 0.09;
+      save(`az${deg}-sil.png`, render(tris, bodyV, -rad, elev, 300, 400));
+      save(`az${deg}-head.png`, render(tris, bodyV, -rad, elev, 420, 420, { focus: HEADF }));
+      save(`az${deg}-headparts.png`, render(tris, bodyV, -rad, elev, 420, 420, { focus: HEADF, parts: true }));
+      console.log(`  az ${String(deg).padStart(4)}°  pose ${pose}`);
+    }
+  }
+}
 console.log('\nwrote', OUT);

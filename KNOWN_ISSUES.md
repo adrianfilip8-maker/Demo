@@ -313,8 +313,55 @@ Recorded so they are not re-derived:
   there should be small, but that is a prediction, not a measurement.
 - **Stone mean albedo is 4–5% darker family-wide** (granite −13%) since the grime film landed.
   If LIGHTING wants it back, the lever is `ashlar`'s `tone`, not the grime.
+- **The paving UV fix is measured-correct and visually unverified.** `Kit.pavingField` replaced
+  the InstancedMesh with a merged field projected *after* placement, taking UV density from
+  0.208/0.228/0.221 to **0.500 on all three** (p10..p90 all 0.500, no residual), and the
+  exact-repetition period from one slab — 2.38 m, aligned to every joint — to the texture's own
+  8.8 m. Cost is genuinely nothing: 315,358 → 315,358 triangles, 44 → 44 meshes, verified
+  against a pristine `git archive HEAD` build, with `cast: false` preserved so the slabs stay
+  out of the caster set. **But nobody has seen a frame at the corrected scale**, and this is a
+  2.4× change to 36% of `interior` and 14% of `hero`. A texture authored to look right while
+  stretched need not look right unstretched. Check it on the next capture; if the corrected
+  scale reads worse, say so rather than tuning `UV_PER_M` to hide it.
+- **Frustum culling has been eaten by the merge.** 8 of 10 shots bill the *entire* 315k
+  architecture triangle count, because `arch:hall:hieroglyph_wall` is a single 75k mesh spanning
+  36 m of z and any camera seeing one course pays for all of it. Billing the same geometry at
+  triangle granularity gives the ceiling on re-bucketing by z-band: `interior` 91%, `guard` 90%,
+  `combat` 75%, `temple` 66%, `sly-closeup` 55%, `traversal` 50%, `hero` 49%, `courtyard` 40%,
+  `night` 38%, `dunes` 0%. Real, but architecture is only ~11% of the frame's triangles, so
+  recovering even 60% of it is ~7% — **this is not where the 2× budget overage lives.** Headless
+  attribution confirms the overage is ~89% outside `src/world/**`: `traversal` architecture is
+  39 draws / 309k against the frame's 408 / 2.763M.
 - **The cel ramp needs geometry, not shader work.** The 3-band quantiser is correct; the scene
   is boxes and faceted cylinders, so there is almost no smooth normal gradient for it to band.
+
+  **Quote 0.14%–2.33% of architecture pixels showing band-edge crossings, not the 0.5%–1.7%
+  first reported, and say that eight of ten shots are under 0.5%.** The first measurement had
+  *two* errors, and only one of them had been flagged. It used a fixed light vector instead of
+  each shot's own `keyDir` — and it put the band edges at ⅓ and ⅔, when `slyRamp` spreads
+  terminators between `uTermLo` and `uTermHi`, which `ToonMaterial.TUNE` sets to **0.14 and
+  0.52** deliberately, so the first terminator sits past zero. 0.14 lands on an entirely
+  different population of surfaces. The correction *reorders* the set rather than scaling it:
+  `night` and `guard` are moonlit with keys in the opposite quadrant from the fixed vector, so
+  `night` fell 1.46% → **0.31%** (4.7× overstated, from second-best to near-bottom) while
+  `guard` nearly doubled to 0.50%. `temple` at 2.33% remains the best case — it was right by
+  luck. `hero` 0.57% → 0.16%, `sly-closeup` 0.65% → 0.14%.
+
+  **The unpredicted result is a different failure mode from the one in the record.** Measuring
+  *coverage* — pixels whose `ndl` sits inside a terminator's soft window — gives `guard`
+  **24.03%** against 0.50% crossings and `temple` 18.36% against 2.33%. That gap is whole flat
+  face populations landing **on** a terminator rather than inside a band:
+
+  ```
+  temple:  +Z-facing walls  ndl 0.15  vs terminator 0.14
+  guard:   +X-facing walls  ndl 0.51  vs terminator 0.52
+  ```
+
+  Those surfaces render a flat mid-transition value with no gradient, and at ±0.024 they are one
+  normal-map perturbation from flipping band — a plausible latent source of blotching. It is
+  half ARCHITECTURE's (the normals) and half SHADING's (the terminator positions), and **a
+  fixed-light measurement could not have found it.** Caveat that stays attached: measured with
+  no shadows, normal maps, AO or post, so it is an upper bound on what the geometry can offer.
 - **Light shafts have no forward-scatter term, so one gain serves a 7.2× range.** A shaft is
   visible *because* of forward scatter, and `SHAFT_FRAG` (`src/fx/Particles.js`) has no term
   for it: `vViewZ` is depth fade, `vX`/`vS` are cross-section and along-beam, and `vAxial` is a
