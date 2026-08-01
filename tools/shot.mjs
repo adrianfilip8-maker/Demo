@@ -51,6 +51,11 @@ const HEIGHT = parseInt(opt('h', '900'), 10);
 const QUALITY = opt('q', 'high');
 const OUTDIR = path.resolve(ROOT, opt('out', 'shots'));
 const TIMEOUT = parseInt(opt('timeout', '240000'), 10);
+/* Per-shot deadline. A `setShot` is 17 frames and a frame costs ~14 s at 1280x720 on this
+   container's software rasteriser, so a legitimate shot runs 4-6 minutes and contention can
+   double that. 15 minutes is generous enough never to fire on a healthy run and short enough
+   that a wedged one fails the shot rather than the session. */
+const SHOT_TIMEOUT = parseInt(opt('shotTimeout', String(15 * 60 * 1000)), 10);
 const KEEP = flag('keep');
 const VERBOSE = flag('verbose');
 const requested = argv.filter((a) => !a.startsWith('--'));
@@ -206,6 +211,22 @@ async function main() {
       for (const w of info.warnings.slice(0, 12)) process.stdout.write(`    ! ${w}\n`);
     }
 
+    /* Two runs were reported booting cleanly and then dying before the first `✓`, writing
+       nothing at all — no report, no partial frames, no error. That is the worst possible
+       failure on a container where a single shot costs 2–5 minutes, because it destroys the
+       evidence of its own cause. These three guards do not fix whatever kills it; they make it
+       impossible for it to die quietly again. */
+    page.on('crash', () => {
+      process.stdout.write('  ✗ RENDERER CRASHED — the browser page died, not the harness\n');
+    });
+    page.on('close', () => {
+      process.stdout.write('  · page closed\n');
+    });
+    const flush = async () => {
+      // Written after every shot, so a run that dies at shot 7 still hands over shots 1-6.
+      await writeFile(path.join(OUTDIR, 'report.json'), JSON.stringify(report, null, 2));
+    };
+
     const names = requested.length ? requested : info.shots;
     for (const name of names) {
       if (!info.shots.includes(name)) {
@@ -216,13 +237,21 @@ async function main() {
       }
       const t0 = Date.now();
       try {
-        const res = await page.evaluate(
-          async (n) => {
-            const r = await window.__GAME.setShot(n);
-            return { stats: r.stats, warnings: r.warnings.length, png: window.__GAME.capture() };
-          },
-          name
-        );
+        /* A per-shot deadline. `page.evaluate` has no timeout of its own, so a wedged frame
+           inside `setShot` hangs the whole run with no output — indistinguishable from slow
+           progress on a box where 17 frames legitimately take minutes. Racing it turns that
+           into a named failure on one shot and lets the rest of the run continue. */
+        const res = await Promise.race([
+          page.evaluate(
+            async (n) => {
+              const r = await window.__GAME.setShot(n);
+              return { stats: r.stats, warnings: r.warnings.length, png: window.__GAME.capture() };
+            },
+            name
+          ),
+          new Promise((_, rej) => setTimeout(
+            () => rej(new Error(`timed out after ${(SHOT_TIMEOUT / 1000) | 0}s`)), SHOT_TIMEOUT)),
+        ]);
         const file = path.join(OUTDIR, `${name}.png`);
         await writeFile(file, Buffer.from(res.png.split(',')[1], 'base64'));
         const ms = Date.now() - t0;
@@ -236,6 +265,8 @@ async function main() {
         report.errors.push(`${name}: ${err.message}`);
         process.stdout.write(`  ✗ ${name}: ${err.message.split('\n')[0]}\n`);
       }
+      // Hand over what we have after every shot, pass or fail.
+      await flush().catch(() => {});
     }
 
     const runtimeWarnings = await page.evaluate(() => window.__GAME.warnings.slice());
