@@ -11,6 +11,18 @@
  *
  * Headless Chromium has no GPU here, so WebGL runs on SwiftShader: a frame can take
  * seconds. Timeouts are generous on purpose.
+ *
+ * **Ask for the fewest shots that answer your question.** The lock is a fair FIFO, so a run
+ * holds it for its whole duration and everyone behind you waits that long. The cost model,
+ * measured: ~14 s per frame at 1280x720/high, a `setShot` is 17 frames, so **one shot is 4-6
+ * minutes and a full ten-shot set is 40-60 minutes of exclusive hold**.
+ *
+ * With several agents working, a 10-shot run is a decision to block everyone else for an hour.
+ * That has already had a real cost: an agent completed an entire session of geometry work — a
+ * collapsed pylon corner, subdivided pyramids, terrain-bedded rubble, a breached temenos wall —
+ * and looked at **zero rendered frames**, because captures never reached the front of the
+ * queue. Take 1-3 shots, verify the specific thing you changed, release, and re-queue if you
+ * need more. Reserve full sets for the critic, which genuinely needs them.
  */
 import { chromium } from 'playwright';
 import { acquire } from './lock.mjs';
