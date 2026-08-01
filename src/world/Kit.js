@@ -1451,9 +1451,21 @@ export function pavingField({ x0, x1, z0, z1, y = 0, slab = 2.2, thick = 0.5, rn
   const out = [];
   const R = [0, 1, 2, 3].map((q) => new THREE.Matrix4().makeRotationY(q * Math.PI * 0.5));
   const mm = new THREE.Matrix4();
+  /* The turn is hashed off the slab's GRID CELL, recovered from its translation, and mixed
+     through an integer hash. The first version hashed the raw position linearly
+     (round(x·97 + z·57) & 3) and 97 × the court's 2.476 m pitch is 240.2 ≡ 0 (mod 4): the
+     turn came out row-constant, entire joints kept their bevel, and the geo3 capture showed
+     the continuous rule surviving on exactly the rows the lottery lost. Cell indices are
+     immune to the pitch (consecutive cells differ by exactly 1) and Knuth/xor mixing kills
+     any residual pattern. */
+  const nx = Math.max(1, Math.round((x1 - x0) / slab)), nz = Math.max(1, Math.round((z1 - z0) / slab));
+  const sx = (x1 - x0) / nx, sz = (z1 - z0) / nz;
   for (const m of pavingMatrices({ x0, x1, z0, z1, y, slab, rng, sink, holes })) {
     const e = m.elements;
-    const qt = Math.abs(Math.round(e[12] * 97 + e[14] * 57)) & 3;
+    const ci = Math.round((e[12] - x0) / sx - 0.5), cj = Math.round((e[14] - z0) / sz - 0.5);
+    let hsh = (Math.imul(ci, 0x9e3779b1) ^ Math.imul(cj, 0x85ebca6b)) >>> 0;
+    hsh = Math.imul(hsh ^ (hsh >>> 13), 0xc2b2ae35) >>> 0;
+    const qt = (hsh >>> 4) & 3;
     mm.copy(m).multiply(R[qt]);
     out.push(unit.clone().applyMatrix4(mm));
   }
