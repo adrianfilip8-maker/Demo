@@ -281,10 +281,10 @@ const IDLE_A = P({
      body instead of both pointing the same way. The old set left it a level horizontal
      sausage at shoulder height, which is the one shape a big tail must not make: it reads as
      a wing, it flattens the figure, and it puts the heaviest mass on the frame's mid-line. */
-  tailA: [-16, -24, 6],
-  tailB: [-4, -36, 0],
-  tailC: [38, 16, 0],
-  tailD: [34, 28, 0],
+  tailA: [-6, -30, 6],
+  tailB: [16, -34, 0],
+  tailC: [40, 14, 0],
+  tailD: [30, 24, 0],
 });
 
 /* `hold: 0` on purpose. This clip is what `sly-closeup` and `dunes` freeze on, so the held
@@ -419,10 +419,15 @@ const PERCH = P({
      the heaviest mass on the frame's mid-line.
      Arced up over the back instead, so from a three-quarter camera it climbs across the body
      and its curl reads against the sky rather than along the horizon. */
-  tailA: [-8, -30, 0],
-  tailB: [12, -34, 0],
-  tailC: [30, 16, 0],
-  tailD: [34, 24, 0],
+  /* Re-aimed after the tail gained 26% of its length (`TUNE.tailScale`). The arc itself is
+     right — up and over the back so it reads against sky from a three-quarter camera — but at
+     the new length it came out level with his own head and the two masses welded into one blob
+     in the silhouette test. Dropping the first joint starts the C *below* the hip line, so the
+     same curve now sweeps up past the shoulder instead of across the skull. */
+  tailA: [-30, -30, 0],
+  tailB: [6, -34, 0],
+  tailC: [34, 16, 0],
+  tailD: [36, 26, 0],
 });
 
 /* `hold: 0` for the same reason as `idle_confident`: `hero` freezes this clip, and holding at
@@ -449,9 +454,9 @@ def('perch_idle', {
     { t: 0, e: 'soft', P: PERCH, pos: [0, -0.30, 0.07], cane: [-30, 30, -30] },
     { t: 0.8, e: 'soft', P: { chest: [-17, -13, 5], head: [-21, 18, -8], hips: [28, 11, -5],
       // re-authored with the base pose's tail arc — these are absolute, not deltas
-      tailA: [-12, -36, 0], tailB: [8, -40, 0], tailD: [38, 28, 0] }, pos: [0, -0.325, 0.078], cane: [-26, 26, -30] },
+      tailA: [-34, -36, 0], tailB: [2, -40, 0], tailD: [40, 30, 0] }, pos: [0, -0.325, 0.078], cane: [-26, 26, -30] },
     { t: 1.7, e: 'soft', P: { chest: [-11, -9, 3], head: [-15, 12, -6], hips: [24, 9, -3],
-      tailA: [-4, -25, 0], tailB: [16, -29, 0], tailD: [30, 20, 0] }, pos: [0, -0.285, 0.062], cane: [-34, 34, -30] },
+      tailA: [-26, -25, 0], tailB: [10, -29, 0], tailD: [32, 22, 0] }, pos: [0, -0.285, 0.062], cane: [-34, 34, -30] },
     // a small head-flick as something below catches his eye
     { t: 2.3, e: 'out', P: { head: [-14, 26, -12], neck: [-14, 13, -6], earL: [-20, 8, -24] } },
     { t: 3.2, e: 'soft', P: PERCH, pos: [0, -0.30, 0.07], cane: [-30, 30, -30] },
@@ -659,7 +664,16 @@ const SNEAK_BASE = P({
   shoulderR: [-8, -6, 20], upperArmR: [26, -14, 34], lowerArmR: [-30, 22, 16], handR: [8, 16, 10],
   upperLegL: [-52, 6, 4], lowerLegL: [64, 0, 0], footL: [-14, -5, 0], toeL: [6, 0, 0],
   upperLegR: [-46, -6, -4], lowerLegR: [58, 0, 0], footR: [-12, 5, 0], toeR: [6, 0, 0],
-  tailA: [-6, -24, 0], tailB: [-2, -30, 0], tailC: [6, 16, 0], tailD: [16, 20, 0],
+  /* **Dropped hard off the hips.** `hips` is pitched 30 deg nose-down here, and the tail
+     hangs off the hips, so a tail authored level comes out of that rotation climbing at 30 deg
+     — and at 1.34 m long it puts its tip above his own head. Rendered as a pure silhouette
+     through `temple`, `interior` and `guard` (all three freeze this clip) it is a horizontal
+     plank at shoulder height, which is the exact shape the tail notes elsewhere in this file
+     warn against: it flattens the figure and drops the heaviest mass on the frame's mid-line.
+     A sneaking animal carries its tail LOW, so the first two joints now dump it toward the
+     floor and only the last two flick up — a shallow S below the hip line instead of a beam
+     above the shoulder line. */
+  tailA: [-38, -20, 0], tailB: [-24, -26, 0], tailC: [40, 30, 0], tailD: [48, 36, 0],
 });
 
 def('sneak_idle', {
@@ -667,9 +681,9 @@ def('sneak_idle', {
   keys: [
     { t: 0, e: 'soft', P: SNEAK_BASE, pos: [0, -0.30, 0.05], cane: CANE.out },
     { t: 0.8, e: 'soft', P: { chest: [-11, -5, 2], head: [-27, 12, -6], neck: [-28, 6, -2],
-      tailA: [-8, -30, 0], tailB: [-4, -36, 0], tailC: [4, 20, 0], tailD: [14, 26, 0] }, pos: [0.006, -0.315, 0.055], cane: [56, -40, 0] },
+      tailA: [-40, -26, 0], tailB: [-22, -32, 0], tailC: [38, 34, 0], tailD: [46, 40, 0] }, pos: [0.006, -0.315, 0.055], cane: [56, -40, 0] },
     { t: 1.7, e: 'soft', P: { chest: [-5, 5, -2], head: [-21, -10, 5], neck: [-24, -5, 2],
-      tailA: [-4, -18, 0], tailB: [0, -24, 0], tailC: [8, 12, 0], tailD: [18, 14, 0] }, pos: [-0.006, -0.285, 0.045], cane: [60, -26, 0] },
+      tailA: [-34, -14, 0], tailB: [-26, -20, 0], tailC: [42, 26, 0], tailD: [50, 30, 0] }, pos: [-0.006, -0.285, 0.045], cane: [60, -26, 0] },
     { t: 3.0, e: 'soft', P: SNEAK_BASE, pos: [0, -0.30, 0.05], cane: CANE.out },
   ],
 });
@@ -680,7 +694,7 @@ const SNEAK_C = Object.assign({}, SNEAK_BASE, {
   upperArmL: [-28, 12, -26], upperArmR: [16, -14, 34],
   upperLegL: [-76, 8, 4], lowerLegL: [46, 0, 0], footL: [12, -5, 0], toeL: [-6, 0, 0],
   upperLegR: [-18, -8, -4], lowerLegR: [48, 0, 0], footR: [-4, 5, 0], toeR: [10, 0, 0],
-  tailA: [-6, -14, 0], tailB: [-2, -20, 0], tailC: [6, 22, 0], tailD: [16, 12, 0],
+  tailA: [-36, -10, 0], tailB: [-26, -16, 0], tailC: [42, 34, 0], tailD: [48, 26, 0],
 });
 const SNEAK_D = {
   hips: [32, -6, 3], chest: [-6, 8, -1],
@@ -692,7 +706,7 @@ const SNEAK_P = {
   upperArmL: [-40, 12, -26], upperArmR: [26, -14, 34],
   upperLegL: [-40, 6, 4], lowerLegL: [70, 0, 0], footL: [-16, -5, 0], toeL: [8, 0, 0],
   upperLegR: [-58, -6, -4], lowerLegR: [78, 0, 0], footR: [-22, 5, 0], toeR: [2, 0, 0],
-  tailA: [-2, 0, 0], tailB: [2, 0, 0], tailC: [4, 0, 0], tailD: [10, 0, 0],
+  tailA: [-32, 0, 0], tailB: [-22, 0, 0], tailC: [42, 0, 0], tailD: [46, 0, 0],
 };
 const SNEAK_U = {
   hips: [30, 6, -1], spine: [-6, -3, 0], chest: [-8, -8, 1],

@@ -76,7 +76,15 @@ export const TUNE = {
    */
   headScale: 0.90,        // cranium scale about the neck joint (§7.3 "~1:5 head:body")
   headWide: 1.08,         // extra width-only on the cranium: rounder from the front
-  tailScale: 1.12,        // tail length + girth; the tail is half the silhouette
+  /* Length and girth are separate knobs now, and they were not before. A single `tailScale`
+   * multiplying both can only make a *fatter longer* sausage, and the defect the captures kept
+   * showing was the aspect ratio rather than the size: at 1.05 m long and 0.40 m across the
+   * tail is a 2.6:1 blob, and a blob has no direction, so the "big C arcing up behind him" the
+   * clips author has nowhere to read. A raccoon tail is nearer 4:1 and tapers to a dark point.
+   * Longer and slightly slimmer keeps the mass §7.3 wants — 0.33 m across still beats his
+   * 0.27 m chest — while giving the curve room to be a curve. */
+  tailScale: 1.32,        // tail LENGTH; the tail is half the silhouette
+  tailGirth: 0.92,        // tail girth, independent of length — see tailScale
   handScale: 1.46,        // big thief hands — they sell every gesture, so they are oversized
   footScale: 1.34,        // chunky boots give the contrapposto a base to stand on
   limbSlim: 0.86,         // long thin limbs: every leg/arm radius goes through this
@@ -338,10 +346,13 @@ const SKELETON = [
      managed to read as "no tail at all". ANIMATION's clip rotations compose on top of this. */
   /* `+ legLift`, not `by()`: the tail hangs off the pelvis, so it rides the hips rigidly and
      must not pick up the torso compression that lives above them. */
-  ['tailA', 'hips', [0, 0.898 + TUNE.legLift, -0.135]],
-  ['tailB', 'tailA', [0.038, 0.896 + TUNE.legLift, -0.440]],
-  ['tailC', 'tailB', [0.110, 0.928 + TUNE.legLift, -0.730]],
-  ['tailD', 'tailC', [0.205, 1.008 + TUNE.legLift, -0.962]],
+  /* Scaled by `tailScale` in all three axes, like the loft they drive. They were not, so any
+     `tailScale` other than 1.0 left the bone chain shorter than the geometry riding it and the
+     last bone dragging a lever it did not reach the end of. */
+  ['tailA', 'hips', [0, 0.898 + TUNE.legLift, -0.135 * TUNE.tailScale]],
+  ['tailB', 'tailA', [0.038 * TUNE.tailScale, 0.896 + TUNE.legLift, -0.440 * TUNE.tailScale]],
+  ['tailC', 'tailB', [0.110 * TUNE.tailScale, 0.928 + 0.030 * TUNE.tailScale + TUNE.legLift, -0.730 * TUNE.tailScale]],
+  ['tailD', 'tailC', [0.205 * TUNE.tailScale, 1.008 + 0.110 * TUNE.tailScale + TUNE.legLift, -0.962 * TUNE.tailScale]],
 ];
 
 /**
@@ -757,35 +768,34 @@ export class SlyModel {
            the torso in the one shot that exists to prove the character.
        ANIMATION's clip rotations compose on top, so this only has to *start* the arc. */
     const L = TUNE.legLift;   // the tail hangs off the pelvis and rides it rigidly
+    /* Authored as a unit curve off the tail root and scaled in all three axes, so `tailScale`
+       lengthens the tail without flattening its arc — scaling Z alone stretches the sweep out
+       behind him and leaves the rise where it was, which is how a curve becomes a plank. */
+    const root = new THREE.Vector3(0, 0.898 + L, 0);
     const spine = resample([
-      new THREE.Vector3(0.000, 0.898 + L, -0.070 * S),
-      new THREE.Vector3(0.008, 0.895 + L, -0.199 * S),
-      new THREE.Vector3(0.026, 0.894 + L, -0.337 * S),
-      new THREE.Vector3(0.055, 0.899 + L, -0.474 * S),
-      new THREE.Vector3(0.094, 0.913 + L, -0.607 * S),
-      new THREE.Vector3(0.141, 0.941 + L, -0.731 * S),
-      new THREE.Vector3(0.196, 0.983 + L, -0.840 * S),
-      new THREE.Vector3(0.254, 1.039 + L, -0.926 * S),
-      new THREE.Vector3(0.312, 1.105 + L, -0.984 * S),
-      new THREE.Vector3(0.362, 1.174 + L, -1.016 * S),
-    ], 32);
+      [0.000, 0.000, -0.070], [0.008, -0.003, -0.199], [0.026, -0.004, -0.337],
+      [0.055, 0.001, -0.474], [0.094, 0.015, -0.607], [0.141, 0.043, -0.731],
+      [0.196, 0.085, -0.840], [0.254, 0.141, -0.926], [0.312, 0.207, -0.984],
+      [0.362, 0.276, -1.016],
+    ].map(([x, y, z]) => new THREE.Vector3(x * S, y * S, z * S).add(root)), 34);
 
     /* Girth: at its widest the tail is 0.36 m across — wider than his 0.27 m chest and close to
        his 0.41 m head. That ratio is not an exaggeration of the reference, it *is* the
        reference; a tail slimmer than the torso reads as a rope. The root stays narrow (0.058)
        so the fat lobe reads as its own mass rather than as a hump on his back. */
+    const G = TUNE.tailGirth;
     const radius = (t) => {
       const prof = [
-        [0.00, 0.058], [0.09, 0.098], [0.20, 0.150], [0.36, 0.180],
-        [0.52, 0.178], [0.66, 0.163], [0.80, 0.135], [0.91, 0.094], [1.00, 0.034],
+        [0.00, 0.058], [0.09, 0.100], [0.20, 0.152], [0.34, 0.180],
+        [0.48, 0.176], [0.62, 0.158], [0.76, 0.126], [0.88, 0.082], [1.00, 0.026],
       ];
       for (let i = 0; i < prof.length - 1; i++) {
         if (t <= prof[i + 1][0]) {
           const f = (t - prof[i][0]) / (prof[i + 1][0] - prof[i][0]);
-          return THREE.MathUtils.lerp(prof[i][1], prof[i + 1][1], f) * S;
+          return THREE.MathUtils.lerp(prof[i][1], prof[i + 1][1], f) * G;
         }
       }
-      return 0.034 * S;
+      return 0.026 * G;
     };
 
     /* Ring bands. Crisp material boundaries at ring positions — no vertex duplication needed,
@@ -1870,7 +1880,7 @@ export class SlyModel {
         const dir = out.clone().addScaledVector(new THREE.Vector3(0, -1, -0.55), 0.55).normalize();
         put({
           base, dir, shadeN: out,
-          length: (0.052 + 0.030 * (1 - Math.abs(f - 0.45) * 2)) * S * jit(i, side),
+          length: (0.044 + 0.026 * (1 - Math.abs(f - 0.45) * 2)) * S * jit(i, side),
           width: 0.021 * S * (0.78 + 0.44 * hash(i, side + 59)),
           bend: 0.34, bendDir: new THREE.Vector3(0, -1, 0),
           group: 'fur', weights: [['head', 1]],
@@ -1888,7 +1898,7 @@ export class SlyModel {
         put({
           base, shadeN: out,
           dir: out.clone().addScaledVector(new THREE.Vector3(0, -0.55, -0.35), 0.6).normalize(),
-          length: 0.036 * S * jit(i, side + 3), width: 0.024 * S, bend: 0.30,
+          length: 0.030 * S * jit(i, side + 3), width: 0.022 * S, bend: 0.30,
           bendDir: new THREE.Vector3(0, -1, 0),
           group: 'fur', weights: [['head', 1]],
         });
@@ -1924,9 +1934,13 @@ export class SlyModel {
       /* chest ruff bursting out of the open collar. Two rows at different heights so the
          collar edge is a scalloped mass rather than a single fringe. */
       if (side > 0) {
-        for (const row of [{ y: by(1.300), len: 0.056, w: 0.020, sp: 0.56, k: 1 },
-          { y: by(1.268), len: 0.042, w: 0.024, sp: 0.72, k: 2 }]) {
-          const N = Math.round(5 * D);
+        /* Pulled up to the collar and cut down. Two rows of wide clumps starting 5 cm below
+           the collar covered the whole cream chest V in overlapping slabs — rendered, it reads
+           as a bib or a folded napkin rather than as fur bursting out of an open collar. A
+           ruff is a *scallop on an edge*; the moment it has area it stops being fur. */
+        for (const row of [{ y: by(1.330), len: 0.040, w: 0.015, sp: 0.50, k: 1 },
+          { y: by(1.306), len: 0.030, w: 0.018, sp: 0.64, k: 2 }]) {
+          const N = Math.round(4 * D);
           for (let i = 0; i < N; i++) {
             const f = (i + 0.5) / N;
             const th = THREE.MathUtils.lerp(-row.sp, row.sp, f);
@@ -2136,12 +2150,12 @@ export class SlyModel {
        Rolls are placed away from ±90° in the tail's own frame: those two lines are the
        silhouette for a camera looking down the tail's local X, and a clump sitting exactly on
        a silhouette tangent renders edge-on as a hard line rather than as a soft break. */
-    const STEP = 2;
+    const STEP = 3;
     for (let i = 2; i < n - 2; i += STEP) {
       const t = i / (n - 1);
       const c = spine[i];
       const tan = new THREE.Vector3().subVectors(spine[Math.min(n - 1, i + 1)], spine[Math.max(0, i - 1)]).normalize();
-      const rings = (i / STEP) % 2 ? [-2.3, -0.35, 1.55] : [2.3, 0.35, -1.55];
+      const rings = (i / STEP) % 2 ? [-2.5, -0.9, 0.5, 1.9] : [2.5, 0.9, -0.5, -1.9];
       for (const roll of rings) {
         const up = new THREE.Vector3(Math.sin(roll) * 0.85, Math.cos(roll), 0).normalize();
         const side2 = new THREE.Vector3().crossVectors(tan, up).normalize();
@@ -2149,12 +2163,18 @@ export class SlyModel {
         const base = c.clone().addScaledVector(outward, radius(t) * 0.90);
         // a band edge gets the longest clumps — that is where fur actually parts
         const edge = isDark(t) !== isDark(Math.max(0, t - 0.035)) ? 1.30 : 1.0;
+        /* Colour the clump by the band at its own MIDPOINT, not at its root. `dir` lays it
+           back along the tail toward the root, so it covers ~0.06 of t — half a ring band —
+           and a clump coloured by its root lies across the neighbouring band as a hard patch
+           of the wrong value. That is what turned the tail into camouflage at three-quarter
+           views while looking correct end-on, which is why it survived a frontal check. */
+        const tMid = Math.max(0, t - 0.030);
         put({
           base, shadeN: outward.clone(),
           dir: outward.clone().multiplyScalar(0.46).addScaledVector(tan, -1.0).normalize(),
-          length: (0.072 + 0.026 * Math.sin(t * 7)) * TUNE.tailScale * edge * jit(i, roll),
-          width: 0.030 * TUNE.tailScale, bend: 0.26, bendDir: outward.clone(),
-          group: isDark(t) ? 'furDark' : 'furCream',
+          length: (0.070 + 0.024 * Math.sin(t * 7)) * TUNE.tailGirth * edge * jit(i, roll),
+          width: 0.025 * TUNE.tailGirth, bend: 0.26, bendDir: outward.clone(),
+          group: isDark(tMid) ? 'furDark' : 'furCream',
           weights: ramp(t, this._tailRamp),
         });
       }
@@ -2171,7 +2191,7 @@ export class SlyModel {
         base: tipC.clone().addScaledVector(tipT, -0.030),
         dir: tipT.clone().multiplyScalar(0.94).addScaledVector(perp, 0.30).normalize(),
         shadeN: tipT.clone().multiplyScalar(0.55).addScaledVector(perp, 0.85).normalize(),
-        length: 0.062 * TUNE.tailScale, width: 0.030 * TUNE.tailScale, bend: 0.22,
+        length: 0.070 * TUNE.tailGirth, width: 0.032 * TUNE.tailGirth, bend: 0.22,
         bendDir: perp.clone(),
         group: 'furDark', weights: [['tailD', 1]],
       });

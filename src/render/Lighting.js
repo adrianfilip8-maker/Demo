@@ -155,6 +155,28 @@ const TUNE = {
   /* A beam only exists where the opening faces the sun. cos of the widest angle that still
      counts as "the sun can see through this hole". */
   shaftFaceCos: 0.12,
+  /* **An opening is a hole in something with thickness, and near-grazing sun it seals.**
+     A roof slot is 2.6 m across cut through 0.85 m of slab; light entering it drifts
+     `thick * tan(incidence)` sideways on the way through, so below a certain elevation no ray
+     clears both lips and the slot transmits *nothing*. At tod 0.83 (sun 15°) the nave slots
+     are geometrically sealed — the drift is 3.11 m across a 2.6 m opening — yet they were
+     still publishing blades. COLLISION agreed: the length raycast left the aperture lip while
+     still inside the roof's own `ground` proxy and came back 1.37 m, so the four nave blades
+     drew as 1.77 m stubs hanging off the ceiling. Both symptoms are the same fact, and the
+     fix is to stop emitting a blade the masonry cannot pass rather than to lengthen it.
+
+     Deliberately a *seal* gate, not a transmission model: it is 1.0 for every opening in
+     every canonical shot except the sealed case, so it cannot dim the hall blades in `temple`
+     — the one shot where §7.3's volumetrics condition already passes. `temple`'s roof slots
+     sit at throat 0.45 against a 0.12 seal, a 3.75x margin. If the art ever wants slot blades
+     to genuinely fade toward sunset, raise `shaftSeal` — that is the knob, and it is a
+     separate decision from this bug. */
+  shaftSeal: 0.12,
+  /* Metres of masonry each opening family is cut through, from the geometry EgyptLevel emits:
+     nave roof slab `groundProxy` thick 0.85; clerestory band `masonryShell` thick 0.72;
+     peristyle pier depth d = 1.95 (its 2.15 is the width along the row, not the depth light
+     crosses). Only used by the seal test above. */
+  shaftThick: { roof: 0.85, clere: 0.72, court: 1.95 },
   /* Courtyard peristyle (§8.1 x = ±23, piers every 5.5 m): the gaps between piers, above
      the temenos wall behind them and below the y = 9.0 architrave. The only motivated
      opening in an open courtyard, and the one that rakes light past the obelisk. */
@@ -639,9 +661,9 @@ export class Lighting {
    * `width` / `span` / `axis` are kept on every entry because FX's mote placement and its
    * `shaftBoost()` uniform packing already speak that vocabulary.
    */
-  _makeShaft(id, kind, origin, normal, axis, axis2, halfU, halfV, gain) {
+  _makeShaft(id, kind, origin, normal, axis, axis2, halfU, halfV, gain, thick = 0) {
     const s = {
-      id, kind, gain,
+      id, kind, gain, thick,
       origin: origin.clone(),
       normal: normal.clone().normalize(),
       axis: axis.clone().normalize(),
@@ -675,7 +697,7 @@ export class Lighting {
     slots.forEach((o, i) => {
       this.shafts.push(this._makeShaft(
         `roofslot${i}`, 'slab', o.center, o.normal || Y, X, Z,
-        (o.w ?? 2.6) * 0.5, (o.h ?? 2.3) * 0.5, 1.0));
+        (o.w ?? 2.6) * 0.5, (o.h ?? 2.3) * 0.5, 1.0, o.t ?? TUNE.shaftThick.roof));
     });
 
     /* --- clerestory windows: vertical openings in the band wall, normal ±X --- */
@@ -688,7 +710,7 @@ export class Lighting {
       if (u.lengthSq() < 1e-6) u.set(0, 0, 1);
       this.shafts.push(this._makeShaft(
         `clerestory${i}`, 'slab', o.center, n, u, Y,
-        (o.w ?? 2.8) * 0.5, (o.h ?? 1.3) * 0.5, 1.0));
+        (o.w ?? 2.8) * 0.5, (o.h ?? 1.3) * 0.5, 1.0, o.t ?? TUNE.shaftThick.clere));
     });
 
     /* --- courtyard peristyle gaps: §2.3's "shafts through at least one opening in every
@@ -699,7 +721,7 @@ export class Lighting {
         this.shafts.push(this._makeShaft(
           `court${sx > 0 ? 'e' : 'w'}${i}`, 'slab',
           V(sx * TUNE.courtGapX, TUNE.courtGapY, z), V(sx, 0, 0), Z, Y,
-          TUNE.courtGapW * 0.5, TUNE.courtGapH * 0.5, TUNE.courtShaftGain));
+          TUNE.courtGapW * 0.5, TUNE.courtGapH * 0.5, TUNE.courtShaftGain, TUNE.shaftThick.court));
       }
     }
 
@@ -747,6 +769,30 @@ export class Lighting {
     }
     this._coneCount = this.shafts.length - this._slabCount;
     this._localSig = lights.length;
+  }
+
+  /**
+   * How much of a slab opening still passes light at this incidence, 0..1.
+   *
+   * Light entering a rectangular hole in a slab of thickness `t` drifts sideways by
+   * `t * tan(angle from the opening's normal)` before it leaves the far face, so the strip
+   * that clears both lips is narrowed by that drift in each in-plane axis independently —
+   * hence the product of the two reductions. Returns 0 when the drift exceeds the aperture,
+   * i.e. when the opening is geometrically sealed and no direct sun reaches the far side.
+   *
+   * See `TUNE.shaftSeal` for why this is gated to a seal test rather than used as a
+   * transmission curve.
+   */
+  _apertureThroat(s, dir) {
+    if (!(s.thick > 0)) return 1;
+    const cn = Math.abs(dir.dot(s.normal));
+    if (cn < 1e-4) return 0;                       // travelling along the opening's face
+    const du = Math.abs(dir.dot(s.axis)) / cn;     // tan of the incidence, per in-plane axis
+    const dv = Math.abs(dir.dot(s.axis2)) / cn;
+    const ru = 1 - (s.thick * du) / Math.max(1e-4, 2 * s.halfU);
+    const rv = 1 - (s.thick * dv) / Math.max(1e-4, 2 * s.halfV);
+    if (ru <= 0 || rv <= 0) return 0;
+    return ru * rv;
   }
 
   /**
@@ -802,7 +848,9 @@ export class Lighting {
          clerestory dark while the west one blazes at golden hour. */
       const face = s.normal.dot(A.sunDir);
       const open = THREE.MathUtils.smoothstep(face, TUNE.shaftFaceCos, 0.45);
-      s.intensity = power * open * s.gain;
+      /* ...and a hole the sun can see through still has to be one the light can *cross*. */
+      const seal = THREE.MathUtils.smoothstep(this._apertureThroat(s, _lightDir), 0, TUNE.shaftSeal);
+      s.intensity = power * open * s.gain * seal;
 
       if (sunMoved || !s._len) {
         let len = 0;
