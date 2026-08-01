@@ -223,7 +223,7 @@ function pillowN(n, p, cx, cy, cz, k) {
  */
 export function chamferBox(w, h, d, opts = {}) {
   const { rng, jitter = 0.0, chip = 0, taper = 0, lean = 0, shear = 0, round = 0, c = 0.035, only = 'all',
-    pillow = PILLOW } = opts;
+    pillow = PILLOW, edges = null } = opts;
   const W = w * 0.5, H = h * 0.5, D = d * 0.5;
   const cc = Math.min(c, w * 0.32, h * 0.32, d * 0.32);
 
@@ -246,6 +246,22 @@ export function chamferBox(w, h, d, opts = {}) {
   // 'top' leaves the underside square — nothing sees it and it halves the cost.
   const cAt = (j) => (only === 'top' && j === 0 ? 0 : cc);
 
+  /* `edges` masks the horizontal (y-rim) bevel per vertical face: { px, nx, pz, nz },
+   * true = bevelled. A masked-off side keeps a sharp square arris — the face reaches full
+   * height and the top face reaches the full footprint, so the strip there collapses and
+   * `face()` drops it. The vertical corner arrises are deliberately NOT maskable: they carry
+   * the silhouette break, and leaving them stable keeps the corner topology closed whatever
+   * the mask. Why mask at all: a floor of slabs whose every joint carries the swept-normal
+   * bevel draws one continuous lit rule down every joint line — under the night key that
+   * rule reads as the §7.3 "AO inverted at contact" cyan hairline (measured on `guard`:
+   * bevel ndl 0.712 vs floor 0.473 at tod 0.10, one band up, cool). Dashing the rims per
+   * slab keeps the day-time carved read and breaks the night-time wireframe one.
+   */
+  const eMask = edges
+    ? { px: edges.px !== false, nx: edges.nx !== false, pz: edges.pz !== false, nz: edges.nz !== false }
+    : null;
+  const sideOn = (axis, s) => !eMask || (axis === 0 ? (s ? eMask.px : eMask.nx) : (s ? eMask.pz : eMask.nz));
+
   const pos = [], nor = [], idx = [];
   const push = (p, n) => { pos.push(p[0], p[1], p[2]); nor.push(n[0], n[1], n[2]); return pos.length / 3 - 1; };
   const S = (i) => (i ? 1 : -1);
@@ -253,9 +269,9 @@ export function chamferBox(w, h, d, opts = {}) {
   const cor = (i, j, k, axis) => {
     const o = off.get(i * 4 + j * 2 + k), e = cAt(j);
     const p = [S(i) * W + o[0], S(j) * H + o[1], S(k) * D + o[2]];
-    if (axis !== 0) p[0] -= S(i) * e;
-    if (axis !== 1) p[1] -= S(j) * e;
-    if (axis !== 2) p[2] -= S(k) * e;
+    if (axis !== 0 && (axis !== 1 || sideOn(0, i))) p[0] -= S(i) * e;               // top-face x-inset, masked; z-face vertical arris, always
+    if (axis !== 1 && sideOn(axis === 0 ? 0 : 2, axis === 0 ? i : k)) p[1] -= S(j) * e; // side-face y-rim bevel, masked per its own face
+    if (axis !== 2 && (axis !== 1 || sideOn(2, k))) p[2] -= S(k) * e;               // top-face z-inset, masked; x-face vertical arris, always
     return p;
   };
 
@@ -1415,11 +1431,31 @@ export function pavingField({ x0, x1, z0, z1, y = 0, slab = 2.2, thick = 0.5, rn
      exactly; building a fresh box per slab instead drew 675x more from `rng` and shifted the
      whole downstream stream, which re-rolled every chipped corner and fallen block in the
      level. A geometry change that silently reseeds the rest of the build is not a local fix. */
-  const unit = chamferBox(1, thick, 1, { rng, jitter: 0.006, c: 0.022, only: 'top' });
+  /* Two of the four rim bevels, not four. A full rim draws one continuous lit rule down
+     every joint of the field, and under the cool night key that rule is the measured `guard`
+     defect: bevel ndl 0.712 vs floor 0.473 at tod 0.10 — a band up, rendered cyan, lying
+     exactly where contact occlusion should read (critic pass 4 §12; probed to these bevels
+     by raycast at px (470,556) → N (0, .925, −.381) on `paving:court`). Masking opposite
+     sides and quarter-turning per slab keeps the day-time carved rim on ~half of every
+     joint's length as *dashes* — hand-worn edges — and no joint line survives as a rule.
+     The turn is hashed off the slab's own deterministic position, not drawn from `rng`:
+     the unit build consumes exactly the draws it always did, so the level's downstream
+     stream is untouched (the reseeding trap documented above). Odd turns swap the slab's
+     footprint axes; grids are near-square (≤2.4 cm mismatch) and joints already jitter
+     ±5 cm, so the swap disappears into the authored irregularity. */
+  const unit = chamferBox(1, thick, 1, {
+    rng, jitter: 0.006, c: 0.022, only: 'top',
+    edges: { px: true, pz: true, nx: false, nz: false },
+  });
   place(unit, { y: -thick * 0.5 });
   const out = [];
+  const R = [0, 1, 2, 3].map((q) => new THREE.Matrix4().makeRotationY(q * Math.PI * 0.5));
+  const mm = new THREE.Matrix4();
   for (const m of pavingMatrices({ x0, x1, z0, z1, y, slab, rng, sink, holes })) {
-    out.push(unit.clone().applyMatrix4(m));
+    const e = m.elements;
+    const qt = Math.abs(Math.round(e[12] * 97 + e[14] * 57)) & 3;
+    mm.copy(m).multiply(R[qt]);
+    out.push(unit.clone().applyMatrix4(mm));
   }
   unit.dispose();
   const g = mergeAll(out);

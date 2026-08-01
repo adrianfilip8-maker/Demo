@@ -301,9 +301,17 @@ function courtyard(A) {
   }), 'paving:court', { cast: false });
   groundProxy(A, c.x0, c.x1, 0, c.z0, c.z1, { material: 'stone' });
 
-  /* Stylobate apron so the complex is planted rather than floating on TERRAIN's sand. */
+  /* Stylobate apron so the complex is planted rather than floating on TERRAIN's sand.
+     Top at −0.07: BELOW the lowest jittered slab top (±0.055), not the +0.02 it used to be.
+     Proud of the paving, its chamfered inner arris ran the whole court perimeter as one
+     up-facing sliver — under the night key that sliver renders one band brighter than both
+     neighbours and was the `guard` shot's cyan "kerb" contact line at the wall/ground
+     junctions (this is the geometry the shading investigation predicted: a correctly-lit
+     up-facing strip exactly where an occlusion crease should read). Sunk, it becomes a
+     shallow perimeter channel the paving edge shades — reads as a drainage margin, and the
+     apron still stands 1.4 m proud of the sand outside, which was its whole job. */
   for (const [x0, x1, z0, z1] of [[c.x0 - 1.4, c.x1 + 1.4, c.z1, c.z1 + 1.4], [c.x0 - 1.4, c.x0, c.z0, c.z1 + 1.4], [c.x1, c.x1 + 1.4, c.z0, c.z1 + 1.4]]) {
-    vol(A, 'court', 'sandstone_worn', x0, x1, -1.5, 0.02, z0, z1, { jitter: 0.03 });
+    vol(A, 'court', 'sandstone_worn', x0, x1, -1.5, -0.07, z0, z1, { jitter: 0.03 });
   }
 
   /* ---- Obelisk terrace: two stages, so the courtyard has vertical mass in its middle.
