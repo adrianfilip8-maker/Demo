@@ -36,16 +36,31 @@ export const TUNE = {
 
   /* --- silhouette proportions. These are the cartoon exaggeration knobs. ---
    *
-   * Measured before this pass, off the skinned mesh rather than off these numbers: chin→crown
-   * 0.349 m against a 1.93 m rendered figure = **5.5 heads**, or 4.4 counting the cap as part
-   * of the head silhouette (which it is). That is the lanky end of stylised-realistic, not the
-   * ~1:5 §7.3 asks for, and at `hero` distance — 55 px — it left him an unreadable column.
+   * **The head count is 1 : 3.07, not the 1 : 4.88 this block used to claim.** Measured off the
+   * built mesh, tuft geometry and unindexed verts excluded, material groups used to tell cap
+   * from skull:
+   *
+   *     floor 0.002   chin 1.235   cranium 1.739   cap crown 1.832
+   *     including the cap   head 0.597 m / figure 1.829 m  →  1 : 3.07
+   *     excluding the cap   head 0.504 m / figure 1.736 m  →  1 : 3.45
+   *
+   * The old figure was not a measurement of this mesh. It came from the asymptote below,
+   * `1.49 + 1.396/headHeight`, evaluated with headHeight = 0.349 — the *pre-`headScale`* head.
+   * `headScale` is 1.31, so the real head is 0.50 m and the formula was 1.4 heads optimistic.
+   * Anything reasoning about `headScale` from the old number was reasoning about a head that
+   * has not existed since headScale left 1.0.
+   *
+   * Two consequences worth stating plainly, because the instinct on seeing 3.07 is to shrink
+   * the head and that would be wrong twice over. §7.3's condition fails on proportions being
+   * **realistic**; 3.07 is more stylised than the ~1:5 it asks for, not less, so the condition
+   * passes and the lever is not the problem. And all 52 clips in Clips.js are authored against
+   * this skeleton, so a proportion change is a re-authoring job, not a constant edit.
    *
    * Head count alone is the weakest of the levers, because the head sits on top: growing it
-   * grows the total, so the ratio only asymptotes to 1.49 + 1.396/headHeight. Getting to 4.5
-   * by headScale alone needs S≈1.55 and a bobblehead. The cartoon read actually comes from the
-   * *set*: big head, tiny waist, narrow shoulders, long thin limbs, oversized hands and feet,
-   * and a tail with more mass than the torso. All six move together here.
+   * grows the total, so the ratio only asymptotes to 1.49 + 1.396/headHeight. The cartoon read
+   * actually comes from the *set*: big head, tiny waist, narrow shoulders, long thin limbs,
+   * oversized hands and feet, and a tail with more mass than the torso. All six move together
+   * here.
    */
   headScale: 1.31,        // cranium scale about the neck joint (§7.3 "~1:5 head:body")
   headWide: 1.08,         // extra width-only on the cranium: rounder from the front
@@ -55,7 +70,8 @@ export const TUNE = {
   limbSlim: 0.86,         // long thin limbs: every leg/arm radius goes through this
   shoulderSlim: 0.87,     // narrow shoulders — the deltoid mass, not the bone spacing
   brimLift: 0.050,        // cap brim off the brow — it was covering both eyes, see _buildCap
-  torsoShrink: 0.16,      // see `by()`: hips→neck 0.49 → 0.33 m, 5.29 → 4.88 heads tall
+  torsoShrink: 0.16,      // see `by()`: hips→neck 0.49 → 0.33 m. (The "5.29 → 4.88 heads" this
+                          //  line used to carry came from the same stale formula — see above.)
 
   /* Head-space units (pre-`headScale`), applied to the muzzle, the nose and the mouth line
    * together so they cannot drift apart. The muzzle root used to top out at y 1.652 against
@@ -753,10 +769,25 @@ export class SlyModel {
       [1.00, { [`lowerArm${L}`]: 0.42, [`hand${L}`]: 0.58 }],
     ];
 
-    // Sleeve → a short band of bare forearm fur → glove cuff. The fur band exists so the
-    // forearm tufts have somewhere to grow from, and it breaks the blue tube in two.
+    /* Sleeve → bare forearm fur → glove cuff.
+     *
+     * `cuffStart` 0.86 → 0.76, measured rather than chosen. At 0.86 the bare band was 8.4 cm
+     * of a 55 cm arm — the last 8%, right at the wrist — and every forearm clump was packed
+     * into the 6.5 cm the tuft pass could use, landing on the *face* of the arm and partly
+     * swallowed by the glove, which is 14% fatter. Rendered through the real `sly-closeup`
+     * camera with the arm's own clumps held out, the arm's share of the outer silhouette went
+     * −12.4%: the clumps were costing triangles and contributing no edge at all, in the one
+     * place §7.3 names out loud ("the backs of the arms"). The legs, built the same way but
+     * over a full-length band, come in at +26.6% in the same frame.
+     *
+     * 0.76 is not a round number, it is where `clothSwell`'s hem roll already finishes — the
+     * sleeve was always modelled as flaring to +20% and completing at t 0.76, so the hem lands
+     * on the hem instead of 10% short of it, and the band goes to 15.3 cm without inventing a
+     * new silhouette event. It also reads as a rolled sleeve ending below the elbow (0.68),
+     * which is the reference shape, and it breaks the sleeve — the second largest smooth
+     * surface on him after the legs — into blue tube, grey forearm, dark glove. */
     const sgSleeve = mb.newSg(), sgFur = mb.newSg(), sgCuff = mb.newSg();
-    const cuffStart = 0.86, gloveStart = 0.965;
+    const cuffStart = 0.76, gloveStart = 0.965;
 
     /* Published for the tuft pass so forearm clumps sit on the real loft rather than on a
        hand-copied pair of coordinates that silently rots when a radius moves. */
@@ -1649,8 +1680,20 @@ export class SlyModel {
       ...o,
       width: (o.width ?? 0.015) * WF,
     });
-    // deterministic jitter: two clumps the same size next to each other read as a comb
-    const jit = (i, k) => 1 + 0.34 * Math.sin(i * 12.9898 + k * 78.233);
+    /* Deterministic jitter: two clumps the same size next to each other read as a comb.
+     *
+     * This was `1 + 0.34 * sin(i * 12.9898 + k * 78.233)` — the standard GLSL hash with the
+     * large multiplier and the `fract()` dropped, which is what actually decorrelates it.
+     * Without them it is just a sine sampled at 12.99 rad per index: it wraps ~2.07 times per
+     * step, so successive clumps beat slowly instead of decorrelating. Enumerated, the eleven
+     * cheek clumps came out spanning 0.0526–0.0616 m — a **±8% spread against the ±34% the
+     * amplitude claims** — and that near-constant length, on top of an exactly uniform angular
+     * pitch, is the row of identical teeth the silhouette test shows along the cheek ruff.
+     *
+     * Same mean (1.0) and same range ([0.66, 1.34]) as before, so nothing rescales; only the
+     * distribution inside that range changes, from a slow beat to actual noise. */
+    const hash = (i, k) => { const s = Math.sin(i * 12.9898 + k * 78.233) * 43758.5453; return s - Math.floor(s); };
+    const jit = (i, k) => 0.66 + 0.68 * hash(i, k);
 
     for (const side of [1, -1]) {
       /* cheek ruffs — the widest part of his head, so the most valuable place to break up.
@@ -1661,17 +1704,25 @@ export class SlyModel {
        * identity is. 92 of them sat in front of the mask plane. A tuft earns its triangles by
        * breaking the *outline*, which needs it at the silhouette edge, not on the face: from
        * θ 0.86 they are past the eye and doing the job the comment claims. */
+      /* Pitch and width are jittered here, not only length. Length variation on a row of
+         equally-spaced, equally-wide clumps still reads as a comb — it is a comb with uneven
+         teeth. The pitch offset is bounded to ±0.022 rad against a 0.060 rad step so clumps
+         cannot cross each other, and `th` is clamped at 0.86: nothing may drift back toward
+         the face, which is the failure this row already had once (clumps at θ 0.60 stood in
+         front of the eyes and captured as black lashes). */
       for (let i = 0; i < Math.round(5 * D); i++) {
         const f = i / (Math.round(5 * D) - 1);
-        const th = side * THREE.MathUtils.lerp(0.86, 1.46, f);
-        const phi = THREE.MathUtils.lerp(-0.38, 0.30, f);
+        const th = side * Math.max(0.86,
+          THREE.MathUtils.lerp(0.86, 1.46, f) + (hash(i, side + 31) - 0.5) * 0.045);
+        const phi = THREE.MathUtils.lerp(-0.38, 0.30, f) + (hash(i, side + 47) - 0.5) * 0.050;
         const base = this.headSurf(th, phi, 0.97);
         const out = base.clone().sub(this.headCenter).normalize();
         const dir = out.clone().addScaledVector(new THREE.Vector3(0, -1, -0.55), 0.55).normalize();
         put({
           base, dir,
           length: (0.052 + 0.030 * (1 - Math.abs(f - 0.45) * 2)) * S * jit(i, side),
-          width: 0.021 * S, bend: 0.34, bendDir: new THREE.Vector3(0, -1, 0),
+          width: 0.021 * S * (0.78 + 0.44 * hash(i, side + 59)),
+          bend: 0.34, bendDir: new THREE.Vector3(0, -1, 0),
           group: 'fur', weights: [['head', 1]],
         });
       }
@@ -1738,23 +1789,30 @@ export class SlyModel {
           }
         }
       }
-      // neck ruff around the collar
+      /* Neck ruff around the collar. This row had *no* variation of any kind — seven clumps at
+         exactly 0.55 rad pitch, identical width, identical length — so it was the most
+         literally comb-like family on the model. Same three axes jittered as the cheeks. */
       for (let i = 0; i < Math.round(3 * D); i++) {
-        const th = side * (0.95 + i * 0.55);
-        const y = by(1.352);
+        const th = side * (0.95 + i * 0.55 + (hash(i, side + 71) - 0.5) * 0.22);
+        const y = by(1.352) + (hash(i, side + 83) - 0.5) * 0.012;
         const r = this._torsoRadius(y);
         const base = new THREE.Vector3(Math.sin(th) * r.rx * 1.02, y, r.cz + Math.cos(th) * r.rz * 1.02);
         put({
           base, dir: new THREE.Vector3(Math.sin(th) * 0.75, -0.42, Math.cos(th) * 0.75).normalize(),
-          length: 0.042, width: 0.015, bend: 0.3,
+          length: 0.042 * jit(i, side + 11), width: 0.015 * (0.80 + 0.40 * hash(i, side + 97)),
+          bend: 0.3,
           group: 'furCream', weights: [['neck', 1]],
         });
       }
 
-      /* Backs of the forearms — §7.3 names this surface explicitly. Rings now, replacing two
-         ulnar-side rows that covered about 140° of the arm: `combat`, `traversal` and `hero`
-         all catch a forearm from outside that arc, where the edge was clean. Built off the
-         published arm loft so a radius change cannot silently float them. */
+      /* Backs of the forearms — §7.3 names this surface explicitly, and until this pass it was
+         the only named surface where the clumps measurably did nothing. Rendered through each
+         shot's own camera with just this region's clumps held out, the arm's share of the
+         outer silhouette moved −12.4% at `sly-closeup`, −5.9% at `hero` and −8.1% at `combat`:
+         they were costing triangles and buying no edge anywhere. Two causes, both fixed below
+         — the band they grow from was 8 cm at the wrist (see `cuffStart`), and three columns
+         only ever face a camera dead in front or dead behind.
+         Built off the published arm loft so a radius change cannot silently float them. */
       const arm = this._armInfo?.[side];
       if (arm) {
         const armAt = (u) => {
@@ -1772,8 +1830,20 @@ export class SlyModel {
         const nrm = new THREE.Vector3().crossVectors(axis, fwd).normalize();
         /* `a` is measured from +Z here, so a camera in front of him puts the forearm's
            silhouette tangents at a ≈ ±π/2 and a camera behind him at the same two lines. Those
-           get the clumps; a full ring was tried and carpets a 0.07 m band into a bottle brush. */
-        const COLS = [{ a: 1.52, n: 3 }, { a: -1.52, n: 3 }, { a: 3.02, n: 2 }];
+           get the clumps; a full ring was tried and carpets the band into a bottle brush.
+           Row counts raised with the band length (see `cuffStart`) so the spacing stays what
+           it was rather than stretching three rows over twice the distance.
+
+           Four columns, not three, and this is the difference between the arm working and
+           not. ±π/2 and π only serve a camera dead in front of him or dead behind. Measured
+           azimuths: `sly-closeup` sees him 13° off front (tangents at a ≈ ±π/2 — covered),
+           but `combat` sees him at 45° (tangents −0.79 / 2.36) and `guard` at 98°, and with
+           the front column missing the nearest clump line was 44° away — which is why the
+           `combat` map showed six clumps sitting on the face of the forearm and none on its
+           edge. Adding a ≈ 0 puts every azimuth within 45° of a column. This is the same
+           reasoning the legs already use (their three columns sit at 0 and ±π/2 in their own
+           convention), and the legs are the region that measures +26%. */
+        const COLS = [{ a: 0.02, n: 4 }, { a: 1.52, n: 4 }, { a: -1.52, n: 4 }, { a: 3.02, n: 3 }];
         for (let ci = 0; ci < COLS.length; ci++) {
           const col = COLS[ci];
           for (let r = 0; r < col.n; r++) {
@@ -1784,7 +1854,11 @@ export class SlyModel {
             const out = fwd.clone().multiplyScalar(Math.cos(a)).addScaledVector(nrm, Math.sin(a)).normalize();
             put({
               base: c.clone().addScaledVector(out, rad * 0.86),
-              dir: out.clone().multiplyScalar(0.78).addScaledVector(axis, 0.58).normalize(),
+              /* Was 0.78 out / 0.58 along-arm. `axis` points at the hand, so more than half of
+                 every clump's length was being spent travelling toward a glove fat enough to
+                 hide it. 0.86/0.34 spends it on the radius, which is the only component that
+                 can reach past the silhouette. */
+              dir: out.clone().multiplyScalar(0.86).addScaledVector(axis, 0.34).normalize(),
               length: 0.050 * (r % 2 ? 0.66 : 1.0) * jit(r * 3 + ci, side * 5),
               width: 0.015, bend: 0.32,
               bendDir: axis.clone(),

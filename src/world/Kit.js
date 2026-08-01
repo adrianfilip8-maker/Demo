@@ -426,6 +426,25 @@ export function masonryShell(o) {
   const driftAt = (t, phase) => drift <= 0 ? 0
     : drift * Math.sin(t * Math.PI * 1.7 + phase) * t;
 
+  /* ---- The bright line at the `guard` wall/ground contact: NOT here -----
+   *
+   * A battered wall steps every course back by `batter · ch` and recesses each block by
+   * 1–5 cm, which does leave up-facing strips along every course line. That looked like an
+   * exact match for the reported "kerb top at ndl ≈ 0.62", and counting them found 727 in the
+   * `guard` frustum below y = 1.4 m. It was the wrong answer twice over, and both errors are
+   * worth leaving written down:
+   *
+   *   1. That count had no occlusion test. `weld` overlaps every course by ~6 cm, so most of
+   *      those strips are interior faces buried inside the course above and never render. A
+   *      z-buffered rasterisation of the same view (scratch `zbuf.mjs`) puts the number of
+   *      VISIBLE bright up-facing contact pixels at 86 — 0.009% of the frame, longest run
+   *      14 px. There is no 200 px kerb line in this geometry to remove.
+   *   2. Holding the batter off with a vertical plinth — the obvious fix, and the one the
+   *      brief suggested — measured *worse*: 86 → 464 flagged pixels, 3 → 9 runs. Flush
+   *      plinth courses turn many short broken ledges into one clean unbroken one.
+   *
+   * So the batter ledges stay as they are. Whatever draws that line, it is not this.
+   */
   for (let c = 0; c < nCourse; c++) {
     const yb = c * ch, yc = yb + ch * 0.5;
     const t = h > 0 ? yc / h : 0;

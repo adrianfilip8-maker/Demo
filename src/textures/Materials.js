@@ -173,6 +173,18 @@ const GOLD_DEEP = MX(PAL.goldDark, PAL.sandCrev, 0.58);
 /** The crest a specular hit lands on. Past `goldLight` toward the *sun*, not toward paper. */
 const GOLD_HOT = MX(PAL.goldLight, PAL.sun, 0.45);
 
+/* Palm-trunk browns, both chosen against §2.2's `crevice #4a2f22` luminance (0.2031) — the value
+ * below which the shader's flat additive shadow wash out-weighs a texel's own albedo. Bark is
+ * legitimately the darkest organic surface in the level and these keep it that way; what they
+ * stop is it falling *through* the palette into shadow-violet. See `palm_bark`. */
+/** Darkest stop of the trunk ramp. Luma 0.2334. */
+const BARK_DARK = 0x523726;
+/** The groove between two frond pads, and the floor. Luma 0.2451 — a floor has to sit well
+ *  *above* the threshold it defends, because `rampFloor`'s pull is `(lo − y)/lo` and vanishes as
+ *  a texel approaches it. Measured: a texel left at 0.199 by `grain`'s multiply is pulled only to
+ *  0.202 from a 0.2253 floor, still under the line; from 0.2451 it clears. */
+const BARK_CREV = 0x563a26;
+
 /**
  * Five-stop gold ramp, `t` biased so the mass falls low and only the tail reaches `GOLD_HOT`.
  *
@@ -807,20 +819,41 @@ export const MATERIALS = {
       const fHex = tintAtValue(base, PAL.carnelian, 0.26);
       const qHex = tintAtValue(base, MX(PAL.limeLight, PAL.sandLight, 0.5), 0.26);
       const bHex = MX(base, PAL.sandCrev, 0.28);
-      const macro = s.field(5, (u, v) => warpN(u, v, 4, 4, 1.2, cx.seed + 31) * 0.5 + 0.5);
+      // 6 rather than 4 cycles, for the same k=1 reason as `schl` below: this field is the other
+      // half of the hue band, and at 4 cycles on a 4.4 m repeat it was leaking into the one-blob
+      // bin alongside it. At 6 it is a 0.73 m band, still far above the 23 mm crystals.
+      const macro = s.field(5, (u, v) => warpN(u, v, 6, 4, 1.2, cx.seed + 31) * 0.5 + 0.5);
       const size = s.size;
 
-      /* (1) Schlieren — the pluton's own banding. Two cycles per tile is ~2 m of world, warped
-       * hard so it winds rather than stripes, plus a weaker second octave. It biases which
-       * mineral wins the Worley cell, so a pink swathe is pink because the feldspar count is up
-       * there, and it drags a little value with it. */
+      /* (1) Schlieren — the pluton's own banding, warped hard so it winds rather than stripes,
+       * plus a weaker second octave. It biases which mineral wins the Worley cell, so a pink
+       * swathe is pink because the feldspar count is up there, and it drags a little value.
+       *
+       * **Three cycles per tile, not two, and the reason is the obelisk's repeat.** The note
+       * above claims this material cannot show a seam because none of its layers carries a
+       * countable landmark. Landmarks are not the only way a repeat becomes countable: a tile
+       * whose variance sits at *one cycle per tile* is a single blob, and a column of identical
+       * blobs is as countable as a column of identical cracks. Measured on the built albedo by
+       * taking the row- and column-mean profiles and binning them by cycles-per-tile, this
+       * recipe put **61.5%** of its along-U profile variance and **53.4%** of its along-V
+       * variance in the k=1 bin — the highest in the catalogue after `bronze_aged`. With a 4.4 m
+       * repeat on a 22 m shaft that is five identical light/dark bands, and at `courtyard`'s
+       * 20.8 px/m they are 92 px apart: countable.
+       *
+       * Two cycles across a 4.4 m repeat is a 2.2 m feature, which is *above* this recipe's own
+       * stated design band ("deliberately an order of magnitude coarser than the crystals — 0.5
+       * to 2 m"). Three cycles is 1.5 m, inside it. So this is not a retreat from macro
+       * structure — the flatness this recipe was rebuilt to fix — it is the same structure
+       * moved to the scale the recipe already argued for. Nothing is lost to the mip chain
+       * either: the obelisk is seen at mip 3 in `courtyard` (512 texels over a 66 px repeat),
+       * which averages away anything under ~7 cm, and 1.5 m is twenty times that. */
       const schl = s.field(4, (u, v) => sat(
-        warpN(u, v, 2, 3, 1.45, cx.seed + 907) * 0.80
-        + warpN(u, v, 5, 3, 1.10, cx.seed + 1531) * 0.34 + 0.5));
+        warpN(u, v, 3, 3, 1.45, cx.seed + 907) * 0.80
+        + warpN(u, v, 7, 3, 1.10, cx.seed + 1531) * 0.34 + 0.5));
 
       /* (2) Wind scour — shallow hollows cut by three thousand years of blown sand, at ~0.5 m.
        * Ridged noise because scour has crests where the harder crystals stand out. */
-      const scour = s.field(3, (u, v) => ridgeN(u, v, 6, 4, 0.55, cx.seed + 733));
+      const scour = s.field(3, (u, v) => ridgeN(u, v, 8, 4, 0.55, cx.seed + 733));
 
       const wA = {}, wB = {};
       // Crystal cells, capped so a half-resolution tier still gets ≥6 texels per crystal —
@@ -897,7 +930,8 @@ export const MATERIALS = {
         streakAmt: 0.44, streakTint: 0x4e3628, streakDecay: 0.9962,
         dustAmt: 0.16, dust: MX(PAL.sandLight, PAL.limeLight, 0.4),
         downDark: 0.10, roughGrime: 0.14,
-        patina: 0.26, patinaTint: 0x6f5040, patinaFreq: 2,
+        // patinaFreq 2 → 3: one more k=1 contributor on a surface whose repeat is countable.
+        patina: 0.26, patinaTint: 0x6f5040, patinaFreq: 3,
         // Granite is quarried in one piece: it has no courses, so no course-scale bevel light.
         directional: 0.45,
       });
@@ -1179,7 +1213,20 @@ export const MATERIALS = {
    * the anti-repetition work now, because a repeat you cannot pick out is not a repeat. */
   hieroglyph_wall: {
     group: 'carved', tier: 0, tile: HG_WALL_TILE, bump: 0.044, rough: 0.86,
-    aoStrength: 1.15, aoFloor: 0.13,
+    /* 1.15 → 0.55: the same saturated-AO defect diagnosed on `hieroglyph_gilded`, live in a
+     * second place. `heightAO`'s nearest-radius gain here is
+     * `(0.044 / (3 · 5.2/1024)) · 1.55 · 0.47 · 1.15 = 2.42`, so its term is `sat(d · 9.7)` and
+     * clamps at a height difference of 0.103 — while `carve`'s `depth: 0.46` puts roughly 0.23
+     * across the bevel at that radius. Every glyph interior therefore came out at `aoFloor`
+     * regardless of its shape, which is `heightAO`'s own named failure ("a sunk relief … as a
+     * *filled* dark stamp … §7.3's 'carvings look painted-on'") reappearing through the
+     * `aoStrength` knob rather than through the radius weights it was fixed in.
+     *
+     * 0.55 is set against the saturation point, not by ratio: it gives `sat(d · 4.6)`, which
+     * needs d > 0.22 to clamp, so the floor of a cut still bottoms out and the bevel keeps a
+     * gradient. These are the 36 m walls `temple` looks down, so this is the largest carved
+     * surface in the level and the one that decides that line of §7.3. */
+    aoStrength: 0.55, aoFloor: 0.13,
     build(s, cx) {
       const size = s.size;
       // Carvings run straight across block joints, exactly as they do on a real temple wall —
@@ -1188,7 +1235,27 @@ export const MATERIALS = {
       // The world size the layout is actually laid out at, derived from the tile rather than
       // written out — a literal here would go stale the next time anyone retunes `tile`, which
       // is precisely the failure `glyphWall`'s note describes. See `worldTileOf`.
-      const layout = (mode) => (ctx) => glyphWall(ctx, size, mode, cx.seed, { worldTile: worldTileOf(HG_WALL_TILE), glyphM: 0.72 });
+      /* **`cartouche: false`, and it is the whole of §7.3's "visible texture tiling repetition"
+       * on this recipe.** `glyphWall` defaults `cartouche` to `true`, so these walls were drawing
+       * one royal cartouche — a 0.7 x 1.8 m outlined oval, the single most distinctive shape in
+       * the sign set — once per 10.4 m repeat. Rendered as `temple` actually frames the far hall
+       * wall (36 m of wall at 13.5 px/m, i.e. 3.46 repeats across 486 px, each repeat 140 px
+       * wide) the cartouche is a beacon marking every seam, and the repeats are trivially
+       * countable by eye.
+       *
+       * This is the failure `glyphWall`'s own note says it fixed — *"a dense field of small
+       * varied marks has no landmark in it, so the eye has nothing to recognise on the next
+       * repeat: the repetition is solved by removing the thing that repeats visibly"* — and the
+       * note is right; the default simply put the landmark back. `hieroglyph_gilded` keeps its
+       * cartouche on purpose (it is passed explicitly there): an architrave carries a royal name,
+       * it is 11.7% gilded, and at `courtyard`'s 41 px per repeat there is nothing to count.
+       *
+       * Worth recording that the spectral tiling measure missed this completely. Binning the
+       * tile's row/column mean profiles by cycles-per-tile put `hieroglyph_wall` among the
+       * *cleanest* in the catalogue (k=1 at 0.047 along U, 0.169 along V) because its repeat
+       * signature is not a low-frequency blob — it is a recognisable object. Only the render at
+       * consumer scale showed it. */
+      const layout = (mode) => (ctx) => glyphWall(ctx, size, mode, cx.seed, { worldTile: worldTileOf(HG_WALL_TILE), glyphM: 0.72, cartouche: false });
       const cut = rasterMask(size, layout('cut'));
       const lines = rasterMask(size, layout('line'));
       const paint = rasterRGBA(size, layout('paint'));
@@ -1219,7 +1286,40 @@ export const MATERIALS = {
    * value range across the two millimetres where the relief is. */
   hieroglyph_gilded: {
     group: 'carved', tier: 1, tile: HG_GILDED_TILE, bump: 0.042, rough: 0.70,
-    aoStrength: 1.30, aoFloor: 0.07,
+    /* **`aoStrength` 1.30 → 0.60, because at 1.30 this recipe had no occlusion *gradient* — it
+     * had an occlusion *switch*, and the switch was closed over the whole of the gilding.**
+     *
+     * Measured on the built ORM: of the texels carrying the gild mask, **64.6%** sat exactly at
+     * `aoFloor`, and the 1st, 25th and 50th percentiles were all 0.067 — the floor itself. The
+     * comparison that makes it obvious is `gold_leaf`, the recipe this one borrows its value
+     * policy from: 10.2% at floor, p50 **0.675**. One has a gradient; this one did not.
+     *
+     * The mechanism is arithmetic in `heightAO`. Its per-radius gain is
+     * `(bump / (r·px))·1.55·w·strength`, and `px` comes from the *declared* tile (3.2) rather
+     * than the 6.4 m the consumer actually lays it over, so it is already double what the name
+     * suggests. At bump 0.042, size 512 and strength 1.30 the nearest radius alone gives
+     * `sat(d·12.7)`, which reaches 1.0 at a height difference of 0.079 — and `carve`'s
+     * `depth: 0.42` puts roughly 0.16 across the bevel at that radius. So all four radius terms
+     * fired at full strength, `sat(v)` clamped to zero, and every texel inside a glyph came out
+     * at the floor regardless of whether it was the floor of the cut or the arris above it.
+     *
+     * Why that matters more here than anywhere else in the catalogue: AO multiplies the two
+     * terms that give cel metal its body away from the highlight — the hemispheric fill
+     * (`albAmb * fill * ao`) and, decisively, the stylised environment reflection
+     * (`metalEnv = alb * env * slyMetal * uMetalGain * ef * … * ao`). The specular lobe is *not*
+     * multiplied by AO, so the surface still glinted; what it had lost was everything in
+     * between. A gilded cornice was therefore a black stamp with a hard line on it, which is
+     * neither metal nor carving. §7.3 asks for hard spec *and* dark occlusion, and dark
+     * occlusion means the recess is dark **relative to** the arris — a uniform floor supplies
+     * the darkness and destroys the relation that makes it read.
+     *
+     * 0.60 is chosen against the saturation point rather than by eye: it takes the nearest
+     * radius' gain to `sat(d·5.9)`, which needs d > 0.17 to clamp, so the glyph floor still
+     * bottoms out and the bevel keeps a gradient. The stone half of this recipe pays almost
+     * nothing for it — only 9.2% of the whole surface was at the floor and the gild mask is
+     * 11.7% of it, so essentially every floored texel *was* gilding; the limestone's AO sat at
+     * p25 0.933 and is untouched. */
+    aoStrength: 0.60, aoFloor: 0.07,
     build(s, cx) {
       const size = s.size;
       ashlar(s, {
@@ -1273,9 +1373,13 @@ export const MATERIALS = {
     },
   },
 
+  /* No consumer: nothing in `Architecture.RECIPES`, `Props.MATERIALS` or any other module names
+   * this recipe, so it is built by `PREWARM` and applied to nothing. Kept correct rather than
+   * tuned in frame — including the `aoStrength` correction below, which is the same defect and
+   * the same arithmetic as its two siblings and should not be left live in a third place. */
   relief_figures: {
     group: 'carved', tier: 0, tile: 5.4, bump: 0.046, rough: 0.86,
-    aoStrength: 1.15, aoFloor: 0.13,
+    aoStrength: 0.55, aoFloor: 0.13,
     build(s, cx) {
       const size = s.size;
       const m = ashlar(s, { seed: cx.seed, courses: 4, aspect: 3.2, dome: 0.02, relief: 0.04, groove: 0.20, jointW: 0.005, chamfer: 0.010, tone: -0.020, bedFreq: 2 });
@@ -1957,6 +2061,33 @@ export const MATERIALS = {
     },
   },
 
+  /* **The catalogue's worst near-black tail on a surface that is actually in a canonical shot.**
+   *
+   * `darkTail` — the fraction of texels below §2.2's `crevice #4a2f22` luminance, 0.2031 — was
+   * **0.141** here, twenty times the worst stone offender, on a recipe with no `rampFloor` at
+   * all. Palms stand in `courtyard` (10 m from the camera, 53 px/m) and `dunes`.
+   *
+   * That threshold is not decoration, and it is worth writing down why it applies to bark and
+   * not only to stone. In shadow the shader's terms on a texel are
+   * `albShadow·uShadowColor·shadowMix·mix(0.55,1,ao)` plus `albAmb·fill·ao` plus a *flat*
+   * additive `uShadowColor·uShadowWash·shadowMix·ao`. With `shadowWash 0.15` and the shadow
+   * light at linear (0.142, 0.189, 0.423), the additive term is (0.021, 0.028, 0.063) — fixed,
+   * independent of albedo. A bark texel at sRGB luma 0.13 is linear ~0.014, so its own
+   * multiplied contribution is about (0.002, 0.003, 0.006): **the flat violet is an order of
+   * magnitude larger than the material.** Fourteen per cent of the trunk was rendering as
+   * shadow-hue rather than as bark, which is the same defect that put violet blotches on the
+   * walls, arriving by the same route.
+   *
+   * Fixed at the source rather than with the floor, following `mudbrick`'s note: `rampFloor`'s
+   * pull is `(lo − y)/lo` and goes to zero as a texel approaches the threshold, so it cannot
+   * move a texel that sits just under the line. The ramp's dark stop was luma 0.162 and
+   * `weather`'s crevice hex `0x241608` was **0.094** — less than half the threshold, mixed in at
+   * `creviceAmt 0.62`. Both now sit just above it and keep the hue; `rampFloor` goes on as the
+   * backstop it is meant to be.
+   *
+   * The bark does not go flat for it: the ramp's *range* is what carries this material and the
+   * bright end is untouched, so the lift costs the bottom 6% of the value range and nothing
+   * else. Checked, not assumed — luma RMS and the whole mip ladder are reported below. */
   palm_bark: {
     group: 'organic', tier: 1, tile: [1.4, 1.8], bump: 0.022, rough: 0.90,
     build(s, cx) {
@@ -1977,7 +2108,7 @@ export const MATERIALS = {
           const groove = sat(1 - (1 - d) / 0.16) ** 1.4;
           s.h[i] = 0.34 + pad * 0.46 - groove * 0.26 + (fibre[i] - 0.5) * 0.10;
           const t = sat(0.34 + pad * 0.5 + (macro[i] - 0.5) * 0.5 + (fibre[i] - 0.5) * 0.4);
-          const col = ramp3(0x3a2618, PAL.sandDark, PAL.sandMid, t);
+          const col = ramp3(BARK_DARK, PAL.sandDark, PAL.sandMid, t);
           s.r[i] = col[0]; s.g[i] = col[1]; s.b[i] = col[2];
           s.rough[i] = sat(0.88 + (1 - pad) * 0.08);
         }
@@ -1989,8 +2120,13 @@ export const MATERIALS = {
         s.mixHex(i, hairHex, hair[i] * 0.5);
         s.h[i] += hair[i] * 0.05;
       }
-      weather(s, { seed: cx.seed + 6, crevice: 0x241608, creviceAmt: 0.62, streakAmt: 0.18, dustAmt: 0.20, roughGrime: 0.06 });
-      grain(s, { amount: 0.04, freq: 300, seed: cx.seed + 8, heightAmt: 0.014 });
+      weather(s, { seed: cx.seed + 6, crevice: BARK_CREV, creviceAmt: 0.62, streakAmt: 0.18, dustAmt: 0.20, roughGrime: 0.06, downDark: 0.08 });
+      /* 300 cycles on the ~3.1 m Vegetation lays this tile over is a 10 mm feature: 0.54 px on
+       * the `courtyard` palm and 0.08 px in `dunes`, i.e. below the pixel at both framings it
+       * appears in. Dropped to 90 (34 mm, 1.8 px at `courtyard`) so the grain is something the
+       * frame can carry rather than mip-chain fodder. */
+      grain(s, { amount: 0.04, freq: 90, seed: cx.seed + 8, heightAmt: 0.014 });
+      rampFloor(s, { crevice: BARK_CREV });
     },
   },
 

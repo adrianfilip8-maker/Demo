@@ -46,6 +46,23 @@ function takeTicket() {
   try { writeFileSync(myTicket(), ''); } catch { _ticketAt = 0; }
 }
 
+/**
+ * Re-create our ticket if it has gone missing, keeping the original timestamp so our place in
+ * the queue is preserved.
+ *
+ * Needed because losing a ticket is silent and self-inflicting: `takeTicket()` early-returns
+ * once `_ticketAt` is set, so a swept ticket was never recreated and the waiter then raced
+ * ticketless — the exact starvation the FIFO exists to prevent, visited on the *longest*
+ * waiter. Called every poll; a `writeFileSync` of an empty file once a second is free next to
+ * a 90 s boot.
+ */
+function reassertTicket() {
+  if (!_ticketAt) return;
+  try {
+    if (!existsSync(myTicket())) { mkdirSync(QUEUE, { recursive: true }); writeFileSync(myTicket(), ''); }
+  } catch {}
+}
+
 function dropTicket() {
   if (!_ticketAt) return;
   try { unlinkSync(myTicket()); } catch {}
@@ -64,7 +81,13 @@ function isMyTurn() {
     const pid = parseInt(n.slice(dash + 1), 10);
     if (!Number.isFinite(at) || !Number.isFinite(pid)) continue;
     if (pid === process.pid) continue;
-    if (!alive(pid) || Date.now() - at > STALE_MS + 10 * 60 * 1000) {
+    /* Liveness is the ONLY eviction rule. An age cutoff was tried and was a bug: a waiter that
+       had queued patiently for thirty minutes had its ticket swept while its process was
+       perfectly alive, and it then raced ticketless — starvation inflicted on precisely the
+       waiter the FIFO exists to protect. On this container a legitimate wait behind several
+       2-5 minute captures routinely exceeds any cutoff worth setting, so "old" carries no
+       information about "dead" and `alive()` answers the question directly. */
+    if (!alive(pid)) {
       try { unlinkSync(path.join(QUEUE, n)); } catch {}
       continue;
     }
@@ -104,7 +127,13 @@ function tryTake() {
  * Wait for the capture lock. Returns a release function.
  * @param {(waitedMs:number, holder:number)=>void} [onWait] progress callback, called every ~10 s
  */
-export async function acquire({ timeoutMs = 45 * 60 * 1000, onWait } = {}) {
+/* Give-up time. Deliberately long, because giving up means rendering *unlocked* alongside
+   everyone else, and that is the thrash the lock exists to prevent — seven concurrent
+   SwiftShader renderers were observed after several waiters timed out at the old 45 minutes,
+   each then making every other run slower, including the one holding the lock. A fair queue
+   changes the arithmetic: under FIFO your wait is bounded by the runs ahead of you, so waiting
+   three hours is strictly better than joining a stampede. */
+export async function acquire({ timeoutMs = 3 * 60 * 60 * 1000, onWait } = {}) {
   mkdirSync(DIR, { recursive: true });
   const t0 = Date.now();
   let announced = 0;
@@ -112,7 +141,7 @@ export async function acquire({ timeoutMs = 45 * 60 * 1000, onWait } = {}) {
   takeTicket();
   // Only attempt the lock when we hold the oldest live ticket, so waiting is rewarded rather
   // than merely tolerated. `tryTake()` remains the atomic step; this decides who gets to call it.
-  while (!(isMyTurn() && tryTake())) {
+  while (!(reassertTicket(), isMyTurn() && tryTake())) {
     const waited = Date.now() - t0;
     if (waited > timeoutMs) {
       // Better to render slowly alongside someone else than to fail the agent's check.
