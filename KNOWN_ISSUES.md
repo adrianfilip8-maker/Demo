@@ -289,25 +289,23 @@ The reason it survived three critic passes and many GPU cycles is worth more tha
 z-buffered rasteriser that paints backfaces magenta (`tools/raster.mjs`, ~3 s, no capture lock)
 after the ordinary review process had missed it repeatedly.
 
-**Two larger instances are still open**, found by running that tool across all ten shots rather
-than the three it was first pointed at:
+**Two larger instances I reported here were wrong, and the reason matters more than the numbers.**
 
-| shot | backface px | share of frame | worst offender |
-|---|---|---|---|
-| `traversal` | **64,715** | **18.4%** | `arch:court:sandstone_block` |
-| `combat` | **16,849** | **4.9%** | `arch:court:bronze_dark` |
-| `hero` | 3,351 | 0.9% | `arch:court:sandstone_block` |
+I ran `raster.mjs` across all ten shots and reported `traversal` at **64,715 backface px (18.4%
+of frame)** and `combat` at 4.9%, wrote them into this file, and routed them to ARCHITECTURE.
+Re-run against the current tree, the same tool gives **`traversal` 0.01%, `combat` 0.00%,
+`guard` 0.00%**. A critic pass independently measured `ed67555` at 3.23% and found `guard`'s
+apparent 6.32% was entirely the sand-drift twin — it nearly filed that as a new finding and
+checked first.
 
-Evidence frames are committed at `progress/frames/geo-traversal.png` and `geo-combat.png`
-(backfaces in magenta) because `shots/**` is gitignored and this container has rewound five
-times. In both, a large smooth surface is being seen from its inside.
+The figures were not a tool artefact. They were a *correct measurement of a build that no longer
+existed*: triangle count over the same shot went 135,111 → 246,241 between my two runs, because
+the reveal, sand-drift and cornice-winding fixes landed in between. **I measured a tree that five
+agents were editing live and quoted the result without recording what I had measured** — the
+exact provenance failure that made a 25-commit-old PNG look like a live sky bug, and that
+`shot.mjs` and `critic.mjs` now stamp against. Offline measurements need the same discipline as
+captures: record the SHA and whether the tree was dirty, or the number is unattributable within
+minutes.
 
-**A caveat before anyone acts on the numbers.** The two tools disagree and I have not resolved
-why. `tools/backface.mjs` casts a 96×54 ray grid and classifies *first hits*; it reports
-`traversal` at 4.6% and `combat` at **0.2%, with no `bronze_dark` at all**. `tools/raster.mjs`
-rasterises every pixel. A sparse ray grid can miss a few large triangles, which would explain
-`traversal`; it does not obviously explain `combat`. Note also that `bronze_dark` is in
-`HULL_OUTLINE`, and an inverted-hull shell is backfacing *by design* — if the offline rasteriser
-builds those shells, its `combat` figure is a false positive. **Check that before chasing it.**
-`traversal`'s offender is `sandstone_block`, which takes no hull outline, so that one is real
-whatever the answer.
+What was real, and is now fixed: `traversal`'s unclosed cornice ring — the single largest object
+in that frame, with 182 px seeing through to sky. A critic pass scored the shot **2** on it.
