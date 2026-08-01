@@ -2725,13 +2725,51 @@ export class Particles {
        of day change) or when LIGHTING first publishes a real set. Keyed on *lengths*, never
        on intensity: a cone's intensity carries the fire's flicker and would re-seed nine
        hundred particles on every single frame. Time of day and shot staging invalidate this
-       explicitly, so it only has to notice the set itself changing. */
-    let sig = list.length * 977;
-    for (let i = 0; i < list.length; i++) sig += Math.round((list[i].length || 0) * 4) * (i + 1);
+       explicitly, so it only has to notice the set itself changing.
+
+       **That was the intent and the code defeated it one function earlier.** The signature
+       avoided intensity, but the *list it is computed over* came from `_activeShafts`, whose
+       membership test is `intensity > 0.012` — a flickering number. So a cone breathing
+       across that threshold changed `list.length`, changed the signature, and re-seeded all
+       nine hundred motes. In `interior` this is not hypothetical: the live cone set includes
+       entries at intensity 0.02 and 0.05, i.e. sitting on the threshold. It is visible in
+       the flames on/off pair in `shots/fx2` — two captures 33 ms apart, in which a ~120 px
+       mote covering the hieroglyph band in one is simply absent from the other, and a
+       192x124 region measures **7.8 luma darker and 15 R−B cooler with the flames ON**,
+       which additive blending cannot do. That pair is the measurement `TUNE.flameNear` was
+       tuned on.
+
+       So membership now comes from `baseIntensity`, which LIGHTING publishes with the
+       flicker removed and everything else — enabled, day/night, distance — left in. The
+       ribbons keep using `list`/`intensity`: a beam's *brightness* should flicker, only its
+       existence in the mote set should not. */
+    const stable = this._moteShafts(shafts);
+    let sig = stable.length * 977;
+    for (let i = 0; i < stable.length; i++) sig += Math.round((stable[i].length || 0) * 4) * (i + 1);
     if (sig !== this._motesBuilt) {
       this._motesBuilt = sig;
-      this._buildMotes(list);
+      this._buildMotes(stable);
     }
+  }
+
+  /**
+   * The volumes dust is *placed* in — same shape as `_activeShafts`, gated on LIGHTING's
+   * flicker-free `baseIntensity` so the set cannot re-form between two frames of the same
+   * still. Falls back to `intensity` if LIGHTING has not been updated to publish it, which
+   * degrades to the old behaviour rather than to an empty set.
+   */
+  _moteShafts(shafts) {
+    const out = this._moteLive || (this._moteLive = []);
+    out.length = 0;
+    if (!shafts) return out;
+    for (let i = 0; i < shafts.length; i++) {
+      const s = shafts[i];
+      if (!s?.origin || !s?.dir) continue;
+      const base = s.baseIntensity ?? s.intensity ?? 0;
+      if (base <= 0.012) continue;
+      out.push(s);
+    }
+    return out;
   }
 
   /** Live blades only, in a reused array — `update()` allocates nothing (§5). */

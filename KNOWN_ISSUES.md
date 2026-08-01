@@ -897,6 +897,88 @@ across a known-bad A/B and publish the separation next to the number. Where a de
 localised feature in a large field, expect to find no scalar at all, and budget for looking at
 the render instead of for building a fifth metric.
 
+### Correction: the shipped wall was *not* obviously clean, and the rhythm was not register structure
+
+The coordinator looked at `wallstrip`'s 248 px render of `hieroglyph_wall`, reported a periodic
+recurrence of coloured accents in the glyph registers — "particularly a blue element and an
+arch-shaped glyph" — and asked for one of two answers: the known-bad rendered beside the shipped
+state showing shipped is *obviously* the clean one, or a note saying the rhythm is intended.
+
+**Neither. The observation was correct, the rhythm was residue, and the "condition met" above was
+too strong.** Rendered side by side at 248 px (`cartouche: true` flipped in place, bit-exact), the
+known-bad's oval is unmistakable once per repeat — and the shipped state still shows a rhythm of
+its own. Cleaner, but not clean. *A control that separates does not license the claim that the
+better side is good; it only shows the worse side is worse.*
+
+**What the accents were, found by census rather than by eye.** Instrumenting `drawGlyph` to record
+every sign the build actually places — position, size, paint — gives a per-instance list, which is
+the one thing the twenty-eight failed scalars could not produce. On the shipped tile, of 109 sign
+placements the rare-and-large ones were `ka` (red, 2.24× median area, n=2), **`scarab` (lapis,
+1.95×, n=2 — both at the same tile-U, a stacked blue pair)**, `lotus` (lapis, 1.55×, n=1). The
+coordinator's "blue element" is the scarab pair; it is a genuine once-per-repeat landmark.
+
+**But they were salient because of what surrounded them, and that is the real defect.**
+
+### The largest source of visible repetition in the level was one line of fallback code
+
+`quadrat` builds three of its five layouts by *stacking* signs, asking `pick()` for one short
+enough (`maxH` 0.5, 0.36, 0.40). **`POOLS.divine` contained no sign shorter than 0.78 and
+`POOLS.royal` none but `neb`**, so those branches filtered to nothing and hit
+`if (!ok.length) return pool[0]` — drawing the same sign every time, silently, because a plausible
+glyph appeared and nothing looked broken. Weighted by branch probability that is **72.8 % of every
+sign drawn from either pool**. Measured on the built tiles:
+
+| recipe | signs/repeat | commonest sign, before | after |
+|---|---|---|---|
+| `column_papyrus` — **54.5 % of `temple`** | 64 | `falcon` **71.9 %** | `bread` 21.5 % |
+| `hieroglyph_wall` | 109 | `falcon` **47.7 %** | `mouth` 17.9 % |
+| `relief_figures` | 38 | `neb` **44.7 %** | `mouth` 28.9 % |
+| `hieroglyph_gilded` | 48 | `neb` 37.5 % | `neb` 23.5 % |
+
+Seven signs in ten on the biggest surface in the interior shot were the same near-black falcon.
+At 1:1 the ringing register on a column is visibly a row of one repeated mark, and the vertical
+text a stack of it. **This is §7.3's "visible texture tiling repetition" in its most literal form,
+and no instrument in this project could have found it**: the repetition is *inside* the tile, not
+at the repeat, so every global statistic sees a dense varied inscription. It also explains the
+landmark question above — the rare coloured signs read as beacons because the field they sat in
+had almost no variety to hide them in.
+
+**Fixed** by giving both pools the flat signs the writing system actually leans on — `nb`, `n`,
+`r`, `t`, the scroll, `ꜥ` — chosen four-warm-to-one-cool so replacing three-quarters of the field
+could not swing §3's warm/cool balance. Every branch now has ≥5 candidates; degeneracy 72.8 % → 0.
+
+Verified CPU-side, before/after at size 512, on everything the change could plausibly break:
+
+| | `hieroglyph_wall` | `column_papyrus` |
+|---|---|---|
+| warm/cool `b−r` | −0.3531 → −0.3523 | −0.3810 → −0.3799 |
+| chroma mean | 0.3532 → 0.3523 | 0.3890 → 0.3879 |
+| `lumaRms` (busy) | 0.0645 → 0.0652 | 0.0621 → 0.0612 |
+| squint, sd at 1/32 | 0.0348 → 0.0350 | 0.0314 → 0.0310 |
+| in-band saturated texels >0.42 | 0.83 % → 0.62 % | 16.6 % → 9.9 % |
+| in-band luma p01 | 0.2502 → 0.2602 | 0.2925 → 0.3184 |
+| `jointDeltaY` / `dH` | −0.0338/−0.2786 → −0.0335/−0.2784 | −0.0600/−0.1324 → −0.0602/−0.1326 |
+
+Both §7.3 conditions hold at once, checked as renders and not only as numbers: at 1:1 the
+registers read as varied writing instead of columns of one mark, and at squint the masses are
+unchanged and clean. All 44 recipes still report both joint deltas negative. My own expectation
+that this would add colour was **wrong in sign** — saturated-texel share inside the register
+*falls* (16.6 % → 9.9 % on the column), because what was removed was ink, not pigment.
+
+`pick()`'s fallback is kept but made non-degenerate (shortest few, chosen at random) so a future
+pool edit cannot re-create this silently. It is unreachable for the shipped pools, and that is
+verified rather than believed: the built Surfaces of all six glyph-bearing recipes hash
+bit-identically across the rewrite.
+
+**Not verified in a frame.** `shots/tx6/temple.png` predates this change. Pre-registered for
+whoever next holds the lock: the near nave column's ringing bands should show *varied* signs
+rather than a row of one; `relLocalContrast` in the critic's ROI (950,200 180×380) should move by
+less than ±5 % (this changes which signs are drawn, not how much is drawn); and the frame's
+warm/cool balance should not move at all.
+
+**The rule this adds.** *A metric over a whole surface cannot see a defect in what the surface is
+made of.* Where a texture is assembled from parts, count the parts.
+
 ### Correction: `darkTail` is not 0.0000 on every stone recipe
 
 Stated as an invariant in the brief, and asserted in `rampFloor`'s own docstring ("every stone
@@ -909,3 +991,21 @@ The floor is set at the threshold and cannot reach it. The fix is the existing o
 which is off "because every stone recipe already reports 0.0000" — a premise that is false for
 the three recipes that would need it. Not taken in this pass: it is a real albedo change and it
 was found while a tiling experiment was live, so it is recorded rather than shipped blind.
+
+**Amended — the diagnosis above was right about the mechanism and wrong about the cause, on two
+of the three recipes.** The pool fix in the section above touches no ramp, no floor and no
+`lift`, and it took **`hieroglyph_wall` 0.0008 → 0.0001** and **`relief_figures` 0.0001 → 0.0000**
+on its own. The dark texels were not the `rampFloor` lerp landing short: they were `falcon`'s
+near-black paint (**#241a16**, luma 0.11, well under the crevice's 0.157) mass-duplicated into
+half the tile by the fallback bug. Removing the duplication removed the tail.
+
+`ceiling_stars` is the control that proves the split, and it is worth stating precisely: it draws
+**no glyphs at all**, its `darkTail` is unchanged at 0.0005, and it is now the *only* stone recipe
+above zero. So the `rampFloor` explanation stands — for exactly the one recipe that has no other
+candidate. The `lift` remains found-not-taken, but it is now a one-recipe question rather than a
+three-recipe one, and correspondingly cheaper to verify.
+
+The general point is worth more than the numbers: **a defect can be measured correctly, explained
+by a mechanism that is genuinely present, and still be attributed to the wrong cause** — because
+the true cause was upstream in a different file and was producing the same signature. The
+mechanism was real; it just was not what was making the texels dark.

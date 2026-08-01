@@ -547,15 +547,6 @@ export function drawGlyph(ctx, name, x, y, bw, bh, mode) {
   if (mode === 'line' && !g.d) return;
   const k = Math.min(bw / g.w, bh / g.h);
   const ox = x + (bw - g.w * k) * 0.5, oy = y + (bh - g.h * k) * 0.5;
-  if (globalThis.__GLYPHLOG) {
-    const t = ctx.getTransform ? ctx.getTransform() : { a: 1, d: 1, e: 0, f: 0 };
-    globalThis.__GLYPHLOG.push({
-      name: typeof name === 'string' ? name : '?', mode,
-      x: t.a * ox + t.e, y: t.d * oy + t.f,
-      w: g.w * k * t.a, h: g.h * k * t.d,
-      paint: g.paint ?? null,
-    });
-  }
   ctx.save();
   ctx.translate(ox, oy);
   ctx.scale(k, k);
@@ -570,10 +561,29 @@ export function drawGlyph(ctx, name, x, y, bw, bh, mode) {
 /*  quadrat packing                                                          */
 /* ------------------------------------------------------------------------- */
 
+/**
+ * Choose a sign that fits the slot.
+ *
+ * **The empty-filter branch used to be `return pool[0]`, and that one line was the largest
+ * single source of visible repetition in the level.** When a pool held no sign short enough for
+ * a stacking slot the filter emptied, and every such slot then drew the *same* sign — silently,
+ * because a plausible glyph appeared and nothing looked broken. See the note on `POOLS`: it cost
+ * 72.8 % of the signs drawn from `divine` and `royal`.
+ *
+ * The pools are fixed, so this branch is now unreachable — verified bit-exactly, the built
+ * Surfaces of all six glyph-bearing recipes are unchanged by this rewrite. It is kept, and kept
+ * *non-degenerate*, so that the next edit to a pool cannot quietly re-create the defect: falling
+ * back to the shortest few signs still yields variety, where falling back to a fixed index yields
+ * a wall of one sign. A silent fallback that returns something valid is worse than one that
+ * returns something wrong, because only the second one gets found.
+ */
 function pick(rand, pool, maxH, maxW = 2) {
   const ok = pool.filter((n) => GLYPHS[n] && GLYPHS[n].h <= maxH + 0.02 && GLYPHS[n].w <= maxW);
-  if (!ok.length) return pool[0];
-  return ok[Math.floor(rand() * ok.length) % ok.length];
+  if (ok.length) return ok[Math.floor(rand() * ok.length) % ok.length];
+  const byH = pool.filter((n) => GLYPHS[n]).sort((a, b) => GLYPHS[a].h - GLYPHS[b].h);
+  if (!byH.length) return pool[0];
+  const k = Math.min(3, byH.length);
+  return byH[Math.floor(rand() * k) % k];
 }
 
 /**

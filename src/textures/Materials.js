@@ -2032,7 +2032,31 @@ export const MATERIALS = {
        * equals tile-v in the frame — verified end-to-end rather than assumed, by finding the
        * painted bands at tile-v 0.075-0.125 / 0.800 / 0.900 against authored 0.035-0.090 /
        * 0.115-0.145 / 0.80-0.83 / 0.865-0.920. Three flips sit in that chain and reasoning about
-       * them gives the wrong sign. */
+       * them gives the wrong sign.
+       *
+       * ── Verified in frame. `shots/tx6/temple.png` against `shots/tx5/temple.png` ────────────
+       *
+       * All three pre-registered predictions hold, and the prediction was written before the
+       * capture existed:
+       *
+       *   1. **Bands visible.** In the critic's own ROI (950,200 180x380) the near nave column
+       *      carried, in tx5, two thin vertical highlights and one small mark on an otherwise
+       *      blank shaft — critic pass 4's "smooth tapered slabs", exactly. In tx6 the same crop
+       *      shows discrete signs on a ruled horizontal band, including a legible scarab.
+       *   2. **No vertical streaking.** The only full-height lines in either frame are the
+       *      `columnRule` pair bounding the vertical text, present in tx5 too. The
+       *      `scale(1, BAND_ASPECT)` transform introduced none — which was the specific risk,
+       *      this recipe having failed twice before on corrugation.
+       *   3. **Magnitude in band.** Relative local contrast (5x5 sd/mean) over that ROI:
+       *      **0.04764 -> 0.05302, +11.3 %**, against a pre-registered +8 % to +18 %. Below the
+       *      albedo's +25 %, as the measured 2.65x transfer function said it should be — the
+       *      change reached the frame and was diluted rather than amplified.
+       *
+       * Recorded because the honest reading of a +11.3 % is easy to lose: it is a *third* of the
+       * texture-side gain, and the predecessor's "+117 % in texture, +22 % in frame" was read as
+       * evidence that more amplitude was pointless. It is not — dilution was predicted from a
+       * measurement and then observed. What that number does not license is any claim about the
+       * sign *variety* in these bands, which changed after this capture; see KNOWN_ISSUES §13. */
       const BAND_V = [0.186, 0.432], BAND_HW = 0.024;
       /* 10 m of arc per tile-u against `capTop` m per tile-v. Exact on a nave column, which is
          what `temple` is mostly made of; aisle columns (capTop 11.4 m) come out ~1.3x wide, and

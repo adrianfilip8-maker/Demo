@@ -680,6 +680,12 @@ export class Lighting {
    *   axis/axis2 + halfU/halfV   the opening's two in-plane axes and half-extents
    *   dir, length                unit travel direction and how far it gets before it lands
    *   intensity, color           0 = the beam is off this frame
+   *   baseIntensity              `intensity` with the fire's flicker removed. Use this, not
+   *             `intensity`, for anything whose *membership* must be stable frame to frame —
+   *             a set keyed on the flickering value re-forms whenever a cone breathes across
+   *             a threshold, which is how FX's whole mote field came to re-seed between two
+   *             captures 33 ms apart. Use `intensity` for radiance; `baseIntensity` for "is
+   *             this volume one of the ones I am tracking".
    *
    * `width` / `span` / `axis` are kept on every entry because FX's mote placement and its
    * `shaftBoost()` uniform packing already speak that vocabulary.
@@ -697,6 +703,7 @@ export class Lighting {
       maxLength: TUNE.shaftMaxLength,
       flare: TUNE.shaftFlare,
       intensity: 0,
+      baseIntensity: 0,
       color: new THREE.Color(PALETTE.keySun),
       /* legacy view of the same volume, for FX's shaftBoost uniforms */
       width: halfV * 2,
