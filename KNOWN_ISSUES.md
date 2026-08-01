@@ -281,6 +281,24 @@ Recorded so they are not re-derived:
   If LIGHTING wants it back, the lever is `ashlar`'s `tone`, not the grime.
 - **The cel ramp needs geometry, not shader work.** The 3-band quantiser is correct; the scene
   is boxes and faceted cylinders, so there is almost no smooth normal gradient for it to band.
+- **Light shafts have no forward-scatter term, so one gain serves a 7.2× range.** A shaft is
+  visible *because* of forward scatter, and `SHAFT_FRAG` (`src/fx/Particles.js`) has no term
+  for it: `vViewZ` is depth fade, `vX`/`vS` are cross-section and along-beam, and `vAxial` is a
+  billboard degeneracy guard that is symmetric and cannot tell looking into a beam from looking
+  away from one. Blade brightness is independent of the camera–sun angle. The ten cameras are
+  spread across the whole phase function — `courtyard` at 53° (into the sun), six shots at
+  101–157° — and at each shot's own `A.mieG` the Henyey–Geenstein weight ranges **7.2×**, which
+  the shader renders flat. Tune the gain until `courtyard` blazes and six frames get a bright
+  volume where a real beam would be nearly invisible; tune it the other way and `courtyard`
+  gets a seventh of what its geometry asks for. This is a second, independent explanation for
+  "the open-air blades measured as drawn and read as absent", alongside the additive-headroom
+  argument `SHAFT_FRAG`'s own comment makes. `hgPhase` already exists at `Atmosphere.js:460`
+  and is live in `Sky.js:368`, so there is a tested implementation to reuse. Reproduce with
+  `node tools/shaftphase.mjs`.
+
+  **The axial guard is cleared, not suspected.** `vAxial` maxes at 0.62 (`night`) against its
+  0.86 threshold, so its fade is exactly 1.00 in all ten shots and it never touches a canonical
+  frame. `courtyard` sits at 0.21, so a phase term added there will land cleanly.
 - **The shadow residual is now green, not blue** — and this is the second time the same trap
   has been walked into from the opposite side. After the `shadowTintPeak` fix, shadow `B/max`
   went 1.050 → **0.855** (below 1.0 for the first time, blue inversion gone) while `R/G` went
