@@ -120,10 +120,21 @@ export const SHOTS = {
      subject, and a scale figure reads as a person without needing his tail rings to resolve.
      `hero` got the camera moved because it is the one frame that has to sell the game and he
      is the subject of it. If a critic faults the character *here*, the answer is the same
-     dolly, but it should be a deliberate decision to change what this shot is about. */
+     dolly, but it should be a deliberate decision to change what this shot is about.
+
+     He was also **completely invisible in this shot** until now, and every projection check
+     passed while he was. A raycast against the built scene found all five body samples blocked
+     at 9.3–9.5 m of the 19.2 m to him, by the west colossus throne block at ≈(-12.9, 3.1, 23.4)
+     — which sits exactly where §8.1 contracts it, so the level was right and this staging was
+     wrong. He was inside the frustum at NDC (-0.115, -0.880), which is precisely why
+     `charview.mjs` and every other projection tool reported him fine.
+
+     Moved onto terrace stage 2, a surface already proven by `night` staging him at (-4, 5.2,
+     12.5). Verified: clear of the throne, and the framing improves besides — NDC y -0.964 to
+     -0.315, so he stops being jammed against the bottom edge. 84 px at 1600x900. */
   courtyard: {
     pos: [-19.0, 5.6, 30.0], target: [1.0, 9.0, 12.0], fov: 50, tod: 0.76, roll: 1.0,
-    player: { pos: [-6.5, 0.0, 16.5], yaw: 4.19, pose: 'run' },
+    player: { pos: [-6.6, 5.2, 14.4], yaw: 4.19, pose: 'run' },
   },
 
   /* Terrain + sky + aerial perspective. The approach ridge looking back at the complex. */
