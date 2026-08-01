@@ -1287,21 +1287,76 @@ export const MATERIALS = {
        * review describes (§2.3 wants "large simple areas of colour, detail concentrated at focal
        * points") and it is what made the floor read as crazy paving rather than as cut flags.
        * The crack keeps its full depth in the height field — it is a real crack — but almost all
-       * of its albedo stain is gone; the AO it earns is what should draw it. */
-      const crackNet = s.field(1.5, (u, v) => {
-        const w = worleyN(u, v, 9, cx.seed + 51, 0.95);
+       * of its albedo stain is gone; the AO it earns is what should draw it.
+       *
+       * ── Per-flag crazing, because the field had no per-flag term at all ──
+       *
+       * After the UV fix put the paving at its authored density, the geometry agent's honest
+       * caveat was that "every slab states the same crackle motif". Census first, before any
+       * amplitude knob (the falcon lesson — count the parts): per painted flag, the fraction of
+       * texels carrying crack sat between **4.2% and 6.2%, cv 0.12** — one homogeneous Worley
+       * web sliced by the flag grid, every flag crazed at the same density in the same ridge
+       * width. Checked against the falcon bug's shape and it is *not* that: no variety pipeline
+       * collapses to one output here, because there was no variety pipeline — the crack field
+       * simply had no term below whole-tile frequency. A real slab field is the opposite: most
+       * flags clean or lightly checked, runs of neighbours sharing a state (they were bedded on
+       * the same fill), the odd flag properly shattered.
+       *
+       * Three per-flag terms supply that, all keyed the way `ashlar` keys the quarry bed —
+       * a smooth regional field read once per flag at the flag's centre, trimmed by the flag's
+       * own white noise — so neighbours correlate into metre-scale regions (§2.3's structure)
+       * instead of chequerboarding:
+       *   - an amplitude gate, shaped so a fair share of flags are *clean* and a few are heavy;
+       *   - a ridge-width blend: heavy flags draw a denser, wider-capture web (a genuinely
+       *     different crack pattern, not the same one darker);
+       *   - a per-flag domain offset into the Worley lattice, so two flags never state the same
+       *     network and a crack terminates at the joint instead of flowing across it — which is
+       *     also what real slabs do, since a crack cannot cross a gap. `worleyN` hashes cell
+       *     indices mod freq, so a constant offset keeps the tile seamless.
+       * Height, roughness and stain all follow the same gate: a clean flag must not carry
+       * phantom crack relief in its normal map. */
+      const crackThin = s.field(1.5, (u, v) => {
+        const x = Math.min(s.size - 1, (u * s.size) | 0), y = Math.min(s.size - 1, (v * s.size) | 0);
+        const k = y * s.size + x;
+        const w = worleyN(u + m.id[k] * 17.31, v + m.id2[k] * 11.73, 9, cx.seed + 51, 0.95);
         return sat(1 - (w.f2 - w.f1) / 0.045) ** 2.4;
       });
+      const crackWide = s.field(1.5, (u, v) => {
+        const x = Math.min(s.size - 1, (u * s.size) | 0), y = Math.min(s.size - 1, (v * s.size) | 0);
+        const k = y * s.size + x;
+        const w = worleyN(u + m.id[k] * 17.31, v + m.id2[k] * 11.73, 13, cx.seed + 53, 0.95);
+        return sat(1 - (w.f2 - w.f1) / 0.075) ** 1.8;
+      });
+      const crz = new Map();
+      const crazeOf = (i) => {
+        const cu = Math.round(m.bcu[i] * 4096), cv = Math.round(m.bcv[i] * 4096);
+        const key = cu * 8192 + cv;
+        let e = crz.get(key);
+        if (e === undefined) {
+          const reg = warpN(cu / 4096, cv / 4096, 2, 3, 1.2, cx.seed + 661) * 0.5 + 0.5;
+          const t = sat(reg * 0.62 + (m.id2[i] - 0.5) * 0.72 + 0.18);
+          e = [smoothstep(0.26, 0.55, t) * (0.5 + 1.2 * smoothstep(0.55, 0.90, t)), smoothstep(0.55, 0.90, t)];
+          crz.set(key, e);
+        }
+        return e;
+      };
+      // Measurement hook (same shape as Hieroglyphs' __GLYPHLOG): the census instrument reads
+      // what shipped rather than re-deriving it. Free when unset.
+      const logCrack = globalThis.__PAVELOG ? new Float32Array(s.n) : null;
       for (let i = 0; i < s.n; i++) {
         const bu = m.bu[i] * 2 - 1, bv = m.bv[i] * 2 - 1;
         const dish = (1 - bu * bu) * (1 - bv * bv);
         const wear = traffic[i];
+        const cz = crazeOf(i);
+        const crack = lerp(crackThin[i], crackWide[i], cz[1]) * cz[0];
+        if (logCrack) logCrack[i] = crack;
         s.h[i] -= dish * wear * 0.16;                        // worn hollow in the flag
-        s.h[i] -= crackNet[i] * 0.22;
+        s.h[i] -= crack * 0.22;
         s.mixHex(i, PAL.limeLight, dish * wear * 0.14);      // scuffed pale
-        s.rough[i] = sat(s.rough[i] - dish * wear * 0.10 + crackNet[i] * 0.06);
-        s.stainHex(i, PAL.sandCrev, crackNet[i] * 0.14);
+        s.rough[i] = sat(s.rough[i] - dish * wear * 0.10 + crack * 0.06);
+        s.stainHex(i, PAL.sandCrev, crack * 0.14);
       }
+      if (logCrack) globalThis.__PAVELOG.crack = logCrack;
       /* Sand drifted into the joints.
        *
        * This was the single most visible sign error in the review: the joint was mixed 65%
