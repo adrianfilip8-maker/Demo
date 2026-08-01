@@ -60,11 +60,16 @@ function analyse(s, yaw) {
   camera.position.copy(cam); camera.lookAt(tgt);
   camera.updateMatrixWorld(true); camera.updateProjectionMatrix();
   const a = p.clone().project(camera), b = p.clone().setY(p.y + H).project(camera);
-  const px = Math.abs(b.y - a.y) * ROWS / 2;
-  const onScreen = Math.abs(a.x) <= 1 && Math.abs(a.y) <= 1
-    && p.clone().sub(cam).dot(tgt.clone().sub(cam).normalize()) > 0;
+  const fwd = tgt.clone().sub(cam).normalize();
+  const behind = p.clone().sub(cam).dot(fwd) <= 0;
+  /* A point behind the camera still projects to a finite NDC pair, so the pixel height comes
+     out as a plausible-looking number that means nothing — `guard` reported 483 px for a
+     character who is behind the lens by design. Report null rather than a figure someone will
+     quote. */
+  const px = behind ? null : Math.abs(b.y - a.y) * ROWS / 2;
+  const onScreen = !behind && Math.abs(a.x) <= 1 && Math.abs(a.y) <= 1;
 
-  return { view, sunA, px, onScreen, dist: p.distanceTo(cam) };
+  return { view, sunA, px, onScreen, behind, dist: p.distanceTo(cam) };
 }
 
 const sweep = process.argv.includes('--sweep');
@@ -73,12 +78,13 @@ for (const [name, s] of Object.entries(SHOTS)) {
   if (!s.player) { console.log(`${name.padEnd(13)} (no player)`); continue; }
   const r = analyse(s, s.player.yaw);
   const notes = [];
-  if (!r.onScreen) notes.push('OFF-SCREEN');
+  if (r.behind) notes.push('BEHIND CAMERA (no pixel size)');
+  else if (!r.onScreen) notes.push('OFF-SCREEN');
   if (Math.abs(r.view) > 130) notes.push('sees his BACK');
   else if (Math.abs(r.view) < 12) notes.push('dead-on, flat');
-  if (r.px < 70 && r.onScreen) notes.push(`only ${r.px.toFixed(0)}px tall`);
+  if (r.px !== null && r.px < 70 && r.onScreen) notes.push(`only ${r.px.toFixed(0)}px tall`);
   if (Math.abs(r.sunA) > 110) notes.push('face unlit');
-  console.log(`${name.padEnd(13)} ${r.view.toFixed(0).padStart(5)} ${r.sunA.toFixed(0).padStart(6)} ${r.px.toFixed(0).padStart(5)}   ${notes.join(', ') || 'ok'}`);
+  console.log(`${name.padEnd(13)} ${r.view.toFixed(0).padStart(5)} ${r.sunA.toFixed(0).padStart(6)} ${(r.px === null ? '--' : r.px.toFixed(0)).padStart(5)}   ${notes.join(', ') || 'ok'}`);
 
   if (sweep && (Math.abs(r.view) > 130 || Math.abs(r.sunA) > 110)) {
     // Best yaw satisfying both reads at once, nearest to the current one.

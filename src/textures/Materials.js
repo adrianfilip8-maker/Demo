@@ -1386,7 +1386,12 @@ export const MATERIALS = {
        * replaced by another `columnRegister`, so the wall carries the same amount of writing with
        * no shape distinctive enough to count repeats by. A royal name belongs on `cartouche_gold`,
        * which exists for exactly that and is not tiled. */
-      const layout = (mode) => (ctx) => glyphWall(ctx, size, mode, cx.seed + 4, { worldTile: worldTileOf(HG_GILDED_TILE), glyphM: 0.80, cartouche: false });
+      /* `glyphArchitrave`, not `glyphWall` — see that function's note. Every consumer of this
+       * recipe is a 0.8-2.6 m horizontal band whose UVs are box-projected in *local* space, so
+       * they all sample V within +/-0.20 of the seam and the wall layout's registers, at V
+       * 0.645-0.945 and 0.36-0.43, reached none of them. Measured on `hero`'s doorway lintel
+       * through its own camera: luma p50 163/255 at chroma 0.330, i.e. pale limestone. */
+      const layout = (mode) => (ctx) => glyphArchitrave(ctx, size, mode, cx.seed + 4, { worldTile: worldTileOf(HG_GILDED_TILE), signM: 1.0 });
       const cut = rasterMask(size, layout('cut'));
       const lines = rasterMask(size, layout('line'));
       const ramp = carve(s, cut, lines, { depth: 0.42, bevelPx: 2.6, lip: 0.10, bulge: 0.5, lineDepth: 0.56, seed: cx.seed + 5 });
@@ -1448,11 +1453,26 @@ export const MATERIALS = {
          * top of the range. The dark is not lost: it comes from `swathe`/`wrinkle` (which are
          * metre-scale, so they survive minification), from the albedo dirt on `s.occ` below, and
          * from the baked AO. Dark occlusion, not a dark base colour, is what §7.3 asks for. */
+        /* Base 0.46 -> 0.62, and it is the *same* argument as the note above, re-applied now that
+         * the cut is a panel instead of a row of sign-shaped holes.
+         *
+         * `bevel = 4·ramp·(1−ramp)` is zero wherever `ramp` saturates, which over a sunk band is
+         * its whole interior. So with the architrave layout the base constant alone sets the
+         * body of the gilding, and 0.46 through `goldRamp`'s `k = t^1.75` is **0.257** — under
+         * the 0.34 knee, i.e. between `GOLD_DEEP` and `goldDark`. Measured on `hero`'s doorway
+         * lintel through its own camera, that put the band at luma p50 **89/255**: the exact
+         * "median of the gilding *was* `GOLD_DEEP`" failure this recipe was rebuilt to remove,
+         * reintroduced through a different door. 0.62 gives `k = 0.437`, between `goldDark` and
+         * `goldMid`, so the body sits mid-ramp and the arrises still reach `GOLD_HOT`. */
         const bevel = 4 * ramp[i] * (1 - ramp[i]);
-        const t = sat(0.46 + bevel * 0.50 + (swathe[i] - 0.5) * 0.42 + (wrinkle[i] - 0.5) * 0.26);
+        const t = sat(0.62 + bevel * 0.50 + (swathe[i] - 0.5) * 0.42 + (wrinkle[i] - 0.5) * 0.26);
         goldRamp(t, t3);
         s.r[i] += (t3[0] - s.r[i]) * g; s.g[i] += (t3[1] - s.g[i]) * g; s.b[i] += (t3[2] - s.b[i]) * g;
-        s.mixHex(i, PAL.red, worn * 0.75);                    // bole showing through
+        /* Red bole under lifted leaf. 0.75 -> 0.40 for the same reason as the base above: `worn`
+         * is gated on `g`, and `g` used to cover only the sign cuts. Over a whole gilded band a
+         * 75 % mix toward `PAL.red` fires on ~25 % of the area and the architrave reads as a
+         * red-and-gold stripe rather than as gold. The bole is a tell, not a colourway. */
+        s.mixHex(i, PAL.red, worn * 0.40);                    // bole showing through
         s.metal[i] = g * (1 - worn * 0.85);
         s.rough[i] = lerp(s.rough[i], sat(goldRough(t) + worn * 0.4), g);
         s.h[i] += g * 0.03 * wrinkle[i];
@@ -2190,12 +2210,48 @@ export const MATERIALS = {
    * The bark does not go flat for it: the ramp's *range* is what carries this material and the
    * bright end is untouched, so the lift costs the bottom 6% of the value range and nothing
    * else. Checked, not assumed — luma RMS and the whole mip ladder are reported below. */
+  /* **`tile[0]` 1.4 → 1.0, because this consumer's U is not world metres — it is a fraction of
+   * the way around the trunk, and 1.4 put a hard seam down every palm in the level.**
+   *
+   * `Vegetation.palmTrunk` writes `uv.push(s / SIDES, t * (height / 3))` (Vegetation.js:86), so U
+   * runs **0..1 around a closed cylinder**. `Textures._build` turns `tile[0]` into
+   * `repeat.x = 1/1.4`, so the texture U actually sampled ran 0 → **0.714** and then jumped
+   * straight back to 0 at the geometric seam. 0.714 of a tileable texture butted against its own
+   * start is a guaranteed discontinuity — the bark pattern breaks along one vertical line on
+   * every trunk — and no amount of authoring inside the tile can hide it. At 1.0 exactly one
+   * repeat wraps the trunk and the wrap is the texture's own seam, which is seamless by
+   * construction.
+   *
+   * This is the third instance of the same shape (`sand_ripples` at 3.7x its authored slope,
+   * `MOTES.size` sub-pixel, and the `Math.max(0.05, [u,v])` NaN): **a number quoted in metres
+   * that its consumer does not read in metres.** `CONSUMER_UV_SCALE` in `Textures.js` cannot
+   * express it, because the factor is not a constant — it is "whatever the trunk circumference
+   * happens to be". Vegetation is already flagged there as a special case; this is what that
+   * flag was hiding.
+   *
+   * **`fx` 5 → 9, for the reason `column_papyrus` was retuned: match the rib the geometry
+   * already cuts.** `palmTrunk` modulates the radius by
+   * `sin(a·4.5 + t·46)·sin(-a·4.5 + t·46)`, and `sin A · sin B = ½[cos(A−B) − cos(A+B)]` makes
+   * that a diamond lattice of **9 cells around** the trunk and ~14.6 up its full height. The
+   * painted lattice was `fx = 5` cells per repeat over 0.714 of a repeat, i.e. **3.6 around**
+   * against the mesh's 9 — two incommensurate diamond grids on one cylinder, the same beat that
+   * made the columns read as corrugation. `fy` 7 → 9 lands the painted rows at `9 · height/5.4`
+   * = 15 over a 9 m palm against the mesh's 14.6, and squares up the pad: 0.22 m wide × 0.36 m
+   * tall instead of 0.22 × 0.77, which is what an old frond base actually looks like.
+   *
+   * The relief scale moves with `tile[0]`: `derive()`'s `ku = bump·size/tu` goes 8.05 → 11.26 at
+   * the shipping 512. The true U period is the mid-trunk circumference, ~2.0 m, for which the
+   * honest `ku` would be 5.6 — so this lands at 2.0x, which is exactly the convention every
+   * architectural surface in the project already runs at (see `Textures._build`'s note: UVs at
+   * `UV_PER_M` make every declared `tile` cover 2x its metres, so every normal map in the game
+   * is encoded 2x steep). It was at 1.43x before; it is now consistent with the rest. */
   palm_bark: {
-    group: 'organic', tier: 1, tile: [1.4, 1.8], bump: 0.022, rough: 0.90,
+    group: 'organic', tier: 1, tile: [1.0, 1.8], bump: 0.013, rough: 0.90,
     build(s, cx) {
       const size = s.size;
       // A date palm trunk is a lattice of old frond bases — rhombic pads with deep grooves.
-      const fx = 5, fy = 7;
+      // Counts matched to `Vegetation.palmTrunk`'s own scar lattice; see the note above.
+      const fx = 9, fy = 9;
       const fibre = s.field(1.5, (u, v) => fbmA(u, v, 14, 140, 3, 0.5, cx.seed + 11) * 0.5 + 0.5);
       const macro = s.field(5, (u, v) => warpN(u, v, 4, 4, 1.2, cx.seed + 23) * 0.5 + 0.5);
       for (let y = 0; y < size; y++) {
@@ -2223,11 +2279,13 @@ export const MATERIALS = {
         s.h[i] += hair[i] * 0.05;
       }
       weather(s, { seed: cx.seed + 6, crevice: BARK_CREV, creviceAmt: 0.62, streakAmt: 0.18, dustAmt: 0.20, roughGrime: 0.06, downDark: 0.08 });
-      /* 300 cycles on the ~3.1 m Vegetation lays this tile over is a 10 mm feature: 0.54 px on
-       * the `courtyard` palm and 0.08 px in `dunes`, i.e. below the pixel at both framings it
-       * appears in. Dropped to 90 (34 mm, 1.8 px at `courtyard`) so the grain is something the
-       * frame can carry rather than mip-chain fodder. */
-      grain(s, { amount: 0.04, freq: 90, seed: cx.seed + 8, heightAmt: 0.014 });
+      /* 300 cycles was a 10 mm feature: 0.54 px on the `courtyard` palm and 0.08 px in `dunes`,
+       * i.e. below the pixel at both framings it appears in, so it could only ever be mip-chain
+       * fodder. Re-derived now that `tile[0]` is 1.0: one U repeat is the trunk circumference,
+       * ~2.0 m at mid-shaft, so 64 cycles is a **31 mm** grain — 1.6 px on the `courtyard` palm
+       * at 20 m and 0.97 mrad/px. (At the old freq 90 it would now be 22 mm / 1.1 px, right at
+       * the line this recipe was already corrected once for standing on.) */
+      grain(s, { amount: 0.04, freq: 64, seed: cx.seed + 8, heightAmt: 0.014 });
       /* `lift` 0.14: `lo·(1 − 0.14)` = 0.2108, just clear of §2.2's `crevice` luminance 0.2031,
        * so nothing on a palm trunk can land where the shader's violet wash out-weighs its own
        * albedo. Palms stand in `courtyard` and `dunes` and this recipe was the worst live
@@ -2238,8 +2296,44 @@ export const MATERIALS = {
     },
   },
 
+  /* **This recipe's two axes were the wrong way round for the only geometry that uses it, so
+   * essentially none of what it drew reached a frond.** Found by the sweep the palm trunk seam
+   * came out of; recorded in full because the failure is invisible in a swatch and total in the
+   * frame.
+   *
+   * `Vegetation.palmFrond` (Vegetation.js:143-165) writes exactly two kinds of UV:
+   *
+   *   rachis strip   `uv.push(t, 0.48,  t, 0.52)`               U along the frond, V a 0.04 band
+   *   pinna triangle `uv.push(t, 0.5,   t, 1.0,   t, 0.62)`     **all three verts share U = t**
+   *
+   * So **U selects a leaflet and V runs outward along it, base to tip** — and because a pinna's
+   * three vertices carry the *same* U, any U-direction structure in this texture is a single
+   * flat value per leaflet. The recipe was authored the other way up: 13 leaflets laid *across*
+   * U, a blade cross-section `sqrt(1 − d²)` in U, a rib at `|u − 0.5| < 0.035` described as
+   * "midrib of the whole frond, down the centre", and the alpha taper on V. Every one of those
+   * either collapsed to a constant or landed across the wrong axis.
+   *
+   * The tile made it worse in two independent ways. At `[0.8, 2.4]` the repeats are
+   * `[1.25, 0.4167]`, so (a) U ran 0 → 1.25 along the frond — the 13-leaflet field wrapped
+   * mid-frond and the "midrib" became a bright band straight across the rachis at 40 % of its
+   * length — and (b) V was compressed to **0.208 … 0.417**, so the geometry only ever sampled a
+   * fifth of the texture's V, in a stretch where `taperV = smoothstep(1.0, 0.62, v)` is
+   * identically 1 and the sun-dried `smoothstep(0.3, 1.0, v)` never exceeds 0.17. The tip
+   * straw and the alpha taper — the two things that make a palm frond read at golden hour —
+   * were switched off by the tile, not by the authoring.
+   *
+   * `[1.0, 1.0]` makes the mapping the identity: U is the position along the frond, V = 0.5 is
+   * the rachis and V = 1.0 is a leaflet tip, and the rachis strip lands in V 0.48–0.52 where
+   * this build now paints one.
+   *
+   * **Be honest about what this geometry can and cannot carry.** A pinna is one triangle at one
+   * U, so there is no width parameter: a leaflet's own fine longitudinal ribbing is not
+   * expressible from a texture here and is not attempted. What is expressible is variation
+   * *along* the leaflet (V) and *between* leaflets (U), and that is what the build below is. If
+   * cross-blade detail is ever wanted it needs a second UV coordinate from VEGETATION, not more
+   * authoring in this file. */
   palm_frond: {
-    group: 'organic', tier: 1, tile: [0.8, 2.4], bump: 0.010, rough: 0.62, alpha: true,
+    group: 'organic', tier: 1, tile: [1.0, 1.0], bump: 0.030, rough: 0.62, alpha: true,
     build(s, cx) {
       const size = s.size;
       const oliveHex = MX(PAL.malachite, PAL.ochre, 0.42);
@@ -2247,48 +2341,74 @@ export const MATERIALS = {
       const strawDry = MX(PAL.sandLight, PAL.ochre, 0.35);
       const ribHex = MX(PAL.sandLight, oliveHex, 0.40);
       const a = s.alpha();
-      const leaflets = 13;
+      // `SEG = 9` stations along the rachis, both pinnae of a pair sharing one U.
+      const leaflets = 9;
       const dry = s.field(3, (u, v) => sat(warpN(u, v, 6, 4, 1.2, cx.seed + 17) * 1.4 + 0.5));
-      const fibre = s.field(1.5, (u, v) => fbmA(u, v, 160, 10, 3, 0.5, cx.seed + 5) * 0.5 + 0.5);
+      /* Segmentation *along* a leaflet — the axis this geometry can actually resolve. Sized
+       * against the frame, not against the tile: a pinna is ~0.5 m long (`palmFrond`'s `plen`)
+       * and spans V 0.5→1.0, i.e. half the map, so `fy = 24` puts 12 segments across it at
+       * ~42 mm — 2.2 px on a `courtyard` palm at 20 m and 0.97 mrad/px. `fbmA` doubles per
+       * octave, so three octaves reach 96 in V, 10 mm, which is where it should stop.
+       *
+       * `fx = 3`, deliberately low. Leaflet-to-leaflet difference is `jit` below, which is
+       * exact; what `fx` controls here is the U *gradient* of the height field, and `tile` has
+       * to be `[1, 1]` for the mapping (see the note above) while one U repeat is really the
+       * ~3.5 m rachis — so `derive()` encodes the U slope 3.5x too steep. Keeping the height
+       * nearly flat along U is what stops that overstatement turning into a sideways tilt on
+       * every pinna, which is not a shape a frond has. */
+      const fibre = s.field(1.5, (u, v) => fbmA(u, v, 3, 24, 3, 0.5, cx.seed + 5) * 0.5 + 0.5);
       for (let y = 0; y < size; y++) {
         const v = (y + 0.5) / size, row = y * size;
+        /* `b` = 0 where a pinna leaves the rachis, 1 at its tip. Below V 0.5 is the rachis
+         * strip, which the geometry samples at 0.48-0.52. */
+        const b = sat((v - 0.5) * 2);
+        const rachis = sat(1 - Math.abs(v - 0.5) / 0.045);
         for (let x = 0; x < size; x++) {
           const i = row + x, u = (x + 0.5) / size;
-          const p = (u * leaflets) % 1;
-          const d = Math.abs(p * 2 - 1);
           const idx = Math.floor(u * leaflets);
-          const wid = 0.80 + (C.hash01(idx, 3, cx.seed) - 0.5) * 0.30;
-          // Leaflets taper and part toward the tip, which is where the alpha gaps belong.
-          const taperV = smoothstep(1.0, 0.62, v);
-          const alive = sat(wid * taperV * 1.25 - d);
-          const blade = smoothstep(0.0, 0.16, alive);
-          a[i] = blade;
-          const rib = sat(1 - d / 0.10);
-          s.h[i] = 0.5 + Math.sqrt(sat(1 - d * d)) * 0.28 + rib * 0.18;
-          const t = sat(0.42 + (fibre[i] - 0.5) * 0.6 + (C.hash01(idx, 7, cx.seed) - 0.5) * 0.5);
+          // Per-leaflet variation. Constant across a pinna by construction, which is correct:
+          // neighbouring leaflets on a real frond differ, one leaflet does not differ from itself.
+          const jit = C.hash01(idx, 7, cx.seed) - 0.5;
+          /* A pinna is thick and V-folded where it leaves the rachis and thins to a blade at the
+           * tip, so the relief belongs on `b`. This is the same shape the old `sqrt(1 − d²)`
+           * carried, moved onto the axis that has an extent. */
+          const fold = Math.sqrt(sat(1 - b * b));
+          /* The segmentation has to be in the *height* as well as the colour, or this map has no
+           * relief at all: with `fold` and `rachis` alone the normal's 90th-percentile tilt
+           * measured **1.6°**, i.e. a normal map doing nothing. Both are slow ramps in V and the
+           * old cross-blade term is gone with the axis swap, so `fibre` is the only structure
+           * left at a frequency a normal can use. */
+          s.h[i] = 0.5 + fold * 0.26 + rachis * 0.30 + (fibre[i] - 0.5) * 0.34 * (0.35 + b);
+          const t = sat(0.42 + (fibre[i] - 0.5) * 0.6 + jit * 0.5 - b * 0.10);
           const col = ramp3(0x2c5a34, oliveHex, oliveLight, t);
           s.r[i] = col[0]; s.g[i] = col[1]; s.b[i] = col[2];
-          // Sun-dried tips go straw-coloured — no palm in Egypt is uniformly green.
-          const d2 = sat(dry[i] - 0.42) * 1.5 * smoothstep(0.3, 1.0, v);
-          s.mixHex(i, strawDry, sat(d2) * 0.7);
-          s.rough[i] = sat(0.55 + (1 - rib) * 0.16 + d2 * 0.2);
-          s.occ[i] *= 0.86 + rib * 0.14;
+          /* Sun-dried tips go straw-coloured — no palm in Egypt is uniformly green. Now driven
+           * by distance out along the leaflet, which is where a frond actually dries.
+           *
+           * Damped from `0.7` at `smoothstep(0.30, 1.0, v)`, because that pair was written for a
+           * V axis the consumer compressed to 0.208-0.417: the old term never exceeded 0.17 and
+           * was effectively switched off. Restoring the axis switched it fully on and bleached
+           * every leaflet tip to near-white. VEGETATION also marks 22 % of fronds dry through
+           * vertex colour (`palmFrond`'s `dry`), so a full-strength straw here double-counts;
+           * this leaves the texture doing the fraying and the vertex colour doing the season. */
+          const d2 = sat(dry[i] - 0.42) * 1.5 * smoothstep(0.45, 1.0, b);
+          s.mixHex(i, strawDry, sat(d2) * 0.45);
+          s.mixHex(i, ribHex, rachis * 0.6);
+          s.rough[i] = sat(0.55 + b * 0.16 + d2 * 0.2);
+          s.occ[i] *= 0.86 + (1 - b) * 0.14;
+          /* Leaflets part and fray toward their tips. Kept in step with the colour rather than
+           * carrying the shape: VEGETATION's `frondMat` sets neither `transparent` nor
+           * `alphaTest`, so this alpha is inert today — it must therefore never be the thing a
+           * frond's read depends on, and it is correct if that material is ever switched on. */
+          a[i] = Math.max(rachis, smoothstep(1.0, 0.72, b + sat(dry[i] - 0.55) * 0.5));
         }
       }
-      // Midrib of the whole frond, down the centre.
-      for (let y = 0; y < size; y++) {
-        const row = y * size;
-        for (let x = 0; x < size; x++) {
-          const i = row + x, u = (x + 0.5) / size;
-          const dm = Math.abs(u - 0.5);
-          const m = sat(1 - dm / 0.035);
-          if (m <= 0) continue;
-          a[i] = Math.max(a[i], m > 0.2 ? 1 : a[i]);
-          s.h[i] += m * 0.30;
-          s.mixHex(i, ribHex, m * 0.6);
-        }
-      }
-      grain(s, { amount: 0.03, freq: 320, seed: cx.seed + 8, heightAmt: 0.006 });
+      /* `grain` is isotropic in tile space and this mapping is not: one U repeat is the whole
+       * frond (~3.5 m of rachis) while one V repeat is two leaflet-lengths (~1.0 m). Size it off
+       * V, the tighter axis — 32 cycles is 31 mm there (1.6 px on a `courtyard` palm at 20 m)
+       * and a harmless 109 mm along U. At the old 320 it was 3 mm in V, six times under the
+       * pixel and pure mip-chain fodder. */
+      grain(s, { amount: 0.03, freq: 32, seed: cx.seed + 8, heightAmt: 0.006 });
     },
   },
 
@@ -3180,6 +3300,102 @@ function glyphWall(ctx, size, mode, seed, o = {}) {
 }
 
 /**
+ * An **architrave** band, not a wall: one row of large signs centred on the tile seam, rules
+ * either side of it, plain dressed stone everywhere else, and one small secondary frieze at
+ * mid-tile for the one consumer that sees a whole repeat.
+ *
+ * ── Why this exists, measured ────────────────────────────────────────────────────────────────
+ *
+ * `hieroglyph_gilded` was drawn by `glyphWall`, whose registers sit at surface V **0.645-0.945**
+ * (tall) and **0.36-0.43** (frieze), with the incised rules on the seam. That is the right layout
+ * for a wall. **None of this recipe's consumers is a wall.** Every one of the twelve call sites in
+ * `EgyptLevel.js` is a horizontal band:
+ *
+ *     l.388  peristyle architrave  beam h 1.25    l.921  nave architrave     beam h 0.80
+ *     l.621  pylon cornice         cornice ~0.86  l.1020 hall ext. cornice   cornice ~0.86
+ *     l.666  great gate lintel     beam h 2.60    l.1085 pylon beam          beam h 1.40
+ *     l.816  hall doorway lintel   beam h 1.50    l.1239 tomb beam           beam h 1.20
+ *     l.1324 court beam            beam h 1.70    l.1349 fallen block        box  h 1.50
+ *
+ * and `Kit.beam`/`Kit.cornice` both call `boxProjectUVs(g)` **before** `place()`, so V is the
+ * geometry's *local* Y times `UV_PER_M`, not its world height. A beam of height `h` therefore
+ * samples exactly `h / (2 x tile) = h / 6.4` of the tile's V, **centred on the seam** (a beam's
+ * blocks are built about local y = 0). So:
+ *
+ *     h 0.80 -> V +/-0.063     h 1.50 -> V +/-0.117     h 2.60 -> V +/-0.203
+ *
+ * The union over every gilded consumer is **V in [0.80, 1.0] u [0, 0.20]** — 40 % of the tile —
+ * and the wall layout put its gilding in the other 60 %. Rendered through `hero`'s own camera at
+ * the real 1280-equivalent scale, the great doorway lintel (10.4 x 1.5 m at 34 m, **379 x 58 px**,
+ * the largest gilded surface in the money shot) comes out **luma p50 163/255, chroma p50 0.330**:
+ * pale limestone with a 10 px strip of small gold signs along its lower edge. Critic pass 3 on
+ * `hero` reads *"Gold doesn't read as metal — there is no gold in the frame to read"*, and this
+ * is a large part of why. It is not a hue problem and not a shading problem; the gilding was
+ * authored into a V band that no consumer samples.
+ *
+ * Same defect class as `MOTES.size`, `sand_ripples` and `palm_bark`: **a feature placed at a
+ * coordinate the consumer does not visit.** The other three were about size; this one is about
+ * position, which is why none of the size sweeps found it.
+ *
+ * ── Why the seam, and why not just make the tile anisotropic ─────────────────────────────────
+ *
+ * Centring on the seam is forced, not chosen: `beam` centres its blocks on local y = 0, so V = 0
+ * is the middle of every architrave in the level. Drawing the row twice (`oy` of 0 and `-size`)
+ * is the same wrap trick `ceiling_stars` uses for stars that cross the edge, and it is exact
+ * because `columnRegister`/`rowRegister` are deterministic in their own box coordinates.
+ *
+ * The alternative — `tile: [3.2, 0.75]`, so one V repeat is 1.5 m and the whole authored height
+ * lands on a beam — was rejected for two measured reasons. `derive()` takes the *same* `tile` for
+ * the repeat and for the slope scale, so `kv` would go 6.72 -> 28.7; and 512 texels would map to
+ * 6.4 m x 1.5 m, making every glyph 4.27x wider than tall unless the whole layout were redrawn
+ * under a canvas transform. Both are real changes to the relief and the drawing on the largest
+ * gilded family in the level, for the same result this gets by moving the band.
+ */
+function glyphArchitrave(ctx, size, mode, seed, o = {}) {
+  const { worldTile = 6.4, signM = 1.0 } = o;
+  /* The row's height in metres *is* its sign size — `rowRegister` takes the quadrat from the
+   * band height. 1.0 m is a large sign, which is what an architrave carries: the narrowest
+   * consumer is the 0.80 m nave architrave, so anything taller than this is cropped on the
+   * surface `temple` is composed around. */
+  const band = clamp(signM / worldTile, 0.05, 0.30);
+  const rule = size * 0.010;
+  const half = size * band * 0.5;
+  // Drawn twice so the row is continuous across the seam it is centred on.
+  for (const oy of [0, -size]) {
+    const y0 = size - half + oy;
+    /* **The whole band is a sunk panel, not just the signs.** `hieroglyph_gilded` gilds wherever
+     * `carve`'s ramp is high — `g = sat(ramp * 1.35 - 0.10)` — so the gild mask is the *cut*, and
+     * a row of separate sign-shaped cuts gilds only the signs. Measured on the built map, that
+     * left the 1.5 m doorway lintel's visible V band at mean metal 0.22 with the rest bare
+     * limestone: gold lettering on pale stone, not a gilded architrave.
+     *
+     * Sinking the band first and cutting the signs into it is both what a gilded architrave
+     * actually is — leaf laid over a sunk field, the burnisher reaching only the arrises — and
+     * what this recipe's own value policy was rebuilt around (see the long note on `bevel` in
+     * `hieroglyph_gilded`: "leaf covers the whole sunk field, because that is what gilding a
+     * sunk relief means"). The signs stay legible because they are also drawn in `'line'` mode,
+     * which `carve` incises at `lineDepth`, so they read as dark cuts *in* the gold. */
+    if (mode === 'cut') { ctx.fillStyle = '#fff'; ctx.fillRect(-2, y0, size + 4, half * 2); }
+    HG.rowRegister(ctx, 0, y0, size, half * 2, seed + 41, HG.POOLS.royal, mode);
+    HG.registerRule(ctx, size, y0 - size * 0.018, rule, mode);
+    HG.registerRule(ctx, size, y0 + half * 2 + size * 0.018, rule, mode);
+    HG.paintedBand(ctx, -2, y0 - size * 0.018 - size * 0.030, size + 4, size * 0.026, mode,
+      [PAL.ochre, PAL.red, PAL.white, PAL.lapis]);
+    HG.paintedBand(ctx, -2, y0 + half * 2 + size * 0.018 + size * 0.004, size + 4, size * 0.026, mode,
+      [PAL.lapis, PAL.white, PAL.red, PAL.ochre]);
+  }
+  /* One secondary frieze at mid-tile. Nothing that samples a band ever sees this; it is here so
+   * the single wall-shaped consumer — the tomb false door at `EgyptLevel.js:1263`, 6.2 m tall and
+   * the only one that spans a whole repeat — is not 84 % bare stone. */
+  {
+    const fh = size * clamp(band * 0.55, 0.03, 0.10);
+    const y0 = size * 0.5 - fh * 0.5;
+    HG.registerRule(ctx, size, y0 - size * 0.016, rule * 0.8, mode);
+    HG.rowRegister(ctx, 0, y0, size, fh, seed + 907, HG.POOLS.divine, mode);
+  }
+}
+
+/**
  * Figures in registers: a god receiving an offering from the king, with label text columns. Each
  * register stands on an incised ground line, and nothing crosses the tile seam.
  */
@@ -3245,11 +3461,45 @@ export const MATERIAL_GROUPS = (() => {
   return g;
 })();
 
-/** Built first in init(): everything the canonical shots actually put on screen. */
+/**
+ * Built first in `init()`: everything the canonical shots actually put on screen.
+ *
+ * **Nine of the twenty entries here had no consumer anywhere in the build**, and this list is
+ * the only reason they were ever built. Grepped across `src/world`, `src/player`, `src/fx`,
+ * `src/ai` and `src/render` for every catalogue name and its alias, then measured the cost of
+ * each recipe at the shipping size (`texSize 1024`, so tier 0 builds at 1024 and tier 1 at 512):
+ *
+ *   fur_sly 1942 ms · relief_figures 2543 ms · dust_soft 668 · light_shaft 514 · gold_cane 273 ·
+ *   cloth_cap_blue 229 · cloth_shirt_blue 188 · mask_black 164 · spark_diamond 137
+ *
+ * **6.66 s of a 24.9 s prewarm (27 %) and 45.2 MB of the 350 MB texture budget, for material
+ * that reaches no pixel.** The in-page warning `textures: prewarm took 33.7s at size 1024` in
+ * the last `shots/report.json` is the same cost measured end to end, and on this container it
+ * is paid inside every one of the 90 s boots that four agents queue behind.
+ *
+ * Why they were dead, so nobody re-adds them by reflex:
+ *
+ *   - The `sly` group (`fur_sly`, `fur_tail_rings`, `cloth_*`, `leather_boot`, `gold_cane`,
+ *     `mask_black`) is **not what dresses the character.** `SlyModel.js` builds its own fur,
+ *     cloth and gradient maps and sets its own repeats; it never calls `textures.get`. This is
+ *     already recorded in `Textures._build`'s note on `tile`, and the PREWARM list had not
+ *     caught up with it.
+ *   - The `fx` sprites (`dust_soft`, `spark_diamond`, `light_shaft`) are the same story on the
+ *     other side: **FX never asks TEXTURES for anything.** `src/fx/Emitters.js` draws its own
+ *     sprites analytically — its own comment says so ("the sparkle field draws its own
+ *     analytically"). `torch_flame` is the exception and stays: `Props.MATERIALS.flame`
+ *     consumes it.
+ *   - `relief_figures` has no consumer in `Architecture.RECIPES` or `Props.MATERIALS`, which
+ *     its own recipe comment already states — it was still the second most expensive entry
+ *     in this list.
+ *
+ * Removing a name here does **not** remove the recipe: `Textures.get()` still builds any
+ * catalogue entry on first request. So if FX or CHARACTER ever wires one of these up it will
+ * simply build lazily, and can be re-added here once it is actually on screen.
+ */
 export const PREWARM = [
   'sandstone_block', 'hieroglyph_wall', 'paving_courtyard', 'sand_ripples',
-  'limestone_polished', 'column_papyrus', 'gold_leaf', 'fur_sly',
-  'sandstone_worn', 'granite_pink', 'relief_figures', 'ceiling_stars',
-  'cloth_cap_blue', 'cloth_shirt_blue', 'gold_cane', 'mask_black',
-  'spark_diamond', 'torch_flame', 'dust_soft', 'light_shaft',
+  'limestone_polished', 'column_papyrus', 'gold_leaf', 'hieroglyph_gilded',
+  'sandstone_worn', 'granite_pink', 'mudbrick', 'ceiling_stars',
+  'palm_bark', 'palm_frond', 'bronze_aged', 'torch_flame',
 ];

@@ -1,532 +1,387 @@
 # Critic — scoring pass 3
 
-**Review set:** `shots/r3/` (hero, temple, sly-closeup, courtyard, dunes, interior) +
-`shots/r3b/` (night, traversal, combat, guard) — 1280×720, quality `high`.
-**Provenance:** commit **`9616d7d`**, working tree **clean** (`git status --porcelain` empty at
-capture start). Verified myself; `tools/critic.mjs` does **not** stamp `commit` into its
-`manifest.json` — only `tools/shot.mjs` writes that into `shots/report.json`. See "Provenance
-gap" below. Nothing in this report is judged from `shots/*.png` at the repo root; those are stale.
+**Review set:** `shots/r3/` — 1280×720, quality `high`, captured by me on 2026-08-01 11:17–.
 **Reviewer:** adversarial art director per `tools/CRITIC.md`. No involvement in the build.
-**Method:** every PNG and every 2× centre crop opened with the Read tool and looked at. Every
-numeric claim below is measured off the captured pixels with a probe script, not taken on trust.
+
+> **This supersedes the partial pass-3 report that previously occupied this file.** That one
+> scored six shots against commit `9616d7d`; the container was restarted and that run was lost.
+> Everything below is re-measured against `073d075`. Where the two agree I say so, because two
+> independent captures twelve commits apart agreeing to one decimal place is itself evidence.
+
+---
+
+## Provenance — read this before using any number below
+
+`tools/critic.mjs` **still does not stamp `commit` into its `manifest.json`.** `gitDesc()` exists
+only in `tools/shot.mjs`, which writes `shots/report.json`. I recorded provenance by hand around
+every batch:
+
+| batch | shots | HEAD | tree at page-load | frames |
+|---|---|---|---|---|
+| 1 | `hero` `temple` `courtyard` | `073d075` | **clean** | 11:28 / 11:31 / 11:35 |
+| 2 | `sly-closeup` `dunes` `interior` | `073d075` | **dirty** (see below) | pending |
+| 3 | `night` `traversal` `combat` `guard` | `073d075` | **dirty** | pending |
+
+Batch 1 is a clean `073d075`. I can state that precisely because `vite.config.js:12-13` sets
+`hmr:false` and `watch:{ignored:['**/*']}` under `SANDS_NO_HMR`, which the harness always sets —
+so the page's module graph is frozen at page load and later edits on disk cannot reach it. Batch
+1's page loaded at ~11:20; the first agent edit landed at 11:28:03 (`src/player/Body.js`), after
+`hero` had already rendered. **Batch 1 is one coherent build.**
+
+Batches 2 and 3 are not the same build as batch 1. By 11:35 the tree carried uncommitted edits to
+`src/fx/Particles.js`, `src/player/Body.js`, `src/player/Clips.js`, `src/player/SlyModel.js`,
+`src/world/EgyptLevel.js` and `src/world/Kit.js` — five agents are working live. Their scores are
+against `073d075 + those working-tree edits`, and I say so again at each shot.
+
+**What this build does NOT contain.** `PAL.shadowTintPeak = 0.52` (`ToonMaterial.js:182`) and the
+`k = Math.min(k, maxK)` clamp (`:879-881`) are **both still present**. The daylight-shadow fix I
+was told was "being tested right now" **is not in the tree I captured.** Every daylight score
+below is against the clamped build and should be re-run when that lands.
+
+**Method.** Every PNG and every 2× centre crop opened with the Read tool and looked at. Every
+number is measured off the captured pixels with a decoder I validated first by reproducing pass
+2's published `hero` figures exactly (L 121.6, sat 0.423, warm 88.7%, cool 1.9%). Nothing is
+judged from `shots/*.png` at the repo root or from any other label.
+
+**Blind comparison.** I am working from my own knowledge of Super Mario Odyssey, Tears of the
+Kingdom, Breath of the Wild and Sly Cooper: Thieves in Time. There are no reference images in this
+repo and I did not download any. Every comparison below is memory against pixels, and I say so
+rather than implying I have a frame open beside me.
 
 ---
 
 ## Verdict: **REJECT**
 
-**Mean 3.5/10, down from 4.2. Best score 4. Pass floor is 8.**
-
-*(Scores for the final four shots are appended below once `r3b` clears the capture lock.)*
+*(Scores complete for batch 1. Batches 2 and 3 append below as they clear the lock.)*
 
 | shot | pass 2 | pass 3 | Δ | one-line |
 |---|---|---|---|---|
-| `hero` | 5 | **3** | −2 | Palette inverted to violet; Sly is 1.5 luma from the wall behind him |
-| `temple` | 4 | **4** | 0 | Light shafts finally landed — and the columns have a 0.1-luma terminator |
-| `sly-closeup` | 4 | **4** | 0 | Gold cane is real metal at last. Stiff A-pose, no bandit mask, chrome eye |
-| `courtyard` | 5 | **4** | −1 | Best warm/cool tension in the set; obelisk is 1.2:1 and glyphs read as rust |
-| `dunes` | 5 | **3** | −2 | Pyramid is 5 luma from the sky; sand is terracotta; black speckle corruption |
-| `interior` | 4 | **3** | −1 | A torch-lit tomb that is 86.7% cool, 1.6% warm, with no torch |
+| `hero` | 5 | **3** | −2 | Lost two-thirds of its light values. Key light is expressed *backwards* |
+| `temple` | 4 | **4** | 0 | Real shafts, real depth, best composition — on columns with no form |
+| `courtyard` | 5 | **4** | −1 | Best colour in the set; its title object is a 1.18:1 cube |
 
 ---
 
-## The headline: the daylight palette inverted, and it is the most expensive thing in this pass
+## Did it move the needle? Measured, not asserted
 
-Pass 2's complaint was "monochrome-warm" and a magenta shadow hue. The correction overshot and
-did not stop at shadows. Measured as the fraction of frame pixels that are red-dominant
-(R−B > 12) versus blue-dominant (B−R > 12):
+I was given a list of things fixed since the 4.2 baseline. Here is what the pixels say about the
+ones that touch batch 1.
 
-| shot | warm% p2 → p3 | cool% p2 → p3 | mean luma p2 → p3 | mean sat p2 → p3 |
-|---|---|---|---|---|
-| `hero` | 88.7 → **21.1** | 1.9 → **62.5** | 121.6 → 86.7 | .423 → .331 |
-| `temple` | 84.6 → **13.5** | 7.2 → **64.3** | 96.3 → 85.9 | .483 → .294 |
-| `sly-closeup` | 80.1 → **19.6** | 6.9 → **71.9** | 98.3 → 75.5 | .419 → .407 |
-| `courtyard` | 62.3 → **33.4** | 21.7 → **47.9** | 128.3 → 118.4 | .361 → .308 |
-| `dunes` | 85.5 → 73.8 | 3.6 → 8.2 | 134.4 → 124.6 | .369 → .354 |
-| `interior` | 88.4 → **1.6** | 1.5 → **86.7** | 93.7 → 67.6 | .427 → .354 |
+**Genuinely landed — credited once, briefly, per `CRITIC.md`:**
 
-Five of six flipped polarity. The set got **19 luma darker on average** and lost saturation in
-four of six. `temple` lost 39% of its saturation.
+- **Ink lines are exactly on spec and stay that way.** Darkest 0.5% of each frame measures
+  `#18121f` / `#19131e` / `#1b141c` — dark violet-brown, sitting between §2.1.2's `#1a1210` and
+  `#161022`. **Zero pure-black pixels in 2.76 M.** Stop touching this.
+- **The bright cool contact line is gone.** Pass 2's `#598aa2` L129 line between surfaces at L87
+  and L65 does not exist in any of these three frames. Walking down the `hero` ledge/pier contact
+  gives 91 → 36 (ink) → 62; the `courtyard` obelisk/plinth contact gives 82 → 54 → 47. Darkening,
+  not brightening. The `uRimCurve` convexity gate did the job it was added for.
+- **Texture tiling stays fixed.** Horizontal-period |ΔL| on `hero`'s ledge runs 18.2 / 21.6 / 23.8
+  / 25.9 / 25.1 / 28.0 / 28.3 / 27.5 / 25.3 at 16…192 px — no repeat peak. Do not re-open it.
+- **Airborne particulate exists.** Motes are visible in all three frames and clearly resolved in
+  `temple`'s shafts at 2×. Pass 2's `fx: no emitter named "embers"` warning is gone from the
+  manifest. §7.3's particulate condition **passes** three for three.
+- **Volumetric shafts are real and they are the best thing in the build.** See `temple`.
 
-This is not "shadows are cool now". The *lit* geometry is blue-dominant. In `hero` the entire
-foreground ledge — the largest object in frame, x 0–830 — scans as
-`#5b5c77 #595b7a #5e5b7c #5f5d7c #575a7b #3c3d69 #45416f #3a3a69 #40406c` along y=350. Sandstone
-mid is specified `#c9915a`, where R−B = **+111**. On that ledge R−B is typically **−45**. The
-sign is inverted. The tall pylon at x 250–370 is `#3a3a67` — navy, not stone.
+**Did not move at all:**
 
-**Egypt at 22° golden hour cannot be a blue game with warm accents. It has to be a gold game with
-violet shadows, and right now it is the first one.**
+- **The daylight palette.** `hero` measures warm **21.1%** / cool **63.5%**, L 86.5, sat 0.331.
+  My capture twelve commits earlier at `9616d7d` measured warm 21.1 / cool 62.5 / L 86.7 / sat
+  0.331. `temple`: warm 13.9 / cool 63.0 now against 13.5 / 64.3 then. **Two independent captures,
+  twelve commits apart, agreeing to a decimal place.** Nothing in those twelve commits touched the
+  daylight palette, which is exactly what you would predict from `shadowTintPeak` still clamping.
+- **The `hero` sky.** Like-for-like patches, pass 2 → r3: top-left `#a29da2` sat 0.059 → `#8e8a91`
+  sat 0.100; left horizon `#b8a8a2` sat 0.12 → `#af9f9b` sat 0.137. Still grey. Still no cloud, no
+  bird, and **still no pyramid** in the shot §7.2 defines as "Sly on a temple ledge, sun raking,
+  **pyramid behind**". Third pass running.
 
-## What is actually causing it — measured, not guessed
+**Moved backwards.** Value structure, as fractions of frame area:
 
-It is *not* the key light colour: in `dunes` the same sun lands on terrain as `#9f573f`
-(rb 2.53, correctly warm) while the architecture in the same frame lands at `#715f6c` (rb 1.05).
-Same light, different result — so the defect is in how the stone material resolves, and in how
-much of each frame is in the shadow term at all.
+| shot | dark <L80 (p2 → r3) | light ≥L140 (p2 → r3) |
+|---|---|---|
+| `hero` | 12.4% → **47.8%** | 32.2% → **11.3%** |
+| `temple` | 24.2% → **41.7%** | 1.9% → 6.7% |
+| `courtyard` | 10.5% → **28.8%** | 45.8% → 44.4% |
 
-The second half of it is worse than the hue, and it is the reason the frames also read *flat*.
-Lit versus shadow face **on the same object**:
+`hero` lost **two-thirds of its light values** and **quadrupled its dark mass**. The frame that
+has to sell the game is now half shadow.
 
-| same object, two faces | sun-facing | shadow-facing | shadow / lit |
+**Moved forwards, and it deserves saying.** Composition-scale structure — the squint test, measured
+as the standard deviation of 40×40 px block means — improved where the shafts and the staging
+landed:
+
+| shot | block-SD p2 → r3 |
+|---|---|
+| `hero` | 27.0 → 27.6 (flat) |
+| `temple` | 15.4 → **25.2** (+64%) |
+| `courtyard` | 28.1 → **36.0** (+28%) |
+
+So the honest summary is not "everything got worse". **Large-shape read improved; palette and
+local terminator did not.** `temple` gained more low-frequency structure than any other change in
+this pass produced, and it came from the shafts and the reframing.
+
+---
+
+## The one measurement that matters most — the shadow term is ~3× its spec, proved from pixels
+
+I can show the `shadowTintPeak` clamp is the root cause **without reading the shader**, by picking
+two faces of one block whose light is known exactly from the sun table.
+
+`Atmosphere.js:46-56` at `hero`'s `tod 0.79` gives elevation **22°**, azimuth **186°**, with
+azimuth 0° = +X east and 180° = −X west. That is a unit sun direction of **(−0.922, 0.375,
+−0.097)**. For the foreground ledge:
+
+| face of the same block | normal | **N·L** | what it should receive |
 |---|---|---|---|
-| `courtyard` obelisk | L142.2 (`#d67f55`) | L82.9 (`#5e4d69`) | 58% |
-| `courtyard` plinth | L61.7 (`#60352f`, rb 2.05) | **L74.3** (`#4e466b`, rb 0.73) | **120%** |
-| `temple` column | L80.9 (`#544d70`) | L80.8 (`#574d65`) | **100%** |
+| top | (0, 1, 0) | **+0.375** | 37.5% of the key |
+| camera-facing front | ≈(0.59, 0.17, 0.79) | **−0.557** | **zero direct sun — shadow term only** |
 
-On the `courtyard` plinth the sun-facing face is **12.6 luma darker** than its own shadow side —
-the hue says "lit" and the value says "shadow". On the `temple` column the two sides of a
-cylinder under a raking sun differ by **0.1 luma**: there is no terminator at all, banded or
-otherwise. The obelisk is the only object I measured in the whole set where the ramp does real
-work. §2.2 puts shadow at ~14% of key luminance; where it resolves at all it is at 58–120%.
+Measured:
 
----
+| face | colour | luma | warm% |
+|---|---|---|---|
+| top — receives 37.5% of key | `#654a3d` | **78.7** | 77.2 |
+| front — receives **no** direct sun | `#605f7c` | **97.7** | 0.0 (99.7% cool) |
 
-## Highlights are gone, so nothing blooms and nothing is the hero read
+**A face in full shadow is 19.0 luma — 24% — brighter than a face carrying 37.5% of the key.**
+For that to happen the shadow light must exceed roughly 0.375 × key. §2.2 specifies
+`SHADOW HUE #2a3f66 … ~14% of key luminance, never below`. It is running at **more than double,
+probably triple, its specified magnitude**, and it is doing so identically in every daylight shot.
 
-Fraction of each frame above L230, which is what a bloom threshold needs to catch:
+That is exactly the signature `KNOWN_ISSUES` §3 predicts from `PAL.shadowTintPeak` pinning `k` at
+3.904 while every daylight shot asks for 6.5–9.8. **I am confirming that diagnosis from the
+pixels, independently.** It is correct, it is the single most expensive defect in the build, and
+the fix is not in the tree I captured.
 
-| shot | >L200 | >L230 | max L | "warm+bright+saturated" px |
-|---|---|---|---|---|
-| `hero` | 0.02% | **0.000%** | 214 | 29.7% → **3.3%** |
-| `temple` | 0.01% | **0.000%** | 214 | 5.4% → **0.45%** |
-| `sly-closeup` | 0.15% | 0.054% | 238 | 2.4% → 8.9% |
-| `courtyard` | 0.09% | **0.000%** | 225 | 18.2% → 11.2% |
-| `dunes` | 0.01% | **0.000%** | 219 | 32.9% → 15.8% |
-| `interior` | 0.00% | **0.000%** | **183** | 5.1% → **0.00%** |
+The consequence is not subtle. Because the shadow term is this bright and this blue, it wins the
+value contest against the key almost everywhere: the *next* block's top face — same +0.375 of the
+same sun — measures `#5b5a73`, **87.1% blue-dominant**. The key is reaching it and losing.
 
-`sly-closeup` is the only frame in the set with anything above L230, and that is the cane crook
-and one eye. Everywhere else there is **no bloom source at all**, which is why §2.3's "one hero
-read — a single brightest thing, usually gold" fails six times out of six. In `hero` and `temple`
-the brightest large object in frame is *empty sky* (L159 and L170). In `interior` nothing exceeds
-L183 and 99% of the frame is below L112.
+This is the same inversion I measured on the `courtyard` plinth at `9616d7d` (120%). It has not
+moved. It is why five of six daylight frames read as violet concrete, and it is why the
+golden-hour key survives on almost nothing but a few horizontal faces — those are simply the
+faces where 0.375 of the key happens to beat the flood.
 
 ---
 
-## What genuinely landed since 4.2 — credited, briefly
-
-- **Ink lines are correct.** Darkest decile measures `#171223` / `#1b131c` / `#191322` — dark
-  violet-brown, on spec per §2.1.2, and **pure `#000000` occupies 0.0000% of every frame in the
-  set**. §7.3's outline condition passes six for six. This is done; stop touching it.
-- **Volumetric light shafts exist.** `temple` has clean directional shafts with visible dust
-  motes in them. First time in three passes. §7.3's volumetrics condition passes on `temple`.
-- **Texture tiling is fixed.** On `temple`'s rear wall, mean |ΔL| at horizontal periods 32/48/64/
-  96/128 px is 32.3/37.6/45.2/56.5/63.7 — monotonically rising with no repeat peak. The
-  three-metre glyph repeating nine times per wall is gone. Do not re-open this.
-- **Gold is metal.** The `sly-closeup` cane crook has p50 L77 against p95 L173 — a 96-luma
-  specular range on a small object, which is metal behaviour. It is the only convincing metal in
-  the set and its mean is still a tarnished `#64504f` rather than `#e8b942`.
-- **`courtyard` has a character in it.** Confirmed at (455–500, 395–465), `#595b6f` L91.8 against
-  a `#9a7d68` L129.3 surround. He is present and value-separated. He is not yet *read* — see below.
-
----
-
-## Shot by shot
+## Shot by shot — batch 1
 
 ### `hero` — 5 → **3**
 
+Draws 427 (budget 250). Triangles **2.790 M** (budget 1.2 M) — worst in the set and **up** from
+2.297 M in pass 2 and 2.657 M at `9616d7d`.
+
 §7.3 conditions failed, quoted:
 
-- *"No rim light separating silhouettes from the background"* — Sly's body measures `#2f314a`
-  (L50.8); the wall immediately to his right measures `#31334d` (L52.3). **Δluma 1.5, ΔRGB
-  (2,2,3).** He is separated from the background by his ink hull and nothing else. This is the
-  worst single measurement in the pass.
-- *"Diffuse ramp reads as smooth/realistic instead of banded-cel"* — the big ledge face carries
-  49 distinct L/4 levels over 15,000 px with the modal level at only 7.4%. That is a continuous
-  gradient. The pylon is the opposite failure: 90% of its pixels sit inside a 12-luma window.
-- *"Any surface reads as flat vertex colour with no texture detail"* — the pylon, per above.
+- *"Shadows are grey/black instead of coloured, or crush to zero detail"* — the hue is right
+  (violet, `#605f7c`) but the **value is inverted**, see above. Failing this on the crush half:
+  47.8% of the frame is below L80 against 12.4% in pass 2.
+- *"Any surface reads as flat vertex colour with no texture detail"* — the pylon at x 215–265
+  holds **78.8% of its pixels in three L/4 buckets spanning L56–L72**, 98.4% blue-dominant, p05
+  54.3 → p95 69.6. A 15-luma window over 12,000 px. It is a flat navy wash.
+- *"No normal-map relief on stone; carvings look painted-on rather than chiselled"* — worse than
+  painted-on. The right-hand wall (x 900–1270, y 60–200) measures **horizontal edge energy 5.95:1
+  over vertical** (22.25% strong horizontal-rule pixels against 3.74% vertical). A wall built of
+  stacked horizontal rules is the signature of panelling and louvres. There is not one Egyptian
+  glyph on it; at 2× it reads as a **server rack**.
 - *"Architecture reads as boxes; proportions realistic instead of exaggerated-cartoon"* — the
-  foreground ledge is a row of rectangular prisms with a chamfer. Nothing leans, tapers or sags.
-- *"Empty sky, or background not atmospherically hazed"* — sky at y=25 is `#a09ca3`/`#9b97a0`,
-  **saturation 0.06**. Grey. No cloud, no bird, no dust, and no pyramid, which §7.2 names as the
-  defining content of this shot ("Sly on a temple ledge, sun raking, **pyramid behind**").
-- *"No single hero focal read"* — brightest large area is the sky haze at L159.
-- *"Gold doesn't read as metal"* — there is no gold in the frame to read.
+  foreground ledge is a row of chamfered rectangular prisms. Nothing leans, tapers or sags,
+  against §2.1.4's explicit "pylons lean, columns are fat at the base and taper hard".
+- *"Empty sky, or background not atmospherically hazed"* — top-left sky `#8e8a91`, **saturation
+  0.100**. Grey. No cloud, no bird, no dust bank, and no pyramid. §2.2's zenith is `#3f7fc4`;
+  there is **no blue anywhere in this sky**.
+- *"No dark foreground framing element; flat depth"* — measured by plane: foreground L79.7,
+  midground L92.4, background L94.8. Value **rises monotonically front to back** — the inverse of
+  the dark-frame / lit-hero / hazed-distance structure §2.3 asks for — and the spread is only 15
+  luma across the whole depth of the shot.
+- *"No single hero focal read"* — max luma 213.8, **>L230 = 0.000%**, >L200 = 0.019%. The
+  brightest large area in frame is the sky at L169. §2.3 wants "a single brightest thing, usually
+  gold"; there is no gold in this frame at all.
+- *"Bloom is a grey wash instead of a tight coloured halo on bright things"* — with nothing above
+  L230 there is no bloom source, so the condition fails by absence.
+- *"No ambient occlusion in crevices / where forms meet"* — walking down the ledge/pier contact at
+  x=760: 104, 104, 103, 99, 91, **36**, 62, 84, 85, 87. The only dark event is a one-pixel ink
+  line; there is no occlusion gradient on either side of it.
 - *"Placed blind next to Mario Odyssey / Sly 4, an art director picks the other one"*.
 
-**Blind comparison — vs Super Mario Odyssey, Sand Kingdom, the approach to Tostarena from the
-south with the inverted pyramid on the horizon.** Working from memory of that game, not a
-downloaded frame. **Odyssey wins, and it is not close.** Odyssey's Tostarena reads instantly as
-hot stone under a low sun: the sunlit faces are a high-value saturated ochre, the shadow faces
-drop to a deep violet at a *fraction* of the lit value, and the sky is a real gradient with cloud
-banks and the pyramid silhouette anchoring the horizon. Ours has the violet but not the ochre —
-62.5% of the frame is blue-dominant and there is no gold anywhere — and where Odyssey puts a
-readable landmark on the skyline we put a `#a09ca3` grey void. The tell that would decide it in
-one second for any art director: in Odyssey you can find Mario in the frame instantly because the
-environment is warm and he is red-and-blue; in ours Sly is 1.5 luma from the wall behind him.
+Passing, and worth stating so nobody re-opens them: outlines, tiling, particulate, pure black,
+and — contrary to the brief I was handed — **Sly does have a rim here**. Walking across his
+silhouette at y=250, his sunward edge carries `#4a6085` / `#3f567e` / `#4f6b94` at L84–104 against
+a body at L28–40. It is ~3 px and it works. The rim regression is real elsewhere; it is not what
+is wrong with this frame.
 
-**Highest-leverage fix:** get the key light onto the stone and get the stone back to `#c9915a`
-family on lit faces. Everything else in this shot is downstream of that.
+**Blind comparison — vs Super Mario Odyssey, Sand Kingdom, the approach to Tostarena from the
+south.** From memory, not from an image. **Odyssey wins, decisively.** Two concrete reasons.
+First, Tostarena's sunlit stone is a high-value saturated ochre and its shadow faces drop to a
+deep violet at a *fraction* of that value, so every block states the sun's direction; ours states
+it backwards — our most-lit face is 19 luma *darker* than its own shadow side. Second, Odyssey
+never leaves the horizon empty: the inverted pyramid anchors the skyline and the sky is a real
+saturated gradient with cloud banks. Ours is a sat-0.10 grey void where §7.2 promises a pyramid.
+The one-second tell for any art director: in Odyssey the environment is warm and Mario is
+red-and-blue, so you find him instantly; here the environment is 63.5% blue and so is Sly.
+
+**Highest-leverage fix:** get the key light onto the stone with the correct sign. Everything else
+in this shot is downstream of it.
 
 ### `temple` — 4 → **4**
 
-- *"Diffuse ramp reads as smooth/realistic instead of banded-cel"* — the left column's lit face
-  is `#544d70` L80.9 and its shadow face is `#574d65` L80.8. **0.1 luma apart.** 82% of the
-  column's pixels sit inside L72–L88. A cylinder under a raking sun with no terminator.
-- *"Any surface reads as flat vertex colour with no texture detail"* — same measurement; the
-  columns are an untextured lilac wash.
-- *"No normal-map relief on stone; carvings look painted-on rather than chiselled"* — worse than
-  painted-on. The rear wall in the 2× crop is covered in fine horizontal panel lines and small
-  rectangular greebles. There is not one recognisable Egyptian glyph on it; it reads as a
-  spaceship bulkhead.
-- *"No rim light separating silhouettes from the background"* — the character is `#2a2e49` L47.0
-  on a floor measuring `#302839` L42.8. **Δ4.2 luma.**
-- *"No single hero focal read"* — brightest object is the doorway sky at L170, `#ada8b3`,
-  saturation 0.082.
+Draws 370. Triangles 2.622 M.
+
+The best-composed frame in the set and the only one that passes the squint test outright: the
+shafts rake, the column rhythm recedes, and the doorway is an unambiguous focal point. Then it is
+let down by the geometry the shafts land on.
+
+§7.3 conditions failed, quoted:
+
+- *"Diffuse ramp reads as smooth/realistic instead of banded-cel"* — walking the **full width** of
+  the left column at y=400: L 81, 83, 80, 82, 75, 81, 85, 85, 88, 89, 81, 86, 87, 82, 77, 86, 84,
+  86, 80. That is a **14-luma range with no directional trend** across a 3.8 m cylinder under a
+  raking sun. Boxed, the two halves are L84.4 and L80.9 — **Δ3.5 luma**. The right column is the
+  same: 12 luma across its whole width. Better than the 0.1 luma I measured at `9616d7d`, still no
+  terminator. 69.6% of the column sits in three L/4 buckets spanning **L80–L88**: one band, not
+  the three §2.1.1 requires.
+- *"Any surface reads as flat vertex colour with no texture detail"* — same measurement; the left
+  column is 100% blue-dominant with p05 74 → p95 90.9. A lilac wash.
+- *"No normal-map relief on stone; carvings look painted-on rather than chiselled"* — at 2× the
+  walls are fine horizontal panel lines and small rectangular insets. There is one recognisable
+  ankh (right column, x 1010–1060) in the entire frame; everything else is greebling.
+- *"No rim light separating silhouettes from the background"* — the character measures `#2b2e48`
+  L47.0 against a floor of `#342e43` L48.8. **Δ1.8 luma, and he is the darker of the two.** This
+  is the 5%-separation figure I was handed; it is real and it is worse than the 4.2 luma I
+  measured at `9616d7d`.
 - *"Bloom is a grey wash instead of a tight coloured halo on bright things"* — the shaft cores
-  measure `#9a847e`, saturation 0.204. A god ray carrying a `#ffd9a0` key should be a warm cream;
-  these are grey-brown.
+  measure `#78696f` **sat 0.249** and `#7d6e75` **sat 0.168**. A shaft carrying a `#ffd9a0` key
+  should be warm cream. These read as light only because they are brighter than their surround,
+  not because they have a hue. Frame max 217, **>L230 = 0.000%**.
+- *"No single hero focal read"* — there *is* a focal point, the doorway, and it works
+  compositionally. But it is a hole, not an object, and its sky half measures `#aba7b1`
+  **sat 0.084** — a colourless grey-white. The brightest large area in the frame is again nothing.
+- *"No ambient occlusion in crevices / where forms meet"* — the column base at x=250 drifts L87 →
+  L61 over 78 px with no localised darkening at the contact at all.
 - *"Placed blind next to …, an art director picks the other one"*.
 
-Passes, notably: volumetrics, particulate, tiling, outlines.
+Passing: outlines, tiling, particulate (motes clearly resolved in the shafts), **volumetrics**,
+and composition.
 
-**Blind comparison — vs Zelda: Tears of the Kingdom, a Sky Island shrine interior with the
-shafts coming through the ceiling apertures.** From memory. **TotK wins.** Its shafts are the
-same idea and roughly the same quality as ours — this is the one place we are competitive. It
-wins on everything the shafts land on: TotK's shrine stone has a clear lit/shadow split that
-models the curvature of every column, a visible material grain, and inlay that is *emissive* so
-the room has a hero read. Ours has a 0.1-luma terminator, so our columns are flat lilac
-cylinders, and our brightest thing is the doorway.
+**Blind comparison — vs Zelda: Tears of the Kingdom, a shrine interior with light coming through
+ceiling apertures.** From memory. **TotK wins, but this is the closest we get.** Our shafts are
+genuinely competitive — comparable softness, real motes, believable falloff. TotK wins on what the
+shafts illuminate: its shrine stone has a clear lit/shadow split that models the curvature of
+every column and pillar, a visible material grain, and emissive inlay that gives the room a hero
+read. Ours puts world-class shafts onto flat lilac cylinders with a 3.5-luma terminator and walls
+that read as bulkheads, and the brightest thing in the room is a grey hole.
 
-**Highest-leverage fix:** the column terminator. Shafts this good are being wasted on geometry
-that has no form.
-
-### `sly-closeup` — 4 → **4**
-
-- *"Pose is A-pose/T-pose/stiff instead of a confident line-of-action"* — he is standing
-  symmetric: both arms out, both legs vertical and parallel, hips level, shoulders level, weight
-  evenly distributed. This is the textbook instance of the condition.
-- *"Silhouette not instantly readable as Sly (cap, mask, tail, cane)"* — cap, tail and cane read.
-  **The bandit mask is absent.** The region around and between the eyes measures `#535966`, the
-  same family as the rest of the head; there is no dark domino shape. The mask is Sly's single
-  most identifiable feature after the cap.
-- *"Fur reads as smooth plastic"* — the tail has a spiky black fringe at its silhouette but its
-  interior is smooth flat blue/white bands with no strand texture.
-- *"Any surface reads as flat vertex colour with no texture detail"* — the wall behind him
-  carries 22 L/4 levels over 60,000 px with **81% inside L64–L80**, a 16-luma wash.
-- *"No rim light separating silhouettes from the background"*.
-- *"Placed blind next to …, an art director picks the other one"*.
-
-Two defects not on the checklist but worth more than several that are:
-
-1. **The eyes do not read as a pair.** Left eye `#b7b4a9` L179.5 with p95 236; right eye
-   `#506086` L95.5. **84 luma apart.** The left one is picking up a hard specular and reads as
-   polished chrome or a sunglass lens, not an eye. At 2× he reads as an angry raptor.
-2. **The tail still roots at the shoulder blade**, ~110 px above the gold belt line, and projects
-   horizontally. Pass 2 called this out explicitly ("move the tail from the shoulder to the base
-   of the spine") and it has not moved.
-
-Proportions **pass** — measured off the pixels he is ~3.5 heads including the cap (cap top y≈118,
-jaw y≈268, boot sole y≈645), which is comfortably inside cartoon territory. Note this does not
-match the 4.88-heads rig figure; the pixel read is the one that matters for §7.3 and it is fine.
-
-**Blind comparison — vs Sly Cooper: Thieves in Time, any Sly close-up in the Ancient Egypt
-episode.** From memory. **Thieves in Time wins.** Its Sly is defined by three things we do not
-have: the black bandit mask that turns the top half of his face into one graphic shape, an
-asymmetric weight-shifted contrapposto with the cane taking load, and fur that breaks the
-silhouette everywhere rather than only on the tail. Ours has the cap, the cane and the tail, and
-then puts them on a symmetric A-posed figure with a bare face and one chrome eye.
-
-**Highest-leverage fix:** the bandit mask. It is a dark shape over the eyes and it converts him
-from "a raccoon-ish biped" to "Sly" in one change.
+**Highest-leverage fix:** the column terminator. This is the one frame where fixing the shading
+would immediately produce a good image, because the composition and the atmosphere are already
+there.
 
 ### `courtyard` — 5 → **4**
 
-- *"Architecture reads as boxes; proportions realistic instead of exaggerated-cartoon"* — the
-  obelisk shaft is roughly **330 px wide × 400 px tall, about 1.2:1**, with a small pyramidion on
-  top. A real obelisk is 9–10:1 and §2.1.4 asks for *more* exaggeration than real, not less. It
-  reads as a shipping container wearing a party hat. Pass 2 asked for 8:1; it has not moved.
-- *"No normal-map relief on stone; carvings look painted-on rather than chiselled"* — at 2× the
-  glyphs are flat orange marks scattered at random over the blue faces, with no bevel, no
-  highlight/shadow pair, and no register ruling. Many are clipped part-shapes. The dominant read
-  is **orange primer showing through chipped paint on a blue steel container**, not carving.
-- *"Visible texture tiling repetition"* — passes.
+Draws 442. Triangles **2.819 M** — the worst in the set, 135% over budget.
+
+The best colour in the build. The obelisk is the only object I measured anywhere with a correct,
+directional, §2.2-shaped terminator:
+
+| face | colour | luma | sat | warm% |
+|---|---|---|---|---|
+| lit (west) | `#d57e55` | 141.9 | 0.602 | **99.6** |
+| shadow (south) | `#604e6a` | 83.9 | 0.373 | 18.8 (75.6% cool) |
+
+A 58-luma break, warm lit against violet shadow. **This is what the rest of the game should look
+like.** Whatever path produces this surface, it is the reference.
+
+§7.3 conditions failed, quoted:
+
+- *"Architecture reads as boxes; proportions realistic instead of exaggerated-cartoon"* — **the
+  obelisk violates the §8.1 coordinate contract by a factor of three.** This is arithmetic, not
+  taste. The camera sits 26.87 m from the obelisk at (0, ·, 11); at fov 50 on a 1280×720 frame
+  that is 16.14 px per horizontal degree. §8.1 specifies "**Obelisk at (0,·,11), base 2.6 m², 22 m**".
+  A 2.6 m-across shaft at that distance projects to **89 px**, or **126 px** in the worst case
+  where a square section is seen at 45° and shows two faces. Measured silhouette width: **205 px
+  at y=180, 340 px at y=300, 355 px at y=440**. That is **2.8× too wide** at the most generous
+  reading of the contract and **4.6×** at the literal one (2.6 m² of area = 1.61 m across).
+  Meanwhile the height is broadly right — 22 m projects to 641 px and the visible silhouette is
+  530 px with the base occluded by the terrace. **So the height is correct and the width is ~3×
+  wrong**, giving a shaft aspect of roughly 1.6:1 against a real obelisk's 9–10:1. It reads as a
+  substation cabinet wearing a party hat. Pass 2 asked for 8:1; pass 3 at `9616d7d` measured
+  1.2:1; it has not moved in two passes. It does at least taper correctly — 205 px at the top
+  against 355 px at the base.
+- *"Diffuse ramp reads as smooth/realistic instead of banded-cel"* — the ramp has **two steps, not
+  three**. The obelisk's lit face is 38 levels clustered L140–156 (top-3 cover 43.0%, all adjacent
+  buckets) and its shadow face is clustered L72–88 (top-3 cover 57.5%). Each face is one
+  continuous tone; there is no mid-band anywhere between L88 and L140. Frame-wide the histogram is
+  bimodal — modes at L76–80 and L156–164 — with only **26.8% of the frame in L80–139**. That is
+  the "salmon-and-indigo with no middle" read, and its cause is a 2-step ramp, not the grade.
+- *"No normal-map relief on stone; carvings look painted-on rather than chiselled"* — walking
+  across the glyph field at y=260: 87, 83, 76, 82, 63, 81, 80, **110**, 78, 84, 56, 76, 70, 74, 77,
+  78, 87. Single-signed orange marks on a violet field with **no highlight/shadow pair** in a
+  consistent direction. A chiselled glyph under a raking key must have both. At 2× the dominant
+  read is **rust bleeding through paint on a steel container** — and the reason is specific: the
+  glyph colour *is* the lit stone colour showing through the shadowed face, which is exactly what
+  chipped paint over primer looks like.
 - *"No volumetric light shafts anywhere they'd be motivated"* — §2.3 requires shafts through at
-  least one opening in every interior **or courtyard**. There are none here.
-- *"No single hero focal read"* — the eye goes to the 330-px orange obelisk face, not to the
-  character.
+  least one opening in every interior **or courtyard**. There are none here. `temple` proves the
+  tech works.
+- *"Empty sky, or background not atmospherically hazed"* — the sky is blue at last (`#97a1b4`,
+  68% cool) but **sat 0.187** against §2.2's `#3f7fc4`, and the clouds are white filaments swirling
+  in it. Pass 2 called them "marbled endpaper" and asked for soft-edged masses at two scales;
+  unchanged. It reads as paper marbling or an oil slick.
+- *"No single hero focal read"* — max 224.8, **>L230 = 0.000%**. The brightest large area is the
+  sky at L160, ahead of the obelisk's lit face at L141.9. The hero read loses to the background.
 - *"Placed blind next to …, an art director picks the other one"*.
 
-The shading here is the strongest in the set — the obelisk terminator is a real 56.6-luma break
-(`#d67f55` L142.2 lit, `#5f506c` L85.5 shadow). But each face is a **single flat value**: 73% of
-the lit face inside L140–L164, 62% of the shadow face inside L72–L88. That is **2 bands, not the
-3 that §2.1.1 requires**, and with no mid-tone every object in frame gets the identical
-orange/periwinkle pair. The frame reads as a cel-shade filter applied uniformly rather than as
-lighting.
+The character **is** in frame and value-separated — L93.5 against neighbours at L155.6 and L121.4,
+so 28–62 luma of separation. That fix landed. At ~45×70 px he is a periwinkle blob rather than a
+readable Sly, but this shot is explicitly not about him.
 
-The sky is unfixed from pass 2: white filaments swirling in desaturated blue (`#96a1b4`,
-saturation 0.188). It is paper marbling, not cloud.
-
-**Blind comparison — vs Super Mario Odyssey, the Tostarena town square with the obelisk-like
-stone markers and the inverted pyramid beyond.** From memory. **Odyssey wins.** Its props have
-silhouette hierarchy — tall thin things read as tall and thin, and the town square has one clear
-gold-lit focal object with everything else subordinate. Ours gives the obelisk, the plinth, the
-walls and the background terraces the same two colours at the same saturation, so nothing is
-subordinate to anything and the composition has no centre. Odyssey's clouds are soft-edged masses
-at two scales; ours are filaments.
+**Blind comparison — vs Super Mario Odyssey, the Tostarena town square with its stone markers and
+the inverted pyramid beyond.** From memory. **Odyssey wins.** The deciding difference is
+silhouette hierarchy: in Odyssey tall thin things read as tall and thin, and one gold-lit object
+dominates with everything else subordinate to it. Our shot is named for an obelisk and the obelisk
+is a cube — the single most recognisable silhouette in Egyptian architecture, rendered as the
+least. Odyssey's clouds are soft-edged masses at two scales; ours are filaments. Odyssey also has
+a mid-tone: our frame is 28.8% below L80 and 44.4% above L140 with a hollow middle, which is what
+makes it read as a posterised filter rather than as light.
 
 **Highest-leverage fix:** take the obelisk to at least 8:1. It is the shot's title object and its
 proportion is the reason the frame reads as an industrial yard.
 
-### `dunes` — 5 → **3**
+---
 
-- *"Empty sky, or background not atmospherically hazed"* — the pyramid body measures `#c1a389`
-  L163 against a sky of `#b0a5ac` L168 immediately above its edge. **Δ5 luma.** It is separated
-  from the sky only by its ink outline, so it reads as a flat paper cut-out rather than a hazed
-  mass. Sky top is `#9c97a4`, **saturation 0.109** — grey, against §2.2's `#3f7fc4` zenith.
-- *"Any surface reads as flat vertex colour with no texture detail"* — the foreground dune is a
-  smooth brown gradient with horizontal streaking and no grain or ripple; the shadow wedge at
-  left (x 0–460) is a hard-edged flat violet shape that reads as torn paper laid on the sand.
-- *"Silhouette not instantly readable as Sly"* — at 2× he is a solid blue lump with a featureless
-  domed head, a horizontal sausage tail and a straight blue bar for a cane. He reads as **a
-  soldier in a Brodie helmet holding a rifle**.
-- *"Geometry silhouettes are straight/symmetric everywhere"* — the vertical poles are
-  constant-width tubes at assorted angles; the mid-ground reads as scaffolding.
-- *"No single hero focal read"*.
-- *"Placed blind next to …, an art director picks the other one"*.
+## Harness gaps worth ten minutes from whoever owns `tools/`
 
-The sand hue is a regression in a different direction from pass 2. It measures `#a45a41`
-(saturation 0.603, L104) — a **terracotta brick**, not sand. §2.2's sand GI bounce is `#e8a852`
-and sandstone light is `#e6b878`; both are far brighter and far less red. Pass 2 reported the
-dunes reading as "dirty snow"; they now read as a ploughed clay field.
+1. **`tools/critic.mjs` has no `gitDesc()`.** The critic's own capture is the one artifact in the
+   repo with no provenance stamp, which is backwards given that the stale-frame incident is what
+   motivated the stamp. Copy it from `tools/shot.mjs:36-42`. I asked for this last pass.
+2. **`tools/critic.mjs` has no per-shot deadline.** `shot.mjs` has `SHOT_TIMEOUT` (15 min) and
+   fails one shot rather than the session; `harness.mjs:131`'s `grab()` wraps a bare
+   `page.evaluate` with no timeout, so a wedged `setShot` hangs the whole run forever.
+3. **`tools/critic.mjs` writes `manifest.json` only at the end**, and overwrites it per invocation,
+   so batched captures into one label lose the earlier batches' draw/triangle stats. `shot.mjs`
+   flushes `report.json` after every shot. I worked around it by saving stdout per batch.
+4. **No `--resume`.** Asked for last pass; a killed run still re-renders everything.
 
-**New in this pass and clearly a bug, not a style choice:** a dense cluster of black speckles at
-approximately (650–770, 235–285), visible unmistakably in the 2× crop. It reads as a swarm of
-flies or as dead pixels. There are smaller instances near (150–300, 320–350) and (1050–1120,
-470–500). This is aliasing on thin geometry and it looks like image corruption.
+## Runtime signals from the batch-1 manifest
 
-**Blind comparison — vs Zelda: Breath of the Wild, the Gerudo Desert approach to Gerudo Town in
-late afternoon.** From memory. **BotW wins.** Its desert reads as sand because of two things we
-do not do: the dunes carry a fine directional ripple that catches the raking light so the surface
-has grain at every distance, and the far mesas sit in genuine aerial perspective — they lose
-contrast and shift toward the sky colour with distance, so depth is unambiguous. Ours has a
-brown gradient with no grain, and a pyramid that is 5 luma from the sky yet drawn with a full
-black contour, which is the exact opposite of aerial perspective: maximum edge contrast, minimum
-tonal contrast.
+- `textures: prewarm took 26.0s at size 1024` — new since pass 2.
+- `collision: pole "unnamed" / "proxy:pole" has no userData.spline — synthesised one` ×2. Same as
+  pass 2.
+- **One console 404.** §1 forbids external asset fetches. Unidentified across three passes now.
+- All modules present.
 
-**Highest-leverage fix:** put the sand back to the `#e6b878`/`#e8a852` family and give the
-pyramids a real haze-vs-value separation from the sky instead of an ink line.
+## §1 budget — triangles still climbing
 
-### `interior` — 4 → **3**
+| shot | draws (≤250) | tris (≤1.2 M) | tris p2 → `9616d7d` → r3 |
+|---|---|---|---|
+| `hero` | 427 | **2.790 M** | 2.297 → 2.657 → **2.790** |
+| `temple` | 370 | **2.622 M** | 2.252 → 2.488 → **2.622** |
+| `courtyard` | 442 | **2.819 M** | 2.297 → 2.701 → **2.819** |
 
-- *"No volumetric light shafts anywhere they'd be motivated"* — §2.3 requires them in every
-  interior. `temple` has them; this room has none.
-- *"No single hero focal read"* — **nothing in this frame exceeds L183**, and 99% of it is below
-  L112. There is no light source visible anywhere in a shot whose stated §7.2 purpose is
-  "Lighting: torch-lit tomb, warm/cool tension, volumetrics".
-- *"Any surface reads as flat vertex colour with no texture detail"* — the walls carry a uniform
-  violet speckle at constant density that reads as terrazzo or a granite worktop; the floor is
-  giant flat pentagonal tiles ~250 px across with bright cyan-white joints, which reads as a
-  swimming pool.
-- *"Gold doesn't read as metal"* — the treasure pile at (790–940, 400–470) is a scatter of small
-  dark grey shapes with **zero** warm-bright-saturated pixels in the whole frame. In a tomb this
-  is where the gold hero read should live.
-- *"No rim light separating silhouettes from the background"* — character `#33395a` L58.4 against
-  a floor of `#494968` L75.5; he is *darker* than his surround, not rim-separated from it.
-- *"Pose is A-pose/T-pose/stiff instead of a confident line-of-action"* — he is pitched forward
-  ~45° with his muzzle down-left and one arm hanging; at 2× it reads as a dog begging. It is not
-  a stiff pose so much as an unresolved one.
-- *"Placed blind next to …, an art director picks the other one"*.
-
-**The warm/cool tension is not merely weak, it is inverted: 86.7% cool against 1.6% warm.** In
-pass 2 this same shot was 88.4% warm. An entire torch-lit tomb now has one and a half percent of
-warm pixels and the brightest thing in it is L183. Putting an actual torch in this room was pass
-2's nominated highest-leverage fix for this shot and pass 1's before that. Three passes.
-
-The hieroglyph panel at (615–925, 85–235) is **the best single asset in the whole set** —
-recognisable glyphs (a bird, an ankh, cartouches) laid out in ruled registers, which is exactly
-what the walls in `temple` and `courtyard` should have and do not. It is flat and unchiselled,
-but the drawing is right. Whoever made it should make the rest of them.
-
-**Blind comparison — vs Zelda: Tears of the Kingdom, a Depths chamber lit by a single lit
-Brightbloom seed.** From memory. **TotK wins overwhelmingly.** The entire point of that
-comparison is one warm source in a cold volume: the light has a visible origin, a falloff you can
-read across the floor, and it throws the surrounding stone into genuine warm/cool opposition
-within a few metres. Ours has the cold volume and no source — the room is lit by a uniform violet
-ambient with no origin, so there is nothing for the eye to travel to and no depth cue at all.
-
-**Highest-leverage fix:** one warm point light with visible falloff and a flame billboard. This
-shot is a single light away from being the best in the set, because the room's geometry, the
-sarcophagus and the glyph panel are all already there.
+Draws are 48–77% over. Triangles are **118–135% over and have risen in every capture**, +21% on
+`hero` since pass 2. Per `CRITIC.md` I judge no frame times, but these counts are the fair part of
+§1 and they are moving the wrong way in a straight line. On this container it is not free either:
+`hero` at 2.79 M took ~8 minutes to render one frame set.
 
 ---
 
-## `night`, `traversal`, `combat`, `guard` — NOT CAPTURED, NOT SCORED
-
-I did not get these four and I am not going to score them from stale frames or from source.
-Stating it plainly rather than papering over it, because pass 1's worst failure was exactly that.
-
-The first capture (`shots/r3/`) rendered six shots over ~45 minutes and was then killed by
-SIGTERM (exit 143) partway through `night`, which is why `shots/r3/` has no `manifest.json`.
-I relaunched five times for the remaining four shots. Every one of my capture processes was
-reclaimed by the environment after 5–10 minutes — including runs started with `setsid nohup`,
-which should have survived. Each death lost my place in the FIFO: my ticket
-(`/tmp/sands-of-ra/queue/`) vanished with the process every time, so I never accumulated
-seniority. Other agents' processes were not affected — `rimfix2.mjs` held the lock for 34+ minutes
-and `tools/shot.mjs` waiters sat in the queue for 30+ minutes without dying.
-
-Net effect: **the capture lock is FIFO, but a waiter that cannot keep a process alive can be
-starved indefinitely while shorter-lived work cycles through ahead of it.** Two hours of wall
-clock produced six frames. This is worth fixing before pass 4, otherwise the critic cannot
-reliably review the full set. The cheapest fix is a `--resume` flag on `tools/critic.mjs` that
-skips shots already present in the output directory, so a killed run can be restarted without
-re-rendering what it already has and without re-queueing from the back.
-
-**What this costs this report:** no score for the palette flip (`night`), motion tech
-(`traversal`), impact FX (`combat`) or the guard model (`guard`). The rim-light figures I was
-handed — 21% floor-relative silhouette separation on `night`, ~0% on `combat` — are unverified by
-me. I did verify the `temple` figure independently and it is consistent with the 5% I was told:
-the character there sits 4.2 luma off the floor behind him.
-
----
-
-## §1 budget — draw calls improved, triangles got worse
-
-| shot | draws (≤250) | tris (≤1.2 M) | draws p2 → p3 | tris p2 → p3 |
-|---|---|---|---|---|
-| `hero` | 427 | 2.657 M | 535 → 427 | 2.297 → **2.657 M** |
-| `temple` | 370 | 2.488 M | 505 → 370 | 2.252 → **2.488 M** |
-| `sly-closeup` | 389 | 2.487 M | 516 → 389 | 2.272 → **2.487 M** |
-| `courtyard` | **446** | **2.701 M** | 535 → 446 | 2.297 → **2.701 M** |
-| `dunes` | 437 | 2.577 M | 520 → 437 | 2.215 → **2.577 M** |
-| `interior` | 339 | 2.037 M | 443 → 339 | 1.918 → **2.037 M** |
-
-Draw calls are down ~18% and still **36–78% over budget**. Triangles went **up ~13%** and are now
-**70–125% over budget**, worst at `courtyard`'s 2.701 M against a 1.2 M ceiling. Whatever added
-geometry this pass (the collapsed corner, the bow/drift on ten shells, the cornice flare) was
-added without a corresponding decimation anywhere. Per `CRITIC.md` I judge no frame times — these
-counts are the fair part of the §1 budget and they are moving the wrong way.
-
-## Provenance gap — worth 10 minutes from whoever owns `tools/`
-
-`tools/shot.mjs:25-29` computes `gitDesc()` and stamps `commit: {sha, dirty}` into
-`shots/report.json`. **`tools/critic.mjs` does not** — its `manifest.json` carries `label`, `at`,
-`renderer`, `modules`, warnings and per-shot stats, but no commit. The critic's own capture is
-therefore the one artifact in the repo with no provenance stamp, which is precisely backwards
-given that the stale-frame incident is what motivated the stamp. I recorded `9616d7d` / clean by
-hand. Please copy `gitDesc()` into `critic.mjs`'s manifest.
-
----
-
-## Ranked — what to fix next, most damaging first
-
-Ranked by how much each defect costs the frame, not by effort. Items 1 and 2 are worth more than
-3–9 combined.
-
-### 1. The stone renders cool, and on most objects the terminator does nothing — **SHADING** (`src/render/ToonMaterial.js`, `src/render/shaders/toon.glsl.js`) with **LIGHTING** (`src/render/Lighting.js`)
-
-Two symptoms, treat as one job. Five of six frames flipped to blue-dominant (`interior` 86.7%
-cool / 1.6% warm; `hero` 62.5% cool). And on the same object, `temple`'s column has its lit and
-shadow faces **0.1 luma apart**, while `courtyard`'s plinth has its sun-facing face **12.6 luma
-darker** than its own shadow side. A frame cannot read as golden-hour Egypt when the stone is
-navy and the light direction is not expressed in value.
-
-Definition of done, measurable off the next capture:
-- On sunlit sandstone, **R−B ≥ +60** (spec `#c9915a` is +111). Today `hero`'s ledge is −45.
-- On any object with a lit and a shadow face, **shadow luma ≤ 45% of lit luma**, and the sign must
-  never invert. Today: 58% / 100% / 120% on the three I measured.
-- Daylight frames back above **60% warm pixels**. Keep the violet — it is correct and it is the
-  one thing pass 2's shadow work got right — but put it in the shadows only.
-
-### 2. Nothing in the set is bright enough to be a focal point or to bloom — **LIGHTING** + **POSTFX** (`src/render/PostFX.js`)
-
-`>L230` is **0.000%** in five of six frames; `interior` never exceeds **L183**. §2.3's "one hero
-read — a single brightest thing, usually gold" fails six for six, and in `hero` and `temple` the
-brightest large object is *empty sky*. This is the difference between "a render" and "a shot".
-Give every frame one object at L235+ — gold, a flame, a sun-struck cornice — and let the bloom
-find it. `sly-closeup` proves the pipeline can do it: the cane crook runs p50 L77 to p95 L173.
-
-### 3. The character does not separate from the environment — **SHADING** (rim) + **LIGHTING**
-
-`hero`: Sly `#2f314a` vs the wall behind him `#31334d`, **Δ1.5 luma**. `temple`: **Δ4.2**.
-`interior`: he is *darker* than the floor. The rim-light regression is known and in flight, so
-this is ranked below 1 and 2 deliberately — but note that **a perfect rim will not fix this on its
-own** while the environment sits in the same blue-violet family as the character. Sly is blue; the
-world has to be gold for him to read. Fixing item 1 does most of item 3 for free.
-
-### 4. Surfaces have no texture and the carvings are not carvings — **TEXTURES** (`src/textures/**`) + **ARCHITECTURE** (`src/world/Architecture.js`)
-
-`temple` columns: 82% of pixels inside a 16-luma window. `sly-closeup` wall: 81% inside 16 luma.
-`hero` pylon: 90% inside 12 luma. These are untextured washes. Worse, the "hieroglyphs" are not
-glyphs: `temple`'s rear wall is fine panel lines and rectangular greebles that read as a spaceship
-bulkhead, and `courtyard`'s are flat orange marks scattered at random with no bevel and no register
-ruling, which read as **primer showing through chipped paint on a steel container**.
-
-The reference for this already exists in the repo: the `interior` panel at (615–925, 85–235) has
-recognisable glyphs in ruled registers and is the best asset in the set. Copy its approach onto
-`temple` and `courtyard`, and give the glyphs a highlight/shadow pair so they read as chiselled.
-Tiling is genuinely fixed — do not re-open it.
-
-### 5. `interior` is a torch-lit tomb with no torch — **LIGHTING**
-
-One warm point light with visible falloff plus a flame billboard. Nominated as this shot's
-highest-leverage fix in pass 1 and again in pass 2; three passes with no torch. The room's
-geometry, sarcophagus, canopic jars and glyph panel are all already built, so this is the largest
-score gain per unit of work anywhere in the report — and it would take `interior` from 1.6% warm
-to a genuine warm/cool opposition in one change.
-
-### 6. The obelisk is 1.2:1 and the architecture reads as boxes — **PROPS** (`src/world/Props.js`) + **ARCHITECTURE**
-
-`courtyard`'s obelisk shaft is ~330 px wide × 400 px tall with a small pyramidion — a shipping
-container in a party hat. Pass 2 asked for 8:1; it has not moved. `hero`'s foreground ledge is a
-row of rectangular prisms with a chamfer; nothing leans, tapers or sags, against §2.1.4's explicit
-"pylons lean, columns are fat at the base and taper hard". `temple`'s columns taper the wrong way
-— widest at the capital, narrowest at the base.
-
-### 7. Sly's face and pose — **CHARACTER** (`src/player/SlyModel.js`) + **ANIMATION** (`src/player/Clips.js`)
-
-In priority order: (a) **the bandit mask is absent** — the region around the eyes measures
-`#535966`, the same family as the rest of the head; this one dark shape does more for "is that
-Sly?" than anything else on the list; (b) **the pose is a symmetric A-pose** in `sly-closeup` —
-level hips, level shoulders, both legs vertical, which is the §7.3 condition verbatim; (c) **the
-eyes are 84 luma apart**, the left one reading as polished chrome at p95 236, so he does not have
-a matched pair of eyes; (d) **the tail still roots at the shoulder blade**, ~110 px above the belt,
-which pass 2 also asked for. The face rebuild did land — the muzzle no longer sits above the eyes
-— so this is finishing work, not a redo.
-
-### 8. `dunes` sand hue, pyramid separation, and a speckle artifact — **TERRAIN** (`src/world/Terrain.js`) + **SKY** (`src/render/Sky.js`)
-
-Sand measures `#a45a41` — terracotta brick, not sand; §2.2 wants the `#e6b878`/`#e8a852` family.
-The pyramid body is `#c1a389` L163 against sky `#b0a5ac` L168 — **Δ5 luma**, so it is a paper
-cut-out held together by its ink line, which is the opposite of aerial perspective. And there is a
-dense black speckle cluster at ~(650–770, 235–285) that reads as image corruption; smaller ones
-near (150–300, 320–350) and (1050–1120, 470–500).
-
-### 9. The sky — **SKY**
-
-Zenith is desaturated grey in three frames (`hero` `#a09ca3` sat **0.06**; `dunes` `#9c97a4` sat
-0.109) against §2.2's `#3f7fc4`. Where clouds exist (`courtyard`) they are white filaments
-swirling in blue that read as paper marbling — pass 2 called them "marbled endpaper" and asked for
-soft-edged masses at two scales; unchanged.
-
-### 10. Triangle budget — **ARCHITECTURE**
-
-2.04–2.70 M against a 1.2 M ceiling, and rising. See the budget table.
-
----
-
-## Overall
-
-**REJECT.** Mean **3.5/10** across the six shots I captured, against **4.5** for those same six in
-pass 2 — so on a like-for-like basis the set went **down 1.0**, and against the all-ten 4.2
-baseline it is down 0.7. Nothing reached the floor of 8; the best shot in the set is a 4.
-
-The blind comparison in §7.3 — *"Placed blind next to Mario Odyssey / Sly 4, an art director picks
-the other one"* — **fails six times out of six**, as it did in passes 1 and 2. I am working from my
-own knowledge of Odyssey, TotK, BotW and Thieves in Time, not from downloaded reference images,
-and I have said so per shot.
-
-This pass did real, verifiable work: light shafts exist, tiling is gone, ink lines are exactly on
-spec with zero pure black in 5.5 million pixels, gold is finally metal, and `courtyard` has a
-character in it. Four of those five were on pass 2's routing list and they are genuinely done.
-
-But the set regressed, and it regressed for one reason: **the fix for the magenta shadow hue was
-applied to the stone rather than to the shadows, and it took the sun with it.** Five of six frames
-inverted polarity, the average frame lost 19 luma, and on most objects the light direction stopped
-being expressed in value at all. Pass 2's stone agent predicted a version of this — that removing
-the violet would take the surface richness with it — and was right again in the other direction.
-
-The good news is that this is one bug, not nine. Item 1 above is worth more than everything below
-it, and items 2 and 3 are largely downstream of it. Fix the stone's response to the key light and
-re-capture before touching anything else on this list.
-
-**Re-score trigger:** a full ten-shot capture with sunlit sandstone at R−B ≥ +60 and shadow ≤ 45%
-of lit luma. I would expect that alone to move every daylight frame by two points.
+*Batches 2 and 3 append below.*

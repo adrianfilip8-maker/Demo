@@ -1056,11 +1056,31 @@ function innerPylon(A) {
   }), { x: p.x, y: 0, z: p.z }));
   A.add('pylon', 'sandstone_worn', K.place(K.cornerRolls({ w: p.w, d: p.d, h: MASS - 0.5, r: 0.48, batter: B, rng: R }), { x: p.x, y: 0, z: p.z }));
 
-  /* Battered faces on all four sides — the vertical set piece's wall-run surfaces. */
-  A.proxy(K.proxyBattered(p.w, p.d, MASS, B, A._proxyMat()), { tag: 'wall', material: 'stone', climbable: true, batter: B }, { x: p.x, y: 0, z: p.z });
+  /* Battered faces on all four sides — the vertical set piece's wall-run surfaces.
+     Split at the gate: a single solid box here made §8.1 route step 6 impassable (measured —
+     the centre line was inside a `wall` proxy from z −48 to −55). Above the gate head the
+     mass is solid again, so the tall battered faces the rooftop run uses are unchanged. */
+  const GATE_H = 8.4;
+  for (const sx of [-1, 1]) {
+    A.proxy(K.proxyFlank(sx * p.w / 2, sx * 3.5, p.d, GATE_H, B, A._proxyMat()),
+      { tag: 'wall', material: 'stone', climbable: true, batter: B }, { x: p.x, y: 0, z: p.z });
+  }
+  A.proxy(K.proxyBattered(p.w - 2 * B * GATE_H, p.d - 2 * B * GATE_H, MASS - GATE_H, B, A._proxyMat()),
+    { tag: 'wall', material: 'stone', climbable: true, batter: B }, { x: p.x, y: GATE_H, z: p.z });
 
   /* Gate passage through to the tomb stair. */
   groundProxy(A, -3.4, 3.4, 0, p.z - p.d / 2 - 0.2, p.z + p.d / 2 + 0.2);
+  /* ---- The gate you walk through had no floor -------------------------
+   * `groundProxy` is invisible, and the two things that DO draw a floor here stop short of
+   * each other: the hall paving ends at z = -51 and the tomb landing slab starts at z = -54.
+   * Between them, for the passage's full 6.8 m width, there was nothing — an axis ray fired
+   * downward from inside the passage ran the full 30 m of the probe without a hit, on 54 of
+   * 64 samples in the main gate and 64 of 64 in the stage gate. This is on the `temple`
+   * camera's centre line and is a candidate for the daylight that keeps reaching the
+   * interior shots. Top at 0.02 to match the landing slab it butts against, not the paving,
+   * so the two ends of the threshold agree with their own neighbour rather than splitting
+   * the difference and leaving a lip at both. */
+  vol(A, 'pylon', 'paving_courtyard', -4.3, 4.3, -0.6, 0.02, -54.1, -51.0, { jitter: 0.02 });
   vol(A, 'pylon', 'ceiling_stars', -3.2, 3.2, 8.2, 8.5, p.z - p.d / 2, p.z + p.d / 2, { c: 0.03 });
   A.add('pylon', 'hieroglyph_gilded', K.place(K.beam(8.6, 1.4, p.d + 0.6, { rng: R, pieces: 3, crack: 0.05, chip: 0.16 }), { x: 0, y: 8.9, z: p.z }));
   doorFrame(A, 'pylon', 'sandstone_worn', { halfW: 3.55, y0: 0, y1: 8.2, z: p.z + p.d / 2 + 0.02, r: 0.28 });
@@ -1095,8 +1115,15 @@ function innerPylon(A) {
   vol(A, 'pylon', 'paving_courtyard', -8.0, 8.0, stageTop - 0.4, stageTop, sz0 + 0.4, sz1 - 0.2, { jitter: 0.02 });
   groundProxy(A, -8.0, 8.0, stageTop, sz0 + 0.4, sz1 - 0.2);
   ledgeProxy(A, -9.4, 9.4, 25.6, sz1 - 0.2, sz1 + 1.2, { thick: 0.5 });
-  A.proxy(K.proxyBattered(21.4, sz1 - sz0, 24.0, A.TUNE.batterPylon, A._proxyMat()),
-    { tag: 'wall', material: 'stone', climbable: true, batter: A.TUNE.batterPylon }, { x: 0, y: 0, z: (sz0 + sz1) / 2 });
+  /* Same split as the mass behind it — the stage's own gate is the first thing on the route
+     out of the hall, so a solid proxy here blocks it just as completely. */
+  const SB = A.TUNE.batterPylon, SGH = 8.8, SZC = (sz0 + sz1) / 2;
+  for (const sx of [-1, 1]) {
+    A.proxy(K.proxyFlank(sx * 21.4 / 2, sx * 3.7, sz1 - sz0, SGH, SB, A._proxyMat()),
+      { tag: 'wall', material: 'stone', climbable: true, batter: SB }, { x: 0, y: 0, z: SZC });
+  }
+  A.proxy(K.proxyBattered(21.4 - 2 * SB * SGH, (sz1 - sz0) - 2 * SB * SGH, 24.0 - SGH, SB, A._proxyMat()),
+    { tag: 'wall', material: 'stone', climbable: true, batter: SB }, { x: 0, y: SGH, z: SZC });
 
   for (const sx of [-1, 1]) {
     A.add('pylon', 'gold_leaf', K.place(K.spire({ r: 0.52, h: 1.0, rng: R }), { x: sx * 6, y: stageTop, z: -50 }));

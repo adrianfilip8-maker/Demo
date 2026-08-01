@@ -326,7 +326,7 @@ export function masonryShell(o) {
     /* Diagnostics only. Pass an array and every emitted block's face/course/span is recorded,
        which is how reveal straightness gets debugged without guessing. Inert when null. */
     _spans = null,
-    sag = 0, windFace = null, windK = 2.0, bow = 0, drift = 0,
+    sag = 0, windFace = null, windK = 2.0, bow = 0, drift = 0, reveal = true,
   } = o;
 
   const out = [];
@@ -448,6 +448,61 @@ export function masonryShell(o) {
    *
    * So the batter ledges stay as they are. Whatever draws that line, it is not this.
    */
+
+  /* ---- Openings had no reveals: every hole was a hole into the hollow ---
+   *
+   * A shell is four one-block-thick leaves around a void. `openings` cut blocks out of a leaf,
+   * which is right for the elevation and wrong for everything behind it, because nothing ever
+   * closed the cut. Measured by casting axis rays from inside each opening volume against the
+   * built level (`shots/_scratch/gate.mjs`), before this existed:
+   *
+   *   inner-pylon gate    sideways ±X mean first hit 4.6 m   38–40 of 64 rays beyond 2.5 m
+   *   south stage gate    sideways ±X mean 3.5 / 3.8 m       39–40 of 64
+   *   terrace s1 opening  sideways ±X mean 6.9 m             56 of 64, and −Z ran 12.8 m
+   *                                                          clean through to the far leaf
+   *
+   * A gate passage therefore had a soffit and a floor and no side walls: standing in it and
+   * looking sideways you saw down the inside of the tower. The single-face openings — the
+   * flagstaff niches, the service door, the west tower's collapsed corner — were worse, being
+   * simply windows onto the void with nothing behind them at all.
+   *
+   * Three pieces close it, all built here rather than at each call site so that no future
+   * opening can be added without them:
+   *
+   *   jambs   — for an opening cut through BOTH leaves (a passage), a pier on each side
+   *             spanning the void from leaf to leaf. This is the missing side wall.
+   *   back    — for an opening in ONE leaf (a niche), a slab across the back of the recess,
+   *             so the niche is a niche and not a window.
+   *   soffit  — for a passage whose head is below the wall head, a slab over it, so the void
+   *             above the opening is not visible from inside the passage.
+   *
+   * All three are skipped when the two leaves already meet (`inner <= 0.06`), which is the
+   * case for every thin wall in the level — the hall facades, the clerestory band, the tomb
+   * gate — so those shells are untouched and stay bit-identical.
+   *
+   * None of this draws from `rng`. That is deliberate and load-bearing: the whole level shares
+   * one stream, so a single extra draw here would re-shuffle every block placed after it.
+   */
+  const revealSpecs = [];
+  if (reveal) {
+    for (const op of openings) {
+      if (op.reveal === false) continue;
+      const y0 = op.y0 ?? -1, y1 = op.y1 ?? 1e3;
+      const near = (p, q) => Math.abs(p - q) < 0.26;
+      /* Same span cut in the opposite leaf = one passage, not two niches. Matched with a
+         tolerance because call sites write the two faces out by hand. */
+      const twin = openings.some((q) => q !== op && q.face === (op.face ^ 1)
+        && near(q.a0, op.a0) && near(q.a1, op.a1)
+        && near(q.y0 ?? -1, y0) && near(q.y1 ?? 1e3, y1));
+      if (twin && (op.face === 1 || op.face === 3)) continue;   // the +face owns the pair
+      revealSpecs.push({
+        axis: op.face < 2 ? 'x' : 'z',
+        sign: op.face === 0 || op.face === 2 ? +1 : -1,
+        a0: op.a0, a1: op.a1, y0, y1, through: twin,
+      });
+    }
+  }
+
   for (let c = 0; c < nCourse; c++) {
     const yb = c * ch, yc = yb + ch * 0.5;
     const t = h > 0 ? yc / h : 0;
@@ -502,7 +557,13 @@ export function masonryShell(o) {
           const oy0 = op.y0 ?? -1, oy1 = op.y1 ?? 1e3;
           if (!(yb + ch > oy0 && yb < oy1)) continue;
           const oa0 = op.a0 * oScale, oa1 = op.a1 * oScale;
-          if (a > oa0 - 0.16 && a < oa1) a = oa1;
+          /* Snapping across the last 16 cm before a jamb left the reveal 16 cm short of where
+             it was specified, on every course that landed in that window — the near-jamb means
+             in the reveal probe were 0.05–0.21 m and this was most of them. 7 cm instead, which
+             is under the mortar joint and so cannot read as a notch. Paired with the same
+             change to the sliver drop below: laying a 7 cm jamb block is only useful if the
+             block survives. */
+          if (a > oa0 - 0.07 && a < oa1) a = oa1;
         }
         if (!(a < face.len * 0.5 - 0.15)) break;
         let bl = rng ? rng.range(blockLen[0], blockLen[1]) : (blockLen[0] + blockLen[1]) * 0.5;
@@ -525,7 +586,7 @@ export function masonryShell(o) {
            twenty metres tall — the "misaligned blocks stepping diagonally, reads as an
            exploded wall" the critic found in four separate shots. Clipping gives every
            opening a straight jamb, and gives the door mouldings something to land on. */
-        let skip = false, jamb = false;
+        let skip = false, jamb = false, resume = -Infinity;
         for (const op of openings) {
           if (op.face !== face.f) continue;
           const y0 = op.y0 ?? -1, y1 = op.y1 ?? 1e3;
@@ -535,12 +596,24 @@ export function masonryShell(o) {
              no clip was needed, so proximity counts as well as overlap. */
           if (Math.abs(s1 - oa0) < 0.06 || Math.abs(s0 - oa1) < 0.06) jamb = true;
           if (s1 <= oa0 || s0 >= oa1) continue;                     // clear of the hole
-          if (s0 >= oa0 && s1 <= oa1) { skip = true; break; }        // wholly inside it
+          if (s0 >= oa0 && s1 <= oa1) { skip = true; resume = Math.max(resume, oa1); break; }
           jamb = true;                                               // this block *is* the reveal
-          if (s0 < oa0 && s1 > oa1) s1 = oa0;                        // spans it: keep the jamb side
-          else if (s0 < oa0) s1 = Math.min(s1, oa0);
+          // Cut at the near jamb (the `s1 > oa1` case is the same clip: oa0 < oa1 < s1).
+          if (s0 < oa0) { s1 = Math.min(s1, oa0); resume = Math.max(resume, oa1); }
           else s0 = Math.max(s0, oa1);
         }
+        /* ---- The far reveal landed late -----------------------------------
+         * `a` is advanced by the block's *un-clipped* length, above, before the clip below is
+         * known. So a block that runs into the near jamb and is cut back to it still advances
+         * the run by its full length, which lands the next block past the far jamb by however
+         * much of it was thrown away. On the 1.4 m flagstaff niches that is up to
+         * `blockLen.max − width`, and it measured ~0.6 m of missing wall on the far side —
+         * the niche reading 2.0 m wide on the courses where it happened.
+         *
+         * A mason restarts the run on the far jamb, and so does this now. `resume` is only ever
+         * set by a block that was cut at the near jamb, and `oa1 > oa0 >= s0`, so `a` still
+         * advances strictly and the loop still terminates. */
+        if (resume > -Infinity) a = resume;
         if (skip) continue;
         /* Erosion is directional. The wind comes up the valley and loads one face with sand
            all year; that face loses blocks and takes chips at twice the rate of the sheltered
@@ -559,7 +632,9 @@ export function masonryShell(o) {
         const fell = rng ? rng.chance(Math.min(0.35, gapChance * exposure)) : false;
         if (fell && !jamb && yb > 1.2) continue;
         bl = s1 - s0;
-        if (bl < 0.16) continue;
+        if (bl < 0.07) continue;      // see the snap threshold above — a jamb block this short
+                                      // is still the difference between a straight reveal and
+                                      // one that steps in and out by a joint width per course.
         const ac = (s0 + s1) * 0.5;
         if (_spans) _spans.push({ f: face.f, c, s0, s1, jamb, len: face.len, oScale });
 
@@ -595,6 +670,55 @@ export function masonryShell(o) {
           rx: face.axis === 'z' ? -sl : 0,
         });
         out.push(g);
+      }
+    }
+
+    /* ---- Reveals for this course (see the note above the loop) ---- */
+    if (revealSpecs.length) {
+      /* Openings are given in footprint coordinates and the wall narrows as it rises, so the
+         reveal has to take the same per-course scale the coursing took, or the jamb pier and
+         the jamb blocks part company by the batter's inset near the top. `faces[0]` carries
+         the along-X scale and `faces[2]` the along-Z one. */
+      const sc = {
+        x: faces[0].len0 > 0.01 ? faces[0].len / faces[0].len0 : 1,
+        z: faces[2].len0 > 0.01 ? faces[2].len / faces[2].len0 : 1,
+      };
+      const yMid = yb + ch * 0.5 - sink * 0.5;
+      const hh = ch + weld + sink;
+      for (const sp of revealSpecs) {
+        if (!(yb + ch > sp.y0 && yb < sp.y1)) continue;
+        const s = sc[sp.axis];
+        const oa0 = sp.a0 * s, oa1 = sp.a1 * s;
+        if (oa1 - oa0 < 0.12) continue;
+        const crossHalf = (sp.axis === 'x' ? dc : wc) * 0.5;
+        const inner = crossHalf - thick;              // half-depth of the void between leaves
+        if (inner <= 0.06) continue;                  // leaves already meet: nothing to close
+        const emit = (aC, aL, cC, cL, yC, yL) => {
+          const g = block(sp.axis === 'x' ? aL : cL, yL, sp.axis === 'x' ? cL : aL, {});
+          place(g, {
+            x: (sp.axis === 'x' ? aC : cC) + drX,
+            y: yC,
+            z: (sp.axis === 'x' ? cC : aC) + drZ,
+          });
+          out.push(g);
+        };
+        if (sp.through) {
+          const jt = Math.min(thick, 1.15);
+          for (const [c0, c1] of [[oa0 - jt, oa0], [oa1, oa1 + jt]]) {
+            emit((c0 + c1) * 0.5, c1 - c0, 0, inner * 2, yMid, hh);
+          }
+          // Head of the passage, once, on the course the opening's top falls in.
+          if (sp.y1 < h && yb + ch > sp.y1 && yb <= sp.y1) {
+            const st = Math.min(0.8, Math.max(0.3, ch));
+            // +2 cm so a lintel or painted soffit placed by the level at exactly y1 stays the
+            // visible surface and this one never lands coplanar with it.
+            emit((oa0 + oa1) * 0.5, oa1 - oa0 + 0.1, 0, inner * 2, sp.y1 + 0.02 + st * 0.5, st);
+          }
+        } else {
+          const bt = Math.min(0.4, Math.max(0.12, thick * 0.35));
+          emit((oa0 + oa1) * 0.5, oa1 - oa0 + 0.24,
+            sp.sign * (crossHalf - thick - bt * 0.5 + 0.02), bt, yMid, hh);
+        }
       }
     }
 
@@ -1337,6 +1461,48 @@ export function proxyBattered(w, d, h, batter, mat) {
   ];
   const idx = [];
   for (let f = 0; f < 5; f++) { const a = f * 4; idx.push(a, a + 1, a + 2, a, a + 2, a + 3); }
+  g.setAttribute('position', new THREE.Float32BufferAttribute(v, 3));
+  g.setIndex(idx);
+  g.computeVertexNormals();
+  g.setAttribute('uv', new THREE.Float32BufferAttribute(new Float32Array((v.length / 3) * 2), 2));
+  const m = new THREE.Mesh(g, mat);
+  m.visible = false;
+  return m;
+}
+
+/**
+ * One flank of a battered mass, so a gate through it is actually walkable.
+ *
+ * `proxyBattered` is a solid tapered box. On a pylon with a gate cut through it that is wrong
+ * in a way nothing in the art shows: measured by walking the inner pylon's centre line at
+ * y = 1.0, §8.1 route step 6 — "out of the hall through the inner pylon gate" — was inside a
+ * `wall` proxy for 8 consecutive metres, z −48 to −55. The passage could be seen through and
+ * not entered.
+ *
+ * Splitting it into two flanks with an axis-aligned box would have cost the batter on the
+ * bottom third of the tower, and the batter is the wall-run surface the rooftop route uses. So
+ * the flank keeps it: the OUTER edge leans in with the mass, and the inner edge — the gate
+ * reveal — stays vertical, which is what the jamb blocks in the art do too.
+ *
+ * `xOut` is the outer edge at the base, `xIn` the gate reveal. Both in the mass's local X.
+ */
+export function proxyFlank(xOut, xIn, d, h, batter, mat) {
+  const s = Math.sign(xOut - xIn) || 1;                 // +1 for the +X flank
+  const xOutTop = xOut - s * batter * h;
+  const hd = d * 0.5, td = Math.max(0.2, hd - batter * h);
+  // Wound so every face points out of the solid, same convention as proxyBattered.
+  const lo = s > 0 ? xIn : xOutTop, hi = s > 0 ? xOutTop : xIn;   // top span
+  const blo = s > 0 ? xIn : xOut, bhi = s > 0 ? xOut : xIn;       // base span
+  const v = [
+    blo, 0, hd, bhi, 0, hd, hi, h, td, lo, h, td,        // +Z
+    bhi, 0, -hd, blo, 0, -hd, lo, h, -td, hi, h, -td,    // -Z
+    bhi, 0, hd, bhi, 0, -hd, hi, h, -td, hi, h, td,      // +X
+    blo, 0, -hd, blo, 0, hd, lo, h, td, lo, h, -td,      // -X
+    lo, h, td, hi, h, td, hi, h, -td, lo, h, -td,        // top
+  ];
+  const idx = [];
+  for (let f = 0; f < 5; f++) { const a = f * 4; idx.push(a, a + 1, a + 2, a, a + 2, a + 3); }
+  const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.Float32BufferAttribute(v, 3));
   g.setIndex(idx);
   g.computeVertexNormals();

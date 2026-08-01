@@ -193,11 +193,22 @@ const IDLE_A = P({
      Sign conventions (Rig.js): hips −Z roll raises his RIGHT hip; upperLeg +Z swings the foot
      toward his LEFT. So +Z on both legs walks the right foot in under his centre of mass and
      the left foot out from it, which is the stance, not just the tilt. */
-  hips: [2, 17, -12],
-  spine: [-3, -8, 10],
-  chest: [5, -17, 14],        // shoulders roll opposite the hips: the S
-  neck: [-8, 9, -7],
-  head: [-9, 17, -12],
+  /* **Second correction, and the missing ingredient was translation, not rotation.**
+     Measured on the held frame: ankle-mid x 0.003 → hips −0.026 → chest −0.010 → head −0.042.
+     That is **4.5 cm of lateral travel on a 1.8 m figure**, i.e. the centre line is straight
+     to within 2.5% of height, and a rendered frame reads it as a column no matter how much
+     counter-*roll* is stacked on top — the roll tips the segments without ever moving their
+     centres off the axis, so the outline stays a vertical bar with tilted detail inside it.
+
+     A line of action is a *displaced* centre line: the pelvis rides out over the weight leg,
+     the ribcage falls back across it, the head returns over the foot. So the pelvis now shifts
+     5.5 cm onto his right (−X) via the key's `pos`, and the counter-roll is opened up to
+     carry the ribcage back the other way rather than being the whole effect. */
+  hips: [2, 19, -17],
+  spine: [-3, -9, 13],
+  chest: [6, -20, 21],        // shoulders roll opposite the hips: the S
+  neck: [-8, 10, -9],
+  head: [-7, 19, -15],
   jaw: [4, 0, 0],
   capBrim: [3, 0, -3],
   earL: [-13, 6, -18],
@@ -208,6 +219,10 @@ const IDLE_A = P({
   /* Left hand on the hip. Two jobs: it closes a triangle of open sky between the arm and the
      ribs, which is worth more in silhouette than any amount of surface detail, and it stops
      the arm outline melting into the torso outline the way a hanging arm does. */
+  /* Reverted an attempt to open the elbow further (upperArmL Z −52 → −34) after measuring it:
+     at `sly-closeup`'s 13° azimuth the tail sits exactly where that triangle of sky would be,
+     so the silhouette was bit-for-bit unchanged and the hand ended up more hidden, not less.
+     The gap this comment wants is not available from this camera at this tail aim. */
   shoulderL: [3, 7, -16],
   upperArmL: [-14, 16, -52],
   lowerArmL: [-74, -36, -26],
@@ -224,22 +239,40 @@ const IDLE_A = P({
      so a leg authored at +13 nets +1° in world and both feet stay under the pelvis. This is
      exactly why the previous contrapposto measured correct and rendered as parallel sticks.
      +20 / +24 here net out at roughly +8° and +12°, which is a 22 cm stance. */
-  upperLegR: [-1, -7, 11],
-  lowerLegR: [3, 0, 0],
-  footR: [-2, 5, -1],
-  upperLegL: [-13, 20, 27],
-  lowerLegL: [21, 0, 0],
-  footL: [8, -12, -12],
-  toeL: [10, 0, 0],
+  /* The free leg has to visibly stop carrying anything, or the stance is just a wider column.
+     Right leg (weight) is straight and near-vertical under the shifted pelvis; left leg takes
+     a folded knee, a turned-out thigh and a foot set forward and inboard with the heel off the
+     ground, so its outline is a bent shape against the weight leg's straight one. Two
+     different silhouettes is the read; two spread sticks is not. */
+  upperLegR: [-2, -8, 13],
+  lowerLegR: [4, 0, 0],
+  footR: [-3, 6, -2],
+  upperLegL: [-17, 13, 31],
+  lowerLegL: [33, 0, 0],
+  footL: [12, -8, -15],
+  toeL: [11, 0, 0],
 
   /* Tail as counterweight, and — this is the part that is easy to get wrong — on the opposite
      side of the frame from the cane. Swept to his right it folded in behind the torso and left
      the silhouette entirely, which costs one of §7.3's four identity cues outright. Out to his
      left it balances the crook, and the two of them frame the body between them. */
-  tailA: [4, -20, 4],
-  tailB: [14, -28, 0],
-  tailC: [22, 12, 0],
-  tailD: [-12, 26, 0],
+  /* **The tail is the line of action on this rig, and that is a consequence of the
+     proportions rather than a stylistic preference.** Measured on the held frame, the hip
+     line tilts 17.5° and the shoulder line 17.6° the other way — a textbook contrapposto —
+     and it is invisible, because `torsoShrink` leaves only 16 cm between hips and chest and
+     the shoulder span projects 10 cm wide, all of it underneath a 0.50 m head. A spinal S has
+     no lever here. The tail has 0.9 m of it and is half the silhouette, so the curve gets
+     authored where there is room to see it.
+
+     Down and out of the hips first, then a long sweep to his left, then a hard curl up and
+     over — a C that opposes the cane's diagonal, so the two of them close a shape around the
+     body instead of both pointing the same way. The old set left it a level horizontal
+     sausage at shoulder height, which is the one shape a big tail must not make: it reads as
+     a wing, it flattens the figure, and it puts the heaviest mass on the frame's mid-line. */
+  tailA: [-14, -20, 6],
+  tailB: [-6, -32, 0],
+  tailC: [34, 14, 0],
+  tailD: [30, 26, 0],
 });
 
 /* `hold: 0` on purpose. This clip is what `sly-closeup` and `dunes` freeze on, so the held
@@ -250,14 +283,20 @@ const IDLE_A = P({
 def('idle_confident', {
   dur: 3.6, loop: true, hold: 0,
   keys: [
-    { t: 0, e: 'soft', P: IDLE_A, pos: [-0.026, -0.014, 0], cane: CANE.shoulder },
+    { t: 0, e: 'soft', P: IDLE_A, pos: [-0.032, -0.014, 0], cane: CANE.shoulder },
     // weight rocks a couple of centimetres and the chest drifts open — a drift off IDLE_A,
     // never a different pose
-    { t: 0.9, e: 'soft', P: { hips: [1, 19, -14], chest: [3, -19, 16], head: [-11, 20, -14], tailA: [7, -24, 4], tailB: [17, -32, 0], tailD: [-16, 30, 0] }, pos: [-0.018, -0.006, 0.004], cane: [-59, -58, 28] },
-    { t: 1.9, e: 'soft', P: { hips: [3, 14, -10], chest: [6, -14, 12], head: [-6, 13, -9], tailA: [1, -15, 4], tailB: [11, -23, 0], tailD: [-8, 21, 0] }, pos: [-0.032, -0.020, -0.004], cane: [-65, -52, 28] },
+    /* These two are a *drift off IDLE_A* and nothing else, so they have to be re-authored
+       whenever IDLE_A moves — they carry absolute angles, not deltas. Left at their old values
+       after the contrapposto and tail rewrite they were 40–60° away from the base pose on the
+       tail, so the clip's "breath" would have swung the tail from the new curl back down to
+       the old level sweep twice a cycle. `hold: 0` hides that from every screenshot, which is
+       exactly why it is worth stating: the held frame being right is not evidence the clip is. */
+    { t: 0.9, e: 'soft', P: { hips: [1, 21, -19], chest: [4, -22, 23], head: [-9, 22, -17], tailA: [-11, -24, 6], tailB: [-3, -36, 0], tailD: [34, 30, 0] }, pos: [-0.024, -0.008, 0.004], cane: [-59, -58, 28] },
+    { t: 1.9, e: 'soft', P: { hips: [3, 16, -15], chest: [7, -17, 19], head: [-4, 15, -12], tailA: [-18, -15, 6], tailB: [-10, -27, 0], tailD: [26, 21, 0] }, pos: [-0.038, -0.020, -0.004], cane: [-65, -52, 28] },
     // a slow blink-and-smirk beat: head cocks a little further over, ears flick
-    { t: 2.6, e: 'smooth', P: { head: [-10, 20, -16], earL: [-19, 8, -24], earR: [-2, -9, 29], jaw: [6, 0, 0] } },
-    { t: 3.6, e: 'soft', P: IDLE_A, pos: [-0.026, -0.014, 0], cane: CANE.shoulder },
+    { t: 2.6, e: 'smooth', P: { head: [-8, 22, -19], earL: [-19, 8, -24], earR: [-2, -9, 29], jaw: [6, 0, 0] } },
+    { t: 3.6, e: 'soft', P: IDLE_A, pos: [-0.032, -0.014, 0], cane: CANE.shoulder },
   ],
 });
 
@@ -360,10 +399,18 @@ const PERCH = P({
      `tools/charview.mjs` now measures `hero` at **view 70°, 166 px** — a three-quarter, not a
      back view. The sweep here still reads well from 70°, so the pose stands; but anything
      re-derived from "172°" is being derived from a camera that no longer exists. */
-  tailA: [-16, -32, 0],
-  tailB: [-14, -38, 0],
-  tailC: [-6, 18, 0],
-  tailD: [26, 26, 0],
+  /* **Re-aimed off a silhouette render at the real `hero` azimuth.** The sweep above put the
+     tail out to his left, and from 70° round that projects as a level horizontal sausage
+     running off the side of the frame — the "giant croissant" / "horizontal sausage tail" the
+     critic has logged in three separate shots. A tail this big is not a detail that can be
+     mis-aimed: it is half the outline, and lying flat it both flattens the figure and drops
+     the heaviest mass on the frame's mid-line.
+     Arced up over the back instead, so from a three-quarter camera it climbs across the body
+     and its curl reads against the sky rather than along the horizon. */
+  tailA: [-8, -30, 0],
+  tailB: [12, -34, 0],
+  tailC: [30, 16, 0],
+  tailD: [34, 24, 0],
 });
 
 /* `hold: 0` for the same reason as `idle_confident`: `hero` freezes this clip, and holding at
@@ -389,9 +436,10 @@ def('perch_idle', {
   keys: [
     { t: 0, e: 'soft', P: PERCH, pos: [0, -0.30, 0.07], cane: [-30, 30, -30] },
     { t: 0.8, e: 'soft', P: { chest: [-17, -13, 5], head: [-21, 18, -8], hips: [28, 11, -5],
-      tailA: [-12, -36, 0], tailB: [-10, -42, 0], tailD: [30, 30, 0] }, pos: [0, -0.325, 0.078], cane: [-26, 26, -30] },
+      // re-authored with the base pose's tail arc — these are absolute, not deltas
+      tailA: [-12, -36, 0], tailB: [8, -40, 0], tailD: [38, 28, 0] }, pos: [0, -0.325, 0.078], cane: [-26, 26, -30] },
     { t: 1.7, e: 'soft', P: { chest: [-11, -9, 3], head: [-15, 12, -6], hips: [24, 9, -3],
-      tailA: [-21, -27, 0], tailB: [-19, -33, 0], tailD: [21, 21, 0] }, pos: [0, -0.285, 0.062], cane: [-34, 34, -30] },
+      tailA: [-4, -25, 0], tailB: [16, -29, 0], tailD: [30, 20, 0] }, pos: [0, -0.285, 0.062], cane: [-34, 34, -30] },
     // a small head-flick as something below catches his eye
     { t: 2.3, e: 'out', P: { head: [-14, 26, -12], neck: [-14, 13, -6], earL: [-20, 8, -24] } },
     { t: 3.2, e: 'soft', P: PERCH, pos: [0, -0.30, 0.07], cane: [-30, 30, -30] },

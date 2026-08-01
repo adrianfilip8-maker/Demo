@@ -56,6 +56,22 @@ export const TUNE = {
    * passes and the lever is not the problem. And all 52 clips in Clips.js are authored against
    * this skeleton, so a proportion change is a re-authoring job, not a constant edit.
    *
+   * **A head count is meaningless without the pose it was taken in, and the number above does
+   * not carry one.** Measured with `tools/shotsil.mjs`, same mesh, same day:
+   *
+   *     idle_confident (standing)   figure 1.885 m   head+cap 0.560 m  →  1 : 3.37
+   *     perch_idle     (crouched)   figure 1.589 m   head+cap 0.593 m  →  1 : 2.68
+   *
+   * The head is a rigid body and the figure is not, so every crouch, lunge and hang in the
+   * clip set reads as a *different* head count — the span across the 52 clips is wider than
+   * any plausible disagreement about what the target should be. The standing figure is the
+   * one to quote. `hero` freezes `perch_idle`, which is why that shot has always measured the
+   * most bobble-headed of the set without anything being wrong with the rig.
+   *
+   * Re-measured against `073d075` with the same tool and the same pose after this session's
+   * muzzle, mask and brim work: **3.36 → 3.37 heads.** Nothing in this pass moved the ratio,
+   * which was the intent — the condition was already passing and the head is not the defect.
+   *
    * Head count alone is the weakest of the levers, because the head sits on top: growing it
    * grows the total, so the ratio only asymptotes to 1.49 + 1.396/headHeight. The cartoon read
    * actually comes from the *set*: big head, tiny waist, narrow shoulders, long thin limbs,
@@ -69,7 +85,29 @@ export const TUNE = {
   footScale: 1.34,        // chunky boots give the contrapposto a base to stand on
   limbSlim: 0.86,         // long thin limbs: every leg/arm radius goes through this
   shoulderSlim: 0.87,     // narrow shoulders — the deltoid mass, not the bone spacing
-  brimLift: 0.050,        // cap brim off the brow — it was covering both eyes, see _buildCap
+  /* Cap brim clearance off the brow, and the cap's forward tip.
+   *
+   * `brimLift` 0.050 → 0.112 and `capTip` 0.062 → 0.018, and this is the same defect as the
+   * one `brimLift` was introduced for, found a second time on a target nobody was checking.
+   * `occlude.mjs` tests a ray from each *sclera centre* to the camera and both report CLEAR —
+   * but rendering `ink + eye + clothDark` alone shows the brim as a navy bar lying diagonally
+   * across the top half of both eyes and across the whole upper half of the domino mask. The
+   * centre ray threads under it; the shape does not.
+   *
+   * The arithmetic behind the numbers: the brim arc sits at head-space y 1.610 + `brimLift`,
+   * the mask's top edge at θ 0 is at φ 0.611 ⇒ head-space y **1.700**, and the brim is 5 cm in
+   * *front* of the mask plane on a camera looking 22° down — so at 0.050 the bar rendered
+   * through the mask's middle and only what peeked out below it survived. That is why the mask
+   * read as a thin stripe no matter what `half` did, and why the eyes read as "one chrome
+   * lens": what was visible of them was the bottom third.
+   *
+   * `capTip` is the cap's nose-down rotation. It is a real piece of the character — a level
+   * cap reads as a swimming hat — but at 0.062 it was spending most of its charm on burying
+   * the identity feature underneath it. The cock about Z (`capCock`) carries the asymmetry
+   * instead; it does not push the bill down onto the face. */
+  brimLift: 0.112,
+  capTip: 0.018,
+  capCock: 0.086,
   torsoShrink: 0.16,      // see `by()`: hips→neck 0.49 → 0.33 m. (The "5.29 → 4.88 heads" this
                           //  line used to carry came from the same stale formula — see above.)
 
@@ -83,6 +121,26 @@ export const TUNE = {
    * 0.034 → 0.070 off a real capture: at 0.034 the snout root still topped out at head-space
    * 1.598 against eyes that bottom out at 1.536, so it read as a beak rising between them. */
   muzzleDrop: 0.070,
+
+  /* Snout **reach** and **girth**, as fractions of what the key rings author. Both go through
+   * `mz()` / the girth multiply below, so the muzzle, the nose and the mouth move together.
+   *
+   * Measured on the built mesh rather than guessed. The cranium's half-width is 0.249 m and
+   * its front face plane sits at head-space z 0.190; the snout's widest ring was **0.139 m
+   * half-width** — as wide as the skull — and its tip reached z 0.352, i.e. it projected
+   * **0.212 m past the face plane against a 0.538 m head**: 39% of head height, sticking
+   * straight out front. Two separate frames read it exactly as that geometry predicts —
+   * `hero` and `combat` see him at 70° and 45° and the critic called the head *"a bird skull"*
+   * and *"a pale khaki diagonal band"*, and near-frontal at `sly-closeup` the same mass reads
+   * as a cream shield over the whole lower face.
+   *
+   * That shield is the thing standing between this face and Sly's. His identity is a big black
+   * mask over the top half of the face and a *small* muzzle under it; ours had the ratio
+   * inverted, so no amount of mask work could win while the snout owned the real estate.
+   * At 0.71 / 0.76 the tip lands ~0.10 m past the face plane and the widest ring is 0.106 m,
+   * comfortably inside the cranium — a raccoon snout rather than a beak. */
+  muzzleLen: 0.71,
+  muzzleGirth: 0.76,
 
   /* --- shading / line --- */
   outline: 0.0034,        // fraction-of-frame-height thickness ⇒ ~2.5 px at any resolution
@@ -183,6 +241,14 @@ const ay = (y) => y - armDrop();
 
 const hy = (y) => by(HEAD_BASE) + (y - HEAD_BASE) * TUNE.headScale;
 const hx = (v) => v * TUNE.headScale;
+/**
+ * Snout reach. Head-space z in, head-space z out, pivoting on the muzzle root (z 0.040) so the
+ * snout shortens *forward* and its junction with the skull never moves — a root that slides
+ * back opens a seam between the snout and the cheek. Everything drawn on the snout goes
+ * through this: the muzzle rings, the nose and the mouth line. See `TUNE.muzzleLen`.
+ */
+const MZ_ROOT = 0.040;
+const mz = (z) => z - Math.max(0, z - MZ_ROOT) * (1 - TUNE.muzzleLen);
 /** Cross-body width in head space. Wider than it is deep reads rounder from the front. */
 const hw = (v) => v * TUNE.headScale * TUNE.headWide;
 
@@ -1189,11 +1255,12 @@ export class SlyModel {
       [new THREE.Vector3(0, 1.528 - D, 0.312), 0.058, 0.047],
       [new THREE.Vector3(0, 1.519 - D, 0.352), 0.030, 0.026],
     ];
+    const G = TUNE.muzzleGirth;
     addTube(mb, {
-      centers: key.map((k) => new THREE.Vector3(0, hy(k[0].y), hx(k[0].z))),
+      centers: key.map((k) => new THREE.Vector3(0, hy(k[0].y), hx(mz(k[0].z)))),
       seg: 20,
-      rx: (i) => key[i][1] * S * TUNE.headWide,
-      ry: (i) => key[i][2] * S,
+      rx: (i) => key[i][1] * S * TUNE.headWide * G,
+      ry: (i) => key[i][2] * S * G,
       upHint: new THREE.Vector3(0, 1, 0),
       shape: (a) => superEllipse(a, 1.12),
       groupAt: () => 'furCream',
@@ -1202,7 +1269,7 @@ export class SlyModel {
       // The lower half of the snout is the jaw; the bridge stays with the skull.
       weightsAtVert: (i, t, a, p) => {
         const below = Math.max(0, -Math.sin(a));
-        const j = 0.62 * below * smooth(hx(0.03), hx(0.25), p.z);
+        const j = 0.62 * below * smooth(hx(mz(0.03)), hx(mz(0.25)), p.z);
         return [['head', 1 - j], ['jaw', j]];
       },
       capStart: true, capEnd: true,
@@ -1282,8 +1349,28 @@ export class SlyModel {
       at: (u, v) => {
         const th = THREE.MathUtils.lerp(-TH, TH, u);
         const at = Math.abs(th) / TH;
-        const phic = 0.128 + 0.425 * Math.pow(at, 1.75);
-        const half = 0.500 * (1 - 0.80 * Math.pow(at, 3.0)) * (0.70 + 0.30 * smooth(0.0, 0.30, at));
+        /* **Third pass, and this one is sized against the eye rather than against the gap.**
+         *
+         * The band was `half = 0.500·…·0.70` = 0.35 rad at the centre. On a 0.241 m head
+         * radius that is a 0.169 m tall band — against an eye lens whose vertical radius is
+         * 0.092·1.31 = 0.120 m, i.e. **0.241 m tall, 1.4× the entire band**. So the eye could
+         * not be contained by it at any theta: it necessarily overflowed top and bottom, and
+         * what rendered was a thin dark *bar* with pale eye bulging out above and below it.
+         * That is the "face reads as a pale blob" — the pale is the *sclera escaping the
+         * mask*, not the cream muzzle, and not the cream/eyeWhite value pair.
+         *
+         * The earlier note that `half` past ~0.5 "buys nothing" was true when it was written
+         * and is not true now: it was bounded by the gap between the brim and the top of the
+         * snout, and `muzzleLen` has since taken 0.11 m off the snout's reach and dropped its
+         * crown, which is what opens the room. The two changes are coupled; do not revert one
+         * without re-checking the other.
+         *
+         * Sized so the band encloses the eye where the eye is. The eye sits at |θ| 0.455,
+         * i.e. `at` = 0.316, and subtends 0.50 rad of half-height; `half` there is 0.614, so
+         * the black closes over the top and bottom of the lens with ~20% margin and the eye
+         * becomes a hole *in* a shape instead of a lump on a stripe. */
+        const phic = 0.150 + 0.400 * Math.pow(at, 1.75);
+        const half = 0.640 * (1 - 0.78 * Math.pow(at, 2.6)) * (0.72 + 0.28 * smooth(0.0, 0.26, at));
         const phi = phic + (v * 2 - 1) * half;
         return this.headSurf(th, phi, 1.058);
       },
@@ -1388,10 +1475,10 @@ export class SlyModel {
 
   _buildNose(mb) {
     const S = TUNE.headScale;
-    const c = new THREE.Vector3(0, hy(1.530 - TUNE.muzzleDrop), hx(0.348));
+    const c = new THREE.Vector3(0, hy(1.530 - TUNE.muzzleDrop), hx(mz(0.348)));
     addEllipsoid(mb, {
       center: c,
-      radii: new THREE.Vector3(0.031 * S * TUNE.headWide, 0.024 * S, 0.024 * S),
+      radii: new THREE.Vector3(0.033 * S * TUNE.headWide, 0.026 * S, 0.024 * S),
       segTheta: 12, segPhi: 7,
       group: 'ink', sg: mb.newSg(), weights: [['head', 1]],
       // narrow the bottom into the triangular raccoon nose
@@ -1409,7 +1496,7 @@ export class SlyModel {
     /* Rides `muzzleDrop` with the snout it is drawn on — a mouth left behind by a moved
        muzzle floats in front of the cheek, which is worse than no mouth. */
     const D = TUNE.muzzleDrop;
-    const P = (x, y, z) => new THREE.Vector3(hw(x), hy(y - D), hx(z));
+    const P = (x, y, z) => new THREE.Vector3(hw(x * TUNE.muzzleGirth), hy(y - D), hx(mz(z)));
     const line = resample([
       P(-0.070, 1.512, 0.238),
       P(-0.042, 1.500, 0.296),
@@ -1529,7 +1616,8 @@ export class SlyModel {
     const pivot = new THREE.Vector3(0, 1.640, 0.0);   // in *unscaled* head space; place() maps it
     // Tipped down over the brow and cocked to his left. A level, symmetric cap reads as a
     // swimming hat; the cock is most of what makes it read as *his* cap.
-    const tilt = new THREE.Matrix4().makeRotationX(0.062).premultiply(new THREE.Matrix4().makeRotationZ(0.098));
+    const tilt = new THREE.Matrix4().makeRotationX(TUNE.capTip)
+      .premultiply(new THREE.Matrix4().makeRotationZ(TUNE.capCock));
     const place = (p) => {
       p.sub(pivot).applyMatrix4(tilt).add(pivot);
       p.set(hw(p.x), hy(p.y), hx(p.z));
@@ -1623,22 +1711,34 @@ export class SlyModel {
      * and stubby, and the identity in this silhouette is the *crown* plus the mask, not the
      * bill's reach. Now 0.238 + 0.082 = 0.320, a 20% cut in projection, with the wrap round
      * the temples pulled in from 0.224 to 0.206 so it stops shading the outer eye. */
-    const N = 24, TH = 1.40;
+    /* **Re-proportioned after the lift, because the lift broke it edge-on.** Raising
+     * `brimLift` to clear the mask also raised the bill clear of the cap's own profile, and a
+     * 0.022 m thick flat arc seen from the side is a *needle*: rendering `clothDark` alone
+     * through the real `hero` camera (70° round) produced two long thin dark blades — the brim
+     * and the hem — projecting off the head like antennae. Frontal it was a win and three
+     * quarters on it was a regression, which is the trap with a shape this thin.
+     *
+     * Fixed by giving it volume rather than by putting it back on the face: `ry` 0.0165 →
+     * 0.027 makes it a stubby slab instead of a blade, the wrap comes in (`TH` 1.40 → 1.24,
+     * radius 0.206 → 0.190) so the ends stop escaping the cap sideways, and the end droop
+     * doubles (0.030 → 0.058) so they tuck back down into the crown. A newsboy bill is short,
+     * thick and soft; the thing that was there was a scalpel. */
+    const N = 24, TH = 1.24;
     const arc = [];
     for (let i = 0; i <= N; i++) {
       const th = THREE.MathUtils.lerp(-TH, TH, i / N);
       const k = Math.abs(th) / TH;
       arc.push(place(new THREE.Vector3(
-        Math.sin(th) * 0.206,
-        1.610 + TUNE.brimLift - 0.030 * Math.pow(k, 2),
-        0.004 + Math.cos(th) * 0.238,
+        Math.sin(th) * 0.190,
+        1.610 + TUNE.brimLift - 0.058 * Math.pow(k, 2),
+        0.004 + Math.cos(th) * 0.234,
       )));
     }
     addTube(mb, {
       centers: arc, seg: 12,
       // deep at the centre, tucking away at the temples — a peak, not a sun-visor ring
       rx: (i) => 0.082 * S * (1 - 0.66 * Math.pow(Math.abs(i / N * 2 - 1), 1.9)),
-      ry: 0.0165 * S,
+      ry: 0.027 * S,
       upHint: new THREE.Vector3(0, 1, 0),
       // shear the section so the outer lip dips: a flat brim reads as a frisbee
       shape: (a) => { const s = superEllipse(a, 1.6); return { u: s.u, v: s.v + 0.70 * s.u }; },
@@ -1719,7 +1819,7 @@ export class SlyModel {
         const out = base.clone().sub(this.headCenter).normalize();
         const dir = out.clone().addScaledVector(new THREE.Vector3(0, -1, -0.55), 0.55).normalize();
         put({
-          base, dir,
+          base, dir, shadeN: out,
           length: (0.052 + 0.030 * (1 - Math.abs(f - 0.45) * 2)) * S * jit(i, side),
           width: 0.021 * S * (0.78 + 0.44 * hash(i, side + 59)),
           bend: 0.34, bendDir: new THREE.Vector3(0, -1, 0),
@@ -1736,7 +1836,8 @@ export class SlyModel {
         const base = this.headSurf(th, THREE.MathUtils.lerp(-0.30, 0.18, f), 0.99);
         const out = base.clone().sub(this.headCenter).normalize();
         put({
-          base, dir: out.clone().addScaledVector(new THREE.Vector3(0, -0.55, -0.35), 0.6).normalize(),
+          base, shadeN: out,
+          dir: out.clone().addScaledVector(new THREE.Vector3(0, -0.55, -0.35), 0.6).normalize(),
           length: 0.036 * S * jit(i, side + 3), width: 0.024 * S, bend: 0.30,
           bendDir: new THREE.Vector3(0, -1, 0),
           group: 'fur', weights: [['head', 1]],
@@ -1753,7 +1854,8 @@ export class SlyModel {
         const base = this.headSurf(th, -0.44 - TUNE.muzzleDrop / 0.184 + f * 0.14, 0.96);
         const out = base.clone().sub(this.headCenter).normalize();
         put({
-          base, dir: out.clone().addScaledVector(new THREE.Vector3(0, -1, 0), 0.85).normalize(),
+          base, shadeN: out,
+          dir: out.clone().addScaledVector(new THREE.Vector3(0, -1, 0), 0.85).normalize(),
           length: 0.054 * S * jit(i, side + 7), width: 0.020 * S, bend: 0.35,
           bendDir: new THREE.Vector3(0, -1, 0.3),
           group: 'furCream', weights: [['head', 0.55], ['jaw', 0.45]],
@@ -1764,6 +1866,7 @@ export class SlyModel {
       const et = ear ? ear.p.clone().addScaledVector(ear.axis, -0.014 * S) : this.headSurf(side * 0.6, 0.9, 1.05);
       put({
         base: et, dir: (ear ? ear.axis.clone() : new THREE.Vector3(side * 0.38, 0.86, -0.34)).normalize(),
+        shadeN: et.clone().sub(this.headCenter).normalize(),
         length: 0.040 * S, width: 0.011 * S, bend: 0.4,
         group: 'furDark', weights: [[side > 0 ? 'earL' : 'earR', 1]],
       });
@@ -1782,6 +1885,7 @@ export class SlyModel {
             const base = new THREE.Vector3(Math.sin(th) * r.rx * 1.02, y, r.cz + Math.cos(th) * r.rz * 1.02);
             put({
               base, dir: new THREE.Vector3(Math.sin(th) * 0.5, 0.72, Math.cos(th) * 0.62).normalize(),
+              shadeN: new THREE.Vector3(Math.sin(th), 0.24, Math.cos(th)).normalize(),
               length: row.len * jit(i, row.k), width: row.w, bend: 0.35,
               bendDir: new THREE.Vector3(0, 0, 1),
               group: 'furCream', weights: [['chest', 0.6], ['neck', 0.4]],
@@ -1799,6 +1903,7 @@ export class SlyModel {
         const base = new THREE.Vector3(Math.sin(th) * r.rx * 1.02, y, r.cz + Math.cos(th) * r.rz * 1.02);
         put({
           base, dir: new THREE.Vector3(Math.sin(th) * 0.75, -0.42, Math.cos(th) * 0.75).normalize(),
+          shadeN: new THREE.Vector3(Math.sin(th), 0.18, Math.cos(th)).normalize(),
           length: 0.042 * jit(i, side + 11), width: 0.015 * (0.80 + 0.40 * hash(i, side + 97)),
           bend: 0.3,
           group: 'furCream', weights: [['neck', 1]],
@@ -1859,6 +1964,7 @@ export class SlyModel {
                  hide it. 0.86/0.34 spends it on the radius, which is the only component that
                  can reach past the silhouette. */
               dir: out.clone().multiplyScalar(0.86).addScaledVector(axis, 0.34).normalize(),
+              shadeN: out.clone(),
               length: 0.050 * (r % 2 ? 0.66 : 1.0) * jit(r * 3 + ci, side * 5),
               width: 0.015, bend: 0.32,
               bendDir: axis.clone(),
@@ -1912,6 +2018,7 @@ export class SlyModel {
             put({
               base: c.clone().addScaledVector(out, rad * 0.88),
               dir: out.clone().multiplyScalar(0.80).add(new THREE.Vector3(0, -0.66, 0)).normalize(),
+              shadeN: out.clone().normalize(),
               length: col.len * (r % 2 ? col.alt : 1.0) * jit(r * 3 + ci, side * 23),
               width: 0.017 - 0.004 * u, bend: 0.34,
               bendDir: new THREE.Vector3(0, -1, 0),
@@ -1929,6 +2036,7 @@ export class SlyModel {
           put({
             base: c.clone().addScaledVector(out, rad * 0.86),
             dir: out.clone().multiplyScalar(0.62).add(new THREE.Vector3(0, -0.84, 0)).normalize(),
+            shadeN: out.clone().normalize(),
             length: 0.070 * (i === 1 ? 1.0 : 0.78), width: 0.023, bend: 0.40,
             bendDir: new THREE.Vector3(0, -1, 0),
             group: 'fur', weights: ramp(u, leg.ramp),
@@ -1942,6 +2050,7 @@ export class SlyModel {
         const base = new THREE.Vector3(side * 0.088 + Math.sin(a) * 0.042, 0.308, -0.004 + Math.cos(a) * 0.042);
         put({
           base, dir: new THREE.Vector3(Math.sin(a) * 0.55, 0.72, Math.cos(a) * 0.55).normalize(),
+          shadeN: new THREE.Vector3(Math.sin(a), 0.20, Math.cos(a)).normalize(),
           length: 0.042 * jit(i, side * 17), width: 0.018, bend: 0.3,
           group: 'fur',
           weights: [[side > 0 ? 'lowerLegL' : 'lowerLegR', 1]],
@@ -1970,7 +2079,7 @@ export class SlyModel {
         // a band edge gets the longest clumps — that is where fur actually parts
         const edge = isDark(t) !== isDark(Math.max(0, t - 0.035)) ? 1.35 : 1.0;
         put({
-          base,
+          base, shadeN: outward.clone(),
           dir: outward.clone().addScaledVector(tan, -0.55).normalize(),
           length: (0.040 + 0.020 * Math.sin(t * 7)) * TUNE.tailScale * edge * jit(i, roll),
           width: 0.030 * TUNE.tailScale, bend: 0.30, bendDir: tan.clone().negate(),
@@ -1989,6 +2098,7 @@ export class SlyModel {
       put({
         base: tipC.clone().addScaledVector(tipT, -0.010),
         dir: tipT.clone().multiplyScalar(0.75).addScaledVector(perp, 0.65).normalize(),
+        shadeN: tipT.clone().multiplyScalar(0.55).addScaledVector(perp, 0.85).normalize(),
         length: 0.075 * TUNE.tailScale, width: 0.017 * TUNE.tailScale, bend: 0.2,
         group: 'furDark', weights: [['tailD', 1]],
       });
@@ -2100,8 +2210,61 @@ export class SlyModel {
         normalScale: 0.7, repeat: [2, 2], sss: 0.0, rim: 0.5,
         spec: 0.9, gloss: 96, metal: true,
       };
+      /* `rim` 0.30 → 0.12, off a shaded capture (`shots/char6/sly-closeup.png`).
+       *
+       * Everything in `ink` is an *interior* feature — the domino mask, the pupils, the upper
+       * lids, the nose, the mouth. None of them is on the character's outer silhouette, so
+       * none of them can collect the §2.1.5 benefit a rim exists for, and all of them pay its
+       * cost: `rimColor` is `#7fd4ff`, a saturated cyan, and the mask is a patch on the head
+       * ellipsoid whose normals sweep to grazing at the temples. A 0.30 fresnel across that
+       * band lifts near-black toward cyan exactly where the mask is widest.
+       *
+       * Measured on that frame, `ink` is authored at luma **19** and renders at:
+       *
+       *     mask bridge (between the eyes)   mean  92.0
+       *     mask temple sweep                mean 129.7
+       *     cap crown, for scale (`cloth`)   mean  75.9
+       *     cheek fur, for scale (`fur`)     mean  61.2
+       *
+       * **The domino mask renders as the lightest thing on his head after the eyes and the
+       * muzzle** — lighter than the blue cap it is supposed to contrast against. That is the
+       * whole of "there is no bandit mask", in five numbers.
+       *
+       * The temples reading 38 luma *brighter* than the bridge is what identifies the cause.
+       * Bloom bleeding off the eyes would be strongest nearest the eyes, i.e. at the bridge;
+       * a fresnel is strongest where the surface turns away from the eye, i.e. at the temples.
+       * The gradient runs the fresnel way.
+       *
+       * Worth stating plainly because it has cost this project several passes: the earlier
+       * work here chased *coverage* — "the ink group renders zero pixels of mask", then 1062,
+       * then 3222 — and coverage was never the binding constraint. The mask has been on screen
+       * and invisible. A shape can be present, correctly sized and correctly placed, and still
+       * not read, and pixel-count instruments cannot see the difference.
+       *
+       * Kept non-zero: a little rim still separates the mask from the fur where the two meet
+       * at a silhouette edge on a three-quarter view. */
+      /* `spec` 0.05 → 0.012 and `gloss` 12 → 28, for the same reason as the rim and found by
+       * the same arithmetic: **on a near-black material every additive term dominates.**
+       *
+       * `toon.glsl.js` composites specular as `specTint * (uSpec * specStep * …)` — additive,
+       * white — and `specStep` carries a `0.35 * smoothstep(0.02, 0.30, lobe)` shoulder, so at
+       * `gloss 12` the lobe is over 0.02 for any `ndh > 0.72`, i.e. across ~44° of half-angle.
+       * That is not a highlight, it is a wash over most of the face. It contributes ~0.0175
+       * linear against `ink`'s albedo of ~0.010 linear: **the specular alone is 1.75× the
+       * material.** The same statement is false for every other group on this model, which is
+       * why the value survived — 0.05 is genuinely small on fur at 0.18 albedo.
+       *
+       * At 0.012/28 the lobe is tight enough to stay a glint on the nose tip, which is the one
+       * `ink` surface that wants one.
+       *
+       * **These two changes will be verified together, not separately.** They have the same
+       * cause, the same arithmetic and the same fix direction, and a capture costs 5-7 minutes
+       * of an exclusive lock — so the question being asked of the next frame is "does the mask
+       * read black now", not "which of the two did it". If it still does not read, the lift is
+       * coming from somewhere outside this file (bloom bleed off the eyes, or PostFX lift) and
+       * that is the next place to look. */
       case 'ink': return {
-        color: PAL.ink, sss: 0.0, rim: 0.30, spec: 0.05, gloss: 12, flat: true,
+        color: PAL.ink, sss: 0.0, rim: 0.12, spec: 0.012, gloss: 28, flat: true,
       };
       case 'eye': return {
         // A *neutral* whisper of self-illumination, not a warm one. At `tod: 0.02` the old warm
@@ -2120,7 +2283,33 @@ export class SlyModel {
          * sclera as blown-out near-white with grey pupils; at the same spec a lens is strictly
          * worse. The "alive" cue does not depend on this — it is authored as its own highlight
          * ellipsoid in the `eye` group, which is what should carry the glint. */
-        color: PAL.eyeWhite, sss: 0.0, rim: 0.22, spec: 0.26, gloss: 80, emissive: 0x282828,
+        /* **`spec` 0.26 → 0.035, `gloss` 80 → 20, `emissive` 0x282828 → 0x141414, `rim`
+         * 0.22 → 0.09 — all four measured on a shaded frame, which is the first one any of
+         * these numbers has ever been checked against.**
+         *
+         * The comment above predicted the mechanism correctly and then under-corrected by an
+         * order of magnitude. In `shots/char6/sly-closeup.png` each eye is a **blown white
+         * disc with a bloom halo around it**, comfortably the brightest thing in a frame that
+         * also contains a gold cane in direct sun — and the halo is what erases the mask
+         * beside it. So `spec 0.26` is not "a glint"; on a lens whose normals barely turn, a
+         * `pow(ndh, 80)` lobe is all-or-nothing across the entire sclera, and it fired.
+         *
+         * A CPU probe said the opposite — ≤8% of front-facing eye verts above 0.5, peak added
+         * radiance 0.188 — and it was measuring the wrong quantity. Per-vertex specular
+         * response says nothing about what a bloom pass does with a small, very bright,
+         * high-contrast region, and bloom is where this defect lives.
+         *
+         * The emissive drop is safe now for a reason that was not true when it was raised.
+         * 0x121212 → 0x282828 was compensating for "the eyes came out dark-on-dark inside the
+         * black mask" — and the cause of *that* was the cap brim lying across both eyes (see
+         * `TUNE.brimLift`). With the occluder gone the sclera is lit by the key directly and
+         * does not need a self-illumination crutch; keeping the crutch is what pushes it over
+         * the bloom threshold. `night` (`tod 0.02`) is still the shot to re-check, because a
+         * previous, warmer emissive failed there as "two yellow dots".
+         *
+         * The glint is not lost: it is authored as its own highlight ellipsoid sitting on the
+         * black pupil, which is where a cartoon eye's highlight is supposed to come from. */
+        color: PAL.eyeWhite, sss: 0.0, rim: 0.09, spec: 0.035, gloss: 20, emissive: 0x141414,
       };
       default: return { color: 0xff00ff };
     }

@@ -58,9 +58,20 @@ const TUNE = {
   shaftCapacity: 44,
   /* Bracketed on `temple` at 0.35 / 0.62 / 0.90. At 0.35 the blades are a haze on the
      ceiling and the shot still fails §7.3; at 0.62 they read unmistakably as light and only
-     start to flatten the pale columns where two of them overlap. 0.55 keeps the read and
-     gives that overlap some headroom. */
-  shaftGain: 0.55,          // master multiplier on every beam's published intensity
+     start to flatten the pale columns where two of them overlap. 0.55 kept the read and
+     gave that overlap some headroom.
+
+     Now 0.40, and this is **not** a re-tune of the same shape — it is the compensation that
+     keeps the shape change close to energy-neutral. The cross-section stopped being a
+     smoothstep bell and became the chord through a round beam, which is far flatter, so the
+     same gain would have been a large brightening. Integrated numerically across the ribbon
+     half-width, `bell + 0.85·bell⁵` = **0.7034** and `chord + 0.55·chord⁵` = **1.0322**, a
+     factor of 1.47. Exact neutrality is 0.55 × 0.7034/1.0322 = 0.375; 0.40 is deliberately
+     6% over that, spent on the open-air blades that are the §7.3 failure. The peak drops
+     (1.85 × 0.55 = 1.02 → 1.55 × 0.40 = 0.62) — that is the half of this which has to be
+     checked against POSTFX's 1.55 bloom threshold on `temple`, and it is a regression risk
+     on the one shot where §7.3's volumetrics condition already passes. */
+  shaftGain: 0.40,          // master multiplier on every beam's published intensity
   shaftConeGain: 0.85,      // torch / brazier cones, relative to shaftGain
   shaftSoft: 2.0,           // metres of soft fade where a blade meets geometry
   /* 96 m put the `dunes` blades — the whole west colonnade, 88 m from that camera — inside
@@ -77,8 +88,30 @@ const TUNE = {
      contrast without widening the beam. All three at 0 / 1 restore the pure additive blade. */
   shaftWide: 1.85,          // ribbon half-width in aperture widths
   shaftDark: 0.30,          // depth of the flanking shadow band, 0..0.5
-  shaftDarkFar: [55, 105],  // metres of backdrop distance over which that band dies out
-  shaftCore: 0.85,          // hot-core lift on top of the cross-section bell
+  /* **Metres of gap between the blade and whatever is behind it**, not metres from the
+     camera, which is what this used to be. The absolute form was doing two jobs and failing
+     the second: excluding the sky (already handled — Sky.js's dome has `depthWrite: false`,
+     so DEPTH_FRAG hands the shader its 30 000 m sentinel and `haveZ` is false over sky), and
+     keeping the band off the far backdrop. At [55, 105] from the camera the `dunes` blades —
+     which stand at 88 m — got 21% of their band against stonework a couple of metres behind
+     them, i.e. the open-air contrast mechanism was switched off in the one exterior shot
+     where eight parallel beams project cleanly into frame. Keyed on the gap it means what it
+     says: full band on a surface just behind the blade, none on dunes 200 m further back. */
+  shaftDarkFar: [40, 120],  // metres of blade→backdrop gap over which that band dies out
+  /* Cross-section shape. `shaftEdge` is the fraction of the half-width spent softening the
+     rim; the rest of the profile is the chord through a round beam, which is flat across
+     most of the aperture and turns vertical at the rim. The old smoothstep bell reached half
+     its value at half the aperture and landed on zero with zero slope — the softest possible
+     edge, i.e. no edge at all, which is why the open-air blades drew as a wide soft plateau
+     rather than as a beam. 0.16 is ~6 px of shoulder on a 76 px blade: enough not to alias
+     at 960 px, an order of magnitude tighter than the ~1.0 half-width the bell spent. */
+  shaftEdge: 0.16,          // rim penumbra, in half-widths
+  shaftCore: 0.55,          // hot-core lift on top of the cross-section chord
+  /* Where the blade's tail starts, in blade-lengths. See `lenFade` in SHAFT_FRAG: the length
+     profile is now flat-ish along the body with a short tail here, instead of a hard taper
+     that put 87% of a blade's light in its first half. */
+  shaftTail: 0.86,
+  shaftLenNorm: 0.59,       // renormalises that profile to the old one's integral
 
   /* soft particles */
   softDepth: 0.55,          // metres of depth over which a sprite fades into geometry
@@ -511,6 +544,9 @@ uniform float uScroll;
 uniform float uNoiseAmt;
 uniform float uHead;
 uniform float uWide;
+uniform float uEdge;
+uniform float uTail;
+uniform float uLenNorm;
 uniform float uCoreLift;
 uniform float uDark;
 uniform vec3  uDarkTint;
@@ -549,15 +585,38 @@ void main() {
   float ax = clamp( abs( vX ), 0.0, 1.0 );
   float xb = ax * mix( uWide, 1.0, vCone );
 
-  float e = 1.0 - clamp( xb, 0.0, 1.0 );
-  float bell = e * e * ( 3.0 - 2.0 * e );
-  // A hot core on top of the bell. Same silhouette, higher peak: local contrast is what
+  /* The chord an eye ray cuts through a round beam — NOT a bell. The old e*e*(3-2e) reaches
+     half its value at half the aperture and lands on zero with zero slope, which is the
+     softest edge a curve can have; a blade drawn with it has no edge anywhere and reads as a
+     soft mound. sqrt(1 - x*x) is the actual view-ray integral through a cylinder of uniform
+     density: flat across most of the opening, vertical at the rim. The rim is then softened
+     by exactly uEdge of the half-width, which is what stops it aliasing at 960 px. This is
+     the difference between a plateau and a beam, and it is the edge that carries it. */
+  /* Slabs get the tight rim; cones get a broad one. That is not a fudge — a sun blade
+     through a stone aperture has a penumbra of centimetres, while a flame is an extended
+     fuzzy source whose cone genuinely has no edge. Giving a torch cone a 6 px shoulder would
+     read as painted cardboard. Both are still far tighter than the old bell. */
+  float rim = mix( uEdge, 0.55, vCone );
+  float chord = sqrt( max( 1.0 - xb * xb, 0.0 ) ) * smoothstep( 0.0, rim, 1.0 - xb );
+  // A hot core on top of the chord. Same silhouette, higher peak: local contrast is what
   // makes a beam read as light rather than as haze, and it costs no extra width.
-  float edge = bell + pow( bell, 5.0 ) * uCoreLift;
+  float edge = chord + pow( chord, 5.0 ) * uCoreLift;
 
-  // Along the beam: bright at the opening, gone by the far end. uHead keeps the first
-  // few per cent from starting on a hard line inside the slot.
-  float lenFade = pow( max( 1.0 - vS, 0.0 ), 1.35 ) * smoothstep( 0.0, uHead, vS );
+  /* Along the beam. This was pow(1 - s, 1.35), which puts 87% of a blade's light in its
+     first half. That is right for the temple shot, where the camera sees the slot the blade
+     comes out of, and wrong for every open-air shot: there the aperture is off-frame and the
+     only part in shot is the tail, arriving at ~12% of full. Physically a beam loses only to
+     spread, which at flare 0.28 is ~40% over the whole length, not 90%.
+
+     So: a gentle body taper plus a short tail at uTail, renormalised by uLenNorm to the old
+     curve's integral. Same light, spread along the blade instead of piled at the opening —
+     the far half comes up ~3x, the head goes down ~35%, and the total the frame receives is
+     unchanged. The flank shadow band multiplies by this too, so this is what was switching
+     off BOTH halves of the open-air contrast mechanism, not just the bright one. uHead keeps
+     the first few per cent from starting on a hard line inside the slot. */
+  float body = 0.42 + 0.58 * pow( max( 1.0 - vS, 0.0 ), 0.75 );
+  float lenFade = body * uLenNorm * ( 1.0 - smoothstep( uTail, 1.0, vS ) ) *
+                  smoothstep( 0.0, uHead, vS );
 
   // Scrolling noise along the blade — the dust turning in it. Two octaves travelling at
   // different speeds so it never reads as a texture sliding past.
@@ -585,11 +644,16 @@ void main() {
   if ( haveZ ) {
     occl = clamp( ( sceneZ - vViewZ ) / uSoft, 0.0, 1.0 );
   }
-  /* The shadow band only exists against a surface the shadow could fall on. Over open sky it
-     would be a grey-violet smear across the one part of the frame §2.3 wants clean, so it
-     dies with distance — and fails *closed* when there is no depth to judge by, which is the
-     opposite of how the light half fails. */
-  dark *= haveZ ? ( 1.0 - smoothstep( uDarkFar.x, uDarkFar.y, sceneZ ) ) : 0.0;
+  /* The shadow band only exists against a surface the shadow could fall on, and it fails
+     CLOSED when there is no depth to judge by — the opposite of how the light half fails.
+     Open sky needs no special case: the Sky dome draws with depthWrite off, so DEPTH_FRAG
+     hands us its 30 000 m sentinel and haveZ is already false up there. What the window is
+     for is the far backdrop — a band painted across dunes 200 m behind the blade is a smear,
+     not a shadow — so it keys on the GAP between the blade and what is behind it rather than
+     on absolute camera distance. Keyed on distance it was switching itself off in the dunes
+     shot, where the blades stand at 88 m against stone a few metres behind them. */
+  float backGap = sceneZ - vViewZ;
+  dark *= haveZ ? ( 1.0 - smoothstep( uDarkFar.x, uDarkFar.y, backGap ) ) : 0.0;
   occl *= smoothstep( uNearFade.x, uNearFade.y, vViewZ );
   occl *= 1.0 - smoothstep( uFarFade.x, uFarFade.y, vViewZ );
   // vAxial is 1 when the eye is on the beam's own axis, where a ribbon degenerates to a
@@ -665,6 +729,9 @@ class LightShafts {
         uNoiseAmt: { value: tune.shaftNoise },
         uHead: { value: 0.05 },
         uWide: { value: tune.shaftWide },
+        uEdge: { value: tune.shaftEdge },
+        uTail: { value: tune.shaftTail },
+        uLenNorm: { value: tune.shaftLenNorm },
         uCoreLift: { value: tune.shaftCore },
         uDark: { value: tune.shaftDark },
         uDarkFar: { value: new THREE.Vector2(tune.shaftDarkFar[0], tune.shaftDarkFar[1]) },

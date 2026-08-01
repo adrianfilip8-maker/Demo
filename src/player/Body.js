@@ -45,6 +45,7 @@ export class MeshBuilder {
     this.si = [];
     this.sw = [];
     this.sgOf = [];          // smoothing group per vertex
+    this.nBias = [];         // post-weld normal overrides — see `biasNormals`
     this.groups = new Map(); // materialGroupName → index array
     this._group = 'fur';
     this._sg = 1;
@@ -65,6 +66,39 @@ export class MeshBuilder {
   color(c) { this._color.set(c); return this; }
   /** @param {Array<[string,number]>} pairs */
   weights(pairs) { this._weights = pairs; return this; }
+
+  /**
+   * Bend vertices `[start, end)`'s welded normals toward `dir`. Applied *after* the weld, so
+   * it overrides the face-average rather than competing with it.
+   *
+   * This exists for fur clumps, and the reason is a shading one rather than a geometric one.
+   * A clump is a thin wedge in its own smoothing group, so its normals are its own — and they
+   * point sideways, away from anything the key light is doing to the body underneath. Through
+   * a 3-band cel ramp (§2.1.1) every one of them therefore quantises into the shadow band and
+   * the clump renders as a hard dark chip stuck on a lit surface. Forty of those along an arm
+   * is precisely the *"torn or burnt edge"* the critic has reported twice, and it is why the
+   * previous two attempts at fur — needles, then wide wedges — both failed the same way: the
+   * *shape* was the variable being changed and the *shading* was the defect.
+   *
+   * Real fur reads as fur because the clump shades continuously with the skin it grows from
+   * and only the silhouette breaks. Pointing the clump's normals back along the host surface
+   * normal buys exactly that, and it is the same trick hair cards use with a scalp normal.
+   *
+   * **Coupling worth knowing about, for SHADING.** `Outline.js` builds the inverted hull by
+   * welding coincident positions, averaging *this same* `normal` attribute into `slyNormal`
+   * and extruding along it. A clump's verts are coincident only with each other, so a biased
+   * clump extrudes as a near-parallel *translation* along the host normal rather than as an
+   * enclosing shell: the ink line lands as a sliver on the clump's outward edge and the sides
+   * are under-outlined. At ~2.5 px on a ~10 px clump that reads as a fur edge and is an
+   * improvement on what it replaced — the clumps used to quantise black, so their outline was
+   * invisible against them anyway — but it is a real change in what the hull does on ~200
+   * clumps, it has only been verified in a CPU shade render, and it is the first thing to
+   * look at if character outlines regress.
+   */
+  biasNormals(start, end, dir, amount = 1) {
+    if (amount > 0 && end > start) this.nBias.push({ start, end, d: dir.clone().normalize(), a: amount });
+    return this;
+  }
 
   vert(p, u, v, colOverride, weightsOverride) {
     const i = this.pos.length / 3;
@@ -161,6 +195,18 @@ export class MeshBuilder {
       if (l < 1e-12) { b.x = 0; b.y = 1; b.z = 0; l = 1; }
       const x = b.x / l, y = b.y / l, z = b.z / l;
       for (const i of b.list) { const o = i * 3; normal[o] = x; normal[o + 1] = y; normal[o + 2] = z; }
+    }
+
+    // --- post-weld normal overrides (see `biasNormals`) ---
+    for (const bias of this.nBias) {
+      for (let i = bias.start; i < bias.end; i++) {
+        const o = i * 3;
+        const nx = normal[o] + (bias.d.x - normal[o]) * bias.a;
+        const ny = normal[o + 1] + (bias.d.y - normal[o + 1]) * bias.a;
+        const nz = normal[o + 2] + (bias.d.z - normal[o + 2]) * bias.a;
+        const l = Math.hypot(nx, ny, nz) || 1;
+        normal[o] = nx / l; normal[o + 1] = ny / l; normal[o + 2] = nz / l;
+      }
     }
 
     const g = new THREE.BufferGeometry();
@@ -416,6 +462,7 @@ export function addTuft(mb, o) {
   const S = side.clone(), Uv = up.clone(), D = dir.clone();
   const flat = o.flat ?? 1;
   const RN = 4;
+  const v0 = mb.vertexCount;
   const ringAt = (centre, sw, uw, v) => {
     const out = [];
     for (let j = 0; j < RN; j++) {
@@ -440,6 +487,12 @@ export function addTuft(mb, o) {
   }
   mb.tri(tip[0], tip[1], tip[2]);
   mb.tri(tip[0], tip[2], tip[3]);
+  /* `shadeN` is the *host surface* normal at `base`. Given one, the clump shades with the body
+     instead of as an independent dark chip — see MeshBuilder.biasNormals for why that is the
+     whole ballgame on a cel-shaded character. Default 0.82: enough that no clump can land in a
+     different band from the skin beside it, short of 1.0 so the clumps are not perfectly flat
+     cards and still catch a little of their own form. */
+  if (o.shadeN) mb.biasNormals(v0, mb.vertexCount, o.shadeN, o.shadeMix ?? 0.82);
   return tip[0];
 }
 
