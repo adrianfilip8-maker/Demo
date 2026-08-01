@@ -332,6 +332,30 @@ Recorded so they are not re-derived:
   recovering even 60% of it is ~7% — **this is not where the 2× budget overage lives.** Headless
   attribution confirms the overage is ~89% outside `src/world/**`: `traversal` architecture is
   39 draws / 309k against the frame's 408 / 2.763M.
+
+  **The budget question is now answered end-to-end, and "the 2× overage" was never scene
+  geometry at all.** `budget.mjs` finally ran in-page (it had never executed — see the
+  `__THREE` note) with the paving frames in the same boot. The frustum-visible scene is
+  **under §1's 250 draws / 1.2M triangles in every shot measured**: `hero` 91 / 0.629M,
+  `interior` 62 / 0.379M, `guard` 55 / 0.409M, `night` 93 / 0.639M. What `report.json` quotes
+  is `renderer.info.render.calls/triangles` (`Engine.js:273`), which counts **every pass** —
+  three shadow cascades re-drawing all casters (cascade frusta exceed the camera's), AO,
+  outline, composite — a **4.5–5.4× pass multiplication over an in-budget scene**. The
+  headless cross-checks hold (`interior` 17/125k predicted vs 17/125k measured, exact), so the
+  table's rows are trusted. **Owner of the breach as measured: RENDER/LIGHTING** — cascade
+  caster culling and shadow distance, not scene geometry, and deleting visible geometry would
+  be spending in the wrong place. Two cheap secondary items: TERRAIN bills a constant 162k
+  tris in every shot *including inside the sealed tomb* (sand rings + nile drawn fully
+  occluded in `interior`; wants the zone-hide treatment Architecture gives the tomb), and FX
+  spends 13 draws on empty emitters in all four shots measured.
+
+  **The paving fix is now frame-verified: better, not worse.** Same boot, same ROIs against
+  the pre-fix `rim1/interior-base.png`: floor local contrast 0.0577 → 0.0661 (+15%),
+  floor/wall texture-energy ratio 0.676 → 0.775, wall control bit-stable at 0.0853. The
+  featureless pale panels are gone and no repeat is countable in frame. The failure mode has
+  *moved*, not vanished: every slab now states the same crackle motif, so the floor reads
+  slightly monotonous — that is the paving *recipe's* crack network, a TEXTURES question, not
+  density or geometry. `UV_PER_M` stays.
 - **The cel ramp needs geometry, not shader work.** The 3-band quantiser is correct; the scene
   is boxes and faceted cylinders, so there is almost no smooth normal gradient for it to band.
 
