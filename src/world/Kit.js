@@ -916,6 +916,12 @@ export function bevelPrism(rows, { capBottom = true, channel = null } = {}) {
     const p = [(ax + bx) * half, y, (az + bz) * half];
     if (on === 0) { p[0] -= bx * cc; p[2] -= bz * cc; }        // stay on side s
     else { p[0] -= ax * cc; p[2] -= az * cc; }                 // stay on side s+1
+    // Optional rows[i][3..4]: shift this row's centre. A prism whose axis wanders is the
+    // difference between a symmetric trapezoid and a mass someone piled up — see
+    // steppedPyramid, where the apex is deliberately off the footprint centre. `faceN`
+    // ignores it on purpose: the offsets in use are metres against tens of metres of
+    // half-width, so the normal error is under a degree and not worth four more rows.
+    p[0] += rows[i][3] || 0; p[2] += rows[i][4] || 0;
     return p;
   };
   const lerp3 = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
@@ -967,9 +973,10 @@ export function bevelPrism(rows, { capBottom = true, channel = null } = {}) {
   }
   if (capBottom) {
     const [y, half] = rows[0];
+    const ox = rows[0][3] || 0, oz = rows[0][4] || 0;
     const n = [0, -1, 0];
-    const a = push([-half, y, -half], n), b = push([half, y, -half], n);
-    const c = push([half, y, half], n), d = push([-half, y, half], n);
+    const a = push([ox - half, y, oz - half], n), b = push([ox + half, y, oz - half], n);
+    const c = push([ox + half, y, oz + half], n), d = push([ox - half, y, oz + half], n);
     idx.push(a, b, c, a, c, d);
   }
   const geo = new THREE.BufferGeometry();
@@ -1194,32 +1201,62 @@ export function sandDrift({ len = 12, h = 1.5, depth = 3.2, seg = 14, rng }) {
 
 /* ========================== pyramids =================================== */
 
-/** Stepped background pyramid. Silhouette only — it lives behind 60% haze. */
-export function steppedPyramid({ base = 105, h = 105, courses = 34, rng, casing = 0.22 }) {
-  const out = [];
-  for (let i = 0; i < courses; i++) {
-    const t = i / courses, t2 = (i + 1) / courses;
-    const b0 = base * (1 - t), b1 = base * (1 - t2);
-    const ch = h / courses;
-    const g = new THREE.CylinderGeometry(b1 * 0.5 * Math.SQRT2, b0 * 0.5 * Math.SQRT2, ch, 4, 1);
-    normaliseAttrs(g);
-    // A missing course-edge here and there keeps the profile from being a perfect triangle.
-    place(g, {
-      y: i * ch + ch * 0.5, ry: Math.PI * 0.25 + (rng ? rng.jitter(0.004) : 0),
-      x: rng ? rng.jitter(0.35) : 0, z: rng ? rng.jitter(0.35) : 0,
-    });
-    out.push(g);
-  }
-  // smooth casing survives near the apex — the classic Khafre read
-  if (casing > 0) {
-    const ch = h * casing;
-    const g = new THREE.CylinderGeometry(0.4, base * casing * 0.5 * Math.SQRT2 * 1.02, ch, 4, 1);
-    normaliseAttrs(g);
-    place(g, { y: h * (1 - casing), ry: Math.PI * 0.25 });
-    place(g, { y: ch * 0.5 });
-    out.push(g);
-  }
-  return boxProjectUVs(mergeAll(out), UV_PER_M * 0.25);
+/**
+ * A background pyramid: one cased mass, not a staircase.
+ *
+ * The old build stacked 34 four-sided cylinders. From the `dunes` camera the near pyramid is
+ * ~266 m away, where 720 px of frame covers 46°, so each 3.1 m course landed ~10 px tall with
+ * a 7 px inset — a literal staircase down both silhouette edges at exactly the frequency that
+ * reads as aliasing rather than as masonry. That stack also carried 68 interior cap faces per
+ * pyramid: never visible, every one of them a shadow caster, and between them 87% of the whole
+ * level's surface area, which silently invalidated every area-weighted measurement taken here.
+ *
+ * This is the Khafre read instead — smooth casing surviving over the top `casing` fraction of
+ * the height, one crisp horizontal ledge where the casing was stripped, and bare core set back
+ * behind it below. The four arrises are bevelled, so each corner carries a lit line for the
+ * ramp to bite on, and the axis drifts on independent X and Z phases with the apex off the
+ * footprint centre, so no elevation is a symmetric trapezoid.
+ *
+ * 114 triangles against ~560, and not one interior face.
+ */
+export function steppedPyramid({ base = 105, h = 105, rng, casing = 0.22 } = {}) {
+  const hb = base * 0.5;
+  const R = rng;
+  const tC = Math.min(0.9, Math.max(0.1, 1 - casing));   // height fraction where casing starts
+
+  /* Casing thickness, and therefore the width of the one horizontal ledge in the silhouette.
+     3% of the half-base puts it at ~2.2 m on the near pyramid — about 7 px at the `dunes`
+     camera, which is a feature you can point at. The old build's 7 px steps were a defect
+     only because there were thirty-four of them. */
+  const ct = hb * 0.03;
+  const skirt = hb * 0.035;                              // talus of debris/sand at the foot
+  const half = (t) => Math.max(0.8, hb * (1 - t));
+  const cham = (t) => Math.max(0.4, hb * 0.05 * (1 - t * 0.65));
+
+  // Axis drift. Independent phases per axis — one shared curve would lean the mass but leave
+  // every elevation symmetric about its own centreline, which is the thing being fixed.
+  const phX = R ? R.range(0, Math.PI * 2) : 0.7;
+  const phZ = R ? R.range(0, Math.PI * 2) : 2.4;
+  const dk = hb * 0.035;
+  const ox = (t) => dk * Math.sin(t * 2.1 + phX) * t * t;
+  const oz = (t) => dk * Math.sin(t * 1.7 + phZ) * t * t;
+  const row = (t, halfW, c) => [h * t, halfW, c, ox(t), oz(t)];
+
+  const tSkirt = 0.022;
+  const rows = [
+    [0, hb + skirt, cham(0) * 0.6, 0, 0],                // bedding: flares out into the sand
+    row(tSkirt, half(tSkirt) - ct, cham(tSkirt)),
+    row(tC * 0.42, half(tC * 0.42) - ct, cham(tC * 0.42)),
+    row(tC * 0.76, half(tC * 0.76) - ct, cham(tC * 0.76)),
+    row(tC, half(tC) - ct, cham(tC)),                    // top of the stripped core
+    row(tC + 0.006, half(tC), cham(tC)),                 // the casing ledge — the one break
+    row(tC + (1 - tC) * 0.55, half(tC + (1 - tC) * 0.55), cham(0.85)),
+    row(0.965, half(0.965), cham(0.95)),                 // capstone gone: a small flat platform
+  ];
+
+  const g = bevelPrism(rows, { capBottom: true });
+  normaliseAttrs(g);
+  return boxProjectUVs(g, UV_PER_M * 0.25);
 }
 
 /* ====================== collision proxies ============================== */

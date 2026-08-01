@@ -95,6 +95,37 @@ function vol(A, zone, mat, x0, x1, y0, y1, z0, z1, o = {}) {
   return box(A, zone, mat, x1 - x0, y1 - y0, z1 - z0, (x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2, o);
 }
 
+/**
+ * World y of TERRAIN's sand at (x, z), or 0 if TERRAIN is not up yet.
+ *
+ * Everything in this file is authored against y = 0, which is right inside the stylobate —
+ * paving slabs define that floor. Outside it there is no paving, only sand, and the sand is
+ * not flat: measured against `Terrain.heightAt`, the pylon-corner rubble spill was scattered
+ * between 46 cm buried and 18 cm airborne, the mastaba field had one block 7.6 m under the
+ * dune and four floating 4.2–4.6 m above it, and the near pyramid's whole footprint hung
+ * ~4 m clear of the ground. None of that is visible from the source; all of it is visible
+ * in a frame.
+ *
+ * `heightAt` is safe to call before TERRAIN's own init(): the cache is empty at that point,
+ * so it falls through to the analytic field and returns the same surface, just slower.
+ * Registration order in main.js puts terrain before architecture, so it resolves.
+ */
+function sand(A, x, z) {
+  const t = A.engine.get?.('terrain');
+  return typeof t?.heightAt === 'function' ? t.heightAt(x, z) : 0;
+}
+
+/** Lowest sand height over a footprint — bed a mass into the dune instead of tipping it. */
+function sandFloor(A, x, z, halfW, halfD = halfW, n = 3) {
+  let lo = Infinity;
+  for (let i = 0; i <= n; i++) {
+    for (let j = 0; j <= n; j++) {
+      lo = Math.min(lo, sand(A, x + (i / n * 2 - 1) * halfW, z + (j / n * 2 - 1) * halfD));
+    }
+  }
+  return Number.isFinite(lo) ? lo : 0;
+}
+
 function groundProxy(A, x0, x1, y, z0, z1, opts = {}) {
   const t = opts.thick ?? 1.0;
   A.proxy(new THREE.BoxGeometry(x1 - x0, t, z1 - z0),
@@ -1122,15 +1153,24 @@ function tomb(A) {
 
 function background(A) {
   const R = A.rng;
+  /* Both pyramids sat at a hard-coded y = -1.5. Sampled against the real height field that
+     left pyr1's footprint hanging 3.9–4.3 m in the air over three of its four corners and
+     buried pyr2 by 5.5 m. Bed each one to the lowest sand under its own footprint and then
+     sink it a further 1.2 m, so the base line is a dune contact rather than a floating edge. */
   for (const p of [L.pyr1, L.pyr2]) {
+    const y = sandFloor(A, p.x, p.z, p.base * 0.5) - 1.2;
     A.add('far', 'limestone_polished', K.place(
-      K.steppedPyramid({ base: p.base, h: p.h, courses: Math.round(p.h / 3.1), rng: R, casing: 0.2 }),
-      { x: p.x, y: -1.5, z: p.z, ry: D(R.range(-3, 3)) }));
+      K.steppedPyramid({ base: p.base, h: p.h, rng: R, casing: 0.2 }),
+      { x: p.x, y, z: p.z, ry: D(R.range(-3, 3)) }));
   }
-  /* A third, distant, half-buried mastaba field staggers the horizon further. */
+  /* A third, distant, half-buried mastaba field staggers the horizon further. Each one is
+     dropped onto its own patch of sand — one of the five used to be 7.6 m under the dune,
+     which is 12 k triangles and a shadow caster for nothing at all. */
   for (let i = 0; i < 5; i++) {
     const x = -60 - i * 34 + R.jitter(12), z = -150 - i * 26 + R.jitter(20);
-    box(A, 'far', 'sandstone_worn', 24 + R.range(0, 14), 7 + R.range(0, 5), 16 + R.range(0, 10), x, 2.4, z, { jitter: 0.2, taper: 2.6, ry: D(R.range(-8, 8)), c: 0 });
+    const hh = 7 + R.range(0, 5), w = 24 + R.range(0, 14), d = 16 + R.range(0, 10);
+    const y = sandFloor(A, x, z, w * 0.5, d * 0.5) + hh * 0.5 - hh * 0.28;   // buried to ~28%
+    box(A, 'far', 'sandstone_worn', w, hh, d, x, y, z, { jitter: 0.2, taper: 2.6, ry: D(R.range(-8, 8)), c: 0 });
   }
 }
 
