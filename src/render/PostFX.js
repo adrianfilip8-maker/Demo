@@ -120,6 +120,16 @@ const TUNE = {
   aoStrength: 0.62,
   aoDepth: 0.42,
   aoTint: 0x2a3f66,
+  /* Task #19: blend of aoTint toward §2.2 TURQUOISE #2fa8a0 before the peak-normalise.
+     tintColor() normalises by the peak channel, so #2a3f66 arrives at the shader as
+     (0.174, 0.383, 1.0) — a multiplier that starves G relative to B on every occluded
+     pixel. On warm albedo (R > G) that is the magenta-corridor arithmetic from task #16
+     acting inside the AO composite: R survives via the albedo, B is fed, G has no
+     champion. The shadow LIGHT got its G lifted in 07fe98c; this tint is the same hex and
+     never did. 0 = bit-identical legacy (lerp at 0 is exact); the A/B pokes tune live —
+     the composite re-reads it every frame. Modelled in scratchpad/t19corridor.mjs; ships
+     only with PREREG-task19.md's frame verdict. */
+  aoTintTeal: 0.0,
 
   /* --- bloom ---
      §7.3 wants "a tight coloured halo on bright things", not a wash. At threshold 1.02 with
@@ -208,6 +218,19 @@ const TUNE = {
   gain: [1.035, 1.0, 0.985],
   splitShadow: 0x2a3f66,           // §2.2 shadow hue
   splitHighlight: 0xffd9a0,        // §2.2 sun
+  /* Task #19: blend of splitShadow toward §2.2 TURQUOISE #2fa8a0. The cool leg is built
+     from splitShadow at unit luminance — #2a3f66 gives per-channel (0.914, 0.999, 1.265):
+     it cuts R, feeds B and leaves G alone, which KNOWN_ISSUES §8 already names as "the
+     term actually making green the darkest channel". On the terminator-corridor population
+     (partial warm key crossfading with teal shadow — the centre of mass of temple's
+     233-256 shadow violet; the shot holds ~43% of its visible architecture inside a
+     terminator soft window) this is the strongest single lever in this file: the corridor
+     model (scratchpad/t19corridor.mjs, cross-validated on the t16ab base/teal15 pair)
+     moves the corridor pixel 25-35 deg at blend 0.30-0.50 where the fill lever at maximum
+     buys 7-14. Night is the binding constraint (ledger: 210-235, sat not falling; model
+     says -5 deg, -1% sat at 0.30) and goes FIRST in the capture. 0 = bit-identical legacy;
+     the A/B pokes tune live. Ships only with PREREG-task19.md's frame verdict. */
+  splitShadowTeal: 0.0,
   // 0.22 -> 0.16. The split is hue-only and correct in direction, but at 0.22 it pulled the
   // whole mid-tone range warm — and the daylight sky lives in the mid-tones, so it was
   // eating a measurable part of the zenith blue that §2.3's warm/cool tension depends on.
@@ -785,6 +808,14 @@ function tintColor(col) {
   return m > 1e-4 ? col.multiplyScalar(1 / m) : col;
 }
 
+/* Task #19 scratch: the two shadow-side tint colours are rebuilt from tune every frame so
+   splitShadowTeal / aoTintTeal are live-pokeable for one-boot A/Bs (the scalar tune block
+   below already works that way; the colours were constructor-only, which is exactly the
+   "knob you cannot A/B costs capture cycles" trap TUNE exists to avoid). Hoisted per §5. */
+const _turqTint = new THREE.Color(0x2fa8a0);   // §2.2 TURQUOISE — same target 07fe98c used
+const _splitScratch = new THREE.Color();
+const _aoScratch = new THREE.Color();
+
 export class PostFX {
   /** @param {import('../core/Engine.js').Engine} engine */
   constructor(engine) {
@@ -1126,6 +1157,9 @@ export class PostFX {
     cu.uSaturation.value = this.passes.grade.enabled ? this.tune.saturation : 1;
     cu.uSplitStrength.value = this.passes.grade.enabled ? this.tune.splitStrength : 0;
     cu.uSplitRange.value.set(this.tune.splitRange[0], this.tune.splitRange[1]);
+    // Task #19 teal-consistency blends. lerp at 0 is exact, so 0 = the pre-knob colours.
+    cu.uSplitShadow.value.copy(_splitScratch.setHex(this.tune.splitShadow).lerp(_turqTint, this.tune.splitShadowTeal));
+    cu.uAOTint.value.copy(tintColor(_aoScratch.setHex(this.tune.aoTint).lerp(_turqTint, this.tune.aoTintTeal)));
     cu.uInkStrength.value = this.tune.inkStrength;
     cu.uAOStrength.value = this.tune.aoStrength;
     cu.uAODepth.value = this.tune.aoDepth;

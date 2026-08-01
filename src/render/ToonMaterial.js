@@ -153,6 +153,19 @@ const TUNE = {
      it here is the second half of the shadow-hue fix; see the fill term in toon.glsl.js. */
   bounceGain: 0.42,
 
+  /* Task #19: hue blend of the fill's sand-bounce leg toward the sky, at matched luminance
+     (see the fill term in toon.glsl.js). The fill is the one light term left with G/R < 1
+     after 07fe98c, which made it the pre-registered suspect for temple's 233-256 shadow
+     violet — but the corridor model (scratchpad/t19corridor.mjs, cross-validated on the
+     t16ab base/teal15 frame pair) sizes this lever at 7-14 deg of a 10-30 deg residual:
+     REAL and INSUFFICIENT. The violet's centre of mass is the terminator-corridor
+     population (partial warm key crossfading with teal shadow — temple has ~43% of its
+     visible architecture inside a terminator soft window, KNOWN_ISSUES §8), where the
+     strong lever is PostFX's splitShadowTeal. This knob ships as the fill's share of that
+     package. 0 = bit-identical legacy (mix at 0 is exact); capture A/B pokes the uniform.
+     PREREG-task19.md stakes the acceptance; value lands only with the frame verdict. */
+  fillSkyMix: 0.0,
+
   /* Baked aoMap strength, globally. The maps were authored while cast shadows were suppressed
      engine-wide (KNOWN_ISSUES §1), so the baked term was carrying the low frequencies as well
      as the contact scale. Shadows work now and the critic caught the consequence: occlusion
@@ -475,6 +488,7 @@ export class Shading {
       uSkyColor:     { value: new THREE.Color(PAL.fillSky) },
       uBounceColor:  { value: new THREE.Color(PAL.bounce) },
       uBounceGain:   { value: TUNE.bounceGain },
+      uFillSkyMix:   { value: TUNE.fillSkyMix },
       uAmbIntensity: { value: TUNE.ambIntensity },
       uShadowColor:  { value: new THREE.Color(0x000000) },
       uShadowWash:   { value: TUNE.shadowWash },

@@ -121,6 +121,7 @@ uniform vec3  uSssColor;
 uniform float uAoStrength;
 uniform float uHazeAmount;
 uniform float uBounceGain;    // attenuation on the sand-bounce half of the hemispheric fill
+uniform float uFillSkyMix;    // hue blend of that half toward the sky, luma-matched. 0 = legacy
 
 /* One terminator of the ramp. k is its 0-based index; masked off above "steps". */
 float slyTerm( float x, float k, float steps ) {
@@ -349,9 +350,21 @@ export const TOON_SHADE = /* glsl */ `
 		 *    red on a shaded wall than the key puts on a lit one.
 		 * 2. '0.5 + 0.5 * N.y' hands every vertical face 50% of that. A wall in an open desert
 		 *    sees most of the sky dome and only a grazing sliver of hot ground, so the
-		 *    crossover belongs below the horizon, not on it. */
+		 *    crossover belongs below the horizon, not on it.
+		 *
+		 * uFillSkyMix (task #19) blends the bounce leg's HUE toward the sky at matched
+		 * luminance — the sand bounce is the one remaining G-poor light term (G/R 0.78 on a
+		 * wall at golden hour), and on shadow-side pixels it is what keeps green in last
+		 * place. Luma-matched so the blend cannot change how bright the fill is, only what
+		 * colour it is; mix(x, y, 0.0) == x exactly, so 0 is bit-identical legacy. Modelled
+		 * in scratchpad/t19corridor.mjs: this lever alone is measured INSUFFICIENT for the
+		 * temple violet (7-14 deg of a 10-30 deg residual) — it ships as one leg of the
+		 * teal-consistency package with PostFX's splitShadowTeal/aoTintTeal, not alone. */
 		float hemi = smoothstep( -0.72, 0.55, Nw.y );
-		vec3 fill = mix( uBounceColor * uBounceGain, uSkyColor, hemi ) * uAmbIntensity;
+		vec3 bounceLeg = mix( uBounceColor,
+		                      uSkyColor * ( slyLum( uBounceColor ) / max( slyLum( uSkyColor ), 1e-4 ) ),
+		                      uFillSkyMix );
+		vec3 fill = mix( bounceLeg * uBounceGain, uSkyColor, hemi ) * uAmbIntensity;
 
 		float shadowMix = 1.0 - key;
 
