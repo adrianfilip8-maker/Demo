@@ -95,6 +95,20 @@ a blue-channel one. Measure `B / max(R,G)` alongside it, and put the frame on sc
 single iteration — this defect has now twice produced numbers that were on target while the
 image was plainly wrong.
 
+> **The "after" column above is NOT a validated target. Do not defend a value with it.**
+>
+> Those numbers record what one fix happened to produce. They were never checked against
+> reference art or against the frame as a whole. I then used them to rule that `temple` was "at
+> target" and to stop a shading agent from changing the wash — without opening the PNG. When I
+> finally looked at `shots/tx2/hero.png` and `courtyard.png`, the frames are overwhelmingly
+> lavender-grey: shaded sandstone reads as violet concrete, the golden-hour key barely survives
+> outside a few horizontal faces, and the whole image is two-tone orange/indigo with no middle.
+> An art director shown that beside Odyssey's Sand Kingdom picks Odyssey instantly.
+>
+> A measured value sitting inside this band means only that it matches the last change someone
+> made. **The frame is the authority; this table is a record.** Anyone tuning here should be
+> looking at the image and at the palette in §2.2, not at these six numbers.
+
 ---
 
 ## 4. Guards module still absent
