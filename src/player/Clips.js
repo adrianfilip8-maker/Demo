@@ -143,6 +143,14 @@ const CANE = {
      plane facing the camera, the shaft lying across the view rather than along it, and the
      crook clearing both the head and the body outline. */
   shoulder: [-62, -56, 28],
+  /* The standing idle. `shoulder` above is a fine *aim* and a bad *pose*: with the forearm
+     folded up it lays the shaft diagonally across the torso, and a prop drawn across a figure
+     stops reading as a prop. `plant` stands the shaft vertical at his right side with the
+     crook out at head height and open sky inside the C — chosen by sweeping aims against the
+     arm pose `IDLE_A` actually holds and keeping the ones where hook and tip are both clear of
+     the body outline on the same side. Re-sweep it if that arm moves; it is measured against
+     the hand, not against the world. */
+  plant: [-10, 40, -45],
   fwd: [16, 0, 0],          // levelled, pointing where he is looking
   up: [-96, 0, 0],          // shaft vertical: hook overhead, swinging
   back: [128, 10, 0],       // wound up behind him, cocked to swing
@@ -204,11 +212,11 @@ const IDLE_A = P({
      the ribcage falls back across it, the head returns over the foot. So the pelvis now shifts
      5.5 cm onto his right (−X) via the key's `pos`, and the counter-roll is opened up to
      carry the ribcage back the other way rather than being the whole effect. */
-  hips: [2, 19, -17],
-  spine: [-3, -9, 13],
-  chest: [6, -20, 21],        // shoulders roll opposite the hips: the S
-  neck: [-8, 10, -9],
-  head: [-7, 19, -15],
+  hips: [2, 21, -19],
+  spine: [-3, -11, 15],
+  chest: [7, -23, 24],        // shoulders roll opposite the hips: the S
+  neck: [-9, 12, -10],
+  head: [-9, 21, -16],
   jaw: [4, 0, 0],
   capBrim: [3, 0, -3],
   earL: [-13, 6, -18],
@@ -219,60 +227,64 @@ const IDLE_A = P({
   /* Left hand on the hip. Two jobs: it closes a triangle of open sky between the arm and the
      ribs, which is worth more in silhouette than any amount of surface detail, and it stops
      the arm outline melting into the torso outline the way a hanging arm does. */
-  /* Reverted an attempt to open the elbow further (upperArmL Z −52 → −34) after measuring it:
-     at `sly-closeup`'s 13° azimuth the tail sits exactly where that triangle of sky would be,
-     so the silhouette was bit-for-bit unchanged and the hand ended up more hidden, not less.
-     The gap this comment wants is not available from this camera at this tail aim. */
+  /* Reverted an attempt to open the elbow further (upperArmL Z -52 -> -34) after measuring it:
+     at `sly-closeup`'s 13 degree azimuth the tail sits exactly where that triangle of sky would
+     be, so the silhouette was bit-for-bit unchanged and the hand ended up more hidden, not
+     less. The gap this comment wants is not available from this camera at this tail aim. */
   shoulderL: [3, 7, -16],
   upperArmL: [-14, 16, -52],
   lowerArmL: [-74, -36, -26],
   handL: [22, -28, -14],
 
-  // right arm up, cane slung across the shoulder — the signature
-  shoulderR: [-5, -9, 14],
-  upperArmR: [6, -17, -3],
-  lowerArmR: [-88, 34, 26],
-  handR: [-8, 18, 14],
+  /* **Right arm down, cane planted, not slung.** It was `CANE.shoulder` with the forearm
+     folded up to the shoulder, and the resulting silhouette is the thing to look at rather
+     than the label: the shaft ran diagonally from his lower left to his upper right straight
+     across the torso, passing within a few pixels of the free left hand, and every capture of
+     it reads as a two-handed staff held at port arms. A prop that crosses the body cannot be
+     read as a prop — it becomes a line drawn over the figure.
+
+     Down at his side the cane owns one half of the frame and the tail owns the other, the
+     torso is left clear between them, and the crook sits out at head height with open sky
+     inside its C. That is the Sly pose, and it is also the only arrangement in which §7.3's
+     silhouette test can pass on all four cues at once. */
+  shoulderR: [-4, -7, 11],
+  upperArmR: [-4, -12, 20],
+  lowerArmR: [-52, 18, 12],
+  handR: [-6, 16, 10],
 
   /* Weight right. The leg Z angles look large because they are measured against the *hips*,
-     which are already rolled −12°: that roll tips the whole lower body 12° toward his right,
-     so a leg authored at +13 nets +1° in world and both feet stay under the pelvis. This is
-     exactly why the previous contrapposto measured correct and rendered as parallel sticks.
-     +20 / +24 here net out at roughly +8° and +12°, which is a 22 cm stance. */
-  /* The free leg has to visibly stop carrying anything, or the stance is just a wider column.
-     Right leg (weight) is straight and near-vertical under the shifted pelvis; left leg takes
-     a folded knee, a turned-out thigh and a foot set forward and inboard with the heel off the
-     ground, so its outline is a bent shape against the weight leg's straight one. Two
-     different silhouettes is the read; two spread sticks is not. */
-  upperLegR: [-2, -8, 13],
-  lowerLegR: [4, 0, 0],
-  footR: [-3, 6, -2],
-  upperLegL: [-17, 13, 31],
-  lowerLegL: [33, 0, 0],
-  footL: [12, -8, -15],
-  toeL: [11, 0, 0],
+     which are already rolled -19: that roll tips the whole lower body toward his right, so a
+     leg authored at +13 nets a few degrees in world and both feet stay under the pelvis. This
+     is exactly why a previous contrapposto measured correct and rendered as parallel sticks.
 
-  /* Tail as counterweight, and — this is the part that is easy to get wrong — on the opposite
+     The free leg has to visibly stop carrying anything, or the stance is just a wider column.
+     Right leg (weight) is straight and near-vertical under the shifted pelvis; the left takes
+     a folded knee, a turned-out thigh and a foot set forward and *inboard past the weight
+     line*, heel off the ground — so the two legs cross in silhouette and read as two different
+     shapes rather than as two spread sticks. Crossing is what a standing-at-ease pose actually
+     does, and it is the cheapest thing on this rig that reads as weight. */
+  upperLegR: [-2, -7, 15],
+  lowerLegR: [3, 0, 0],
+  footR: [-3, 6, -2],
+  upperLegL: [-19, 15, 36],
+  lowerLegL: [42, 0, 0],
+  footL: [16, -12, -18],
+  toeL: [14, 0, 0],
+
+  /* Tail as counterweight, and - this is the part that is easy to get wrong - on the opposite
      side of the frame from the cane. Swept to his right it folded in behind the torso and left
      the silhouette entirely, which costs one of §7.3's four identity cues outright. Out to his
-     left it balances the crook, and the two of them frame the body between them. */
-  /* **The tail is the line of action on this rig, and that is a consequence of the
-     proportions rather than a stylistic preference.** Measured on the held frame, the hip
-     line tilts 17.5° and the shoulder line 17.6° the other way — a textbook contrapposto —
-     and it is invisible, because `torsoShrink` leaves only 16 cm between hips and chest and
-     the shoulder span projects 10 cm wide, all of it underneath a 0.50 m head. A spinal S has
-     no lever here. The tail has 0.9 m of it and is half the silhouette, so the curve gets
-     authored where there is room to see it.
+     left it balances the crook, and the two of them frame the body between them.
 
      Down and out of the hips first, then a long sweep to his left, then a hard curl up and
-     over — a C that opposes the cane's diagonal, so the two of them close a shape around the
+     over - a C that opposes the cane's vertical, so the two of them close a shape around the
      body instead of both pointing the same way. The old set left it a level horizontal
      sausage at shoulder height, which is the one shape a big tail must not make: it reads as
      a wing, it flattens the figure, and it puts the heaviest mass on the frame's mid-line. */
-  tailA: [-14, -20, 6],
-  tailB: [-6, -32, 0],
-  tailC: [34, 14, 0],
-  tailD: [30, 26, 0],
+  tailA: [-16, -24, 6],
+  tailB: [-4, -36, 0],
+  tailC: [38, 16, 0],
+  tailD: [34, 28, 0],
 });
 
 /* `hold: 0` on purpose. This clip is what `sly-closeup` and `dunes` freeze on, so the held
@@ -283,7 +295,7 @@ const IDLE_A = P({
 def('idle_confident', {
   dur: 3.6, loop: true, hold: 0,
   keys: [
-    { t: 0, e: 'soft', P: IDLE_A, pos: [-0.032, -0.014, 0], cane: CANE.shoulder },
+    { t: 0, e: 'soft', P: IDLE_A, pos: [-0.058, -0.018, 0], cane: CANE.plant },
     // weight rocks a couple of centimetres and the chest drifts open — a drift off IDLE_A,
     // never a different pose
     /* These two are a *drift off IDLE_A* and nothing else, so they have to be re-authored
@@ -296,7 +308,7 @@ def('idle_confident', {
     { t: 1.9, e: 'soft', P: { hips: [3, 16, -15], chest: [7, -17, 19], head: [-4, 15, -12], tailA: [-18, -15, 6], tailB: [-10, -27, 0], tailD: [26, 21, 0] }, pos: [-0.038, -0.020, -0.004], cane: [-65, -52, 28] },
     // a slow blink-and-smirk beat: head cocks a little further over, ears flick
     { t: 2.6, e: 'smooth', P: { head: [-8, 22, -19], earL: [-19, 8, -24], earR: [-2, -9, 29], jaw: [6, 0, 0] } },
-    { t: 3.6, e: 'soft', P: IDLE_A, pos: [-0.032, -0.014, 0], cane: CANE.shoulder },
+    { t: 3.6, e: 'soft', P: IDLE_A, pos: [-0.058, -0.018, 0], cane: CANE.plant },
   ],
 });
 
