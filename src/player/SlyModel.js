@@ -1602,18 +1602,32 @@ export class SlyModel {
        across the two eyes by construction because nothing about it is view-dependent. */
     const hc = pc.clone().addScaledVector(outward, 0.014 * S)
       .addScaledVector(trueUp, 0.020 * S).addScaledVector(right, -side * 0.015 * S);
-    /* `0.016 → 0.021` radius, and this is a hedge against a documented mechanism rather than a
-       measurement. At `sly-closeup` the figure is 420 px for 1.83 m, so 0.016·S projects to a
-       ~6.6 px dot — and the inverted-hull ink line is ~2.5 px, which would draw a ring taking
-       most of it. That is exactly the ratio `TUNE.tuftLen`'s note records the fur clumps
-       losing to ("the ink hull is ~2.5 px, so it was 25% of a clump — every clump rendered as
-       more line than fill"). The glint was decoration when the whole sclera was near-white; it
-       is load-bearing now that it is the only near-white left, so it is sized to survive its
-       own outline: ~8.7 px across leaves a ~4 px core inside the ring. Still only half the
-       pupil's half-width, so the pupil keeps a black ring all the way round it. */
+    /* `0.021 → 0.013` radius, and this one is sized against a measurement of the defect it
+       was blamed for. `shots/char9/sly-closeup.png` (15:28, scleraTint live) settles the split
+       the scleraTint note predicted: the sclera *body* measures L144–146 median — off the
+       ceiling, done — while each eye still carries a ~250 px blob at ≥L228 (64% of a 24×16
+       box) centred on the pupil. The blob is ~2.5× the glint's projected diameter: it is the
+       full-white glint, inflated by bloom, bleeding over a near-white sclera and filling the
+       entire pupil — which is why no pupil reads and the closeup gets the "headlights" note.
+       An 18% sclera-albedo cut moved that top end by nothing, so by this project's own rule
+       (`spec 0.035 → 0` above) the sclera is not what feeds it; the glint is.
+
+       The `0.016 → 0.021` sizing this replaces was a hedge against the ink hull eating a small
+       dot ("~8.7 px across leaves a ~4 px core inside the ring"). Two things outrank it now:
+       the hull ring around the glint lands on the *black pupil*, where a dark ring costs
+       nothing, and the char9 frame shows the ring never restrained the blob — bloom paints
+       far outside any 2.5 px line. 0.013·S projects ~7.5 px at closeup, a ~3 px core inside
+       the ring, and bloom can be trusted to do the rest: it demonstrably doubles this dot's
+       footprint, and a doubled 7.5 px dot is a catchlight where a doubled 13 px disc is a
+       headlight. Kept full-white — it stays the frame's genuine >L230 source, now at the size
+       where §7.3's "tight coloured halo on a bright thing" is a description rather than an
+       aspiration. Prediction registered for the next capture: per-eye ≥L228 area ≤100 px, a
+       visible black pupil ring all round the glint, and the mask beside the eyes no longer
+       washed by halo. If ≥L228 stays ~250 px after this, the source is not the glint and the
+       next suspect is bloom's threshold/kernel in PostFX, which is not this file's to tune. */
     const v2 = mb.vertexCount;
     addEllipsoid(mb, {
-      center: hc, radii: new THREE.Vector3(0.021 * S, 0.021 * S, 0.012 * S), basis,
+      center: hc, radii: new THREE.Vector3(0.013 * S, 0.013 * S, 0.009 * S), basis,
       segTheta: 8, segPhi: 5,
       group: 'eye', sg: mb.newSg(), weights: [['head', 1]],
     });
