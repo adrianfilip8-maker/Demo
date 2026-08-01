@@ -129,7 +129,7 @@ function _merge(list) {
  * `chip` knocks a single corner well in so the silhouette gets a genuine broken bite.
  */
 export function block(w, h, d, opts = {}) {
-  const { rng, jitter = 0.02, chip = 0, taper = 0, lean = 0 } = opts;
+  const { rng, jitter = 0.02, chip = 0, taper = 0, lean = 0, pillow = PILLOW } = opts;
   const geo = new THREE.BoxGeometry(w, h, d, 1, 1, 1);
   const pos = geo.attributes.position;
 
@@ -157,7 +157,54 @@ export function block(w, h, d, opts = {}) {
     pos.setXYZ(i, x + o[0], y + o[1], z + o[2]);
   }
   geo.computeVertexNormals();
+  /* Same face pillow as chamferBox (see PILLOW). BoxGeometry lays its 24 vertices out four
+     per face, so the group of 4 IS the face; centroid comes from the displaced positions. */
+  if (pillow > 0) {
+    const nor = geo.attributes.normal;
+    for (let f = 0; f < 6; f++) {
+      let cx = 0, cy = 0, cz = 0;
+      for (let v = f * 4; v < f * 4 + 4; v++) { cx += pos.getX(v) / 4; cy += pos.getY(v) / 4; cz += pos.getZ(v) / 4; }
+      for (let v = f * 4; v < f * 4 + 4; v++) {
+        const n = pillowN([nor.getX(v), nor.getY(v), nor.getZ(v)],
+          [pos.getX(v), pos.getY(v), pos.getZ(v)], cx, cy, cz, pillow);
+        nor.setXYZ(v, n[0], n[1], n[2]);
+      }
+    }
+    nor.needsUpdate = true;
+  }
   return geo;
+}
+
+/**
+ * Shading-normal pillow, in tan units (0.06 ≈ 3.4° tilt at a face rim, zero at centre by
+ * interpolation). Positions are untouched, so this costs nothing and moves no silhouette.
+ *
+ * Why it exists (79c0496 / 882429f): a flat face has ONE normal, so whole face populations
+ * can land exactly ON a cel terminator — `temple`'s +Z walls at ndl 0.145 vs termLo 0.14 were
+ * 40% of the shot's visible architecture, rendering a uniform half-transition value with no
+ * gradient, one normal-map perturbation from flipping band. Between terminators the ramp
+ * output is constant, so a 3.4° pillow is invisible inside a band and only manifests where a
+ * face straddles a terminator — as a swept band edge instead of that flat mid-value. The
+ * "blocked-in colour" property the flat normals bought is therefore kept by the quantiser
+ * itself, not by the flatness.
+ *
+ * Sized against the surface-rim planarity gate (toon.glsl.js): the pillow turns the normal
+ * ~7° across a whole face, which on a near slab is slyTurn ≈ 0.35 per screen height against
+ * the gate's lo threshold of 3 — an ~8x margin, so the guard-shot contact-line fix stays
+ * closed. See PREREG-pillow.md for the registered predictions.
+ */
+export const PILLOW = 0.06;
+
+/** Tilt `n` toward (p − centroid), projected off n — the per-vertex pillow direction. */
+function pillowN(n, p, cx, cy, cz, k) {
+  let dx = p[0] - cx, dy = p[1] - cy, dz = p[2] - cz;
+  const along = dx * n[0] + dy * n[1] + dz * n[2];
+  dx -= along * n[0]; dy -= along * n[1]; dz -= along * n[2];
+  const l = Math.hypot(dx, dy, dz);
+  if (l < 1e-6) return n;
+  const ox = n[0] + (k * dx) / l, oy = n[1] + (k * dy) / l, oz = n[2] + (k * dz) / l;
+  const ol = Math.hypot(ox, oy, oz);
+  return [ox / ol, oy / ol, oz / ol];
 }
 
 /**
@@ -167,14 +214,16 @@ export function block(w, h, d, opts = {}) {
  * band and there is no terminator anywhere in the frame. This adds a narrow bevel along the
  * arrises whose vertices carry the *adjacent face* normals, so the interpolated normal sweeps
  * the full 90° across a 3 cm strip: the quantiser draws all three bands inside it and every
- * edge reads as a lit line. The flat faces keep their flat normals on purpose — that is what
- * keeps the stone reading as blocked-in colour rather than as a smooth render.
+ * edge reads as a lit line. The face interiors carry the `pillow` above rather than a single
+ * flat normal — flat colour inside a band either way, a swept terminator instead of a stuck
+ * half-transition value when a face population lands on one.
  *
  * `c` is the chamfer in metres; `only:'top'` bevels just the top rim (24 tris instead of 44),
  * which is what anything sitting on the ground wants.
  */
 export function chamferBox(w, h, d, opts = {}) {
-  const { rng, jitter = 0.0, chip = 0, taper = 0, lean = 0, shear = 0, round = 0, c = 0.035, only = 'all' } = opts;
+  const { rng, jitter = 0.0, chip = 0, taper = 0, lean = 0, shear = 0, round = 0, c = 0.035, only = 'all',
+    pillow = PILLOW } = opts;
   const W = w * 0.5, H = h * 0.5, D = d * 0.5;
   const cc = Math.min(c, w * 0.32, h * 0.32, d * 0.32);
 
@@ -261,7 +310,7 @@ export function chamferBox(w, h, d, opts = {}) {
     }
   };
 
-  // Six inset faces.
+  // Six inset faces, interiors pillowed (see PILLOW above; zero-cost, positions untouched).
   for (let axis = 0; axis < 3; axis++) {
     for (let s = 0; s < 2; s++) {
       const quad = [];
@@ -270,6 +319,11 @@ export function chamferBox(w, h, d, opts = {}) {
         ijk[axis] = s;
         ijk[(axis + 1) % 3] = u; ijk[(axis + 2) % 3] = v;
         quad.push({ p: cor(ijk[0], ijk[1], ijk[2], axis), n: nrm(ijk[0], ijk[1], ijk[2], axis) });
+      }
+      if (pillow > 0) {
+        let cx = 0, cy = 0, cz = 0;
+        for (const q of quad) { cx += q.p[0] / 4; cy += q.p[1] / 4; cz += q.p[2] / 4; }
+        for (const q of quad) q.n = pillowN(q.n, q.p, cx, cy, cz, pillow);
       }
       face(quad);
     }

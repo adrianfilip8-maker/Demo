@@ -568,7 +568,15 @@ export const TOON_SHADE = /* glsl */ `
 			   one gets the right answer on each, because the program cache already splits them.
 
 			   Default 0, i.e. no behaviour change, so the A/B is a uniform poke and the shipping
-			   frame is whatever the measurement says it should be, not whatever this edit does. */
+			   frame is whatever the measurement says it should be, not whatever this edit does.
+			   At 0 the arithmetic is an exact identity: mix(a,b,0) = a and z*(1-0*x) = z.
+
+			   Verified before hand-off, without the capture lock, by compiling this program on
+			   the same ANGLE/SwiftShader stack the harness uses — on a THREE.SkinnedMesh and a
+			   THREE.Mesh — and reading vSlySkin straight out of the framebuffer through a
+			   test-local debug write that bypasses the shading, the tonemap and the grade:
+			   0 on the static mesh, 255 on the skinned one, gl.getError 0, no shader log.
+			   Reproduce with scratchpad/compilecheck.mjs. */
 			float slyConvex = mix( 1.0, step( 0.0, slyFold ),
 				uRimCurve.z * ( 1.0 - uRimSkinExempt * vSlySkin ) );
 		#endif
