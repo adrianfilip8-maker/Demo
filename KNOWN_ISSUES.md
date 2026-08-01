@@ -466,6 +466,74 @@ Recorded so they are not re-derived:
   specular term") and a broad architectural one ("there is no specular path") differ by one
   word and by everything. I relayed the second, opened a task on it, and wrote it in here as
   fact. The agent that owns the file checked and refused to implement it.
+
+  **§7.3's "gold needs dark occlusion": the dark base is authored and does not survive to the
+  frame. TEXTURES' side is verified correct; the loss is downstream.** `hieroglyph_gilded` is
+  **28.7% of `hero`** (corrected `angsize`, keyed on material name), so it decides this line.
+  Measured off the built maps, before any lighting — the CPU lab, so no shading term can
+  confound it:
+
+  | | albedo luma p5/p50/p95 | AO p5/p50/p95 |
+  |---|---|---|
+  | `hieroglyph_gilded`, **built texture** | 92 / 166 / 193 | 0.247 / **0.412** / 0.992 |
+  | `hieroglyph_gilded`, **in frame** | 162 / 186 / 217 | — / **0.992** / — |
+  | `gold_leaf`, built texture | 70 / 130 / 218 | 0.047 / 0.047 / 0.733 |
+  | `bronze_aged`, built texture | 76 / 93 / 148 | 0.090 / 0.784 / 0.980 |
+
+  The texture authors a 2.1:1 value span with a genuine dark floor and a strong occlusion
+  gradient. In frame that span is **1.34:1 and the occlusion is gone** — which is exactly "a
+  bright yellow surface reading as painted plaster", and it is not a texture-authoring problem.
+  So the earlier report that this recipe *has* no dark base was measuring the frame and
+  attributing it to the source.
+
+  Two named candidates, both outside `src/textures/**`, neither yet A/B'd:
+  - `ToonMaterial.TUNE.bakedAO = 0.55` with `ao = mix(1.0, ao, uAoStrength)` takes an authored
+    0.412 to **0.677** before anything else touches it. That is arithmetic, not a hypothesis —
+    but it does not reach 0.992 on its own, so it is at most part of it.
+  - The `aoMap` UV channel. `orm` is bound as both `roughnessMap` and `aoMap`
+    (`Textures.js:289-291`, R=AO / G=rough / B=metal, which matches `packORM`), and
+    `toon.glsl.js:316` samples `texture2D(aoMap, vAoMapUv).r`. `Kit.normaliseAttrs`
+    (`Kit.js:51`) **deletes every attribute that is not `position`, `normal` or `uv`**, so no
+    architecture geometry carries a second UV set at all. If anything in the chain resolves
+    `vAoMapUv` to `uv1`, the AO term is sampling nothing. **Do not take this as established —
+    it is a code reading, and this file's §7 records what reading code as evidence of its
+    behaviour costs.** Settle it with the one-line A/B (force `aoMap.channel = 0`, or paint the
+    sampled `ao` to the framebuffer) rather than by arguing about three.js defaults.
+
+  Owned by SHADING (`ToonMaterial.js`, `toon.glsl.js`). TEXTURES' baseline above is frozen and
+  is the before-measurement for whichever fix lands: if the frame's AO median moves off 0.992
+  toward the authored 0.412 and the albedo span reopens past 1.34:1, the fix worked.
+
+  **A third cause, and it subsumes both of those: `ao` never multiplies the key term.**
+  `toon.glsl.js:365`:
+
+  ```glsl
+  vec3 diff = alb * keyRad * key                                        // <- no `ao` factor
+            + albAmb * fill * ao
+            + albShadow * uShadowColor * shadowMix * mix( 0.55, 1.0, ao )
+            + uShadowColor * uShadowWash * shadowMix * ao;
+  ```
+
+  AO is applied to the ambient fill, to the shadow term (there remapped to [0.55, 1.0]) and to
+  the wash — **never to direct key light.** So on a sunlit surface, where `alb * keyRad * key`
+  dominates, occlusion is close to absent by construction, which is exactly a frame AO median
+  of 0.992 on `hero`. The two stacked attenuations are real and secondary: `aoMapIntensity` is
+  1 (`ToonMaterial.js:603`, so it contributes nothing), and `uAoStrength` is
+  `TUNE.bakedAO = 0.55`, which takes an authored 0.412 to 0.677 — matching TEXTURES' arithmetic
+  and, as it said, not reaching 0.992 on its own. It does not have to: whatever survives to
+  `ao` is then only spent on terms the sun is drowning.
+
+  Candidate 2 is separately **weakened**: `Texture.channel` defaults to 0 and nothing in the
+  project sets it, so `vAoMapUv` resolves to `uv`, which every mesh has. `Kit.normaliseAttrs`
+  stripping non-`uv` attributes is real but does not bite here.
+
+  Epistemic status, stated because this file has been burned on exactly this: the above is a
+  reading of the shader source, like candidate 2 was. The difference is that it is a reading of
+  *which terms are written in an expression*, not an inference about whether a function has an
+  effect at runtime — `ao` is textually absent from the key term. It is still worth one A/B
+  (multiply the key term by `ao` and diff a frame) before anyone tunes `bakedAO` on the strength
+  of it, because tuning a knob that is only spent on drowned terms will look like a dead knob and
+  produce another five-cycle chase of the kind §3 records.
 - ~~**The one anti-tiling mechanism is mistuned.**~~ **Fixed, and it was worse than reported.**
   The handoff named `sandstone`. Recomputing against every (recipe, detail-preset) pairing
   actually built in `src/world/**` shows it is **universal — all 8 tiled consumers** sat at
@@ -488,6 +556,27 @@ Recorded so they are not re-derived:
 exceptions therefore read wrong in it: the pyramids use `UV_PER_M * 0.25`, making
 `limestone_polished`'s `dunes` count ~11–13, not the 44–54 it prints. Apply the correction by
 hand or do not quote the number.
+
+**Second caveat, now fixed, and it hid the largest tiling defect in the project.** `angsize.mjs`
+keyed its per-material buckets on `mesh.name`. `Architecture.mesh()` happens to name meshes
+`arch:<zone>:<materialKey>`, so splitting on `:` worked there and the tool looked correct.
+`Architecture.instance()` (l.239) does not — it takes a `name` describing the *piece* and sets
+`im.name = name`, while the recipe arrives separately as `matKey`. **Every InstancedMesh in the
+level was therefore filed under a phantom key named after its geometry.** `paving_courtyard` —
+675 instances — read as 5.81% of `hero` instead of **14.45%**, and *absent* from `interior`
+instead of **36.19%**, with no tiling numbers printed at all for the phantom keys. Now keyed on
+`material.name` (`Architecture.mat()` sets `arch:<matKey>` at l.191 and caches one material per
+key, so it is authoritative for both paths). Third instance this session of a probe describing
+something other than what its reader assumed.
+
+**Sub-pixel sweep at the ten framings — clear, with the corrected keying.** The failure class
+that bit at `MOTES.size` (0.045–0.075 m, sub-pixel at 20–35 m) and `sand_ripples` (2.6 m tile
+applied at 1/9.6) was swept across every material holding ≥1% of any canonical frame, taking each
+recipe's authored detail scale through its consumer's real UV factor. **The smallest such feature
+is 12 px** (`ceiling_stars` in `temple`, 9.1% of frame), then `limestone_polished` 13.2 px on the
+pyramids once the ×4 exception is applied, then `column_papyrus` 15.2 px. Nothing on architecture
+is anywhere near the line. The four consumer exceptions above were already checked individually
+when they were found; this closes the framing-side half of the same question.
 
 ---
 
