@@ -205,6 +205,16 @@ const BARK_DARK = 0x523726;
  *  0.202 from a 0.2253 floor, still under the line; from 0.2451 it clears. */
 const BARK_CREV = 0x563a26;
 
+/* Old timber, chosen the same way. `wood_old`'s ramp bottomed out on `0x3f2a1a`, luma **0.178** —
+ * *below* §2.2's `crevice` 0.2031 before a single darkening pass had run — and the recipe carried
+ * no `rampFloor` at all, so it reported the largest dark tail of any recipe in the catalogue with
+ * a live consumer (**0.0649**). Props dresses walkable platforms and climbable poles with it, so
+ * those texels are on surfaces the camera is close to. */
+/** Darkest stop of the timber ramp. Luma 0.2280. */
+const TIMBER_DARK = 0x51361f;
+/** Split, check and nail-hole floor. Luma 0.2757 — well clear of the line it defends. */
+const TIMBER_CREV = 0x624128;
+
 /**
  * Five-stop gold ramp, `t` biased so the mass falls low and only the tail reaches `GOLD_HOT`.
  *
@@ -1013,8 +1023,15 @@ export const MATERIALS = {
        * near-black texels and is arithmetically incapable of moving one that sits just under the
        * line — no value of `soft` fixes that, because `soft` only scales a term that is already
        * ~0 there. A dark tail has to be closed at the source, which is what the two hexes above
-       * do. Measured, not reasoned: raising `soft` to 2.2 here moved `darkTail` by nothing. */
-      rampFloor(s, { crevice: 0x503322 });
+       * do. Measured, not reasoned: raising `soft` to 2.2 here moved `darkTail` by nothing.
+       *
+       * `lift` is the missing tool that note was describing, added since: it multiplies rather
+       * than lerps, so it maps [0, lo] onto [lo·(1−lift), lo] and *cannot* leave a texel short.
+       * At `crevice 0x503322` (luma 0.2196) a lift of 0.06 puts the hard minimum at 0.2064, just
+       * over §2.2's 0.2031, and takes this recipe's residual 0.0003 to zero. Small on purpose —
+       * the source fix above is what did the work (0.0076 → 0.0003) and this only removes the
+       * last ~79 texels of 262 144, which are the ones no source hex can reach. */
+      rampFloor(s, { crevice: 0x503322, lift: 0.06 });
     },
   },
 
@@ -1350,7 +1367,26 @@ export const MATERIALS = {
       // Same derivation as `hieroglyph_wall`: 3.2 declared through the 2x consumer factor is
       // 6.4 m of world per repeat, which at `cols: 3` was a 1.62 m sign. Gilded architrave signs
       // run a little larger than wall text, hence 0.80 rather than 0.72.
-      const layout = (mode) => (ctx) => glyphWall(ctx, size, mode, cx.seed + 4, { worldTile: worldTileOf(HG_GILDED_TILE), glyphM: 0.80, cartouche: true });
+      /* **`cartouche: false` here too — the exception that kept it was argued against a framing
+       * that no longer exists.** The note on `hieroglyph_wall` above removed the same landmark
+       * and explicitly spared this recipe, on the grounds that "at `courtyard`'s 41 px per repeat
+       * there is nothing to count". That was true of `courtyard` and is not true of `temple`,
+       * which has since been re-framed from inside a nave column to a long axial view down the
+       * full hypostyle nave — and this recipe dresses the nave architraves that run away from
+       * that camera (`EgyptLevel.js:716, 821, 920`).
+       *
+       * The arithmetic at the new framing: fov 55 over 720 px is 1.334 mrad/px, so a 6.4 m repeat
+       * subtends **192 px at 25 m and 137 px at 35 m**, the near and far ends of the run. The
+       * cartouche is one of six columns, ~1.07 m, i.e. a 32 px outlined oval recurring every
+       * 137–192 px straight down the axis of the shot — 4.7x the px-per-repeat the exception was
+       * granted for, on a surface presented edge-on for its whole length.
+       *
+       * Same defect, same recipe family, fixed in one place and left live in the other: the
+       * `Math.max(0.05, [u,v])` shape. The density does not change — the cartouche column is
+       * replaced by another `columnRegister`, so the wall carries the same amount of writing with
+       * no shape distinctive enough to count repeats by. A royal name belongs on `cartouche_gold`,
+       * which exists for exactly that and is not tiled. */
+      const layout = (mode) => (ctx) => glyphWall(ctx, size, mode, cx.seed + 4, { worldTile: worldTileOf(HG_GILDED_TILE), glyphM: 0.80, cartouche: false });
       const cut = rasterMask(size, layout('cut'));
       const lines = rasterMask(size, layout('line'));
       const ramp = carve(s, cut, lines, { depth: 0.42, bevelPx: 2.6, lip: 0.10, bulge: 0.5, lineDepth: 0.56, seed: cx.seed + 5 });
@@ -1380,11 +1416,32 @@ export const MATERIALS = {
          * i.e. flat `GOLD_DEEP`, over essentially all of its area.
          *
          * Measured on the metal-masked subset before this change: luma p50 **0.290** against
-         * `gold_leaf`'s 0.509, p95 0.634 against 0.775. A surface whose median is `GOLD_DEEP` with
-         * a sub-pixel hot line on it minifies to dull ochre, which is what the catalogue's own
-         * tile render shows and what §7.3 means by "gold doesn't read as metal". This is the same
-         * defect class as `MOTES.size` and `sand_ripples`: the material's whole value range placed
-         * across a feature that subtends less than a pixel at the framings it appears in.
+         * `gold_leaf`'s 0.509, p95 0.634 against 0.775. The median of the gilding *was*
+         * `GOLD_DEEP`, so the surface's central tendency was a dark brown and the only thing that
+         * could have lifted it was a hot line under a pixel wide. In frame that measured as
+         * `#4a3a39` on `hero`'s cornice — L 61, chroma 0.227 — which is what §7.3 means by "gold
+         * doesn't read as metal". Same defect class as `MOTES.size` and `sand_ripples`: the
+         * material's value range placed across a feature that subtends less than a pixel.
+         *
+         * **Be precise about the minification, because the obvious story is wrong.** Box-mipping
+         * the albedo and the gild mask in lockstep, the old version's gild median *rises* with
+         * distance — 0.290 at mip 0 to 0.354 at mip 1 (2 texels/px, `temple`'s nave architrave at
+         * 25 m) and 0.362 at mip 2 — because averaging pulls the dark cut floor toward the pale
+         * limestone around it. The range shrinks in both versions by about the same amount
+         * (0.476 -> 0.363 old, 0.464 -> 0.369 new). So the fix is not "the range survives
+         * minification now"; it is that the *median* moved off `GOLD_DEEP`: at mip 1 the gild
+         * goes 0.354 -> 0.431, at mip 2 0.362 -> 0.427.
+         *
+         * **And record the cost, which is real.** Albedo chroma on the gild at mip 1 falls
+         * **0.702 -> 0.629** (mip 2: 0.662 -> 0.635), because `goldRamp`'s saturation peaks around
+         * `goldMid` and falls again toward `goldLight`/`GOLD_HOT`. The trade is bought back on the
+         * term §7.3 actually names: evaluating `toon.glsl`'s hard-stepped specular on the built
+         * maps at this recipe's real consumer parameters (uSpec 0.55, gloss 64, uMetal 0.85),
+         * peak specular over a hemisphere sweep goes p50 0.976 -> 1.087 and p90 1.104 -> 1.261,
+         * the fraction of gilding whose highlight clips in all three channels goes 8.8% -> 22.5%,
+         * and the *highlight's* chroma holds (p50 0.476 -> 0.472, p90 0.544 -> 0.589). That comes
+         * free with the value move, because `goldRough` is keyed to ramp position: the gild's
+         * roughness p50 falls 0.715 -> 0.598, which lifts both `specAmt` and `glossP`.
          *
          * So the *body* of the cut now sits mid-ramp — leaf covers the whole sunk field, because
          * that is what gilding a sunk relief means — and the bevel keeps its job of carrying the
@@ -2171,7 +2228,13 @@ export const MATERIALS = {
        * appears in. Dropped to 90 (34 mm, 1.8 px at `courtyard`) so the grain is something the
        * frame can carry rather than mip-chain fodder. */
       grain(s, { amount: 0.04, freq: 90, seed: cx.seed + 8, heightAmt: 0.014 });
-      rampFloor(s, { crevice: BARK_CREV });
+      /* `lift` 0.14: `lo·(1 − 0.14)` = 0.2108, just clear of §2.2's `crevice` luminance 0.2031,
+       * so nothing on a palm trunk can land where the shader's violet wash out-weighs its own
+       * albedo. Palms stand in `courtyard` and `dunes` and this recipe was the worst live
+       * offender in the catalogue outside the deliberately-black character maps: `darkTail`
+       * 0.0367 at shipping resolution *with this floor already applied*, because the lerp on its
+       * own leaves mid-dark texels short of the line (see `rampFloor`). */
+      rampFloor(s, { crevice: BARK_CREV, lift: 0.14 });
     },
   },
 
@@ -2337,7 +2400,7 @@ export const MATERIALS = {
           const ring = Math.abs(tri(d)) ;
           const hard = smoothstep(0.25, 0.95, ring);
           const t = sat(0.34 + hard * 0.5 + (warpF[i] * 0.5 + 0.5 - 0.5) * 0.4);
-          const col = ramp3(0x3f2a1a, PAL.sandDark, woodPale, t);
+          const col = ramp3(TIMBER_DARK, PAL.sandDark, woodPale, t);
           s.r[i] = col[0]; s.g[i] = col[1]; s.b[i] = col[2];
           // Soft earlywood erodes away, leaving the hard rings standing proud.
           s.h[i] = 0.52 + hard * 0.28 - knots[i] * 0.10;
@@ -2367,8 +2430,15 @@ export const MATERIALS = {
         s.metal[i] = nails[i] * 0.7;
         s.rough[i] = sat(s.rough[i] - nails[i] * 0.3);
       }
-      weather(s, { source: check, seed: cx.seed + 6, crevice: 0x241609, creviceAmt: 0.55, streakAmt: 0.28, dustAmt: 0.14, roughGrime: 0.08 });
+      /* `crevice` was `0x241609`, luma 0.094 — less than half the value the invariant defends,
+       * mixed at 0.55. A split in old timber is genuinely the darkest thing on the plank, but it
+       * is still *timber*, and below the line it stops rendering as dark wood and starts
+       * rendering as the shader's flat violet. Kept as the darkest hex in the recipe, moved onto
+       * the palette's own crevice value. */
+      weather(s, { source: check, seed: cx.seed + 6, crevice: PAL.sandCrev, creviceAmt: 0.55, streakAmt: 0.28, dustAmt: 0.14, roughGrime: 0.08 });
       grain(s, { amount: 0.03, freq: 330, seed: cx.seed + 8, heightAmt: 0.006 });
+      // The floor this recipe never had. `lift` 0.24 puts the hard minimum at 0.2096.
+      rampFloor(s, { crevice: TIMBER_CREV, lift: 0.24 });
     },
   },
 
@@ -2995,6 +3065,17 @@ function inlay(s, cx, stoneHex, veinHex, fleckHex, fleckAmt) {
   }
   weather(s, { seed: cx.seed + 6, crevice: 0x0e1424, creviceAmt: 0.45, streakAmt: 0.10, dustAmt: 0.10, dust: PAL.limeMid, roughGrime: 0.10 });
   grain(s, { amount: 0.016, freq: 380, seed: cx.seed + 8, heightAmt: 0.004 });
+  /* The floor the whole inlay family was missing. `lapis_inlay` reported `darkTail` 0.0257 and
+   * `carnelian_inlay` 0.0062 with no `rampFloor` anywhere in this helper, and the cause is one
+   * line above the loop: `stoneDeep = MX(stoneHex, inkCool, 0.42)` puts lapis at luma **0.199**,
+   * already under §2.2's `crevice` 0.2031 before `weather`'s 0.078 crevice mixes it further down.
+   *
+   * The floor hex is derived from `stoneHex` rather than fixed, so each variety bottoms out in
+   * its *own* hue — a shadowed lapis cell goes deep blue, a carnelian one goes deep red. That is
+   * the point of the invariant: not "no dark", but "no dark that the additive violet wash can
+   * take over". Lapis is the tightest case at luma 0.238, and `lift` 0.12 puts its hard minimum
+   * at 0.2094. */
+  rampFloor(s, { crevice: MX(stoneHex, PAL.inkCool, 0.24), lift: 0.12 });
 }
 
 /* ------------------------------------------------------------------------- */

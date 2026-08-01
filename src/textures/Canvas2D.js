@@ -787,15 +787,42 @@ export function lumaHex(hex) {
  * not lifted in value, so the darkest stone is warm brown rather than grey.
  */
 export function rampFloor(s, o = {}) {
-  const { crevice = PAL.sandCrev, floor = null, soft = 1.0, ceil = 0, mask = null } = o;
+  const { crevice = PAL.sandCrev, floor = null, soft = 1.0, ceil = 0, mask = null, lift = 0 } = o;
   const lo = floor == null ? lumaHex(crevice) : floor;
   const cr = ((crevice >> 16) & 255) / 255, cg = ((crevice >> 8) & 255) / 255, cb = (crevice & 255) / 255;
   const hi = ceil ? lumaHex(ceil) : 0;
   for (let i = 0; i < s.n; i++) {
     const y = s.r[i] * 0.2126 + s.g[i] * 0.7152 + s.b[i] * 0.0722;
     if (y < lo) {
+      /* `lift` — an opt-in hue-preserving compression, applied *before* the lerp below.
+       *
+       * The lerp alone cannot deliver what this function is named for, and the arithmetic says
+       * so: its pull is `t = (lo − y)/lo`, so a texel already at the floor is not moved at all
+       * and a texel at zero is only moved onto the crevice colour. Everything in between lands
+       * *short*. Worked through on `palm_bark`, whose floor is `BARK_CREV` at luma 0.2451: a
+       * texel at 0.12 gets t = 0.51 and comes out at 0.185 — still under §2.2's `crevice`
+       * luminance of 0.2031, which is the line the whole invariant is measured against. That is
+       * why `palm_bark` reported `darkTail 0.0367` *with* a floor already on it.
+       *
+       * `lift` maps [0, lo] onto [lo·(1−lift), lo] as a straight multiply, so a texel keeps its
+       * own hue and only its value moves. Nothing can then land below `lo·(1−lift)`, which is a
+       * guarantee the lerp cannot make. Pure black stays black under a multiply, which is what
+       * the crevice lerp below is still for.
+       *
+       * The contrast this gives up is contrast that was never rendering: below `crevice` the
+       * shader's flat additive `uShadowColor` wash out-weighs a texel's own albedo, so those
+       * texels were not reading as "darker bark", they were reading as violet. Off by default —
+       * every stone recipe already reports 0.0000 without it and must not be perturbed. */
+      if (lift > 0) {
+        const t0 = lo * (1 - lift + lift * (y / lo));
+        if (y > 1e-5 && t0 > y) {
+          const k = t0 / y;
+          s.r[i] *= k; s.g[i] *= k; s.b[i] *= k;
+        }
+      }
+      const y2 = lift > 0 ? s.r[i] * 0.2126 + s.g[i] * 0.7152 + s.b[i] * 0.0722 : y;
       // t = 1 at black, 0 at the floor. `soft` lets a recipe keep a little more of its own tail.
-      const t = sat((lo - y) / lo) * soft * (mask ? mask[i] : 1);
+      const t = sat((lo - y2) / lo) * soft * (mask ? mask[i] : 1);
       s.r[i] += (cr - s.r[i]) * t;
       s.g[i] += (cg - s.g[i]) * t;
       s.b[i] += (cb - s.b[i]) * t;
@@ -1016,6 +1043,27 @@ export function flowStreaks(s, angle, o = {}) {
  * Capped at size/7 for the same reason as `speckle`: grain at 2–4 texels per period is below
  * what the mip chain can represent, so it survives minification as sparkle instead of fading
  * out the way real grain does. Detail should be visible at 2 m and gone by 30 m.
+ *
+ * **The cap means `freq` is pinned to *texel* scale, not to world scale, and a declared value
+ * above it does nothing at all.** Grain's real period is always `7 texels`, i.e.
+ * `7 x mmPerTexel` of world — a function of the recipe's `tile` and `tier`, never of the number
+ * written here. At the shipping quality (`high`: texSize 1024, so tier-1 maps build at 512) the
+ * cap is `round(512/7) = 73`; tier-0 maps build at 1024 and cap at 146. `speckle` is the same
+ * shape at size/8.
+ *
+ * This has already cost two changes that were believed to be scale fixes and were arithmetic
+ * no-ops. `palm_bark` moved its grain 300 -> 90 and `cartouche_gold` 320 -> 150, both with
+ * comments deriving a new feature size in millimetres. Both recipes are tier 1, so both values
+ * sit above the cap and both build byte-identical grain before and after: `cartouche_gold` at
+ * *every* quality (320 and 150 both clamp to 146 even at `ultra`), `palm_bark` at everything
+ * below `ultra`, where 90 finally drops under the 146 cap. The reasoning in those comments was
+ * right about the target and wrong about the lever.
+ *
+ * So: if you need to move a grain or speckle feature in *world* units, the lever is the recipe's
+ * `tile` (or its `tier`), because those set `mmPerTexel`. Changing `freq` only does anything
+ * while it is **below** the cap, and below the cap it is coarser grain, which is the direction
+ * that has historically been rejected as blotching. Check `mmPerTexel` in `Textures.report()`
+ * before reaching for either.
  */
 export function grain(s, o = {}) {
   const { amount = 0.02, freq = 220, seed = 43, heightAmt = 0.012 } = o;

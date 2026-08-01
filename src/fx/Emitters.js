@@ -592,7 +592,12 @@ export const AMBIENT = {
      and for the same reason — this is the batch that has to read against the *sky*, which
      is the brightest thing in any exterior frame. */
   sand_haze: {
-    batch: 'sandHigh', capacity: 420, tile: [TILE.GRAIN, TILE.MOTE, TILE.DUST3],
+    /* 420 was 1 sprite per 500 m³ of a 210 600 m³ box. See `air_motes` below for the density
+       arithmetic and the measurement it came from; this field is 16x thinner than
+       `sand_drift`, which is the only ambient field that has ever shown up in a frame.
+       Alpha-blended rather than additive, so raising it cannot lift the exposure — it is a
+       veil, and a veil at one sprite per 500 m³ is not a veil. */
+    batch: 'sandHigh', capacity: 900, tile: [TILE.GRAIN, TILE.MOTE, TILE.DUST3],
     box: [90, 26, 90], yOffset: 11, life: [4.0, 9.0],
     size: [0.20, 0.85], sizeExp: 0.8, spin: [-0.2, 0.2], fadeIn: 0.25, fadeOut: 1.2,
     alpha: [0.14, 0.32], col0: PAL.sandMid, col1: PAL.bounce, litMix: 0.52,
@@ -609,9 +614,35 @@ export const AMBIENT = {
    * light, and big enough to survive a 960 px frame (0.16 m at 30 m is ~4 px, where the
    * 0.05 m shaft motes were sub-pixel). They are what backlit dust actually looks like at
    * golden hour — specks brighter than the air, not a veil the colour of the ground.
+   *
+   * **The retint was right and it still did not read, because the count was never the size
+   * of the problem.** Measured on the current review set (`shots/r3`, 1280x720): at 1:1 there
+   * is no visible particulate in `hero`, `courtyard`, `dunes` or `sly-closeup`. At 3x, the
+   * `courtyard` floor does show them — a handful of faint soft halos, four or five in a
+   * 340x160 region. So the batch draws, the sprites are the right thing, and there are
+   * simply far too few of them to register at the size the frame is actually viewed.
+   * (`temple` and `interior` read as dusty because they also get the shaft/torch mote batch,
+   * which is placed in the light volumes rather than in a box — nine hundred of them.)
+   *
+   * The arithmetic nobody had done: 300 sprites in a 46 x 17 x 46 m box is one per 120 m³,
+   * against `sand_drift`'s one per 31 m³. The part of that box inside the frustum and inside
+   * the 26–44 m fade is roughly 5 000 m³, i.e. about 40 sprites spread over a 1280x720
+   * frame, most of them behind something. Forty 4 px specks is not "airborne particulate",
+   * it is noise you have to be told to look for.
+   *
+   * 1000 puts it at one per 36 m³, matching `sand_drift`'s density. The wash risk that number
+   * has to answer for — these are additive — is bounded and small: ~145 visible specks at
+   * ~20 px² each is 0.16 % of the frame area at roughly half alpha, so the mean exposure
+   * moves by ~0.0004 while the *reading* of the air changes completely. Many small bright
+   * specks are not the same additive risk as one large soft volume.
+   *
+   * Still open, deliberately not stacked on top of this: at 3x these read as soft round
+   * halos rather than as crisp chips of dust, which is the failure `MOTES` fixed for the
+   * shaft batch by dropping `TILE.STAR`. If density alone does not carry it, that is the
+   * next lever, not more count.
    */
   air_motes: {
-    batch: 'airMotes', capacity: 300, tile: [TILE.MOTE, TILE.MOTE, TILE.GRAIN],
+    batch: 'airMotes', capacity: 1000, tile: [TILE.MOTE, TILE.MOTE, TILE.GRAIN],
     box: [46, 17, 46], yOffset: 3.0, life: [5.0, 11.0],
     size: [0.11, 0.23], sizeExp: 0.9, spin: [-0.2, 0.2], fadeIn: 0.22, fadeOut: 1.15,
     /* Near-white rather than key-sun: this is the population that has to read against

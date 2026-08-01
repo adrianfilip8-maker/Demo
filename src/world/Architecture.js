@@ -62,7 +62,11 @@ const RECIPES = {
      carry the gilding mask. */
   hieroglyph_gilded:   { color: 0xdcae5e, rough: 0.55, spec: 0.55, gloss: 64, detail: 'sandstone', metal: true },
   column_papyrus:      { color: 0xd8a468, rough: 0.88, spec: 0.15, gloss: 22, detail: 'sandstone' },
-  ceiling_stars:       { color: 0x1f4f96, rough: 0.80, spec: 0.20, gloss: 30, detail: 'plaster', emissive: 0x0a1a3a, emissiveIntensity: 0.18 },
+  /* `metal` for the gilded stars only — 3.3% of this texture's texels carry the gild mask, and
+     the shader multiplies `uMetal` by the ORM blue channel, so the painted plaster around them
+     stays plaster. Without the flag that mask had no consumer at all and the stars measured at
+     highlight chroma 0.09. */
+  ceiling_stars:       { color: 0x1f4f96, rough: 0.80, spec: 0.20, gloss: 30, detail: 'plaster', emissive: 0x0a1a3a, emissiveIntensity: 0.18, metal: true },
   gold_leaf:           { color: 0xe8b942, rough: 0.22, spec: 0.95, gloss: 110, detail: null, metal: true },
   mudbrick:            { color: 0x9a6a44, rough: 0.99, spec: 0.05, gloss: 10, detail: 'mudbrick' },
   plaster_painted:     { color: 0xe4d3ab, rough: 0.78, spec: 0.18, gloss: 26, detail: 'plaster' },

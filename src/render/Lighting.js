@@ -139,7 +139,18 @@ const TUNE = {
   coneRadius: 0.46,          // end radius as a fraction of length
   coneApex: 0.10,
   coneDayFade: 0.30,         // how much of a cone survives full daylight above ground
-  coneFade: [30, 56],        // metres from camera: full → gone
+  /* Metres from camera: full → gone.
+     **Checked, and deliberately left alone — recording the negative result so it is not
+     re-investigated.** Projecting all 24 registered fires through the ten canonical cameras
+     gives, for the nearest brazier in each: `guard` 7 m, `combat` 25 m, `hero` 31 m,
+     `night` 34 m, `courtyard` 38 m. Evaluated against this smoothstep those arrive at
+     1.00, 1.00, 1.00, 0.94 and 0.77 of full strength — i.e. the fade is **not** what is
+     keeping brazier volumetrics out of `night`, which is the shot §7.2 wants them in. I
+     widened this to [52, 92] on the assumption that it was, having read the smoothstep the
+     wrong way round in my head, and reverted it when the arithmetic disagreed. Whatever is
+     costing `night` its warm brazier accents is somewhere else; the only frame of it in the
+     tree predates the night-anchor retune, so start by capturing a fresh one. */
+  coneFade: [30, 56],
 };
 
 /* ── The cascade shader patch ────────────────────────────────────────────────────
@@ -257,17 +268,22 @@ function flickerNoise(t, seed) {
 /**
  * Signature of ARCHITECTURE's published opening set — **positions, not just counts.**
  *
- * This used to be `roofSlots.length * 131 + clerestory.length`, and that was a real bug with a
- * silent failure mode. The fallback constants in `_buildShafts()` are four roof slots and eight
- * clerestory windows; the hall ARCHITECTURE actually builds is *also* four and eight. So the
- * fallback set and the real set hashed identically, the poll in `update()` never fired, and the
- * blades stayed on the placeholder z = −24/−32/−40/−48 forever — while the real slots land on
- * the nave roof's band grid at z ≈ −25.19/−32.45/−39.71/−46.97, up to 1.2 m away. A 2.6 m slot
- * displaced 1.2 m is a beam whose top emerges from solid stone.
+ * This used to be `roofSlots.length * 131 + clerestory.length`. **Be precise about what that
+ * did and did not break, because the obvious reading of it is wrong and I believed the wrong
+ * one first.** The fallback constants in `_buildShafts()` are four roof slots and eight
+ * clerestory windows and the hall ARCHITECTURE builds is *also* four and eight, so fallback
+ * and real hashed identically — 532 both ways. But `_buildShafts()` latches the signature of
+ * the api it actually *used*, and at init that api is still empty, which hashed to 0. So the
+ * empty → real transition was visible to the poll, it did fire, and the shipped frames have
+ * had the real slot positions all along. Checked by computing both signatures against both
+ * sets rather than by reasoning about them.
  *
- * It is also latent beyond that case: move an opening without changing how many there are and
- * the shafts silently keep the old geometry. Folding the centres in costs nothing on a poll
- * that runs once every 8 frames.
+ * What was genuinely broken is the case with no symptom: move an opening without changing how
+ * many there are — retune the nave roof's band pitch, shift a clerestory — and the poll cannot
+ * see it, so the blades keep the old geometry and nothing warns. The real slots already sit on
+ * the band grid at z ≈ −25.19/−32.45/−39.71/−46.97 rather than on §8.1's nominal −24/−32/−40/
+ * −48, which is exactly the kind of drift that would go unnoticed. Folding the centres and
+ * sizes in costs nothing on a poll that runs once every 8 frames.
  */
 function archSignature(api) {
   let h = 0x9e3779b1;
@@ -910,8 +926,12 @@ export class Lighting {
    * clerestory windows, four roof slots and an open south end and genuinely *is* lit by the
    * sky. One binary term forced one `encloseStrength` to serve both, so any value dark enough
    * for the tomb turned the hall into a cave. The fan reports the fraction of sky the camera
-   * cannot see, which comes out near 1 in the vault and part-way in the hall by construction,
-   * and one knob then means the same thing in both.
+   * cannot see, so one knob can mean the same thing in both.
+   *
+   * **Not yet measured in place.** The intent is that the vault reads near 1 and the hall
+   * part-way, and the ray geometry says it should (`temple`'s +z ray leaves the hall past
+   * z −16 into open sky), but no capture has confirmed the numbers this returns per shot.
+   * Read `_encloseTarget` from the harness before trusting the separation.
    *
    * The offsets are a fixed set, not sampled, so the term is deterministic frame for frame —
    * the screenshot critic depends on that (§1).

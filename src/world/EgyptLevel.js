@@ -423,19 +423,41 @@ function courtyard(A) {
          of lean. The architrave above them stays put, which is what makes the drift read as
          settlement rather than as noise. */
       const bat = 0.05 + R.jitter(0.018);
-      const ph = 7.7 + R.jitter(0.22);
       const tilt = D(R.jitter(0.9));
+      /* ONE pier per side has lost its top. Height/batter/lean jitter is ±22 cm and about a
+         degree — real, but centimetre-scale, and at the 13–40 m these are seen from it is
+         1–2 px. A pier that stops at 3.4 m instead of 7.7 m is a four-metre hole in the
+         colonnade's rhythm, which is the same order of move as the collapsed pylon corner.
+         Chosen off the pier's own index so the two sides break at different bays and the
+         colonnade never reads as mirrored. The architrave above keeps its full span and its
+         y = 9.0 `ledge` contract — a ruin drops the upright and leaves the lintel bridging,
+         which is also the more interesting silhouette. */
+      const broken = pierZ.indexOf(pz) === (sx < 0 ? 5 : 2);
+      const ph = broken ? 3.4 + R.jitter(0.3) : 7.7 + R.jitter(0.22);
       A.add('court', 'sandstone_block', K.place(K.masonryShell({
         w: 2.15, d: 1.95, h: ph, batter: bat, course: 0.64, thick: 0.85, rng: R,
-        blockLen: [1.1, 1.9], recess: 0.06, chipChance: 0.2, gapChance: 0.03, buried: 0.3, hollow: false,
+        blockLen: [1.1, 1.9], recess: 0.06, chipChance: broken ? 0.55 : 0.2,
+        gapChance: broken ? 0.14 : 0.03, buried: 0.3, hollow: false,
       }), { x: sx * pe.x, y: 0, z: pz, ry: D(R.jitter(0.45)), rz: tilt }));
+      if (broken) {
+        /* The drums that came off it, lying at the foot. Same bucket, so zero extra draws. */
+        for (let i = 0; i < 4; i++) {
+          const s = R.range(0.85, 1.45);
+          const g = K.chamferBox(s * 1.7, s * 0.66, s * 1.5, { rng: R, jitter: 0.035, chip: R.chance(0.6) ? 0.18 : 0, c: 0.05 });
+          K.place(g, {
+            x: sx * pe.x + R.range(-2.6, 2.6), y: s * 0.33 - R.range(0.04, 0.22), z: pz + R.range(-2.4, 2.4),
+            rx: D(R.jitter(16)), ry: D(R.range(0, 360)), rz: D(R.jitter(18)),
+          });
+          A.add('court', 'sandstone_block', K.boxProjectUVs(g));
+        }
+      }
       /* Torus rolls down the arrises. Four lit vertical lines turn a masonry box into a
          modelled mass for ~250 triangles, which is the best terminator-per-triangle in the
          level — the ramp has an actual gradient to quantise on a cylinder. */
       A.add('court', 'sandstone_worn', K.place(
         K.cornerRolls({ w: 2.15, d: 1.95, h: ph - 0.2, r: 0.19, batter: bat, rng: R }),
         { x: sx * pe.x, y: 0.1, z: pz, rz: tilt }));
-      wallProxy(A, sx * pe.x - 1.05, sx * pe.x + 1.05, 0, 7.7, pz - 0.95, pz + 0.95);
+      wallProxy(A, sx * pe.x - 1.05, sx * pe.x + 1.05, 0, ph, pz - 0.95, pz + 0.95);
     }
     /* Architrave: top face exactly y = 9.0, 1.6 m deep — obviously grabbable.
 

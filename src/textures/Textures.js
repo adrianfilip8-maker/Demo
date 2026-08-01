@@ -40,6 +40,28 @@ const ALIASES = {
  * two tiles. Terrain hands its meshes world-metre UVs and sets `repeat` itself, so those two
  * recipes get the tile they declare. See `_build()` for why this is documented rather than
  * compensated for.
+ *
+ * **This map is keyed by recipe and the factor is a property of the *consumer*, so two call
+ * sites can disagree and this table cannot express it.** A sweep of every UV-scale expression in
+ * `src/world/**` found two live exceptions to the default 2, and both are geometry dressed with
+ * recipes that are *also* used at the default elsewhere, so neither can be added here:
+ *
+ *   `Kit.js:1259`   `steppedPyramid` → `boxProjectUVs(g, UV_PER_M * 0.25)`, i.e. one UV per 8 m.
+ *                   `EgyptLevel.js:1262` dresses both pyramids with `limestone_polished`
+ *                   (tile 3.8), so their real repeat is **30.4 m**, not the 7.6 m `report()`
+ *                   prints — and `derive()` encoded the normal slope for 7.6 m, so the relief on
+ *                   a pyramid is a quarter of its `bump`. Correct in the frame (§2.3 wants the
+ *                   background hazed and simple) and wrong in every number quoted about it.
+ *   `PropKit.js:701` banner cloth → `x * UV_PER_M * 2`, i.e. one UV per 1 m, so `linen_cloth`
+ *                   (tile 0.55) repeats every **0.55 m**, half what is printed.
+ *
+ * `Vegetation.js` is a third case and is already noted in `_build()`: trunk UVs are 0..1 around
+ * and 0..height/3 up, so `palm_bark` lands near [3.1, 5.4] m on a 9 m palm.
+ *
+ * The rule to carry: **`mmPerTexel` and `worldTile` from `report()` are only true for geometry
+ * built at `UV_PER_M`.** Before sizing anything in metres against a specific surface, check that
+ * surface's own UV expression. This is the same class of error as `sand_ripples` at 3.7x slope
+ * and `MOTES.size` at sub-pixel; it has now been found three times.
  */
 const CONSUMER_UV_SCALE = {
   sand_ripples: 1,   // Terrain: UV = metres, repeat 1/9.6

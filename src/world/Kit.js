@@ -1243,16 +1243,35 @@ export function steppedPyramid({ base = 105, h = 105, rng, casing = 0.22 } = {})
   const row = (t, halfW, c) => [h * t, halfW, c, ox(t), oz(t)];
 
   const tSkirt = 0.022;
-  const rows = [
-    [0, hb + skirt, cham(0) * 0.6, 0, 0],                // bedding: flares out into the sand
-    row(tSkirt, half(tSkirt) - ct, cham(tSkirt)),
-    row(tC * 0.42, half(tC * 0.42) - ct, cham(tC * 0.42)),
-    row(tC * 0.76, half(tC * 0.76) - ct, cham(tC * 0.76)),
-    row(tC, half(tC) - ct, cham(tC)),                    // top of the stripped core
-    row(tC + 0.006, half(tC), cham(tC)),                 // the casing ledge — the one break
-    row(tC + (1 - tC) * 0.55, half(tC + (1 - tC) * 0.55), cham(0.85)),
-    row(0.965, half(0.965), cham(0.95)),                 // capstone gone: a small flat platform
-  ];
+
+  /* ---- Row count is the stair-stepping ---------------------------------
+   *
+   * This profile is straight by construction — `half(t)` is linear in t, so every row of the
+   * stripped core lies on one line and the casing lies on another, with a single deliberate
+   * `ct` ledge between them. That is the correct *shape*, and it is why the 34-course version
+   * this replaced was the right thing to delete.
+   *
+   * It was still built from eight rows, and eight is not enough to draw it. pyr1's silhouette
+   * is ~320 px tall at the `dunes` camera, so eight rows put a break every ~40 px. Worse, the
+   * axis drift `ox`/`oz` below is sampled *per row* and interpolated straight between them:
+   * at ±2.7 m it swings ±14 px at that camera, so coarse rows turn a smooth wander into a
+   * chain of visible kinks, which is exactly what reads as a staircase on a silhouette that
+   * is supposed to be a clean diagonal.
+   *
+   * `bevelPrism` costs ~16 triangles per row-pair, so the whole pyramid is a few hundred
+   * triangles either way — subdividing to 20 row-pairs costs ~210 triangles against a 1.2 M
+   * budget. There is no reason to be mean with it.
+   */
+  const CORE = 11, CASE = 7;
+  const rows = [[0, hb + skirt, cham(0) * 0.6, 0, 0]];   // bedding: flares out into the sand
+  for (let i = 0; i <= CORE; i++) {
+    const t = tSkirt + (tC - tSkirt) * (i / CORE);
+    rows.push(row(t, half(t) - ct, cham(t)));            // the stripped core
+  }
+  for (let i = 0; i <= CASE; i++) {                      // casing ledge -> apex platform
+    const t = tC + 0.006 + (0.965 - tC - 0.006) * (i / CASE);
+    rows.push(row(t, half(t), cham(t)));
+  }
 
   const g = bevelPrism(rows, { capBottom: true });
   normaliseAttrs(g);

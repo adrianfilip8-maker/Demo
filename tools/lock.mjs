@@ -29,7 +29,10 @@ const DIR = process.env.SANDS_LOCK_DIR
 const LOCK = path.join(DIR, 'capture.lock');
 const QUEUE = path.join(DIR, 'queue');
 
-const STALE_MS = 20 * 60 * 1000;   // a capture that's held the lock this long is dead or hung
+/* Deliberately no age-based staleness anywhere in this file. Both the holder check and the
+   ticket sweep originally had one, and both were the same bug: on this container a legitimate
+   run outlives any cutoff worth setting, so the timeout evicted live processes and produced
+   exactly the concurrent-render thrash the lock exists to prevent. Liveness is the only rule. */
 
 function alive(pid) {
   try { process.kill(pid, 0); return true; } catch { return false; }
@@ -114,7 +117,15 @@ function tryTake() {
   } catch {
     const held = readLock();
     if (!held) return false;
-    const stale = !alive(held.pid) || Date.now() - held.at > STALE_MS;
+    /* Liveness only, for the holder as well as for tickets. An age cutoff was tried here and
+       was the same bug in the same file twice: a legitimate 10-shot run at ~5 min/shot always
+       exceeds any cutoff worth setting, so a live capture was evicted at 20 minutes while it
+       was still rendering, another process took the lock underneath it, and both then thrashed
+       — one run was observed losing the lock at 33.7 minutes mid-render. "Old" carries no
+       information about "dead" on this container; `alive()` answers the question directly.
+       A genuinely hung holder is now cleared by its process exiting, which the release handlers
+       on exit/SIGINT/SIGTERM cover. */
+    const stale = !alive(held.pid);
     if (stale) {
       try { unlinkSync(LOCK); } catch {}
       return tryTake();
