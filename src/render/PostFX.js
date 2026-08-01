@@ -85,8 +85,9 @@ const TUNE = {
      variant differencing on the rim1 frames (scratchpad/plinth2.mjs, task #8a):
 
        courtyard 236 = 145 px of cloud drift at the top frame edge (the norim control was
-       captured ~20 s later, the sky moved, and the control's cool test sits at L150 exactly
-       where the zenith sky lands — a metric artefact, not an image defect) + 73 px on the
+       captured ~45 s after base, the sky moved, and the control's cool test sits at L150
+       exactly where the zenith sky lands — a metric artefact, not an image defect: the
+       drifted pixels' signature is +44R/-6B, a cream cloud edge, not a rim) + 73 px on the
        plinth lip + 18 scattered. On the lip, `surfonly` is bit-identical to `base` and
        `screenonly` is identical to `norim` (box mean add 0.1/0.3/0.3 — nothing): the pale
        band is entirely the SURFACE fresnel rim, which is scene-linear and goes through AgX.
@@ -190,12 +191,15 @@ const TUNE = {
      streak — the pale band is the SURFACE rim, which is already added before the encode, in
      scene-linear, and that placement is precisely what produces the band (see the rimPlanar
      comment above). Moving THIS rim pre-encode was evaluated by arithmetic on the captured
-     pairs (scratchpad/plinth.mjs `premap`): it recreates the surface rim's failure shape and
-     moves the edge-rim population by ~+50%, which re-opens every validated rim measurement,
-     for zero artefact benefit. Display-space caps (`mixcap`/`headcap`) were evaluated too:
-     both change nothing on the residuals, because this rim's contribution there is already
-     zero. The bounded `rim*amt*(1-c)` wrap below is the correct form for a display-space
-     add and is kept. */
+     pairs with the screen term isolated against `surfonly` (scratchpad/plinth3.mjs, proof:
+     re-applying the current formula reproduces the captured base at mean |err| 0.2-0.5):
+     `premap` recreates the surface rim's failure shape and inflates the edge-rim population
+     +25.6% / +58.5% / +28.6% on courtyard / night / temple — night worst, the shot that can
+     least afford a rim recalibration — while the artefact counts stay flat or worsen (night
+     visFlat 183 -> 206). Display-space caps (`mixcap`/`headcap`) trade 8-10% of the edge
+     population for no artefact change, because this rim's contribution to the residuals is
+     already zero. The bounded `rim*amt*(1-c)` wrap below is the correct form for a
+     display-space add and is kept. */
   saturation: 1.30,
   lift: [0.006, 0.004, 0.010],     // open the toe just enough to keep shadow detail (§7.3)
   // Warm the highlights — but the blue leg was pulled to 0.95, which is a 5% cut on every
