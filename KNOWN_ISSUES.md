@@ -1033,3 +1033,57 @@ The general point is worth more than the numbers: **a defect can be measured cor
 by a mechanism that is genuinely present, and still be attributed to the wrong cause** — because
 the true cause was upstream in a different file and was producing the same signature. The
 mechanism was real; it just was not what was making the texels dark.
+
+## 14. Background capture processes are reaped at exactly one hour — unless detached
+
+Five capture-pipeline processes died silently in one afternoon, and the first two explanations
+were both wrong before the third one was right. The record matters because each wrong
+explanation was plausible, actionable, and would have hardened the pipeline against the wrong
+threat.
+
+**The symptom.** Queued capture runs and completion watchers died without a line of output:
+CHARACTER's first cap2 run, TEXTURES' first and second tx7 runs, SHADING's rim2-done waiter,
+FX's fx5 monitor. Each owner was left parked on a wake that could never arrive; the FIFO
+lock swept the dead pids' tickets correctly, so from the queue's point of view the runs
+simply ceased to exist.
+
+**Wrong explanation #1 — lock handovers.** The first two deaths timestamped within a minute
+of the moments the capture lock changed hands, which suggested the next holder's Chromium
+boot was killing bystanders (memory spike, OOM). Coincidence: holds were running close to an
+hour, so death-at-3600s and death-at-handover looked identical until a death arrived with no
+handover near it.
+
+**Wrong explanation #2 — self-inflicted timeouts.** Two deaths at 3589s and 3591s of process
+life look exactly like someone passing `timeout: 3600000`. Nobody had: every launch in every
+transcript shows no timeout parameter.
+
+**The actual mechanism, proven by ancestry.** What separates the dead from the survivors is
+the process tree, not the workload:
+
+| process | launch shape | lifetime | fate |
+|---|---|---|---|
+| tx7 first run | attached (bg task child) | 3589 s | reaped |
+| tx7 second run | attached (`wait $PID` wrapper) | 3591 s | reaped |
+| cap2 first relaunch | attached (`wait $PID` wrapper) | would die ~19:35 | killed pre-emptively, relaunched |
+| geo2 | `nohup … &` from a foreground call, ppid 1 | 95 min | completed |
+| rimsweep2 | same, ppid 1 | 94 min | completed |
+| fx6 | ppid 1 | >55 min and counting | alive |
+
+A background task's process tree is reaped at ~3600 s of task life. A process that has been
+orphaned to init before the hour — `nohup cmd > log 2>&1 &` inside a **non**-background call
+that returns immediately — is outside the tree and untouchable. Keeping a wrapper alive with
+`wait $PID` feels tidier (it captures the exit code) and is precisely what keeps the child
+attached and mortal.
+
+**The recipe, stated once:**
+- Long captures: launch detached — `nohup node tools/shot.mjs … > "$SCRATCH/run.log" 2>&1 &`,
+  write `$!` to a pid file, let the call return. Exit codes go to the log
+  (`echo` an epilogue from the script itself, not from a waiting parent).
+- Wakes: watchers must each live under the hour. A 50-minute poll loop that exits on its
+  condition *or* on heartbeat — re-armed on every wake — never meets the reaper; a single
+  until-loop armed for "however long the queue takes" always does.
+
+**The general point:** a fleet of independent failures with one hidden cause will hand you a
+different plausible story per failure — this one died at a handover, that one at an hour, the
+other while its owner slept. The tell was two lifetimes agreeing to within two seconds. When
+failures start rhyming numerically, stop explaining them individually.
