@@ -76,9 +76,33 @@ const TUNE = {
      shaft motes top out at 24 px (0.26 m at 15 m) and are 10-18 px across the 20-35 m the
      blades actually cross; 0.028 is 20 px at 720p, so it trims only the nearest few and
      leaves "a +60 luma god-ray with dust motes inside it" alone, while taking the `guard`
-     and `interior` discs from 50-160 px down to 20. Tighter values are worth having — a
-     20 px mote is still large for dust — but "tighter" has to be bought with a frame that
-     shows the shaft motes surviving it, not with an argument. */
+     and `interior` discs from 50-160 px down to 20.
+
+     **20 px is very likely still too loose and the number to beat is 8.** Commit `dc8597c`
+     ran this exact check on the ember sprites and concluded "0.095 m embers subtend 11 px at
+     the guard camera's 7.4 m through a 38 degree lens, which reads as bokeh rather than as
+     embers", settling on 0.072 m — about 8 px there. That is the project's own established
+     threshold for "speck, not bokeh", measured on the same camera these discs are on, and it
+     puts 0.014 (10 px) and 0.008 (6 px) firmly in play. The reason this ships at 0.028 rather
+     than at 0.008 today is that the counter-risk is `temple`'s shaft motes, which are the
+     population a critic pass explicitly credited, and the two cannot both be settled by
+     arithmetic — a mote inside a bright beam is a low-contrast speck and a mote over dark
+     stone is a high-contrast disc, and only a frame can say where each stops reading. Both
+     are bracketed at 0.028 / 0.014 / 0.008 / off in one page session; set this from those
+     frames, not from this paragraph.
+
+     What 0.028 actually touches — the distance inside which it binds, per batch and camera:
+
+       temple   fov 55  MOTES 0.26 m   17.8 m    blades cross at 20-35 m: untouched
+       temple   fov 55  MOTES 0.10 m    6.9 m
+       courtyard fov 50 air   0.23 m   17.6 m
+       interior fov 52  TORCH 0.16 m   11.7 m    fires at 2-10 m: clamped
+       guard    fov 38  TORCH 0.16 m   16.6 m    fires at 2-10 m: clamped
+       guard    fov 38  air   0.23 m   23.9 m    frame is 99.9% nearer than 20 m: all clamped
+
+     `guard` is the closest camera in the set — 98% architecture, **99.9% of it nearer than
+     20 m, median depth 8 m** — which is exactly why the world-space sizes that are right at
+     30 m turn into saucers there. */
   moteMaxH: 0.028,          // max sprite diameter as a fraction of frame height
 
   /* light shafts (rendered from lighting.shafts) --------------------------------------
@@ -150,12 +174,36 @@ const TUNE = {
      weight at that shot's own `mieG`, normalised at 90 deg where this term is unity, and
      what the flattened+clamped term below actually applies:
 
-       into the sun                             backlit
-       hero        56 deg g 0.760  3.17x 1.80x  temple      79 deg g 0.749  1.36x 1.27x
-       traversal   57 deg g 0.759  3.01x 1.80x  interior   111 deg g 0.660  0.65x 0.74x
-       dunes       60 deg g 0.766  2.66x 1.80x  sly-close  111 deg g 0.760  0.64x 0.73x
-                                                courtyard  127 deg g 0.758  0.50x 0.63x
-       night is `dayAmount` 0, so it has no sun blades and this never applies to it.
+       shot          theta   mieG   rawHG  applied   note
+       night          23    0.620  13.94    1.80    dayAmount 0 — no sun blades at all
+       hero           56    0.760   3.17    1.80    at the ceiling
+       combat         57    0.755   3.07    1.80    at the ceiling
+       dunes          60    0.766   2.66    1.80    at the ceiling
+       traversal      69    0.759   1.89    1.61    inside the clamp, not on it
+       temple         79    0.749   1.36    1.26
+       guard         106    0.620   0.72    0.78    dayAmount 0 — no sun blades at all
+       interior      111    0.660   0.65    0.73
+       sly-closeup   111    0.760   0.64    0.71
+       courtyard     127    0.758   0.50    0.60    the most backlit camera in the set
+
+     Regenerate with: for each shot, evalAtmosphere(tod) -> keyDir, fwd = normalize(target −
+     pos), theta = acos(keyDir·fwd), applied = clamp(pow(HG(cos)/HG(0), shaftPhase), 0.45,
+     1.8). Ten lines of node against Shots.js and Atmosphere.js; no capture involved.
+
+     **Two corrections live in this table and both are recorded rather than silently fixed.**
+     (1) It was handed to me *inverted*: the version I received had `courtyard` at 53 deg as
+     "the one into-the-sun frame" deserving a blaze and `hero`/`dunes` past 120 deg — every
+     entry 180 deg minus the truth. §8.1 fixes the setting sun in the west (−X);
+     `evalAtmosphere(0.76)` returns `sunDir` (−0.899, 0.438, 0), i.e. pointing *at* the sun,
+     westward; and `courtyard`'s camera stands at x −19 looking toward x +1, with its back to
+     it. Independently, the `courtyard` blades are known to travel *away* from that camera
+     (see `Lighting.js` TUNE.courtShaftGain), which can only happen in a backlit frame.
+     (2) Then the corrected table I wrote here **mislabelled `combat`'s row as `traversal`**
+     and omitted `combat`, `guard` and `night` entirely — so it said `traversal` was clamped
+     at 1.80x when it actually lands at 1.61x, inside the clamp. The three shots on the
+     ceiling are `hero`, `combat` and `dunes`. A table written specifically to stop this
+     class of error contained one for its whole life; it is now the full ten rows with the
+     recipe to rebuild it, because a table that cannot be regenerated cannot be checked.
 
      **This table was handed to me inverted and I am recording the correction, because the
      conclusion drawn from it was the opposite of the right one.** The version I received had
@@ -174,10 +222,42 @@ const TUNE = {
      beam that vanishes entirely at 127 deg is correct physics and a worse frame than one
      that merely steps down. The clamp is the backstop, and the **ceiling is deliberately
      1.8 rather than the 2.6 the raw curve wants**: the three shots that hit it — `hero`,
-     `traversal`, `dunes` — are the money shot and two exteriors, none of which has been
-     captured with this term in place, and an additive volume is the classic way to wash a
-     graded frame. Raise it once a `hero` capture says there is headroom; do not raise it
-     because the physics says 3.17. */
+     `combat`, `dunes` — are the money shot and two of the three widest frames, none of which
+     has been captured with this term in place, and an additive volume is the classic way to
+     wash a graded frame. Raise it once a `hero` capture says there is headroom; do not raise
+     it because the physics says 3.17.
+
+     **And before that capture is read as a verdict on the phase term, check occlusion.**
+     Rasterising ARCHITECTURE through each camera and comparing per-cell depth against the
+     published blade distances: `hero` is 94% covered by architecture at a median depth of
+     **11 m** with 56% of it nearer than 20 m, and the four `courtw` blades that project
+     100% on-screen sit at 21-42 m *behind* the obelisk (`granite_pink`, 9.5 m) and the
+     gilded architrave (5-9 m) at every sample point. The blades in `hero` that can actually
+     reach the film are the clerestory band across the top-centre, which lands at 43-65 m in
+     front of a 135-211 m backdrop. `courtyard` is worse — its 52-95 m blades sit behind
+     22-49 m walls everywhere they project. `traversal` is the best-placed camera in the set
+     for this: median depth 27 m, only 14.4% of its architecture nearer than 20 m, and a
+     172-215 m backdrop across its top-left quadrant. Phase decides how bright a blade is;
+     depth decides whether the frame contains it at all, and only the second of those has
+     ever been checked for `courtyard`.
+
+     The same rasterisation across the whole set, because it reframes this entire block —
+     "architecture coverage / share of it nearer than 20 m / median depth":
+
+       interior 100% / 100% /  9 m      guard     98% / 99.9% /  8 m
+       combat    98% /  94% /  8 m      hero      94% /  56% / 11 m
+       night     85% /  69% / 16 m      courtyard 65% /  54% / 19 m
+       traversal 89% /  14% / 27 m      dunes     44% /   0% / 60 m
+
+     **Eight of the ten canonical cameras stand inside near-field compositions, and every
+     volumetric this module can draw lives 20-100 m away.** Sun blades come from roof slots,
+     clerestories and courtyard gaps; torch cones are 2-6 m long but sit at the fire, and in
+     `night` the one brazier that projects into frame is at 36 m behind geometry at 16-25 m,
+     which is why its 5.5 m cone reaches the film as a 28x70 px sliver rather than the
+     260x239 px column its own geometry implies. So the honest ranking of where volumetrics
+     can pay is `traversal` and `dunes` first, `courtyard` last, and everything between is
+     bounded by ARCHITECTURE's near field and CAMERA's placement, not by anything in this
+     file. No gain or phase value moves a blade out from behind an obelisk. */
   shaftPhase: 0.75,
   shaftPhaseClamp: [0.45, 1.8],
   /* **Metres of gap between the blade and whatever is behind it**, not metres from the

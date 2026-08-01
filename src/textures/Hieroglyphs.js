@@ -486,11 +486,40 @@ export const GLYPHS = {
 
 export const GLYPH_NAMES = Object.keys(GLYPHS);
 
-/** Pools that read as plausible text rather than a bag of signs. */
+/**
+ * Pools that read as plausible text rather than a bag of signs.
+ *
+ * **Every pool must contain flat signs, and `divine` and `royal` did not.** `quadrat` builds three
+ * of its five layouts by *stacking* signs — two deep at `maxH 0.5`, three deep at `0.36`, one
+ * floated at `0.40` — and asks `pick()` for a sign short enough each time. The shortest sign in
+ * `divine` was `wedjat` at h 0.78 and in `royal` (bar `neb`) `bee` at 0.62, so those three
+ * branches filtered to **nothing**, and `pick()`'s `if (!ok.length) return pool[0]` quietly
+ * returned the same sign for every one of them. Weighted by the branch probabilities that is
+ * **72.8 % of all signs drawn from either pool**, and measured on the built tiles it was exactly
+ * that: `falcon` 46 of 64 placements on `column_papyrus` (71.9 %) and 52 of 109 on
+ * `hieroglyph_wall`, `neb` 17 of 38 on `relief_figures` — on the recipe that dresses **54.5 % of
+ * `temple`**, seven signs in ten were the same near-black falcon.
+ *
+ * That is §7.3's "visible texture tiling repetition" in its most literal form, and no tiling
+ * metric in this project could ever have caught it, because the repetition is *inside* the tile
+ * rather than at the repeat: every global statistic over the tile sees a dense varied inscription,
+ * and only a per-instance census of what was actually drawn shows one sign in three-quarters of
+ * the slots. It also explains why a handful of rare coloured signs read as landmarks — the field
+ * they sit in had almost no variety to hide them in.
+ *
+ * The flat signs added here are the ones the writing system actually leans on: `nb` (neb), `n`
+ * (water), `r` (mouth), `t` (bread), the scroll determinative, and `ꜥ` (arm). They are also
+ * chosen for *tone*: `falcon` paints near-black (#241a16), so replacing three-quarters of the
+ * field wholesale with lapis signs would have swung §3's warm/cool balance on the biggest surface
+ * in the interior shot. Four of the five additions to each pool are ochre / red / white and one
+ * is cool, which is both what a real wall looks like and what keeps `b-r` still.
+ */
 export const POOLS = {
-  royal: ['sedge', 'bee', 'sun', 'ankh', 'was', 'djed', 'netjer', 'nefer', 'neb', 'falcon', 'cobra', 'star'],
+  royal: ['sedge', 'bee', 'sun', 'ankh', 'was', 'djed', 'netjer', 'nefer', 'neb', 'falcon', 'cobra', 'star',
+    'bread', 'mouth', 'scroll', 'arm', 'water'],
   offering: ['bread', 'water', 'mouth', 'basket', 'hand', 'arm', 'cone', 'pool', 'ka', 'scroll', 'strokes', 'neb'],
-  divine: ['falcon', 'jackal', 'scarab', 'wedjat', 'feather', 'lotus', 'papyrus', 'ankh', 'was', 'djed', 'netjer', 'sun'],
+  divine: ['falcon', 'jackal', 'scarab', 'wedjat', 'feather', 'lotus', 'papyrus', 'ankh', 'was', 'djed', 'netjer', 'sun',
+    'neb', 'bread', 'mouth', 'scroll', 'water'],
   common: GLYPH_NAMES,
 };
 
@@ -518,6 +547,15 @@ export function drawGlyph(ctx, name, x, y, bw, bh, mode) {
   if (mode === 'line' && !g.d) return;
   const k = Math.min(bw / g.w, bh / g.h);
   const ox = x + (bw - g.w * k) * 0.5, oy = y + (bh - g.h * k) * 0.5;
+  if (globalThis.__GLYPHLOG) {
+    const t = ctx.getTransform ? ctx.getTransform() : { a: 1, d: 1, e: 0, f: 0 };
+    globalThis.__GLYPHLOG.push({
+      name: typeof name === 'string' ? name : '?', mode,
+      x: t.a * ox + t.e, y: t.d * oy + t.f,
+      w: g.w * k * t.a, h: g.h * k * t.d,
+      paint: g.paint ?? null,
+    });
+  }
   ctx.save();
   ctx.translate(ox, oy);
   ctx.scale(k, k);

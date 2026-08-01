@@ -67,7 +67,34 @@ const TUNE = {
      are thresholds on the second difference of inverse depth, which is exactly zero across
      any plane: 0.04 is roughly a ledge against a floor 3 m behind it at 20 m, 0.20 is a
      clean silhouette against something far enough back to read as background. The third
-     number is the strength of the gate; 0 restores the old ungated mask. */
+     number is the strength of the gate; 0 restores the old ungated mask.
+
+     **Measured on the six shots that had never been checked** (`shots/rim1`, one boot, gates
+     A/B'd live so every variant of a shot shares its geometry, camera and staging). The metric
+     that matters is not the loose "bright and cool" count — quote the one that also requires
+     the rim to have LIFTED the pixel, because `courtyard`'s sky is cream cloud on blue, sits at
+     B == R, and turns a sub-perceptual nudge into 8610 counted pixels at a mean lift of 13
+     while the overlay traces cloud filaments a rim term cannot reach. Visible bright-cool
+     pixels away from any ink line, gateoff -> base:
+
+       interior 1028 -> 0     combat 7816 -> 8     temple 53 -> 10
+       traversal 104 -> 28    night  511 -> 181    courtyard 239 -> 236
+
+     So five of six are clean and two are unfinished business. `night` keeps a visible cool
+     streak along the paving joints (bottom-left, cells x 128-448 y 512+) — smaller than the
+     ungated build but not gone. `courtyard` is untouched by the gate because its residual is
+     not a grazing plane at all: it is a blown near-white band on the plinth's top-front edge,
+     i.e. a real depth discontinuity, which both gates are supposed to keep. That one is a
+     brightness question (rimStrength / rimTail), not a gating one.
+
+     One thing this pass does NOT do, and it shows up at night: uRimLit is a constant. PostFX
+     has no time-of-day hook of any kind, so the screen-space rim is `#7fd4ff` in all ten shots,
+     while the surface rim's colour is clock-driven (`Atmosphere.evalAtmosphere` lerps rimCool
+     -> rimWarm `#ff9a5c` by nightAmount, LIGHTING passes it, ToonMaterial takes it as an
+     override). §2.2 asks for the warm variant at night. On `night`'s residual pixels the added
+     light measures B-R = +5.9 for this pass and +10.7 for the surface term, so neither is
+     currently landing warm — flagged with numbers rather than changed, because it moves the
+     look of a shot rather than fixing a defect. */
   rimPlanar: [0.04, 0.20, 1.0],
   // The shadow side keeps 45% of the lit side's strength — enough that a dark silhouette
   // always separates, little enough that the light still reads as coming from one direction.

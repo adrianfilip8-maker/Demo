@@ -224,8 +224,41 @@ const TUNE = {
      concave contacts §7.3 wants darkened. A fresnel on its own cannot tell a silhouette from
      a flat face seen edge-on, and measured on `hero` that mistake was laying up to 0.91 of a
      full-strength cool rim across the open courtyard paving. Set [0, 0, 0] to disable the
-     gate and get the old term back. */
+     gate and get the old term back.
+
+     **The gate's cost is not uniform across a frame, and the split is by geometry type.**
+     Measured on `temple`, the shot framed down the nave and dominated by curved column shafts
+     at grazing angles — the case this gate is supposed to be worst at. Lifted pixels within
+     3 px of an ink line, ungated -> gated:
+
+       column shafts (ROI x 333-512, y 72-518)   5632 -> 4046   72%, mean lift 31.1 -> 29.5,
+                                                                peak identical at 103
+       Sly (projected box, 161x154 px)           9509 ->  866    9%, mean lift 35.3 -> 24.3
+
+     Architecture keeps its rim; the character does not. That is the convexity half doing
+     exactly what the note above it predicts — faceted skinned quads read as concave — and it
+     is why `rimSkinExempt` below exists. Whole-frame silhouette coverage tells the same story
+     per shot (gated / ungated): `combat` 71/67, `traversal` 57/59, `courtyard` 60/78,
+     `interior` 40/63, `temple` 41/96. The two shots at the bottom are the two where the
+     subject stands against a background only slightly further away than itself, so the
+     screen-space rim's depth-ratio gate is shut as well and nothing is left to carry it. */
   rimCurve: [3.0, 10.0, 1.0],
+
+  /* Exempt skinned geometry from the convexity HALF of that gate (the magnitude half still
+     applies). The gate's own note in toon.glsl.js records that convexity rejects 69.7-79.7% of
+     Sly's fresnel rim band because low-poly skinned quads straddle facet boundaries — his
+     normalised fold reads -0.64 where a real concave crease reads -0.645 — while being the only
+     thing suppressing a concave wall/ground contact on architecture. Those two facts do not
+     conflict once the test can tell a character from a wall, which is what this does.
+     0 = shipping behaviour, unchanged. Measure before moving it. */
+  rimSkinExempt: 0.0,
+
+  /* Whether baked AO multiplies the DIRECT key term. It does not (0), which is why a texture
+     authoring a 0.412 median AO renders at 0.992 in a daylight frame: `ao` currently reaches
+     only the ambient fill, the shadow term and the wash, and the sun drowns all three. 1 is the
+     A/B. It is a global change to every sunlit crevice in the game, so the verification is the
+     whole frame's midtones, not one material's mask. */
+  aoKey: 0.0,
 
   /* --- spec --- */
   spec: 0.25,
@@ -396,6 +429,8 @@ export class Shading {
       uTermHi:       { value: TUNE.termHi },
       uRimGain:      { value: TUNE.rimGain },
       uRimCurve:     { value: new THREE.Vector3(...TUNE.rimCurve) },
+      uRimSkinExempt: { value: TUNE.rimSkinExempt },
+      uAoKey:        { value: TUNE.aoKey },
       /* Shared, not per-material: it is one global ratio and it has to be pokeable from
          `shading.uniforms` for the A/B. Merged into every material by identity in
          onBeforeCompile, alongside the per-material uDetailScale it multiplies. */
@@ -644,6 +679,7 @@ export class Shading {
     mat.onBeforeCompile = (shader) => {
       Object.assign(shader.uniforms, self.uniforms, own);
       shader.fragmentShader = self._patch(shader.fragmentShader);
+      shader.vertexShader = self._patchVert(shader.vertexShader);
     };
 
     return mat;
@@ -668,11 +704,33 @@ export class Shading {
     for (const c of cuts) s = s.split(c).join('');
 
     s = replaceOnce(s, 'void main() {', `${TOON_PARS}\nvoid main() {`, this, 'pars');
+    /* NOTE: `void main() {` appears once in meshphysical's fragment shader, and TOON_PARS is
+       spliced in front of it, so this must run before any other splice that could introduce a
+       second one. It does. */
     s = replaceOnce(s, '#include <normal_fragment_maps>',
       `#include <normal_fragment_maps>\n${TOON_DETAIL}`, this, 'detail');
     s = replaceOnce(s, 'vec3 outgoingLight = totalDiffuse + totalSpecular + totalEmissiveRadiance;',
       TOON_SHADE, this, 'shade');
     return s;
+  }
+
+  /**
+   * The only thing the vertex stage has to tell the fragment stage: whether this draw is
+   * skinned.
+   *
+   * `USE_SKINNING` is defined by three in `prefixVertex` and nowhere else, so a `#ifdef` on it
+   * in a fragment shader is always false — which is why the convexity gate in toon.glsl.js
+   * could not exempt characters from inside its own file. One varying carries the answer
+   * across, and it costs nothing: no attribute, no uniform, no branch in the vertex body.
+   *
+   * Patched here rather than in the material because the same material may be drawn on both a
+   * SkinnedMesh and a static Mesh; three compiles a separate program for each, so each gets the
+   * right constant automatically.
+   */
+  _patchVert(src) {
+    return replaceOnce(src, 'void main() {',
+      'varying float vSlySkin;\nvoid main() {\n\t#ifdef USE_SKINNING\n\t\tvSlySkin = 1.0;\n\t#else\n\t\tvSlySkin = 0.0;\n\t#endif\n',
+      this, 'vert-skin');
   }
 
   /* ======================================================================

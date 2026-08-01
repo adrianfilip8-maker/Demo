@@ -108,6 +108,9 @@ uniform float uRimPower;
 uniform float uRimGain;
 uniform vec3  uRimCurve;      // silhouette gate: xy = normal turn per screen height, lo..hi;
                               // z = how strictly to require convexity (0 = not at all)
+uniform float uRimSkinExempt; // 1 = skinned geometry skips the convexity half of the gate
+uniform float uAoKey;         // 0 = key light ignores AO (shipping); 1 = key is multiplied by it
+varying float vSlySkin;       // 1.0 on a SkinnedMesh, 0.0 otherwise — see the note at slyConvex
 uniform float uSpec;
 uniform vec3  uSpecColor;
 uniform float uGloss;
@@ -362,7 +365,14 @@ export const TOON_SHADE = /* glsl */ `
 		/* Coloured, transparent shadow. The multiplied term keeps albedo detail readable
 		   inside the shadow; the small additive wash keeps the *hue* alive, because a warm
 		   sandstone albedo multiplied by a violet light neutralises to grey otherwise. */
-		vec3 diff = alb * keyRad * key
+		/* uAoKey: whether baked occlusion multiplies the DIRECT key term as well as the
+		   ambient ones. It does not today, and that is measurable in a frame — hieroglyph_gilded
+		   authors AO p5/p50/p95 = 0.247/0.412/0.992 and renders with a frame median of 0.992, i.e.
+		   no occlusion at all, because on a sunlit surface alb * keyRad * key dominates and is
+		   the one term ao never reaches. Default 0 keeps the shipping look; 1 is the A/B.
+		   Whoever turns it on must measure the whole frame's midtones, not only the gilded mask:
+		   this darkens every crevice in every sunlit surface in the game. */
+		vec3 diff = alb * keyRad * key * mix( 1.0, ao, uAoKey )
 		          + albAmb * fill * ao
 		          + albShadow * uShadowColor * shadowMix * mix( 0.55, 1.0, ao )
 		          + uShadowColor * uShadowWash * shadowMix * ao;
@@ -550,7 +560,17 @@ export const TOON_SHADE = /* glsl */ `
 			   set where character materials are built, which also means escaping this file's
 			   single shared uniform block. */
 			float slyFold = dot( slyDNx, dFdx( slyViewPos ) ) + dot( slyDNy, dFdy( slyViewPos ) );
-			float slyConvex = mix( 1.0, step( 0.0, slyFold ), uRimCurve.z );
+			/* uRimSkinExempt is the exemption the note above says the fix has to be, spelled as a
+			   varying rather than a define: three sets USE_SKINNING in prefixVertex only, so the
+			   vertex stage is the only place that can answer "is this a skinned mesh", and it
+			   answers it into vSlySkin. This is strictly better than a per-material define would
+			   have been — the same material instance shared between a SkinnedMesh and a static
+			   one gets the right answer on each, because the program cache already splits them.
+
+			   Default 0, i.e. no behaviour change, so the A/B is a uniform poke and the shipping
+			   frame is whatever the measurement says it should be, not whatever this edit does. */
+			float slyConvex = mix( 1.0, step( 0.0, slyFold ),
+				uRimCurve.z * ( 1.0 - uRimSkinExempt * vSlySkin ) );
 		#endif
 		float rimSil = uRimCurve.y > uRimCurve.x
 			? smoothstep( uRimCurve.x, uRimCurve.y, slyTurn ) * slyConvex : 1.0;

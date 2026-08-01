@@ -861,6 +861,14 @@ export class Lighting {
         // actually near have any business adding radiance to the frame.
         const near = 1 - THREE.MathUtils.smoothstep(Math.sqrt(h?._dist ?? 0), TUNE.coneFade[0], TUNE.coneFade[1]);
         s.intensity = (h?.enabled === false ? 0 : norm) * day * near;
+        /* The same number with the flicker taken out. FX places nine hundred dust motes
+           *inside* these volumes and needs a set membership that does not change forty times
+           a second: `s.intensity` carries `_live`, so a cone breathing across a consumer's
+           cull threshold silently re-seeds the entire mote field. See `Particles.js`
+           `_moteShafts`. Everything else here — enabled, day/night, distance — is stable
+           within a frame and stays in, so this still means "is this cone contributing". */
+        const nominal = THREE.MathUtils.clamp((h?.intensity ?? 0) / 5.0, 0, 1.4);
+        s.baseIntensity = (h?.enabled === false ? 0 : nominal) * day * near;
         continue;
       }
 
@@ -874,6 +882,9 @@ export class Lighting {
       /* ...and a hole the sun can see through still has to be one the light can *cross*. */
       const seal = THREE.MathUtils.smoothstep(this._apertureThroat(s, _lightDir), 0, TUNE.shaftSeal);
       s.intensity = power * open * s.gain * seal;
+      // A slab has no flicker in it — sun, aperture and geometry only — so the flicker-free
+      // intensity is the intensity. Published anyway so consumers never have to branch.
+      s.baseIntensity = s.intensity;
 
       if (sunMoved || !s._len) {
         let len = 0;
