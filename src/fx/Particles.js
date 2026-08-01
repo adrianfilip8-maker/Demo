@@ -268,6 +268,27 @@ const TUNE = {
      file. No gain or phase value moves a blade out from behind an obelisk. */
   shaftPhase: 0.75,
   shaftPhaseClamp: [0.45, 1.8],
+  /* Stacking budget for the courtyard peristyle row (ledger #13, decided by the fx8
+     decomposition: slabs own ~100% of combat's left veil ROI and ~91% of its doorway ROI;
+     cones 0% / 6.6%). The eight courtw blades are parallel and their widened ribbons
+     (2·halfU·shaftWide = 6.3 m) overlap their 5.5 m spacing, so a camera looking ALONG the
+     row integrates several blades per sightline and gets a cream veil where a camera looking
+     ACROSS the row gets one beam with an edge. Phase cannot condition this — combat (1.8,
+     at the ceiling) and traversal (1.61) are 11% apart while the required cut is ~3x — and
+     raw row alignment inverts it (traversal's |fwd·Z| = 0.885 EXCEEDS combat's 0.641; its
+     rays exit the band downward instead of running inside it). What separates the framings
+     cleanly is the on-screen COUNT of the family: projecting spine midpoints through each
+     canonical camera gives combat 7.8, dunes 8.0 vs traversal 1.4, courtyard 1.7, temple 0
+     (scratchpad courtvis.mjs, reproducible offline). So the family shares a K-blade budget:
+     each court blade's gain scales by min(1, K / N_onscreen), where N is the sum of smooth
+     per-blade window weights (no popping as blades cross the frame edge). At K = 2 the
+     predicted combat ROIs land at ~7.5 / ~4.8 against fx7's <=9.5 / <=5.1 targets;
+     traversal's cap is exactly 1.0 (1.4 < K) so the one shaft §7.3 credits is untouched.
+     Cost accepted and recorded: dunes' faint courtw haze (+7 mean lift over 1.1% of frame,
+     fx5 — "sells nothing") drops to ~+1.8. Midpoint under-counting when only a blade's tail
+     is in frame fails toward cap = 1, i.e. toward keeping a beam, never toward killing one.
+     Verification: fx9 combat/traversal pairs against the fx8 full frames. */
+  courtStackBudget: 2.0,
   /* **Metres of gap between the blade and whatever is behind it**, not metres from the
      camera, which is what this used to be. The absolute form was doing two jobs and failing
      the second: excluding the sky (already handled — Sky.js's dome has `depthWrite: false`,
@@ -1295,6 +1316,10 @@ const _t2 = new THREE.Vector3();
 const _cam = new THREE.Vector3();
 const _fwd = new THREE.Vector3();
 const _col = new THREE.Color();
+const _viewM = new THREE.Matrix4();
+const _ndc = new THREE.Vector3();
+/** JS twin of GLSL smoothstep, for the CPU-side stacking-cap window. */
+const sstep = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 const _size = new THREE.Vector2();
 const UP = new THREE.Vector3(0, 1, 0);
 
@@ -2749,6 +2774,29 @@ export class Particles {
       if (u.uShaftSpan) u.uShaftSpan.value = span;
     }
 
+    /* --- court-row stacking budget (ledger #13 — see TUNE.courtStackBudget) ----------- */
+    /* Sum of smooth on-screen weights over the court family's spine midpoints. Computed
+       from the camera's own matrices rather than a cached forward so a staged still (dt-0
+       harness renders) sees the cap the gameplay camera would. One Matrix4 invert and at
+       most sixteen projections per frame; zero allocation (§5). */
+    let courtCap = 1;
+    {
+      const cam = this.engine.camera;
+      _viewM.copy(cam.matrixWorld).invert();
+      let nVis = 0;
+      for (let i = 0; i < list.length; i++) {
+        const s = list[i];
+        if (s.family !== 'court') continue;
+        _ndc.copy(s.origin).addScaledVector(s.dir, 0.5 * (s.length ?? 14)).applyMatrix4(_viewM);
+        if (_ndc.z >= -1e-3) continue;             // behind the lens
+        _ndc.applyMatrix4(cam.projectionMatrix);
+        nVis += (1 - sstep(0.85, 1.15, Math.abs(_ndc.x))) *
+                (1 - sstep(0.85, 1.15, Math.abs(_ndc.y)));
+      }
+      if (nVis > TUNE.courtStackBudget) courtCap = TUNE.courtStackBudget / nVis;
+      this._courtCap = courtCap;                   // read by the capture probes; not an input
+    }
+
     /* --- the blades themselves -------------------------------------------------------- */
     const sh = this.shafts;
     if (sh) {
@@ -2770,7 +2818,8 @@ export class Particles {
         // `s.color` is already in the linear working space (LIGHTING copies it off the
         // atmosphere's sun/torch colours), so it goes straight to the shader.
         _col.copy(s.color);
-        const gain = s.intensity * TUNE.shaftGain * (cone ? TUNE.shaftConeGain : 1);
+        const gain = s.intensity * TUNE.shaftGain * (cone ? TUNE.shaftConeGain : 1) *
+                     (s.family === 'court' ? courtCap : 1);
         if (gain < 0.006) continue;
         if (!sh.push(s, _col, gain,
           cone ? 0.14 : 1.0,

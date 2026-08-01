@@ -211,7 +211,15 @@ const TUNE = {
   /* Open-air blades used to be deliberately quiet. That was the wrong call: it is the
      *interior* that has contrast to spare, and these are the blades being asked to survive a
      sunlit backdrop. They now carry a flanking shadow band (FX's `shaftDark`), which does
-     most of the separating, and the gain is up to match. */
+     most of the separating, and the gain is up to match.
+
+     **And do not lower it chasing the `combat` veils (ledger #13).** The fx8 decomposition
+     owns those veils to this family (slabs ~100% of the left ROI, ~91% of the doorway), but
+     the mechanism is stacking, not per-blade brightness: a camera that looks ALONG the row
+     integrates many blades in one sightline (combat has all eight on-screen; traversal —
+     whose winning beam is one of these same blades — has ~1.4). The per-blade gain is right;
+     the lever is FX's `courtStackBudget` family cap, which scales with the on-screen count
+     and leaves single-blade framings untouched. */
   courtShaftGain: 0.80,
   /* **Do not raise the above trying to get a blade into the `courtyard` shot. It is not a
      brightness problem and no value of this knob can fix it.**
@@ -729,9 +737,9 @@ export class Lighting {
    * `width` / `span` / `axis` are kept on every entry because FX's mote placement and its
    * `shaftBoost()` uniform packing already speak that vocabulary.
    */
-  _makeShaft(id, kind, origin, normal, axis, axis2, halfU, halfV, gain, thick = 0) {
+  _makeShaft(id, kind, origin, normal, axis, axis2, halfU, halfV, gain, thick = 0, family = kind) {
     const s = {
-      id, kind, gain, thick,
+      id, kind, family, gain, thick,
       origin: origin.clone(),
       normal: normal.clone().normalize(),
       axis: axis.clone().normalize(),
@@ -790,7 +798,10 @@ export class Lighting {
         this.shafts.push(this._makeShaft(
           `court${sx > 0 ? 'e' : 'w'}${i}`, 'slab',
           V(sx * TUNE.courtGapX, TUNE.courtGapY, z), V(sx, 0, 0), Z, Y,
-          TUNE.courtGapW * 0.5, TUNE.courtGapH * 0.5, TUNE.courtShaftGain, TUNE.shaftThick.court));
+          TUNE.courtGapW * 0.5, TUNE.courtGapH * 0.5, TUNE.courtShaftGain, TUNE.shaftThick.court,
+          /* family: the peristyle is a ROW of parallel blades; FX's stacking budget
+             (Particles TUNE.courtStackBudget) keys on this tag. */
+          'court'));
       }
     }
 
