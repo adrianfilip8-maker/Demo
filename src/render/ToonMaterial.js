@@ -98,7 +98,46 @@ const TUNE = {
    *               R/G 1.38 to 1.22 and from B/max 0.70 to 1.04 on that change alone. The
    *               chroma in a shadow now comes from the light, which is where it comes from
    *               in the reference art too. */
-  shadowWash: 0.15,
+  /* 0.15 -> 0.05. **This term, not the `shadowTintPeak` clamp, is what makes the daylight
+   * frames lavender.** Measured on a 12-variant sweep of `hero` and `courtyard` at 1280x720
+   * (shots/washcap/, one boot, every variant the real `_refreshShadowColor()` with one input
+   * changed — the re-implementation was checked bit-exact against it first, maxAbsErr 0.0).
+   *
+   * The wash is `uShadowColor * uShadowWash * shadowMix * ao`: **albedo-independent**. At a 22
+   * degree sun `shadowMix = 1 - key` is non-zero over **88.8% of the `hero` frame**, so at 0.15
+   * against the clamped light this stopped being a tint and became a flat coat of violet paint
+   * over seven eighths of the image — which is exactly what "shaded sandstone reads as violet
+   * concrete" is. `src/textures/Materials.js:2174` reached the same conclusion independently
+   * from the other end: the flat term is `(0.021, 0.028, 0.063)` against a dark texel's own
+   * `(0.002, 0.003, 0.006)`, an order of magnitude larger than the material.
+   *
+   * Removing it alone (`washoff`), against removing the whole shadow light (`off`) as control:
+   *
+   *   hero          cool% 57.1 -> 9.8    warm% 21.3 -> 39.0   frozen-set sat 0.238 -> 0.275
+   *   courtyard     cool% 44.8 -> 24.1   warm% 35.8 -> 43.3   frozen-set sat 0.172 -> 0.299
+   *
+   * Note the shadows come out **more** saturated, not less: this is not "desaturating toward
+   * grey", it is removing a flat overlay that was burying the material under it.
+   *
+   * It is also the term that inverts the key light, which is the top item in critic pass 3.
+   * Removing only the wash takes `hero`'s fully-unlit pylon from L 61.0 to L 30.0 (-51%) while
+   * the sunlit wall moves L 151.4 to L 148.9 (-1.7%). An albedo-independent additive term
+   * lands at full strength on a face with no sun on it and is negligible next to a lit one, so
+   * it is precisely the term that lets an unlit face out-brighten a lit one.
+   *
+   * Why 0.05 and not 0. Zero measured best on every palette metric but took `hero` to cool%
+   * 9.8, which is pass 2's "monochrome-warm" failure re-entered from the other side, and the
+   * standing instruction is to keep the violet and put it in the shadows only. 0.05 keeps the
+   * hue support the term exists for at a third of the strength. `shots/washcap2/` brackets
+   * 0.00 / 0.05 / 0.15 against the fill to settle the value.
+   *
+   * **What this cannot fix, for whoever picks up item 1.** The critic's "unlit <= 45% of lit"
+   * is not reachable from this file on `courtyard`'s obelisk: with the wash at zero *and* the
+   * whole shadow light at zero, its shadow face still measures **47.8%** of the lit face. The
+   * remainder is the hemispheric fill, and `TUNE.ambIntensity` below is a **dead knob** —
+   * `Lighting.js:1335` republishes `ambient.intensity` through `setKeyLight()` every frame, so
+   * it is overwritten exactly the way `shadowFloor` is clamped. That half belongs to LIGHTING. */
+  shadowWash: 0.05,
   shadowSat: -0.35,
 
   /* The sand bounce is *bounced* light — sunlight already absorbed once by sand — but it

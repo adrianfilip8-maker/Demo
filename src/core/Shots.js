@@ -101,10 +101,16 @@ export const SHOTS = {
      away from a sun at azimuth 187°, so *no* camera position could have lit it — a sweep of
      6480 camera placements failed the face-lighting test on every single one, because face
      lighting is a function of yaw and the sun alone. At yaw 5.59 he is lit three-quarter
-     front, and the camera sits off the shadow axis so the shadow rakes away across frame. */
+     front, and the camera sits off the shadow axis so the shadow rakes away across frame.
+
+     Yaw 5.59 → 5.24. At 5.59 the camera sat at view 13°, one degree off `charview`'s
+     "dead-on, flat" threshold — and this is the one shot whose entire job is the character.
+     Dead-on shows the cap brim, muzzle, ear notch and cane hook all in profile or not at all;
+     a three-quarter view shows them together. 5.24 puts view at 33° and keeps the sun at 37°
+     off his face, so both reads land at once. */
   'sly-closeup': {
     pos: [-1.6, 1.45, 33.2], target: [0.0, 0.95, 30.0], fov: 38, tod: 0.80,
-    player: { pos: [0, 0, 30], yaw: 5.59, pose: 'idle_confident' },
+    player: { pos: [0, 0, 30], yaw: 5.24, pose: 'idle_confident' },
   },
 
   /* Composition + props: obelisk, colossi, braziers, palms, banners.
