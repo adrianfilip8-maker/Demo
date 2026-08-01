@@ -578,17 +578,26 @@ export class Lighting {
       this._splits.push(THREE.MathUtils.lerp(uni, log, TUNE.splitLambda));
     }
 
-    const splitVecs = [];
+    /* The csmSplits/csmFade uniform OBJECTS keep their identity for the life of the
+       module: every compiled program of every patched material holds a reference to them
+       (enableCascades assigns them into shader.uniforms), and a reused program keeps its
+       reference across a rebuild. Allocating fresh objects here left reused programs bound
+       to stale split values — and the old workaround for that (_patched.clear() so the
+       sweep re-patches) let onBeforeCompile get wrapped twice, double-injecting the GLSL
+       and killing the program: fx6 hero.back rendered with every patched mesh missing.
+       Mutate the values in place instead; identity never changes. */
+    if (!this._csmUniforms) {
+      this._csmUniforms = { csmSplits: { value: [] }, csmFade: { value: TUNE.cascadeFade } };
+    }
+    const splitVecs = this._csmUniforms.csmSplits.value;
+    splitVecs.length = n;
     for (let i = 0; i < n; i++) {
-      splitVecs.push(new THREE.Vector2(
+      (splitVecs[i] ||= new THREE.Vector2()).set(
         i === 0 ? -1e4 : this._splits[i],
         i === n - 1 ? 1e6 : this._splits[i + 1]
-      ));
+      );
     }
-    this._csmUniforms = {
-      csmSplits: { value: splitVecs },
-      csmFade: { value: TUNE.cascadeFade },
-    };
+    this._csmUniforms.csmFade.value = TUNE.cascadeFade;
     this._keyPayload.shadowSplits = splitVecs;
     this._keyPayload.shadowMatrix = this.cascades[0].matrix;
     this._keyPayload.cascades = this.cascades;
@@ -605,8 +614,13 @@ export class Lighting {
     }
     this.cascades.length = 0;
     this._buildCascades();
+    /* Relink only. Do NOT clear _patched: a material is wrapped once, ever — its
+       onBeforeCompile and cache key read live cascade state, so a relink (count changed:
+       new cache key, fresh compile) or a plain program reuse (count unchanged: same key,
+       identity-stable uniforms updated in place) both see current values. Clearing the
+       set made _sweepMaterials wrap the wrap, and the doubled GLSL injection failed to
+       compile — every patched mesh vanished from the frame within one sweep period. */
     for (const mat of this._patchedMaterials()) mat.needsUpdate = true;
-    this._patched.clear();
     this._applyAtmosphere();
   }
 
@@ -1364,13 +1378,14 @@ export class Lighting {
     if (material.isShaderMaterial || material.isRawShaderMaterial) return material;
     if (!PATCHABLE.has(material.type)) return material;
 
-    const n = this._cascadeCount;
-    const csm = this._csmUniforms;
+    /* No captured cascade state: the closure reads `this` at compile time, so the one
+       wrap a material ever gets stays correct across _rebuildForQuality. */
     const prev = material.onBeforeCompile;
     material.onBeforeCompile = (shader, renderer) => {
       try { prev?.call(material, shader, renderer); } catch { /* not ours to fix */ }
-      shader.uniforms.csmSplits = csm.csmSplits;
-      shader.uniforms.csmFade = csm.csmFade;
+      const n = this._cascadeCount;
+      shader.uniforms.csmSplits = this._csmUniforms.csmSplits;
+      shader.uniforms.csmFade = this._csmUniforms.csmFade;
       const chunk = THREE.ShaderChunk.lights_fragment_begin
         .replace(CSM_SHADOW_LINE, CSM_SHADOW_PATCH);
       if (chunk === THREE.ShaderChunk.lights_fragment_begin) {
@@ -1388,7 +1403,8 @@ export class Lighting {
           .replace('#include <lights_fragment_begin>', chunk);
     };
     const prevKey = material.customProgramCacheKey;
-    material.customProgramCacheKey = () => `csm${n}|${prevKey ? prevKey.call(material) : ''}`;
+    material.customProgramCacheKey =
+      () => `csm${this._cascadeCount}|${prevKey ? prevKey.call(material) : ''}`;
     material.needsUpdate = true;
     this._patched.add(material.uuid);
     this._patchedMaterials().push(material);
