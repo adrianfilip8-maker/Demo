@@ -209,6 +209,13 @@ const TUNE = {
   rim: 0.55,
   rimPower: 3.1,
   rimGain: 2.05,         // scales the art-directed rim colour into bloom range
+  /* This is NOT the live value. `_applyAutoLight()` republishes `uRimGain = rimGain * (day ?
+     1 : 1.45)` every time the clock moves, so on a night shot the uniform reads 2.9725 while
+     this constant still reads 2.05. Any A/B harness that snapshots `tune.rimGain` and restores
+     the *uniform* from it therefore renders its own baseline with a 31% weaker rim than the
+     shipping build — which, on the shots that depend on rim for silhouette separation in near
+     darkness, manufactures exactly the regression such a harness is usually looking for. Take
+     the baseline off `uniforms.uRimGain` after staging each shot, and take it per shot. */
 
   /* Silhouette gate on the fresnel rim — see the long note at the term in toon.glsl.js.
      [lo, hi] are "normal turn per screen height": zero on any planar patch at any grazing

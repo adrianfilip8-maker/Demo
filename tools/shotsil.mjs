@@ -5,11 +5,27 @@
  *   <shot>-shade.png  same view, 3-band cel shade, so shapes can be identified
  *   <shot>-tiny.png   the real on-screen pixel size, ×7 nearest-neighbour for inspection
  *
- * No browser, no GPU: builds SlyModel against a stub engine, samples the clip exactly the way
+ * No browser, no GPU: builds SlyModel against a stub engine, samples the clip the way
  * Animation.freezePose() does (including the cane aim, which lives outside the pose buffer),
  * skins on the CPU and scan-converts.
  *
- *   node shotsil.mjs <outdir> [shot ...]
+ *   node tools/shotsil.mjs <outdir> [shot ...]
+ *
+ * **The feet here are NOT the feet the renderer draws.** `freezePose()` also sets `_ikW = 1`
+ * for every non-airborne clip, so at runtime `Rig.footIK()` re-solves both legs and re-pitches
+ * both ankles before anything is drawn. This tool does not run it — deliberately, because it
+ * renders the character standalone with no ground under him, and a stub plane at y=0 would be
+ * simply wrong for the poses staged on a ledge (`perch_idle`/`hero`) or a rail. So everything
+ * from the knee down is the authored clip pose: read boot angle, boot height and ground contact
+ * from `tools/footall.mjs` instead, which does drive the real `footIK`. Assuming otherwise is
+ * what falsified commit 5a1de96, and it is the same failure family as `charview`'s
+ * "in frame is not visible" — a tool that is right about what it measures being read as
+ * authority over something adjacent that it never touched.
+ *
+ * **What else it cannot tell you.** No level geometry, so nothing here can be occluded by a
+ * wall; use `charvis.mjs` for that. The silhouette is the union of body and cane only. And a
+ * pure-black silhouette cannot test the mask, which is a colour feature that does not break the
+ * outline — the `-shade.png` is the artefact for that half of the §7.3 condition.
  */
 import * as THREE from 'three';
 import { writeFileSync, mkdirSync } from 'node:fs';

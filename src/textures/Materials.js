@@ -1944,9 +1944,19 @@ export const MATERIALS = {
        * Two results there that reasoning gets wrong. **The upper shaft is never on screen** — a
        * band at "two thirds up", the natural place to put one, is *zero* pixels in `hero` and
        * `traversal`. And coverage falls monotonically with height, so registers belong low.
-       * 0.268 and 0.432 are the centres of drum faces 1 and 3, so a bed joint never cuts a band
-       * (nearest joint clears by 0.017 of v, ~25 cm), and together they cover **24.3 % of the
+       * 0.186 and 0.432 are the centres of drum faces 0 and 3, so a bed joint never cuts a band
+       * (nearest joint clears by 0.017 of v, ~25 cm), and together they cover **24.5 % of the
        * critic's ROI**.
+       *
+       * **0.186 rather than 0.268 for the lower band, and the reason is not its own coverage.**
+       * At 0.268 the band sits *inside* the span the vertical text used to occupy and pushes its
+       * lowest run below one quadrat, so that run is dropped — and measured in the critic's ROI
+       * that cost the *unbanded* shaft 11 % of its local contrast (0.0109 -> 0.0097), cancelling
+       * a third of what the bands had just bought. At 0.186 the band clears the text entirely
+       * (band top 0.210, text starts 0.220) and the vertical register runs unbroken from 0.220 to
+       * the second band. Same band count, marginally better coverage, and nothing given back.
+       * Worth carrying: a feature can be paid for out of a *neighbouring* feature's budget
+       * without anything in its own numbers showing it.
        *
        * Half-width 0.024 of v is **43 px in `temple`**, 19 px `traversal`, 12 px `hero`, 10 px
        * `night`, 9 px `courtyard` — legible signs in the interior shot and a band at distance,
@@ -1964,7 +1974,7 @@ export const MATERIALS = {
        * painted bands at tile-v 0.075-0.125 / 0.800 / 0.900 against authored 0.035-0.090 /
        * 0.115-0.145 / 0.80-0.83 / 0.865-0.920. Three flips sit in that chain and reasoning about
        * them gives the wrong sign. */
-      const BAND_V = [0.268, 0.432], BAND_HW = 0.024;
+      const BAND_V = [0.186, 0.432], BAND_HW = 0.024;
       /* 10 m of arc per tile-u against `capTop` m per tile-v. Exact on a nave column, which is
          what `temple` is mostly made of; aisle columns (capTop 11.4 m) come out ~1.3x wide, and
          that is not fixable from inside a tile while V is registered per column. */
@@ -2092,7 +2102,20 @@ export const MATERIALS = {
       s.masonry = { joint: drum };
       const ramp = carve(s, textCut, textLine, { depth: 0.40, bevelPx: 2.4, lip: 0.09, bulge: 0.45, lineDepth: 0.60, seed: cx.seed + 5 });
       freshCutTint(s, ramp, { amount: 0.14 });
-      paintRemnants(s, ramp, paint, { survival: 0.34, freq: 6, seed: cx.seed + 9, edgeLoss: 0.70, fade: 0.45 });
+      /* `survival` 0.34 → 0.46. With the registers above landing, the band interior measured
+       * relative local contrast **0.0231 in frame against `hieroglyph_wall`'s 0.0305**, and its
+       * chroma variation 0.0081 against the wall's 0.0112 — the marks were there and grey. The
+       * two recipes' carve pipelines are otherwise near-identical
+       * and this was the one large gap between them (the wall keeps 0.50, with lower `edgeLoss`
+       * and `fade` besides), so this is matching a surface that already works rather than
+       * inventing an amplitude.
+       *
+       * It is *not* a relaxation of the damping the two notes at the top of this recipe describe.
+       * Those took down the painted **stalk** and the **binding-band chroma**, both of which are
+       * full-width terms that fight the mesh's own 8 lobes or alias at 30 m. This is pigment left
+       * in a **carved glyph**, which exists only where `ramp > 0` — about 13 % of the tile — and
+       * is the difference between "a sunk relief" and "a smudge". Still below the wall's 0.50. */
+      paintRemnants(s, ramp, paint, { survival: 0.46, freq: 6, seed: cx.seed + 9, edgeLoss: 0.70, fade: 0.45 });
       // Band paint survives better than glyph paint — it was thicker and re-applied.
       const bandWear = s.field(3, (u, v) => sat(warpN(u, v, 8, 4, 1.2, cx.seed + 41) * 1.4 + 0.5));
       /* Band paint survives better than glyph paint — it was thicker and re-applied — but it was

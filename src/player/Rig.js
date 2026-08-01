@@ -53,6 +53,13 @@ export const RIG_TUNE = {
   ikDropRate: 6.0,         // hip drop follow rate (m/s per m of error)
   ikProbeUp: 0.55, ikProbeDown: 1.30,
   ikAnkle: 0.086,          // bind ankle height above the sole plane
+  /* The boot's contact point is the sole TIP, measured in bind at y=0.0023 z=0.1980 against an
+     ankle at y=0.0816 z=-0.0200 — 0.10 m beyond the toe bone, so driving the toe bone to a
+     fixed height is only ever correct at one ankle height. These two say where the tip is
+     relative to the ankle, in the foot's sagittal plane, and let the pitch be solved exactly. */
+  ikSoleR: 0.232,          // ankle -> sole tip distance
+  ikSoleDelta: 0.044,      // radians the tip sits ABOVE the foot->toe axis
+  ikToeClear: 0.004,       // how proud of the floor the tip is left when it is planted
   ikRollMax: 32,           // degrees of foot tilt onto a slope
   ikSoft: 0.02,            // keeps the knee from locking dead straight
 };
@@ -264,6 +271,9 @@ export class Rig {
     this._ikTargetR = new THREE.Vector3();
     this._ikNormalL = new THREE.Vector3(0, 1, 0);
     this._ikNormalR = new THREE.Vector3(0, 1, 0);
+    /* Ground height probed under each foot. Kept because the levelling pass needs to know
+       where the floor is, not just which way it faces — see footIK. */
+    this._ikGroundY = { L: 0, R: 0 };
     this.warned = Object.create(null);
   }
 
@@ -467,6 +477,7 @@ export class Rig {
         }
       }
       const targetY = groundY + ankleH + clipLift;
+      this._ikGroundY[side] = groundY;
       const tgt = side === 'L' ? this._ikTargetL : this._ikTargetR;
       tgt.set(_v1.x, targetY, _v1.z);
       // Contact weight: only a foot near the ground gets rolled onto the slope.
@@ -488,17 +499,53 @@ export class Rig {
       _v0.set(Math.sin(footYaw), 0.25, Math.cos(footYaw)).normalize();
       this.twoBoneIK(`upperLeg${side}`, `lowerLeg${side}`, `foot${side}`, tgt, _v0, weight);
 
-      // Roll the foot onto the surface normal, but only while it is actually in contact.
       const nrm = side === 'L' ? this._ikNormalL : this._ikNormalR;
-      const plant = this.footPlant[side] * weight;
-      if (plant > 0.01 && nrm.y < 0.9995) {
+      /* Lift the toe out of the floor.
+         `twoBoneIK` reorients the shin to put the ankle on the ground and the foot swings with
+         it, so a clip authored flat-footed arrives with its toe pitched 26-80 deg down and the
+         boot 15-24 cm through the paving. This pass used to be gated on `nrm.y < 0.9995` and so
+         ran only on slopes — where, until the `_v0` aliasing fix, `aimBone` was a no-op
+         regardless — so it had never once run to effect.
+
+         It does NOT flatten the foot onto the plane, which is what the gated version did.
+         Flattening double-counts against the ankle target: that target is
+         `groundY + ikAnkle + clipLift`, so once the sole is level the boot hangs `clipLift`
+         clear of the floor and every ball-of-foot pose in the set floats. Measured over all
+         52 clips, flattening lifted `cane_combo_3` — the `combat` pose, a legitimate
+         toe-planted stance — 8.5 cm off the ground.
+
+         So this is a one-sided CONSTRAINT, not a blend: rotate the sole tip up exactly as far
+         as it takes to reach the floor and no further, and do nothing at all to a foot whose
+         tip is already clear. A swing foot mid-stride is therefore untouched, which is why it
+         is safe to run without the `plant` weight — `plant` fades out by ankle height, and a
+         buried toe on a lifted ankle is precisely the case that needs the most correction. */
+      {
         foot.getWorldQuaternion(_q0);
         _v1.copy(this.bindDir[`foot${side}`] || _up).applyQuaternion(_q0).normalize();
-        // keep the toe heading, tilt only the pitch/roll onto the plane
-        _v2.copy(_v1).addScaledVector(nrm, -_v1.dot(nrm)).normalize();
-        if (_v2.lengthSq() > 1e-6) {
-          _v3.copy(_v1).lerp(_v2, THREE.MathUtils.clamp(plant, 0, 1)).normalize();
-          this.aimBone(foot, _v3);
+        // ankle height above the ground plane, measured along the surface normal
+        _v4.setFromMatrixPosition(foot.matrixWorld);
+        _v5.set(_v4.x, this._ikGroundY[side], _v4.z);
+        const ankleH2 = _v4.sub(_v5).dot(nrm);
+        /* Pitch that lands the tip on the floor: the tip swings on a circle of radius ikSoleR
+           about the ankle, so sin(tip angle below horizontal) = ankle height / radius, and the
+           foot axis sits ikSoleDelta below that. sinPsi >= 1 means the ankle is higher than the
+           boot is long — the foot cannot reach the floor at any pitch, i.e. it is airborne. */
+        const sinPsi = (ankleH2 - RIG_TUNE.ikToeClear) / RIG_TUNE.ikSoleR;
+        const cNow = _v1.dot(nrm);
+        const cWant = -Math.sin(Math.asin(Math.max(-1, sinPsi)) + RIG_TUNE.ikSoleDelta);
+        if (sinPsi < 1 && cNow < cWant - 1e-4) {
+          /* Tangential component, measured BEFORE normalising: a foot pointed within a few
+             degrees of straight down has a near-zero tangent whose *direction* is numerical
+             noise, and normalising first would hand that noise to aimBone as a confident
+             heading. Dropping the slope gate is what lets steep feet reach this line at all. */
+          _v2.copy(_v1).addScaledVector(nrm, -cNow);
+          if (_v2.lengthSq() > 0.01) {
+            _v2.normalize();
+            // rebuild the direction at the wanted pitch, keeping the toe's heading
+            _v3.copy(nrm).multiplyScalar(cWant).addScaledVector(_v2, Math.sqrt(Math.max(0, 1 - cWant * cWant)));
+            _v3.lerpVectors(_v1, _v3, THREE.MathUtils.clamp(weight, 0, 1)).normalize();
+            this.aimBone(foot, _v3);
+          }
         }
       }
     }

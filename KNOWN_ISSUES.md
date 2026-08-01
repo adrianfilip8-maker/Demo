@@ -411,6 +411,24 @@ looks like standing still — and `hook_swing` froze at the bottom of the arc, i
 least dynamic frame, when the file's own comment already said the front of the arc was "the
 pose the traversal frame wants".
 
+A third, and the one that shows what this family actually costs. `idle_confident`'s breath keys
+at t=0.9 and t=1.9 were still carrying cane aims from the old `CANE.shoulder` family —
+`[-59,-58,28]` and `[-65,-52,28]` — left behind when the base pose moved to `CANE.plant`. Twice
+every 3.6 s the clip swung the crook from resting at his side up over his shoulder and back
+down, on a cane whose butt is supposed to be planted on the ground. The same trap had already
+been found and fixed on the *tail* in those same two keys, and missed on the cane sitting on the
+same line. Both now hold `CANE.plant`; only the body drifts.
+
+What hid it was `hold: 0` — the held frame was correct. So **every still ever captured of this
+clip was evidence that the clip was fine, and no still could ever have been evidence that it was
+not.** That is the general form and it is worth stating once: a hold frame being right is not
+weak evidence that the clip is right, it is *no* evidence, because the frozen frame is the only
+thing anyone looks at and is therefore the one frame that gets fixed — the rest of the clip is
+unobserved by construction. The mechanism is always the same: an in-between key carrying an
+**absolute** angle is orphaned the moment the pose it was authored to drift from moves. When a
+base pose changes, grep the clip's other keys for absolute `cane:` aims and absolute tail angles
+before believing the capture.
+
 **Read every prior character critique in that light.** "Pose is stiff / A-pose-like" was a real
 observation of a frame nobody intended to render. `idle_confident` *did* have contrapposto
 authored; it also failed for a second, independent reason worth knowing — leg angles are
@@ -469,14 +487,55 @@ Re-run against the current tree, the same tool gives **`traversal` 0.01%, `comba
 apparent 6.32% was entirely the sand-drift twin — it nearly filed that as a new finding and
 checked first.
 
-The figures were not a tool artefact. They were a *correct measurement of a build that no longer
-existed*: triangle count over the same shot went 135,111 → 246,241 between my two runs, because
-the reveal, sand-drift and cornice-winding fixes landed in between. **I measured a tree that five
-agents were editing live and quoted the result without recording what I had measured** — the
-exact provenance failure that made a 25-commit-old PNG look like a live sky bug, and that
-`shot.mjs` and `critic.mjs` now stamp against. Offline measurements need the same discipline as
-captures: record the SHA and whether the tree was dirty, or the number is unattributable within
-minutes.
+I first retracted them as a *correct measurement of a build that no longer existed*: triangle
+count over the same shot went 135,111 → 246,241 between my two runs, because the reveal,
+sand-drift and cornice-winding fixes landed in between. That much is true, and **I did quote a
+tree five agents were editing live without recording what I had measured** — the same provenance
+failure that made a 25-commit-old PNG look like a live sky bug, and that `shot.mjs`,
+`critic.mjs` and now `charvis.mjs` stamp against.
 
-What was real, and is now fixed: `traversal`'s unclosed cornice ring — the single largest object
-in that frame, with 182 px seeing through to sky. A critic pass scored the shot **2** on it.
+**But I wrote "the figures were not a tool artefact", and that was wrong. Most of the inflation
+was the tool, and it was my tool.** `raster.mjs` had **no near-plane clipping** — it dropped any
+triangle with a vertex behind the eye. Near a surface, the triangles that drops are the *near,
+occluding, front* faces, leaving the far interior wall to win the depth test and paint itself
+magenta. Sampling the claimed pixels against a brute-force all-triangle ray tracer: `traversal`
+30/151 truly backfacing, **121/151 (80%) a dropped front occluder**; `combat` 3/151 real,
+**143/151 (95%) dropped**. The tool was inventing the defect it exists to find. The arithmetic
+closes cleanly — 18.36% × 20% ≈ 3.7% against the 3.23% an independent pass measured at
+`ed67555`.
+
+A second false-positive class fell out of the same review: `guard`'s 6.38% was **entirely the
+sand drift's deliberate reversed twin**. "Frontmost triangle is wound away" is the wrong
+question — under `FrontSide` the GPU never draws a backface, so it cannot occlude anything. Both
+tools now compare nearest-front against nearest-back depth with a tolerance, so coincident
+two-sided art drops out on its own.
+
+**Two lessons, and the second is the expensive one.** Offline measurements need the same
+provenance discipline as captures. And when a number is wrong, "I measured a stale tree" is a
+*comfortable* explanation that fully accounts for it — which is exactly why it should not be
+accepted without checking the instrument too. I stopped at the first sufficient cause.
+
+What was real, and is now fixed: **three open shells in `Kit.js`**, all genuine. `sweep()` had
+no back plane, so every cornice run was an open shell and a cornice *ring* was four open shells
+round a void open top and bottom — the "giant croissant", and `traversal`'s 182 px seeing
+through to sky, which a critic pass scored the shot **2** on. `cornerRolls()` were `openEnded`,
+so on small masses the bore stood in open air (759 px in `hero`, at the kiosk). `railGeo()`
+tubes had no end caps.
+
+**Two of those three fixes were wrong on the first attempt, and both were caught by measurement
+rather than by review.** The back plane as a single quad left a **T-junction** (38 unpaired
+boundary edges). The rail caps were **inverted on both ends** — which neither the watertightness
+test nor the raster test could see, *because an inverted cap is culled*. It looked exactly like
+a fix and did nothing. A tangent-direction check found it. A fix that is invisible to the test
+that motivated it is the same failure shape as the culled cornice itself.
+
+Result across all ten shots: `traversal` 3.23% (11,618 px) → **0.01% (18 px)**, `hero` 0.69% →
+**0**, `night` 0.59% → **0**, `courtyard` 0.18% → **0**, the other six ≤0.04% → **0**. An
+independent ray tracer agrees at 0–1 rays on all ten. Cost **+6,608 tris (+2.1%)**, draw calls
+unchanged at 44. GPU-verified in `progress/frames/gpu2/traversal.png`: the cornice is a solid
+opaque mass with a readable cavetto curve, fillet lip, undercut and ink silhouette.
+
+**Deliberately left open**, and this is a judgement not an oversight: `obelisk`, `spire`,
+`stairFlight`, `slabUnit`, `hookRing`, `papyrusColumn`, `bevelPrism`, `torusRoll` and
+`steppedPyramid` are still open shells. Both camera-relevant tests read ~0 on them because their
+rims are buried, so closing them spends triangles for no visible gain.
