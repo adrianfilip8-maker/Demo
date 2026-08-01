@@ -97,6 +97,19 @@ const TUNE = {
   beamFlicker: 0.09,
   glowSize: 0.34,          // radius of the lamp card at the apex, metres at full throw
   beamDayFloor: 0.26,      // how much of the cone survives full daylight
+  /* At night the patrol lamp cannot stay sun-cream: with the day fade clamped to 1 the
+     additive wedge is the warmest, brightest thing in a moonlit frame and reads as daylight
+     leaking in — the `night` shot's "cream wedge". Below the night window the patrol colour
+     cools toward §2.2's RIM complement (#7fd4ff pushed pale, the same treatment colPatrol
+     gives the sun) and patrol brightness comes down, so the cone reads as a deliberate
+     stealth telegraph instead of a wash. Gated on the same smoothed tod signal as the day
+     fade: zero above `nightHi`, so every daylight and interior frame is arithmetically
+     untouched. Alert keeps its hue and full brightness at any hour — a telegraph that dims
+     exactly when it matters is not a telegraph. */
+  colNight: 0xbfe6ff,      // §2.2 rim #7fd4ff pushed pale, colPatrol's own treatment
+  beamNight: 0.55,         // patrol-state brightness multiplier at full night
+  nightLo: 0.14,           // _light at which the cone is fully night-graded…
+  nightHi: 0.30,           // …and fully day-graded (guard tod 0.10 → _light 0.26 → 14% cool)
   poolMix: 0.24,           // pool intensity as a fraction of the beam's
   poolRings: [0.03, 0.10, 0.20, 0.34, 0.50, 0.68, 0.85, 1.0],
   poolLat: 14,
@@ -354,6 +367,7 @@ const _mat = new THREE.Matrix4();
 const _col = new THREE.Color();
 const _colA = new THREE.Color();
 const _colB = new THREE.Color();
+const _colN = new THREE.Color();
 const WORLD_UP = new THREE.Vector3(0, 1, 0);
 const RAY_OPTS = { ignoreTags: ['hazard', 'water', 'rail', 'hook', 'spire', 'vent'] };
 
@@ -965,6 +979,7 @@ export class Guards {
     this._shot = null;
     this._shotLock = null;
     this._light = 0.3;
+    this.TUNE = TUNE;        // so the capture harness can bracket a value (Lighting.js precedent)
     this.stats = { draws: 0, tris: 0 };
 
     /* One sense-parameter bag, mutated in place — Senses.evaluate reads it and keeps nothing. */
@@ -1382,6 +1397,20 @@ export class Guards {
     });
 
     on('shot', (p) => this._poseForShot(p?.name || null));
+
+    /* A tod *set* (shot staging, the debug slider) is a discontinuity, and easing `_light`
+       across it leaves the cone's day fade and night grade carrying the previous scene's
+       daylight for exactly the ~17 settle frames the capture harness renders — so cone
+       opacity in a canonical frame depended on which shot ran before it in the same boot.
+       Snap to target on the event; the per-frame ease in update() still owns continuous
+       drift. This event fires only on discontinuous sets, never per-frame. */
+    on('timeOfDay', (v) => { if (typeof v === 'number') this._light = this._lightTarget(v); });
+  }
+
+  /** Ambient daylight level 0.10 (deep night) … 0.90 (noon) for a given time-of-day. */
+  _lightTarget(tod) {
+    const day = Math.max(0, Math.sin(Math.PI * clamp((tod - 0.04) / 0.92, 0, 1)));
+    return 0.10 + day * 0.80;
   }
 
   /* -------------------------------------------------------------- public --- */
@@ -1489,9 +1518,8 @@ export class Guards {
        are easier to see" is a loop that silently doubles every tuned fill rate in Patrol.js.
        Standing in *another* guard's beam does light you up, and that is applied per guard
        below from last frame's flags. */
-    const tod = this.engine.debug?.timeOfDay ?? 0.78;
-    const day = Math.max(0, Math.sin(Math.PI * clamp((tod - 0.04) / 0.92, 0, 1)));
-    this._light += (0.10 + day * 0.80 - this._light) * Math.min(1, dt * 4);
+    this._light += (this._lightTarget(this.engine.debug?.timeOfDay ?? 0.78) - this._light)
+      * Math.min(1, dt * 4);
 
     this._sawCount = 0;
     for (const g of this.guards) {
@@ -1516,7 +1544,13 @@ export class Guards {
     this._beamMat.uniforms.uOpacity.value = day;
     this._poolMat.uniforms.uOpacity.value = day;
 
-    _colA.setHex(TUNE.colPatrol);
+    /* Night grade for the patrol lamp — see TUNE.colNight. `night` (tod .02) rests at
+       _light 0.10 → fully graded; `guard` (tod .10) at 0.26 → 14%; every daylight and
+       interior shot sits ≥ 0.56 → exactly 0, leaving their colour math bit-identical
+       (lerp by 0, multiply by 1). */
+    const night = 1 - THREE.MathUtils.smoothstep(this._light, TUNE.nightLo, TUNE.nightHi);
+
+    _colA.setHex(TUNE.colPatrol).lerp(_colN.setHex(TUNE.colNight), night);
     _colB.setHex(TUNE.colAlert);
 
     for (let i = 0; i < this.guards.length; i++) {
@@ -1548,6 +1582,9 @@ export class Guards {
       _col.copy(_colA).lerp(_colB, THREE.MathUtils.smoothstep(sus, 0.12, 0.95));
       let bright = TUNE.beamBase + TUNE.beamGain * gain + sus * 0.35;
       if (g.state === STATE.CHASE) bright *= TUNE.beamAlert;
+      /* The night dim applies to the resting patrol read only and yields to suspicion, so a
+         filling cone still surges to full — the reaction is the telegraph. */
+      bright *= 1 - night * (1 - TUNE.beamNight) * (1 - sus);
       bright *= 1 + TUNE.beamFlicker * Math.sin(t * 6.3 + g.senses.phase);
       if (down) bright = 0;
       _col.multiplyScalar(bright);
@@ -1620,7 +1657,9 @@ export class Guards {
       h.position.copy(g.position).addScaledVector(g.forward, TUNE.lightAhead);
       h.position.y += g.vision.eyeHeight * 0.55;
       const sus = clamp(g.senses.suspicion / DETECT.chase, 0, 1);
-      h.color.setHex(TUNE.colPatrol).lerp(_colB, THREE.MathUtils.smoothstep(sus, 0.12, 0.95));
+      // `_colA` already carries the night-graded patrol colour (set in _updateCones, which
+      // calls this) — the spill must agree with the beam it pretends to be cast by.
+      h.color.copy(_colA).lerp(_colB, THREE.MathUtils.smoothstep(sus, 0.12, 0.95));
       h.intensity = TUNE.lightIntensity * (1 + sus * 0.6);
     }
   }
