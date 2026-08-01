@@ -255,6 +255,10 @@ function proportions(bodyV) {
 }
 
 /* ---- run ---------------------------------------------------------------- */
+/* Output resolution the pixel figures are quoted in. Defaults to the harness default. */
+const ROWS = parseInt((process.argv.includes('--rows')
+  ? process.argv[process.argv.indexOf('--rows') + 1] : '900'), 10);
+
 let reported = false;
 for (const [name, shot] of Object.entries(SHOTS)) {
   if (ONLY.length && !ONLY.includes(name)) continue;
@@ -266,7 +270,18 @@ for (const [name, shot] of Object.entries(SHOTS)) {
   while (phi < -Math.PI) phi += 2 * Math.PI;
   const elev = Math.atan2(dy, Math.hypot(dx, dz));
   const dist = Math.hypot(dx, dz, dy);
-  const px = Math.round(1.93 / dist / (2 * Math.tan((shot.fov ?? 50) * Math.PI / 360)) * 540);
+  /* Is the subject actually in front of the lens? This is distance-based, not a projection, so
+     without the test a character *behind* the camera yields a perfectly plausible pixel height —
+     `guard` reported 483 px for a subject at player-dot-forward -1.93. The identical bug was
+     fixed in charview.mjs and never propagated here, which is why the same wrong number appeared
+     twice from two tools. ROWS is also no longer 540: nothing in this project captures at that
+     resolution (harness 900, critic 720), so every figure was in units nobody uses. */
+  const _f = [shot.target[0] - c[0], shot.target[1] - c[1], shot.target[2] - c[2]];
+  const _fl = Math.hypot(..._f) || 1;
+  const behind = ((p[0] - c[0]) * _f[0] + (p[1] - c[1]) * _f[1] + (p[2] - c[2]) * _f[2]) / _fl <= 0;
+  const px = behind
+    ? null
+    : Math.round(1.93 / dist / (2 * Math.tan((shot.fov ?? 50) * Math.PI / 360)) * ROWS);
 
   if (!applyClip(shot.player.pose)) continue;
   const { tris, bodyV } = buildTris();
@@ -286,6 +301,6 @@ for (const [name, shot] of Object.entries(SHOTS)) {
   if (process.env.BIG) save(`${name}-big.png`, render(tris, bodyV, -phi, elev, 900, 1200, { shade: true }));
   const tw = Math.max(12, Math.round(px * 0.72)), th = Math.max(16, px);
   save(`${name}-tiny.png`, magnify(render(tris, bodyV, -phi, elev, tw, th), 6));
-  console.log(`  ${name.padEnd(13)} view ${(phi * 180 / Math.PI).toFixed(0).padStart(5)}°  elev ${(elev * 180 / Math.PI).toFixed(0).padStart(3)}°  ${String(px).padStart(4)}px  pose ${shot.player.pose}`);
+  console.log(`  ${name.padEnd(13)} view ${(phi * 180 / Math.PI).toFixed(0).padStart(5)}°  elev ${(elev * 180 / Math.PI).toFixed(0).padStart(3)}°  ${(px === null ? 'BEHIND' : String(px) + 'px').padStart(7)}  pose ${shot.player.pose}`);
 }
 console.log('\nwrote', OUT);

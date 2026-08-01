@@ -64,7 +64,7 @@ rather than silently assigned to a plane.
 A near plane darker than the mid plane, rising toward the distance, *is* the dark-frame /
 lit-mid / hazed-distance structure. I read "rises front to back" as the inverse of it. It is the
 shape of it. Whoever was going to act on that line in `hero`: **don't.** I have since re-run
-`hero` itself and it measures 45.8 → 68.1 → 82.9, spread 37.1 luma (§9). The method error is mine,
+`hero` itself and it measures 45.8 → 68.1 → 82.9, spread 37.1 luma (§10). The method error is mine,
 it is corrected here, and the finding it produced is retracted.
 
 **What actually fails is the other half of the rule — "hazed background at ≥ 60% atmospheric
@@ -130,7 +130,7 @@ Four things follow, and each saves somebody an iteration:
 2. **`guard`'s 6.32% is entirely the sand-drift twin**, exactly as the corrected tool's comment
    predicts. I nearly filed it as a new finding — the largest unreported backface in the set — and
    it would have been a false positive. It is 3 pixels.
-3. **`traversal`'s 3.23% is real and it is the single biggest thing wrong with that frame** (§4).
+3. **`traversal`'s 3.23% is real and it is the single biggest thing wrong with that frame** (§5).
    Depth gap p50 **0.87 m**, and **182 px see straight through to sky**. A shallow open shell.
 4. **It is already fixed in the working tree.** Kit's uncommitted change closes the back plane of
    `sweep()` and caps `cornerRolls`. `traversal` goes 3.23% → 0.01%. Verify it in the next capture;
@@ -141,7 +141,81 @@ agent after a 5.7× overstatement and a 4,900× one.**
 
 ---
 
-## 3. `night` — **3 / 10**
+## 3. The warm-fraction criterion, restated per shot — and a second cause I can corroborate
+
+The shading agent has shown offline that at `hero`'s 22°/azimuth-186° sun only **4.7% of the frame
+has N·L > 0.52** and **67% faces away from the sun entirely**, before cast shadows. That makes
+"daylight frames above 60% warm" unreachable on `hero` by any shading setting: it is a **backlit**
+composition, and the criterion was measuring the camera, not the renderer. **I accept that and I am
+withdrawing the frame-wide form.** It was the weakest of my three and this is the right correction.
+
+My other two stand unchanged, and for the reason given: they are ratios on the *same surface*, so
+composition cannot move them.
+
+- **A. Sunlit sandstone R−B ≥ +60.** Binding.
+- **B. Unlit luma ≤ 45% of lit, sign never inverted.** Binding.
+
+### Replacing the withdrawn one — three shot-independent forms
+
+**C1 — the lit test (binding, replaces the frame-wide number).** Of pixels on sun-facing
+architecture (N·L > 0.3, which the offline rasteriser already computes per shot): **≥ 90% warm
+(R > B), median hue in 20–45.** Conditioning on the surface rather than the frame makes this
+immune to how much of the shot happens to be lit. `combat`'s lit wall passes today (100% warm, hue
+36); `traversal`'s lit wall fails (R−B −3.3, hue 273).
+
+**C2 — the haze test (binding, new, and the one that matters most right now).** Sky and any surface
+at ≥ 60% atmospheric blend must satisfy **B/R ≤ 0.70** at golden hour. §2.2's horizon `#f0c88a` is
+0.575 and its haze `#e8b878` is 0.517, so 0.70 is already generous. **This is a better detector of
+the cast than warm-fraction ever was**, because the sky is one surface, is never in shadow, and
+carries no composition dependence at all.
+
+**C3 — per-shot frame-warm floor (recorded, not binding).** Where a frame-wide number is still
+wanted, derive it rather than fixing it: `floor = sunlitFrac + 0.5 × (1 − sunlitFrac − awayFrac)`.
+For `hero` that is 0.047 + 0.5 × 0.283 = **18.9%**, and `hero` measures **41.0% warm** — it passes
+comfortably. For `courtyard`, 0.245 + 0.5 × 0.566 = **52.8%**. The old flat 60% was failing `hero`
+for being backlit, which is exactly the diagnosis.
+
+### The split-tone: I can corroborate it from my own frames, and it re-routes one of my fixes
+
+The claim is that PostFX's `smoothstep(0.08, 0.72, l)` crossover runs in scene-linear where 0.72
+maps to display L192, so nearly every pixel takes the cool leg — B × 1.265, R × 0.914, a 38% B/R
+swing on sky included. That makes a falsifiable prediction I can test without touching the code:
+**the brightest, least-shadowed, most-should-be-warm regions in my frames must come out neutral or
+cool.** They do.
+
+| region | measured | B/R | §2.2 target | cool shift |
+|---|---|---|---|---|
+| `traversal` sky | `#b3a6a4` | **0.916** | horizon `#f0c88a` = 0.575 | **+59%** |
+| `hero` sky | `#6f6371` | **1.018** | 0.575 | **+77%** |
+| `temple` doorway (brightest opening in the set) | `#ada4a9` | **0.977** | 0.575 | **+70%** |
+| `combat` sunlit sandstone | `#d4b17e` | **0.594** | albedo `#c9915a` = 0.448 | **+33%** |
+
+The `traversal` sky and the `temple` doorway both measure **sat 0.070** — a sun-blasted opening and
+a golden-hour sky, bleached to near-neutral. And the internal consistency is the convincing part:
+**`combat`'s sandstone, the one surface in the set that passes criterion A, is also the one bright
+enough to take part of the warm leg** (+33% rather than +59–77%). The two facts are the same fact.
+
+**Three consequences for the ranked list, and I am applying them:**
+
+1. **§8's item 1 has two owners, not one.** A `shadowTintPeak` fix alone cannot clear it. Nobody
+   should be credited or faulted for the whole delta on either lever.
+2. **§8's item 6 is misrouted and I am correcting it.** I filed "the golden-hour sky is grey, sat
+   0.076" against **SKY**. At B/R 0.92–1.02 on a surface that is never shadowed, that is the
+   PostFX cast, not `Sky.js`. **Do not send the sky agent after it.** The night sky measuring
+   `#123468` at sat 0.861 — a frame where the cool leg is *correct* — was the clue and I read it
+   as evidence the module works rather than as evidence of where the bug is.
+3. **The AgX toe means I must not score a shading fix on its linear value.** Shadow illumination
+   measures 12.8–13.9% of key, exactly §2.2's 14%, and the toe lifts that to a 53–62% display
+   ratio. My pixel measurement and the source value were both right. **Criterion B is a display-space
+   test and should be stated as one** — the knob has to overshoot in linear to land in display, and
+   a fix that makes the linear number look wrong may be the correct fix.
+
+That the agent's instrument reproduced every pass-3 figure across all six shots before measuring
+anything new is worth more than the finding itself: it means the numbers in these reports replicate.
+
+---
+
+## 4. `night` — **3 / 10**
 
 Draws 444, triangles **2.834 M** against a 1.2 M budget — the heaviest frame in the project.
 
@@ -215,7 +289,7 @@ separate him from.
 
 ---
 
-## 4. `traversal` — **2 / 10** · worst in the set
+## 5. `traversal` — **2 / 10** · worst in the set
 
 Draws 408, triangles 2.735 M.
 
@@ -296,7 +370,7 @@ already fixed.
 
 ---
 
-## 5. `combat` — **5 / 10** · best in the set
+## 6. `combat` — **5 / 10** · best in the set
 
 Draws 383, triangles 2.646 M.
 
@@ -352,7 +426,7 @@ frame is otherwise the closest thing in this project to a real game.
 
 ---
 
-## 6. `guard` — **4 / 10**
+## 7. `guard` — **4 / 10**
 
 Draws 273, triangles 1.963 M — the only shot inside a plausible distance of the §1 budget.
 
@@ -418,16 +492,21 @@ one move.
 
 ---
 
-## 7. Ranked — most damaging first
+## 8. Ranked — most damaging first
 
 Ranked by what the defect costs the frame, not by effort.
 
-### 1. The shadow/ambient term inverts sandstone's hue on every face past the terminator — **SHADING** `src/render/ToonMaterial.js`, `src/render/shaders/toon.glsl.js`
+### 1. Sandstone renders at hue 260–290 instead of 30 — **two independent causes, two owners** — **POSTFX** `src/render/PostFX.js` *and* **SHADING** `src/render/ToonMaterial.js`
+**Read §3 before acting on this.** The split-tone crossover in PostFX puts ~89% of `hero`'s pixels
+on the cool leg (B × 1.265, R × 0.914) including the sky, and the shadow term is the second lever.
+**A fix to `shadowTintPeak` alone will leave most of the cast in place.** Split the work; measure
+each lever separately against criteria A/C1/C2.
 Wall `#5c475c` (hue 287, R−B **+0.8**) twenty pixels above deck `#cc7b4a` (hue 26, R−B **+130**),
 same material, same sun. Albedo is `#c9915a` (hue 30, R−B +111) — **110 of 111 points of warm bias
 destroyed**. Mid-ground wall hue p75 = **311**. §2.2 has no hue above 220. Binding criterion
-"sunlit sandstone R−B ≥ +60" measures **−3.3**. This single term is why `traversal` is a purple
-frame and why nothing in the set except `combat` reads as stone. Everything below is downstream.
+"sunlit sandstone R−B ≥ +60" measures **−3.3**. Between them these two levers are why `traversal`
+is a purple frame, why `temple`'s largest hue bucket is 270, and why nothing in the set except
+`combat` reads as stone. Everything below is downstream of them.
 
 ### 2. Where a cel ramp is actually testable, it is a continuous gradient — **SHADING**
 §2.1.1 is the first non-negotiable ingredient in the bible, and this is the first pass that has
@@ -457,10 +536,11 @@ flare, not an object. `guard`'s brightest pixels are a brazier cropped by the ri
 3.23% of frame, 29,735 px, gap p50 0.87 m, 182 px through to sky, and it is the largest object in
 the shot. Working tree at 14:09 takes it to 79 px. **Confirm in the next capture; do not re-derive.**
 
-### 6. No atmospheric perspective at golden hour — **SKY** `src/render/Sky.js` + **POSTFX**
-`traversal` FAR (229 m) is 7.5% less saturated than NEAR (2 m). §2.3 asks ≥ 60% blend. And the
-golden-hour sky itself is grey: sat **0.076**, mean `#a59c9d`, no cloud, no pyramid. The night sky
-(`#123468`, sat 0.861) proves the module can do it — it just doesn't at `tod` 0.7–0.8.
+### 6. No atmospheric perspective at golden hour — **SKY** `src/render/Sky.js` for the depth blend; **POSTFX** for the colour
+`traversal` FAR (229 m) is only 7.5% less saturated than NEAR (2 m) against §2.3's ≥ 60% blend —
+**that half is SKY's.** The grey sky is **not**: at B/R 0.92–1.02 on an unshadowed surface it is the
+PostFX cool cast (§3), and I had this misrouted. The night sky at `#123468` sat 0.861 is the same
+module doing it right in the one frame where the cool leg is correct.
 
 ### 7. Large flat untextured fields — **TEXTURES** `src/textures/**`
 `night`'s left mass: **26% of the frame inside 26.6 luma**, 78.9% in four buckets. `guard`'s cream
@@ -492,7 +572,7 @@ reach. Draws 273–444 against 250.
 
 ---
 
-## 8. Scores, and what the mean does and does not mean
+## 9. Scores, and what the mean does and does not mean
 
 | shot | score | one-line reason |
 |---|---|---|
@@ -501,7 +581,7 @@ reach. Draws 273–444 against 250.
 | `combat` | **5** | correct sandstone, real bloom, real cast shadows — and the hero has no local colour |
 | `guard` | **4** | the best silhouette in the project, at one value, with no light cone in the light-cone shot |
 
-**Mean 3.50 across the four.** With §9's re-scores of `hero` (4), `sly-closeup` (6) and `temple`
+**Mean 3.50 across the four.** With §10's re-scores of `hero` (4), `sly-closeup` (6) and `temple`
 (6), the seven shots scored this pass average **4.29**.
 
 **Be careful what you compare that to.** The 4.2 baseline and my 3.67 are six-shot means over
@@ -522,7 +602,7 @@ were the four worst, and one dominant shading defect is spread across all of the
 
 ---
 
-## 9. Addendum — `hero`, `sly-closeup`, `temple` (set `r4`), and the stamp earning its keep
+## 10. Addendum — `hero`, `sly-closeup`, `temple` (set `r4`), and the stamp earning its keep
 
 The queued capture landed at 14:29. **Its manifest carries the provenance block, and the block
 immediately told me something I could not otherwise have known:**
@@ -598,15 +678,15 @@ L230, 0.011% above L200** — a hall full of light shafts with no bright thing i
 ### What the three add up to
 
 All three moved up. The direction is right and the work landing is the right work. Every one of
-them is still held back by **the same single defect at the top of §7's ranked list** — architecture
+them is still held back by **the same single defect at the top of §8's ranked list** — architecture
 rendering at hue 260–290 instead of hue 30 — which now demonstrably costs the project its three
 best frames, not just its worst one.
 
 ---
 
-## 10. Still outstanding from my side
+## 11. Still outstanding from my side
 
-All three items I owed are discharged in §9:
+All three items I owed are discharged in §10:
 
 1. **`hero`'s depth planes, re-measured against true depth** — done, and it **retracts** my pass-3
    finding. Near 45.8 → mid 68.1 → far 82.9, spread 37.1 luma.
