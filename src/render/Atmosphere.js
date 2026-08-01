@@ -393,7 +393,37 @@ export function evalAtmosphere(tod, s) {
   return s;
 }
 
-/* ── Aerial perspective ─────────────────────────────────────────────────────── */
+/* ── Aerial perspective ─────────────────────────────────────────────────────────
+   **§2.3's "≥ 60% atmospheric blend" is met on the horizon and nowhere near the
+   mid-ground, and the haze cannot be asked to hide sand tiling on `dunes`.**
+
+   Recorded because it has been asserted as a mitigation without being measured, and the
+   measurement is arithmetic — no capture needed. At `dunes`' tod 0.83 the curve is
+   `density 0.00495`, `heightFalloff 54.6`, so 60% blend does not arrive until **193 m** at
+   ground level (218 m at 16 m altitude, where the approach ridge is). Marching the ground
+   plane through that camera at 1280x720:
+
+     visible ground              67.3% of frame
+     view distance              p10 46 m · p25 54 m · p50 79 m · p75 150 m · p90 334 m
+     blend 0-20 / 20-40 / 40-60 / 60-80 / 80-100 %      59.2 / 14.7 / 7.2 / 5.2 / 12.7
+     ground at >= 60% blend      18.9%
+
+   So 59.2% of the visible sand is under **20%** hazed and the median ground pixel sits at
+   79 m / ~13%. The pyramid at ~330 m is 84-86% hazed in every daylight shot, which is the
+   part §7.3 actually asks for and it passes — but a tiling repeat has to be near enough to
+   resolve, and near enough to resolve is near enough to be un-hazed. The two conditions
+   cannot both be served by this curve.
+
+   Costed, so nobody re-derives it: raising `fogDensity` x1.6 moves 60% to 127 m — still
+   outside the 54-150 m band the repeats live in — and already takes `dunes`' own subject
+   (the complex at 72 m) from 11% to 26% hazed. x2.4 reaches 60% at 85 m, which would cover
+   the mid-ground, at the cost of **49% haze on the subject of the one shot whose §7.2 job is
+   terrain and atmosphere**, plus `hero`/`courtyard` sand going from 8% to 37% at 60 m.
+   That trades §7.3's tiling line for its "geometry silhouettes / hero read" lines.
+
+   Conclusion: this is not a haze defect and raising the density is not the fix. If the
+   `dunes` repeats read at 1:1, they have to be broken up where they live — macro-variation
+   in the sand recipe, or dune geometry — not dissolved. */
 
 /**
  * Atmospheric blend factor for a given view distance — the exact curve SHADING/POSTFX

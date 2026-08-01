@@ -29,7 +29,30 @@ import { MeshBuilder, addTube, addEllipsoid, addHardBox, superEllipse } from './
  *     and an open C is what makes the silhouette legible at 40 px.
  */
 export const CANE_TUNE = {
-  length: 1.30,         // butt tip → top of the hook arc
+  /**
+   * Distance from the grip (the local origin) down to the butt ferrule.
+   *
+   * This is not a free style choice, it is a constraint, and it is worth stating why because
+   * the obvious knob does not work. `CANE.plant` is the standing idle — the pose `sly-closeup`
+   * and `hero` freeze on — and a preset called `plant` has to actually plant. **The aim cannot
+   * do it.** Re-aiming turns the shaft about a cone whose apex is the grip, so the tip sweeps a
+   * sphere of fixed radius and its height is set by the grip height and this number alone.
+   *
+   * Measured on `idle_confident` (node tools/poseprobe.mjs): the grip rides at y 0.787 above
+   * the floor and `plant` stands the shaft 8.5° off vertical, so the tip needs
+   * 0.787 / cos 8.5° = 0.796 m of shaft below the grip to touch down.
+   *
+   * It used to be `length * 0.455` = 0.5915 m, which left the tip floating 0.20 m in the air.
+   * A 4×3×3 sweep of the aim could not move that and the invariance looked like a dead knob;
+   * it was not. 0.196 m is the *lowest the tip can physically reach* from that grip, so the
+   * aim was already sitting within 6 mm of its own optimum and the sweep was reading the flat
+   * bottom of the bowl. The shaft was simply 20 cm too short to reach the ground.
+   *
+   * Re-derive this if `IDLE_A`'s right arm moves — it is measured against the grip, not the
+   * world. `node caneall.mjs` prints the tip height for all 52 clips, which is the check that
+   * matters: lengthening the shaft is global, and the tip must not spear the floor elsewhere.
+   */
+  dropBelowGrip: 0.796,
   shaftR: 0.0205,       // slim shaft so the hook reads as the heavy end
   hookR: 0.0375,        // deliberately chunky: this silhouette is his logo
   hookRadius: 0.168,    // radius of the C
@@ -67,7 +90,7 @@ export class Cane {
     /* ---- shaft path: straight, then the crook --------------------------- */
     /* Sampled directly rather than through a spline so `s` (0 at the butt, 1 at the hook tip)
        tracks real arc position — the radius and grip masks are authored against it. */
-    const butt = -T.length * 0.455;         // below the grip
+    const butt = -T.dropBelowGrip;          // below the grip — see CANE_TUNE, this plants the tip
     const shaftTop = 0.425;                 // where the crook begins
     const NS = 16, NH = 30;
     const centers = [];

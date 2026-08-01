@@ -295,8 +295,22 @@ const IDLE_A = P({
   footR: [-3, 6, -2],
   upperLegL: [-19, 15, 44],
   lowerLegL: [30, 0, 0],
-  footL: [20, -12, -18],
-  toeL: [14, 0, 0],
+  /* **Fourth correction, and this one was invisible to every bone-space check.** The free foot
+     was authored `footL [20,-12,-18]` / `toeL [14,0,0]` — 34° of toe-down — and the *bones* sat
+     comfortably above the floor (ankle 0.149, toe 0.036) so `poseprobe` reported it as fine.
+     Skinning the mesh on the CPU and asking for vertices below y=0 tells a different story:
+     **82 of them, the lowest 7.4 cm under the ground plane.** The toe bone cleared the floor;
+     the boot hanging off it did not, so a quarter of the free boot was buried in every frame
+     that shows his feet — seven of the ten shots do.
+     Nothing upstream was going to catch it: `footIK` drives the *ankle* to groundY + ikAnkle
+     and preserves the clip's lift, so it never inspects the boot, and on flat ground the
+     contact roll is skipped entirely (`nrm.y < 0.9995` is false).
+     Solved against the vertices rather than the bones: this pitch pair rests the sole on the
+     floor (lowest vertex +0.002) and, because it is no longer driving the toe underground, it
+     actually lifts the *heel* further clear than the old pose managed — 0.053 against 0.036.
+     Toe down, heel up, and now both on the correct side of the floor. */
+  footL: [-4, -12, -18],
+  toeL: [0, 0, 0],
 
   /* Tail as counterweight, and - this is the part that is easy to get wrong - on the opposite
      side of the frame from the cane. Swept to his right it folded in behind the torso and left
@@ -331,8 +345,17 @@ def('idle_confident', {
        tail, so the clip's "breath" would have swung the tail from the new curl back down to
        the old level sweep twice a cycle. `hold: 0` hides that from every screenshot, which is
        exactly why it is worth stating: the held frame being right is not evidence the clip is. */
-    { t: 0.9, e: 'soft', P: { hips: [1, 21, -19], chest: [4, -22, 23], head: [-9, 22, -17], tailA: [-11, -24, 6], tailB: [-3, -36, 0], tailD: [34, 30, 0] }, pos: [-0.044, -0.008, 0.004], cane: [-59, -58, 28] },
-    { t: 1.9, e: 'soft', P: { hips: [3, 16, -15], chest: [7, -17, 19], head: [-4, 15, -12], tailA: [-18, -15, 6], tailB: [-10, -27, 0], tailD: [26, 21, 0] }, pos: [-0.058, -0.020, -0.004], cane: [-65, -52, 28] },
+    /* The cane aims here were `[-59,-58,28]` and `[-65,-52,28]` — the *old* `CANE.shoulder`
+       family, left behind when the base pose moved to `CANE.plant`. That is precisely the trap
+       the note above describes, and it had been fixed for the tail and missed for the cane: the
+       breath was swinging the crook from planted-at-his-side up over his shoulder and back,
+       twice every 3.6 s, on a cane whose butt is supposed to be resting on the ground.
+       A planted cane does not move while he breathes — his hand slides a little on it instead —
+       so both keys now hold `CANE.plant` and only the body drifts. `hold: 0` hides all of this
+       from stills, which is exactly why it survived: the held frame being right has never been
+       evidence that the clip is. */
+    { t: 0.9, e: 'soft', P: { hips: [1, 21, -19], chest: [4, -22, 23], head: [-9, 22, -17], tailA: [-11, -24, 6], tailB: [-3, -36, 0], tailD: [34, 30, 0] }, pos: [-0.044, -0.008, 0.004], cane: CANE.plant },
+    { t: 1.9, e: 'soft', P: { hips: [3, 16, -15], chest: [7, -17, 19], head: [-4, 15, -12], tailA: [-18, -15, 6], tailB: [-10, -27, 0], tailD: [26, 21, 0] }, pos: [-0.058, -0.020, -0.004], cane: CANE.plant },
     // a slow blink-and-smirk beat: head cocks a little further over, ears flick
     { t: 2.6, e: 'smooth', P: { head: [-8, 22, -19], earL: [-19, 8, -24], earR: [-2, -9, 29], jaw: [6, 0, 0] } },
     { t: 3.6, e: 'soft', P: IDLE_A, pos: [-0.078, -0.018, 0], cane: CANE.plant },
@@ -2081,7 +2104,14 @@ def('ko', {
       upperLegL: [-96, 16, 8], lowerLegL: [104, 0, 0], footL: [-8, -12, 0],
       upperLegR: [-58, -18, -8], lowerLegR: [70, 0, 0], footR: [-4, 14, 0],
       tailA: [-10, 16, 0], tailB: [-20, 22, 0], tailC: [-10, 15, 0], tailD: [12, -10, 0],
-    }, pos: [0, -0.86, 0.02], sc: { hips: [1.14, 0.82, 1.12], chest: [1.08, 0.9, 1.06] }, cane: [96, 30, 0] },
+    }, pos: [0, -0.86, 0.02], sc: { hips: [1.14, 0.82, 1.12], chest: [1.08, 0.9, 1.06] },
+      /* Was [96,30,0], which put the butt 15 cm under the floor even on the old short shaft and
+         25 cm under once `dropBelowGrip` grew to plant the idle. He is flat on his back here, so
+         the cane should be lying down beside him: this aim lays the shaft along the ground with
+         tip y 0.096 and hook y 0.032 — both ends just clear — and keeps it 0.72 m off the torso
+         so it does not draw a line across the body. `ko` was the only one of the 52 clips whose
+         tip was through the floor, before or after the lengthening. */
+      cane: [126, 12, 0] },
     // a small dead bounce
     { t: 0.46, e: 'out', P: { hips: [80, 6, -4], head: [26, 6, -5] }, pos: [0, -0.80, 0.02], sc: { hips: [1.06, 0.94, 1.05], chest: [1, 1, 1] } },
     { t: 0.62, e: 'smooth', P: { hips: [90, 8, -5], head: [34, 8, -7],

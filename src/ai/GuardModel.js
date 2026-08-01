@@ -41,6 +41,10 @@ export const TUNE = {
   segHead: 20,
 
   colorJitter: 0.055,      // per-vertex tone break-up so no region is one flat value
+  /* Albedo multiplier on the sclera only — see `buildEyes`. `PAL.eyeWhite` is luma 0.953, which
+     on Sly's identical palette entry rendered as a flat blown disc with no pupil left in it and
+     was the frame's only >L230 region. Ported at the value measured to fix it there. */
+  scleraTint: 0.82,
 };
 
 /* ============================ PALETTE ===================================== */
@@ -103,6 +107,7 @@ class GBuild {
     this.boneIndex = boneIndex;
     this.pos = []; this.uv = []; this.col = [];
     this.si = []; this.sw = []; this.sgOf = [];
+    this.nBias = [];         // post-weld normal overrides — see `biasNormals`
     this.groups = new Map();
     this._g = 'body';
     this._sg = 1;
@@ -117,6 +122,26 @@ class GBuild {
   newSg() { return ++this._sgNext; }
   color(c) { this._c.set(c); return this; }
   weights(w) { this._w = w; return this; }
+
+  get vertexCount() { return this.pos.length / 3; }
+
+  /**
+   * Bend vertices `[start, end)`'s welded normals toward `dir`. Applied *after* the weld, so
+   * it overrides the face average rather than competing with it.
+   *
+   * Ported from `Body.js`'s builder, where it exists for fur clumps and, latterly, for the
+   * eyes. The eye case is the one that matters here. A 3-band cel ramp turns the key into a
+   * step function, and a mirrored pair of lenses is the pair of features on a face most likely
+   * to land on opposite sides of a terminator under any off-axis key — one eye then receives
+   * twice the key of the other, discontinuously, and reads as a headlight beside a socket.
+   * Measured on Sly that was a 145-luma gap between his two eyes, and no material constant can
+   * close a band boundary. Biasing both eyes onto one shared, unmirrored normal is what fixes
+   * it, because it makes them present the same normal to the key at every sun angle.
+   */
+  biasNormals(start, end, dir, amount = 1) {
+    if (amount > 0 && end > start) this.nBias.push({ start, end, d: dir.clone().normalize(), a: amount });
+    return this;
+  }
 
   vert(p, u = 0, v = 0, col = null, w = null) {
     const i = this.pos.length / 3;
@@ -197,6 +222,18 @@ class GBuild {
       if (l < 1e-12) { bk.x = 0; bk.y = 1; bk.z = 0; l = 1; }
       const x = bk.x / l, y = bk.y / l, z = bk.z / l;
       for (const i of bk.list) { const o = i * 3; normal[o] = x; normal[o + 1] = y; normal[o + 2] = z; }
+    }
+
+    // --- post-weld normal overrides (see `biasNormals`) ---
+    for (const bias of this.nBias) {
+      for (let i = bias.start; i < bias.end; i++) {
+        const o = i * 3;
+        const nx = normal[o] + (bias.d.x - normal[o]) * bias.a;
+        const ny = normal[o + 1] + (bias.d.y - normal[o + 1]) * bias.a;
+        const nz = normal[o + 2] + (bias.d.z - normal[o + 2]) * bias.a;
+        const l = Math.hypot(nx, ny, nz) || 1;
+        normal[o] = nx / l; normal[o + 1] = ny / l; normal[o + 2] = nz / l;
+      }
     }
 
     const g = new THREE.BufferGeometry();
@@ -1215,7 +1252,28 @@ function buildHippoHead(mb, S, cfg) {
   buildEyes(mb, S, C, R, 0.40, 0.30, 0.042);
 }
 
-/** Eyes: sclera + oversized ink pupil + a highlight, plus a hooded lid for the dim-witted read. */
+/**
+ * Eyes: sclera + oversized ink pupil + a highlight, plus a hooded lid for the dim-witted read.
+ *
+ * **This function carried the same two defects `SlyModel._buildEye` was rebuilt to fix**, and
+ * they are worth naming because the guard is not a minor character in the shot list: `charvis`
+ * finds exactly one guard in the `guard` frame — #1, 6.5 m out, dead centre, unoccluded, at
+ * **297 px**. That is the largest character in any canonical frame, close to three times
+ * `sly-closeup`'s scale, so both defects are scored bigger here than they ever were on Sly.
+ *
+ *   1. **A mirrored shading normal.** `out` carries `Math.sin(th) * 0.8` with `th = s*thetaOff`,
+ *      so the two lenses present mirror-image normals to the key. Through a 3-band cel ramp
+ *      that is the classic straddling-terminator pair: under any off-axis key the two eyes can
+ *      quantise into different bands and one blows out while the other goes to socket. On Sly
+ *      the same construction measured 145 luma apart between his two eyes.
+ *   2. **A near-white sclera at full albedo.** `PAL.eyeWhite` is 0xf7f3e6 — luma 0.953, the
+ *      same value Sly's palette entry has, and the one that rendered there as a flat blown
+ *      disc with no pupil left in it and the frame's only >L230 region.
+ *
+ * Both are fixed the same way they were fixed on Sly: one shared unmirrored normal for the
+ * whole eye, and the albedo cut on the sclera only — the highlight stays near-white, because
+ * it is the intended bloom source and dropping the palette entry would take it down too.
+ */
 function buildEyes(mb, S, C, R, thetaOff, phiOff, size) {
   for (const s of [1, -1]) {
     const th = s * thetaOff, ph = phiOff;
@@ -1230,24 +1288,46 @@ function buildEyes(mb, S, C, R, thetaOff, phiOff, size) {
     const basis = { x: right, y: tup, z: out };
     const W = [['head', 1]];
 
+    /* The shared shading normal: `out` with the mirrored X term dropped. `Math.cos(th)` is
+       even in `s`, so this is bit-identical for both eyes by construction rather than by
+       coincidence — which is the property that makes the pair immune to the band boundary at
+       every sun angle, not just the one that was measured. The geometry is untouched; only
+       the normal the key sees moves, so the lens keeps sitting flat on the skull. */
+    const shadeN = new THREE.Vector3(0, Math.sin(ph) * 0.5, Math.cos(th)).normalize();
+
+    const v0 = mb.vertexCount;
     blob(mb, {
       center: c, radii: new THREE.Vector3(size, size * 1.05, size), basis,
       segTheta: 12, segPhi: 8, group: 'body', sg: mb.newSg(), weights: W,
-      colorAt: () => _col.set(PAL.eyeWhite),
+      /* Vertex colour is the albedo for the `body` group, so the tint goes here rather than in
+         PAL.eyeWhite — same split as Sly, and for the same reason: the highlight below shares
+         the group and has to stay near-white. `TUNE.scleraTint` is ported at the value that was
+         measured to fix this on Sly (L233 blown -> in band); it has not been independently
+         measured on a guard frame, so treat it as the known-good starting point it is. */
+      colorAt: () => _col.set(PAL.eyeWhite).multiplyScalar(TUNE.scleraTint),
     });
+    mb.biasNormals(v0, mb.vertexCount, shadeN, 0.90);
+
     const pc = c.clone().addScaledVector(out, size * 0.60);
+    const v1 = mb.vertexCount;
     blob(mb, {
       center: pc, radii: new THREE.Vector3(size * 0.50, size * 0.58, size * 0.50), basis,
       segTheta: 10, segPhi: 7, group: 'body', sg: mb.newSg(), weights: W,
       colorAt: () => _col.set(PAL.ink),
     });
+    /* The pupil is the thing that gets erased when the sclera blows, so it must not be able to
+       land in a different band from the white it sits on either. */
+    mb.biasNormals(v1, mb.vertexCount, shadeN, 0.90);
+
     const hc = pc.clone().addScaledVector(out, size * 0.42)
       .addScaledVector(tup, size * 0.26).addScaledVector(right, -s * size * 0.20);
+    const v2 = mb.vertexCount;
     blob(mb, {
       center: hc, radii: new THREE.Vector3(size * 0.22, size * 0.22, size * 0.20), basis,
       segTheta: 8, segPhi: 6, group: 'body', sg: mb.newSg(), weights: W,
       colorAt: () => _col.set(0xffffff),
     });
+    mb.biasNormals(v2, mb.vertexCount, shadeN, 0.95);
     // Heavy lid across the top third: wide-open reads as alert, a hooded lid reads as slow.
     const lidUp = tup.clone().applyAxisAngle(out, s * 0.22).normalize();
     const lidRight = new THREE.Vector3().crossVectors(lidUp, out).normalize();

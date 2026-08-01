@@ -116,9 +116,37 @@ const TUNE = {
   /* Where the split crosses over from the shadow tint to the highlight tint, in SCENE-LINEAR
      luma — the space the composite tests, not display luma. Hoisted out of the shader because
      it is the term that decides whether this is a warm/cool *split* at all, and it was a pair
-     of literals nobody could A/B. Same values as the literals it replaces; behaviour-neutral
-     until something moves it. */
-  splitRange: [0.08, 0.72],
+     of literals nobody could A/B.
+
+     [0.08, 0.72] -> [0.04, 0.24]. The old pair was not a split at all, it was a global cool
+     cast, and the reason is the space it is measured in. Transcribing this file's own grade
+     chain (contrast about 0.18, then AgX, then the sRGB encode) and evaluating it exactly:
+
+       scene-linear l   0.02   0.05   0.08   0.18   0.35   0.50   0.72   1.00   2.00
+       display L        29     60     78     112    139    153    165    175    188
+
+     so the old crossover finished at L165 — above the 95th percentile of every daylight frame
+     measured. AgX is extremely compressive at the top (L160 -> l 0.62, L192 -> l 2.78), which
+     is what made a scene-linear number this large look reasonable. Measured over whole frames,
+     fraction taking >=85% of the COOL leg vs >=85% of the warm leg:
+
+                    old [0.08,0.72]        new [0.04,0.24]
+       hero          86.4% / 8.2%           71.7% / 15.1%
+       temple        84.2% / 3.1%           63.1% / 21.9%
+       courtyard     47.1% / 31.2%          34.1% / 55.2%
+
+     A warm/cool split whose warm leg reaches 3.1% of `temple` is a cool filter with extra
+     steps, and it is a second, independent cause of the lavender that KNOWN_ISSUES §3
+     describes — the first being the shadow-light mix, which is a different file.
+
+     The new midpoint is not a taste call: it is anchored on the measured shadow/lit boundary.
+     `courtyard` reads shadow L69.2 against lit L130.3 (53.1% ratio), so the tonal boundary
+     between them is L~100, and [0.04, 0.24] puts a->L51, midpoint->L101, b->L124 — the ramp
+     spans the shadow-to-lit transition instead of sitting above the whole image.
+
+     Frame-verified, not just computed: the A/B restoring [0.08, 0.72] is one poke, since this
+     is pushed to the uniform every frame. */
+  splitRange: [0.04, 0.24],
 
   /* --- finishing --- */
   vignette: 0.16,                  // was compounding with dark shadows into a black frame

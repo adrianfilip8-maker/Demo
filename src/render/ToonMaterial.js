@@ -169,6 +169,42 @@ const TUNE = {
      cycles. */
   shadowTintPeak: 0.52,
 
+  /* How much warm sand bounce is mixed into the shadow light — a desert shadow is lit by sky
+     *and* by sun bouncing off the sand around it, and a purely blue shadow light multiplied
+     into warm sandstone neutralises to mauve.
+
+     The mix is done at matched luminance (see _refreshShadowColor). Doing it on raw linear
+     radiance, as it used to, is what broke the shadow hue: the palette hue is R/G 0.667 in
+     sRGB but the *linear* bounce is 35x brighter in red than the linear tint, so 20% of it
+     took the light to R/G 1.52 — warmer than the sun it was meant to contrast with.
+
+     **What this knob can and cannot reach, in closed form so nobody spends a capture cycle
+     discovering it.** §2.2's R/G 0.667 is the shadow *hue* #2a3f66, i.e. a LIGHT colour. An
+     in-frame shadowed surface is light x albedo, and `sandstone` mid #c9915a is itself R/G
+     2.06 in linear. Transcribing the matched-luminance mix below and multiplying through:
+
+       mix    shadow light   light R/G    sandstone in shadow, with the split-tone cool leg
+                                          (x unit-luma #2a3f66 at splitStrength 0.16)
+       0.00   #2a3f66        0.667        #1d1f23  R/G 0.935  B/max 1.000  darkest R
+       0.10   #303f61        0.762        #221f21  R/G 1.097  B/max 0.971  darkest G
+       0.20   #353e5c        0.855        #261f1f  R/G 1.226  B/max 0.816  darkest G
+
+     Two things follow, and both have been walked into already:
+
+     1. **R/G 0.667 is not reachable on a surface at any value of this knob**, and never was.
+        The light hits it exactly at mix = 0 — that is what the number describes. Reading it
+        as a target for a shadowed-sandstone *pixel* is the same category error as reading
+        §3's "after" table as a target; the albedo alone puts the floor at 0.935.
+
+     2. **This knob is not what makes green the darkest channel — the split-tone is.** The
+        cool leg multiplies by unit-luma #2a3f66, i.e. per-channel (0.914, 0.999, 1.265) at
+        strength 0.16, so it lifts blue 26.5% and cuts red 8.6% and leaves green alone. That
+        is what promotes green past blue into the darkest slot: at mix 0.20 the surface is
+        darkest-in-BLUE before the split and darkest-in-GREEN after it. Since a shadow pixel
+        sits on the cool leg under any sane `splitRange`, the two levers are not
+        interchangeable — this one sets R/G, that one decides which of G and B is lowest. */
+  shadowBounceMix: 0.20,
+
   /* --- rim --- */
   rim: 0.55,
   rimPower: 3.1,
@@ -215,6 +251,44 @@ const TUNE = {
 
   /* --- detail --- */
   detailFade: 95,        // metres at which the triplanar layer is fully faded out
+
+  /* Ratio of the triplanar detail's SECOND octave to its first. The second octave is the only
+     anti-tiling mechanism in the pipeline: a tile cannot avoid repeating its own content, so
+     the macro layer has to vary *between* neighbouring repeats to break the lattice.
+     Its world period is `P2 = 1 / (presetScale * detail2Scale)` metres.
+
+     0.137 -> 0.030. At 0.137 the mechanism was tuned to a period where it cannot work, and
+     the defect is universal rather than a sandstone special case — recomputed against every
+     (recipe, detail-preset) pairing actually built in `src/world/**`, ALL EIGHT tiled
+     consumers sat at rho = P2/repeat between 0.97 and 1.84:
+
+       ceiling_stars    plaster   P2  5.84 m vs repeat  6.00 m   rho 0.97
+       plaster_painted  plaster   P2  5.84 m vs repeat  5.60 m   rho 1.04
+       hieroglyph_wall  sandstone P2 11.77 m vs repeat 10.40 m   rho 1.13   (the reported case)
+       column_papyrus   sandstone P2 11.77 m vs repeat 10.00 m   rho 1.18
+       mudbrick         generic   P2  7.30 m vs repeat  5.20 m   rho 1.40
+       sandstone_worn   sandstone P2 11.77 m vs repeat  7.20 m   rho 1.64
+       sandstone_block  sandstone P2 11.77 m vs repeat  6.80 m   rho 1.73
+       hieroglyph_gilded sandstone P2 11.77 m vs repeat 6.40 m   rho 1.84
+
+     At rho ~ 1 every repeat receives the same macro phase, so the layer adds detail but
+     decorrelates nothing — `hieroglyph_wall` beat at 89 m instead of breaking the lattice.
+
+     Three constraints bound the replacement, and 0.030 clears all three on all eight:
+       (a) rho >= 3, so the macro actually differs between adjacent tiles  -> min rho 4.44;
+       (b) the super-lattice round(rho)*repeat must exceed the longest framed run of one
+           surface, or the macro becomes the countable landmark itself. Worst case is
+           `temple`'s far hall wall, 36 m at 3.46 repeats (Materials.js:1334);
+       (c) P2 must stay under ~3x that run, or the macro is DC across the frame and again
+           decorrelates nothing -> sandstone lands at 53.8 m, 0.67 of a cycle across 36 m.
+     The band clearing all eight is 0.015..0.0425; 0.030 sits inside it and is the more
+     robust half, since (c) is the constraint that tightens on shots framing less wall.
+
+     Hoisted to a shared uniform rather than left as a shader literal for the same reason
+     `splitRange` was: it decides whether the mechanism works at all and was unreachable for
+     an A/B. Verified by arithmetic (tools cannot reject a period from a frame), confirmed in
+     frame — a bad number here is rejectable offline, a good one is not. */
+  detail2Scale: 0.030,
 };
 
 /* The Egypt palette, AGENTS.md §2.2. THREE.Color decodes sRGB hex to linear working space. */
@@ -232,15 +306,11 @@ const PAL = {
   shadowHue: 0x2a3f66,
   /* `shadowTintPeak` moved to TUNE — it is the daylight shadow's magnitude control and had to
      become reachable from `shading.tune` to be A/B-able at all. */
-  /* How much warm sand bounce is mixed into the shadow light — a desert shadow is lit by sky
-     *and* by sun bouncing off the sand around it, and a purely blue shadow light multiplied
-     into warm sandstone neutralises to mauve.
-
-     The mix is done at matched luminance (see _refreshShadowColor). Doing it on raw linear
-     radiance, as it used to, is what broke the shadow hue: the palette hue is R/G 0.667 in
-     sRGB but the *linear* bounce is 35x brighter in red than the linear tint, so 20% of it
-     took the light to R/G 1.52 — warmer than the sun it was meant to contrast with. */
-  shadowBounceMix: 0.20,
+  /* `shadowBounceMix` moved to TUNE for exactly the reason `shadowTintPeak` did: it is
+     described everywhere as "the live hue lever" and it was not live at all — a PAL constant
+     with no setter, reachable only by editing this file and rebuilding, so every A/B on the
+     shadow hue cost a full boot. It is `TUNE.shadowBounceMix` now; poke it and call
+     `_refreshShadowColor()`. */
   haze: 0xe8b878,
   hazeNight: 0x2a3f66,
   hazeSun: 0xffc98a,
@@ -319,6 +389,10 @@ export class Shading {
       uTermHi:       { value: TUNE.termHi },
       uRimGain:      { value: TUNE.rimGain },
       uRimCurve:     { value: new THREE.Vector3(...TUNE.rimCurve) },
+      /* Shared, not per-material: it is one global ratio and it has to be pokeable from
+         `shading.uniforms` for the A/B. Merged into every material by identity in
+         onBeforeCompile, alongside the per-material uDetailScale it multiplies. */
+      uDetail2Scale: { value: TUNE.detail2Scale },
       uShadowSat:    { value: TUNE.shadowSat },
       uMetalGain:    { value: TUNE.metalGain },
       /* Diagnostic channel. window.__ENGINE.get('shading').debugShadow(true) paints
@@ -954,7 +1028,7 @@ export class Shading {
     const bounce = u.uBounceColor.value;
     const bl = lum(bounce);
     _col.copy(bounce).multiplyScalar(bl > 1e-4 ? this._shadowTintLum / bl : 1);
-    _col.lerp(this._shadowTint, 1 - PAL.shadowBounceMix);
+    _col.lerp(this._shadowTint, 1 - TUNE.shadowBounceMix);
     u.uShadowColor.value.copy(_col).multiplyScalar(k);
   }
 

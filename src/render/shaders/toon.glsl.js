@@ -174,6 +174,7 @@ float slyShadowBand( float x, float steps, float soft ) {
 
 	uniform sampler2D uDetailMap;   // rgb = tangent-space normal, a = albedo grain
 	uniform float uDetailScale;
+	uniform float uDetail2Scale;
 	uniform float uDetailStrength;
 	uniform float uDetailGrain;
 	uniform float uDetailFade;
@@ -230,13 +231,20 @@ export const TOON_DETAIL = /* glsl */ `
 	#ifdef SLY_DETAIL
 	{
 		/* Two octaves at incommensurable scales: one reads as chisel tooth, the wide one
-		   breaks up the repeat so a 40 m wall never shows a tiling grid. */
+		   breaks up the repeat so a 40 m wall never shows a tiling grid.
+
+		   "Incommensurable" was the intent and was NOT what the second octave's multiplier
+		   delivered: at the literal 0.137 it stood at 0.97-1.84x every tiled consumer's
+		   repeat, i.e. near unison, so each repeat got the same macro phase and the layer
+		   decorrelated nothing. It is TUNE.detail2Scale now (see the derivation there) and a
+		   uniform rather than a literal so the ratio can be A/B'd.
+		   (No backticks in this file: the whole shader is a template literal.) */
 		float fade = 1.0 - smoothstep( uDetailFade * 0.4, uDetailFade, slyDist );
 		if ( fade > 0.001 ) {
 			vec3 b = slyTriWeights( slyWN );
 			vec4 d0 = slyTriplanar( slyWP, slyWN, b, uDetailScale );
 			#ifdef SLY_DETAIL2
-				vec4 d1 = slyTriplanar( slyWP + vec3( 37.7, 11.3, 91.1 ), slyWN, b, uDetailScale * 0.137 );
+				vec4 d1 = slyTriplanar( slyWP + vec3( 37.7, 11.3, 91.1 ), slyWN, b, uDetailScale * uDetail2Scale );
 			#else
 				vec4 d1 = vec4( slyWN, 0.5 );
 			#endif
@@ -382,7 +390,39 @@ export const TOON_SHADE = /* glsl */ `
 		vec3 sss = alb * uSssColor * keyRad * ( sssAmt * uSss * 2.4 * sh );
 
 		/* Hard-stepped Blinn-Phong. Threshold on the lobe, not on N.H, so the highlight is
-		   a crisp shape whose size tracks gloss instead of a soft blob. */
+		   a crisp shape whose size tracks gloss instead of a soft blob.
+
+		   **"Gold has no specular path in the shader at all" is false — correct the record.**
+		   That claim reached me as a handoff and it is a misreading of the note at
+		   Materials.js:148-190, which says something different and narrower. What is true:
+		   Materials.js's own PAL.goldSpec reaches no specular term, because this module
+		   declares a private palette. What does NOT follow is that gold has no highlight.
+		   Three lines below there is a dedicated metal branch, and it is what that same
+		   Materials.js note concludes is *correct by design*:
+
+		     specAmt  = uSpec * (1 - 0.75*rgh) * mix( 1.0, 3.4, slyMetal )      -> x3.4 on metal
+		     specTint = mix( uSpecColor, alb * 2.0 + uSpecColor * 0.25, slyMetal )
+		     metalEnv = alb * env * ( slyMetal * uMetalGain * ef ) * ...        (the block below)
+
+		   i.e. on metal the highlight colour is derived from the ALBEDO (1.7x albedo plus a
+		   0.36 white core) rather than from any palette hex — "sun-times-gold, arrived at
+		   without any palette entry", which is exactly why goldSpec not reaching here is
+		   harmless rather than a bug. gold_leaf ships spec 0.95 / gloss 110 / metal 0.85,
+		   so the term is live and strong. Adding a second gold specular on top of this one,
+		   on the strength of the "no path at all" claim, would double the highlight.
+
+		   The measured defect (gold reading B/max 1.08-1.39 in frame against 0.24-0.26 on the
+		   albedo) is real but is NOT a missing lobe, and the arithmetic rules out the obvious
+		   candidates: metalEnv and the diffuse are both multiplied by the gold albedo, whose
+		   linear blue is ~0.05, so neither can make blue the max channel. The terms that can
+		   are the ones NOT multiplied by albedo — the additive shadow wash on the line above,
+		   the additive rim, and the multiplicative AO tint and split-tone cool leg, all four
+		   of which are blue. What makes gold uniquely exposed to them is one line up:
+		   diff *= mix( 1.0, 0.20, slyMetal ) removes 68% of gold's own colour at metal 0.85,
+		   leaving little signal for those blue terms to sit against. That is the hypothesis to
+		   test first, it is a one-line A/B, and per the handoff's own sequencing it should be
+		   measured only AFTER the split-tone cast is fixed — otherwise it is sized against a
+		   moving baseline. TEXTURES holds the material masks and owns that verification. */
 		float rgh = clamp( roughnessFactor, 0.03, 1.0 );
 		vec3 Lv = slyToViewDir( L );
 		vec3 H = normalize( Lv + V );
