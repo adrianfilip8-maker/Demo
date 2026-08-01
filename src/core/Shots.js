@@ -152,7 +152,7 @@ export const SHOTS = {
 
   /* Palette flip. Moonlit stealth: cool key, warm brazier accents, blue sparkles. */
   night: {
-    pos: [-11.0, 8.4, 22.0], target: [2.0, 6.0, 2.0], fov: 48, tod: 0.02,
+    pos: [-13.4, 8.4, 22.0], target: [2.0, 6.0, 2.0], fov: 48, tod: 0.02,
     player: { pos: [-4.0, 5.2, 12.5], yaw: 1.15, pose: 'sneak_walk' },
   },
 
@@ -192,8 +192,8 @@ export const SHOTS = {
      lifted equally to keep the original pitch and aim. The plinth itself is an §8.1 contract
      surface and is correct — nothing about the level needed changing. */
   guard: {
-    pos: [-11.5, 4.05, 25.4], target: [-15.6, 3.45, 22.0], fov: 38, tod: 0.10,
-    player: { pos: [-9.0, 0, 27.5], yaw: 2.3, pose: 'sneak_idle' },
+    pos: [-11.5, 2.6, 30.5], target: [-17.0, 1.1, 28.0], fov: 38, tod: 0.10,
+    player: { pos: [-9.0, 0, 31.5], yaw: 2.3, pose: 'sneak_idle' },
   },
 };
 

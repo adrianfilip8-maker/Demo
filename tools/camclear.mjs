@@ -23,6 +23,45 @@ function radiusAt(c, y) {
   return c.rBase + (c.rTop - c.rBase) * t;
 }
 
+/* Solid boxes that are not columns but have repeatedly swallowed cameras. The colossi are the
+   worst offenders in the level and have now caused three separate defects on their own: the
+   `courtyard` character was fully occluded by the west throne, the `guard` camera stood 5 cm
+   above a plinth deck (producing a "cyan contact line", a blank lower 61% and a missing
+   subject), and my fix for that put the camera *inside* the throne block above it. Extents
+   from EgyptLevel's `colossi` contract (x ±9.5, z 25, plinth 2.0). */
+const BOXES = [];
+for (const sx of [-1, 1]) {
+  BOXES.push({ name: `${sx < 0 ? 'west' : 'east'} colossus plinth`,
+    x0: sx * 9.5 - 3.4, x1: sx * 9.5 + 3.4, y0: 0, y1: 2.0, z0: 21.5, z1: 28.5 });
+  BOXES.push({ name: `${sx < 0 ? 'west' : 'east'} colossus throne`,
+    x0: sx * 9.5 - 3.4, x1: sx * 9.5 + 3.4, y0: 2.0, y1: 4.5, z0: 22.0, z1: 27.6 });
+}
+
+/** Signed clearance to a box: negative means inside. */
+function boxClear(b, x, y, z) {
+  const dx = Math.max(b.x0 - x, 0, x - b.x1);
+  const dy = Math.max(b.y0 - y, 0, y - b.y1);
+  const dz = Math.max(b.z0 - z, 0, z - b.z1);
+  const outside = Math.hypot(dx, dy, dz);
+  if (outside > 0) return outside;
+  // Inside: report how far in, as the smallest distance to any face.
+  return -Math.min(x - b.x0, b.x1 - x, y - b.y0, b.y1 - y, z - b.z0, b.z1 - z);
+}
+
+function checkBoxes(label, x, y, z) {
+  let worst = null;
+  for (const b of BOXES) {
+    const c = boxClear(b, x, y, z);
+    if (!worst || c < worst.c) worst = { b, c };
+  }
+  if (worst && worst.c < 0.6) {
+    console.log(`  ${label.padEnd(24)} ${worst.b.name.padEnd(22)} clearance ${worst.c.toFixed(2)}m  ` +
+      (worst.c < 0 ? 'INSIDE SOLID' : 'grazing'));
+    return worst.c;
+  }
+  return 999;
+}
+
 function check(label, x, y, z) {
   let worst = null;
   for (const c of COLS) {
@@ -47,5 +86,8 @@ for (const [name, s] of Object.entries(SHOTS)) {
   if (inHall(s.pos[0], s.pos[2])) { if (check(`${name} camera`, ...s.pos) < 0.6) bad++; }
   if (s.player && inHall(s.player.pos[0], s.player.pos[2])) { if (check(`${name} player`, ...s.player.pos) < 0.6) bad++; }
   if (inHall(s.target[0], s.target[2])) check(`${name} target`, ...s.target);
+  // Box check runs everywhere — the colossi are in the courtyard, not the hall.
+  if (checkBoxes(`${name} camera`, ...s.pos) < 0.6) bad++;
+  if (s.player && checkBoxes(`${name} player`, ...s.player.pos) < 0.6) bad++;
 }
 console.log(bad ? `\n${bad} placement(s) need moving.` : '\nAll clear.');

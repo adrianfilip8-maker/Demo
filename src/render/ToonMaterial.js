@@ -230,9 +230,12 @@ export class Shading {
     this._shadowTint = new THREE.Color(PAL.shadowHue);
     this._shadowTintLum = lum(this._shadowTint);
     this._shadowFloor = TUNE.shadowFloor;
-    /* TEMP-AB: pinned true for the shadowcap.mjs A/B so `uHazeSun` holds the shipped-before
-       constant and the harness owns it. RESTORE TO false. */
-    this._hazeSunExplicit = true;
+    /* Set only by an explicit setAtmosphere({ hazeSun }) — see _refreshHazeSun(). While false,
+       the forward-scatter colour tracks the live haze instead of holding a constant.
+
+       A harness that wants the shipped-before behaviour for an A/B sets this true and writes
+       uHazeSun itself; that is the supported way to pin it, rather than editing this line. */
+    this._hazeSunExplicit = false;
 
     /**
      * Shared uniform objects. Every material created by toon() references these *by identity*,
@@ -847,7 +850,32 @@ export class Shading {
      *
      * The floor is a readability rule — keep detail visible in shadow — not a licence to make
      * the shadow light brighter than the material it falls on. Capping the peak channel keeps
-     * the hue intact and keeps shadow reading as shadow. */
+     * the hue intact and keeps shadow reading as shadow.
+     *
+     * **Read this before tuning `shadowFloor` or `ambient.floor`: in daylight the cap is not an
+     * edge case, it is the operating point, and both of those knobs are dead above it.**
+     * `#2a3f66` has a linear peak of 0.1332, so `maxK` is `0.52 / 0.1332` = **3.904**, and every
+     * daylight shot asks for far more than that:
+     *
+     *     shot        keyLum   k asked   k used
+     *     hero         2.424     6.50     3.904   floor must fall below 0.075 to matter
+     *     temple       2.544     6.82     3.904                          0.072
+     *     courtyard    2.433     6.52     3.904                          0.075
+     *     combat       2.474     6.63     3.904                          0.074
+     *     interior     3.652     9.79     3.904                          0.050
+     *     night        0.336     0.90     0.900   uncapped — the floor IS live here
+     *     guard        0.336     0.90     0.900   uncapped
+     *
+     * So every daylight shot in the game receives the *identical* shadow light,
+     * `(0.123, 0.175, 0.423)`, and `TUNE.shadowFloor` cannot change it at any value above 0.075.
+     * KNOWN_ISSUES §3 records five capture cycles spent on that parameter; it was clamped out of
+     * the arithmetic for all of them. The same is now true of the `ambient.floor` this file
+     * accepts from LIGHTING — an enclosure term has to cut it by 40-60% before it does anything.
+     *
+     * The magnitude of a daylight shadow is therefore set by `PAL.shadowTintPeak` and by nothing
+     * else. If the frame is too bright or too blue in shadow — and measured on `courtyard` the
+     * obelisk runs L 144.8 lit against L 82.3 shadowed, only 1.76:1 at golden hour — that
+     * constant is the lever, not the floor and not the wash. */
     const peak = Math.max(this._shadowTint.r, this._shadowTint.g, this._shadowTint.b);
     const maxK = PAL.shadowTintPeak / Math.max(peak, 1e-4);
     k = Math.min(k, maxK);
