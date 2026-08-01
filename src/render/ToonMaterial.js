@@ -48,6 +48,14 @@ const TUNE = {
 
   /* --- key / fill --- */
   keyIntensity: 2.55,
+  /* **Dead in the shipped game — do not tune this against a capture.** `Lighting.js:1335`
+   * sets `p.ambient.intensity` every frame and `setKeyLight()` writes it straight into
+   * `uAmbIntensity`, so whatever is here is overwritten before the first frame is drawn. It is
+   * the boot value and the `_applyAutoLight()` fallback only. This is the same shape of trap as
+   * the `shadowTintPeak` clamp that cost five capture cycles (KNOWN_ISSUES §3): the knob still
+   * *moves* the image from a console poke, which is how it reads as live. The fill is a real
+   * lever and it is needed for critic pass 3's "unlit <= 45% of lit" — but it has to be moved
+   * in LIGHTING, via `Lighting.TUNE.ambientBoost` or `A.ambientIntensity`. */
   ambIntensity: 0.52,
   shadowFloor: 0.125,    // shadow illumination as a fraction of key luminance. AGENTS: never below ~14%
                          // of the *tonemapped* result — 0.155 of a raw 3.3 key left the frame flat.
