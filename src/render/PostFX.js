@@ -144,8 +144,28 @@ const TUNE = {
      between them is L~100, and [0.04, 0.24] puts a->L51, midpoint->L101, b->L124 — the ramp
      spans the shadow-to-lit transition instead of sitting above the whole image.
 
-     Frame-verified, not just computed: the A/B restoring [0.08, 0.72] is one poke, since this
-     is pushed to the uniform every frame. */
+     STATUS, stated precisely because an earlier version of this comment overstated it and the
+     overstatement reached a commit message: the numbers above are ARITHMETIC, computed by
+     transcribing this file's grade chain and evaluating it against captured frames. They are
+     not a frame A/B of this change. The A/B is one poke — `splitRange` is pushed to the
+     uniform every frame — and is captured as the `splitold` variant in the six-shot run.
+     Until that lands, treat this as a well-founded prediction, not a verified result.
+
+     One figure in circulation IS wrong and it came from my own earlier report: scene-linear
+     0.72 maps to display **L165**, not L192. That is a property of the grade chain (contrast
+     1.08 + AgX + sRGB), so it does not depend on which frames were measured — L192 was simply
+     miscomputed, and it is repeated in commit ee28427's message. The conclusion is unaffected:
+     L165 is still above the 95th percentile of every daylight frame, which is the claim doing
+     the work. Separately, the cool-leg fractions quoted there (88.7 / 99.9) versus the table
+     above (86.4 `hero` / 99.3 `interior`) are not a correction — they are the same statistic
+     on different captures, and both say the same thing.
+
+     One caveat on that arithmetic, since it is the basis for the change: the display->scene-
+     linear step inverts AgX on the neutral axis, which is exact for greys and approximate for
+     saturated colour. Round-tripped against real palette colours, the error INSIDE the
+     crossover band 0.04..0.24 is 1.1-1.3% for stone and 6.7% worst case (gold). Far above the
+     band, at display L>190, it reaches 88% — so this model must not be used to reason about
+     highlights, only about where the crossover sits. */
   splitRange: [0.04, 0.24],
 
   /* --- finishing --- */

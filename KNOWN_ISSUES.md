@@ -221,26 +221,45 @@ instrument clears a change, that is the instrument's resolution talking, not the
 He is now at (-6.6, 5.12, 12.4), 100% of 506 samples visible, and 5.12 is the *measured* deck
 height at that xz rather than the 5.2 assumed from `night` 8 cm away.
 
-**Correct the record on the feet band — I first wrote it as "boot soles coincident with the
-floor" and that was wrong.** The paving hits on `temple`, `interior`, `night` and `combat`
-(46–56% of the **feet** band, 0% everywhere else) are not contact artefacts: the blocked
-samples sit 0.9–27 cm *below* the character's own root, and the occluders are a median 0.33–0.64
-m in front of them, so the floor is correctly hiding points that are underground.
+**The feet band went through two wrong explanations before the right one. Both were mine.**
 
-They are underground because **`charvis` skins the raw clip and the runtime does not render the
-raw clip.** `Rig.footIK` drives each ankle to `groundY + ikAnkle + clipLift` with
-`clipLift = max(0, ...)`, so an ankle authored below the root is raised back onto the ground
-plane, and `Animation.freezePose` sets `_ikW = 1` for every non-airborne clip — IK is live in
-exactly the captures this tool predicts. The sneak clips author their lowest vertex 28–29 cm
-under the root (`sneak_idle` −0.283, `sneak_walk` −0.287, `cane_combo_3` −0.107, against `run`
-+0.165 and `idle_confident` +0.002), and **the feet-band percentages track that sink depth
-exactly**: 54/56/46% on the three sneak shots, 33% on `cane_combo_3`, 0% on every shot whose
-clip sits at or above the root. The headline number now excludes the band for that reason.
+The paving hits on `temple`, `interior`, `night` and `combat` (46–56% of the **feet** band, 0%
+everywhere else) are not contact artefacts — that was the first wrong answer. The blocked
+samples sit 0.9–27 cm *below* the character's own root with the occluder a median 0.33–0.64 m
+in front, so the floor is correctly hiding points that are underground. The sneak clips author
+their lowest vertex 28–29 cm under the root (`sneak_idle` −0.283, `sneak_walk` −0.287,
+`cane_combo_3` −0.107, against `run` +0.165 and `idle_confident` +0.002), and the percentages
+track that sink depth exactly.
 
-Taken at face value this reads as three canonical shots rendering the character buried to
-mid-shin — a severe defect that does not exist. **A tool that omits a runtime correction does
-not report "unknown", it reports a confident wrong number**, and this one correlated so cleanly
-with pose that it looked like a finding. Read the per-band line, never the single percentage.
+The second wrong answer was mine too, and it is the instructive one. I read `Rig.footIK`, saw
+that it drives each ankle to `groundY + ikAnkle + clipLift`, saw `Animation.freezePose` set
+`_ikW = 1` for every non-airborne clip, and concluded the runtime corrects the sink — so the
+buried feet were my tool's artefact and the frames were fine. **Every step of that was true
+about what the code is specified to do, and the code did not do it.**
+
+`Rig.aimBone` borrowed the module scratch `_v0`. `twoBoneIK` builds the direction it wants into
+`_v0` and passes it as `dirWorld`, and `aimBone`'s first line overwrote `_v0` with the bone's
+*current* direction — so `setFromUnitVectors(_v0, dirWorld)` compared the vector against itself,
+returned the identity quaternion, and rotated nothing. **Both** call sites aliased. Every foot
+plant returned `true` and moved no leg, in every clip, since the IK was written. So the captures
+genuinely did render a buried character, and the tool was right for the wrong reason.
+
+Fixed with a private `_vAim`. Ankles now land on target (`crouch_idle` −0.082 → 0.086); worst-case
+boot penetration across the 52 clips **−0.450 → −0.188 m**.
+
+**Still not zero, so do not read charvis's feet band as solved either.** With working IK
+`sneak_idle` retains ~15.5 cm of boot below the floor, and 39 grounded clips still have some.
+The cause is identified and deliberately not shipped: the foot inherits the IK-solved shin's
+pitch, and `footIK`'s foot-levelling block is gated on `nrm.y < 0.9995`, so it runs only on
+*sloped* ground and is skipped on flat ground — which is exactly where it is needed. That is a
+one-token change with a blast radius across every grounded clip, left unshipped rather than
+verified blind.
+
+Three lessons, in the order they cost something: reading what code is specified to do is not
+evidence that it does it; a knob that reports success is not a knob that did anything; and
+**a tool that omits a runtime correction does not report "unknown", it reports a confident
+wrong number** — this one correlated so cleanly with pose that it looked like a finding twice,
+once as a defect and once as an artefact.
 
 Ruled out so far by reading the code: the staging path is wired correctly. `Controller.js` is
 registered as `'movement'` (`main.js:29`) and does have `teleport()` at `Controller.js:1007`, so
@@ -317,24 +336,52 @@ Recorded so they are not re-derived:
 - **The shadow residual is now green, not blue** — and this is the second time the same trap
   has been walked into from the opposite side. After the `shadowTintPeak` fix, shadow `B/max`
   went 1.050 → **0.855** (below 1.0 for the first time, blue inversion gone) while `R/G` went
-  1.276 → **1.468** against §2.2's 0.667. Green is now the darkest channel and that is what
-  reads as magenta. §3 below warns "R/G cannot see blue — measure B/max too"; **the inverse now
-  applies, and measuring only B/max would call this solved.** Report R/G, B/max and per-channel
-  means together or you will trade one cast for another. The live hue lever is
-  `shadowBounceMix`; the clamp binds magnitude only.
-- **Gold has no specular path in the shader at all.** `Materials.js`'s `goldSpec` reaches no
-  specular term — `ToonMaterial` declares its own palette and never consults it, so the
-  authored anisotropic gold has never reached a pixel. The albedo is *not* the problem and was
-  eliminated before the GPU: `hieroglyph_gilded` B/max 0.243, `gold_leaf` 0.259, against §2.2's
-  0.284. Through exact material masks in frame the same materials read 1.079/1.165 (`interior`)
-  and 1.385 (`hero`) — darker and bluer than the granite beside them in every environment.
-  Nothing in `src/textures/**` fixes it; it is SHADING's. Size it *after* the split-tone cast
-  is fixed, since a 38% B/R swing lands on gold too and part of that 1.385 is the cast.
-- **The one anti-tiling mechanism is mistuned.** The triplanar detail's second octave sits at
-  `uDetailScale * 0.137`; with `sandstone`'s `scale: 0.62` that is an **11.77 m period against
-  `hieroglyph_wall`'s 10.4 m repeat** — near-unison, beating at 88 m instead of decorrelating.
-  ~0.03 puts it near 52 m. Check the beat against *every* consumer scale before taking a value,
-  not just `sandstone`; landing in unison with a different one costs a frame to discover.
+  1.276 → **1.468**. Green is now the darkest channel and that is what reads as magenta. §3
+  below warns "R/G cannot see blue — measure B/max too"; **the inverse now applies, and
+  measuring only B/max would call this solved.** Report R/G, B/max and per-channel means
+  together or you will trade one cast for another.
+
+  **But do not score that 1.468 against §2.2's 0.667, which is what I first asked for.** 0.667
+  is `#2a3f66`'s ratio — a *light* colour. A pixel is light × albedo, and `sandstone` is itself
+  R/G ≈ 2.05 linear (`#c9915a` → 0.578/0.283), so a shadowed sandstone surface has a floor near
+  **0.935** and cannot reach 0.667 at any `shadowBounceMix`. Comparing a surface measurement to
+  a light spec is a category error, and it made a knob look like it had moved the wrong way when
+  it was already near its own floor. Two independent things also turn out to be true here:
+  `shadowBounceMix` was described everywhere as "the live hue lever" while being a `PAL`
+  constant with **no setter at all** (now in `TUNE`), and the term actually making green the
+  darkest channel is the **split-tone**, whose cool-leg gains are (0.914, 0.999, 1.265) — a
+  1.384 B/R swing, i.e. exactly the reported 38%. At mix 0.20 the surface is darkest-in-blue
+  *before* the split and darkest-in-green *after* it.
+- ~~**Gold has no specular path in the shader at all.**~~ **False, and it was my widening of a
+  true finding.** TEXTURES reported the narrow, correct fact: *this file's* `goldSpec` reaches
+  no specular term. I relayed it as "no specular path at all". The shader has a full metal
+  branch and has had one since before this was raised — `specAmt = uSpec * (1 - 0.75*rgh) *
+  mix(1.0, 3.4, slyMetal)`, `specTint = mix(uSpecColor, alb*2.0 + uSpecColor*0.25, slyMetal)`,
+  plus `metalEnv` — at `toon.glsl.js:433–449`, present at `23befef`. And `Materials.js:148–190`
+  *already explains* that `goldSpec` not reaching `uSpecColor` is **correct by design**: a
+  metal's specular is tinted by the metal, so the shader derives gold's highlight from the
+  albedo rather than from a palette hex. **Adding a gold spec lobe would double an existing
+  highlight.** Not implemented, deliberately.
+
+  The B/max 1.08–1.39 defect is real; the cause is elsewhere. `metalEnv` and the diffuse are
+  both multiplied by gold's albedo (linear blue ~0.05), so neither can produce it. The exposed
+  terms are the additive shadow wash and rim, the multiplicative AO tint, and the split leg —
+  and `diff *= mix(1.0, 0.20, slyMetal)` strips **68% of gold's own colour** at metal 0.85.
+  That is the one-line A/B, after the cast fix.
+
+  **The general lesson, which is mine.** A narrow measured claim ("`goldSpec` reaches no
+  specular term") and a broad architectural one ("there is no specular path") differ by one
+  word and by everything. I relayed the second, opened a task on it, and wrote it in here as
+  fact. The agent that owns the file checked and refused to implement it.
+- ~~**The one anti-tiling mechanism is mistuned.**~~ **Fixed, and it was worse than reported.**
+  The handoff named `sandstone`. Recomputing against every (recipe, detail-preset) pairing
+  actually built in `src/world/**` shows it is **universal — all 8 tiled consumers** sat at
+  rho = P2/repeat between 0.97 and 1.84, i.e. near-unison, where the macro layer decorrelates
+  nothing: `ceiling_stars` 0.97, `plaster_painted` 1.04, `hieroglyph_wall` 1.13, `sandstone_block`
+  1.73. `detail2Scale` 0.137 → **0.030** takes them to 4.44–7.91; the clean band is 0.015–0.0425.
+  The two assumptions under this were checked rather than assumed: `slyTriplanar` uses
+  UV = worldPos × scale (so period = 1/scale), and the detail texture is `RepeatWrapping`.
+  Checking every consumer instead of the one named is what turned a local fix into a global one.
 - **Enlarging `HG_WALL_TILE` is not an improvement — do not take it.** It halves texels per
   glyph, trading §7.3's tiling condition for §7.3's carving-detail condition. Measured and
   declined, not overlooked.

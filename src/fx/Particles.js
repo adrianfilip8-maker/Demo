@@ -88,6 +88,41 @@ const TUNE = {
      contrast without widening the beam. All three at 0 / 1 restore the pure additive blade. */
   shaftWide: 1.85,          // ribbon half-width in aperture widths
   shaftDark: 0.30,          // depth of the flanking shadow band, 0..0.5
+  /* Forward scatter — see the block in SHAFT_VERT for why this exists at all. The angle
+     between each canonical camera's forward and `A.sunDir`, with the Henyey-Greenstein
+     weight at that shot's own `mieG`, normalised at 90 deg where this term is unity, and
+     what the flattened+clamped term below actually applies:
+
+       into the sun                             backlit
+       hero        56 deg g 0.760  3.17x 1.80x  temple      79 deg g 0.749  1.36x 1.27x
+       traversal   57 deg g 0.759  3.01x 1.80x  interior   111 deg g 0.660  0.65x 0.74x
+       dunes       60 deg g 0.766  2.66x 1.80x  sly-close  111 deg g 0.760  0.64x 0.73x
+                                                courtyard  127 deg g 0.758  0.50x 0.63x
+       night is `dayAmount` 0, so it has no sun blades and this never applies to it.
+
+     **This table was handed to me inverted and I am recording the correction, because the
+     conclusion drawn from it was the opposite of the right one.** The version I received had
+     `courtyard` at 53 deg as "the one into-the-sun frame" deserving a blaze, and `hero` /
+     `traversal` / `dunes` past 120 deg. Every entry is 180 deg minus the truth. §8.1 fixes
+     the setting sun in the west (−X); `evalAtmosphere(0.76)` returns `sunDir` (−0.899,
+     0.438, 0), i.e. pointing *at* the sun, westward; and `courtyard`'s camera stands at
+     x −19 looking toward x +1, east-north-east, with its back to it. Independently, the
+     `courtyard` blades are already known to travel *away* from that camera and land
+     off-frame (see `Lighting.js` TUNE.courtShaftGain) — which can only happen in a backlit
+     frame. So `courtyard` is the most backlit shot in the set, not the least, and this is a
+     *third* independent reason its beams do not read. `hero` is the into-the-sun frame.
+
+     `shaftPhase` at 1 is the true phase function; below 1 it is flattened toward flat. 0.75
+     is a look call, not a physics one — full HG at g = 0.76 spans 2700x end to end, and a
+     beam that vanishes entirely at 127 deg is correct physics and a worse frame than one
+     that merely steps down. The clamp is the backstop, and the **ceiling is deliberately
+     1.8 rather than the 2.6 the raw curve wants**: the three shots that hit it — `hero`,
+     `traversal`, `dunes` — are the money shot and two exteriors, none of which has been
+     captured with this term in place, and an additive volume is the classic way to wash a
+     graded frame. Raise it once a `hero` capture says there is headroom; do not raise it
+     because the physics says 3.17. */
+  shaftPhase: 0.75,
+  shaftPhaseClamp: [0.45, 1.8],
   /* **Metres of gap between the blade and whatever is behind it**, not metres from the
      camera, which is what this used to be. The absolute form was doing two jobs and failing
      the second: excluding the sky (already handled — Sky.js's dome has `depthWrite: false`,
@@ -714,6 +749,8 @@ attribute vec4 aTint;      // linear rgb, gain
 attribute vec4 aParams;    // apex, flare, noiseScale, seed
 
 uniform float uWide;       // ribbon half-width in aperture widths — room for the shadow flank
+uniform vec2  uPhase;      // Mie g from ATMOSPHERE, and how much of the phase term to apply
+uniform vec2  uPhaseClamp; // hard floor/ceiling on the phase weight
 
 varying float vS;
 varying float vX;
@@ -761,7 +798,37 @@ void main() {
   vS = s;
   vX = position.x;
   vTint = aTint.rgb;
-  vGain = aTint.w;
+
+  /* Forward scatter — the reason you can see a beam at all.
+     This shader had **no angular term whatsoever**: vAxial is a billboard-degeneracy guard
+     and is symmetric, so it cannot tell looking *into* a beam from looking *away* from one,
+     and blade brightness was independent of the camera-sun angle. The eight daylight cameras
+     span 56 deg (hero, looking into the sun) to 127 deg (courtyard, its back to it), which
+     is a 6.3x range of physical Henyey-Greenstein weight at their own mieG values. One
+     global gain across that range can be right in at most one frame: tuned for the backlit
+     end it starves hero and traversal, and tuned for those it gives the backlit frames a
+     bright volume where a real beam would be nearly invisible. Zero angular dependence is
+     the single option that cannot be correct. (Per-shot figures, and a correction to an
+     inverted version of them, are tabulated at TUNE.shaftPhase.)
+
+     Same HG as Atmosphere.js's hgPhase (which Sky.js already uses for the sun bloom),
+     normalised at 90 deg so *side*-scatter is unity — that is roughly where the blades were
+     last tuned (temple sits at 101 deg), so this re-weights the set without moving the
+     shot the volumetrics condition already passes. The 4pi in the real phase function
+     cancels in the ratio and is dropped.
+
+     uPhase.y flattens it and the clamp bounds it: the physics is a look input here, not a
+     spec, and an unbounded HG at g = 0.76 spans 2700x. Cones opt out — a torch is a point
+     source, its light is not collimated, and there is no beam axis to take an angle to. */
+  float cosT = dot( d, toCam );
+  float g = clamp( uPhase.x, 0.0, 0.95 );
+  float g2 = g * g;
+  float hg = ( 1.0 - g2 ) / pow( max( 1.0 + g2 - 2.0 * g * cosT, 1e-4 ), 1.5 );
+  float hg90 = ( 1.0 - g2 ) / pow( 1.0 + g2, 1.5 );
+  float phase = clamp( mix( 1.0, hg / max( hg90, 1e-5 ), uPhase.y ),
+                       uPhaseClamp.x, uPhaseClamp.y );
+
+  vGain = aTint.w * mix( phase, 1.0, vCone );
   vSeed = aParams.w;
   vNoiseK = aParams.z;
   gl_Position = projectionMatrix * mv;
@@ -967,6 +1034,10 @@ class LightShafts {
         uNoiseAmt: { value: tune.shaftNoise },
         uHead: { value: 0.05 },
         uWide: { value: tune.shaftWide },
+        // g is overwritten from ATMOSPHERE every frame (see `_updateShafts`); this is only
+        // the value used before LIGHTING has published a state.
+        uPhase: { value: new THREE.Vector2(0.74, tune.shaftPhase) },
+        uPhaseClamp: { value: new THREE.Vector2(tune.shaftPhaseClamp[0], tune.shaftPhaseClamp[1]) },
         uEdge: { value: tune.shaftEdge },
         uTail: { value: tune.shaftTail },
         uLenNorm: { value: tune.shaftLenNorm },
@@ -2419,6 +2490,13 @@ export class Particles {
     const lighting = this.engine.get('lighting');
     const shafts = lighting?.shafts;
     const list = this._activeShafts(shafts);
+
+    /* The Mie asymmetry comes from ATMOSPHERE rather than being a constant here, because it
+       is already keyed to time of day (0.62 at night through 0.766 at `dunes`' tod) and the
+       sky dome is drawn with the same number — a beam scattering on a different `g` from the
+       air around it is the sort of disagreement §7.3 catches without being able to name. */
+    const g = lighting?.atmosphere?.mieG;
+    if (this.shafts && Number.isFinite(g)) this.shafts.material.uniforms.uPhase.value.x = g;
 
     /* --- the dust-boost uniforms: the six nearest live volumes ------------------------- */
     /* Two corrections here, and the second is the one that matters.

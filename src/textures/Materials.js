@@ -205,6 +205,23 @@ const BARK_DARK = 0x523726;
  *  0.202 from a 0.2253 floor, still under the line; from 0.2451 it clears. */
 const BARK_CREV = 0x563a26;
 
+/**
+ * Crevice floor for the *carved* sandstone recipes, as opposed to the crevice *colour*.
+ *
+ * §2.2's `crevice #4a2f22` is luma **0.2031**, which is exactly the line the dark-tail invariant
+ * is measured against — and `rampFloor`'s pull is `(lo − y)/lo`, which vanishes as a texel
+ * approaches `lo`. So passing `PAL.sandCrev` as the floor asks it to defend a line it is standing
+ * on, and everything just under slips through. Same lesson, same arithmetic and same fix as
+ * `BARK_CREV`: a floor has to sit *above* the threshold it defends.
+ *
+ * This is `#4a2f22` scaled x1.15 — the same hue, so §2.2's crevice is still what a recess reads
+ * as — at luma **0.2334**, clear of the line by the margin `BARK_DARK` uses. It touches only the
+ * texels that were already below §2.2's crevice, which is 0.03 % of the map, and lifts them by at
+ * most 0.03 luma. It is *not* a general lightening of the crevices: the deep occlusion a carving
+ * needs lives in `derive()`'s AO and in `s.h`, not down here.
+ */
+const SAND_CREV_FLOOR = 0x553627;
+
 /* Old timber, chosen the same way. `wood_old`'s ramp bottomed out on `0x3f2a1a`, luma **0.178** —
  * *below* §2.2's `crevice` 0.2031 before a single darkening pass had run — and the recipe carried
  * no `rampFloor` at all, so it reported the largest dark tail of any recipe in the catalogue with
@@ -1888,16 +1905,117 @@ export const MATERIALS = {
         return drumTone[k];
       });
 
-      /* Text column geometry, in metres rather than in fractions of a tile.
+      /* ---- Glyph registers: two ringing the shaft, and the vertical text between them. -----
        *
-       * `columnRegister` makes its quadrats one box-width square, so the box width *is* the glyph
+       * Critic pass 4 scored the near nave column *"no fluting, no glyph and no capital detail;
+       * at this scale they are smooth tapered slabs"*. Measured on the frame it is exactly that:
+       * relative local contrast (5x5 sd / mean, taken on an **albedo-only render through the
+       * real camera** so no shading term can confound it) is **0.0132 against `hieroglyph_wall`'s
+       * 0.0305 in `temple`**, and **0.0120 inside the critic's own ROI** — the flattest surface
+       * in the frame while being 54.5 % of it. The drum courses above supplied the *low*
+       * frequency and nothing carried the middle.
+       *
+       * The glyphs were already here, and the reason they were invisible only shows up when the
+       * frame is measured rather than the tile: the register is a **vertical** strip 0.09 of the
+       * repeat wide, so it dresses 9 % of a 10 m circumference and only the half of the shaft
+       * facing the camera can show it at all. Measured, **10.3 % of `temple`'s column pixels
+       * fall inside it**, most of that the blank ground between signs — which is why a 180x380
+       * crop of the near column contains exactly one legible sign.
+       *
+       * A register that *rings* the shaft has no such lottery: it is on every column at every
+       * angle. It is also **horizontal**, the one direction this recipe has no energy in, and
+       * the one direction that cannot re-create the vertical streaking the two notes above exist
+       * to prevent — the rib fix took the painted stalk down so the mesh's 8 lobes could own the
+       * bundle, and nothing here puts it back.
+       *
+       * **Placed against the framings, not against the tile.** V is registered (see
+       * `Kit.COLUMN_V_TILE`), so a fraction of v is a different number of metres on a nave
+       * column than an aisle one and the only stable unit is pixels measured in the frame.
+       * Coverage of each drum-face centre, as the share of that shot's column pixels landing
+       * within +/-0.024 of it:
+       *
+       *     band v    temple  criticROI  courtyard   hero  traversal  night
+       *     0.186       7.7      13.8       7.3       9.0     7.9      8.2
+       *     0.268       6.6      13.6       7.0       8.8     5.3      8.0
+       *     0.432       5.0      10.7       7.6       8.7     4.0      9.1
+       *     0.513       4.5       1.5       7.3       3.5     0.0      8.1
+       *     0.595+     <4.0      ~1.1      <6.7       0.0     0.0     <0.8
+       *
+       * Two results there that reasoning gets wrong. **The upper shaft is never on screen** — a
+       * band at "two thirds up", the natural place to put one, is *zero* pixels in `hero` and
+       * `traversal`. And coverage falls monotonically with height, so registers belong low.
+       * 0.268 and 0.432 are the centres of drum faces 1 and 3, so a bed joint never cuts a band
+       * (nearest joint clears by 0.017 of v, ~25 cm), and together they cover **24.3 % of the
+       * critic's ROI**.
+       *
+       * Half-width 0.024 of v is **43 px in `temple`**, 19 px `traversal`, 12 px `hero`, 10 px
+       * `night`, 9 px `courtyard` — legible signs in the interior shot and a band at distance,
+       * the same "outlives its own detail" property the drum tone above was chosen for.
+       *
+       * **The quadrats are square in WORLD, not in the tile.** One tile-u is 10 m of arc and one
+       * tile-v is `capTop`, so a texel-square sign renders 1.47x taller than wide — the existing
+       * vertical register has been drawing 0.90 x 1.42 m signs this whole time. Drawing inside
+       * `scale(1, BAND_ASPECT)` cancels it: `drawGlyph` preserves the glyph's own aspect in the
+       * scaled space, the outer scale squashes it by 0.680 in texels, and the u:v metre ratio
+       * stretches it back. That puts 14 signs around the shaft at 41x43 px in `temple`.
+       *
+       * The bottom-up `y` used here is the same coordinate the binding bands below use, and it
+       * equals tile-v in the frame — verified end-to-end rather than assumed, by finding the
+       * painted bands at tile-v 0.075-0.125 / 0.800 / 0.900 against authored 0.035-0.090 /
+       * 0.115-0.145 / 0.80-0.83 / 0.865-0.920. Three flips sit in that chain and reasoning about
+       * them gives the wrong sign. */
+      const BAND_V = [0.268, 0.432], BAND_HW = 0.024;
+      /* 10 m of arc per tile-u against `capTop` m per tile-v. Exact on a nave column, which is
+         what `temple` is mostly made of; aisle columns (capTop 11.4 m) come out ~1.3x wide, and
+         that is not fixable from inside a tile while V is registered per column. */
+      const BAND_ASPECT = 10 / 14.7;
+      const RULE_T = 0.0026;
+
+      /* `columnRegister` makes its quadrats one box-width square, so the box width *is* the glyph
        * size. At 0.20 of the tile it was a 1.44 m sign, and widening `tile[0]` to 5.0 above would
        * have quietly taken it to **2.0 m** — the same over-scale that put three-metre
-       * hieroglyphs on the hypostyle walls, made worse by the fix for the ribs. TXT_W is 0.09 of
-       * the repeat, i.e. 0.90 m: large, as befits a hypostyle column, but a *sign* rather than a
-       * billboard, and it stacks six of them down the shaft instead of showing four. At the near
-       * nave column (~8 m, 8.5 mm/px) that is 106 px and at the far end of the nave 28 px. */
-      const TXT_W = 0.09, TXT_X = 0.5 - TXT_W * 0.5, TXT_Y = 0.20, TXT_H = 0.58;
+       * hieroglyphs on the hypostyle walls. TXT_W is 0.09 of the repeat, i.e. 0.90 m: large, as
+       * befits a hypostyle column, but a *sign* rather than a billboard.
+       *
+       * The ringing bands own their slice of v and the vertical text runs in what is left, rather
+       * than being drawn through — overlapping registers are mush at every distance. Runs shorter
+       * than one quadrat are dropped instead of being squeezed. */
+      const TXT_W = 0.09, TXT_X = 0.5 - TXT_W * 0.5;
+      const TXT_V0 = 0.22, TXT_V1 = 0.79, TXT_GAP = 0.010;
+      const txtRuns = [];
+      {
+        let y0 = TXT_V0;
+        for (const bc of BAND_V) {
+          if (bc - BAND_HW - TXT_GAP - y0 > 0.05) txtRuns.push([y0, bc - BAND_HW - TXT_GAP]);
+          y0 = bc + BAND_HW + TXT_GAP;
+        }
+        if (TXT_V1 - y0 > 0.05) txtRuns.push([y0, TXT_V1]);
+      }
+
+      /** One ringing register per band, drawn identically into the cut / line / paint passes. */
+      const glyphBands = (ctx, mode) => {
+        for (let b = 0; b < BAND_V.length; b++) {
+          ctx.save();
+          ctx.translate(0, (1 - BAND_V[b] - BAND_HW) * size);
+          ctx.scale(1, BAND_ASPECT);
+          HG.rowRegister(ctx, 0, 0, size, (BAND_HW * 2 * size) / BAND_ASPECT,
+            cx.seed + 61 + b * 13, HG.POOLS.divine, mode);
+          ctx.restore();
+        }
+      };
+      /** The vertical text, in the runs the bands left, with the same world-square correction. */
+      const glyphColumns = (ctx, mode) => {
+        for (let r = 0; r < txtRuns.length; r++) {
+          const [v0, v1] = txtRuns[r];
+          ctx.save();
+          ctx.translate(0, (1 - v1) * size);
+          ctx.scale(1, BAND_ASPECT);
+          HG.columnRegister(ctx, size * TXT_X, 0, size * TXT_W, ((v1 - v0) * size) / BAND_ASPECT,
+            cx.seed + 3 + r * 7, HG.POOLS.divine, mode);
+          ctx.restore();
+        }
+      };
+
       const bandsMask = rasterMask(size, (ctx) => {
         ctx.fillStyle = '#fff';
         // Binding bands near the foot and below the capital.
@@ -1913,17 +2031,29 @@ export const MATERIALS = {
         for (const [y, h] of [[0.115, 0.030], [0.80, 0.030]]) {
           ctx.fillStyle = css(PAL.ochre); ctx.fillRect(-2, (1 - y - h) * size, size + 4, h * size);
         }
-        HG.columnRegister(ctx, size * TXT_X, size * TXT_Y, size * TXT_W, size * TXT_H, cx.seed + 3, HG.POOLS.divine, 'paint');
+        glyphColumns(ctx, 'paint');
+        glyphBands(ctx, 'paint');
       });
       const textCut = rasterMask(size, (ctx) => {
         ctx.fillStyle = '#fff'; ctx.strokeStyle = '#fff';
-        HG.columnRule(ctx, size, size * (TXT_X - 0.018), size * 0.008, size * 0.19, size * 0.79, 'line');
-        HG.columnRule(ctx, size, size * (TXT_X + TXT_W + 0.018), size * 0.008, size * 0.19, size * 0.79, 'line');
-        HG.columnRegister(ctx, size * TXT_X, size * TXT_Y, size * TXT_W, size * TXT_H, cx.seed + 3, HG.POOLS.divine, 'cut');
+        for (const [v0, v1] of txtRuns) {
+          HG.columnRule(ctx, size, size * (TXT_X - 0.018), size * 0.008, (1 - v1) * size, (1 - v0) * size, 'line');
+          HG.columnRule(ctx, size, size * (TXT_X + TXT_W + 0.018), size * 0.008, (1 - v1) * size, (1 - v0) * size, 'line');
+        }
+        /* The incised rule bounding each ringing register. It is what still reads once the signs
+           inside it have blurred: at `courtyard`'s 9 px the band survives as a ruled stripe. */
+        ctx.fillStyle = '#fff';
+        for (const bc of BAND_V) {
+          ctx.fillRect(-2, (1 - bc - BAND_HW) * size - RULE_T * size, size + 4, RULE_T * size);
+          ctx.fillRect(-2, (1 - bc + BAND_HW) * size, size + 4, RULE_T * size);
+        }
+        glyphColumns(ctx, 'cut');
+        glyphBands(ctx, 'cut');
       });
       const textLine = rasterMask(size, (ctx) => {
         ctx.fillStyle = '#fff'; ctx.strokeStyle = '#fff';
-        HG.columnRegister(ctx, size * TXT_X, size * TXT_Y, size * TXT_W, size * TXT_H, cx.seed + 3, HG.POOLS.divine, 'line');
+        glyphColumns(ctx, 'line');
+        glyphBands(ctx, 'line');
       });
 
       for (let i = 0; i < s.n; i++) {
@@ -1999,7 +2129,12 @@ export const MATERIALS = {
        * as "long vertical cyan and white smears running their full height". */
       weather(s, { source: src, seed: cx.seed + 6, creviceAmt: 0.46, streakAmt: 0.24, dustAmt: 0.16, directional: 0.20 });
       grain(s, { amount: 0.020, freq: 120, seed: cx.seed + 8, heightAmt: 0.006 });
-      rampFloor(s, { crevice: PAL.sandCrev });
+      /* `SAND_CREV_FLOOR`, not `PAL.sandCrev`, and only on this recipe — see the constant. The
+         registers above roughly tripled the carved area, and carving is what makes a dark tail:
+         measured at the shipping size, `sandstone_block` (uncarved) is 0.00000, this recipe was
+         0.00010 and is 0.00027 with a floor sitting exactly *on* the line, and `hieroglyph_wall`
+         — carved, same family, same frame — is 0.00125. A floor on the line cannot defend it. */
+      rampFloor(s, { crevice: SAND_CREV_FLOOR, lift: 0.5 });
     },
   },
 

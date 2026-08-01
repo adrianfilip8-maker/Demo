@@ -70,6 +70,17 @@ const _v3 = new THREE.Vector3();
 const _v4 = new THREE.Vector3();
 const _v5 = new THREE.Vector3();
 const _v6 = new THREE.Vector3();
+/**
+ * `aimBone`'s own scratch, and it must stay private to it.
+ *
+ * It used to borrow `_v0`, which silently killed the entire two-bone IK: `twoBoneIK` builds the
+ * direction it wants into `_v0` and passes it as `dirWorld`, and `aimBone`'s first act was to
+ * overwrite `_v0` with the bone's *current* direction — so `setFromUnitVectors(_v0, dirWorld)`
+ * was comparing the vector against itself, produced the identity quaternion, and rotated
+ * nothing. Both of `twoBoneIK`'s two calls aliased this way, so foot planting had never once
+ * moved a leg, in any clip, while still returning `true`.
+ */
+const _vAim = new THREE.Vector3();
 const _eu = new THREE.Euler();
 const _up = new THREE.Vector3(0, 1, 0);
 const _ident = new THREE.Quaternion();
@@ -352,10 +363,13 @@ export class Rig {
   aimBone(bone, dirWorld) {
     const bd = this.bindDir[bone.name];
     if (!bd) return;
-    bone.getWorldQuaternion(_q0);                  // current world orientation
-    _v0.copy(bd).applyQuaternion(_q0).normalize(); // where it points now
-    if (_v0.lengthSq() < 1e-8) return;
-    _q1.setFromUnitVectors(_v0, dirWorld);         // world-space correction
+    bone.getWorldQuaternion(_q0);                     // current world orientation
+    /* `_vAim`, never `_v0` — callers pass their own scratch as `dirWorld` and `_v0` is the
+       one they reach for. See the declaration of `_vAim`: aliasing it here made every
+       two-bone IK solve a no-op that still reported success. */
+    _vAim.copy(bd).applyQuaternion(_q0).normalize(); // where it points now
+    if (_vAim.lengthSq() < 1e-8) return;
+    _q1.setFromUnitVectors(_vAim, dirWorld);          // world-space correction
     // localNew = inv(parentWorld) * delta * parentWorld * localOld
     const parent = bone.parent;
     if (parent) parent.getWorldQuaternion(_q2); else _q2.identity();

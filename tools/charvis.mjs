@@ -22,16 +22,24 @@
  * **The feet band is measured before foot IK and is reported separately for that reason.**
  * This skins the raw clip; the runtime does not render the raw clip. `Rig.footIK` drives each
  * ankle to `groundY + ikAnkle + clipLift` where `clipLift = max(0, ...)`, so an ankle authored
- * *below* the root is raised back onto the ground plane — and `Animation.freezePose` sets
- * `_ikW = 1` for every non-airborne clip, so IK is live in exactly the captures this tool is
- * used to predict. The sneak clips author their lowest vertex 28-29 cm below the root
- * (`sneak_idle` -0.283, `sneak_walk` -0.287, `cane_combo_3` -0.107, against `run` +0.165 and
- * `idle_confident` +0.002), so without IK those samples sit underground and the paving
- * correctly occludes them. The feet-band figures track that sink depth exactly — 54% / 56% /
- * 46% on the three sneak shots, 33% on `cane_combo_3`, and **0% on every shot whose clip sits
- * at or above the root**. That is this tool's artefact, not a buried character. Taken at face
- * value it reads as a severe defect in three canonical shots, which is why the headline number
- * excludes it.
+ * *below* the root is raised back onto the ground plane. The sneak clips author their lowest
+ * vertex 28-29 cm below the root (`sneak_idle` -0.283, `sneak_walk` -0.287, `cane_combo_3`
+ * -0.107, against `run` +0.165 and `idle_confident` +0.002), so without IK those samples sit
+ * underground and the paving correctly occludes them — 54% / 56% / 46% on the three sneak
+ * shots, 33% on `cane_combo_3`, 0% on every shot whose clip sits at or above the root.
+ *
+ * **Do not conclude from that, as I did, that the frames were fine.** I read `footIK`, saw
+ * `freezePose` set `_ikW = 1` for every non-airborne clip, and called the whole band this
+ * tool's artefact. `Rig.aimBone` was borrowing the module scratch `_v0` — the same vector
+ * `twoBoneIK` builds its target into and passes as `dirWorld` — so `setFromUnitVectors` was
+ * comparing the vector with itself and returning identity. Both call sites aliased. **Foot IK
+ * had never moved a leg while returning `true`**, so the captures really did show a buried
+ * character. Reading what code is specified to do is not evidence that it does it.
+ *
+ * Fixed (private `_vAim`), and still not zero: with working IK `sneak_idle` retains ~15.5 cm of
+ * boot below the floor and 39 grounded clips have some, because `footIK`'s foot-levelling block
+ * is gated on `nrm.y < 0.9995` and so runs only on sloped ground. So this band is neither an
+ * artefact nor a measurement of the frame. It is excluded from the headline and printed raw.
  */
 import * as THREE from 'three';
 import { execFileSync } from 'node:child_process';
