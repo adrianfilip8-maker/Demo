@@ -1391,7 +1391,7 @@ export const MATERIALS = {
        * they all sample V within +/-0.20 of the seam and the wall layout's registers, at V
        * 0.645-0.945 and 0.36-0.43, reached none of them. Measured on `hero`'s doorway lintel
        * through its own camera: luma p50 163/255 at chroma 0.330, i.e. pale limestone. */
-      const layout = (mode) => (ctx) => glyphArchitrave(ctx, size, mode, cx.seed + 4, { worldTile: worldTileOf(HG_GILDED_TILE), signM: 1.0 });
+      const layout = (mode) => (ctx) => glyphArchitrave(ctx, size, mode, cx.seed + 4, { worldTile: worldTileOf(HG_GILDED_TILE), signM: 0.85 });
       const cut = rasterMask(size, layout('cut'));
       const lines = rasterMask(size, layout('line'));
       const ramp = carve(s, cut, lines, { depth: 0.42, bevelPx: 2.6, lip: 0.10, bulge: 0.5, lineDepth: 0.56, seed: cx.seed + 5 });
@@ -2239,12 +2239,15 @@ export const MATERIALS = {
    * = 15 over a 9 m palm against the mesh's 14.6, and squares up the pad: 0.22 m wide × 0.36 m
    * tall instead of 0.22 × 0.77, which is what an old frond base actually looks like.
    *
-   * The relief scale moves with `tile[0]`: `derive()`'s `ku = bump·size/tu` goes 8.05 → 11.26 at
-   * the shipping 512. The true U period is the mid-trunk circumference, ~2.0 m, for which the
-   * honest `ku` would be 5.6 — so this lands at 2.0x, which is exactly the convention every
-   * architectural surface in the project already runs at (see `Textures._build`'s note: UVs at
-   * `UV_PER_M` make every declared `tile` cover 2x its metres, so every normal map in the game
-   * is encoded 2x steep). It was at 1.43x before; it is now consistent with the rest. */
+   * `bump` 0.022 → 0.013 holds the *measured relief* constant across the change, so this is a
+   * registration fix and nothing else: the encoded normal's tilt percentiles go 23.79/33.73/38.43
+   * before to 23.85/35.10/41.43 after. It has to move because both levers changed at once —
+   * `derive()`'s `ku = bump·size/tu` rises 1.4x with the tile, and 9 cells across a repeat are
+   * steeper than 5. For the record, `palmTrunk`'s taper gives circumferences of 2.73 m at the
+   * foot, **1.57 m at mid-shaft** and 0.85 m under the crown, so the honest U slope scale would
+   * be `0.013·512/1.57` = 4.24 against the 6.66 this declares — a 1.57x overstatement, in the
+   * same direction and the same order as the project-wide 2x convention that `Textures._build`
+   * documents. It was 8.05 against a true 3.66 (2.2x) before. */
   palm_bark: {
     group: 'organic', tier: 1, tile: [1.0, 1.8], bump: 0.013, rough: 0.90,
     build(s, cx) {
@@ -2281,11 +2284,12 @@ export const MATERIALS = {
       weather(s, { seed: cx.seed + 6, crevice: BARK_CREV, creviceAmt: 0.62, streakAmt: 0.18, dustAmt: 0.20, roughGrime: 0.06, downDark: 0.08 });
       /* 300 cycles was a 10 mm feature: 0.54 px on the `courtyard` palm and 0.08 px in `dunes`,
        * i.e. below the pixel at both framings it appears in, so it could only ever be mip-chain
-       * fodder. Re-derived now that `tile[0]` is 1.0: one U repeat is the trunk circumference,
-       * ~2.0 m at mid-shaft, so 64 cycles is a **31 mm** grain — 1.6 px on the `courtyard` palm
-       * at 20 m and 0.97 mrad/px. (At the old freq 90 it would now be 22 mm / 1.1 px, right at
-       * the line this recipe was already corrected once for standing on.) */
-      grain(s, { amount: 0.04, freq: 64, seed: cx.seed + 8, heightAmt: 0.014 });
+       * fodder. Re-derived now that `tile[0]` is 1.0, which makes one U repeat the trunk
+       * circumference and therefore height-dependent: 2.73 m at the foot, 1.57 m at mid-shaft.
+       * At 48 cycles that is 57 mm / 33 mm, i.e. 2.3 px and 1.35 px on a `courtyard` palm at
+       * 20 m and 1.212 mrad/px (1280x720). At 64 the mid-shaft figure is 24 mm = 1.01 px, which
+       * is exactly the line this recipe was corrected once for standing on. */
+      grain(s, { amount: 0.04, freq: 48, seed: cx.seed + 8, heightAmt: 0.014 });
       /* `lift` 0.14: `lo·(1 − 0.14)` = 0.2108, just clear of §2.2's `crevice` luminance 0.2031,
        * so nothing on a palm trunk can land where the shader's violet wash out-weighs its own
        * albedo. Palms stand in `courtyard` and `dunes` and this recipe was the worst live
@@ -2396,11 +2400,14 @@ export const MATERIALS = {
           s.mixHex(i, ribHex, rachis * 0.6);
           s.rough[i] = sat(0.55 + b * 0.16 + d2 * 0.2);
           s.occ[i] *= 0.86 + (1 - b) * 0.14;
-          /* Leaflets part and fray toward their tips. Kept in step with the colour rather than
-           * carrying the shape: VEGETATION's `frondMat` sets neither `transparent` nor
-           * `alphaTest`, so this alpha is inert today — it must therefore never be the thing a
-           * frond's read depends on, and it is correct if that material is ever switched on. */
-          a[i] = Math.max(rachis, smoothstep(1.0, 0.72, b + sat(dry[i] - 0.55) * 0.5));
+          /* Leaflets fray at their tips, and only the dry ones. Kept in step with the colour
+           * rather than carrying the shape: VEGETATION's `frondMat` sets neither `transparent`
+           * nor `alphaTest`, so this alpha is inert today — it must never be the thing a frond's
+           * read depends on, *and* it has to be right if that material is ever switched on.
+           * Gated on `dry` for exactly that reason: an ungated taper would cut the outer 28 % off
+           * every leaflet in the level the moment anyone enabled `alphaTest`, which is a
+           * silhouette change disguised as a texture parameter. */
+          a[i] = Math.max(rachis, sat(1 - sat((b - 0.86) / 0.14) * sat((dry[i] - 0.50) * 2)));
         }
       }
       /* `grain` is isotropic in tile space and this mapping is not: one U repeat is the whole
@@ -3352,11 +3359,17 @@ function glyphWall(ctx, size, mode, seed, o = {}) {
  * gilded family in the level, for the same result this gets by moving the band.
  */
 function glyphArchitrave(ctx, size, mode, seed, o = {}) {
-  const { worldTile = 6.4, signM = 1.0 } = o;
+  const { worldTile = 6.4, signM = 0.85 } = o;
   /* The row's height in metres *is* its sign size — `rowRegister` takes the quadrat from the
-   * band height. 1.0 m is a large sign, which is what an architrave carries: the narrowest
-   * consumer is the 0.80 m nave architrave, so anything taller than this is cropped on the
-   * surface `temple` is composed around. */
+   * band height — so this one number sets both how big a hieroglyph is and how much of each
+   * architrave is gilded. 0.85 m is chosen against the *narrowest* consumer rather than the
+   * average: the nave architrave is 0.80 m tall and samples V +/-0.063, so at 1.0 m it was
+   * gilded edge to edge with no stone left, and so was the 1.25 m courtyard architrave that
+   * `hero` frames Sly standing on. At 0.85 every consumer keeps a limestone rail above and
+   * below the gold — which is what an architrave looks like, and which stops a change meant to
+   * put one gold read in the frame from turning every horizontal band in the level solid gold.
+   * Measured on `hero`'s doorway lintel: 1.0 m gives mean #a07834, 0.85 m gives #a27c3d with
+   * visible stone margins. */
   const band = clamp(signM / worldTile, 0.05, 0.30);
   const rule = size * 0.010;
   const half = size * band * 0.5;

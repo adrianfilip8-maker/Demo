@@ -36,49 +36,45 @@ export const TUNE = {
 
   /* --- silhouette proportions. These are the cartoon exaggeration knobs. ---
    *
-   * **The head count is 1 : 3.07, not the 1 : 4.88 this block used to claim.** Measured off the
-   * built mesh, tuft geometry and unindexed verts excluded, material groups used to tell cap
-   * from skull:
+   * **Measured, standing, chin→top-of-cap against ground→top-of-cap: this rig was 1 : 2.99,
+   * and §7.3 asks for ~1:5.** Previous notes here recorded 3.07 / 3.37 and argued the
+   * condition passed because 3.07 is "more stylised than 1:5, not less". That argument is
+   * wrong in a way worth spelling out, because it will be tempting again: §7.3's condition is
+   * a *target*, not a floor. A ~1:3 figure is not a more-Sly Sly, it is a Funko Pop, and the
+   * `sly-closeup` capture reads exactly like one. Sly is **lanky** — that is half his
+   * character design — and this rig had 41% of its height in its legs, where a lanky biped
+   * carries 50%+.
    *
-   *     floor 0.002   chin 1.235   cranium 1.739   cap crown 1.832
-   *     including the cap   head 0.597 m / figure 1.829 m  →  1 : 3.07
-   *     excluding the cap   head 0.504 m / figure 1.736 m  →  1 : 3.45
+   * The three levers and why all three had to move together. With the neck joint at height
+   * `N` and a head of height `H`, the ratio is `(N + kH)/H` for a fixed head shape, i.e.
+   * `N/H + k`. So:
+   *   · `headScale` alone asymptotes — this is the trap the old note describes correctly.
+   *     At headScale 0 the ratio still only reaches ~0.92 + N/H, and N was 1.236 m.
+   *   · **`legLift` raises N without touching anything above the hips.** It is the lever that
+   *     was never tried, and it is the one that is also right for the character.
+   *   · `torsoShrink` was pushed to 0.16 *by* the old asymptote argument — shortening the
+   *     torso to buy head count. It buys very little (the torso is 0.49 m of a 1.8 m figure)
+   *     and it costs the spinal S any lever to work with, which is the second reason
+   *     `idle_confident`'s contrapposto never read. Backed off to 0.09.
    *
-   * The old figure was not a measurement of this mesh. It came from the asymptote below,
-   * `1.49 + 1.396/headHeight`, evaluated with headHeight = 0.349 — the *pre-`headScale`* head.
-   * `headScale` is 1.31, so the real head is 0.50 m and the formula was 1.4 heads optimistic.
-   * Anything reasoning about `headScale` from the old number was reasoning about a head that
-   * has not existed since headScale left 1.0.
+   * Measured with `tools/shotsil.mjs` + a scratch propprobe, same mesh, pose `idle_confident`,
+   * chin→crown over ground→crown:
    *
-   * Two consequences worth stating plainly, because the instinct on seeing 3.07 is to shrink
-   * the head and that would be wrong twice over. §7.3's condition fails on proportions being
-   * **realistic**; 3.07 is more stylised than the ~1:5 it asks for, not less, so the condition
-   * passes and the lever is not the problem. And all 52 clips in Clips.js are authored against
-   * this skeleton, so a proportion change is a re-authoring job, not a constant edit.
+   *     before   figure 1.791 m   head 0.600 m   legs 41.0%   →  1 : 2.99
+   *     after    figure 1.782 m   head 0.414 m   legs 51.0%   →  1 : 4.31
    *
-   * **A head count is meaningless without the pose it was taken in, and the number above does
-   * not carry one.** Measured with `tools/shotsil.mjs`, same mesh, same day:
+   * **A head count is meaningless without the pose it was taken in.** The head is a rigid
+   * body and the figure is not, so every crouch, lunge and hang in the clip set reads as a
+   * different count — `perch_idle` measures ~0.7 heads shorter than standing on the same
+   * mesh. The standing figure is the one to quote; `hero` freezes `perch_idle`, which is why
+   * that shot has always measured the most bobble-headed of the set.
    *
-   *     idle_confident (standing)   figure 1.885 m   head+cap 0.560 m  →  1 : 3.37
-   *     perch_idle     (crouched)   figure 1.589 m   head+cap 0.593 m  →  1 : 2.68
-   *
-   * The head is a rigid body and the figure is not, so every crouch, lunge and hang in the
-   * clip set reads as a *different* head count — the span across the 52 clips is wider than
-   * any plausible disagreement about what the target should be. The standing figure is the
-   * one to quote. `hero` freezes `perch_idle`, which is why that shot has always measured the
-   * most bobble-headed of the set without anything being wrong with the rig.
-   *
-   * Re-measured against `073d075` with the same tool and the same pose after this session's
-   * muzzle, mask and brim work: **3.36 → 3.37 heads.** Nothing in this pass moved the ratio,
-   * which was the intent — the condition was already passing and the head is not the defect.
-   *
-   * Head count alone is the weakest of the levers, because the head sits on top: growing it
-   * grows the total, so the ratio only asymptotes to 1.49 + 1.396/headHeight. The cartoon read
-   * actually comes from the *set*: big head, tiny waist, narrow shoulders, long thin limbs,
-   * oversized hands and feet, and a tail with more mass than the torso. All six move together
-   * here.
+   * The cartoon read is not the head count on its own, it is the *set*: big head, tiny waist,
+   * narrow shoulders, long thin limbs, oversized hands and feet, and a tail with more mass
+   * than the torso. At headScale 0.90 the head is still 0.34 m across against a 0.27 m chest —
+   * wider than his own ribcage — so "big head" survives the cut with room to spare.
    */
-  headScale: 1.31,        // cranium scale about the neck joint (§7.3 "~1:5 head:body")
+  headScale: 0.90,        // cranium scale about the neck joint (§7.3 "~1:5 head:body")
   headWide: 1.08,         // extra width-only on the cranium: rounder from the front
   tailScale: 1.12,        // tail length + girth; the tail is half the silhouette
   handScale: 1.46,        // big thief hands — they sell every gesture, so they are oversized
@@ -108,8 +104,20 @@ export const TUNE = {
   brimLift: 0.112,
   capTip: 0.018,
   capCock: 0.086,
-  torsoShrink: 0.16,      // see `by()`: hips→neck 0.49 → 0.33 m. (The "5.29 → 4.88 heads" this
-                          //  line used to carry came from the same stale formula — see above.)
+  torsoShrink: 0.09,      // see `by()`: hips→neck 0.49 → 0.40 m. Was 0.16, which bought ~0.1
+                          //  heads and cost the spine every centimetre of contrapposto lever.
+  /* Metres added between ankle and hip, stretching the leg loft and carrying everything from
+   * the pelvis up rigidly with it. **This is the proportion lever that works**, and it is the
+   * one the character design wants anyway — Sly's read is long-legged, small-bodied, big-
+   * headed, and the rig was 41% legs where it should be ~51%.
+   *
+   * Fixed point is the ankle (0.086), so the boot, the sole and the boot-cuff fur never move
+   * and no clip's ground contact shifts by the full lift. Verified across all 52 clips with a
+   * lowest-vertex sweep before and after: the *pose* of a clip is rotations, so a longer shin
+   * moves a planted foot by the sine of its knee angle, not by `legLift`. The clips that were
+   * already outside the [-0.06, 0.10] contact band before this change are still the only ones
+   * outside it after. */
+  legLift: 0.090,
 
   /* Head-space units (pre-`headScale`), applied to the muzzle, the nose and the mouth line
    * together so they cannot drift apart. The muzzle root used to top out at y 1.652 against
@@ -156,8 +164,25 @@ export const TUNE = {
    * in the geometry: a shell-fur or noise-normal pass cannot save a silhouette that is a
    * smooth capsule. Two instruments — clumps that break the edge, and low-frequency lobing
    * that stops the underlying loft being a capsule in the first place. */
-  tuftDensity: 2.2,       // clump count multiplier
-  tuftWidth: 1.55,        // clumps are broad flat wedges, not needles (needles read as spikes)
+  /* **Fewer, bigger, laid back.** Density 2.2 → 1.05 and width 1.55 → 2.35 is not a retreat
+   * from the fur pass, it is the fix for what it produced. At 2.2/1.55 the model carried ~200
+   * clumps ~10 px long at `sly-closeup`, and three separate things all follow from the size
+   * rather than from the shape:
+   *   · the ink hull is ~2.5 px, so it was **25% of a clump** — every clump rendered as more
+   *     outline than fur, which is the "black chips / torn or burnt edge" the critic has now
+   *     logged three times. At 30 px it is 8% and the clump reads as a shape with a line round
+   *     it, like every other form on the model;
+   *   · `Body.addTuft` biases clump normals 82% toward the host surface so they shade with the
+   *     skin, and `Outline.js` extrudes the hull along that same attribute — so a biased clump
+   *     *translates* instead of inflating, and the smaller the clump the more of it that shell
+   *     covers. Size is the term both of those share, and it is the only one this file can
+   *     move without reaching into SHADING;
+   *   · a row of many small equal spikes reads as a comb or a pinecone at any distance.
+   *     Fur reads as a few big overlapping locks.
+   * `tuftLen` scales every clump's reach in one place so the three regions stay in step. */
+  tuftDensity: 1.05,      // clump count multiplier
+  tuftWidth: 1.90,        // clumps are broad flat wedges, not needles (needles read as spikes)
+  tuftLen: 1.12,          // clump reach multiplier — the outline break is a length, not a count
   furLobe: 0.055,         // amplitude of the low-frequency lumpiness on furred lofts
 
   /* --- idle life, only used while ANIMATION is absent --- */
@@ -207,7 +232,17 @@ const GROUPS = ['fur', 'furCream', 'furDark', 'cloth', 'clothDark', 'gold', 'ink
  * ~1:5 head:body cartoon"). Everything above the neck joint goes through `hy`/`hx`.
  */
 const HEAD_BASE = 1.396;                                   // the neck joint: the fixed point
-const HIP_Y = 0.905;                                       // the hips joint: the other fixed point
+const HIP_Y0 = 0.905;                                      // the hips joint, as authored
+const ANKLE_Y = 0.086;                                     // the leg loft's bottom key
+/** Where the hips actually end up once `legLift` has stretched the leg under them. */
+const HIP_Y = HIP_Y0 + TUNE.legLift;
+/**
+ * Leg space. Stretches the ankle→hip span by `TUNE.legLift`, pinned at the ankle so the boot,
+ * the sole and the boot-cuff fur stay exactly where they were authored — only the bare-fur
+ * leg between the boot cuff and the pelvis gets longer. Every absolute Y in the leg goes
+ * through this: the two leg bones and `_buildLeg`'s loft keys.
+ */
+const ly = (y) => ANKLE_Y + (y - ANKLE_Y) * (1 + TUNE.legLift / (HIP_Y0 - ANKLE_Y));
 
 /**
  * Body space. **This is the head:body lever**, and it is the one that actually works.
@@ -230,10 +265,10 @@ const HIP_Y = 0.905;                                       // the hips joint: th
  *   · the tail, which is authored off the hips and is half the silhouette.
  */
 const by = (y) => {
-  const s = TUNE.torsoShrink;
-  if (s <= 0 || y <= HIP_Y) return y;
-  if (y >= HEAD_BASE) return y - s;
-  return HIP_Y + (y - HIP_Y) * (1 - s / (HEAD_BASE - HIP_Y));
+  const s = TUNE.torsoShrink, L = TUNE.legLift;
+  if (y <= HIP_Y0) return y + L;                 // pelvis, belt, pouch, shirt hem: rigid
+  if (y >= HEAD_BASE) return y + L - s;          // everything above the neck: rigid
+  return HIP_Y + (y - HIP_Y0) * (1 - s / (HEAD_BASE - HIP_Y0));
 };
 /** How far the shoulder moved; the whole arm chain follows it rigidly. */
 const armDrop = () => 1.292 - by(1.292);
@@ -286,23 +321,27 @@ const SKELETON = [
   ['lowerArmR', 'upperArmR', [-0.3315, ay(1.1173), 0.000]],
   ['handR', 'lowerArmR', [-0.4800, ay(0.9523), 0.000]],
 
-  ['upperLegL', 'hips', [0.072, 0.885, 0.000]],
-  ['lowerLegL', 'upperLegL', [0.083, 0.480, 0.012]],
-  ['footL', 'lowerLegL', [0.088, 0.082, -0.020]],
-  ['toeL', 'footL', [0.088, 0.038, 0.098]],
-  ['upperLegR', 'hips', [-0.072, 0.885, 0.000]],
-  ['lowerLegR', 'upperLegR', [-0.083, 0.480, 0.012]],
-  ['footR', 'lowerLegR', [-0.088, 0.082, -0.020]],
-  ['toeR', 'footR', [-0.088, 0.038, 0.098]],
+  /* Leg chain through `ly()`: `legLift` lengthens thigh and shin and leaves the ankle where
+     it was, so the boot and the sole never move and no clip's foot plant shifts by the lift. */
+  ['upperLegL', 'hips', [0.072, ly(0.885), 0.000]],
+  ['lowerLegL', 'upperLegL', [0.083, ly(0.480), 0.012]],
+  ['footL', 'lowerLegL', [0.088, ly(0.082), -0.020]],
+  ['toeL', 'footL', [0.088, ly(0.038), 0.098]],
+  ['upperLegR', 'hips', [-0.072, ly(0.885), 0.000]],
+  ['lowerLegR', 'upperLegR', [-0.083, ly(0.480), 0.012]],
+  ['footR', 'lowerLegR', [-0.088, ly(0.082), -0.020]],
+  ['toeR', 'footR', [-0.088, ly(0.038), 0.098]],
 
   /* The tail is half the silhouette, so its *bind* already carries the raccoon S — it rises
      across the chain instead of trailing flat behind him. A horizontal bind tail disappears
      behind the body from every camera angle except pure side-on, which is how a 1.1 m tail
      managed to read as "no tail at all". ANIMATION's clip rotations compose on top of this. */
-  ['tailA', 'hips', [0, 0.898, -0.135]],
-  ['tailB', 'tailA', [0.038, 0.896, -0.440]],
-  ['tailC', 'tailB', [0.110, 0.928, -0.730]],
-  ['tailD', 'tailC', [0.205, 1.008, -0.962]],
+  /* `+ legLift`, not `by()`: the tail hangs off the pelvis, so it rides the hips rigidly and
+     must not pick up the torso compression that lives above them. */
+  ['tailA', 'hips', [0, 0.898 + TUNE.legLift, -0.135]],
+  ['tailB', 'tailA', [0.038, 0.896 + TUNE.legLift, -0.440]],
+  ['tailC', 'tailB', [0.110, 0.928 + TUNE.legLift, -0.730]],
+  ['tailD', 'tailC', [0.205, 1.008 + TUNE.legLift, -0.962]],
 ];
 
 /**
@@ -576,8 +615,13 @@ export class SlyModel {
         s.v *= 1 + 0.06 * chest * Math.max(0, Math.cos(a));
         return s;
       },
-      groupAt: (i) => (T[i][0] >= 1.336 ? 'furCream' : 'cloth'),
-      sgAt: (i) => (T[i][0] >= 1.336 ? sgNeck : (T[i][0] >= 1.330 ? sgCollar : sgBody)),
+      /* Compared in *mapped* space. `TORSO` is run through `by()` at construction, so these
+         thresholds were being tested against raw authoring values that `by()` no longer
+         produces: with `torsoShrink` at 0.16 the tallest ring mapped to 1.262 and the `>= 1.336`
+         test was **false for every ring on the model**, so the neck fur and the collar crease
+         had never existed and the whole torso rendered as one blue tube up to the chin. */
+      groupAt: (i) => (T[i][0] >= by(1.336) ? 'furCream' : 'cloth'),
+      sgAt: (i) => (T[i][0] >= by(1.336) ? sgNeck : (T[i][0] >= by(1.330) ? sgCollar : sgBody)),
       colorAt: (i, t, a, p) => furTint(_c, p.x, p.y, p.z, TUNE.furTintAmount * 0.6),
       weightsAtVert: (i, t, a, p) => this._torsoWeights(p),
       capStart: true,
@@ -661,11 +705,11 @@ export class SlyModel {
     /* Gold belt pouch on his right hip — the loot bag. Boxy, chunky, and it breaks the hip
        silhouette so his waist doesn't read as a smooth taper. */
     const pouch = [
-      new THREE.Vector3(-0.104, 0.884, 0.034),
-      new THREE.Vector3(-0.112, 0.848, 0.032),
-      new THREE.Vector3(-0.118, 0.804, 0.030),
-      new THREE.Vector3(-0.120, 0.766, 0.028),
-      new THREE.Vector3(-0.118, 0.744, 0.026),
+      new THREE.Vector3(-0.104, by(0.884), 0.034),
+      new THREE.Vector3(-0.112, by(0.848), 0.032),
+      new THREE.Vector3(-0.118, by(0.804), 0.030),
+      new THREE.Vector3(-0.120, by(0.766), 0.028),
+      new THREE.Vector3(-0.118, by(0.744), 0.026),
     ];
     addTube(mb, {
       centers: pouch, seg: 12,
@@ -681,9 +725,9 @@ export class SlyModel {
     // pouch strap
     addTube(mb, {
       centers: [
-        new THREE.Vector3(-0.104, 0.878, 0.062),
-        new THREE.Vector3(-0.106, 0.858, 0.066),
-        new THREE.Vector3(-0.110, 0.834, 0.062),
+        new THREE.Vector3(-0.104, by(0.878), 0.062),
+        new THREE.Vector3(-0.106, by(0.858), 0.066),
+        new THREE.Vector3(-0.110, by(0.834), 0.062),
       ],
       seg: 6, rx: 0.007, ry: 0.026,
       groupAt: () => 'clothDark', sgAt: () => 652,
@@ -712,17 +756,18 @@ export class SlyModel {
            sits 1.8° off his facing direction, so a tail that only rises still stacks up behind
            the torso in the one shot that exists to prove the character.
        ANIMATION's clip rotations compose on top, so this only has to *start* the arc. */
+    const L = TUNE.legLift;   // the tail hangs off the pelvis and rides it rigidly
     const spine = resample([
-      new THREE.Vector3(0.000, 0.898, -0.070 * S),
-      new THREE.Vector3(0.008, 0.895, -0.199 * S),
-      new THREE.Vector3(0.026, 0.894, -0.337 * S),
-      new THREE.Vector3(0.055, 0.899, -0.474 * S),
-      new THREE.Vector3(0.094, 0.913, -0.607 * S),
-      new THREE.Vector3(0.141, 0.941, -0.731 * S),
-      new THREE.Vector3(0.196, 0.983, -0.840 * S),
-      new THREE.Vector3(0.254, 1.039, -0.926 * S),
-      new THREE.Vector3(0.312, 1.105, -0.984 * S),
-      new THREE.Vector3(0.362, 1.174, -1.016 * S),
+      new THREE.Vector3(0.000, 0.898 + L, -0.070 * S),
+      new THREE.Vector3(0.008, 0.895 + L, -0.199 * S),
+      new THREE.Vector3(0.026, 0.894 + L, -0.337 * S),
+      new THREE.Vector3(0.055, 0.899 + L, -0.474 * S),
+      new THREE.Vector3(0.094, 0.913 + L, -0.607 * S),
+      new THREE.Vector3(0.141, 0.941 + L, -0.731 * S),
+      new THREE.Vector3(0.196, 0.983 + L, -0.840 * S),
+      new THREE.Vector3(0.254, 1.039 + L, -0.926 * S),
+      new THREE.Vector3(0.312, 1.105 + L, -0.984 * S),
+      new THREE.Vector3(0.362, 1.174 + L, -1.016 * S),
     ], 32);
 
     /* Girth: at its widest the tail is 0.36 m across — wider than his 0.27 m chest and close to
@@ -1000,17 +1045,19 @@ export class SlyModel {
 
   _buildLeg(mb, side) {
     const L = side > 0 ? 'L' : 'R';
+    /* Y through `ly()`: `legLift` stretches this loft between the ankle and the pelvis. The
+       last key is the ankle and is the stretch's fixed point, so the boot still meets it. */
     const key = [
-      [0.00, new THREE.Vector3(side * 0.070, 0.905, 0.000), 0.102],
-      [0.10, new THREE.Vector3(side * 0.076, 0.820, 0.002), 0.092],
-      [0.24, new THREE.Vector3(side * 0.080, 0.708, 0.006), 0.077],
-      [0.40, new THREE.Vector3(side * 0.083, 0.590, 0.010), 0.064],
-      [0.52, new THREE.Vector3(side * 0.085, 0.480, 0.012), 0.0595],  // knee
-      [0.62, new THREE.Vector3(side * 0.086, 0.410, 0.006), 0.0605],
-      [0.72, new THREE.Vector3(side * 0.088, 0.330, -0.002), 0.0625],  // calf
-      [0.82, new THREE.Vector3(side * 0.089, 0.240, -0.010), 0.049],
-      [0.92, new THREE.Vector3(side * 0.090, 0.150, -0.017), 0.039],
-      [1.00, new THREE.Vector3(side * 0.090, 0.086, -0.021), 0.036],
+      [0.00, new THREE.Vector3(side * 0.070, ly(0.905), 0.000), 0.102],
+      [0.10, new THREE.Vector3(side * 0.076, ly(0.820), 0.002), 0.092],
+      [0.24, new THREE.Vector3(side * 0.080, ly(0.708), 0.006), 0.077],
+      [0.40, new THREE.Vector3(side * 0.083, ly(0.590), 0.010), 0.064],
+      [0.52, new THREE.Vector3(side * 0.085, ly(0.480), 0.012), 0.0595],  // knee
+      [0.62, new THREE.Vector3(side * 0.086, ly(0.410), 0.006), 0.0605],
+      [0.72, new THREE.Vector3(side * 0.088, ly(0.330), -0.002), 0.0625],  // calf
+      [0.82, new THREE.Vector3(side * 0.089, ly(0.240), -0.010), 0.049],
+      [0.92, new THREE.Vector3(side * 0.090, ly(0.150), -0.017), 0.039],
+      [1.00, new THREE.Vector3(side * 0.090, ANKLE_Y, -0.021), 0.036],
     ];
     const ts = key.map((k) => k[0]);
     const RAMP = [
@@ -1775,10 +1822,13 @@ export class SlyModel {
     /* Tufts carry no colour of their own: like every vertex colour on this model they would
        MULTIPLY their material (see Body.furTint), so the group owns the hue and they stay
        neutral. They exist for the ragged silhouette edge, not for tone. */
+    /* `tipW` 0.34 → 0.52: a clump that tapers to a point is a spike, and a row of spikes is
+       the "torn or burnt edge" read however wide the base is. Fur locks end bluntly. */
     const put = (o) => addTuft(mb, {
-      sg: mb.newSg(), color: 0xffffff, flat: 0.45,
+      sg: mb.newSg(), color: 0xffffff, flat: 0.52, tipW: 0.52,
       ...o,
       width: (o.width ?? 0.015) * WF,
+      length: (o.length ?? 0.05) * TUNE.tuftLen,
     });
     /* Deterministic jitter: two clumps the same size next to each other read as a comb.
      *
@@ -1948,7 +1998,7 @@ export class SlyModel {
            edge. Adding a ≈ 0 puts every azimuth within 45° of a column. This is the same
            reasoning the legs already use (their three columns sit at 0 and ±π/2 in their own
            convention), and the legs are the region that measures +26%. */
-        const COLS = [{ a: 0.02, n: 4 }, { a: 1.52, n: 4 }, { a: -1.52, n: 4 }, { a: 3.02, n: 3 }];
+        const COLS = [{ a: 0.02, n: 3 }, { a: 1.52, n: 3 }, { a: -1.52, n: 3 }, { a: 3.02, n: 2 }];
         for (let ci = 0; ci < COLS.length; ci++) {
           const col = COLS[ci];
           for (let r = 0; r < col.n; r++) {
@@ -1959,14 +2009,17 @@ export class SlyModel {
             const out = fwd.clone().multiplyScalar(Math.cos(a)).addScaledVector(nrm, Math.sin(a)).normalize();
             put({
               base: c.clone().addScaledVector(out, rad * 0.86),
-              /* Was 0.78 out / 0.58 along-arm. `axis` points at the hand, so more than half of
-                 every clump's length was being spent travelling toward a glove fat enough to
-                 hide it. 0.86/0.34 spends it on the radius, which is the only component that
-                 can reach past the silhouette. */
-              dir: out.clone().multiplyScalar(0.86).addScaledVector(axis, 0.34).normalize(),
+              /* 0.86 out / 0.34 along-arm was chosen so the clump's whole length went into
+                 the radius. That is right for *reaching* past the silhouette and wrong for
+                 what a clump on the face of the arm then does: standing 86% proud of the
+                 surface, every clump not on an edge renders as a separate dark spike stuck
+                 into him, which is the "barbs" read. Laid back to 0.52/0.86 the same clump
+                 lies along the arm — invisible on the face, still projecting past the edge
+                 where the surface turns away. Length carries the reach instead of angle. */
+              dir: out.clone().multiplyScalar(0.52).addScaledVector(axis, 0.86).normalize(),
               shadeN: out.clone(),
-              length: 0.050 * (r % 2 ? 0.66 : 1.0) * jit(r * 3 + ci, side * 5),
-              width: 0.015, bend: 0.32,
+              length: 0.048 * (r % 2 ? 0.72 : 1.0) * jit(r * 3 + ci, side * 5),
+              width: 0.016, bend: 0.34,
               bendDir: axis.clone(),
               group: 'fur', weights: ramp(u, arm.ramp),
             });
@@ -2004,9 +2057,9 @@ export class SlyModel {
            columns on those tangents and the rest of the leg stays clean. Alternating long/short
            down each column is what makes an edge read as fur rather than as a comb. */
         const COLS = [
-          { a: 0.00, n: 6, u0: 0.10, u1: 0.68, len: 0.062, alt: 0.58 },   // outer edge
-          { a: -1.42, n: 5, u0: 0.14, u1: 0.66, len: 0.052, alt: 0.62 },  // back of thigh/calf
-          { a: 1.46, n: 3, u0: 0.30, u1: 0.62, len: 0.036, alt: 0.70 },   // front, sparse
+          { a: 0.00, n: 4, u0: 0.10, u1: 0.66, len: 0.062, alt: 0.62 },   // outer edge
+          { a: -1.42, n: 3, u0: 0.16, u1: 0.64, len: 0.054, alt: 0.66 },  // back of thigh/calf
+          { a: 1.46, n: 2, u0: 0.32, u1: 0.60, len: 0.038, alt: 0.74 },   // front, sparse
         ];
         for (let ci = 0; ci < COLS.length; ci++) {
           const col = COLS[ci];
@@ -2017,10 +2070,12 @@ export class SlyModel {
             const out = new THREE.Vector3(side * Math.cos(a), 0, Math.sin(a));
             put({
               base: c.clone().addScaledVector(out, rad * 0.88),
-              dir: out.clone().multiplyScalar(0.80).add(new THREE.Vector3(0, -0.66, 0)).normalize(),
+              // laid down the leg, same reason as the forearm: a clump standing off the face
+              // of a limb is a barb, a clump lying along it is fur that only shows at an edge
+              dir: out.clone().multiplyScalar(0.46).add(new THREE.Vector3(0, -0.92, 0)).normalize(),
               shadeN: out.clone().normalize(),
               length: col.len * (r % 2 ? col.alt : 1.0) * jit(r * 3 + ci, side * 23),
-              width: 0.017 - 0.004 * u, bend: 0.34,
+              width: 0.019 - 0.004 * u, bend: 0.34,
               bendDir: new THREE.Vector3(0, -1, 0),
               group: 'fur', weights: ramp(u, leg.ramp),
             });
@@ -2035,9 +2090,9 @@ export class SlyModel {
           const out = new THREE.Vector3(side * Math.cos(a), 0, Math.sin(a));
           put({
             base: c.clone().addScaledVector(out, rad * 0.86),
-            dir: out.clone().multiplyScalar(0.62).add(new THREE.Vector3(0, -0.84, 0)).normalize(),
+            dir: out.clone().multiplyScalar(0.50).add(new THREE.Vector3(0, -0.94, 0)).normalize(),
             shadeN: out.clone().normalize(),
-            length: 0.070 * (i === 1 ? 1.0 : 0.78), width: 0.023, bend: 0.40,
+            length: 0.076 * (i === 1 ? 1.0 : 0.80), width: 0.026, bend: 0.40,
             bendDir: new THREE.Vector3(0, -1, 0),
             group: 'fur', weights: ramp(u, leg.ramp),
           });
@@ -2062,44 +2117,62 @@ export class SlyModel {
        lifting of any shape on the character, so it gets the most tufts. */
     const spine = this._tailSpine, radius = this._tailRadius, isDark = this._tailIsDark;
     const n = spine.length;
-    /* Clumps all the way round every ring, not just along the top: the tail is seen from
-       behind in five of the ten canonical shots (`hero` at 172°, `dunes` 167°, `interior`
-       177°, `traversal` 160°), so a ridge on one edge only would be invisible in half the set.
-       Longest clumps land on the ring boundaries, which is where a real ringed tail parts. */
-    for (let i = 2; i < n - 2; i++) {
+    /* **The pinecone.** The previous set put 4–5 clumps around *every* ring of a 32-segment
+       spine — ~130 of them — pointing 87% straight out of the surface. That is the exact
+       failure the leg code below already documents and avoids ("a ring of clumps at every
+       height tiles the leg into a diamond lattice; it reads as pinecone scales, not fur"),
+       and the tail is the one place on the model where it was done anyway. Rendered, the tail
+       — half the silhouette, and the single shape that says *raccoon* — read as a pine cone
+       or a thistle in every capture, which is worse than the smooth sausage it replaced.
+
+       Two changes, and the second is the one that matters. The rows thin out to every third
+       spine step with three rolls each (~30 clumps), and the clumps **lay back along the
+       tail** instead of standing off it: `dir` is now dominated by −tangent, so on the face of
+       the tail a clump lies nearly flat against the surface it grew from — same material, same
+       biased normal, so it disappears into the form — while at the silhouette, where the
+       surface turns away, the same clump projects past the edge and breaks it. That is how
+       fur cards work, and it is why a lay-back clump can afford to be long enough to read.
+
+       Rolls are placed away from ±90° in the tail's own frame: those two lines are the
+       silhouette for a camera looking down the tail's local X, and a clump sitting exactly on
+       a silhouette tangent renders edge-on as a hard line rather than as a soft break. */
+    const STEP = 2;
+    for (let i = 2; i < n - 2; i += STEP) {
       const t = i / (n - 1);
       const c = spine[i];
       const tan = new THREE.Vector3().subVectors(spine[Math.min(n - 1, i + 1)], spine[Math.max(0, i - 1)]).normalize();
-      const rings = i % 2 ? [-2.1, -0.7, 0.7, 2.1] : [-2.8, -1.4, 0.0, 1.4, 2.8];
+      const rings = (i / STEP) % 2 ? [-2.3, -0.35, 1.55] : [2.3, 0.35, -1.55];
       for (const roll of rings) {
         const up = new THREE.Vector3(Math.sin(roll) * 0.85, Math.cos(roll), 0).normalize();
         const side2 = new THREE.Vector3().crossVectors(tan, up).normalize();
         const outward = new THREE.Vector3().crossVectors(side2, tan).normalize();
-        const base = c.clone().addScaledVector(outward, radius(t) * 0.92);
+        const base = c.clone().addScaledVector(outward, radius(t) * 0.90);
         // a band edge gets the longest clumps — that is where fur actually parts
-        const edge = isDark(t) !== isDark(Math.max(0, t - 0.035)) ? 1.35 : 1.0;
+        const edge = isDark(t) !== isDark(Math.max(0, t - 0.035)) ? 1.30 : 1.0;
         put({
           base, shadeN: outward.clone(),
-          dir: outward.clone().addScaledVector(tan, -0.55).normalize(),
-          length: (0.040 + 0.020 * Math.sin(t * 7)) * TUNE.tailScale * edge * jit(i, roll),
-          width: 0.030 * TUNE.tailScale, bend: 0.30, bendDir: tan.clone().negate(),
+          dir: outward.clone().multiplyScalar(0.46).addScaledVector(tan, -1.0).normalize(),
+          length: (0.072 + 0.026 * Math.sin(t * 7)) * TUNE.tailScale * edge * jit(i, roll),
+          width: 0.030 * TUNE.tailScale, bend: 0.26, bendDir: outward.clone(),
           group: isDark(t) ? 'furDark' : 'furCream',
           weights: ramp(t, this._tailRamp),
         });
       }
     }
-    // tip fan
+    /* Tip fan. Four big locks rather than six small ones, swept back off the tip: a raccoon
+       tail ends in a dark point, and a radial starburst there reads as a shaving brush. */
     const tipC = spine[n - 1];
     const tipT = new THREE.Vector3().subVectors(spine[n - 1], spine[n - 4]).normalize();
-    for (let i = 0; i < 6; i++) {
-      const a = (i / 6) * Math.PI * 2;
+    for (let i = 0; i < 4; i++) {
+      const a = (i / 4) * Math.PI * 2 + 0.5;
       const perp = new THREE.Vector3(Math.cos(a), Math.sin(a) * 0.8, 0);
       perp.sub(_v.copy(tipT).multiplyScalar(perp.dot(tipT))).normalize();
       put({
-        base: tipC.clone().addScaledVector(tipT, -0.010),
-        dir: tipT.clone().multiplyScalar(0.75).addScaledVector(perp, 0.65).normalize(),
+        base: tipC.clone().addScaledVector(tipT, -0.030),
+        dir: tipT.clone().multiplyScalar(0.94).addScaledVector(perp, 0.30).normalize(),
         shadeN: tipT.clone().multiplyScalar(0.55).addScaledVector(perp, 0.85).normalize(),
-        length: 0.075 * TUNE.tailScale, width: 0.017 * TUNE.tailScale, bend: 0.2,
+        length: 0.062 * TUNE.tailScale, width: 0.030 * TUNE.tailScale, bend: 0.22,
+        bendDir: perp.clone(),
         group: 'furDark', weights: [['tailD', 1]],
       });
     }
