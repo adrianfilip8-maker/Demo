@@ -546,11 +546,16 @@ Recorded so they are not re-derived:
 - **Enlarging `HG_WALL_TILE` is not an improvement — do not take it.** It halves texels per
   glyph, trading §7.3's tiling condition for §7.3's carving-detail condition. Measured and
   declined, not overlooked.
-- **`dunes` tiling is unverified and its only mitigation is a prediction.** Repeat periods at
-  all ten framings are 1.5–9.8 across frame (offline rasterisation, real cameras, real
-  resolution); `dunes` runs **6.4–9.2 repeats at 15.3% of frame and has been probed by nobody**.
-  §2.3 asserts ≥60% haze coverage makes it moot — that is an assertion. Settle it from
-  `evalAtmosphere` at that tod, not from the section.
+- ~~**`dunes` tiling is unverified and its only mitigation is a prediction.**~~ **Both halves
+  are now settled, and they went opposite ways.** §2.3's ≥60% haze claim is **false** — 60%
+  blend does not arrive until 193 m; of the 67.3% of frame that is ground, only 18.9% reaches
+  60% and 59.2% is under 20%, median ground pixel 79 m at ~13%. So the mitigation the tiling
+  defence rested on does not exist, and raising density is not the trade: ×2.4 covers the
+  54–150 m repeat band at the cost of 49% haze on the subject of the terrain shot. But the
+  tiling itself was then probed directly — `tools/wallstrip.mjs` at `dunes`' own 190 px × 7
+  repeats, off the albedo alone and *before* any haze — and reads clean, agreeing with critic
+  pass 4's in-frame autocorrelation. The condition passes on its own merits rather than on the
+  haze that was supposed to hide it.
 
 **Tool caveat — `angsize.mjs` assumes the default `UV_PER_M`.** The four documented consumer
 exceptions therefore read wrong in it: the pyramids use `UV_PER_M * 0.25`, making
@@ -861,8 +866,10 @@ over a dense grid does not rescue it either (0.759 → 0.787), because in a dens
 almost every patch is unique, so the metric saturates and discriminates nothing. The eye does
 feature matching with attention; no global scalar approximates that.
 
-**What is left, and it is enough.** The render at the framing's own px/repeat (scratchpad
-`wallstrip.mjs`, no GPU, no lock, ~20 s) is the calibrated instrument: it separates the A/B
+**What is left, and it is enough.** The render at the framing's own px/repeat
+(`tools/wallstrip.mjs`, no GPU, no lock, ~20 s — promoted out of the scratchpad, which is
+ephemeral, precisely so this rule outlives the session) is the calibrated instrument: it
+separates the A/B
 instantly. On it, the shipped state is clean at `temple`'s 248 px/repeat *and* at `dunes`' 190 px
 × 7 repeats — the worst framing in the table and the one this file said nobody had probed, now
 probed, off the albedo alone and before §2.3's atmospheric haze is applied. That agrees with the

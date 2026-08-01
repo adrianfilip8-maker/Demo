@@ -49,29 +49,37 @@ const TUNE = {
   groundProbeEvery: 5,      // frames between ground-height probes
   groundLerp: 3.0,          // how fast the sand plane chases a new floor height
   /* ── the ceiling on how big a speck of dust may get on screen ──────────────────
-     Every mote size in this project was chosen against a *far* framing — `MOTES` says
-     "0.10-0.26 m puts a mote at 3-6 px in the hall", which is right for the 20-35 m the
-     `temple` blades cross. Nothing bounded the near end, and the near end is where these
-     are drawn from: a billboard's projected size goes as 1/d, so the same sprite that is
-     4 px at 30 m is **36 px at 3 m**.
+     Every mote size in this project was picked against a *far* framing. Nothing bounded
+     the near end, and a billboard's projected size goes as 1/d, so the same sprite is a
+     speck at 30 m and a saucer at 3 m. Diameter in px = size · H / (d · tan(fov/2)):
 
-     Worked through for `guard` (fov 38, 720 px tall), diameter = size·H/(d·tan(fov/2)):
-     `air_motes` at its 0.23 m end is 24 px at 20 m, 48 px at 10 m, **80 px at 6 m**, and
-     its near fade does not start biting until 6 m; `TORCH_MOTES` at 0.16 m ride a 1.7 m
-     shell around each fire, so on a camera standing next to a brazier they are 56-167 px.
-     That is exactly critic pass 4 on `guard`: "~25 soft cream discs 20-40 px across… they
-     read as **a dirty camera lens**, and they sit in front of the architecture rather than
-     in the air of the room". The discs are real, they are these, and the defect is
-     screen-space size — not count, not tile, not colour, all three of which have already
-     been changed once each in pursuit of this.
+       temple   MOTES 0.26 m fov 55    15m 24px · 20m 18px · 30m 12px · 35m 10px
+       temple   MOTES 0.10 m fov 55    15m  9px · 20m  7px · 30m  5px · 35m  4px
+       interior TORCH 0.16 m fov 52     2m 118px ·  3m 79px ·  4m 59px ·  6m 39px
+       guard    TORCH 0.16 m fov 38     2m 167px ·  3m 112px ·  4m 84px ·  6m 56px
+       guard    air   0.23 m fov 38     4m 120px ·  6m 80px · 10m 48px · 20m 24px
 
-     So it is fixed in screen space. Held as a fraction of frame height rather than in
-     pixels because that is what "reads as a speck" actually means, and because the frame
-     height then cancels out of the clamp entirely (see PARTICLE_VERT): 0.014 is 10 px at
-     720p and 15 px at 1080p, i.e. the same picture. It is a *ceiling*, so every mote at
-     the distances these sizes were tuned for is untouched — on `temple` at 20-35 m the
-     clamp binds at 0.31 m against sprites of 0.26 m and does nothing at all. */
-  moteMaxH: 0.014,          // max sprite diameter as a fraction of frame height
+     `TORCH_MOTES` ride a 1.7 m shell around each fire, so any camera standing near a
+     brazier draws them at 50-160 px. That is critic pass 4 on `guard` verbatim: "~25 soft
+     cream discs 20-40 px across… they read as **a dirty camera lens**, and they sit in
+     front of the architecture rather than in the air of the room" — and the same discs are
+     plainly visible over the false door in `shots/fx3/interior.full.png` at (700,100) and
+     (760,95), ~55 px of flat orange laid over the architecture. The defect is screen-space
+     size. Count, tile and colour have each already been changed once chasing this.
+
+     Held as a fraction of frame height, not in pixels: that is what "reads as a speck"
+     means, and the frame height then cancels out of the clamp entirely (see PARTICLE_VERT),
+     so 720p and 1080p get the same picture rather than the same pixel count.
+
+     **0.028 is deliberately the loosest ceiling that still fixes the defect, because it is
+     the only one that provably cannot touch the population the critic *liked*.** `temple`'s
+     shaft motes top out at 24 px (0.26 m at 15 m) and are 10-18 px across the 20-35 m the
+     blades actually cross; 0.028 is 20 px at 720p, so it trims only the nearest few and
+     leaves "a +60 luma god-ray with dust motes inside it" alone, while taking the `guard`
+     and `interior` discs from 50-160 px down to 20. Tighter values are worth having — a
+     20 px mote is still large for dust — but "tighter" has to be bought with a frame that
+     shows the shaft motes surviving it, not with an argument. */
+  moteMaxH: 0.028,          // max sprite diameter as a fraction of frame height
 
   /* light shafts (rendered from lighting.shafts) --------------------------------------
      `shaftGain` is the one number that decides whether these read as light or as a wash.
