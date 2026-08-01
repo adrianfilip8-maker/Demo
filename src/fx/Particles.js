@@ -289,6 +289,45 @@ const TUNE = {
      is in frame fails toward cap = 1, i.e. toward keeping a beam, never toward killing one.
      Verification: fx9 combat/traversal pairs against the fx8 full frames. */
   courtStackBudget: 2.0,
+  /* Camera-inside-band fade — ledger #13's closure, complementary to the K budget above
+     (K handles the on-screen COUNT, this handles the IN-BAND PATH LENGTH; coordinator
+     option (b) after fx9 proved K alone cannot reach the staked ROIs without breaking
+     traversal's fail-safe: budget floor 1.4 -> cap 0.179 -> predicted left ROI ~10-11).
+
+     The mechanism matches fx8's own separator: the court row fills a low horizontal slab
+     of space (bandTop = aperture top edge = origin.y + halfV = 7.6 m with shipped TUNE),
+     and the veil appears for cameras INSIDE that slab, whose rays run within the band for
+     many metres crossing several parallel ribbons (combat camY 2.35, ~16 m in-band path);
+     a camera above it (traversal camY 14) sends rays that exit the band downward and gets
+     one beam with an edge. NOT keyed on camera-in-blade-prism — that dies by arithmetic:
+     combat's camera is ~15 m east of the nearest courtw prism's floor end, so a prism
+     test returns "outside" in the one shot that needs the fade.
+
+     Form: pen = bandTop - cameraY; fade = 1 - (1-floor)*smoothstep(win0, win1, pen),
+     multiplied into the same per-blade court gain as the K cap. C1 in cameraY, cameraY
+     continuous under motion, bandTop static per blade set -> cannot pop; same smoothness
+     family as the K cap's NDC-window count. Composes with K as independent factors (nVis
+     counts screen presence, not gain).
+
+     Numbers are pre-registered in scratchpad PREREG-band13.md from bandprobe.mjs, all ten
+     cameras: traversal pen -6.40 / hero -2.68 / dunes -11.90 -> fade exactly 1.000 (the
+     smoothstep saturates at win0=0, the same "exactly 1.000" fail-safe criterion fx9
+     verified for the K cap; dunes is NOT double-cut). combat pen +5.25 -> floor. courtyard
+     pen +2.0 -> 0.575, frame-inert (its court blades sit behind 22-49 m walls everywhere
+     they project). Scope is family 'court' ONLY: the all-slab counterfactual puts temple's
+     nave camera 13.5 m under the clerestory band top and would cut the program's best shot
+     to the floor factor — hall cameras live under ceiling-opening bands BY DESIGN, and
+     those families' near-body veils are already handled per-fragment by shaftSlabNearFade.
+
+     floor 0.15 not 0.20: fx9 measured the pre->post-AgX estimate error at 1.71x/1.54x on
+     the two staked ROIs; 0.15's predicted 4.2/3.1 clear the 9.5/5.1 stakes THROUGH that
+     error class (7.2/4.8), 0.20's doorway margin does not (5.4 > 5.1).
+
+     Known approximation, recorded: a low EXTERNAL camera (sphinx avenue) fades beams it
+     views laterally at small solid angle. No canonical camera does this; escalation if a
+     future framing wants it is a per-fragment ray/band-prism path integral in SHAFT_FRAG. */
+  courtBandWin: [0, 4],     // metres of camera penetration below bandTop: fade-in window
+  courtBandFloor: 0.15,     // what survives of a court blade for a fully in-band camera
   /* **Metres of gap between the blade and whatever is behind it**, not metres from the
      camera, which is what this used to be. The absolute form was doing two jobs and failing
      the second: excluding the sky (already handled — Sky.js's dome has `depthWrite: false`,
@@ -2779,14 +2818,18 @@ export class Particles {
        from the camera's own matrices rather than a cached forward so a staged still (dt-0
        harness renders) sees the cap the gameplay camera would. One Matrix4 invert and at
        most sixteen projections per frame; zero allocation (§5). */
-    let courtCap = 1;
+    let courtCap = 1, courtBand = 1;
     {
       const cam = this.engine.camera;
       _viewM.copy(cam.matrixWorld).invert();
-      let nVis = 0;
+      let nVis = 0, bandTop = -Infinity;
       for (let i = 0; i < list.length; i++) {
         const s = list[i];
         if (s.family !== 'court') continue;
+        /* Band top over ALL live court blades — a blade behind the lens still defines the
+           slab of space the camera is standing in. Aperture top edge: origin.y + halfV. */
+        const top = s.origin.y + (s.halfV ?? 0);
+        if (top > bandTop) bandTop = top;
         _ndc.copy(s.origin).addScaledVector(s.dir, 0.5 * (s.length ?? 14)).applyMatrix4(_viewM);
         if (_ndc.z >= -1e-3) continue;             // behind the lens
         _ndc.applyMatrix4(cam.projectionMatrix);
@@ -2795,6 +2838,14 @@ export class Particles {
       }
       if (nVis > TUNE.courtStackBudget) courtCap = TUNE.courtStackBudget / nVis;
       this._courtCap = courtCap;                   // read by the capture probes; not an input
+      /* Camera-inside-band fade (ledger #13 — see TUNE.courtBandWin). `_cam` is this
+         frame's camera world position, fetched for the dust-boost ranking above. */
+      if (bandTop > -Infinity) {
+        courtBand = 1 - (1 - TUNE.courtBandFloor) *
+                    sstep(TUNE.courtBandWin[0], TUNE.courtBandWin[1], bandTop - _cam.y);
+      }
+      this._courtBand = courtBand;                 // probes again; not an input
+      this._courtBandTop = bandTop;
     }
 
     /* --- the blades themselves -------------------------------------------------------- */
@@ -2819,7 +2870,7 @@ export class Particles {
         // atmosphere's sun/torch colours), so it goes straight to the shader.
         _col.copy(s.color);
         const gain = s.intensity * TUNE.shaftGain * (cone ? TUNE.shaftConeGain : 1) *
-                     (s.family === 'court' ? courtCap : 1);
+                     (s.family === 'court' ? courtCap * courtBand : 1);
         if (gain < 0.006) continue;
         if (!sh.push(s, _col, gain,
           cone ? 0.14 : 1.0,
