@@ -155,6 +155,14 @@ const TUNE = {
   shaftGain: 0.52,          // master multiplier on every beam's published intensity
   shaftConeGain: 0.85,      // torch / brazier cones, relative to shaftGain
   shaftSoft: 2.0,           // metres of soft fade where a blade meets geometry
+  /* Camera-proximity roll-in, per kind. fx6 `temple`: the slab body nearest the lens is the
+     widest, brightest stretch of the ribbon, and rolled in over (0.4, 2.2) it drew at full
+     phase-ceiling strength right at the camera — a cream veil that erased the painted star
+     ceiling over the nave while the mid-distance blades were doing the actual shaft work.
+     Slabs now roll in over metres; cones keep the tight window, because an interior camera
+     stands 1–3 m from a sconce and a 10 m fade would simply switch torchlight off. */
+  shaftNearFade: [0.4, 2.2],      // cones: metres of view depth over which a beam rolls in
+  shaftSlabNearFade: [2.5, 10],   // slabs: same, but long enough to spare the near frame
   /* 96 m put the `dunes` blades — the whole west colonnade, 88 m from that camera — inside
      the far fade, so the one exterior shot where eight parallel beams project cleanly into
      frame was fading them out on distance alone. At tod 0.83 the aerial-perspective blend at
@@ -991,6 +999,7 @@ uniform vec2  uInvRes;
 uniform float uSoft;
 uniform float uOpacity;
 uniform vec2  uNearFade;
+uniform vec2  uSlabNearFade;
 uniform vec2  uFarFade;
 uniform float uTime;
 uniform float uScroll;
@@ -1107,7 +1116,11 @@ void main() {
      shot, where the blades stand at 88 m against stone a few metres behind them. */
   float backGap = sceneZ - vViewZ;
   dark *= haveZ ? ( 1.0 - smoothstep( uDarkFar.x, uDarkFar.y, backGap ) ) : 0.0;
-  occl *= smoothstep( uNearFade.x, uNearFade.y, vViewZ );
+  // Camera proximity, per kind (task #13, verified on fx6 temple): a slab passing near the
+  // lens is its widest, brightest stretch and must roll in over metres, or it veils the
+  // near frame; a torch cone viewed from across a tomb chamber keeps the tight window.
+  vec2 nearF = mix( uSlabNearFade, uNearFade, vCone );
+  occl *= smoothstep( nearF.x, nearF.y, vViewZ );
   occl *= 1.0 - smoothstep( uFarFade.x, uFarFade.y, vViewZ );
   // vAxial is 1 when the eye is on the beam's own axis, where a ribbon degenerates to a
   // line and its width stops meaning anything. Fade it out before it can flip.
@@ -1176,7 +1189,8 @@ class LightShafts {
         uInvRes: { value: shared.invRes },
         uSoft: { value: tune.shaftSoft },
         uOpacity: { value: 1 },
-        uNearFade: { value: new THREE.Vector2(0.4, 2.2) },
+        uNearFade: { value: new THREE.Vector2(tune.shaftNearFade[0], tune.shaftNearFade[1]) },
+        uSlabNearFade: { value: new THREE.Vector2(tune.shaftSlabNearFade[0], tune.shaftSlabNearFade[1]) },
         uFarFade: { value: new THREE.Vector2(tune.shaftFar * 0.65, tune.shaftFar) },
         uScroll: { value: tune.shaftScroll },
         uNoiseAmt: { value: tune.shaftNoise },
