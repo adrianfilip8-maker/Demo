@@ -202,8 +202,43 @@ const TUNE = {
         is what promotes green past blue into the darkest slot: at mix 0.20 the surface is
         darkest-in-BLUE before the split and darkest-in-GREEN after it. Since a shadow pixel
         sits on the cool leg under any sane `splitRange`, the two levers are not
-        interchangeable — this one sets R/G, that one decides which of G and B is lowest. */
-  shadowBounceMix: 0.20,
+        interchangeable — this one sets R/G, that one decides which of G and B is lowest.
+
+     0.20 -> 0.05 (task #16, t16ab A/B). At 0.20 every shadowed wall in every daylight shot
+     measured hue 261-298 — B-max with R > G, a channel order no §2.2 colour has (every
+     intended cool is G >= R). TEXTURES cleared the albedo (authored hue 17-38 on all eight
+     implicated materials), and the chain decomposition (t16chain2.mjs) found G has no
+     champion in ANY term: fill G/R 0.79, mult 0.81, wash 1.34. This knob alone is measured
+     insufficient (t16ab `mixonly`: worn/block land 252/256, still violet) — it ships
+     INTERLOCKED with `shadowTeal` below. */
+  shadowBounceMix: 0.05,
+
+  /* Blend of the shadow tint toward §2.2 TURQUOISE #2fa8a0, applied inside
+     `_refreshShadowColor` — NOT to `PAL.shadowHue` — because LIGHTING's `ambient.tint`
+     republish overwrites `_shadowTint` every frame, and because the blend must feed the
+     floor/peak arithmetic (see the k-cap note there) rather than arrive pre-scaled.
+
+     Why a hue blend at all: sandstone albedo is G/R 0.483 linear, so the multiplied leg
+     reaches G = R only when the shadow light's G/R exceeds ~2.07 — #2a3f66 after the
+     luminance-matched bounce mix delivers 1.34 and CANNOT get there at any bounceMix
+     (mix 0 gives 1.87). The tint itself has to bring green. #2fa8a0 is §2.2's own cool
+     ("violet, teal, or deep cyan" shadows are all sanctioned).
+
+     0.15 is the smallest step that clears the ledger line (shadowed-arch hue <= 226,
+     G-darkest < 50%) on the evidence frame — t16ab measured, every frame opened:
+       sly-closeup worn/block/paving  base 275/282/261 -> teal15 224/226/211,
+         satP50 0.77-1.10x base, G-dark 99/96/90% -> 12/16/4%, lit splits +-1 deg;
+       night (FIRST, per ledger)      medians 236-242 -> 224-232, sat RISES 0.69->0.78,
+         no green read;
+       temple                         papyrus (55% of frame) 294 -> 224; residual 233-256
+         on wall/block/paving is the FILL leg's sand-bounce R-dominance (untouched by both
+         levers, 31% share on the validated wall, larger in enclosures) — the next lever is
+         the fill hue, not more teal: teal20 buys ~8 deg on a 30 deg residual while pushing
+         paving to 204 and sat to 0.75x.
+     Interlock, both directions: teal at the old warm mix collapses shadow sat to 0.02-0.11
+     (grey — §2.2 violation; model row, grey-collapse half not frame-captured); the new mix
+     without teal stays violet (`mixonly` frame above). Ship both or neither. */
+  shadowTeal: 0.15,
 
   /* --- rim --- */
   rim: 0.55,
@@ -368,6 +403,7 @@ const PAL = {
   rim: 0x7fd4ff,
   rimNight: 0xa8e0ff,
   shadowHue: 0x2a3f66,
+  turquoise: 0x2fa8a0,   // §2.2 TURQUOISE — the G-source for TUNE.shadowTeal's tint blend
   /* `shadowTintPeak` moved to TUNE — it is the daylight shadow's magnitude control and had to
      become reachable from `shading.tune` to be A/B-able at all. */
   /* `shadowBounceMix` moved to TUNE for exactly the reason `shadowTintPeak` did: it is
@@ -390,6 +426,8 @@ const _v3 = new THREE.Vector3();
 const _v3b = new THREE.Vector3();
 const _v2 = new THREE.Vector2();
 const _col = new THREE.Color();
+const _tintBlend = new THREE.Color();
+const _turq = new THREE.Color(PAL.turquoise);
 
 export class Shading {
   constructor(engine) {
@@ -414,7 +452,9 @@ export class Shading {
     this.shadowMatrix = null;
 
     this._shadowTint = new THREE.Color(PAL.shadowHue);
-    this._shadowTintLum = lum(this._shadowTint);
+    /* No cached tint luminance here any more: _refreshShadowColor derives everything from the
+       teal-blended tint each call, so a cached unblended lum would be a field with setters and
+       no reader — the exact "looks live, is dead" shape KNOWN_ISSUES §3/§8 bills by the cycle. */
     this._shadowFloor = TUNE.shadowFloor;
     /* Set only by an explicit setAtmosphere({ hazeSun }) — see _refreshHazeSun(). While false,
        the forward-scatter colour tracks the live haze instead of holding a constant.
@@ -933,7 +973,6 @@ export class Shading {
         }
         if (ambient.tint !== undefined && ambient.tint !== null) {
           setCol(this._shadowTint, ambient.tint);
-          this._shadowTintLum = lum(this._shadowTint);
         }
       }
     }
@@ -969,7 +1008,6 @@ export class Shading {
     if (typeof p.start === 'number') u.uHazeStart.value = p.start;
     if (p.shadowTint !== undefined) {
       setCol(this._shadowTint, p.shadowTint);
-      this._shadowTintLum = lum(this._shadowTint);
     }
     if (typeof p.shadowFloor === 'number') this._shadowFloor = p.shadowFloor;
     this._refreshShadowColor();
@@ -1053,7 +1091,20 @@ export class Shading {
   _refreshShadowColor() {
     const u = this.uniforms;
     const keyLum = lum(u.uKeyColor.value) * u.uKeyIntensity.value;
-    let k = (this._shadowFloor * keyLum) / Math.max(this._shadowTintLum, 1e-4);
+
+    /* The teal blend (TUNE.shadowTeal — the interlock note there is the why) happens HERE,
+     * on whatever tint is current, so a LIGHTING `ambient.tint` republish keeps the fix, and
+     * the blended colour feeds the floor AND the peak cap below. That ordering has a measured
+     * consequence worth stating: uncapped (night), light luminance is floor x keyLum exactly —
+     * lerping two equal-luminance colours preserves luminance, so the hue blend cannot move
+     * night's brightness (t16ab: 0.0419 -> 0.0418). Capped (all daylight), luminance is
+     * tintLum x peakCap / tintPeak, and turquoise carries more luminance per unit of peak
+     * channel than #2a3f66 — so daylight shadow light rises from 8.1% to 11.6% of key
+     * luminance. That is TOWARD §2.2's "~14% of key, never below", not a side effect to
+     * tune back out. */
+    _tintBlend.copy(this._shadowTint).lerp(_turq, TUNE.shadowTeal);
+    const tintLum = lum(_tintBlend);
+    let k = (this._shadowFloor * keyLum) / Math.max(tintLum, 1e-4);
 
     /* Cap how far the hue may be scaled.
      *
@@ -1091,7 +1142,7 @@ export class Shading {
      * else. If the frame is too bright or too blue in shadow — and measured on `courtyard` the
      * obelisk runs L 144.8 lit against L 82.3 shadowed, only 1.76:1 at golden hour — that
      * constant is the lever, not the floor and not the wash. */
-    const peak = Math.max(this._shadowTint.r, this._shadowTint.g, this._shadowTint.b);
+    const peak = Math.max(_tintBlend.r, _tintBlend.g, _tintBlend.b);
     const maxK = TUNE.shadowTintPeak / Math.max(peak, 1e-4);
     k = Math.min(k, maxK);
 
@@ -1116,8 +1167,8 @@ export class Shading {
      * to set how bright a shadow is. */
     const bounce = u.uBounceColor.value;
     const bl = lum(bounce);
-    _col.copy(bounce).multiplyScalar(bl > 1e-4 ? this._shadowTintLum / bl : 1);
-    _col.lerp(this._shadowTint, 1 - TUNE.shadowBounceMix);
+    _col.copy(bounce).multiplyScalar(bl > 1e-4 ? tintLum / bl : 1);
+    _col.lerp(_tintBlend, 1 - TUNE.shadowBounceMix);
     u.uShadowColor.value.copy(_col).multiplyScalar(k);
   }
 
