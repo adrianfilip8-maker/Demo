@@ -161,6 +161,25 @@ const TUNE = {
   flameBody: 0.46,          // tongue half-width as a fraction of the quad's
   flameSoft: 0.16,          // metres of depth fade — small, so a wall sconce does not vanish
   flameFade: [34, 52],      // metres from camera: full → gone
+  /* ── and the *near* taper, which is not symmetry for its own sake ──────────────
+     Measured on `interior` at 1280x720, flames on vs off in one page session with every
+     non-flame region bit-identical (`floor bottom-left` delta 0.0 luma, `far left pier` 0.0):
+     the five flames at 7–16 m are a clear win — the region around them gains **+13.6 luma**
+     and the frame gains ~2 400 warm-bright-saturated pixels. The sixth, at **2.1 m**, is a
+     clear loss: it lands in the top-right corner cell and takes that cell from **11 967 to
+     4 834** such pixels, a net −7 133, which is why the whole frame's `heroWarm` came out
+     *lower* with flames on (1.06%) than off (1.59%).
+     The reason is size, not brightness. At 2.1 m a 0.62 m tongue subtends 218 px and its tip
+     is above the top edge, so what reaches the frame is the flame's hottest, widest part with
+     none of its silhouette — a 160x160 px cream wash laid over what was the best-looking thing
+     in the tomb, a warm ochre cone pool at saturation 0.44. It comes out at 0.21.
+     So the billboard is a *distance* device and always was — its whole justification is that a
+     0.3 s particle cannot be relied on to exist in a still (see `flameCap` above). Up close,
+     `fire_core` and `fire_body` are on screen for tens of pixels each and carry the fire
+     properly. Tapering to 0.42 rather than to zero keeps it from popping, and at 2.1 m puts
+     the body at ~1.5 linear, which the composite model lands at ~L180 saturation 0.44 —
+     i.e. the near flame goes back to *contributing* the warm/cool tension it was erasing. */
+  flameNear: [1.4, 5.0, 0.42],   // floor below this, full above this, floor multiplier
   flameLick: 1.9,           // Hz of the fast crackle; the slow breath is a third of it
   /* Wall-mount standoff — see `_standoff()`. `near` is what counts as "mounted on this":
      the tomb sconces sit 5 cm off a pier face and the hall ones flush, so anything under
@@ -517,6 +536,7 @@ attribute vec3 aTint;
 uniform float uTime;
 uniform vec2  uSize;     // half-width, height at scale 1
 uniform vec2  uFade;     // metres from camera: full → gone
+uniform vec3  uNear;     // floor-below, full-above, floor multiplier
 uniform float uLick;
 
 varying vec2  vQ;        // x −1..1 across, y 0..1 base→tip
@@ -560,7 +580,11 @@ void main() {
   vQ = vec2( corner.x, v );
   vSeed = seed;
   vTint = aTint;
-  vGain = aData.z * flick * ( 1.0 - smoothstep( uFade.x, uFade.y, vViewZ ) );
+  /* A flame right in front of the lens is drawn by the particles, not by this quad — see
+     TUNE.flameNear for the measurement. Floored, not gated, so walking up to a brazier is a
+     dim, never a pop. */
+  float nearK = mix( uNear.z, 1.0, smoothstep( uNear.x, uNear.y, vViewZ ) );
+  vGain = aData.z * flick * nearK * ( 1.0 - smoothstep( uFade.x, uFade.y, vViewZ ) );
 
   gl_Position = projectionMatrix * mv;
 }
@@ -1365,6 +1389,7 @@ class FlameField {
         uSoft: { value: TUNE.flameSoft },
         uSize: { value: new THREE.Vector2(TUNE.flameSize[0], TUNE.flameSize[1]) },
         uFade: { value: new THREE.Vector2(TUNE.flameFade[0], TUNE.flameFade[1]) },
+        uNear: { value: new THREE.Vector3(TUNE.flameNear[0], TUNE.flameNear[1], TUNE.flameNear[2]) },
         uGain: { value: TUNE.flameGain },
         uHalo: { value: TUNE.flameHalo },
         uBody: { value: TUNE.flameBody },

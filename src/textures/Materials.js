@@ -266,6 +266,21 @@ const ARCH_UV = 2.0;
  * the *register layout*, not an individual glyph. A predecessor already removed the strongest
  * anchor (`cartouche: false`, below); this is what is left.
  *
+ * **In frame, it does not currently read, and I checked that rather than assuming it.** Critic
+ * pass 4 re-ran the probe as a continuous autocorrelation sweep over lags 6-300 px and found no
+ * peak above r = 0.30 anywhere on `traversal`'s rear wall or `guard`'s cream wall. My first
+ * reaction was that its 300 px window could not span two of a 237-413 px repeat and so could not
+ * have found one — so I tested it: laid this recipe's real albedo out at exactly the 286 px period
+ * `traversal` measures and ran pass 4's own window and lag range over it. **It recovers the
+ * planted period at r = 1.000** (at lag 286 in a 300 px window the 14 remaining columns are the
+ * same data, so an exact repeat correlates perfectly). The objection was wrong and is withdrawn;
+ * pass 4's result stands on the two shots it measured.
+ *
+ * What is left of the concern is narrower and worth one line: `traversal` (3.1-5.4 repeats) and
+ * `guard` (0.4-2.7) are the two *fewest*-repeat framings in the table above. `dunes` runs 6.4-9.2
+ * at 15.3 % of frame and has been probed by nobody. Its mitigation is supposed to be §2.3's >=60 %
+ * atmospheric blend, which is SKY's and is a prediction until someone measures it.
+ *
  * **Why the fix is not in this file.** A tile cannot avoid repeating its own content, so the two
  * levers are (a) enlarge the tile, which halves texels per glyph and buys §7.3's "visible tiling"
  * at the price of §7.3's "carvings look painted-on" — a straight trade between two conditions on
