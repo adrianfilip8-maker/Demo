@@ -76,13 +76,14 @@ const TUNE = {
   ambientBoost: 1.0,
 
   /* ── Enclosure ────────────────────────────────────────────────────────────────
-     A sealed room is not lit by the sky, and right now it is: at `interior`'s tod 0.5
-     the tomb — twelve metres underground with a stone ceiling — gets hemi 1.02 and an
-     ambient floor of 0.60, i.e. the full open-desert midday fill, while its six torches
-     put ~0.85 on a wall at two metres. The torches are outnumbered two to one by daylight
-     that has no way in, which is exactly the critic's "the room is lit flat and uniformly
-     ... no falloff, no warm pool" and why `interior` cannot demonstrate the warm/cool
-     tension §7.2 says it exists to prove.
+     A sealed room is not lit by the sky, and right now it is: at `interior`'s tod 0.5 the
+     tomb — twelve metres underground with a stone ceiling — gets hemi 1.02 and an ambient
+     floor of 0.586, i.e. the full open-desert midday fill. That is wrong on its own terms and
+     this term exists to correct it.
+
+     **It was also, plausibly but wrongly, held to be the cause of the critic's "the room is
+     lit flat and uniformly … no falloff, no warm pool". It is not.** The measurement is below.
+     Read it before spending a capture cycle here.
 
      `encloseStrength` is how much of the sky fill a fully-roofed camera loses.
 
@@ -101,6 +102,14 @@ const TUNE = {
      Ten times less sky fill changes the tomb by a tenth of a stop and costs it a hair of
      warm/cool contrast. So the fill was never what the room is made of, and the flat,
      uniform, falloff-free look the critic reports is not an FX or fill problem.
+
+     **And it would have been easy to report this as a win.** e=0 against e=0.90 differs on
+     **94.3% of the frame's pixels**, mean |Δ| 12/255, max 129 — a number that looks
+     conclusive and means nothing. The structure the shot is judged on does not move: the
+     near/far floor step stays ~0.02 L, the torch pool keeps the same 3:1 ratio to the
+     unlit stone, and the two frames read identically side by side. This is KNOWN_ISSUES §8's
+     lesson a second time ("disabling the shadow wash changed 83.8% of the frame and left the
+     defect bit-intact"): measure the defect, not the knob.
 
      Where the light actually comes from: `ToonMaterial._refreshShadowColor()` sets shadow
      illumination to `shadowFloor (0.125) x lum(keyColor) x keyIntensity` — a function of the
@@ -959,10 +968,13 @@ export class Lighting {
    * for the tomb turned the hall into a cave. The fan reports the fraction of sky the camera
    * cannot see, so one knob can mean the same thing in both.
    *
-   * **Not yet measured in place.** The intent is that the vault reads near 1 and the hall
-   * part-way, and the ray geometry says it should (`temple`'s +z ray leaves the hall past
-   * z −16 into open sky), but no capture has confirmed the numbers this returns per shot.
-   * Read `_encloseTarget` from the harness before trusting the separation.
+   * **Measured for `interior` only: it returns 1.0 there** — all five rays blocked, which is
+   * right for a sealed vault. The hall is expected to come out part-way (`temple`'s +z ray
+   * leaves the roof past z −16 into open sky) but that has not been captured, so do not trust
+   * the separation until someone reads `_encloseTarget` from `temple`'s camera. Note this all
+   * currently runs for nothing: `encloseStrength` is 0 and stays 0 for the reason recorded in
+   * TUNE. The fan is kept because it is the correct shape for the term if the shadow-floor
+   * handoff below ever lands, and because it costs five rays every six frames.
    *
    * The offsets are a fixed set, not sampled, so the term is deterministic frame for frame —
    * the screenshot critic depends on that (§1).
