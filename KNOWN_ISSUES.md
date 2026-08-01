@@ -109,6 +109,23 @@ image was plainly wrong.
 > made. **The frame is the authority; this table is a record.** Anyone tuning here should be
 > looking at the image and at the palette in §2.2, not at these six numbers.
 
+**Why the five cycles above were unwinnable, found much later.** `PAL.shadowTintPeak` clamps the
+shadow light's brightest channel, and `k` hits that clamp at **3.904** while *every* daylight
+shot asks for more — hero 6.50, temple 6.82, courtyard 6.52, combat 6.63, interior 9.79. So all
+of them receive the **identical** shadow light `(0.123, 0.175, 0.423)` no matter what the scene
+is doing, and **`shadowFloor` is a dead knob in daylight**: it changes nothing until it drops
+below 0.075 (0.050 for `interior`).
+
+Three consequences worth carrying:
+
+- The daylight shadow magnitude is set by `shadowTintPeak` **and by nothing else**. Tuning
+  `shadowWash`, `shadowSat`, `shadowBounceMix` or `shadowFloor` against a daylight frame is
+  tuning behind a clamp.
+- It explains the uniformity. Every daylight shot going lavender in the *same* way is what you
+  would expect from every daylight shot receiving the same shadow light.
+- A knob that is clamped still *moves* when you change it in the other direction, which is how
+  it survived five capture cycles of A/B without anyone noticing it was pinned.
+
 ---
 
 ## 4. Guards module still absent
