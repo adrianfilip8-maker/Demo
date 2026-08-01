@@ -1,8 +1,9 @@
 # Critic pass 4 — the four shots nobody had ever scored
 
-`night` · `traversal` · `combat` · `guard`
+`night` · `traversal` · `combat` · `guard` — plus a re-score of `hero`, `sly-closeup`, `temple`
 
-**Verdict: REJECT.** Mean **3.50 / 10** across the four. Passing floor is 8.
+**Verdict: REJECT.** Mean **3.50 / 10** across the four new shots; **4.29** across all seven
+scored this pass. Passing floor is 8. Best single frame in the project is now a 6.
 
 ---
 
@@ -62,8 +63,9 @@ rather than silently assigned to a plane.
 **All four pass the dark-foreground half of §2.3, and my pass-3 conclusion had the sign backwards.**
 A near plane darker than the mid plane, rising toward the distance, *is* the dark-frame /
 lit-mid / hazed-distance structure. I read "rises front to back" as the inverse of it. It is the
-shape of it. Whoever was going to act on that line in `hero`: **don't.** I will re-run `hero`
-itself the moment my queued capture lands, but the method error is mine and it is corrected here.
+shape of it. Whoever was going to act on that line in `hero`: **don't.** I have since re-run
+`hero` itself and it measures 45.8 → 68.1 → 82.9, spread 37.1 luma (§9). The method error is mine,
+it is corrected here, and the finding it produced is retracted.
 
 **What actually fails is the other half of the rule — "hazed background at ≥ 60% atmospheric
 blend".** `traversal`'s furthest architecture sits at **229 m** and is only **7.5% less saturated**
@@ -499,14 +501,19 @@ reach. Draws 273–444 against 250.
 | `combat` | **5** | correct sandstone, real bloom, real cast shadows — and the hero has no local colour |
 | `guard` | **4** | the best silhouette in the project, at one value, with no light cone in the light-cone shot |
 
-**Mean 3.50.**
+**Mean 3.50 across the four.** With §9's re-scores of `hero` (4), `sly-closeup` (6) and `temple`
+(6), the seven shots scored this pass average **4.29**.
 
-**Do not average this into the 4.2.** These are four shots that have never been scored; the 4.2
-baseline and my 3.67 are both six-shot means over `hero`/`temple`/`courtyard`/`sly-closeup`/
-`dunes`/`interior`. Nothing here moves that number. What it does is establish the back half of the
-set at **3.50** and put the ten-shot picture at roughly **3.6**.
+**Be careful what you compare that to.** The 4.2 baseline and my 3.67 are six-shot means over
+`hero`/`temple`/`courtyard`/`sly-closeup`/`dunes`/`interior`. The four new shots share no members
+with that set, so they cannot move it. The comparable figure is the three re-scored shots:
+**`hero` 3→4, `sly-closeup` 5→6, `temple` 4→6 — every one up, +1.33 mean on matched shots.**
+Against that, the four previously unscored shots come in at 3.50, which is *below* everything
+measured so far. Both statements are true and neither cancels the other: **the work is improving
+and the unmeasured half of the set was worse than the measured half.**
 
-The honest read on trajectory: **the pass-3 fixes that landed are visible and they work.** Cornices
+The honest read on trajectory: **the pass-3 fixes that landed are visible and they work.** Sly
+has local colour, the cornices are in frame, `temple` has real volumetrics. Cornices
 are in frame and reading in `night` and `traversal`. The night sky is genuinely good. `combat`
 holds correct sandstone at R−B +75.6 and a real tight warm bloom. Outlines pass everywhere, none
 of them pure black, all correctly warm-brown or violet. Tiling passes, properly measured this time.
@@ -515,20 +522,102 @@ were the four worst, and one dominant shading defect is spread across all of the
 
 ---
 
-## 9. Still outstanding from my side
+## 9. Addendum — `hero`, `sly-closeup`, `temple` (set `r4`), and the stamp earning its keep
 
-`hero`, `sly-closeup` and `temple` are queued as `r4` (`node tools/critic.mjs --label r4 --crops
-hero sly-closeup temple`, launched 13:59, still behind two older tickets). I owe three things on
-those frames and I have not abandoned them:
+The queued capture landed at 14:29. **Its manifest carries the provenance block, and the block
+immediately told me something I could not otherwise have known:**
 
-1. **`hero`'s depth planes, re-measured against true depth** — the reading I distrusted, whose
-   method error is corrected in §1 but which I have only re-run on the other four shots.
-2. **`hero`'s gold condition**, explicitly unscored in pass 3 because my frame predated the gilding
-   fix.
-3. **`sly-closeup` at 1:4.16 and yaw 33°**, neither of which any capture has yet shown.
+```json
+"commit": { "sha": "ed67555", "dirty": true, "capturedAt": "2026-08-01T14:29:58.384Z" }
+```
 
-`r4`'s manifest will carry the `commit` block, so the next reader will not have to reconstruct
-provenance by hand.
+`dirty: true`, and worse than that — **source files were edited while the run was rendering.**
+Frames: `hero` 14:23, `sly-closeup` 14:27, `temple` 14:29. Source mtimes inside that window:
+`Clips.js` 14:16, `Kit.js` 14:19, `Lighting.js` 14:22, `Particles.js` 14:23, `Materials.js` 14:25,
+`SlyModel.js` 14:27, `PostFX.js` 14:27. The page booted at roughly 14:14.
+
+**These three frames are from up to three different code states and none of them is `ed67555`.**
+That is exactly the straddle I had to reconstruct by hand in pass 3, and this time the tool said so
+in one line. **The stamp works. It is the most valuable thing added to the harness this cycle.**
+
+I am therefore scoring these three **provisionally**, and anyone acting on them should re-capture
+against a quiet tree first. What follows is what the pixels show; the trend is trustworthy, the
+exact numbers are not re-derivable.
+
+### `hero` — pass 3: 3 → **provisionally 4**
+
+**The pass-3 depth-plane claim is now disproven on `hero` itself.** Measured against true depth on
+a fresh frame: **NEAR 45.8 → MID 68.1 → FAR 82.9, spread 37.1 luma.** Near is darker than mid. The
+structure §2.3 asks for is present, and my pass-3 line — *"value rises monotonically front to back
+— the inverse of the dark-frame structure"* — was wrong about what it was looking at, and wrong
+about the magnitude too (I reported a 15-luma spread; it is 37.1). **That line is retracted.**
+
+**The pass-3 unscored gold condition, now scorable.** Pass 3 explicitly deferred *"Gold doesn't
+read as metal"* because my frame predated the gilding fix. Scored now: **2 pixels** within tol-70
+of `#e8b942`, max frame luma 225.4, **0.000% above L230**. It still fails, and the focal read fails
+with it — there is nothing bright enough in `hero` to be a hero.
+
+Genuine progress, stated once: **Sly is legible.** He carries real local colour and a readable
+cane and pose at (600,200). Cornices now read at (95–215, 90–130) and (700–900, 85–130) — the
+cavetto crown is in frame and doing its job. Backfaces are **0.00%**.
+
+Still failing: **62.1% of the frame sits in hue buckets 240/270/300** against 3.6% at sandstone's
+hue 30. The pier at (235,60 70×300) is **82.1% inside L36–L48, range 19.5 luma, hue 260** — a flat
+violet slab. And Sly at hue p50 261 is *the same hue as the pier behind him*: the local-colour fix
+landed, and the environment moved onto his colour instead.
+
+### `sly-closeup` — pass 3: 5 → **provisionally 6** · best shot in the project
+
+**This is the first frame in four passes that would survive being shown to somebody.** Cap, mask,
+striped tail, gloves, boots and cane all read instantly. The pose is a confident weight-shifted
+stance on the cane, not an A-pose. Ink weight varies. And the thing I have asked for in every
+ranked list has landed: **his jacket measures `#365975`, hue 203, sat 0.538, R−B −62.9, 95.1%
+blue-dominant.** That is committed local colour, and it is what makes the silhouette work.
+
+Two things stop it: **his eyes are two blown white discs.** The box at (608,152 76×42) puts
+**13.5% of its pixels at L228–235 against a face at p50 87.8** — 145 luma of separation, at sat
+0.180. The brightest pixels in the entire frame are his eyeballs, and they are colourless. The
+KNOWN_ISSUES note warned the previous emissive read as "two yellow dots"; the correction has
+overshot into headlights, and the mask is lost inside the glare. And the wall behind him is hue
+p50 **278**, **77.8% inside L52–L64** — flat magenta.
+
+### `temple` — pass 3: 4 → **provisionally 6**
+
+**The volumetrics are real and they are good.** Scanning y=300 across the hall, the shaft at x=840
+reads **L138 against L66–78 immediately beside it** — a +60 luma god-ray, with dust motes inside
+it, raking the full depth of a receding colonnade to a bright framed doorway with an obelisk
+silhouetted in it. Star ceiling overhead. This is the first frame in the project with a genuine
+compositional idea, and §2.3's "volumetric light shafts raking through at least one opening" now
+passes here.
+
+Still failing: **hue bucket 270 is the single largest in the frame at 34.8%** — the hall is pink.
+The columns (950,200 180×380) measure sat 0.265, hue p50 272, with **no fluting, no glyph and no
+capital detail**; at this scale they are smooth tapered slabs. And **max luma 221.9, 0.000% above
+L230, 0.011% above L200** — a hall full of light shafts with no bright thing in it.
+
+### What the three add up to
+
+All three moved up. The direction is right and the work landing is the right work. Every one of
+them is still held back by **the same single defect at the top of §7's ranked list** — architecture
+rendering at hue 260–290 instead of hue 30 — which now demonstrably costs the project its three
+best frames, not just its worst one.
+
+---
+
+## 10. Still outstanding from my side
+
+All three items I owed are discharged in §9:
+
+1. **`hero`'s depth planes, re-measured against true depth** — done, and it **retracts** my pass-3
+   finding. Near 45.8 → mid 68.1 → far 82.9, spread 37.1 luma.
+2. **`hero`'s gold condition**, deferred in pass 3 — scored: **2 pixels**, still fails.
+3. **`sly-closeup` at 1:4.16 and yaw 33°** — captured and scored at 6, the best frame in the
+   project, with the eye blowout as the one thing standing between it and a 7.
+
+**The one thing I could not do properly**: `r4` came back `dirty: true` with seven source files
+edited mid-render, so those three scores are provisional. If someone wants them binding, the
+capture needs a quiet tree. That is a coordination problem, not a harness one — the harness told me
+about it correctly and immediately.
 
 ---
 
