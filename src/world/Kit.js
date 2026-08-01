@@ -487,6 +487,21 @@ export function masonryShell(o) {
          they do on a real pylon anyway. */
       const oScale = face.len0 > 0.01 ? face.len / face.len0 : 1;
       while (a < face.len * 0.5 - 0.15 && guard++ < 200) {
+        /* Course the wall *to* the reveal rather than through it. Tiling straight across an
+           opening and clipping afterwards leaves the first block past the hole starting
+           wherever the tiling happened to land — measured at 0.58 m short of the reveal on two
+           courses of the inner pylon's gate, which is a visible notch in a doorway. Restarting
+           the run on the far jamb is also what a mason does. No rng is drawn here, but blocks
+           that fell wholly inside an opening are no longer generated-then-discarded, so shells
+           that HAVE openings do re-shuffle downstream; shells without openings are untouched. */
+        for (const op of openings) {
+          if (op.face !== face.f) continue;
+          const oy0 = op.y0 ?? -1, oy1 = op.y1 ?? 1e3;
+          if (!(yb + ch > oy0 && yb < oy1)) continue;
+          const oa0 = op.a0 * oScale, oa1 = op.a1 * oScale;
+          if (a > oa0 - 0.16 && a < oa1) a = oa1;
+        }
+        if (!(a < face.len * 0.5 - 0.15)) break;
         let bl = rng ? rng.range(blockLen[0], blockLen[1]) : (blockLen[0] + blockLen[1]) * 0.5;
         bl = Math.min(bl, face.len * 0.5 - a);
         if (bl < 0.45) break;
@@ -507,14 +522,18 @@ export function masonryShell(o) {
            twenty metres tall — the "misaligned blocks stepping diagonally, reads as an
            exploded wall" the critic found in four separate shots. Clipping gives every
            opening a straight jamb, and gives the door mouldings something to land on. */
-        let skip = false;
+        let skip = false, jamb = false;
         for (const op of openings) {
           if (op.face !== face.f) continue;
           const y0 = op.y0 ?? -1, y1 = op.y1 ?? 1e3;
           if (!(yb + ch > y0 && yb < y1)) continue;
           const oa0 = op.a0 * oScale, oa1 = op.a1 * oScale;
+          /* A block that happens to finish flush against a reveal is a jamb block even though
+             no clip was needed, so proximity counts as well as overlap. */
+          if (Math.abs(s1 - oa0) < 0.06 || Math.abs(s0 - oa1) < 0.06) jamb = true;
           if (s1 <= oa0 || s0 >= oa1) continue;                     // clear of the hole
           if (s0 >= oa0 && s1 <= oa1) { skip = true; break; }        // wholly inside it
+          jamb = true;                                               // this block *is* the reveal
           if (s0 < oa0 && s1 > oa1) s1 = oa0;                        // spans it: keep the jamb side
           else if (s0 < oa0) s1 = Math.min(s1, oa0);
           else s0 = Math.max(s0, oa1);
@@ -527,7 +546,15 @@ export function masonryShell(o) {
         const exposure = windFace == null ? 1
           : face.f === windFace ? windK
           : face.f === (windFace ^ 1) ? 1 / windK : 1;
-        if (rng && rng.chance(Math.min(0.35, gapChance * exposure)) && yb > 1.2) continue;
+        /* A fallen block is characterful in the middle of a wall and a defect at a doorway: it
+           re-cuts exactly the ragged notch the clipping above exists to prevent, and `windFace`
+           doubles the odds of it on the one face the camera is looking at. Measured on the inner
+           pylon's gate — the critic's "cascade of misaligned blocks" — the reveal held to ±0.35 m
+           on 11 of 13 courses and blew out to 1.0 and 1.5 m on the two the drop had eaten.
+           The roll is still *taken* so the RNG stream, and therefore every other block in the
+           level, stays bit-identical; only its effect on reveal blocks is suppressed. */
+        const fell = rng ? rng.chance(Math.min(0.35, gapChance * exposure)) : false;
+        if (fell && !jamb && yb > 1.2) continue;
         bl = s1 - s0;
         if (bl < 0.16) continue;
         const ac = (s0 + s1) * 0.5;

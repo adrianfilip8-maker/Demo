@@ -483,6 +483,32 @@ export const TOON_SHADE = /* glsl */ `
 		#else
 			vec3 slyDNx = dFdx( vNormal ), slyDNy = dFdy( vNormal );
 			float slyTurn = ( length( slyDNx ) + length( slyDNy ) ) * uRes.y;
+			/* uRimCurve.z is a GLOBAL knob and must stay at 1.0. Setting it to 0 has been
+			   measured and it reopens the defect the note above describes. Recorded here so
+			   nobody pays for that A/B twice.
+
+			   The convexity half is genuinely wrong about characters: it rejects 69.7-79.7% of
+			   Sly's own fresnel rim band in all seven staged shots, cutting the mean gate from
+			   ~1.000 (magnitude alone) to 0.203-0.302, and it cannot be repaired by threshold
+			   because his normalised fold (-0.64) is indistinguishable from a real concave
+			   crease (-0.645). The cause is faceting, not the test: on an analytic sphere,
+			   convex by construction, slyFold < 0 fires on 0.0% of the rim band at every scale
+			   from a temple column to Sly's head. Low-poly skinned quads straddle facet
+			   boundaries; smooth geometry does not.
+
+			   But it cannot simply be switched off globally, because it is the ONLY thing
+			   suppressing a concave contact. At a wall-meets-ground wedge the magnitude half
+			   reads exactly 0 over 918,322 planar px yet 1018 over the 1,279 crease px, and
+			   smoothstep(3,10,1018) = 1.0 — wide open. Measured on hero, uRimCurve.z = 0 puts
+			   an 824 px cyan line 329 px wide (13:1) back along the lintel edge, visually
+			   indistinguishable from the ungated build.
+
+			   So the fix is to exempt characters specifically, and the obvious spelling of that
+			   does NOT work: a preprocessor test on USE_SKINNING is always false in a fragment
+			   shader, because three defines it only in prefixVertex — three.module.js:6811 is
+			   its one and only definition. An exemption has to come from a per-material define
+			   set where character materials are built, which also means escaping this file's
+			   single shared uniform block. */
 			float slyFold = dot( slyDNx, dFdx( slyViewPos ) ) + dot( slyDNy, dFdy( slyViewPos ) );
 			float slyConvex = mix( 1.0, step( 0.0, slyFold ), uRimCurve.z );
 		#endif
