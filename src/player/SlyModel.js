@@ -1734,7 +1734,7 @@ export class SlyModel {
 
     const n = 8;
     const centers = [];
-    for (let i = 0; i < n; i++) centers.push(base.clone().addScaledVector(axis, (i / (n - 1)) * 0.264 * S));
+    for (let i = 0; i < n; i++) centers.push(base.clone().addScaledVector(axis, (i / (n - 1)) * 0.272 * S));
     // published for the tuft pass, which has to grow a wisp off the real tip
     (this._earTip || (this._earTip = {}))[side] = { p: centers[n - 1].clone(), axis: axis.clone() };
     const F = { T: centers.map(() => axis), R: centers.map(() => width), U: centers.map(() => thick) };
@@ -1809,30 +1809,37 @@ export class SlyModel {
      * Two hard direction changes at the widest point of the head, which is exactly the newsboy
      * silhouette and survives being 3 px of black.
      *
-     * The crown top also comes down 1.830 → 1.786 (−4.0 cm). It was 0.067 m of cap above a
-     * skull that stops at 1.763, i.e. the cap was two thirds of the upper head volume and was
-     * *shaped like more skull*. Lower and wider is both the better hat and the better head:
-     * the tall dome is most of what read as "big lumpy head" rather than "big head in a cap".
-     * It also clears the band the ears need — see `_buildEar`, which is the other half of this
-     * change and must move with it.
+     * Above the shelf the crown is a near-vertical **wall** (0.246 → 0.230 over 10 cm) before it
+     * domes, not an arc off the skull. A wall has a top edge; an arc does not.
      *
-     * `cz` slumps back to −0.066 rather than the −0.11 the shape wants, and the constraint is
+     * **The crown height is not free, and I shortened it once and had to put it back.** The
+     * first attempt took the top to 1.786 on the reasoning that a tall dome is what reads as
+     * "big lumpy head". Rendered by material group (`shotsil.mjs --parts`) the crown had then
+     * almost no presence on the head outline at all: the bill sits at head-space y 1.722 and is
+     * ~2.7 cm thick, so its top edge is at ~1.749, and a crown topping out at 1.786 clears its
+     * own bill by 3.7 cm and is a sliver behind it from any three-quarter view. At 1.816 it
+     * clears by 6.7 cm and owns the top of the head again. The floor on this number is the
+     * bill, and the bill's height is `brimLift`, which is load-bearing for the eyes — so if
+     * `brimLift` ever moves, this moves with it.
+     *
+     * `cz` slumps back to −0.098 rather than the −0.13 the shape wants, and the constraint is
      * hard rather than aesthetic: the crown must stay in front of the forehead at every ring or
      * the skull pokes out through the top of the hat. Checked ring by ring against `HEAD` —
-     * front `cz + rz` vs the skull's own front at the same height, worst case 1.730 (cap 0.144,
-     * skull 0.123). Move `cz` back any further without growing `rz` and that inverts.
+     * front `cz + rz` vs the skull's own front at the same height, worst case 1.742 (cap 0.158,
+     * skull 0.084). Move `cz` back any further without growing `rz` and that inverts.
      */
     const C = [
       [1.586, 0.164, 0.174, 0.010],
       [1.600, 0.234, 0.248, 0.004],
-      [1.614, 0.244, 0.258, -0.006],
-      [1.642, 0.242, 0.256, -0.020],
-      [1.672, 0.230, 0.246, -0.034],
-      [1.702, 0.208, 0.226, -0.046],
-      [1.730, 0.178, 0.196, -0.054],
-      [1.756, 0.134, 0.150, -0.060],
-      [1.774, 0.076, 0.086, -0.064],
-      [1.786, 0.018, 0.020, -0.066],
+      [1.616, 0.246, 0.260, -0.006],
+      [1.648, 0.246, 0.260, -0.022],
+      [1.680, 0.240, 0.254, -0.040],
+      [1.712, 0.230, 0.244, -0.056],
+      [1.742, 0.214, 0.228, -0.070],
+      [1.772, 0.184, 0.198, -0.082],
+      [1.796, 0.132, 0.144, -0.090],
+      [1.811, 0.058, 0.064, -0.096],
+      [1.816, 0.014, 0.016, -0.098],
     ];
     addTube(mb, {
       centers: C.map(([y, , , cz]) => new THREE.Vector3(0, y, cz)), seg: 26,
@@ -1857,9 +1864,9 @@ export class SlyModel {
 
     /* Crown button — the one gold spark at the top of the frame in a close-up. Its y is an
        absolute keyed to the crown's top ring, so it moves with `C`; at the old 1.832 it would
-       now float 4.6 cm clear of a cap that stops at 1.786. Same orphaned-absolute failure as
-       the cane aims in KNOWN_ISSUES §9, caught here only because I went looking for it. */
-    const btn = place(new THREE.Vector3(0, 1.784, -0.066));
+       now float clear of a cap that stops at 1.816. Same orphaned-absolute failure as the cane
+       aims in KNOWN_ISSUES §9, caught here only because I went looking for it. */
+    const btn = place(new THREE.Vector3(0, 1.810, -0.096));
     addEllipsoid(mb, {
       center: btn, radii: new THREE.Vector3(0.023 * S, 0.016 * S, 0.023 * S),
       segTheta: 12, segPhi: 6, phi0: -0.2,
@@ -1922,7 +1929,20 @@ export class SlyModel {
      * radius 0.206 → 0.190) so the ends stop escaping the cap sideways, and the end droop
      * doubles (0.030 → 0.058) so they tuck back down into the crown. A newsboy bill is short,
      * thick and soft; the thing that was there was a scalpel. */
-    const N = 24, TH = 1.24;
+    /* **The wrap is the reason the crown had no silhouette, and no amount of crown shaping was
+     * ever going to fix it from the other side.** At `TH` 1.24 the bill spans 142° of arc and
+     * its ends land at head-space (0.180, 1.664, 0.080) — out at the widest point of the
+     * temple, at the height the ears emerge, 6 cm up the crown wall. That is not a bill on the
+     * front of a cap, it is a visor *ring* around its upper third, and rendered by material
+     * group it owns the entire top-front edge of the head at both `sly-closeup` (33°) and
+     * `hero` (70°) with the crown hidden behind it. Two rounds of crown reshaping moved
+     * geometry that was not on the outline.
+     *
+     * At 0.98 (112°) the ends pull in and forward to (0.155, 1.664, 0.140), off the temple and
+     * onto the brow, and the crown wall carries the outline from the temple back. The centre of
+     * the arc — the only part `occlude.mjs` tests, and the part `brimLift` was tuned against —
+     * is untouched, so the eye clearance this brim exists to protect is unchanged. */
+    const N = 24, TH = 0.98;
     const arc = [];
     for (let i = 0; i <= N; i++) {
       const th = THREE.MathUtils.lerp(-TH, TH, i / N);
