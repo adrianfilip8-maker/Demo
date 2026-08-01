@@ -196,6 +196,25 @@ The checkers below do pure projection — no occlusion test, and no verification
 path actually moved him. A character behind a wall, or one the staging never placed, passes them
 identically to one standing in clear view.
 
+**Settled, and the settling found a second defect.** `tools/charvis.mjs` now does the test that
+was missing: CPU-skin the real character in the shot's own pose, stage him where the shot says,
+and cast a ray from the lens to each of ~500 surface points against real level triangles. All
+ten shots, 2.6 s, no renderer and no capture lock. Result — **eight shots are 94–100% visible,
+`guard` is behind the camera by design, and `courtyard` was 65.8%**: legs 70% occluded, torso
+50%, head 16%, by `arch:court:hieroglyph_wall`. That is a *different* occluder from the west
+colossus throne that the earlier fix cleared. The fix moved him out of one thing and into
+another, and **the check that cleared it used five samples** — enough to find a throne block
+that swallows him whole, not enough to see a wall cutting him at the waist. When a coarse
+instrument clears a change, that is the instrument's resolution talking, not the change.
+He is now at (-6.6, 5.12, 12.4), 100% of 506 samples visible, and 5.12 is the *measured* deck
+height at that xz rather than the 5.2 assumed from `night` 8 cm away.
+
+The residual paving hits on `temple`, `interior`, `night` and `combat` (46–56% of the **feet**
+band, 0% everywhere else) are the boot soles coincident with the floor they stand on plus the
+near floor edge, and they are stable across a 3× change in the coincidence tolerance. Read the
+per-band line, never the single percentage: 6% lost off the boots and 6% lost off the cap are
+not the same defect.
+
 Ruled out so far by reading the code: the staging path is wired correctly. `Controller.js` is
 registered as `'movement'` (`main.js:29`) and does have `teleport()` at `Controller.js:1007`, so
 `Debug.js`'s `movement?.teleport` branch fires, and `SlyModel`'s own handler correctly defers to

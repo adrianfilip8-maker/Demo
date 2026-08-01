@@ -137,10 +137,35 @@ export const SHOTS = {
 
      Moved onto terrace stage 2, a surface already proven by `night` staging him at (-4, 5.2,
      12.5). Verified: clear of the throne, and the framing improves besides — NDC y -0.964 to
-     -0.315, so he stops being jammed against the bottom edge. 84 px at 1600x900. */
+     -0.315, so he stops being jammed against the bottom edge. 84 px at 1600x900.
+
+     **That verification was right about the throne and still wrong about the frame, because
+     the instrument had five samples.** Five points on a 1.7 m figure can find a throne block
+     that swallows him whole; they cannot see a wall that cuts him at the waist. A 506-sample
+     test (`tools/charvis.mjs`) says the terrace position was **65.8% visible** — legs 70%
+     occluded, torso 50%, head 16% — by `arch:court:hieroglyph_wall`, a different occluder
+     from the one that was fixed. The fix moved him out of one thing and into another, and the
+     check could not resolve the difference. **When a coarse instrument clears a change, that
+     is the instrument's resolution talking, not the change.**
+
+     Now at (-6.6, 5.12, 12.4): **100% of 506 samples visible**, nothing between him and the
+     lens. 5.12 is the measured deck height at that exact xz, not the 5.2 assumed from `night`
+     8 cm away — the terrace carries block-level relief and standing him on the nominal figure
+     floats him.
+
+     He gets *smaller* by this move — 67 px to 63 px at 1280x720 — and it is still the better
+     frame: 67 px at 65.8% visible is ~44 px of readable figure, and the missing 34% is his
+     legs, which is exactly where a run pose carries its line of action. Camera untouched, as
+     this entry has said from the start; the dolly stays available and stays a deliberate
+     decision about what this shot is for.
+
+     Yaw 4.19 → 5.08. At 4.19 the camera saw him at view 81°, near profile; 5.08 is the
+     nearest yaw putting view at 34° — a three-quarter read — while keeping the key 21° off
+     his face so it still models. Visibility is flat across yaw here, so the two were solved
+     separately without either fighting the other. */
   courtyard: {
     pos: [-19.0, 5.6, 30.0], target: [1.0, 9.0, 12.0], fov: 50, tod: 0.76, roll: 1.0,
-    player: { pos: [-6.6, 5.2, 14.4], yaw: 4.19, pose: 'run' },
+    player: { pos: [-6.6, 5.12, 12.4], yaw: 5.08, pose: 'run' },
   },
 
   /* Terrain + sky + aerial perspective. The approach ridge looking back at the complex. */
