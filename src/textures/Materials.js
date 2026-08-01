@@ -347,7 +347,7 @@ const worldTileOf = (tile) => (Array.isArray(tile) ? tile[0] : tile) * ARCH_UV;
  * (−1.3 %, so the pigment is redistributed rather than removed), mip-4 luma rms 0.0348 → 0.0342
  * (the squint number falls, it does not rise), full-res `lumaRms` 0.0645 → 0.0637.
  */
-const PAINT_WEAR_M = 0.40;
+const PAINT_WEAR_M = 2.08;
 
 const GOLD_BIAS = 1.75;
 function goldRamp(t, out = T3) {

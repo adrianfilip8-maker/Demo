@@ -604,3 +604,57 @@ opaque mass with a readable cavetto curve, fillet lip, undercut and ink silhouet
 `stairFlight`, `slabUnit`, `hookRing`, `papyrusColumn`, `bevelPrism`, `torusRoll` and
 `steppedPyramid` are still open shells. Both camera-relevant tests read ~0 on them because their
 rims are buried, so closing them spends triangles for no visible gain.
+
+---
+
+## 11. Probe headers — the same defect three times, and the rule that stops it
+
+Three separate offline probes in `tools/` have now produced a confident wrong number by the
+same mechanism, and it is worth naming as a class because none of them had a bug in it.
+
+- **`shotsil.mjs`** said it "samples the clip the way `Animation.freezePose()` does". True of the
+  pose buffer and of the cane aim, which is what the author was thinking about. `freezePose()`
+  also sets `_ikW = 1`, so at runtime `Rig.footIK()` re-solves both legs before anything is
+  drawn — and the tool does not run it. Everything below the knee was the *authored* clip pose.
+  That sentence is what commit `5a1de96` quoted to conclude the buried feet were a tool
+  artefact. They were real, and `2d16389` had to retract it.
+- **`charview.mjs`** printed "he is N px tall" from a projection with no frustum-sidedness test
+  and no occlusion test. `guard` came back a plausible **483 px** for a character who is behind
+  the lens by design, and `courtyard` passed every projection check while contributing **zero
+  pixels** to the frame. "In frame" was read as "visible" because the output said "px".
+- **The `night` eye box** was computed from the eye geometry and projected — correctly — into a
+  screen rectangle, and the luminance inside it was reported as the eyes' brightness. At
+  `night`'s staged yaw the camera sees the side of his head, so the rectangle was over cheek
+  fur. Every number in it was arithmetically right and about the wrong surface.
+
+**The shape.** A probe is the authored model plus *some prefix* of the render pipeline. Its
+header describes what it measures; the reader takes that as authority over what the renderer
+draws. The gap is always a transform the probe skipped — foot IK, frustum sidedness plus
+occlusion, staged yaw — and in all three cases the arithmetic was fine and the **sentence** was
+what failed. Nothing in the output looked uncertain, because a skipped transform does not
+produce a wide error bar; it produces a precise number about a different thing.
+
+**The rule, for whoever writes the next tool.** Write the header as *the list of transforms
+between what you compute and what the renderer draws* — the suffix you did **not** implement —
+rather than as a description of what you measure. If you cannot name that suffix, you do not
+know what your number means yet.
+
+And then put it in the **output**, not only the header. `shot.mjs`, `critic.mjs` and
+`charvis.mjs` already stamp provenance into every run for the same reason (§10); scope deserves
+the identical treatment, because a header is read once by its author while the printed line gets
+pasted into reports by people who never open the file. `shotsil.mjs` now prints `BEHIND` instead
+of a pixel count and carries its IK omission in the header; `charview.mjs` prints
+`BEHIND CAMERA (no pixel size)`. Those two lines are the whole fix, and they are cheaper than
+any of the three retractions above.
+
+Two corollaries that have each cost a cycle here:
+
+- **A three-quarter view cannot test a left-right feature.** Every canonical camera that draws
+  Sly is a three-quarter (33°, 45°, 70°), so a change confined to the lateral axis — the ear
+  notches cut into the cap crown, this pass — is invisible in all of them and is occluded by the
+  very feature it is meant to separate. `shotsil.mjs` grew an `AZIM=0,90,180` mode for exactly
+  this; a change that shows up at no azimuth is not shipping on faith.
+- **A solid-black silhouette tells you the head is one blob; it cannot tell you which part owns
+  the blob's edge.** Those two findings want opposite fixes, and I spent two iterations reshaping
+  a cap crown that was not on the outline at all. `shotsil.mjs --parts` colours the crop by
+  material group and answers it in one frame.

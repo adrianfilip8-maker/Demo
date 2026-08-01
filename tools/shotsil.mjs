@@ -1,15 +1,22 @@
 /**
  * Per-shot silhouette harness. For every canonical shot it works out which side of Sly that
  * camera actually sees and how many pixels tall he is in it, then renders:
- *   <shot>-sil.png    big black-on-white silhouette from that exact view   (§7.3 test)
- *   <shot>-shade.png  same view, 3-band cel shade, so shapes can be identified
- *   <shot>-tiny.png   the real on-screen pixel size, ×7 nearest-neighbour for inspection
+ *   <shot>-sil.png        big black-on-white silhouette from that exact view   (§7.3 test)
+ *   <shot>-shade.png      same view, 3-band cel shade, so shapes can be identified
+ *   <shot>-tiny.png       the real on-screen pixel size, ×6 nearest-neighbour for inspection
+ *   <shot>-head.png       the same silhouette framed on the head cluster
+ *   <shot>-headshade.png  · shaded
+ *   <shot>-headparts.png  · flat-coloured by material group — see `PART_COL`
  *
- * No browser, no GPU: builds SlyModel against a stub engine, samples the clip the way
- * Animation.freezePose() does (including the cane aim, which lives outside the pose buffer),
- * skins on the CPU and scan-converts.
+ * No browser, no GPU: builds SlyModel against a stub engine, samples the clip's pose buffer and
+ * cane aim, skins on the CPU and scan-converts.
  *
  *   node tools/shotsil.mjs <outdir> [shot ...]
+ *   AZIM=0,90,180 [AZPOSE=clip] node tools/shotsil.mjs <outdir> <shot>
+ *
+ * **What this is, stated as the gap rather than as the measurement** (KNOWN_ISSUES §11). It is
+ * the authored mesh in the authored clip pose, projected. Between it and a rendered frame lie:
+ * foot IK, the level (occlusion), the shader, the ink hull and PostFX. Read it for *shape*.
  *
  * **The feet here are NOT the feet the renderer draws.** `freezePose()` also sets `_ikW = 1`
  * for every non-airborne clip, so at runtime `Rig.footIK()` re-solves both legs and re-pitches
