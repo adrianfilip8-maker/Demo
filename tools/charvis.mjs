@@ -18,6 +18,20 @@
  * invisible to it, and so is the character's own self-occlusion (`occlude.mjs` does that one).
  * It is a necessary condition that was never being checked, not a sufficient one. A shot that
  * passes here can still be a bad frame; a shot that fails here cannot be a good one.
+ *
+ * **The feet band is measured before foot IK and is reported separately for that reason.**
+ * This skins the raw clip; the runtime does not render the raw clip. `Rig.footIK` drives each
+ * ankle to `groundY + ikAnkle + clipLift` where `clipLift = max(0, ...)`, so an ankle authored
+ * *below* the root is raised back onto the ground plane — and `Animation.freezePose` sets
+ * `_ikW = 1` for every non-airborne clip, so IK is live in exactly the captures this tool is
+ * used to predict. The sneak clips author their lowest vertex 28-29 cm below the root
+ * (`sneak_idle` -0.283, `sneak_walk` -0.287, `cane_combo_3` -0.107, against `run` +0.165 and
+ * `idle_confident` +0.002), so without IK those samples sit underground and the paving
+ * correctly occludes them. The feet-band figures track that sink depth exactly — 54% / 56% /
+ * 46% on the three sneak shots, 33% on `cane_combo_3`, and **0% on every shot whose clip sits
+ * at or above the root**. That is this tool's artefact, not a buried character. Taken at face
+ * value it reads as a severe defect in three canonical shots, which is why the headline number
+ * excludes it.
  */
 import * as THREE from 'three';
 import { execFileSync } from 'node:child_process';
@@ -207,7 +221,10 @@ for (const name of names) {
     await guardSubject(shot, cam, fwd);
     continue;
   }
-  const pct = 100 * visible / inFront;
+  /* Headline excludes the feet band: it is decided by foot IK, which this tool does not run
+     (see the header). Reported below, flagged, so it is visible without being scored. */
+  const bodyTot = tot[1] + tot[2] + tot[3], bodyCut = cut[1] + cut[2] + cut[3];
+  const pct = bodyTot ? 100 * (bodyTot - bodyCut) / bodyTot : 100 * visible / inFront;
   const top = [...blockers.entries()].sort((a, b) => b[1] - a[1]).slice(0, 2)
     .map(([n, c]) => `${n} x${c}`).join(', ');
   const flag = pct === 0 ? '  <-- INVISIBLE: hiding him would change zero pixels'
@@ -215,7 +232,8 @@ for (const name of names) {
   const nearNote = near ? `  [${near} within 15 cm — surface contact, not a wall]` : '';
   console.log(`${name.padEnd(13)} ${String(inFront).padStart(7)} ${pct.toFixed(1).padStart(7)}%   ${top || '(clear)'}${flag}${nearNote}`);
   if (visible < inFront) {
-    const parts = BANDS.map((b, i) => tot[i] ? `${b} ${(100 * cut[i] / tot[i]).toFixed(0)}%` : `${b} --`);
-    console.log(`              occluded by band: ${parts.join('  ')}`);
+    const parts = BANDS.slice(1).map((b, i) => tot[i + 1] ? `${b} ${(100 * cut[i + 1] / tot[i + 1]).toFixed(0)}%` : `${b} --`);
+    const feet = tot[0] ? `${(100 * cut[0] / tot[0]).toFixed(0)}%` : '--';
+    console.log(`              occluded by band: ${parts.join('  ')}   [feet ${feet} — PRE-IK, not scored]`);
   }
 }

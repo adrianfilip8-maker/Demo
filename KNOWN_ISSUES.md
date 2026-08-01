@@ -221,11 +221,26 @@ instrument clears a change, that is the instrument's resolution talking, not the
 He is now at (-6.6, 5.12, 12.4), 100% of 506 samples visible, and 5.12 is the *measured* deck
 height at that xz rather than the 5.2 assumed from `night` 8 cm away.
 
-The residual paving hits on `temple`, `interior`, `night` and `combat` (46–56% of the **feet**
-band, 0% everywhere else) are the boot soles coincident with the floor they stand on plus the
-near floor edge, and they are stable across a 3× change in the coincidence tolerance. Read the
-per-band line, never the single percentage: 6% lost off the boots and 6% lost off the cap are
-not the same defect.
+**Correct the record on the feet band — I first wrote it as "boot soles coincident with the
+floor" and that was wrong.** The paving hits on `temple`, `interior`, `night` and `combat`
+(46–56% of the **feet** band, 0% everywhere else) are not contact artefacts: the blocked
+samples sit 0.9–27 cm *below* the character's own root, and the occluders are a median 0.33–0.64
+m in front of them, so the floor is correctly hiding points that are underground.
+
+They are underground because **`charvis` skins the raw clip and the runtime does not render the
+raw clip.** `Rig.footIK` drives each ankle to `groundY + ikAnkle + clipLift` with
+`clipLift = max(0, ...)`, so an ankle authored below the root is raised back onto the ground
+plane, and `Animation.freezePose` sets `_ikW = 1` for every non-airborne clip — IK is live in
+exactly the captures this tool predicts. The sneak clips author their lowest vertex 28–29 cm
+under the root (`sneak_idle` −0.283, `sneak_walk` −0.287, `cane_combo_3` −0.107, against `run`
++0.165 and `idle_confident` +0.002), and **the feet-band percentages track that sink depth
+exactly**: 54/56/46% on the three sneak shots, 33% on `cane_combo_3`, 0% on every shot whose
+clip sits at or above the root. The headline number now excludes the band for that reason.
+
+Taken at face value this reads as three canonical shots rendering the character buried to
+mid-shin — a severe defect that does not exist. **A tool that omits a runtime correction does
+not report "unknown", it reports a confident wrong number**, and this one correlated so cleanly
+with pose that it looked like a finding. Read the per-band line, never the single percentage.
 
 Ruled out so far by reading the code: the staging path is wired correctly. `Controller.js` is
 registered as `'movement'` (`main.js:29`) and does have `teleport()` at `Controller.js:1007`, so
