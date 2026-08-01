@@ -320,32 +320,51 @@ const worldTileOf = (tile) => (Array.isArray(tile) ? tile[0] : tile) * ARCH_UV;
  * `paintRemnants` gates surviving pigment on `warpN(u, v, freq, …)`, and `freq` is *cycles per
  * tile*. Every call site passed a bare number — 5 here, 4 on `relief_figures`, 6 on
  * `column_papyrus` — and nothing anywhere converted it to metres. On this recipe's 10.4 m repeat,
- * `freq: 5` is a **2.08 m** wear cell: pigment survives in force across a 2 m patch where the
- * field is high and nowhere else, so the paint is not distributed over the inscription, it is
- * clumped into one or two big saturated blobs per repeat. At the canonical framings that blob is
- * 50 px (`temple`), 138 px (`courtyard`), 38 px (`dunes`) — and it is the only saturated thing on
- * a monochrome sandstone field, so it flags every seam. Rendered at `temple`'s own 248 px/repeat
- * the repeats are countable by eye off the albedo alone.
+ * `freq: 5` is a **2.08 m** wear cell, so pigment survives in force across a 2 m patch where the
+ * field is high and nowhere else. That is 50 px at `temple`, 138 px at `courtyard`, 38 px at
+ * `dunes` — well clear of the sub-pixel line, and stated nowhere in metres before this constant.
  *
- * **The two NCC metrics could not see it, and the reason generalises.** `tilematch.mjs` scores
- * this tile 0.482 searching the wrapped tile in 2D on luma; restricted to a horizontal search
- * (the eye's actual task on a wall that is under 1.7 repeats tall and 3.5–4.3 long) and given
- * chroma, it scores **0.441 — under the 0.45 threshold**, while the image plainly fails. Both
- * measure **uniqueness**; the defect is **conspicuity**. A unique patch you cannot pick out of
- * the field is not a landmark. The quantity that does see it is the strongest chroma blob's
- * excursion above the tile's own chroma field, low-passed to one glyph: **12.06 sd here against
- * 7.51 for the next worst recipe in the catalogue** (scratchpad `beacon.mjs`).
+ * **The value here is 2.08, which is `round(10.4 / 2.08) = 5` cycles/tile — bit-identical to the
+ * bare `freq: 5` it replaces. This is a naming change, not a tuning change**, and it is parked at
+ * the control deliberately: the hypothesis that the 2 m wear cell *causes* the tiling landmark
+ * was pre-registered, swept, and **failed**. Beacon peak/sd across the sweep:
  *
- * Sized at roughly one glyph (`glyphM` 0.72 m), which redistributes the *same* pigment as many
- * small accents instead of one or two big ones — the principle `glyphWall`'s own note already
- * states ("a dense field of small varied marks has no landmark in it"), applied to the paint
- * layer instead of to the sign size. Expressed in metres and divided into the world repeat at the
- * call site so it cannot silently become a different physical size the next time `tile` moves,
- * which is the failure `ARCH_UV` exists to prevent one layer up.
+ *     wear cell   2.08    1.30    0.87    0.65    0.50    0.40   (metres)
+ *     peak/sd    12.06   11.96   13.65    8.45   10.06   10.82
  *
- * Measured, control → shipped: beacon peak/sd **12.06 → 4.62**, mean chroma 0.0159 → 0.0157
- * (−1.3 %, so the pigment is redistributed rather than removed), mip-4 luma rms 0.0348 → 0.0342
- * (the squint number falls, it does not rise), full-res `lumaRms` 0.0645 → 0.0637.
+ * No trend. The knob does move the image — the top blob's share of supra-threshold chroma mass
+ * falls 0.273 → 0.17 and the blobs relocate — so it is *connected*; it is not the cause. Recorded
+ * rather than reverted so the next person does not re-run the obvious first experiment. Keep the
+ * derivation: a bare cycle count is the same shape of latent error as `MOTES.size` and
+ * `sand_ripples`, and `ARCH_UV` exists one layer up for exactly this reason.
+ *
+ * **And the reason no sweep could have settled it is that the metric steering the sweep was never
+ * calibrated.** `hieroglyph_wall` has a documented known-bad state — `cartouche: true`, which the
+ * note on the layout call below says made the repeats "trivially countable by eye", and which is
+ * unmistakable in a render at 248 px/repeat. Across that A/B:
+ *
+ *     tilescore.mjs   (1/8 low-pass peakiness)     "no landmark" both      no separation
+ *     tilematch.mjs   (2D luma NCC, mean)          0.482 -> 0.488         +1.2 %
+ *     tilematch2.mjs  (U chroma NCC, mean)         0.441 -> 0.443         +0.5 %
+ *     beacon.mjs      (chroma blob peak/sd)        12.06 -> 12.05         -0.1 %
+ *     usalience.mjs   (strip band salience)         2.61 -> 2.62          +0.4 %
+ *     + a 28-point sweep of four scalar families x seven scales:  max separation **2.5 %**
+ *
+ * **Not one of them can see the landmark this recipe is documented as having had.** The cause is
+ * structural, not a tuning fault: the cartouche is ~1.2 % of the tile and appears once, and every
+ * one of those statistics is a global moment dominated by the other 98.8 %. The eye does feature
+ * matching with attention, which no global scalar approximates.
+ *
+ * **So the 0.482 is withdrawn as evidence, and the 0.45 threshold with it** — I set that
+ * threshold myself, from the numbers, against no known-bad state. What remains is the calibrated
+ * instrument, the render at the framing's own px/repeat (scratchpad `wallstrip.mjs`), and it says
+ * the shipped state is clean: at `temple`'s 248 px/repeat and at `dunes`' 190 px x 7 repeats —
+ * the worst framing in the table above, and the one KNOWN_ISSUES said nobody had probed — no
+ * landmark recurs, while the `cartouche: true` control is obvious at both. That agrees with the
+ * one independent in-frame measurement, critic pass 4's autocorrelation sweep over real captures
+ * (no peak above r = 0.30 on `traversal`'s rear wall or `guard`'s cream wall).
+ *
+ * The predecessor's `cartouche: false` was the real fix. See KNOWN_ISSUES §13.
  */
 const PAINT_WEAR_M = 2.08;
 
@@ -1413,8 +1432,8 @@ export const MATERIALS = {
       const ramp = carve(s, cut, lines, { depth: 0.46, bevelPx: 3.0, lip: 0.12, bulge: 0.42, lineDepth: 0.62, seed: cx.seed + 5 });
       freshCutTint(s, ramp, { amount: 0.16 });
       /* `freq` derived from a metre figure, not written as a bare cycle count — see
-       * `PAINT_WEAR_M`. At 10.4 m of world per repeat this is 16 cycles/tile against the 5 that
-       * shipped, i.e. a 0.65 m wear cell instead of 2.08 m. */
+       * `PAINT_WEAR_M`. At 10.4 m of world per repeat and a 2.08 m cell this is 5 cycles/tile,
+       * exactly the literal it replaces; the derivation is the point, not the value. */
       paintRemnants(s, ramp, paint, { survival: 0.50, freq: Math.round(worldTileOf(HG_WALL_TILE) / PAINT_WEAR_M), seed: cx.seed + 9, edgeLoss: 0.66, fade: 0.42 });
       chiselMarks(s, { amount: 0.016, angle: -0.35, freq: 48, seed: cx.seed + 1, mask: m.edge });
       pitting(s, { amount: 0.030, freq: 64, density: 0.34, seed: cx.seed + 2, colorDark: PAL.sandDark, stain: 0.10 });

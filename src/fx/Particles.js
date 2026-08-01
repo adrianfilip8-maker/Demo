@@ -48,6 +48,30 @@ const TUNE = {
   shaftBoost: 2.6,          // extra brightness for dust caught inside a light blade
   groundProbeEvery: 5,      // frames between ground-height probes
   groundLerp: 3.0,          // how fast the sand plane chases a new floor height
+  /* ── the ceiling on how big a speck of dust may get on screen ──────────────────
+     Every mote size in this project was chosen against a *far* framing — `MOTES` says
+     "0.10-0.26 m puts a mote at 3-6 px in the hall", which is right for the 20-35 m the
+     `temple` blades cross. Nothing bounded the near end, and the near end is where these
+     are drawn from: a billboard's projected size goes as 1/d, so the same sprite that is
+     4 px at 30 m is **36 px at 3 m**.
+
+     Worked through for `guard` (fov 38, 720 px tall), diameter = size·H/(d·tan(fov/2)):
+     `air_motes` at its 0.23 m end is 24 px at 20 m, 48 px at 10 m, **80 px at 6 m**, and
+     its near fade does not start biting until 6 m; `TORCH_MOTES` at 0.16 m ride a 1.7 m
+     shell around each fire, so on a camera standing next to a brazier they are 56-167 px.
+     That is exactly critic pass 4 on `guard`: "~25 soft cream discs 20-40 px across… they
+     read as **a dirty camera lens**, and they sit in front of the architecture rather than
+     in the air of the room". The discs are real, they are these, and the defect is
+     screen-space size — not count, not tile, not colour, all three of which have already
+     been changed once each in pursuit of this.
+
+     So it is fixed in screen space. Held as a fraction of frame height rather than in
+     pixels because that is what "reads as a speck" actually means, and because the frame
+     height then cancels out of the clamp entirely (see PARTICLE_VERT): 0.014 is 10 px at
+     720p and 15 px at 1080p, i.e. the same picture. It is a *ceiling*, so every mote at
+     the distances these sizes were tuned for is untouched — on `temple` at 20-35 m the
+     clamp binds at 0.31 m against sprites of 0.26 m and does nothing at all. */
+  moteMaxH: 0.014,          // max sprite diameter as a fraction of frame height
 
   /* light shafts (rendered from lighting.shafts) --------------------------------------
      `shaftGain` is the one number that decides whether these read as light or as a wash.
@@ -329,6 +353,7 @@ uniform vec3  uLightTint;
 uniform vec3  uAmbTint;
 uniform float uLitMix;
 uniform float uSizeScale;
+uniform float uMaxSize;   // max diameter as a fraction of frame height; 0 = no ceiling
 
 #ifdef SHAFTS
 ${SHAFT_GLSL}
@@ -410,6 +435,16 @@ void main() {
     mvPosition = modelViewMatrix * vec4( p + ( t1 * corner.x + t2 * corner.y ) * sz, 1.0 );
   #else
     mvPosition = modelViewMatrix * vec4( p, 1.0 );
+    /* Screen-space ceiling on the sprite — see TUNE.moteMaxH.
+       A half-extent sz at view depth d covers sz * P11 / d of the NDC half-height, so the
+       sprite's diameter as a fraction of frame height is exactly sz * P11 / d — the frame
+       height cancels, and the ceiling is sz <= uMaxSize * d / P11. Applied here rather
+       than where sz is first computed so it uses the depth of the particle's own centre,
+       and only in the billboard branch: PLANAR rings are ground decals whose size is the
+       thing they are communicating. */
+    if ( uMaxSize > 0.0 ) {
+      sz = min( sz, uMaxSize * max( -mvPosition.z, 1e-3 ) / max( projectionMatrix[1][1], 1e-4 ) );
+    }
     #ifdef STRETCH
       vec3 vel = aV0 * exp( -k * age );
       vec3 vv = ( modelViewMatrix * vec4( vel, 0.0 ) ).xyz;
@@ -1221,6 +1256,7 @@ class Batch {
         uAmbTint: { value: opts.shared.ambTint },
         uLitMix: { value: opts.litMix ?? TUNE.ambientLitMix },
         uSizeScale: { value: 1 },
+        uMaxSize: { value: opts.maxSize ?? 0 },
         uAtlas: { value: opts.shared.atlas },
         uDepth: opts.shared.depth,           // shared uniform object: one assignment re-points all
         uInvRes: { value: opts.shared.invRes },
@@ -1752,6 +1788,11 @@ export class Particles {
         /* Per-field, because how far a sprite is dragged toward the key's colour is exactly
            the knob that decides whether it separates from the ground it flies over. */
         litMix: def.litMix ?? TUNE.ambientLitMix,
+        /* Only the dust populations take the screen-size ceiling. `sand_drift` runs up to
+           1.5 m and `shimmer` to 2.6 m on purpose — they are low alpha-blended sheets, and
+           a sheet that has to cover the ground is *supposed* to be large in frame. Clamping
+           those would delete the two fields that carry the ground haze. */
+        maxSize: key === 'air_motes' ? TUNE.moteMaxH : 0,
       });
       b.material.uniforms.uBox.value.set(def.box[0], def.box[1], def.box[2]);
       b.material.uniforms.uFade.value.set(def.fade[0], def.fade[1], def.fade[2], def.fade[3]);
@@ -1801,6 +1842,9 @@ export class Particles {
     this.motes = this._batch('motes', {
       capacity: MOTES.capacity, additive: true, loop: true, renderOrder: 15, softness: 0.4,
       defines: ['LOOP', 'SOFT'],
+      // Carries TORCH_MOTES too, which sit on a 1.7 m shell around every fire and are
+      // therefore the closest sprites in the game to any camera standing near a brazier.
+      maxSize: TUNE.moteMaxH,
     });
     this.motes._used = 0;
     this.motes._deathMax = Infinity;

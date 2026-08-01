@@ -75,6 +75,24 @@ export const TUNE = {
    * mesh. The standing figure is the one to quote; `hero` freezes `perch_idle`, which is why
    * that shot has always measured the most bobble-headed of the set.
    *
+   * **And the `1 : 4.16` row above is mislabelled — it is a `perch_idle` number wearing an
+   * `idle_confident` label, and it has been quoted as the cleared §7.3 figure.** Re-measured
+   * like for like on one tree with one script, across the cap pass:
+   *
+   *              idle_confident (standing)        perch_idle (`hero`)
+   *     before   1 : 4.56  chin→crown             1 : 4.22
+   *     after    1 : 4.52                         1 : 4.10
+   *     before   1 : 6.68  skull only             1 : 5.79
+   *     after    1 : 6.70                         1 : 5.84
+   *
+   * 4.16 does not reproduce standing on any tree that can still be built; it sits inside the
+   * `perch_idle` band, and the 5.82 skull-only figure quoted beside it is a `perch_idle`
+   * number too. So the pair was self-consistent and the *pose label* was the error — which is
+   * the same defect KNOWN_ISSUES §11 catalogues for probe headers, arriving here through a
+   * tool that reports whichever shot it happened to process first.
+   * **Quote a head count with its pose or do not quote it.** Get both with
+   * `node tools/shotsil.mjs <out> sly-closeup` (standing) and `... hero` (perch).
+   *
    * The cartoon read is not the head count on its own, it is the *set*: big head, tiny waist,
    * narrow shoulders, long thin limbs, oversized hands and feet, and a tail with more mass
    * than the torso. At headScale 0.90 the head is still 0.34 m across against a 0.27 m chest —
@@ -1717,16 +1735,22 @@ export class SlyModel {
      * silhouette had one blob with two nicks in its side.
      *
      * Sly's head reads as two sharp triangles rising clear of a low cap, so that is what this
-     * builds. With `_buildCap`'s crown top down at 1.786, the axis steepens (0.77 → 0.98 in y)
-     * and the ear lengthens (0.196 → 0.264 head-space) so the tip lands at world y 1.809
-     * against a crown top of 1.747: **6.2 cm of ear standing clear above the hat**, 17% of
-     * chin→crown, ~7 px at `hero`'s 45 px head. Lateral clearance improves too (tip |x| 0.272
-     * against a crown 0.247 at its widest), so the notch between ear and cap is a V with white
-     * on both sides of it rather than a nick.
+     * builds. The axis steepens (0.77 → 1.06 in y) and shortens its lateral lean (0.86 → 0.58),
+     * and the ear lengthens 0.196 → 0.272 head-space. Tip lands at world y **1.839** against a
+     * crown top of **1.775** — 6.4 cm of ear standing clear above the hat, 17% of chin→crown,
+     * ~8 px at `hero`'s 45 px head. At the ear's widest ring it clears the crown laterally by
+     * 5.9 cm as well (0.262 against 0.203 at that height).
      *
-     * The two changes are one change. Lengthening the ear against the *old* 1.830 crown needs
-     * a 0.36 m ear to clear it, which is a rabbit; lowering the crown without lengthening the
-     * ear leaves the tips 1 cm short. Do not revert one of them on its own. */
+     * **More lateral lean is worse, not better, and that is not obvious.** The first attempt
+     * put the axis at 0.80 x / 0.98 y, which clears more sideways and rendered as two bat
+     * wings: the ears stopped reading as ears and took the cap's dominance with them. The read
+     * wants them going *up* out of the hat, not out past it. Ear span is the number to watch —
+     * 0.556 before, 0.650 at the wing overshoot, 0.599 shipped.
+     *
+     * Height here is coupled to `_buildCap`'s crown top and the two must move together.
+     * Lengthening the ear against the pre-pass 1.830 crown needs a 0.36 m ear to clear it,
+     * which is a rabbit; the crown coming down without the ear growing leaves the tips short.
+     * Do not revert one of them on its own. */
     const base = new THREE.Vector3(hw(side * 0.126), hy(1.652), hx(-0.020));
     const axis = new THREE.Vector3(side * 0.58, 1.06, -0.16).normalize();
     const thick = new THREE.Vector3(side * 0.74, -0.24, 0.63).normalize();   // faces outward-front
@@ -1774,9 +1798,11 @@ export class SlyModel {
   /* ---------------------------- cap ------------------------------------- */
 
   /**
-   * Cyan newsboy cap: puffy eight-panel crown, a hard dark hem band, and a long stiff bill on
-   * its own bone so ANIMATION can flick it. With the mask and the tail this is one of the three
-   * shapes that has to survive being filled solid black — and it is the one that was failing.
+   * Cyan newsboy cap: eight-panel crown over a hard shelf, a dark hem band, and a short stubby
+   * bill on its own bone so ANIMATION can flick it. With the mask and the tail this is one of
+   * the three shapes that has to survive being filled solid black — and it is the one that was
+   * failing. Read `_buildEar` with this: the crown's top edge and the ear length are one
+   * decision, and the bill's *wrap* rather than the crown's profile was the actual cause.
    */
   _buildCap(mb) {
     const S = TUNE.headScale;
@@ -1852,19 +1878,19 @@ export class SlyModel {
         const panel = 1 + 0.040 * Math.cos(8 * a + 0.35) * (1 - Math.pow(tt, 2));
         // the crown slumps toward the back-left, so the outline is never bilaterally symmetric
         const slump = 1 + 0.075 * Math.max(0, -Math.cos(a - 0.5)) * smooth(0.30, 0.95, tt);
-        /* Ear notches. The frame here is R = −X, U = +Z, so a = 0 is his right and a = π his
-           left; the +0.18 bias puts the dip slightly behind the ear's own backward sweep.
-           This is the shape that separates cap from ear in a solid-black read: without it the
-           ear leaves the crown's outline almost tangentially and the two merge into one lumpy
-           mass, which is the §7.3 line this pass exists to clear. Notched, the ear clears the
-           crown by 6.0 cm at the height it crosses instead of 1.6 cm, so there is white on both
-           sides of it. cos^6 keeps the dip local — at 45° off the ear it is already down to
-           12% — and the ramp holds it off the shelf, which must stay a hard unbroken corner.
-           Checked against `HEAD` that the notched crown still covers the skull at every ring
-           it touches (worst case 1.712: cap 0.179 world against a skull at 0.122). */
-        const earA = Math.max(Math.cos(a + 0.18), Math.cos(a - Math.PI - 0.18));
-        const notch = 1 - 0.20 * Math.pow(Math.max(0, earA), 6) * smooth(0.34, 0.74, tt);
-        return { u: s.u * panel * slump * notch, v: s.v * panel * slump * notch };
+        /* **Ear notches were tried here and measured at nothing — do not re-derive them.**
+           The idea is sound on paper: dip the crown 20% at the two ear azimuths (the frame is
+           R = −X, U = +Z, so a = 0 is his right and a = π his left) and the ear stops leaving
+           the crown's outline tangentially, clearing it by 6.0 cm at the height it crosses
+           instead of 1.6 cm. Rendered, it moved **52 px of 88,146** in a 420 px head crop —
+           0.06% — and byte-identical-to-the-eye silhouettes at 0°, 90° and 180°.
+           The reason is geometric and kills the whole approach, not the numbers: **the ear is
+           wider than the notch is deep, so from every direction that could see the notch, the
+           ear is standing in it.** A dip in a surface can only read if something thinner than
+           the dip passes through it. Separation between cap and ear has to come from the ear
+           clearing the crown's *top*, which is what the height changes above and in
+           `_buildEar` actually do. */
+        return { u: s.u * panel * slump, v: s.v * panel * slump };
       },
       warp: (p) => place(p),
       groupAt: () => 'cloth',

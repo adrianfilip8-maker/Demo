@@ -362,6 +362,34 @@ Recorded so they are not re-derived:
   half ARCHITECTURE's (the normals) and half SHADING's (the terminator positions), and **a
   fixed-light measurement could not have found it.** Caveat that stays attached: measured with
   no shadows, normal maps, AO or post, so it is an upper bound on what the geometry can offer.
+
+  **Weight by projected solid angle, not by world m² — it changes the answer by 2.5–7×.** The
+  first pass weighted by surface area, which put the background *pyramids* at 32–80% of "area"
+  and top of every ranking while the near columns sat at 1–2%. Screen coverage falls with 1/d².
+  Re-weighted by what the camera actually sees (`tools/ndl.mjs`, reproduced independently):
+
+  ```
+  temple     lo 0.14 -> 39.75%   hi 0.52 ->  3.69%   combined 43.44%
+  guard      lo 0.14 ->  0.58%   hi 0.52 -> 42.09%   combined 42.67%
+  interior                                            combined  2.54%
+  courtyard                                           combined  1.62%
+  hero                                                combined  1.07%
+  ```
+
+  So it is **far worse than the m²-weighted 17.5%/5.8%** on the two shots it touches, and
+  essentially absent on the other three — the coinciding populations are precisely the near,
+  large, screen-filling surfaces. Two shots have ~43% of visible architecture sitting on a band
+  boundary; the rest are clean.
+
+  Two things fall out. The smoothing already spent **is working where it was put**:
+  `arch:hall:column_papyrus` carries a band edge inside a primitive across 25.2% of its own
+  area, the best of any near-field mesh. And the residual is nameable — the big flat masonry and
+  paving meshes deliver **1.2–5.7%** (`arch:court:sandstone_block` 1.2%, `arch:tomb:hieroglyph_wall`
+  1.6%, `paving:court` 3.6%) while each occupies 22–39% of frame.
+
+  **Third instance in this file family of a diagnostic inventing the defect it exists to find**,
+  after `raster.mjs`'s missing near-plane clip and the `|du|/|dp|` UV audit's per-vertex axis
+  artefact. Caught because "the pyramids dominate every shot" was too convenient an answer.
 - **Light shafts have no forward-scatter term, so one gain serves a 7.2× range.** A shaft is
   visible *because* of forward scatter, and `SHAFT_FRAG` (`src/fx/Particles.js`) has no term
   for it: `vViewZ` is depth fade, `vX`/`vS` are cross-section and along-beam, and `vAxial` is a
@@ -649,12 +677,139 @@ any of the three retractions above.
 
 Two corollaries that have each cost a cycle here:
 
-- **A three-quarter view cannot test a left-right feature.** Every canonical camera that draws
-  Sly is a three-quarter (33°, 45°, 70°), so a change confined to the lateral axis — the ear
-  notches cut into the cap crown, this pass — is invisible in all of them and is occluded by the
-  very feature it is meant to separate. `shotsil.mjs` grew an `AZIM=0,90,180` mode for exactly
-  this; a change that shows up at no azimuth is not shipping on faith.
+- **A three-quarter view cannot test a left-right feature**, so not seeing a change in the
+  canonical shots is not evidence either way. Every camera that draws Sly is a three-quarter
+  (33°, 45°, 70°), and `shotsil.mjs` grew an `AZIM=0,90,180` mode so a lateral change can be
+  looked at head-on. Used in anger this pass on notches cut into the cap crown at the ear
+  azimuths: front and back said the same thing the three-quarters did, and a pixel diff put it
+  at **52 px of 88,146 (0.06%)**. Removed rather than shipped, with the reason recorded at the
+  site — the ear is wider than the notch is deep, so it stands in its own notch from every
+  direction that could see it. The rule that got there is worth more than the result: *decide
+  what view would show the change before you make it, and if there is no such view, the change
+  is not testable and should not ship.*
 - **A solid-black silhouette tells you the head is one blob; it cannot tell you which part owns
   the blob's edge.** Those two findings want opposite fixes, and I spent two iterations reshaping
-  a cap crown that was not on the outline at all. `shotsil.mjs --parts` colours the crop by
-  material group and answers it in one frame.
+  a cap crown that was not on the outline at all. `shotsil.mjs` now writes a
+  `<shot>-headparts.png` on every run, flat-coloured by material group, which answers it in one
+  frame: cap crown black, bill and hem dark grey, fur and ears light. It is what showed that the
+  bill was wrapped round the temple as a visor ring and was hiding the crown it belongs to.
+
+---
+
+## 12. A feature can be paid for out of a neighbouring feature's budget
+
+Recorded because nothing in the paying feature's own metrics showed the cost, and the general
+form is not specific to textures.
+
+`column_papyrus` gained two horizontal registers of glyph bands. The band's own numbers were
+good and stayed good at every iteration: localisation confirmed exactly (contrast peaks appeared
+only at the authored band buckets, 1.87x/1.72x/1.69x, with all 35 other buckets at 0.99–1.09),
+band-interior luma contrast +70%, chroma +88%, reaching 75% and 82% of the reference wall.
+
+At the band's **first** position it also pushed the vertical text register's lowest run below one
+quadrat, so `columnRegister` dropped that run — and in the critic's ROI the ***unbanded*** shaft
+lost 11% of its contrast, 0.0129 → 0.0115. That cancelled roughly a third of what the bands had
+bought. **Every band metric was clean while this was happening.** The band was not measured on
+the shaft, and the shaft was not expected to change, so nothing looked at it.
+
+What found it was arithmetic, not observation: the ROI total is the area-weighted sum of the
+band and not-band splits, and reconciling `0.0091 × 0.246 + 0.0129 × 0.754` against the measured
+ROI figure did not close. Moving the band to the slot the coverage table already called best
+cleared the text entirely and restored the shaft to 0.0128.
+
+**The general rule.** A feature added inside a shared budget — screen area, tile V, a vertex
+count, a frame's exposure range, a draw-call ceiling — can be paid for by a *neighbouring*
+feature, and the payment is invisible in the new feature's metrics **by construction**, because
+those metrics are scoped to the new feature. Two things follow:
+
+- **Measure the neighbours you displaced, not only the thing you added.** The question is never
+  "did my feature improve" but "did the region containing my feature improve".
+- **Make the totals reconcile.** Splitting a region into changed and unchanged parts and checking
+  that the parts sum to the whole is a cheap, mechanical check that catches this class without
+  anyone having to anticipate which neighbour got squeezed.
+
+Cheap corollary from the same experiment: **a luma metric is largely blind to a pigment change.**
+Raising paint survival 0.34 → 0.46 moved whole-material luma contrast +0.7% and read as a null
+result; measured on the band interior in *chroma* it was **+9%**. Same shape as §3's "R/G cannot
+see blue".
+
+---
+
+## 13. Texture tiling cannot be measured by a global scalar — every metric we have fails its own control
+
+**§7.3 "visible texture tiling repetition" on `hieroglyph_wall`. The finding that opened it is
+withdrawn, and the reason is worth more than the finding was.**
+
+`hieroglyph_wall` was routed as the only recipe over a "countable distinctiveness" line: 0.482
+against a 0.45 threshold, at 13.2–32.9% of frame in seven of the ten canonical framings. Both
+numbers were mine, and **the threshold was set from the numbers themselves, against no state
+known to have the defect.**
+
+This recipe has such a state. `cartouche: true` draws one 0.7 × 1.8 m outlined royal oval per
+10.4 m repeat; the recipe's own note records it as having made the repeats "trivially countable
+by eye", and rendered at `temple`'s own 248 px/repeat it is unmistakable — the oval marches
+across the wall once per tile. That is a free, bit-exact A/B. Run everything we have across it:
+
+| metric | cartouche:false (shipped) | cartouche:true (known-bad) | separation |
+|---|---|---|---|
+| `tilescore.mjs` — 1/8 low-pass peakiness | "no landmark" | "no landmark" | none |
+| `tilematch.mjs` — 2D luma NCC, mean of 14 | 0.482 | 0.488 | +1.2% |
+| `tilematch2.mjs` — horizontal chroma NCC | 0.441 | 0.443 | +0.5% |
+| `beacon.mjs` — chroma blob peak/sd | 12.06 | 12.05 | −0.1% |
+| `usalience.mjs` — strip band salience | 2.61 | 2.62 | +0.4% |
+| 4 scalar families × 7 low-pass scales | — | — | **max 2.5%** |
+
+**Not one of the twenty-eight measurements separates them.** Three of those metrics predate this
+pass; two were written during it, specifically to fix the previous one's blind spot, and both
+failed the same control.
+
+**The cause is structural, so no amount of retuning fixes it.** The cartouche is ~1.2% of the
+tile and occurs once. Every statistic above is a global moment over the whole tile or strip, and
+is therefore dominated by the other 98.8%. Averaging is the worst case — `tilematch` scores each
+patch soundly and then means it over 14 random patches, so a single landmark moves the result by
+at most 1/14 of its own excursion and usually contributes no sample at all — but taking the max
+over a dense grid does not rescue it either (0.759 → 0.787), because in a dense inscription
+almost every patch is unique, so the metric saturates and discriminates nothing. The eye does
+feature matching with attention; no global scalar approximates that.
+
+**What is left, and it is enough.** The render at the framing's own px/repeat (scratchpad
+`wallstrip.mjs`, no GPU, no lock, ~20 s) is the calibrated instrument: it separates the A/B
+instantly. On it, the shipped state is clean at `temple`'s 248 px/repeat *and* at `dunes`' 190 px
+× 7 repeats — the worst framing in the table and the one this file said nobody had probed, now
+probed, off the albedo alone and before §2.3's atmospheric haze is applied. That agrees with the
+only independent in-frame measurement, critic pass 4's autocorrelation over real captures. **The
+predecessor's `cartouche: false` was the real fix and the condition is met.**
+
+Two eliminations recorded so they are not re-run:
+
+- **The paint-survival wear cell is connected but is not the cause.** `paintRemnants` gates
+  pigment on a noise field whose `freq` is *cycles per tile* and was written as a bare number at
+  all three call sites — 5 on `hieroglyph_wall` (a **2.08 m** cell on a 10.4 m repeat), 4 on
+  `relief_figures`, 6 on `column_papyrus`, with nothing anywhere converting it to metres. That
+  looked like the same latent-scale bug as `MOTES.size` and `sand_ripples`, and it was
+  pre-registered as the cause. Swept 2.08 → 0.40 m the beacon score goes 12.06, 11.96, 13.65,
+  8.45, 10.06, 10.82 — **no trend**, while the knob demonstrably moves the image (top-blob mass
+  share 0.273 → 0.17, blobs relocate). *A knob that moves the metric is not the knob that made
+  the defect.* The metre-derived constant is kept at the behaviour-identical value because the
+  bare cycle count is still a latent-scale hazard; the tuning is not taken.
+- **Enlarging `HG_WALL_TILE` remains declined** — it trades this condition for §7.3's
+  carving-detail condition. Measured previously, unchanged.
+
+**The rule.** *A metric that has never been shown to move on a state known to have the defect is
+not evidence about that defect, in either direction.* Before quoting a texture metric, run it
+across a known-bad A/B and publish the separation next to the number. Where a defect is a rare
+localised feature in a large field, expect to find no scalar at all, and budget for looking at
+the render instead of for building a fifth metric.
+
+### Correction: `darkTail` is not 0.0000 on every stone recipe
+
+Stated as an invariant in the brief, and asserted in `rampFloor`'s own docstring ("every stone
+recipe already reports 0.0000 without it"). Measured on the current tree at size 512, three
+carved recipes are not zero: **`hieroglyph_wall` 0.0008** (≈210 texels), `ceiling_stars` 0.0005,
+`relief_figures` 0.0001. The mechanism is in the same docstring: `rampFloor`'s default `crevice`
+is `PAL.sandCrev = 0x4a2f22`, which is *exactly* §2.2's crevice and therefore exactly the
+luminance `darkTail` counts below, and the lerp "lands short" of its own floor by construction.
+The floor is set at the threshold and cannot reach it. The fix is the existing opt-in `lift`,
+which is off "because every stone recipe already reports 0.0000" — a premise that is false for
+the three recipes that would need it. Not taken in this pass: it is a real albedo change and it
+was found while a tiling experiment was live, so it is recorded rather than shipped blind.
