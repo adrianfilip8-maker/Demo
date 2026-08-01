@@ -26,19 +26,44 @@ import {
 const TUNE = {
   /* Cascades */
   shadowNear: 0.5,
-  shadowDistance: 420,      // must reach the Great Pyramid at (−150, ·, −190) so it casts
+  /* 420 → 160. The 420 was "must reach the Great Pyramid at (−150, ·, −190) so it casts" —
+     and the budget attribution (KNOWN_ISSUES §8) finally measured what that costs: the
+     frustum-visible scene is *under* §1's 250-draw budget in every shot measured while
+     `renderer.info` reports 4.5–5.4× that, and the bulk of the multiplier is the cascades
+     re-drawing every caster in the level into shadow maps fitted around 420 m of slice.
+     What the 420 bought: a pyramid shadow that, checked against the sun track, never lands
+     in a canonical frame at all — at tod 0.76–0.83 the sun azimuth is 180–191°, so the
+     pyramid's shadow travels due east and falls at z ≈ −190, 150 m north of the courtyard.
+     At 160 the furthest architecture any shot resolves is still inside the shadowed range,
+     the pyramids leave every cascade's ortho box (they still self-shade by N·L; they are
+     84–86% hazed in every daylight framing), and geometry past 160 m samples outside the
+     maps, which both shadow paths treat as unshadowed (three's `getShadow` frustum test;
+     `csmShadow` delegates to it). To A/B the old behaviour in-page:
+     `L.TUNE.shadowDistance = 420; L._rebuildForQuality()`. */
+  shadowDistance: 160,
   /* 0 = uniform splits, 1 = logarithmic. 0.90 is the usual figure for a four-cascade rig,
      but `med` ships two, and at 0.90 that put the c0/c1 seam at 34 m — so everything past
      the near third of the courtyard fell into a cascade fitted to ±417 m, i.e. 41 cm shadow
      texels and a 61 cm normal bias. That is what made mid-ground shadows read as vague
-     smudges rather than as edges. 0.78 moves the seam to ~57 m, which puts the whole
-     courtyard and the near hall in c0 at ~5 cm texels; the near field only softens from
-     3 cm to 5 cm, which nothing in frame can resolve. */
+     smudges rather than as edges. 0.78 was tuned against distance 420 (seam ~57 m on two
+     cascades); at 160 it lands the med seam at ~25 m and the high splits at ~14.5 / 42 m,
+     with every band's texel size the same or finer than before except the 42–96 m band,
+     which moves from ~3.4 cm to ~13 cm — under 3 px of screen at the distances that band
+     is viewed from, and inside what the PCF radius already blurs. */
   splitLambda: 0.78,
   cascadeFade: 3.2,         // metres of cross-fade between cascades
   radiusQuantum: 0.25,      // tidy the fitted radius; it is already camera-invariant
-  casterPadMin: 34,         // metres of extra depth behind a cascade to catch tall casters
-  casterPadMax: 190,
+  /* Caster pad: how far behind a cascade's slice the ortho box reaches, to catch casters
+     whose shadows fall *into* the slice. The old form (`radius·0.7 + 30`) scaled it off the
+     cascade's own size, which is a proxy with the wrong shape twice over: a tiny near
+     cascade got a pad too small for a 34 m pylon's golden-hour shadow (26 m of pylon at 22°
+     is ~69 m of reach along the light — the old c0 caught its tip by 2 m of luck), and the
+     giant far cascade got 190 m of depth it never needed. The pad a slice actually needs is
+     `tallest caster above it / sin(sun elevation)`, which is what _fitCascades now computes
+     from `casterCeiling` and the live key direction. */
+  casterCeiling: 36,        // metres — tallest shadow-relevant caster (34 m inner pylon + margin)
+  casterPadMin: 34,
+  casterPadMax: 130,        // low-sun clamp; past this the missing shadows are off any frame
   maxCascadeMap: 2048,
   /* PCF kernel radius per cascade, in shadow-map texels.
    *
@@ -1189,7 +1214,14 @@ export class Lighting {
         .addScaledVector(_up, b)
         .addScaledVector(_lightDir, d);
 
-      const pad = THREE.MathUtils.clamp(radius * 0.7 + 30, TUNE.casterPadMin, TUNE.casterPadMax);
+      /* Depth reach for casters shadowing this slice: a caster `h` above the slice sits
+         `h / sin(elevation)` back along the light from where its shadow lands. `keyDir.y`
+         is sin(elevation) for a unit direction. The 0.28 floor stops a horizon-grazing sun
+         from asking for a kilometre of box — below ~16° the pad clamps and the furthest
+         shadows land off every canonical framing anyway. */
+      const sinEl = Math.max(0.28, Math.abs(A.keyDir.y));
+      const pad = THREE.MathUtils.clamp(
+        TUNE.casterCeiling / sinEl, TUNE.casterPadMin, TUNE.casterPadMax);
       const back = radius + pad;
 
       c.light.position.copy(_v2).addScaledVector(_lightDir, -back);

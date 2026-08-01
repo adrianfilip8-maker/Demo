@@ -212,6 +212,14 @@ export class Decals {
       this._dirty = false;
     }
     this.geometry.instanceCount = this._used;
+    // One-sided empty fold — same shape as Particles' Batch._fold and for the same reason:
+    // a pool with zero live decals should not sit in the render list, and the mesh is only
+    // ever re-shown if this guard was what hid it.
+    if (this._used === 0) {
+      if (this.mesh.visible) { this.mesh.visible = false; this._autoHidden = true; }
+    } else if (this._autoHidden) {
+      this.mesh.visible = true; this._autoHidden = false;
+    }
   }
 
   dispose() {

@@ -418,10 +418,14 @@ function goldRough(t) {
    * buy on gold is a lower `specAmt` over the *body* of the material, which is what stops the
    * near-white lobe washing the base toward neutral on the gilded recipes that get no `uMetal`.
    *
-   * It also helps the three gilded recipes that do *not* get `uMetal` (`hieroglyph_gilded`,
-   * `cartouche_gold`, `ceiling_stars` are not flagged `metal` at their call sites): there the
-   * specular is still near-white, and a near-white highlight over half a surface is exactly what
-   * used to measure gold as chromatically neutral in frame. */
+   * It also helps any gilded recipe that does *not* get `uMetal`: there the specular is still
+   * near-white, and a near-white highlight over half a surface is exactly what used to measure
+   * gold as chromatically neutral in frame. When this was written that set was three recipes;
+   * `Architecture.RECIPES` has since flagged `hieroglyph_gilded` and `ceiling_stars`
+   * `metal: true` (the ORM's blue channel gates the metal path per texel, so only the gilded
+   * texels take it), leaving `cartouche_gold` — which currently has no consumer at all — as the
+   * only one still on the near-white lobe. Checked against the call sites on 2026-08-01; the
+   * old parenthetical here named all three as unflagged, which is no longer true. */
   return sat(0.70 - Math.pow(k, 2.0) * 0.60);
 }
 

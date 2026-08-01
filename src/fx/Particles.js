@@ -1259,6 +1259,13 @@ class LightShafts {
     this.count = this._w;
     this.geometry.instanceCount = this.count;
     for (const a of this.attrs) a.needsUpdate = true;
+    // Same one-sided empty fold as Batch._fold — see the comment there. Never re-shows a
+    // mesh an external toggle hid.
+    if (this.count === 0) {
+      if (this.mesh.visible) { this.mesh.visible = false; this._autoHidden = true; }
+    } else if (this._autoHidden) {
+      this.mesh.visible = true; this._autoHidden = false;
+    }
   }
 
   dispose() { this.geometry.dispose(); this.material.dispose(); }
@@ -1422,6 +1429,7 @@ class Batch {
     if (this.looping) {
       this.geometry.instanceCount = Math.min(this.capacity, Math.max(0, Math.round(this._used * density)));
       if (this._dirty) this._upload(true);
+      this._fold();
       return;
     }
     if (this._used > 0 && time > this._deathMax) {
@@ -1429,6 +1437,23 @@ class Batch {
     }
     if (this._dirty) this._upload(false);
     this.geometry.instanceCount = this._used;
+    this._fold();
+  }
+
+  /**
+   * Hide the mesh outright while it holds zero instances. three's buffer renderer already
+   * skips a `primcount === 0` draw, so this saves no GL call — what it saves is the render-
+   * list entry and program bind, and it stops mesh-level accounting (tools/budget.mjs) from
+   * billing FX for a dozen draws that never reach the GPU. One-sided on purpose: it only
+   * ever re-shows a mesh *it* hid, so an external `mesh.visible = false` (the A/B harnesses'
+   * apply step) survives the next update instead of being fought over.
+   */
+  _fold() {
+    if (this.geometry.instanceCount === 0) {
+      if (this.mesh.visible) { this.mesh.visible = false; this._autoHidden = true; }
+    } else if (this._autoHidden) {
+      this.mesh.visible = true; this._autoHidden = false;
+    }
   }
 
   _upload(full) {
@@ -1565,6 +1590,12 @@ class SparkleField {
     this.geometry.instanceCount = this.count;
     this.aPos.needsUpdate = true;
     this.aData.needsUpdate = true;
+    // One-sided empty fold — see Batch._fold. Only ever re-shows what it hid itself.
+    if (this.count === 0) {
+      if (this.mesh.visible) { this.mesh.visible = false; this._autoHidden = true; }
+    } else if (this._autoHidden) {
+      this.mesh.visible = true; this._autoHidden = false;
+    }
   }
 
   dispose() { this.geometry.dispose(); this.material.dispose(); }
@@ -1676,6 +1707,12 @@ class FlameField {
     this.count = this._w;
     this.geometry.instanceCount = this.count;
     for (const a of this.attrs) a.needsUpdate = true;
+    // One-sided empty fold — see Batch._fold. Only ever re-shows what it hid itself.
+    if (this.count === 0) {
+      if (this.mesh.visible) { this.mesh.visible = false; this._autoHidden = true; }
+    } else if (this._autoHidden) {
+      this.mesh.visible = true; this._autoHidden = false;
+    }
   }
 
   dispose() { this.geometry.dispose(); this.material.dispose(); }
@@ -2701,8 +2738,17 @@ export class Particles {
     /* --- the blades themselves -------------------------------------------------------- */
     const sh = this.shafts;
     if (sh) {
-      // §4.2: respect engine.quality. The `low` tier switches volumetrics off outright.
-      sh.mesh.visible = this.engine.settings?.volumetrics !== false;
+      /* §4.2: respect engine.quality. The `low` tier switches volumetrics off outright.
+         Asserted only when the *setting changes*, never per frame. The per-frame form
+         silently overwrote any external `mesh.visible = false` between an A/B harness's
+         apply step and its dt-0 capture render — which means every shaft on/off pair taken
+         through that pattern (fx3's `temple.noshaft`, fx4's `night.noshaft`) captured the
+         mesh ON both times. fx3's "22,083 px at mean −0.2 luma" is re-read accordingly: that
+         is frame drift, not a measurement of the blades, and "temple's blades contribute
+         nothing" was never actually measured. A quality tier is boot-static, so asserting on
+         change loses nothing. */
+      const vol = this.engine.settings?.volumetrics !== false;
+      if (vol !== this._volGate) { this._volGate = vol; sh.mesh.visible = vol; }
       sh.begin();
       for (let i = 0; i < list.length; i++) {
         const s = list[i];
