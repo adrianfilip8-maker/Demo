@@ -38,6 +38,20 @@ export const PAL = {
   rimCool: 0x7fd4ff, rimWarm: 0xff9a5c,
   shadow: 0x2a3f66, haze: 0xe8b878,
   emberHot: 0xffe6b0, emberCool: 0xb8452c,
+  /* The flame *body*, and deliberately not `emberHot`.
+     `emberHot` #ffe6b0 is right for a spark — a spark is a few pixels, so it only has to be
+     bright — but it is the wrong colour for the one large emissive body in the build. Pushed
+     through the real composite (exposure 0.95 → split-tone → saturation 1.30 → AgX), #ffe6b0
+     at *any* gain from 1.0 upward lands between #d2c9b7 and #f8f5ee: saturation 0.13 falling
+     to 0.04. AgX desaturates hard toward the top of its curve, so a near-white emitter cannot
+     come out of this grade as anything but white however it is scaled — which is exactly what
+     `interior` measured, a flame whose brightest 910 px averaged #d1bba8 at saturation 0.20.
+     Chroma has to be in the *emitted* spectrum or it does not survive the tonemap.
+     Same simulation, same gain, with the body at #ff9a3c: the flame's own pixels go from
+     4.4% to 26.3% simultaneously-warm-bright-and-saturated, and the blown-to-white share
+     falls 28.2% → 9.2%, i.e. the white stops being the flame and goes back to being its core.
+     On the §2.2 gold→carnelian axis, between PAINT ochre #d4823a and GOLD mid #e8b942. */
+  flameBody: 0xff9a3c,
   smoke: 0x3a3040, smokeLit: 0x6f5f66,
   woodChip: 0x8a6a44, metalSpark: 0xfff2c8,
 };

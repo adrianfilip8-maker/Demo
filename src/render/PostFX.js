@@ -113,6 +113,12 @@ const TUNE = {
   // whole mid-tone range warm — and the daylight sky lives in the mid-tones, so it was
   // eating a measurable part of the zenith blue that §2.3's warm/cool tension depends on.
   splitStrength: 0.16,
+  /* Where the split crosses over from the shadow tint to the highlight tint, in SCENE-LINEAR
+     luma — the space the composite tests, not display luma. Hoisted out of the shader because
+     it is the term that decides whether this is a warm/cool *split* at all, and it was a pair
+     of literals nobody could A/B. Same values as the literals it replaces; behaviour-neutral
+     until something moves it. */
+  splitRange: [0.08, 0.72],
 
   /* --- finishing --- */
   vignette: 0.16,                  // was compounding with dark shadows into a black frame
@@ -393,6 +399,7 @@ uniform vec2  uTexel;
 uniform float uTime;
 uniform float uExposure, uContrast, uSaturation;
 uniform float uBloomIntensity, uSplitStrength, uVignette, uChroma, uGrain;
+uniform vec2  uSplitRange;
 uniform float uAOEnabled, uEdgeEnabled, uBloomEnabled, uInkStrength;
 uniform float uAOStrength, uAODepth, uRimStrength, uRimShadowFloor;
 uniform vec3  uLift, uGain, uSplitShadow, uSplitHighlight, uInkWarm, uInkCool;
@@ -452,7 +459,7 @@ void main() {
   // darkened and desaturated the whole frame toward lavender, which is why the sandstone
   // stopped reading as warm stone.
   float l = slyLuma( c );
-  vec3 tone = mix( uSplitShadow, uSplitHighlight, smoothstep( 0.08, 0.72, l ) );
+  vec3 tone = mix( uSplitShadow, uSplitHighlight, smoothstep( uSplitRange.x, uSplitRange.y, l ) );
   tone /= max( 1e-4, slyLuma( tone ) );      // hue only, unit luminance
   c = mix( c, c * tone, uSplitStrength );
 
@@ -694,6 +701,7 @@ export class PostFX {
         uSaturation: { value: this.tune.saturation },
         uBloomIntensity: { value: this.tune.bloomIntensity },
         uSplitStrength: { value: this.tune.splitStrength },
+        uSplitRange: { value: new THREE.Vector2(...this.tune.splitRange) },
         uVignette: { value: this.tune.vignette },
         uChroma: { value: this.tune.chroma },
         uGrain: { value: this.tune.grain },
@@ -944,6 +952,7 @@ export class PostFX {
     cu.uContrast.value = this.passes.grade.enabled ? this.tune.contrast : 1;
     cu.uSaturation.value = this.passes.grade.enabled ? this.tune.saturation : 1;
     cu.uSplitStrength.value = this.passes.grade.enabled ? this.tune.splitStrength : 0;
+    cu.uSplitRange.value.set(this.tune.splitRange[0], this.tune.splitRange[1]);
     cu.uInkStrength.value = this.tune.inkStrength;
     cu.uAOStrength.value = this.tune.aoStrength;
     cu.uAODepth.value = this.tune.aoDepth;

@@ -235,6 +235,47 @@ const TIMBER_CREV = 0x624128;
  */
 const ARCH_UV = 2.0;
 /** Declared tiles that a layout function also needs, so the two can never drift apart. */
+/* 5.2 declared, so 10.4 m of world per repeat through the 2x consumer factor.
+ *
+ * ── §7.3 "visible texture tiling repetition": measured, and the remaining lever is not here ──
+ *
+ * Repeat periods at the ten canonical framings, from an offline z-buffered rasterisation of the
+ * real cameras at the real 1280x720 (scratchpad `angsize.mjs`; per-pixel depth and obliquity, so
+ * `mm/px = z x 2tan(fov/2)/H` and the repeat is `worldTile / mm-per-px`):
+ *
+ *   temple      248 px  ->  2.8-6.1 repeats across the frame   17.0% of frame
+ *   courtyard   688 px  ->  1.5-6.3                            22.2%
+ *   night       252 px  ->  5.1-5.2                            14.7%
+ *   traversal   286 px  ->  4.5-6.7                            15.1%
+ *   dunes       190 px  ->  6.7-9.8                            15.3%
+ *
+ * **The critic's pass-3 tiling probe sampled 32/48/64/96/128 px windows on this wall.** Every one
+ * of those is inside a single repeat, so it measured *detail* and reported it as *repeat*. The
+ * number that matters is 2.8-9.8 repeats in frame, and at that count tiling is only visible if
+ * the tile carries an anchor the eye can match across repeats.
+ *
+ * It does. Template-matching distinctiveness — take a patch, slide it over the wrapped tile, and
+ * score `1 - (best non-self NCC)/(self NCC)`, swept over patch sizes because guessing one scale
+ * is how the first attempt missed it (an eighth-scale low-pass scored every recipe "no landmark"
+ * while the 6x6 wall render plainly showed a lattice) —
+ *
+ *   hieroglyph_wall 0.482   mudbrick 0.397   column_papyrus 0.388   limestone_polished 0.384
+ *   sandstone_worn  0.314   paving_courtyard 0.303   sandstone_block 0.271   ceiling_stars 0.203
+ *
+ * This recipe is the only one above 0.45, and its peak is at 1/3 of a repeat — so the anchor is
+ * the *register layout*, not an individual glyph. A predecessor already removed the strongest
+ * anchor (`cartouche: false`, below); this is what is left.
+ *
+ * **Why the fix is not in this file.** A tile cannot avoid repeating its own content, so the two
+ * levers are (a) enlarge the tile, which halves texels per glyph and buys §7.3's "visible tiling"
+ * at the price of §7.3's "carvings look painted-on" — a straight trade between two conditions on
+ * the same list, not an improvement — or (b) decorrelate it with a macro layer at a much longer,
+ * incommensurate period. (b) already exists and is mistuned: `ToonMaterial`'s triplanar detail
+ * takes a second octave at `uDetailScale * 0.137`, and the `sandstone` preset's `scale: 0.62`
+ * puts that octave's period at **11.77 m against this recipe's 10.4 m repeat**. Near-unison — it
+ * beats at 88 m rather than breaking the lattice, so the one mechanism in the pipeline that could
+ * suppress texture repetition is tuned to a period where it cannot. ~0.03 would put it near 52 m.
+ * That multiplier is SHADING's; it is recorded here because the measurement is. */
 const HG_WALL_TILE = 5.2;
 const HG_GILDED_TILE = 3.2;
 const worldTileOf = (tile) => (Array.isArray(tile) ? tile[0] : tile) * ARCH_UV;
@@ -1738,6 +1779,100 @@ export const MATERIALS = {
         return smoothstep(0.70, 1.0, Math.abs(p * 2 - 1));
       });
       const stone = s.field(2, (u, v) => warpN(u, v, 12, 5, 1.0, cx.seed) * 0.5 + 0.5);
+
+      /* ---- Drum courses. -----------------------------------------------------------------
+       *
+       * **This recipe measured the flattest large surface in the catalogue, and it dresses
+       * 54.5 % of `temple`.** Relative local contrast (5x5 luma sd / mean, measured on the built
+       * albedo resampled to the frame's own texel:pixel ratio, so lighting gain cancels) —
+       *
+       *   column_papyrus 0.0291   paving_courtyard 0.0364   sandstone_block 0.0486
+       *   granite_pink   0.0503   hieroglyph_gilded 0.0523  hieroglyph_wall  0.0615
+       *
+       * — i.e. half the wall it stands next to. Everything this recipe carries is either
+       * low-frequency (`stone`, a 5-octave warp) or deliberately damped, because the two notes
+       * above correctly took the painted rib *down* so the mesh's own 8 lobes could own the
+       * bundle. That fixed the corrugation and left the shaft with nothing on it: between the
+       * binding bands at 0.145 and 0.80 there is 9.6 m of smooth sandstone and one 0.9 m column
+       * of text. In `shots/tx4/temple.png` at 3x that is exactly what it looks like — a pale
+       * mass with vertical rib shading and no surface. §7.3's "any surface reads as flat vertex
+       * colour with no texture detail", on the biggest surface in the interior shot.
+       *
+       * A 12.3 m column is not a monolith; it is stacked drums. So the missing structure is
+       * *horizontal*, which is the one direction this recipe has no energy in and the one that
+       * cannot re-create the vertical streaking the two notes above exist to prevent. It is also
+       * low-frequency, so unlike grain it survives to where the columns are actually seen:
+       * `courtyard` puts them at 63 m (texelPx 0.24) and `dunes` at 105 m, where anything finer
+       * than the drum spacing has already averaged away.
+       *
+       * Sized against the frame, not against the tile. V is registered: `Textures._build` sets
+       * `repeat.y = 1/tile[1] = 1/4.5` and `Kit.papyrusColumn` writes `v = py x 4.5/capTop`, so
+       * texture V runs 0..1 over `capTop` — 14.7 m on a nave column, 11.4 m on an aisle one.
+       * Eight drums over the shaft is therefore a **1.20 m** course, and `DRUM_HW = 0.0032` V is
+       * a half-width of **47 mm**, i.e. a 94 mm footprint with a ~28 mm core (the smoothstep runs
+       * from 0.30 x HW to HW). Against the measured mm/px at each framing that is a **5.3 px
+       * groove with a 1.6 px core on `temple`'s near nave column (17.8 mm/px)** and 1.9 px at
+       * `temple`'s far end (48 mm/px).
+       *
+       * **Where it stops resolving, and what carries the structure there.** At `courtyard` the
+       * columns are 63 m out (81.9 mm/px) and at `dunes` 105 m (111.8 mm/px), so the groove falls
+       * to 1.1 px and 0.84 px — at or under the limit that `MOTES.size` and `sand_ripples` both
+       * failed. That is why the per-drum tone below is not decoration: it modulates whole 1.2 m
+       * drums, which subtend 15 px and 11 px at those same distances, so the drum structure
+       * survives exactly where the joint line stops. Measured relative local contrast rises with
+       * minification rather than falling — 0.0324 at `temple`'s 1:1, 0.0645 at `courtyard`'s 1/4
+       * — which is the signature of structure that outlives its own detail.
+       *
+       * The darkness is put in *height and occlusion*, not in albedo: the albedo only leans to
+       * `sandDark` (luma 0.383, well clear of §2.2's crevice 0.203), so `darkTail` cannot move
+       * and the recess goes dark through `derive()`'s AO — which is what §7.3 means by dark
+       * occlusion, and it keeps the joint from turning violet under the additive shadow wash.
+       *
+       * The spacing is jittered ±3.5 % of a course so the eight joints are not a perfect lattice
+       * (§7.3's hand-built irregularity, and one less thing for the eye to count repeats by). */
+      const DRUM_Y0 = 0.145, DRUM_Y1 = 0.80, DRUM_N = 8, DRUM_HW = 0.0032;
+      const drumY = [];
+      {
+        const rj = rng(cx.seed + 71);
+        for (let k = 1; k < DRUM_N; k++) {
+          const f = k / DRUM_N + (rj() - 0.5) * (0.07 / DRUM_N);
+          drumY.push(DRUM_Y0 + (DRUM_Y1 - DRUM_Y0) * f);
+        }
+      }
+      /* 1 in the joint, 0 on the drum face. Full-resolution in v because the joint is a line:
+         a half-res field would blur it to twice its width and halve its depth. */
+      const drum = s.fieldFull((u, v) => {
+        const y = 1 - v;                       // field v runs top-down; bands are keyed bottom-up
+        let best = 1;
+        for (let k = 0; k < drumY.length; k++) {
+          const d = Math.abs(y - drumY[k]);
+          if (d < best) best = d;
+        }
+        return 1 - smoothstep(DRUM_HW * 0.30, DRUM_HW, best);
+      });
+      /* Per-drum tone. Each drum is a separate block of stone, so it gets its own place in the
+       * ramp — and, exactly as the `VARIATION` note above concluded for ashlar, the tone is
+       * sampled from a *smooth field at the drum's centre* rather than hashed from its index.
+       * Hashing would make adjacent drums differ as much as distant ones, which is the
+       * "per-block hue randomised at maximum spatial frequency" failure that note records; a
+       * smooth field means neighbouring drums came out of the same bed and the shaft grows a
+       * slow tonal drift up its height. That drift is also the one cue that distinguishes twelve
+       * columns from twelve copies of one column, because each shaft samples the field at its
+       * own offset. Amplitude is deliberately half of ashlar's: a drum is 1.2 m and there are
+       * only eight of them, so the same swing that reads as depth on a block wall would read as
+       * a stack of differently-coloured cylinders here. */
+      const drumTone = new Float32Array(DRUM_N);
+      for (let k = 0; k < DRUM_N; k++) {
+        const yc = DRUM_Y0 + (DRUM_Y1 - DRUM_Y0) * ((k + 0.5) / DRUM_N);
+        drumTone[k] = warpN(0.37, yc, 2.4, 2, 0.9, cx.seed + 83) * 0.5 + 0.5;
+      }
+      const drumT = s.fieldFull((u, v) => {
+        const y = 1 - v;
+        let k = 0;
+        while (k < drumY.length && y > drumY[k]) k++;
+        return drumTone[k];
+      });
+
       /* Text column geometry, in metres rather than in fractions of a tile.
        *
        * `columnRegister` makes its quadrats one box-width square, so the box width *is* the glyph
@@ -1783,13 +1918,33 @@ export const MATERIALS = {
          * what is left is a shallow trough that deepens the mesh's own valley rather than a
          * painted stripe that sits wherever the two happen to disagree. */
         s.h[i] = 0.42 + cross[i] * 0.22 - groove[i] * 0.11 + (stone[i] - 0.5) * 0.07;
-        const t = sat(0.42 + (stone[i] - 0.5) * 0.60 + cross[i] * 0.05);
+        const t = sat(0.42 + (stone[i] - 0.5) * 0.60 + cross[i] * 0.05 + (drumT[i] - 0.5) * 0.18);
         const col = ramp3(PAL.sandDark, PAL.sandMid, PAL.sandLight, t);
         s.r[i] = col[0]; s.g[i] = col[1]; s.b[i] = col[2];
         s.rough[i] = 0.84;
+        /* The drum joint: lower and darker than the faces either side, which is the invariant
+           `Textures._build()` asserts on `s.masonry` below. A weathered bed joint is also the
+           roughest thing on the shaft — it is the one surface the burnisher never touched. */
+        const dj = drum[i];
+        if (dj > 0.004) {
+          /* `JOINT`, not a local constant: the note at that constant is explicit that a joint's
+             darkness belongs in the *height* field, where `heightAO` turns it into a contact
+             line that tightens near the joint and fades away from it, and that painting it into
+             the albedo instead "reads as a drawn line at every distance and in every lighting
+             condition". The first version of this used 0.50 and did exactly that — visible as a
+             ruled grid in the isolation render. Light touch of colour, deep groove. */
+          s.r[i] += (((PAL.sandDark >> 16) & 255) / 255 - s.r[i]) * dj * JOINT;
+          s.g[i] += (((PAL.sandDark >> 8) & 255) / 255 - s.g[i]) * dj * JOINT;
+          s.b[i] += ((PAL.sandDark & 255) / 255 - s.b[i]) * dj * JOINT;
+          s.h[i] -= dj * 0.11;
+          s.rough[i] = sat(s.rough[i] + dj * 0.10);
+        }
         const bm = bandsMask[i];
         if (bm > 0.02) s.h[i] += bm * 0.16;                    // bands stand proud
       }
+      /* Publish the joint mask so the build-time joint-sign assertion in `Textures._build()`
+         covers this recipe too. It only reads `.joint`; there are no blocks here to id. */
+      s.masonry = { joint: drum };
       const ramp = carve(s, textCut, textLine, { depth: 0.40, bevelPx: 2.4, lip: 0.09, bulge: 0.45, lineDepth: 0.60, seed: cx.seed + 5 });
       freshCutTint(s, ramp, { amount: 0.14 });
       paintRemnants(s, ramp, paint, { survival: 0.34, freq: 6, seed: cx.seed + 9, edgeLoss: 0.70, fade: 0.45 });

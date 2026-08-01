@@ -825,6 +825,46 @@ export function sweep(profile, len, opts = {}) {
   if (!caps) return geo;
   // End caps: fan the profile so mitred corners don't show daylight.
   const capGeos = [geo];
+
+  /* ---- The back of the moulding, and why a cornice ring was hollow --------
+   *
+   * The swept ribbon plus its two end caps is an open shell: the profile runs from (out 0, up 0)
+   * to (out 0, up top), so the whole `out = 0` plane down the length of the run — the face that
+   * sits against the wall — was never built. Against a wall nobody can tell. But `cornice()`
+   * assembles four runs into a *ring*, and a ring's four open backs face a shared void that is
+   * open at the top and the bottom, so any camera that gets level with the moulding or looks in
+   * past the end of a run sees the inside of the far run.
+   *
+   * This is the same failure mode as the winding bug and it hid the same way: an open shell does
+   * not look broken, it looks like a smear. It was 3.2% of the `traversal` frame — the "giant
+   * croissant" — and it is also present in `hero`, `night`, `courtyard` and `dunes`.
+   *
+   * Wound to face −Z, i.e. into the wall the moulding is applied to, so the ring reads as solid
+   * from outside and the back plane reads as solid from inside the void. 38 triangles a run, and
+   * +6.6k over the level — 2.1% more architecture triangles to close every moulding in it.
+   */
+  {
+    /* Subdivided to the same profile rows the end caps use. A single quad here is geometrically
+       coincident but leaves a T-junction against each cap's `out = 0` rim — 38 unpaired boundary
+       edges on one run, measured — and a T-junction is a hairline crack waiting for a camera to
+       find it. Row-for-row, the run closes to zero boundary edges. */
+    const bv = [], bu = [], bi = [];
+    for (let i = 0; i < n; i++) {
+      const y = profile[i][1];
+      bv.push(-0.5 * len, y, 0, 0.5 * len, y, 0);
+      bu.push(-0.5 * len * s, y * s, 0.5 * len * s, y * s);
+    }
+    for (let i = 0; i < n - 1; i++) {
+      const a = i * 2, b = a + 1, c = a + 2, dd = a + 3;
+      bi.push(a, c, b, b, c, dd);           // wound to −Z: into the wall the moulding sits on
+    }
+    const bg = new THREE.BufferGeometry();
+    bg.setAttribute('position', new THREE.Float32BufferAttribute(bv, 3));
+    bg.setAttribute('uv', new THREE.Float32BufferAttribute(bu, 2));
+    bg.setIndex(bi);
+    bg.computeVertexNormals();
+    capGeos.push(bg);
+  }
   for (const e of [-0.5, 0.5]) {
     const cv = [], cu = [], ci = [];
     for (let i = 0; i < n; i++) {
@@ -902,9 +942,16 @@ export function cornice({ w, d, h = 2.0, flare = 1.15, roll = 0.42 }) {
 export function cornerRolls({ w, d, h, r = 0.4, batter = 0.09, rng }) {
   const out = [];
   for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
-    // openEnded: both caps are buried in the mass, and 16 radial segments is what turns
-    // this from a nonagonal post into the lit vertical line the pylon silhouette needs.
-    const g = new THREE.CylinderGeometry(r * 0.82, r, h, 16, 1, true);
+    /* 16 radial segments is what turns this from a nonagonal post into the lit vertical line
+       the pylon silhouette needs.
+       Closed, not openEnded. The caps were left off on the assumption that both ends are
+       buried in the mass, and on a pylon they are — but a roll stands *proud* of the corner it
+       hugs (`w*0.5 - r*0.35`), so on the small masses it is also used on, the barque kiosk
+       piers above all, the ends are out in the air and an open tube shows its own bore. That
+       was 759 backface pixels of `court:limestone_polished` in `hero`, at the kiosk the shot is
+       named for. Two caps at 16 segments is 32 triangles a roll — cheaper than reasoning about
+       which masses happen to swallow their ends. */
+    const g = new THREE.CylinderGeometry(r * 0.82, r, h, 16, 1, false);
     normaliseAttrs(g);
     // Lean with the batter so the roll hugs the wall for its whole run.
     const lean = Math.atan(batter);
@@ -1316,7 +1363,36 @@ export function railGeo(curve, { r = 0.14, seg = 60, rad = 6 } = {}) {
   const L = curve.getLength();
   for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * L * UV_PER_M, uv.getY(i) * 2 * Math.PI * r * UV_PER_M);
   uv.needsUpdate = true; pos.needsUpdate = true;
-  return g;
+
+  /* TubeGeometry has no end caps, so an open rail shows its own bore — the last few backface
+     pixels left in the set after the cornice and roll seals, on `arch:hall:bronze_dark`. Fan
+     each end ring off the curve's endpoint. `rad` triangles a cap, ~24 for the whole level. */
+  const caps = [g];
+  for (const e of [0, 1]) {
+    const centre = curve.getPointAt(e);
+    const cv = [centre.x, centre.y, centre.z], cu = [0, 0], ci = [];
+    // TubeGeometry lays out (seg+1) rings of (rad+1) verts; ring `e ? seg : 0` is the end.
+    const base = (e ? seg : 0) * (rad + 1);
+    for (let j = 0; j <= rad; j++) {
+      const k = base + j;
+      cv.push(pos.getX(k), pos.getY(k), pos.getZ(k));
+      cu.push(Math.cos(j / rad * Math.PI * 2) * r * UV_PER_M, Math.sin(j / rad * Math.PI * 2) * r * UV_PER_M);
+    }
+    for (let j = 0; j < rad; j++) {
+      // Start cap faces −tangent, end cap faces +tangent. Verified against curve.getTangentAt,
+      // not by inspection: the first winding here was inverted on both caps, and an inverted
+      // cap is culled, so it neither closed the bore nor showed up as a backface. It looked
+      // exactly like a fix and did nothing but cost triangles.
+      if (e) ci.push(0, j + 2, j + 1); else ci.push(0, j + 1, j + 2);
+    }
+    const cg = new THREE.BufferGeometry();
+    cg.setAttribute('position', new THREE.Float32BufferAttribute(cv, 3));
+    cg.setAttribute('uv', new THREE.Float32BufferAttribute(cu, 2));
+    cg.setIndex(ci);
+    cg.computeVertexNormals();
+    caps.push(cg);
+  }
+  return mergeAll(caps) || g;
 }
 
 /** Spire tip: a squat four-sided pinnacle, arrises bevelled. The point is the landing target. */

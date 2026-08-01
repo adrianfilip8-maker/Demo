@@ -173,6 +173,24 @@ export const TUNE = {
   bands: 3,
   furTintAmount: 0.095,   // per-vertex tone break-up so no region is a flat colour
 
+  /* Vertex-colour multiplier on the sclera only — see `_buildEye`. `PAL.eyeWhite` is luma
+     0.953 and rendered at median L233 with the pupil gone and a halo over it. Rendered luma
+     tracked albedo at 0.959 on that frame, so this predicts a lit sclera at **L191**.
+     Emissive is added *after* albedo in the toon shader (`outgoingLight = diff + ... +
+     emissiveTerm`), so this multiplier does not touch the eye's night floor — `night` runs at
+     key 0.00 and is carried entirely by `emissive`, which is unchanged.
+
+     0.82 rather than the 0.87 the linear arithmetic asks for, because the error bars are not
+     symmetric and neither is the cost. The old frame topped out at 236.3, not 255, and only
+     ~670 px (one eye) cleared L230 — so the top end is being rolled off by the tonemap rather
+     than hard-clipped, and a compressive curve returns *less* output change than a linear
+     model predicts for the same input cut. Undershooting leaves the defect exactly as it is
+     and costs a capture cycle to find out; overshooting lands the sclera near L180, which is
+     still an enormous graphic against ink at L~30 and a mask at L27-39. Bias toward the cheap
+     failure. The glint keeps the full palette value, so the frame keeps a real >L230 source —
+     it is a dot on the pupil now instead of the whole eye. */
+  scleraTint: 0.82,
+
   /* --- fur, read from the OUTLINE (§7.3 "fur reads as smooth plastic") ---
    * A cel-shaded character carries no fur information in its shading, so all of it has to be
    * in the geometry: a shell-fur or noise-normal pass cannot save a silhouette that is a
@@ -1466,6 +1484,37 @@ export class SlyModel {
    * is the old hand-picked direction's actual value, kept because a raccoon whose eyes face
    * fully sideways stops making eye contact with the camera.
    */
+  /**
+   * **The two eyes were 145 luma apart because the cel ramp's terminator ran between them.**
+   *
+   * Critic pass 3 measured left eye median L233.2 against right eye median L88.3 and called it
+   * "one headlight and one socket". The cause is arithmetic, and it is not spec, bloom or
+   * emissive — `8d95cd7` had already cut eye `spec` 7.4x, `gloss` 4x, `emissive` 2x and `rim`
+   * 2.4x, and that build is the one the critic scored: the eye peak moved 238 -> 236.3, i.e.
+   * not at all. What moves it is the key.
+   *
+   * With `bands: 3` the ramp is a step function returning 0.0 / 0.5 / 1.0 at N.L terminators
+   * 0.14 and 0.52. Measured on the posed rig under `sly-closeup`'s own sun, the two lenses sit
+   * at N.L **0.8349** and **0.3463** — one either side of `termHi`. So one eye receives
+   * **exactly twice** the key light of the other, discontinuously, and no amount of tuning a
+   * material constant can close a gap that is a band boundary. The eyes are the one pair of
+   * features on a face that must match, and being mirror images about the centreline is
+   * precisely what makes them the pair most likely to straddle a terminator under any off-axis
+   * key. This is a structural defect, not a tuned one.
+   *
+   * Fixed by biasing the *shading* normal without moving the geometry, which is the technique
+   * `addTuft` already uses on ~200 fur clumps for the same reason ("enough that no clump can
+   * land in a different band from the skin beside it"). `EYE_SHADE_N` has **no X component and
+   * is not mirrored**, so both eyes present the identical normal to the key and land in the
+   * identical band — at every sun angle and in every shot, not just this one. A matched dark
+   * pair is a face; a headlight and a socket is not.
+   *
+   * Deliberately *not* fixed by rotating `outward` toward straight-ahead, though that also
+   * matches the pair (measured: blend 0.75 puts both in band 3). It tilts the lens off the
+   * head surface — 21.4 deg at 0.75 — and drives the rim from inflate 1.088 to 1.165 against a
+   * mask patch at 1.058, which re-creates the exact "eye punches a hole the mask cannot close"
+   * failure this function was rebuilt to fix. The normal is free; the geometry is not.
+   */
   _buildEye(mb, side) {
     const S = TUNE.headScale;
     const th = side * 0.455, ph = 0.165;
@@ -1482,15 +1531,30 @@ export class SlyModel {
     const trueUp = new THREE.Vector3().crossVectors(outward, right).normalize();
     const basis = { x: right, y: trueUp, z: outward };
 
+    /* The shared shading normal. No X term and no `side` factor on purpose — see the header.
+       Tilted slightly up so the pair reads as catching the sky rather than staring level. */
+    const shadeN = new THREE.Vector3(0, 0.15, 1).normalize();
+
     /* Sclera. Deliberately oversized: §7.3's character read is "huge eyes behind the mask",
        and at the 55 px he occupies in `hero` the eye is either a legible white shape inside
        the black band or it is nothing at all. Wide across the face, shallow along the view —
-       `0.032` against `0.078` is the whole point of this function. */
+       `0.032` against `0.078` is the whole point of this function.
+
+       `TUNE.scleraTint` is the vertex-colour multiplier that stops it clipping. `PAL.eyeWhite` is
+       luma 0.953 and the measured render was L233 — a flat blown disc "with no iris or pupil
+       left in it", and the frame's only >L230 region. That is the plain diffuse term on a
+       near-white albedo, so the albedo is the lever. The multiplier lives here rather than in
+       `PAL.eyeWhite` because the highlight below shares the material and must stay near-white:
+       dropping the palette entry would take the glint down with the sclera and cost the frame
+       its one genuine bloom source, which §2.3 and the critic both want kept. */
+    const v0 = mb.vertexCount;
     addEllipsoid(mb, {
       center: c, radii: new THREE.Vector3(0.086 * S, 0.092 * S, 0.032 * S), basis,
       segTheta: 16, segPhi: 10,
       group: 'eye', sg: mb.newSg(), weights: [['head', 1]],
+      colorAt: (u, v, p) => furTint(_c, p.x, p.y, p.z, 0.018, 7, TUNE.scleraTint),
     });
+    mb.biasNormals(v0, mb.vertexCount, shadeN, 0.90);
     /* Pupil — big and cartoon, a flatter disc riding on the lens. The offset is what keeps it
        off the sclera (0.020 + 0.020 clears the sclera's 0.032 by 0.008·S), not a big radius.
        Raised 0.002 → 0.013 because the lid eats the *top* of the sclera: a pupil centred on the
@@ -1498,19 +1562,41 @@ export class SlyModel {
        the face read both eyes as droopy for exactly that reason. It is centred in the visible
        aperture, not in the geometry. */
     const pc = c.clone().addScaledVector(outward, 0.020 * S).addScaledVector(trueUp, 0.013 * S);
+    const v1 = mb.vertexCount;
     addEllipsoid(mb, {
       center: pc, radii: new THREE.Vector3(0.042 * S, 0.050 * S, 0.020 * S), basis,
       segTheta: 14, segPhi: 9,
       group: 'ink', sg: mb.newSg(), weights: [['head', 1]],
     });
-    // highlight on the pupil: the "alive" cue. Sits on black, so it reads at any size.
+    /* Same shared normal as the sclera. The pupil is the thing that was being erased, so it
+       must not be able to land in a different band from the white it sits on either — and a
+       flat normal is also what stops it being fresnel-lifted to mid-grey, which this function's
+       header records as the old "goggles, not eyes" failure. */
+    mb.biasNormals(v1, mb.vertexCount, shadeN, 0.90);
+
+    /* Highlight on the pupil: the "alive" cue. Sits on black, so it reads at any size — and
+       now it is also the *only* part of the eye allowed near white, which makes it a tight
+       bright dot on a dark ground rather than a blown disc. That is what §7.3 asks bloom to
+       be ("a tight coloured halo on bright things", not a grey wash), and it is symmetric
+       across the two eyes by construction because nothing about it is view-dependent. */
     const hc = pc.clone().addScaledVector(outward, 0.014 * S)
       .addScaledVector(trueUp, 0.020 * S).addScaledVector(right, -side * 0.015 * S);
+    /* `0.016 → 0.021` radius, and this is a hedge against a documented mechanism rather than a
+       measurement. At `sly-closeup` the figure is 420 px for 1.83 m, so 0.016·S projects to a
+       ~6.6 px dot — and the inverted-hull ink line is ~2.5 px, which would draw a ring taking
+       most of it. That is exactly the ratio `TUNE.tuftLen`'s note records the fur clumps
+       losing to ("the ink hull is ~2.5 px, so it was 25% of a clump — every clump rendered as
+       more line than fill"). The glint was decoration when the whole sclera was near-white; it
+       is load-bearing now that it is the only near-white left, so it is sized to survive its
+       own outline: ~8.7 px across leaves a ~4 px core inside the ring. Still only half the
+       pupil's half-width, so the pupil keeps a black ring all the way round it. */
+    const v2 = mb.vertexCount;
     addEllipsoid(mb, {
-      center: hc, radii: new THREE.Vector3(0.016 * S, 0.016 * S, 0.010 * S), basis,
+      center: hc, radii: new THREE.Vector3(0.021 * S, 0.021 * S, 0.012 * S), basis,
       segTheta: 8, segPhi: 5,
       group: 'eye', sg: mb.newSg(), weights: [['head', 1]],
     });
+    mb.biasNormals(v2, mb.vertexCount, shadeN, 0.95);
 
     /* Hooded upper lid, tilted outward-down — this is where the *smug* comes from. A wide-open
        eye reads as surprised; a lid cutting across the top third reads as amused.
@@ -2408,7 +2494,23 @@ export class SlyModel {
          *
          * The glint is not lost: it is authored as its own highlight ellipsoid sitting on the
          * black pupil, which is where a cartoon eye's highlight is supposed to come from. */
-        color: PAL.eyeWhite, sss: 0.0, rim: 0.09, spec: 0.035, gloss: 20, emissive: 0x141414,
+        /* **`spec` 0.035 -> 0, and this one is settled by evidence rather than by argument.**
+         *
+         * The two changes above were made together and their capture *has now happened*: they
+         * are in `8d95cd7` (12:00:27) and critic pass 3's `sly-closeup` page loaded at
+         * 12:11:52, so the scored frame contains them. Half the prediction landed — `ink` went
+         * from L92.0/L129.7 at bridge/temple to a measured L27-39, so the mask reads black and
+         * that condition is closed. The eye half did not: predicted below L200, measured
+         * median **233.2**, p95 236.2, frame max 236.3. Cutting spec 7.4x and gloss 4x moved
+         * the eye peak 238 -> 236.3.
+         *
+         * A term that can be cut by 7.4x without moving the number it was blamed for is not
+         * the cause, so the remaining 0.035 is not defended — it is removed, and with it the
+         * last view-dependent term that could differ between two eyes that must match. The
+         * glint is authored as its own ellipsoid on the pupil and does not depend on this.
+         *
+         * The actual cause was the band boundary between the two lenses; see `_buildEye`. */
+        color: PAL.eyeWhite, sss: 0.0, rim: 0.09, spec: 0.0, gloss: 20, emissive: 0x141414,
       };
       default: return { color: 0xff00ff };
     }

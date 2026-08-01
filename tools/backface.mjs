@@ -84,7 +84,15 @@ function rayTri(o, d, T) {
   return t > 1e-4 ? t : -1;
 }
 
-/* 3D-DDA over the grid; returns {t, n} of the nearest hit. */
+/* 3D-DDA over the grid; returns {t, n} of the nearest hit, and `twin` when a front-facing
+ * triangle sits coincident with it.
+ *
+ * Sand drifts and the star ceiling are deliberately built as a surface plus a reversed copy,
+ * because their bucket is shared with ordinary masonry and making that bucket DoubleSide would
+ * cost every wall in it its culling. So they have a backface at every pixel *by construction*,
+ * and whichever copy the ray happens to hit first is arbitrary. Scoring those as holes put
+ * `guard` at 4.4% on geometry that is correctly modelled. A real hole has no front face
+ * anywhere near it; two-sided art has one within a hair. */
 function cast(o, d, maxT = 400) {
   let ci = Math.floor(o.x / CELL), cj = Math.floor(o.y / CELL), ck = Math.floor(o.z / CELL);
   const si = d.x > 0 ? 1 : -1, sj = d.y > 0 ? 1 : -1, sk = d.z > 0 ? 1 : -1;
@@ -98,11 +106,23 @@ function cast(o, d, maxT = 400) {
   while (travelled < maxT && guard++ < 4000) {
     const b = grid.get(key(ci, cj, ck));
     if (b) {
-      let best = Infinity, bn = -1;
-      for (const n of b) { const t = rayTri(o, d, TRI[n]); if (t > 0 && t < best) { best = t; bn = n; } }
+      let best = Infinity, bn = -1, bestFront = Infinity;
+      for (const n of b) {
+        const t = rayTri(o, d, TRI[n]);
+        if (t <= 0) continue;
+        if (t < best) { best = t; bn = n; }
+        const T = TRI[n];
+        const nx = (T[4]-T[1])*(T[8]-T[2]) - (T[5]-T[2])*(T[7]-T[1]);
+        const ny = (T[5]-T[2])*(T[6]-T[0]) - (T[3]-T[0])*(T[8]-T[2]);
+        const nz = (T[3]-T[0])*(T[7]-T[1]) - (T[4]-T[1])*(T[6]-T[0]);
+        if (nx*d.x + ny*d.y + nz*d.z < 0 && t < bestFront) bestFront = t;
+      }
       // Only accept if the hit is inside this cell's span, else a nearer cell may still win.
       const cellEnd = Math.min(tx, ty, tz);
-      if (bn >= 0 && best <= cellEnd + 1e-3) return { t: best, n: bn };
+      if (bn >= 0 && best <= cellEnd + 1e-3) {
+        const tol = 0.02 + 0.004 * best;
+        return { t: best, n: bn, twin: Math.abs(bestFront - best) <= tol };
+      }
     }
     if (tx < ty && tx < tz) { travelled = tx; ci += si; tx += dtx; }
     else if (ty < tz) { travelled = ty; cj += sj; ty += dty; }
@@ -135,7 +155,7 @@ for (const nm of names) {
     e1.set(T[3] - T[0], T[4] - T[1], T[5] - T[2]);
     e2.set(T[6] - T[0], T[7] - T[1], T[8] - T[2]);
     nrm.crossVectors(e1, e2);
-    if (nrm.dot(d) > 0) {                      // normal points away from the camera
+    if (nrm.dot(d) > 0 && !r.twin) {           // faces away, and no coincident front face
       back++;
       const k = NAME[r.n] || '?';
       tally.set(k, (tally.get(k) || 0) + 1);

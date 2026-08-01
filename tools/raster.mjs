@@ -8,11 +8,13 @@
  */
 import * as THREE from 'three';
 import zlib from 'node:zlib';
-import { writeFileSync } from 'node:fs';
+import { writeFileSync, mkdirSync } from 'node:fs';
 import { buildLevel } from './lvl.mjs';
 import { SHOTS } from '../src/core/Shots.js';
 
 const W = 800, H = 450;
+const OUT = '/home/user/Demo/progress/frames';
+mkdirSync(OUT, { recursive: true });
 const LIGHT = new THREE.Vector3(-0.62, 0.55, 0.56).normalize();
 
 function writePNG(file, w, h, rgb) {
@@ -48,25 +50,58 @@ for (const nm of shots) {
   cam.updateMatrixWorld(true); cam.updateProjectionMatrix();
   const VP = new THREE.Matrix4().multiplyMatrices(cam.projectionMatrix, cam.matrixWorldInverse);
 
-  const zb = new Float32Array(W * H).fill(Infinity);
+  /* Two depth buffers, because the question is about *culling*, not about winding.
+   *
+   * Counting "the frontmost triangle at this pixel is wound away from me" answers the wrong
+   * question twice over. Coincident two-sided art — the sand drifts and the star ceiling, which
+   * are deliberately built as a surface plus a reversed copy — has a backface at every pixel by
+   * construction, and whichever copy happens to be rasterised first wins the tie. That scored
+   * `guard` at 6.38%, entirely on one sand drift that is correctly modelled.
+   *
+   * With FrontSide materials the GPU never draws a backface at all, so a backface cannot
+   * occlude anything. What actually goes wrong on screen is a pixel where the nearest *back*
+   * face is measurably nearer than the nearest *front* face: there the camera is inside an open
+   * shell and sees its far interior wall, or sees straight through it to the sky. So: nearest
+   * front depth and nearest back depth, flagged only where back leads front by more than a
+   * tolerance. Coincident copies fall inside the tolerance and drop out on their own. */
+  const zb = new Float32Array(W * H).fill(Infinity);      // nearest FRONT face
+  const zbk = new Float32Array(W * H).fill(Infinity);     // nearest BACK face
   const rgb = Buffer.alloc(W * H * 3);
   for (let i = 0; i < W * H; i++) { rgb[i*3] = 24; rgb[i*3+1] = 28; rgb[i*3+2] = 40; }   // sky
 
-  const a = new THREE.Vector4(), b = new THREE.Vector4(), c = new THREE.Vector4();
   const p0 = new THREE.Vector3(), p1 = new THREE.Vector3(), p2 = new THREE.Vector3();
   const e1 = new THREE.Vector3(), e2 = new THREE.Vector3(), nrm = new THREE.Vector3();
   let drawn = 0, backPix = 0;
   const owner = new Int32Array(W * H).fill(-1);
   const meshNames = [];
 
-  const project = (v, out) => {
-    out.set(v.x, v.y, v.z, 1).applyMatrix4(VP);
-    if (out.w <= 1e-4) return false;
-    out.x = (out.x / out.w * 0.5 + 0.5) * W;
-    out.y = (1 - (out.y / out.w * 0.5 + 0.5)) * H;
-    out.z = out.w;
-    return true;
+  /* Clip space, then near-plane clip, THEN project.
+   *
+   * The first version of this skipped any triangle with a vertex behind the eye. That is not
+   * a conservative simplification, it is the exact thing that breaks the backface test: when
+   * the camera is close to a surface, the triangles it drops are the *near, occluding, front*
+   * faces, and the far inside wall of the same object is left to win the depth test and paint
+   * itself magenta. Measured against a brute-force ray cast, 95% of `combat`'s reported
+   * backface pixels and 80% of `traversal`'s were this artifact — the tool was inventing the
+   * defect it exists to find. Sutherland-Hodgman against w >= near, fan-triangulated. */
+  const NEAR = cam.near;
+  const clipNear = (poly) => {
+    const out = [];
+    for (let i = 0; i < poly.length; i++) {
+      const A = poly[i], B = poly[(i + 1) % poly.length];
+      const ain = A.w >= NEAR, bin = B.w >= NEAR;
+      if (ain) out.push(A);
+      if (ain !== bin) {
+        const t = (NEAR - A.w) / (B.w - A.w);
+        out.push(new THREE.Vector4(
+          A.x + (B.x - A.x) * t, A.y + (B.y - A.y) * t,
+          A.z + (B.z - A.z) * t, A.w + (B.w - A.w) * t));
+      }
+    }
+    return out;
   };
+  const toScreen = (v) => new THREE.Vector3(
+    (v.x / v.w * 0.5 + 0.5) * W, (1 - (v.y / v.w * 0.5 + 0.5)) * H, v.w);
 
   A.root.traverse((o) => {
     if (!o.isMesh || o.visible === false) return;
@@ -82,45 +117,70 @@ for (const nm of shots) {
         p0.fromBufferAttribute(pos, i0).applyMatrix4(m);
         p1.fromBufferAttribute(pos, i1).applyMatrix4(m);
         p2.fromBufferAttribute(pos, i2).applyMatrix4(m);
-        if (!project(p0, a) || !project(p1, b) || !project(p2, c)) continue;
-        const minX = Math.max(0, Math.floor(Math.min(a.x, b.x, c.x)));
-        const maxX = Math.min(W - 1, Math.ceil(Math.max(a.x, b.x, c.x)));
-        const minY = Math.max(0, Math.floor(Math.min(a.y, b.y, c.y)));
-        const maxY = Math.min(H - 1, Math.ceil(Math.max(a.y, b.y, c.y)));
-        if (minX > maxX || minY > maxY) continue;
-        const area = (b.x - a.x) * (c.y - a.y) - (c.x - a.x) * (b.y - a.y);
-        if (Math.abs(area) < 1e-9) continue;
+
+        // Facing and shading come from the world-space triangle, so clipping can't disturb them.
         e1.subVectors(p1, p0); e2.subVectors(p2, p0); nrm.crossVectors(e1, e2).normalize();
-        const toCam = p0.clone().sub(cam.position);
-        const facing = nrm.dot(toCam) < 0;
+        const facing = nrm.dot(p0.clone().sub(cam.position)) < 0;
         const nd = Math.max(0, nrm.dot(LIGHT));
         // Deliberately un-toned: a linear ramp so a normal gradient is visible as a gradient.
         const l = 0.20 + 0.80 * nd;
         let R, G, B;
         if (facing) { R = 232 * l; G = 196 * l; B = 150 * l; }
         else { R = 255; G = 0; B = 220; }                      // backface: should never show
-        const inv = 1 / area;
-        for (let y = minY; y <= maxY; y++) for (let x = minX; x <= maxX; x++) {
-          const px = x + 0.5, py = y + 0.5;
-          let w0 = ((b.x - a.x) * (py - a.y) - (px - a.x) * (b.y - a.y)) * inv;
-          let w1 = ((px - a.x) * (c.y - a.y) - (c.x - a.x) * (py - a.y)) * inv;
-          const w2 = 1 - w0 - w1;
-          if (w0 < 0 || w1 < 0 || w2 < 0) continue;
-          const z = 1 / (w2 / a.z + w1 / b.z + w0 / c.z);
-          const k = y * W + x;
-          if (z >= zb[k] || z <= 0) continue;
-          zb[k] = z;
-          owner[k] = facing ? -1 : meshId;
-          rgb[k*3] = R; rgb[k*3+1] = G; rgb[k*3+2] = B;
+
+        const poly = clipNear([p0, p1, p2].map((v) =>
+          new THREE.Vector4(v.x, v.y, v.z, 1).applyMatrix4(VP)));
+        if (poly.length < 3) continue;
+        const S = poly.map(toScreen);
+        for (let f = 1; f + 1 < S.length; f++) {
+          const a = S[0], b = S[f], c = S[f + 1];
+          const minX = Math.max(0, Math.floor(Math.min(a.x, b.x, c.x)));
+          const maxX = Math.min(W - 1, Math.ceil(Math.max(a.x, b.x, c.x)));
+          const minY = Math.max(0, Math.floor(Math.min(a.y, b.y, c.y)));
+          const maxY = Math.min(H - 1, Math.ceil(Math.max(a.y, b.y, c.y)));
+          if (minX > maxX || minY > maxY) continue;
+          const area = (b.x - a.x) * (c.y - a.y) - (c.x - a.x) * (b.y - a.y);
+          if (Math.abs(area) < 1e-9) continue;
+          const inv = 1 / area;
+          for (let y = minY; y <= maxY; y++) for (let x = minX; x <= maxX; x++) {
+            const px = x + 0.5, py = y + 0.5;
+            const w0 = ((b.x - a.x) * (py - a.y) - (px - a.x) * (b.y - a.y)) * inv;
+            const w1 = ((px - a.x) * (c.y - a.y) - (c.x - a.x) * (py - a.y)) * inv;
+            const w2 = 1 - w0 - w1;
+            if (w0 < 0 || w1 < 0 || w2 < 0) continue;
+            const z = 1 / (w2 / a.z + w1 / b.z + w0 / c.z);
+            const k = y * W + x;
+            if (z <= 0) continue;
+            if (facing) {
+              if (z >= zb[k]) continue;
+              zb[k] = z;
+              rgb[k*3] = R; rgb[k*3+1] = G; rgb[k*3+2] = B;
+            } else {
+              if (z >= zbk[k]) continue;
+              zbk[k] = z;
+              owner[k] = meshId;
+            }
+          }
         }
         drawn++;
       }
     }
   });
   const tally = new Map();
-  for (let k = 0; k < W * H; k++) if (owner[k] >= 0) { backPix++; const nn = meshNames[owner[k]]; tally.set(nn, (tally.get(nn)||0)+1); }
+  for (let k = 0; k < W * H; k++) {
+    if (owner[k] < 0) continue;
+    // Tolerance grows with distance: 2 cm plus 0.4% of range, comfortably over the jitter
+    // between a drift and its reversed twin, well under any real shell's wall-to-wall depth.
+    const tol = 0.02 + 0.004 * zbk[k];
+    if (zbk[k] >= zb[k] - tol) continue;
+    backPix++;
+    const nn = meshNames[owner[k]];
+    tally.set(nn, (tally.get(nn)||0)+1);
+    rgb[k*3] = 255; rgb[k*3+1] = 0; rgb[k*3+2] = 220;
+  }
   const top = [...tally.entries()].sort((a,b)=>b[1]-a[1]).slice(0,5);
-  writePNG(`/home/user/Demo/shots/_scratch/geo-${nm}.png`, W, H, rgb);
+  // progress/frames, not shots/_scratch: the latter is gitignored and this container rewinds.
+  writePNG(`${OUT}/geo-${nm}.png`, W, H, rgb);
   console.log(`${nm.padEnd(10)} ${drawn} tris, backface px ${backPix} (${(backPix/(W*H)*100).toFixed(2)}%)`);
   for (const [k, v] of top) console.log(`             ${String(v).padStart(6)}  ${k}`);
 }

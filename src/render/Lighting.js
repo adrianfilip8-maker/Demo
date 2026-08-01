@@ -188,6 +188,28 @@ const TUNE = {
      sunlit backdrop. They now carry a flanking shadow band (FX's `shaftDark`), which does
      most of the separating, and the gain is up to match. */
   courtShaftGain: 0.80,
+  /* **Do not raise the above trying to get a blade into the `courtyard` shot. It is not a
+     brightness problem and no value of this knob can fix it.**
+     Critic pass 3 item 10 ("no volumetrics in courtyard") has been read as an FX/LIGHTING
+     tuning failure across three passes. It is geometry, and the arithmetic is short enough to
+     repeat. At `courtyard`'s tod 0.76 the sun is due west at 26°, so light travels
+     (0.899, −0.438, 0): only the *west* peristyle gaps at x = −23 face it, and every beam
+     from them runs east, away from a camera that stands at x = −19 — four metres inside that
+     same colonnade, with its back to the openings. Each blade drops 6.55 m to the floor in
+     13.4 m of easting and lands at x = −9.6, which is where the "the beams die 9.6 m short of
+     the obelisk" reading comes from; the obelisk is at x = 0.
+     Projecting all eight west gaps through that camera, the share of each blade that is
+     on-screen at all is 22 / 29 / 35 / 42 / 48 %, and every one of those segments is in the
+     bottom-left corner — entering at x ≈ 0–8 px and exiting at x ≈ 84–330, y ≈ 580–689 of a
+     1280x720 frame, behind the foreground plinth. So the blades are correctly placed,
+     correctly aimed, live at intensity 0.798, and land where a 26° sun puts them; the frame
+     simply does not contain the volume they occupy.
+     Which means this is not FX's to fix and not LIGHTING's. The three real options are: move
+     the camera (`Shots.js` — SHOTS/lead), give the courtyard an opening the camera is looking
+     *at* rather than standing inside (ARCHITECTURE — a gate or clerestory in the north wall
+     around z = 0 would put a blade across the obelisk), or accept it. What FX *can* put in
+     that frame without an opening is airborne particulate and the three braziers that project
+     inside it, at 38.1, 44.3 and 56.1 m — see `Particles.js` TUNE.flameFade. */
 
   /* Torch / brazier cones. Built from whatever registered through addLocalLight(), so they
      follow PROPS rather than a second hardcoded list of sconces. */
@@ -288,6 +310,7 @@ const _lightDir = new THREE.Vector3();
 const _centre = new THREE.Vector3();
 const _camPos = new THREE.Vector3();
 const _corner = new THREE.Vector3();
+const _rayFrom = new THREE.Vector3();     // shaft length probe, stepped clear of the aperture
 const _c1 = new THREE.Color();
 const WORLD_UP = new THREE.Vector3(0, 1, 0);
 const WORLD_FWD = new THREE.Vector3(0, 0, 1);
@@ -854,6 +877,22 @@ export class Lighting {
 
       if (sunMoved || !s._len) {
         let len = 0;
+        /* **Start the ray outside the masonry the opening is cut through.**
+           `s.origin` is the centre of the aperture, which is the middle of a 0.85 m roof slab
+           or a 1.95 m pier — so a ray fired from it is *inside solid geometry*, and the roof
+           slab is a `ground` collider, so it hits its own far lip within centimetres. That is
+           the whole of the "1.77 m stubs hanging off the nave ceiling" symptom: the blade was
+           not short, its length was being measured against the slab it had not left yet.
+           The distance to the far face along the ray is `(thick/2) / |dir·normal|`, which
+           grows as the sun grazes — exactly the regime where the stubs appeared — and it is
+           added back afterwards so `length` still means "from the published origin".
+           The seal test above is the *other* half of the same geometry and does not replace
+           this one: it removes blades the masonry cannot pass at all, while this fixes the
+           measurement for every blade that does pass. */
+        const cn = Math.abs(s.dir.dot(s.normal));
+        const skip = s.thick > 0 && cn > 1e-3
+          ? Math.min((s.thick * 0.5) / cn + 0.05, s.maxLength * 0.5)
+          : 0.05;
         if (canRay) {
           try {
             /* `ground` only, deliberately. A blade *ends* where it lands on a floor; a
@@ -861,8 +900,9 @@ export class Lighting {
                it — and the depth test already does that per pixel. Raycasting against
                everything would truncate half the hall's beams into stubs against the
                columns they are supposed to rake across. */
-            const hit = col.raycast(s.origin, s.dir, s.maxLength, RAY_GROUND);
-            if (hit?.hit && Number.isFinite(hit.distance)) len = hit.distance;
+            _rayFrom.copy(s.origin).addScaledVector(s.dir, skip);
+            const hit = col.raycast(_rayFrom, s.dir, s.maxLength - skip, RAY_GROUND);
+            if (hit?.hit && Number.isFinite(hit.distance)) len = hit.distance + skip;
           } catch { /* collision not ready; fall through to the analytic length */ }
         }
         if (len < 1.0) {

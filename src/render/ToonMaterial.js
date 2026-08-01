@@ -160,6 +160,15 @@ const TUNE = {
      on the `courtyard` obelisk. The GTAO pass owns contact scale; this is the leftover. */
   bakedAO: 0.55,
 
+  /* Ceiling on the shadow light's brightest channel after the floor rescale — the single
+     constant that sets daylight shadow magnitude, because `k` is clamped by it in every
+     daylight shot (see _refreshShadowColor). It lived in `PAL` until now, which made the one
+     lever KNOWN_ISSUES §3 names unreachable from `shading.tune` and therefore untestable
+     without an edit-and-reboot. Same value, same behaviour; it is in TUNE because §5 says
+     tunables live in TUNE and because a knob you cannot A/B is a knob that costs capture
+     cycles. */
+  shadowTintPeak: 0.52,
+
   /* --- rim --- */
   rim: 0.55,
   rimPower: 3.1,
@@ -221,12 +230,8 @@ const PAL = {
   rim: 0x7fd4ff,
   rimNight: 0xa8e0ff,
   shadowHue: 0x2a3f66,
-  /* Ceiling on the shadow light's brightest channel after the floor rescale. Above roughly
-     this the violet-teal clips toward blue and stops reading as shadow. Raised from 0.42 with
-     the hue fix: the peak channel used to be *red* (the mix had gone magenta), so the same cap
-     bound at a much higher luminance. Capping a genuinely blue-dominant tint at 0.42 halved
-     the light in shadow and started crushing detail, which §2.1.3 forbids. */
-  shadowTintPeak: 0.52,
+  /* `shadowTintPeak` moved to TUNE — it is the daylight shadow's magnitude control and had to
+     become reachable from `shading.tune` to be A/B-able at all. */
   /* How much warm sand bounce is mixed into the shadow light — a desert shadow is lit by sky
      *and* by sun bouncing off the sand around it, and a purely blue shadow light multiplied
      into warm sandstone neutralises to mauve.
@@ -924,7 +929,7 @@ export class Shading {
      * obelisk runs L 144.8 lit against L 82.3 shadowed, only 1.76:1 at golden hour — that
      * constant is the lever, not the floor and not the wash. */
     const peak = Math.max(this._shadowTint.r, this._shadowTint.g, this._shadowTint.b);
-    const maxK = PAL.shadowTintPeak / Math.max(peak, 1e-4);
+    const maxK = TUNE.shadowTintPeak / Math.max(peak, 1e-4);
     k = Math.min(k, maxK);
 
     /* Mix warm sand bounce into the shadow light — **at matched luminance**.

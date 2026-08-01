@@ -162,6 +162,14 @@ const TUNE = {
   flameSoft: 0.16,          // metres of depth fade — small, so a wall sconce does not vanish
   flameFade: [34, 52],      // metres from camera: full → gone
   flameLick: 1.9,           // Hz of the fast crackle; the slow breath is a third of it
+  /* Wall-mount standoff — see `_standoff()`. `near` is what counts as "mounted on this":
+     the tomb sconces sit 5 cm off a pier face and the hall ones flush, so anything under
+     0.55 m is a mount rather than a neighbouring wall. `clear` is the air the opposite side
+     must have before the fire is allowed to move into it. `push` is under the 0.83 m the
+     sconce arm actually reaches, deliberately: this is recovering a fact PROPS dropped, not
+     guessing the arm, and undershooting leaves the flame against the sconce rather than
+     hanging in space beyond it. */
+  flameStandoff: { probe: 2.2, near: 0.55, clear: 1.6, push: 0.55, margin: 0.5 },
   crestPreroll: [34, 2.0],     // bursts, seconds of history — see `_prerollCrests`
 
   /* footstep dead-reckoning when ANIMATION is absent */
@@ -629,7 +637,15 @@ void main() {
   }
   if ( a < 0.004 ) discard;
 
-  vec3 col = mix( uTip, vTint, clamp( body * 0.9 + 0.25, 0.0, 1.0 ) );
+  /* Temperature runs *up* the tongue, not across it.
+     This used to key off the body term, which is 1.0 over everything inside the silhouette —
+     so the carnelian tip showed only in the last few percent of the width, at the antialiased
+     edge, and the whole flame rendered as one flat colour with a hot dot in it. Keying on v
+     puts gold in the cup and carnelian at the tip, which is both what a flame does and what
+     makes the shape read as a tongue rather than as a lozenge. The body term still
+     contributes, so the thin outer skin cools slightly ahead of the centreline. */
+  float heat = ( 1.0 - v ) * ( 0.55 + 0.45 * body );
+  vec3 col = mix( uTip, vTint, clamp( heat * 1.35, 0.0, 1.0 ) );
   col = mix( col, uCore, clamp( core * 1.7, 0.0, 1.0 ) );
 
   /* Additive: the frame receives col * uGain * a. Capped so the hot centre lands a little
@@ -1353,12 +1369,14 @@ class FlameField {
         uHalo: { value: TUNE.flameHalo },
         uBody: { value: TUNE.flameBody },
         uLick: { value: TUNE.flameLick },
-        /* Near-white at the fuel, deep carnelian at the tip. §2.2 has no "flame" entry, so
-           this is the gold/carnelian axis: `goldSpec` #fffbe8 through the ember pair to
-           something close to CARNELIAN #b8452c, which is what a flame's cool tip actually is
-           and keeps it inside the palette. */
-        uCore: { value: lin(0xfff6d8, new THREE.Color()) },
-        uTip: { value: lin(0xc2502a, new THREE.Color()) },
+        /* Gold at the fuel, CARNELIAN at the tip, over a `PAL.flameBody` middle — see the
+           note on that palette entry for why the body is NOT `emberHot`, and why the choice
+           was made against a CPU model of the composite rather than against captures.
+           `uCore` is the only near-white left, and it is confined to the bottom fifth of the
+           tongue by the `core` term: 9% of the flame's pixels, which is the tight bright
+           thing §7.3 wants bloom to find, rather than the whole body. */
+        uCore: { value: lin(0xffeeb4, new THREE.Color()) },
+        uTip: { value: lin(PAL.emberCool, new THREE.Color()) },
       },
       vertexShader: FLAME_VERT,
       fragmentShader: FLAME_FRAG,
@@ -1815,6 +1833,7 @@ export class Particles {
     h.object = null;
     h.alive = true;
     h.accum = 0;
+    h._stood = false;          // handles come out of a pool; the standoff probe is per-fire
     h.scale = opts.scale ?? (name === 'embers' || name === 'brazier' ? 1.35 : 1);
     h.opts = opts;
     h.kind = fire ? 'fire' : 'single';
@@ -1838,6 +1857,51 @@ export class Particles {
   }
 
   /**
+   * Push a fire that was registered *on* a wall plane out into the room it lights.
+   *
+   * **This is compensation for a registration this module does not own, and it should be
+   * deleted the day that registration is fixed.** `PropKit.wallTorch()` publishes the cup at
+   * `bag.flameAt` — local (0, 0.649, 0.825), i.e. 0.83 m out along the sconce arm — and
+   * `Props.js:_torch` registers the emitter at the *mount plate* instead
+   * (`Props.js:340`, `position: (x, y + 0.6, z)`), through `fx.spawn(name, { position })`,
+   * which carries no orientation. So FX is told "there is fire at this point on the wall" and
+   * has no way to know which way the arm points. The correct fix is two lines in PROPS:
+   * transform `bag.flameAt` by the same matrix the geometry gets and register *that*.
+   *
+   * Until then: a billboard centred on a wall plane is half inside the wall, and — measured
+   * on `interior` — from a grazing view down the vault the sconce's own shaft stands directly
+   * in front of it, which is why three of the five tomb flames in that frame render as bright
+   * slivers instead of tongues. Probing four horizontal directions recovers the one fact PROPS
+   * dropped: which side of this fire is solid. One wall close and clear air opposite is a wall
+   * mount; anything else (a brazier in the open, a fire in a niche) is left exactly where it
+   * was registered, so this cannot move something it has misread.
+   *
+   * Runs once per handle, on the first frame COLLISION is ready, and moves the whole fire —
+   * flame, core, embers, smoke — so the plume still rises out of the tongue.
+   */
+  _standoff(h) {
+    if (h._stood) return;
+    const col = this.engine.get('collision');
+    if (!col?.raycast || col.ready === false) return;   // not built yet; try again next frame
+    h._stood = true;
+    const S = TUNE.flameStandoff;
+    let best = -1, bestD = S.near;
+    for (let k = 0; k < 4; k++) {
+      _dir.set(k === 0 ? 1 : k === 1 ? -1 : 0, 0, k === 2 ? 1 : k === 3 ? -1 : 0);
+      const r = col.raycast(h.position, _dir, S.probe);
+      // The result object is pooled and reused by the next call — read it now, not later.
+      if (r?.hit && r.distance < bestD) { bestD = r.distance; best = k; }
+    }
+    if (best < 0) return;                                // nothing close on any side
+    const away = best ^ 1;                               // 0<->1, 2<->3
+    _dir.set(away === 0 ? 1 : away === 1 ? -1 : 0, 0, away === 2 ? 1 : away === 3 ? -1 : 0);
+    const r = col.raycast(h.position, _dir, S.probe);
+    const room = r?.hit ? r.distance : S.probe;
+    if (room < S.clear) return;                          // a niche, not a wall mount
+    h.position.addScaledVector(_dir, Math.min(S.push, room - S.margin));
+  }
+
+  /**
    * The canonical shots are stills captured 17 frames — 0.28 s — after the camera is posed,
    * and a continuous emitter has produced almost nothing by then. So when a shot is staged,
    * every fire near the camera is run *backwards*: a couple of seconds of ticks spawned with
@@ -1854,6 +1918,7 @@ export class Particles {
       const h = this.emitters[i];
       if (h.kind !== 'fire' || !h.alive) continue;
       if (h.object) h.object.getWorldPosition(h.position);
+      else this._standoff(h);
       if (h.position.distanceToSquared(_cam) > cull2) continue;
       const ticks = TUNE.firePreroll[0];
       const span = TUNE.firePreroll[1];
@@ -2555,6 +2620,7 @@ export class Particles {
          evicted by one sixty metres away. A place-anchored emitter beyond the cull radius
          simply stops. (Object-tracked emitters — the player's — are never culled.) */
       if (!h.object) {
+        if (h.kind === 'fire') this._standoff(h);
         if (this._frame % 4 === (i & 3)) h._far = h.position.distanceToSquared(_cam) > cull2;
         if (h._far) { h.accum = 0; continue; }
       }
@@ -2603,7 +2669,7 @@ export class Particles {
          is killed and re-spawned. A fire that does not move keeps its flicker. */
       const seed = ((Math.imul(Math.round(_v3.x * 32) ^ 0x9e37, 0x85ebca6b)
                    ^ Math.imul(Math.round(_v3.z * 32) + 0x1b873, 0xc2b2ae35)) >>> 8) / 16777216;
-      _col.setHex(PAL.emberHot, THREE.SRGBColorSpace);
+      _col.setHex(PAL.flameBody, THREE.SRGBColorSpace);
       // Root it a little into the cup: a tongue whose base floats free reads as a balloon.
       _v3.y -= TUNE.flameSize[1] * h.scale * 0.10;
       if (!f.push(_v3.x, _v3.y, _v3.z, h.scale, 1.0, _col, seed)) break;
