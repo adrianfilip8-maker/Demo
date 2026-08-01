@@ -83,6 +83,53 @@ function characterPoints(shot) {
   return out;
 }
 
+/**
+ * `guard` is the one shot whose subject is not the player, and `setShot` stages only the
+ * player — `Debug.js` teleports the character and freezes its pose, and does nothing at all
+ * to the garrison. So the guard in the "guard sheet" is wherever `buildRoutes(TUNE.seed)` and
+ * the roster's per-guard `u` phase happen to put him, which nobody had ever checked. Reported
+ * here rather than left as "behind camera, by design", because "the player is deliberately out
+ * of shot" is only half the claim; the other half is that the intended subject is in it.
+ */
+async function guardSubject(shot, cam, fwd) {
+  let P;
+  try { P = await import('../src/ai/Patrol.js'); }
+  catch { console.log('              (Patrol.js unavailable — guard subject not checked)'); return; }
+  const routes = P.buildRoutes(1);
+  const half = Math.tan((shot.fov ?? 50) * Math.PI / 360), ASPECT = 16 / 9, GH = 1.85;
+  const right = new THREE.Vector3().crossVectors(fwd, new THREE.Vector3(0, 1, 0)).normalize();
+  const up = new THREE.Vector3().crossVectors(right, fwd);
+  const seen = [];
+  for (let i = 0; i < P.ROSTER.length; i++) {
+    const e = P.ROSTER[i], rt = routes[e.route];
+    if (!rt) continue;
+    /* The roster's `u` is a per-guard phase offset along the route. Evaluating every guard at
+       u = 0 puts two of them on the same square metre and is simply wrong — a mistake worth
+       naming, because it produced a plausible table. */
+    const q = rt.at(e.u);
+    const d = new THREE.Vector3(q.x, q.y, q.z).sub(cam);
+    const z = d.dot(fwd);
+    if (z <= 0) continue;
+    const nx = d.dot(right) / (z * half * ASPECT), ny = d.dot(up) / (z * half);
+    if (Math.abs(nx) > 1 || Math.abs(ny) > 1) continue;
+    /* Body-centre ray only: the garrison is not skinned here, so this answers "is he behind a
+       wall", not "how much of him shows". */
+    const mid = new THREE.Vector3(q.x, q.y + GH * 0.55, q.z);
+    const dir = mid.clone().sub(cam);
+    const dist = dir.length(); dir.divideScalar(dist);
+    const box = new THREE.Box3().setFromPoints([cam, mid]).expandByScalar(2.0);
+    let blocked = null;
+    for (const tr of trisIn(A.root, box)) {
+      const t = rayTri(cam.x, cam.y, cam.z, dir.x, dir.y, dir.z, tr.t);
+      if (t > 0 && t < dist - 0.02) { blocked = tr.name || '(unnamed)'; break; }
+    }
+    seen.push(`#${i} ${e.type} on ${e.route} u=${e.u.toFixed(2)} — ${z.toFixed(1)} m, ndc ${nx.toFixed(2)},${ny.toFixed(2)}, ${(GH / z / (2 * half) * 720).toFixed(0)} px${blocked ? `, OCCLUDED by ${blocked}` : ', clear'}`);
+  }
+  console.log(seen.length
+    ? seen.map((s) => `              subject: ${s}`).join('\n')
+    : '              subject: NO GUARD IS IN THIS FRAME — the guard sheet has no guard');
+}
+
 const names = process.argv.slice(2).length ? process.argv.slice(2) : Object.keys(SHOTS);
 console.log(`shot          samples  visible   nearest blocker (by ray count)   [contact tolerance ${EPS} m]`);
 
@@ -135,6 +182,7 @@ for (const name of names) {
 
   if (inFront === 0) {
     console.log(`${name.padEnd(13)} ${String(pts.length).padStart(7)}   BEHIND CAMERA (by design in \`guard\`)`);
+    await guardSubject(shot, cam, fwd);
     continue;
   }
   const pct = 100 * visible / inFront;

@@ -128,19 +128,31 @@ Three consequences worth carrying:
 
 ---
 
-## 4. Guards module still absent
+## 4. Guards module — **landed**, and the `guard` shot's subject is now verified present
 
-`src/ai/` has a complete supporting library — `GuardModel.js` (`buildGuardAssets()`,
-`instantiate()`), `GuardAnim.js` (`GuardAnim` class, full clip set), `Patrol.js` (`ROSTER`,
-`ROUTES`, `Route`, `Senses`, `stateForSuspicion`, `speedFor`) — but no module entry point, so
-`main.js` reports guards absent and the `guard` canonical shot has no subject.
+`src/ai/Guard.js` exports `Guards`, walks the 11-entry `ROSTER`, wires one `GuardModel` rig per
+entry to a `GuardAnim` and a `Senses`, and renders the vision cone as geometry rather than as a
+budgeted local light. `main.js:31` registers it.
 
-Needs `src/ai/Guard.js` exporting `Guards`, following the same assembly pattern
-`src/world/Props.js` now uses: walk `ROSTER`, `instantiate()` one rig per entry against shared
-geometry, drive each with a `GuardAnim` and a `Senses`, and register the vision cone.
+**The `guard` shot's subject had never been checked, and it turns out to be there.** This
+mattered because `setShot` (`Debug.js:93`) stages *only the player* — it teleports the character
+and freezes its pose and does nothing at all to the garrison — so who appears in the guard sheet
+is decided entirely by `buildRoutes(TUNE.seed)` and each roster entry's `u` phase, neither of
+which anything in `Shots.js` controls. `charvis.mjs` now reports it: exactly one guard is in
+that frame, **#1 `temple` on `courtyard_ring` at u = 0.00, 6.5 m out, NDC (-0.02, -0.47), 297 px
+tall, unoccluded** — dead centre and large. The camera's target (-17.0, 1.1, 28.0) sits on that
+route's u = 0 point, so the aim was deliberate; it simply had no check behind it until now.
 
-Props is done — `src/world/Props.js` landed and assembles the colossi, sphinx avenue, Anubis
-pair, gilded Ra, braziers, banners, treasure and collectibles into 12 merged draw calls.
+**A mistake worth naming, because it produced a plausible table.** The first version of that
+probe evaluated every guard at `u = 0` instead of at its roster phase, which put two guards on
+the same square metre and moved four others. Every number in it looked reasonable. `u` is a
+per-guard offset; read the roster, not the route.
+
+Props is done too — `src/world/Props.js` assembles the colossi, sphinx avenue, Anubis pair,
+gilded Ra, braziers, banners, treasure and collectibles into 12 merged draw calls.
+
+Still open in `src/ai/`: `GuardModel.js:76` carries its own `eyeWhite: 0xf7f3e6` and reproduces
+the blown-sclera and straddling-terminator defect just fixed on Sly (see §9).
 
 ---
 
