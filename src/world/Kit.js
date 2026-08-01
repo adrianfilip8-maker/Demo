@@ -62,6 +62,21 @@ export function normaliseAttrs(geo) {
  * Box-project UVs from the *current* vertex positions using the dominant normal axis.
  * Because it runs after the geometry is placed, neighbouring blocks share one continuous
  * projection — the thing that stops merged masonry from looking like a UV patchwork.
+ *
+ * **Run this last.** It reads positions, so it bakes in whatever space the geometry is in at
+ * the moment of the call, and any transform applied afterwards moves the geometry without
+ * moving the UVs. A later *translation* is harmless (it only shifts the projection's phase,
+ * which is why the local-space calls below are fine). A later *scale* is not: it stretches the
+ * map by that scale. That has now caused two defects — a `place({sy})` that left V local-Y
+ * scaled, and `slabUnit()`, where an InstancedMesh scaled a unit box to 2.4 m and stretched
+ * every paving texture in the level by 2.4x while giving all 675 slabs one identical patch.
+ * Both call sites reasoned correctly about unit-space-times-instance-scale for the *geometry*
+ * and did not carry it to the UVs.
+ *
+ * Audited call sites: everything else in this file projects then translates only. `hookRing`
+ * is instanced at scale 1.0/0.94 (≤6% density error on a 0.62 m ring) and `ruin:drums` at
+ * scale 1, so both are correct to within measurement; they are the only two that would go
+ * wrong if someone gave them a non-unit instance scale.
  */
 export function boxProjectUVs(geo, s = UV_PER_M) {
   const pos = geo.attributes.position, nor = geo.attributes.normal;
@@ -1315,15 +1330,46 @@ export function pavingMatrices({ x0, x1, z0, z1, y = 0, slab = 2.2, rng, sink = 
   return list;
 }
 
-/** Unit slab used by the paving InstancedMesh (scaled per instance). */
-export function slabUnit(thick = 0.5, rng) {
-  /* The chamfer is in *unit* space and the instance matrix scales it by the slab size, so a
-     0.022 unit bevel lands at roughly 5 cm on a 2.4 m slab. Every paving joint then carries a
-     lit rim, which is most of what stops a courtyard floor reading as one flat plane — and it
-     is the largest single surface in five of the ten canonical shots. */
-  const g = chamferBox(1, thick, 1, { rng, jitter: 0.006, c: 0.022, only: 'top' });
-  place(g, { y: -thick * 0.5 });
-  return boxProjectUVs(g, UV_PER_M);
+/**
+ * A whole paved field as one merged geometry, with UVs projected in **world** space.
+ *
+ * This replaces an InstancedMesh over a `slabUnit()` — a unit box whose UVs were baked by
+ * `boxProjectUVs` and which was then handed to an instance matrix that scaled it to ~2.4 m.
+ * `boxProjectUVs` reads vertex *positions*, so geometry scales and baked UVs do not: the map
+ * came out stretched by the instance scale (one repeat per ~21 m against the authored 8.8 m),
+ * and every one of the 675 slabs showed the *same* 0.5-unit patch of it. Measured in frame
+ * that read as more periodic than a deliberately planted perfect period.
+ *
+ * The comment that used to sit here is the cautionary part: it tracked unit-space-times-
+ * instance-scale correctly for the bevel and did not carry it one line down to the UVs.
+ * `boxProjectUVs` is sensitive to the space it runs in and this is the second defect of that
+ * shape; the rule is now that it runs **after** every transform the geometry will ever take.
+ *
+ * The bevel genuinely does want to be in unit space — a 0.022 unit chamfer becomes ~5 cm
+ * across and ~2.2 cm down on a 2.4 m slab, and that lit rim along every joint is most of what
+ * stops a courtyard floor reading as one flat plane. So each slab is still built as a unit box
+ * and scaled by its own matrix, and `applyMatrix4` carries normals through the inverse
+ * transpose exactly as three's instancing path does: the emitted triangles and shading normals
+ * are identical to the instanced version. Only the projection moved.
+ *
+ * Costs the same one draw call and the same triangles as the InstancedMesh it replaces,
+ * trading instance memory for real vertices (~2 MB across the level's three fields).
+ */
+export function pavingField({ x0, x1, z0, z1, y = 0, slab = 2.2, thick = 0.5, rng, sink = 0.05, holes = [] }) {
+  /* One unit slab, cloned — not one `chamferBox` call per slab. The InstancedMesh this
+     replaces drew a single jittered unit box 675 times, so cloning reproduces its triangles
+     exactly; building a fresh box per slab instead drew 675x more from `rng` and shifted the
+     whole downstream stream, which re-rolled every chipped corner and fallen block in the
+     level. A geometry change that silently reseeds the rest of the build is not a local fix. */
+  const unit = chamferBox(1, thick, 1, { rng, jitter: 0.006, c: 0.022, only: 'top' });
+  place(unit, { y: -thick * 0.5 });
+  const out = [];
+  for (const m of pavingMatrices({ x0, x1, z0, z1, y, slab, rng, sink, holes })) {
+    out.push(unit.clone().applyMatrix4(m));
+  }
+  unit.dispose();
+  const g = mergeAll(out);
+  return g ? boxProjectUVs(g) : null;
 }
 
 /* ===================== traversal furniture ============================= */

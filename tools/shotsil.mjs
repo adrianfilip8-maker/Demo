@@ -107,15 +107,16 @@ const DBG = process.env.EYEDBG ? { 7: 0xff00ff, 6: 0x00ff00, 4: 0xff8800 } : nul
 for (const g of geo.groups) {
   const hex = DBG && DBG[g.materialIndex] !== undefined ? DBG[g.materialIndex]
     : sly.mesh.material[g.materialIndex].color.getHex();
-  matCol.push({ s: g.start, e: g.start + g.count, c: new THREE.Color(hex) });
+  matCol.push({ s: g.start, e: g.start + g.count, c: new THREE.Color(hex), m: g.materialIndex });
 }
-const colOfIdxRun = (k) => (matCol.find((r) => k >= r.s && k < r.e)?.c) || new THREE.Color(1, 0, 1);
+const recOfIdxRun = (k) => matCol.find((r) => k >= r.s && k < r.e);
+const colOfIdxRun = (k) => recOfIdxRun(k)?.c || new THREE.Color(1, 0, 1);
 
 function buildTris() {
   const tris = [];
   const bodyV = skin();
   const bidx = geo.index.array;
-  for (let i = 0; i < bidx.length; i += 3) tris.push([bidx[i], bidx[i + 1], bidx[i + 2], bodyV, colOfIdxRun(i)]);
+  for (let i = 0; i < bidx.length; i += 3) tris.push([bidx[i], bidx[i + 1], bidx[i + 2], bodyV, colOfIdxRun(i), recOfIdxRun(i)?.m ?? -1]);
   if (sly.cane?.mesh) {
     const cg = sly.cane.mesh.geometry;
     sly.cane.mesh.updateMatrixWorld(true);
@@ -128,7 +129,7 @@ function buildTris() {
     }
     const ci = cg.index.array;
     const goldC = new THREE.Color(sly.cane.mesh.material[0].color.getHex());
-    for (let i = 0; i < ci.length; i += 3) tris.push([ci[i], ci[i + 1], ci[i + 2], cv, goldC]);
+    for (let i = 0; i < ci.length; i += 3) tris.push([ci[i], ci[i + 1], ci[i + 2], cv, goldC, 5]);
   }
   return { tris, bodyV };
 }
@@ -141,7 +142,25 @@ const KEY = new THREE.Vector3(-0.55, 0.62, 0.56).normalize();
  * question is "does the cap separate from the ears", because the answer depends on the head
  * being drawn together with whatever overlaps it.
  */
-function render(tris, bodyV, yaw, elev, W, H, { shade = false, focus = null } = {}) {
+/**
+ * Flat per-material-group colours for the `parts` mode. The question this answers, and which
+ * neither the black silhouette nor the cel-shaded crop can, is **which part owns each pixel of
+ * the outline**. A black silhouette shows you that the head is one blob; it cannot tell you
+ * whether the cap is on the boundary of that blob at all, or is buried inside it with the
+ * skull, the ears and the cheek fur owning the whole edge. Those two want opposite fixes.
+ * Cap crown is `cloth` and is drawn pure black against everything else in light greys.
+ */
+const PART_COL = {
+  0: 0xd6d6d6,  // fur — skull, ear shell
+  1: 0xe8e8e8,  // furCream — inner ear, muzzle
+  2: 0xb4b4b4,  // furDark — ear tips, tufts
+  3: 0x000000,  // cloth — THE CAP CROWN (and the shirt collar, bottom of frame)
+  4: 0x606060,  // clothDark — cap hem + bill
+  5: 0xff8c00,  // gold — crown button
+  6: 0x9a9a9a,  // ink — mask, nose, mouth
+  7: 0xf4f4f4,  // eye
+};
+function render(tris, bodyV, yaw, elev, W, H, { shade = false, focus = null, parts = false } = {}) {
   const cy = Math.cos(yaw), sy = Math.sin(yaw);
   const ce = Math.cos(elev), se = Math.sin(elev);
   let minX = 1e9, maxX = -1e9, minY = 1e9, maxY = -1e9;
@@ -168,10 +187,13 @@ function render(tris, bodyV, yaw, elev, W, H, { shade = false, focus = null } = 
   const depth = new Float32Array(W * H).fill(-1e9);
   const col = geo.attributes.color;
   const _n3 = new THREE.Vector3();
-  for (const [a, b, c, arr, mc] of tris) {
+  for (const [a, b, c, arr, mc, mi] of tris) {
     const P = [toPx(verts.get(key(arr, a))), toPx(verts.get(key(arr, b))), toPx(verts.get(key(arr, c)))];
     let R = 18, G = 18, B = 18;
-    if (shade) {
+    if (parts) {
+      const h = PART_COL[mi] ?? 0xff00ff;
+      R = (h >> 16) & 255; G = (h >> 8) & 255; B = h & 255;
+    } else if (shade) {
       const p0 = verts.get(key(arr, a)), p1 = verts.get(key(arr, b)), p2 = verts.get(key(arr, c));
       const ux = p1[0] - p0[0], uy = p1[1] - p0[1], uz = p1[2] - p0[2];
       const vx = p2[0] - p0[0], vy = p2[1] - p0[1], vz = p2[2] - p0[2];
@@ -336,6 +358,7 @@ for (const [name, shot] of Object.entries(SHOTS)) {
   save(`${name}-shade.png`, render(tris, bodyV, -phi, elev, 300, 400, { shade: true }));
   save(`${name}-head.png`, render(tris, bodyV, -phi, elev, 420, 420, { focus: HEADF }));
   save(`${name}-headshade.png`, render(tris, bodyV, -phi, elev, 420, 420, { focus: HEADF, shade: true }));
+  save(`${name}-headparts.png`, render(tris, bodyV, -phi, elev, 420, 420, { focus: HEADF, parts: true }));
   if (process.env.BIG) save(`${name}-big.png`, render(tris, bodyV, -phi, elev, 900, 1200, { shade: true }));
   const tw = Math.max(12, Math.round(px * 0.72)), th = Math.max(16, px);
   save(`${name}-tiny.png`, magnify(render(tris, bodyV, -phi, elev, tw, th), 6));

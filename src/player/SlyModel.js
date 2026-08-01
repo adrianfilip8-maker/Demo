@@ -339,8 +339,11 @@ const SKELETON = [
   ['head', 'neck', [0, hy(1.420), 0.015]],
   ['jaw', 'head', [0, hy(1.478), hx(0.055)]],
   ['capBrim', 'head', [0, hy(1.665), hx(0.090)]],
-  ['earL', 'head', [hw(0.128), hy(1.662), hx(-0.022)]],
-  ['earR', 'head', [hw(-0.128), hy(1.662), hx(-0.022)]],
+  /* On the ear loft's own root ring, so a clip's ear rotation pivots where the ear meets the
+     skull. It sat 1 cm above and outboard of it, which swung the whole ear sideways instead of
+     cocking it. Names are unchanged, so the §4.7 clip contract is untouched. */
+  ['earL', 'head', [hw(0.126), hy(1.652), hx(-0.020)]],
+  ['earR', 'head', [hw(-0.126), hy(1.652), hx(-0.020)]],
   ['browL', 'head', [hw(0.064), hy(1.648), hx(0.140)]],
   ['browR', 'head', [hw(-0.064), hy(1.648), hx(0.140)]],
 
@@ -1702,26 +1705,41 @@ export class SlyModel {
   _buildEar(mb, side) {
     const S = TUNE.headScale;
     const L = side > 0 ? 'L' : 'R';
-    /* Swept out at ~48° from vertical so the tips clear the cap crown *laterally*.
-       Worth the arithmetic, because it had never actually been true: at the old 0.62 lean the
-       tip landed at |x| 0.284 against a cap half-width of 0.286, i.e. 2 mm *inside* the widest
-       part of the hat, so the ears vanished into the cap outline from every angle except a
-       narrow frontal cone — and `interior`, `dunes`, `traversal` and `hero` all look at him
-       from behind, where the cap then reads as a featureless dome. At 0.86 the tip clears the
-       crown by 1.7 cm before its tuft, and the ear/cap notch — the shape that says "raccoon in
-       a hat" rather than "person" — survives from any azimuth. */
-    const base = new THREE.Vector3(hw(side * 0.118), hy(1.646), hx(-0.020));
-    const axis = new THREE.Vector3(side * 0.86, 0.77, -0.16).normalize();
+    /* Swept out so the tips clear the cap crown *laterally* — and, since this pass, **above it
+       as well**, which is the half that was missing.
+     *
+     * Clearing sideways was already true (the previous note's arithmetic is correct: at lean
+     * 0.86 the tip beat the crown's half-width by 1.7 cm). It bought very little, because the
+     * ear then emerges from the cap's outline almost tangentially, and a tangential bump on a
+     * big convex mass reads as a lump on the lump. Measured against the crown it was worse than
+     * tangential vertically: the tip topped out at head-space 1.776 against a crown top of
+     * 1.830, so **the ears were 5 cm below the hat and entirely subordinate to it** — the
+     * silhouette had one blob with two nicks in its side.
+     *
+     * Sly's head reads as two sharp triangles rising clear of a low cap, so that is what this
+     * builds. With `_buildCap`'s crown top down at 1.786, the axis steepens (0.77 → 0.98 in y)
+     * and the ear lengthens (0.196 → 0.264 head-space) so the tip lands at world y 1.809
+     * against a crown top of 1.747: **6.2 cm of ear standing clear above the hat**, 17% of
+     * chin→crown, ~7 px at `hero`'s 45 px head. Lateral clearance improves too (tip |x| 0.272
+     * against a crown 0.247 at its widest), so the notch between ear and cap is a V with white
+     * on both sides of it rather than a nick.
+     *
+     * The two changes are one change. Lengthening the ear against the *old* 1.830 crown needs
+     * a 0.36 m ear to clear it, which is a rabbit; lowering the crown without lengthening the
+     * ear leaves the tips 1 cm short. Do not revert one of them on its own. */
+    const base = new THREE.Vector3(hw(side * 0.126), hy(1.652), hx(-0.020));
+    const axis = new THREE.Vector3(side * 0.58, 1.06, -0.16).normalize();
     const thick = new THREE.Vector3(side * 0.74, -0.24, 0.63).normalize();   // faces outward-front
     const width = new THREE.Vector3().crossVectors(thick, axis).normalize();
 
     const n = 8;
     const centers = [];
-    for (let i = 0; i < n; i++) centers.push(base.clone().addScaledVector(axis, (i / (n - 1)) * 0.196 * S));
+    for (let i = 0; i < n; i++) centers.push(base.clone().addScaledVector(axis, (i / (n - 1)) * 0.264 * S));
     // published for the tuft pass, which has to grow a wisp off the real tip
     (this._earTip || (this._earTip = {}))[side] = { p: centers[n - 1].clone(), axis: axis.clone() };
     const F = { T: centers.map(() => axis), R: centers.map(() => width), U: centers.map(() => thick) };
-    const wProf = [0.056, 0.078, 0.092, 0.094, 0.084, 0.062, 0.034, 0.007];
+    // widened with the length, or a 35% longer ear is a needle rather than a triangle
+    const wProf = [0.060, 0.086, 0.100, 0.100, 0.088, 0.066, 0.036, 0.008];
     const tProf = [0.033, 0.039, 0.039, 0.035, 0.029, 0.020, 0.011, 0.003];
 
     addTube(mb, {
@@ -1775,24 +1793,46 @@ export class SlyModel {
 
     /* y, half-width, half-depth, z-offset.
      *
-     * The old crown peaked at 0.201 against a 0.171 skull — a 3 cm lip, which is nothing at
-     * silhouette scale and is exactly why the critic recorded "no cap; the head is a bare
-     * rounded lump". This one peaks at 0.232 against the same 0.171 skull and is pulled back
-     * and up off the cranium, so the profile steps out hard above the ears and the cap becomes
-     * its own soft newsboy lozenge rather than a hat-coloured patch of scalp. Bigger than this
-     * and it swallows the ears, which cost more silhouette than the extra bulk buys.
+     * **Width was never the problem; height and curvature were.** The previous crown peaked at
+     * 0.240 against a 0.171 skull — a 1.5x overhang, already generous — and still rendered as
+     * "a bare rounded lump", which is what made the last note conclude it needed to be bigger.
+     * Filled solid black at the size the shots actually use (`hero` puts his whole head in
+     * ~45 px) that crown is a **circle**, because it starts flush with the cranium at 0.180 and
+     * swells smoothly to 0.240 over 7 cm of height. A smooth convex arc off a smooth convex
+     * skull is one shape no matter how far it bulges; there is no event in the outline for the
+     * eye to read as "hat". Growing it further only makes the circle bigger.
+     *
+     * What reads at 45 px is a **corner**. So the base ring is tucked *inside* the skull
+     * (0.164 against 0.171 — invisible, hidden under the hem) and the flare to full width
+     * happens over 1.4 cm of height instead of 7: the outline leaves the cheek, turns through
+     * ~80° into a near-horizontal shelf, turns again into the crown wall, and only then domes.
+     * Two hard direction changes at the widest point of the head, which is exactly the newsboy
+     * silhouette and survives being 3 px of black.
+     *
+     * The crown top also comes down 1.830 → 1.786 (−4.0 cm). It was 0.067 m of cap above a
+     * skull that stops at 1.763, i.e. the cap was two thirds of the upper head volume and was
+     * *shaped like more skull*. Lower and wider is both the better hat and the better head:
+     * the tall dome is most of what read as "big lumpy head" rather than "big head in a cap".
+     * It also clears the band the ears need — see `_buildEar`, which is the other half of this
+     * change and must move with it.
+     *
+     * `cz` slumps back to −0.066 rather than the −0.11 the shape wants, and the constraint is
+     * hard rather than aesthetic: the crown must stay in front of the forehead at every ring or
+     * the skull pokes out through the top of the hat. Checked ring by ring against `HEAD` —
+     * front `cz + rz` vs the skull's own front at the same height, worst case 1.730 (cap 0.144,
+     * skull 0.123). Move `cz` back any further without growing `rz` and that inverts.
      */
     const C = [
-      [1.598, 0.180, 0.190, 0.004],
-      [1.612, 0.214, 0.226, 0.000],
-      [1.634, 0.234, 0.246, -0.008],
-      [1.664, 0.240, 0.252, -0.018],
-      [1.700, 0.236, 0.246, -0.030],
-      [1.740, 0.222, 0.230, -0.042],
-      [1.776, 0.196, 0.201, -0.052],
-      [1.804, 0.152, 0.155, -0.058],
-      [1.822, 0.088, 0.090, -0.062],
-      [1.830, 0.018, 0.019, -0.064],
+      [1.586, 0.164, 0.174, 0.010],
+      [1.600, 0.234, 0.248, 0.004],
+      [1.614, 0.244, 0.258, -0.006],
+      [1.642, 0.242, 0.256, -0.020],
+      [1.672, 0.230, 0.246, -0.034],
+      [1.702, 0.208, 0.226, -0.046],
+      [1.730, 0.178, 0.196, -0.054],
+      [1.756, 0.134, 0.150, -0.060],
+      [1.774, 0.076, 0.086, -0.064],
+      [1.786, 0.018, 0.020, -0.066],
     ];
     addTube(mb, {
       centers: C.map(([y, , , cz]) => new THREE.Vector3(0, y, cz)), seg: 26,
@@ -1815,8 +1855,11 @@ export class SlyModel {
       uvScale: [4, 1],
     });
 
-    // crown button — the one gold spark at the top of the frame in a close-up
-    const btn = place(new THREE.Vector3(0, 1.832, -0.064));
+    /* Crown button — the one gold spark at the top of the frame in a close-up. Its y is an
+       absolute keyed to the crown's top ring, so it moves with `C`; at the old 1.832 it would
+       now float 4.6 cm clear of a cap that stops at 1.786. Same orphaned-absolute failure as
+       the cane aims in KNOWN_ISSUES §9, caught here only because I went looking for it. */
+    const btn = place(new THREE.Vector3(0, 1.784, -0.066));
     addEllipsoid(mb, {
       center: btn, radii: new THREE.Vector3(0.023 * S, 0.016 * S, 0.023 * S),
       segTheta: 12, segPhi: 6, phi0: -0.2,
@@ -1824,15 +1867,22 @@ export class SlyModel {
     });
 
     /* Hem band: a hard dark ring around the base of the crown. It splits the cap off the head
-       with a value break as well as a shape break, so the cap survives being backlit. */
+       with a value break as well as a shape break, so the cap survives being backlit.
+     *
+     * Pulled in (0.186 → 0.170) and dropped (1.596 → 1.580) because it was **filling the
+     * undercut the crown shelf now depends on**. At its old radius the band stood 3.3 cm proud
+     * of the cranium at the same height as the shelf, so the silhouette went cheek → hem →
+     * shelf as one monotonic staircase outward and the corner had nothing to bite against.
+     * Now it stands ~1.3 cm proud and 1.6 cm lower, which keeps the value break it exists for
+     * while leaving the outline concave between the band and the cap's underside. */
     const HN = 26;
     const hem = [];
     for (let i = 0; i <= HN; i++) {
       const th = (i / HN) * Math.PI * 2;
-      hem.push(place(new THREE.Vector3(Math.sin(th) * 0.186, 1.596 + 0.006 * Math.cos(th), -0.002 + Math.cos(th) * 0.196)));
+      hem.push(place(new THREE.Vector3(Math.sin(th) * 0.170, 1.580 + 0.006 * Math.cos(th), -0.002 + Math.cos(th) * 0.180)));
     }
     addTube(mb, {
-      centers: hem, seg: 8, rx: 0.020 * S, ry: 0.026 * S,
+      centers: hem, seg: 8, rx: 0.019 * S, ry: 0.025 * S,
       upHint: new THREE.Vector3(0, 1, 0),
       shape: (a) => superEllipse(a, 1.8),
       groupAt: () => 'clothDark',

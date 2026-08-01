@@ -319,16 +319,34 @@ Recorded so they are not re-derived:
   visible *because* of forward scatter, and `SHAFT_FRAG` (`src/fx/Particles.js`) has no term
   for it: `vViewZ` is depth fade, `vX`/`vS` are cross-section and along-beam, and `vAxial` is a
   billboard degeneracy guard that is symmetric and cannot tell looking into a beam from looking
-  away from one. Blade brightness is independent of the camera–sun angle. The ten cameras are
-  spread across the whole phase function — `courtyard` at 53° (into the sun), six shots at
-  101–157° — and at each shot's own `A.mieG` the Henyey–Geenstein weight ranges **7.2×**, which
-  the shader renders flat. Tune the gain until `courtyard` blazes and six frames get a bright
-  volume where a real beam would be nearly invisible; tune it the other way and `courtyard`
-  gets a seventh of what its geometry asks for. This is a second, independent explanation for
-  "the open-air blades measured as drawn and read as absent", alongside the additive-headroom
-  argument `SHAFT_FRAG`'s own comment makes. `hgPhase` already exists at `Atmosphere.js:460`
-  and is live in `Sky.js:368`, so there is a tested implementation to reuse. Reproduce with
-  `node tools/shaftphase.mjs`.
+  away from one. Blade brightness is independent of the camera–sun angle. At each shot's own
+  `A.mieG` the Henyey–Greenstein weight across the ten cameras ranges **48.9×** (6.3× among the
+  daylight shots alone), which the shader renders flat — so one `shaftGain` can be right in at
+  most one frame. This is a second, independent explanation for "the open-air blades measured as
+  drawn and read as absent", alongside the additive-headroom argument `SHAFT_FRAG`'s own comment
+  makes. `hgPhase` already exists at `Atmosphere.js:460` and is live in `Sky.js:368`, so there
+  is a tested implementation to reuse. Reproduce with `node tools/shaftphase.mjs`.
+
+  **I published this table with the dot product inverted, and the allocation was backwards.**
+  The scattering angle runs between the direction light *travels* and the direction it is
+  scattered toward the lens: `cosθ = beam · toCam` with `beam = −key` and `toCam = −fwd`, and
+  those negations cancel, so `cosθ = key · fwd`. I computed `fwd · (−key)`, which returns
+  180° − θ. Corrected ordering, most forward-scattering first: `night` 23°, **`hero` 56°**,
+  `combat` 57°, `dunes` 60°, `traversal` 69°, `temple` 79°, `guard` 106°, `interior` 111°,
+  `sly-closeup` 111°, **`courtyard` 127°**. So `courtyard` — which I named as the one
+  into-the-sun frame where a blade should blaze — is the **most backlit shot in the set**, and
+  `hero` is the frame looking into the sun. Independently checkable three ways: §8.1 puts the
+  sun west, `evalAtmosphere(0.76).sunDir` is `(−0.899, 0.438, 0)`, and `courtyard`'s camera
+  looks east-north-east. It also predicts, correctly, that `courtyard`'s beams travel *away*
+  from its camera — which FX had already found by A/B.
+
+  **The instructive part is where the error lived.** That file's header spelled the convention
+  out in prose *specifically* to guard against this, saying "getting this backwards inverts
+  every conclusion below, which is why it is spelled out" — and the line below it did the
+  opposite of the paragraph above it. **Writing a convention down is not implementing it**, and
+  a comment asserting correctness is the easiest thing in a file to read past. The structural
+  conclusion survived unchanged because it depends on the *spread*, not on which shot is which;
+  every per-shot recommendation built on it did not.
 
   **The axial guard is cleared, not suspected.** `vAxial` maxes at 0.62 (`night`) against its
   0.86 threshold, so its fade is exactly 1.00 in all ten shots and it never touches a canonical

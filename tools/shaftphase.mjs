@@ -36,12 +36,23 @@ const smoothstep = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b
 const rows = [];
 for (const [name, s] of Object.entries(SHOTS)) {
   const A = evalAtmosphere(s.tod ?? 0.78, createAtmosphereState());
-  /* `keyDir` points from the surface TOWARD the light — the same convention `charview.mjs`
-     reads it in — so looking into the sun is forward against its negation. Getting this
-     backwards inverts every conclusion below, which is why it is spelled out. */
+  /* The scattering angle is between the direction light TRAVELS and the direction it is
+     scattered toward the lens: `cos0 = beam . toCam`, with `beam = -key` (light travels away
+     from the sun) and `toCam = -fwd` (a scene point back to the camera). Those two negations
+     cancel, so **`cos0 = key . fwd`** — and forward scatter, 0 = 0, is `fwd` aligned WITH
+     `key`, i.e. the camera looking straight at the sun.
+
+     This line previously read `fwd.dot(key.negate())` and the paragraph above it asserted the
+     opposite convention in prose. Every angle came out as 180 - the true one, so the ordering
+     of the table inverted: `courtyard` was published as the one into-the-sun frame at 53 deg
+     when it is the most backlit at 127 deg, and `hero` was published as backlit at 124 deg
+     when it is the frame looking into the sun at 56 deg. Independently checkable: AGENTS 8.1
+     puts the sun west, `evalAtmosphere(0.76).sunDir` is (-0.899, 0.438, 0), and `courtyard`'s
+     camera looks east-north-east. **Writing the convention down in a comment is not the same
+     as implementing it** — this file did the first and not the second. */
   const key = (A.keyDir ?? A.sunDir).clone().normalize();
   const fwd = new THREE.Vector3(...s.target).sub(new THREE.Vector3(...s.pos)).normalize();
-  const phase = Math.acos(Math.max(-1, Math.min(1, fwd.dot(key.clone().negate())))) * 180 / Math.PI;
+  const phase = Math.acos(Math.max(-1, Math.min(1, fwd.dot(key)))) * 180 / Math.PI;
 
   const beam = key.clone().negate();          // the direction sunlight travels
   const toCam = fwd.clone().negate();         // from a point on the beam back to the lens

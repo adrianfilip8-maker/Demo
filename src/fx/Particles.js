@@ -70,8 +70,33 @@ const TUNE = {
      6% over that, spent on the open-air blades that are the §7.3 failure. The peak drops
      (1.85 × 0.55 = 1.02 → 1.55 × 0.40 = 0.62) — that is the half of this which has to be
      checked against POSTFX's 1.55 bloom threshold on `temple`, and it is a regression risk
-     on the one shot where §7.3's volumetrics condition already passes. */
-  shaftGain: 0.40,          // master multiplier on every beam's published intensity
+     on the one shot where §7.3's volumetrics condition already passes.
+
+     **That predicted regression happened, and it is now measured.** Toggling the whole shaft
+     mesh off in one page session on `temple` at 1280x720 changes **22 083 px — 2.4% of the
+     frame — at mean −0.2 luma**, and the two PNGs are indistinguishable by eye. The long
+     raking bands that `temple` has been credited with for three critic passes, and that made
+     it "the best asset in the build", are **lit geometry**: sun through the clerestory
+     falling on the wall and the column drums. The volumetric ribbons contribute essentially
+     nothing, in the one shot where §7.3's volumetrics condition was believed to pass.
+     (Measured with the roof-slot length bug already fixed — `roofslot0..3` report len 30.3 m
+     against the 1.77 m stubs, so this is not a geometry failure. The blades are the right
+     length, aimed correctly, and invisible.)
+
+     The energy-neutral argument was right about the integral and wrong about what makes a
+     beam read: that is the **peak** against a fixed tonemap and a fixed bloom threshold, not
+     the area under the cross-section. Halving the peak took it from just under POSTFX's 1.55
+     to nowhere near it, and the bracket above had already established the two ends — 0.35
+     "a haze on the ceiling, still fails §7.3" and 0.62 "unmistakably light".
+
+     So this restores the *peak* that the bracket verified rather than inventing a value, and
+     it does it through the new phase term so the restoration lands where it is motivated:
+     `0.52` puts `temple` (phase 1.27x) at 1.55 × 0.52 × 1.27 = **1.02**, exactly the peak
+     that read; `hero` (1.8x) at 1.45, still under the bloom threshold; `courtyard` (0.63x)
+     at 0.51, correctly dim in the most backlit frame in the set.
+     **This is the one change in this file that most needs the next capture** — it is an
+     additive brightening across ten shots and only its arithmetic has been checked. */
+  shaftGain: 0.52,          // master multiplier on every beam's published intensity
   shaftConeGain: 0.85,      // torch / brazier cones, relative to shaftGain
   shaftSoft: 2.0,           // metres of soft fade where a blade meets geometry
   /* 96 m put the `dunes` blades — the whole west colonnade, 88 m from that camera — inside

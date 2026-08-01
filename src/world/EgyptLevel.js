@@ -287,14 +287,18 @@ function chamferFor(x, y, z, near = 20) {
 function courtyard(A) {
   const c = L.court, R = A.rng;
 
-  /* Paving: individual slabs, instanced. A textured plane here would sink the whole shot. */
+  /* Paving: individual slabs, merged. A textured plane here would sink the whole shot.
+     Merged rather than instanced because the UVs have to be projected in world space — see
+     `Kit.pavingField`; instancing a pre-projected unit slab stretched this, the largest
+     surface in five of the ten shots, by its own instance scale. */
   const holes = [
     [-9.8, 9.8, 2.2, 19.8],                       // obelisk terrace
     [-13.6, -5.4, 21.4, 28.6], [5.4, 13.6, 21.4, 28.6],   // colossi plinths
     [-20, -8, 30.6, 34], [8, 20, 30.6, 34],       // entry pylon feet
   ];
-  const slabs = K.pavingMatrices({ x0: c.x0, x1: c.x1, z0: c.z0, z1: c.z1, y: 0, slab: 2.45, rng: R, sink: 0.055, holes });
-  A.instance('paving_courtyard', K.slabUnit(0.55, R), slabs, 'paving:court', { cast: false });
+  A.mesh('paving_courtyard', K.pavingField({
+    x0: c.x0, x1: c.x1, z0: c.z0, z1: c.z1, y: 0, slab: 2.45, thick: 0.55, rng: R, sink: 0.055, holes,
+  }), 'paving:court', { cast: false });
   groundProxy(A, c.x0, c.x1, 0, c.z0, c.z1, { material: 'stone' });
 
   /* Stylobate apron so the complex is planted rather than floating on TERRAIN's sand. */
@@ -763,8 +767,9 @@ function hypostyleHall(A) {
   const naveZ = [-22, -30, -38, -46], aisleZ = [-26, -38];
   for (const cz of naveZ) for (const sx of [-1, 1]) holes.push([sx * 8 - 2.5, sx * 8 + 2.5, cz - 2.5, cz + 2.5]);
   for (const cz of aisleZ) for (const sx of [-1, 1]) holes.push([sx * 16.5 - 2.3, sx * 16.5 + 2.3, cz - 2.3, cz + 2.3]);
-  A.instance('paving_courtyard', K.slabUnit(0.5, R),
-    K.pavingMatrices({ x0: -23, x1: 23, z0: -51, z1: -17, y: 0, slab: 2.3, rng: R, sink: 0.045, holes }), 'paving:hall', { cast: false });
+  A.mesh('paving_courtyard', K.pavingField({
+    x0: -23, x1: 23, z0: -51, z1: -17, y: 0, slab: 2.3, thick: 0.5, rng: R, sink: 0.045, holes,
+  }), 'paving:hall', { cast: false });
   groundProxy(A, -23, 23, 0, -51.2, -16.8);
 
   /* ---- Outer walls. Battered, buried at the base, hieroglyph-faced. ---- */
@@ -1167,8 +1172,9 @@ function tomb(A) {
      centre lands in a hole, and a 2.2 m pier cannot cover the fringe. Measured by casting the
      shot's own frustum against the built geometry: 99 of 112 escaping rays left through
      y = -12, and 48 still did with per-pier holes. With none, zero do. */
-  A.instance('paving_courtyard', K.slabUnit(0.5, R),
-    K.pavingMatrices({ x0: t.x0, x1: t.x1, z0: t.z0, z1: -59.0, y: F, slab: 2.35, rng: R, sink: 0.05 }), 'paving:tomb', { cast: false });
+  A.mesh('paving_courtyard', K.pavingField({
+    x0: t.x0, x1: t.x1, z0: t.z0, z1: -59.0, y: F, slab: 2.35, thick: 0.5, rng: R, sink: 0.05,
+  }), 'paving:tomb', { cast: false });
   groundProxy(A, t.x0, t.x1, F, t.z0, -58.6);
   const nicheZ = [-64, -70, -76];
   /* A lamp niche is a recess, so it is cut into the *inner* face only — cutting it through
