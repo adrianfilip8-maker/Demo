@@ -12,6 +12,7 @@
  */
 import { withGame, grab, ROOT } from './harness.mjs';
 import { writeFile, mkdir } from 'node:fs/promises';
+import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 
 const argv = process.argv.slice(2);
@@ -76,6 +77,19 @@ async function main() {
       };
     });
 
+  /* Provenance. `shot.mjs` has stamped this since the day a 25-commit-old PNG was read as
+     evidence of a live bug; `critic.mjs` did not, and a critic pass had to reconstruct which
+     build each batch came from by hand, from file mtimes against commit times. `dirty` matters
+     more here than the SHA: with several agents committing live, a review set can straddle two
+     builds, and that is exactly what happened. */
+  try {
+    const git = (a) => execFileSync('git', a, { cwd: ROOT, encoding: 'utf8' }).trim();
+    manifest.commit = {
+      sha: git(['rev-parse', '--short', 'HEAD']),
+      dirty: git(['status', '--porcelain']) !== '',
+      capturedAt: new Date().toISOString(),
+    };
+  } catch { manifest.commit = null; }
   await writeFile(path.join(OUT, 'manifest.json'), JSON.stringify(manifest, null, 2));
 
   const absent = Object.entries(manifest.modules).filter(([, v]) => !v).map(([k]) => k);

@@ -20,7 +20,7 @@ every batch:
 |---|---|---|---|---|
 | 1 | `hero` `temple` `courtyard` | `073d075` | **clean** | 11:28 / 11:31 / 11:35 |
 | 2 | `sly-closeup` `dunes` `interior` | `8d95cd7` | **dirty** — page load 12:11:52 | 12:20 / 12:22 / 12:24 |
-| 3 | `night` `traversal` `combat` `guard` | — | — | queued, 2nd in FIFO |
+| 3 | `night` `traversal` `combat` `guard` | — | — | **not captured — see below** |
 
 **Batch 2 is a different build from batch 1, and materially so.** Its page froze at ~12:11:52.
 At that instant `src/textures/Materials.js` had been rewritten 19 seconds earlier (12:11:33) with
@@ -72,9 +72,11 @@ rather than implying I have a frame open beside me.
 
 ## Verdict: **REJECT**
 
-*(Six of ten shots scored. `night`, `traversal`, `combat` and `guard` are queued 2nd in the
-capture FIFO and append below when they land. I will not score them from stale frames or from
-source — pass 1's worst failure was exactly that.)*
+*(**Six of ten shots scored.** `night`, `traversal`, `combat` and `guard` were **not captured** —
+see "Harness gaps" item 5 for why, and read that as a process defect rather than as four missing
+opinions. I will not score them from stale frames or from source; pass 1's worst failure was
+exactly that, and my own previous pass repeated it in the other direction by clearing a condition
+its measurement could not see.)*
 
 | shot | pass 2 | pass 3 | Δ | one-line |
 |---|---|---|---|---|
@@ -466,26 +468,36 @@ proportion is the reason the frame reads as an industrial yard.
    flushes `report.json` after every shot. I worked around it by saving stdout per batch.
 4. **No `--resume`.** Asked for last pass; a killed run still re-renders everything.
 
-## Runtime signals from the batch-1 manifest
+**5. The critic role is being structurally starved by the FIFO, and this is now the second pass it
+has cost frames.** The lock is a fair FIFO, but a ticket lives and dies with its process, so a
+waiter that is killed loses its accumulated seniority and re-queues at the back. My batch 3 sat
+2nd in line for 64 minutes, was killed at 12:41 before ever acquiring the lock, and re-queued at
+12:42 as **7th of 7**. My previous pass lost four shots to exactly this and recorded it; nothing
+has changed. Meanwhile short runs cycle through ahead, so the longest-waiting job is the most
+likely to be starved.
 
-- `textures: prewarm took 26.0s at size 1024` — new since pass 2.
-- `collision: pole "unnamed" / "proxy:pole" has no userData.spline — synthesised one` ×2. Same as
-  pass 2.
-- **One console 404.** §1 forbids external asset fetches. Unidentified across three passes now.
-- All modules present.
+The critic is the worst-affected consumer because it is the only one that legitimately needs all
+ten shots. Two cheap fixes, either of which would close it:
+- **`--resume`** on `critic.mjs`: skip shots already present in the output dir, so a killed run
+  restarts cheaply instead of re-rendering six frames it already has.
+- **Ticket persistence**: write the ticket with the *label*, not the pid, and let a re-launched
+  run reclaim its original timestamp. Correctness still rests on the atomic `tryTake()`, so the
+  worst case degrades to the current race rather than to two holders.
 
-## §1 budget — triangles still climbing
+Until then, budget for the critic taking two sessions to score ten shots, and do not read a
+missing shot as a missing finding.
 
-| shot | draws (≤250) | tris (≤1.2 M) | tris p2 → `9616d7d` → r3 |
-|---|---|---|---|
-| `hero` | 427 | **2.790 M** | 2.297 → 2.657 → **2.790** |
-| `temple` | 370 | **2.622 M** | 2.252 → 2.488 → **2.622** |
-| `courtyard` | 442 | **2.819 M** | 2.297 → 2.701 → **2.819** |
+## Runtime signals — identical in both manifests
 
-Draws are 48–77% over. Triangles are **118–135% over and have risen in every capture**, +21% on
-`hero` since pass 2. Per `CRITIC.md` I judge no frame times, but these counts are the fair part of
-§1 and they are moving the wrong way in a straight line. On this container it is not free either:
-`hero` at 2.79 M took ~8 minutes to render one frame set.
+- `textures: prewarm took 26.0 s / 18.6 s at size 1024` — new since pass 2.
+- `collision: pole "unnamed" / "proxy:pole" has no userData.spline — synthesised one` ×2 in each.
+  Same as pass 2 and pass 1.
+- **One console 404 in each batch.** §1 forbids external asset fetches. Unidentified across three
+  passes now, and it is the only §1 *hard constraint* that may be being breached — worth ten
+  minutes from someone with the network tab open.
+- All 17 modules present in both batches, none absent.
+
+*(§1 budget is tabled in full at ranked item 11.)*
 
 ---
 
@@ -518,12 +530,23 @@ it properly because it proves the pipeline can do what the rest of the build is 
 §7.3 conditions failed, quoted:
 
 - *"Silhouette not instantly readable as Sly (cap, mask, tail, cane)"* — cap, tail and cane read
-  instantly. **The face does not.** The two eyes are not a pair: left eye `#c0baa9` **L185.7**
-  (p95 235.3, blown to a flat white disc) against right eye `#656e88` **L110.1** — **75.6 luma
-  apart**. I measured 84 luma at `9616d7d`; it has barely moved. At 2× the muzzle is a long pale
-  wedge detached down-left from the eye mass and the combined read is a **skull or a bird of prey**,
-  not a raccoon. The mask region measures `#5b6379` L99.1 — a cool mid-value, not the dark graphic
-  domino that does more for "is that Sly?" than anything else on the model.
+  instantly. **The face does not, and the reason is one clipped eye.**
+
+  **Correction to my own earlier finding: the bandit mask is NOT absent.** At `9616d7d` I reported
+  it missing off a box that straddled it. Scanning properly at y=150, x 612–648 is a continuous
+  dark band at **L27–39** — the mask/brow is there and it is the right value. **CHARACTER should
+  not go and add one.** I would rather correct myself than send someone to build a thing that
+  exists.
+
+  The actual defect is the eyes. Matched 24×25 px boxes on each: left eye `#e3d9c6` mean **L217.7,
+  median L233.2, p95 236.2, 98.3% warm, sat 0.128** — half its pixels are clipped at L233+, a flat
+  blown white disc with no iris or pupil left in it. Right eye at its own centre: mean L116.2,
+  **median L88.3**, brightest point across it only **L158**. **The two eyes are 145 luma apart at
+  the median.** He does not have a pair of eyes; he has one headlight and one socket. I measured 84
+  luma at `9616d7d` off looser boxes — tightened up it is worse, not better.
+
+  At 2× the muzzle compounds it: a long pale wedge detached down-left from the eye mass, so the
+  combined read is a **skull or a bird of prey**, not a raccoon.
 - *"Pose is A-pose/T-pose/stiff instead of a confident line-of-action"* — improved but still
   failing: the cane gives a diagonal, but both feet are planted, hips and shoulders are level and
   the weight is evenly distributed. There is no contrapposto.
@@ -541,13 +564,15 @@ it properly because it proves the pipeline can do what the rest of the build is 
 **Blind comparison — vs Sly Cooper: Thieves in Time, any Sly close-up in the Egypt episode.**
 From memory, not from an image. **Thieves in Time wins, but for the first time this is a real
 contest.** Our cane, tail, fur fringe and ink are genuinely in the same conversation. It loses on
-the face and on weight: Thieves in Time's Sly has a black bandit mask that fuses the top half of
-his face into one clean graphic shape, two matched eyes reading as a pair, and an asymmetric
-weight-shifted stance with the cane taking load. Ours has one blown-out white eye 75 luma off the
-other, a detached muzzle, and a symmetric planted stance. **Fix the face and this shot competes.**
+the face and on weight: Thieves in Time's Sly reads because two matched eyes sit inside the mask
+as one clean graphic unit, and because he stands in asymmetric contrapposto with the cane taking
+load. We have the mask and we have the cane; what we have instead of a face is one clipped white
+disc 145 luma off its partner, a muzzle that reads detached, and a symmetrically planted stance.
+**Fix the eye and this shot competes.**
 
-**Highest-leverage fix:** make the two eyes match and put a dark mask across them. The rest of the
-character is already there.
+**Highest-leverage fix:** stop the left eye clipping. It is a single blown highlight —
+median L233 against the other eye's L88 — and it is the one thing standing between this shot and a
+7. Everything else on the character (cane, tail, fur, mask, proportions, separation) already works.
 
 ### `dunes` — 5 → **3**
 
@@ -861,10 +886,30 @@ six of six shots losing mid-tone, mean dark fraction nearly tripling, and the go
 surviving on almost nothing but a few horizontal faces. Four shots measured twice, twelve-plus
 commits apart, agree to a decimal place: **nothing in the intervening work touched it.**
 
-The good news is the same news: **this is one bug, not eleven.** Ranked items 1 and 2 are worth
-more than 3–11 combined, and items 4 and 7 are largely downstream of them. SHADING is testing the
-fix; nothing else on this list should be started in parallel with it, because it will change what
-every other measurement means.
+The good news is the same news: **this is one bug, not eleven.**
+
+## How to split this across five agents
+
+Ranked items 1 and 2 are worth more than 3–11 combined, but that does **not** mean everyone should
+wait on SHADING. Three of the eleven are genuinely downstream of the shadow fix and will have to be
+re-measured after it; the rest are independent and can run in parallel today.
+
+**Blocked on item 1 — do not tune these until the shadow fix lands, you will tune them twice:**
+- item 2 (three-band ramp — same code path)
+- item 4 (focal point / bloom — thresholds move when the value range moves)
+- item 7 (character separation — a perfect rim will not save a blue character in a blue world)
+
+**Independent, start now, different owners:**
+- item 3 — **LIGHTING**: one torch in `interior`. Cheapest big win on the list.
+- item 5 — **TEXTURES / ARCHITECTURE**: three specific over-panelled surfaces, plus glyph bevels.
+- item 6 — **PROPS**: the obelisk is ~3× too wide for its own §8.1 footprint.
+- item 8 — **POSTFX**: AO contributes nothing visible at contacts; also the bright paving joints.
+- item 9 — **SKY**: `hero`'s grey zenith, the missing pyramid, `courtyard`'s filament clouds.
+- item 10 — **FX/POSTFX**: shafts in `courtyard`.
+- item 11 — **ARCHITECTURE**: triangles, up in every shot in every pass.
+- **`dunes` sand hue** (inside item 1's family but a separate constant) — **TERRAIN**. It is the
+  only shot that stayed warm and it is warm in the *wrong* direction: `#ad6044`, G/R 0.55 against
+  the spec's 0.80. Also the black speckle artifact at ~(700–820, 230–290), unfixed for two passes.
 
 ## Re-score trigger
 

@@ -142,6 +142,9 @@ const CANE = {
      nobody could mistake. Chosen by sweeping the aim against three measurable things: the C's
      plane facing the camera, the shaft lying across the view rather than along it, and the
      crook clearing both the head and the body outline. */
+  /* Kept as a named aim although nothing references it any more: it is the correct answer to
+     "where does the crook go when the forearm is folded to the shoulder", and a clip that
+     wants that arm will want this. `idle_confident` no longer does — see `plant`. */
   shoulder: [-62, -56, 28],
   /* The standing idle. `shoulder` above is a fine *aim* and a bad *pose*: with the forearm
      folded up it lays the shaft diagonally across the torso, and a prop drawn across a figure
@@ -349,7 +352,7 @@ def('idle_bored', {
 def('idle_look', {
   dur: 4.0, loop: true, hold: 1.4,
   keys: [
-    { t: 0, e: 'soft', P: IDLE_A, pos: [0, -0.014, 0], cane: CANE.shoulder },
+    { t: 0, e: 'soft', P: IDLE_A, pos: [-0.058, -0.018, 0], cane: CANE.plant },
     // anticipation: a small counter-turn before the head whips the other way
     { t: 0.55, e: 'in', P: { head: [-4, 4, -4], neck: [-6, 1, -1], chest: [3, -8, 5] } },
     { t: 0.95, e: 'out', P: { head: [-12, 54, -16], neck: [-8, 22, -6], chest: [2, 6, 2], spine: [-3, 4, 2],
@@ -359,7 +362,7 @@ def('idle_look', {
     { t: 2.7, e: 'out', P: { head: [-2, -34, 6], neck: [-4, -16, 4], chest: [5, -22, 8], spine: [-2, -10, 6],
       hips: [1, 18, -10], earL: [-6, 4, -8], earR: [-14, -8, 24] }, pos: [0.012, -0.016, -0.006], cane: [-124, -8, 6] },
     { t: 3.3, e: 'soft', P: { head: [-4, -28, 4] } },
-    { t: 4.0, e: 'soft', P: IDLE_A, pos: [0, -0.014, 0], cane: CANE.shoulder },
+    { t: 4.0, e: 'soft', P: IDLE_A, pos: [-0.058, -0.018, 0], cane: CANE.plant },
   ],
 });
 
@@ -652,18 +655,28 @@ def('run_fast', {
 /* Sly's sneak is a *pose*, not a slow walk: knees deep, chest low and forward, shoulders up
    around the ears, cane held out behind like a rudder, tail flat and level. */
 const SNEAK_BASE = P({
-  hips: [30, 0, 0],
-  spine: [-6, 0, 0],
-  chest: [-8, 0, 0],
-  neck: [-26, 0, 0],
-  head: [-24, 0, 0],
+  /* **This clip freezes in three of the ten canonical shots** (`temple`, `interior`, `guard`),
+     which is more than any other pose in the file, and it was bilaterally symmetric: hips,
+     spine, chest, neck and head all at yaw 0 and roll 0, and the two legs within 6 deg of
+     mirror images. Measured on the held frame the whole centre line sat at x 0.000 from pelvis
+     to skull. That is the "stiff / no line of action" §7.3 auto-fail, in the pose that decides
+     three shots — a crouch does not excuse it, it makes it worse, because a crouched symmetric
+     figure reads as a squat rather than as a creep.
+     Now the pelvis turns into the lead leg and the ribcage counter-rotates against it, the
+     stance is staggered front-to-back rather than side-by-side, and the head finishes the
+     curve by turning back over the leading shoulder. */
+  hips: [30, 15, -8],
+  spine: [-6, -6, 5],
+  chest: [-8, -15, 12],
+  neck: [-26, 9, -6],
+  head: [-24, 15, -10],
   jaw: [2, 0, 0],
   capBrim: [4, 0, 0],
   earL: [-16, 6, -18], earR: [-14, -6, 20],
   shoulderL: [-8, 6, -20], upperArmL: [-40, 12, -26], lowerArmL: [-56, -18, -14], handL: [16, -14, -10],
   shoulderR: [-8, -6, 20], upperArmR: [26, -14, 34], lowerArmR: [-30, 22, 16], handR: [8, 16, 10],
-  upperLegL: [-52, 6, 4], lowerLegL: [64, 0, 0], footL: [-14, -5, 0], toeL: [6, 0, 0],
-  upperLegR: [-46, -6, -4], lowerLegR: [58, 0, 0], footR: [-12, 5, 0], toeR: [6, 0, 0],
+  upperLegL: [-60, 10, 7], lowerLegL: [72, 0, 0], footL: [-16, -5, 0], toeL: [6, 0, 0],
+  upperLegR: [-36, -9, -6], lowerLegR: [48, 0, 0], footR: [-8, 5, 0], toeR: [6, 0, 0],
   /* **Dropped hard off the hips.** `hips` is pitched 30 deg nose-down here, and the tail
      hangs off the hips, so a tail authored level comes out of that rotation climbing at 30 deg
      — and at 1.34 m long it puts its tip above his own head. Rendered as a pure silhouette
@@ -881,7 +894,7 @@ def('skid_stop', {
       upperLegR: [-12, -6, -4], lowerLegR: [24, 0, 0], footR: [-4, 4, 0], toeR: [4, 0, 0],
       tailA: [-10, 6, 0], tailB: [-18, 10, 0], tailC: [4, 6, 0], tailD: [26, -4, 0],
     }, pos: [0, -0.07, 0.02], sc: { hips: [0.98, 1.03, 0.99] }, cane: [86, 8, -6] },
-    { t: 0.62, e: 'soft', P: IDLE_A, pos: [0, -0.014, 0], sc: { hips: [1, 1, 1] }, cane: CANE.shoulder },
+    { t: 0.62, e: 'soft', P: IDLE_A, pos: [-0.058, -0.018, 0], sc: { hips: [1, 1, 1] }, cane: CANE.plant },
   ],
 });
 
@@ -918,7 +931,7 @@ def('roll', {
       pos: [0, -0.40, -0.02], sc: { hips: [1.08, 0.88, 1.06], chest: [1.05, 0.93, 1.04] }, cane: [104, 20, -6] },
     // and rise, overshooting slightly upright before settling
     { t: 0.66, e: 'out', P: Object.assign({}, IDLE_A, { hips: [358, 10, -6], chest: [1, -10, 5] }),
-      pos: [0, -0.02, 0], sc: { hips: [0.99, 1.02, 0.99], chest: [1, 1, 1] }, cane: CANE.shoulder },
+      pos: [-0.050, -0.024, 0], sc: { hips: [0.99, 1.02, 0.99], chest: [1, 1, 1] }, cane: CANE.plant },
   ],
 });
 
@@ -1098,7 +1111,7 @@ def('land_soft', {
       upperLegR: [-12, -5, -3], lowerLegR: [16, 0, 0], footR: [-5, 4, 0],
       tailA: [-2, 10, 0], tailB: [-12, 14, 0], tailC: [10, 9, 0], tailD: [28, -7, 0],
     }, pos: [0, 0.015, 0], sc: { hips: [0.97, 1.05, 0.98], chest: [0.98, 1.03, 0.99], head: [1, 1, 1] }, cane: [82, 4, -6] },
-    { t: 0.42, e: 'soft', P: IDLE_A, pos: [0, -0.014, 0], sc: { hips: [1, 1, 1], chest: [1, 1, 1] }, cane: CANE.shoulder },
+    { t: 0.42, e: 'soft', P: IDLE_A, pos: [-0.058, -0.018, 0], sc: { hips: [1, 1, 1], chest: [1, 1, 1] }, cane: CANE.plant },
   ],
 });
 
@@ -1136,7 +1149,7 @@ def('land_hard', {
       upperLegR: [-10, -6, -4], lowerLegR: [14, 0, 0], footR: [-5, 5, 0], toeR: [2, 0, 0],
       tailA: [-6, 12, 0], tailB: [-16, 16, 0], tailC: [8, 11, 0], tailD: [26, -8, 0],
     }, pos: [0, 0.02, 0], sc: { hips: [0.96, 1.07, 0.97], chest: [0.97, 1.04, 0.98], head: [1, 1, 1] }, cane: [86, 6, -6] },
-    { t: 0.72, e: 'soft', P: IDLE_A, pos: [0, -0.014, 0], sc: { hips: [1, 1, 1], chest: [1, 1, 1] }, cane: CANE.shoulder },
+    { t: 0.72, e: 'soft', P: IDLE_A, pos: [-0.058, -0.018, 0], sc: { hips: [1, 1, 1], chest: [1, 1, 1] }, cane: CANE.plant },
   ],
 });
 
@@ -1173,7 +1186,7 @@ def('land_roll', {
       upperLegL: [-26, 8, 5], lowerLegL: [32, 0, 0], upperLegR: [-14, -8, -5], lowerLegR: [20, 0, 0],
       upperArmL: [-14, 8, -34], upperArmR: [-10, -12, 30] },
       pos: [0, -0.03, 0], sc: { hips: [0.98, 1.04, 0.99] }, cane: [88, 4, -6] },
-    { t: 0.78, e: 'soft', P: Object.assign({}, IDLE_A, { hips: [361, 12, -8] }), pos: [0, -0.014, 0], sc: { hips: [1, 1, 1] }, cane: CANE.shoulder },
+    { t: 0.78, e: 'soft', P: Object.assign({}, IDLE_A, { hips: [361, 12, -8] }), pos: [-0.058, -0.018, 0], sc: { hips: [1, 1, 1] }, cane: CANE.plant },
   ],
 });
 
@@ -1370,7 +1383,7 @@ def('ledge_climb', {
       upperLegR: [-16, -8, -5], lowerLegR: [24, 0, 0], footR: [-6, 6, 0],
       tailA: [2, 10, 0], tailB: [-8, 14, 0], tailC: [10, 9, 0], tailD: [26, -7, 0],
     }, pos: [0, -0.10, 0.06], sc: { hips: [0.97, 1.04, 0.98] }, cane: [92, 10, -8] },
-    { t: 0.95, e: 'soft', P: IDLE_A, pos: [0, -0.014, 0], sc: { hips: [1, 1, 1] }, cane: CANE.shoulder },
+    { t: 0.95, e: 'soft', P: IDLE_A, pos: [-0.058, -0.018, 0], sc: { hips: [1, 1, 1] }, cane: CANE.plant },
   ],
 });
 
@@ -1862,7 +1875,7 @@ def('cane_combo_3', {
       upperLegR: [-12, -8, -4], lowerLegR: [20, 0, 0], footR: [-4, 6, 0], toeR: [2, 0, 0],
       tailA: [2, -12, 0], tailB: [-10, -16, 0], tailC: [8, -11, 0], tailD: [24, 8, 0],
     }, pos: [0, -0.12, 0.04], sc: { hips: [0.98, 1.03, 0.99], chest: [1, 1, 1] }, cane: [74, -22, -6] },
-    { t: 0.62, e: 'soft', P: IDLE_A, pos: [0, -0.014, 0], sc: { hips: [1, 1, 1] }, cane: CANE.shoulder },
+    { t: 0.62, e: 'soft', P: IDLE_A, pos: [-0.058, -0.018, 0], sc: { hips: [1, 1, 1] }, cane: CANE.plant },
   ],
 });
 
@@ -1929,7 +1942,7 @@ def('dive_impact', {
       upperLegR: [-14, -8, -5], lowerLegR: [20, 0, 0], footR: [-6, 6, 0], toeR: [2, 0, 0],
       tailA: [0, 16, 0], tailB: [-12, 22, 0], tailC: [8, 15, 0], tailD: [26, -10, 0],
     }, pos: [0, -0.08, 0.02], sc: { hips: [0.97, 1.05, 0.98], chest: [1, 1, 1], head: [1, 1, 1] }, cane: [120, 20, -6] },
-    { t: 0.7, e: 'soft', P: IDLE_A, pos: [0, -0.014, 0], sc: { hips: [1, 1, 1] }, cane: CANE.shoulder },
+    { t: 0.7, e: 'soft', P: IDLE_A, pos: [-0.058, -0.018, 0], sc: { hips: [1, 1, 1] }, cane: CANE.plant },
   ],
 });
 
@@ -1965,7 +1978,7 @@ def('pickpocket', {
       upperArmL: [-24, 14, -30], lowerArmL: [-76, -18, -16], handL: [18, -16, -10],
       tailA: [-6, 18, 0], tailB: [-16, 24, 0], tailC: [2, 16, 0], tailD: [22, -10, 0],
     }, pos: [-0.01, -0.22, 0.03], sc: { chest: [1, 1, 1] }, cane: [60, -20, 0] },
-    { t: 1.1, e: 'soft', P: IDLE_A, pos: [0, -0.014, 0], cane: CANE.shoulder },
+    { t: 1.1, e: 'soft', P: IDLE_A, pos: [-0.058, -0.018, 0], cane: CANE.plant },
   ],
 });
 
@@ -2020,7 +2033,7 @@ def('hurt', {
       upperArmL: [-18, 10, -36], upperArmR: [-12, -10, 34],
       upperLegL: [-28, 8, 5], lowerLegL: [36, 0, 0], upperLegR: [-20, -8, -5], lowerLegR: [28, 0, 0],
     }, pos: [0, -0.12, 0.01] },
-    { t: 0.62, e: 'soft', P: IDLE_A, pos: [0, -0.014, 0], cane: CANE.shoulder },
+    { t: 0.62, e: 'soft', P: IDLE_A, pos: [-0.058, -0.018, 0], cane: CANE.plant },
   ],
 });
 
@@ -2086,7 +2099,7 @@ def('victory', {
       head: [-8, 22, -14], capBrim: [10, 0, -6], browL: [0, 0, 18], earL: [-16, 8, -20] } },
     { t: 1.9, e: 'out', P: { upperArmL: [-14, 8, -28], lowerArmL: [-40, -18, -16], handL: [14, -18, -14],
       head: [-11, 19, -12], capBrim: [2, 0, -3], browL: [0, 0, 10] } },
-    { t: 2.2, e: 'soft', P: IDLE_A, pos: [0, -0.014, 0], sc: { chest: [1, 1, 1] }, cane: CANE.shoulder },
+    { t: 2.2, e: 'soft', P: IDLE_A, pos: [-0.058, -0.018, 0], sc: { chest: [1, 1, 1] }, cane: CANE.plant },
   ],
 });
 

@@ -792,9 +792,29 @@ export function sweep(profile, len, opts = {}) {
       uvs.push(x * s, arc[i] * s);
     }
   }
+  /* ---- Every cornice in the level was inside out --------------------------
+   *
+   * This wound `a, c, b`, which puts the surface normal at (0, +Δout, −Δup): pointing INTO the
+   * wall. `computeVertexNormals()` follows the winding, so the whole swept surface carried
+   * inward normals, and since every architecture material is `THREE.FrontSide` the cornices
+   * were being backface-culled — not mis-lit, absent. Measured two ways before changing it:
+   * summed over one straight cornice run, 34 of 36 surface triangles faced −Z where +Z is
+   * outward, and the mean stored vertex normal Z was −0.643; and an offline z-buffered
+   * rasterisation of the `dunes` camera drew 8,208 pixels of `court:hieroglyph_gilded` as
+   * backfaces — both entry pylon crowns, the great gate cornice and both processional gateway
+   * cornices, i.e. every cavetto in the frame.
+   *
+   * That is a direct cause of §7.3's "architecture reads as boxes": the cavetto-and-torus crown
+   * is the one silhouette that reads as Egyptian at a hundred metres, and no frame has ever
+   * contained one. It also removed the biggest curved surface in the level, which is where a
+   * three-band ramp had its best chance of showing a terminator.
+   *
+   * Correct winding puts the normal at (0, −Δout, +Δup) — outward and downward over the
+   * cavetto's overhang, which is what an overhanging moulding does.
+   */
   for (let i = 0; i < n - 1; i++) {
     const a = i * 2, b = a + 1, c = a + 2, dd = a + 3;
-    idx.push(a, c, b, b, c, dd);
+    idx.push(a, b, c, b, dd, c);
   }
   const geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
@@ -815,7 +835,8 @@ export function sweep(profile, len, opts = {}) {
     }
     for (let i = 0; i < n - 1; i++) {
       const a = i * 2, b = a + 1, c = a + 2, dd = a + 3;
-      if (e > 0) ci.push(a, c, b, b, c, dd); else ci.push(a, b, c, b, dd, c);
+      // Inverted for the same reason as the surface above: the +X cap was winding to −X.
+      if (e > 0) ci.push(a, b, c, b, dd, c); else ci.push(a, c, b, b, c, dd);
     }
     const cg = new THREE.BufferGeometry();
     cg.setAttribute('position', new THREE.Float32BufferAttribute(cv, 3));
@@ -1351,7 +1372,27 @@ export function sandDrift({ len = 12, h = 1.5, depth = 3.2, seg = 14, rng }) {
   g.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
   g.setIndex(idx);
   g.computeVertexNormals();
-  return g;
+
+  /* ---- A drift is a membrane, and from behind it was a hole -------------
+   * This is one open surface with no underside, so from its far side it is culled and you see
+   * whatever is beyond it. Usually that is the wall it is banked against and nobody notices —
+   * but the inner pylon's drift is banked on the north face, and the `temple` camera looks
+   * north straight through the gate at it, so the bottom of that doorway rendered as a hole.
+   * Measured on the offline raster: 896 backface pixels of `pylon:sandstone_worn`, all of them
+   * inside the gate opening.
+   *
+   * Duplicated with the winding and the normals flipped rather than by setting the material
+   * to `DoubleSide` — the drift shares a merged bucket with ordinary masonry, and turning that
+   * bucket two-sided would cost every wall in it its backface culling for the sake of one
+   * ribbon. About 40 extra triangles per drift.
+   */
+  const back = g.clone();
+  const bi = back.index.array;
+  for (let i = 0; i < bi.length; i += 3) { const t = bi[i + 1]; bi[i + 1] = bi[i + 2]; bi[i + 2] = t; }
+  const bn = back.attributes.normal;
+  for (let i = 0; i < bn.count; i++) bn.setXYZ(i, -bn.getX(i), -bn.getY(i), -bn.getZ(i));
+  bn.needsUpdate = true; back.index.needsUpdate = true;
+  return mergeAll([g, back]) || g;
 }
 
 /* ========================== pyramids =================================== */

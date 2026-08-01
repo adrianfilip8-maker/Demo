@@ -44,7 +44,24 @@ const ALIASES = {
  * **This map is keyed by recipe and the factor is a property of the *consumer*, so two call
  * sites can disagree and this table cannot express it.** A sweep of every UV-scale expression in
  * `src/world/**` found two live exceptions to the default 2, and both are geometry dressed with
- * recipes that are *also* used at the default elsewhere, so neither can be added here:
+ * recipes that are *also* used at the default elsewhere, so neither can be added here.
+ *
+ * **That sweep was scoped to `src/world/**` and there is a fourth exception outside it.** Grepping
+ * the shape itself — `repeat.set` / `.repeat =` across all of `src/` — finds `Guard.js:1105`,
+ * where `_repeat()` clones the shared texture and calls `repeat.set(r, r)`, which *overwrites*
+ * the repeat `_build()` set rather than composing with it. Two recipes go through it:
+ *
+ *   `Guard.js:1041`  `linen_cloth`  at repeat 2.0   (declared tile 0.55 → `_build()` set 1.818)
+ *   `Guard.js:1054`  `bronze_aged`  at repeat 2.4   (declared tile 1.0  → `_build()` set 1.0)
+ *
+ * Guard UVs run 0..1 over a lofted garment, not at `UV_PER_M`, so one repeat covers half a
+ * garment rather than the 1.1 m / 2.0 m `report()` prints for these two — and both are *also*
+ * dressed by `Props.js` (banners, braziers) at the architecture default, so like the two cases
+ * above they cannot be entered in the table. Checked for the sub-pixel failure this note exists
+ * to catch, and both clear it: at guard range (~8 m, 1.2 mrad/px ⇒ 9.6 mm/px) `linen_cloth`'s
+ * detail lands near 38 mm ≈ 4 px and `bronze_aged`'s near 105 mm ≈ 11 px. So this is a wrong
+ * number, not a lost feature — but it is wrong in the same direction as the three below.
+ *
  *
  *   `Kit.js:1259`   `steppedPyramid` → `boxProjectUVs(g, UV_PER_M * 0.25)`, i.e. one UV per 8 m.
  *                   `EgyptLevel.js:1262` dresses both pyramids with `limestone_polished`

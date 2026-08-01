@@ -61,7 +61,13 @@ export const TUNE = {
    * chin→crown over ground→crown:
    *
    *     before   figure 1.791 m   head 0.600 m   legs 41.0%   →  1 : 2.99
-   *     after    figure 1.782 m   head 0.414 m   legs 51.0%   →  1 : 4.31
+   *     after    figure 1.756 m   head 0.422 m   legs 46.7%   →  1 : 4.16
+   *
+   * Both rows are ground plane to top of cap, in `idle_confident`, measured off the skinned
+   * mesh. Quote them like for like: a bounding-box height that includes the tuft geometry
+   * hanging below y = 0 reads 1.835 m and 1 : 4.35 for the same rig, and mixing the two is
+   * how the numbers in this block drifted before. The leg figure is hip→ankle *in this pose*,
+   * where the free leg is bent; straight in bind it is 0.909 m, 51.8% of the figure.
    *
    * **A head count is meaningless without the pose it was taken in.** The head is a rigid
    * body and the figure is not, so every crouch, lunge and hang in the clip set reads as a
