@@ -115,6 +115,7 @@ export class Architecture {
     this._buckets = new Map();     // "zone|mat" -> BufferGeometry[]
     this._zoneMeshes = new Map();  // zone -> Mesh[]  (for the tomb portal gate, below)
     this._tombVisible = null;
+    this._cryptSealed = null;      // reverse gate: camera inside the vault hides the desert
     this._meshes = [];
     this._materials = new Map();
     this._geoms = new Set();
@@ -342,25 +343,67 @@ export class Architecture {
   }
 
   /**
-   * Portal gate on the tomb.
+   * Portal gate on the tomb — both directions.
    *
-   * The vault is sealed under the desert, but a merged bucket's bounding sphere still
-   * intersects a long view frustum, so all seven tomb meshes were being drawn from every
-   * exterior camera — once for colour, once for POSTFX's normal prepass and once per shadow
-   * cascade. Measured on `hero`: 47 of architecture's 48 meshes passed the frustum test.
-   * The vault is only reachable through the inner pylon gate at z = −52, so anything south
-   * of z = −30 or higher than y = 10 provably cannot see into it.
+   * Outward: the vault is sealed under the desert, but a merged bucket's bounding sphere
+   * still intersects a long view frustum, so all seven tomb meshes were being drawn from
+   * every exterior camera — once for colour, once for POSTFX's normal prepass and once per
+   * shadow cascade. Measured on `hero`: 47 of architecture's 48 meshes passed the frustum
+   * test. The vault is only reachable through the inner pylon gate at z = −52, so anything
+   * south of z = −30 or higher than y = 10 provably cannot see into it.
+   *
+   * Inward: the same argument runs in reverse. A camera inside the sealed crypt box —
+   * strictly past the north face of the tomb gate wall (z = −59.3) and under the vault
+   * ceiling (y = −2.5, margin below C = −2) — cannot see the desert: the sand rings and the
+   * Nile are FrontSide surfaces above a closed roof. The baseline budget run measured 15
+   * terrain meshes / 162k tris rendering in `interior` (25% of its draws, 43% of its
+   * triangles) purely because their bounding spheres straddle a frustum that never sees
+   * them. The stairwell and landing keep the gate OFF: on the stairs z > −59.3 everywhere,
+   * and near the top y > −2.5, so any camera that can see sky is outside the box.
+   *
+   * Visibility-only, both ways: nothing is built or freed here, so the build-time crevice
+   * assertion and the collision proxies are untouched.
    */
   update() {
     const cam = this.engine.camera;
     if (!cam) return;
-    const show = cam.position.z < -30 && cam.position.y < 10;
-    if (show === this._tombVisible) return;
-    this._tombVisible = show;
-    for (const m of this._zoneMeshes.get('tomb') || []) m.visible = show;
+    const p = cam.position;
+
+    const show = p.z < -30 && p.y < 10;
+    if (show !== this._tombVisible) {
+      this._tombVisible = show;
+      for (const m of this._zoneMeshes.get('tomb') || []) m.visible = show;
+    }
+
+    const sealed = p.x > -13.5 && p.x < 13.5
+      && p.y > -12.6 && p.y < -2.5
+      && p.z > -78.5 && p.z < -59.3;
+    if (sealed !== this._cryptSealed) {
+      this._cryptSealed = sealed;
+      for (const o of this._exteriorSets()) o.visible = !sealed;
+    }
+  }
+
+  /**
+   * The exterior sets the sealed-crypt gate toggles: TERRAIN's sand rings and the Nile
+   * water group, read through their public fields. Resolved per toggle, not cached —
+   * TERRAIN owns these objects and may rebuild them. Vegetation and the far pyramids are
+   * deliberately not included: they also render in `interior` (~44k tris), but this change
+   * is pre-registered on exactly rings + water, so widening the set is a separate,
+   * separately-measured step.
+   */
+  _exteriorSets() {
+    const terrain = this.engine.get('terrain');
+    if (!terrain) return [];
+    const out = [];
+    if (Array.isArray(terrain.rings)) out.push(...terrain.rings);
+    if (terrain.water?.group) out.push(terrain.water.group);
+    return out;
   }
 
   dispose() {
+    // Never leave TERRAIN's meshes hidden behind us if we die while the gate is on.
+    if (this._cryptSealed) for (const o of this._exteriorSets()) o.visible = true;
     for (const g of this._geoms) g.dispose?.();
     for (const m of this._materials.values()) m.dispose?.();
     this._pm?.dispose();
