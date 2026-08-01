@@ -192,22 +192,30 @@ export const TUNE = {
   furTintAmount: 0.095,   // per-vertex tone break-up so no region is a flat colour
 
   /* Vertex-colour multiplier on the sclera only — see `_buildEye`. `PAL.eyeWhite` is luma
-     0.953 and rendered at median L233 with the pupil gone and a halo over it. Rendered luma
-     tracked albedo at 0.959 on that frame, so this predicts a lit sclera at **L191**.
-     Emissive is added *after* albedo in the toon shader (`outgoingLight = diff + ... +
+     0.953. Emissive is added *after* albedo in the toon shader (`outgoingLight = diff + ... +
      emissiveTerm`), so this multiplier does not touch the eye's night floor — `night` runs at
      key 0.00 and is carried entirely by `emissive`, which is unchanged.
 
-     0.82 rather than the 0.87 the linear arithmetic asks for, because the error bars are not
-     symmetric and neither is the cost. The old frame topped out at 236.3, not 255, and only
-     ~670 px (one eye) cleared L230 — so the top end is being rolled off by the tonemap rather
-     than hard-clipped, and a compressive curve returns *less* output change than a linear
-     model predicts for the same input cut. Undershooting leaves the defect exactly as it is
-     and costs a capture cycle to find out; overshooting lands the sclera near L180, which is
-     still an enormous graphic against ink at L~30 and a mask at L27-39. Bias toward the cheap
-     failure. The glint keeps the full palette value, so the frame keeps a real >L230 source —
-     it is a dot on the pupil now instead of the whole eye. */
-  scleraTint: 0.82,
+     0.82 → 0.15, and the two previous values (0.82, and the 0.65 once costed) were both picked
+     against a display-L table that was mis-calibrated at the top: it attributed scene 0.72's
+     output (~L191) to scene 2.0. SHADING's one-boot A/B (shots/bloom1, PREREG-bloom1.md)
+     settled the attribution: with bloom entirely OFF the lit sclera still displays p50 218 /
+     max 228.5, because its scene radiance — lit albedo 0.79 × keyRad 3.29 = 2.59 — sits deep
+     on the AgX shoulder, where an 18% albedo cut returns almost no output change. No bloom
+     setting can restore the luma hierarchy; the albedo is the only lever, and it needs a big
+     cut, not a trim.
+
+     0.15 lands the lit sclera body at model L156 (measured will run ~5 lower; the same model
+     predicted 224.2 for a measured p50 218). Chosen against the frame, not the band: the
+     sly-closeup sunlit wall is p50 152 / p90 162, cheek fur p50 92 / p90 147, jacket p50 115 —
+     so at ~L152 the sclera drops below the sunlit-wall band (the acceptance line) while
+     staying ~+58L over the fur median: still decisively the brightest thing on the face, no
+     longer the brightest thing in Egypt. At 0.15 the sclera's scene max-channel is 0.47,
+     far under bloom's 1.90 onset (T 2.20 / k 0.30), so the disc takes no halo at all and the
+     pupil ring gets to exist. The glint keeps the full palette value (scene 3.16, final ~L234
+     with its own bloom) — the frame keeps a real >L230 source, a dot instead of a disc.
+     Full sweep + solver: scratchpad tintsweep.mjs over bloomcalc.mjs's validated chain. */
+  scleraTint: 0.15,
 
   /* --- fur, read from the OUTLINE (§7.3 "fur reads as smooth plastic") ---
    * A cel-shaded character carries no fur information in its shading, so all of it has to be
@@ -1624,7 +1632,14 @@ export class SlyModel {
        aspiration. Prediction registered for the next capture: per-eye ≥L228 area ≤100 px, a
        visible black pupil ring all round the glint, and the mask beside the eyes no longer
        washed by halo. If ≥L228 stays ~250 px after this, the source is not the glint and the
-       next suspect is bloom's threshold/kernel in PostFX, which is not this file's to tune. */
+       next suspect is bloom's threshold/kernel in PostFX, which is not this file's to tune.
+
+       RESOLVED: that prediction FAILED — cap2 (post-shrink) measured 761 px total ≥L228 and
+       no pupil ring. The named suspect was half right: bloom's onset moved (6f1d1f4,
+       761→135 px) but SHADING's bloom-off A/B (shots/bloom1) showed the sclera body itself at
+       ~L224 — scene radiance on the AgX shoulder, not glint and not bloom. The actual fix is
+       `TUNE.scleraTint` 0.82 → 0.15 (see its note); the glint shrink here stays, correct on
+       its own terms. */
     const v2 = mb.vertexCount;
     addEllipsoid(mb, {
       center: hc, radii: new THREE.Vector3(0.013 * S, 0.013 * S, 0.009 * S), basis,
@@ -2365,13 +2380,24 @@ export class SlyModel {
        Rolls are placed away from ±90° in the tail's own frame: those two lines are the
        silhouette for a camera looking down the tail's local X, and a clump sitting exactly on
        a silhouette tangent renders edge-on as a hard line rather than as a soft break. */
-    const STEP = 3;
+    /* STEP 3 → 2. At eleven stations the laid-back clumps project past the edge as *separated*
+       triangles — a saw blade at `hero`'s 70° — because nothing overlaps. The cheek row's own
+       rule applies ("overlapping clumps are what turn a row of spikes into a ruff") and the
+       pinecone failure this row replaced is not the risk here: those stood 87° off the surface,
+       these lay along it, so density buys overlap rather than more spikes. ~68 clumps, +~290
+       tris on a 14k-tri body. */
+    const STEP = 2;
     for (let i = 2; i < n - 2; i += STEP) {
       const t = i / (n - 1);
       const c = spine[i];
       const tan = new THREE.Vector3().subVectors(spine[Math.min(n - 1, i + 1)], spine[Math.max(0, i - 1)]).normalize();
       const rings = (i / STEP) % 2 ? [-2.5, -0.9, 0.5, 1.9] : [2.5, 0.9, -0.5, -1.9];
-      for (const roll of rings) {
+      for (const roll0 of rings) {
+        /* Roll phase is jittered per station for the same reason the cheek row jitters pitch:
+           four rolls repeated at eleven uniform stations is a lattice, and the silhouette test
+           at `hero`'s 70° reads the lattice as saw teeth however well each clump lays back.
+           ±0.17 rad against a ~1.4 rad roll gap cannot cross neighbouring rolls. */
+        const roll = roll0 + (hash(i, roll0 + 13) - 0.5) * 0.34;
         const up = new THREE.Vector3(Math.sin(roll) * 0.85, Math.cos(roll), 0).normalize();
         const side2 = new THREE.Vector3().crossVectors(tan, up).normalize();
         const outward = new THREE.Vector3().crossVectors(side2, tan).normalize();
@@ -2388,7 +2414,10 @@ export class SlyModel {
           base, shadeN: outward.clone(),
           dir: outward.clone().multiplyScalar(0.46).addScaledVector(tan, -1.0).normalize(),
           length: (0.070 + 0.024 * Math.sin(t * 7)) * TUNE.tailGirth * edge * jit(i, roll),
-          width: 0.025 * TUNE.tailGirth, bend: 0.26, bendDir: outward.clone(),
+          /* Width jittered like the cheek row, and for the recorded reason there: "length
+             variation on a row of equally-spaced, equally-wide clumps still reads as a comb —
+             it is a comb with uneven teeth." The tail rows had jittered length only. */
+          width: 0.025 * TUNE.tailGirth * (0.78 + 0.44 * hash(i, roll0 + 5)), bend: 0.26, bendDir: outward.clone(),
           group: isDark(tMid) ? 'furDark' : 'furCream',
           weights: ramp(t, this._tailRamp),
         });
