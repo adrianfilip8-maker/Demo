@@ -250,8 +250,20 @@ const TUNE = {
      normalised fold reads -0.64 where a real concave crease reads -0.645 — while being the only
      thing suppressing a concave wall/ground contact on architecture. Those two facts do not
      conflict once the test can tell a character from a wall, which is what this does.
-     0 = shipping behaviour, unchanged. Measure before moving it. */
-  rimSkinExempt: 0.0,
+
+     1 ships, measured in rim2 (5 shots x 9 variants, one boot, difference-mask contour
+     coverage vs the norim floor): the exemption equals convoff on the character and equals
+     base off it — verified per-pixel, with every hot cell in the outside-identity accounted
+     to animated content (lamp glows, cloud scroll, shafts, a guard walking into frame), not
+     to leak. Character contour coverage base -> skinfix: sly-closeup 26.3 -> 26.8, night
+     31.9 -> 34.8 (= convoff exactly), traversal 53.0 vs convoff 50.8. Architecture FLAT
+     stays at base: hero 3647 -> 3849 px (1.055x, bound 1.1x); temple 1773 -> 2076 reads as
+     1.17x but the excess localises to FX flicker cells that move in BOTH directions
+     (+144@(640,64), -44@(1024,256)) and the nosly drift control moves with them — static
+     architecture is net-flat. The cane is NOT exempt (vSlySkin comes from USE_SKINNING);
+     measured mismatch vs convoff clusters on the cane shaft at 2-6% of subject px and the
+     silhouette shows no visible notch. 0 = the pre-rim2 behaviour, for A/B. */
+  rimSkinExempt: 1.0,
 
   /* Whether baked AO multiplies the DIRECT key term. It does not (0), which is why a texture
      authoring a 0.412 median AO renders at 0.992 in a daylight frame: `ao` currently reaches

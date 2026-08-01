@@ -583,6 +583,16 @@ export const TOON_SHADE = /* glsl */ `
 		float rimSil = uRimCurve.y > uRimCurve.x
 			? smoothstep( uRimCurve.x, uRimCurve.y, slyTurn ) * slyConvex : 1.0;
 
+		/* The mix( 0.55, 1.0, sh ) below is a shadow FLOOR: rim keeps 55% strength where the key
+		   is fully shadowed. That floor is what carries night's silhouette rims (the whole shot
+		   is sh~0 and it is the difference between a readable rooftop and mud — measured, base
+		   traces every deck edge that norim loses). It is also the one term behind the single
+		   bright-cool artefact rim2 left standing: hero's worn step lip at px (832-1056,500-620),
+		   a ~1453 px cyan band on arch:sandstone_worn INSIDE cast shadow. Both gates pass it
+		   honestly — a worn bevel turns the normal fast (magnitude open) and bulges toward the
+		   eye (convex) — so the only property separating it from a rim we want is that it is lit
+		   by nothing. Any fix lives in this floor (shape it by tod or by distance-to-key), and
+		   its A/B must re-measure night before it ships, because night is what the 0.55 buys. */
 		vec3 rim = uRimColor * ( uRim * uRimGain * rimBand * rimSil * mix( 0.55, 1.0, sh ) * mix( 0.45, 1.0, wrapRim ) );
 
 		/* There used to be a second, sky-coloured "counter-rim" here for the shadow side. It
