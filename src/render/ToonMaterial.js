@@ -150,6 +150,13 @@ const TUNE = {
   hazeStart: 26,
   hazeGain: 1.30,
 
+  /* Forward-scatter gain: how much brighter the haze is when you look *into* the key than
+     when you look away from it. See _refreshHazeSun() — this exists because uHazeSun was a
+     compile-time constant that no code path ever wrote, and 1.25 is not a new art decision
+     but the relationship the palette pair already encoded (PAL.haze #e8b878 -> PAL.hazeSun
+     #ffc98a is x1.231, x1.213, x1.359 per linear channel). */
+  hazeSunBoost: 1.25,
+
   /* --- detail --- */
   detailFade: 95,        // metres at which the triplanar layer is fully faded out
 };
@@ -223,6 +230,9 @@ export class Shading {
     this._shadowTint = new THREE.Color(PAL.shadowHue);
     this._shadowTintLum = lum(this._shadowTint);
     this._shadowFloor = TUNE.shadowFloor;
+    /* TEMP-AB: pinned true for the shadowcap.mjs A/B so `uHazeSun` holds the shipped-before
+       constant and the harness owns it. RESTORE TO false. */
+    this._hazeSunExplicit = true;
 
     /**
      * Shared uniform objects. Every material created by toon() references these *by identity*,
@@ -675,6 +685,38 @@ export class Shading {
         if (ambient.ground !== undefined) setCol(u.uBounceColor.value, ambient.ground);
         if (ambient.bounce !== undefined) setCol(u.uBounceColor.value, ambient.bounce);
         if (typeof ambient.intensity === 'number') u.uAmbIntensity.value = ambient.intensity;
+
+        /* `floor` and `tint` were being published and silently dropped. LIGHTING's
+         * `_publishKeyLight()` has always sent both; this function read `sky`, `ground`,
+         * `bounce` and `intensity` and ignored the other two, so `Lighting.TUNE.encloseStrength`
+         * had no consumer and its note ("if the floor took a scalar from here, the enclosure
+         * term could drive it and this knob would start meaning something") was exactly right.
+         *
+         * Why the floor is clamped rather than assigned. It is the fraction of key luminance a
+         * shadow is allowed to sit at, and TUNE.shadowFloor is the value that was bracketed
+         * against captures for the *open-sky* case — AGENTS §2.2 quotes ~14% but that is about
+         * the tonemapped result, and 0.155 of a raw 3.3 key measured flat. A publisher sending
+         * a larger number must not be able to undo that. What a publisher legitimately knows and
+         * this file does not is *enclosure*: a sealed tomb sees almost no sky, so its floor
+         * belongs below the open-sky value. So the payload may only ever darken.
+         *
+         * Today this is arithmetically inert — Atmosphere's SHADOW_FLOOR is 0.14 against
+         * TUNE.shadowFloor 0.125, so the min() picks the tuned value, and `tint` is the same
+         * #2a3f66 both sides. That is the point: wiring it changes no pixel now and makes the
+         * enclosure term live the moment LIGHTING raises `encloseStrength` off 0.
+         *
+         * Note what this does NOT fix. `_refreshShadowColor()` scales the shadow light by
+         * `lum(uKeyColor) * uKeyIntensity`, so an interior's shading is still set by a sun that
+         * never reaches it: `interior` runs at tod 0.5, the brightest key in the game (x4.05),
+         * and every surface in the tomb is at shadowMix 1.0. That is why the frame reads flat
+         * lavender. This wiring is the enabler for the fix, not the fix. */
+        if (typeof ambient.floor === 'number' && ambient.floor >= 0) {
+          this._shadowFloor = Math.min(TUNE.shadowFloor, ambient.floor);
+        }
+        if (ambient.tint !== undefined && ambient.tint !== null) {
+          setCol(this._shadowTint, ambient.tint);
+          this._shadowTintLum = lum(this._shadowTint);
+        }
       }
     }
 
@@ -700,7 +742,8 @@ export class Shading {
     const u = this.uniforms;
     if (p.haze !== undefined) setCol(u.uHaze.value, p.haze);
     if (p.color !== undefined) setCol(u.uHaze.value, p.color);
-    if (p.hazeSun !== undefined) setCol(u.uHazeSun.value, p.hazeSun);
+    if (p.hazeSun !== undefined) { setCol(u.uHazeSun.value, p.hazeSun); this._hazeSunExplicit = true; }
+    else this._refreshHazeSun();
     if (typeof p.density === 'number') u.uHazeDensity.value = p.density;
     if (typeof p.falloff === 'number') u.uHazeFalloff.value = p.falloff;
     if (typeof p.base === 'number') u.uHazeBase.value = p.base;
@@ -757,6 +800,36 @@ export class Shading {
    */
   debugShadow(mode = true) {
     this.uniforms.uDebugShadow.value = mode === true ? 1 : (mode === false ? 0 : (+mode || 0));
+  }
+
+  /**
+   * Forward-scatter haze colour, rebuilt from whatever haze is currently live.
+   *
+   * **`uHazeSun` was a constant.** `setAtmosphere()` is its only writer and nothing in `src/`
+   * calls `setAtmosphere()` — SKY expresses the haze as `scene.fog`, which carries a colour and
+   * a density and no sun tint — so from construction to shutdown the uniform held
+   * `PAL.hazeSun` `#ffc98a`, a golden-hour orange, in every shot at every time of day.
+   *
+   * That is invisible in daylight by luck: Atmosphere's own `fog.sunTint` at tod 0.72-0.83 is
+   * `#ffc889`-`#ffbc7e`, which is the same colour. At night it is not close. Measured over the
+   * `night` camera (tod 0.02, key = moon at elevation 12 deg, azimuth 157 deg — the camera looks
+   * almost straight into it), `slyHazeColor()`'s mix weight `pow(sunAmt,3) * 0.8` combined with
+   * the haze factor exceeds 0.20 over **94.1% of the frame** and peaks at 0.722, while the live
+   * haze is `#222f4a` at linear luminance 0.024 against the stuck constant's 0.431 — **17.7x**
+   * too bright, and warm where §2.2 wants the night palette. The one shot whose entire purpose
+   * is "palette flip: moonlit stealth" was having most of its depth cue tinted orange.
+   *
+   * The gain is not a new art decision. The palette pair the constant came from, `PAL.haze`
+   * `#e8b878` -> `PAL.hazeSun` `#ffc98a`, is x1.231 / x1.213 / x1.359 per linear channel — near
+   * enough a flat 1.25 that the authored intent is simply "the same haze, brighter into the
+   * light". Rebuilding it from the live `uHaze` reproduces daylight to within a rounding error
+   * and follows the haze into night for free. An explicit `setAtmosphere({ hazeSun })` still
+   * wins outright, so this is a floor under a missing publisher, not a replacement for one.
+   */
+  _refreshHazeSun() {
+    if (this._hazeSunExplicit) return;
+    const u = this.uniforms;
+    u.uHazeSun.value.copy(u.uHaze.value).multiplyScalar(TUNE.hazeSunBoost);
   }
 
   _refreshShadowColor() {
@@ -830,6 +903,10 @@ export class Shading {
         if (typeof fog.density === 'number') {
           this.uniforms.uHazeDensity.value = Math.max(fog.density * 2.6, 0.004);
         }
+        /* This is the ONLY path that keeps uHaze current in the shipped game — setAtmosphere()
+           has no caller anywhere in src/ — so it is also the only place uHazeSun can be kept
+           in step with it. */
+        this._refreshHazeSun();
       }
     }
 
@@ -915,6 +992,7 @@ export class Shading {
     if (!this._fogSynced) {
       u.uHaze.value.copy(_colOf(PAL.haze)).lerp(_colOf(PAL.hazeNight), night);
       u.uHazeGain.value = TUNE.hazeGain * (day ? 1 : 0.7);
+      this._refreshHazeSun();
     }
     this._refreshShadowColor();
   }

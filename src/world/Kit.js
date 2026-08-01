@@ -323,6 +323,9 @@ export function masonryShell(o) {
     blockLen = [1.15, 2.0], recess = 0.055, chip = 0.16, chipChance = 0.18,
     gapChance = 0.04, buried = 0, openings = [], quoin = true, courseJitter = 0.018,
     tiltDeg = 0.3, hollow = true, chamfer = 0, skipFaces = null,
+    /* Diagnostics only. Pass an array and every emitted block's face/course/span is recorded,
+       which is how reveal straightness gets debugged without guessing. Inert when null. */
+    _spans = null,
     sag = 0, windFace = null, windK = 2.0, bow = 0, drift = 0,
   } = o;
 
@@ -558,6 +561,7 @@ export function masonryShell(o) {
         bl = s1 - s0;
         if (bl < 0.16) continue;
         const ac = (s0 + s1) * 0.5;
+        if (_spans) _spans.push({ f: face.f, c, s0, s1, jamb, len: face.len, oScale });
 
         // Mortar recess: pull most blocks back from the face plane so shadow catches the joint.
         const rec = rng ? rng.range(0.2, 1.0) * recess : recess * 0.6;
