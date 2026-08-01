@@ -20,8 +20,27 @@
  * passes here can still be a bad frame; a shot that fails here cannot be a good one.
  */
 import * as THREE from 'three';
+import { execFileSync } from 'node:child_process';
 import { buildLevel, trisIn, rayTri } from './lvl.mjs';
 import { SHOTS } from '../src/core/Shots.js';
+
+/* Provenance. This tool loads `src/player/**` and `src/world/**`, so its numbers describe the
+   tree at the moment it ran and nothing more. Between two runs an hour apart, `sly-closeup`
+   moved 99.6% -> 100% with nothing in this tool or in `Shots.js` touched — another agent had
+   edited `Clips.js`, and `idle_confident` is that shot's pose. A figure from this tool without
+   a commit beside it has been measured against a tree that may no longer exist, which has
+   already cost one retracted finding in this project. */
+const provenance = (() => {
+  try {
+    const sha = execFileSync('git', ['rev-parse', '--short', 'HEAD'], { encoding: 'utf8' }).trim();
+    /* Do NOT trim the whole blob before splitting: porcelain lines start with a two-column
+       status field, so the leading space of the first line is significant and trimming it
+       shifts that one path left by one character. It printed `rc/player/Cane.js`. */
+    const dirty = execFileSync('git', ['status', '--porcelain', '--', 'src/'], { encoding: 'utf8' })
+      .split('\n').filter((l) => l.length > 3).map((l) => l.slice(3).trim());
+    return { sha, dirty };
+  } catch { return { sha: '(no git)', dirty: [] }; }
+})();
 
 /* Sample budget per shot. Rays are the cost, and the answer saturates fast: at 480 points on a
    1.7 m figure the samples are ~4 cm apart, well below any occluder edge that matters. */
@@ -131,6 +150,9 @@ async function guardSubject(shot, cam, fwd) {
 }
 
 const names = process.argv.slice(2).length ? process.argv.slice(2) : Object.keys(SHOTS);
+console.log(`tree ${provenance.sha}${provenance.dirty.length
+  ? ` + UNCOMMITTED: ${provenance.dirty.join(' ')}\n     ^ another agent is mid-edit; these numbers describe a tree that may not survive`
+  : ' (clean)'}`);
 console.log(`shot          samples  visible   nearest blocker (by ray count)   [contact tolerance ${EPS} m]`);
 
 for (const name of names) {
