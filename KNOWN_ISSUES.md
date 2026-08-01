@@ -1087,3 +1087,33 @@ attached and mortal.
 different plausible story per failure — this one died at a handover, that one at an hour, the
 other while its owner slept. The tell was two lifetimes agreeing to within two seconds. When
 failures start rhyming numerically, stop explaining them individually.
+
+## 15. `Lighting._rebuildForQuality()` corrupted every patched material on its second call — **fixed**; fx6 jobs 8–11 frames are invalid
+
+The CSM patch (`Lighting.enableCascades`) wraps a material's `onBeforeCompile` and injects
+the cascade GLSL. `_rebuildForQuality()` used to end with `this._patched.clear()` so the
+material sweep would re-adopt everything with the new closure state — but the wrap itself
+was still on the material, so the sweep wrapped the wrap. Both layers injected on the next
+compile (forced, because the cache key doubled to `csm4|csm4|`), the duplicated definitions
+failed to compile, and every patched mesh stopped rendering — while `renderer.info` kept
+counting its draws exactly as before. Symptom pattern: world geometry vanishes, toon-shaded
+characters survive as unlit ink-shell silhouettes, draw/tri stats look completely normal.
+Trigger: any second cascade rebuild in a session (`engine.on('quality')` fires one per
+quality change), plus up to 20 frames of sweep latency.
+
+Consequences for captured evidence:
+- **`shots/fx6/`: `hero.back`, `interior.full`, `guard.full`, `dunes.full` are corrupted**
+  (all captured after the second rebuild of that boot). Do not use them as visual baselines.
+  `temple.*`, `night.*`, `hero.full`, `hero.dist420` predate the corruption and are valid —
+  the temple control was bit-identical, and both cascade A/B frames are coherent.
+- Their **stats** rows appear breakage-invariant (hero.back counted 402 draws / 2.725M tris,
+  identical to hero.full) but carry that asterisk.
+
+Fix (in `src/render/Lighting.js`): the `csmSplits`/`csmFade` uniform objects are now
+identity-stable for the life of the module (values mutated in place on rebuild), the wrap
+reads live cascade state instead of capturing it, and `_patched` is never cleared — a
+material is wrapped once, ever. Count changes still relink through the live cache key.
+Side fix: reused programs previously kept stale split VALUES after a rebuild (fx6
+`hero.dist420` selected cascades with boot-era splits); in-place mutation closes that too.
+Verification pre-registered in `PREREG-fx7.md` (scratchpad): rebuild 420 → sweep → rebuild
+160 → sweep on one boot must reproduce `hero.full` bit-identically.
