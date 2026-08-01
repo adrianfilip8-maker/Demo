@@ -15,3 +15,8 @@ dist/
 shots/*/
 !shots/pass1/
 !shots/pass2/
+
+# Detached capture runs write pid files next to their logs; a compound `cd && nohup … &`
+# backgrounds the whole list, so the trailing `echo $! > run.pid` runs back in the repo
+# root — twice now. Runtime state, never source.
+*.pid
