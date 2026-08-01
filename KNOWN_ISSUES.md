@@ -274,3 +274,40 @@ Still open on the character, honestly scored by the agent that did the work:
 - **Fur improved, not proven at close range.** Arms and legs are still fairly smooth tubes.
 - `combat` is still blown to near-white. The pose under it is fixed; the exposure is not the
   character's to fix.
+
+---
+
+## 10. Backfacing geometry — one instance fixed, two larger ones still open
+
+`Kit.sweep()` wound its triangles `a,c,b`, giving inward normals against `FrontSide` materials,
+so **every cornice in the level was backface-culled** — the cavetto-and-torus crown that is the
+one silhouette reading as Egyptian at distance had never appeared in a frame. Fixed.
+
+The reason it survived three critic passes and many GPU cycles is worth more than the fix:
+**a culled cornice does not look broken, it looks like a plain box.** Nothing in the image says
+"geometry is missing here"; the design just reads as duller. It was found by an offline
+z-buffered rasteriser that paints backfaces magenta (`tools/raster.mjs`, ~3 s, no capture lock)
+after the ordinary review process had missed it repeatedly.
+
+**Two larger instances are still open**, found by running that tool across all ten shots rather
+than the three it was first pointed at:
+
+| shot | backface px | share of frame | worst offender |
+|---|---|---|---|
+| `traversal` | **64,715** | **18.4%** | `arch:court:sandstone_block` |
+| `combat` | **16,849** | **4.9%** | `arch:court:bronze_dark` |
+| `hero` | 3,351 | 0.9% | `arch:court:sandstone_block` |
+
+Evidence frames are committed at `progress/frames/geo-traversal.png` and `geo-combat.png`
+(backfaces in magenta) because `shots/**` is gitignored and this container has rewound five
+times. In both, a large smooth surface is being seen from its inside.
+
+**A caveat before anyone acts on the numbers.** The two tools disagree and I have not resolved
+why. `tools/backface.mjs` casts a 96×54 ray grid and classifies *first hits*; it reports
+`traversal` at 4.6% and `combat` at **0.2%, with no `bronze_dark` at all**. `tools/raster.mjs`
+rasterises every pixel. A sparse ray grid can miss a few large triangles, which would explain
+`traversal`; it does not obviously explain `combat`. Note also that `bronze_dark` is in
+`HULL_OUTLINE`, and an inverted-hull shell is backfacing *by design* — if the offline rasteriser
+builds those shells, its `combat` figure is a false positive. **Check that before chasing it.**
+`traversal`'s offender is `sandstone_block`, which takes no hull outline, so that one is real
+whatever the answer.
