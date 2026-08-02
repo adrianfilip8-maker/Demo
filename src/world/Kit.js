@@ -1113,7 +1113,7 @@ export function papyrusColumn(o = {}) {
   const {
     hShaft = 13.2, rBase = 1.9, rTop = 1.4, capH = 2.4, abacus = 0.62,
     lobes = 8, rib = 0.075, rng, bandCount = 4, shaftSegs = 4, belly = 1.92, neck = 0.80,
-    abacusK = 3.68, lean = 0, leanZ = 0, campaniform = false, abacusOver = 0.20,
+    abacusK = 3.68, lean = 0, leanZ = 0, campaniform = false, abacusOver = 0.20, spin = 0,
   } = o;
   // Enough radial samples to resolve the ribs, rounded up to a multiple of the lobe count so
   // every stem is identical and the seam at a=0 lands on a crest.
@@ -1212,7 +1212,19 @@ export function papyrusColumn(o = {}) {
     // stays planted on its plinth while the capital moves.
     const dx = lean * py, dz = leanZ * py;
     for (let j = 0; j <= seg; j++) {
-      const a = (j / seg) * Math.PI * 2;
+      /* `spin` turns the rib phase, NOT the column.
+       *
+       * The shaft is a surface of revolution, so the only observable of rotating it about Y is
+       * where the flutes land — but callers were buying that variety by rotating the whole
+       * merged column with `place({ ry })`, and that also spins the *square abacus*. A plate of
+       * half-width 2.30 m turned 45° reaches 3.25 m from the axis instead of 2.30, and at
+       * x = ±8 in the nave the clerestory wall's inner face is 2.64 m away: measured in the
+       * built level, capital corners stood 0.56–0.61 m through that wall, and had done since
+       * before the capital was retuned. Spinning the phase here gets the same rib variety with
+       * the abacus left square to the building — which is also the correct reading, since the
+       * architrave lands on it. U is offset with the phase so the painted flutes stay welded to
+       * the carved ones exactly as they did when the geometry itself was turned. */
+      const a = (j / seg) * Math.PI * 2 + spin;
       const lobe = 1 + rib * rs * Math.cos(a * lobes);
       const r = pr * lobe;
       verts.push(Math.cos(a) * r + dx, py, Math.sin(a) * r + dz);

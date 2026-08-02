@@ -979,8 +979,9 @@ function hypostyleHall(A) {
     const col = K.papyrusColumn({
       hShaft: hSh, rBase: 1.9, rTop: 1.25, capH: 2.4 + R.jitter(0.12), abacus: 0.62,
       rng: R, bandCount: 4, belly: 1.74 * (1 + R.jitter(0.03)), lean, leanZ,
+      spin: D(R.range(0, 45)),
     });
-    A.add('hall', 'column_papyrus', K.place(col.geo, { x: cx, y: 0.35, z: cz, ry: D(R.range(0, 45)) }));
+    A.add('hall', 'column_papyrus', K.place(col.geo, { x: cx, y: 0.35, z: cz }));
     vol(A, 'hall', 'sandstone_block', cx - 2.35, cx + 2.35, 0, 0.42, cz - 2.35, cz + 2.35, { jitter: 0.02, chip: 0.12 });
     poleProxy(A, cx, cz, 0.42, 12.6, 1.62);
     colProxies.push([cx, cz, col.height + 0.35]);
@@ -1002,9 +1003,9 @@ function hypostyleHall(A) {
     const col = K.papyrusColumn({
       hShaft: 9.5 + R.jitter(0.2), rBase: 1.62, rTop: 1.07, capH: 1.9, abacus: 0.55,
       rng: R, bandCount: 3, seg: 32, belly: 1.74 * (1 + R.jitter(0.04)), lean, leanZ,
-      campaniform: true, abacusOver: 0.17,
+      campaniform: true, abacusOver: 0.17, spin: D(R.range(0, 45)),
     });
-    A.add('hall', 'column_papyrus', K.place(col.geo, { x: cx, y: 0.34, z: cz, ry: D(R.range(0, 45)) }));
+    A.add('hall', 'column_papyrus', K.place(col.geo, { x: cx, y: 0.34, z: cz }));
     vol(A, 'hall', 'sandstone_block', cx - 2.0, cx + 2.0, 0, 0.4, cz - 2.0, cz + 2.0, { jitter: 0.02 });
     poleProxy(A, cx, cz, 0.4, 12.3, 1.38);
     const abY = col.capTop + 0.275, ox = lean * abY, oz = leanZ * abY;

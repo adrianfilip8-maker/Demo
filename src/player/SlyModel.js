@@ -1069,6 +1069,7 @@ export class SlyModel {
       [1.00, { tailD: 1 }],
     ];
     this._tailRamp = RAMP;
+    this._tailBands = BANDS;
     this._tailSpine = spine;
     this._tailRadius = radius;
     this._tailIsDark = isDark;
@@ -2868,7 +2869,7 @@ export class SlyModel {
      * criterion (5–7), not a density, and a global multiplier is how it would drift back. */
     const LOBE_ROLLS = [-0.62, 0.30];
     let lobeN = 0;
-    for (const [ba, bb] of BANDS) {
+    for (const [ba, bb] of this._tailBands) {
       const tc = Math.min(0.955, (ba + bb) / 2);
       const i = Math.round(tc * (n - 1));
       if (i < 2 || i > n - 3) continue;
@@ -2890,7 +2891,7 @@ export class SlyModel {
         width: 0.082 * TUNE.tailGirth * (0.88 + 0.24 * hash(lobeN, 29)),
         bend: 0.40, bendDir: outward.clone(),
         // Coloured by its own band — a lobe centred in the band cannot cross into its neighbour.
-        group: isDark(t) ? 'furDark' : 'furCream',
+        group: this._tailIsDark(t) ? 'furDark' : 'furCream',
         weights: ramp(t, this._tailRamp),
       });
     }

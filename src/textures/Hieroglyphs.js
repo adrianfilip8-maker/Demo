@@ -509,14 +509,14 @@ export const GLYPHS = {
 
   /* --- N1 sky, "pt" — a flat lintel with two short drops. The one flat sign whose silhouette
    *     is concave, which is why it survives minification as something other than a bar. --- */
-  sky: G(1.05, 0.30, PAL.lapis, (c) => {
+  sky: G(1.05, 0.26, PAL.lapis, (c) => {
     rect(c, 0.02, 0.02, 1.01, 0.12);
     rect(c, 0.02, 0.10, 0.10, 0.19);
     rect(c, 0.93, 0.10, 0.10, 0.19);
   }),
 
   /* --- N25 hill country, "khaset" — three humps. Reads as a scallop at any size. --- */
-  hills: G(0.94, 0.36, PAL.ochre, (c) => {
+  hills: G(0.94, 0.32, PAL.ochre, (c) => {
     for (let i = 0; i < 3; i++) {
       const x = 0.10 + i * 0.32, h = i === 1 ? 0.34 : 0.26;
       c.beginPath();
@@ -528,7 +528,7 @@ export const GLYPHS = {
 
   /* --- V9 shen ring — a closed ring on a bar. Round, and the only outlined void in the flat
    *     set, so at distance it holds a hole where every other flat sign holds a solid. --- */
-  shen: G(0.52, 0.50, PAL.turquoise, (c) => {
+  shen: G(0.52, 0.44, PAL.turquoise, (c) => {
     c.save();
     c.beginPath();
     c.ellipse(0.26, 0.22, 0.24, 0.20, 0, 0, TAU);
@@ -539,7 +539,7 @@ export const GLYPHS = {
   }, (c) => { line(c, [[0.12, 0.22], [0.40, 0.22]], 0.02); }),
 
   /* --- R4 hetep, offering loaf on a mat, "htp" — a stepped profile: low mat, high loaf. --- */
-  hetep: G(0.86, 0.40, PAL.white, (c) => {
+  hetep: G(0.86, 0.34, PAL.white, (c) => {
     rect(c, 0.02, 0.26, 0.82, 0.13);
     c.beginPath();
     c.moveTo(0.22, 0.27);
@@ -548,21 +548,21 @@ export const GLYPHS = {
   }),
 
   /* --- Q3 stool, "p" — a square. The flat set had no orthogonal silhouette at all. --- */
-  stool: G(0.52, 0.46, PAL.malachite, (c) => {
+  stool: G(0.52, 0.42, PAL.malachite, (c) => {
     rect(c, 0.04, 0.03, 0.44, 0.30);
     rect(c, 0.04, 0.31, 0.16, 0.14);
   }),
 
   /* --- N16 land with grains, "ta" — a bar, but a bar with three dots under it, which is a
    *     different mark from a plain bar once the bar itself has blurred. --- */
-  land: G(0.98, 0.30, PAL.ochre, (c) => {
+  land: G(0.98, 0.26, PAL.ochre, (c) => {
     rect(c, 0.02, 0.03, 0.94, 0.13);
     for (let i = 0; i < 3; i++) circ(c, 0.22 + i * 0.27, 0.23, 0.055);
   }),
 
   /* --- W24 pot, "nw" — a round-bottomed bowl. Round, and taller than it is wide at the rim,
    *     so it breaks the 3:1 aspect the whole flat class shared. --- */
-  pot: G(0.50, 0.48, PAL.carnelian, (c) => {
+  pot: G(0.50, 0.42, PAL.carnelian, (c) => {
     c.beginPath();
     c.moveTo(0.04, 0.12);
     c.bezierCurveTo(0.02, 0.48, 0.46, 0.48, 0.44, 0.12);
@@ -601,12 +601,23 @@ export const GLYPH_NAMES = Object.keys(GLYPHS);
  * in the interior shot. Four of the five additions to each pool are ochre / red / white and one
  * is cool, which is both what a real wall looks like and what keeps `b-r` still.
  */
+/**
+ * **Deduplicated by silhouette, not by name.** The flat half of each pool below used to hold four
+ * or five members of one shape family — `neb`, `basket` and `bread` are all a filled arc; `mouth`,
+ * `eye` and `scroll` are all a flat lozenge — so even with a perfectly uniform draw over sign
+ * *names* the field came out uniform over *outlines*. Each pool now keeps at most one arc and one
+ * lozenge and takes its remaining flats from the shape-distinct set added above (`sky`, `hills`,
+ * `land`, `hetep`, `shen`, `stool`, `pot`). Every branch of `quadrat` still has ≥5 candidates in
+ * every pool, which is the property `pick()`'s fallback note asks for; that is asserted by
+ * `tools/census.mjs` rather than believed.
+ */
 export const POOLS = {
   royal: ['sedge', 'bee', 'sun', 'ankh', 'was', 'djed', 'netjer', 'nefer', 'neb', 'falcon', 'cobra', 'star',
-    'bread', 'mouth', 'scroll', 'arm', 'water'],
-  offering: ['bread', 'water', 'mouth', 'basket', 'hand', 'arm', 'cone', 'pool', 'ka', 'scroll', 'strokes', 'neb'],
+    'mouth', 'scroll', 'arm', 'water', 'sky', 'shen', 'hetep', 'land', 'stool'],
+  offering: ['bread', 'water', 'mouth', 'hand', 'arm', 'cone', 'pool', 'ka', 'strokes',
+    'hetep', 'pot', 'stool', 'land', 'hills'],
   divine: ['falcon', 'jackal', 'scarab', 'wedjat', 'feather', 'lotus', 'papyrus', 'ankh', 'was', 'djed', 'netjer', 'sun',
-    'neb', 'bread', 'mouth', 'scroll', 'water'],
+    'neb', 'mouth', 'water', 'sky', 'shen', 'hills', 'stool', 'pot'],
   common: GLYPH_NAMES,
 };
 
