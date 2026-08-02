@@ -320,7 +320,13 @@ Recorded so they are not re-derived:
   (planarlo ran −1.7 pts against a required +1.5 and was declined). Still open from that
   sweep: `hero`'s 1,692 px kerb band (§24.3, gates pass it correctly, not fixable from the
   gate knobs) and `combat`'s additive-model anomaly (§24.4, flagged before quoting any
-  `combat` rim number).
+  `combat` rim number). **Re-measured on the current tree 2026-08-02** (§32; rim1's retention
+  column predates `rimSkinExempt` and is void): edge-ring retention passes on `temple` (+4.95)
+  and `interior` (+4.77); `courtyard`/`combat` are strong but want a post-skinfix refresh;
+  `traversal`'s negative mean is a bright-against-paving framing, not a regression. **`night`
+  is the one genuinely weak shot** — +1.69 and negative inward, a dark figure on a dark parapet
+  — and it now has its own sealed A/B with a falsifier that kills the lever if the gain does
+  not survive the tonemap.
 - **Stone mean albedo is 4–5% darker family-wide** (granite −13%) since the grime film landed.
   If LIGHTING wants it back, the lever is `ashlar`'s `tone`, not the grime.
 - **The paving UV fix is measured-correct and visually unverified.** `Kit.pavingField` replaced
@@ -2353,3 +2359,43 @@ refreshes on an eighth of all frames is paying a real steady-state bill, not a l
 every saving ever quoted for it assumed a near-zero refresh rate on a static camera. §19's
 figures are struck accordingly. **A performance number inherits every assumption of the run that
 produced it, and "nothing changed, so nothing refreshed" is an assumption, not an observation.**
+
+---
+
+## 32. A source comment became a premise, generated a prereg, and was false
+
+`PREREG-rimstarve` existed because of one sentence in `ToonMaterial.js`: that on `temple` and
+`interior` *"the screen-space rim's depth-ratio gate is shut as well and nothing is left to
+carry it."* The seal registered **S ≥ 0.16 on either shot as outright refutation**. Measured
+headless against ray-cast geometry along the taps the shader actually samples, `temple` reads
+**0.418** and `interior` **0.441** — refuted by 8×, with 94–96% of the subject's rim band open
+and 81–89% *fully* open. The gate was never shut. `rimSubjExempt` not reaching Gate A — the
+prereg's load-bearing structural finding — is true and load-bearing on nothing.
+
+The comment has been corrected in source, which is where a false premise has to be killed: a
+prose sentence in a shipped file is not a note, it is a **premise that the next reader will
+build on**, and this one spawned an entire sealed investigation. It also explains an old null
+that had been filed as a puzzle — if a gate costs the character 0–6% everywhere but `night`,
+then a ±0.4 L result from toggling it is the arithmetic answer, not an anomaly.
+
+Three discipline points from the same run, all of which made the refutation trustworthy:
+
+- **The instrument was proved on a constructed known before any scene number was read**: with
+  the level removed every tap is sky, so S must be exactly `FAR/z0 − 1`; it returned 313.5,
+  implying z0 = 12.72 m against an independently frozen 12.54–12.94.
+- **A wrong mask was caught and discarded rather than used.** Hiding the character to build a
+  subject mask also removes his cast shadow, producing a 16%-of-frame "silhouette" for a 193 px
+  figure. The replacement was overlay-verified against cap, ear, tail rings and legs.
+- **A known gap in the instrument was checked for its direction, not just noted.** `Terrain`
+  cannot build headless, so it is missing from the depth set — which biases the gate *open*,
+  i.e. toward the refutation. A gap that pushes toward your own conclusion has to be declared
+  as such; here it means the refutation cannot have been manufactured by it, and that a future
+  PASS on this instrument would need re-reading.
+
+**And a correction to that report, made by checking rather than accepting.** It stated that
+`shots/rim1/`'s analysis "was never carried into §8, which still lists all six as unverified".
+§8 does not: that bullet was struck and closed with its numbers at `7b0e3f8`. The report was
+right that rim1's *retention* column is stale — it predates `rimSkinExempt: 1.0` and describes
+a tree that no longer exists — but wrong that the ledger had missed the work. Agent reports get
+the same freshness check as everything else (§27.4), including reports that are otherwise
+excellent, and including when the claim is that *I* have been sloppy.
