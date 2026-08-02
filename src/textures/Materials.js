@@ -2185,6 +2185,53 @@ export const MATERIALS = {
         return smoothstep(0.70, 1.0, Math.abs(p * 2 - 1));
       });
       const stone = s.field(2, (u, v) => warpN(u, v, 12, 5, 1.0, cx.seed) * 0.5 + 0.5);
+      /* ---- Quarry mottle: the coverage term, not another amplitude term. ------------------
+       *
+       * Measured per material *in real frames* rather than on the tile: rasterise the level
+       * offline with each shot's own camera, key every pixel by material, erode 3 px to drop
+       * silhouettes and ink, and count the share of a material's pixels whose 1.6 px band-pass
+       * contrast clears 1 % of the local base. Coverage, not RMS — "reads as flat vertex colour"
+       * is a statement about how much of a surface carries *anything*, and a mean cannot see it.
+       * At equal local luma in `temple` (so the tone curve is held fixed, see below) this recipe
+       * delivered **71 %** against `hieroglyph_wall`'s **86 %** and `paving_courtyard`'s 94 % —
+       * the lowest in the frame while being 54 % of it, which is the same verdict the two notes
+       * below reached, still standing after the drum courses and the ringing registers.
+       *
+       * On the built albedo resampled to each framing's own mm/px the gap is wider —
+       * **45.2 % against the wall's 81.1 %** — so it is an authoring gap and not a lighting one.
+       * Its shape is the point: the shaft's energy is either low-frequency (`stone`, a 12-cycle
+       * 5-octave warp = 83 cm) or at features an eye counts (drum joints, two registers, the
+       * stalk grooves). Between them sits bare ground whose only content is `grain` at ±2 %,
+       * i.e. sitting *on* the 1 % line rather than clear of it. One 17 cm mottle at ±0.45 of the
+       * ramp coordinate — no new landmark, no new axis — takes the same measurement to
+       * **67.2 %** (`traversal` 73.0 → 80.0, `hero` 77.9 → 82.5).
+       *
+       * **Both §7.3 conditions are checked, because this recipe's history is fixing one by
+       * breaking the other.** Squint sd of the screen-scale view moves 0.0512 → 0.0516 at 1/8
+       * and 0.0285 → 0.0284 at 1/32; for scale, the ashlar state that failed as blotching
+       * (VARIATION 1.00) moves the equivalent number +49 %. Mean albedo 0.5244 → 0.5237, so
+       * nothing is relit; `darkTail` stays 0.0000; and `hieroglyph_wall`, which this does not
+       * touch, is bit-identical across the change.
+       *
+       * **Three alternatives were built and rejected, two of them on the image after they had
+       * already passed on the numbers.** Horizontal bedding laminations scored best of all
+       * (cov1 75.7 %) and read unmistakably as **wood grain** at 4x — long unbroken parallel
+       * figure is what timber looks like, and breaking them up only softened it. Raising
+       * `chiselMarks`' `pale` so the existing gouges show in albedo scored well at `temple` and
+       * *nothing* at `traversal`/`hero` (the gouges are 15 cm and minify away), and its 1.35 rad
+       * angle is 77° from u — near-vertical, which is the streaking this recipe has failed on
+       * twice. Raising `grain` is the noise answer the record already rejected; it is included in
+       * `scratchpad/dressexp.mjs` as the comparison rather than as a candidate.
+       *
+       * **Sized against the framings.** 10.0 m of arc per repeat, so the base is 16.7 cm and the
+       * upper octave 8.3 cm: 9.4 px and 4.7 px at `temple`'s 17.8 mm/px, 2.0 px and 1.0 px at
+       * `courtyard`'s 63 m. The upper octave therefore mips away at courtyard distance and the
+       * base still resolves — deliberate, and the reason the amplitude is low enough that losing
+       * it cannot clip anything (cf. `sand_ripples`, where a 3.7x over-slope clipped the lit
+       * flank). `field(1)`, not `field(2)`: `field` samples at `size/div`, so 2 octaves off a
+       * 60-cycle base against 256 samples would put the upper octave under Nyquist and the
+       * "mottle" would be the sampler aliasing. At 1024 it is 8.5 samples per cycle. */
+      const mottle = s.field(1, (u, v) => warpN(u, v, 60, 2, 1.0, cx.seed + 217) * 0.5 + 0.5);
 
       /* ---- Drum courses. -----------------------------------------------------------------
        *
@@ -2487,7 +2534,8 @@ export const MATERIALS = {
          * what is left is a shallow trough that deepens the mesh's own valley rather than a
          * painted stripe that sits wherever the two happen to disagree. */
         s.h[i] = 0.42 + cross[i] * 0.22 - groove[i] * 0.11 + (stone[i] - 0.5) * 0.07;
-        const t = sat(0.42 + (stone[i] - 0.5) * 0.60 + cross[i] * 0.05 + (drumT[i] - 0.5) * 0.18);
+        const t = sat(0.42 + (stone[i] - 0.5) * 0.60 + cross[i] * 0.05 + (drumT[i] - 0.5) * 0.18
+          + (mottle[i] - 0.5) * 0.45);
         const col = ramp3(PAL.sandDark, PAL.sandMid, PAL.sandLight, t);
         s.r[i] = col[0]; s.g[i] = col[1]; s.b[i] = col[2];
         s.rough[i] = 0.84;

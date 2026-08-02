@@ -5577,3 +5577,70 @@ cap-share breakdown are published nowhere else.
 > definition is only half. The other half is finding every tool that still emits a rival number and
 > either retiring it or labelling it, because the one that reads as a **pass** is the one that will
 > be quoted.
+
+
+---
+
+## §67 — coverage is not amplitude, and two candidates that passed on the numbers were killed by the image
+
+TEXTURES on §7.3's "flat vertex colour" condition, which it had previously declined to touch because
+the obvious lever — more albedo variance — is what produced the blotching regression. It found a
+different lever and verified it against **both** conditions, because *this recipe's history is
+fixing one by breaking the other.*
+
+### 67.1 The statistic is coverage, and a mean cannot see the defect
+
+Measured in **real frames** rather than on the tile: rasterise the level offline with each shot's
+own camera, key every pixel by material, erode 3 px to drop silhouettes and ink, and count the share
+of a material's pixels whose 1.6 px band-pass contrast clears 1% of local base.
+
+> **Coverage, not RMS.** *"Reads as flat vertex colour"* is a claim about how much of a surface
+> carries **anything**, and an average over the surface cannot express it — a few strong features
+> and a large dead area produce the same mean as uniform mild texture.
+
+The column shaft measured **71%** against `hieroglyph_wall`'s 86% and `paving_courtyard`'s 94% —
+lowest in frame while occupying 54% of it. On the built albedo resampled to each framing's own
+mm/px the gap is wider, **45.2% against 81.1%**, which places it as an **authoring** gap rather than
+a lighting one.
+
+The *shape* of the deficit is the diagnosis: the shaft's energy is either low-frequency (an 83 cm
+warp) or at features an eye counts (drum joints, registers, stalk grooves). **Between them sits bare
+ground whose only content sits *on* the 1% line rather than clear of it.** One 17 cm mottle at ±0.45
+of the ramp coordinate — no new landmark, no new axis — takes it to **67.2%** (`traversal`
+73.0 → 80.0, `hero` 77.9 → 82.5).
+
+### 67.2 Two alternatives passed on the numbers and were killed by looking
+
+- **Horizontal bedding laminations scored best of all** (coverage 75.7%) and read unmistakably as
+  **wood grain** at 4×. Long unbroken parallel figure is what timber looks like, and breaking them
+  up only softened it.
+- **Raising the existing chisel gouges into albedo** scored well at `temple` and **nothing** at
+  `traversal`/`hero` — the gouges are 15 cm and minify away — and its 1.35 rad angle is 77° from u,
+  i.e. near-vertical, *the streaking this recipe has failed on twice already.*
+- Raising the base grain is the noise answer the record already rejected; it is kept in the
+  experiment as the **comparison**, not as a candidate.
+
+**The winner was not the highest-scoring candidate.** A metric that ranks wood grain first is
+telling you something true about contrast and nothing about material identity, and the only way to
+find that out was to render it and look.
+
+### 67.3 The parameter choice is a sampling argument, and getting it wrong would have made the feature *be* aliasing
+
+`field(1)`, not `field(2)`. `field` samples at `size/div`, so two octaves off a 60-cycle base
+against 256 samples would put the upper octave **under Nyquist** — and the "mottle" would have been
+the sampler aliasing rather than the texture. At 1024 it is 8.5 samples per cycle.
+
+Sized against the framings too: 16.7 cm base and 8.3 cm upper octave give 9.4 px and 4.7 px at
+`temple`, 2.0 px and 1.0 px at `courtyard`. **The upper octave mips away at courtyard distance by
+design**, and the amplitude is deliberately low enough that losing it cannot clip — the failure mode
+recorded for `sand_ripples`, where a 3.7× over-slope clipped the lit flank.
+
+### 67.4 The regression guard is the other §7.3 condition, and it is quantified
+
+Squint standard deviation of the screen-scale view moves **0.0512 → 0.0516** at 1/8 and
+**0.0285 → 0.0284** at 1/32. For scale: **the ashlar state that failed as blotching moves the
+equivalent number +49%.** Mean albedo 0.5244 → 0.5237, so nothing is relit; `darkTail` holds at
+0.0000; and `hieroglyph_wall`, which the change does not touch, is **bit-identical** across it.
+
+Checking the condition you are *not* trying to fix, with a numeric scale for what failure looked
+like last time, is what makes "no regression" a measurement instead of a hope.
