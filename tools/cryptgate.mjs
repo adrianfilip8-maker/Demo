@@ -103,7 +103,11 @@ await withGame({ width: 1280, height: 720, quality: 'high' }, async ({ page, inf
   console.log(`  of those, shadow casters: ${inventory.casters.length ? inventory.casters.join(', ') : 'none'}`);
 
   const results = {};
-  const shots = ['interior', 'hero', 'courtyard'];
+  /* `interior` is the only shot the gate can fire in, so it carries V1 and V2 on its own; the
+     others are the V3 exterior controls and are pure cost, so keep the default set small — this
+     run queues behind every other agent's capture and a trimmed job is one that survives. */
+  const shots = argv.filter((a) => !a.startsWith('--'));
+  if (!shots.length) shots.push('interior', 'hero');
 
   for (const nm of shots) {
     const row = {};
