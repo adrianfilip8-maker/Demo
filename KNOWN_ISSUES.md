@@ -1997,6 +1997,18 @@ runs. And when a seal's assumed ordering is broken by the queue, say which order
 happened; a verification's authority comes from its bands, but its *honesty* comes from the
 record matching what was really done.
 
+**26.4 The acceptance set omitted the shot the fix breaks.** The task-16 seal registered its
+tint→turquoise arm on `night` and `day` and never evaluated `interior`. Modelled afterwards, the
+sealed arm drives `interior`'s shadows to hue **345 (magenta)** and then **69 (olive)** with
+saturation collapsing to 0.039–0.067 — violating §2.2 in both directions, on a shot the seal's
+own run order never renders. Only the smallest candidate (`turq 0.10 + mix 0.05`) survives all
+three. A seal that ships a global lever must evaluate it on every shot the lever can reach, and
+**the run order is part of the seal**: if a shot is not in the capture list, its verdict is not
+"fine", it is "unmeasured". The same addendum recorded a second limit worth carrying — the ≤226
+acceptance is **not offline-decidable**, because the seal's own validated model→frame offsets are
+8–24° while the decision margin is 0–20°. That is §11 exactly: the correction you are skipping is
+the size of the effect you are deciding. No model hue was quoted against the ledger.
+
 ---
 
 ## 27. A verdict that nearly went wrong three ways, and one verdict that cannot exist
