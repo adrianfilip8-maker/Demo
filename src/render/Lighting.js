@@ -1413,6 +1413,17 @@ export class Lighting {
          always contributes at least the +11, so any flip in either direction moves `sig`. */
       if (!vis) continue;
       const e = m.matrixWorld.elements;
+      /* KNOWN GAP, recorded deliberately rather than fixed (ledger #20, coordinator
+         concurred). This fingerprint covers a static's TRANSFORM, visibility, castShadow,
+         material side and instance matrices — it does NOT cover its GEOMETRY. A mesh that
+         keeps its transform while its position buffer is rewritten in place (morphing,
+         a rebuilt BufferGeometry assigned to a live mesh, an edited instance layout that
+         does not bump instanceMatrix.version) hashes identically and keeps a stale shadow.
+         Latent today because the world builds its statics once at init and never touches
+         them afterwards — which is exactly the condition that makes it cheap to record and
+         expensive to discover later, as a shadow map nobody can explain. If a static ever
+         becomes geometry-dynamic, hash `geometry.uuid` plus the position attribute's
+         `version` here, or call `invalidateShadowCache()` from whatever rewrote it. */
       sig += e[12] * 3.1 + e[13] * 5.7 + e[14] * 7.3 + e[0] + e[5] + e[10]
            + 11 + (m.castShadow ? 17 : 0) + (m.material?.side ?? 0) * 23
            + (m.isInstancedMesh ? m.instanceMatrix.version * 29 : 0);

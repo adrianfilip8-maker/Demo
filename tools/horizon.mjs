@@ -192,21 +192,43 @@ if (argv.includes('--profile')) {
    "through the wall", which is. */
 const RUN = { z0: -15.5, z1: 33.5, step: 0.25 };
 const SKY = { 'temenos W': wallProfile(-25.6, RUN.z0, RUN.z1, RUN.step), 'temenos E': wallProfile(25.6, RUN.z0, RUN.z1, RUN.step) };
+/* Local top and local roughness. The top of this wall is not a line: every block is jittered,
+   chamfered and mortar-recessed, and the plan steps between segments, so the honest statement
+   about "the top at z" is a height plus a tolerance. ±1 m of neighbourhood covers both the
+   jitter and a profile step landing between samples. */
+/* The wall top at the crossing's OWN z, probed on demand rather than looked up in the 0.25 m
+   grid. The grid was the last source of misclassification: the breach edge is a hard step from
+   12.5 m to 0, its z is jittered, and any nearest-sample lookup charges rays on the open side
+   of that step to the solid side of it. Memoised at centimetre resolution — there are only a
+   few hundred distinct crossings per shot, so exactness is affordable here. */
+const TOPMEMO = new Map();
 function wallTopAt(side, z) {
-  const rows = SKY[side]; if (!rows) return null;
   if (z < RUN.z0 || z > RUN.z1) return null;          // past the end of the run
-  const i = Math.min(rows.length - 1, Math.max(0, Math.round((z - RUN.z0) / RUN.step)));
-  /* Take the tallest of the three nearest samples: the wall is jittered and chamfered, and a
-     single sample can land in a mortar recess and under-report the top by a few cm. */
-  let top = 0;
-  for (let k = Math.max(0, i - 1); k <= Math.min(rows.length - 1, i + 1); k++) top = Math.max(top, rows[k][1]);
+  const k = `${side}|${z.toFixed(2)}`;
+  let top = TOPMEMO.get(k);
+  if (top === undefined) {
+    const x = side === 'temenos W' ? -25.6 : 25.6;
+    top = 0;
+    const down = new THREE.Vector3(0, -1, 0);
+    for (const dx of [-0.6, -0.3, 0, 0.3, 0.6]) {
+      const r = cast(new THREE.Vector3(x + dx, 30, z), down, 40);
+      if (r.n >= 0) top = Math.max(top, 30 - r.t);
+    }
+    TOPMEMO.set(k, top);
+  }
   return top;
 }
+/* A crossing is only charged as a hole if it clears the local top by more than the wall's own
+   top roughness. Calling every borderline ray a hole was the first version's mistake: it put
+   16 of `hero`'s rays in a THROUGH-WALL bucket whose y range (8.99..9.23) sat inside the same
+   band as its over-top rays (9.04..10.28), i.e. both sides of a top that is really ~9 m there
+   because segment 2 of the plan is a low step, not the full 12.5 m. */
+const ROUGH = 0.35;
 function chargeCrossing(side, p) {
   if (!side.startsWith('temenos')) return side;
   const top = wallTopAt(side, p.z);
   if (top === null) return `${side} PAST-END`;
-  if (p.y > top + 0.05) return `${side} over-top`;
+  if (p.y > top - ROUGH) return `${side} over-top`;
   return `${side} THROUGH-WALL`;
 }
 

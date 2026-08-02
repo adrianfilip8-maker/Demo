@@ -228,7 +228,37 @@ export const TUNE = {
      pupil ring gets to exist. The glint keeps the full palette value (scene 3.16, final ~L234
      with its own bloom) — the frame keeps a real >L230 source, a dot instead of a disc.
      Full sweep + solver: scratchpad tintsweep.mjs over bloomcalc.mjs's validated chain. */
-  scleraTint: 0.15,
+  /* **Scalar → colour, and the axis is the point (ledger #33).**
+   *
+   * Everything above is about *luma*, and every word of it still holds: measured on
+   * `shots/cap3/sly-closeup.png` the hierarchy is exactly what it was designed to be —
+   * glint L229 > sclera L156 > muzzle L110 > pupil L53 > mask L40. #15 closed on that and
+   * passed it honestly. The face still does not read as Sly, and luma is not why.
+   *
+   * What the frame shows at 8x is three warm browns stacked: sclera (183,153,113) sat 0.38,
+   * pupil (73,47,46) sat 0.36, mask (59,34,41) sat 0.42. **There is no white and no black
+   * anywhere on the face** — only three values of tan. Two big round buff discs over a pale
+   * spike of muzzle is an owl, and that is what it reads as. Sly's face is maximum value
+   * contrast in *neutral* hues: white lens, black pupil, black mask.
+   *
+   * The cause is not this albedo. At the old scalar the sclera's albedo was
+   * (0.145, 0.143, 0.135) — sat **0.069**, already near-neutral — and it renders at sat 0.38.
+   * The warmth is the light: a `#ffd9a0` key over an `#e8a852` sand bounce, then the grade. A
+   * neutral albedo under that chain cannot come out neutral, so an eye-white has to be
+   * authored *cool* to arrive white. That is what a scalar can never do — it preserves hue by
+   * construction, so all three prior values (0.82, 0.65, 0.15) were moves along the one axis
+   * that was not the defect.
+   *
+   * `Body.furTint` already accepts a colour `shift`, so this needs no new plumbing and no
+   * other agent's file. Solved against the measured per-channel transfer (rendered ÷ albedo:
+   * R 1260, G 1073, B 839) for a target render of (163, 156, 147): sat 0.38 → **0.10**, and
+   * luma held at 156.8 against the measured 156.0 — the hierarchy above is a *constraint*
+   * that this change is required not to disturb, not the thing being optimised.
+   *
+   * Local linearisation caveat, stated because AgX is not a ratio: those transfers are valid
+   * near this amplitude, which is why luma is deliberately pinned rather than moved. If the
+   * next frame shows the eye off-white but the luma shifted, the linearisation is the suspect. */
+  scleraTint: { r: 0.133, g: 0.153, b: 0.194 },
 
   /* --- fur, read from the OUTLINE (§7.3 "fur reads as smooth plastic") ---
    * A cel-shaded character carries no fur information in its shading, so all of it has to be
@@ -314,7 +344,25 @@ const PAL = {
   shirt: 0x2f7fc4,        // §2.1 cyan-blue cap + shirt
   shirtDark: 0x1b4f7c,    // gloves, boots, brim — a real value step below the shirt
   gold: 0xe8b942,         // §2.2 GOLD mid — belt buckle, pouch, cane
-  ink: 0x191113,          // §2.1 never pure black
+  /* `0x191113` → `0x101319`: same luma (0.0738 vs 0.0739), hue flipped warm → cool.
+   *
+   * The other half of ledger #33's chroma failure. This group is the mask, the pupils, the
+   * nose and the mouth — everything on the face that has to read as *black* — and measured on
+   * `shots/cap3/sly-closeup.png` the mask bridge renders (59, 34, 41): R/G **1.74**, sat 0.42,
+   * the most red-dominant thing on the head. It is dark enough (L40, well under the sclera's
+   * L156) and still does not read as a bandit mask, because it is the same warm brown as the
+   * eye it surrounds — so it reads as socket shading rather than as a shape.
+   *
+   * Authored warm, it could not do anything else: the albedo is R/G 1.47 and the warm key then
+   * multiplies red about 1.5x harder than blue (the transfer measured at `scleraTint`). Cooling
+   * the albedo to R/G 0.84 spends that bias instead of compounding it. **Luma is deliberately
+   * unchanged** — this is a hue correction, and if the mask gets darker as well as cooler I
+   * will not know which one bought the read.
+   *
+   * Not a §2.1 violation: that rule is about *ink lines* (`TUNE.outlineColor`, still `0x1a1210`
+   * and still warm) and it already spans warm brown in sun to dark violet in shadow. This is a
+   * material, and Sly's mask is neutral black in every reference frame. Still not pure black. */
+  ink: 0x101319,
   eyeWhite: 0xf7f3e6,
 };
 
