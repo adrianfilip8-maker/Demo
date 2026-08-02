@@ -275,6 +275,54 @@ const TUNE = {
      not been taken — so the lever (post-AgX chroma restore vs. moving `uSaturation` to display
      space) is a proposal, not a conclusion. Do not tune it from this comment alone.
 
+     **The "move `uSaturation` to display space" half of that proposal is now MEASURED AND
+     REFUTED — it makes a live defect worse.** CHARACTER reported a red-channel crush on the
+     character (`clothDark` authored R/G 0.342, delivered 0.013) and read it as "a saturation
+     multiply driving red negative and clamping". `mix(vec3(l), c, 1.30)` genuinely does go
+     negative below `(1 - 1/s)*l = 0.23077*l`, and the `max(c, 1e-6)` on the contrast line
+     genuinely does amputate it — so the hypothesis matches the signature exactly. It is still
+     not the cause. Traced stage by stage (`scratchpad/redstage.mjs`), `shirtDark` under a cool
+     light leaves the saturation multiply at red **+9.01e-5, positive**, and is zeroed two stages
+     later by AgX's own `SLY_REC2020_TO_SRGB * color` followed by its `clamp(color, 0.0, 1.0)`:
+     red arrives at **-0.00885** and is clipped. Neutralising `uSaturation` entirely leaves it at
+     **-0.00234** — still negative, still clipped, still display red 0.
+
+     So this knob is an AGGRAVATOR with a measured share, not the cause. Over the character's 9
+     authored materials x 22 light levels, pixels with display red pinned at 0:
+
+       saturation 1.30 -> 17.7%    1.20 -> 13.1%    1.10 -> 7.1%    1.00 -> 5.1%
+
+     and only 9% of the pinned cases have red driven negative by the saturation multiply at all.
+     **Do not cut this value on that evidence**: it would spend chroma over the whole frame —
+     the thing §2.2 and §7.3 ask for — to buy back a fraction of one channel on 0.59% of one
+     shot, and §3 records what tuning a knob at the wrong end of a chain costs here.
+
+     And the reason the display-space move is refuted rather than merely unhelpful: applying the
+     same multiply AFTER AgX operates on an already-clipped value and destroys MORE information.
+     Sweeping the scene red at fixed G,B and counting distinct outputs over 7 inputs
+     (`scratchpad/redinfo.mjs`) — 7 = fully invertible, 1 = all information gone:
+
+       shipped (pre-AgX sat, hard clip)   3
+       luminance-preserving gamut map     5
+       saturation moved after AgX         2      <- worse than shipped
+
+     The real fix is a gamut map in place of that hard clamp, and it is **not in this file** —
+     `GLSL_AGX` lives in `passes/Common.js`. Routed there with the patch and its no-op proof:
+     blending toward the pixel's own luminance by exactly enough to lift the minimum channel to
+     0 is bit-identical on all 26,632 in-gamut grid samples (worst delta 0 bytes), so it cannot
+     regress a pixel the clip was not already firing on. Note it does NOT restore red — the
+     colour is genuinely outside sRGB by then — it recovers the information into blue.
+
+     In-frame extent, so nobody re-derives it (`scratchpad/pinned.mjs`, shipped bytes, no model):
+     `sly-closeup` 5407 px (0.59%), `hero` 334, `night` 126, `guard` 47, `interior` 28,
+     `combat` 0 — and **red is the only channel ever pinned; G and B are pinned on zero pixels
+     in every frame checked**, which is what the asymmetry of the rec2020->sRGB red row
+     (-0.5876 G, -0.0728 B) predicts. Marked on the frame it is exactly `clothDark` and the
+     darkest `tailDark`: boots, gloves, brim. It is NOT what makes the tail read as blotches —
+     the tail profiles at 0-6% pinned — and it is not why the character reads blue, since the
+     architecture in the same frame sits at R/G 1.55-1.65 warm while every character surface is
+     B-max. That part is the light reaching him, not this chain.
+
      An earlier version of this comment blamed the `courtyard` plinth band on the silhouette
      rim being added AFTER `slyLinearToSrgb` ("no headroom left, so it clips toward white").
      DECIDED, with the rim1 frames as evidence (task #8a): the display-space placement stays,

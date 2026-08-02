@@ -1430,3 +1430,182 @@ capture whose frames will be measured, or do not touch `src/**` while one is ren
 in a fleet where several agents edit concurrently, the first is the only one anybody can
 enforce. A frame captured during someone else's edit is unattributable even when its own author
 did nothing wrong.
+
+---
+
+## 22. Two knobs that could not have done anything, and the arithmetic that says so
+
+§20 ended with "no un-confounded lever has yet moved this character's rim at all". Four legs had
+run — `gateoff` (two knobs at once), `planaroff` (global, ±0.4 L), `curveopen` (global, +4–12 L
+but +13–20 L on the paving behind him), `magex` (subject-restricted, null) — and the residue was
+that the original regression itself was in question.
+
+**A fifth lever was not needed. The gate's own arithmetic settles it.**
+
+`rimBand = smoothstep(0.26, 0.58, fres·mix(0.60,1,wrapRim))`, `fres = (1−N·V)^3.1`, so the rim
+term is **identically zero until 69.4° from facing** and saturates at 80.7°. The band is
+therefore a sliver at the silhouette of world width `0.064·r`, across which the normal rotates
+20.6°. `slyTurn = |∇N|·uRes.y` is large exactly there — 105–386 on Sly at his staged distances,
+37 on a temple column shaft — against a gate that saturates at **10**. The margin is 10–160× on
+the character and 3.7× at worst anywhere curved. The magnitude gate begins to close only for
+radii above ~1.6 m at 3 m and ~7.3 m at 14 m: **planes and near-planes, which is exactly and
+only what it was built for.**
+
+Three consequences, none of which needed a capture:
+
+- **`rimMagExempt` is a no-op by construction on its own target population.**
+  `mix(rimMag, 1, exempt·vSlySkin)` can only move a pixel where `rimMag < 1`, and on the
+  character's band `rimMag` is already 1. `mag1`'s null was a **tautology** — it could not have
+  come out any other way — so it is not evidence about what starves the rim, in either
+  direction.
+- **The knob's stated rationale names the wrong population.** "`slyTurn` is small over his body"
+  is true of the body *interior*, and irrelevant there, because `rimBand` is already 0 in the
+  interior for an unrelated reason. A statement can be measured, true, and about the wrong
+  pixels.
+- **`curveopen` could not have moved the character's rim either.** `rimCurve = [0, 0.0001, 1]`
+  takes `rimMag` 1.000 → 1.000 on every character pixel carrying a rim: bit-identical on the
+  subject. Its +4–12 L was therefore **entirely** external. §20 named bloom off the paving as
+  the prime suspect; this makes it the only possibility, from arithmetic rather than an A/B.
+
+The load-bearing assumption — that `slyTurn` reads the *geometric* interpolated normal, not the
+normal-mapped one — is confirmed by a measurement made for another purpose entirely: §8's dune
+ripples are a **normal map on planar mesh** and went 902 artefact px → **0** under this gate. If
+the gate saw the shaded normal, that could not have happened.
+
+### The general form
+
+**Before running a fifth A/B on a knob, check whether the knob can move the quantity at all.**
+`rimMagExempt` cost a capture run, a commit, a retraction and a §20 entry, and one line of
+algebra on the expression it modifies would have predicted its null before any of that. A
+subject-restricted lever that reproduces none of its global version's effect is *suggestive* of
+a confound; a lever that is arithmetically pinned on its own population is *proof* of one.
+
+This is the third instrument class in one session whose common property is that it returns a
+**plausible** number rather than an obviously wrong one — after §19's counter that nothing wrote
+to and §21's grid walk that exits on iteration one. The shared defence is the same in all three:
+establish what the instrument *must* report on a known input before trusting what it reports on
+an unknown one.
+
+### And a retraction that reached two of its three sites
+
+`rimSubjExempt` (PostFX `TUNE`) exists solely on RESULT-rim3 §3's "temple subject rim lift
+30.31 ungated → 8.91 shipped". That attribution was withdrawn when `gate5` isolated the knobs
+(`planaroff` off *everywhere* moves the character ±0.4 L; a gate costing 21.4 L cannot be worth
+0.4 L switched off). The withdrawal was recorded at `ToonMaterial.js` and `toon.glsl.js` — and
+not at `PostFX.js`, where the knob actually lives, so its sole justification went on reading as
+a live finding. Now corrected in place.
+
+That is §7's "when a bug has a shape, grep for the shape" from the other side: **one retraction,
+three sites, two of them updated.** A retraction is a change with a blast radius and it wants the
+same grep discipline a fix does. The site that matters most is not where a knob is *consumed* —
+it is where the knob is **declared**, because that is the line a future reader lands on when they
+ask what the knob is for.
+
+**Standing count:** three subject-exemption knobs now exist — `rimSkinExempt` (1.0, shipped),
+`rimMagExempt` (0), `rimSubjExempt` (0) — each introduced to fix "the character's rim is
+starved", and the attribution behind both of the latter two has since been withdrawn. Two of
+the three are answers to a question nobody has yet shown has a defect in it.
+
+### The instrument that closes it
+
+`shading.debugTerm(n)` + `postfx.debugRaw(true)` paint the gate terms into the framebuffer with
+haze, AO, ink, bloom, the composite (exposure/lift/gain/split/saturation/contrast/AgX/sRGB) and
+FXAA all skipped **by control flow**, not by zeroed uniforms — a pass whose strength is 0 still
+runs, still samples, and still clamps. Mode 4 writes `(0.25, 0.50, 0.75)` and must arrive as
+`(64, 128, 191)`; that is proven offline in ~1 s without the capture lock
+(`scratchpad/termproof.mjs`), which is the §1 lesson turned into a procedure rather than a
+warning. Mode 4 doubles as the toon-population map, so "is this pixel toon-shaded" stops being
+an inference from a graded image.
+
+---
+
+## 23. A term can be present, firing, and provably able to produce the exact signature — and still not be the cause
+
+CHARACTER reported a red-channel crush on the character: `clothDark` authored at R/G 0.342 and
+delivered at **0.013**, boot red 0.6/255, tail fur 1.4/255. The discriminator offered with it was
+that the loss is **not uniform** — arm fur at HSV saturation 0.15 against tail fur at 0.98 — read
+as "the signature of a saturation multiply driving red negative and clamping". `SATURATION = 1.30`
+is live in the chain, so the named term exists and is running.
+
+**Every step of that reasoning is sound and the attribution is still wrong.**
+
+`c = mix(vec3(l), c, uSaturation)` is `l + s(c − l)`, which is negative for any channel below
+`(1 − 1/s)·l = 0.23077·l`, and the `max(c, vec3(1e-6))` on the very next line amputates it. That
+is not a hypothesis, it is the arithmetic — and it is the *same* failure the contrast line's own
+comment records having fixed (`#2a3f66` leaving the grade as `#00358c`, red exactly zero), one
+line earlier, in a term nobody re-checked. A better-looking candidate is hard to imagine.
+
+Traced stage by stage, `shirtDark` under a cool light leaves the saturation multiply at red
+**+9.01e-5 — positive**. It is zeroed two stages later, by AgX's own
+`SLY_REC2020_TO_SRGB * color` followed by its `clamp(color, 0.0, 1.0)`: red arrives at −0.00885
+and is clipped. Neutralise `uSaturation` entirely and the same pixel still arrives at −0.00234,
+still clips, still delivers display red 0. The saturation multiply is neither necessary nor
+sufficient. It is a real **aggravator** with a measured share (pinned population 17.7% → 5.1%
+going 1.30 → 1.00; only 9% of pinned cases have red driven negative by it at all) and it is not
+the cause.
+
+**What settled it was a prediction the two mechanisms make differently, not a bigger number.**
+The saturation multiply is channel-*symmetric* — it pins whichever channel is furthest below
+`0.23077·l`, which on the warm architecture filling most of these frames is **blue**. The gamut
+clip is channel-*asymmetric*: the rec2020→sRGB red row carries −0.5876 on green, an order of
+magnitude more than anything in the other two rows, so only red can be driven out. Over 26
+materials × 46 lights:
+
+```
+                            R      G      B
+saturation drove negative  95      0    169     <- refuted hypothesis: blue is its FAVOURITE channel
+AgX->sRGB drove negative   89      0      0     <- located cause
+display channel pinned     93      0      0
+measured in every frame   334-5614  0      0     <- ten frames, zero blue pins, zero green pins
+```
+
+So the frames **contradict** the handed hypothesis rather than merely being consistent with the
+alternative. Had the saturation multiply been the cause, blue would be the most commonly pinned
+channel in the game; there is not one blue-pinned pixel in any frame checked.
+
+**And the discriminator that motivated the hypothesis does not discriminate.** Arm fur 0.15
+against tail fur 0.98 is reproduced from albedo × light alone, with no per-material term at all:
+`furMid` under the key lands at HSV saturation **0.16**, `furMid` under the cool fill at **1.00**.
+The two surfaces differ by the light they receive. A non-uniformity is only evidence of a
+per-surface mechanism if the uniform explanation has been checked first.
+
+### The general form, which is new to this file
+
+§16 records a number passing while the thing it measures is wrong. §20 records a lever moving an
+ROI it was not confined to. §22 records a knob that could not have moved anything. **This is the
+fourth shape: a term that genuinely does the thing it is accused of, to some pixels, some of the
+time — and is still not what produced the defect,** because an unconditional downstream term
+produces the same signature on the same population. A partial true positive is the hardest of the
+four to refute, because neutralising the accused term *does* move the image (here, red goes
+−0.00885 → −0.00234, a 3.8× change) and every check short of "did the defect clear" reads as
+confirmation. §8's rule — *a knob moving the image proves it is connected, not that it is the
+cause* — is usually applied to an unrelated knob. It applies just as hard to a contributing one.
+
+### Two corrections to the report, and what survived
+
+- **The clip is not what breaks the tail.** Profiled along the tail, pinned share is **0–6%** and
+  luma still swings 33 → 78 (≈2.3:1). The rings separate. Whatever makes the tail read as
+  blotches, it is not this.
+- **It is not why the character reads blue.** In the same frame the architecture sits at R/G
+  1.55–1.65, B/max ≈ 0.50 (warm) while every character surface is B-max. A global chain term
+  cannot be warm on the wall and cool on the subject. The character is blue because the light
+  reaching him is — upstream of PostFX.
+
+CHARACTER's substantive claim survives both: the geometry is right and something downstream loses
+it. The loss is real, smaller than reported, and in a different term.
+
+### The fix is real, cheap, and in nobody's current scope
+
+`GLSL_AGX` lives in `src/render/passes/Common.js`, which §3 does not assign. The patch replaces
+the final hard `clamp` with a luminance-preserving gamut map — blend toward the pixel's own
+luminance by exactly enough to lift the minimum channel to 0. **It is bit-identical on all 26,632
+in-gamut grid samples (worst delta 0 display bytes), so it cannot regress a pixel the clip was not
+already firing on** — which is the property that makes a global tonemap change safe to take, and
+it is proven rather than asserted. It does **not** restore red: the colour is genuinely outside
+sRGB by then. It recovers the information into blue (distinct outputs over 7 swept scene reds:
+3 → 5) and removes the flat pinned patch.
+
+**A standing proposal in `PostFX.js` is refuted by the same sweep.** That file's `saturation`
+comment floats "moving `uSaturation` to display space". Applied after AgX it multiplies an
+already-clipped value and destroys *more* information — distinct outputs 3 → **2**, worse than
+shipped. Recorded at the declaration site per §22, because that is where the proposal lives.
