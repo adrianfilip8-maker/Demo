@@ -49,7 +49,8 @@ import * as K from './Kit.js';
  *    in the level, whole complex and both pyramids in frame.
  *
  *  RAIL ENTRY (§8.1 "first rail slide down into the complex"): rail 'approach' runs from the
- *  ridge anchor mast (10, 15.4, 61) down to the courtyard paving at (2.2, 1.1, 23).
+ *  ridge anchor mast (10, 15.4, 61) down to the courtyard paving at (-4.4, 1.1, 23), swinging
+ *  west of the spawn axis on the way so it stays out of the `sly-closeup` frame.
  * =============================================================================
  */
 
@@ -794,9 +795,29 @@ function courtyardTraversal(A) {
   const mast = new THREE.CylinderGeometry(0.24, 0.4, mastH, 12, 1);
   K.normaliseAttrs(mast);
   A.add('court', 'bronze_dark', K.boxProjectUVs(K.place(mast, { x: 10, y: ancDeck + mastH * 0.5, z: 61 })));
+  /* The descent swings WEST of the spawn axis on its way down, and that is deliberate.
+   *
+   * The old line ran (5.2,3.9,34.5) -> (3.4,1.7,28) -> (2.2,1.15,23), which put it straight
+   * through the `sly-closeup` frame: 131 of 501 sampled points on screen, passing **17 px from
+   * the head centre at 9.4 m depth** and sweeping screen y 71..243 against a head at y 214. It
+   * merged with the tail silhouette and cost that shot — the most-used character frame in the
+   * project — its cleanest read. The rail was never staged against this camera; the camera's
+   * placement came out of a 6480-position sweep, so the rail is the cheap thing to move.
+   *
+   * Dropping the low end does NOT fix it (0.5–2.0 m of drop leaves all 105 in-frame samples in
+   * frame) because the offending run is the whole last 11 m, not its tail. Lateral is the only
+   * axis that works, and east is unavailable: +4 m or more puts the line inside the east pylon
+   * tower (x 8.5..19.5 at z 31..37). West clears at −6 m of shift.
+   *
+   * Routed as a progressive swing rather than a dogleg so a 9.5 m/s slide stays smooth, and
+   * checked against the three things in the way: it crosses the gate at x −0.5 (opening is
+   * |x| < 8.5) and 10 m under the lintel, and its terminus at x −4.4 clears the west colossus
+   * plinth (x −13.5..−5.5, z 21.5..28.5) and sits south of the obelisk terrace (z1 19.4).
+   * Verified 0/501 samples in the `sly-closeup` frustum. The mast, the §8.1 rail head height
+   * and the "slide down into the complex" beat are all unchanged. */
   rail(A, 'approach', [
-    [10.0, 15.3, 61.0], [8.6, 12.0, 51.0], [7.0, 7.6, 42.0],
-    [5.2, 3.9, 34.5], [3.4, 1.7, 28.0], [2.2, 1.15, 23.0],
+    [10.0, 15.3, 61.0], [7.8, 12.0, 51.0], [4.4, 7.6, 42.0],
+    [-0.5, 3.9, 34.5], [-3.0, 1.7, 28.0], [-4.4, 1.15, 23.0],
   ], 'bronze_dark', 0.13);
 
   /* Rooftop-run entry: east pylon deck down to the peristyle architrave. */
