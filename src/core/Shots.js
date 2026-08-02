@@ -247,6 +247,39 @@ export const SHOTS = {
     pos: [-11.5, 2.6, 30.5], target: [-17.0, 1.1, 28.0], fov: 38, tod: 0.10,
     player: { pos: [-9.0, 0, 31.5], yaw: 2.3, pose: 'sneak_idle' },
   },
+
+  /* Near-profile character sheet — ADDITIVE, added for §7.3's "silhouette readable as Sly
+     (cap, mask, tail, cane)" condition. Every other camera that draws Sly is a three-quarter
+     (33°, 45°, 70°, and five behind him), and a three-quarter cannot test the one feature the
+     cap is *made of*: the bill projects forward along head-space +Z, reaching z 0.320 against a
+     face plane at ~0.19, so seen end-on it foreshortens into the crown and contributes almost
+     nothing to the outline. Measured on the head-outline boundary, flat-filled by material
+     group, collar excluded (`shotsil.mjs --parts` + `capoutline.mjs`), the bill owns **3.3% of
+     the head outline at `sly-closeup`'s 33° and 12.2% at 90°**; the whole cap goes 24.9% → 48.0%
+     over the same swing. So the cap's silhouette is a real feature that no canonical frame was
+     looking at, and this camera is the view that shows it.
+
+     Staging is `sly-closeup`'s, deliberately and in full: same player position (the spawn, open
+     ground, the one staging charvis scores 100% visible at 506 samples), same `idle_confident`,
+     and **the same yaw 5.24**. Only the camera moves. That is what makes this additive rather
+     than a new variable — face lighting is a function of yaw and the sun alone (this file's
+     header, and the 6480-placement sweep behind `sly-closeup`'s yaw), so reusing the yaw
+     inherits its proven key angle (sun 37° off his face) instead of re-deriving one.
+
+     Camera swung to view 95°: from the player at (0,0,30), `atan2(dx,dz) − yaw` = 1.657 rad.
+     3.46 m out at fov 38 puts him ~729 px at the harness's 900 rows, so the head is large
+     enough that the bill and the ear tips resolve rather than merging into the ink line — the
+     failure `hero` hits at 111 px. Elevation 10° so it looks slightly down the way the other
+     character cameras do, rather than being a turntable elevation nothing else uses.
+
+     **This is the eleventh shot, and a default `node tools/critic.mjs` with no shot names now
+     scores eleven.** The standing 4.2 baseline is over ten; compare against it by passing the
+     ten names explicitly, or re-baseline deliberately. Nothing here changes any existing
+     entry. */
+  'sly-profile': {
+    pos: [1.96, 1.62, 32.78], target: [0.0, 1.15, 30.0], fov: 38, tod: 0.80,
+    player: { pos: [0, 0, 30], yaw: 5.24, pose: 'idle_confident' },
+  },
 };
 
 export const SHOT_NAMES = Object.keys(SHOTS);
