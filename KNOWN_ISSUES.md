@@ -1950,11 +1950,18 @@ between the two gain-0 arms) failed on both shots and the run stands anyway**: t
 gilded), the bar as sealed is unattainable on any shot with animated emitters, and the a0/a0b
 bracket *is* the temporal mask working as §24.4's sweep standard intends. The sealed letter
 ("run invalid") is preserved in the RESULT; the temporally-masked statistics are ruled the
-operative evidence. Standing rule: **a bit-identity falsifier on an FX-bearing shot must be
+operative evidence. ~~Standing rule: **a bit-identity falsifier on an FX-bearing shot must be
 written as a duplicate-arm bracket + temporal mask from the start** — demanding byte equality
-from an animated frame is sealing an impossibility, §26.1's cousin. Temple's F2 control
-"failure" was the same time-noise (moves more at gain 0 than gain 24; masked, 14× under the
-bar); hero's F2 passed unmasked. Two prereg design flaws, found by the seals' own verdicts — bands that don't partition, and an adjective with no metric
+from an animated frame is sealing an impossibility, §26.1's cousin.~~ **RETRACTED — see §28.**
+That ruling was mine and it was wrong: the impossibility was not in the animation, it was in the
+harness advancing its world clock between arms. Pin the clock (`step(n, 0)`) and byte equality is
+achievable on any shot; the bracket is a check that the pin held, not a substitute for it.
+Temple's F2 control "failure" was the same time-noise (moves more at gain 0 than gain 24; masked,
+14× under the bar); hero's F2 passed unmasked.
+
+---
+
+## 26. Two prereg design flaws, found by the seals' own verdicts — bands that don't partition, and an adjective with no metric
 
 Both from cap5's sealed read (`progress/records/RESULT-cap5.md`), and both are flaws in how
 the *seal* was written, discovered only because the measurement was honest against it.
@@ -2102,3 +2109,66 @@ post-derivation corroboration (`WALL-SHADOW` reads +35 on shipped frames against
 corroborates**: three counts of agreement would have justified a narrower S1, and taking it
 would have been fitting the band to the evidence it exists to test. The substantive predictions
 never moved — only the certifier did.
+
+---
+
+## 28. Every within-boot A/B in this project was captured at a different world clock — and it is a one-token fix
+
+Found while scoring `goldonset`, and it reaches backwards through several results.
+
+`window.__GAME.step(frames = 1, dt = 1/60)` calls `engine.renderFrame(dt)`, which **advances
+`engine.time`**. Arms captured sequentially inside one boot are therefore rendered at different
+world times, and every animated term rides that clock — torch flames, dust, shafts, sparkle,
+birds. There is no `performance.now()` or `Date.now()` anywhere in `src/fx` or `src/render`, so
+the engine clock is the *only* phase source, which is what makes the fix total.
+
+The docstring reads *"Deterministic fixed-step advance — no reliance on wall clock"*
+(`src/core/Debug.js:125`). That sentence is true and is exactly what kept the trap invisible for
+weeks: **deterministic is not phase-stable.** Freedom from the wall clock buys reproducibility
+across runs; it does nothing about the world clock moving between arms *within* a run.
+
+**The fix is one token at the call site: `step(n, 0)`.** Frames still advance — poked uniforms
+propagate, SwiftShader still flushes — while `engine.time` stands still. With the clock pinned, a
+duplicate arm must produce **exactly zero** moved pixels, so bit-identity returns as the right
+falsifier instead of a 40 % tolerance band.
+
+### What this retracts
+
+- **§25's amendment, which was my ruling.** I declared byte equality on an FX-bearing shot "an
+  impossibility" and canonised bracket + temporal mask in its place. The impossibility was a bug's
+  shadow. The standard reverts to the stronger one: **pin the clock and demand bit-identity**,
+  keeping a duplicate arm as evidence the pin held.
+- **§24.4's combat anomaly is now root-caused rather than merely located.** "FX-phase aliasing"
+  was the right diagnosis; this is *why* the phase differed.
+- **`goldhalo`'s F1 failure** was not an animated frame refusing to be identical — it was the run
+  moving time between arms. Its masked statistics stand as far as they go, but the run had less
+  power than it appeared to.
+
+### `goldonset` is VOID, and its stop-band must not fire
+
+The bracket arm `c0b` — an identical setting to `c0` — moved **more** gilded-architecture pixels
+than the strongest real arm: 17,787 vs 17,527 on `hero`, 4,362 vs 3,739 on `temple`, at comparable
+lift. Signal-to-phase below 1, so every pixel verdict in the run is void.
+
+The seal's registered MECH stop-band — *"the onset formulation is not the lever either; §25's
+routing is wrong twice — say so, stop"* — reads as **satisfied, and must not be applied.** A
+stop-band met by a run with no power is a false negative, not a finding. **§25's routing is
+untested, not refuted**, and the honest state of the gold line is that its replacement lever has
+never actually been measured. Lesson for the next seal: **a stop-band needs its own power
+condition attached**, or it will fire on noise exactly when the experiment is weakest.
+
+### The control that caught the author's own misreading
+
+Cropping on the strongest measured change showed two tight warm elliptical blobs — precisely
+§7.3's "tight coloured halo", precisely what the experiment was hoping to see. Re-rendering those
+same crops as `c0` vs `c0b`, **both at cut = 0**, reproduced the same blobs at the same positions
+and amplitude. All phase. The same control killed an intermediate inference that the movers were
+static "because they survived the temporal mask" — a two-phase bracket nulls itself by
+construction and is blind to the phases between.
+
+**When a result looks exactly like the thing you hoped for, render the null arm at the same crop
+before believing it.**
+
+Two prereg faults from the same seal, independent of phase and worth not repeating: a p95
+statistic over a 45,984-px annulus cannot see a ~50-px effect by construction, and a "brightest
+1,000 non-metal pixels" selector never sampled the 1,072 actual movers.
