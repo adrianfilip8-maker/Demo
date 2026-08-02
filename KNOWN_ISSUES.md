@@ -1216,6 +1216,24 @@ backgrounded list and the run's log was silently written to `/` — the capture 
 output was simply not where anyone was looking for it. Expand paths before the `&`, or use
 absolute ones.
 
+**A seventh, and this one is mine: a restart-protection sweep committed a broken term ON.**
+The convention in this session is that I commit agents' in-flight edits by filename, syntax-checked
+and labelled unverified, so a restart cannot cost the work. That is sound and it has already paid
+for itself — but on one sweep it caught a shading term **mid-edit, with its strength at the A/B
+value rather than at zero, and carrying an arithmetic bug its author found minutes later.** Had a
+capture booted in that window it would have measured a null and read as a *design* failure, when
+the real state was a collapsed arm — §40's failure mode, manufactured by the safety mechanism.
+
+The same commit also broke that author's verification tool, which had hardcoded `HEAD` as its
+pre-term baseline: with the term now *in* `HEAD`, the check would have compared the term against
+itself and reported a clean no-op. §18 arriving live, caused by a sweep.
+
+**So a checkpoint sweep must not pick up a file whose owner is actively editing it** — or, where
+it must, it has to be labelled loudly enough that no capture launched in that window is trusted.
+The cheap version: sweep only files whose owner has reported, and treat "I am mid-edit" as a
+reason to leave a file dirty and accept the restart risk. Restart-protection is worth less than a
+frame nobody can trust.
+
 **A sixth, and it inverts the recovery playbook: a HARNESS restart is not a container restart.**
 A restart notice arrived saying *"The container was restarted. The following background tasks
 were running and are now stopped"* — and the playbook this file had been carrying said container
