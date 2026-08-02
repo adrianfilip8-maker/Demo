@@ -1821,7 +1821,29 @@ mask (`vSlySkin = 255`):
 | **`rimSil`** mean / med | **237.4 / 255** | **250.4 / 255** | **252.8 / 255** |
 | same statistic on the architecture band | 0 (median) | 0 (median) | 0 (median) |
 
-So the gate is at **93–99% on the character and 0 on planes** — which is exactly and only what it
+**CORRECTED 2026-08-02 — the 93–99% is inflated by an unsubtracted floor, and the corrected
+figure is ~52%.** The ratio was computed as `base / gateoff` on raw cool-bright counts inside
+the character box, but the `norim` control shows that box already contains a large
+rim-independent population: on `sly-closeup` the numbers are 1260 → 1213 against **1162 with the
+rim removed entirely**. That floor of 1162 sits in *both* the numerator and the denominator, so
+it drags any ratio toward 1. Subtract it and the rim's own contribution is **98 px → 51 px, i.e.
+~52% retained, not 96%.** The mechanism was reproduced independently on rim2's frames, where
+`norim` alone contributes 2,675 cool-bright px inside the box and the same raw-style ratio reads
+25.9% against a causal 4.1%.
+
+**The general form, which is worth more than the number: a retention ratio must subtract the
+control from both terms.** `after/before` measures what you think it measures only when the
+control is zero; whenever a control floor exists, the raw ratio is a weighted average of the
+real effect and 1, and it always flatters retention. This is §30's non-circularity instinct
+applied to a *ratio* rather than to a null — and it is the second time a reassuring number here
+turned out to be an artefact of the population rather than a property of the term (§27.5 was the
+first).
+
+~~So the gate is at 93–99% on the character and 0 on planes~~ — the plane figure stands; the
+character figure is superseded by the above. The paragraph below is retained because its
+*argument* is unaffected: what it establishes is that the gate does not discriminate against
+the character relative to planes, and a 52% causal retention against 0% on planes says that
+just as well as 96% did.
 was built to do. `night`, the shot whose silhouette separation lives entirely on the rim, is the
 *least* affected of the three at 99%.
 
