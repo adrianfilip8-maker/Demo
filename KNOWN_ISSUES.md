@@ -2979,3 +2979,56 @@ So a historical note, accurate and worth keeping, was read in the present tense 
 fixed, in the same sentence, in the tense the reader will assume.** The cost here was one
 capture and a wasted queue slot; the citizenship was exemplary and the premise was wrong, which
 is the combination worth guarding against.
+
+---
+
+## 40. A clamp made two arms the same state, and only the applied-state readback knew
+
+The grounding A/B ran four arms to test whether the shadow's normal-offset bias displaces the
+contact away from the boot. Its seal required each arm to **read back the value the shader
+actually received**, not the value requested. That requirement is the only reason the following
+is known rather than assumed:
+
+`normalBiasClamp = [0.012, 1.4]` floors the treated arms. `0.0105 × 0.5 = 0.00525` and
+`0.0105 × 0.1 = 0.00105` **both clamp to 0.012**, so on cascade 0 — the cascade the contact
+shadow actually lives in — `lowbias` and `minbias` are *the same state*, and the near-zero
+extreme never ran. The frames confirm it independently: those two arms differ by 563 px, **every
+one of them in c1/c2 where the clamp did bite, and 0 px under the boot.**
+
+**So the seal's own "a null at minbias makes this decisive" leg is VOID**, and its author said so
+rather than banking the null. What was actually tested is 11.23 cm → 5.87 cm of displacement
+(≈15 px); the untested remainder is ≈8.7 px. **Rule: a parameter sweep must read back the
+applied value per arm.** A clamp, a quantisation, a texel-size floor or a driver minimum can
+silently collapse two arms into one, and the resulting null looks exactly like a decisive null —
+same numbers, same shape, no warning.
+
+### The instrument was sampling where the phenomenon cannot be
+
+Band 1 came back **FLAT and then some**: ΔL 0.00 at every distance, and the under-boot box
+**pixel-identical at 754/754** both between arms and against the critic's own frame. That is not
+a dead knob — the same toggle moved **18,299 px (1.99% of frame)** on mid-ground floor and kerb
+boundaries. It moved nothing under the boot.
+
+The geometry says why, and it reaches back to the finding itself: the sun direction
+(−0.927, 0.358, −0.109) sits at **20.97°**, throwing roughly **4.7 m of shadow nearly sideways in
+screen space**, while the probe samples **straight down** from the sole. *That column contains no
+cast shadow in any arm* — so a cast-shadow lever could never have shown up in it, at any bias.
+
+This is worth separating carefully, because it is easy to over-read. It does **not** overturn the
+critic's finding: there genuinely is no contact darkening under the character, and that is what
+the probe measured correctly. What it establishes is that **cast shadow was never a candidate
+mechanism at this sun angle** — the darkening has to come from a contact term, because the
+geometry puts the shadow somewhere else entirely. The critic's #3 is unchanged, its ownership
+does not move, and the AO knobs stay dead (+0.6 L at ceiling, §3 of the AO work).
+
+### Two more disciplines held under pressure
+
+**The acne band FAILED as sealed and was not reinterpreted.** Its author diagnosed the failure as
+its own specification — an area threshold applied to an ROI defined as *"a sunlit floor band with
+one shadow boundary"*, where a 4× crop shows coherent boundary movement (the kerb shadow
+reattaching toward its caster, the knob working as intended) rather than speckle — and still
+recorded FAIL, noting only that boundary ROIs should be scored on the component split alone.
+Moot for shipping either way, since a FLAT contact band means there was no win to bank.
+
+**And `base` vs `back` came back byte-identical**, which retires a live worry: the toggle path is
+exact and §35's cross-boot nondeterminism did not touch this run.
