@@ -37,7 +37,14 @@ const png = (dataUrl) => Buffer.from(dataUrl.split(',')[1], 'base64');
 
 /* Settle to steady state, then report renderer.info and the shadow cache's own counters.
    `refreshes` must be unchanged across the last two settle frames or the reading is from a
-   cache-rebuild frame and means nothing. */
+   cache-rebuild frame and means nothing.
+
+   Frames are stepped with `__GAME.step(1)`, NOT with bare requestAnimationFrame. `setShot()`
+   calls `engine.stopLoop()`, so after it `Engine._tick` returns on its first line: rAF still
+   fires but renders nothing — no `renderFrame`, so no module `update()`, no `info.reset()` and
+   no draw. A settle loop built on rAF therefore returns whatever `renderer.info` happened to
+   hold when `setShot` finished, identical in every leg regardless of the lever under test.
+   That is exactly how this tool's V2 BUDGET leg came to report zero deltas. See KNOWN_ISSUES §19. */
 const SETTLE = `async (frames) => {
   const eng = window.__ENGINE;
   const L = eng.get('lighting') || eng.modules?.lighting || null;
@@ -47,7 +54,7 @@ const SETTLE = `async (frames) => {
   };
   let prev = stats(), stable = 0;
   for (let i = 0; i < frames; i++) {
-    await new Promise((r) => requestAnimationFrame(() => r()));
+    await window.__GAME.step(1);
     const now = stats();
     if (!now || !prev || now.refreshes === prev.refreshes) stable++; else stable = 0;
     prev = now;
