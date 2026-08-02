@@ -594,36 +594,45 @@ export const TOON_SHADE = /* glsl */ `
 			float slyConvex = mix( 1.0, step( 0.0, slyFold ),
 				uRimCurve.z * ( 1.0 - uRimSkinExempt * vSlySkin ) );
 		#endif
-		/* The MAGNITUDE half is what starves the character's rim — measured, not reasoned.
+		/* uRimMagExempt: MEASURED NULL. Keep it at 0. Read this before trusting any figure
+		 * attributing the character's rim loss to this gate — including the one in the commit
+		 * that introduced this knob, which is overstated and is corrected here.
 		 *
-		 * The note above says the convexity half is "genuinely wrong about characters" and
-		 * uRimSkinExempt waives it; RESULT-rim3 §3 then concluded from that, by construction,
-		 * that the surface gate on Sly reduces to a magnitude half whose "mean gate is ~1.000"
-		 * and therefore could not be costing anything — so the screen-space rimPlanar gate
-		 * must be what starves temple's silhouette. Every step of that was a shader reading.
+		 * What is solid. RESULT-rim3 §3 blamed the screen-space rimPlanar gate for temple's
+		 * silhouette regression, by construction, from a chain of shader readings. gate5 moved
+		 * the two knobs inside gateoff ONE AT A TIME — which no run had ever done; rim1's
+		 * surfonly/screenonly split the two TERMS with both gates left on. Mean L lift vs
+		 * norim over the character's silhouette band, one boot per row:
 		 *
-		 * gate5 moved the two knobs inside gateoff one at a time, which no run had ever
-		 * done (rim1's surfonly/screenonly split the two TERMS with both gates left on). Mean L
-		 * lift vs norim on the character, one boot each:
+		 *   shot         base  planaroff  subj  magex  curveopen  oldrim   base2 (noise)
+		 *   temple       3.77    3.70     3.67   3.75    16.43     21.80    3.64
+		 *   sly-closeup  2.92    3.98     3.89   3.44     8.82      8.94    3.41
+		 *   hero         4.40    4.68     4.47   4.39     7.01      7.30    4.31
 		 *
-		 *   shot         base   planaroff  subj   curveopen   oldrim(both gates off)
-		 *   temple       3.77     3.70     3.67     16.58        21.82
-		 *   sly-closeup  3.61     3.98     3.89      8.57         8.83
-		 *   hero         4.40     4.68     4.47      6.95         7.19
+		 * planaroff turns the screen gate off EVERYWHERE and moves the character by ±0.4 L, so
+		 * rimPlanar is NOT the suppressor and rim3 §3's attribution is withdrawn. That much is
+		 * measured three ways and stands.
 		 *
-		 * planaroff turns the screen gate off EVERYWHERE and moves the character by ±0.4 L;
-		 * curveopen opens this smoothstep alone and recovers 76-97% of the ungated rim. So
-		 * the magnitude half is not ~1.000 on a character, and the screen gate was never the
-		 * suppressor. A mean over a gate is not the rim's contribution to a frame.
+		 * What does NOT follow, and what I asserted anyway. curveopen — this smoothstep opened
+		 * for ALL geometry — lifts the character band 4-12 L, and I read that as "the magnitude
+		 * half starves the character's rim". Then magex, which opens the identical smoothstep
+		 * on exactly the skinned population, moves it by -0.02 / +0.53 / -0.01 L: inside the
+		 * base-vs-base2 noise in all three shots. A subject-restricted change that reproduces
+		 * none of its global version's effect on the subject means the global version's lift on
+		 * those pixels was not coming from the subject's own surface. The prime suspect is the
+		 * artefact this gate exists to remove: curveopen raises the paving immediately BEHIND
+		 * him by +13 to +20 L, and bloom does not respect a silhouette.
 		 *
-		 * It cannot simply be opened: the same leg re-admits the artefact, lifting the paving
-		 * BEHIND him from 0.96 to 19.79 L on temple (ungated 28.43). One knob owns both
-		 * effects, so the only fix that separates them is the one the convexity half already
-		 * uses — exempt the subject, not the gate. Same varying, same population, so the two
-		 * halves cannot drift apart about what a character is.
+		 * So this is the brief's own opening lesson arriving a second time in the same
+		 * investigation — a knob moving the image proves it is connected, not that it is the
+		 * cause — and gateoff/curveopen are global legs with the identical confound.
 		 *
-		 * Defaults to 0: the mix is then an exact identity and the shipping frame is
-		 * bit-identical until a measurement says otherwise. */
+		 * The knob is kept, at 0, because it is the one clean way to ask the question again:
+		 * it isolates the skinned population, which no global leg can. Whoever picks this up
+		 * should first paint vSlySkin and rimMag straight to the framebuffer with the tonemap
+		 * bypassed (scratchpad/compilecheck.mjs already proves that bypass on a known input) and
+		 * confirm the population is what this file thinks it is, BEFORE tuning anything.
+		 * At 0 the mix is an exact identity and the frame is bit-identical. */
 		float rimMag = uRimCurve.y > uRimCurve.x
 			? smoothstep( uRimCurve.x, uRimCurve.y, slyTurn ) : 1.0;
 		rimMag = mix( rimMag, 1.0, uRimMagExempt * vSlySkin );

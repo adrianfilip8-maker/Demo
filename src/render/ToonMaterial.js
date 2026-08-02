@@ -358,15 +358,22 @@ const TUNE = {
      mostly smooth on the scale of a pixel — `slyTurn` is small over his body, which is exactly
      what the gate is built to read as "not a silhouette".
 
-     Measured owner of `temple`'s silhouette regression (see the note at `rimSil`): opening this
-     half alone takes the character's rim lift 3.77 -> 16.58 L where the ungated ceiling is
-     21.82, while turning the screen-space gate off entirely moves it 3.77 -> 3.70. RESULT-rim3
-     §3 attributed that loss to `rimPlanar` by construction and was wrong.
+     **MEASURED NULL — leave it at 0.** `mag1` ran it: the character's rim lift moves
+     3.77 -> 3.75 (`temple`), 2.92 -> 3.44 (`sly-closeup`, against a base2 of 3.41), 4.40 ->
+     4.39 (`hero`) — inside the base-vs-base2 noise in all three. Opening the *same* smoothstep
+     globally (`rimCurve [0,0.0001,1]`) instead gives 16.4 / 8.8 / 7.0, so I concluded the
+     magnitude half was starving the character and shipped this knob to fix it. The
+     subject-restricted version reproducing none of that says the global lift on those pixels
+     was never the subject's own surface — most likely bloom off the paving behind him, which
+     the same leg raises by +13 to +20 L. See the long note at `rimSil` in `toon.glsl.js`.
 
-     DEFAULT 0 — no behaviour change. The exemption is the right SHAPE (opening the gate
-     globally re-admits the paving artefact this file exists to remove: `temple` paving behind
-     the subject goes 0.96 -> 19.79 L on the same leg), but "right shape" is not "right value",
-     and the frame decides. A/B is a uniform poke: `shading.uniforms.uRimMagExempt.value = 1`. */
+     What IS established, three ways: `rimPlanar` is not the suppressor (turning the screen
+     gate off entirely moves the character by ±0.4 L), so RESULT-rim3 §3's attribution is
+     withdrawn. What starves it is still open.
+
+     Kept at 0 rather than reverted because it is the only lever that isolates the skinned
+     population — every other leg is global and carries the confound that produced the wrong
+     answer twice. A/B is a uniform poke: `shading.uniforms.uRimMagExempt.value = 1`. */
   rimMagExempt: 0.0,
 
   /* Whether baked AO multiplies the DIRECT key term. It does not (0), which is why a texture
