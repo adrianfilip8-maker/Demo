@@ -443,7 +443,11 @@ function courtyard(A) {
        arrises where the statue's 2.66 m shoulder half-width leaves them clear — and the
        cavetto goes on the plinth below, which is unobstructed. A back pillar with no cornice
        is also what a real seated colossus has. */
-    const tbW = 6.4, tbTop = 9.6, tbBat = 0.055;
+    /* Batter 0.09 (5.1°), not the 0.055 used elsewhere: over this slab's 5.1 m that is 46 cm
+       of lean instead of 28 cm, which is the difference between a wall the eye reads as leaning
+       and one it reads as vertical with a perspective error. The rolls take the same number and
+       follow it. Battering also tips the top of the slab *north*, away from the colossus. */
+    const tbW = 6.4, tbTop = 9.6, tbBat = 0.09;
     A.add('court', 'hieroglyph_wall', K.place(K.masonryShell({
       w: tbW, d: 1.8, h: tbTop - L.colossi.knee, batter: tbBat, course: 0.62, thick: 0.8, rng: R,
       blockLen: [1.4, 2.3], recess: 0.06, chipChance: 0.2, gapChance: 0.015, hollow: false,

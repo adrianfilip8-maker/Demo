@@ -106,22 +106,53 @@ export class Props {
     }
   }
 
+  /**
+   * The avenue follows the ground, because the ground is not flat under it.
+   *
+   * §8.1 puts the avenue at x = ±7, z = 40…84 and the approach ridge at z ∈ [70, 96] with a
+   * crest near y = 16 — and TERRAIN's crest line sits at z = 79, rising from about z = 50. Laid
+   * flat at y = 0, six of the eight pairs are *inside* that dune: sampled at their own
+   * positions the sand stands at 7.6 / 11.5 / 14.8 / 17.4 / 18.6 / 15.0 m against a 3.5 m
+   * sphinx. They were invisible before this only because they were all stacked at the world
+   * origin (see `PropKit.applyXf`); placing them correctly is what made the burial reachable.
+   *
+   * Sitting each one on `heightAt` costs nothing, satisfies both §8.1 rows at once, and is the
+   * better picture: a processional avenue that climbs the ridge toward the temple, seen from
+   * the `dunes` camera which stands on that very ridge. 15 cm of sink keeps them planted rather
+   * than perched. Falls back to y = 0 if TERRAIN is absent — `main.js` registers it before
+   * PROPS, so it normally is not.
+   */
   _sphinxAvenue() {
+    const terrain = this.engine.get('terrain');
+    const groundY = (x, z) => (terrain?.heightAt ? terrain.heightAt(x, z) : 0);
     for (let i = 0; i < L.sphinxZ.length; i++) {
       const z = L.sphinxZ[i];
       for (const sx of [-1, 1]) {
         const bag = sphinx({ rng: this.rng, worn: 0.35 + i * 0.05 });
+        const x = sx * L.sphinxX;
         bag.transform(matrixOf({
-          x: sx * L.sphinxX, y: 0, z,
+          x, y: groundY(x, z) - 0.15, z,
           ry: sx > 0 ? -Math.PI / 2 : Math.PI / 2,
           s: 1 + this.rng.jitter(0.04),
         }));
         this._absorb(bag);
       }
     }
-    // One toppled, because eight perfect pairs reads as a copy-paste (§7.3 irregularity).
+    /* One toppled, because eight perfect pairs reads as a copy-paste (§7.3 irregularity).
+       Oriented first, *then* measured, then set down: tipping a 3.5 m head by 69° swings its
+       lowest point about 2 m below its own origin, so a single composed transform with a
+       hand-guessed +0.5 m buried it exactly that far under the crest. Measuring the rotated
+       bag is two loops and removes the guess. */
     const fallen = fallenHead({ rng: this.rng });
-    fallen.transform(matrixOf({ x: -L.sphinxX - 1.6, y: 0.5, z: 71.5, rz: 1.2, ry: 0.7 }));
+    const fx = -L.sphinxX - 1.6, fz = 71.5;
+    fallen.transform(matrixOf({ rz: 1.2, ry: 0.7 }));
+    let lo = Infinity;
+    for (const p of fallen.parts) {
+      const pos = p.geo?.attributes?.position;
+      for (let i = 0; pos && i < pos.count; i++) lo = Math.min(lo, pos.getY(i));
+    }
+    if (!Number.isFinite(lo)) lo = 0;
+    fallen.transform(matrixOf({ x: fx, y: groundY(fx, fz) - lo - 0.35, z: fz }));
     this._absorb(fallen);
   }
 

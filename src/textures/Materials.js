@@ -1747,7 +1747,20 @@ export const MATERIALS = {
     },
   },
 
-  /* The largest gilded surface in the level by a long way — every cornice, architrave, lintel
+  /* **Cloisonné inlay considered for critic pass 5's finding #2 and deliberately not taken.**
+   * This recipe is 28.7 % of `hero`, 14.4 % of `traversal` and 11.1 % of `night`, so it is the
+   * largest single surface that could carry a third hue, and lapis/malachite/carnelian inlay in
+   * a gilded architrave is correct Egyptian practice. Two measurements say it would buy nothing
+   * and cost something. `scratchpad/huechain.mjs`: in the *shade* regime every pigment in §2.2
+   * lands between 152° and 244° after the light and grade chain — authored hue does not survive
+   * there at all — and KNOWN_ISSUES §34 records that `hero`'s gilded mass is **98.6 % shadowed
+   * at median L 43.6**. So the inlay would be invisible on the shot that has most of it, while
+   * displacing gold on a recipe whose value ramp has been rebuilt twice to make §7.3's
+   * "gold reads as metal" line work. Recorded rather than done, with the arithmetic, so the next
+   * pass does not re-derive it: the reach on that 98.6 % is shadow-side and belongs to
+   * SHADING/LIGHTING, or it is a framing decision, exactly as §34 concluded.
+   *
+   * The largest gilded surface in the level by a long way — every cornice, architrave, lintel
    * and false door in `hero`, `temple`, `courtyard` and `interior` is this recipe. Its gold gets
    * the same value policy as `gold_leaf` (see `goldRamp`), plus one thing that only applies to
    * gilding *in a sunk relief*: the ramp position is driven by where the texel sits on the cut
