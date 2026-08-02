@@ -1656,3 +1656,164 @@ Same report, one more counting rule paid for three times in one night: **the man
 authority, not the directory.** One capture was reported as 7, 8 and 9 shots by three different
 counts; `ls | wc -l` counts whatever else lives in the directory, while `report.json`'s shot
 rows are written by the harness that rendered them. Count from the manifest.
+
+---
+
+## 24. The character's rim was never starved — the term reads 93–99% — and the residual that *is* real was outside every ROI anyone measured
+
+Two results, opposite in sign, from one paint run (`shots/term1`, `temple` / `sly-closeup` /
+`night`, six variants each, one boot). Full working in `scratchpad/RESULT-term1.md`.
+
+### 24.1 P6: the surface gate passes the character's rim
+
+`rimSil` — the factor that multiplies `uRimColor`, painted straight into the framebuffer with
+the tonemap bypassed by control flow — read over the fresnel band on the **shader's own** skinned
+mask (`vSlySkin = 255`):
+
+| | `temple` | `sly-closeup` | `night` |
+|---|---|---|---|
+| band px | 368 | 3,181 | 1,559 |
+| `rimMag` (magnitude gate) mean / med | 242.9 / **255** | 252.7 / **255** | 255.0 / **255** |
+| `slyConvex` (convexity gate) mean / med | 240.9 / **255** | 255.0 / **255** | 254.9 / **255** |
+| **`rimSil`** mean / med | **237.4 / 255** | **250.4 / 255** | **252.8 / 255** |
+| same statistic on the architecture band | 0 (median) | 0 (median) | 0 (median) |
+
+So the gate is at **93–99% on the character and 0 on planes** — which is exactly and only what it
+was built to do. `night`, the shot whose silhouette separation lives entirely on the rim, is the
+*least* affected of the three at 99%.
+
+**This closes the thread §20 left open.** Four legs had been run and every one was confounded:
+`gateoff` moves two knobs, `planaroff` moved him ±0.4 L, `curveopen` is bit-identical on him by
+arithmetic (§22), `magex` is a tautological null (§22). The term itself now says there was never
+anything to un-starve: **the original "temple regression" was measured against the two-knob
+reference, and the difference it showed is bloom off the paving behind him** — the same leg lifts
+that paving +13 to +20 L. Three subject-exemption knobs were built for this defect
+(`rimSkinExempt` 1.0 shipped and verified working here, `rimMagExempt` 0, `rimSubjExempt` 0);
+the attribution behind the latter two is withdrawn and there is no longer a reason to look for a
+fourth.
+
+### 24.2 The first reading of this run was of the wrong population, and the paint is what caught it
+
+`termread.mjs` masks the subject by differencing `base` against `nosly`. On `temple` it reported
+`vSlySkin` median **0** over the band and scored P1 and P2 as failures. That mask is *"pixels the
+character's removal changes"* — his cast shadow, his bloom halo, the AO he contributes — so most
+of it is architecture, where the gate reads 0 **because it is working**. Read on `vSlySkin`
+instead, the same frames give the table above.
+
+It is §20 inverted: there, a global lever moved pixels outside the population under test; here, a
+mask built out of a population's *effects* was read as the population. **If a probe can paint the
+membership predicate itself, difference nothing.**
+
+### 24.3 What is real: a fat cool band the gates pass by design, and it is in `hero`
+
+`hero`'s headline was "open paving 1536 → 107 artefact px". True, and scoped to the paving ROI.
+Measured over the **whole frame**, `hero` retains **2,311** rim-caused cool-bright px, and 1,692
+of them are one band: a pale cyan bar along the rounded top edge of the lower-right kerb, ~13 px
+wide, on the shadowed side of the moulding.
+
+- **Rim-caused**: 1,692 px in the ROI at `base`, **0 at `norim`**. Removing the rim removes the
+  band entirely.
+- **Not the screen-space term.** On the same band class in `courtyard`: base 557, `surfonly` 557,
+  `screenonly` **0**. It is the surface fresnel in `toon.glsl.js`, alone.
+- **Not something the gates can reach.** `convoff` 1,692, `planarlo` 1,693, `skinfix` 1,692,
+  `aokey` 1,692, `gateoff` 1,920 against `base` 1,692. Every gate lever is inside ±0.1%: the
+  surface genuinely turns and is genuinely convex, so **both gates pass it correctly**. No value
+  of `rimCurve` or `rimPlanar` will move it.
+- **Still live on the current tree**: 1,704 cool-bright px in that ROI in `shots/bud34/hero.png`
+  (08:15 today) against 1,692 in `rim2` — unchanged, and it looks identical cropped.
+- **Shape, on a control that has the defect.** Thinness (share of artefact px with a non-artefact
+  neighbour; a 1–2 px line ≈ 100%, a wash is low) separates pre-gate from post-gate where the
+  defect was planar — `combat` 57.1% → 97.0%, `interior` 90% → 100%, `traversal` 87.5% → 99.6% —
+  and `hero` sits at **50.0%** *after* the gate. It is the one frame whose residual is fat.
+
+**Why the ROI hid it**: the band is not on the paving. §12's rule applies to region choice as
+well as to features — *the question is never "did my ROI improve" but "did the frame improve"* —
+and the cheap version of it is to run the causal metric frame-wide once before choosing an ROI.
+
+**Not fixed, deliberately.** The only levers that reach it are the fresnel width itself
+(`uRimPower` 3.1 / `rimBand`'s `smoothstep(0.26, 0.58)`) or rim strength on architecture, and
+the band's world width scales with the moulding radius — so narrowing it narrows the character's
+rim in the same proportion, against a §7.3 condition that nine of ten frames were failing earlier
+this session and that §24.1 has just measured as healthy. That is §17's trap exactly: a fix that
+moves a shipped look is a change, and it needs its own pre-registered A/B with the character
+retention predicted first, not a knob turned on the strength of one kerb.
+
+### 24.4 `courtyard`'s 8,520 → 8,610 is the metric counting the feature, not a residual
+
+`courtyard` was the one shot where the gate reduced nothing. Looked at rather than inferred: the
+dominant cluster is the pale edge line along the top of the shadowed stair block and its gate
+posts, and with `norim` those edges go flat. Thinness 95.7% at `base` against 92.3% at `gateoff` —
+edge-shaped in both states, i.e. **there was no planar artefact there to remove**, which is what
+§8 predicted for this shot and is now measured rather than asserted. The causal metric counts
+*any* rim-caused bright cool pixel, so on a shot whose rim legitimately lives on edges it counts
+the intended feature. Read `courtyard`'s number as a description, not a defect.
+
+Unexplained and left flagged rather than interpreted: `combat` reports `surfonly` 8,625 and
+`screenonly` 11,992 against `base` 301 — both single-term legs score *worse than both terms
+together*, which no additive model explains. Somebody should find out why before quoting any
+`combat` rim number.
+
+### 24.5 Why the character is lit only by fill: staging, and he is one to two metres off the light
+
+Routed as "occlusion, key direction, or intended staging?" — answer per shot, from ray-casting the
+key against Architecture + Props + Terrain built headless (`scratchpad/keyocc*.mjs`, `keymap.mjs`;
+full caveats in `RESULT-keylight.md`). Share of camera-visible surface that is both key-facing and
+unoccluded: `courtyard` 67%, `sly-closeup` **37%**, `traversal` 32%, `hero` 29% (backlit by
+design, nothing occludes him), `combat` 17%, `temple` **0%**, `night` **0%** (sun 59.5° *below*
+the horizon — there is no key to occlude, the moon is the key).
+
+- **`sly-closeup` is staging, and it is marginal staging.** He is not in full shadow (63% of his
+  surface has a clear path to the sun) and not turned away (the side the camera sees is at
+  N·L +0.317). Gridding his position shows the courtyard at this hour is mostly shadowed with a
+  **lit corridor two rows deep at z ≈ 30–32**, and he is staged at its western lip: +2 m of x
+  takes him 38% → 52%, +4 m → 58%. The frame's own warm wedge sits exactly there.
+- **`temple` is a different answer**: 100% of body samples are inside `arch:hall:column_papyrus`'s
+  shadow, from a column 1.9 m away, *and* his camera-facing side is edge-on at N·L −0.007. No
+  staging nudge fixes that one.
+- Two architecture occluders are named rather than inferred, by clustering the ray hit points
+  (these meshes are 40–77 m merges, so a mesh name is not a location): the **west courtyard wall
+  top edge at (−22.2, 8.6, 27.4)**, and a **`bronze_dark` piece at (−2.2, 2.3, 30.0)** — 2.2 m due
+  west of the staged player, sitting on his key axis at chest-to-head height.
+
+**Where this probe and the frame disagree, and it is recorded rather than resolved:** the ray set
+calls the ground at his feet lit; the frame measures it shadowed (R/G **0.80** under him against
+**1.36–1.80** on lit paving 3 m east, with a crisp boundary visible in the crop). A metre of
+disagreement is inside this probe's own stated gaps (capsule vs skinned pose, no shadow map, no
+normal bias), so it is **not** filed as a shadow-map defect — but it does mean his lighting is
+knife-edge sensitive to where he stands, which is the actionable part.
+
+### 24.6 AgX's gamut clip now maps instead of amputating — and the prediction registered for it was impossible
+
+Landed in `src/render/passes/Common.js` (§23's routed fix): the final `clamp` after
+`SLY_REC2020_TO_SRGB` blends toward the pixel's own luminance by exactly enough to lift the
+minimum channel to 0.
+
+- **No-op outside the population it fixes**, verified with the constants parsed out of the file at
+  run time (§18): **0 of 42,123 in-gamut grid samples change**, in float64, not to a tolerance.
+- **Compiles and behaves in the driver**, not only in the model: `scratchpad/agxcompile.mjs`
+  renders five known radiances through the patched shader on the harness's own
+  ANGLE/SwiftShader — 1 program, `glError 0`, no shader messages — and `agxcmp.mjs` finds the
+  bytes **exact** against the float64 model on 5 of 5, in-gamut samples identical under both
+  modes, pinned samples moving in blue (77 → 68, 64 → 53).
+- **The registered prediction "pinned-red 5407 → 0" was withdrawn *before* the capture, because it
+  was arithmetically impossible.** The map sets the minimum channel to exactly 0, so a pixel the
+  clamp pinned at display red 0 stays at display red 0 and `pinned.mjs`'s count is unchanged. I
+  had written a prediction about the fix's *intent* (recover the channel) where the metric can
+  only see its *arithmetic* (lift to the gamut boundary). What the patch actually buys is that the
+  pinned patch stops being **flat**. Frame A/B queued as `shots/agx1`.
+- First attempt at this edit put **backticks inside the GLSL template literal** and broke
+  `Common.js` at module load. Caught in seconds by importing it; it would otherwise have been a
+  black frame for whichever agent booted next. Prose comments go into GLSL strings without them.
+
+### 24.7 `GuardModel.js`'s `scleraTint` — closed by CHARACTER at `b87f79a`, and I nearly filed it as a misread
+
+Routed to me as "still carries the pre-fix 0.82". It did, until **09:09 today**, when the file's
+owner landed `b87f79a` (0.82 → 0.15). By the time I read it the live value at line 63 was 0.15
+and the only `0.82` left in the file was at lines 47–48, **inside the comment that fix wrote to
+explain itself**.
+
+I had this queued to report as "the routing was a comment read as a value" — the §8 `goldSpec` /
+§13 `rampFloor` family. `git log` on the file says otherwise: the item was real when it was
+routed and someone else fixed it in the interval. **Check when a value changed, not only what it
+is now** — on a tree taking several commits an hour, "I looked and it was fine" and "it was never
+broken" are different claims, and only one of them is checkable.
