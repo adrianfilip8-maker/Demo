@@ -507,17 +507,57 @@ function courtyard(A) {
      * here read "no chamfer — it is never inside 25 m of a camera"; the `guard` camera stands
      * 14 m from it. It gets the same 3 cm chamfer as everything else a camera can approach,
      * which is what turns mudbrick from a box into a mass at that distance.
+     *
+     * ---- HEIGHT: 5.6 -> 12.5 m (ledger #29) ----
+     *
+     * The defect was never the architrave. It was that the temenos stood 5.6 m against a
+     * colonnade whose architrave ledge is 9.0 m — an enclosure shorter than the thing it
+     * encloses, which makes this a freestanding colonnade with a boundary fence around it
+     * rather than a peristyle court. The frame evidence says the same thing twice: from
+     * `courtyard`'s eye at y 5.6 the old wall top subtends *exactly* 0° of elevation, so it
+     * occluded nothing and the desert horizon ran straight through the ambulatory. A temple
+     * court that shows you the horizon has failed at the one job an enclosure has. At 12.5 m
+     * the same wall top sits 6.56° above the eye line and the horizon is gone.
+     *
+     * Three things had to move together, and two of them are not free:
+     *
+     *   w 1.5 -> 2.0, centre ±25.3 -> ±25.6.  A 12.5 m wall 1.5 m thick is a playing card.
+     *
+     *   batter 0.075 -> 0.03.  This one is forced, not chosen. `masonryShell` floors its
+     *   course width at 1.2 m, so w 2.0 at batter 0.075 stops tapering at y 5.33 and runs
+     *   dead straight for the remaining 7 m — a kink in the silhouette exactly where the eye
+     *   is. 0.03 clamps at 13.33 m, clear of the 12.5 m top, and still closes 2.0 -> 1.25 m
+     *   over the height. Measured, not guessed: see the clamp table in the ledger.
+     *
+     *   course 0.5 -> 0.72, blockLen [1.35,2.15] -> [1.9,2.9].  This is the funding. The raise
+     *   costs +48.4k triangles unfunded (+121% on this wall); coarsening the courses gives
+     *   back 41.6k of it for +6.8k net (+17%), and it costs nothing visible — a 0.72 m course
+     *   still reads 27 px tall at the `guard` camera against 19 px at 0.5 m, and courses that
+     *   size are the more plausible read for a mudbrick temenos at this mass anyway.
+     *
+     * `skipFaces` was the funding originally proposed and it is NOT used here, for two reasons
+     * both of which are measurements rather than opinions. It only saves a further 16k, and it
+     * would be the one change in this wall whose correctness depends on where the cameras are:
+     * dropping the outward skin leaves the run one block thick, `gapChance` fallen blocks then
+     * have nothing behind them and open into 25–44 cm holes (through-ray leak 0.16% -> 0.94%,
+     * worst hole 438 mm ≈ 16 px from `guard`), so it additionally forces gapChance to 0 and
+     * costs this wall its fallen-brick ruin notes. And it is safe only while every camera stays
+     * inboard of the outer face — which they all are, but `dunes` at x 26.0 clears the east
+     * face plane at x 26.6 by **0.6 m**. That is too thin a margin to spend on 16k triangles in
+     * a level where three canonical cameras were repositioned this session alone.
      */
-    const tx = sx * (pe.x + 2.3);
+    const tx = sx * (pe.x + 2.6);
     const zA = pe.z0 - 1.5, zB = pe.z1 + 1.5;
+    const TH = 12.5;
+    const k = TH / 5.6;    // scale the stepped profile, so the steps grow with the wall
     /* [length, height] — heights in metres, 0 = the collapsed breach. Lengths sum to the
        full run so the two ends still land exactly on the colonnade's. */
     const plan = [
-      [13.5 + R.jitter(1.1), 5.6],
-      [11.0 + R.jitter(1.0), 5.6 - R.range(1.4, 2.0)],
+      [13.5 + R.jitter(1.1), 5.6 * k],
+      [11.0 + R.jitter(1.0), (5.6 - R.range(1.4, 2.0)) * k],
       [3.2 + R.jitter(0.5), 0],
-      [12.0 + R.jitter(1.0), 5.6 - R.range(0.1, 0.5)],
-      [9.3, 5.6 - R.range(2.4, 3.0)],
+      [12.0 + R.jitter(1.0), (5.6 - R.range(0.1, 0.5)) * k],
+      [9.3, (5.6 - R.range(2.4, 3.0)) * k],
     ];
     const span = plan.reduce((s, p) => s + p[0], 0);
     let zc = zA;
@@ -540,16 +580,16 @@ function courtyard(A) {
         continue;
       }
       A.add('court', 'mudbrick', K.place(K.masonryShell({
-        w: 1.5, d: len, h: hh, batter: 0.075, course: 0.5, thick: 0.7, rng: R,
-        blockLen: [1.35, 2.15], recess: 0.05, chipChance: 0.26, gapChance: 0.06, buried: 0.6,
+        w: 2.0, d: len, h: hh, batter: 0.03, course: 0.72, thick: 0.7, rng: R,
+        blockLen: [1.9, 2.9], recess: 0.05, chipChance: 0.26, gapChance: 0.06, buried: 0.6,
         hollow: true, chamfer: 0.03,
-        /* Thin wall: `bow` only eats its 1.5 m thickness, which `wc`'s 1.2 m floor clamps
+        /* Thin wall: `bow` only eats its 2.0 m thickness, which `wc`'s 1.2 m floor clamps
            away anyway, so this one is all `drift` — each run wanders off true on its own
            phase, so the five of them do not line up into one straight wall again. */
         sag: 0.34, windFace: sx > 0 ? 2 : 3, windK: 2.6, drift: 0.17,
       }), { x: tx, y: 0, z: (z0 + z1) / 2 }));
-      wallProxy(A, tx - 0.8, tx + 0.8, 0, hh, z0, z1);
-      ledgeProxy(A, tx - 0.7, tx + 0.7, hh, z0, z1);
+      wallProxy(A, tx - 1.0, tx + 1.0, 0, hh, z0, z1);
+      ledgeProxy(A, tx - 0.9, tx + 0.9, hh, z0, z1);
     }
   }
   /* Short south returns — enclosure without blocking the entry axis. */
