@@ -3880,3 +3880,142 @@ block-comment depth 0, and `compilecheck.mjs` linking both skinned and static wi
 
 "It is only a comment" is a claim about intent. In a shader stored as a template literal it is not a
 claim about syntax.
+
+---
+
+## §53 — §35 closes: the divergence does not reproduce, the counter was never a scene inventory, and the answer was in cap8's own stamp
+
+CHARACTER's det1/det2 pair. It touched **no source files**; §4.7 verified intact (52 clips,
+`missing: []`).
+
+### 53.1 Root identity established by content, not by stamp
+
+I had asked for a src hash. CHARACTER did better and declined the weaker instrument: **all 322
+tracked files at det1's stamped commit `5ad3286` compared byte-for-byte against the pristine copy —
+0 differ, 0 missing, no extra files that could shadow a module.** `node_modules` in the pristine
+copy is a **symlink to `/home/user/Demo/node_modules`**, so it is literally the same dependency
+tree. A `src/*.js`-shaped hash would have missed `index.html`, `vite.config.js` and `package.json`;
+this misses nothing.
+
+### 53.2 The verdict: seven pixels
+
+| shot | px differing (of 921,600) | max channel Δ | where |
+|---|---|---|---|
+| `sly-startle` | **7 (0.0008%)** | 86 | one 3×3 blob at (65–67, 143–145), frame corner |
+| `sly-profile` | 979 (0.106%) | 31 | top band y 0–249 only: sky/haze + one background edge |
+
+`sly-startle` is **the shot §35 was observed on** (cap7/cap8). The cane and the entire character are
+bit-identical across boots.
+
+**A trap caught by its own author, and it is §42's exact shape.** `canediff.mjs`'s ROI was calibrated
+on *`sly-profile`'s* framing; `sly-startle` is a face closeup where the gold hook sits at the bottom,
+largely **outside** that ROI. So "cane ROI 0 px" on `sly-startle` is mostly measuring empty
+background and proves nothing. What carries the claim is the **whole-frame** count of 7 — the hook
+occupies thousands of pixels and not one differs. An ROI inherited across framings is an ROI that has
+not been checked.
+
+### 53.3 The §35.2 fix cannot be credited, and the arithmetic says so
+
+An absent divergence was the ambiguous case I flagged. CHARACTER resolved it by **magnitude** rather
+than by inference: §35.2's tail-seeding fix removed a **22 mm** drift, while §35.1's own probe says
+only two candidates reach the observed size — "freeze never took" (50–78 cm) and "rig never bound"
+(110 cm). 22 mm is **23–50× below the smaller**. *A fix that size cannot remove a defect that size.*
+
+Both candidates are then **positively excluded**, not merely unobserved:
+
+- **"Rig never bound"** — §35.1 shipped a warning into `engine.warnings` → `report.json` for exactly
+  this. Both reports contain **only** the prewarm timing line. Excluded by the instrument built for
+  it (contrast §49's lesson: this is a null read from an instrument proven able to fire).
+- **"Freeze never took"** — a freeze failure renders a different pose, and the character pixels are
+  bit-identical. Either it fired in neither or identically in both, and **a race that fires
+  identically twice is not a race.**
+
+### 53.4 What actually happened to cap7/cap8 was in cap8's own report all along
+
+§35's premise was that the two trees "differ by four pupil lines in `Clips.js` and nothing else",
+derived by diffing two **commits**. The stamps read:
+
+- cap7: `6fc9e51`, `dirty: false`
+- cap8: `338abec`, **`dirty: TRUE`**
+
+Uncommitted edits were live at capture time, on a repo §10 records as having five agents editing
+concurrently — and **a commit-to-commit diff cannot see them**. The "and nothing else" premise was
+never established, and *the stamp contradicting it sat in the file for the whole investigation*.
+
+CHARACTER labels "cap7 and cap8 did not render the same source" a **hypothesis rather than a proof**
+— the uncommitted state is gone and cannot be recovered — while noting it is the only explanation
+consistent with everything and rests on a recorded fact rather than on elimination. That is the right
+epistemic weight and it is why this section closes §35 without overclaiming.
+
+**Cross-boot noise floor, which is what §35 asked to be found or bounded:** with sources proven
+identical, two boots agree to 7 px and 979 px, max ~10/255 per channel, **none of it on the
+character**. Cross-boot geometry deltas on the character are usable again.
+
+### 53.5 The +62 triangles are not a builder — and my instruction to hunt one was wrong
+
+I told CHARACTER that identical draw calls meant "a count change inside an existing bag, localisable
+by comparing per-bag triangle counts". **That was wrong, and acting on it would have burned cycles
+searching `src/player` and `src/world` for a defect that is in neither.**
+
+`report.json`'s `triangles` is `renderer.info.render.triangles` (`Engine.js:273`) with
+`autoReset = false` — reset at frame start, read at frame end. It is a **per-frame, all-passes
+submission counter**, not a scene inventory; §8 already documents the 4.5–5.4× pass multiplication.
+It counts what was *submitted*, not what was *built*.
+
+The arithmetic is exact: **62 ÷ 2 = 31.** Every instanced emitter in `src/fx/Particles.js` uses
+`setIndex([0,1,2,0,2,3])` — a quad, 2 triangles per instance — so 62 triangles is **31 particle
+instances**, a whole number, in a single pass. The only dynamic-count objects in the scene are FX's:
+`geometry.instanceCount` is set from live particle counts at `Particles.js:1348, 1522, 1531, 1682,
+1800`.
+
+The pixels agree independently: every differing pixel in `sly-profile` is in the top band on
+warm-brown and pale-blue values (`#795a48`, `#714b36`, `#7195a5` — haze and sky), additive-shaped,
+none on the character, none gold, none on Sly's blue. **Airborne particulate, not structural
+geometry.**
+
+Candidate mechanism, stated as a hypothesis: the two boots' texture prewarm took **35.1 s vs
+27.6 s** — a 7.5 s wall-clock difference during boot, from their own `bootWarnings`. §28 records that
+the world clock advances during staging; an emitter advanced on wall clock during boot lands in a
+different phase, and 31 particles is what that looks like. `sly-startle` matching exactly is
+consistent — a face closeup at 179 draws with little sky. **So `sly-startle`'s zero is a control on
+FX phase, not on a builder. Routed to FX.**
+
+### 53.6 `perch_idle` was re-tasked three times from a number the record already marked stale
+
+**My error, and the worst kind: a stale figure that survived three hops.** §9 carries a correction
+dated 2026-08-02 — the "hips 0.000, chest 0.006, head −0.007" numbers describe a tree that stopped
+existing at `5d0441e`. Re-measured on the live tree:
+
+```
+hips x +0.045  →  chest x +0.082  →  head x +0.046
+```
+
+**The line of action is present and landed** (+3.7 cm out on the lower segment, −3.6 cm back on the
+upper). Acting on the stale figure would have authored a **second** lateral lean on top of the first
+and doubled it — which is what §9's own text warns about.
+
+The number's path was **record → session verdict → work order**, and it was stale at the first hop.
+§18's stale-reference failure is usually described as an instrument validating against an old
+baseline; this is the human-readable version, and it is more dangerous because each hop launders the
+figure a little further from the correction attached to it. The remaining genuine item is verifying
+the line **in pixels**, which is a different task from authoring it.
+
+### 53.7 Arms: the geometry framing is confirmed, and a fourth ink pass is now definitively excluded
+
+Measured at silhouette scale with membership decided by **skin weight** rather than proximity
+(`scratchpad/armscale.mjs`), at `sly-closeup`'s 699 px figure:
+
+- glove cuff → mitt: **59 px**
+- bare forearm → glove cuff: **26 px**
+- sleeve → bare forearm: **at or below the ~2.5 px ink hull**
+
+The arm's outline carries two large unambiguous events, both at the hand end, and essentially nothing
+along its length. **More ink is not the lever** — the events that read are already silhouette-scale,
+and the one that does not read is smaller than the line drawn over it.
+
+Two caveats CHARACTER volunteered rather than buried. Its first probe binned by proximity to the arm
+axis and reported a **32 cm-wide upper arm on a 1.53 m figure** — catching torso, tail and cane —
+caught only because the number was physically absurd (§11's family). And in the corrected version
+several bins near the cuff rest on **2–6 vertices**, so the sleeve→forearm figure is noisy: 1.7 px
+band-max-to-band-max, ~19 px across the actual notch. **It shipped no geometry change**, because
+authoring one it could not verify is precisely what §47 records going wrong.
