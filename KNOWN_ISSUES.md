@@ -2248,3 +2248,55 @@ plausibly in a write-up: the cane aim *does* have a lever on screen position (42
 centroid travel — `CANE.plant`'s tip-height invariance is about a fixed radius from a fixed grip
 and does not generalise), and the right arm is not the lever (all five arm variants made burial
 worse, 41.2% → 47.9–77.4%; the shipped arm is the best of them).
+
+---
+
+## 30. Phase contamination is a property of the statistic, not of the run
+
+§28 killed `goldonset`. The very next run carried **the same contamination, worse**, and its
+verdicts are readable. The difference is not the physics; it is which number was being asked for,
+and this is the rule that decides it.
+
+`creamfix` measured its own phase floor first, as its addendum required: `base` vs `baseB` — an
+identical setting — differs by **181,071 px on `night` (19.65% of frame)** and **245,674 px on
+`sly-closeup` (26.66%)**. The arms under test move *fewer* whole-frame pixels than that duplicate
+does (168k / 208k / 233k). That is exactly the shape that voided `goldonset`, and the expectation —
+stated by its own author beforehand — was that it would void this run too.
+
+It does not, because the sealed verdicts are **ROI medians**. Measured in the same statistic as the
+claim, the null is:
+
+| ROI | null (`base`→`baseB`) | effect at the verdict arm | ratio |
+|---|---|---|---|
+| cream band (V1) | **1.0** | −88.0 | 88× |
+| navy rings (V2) | **1.0** | −49.0 | 49× |
+| wall shadow (V5 certifier) | **0.0** | −77.0 | >154× |
+
+**A median over 1,000–12,000 px is nearly immune to small-amplitude, spatially scattered drift; a
+"did this pixel change at all" count is maximally sensitive to it** — a change-count is a threshold
+at ε, so every pixel that moves by one least-significant bit counts the same as one that moves by
+100. Count-family statistics are phase-dominated. Robust location statistics are not.
+
+**The operational rule: measure the null in the same statistic as the claim, and make it
+non-circular.** A null computed on a mask built from the arms agreeing is circular — it can only
+tell you that the pixels you selected for agreeing, agree. `creamfix`'s nulls are unmasked for
+exactly this reason. Do this and a phase-dirty run still yields every verdict whose statistic is
+robust, while honestly voiding the ones that are not: here V1/V2/V4/V5 are read verbatim and **V3,
+a whole-frame pixel-count claim, is VOID** — not failed, and explicitly not "read with a wider
+band".
+
+Three practices from the same read worth keeping:
+
+- **Removing an instrument is not re-anchoring a band.** The frozen reader's temporal mask excluded
+  **2,965 of 3,000 px** in the cream box, leaving n = 0, and the reader stopped rather than scoring
+  an empty population. The mask exists to suppress phase; phase on that statistic is worth 1.0
+  count. Dropping it and scoring the raw population with **every threshold exactly as sealed** is an
+  instrument correction. §27.5's warning is about moving a *band* to rescue a result — no threshold
+  moved here, and the distinction is the whole difference between honest and not.
+- **A two-phase null cannot establish absence.** V3's off-subject diff appears almost entirely in
+  the null, but "almost entirely" is not "none", and inferring absence from a two-arm bracket is the
+  invalid step `goldonset` already recorded against the same author. It was not repeated; the leg is
+  void and one pinned capture settles it.
+- **Predicting the void and then being wrong about it, out loud, is the finding.** The correction
+  above exists because an expectation was written down before the numbers and then contradicted by
+  them.
