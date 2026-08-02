@@ -3357,3 +3357,49 @@ quantities: a **linear** median of a circular value put a plainly orange surface
 straddling 0°/360°, and a circular **mean** over a bimodal region landed between the modes
 describing nothing (351.8° against a median of 31.1°). Both fixed, with every reported region now
 gated at mean resultant length ≥ 0.964.
+
+---
+
+## 46. Two instruments checked against their own pathological input — one passed, one was worthless
+
+§43 left a standing check: **ask what your instrument returns for the pathological input and
+confirm it differs from what it returns for the ideal one.** Both halves of it showed up in the
+same read, one hour later.
+
+**Applied, and it worked.** The sphinx avenue was re-planted on the terrain height, and "planted on
+`heightAt`" does not mean "not buried" when a ridge rises across a 5.0 × 2.4 m footprint. So the
+predicate sampled the whole footprint of all sixteen bags: **0/16 have sand above the plinth top
+anywhere**, crown clearance 2.80–3.51 m, base heights climbing 1.23 → 18.45 m across z 40 → 77.8
+and cresting with the ridge. **Then the control: the identical predicate run against the shipped-away
+bug (all bags at y = 0) returns 15/16 submerged.** The instrument distinguishes the two states, so
+the pass means something. One detail kept rather than smoothed: the z = 52.6 pair clears by 0.00 and
+−0.01 m — level with the sand, not buried, but zero margin.
+
+**Not applied, and it was worthless.** A detector written to find the critic's "cream faceted
+polyhedron" scored the **before** frame at **0.03%** — it called clean a frame that visibly contains
+a 2.7% object — because its author guessed a saturation threshold of `< 0.30` and the lump measures
+**0.42–0.48**. It was caught only by opening the before-frame instead of trusting the number, and
+then recalibrated *on the object itself*: largest warm blob 7,849 px before → 1,723 px after, and
+the survivor is a different object elsewhere in frame. The polyhedron is gone — confirmed by direct
+A/B at identical camera settings, `#bd935e`–`#d2a975` → `#354458`–`#394659` on the same pixels.
+
+**The pattern across both: a guessed threshold is a hypothesis about the data, and it needs the
+same control as any other hypothesis.** The working predicate was validated against the state it
+was meant to detect; the failing one was validated against nothing and returned the comfortable
+answer.
+
+### Three more, all of them the same discipline
+
+- **A hypothesis killed before it was reported.** The suspicion that god-rays were washing the cel
+  ramp flat was measured and is false — the in-shaft band swings **39.0 L** against the out-of-shaft
+  band's **13.0 L**. It appears here only because it was tested.
+- **A frame declared unable to settle its own question.** `hero` shows **4.5 m of a 12.45 m
+  obelisk shaft, and the fattest part**, so a 9% taper is diluted by an ink shell measured 6–13 px
+  outside the projected silhouette. The author's own first read off a 2× crop was "parallel-sided",
+  which the projection then corrected. **Saying which frame cannot answer a question is worth more
+  than an answer from the wrong frame.**
+- **A defect found and deliberately not chased**: a ~6 cm flange at the obelisk base, invisible
+  because it sits on a 5 × 5 m plinth top. Recorded so nobody re-derives it.
+
+And one number corrected at its source: the obelisk's mid-shaft width is **2.044 m**, not the
+2.00 m its comment claims — 2.2% off, in a comment written to record a fix.
