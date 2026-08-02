@@ -116,6 +116,12 @@ export class Architecture {
     this._zoneMeshes = new Map();  // zone -> Mesh[]  (for the tomb portal gate, below)
     this._tombVisible = null;
     this._cryptSealed = null;      // reverse gate: camera inside the vault hides the desert
+    /* A/B lever for the widened half of that gate (vegetation + the `far` zone), mirroring
+       Lighting's `shadowStaticCache: false`: flipping it and calling resetCryptGate() restores
+       the narrow behaviour live, inside one boot, with no rebuild. That is what makes the
+       byte-identity control a within-boot comparison rather than a between-boot one — two boots
+       can differ for reasons that have nothing to do with the gate. */
+    this.cryptGateWide = true;
     this._meshes = [];
     this._materials = new Map();
     this._geoms = new Set();
@@ -354,12 +360,18 @@ export class Architecture {
    *
    * Inward: the same argument runs in reverse. A camera inside the sealed crypt box —
    * strictly past the north face of the tomb gate wall (z = −59.3) and under the vault
-   * ceiling (y = −2.5, margin below C = −2) — cannot see the desert: the sand rings and the
-   * Nile are FrontSide surfaces above a closed roof. The baseline budget run measured 15
-   * terrain meshes / 162k tris rendering in `interior` (25% of its draws, 43% of its
-   * triangles) purely because their bounding spheres straddle a frustum that never sees
-   * them. The stairwell and landing keep the gate OFF: on the stairs z > −59.3 everywhere,
-   * and near the top y > −2.5, so any camera that can see sky is outside the box.
+   * ceiling (y = −2.5, margin below C = −2) — cannot see the desert: every exterior set is a
+   * surface on or above the sand, and the crypt's only opening leads south into a roofed
+   * stairwell. The baseline budget run measured 15 terrain meshes / 162k tris rendering in
+   * `interior` (25% of its draws, 43% of its triangles) purely because their bounding spheres
+   * straddle a frustum that never sees them. The stairwell and landing keep the gate OFF: on
+   * the stairs z > −59.3 everywhere, and near the top y > −2.5, so any camera that can see sky
+   * is outside the box.
+   *
+   * The predicate is a pure function of camera position, which is what makes the exterior
+   * shots safe by construction rather than by testing: evaluated over the shot table, exactly
+   * one of the ten canonical cameras (`interior`, at (3.2, −9.2, −60.0)) is inside the box.
+   * The other nine cannot reach this branch at all.
    *
    * Visibility-only, both ways: nothing is built or freed here, so the build-time crevice
    * assertion and the collision proxies are untouched.
@@ -385,25 +397,51 @@ export class Architecture {
   }
 
   /**
-   * The exterior sets the sealed-crypt gate toggles: TERRAIN's sand rings and the Nile
-   * water group, read through their public fields. Resolved per toggle, not cached —
-   * TERRAIN owns these objects and may rebuild them. Vegetation and the far pyramids are
-   * deliberately not included: they also render in `interior` (~44k tris), but this change
-   * is pre-registered on exactly rings + water, so widening the set is a separate,
-   * separately-measured step.
+   * The exterior sets the sealed-crypt gate toggles. Resolved per toggle, not cached —
+   * TERRAIN owns most of these objects and may rebuild them.
+   *
+   *   S1/S2  sand rings + the Nile water group — the first gate's pre-registered set.
+   *   S3     vegetation (palms, reeds, tufts). InstancedMesh, castShadow TRUE, so unlike the
+   *          others it is a shadow caster: hiding it changes FX's static-caster fingerprint
+   *          (002f27e trigger #4 covers effective visibility including ancestors) and forces
+   *          one cache refresh on the flip frame. That frame is not representative of steady
+   *          state and must not be the one a budget number is read from.
+   *   S4     the `far` zone — 2 stepped pyramids + 5 mastabas. Already in NO_CAST_ZONE, so
+   *          castShadow is false and this set costs the colour pass only, 1×.
+   *
+   * S3/S4 were excluded from the first gate on purpose — it was pre-registered on exactly
+   * rings + water — and are added here under their own pre-registration and their own
+   * within-boot byte-identity control.
+   *
+   * `wide` defaults to the live A/B lever but is forced true on every restore path, because a
+   * restore that consulted the lever would strand S3/S4 hidden the moment the lever was
+   * flipped off while sealed. Restores must always cover the widest set that could be hidden.
    */
-  _exteriorSets() {
+  _exteriorSets(wide = this.cryptGateWide) {
     const terrain = this.engine.get('terrain');
-    if (!terrain) return [];
     const out = [];
-    if (Array.isArray(terrain.rings)) out.push(...terrain.rings);
-    if (terrain.water?.group) out.push(terrain.water.group);
+    if (terrain) {
+      if (Array.isArray(terrain.rings)) out.push(...terrain.rings);
+      if (terrain.water?.group) out.push(terrain.water.group);
+      if (wide && terrain.vegetation?.group) out.push(terrain.vegetation.group);
+    }
+    if (wide) out.push(...(this._zoneMeshes.get('far') || []));
     return out;
+  }
+
+  /**
+   * Re-evaluate the gate from scratch on the next update(). Needed after flipping
+   * `cryptGateWide`, and the only supported way to do it: it reveals the widest set first, so
+   * nothing can be left hidden by a lever change.
+   */
+  resetCryptGate() {
+    for (const o of this._exteriorSets(true)) o.visible = true;
+    this._cryptSealed = null;
   }
 
   dispose() {
     // Never leave TERRAIN's meshes hidden behind us if we die while the gate is on.
-    if (this._cryptSealed) for (const o of this._exteriorSets()) o.visible = true;
+    if (this._cryptSealed) for (const o of this._exteriorSets(true)) o.visible = true;
     for (const g of this._geoms) g.dispose?.();
     for (const m of this._materials.values()) m.dispose?.();
     this._pm?.dispose();
