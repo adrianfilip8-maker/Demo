@@ -469,6 +469,22 @@ Recorded so they are not re-derived:
   darkest channel is the **split-tone**, whose cool-leg gains are (0.914, 0.999, 1.265) — a
   1.384 B/R swing, i.e. exactly the reported 38%. At mix 0.20 the surface is darkest-in-blue
   *before* the split and darkest-in-green *after* it.
+
+  **Correction, by toggle rather than by argument: the split-tone is compensating, not
+  causing.** The paragraph above reads the split's gains and concludes it makes green darkest.
+  Switching it off measures the opposite — shadow hue goes **266° → 278°, worse**, and so do the
+  other two suspects that were argued the same way (AgX bypass 274°, wash off 277°). All three
+  were named by inspecting a term's coefficients; none survives being turned off. The split's
+  cool leg is G/R **1.09**, so it *raises* G relative to R and is partly undoing the defect.
+
+  The real owner is the **albedo multiply**, and it is a share argument rather than a hue one:
+  88.4% of shadow-side radiance is albedo-multiplied (the multiplied leg 57.3% plus the fill
+  31.1%) and therefore inherits sandstone's own linear G/R of **0.483**, while the one
+  albedo-free term — the wash, at G/R 1.336 and healthy — is only 11.6% and far too small to
+  rescue G. No cool term is making green dark; the stone is, and everything downstream is
+  scaling it. This is the same category error as the ≤226° acceptance below, arriving from the
+  other side: **read a coefficient and you learn what a term would do alone; toggle it and you
+  learn what it does here.**
 - ~~**Gold has no specular path in the shader at all.**~~ **False, and it was my widening of a
   true finding.** TEXTURES reported the narrow, correct fact: *this file's* `goldSpec` reaches
   no specular term. I relayed it as "no specular path at all". The shader has a full metal
@@ -1185,3 +1201,28 @@ different exponent the held-out middle point is predicted exactly with `C≈0`. 
 free parameters: the fit cannot separate "there is a floor" from "the exponent is smaller here",
 and it will hand you whichever story you sampled toward. Report what both branches agree on, or
 get a fourth point.
+
+## 17. The obvious one-line fix would have halved the rim in nine shots
+
+`LIGHTING` publishes `rim.strength`; `setKeyLight` reads `rim.gain` / `rim.intensity` and
+ignores it. The bug is real — `uRimGain` has held its boot value of 2.05 in all ten shots for
+the whole session, and a per-tod multiplier has never applied. The fix looks like a rename.
+
+It is not a rename, and taking it would have been a silent 50% regression. `rimStrength` runs
+0.5–0.72 while `uRimGain` is 2.05 and its consumer *multiplies*: the two live in different
+units. Wiring `strength` straight into `gain` would have dropped the rim to roughly a quarter
+of its shipped value in the nine daylight shots — arriving as "a correctness fix", landing as
+a lighting regression, and with a commit message that would have made it look intended.
+
+What identifies the right normalisation is that the two mechanisms **agree where they overlap**:
+read against its own daylight reference, `0.72/0.5 = 1.44` against a hardcoded `1.45` — 0.7%
+apart. That agreement is the evidence the units differ by exactly that reference, and under it
+eight of ten shots come out bit-identical with only `night` and `guard` moving. Both of those
+are night; the first report of this called it "night's rim" and missed that `guard` at tod 0.10
+is night too, and that no rim run had ever measured `guard`.
+
+So the plumbing goes in defaulted to a no-op, and the brightening it enables is held as its own
+pre-registered A/B with the residual predictions written down first (the night lip artefact
+13 → ~19 px, guard 4 → ~6 px). **A dropped value is a bug; restoring it at face value is a
+change.** Before wiring any two systems together, check that the number means the same thing on
+both ends — and if a "fix" would move a shipped look, it is a change wearing a fix's clothes.
