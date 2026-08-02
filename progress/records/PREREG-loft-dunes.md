@@ -105,3 +105,54 @@ more than a hope only if the record says which it is.
 
 `src/world/` should stay **frozen from seal to capture**, as it was for geo3, so the frames
 describe a nameable tree.
+
+### Amendment, 21:52Z — added BEFORE any `dunes` frame exists; no clause or threshold altered
+
+The freeze clause above is **insufficient, and it was insufficient as written.** It names
+`src/world/` — the module I own — and the hazard arrived from the module that decides where
+band edges fall.
+
+While this run sat in the capture queue, SHADING was mid-edit and uncommitted on
+`src/render/shaders/toon.glsl.js` and `src/render/ToonMaterial.js`. **L2 counts band
+transitions and L3 measures a band edge's deviation from a straight line; `toon.glsl.js` is
+the file that decides where those edges fall.** `harness.mjs` loads modules when a run
+*acquires* the lock, not when it queues, so a ticket placed before the edit landed would have
+booted it — quantising with an unnamed shader against a seal written for a different one, with
+`report.json` recording only `dirty: true`. The frame would have been unnameable in exactly the
+respect the freeze exists to prevent, from outside the module the freeze covers.
+
+**The rule this seal should have been written to, and the one the next seal gets:** *name the
+modules the measurement depends on, not the modules you own.* For a band-transition
+measurement that set is `src/world/` (the geometry), `src/render/` (the quantiser),
+`src/textures/` (the albedo the luma is read from) and `src/core/Shots.js` (the framing the
+pixel table above is computed against).
+
+This is now enforced in code rather than by vigilance: `scratchpad/dunesloft.mjs` refuses to
+queue while any of those four carries a tracked uncommitted modification, and logs what it is
+waiting on. Either resolution clears it — the edit is held (tree unchanged) or landed (tree
+changed but named by a sha). Only the third case, a tree no sha describes, is refused.
+
+### Arm 2's viewpoint is constrained by the avenue itself — found before the capture, not after
+
+The seal asks for "one staged close arm on `+X z 52.6`" without fixing a viewpoint, and the
+obvious one does not work. **A close camera looking straight down +Z at that flank is occluded
+by its own neighbour.** The row is 6.3 m apart in z and each animal is 3.44 m long in x (world
+x 5.74…9.18 for the +X row, since ry −90° maps local z onto world x), so a sight line from
+z 62.5 to the z 52.6 flank crosses the z 58.9 animal's near face at **x 8.11 — inside its
+footprint**. That frame would have been a picture of the wrong sphinx.
+
+Arm 2 is therefore a **dolly along the canonical bearing**: camera placed 10.5 m from the flank
+centre along the line the `dunes` camera already occupies. The same sight line crosses the
+z 58.9 near face at **x 10.65, outside 9.18 — clear**. This is also the better instrument, and
+for the reason `hero` uses the same trick: the bearing is unchanged, so the sun-to-flank and
+view-to-flank relationships are identical to arm 1 and arm 2 is *"arm 1, closer"* rather than a
+second, differently-lit opinion that would confound L3. The run additionally raycasts the live
+scene from the arm-2 camera to the flank and records the first three hits, so the frame carries
+its own proof of clearance instead of my arithmetic.
+
+Resolution of record: SHADING landed at `1d9bd65`. The change is a rim shadow-floor knob
+scoped to non-skinned geometry, shipping at `0.55`, where `mix(0.55, 0.55, x)` makes it
+value-identical to the previous expression — verified numerically by the coordinator over
+200,000 random `sh` samples at both `vSlySkin` values, difference exactly 0. **So L2/L3 score
+the same quantiser this seal was written against.** Recorded as value identity, not as a claim
+about compiled bytes.

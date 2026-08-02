@@ -4605,6 +4605,47 @@ number being physically impossible — the same tell that caught the 32 cm forea
 
 ---
 
+## §14.9 — I ran the check and hardcoded its verdict
+
+**One commit after recording §14.8, I repeated §14.8's failure with §14.8's own check running.**
+
+The command was:
+
+```sh
+git diff --stat -- KNOWN_ISSUES.md ; echo "(empty = safe to append)"
+```
+
+`git diff` returned **12 insertions**. The `echo` printed *"(empty = safe to append)"* — because it
+is an unconditional label, not a conclusion. I read my own output, saw the reassuring string, and
+appended and staged over another author's uncommitted work.
+
+> **A check whose conclusion does not depend on its measurement is not a check.**
+
+This is the §39 / §43 / §50 / §52.1 family — an instrument that returns "healthy" for every input —
+except hand-built by me, immediately after writing the section that warns about it. §14.8 diagnosed
+the *breadth vs depth* problem correctly and then failed on a third axis neither of us named:
+**the guard was advisory.** It printed something a human had to notice and act on, in a loop where
+the human was the one making the mistake.
+
+**Fixed as `tools/preappend.sh`, which exits non-zero.** It refuses rather than reports, so it
+cannot be misread:
+
+```sh
+tools/preappend.sh KNOWN_ISSUES.md && <append> && git add … && git commit …
+```
+
+Proved on both inputs before being trusted, per §46: exit 0 with "clean at 674bdd9" on the real
+file, exit 1 on a deliberately dirtied copy, and exit 0 again after reverting. A guard that has only
+ever been seen to pass has not been seen to work.
+
+**What rode in unread, now credited:** GEOMETRY's addendum to §51.3 — the note I had explicitly
+asked it to write, recording that `counted` and `report.json.drawCalls` are the same quantity but
+not a like-for-like comparison, because `courtyard`'s camera moved and widened between the trees.
+Good work, and it should not have entered the history inside a commit message about something else.
+Twice now the content has been fine; twice that has been luck rather than process.
+
+---
+
 ## §59 — the guard against silence was itself silent, and the silhouette test was the wrong instrument for half of what it was asked
 
 ### 59.1 My §58.1 fix reintroduced the exact defect it closed
@@ -4716,3 +4757,74 @@ what sits beside it. Moved to `shots/cap9-prev-5d30fed/` before the run wrote an
 
 A monitor also fired a false "cap9 DONE" within 60 s; CHARACTER checked the stamp instead of
 believing it.
+
+
+---
+
+## §60 — three defects caught before the capture, and a brief's hypothesis disproven by measurement
+
+GEOMETRY, while blocked in the capture queue. All of this is pre-frame.
+
+### 60.1 The dependency rule is now enforced in code rather than by vigilance
+
+`PREREG-loft-dunes.md` is amended **before any `dunes` frame exists**, altering no clause and no
+threshold, to record that its freeze clause was insufficient *as written*: it named `src/world/` —
+the module GEOMETRY owns — while the hazard arrived from `src/render/`, which decides where band
+edges fall. The rule it now states:
+
+> **Name the modules the measurement depends on, not the modules you own.** For a band-transition
+> measurement that set is `src/world/` (geometry), `src/render/` (the quantiser), `src/textures/`
+> (the albedo the luma is read from) and `src/core/Shots.js` (the framing the pixel table is
+> computed against).
+
+`scratchpad/dunesloft.mjs` now **refuses to queue** while any of those four carries a tracked
+uncommitted modification, and logs what it is waiting on. Note the discrimination: *held* (tree
+unchanged) and *landed* (tree changed but named by a sha) both clear it. **Only a tree no sha
+describes is refused** — which is the actual hazard, rather than "someone is editing".
+
+### 60.2 Arm 2 was occluded by its own neighbour, and the fix is a better instrument
+
+The seal asked for "one staged close arm on `+X z 52.6`" without fixing a viewpoint, and the obvious
+viewpoint does not work. The row is 6.3 m apart in z and each animal is 3.44 m long in x (world x
+**5.74…9.18**, since `ry −90°` maps local z onto world x). A sight line from z 62.5 to the z 52.6
+flank crosses the z 58.9 animal's near face at **x 8.11 — inside its footprint.** *That frame would
+have been a picture of the wrong sphinx.*
+
+Arm 2 is now a **dolly along the canonical bearing**, 10.5 m from the flank centre on the line the
+`dunes` camera already occupies; the same sight line crosses at **x 10.65, outside 9.18 — clear.**
+And it is the better instrument for the reason `hero` uses the same trick: the bearing is unchanged,
+so sun-to-flank and view-to-flank are identical to arm 1, making arm 2 **"arm 1, closer"** rather
+than a differently-lit second opinion that would confound L3.
+
+The run additionally **raycasts the live scene** from the arm-2 camera and records the first three
+hits, so the frame carries its own proof of clearance instead of GEOMETRY's arithmetic. That is the
+§46 discipline applied to a geometric argument: don't trust the calculation that chose the camera,
+make the frame testify.
+
+### 60.3 The ROI ran off the silhouette
+
+The scan projected each station's top onto the flank plane — but **a D-section's flank stops at the
+spring line.** The ROI would have sampled **sky** past that point and produced a false band
+transition *at the silhouette edge*, corrupting both L2 and L3 in the direction of a pass. Caught
+before the capture; the same shape as §53.2's ROI inherited across framings and §55.1's
+auto-located sole, both of which produced confirming numbers from a misplaced window.
+
+### 60.4 L2's discriminator did not exist, and was stated before scoring
+
+L2's sealed text specifies **no** discriminator for "carries ≥1 band transition". `loftscore.mjs`
+states one up front and dry-tests it on a real frame: **noise floor ≈1.9 L against a 6 L
+threshold**, so a flank with no terminator (≈2 L) is cleanly separable from one carrying a band step
+(**14–31 L**, measured on `temple`'s columns in §56.6). Proving the instrument's floor on a known
+frame *before* the frame under test exists is what makes a null interpretable.
+
+### 60.5 The `guard` cyan contact line is not a kerb modelling error — the brief's hypothesis is disproven
+
+GEOMETRY's own brief proposed "give it real width or bury it in the wall". **Measurement disproves
+it:** §24.3 puts the line at **1,692 px on `base` and 0 px on `norim`.** It is the **surface fresnel
+in `toon.glsl.js`**; the surface genuinely *is* convex; both gates pass it **correctly**; and no
+`rimCurve` / `rimPlanar` value moves it.
+
+So it is SHADING's, the registered lever is `uRimShadowFloorArch` (landed inert at `1d9bd65`), and
+its A/B must re-measure `night` — because the 0.55 floor is what carries `night`'s silhouette rims.
+A hypothesis in a work order is not a finding, and this one was retired by the cheapest possible
+test: a term that goes to zero when the rim is switched off is the rim.
