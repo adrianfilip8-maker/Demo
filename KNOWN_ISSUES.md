@@ -1932,9 +1932,29 @@ crest scatter — is done and verified in the texture (§8); no texture change s
 finding. Full working: `scratchpad/RESULT-goldmip.md` (pre-registered, `PREREG-goldmip.md`);
 instruments kept in the scratchpad: `gildmip.mjs`, `gildmips.mjs`, `gildresp.mjs`.
 
----
+**MEASURED 2026-08-02 (`progress/records/RESULT-goldhalo.md`): the gain formulation of that
+routing is dead, and this section's own arithmetic said why before the run did.** The goldhalo
+A/B (hero+temple × bloomMetalGain {0,4,12,24} + gain-0 falsifier arm, boot 4ef5f44 clean,
+per-arm uniform readbacks verified) found that at gain 24 — a ×25 feed multiplier — **zero
+temporally-stable pixels changed**: full gilded annulus, kiosk halo, gilded body, and the
+bit-stable frame max 226.4, all flat. The arithmetic closes rather than surprises: §25 quoted
+"feeds ~2.2–3.6 scene" from the ndh=1 *bound*, but its own log-fit puts the hottest gilded
+pixel at scene ≈2.0 against the shipped onset 1.90 — w ≈ 0.004, and ×25 of nearly-nothing is
+sub-quantization. `bloomMetalGain` stays 0. The lever with actual headroom is a **metal-aware
+onset** (`mix(T, Tmetal, metal)`, Tmetal ≈ 1.2–1.5, DG-safe by the same arithmetic) — new
+prereg required; nothing ships from this finding.
 
-## 26. Two prereg design flaws, found by the seals' own verdicts — bands that don't partition, and an adjective with no metric
+Two instrument rulings from the same run, both coordinator-decided. **F1 (bit-identity
+between the two gain-0 arms) failed on both shots and the run stands anyway**: the diff is
+§24.4's temporal-FX class (torch flame cores, shaft/dust overlays — 4–23% of it anywhere near
+gilded), the bar as sealed is unattainable on any shot with animated emitters, and the a0/a0b
+bracket *is* the temporal mask working as §24.4's sweep standard intends. The sealed letter
+("run invalid") is preserved in the RESULT; the temporally-masked statistics are ruled the
+operative evidence. Standing rule: **a bit-identity falsifier on an FX-bearing shot must be
+written as a duplicate-arm bracket + temporal mask from the start** — demanding byte equality
+from an animated frame is sealing an impossibility, §26.1's cousin. Temple's F2 control
+"failure" was the same time-noise (moves more at gain 0 than gain 24; masked, 14× under the
+bar); hero's F2 passed unmasked. Two prereg design flaws, found by the seals' own verdicts — bands that don't partition, and an adjective with no metric
 
 Both from cap5's sealed read (`progress/records/RESULT-cap5.md`), and both are flaws in how
 the *seal* was written, discovered only because the measurement was honest against it.

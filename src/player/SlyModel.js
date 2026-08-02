@@ -2709,9 +2709,15 @@ export class SlyModel {
       const t = i / (n - 1);
       const c = spine[i];
       const tan = new THREE.Vector3().subVectors(spine[Math.min(n - 1, i + 1)], spine[Math.max(0, i - 1)]).normalize();
+      /* Underside pair at EVERY station (PREREG-tailtip.md B). The alternating sets carried
+         |roll| ∈ {1.9, 2.5} in every OTHER station's set, so along the lower contour each
+         underside roll line appeared at half the station rate and the clumps read as isolated
+         dark studs — cap5's verdict residual. Each set now appends the *mirrored* underside
+         pair, so all four of {±1.9, ±2.5} exist at every station and the along-contour spacing
+         halves. The alternation of the other four rolls is untouched. */
       const rings = (i / STEP) % 2
-        ? [-2.5, -1.62, -0.74, 0.14, 1.02, 1.9]
-        : [2.5, 1.62, 0.74, -0.14, -1.02, -1.9];
+        ? [-2.5, -1.62, -0.74, 0.14, 1.02, 1.9, 2.5, -1.9]
+        : [2.5, 1.62, 0.74, -0.14, -1.02, -1.9, -2.5, 1.9];
       for (const roll0 of rings) {
         /* Roll phase is jittered per station for the same reason the cheek row jitters pitch:
            four rolls repeated at eleven uniform stations is a lattice, and the silhouette test
@@ -2737,7 +2743,12 @@ export class SlyModel {
         const tMid = Math.max(0, t - 0.030);
         put({
           base, shadeN: outward.clone(),
-          dir: outward.clone().multiplyScalar(0.46).addScaledVector(tan, -1.0).normalize(),
+          /* Lay-back on the underside rolls (PREREG-tailtip.md B): for |roll| > 1.7 the
+             outward component drops 0.46 → 0.30 — the exact change that fixed the leg row.
+             A stud protrudes; a laid-back clump scallops the band it grew from. Keyed on the
+             authored roll0, not the jittered roll, so the jitter cannot flip a clump between
+             the two regimes station to station. */
+          dir: outward.clone().multiplyScalar(Math.abs(roll0) > 1.7 ? 0.30 : 0.46).addScaledVector(tan, -1.0).normalize(),
           /* Base reach 0.070 → 0.058 and bend 0.26 → 0.34 — the "softer" half of the cap4
              stegosaurus read (the ridge of separated near-black triangles along both tail
              contours at 2x). Count is deliberately untouched: STEP 2 closed a measured
@@ -2757,19 +2768,33 @@ export class SlyModel {
         });
       }
     }
-    /* Tip fan. Four big locks rather than six small ones, swept back off the tip: a raccoon
-       tail ends in a dark point, and a radial starburst there reads as a shaving brush. */
+    /* Merged terminal lock (PREREG-tailtip.md A), replacing the 4-lock radial tip fan. The
+       fan's one ring diverging at perp 0.30 was separated *by construction* — cap5 read it as
+       a crown of separated near-black triangles on the raised tip, and no width/roll knob has
+       a lever on a divergence that is authored in. Three wedges laid nearly along the tip
+       tangent instead, bases staggered BACK down the spine so each wedge overlaps the one
+       ahead of it: base spacing along tipT 0.040·G against reach 0.050–0.085·G is
+       spacing/reach 0.47–0.80, inside the proven fur band (≤1.2) — the same overlap
+       arithmetic that discriminated the leg row from the forearm comb. Azimuths cluster on
+       the down-swept side so the merged mass reads as one dark tapering point with a ragged
+       edge, not a starburst. Cost −1 clump. */
     const tipC = spine[n - 1];
     const tipT = new THREE.Vector3().subVectors(spine[n - 1], spine[n - 4]).normalize();
-    for (let i = 0; i < 4; i++) {
-      const a = (i / 4) * Math.PI * 2 + 0.5;
+    const G = TUNE.tailGirth;
+    const TIPLOCK = [
+      { off: -0.010, az: 0.00, len: 0.085, wid: 0.048 },
+      { off: -0.050, az: +0.35, len: 0.065, wid: 0.042 },
+      { off: -0.090, az: -0.35, len: 0.050, wid: 0.036 },
+    ];
+    for (const wdg of TIPLOCK) {
+      const a = -Math.PI / 2 + wdg.az;                   // -π/2 = the down-swept side
       const perp = new THREE.Vector3(Math.cos(a), Math.sin(a) * 0.8, 0);
       perp.sub(_v.copy(tipT).multiplyScalar(perp.dot(tipT))).normalize();
       put({
-        base: tipC.clone().addScaledVector(tipT, -0.030),
-        dir: tipT.clone().multiplyScalar(0.94).addScaledVector(perp, 0.30).normalize(),
+        base: tipC.clone().addScaledVector(tipT, wdg.off * G),
+        dir: tipT.clone().multiplyScalar(0.94).addScaledVector(perp, 0.10).normalize(),
         shadeN: tipT.clone().multiplyScalar(0.55).addScaledVector(perp, 0.85).normalize(),
-        length: 0.070 * TUNE.tailGirth, width: 0.032 * TUNE.tailGirth, bend: 0.22,
+        length: wdg.len * G, width: wdg.wid * G, bend: 0.30,
         bendDir: perp.clone(),
         group: 'furDark', weights: [['tailD', 1]],
       });
