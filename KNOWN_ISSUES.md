@@ -2136,6 +2136,22 @@ runs. And when a seal's assumed ordering is broken by the queue, say which order
 happened; a verification's authority comes from its bands, but its *honesty* comes from the
 record matching what was really done.
 
+**26.5 Narrowing a seal after the fact is safe; widening it is not.** Two grounding
+investigations converged from opposite directions — one predicting the shadow is *displaced*
+8–46 px laterally, the other measuring that the occlusion is *too weak* by an order of magnitude
+even at its ceiling — and the risk was that a null on the first would be read as closing the
+whole finding. The fix was an addendum written **before any frame of that run existed** which
+changed **no threshold** and only restricted what a FLAT outcome is permitted to *conclude*:
+displacement eliminated by measurement, a dedicated contact term still owed, the AO knobs still
+proven dead. It stated the converse too — a positive result there does not overturn the other
+measurement.
+
+That is the general rule worth having. **An amendment that makes a seal claim *less* is
+legitimate at any time, because it cannot manufacture a pass; an amendment that makes it claim
+*more*, or that moves a band, must precede the pixels.** §27.5 and §33 are both about the second
+kind. This is the first clean example of the first kind, and the tell that it was legitimate is
+that it constrained its own author's conclusion rather than freeing it.
+
 **26.4 The acceptance set omitted the shot the fix breaks.** The task-16 seal registered its
 tint→turquoise arm on `night` and `day` and never evaluated `interior`. Modelled afterwards, the
 sealed arm drives `interior`'s shadows to hue **345 (magenta)** and then **69 (olive)** with
