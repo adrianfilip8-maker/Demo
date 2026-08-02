@@ -1609,3 +1609,22 @@ sRGB by then. It recovers the information into blue (distinct outputs over 7 swe
 comment floats "moving `uSaturation` to display space". Applied after AgX it multiplies an
 already-clipped value and destroys *more* information — distinct outputs 3 → **2**, worse than
 shipped. Recorded at the declaration site per §22, because that is where the proposal lives.
+
+**Checking one level of ancestry is not a detachment test.** A false alarm was raised — and
+acted on — that four captures were about to be reaped, on the strength of reading each node
+process's immediate parent and finding it was not `1`. That is the wrong test. The survivor
+shape in this project is `init → wrapper → node`: the *wrapper* is orphaned to init, the node
+hangs off the wrapper, and `ps -o ppid= -p <node>` therefore returns the wrapper's pid, not 1,
+on a process that is perfectly safe. Every long run that survived 55–95 minutes this session has
+exactly that ancestry.
+
+The consequence was a killed capture and two agents pulled off their work to fix a problem that
+did not exist. **Walk the chain to init, or check the session id (`ps -o sid=`), and treat a
+non-1 immediate parent as a question rather than an answer.** Note also that `pgrep -f` is not a
+safe way to find the pid to check: it matched the checking shell and its own subshells, and
+would have written the wrong pid into a pid file. The reliable identifier is the lock's own
+queue ticket, which is named `<epoch>-<pid>` by the process that took it.
+
+Left open, and worth stating so it is not quietly assumed solved: **the original watcher deaths
+that motivated §14 remain unexplained.** Those processes really did die at ~3600 s. This
+correction removes one diagnosis, not the phenomenon.
