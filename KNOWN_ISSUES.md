@@ -3470,3 +3470,73 @@ scratchpad, with `cwd` and hash verified to match the first boot's stamp.
 
 **The provenance discipline has to point at your own edits, not only at other people's.** An
 instrument built to protect a run from concurrent agents caught the agent that built it.
+
+---
+
+## 48. Three results from one offline pass: a defect that was a control, an arithmetic that divided by nothing, and a falsifier pre-registered to fail
+
+No capture, no source change. All three came from frames that already existed plus the shader
+expressions read out of source.
+
+### 48.1 The sphinx avenue is not a defect — it is the control §41 never had
+
+Routed as "a cream albedo rendering green-dominant, a channel order the albedo does not contain".
+Modelled through the chain, both pixels reproduce: sphinx `#3b6068` h 190.7 against a measured
+196.5 (**5.8°**), shadowed sand `#2d3e54` h 213.8 against 216.4 (**2.6°**). **The ordering is
+predicted rather than anomalous**: cream limestone's albedo G/R is 0.623 against sandstone's
+0.234, so §41's product lands at 2.342 against 1.181 and the sphinx *must* sit ~20° cooler —
+modelled 23.1°, measured 19.9°.
+
+And it is the missing control. **A near-neutral albedo is exactly where the light dominates the
+product**, so the avenue shows the shadow light's own channel order more purely than any stone in
+the game — the case §41's mechanism most needed and never had. It passes §45's band against every
+lit-stone value ever measured here, worst |180 − Δh| = 16.7 against a tolerance of 30.
+
+Its author's own "reads as teal blocks" impression was then **killed by its own control**: sphinx
+chroma is **37–48 against lit sand's 123 and shaded sand's 62** — *less* chromatic than everything
+around it. Two of four control ROIs were also thrown out for measuring the wrong surface (a
+"shaded" pylon face that was lit; a sand box straddling a shadow boundary), caught by drawing the
+boxes onto the frame. What survives is **form, not shading**: the statues read as stacked boxes,
+which is a geometry line.
+
+### 48.2 An arithmetic that attributed a swing to a term contributing exactly zero
+
+The cel-ramp handoff was "13 L of total swing across a full cylinder gives a three-band quantiser
+~4 L per step, below what reads — so diffuse **range** is missing." The shader says otherwise:
+`key = ramp * sh`, so **outside the light shaft `sh → 0` and the quantiser contributes exactly
+0 L.** That is arithmetic on the expression, not a model's opinion. The 13 L is entirely an
+additive non-quantised term, and dividing it into three band steps describes a term that put none
+of it there.
+
+Where the ramp *is* spent, the model reconciles: in-shaft **36.6 L modelled against 39.0 L
+measured** (6%), with band steps of **26.2 L and 10.4 L** — not 4. **So the missing quantity is
+key light, not diffuse range, and no ramp tuning can reach a term multiplied by zero.**
+
+**Before tuning a term, confirm it is active in the region you measured.** The measurement was
+correct and carefully done; only the attribution was wrong, and no amount of re-measuring the same
+region would have exposed it — reading the expression did.
+
+Kept honest at the other end too: the surface fresnel rim is a candidate for the residual 13 L,
+and its author explicitly declined to claim it, because that model overshot at 32 L with the
+silhouette gate assumed open.
+
+### 48.3 A falsifier pre-registered to fail under a correct diagnosis
+
+The cane renders near-black in a shipped frame. Quantified:
+
+- `SlyModel.js:3331` binarises `metal: spec.metal ? 1 : 0`, so the cane runs at **uMetal 1.0** and
+  loses **80%** of its diffuse — **§8's oft-quoted 68% is the world's 0.85 value and is simply
+  wrong for the cane.** A number correct in one place, quoted in another where it does not apply.
+- `spec *= sh` means specular is **exactly zero in shade**, so the metal's designed highlight path
+  cannot fire on a shaft in shadow at all.
+- **The symptom is a hue gradient, not a brightness one**: shaft centre h 160.0°, silhouette
+  h 40.0°, against authored gold 45.1°, with a luminance rim-to-shaft ratio of only **1.51×**.
+  Anyone testing this on brightness would measure a weak effect and conclude the diagnosis was
+  wrong.
+
+Then the part worth the section: **the proposed one-line fix was modelled and predicted to be
+insufficient — before it runs.** Raising the diffuse multiply 0.20 → 0.55 moves shaft luminance
+×2.37 but leaves hue at **129.2°, still not gold**, and it does *not* leave the rim alone
+(×1.91), so the falsifier's second half fails **even when the diagnosis is correct**. Recording
+that in advance is what stops a correct diagnosis being thrown away by its own test — the mirror
+of §33's pre-registered luck clause, and rarer.
