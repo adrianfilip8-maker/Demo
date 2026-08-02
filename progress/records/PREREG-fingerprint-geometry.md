@@ -1,4 +1,11 @@
-# PREREG — shadow-cache fingerprint: the geometry-not-hashed hazard (paper only; SRC FROZEN)
+# PREREG — shadow-cache fingerprint: the geometry-not-hashed hazard
+
+> STATUS (13:4x): unfrozen by coordinator after goldhalo; **the fix below is IMPLEMENTED
+> in src/render/Lighting.js** exactly as specified (terms 31/37/41/43/47, Infinity→−1;
+> trigger-4 doc line amended; syntax-checked; uncommitted for sweep). The sealed
+> verification V1–V3 below is UNCHANGED and still pending — it runs in the coordinator's
+> next FIFO batch (no captures before the explicit green light). The seal's bands were
+> registered before any code existed and have not been touched since.
 
 Written under the src freeze (until goldhalo/28178 completes). No code has been changed;
 this is the fix plan and the sealed verification design, §26-compliant.

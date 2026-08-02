@@ -78,3 +78,31 @@ to optimise for §1 compliance itself.
 Counter-window rule carried forward: any future cache-on stats quote uses the corrected
 column (counted + amortised static-refresh), never the counted one — Engine resets info
 after module updates, so Lighting.update()'s cache work is invisible to engine.stats.
+
+## ADDENDUM (13:2x) — the combat leg lands; §1 is CLOSED on all ten
+
+Input: `progress/records/bud35-report.json` (committed e2e038e), stamp **c61941c
+dirty:false** — same-src tree as the reference, so no seam margin applies, exactly as the
+band pre-statement specified. Ten rows, zero errors. Verified off the file, not the relay
+(values matched).
+
+**Combat row: 210 draws / 1,475,555 tris counted.** Band test: 210 ≤ 500 AND 1.476M ≤
+2.400M → first band → **combat bounded inside at floor 2.0: main-view ≤ 105 draws /
+0.738M tris, i.e. ≤ 42% of the draw budget and ≤ 62% of the triangle budget. CLOSED.**
+(Second band not entered; no direct measurement order issued.)
+
+**Final §1 status, one paragraph.** §1 closes as bookkeeping on all ten canonical shots:
+four measured directly by budget.mjs (worst: night, 93 draws / 0.668M — 56% of triangle
+budget), five bounded from counted rows (worst bound 74% of triangle budget), and combat
+measured-in-bands on bud35's same-src row (bound 62%). No shot's scored main-view line
+exceeds — or at bound can exceed — 250 draws / 1.2M triangles. The 2.5–3.1× pass
+multiplication is real frame cost and remains the open FRAME-TIME item, explicitly
+unsettleable on this GPU-less container; it is no longer a §1 compliance question.
+
+**bud34 retired as reference.** bud35's ten rows on c61941c supersede bud34's eight-row
+table for every future comparison; bud34 remains only as the tree@08:15 historical pin
+(RESULT-bud34.md §3).
+
+Watchers: the bud35 Monitor (bcuhew4mt) fired its completion events and its stream ended —
+self-disarmed; the 14:15Z backup poke is disabled by trigger update so nothing fires into a
+closed question.
