@@ -1216,6 +1216,23 @@ backgrounded list and the run's log was silently written to `/` — the capture 
 output was simply not where anyone was looking for it. Expand paths before the `&`, or use
 absolute ones.
 
+**A sixth, and it inverts the recovery playbook: a HARNESS restart is not a container restart.**
+A restart notice arrived saying *"The container was restarted. The following background tasks
+were running and are now stopped"* — and the playbook this file had been carrying said container
+restarts kill everything, detached processes included, so relaunch the queue. **Checking first
+showed the opposite.** Every `setsid`-detached capture was still running with its original pid
+(one holding the lock, one queued, one budget probe), the whole filesystem survived including
+`shots/` and a 1,202-file scratchpad, and git was at HEAD with zero commits behind origin. What
+actually died was the **harness-tracked background tasks** — the watchers and Monitors — and
+nothing else. One run had even completed normally during the event and written its manifest.
+
+Relaunching reflexively would have destroyed two live captures and cost roughly two hours of
+lock time to re-render frames that already existed. **Rule: on any restart notice, verify before
+recovering** — `ps` the pids you recorded, `ls` the output directories, and check `git rev-list
+HEAD..origin`. The notice tells you what the *harness* lost, which is not the same question as
+what the *machine* lost. Re-arm the watchers, which are the only casualties, and leave the work
+alone.
+
 **A fifth, hit twice in one hour by two different agents: `pgrep -f` matches the wrapper, so
 the queue ticket is the authority on which pid is yours.** `pgrep -f "shot.mjs hero …"` matches
 *any* process whose command line contains that string — including the `bash -c` wrapper that
