@@ -1,0 +1,28 @@
+┌─────────┬──────────────────┬─────────┬─────────┬──────────────┬────────────┬───────────┬─────────┐
+│ (index) │ mesh             │ verts   │ tris    │ maxBboxDelta │ hash       │ dMeanY    │ status  │
+├─────────┼──────────────────┼─────────┼─────────┼──────────────┼────────────┼───────────┼─────────┤
+│ 0       │ 'sand_ring0'     │ '37249' │ '73728' │ '0.00e+0'    │ '6a819446' │ '0.00e+0' │ 'exact' │
+│ 1       │ 'sand_ring1'     │ '6561'  │ '10752' │ '0.00e+0'    │ '674e8d75' │ '0.00e+0' │ 'exact' │
+│ 2       │ 'sand_ring2'     │ '2401'  │ '3808'  │ '0.00e+0'    │ 'a7ee5684' │ '0.00e+0' │ 'exact' │
+│ 3       │ 'sand_ring3'     │ '3721'  │ '6048'  │ '0.00e+0'    │ '9d9ce9f3' │ '0.00e+0' │ 'exact' │
+│ 4       │ 'sand_collision' │ '7225'  │ '14112' │ '0.00e+0'    │ '2bc1c9a4' │ '0.00e+0' │ 'exact' │
+│ 5       │ 'pyramid_105'    │ '1242'  │ '414'   │ '0.00e+0'    │ '9af4e0cd' │ '0.00e+0' │ 'exact' │
+│ 6       │ 'pyramid_72'     │ '954'   │ '318'   │ '0.00e+0'    │ 'cd368f87' │ '0.00e+0' │ 'exact' │
+└─────────┴──────────────────┴─────────┴─────────┴──────────────┴────────────┴───────────┴─────────┘
+
+bound meshes        : 7
+missing             : 0
+count mismatches    : 0
+bbox mismatches>1e-6: 0
+hash mismatches     : 0
+meanY>1e-6 (of those): 0
+
+headless totals     : 73306 verts / 130626 tris
+browser  totals     : 73306 verts / 130626 tris
+browser quality     : high | headless quality: high
+heightAt agree      : true
+
+=== VERDICT: EXACT ===
+
+(non-binding) unbound meshes — headless 9 / browser 9
+(non-binding) unbound verts — headless 13953 / browser 13953

@@ -1,0 +1,37 @@
+--- a/src/world/Terrain.js
++++ b/src/world/Terrain.js
+@@ -500,14 +500,33 @@
+ 
+   async init() {
+     const t0 = performance.now();
++    /* These three used to share one try/catch, which meant the *cosmetic* stage in the
++       middle could take out the two that matter. It did exactly that headless for as long
++       as `_canvas()` needed a DOM. Each stage now fails on its own terms, and each warning
++       says what was actually lost, so a missing ground can never again be reported as a
++       missing texture. */
+     try {
+       this._buildCache();
++    } catch (err) {
++      // Not fatal: heightAt() falls back to the analytic field, just far slower.
++      this.engine.warn(`terrain: height cache failed, heightAt() falls back to analytic — ${err?.message || err}`);
++      console.error('[terrain/cache]', err);
++    }
++
++    // Cosmetic: these feed material map/normalMap. No geometry reads them back.
++    try {
+       this._buildTextures();
++    } catch (err) {
++      this.engine.warn(`terrain: sand maps failed, surfaces will be untextured — ${err?.message || err}`);
++      console.error('[terrain/textures]', err);
++    }
++
++    try {
+       this._buildSand();
+       this._buildPyramids();
+       this.engine.scene.add(this.group);
+     } catch (err) {
+-      this.engine.warn(`terrain: sand build failed — ${err?.message || err}`);
++      this.engine.warn(`terrain: sand build failed — THE WORLD HAS NO GROUND — ${err?.message || err}`);
+       console.error('[terrain]', err);
+     }
+ 
