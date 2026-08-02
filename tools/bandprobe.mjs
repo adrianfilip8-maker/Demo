@@ -364,6 +364,70 @@ stepTest(bins, 'all lit architecture, all materials pooled');
   for (const r of rank) stepTest(r.bb, `${meshNames[r.mi]}  (n=${r.n}, ndl span ${r.span.toFixed(2)})`);
 }
 
+/* ---- edge rejection: a geometric mask, computed with no reference to luma ----
+ *
+ * WHY THIS EXISTS. A site is a 4-connected run of one *merged* mesh spanning ≥2 bands, and that
+ * definition says nothing about whether the run is flat. On `sandstone_worn` in `courtyard` the
+ * winning run was a **stair flight** — five nosings inside 59 px — while `hieroglyph_wall`'s was
+ * a flat 356×410 face. Scoring those against each other and reporting the difference as a
+ * property of the material was wrong: the separation figures (0.82/0.99 against 3.12/1.92) were
+ * comparing a staircase to a wall, and the routing that came out of them sent a geometry defect
+ * to whoever owns the texture. Rejecting pixels within 3 px of a normal discontinuity removes
+ * 76.3% of the stair site against 4.8% of the wall and brings the two to parity (IQR 9/12/15
+ * against 16/11/18) — i.e. the materials were never meaningfully different.
+ *
+ * Two properties make this a rejection rather than a convenient filter, and both are load-bearing:
+ *
+ *   - It uses NO LUMA GATE. The seed test is normals, mesh identity and depth only. A filter
+ *     that consulted brightness could select for the answer; this one cannot see brightness.
+ *   - The normals here are the *interpolated* ones the rasteriser already writes, so a smooth
+ *     column changes by ~2°/px and survives, while a nosing, chamfer arris or silhouette jumps
+ *     45–90° in one pixel and seeds. Every joint, pit and streak the recipe *paints* is a
+ *     texture feature, not a geometric one, so it stays inside the residual and still counts
+ *     against the material. That is what keeps this honest as a texture-noise measurement.
+ *
+ * The 3 px dilation is there because the discontinuity is not one pixel wide on screen: it is
+ * the nosing, the ink line the outline pass puts on it, and that line's antialiased skirt.
+ *
+ * Reported per site as `edgeRej`. A high value is itself the diagnostic — it says "this site is
+ * geometry, do not read its IQR as texture amplitude".
+ */
+const EDGE_PX = parseInt(opt('edge', '3'), 10);
+const EDGE_COS = Math.cos(THREE.MathUtils.degToRad(parseFloat(opt('edgeDeg', '20'))));
+const gEdge = new Uint8Array(NPX);
+if (EDGE_PX > 0) {
+  const nDot = (p, q) => gN[p * 3] * gN[q * 3] + gN[p * 3 + 1] * gN[q * 3 + 1] + gN[p * 3 + 2] * gN[q * 3 + 2];
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      const q = y * W + x;
+      if (gM[q] < 0) continue;
+      let seed = false;
+      const nb = [x > 0 ? q - 1 : -1, x < W - 1 ? q + 1 : -1, y > 0 ? q - W : -1, y < H - 1 ? q + W : -1];
+      for (const r of nb) {
+        if (r < 0) { seed = true; break; }                       // frame edge
+        if (gM[r] < 0 || gM[r] !== gM[q]) { seed = true; break; } // silhouette / mesh boundary
+        if (nDot(q, r) < EDGE_COS) { seed = true; break; }        // normal discontinuity
+        if (Math.abs(zb[q] - zb[r]) > 0.02 * Math.min(zb[q], zb[r])) { seed = true; break; } // depth step
+      }
+      if (seed) gEdge[q] = 1;
+    }
+  }
+  for (let it = 0; it < EDGE_PX; it++) {
+    const prev = gEdge.slice();
+    for (let y = 0; y < H; y++) {
+      for (let x = 0; x < W; x++) {
+        const q = y * W + x;
+        if (prev[q]) continue;
+        if ((x > 0 && prev[q - 1]) || (x < W - 1 && prev[q + 1]) ||
+            (y > 0 && prev[q - W]) || (y < H - 1 && prev[q + W])) gEdge[q] = 1;
+      }
+    }
+  }
+  let nEdge = 0, nSurf = 0;
+  for (let q = 0; q < NPX; q++) if (gM[q] >= 0) { nSurf++; if (gEdge[q]) nEdge++; }
+  console.error(`# edge mask: ${nEdge}/${nSurf} surface px within ${EDGE_PX} px of a normal discontinuity (${(100 * nEdge / Math.max(1, nSurf)).toFixed(1)}%)`);
+}
+
 /* ---- sites: genuinely CONTIGUOUS single-mesh regions that span all three bands ----
  *
  * The first version of this grouped by (terminator, mesh) over the whole frame and reported a
@@ -404,12 +468,18 @@ for (let q0 = 0; q0 < NPX; q0++) {
  * Below ~1 the band edge is buried in the texture and no viewer will read it as a terminator. */
 for (const c of comps) {
   const per = [[], [], []];
+  let cand = 0, rej = 0;
   for (let y = c.y0; y <= c.y1; y++) for (let x = c.x0; x <= c.x1; x++) {
     const q = y * W + x;
     if (gM[q] !== c.mesh || lit8[q] !== 1) continue;
     const lum = lumaOf(q * img.ch); if (lum < INK) continue;
+    cand++;
+    /* Geometry is not texture noise. See the edge-mask note above: without this, a stair
+       flight and a flat wall are scored as if the difference between them were the material. */
+    if (gEdge[q]) { rej++; continue; }
     per[bandAt(q)].push(lum);
   }
+  c.edgeRej = cand ? rej / cand : 0;
   c.med = per.map((a) => (a.length >= 25 ? med(a) : NaN));
   c.iqr = per.map((a) => (a.length >= 25 ? iqr(a) : NaN));
   c.litN = per.map((a) => a.length);
@@ -430,7 +500,8 @@ for (const c of comps.slice(0, NSITES)) {
   const g = (v) => (isNaN(v) ? ' n/a' : v.toFixed(0).padStart(4));
   console.log(`  sep lo|mid ${f(c.sepLoMid)}  mid|hi ${f(c.sepMidHi)}   medL ${g(c.med[0])}/${g(c.med[1])}/${g(c.med[2])}` +
     `  IQR ${g(c.iqr[0])}/${g(c.iqr[1])}/${g(c.iqr[2])}  litpx ${c.litN[0]}/${c.litN[1]}/${c.litN[2]}`);
-  console.log(`       ${meshNames[c.mesh]}  box(${c.x0},${c.y0})-(${c.x1},${c.y1})  ${c.x1 - c.x0 + 1}x${c.y1 - c.y0 + 1}`);
+  console.log(`       ${meshNames[c.mesh]}  box(${c.x0},${c.y0})-(${c.x1},${c.y1})  ${c.x1 - c.x0 + 1}x${c.y1 - c.y0 + 1}` +
+    `  edgeRej ${(100 * (c.edgeRej ?? 0)).toFixed(1)}%${(c.edgeRej ?? 0) > 0.35 ? '  <- GEOMETRY, not a texture-noise reading' : ''}`);
 }
 
 /* ---- the mid-level check: is the middle tone the QUANTISER's 0.5, or an accident? ----
