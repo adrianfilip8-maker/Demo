@@ -325,7 +325,19 @@ export const TUNE = {
      narrow locks that predate the roll-count change, so this cannot land somewhere unobserved.
      **The final width is deferred to a capture judged with `interiorink.mjs` against the
      torso's ~1.6 runs/row — never against contour roughness again.** */
-  tuftRollW: 1.0,
+  /* 1.0 → 1.35, and this is the deferred decision above being taken, with the instrument it
+     named. Measured on `shots/cap4/sly-closeup.png` (re-derived interiorink, torso control in
+     the same frame): tail-tip INTERIOR runs/row **4.04 against the torso's 3.20** — the locks
+     are not fused, they are over-separated, and the separators are ink: the ROI's adaptive
+     threshold lands at L39.6, *darker than the `tailDark` ring material renders*, so what the
+     eye reads as a stegosaurus ridge of black thorns is mostly the ~2.5 px hull wrapping
+     clumps only ~4–8 px wide on screen. The falsified 3.40 fused locks into plates; 1.35 is
+     aimed at the ink *fraction* (the `tuftDensity` note's own arithmetic: a clump's hull share
+     falls with its width) while keeping lock aspect ~1:2.4, still well clear of the 1:0.95
+     plate. Predicted: tail-tip runs/row 4.04 → 3.1–3.7, i.e. toward the control, never below
+     ~2.4. If the next frame reads runs/row < 2.4 the width overshot and 1.35 joins 3.40 in
+     this note as falsified. */
+  tuftRollW: 1.35,
   furLobe: 0.055,         // amplitude of the low-frequency lumpiness on furred lofts
 
   /* --- idle life, only used while ANIMATION is absent --- */
@@ -2665,7 +2677,12 @@ export class SlyModel {
         const outward = new THREE.Vector3().crossVectors(side2, tan).normalize();
         const base = c.clone().addScaledVector(outward, radius(t) * 0.90);
         // a band edge gets the longest clumps — that is where fur actually parts
-        const edge = isDark(t) !== isDark(Math.max(0, t - 0.035)) ? 1.30 : 1.0;
+        /* Edge boost 1.30 → 1.12. The longest clumps in the row were exactly the ones the
+           midpoint-colouring rule paints with the *neighbouring* band's value, so the boost was
+           buying reach for the highest-contrast chips on the tail — a dark lock lying a third of
+           its length across a cream band, at cap4's 2x the single worst "thorn" class. The parts
+           still part; they just stop being the longest spikes on the silhouette. */
+        const edge = isDark(t) !== isDark(Math.max(0, t - 0.035)) ? 1.12 : 1.0;
         /* Colour the clump by the band at its own MIDPOINT, not at its root. `dir` lays it
            back along the tail toward the root, so it covers ~0.06 of t — half a ring band —
            and a clump coloured by its root lies across the neighbouring band as a hard patch
@@ -2675,12 +2692,20 @@ export class SlyModel {
         put({
           base, shadeN: outward.clone(),
           dir: outward.clone().multiplyScalar(0.46).addScaledVector(tan, -1.0).normalize(),
-          length: (0.070 + 0.024 * Math.sin(t * 7)) * TUNE.tailGirth * edge * jit(i, roll),
+          /* Base reach 0.070 → 0.058 and bend 0.26 → 0.34 — the "softer" half of the cap4
+             stegosaurus read (the ridge of separated near-black triangles along both tail
+             contours at 2x). Count is deliberately untouched: STEP 2 closed a measured
+             along-tail saw and six rolls closed a measured 3.52 px broadside comb, so "fewer"
+             here means fewer clumps *breaking the silhouette*, bought by pulling the length
+             distribution down and curling tips back along the surface — most clumps now stay
+             overlapped in the mass and the long tail of the jitter supplies the few locks that
+             project. A spike is a length past the edge, not a clump that exists. */
+          length: (0.058 + 0.020 * Math.sin(t * 7)) * TUNE.tailGirth * edge * jit(i, roll),
           /* Width jittered like the cheek row, and for the recorded reason there: "length
              variation on a row of equally-spaced, equally-wide clumps still reads as a comb —
              it is a comb with uneven teeth." The tail rows had jittered length only. */
           width: 0.025 * TUNE.tuftRollW * TUNE.tailGirth * (0.78 + 0.44 * hash(i, roll0 + 5)),
-          bend: 0.26, bendDir: outward.clone(),
+          bend: 0.34, bendDir: outward.clone(),
           group: isDark(tMid) ? 'furDark' : 'furCream',
           weights: ramp(t, this._tailRamp),
         });
