@@ -1354,3 +1354,22 @@ The residue is worth stating plainly: after both eliminations, **no un-confounde
 moved this character's rim at all** — which puts the original regression itself in question,
 since it was measured against the same two-knob reference. The next step is to paint the terms
 into the framebuffer with the tonemap bypassed and look at what is actually there. Not a tuning.
+
+**The same defect from the other side: work that happens outside the counter.** §19 is about a
+probe that reads a counter nothing has written to. Its mirror is a counter that is reset *after*
+the work it was supposed to count. `Engine.renderFrame` runs every module's `update()` and
+*then* calls `info.reset()`. The static-caster shadow cache does all of its shadow work inside
+`Lighting.update()` — the static refreshes, the depth blits, **and the per-frame dynamics
+redraw** — so none of it appears in `engine.stats` at all.
+
+The consequence lands on a number this file already quotes. With the cache shipping,
+`renderer.info` simultaneously **over**-counts against §1's wording (it sums every pass, and a
+shadow-cascade redraw is not a visible triangle) and **under**-counts true GPU work (it omits
+the whole update phase). What the counter shows dropping is statics *plus* dynamics; what is
+actually saved is statics only. **So `renderer.info` overstates the cache's saving, and the
+33–41% figure must carry that correction before it is quoted again.**
+
+The general form: *a counter measures a window, and shipping work into a different window
+changes the number without changing the machine.* Before trusting a delta, check that the thing
+you changed executes inside the interval the counter covers — and when you move work across
+phase boundaries, expect every historical number spanning that boundary to need re-basing.
