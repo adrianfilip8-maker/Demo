@@ -3801,6 +3801,18 @@ Four shots measured directly, five bounded, combat measured-in-bands. Worst case
 draw budget and 56% of the triangle budget**; architecture sits at 33 draws / 296 k. The specified
 column trade was made as described — papyrus shafts **22 → 48 radial, 9 → 4 vertical**.
 
+> **Reading a shipped `report.json` against this table — see §56.4.** `counted` here and
+> `report.json.drawCalls` are the *same quantity* (both `renderer.info.render`, `autoReset =
+> false`), so the two look directly comparable and are not. **`courtyard`'s camera moved and
+> widened between the trees** — `[-19, 5.6, 30] fov 50` → `[-2.5, 4, 41.5] fov 55` (`8757fb6`,
+> `9c5edf8`) — and a wider lens further back sees more of the level. That, not a regression,
+> is the whole of the 255 → 270 draws and +53 k triangles anyone will find when they check.
+> It also **exonerates the statue change independently of any camera argument**: the loft cost
+> 2,240 triangles level-wide, and 2,240 cannot become 53,000 at any pass multiplier (the
+> observed one is 3.1×). **§1 is scored on the main-view column, not on `counted`**, so the
+> ruling above is unaffected either way. Recorded here rather than only in §56 because this
+> table is where the comparison will actually be attempted.
+
 ### 51.4 A previously-closed item is reopened by its own author, and re-routed
 
 GEOMETRY had reported the "no AO in crevices" defect closed. It corrects that: **it was closed on
@@ -4589,3 +4601,118 @@ CHARACTER tried to settle the line of action offline with a per-row silhouette-c
 threw its own result away: the "head" band came out **204 px wide on a 320 px figure**, so the bands
 contained the cane and the tail rather than the spine. §11's wrong-population trap, caught by the
 number being physically impossible — the same tell that caught the 32 cm forearm in §53.7.
+
+
+---
+
+## §59 — the guard against silence was itself silent, and the silhouette test was the wrong instrument for half of what it was asked
+
+### 59.1 My §58.1 fix reintroduced the exact defect it closed
+
+§57.1 found that `canesweep.mjs` could announce a winner while saying nothing about the value
+already in the file. §58.1 claimed to close that by printing the shipped aim with its rank. **The
+block never ran.**
+
+It read `CLIPS[clip]?.keys?.find(k => k.cane)?.cane` — the **authoring** shape. `def()` in
+`Clips.js` compiles `keys: [...]` into tracks, so at runtime **0 of 52 clips have `.keys`**, and the
+aim lives at `clip.cane.v[0..2]` of a `{times, ease, v, q}` track. `shippedKey` was `undefined` for
+every clip, the `if` never fired, and the tool printed its winner list with **no SHIPPED line —
+indistinguishable from a clean run.**
+
+> **A guard whose failure mode is silence cannot be verified by running it.** Nothing appears in
+> either case. It must be checked by making it speak on a known input.
+
+Fixed against the verified runtime shape and **proved by making it speak**: `perch_idle` now prints
+`SHIPPED [116,-30,45] score 3.475 RANK 1 of 10350`, reproducing CHARACTER's independent numbers
+exactly. Stated honestly: the new "no cane track" branch is **unreachable in this build** — all 52
+clips carry one — so it is written for robustness and is *not* exercised by any control.
+
+Same family as §7's `aimBone` aliasing. This is my error, found by CHARACTER, one section after I
+recorded the tool as fixed.
+
+The output also makes §57.2's rule visible: the top four rows score **3.475 / 3.474 / 3.473 /
+3.462** — four candidates inside 0.013, one of which renders as a ring fused into the tail.
+*Shortlist with the score, never select with it.*
+
+### 59.2 Head:body resolved — 5.72, and the two published numbers never tested the condition
+
+§58.3 froze the proportions lever as unscoreable. CHARACTER closed it by computing the measure
+nobody had, and by explaining *why* the existing two disagree:
+
+- `shotsil`'s `headH` is `max(y over head-cluster bones) − chin`, and that cluster contains
+  `capBrim`, `earL`, `earR` — so it measures chin to the top of the **cap or ear tip**, inflating
+  the head and deflating the ratio → **4.44**.
+- `skullH` is a span read off the `SlyModel.HEAD` profile table, **narrower than the rendered
+  skull** → **6.73**.
+
+**They bracket §7.3's "~1:5" rather than test it.** Measured anatomically — chin to top of cranium,
+cap and ears excluded, off skinned vertices, `idle_confident` — total **1.7745 m**, head
+**0.3101 m** → **5.72 heads**. (`perch_idle` reads 5.11, but that is a crouch, not a stature.)
+
+**So the condition is genuinely failing, and the generous 4.44 reading was making it look passed.**
+He is ~0.7 head too realistic. Proposed for `AGENTS.md` §7.3, which is locked to CHARACTER:
+
+> **Head:body** = total standing height ÷ head height, where head height is **chin to top of
+> cranium in `idle_confident`, excluding cap and ears**. Target **5.0**; fail outside **4.5–5.5**.
+> Current rig: **5.72**. Reproduce with `scratchpad/headratio.mjs`.
+
+§9's arithmetic survives against it: reaching 5.0 by head size alone needs a 0.398 m head — a
+bobblehead — so the torso remains the lever, now with a target that means something.
+
+### 59.3 The pure-black silhouette is the right instrument for props and the wrong one for weight
+
+CHARACTER read the black silhouette as "a vertical post", nearly filed a pose regression, and was
+**corrected by its own measurement**. On the rig, `idle_confident` carries:
+
+- **34.0°** of shoulder-vs-hip counter-rotation — genuine contrapposto;
+- shoulder tilt **−0.036** against hip tilt **+0.045** — *opposite signs*, which is the definition;
+- hips centred over the right foot (|dx| **0.002** against **0.234**) — the weight is on one leg;
+- a **4.6 cm** chest offset from the hip→head chord, *more* line of action than `perch_idle`'s 3.6.
+
+§9's "both feet 4 cm apart and vertical" is **stale — they are 23 cm apart.**
+
+> **Contrapposto at a near-frontal view is an internal-contour and limb-overlap cue.** A pure-black
+> silhouette deletes exactly the evidence that carries it, so it returns "post" for a correctly
+> weighted pose. The instrument that settled the cane hook is the wrong instrument for the spine.
+
+An instrument being *right* for the last question is not a reason to trust it on the next one — the
+same lesson as §53.2's ROI inherited across framings, in a different currency.
+
+### 59.4 Fur: both prescribed fixes are documented regressions, and the sheen is not fur
+
+The brief asks for clumps and tufts breaking the silhouette. **§37 shipped exactly that and removed
+it on a hold-out render** — with cards it read as "a shredded mottled mass"; without, it read
+immediately as Sly. CHARACTER verified the current tree *is* the post-removal state rather than
+assuming it: `shotsil` reports **13,148 body triangles**, matching §37's 16,094 → 13,148 exactly.
+§47 then authored interior arm ink and withdrew it on measurement.
+
+**Both routes are eliminated**, and the remaining lever §47 names — silhouette-scale sleeve/glove/
+forearm proportions — is the same lever §58.3 froze. The honest state is: *not fixed, and the two
+obvious fixes are documented regressions.*
+
+One new fact, routed: at 4× the arms carry a **vinyl specular band**, and fur spec is already
+0.02–0.03 at gloss 8–9. **That sheen is cloth (spec 0.18 / gloss 34), not fur.** It belongs to
+whoever owns the shading of the sleeve, not to the fur work.
+
+### 59.5 The ledge risk, predicted falsifiably before its frame
+
+§57.4 registered that no offline probe could see whether the re-aimed hook passes through the
+ledge. `scratchpad/caneledge.mjs` now bounds it in world space: staged at `hero`'s transform, the
+cane's lowest vertex sits **6.2 cm** below his contact plane — statistically identical to his own
+boots at **6.1 cm** — with the below-plane footprint within **0.42 m** of his stance. At `hero`'s
+87–97 px/m that is **~0.6 px, sub-pixel.**
+
+**Prediction: the hook clears, and any intersection is invisible.** The "low and outboard"
+impression from the silhouette is projection, not world space. If `hero` contradicts this,
+`scratchpad/Clips.preperch.js` reverts four numbers.
+
+### 59.6 A stale output directory that would have produced a lying manifest
+
+`shots/cap9/` already held a **different** run — `sly-closeup / sly-key / sly-startle / hero` from
+19:14–19:25 at commit `5d30fed`, an older ancestor. The granted run writes **three** files, so
+`sly-key` and `sly-startle` would have survived as orphans **inside a directory whose fresh
+`report.json` did not describe them** — a manifest that is true about what it lists and silent about
+what sits beside it. Moved to `shots/cap9-prev-5d30fed/` before the run wrote anything.
+
+A monitor also fired a false "cap9 DONE" within 60 s; CHARACTER checked the stamp instead of
+believing it.

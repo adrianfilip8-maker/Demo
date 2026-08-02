@@ -84,7 +84,23 @@ rows.sort((a, b) => b.score - a.score);
    perch_idle's shipped aim ranked 5927 of 10351 and nobody knew, because the number was never
    printed. `clip` is read from Clips.js so this cannot drift out of date the way a hardcoded
    baseline would. */
-const shippedKey = CLIPS[clipName]?.keys?.find((k) => k.cane)?.cane ?? null;
+/* Read the base aim off the COMPILED clip, not off the authoring form. `def()` in Clips.js
+   turns `keys: [...]` into tracks, so at runtime NO clip has `.keys` — 0 of 52 — and the aim
+   lives at `clip.cane.v[0..2]` of a `{times, ease, v, q}` track. The first version of this
+   block read `CLIPS[c].keys.find(k => k.cane)`, which is the authoring shape: `shippedKey` was
+   `undefined` for every clip, the `if` never ran, and the tool printed its winner list with no
+   SHIPPED line — indistinguishable from a clean run.
+
+   That is the precise defect this block was added to fix (§57.1: a tool that can announce a
+   winner while staying silent about what is already in the file), reintroduced by the fix
+   itself. A guard whose failure mode is SILENCE must be checked by making it speak on a known
+   input — verified here against perch_idle, whose committed aim is [116, -30, 45]. See §59. */
+const caneTrack = CLIPS[clipName]?.cane;
+const shippedKey = caneTrack?.v?.length >= 3 ? [caneTrack.v[0], caneTrack.v[1], caneTrack.v[2]] : null;
+if (!shippedKey) {
+  console.log(`SHIPPED  [unavailable] — clip "${clipName}" carries no cane track; the ranking below `
+    + 'has NO baseline and cannot tell you whether the shipped aim is better than its winner.');
+}
 if (shippedKey) {
   const [sx, sy, sz] = shippedKey;
   // Nearest grid row to the shipped aim; exact if it lands on the grid, labelled if it does not.
