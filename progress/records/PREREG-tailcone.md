@@ -70,6 +70,17 @@ meanDepth 4.5, ratio 1.077.
 Transforms not implemented, stated as the gap (§11): `taillobes` reads a rendered frame, so it
 carries the shader and the ink shell but not the pose of any clip other than the frozen one.
 
+**§28 caveat, added after that section landed.** `taillobes` counts lobes on a rendered contour,
+and the harness advances `engine.time` between frames, so any clock-driven FX that overlaps the
+tail's contour ROI (sand drift, motes, sparkle) is at a *different phase* in cap6 than in the
+verdict capture. The character's own pose is immune — `freezePose` holds it — but the pixels
+immediately outside his outline are not. This is a cross-boot comparison, not a within-boot A/B,
+so `step(n, 0)` does not fix it for me; the mitigation is that the tip ROI is small and sits
+against sky, and the honest statement is that a **±1 lobe** difference traceable to a particle
+crossing the tip is not distinguishable from a real one by this instrument. If the verdict lands
+on the {2} IMPROVED boundary, re-shoot before routing on it rather than treating the boundary as
+decided. `heroline`'s bands are unaffected — `silmerge` never boots the renderer.
+
 ## Registered bands — partitioning the outcome line (§26.1)
 
 **T-tip (integer ≥ 0), primary:**

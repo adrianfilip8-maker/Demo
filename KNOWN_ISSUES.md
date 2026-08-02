@@ -2049,10 +2049,21 @@ wrong, and it was correctly refused: re-anchoring rescues an *absolute* band, ne
 arithmetic — neutralise the pupil keys, shoot `sly-startle` once, and that frame is the missing
 minuend. A coordinator's convenient suggestion is worth exactly as much as its arithmetic.
 
-The same read did produce a real defect from a guard's first firing: the **catchlight fails on
-one eye** (max L121.9 right against a ≥180 bar; L198.8 left) because the glint rides the
-constricting bone and shrank with the pupil. A guard that catches a genuine regression the
-first time it is exposed has paid for itself.
+The same read fired a guard on its first exposure: the **catchlight reads L121.9 on the right
+eye against a ≥180 bar** (L198.8 left). ~~because the glint rides the constricting bone and
+shrank with the pupil.~~ **That attribution is retracted** — it was stated in the cap6 report,
+relayed onward by me, and refuted by its own author on the next pass: the glint does ride the
+pupil bone, but the constriction is **identical on both eyes** (`pupilL` and `pupilR` both
+`[0.35, 0.35, 1]` in the same clip), and *a symmetric cause cannot produce an asymmetric
+result*. §23's shape a second time — a term present, firing, provably able to produce the
+signature, and still not the cause. What the frame actually presents is two eyes it does not
+present equally: `dot(outward, toCamera)` **0.963 left against 0.684 right** (≈16° vs ≈47°
+off-axis), 48 px against 34 px, with `sly-closeup` carrying the same asymmetry. A single
+threshold was applied to both. **The guard did its job by firing on a real difference; "right
+eye < 180" is not yet evidence of a defect in the eye** — it may be evidence about the framing,
+or a correct dimming no threshold should have been set against. It is settled for free by the
+calibration capture §27.2 already requires, and no geometry change is sealed until then:
+shipping one now would be a fix for nothing, tuned against a number it can move.
 
 ### 27.3 The prereg costed the visible mesh and forgot the inverted hull
 
