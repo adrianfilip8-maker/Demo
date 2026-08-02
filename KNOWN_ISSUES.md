@@ -3032,3 +3032,60 @@ Moot for shipping either way, since a FLAT contact band means there was no win t
 
 **And `base` vs `back` came back byte-identical**, which retires a live worry: the toggle path is
 exact and §35's cross-boot nondeterminism did not touch this run.
+
+---
+
+## 41. The shadow's hue is owned by the albedo, not by any light term — and it explains two findings at once
+
+The violet-shadow line has been chased through `shadowTeal`, `shadowBounceMix`, `fillSkyMix`,
+the split-tone and the wash. The decomposition says none of them is the owner:
+
+| term | luma share | G/R | multiplied by albedo |
+|---|---|---|---|
+| fill | 31.1% | 0.787 | yes |
+| shadow multiply | 57.3% | 0.808 | yes |
+| wash | 11.6% | **1.336** | **no** |
+
+`shadowLight` itself is **G/R 1.336** — correctly `G ≥ R`, exactly as §2.2 asks. Sandstone albedo
+is **G/R 0.483** (0.605 after `shadowSat`). So **88.4% of shadow radiance arrives carrying the
+albedo's channel order rather than the light's**, and every cool constant on the shading side
+being `G ≥ R` is beside the point. The wash is the only term that delivers the intended hue and
+it is 11.6% of the energy.
+
+The controlling quantity is a product, not a term: **`(albedo G/R in shadow) × (light G/R) ≥ 1`**.
+Day **0.808** (fails by 19%), interior 0.837 (fails), night **1.003** (passes by 0.3%).
+
+**That yields a falsifiable prediction with no capture at all: the violet is daylight-only, and
+`night` has always been on the correct side of it** — from the same two constants. Night is the
+first thing to re-measure, and if it comes back violet the mechanism is wrong.
+
+### It is the same fact as §38.4, seen from the other side
+
+TEXTURES measured that a shaded column reads 1.000 on the two-window hue statistic across all ten
+framings — authored hue cannot arrive on a shaded surface. This says why: in shadow the albedo's
+channel order dominates the product, so **whatever the light is doing, the surface decides the
+hue** — and the stone family is one hue, which is §38.1's 1.000. Two agents, two instruments, two
+directions, one mechanism. Neither could have closed it alone, and the pair is much stronger than
+either: TEXTURES fixed what it owned and predicted its own number would barely move; SHADING then
+found the reason it could not have moved.
+
+### The acceptance line was derived for the wrong object and is not reachable
+
+The ledger's **≤226°** target came from *light* constants and has been applied to *surfaces* —
+the category error §8 already records once. Measured: no cell of the full two-dimensional lever
+sweep reaches 226 on all three materials, and the single cell that reaches it on one requires
+`shadowSat −1.00`, i.e. a grey albedo in shadow, which deletes §2.2's readable-shadow
+requirement outright. Every path toward 226 doubles shadow chroma — §3's recorded failure mode,
+verbatim. The additive wash is the only lever that buys hue at constant saturation, and it
+asymptotes at exactly 240° while costing shadow density (L 0.331 → 0.550).
+
+**Ruling: the target is re-derived, not relaxed — and the distinction has to be honoured in the
+derivation.** A criterion that cannot be met is not automatically wrong; what makes this one
+wrong is that it was computed for a different object. So the replacement must come from §2.2's
+*surface* intent, derived independently, and must not be set to whatever `night` happens to
+achieve. "Night already reaches it" is evidence a target is attainable, never evidence it is
+correct.
+
+Also corrected in passing: §8's "tuning behind a clamp" is true of shadow **magnitude** and false
+of shadow **hue** — `tintPeak` pins the magnitude, while `bounceMix` still moves G/R from 1.336 to
+2.147.
