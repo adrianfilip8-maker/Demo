@@ -719,8 +719,22 @@ Still open on the character, honestly scored by the agent that did the work:
   about a fixed cone whose apex is the grip, so tip height is set by grip height and shaft
   length and the aim has no lever on it. A preset called `plant` that does not plant. The two
   real levers are arm pose and shaft length.
-- **`perch_idle` (the `hero` pose) has zero lateral line of action** — hips 0.000, chest 0.006,
-  head −0.007. Untouched for lack of capture budget on the money shot, not because it is right.
+- ~~**`perch_idle` (the `hero` pose) has zero lateral line of action** — hips 0.000, chest 0.006,
+  head −0.007. Untouched for lack of capture budget on the money shot, not because it is right.~~
+  **STALE — corrected 2026-08-02.** These numbers describe a tree that stopped existing at
+  `5d0441e`, the commit that authored the perch lateral line by roll opposition. `poseprobe` on
+  the current tree reads **hips +0.045 → chest +0.082 → head +0.046** (+3.7 cm out on the lower
+  segment, −3.6 cm back on the upper): **the line of action is present and landed.** What was
+  never done is verifying it *in pixels*, which is a different task with a different remedy —
+  and acting on the stale figure would have authored a second lateral lean on top of the first
+  and doubled it. This is §18's shape (a model validated against a dead tree) arriving through a
+  relay: the record was right when written, and three commits later it was a confident number
+  about nothing. It propagated from here into a session verdict and then into a work order
+  before its own owner re-measured and caught it. **A number quoted "from the record" needs the
+  same freshness check as a relayed instruction (§27.4) — check when it was written, not only
+  what it says.** What is actually wrong at `hero` is measured in
+  `progress/records/PREREG-heroline.md`: the cane hook sits *inside* the torso (5.5% of the union
+  outline, 41.2% of its own boundary buried).
 - **The guards carry the identical eye defect.** `src/ai/GuardModel.js:76` has its own
   `eyeWhite: 0xf7f3e6` and reproduces the blown sclera and straddling cel terminator that were
   just fixed on Sly. `src/ai/**` had no owner (see §4); CHARACTER is now cleared to edit that
@@ -2183,3 +2197,42 @@ before believing it.**
 Two prereg faults from the same seal, independent of phase and worth not repeating: a p95
 statistic over a 45,984-px annulus cannot see a ~50-px effect by construction, and a "brightest
 1,000 non-metal pixels" selector never sampled the 1,072 actual movers.
+
+---
+
+## 29. Two preregistered fixes, each passing its own bands, making the frame worse together
+
+The strongest argument for preregistration is that it stops you rationalising a result after you
+see it. This is the case it does **not** cover, and it was caught with one sweep rather than one
+capture.
+
+`hero`'s silhouette fails on the cane hook — 5.5% of the union outline with 41.2% of its own
+boundary buried inside the torso. Two fixes were obvious and were about to be sealed
+independently: move the **cane aim** so the hook clears the body, and **sweep the tail** so the
+cap stops being welded to it. Each had a plausible mechanism, each would have been given
+partitioning bands, and each would have **passed its own seal**.
+
+A 96-row joint sweep says that together they drive hook outline to **1.5% — worse than the
+untouched baseline, on the exact condition both fixes exist to repair.** Two green verdicts and a
+worse frame. The tail must not move; the shipped seal is cane aim alone, and the tail's position
+is now a *constraint* on that seal rather than a second opportunity.
+
+**Rule: independently sealed changes to the same observable must be swept jointly before either
+ships.** A prereg fixes the standard of evidence for one change; it says nothing about the
+composition of two. Where two levers touch one metric, the seal must either (a) register the
+joint arm as part of its own design, or (b) state the other lever's value as a frozen
+precondition — "this verdict holds only while the tail stays where it is". Sealing them as
+independent experiments quietly asserts they are separable, which is a physical claim about the
+frame, not a procedural one, and it is exactly the claim that was false here.
+
+**A second finding from the same instrument, about clusters.** The tail-sweep case was wrong
+twice: its motivating number, "74% of the cap's boundary is buried", was the instrument scoring
+the *internal* cap/skull seam as burial. Scored on the head+cap **cluster** — the thing a viewer
+actually sees as one shape — it is 39.4%. **When parts are adjacent by construction, per-part
+boundary metrics measure the construction, not the silhouette.** Cluster first, then measure.
+
+Two hypotheses were also killed cheaply in the same sweep, both of which would have read
+plausibly in a write-up: the cane aim *does* have a lever on screen position (42 px of hook
+centroid travel — `CANE.plant`'s tip-height invariance is about a fixed radius from a fixed grip
+and does not generalise), and the right arm is not the lever (all five arm variants made burial
+worse, 41.2% → 47.9–77.4%; the shipped arm is the best of them).
