@@ -1470,6 +1470,46 @@ export const MATERIALS = {
    * 5.2 m is still a quarter coarser than the version that failed, and the other two levers —
    * three wide glyph columns instead of four, and pigment faded toward the stone — carry most of
    * the anti-repetition work now, because a repeat you cannot pick out is not a repeat. */
+  /* **The 6.5 % upper lobe on this recipe's shadowed faces: measured, looked at, kept.** It was
+   * parked with a number so an art-director read could overrule it with a picture rather than
+   * re-find it. This is that read, against `shots/rim3/courtyard-base.png` at (620,400) 240×110 —
+   * 99.4 % one flat +Z face of `arch:court:hieroglyph_wall`, 0.5 % within a geometric normal
+   * discontinuity, so nothing in it is an ink line or a neighbouring mesh.
+   *
+   * The lobe reproduces: base median 71, IQR 8, main lobe 60–80 carrying 78.8 %, upper lobe
+   * 100–130, **6.77 % of the ROI at ≥100**. What it *is* was mis-described when it was parked,
+   * and that correction matters more than the verdict. "Vertical erosion runnels" is right about
+   * the mechanism and wrong about the magnification it was claimed at: at 4× the bright pixels
+   * read as speckle plus two course beds, the vertical trains only resolve at 8×, and at 2× —
+   * near how the frame is actually seen — they read as weathering streaks and chipped course
+   * edges. Asserting a read at a magnification nobody looks at is how a wrong description
+   * survives.
+   *
+   * "Structure, not rash" measured in the frame instead of asserted, at luma ≥ 100:
+   *
+   *                                        in ≥8 px comps   mean comp   largest   bbox h/w
+   *   this ROI                                  89.0 %         122        784       3.25
+   *   same pixel count, scattered (null)         0.0 %          —           4        —
+   *   glyph register, same face, 130 px up      95.6 %          92        490       4.61
+   *
+   * A rash does not make a 784 px component against a scatter null of 4, and h/w 3.25 with the
+   * x-autocorrelation through zero by lag 3 while y holds 0.39–0.44 out to lag 8 is a vertical
+   * streak field. High-pass sd on shadow faces in that frame: glyph register 18.71, this ROI's
+   * densest patch 9.14, this ROI's **joint-free interior 2.49**, neighbouring
+   * `arch:court:sandstone_block` shadow face 1.58. So the flagged region is a near-clean ground
+   * carrying sparse organised streaks, its busiest patch is half the accepted glyph band, and the
+   * material beside it is the one sitting closest to §7.3's "flat vertex colour". Quieting this
+   * moves toward that failure, not away from it. No autocorrelation recurrence at any lag in any
+   * direction on any patch, so no tiling verdict is disturbed; squint holds at 48 px frame width
+   * and 40 px on the wall, the shadowed mass staying one clean cool shape.
+   *
+   * Kept unchanged. **Correct one premise if this is quoted.** The guardrail handed to me said
+   * this recipe is the quietest of the three stone recipes at the terminator-competing scale. It
+   * is the *busiest* — 44.3 % of albedo variance at ≤8 screen px against `sandstone_worn`'s
+   * 13.7 %; the 13.7 % belongs to the `sandstone_worn` note above, and the two got swapped in
+   * relay. The verdict survives the corrected premise because it never rested on it: the
+   * busyness costs no band separation here (this material reproduces at 3.12 / 1.92 in
+   * `courtyard` where the noise floor is 1.0), and busy-*with*-separation is the target. */
   hieroglyph_wall: {
     group: 'carved', tier: 0, tile: HG_WALL_TILE, bump: 0.044, rough: 0.86,
     /* 1.15 → 0.55: the same saturated-AO defect diagnosed on `hieroglyph_gilded`, live in a
