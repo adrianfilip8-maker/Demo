@@ -4925,6 +4925,12 @@ criterion counting drifting cloud filaments.** Under the calibrated criterion pl
 
 ### 61.4 `night` carries a real 142 px residual, and it is the kerb class
 
+> **CORRECTION (§69.1): the attribution below is wrong. The floor moves `night`'s residual without
+> owning it.** Fitting `sh` from `kerb2`'s ladder puts `night`'s kerb at **~39% key-lit** against
+> `hero`'s ~16%, so most of its rim arrives through the `1.0` leg the floor cannot reach — and
+> `f10`, a **5.5× cut**, still leaves it at **97.4 L, 2.2× the band ceiling**, while `norim` clears
+> the streaks outright. Same class of defect, different dominant term.
+
 It localises to five cells at (224–448, 512–576) — at 4×, the pale tops of a worn kerb/step run
 **inside cast shadow**. Same defect as `hero`'s 1,704 px band, produced by the same
 `mix(0.55, 1.0, sh)` shadow floor. So `rim4` hands the reopened kerb item (§51.4) **a second frame,
@@ -5731,3 +5737,114 @@ Two features worth copying:
 
 Nulls are registered too: if the untouched materials disagree by more than ±2.5 points, the frame
 moved for reasons outside this change and the primary is **unquotable, not passed.**
+
+
+---
+
+## §69 — the floor cannot do the job, and an abort clause was unmeetable the day it was sealed
+
+SHADING's `kerb2`: five shots, nine arms, 45 frames, one boot. It also confirmed — verified, not
+asserted — that nothing of its own was uncommitted, which is what let the pass-6 capture launch.
+
+### 69.1 NO SHIP, on a better reason than the one I gave
+
+I ruled the floor out as a **look change arriving as a correctness fix** (§17). SHADING got to the
+same verdict independently and on stronger evidence: **the floor cannot do the job at all.**
+
+`hero`'s V1 reproduced the seal's point prediction — predicted ≈110, measured **106.8 L** — and the
+ladder runs **106.8 → 87.8 → 65.5 → 42.5**, so only `f10` clears the ≤45 gate. But on `night`'s own
+§61.4 residual, that same `f10` — a **5.5× cut** — still reads **97.4 L, "prominent," 2.2× the band
+ceiling**, and the crop strip shows `a0/f35/f20/f10` near-indistinguishable while `norim` clears the
+streaks outright.
+
+Fitting `sh` from the ladder gives **≈0.39 on `night`'s kerb against ≈0.16 on `hero`'s**: night's
+kerb is roughly **39% key-lit**, so most of its rim arrives through the `1.0` leg — *the leg the
+floor cannot reach by construction.*
+
+> **So §61.4's attribution is wrong, and the tension I built the schedule around dissolves.** The
+> floor **moves** night's residual without **owning** it. Lowering it does not buy night's artefact
+> back; it only spends night's silhouette. No arm qualifies under the sealed ship rule either way.
+
+Corrected at §61.4's declaration site.
+
+### 69.2 The abort clause was unmeetable on the day it was sealed
+
+`F1` fired on all three shots — 4.2% / 13.4% / 12.4% against a **3%** gate — and SHADING then
+checked whether the gate had ever been achievable: **rim4's own masks on those same shots were
+already 7.6–43.9%.** It set a frame-level threshold that its own prior run had already falsified.
+
+The right criterion is **population-level**, and it is decisive where the frame-level one was
+noise: on `hero`, **zero of 1,708 V1 pixels fall inside the mask, and `a0`/`a0b` are bit-exact over
+them at max 0.0 L.**
+
+**And it flagged this precisely because the verdict is "no change" either way** — so the withdrawal
+of a failed abort cannot be read as clearing a path to a value it wanted. Withdrawing a clause that
+would have blocked a result you are *not* claiming is the cleanest possible time to withdraw one,
+and saying so is what makes it credible.
+
+A second prediction went the same way: **V2's "1.00 by construction" is falsified** (0.84 at `f10`).
+The deep interior and rings 3–5 are flat at every arm, so the scoping did protect the surface it was
+meant to; ring 0–2 straddles the boundary where architecture rim and bloom sit. Named rather than
+absorbed.
+
+### 69.3 `temple`: mitigated, not closed — and the null was the instrument, not the knob
+
+`magex` is **free in all five shots and positive in two**: `temple` +0.6 pp ring / +0.4 pp SIL at
+**6× the null-control floor**, with artefact counts **identical** (22 → 22 flat, 11 → 11 lower);
+`night` +1.5 pp SIL, also free. `convoff` buys slightly more silhouette and pays **22 → 94** flat and
+**11 → 82** lower.
+
+> **The convexity half carries the artefact suppression; the magnitude half does not.** They were
+> only ever separable because the run captured them as separate arms (§61.2).
+
+So the sentence I quoted back at SHADING is discharged on evidence rather than overridden:
+`rimMagExempt`'s comment records a null measured on the **character bbox**, and §61.5 itself records
+why that box misreports. On the `nosly` contour ring — **the instrument the 15.0% regression is
+defined on** — it is not null. Retention scales to ~15.7–16.5% against the <15% line: over it, but
+barely, and **SHADING flagged the scaling as a cross-run chain** because `kerb2` has no `gateoff`
+arm, so the denominator is rim4 at `2f99d55`. A within-run `gateoff + magex` pair closes it cheaply.
+
+Recommendation carried to after the pass: ship `rimMagExempt: 1` **in a change that also rewrites
+its measured-null paragraph** — otherwise a stale claim sits where the knob is, which is §61.7's
+exact failure shape. Not now, and for a reason worth keeping: **`guard` is skinned geometry and is
+not in this run**, so it is an unmeasured surface for a knob that only affects skinned geometry.
+
+### 69.4 A provenance argument worth copying
+
+`kerb2` booted at `669cb28`, not at the current `1bc8938`. Rather than caveat the frames or re-shoot
+them, SHADING **comment-stripped both files and hashed them**: `PostFX.js` and `ToonMaterial.js` are
+identical to `1420def`, so the entire delta between the boot tree and the current one is §62/§61.7
+**prose**. The frames are therefore valid evidence for the current tree, and that is demonstrated
+rather than assumed.
+
+*A sha difference is not a behaviour difference, and the cheap way to tell them apart is to hash
+what the compiler sees.*
+
+
+### 69.5 The guard's third design flaw: it assumed append-only, and this project mandates the opposite
+
+`--verify` fired on this very section — and its message was **wrong**. It said *"another author
+wrote into the first N bytes while you were composing."* Nobody had. **Both hunks were mine:** the
+§69 append at the tail, and the §61.4 correction I had just inserted **at its declaration site**.
+
+That is not a bug in the hash. It is a bug in the model:
+
+> The guard was built assuming an author only ever **appends**. But §34 and §41 *require* correcting
+> a claim **where the claim lives** — and a declaration site is in the prefix. **The project's own
+> most-repeated rule is the thing that trips its newest guard.**
+
+Third distinct flaw in three revisions (§14.8 breadth, §14.9 an advisory check with a hardcoded
+verdict, §64.1 the staging window, and now this). And this one is the most dangerous of the four,
+because it fails **loudly and falsely**: a guard that cries wolf on the author's own correct
+behaviour teaches the next reader to dismiss it, and the reader it teaches is the same person who
+will next be shown a real collision.
+
+Fixed by making it **force a read instead of attributing**. It cannot tell a foreign write from a
+declaration-site correction — no tool operating on an unstaged file can — so it now says exactly
+that, prints the command to look, and offers `--verify-ack` for "I read it and every hunk is mine".
+It still exits non-zero, because the point was never the verdict; **the point is that somebody
+looks.**
+
+*An instrument that cannot distinguish two causes should report the ambiguity, not pick one.* That
+is the same rule §49 recorded for a null with two opposite mechanisms, arriving here in a tool I
+wrote after recording it.

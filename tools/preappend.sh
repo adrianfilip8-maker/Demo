@@ -37,12 +37,17 @@
 set -u
 MODE=check
 if [ "${1:-}" = "--verify" ]; then MODE=verify; shift; fi
+if [ "${1:-}" = "--verify-ack" ]; then MODE=ack; shift; fi
 f="${1:-KNOWN_ISSUES.md}"
 cd "$(git rev-parse --show-toplevel)" || exit 2
 stampdir="${TMPDIR:-/tmp}/preappend-stamps"
 mkdir -p "$stampdir"
 stamp="$stampdir/$(echo "$f" | tr '/' '_').stamp"
 
+if [ "$MODE" = ack ]; then
+  echo "preappend --verify-ack: acknowledged — you have read the diff for '$f' and every hunk is yours."
+  exit 0
+fi
 if [ "$MODE" = verify ]; then
   if [ ! -f "$stamp" ]; then
     echo "preappend --verify: no stamp for '$f' — run the check before appending." >&2
@@ -60,9 +65,16 @@ if [ "$MODE" = verify ]; then
   fi
   now_sha=$(head -c "$was_bytes" "$f" | sha256sum | cut -d' ' -f1)
   if [ "$now_sha" != "$was_sha" ]; then
-    echo "preappend --verify: REFUSING — '$f' changed BENEATH your append since the check." >&2
-    echo "  Another author wrote into the first $was_bytes bytes while you were composing." >&2
-    echo "  Re-read the diff and name their work, or commit it separately with credit." >&2
+    # NOT necessarily a foreign write. This project REQUIRES corrections at the declaration site
+    # (§34, §41), and a declaration site is in the prefix — so your own correction trips this too.
+    # The first version of this message asserted "another author wrote", which was wrong the first
+    # time it fired and would have taught the next reader to dismiss it (KNOWN_ISSUES §69.5).
+    # It exits non-zero on purpose: the point is to FORCE A READ, not to attribute.
+    echo "preappend --verify: STOP — '$f' changed beneath your append since the check." >&2
+    echo "  This is EITHER another author's write OR your own declaration-site correction." >&2
+    echo "  The tool cannot tell them apart. Read the diff and decide:" >&2
+    echo "    git diff -- $f" >&2
+    echo "  If every hunk is yours, re-run with --verify-ack to record that you looked." >&2
     exit 1
   fi
   echo "preappend --verify: '$f' prefix unchanged ($was_bytes bytes). Safe to stage."
