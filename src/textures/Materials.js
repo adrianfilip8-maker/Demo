@@ -821,6 +821,40 @@ export const MATERIALS = {
     },
   },
 
+  /* **"This material's amplitude is eating the cel band" was measured on a staircase.** Kept in
+   * full because the amplitude here has been defended twice and the refutation is cheap to lose.
+   *
+   * `bandprobe` scored `arch:court:sandstone_worn` in `courtyard` at separation **0.82 / 0.99**
+   * (within-band IQR 29/49/36 against band steps of 32–42) beside `hieroglyph_wall` at 3.12/1.92
+   * (IQR 16/12/21), and the difference was routed here as an albedo/mortar question. It is not
+   * one. A bandprobe "site" is a 4-connected run of one *merged* mesh spanning ≥2 bands, and on
+   * this mesh that run is a **stair flight** — box(301,464)-(508,522), 5 nosings inside 59 px —
+   * while `hieroglyph_wall`'s is a flat 356×410 wall. Rejecting pixels within 3 px of a geometric
+   * normal discontinuity (the nosing, its post-process ink line and that line's antialiased
+   * skirt) removes **76.3 %** of the stair site and **4.8 %** of the wall, and takes the stair's
+   * IQR to **9/12/15** against the wall's 16/11/18. That rejection is measured with *no luma
+   * gate at all*, and it cannot be removing texture: bandprobe's normals are interpolated vertex
+   * normals, so every joint, pit and streak this recipe paints is still inside the residual.
+   *
+   * Confirmed off the built Surface, before any lighting (`scratchpad/bandnoise.mjs`, at the
+   * site's own 34 mm/px and the architecture UV factor of 2):
+   *
+   *   gamma-relative albedo IQR   sandstone_worn 0.126   hieroglyph_wall 0.124   sandstone_block 0.139
+   *   variance ≤ 8 screen px      13.7 %                 44.3 %
+   *   variance ≥ 32 screen px     74.1 %                 42.3 %
+   *   normal-map band flips       2.8 %                  5.6 %   (97–98 % of them in ≥8-texel blobs)
+   *
+   * So this recipe is *already* what the redistribution hypothesis asks for — 3.2× less energy
+   * than the control at the frequency that competes with a terminator, 1.75× more in the
+   * low-frequency band that breaks flatness — and the control is the material whose bands read
+   * well. Cutting amplitude here would push the quietest of the three stone recipes toward the
+   * flatness failure for no separation gain. **Not taken, and do not take it without first
+   * re-running the edge split; a site that is three-quarters ink cannot be fixed from this file.**
+   * The 1.7 mid|hi separation that survives at the stair is limited by the *step*, not the noise:
+   * an up-facing tread collects the sky fill a west-facing riser does not, so ~half the key
+   * difference is filled back in before AgX compresses the top end. That is SHADING's arithmetic.
+   * Sites where this recipe is a large flat face already read: `traversal`'s pylon faces score
+   * 2.16–3.61 in the shipped build. */
   sandstone_worn: {
     group: 'stone', tier: 1, tile: 3.6, bump: 0.050, rough: 0.92,
     build(s, cx) {
