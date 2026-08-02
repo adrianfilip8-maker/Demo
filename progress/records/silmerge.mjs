@@ -302,10 +302,25 @@ for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (partAt(x, y) === P_H
 const hookHull = hullArea(hookPts);
 const hookAperture = hookHull > 0 ? 1 - hookPts.length / hookHull : 0;
 
-/* Hook-to-shaft connectivity inside the union silhouette: can you walk from a visible hook
-   pixel to a visible shaft pixel without leaving the silhouette? A hooked cane that reads as
-   a hooked cane is one connected gold line; a crook severed from its own shaft by the body
-   reads as two unrelated marks, which is what "the hook goes ambiguous" means in pixels. */
+/* Hook-to-shaft connectivity along the CANE ONLY: can you walk from a visible hook pixel to a
+   visible shaft pixel without leaving cane pixels? A hooked cane that reads as a hooked cane is
+   one connected gold line; a crook severed from its own shaft by the body reads as two
+   unrelated marks, which is what "the hook goes ambiguous" means in pixels.
+
+   BUG FIXED HERE (KNOWN_ISSUES §32, and worse than §32's shape). The traversal gate was
+   `inSil(nx, ny)` — ANY silhouette pixel, torso included — while this comment above it, and the
+   seal clause it implements (`PREREG-heroline` H-look clause 2: "traceable to its own shaft
+   **without crossing the torso mass**"), both state the strict intent. So the walk was allowed
+   to do precisely the thing the clause forbids: detour through the body and arrive at the shaft.
+   `connected: true` was therefore returned for a cane that is severed, and any prior true
+   reading from this function is an artifact and is not evidence that clause 2 held.
+
+   §32 is a source comment that was false and became a premise. This is that shape with the
+   contradiction *inside a single file* — comment and clause on one side, code on the other —
+   which is worse, because the file reads as self-corroborating: anyone checking the intent finds
+   it stated correctly two lines above the code that violates it. Fixed by making the code match
+   the comment, per the coordinator's ruling, rather than by softening the comment. */
+const isCane = (x, y) => { const p = partAt(x, y); return p === P_HOOK || p === P_SHAFT; };
 function connectedHookShaft() {
   if (!hookPts.length) return { connected: false, steps: -1 };
   const seen = new Uint8Array(W * H);
@@ -318,7 +333,8 @@ function connectedHookShaft() {
     const x = o % W, y = (o / W) | 0;
     for (const [ax, ay] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
       const nx = x + ax, ny = y + ay;
-      if (!inSil(nx, ny)) continue;
+      /* Strict: cane pixels only. Was `inSil`, which is the whole silhouette. */
+      if (!isCane(nx, ny)) continue;
       const no = ny * W + nx;
       if (seen[no]) continue;
       seen[no] = 1; q.push(no);
@@ -327,7 +343,60 @@ function connectedHookShaft() {
   }
   return { connected: false, steps: -1 };
 }
+/* The OLD (buggy) measure, kept only as a diagnostic so a RESULT can show what the artifact was
+   rather than assert it. If strict=false and loose=true, the crook reaches its shaft only by
+   detouring through the body — i.e. severed, and the old code called that connected. This is NOT
+   a scored band and must never be quoted as one. */
+function connectedThroughAnySilhouette() {
+  if (!hookPts.length) return false;
+  const seen = new Uint8Array(W * H);
+  let head = 0; const q = [];
+  for (const [x, y] of hookPts) { q.push(y * W + x); seen[y * W + x] = 1; }
+  while (head < q.length) {
+    const o = q[head++];
+    if (partAt(o % W, (o / W) | 0) === P_SHAFT) return true;
+    const x = o % W, y = (o / W) | 0;
+    for (const [ax, ay] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const nx = x + ax, ny = y + ay;
+      if (!inSil(nx, ny)) continue;
+      const no = ny * W + nx;
+      if (seen[no]) continue;
+      seen[no] = 1; q.push(no);
+    }
+  }
+  return false;
+}
 const hookShaft = connectedHookShaft();
+hookShaft.looseArtifact = connectedThroughAnySilhouette();
+
+/* Gap geometry, for when strict connectivity is FALSE. "Severed" is a boolean on the UNDILATED
+   silhouette, and this file's own header states the ink shell dilates the union ~2.5 px per side,
+   so a gap of N px here reads as about (N-5) px in frame — the same correction the H4 band is
+   built on (bands set at >=8 px, not >0). A boolean alone therefore cannot say whether a break is
+   visible in the delivered frame; the width has to be reported with it.
+   Also reports what occupies the straight line between the closest hook/shaft pair, because
+   "severed by the body" and "severed by background" are different defects with different owners. */
+function caneGap() {
+  const shaftPts = [];
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (partAt(x, y) === P_SHAFT) shaftPts.push([x, y]);
+  if (!hookPts.length || !shaftPts.length) return null;
+  let best = Infinity, pa = null, pb = null;
+  for (const [hx, hy] of hookPts) for (const [sx, sy] of shaftPts) {
+    const d = Math.hypot(hx - sx, hy - sy);
+    if (d < best) { best = d; pa = [hx, hy]; pb = [sx, sy]; }
+  }
+  const n = Math.max(1, Math.ceil(best));
+  const between = {};
+  for (let i = 1; i < n; i++) {
+    const x = Math.round(pa[0] + (pb[0] - pa[0]) * (i / n));
+    const y = Math.round(pa[1] + (pb[1] - pa[1]) * (i / n));
+    const p = partAt(x, y);
+    const nm = p < 0 ? 'background' : ['cap', 'head', 'tail', 'body', 'hook', 'shaft'][p];
+    between[nm] = (between[nm] || 0) + 1;
+  }
+  return { gapPx: best, from: pa, to: pb, between };
+}
+const gap = hookShaft.connected ? null : caneGap();
 
 /* Head/cap gap to the nearest non-head mass, measured along the union outline: the widest
    background channel separating the head cluster from the body mass. Reported in px at the
@@ -434,7 +503,9 @@ for (const [cn, members] of Object.entries(CLUSTERS)) {
   const buried = edge > 0 ? 100 * (1 - edgeOut / edge) : 0;
   console.log(`  CLUSTER ${cn} px ${px} outline ${outl} (${pct(outl, unionOutline)}% of union outline) buried ${buried.toFixed(1)}%`);
 }
-console.log(`  HOOK->SHAFT connected in silhouette: ${hookShaft.connected}`);
+console.log(`  HOOK->SHAFT connected ALONG CANE (strict, clause 2): ${hookShaft.connected}`);
+console.log(`  HOOK->SHAFT connected via any silhouette (OLD BUGGY measure, diagnostic only): ${hookShaft.looseArtifact}`);
+if (gap) console.log(`  CANE GAP ${gap.gapPx.toFixed(2)} px (undilated) ~${(gap.gapPx - 5).toFixed(2)} px after ink shell; ${gap.from} -> ${gap.to}; between: ${JSON.stringify(gap.between)}`);
 console.log(`  HEAD widest background channel below/around head: ${hGap.gap} px @ ${hGap.at ? hGap.at.join(',') : '—'}`);
 console.log(`  wrote ${OUT}/${TAG}-${SHOT}-{parts6x,sil6x,sil1x}.png`);
 console.log(`  warnings: ${warnings.length}`);

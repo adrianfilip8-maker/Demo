@@ -2118,8 +2118,9 @@ wrong, and it was correctly refused: re-anchoring rescues an *absolute* band, ne
 arithmetic — neutralise the pupil keys, shoot `sly-startle` once, and that frame is the missing
 minuend. A coordinator's convenient suggestion is worth exactly as much as its arithmetic.
 
-The same read fired a guard on its first exposure: the **catchlight reads L121.9 on the right
-eye against a ≥180 bar** (L198.8 left). ~~because the glint rides the constricting bone and
+~~The same read fired a guard on its first exposure: the **catchlight reads L121.9 on the right
+eye against a ≥180 bar** (L198.8 left).~~ **BOTH NUMBERS RETRACTED — the boxes excluded the
+glint (see the close-out at the end of this subsection).** ~~because the glint rides the constricting bone and
 shrank with the pupil.~~ **That attribution is retracted** — it was stated in the cap6 report,
 relayed onward by me, and refuted by its own author on the next pass: the glint does ride the
 pupil bone, but the constriction is **identical on both eyes** (`pupilL` and `pupilR` both
@@ -2133,6 +2134,34 @@ eye < 180" is not yet evidence of a defect in the eye** — it may be evidence a
 or a correct dimming no threshold should have been set against. It is settled for free by the
 calibration capture §27.2 already requires, and no geometry change is sealed until then:
 shipping one now would be a fix for nothing, tuned against a number it can move.
+
+**CLOSED by the calibration pair, and the answer was neither hypothesis.** With the pupil keys
+neutralised and everything else held, the catchlight measures **left 161.1, right 163.2** — a
+spread of **2.1 L, not 33**. The asymmetry this subsection was built to explain **does not exist
+in the render.** Both earlier readings (L198.8 / L121.9) came from a pinned box carried over
+verbatim from the `night` eye ROI, and **that box excludes the glint entirely** — verified by
+eye, the highlight sits above the box's top edge. So the first explanation (the glint riding the
+constricting bone) was refuted by symmetry, the second (the eyes presented at very different
+view angles) explained a difference that measurement now says was never there, and both were
+reasoning about an artefact of where a rectangle was placed.
+
+What is real, and much duller: the guard's ≥180 bar genuinely fails at 161–163 — but
+**symmetrically, and identically with the keys active or neutralised** (Δ ≈ +0.1/+0.2). It is
+therefore not attributable to the pupil work at all; it is framing or grade, and it needs one
+frame rather than an A/B, which makes it immune to every confound that complicated the rest of
+this pair.
+
+**The transferable lesson is about ROIs, not eyes.** A box inherited from another shot is an
+*assumption* wearing the costume of a measurement, and it produced two successive confident
+explanations of a phenomenon that was not in the image. Before explaining an asymmetry, confirm
+the ROI contains the feature — by eye, at magnification, on both frames. (§30's non-circularity
+rule is the same instinct applied to nulls; this is it applied to populations.)
+
+**And the pupil verdict itself PASSES**, which is what the pair was for: ΔdarkFrac
+**+0.726 / +0.731** on the pinned boxes and **+0.575 / +0.612** on empirically-located ones,
+against a ≥0.12 band — roughly 5× the threshold on either ROI choice, and confirmed by eye
+(large dark pupils in the calibration frame, small constricted ones in the verdict frame). The
+missing minuend was the whole obstacle, and one capture supplied it.
 
 ### 27.3 The prereg costed the visible mesh and forgot the inverted hull
 
@@ -2536,3 +2565,44 @@ wash on metal), or it is a **framing** decision — the census says `interior`'s
 53.7% above the terminator and `courtyard`'s gilded 10.0%, against `hero`'s 1.4%. §7.3's
 "gold reads as metal" condition has been getting judged on the one canonical shot where the gold
 is in shadow.
+
+---
+
+## 35. The cane renders in a different place in two boots of the same tree
+
+Found while differencing the pupil calibration pair, and it is the one result from that pair
+that reaches past the character.
+
+`cap7` and `cap8` are the same shot (`sly-startle`) on trees that differ by **four pupil lines
+in `Clips.js` and nothing else** — the `src/render` diff between them is comment-only, checked
+rather than assumed after a shading confound was hypothesised and refuted. `sampleCane(hurt,
+hold)` returns **`[85.94, 20.11, −0.03]` in both trees.** And the cane still renders in a
+visibly different position: two diagonals in the A/B difference map, a lit shaft across the
+torso in one frame and not the other.
+
+So **something outside the clip data moves the cane between boots.** This is §28's family — a
+comparison contaminated by state nobody registered — but it is a genuinely different animal:
+§28 was the *world clock advancing within* a boot, and pinning `dt` fixes it. This is
+divergence *across* boots, where both frames are the first thing rendered after their own
+staging, and `step(n, 0)` has nothing to say about it.
+
+**What it costs immediately:** `cap8` is not a clean minuend for anything involving pose or the
+cane. The pupil and catchlight results survive untouched because they depend on eye-window
+pixels, which the difference map shows unaffected — but the tail-cone re-shoot that was going
+to ride along in the same capture **was correctly not scored**, because a lobe count on a
+contour would inherit exactly this nondeterminism.
+
+**What it may cost retroactively is larger and is not yet known.** Every cross-boot comparison
+this project has made — and most of them are cross-boot, because a capture is a boot — assumes
+that identical source plus identical shot yields an identical frame. That assumption is now
+false for at least one prop in at least one pose. Nobody should re-quote a cross-boot geometry
+delta until the mechanism is found and either fixed or bounded.
+
+**The shape to look for**, since the clip sample is identical: state that survives or varies
+across staging rather than being derived from it — an `aimBone`/IK solve seeded from a previous
+frame, a spring or damper with no reset, a `setShot` ordering where the cane's constraint runs
+before or after the pose depending on what happened earlier, or physics settling a variable
+number of ticks. The falsifier is cheap and should come first: **boot the same shot twice in
+one process, and boot it twice in two processes, and difference the cane region.** If one-process
+repeats are identical and two-process repeats are not, it is initialisation; if both differ, it
+is a settle that never converged.
