@@ -420,11 +420,23 @@ def('idle_look', {
  * the braced hand up through the spine to the cane tip.
  */
 const PERCH = P({
-  hips: [26, 10, -4],
+  /* Lateral line of action (ledger #17). poseprobe measured this pose dead straight across
+     the frontal axis — hips x 0.000, chest x 0.006, head x -0.007 — so from any azimuth off
+     the 70° profile the figure read as a mannequin on a plumb line. The sagittal diagonal
+     (braced hand -> spine -> cane) was always here; this adds the missing axis, authored as
+     roll opposition rather than translation: pelvis rolled 9° further (-4 -> -13) so the
+     torso base leans toward the braced glove, chest counter-rolled +10 against it, neck and
+     head +10/+9 re-levelling past centre, legs counter-rolled so the feet hold their stance
+     (footL/footR within 8 mm of the old plant). Measured after (poseprobe): hips +0.045 ->
+     chest +0.082 -> head +0.046 — +3.7 cm out on the lower segment, -3.6 cm back on the
+     upper, a genuine S against the old plumb line, with the pelvis/shoulder tilt opposition
+     carrying the read even where the projection forecloses lateral offsets. The braced glove
+     follows the lean (+3.6 cm toward its own side) and stays planted at y 0.704. */
+  hips: [26, 10, -13],
   spine: [-6, -5, 3],
-  chest: [-14, -11, 4],
-  neck: [-16, 8, -4],
-  head: [-18, 15, -7],
+  chest: [-14, -11, 14],
+  neck: [-16, 8, 6],
+  head: [-18, 15, 2],
   jaw: [3, 0, 0],
   capBrim: [5, 0, -4],
   earL: [-14, 6, -18],
@@ -432,21 +444,21 @@ const PERCH = P({
 
   // braced left glove: arm reaches down and forward, elbow nearly straight
   shoulderL: [6, 8, -14],
-  upperArmL: [-52, 12, -24],
-  lowerArmL: [-30, -14, -10],
+  upperArmL: [-46, 12, -34],
+  lowerArmL: [-36, -14, -10],
   handL: [34, -12, -8],
 
   // right arm swept back, cane trailing off behind the hip
   shoulderR: [-2, -10, 10],
-  upperArmR: [34, -14, 30],
+  upperArmR: [34, -14, 22],
   lowerArmR: [-22, 22, 14],
   handR: [4, 14, 8],
 
-  upperLegL: [-96, 12, 6],
+  upperLegL: [-96, 12, 10],
   lowerLegL: [104, 0, 0],
   footL: [-14, -6, 2],
   toeL: [10, 0, 0],
-  upperLegR: [-84, -14, -6],
+  upperLegR: [-84, -14, -3],
   lowerLegR: [96, 0, 0],
   footR: [-10, 8, -2],
   toeR: [8, 0, 0],
@@ -501,15 +513,20 @@ const PERCH = P({
 def('perch_idle', {
   dur: 3.2, loop: true, hold: 0,
   keys: [
-    { t: 0, e: 'soft', P: PERCH, pos: [0, -0.30, 0.07], cane: [-30, 30, -30] },
-    { t: 0.8, e: 'soft', P: { chest: [-17, -13, 5], head: [-21, 18, -8], hips: [28, 11, -5],
+    { t: 0, e: 'soft', P: PERCH, pos: [0.045, -0.30, 0.07], cane: [-30, 30, -30] },
+    /* In-between keys re-derived as the SAME breath drifts on the new base — these are
+       absolute angles, and §9's orphaned-key trap is exactly a base pose moving under keys
+       like these. Old drift preserved: hips +[2,1,-1] / chest +[-3,-2,1] / head +[-3,3,-1]
+       at 0.8, the mirror at 1.7, head/neck flick deltas at 2.3. pos.x rides at the base's
+       0.045 throughout so the breath does not saw the pelvis laterally. */
+    { t: 0.8, e: 'soft', P: { chest: [-17, -13, 15], head: [-21, 18, 1], hips: [28, 11, -14],
       // re-authored with the base pose's tail arc — these are absolute, not deltas
-      tailA: [-34, -36, 0], tailB: [2, -40, 0], tailD: [40, 30, 0] }, pos: [0, -0.325, 0.078], cane: [-26, 26, -30] },
-    { t: 1.7, e: 'soft', P: { chest: [-11, -9, 3], head: [-15, 12, -6], hips: [24, 9, -3],
-      tailA: [-26, -25, 0], tailB: [10, -29, 0], tailD: [32, 22, 0] }, pos: [0, -0.285, 0.062], cane: [-34, 34, -30] },
+      tailA: [-34, -36, 0], tailB: [2, -40, 0], tailD: [40, 30, 0] }, pos: [0.045, -0.325, 0.078], cane: [-26, 26, -30] },
+    { t: 1.7, e: 'soft', P: { chest: [-11, -9, 13], head: [-15, 12, 3], hips: [24, 9, -12],
+      tailA: [-26, -25, 0], tailB: [10, -29, 0], tailD: [32, 22, 0] }, pos: [0.045, -0.285, 0.062], cane: [-34, 34, -30] },
     // a small head-flick as something below catches his eye
-    { t: 2.3, e: 'out', P: { head: [-14, 26, -12], neck: [-14, 13, -6], earL: [-20, 8, -24] } },
-    { t: 3.2, e: 'soft', P: PERCH, pos: [0, -0.30, 0.07], cane: [-30, 30, -30] },
+    { t: 2.3, e: 'out', P: { head: [-14, 26, -3], neck: [-14, 13, 4], earL: [-20, 8, -24] } },
+    { t: 3.2, e: 'soft', P: PERCH, pos: [0.045, -0.30, 0.07], cane: [-30, 30, -30] },
   ],
 });
 

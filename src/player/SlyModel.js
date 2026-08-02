@@ -194,7 +194,8 @@ export const TUNE = {
   /* Vertex-colour multiplier on the sclera only — see `_buildEye`. `PAL.eyeWhite` is luma
      0.953. Emissive is added *after* albedo in the toon shader (`outgoingLight = diff + ... +
      emissiveTerm`), so this multiplier does not touch the eye's night floor — `night` runs at
-     key 0.00 and is carried entirely by `emissive`, which is unchanged.
+     key 0.00 and is carried entirely by `emissive`, which is set independently (0x363636,
+     ledger #17 — see the `eye` spec in `_matSpec` for the arithmetic).
 
      0.82 → 0.15, and the two previous values (0.82, and the 0.65 once costed) were both picked
      against a display-L table that was mis-calibrated at the top: it attributed scene 0.72's
@@ -2662,7 +2663,25 @@ export class SlyModel {
          * glint is authored as its own ellipsoid on the pupil and does not depend on this.
          *
          * The actual cause was the band boundary between the two lenses; see `_buildEye`. */
-        color: PAL.eyeWhite, sss: 0.0, rim: 0.09, spec: 0.0, gloss: 20, emissive: 0x141414,
+        /* `emissive` 0x141414 -> 0x363636 (ledger #17), and this floor is picked by arithmetic
+         * against the calibrated display chain rather than by taste — scratchpad/nightcalc.mjs,
+         * validated to ±0.4 L against PostFX.js's display row before use.
+         *
+         * At night key 0.00 the sclera is carried by fill + this term (§196 note above). The
+         * wedge1 `night-close` frame measures sclera p50 L26.6 against mask ink L9.5 — a +17
+         * margin on a +15 gate, one B1 re-frame from failing, with the far eye an indistinct
+         * sliver. Inverting L26.6 through the chain gives scene 0.0119; this hex adds
+         * +0.0105 scene-linear (0.0369 lin x 0.35 intensity − the old 0.0024), landing the
+         * sclera at ~L42: +32 over the mask (+30 if socket AO eats 15%), one step above the
+         * muzzle's L41 — the eye-white reads as the face's brightest feature — and far under
+         * the night sky's L126 p99 / torch highlights, so it cannot read as headlights.
+         *
+         * Not a headlight risk by construction: emissive is grey (it cannot push R over G —
+         * the "two yellow dots" failure needs warmth this term does not have), night scene
+         * 0.023 sits 100x under bloom threshold 2.20 so the pyramid never sees it, and the
+         * day side moves 2.590 -> 2.600 scene (+0.1 display L, bright-pass w +0.003) — the
+         * eye1-verified day read is untouched to the precision any capture can resolve. */
+        color: PAL.eyeWhite, sss: 0.0, rim: 0.09, spec: 0.0, gloss: 20, emissive: 0x363636,
       };
       default: return { color: 0xff00ff };
     }
