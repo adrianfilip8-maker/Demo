@@ -3809,6 +3809,12 @@ level-wide, 0.19% of budget**; the nemes/lappet/head/plinth changes cost zero.
 | counted, like-for-like | 548 draws / 2.355 M | **265 draws / 1.747 M** (worst: night) |
 | scored main-view (§1 ruling) | — | **93 draws / 0.668 M** (worst: night) |
 
+**"Like-for-like" scopes the two cells in that row against each other — it does not extend to a
+`report.json` from a later tree.** Concretely: `shots/geo3/report.json` reports `courtyard` at
+**270 draws**, *above* the 265 this row calls the worst case. That is the camera move below, not a
+regression and not an error in this table; the rows were measured on trees where `courtyard` was
+still framed from `[-19, 5.6, 30] fov 50`.
+
 Four shots measured directly, five bounded, combat measured-in-bands. Worst case is **37% of the
 draw budget and 56% of the triangle budget**; architecture sits at 33 draws / 296 k. The specified
 column trade was made as described — papyrus shafts **22 → 48 radial, 9 → 4 vertical**.
@@ -4283,7 +4289,7 @@ Measured, not inferred. The sampled region sits on floor receiving **no direct k
 |---|---|---|
 | under the boot | 61, 77, 90 | **0.68** (cool) |
 | control | 59, 75, 90 | 0.66 |
-| sunlit floor | 137, 78, 56 | **2.47** |
+| sunlit floor | 137, 78, 56 | ~~**2.47**~~ — **dead reference pixel, see §63.2; use 2.74** |
 
 **A contact shadow is the removal of direct light. On shaded floor there is nothing to remove, at
 any bias.** The lit/shade boundary is a long rail-parallel diagonal spanning the frame —
@@ -5018,6 +5024,24 @@ which, pre-registered: **>6° from prediction and the whole table is withdrawn.*
 > 227 against base's 226 / 213 / 227 — the cool rim moves the shadow median by ≤1°, so this is
 > the shading chain, not the rim.
 >
+> **Day mood, the acceptance's other half, from the same frames' lit split (L>140):** `temple`
+> `sandstone_block` **24°**, `sandstone_worn` **27°**, `column_papyrus` **34°**; `interior`
+> `granite_pink` **30°**, `hieroglyph_wall` **34°**. Warm, and inside the 18–35° band the
+> coordinator's own attribution note quotes for authored albedo — so the shadow move did not
+> come out of the lit side, and §2.2's warm/cool tension is intact rather than traded. `night`'s
+> lit population is 275–331 px and is not evidence in either direction; its verdict is the
+> shadow row above.
+>
+> **One leg of the acceptance is NOT re-verified here, and saying which is the point.** "≤226°
+> *at comparable saturation*" is a ratio against the pre-fix state, and no pre-fix frame of
+> `temple`/`night`/`interior` exists at these cameras to divide by — `courtyard`'s camera moved
+> in `9c5edf8` after the masks were built, so it is excluded outright. The saturation leg rests
+> on `t16ab`'s same-shot pair (satP50 0.77–1.10× base) recorded at `TUNE.shadowTeal`, measured on
+> `sly-closeup`, not on these three. What this measurement adds is the hue leg, on 100k–426k px
+> populations across three shots, plus the channel order: shadow means are 61/72/83, 48/53/69,
+> 13/20/43, 44/48/70, 57/67/80 — **G > R on every one**, where the pre-fix signature the task was
+> opened on is B-max with R > G.
+>
 > **The acceptance is met on the shipped tree, and `bmix05` is not an arm.** It pokes
 > `shadowBounceMix` to 0.05, which *is* the shipped value — the arm would have compared 0.05
 > against 0.05 and measured its own noise, and I had it pre-registered as the run that would
@@ -5148,3 +5172,130 @@ And the rule SHADING extracted from its own confusion, which I had recorded back
 > difference, not a contradiction, and it caught both writers. Measured with the ordering statistic
 > itself, green is already darkest in the scene-linear composite before the grade exists, and the
 > split moves it *out* of last place in the single cell where it matters at all.
+
+### 62.5 The ledger already contained this answer, measured, sixteen sections earlier — and §61.7 contradicted it without noticing
+
+**§45 closed the shadow-hue line at 20:35, on frames, two hours before §61.7 reopened it from a
+model.** It says it in the section title: *"the shadow-hue line closes — measured, not fixed."* It
+retires the same stale 274/282/261 hues, for the same reason (`bounceMix` + `shadowTeal` shipped
+mid-session), and it states the same consequence — *"the pre-registered lever arms are moot"*.
+§61.7 then ruled the acceptance unreachable and pre-registered `bmix05` as the arm that would
+settle it. **Both of those were already answered, in this file, by a section I did not read.**
+
+So §62.1's provenance finding is real but is the *second* discovery of it, and the instrument
+guard is worth keeping for the next transcription rather than for this question. The honest
+credit: §45 got there first, cheaper, and by asking the better question — whether the frame it
+needed already existed.
+
+**The two measurements are independent and they agree**, which is the one thing §45 could not
+give itself:
+
+| shot | §45 — `tx8` `671dd39`, ROI crops (`dhscore.mjs`) | §62 — `rim4` `2f99d55`, arch masks (`framehue.mjs`) | Δ |
+|---|---|---|---|
+| `temple` | 211.4° | 213° (`column_papyrus`, 426k px) | **1.6°** |
+| `interior` | 226.7° | 227° (`granite_pink`, 348k px) | **0.3°** |
+| `night` | *declined as unnecessary* | **223–226°**, sat 0.74–0.79, G > R | — |
+
+Different capture sets, different trees, different framings, different instruments — hand-placed
+ROIs against material masks — landing within 2° on both shared shots. Neither was built to check
+the other, which is what makes the agreement worth more than either number.
+
+**What this pass adds is the leg §45 waived.** §45 argued `night` "never needed re-measuring — it
+was a regression guard for a fix that is not happening". That is sound reasoning and it is still
+an *assumption*: the coordinator's acceptance names night first precisely because night is what
+the cool terms pay for. It is now measured — 223/226/226 across three materials and 380k px,
+inside §2.2's [215, 235] band, with saturation **rising** to 0.74–0.79 rather than collapsing —
+at zero capture cost, off frames that already existed. A waived guard and a discharged guard are
+not the same evidence, and the difference cost nothing to close.
+
+**The rule, and it is cheaper than every instrument in this section.** *Before writing a ruling
+into this file, grep this file for the thing being ruled on.* This ledger is 5,000 lines and its
+own §45 answered §61.7's question with better evidence; the search that would have found it is
+`grep -n "shadow.*hue" KNOWN_ISSUES.md`, which costs one second and which I did not run. Every
+guard in §62.3 protects against a constant going stale. Nothing protects against not reading, and
+on this occasion that was the more expensive failure — it produced a wrong ruling, a
+pre-registered capture arm that could not have measured anything, and a task routed to two agents
+on a question that was already closed.
+
+
+---
+
+## §63 — a control that a working mechanism and a broken one both pass, and two pixels that stopped being landmarks
+
+FX, on `det3`'s first boot and on re-verifying §55 against `cap9`.
+
+### 63.1 The latch control is clean, and clean means nothing on this shot
+
+Boot A: `sparkles latched=17 fresh=17`, `focus=[0,0,30]`; transients `smoke 220 · spark 586`; every
+looping pool (`sandLow` 460, `sandHigh` 900, `airMotes` 1000, `shimmer` 90, `motes` 900) **pinned at
+its cap**.
+
+FX first checked the control was not vacuous *by shared input* — the probe re-reads `focus` from
+`movement.position` at probe time and re-runs the collision query itself, so a stale latch would
+disagree. It doesn't. **Then it found the control is vacuous for a different reason, and recorded
+that before boot B exists.**
+
+`Shots.js:369` stages `sly-profile`'s player at `[0, 0, 30]` — *exactly the spawn point*. The
+pre-staging and staged positions are identical, so **there is no displacement for the latch to be
+stale across**, and `latched == fresh` is what a working latch and a broken one would **both**
+produce.
+
+> **`sly-profile` is the weakest possible shot for the mechanism §55.5 named.** Boot A's clean
+> control is not exoneration. Testing the latch needs a shot staged far from spawn — `hero`,
+> `traversal`, `temple`.
+
+This is the standing *"what does it read in the state you have not created yet"* check applied to a
+**control** rather than a metric — and applied to a result that had already come back **in FX's
+favour**, which is the harder direction by far.
+
+Pre-registered before boot B, with the population narrowed from the dump rather than the code: only
+the two **non-looping** pools can vary with boot history, since the looping ones have no room to
+differ by 31 and `LightShafts` was eliminated free in §55.5.
+
+- `sparkles ≠ 17` → latch implicated **without** displacement;
+- `sparkles = 17` **and** transients differ by 31 → latch falsified for this delta;
+- nothing differs by 31 → **it is not in `src/fx` at all**, and the census is the elimination handed
+  back to CHARACTER.
+
+### 63.2 Two of §55.4's reference pixels are dead, and the survey is why that was caught
+
+Re-measured on `cap9` (`5c17500`, clean): floor under the boots **R/B 0.68** against **genuinely
+sunlit floor in the same frame at 2.74** — a **4.0× separation**. §55.4's routing stands unchanged:
+a contact term keyed off direct light does nothing there, and **AO remains the only possible source
+of darkening**, exactly where SHADING's +0.6 L ceiling bites.
+
+**But two coordinates did not survive.** §55.4's "sunlit floor" references — 2.47 and 2.38 — now
+read **0.57 and 0.64. Cool.** The corridor has not vanished: a warm-pixel survey finds **9.27% of
+frame above R/B 1.5**, and the frame plainly shows sunlit floor to his frame-right. Those two
+*pixels* are simply no longer in it, because §39 relocated every `Bag`-placed prop and changed what
+occludes what.
+
+> **A fixed pixel is not a landmark when the world moves under it.** FX would have reported a
+> spurious *"the sun went away"* had it trusted the coordinates instead of surveying the population
+> and opening the frame.
+
+§55.4's table is struck at its declaration site. **Do not re-quote 2.47 or 2.38** — use 2.74 or
+re-survey. §53.2's inherited-ROI failure in its most compact form: there the window moved between
+framings; here the world moved beneath a window that stayed put.
+
+### 63.3 Coordinator decision: the feet are NOT re-staged before pass 6
+
+§55.4 left this open — re-stage `sly-closeup`'s feet into direct key (a `Shots.js` one-liner, my
+file) or specify the contact term against ambient. FX reports the lit corridor is a short lateral
+move frame-right, matching §24.5's "+2 m of x", and genuinely sunlit.
+
+**Decision: do not move it before the pass-6 capture.** Recorded so it can be overturned on evidence
+rather than re-argued:
+
+1. It is a **composition change to a canonical shot**, unverified, landing immediately before a
+   blind critic capture. §17 is exact: *a change that moves a shipped look, arriving as a
+   correctness fix, is a change wearing a fix's clothes.*
+2. **The critic is the right instrument for the question underneath it.** If pass 6 reports the
+   subject reading flat or unlit, that is independent evidence for the re-stage, obtained without my
+   guessing. If it does not, the move was cosmetic and the term must be specified against ambient
+   regardless.
+3. The contact term already built derives from **depth geometry, not light**, and composites on the
+   AO path — so it should survive an unlit floor. That is a prediction on the record, and
+   re-staging would remove the frame that tests it.
+
+Deferred, not declined.
