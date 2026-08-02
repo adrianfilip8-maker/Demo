@@ -93,8 +93,35 @@ export class Debug {
         if (shot.player && movement?.teleport) {
           movement.teleport(new THREE.Vector3().fromArray(shot.player.pos), shot.player.yaw ?? 0);
         }
-        if (shot.player?.pose && animation?.freezePose) {
-          animation.freezePose(shot.player.pose);
+        /* Staging failures here used to be SILENT, and silence is what made them expensive:
+           two capture-to-capture divergences of 50-110 cm in the cane were traced (KNOWN_ISSUES
+           §35.1) to exactly two candidates — the freeze not taking, and the rig never binding —
+           and neither left any trace except a wrong picture. Bounded, not reproduced, precisely
+           because there was nothing in the record to read afterwards. So both now announce
+           themselves into `engine.warnings`, which reaches `report.json`: a capture that staged
+           wrongly says so in its own manifest instead of quietly rendering a different pose.
+           Warn, never throw (§5) — a diagnostic that kills the run destroys the evidence. */
+        if (shot.player?.pose) {
+          if (!animation?.freezePose) {
+            engine.warn?.(`setShot("${name}"): shot asks for pose "${shot.player.pose}" but the `
+              + 'animation module exposes no freezePose — the character is rendering whatever '
+              + 'pose the sim happened to be in, NOT the one this shot specifies');
+          } else {
+            animation.freezePose(shot.player.pose);
+            /* Confirm it took by reading the state it sets, rather than assuming the call
+               implies it. `freezePose` already warns on an unknown clip name and returns with
+               `frozen` still null, so this catches that path AND any future one that leaves the
+               wrong clip held. Field names checked against Animation.js, not guessed — a
+               condition written against a property that does not exist never fires, which is the
+               most useless kind of check there is. */
+            if (!animation.frozen) {
+              engine.warn?.(`setShot("${name}"): freezePose("${shot.player.pose}") did not take — `
+                + 'nothing is frozen, so this frame is whatever pose the sim was already in');
+            } else if (animation.frozen.name !== shot.player.pose) {
+              engine.warn?.(`setShot("${name}"): asked to freeze "${shot.player.pose}" but `
+                + `"${animation.frozen.name}" is held — this frame is not the pose it claims`);
+            }
+          }
         }
         if (character?.root) character.root.visible = !shot.hidePlayer;
 
