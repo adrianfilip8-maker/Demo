@@ -2666,3 +2666,59 @@ that stopped existing sixteen hours earlier. Its author correctly labelled `cap2
 baseline in one paragraph and then read frames from it in another without re-attaching the
 caveat — which is exactly how §18 and §27.4 keep happening, and why the caveat belongs on the
 *observation*, not on the capture that produced it.
+
+---
+
+## 36. Critic pass 5: REJECT at 2.88/10, and the finding is that we optimised the wrong layer
+
+Full record: `progress/records/RESULT-critic5.md`. Thirteen shots, blind — the critic was given
+no change list, no owner's belief about what was closed, and no hint about any contested
+question. Best frame `temple` 4.5, worst `sly-profile` 1.5, mean **2.88**, median 2.5. **All
+thirteen lose their blind side-by-side**, and the closing sentence is the one that matters:
+*"the mandate is not 'better than before' but 'utterly wowed compared with the actual Sly
+Cooper, Mario and Zelda games', and against that question, thirteen times out of thirteen, a
+player picks the other frame."*
+
+**It ruled the run valid on its own investigation rather than on my summary**, which is what a
+provenance clause is for. Four `src/` files really did change inside the capture window; the
+critic established they could not have reached the page by checking that all 17 `import(`
+occurrences in `src/` are JSDoc annotations — no runtime dynamic import exists, so the static
+module graph was fully fetched before `ready`. It then killed the one apparent contamination
+signal (a `programs` 94→136 step a minute after a file was written) with a **null control**: the
+same +42 step lands on `dunes` in a clean-tree run, at a different wall-clock offset and a
+different shot index. The step is bound to the shot, not the clock. And the 404 appears in 24 of
+24 historical reports.
+
+### What it costs us to have been measuring what we were measuring
+
+The three findings that dominate — character model, palette, grounding — **are not things any
+seal in this project was watching.** Months of this ledger are gate coefficients, rim retention,
+bloom onsets, percentile labels and phase pinning; the critic's top item is that *the mask is
+unreliable across poses, the tail reads as hard plates with gaps, and the fur cards float clear
+of the silhouette.* Its second is that **86.7% of chromatic pixels sit in two 40° hue windows**
+(with controls proving the scale reaches 0.222 and 1.000), i.e. the frames read as a grade
+smeared over grey geometry because hue variety was never authored into albedo. Its third is that
+**there is no contact shadow at all** — floor 3 px under the boot reads L 72.0 against control
+columns at 75.3 and 73.3.
+
+None of those needed a pinned clock or a partitioned band to find. They needed someone to look
+at the picture and compare it to the target. **A measurement apparatus can be rigorous, honest,
+self-correcting — and pointed at the wrong layer.** Everything in §§17–35 is *true*; almost none
+of it was load-bearing for the thing the project is actually judged on. The corrective is not
+less rigour, it is choosing the object of rigour by asking first "if this were perfect, would the
+frame win its side-by-side?"
+
+### The critic's own misses, recorded because they are evidence
+
+It listed six, three of which were its own 1× impressions destroyed by its own instruments:
+"the character doesn't separate from the background" (refuted — Michelson 0.25–0.41 against
+nulls of 0.01–0.03), "the combat character is flat" (refuted — spread 111 against `sly-key`'s
+110), and "the courtyard sky has no large-scale structure" (refuted — R64 0.727 against controls
+of 0.015 and 0.916). A fourth, on the guard cone's texture, had a **within-group null of 9.96×
+against a between-group ratio of 0.14×** — it discriminates nothing (§33), so that finding
+stands only as a described read at 2×, explicitly not as a measurement. Its ROIs were box-drawn
+and eye-checked at magnification first, which caught two `night` patches sitting on the platform
+rather than on the character (§27.2's lesson, applied by someone who had read it).
+
+**A critic that publishes its own refuted impressions is worth more than one that does not**,
+because it tells you which of its surviving claims were tested and which were merely felt.
