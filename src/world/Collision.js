@@ -836,7 +836,13 @@ export class Collision {
       if (isLine && !curve) {
         curve = this._synthCurve(rec, ud, world);
         if (curve) {
-          this._warn(`collision: ${rec.tag} "${mesh.name || 'unnamed'}" has no userData.spline — synthesised one from its bounds`);
+          // Two synth branches, only one is worth a warning. From authored top/bottom the
+          // synthesised vertical is affine-exact — identical to an authored 2-point spline —
+          // so it is silent. From bounds the spline is a guess (and for an InstancedMesh the
+          // bounds ignore instances entirely), so that branch stays loud.
+          if (!(Number.isFinite(ud.top) && Number.isFinite(ud.bottom))) {
+            this._warn(`collision: ${rec.tag} "${mesh.name || 'unnamed'}" has no userData.spline — synthesised one from its world bounds, which may not match the visible geometry (instanced meshes especially)`);
+          }
           try { ud.spline = curve; } catch { /* frozen userData, fine */ }
         }
       }

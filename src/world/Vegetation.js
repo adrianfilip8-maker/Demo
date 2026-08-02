@@ -379,8 +379,13 @@ export class Vegetation {
         this.group.add(im);
       }
 
-      // Trunks are climbable — a palm by a wall is a legitimate route up.
-      this.engine.registerCollider(trunks, { tag: 'pole', material: 'wood', climbable: true });
+      // Trunks are SOLID but deliberately not `pole`: an InstancedMesh's bounds ignore its
+      // instances, so a line-affordance tag here made Collision synthesise a phantom
+      // climbable spline at the group origin — ~11 m of mountable air on the courtyard
+      // walking route (see progress/records/NOTE-void-and-poles.md §2b). `misc` keeps every
+      // trunk solid in the BVH and registers no affordance. Real palm climbing, if wanted,
+      // needs one collider per palm spot with an authored 2-point spline from _scatterPalms.
+      this.engine.registerCollider(trunks, { tag: 'misc', material: 'wood' });
     }
 
     /* --- papyrus along the waterline ------------------------------------- */

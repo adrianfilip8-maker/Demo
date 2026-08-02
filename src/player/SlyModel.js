@@ -690,9 +690,27 @@ export class SlyModel {
       this.bones[parent].add(b);
       this.bones[name] = b;
     }
+
+    /* Pupil bones (SPEC-startle-pupils, task #19). Not in the static SKELETON table because
+       their bind position IS the eye's pupil centre — `_eyeFrame(side).pc`, the same
+       expression `_buildEye` builds the disc from — and duplicating that arithmetic as
+       literals is how a bone ends up 2 mm off the disc it drives and a "constriction"
+       becomes a translation. Children of `head`, identity at rest: skinning is bit-identical
+       to the old head-weighted eye in every pose that does not key them, and the startle
+       clips constrict through the existing `sc:` path (proven by `hurt`'s chest squash). */
+    for (const side of [1, -1]) {
+      const name = side > 0 ? 'pupilL' : 'pupilR';
+      const b = new THREE.Bone();
+      b.name = name;
+      const wp = this._eyeFrame(side).pc;
+      worldPos[name] = wp;
+      b.position.copy(wp).sub(worldPos.head);
+      this.bones.head.add(b);
+      this.bones[name] = b;
+    }
     this._bindWorld = worldPos;
 
-    const order = ['root', ...SKELETON.map((s) => s[0])];
+    const order = ['root', ...SKELETON.map((s) => s[0]), 'pupilL', 'pupilR'];
     const boneList = order.map((n) => this.bones[n]);
     this._boneIndex = {};
     order.forEach((n, i) => { this._boneIndex[n] = i; });
@@ -1395,6 +1413,36 @@ export class SlyModel {
     );
   }
 
+  /**
+   * The eye's oriented frame and pupil centre, in bind space. Single source of truth shared
+   * by `_buildEye` (which builds every eye part in this frame) and `_buildSkeleton` (which
+   * parks a pupil bone exactly at `pc`). Pure function of TUNE, so it is callable before any
+   * geometry exists. Everything here is the arithmetic `_buildEye` carried inline before the
+   * pupil bones needed the same answer.
+   */
+  _eyeFrame(side) {
+    const S = TUNE.headScale;
+    const th = side * 0.455, ph = 0.165;
+    const SINK = 0.92;                                   // centre depth, in head-ellipsoid radii
+    const c = this.headSurf(th, ph, SINK);
+    const r = this.headRadii;
+    // ∇((p−c)/r)² — the ellipsoid normal, not a normalised position
+    const nrm = new THREE.Vector3(
+      Math.cos(ph) * Math.sin(th) / r.x, Math.sin(ph) / r.y, Math.cos(ph) * Math.cos(th) / r.z,
+    ).normalize();
+    const outward = nrm.lerp(new THREE.Vector3(0, 0, 1), 0.30).normalize();
+    const up = new THREE.Vector3(0, 1, 0);
+    const right = new THREE.Vector3().crossVectors(up, outward).normalize();
+    const trueUp = new THREE.Vector3().crossVectors(outward, right).normalize();
+    /* The offset is what keeps the pupil off the sclera (0.020 + 0.020 clears the sclera's
+       0.032 by 0.008·S), not a big radius. Raised 0.002 → 0.013 because the lid eats the
+       *top* of the sclera: a pupil centred on the lens centre sits low in the part of the eye
+       you can actually see, and an albedo render of the face read both eyes as droopy for
+       exactly that reason. It is centred in the visible aperture, not in the geometry. */
+    const pc = c.clone().addScaledVector(outward, 0.020 * S).addScaledVector(trueUp, 0.013 * S);
+    return { c, outward, right, trueUp, basis: { x: right, y: trueUp, z: outward }, pc };
+  }
+
   _headWeights(p) {
     const w = ramp(p.y, [
       [hy(1.380), { neck: 0.72, head: 0.28 }],
@@ -1671,19 +1719,8 @@ export class SlyModel {
    */
   _buildEye(mb, side) {
     const S = TUNE.headScale;
-    const th = side * 0.455, ph = 0.165;
-    const SINK = 0.92;                                   // centre depth, in head-ellipsoid radii
-    const c = this.headSurf(th, ph, SINK);
-    const r = this.headRadii;
-    // ∇((p−c)/r)² — the ellipsoid normal, not a normalised position
-    const nrm = new THREE.Vector3(
-      Math.cos(ph) * Math.sin(th) / r.x, Math.sin(ph) / r.y, Math.cos(ph) * Math.cos(th) / r.z,
-    ).normalize();
-    const outward = nrm.lerp(new THREE.Vector3(0, 0, 1), 0.30).normalize();
-    const up = new THREE.Vector3(0, 1, 0);
-    const right = new THREE.Vector3().crossVectors(up, outward).normalize();
-    const trueUp = new THREE.Vector3().crossVectors(outward, right).normalize();
-    const basis = { x: right, y: trueUp, z: outward };
+    // Frame + pupil centre come from `_eyeFrame` — the pupil bone sits at the same `pc`.
+    const { c, outward, right, trueUp, basis, pc } = this._eyeFrame(side);
 
     /* The shared shading normal. No X term and no `side` factor on purpose — see the header.
        Tilted slightly up so the pair reads as catching the sky rather than staring level. */
@@ -1709,18 +1746,19 @@ export class SlyModel {
       colorAt: (u, v, p) => furTint(_c, p.x, p.y, p.z, 0.018, 7, TUNE.scleraTint),
     });
     mb.biasNormals(v0, mb.vertexCount, shadeN, 0.90);
-    /* Pupil — big and cartoon, a flatter disc riding on the lens. The offset is what keeps it
-       off the sclera (0.020 + 0.020 clears the sclera's 0.032 by 0.008·S), not a big radius.
-       Raised 0.002 → 0.013 because the lid eats the *top* of the sclera: a pupil centred on the
-       lens centre sits low in the part of the eye you can actually see, and an albedo render of
-       the face read both eyes as droopy for exactly that reason. It is centred in the visible
-       aperture, not in the geometry. */
-    const pc = c.clone().addScaledVector(outward, 0.020 * S).addScaledVector(trueUp, 0.013 * S);
+    /* Pupil — big and cartoon, a flatter disc riding on the lens. Centre + placement
+       rationale live in `_eyeFrame` (the pupil bone shares them).
+       Weighted to the pupil bone, not the head (SPEC-startle-pupils): the bone is identity at
+       rest so nothing moves in any existing pose, and the startle clips constrict it through
+       the ordinary `sc:` scale path. Scale is in the bone's local frame and the disc is
+       already flattened along its own view axis, so a uniform (s,s,1) reads as a smaller
+       disc, not a squashed sphere. */
+    const pupilBone = side > 0 ? 'pupilL' : 'pupilR';
     const v1 = mb.vertexCount;
     addEllipsoid(mb, {
       center: pc, radii: new THREE.Vector3(0.042 * S, 0.050 * S, 0.020 * S), basis,
       segTheta: 14, segPhi: 9,
-      group: 'ink', sg: mb.newSg(), weights: [['head', 1]],
+      group: 'ink', sg: mb.newSg(), weights: [[pupilBone, 1]],
     });
     /* Same shared normal as the sclera. The pupil is the thing that was being erased, so it
        must not be able to land in a different band from the white it sits on either — and a
@@ -1769,9 +1807,17 @@ export class SlyModel {
     addEllipsoid(mb, {
       center: hc, radii: new THREE.Vector3(0.013 * S, 0.013 * S, 0.009 * S), basis,
       segTheta: 8, segPhi: 5,
-      group: 'eye', sg: mb.newSg(), weights: [['head', 1]],
+      /* Rides the pupil bone with the pupil (SPEC-startle-pupils): at 0.35 constriction a
+         full-size glint would cover the whole disc, so it shares the scale and stays a
+         catchlight on black rather than becoming the eye. */
+      group: 'eye', sg: mb.newSg(), weights: [[pupilBone, 1]],
     });
     mb.biasNormals(v2, mb.vertexCount, shadeN, 0.95);
+    /* Published like `tuftRanges`, for the offline zero-regression skin diff: pupil + glint
+       are contiguous (nothing between the two ellipsoids adds a vertex), so one range per
+       side names every vertex the pupil bone owns. Metadata only; nothing reads it at
+       runtime. */
+    (this.pupilRanges ??= []).push({ name: pupilBone, v0: v1, v1: mb.vertexCount });
 
     /* Hooded upper lid, tilted outward-down — this is where the *smug* comes from. A wide-open
        eye reads as surprised; a lid cutting across the top third reads as amused.

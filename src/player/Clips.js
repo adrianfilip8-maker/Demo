@@ -2126,13 +2126,20 @@ def('hurt', {
       upperLegR: [-14, -12, -6], lowerLegR: [26, 0, 0], footR: [16, 8, 0], toeR: [10, 0, 0],
       tailA: [26, -14, 0], tailB: [16, -20, 0], tailC: [-4, -13, 0], tailD: [8, 9, 0],
       browL: [0, 0, -14], browR: [0, 0, 12], jaw: [14, 0, 0], earL: [-26, 10, -30], earR: [-22, -10, 34],
-    }), pos: [0.02, -0.10, -0.12], sc: { chest: [1.06, 0.94, 1.04] }, cane: [60, 60, 0] },
+    }), pos: [0.02, -0.10, -0.12],
+      /* Startled pupils (SPEC-startle-pupils): snap to 0.35 with the impact, held through the
+         0.16 key — the hold frame (0.1) sits inside the constricted window, so any frozen
+         capture of `hurt` shows the startle — then recover on the sc-only key at 0.42. The
+         glint shares the bone, so the catchlight constricts with the disc. */
+      sc: { chest: [1.06, 0.94, 1.04], pupilL: [0.35, 0.35, 1], pupilR: [0.35, 0.35, 1] }, cane: [60, 60, 0] },
     { t: 0.16, e: 'out', P: {
       hips: [18, 8, -5], chest: [-8, 10, -5], neck: [-8, -5, 3], head: [-6, 8, -6],
       upperArmL: [-30, 16, -50], upperArmR: [-24, -16, 46],
       upperLegL: [-58, 10, 5], lowerLegL: [70, 0, 0], upperLegR: [-40, -10, -5], lowerLegR: [56, 0, 0],
       tailA: [-2, 10, 0], tailB: [-12, 14, 0], tailC: [4, 9, 0], tailD: [20, -7, 0],
-    }, pos: [0, -0.30, 0.02], sc: { chest: [1, 1, 1] }, cane: [86, 20, 0] },
+    }, pos: [0, -0.30, 0.02], sc: { chest: [1, 1, 1], pupilL: [0.35, 0.35, 1], pupilR: [0.35, 0.35, 1] }, cane: [86, 20, 0] },
+    // sc-only key: pupil recovery to full, eased out — no bone or cane track reads this key
+    { t: 0.42, e: 'out', sc: { pupilL: [1, 1, 1], pupilR: [1, 1, 1] } },
     { t: 0.36, e: 'out', P: {
       hips: [10, 4, -2], chest: [2, 4, -2], head: [-12, 6, -4], jaw: [7, 0, 0],
       upperArmL: [-18, 10, -36], upperArmR: [-12, -10, 34],
@@ -2154,7 +2161,10 @@ def('ko', {
       upperLegL: [-30, 10, 5], lowerLegL: [42, 0, 0], upperLegR: [-12, -10, -5], lowerLegR: [24, 0, 0],
       tailA: [20, -10, 0], tailB: [10, -14, 0], tailC: [-6, -9, 0], tailD: [10, 7, 0],
       jaw: [16, 0, 0], browL: [0, 0, -16], browR: [0, 0, 14],
-    }), pos: [0, -0.08, -0.08], cane: [70, 50, 0] },
+      /* Startled pupils, KO flavour (SPEC-startle-pupils): constrict 0.45 from the hit and
+         recover only to 0.72 by the settle key at 1.3 — dazed, not alert. The 0.9 hold frame
+         reads mid-recovery by construction. */
+    }), pos: [0, -0.08, -0.08], sc: { pupilL: [0.45, 0.45, 1], pupilR: [0.45, 0.45, 1] }, cane: [70, 50, 0] },
     { t: 0.34, e: 'out', P: {
       hips: [86, 6, -4], spine: [-16, -3, 2], chest: [-26, 8, -4], neck: [26, -4, 2], head: [30, 6, -5],
       upperArmL: [-70, 22, -96], lowerArmL: [-14, -22, -26], handL: [16, -22, -26],
@@ -2177,7 +2187,8 @@ def('ko', {
       upperLegL: [-88, 16, 8], upperLegR: [-52, -18, -8],
       tailA: [-14, 20, 0], tailB: [-24, 26, 0] }, pos: [0, -0.90, 0.02], sc: { hips: [1.02, 0.97, 1.02] } },
     { t: 1.3, e: 'soft', P: { head: [32, 10, -8], jaw: [10, 0, 0],
-      tailA: [-12, 14, 0], tailB: [-22, 20, 0], tailC: [-12, 13, 0], tailD: [14, -9, 0] }, pos: [0, -0.91, 0.02] },
+      tailA: [-12, 14, 0], tailB: [-22, 20, 0], tailC: [-12, 13, 0], tailD: [14, -9, 0] }, pos: [0, -0.91, 0.02],
+      sc: { pupilL: [0.72, 0.72, 1], pupilR: [0.72, 0.72, 1] } },
   ],
 });
 
