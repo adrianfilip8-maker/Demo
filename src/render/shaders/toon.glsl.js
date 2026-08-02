@@ -394,10 +394,15 @@ export const TOON_SHADE = /* glsl */ `
 		   inside the shadow; the small additive wash keeps the *hue* alive, because a warm
 		   sandstone albedo multiplied by a violet light neutralises to grey otherwise. */
 		/* uAoKey: whether baked occlusion multiplies the DIRECT key term as well as the
-		   ambient ones. It does not today, and that is measurable in a frame — hieroglyph_gilded
-		   authors AO p5/p50/p95 = 0.247/0.412/0.992 and renders with a frame median of 0.992, i.e.
-		   no occlusion at all, because on a sunlit surface alb * keyRad * key dominates and is
-		   the one term ao never reaches. Default 0 keeps the shipping look; 1 is the A/B.
+		   ambient ones. It does not today: on a sunlit surface alb * keyRad * key dominates and
+		   is the one term ao never reaches. Default 0 keeps the shipping look; 1 is the A/B.
+
+		   The numbers that used to appear here were wrong and are withdrawn (§34). They read
+		   "authors AO p5/p50/p95 = 0.247/0.412/0.992 and renders with a frame median of 0.992,
+		   i.e. no occlusion at all" — but texlab emits p1/p5/p50, so the authored MEDIAN is
+		   0.992 and 0.412 was the 5th percentile; the two figures in that sentence were the same
+		   statistic labelled twice. And nothing reads AO out of a frame, so "renders with a
+		   frame median" described a measurement that does not exist.
 		   Whoever turns it on must measure the whole frame's midtones, not only the gilded mask:
 		   this darkens every crevice in every sunlit surface in the game. */
 		/* Grade-lever scaffolding (see ToonMaterial TUNE): the two shade-side lights pass

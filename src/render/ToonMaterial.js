@@ -418,10 +418,19 @@ const TUNE = {
      answer twice. A/B is a uniform poke: `shading.uniforms.uRimMagExempt.value = 1`. */
   rimMagExempt: 0.0,
 
-  /* Whether baked AO multiplies the DIRECT key term. It does not (0), which is why a texture
-     authoring a 0.412 median AO renders at 0.992 in a daylight frame: `ao` currently reaches
-     only the ambient fill, the shadow term and the wash, and the sun drowns all three. 1 is the
-     A/B. It is a global change to every sunlit crevice in the game, so the verification is the
+  /* Whether baked AO multiplies the DIRECT key term. It does not (0): `ao` currently reaches
+     only the ambient fill, the shadow term and the wash, and on a sunlit surface the sun
+     drowns all three. That much is a real shader fact and is why 1 is the A/B.
+
+     The justification that used to sit here was arithmetic on a mislabelled column and is
+     withdrawn (KNOWN_ISSUES §8's correction, §34). It read "a texture authoring a 0.412 median
+     AO renders at 0.992" — but `texlab.mjs` emits p1/p5/p50, so 0.412 is the FIFTH PERCENTILE
+     and the authored median is 0.992, the same number it was being compared against. There is
+     also no instrument anywhere that reads AO back out of a frame, so the "renders at" half was
+     never measured. Size this against percentiles that exist, and note that on `hero` only
+     ~1.4% of the gilded population is key-lit, so this term cannot reach the other 98.6%.
+
+     It is a global change to every sunlit crevice in the game, so the verification is the
      whole frame's midtones, not one material's mask. */
   aoKey: 0.0,
 

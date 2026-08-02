@@ -529,12 +529,28 @@ Recorded so they are not re-derived:
   Measured off the built maps, before any lighting — the CPU lab, so no shading term can
   confound it:
 
-  | | albedo luma p5/p50/p95 | AO p5/p50/p95 |
+  | | albedo luma p5/p50/p95 | AO **p1/p5/p50** (mislabelled p5/p50/p95 below — see correction) |
   |---|---|---|
-  | `hieroglyph_gilded`, **built texture** | 92 / 166 / 193 | 0.247 / **0.412** / 0.992 |
-  | `hieroglyph_gilded`, **in frame** | 162 / 186 / 217 | — / **0.992** / — |
+  | `hieroglyph_gilded`, **built texture** | 92 / 166 / 193 | 0.247 / 0.416 / **0.992** |
+  | `hieroglyph_gilded`, **in frame** | 162 / 186 / 217 | *(no instrument — see correction)* |
   | `gold_leaf`, built texture | 70 / 130 / 218 | 0.047 / 0.047 / 0.733 |
   | `bronze_aged`, built texture | 76 / 93 / 148 | 0.090 / 0.784 / 0.980 |
+
+  > **CORRECTION, 2026-08-02 — this whole bullet rested on a mislabelled column.**
+  > `tools/texlab.mjs:170` emits `aoP: [1, 5, 50]`. The triple is **p1 / p5 / p50**, and it has
+  > been read as p5/p50/p95 here, in `PREREG-aokey.md`, and in two *shipped source comments*.
+  > So the "authored 0.412 median" is the **5th percentile**; re-measured, `hieroglyph_gilded`
+  > is p1 0.247 · p5 0.416 · p25 0.722 · **p50 0.992** · mean 0.865. **The authored median is
+  > 0.992 — identical to the "in frame" figure this bullet calls a loss.** The two numbers
+  > being compared were the same number wearing different labels.
+  > Worse, **the "in frame" AO median had no instrument at all**: nothing in the repo reads an
+  > AO channel back from a rendered frame, and the only 0.992 anywhere is `aoP[2]` itself. The
+  > in-frame albedo row came from an *albedo-debug* capture rather than a graded frame; on the
+  > real frame that population spans **3.879** (lit subset 1.508), not 1.34:1.
+  > Everything below about "the occlusion is gone" is withdrawn. What survives: `ao` genuinely
+  > does not multiply the direct key term, which is a real shader fact — but it was sized
+  > against percentiles two steps off, over-predicting roughly 5×, and on `hero` it can only
+  > reach the **1.4%** of gilded pixels that are key-lit.
 
   The texture authors a 2.1:1 value span with a genuine dark floor and a strong occlusion
   gradient. In frame that span is **1.34:1 and the occlusion is gone** — which is exactly "a
@@ -2471,3 +2487,52 @@ which makes `= 2` reachable for the first time.
   unmeasured input that happens to sit near the truth is not evidence about the input. Without
   writing that down first, a coincidence arriving after the fact is nearly impossible to argue
   down.
+
+---
+
+## 34. A mislabelled column travelled into two shipped shader comments, the ledger, and a seal
+
+`tools/texlab.mjs:170` emits `aoP: [1, 5, 50].map(...)` — **p1, p5, p50**. Every consumer read
+it as **p5/p50/p95**. The consequences, in order of how much they cost:
+
+- **The premise of the whole AO line evaporates.** The argument was "the texture authors a
+  0.412 median AO and the frame renders 0.992, so the occlusion is being lost". 0.412 is the
+  **5th percentile**; re-measured, `hieroglyph_gilded` is p1 0.247 · p5 0.416 · p25 0.722 ·
+  **p50 0.992** · mean 0.865. The authored median *is* 0.992. **The two numbers in that sentence
+  were the same statistic wearing different labels**, and the gap between them — the entire
+  observation — was a naming error.
+- **The "in frame" AO median had no instrument.** Nothing in the repo, records or scratchpad
+  reads an AO channel back out of a rendered frame; the only 0.992 anywhere is `aoP[2]`. A
+  number was compared against itself and the comparison was reported as a measurement (§11's
+  family: a precise sentence about something never measured).
+- **It reached shipped source.** Both `ToonMaterial.js` and `toon.glsl.js` carried the wrong
+  percentiles and the wrong conclusion in comments justifying a live uniform — §32's shape, now
+  twice, and both are corrected in place rather than in a note somewhere else.
+- **A seal inherited it.** `PREREG-aokey`'s sizing table is displaced two percentile steps
+  (its "p50" row is the behaviour of the 5th percentile), over-predicting roughly **5×**; and
+  its in-frame anchor came from an **albedo-debug capture, not a graded frame** — on the real
+  frame the same population spans **3.879**, not 1.34:1, so its registered falsifier ("fails if
+  span does not reach 1.45") **is already passed by the shipped baseline and cannot fire.**
+  §33's shape a second time, arrived at from a completely different direction.
+
+**The rule: a percentile triple must carry its percentiles at every hop.** `[0.247, 0.412,
+0.992]` is not data, it is data plus a convention held in someone's head, and conventions do not
+survive being pasted. Emit labelled keys or label them at the call site — and when a tool's
+output is quoted in a comment, quote the tool's own field name with it.
+
+### What survives, and the routing it forces
+
+`ao` genuinely does not multiply the direct key term. That is a real shader fact and was never
+the part in doubt. But the frozen before-measurement now says where it can act: **the ORM metal
+mask covers only 14.2% of `hieroglyph_gilded`** (the rest is limestone), that metal is authored
+*darker and warmer* than its stone — correct cel-metal doctrine, not a defect — and in `hero`
+that mass is **98.6% shadowed at median L 43.6**, reading cool blue-grey.
+
+So **every key-side lever this project has tried on gold — spec (§25), bloom gain, bloom onset
+(§28), AO-on-key — operates on the same 1.4% of pixels.** That is why they keep measuring
+inert, void or partial: they are all aimed at the lit fraction of a surface that is almost
+entirely in shadow. The reach on the other 98.6% is **shadow-side** (`metalEnv`, shadow tint and
+wash on metal), or it is a **framing** decision — the census says `interior`'s `gold_leaf` is
+53.7% above the terminator and `courtyard`'s gilded 10.0%, against `hero`'s 1.4%. §7.3's
+"gold reads as metal" condition has been getting judged on the one canonical shot where the gold
+is in shadow.
