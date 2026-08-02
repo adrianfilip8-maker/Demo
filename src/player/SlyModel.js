@@ -1773,6 +1773,60 @@ export class SlyModel {
       },
       weightsAtVert: (u, v, p) => this._headWeights(p),
     });
+
+    /* ── CRITIC PASS 5 §3.1 FAULT 1, the one it calls the largest single loss ────────────────
+     * "The mask is unreliable across poses ... it is the one shape that says Sly Cooper and it
+     * cannot be allowed to vary per pose. Author it as geometry, or as a mask in a UV layout
+     * LOCKED TO THE EYEBALL TRANSFORM, and verify it in the same five poses."
+     *
+     * The band above is a hand-authored profile in head latitude/longitude. Every constant in
+     * it — TH, the `phic` drift, the `half` falloff — was fitted against where the eye happened
+     * to be, and each one is free to stop agreeing with the eye the moment `headScale`,
+     * `muzzleDrop` or the eye's own theta moves. Measured (`scratchpad/charread.mjs`, M5, the
+     * critic's five poses): the fraction of each eye's visible boundary that touches ink is
+     * **0.52–0.61**, against a control in which the mask is a blob sitting BESIDE the eye,
+     * which scores 0.518. In other words the band was, to within measurement, doing nothing to
+     * enclose the eye at all — which is exactly "asymmetric and half-absent" and "a soft blob".
+     *
+     * This ring is the same shape stated in the eye's own coordinates, so the coupling is
+     * structural rather than fitted. The eye's silhouette on the head IS an ellipse in
+     * (theta, phi) centred on `_eyeFrame`'s own constants with semi-axes equal to the sclera
+     * radii over the head radii; the ring is the annulus between 1.00 and `MASK_OUT` of that
+     * same ellipse. Enclosure is then true by construction at every head scale, every muzzle
+     * drop and every view — there is no value any of those can take that leaves the eye
+     * outside its own annulus.
+     *
+     * `MASK_TEMPLE` sweeps the outboard half of the ring up and back into the point the
+     * reference silhouette has at the temple, which is the part of the mask that survives at
+     * `hero`'s 111 px when the eye itself is 21 px and everything else on the face is gone. */
+    const S = TUNE.headScale;
+    const rH = this.headRadii;
+    const EYE_TH = 0.455, EYE_PH = 0.165;                  // _eyeFrame's own constants
+    const eAx = (0.086 * S) / rH.x, eAy = (0.092 * S) / rH.y;   // the sclera, in head angle
+    const MASK_OUT = 1.62;                                 // outer edge, in eye-ellipse radii
+    const MASK_TEMPLE = 1.30;                              // extra outboard reach at the temple
+    for (const side of [1, -1]) {
+      addPatch(mb, {
+        segU: 26, segV: 3,
+        group: 'ink', sg: mb.newSg(),
+        at: (u, v) => {
+          const a = u * Math.PI * 2;
+          const ca = Math.cos(a), sa = Math.sin(a);
+          /* Outboard (|theta| growing away from the centreline) gets the temple sweep; the
+             inboard side stays tight so the two rings leave a bridge rather than merging into
+             a domino. `side * ca > 0` is the outboard half in both mirror images. */
+          const outb = Math.max(0, side * ca);
+          const rOut = MASK_OUT * (1 + (MASK_TEMPLE - 1) * outb * outb);
+          const r = THREE.MathUtils.lerp(1.0, rOut, v);
+          const th = side * EYE_TH + ca * eAx * r;
+          const ph = EYE_PH + sa * eAy * r
+            // the temple point rides up, which is what makes the shape read as a bandit mask
+            + 0.26 * eAy * outb * outb * MASK_TEMPLE * v;
+          return this.headSurf(th, ph, 1.058);
+        },
+        weightsAtVert: (u, v, p) => this._headWeights(p),
+      });
+    }
   }
 
   /**
@@ -2413,10 +2467,20 @@ export class SlyModel {
          cannot cross each other, and `th` is clamped at 0.86: nothing may drift back toward
          the face, which is the failure this row already had once (clumps at θ 0.60 stood in
          front of the eyes and captured as black lashes). */
+      /* **θ floor 0.86 → 1.18, and the face gets no cards at all.** 0.86 was chosen as "past
+         the eye", which it is — and past the eye is still ON THE FACE at the three-quarter
+         azimuths every character shot uses (`sly-closeup` 33°, `combat` 45°). With clumps
+         widened for critic pass 5's "larger", those cheek cards rendered as black rectangular
+         slabs lying across the cheek and jaw: the head render went from spiky to bricked, and
+         the mask — the one shape that has to read — was competing with four black rectangles
+         6 cm from it. The face is the highest-value surface on the model and a card is never
+         an improvement on it; the cheek row earns its place at the head's silhouette tangent
+         and nowhere else. 1.18 clears the eye's outer edge (θ 0.907) by 0.27 rad and clears
+         the new mask ring's temple point. */
       for (let i = 0; i < cnt(5); i++) {
         const f = i / (cnt(5) - 1);
-        const th = side * Math.max(0.86,
-          THREE.MathUtils.lerp(0.86, 1.46, f) + (hash(i, side + 31) - 0.5) * 0.045);
+        const th = side * Math.max(1.18,
+          THREE.MathUtils.lerp(1.18, 1.62, f) + (hash(i, side + 31) - 0.5) * 0.045);
         const phi = THREE.MathUtils.lerp(-0.38, 0.30, f) + (hash(i, side + 47) - 0.5) * 0.050;
         const base = this.headSurf(th, phi, 0.97);
         const out = base.clone().sub(this.headCenter).normalize();
@@ -2430,10 +2494,12 @@ export class SlyModel {
         });
       }
       /* a second, shorter cheek layer set between the first — overlapping clumps are what
-         turn a row of spikes into a ruff */
+         turn a row of spikes into a ruff. Moved outboard with the row it interleaves, for the
+         same reason: at 0.92 it was the inner-most card on the model and sat on the cheek
+         directly under the eye. */
       for (let i = 0; i < cnt(4); i++) {
         const f = (i + 0.5) / cnt(4);
-        const th = side * THREE.MathUtils.lerp(0.92, 1.38, f);
+        const th = side * THREE.MathUtils.lerp(1.24, 1.56, f);
         // kept at or below eye level: clumps that climb past it crowd the mask and the face
         // stops reading as a face at any distance
         const base = this.headSurf(th, THREE.MathUtils.lerp(-0.30, 0.18, f), 0.99);
@@ -2893,8 +2959,13 @@ export class SlyModel {
         // Laid back along the tail: flat against the surface on the face, projecting past the
         // edge where the surface turns away. Same rule the old row used, applied to six clumps.
         dir: outward.clone().multiplyScalar(0.34).addScaledVector(tan, -1.0).normalize(),
-        length: 0.115 * TUNE.tailGirth * (0.86 + 0.28 * hash(lobeN, 23)),
-        width: 0.082 * TUNE.tailGirth * (0.88 + 0.24 * hash(lobeN, 29)),
+        /* Authored small because `put()` multiplies width by `tuftWidth` (3.30) and length by
+           `tuftLen` (1.24) on the way through. Written at the sizes a lobe should FINISH at,
+           this row built 0.25 m slabs — wider than the 0.33 m tail is thick — and the tail
+           rendered as five navy planks. Final size here is ~0.11 m wide x ~0.10 m long against
+           a local radius of 0.15–0.17 m: a third of the diameter, which is a lock. */
+        length: 0.088 * TUNE.tailGirth * (0.86 + 0.28 * hash(lobeN, 23)),
+        width: 0.034 * TUNE.tailGirth * (0.88 + 0.24 * hash(lobeN, 29)),
         bend: 0.40, bendDir: outward.clone(),
         // Coloured by its own band — a lobe centred in the band cannot cross into its neighbour.
         group: this._tailIsDark(t) ? 'furDark' : 'furCream',

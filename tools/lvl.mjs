@@ -1,7 +1,16 @@
 /* Build Architecture headless and expose world-space triangles. */
 import * as THREE from 'three';
 
-export async function buildLevel() {
+/**
+ * Build Architecture headless.
+ *
+ * `withProps` also builds PROPS and returns a `root` containing both. Worth having as an
+ * option rather than always on: the architecture-only view is the right one for questions
+ * about the building, but it is the *wrong* one for "what is in this frame" — the colossi,
+ * the sphinx avenue and the tomb furniture are props, and a frame analysis that omits them
+ * attributes their pixels to whatever masonry stands behind them.
+ */
+export async function buildLevel({ withProps = false } = {}) {
   const warnings = [];
   const engine = {
     quality: 'high', scene: new THREE.Scene(), debug: {}, stats: {}, warnings,
@@ -13,7 +22,20 @@ export async function buildLevel() {
   const { Architecture } = await import('../src/world/Architecture.js');
   const A = new Architecture(engine);
   await A.init();
-  return { A, engine, warnings };
+  let P = null;
+  const root = A.root;
+  if (withProps) {
+    const { Props } = await import('../src/world/Props.js');
+    P = new Props(engine);
+    await P.init();
+    // Re-parent rather than nest: `root` must stay a plain container both modules hang off.
+    const holder = new THREE.Group();
+    holder.name = 'level';
+    holder.add(A.root, P.group);
+    holder.updateMatrixWorld(true);
+    return { A, P, engine, warnings, root: holder };
+  }
+  return { A, P, engine, warnings, root };
 }
 
 /** Collect world-space triangles from visible meshes whose bbox overlaps `box`. */

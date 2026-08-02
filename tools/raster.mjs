@@ -39,8 +39,9 @@ function writePNG(file, w, h, rgb) {
   ]));
 }
 
-const { A } = await buildLevel();
-A.root.updateMatrixWorld(true);
+const WITH_PROPS = !process.argv.includes('--noprops');
+const { root } = await buildLevel({ withProps: WITH_PROPS });
+root.updateMatrixWorld(true);
 
 const shots = process.argv.slice(2).length ? process.argv.slice(2) : ['temple', 'dunes'];
 for (const nm of shots) {
@@ -103,7 +104,7 @@ for (const nm of shots) {
   const toScreen = (v) => new THREE.Vector3(
     (v.x / v.w * 0.5 + 0.5) * W, (1 - (v.y / v.w * 0.5 + 0.5)) * H, v.w);
 
-  A.root.traverse((o) => {
+  root.traverse((o) => {
     if (!o.isMesh || o.visible === false) return;
     const g = o.geometry; if (!g?.attributes?.position) return;
     const meshId = meshNames.push(o.name) - 1;

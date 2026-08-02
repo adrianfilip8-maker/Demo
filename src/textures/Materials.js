@@ -1635,10 +1635,20 @@ export const MATERIALS = {
        * *cleanest* in the catalogue (k=1 at 0.047 along U, 0.169 along V) because its repeat
        * signature is not a low-frequency blob — it is a recognisable object. Only the render at
        * consumer scale showed it. */
-      const layout = (mode) => (ctx) => glyphWall(ctx, size, mode, cx.seed, { worldTile: worldTileOf(HG_WALL_TILE), glyphM: 0.72, cartouche: false });
+      /* ── Amendment, critic pass 5 §3.9 and §36 ──────────────────────────────────────────────
+       * `cartouche: true` again, and the note above stays because its mechanism is correct: a
+       * *once-per-repeat* landmark is what made repeats countable. `glyphWall` no longer draws
+       * one. It draws a cartouche in every other text column — five per repeat at a pitch of one
+       * fifth of the tile — which is what a real royal wall does and which has no period at the
+       * tile boundary for the eye to lock onto. The claim is checked at the framing's own scale
+       * with `tools/wallstrip.mjs`, the instrument that separated the known-bad `cartouche: true`
+       * state when twenty-eight scalars could not, and it must be checked again on any change
+       * here rather than argued from this paragraph. */
+      const layout = (mode) => (ctx) => glyphWall(ctx, size, mode, cx.seed, { worldTile: worldTileOf(HG_WALL_TILE), glyphM: 0.72, cartouche: true, kheker: 0.075 });
       const cut = rasterMask(size, layout('cut'));
       const lines = rasterMask(size, layout('line'));
       const paint = rasterRGBA(size, layout('paint'));
+      const bandPaint = rasterRGBA(size, layout('bandpaint'));
 
       /* Deeper cut, tighter bevel, no baked highlight. All of the carving's contrast now lives
        * in the height field, so the normal map and `heightAO` produce it — which means it turns
@@ -1648,7 +1658,56 @@ export const MATERIALS = {
       /* `freq` derived from a metre figure, not written as a bare cycle count — see
        * `PAINT_WEAR_M`. At 10.4 m of world per repeat and a 2.08 m cell this is 5 cycles/tile,
        * exactly the literal it replaces; the derivation is the point, not the value. */
-      paintRemnants(s, ramp, paint, { survival: 0.50, freq: Math.round(worldTileOf(HG_WALL_TILE) / PAINT_WEAR_M), seed: cx.seed + 9, edgeLoss: 0.66, fade: 0.42 });
+      /* `fade` 0.42 → 0.15, and this is the single largest hue lever in the file.
+       *
+       * `fade` bleaches surviving pigment toward the stone *before* it is laid down, and at 0.42
+       * on top of `peak 0.80` and a wear field that already removes about half the coverage, the
+       * effective pigment weight inside a glyph is ~0.46. Measured: an Egyptian-blue sign at that
+       * weight over `sandMid` arrives at RGB (123,115,118) — **chroma 8, i.e. exactly on the
+       * critic's chromatic gate**, which is why `huelab` reported 100 % of this recipe's
+       * chromatic texels inside one 30 deg bucket while eleven of the twenty signs in the pool
+       * it draws from are authored blue, green or turquoise. The paint was there and grey.
+       *
+       * The note at `paintRemnants` that motivated the high fade is about a real defect and is
+       * not being relitigated — but it conflates two knobs. What produced *"flat decals with a
+       * hard offset drop shadow"* and *"abstract confetti"* was **coverage**: full-opacity
+       * pigment filling a glyph edge to edge. That is `keep`/`peak`/`edgeLoss`, and all three
+       * stay exactly where they are, so the pigment is still patchy, still short of opaque, and
+       * still lets the grain and grime through. `fade` is **chroma**, and chroma is not what made
+       * a sticker; a real painted relief is partial in coverage and saturated where it survives.
+       * At 0.15 the same sign lands at (82,99,132) — chroma 50, hue 220 — and is a colour again.
+       *
+       * Registered risk, because it is the one this trades against: if the wall comes back
+       * reading as confetti at 1:1, the correct response is to take `peak` or `survival` down,
+       * **not** to put `fade` back, because it was fade that cost the hue. */
+      paintRemnants(s, ramp, paint, { survival: 0.50, freq: Math.round(worldTileOf(HG_WALL_TILE) / PAINT_WEAR_M), seed: cx.seed + 9, edgeLoss: 0.66, fade: 0.15 });
+      /* Band paint — the kheker crown and the register stripe — laid down separately and near
+       * flat, for the same reason `column_papyrus` does it: band paint on a temple wall was
+       * thick, flat and re-applied, while pigment in a sunk glyph is a ghost. Going through
+       * `paintRemnants` with the glyphs would have averaged these to chroma 9 after the
+       * consumer's warm material multiply (see the four-pass note at `glyphWall`), which is the
+       * whole reason the hue never reached the frame. `BAND_KEEP` still leaves a quarter of the
+       * pigment's own chroma to the stone under it, and `bandWear` still removes it in patches,
+       * so this is weathered painted plaster and not a decal. */
+      /* **Wear is coverage, not opacity, and getting that wrong is what desaturates a palette.**
+       * A uniform `keep` of 0.6 does not read as 60 % worn paint; it reads as paint mixed 60:40
+       * with stone *everywhere*, and a 60:40 mix of malachite and sandstone is neither — measured
+       * through the consumer's material colour it lands at hue 43 deg, i.e. back inside the warm
+       * bin, where the same pigment at 0.9 lands at 90 deg. So the wear field is thresholded into
+       * patches: a texel is painted or it is bare stone, at a 1.5 m patch scale, which is both how
+       * pigment actually fails and the only version of it that keeps a hue. */
+      const BAND_KEEP = 0.90;
+      const bandWear = s.field(3, (u, v) => sat(warpN(u, v, 7, 4, 1.2, cx.seed + 43) * 1.4 + 0.55));
+      for (let i = 0; i < s.n; i++) {
+        const pa = bandPaint.a[i];
+        if (pa <= 0.02) continue;
+        const keep = smoothstep(0.34, 0.52, bandWear[i]) * pa * BAND_KEEP;
+        if (keep <= 0.002) continue;
+        s.r[i] += (bandPaint.r[i] - s.r[i]) * keep;
+        s.g[i] += (bandPaint.g[i] - s.g[i]) * keep;
+        s.b[i] += (bandPaint.b[i] - s.b[i]) * keep;
+        s.rough[i] = sat(s.rough[i] - keep * 0.10);
+      }
       chiselMarks(s, { amount: 0.016, angle: -0.35, freq: 48, seed: cx.seed + 1, mask: m.edge });
       pitting(s, { amount: 0.030, freq: 64, density: 0.34, seed: cx.seed + 2, colorDark: PAL.sandDark, stain: 0.10 });
       const src = new Float32Array(s.n);
@@ -3878,7 +3937,31 @@ function glyphWall(ctx, size, mode, seed, o = {}) {
    * `tall`/`frieze` still hold the *proportion* of wall that is writing at 40%, so the majority
    * is plain dressed stone — §2.3's "large simple areas of colour, detail concentrated at focal
    * points" is unchanged. Only the sign size moved. */
+  /* **Four passes, not three, and the fourth exists because of the consumer's material colour.**
+   *
+   * `Architecture.RECIPES.hieroglyph_wall.color` is `0xd6a874`, which three.js multiplies the map
+   * by *in linear*: (0.680, 0.402, 0.185). That attenuates blue 3.7x harder than red, so a
+   * pigment's chroma has to survive a multiply that is itself a saturated warm. Measured through
+   * the whole chain (`scratchpad/huechain.mjs`): full-strength malachite comes out at display hue
+   * 95 deg with chroma 105 — fine — but the *same pigment at 70 % over stone*, which is what
+   * `paintRemnants` leaves, arrives at chroma **9**, one count above the critic's chromatic gate.
+   * The blend with stone happens before the multiply, and the multiply then compresses whatever
+   * is left toward its own hue.
+   *
+   * That is the mechanism behind `huelab`'s otherwise baffling reading that this recipe put
+   * **100 % of its chromatic texels in one 30 deg bucket** while drawing from a pool in which
+   * eleven signs of twenty are authored blue, green or turquoise. Nothing was wrong with the
+   * pigments; they were being averaged into stone and then multiplied by a warm.
+   *
+   * So the flat painted decoration — the kheker crown and the register stripe — is separated out
+   * into its own `'bandpaint'` pass and laid down at near-full strength by the recipe, exactly as
+   * `column_papyrus` already does for its binding bands and for the same physical reason: band
+   * paint on a temple wall was thick, flat and re-applied, where pigment in a sunk glyph is a
+   * three-thousand-year-old ghost. The glyph pass is unchanged in coverage; only its `fade` moved.
+   */
   const { worldTile = 10.4, glyphM = 0.72, cartouche = true, tall = 0.26, kheker = 0 } = o;
+  const isBand = mode === 'bandpaint';        // flat painted decoration only
+  const gm = isBand ? 'paint' : mode;         // styling mode handed to the HG primitives
   const cols = Math.max(2, Math.round((0.76 * worldTile) / glyphM));
   /* `rowRegister` takes its quadrat size from the band *height*, so the frieze's sign size is
    * the band height and nothing else. Left at the old fixed 0.10 of the tile it drew 1.04 m
@@ -3888,8 +3971,10 @@ function glyphWall(ctx, size, mode, seed, o = {}) {
   const frieze = clamp(glyphM / worldTile, 0.03, 0.12);
   const rule = size * 0.010;
   const rnd = rng((seed ^ 0x5eed) >>> 0);
-  HG.registerRule(ctx, size, 0, rule, mode);
-  HG.registerRule(ctx, size, size, rule, mode);
+  if (!isBand) {
+    HG.registerRule(ctx, size, 0, rule, mode);
+    HG.registerRule(ctx, size, size, rule, mode);
+  }
 
   const pitch = size / cols;
   const margin = pitch * 0.12;
@@ -3923,13 +4008,13 @@ function glyphWall(ctx, size, mode, seed, o = {}) {
    * once in hue and once in "reads as Egypt in 200 ms". */
   const khTop = size * 0.012;
   const khH = size * kheker;
-  if (kheker > 0) {
-    HG.khekerFrieze(ctx, -2, khTop, size + 4, khH, Math.max(4, Math.round(worldTile / 1.15)), mode);
-    HG.registerRule(ctx, size, khTop + khH + size * 0.014, rule, mode);
+  if (kheker > 0 && mode !== 'paint') {
+    HG.khekerFrieze(ctx, -2, khTop, size + 4, khH, Math.max(4, Math.round(worldTile / 1.15)), gm);
+    if (!isBand) HG.registerRule(ctx, size, khTop + khH + size * 0.014, rule, mode);
   }
 
   /* Band 0 — the tall text register, sitting under the crown. */
-  {
+  if (!isBand) {
     const y0 = khTop + khH + size * (kheker > 0 ? 0.040 : 0.043);
     const y1 = y0 + size * tall;
     HG.registerRule(ctx, size, y1 + size * 0.020, rule, mode);
@@ -3954,8 +4039,10 @@ function glyphWall(ctx, size, mode, seed, o = {}) {
   {
     const y0 = size * (0.055 + kheker + tall + 0.215);
     const y1 = y0 + size * frieze;
-    HG.registerRule(ctx, size, y0 - size * 0.020, rule, mode);
-    HG.rowRegister(ctx, 0, y0, size, y1 - y0, seed + 907, HG.POOLS.divine, mode);
+    if (!isBand) {
+      HG.registerRule(ctx, size, y0 - size * 0.020, rule, mode);
+      HG.rowRegister(ctx, 0, y0, size, y1 - y0, seed + 907, HG.POOLS.divine, mode);
+    }
     /* A painted stripe under the frieze. Purely horizontal, one repeat per tile: it puts colour
      * and an edge back on the plain area without giving the eye anything to resolve, which is
      * the only kind of detail a large wall can carry and still hold its shape when you squint.
@@ -3969,8 +4056,35 @@ function glyphWall(ctx, size, mode, seed, o = {}) {
      * clear of both the 10-30 deg and 200-220 deg bins. In *shadow* it collapses to 188 deg
      * with everything else, so this buys nothing on a shaded wall and that limit is stated
      * rather than hidden. */
-    HG.paintedBand(ctx, -2, y1 + size * 0.020, size + 4, size * 0.052, mode,
-      [PAL.ochre, PAL.red, PAL.white, PAL.lapis, PAL.malachite]);
+    if (mode !== 'paint') {
+      HG.paintedBand(ctx, -2, y1 + size * 0.020, size + 4, size * 0.052, gm,
+        [PAL.ochre, PAL.red, PAL.white, PAL.lapis, PAL.malachite]);
+    }
+  }
+
+  /* Band 2 — the dado, at the foot of the wall.
+   *
+   * `rasterMask` flips rows on readback, so canvas y near `size` is the *bottom* of the wall,
+   * which is where this belongs and is why it can be a broad flat colour rather than another
+   * stripe: a dado is the one zone of a temple wall that is painted as a field.
+   *
+   * **This is the area that actually moves the hue statistic, and the arithmetic is the reason
+   * it exists.** `huewhere.mjs` on the pre-change tile: **94.9 % of chromatic texels in the
+   * single 20-30 deg bin, mean chroma 104** — the sandstone is not a neutral ground, it is a
+   * saturated orange covering 95 % of the surface. Against that, decoration measured in
+   * millimetres cannot register: the kheker crown and the register stripe together are ~2 % of
+   * the tile in cool pigment, which moves a two-window concentration statistic by 0.02. A third
+   * hue has to be paid for in *area* or not at all, and 0.13 of the tile is ~1.35 m of wall —
+   * the height a real dado is.
+   *
+   * Five stripes, three of them cool, because the warm half of the palette (ochre 15 deg, red
+   * 8 deg, gold 24 deg, and the stone itself at 20 deg) all lands inside one 40 deg window
+   * after the chain, so warm pigment buys identity but no variety. */
+  if (mode !== 'paint') {
+    const dy = size * 0.845;
+    if (!isBand) HG.registerRule(ctx, size, dy - size * 0.014, rule, mode);
+    HG.paintedBand(ctx, -2, dy, size + 4, size * 0.130, gm,
+      [PAL.malachite, PAL.white, PAL.lapis, PAL.red, PAL.malachite]);
   }
 }
 

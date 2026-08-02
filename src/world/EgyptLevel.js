@@ -418,9 +418,32 @@ function courtyard(A) {
     /* Throne: seat block to the knee ledge at 4.5, then the high back slab. */
     vol(A, 'court', 'sandstone_block', cx - 3.4, cx + 3.4, L.colossi.plinth, L.colossi.knee, cz - 3.0, cz + 2.6, { jitter: 0.03, chip: 0.18, c: 0.12 });
     ledgeProxy(A, cx - 3.4, cx + 3.4, L.colossi.knee, cz + 1.4, cz + 2.6, { thick: 0.9 });   // the knees
-    vol(A, 'court', 'hieroglyph_wall', cx - 3.2, cx + 3.2, L.colossi.knee, 9.6, cz - 3.0, cz - 1.2, { jitter: 0.035, c: 0.12 });
-    wallProxy(A, cx - 3.2, cx + 3.2, L.colossi.knee, 9.6, cz - 3.0, cz - 1.2);
-    ledgeProxy(A, cx - 3.2, cx + 3.2, 9.6, cz - 3.0, cz - 1.2, { thick: 0.7 });
+    /* ---- Throne back: the largest single mass in the `courtyard` frame, and until now a
+       plain `vol`. Front-face ownership at the `courtyard` camera puts this slab and the seat
+       under it at 41% of the frame, nearer than anything else in the shot at 6.0–8.7 m, which
+       is why critic pass 5 read the whole complex off it: "every structure is a chamfered
+       cuboid — no cavetto cornice, no torus roll moulding, no batter on any wall".
+       It now carries all three. The naos shrine — a battered box, rolled at the arrises,
+       capped by a cavetto — is the Egyptian form a throne back *is*, so this is the vocabulary
+       arriving on the piece the camera is actually pointed at rather than on a distant pylon.
+
+       The 9.6 top is held to the centimetre: the wall stops at 8.12 and the 1.48 m cornice
+       makes the difference, so the registered `ledge` and the colossus that leans on it are
+       both undisturbed. */
+    const tbW = 6.4, tbTop = 9.6, tbBat = 0.055;
+    const tbCor = K.cornice({ w: tbW - 2 * tbBat * 3.62, d: 1.8 - 2 * tbBat * 3.62, h: 0.70, flare: 0.55, roll: 0.22 });
+    const tbWallTop = tbTop - tbCor.height;
+    A.add('court', 'hieroglyph_wall', K.place(K.masonryShell({
+      w: tbW, d: 1.8, h: tbWallTop - L.colossi.knee, batter: tbBat, course: 0.62, thick: 0.8, rng: R,
+      blockLen: [1.4, 2.3], recess: 0.06, chipChance: 0.2, gapChance: 0.015, hollow: false,
+      bow: 0.06, drift: 0.05,
+    }), { x: cx, y: L.colossi.knee, z: cz - 2.1 }));
+    A.add('court', 'sandstone_worn', K.place(
+      K.cornerRolls({ w: tbW, d: 1.8, h: tbWallTop - L.colossi.knee, r: 0.24, batter: tbBat, rng: R }),
+      { x: cx, y: L.colossi.knee, z: cz - 2.1 }));
+    A.add('court', 'hieroglyph_gilded', K.place(tbCor.geo, { x: cx, y: tbWallTop, z: cz - 2.1 }));
+    wallProxy(A, cx - 3.2, cx + 3.2, L.colossi.knee, tbTop, cz - 3.0, cz - 1.2);
+    ledgeProxy(A, cx - 3.2, cx + 3.2, tbTop, cz - 3.0, cz - 1.2, { thick: 0.7 });
     /* Sand banked against the north face — the wind comes down the valley. */
     A.add('court', 'sandstone_worn', K.place(K.sandDrift({ len: 7.4, h: 1.35, depth: 3.4, rng: R }), { x: cx, z: cz - 3.0, ry: Math.PI }));
   }

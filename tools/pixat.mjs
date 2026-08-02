@@ -16,8 +16,9 @@ const nm = argv.shift() || 'courtyard';
 const s = SHOTS[nm];
 if (!s) { console.log(`unknown shot ${nm}`); process.exit(1); }
 
-const { A } = await buildLevel();
-A.root.updateMatrixWorld(true);
+const WITH_PROPS = !process.argv.includes('--noprops');
+const { root } = await buildLevel({ withProps: WITH_PROPS });
+root.updateMatrixWorld(true);
 
 const cam = new THREE.PerspectiveCamera(s.fov, W / H, 0.1, 600);
 cam.position.fromArray(s.pos);
@@ -28,7 +29,7 @@ cam.updateMatrixWorld(true); cam.updateProjectionMatrix();
 const rc = new THREE.Raycaster();
 rc.firstHitOnly = false;
 const targets = [];
-A.root.traverse((o) => { if (o.isMesh && o.visible !== false) targets.push(o); });
+root.traverse((o) => { if (o.isMesh && o.visible !== false) targets.push(o); });
 
 for (const spec of argv) {
   const [px, py] = spec.split(',').map(Number);

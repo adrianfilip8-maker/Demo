@@ -7,9 +7,13 @@
  * amount of reshaping it will change the picture.
  *
  * Same clip-then-project path as raster.mjs (see the note there on why near-plane clipping
- * is load-bearing rather than a nicety). Architecture only — no player, no props.
+ * is load-bearing rather than a nicety). Architecture **and props**; no player, no terrain.
+ * Props are in by default deliberately — with them omitted this tool reported the colossus
+ * throne as 41% of the `courtyard` frame when a 13 m statue is supposed to stand in front of
+ * it, which is a reading of the building taken from a frame the building does not own.
+ * `--noprops` restores the architecture-only view when the question is about masonry alone.
  *
- *   node tools/frontmap.mjs <shot> [--w 800] [--h 450] [--top 20]
+ *   node tools/frontmap.mjs <shot> [--w 800] [--h 450] [--top 20] [--noprops]
  */
 import * as THREE from 'three';
 import { buildLevel } from './lvl.mjs';
@@ -25,8 +29,9 @@ const nm = argv[0] || 'courtyard';
 const s = SHOTS[nm];
 if (!s) { console.log(`unknown shot ${nm}`); process.exit(1); }
 
-const { A } = await buildLevel();
-A.root.updateMatrixWorld(true);
+const WITH_PROPS = !process.argv.includes('--noprops');
+const { root } = await buildLevel({ withProps: WITH_PROPS });
+root.updateMatrixWorld(true);
 
 const cam = new THREE.PerspectiveCamera(s.fov, W / H, 0.1, 600);
 cam.position.fromArray(s.pos);
@@ -59,7 +64,7 @@ const meshNames = [];
 const p0 = new THREE.Vector3(), p1 = new THREE.Vector3(), p2 = new THREE.Vector3();
 const e1 = new THREE.Vector3(), e2 = new THREE.Vector3(), nrm = new THREE.Vector3();
 
-A.root.traverse((o) => {
+root.traverse((o) => {
   if (!o.isMesh || o.visible === false) return;
   const g = o.geometry; if (!g?.attributes?.position) return;
   const meshId = meshNames.push(o.name) - 1;

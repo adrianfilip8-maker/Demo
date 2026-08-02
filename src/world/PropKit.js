@@ -93,6 +93,33 @@ export function place(geo, { x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0, sx = 1
   return geo;
 }
 
+/**
+ * Apply either a `place`-style options object **or** a `Matrix4` to a geometry.
+ *
+ * This exists because the two spellings were silently incompatible and the silence was
+ * expensive. `Bag.transform` forwarded straight to `place(geo, xf)`, whose signature is a
+ * destructure — `{ x = 0, y = 0, z = 0, rx = 0, … }`. Hand it a `Matrix4` and every one of
+ * those names is absent, so they all take their defaults, `place` composes an identity, and
+ * `applyMatrix4(identity)` returns the geometry exactly where it was. No throw, no warning,
+ * no NaN: the call looks like it worked and the prop stays at the world origin.
+ *
+ * All thirteen `Props.js` call sites passed `matrixOf(...)`, so **every prop placed through a
+ * Bag was stacked at (0, 0, 0)** — both 13 m colossi, the sixteen-sphinx avenue, the Anubis
+ * pair, the gilded Ra, the sarcophagus lid, the offering table, the scaffold, the stelae and
+ * the pylon masts. That is the missing subject in `courtyard`, the missing avenue in `dunes`,
+ * and it is very probably critic pass 5's "large untextured, unlit, faceted cream polyhedron
+ * floating in frame occluding the tail… appears in this shot and no other" in `sly-profile` —
+ * the whole prop pile, interpenetrating, sitting on the courtyard axis.
+ *
+ * `Statues.js` passes options objects and was always correct, so this accepts both rather than
+ * changing one convention into the other.
+ */
+export function applyXf(geo, xf) {
+  if (!xf) return geo;
+  if (xf.isMatrix4) { geo.applyMatrix4(xf); return geo; }
+  return place(geo, xf);
+}
+
 export function matrixOf({ x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0, s = 1, sx = s, sy = s, sz = s } = {}) {
   const m = new THREE.Matrix4();
   _e.set(rx, ry, rz, 'YXZ');
@@ -129,7 +156,7 @@ export class Bag {
   absorb(bag, xf = null) {
     if (!bag) return this;
     for (const p of bag.parts) {
-      if (xf) place(p.geo, xf);
+      if (xf) applyXf(p.geo, xf);
       this.parts.push(p);
     }
     bag.parts.length = 0;
@@ -137,7 +164,7 @@ export class Bag {
   }
 
   transform(xf) {
-    for (const p of this.parts) place(p.geo, xf);
+    for (const p of this.parts) applyXf(p.geo, xf);
     return this;
   }
 
