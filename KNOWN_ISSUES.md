@@ -3037,6 +3037,44 @@ exact and §35's cross-boot nondeterminism did not touch this run.
 
 ## 41. The shadow's hue is owned by the albedo, not by any light term — and it explains two findings at once
 
+> **CORRECTED 2026-08-02, by its own author, before the prediction below was tested. The
+> mechanism survives; every number in it was computed from constants that had already shipped
+> away.** This section used `shadowBounceMix 0.20` with no `shadowTeal`; the live values are
+> **0.05 and 0.15**, and re-read from source the shadow light is G/R **3.258, not 1.336** —
+> matching the pair §18 independently recorded. Consequences, all inverting:
+> - break-even albedo G/R is **0.307**, not 0.749;
+> - **the entire stone family passes** (1.73–2.31). *"Stone cannot survive shade" was the stale
+>   light, not the stone;*
+> - product hue for shaded sandstone is **176–181°, not 18°** — which reconciles with the 214°
+>   TEXTURES measured, and dissolves the anomaly it routed rather than leaving it open.
+>
+> **The prediction this section was proudest of is dead, and the way it died is the lesson.** It
+> claimed the violet is daylight-only and that `night` had always been on the correct side. On
+> the live light **day passes too**, so the day/night split the prediction was made of does not
+> exist. Its author's own words: *"Had I run night first as instructed, it would have come back
+> `G ≥ R` and I'd have reported it as confirming a mechanism it does not test."* The
+> pre-registered `bounceMix 0.20 → 0.00` arm **must not be run as written**.
+>
+> This is §18 recurring inside a section that cites §18 — a model validated against constants
+> that had moved. The habit that caught it was re-reading the constants **from source** when a
+> downstream agent produced a number the model could not predict, instead of treating that number
+> as the anomaly. **When a measurement contradicts your model, re-derive the model's inputs before
+> you doubt the measurement.**
+>
+> What survives, and it is not small: the *structure* — a shaded pixel is `light × albedo`, 88.4%
+> of shadow radiance arrives multiplied by the albedo, and the controlling quantity is their
+> product rather than any single term. What also survives is §38.4's measurement (a shaded column
+> reads 1.000 on the two-window statistic across all ten framings) — but note carefully that the
+> product test governs **channel order**, not **hue variety**. Everything being cool *and similar*
+> still concentrates into two windows. The two facts are compatible and were briefly conflated
+> here.
+>
+> Net effect on the shipped state: its distance from the re-derived acceptance band is now
+> **unmeasured**, not the 37–45° this section implied — those frame numbers predate the shipped
+> teal/bounceMix change. The next step is therefore **one provenance-stamped daylight capture
+> scored for hue separation, not a fix A/B**; if it lands in band, the correct action is to close
+> the line rather than to improve it.
+
 The violet-shadow line has been chased through `shadowTeal`, `shadowBounceMix`, `fillSkyMix`,
 the split-tone and the wash. The decomposition says none of them is the owner:
 
