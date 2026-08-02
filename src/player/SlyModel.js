@@ -374,14 +374,6 @@ export const TUNE = {
   tuftRollW: 1.35,
   furLobe: 0.055,         // amplitude of the low-frequency lumpiness on furred lofts
 
-  /* Forearm ink seams — see `_buildArmInk`. `welt` and `seamR` are fractions of the host arm
-     radius, so they hold their proportion if the limb is ever re-slimmed.
-     Sized against the one number that matters: at `sly-closeup` the forearm is ~26 px wide, so
-     a seam at `seamR` 0.15 of a ~0.042 m radius lands ~2 px — the same order as the 2.5 px ink
-     hull, i.e. a drawn line rather than a pipe. Above ~0.25 it reads as a cable stuck on the
-     arm; that is the failure direction to watch for in the frame, not a metric. */
-  armInk: { welt: 0.085, weltHalf: 0.016, seamR: 0.15, seamSeat: 0.88 },
-
   /* --- idle life, only used while ANIMATION is absent --- */
   breathRate: 0.62,
   breathAmp: 0.014,
@@ -1242,13 +1234,8 @@ export class SlyModel {
     (this._armInfo || (this._armInfo = {}))[side] = { key, ramp: ARM_RAMP, cuffStart, gloveStart };
 
     /* Slim, and slimmest at the shoulder end. §7.3's cartoon read wants narrow shoulders and
-       long thin limbs; the deltoid below carries what shoulder mass there is.
-
-       Expressed in `t` rather than in ring index so the ink pass below can evaluate the same
-       profile at stations that are not keys. `slim`/`clothSwell` delegate, so the loft is
-       bit-identical to before this split. */
-    const slimT = (t) => TUNE.limbSlim * (t < 0.34 ? TUNE.shoulderSlim : 1);
-    const slim = (i) => slimT(ts[i]);
+       long thin limbs; the deltoid below carries what shoulder mass there is. */
+    const slim = (i) => TUNE.limbSlim * (ts[i] < 0.34 ? TUNE.shoulderSlim : 1);
 
     /* Cloth silhouette events. A sleeve is not a machined tube — fabric bunches above the
        elbow and the hem rolls where it ends — and the sleeve is the *second* largest smooth
@@ -1256,23 +1243,11 @@ export class SlyModel {
        nothing happening on either edge. These are 3–4 px steps, which is about the smallest
        event that survives the 2.5 px ink hull. Fur clumps are not the instrument here: this
        surface is cloth, and clumping it would read as a moulting jumper. */
-    const clothSwellT = (t) => {
+    const clothSwell = (i) => {
+      const t = ts[i];
       if (t >= cuffStart) return 1;
       return 1 + 0.10 * smooth(0.56, 0.68, t) * (1 - smooth(0.70, 0.80, t))
         + 0.20 * smooth(0.68, 0.76, t);
-    };
-    const clothSwell = (i) => clothSwellT(ts[i]);
-
-    /** The loft's centre and host radius at an arbitrary `t`, so ink lands ON the arm. */
-    const atT = (tq) => {
-      let i = 1;
-      while (i < ts.length - 1 && ts[i] < tq) i++;
-      const a = ts[i - 1], b = ts[i];
-      const f = b === a ? 0 : (tq - a) / (b - a);
-      const c = centers[i - 1].clone().lerp(centers[i], f);
-      const r = (radii[i - 1] + (radii[i] - radii[i - 1]) * f)
-        * slimT(tq) * clothSwellT(tq) * (tq >= gloveStart ? 1.14 : 1.0);
-      return { c, r };
     };
 
     addTube(mb, {
@@ -1316,82 +1291,6 @@ export class SlyModel {
       group: 'cloth', sg: mb.newSg(),
       weights: [[`shoulder${L}`, 0.78], ['chest', 0.22]],
       colorAt: (u, v, p) => furTint(_c, p.x, p.y, p.z, 0.03),
-    });
-
-    this._buildArmInk(mb, side, { atT, ARM_RAMP, cuffStart, gloveStart });
-  }
-
-  /**
-   * Authored ink on the forearm — the one thing the tail carries and an arm does not.
-   *
-   * **The defect this answers is measured, not felt.** `progress/records/RESULT-limbink-baseline.md`
-   * ran the ink gate on every limb ROI of `cap5/sly-closeup` and every one FAILS: the dark-half
-   * adaptive threshold lands 1.5–7.5 L *below* the limb's own dark-fur mode, i.e. there is no
-   * population inside an arm that is separable from its fur. The cause is the value ladder
-   * (`PAL`), not the shading — an arm runs `cloth` 0.45 → `fur` 0.54 → `clothDark` 0.28 and
-   * stops, while a tail runs the same range *plus* `tailDark` 0.19 rings and `ink` 0.07
-   * separators, which is why the tail gate passes at a 10.5 L margin and the arm has none.
-   * So the arm's only dark line is the 2.5 px hull around its outside, and a shape whose sole
-   * ink is its outer contour is exactly what §7.3 means by "fur reads as smooth plastic".
-   *
-   * **Lines, not clumps, and that is the whole design.** §37 removed the fur cards after a
-   * hold-out showed a population of clumps reads as a shredded mass, and its instruments could
-   * not see the damage because each scored a clump against its own absence. Nothing here adds
-   * contour noise: every feature below is a *seam*, which adds a near-black interior population
-   * — the thing the gate actually measures — without putting a single new bump on the
-   * silhouette. It is also the ink language §2.1 asks for rather than more fur.
-   *
-   * Three features, the two welts sized off the boot's sole slab (the established pattern for a
-   * hard welt line: own smoothing group, slightly proud of its host):
-   *   1. sleeve hem  — where blue cloth meets grey forearm fur
-   *   2. glove cuff  — where forearm fur meets the dark glove
-   *   3. ulnar seam  — a cord along the *back* of the forearm, spanning the bare band, so the
-   *      contribution is ~1 run on every row of the ROI rather than two runs at its edges.
-   *      §7.3 names "the backs of the arms" specifically.
-   */
-  _buildArmInk(mb, side, { atT, ARM_RAMP, cuffStart, gloveStart }) {
-    const K = TUNE.armInk;
-    if (!K || K.welt <= 0) return;
-
-    /* A welt is three rings straddling a station: the outer two sit at the host radius so the
-       seam closes flush into the arm, the middle one stands proud by `welt`. That profile is a
-       crease with a lit edge rather than a ring stuck on a tube. */
-    const weltAt = (tc, half) => {
-      const st = [tc - half, tc, tc + half];
-      const a = st.map(atT);
-      addTube(mb, {
-        centers: a.map((s) => s.c),
-        seg: TUNE.segLimb,
-        rx: (i) => a[i].r * (i === 1 ? 1 + K.welt : 1 + K.welt * 0.15),
-        upHint: new THREE.Vector3(0, 0, 1),
-        shape: (ang) => superEllipse(ang, 1.05),
-        groupAt: () => 'ink',
-        sg: mb.newSg(),
-        weightsAt: (i) => ramp(st[i], ARM_RAMP),
-        uvScale: [2, 1],
-      });
-    };
-    weltAt(cuffStart, K.weltHalf);
-    weltAt(gloveStart, K.weltHalf);
-
-    /* The ulnar seam. Offset along −z because +z is the way he faces (the muzzle builds to
-       +z), so −z is the back of a hanging arm — the extensor side, where a raccoon's guard
-       hair parts and where reference art puts the darker edge. Radius is a fraction of the
-       host's so it reads as a drawn line at `sly-closeup`'s ~26 px arm width, not as piping. */
-    const st = [];
-    for (let k = 0; k <= 6; k++) st.push(cuffStart + (gloveStart - cuffStart) * (k / 6));
-    const seg = st.map(atT);
-    addTube(mb, {
-      centers: seg.map((s) => s.c.clone().add(new THREE.Vector3(0, 0, -s.r * K.seamSeat))),
-      seg: 8,
-      rx: (i) => seg[i].r * K.seamR,
-      upHint: new THREE.Vector3(0, 0, 1),
-      shape: (ang) => superEllipse(ang, 1.3),
-      groupAt: () => 'ink',
-      sg: mb.newSg(),
-      weightsAt: (i) => ramp(st[i], ARM_RAMP),
-      capStart: true, capEnd: true,
-      uvScale: [1, 1],
     });
   }
 
