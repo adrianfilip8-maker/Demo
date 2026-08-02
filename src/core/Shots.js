@@ -113,6 +113,16 @@ export const SHOTS = {
     player: { pos: [0, 0, 30], yaw: 5.24, pose: 'idle_confident' },
   },
 
+  /* Pupil-state verification twin for the startle work (SPEC-startle-pupils): `sly-closeup`'s
+     staging verbatim — same camera, sun, and yaw, so every calibration taken on the closeup
+     (eye boxes, face masks, head-pixel scale) transfers unchanged — with only the pose swapped
+     to `hurt`, whose hold window is where the pupil constriction keys live. Two shots, one
+     variable, same reason `sly-key` reuses this assembly. */
+  'sly-startle': {
+    pos: [-1.6, 1.45, 33.2], target: [0.0, 0.95, 30.0], fov: 38, tod: 0.80,
+    player: { pos: [0, 0, 30], yaw: 5.24, pose: 'hurt' },
+  },
+
   /* Composition + props: obelisk, colossi, braziers, palms, banners.
 
      Camera untouched — this shot exists to show the architecture, and turning it toward the
