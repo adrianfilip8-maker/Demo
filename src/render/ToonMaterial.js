@@ -443,6 +443,20 @@ const TUNE = {
      whole frame's midtones, not one material's mask. */
   aoKey: 0.0,
 
+  /* Shadow-side rim floor for NON-skinned geometry. The shader's `mix( 0.55, 1.0, sh )` keeps
+     55% of the rim where the key is fully shadowed; that floor is what carries `night`'s
+     silhouette rims, and it is also the one term behind the bright-cool band still standing on
+     `hero`'s worn step lip at px (832-1056, 500-620).
+     **0.55 = bit-identical no-op** — mix(0.55, 0.55, vSlySkin) is 0.55 everywhere — so this
+     ships as scaffolding, exactly as `rimSkinExempt` and `aoKey` did.
+     Scoped to architecture on purpose: §24.3's trap is that narrowing the band narrows the
+     CHARACTER's rim in the same proportion, and scoping sidesteps that rather than trading
+     against it. A/B is a uniform poke: `shading.uniforms.uRimShadowFloorArch.value = 0.20`.
+     PREREG-kerb.md holds the bands and the ship rule; its acceptance requires `night` to be
+     re-measured, because night is what the 0.55 buys. Do not change this default from a
+     number in that prereg — change it from the run. */
+  rimShadowFloorArch: 0.55,
+
   /* --- spec --- */
   spec: 0.25,
   gloss: 32,
@@ -625,6 +639,7 @@ export class Shading {
       uRimCurve:     { value: new THREE.Vector3(...TUNE.rimCurve) },
       uRimSkinExempt: { value: TUNE.rimSkinExempt },
       uRimMagExempt: { value: TUNE.rimMagExempt },
+      uRimShadowFloorArch: { value: TUNE.rimShadowFloorArch },
       uAoKey:        { value: TUNE.aoKey },
       /* Shared, not per-material: it is one global ratio and it has to be pokeable from
          `shading.uniforms` for the A/B. Merged into every material by identity in

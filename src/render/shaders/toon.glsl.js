@@ -112,6 +112,7 @@ uniform vec3  uRimCurve;      // silhouette gate: xy = normal turn per screen he
                               // z = how strictly to require convexity (0 = not at all)
 uniform float uRimSkinExempt; // 1 = skinned geometry skips the convexity half of the gate
 uniform float uRimMagExempt;  // 1 = skinned geometry skips the MAGNITUDE half — see rimSil
+uniform float uRimShadowFloorArch; // shadow-side rim floor for NON-skinned geometry; 0.55 = no-op
 uniform float uAoKey;         // 0 = key light ignores AO (shipping); 1 = key is multiplied by it
 varying float vSlySkin;       // 1.0 on a SkinnedMesh, 0.0 otherwise — see the note at slyConvex
 uniform float uSpec;
@@ -691,8 +692,21 @@ export const TOON_SHADE = /* glsl */ `
 		   honestly — a worn bevel turns the normal fast (magnitude open) and bulges toward the
 		   eye (convex) — so the only property separating it from a rim we want is that it is lit
 		   by nothing. Any fix lives in this floor (shape it by tod or by distance-to-key), and
-		   its A/B must re-measure night before it ships, because night is what the 0.55 buys. */
-		vec3 rim = uRimColor * ( uRim * uRimGain * rimBand * rimSil * mix( 0.55, 1.0, sh ) * mix( 0.45, 1.0, wrapRim ) );
+		   its A/B must re-measure night before it ships, because night is what the 0.55 buys.
+
+		   uRimShadowFloorArch is that A/B's scaffolding, and it is SCOPED rather than tuned.
+		   The §24.3 trap is that narrowing the band narrows the CHARACTER's rim in the same
+		   proportion — so the knob applies to non-skinned geometry only, and at vSlySkin = 1
+		   the floor holds 0.55 at every arm by construction. That sidesteps the trap instead
+		   of trading against it.
+		   **Default 0.55 = bit-identical no-op**: mix(0.55, 0.55, x) is 0.55 for every x, so
+		   the expression is the old one until someone pokes the uniform.
+		   Registered in PREREG-kerb.md, and sized offline there at ~110 L of lift on hero's
+		   kerb band against a 7.2 L luma margin over the artefact threshold — a cause fifteen
+		   times its own margin. NOT SHIPPED and not measured in a frame: the A/B that decides
+		   its value must re-measure night, and until it does, 0.55 is the shipping value. */
+		float rimShadeFloor = mix( uRimShadowFloorArch, 0.55, vSlySkin );
+		vec3 rim = uRimColor * ( uRim * uRimGain * rimBand * rimSil * mix( rimShadeFloor, 1.0, sh ) * mix( 0.45, 1.0, wrapRim ) );
 
 		/* There used to be a second, sky-coloured "counter-rim" here for the shadow side. It
 		   is gone, and its removal is a fix rather than a loss.
