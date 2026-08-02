@@ -3540,3 +3540,78 @@ insufficient — before it runs.** Raising the diffuse multiply 0.20 → 0.55 mo
 (×1.91), so the falsifier's second half fails **even when the diagnosis is correct**. Recording
 that in advance is what stops a correct diagnosis being thrown away by its own test — the mirror
 of §33's pre-registered luck clause, and rarer.
+
+---
+
+## §49 — a zero is not one state: two opposite mechanisms produced identical nulls, and my hypothesis was falsified by the data I handed over with it
+
+FX's `sprobe` (`shots/sprobe/sprobe.json`, 6 shots, boot-only, no capture cost) answers the `S`
+re-statement. Three things came out of it and the least expected one is the most reusable.
+
+### 49.1 The statistic was misread first, by its own author, and self-corrected
+
+`S_runtime_cached` is a **per-cascade redraw bill** — each caster counted once per cached cascade
+its bounds intersect — not a count of casters. FX's first reconciliation summed unique casters and
+landed at **half** the reported value on every shot. Summing per-cascade reproduces all six `S`,
+all six `S_pre39` and all six `D_runtime_all` **exactly**, and the 52/56-row tables reconcile to
+**100.0%**. The rows are therefore complete for this population and can name individual movers;
+the ~280 other tracked casters intersect no cascade at all.
+
+A halving that appears on *every* shot is the signature of a units error, not of noise. It is worth
+more than a correct first answer, because it proves the reconciliation was actually attempted.
+
+### 49.2 My hypothesis was wrong, and the check that killed it was in the data I sent with it
+
+I proposed that §39's identity-matrix defect only reaches shots with transformed prop bags in the
+caster set — temple and guard move, bare framings do not — and explicitly flagged it as mine and
+not to be accepted on my say-so. **It is false**, on two independent counts:
+
+- **All six shots carry an identical prop population**: 7 prop rows, 55,466 triangles, *including
+  both movers*, in every shot including the three that null. Presence is not the discriminator.
+- **Only 2 of 7 bags ever move** — `props_cloth` (480 t) and `props_wood` (1,422 t). The other five
+  are **96.6% of all prop triangles** and are identical under `real` and `origin` in all six shots.
+  A property of Bag-transform placement *as such* would move the big ones too.
+
+The real discriminator is **displacement measured against the bag's own bounding radius**, then
+per-camera coverage: cloth 3.06 and wood 1.97 move; dark 0.46, bronze 0.39, lime 0.12, gold 0.09,
+stone 0.08 do not. The proof case is `props_dark` — displaced comparably to `props_wood` and never
+moving, because its 53.5 m radius swallows both endpoints. Absolute displacement predicts nothing;
+displacement *relative to extent* predicts everything.
+
+### 49.3 The finding: the three zeros have two opposite causes
+
+`courtyard` and `night` null because both endpoints sit inside **all three** cascades — the caster
+is counted either way. `interior` nulls because **neither** endpoint sits in any cascade — the
+sealed tomb's cascades never reach the courtyard props.
+
+> **A zero in `courtyard` means "always counted". A zero in `interior` means "never counted".**
+
+Identical in the column, opposite in the world, and no amount of re-reading the zeros distinguishes
+them. This is the sharp form of a hazard §30 only gestured at: pooling does not merely dilute a
+signal, it can **merge two contradictory states into one symbol**. Any instrument that treats "no
+delta" as a single outcome is lossy at exactly the point where it looks cleanest, and a null-rate
+computed over such a column is meaningless — it is counting two different things.
+
+### 49.4 The re-statement declines to produce the number it was asked for
+
+| shot | S/D | §39 delta (% of S) |
+|---|---|---|
+| hero | 69.6% | −0.06% |
+| courtyard | 75.3% | 0 |
+| temple | 66.9% | −0.40% |
+| night | 66.7% | 0 |
+| interior | 71.1% (56 rows) | 0 |
+| guard | 66.5% | −0.23% |
+
+Per-shot spread is **66.5–75.3%**, an 8.8 pp range — **an order of magnitude wider than the §39
+effect it corrects** (max 0.40%). Pooled figures exist (69.1% all six, 68.9% excluding interior)
+and FX declines to headline either: interior is a genuinely different population (56 rows, `S` at
+63% of the others, cascades that exclude the courtyard props), so a pooled denominator changes
+meaning between framings, and the pooled figure would read as "interior drags it down", which is
+precisely the false inference. The earlier **81.1% architecture-only headless** figure is
+**superseded, not contradicted** — different population, one camera, no props — and must not be
+quoted alongside these.
+
+Refusing to emit a single project-wide number, when a single number was what was asked for, is the
+correct answer here: it would misstate an individual shot by up to ~6 pp to correct an effect
+of 0.40%.
