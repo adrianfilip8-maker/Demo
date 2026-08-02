@@ -1418,6 +1418,19 @@ exact zero component *and* an origin on a cell plane — but it is one axis-alig
 and its failure mode is the dangerous one: silence. A void probe that hits nothing reports "no
 leak", which is the answer everyone wants to hear.
 
+**CLOSED 2026-08-02: void.mjs got the same `t0` guard (`tools/void.mjs:104`), proven both
+directions on the on-disk code.** The proof harness (`scratchpad/voidproof.mjs`) textually
+extracts `rayTri`+`cast` from the file so it measures what actually ships, and before the fix
+it reproduced the exact signature above — a strip scan reading holed at every `x = k·CELL`.
+The mechanism surfaces one line later than horizon's, and it is worth recording because it is
+*quieter*: the NaN `tx` never wins the branch chooser, but poisons
+`cellEnd = Math.min(tx,ty,tz)`, so `best <= cellEnd` rejects every real hit forever — the
+probe walks the whole grid politely and reports nothing. After the guard: the known-bad hits
+at the analytic t = 8.000, the strip has zero holes, and the null (same degenerate ray aimed
+away) still misses. Same bug, two tools, two different failure surfaces — a copied block
+carries its trap into whatever control flow surrounds the paste site (diagnosis in
+`progress/records/NOTE-void-and-poles.md`).
+
 Second instrument fault in the same tool, same session: classifying crossings against a
 **smoothed** profile. A ±1 m lookup window absorbed block jitter but bulldozed the breach's
 edge, charging rays passing through open breach as passing through solid wall. Probing the wall

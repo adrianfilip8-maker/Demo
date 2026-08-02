@@ -98,9 +98,15 @@ function cast(o, d, maxT = 400) {
   const inv=(v)=>Math.abs(v)<1e-12?Infinity:1/v;
   const dtx=Math.abs(CELL*inv(d.x)), dty=Math.abs(CELL*inv(d.y)), dtz=Math.abs(CELL*inv(d.z));
   const nb=(c,s)=>s>0?(c+1)*CELL:c*CELL;
-  let tx=(nb(ci,si)-o.x)*inv(d.x); if (tx<0) tx=Infinity;
-  let ty=(nb(cj,sj)-o.y)*inv(d.y); if (ty<0) ty=Infinity;
-  let tz=(nb(ck,sk)-o.z)*inv(d.z); if (tz<0) tz=Infinity;
+  /* `(boundary - o) * inv(d)` is 0 * Infinity = NaN when the ray is axis-aligned AND its
+     origin sits exactly on a cell plane — every NaN comparison below is false, so
+     `Math.min(tx,ty,tz)` is NaN and the hit test rejects real hits forever: a clean miss
+     straight through solid geometry. Same bug horizon.mjs had (KNOWN_ISSUES §21); same
+     guard: test the zero direction directly instead of trusting the sign test. */
+  const t0=(b,o1,d1)=>Math.abs(d1)<1e-12?Infinity:(()=>{const t=(b-o1)/d1;return t<0?Infinity:t;})();
+  let tx=t0(nb(ci,si),o.x,d.x);
+  let ty=t0(nb(cj,sj),o.y,d.y);
+  let tz=t0(nb(ck,sk),o.z,d.z);
   let travelled=0, guard=0;
   while (travelled<maxT && guard++<4000) {
     const b = grid.get(key(ci,cj,ck));
