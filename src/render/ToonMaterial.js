@@ -212,7 +212,16 @@ const TUNE = {
      and renders FIRST in the A/B. Ships only with PREREG-creamfix.md's frame verdict. */
   neutralShadow: 0.0,
   neutralFill: 0.0,
-  subjWarmShade: 0.0,
+  /* SHIPPED at 0.50 — certified by the creamfix A/B (progress/records/RESULT-creamfix.md):
+     V1 cream lands in its corridor, V2 the navy rings hold, V4 night direction + retention +
+     look, and V5 TEXTURES' independently re-anchored gate (S1 −42, S2 −77). The arm at 0.65
+     measured closer to §2.2's authored sandstone ratios, and was NOT taken: choosing a
+     different arm after seeing which one looks nearer authored is post-hoc selection, and 0.50
+     is what the seal certified. Whether the acceptance corridor is itself the right ART target
+     — it was derived as an ATTRIBUTION target, for deciding whether the blue was light-owned —
+     is an open question routed to the blind critic rather than settled by re-picking an arm.
+     V3 (off-subject scope) is VOID, not failed, and wants one pinned capture (§28/§30). */
+  subjWarmShade: 0.50,
 
   /* Baked aoMap strength, globally. The maps were authored while cast shadows were suppressed
      engine-wide (KNOWN_ISSUES §1), so the baked term was carrying the low frequencies as well

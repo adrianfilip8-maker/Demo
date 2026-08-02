@@ -500,14 +500,33 @@ export class Terrain {
 
   async init() {
     const t0 = performance.now();
+    /* These three used to share one try/catch, which meant the *cosmetic* stage in the
+       middle could take out the two that matter. It did exactly that headless for as long
+       as `_canvas()` needed a DOM. Each stage now fails on its own terms, and each warning
+       says what was actually lost, so a missing ground can never again be reported as a
+       missing texture. */
     try {
       this._buildCache();
+    } catch (err) {
+      // Not fatal: heightAt() falls back to the analytic field, just far slower.
+      this.engine.warn(`terrain: height cache failed, heightAt() falls back to analytic — ${err?.message || err}`);
+      console.error('[terrain/cache]', err);
+    }
+
+    // Cosmetic: these feed material map/normalMap. No geometry reads them back.
+    try {
       this._buildTextures();
+    } catch (err) {
+      this.engine.warn(`terrain: sand maps failed, surfaces will be untextured — ${err?.message || err}`);
+      console.error('[terrain/textures]', err);
+    }
+
+    try {
       this._buildSand();
       this._buildPyramids();
       this.engine.scene.add(this.group);
     } catch (err) {
-      this.engine.warn(`terrain: sand build failed — ${err?.message || err}`);
+      this.engine.warn(`terrain: sand build failed — THE WORLD HAS NO GROUND — ${err?.message || err}`);
       console.error('[terrain]', err);
     }
 
@@ -643,6 +662,35 @@ const RINGS = [
 /** Inner-ring cell size by quality. Each must divide 4.8 exactly (see stitching above). */
 const INNER_STEP = { low: 1.6, med: 0.96, high: 0.8, ultra: 0.6 };
 
+/**
+ * The minimal 2D-canvas surface `_canvas()` needs when there is no DOM.
+ *
+ * Deliberately NOT a general polyfill. It implements only the four operations the two bakes
+ * below actually perform, so it cannot silently half-support some future canvas use and hand
+ * back a blank map — anything else throws loudly. `createImageData` zero-fills like the real
+ * thing, and both bakes write all four channels of every pixel unconditionally, so the fill
+ * value cannot change what they produce.
+ */
+function makeHeadlessCanvas(size) {
+  const canvas = {
+    width: size,
+    height: size,
+    getContext(kind) {
+      if (kind !== '2d') {
+        throw new Error(`Terrain headless canvas: only '2d' is supported, got '${kind}'`);
+      }
+      return {
+        canvas,
+        createImageData: (w, h) => ({
+          width: w, height: h, data: new Uint8ClampedArray(w * h * 4),
+        }),
+        putImageData(img) { canvas._imageData = img; },
+      };
+    },
+  };
+  return canvas;
+}
+
 Object.assign(Terrain.prototype, {
 
   /* ── procedural maps ──────────────────────────────────────────────────── */
@@ -678,10 +726,34 @@ Object.assign(Terrain.prototype, {
     this.sandMap.colorSpace = THREE.SRGBColorSpace;
   },
 
+  /**
+   * Raster backend for the two baked maps below.
+   *
+   * The browser path is byte-for-byte what it always was: when a DOM exists this is exactly
+   * `document.createElement('canvas')` and nothing downstream can tell the difference.
+   *
+   * Headless (node instruments — depth/occlusion probes that need the real ground) there is
+   * no `document` and this used to throw. That throw did not merely skip the textures:
+   * `init()` ran cache → textures → sand → pyramids inside ONE try/catch, so losing the
+   * canvas lost the entire sand mesh, both pyramids and the collision proxy, and
+   * `engine.scene.add(this.group)` never ran either. The module still resolved and still
+   * reported success, so an instrument saw a world with vegetation and water floating over
+   * no ground at all — a silent wrong answer, which is the dangerous kind.
+   *
+   * The geometry never reads these maps; they only feed material `map`/`normalMap`. The two
+   * bakes cost ~1.7 s headless (512² ripple + 292 ms 256² macro) out of a ~4.8 s build.
+   *
+   * Deliberate limitation: headless, the resulting CanvasTexture is CPU-side only. Its image
+   * is a plain object, not an HTMLCanvasElement, so binding it to a real GL context would
+   * fail. Nothing headless has a GL context to bind it to.
+   */
   _canvas(size) {
-    const c = document.createElement('canvas');
-    c.width = c.height = size;
-    return c;
+    if (typeof document !== 'undefined') {
+      const c = document.createElement('canvas');
+      c.width = c.height = size;
+      return c;
+    }
+    return makeHeadlessCanvas(size);
   },
 
   /**
