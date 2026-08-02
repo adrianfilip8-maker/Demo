@@ -2741,3 +2741,63 @@ rather than on the character (§27.2's lesson, applied by someone who had read i
 
 **A critic that publishes its own refuted impressions is worth more than one that does not**,
 because it tells you which of its surviving claims were tested and which were merely felt.
+
+---
+
+## 37. The fur cards were net negative, and every instrument we had was structurally blind to it
+
+The critic listed five character faults. **Four of them have one cause**, and it was found by a
+hold-out rather than by a measurement: rendering the same model with every fur-card family
+suppressed makes it read *immediately* as Sly Cooper — cap, mask band, cream muzzle, blue shirt,
+clean banded tail. With the cards on, it is a shredded mottled mass.
+
+### Why months of tuning could not find it
+
+**Every clump instrument in this project scores a row by how much outer contour it breaks** —
+that is, it measures each clump against the alternative of *not existing*. None of them can see
+what a clump does when it is **not** on the contour, and for any single camera most clumps in a
+ring are not on the contour. So the rows were optimised for the one view in which each clump is
+an edge, and shipped into the frame where it is a blemish.
+
+That is §36's lesson in mechanical form, and it is worth stating as a rule: **an instrument that
+scores a feature against its own absence cannot tell you whether the feature is worth having.**
+It answers "does this clump break the silhouette here", never "does the population of clumps
+improve the picture". The second question needed a hold-out — build it without the feature and
+look — which costs one render and no instrumentation at all.
+
+The tail told the same story from the other side. The T40 verdict passed on the interior read
+and on looking at the image, while **components, holes and solidity barely moved** (1/0/0.774 →
+1/0/0.723): the inverted-hull ink shell welds the old shards into a single blob at 40 px, so the
+shape metrics were *structurally unable* to see the defect they were pointed at. A metric that
+cannot resolve the failure mode returns a healthy number for a broken object, and it will do so
+consistently, which is what makes it dangerous.
+
+### Two instruments caught being non-discriminating on real input after passing synthetic controls
+
+- `contourRough` normalises by per-column extent, which **divides the defect away on a diagonal
+  tail**: it read 0.079 on a visibly shredded tail against a 0.735 sawtooth control.
+- The first `ringProfile` averaged along screen columns, which smears rings on a diagonal — it
+  would have scored a **perfect** tail as a failure.
+
+Both passed their synthetic knowns. Synthetic controls prove an instrument *can* respond; only
+real input proves it responds *to this*. Both are now PCA-aligned, and the broken one is left in
+the source **labelled NON-DISCRIMINATING rather than deleted**, so the next reader learns the
+trap instead of rediscovering it.
+
+### What it cost, and the trade taken deliberately
+
+Triangles **16,094 → 13,148 (−18.3%)**, verts 9,914 → 7,958 — the fix is a net budget saving,
+which is the shape of result you get when a feature was subtracting value. Fur at close range is
+now sparser, and that is a **deliberate trade against §7.3's "fur must not read as smooth
+plastic"**: a smooth silhouette that reads as Sly beats a furry one that reads as a shredded
+mass. It is recorded here so the next critic's call on it is a decision being revisited, not a
+regression being discovered.
+
+### Two honest residuals
+
+`sly-startle`'s mask still fails its band (0.08 → 0.10) because that pose's eye is
+proportionally larger than the bind-pose ring anticipates — the fix is to derive the ring radius
+from the *posed* sclera. And the character tool's projection is **mirrored relative to the
+shipped frame**, inherited from `silmerge`'s phi derivation — harmless for before/after
+comparisons, invalid for any "his left arm" claim, and **`silmerge`'s own left/right part
+attributions are therefore suspect** for anyone relying on them.
