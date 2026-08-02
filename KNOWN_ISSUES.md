@@ -3191,13 +3191,35 @@ with a two-sided proof is the system working; the instruction should not have ne
 **Before endorsing a fix for a metric, ask what the metric would read if the defect did not
 exist.** Here it would still have read 0.10.
 
-Two smaller things from the same read, both worth keeping. **The muzzle overshot**: the beak is
+~~Two smaller things from the same read, both worth keeping. **The muzzle overshot**: the beak is
 gone and there is now *zero* forward projection — the muzzle sits entirely inside the cranium arc,
-because two levers both landed (key stations −16% *and* a length constant −29%). It was left
-uncorrected deliberately, since lengthening reverses something the critic explicitly asked for and
-there was no capture to verify against; it is registered as the next A/B rather than nudged. And
-a **confounded metric was discarded rather than quoted**: a snout-bulge measure taken off a
-silhouette panel that also contained the cane and the ear reported the *ear* as the forward bulge.
+because two levers both landed. It was registered as the next A/B rather than nudged.~~
+
+**THE MUZZLE CLAIM IS RETRACTED — it does not survive measurement, and the reason is this
+section's own lesson applied one part further over.** Measured on built geometry with every vertex
+carrying the method that emitted it, the snout and nose stand **+0.0947 m proud of the skull's own
+profile contour — 27.5% of head height.** The instrument was checked against pathological input
+per §43: skull-against-itself reads **0.00000**, and a +0.10 m push moves the peak by exactly
++0.10.
+
+The original "zero forward projection" reading came from **the same confound this section already
+caught, one part over**. A row-wise front-extent profile of the head is owned by the **cap bill**
+(z 0.2909) and the **ear** (+0.1092), never by the nose (z 0.2143) — so a projecting snout reads
+as flush. And here is the part worth the retraction: §42 **discarded the ear-confounded metric and
+then kept the conclusion that metric had produced.** Throwing out an instrument does not throw out
+what it told you. **When an instrument is disqualified, every claim that rests on it is
+disqualified with it, including the ones that felt independently obvious** — otherwise the number
+is retracted and the belief survives, which is worse than never measuring, because the belief now
+looks like it was arrived at some other way.
+
+Its author's first replacement was also wrong, in the flattering direction — binning cranium
+vertices by height and taking a max, where the ring stack is coarse enough that inter-ring bins
+caught only rear vertices and reported the skull's front at z −0.099, manufacturing a large fake
+bulge. It was replaced with an upper hull **before anything was quoted**.
+
+So the muzzle A/B is **not booked**. The only real geometric item is the bill's 0.077 m overhang,
+and trimming that trades §7.3's cap-silhouette condition (§11 records the cap going 24.9% → 48.0%)
+against the muzzle read — not a blind change either.
 
 Finally, the §37 fur trade now has its price measured rather than argued: tail ink **2.52 → 1.44
 runs/row (−43%)**, torso **2.16 → 1.67 (−23%)** — and **the arms still fail the ink gate
