@@ -2104,6 +2104,18 @@ Verify freshness before acting on any relayed process instruction — including 
 on the file fired "cap6 FINISHED" after shot 1 of 2. Key completion on the last expected PNG, or
 on the harness's own `done` line.
 
+**A bulk `git add` commits whatever an agent happened to write, read or not — mine, twice.** The
+sweep convention is that agents write to the scratchpad and the coordinator copies named files
+into `progress/records/`, having read them. Several agents began writing *directly* into
+`progress/records/`, which is sensible on their side — the scratchpad is restart-mortal — but it
+means a `git add -A` or `git add progress/records/` silently publishes documents nobody has read.
+Two seals and a set of PNGs went in that way; the second time was in the very commit whose
+message said bulk adds would stop, which is the useful part of the lesson: **a rule announced in
+a commit is not a rule implemented in the command.** Both were read afterwards and were sound, so
+the cost was zero this time and the exposure was not. Sweep by explicit filename, and treat any
+path an agent can write to as unread until you have read *that version* of it — a file already
+committed can be extended in place, so "I read this file" is a claim about a revision, not a name.
+
 ### 27.5 Re-anchoring the band would have preserved the broken box
 
 One agent's offline arithmetic predicted that another's sealed gate would fail *warm* on a
