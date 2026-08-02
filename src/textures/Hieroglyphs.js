@@ -828,13 +828,23 @@ export function columnRule(ctx, size, x, thick, y0, y1, mode) {
   ctx.restore();
 }
 
-/** Kheker frieze — the row of stylised reed-bundle finials that crowns a temple wall. */
+/**
+ * Kheker frieze — the row of stylised reed-bundle finials that crowns a temple wall.
+ *
+ * **Four pigments in rotation, not two.** The two-colour version alternated `lapis · ochre`,
+ * which is one sample from each of the two hue windows critic pass 5 found the whole project
+ * inside. A real kheker row runs blue / green / red / yellow, and `malachite` is the member that
+ * is not reachable from either of those windows — see the note at `glyphWall`'s call site. The
+ * cycle length is 4 against a finial count derived from the world tile, so it does not land in
+ * phase with the tile and add a second countable rhythm.
+ */
 export function khekerFrieze(ctx, x, y, w, h, count, mode) {
   const cw = w / count;
+  const CYCLE = [PAL.lapis, PAL.malachite, PAL.red, PAL.ochre];
   ctx.save();
   for (let i = 0; i < count; i++) {
     const cx = x + i * cw;
-    setMode(ctx, mode, { paint: i % 2 ? PAL.lapis : PAL.ochre });
+    setMode(ctx, mode, { paint: CYCLE[i % CYCLE.length] });
     ctx.beginPath();
     ctx.moveTo(cx + cw * 0.5, y);
     ctx.lineTo(cx + cw * 0.86, y + h * 0.42);
