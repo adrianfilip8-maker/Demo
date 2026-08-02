@@ -2059,3 +2059,34 @@ Verify freshness before acting on any relayed process instruction — including 
 **`report.json` is written incrementally, so its existence is not completion.** A watcher keyed
 on the file fired "cap6 FINISHED" after shot 1 of 2. Key completion on the last expected PNG, or
 on the harness's own `done` line.
+
+### 27.5 Re-anchoring the band would have preserved the broken box
+
+One agent's offline arithmetic predicted that another's sealed gate would fail *warm* on a
+correctly functioning arm, and an independent transcription confirmed it to the digit: neutral-arm
+shadowed sandstone lands at b−r **−38**, paving −43, ROI-weighted −41, against a registered
+`[−15, +15]` that would have failed a working arm by 23–33 counts. The stated cause is §8's
+category error a second time — **a band written for the light, applied to a pixel**. Neutralising
+the light exposes the albedo, and sandstone is warm by authoring.
+
+The instructive part is what the disagreement did *not* name. Re-anchoring the band, which is
+exactly what I asked for, would have preserved a worse defect: the certifier box called
+`PAVING-SHADOW` is **70.4% `sandstone_block`**, and five of six unprojected probes land on a
+**west-facing vertical kerb face** with ndl **+0.927** against the key — which the neutral arm
+does not neutralise. Its statistic swings **−38 → −116** across keyF 0→0.6 while never leaving
+its own luma gate. A box named for shadow was reading a lit face, and a re-anchored band would
+have been a wrong claim with better arithmetic.
+
+**Rule: when a gate misfires, ask what its ROI is actually made of before you move its band.** A
+band is a claim about a population; fixing the number while the population is wrong is the more
+dangerous repair, because it silences the symptom that would have led you to the box.
+
+Two disciplines from the amendment worth copying wholesale. The replacement moved to a box
+**already frozen in the same file and the same run** (`WALL-SHADOW`: one material, one plane,
+subject bbox clearing it by 12 px) rather than authoring a fresh ROI after the fact — an
+amendment inside the seal, not a new instrument built around a known answer. And the
+post-derivation corroboration (`WALL-SHADOW` reads +35 on shipped frames against the model's
++38) was quarantined in its own section and **explicitly barred from tightening the band it
+corroborates**: three counts of agreement would have justified a narrower S1, and taking it
+would have been fitting the band to the evidence it exists to test. The substantive predictions
+never moved — only the certifier did.
