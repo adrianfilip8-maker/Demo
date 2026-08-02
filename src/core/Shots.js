@@ -113,13 +113,27 @@ export const SHOTS = {
     player: { pos: [0, 0, 30], yaw: 5.24, pose: 'idle_confident' },
   },
 
-  /* Pupil-state verification twin for the startle work (SPEC-startle-pupils): `sly-closeup`'s
-     staging verbatim — same camera, sun, and yaw, so every calibration taken on the closeup
-     (eye boxes, face masks, head-pixel scale) transfers unchanged — with only the pose swapped
-     to `hurt`, whose hold window is where the pupil constriction keys live. Two shots, one
-     variable, same reason `sly-key` reuses this assembly. */
+  /* Pupil-state verification twin for the startle work (SPEC-startle-pupils): the `hurt` pose,
+     whose hold window is where the pupil constriction keys live.
+
+     **Player yaw stays 5.24 — `sly-closeup`'s — deliberately.** Face lighting is a function of
+     yaw and the sun alone (§7), so yaw is the one thing that must not move if this shot is to
+     remain the closeup's one-variable twin.
+
+     The *camera*, though, is not the closeup's, and the first version of this shot was wrong to
+     reuse it. `hurt` turns the head, and at the closeup's bearing that left the two eyes
+     presented very unequally — `dot(outward, toCamera)` 0.963 left against 0.684 right, 48 px
+     against 34 px. A single catchlight threshold applied across that asymmetry produced a
+     failure on the right eye that was first blamed on the pupil constriction; it was the
+     framing (KNOWN_ISSUES §27.2). So the lens is rotated −25° around him, up 10°, and in to
+     2.8 m, aimed at the head centre rather than the chest: the two eyes come within 0.013 dot
+     of each other (0.907 / 0.920) and the previously failing eye gets 3× its pixels.
+
+     Measured control, so the gain is not miscredited to the zoom: the same distance and fov at
+     the *old* bearing leaves the right eye at 0.685. The azimuth is the lever; the zoom only
+     adds pixels. */
   'sly-startle': {
-    pos: [-1.6, 1.45, 33.2], target: [0.0, 0.95, 30.0], fov: 38, tod: 0.80,
+    pos: [-2.21, 1.60, 31.78], target: [-0.08, 1.11, 30.03], fov: 22, tod: 0.80,
     player: { pos: [0, 0, 30], yaw: 5.24, pose: 'hurt' },
   },
 

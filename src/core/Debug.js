@@ -121,7 +121,24 @@ export class Debug {
         };
       },
 
-      /** Deterministic fixed-step advance — no reliance on wall clock. */
+      /**
+       * Fixed-step advance. Deterministic across runs — no reliance on the wall clock — but
+       * **NOT phase-stable within a run**, and the difference cost this project a whole A/B.
+       *
+       * At the default `dt` this advances `engine.time`, so two arms captured one after the
+       * other in the same boot render at *different* animation phases: torch flames, dust,
+       * shafts, sparkle and birds all ride that clock, and it is the only phase source in the
+       * build (nothing in `src/fx` or `src/render` reads `performance.now()`/`Date.now()`).
+       * A gold-bloom sweep was voided by exactly this — its duplicate arm, at an identical
+       * setting, moved more pixels than its strongest real arm.
+       *
+       * **For any within-boot A/B, pass `dt = 0`:** `step(n, 0)`. Frames still advance, poked
+       * uniforms still propagate and SwiftShader still flushes; only the world clock stands
+       * still, and a duplicate arm then differs by exactly zero pixels. The default is left
+       * live on purpose — staging wants the sim to settle — so the caller chooses.
+       *
+       * See KNOWN_ISSUES §28, and §30 for which statistics survive the unpinned case anyway.
+       */
       step: async (frames = 1, dt = 1 / 60) => {
         for (let i = 0; i < frames; i++) {
           engine.renderFrame(dt);
