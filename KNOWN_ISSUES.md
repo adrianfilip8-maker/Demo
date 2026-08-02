@@ -3740,6 +3740,19 @@ again at the shoulder. Replacing them with a single lofted mass is obviously the
 and **the first loft measured worse than the boxes it replaced**: swept-normal area over the figure
 fell **82.1% → 72.1%**.
 
+> **SECOND CORRECTION — the mechanism below is measurably INVERTED, and the headline pair is not
+> reproducible. See §56.** Measured with the chamfer bevels excluded, a `chunkAt` slab face
+> interior turns **0.00°** with jitter off (0.46° shipped, and that is jitter, not pillowing),
+> while the shipped loft flank turns **6.66°**. The "~7° pillowing" is an artefact of a 45°
+> selection cone dragging the bevels into the face-interior population — the same slab then
+> reports 13.98°. And **"swept-normal area" is not a statistic anything in the project computes**:
+> `form.mjs` reports `top6/top12/top24`, no definition of the named quantity is written down, and
+> every reconstruction comes out the **opposite sign** to the pair below. The 82.1 / 72.1 headline
+> and `PropKit.js:393` are both **unverified** until whoever produced them states the statistic.
+> **My error as much as anyone's: I recorded a headline number without ever asking what it
+> measured.** `belly` is retained on evidence (+7.6 points body-only, +1.79° of flank turn), not on
+> the story that was attached to it.
+
 > **CORRECTION, added by GEOMETRY at the declaration site while sealing `PREREG-loft-dunes.md`:
 > the 82.1% / 72.1% pair above is for the FLAT-FLANK loft — the version *before* `belly` existed.
 > No measurement of the shipped `belly` loft exists anywhere in the record.** The claim that
@@ -4312,3 +4325,104 @@ latched **and** freshly re-queried sparkle count, so a stale latch shows up **wi
 FX verified `det3`'s detachment by a **full ancestry walk** (init → wrapper → node, the survivor
 shape). Its earlier one-level "ppid must be 1" test is the too-strict version §14 already corrected,
 and it would have declared this correctly-detached process attached.
+
+
+---
+
+## §56 — L1 cleared the capture without being scoreable, and inverted the mechanism it was testing
+
+GEOMETRY ran `PREREG-loft-dunes.md`'s L1 offline while `rim4` held the lock — the clause registered
+so that a FAIL could cancel its own capture. It did not fail. It also could not be scored, and that
+is the more useful outcome.
+
+### 56.1 The bands were denominated in a statistic nobody defines
+
+L1's thresholds (≥82.1 / 72.1–82.1 / ≤72.1) inherit §51.1's "swept-normal area" pair. **No such
+quantity exists in the project.** `form.mjs` — the only instrument measuring area-weighted normal
+clustering — reports `top6/top12/top24`, and no definition of the named statistic is written
+anywhere. Reconstructing the most natural reading gives 47.9% → 69.3% body-only and 39.8% → 43.9%
+whole-figure: **neither reproduces the pair, and both come out the opposite sign** to the recorded
+finding.
+
+GEOMETRY recorded L1 **UNSCOREABLE AS REGISTERED** rather than forcing a verdict into a band. That
+is the right call and the rarer one — a sealed clause with a number attached invites you to produce
+a number.
+
+### 56.2 What is reproducible, with its definition stated so it can be recomputed
+
+Area-weighted triangle-normal clustering, two normals in one cluster iff `dot > 0.9998`;
+`swept = 100 − (area fraction in the 6 largest clusters)`. Arms share `rng(12345)`; the shipped
+figure is built once and only its body is substituted.
+
+| arm | tris | swept, body only | swept, whole figure |
+|---|---|---|---|
+| A — the `chunkAt` slabs the loft replaced | 88 | 47.9% | 39.8% |
+| B — **shipped** loft, `belly` 0.06 | 240 | **76.9%** | 43.9% |
+| C — same loft, `belly` 0 | 240 | 69.3% | 43.9% |
+
+**The shipped loft beats what it replaced by +29.0 points**, and `belly` earns +7.6 of that. At
+whole-figure scale `belly` is **invisible** — 43.9% in both arms to three figures — because the body
+is too small a share of the figure's area. Any future `belly` claim must be body-only or it is
+measuring the head and the plinth.
+
+### 56.3 The mechanism in §51.1 is exactly inverted
+
+Mean area-weighted angular deviation of face-interior normals, restricted to triangles within 10° of
++X so the chamfer bevels are excluded:
+
+| surface | tris | mean turn | max |
+|---|---|---|---|
+| `chunkAt` slab face interior, jitter **0** | 2 | **0.00°** | 0.00° |
+| slab face interior, shipped jitter 0.025 | 2 | 0.46° | 0.48° |
+| loft flank interior, `belly` 0 | 36 | 4.87° | 8.35° |
+| loft flank interior, **`belly` 0.06 shipped** | 32 | **6.66°** | 11.17° |
+
+**The box face turns through precisely zero and the loft flank carries the gradient** — the reverse
+of what §51.1 says. A `chamferBox` side face is two triangles sharing one normal; its 0.46° is
+jitter, and switching jitter off takes it to a hard 0.00°.
+
+The origin is visible: widening the selection cone from 10° to 45° pulls the bevels into the
+"face interior" population and the same slab reports **13.98°**. The "~7°" is that artefact — **a
+bevel measured and attributed to the flat face beside it.** §50 and §51.4's shape again: an
+instrument silently including what it was meant to exclude, and a conclusion reasoned from it.
+
+**Four deep now, always the same:** a number quoted onward without its definition travelling with
+it. §34 (`aoP` p1/p5/p50 read as p5/p50/p95), §48.3 (68% correct for a different material), §51.1
+(this), §54's palette figure being checkable only because TEXTURES published the eighteen hex
+constants. **My share of this one is specific: I wrote §51.1's headline into the ledger without ever
+asking what "swept-normal area" measured.** A statistic with no definition is not a measurement, and
+recording it gave it three more hops of authority.
+
+`belly` stays at 0.06 — retained on §56.2's evidence, not on the source comment, which is wrong.
+`PropKit.js:393` and §51.1's headline both want marking unverified; the source edit waits until
+`src/world/` unfreezes after `dunes`.
+
+### 56.4 The draw-call question: same quantity, wrong comparison
+
+`counted` (bud35) and `report.json.drawCalls` **are** the same quantity — both `renderer.info.render`
+with `autoReset = false`. But courtyard's camera **moved and widened between the two trees**:
+`[-19, 5.6, 30] fov 50` → `[-2.5, 4, 41.5] fov 55` (`8757fb6`, `9c5edf8`). A wider lens further back
+sees more. That accounts for 255 → 270 draws and +53 k triangles, and **exonerates the statue change
+independently**: 2,240 level-wide triangles cannot become 53,000 even at the 3.1× pass multiplier.
+§1 is unaffected — it scores the main-view column, not this one — and the table should say so where
+it is declared.
+
+### 56.5 N1–N4 on geo3's courtyard: the least-confident clause passed, and the falsifier stayed quiet
+
+- **N3 PASSES** — the clause GEOMETRY called least confident and most worth knowing — **10.8 L west
+  / 10.1 L east against a ≥8 L bar.** The terrace tops carry a real gradient; `round` is working.
+- **N2 weak-but-present**: 5 px median (p25 3, p75 11) against a 9.8 px point prediction — **missed
+  by ~2×**, and reported as a miss.
+- **N4 registers no loss**: both crowns read crisply stepped, not melted. The over-rounding
+  falsifier was registered to fire and did not.
+- **N1 UNSCOREABLE** — it asked for a count of horizontal step edges, but the nemes has 5 stripes by
+  construction and the clause specified no discriminator between two co-located band families; the
+  terraces also step in depth rather than against the sky. **A prereg design defect, not a geometry
+  result**, and the second clause this session to be unscoreable rather than failed.
+
+### 56.6 `temple` closes §7.3's first condition on the columns
+
+Median-filtered scans across five shafts show plateau-and-step structure with **41–72% of each scan
+in flat plateaus separated by 14–31 L steps** — against critic pass 2's reading of "~12 L over
+100 px with no plateau-and-step structure". The 48-radial-segment shafts gave the quantiser
+something to act on.
