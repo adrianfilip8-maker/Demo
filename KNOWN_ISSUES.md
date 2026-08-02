@@ -3089,3 +3089,62 @@ correct.
 Also corrected in passing: §8's "tuning behind a clamp" is true of shadow **magnitude** and false
 of shadow **hue** — `tintPeak` pins the magnitude, while `bounceMix` still moves G/R from 1.336 to
 2.147.
+
+---
+
+## 42. The mask never varied per pose; the statistic's ray origin was outside every population it measured
+
+I twice told CHARACTER to implement a named fix — derive the mask ring radius from the *posed*
+sclera rather than the bind-pose constant — to close a band that read 0.08 → 0.10 on
+`sly-startle`. **It refused, proved the failure was in the instrument, and it was right. The fix
+would have changed geometry to chase a number that cannot see geometry.**
+
+`maskRead` walks its measurement band outward from **one centroid taken over the whole eye
+population**. With two eyes visible, that centroid lands on the **muzzle bridge — between them**.
+From the tool's own stored data, no new rendering:
+
+| shot | eye components | aggregate | per-eye |
+|---|---|---|---|
+| `sly-profile` | 1 (178 px) | 0.46 | **0.46 — identical** |
+| `sly-closeup` | 2 (877 / 234) | 0.74 | 0.78 / 0.46 (dominant eye ⇒ accidentally right) |
+| `sly-startle` | 2 (4622 / 3518) | **0.10** | **0.73 / 0.28 — below both** |
+| `hero` | 0 ≥ 20 px (23 px total) | 1.48 | computed from 23 pixels |
+
+**The tell is arithmetic and it is decisive: a median cannot fall below every sub-population it is
+drawn from unless the ray origin is outside them all.** And the artefact appears *only* where the
+two eyes project at comparable size — the one near-face-on framing — which is exactly why a
+single shot looked broken while the others looked fine. A one-shot failure in a five-shot test
+invites a pose-specific explanation, and that is the trap.
+
+The proposed mechanism was absent too, checkably: `hurt` scales the **pupil** bone, while the
+sclera is weighted `[['head', 1]]` — so the posed sclera *is* the bind-pose sclera and the ring
+still matches it by construction. What actually inflates the metric is the pupil constricting and
+**uncovering sclera**, which grows the denominator.
+
+**What survives is real, smaller, and the opposite of the original claim.** Per eye, the near eye
+reads **0.73–0.78 across all three poses — the mask does not vary per pose at all** — while the
+oblique eye reads 0.28–0.46, tracking head yaw on a ring that is symmetric by construction. That
+is a view consequence, not a defect, and the critic's fault #1 item ("the mask cannot be allowed
+to vary per pose") is answered rather than fixed.
+
+**The coordinator error worth recording, because it is mine and it repeated.** I endorsed the
+named fix twice, in consecutive messages, each time reasoning from the *number* rather than from
+what could produce it — and the second endorsement came after §40 had already taught this session
+that a null can be an artefact of the apparatus. An owner refusing a coordinator's instruction
+with a two-sided proof is the system working; the instruction should not have needed refusing.
+**Before endorsing a fix for a metric, ask what the metric would read if the defect did not
+exist.** Here it would still have read 0.10.
+
+Two smaller things from the same read, both worth keeping. **The muzzle overshot**: the beak is
+gone and there is now *zero* forward projection — the muzzle sits entirely inside the cranium arc,
+because two levers both landed (key stations −16% *and* a length constant −29%). It was left
+uncorrected deliberately, since lengthening reverses something the critic explicitly asked for and
+there was no capture to verify against; it is registered as the next A/B rather than nudged. And
+a **confounded metric was discarded rather than quoted**: a snout-bulge measure taken off a
+silhouette panel that also contained the cane and the ear reported the *ear* as the forward bulge.
+
+Finally, the §37 fur trade now has its price measured rather than argued: tail ink **2.52 → 1.44
+runs/row (−43%)**, torso **2.16 → 1.67 (−23%)** — and **the arms still fail the ink gate
+outright**, unchanged from before the redirect. Limb ink is still not tonally separable from limb
+dark fur, which is §7.3's "smooth plastic" signature, and it is now the character's largest open
+item.
