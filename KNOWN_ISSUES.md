@@ -1996,3 +1996,66 @@ state, not of schedule** — "if FAIL, the change does not remain in the tree" h
 runs. And when a seal's assumed ordering is broken by the queue, say which ordering actually
 happened; a verification's authority comes from its bands, but its *honesty* comes from the
 record matching what was really done.
+
+---
+
+## 27. A verdict that nearly went wrong three ways, and one verdict that cannot exist
+
+All four from the cap6 read (`progress/records/RESULT-cap6-verdicts.md`). The tail verdict is a
+FAIL on its tip band, and it is a *trustworthy* fail only because three separate traps were
+caught on the way to it.
+
+### 27.1 An instrument that derives its ROI from live source cannot measure an old frame
+
+`taillobes.mjs` builds its tail mask from the live rig. Re-run on the pre-change frame it
+returned under 6 / meanDepth 3.3 against the sealed 7 / 4.1 — which reads exactly like a
+provenance failure, or like a seal that had been quietly written to fit. It was neither: a
+**post-change mask over pre-change pixels**. Rebuilding the baseline from the archived sealed
+tree (`git archive 7b0e3f8` into a scratch dir, instrument repointed, working tree untouched)
+reproduced the seal to the digit — tip 2, under 7, top 3, 4.1 / 2.3.
+
+**Rule: when an instrument reads geometry from source, a baseline needs both the old pixels and
+the old source.** Keeping the old PNG is half a baseline. This is the mirror of §18 (a model
+validated against a dead tree): there the *reference* was stale, here the *instrument* is live
+against a stale frame, and both produce a confident number about nothing.
+
+### 27.2 A difference metric cannot be re-anchored from one endpoint — and I told it to try
+
+`SPEC-startle-pupils` scores ΔdarkFrac = calibration − verdict and requires a **pre-change**
+calibration capture. `cap6` was the first capture ever to contain `sly-startle`, and it is
+post-change: **there is no minuend.** I had instructed that if the provisional bands proved
+mis-scaled, they should be re-anchored from this frame's calibration. That instruction was
+wrong, and it was correctly refused: re-anchoring rescues an *absolute* band, never a
+*difference* whose other endpoint was never photographed. The remedy is a capture, not
+arithmetic — neutralise the pupil keys, shoot `sly-startle` once, and that frame is the missing
+minuend. A coordinator's convenient suggestion is worth exactly as much as its arithmetic.
+
+The same read did produce a real defect from a guard's first firing: the **catchlight fails on
+one eye** (max L121.9 right against a ≥180 bar; L198.8 left) because the glint rides the
+constricting bone and shrank with the pupil. A guard that catches a genuine regression the
+first time it is exposed has paid for itself.
+
+### 27.3 The prereg costed the visible mesh and forgot the inverted hull
+
+`PREREG-tailtip` costed the change at +522 triangles — the body-mesh delta. The character
+carries a 1:1 inverted-hull ink shell, so the shipped cost is **+1,044, exactly ×2**, confirmed
+per mesh (`sly_body` and `sly_outline` both 15,482 → 16,004). Draw groups did not move.
+**Every character geometry change costs twice its mesh delta**, and no character prereg in this
+project had ever said so.
+
+One caveat that stops the next chase before it starts: the frame's residual (+764 tris, +2
+draws) is *not* from `src/player/**`, and is not necessarily a code change at all — `cap5`'s own
+`sly-key` and `sly-closeup` differ by 1 draw / 1,056 tris **on a single tree**, so a 2-draw delta
+sits inside scene-side emitter/cull variation. Chasing it as a defect would be chasing noise.
+
+### 27.4 Two process failures worth the same care as the measurements
+
+**A 19.5-hour-stale instruction was acted on before it was checked.** A relayed cap2 directive
+described a lock holder and a pid from the previous day; the pid was killed before anyone ran
+`date` or `ps`. No harm followed (the frames were stale anyway and no ticket was squatted), but
+§14's ancestry checks answer *"is this process alive"*, never *"is this still the situation"*.
+Verify freshness before acting on any relayed process instruction — including mine.
+
+**`report.json` is written incrementally, so its existence is not completion.** A watcher keyed
+on the file fired "cap6 FINISHED" after shot 1 of 2. Key completion on the last expected PNG, or
+on the harness's own `done` line.
