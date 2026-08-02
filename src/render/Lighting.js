@@ -1353,11 +1353,9 @@ export class Lighting {
    *      legacy cost, never a stale map;
    *   3. static-set membership — census re-runs on a slow beat (%8, the _buildShafts
    *      cadence); a removed/reparented mesh trips the per-frame fingerprint immediately;
-   *   4. static motion, state or geometry — per-frame fingerprint over matrixWorld,
-   *      castShadow, material.side, EFFECTIVE visibility (own flag AND every ancestor's,
-   *      because zone reveals toggle group visibility, not mesh visibility), and geometry
-   *      content (object id, index/position versions, drawRange — an in-place edit that
-   *      bumps no version is trigger 7's job, a raw typed-array write is invisible here);
+   *   4. static motion or state — per-frame fingerprint over matrixWorld, castShadow,
+   *      material.side and EFFECTIVE visibility (own flag AND every ancestor's, because
+   *      zone reveals toggle group visibility, not mesh visibility);
    *   5. quality / cascade rebuild — _rebuildForQuality disposes the cache first;
    *   6. map reallocation — the live shadow.map's identity is part of the key;
    *   7. anything else — invalidateShadowCache() for agents mutating what the census
@@ -1415,28 +1413,20 @@ export class Lighting {
          always contributes at least the +11, so any flip in either direction moves `sig`. */
       if (!vis) continue;
       const e = m.matrixWorld.elements;
-      /* Geometry-content terms (PREREG-fingerprint-geometry.md — closes what was recorded
-         here as a KNOWN GAP under ledger #20). A static whose GEOMETRY is edited while its
-         transform stands still — position attribute rewritten in place, index buffer
-         swapped, drawRange changed, or the whole geometry object replaced — must
-         invalidate like a moved one, or it serves the OLD shape's shadow indefinitely:
-         §15's exact failure shape, latent only because today's world builds statics once.
-         `id` catches replacement, the two `version`s catch in-place edits (three bumps
-         them on `needsUpdate`), and drawRange catches partial-draw changes. drawRange's
-         default count is Infinity, and Infinity in the sum would freeze `sig` at Infinity
-         — equal to itself forever, hiding every LATER edit — so it maps to −1, finite and
-         distinct from any real count ≥ 0. All reads, ~5 flops on the existing loop.
-         An in-place edit that bumps no version still needs `invalidateShadowCache()`,
-         same as before — no fingerprint can see a raw typed-array write. */
-      const g = m.geometry;
-      const drc = g ? (g.drawRange.count === Infinity ? -1 : g.drawRange.count) : 0;
+      /* KNOWN GAP, recorded deliberately rather than fixed (ledger #20, coordinator
+         concurred). This fingerprint covers a static's TRANSFORM, visibility, castShadow,
+         material side and instance matrices — it does NOT cover its GEOMETRY. A mesh that
+         keeps its transform while its position buffer is rewritten in place (morphing,
+         a rebuilt BufferGeometry assigned to a live mesh, an edited instance layout that
+         does not bump instanceMatrix.version) hashes identically and keeps a stale shadow.
+         Latent today because the world builds its statics once at init and never touches
+         them afterwards — which is exactly the condition that makes it cheap to record and
+         expensive to discover later, as a shadow map nobody can explain. If a static ever
+         becomes geometry-dynamic, hash `geometry.uuid` plus the position attribute's
+         `version` here, or call `invalidateShadowCache()` from whatever rewrote it. */
       sig += e[12] * 3.1 + e[13] * 5.7 + e[14] * 7.3 + e[0] + e[5] + e[10]
            + 11 + (m.castShadow ? 17 : 0) + (m.material?.side ?? 0) * 23
-           + (m.isInstancedMesh ? m.instanceMatrix.version * 29 : 0)
-           + (g ? g.id * 31 + (g.index ? g.index.version : 0) * 37
-                + (g.attributes.position ? g.attributes.position.version : 0) * 41
-                + g.drawRange.start * 43 + drc * 47
-              : 0);
+           + (m.isInstancedMesh ? m.instanceMatrix.version * 29 : 0);
     }
     const dirty = !(sig === this._staticSig) || this._seenEpoch !== this._cacheEpoch;
 

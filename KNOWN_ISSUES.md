@@ -1403,6 +1403,14 @@ the whole update phase). What the counter shows dropping is statics *plus* dynam
 actually saved is statics only. **So `renderer.info` overstates the cache's saving, and the
 33–41% figure must carry that correction before it is quoted again.**
 
+**A second, larger correction to the same figure — 2026-08-02, from the fingerprint null
+control (§31).** That correction assumed the refresh rate was near zero on a static camera. It
+is not: the cache takes a **full static refresh on 12.5% of all frames** regardless of whether
+anything changed. Every saving quoted for this cache — the 33–41% here and the corrected
+34.7–40.1% statics-only figure — assumed a bill that is not being paid, and **all of them are
+overstated and must be re-derived after the census fix rather than re-used.** No saving number
+for the shadow cache is quotable until then.
+
 The general form: *a counter measures a window, and shipping work into a different window
 changes the number without changing the machine.* Before trusting a delta, check that the thing
 you changed executes inside the interval the counter covers — and when you move work across
@@ -2300,3 +2308,48 @@ Three practices from the same read worth keeping:
 - **Predicting the void and then being wrong about it, out loud, is the finding.** The correction
   above exists because an expectation was written down before the numbers and then contradicted by
   them.
+
+---
+
+## 31. The null control failed, the diagnosis exonerated the change, and the change was reverted anyway
+
+`PREREG-fingerprint-geometry`'s three legs, measured on a run that was pinned by construction
+(`fpv.mjs` never calls `step()`; all five frames sit at `time 0.5333` in one boot, so §28 does
+not touch it and §30 does not need to be invoked):
+
+| leg | measured | band | verdict |
+|---|---|---|---|
+| V1 stake — in-place position edit | **0 px** | `= 0` | **PASS** |
+| V1 non-vacuity | 105,748 px | `≥ 200` | probative |
+| V2 stake — `drawRange` edit | **0 px** | `= 0` | **PASS** |
+| V2 non-vacuity | 12,406 px | `≥ 200` | probative |
+| V3 null control — no edit, 100 frames | **26** (14 → 40) | `≥ 9` = FAIL | **FAIL** |
+
+The correctness claim is established: with the geometry terms in the fingerprint, the cached
+path reproduces the uncached path **bit for bit** after a geometry edit, and neither
+non-vacuity leg landed in WEAK or VOID, so those zeros are real rather than a test that could
+not have failed.
+
+**Then the null control failed, and the diagnosis pointed away from the change.**
+`_censusCasters()` ends by setting `_staticSig = NaN` and runs every 8th frame, so **every
+cached cascade takes a full static refresh on 12.5% of frames whether or not anything changed**
+— 12–13 censuses × 2 cascades + 2 from the restore ≈ 26–28, against 26 measured. That line
+arrived with the *original* cache commit (`002f27e`), seven hours before the fix under test, and
+the fix's own terms spent exactly +2 refreshes per edit with no excess.
+
+**The change was reverted anyway, and that is the entry.** Its author's words: *"the failing
+control doesn't implicate my change" is exactly the argument that manufactures a pass.* The band
+was sealed before any code existed, 26 lands squarely in FAIL, and the remedy was already fixed
+as a function of state rather than schedule (§26.3) — the fix had shipped ahead of its
+verification, so FAIL meant revert, not withhold. The hunks reverse-applied cleanly, the terms
+are gone, and the KNOWN-GAP note is back where it was. The geometry hazard is latent and
+recorded again, which is a worse *engineering* position and a better *epistemic* one, and the
+follow-up is ordered correctly: **fix the census reset first, then re-run V1–V3 unchanged.**
+Until that lands, V3's `= 2` band is unreachable by *any* fingerprint, so re-running now would
+fail identically and prove nothing.
+
+**The consequence that reaches furthest is the one nobody was looking for.** A cache that
+refreshes on an eighth of all frames is paying a real steady-state bill, not a latent one, and
+every saving ever quoted for it assumed a near-zero refresh rate on a static camera. §19's
+figures are struck accordingly. **A performance number inherits every assumption of the run that
+produced it, and "nothing changed, so nothing refreshed" is an assumption, not an observation.**
