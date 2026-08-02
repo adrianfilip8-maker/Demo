@@ -142,6 +142,41 @@ known input (the previous run's frames, re-labelled) before the real frames land
 a diagnostic must be proven on a known input first. Any reconstruction delta is declared in the
 RESULT.
 
+## Instrument proving — done BEFORE the frames exist, and it found a bug in the reader
+
+Per §1 ("your diagnostic can be the bug — prove it on a known input first"), the frozen reader was
+run against two constructed inputs while `shots/goldonset2/` was empty. This changed **no band, no
+threshold and no population**; it tested code paths and branch logic only.
+
+1. **Known-BAD (the real, unpinned goldonset frames).** F0b must catch an unpinned run.
+   It did: `hero` **120,216** moved px, `temple` **286,407** moved px, whole frame — both correctly
+   **VOIDED**, with the downstream statistics refusing to run. (These are whole-frame figures; the
+   17,787 in `RESULT-goldonset` was the gilded-architecture subset, so the two agree in kind.)
+2. **Known-GOOD (synthetic: `c0b` copied from `c0`, so the pin is held by construction).**
+   F0b passed at **0** moved px and every downstream verdict executed end-to-end.
+
+**The proving run found a genuine defect in my reader.** `Math.max(...arr)` overflowed the call
+stack at ~130k far-class pixels — a population size the real frames will certainly reach. Had this
+been discovered on the real frames it would have destroyed the read *after* the capture and the
+FIFO wait. Replaced with a loop (`amax`). A second fix: the reader could print "engine.time
+identical" when the field was simply absent (every value `undefined` compares equal) — the §11
+failure shape, a precise sentence about something never measured. It now prints `NOT RECORDED`.
+
+**The null-image machinery is proven in both directions**, which is the part that matters, because
+a null crop that is black due to broken diff code proves nothing:
+
+| crop | nonzero px / 172,800 | max |
+|---|---|---|
+| `hero` NULL `c0b` vs `c0` | **0** | 0 |
+| `hero` `c100` vs `c0` | 5,571 | 255 |
+| `temple` NULL `c0b` vs `c0` | **0** | 0 |
+| `temple` `c100` vs `c0` | 52,677 | 255 |
+
+No number from either proving input is evidence about the art. The known-GOOD input is synthetic
+(`c200` is a copy of `c100`, and its "moved" populations are the *previous run's phase noise*), so
+its POW/MECH/F2'' figures describe the old defect, not this knob. They are reported here solely as
+proof that the branches execute.
+
 ## What this run cannot decide (scope, stated at seal)
 
 Unchanged from the last seal: body-of-the-band gold (98.6% shadowed, spec sh-gated) is carried by
