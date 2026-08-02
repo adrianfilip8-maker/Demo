@@ -691,8 +691,18 @@ Still open on the character, honestly scored by the agent that did the work:
   32 minutes and the work was reported without it. Check `sly-closeup`, and check `night`
   (`tod 0.02`) where a warmer, brighter eye emissive previously failed as "two yellow dots".
 - **Fur improved, not proven at close range.** Arms and legs are still fairly smooth tubes.
-- `combat` is still blown to near-white. The pose under it is fixed; the exposure is not the
-  character's to fix.
+- ~~`combat` is still blown to near-white.~~ **Struck: this predates the bloom onset move
+  (1.10 → 1.90) and is no longer true of the frame.** Measured on `shots/char10/combat.png`
+  (stamped `4b58fee`): 0.89% of pixels ≥L230, **0.00% ≥L245**, frame mean luma 89.0 at
+  saturation 0.417, with the violet wall at 0.639 and the paving at 0.369 — the environment is
+  fully coloured and the only region over L230 is the impact glow itself, a tight halo at 0.89%
+  of frame, which is what §7.3 asks for rather than a wash. What *is* bleached is **Sly**: his
+  torso renders (155,139,119), warm-dominant at saturation 0.235, on a shirt authored
+  `PAL.shirt = 0x2f7fc4`. So the defect is local to the character inside the flash glow — the
+  flash's own energy (its share measured: removing it recovers 4× the blue-shirt pixels and
+  +0.112 torso saturation) plus a residual warm hue-flip that additive energy alone cannot
+  produce. It is not an exposure fault and must not be routed as one; a frame-wide statement
+  sent the wrong owner to look for a problem the frame does not have.
 - **The cane floats ~19 cm and the aim cannot fix it.** Measured off the render, not the probe:
   lowest gold pixel 42 px above the lowest boot pixel in a 400 px figure. A full 4×3×3 sweep of
   `CANE.plant` left tip y **invariant at 0.20** while x and z both moved — the shaft precesses
@@ -1262,3 +1272,57 @@ provenance stamp and found it seven commits old, so the defects being re-diagnos
 been fixed. **Existence is not completion and a file is not a frame.** Watch for a file *newer
 than the launch*, move or delete a previous run before capturing into the same directory, and
 read the tree stamp out of the report before quoting a single number from the frames.
+
+---
+
+## 19. `setShot()` stops the rAF loop, so a `requestAnimationFrame` settle renders nothing
+
+An in-page probe that advances frames with bare `requestAnimationFrame` and then reads
+`renderer.info` or `engine.stats` is reading a **frozen snapshot**, not a measurement. It will
+report plausible numbers that cannot respond to whatever lever it is testing.
+
+`Debug.js`'s `setShot()` calls `engine.stopLoop()` — deliberately, so captures are reproducible
+frame-for-frame — which clears `_looping`. `Engine._tick` then returns on its very first line.
+rAF still *fires*; it just does nothing. No `renderFrame`, so no module `update()`, no
+`renderer.info.reset()`, and no draw. Frames after `setShot` only advance through
+`__GAME.step(n)` or `__GAME.capture()`, both of which call `engine.renderFrame()` directly.
+
+This cost a full crypt-gate control run. `determinism.mjs` compared `interior` in four lever
+states and reported **identical draw calls and identical triangles in all four** — 148 / 0.654M.
+That was read as "the widened gate saves nothing". It is not: the counts were captured inside
+`setShot`'s own `api.step(3)`, *before any lever moved*, and were identical by construction. The
+byte-identity verdict from the same run is unaffected and still stands, because `capture()`
+calls `renderFrame(0)` itself — which is the only reason the protocol produced a real result at
+all.
+
+The tell that it was an instrument fault rather than a finding is offline and takes seconds:
+the `far` zone's merged `limestone_polished` mesh has a bounding sphere that **contains the
+`interior` camera**, so it can never be frustum-culled from that shot, so hiding it *must* move
+the draw count. A knob that provably should move a number and doesn't is a dead instrument
+before it is a null result.
+
+**This is not confined to one scratch script. `tools/cryptgate.mjs` has the same defect** — bare
+rAF at line 50, `renderer.info` read at 56–58 — and that is the tool that produced the crypt
+gate's **V2 BUDGET** leg, in both the original gate (`77e1eab`) and the widening (`33787cc`).
+Every draw/triangle saving either of those two commits claims was taken through it and should be
+treated as unmeasured until re-run. The V1 byte-identity legs are unaffected.
+
+Audited, so nobody has to repeat it: `tools/budget.mjs`, `tools/progress.mjs`, `tools/critic.mjs`
+and `tools/shot.mjs` are all **clean**. They read `stats` out of `setShot`'s own return value,
+which is snapshotted after a real `api.step(14)` + `api.step(3)`, so every number in a
+`shots/*/report.json` is a genuine rendered frame.
+
+Two rules:
+
+- **Advance frames with `__GAME.step(n)`, never with bare rAF, once `setShot` has been called.**
+- Before believing a null result, find something the knob provably must change and check that it
+  changed. §16 is the same lesson from the other side; this is the version where the number is
+  not diluted but simply never taken.
+
+**Related: pre-registered inventories drift from the thing they authorise.** The same gate was
+pre-registered on S3+S4 "rendering in `interior` (~44k tris)". Measured offline, S4 (`far`) is
+**704 triangles over 2 draw calls** — 2 stepped pyramids and 5 mastabas, all of which are cheap
+silhouette geometry behind haze. Whatever the 44k was, it is essentially all S3 (vegetation).
+The widening is still worth having, but it buys about 1.6% of what its own pre-registration
+implied for S4, and no acceptance in that document would have caught the discrepancy because
+none of them measured the inventory.
