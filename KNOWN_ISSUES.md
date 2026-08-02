@@ -4029,3 +4029,246 @@ caught only because the number was physically absurd (§11's family). And in the
 several bins near the cuff rest on **2–6 vertices**, so the sleeve→forearm figure is noisy: 1.7 px
 band-max-to-band-max, ~19 px across the actual notch. **It shipped no geometry change**, because
 authoring one it could not verify is precisely what §47 records going wrong.
+
+---
+
+## §54 — the parity fix reaches the frame and the seam rhythm closes; the palette item has an arithmetic ceiling and the shipped frame is already at it
+
+Two results, one capture-free. The first cost no lock at all: the frames it needed already existed
+(§45's discipline), and the pre-registration was written and time-stamped before `shots/geo3/`
+had a single file in it.
+
+### §54.1 §44's parity fix: A1 and B pass, on frames that had a genuine pre-fix twin
+
+`shots/tx8/` (`671dd39`, clean) is **post**-kheker/post-cartouche and **pre**-parity-fix, at the
+same three framings `shots/geo3/` (`8795030`, clean, `errors: []`) later rendered. That is a real
+A/B and nobody had noticed it was sitting on disk. `git merge-base --is-ancestor 59e3328 8795030`
+confirms the fix is in the tree the pixels came from.
+
+**The instrument, and why the first one was thrown away.** `scratchpad/uvprofile.mjs` resamples a
+*rendered frame into texture space*: ray-cast the material through the shot's own camera, take
+the interpolated `u_tex`/`v_tex` off the merged geometry, bin the frame's own pixels by `u`
+within a `v` band. A decoration drawn `n` times per tile then has its fundamental at exactly
+`k = n` cycles per repeat, so "14 finials or 16" is a question about which integer bin holds the
+peak. **The NCC-lag version written first could not answer it** — at 96 bins the two lags are 7
+and 6 samples and it returned r 0.352 vs 0.354, a null — and it was replaced rather than tuned,
+which is §13's rule biting inside one session.
+
+And the parity itself falls out as a frequency: a 4-pigment cycle over `n` finials sits at
+`k = n/4`, an **integer when 4 divides n and 3.5 when it does not** — and a non-integer frequency
+cannot exist in a periodic signal, so it appears as split energy across k3/k4. **That split *is*
+§44's defect, written as a spectrum.**
+
+| | tx8 (pre) | geo3 (post) | registered band | verdict |
+|---|---|---|---|---|
+| finial fundamental, luma | k14 **10.9 %**, k16 3.5 % | k14 **3.3 %**, k16 **14.0 %** | k16 > k14, ≥ 6 % | **PASS** |
+| pigment cycle, `b−r` k4/(k3+k4) | **0.261** | **0.860** | ≥ 0.60 | **PASS** |
+| columns 11 → 12, register band | luma 1.7/0.5, `b−r` 2.6/4.6 | luma 1.0/1.7, `b−r` 1.1/4.8 | both channels flip | **INCONCLUSIVE**, as pre-registered |
+| **dado null** (no cycle) | k1 17.9, k4 11.6, k11 5.3, ratio 0.803 | k1 18.0, k4 11.6, k11 5.3, ratio 0.799 | < 3 % | **PASS**, ≤ 0.1 pp |
+
+The A1 pair is a **swap**, not a strengthening — k14 falls as k16 rises, on the same 560 × 80 ROI
+with an identical 11,476-pixel sample in both frames — and a constant that had not reached the
+renderer would have left k14 where it was. So this is *not* §39's family; the value is consumed
+where it is set.
+
+**The dado null is what makes the rest quotable**: every dado figure matches to ±0.1 percentage
+point across the two trees, so nothing global moved on that wall and the kheker swing is the
+change under test. §29's failure — two fixes each passing its own band while the frame got worse
+— is exactly what a null this tight rules out.
+
+Three scope facts, all registered before the frames existed rather than discovered after:
+
+- **`temple` cannot score this fix.** Its kheker band has no fundamental in *either* tree (k14
+  2.2 % / k16 2.3 %), so it was disqualified in advance. The whole verdict rests on `traversal`.
+- **`courtyard`'s null is unusable** — its ROI spectrum moves wildly between the trees because
+  the shot's framing and props changed for unrelated reasons. Reported, not quoted.
+- **A2 does not count**, by its own rule: both geo3 channels agree on k12 but `b−r` already
+  favoured k12 pre-fix, so it did not flip. The cartouche alternation is therefore **not
+  independently confirmed in frame**; it rides on A1 proving that both counts reach the renderer
+  through the same function.
+
+**A prior of mine was falsified before it could become a conclusion.** I first wrote that the
+seam-local test would be VOID — 14 px cells on a wall at 28 m, through AgX and a bloom, ought to
+be below the noise. Running the instrument on the *pre-fix* frame before writing the prediction
+put the pigment cycle at 0.261 with k3 at 9.5 %, plainly present. **The defect was visible in a
+shipped frame.** Getting the known-bad reading first is the only reason that is a correction
+rather than a retraction.
+
+### §54.2 The palette line is bounded by §2.2 itself at 0.875, and the critic measured 0.87
+
+Every named colour in `AGENTS.md` §2.2, by display hue:
+
+```
+red 7.5  carnelian 10.7  paintBlack 17.1  sandCrev 19.5  sandDark 24.9  ochre 28.1  sandMid 29.7
+sandLight 34.9  limeDark 36.4  goldDark 39.0  white 40.0  limeMid 40.3  limeLight 40.5  gold 43.0
+goldLight 44.8   ||   malachite 146.9   turquoise 176.0   lapis 215.8
+```
+
+**Fifteen of eighteen lie inside a 37.3° span — narrower than one of M11's two 40° windows.** The
+other three span 68.9°, so a second window holds at most two. Equal areas of all eighteen score
+**17/18 = 0.944**; equal areas of the eight accent pigments, with no stone at all, score
+**7/8 = 0.875**. Critic pass 5 measured the whole frame at **0.87**. *The shipped frame is
+already at the floor the art bible's own palette permits*, and this is arithmetic on eighteen hex
+constants, checkable in one line.
+
+`scratchpad/chaincap.mjs` closes it from the other end by asking what the chain does to a
+**perfect** input (controls first: sweep 0.222, two-hue 1.000):
+
+| input | albedo | × matcol | keyF 1.00 | keyF 0.35 | keyF 0.00 |
+|---|---|---|---|---|---|
+| full-hue sweep | 0.228 | — | 0.417 | 0.325 | **1.000** |
+| × `hieroglyph_wall` 0xd6a874 | — | 0.453 | **0.861** | 0.558 | **1.000** |
+| × `sandstone_block` 0xc9915a | — | 0.630 | **0.942** | 0.654 | **1.000** |
+
+A texture with a perfect 360° hue distribution — neither palette-legal nor desirable — still
+leaves the chain at 0.861 in sun and 1.000 in shadow. Decomposed: consumer material colour
+0.228 → 0.453 (ARCHITECTURE), light+grade 0.453 → 0.861 (SHADING/POSTFX), shadow → 1.000 (§38.4,
+reproduced here from the opposite direction).
+
+**So finding #2 is not closable from `src/textures/**`, and now it is bounded rather than
+argued.** What the texture side did move is on the record: `hieroglyph_wall`'s built albedo is
+**0.957** raw with hue mass 88/4/4/4 across the first four 30° buckets, against §38.1's 94.9 % in
+a single bin; `column_papyrus` 0.949; `plaster_painted` 0.965 — three recipes off 1.000 where
+§38.1 found nine of ten at 1.000. The consumer multiply takes `hieroglyph_wall` back to 0.994.
+
+**What this does not say.** M11 being unreachable is not a defence of the frame. "The image is
+two colours" is a real perceptual read; the answer to it is the shadow chain and the non-stone
+area of the frame, not a statistic §2.2 pins at 0.875 before a texel is authored.
+
+### §54.3 A UV-density defect that was the instrument, killed by its own distribution
+
+A sweep across every mesh reported `arch:hall:hieroglyph_wall` at **5.23× the `UV_PER_M = 0.50`
+contract** — which would have meant the largest wall in the game tiling every 2 m instead of
+every 10.4 m, the biggest tiling defect in the project. It was the metric.
+`sqrt(Σ uvArea / Σ worldArea)` is dominated by near-degenerate triangles with area ≈ 0 and
+non-zero UV extent. Per-triangle and area-weighted, **every architecture mesh reports
+p10 = p50 = p90 = 0.500 exactly**, and props are on contract too (`props_stone` 0.500,
+`props_lime` 0.500; only `props_cloth` at 0.99, and it is banners). Same shape as §10's
+rasteriser: an aggregate inventing the defect it exists to find, caught by looking at the
+distribution instead of the ratio. **Nothing was reported until the distribution was checked.**
+
+Also eliminated in the same pass, so it is not re-derived: the walls do **not** repeat
+vertically. `arch:hall:hieroglyph_wall` runs `v_tex` 0.016 → 0.970 over its full 9.9 m height and
+the court wall likewise stays inside one repeat, so the dado sits at the foot of the wall exactly
+once and the kheker crown crowns it exactly once, as authored.
+
+---
+
+## §54 — the contact experiment was FLAT, and the reason is upstream of everything it tested
+
+FX's `fx16`. Full write-up in `scratchpad/RESULT-fx16.md`. It reported **two defects in its own
+experiment before scoring it**, then a flat result, then the cause — which turns out not to be a
+tuning question at all.
+
+### 54.1 The probe mis-located the sole and returned a confident false positive
+
+The auto-locator put the boot sole at **(866, 660)** — open floor sitting on a cast-shadow edge —
+and returned **+17.2 L**. That number reads *exactly* like "the contact shadow now exists". Cropping
+showed floor and a rail and **no boot**. Eye-verified, the sole is at **(617, 638)**, which is
+*precisely* critic5's published coordinate; the character had never moved.
+
+> **Had the auto-location been trusted, FX would have reported the critic's finding fixed.**
+
+This is the most dangerous failure shape in the project so far, because unlike §39, §40, §43, §50
+and §52.1 — all of which returned a *healthy* number for a broken state — this one returns a
+**confirming** number for the hypothesis under test. An instrument that fails toward your
+conclusion is not caught by disbelieving good news. Re-scored at the true sole, the baseline
+reproduces critic5's table exactly, which is the check that establishes the ROI rather than assuming
+it.
+
+### 54.2 `minbias` never applied — §40's clamp, inside a sealed experiment, again
+
+`normalBiasClamp[0] = 0.012 m` pinned it. At c0's texel of 0.0105, both `nbt 0.5` → raw 0.00525 and
+`nbt 0.1` → raw 0.00105 clamp to **0.012**. The two "reduced" states are an identical c0. The sweep
+was **×1.49, not ×17**, and — the part that matters for the write-up — **the seal's "even at a
+near-zero offset" argument is not available**, because that state never rendered. FX withdrew the
+argument rather than keeping the conclusion it supported (contrast §42, where a disqualified
+instrument's conclusion was kept; that was my error).
+
+### 54.3 The band is flat, and flat harder than it was asked to be
+
+Band 1 was sealed at "< 3 L". The result is **0 px changed, max delta 0** across the whole contact
+neighbourhood, in both reduced states. Meanwhile the same toggle moves **26,150 px with max delta
+129** elsewhere in frame and visibly tightens the kerb-rail shadow. **The knob is connected and does
+nothing under the boot.** A null with a working positive control in the same frame is worth more
+than any tuned number.
+
+R2 failed as sealed (2.60% against a 1.0% band). FX reported it **FAIL as written** rather than
+rewriting the rule after seeing the number, while noting 88.5% of it is large coherent components
+and a 4× crop shows a rail shadow tightening rather than speckle. Reporting the sealed verdict and
+the mitigating observation *separately* is the correct handling. `back` is byte-identical to `base`.
+
+### 54.4 The cause: there is no direct light there to remove
+
+Measured, not inferred. The sampled region sits on floor receiving **no direct key light**:
+
+| region | RGB | R/B |
+|---|---|---|
+| under the boot | 61, 77, 90 | **0.68** (cool) |
+| control | 59, 75, 90 | 0.66 |
+| sunlit floor | 137, 78, 56 | **2.47** |
+
+**A contact shadow is the removal of direct light. On shaded floor there is nothing to remove, at
+any bias.** The lit/shade boundary is a long rail-parallel diagonal spanning the frame —
+architectural in scale, far too large to be the 1.8 m caster's own shadow, so this is not Sly
+swallowing his own ROI.
+
+Three findings, deliberately kept separate: shadow-map **displacement is eliminated** (FX's own,
+closed); **`sly-closeup` stages the character on unlit floor** (new, measured — owner is shot
+staging or LIGHTING); the **AO ceiling of +0.6 L** (SHADING's, unchanged). They compose rather than
+compete, and the composition is the finding:
+
+> On shaded floor, **AO is the only possible source of contact darkening** — and AO is exactly the
+> route already measured an order of magnitude too weak. So a contact term for this frame **must
+> work in ambient-only conditions**; one keyed off direct light does nothing here.
+
+**This reaches the contact term already built** (`RESULT-contact-build.md`, shipping at
+`strength = 0`). That term derives its signal from the *negative lobe of the rim gate's planarity
+test* — depth geometry, not light — and composites on the PostFX AO path toward `uAOTint`, so it
+should survive an unlit floor. **That is now a prediction to state before its A/B, not an assumption
+to discover afterwards**, and its M12 scoring ROI is on the same `sly-closeup` sole this section
+just relocated.
+
+**The cheapest next step is a decision, not code:** re-stage the feet into direct key (a `Shots.js`
+one-liner) or specify the term against ambient. Building first risks specifying against the wrong
+lighting condition.
+
+### 54.5 The determinism lead: one emitter eliminated free, one mechanism named
+
+**`LightShafts` is eliminated at zero cost.** `fx6` and `fx7` are two independent boots and their
+shaft counts agree **exactly** on all six shared shots (dunes 12, guard 10, hero 27, interior 20,
+night 12, temple 38). An existing pair of captures answered a new question with no lock spent.
+
+**Named suspect, from the code rather than from pixels:** `_updateSparkles` **latches**.
+
+```js
+this._sparkleTimer -= dt;
+if (this._sparkleTimer > 0) return;
+```
+
+The count is whatever the last refresh produced; refreshes are paced by the **world** clock; and
+under the harness's `dt = 0` frames it never re-evaluates after staging. Its input is
+`collision.query(movement.position, 34 m, [hook, spire, rail, pole])` **at whatever position the
+player held when the last pre-staging refresh fired** — so a boot whose prewarm ran 7.5 s longer
+latches a different one. `sparkleMax` is 96, so §53.5's **31 instances** is in range, and hook rings
+hang at y 11–15 m, which lands in exactly the top band CHARACTER localised the differing pixels to.
+
+If confirmed, this answers both questions I put to FX: it is **a determinism bug, not a
+correctly-behaving emitter**, and the remedy is **neither a fixed seed nor `step(n, 0)`** but
+forcing one refresh on the `shot` event — precisely as `_animT0` is already rebased for flicker.
+§28's `step(n, 0)` fixes *within-boot* phase; a latch predating staging is immune to it.
+
+The noise floor then gets a name and a bound rather than an empirical range: **≤ 96 instances /
+192 triangles, spatially confined to wherever traversal affordances project.** Face closeups with no
+affordances in frustum (`sly-startle`, 7 px) are trustworthy for cross-boot A/B; wide shots showing
+the hook chain are not. That is a *predictive* statement about which shots can carry a cross-boot
+comparison, which is worth far more than the measurement that prompted it.
+
+`det3` is queued — two boots in one process, dumping every emitter's `instanceCount` plus the
+latched **and** freshly re-queried sparkle count, so a stale latch shows up **within a single boot**.
+
+### 54.6 A §14 footnote worth keeping
+
+FX verified `det3`'s detachment by a **full ancestry walk** (init → wrapper → node, the survivor
+shape). Its earlier one-level "ppid must be 1" test is the too-strict version §14 already corrected,
+and it would have declared this correctly-detached process attached.
