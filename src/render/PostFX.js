@@ -143,6 +143,25 @@ const TUNE = {
      screen rim here". The gate is answering its own question correctly; the subject is simply
      not what it was built to police.
 
+     **And the depth ratios are not shut either, so "what starves the screen rim here" was
+     naming a cause that does not exist.** Both gates were computed directly off ray-cast
+     Architecture+Props geometry along the taps this function samples, at the shipped radii
+     (`scratchpad/rimstarve.mjs`; no renderer, no lock; instrument proved first on a
+     level-free control returning the exact predicted S = 313.5). Gate A's ratio over the
+     subject's own rim band is `interior` 0.441 and `temple` 0.418 against thresholds of
+     0.05/0.16 — 96% and 94% of that band is open, 89% and 81% fully open. Gate A is open on
+     all nine shots that stage a character (median S 0.169 to 6.55).
+
+     What Gate B costs the subject, shipped vs `uRimPlanar.z = 0`: `traversal` 0.0%, `dunes`
+     0.0%, `courtyard` 0.4%, `sly-closeup` 1.9%, `hero` 2.0%, `interior` 2.5%, `combat` 5.3%,
+     `temple` 5.9%, `night` 21.9%. A gate costing 6% cannot also be worth 21.4 L of subject
+     rim, which is why the ±0.4 L null above is the *expected* number rather than a puzzle —
+     and `night` is the one frame where raising this knob could buy anything real.
+
+     PREREG-rimstarve predicted S < 0.05 on `temple` and `interior` and registered S >= 0.16 as
+     an outright refutation. It refuted, with its own `night` control passing as predicted.
+     Recorded as a refutation, not as a tuning result.
+
      It cannot re-admit what the gate is for. The paving, the dune ripples and the wall/ground
      contacts that motivated `rimPlanar` are all static geometry, so their subject mask is 0
      and the mix is the identity there — off-subject pixels are bit-identical by construction,

@@ -551,11 +551,23 @@ const PERCH = P({
  * screen-left placement, crook rolled +110 about the shaft so the hook's opening faces the
  * camera as a C instead of edge-on as a J. Every breath key's aim moves by the same delta —
  * these are absolute angles, and §9's orphaned-key trap is exactly a base aim moving under
- * keys that still carry the old family. */
+ * keys that still carry the old family.
+ *
+ * Re-aimed again `[-40,40,80]` → `[-20,30,130]`, delta (+20,−10,+50) — seal `PREREG-heroline.md`.
+ * §7.3's silhouette condition was failing on the cane hook and it was failing by *position*:
+ * measured at the 120 px `hero` really delivers, the crook sat in the middle of the torso mass
+ * owning 5.5% of the union outline with 41.2% of its own boundary buried. Two plausible causes
+ * were tested and killed first — the aim *does* move the hook (42 px of a 134 px canvas, so the
+ * `CANE.plant` tip-height invariance does not generalise to screen position), and the right arm
+ * is not the lever (all five variants made burial worse). The tail is deliberately NOT touched:
+ * a joint sweep says tail+cane together drives hook outline ownership to 1.5%, worse than
+ * baseline, because the tail swings into the region the hook was just moved into. Sealed as one
+ * cane-only change for that reason. Same delta on all four breath keys, preserving the ±4°
+ * swing about the new centre. */
 def('perch_idle', {
   dur: 3.2, loop: true, hold: 0,
   keys: [
-    { t: 0, e: 'soft', P: PERCH, pos: [0.045, -0.30, 0.07], cane: [-40, 40, 80] },
+    { t: 0, e: 'soft', P: PERCH, pos: [0.045, -0.30, 0.07], cane: [-20, 30, 130] },
     /* In-between keys re-derived as the SAME breath drifts on the new base — these are
        absolute angles, and §9's orphaned-key trap is exactly a base pose moving under keys
        like these. Old drift preserved: hips +[2,1,-1] / chest +[-3,-2,1] / head +[-3,3,-1]
@@ -568,12 +580,12 @@ def('perch_idle', {
        twice every 3.2 s, on the one clip the money shot freezes. */
     { t: 0.8, e: 'soft', P: { chest: [-17, -13, 15], head: [-21, 18, 1], hips: [28, 11, -14],
       // re-authored with the base pose's tail arc — these are absolute, not deltas
-      tailA: [-22, -36, 0], tailB: [22, -40, 0], tailD: [12, 30, 0] }, pos: [0.045, -0.325, 0.078], cane: [-36, 36, 80] },
+      tailA: [-22, -36, 0], tailB: [22, -40, 0], tailD: [12, 30, 0] }, pos: [0.045, -0.325, 0.078], cane: [-16, 26, 130] },
     { t: 1.7, e: 'soft', P: { chest: [-11, -9, 13], head: [-15, 12, 3], hips: [24, 9, -12],
-      tailA: [-14, -25, 0], tailB: [30, -29, 0], tailD: [4, 22, 0] }, pos: [0.045, -0.285, 0.062], cane: [-44, 44, 80] },
+      tailA: [-14, -25, 0], tailB: [30, -29, 0], tailD: [4, 22, 0] }, pos: [0.045, -0.285, 0.062], cane: [-24, 34, 130] },
     // a small head-flick as something below catches his eye
     { t: 2.3, e: 'out', P: { head: [-14, 26, -3], neck: [-14, 13, 4], earL: [-20, 8, -24] } },
-    { t: 3.2, e: 'soft', P: PERCH, pos: [0.045, -0.30, 0.07], cane: [-40, 40, 80] },
+    { t: 3.2, e: 'soft', P: PERCH, pos: [0.045, -0.30, 0.07], cane: [-20, 30, 130] },
   ],
 });
 

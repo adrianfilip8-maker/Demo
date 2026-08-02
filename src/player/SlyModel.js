@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import {
   MeshBuilder, addTube, addEllipsoid, addPatch, addTuft, addHardBox,
-  resample, superEllipse, smooth, ramp, furTint,
+  resample, superEllipse, smooth, ramp, furTint, frames,
   makeFurMaps, makeClothMaps, makeMetalMaps,
 } from './Body.js';
 import { Cane } from './Cane.js';
@@ -1035,7 +1035,61 @@ export class SlyModel {
       sgAt: () => 700,
       colorAt: (i, t, a, p) => furTint(_c, p.x, p.y, p.z, TUNE.furTintAmount),
       weightsAt: (i, t) => ramp(t, RAMP),
-      capEnd: true,
+      /* The flat end cap is gone because the terminal cone below now closes the tube, and its
+         base ring is this ring — same centre, same radius, same cross-section, same smoothing
+         group, so the two weld into one and the join has neither a hole nor a shading seam.
+         Keeping the cap as well would bury a disc of *backward*-facing triangles inside the
+         cone, and because `toGeometry` welds by position the disc's rearward normals would be
+         averaged into the rim it shares, tipping the taper's shading back on itself. */
+      capEnd: false,
+      uvScale: [3, 1],
+    });
+
+    /* Terminal cone — seal `PREREG-tailcone.md`, the remedy the tail-tip seal named for its own
+       FAIL. The tip used to be made *entirely* of the three `TIPLOCK` fur wedges reaching past a
+       flat 2.4 cm cap, so the terminal contour was the union of three wedge tips: three contour
+       extrema, i.e. three lobes, **by construction** — no amount of staggering or azimuth
+       clustering could have removed it, which is why the previous iteration's re-clustering
+       improved the mass and left the lobe count exactly where it was. The cone supplies a single
+       most-distal point and demotes the wedges to breaking its edge.
+
+       **A separate tube, deliberately, and this is the load-bearing decision.** `t` is normalised
+       over `spine`, and both the six ring `BANDS` and the whole skin `RAMP` are expressed in `t`.
+       Appending centres to `spine` re-parameterises every existing centre, silently shifting all
+       six ring bands and the bone-weight ramp along the entire tail — a global change to the
+       tail's colour and skinning arriving through what looks like a local tip edit, on the part
+       that is half the silhouette and is driven by all 52 clips. This leaves the main tube's `t`,
+       bands and ramp bit-identical.
+
+       Frames are taken from the tube's own last ring rather than recomputed: `frames()` is a
+       parallel transport, so a fresh call starting at the tip would land at an arbitrary roll
+       about the tail axis and rotate the lumpy cross-section against the ring it is supposed to
+       continue. The cone is straight, so one frame serves all four rings. */
+    const CONE_OFF = [0, 0.035, 0.075, 0.115];      // along the tube's end tangent, ×G
+    const CONE_R = [0.026, 0.017, 0.008, 0.0];      // 0.026·G == radius(1.0): no step at the seam
+    const TF = frames(spine, new THREE.Vector3(0, 1, 0));
+    const iEnd = spine.length - 1;
+    const cT = TF.T[iEnd], cR = TF.R[iEnd], cU = TF.U[iEnd];
+    addTube(mb, {
+      centers: CONE_OFF.map((d) => spine[iEnd].clone().addScaledVector(cT, d * G)),
+      seg: TUNE.segTail,
+      rx: (i) => CONE_R[i] * G,
+      framesOverride: { T: [cT, cT, cT, cT], R: [cR, cR, cR, cR], U: [cU, cU, cU, cU] },
+      /* The tube's t=1 cross-section, frozen. Radius continuity alone would still leave a
+         visible kink, because the lump and the super-ellipse both deform the ring. */
+      shape: (a) => {
+        const s = superEllipse(a, 1.06);
+        const lump = furLobe(a, 6, TUNE.furLobe * 1.5, 3, 26);
+        return { u: s.u * lump * 1.03, v: s.v * lump * 0.94 };
+      },
+      // The last authored band [0.975, 1.001] is dark, so the cone continues the dark tip
+      // rather than introducing a new colour event at the one place the eye ends the shape.
+      groupAt: () => 'furDark',
+      sgAt: () => 700,
+      colorAt: (i, t, a, p) => furTint(_c, p.x, p.y, p.z, TUNE.furTintAmount),
+      // Rides the last tail bone alone — the same binding the tip wedges already use, so no
+      // clip's tail motion changes and the 52-clip contract is untouched.
+      weightsAt: () => [['tailD', 1]],
       uvScale: [3, 1],
     });
   }
@@ -2781,10 +2835,15 @@ export class SlyModel {
     const tipC = spine[n - 1];
     const tipT = new THREE.Vector3().subVectors(spine[n - 1], spine[n - 4]).normalize();
     const G = TUNE.tailGirth;
+    /* Lengths cut 0.085/0.065/0.050 → 0.055/0.045/0.035 with the terminal cone (see `_buildTail`).
+       These wedges used to *be* the tip and therefore owned the terminal contour; now the cone's
+       apex is the most distal point and their job is to ripple its edge, so each must sit inside
+       the cone's silhouette. Offsets, azimuths, widths, bend and group are unchanged — the fix
+       for three lobes is which shape reaches furthest, not where the fur sits. */
     const TIPLOCK = [
-      { off: -0.010, az: 0.00, len: 0.085, wid: 0.048 },
-      { off: -0.050, az: +0.35, len: 0.065, wid: 0.042 },
-      { off: -0.090, az: -0.35, len: 0.050, wid: 0.036 },
+      { off: -0.010, az: 0.00, len: 0.055, wid: 0.048 },
+      { off: -0.050, az: +0.35, len: 0.045, wid: 0.042 },
+      { off: -0.090, az: -0.35, len: 0.035, wid: 0.036 },
     ];
     for (const wdg of TIPLOCK) {
       const a = -Math.PI / 2 + wdg.az;                   // -π/2 = the down-swept side

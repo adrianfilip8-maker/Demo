@@ -347,9 +347,29 @@ const TUNE = {
      exactly what the note above it predicts — faceted skinned quads read as concave — and it
      is why `rimSkinExempt` below exists. Whole-frame silhouette coverage tells the same story
      per shot (gated / ungated): `combat` 71/67, `traversal` 57/59, `courtyard` 60/78,
-     `interior` 40/63, `temple` 41/96. The two shots at the bottom are the two where the
-     subject stands against a background only slightly further away than itself, so the
-     screen-space rim's depth-ratio gate is shut as well and nothing is left to carry it. */
+     `interior` 40/63, `temple` 41/96.
+
+     **The sentence that used to end this note — that on `interior` and `temple` "the
+     screen-space rim's depth-ratio gate is shut as well and nothing is left to carry it" — is
+     measurably false, and it was load-bearing.** It is the belief PREREG-rimstarve was built
+     on. Measured by ray-casting real Architecture+Props geometry along the taps the shader
+     actually samples (`scratchpad/rimstarve.mjs`, no renderer, no capture lock), the depth
+     ratio `(z_bg - z0)/z0` over the character's own rim band is:
+
+       temple 0.418   interior 0.441   night 0.169   courtyard 0.244
+       combat 0.442   traversal 1.492  hero 2.840    sly-closeup 1.269   dunes 6.546
+
+     against a gate that opens at 0.05 and is fully open at 0.16. On `temple` 94% of that band
+     is above the opening threshold and 81% is fully open; on `interior`, 96% and 89%. **Gate A
+     is open on every shot that stages a character**, and the whole planarity gate costs the
+     subject 0-6% of the screen rim's mask everywhere except `night` (22%). The instrument was
+     proved first on a known input: with the level removed every tap is sky, and it returns
+     S = 313.5, i.e. z0 = 4000/314.55 = 12.72 m, matching the independently frozen 12.54-12.94.
+
+     So "nothing is left to carry it" was an inference from two gates being *assumed* shut, and
+     neither is. What the character's rim actually costs is the convexity half, above, which is
+     what `rimSkinExempt` already fixes. Do not re-derive the starvation hypothesis from this
+     block. */
   rimCurve: [3.0, 10.0, 1.0],
 
   /* Exempt skinned geometry from the convexity HALF of that gate (the magnitude half still
