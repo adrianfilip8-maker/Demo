@@ -324,7 +324,16 @@ export const TUNE = {
    * The columns that only ever face away are removed at their sites, which is where the
    * "clipped to the silhouette" half lives. */
   tuftDensity: 0.46,      // clump count multiplier — halved; see the hold-out note above
-  tuftWidth: 3.30,        // clumps are broad rounded lobes, not needles (needles read as spikes)
+  /* 1.90 → 3.30 → **2.50**, and the middle value was walking into a failure this file has
+     already recorded. At 3.30 a leg clump finishes 0.053 m wide against a 0.060 m length —
+     aspect 0.88, i.e. very nearly the 1:0.95 that the `tuftRollW` note calls "a square with a
+     line round it is a plate, not a lock", and the head render at 3.30 duly went from spiky to
+     bricked, with black rectangles lying across the cheek beside the mask. "Larger" was the
+     critic's word for the clumps that survive; it is not licence to reach an aspect this file
+     has already falsified. 2.50 finishes ~0.040 m against 0.060 m — aspect 0.67, between the
+     old 0.56 and the plate. The count and the position cuts are what buy the read; width is a
+     supporting term and it has a ceiling. */
+  tuftWidth: 2.50,        // clumps are broad rounded lobes, not needles (needles read as spikes)
   tuftLen: 1.24,          // clump reach multiplier — the outline break is a length, not a count
   /* Tail clump width in the ROLL axis only. Separate from `tuftWidth` because the tail's comb
      is in a different axis from the limbs': along the tail this row is already at a
@@ -1409,7 +1418,22 @@ export class SlyModel {
         const k = furLobe(a, i, TUNE.furLobe * (1 - 0.55 * t), 5, 13);
         return { u: s.u * k, v: s.v * k };
       },
-      groupAt: () => 'fur',
+      /* ── CRITIC PASS 5 §3.1 FAULT 5: "the legs read as bare mottled skin, not trousers."
+         Both halves of that were true and they had different causes. The MOTTLE was the three
+         columns of clump cards lying on the face of the thigh (cut to one outer column above).
+         The SKIN was this line: the leg carried `fur`, `PAL.furMid` 0x7a8ba8, the same slate
+         the *arms and face* are, so from the hip to the boot cuff he was one continuous
+         flesh-toned tube with no garment event anywhere on the lower body — which is what
+         "bare" is describing, and no amount of fur geometry fixes it because the defect is that
+         the surface is not reading as cloth.
+
+         `clothDark` (0x1b4f7c) is the value the gloves, boot and brim already carry, so the
+         lower body now closes with the same family that closes the arms and the head instead of
+         fading into limb colour, and the cream ruff at the boot cuff reads as fur ABOVE a
+         garment edge rather than as more of the same tube. §2.1's value ladder is respected:
+         shirt 0.45 / clothDark 0.28 keeps a real step between the top and the trousers, so he
+         does not become a single blue mass either. */
+      groupAt: () => 'clothDark',
       sgAt: () => 900 + (side > 0 ? 0 : 1),
       colorAt: (i, t, a, p) => furTint(_c, p.x, p.y, p.z, TUNE.furTintAmount * 0.7),
       weightsAt: (i) => ramp(ts[Math.min(i, ts.length - 1)], RAMP),
@@ -1644,13 +1668,23 @@ export class SlyModel {
   _buildMuzzle(mb) {
     const S = TUNE.headScale;
     const D = TUNE.muzzleDrop;
+    /* ── CRITIC PASS 5 §3.1 FAULT 4: "the muzzle is flat intersecting planes ... reads as a
+     * beak in profile. Shorten and blunt it; merge the nose."
+     *
+     * Shortened 0.352 → 0.296 of head space (−16%) and blunted: the last two stations were
+     * 0.058 and 0.030 wide, a 2:1 taper into a point over the final 4 cm, which is the wedge
+     * that reads as a beak. They are now 0.068 and 0.050, so the snout ends in a rounded pad
+     * rather than a tip, and the nose sits ON that pad instead of being the only thing at the
+     * end of a spike. The vertical keys are pulled up slightly along the way so the profile is
+     * a convex curve rather than a straight ramp — a straight ramp plus a point IS a beak,
+     * independent of how long it is. */
     const key = [
       [new THREE.Vector3(0, 1.564 - D, 0.040), 0.092, 0.050],
-      [new THREE.Vector3(0, 1.559 - D, 0.118), 0.098, 0.056],
-      [new THREE.Vector3(0, 1.550 - D, 0.192), 0.092, 0.060],
-      [new THREE.Vector3(0, 1.539 - D, 0.258), 0.078, 0.056],
-      [new THREE.Vector3(0, 1.528 - D, 0.312), 0.058, 0.047],
-      [new THREE.Vector3(0, 1.519 - D, 0.352), 0.030, 0.026],
+      [new THREE.Vector3(0, 1.560 - D, 0.112), 0.098, 0.057],
+      [new THREE.Vector3(0, 1.553 - D, 0.180), 0.094, 0.061],
+      [new THREE.Vector3(0, 1.545 - D, 0.238), 0.084, 0.060],
+      [new THREE.Vector3(0, 1.537 - D, 0.278), 0.068, 0.054],
+      [new THREE.Vector3(0, 1.531 - D, 0.296), 0.050, 0.042],
     ];
     const G = TUNE.muzzleGirth;
     addTube(mb, {
@@ -2013,7 +2047,15 @@ export class SlyModel {
 
   _buildNose(mb) {
     const S = TUNE.headScale;
-    const c = new THREE.Vector3(0, hy(1.530 - TUNE.muzzleDrop), hx(mz(0.348)));
+    /* "Merge the nose" (critic pass 5 §3.1 fault 4). It was centred at z 0.348 against a snout
+       that ended at 0.352 — i.e. sitting on the very tip with 93% of its own depth hanging off
+       the front, so it read as a separate ball stuck on the end of a wedge, and its silhouette
+       was the muzzle's silhouette. Pulled back to 0.286 inside the (now shorter, blunter) snout,
+       whose last station is 0.296: the nose is now a pad set INTO the top of the muzzle pad and
+       most of its volume is buried, so what shows is a dark triangle on a rounded snout rather
+       than a bolted-on sphere. Raised 1.530 → 1.541 for the same reason — a nose on the
+       centreline of a tapering tube is a beak tip; a nose on the upper surface is a nose. */
+    const c = new THREE.Vector3(0, hy(1.541 - TUNE.muzzleDrop), hx(mz(0.286)));
     addEllipsoid(mb, {
       center: c,
       radii: new THREE.Vector3(0.033 * S * TUNE.headWide, 0.026 * S, 0.024 * S),
@@ -2813,7 +2855,9 @@ export class SlyModel {
                  exposure, and the ink hull's translate-instead-of-inflate on biased clumps is
                  `Outline.js`. Both are SHADING's. This only stops the geometry making it worse. */
               shadeMix: 0.90,
-              group: 'fur', weights: ramp(u, leg.ramp),
+              // Matches the trouser the clump grows from — a slate-fur lock on a navy leg
+              // reads as a patch of bare skin showing through, which is the fault being fixed.
+              group: 'clothDark', weights: ramp(u, leg.ramp),
             });
           }
         }
@@ -2830,7 +2874,7 @@ export class SlyModel {
             shadeN: out.clone().normalize(),
             length: 0.076 * (i === 1 ? 1.0 : 0.80), width: 0.026, bend: 0.40,
             bendDir: new THREE.Vector3(0, -1, 0),
-            group: 'fur', weights: ramp(u, leg.ramp),
+            group: 'clothDark', weights: ramp(u, leg.ramp),
           });
         }
       }

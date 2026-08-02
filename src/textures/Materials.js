@@ -1696,16 +1696,37 @@ export const MATERIALS = {
        * bin, where the same pigment at 0.9 lands at 90 deg. So the wear field is thresholded into
        * patches: a texel is painted or it is bare stone, at a 1.5 m patch scale, which is both how
        * pigment actually fails and the only version of it that keeps a hue. */
-      const BAND_KEEP = 0.90;
-      const bandWear = s.field(3, (u, v) => sat(warpN(u, v, 7, 4, 1.2, cx.seed + 43) * 1.4 + 0.55));
+      const BAND_KEEP = 0.88;
+      /* `freq` 18 over a 10.4 m repeat is a **58 cm** flake, deliberately not the 1.5 m the first
+       * version used. A 1.5 m loss patch inside a 10.4 m tile is a large distinctive shape that
+       * recurs once per repeat — which is exactly §13's countable-landmark defect arriving
+       * through the wear field instead of through a cartouche, and it was visible as such in the
+       * `wallstrip` render at `traversal`'s 340 px/repeat. Smaller flakes read as weathering and
+       * have nothing for the eye to match on the next tile. */
+      const bandWear = s.field(3, (u, v) => sat(warpN(u, v, 18, 4, 1.05, cx.seed + 43) * 1.5 + 0.60));
+      /* Mineral pigment on a limed wall, not a swatch. Egyptian blue, malachite and red ochre are
+       * ground minerals in a chalky binder — a few points off full chroma and a step lighter than
+       * the raw hex, which is also what stops the dado reading as a printed stripe. Mixing toward
+       * a *neutral* rather than toward the stone or toward `PAL.white` is what keeps the hue:
+       * mixing toward the stone put the pigment back inside the warm bin, and mixing 16 % toward
+       * the warm `PAL.white` measured malachite out at hue **80 deg** — olive — where the same
+       * pigment at 10 % toward neutral lands at **112 deg**. The multiply by the consumer's warm
+       * material colour amplifies any warmth introduced here, so the muting has to be achromatic
+       * or it is not muting, it is tinting. */
+      const PIG_LIME = 0.10;
+      const PIG_TO = 0xe4e4e4;   // neutral, not warm — see PIG_LIME
+      const wr = ((PIG_TO >> 16) & 255) / 255, wg = ((PIG_TO >> 8) & 255) / 255, wb = (PIG_TO & 255) / 255;
       for (let i = 0; i < s.n; i++) {
         const pa = bandPaint.a[i];
         if (pa <= 0.02) continue;
-        const keep = smoothstep(0.34, 0.52, bandWear[i]) * pa * BAND_KEEP;
+        const keep = smoothstep(0.28, 0.46, bandWear[i]) * pa * BAND_KEEP;
         if (keep <= 0.002) continue;
-        s.r[i] += (bandPaint.r[i] - s.r[i]) * keep;
-        s.g[i] += (bandPaint.g[i] - s.g[i]) * keep;
-        s.b[i] += (bandPaint.b[i] - s.b[i]) * keep;
+        const pr = bandPaint.r[i] + (wr - bandPaint.r[i]) * PIG_LIME;
+        const pg = bandPaint.g[i] + (wg - bandPaint.g[i]) * PIG_LIME;
+        const pb = bandPaint.b[i] + (wb - bandPaint.b[i]) * PIG_LIME;
+        s.r[i] += (pr - s.r[i]) * keep;
+        s.g[i] += (pg - s.g[i]) * keep;
+        s.b[i] += (pb - s.b[i]) * keep;
         s.rough[i] = sat(s.rough[i] - keep * 0.10);
       }
       chiselMarks(s, { amount: 0.016, angle: -0.35, freq: 48, seed: cx.seed + 1, mask: m.edge });
@@ -1714,7 +1735,15 @@ export const MATERIALS = {
       for (let i = 0; i < s.n; i++) src[i] = sat(m.joint[i] * 0.8 + ramp[i] * 0.55);
       weather(s, { source: src, seed: cx.seed + 6, creviceAmt: 0.44, streakAmt: 0.26, dustAmt: 0.20, roughGrime: 0.12, directional: 0.35 });
       grain(s, { amount: 0.020, freq: 120, seed: cx.seed + 8, heightAmt: 0.006 });
-      rampFloor(s, { crevice: PAL.sandCrev });
+      /* `SAND_CREV_FLOOR` + `lift`, matching `column_papyrus` — see that constant and the `lift`
+       * note in `rampFloor`. Unbleaching the glyph pigment (`fade` 0.42 → 0.15 above) lets the
+       * conventionally *black* signs — `falcon`, `jackal`, `wedjat`, `eye`, `kh`, all `#241a16`
+       * at luma 0.11 — reach the surface at ~0.70 strength instead of ~0.46, and inside a deep
+       * cut that `weather` has also darkened, a few of them land under §2.2's crevice luminance.
+       * Measured: `darkTail` 0.0001 → 0.0003 without this, 0.0000 with it. The default lerp
+       * cannot fix it (it lands short by construction); `lift` can, and it costs contrast that
+       * was rendering as violet rather than as dark. */
+      rampFloor(s, { crevice: SAND_CREV_FLOOR, lift: 0.5 });
     },
   },
 
@@ -2389,13 +2418,29 @@ export const MATERIALS = {
           ctx.fillRect(-2, (1 - y - h) * size, size + 4, h * size);
         }
       });
+      /* ── The binding bands are where this recipe's hue lives, and they had none ──────────────
+       *
+       * `huewhere.mjs` on the built tile: **93.9 % of chromatic texels in the single 20-30 deg
+       * bin, 0.86 % anywhere cool or green** — on the recipe that dresses **54.5 % of `temple`**,
+       * i.e. the single largest contributor to critic pass 5's finding that 86.7 % of the frame's
+       * chromatic pixels sit in two hue windows. The pigments were authored (`lapis`, `turquoise`
+       * in the five-colour bands) and did not arrive, for the two reasons the wall recipe
+       * documents: they were laid down mixed ~40:60 with the stone under them, and the consumer
+       * then multiplies the map by `0xd8a468`, a saturated warm, which compresses a low-chroma
+       * mix toward its own hue.
+       *
+       * Three changes, all of them area or chroma rather than new decoration: the two plain-ochre
+       * cord bands become **malachite** (a papyrus column's bindings are the plant's own sheaths,
+       * and green is both what they were painted and the one hue in §2.2 that the warm key cannot
+       * rotate into the orange bin); the five-colour bands trade `ochre` for `malachite` so they
+       * are half cool; and `BAND_FADE` stops averaging pigment into stone. */
       const paint = rasterRGBA(size, (ctx) => {
         for (const [y, h] of [[0.035, 0.055], [0.865, 0.055]]) {
           HG.paintedBand(ctx, -2, (1 - y - h) * size, size + 4, h * size, 'paint',
-            [PAL.ochre, PAL.red, PAL.lapis, PAL.turquoise, PAL.white]);
+            [PAL.malachite, PAL.red, PAL.lapis, PAL.turquoise, PAL.white]);
         }
         for (const [y, h] of [[0.115, 0.030], [0.80, 0.030]]) {
-          ctx.fillStyle = css(PAL.ochre); ctx.fillRect(-2, (1 - y - h) * size, size + 4, h * size);
+          ctx.fillStyle = css(PAL.malachite); ctx.fillRect(-2, (1 - y - h) * size, size + 4, h * size);
         }
         glyphColumns(ctx, 'paint');
         glyphBands(ctx, 'paint');
@@ -2471,9 +2516,13 @@ export const MATERIALS = {
        * full-width terms that fight the mesh's own 8 lobes or alias at 30 m. This is pigment left
        * in a **carved glyph**, which exists only where `ramp > 0` — about 13 % of the tile — and
        * is the difference between "a sunk relief" and "a smudge". Still below the wall's 0.50. */
-      paintRemnants(s, ramp, paint, { survival: 0.46, freq: 6, seed: cx.seed + 9, edgeLoss: 0.70, fade: 0.45 });
+      /* `fade` 0.45 → 0.18, for the reason set out at `hieroglyph_wall`'s call: `fade` is chroma,
+       * not coverage, and it was chroma that stopped the pigment reaching the frame. `survival`,
+       * `edgeLoss` and `peak` — the three knobs that decide how *much* of a glyph is painted, and
+       * therefore the ones that produced the "flat decal" failure — are untouched. */
+      paintRemnants(s, ramp, paint, { survival: 0.46, freq: 6, seed: cx.seed + 9, edgeLoss: 0.70, fade: 0.18 });
       // Band paint survives better than glyph paint — it was thicker and re-applied.
-      const bandWear = s.field(3, (u, v) => sat(warpN(u, v, 8, 4, 1.2, cx.seed + 41) * 1.4 + 0.5));
+      const bandWear = s.field(3, (u, v) => sat(warpN(u, v, 16, 4, 1.15, cx.seed + 41) * 1.45 + 0.55));
       /* Band paint survives better than glyph paint — it was thicker and re-applied — but it was
        * the one pigment in this file laid at *full chroma*: `keep` reaches 1.0 and, unlike
        * `paintRemnants`, nothing bleached it toward the stone first. A five-colour band at full
@@ -2487,13 +2536,29 @@ export const MATERIALS = {
        * tiling texture cannot know where the capital is. If the shaft's v were normalised to
        * shaft height instead of world metres, this tile would land exactly once and the bands
        * would sit where the recipe says they sit. */
-      const BAND_FADE = 0.26;
+      /* `BAND_FADE` 0.26 → 0.08, and `keep` becomes a *coverage* threshold rather than a uniform
+       * opacity — the same correction as on the wall, and the same measurement behind it: a
+       * pigment laid at 0.6 opacity over sandstone is not "60 % worn", it is a 60:40 mix whose
+       * hue, after the consumer's warm multiply, lands back inside the warm bin. Paint fails in
+       * patches; a texel here is now painted or bare. The aliasing worry in the note above is
+       * answered by the patch scale, not by the chroma: `bandWear` runs at 16 cycles over a 9 m
+       * V repeat, so a patch is ~0.56 m — small enough that no single loss blob is a landmark the
+       * eye can match on the next repeat (the 8-cycle version was, visibly, in the `wallstrip`
+       * render at `temple`'s 562 px/repeat), and still 5 px across at `courtyard`'s 63 m.
+       * `PIG_LIME` toward a neutral keeps these off full-saturation swatch values without
+       * rotating the hue, which mixing toward the stone or toward the warm `PAL.white` both do. */
+      const BAND_FADE = 0.08, PIG_LIME = 0.10, PIG_TO = 0xe4e4e4;
+      const wr = ((PIG_TO >> 16) & 255) / 255, wg = ((PIG_TO >> 8) & 255) / 255, wb = (PIG_TO & 255) / 255;
       for (let i = 0; i < s.n; i++) {
         if (bandsMask[i] < 0.02 || paint.a[i] < 0.02) continue;
-        const keep = sat((bandWear[i] * 0.8 + 0.35)) * bandsMask[i] * paint.a[i];
-        const pr = paint.r[i] + (s.r[i] - paint.r[i]) * BAND_FADE;
-        const pg = paint.g[i] + (s.g[i] - paint.g[i]) * BAND_FADE;
-        const pb = paint.b[i] + (s.b[i] - paint.b[i]) * BAND_FADE;
+        const keep = smoothstep(0.30, 0.50, bandWear[i]) * bandsMask[i] * paint.a[i] * 0.90;
+        if (keep <= 0.002) continue;
+        const qr = paint.r[i] + (wr - paint.r[i]) * PIG_LIME;
+        const qg = paint.g[i] + (wg - paint.g[i]) * PIG_LIME;
+        const qb = paint.b[i] + (wb - paint.b[i]) * PIG_LIME;
+        const pr = qr + (s.r[i] - qr) * BAND_FADE;
+        const pg = qg + (s.g[i] - qg) * BAND_FADE;
+        const pb = qb + (s.b[i] - qb) * BAND_FADE;
         s.r[i] += (pr - s.r[i]) * keep; s.g[i] += (pg - s.g[i]) * keep; s.b[i] += (pb - s.b[i]) * keep;
         s.rough[i] = sat(s.rough[i] - keep * 0.12);
       }
@@ -4009,7 +4074,7 @@ function glyphWall(ctx, size, mode, seed, o = {}) {
   const khTop = size * 0.012;
   const khH = size * kheker;
   if (kheker > 0 && mode !== 'paint') {
-    HG.khekerFrieze(ctx, -2, khTop, size + 4, khH, Math.max(4, Math.round(worldTile / 1.15)), gm);
+    HG.khekerFrieze(ctx, -2, khTop, size + 4, khH, Math.max(4, Math.round(worldTile / 0.72)), gm);
     if (!isBand) HG.registerRule(ctx, size, khTop + khH + size * 0.014, rule, mode);
   }
 
@@ -4057,8 +4122,8 @@ function glyphWall(ctx, size, mode, seed, o = {}) {
      * with everything else, so this buys nothing on a shaded wall and that limit is stated
      * rather than hidden. */
     if (mode !== 'paint') {
-      HG.paintedBand(ctx, -2, y1 + size * 0.020, size + 4, size * 0.052, gm,
-        [PAL.ochre, PAL.red, PAL.white, PAL.lapis, PAL.malachite]);
+      HG.paintedBand(ctx, -2, y1 + size * 0.020, size + 4, size * 0.050, gm,
+        [PAL.red, PAL.white, PAL.lapis]);
     }
   }
 
@@ -4083,8 +4148,13 @@ function glyphWall(ctx, size, mode, seed, o = {}) {
   if (mode !== 'paint') {
     const dy = size * 0.845;
     if (!isBand) HG.registerRule(ctx, size, dy - size * 0.014, rule, mode);
-    HG.paintedBand(ctx, -2, dy, size + 4, size * 0.130, gm,
-      [PAL.malachite, PAL.white, PAL.lapis, PAL.red, PAL.malachite]);
+    /* A narrow polychrome band over a broad single-hue field, not five equal stripes. The
+     * equal-stripe version was measured-correct and *looked* like bunting: five saturated bars
+     * of the same weight have no hierarchy, so the eye reads a flag rather than architecture,
+     * and §2.3's "large simple areas of colour, detail concentrated at focal points" is the rule
+     * it breaks. The field carries the hue and the band carries the detail. */
+    HG.paintedBand(ctx, -2, dy, size + 4, size * 0.042, gm, [PAL.red, PAL.white, PAL.lapis]);
+    HG.paintedBand(ctx, -2, dy + size * 0.042, size + 4, size * 0.094, gm, [PAL.malachite]);
   }
 }
 

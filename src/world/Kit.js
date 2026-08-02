@@ -1403,16 +1403,22 @@ export function bevelPrism(rows, { capBottom = true, channel = null } = {}) {
 export function obelisk({ h = 22, base = 2.6, rng, relief = true } = {}) {
   const tipH = base * 1.25;
   const shaftH = h - tipH;
-  const rt = base * 0.60;
+  const rt = base * 0.55;
   const c = Math.min(0.075, base * 0.05);
   /* The inscription column runs from a plinth margin up to a margin under the benben.
      Its two bounding rows exist only to stop the trough — vertical subdivision buys nothing
      on a flat face, so there are exactly as many rows as the shape needs and no more. */
   const cy0 = Math.min(1.1, shaftH * 0.14), cy1 = shaftH - Math.min(0.45, shaftH * 0.06);
-  /* t² not t: the old three-row shaft put its mid-row at 0.75·base + 0.25·rt, which is a
-     convex taper, not a cone. Keep that exactly — an obelisk that tapers linearly reads as a
-     wedge — so this reproduces the old silhouette at t = 0, ½ and 1 and interpolates between. */
-  const halfAt = (y) => { const t = y / shaftH; return 0.5 * (base + (rt - base) * t * t); };
+  /* **Taper exponent 2.0 -> 1.08, and `rt` 0.60·base -> 0.55·base.**
+     The t² curve was chosen to avoid "an obelisk that tapers linearly reads as a wedge", but
+     what it actually produced was a shaft still 90% of its base width at half height — over
+     the lower two thirds, the part that fills `hero` at 13.5% of frame, it is a parallel-sided
+     box. Critic pass 5: "the obelisk has almost no taper". A real obelisk *is* close to linear
+     — Hatshepsut's runs about 2.4 m to 1.6 m over 28 m — so the wedge worry was misplaced; the
+     shape that reads is a straight batter with a hair of convexity, which 1.08 gives. Width at
+     mid-height goes 2.34 m -> 2.00 m on the 2.6 m courtyard obelisk, and the silhouette now
+     narrows visibly from the terrace to the benben instead of only in the top few metres. */
+  const halfAt = (y) => { const t = y / shaftH; return 0.5 * (base + (rt - base) * Math.pow(t, 1.08)); };
   const g = bevelPrism([
     [0, base * 0.5, c],
     [cy0, halfAt(cy0), c],

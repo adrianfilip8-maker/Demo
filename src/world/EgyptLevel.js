@@ -414,6 +414,13 @@ function courtyard(A) {
          easiest to catch. Each plinth draws its own phases from the shared stream. */
       bow: 0.07, drift: 0.05,
     }), { x: cx, y: 0, z: cz }));
+    /* Cavetto podium. The plinth is the one part of the colossus group with clear air above
+       its whole perimeter — the throne above it is 6.8 m wide against the plinth's 8.0 — so
+       this is where the moulding the throne back cannot carry actually goes. Sized so the
+       cornice top lands exactly on `L.colossi.plinth`, keeping the y = 2.0 ground proxy and
+       the seat that stands on it where they were. */
+    const plCor = K.cornice({ w: 8.0 - 2 * 0.04 * 1.4, d: 7.0 - 2 * 0.04 * 1.4, h: 0.22, roll: 0.13, flare: 0.34 });
+    A.add('court', 'hieroglyph_gilded', K.place(plCor.geo, { x: cx, y: L.colossi.plinth - plCor.height, z: cz }));
     groundProxy(A, cx - 4, cx + 4, L.colossi.plinth, cz - 3.5, cz + 3.5);
     /* Throne: seat block to the knee ledge at 4.5, then the high back slab. */
     vol(A, 'court', 'sandstone_block', cx - 3.4, cx + 3.4, L.colossi.plinth, L.colossi.knee, cz - 3.0, cz + 2.6, { jitter: 0.03, chip: 0.18, c: 0.12 });
@@ -427,21 +434,24 @@ function courtyard(A) {
        capped by a cavetto — is the Egyptian form a throne back *is*, so this is the vocabulary
        arriving on the piece the camera is actually pointed at rather than on a distant pylon.
 
-       The 9.6 top is held to the centimetre: the wall stops at 8.12 and the 1.48 m cornice
-       makes the difference, so the registered `ledge` and the colossus that leans on it are
-       both undisturbed. */
+       **No cavetto on this one, and the reason is measured.** A cavetto is the obvious cap for
+       a naos, but the colossus leans on this slab: sliced every 25 cm over the band the back
+       runs (`thronegap.mjs`), the statue's nearest z sits between −1.70 m and +0.55 m of the
+       slab's own south face, i.e. it is *touching or inside* it for most of the height. Any
+       moulding that projects cuts the figure. So this mass gets the two vocabulary items that
+       hug rather than overhang — the batter and the corner rolls, the latter at the ±3.2
+       arrises where the statue's 2.66 m shoulder half-width leaves them clear — and the
+       cavetto goes on the plinth below, which is unobstructed. A back pillar with no cornice
+       is also what a real seated colossus has. */
     const tbW = 6.4, tbTop = 9.6, tbBat = 0.055;
-    const tbCor = K.cornice({ w: tbW - 2 * tbBat * 3.62, d: 1.8 - 2 * tbBat * 3.62, h: 0.70, flare: 0.55, roll: 0.22 });
-    const tbWallTop = tbTop - tbCor.height;
     A.add('court', 'hieroglyph_wall', K.place(K.masonryShell({
-      w: tbW, d: 1.8, h: tbWallTop - L.colossi.knee, batter: tbBat, course: 0.62, thick: 0.8, rng: R,
+      w: tbW, d: 1.8, h: tbTop - L.colossi.knee, batter: tbBat, course: 0.62, thick: 0.8, rng: R,
       blockLen: [1.4, 2.3], recess: 0.06, chipChance: 0.2, gapChance: 0.015, hollow: false,
       bow: 0.06, drift: 0.05,
     }), { x: cx, y: L.colossi.knee, z: cz - 2.1 }));
     A.add('court', 'sandstone_worn', K.place(
-      K.cornerRolls({ w: tbW, d: 1.8, h: tbWallTop - L.colossi.knee, r: 0.24, batter: tbBat, rng: R }),
+      K.cornerRolls({ w: tbW, d: 1.8, h: tbTop - L.colossi.knee, r: 0.24, batter: tbBat, rng: R }),
       { x: cx, y: L.colossi.knee, z: cz - 2.1 }));
-    A.add('court', 'hieroglyph_gilded', K.place(tbCor.geo, { x: cx, y: tbWallTop, z: cz - 2.1 }));
     wallProxy(A, cx - 3.2, cx + 3.2, L.colossi.knee, tbTop, cz - 3.0, cz - 1.2);
     ledgeProxy(A, cx - 3.2, cx + 3.2, tbTop, cz - 3.0, cz - 1.2, { thick: 0.7 });
     /* Sand banked against the north face — the wind comes down the valley. */

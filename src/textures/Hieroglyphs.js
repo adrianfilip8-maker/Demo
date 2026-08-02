@@ -843,16 +843,38 @@ export function khekerFrieze(ctx, x, y, w, h, count, mode) {
   const CYCLE = [PAL.lapis, PAL.malachite, PAL.red, PAL.ochre];
   ctx.save();
   for (let i = 0; i < count; i++) {
-    const cx = x + i * cw;
+    const cx = x + i * cw, mid = cx + cw * 0.5;
     setMode(ctx, mode, { paint: CYCLE[i % CYCLE.length] });
+    /* **A kheker is a bundle of reeds tied at the neck, not a pentagon.** The five-point polygon
+     * this drew read at frame scale as a row of flat bunting pennants — the first thing to look
+     * wrong in the render, and wrong in a way that says "placeholder" rather than "Egypt". The
+     * real motif is a narrow bundle that flares to a rounded, split crown above a banded waist,
+     * and it is the *waist* that carries the read: a silhouette that pinches is unmistakable
+     * where one that tapers straight is just a triangle. */
+    const wSt = cw * 0.30, wCr = cw * 0.46;
+    if (mode === 'line') {
+      ctx.lineWidth = Math.max(1, h * 0.045);
+      ctx.beginPath();
+      ctx.moveTo(mid - wSt * 0.5, y + h * 0.46); ctx.lineTo(mid + wSt * 0.5, y + h * 0.46);
+      ctx.moveTo(mid - wSt * 0.5, y + h * 0.58); ctx.lineTo(mid + wSt * 0.5, y + h * 0.58);
+      ctx.moveTo(mid, y + h * 0.06); ctx.lineTo(mid, y + h * 0.40);
+      ctx.stroke();
+      continue;
+    }
     ctx.beginPath();
-    ctx.moveTo(cx + cw * 0.5, y);
-    ctx.lineTo(cx + cw * 0.86, y + h * 0.42);
-    ctx.lineTo(cx + cw * 0.76, y + h);
-    ctx.lineTo(cx + cw * 0.24, y + h);
-    ctx.lineTo(cx + cw * 0.14, y + h * 0.42);
+    // crown: a rounded fan that splits at the top
+    ctx.moveTo(mid - wSt * 0.5, y + h * 0.52);
+    ctx.bezierCurveTo(mid - wCr, y + h * 0.30, mid - wCr * 0.92, y + h * 0.05, mid - wCr * 0.42, y + h * 0.02);
+    ctx.lineTo(mid, y + h * 0.16);
+    ctx.lineTo(mid + wCr * 0.42, y + h * 0.02);
+    ctx.bezierCurveTo(mid + wCr * 0.92, y + h * 0.05, mid + wCr, y + h * 0.30, mid + wSt * 0.5, y + h * 0.52);
+    // shaft below the tie
+    ctx.lineTo(mid + wSt * 0.5, y + h);
+    ctx.lineTo(mid - wSt * 0.5, y + h);
     ctx.closePath();
-    if (mode === 'line') { ctx.lineWidth = h * 0.05; ctx.stroke(); } else ctx.fill();
+    ctx.fill();
+    // the tie itself, a touch wider than the shaft
+    rect(ctx, mid - wSt * 0.78, y + h * 0.50, wSt * 1.56, h * 0.10);
   }
   ctx.restore();
 }
