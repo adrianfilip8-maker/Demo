@@ -3425,3 +3425,48 @@ answer.
 
 And one number corrected at its source: the obelisk's mid-shaft width is **2.044 m**, not the
 2.00 m its comment claims — 2.2% off, in a comment written to record a fix.
+
+---
+
+## 47. The arms don't read as plastic because ink is missing — they read as plastic because nothing can resolve there
+
+An ink treatment for the limbs was authored, measured, and **withdrawn by its author on the
+measurement**, which is the outcome worth recording rather than the fix.
+
+The diagnosis behind it was sound and still is: the arm's value ladder runs `cloth` 0.45 →
+`fur` 0.54 → `clothDark` 0.28 and **stops**, where the tail continues to `tailDark` 0.19 and
+`ink` 0.07. There is no near-black anywhere on an arm. So ink lines were authored — welts at the
+sleeve hem and glove cuff, an ulnar seam along the forearm, deliberately *lines* rather than
+clumps, since §37 removed clumps for good reason.
+
+Then it was measured:
+- **93 px changed** on `sly-closeup`, 90 on `sly-profile`, 117 on `hero` — about **0.1% of frame**,
+  the same order as a cap-notch change §11 records as *removed rather than shipped*;
+- at 6× the seam is a **1 px black hairline**; at 8× in profile it renders **detached from the arm,
+  floating in background** — a placement bug on top of being invisible;
+- cost **432 triangles (+3.3%)**.
+
+Withdrawn, with the working tree hash verified back to its starting value.
+
+**The finding is why it failed.** The bare-fur band is **15.3 cm of a 55 cm arm, seen ~26 px wide
+across 18–33 rows.** Interior detail there is below the resolution at which *anything* can read —
+which is also why the earlier baseline reported the arms UNMEASURABLE by its instrument on these
+frames. **The lever is silhouette-scale — sleeve, glove and forearm proportions — not interior
+ink.** A treatment that cannot be resolved is not a weak fix; it is a fix aimed at a feature the
+frame does not have room for, and adding triangles to it makes the budget worse for nothing.
+
+This generalises past the arms: **before authoring interior detail, compute how many pixels the
+region occupies in the shots that score it.** Two of this project's three character wins —
+the tail's merged mass and the cap's brim — were silhouette-scale. Every interior-detail attempt
+on a small region has now failed the same way twice.
+
+### And a provenance discipline that caught its own author
+
+The determinism pair was nearly confounded by its owner editing source **ten seconds after
+launching the second boot** — the exact hazard I had flagged, arriving from the inside rather
+than the outside. It was caught because the runner stamps the source hash around the run, so the
+mismatch was visible immediately; the boot was killed and relaunched from a `git archive` copy in
+scratchpad, with `cwd` and hash verified to match the first boot's stamp.
+
+**The provenance discipline has to point at your own edits, not only at other people's.** An
+instrument built to protect a run from concurrent agents caught the agent that built it.
