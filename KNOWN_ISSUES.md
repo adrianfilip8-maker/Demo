@@ -1216,6 +1216,18 @@ backgrounded list and the run's log was silently written to `/` — the capture 
 output was simply not where anyone was looking for it. Expand paths before the `&`, or use
 absolute ones.
 
+**A fifth, hit twice in one hour by two different agents: `pgrep -f` matches the wrapper, so
+the queue ticket is the authority on which pid is yours.** `pgrep -f "shot.mjs hero …"` matches
+*any* process whose command line contains that string — including the `bash -c` wrapper that
+launched it, and including the persistent tool shell. Both of us "verified detachment" against
+the wrong pid: one launch reported `ppid 1` for a wrapper whose real node child sat at
+`init → shell → node` with a live parent that the tool shell would have carried into the reaper,
+and the other read a session id belonging to an already-exited leader. **The lock ticket is
+written by the runner itself, so the pid in `<epochMs>-<pid>` is the process actually doing the
+work.** Resolve from the ticket, or walk `--ppid` from the wrapper to its node child; then
+confirm `ppid 1` *and* session leadership on **that** pid. A detachment check performed against
+a process that is not the one rendering is worse than no check, because it reports safety.
+
 **A fourth, paid for only in luck: a mid-queue src edit races the next boot.** The goldhalo
 splice (b77b614) was briefly broken on disk — a compile-breaker caught by its own proof
 script — inside the window where cap5's queued run could have booted vite and baked the broken
