@@ -1,5 +1,15 @@
 # Re-derivation of the shadowed-architecture hue acceptance — from §2.2 *surface* intent
 
+> **§§5–6 OF THIS FILE ARE SUPERSEDED — see `ADDENDUM-shadowhue-restate.md`.** They were computed
+> against `shadowBounceMix 0.20` with no `shadowTeal` term; the live constants are **0.05** and
+> **0.15**, and the live shadow light is G/R **3.258**, not 1.336. Consequences: the break-even
+> albedo G/R is **0.307**, not 0.749; the whole stone family **passes** the product test; and the
+> pre-registered `bounceMix 0.20 → 0.00` arm in §6 must not be run as written. §4's "shipped
+> fails by 37–45°" rests on frame numbers of unknown vintage and is now **unmeasured**, not known.
+>
+> **§§1–4 — the derivation and the band — stand.** They rest on §2.2's surface constants and on a
+> measured lit mass, neither of which this correction touches.
+
 **Ruling honoured:** GRANTED as a re-derivation, REFUSED as a relaxation. So this file derives the
 replacement from the art bible's statements about **surfaces**, independently, and does **not** set
 it to whatever `night` achieves. The derivation is written before the number, and the number falls
