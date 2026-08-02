@@ -700,9 +700,34 @@ Still open on the character, honestly scored by the agent that did the work:
 
   At least three defensible answers exist — 4.13, 4.52, 4.57 — differing only in where "chin"
   and "top" are placed, and every one of them is reproducible. So: **quote a head count with its
-  definition *and* its pose, or do not quote it.** The pose half of that rule was learned first,
+  definition *and* its pose, or do not quote it.**
+
+  **2026-08-02 — the rule gets a tiebreaker, which this condition needed.** A silhouette-side
+  measurement puts the same unchanged geometry at **4.14 heads including the cap** and **5.79
+  skull-only** (an independent bind-pose probe agrees at 4.10), so the span is now measured at
+  both ends rather than argued. The tiebreaker: **the cap is never removed in any frame or any
+  clip.** No viewer ever sees the skull-only figure, so the number that adjudicates a *visual*
+  condition is the cap-inclusive one — 4.14, comfortably inside §7.3's cartoon band — and the
+  5.79 family describes an anatomy nobody looks at. This is why the condition kept failing on
+  paper while passing on screen: two true numbers about different measurements were being
+  traded as if one had to be wrong. When a definitional choice changes a verdict, pick the
+  definition the *frame* uses, and say that you did. The pose half of that rule was learned first,
   when a `perch_idle` number was briefly cited as the standing figure; the definition half cost
   a published record. Like-for-like tables are at the `TUNE` block in `src/player/SlyModel.js`.
+
+- **The cap fails the silhouette test, and no cane or tail work can reach it — OPEN.** Run
+  literally, in pure black, on both framings: the cane shaft and hook now pass (in `hero` the
+  crook reads as a distinct annulus with background inside its curve, clear of the torso and
+  traceable to its shaft — the heroline change), ears read strongly, and the tail passes on mass
+  at 26.6% of union pixels against the body's 46.2%. **The cap does not: 73.8% of its own
+  boundary is buried, and cap and skull weld into a single blob with no bill notch at 118 px.**
+  This is a head/cap geometry question and it needs its own seal; the cane aim and the tail
+  shape have both now been measured and neither has a lever on it.
+
+  Two limits of the method, worth stating so the result is not over-read: **the ringed tail and
+  the mask are colour features and are untestable in a black silhouette** — the tail passes on
+  *mass* only, and half of that signifier (the rings) cannot be scored this way at all. A
+  silhouette test answers "is the shape readable", never "is the character recognisable".
 - **Eye emissive lift is CPU-verified only.** The re-capture was queued behind other agents for
   32 minutes and the work was reported without it. Check `sly-closeup`, and check `night`
   (`tod 0.02`) where a warmer, brighter eye emissive previously failed as "two yellow dots".
