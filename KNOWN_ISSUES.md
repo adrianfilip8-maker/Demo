@@ -1226,3 +1226,29 @@ pre-registered A/B with the residual predictions written down first (the night l
 13 → ~19 px, guard 4 → ~6 px). **A dropped value is a bug; restoring it at face value is a
 change.** Before wiring any two systems together, check that the number means the same thing on
 both ends — and if a "fix" would move a shipped look, it is a change wearing a fix's clothes.
+
+## 18. A perfect validation score against a baseline that has already shipped past you
+
+The chain model for the shadow-hue work validated against a live readback at
+`maxAbsErr 4.69e-5` — five decimal places of agreement, the strongest validation any instrument
+in this project has produced. It was a perfect match to **a tree that no longer existed.**
+
+`shadowBounceMix 0.20 → 0.05` had shipped roughly four hours earlier, in the same commit that
+introduced a turquoise blend the model did not contain at all. The model hardcoded the old mix
+and had no teal term, so it described the renderer as it stood that morning. Live shadow light
+had moved from `(0.1416, 0.1892, 0.4232)` to `(0.0961, 0.3131, 0.4966)` — G/R from 1.336 to
+3.258, a factor of 2.4 — and the validation still passed, because the thing it was compared
+against was itself computed from the same stale constants.
+
+Everything downstream inherited it. An acceptance was declared unreachable ("floors of
+225/240/238") on the strength of a model missing the very lever that reaches it; the frames
+land 223/235/210/225, three of four inside the target. A caution that was true — a surface hue
+does have a floor above the light's, so scoring one against a light spec is a category error —
+got converted into a quantitative impossibility claim that was false. The coordinator conceded
+the point. Both of us were arguing from the same dead tree.
+
+**A validation number tells you the model matches its reference. It cannot tell you the
+reference is current.** So: stamp the tree a model was built against, re-read the constants from
+source at run time rather than transcribing them, and when a model and a frame disagree, check
+what has shipped between them *before* trusting either. In a fleet shipping several commits an
+hour, "my instrument is validated" has a shelf life measured in commits, not in correctness.
