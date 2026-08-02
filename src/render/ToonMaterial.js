@@ -163,8 +163,34 @@ const TUNE = {
      visible architecture inside a terminator soft window, KNOWN_ISSUES §8), where the
      strong lever is PostFX's splitShadowTeal. This knob ships as the fill's share of that
      package. 0 = bit-identical legacy (mix at 0 is exact); capture A/B pokes the uniform.
-     PREREG-task19.md stakes the acceptance; value lands only with the frame verdict. */
-  fillSkyMix: 0.0,
+     PREREG-task19.md stakes the acceptance; value lands only with the frame verdict.
+
+     **0.70 SHIPS.** The model above was wrong about the magnitude and the direction of its own
+     error, which is recorded rather than smoothed over: it sized this lever at 7-14 deg and
+     called the fill "REAL and INSUFFICIENT". Measured in frame (`t19ab`, one boot, identity
+     gate `maxAbsErr 2.78e-17` at all knobs 0, so the A leg is exactly the legacy chain), the
+     fill alone moves temple's shadow hue by 2-4x that: hieroglyph_wall 232 -> 218,
+     sandstone_block 256 -> 223, column_papyrus 224 -> 213, against §2.2's own shadow tint of
+     219 deg. Saturation RISES (0.213 -> 0.293, 0.235 -> 0.338), so this is violet being
+     replaced by a more saturated cool blue, not the desaturation-toward-grey KNOWN_ISSUES §3
+     warns about. Lit splits move <=2 deg on every material, so the day mood is untouched.
+     `pkg30`/`pkg50` overshoot to 195-211 — past the palette onto the cyan side — so this is
+     the weakest variant that clears the condition and it is also the best on art direction.
+     RESULT-task19.md carries the table and the falsified predictions.
+
+     The ship was held one extra capture on purpose. The acceptance required night to be
+     MEASURED, and night's only evidence was `pkg30`/`pkg50` — strictly stronger variants, so
+     night was bracketed rather than measured, and shipping on a bracket is the four-of-ten
+     move this fleet keeps refusing. `rim3`'s `fill70` leg closes it on night's own frame:
+     subject silhouette lift vs the norim floor goes 1140 px / mean 12.15 -> 1129 px / 12.00,
+     i.e. **99.0% of lifted pixels and 98.8% of mean lift retained**. Temple 104.2%/101.4%,
+     interior 99.2%/98.3%. §7.3's rim condition pays nothing anywhere.
+
+     One number here needs its caveat attached or it will mislead: this knob changes 45-90% of
+     the PIXELS in a frame, at a mean delta of 3-11 L. That is a fill term touching everything
+     slightly, and per KNOWN_ISSUES §8 it proves the knob is connected, not that it is right —
+     the load-bearing figures are the silhouette costs above and the hue table in RESULT-task19. */
+  fillSkyMix: 0.70,
 
   /* Baked aoMap strength, globally. The maps were authored while cast shadows were suppressed
      engine-wide (KNOWN_ISSUES §1), so the baked term was carrying the low frequencies as well
