@@ -1153,3 +1153,35 @@ Side fix: reused programs previously kept stale split VALUES after a rebuild (fx
 `hero.dist420` selected cascades with boot-era splits); in-place mutation closes that too.
 Verification pre-registered in `PREREG-fx7.md` (scratchpad): rebuild 420 → sweep → rebuild
 160 → sweep on one boot must reproduce `hero.full` bit-identically.
+
+## 16. Two ways a number passes while the thing it measures is still wrong
+
+Both of these were caught tonight by the agent whose own result they undercut, which is the only
+reason they are written down rather than shipped.
+
+**A region mean passes because the clean part of the region is bigger than the broken part.**
+The courtyard veil was staked as a mean lift over a frozen 109,549 px mask, and the final
+measurement cleared it: +8.96 against ≤9.5. Split by surface, the plinth and bench — the
+acceptance surface — read **+1.03 and are clean**, while the left stairs, a named residual from
+two runs earlier, read **+10.06 and are still over the stake on their own terms**. The region
+passes because the large clean area dilutes the small broken one. Both numbers are true. The
+second is the one an art director sees, because nobody looks at a frame's area-weighted mean.
+
+The lesson is not "use medians" — the median moved the same way. It is that a stake defined over
+a region silently assumes the defect is distributed like the region, and a *named* residual
+inside that region is direct evidence the assumption is false. When you already know a
+sub-population is worse, stake it separately or your headline will average it away.
+
+**A prediction chain compounds its own error and blames the model.** The same knob was predicted
+three times. Each prediction was computed from the *previous prediction*, and the endpoint missed
+by 1.47× — enough to look like the model was wrong. Recomputing one step from the last
+**measured** value instead lands at 1.06×. The model was fine; the chain was rotten. Predict from
+measurements, never from earlier predictions, and if you must chain, re-anchor every time a real
+number arrives.
+
+**A corollary about fitting, from the same run.** Fitting `lift = C + K·factor^p` to three points
+produced a tidy "3.53 of the residual is non-court" — a finding worth reporting, except that at a
+different exponent the held-out middle point is predicted exactly with `C≈0`. Three points, two
+free parameters: the fit cannot separate "there is a floor" from "the exponent is smaller here",
+and it will hand you whichever story you sampled toward. Report what both branches agree on, or
+get a fourth point.
