@@ -3,6 +3,35 @@
  * Pure read/write on files; takes no capture lock and boots nothing.
  *
  *   node tools/crop.mjs <in.png> <out.png> <x> <y> <w> <h> [zoom]
+ *
+ * ---------------------------------------------------------------------------------------------
+ * **The transform this tool does not implement is the viewing scale, and that is where its
+ * readers get hurt.** Per KNOWN_ISSUES §11, a probe is the pipeline minus some suffix; the
+ * suffix here is the magnification the frame is actually looked at. What comes out at `z` is
+ * the source pixels made `z` times larger — not what the eye resolves in the shot.
+ *
+ * **A described read is only true at the magnification it was taken at. State the zoom with
+ * the description, every time.** A texture region in this project was parked in a material note
+ * as "vertical erosion runnels", asserted at 4×. Re-read at three zooms off the same ROI of the
+ * same PNG, the same pixels are three different objects: at **8×** the vertical trains resolve
+ * and the phrase is exactly right; at **4×** — the magnification it was claimed at — they read
+ * as speckle plus two course beds and the phrase is wrong; at **2×**, nearest to how the frame
+ * is really seen, they read as weathering streaks and chipped course edges. Nothing about the
+ * data changed. Asserting a read at a magnification nobody looks at is how a wrong description
+ * survives — it is unfalsifiable at the only scale that matters, and the next reader inherits
+ * it as fact. If a claim is going to drive a change, take it at a zoom someone will actually
+ * view the shot at, and say which. (Worked example and the three reads: the
+ * `hieroglyph_wall` note in `src/textures/Materials.js`, commit `1711ca0`.)
+ *
+ * **And a crop is where *shape* claims get made — "structure, not noise", "a streak field",
+ * "a repeat" — which want a known-bad control, not an eyeball.** The cheap one is a null with
+ * the same magnitude and no structure: scatter the same pixel count at random over the same ROI
+ * and run the identical predicate. In the case above, 89.0% of the flagged pixels sat in
+ * connected components of ≥8 px, largest 784, where the scatter null put 0.0% in such
+ * components with a largest of 4 — so "structure" was measured rather than asserted. A shuffle
+ * or scatter null costs a few lines and catches the failure this repo keeps repeating: a
+ * predicate that selects *something* on any input, believed because its output looked plausible.
+ * ---------------------------------------------------------------------------------------------
  */
 import { readPNG } from './png.mjs';
 import { writeFileSync } from 'node:fs';
