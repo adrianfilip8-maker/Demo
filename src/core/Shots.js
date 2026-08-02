@@ -289,6 +289,43 @@ export const SHOTS = {
     pos: [2.21, 1.70, 33.13], target: [0.0, 0.88, 30.0], fov: 38, tod: 0.80,
     player: { pos: [0, 0, 30], yaw: 5.24, pose: 'idle_confident' },
   },
+
+  /* Character sheet in KEY light — ADDITIVE, approved by the coordinator against KNOWN_ISSUES
+     §24.5. `sly-closeup` stages him at the *western lip* of the one lit corridor the courtyard
+     has at tod 0.80 (two paving rows deep at z ≈ 30–32): measured by ray-casting the key against
+     the built level, only **37% of his camera-visible surface is key-lit and unoccluded** there,
+     with the occluders named rather than inferred — the west courtyard wall's top edge at
+     (−22.2, 8.6, 27.4), and a `bronze_dark` piece at (−2.2, 2.3, 30.0) sitting 2.2 m due west of
+     him, on the key axis at chest-to-head height. Every cel-band, fur and face judgement made on
+     `sly-closeup` is therefore a judgement of him under *fill*, and §24.5's grid says +2 m of x
+     takes the key-lit share to 52% and +4 m to 58%.
+
+     This entry is that +4 m, as a new frame instead of a moved one. `sly-closeup` is untouched
+     deliberately: it is the standing baseline half the character record is measured against, and
+     its marginal staging is now a documented property, not a defect to erase. The whole rig —
+     camera, target, player — is translated +4.0 in x together, so the 33° three-quarter view,
+     the fov 38 figure size and the verified feet-in-frame coverage are inherited rather than
+     re-derived; yaw stays 5.24 because face lighting is a function of yaw and the sun alone
+     (this file's header; the 6480-placement sweep), so the key lands 37° off his face here too —
+     but *on* him, not on the wall behind him.
+
+     Verified before first capture, per the discipline the previous entry paid for — these are
+     measured values, not the §24.5 predictions: `camclear` clear; `charvis` **100% of 500
+     samples visible**, no occluder between lens and figure; `keyocc4` at the staged position:
+     key-lit-and-visible **63%** against `sly-closeup`'s 37% in the same run — better than the
+     grid's 58% because the wall shadow's lip falls fully behind him here (unshadowed 100%
+     against 62%); full-vertex projection through the real camera at 1280x720: figure rows
+     123…639 (identical to `sly-closeup`'s, as translation guarantees), 123 px of headroom,
+     81 px of contact ground under his boots, 0 of 4746 vertices clipped.
+
+     **This is the twelfth shot, and a default `node tools/critic.mjs` with no shot names now
+     scores twelve.** The standing baseline is over ten (see `sly-profile`, the eleventh);
+     compare against it by passing the ten names explicitly, or re-baseline deliberately.
+     Nothing here changes any existing entry. */
+  'sly-key': {
+    pos: [2.4, 1.45, 33.2], target: [4.0, 0.95, 30.0], fov: 38, tod: 0.80,
+    player: { pos: [4.0, 0, 30], yaw: 5.24, pose: 'idle_confident' },
+  },
 };
 
 export const SHOT_NAMES = Object.keys(SHOTS);
