@@ -3740,6 +3740,16 @@ again at the shoulder. Replacing them with a single lofted mass is obviously the
 and **the first loft measured worse than the boxes it replaced**: swept-normal area over the figure
 fell **82.1% → 72.1%**.
 
+> **CORRECTION, added by GEOMETRY at the declaration site while sealing `PREREG-loft-dunes.md`:
+> the 82.1% / 72.1% pair above is for the FLAT-FLANK loft — the version *before* `belly` existed.
+> No measurement of the shipped `belly` loft exists anywhere in the record.** The claim that
+> `belly` repays the deficit rests on a construction argument in a source comment ("the normal
+> leaves the base tilted ~9° outward-and-down and arrives at the spring line horizontal"), which
+> is the *specified* behaviour, not the measured one. That is §18's, §50's and §51.4's failure
+> exactly — and it was caught by its own author one section after reopening someone else's item
+> for the same reason. The gap is closed by clause **L1**, which needs no lock and is registered
+> to run *before* the capture: if it fails, the `dunes` lock is to be spent on something else.
+
 The reason is exact and generalises well beyond statues. `chamferBox` **pillows its face interiors
 by about 7°**, so a "flat" box face is not flat and contributes real normal variation. A ruled
 flank on a loft turns through **precisely zero**. Swapping boxes for a straight-sided loft therefore
