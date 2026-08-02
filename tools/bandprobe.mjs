@@ -433,6 +433,23 @@ for (const c of comps.slice(0, NSITES)) {
   console.log(`       ${meshNames[c.mesh]}  box(${c.x0},${c.y0})-(${c.x1},${c.y1})  ${c.x1 - c.x0 + 1}x${c.y1 - c.y0 + 1}`);
 }
 
+/* ---- the mid-level check: is the middle tone the QUANTISER's 0.5, or an accident? ----
+ *
+ * This is the test that separates a ramp terminator from a cast-shadow edge, and it caught two
+ * false positives that the step and slope statistics both passed. With bands = 3 the quantiser
+ * emits exactly three levels — 0, 0.5, 1 — so a genuine mid band must sit near HALFWAY between
+ * the shadow and light tones. A sunlit patch edge, a mortar recess or a mis-registered shadow
+ * boundary produces a middle tone at an arbitrary fraction: the temple column site measured
+ * 0.13 and the courtyard limestone 0.25, and both are shadow edges rather than ramp bands.
+ *
+ * The frame is display-referred and AgX compresses the highlight end, which biases a true 0.5
+ * slightly UP; so the acceptance window is deliberately loose on the high side. */
+function midFraction(Lsh, Lmid, Llight) {
+  if ([Lsh, Lmid, Llight].some(isNaN)) return NaN;
+  const d = Llight - Lsh;
+  return Math.abs(d) < 1e-6 ? NaN : (Lmid - Lsh) / d;
+}
+
 /* ---- box mode: the spatial profile across one compact surface ----
  *
  * The pooled and per-mesh step tests above share a weakness worth stating: a merged bucket holds
@@ -450,6 +467,20 @@ if (BOX) {
   }
   const domMesh = [...meshHist.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
   console.log(`\n=== box (${bx0},${by0})-(${bx1},${by1})  dominant mesh ${meshNames[domMesh]} (${meshHist.get(domMesh)} px)`);
+  {
+    /* Name the site in world space. A pixel box is not a surface anyone else can find; the
+       world position and the distance from the shot camera are what make it citable. */
+    const wp = [], dd = [];
+    for (let y = by0; y <= by1; y++) for (let x = bx0; x <= bx1; x++) {
+      const q = y * W + x; if (gM[q] !== domMesh) continue;
+      wp.push([gP[q * 3], gP[q * 3 + 1], gP[q * 3 + 2]]);
+    }
+    if (wp.length) {
+      const c = [0, 1, 2].map((k) => med(wp.map((p) => p[k])));
+      const dist = Math.hypot(c[0] - cam.position.x, c[1] - cam.position.y, c[2] - cam.position.z);
+      console.log(`  world ≈ (${c[0].toFixed(1)}, ${c[1].toFixed(1)}, ${c[2].toFixed(1)})   ${dist.toFixed(1)} m from the shot camera`);
+    }
+  }
 
   /* Which screen axis does ndl vary along? Pick the one with the larger spread of column/row
      medians, so the profile is taken across the terminator rather than along it. */
@@ -545,6 +576,68 @@ if (BOX) {
     console.log(`  → in-band mean ${mi.toFixed(0)} L/ndl, across-terminator mean ${ma.toFixed(0)} L/ndl, ` +
       `RATIO ${(ma / Math.max(1e-6, mi)).toFixed(1)}×   (a smooth ramp gives ~1×)`);
   }
+}
+
+/* ---- scan mode: apply all three tests to every candidate site, one level build ----
+ *
+ * The verdict wanted is "does any surface in this frame demonstrate the triple", so the scan has
+ * to be exhaustive rather than a site I picked by eye — picking by eye is how the earlier
+ * false positives got promoted. Each component is scored on:
+ *   ratio  — |ΔL| per unit ndl across a terminator vs inside a band, matched widths (~1 = smooth)
+ *   midf   — where the middle tone sits between shadow and light (0.5 = the quantiser's level)
+ *   sep    — band separation against within-band texture IQR (<1 = buried in the noise)
+ * A site passes only if all three do. */
+if (argv.includes('--scan') || process.argv.includes('--scan')) {
+  console.log(`\n=== SCAN: every contiguous multi-band site, all three tests ===`);
+  console.log(`  pass = ratio ≥ 3, midf in [0.35,0.75], both seps ≥ 1.0`);
+  const rowsOut = [];
+  for (const c of comps) {
+    if (c.spanned < 3) continue;
+    const wpx = [];
+    const colN = [], rowN = [];
+    for (let x = c.x0; x <= c.x1; x++) { const a = []; for (let y = c.y0; y <= c.y1; y++) { const q = y * W + x; if (gM[q] === c.mesh) a.push(ndlAt(q)); } colN.push(med(a)); }
+    for (let y = c.y0; y <= c.y1; y++) { const a = []; for (let x = c.x0; x <= c.x1; x++) { const q = y * W + x; if (gM[q] === c.mesh) a.push(ndlAt(q)); } rowN.push(med(a)); }
+    const spread = (a) => { const f = a.filter((v) => !isNaN(v)); return f.length ? Math.max(...f) - Math.min(...f) : 0; };
+    const byCol = spread(colN) >= spread(rowN);
+    const prof = [];
+    const outer = byCol ? [c.x0, c.x1] : [c.y0, c.y1];
+    const inner = byCol ? [c.y0, c.y1] : [c.x0, c.x1];
+    for (let i = outer[0]; i <= outer[1]; i++) {
+      const nd = [], lm = [];
+      for (let j = inner[0]; j <= inner[1]; j++) {
+        const q = byCol ? j * W + i : i * W + j;
+        if (gM[q] !== c.mesh || lit8[q] === 2) continue;
+        const lum = lumaOf(q * img.ch); if (lum < INK) continue;
+        nd.push(ndlAt(q)); lm.push(lum);
+      }
+      if (nd.length >= 3) { prof.push({ ndl: med(nd), L: med(lm) }); wpx.push(nd.length); }
+    }
+    if (prof.length < 6) continue;
+    const at = (t) => { let b = null, bd = 1e9; for (const p of prof) { const d = Math.abs(p.ndl - t); if (d < bd) { bd = d; b = p; } } return bd < 0.05 ? b : null; };
+    const iv = (a, b) => { const pa = at(a), pb = at(b); if (!pa || !pb) return null; const dn = Math.abs(pb.ndl - pa.ndl); return dn < 0.02 ? null : { dn, dL: Math.abs(pb.L - pa.L), r: Math.abs(pb.L - pa.L) / dn }; };
+    const WD = 0.19;
+    const inL = iv(TERM_HI + WD / 2, TERM_HI + WD * 1.5);
+    const acH = iv(TERM_HI + WD / 2, TERM_HI - WD / 2);
+    const inM = iv(TERM_HI - WD / 2, TERM_LO + 0.10);
+    const acL = iv(TERM_LO + 0.10, Math.max(0.02, TERM_LO - 0.07));
+    const ib = [inL, inM].filter(Boolean).map((r) => r.r);
+    const ac = [acH, acL].filter(Boolean).map((r) => r.r);
+    if (!ib.length || !ac.length) continue;
+    const mi = ib.reduce((a, b) => a + b, 0) / ib.length, ma = ac.reduce((a, b) => a + b, 0) / ac.length;
+    const ratio = ma / Math.max(1e-6, mi);
+    const midf = midFraction(c.med[0], c.med[1], c.med[2]);
+    const pass = ratio >= 3 && midf >= 0.35 && midf <= 0.75 && c.sepLoMid >= 1 && c.sepMidHi >= 1;
+    let wx = 0, wy = 0, wz = 0, wn = 0;
+    for (let y = c.y0; y <= c.y1; y++) for (let x = c.x0; x <= c.x1; x++) { const q = y * W + x; if (gM[q] !== c.mesh) continue; wx += gP[q * 3]; wy += gP[q * 3 + 1]; wz += gP[q * 3 + 2]; wn++; }
+    rowsOut.push({ pass, ratio, midf, c, w: [wx / wn, wy / wn, wz / wn], dist: Math.hypot(wx / wn - cam.position.x, wy / wn - cam.position.y, wz / wn - cam.position.z) });
+  }
+  rowsOut.sort((a, b) => (b.pass - a.pass) || (b.ratio - a.ratio));
+  for (const r of rowsOut.slice(0, 12)) {
+    console.log(`  ${r.pass ? 'PASS' : 'fail'}  ratio ${r.ratio.toFixed(1).padStart(5)}×  midf ${isNaN(r.midf) ? ' n/a' : r.midf.toFixed(2)}  ` +
+      `sep ${r.c.sepLoMid.toFixed(1)}/${r.c.sepMidHi.toFixed(1)}  ${r.dist.toFixed(0)}m  ${meshNames[r.c.mesh]}`);
+    console.log(`        box(${r.c.x0},${r.c.y0})-(${r.c.x1},${r.c.y1})  world (${r.w[0].toFixed(1)}, ${r.w[1].toFixed(1)}, ${r.w[2].toFixed(1)})`);
+  }
+  console.log(`  ${rowsOut.filter((r) => r.pass).length} of ${rowsOut.length} three-band sites pass all three tests`);
 }
 
 /* ---- optional visual: band map + lit mask ---- */
