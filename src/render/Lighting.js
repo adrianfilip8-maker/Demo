@@ -504,6 +504,7 @@ export class Lighting {
     this._cacheEpoch = 0;              // bumped by invalidateShadowCache() and rebuilds
     this._seenEpoch = -1;
     this._staticSig = NaN;             // NaN ≠ NaN → first engaged frame always refreshes
+    this._memberSig = undefined;       // census membership hash; undefined ⇒ first census resets
     this._staticCasters = null;        // [{ mesh }] — layer-tagged at census time
     this._dynCount = 0;
     this._cachePoll = 0;
@@ -1353,9 +1354,11 @@ export class Lighting {
    *      legacy cost, never a stale map;
    *   3. static-set membership — census re-runs on a slow beat (%8, the _buildShafts
    *      cadence); a removed/reparented mesh trips the per-frame fingerprint immediately;
-   *   4. static motion or state — per-frame fingerprint over matrixWorld, castShadow,
-   *      material.side and EFFECTIVE visibility (own flag AND every ancestor's, because
-   *      zone reveals toggle group visibility, not mesh visibility);
+   *   4. static motion, state or geometry — per-frame fingerprint over matrixWorld,
+   *      castShadow, material.side, EFFECTIVE visibility (own flag AND every ancestor's,
+   *      because zone reveals toggle group visibility, not mesh visibility), and geometry
+   *      content (object id, index/position versions, drawRange — an in-place edit that
+   *      bumps no version is trigger 7's job, a raw typed-array write is invisible here);
    *   5. quality / cascade rebuild — _rebuildForQuality disposes the cache first;
    *   6. map reallocation — the live shadow.map's identity is part of the key;
    *   7. anything else — invalidateShadowCache() for agents mutating what the census
@@ -1413,20 +1416,28 @@ export class Lighting {
          always contributes at least the +11, so any flip in either direction moves `sig`. */
       if (!vis) continue;
       const e = m.matrixWorld.elements;
-      /* KNOWN GAP, recorded deliberately rather than fixed (ledger #20, coordinator
-         concurred). This fingerprint covers a static's TRANSFORM, visibility, castShadow,
-         material side and instance matrices — it does NOT cover its GEOMETRY. A mesh that
-         keeps its transform while its position buffer is rewritten in place (morphing,
-         a rebuilt BufferGeometry assigned to a live mesh, an edited instance layout that
-         does not bump instanceMatrix.version) hashes identically and keeps a stale shadow.
-         Latent today because the world builds its statics once at init and never touches
-         them afterwards — which is exactly the condition that makes it cheap to record and
-         expensive to discover later, as a shadow map nobody can explain. If a static ever
-         becomes geometry-dynamic, hash `geometry.uuid` plus the position attribute's
-         `version` here, or call `invalidateShadowCache()` from whatever rewrote it. */
+      /* Geometry-content terms (PREREG-fingerprint-geometry.md — closes what was recorded
+         here as a KNOWN GAP under ledger #20). A static whose GEOMETRY is edited while its
+         transform stands still — position attribute rewritten in place, index buffer
+         swapped, drawRange changed, or the whole geometry object replaced — must
+         invalidate like a moved one, or it serves the OLD shape's shadow indefinitely:
+         §15's exact failure shape, latent only because today's world builds statics once.
+         `id` catches replacement, the two `version`s catch in-place edits (three bumps
+         them on `needsUpdate`), and drawRange catches partial-draw changes. drawRange's
+         default count is Infinity, and Infinity in the sum would freeze `sig` at Infinity
+         — equal to itself forever, hiding every LATER edit — so it maps to −1, finite and
+         distinct from any real count ≥ 0. All reads, ~5 flops on the existing loop.
+         An in-place edit that bumps no version still needs `invalidateShadowCache()`,
+         same as before — no fingerprint can see a raw typed-array write. */
+      const g = m.geometry;
+      const drc = g ? (g.drawRange.count === Infinity ? -1 : g.drawRange.count) : 0;
       sig += e[12] * 3.1 + e[13] * 5.7 + e[14] * 7.3 + e[0] + e[5] + e[10]
            + 11 + (m.castShadow ? 17 : 0) + (m.material?.side ?? 0) * 23
-           + (m.isInstancedMesh ? m.instanceMatrix.version * 29 : 0);
+           + (m.isInstancedMesh ? m.instanceMatrix.version * 29 : 0)
+           + (g ? g.id * 31 + (g.index ? g.index.version : 0) * 37
+                + (g.attributes.position ? g.attributes.position.version : 0) * 41
+                + g.drawRange.start * 43 + drc * 47
+              : 0);
     }
     const dirty = !(sig === this._staticSig) || this._seenEpoch !== this._cacheEpoch;
 
@@ -1497,7 +1508,31 @@ export class Lighting {
       statics.push(o);
     });
     this._dynCount = dyn;
-    this._staticSig = NaN;              // set membership changed ⇒ next compare refreshes
+    /* Reset the fingerprint ONLY when the membership actually changed.
+       This line used to be an unconditional `this._staticSig = NaN`, which made every 8th
+       frame dirty regardless of whether anything moved — the census runs on a `%8` beat, and
+       NaN never compares equal, so each census forced a full static refresh in every cached
+       cascade. Measured on a static camera with a quiescent world: 26 refreshes per 100
+       frames, i.e. the cache was paying its full bill on 12.5% of frames for nothing. It also
+       made the V3 null control's pass band arithmetically unreachable, so that control could
+       not discriminate any fingerprint implementation from any other.
+       The reset was never the detector: the per-frame loop above iterates `_staticCasters`
+       itself, so an appearing member adds its transform + visibility terms and a vanishing one
+       stops contributing — membership moves `sig` on the very next frame anyway, and a removed
+       mesh trips the `!m.parent` guard even earlier. This hash only closes the one gap that
+       leaves: a float sum can in principle collide across a swap, so `h` is a different
+       function of a different input (identity and order, not transforms) and a masked change
+       must defeat both at once. `o.id` is three's monotonic per-object counter, never reused
+       in a session; the polynomial is order-sensitive, so an add, a removal, a substitution, a
+       side-class change or a reparent that reorders traversal all move it. */
+    let h = 0x9e37 | 0;
+    for (let k = 0; k < statics.length; k++) {
+      const o = statics[k];
+      h = (Math.imul(h, 31) + o.id) | 0;
+      h = (Math.imul(h, 31) + ((o.material?.shadowSide ?? o.material?.side ?? 0) | 0)) | 0;
+    }
+    h = (Math.imul(h, 31) + statics.length) | 0;
+    if (h !== this._memberSig) { this._memberSig = h; this._staticSig = NaN; }
   }
 
   _cacheDepthMat(side) {
@@ -1610,6 +1645,11 @@ export class Lighting {
     this._cacheEngaged = false;
     this._cacheEpoch++;
     this._staticSig = NaN;
+    /* Cleared so a rebuilt cache re-censuses from scratch: without this, a dispose followed by
+       an identical set would hash equal and skip its reset. Harmless today (the `_staticSig`
+       above already forces the next frame dirty) — set explicitly so the property the census
+       fix is documented to rely on does not depend on that coincidence holding. */
+    this._memberSig = undefined;
     this._staticCasters = null;
   }
 
