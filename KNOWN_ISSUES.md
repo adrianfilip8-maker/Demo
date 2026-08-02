@@ -4944,9 +4944,30 @@ sandstone's albedo is G/R **0.483**; the only albedo-free term is the wash at 11
 `#2a3f66` has G/R 1.42 against B/R 3.2. **Green is last because it is poor in both factors.**
 
 Two recorded claims are contradicted by single-stage toggles: turning the split-tone **off** moves
-hue 266 → **278**, i.e. *toward* magenta — §8 names the split as the term making green darkest, and
+hue 266 → **278**, i.e. *toward* magenta — the split is named as the term making green darkest, and
 **the sign is the other way.** Wash off gives 277, also worse. *Reaching for `shadowWash` here will
 move the image and make it worse.*
+
+**Correction to this subsection, made when the coordinator acted on it: §8 was already fixed, and
+the site that still carried the wrong sign was in `src/render/PostFX.js`.** The sentence above
+sent a reader to §8's declaration site to correct something corrected there at **`a216439`
+(03:28)** — §8 now records the same toggle, the same 266 → 278, and the same albedo-multiply
+attribution. rim4 is therefore an *independent reproduction* of a standing correction, not a new
+finding, and that is how it should be quoted.
+
+What the sweep did find still live is a **quotation** of §8's withdrawn sentence, at
+`PostFX.js`'s `splitShadowTeal` — the comment an agent reads immediately before turning task
+#19's teal blend up. It cited "the term actually making green the darkest channel" as the reason
+the blend was worth taking, three lines under its own gains `(0.914, 0.999, 1.265)`, whose G/R is
+**1.09**. Now corrected in place, with the lever's *direction* explicitly preserved (turquoise is
+G-rich; the corridor model is the evidence, the withdrawn sentence never was).
+
+**The general shape, which is the part worth carrying:** a retraction lands at its declaration
+site, and the *citations* of it do not move. Grepping for the corrected claim finds the fixed
+site and reports success; only grepping for the **words of the withdrawn sentence** finds the
+copies. §7 already records "when a bug has a shape, grep for the shape" — this is the same rule
+for prose, and a quoted claim in a `TUNE` comment is worse than one in the ledger, because it sits
+where the knob is.
 
 The registered **≤226° acceptance is not reachable with these levers** — the strongest combination
 lands at frame-predicted 233/247/237. Either the levers are insufficient or the model→frame offset

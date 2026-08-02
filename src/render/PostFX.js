@@ -478,8 +478,27 @@ const TUNE = {
   splitHighlight: 0xffd9a0,        // §2.2 sun
   /* Task #19: blend of splitShadow toward §2.2 TURQUOISE #2fa8a0. The cool leg is built
      from splitShadow at unit luminance — #2a3f66 gives per-channel (0.914, 0.999, 1.265):
-     it cuts R, feeds B and leaves G alone, which KNOWN_ISSUES §8 already names as "the
-     term actually making green the darkest channel". On the terminator-corridor population
+     it cuts R, feeds B and leaves G alone.
+
+     **The sentence that used to follow those numbers had the sign backwards, and it was
+     quoting a claim that has since been withdrawn at its own site.** It read: "which
+     KNOWN_ISSUES §8 already names as the term actually making green the darkest channel."
+     §8's declaration site now carries the opposite finding, by toggle rather than by
+     coefficient-reading: switch the split off and shadow hue moves 266° -> 278°, i.e.
+     *toward* magenta, so the split is COMPENSATING, not causing (rim4 reproduced this
+     independently; KNOWN_ISSUES §61.7). The arithmetic on this very line says so too and
+     always did — G/R of the cool leg is 0.999/0.914 = **1.09**, so leaving G alone while
+     cutting R *raises* G relative to R. A term whose gains are (0.914, 0.999, 1.265) cannot
+     be what makes green darkest; that is the albedo multiply, which carries sandstone's own
+     G/R 0.483 across 88.4% of shadow-side radiance.
+
+     What survives unchanged is the *direction* of this lever: turquoise is G-rich, so
+     blending toward it still raises G on the cool leg, which is still the thing the shadow
+     violet wants. What does NOT survive is the justification — do not defend a teal blend by
+     saying it repairs a green suppression this term causes, because it does not cause one.
+     The corridor model below is the evidence for the lever; the withdrawn sentence never was.
+
+     On the terminator-corridor population
      (partial warm key crossfading with teal shadow — the centre of mass of temple's
      233-256 shadow violet; the shot holds ~43% of its visible architecture inside a
      terminator soft window) this is the strongest single lever in this file: the corridor
