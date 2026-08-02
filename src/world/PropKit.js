@@ -357,6 +357,169 @@ export function post(h, r0, r1, opts = {}) {
   return g;
 }
 
+/* ======================= lofted animal bodies ========================== */
+
+/**
+ * A body lofted along +Z from a run of D-shaped cross sections.
+ *
+ * This exists because of a measurement, not a preference. A recumbent sphinx built the way
+ * everything else here is built — `chunkAt` for the barrel, another for the haunch, a third
+ * for the chest — puts **62.1% of its whole surface area on six normal directions** (measured
+ * by area-weighted normal clustering over the built geometry; the seated colossus, which is
+ * the same idiom with heavier chamfers, scores 46.2%). Six directions is five plateaux and a
+ * silhouette: the 3-band cel ramp lands each slab wholly inside one band, so no terminator can
+ * fall anywhere on the animal, and the critic's read — "the statues are stacked boxes" — is
+ * the correct description of what the geometry is.
+ *
+ * The section is a **D**: flat bottom (it is carved down onto a plinth), near-vertical flanks,
+ * and a superellipse arc over the back. The arc is where the whole value is. Its normal turns
+ * continuously from (±1,0) at the spring line to (0,1) at the crown, so a light at any
+ * elevation crosses both band edges *somewhere* on the back, and the terminator sweeps the
+ * length of the animal instead of stopping at an arris. The flank meets the arc C1 by
+ * construction — at the spring point the arc's own normal is already (±1,0) — so there is no
+ * seam where the two meet and nothing to weld.
+ *
+ * `n` is the superellipse exponent: 2 is a true ellipse, large is a box. Egyptian animal
+ * sculpture is carved out of a rectangular block and keeps a slab-sidedness that a pure
+ * ellipse loses, so the default 2.6 is deliberately squarer than a real cat.
+ *
+ * Triangles are spent only where they buy normal turn: `arc` subdivides the back, and there
+ * is no subdivision along the flat flanks or between sections beyond the sections themselves.
+ * `floor` defaults **off** — a body sitting on a plinth never shows its underside, and the
+ * bottom strip is the one part of the ring that is pure cost.
+ *
+ * The flank is **not** a straight vertical plane, and that is load-bearing rather than a
+ * flourish. Built with flat flanks this shape measured *worse* than the three chunks it
+ * replaced — swept-normal area over the figure fell 82.1% → 72.1% — because `chamferBox`
+ * pillows its face interiors by ~7° while a ruled flank turns through exactly zero. A flank is
+ * the largest single area on the animal, so a flat one dominates whatever the back is doing.
+ * `belly` gives it a shallow barrel that narrows toward the plinth: the normal leaves the base
+ * tilted ~9° outward-and-down and arrives at the spring line horizontal, so the whole flank
+ * carries a gradient and the undercut reads as carved stone standing off its own base.
+ *
+ * sections: [{ z, w, y0, top, spring?, n?, dx? }]
+ *   z      position along the run          w    half-width at this station
+ *   y0     the flat underside              top  the crown of the back
+ *   spring fraction of (top−y0) where the flank turns into the arc (default 0.42)
+ *   n      superellipse exponent (default 2.6)     dx  lateral drift of this station's centre
+ */
+export function loft(sections, opts = {}) {
+  const {
+    arc = 9, rng, wobble = 0, capFront = true, capBack = true, floor = false,
+    flankSeg = 3, belly = 0.06,
+  } = opts;
+  if (!sections || sections.length < 2) return null;
+
+  const pos = [], nor = [], idx = [];
+  const rings = [];
+
+  /* One station's ring, walked anticlockwise seen from +Z: right flank bottom, up to the
+     right spring, over the back, down to the left spring, left flank bottom. Positions and
+     normals are both analytic — `computeVertexNormals` would average the arc into facets and
+     throw away exactly the continuity this shape exists to provide. */
+  for (let s = 0; s < sections.length; s++) {
+    const S = sections[s];
+    const spring = S.spring ?? 0.42;
+    const n = S.n ?? 2.6;
+    // Per-station drift so a run of these is not a machined extrusion (§7.3 irregularity).
+    const wob = wobble && rng ? 1 + rng.jitter(wobble) : 1;
+    const w = S.w * wob, cx = S.dx || 0;
+    const yS = S.y0 + (S.top - S.y0) * spring;     // spring line: flank ends, arc begins
+    const hA = S.top - yS;                          // arc height
+    const ring = [];
+
+    /* Barrelled flank, base → spring. x narrows toward the plinth by `belly`; the normal is
+       the in-plane perpendicular of that curve, so it turns continuously instead of being
+       the single (±1,0) a ruled flank would carry. */
+    const flank = (sx, up) => {
+      const outp = [];
+      for (let i = 0; i <= flankSeg; i++) {
+        const k = up ? i / flankSeg : 1 - i / flankSeg;
+        const shrink = belly * Math.pow(1 - k, 1.7);
+        const dxdk = w * belly * 1.7 * Math.pow(Math.max(0, 1 - k), 0.7);
+        const dydk = yS - S.y0;
+        const nl = Math.hypot(dydk, dxdk) || 1;
+        outp.push({
+          p: [cx + sx * w * (1 - shrink), S.y0 + (yS - S.y0) * k, S.z],
+          n: [(sx * dydk) / nl, -dxdk / nl, 0],
+        });
+      }
+      return outp;
+    };
+
+    for (const v of flank(1, true)) ring.push(v);   // +X flank, base up to the spring
+    for (let i = 1; i < arc; i++) {                 // the back, spring to spring (ends shared)
+      const t = (i / arc) * Math.PI;                // 0 = +X spring, π = −X spring
+      const ct = Math.cos(t), st = Math.sin(t);
+      const sx = ct >= 0 ? 1 : -1;
+      const ax = Math.pow(Math.abs(ct), 2 / n), ay = Math.pow(Math.abs(st), 2 / n);
+      /* Implicit form |x/w|^n + |y/hA|^n = 1 ⇒ gradient ∝ (|x/w|^(n−1)·sgn(x)/w,
+         |y/hA|^(n−1)/hA). Substituting the parameterisation gives the exponents below. */
+      const gx = (sx * Math.pow(Math.abs(ct), 2 * (n - 1) / n)) / w;
+      const gy = Math.pow(Math.abs(st), 2 * (n - 1) / n) / hA;
+      const gl = Math.hypot(gx, gy) || 1;
+      ring.push({ p: [cx + w * sx * ax, yS + hA * ay, S.z], n: [gx / gl, gy / gl, 0] });
+    }
+    for (const v of flank(-1, false)) ring.push(v); // −X flank, spring back down to the base
+    if (floor) {
+      // Only reachable when the underside is genuinely seen; otherwise these two never exist.
+      ring.push({ p: [cx - w, S.y0, S.z], n: [0, -1, 0] });
+      ring.push({ p: [cx + w, S.y0, S.z], n: [0, -1, 0] });
+    }
+    rings.push(ring);
+  }
+
+  /* Longitudinal correction: the section normals are all in-plane, but the body tapers, so
+     the real surface tilts along Z. Project each normal off the along-run tangent through the
+     same ring index — that is what stops a tapering loft from shading like a straight tube. */
+  for (let s = 0; s < rings.length; s++) {
+    const prev = rings[Math.max(0, s - 1)], next = rings[Math.min(rings.length - 1, s + 1)];
+    for (let i = 0; i < rings[s].length; i++) {
+      const a = prev[i].p, b = next[i].p;
+      let tx = b[0] - a[0], ty = b[1] - a[1], tz = b[2] - a[2];
+      const tl = Math.hypot(tx, ty, tz);
+      if (tl < 1e-9) continue;
+      tx /= tl; ty /= tl; tz /= tl;
+      const nv = rings[s][i].n;
+      const dot = nv[0] * tx + nv[1] * ty + nv[2] * tz;
+      const ox = nv[0] - dot * tx, oy = nv[1] - dot * ty, oz = nv[2] - dot * tz;
+      const ol = Math.hypot(ox, oy, oz);
+      if (ol > 1e-6) rings[s][i].n = [ox / ol, oy / ol, oz / ol];
+    }
+  }
+
+  const push = (v) => { pos.push(v.p[0], v.p[1], v.p[2]); nor.push(v.n[0], v.n[1], v.n[2]); return pos.length / 3 - 1; };
+  for (let s = 0; s < rings.length - 1; s++) {
+    const A = rings[s], B = rings[s + 1];
+    for (let i = 0; i < A.length - 1; i++) {
+      const a = push(A[i]), b = push(A[i + 1]), c = push(B[i + 1]), d = push(B[i]);
+      idx.push(a, b, c, a, c, d);
+    }
+  }
+  /* Caps: a fan to the station centroid. Flat, and always buried inside a neighbouring mass
+     (a chest into the shoulders, a rump into the haunch), so they exist for watertightness
+     rather than to be looked at. */
+  const cap = (ring, sign) => {
+    let cx = 0, cy = 0, cz = ring[0].p[2];
+    for (const v of ring) { cx += v.p[0]; cy += v.p[1]; }
+    cx /= ring.length; cy /= ring.length;
+    const nn = [0, 0, sign];
+    const ci = push({ p: [cx, cy, cz], n: nn });
+    for (let i = 0; i < ring.length - 1; i++) {
+      const a = push({ p: ring[i].p, n: nn }), b = push({ p: ring[i + 1].p, n: nn });
+      if (sign > 0) idx.push(ci, a, b); else idx.push(ci, b, a);
+    }
+  };
+  if (capBack) cap(rings[0], -1);
+  if (capFront) cap(rings[rings.length - 1], 1);
+
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  geo.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
+  geo.setIndex(idx);
+  return boxProjectUVs(geo);
+}
+
 /* ============================ pottery ================================== */
 
 /**

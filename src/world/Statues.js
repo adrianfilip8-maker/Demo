@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { Bag, chunk, chunkAt, wedge, place, boxProjectUVs, collar } from './PropKit.js';
+import { Bag, chunk, chunkAt, wedge, place, boxProjectUVs, collar, loft } from './PropKit.js';
 
 /**
  * Statues — the figurative sculpture of the Temple of Ra.
@@ -79,8 +79,14 @@ function nemes(bag, { w, browY, topY, faceZ, backZ, stripes = 8, rng, lappetDrop
   for (let i = 0; i < steps; i++) {
     const t = i / steps, t1 = (i + 1) / steps;
     const ww = w * (1.34 - t * 0.30);
+    /* The three terraces are deliberate (§2.4 wants the ink line to read three steps, not one
+       dome) — but each terrace was a flat-topped slab, so the whole headdress landed in a
+       single band and the crown had no modelling at all. `round` domes each terrace's top and
+       a chamfer three times the old one turns the arris over ~10 cm of real width. The steps
+       survive in the silhouette; the faces stop being plateaux. */
     bag.add(crownKey, chunkAt(-ww / 2, ww / 2, browY + crownH * t, browY + crownH * t1,
-      backZ - 0.10 * w, faceZ - t * 0.16 * w, { rng, jitter: 0.012 * w, round: 0.05 * w, c: 0.055 * w }));
+      backZ - 0.10 * w, faceZ - t * 0.16 * w,
+      { rng, jitter: 0.012 * w, round: 0.13 * w, c: 0.10 * w }));
   }
   // Brow band, the fillet the uraeus sits on. Gold, always — it frames the face.
   bag.add('gold', chunkAt(-w * 0.72, w * 0.72, browY - crownH * 0.16, browY + crownH * 0.06,
@@ -92,7 +98,11 @@ function nemes(bag, { w, browY, topY, faceZ, backZ, stripes = 8, rng, lappetDrop
   const drop = lappetDrop ?? crownH * 1.9;
   for (const sx of [-1, 1]) {
     const x0 = sx * w * 0.52, x1 = sx * w * 1.02;
-    const g = chunk(Math.abs(x1 - x0), drop, w * 0.42, { rng, jitter: 0.01 * w, taper: -0.16 * w, chip: sx > 0 ? 0.06 * w : 0, c: 0.05 * w });
+    /* Lappets are two of the largest flat plates on any of these figures and they sit on the
+       silhouette either side of the face. `round` gives the cloth a fall away from the jaw and
+       the chamfer widens to match the crown's. */
+    const g = chunk(Math.abs(x1 - x0), drop, w * 0.42,
+      { rng, jitter: 0.01 * w, taper: -0.16 * w, round: 0.07 * w, chip: sx > 0 ? 0.06 * w : 0, c: 0.09 * w });
     place(g, { x: (x0 + x1) / 2, y: browY - drop * 0.5, z: faceZ - w * 0.12, rz: sx * D(2.5) });
     bag.add('gold', g);
     for (let i = 0; i < stripes; i++) {
@@ -223,13 +233,32 @@ export function sphinx(opts = {}) {
   const bag = new Bag();
   const R = rng;
 
-  /* plinth */
-  bag.add('lime', chunkAt(-1.15, 1.15, 0, 0.72, -2.55, 2.35, { rng: R, jitter: 0.03, chip: worn * 0.16, c: 0.06 }));
-  bag.add('lime', chunkAt(-1.22, 1.22, 0.66, 0.84, -2.62, 2.42, { rng: R, jitter: 0.02 }));
+  /* plinth. The cap slab is 19.4% of the whole animal's surface area — measured, and it was
+     carrying it on twelve unchamfered triangles, which made it the single largest flat
+     population on the piece. It gets a real arris. */
+  bag.add('lime', chunkAt(-1.15, 1.15, 0, 0.72, -2.55, 2.35, { rng: R, jitter: 0.03, chip: worn * 0.16, c: 0.09 }));
+  bag.add('lime', chunkAt(-1.22, 1.22, 0.66, 0.84, -2.62, 2.42, { rng: R, jitter: 0.02, c: 0.07 }));
 
-  /* body: long, low, tapering to the haunch */
-  bag.add('lime', chunkAt(-0.80, 0.80, 0.84, 1.92, -2.05, 0.95, { rng: R, jitter: 0.025, taper: 0.14, c: 0.10 }));
-  bag.add('lime', chunkAt(-0.86, 0.86, 0.84, 2.05, -2.15, -0.55, { rng: R, jitter: 0.03, round: 0.18, c: 0.14 }));   // haunches
+  /* ---- body: haunch, barrel and chest as ONE lofted mass ----
+     Three stacked `chunkAt` slabs used to do this job and the join between them was a hard
+     arris across the animal's back at the waist and again at the shoulder. Lofting it puts a
+     continuous curve from rump to chest with the back's normal turning through the whole
+     quarter-circle, which is what the cel ramp needs to draw a terminator anywhere on it.
+     The front sections keep y0 on the plinth: a sphinx's chest is a wall that comes down
+     between the forelegs, not a box resting on the barrel. */
+  bag.add('lime', loft([
+    { z: -2.18, w: 0.72, y0: 0.84, top: 1.82, n: 2.4 },
+    { z: -1.78, w: 0.90, y0: 0.84, top: 2.06, n: 2.3 },   // haunch, the widest station
+    { z: -1.12, w: 0.87, y0: 0.84, top: 2.00, n: 2.4 },
+    { z: -0.42, w: 0.79, y0: 0.84, top: 1.89, n: 2.6 },   // waist
+    { z:  0.22, w: 0.80, y0: 0.84, top: 1.93, n: 2.6 },
+    { z:  0.74, w: 0.84, y0: 0.84, top: 2.16, n: 2.7 },   // shoulder
+    /* The last two stations square up (n 3.6, 4.2) and flatten their spring line. A rounded
+       crown here left the head sitting on a curve and opened a gap under its outer edges;
+       the neck platform has to be flat enough to actually carry it. */
+    { z:  1.06, w: 0.80, y0: 0.84, top: 2.32, n: 3.6, spring: 0.55 },
+    { z:  1.26, w: 0.70, y0: 0.84, top: 2.36, n: 4.2, spring: 0.60 },   // chest front
+  ], { arc: 9, rng: R, wobble: 0.035, capBack: true, capFront: true }));
   for (const sx of [-1, 1]) {
     bag.add('lime', chunkAt(sx * 0.32, sx * 0.92, 0.84, 1.45, -2.30, -1.35, { rng: R, jitter: 0.02, round: 0.12, c: 0.08 }));
     /* forelegs run right out to the front of the plinth — the classic sphinx read */
@@ -245,12 +274,9 @@ export function sphinx(opts = {}) {
       { x: 0.72 + Math.sin(i * 0.9) * 0.24, y: 1.0 + i * 0.12, z: -1.95 + i * 0.34, ry: D(30 + i * 22) }));
   }
 
-  /* chest rising into the shoulders */
-  bag.add('lime', chunkAt(-0.78, 0.78, 1.60, 2.30, 0.35, 1.20, { rng: R, jitter: 0.02, taper: -0.14, c: 0.09 }));
-
   /* head — oversized on purpose */
   const CHIN = 2.34, BROW = 3.02, TOP = 3.44;
-  bag.add('lime', chunkAt(-0.50, 0.50, CHIN, 3.10, -0.15, 1.25, { rng: R, jitter: 0.015, round: 0.10, c: 0.06 }));
+  bag.add('lime', chunkAt(-0.50, 0.50, CHIN, 3.10, -0.15, 1.25, { rng: R, jitter: 0.015, round: 0.14, c: 0.11 }));
   carveFace(bag, { w: 1.0, h: 0.80, y0: CHIN, z: 1.24, rng: R, brows: false });
   nemes(bag, { w: 1.02, browY: BROW, topY: TOP, faceZ: 1.28, backZ: -0.30, stripes: 5, rng: R, lappetDrop: 1.30 });
   uraeus(bag, { s: 0.7, y: BROW - 0.02, z: 1.34, rng: R });
