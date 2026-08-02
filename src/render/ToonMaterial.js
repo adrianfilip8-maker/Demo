@@ -192,6 +192,28 @@ const TUNE = {
      the load-bearing figures are the silhouette costs above and the hue table in RESULT-task19. */
   fillSkyMix: 0.70,
 
+  /* Grade-lever scaffolding (scratchpad/PREREG-creamfix.md; blueskew/coolskew verdict —
+     the character's authored warm cream displays teal in fill+shadow, and the blind
+     comparison convicted the light+grade chain, per-term B shares shadowMul 66 / fill 29 /
+     wash 5). Three knobs, every default 0 = bit-identical legacy (mix at 0 exact):
+
+     neutralShadow / neutralFill — ATTRIBUTION ARMS, never ship. Lerp uShadowColor (the wash
+     follows it) / the hemispheric fill toward luma-matched grey, globally. Together with
+     PostFX pokes (saturation 1, splitStrength 0, aoTintNeutral 1) they are TEXTURES'
+     registered "neutral arm" (PREREG-blueskew-albedo §4); separately they are the
+     single-knob legs its gate-fail branch reads against the B shares.
+
+     subjWarmShade — THE FIX CANDIDATE. vSlySkin-scoped in the shader (skinned draws only:
+     Sly and the guards; architecture is bit-identical by construction), lerps the chroma of
+     both shade-side lights toward luma-matched PAL.wrapWarm on the subject. Modelled in
+     scratchpad/creammodel.mjs (validated t16chain2 transcription): cream crosses the
+     authored floor corridor b−r [−25,−16] at ≈ 0.45–0.52, rings stay cool (+30 at 0.5),
+     luminance moves < 2% (luma-matched by construction). Night is DIRECTION-modelled only
+     and renders FIRST in the A/B. Ships only with PREREG-creamfix.md's frame verdict. */
+  neutralShadow: 0.0,
+  neutralFill: 0.0,
+  subjWarmShade: 0.0,
+
   /* Baked aoMap strength, globally. The maps were authored while cast shadows were suppressed
      engine-wide (KNOWN_ISSUES §1), so the baked term was carrying the low frequencies as well
      as the contact scale. Shadows work now and the critic caught the consequence: occlusion
@@ -540,6 +562,11 @@ export class Shading {
       uBounceColor:  { value: new THREE.Color(PAL.bounce) },
       uBounceGain:   { value: TUNE.bounceGain },
       uFillSkyMix:   { value: TUNE.fillSkyMix },
+      /* Grade-lever scaffolding — shared by identity like uDetail2Scale, so a one-boot A/B
+         pokes `shading.uniforms.uX.value` and the whole scene follows. Defaults 0 = legacy. */
+      uNeutralShadow: { value: TUNE.neutralShadow },
+      uNeutralFill:  { value: TUNE.neutralFill },
+      uSubjWarmShade: { value: TUNE.subjWarmShade },
       uAmbIntensity: { value: TUNE.ambIntensity },
       uShadowColor:  { value: new THREE.Color(0x000000) },
       uShadowWash:   { value: TUNE.shadowWash },

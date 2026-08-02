@@ -212,6 +212,12 @@ const TUNE = {
      the composite re-reads it every frame. Modelled in scratchpad/t19corridor.mjs; ships
      only with PREREG-task19.md's frame verdict. */
   aoTintTeal: 0.0,
+  /* Neutral-arm scaffolding for the grade-lever prereg (scratchpad/PREREG-creamfix.md):
+     blend of aoTint toward WHITE before the peak-normalise — at 1.0 the AO composite stops
+     imposing chroma entirely. NEVER ships; it exists so the attribution arm ("neutralise the
+     shadow-regime grade", PREREG-blueskew-albedo §4) can be produced in one boot alongside
+     saturation/splitStrength pokes. 0 = bit-identical legacy (lerp at 0 exact). */
+  aoTintNeutral: 0.0,
 
   /* --- bloom ---
      §7.3 wants "a tight coloured halo on bright things", not a wash. At threshold 1.02 with
@@ -278,6 +284,23 @@ const TUNE = {
      composite/raw all sample .rgb only). Arms {0, 4, 12, 24} registered in
      scratchpad/PREREG-goldhalo.md; do not ship a nonzero value without that A/B's verdict. */
   bloomMetalGain: 0,
+  /* Metal-aware bloom ONSET (KNOWN_ISSUES §25 amendment; the gain formulation above was
+     measured dead in RESULT-goldhalo.md — at the shipped onset the hottest gilded pixel sits
+     at w ≈ 0.004, and a gain multiplies nearly-nothing). This is the redesign with measured
+     headroom: the per-pixel threshold becomes T − cut·metal, so full-metal pixels feed from
+     scene (T − cut) − knee while stone keeps the shipped 1.90 onset untouched.
+
+     Arithmetic at the §25/RESULT-goldhalo anchors (scratchpad/onsetcalc.mjs): at cut 1.0
+     (Tmetal 1.20) the bright gilded cohort u 1.2–2.0 feeds w 0.06–0.40 against 0.000–0.004
+     shipped, while temple's architrave body (u ≈ 0.5) stays at w = 0 exactly at every arm —
+     the feed onset never drops below 0.90. The "whole architraves glow uniformly" failure
+     §25 declined on the mip route is excluded by the same arithmetic that closed goldhalo.
+
+     0 = exact no-op: t = uThreshold.x − 0·m ≡ uThreshold.x in IEEE for finite m, and every
+     line downstream is textually the arithmetic it was before. Arms {0, 0.70, 0.85, 1.00}
+     (Tmetal {off, 1.50, 1.35, 1.20}) registered in scratchpad/PREREG-goldonset.md; do not
+     ship a nonzero value without that A/B's verdict. */
+  bloomMetalCut: 0,
 
   /* --- grade --- */
   // Was lifted to 1.45 to fight darkness that turned out to be the AO feedback bug below.
@@ -690,19 +713,25 @@ varying vec2 vUv;
 uniform sampler2D uScene;
 uniform vec2 uThreshold;   // threshold, knee
 uniform float uMetalBloom; // metal feed gain; 0 = exact no-op (see TUNE.bloomMetalGain)
+uniform float uMetalCut;   // metal onset cut; 0 = exact no-op (see TUNE.bloomMetalCut)
 void main() {
   vec4 s = texture2D( uScene, vUv );
   vec3 c = s.rgb;
   float l = max( c.r, max( c.g, c.b ) );
+  // Scene alpha is 1 - slyMetal on opaque toon draws and 1 on every other path (see
+  // TUNE.bloomMetalGain), so unflagged content decodes to metal 0 on every failure path.
+  float m = clamp( 1.0 - s.a, 0.0, 1.0 );
+  // Metal-aware onset (TUNE.bloomMetalCut): metal pixels see a lower threshold, stone sees
+  // uThreshold.x untouched. At uMetalCut = 0, t == uThreshold.x exactly (0*m = 0, x-0 = x).
+  float t = uThreshold.x - uMetalCut * m;
   // Soft knee, so a surface drifting past the threshold ramps in instead of snapping on.
   float k = uThreshold.y;
-  float soft = clamp( l - uThreshold.x + k, 0.0, 2.0 * k );
+  float soft = clamp( l - t + k, 0.0, 2.0 * k );
   soft = soft * soft / ( 4.0 * k + 1e-5 );
-  float w = max( soft, l - uThreshold.x ) / max( l, 1e-5 );
-  // Metal-aware gain. Scene alpha is 1 - slyMetal on opaque toon draws and 1 on every other
-  // path (see TUNE.bloomMetalGain), so unflagged content decodes to metal 0 and w is exact.
-  // Multiplies w, never the onset: below-onset pixels stay at w = 0 at any gain.
-  w *= 1.0 + uMetalBloom * clamp( 1.0 - s.a, 0.0, 1.0 );
+  float w = max( soft, l - t ) / max( l, 1e-5 );
+  // Metal-aware gain. Multiplies w, never the onset: below-onset pixels stay at w = 0 at
+  // any gain. (Measured inert at the shipped onset — RESULT-goldhalo; kept for the record.)
+  w *= 1.0 + uMetalBloom * m;
   gl_FragColor = vec4( c * w, 1.0 );
 }
 `;
@@ -988,6 +1017,7 @@ function tintColor(col) {
    below already works that way; the colours were constructor-only, which is exactly the
    "knob you cannot A/B costs capture cycles" trap TUNE exists to avoid). Hoisted per §5. */
 const _turqTint = new THREE.Color(0x2fa8a0);   // §2.2 TURQUOISE — same target 07fe98c used
+const _whiteTint = new THREE.Color(0xffffff);  // aoTintNeutral target — neutral-arm only
 const _splitScratch = new THREE.Color();
 const _aoScratch = new THREE.Color();
 
@@ -1063,6 +1093,7 @@ export class PostFX {
       this.brightMat = this._mat(passMaterial('postfx.bright', {
         uScene: { value: null }, uThreshold: { value: new THREE.Vector2() },
         uMetalBloom: { value: this.tune.bloomMetalGain },
+        uMetalCut: { value: this.tune.bloomMetalCut },
       }, BRIGHT_FRAG));
 
       this.downMat = this._mat(passMaterial('postfx.down', {
@@ -1395,6 +1426,7 @@ export class PostFX {
       this.brightMat.uniforms.uScene.value = this.sceneRT.texture;
       this.brightMat.uniforms.uThreshold.value.set(this.tune.bloomThreshold, this.tune.bloomKnee);
       this.brightMat.uniforms.uMetalBloom.value = this.tune.bloomMetalGain;
+      this.brightMat.uniforms.uMetalCut.value = this.tune.bloomMetalCut;
       blit.render(renderer, this.brightMat, this.bloomRTs[0]);
 
       for (let i = 1; i < this.bloomRTs.length; i++) {
@@ -1429,7 +1461,7 @@ export class PostFX {
     cu.uSplitRange.value.set(this.tune.splitRange[0], this.tune.splitRange[1]);
     // Task #19 teal-consistency blends. lerp at 0 is exact, so 0 = the pre-knob colours.
     cu.uSplitShadow.value.copy(_splitScratch.setHex(this.tune.splitShadow).lerp(_turqTint, this.tune.splitShadowTeal));
-    cu.uAOTint.value.copy(tintColor(_aoScratch.setHex(this.tune.aoTint).lerp(_turqTint, this.tune.aoTintTeal)));
+    cu.uAOTint.value.copy(tintColor(_aoScratch.setHex(this.tune.aoTint).lerp(_turqTint, this.tune.aoTintTeal).lerp(_whiteTint, this.tune.aoTintNeutral)));
     cu.uInkStrength.value = this.tune.inkStrength;
     cu.uAOStrength.value = this.tune.aoStrength;
     cu.uAODepth.value = this.tune.aoDepth;

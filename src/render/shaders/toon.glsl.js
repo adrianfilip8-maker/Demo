@@ -125,6 +125,12 @@ uniform float uAoStrength;
 uniform float uHazeAmount;
 uniform float uBounceGain;    // attenuation on the sand-bounce half of the hemispheric fill
 uniform float uFillSkyMix;    // hue blend of that half toward the sky, luma-matched. 0 = legacy
+/* Grade-lever scaffolding (ToonMaterial TUNE.neutralShadow/neutralFill/subjWarmShade — the
+   comment block there is the why). All three are luma-matched chroma blends on the two
+   shade-side lights; every default 0 is bit-identical legacy (mix at 0 is exact). */
+uniform float uNeutralShadow; // uShadowColor chroma -> grey, globally. Attribution arm only.
+uniform float uNeutralFill;   // fill chroma -> grey, globally. Attribution arm only.
+uniform float uSubjWarmShade; // both shade lights' chroma -> luma-matched uSssColor, vSlySkin-scoped.
 
 /* One terminator of the ramp. k is its 0-based index; masked off above "steps". */
 float slyTerm( float x, float k, float steps ) {
@@ -394,10 +400,27 @@ export const TOON_SHADE = /* glsl */ `
 		   the one term ao never reaches. Default 0 keeps the shipping look; 1 is the A/B.
 		   Whoever turns it on must measure the whole frame's midtones, not only the gilded mask:
 		   this darkens every crevice in every sunlit surface in the game. */
+		/* Grade-lever scaffolding (see ToonMaterial TUNE): the two shade-side lights pass
+		   through two luma-matched chroma blends before they touch the surface.
+		   - uNeutralShadow / uNeutralFill: -> grey. Global attribution arms, never shipped.
+		   - uSubjWarmShade: -> the material's own warm wrap colour, on skinned draws only
+		     (vSlySkin — same subject scope §24.1 verified for the rim gate). This is the
+		     blueskew/coolskew fix candidate: it restores the authored warm cream in
+		     fill+shadow without moving one architecture pixel, because for vSlySkin = 0 the
+		     blend factor is exactly 0 and mix(x, y, 0.0) == x.
+		   All blends preserve luminance by construction (targets are pre-scaled to the
+		   source light's own luma), so this is a hue lever, not a brightness lever. */
+		float slySubjT  = clamp( uSubjWarmShade, 0.0, 1.0 ) * vSlySkin;
+		vec3  slyWarmT  = uSssColor / max( slyLum( uSssColor ), 1e-4 );
+		vec3  slyFillX  = mix( fill, vec3( slyLum( fill ) ), clamp( uNeutralFill, 0.0, 1.0 ) );
+		vec3  slyShadX  = mix( uShadowColor, vec3( slyLum( uShadowColor ) ), clamp( uNeutralShadow, 0.0, 1.0 ) );
+		slyFillX = mix( slyFillX, slyWarmT * slyLum( slyFillX ), slySubjT );
+		slyShadX = mix( slyShadX, slyWarmT * slyLum( slyShadX ), slySubjT );
+
 		vec3 diff = alb * keyRad * key * mix( 1.0, ao, uAoKey )
-		          + albAmb * fill * ao
-		          + albShadow * uShadowColor * shadowMix * mix( 0.55, 1.0, ao )
-		          + uShadowColor * uShadowWash * shadowMix * ao;
+		          + albAmb * slyFillX * ao
+		          + albShadow * slyShadX * shadowMix * mix( 0.55, 1.0, ao )
+		          + slyShadX * uShadowWash * shadowMix * ao;
 
 		/* uMetal is the art-directed metal *amount*; the ORM texture's blue channel is the
 		   mask that says where on the surface it applies — the gilding on a hieroglyph, the
