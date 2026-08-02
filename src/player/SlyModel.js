@@ -93,6 +93,12 @@ export const TUNE = {
    * **Quote a head count with its pose or do not quote it.** Get both with
    * `node tools/shotsil.mjs <out> sly-closeup` (standing) and `... hero` (perch).
    *
+   * Ledger figure, current tree: `tools/propprobe.mjs` standing `idle_confident` reads
+   * figure 1.766 m / chin→crown 0.428 m ⇒ **1 : 4.13** (shotsil concurring; perch ~4.10).
+   * The 4.5x standing rows above were measured mid-cap-pass on an earlier tree — chin→crown
+   * grew 0.391 → 0.428 m between the two, by the rows' own arithmetic. 4.13 is the figure
+   * on the ledger; do not re-quote 4.52 (or the superseded 5.29) as current.
+   *
    * The cartoon read is not the head count on its own, it is the *set*: big head, tiny waist,
    * narrow shoulders, long thin limbs, oversized hands and feet, and a tail with more mass
    * than the torso. At headScale 0.90 the head is still 0.34 m across against a 0.27 m chest —

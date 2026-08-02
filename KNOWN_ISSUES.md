@@ -648,11 +648,18 @@ netted +1° in world and both feet stayed 4 cm apart and vertical.
 
 Still open on the character, honestly scored by the agent that did the work:
 
-- **Proportions improved, not fixed:** 5.53 → 5.29 heads. The head sits on a fixed 1.396 m of
-  legs and torso, so the ratio asymptotes to `1.49 + 1.396/headHeight` and no `headScale` gets
-  to 1:4.5 without a bobblehead. The real lever is a ~0.10 m shorter torso, which touches ~10
-  sites carrying absolute Y coordinates plus three bone positions. Deliberately not attempted;
-  it is the next move if the critic keeps failing this line.
+- **Proportions — landed; this bullet's earlier text is superseded.** It read "5.53 → 5.29
+  heads ... the real lever is a ~0.10 m shorter torso ... Deliberately not attempted", and that
+  was the headScale-alone era. The asymptote arithmetic in it was right, which is why the fix
+  that landed (`66d57aa` and the cap pass after it) moved the *other* levers: `TUNE.legLift`
+  — the lever that works and the one the design wants, legs 41% → ~47% of figure — plus
+  `TUNE.torsoShrink`, pushed to 0.16 by the old argument and backed off to 0.09 to give the
+  spinal S its lever back. Current tree, `tools/propprobe.mjs`, standing `idle_confident`,
+  chin→crown over ground→crown: figure 1.766 m, head 0.428 m ⇒ **1 : 4.13** (`perch_idle`
+  ~4.10; `shotsil.mjs` concurs). Squarely cartoon; §7.3's proportions condition is met. The
+  like-for-like tables — and the pose-label trap that briefly had a `perch_idle` number quoted
+  as the standing figure — are recorded at the `TUNE` block in `src/player/SlyModel.js`.
+  Quote a head count with its pose or do not quote it.
 - **Eye emissive lift is CPU-verified only.** The re-capture was queued behind other agents for
   32 minutes and the work was reported without it. Check `sly-closeup`, and check `night`
   (`tod 0.02`) where a warmer, brighter eye emissive previously failed as "two yellow dots".
