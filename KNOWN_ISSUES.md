@@ -1628,3 +1628,16 @@ queue ticket, which is named `<epoch>-<pid>` by the process that took it.
 Left open, and worth stating so it is not quietly assumed solved: **the original watcher deaths
 that motivated §14 remain unexplained.** Those processes really did die at ~3600 s. This
 correction removes one diagnosis, not the phenomenon.
+
+**A candidate explanation for the ~3600 s deaths, recorded as a hypothesis with its test.**
+While verifying a relaunch, a transient wrapper was observed with **ppid 569 — the `claude`
+session process** — meaning orphans in this container do not necessarily fall to init: some are
+adopted by the harness process itself, which behaves as a subreaper for its subtree. If that is
+so, the two fates observed all session have a single cause: a process whose orphan-reparenting
+lands on the harness lives inside a *task's* lifecycle and dies when that context is torn down
+(the ~3600 s shape), while a process that genuinely reaches init (`setsid --fork` before the
+adopting parent exits, or a wrapper that orphans first) outlives everything except a container
+restart. The distinguishing test is cheap and should be run on any process whose survival
+matters: walk `ppid` upward — a chain that terminates at `1` is safe; a chain that terminates
+at the `claude` process is on that task's clock, whatever the process's own age. Unverified;
+recorded so the next death can test it instead of starting cold.
