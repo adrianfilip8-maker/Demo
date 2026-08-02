@@ -5412,3 +5412,93 @@ carrying arm 2's raycast hits so the frame testifies to its own clearance rather
 §60.2's arithmetic. **The last shipped-but-unverified `src` change in the project now has its
 frames.** Remaining before the pass-6 capture: `det3`'s second boot (holding the lock) and `kerb2`
 (the only ticket queued).
+
+
+---
+
+## §65 — the ledge prediction holds, the abort clause fired, and a control caught a false "closed ring"
+
+CHARACTER on `cap9`. **No source edits this session**; `src/player/` clean against HEAD, clip
+contract re-verified twice at `clips 52 · missing []`.
+
+### 65.1 `hero`: the prediction is confirmed, and a control saved it from a false failure
+
+`charvis` reports `hero` at **100.0% visible, no blocker across 498 samples** — the re-aimed hook is
+neither occluded by nor intersecting the architrave, agreeing with `caneledge.mjs`'s world-space
+bound (lowest vertex 6.2 cm below the contact plane against boots at 6.1 cm). §57.4's registered
+risk is discharged, `Clips.preperch.js` stays unused, **and the re-aim closes.**
+
+**The crook row passes only because of a control.** A naive enclosure test on the *capture* finds a
+**~50 px enclosed region inside the crook** — which is exactly what the "closed ring" failure looks
+like. Re-run identically on the **offline black silhouette** at `hero`'s own 70°/1°, where there is
+no scene at all: **0 enclosed px, 0 components.**
+
+> The crook is an open C in the geometry. The in-frame enclosure is **the deck's own dark edge band
+> filling the opening from behind.**
+
+Routed rather than fixed, and a real finding for the critic pass: at `hero`'s 111–148 px the hook's
+opening sits against dark deck, so **the most recognisable prop in the series is losing its opening
+to the background it happens to stand on.** That is a framing/background interaction, not a geometry
+defect — and CHARACTER declined to re-aim on it, on the grounds that *changing an aim unmeasured
+before a sealed capture is how §3's five-cycle chase started.* Correct call.
+
+### 65.2 The abort clause fired: A, B and C are all void in this framing
+
+CHARACTER scored the **readability precondition before any width number**, and it fails on both
+arms:
+
+- **viewer-left**: scanning every 5th row from y 250–445, **0 rows have body on the outboard
+  outline** — the cane hook and shaft own it for the entire span.
+- **viewer-right**: same scan, **0 body rows** — the tail owns that side.
+
+So the forearm→cuff ruler cannot be located as a silhouette event at all, and per the seal
+**A = 0.07, B = 0.58 and Reading C are all void here.** The u = 0.662 control is unscored, which
+means **Reading B is neither withdrawn nor confirmed** — the best clause in the seal never got a
+chance to fire.
+
+This is the abort doing precisely its job. A seal without it would have produced a width number from
+a scan that was measuring cane and tail, and §58.7's 204-px "head" band shows what that looks like
+when nobody checks.
+
+**Consequence for `_buildArmInk`, reasoned rather than assumed:** the abort proves the withholding
+was *unnecessary* — the arm edge was never on the outline, so the sleeve-hem welt could not have
+contaminated the measurement. **It stays out anyway**, because §47/§59.4 record that ink as
+*withdrawn on its own measurement*, and reinstating it unverified into a sealed blind capture would
+ship a change whose only prior measurement declined it. Cheap to overrule; not overruled.
+
+**The item now needs something no existing framing provides: a shot where an arm is on the
+outline.** Without it the arms question stays open regardless of how many `sly-closeup`s are taken.
+
+### 65.3 `sly-perch` resolves the lean, and its author refuses to over-read it
+
+Read **shaded** rather than as a silhouette, per §59.3's own caution. Body-blue centroid per row,
+cane and tail excluded by colour: chest band stable at cx 642.5–649.0 (n = 59–73/row), hip band at
+595–631. **Chest sits ~27 px lateral of the hip band on a ~450 px figure** — an order of magnitude
+above the 2.5 px ink hull, where `hero`'s 3.2–3.6 px was not. §58.2's registered null for `hero`
+therefore **stands as expected rather than as evidence of absence**, which is exactly why it was
+registered in advance.
+
+The honest limit, volunteered: arms and hands are body-blue, so 27 px is a body-**mass** offset and
+not the spine. CHARACTER declines to convert it to centimetres or score it against the registered
+13.5 px — *"§58.7's wrong-population trap in a milder form."* Refusing to score a number you have in
+hand, because the population behind it is not the one the clause names, is the rarer discipline.
+
+### 65.4 The four character conditions, scored honestly
+
+| condition | state |
+|---|---|
+| **proportions** | **failing**, ~0.7 head too realistic — but now *scoreable*: 5.72 against a 5.0 target |
+| **silhouette** | **passing**, 3 of 4 cues; the mask is a colour feature that breaks no outline and is untestable in silhouette *by construction*, carried by the shaded frame |
+| **fur** | **not fixed**; both prescribed routes are documented regressions (§37 shipped and removed cards, verified at 13,148 body tris; §47 authored and withdrew ink) |
+| **pose** | **passing, and now verified in pixels** — 34° counter-rotation, opposite-sign tilts, hips over the right foot, feet 23 cm apart |
+
+`AGENTS.md` §7.3's proportions line **now carries the definition** (chin to cranium, cap and ears
+excluded, target 5.0, fail outside 4.5–5.5). It is written into the checklist rather than the ledger
+because that is where the condition is scored, and without it the item was unscoreable in principle.
+The rig is **not** changed: §9's lever is a ~0.10 m shorter torso across ~10 sites, and changing a
+rig against an ambiguous target is how a regression scores as a win. Now that the target is
+unambiguous, that lever is a legitimate item — after pass 6, not before it.
+
+One finding routed away from CHARACTER: at 4× the arms carry a **vinyl specular band**, and fur spec
+is already 0.02–0.03 at gloss 8–9. **That sheen is cloth (spec 0.18 / gloss 34), not fur** — it
+belongs to whoever owns sleeve shading.
