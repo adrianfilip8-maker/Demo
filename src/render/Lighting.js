@@ -65,6 +65,21 @@ const TUNE = {
   casterPadMin: 34,
   casterPadMax: 130,        // low-sun clamp; past this the missing shadows are off any frame
   maxCascadeMap: 2048,
+  /* Static-caster shadow cache (ledger #20). 48 of the 61 casters are static (0.38M of
+     0.447M expanded tris — see the census in RESULT-ledger20-casters.md); the cascades
+     re-drawing all of them every frame is the bulk of the §1 pass multiplication that
+     survives the 160 m distance fix. Per cached cascade the statics are rendered once into
+     a private depth target and re-rendered ONLY when anything that could change their
+     depth image changes (snapped box, key direction, a static's transform/visibility, the
+     caster set, a rebuild — the full trigger list is enumerated at _updateShadowCache);
+     every frame the cached depth is blitted into the live map and the ~13 dynamic casters
+     (sly_root + guard_root subtrees) are drawn on top. c0 is left on the legacy path: its
+     ~1.2 cm texels mean any camera walk refreshes it anyway.
+     `shadowStaticCache: false` restores the stock three path bit-identically, live, no
+     rebuild — it is the verification A/B lever and the failure valve (any throw in the
+     cache flips it off and pushes a warning rather than costing the frame). */
+  shadowStaticCache: true,
+  shadowCacheFrom: 1,       // first cached cascade index; c0 stays per-frame
   /* PCF kernel radius per cascade, in shadow-map texels.
    *
    * The old name (`vsmRadius`) said this was VSM-only tuning and therefore dead, because
@@ -460,6 +475,18 @@ export class Lighting {
     this._patched = new Set();
     this._sweep = 0;
 
+    /* Static-caster shadow cache (ledger #20; TUNE.shadowStaticCache). All allocation
+       happens at census/first-engage time — the per-frame path reuses these. */
+    this._cacheEngaged = false;
+    this._cacheEpoch = 0;              // bumped by invalidateShadowCache() and rebuilds
+    this._seenEpoch = -1;
+    this._staticSig = NaN;             // NaN ≠ NaN → first engaged frame always refreshes
+    this._staticCasters = null;        // [{ mesh }] — layer-tagged at census time
+    this._dynCount = 0;
+    this._cachePoll = 0;
+    this._cacheDepthMats = null;       // per-side override materials, built lazily
+    this._cacheStats = { refreshes: 0, blits: 0, dynDraws: 0, dynTris: 0, engaged: false };
+
     this._hemi = null;
     this._bounce = null;
     this._ambient = null;
@@ -612,6 +639,10 @@ export class Lighting {
   }
 
   _rebuildForQuality() {
+    /* The cache holds per-cascade targets and a key built from the old lights — a rebuild
+       invalidates every part of it (§15 is the record of what a half-torn-down rebuild
+       costs). Dispose first, epoch-bump, and let the next engaged frame rebuild fresh. */
+    this._disposeShadowCache();
     // Cascade count is baked into every patched shader, so a quality change has to tear
     // the whole set down and force a relink.
     for (const c of this.cascades) {
@@ -1082,6 +1113,15 @@ export class Lighting {
     this._updateEnclosure(dt);
     this._applyFill();
     this._fitCascades();
+    /* Fail OPEN: any defect in the cache must cost the optimisation, never the frame.
+       Engine wraps update() as a unit (see the `|| 0` note below), so this cannot be
+       allowed to throw past here — a NaN in cache bookkeeping must not cost the shafts. */
+    try { this._updateShadowCache(); }
+    catch (err) {
+      TUNE.shadowStaticCache = false;
+      this._restoreShadowAutoUpdate();
+      this.engine.warn(`lighting: static shadow cache failed (${err?.message || err}) — legacy path restored`);
+    }
     /* `|| 0` on purpose: everything after this line in update() — the shaft re-derive poll
        and `_updateShafts()` — is skipped for the whole frame if anything in here throws,
        because Engine wraps a module's update() as a unit. A NaN clock must not be able to
@@ -1275,6 +1315,250 @@ export class Lighting {
 
       if (!c.map && c.light.shadow.map) c.map = c.light.shadow.map;
     }
+  }
+
+  /* ------------------------------------- static-caster shadow cache (#20) --- */
+
+  /**
+   * Cache the static casters' depth per far cascade; re-render only the dynamics per frame.
+   *
+   * Invalidation triggers, enumerated (each maps to a term of the cache key or a signature):
+   *   1. snapped-box identity — target/light positions (texel-snapped in _fitCascades),
+   *      radius, ortho far plane, map size;
+   *   2. key direction — folded into the target/light position pair (position is a function
+   *      of keyDir), so any sun/moon motion refreshes every frame: graceful degradation to
+   *      legacy cost, never a stale map;
+   *   3. static-set membership — census re-runs on a slow beat (%8, the _buildShafts
+   *      cadence); a removed/reparented mesh trips the per-frame fingerprint immediately;
+   *   4. static motion or state — per-frame fingerprint over matrixWorld, castShadow,
+   *      material.side and EFFECTIVE visibility (own flag AND every ancestor's, because
+   *      zone reveals toggle group visibility, not mesh visibility);
+   *   5. quality / cascade rebuild — _rebuildForQuality disposes the cache first;
+   *   6. map reallocation — the live shadow.map's identity is part of the key;
+   *   7. anything else — invalidateShadowCache() for agents mutating what the census
+   *      cannot see.
+   *
+   * three's own WebGLShadowMap is kept off these cascades via shadow.autoUpdate = false;
+   * shadow.updateMatrices() is called here because three only calls it on the path we just
+   * disabled, and a stale sample matrix under a moved box is §15-class invisible wrongness.
+   */
+  _updateShadowCache() {
+    const on = TUNE.shadowStaticCache && this.cascades.length > TUNE.shadowCacheFrom;
+    if (!on) {
+      if (this._cacheEngaged) { this._restoreShadowAutoUpdate(); this._cacheEngaged = false; }
+      this._cacheStats.engaged = false;
+      return;
+    }
+    // Warm-up: three allocates shadow.map inside its own first render. Until every cached
+    // cascade has a live map (and its FBO), run legacy — the first frame after any rebuild.
+    const renderer = this.engine.renderer;
+    for (let i = TUNE.shadowCacheFrom; i < this.cascades.length; i++) {
+      const sh = this.cascades[i].light.shadow;
+      if (!sh.map || !renderer.properties.get(sh.map).__webglFramebuffer) {
+        if (this._cacheEngaged) { this._restoreShadowAutoUpdate(); this._cacheEngaged = false; }
+        this._cacheStats.engaged = false;   // probes must not read stale engagement here
+        return;
+      }
+    }
+
+    if (!this._staticCasters || (this._cachePoll++ & 7) === 0) this._censusCasters();
+
+    // Per-frame fingerprint of everything that can change the statics' depth image.
+    let sig = 0;
+    const list = this._staticCasters;
+    for (let k = 0; k < list.length; k++) {
+      const m = list[k];
+      if (!m.parent) { sig = NaN; break; }          // removed since census → refresh now
+      const e = m.matrixWorld.elements;
+      let vis = m.visible ? 1 : 0;
+      for (let p = m.parent; vis && p; p = p.parent) if (!p.visible) vis = 0;
+      sig += e[12] * 3.1 + e[13] * 5.7 + e[14] * 7.3 + e[0] + e[5] + e[10]
+           + vis * 11 + (m.castShadow ? 17 : 0) + (m.material?.side ?? 0) * 23
+           + (m.isInstancedMesh ? m.instanceMatrix.version * 29 : 0);
+    }
+    const dirty = !(sig === this._staticSig) || this._seenEpoch !== this._cacheEpoch;
+
+    const st = this._cacheStats;
+    st.engaged = true;
+    for (let i = TUNE.shadowCacheFrom; i < this.cascades.length; i++) {
+      const c = this.cascades[i];
+      const sh = c.light.shadow;
+      /* three's own path runs updateMatrices AFTER scene.updateMatrixWorld inside render;
+         here in the update phase the light's matrixWorld is one frame stale after
+         _fitCascades moved it. Refresh both explicitly so the map, the sample matrix and
+         the cache key all describe the SAME box — a one-frame skew between map and matrix
+         is exactly the invisible-wrongness class §15 documents. */
+      c.light.updateMatrixWorld(true);
+      c.light.target.updateMatrixWorld(true);
+      sh.updateMatrices(c.light);
+
+      const key = (c._cacheKey ||= new Float64Array(9));
+      const tp = c.light.target.position, lp = c.light.position;
+      const stale = dirty || c._cacheMapRef !== sh.map ||
+        key[0] !== tp.x || key[1] !== tp.y || key[2] !== tp.z ||
+        key[3] !== lp.x || key[4] !== lp.y || key[5] !== lp.z ||
+        key[6] !== c.radius || key[7] !== c.camera.far || key[8] !== c.mapSize;
+      if (stale) {
+        key[0] = tp.x; key[1] = tp.y; key[2] = tp.z;
+        key[3] = lp.x; key[4] = lp.y; key[5] = lp.z;
+        key[6] = c.radius; key[7] = c.camera.far; key[8] = c.mapSize;
+        c._cacheMapRef = sh.map;
+        this._renderCacheStatics(c);
+        st.refreshes++;
+      }
+      if (this._blitCacheDepth(c)) {
+        st.blits++;
+        this._renderCacheDynamics(c);
+        sh.autoUpdate = false;
+      } else {
+        // FBO not resolvable this frame — legacy-render this cascade rather than show a
+        // stale or empty map. Costs the saving for a frame, never correctness.
+        sh.autoUpdate = true;
+      }
+    }
+    this._staticSig = sig;
+    this._seenEpoch = this._cacheEpoch;
+    this._cacheEngaged = true;
+  }
+
+  /** Census + layer tagging. Layers 28/29/30 partition the statics by the side their depth
+   *  must be rasterised with (three's shadowSide mapping: Front→Back, Back→Front,
+   *  Double→Double); 31 is the dynamics. Layer 0 membership is never touched, so the main
+   *  camera and c0's stock shadow pass are blind to all of this. */
+  _censusCasters() {
+    const statics = (this._staticCasters ||= []);
+    for (let k = 0; k < statics.length; k++) {
+      statics[k].layers.disable(28); statics[k].layers.disable(29); statics[k].layers.disable(30);
+    }
+    statics.length = 0;
+    let dyn = 0;
+    const isDynRoot = (o) => o.name === 'sly_root' || o.name === 'guard_root';
+    this.engine.scene.traverse((o) => {
+      if (!o.isMesh || !o.castShadow) { o.layers?.disable?.(31); return; }
+      let dynamic = !!o.isSkinnedMesh;
+      for (let p = o; !dynamic && p; p = p.parent) dynamic = isDynRoot(p);
+      if (dynamic) { o.layers.enable(31); dyn++; return; }
+      o.layers.disable(31);
+      const side = o.material?.shadowSide ?? o.material?.side ?? THREE.FrontSide;
+      // three renders shadow depth with the mapped side; mirror the mapping per mesh.
+      o.layers.enable(side === THREE.DoubleSide ? 29 : side === THREE.BackSide ? 28 : 30);
+      statics.push(o);
+    });
+    this._dynCount = dyn;
+    this._staticSig = NaN;              // set membership changed ⇒ next compare refreshes
+  }
+
+  _cacheDepthMat(side) {
+    const mats = (this._cacheDepthMats ||= {});
+    return (mats[side] ||= new THREE.MeshDepthMaterial({ side, blending: THREE.NoBlending }));
+  }
+
+  _makeCacheRT(size) {
+    const rt = new THREE.WebGLRenderTarget(size, size);
+    // Mirror three r185's PCF shadow-map depth allocation exactly (UnsignedIntType →
+    // DEPTH_COMPONENT24) so gl.blitFramebuffer sees identical depth formats. No
+    // compareFunction: this target is only ever blitted, never texture-sampled.
+    rt.depthTexture = new THREE.DepthTexture(size, size, THREE.UnsignedIntType);
+    rt.texture.name = 'lighting.shadowCache';
+    return rt;
+  }
+
+  /** Render the static casters into the cascade's private depth target, per side class. */
+  _renderCacheStatics(c) {
+    const renderer = this.engine.renderer;
+    const scene = this.engine.scene;
+    const cam = c.camera;
+    const rt = (c._staticRT ||= this._makeCacheRT(c.mapSize));
+
+    const prevRT = renderer.getRenderTarget();
+    const prevAuto = renderer.autoClear;
+    const prevShadowAuto = renderer.shadowMap.autoUpdate;
+    const prevOverride = scene.overrideMaterial;
+    const prevMask = cam.layers.mask;
+    renderer.shadowMap.autoUpdate = false;   // our offscreen renders must not re-enter c0
+    renderer.autoClear = false;
+    renderer.setRenderTarget(rt);
+    renderer.clear(true, true, false);
+    for (const [layer, side] of [[30, THREE.BackSide], [29, THREE.DoubleSide], [28, THREE.FrontSide]]) {
+      cam.layers.set(layer);
+      scene.overrideMaterial = this._cacheDepthMat(side);
+      renderer.render(scene, cam);
+    }
+    scene.overrideMaterial = prevOverride;
+    cam.layers.mask = prevMask;
+    renderer.setRenderTarget(prevRT);
+    renderer.autoClear = prevAuto;
+    renderer.shadowMap.autoUpdate = prevShadowAuto;
+  }
+
+  /** Depth-blit the cached statics into the live shadow map. Uses renderer.state's tracked
+   *  binds so three's GL state cache stays coherent. */
+  _blitCacheDepth(c) {
+    const renderer = this.engine.renderer;
+    const props = renderer.properties;
+    const src = c._staticRT && props.get(c._staticRT).__webglFramebuffer;
+    const dst = c.light.shadow.map && props.get(c.light.shadow.map).__webglFramebuffer;
+    if (!src || !dst) return false;
+    const gl = renderer.getContext();
+    const state = renderer.state;
+    state.bindFramebuffer(gl.READ_FRAMEBUFFER, src);
+    state.bindFramebuffer(gl.DRAW_FRAMEBUFFER, dst);
+    gl.blitFramebuffer(0, 0, c.mapSize, c.mapSize, 0, 0, c.mapSize, c.mapSize,
+                       gl.DEPTH_BUFFER_BIT, gl.NEAREST);
+    state.bindFramebuffer(gl.FRAMEBUFFER, null);
+    return true;
+  }
+
+  /** Draw the dynamics over the blitted static depth — no clear; the depth test keeps the
+   *  nearer of cached-static vs dynamic, which is exactly what a full redraw would keep. */
+  _renderCacheDynamics(c) {
+    const renderer = this.engine.renderer;
+    const scene = this.engine.scene;
+    const cam = c.camera;
+
+    const prevRT = renderer.getRenderTarget();
+    const prevAuto = renderer.autoClear;
+    const prevShadowAuto = renderer.shadowMap.autoUpdate;
+    const prevOverride = scene.overrideMaterial;
+    const prevMask = cam.layers.mask;
+    const info = renderer.info.render;
+    const d0 = info.calls, t0 = info.triangles;
+    renderer.shadowMap.autoUpdate = false;
+    renderer.autoClear = false;
+    renderer.setRenderTarget(c.light.shadow.map);
+    cam.layers.set(31);
+    scene.overrideMaterial = this._cacheDepthMat(THREE.BackSide);
+    renderer.render(scene, cam);
+    scene.overrideMaterial = prevOverride;
+    cam.layers.mask = prevMask;
+    renderer.setRenderTarget(prevRT);
+    renderer.autoClear = prevAuto;
+    renderer.shadowMap.autoUpdate = prevShadowAuto;
+    this._cacheStats.dynDraws += info.calls - d0;
+    this._cacheStats.dynTris += info.triangles - t0;
+  }
+
+  _restoreShadowAutoUpdate() {
+    for (const c of this.cascades) {
+      c.light.shadow.autoUpdate = true;
+      c.light.shadow.needsUpdate = true;   // stock path re-renders immediately, no stale frame
+    }
+  }
+
+  /** Public: force a full static refresh (e.g. an agent moved world geometry mid-session). */
+  invalidateShadowCache() { this._cacheEpoch++; }
+
+  _disposeShadowCache() {
+    this._restoreShadowAutoUpdate();
+    for (const c of this.cascades) {
+      if (c._staticRT) { c._staticRT.dispose(); c._staticRT = null; }
+      c._cacheKey = null;
+      c._cacheMapRef = null;
+    }
+    this._cacheEngaged = false;
+    this._cacheEpoch++;
+    this._staticSig = NaN;
+    this._staticCasters = null;
   }
 
   /* ------------------------------------------------------- local lights --- */
@@ -1486,6 +1770,9 @@ export class Lighting {
   dispose() {
     for (const off of this._offEvents) off?.();
     this._offEvents.length = 0;
+    this._disposeShadowCache();
+    for (const k in (this._cacheDepthMats || {})) this._cacheDepthMats[k].dispose();
+    this._cacheDepthMats = null;
     const scene = this.engine.scene;
     for (const c of this.cascades) {
       scene.remove(c.light); scene.remove(c.light.target);
