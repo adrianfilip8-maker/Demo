@@ -351,6 +351,24 @@ const TUNE = {
      silhouette shows no visible notch. 0 = the pre-rim2 behaviour, for A/B. */
   rimSkinExempt: 1.0,
 
+  /* Waive the MAGNITUDE half of the same gate on the same population. Separate knob from
+     `rimSkinExempt` because the two halves fail differently and were established by different
+     measurements: the convexity half rejects a character's rim because low-poly skinned quads
+     straddle facet boundaries, while the magnitude half rejects it because a character IS
+     mostly smooth on the scale of a pixel — `slyTurn` is small over his body, which is exactly
+     what the gate is built to read as "not a silhouette".
+
+     Measured owner of `temple`'s silhouette regression (see the note at `rimSil`): opening this
+     half alone takes the character's rim lift 3.77 -> 16.58 L where the ungated ceiling is
+     21.82, while turning the screen-space gate off entirely moves it 3.77 -> 3.70. RESULT-rim3
+     §3 attributed that loss to `rimPlanar` by construction and was wrong.
+
+     DEFAULT 0 — no behaviour change. The exemption is the right SHAPE (opening the gate
+     globally re-admits the paving artefact this file exists to remove: `temple` paving behind
+     the subject goes 0.96 -> 19.79 L on the same leg), but "right shape" is not "right value",
+     and the frame decides. A/B is a uniform poke: `shading.uniforms.uRimMagExempt.value = 1`. */
+  rimMagExempt: 0.0,
+
   /* Whether baked AO multiplies the DIRECT key term. It does not (0), which is why a texture
      authoring a 0.412 median AO renders at 0.992 in a daylight frame: `ao` currently reaches
      only the ambient fill, the shadow term and the wash, and the sun drowns all three. 1 is the
@@ -534,6 +552,7 @@ export class Shading {
       uRimGain:      { value: TUNE.rimGain },
       uRimCurve:     { value: new THREE.Vector3(...TUNE.rimCurve) },
       uRimSkinExempt: { value: TUNE.rimSkinExempt },
+      uRimMagExempt: { value: TUNE.rimMagExempt },
       uAoKey:        { value: TUNE.aoKey },
       /* Shared, not per-material: it is one global ratio and it has to be pokeable from
          `shading.uniforms` for the A/B. Merged into every material by identity in

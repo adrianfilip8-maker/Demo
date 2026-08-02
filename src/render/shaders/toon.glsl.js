@@ -109,6 +109,7 @@ uniform float uRimGain;
 uniform vec3  uRimCurve;      // silhouette gate: xy = normal turn per screen height, lo..hi;
                               // z = how strictly to require convexity (0 = not at all)
 uniform float uRimSkinExempt; // 1 = skinned geometry skips the convexity half of the gate
+uniform float uRimMagExempt;  // 1 = skinned geometry skips the MAGNITUDE half — see rimSil
 uniform float uAoKey;         // 0 = key light ignores AO (shipping); 1 = key is multiplied by it
 varying float vSlySkin;       // 1.0 on a SkinnedMesh, 0.0 otherwise — see the note at slyConvex
 uniform float uSpec;
@@ -593,8 +594,40 @@ export const TOON_SHADE = /* glsl */ `
 			float slyConvex = mix( 1.0, step( 0.0, slyFold ),
 				uRimCurve.z * ( 1.0 - uRimSkinExempt * vSlySkin ) );
 		#endif
-		float rimSil = uRimCurve.y > uRimCurve.x
-			? smoothstep( uRimCurve.x, uRimCurve.y, slyTurn ) * slyConvex : 1.0;
+		/* The MAGNITUDE half is what starves the character's rim — measured, not reasoned.
+		 *
+		 * The note above says the convexity half is "genuinely wrong about characters" and
+		 * uRimSkinExempt waives it; RESULT-rim3 §3 then concluded from that, by construction,
+		 * that the surface gate on Sly reduces to a magnitude half whose "mean gate is ~1.000"
+		 * and therefore could not be costing anything — so the screen-space rimPlanar gate
+		 * must be what starves temple's silhouette. Every step of that was a shader reading.
+		 *
+		 * gate5 moved the two knobs inside gateoff one at a time, which no run had ever
+		 * done (rim1's surfonly/screenonly split the two TERMS with both gates left on). Mean L
+		 * lift vs norim on the character, one boot each:
+		 *
+		 *   shot         base   planaroff  subj   curveopen   oldrim(both gates off)
+		 *   temple       3.77     3.70     3.67     16.58        21.82
+		 *   sly-closeup  3.61     3.98     3.89      8.57         8.83
+		 *   hero         4.40     4.68     4.47      6.95         7.19
+		 *
+		 * planaroff turns the screen gate off EVERYWHERE and moves the character by ±0.4 L;
+		 * curveopen opens this smoothstep alone and recovers 76-97% of the ungated rim. So
+		 * the magnitude half is not ~1.000 on a character, and the screen gate was never the
+		 * suppressor. A mean over a gate is not the rim's contribution to a frame.
+		 *
+		 * It cannot simply be opened: the same leg re-admits the artefact, lifting the paving
+		 * BEHIND him from 0.96 to 19.79 L on temple (ungated 28.43). One knob owns both
+		 * effects, so the only fix that separates them is the one the convexity half already
+		 * uses — exempt the subject, not the gate. Same varying, same population, so the two
+		 * halves cannot drift apart about what a character is.
+		 *
+		 * Defaults to 0: the mix is then an exact identity and the shipping frame is
+		 * bit-identical until a measurement says otherwise. */
+		float rimMag = uRimCurve.y > uRimCurve.x
+			? smoothstep( uRimCurve.x, uRimCurve.y, slyTurn ) : 1.0;
+		rimMag = mix( rimMag, 1.0, uRimMagExempt * vSlySkin );
+		float rimSil = rimMag * slyConvex;
 
 		/* The mix( 0.55, 1.0, sh ) below is a shadow FLOOR: rim keeps 55% strength where the key
 		   is fully shadowed. That floor is what carries night's silhouette rims (the whole shot
