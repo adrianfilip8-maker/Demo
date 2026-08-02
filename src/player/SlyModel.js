@@ -258,17 +258,27 @@ export const TUNE = {
      is in a different axis from the limbs': along the tail this row is already at a
      spacing/reach of ~0.7 (fur), while around it the ratio was ~8 (saw). Widening every tuft
      to fix the tail would push the limb rows past the overlap they were measured into. */
-  /* ×0.025 m base ⇒ ~0.58 rad against a 0.88 rad roll gap ⇒ ratio ~1.5, i.e. inside the
-     overlap band the forearm row proved (1.22 reads as fur).
-     **Set from the image, NOT from the roughness number, and the gap between the two is the
-     finding.** Contour roughness in the tail band moved 3.52 → 3.32 → 3.06 px across
-     rollW 1.0 → 2.2 → 3.4 — a 13% move — while the rendered silhouette went from a uniform
-     thistle to a solid mass with a broken edge. The metric is a mean |2nd difference| over a
-     horizontal band that also contains the arm, the cane and the torso, so the tail is a
-     minority of its support and a large change in the tail is a small change in the number.
-     Anyone re-tuning this should look at `az70`/`az90` from `shotsil.mjs`; the number is only
-     good for ranking azimuths against each other, which is what it was written for. */
-  tuftRollW: 3.40,
+  /* **Reverted 3.40 → 1.0. The width was falsified; the roll count that shipped with it was
+     not, and stays at 6.**
+
+     3.40 was chosen against contour roughness in the tail band — a mean |2nd difference| over
+     a horizontal strip that also contains the arm, the cane and the torso. That instrument is
+     structurally incapable of scoring this defect: it reads only the *outer contour*, and a
+     filled silhouette has no interior by construction, so the thing 3.40 actually did — fusing
+     separate locks into one mass — is invisible to it. It moved 3.52 → 3.32 → 3.06 px across
+     rollW 1.0 → 2.2 → 3.4 (13%) while the rendered tail went from a row of reading locks to a
+     solid slab. A metric moving proves the knob is connected, not that it found the cause.
+
+     What `interiorink.mjs` measures instead is the ink *inside* the fill, which is where a lock
+     is legible: at 3.40 the locks go from a 1:3.2 aspect to 1:0.95 — a square with a line round
+     it is a plate, not a lock — and the row's runs/row collapses well under the torso's ~1.6.
+
+     1.0 is not a new guess: it is the prior state and the only value in this space whose
+     rendered behaviour has been seen. Six narrow locks is strictly closer spacing than the four
+     narrow locks that predate the roll-count change, so this cannot land somewhere unobserved.
+     **The final width is deferred to a capture judged with `interiorink.mjs` against the
+     torso's ~1.6 runs/row — never against contour roughness again.** */
+  tuftRollW: 1.0,
   furLobe: 0.055,         // amplitude of the low-frequency lumpiness on furred lofts
 
   /* --- idle life, only used while ANIMATION is absent --- */
@@ -2551,9 +2561,16 @@ export class SlyModel {
        station and the envelope sawtooths.
 
        Six rolls across the same span the four occupied (the inner sector facing the body stays
-       empty — clumps there push through his back) takes the gap to 0.88 rad, and `tuftRollW`
-       widens the clump so the ratio lands near the forearm's proven value. Density is spent in
-       the axis the measurement names, not uniformly: along-tail STEP is untouched at 2. */
+       empty — clumps there push through his back) takes the gap 1.4 → 0.88 rad. Density is
+       spent in the axis the measurement names, not uniformly: along-tail STEP is untouched at 2.
+
+       **This half stands; the width half that shipped with it does not.** The commit paired the
+       count with `tuftRollW` 3.40, and the width was set against contour roughness, an
+       outer-contour metric that cannot see lock legibility (see the note at `tuftRollW`, now
+       reverted to 1.0). The count needs no such defence: closing the gap 1.4 → 0.88 rad closes
+       the spacing/reach ratio by the same factor while leaving each lock's aspect alone, which
+       is what a comb in the roll axis actually calls for. Widening the lock instead traded the
+       comb for a slab. */
     const STEP = 2;
     for (let i = 2; i < n - 2; i += STEP) {
       const t = i / (n - 1);
