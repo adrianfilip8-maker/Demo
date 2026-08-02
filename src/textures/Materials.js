@@ -250,6 +250,24 @@ const JOINT = 0.24;
  * here provably cannot feed bloom in frame; one above it still might not. The asymmetry is the
  * point — this is a necessary condition, which is exactly what was needed to refute an
  * impossibility claim, and it is not evidence that the glints are landing.
+ *
+ * ── The mip caveat above is now MEASURED, and it is not what capped the glints ───────────────
+ *
+ * The uSpec poke ran (`shots/spec1`, 0.55/0.85/0.95): localised on-form lift, real, and 0 px at
+ * display L ≥ 235 in every arm. Measured per pixel off the built geometry
+ * (`scratchpad/gildmip.mjs`), the population that responds — the kiosk lintel, the pixels the
+ * verdict was decided on — samples the ORM at **mip ~0** (λ_iso p50 0.09; 0.00 with aniso), so
+ * the only loss between the table above and the frame is `packORM`'s own div-2 (max 3.91 → 3.61
+ * at uSpec 0.95, over-onset 29.9 % → 26.5 %; `scratchpad/gildmips.mjs`). The mask transfers.
+ * What caps the frame is the **AgX shoulder**: the responsive cohort measures L(0.55) 187.9,
+ * L(0.85) 200.6, L(0.95) 203.9 — L 235 back-solves to ≈ 2.7× the scene spec of the 0.95 arm,
+ * and every texture-side lever stacked (ormDiv 1: ×1.09; crest parity with gold_leaf: ×1.56
+ * max, at the dirty-snow cost; peak-preserving mips: ×1.13 where mips barely engage) tops out
+ * under ×1.9. Hand-authored mip chains are also the wrong tool at distance: min-rough mips take
+ * the L3 over-onset share to 60 %, i.e. whole far bands catching the lobe — "glows uniformly".
+ * So §7.3's "hot" on gilded architecture is bloom's to deliver (metal-aware feed, POSTFX);
+ * this file's share of the gold line — dark occlusion, value mass, crest scatter — is done.
+ * Full working: `scratchpad/RESULT-goldmip.md`, pre-registered in `PREREG-goldmip.md`.
  */
 /** Deep shadowed gold — a recess in gilding, still gold-brown, never neutral and never black. */
 const GOLD_DEEP = MX(PAL.goldDark, PAL.sandCrev, 0.58);

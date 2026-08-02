@@ -1817,3 +1817,55 @@ I had this queued to report as "the routing was a comment read as a value" — t
 routed and someone else fixed it in the interval. **Check when a value changed, not only what it
 is now** — on a tree taking several commits an hour, "I looked and it was fine" and "it was never
 broken" are different claims, and only one of them is checkable.
+
+---
+
+## 25. §7.3 gold-hot: the mip hypothesis was measured and does not bind — the wall is the AgX shoulder, and the line routes to POSTFX
+
+The spec1 A/B (uSpec 0.55/0.85/0.95 poked live on `arch:hieroglyph_gilded`, GEOMETRY) produced
+a real, localised, on-form specular lift on the kiosk's gilded lintel and **0 px at L ≥ 235 in
+every arm**. The standing explanation — TEXTURES' own bound, "mip filtering averages the sparse
+gild peaks away" — was then measured rather than accepted, and it is false where the verdict
+was decided.
+
+**Where the gilded band samples.** Per-pixel λ from perspective-correct UV derivatives on the
+built geometry (`scratchpad/gildmip.mjs`; instrument anchored on `temple`, which returns
+λ_iso p50 1.87 against 1.4–1.9 predicted by the recipe note's own px-per-repeat arithmetic):
+the spec-responsive population in `hero` — 1,554 px, spatially coherent on the kiosk lintel,
+found by monotone rise across the three arms on the gilded matmask — samples the ORM at
+**mip ~0** (λ_iso p50 0.09, p90 3.86; with 16× aniso p50 0.00). The band is majority
+*magnified*: one ORM texel is 25 mm of world, the median band pixel ~21 mm. SwiftShader's true
+aniso conduct is immaterial to this conclusion (both bounds agree at the median). The far tail
+and `temple`'s architrave run (ORM λ ~1–4) do lose their peaks to mips — max 3.61 → 2.38 by
+three halvings (`scratchpad/gildmips.mjs`) — but that is not where spec1 was scored.
+
+**What the peaks lose on the real path at mip 0** is only `packORM`'s div-2: over-onset share
+29.9 % → 26.5 % at 0.95 (16.4 → 13.8 at 0.85), ndh=1 max 3.91 → 3.61. The mip-0 mask
+essentially transfers to the frame.
+
+**What actually caps it.** The hot cohort (top decile of responsive px) measures
+**L(0.55) 187.9 → L(0.85) 200.6 → L(0.95) 203.9**: slope falling 42 → 33 L/uSpec, log-fit
+L ≈ 203.9 + 21.7·log2(0.05 + u), so surface L 235 needs ≈ **2.7× the scene spec of the 0.95
+arm** — a floor, since the AgX slope keeps falling. Nothing in `hero` exceeds L 226.4 in any
+arm; the frame max is the *sky*, bit-stable across arms. Texture-side headroom, stacked and
+optimistic — recover packORM ×1.09, crest parity with `gold_leaf` ×1.56 (at the dirty-snow
+cost the gold doctrine records), peak-preserving mips ×1.13 — tops out **< ×1.9 < ×2.7**.
+Peak-preserving mip chains are additionally the wrong tool at distance: min-rough mips drive
+the far-band over-onset share to 60 %, i.e. whole architraves catching the lobe, the "glows
+uniformly" failure. Declined with numbers, not by taste.
+
+**Routing.** §7.3's "hot" on gilded architecture is bloom's to deliver — which is what §7.3's
+own wording ("hard spec + **bloom** + dark occlusion") already says. POSTFX's metal-aware
+bloom feed is the lever with headroom: the responsive cluster feeds ~2.2–3.6 scene (ndh=1
+bound) against the 1.90 onset — a thin margin a metal-aware onset/gain reaches without
+touching stone. Two facts to carry into that A/B: `spec` is `sh`-gated (`toon.glsl.js:461`)
+and `hero`'s gilded band is 98.6 % shadowed, so no spec/bloom lever touches the band's body —
+that read is carried by the shipped dark occlusion and metalEnv; and under the shipped grade
+the "0 px ≥ 235" criterion cannot pass on *surface* pixels in `hero` at any authoring — score
+a bloom change on the halo (bloom adds display-space energy past the shoulder; the old blown
+`combat` frame at 237.7 is the precedent that 235 is reachable at all).
+
+`uSpec` 0.55 stays shipped. TEXTURES' side of the gold line — dark occlusion, value mass,
+crest scatter — is done and verified in the texture (§8); no texture change ships from this
+finding. Full working: `scratchpad/RESULT-goldmip.md` (pre-registered, `PREREG-goldmip.md`);
+instruments kept in the scratchpad: `gildmip.mjs`, `gildmips.mjs`, `gildresp.mjs`.
