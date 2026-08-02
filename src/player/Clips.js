@@ -567,7 +567,34 @@ const PERCH = P({
 def('perch_idle', {
   dur: 3.2, loop: true, hold: 0,
   keys: [
-    { t: 0, e: 'soft', P: PERCH, pos: [0.045, -0.30, 0.07], cane: [-20, 30, 130] },
+    /* Cane aim was `[-20, 30, 130]` and it failed §7.3's silhouette condition on the one shot
+       that freezes this clip. Rendered as a pure black silhouette at `hero`'s own 70°/1°, the
+       crook curled back against the hip and its tip closed on the torso, so the C read as a
+       ring hanging off him rather than as a hook — the most recognisable prop in the series,
+       fused into the body mass. `tools/canesweep.mjs` scores exactly this, and could not have
+       found it: its `z` grid is -30..+30 while the shipped aim was z = 130, i.e. **the aim in
+       the file was outside the tool's search domain**, and its top-12 all sat on the z = +30
+       boundary — an optimum outside the box (§3's clamped-knob shape). Re-scored over the full
+       domain with the shipped aim included as a control (`scratchpad/canebase.mjs`), it ranked
+       **5927 of 10351**, bodyGap 0.12, across 0.52 — the shaft half-aligned with the view axis,
+       foreshortened into a stub. This aim is rank 1: broad 1.00, across 1.00, bodyGap 0.53.
+
+       **The score shortlisted it; the silhouette chose it, and they disagreed.** `[-124,45,-180]`
+       scores 3.455 against this one's 3.475 — a tie — and renders as a ring fused into the tail.
+       canesweep measures crook clearance against `head` and `chest` only, and in this pose the
+       tail is the largest mass in the frame and is not in its model at all. Shortlist with the
+       score, never select with it.
+
+       All four keys move together by the same deltas (+[4,-4,0] at 0.8, -[4,-4,0] at 1.7) so the
+       breath drift is unchanged and only its centre moves — §9's orphaned-key trap, which the
+       tail keys below already document, applies identically to the cane and is why these are not
+       left at their old absolute angles.
+
+       Verified offline only (shotsil: no ink hull, no scene). **What a capture still has to
+       confirm is the one thing no offline probe here can see: he is perched on a ledge and the
+       hook now swings low and outboard, so `hero` must show it over open air rather than through
+       the ledge.** */
+    { t: 0, e: 'soft', P: PERCH, pos: [0.045, -0.30, 0.07], cane: [116, -30, 45] },
     /* In-between keys re-derived as the SAME breath drifts on the new base — these are
        absolute angles, and §9's orphaned-key trap is exactly a base pose moving under keys
        like these. Old drift preserved: hips +[2,1,-1] / chest +[-3,-2,1] / head +[-3,3,-1]
@@ -580,12 +607,12 @@ def('perch_idle', {
        twice every 3.2 s, on the one clip the money shot freezes. */
     { t: 0.8, e: 'soft', P: { chest: [-17, -13, 15], head: [-21, 18, 1], hips: [28, 11, -14],
       // re-authored with the base pose's tail arc — these are absolute, not deltas
-      tailA: [-22, -36, 0], tailB: [22, -40, 0], tailD: [12, 30, 0] }, pos: [0.045, -0.325, 0.078], cane: [-16, 26, 130] },
+      tailA: [-22, -36, 0], tailB: [22, -40, 0], tailD: [12, 30, 0] }, pos: [0.045, -0.325, 0.078], cane: [120, -34, 45] },
     { t: 1.7, e: 'soft', P: { chest: [-11, -9, 13], head: [-15, 12, 3], hips: [24, 9, -12],
-      tailA: [-14, -25, 0], tailB: [30, -29, 0], tailD: [4, 22, 0] }, pos: [0.045, -0.285, 0.062], cane: [-24, 34, 130] },
+      tailA: [-14, -25, 0], tailB: [30, -29, 0], tailD: [4, 22, 0] }, pos: [0.045, -0.285, 0.062], cane: [112, -26, 45] },
     // a small head-flick as something below catches his eye
     { t: 2.3, e: 'out', P: { head: [-14, 26, -3], neck: [-14, 13, 4], earL: [-20, 8, -24] } },
-    { t: 3.2, e: 'soft', P: PERCH, pos: [0.045, -0.30, 0.07], cane: [-20, 30, 130] },
+    { t: 3.2, e: 'soft', P: PERCH, pos: [0.045, -0.30, 0.07], cane: [116, -30, 45] },
   ],
 });
 

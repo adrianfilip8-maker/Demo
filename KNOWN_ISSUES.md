@@ -4426,3 +4426,72 @@ Median-filtered scans across five shafts show plateau-and-step structure with **
 in flat plateaus separated by 14–31 L steps** — against critic pass 2's reading of "~12 L over
 100 px with no plateau-and-step structure". The 48-radial-segment shafts gave the quantiser
 something to act on.
+
+
+---
+
+## §57 — the shipped value was outside its own tuner's search domain, and the score and the silhouette disagreed
+
+CHARACTER's `perch_idle` cane re-aim (`src/player/Clips.js`). **Authored and verified offline only
+— no capture yet**, and the change says so in its own comment. Recorded here because the two
+findings behind it outlive the fix.
+
+### 57.1 An optimum on the boundary meant the answer was outside the box
+
+The shipped cane aim was `[-20, 30, 130]`. `tools/canesweep.mjs` — the tool built to choose that
+aim — searches `z` over **−30…+30**.
+
+> **The value in the file was outside the domain the tool could search**, so the tool had never
+> been able to evaluate what was shipped, in either direction.
+
+The tell was present and readable the whole time: **its top-12 results all sat on the `z = +30`
+boundary.** A search whose winners pile up against an edge is reporting that the optimum is outside
+the box — §3's clamped-knob shape, appearing here in a search domain rather than in a uniform
+clamp. Re-scored over the full domain with the shipped aim included **as a control**
+(`scratchpad/canebase.mjs`), the shipped value ranks **5927 of 10351**: `bodyGap` 0.12, `across`
+0.52 — the shaft half-aligned with the view axis and foreshortened into a stub. The new aim ranks
+**1**: broad 1.00, across 1.00, bodyGap 0.53.
+
+Including the shipped value as a control is what converts "the tool likes this new number" into
+"the tool ranks the old number 5927th"; without it the sweep only ever compares candidates to each
+other.
+
+### 57.2 The score shortlisted; the silhouette chose; they disagreed
+
+`[-124, 45, -180]` scores **3.455** against the chosen aim's **3.475** — a tie on the metric — and
+renders as **a ring fused into the tail**. The reason is structural: `canesweep` measures crook
+clearance against **`head` and `chest` only**, and in this pose the **tail is the largest mass in
+frame and is not in its model at all.**
+
+> **Shortlist with the score, never select with it.**
+
+This is the §46/§52.1 family seen from a new angle. Those were instruments blind to a state; this is
+an instrument blind to *an object* — the metric is correctly computed over a population that omits
+the thing that actually decides the frame. A tie between a good answer and a bad one is the
+signature: when two candidates score identically and look nothing alike, the score is missing a
+term, not splitting hairs.
+
+The defect being fixed is worth stating plainly, because it is a critic-visible one: at `hero`'s own
+70°/1°, rendered as a pure black silhouette, the old crook curled back against the hip and its tip
+closed on the torso — **the C read as a ring hanging off him rather than as a hook.** The most
+recognisable prop in the series, fused into the body mass, on the one shot that freezes this clip.
+
+### 57.3 All four keys moved together, and that is §9's trap being avoided rather than repeated
+
+The base pose and the three in-between keys hold **absolute** angles, so moving the base alone would
+have left the drift keys orphaned against a pose that no longer exists. All four moved by matched
+deltas (+[4,−4,0] at 0.8, −[4,−4,0] at 1.7), so the breath drift is unchanged and only its centre
+moves. §9's orphaned-key trap is already documented for the tail keys in this same clip; it applies
+identically to the cane, and this is the first time it has been applied *before* the fact rather
+than diagnosed after.
+
+### 57.4 What the capture still has to answer
+
+Stated by the author in the source, before any frame exists: `shotsil` has **no ink hull and no
+scene**, so it cannot see the one risk this change creates — **he is perched on a ledge, and the
+hook now swings low and outboard, so `hero` must show it over open air rather than through the
+ledge.** An offline silhouette probe cannot see intersection with world geometry.
+
+This also revises §53.6. I had recorded that `perch_idle`'s only remaining item was verifying the
+existing line of action in pixels. That was right about the line of action and wrong about the clip:
+a separate, larger, critic-visible defect was sitting in the same four keys.
