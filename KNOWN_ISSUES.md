@@ -1228,6 +1228,16 @@ work.** Resolve from the ticket, or walk `--ppid` from the wrapper to its node c
 confirm `ppid 1` *and* session leadership on **that** pid. A detachment check performed against
 a process that is not the one rendering is worse than no check, because it reports safety.
 
+**And the sharper half, which explains the false passes: verify in a SEPARATE call, after the
+launching shell has exited.** Checking `ppid` in the same call that launched the process is
+guaranteed to mislead — *the parent is necessarily still alive at that moment*, so an attached
+child looks exactly like a detached one and the check reports success at the only instant it
+cannot possibly fail. One launch was caught this way: `cd X && nohup … &` binds the `&` to the
+whole `&&` chain, so the subshell ran node in the *foreground* and waited on it — the exact
+mortal shape §14 exists to prevent — and the same-call check passed it. Launch, let the call
+return, then verify in a fresh call. The orphaning you are testing for happens *after* your
+launching shell dies, so a test that runs before that has not tested anything.
+
 **A fourth, paid for only in luck: a mid-queue src edit races the next boot.** The goldhalo
 splice (b77b614) was briefly broken on disk — a compile-breaker caught by its own proof
 script — inside the window where cap5's queued run could have booted vite and baked the broken
