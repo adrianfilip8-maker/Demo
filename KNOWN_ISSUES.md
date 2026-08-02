@@ -1786,6 +1786,21 @@ Unexplained and left flagged rather than interpreted: `combat` reports `surfonly
 together*, which no additive model explains. Somebody should find out why before quoting any
 `combat` rim number.
 
+**EXPLAINED 2026-08-02 (`progress/records/RESULT-combatrim.md`): it was never rim.** Three
+hypotheses were run against differing predictions. Leg-mislabel: refuted by the per-arm
+uniform readback in rim1's own log. AgX exit-upward: refuted — the base is *dimmer* (135.7 vs
+193.2) at 87.5% of surfonly's artefact pixels, the wrong direction. The located cause is
+**FX-phase aliasing**: 95% of the anomalous population is the spire-tip blue sparkle glow at
+(1216, 256–448), whose quiet-box luma swings 68.7 / 71.5 / 18.1 / 74.0 / 49.9 across the five
+arms *in capture order* while true quiet boxes hold ±2 L — the animated particle system is in
+a different phase in every arm, and a pixel-count metric reads the phase difference as a rim
+difference. No additive model over rim terms can explain it because rim was never the
+variable. The quarantine narrows rather than lifts: combat count-family numbers stay
+unquotable until measured under the new sweep standard — a duplicate-arm bracket (same arm
+captured twice brackets the phase noise) plus a temporal mask over known animated emitters.
+The kerb prereg was amended to use that standard before its first pixel, which is the point
+of finding this before running it.
+
 ### 24.5 Why the character is lit only by fill: staging, and he is one to two metres off the light
 
 Routed as "occlusion, key direction, or intended staging?" — answer per shot, from ray-casting the
