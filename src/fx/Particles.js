@@ -326,7 +326,14 @@ const TUNE = {
      Known approximation, recorded: a low EXTERNAL camera (sphinx avenue) fades beams it
      views laterally at small solid angle. No canonical camera does this; escalation if a
      future framing wants it is a per-fragment ray/band-prism path integral in SHAFT_FRAG. */
-  courtBandWin: [0, 4],     // metres of camera penetration below bandTop: fade-in window
+  /* (0,4) -> (0,2.2), ledger #21a per PREREG-band13b: fx11 acceptance 5 found courtyard's
+     camera (pen +2.00) held a 0.575 factor and drew an 11.9%-of-frame warm wash at +17.2
+     inside violet shadow — the fx5-era "court blades never reach this camera" occlusion
+     record is stale (courtOnScreen=5 now). Tightening the window to 2.2 m takes courtyard
+     to factor 0.170 (predicted wash ~+8.3, under combat-left's own 9.5 stake) and moves NO
+     other canonical camera: combat/temple/sly-closeup sit past both windows (0.150), the
+     four saturated cameras keep pen < 0 = 1.000 EXACT since the window start stays 0. */
+  courtBandWin: [0, 2.2],   // metres of camera penetration below bandTop: fade-in window
   courtBandFloor: 0.15,     // what survives of a court blade for a fully in-band camera
   /* **Metres of gap between the blade and whatever is behind it**, not metres from the
      camera, which is what this used to be. The absolute form was doing two jobs and failing
