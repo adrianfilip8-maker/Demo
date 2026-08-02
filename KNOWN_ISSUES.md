@@ -2424,3 +2424,50 @@ right that rim1's *retention* column is stale — it predates `rimSkinExempt: 1.
 a tree that no longer exists — but wrong that the ledger had missed the work. Agent reports get
 the same freshness check as everything else (§27.4), including reports that are otherwise
 excellent, and including when the claim is that *I* have been sloppy.
+
+---
+
+## 33. A band can partition the outcome line and still discriminate nothing
+
+§26.1 says registered bands must partition — every value the instrument can emit must land in
+exactly one band. The fingerprint null control satisfied that rule completely and was still
+incapable of returning information, and the distinction is worth having explicitly.
+
+With the census reset in place, the arithmetic **floor** on V3's statistic over its 100-frame
+window was 26 (12 censuses × 2 cascades + 2 from the restore). The registered bands were
+`= 2` PASS / `3–8` MARGINAL / `≥ 9` FAIL. So *every emittable value* fell in FAIL — for a
+correct fingerprint, an incorrect one, or none at all. The band partitioned the line correctly
+and returned the correct verdict on the run it scored; what it could not do was **tell those
+three cases apart.**
+
+**Partitioning is necessary and not sufficient. A band also has to be reachable from both
+sides**, which means checking the statistic's floor and ceiling *in the system as it actually
+is* before sealing thresholds against it. The cheap check: ask what the metric reads when the
+change under test is absent, and confirm that value can land in more than one band. If it
+cannot, the control is decorative — it will fire identically whatever you do, and its FAIL
+carries no information about the thing it was built to watch.
+
+This is also the precise sense in which reverting was right rather than merely disciplined.
+"The band is untestable, so ignore it" and "the band is untestable, so the verdict stands until
+it is testable" both describe the same situation; only the second one keeps the seal worth
+anything. The remedy ran, the change came out, and the follow-up is ordered so the control
+becomes discriminating *before* it is asked to judge again — the fix moves the floor to 2,
+which makes `= 2` reachable for the first time.
+
+**Three practices from the same seal, each closing a hole nobody had named:**
+
+- **An argument is not a test.** The census fix rests on a claim — that the reset was never the
+  detector, because the per-frame fingerprint already loops the caster set, so an appearing or
+  vanishing member moves the signature on the next frame regardless. That argument is sound, and
+  *nothing in the existing V1–V3 suite exercises it*: all three mutate geometry or quiescence,
+  none changes membership. A new leg was added that adds and removes a caster, because a fix
+  whose own risk surface is untested by its own verification is a fix resting on prose.
+- **A percentage must name its denominator in the same sentence.** The struck cache-saving
+  figures (§19) travelled unchallenged for hours partly because the denominator was never
+  restated after the first quote — so each re-quote inherited an assumption nobody could see. The
+  new derivation is required to carry it inline, every time.
+- **Register what a *lucky* result would mean, before it happens.** The re-derived saving may
+  land near the old struck figure. That was pre-registered as **luck, not vindication**: an
+  unmeasured input that happens to sit near the truth is not evidence about the input. Without
+  writing that down first, a coincidence arriving after the fact is nearly impossible to argue
+  down.
