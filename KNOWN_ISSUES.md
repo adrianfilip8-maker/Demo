@@ -4387,10 +4387,30 @@ figure is built once and only its body is substituted.
 | arm | tris | swept, body only | swept, whole figure |
 |---|---|---|---|
 | A — the `chunkAt` slabs the loft replaced | 88 | 47.9% | 39.8% |
+| A3 — **the slabs it *actually* replaced** (see below) | 132 | **51.9%** | not recomputed |
 | B — **shipped** loft, `belly` 0.06 | 240 | **76.9%** | 43.9% |
 | C — same loft, `belly` 0 | 240 | 69.3% | 43.9% |
 
-**The shipped loft beats what it replaced by +29.0 points**, and `belly` earns +7.6 of that. At
+> **CORRECTION, added by GEOMETRY at the declaration site while applying this table to
+> `PropKit.js:393`: arm A is under-populated, and the +29.0 headline inherits it.** Arm A is built
+> from **two** slabs, and the loft replaced **three**. `Statues.js` says so beside the `loft()`
+> call itself — *"body: haunch, barrel and chest as ONE lofted mass"* — its stations span
+> z −2.18…1.26, and the pre-loft chest slab `chunkAt(-0.78,0.78,1.60,2.30,0.35,1.20)` is absent
+> from the shipped sphinx. The loft and all eight stations landed in **one** commit (`d542055`),
+> so the loft did not grow after the measurement; the control just omitted a slab.
+>
+> Adding it **raises** the baseline — a third chamfered slab contributes its own bevel clusters —
+> so the margin **shrinks to +25.0 points body-only**. Direction and magnitude of the conclusion
+> are unchanged, and **`belly`'s +7.6 is untouched**: that is B against C, loft against loft, and
+> no control population enters it. Recomputed with `progress/records/L1-chest.mjs` (= `L1.mjs` + the
+> third slab, params verbatim from `d542055~1`). `RESULT-L1-loft.md` §43/§47 carries the same
+> two-slab control and wants the same correction.
+>
+> This is §56.3's own lesson landing on §56.2: **a number quoted onward without its population
+> travelling with it.** The population was recoverable in about a minute from the source comment
+> next to the knob, and nobody had checked it against the arm.
+
+**The shipped loft beats what it replaced by +29.0 points** — corrected to **+25.0**, above — and `belly` earns +7.6 of that. At
 whole-figure scale `belly` is **invisible** — 43.9% in both arms to three figures — because the body
 is too small a share of the figure's area. Any future `belly` claim must be body-only or it is
 measuring the head and the plinth.
@@ -5299,3 +5319,96 @@ rather than re-argued:
    re-staging would remove the frame that tests it.
 
 Deferred, not declined.
+
+
+---
+
+## §64 — the guard closed the reading window and not the staging window, and I reopened a line I had closed myself
+
+### 64.1 `ee9c23a` swept 45 unnamed lines *through* the guard that exists to stop exactly that
+
+The commit added **152 lines**; its message named roughly 110 — GEOMETRY's budget-table note,
+SHADING's two additions to §62, and my §63. The remaining ~45 were SHADING's **§62.5**, written
+between the moment `preappend.sh` printed its diff and the moment I ran `git add`.
+
+> **The guard protects the instant you READ. Staging happens later, and anything written in the gap
+> rides in anyway.**
+
+Third distinct version of one failure in a session: §14.8 (staged a shared file by name without
+reading it), §14.9 (ran the check and hardcoded its verdict), §64.1 (ran the check, honoured it, and
+was overtaken between check and stage). **Each fix was correct and each left a window open one step
+further along.**
+
+Closed with `tools/preappend.sh --verify`: the check stamps the file's byte length and prefix hash,
+and `--verify` re-hashes that prefix immediately before `git add`, refusing if anything moved
+beneath the append. **My first implementation of it was wrong in a way worth recording** — it
+compared the **index** copy, which an unstaged foreign write never touches, so it would have passed
+every real instance of the bug. Rewritten against the working tree and **proved on both inputs
+before being trusted**: exit 0 with only my own append present, exit 1 with a foreign edit injected
+into the prefix.
+
+### 64.2 §45 had already closed the line, on frames, two hours before §61.7 reopened it from a model
+
+**Mine, and the more expensive of the two.** SHADING found it: §45 closed the shadow-hue line at
+20:35 **on frames** — it says so in its own title, retires the same stale hues for the same reason,
+and states the same consequence, *"the pre-registered lever arms are moot."* §61.7 then ruled the
+acceptance unreachable and pre-registered `bmix05` as the arm that would settle it. **Both were
+already answered, in this file, by a section I did not read.**
+
+§62.1's provenance finding is real and worth keeping for the next transcription — but it is the
+**second** discovery. §45 got there first, cheaper, and by asking the better question: *whether the
+frame it needed already existed.*
+
+Cost of not looking: a wrong ruling written into the ledger, a capture arm pre-registered that could
+not have measured anything, and a task routed to two agents on a closed question.
+
+> **Before writing a ruling into this file, grep this file for the thing being ruled on.** The
+> search that would have found it costs one second. Every guard in §62.3 protects against a constant
+> going stale; **nothing protects against not reading.**
+
+What redeems the duplication: the two measurements are **independent and agree** — hand-placed ROI
+crops on `tx8` `671dd39` against material masks on `rim4` `2f99d55`, `temple` 211.4° vs 213°
+(**1.6°**) and `interior` 226.7° vs 227° (**0.3°**). Neither was built to check the other. And §62
+discharges the leg §45 **waived**: `night` measured across three materials and 380k px, inside
+§2.2's band, saturation *rising* rather than collapsing, at zero capture cost. **A waived guard and
+a discharged guard are not the same evidence.**
+
+### 64.3 A silent no-op caught before it spent the lock — the trap is an asymmetry inside one renderer
+
+`kerb2`'s predecessor poked `sh.tune.rimShadowFloorArch`. **`ToonMaterial.update()` never
+republishes rim uniforms** — `this.tune = TUNE` is the object the uniforms were *initialised* from.
+All four floor arms would have rendered at **0.55** while the log printed four distinct floors.
+
+`PostFX` is the **opposite**: it re-reads `tune` every frame, which is why the contact term's A/B is
+a live poke. Two modules in the same renderer, opposite conventions, and the poke that is correct
+for one is a silent null for the other. `kerb2` now pokes **both** sites and reads back **after** the
+step, from the uniform that rendered the frame.
+
+> **A convention is a property of the module, not of the codebase** — and the arm that works next
+> door is the most convincing wrong answer available.
+
+### 64.4 GEOMETRY corrects §56.2's control: two slabs against a loft that replaced three
+
+Caught by this guard's fourth refusal, while GEOMETRY was applying §56.2's table to
+`PropKit.js:393`. **Arm A was built from two `chunkAt` slabs; the loft replaced three.**
+`Statues.js` says so beside the `loft()` call — *"body: haunch, barrel and chest as ONE lofted
+mass"* — its stations span z −2.18…1.26, and the pre-loft chest slab is absent from the shipped
+sphinx. Loft and stations landed in **one** commit (`d542055`), so the loft did not grow after the
+measurement; the control simply omitted a slab.
+
+Adding it **raises the baseline** — a third chamfered slab brings its own bevel clusters — so the
+margin **shrinks from +29.0 to +25.0 points body-only**. Direction and magnitude of the conclusion
+are unchanged, and **`belly`'s +7.6 is untouched**, because that is B against C, loft against loft,
+with no control population in it.
+
+**This is §56.3's own lesson landing on §56.2** — *a number quoted onward without its population
+travelling with it* — and the population was recoverable in about a minute from the source comment
+next to the knob. I quoted +29.0 twice without asking what arm A contained.
+
+### 64.5 `dunesloft` is complete
+
+`shots/dunesloft/{dunes-canon.png (22:40), dunes-flank.png (22:41), report.json}` — the report 25 KB,
+carrying arm 2's raycast hits so the frame testifies to its own clearance rather than resting on
+§60.2's arithmetic. **The last shipped-but-unverified `src` change in the project now has its
+frames.** Remaining before the pass-6 capture: `det3`'s second boot (holding the lock) and `kerb2`
+(the only ticket queued).
