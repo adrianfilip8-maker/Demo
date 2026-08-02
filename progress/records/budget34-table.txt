@@ -3,8 +3,12 @@
 Provenance: node tools/budget.mjs night guard courtyard hero — pid 3762, init-rooted,
 coordinator-relaunched after restart-2. Lock held 12:06:32–12:23:13 UTC 2026-08-02.
 Tree at boot: c61941c checked out (src identical to 7b0e3f8/b77b614 — no src commits
-between; b77b614's bloomMetalGain=0 is an exact no-op). Shots chosen as the worst four
-of bud34's eight-row counted column (renderer.info). Verbatim log content below;
+between; b77b614's bloomMetalGain=0 is an exact no-op). Shot selection, corrected from
+this file's first committed version (which claimed "the worst four of bud34's counted
+column" — FX's verdict flagged that as false): night/courtyard/hero are high-count bud34
+rows, but guard has NO bud34 row (that run died before reaching it) and dunes (258 counted
+draws, 2nd-worst in bud34) was NOT measured. The unmeasured six are closed by the bounding
+chain in RESULT-budget34-verdict.md, not by this selection. Verbatim log content below;
 lock-wait lines elided. THE RULING: §1 is scored on the main-view visible line;
 the renderer.info line is pass-multiplied frame cost, recorded for reference.
 
