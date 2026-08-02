@@ -1,0 +1,58 @@
+verts HEAD 9491 · work 9491 EQUAL
+bones HEAD 32 · work 34 (expect +2)
+pupilRanges: pupilL [4934,5138) · pupilR [5427,5631)
+HEAD: 52 required clips, missing []
+work: 52 required clips, missing []
+idle_confident   outside 0 moved (max 0.00e+0) · inside 204 moved (max 1.241e-16) ok
+idle_bored       outside 0 moved (max 0.00e+0) · inside 408 moved (max 2.255e-16) ok
+idle_look        outside 0 moved (max 0.00e+0) · inside 408 moved (max 1.241e-16) ok
+perch_idle       outside 0 moved (max 0.00e+0) · inside 204 moved (max 2.220e-16) ok
+balance_idle     outside 0 moved (max 0.00e+0) · inside 204 moved (max 2.355e-16) ok
+walk             outside 0 moved (max 0.00e+0) · inside 289 moved (max 3.925e-17) ok
+run              outside 0 moved (max 0.00e+0) · inside 408 moved (max 2.220e-16) ok
+run_fast         outside 0 moved (max 0.00e+0) · inside 408 moved (max 2.289e-16) ok
+sneak_idle       outside 0 moved (max 0.00e+0) · inside 408 moved (max 2.238e-16) ok
+sneak_walk       outside 0 moved (max 0.00e+0) · inside 396 moved (max 5.551e-17) ok
+crouch_idle      outside 0 moved (max 0.00e+0) · inside 408 moved (max 3.140e-16) ok
+crouch_walk      outside 0 moved (max 0.00e+0) · inside 408 moved (max 3.143e-16) ok
+crawl            outside 0 moved (max 0.00e+0) · inside 408 moved (max 2.222e-16) ok
+turn_l           outside 0 moved (max 0.00e+0) · inside 408 moved (max 5.551e-17) ok
+turn_r           outside 0 moved (max 0.00e+0) · inside 408 moved (max 5.551e-17) ok
+skid_stop        outside 0 moved (max 0.00e+0) · inside 408 moved (max 2.306e-16) ok
+roll             outside 0 moved (max 0.00e+0) · inside 408 moved (max 2.306e-16) ok
+jump_rise        outside 0 moved (max 0.00e+0) · inside 404 moved (max 1.119e-16) ok
+jump_apex        outside 0 moved (max 0.00e+0) · inside 385 moved (max 2.486e-16) ok
+jump_fall        outside 0 moved (max 0.00e+0) · inside 408 moved (max 2.238e-16) ok
+double_jump      outside 0 moved (max 0.00e+0) · inside 408 moved (max 1.144e-16) ok
+land_soft        outside 0 moved (max 0.00e+0) · inside 408 moved (max 3.140e-16) ok
+land_hard        outside 0 moved (max 0.00e+0) · inside 408 moved (max 1.110e-16) ok
+land_roll        outside 0 moved (max 0.00e+0) · inside 408 moved (max 2.486e-16) ok
+wall_run_l       outside 0 moved (max 0.00e+0) · inside 204 moved (max 2.289e-16) ok
+wall_run_r       outside 0 moved (max 0.00e+0) · inside 204 moved (max 2.289e-16) ok
+wall_jump        outside 0 moved (max 0.00e+0) · inside 408 moved (max 4.450e-16) ok
+wall_cling       outside 0 moved (max 0.00e+0) · inside 408 moved (max 4.967e-16) ok
+ledge_hang       outside 0 moved (max 0.00e+0) · inside 408 moved (max 4.965e-16) ok
+ledge_shimmy_l   outside 0 moved (max 0.00e+0) · inside 408 moved (max 2.498e-16) ok
+ledge_shimmy_r   outside 0 moved (max 0.00e+0) · inside 408 moved (max 2.498e-16) ok
+ledge_climb      outside 0 moved (max 0.00e+0) · inside 310 moved (max 2.238e-16) ok
+hook_grab        outside 0 moved (max 0.00e+0) · inside 204 moved (max 2.289e-16) ok
+hook_swing       outside 0 moved (max 0.00e+0) · inside 408 moved (max 2.289e-16) ok
+hook_release     outside 0 moved (max 0.00e+0) · inside 408 moved (max 2.220e-16) ok
+rail_slide       outside 0 moved (max 0.00e+0) · inside 408 moved (max 2.238e-16) ok
+rail_walk        outside 0 moved (max 0.00e+0) · inside 408 moved (max 2.306e-16) ok
+pole_climb       outside 0 moved (max 0.00e+0) · inside 166 moved (max 2.220e-16) ok
+pole_slide       outside 0 moved (max 0.00e+0) · inside 408 moved (max 2.238e-16) ok
+pole_swing       outside 0 moved (max 0.00e+0) · inside 407 moved (max 3.140e-16) ok
+spire_land       outside 0 moved (max 0.00e+0) · inside 408 moved (max 2.483e-16) ok
+spire_balance    outside 0 moved (max 0.00e+0) · inside 408 moved (max 2.544e-16) ok
+cane_combo_1     outside 0 moved (max 0.00e+0) · inside 408 moved (max 2.289e-16) ok
+cane_combo_2     outside 0 moved (max 0.00e+0) · inside 204 moved (max 2.220e-16) ok
+cane_combo_3     outside 0 moved (max 0.00e+0) · inside 379 moved (max 2.220e-16) ok
+dive_attack      outside 0 moved (max 0.00e+0) · inside 408 moved (max 2.306e-16) ok
+dive_impact      outside 0 moved (max 0.00e+0) · inside 408 moved (max 3.342e-16) ok
+pickpocket       outside 0 moved (max 0.00e+0) · inside 408 moved (max 2.220e-16) ok
+paraglide        outside 0 moved (max 0.00e+0) · inside 37 moved (max 1.388e-17) ok
+hurt             outside 0 moved (max 0.00e+0) · inside 408 moved (max 2.904e-2) ok
+ko               outside 0 moved (max 0.00e+0) · inside 408 moved (max 2.007e-2) ok
+victory          outside 0 moved (max 0.00e+0) · inside 408 moved (max 2.220e-16) ok
+GATE PASSED: zero vertices moved outside pupilRanges in all 52 holds (outside max 0); startle moves only hurt/ko pupils.

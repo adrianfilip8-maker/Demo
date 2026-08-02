@@ -1,0 +1,10 @@
+tris  HEAD 15482 · work 16004 · delta 522
+verts HEAD 9491 · work 9839 · delta 348
+tail tuft verts HEAD 1128 · work 1476
+pupilRanges work: pupilL [4934,5138) · pupilR [5427,5631) (expect [4934,5138) · [5427,5631))
+work: 52 required clips, missing []
+perch_idle cane keys: times [0, 0.800000011920929, 1.7000000476837158, 3.200000047683716] (expect 0, 0.8, 1.7, 3.2)
+hurt pupil tracks: pupilL×3 pupilR×3 · ko: pupilL×2 pupilR×2
+hurt @hold 0.1: pupilL scale 0.350 · pupilR 0.350
+ko @hold 0.9: pupilL scale 0.540 · pupilR 0.540
+CONTRACT OK
