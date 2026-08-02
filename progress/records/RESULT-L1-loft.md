@@ -1,5 +1,36 @@
 # RESULT — L1, run before the `dunes` capture it can cancel
 
+> ## CORRECTION — the control population in §2 and §3 is under-populated; the margin is +25.0, not +29.0
+>
+> Added by the coordinator at GEOMETRY's flag. GEOMETRY found this while placing the corrected
+> comment at `PropKit.js:393` and **declined to edit a sealed result itself**, which is the right
+> call — so the correction lands here as a header rather than as a silent body edit.
+>
+> **Arm A is built from two `chunkAt` slabs. The loft replaced three.** `Statues.js` says so beside
+> the `loft()` call — *"body: haunch, barrel and chest as ONE lofted mass"* — the loft's stations
+> span z −2.18…1.26, and the pre-loft chest slab `chunkAt(-0.78, 0.78, 1.60, 2.30, 0.35, 1.20)` is
+> absent from the shipped sphinx. Loft and all eight stations landed in a single commit
+> (`d542055`), so this is not the loft growing after the measurement — **the control omitted a
+> slab.**
+>
+> | control | tris | swept, body-only | loft (76.9%) beats it by |
+> |---|---|---|---|
+> | two slabs (as this document states) | 88 | 47.9% | ~~+29.0~~ |
+> | **three slabs (actually replaced)** | 132 | **51.9%** | **+25.0** |
+>
+> Adding the slab **raises** the baseline — a third chamfered box contributes its own bevel
+> clusters — so the margin shrinks by 4.0 points. **The conclusion survives**: the sign is
+> unchanged, +25.0 is still large, and **`belly`'s +7.6 is completely untouched**, because that is
+> arm B against arm C — loft against loft, with no control population in it. `belly` stays at 0.06,
+> and `dunes` was correctly cleared.
+>
+> Re-measured with `progress/records/L1-chest.mjs` (`L1.mjs` plus the third slab, parameters
+> verbatim from `d542055~1`). No lock taken.
+>
+> Recorded in `KNOWN_ISSUES.md` §64.4. This is §56.3's own lesson landing on §56.2 — *a number
+> quoted onward without its population travelling with it* — and the population was recoverable in
+> about a minute from the source comment beside the knob.
+
 Sealed clause: `PREREG-loft-dunes.md` §L1 (sha256 `c4007009…`, committed `957c3f0` before any
 `dunes` frame existed). Run offline, no lock, while `rim4` held it. Tree: `src/` at `8795030`,
 `src/world/` clean.

@@ -418,12 +418,24 @@ export function post(h, r0, r1, opts = {}) {
  * `swept = 100 - (area fraction in the 6 largest clusters)`; arms share `rng(12345)` and only
  * the body part is substituted into the shipped figure.
  *
- *     the two chunkAt slabs this loft replaced    88 tris   47.9% body-only   39.8% whole figure
+ *     chunkAt control, TWO slabs  (as stated)     88 tris   47.9% body-only   39.8% whole figure
+ *     chunkAt control, THREE slabs (correct)     132 tris   51.9%             not recomputed
  *     shipped loft, belly 0.06                   240 tris   76.9%             43.9%
  *     same loft, belly 0 (calibration)           240 tris   69.3%             43.9%
  *
- * So the loft beats what it replaced by **+29.0 points body-only**, and `belly` earns **+7.6**
- * of that. `belly` stays at 0.06 on those numbers, not on the paragraph that used to be here.
+ * **The control population was under-stated, and the margin with it.** `RESULT-L1-loft.md` and
+ * the draft of this comment both name "the two `chunkAt` slabs the loft replaced" — but the loft
+ * replaced **three**. The comment beside the `loft()` call in `Statues.js` says so itself
+ * ("haunch, barrel and chest as ONE lofted mass"), its stations run z −2.18…1.26 spanning the
+ * chest, and the pre-loft chest slab `chunkAt(-0.78,0.78,1.60,2.30,0.35,1.20)` is absent from
+ * the shipped sphinx. The loft and all eight stations arrived in one commit (`d542055`), so this
+ * is not a case of the loft growing after the measurement — the control simply omitted a slab.
+ *
+ * Adding it *raises* the baseline (a third chamfered slab brings its own bevel clusters), so the
+ * margin shrinks: the loft beats what it actually replaced by **+25.0 points body-only**, not
+ * +29.0. The sign and the size of the conclusion are unchanged and `belly` stays at 0.06 — its
+ * own **+7.6** is loft-against-loft (arms B vs C) and is untouched by the control's population.
+ * Recomputed with `progress/records/L1-chest.mjs`, which is `L1.mjs` plus the third slab.
  *
  * **Any claim about `belly` must be made body-only or it is measuring the head and the plinth**
  * — at whole-figure scale it is invisible, 43.9% either way, identical to three significant
