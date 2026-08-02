@@ -2869,3 +2869,58 @@ ARCHITECTURE's file; and the shadow regime belongs to SHADING/LIGHTING.
 number is expected to move little, and why.** Three of the shots are 83–98% stone and cannot
 move on decoration alone. That converts a small result from something to explain away into
 something predicted — and it is the difference between a finding and a spin, decided in advance.
+
+---
+
+## 39. Every prop placed through a Bag was stacked at the world origin, silently, for the whole project
+
+`Bag.transform` forwarded a `Matrix4` into `place()`, whose signature is a **destructure**. A
+`Matrix4` has none of the destructured field names, so every field came back `undefined`, every
+default applied, the transform resolved to identity, and **nothing threw**. All 13 call sites in
+`Props.js` passed `matrixOf(...)`, so **every prop placed through a Bag rendered at (0,0,0)**:
+both colossi, the sixteen-sphinx avenue, the Anubis pair, the gilded Ra, the sarcophagus lid,
+the offering table, the scaffold, the stelae and the masts. Props bounding box after the fix:
+z **[−13.4, 31.4] → [−75.6, 84.7]**, y **[−0.4, 11.1] → [−12.0, 13.3]**.
+
+**This is the single largest defect found in the project, and it was invisible to every
+instrument we own.** A destructure of an object with the wrong shape is the quietest failure in
+JavaScript: no exception, no warning, no NaN, no missing property access — just defaults, which
+are by construction *plausible*. `Statues.js` passed options objects and was always correct, so
+the same helper worked perfectly on half its callers.
+
+**It explains four of the critic's §3.11 "placeholder and broken assets" at once:** the missing
+subject in `courtyard`, the missing avenue in `dunes`, `interior`'s "placeholder rectangle"
+(the gilded Ra belongs in front of it, and a pixel probe now finds Ra there at 15.3 m), and —
+strongly though not conclusively — `sly-profile`'s "cream faceted polyhedron", since the
+origin-stacked colossus projects to **2.8% of that frame against the critic's measured ~2.7%**,
+and the pre-fix build put ~19,200 cream-limestone vertices on that screen that the post-fix
+build does not.
+
+**The lesson is about the shape of the failure, not the bug.** Ask what a wrong argument
+*produces*: a destructure that misses produces defaults, and defaults were chosen to be
+reasonable, so the wrong result looks like a deliberate one. Where a helper accepts a
+structurally-typed argument, either accept both forms explicitly (as the fix does) or fail
+loudly on an unrecognised one. **A silent default is a lie told in a plausible voice.**
+
+Two smaller findings of the same family, both from the same sweep: a **sign error** in the
+corner-roll transform put the entry pylon's torus moulding **0.97 m inside the wall at its foot
+and 4.08 m clear of it in open air at its head** — those were the critic's "ten purposeless
+untextured poles in `dunes`", never props at all but a moulding standing off its own building.
+And the papyrus abacus was authored **0.256 m narrower than the bell it caps**, so the capital
+occluded it — which is the critic's "no abacus" on a part drawn in every frame.
+
+### 39.1 A comment describing a fixed bug, read as current behaviour, cost a capture
+
+The same agent stood down a queued capture after 8.5 minutes because it believed
+`lock.mjs` "steals at 20 min on elapsed time regardless of whether the holder is alive", and it
+did not want to hijack a live run. **That behaviour does not exist.** `lock.mjs` evicts on
+liveness only — `const stale = !alive(held.pid)` — and carries an explicit banner saying
+*"Deliberately no age-based staleness anywhere in this file"*, because an age cutoff was tried
+twice and was a bug both times. What the file *does* contain is a comment recording the old
+bug's symptom: *"one run was observed losing the lock at 33.7 minutes mid-render."*
+
+So a historical note, accurate and worth keeping, was read in the present tense — the mirror of
+§32, where a comment stated something false. **A comment that describes a bug must say it is
+fixed, in the same sentence, in the tense the reader will assume.** The cost here was one
+capture and a wasted queue slot; the citizenship was exemplary and the premise was wrong, which
+is the combination worth guarding against.
