@@ -40,7 +40,12 @@ const e = new THREE.Euler(), q = new THREE.Quaternion();
 const rows = [];
 for (let x = -180; x <= 180; x += 8) {
   for (let y = -60; y <= 60; y += 15) {
-    for (let z = -30; z <= 30; z += 15) {
+    /* z was -30..+30 until KNOWN_ISSUES §57. That domain did not contain the aim that was
+       ACTUALLY SHIPPED in perch_idle (z = 130), so this tool could never evaluate the value it
+       existed to choose — in either direction. The tell was in its own output the whole time:
+       the top twelve all sat on the z = +30 boundary. A search whose winners pile against an
+       edge is reporting that its optimum is outside the box. Full rotation range now. */
+    for (let z = -180; z <= 180; z += 15) {
       e.set(x * D2R, y * D2R, z * D2R, 'XYZ');
       q.setFromEuler(e);
       sly._canePivot.quaternion.copy(q).multiply(bq);
@@ -72,9 +77,38 @@ for (let x = -180; x <= 180; x += 8) {
   }
 }
 rows.sort((a, b) => b.score - a.score);
+
+/* The shipped aim, scored and RANKED against the sweep it is being compared to.
+   Without this the tool only ever compares candidates to each other, so it can report a
+   confident winner while saying nothing about whether the thing already in the file was better.
+   perch_idle's shipped aim ranked 5927 of 10351 and nobody knew, because the number was never
+   printed. `clip` is read from Clips.js so this cannot drift out of date the way a hardcoded
+   baseline would. */
+const shippedKey = CLIPS[clipName]?.keys?.find((k) => k.cane)?.cane ?? null;
+if (shippedKey) {
+  const [sx, sy, sz] = shippedKey;
+  // Nearest grid row to the shipped aim; exact if it lands on the grid, labelled if it does not.
+  let best = null, bestD = Infinity;
+  for (const r of rows) {
+    const d = Math.abs(r.x - sx) + Math.abs(r.y - sy) + Math.abs(r.z - sz);
+    if (d < bestD) { bestD = d; best = r; }
+  }
+  const rank = rows.indexOf(best) + 1;
+  console.log(`SHIPPED  [${sx},${sy},${sz}]${bestD ? `  (nearest grid [${best.x},${best.y},${best.z}], Δ${bestD}°)` : ''}` +
+    `  score ${best.score.toFixed(3)}  RANK ${rank} of ${rows.length}` +
+    `  broad ${best.broadside.toFixed(2)} across ${best.across.toFixed(2)} bodyGap ${best.clearBody.toFixed(2)}`);
+}
+
 console.log(`clip ${clipName}  view azim ${(azim / D2R).toFixed(0)}° elev ${(elev / D2R).toFixed(0)}°`);
 for (const r of rows.slice(0, 12)) {
   console.log(`  [${String(r.x).padStart(4)},${String(r.y).padStart(4)},${String(r.z).padStart(4)}]  score ${r.score.toFixed(3)}` +
     `  broad ${r.broadside.toFixed(2)} across ${r.across.toFixed(2)} headGap ${r.clearHead.toFixed(2)} bodyGap ${r.clearBody.toFixed(2)}` +
     `  hook ${r.hook.x.toFixed(2)},${r.hook.y.toFixed(2)},${r.hook.z.toFixed(2)}`);
 }
+
+/* SCOPE, stated because §57.2 cost a wrong selection: this score models crook clearance against
+   `head` and `chest` ONLY. It does not know about the tail, which in perch_idle is the largest
+   mass in frame. Two aims tied at 3.455 / 3.475 there, and the loser rendered as a ring fused
+   into the tail. SHORTLIST WITH THIS SCORE, NEVER SELECT WITH IT — take the top rows to a
+   silhouette render and choose there. A tie between candidates that look nothing alike means
+   this score is missing a term, not splitting hairs. */

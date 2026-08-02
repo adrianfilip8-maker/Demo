@@ -4495,3 +4495,97 @@ ledge.** An offline silhouette probe cannot see intersection with world geometry
 This also revises §53.6. I had recorded that `perch_idle`'s only remaining item was verifying the
 existing line of action in pixels. That was right about the line of action and wrong about the clip:
 a separate, larger, critic-visible defect was sitting in the same four keys.
+
+
+---
+
+## §58 — a tool that could not see the value it chose, a shot that could not see the thing it was asked about, and a condition that cannot be scored at all
+
+CHARACTER's `perch_idle` follow-up. Two of these were fixed at source by the coordinator because
+`tools/**` and `src/core/Shots.js` are read-only to the agent that found them.
+
+### 58.1 `canesweep.mjs` fixed at the declaration site
+
+Both defects §57 identified are now closed in the tool rather than in a scratch copy:
+
+- **`z` domain `-30…30` → `-180…180`.** The grid is now 46 × 9 × 25 = **10,350** rows, which is
+  exactly the population CHARACTER's full-domain re-score used (10,351 including its control).
+- **The shipped aim is scored and RANKED**, read out of `Clips.js` so it cannot drift the way a
+  hardcoded baseline would. Without it the tool compares candidates only to each other and can
+  announce a confident winner while saying nothing about what is already in the file.
+- **The scope limit is now written in the tool**: this score models crook clearance against `head`
+  and `chest` only and does not know about the tail. *Shortlist with the score, never select with
+  it.*
+
+### 58.2 `sly-perch` added, because `hero` provably cannot answer the question
+
+The line of action is hips +0.045 → chest +0.082 → head +0.046 — 3.7 cm out, 3.6 cm back. At
+`hero`'s 87–97 px/m that is **3.2–3.6 px against a ~2.5 px ink hull at a 70° view.** The excursion
+is the width of the line drawn over it, so `hero` returns a null whether or not the lean exists.
+
+**Registered as an expected null before the capture**, so that a null in `hero` is never later read
+as "the lean is missing" — the §49 discipline applied prospectively. `sly-perch` is `sly-closeup`
+translated down 0.30 m and nothing else: same lens, bearing, distance, yaw and player position, with
+only the height following `perch_idle`'s own base offset. Authored as a pure translation because
+`sly-startle`'s own comment records what re-inventing a twin's camera costs (§27.2). It is
+deliberately not on the ledge and therefore says nothing about §57.4's cane-over-open-air risk,
+which remains `hero`'s alone.
+
+### 58.3 The proportions condition cannot currently be scored — three definitions, no agreement
+
+Measured on the live rig: standing `idle_confident` is **1.774 m**, reading **4.44 heads**
+chin→crown including the cap, or **6.73 heads** on authored skull height. `perch_idle` reads
+4.14 / 5.79 — *pose, not rig*. §7.3 asks for "~1:5", which sits **between** the two published
+measures. §9's often-quoted **5.29 heads** is a third definition matching neither.
+
+> **This is a live hazard, not a fixed defect.** Four numbers describe one figure and no two share a
+> definition, so "does he read 1:5?" has no determinate answer until someone says chin-to-crown or
+> skull, with or without the cap.
+
+**Fifth instance of the session's most persistent pattern** — §34, §48.3, §51.1/§56.3, §54's palette
+figure, and now this: *a number quoted onward without its definition travelling with it.* §9's
+actual lever (~0.10 m shorter torso across ~10 absolute-Y sites) remains unattempted, and should
+stay unattempted until the measure is fixed, because changing the rig to satisfy an ambiguous target
+is how you ship a regression that scores as a win.
+
+### 58.4 The sleeve→forearm bands carried a unit error larger than the effect
+
+The 1.7 px / 19 px readings from §53.7 are in **`shotsil@900`** units; the capture renders **720**
+rows. That is a **1.44× conversion — larger than the difference between the two candidate
+readings.** Converted: **A = 1.4 px** (no event, buried inside the 2.5 px ink hull) against
+**B = 15.4 px** (a visible notch).
+
+The registered primary verdict is therefore the **unit-free ratio** to the forearm→cuff step
+measured in the same frame: **A = 0.07, B = 0.58**, indeterminate between 0.15 and 0.40, with an
+abort if the forearm→cuff ruler itself misses 15–28 px. Scoring a ratio rather than a length is what
+makes the clause immune to the error that nearly broke it.
+
+### 58.5 Reading C: the probe has a demonstrated false positive of exactly the shape the finding needs
+
+Not in the record before, and registered by CHARACTER as the outcome it thinks most likely: the
+notch rests on **4–6 vertex bins**, and the same probe is *known* to produce a spurious event of
+precisely that shape — bin `u = 0.662`, `n = 4`, reporting a 7 cm arm in mid-sleeve, half of both
+its neighbours.
+
+So `cap9` gets a **free in-frame control**: that bin predicts ~34 px if low-`n` bins are real and
+~0 px if they are artefacts. **If the control pinches, B is withdrawn regardless of what the hem
+shows.** This is the §46 discipline — prove the instrument on a known input in the same frame as the
+claim — arriving inside a pre-registration rather than after a disputed result.
+
+### 58.6 The arm ink is authored and deliberately withheld, to keep the measurement falsifiable
+
+`_buildArmInk` (105 lines: sleeve-hem welt, glove-cuff welt, ulnar seam) was withdrawn at `866e251`
+to protect another agent's determinism pair, and is being **kept out on purpose**: its sleeve-hem
+welt lands at `u ≈ 0.76`, exactly the boundary `cap9` measures, so reinstating it would make the
+sleeve→forearm item **unfalsifiable**. `cap9` is its before-frame. Recovery is
+`git show 4db64b4 -- src/player/SlyModel.js`.
+
+A decision *not* to ship finished work, in order to preserve the falsifiability of a measurement,
+is the inverse of §37's fur-card lesson and belongs in the record as a positive example.
+
+### 58.7 A third self-discarded probe
+
+CHARACTER tried to settle the line of action offline with a per-row silhouette-centroid probe and
+threw its own result away: the "head" band came out **204 px wide on a 320 px figure**, so the bands
+contained the cane and the tail rather than the spine. §11's wrong-population trap, caught by the
+number being physically impossible — the same tell that caught the 32 cm forearm in §53.7.

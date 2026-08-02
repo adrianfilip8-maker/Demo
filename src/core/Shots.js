@@ -137,6 +137,32 @@ export const SHOTS = {
     player: { pos: [0, 0, 30], yaw: 5.24, pose: 'hurt' },
   },
 
+  /* Line-of-action verification twin for `perch_idle`. Added because `hero` provably CANNOT
+     verify it and this was going to be read as a null in `hero` and mistaken for a missing lean.
+
+     The excursion under test is the spine's lateral S — hips +0.045 → chest +0.082 → head
+     +0.046, i.e. 3.7 cm out on the lower segment and 3.6 cm back on the upper. At `hero`'s
+     87-97 px/m that is **3.2-3.6 px against a ~2.5 px ink hull at a 70° view**: the excursion is
+     the width of the line drawn over it, so `hero` returns a null whether or not the lean exists.
+     The same 3.7 cm at this framing's density is ~13.5 px, which a per-row centroid can resolve.
+
+     **This is `sly-closeup` translated down 0.30 m and nothing else.** Same lens (fov 38), same
+     bearing, same distance, same yaw 5.24, same player position — only the height follows
+     `perch_idle`'s own `pos: [0.045, -0.30, 0.07]` base offset, so the crouched torso sits where
+     the standing one did. Authored as a pure translation on purpose: `sly-startle`'s comment
+     above records that re-inventing a twin's camera is how a framing artefact got blamed on the
+     feature under test (§27.2), and a shot that differs from its reference in one axis by one
+     known quantity cannot repeat that.
+
+     Note it is deliberately NOT on the ledge — `perch_idle` is frozen here over flat ground.
+     That is correct for this measurement, which is about the spine's own curve, and it means
+     this shot says nothing about the cane-over-open-air question §57.4 registers. That one is
+     `hero`'s to answer and only `hero`'s. */
+  'sly-perch': {
+    pos: [-1.6, 1.15, 33.2], target: [0.0, 0.65, 30.0], fov: 38, tod: 0.80,
+    player: { pos: [0, 0, 30], yaw: 5.24, pose: 'perch_idle' },
+  },
+
   /* Composition + props: obelisk, colossi, braziers, palms, banners.
 
      Camera untouched — this shot exists to show the architecture, and turning it toward the
