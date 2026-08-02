@@ -187,7 +187,28 @@ export const SHOTS = {
      nearest yaw putting view at 34° — a three-quarter read — while keeping the key 21° off
      his face so it still models. Visibility is flat across yaw here, so the two were solved
      separately without either fighting the other. */
-  courtyard: {
+  /* FRAMING IS BROKEN AND THE FIX IS NOT A CAMERA NUDGE — see KNOWN_ISSUES §39.
+
+     Every prop placed through a `Bag` was rendering at the world origin, so the colossi, the
+     sphinx avenue and most of the set dressing were invisible when this camera was composed.
+     This shot is named for those props and was framed around their absence. Now that they are
+     placed, the west colossus (13 m tall on a 2 m plinth at x -9.5, z 25) sits 11.1 m away in a
+     50° vertical fov that spans only 10.37 m there — so head and feet both leave the frame and
+     what remains reads as a stack of slabs.
+
+     Three corrections were measured and all three are worse, which is the useful finding: the
+     courtyard is ENCLOSED, and there is no distance to buy.
+       · back along the view axis to (-22.7, 5.6, 33.3) — camera 1.3 m off the west wall, the
+         statue drops to 2.8% of frame;
+       · back in z to (-19, 5.6, 36) — 0.2 m from the hieroglyph wall, which then fills 93%;
+       · up and back to (-20, 11.5, 34) — `camclear` passes, but a wall at 1.6 m takes 34% and
+         the colossus falls out of the top five entirely.
+
+     So this needs a composition decision by the level's owner, not arithmetic from here: either
+     the camera moves outside the courtyard and looks in, or the shot accepts a partial statue
+     and re-aims so the HEAD is in frame and the plinth clips (a figure cropped at the base
+     reads; one cropped at both ends does not). Left at its original values deliberately — a
+     known-wrong frame beats an unmeasured guess. */  courtyard: {
     pos: [-19.0, 5.6, 30.0], target: [1.0, 9.0, 12.0], fov: 50, tod: 0.76, roll: 1.0,
     player: { pos: [-6.6, 5.12, 12.4], yaw: 5.08, pose: 'run' },
   },
