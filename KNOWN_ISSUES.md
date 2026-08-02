@@ -1326,3 +1326,31 @@ silhouette geometry behind haze. Whatever the 44k was, it is essentially all S3 
 The widening is still worth having, but it buys about 1.6% of what its own pre-registration
 implied for S4, and no acceptance in that document would have caught the discrepancy because
 none of them measured the inventory.
+
+## 20. A global lever measured in a local ROI is not a local result
+
+Twice in one investigation, and the second time by the agent who had just caught the first.
+
+The rim work needed to know which of two gates was starving a character's silhouette. The
+reference leg every capture had ever used, `gateoff`, **moves two knobs at once** — so no run in
+the project had ever isolated either half. That was caught, correctly, and the elimination was
+re-run one knob at a time. `rimPlanar` cleared: the screen gate off *everywhere* moves the
+character by ±0.4 L.
+
+Then the magnitude half was opened — **globally** — and the character lifted 4–12 L. That was
+read as the answer, shipped as a subject exemption, and written into a comment and a commit
+message. Opening the identical smoothstep on **exactly the skinned population** moves him
+−0.02 / +0.53 / −0.01 L: nothing, inside base-vs-base2 noise. The 4–12 L was never his surface.
+The same global leg raises the paving *behind* him by +13 to +20 L, and bloom does not respect a
+silhouette, so the light bled into the ROI from outside the population under test.
+
+**A lever applied outside your region of interest can move the pixels inside it.** Bloom, AO,
+the prepass, ambient bounce and the tonemap's own shoulder all couple neighbouring pixels, so
+"I changed X and my ROI moved" only implicates X if X was confined to the ROI. When the lever is
+global, the control is not base-vs-lever — it is **lever-restricted-to-the-population** vs
+**lever-everywhere**, and the gap between those two is the bleed.
+
+The residue is worth stating plainly: after both eliminations, **no un-confounded lever has yet
+moved this character's rim at all** — which puts the original regression itself in question,
+since it was measured against the same two-knob reference. The next step is to paint the terms
+into the framebuffer with the tonemap bypassed and look at what is actually there. Not a tuning.
