@@ -389,13 +389,49 @@ export function post(h, r0, r1, opts = {}) {
  * bottom strip is the one part of the ring that is pure cost.
  *
  * The flank is **not** a straight vertical plane, and that is load-bearing rather than a
- * flourish. Built with flat flanks this shape measured *worse* than the three chunks it
- * replaced — swept-normal area over the figure fell 82.1% → 72.1% — because `chamferBox`
- * pillows its face interiors by ~7° while a ruled flank turns through exactly zero. A flank is
- * the largest single area on the animal, so a flat one dominates whatever the back is doing.
- * `belly` gives it a shallow barrel that narrows toward the plinth: the normal leaves the base
- * tilted ~9° outward-and-down and arrives at the spring line horizontal, so the whole flank
- * carries a gradient and the undercut reads as carved stone standing off its own base.
+ * flourish — but the mechanism stated here until §56.3 was measured backwards, and the number
+ * that justified it does not exist. Both are corrected in place rather than deleted, because
+ * the wrong version shipped and the next reader needs to know which claim to distrust.
+ *
+ * **WITHDRAWN: "swept-normal area over the figure fell 82.1% -> 72.1%".** No statistic by that
+ * name exists in this project, no definition of it was ever written down, and every natural
+ * reconstruction comes out the opposite sign. The pair also describes the FLAT-FLANK loft, i.e.
+ * the version before `belly` existed, so it was never a measurement of what ships here.
+ *
+ * **WITHDRAWN: "`chamferBox` pillows its face interiors by ~7° while a ruled flank turns
+ * through exactly zero".** Measured, it is precisely inverted. Restricting to triangles within
+ * 10° of +X so the chamfer bevels are excluded from the face-interior population:
+ *
+ *     chunkAt slab face interior, jitter 0        2 tris    0.00° mean    0.00° max
+ *     chunkAt slab face interior, shipped jitter  2 tris    0.46°         0.48°
+ *     loft flank interior, belly 0               36 tris    4.87°         8.35°
+ *     loft flank interior, belly 0.06 (shipped)  32 tris    6.66°        11.17°
+ *
+ * It is the box face that turns through zero — two triangles sharing one normal — and the loft
+ * flank that carries the gradient. The "~7°" was an artefact of the selection cone: widen it
+ * from 10° to 45° and the chamfer bevels are pulled into the "face interior" population, at
+ * which point the same slab reports 13.98°. A bevel was measured and attributed to the flat
+ * face beside it.
+ *
+ * **What actually holds, with its definition, so it can be recomputed rather than trusted:**
+ * area-weighted triangle-normal clustering, two normals in one cluster iff `dot > 0.9998`;
+ * `swept = 100 - (area fraction in the 6 largest clusters)`; arms share `rng(12345)` and only
+ * the body part is substituted into the shipped figure.
+ *
+ *     the two chunkAt slabs this loft replaced    88 tris   47.9% body-only   39.8% whole figure
+ *     shipped loft, belly 0.06                   240 tris   76.9%             43.9%
+ *     same loft, belly 0 (calibration)           240 tris   69.3%             43.9%
+ *
+ * So the loft beats what it replaced by **+29.0 points body-only**, and `belly` earns **+7.6**
+ * of that. `belly` stays at 0.06 on those numbers, not on the paragraph that used to be here.
+ *
+ * **Any claim about `belly` must be made body-only or it is measuring the head and the plinth**
+ * — at whole-figure scale it is invisible, 43.9% either way, identical to three significant
+ * figures. That is a property of the figure's area budget, not evidence that `belly` is inert.
+ *
+ * What `belly` does geometrically is unchanged and is what the shape wants: a shallow barrel
+ * narrowing toward the plinth, so the flank carries a gradient down to the base and the
+ * undercut reads as carved stone standing off its own plinth rather than as a ruled wall.
  *
  * sections: [{ z, w, y0, top, spring?, n?, dx? }]
  *   z      position along the run          w    half-width at this station
