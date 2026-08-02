@@ -113,6 +113,40 @@ const TUNE = {
   rimLit: 0x7fd4ff,       // §2.2 RIM, the key's complement
   rimShade: 0x6fa8d8,     // §2.2 FILL sky bounce — the shadow side is lit by sky, not by sun
 
+  /* --- normal-prepass membership (ledger #26) ---
+     Who is allowed to write into the normal buffer that AO and the crease pass read.
+
+     The irony is worth recording rather than smoothing over: the block at the normal pass
+     below already documents this exact contamination family as *fixed* — but only for the
+     inverted-hull ink shells. The same argument was never extended to the two other
+     populations that have no business defining a surface normal, so the fix reads as
+     complete while two thirds of the class is still live:
+
+       - the sky dome, which is not a surface at all;
+       - the transparent queue — shafts, veils, particles, decals — which are volumetric
+         or additive. `overrideMaterial` replaces their material outright, so blend mode,
+         `depthWrite: false` and alpha all vanish and a light shaft renders as an opaque
+         wall of normals sitting in mid-air. AO then occludes against it and the crease pass
+         draws an ink line round a beam of light.
+
+     Two knobs, not one, because their acceptance criteria are OPPOSITE and folding them
+     together would make the bit-identical half unfalsifiable — the precise failure shape
+     §8 records for the two rim terms ("if you are eliminating *the rim*, say which of the
+     two"):
+
+       - `prepassSkipSky` MUST be bit-identical in all ten shots. `Sky.js` builds the dome
+         `side: BackSide` while the override is FrontSide, so every dome triangle is already
+         back-face culled and hiding it can only remove a draw, never a pixel. If a frame
+         moves, that reading is wrong and this knob is the thing that says so.
+       - `prepassSkipTransparent` MUST change the frame where transparent geometry sits near
+         an AO-relevant surface, and must not change it anywhere else. A gate that changes
+         nothing at all would mean it is not reaching the queue it targets.
+
+     Both default OFF so the shipped chain is unchanged and the A leg of that A/B is exact.
+     This is a correctness gate, not a budget one: the geometry involved is ≤3k triangles. */
+  prepassSkipSky: false,
+  prepassSkipTransparent: false,
+
   /* --- ambient occlusion composition ---
      Occlusion darkens *toward the shadow hue*, never toward grey (§2.1.3). aoDepth is how
      dark a fully-occluded crease goes; aoStrength is how much of the AO buffer is believed,
@@ -1080,6 +1114,28 @@ export class PostFX {
       renderer.shadowMap.autoUpdate = false;
       renderer.shadowMap.needsUpdate = false;
 
+      /* Ledger #26 — see `prepassSkipSky` / `prepassSkipTransparent` in TUNE. Same shipped
+         mechanism as the shell gate above (hide for the duration, restore in `finally`),
+         extended to the two other populations that cannot define a surface normal.
+         Collected before the try so the restore list exists no matter where we throw. */
+      const prepassHidden = [];
+      if (this.tune.prepassSkipSky || this.tune.prepassSkipTransparent) {
+        scene.traverse((o) => {
+          if (!o.visible || !(o.isMesh || o.isInstancedMesh || o.isSkinnedMesh)) return;
+          const m = Array.isArray(o.material) ? o.material[0] : o.material;
+          if (!m) return;
+          /* `depthWrite === false` is part of the test rather than `transparent` alone:
+             additive FX (shafts, sparkles) are the population that most needs excluding and
+             several of them are opaque-flagged but non-depth-writing. */
+          const isSky = /^sky\./.test(o.name || '');
+          const isVeil = m.transparent === true || m.depthWrite === false;
+          if ((this.tune.prepassSkipSky && isSky) || (this.tune.prepassSkipTransparent && isVeil)) {
+            o.visible = false;
+            prepassHidden.push(o);
+          }
+        });
+      }
+
       try {
         scene.overrideMaterial = normalMat;
         scene.background = null;
@@ -1087,6 +1143,7 @@ export class PostFX {
         renderer.clear();
         renderer.render(scene, cam);
       } finally {
+        for (const o of prepassHidden) o.visible = true;
         scene.overrideMaterial = prevOverride;
         scene.background = prevBg;
         renderer.shadowMap.autoUpdate = prevShadowAuto;
