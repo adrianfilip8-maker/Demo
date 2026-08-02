@@ -322,6 +322,18 @@ const IDLE_A = P({
      body instead of both pointing the same way. The old set left it a level horizontal
      sausage at shoulder height, which is the one shape a big tail must not make: it reads as
      a wing, it flattens the figure, and it puts the heaviest mass on the frame's mid-line. */
+  /* **The `perch_idle` tail fix does NOT transfer here, and it was tried and reverted.**
+     Measured the same way (`scratchpad/tailsweep2.mjs`), this aim scores like the one that was
+     wrong on the perch: chord 20° at `sly-closeup`, 16° at `sly-profile`, tip below head height
+     at both. Lifting it to chord 27/40 improves every number and makes the picture worse — at
+     `sly-profile`'s 95° the raised tail **welds to the head**, closing the one gap that was
+     separating the two heaviest masses in the frame, and at `sly-closeup` it trades the arc for
+     a straight diagonal (reach 0.846 → 0.777) for no visible gain.
+
+     The reason the metric misleads here and not on the perch: it reads *joint positions*, and
+     this tail's arc is carried by the loft and the tufts hanging past `tailD`, which no joint
+     metric can see. On `perch_idle` the chain itself was sagging (world Y falling through the
+     middle), so the joints and the picture agreed. Here they do not. Left as authored. */
   tailA: [-6, -30, 6],
   tailB: [16, -34, 0],
   tailC: [40, 14, 0],
@@ -486,10 +498,34 @@ const PERCH = P({
      the new length it came out level with his own head and the two masses welded into one blob
      in the silhouette test. Dropping the first joint starts the C *below* the hip line, so the
      same curve now sweeps up past the shoulder instead of across the skull. */
-  tailA: [-30, -30, 0],
-  tailB: [6, -34, 0],
-  tailC: [34, 16, 0],
-  tailD: [36, 26, 0],
+  /* **The arc was right in model space and still projected as a bar, because "up over the
+     back" is not a screen-space claim.** Every fix above was aimed by reasoning about world
+     axes; none was measured at the camera that frames the pose. Projected through `hero`'s own
+     view (70°, `scratchpad/tailproj.mjs`, shotsil's exact transform) the previous angles put
+     the two segments carrying the tail's mass at **-8.1° and +7.2° from horizontal** — dead
+     level — with the entire rise crammed into the last segment, and world Y *sagging* through
+     the middle of the chain (0.764 → 0.707 → 0.750 → 1.075). That is an L, not a C, and at the
+     185 px `hero` actually gives him it reads as a spiky horizontal log welded to the body:
+     `hero-tiny.png` was a quadruped, not a perched thief. tailD also sat 2.9 cm *below* head
+     height on screen, so tail and skull fused into one band across the frame's mid-line.
+
+     Now the chain climbs monotonically (sag +0.010 m, i.e. no joint drops below its parent) and
+     the chord runs at **35°** instead of 20°, with the tip clearing the head by 12 cm on screen.
+
+     **The reach is the constraint that stops this going further, and it is a real one.** Pitch
+     the chain up harder and the numbers all improve while the shape gets worse: at tailB +40
+     the chord hits 49° but horizontal reach collapses 0.833 → 0.409, and a tail with no width
+     is a vertical plume, not a raccoon C. These angles sit at reach 0.632 — 76% of the old
+     spread — which is the most lift the silhouette takes before the C closes up. Verified by
+     rendering, not by the table: the table cannot see it, because tailD's own rotation moves
+     no joint at all (it is the last bone) and the tail geometry continues past it.
+
+     Re-aim with `scratchpad/tailsweep.mjs`, which patches the compiled quaternions in memory,
+     and then LOOK at `hero-tiny.png`. Never re-aim this in model space again. */
+  tailA: [-18, -30, 0],
+  tailB: [26, -34, 0],
+  tailC: [26, 16, 0],
+  tailD: [8, 26, 0],
 });
 
 /* `hold: 0` for the same reason as `idle_confident`: `hero` freezes this clip, and holding at
@@ -519,11 +555,16 @@ def('perch_idle', {
        like these. Old drift preserved: hips +[2,1,-1] / chest +[-3,-2,1] / head +[-3,3,-1]
        at 0.8, the mirror at 1.7, head/neck flick deltas at 2.3. pos.x rides at the base's
        0.045 throughout so the breath does not saw the pelvis laterally. */
+    /* Tail breath keys carried forward onto the re-aimed base by the SAME per-bone deltas the
+       base moved (tailA +12, tailB +20, tailD -28), so the drift amplitude is unchanged and
+       only its centre moves. These are absolute angles and this is exactly §9's orphaned-key
+       trap: left alone they would have yanked the tail back down to the old horizontal aim
+       twice every 3.2 s, on the one clip the money shot freezes. */
     { t: 0.8, e: 'soft', P: { chest: [-17, -13, 15], head: [-21, 18, 1], hips: [28, 11, -14],
       // re-authored with the base pose's tail arc — these are absolute, not deltas
-      tailA: [-34, -36, 0], tailB: [2, -40, 0], tailD: [40, 30, 0] }, pos: [0.045, -0.325, 0.078], cane: [-26, 26, -30] },
+      tailA: [-22, -36, 0], tailB: [22, -40, 0], tailD: [12, 30, 0] }, pos: [0.045, -0.325, 0.078], cane: [-26, 26, -30] },
     { t: 1.7, e: 'soft', P: { chest: [-11, -9, 13], head: [-15, 12, 3], hips: [24, 9, -12],
-      tailA: [-26, -25, 0], tailB: [10, -29, 0], tailD: [32, 22, 0] }, pos: [0.045, -0.285, 0.062], cane: [-34, 34, -30] },
+      tailA: [-14, -25, 0], tailB: [30, -29, 0], tailD: [4, 22, 0] }, pos: [0.045, -0.285, 0.062], cane: [-34, 34, -30] },
     // a small head-flick as something below catches his eye
     { t: 2.3, e: 'out', P: { head: [-14, 26, -3], neck: [-14, 13, 4], earL: [-20, 8, -24] } },
     { t: 3.2, e: 'soft', P: PERCH, pos: [0.045, -0.30, 0.07], cane: [-30, 30, -30] },
