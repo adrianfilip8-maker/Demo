@@ -1373,3 +1373,60 @@ The general form: *a counter measures a window, and shipping work into a differe
 changes the number without changing the machine.* Before trusting a delta, check that the thing
 you changed executes inside the interval the counter covers — and when you move work across
 phase boundaries, expect every historical number spanning that boundary to need re-basing.
+
+## 21. `0 * Infinity` in the grid walk, and a wall that read as holed at exactly the cell size
+
+The temenos raise (`0ad97ca`) was justified with an elevation angle — "at 12.5 m the wall top
+sits 6.56° above the eye line and the horizon is gone". An elevation angle proves the wall is
+tall **enough**. It does not prove nothing sees past it, and that run is stepped, jittered and
+carries a collapsed breach at h=0, so those are different claims. `tools/horizon.mjs` closes the
+gap by ray-cast, and — worth noting for anyone budgeting a slot — it needed **no capture boot at
+all**: `tools/lvl.mjs` builds Architecture headless, so the whole verification is CPU-side.
+
+**The instrument lied first, and the tell was a period rather than a value.** The first wall
+profile came back holed at z = −12, −8, −4, 0, 4, … — isolated full-height gaps at *exactly*
+every 4.0 m, which is `CELL`. In the DDA setup, `(boundary − origin) * (1/d)` is `0 * Infinity`
+= **NaN** whenever a ray is axis-aligned on some component *and* its origin sits exactly on a
+cell plane for that axis. Every comparison against NaN is false, so the walk fell through to the
+`else` branch, set `travelled = NaN`, and `travelled < maxT` terminated the loop on its first
+iteration — reporting a clean miss straight through 12.5 m of masonry. The sign test that was
+supposed to catch bad entry distances (`if (t < 0) t = Infinity`) cannot see a NaN.
+
+**`tools/void.mjs` contains this DDA verbatim and therefore shares the bug.** It is not
+reachable there today — its rays are general-direction camera rays, and the failure needs an
+exact zero component *and* an origin on a cell plane — but it is one axis-aligned probe away,
+and its failure mode is the dangerous one: silence. A void probe that hits nothing reports "no
+leak", which is the answer everyone wants to hear.
+
+Second instrument fault in the same tool, same session: classifying crossings against a
+**smoothed** profile. A ±1 m lookup window absorbed block jitter but bulldozed the breach's
+edge, charging rays passing through open breach as passing through solid wall. Probing the wall
+top at the crossing's own z, rather than at the nearest grid sample, removed the class outright.
+Both faults produced *plausible* numbers; neither produced a wrong-looking one.
+
+**The finding, once the tool was honest.** Same seed, same cameras, wall at 5.6 m vs 12.5 m,
+desert visible as % of frame: `courtyard` 0.52 → **0.16**, `hero` 1.24 → 0.90, `night` 1.22 →
+1.11, `guard` 0.00 → 0.00 but its sky rays 303 → **0**. No unintended hole anywhere in the run.
+The raise did its job — on the camera it was argued from it removes two thirds of the leak and
+collapses the remainder's z-range from 9.2..27.9 to 9.2..11.2, i.e. confines it to the breach.
+
+**But "the horizon is gone" was overstated and is now corrected at its site.** The breach is a
+hole by design and still shows desert to two of the eight enclosed cameras, and an eye above the
+wall top legitimately sees over it. The claim that survives is narrower and is the one worth
+making: *the wall is sound and the residual is the ruin, not a defect.* General form — when a
+justification is a scalar computed from the design intent, it describes the design, not the
+build. Only a measurement over the built geometry can close it.
+
+**HMR can contaminate a capture that is already running.** `vite.config.js` leaves hot module
+replacement enabled unless `SANDS_NO_HMR` is set, so editing a source file while a capture is
+mid-run can push the edit into the live page between shots. One `hero` frame was rendered
+during exactly that window: its `report.json` stamps the tree clean at the commit it booted
+from, and the frame may still contain a later edit or a reload artefact — a 404 appears in the
+log at the moment of the edit. The stamp is not lying; it records the boot, and nothing in it
+can see a mid-run reload.
+
+So the provenance stamp is necessary and not sufficient. **Either set `SANDS_NO_HMR=1` on any
+capture whose frames will be measured, or do not touch `src/**` while one is rendering** — and
+in a fleet where several agents edit concurrently, the first is the only one anybody can
+enforce. A frame captured during someone else's edit is unattributable even when its own author
+did nothing wrong.

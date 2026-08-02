@@ -27,11 +27,6 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import path from 'node:path';
 
-const argv = process.argv.slice(2);
-const opt = (n, d) => { const i = argv.indexOf(`--${n}`); if (i === -1) return d; const v = argv[i + 1]; argv.splice(i, 2); return v; };
-const OUT = opt('out', 'shots/gate2');
-await mkdir(OUT, { recursive: true });
-
 const sha = (b) => createHash('sha256').update(b).digest('hex').slice(0, 16);
 const png = (dataUrl) => Buffer.from(dataUrl.split(',')[1], 'base64');
 
@@ -67,7 +62,16 @@ const SETTLE = `async (frames) => {
   };
 }`;
 
-await withGame({ width: 1280, height: 720, quality: 'high' }, async ({ page, info }) => {
+/**
+ * The protocol itself, against an already-booted page. Exported so it can be bundled into a
+ * boot that is being taken anyway — the capture queue on this container runs several deep, so
+ * a run that can share a slot should share it. Called directly below when this file is the
+ * entry point.
+ */
+export async function runCryptGate({ page, info, out = 'shots/gate2', shots = [] }) {
+  const OUT = out;
+  await mkdir(OUT, { recursive: true });
+  {
   console.log(`renderer: ${info.renderer}`);
   console.log(`boot warnings: ${info.warnings.length}`);
   for (const w of info.warnings) console.log(`   ! ${w}`);
@@ -113,8 +117,7 @@ await withGame({ width: 1280, height: 720, quality: 'high' }, async ({ page, inf
   /* `interior` is the only shot the gate can fire in, so it carries V1 and V2 on its own; the
      others are the V3 exterior controls and are pure cost, so keep the default set small — this
      run queues behind every other agent's capture and a trimmed job is one that survives. */
-  const shots = argv.filter((a) => !a.startsWith('--'));
-  if (!shots.length) shots.push('interior', 'hero');
+  if (!shots.length) shots = ['interior', 'hero'];
 
   for (const nm of shots) {
     const row = {};
@@ -158,4 +161,16 @@ await withGame({ width: 1280, height: 720, quality: 'high' }, async ({ page, inf
 
   await writeFile(path.join(OUT, 'cryptgate.json'), JSON.stringify({ inventory, results, warnings: errs }, null, 2));
   console.log(`\n→ ${OUT}/`);
-});
+  return { inventory, results, warnings: errs };
+  }
+}
+
+/* CLI entry: unchanged behaviour when this file is run directly. */
+if (import.meta.url === `file://${process.argv[1]}`) {
+  const argv = process.argv.slice(2);
+  const opt = (n, d) => { const i = argv.indexOf(`--${n}`); if (i === -1) return d; const v = argv[i + 1]; argv.splice(i, 2); return v; };
+  const out = opt('out', 'shots/gate2');
+  const shots = argv.filter((a) => !a.startsWith('--'));
+  await withGame({ width: 1280, height: 720, quality: 'high' },
+    async ({ page, info }) => runCryptGate({ page, info, out, shots }));
+}

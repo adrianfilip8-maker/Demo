@@ -518,7 +518,38 @@ function courtyard(A) {
      * `courtyard`'s eye at y 5.6 the old wall top subtends *exactly* 0° of elevation, so it
      * occluded nothing and the desert horizon ran straight through the ambulatory. A temple
      * court that shows you the horizon has failed at the one job an enclosure has. At 12.5 m
-     * the same wall top sits 6.56° above the eye line and the horizon is gone.
+     * the same wall top sits 6.56° above the eye line.
+     *
+     * That elevation angle proves the wall is tall ENOUGH; it does not prove nothing sees past
+     * it, and this run is stepped, breached and jittered, so those are different claims.
+     * `tools/horizon.mjs` settles it by ray-cast — every frustum ray classified, no threshold:
+     * a ray that hits nothing and points at or below horizontal must land on desert floor.
+     * Measured skyline: W max 12.56 mean 9.39, E max 12.58 mean 8.97, and the only run below
+     * the courtyard eye is the breach at z 9..12. Desert visible as % of frame, this wall at
+     * 5.6 m vs at 12.5 m, same seed and same cameras — the control matters, because a leak
+     * number with nothing to compare it against does not measure the raise:
+     *
+     *   courtyard   0.52 -> 0.16   and the leak's z range collapses 9.2..27.9 -> 9.2..11.2
+     *   hero        1.24 -> 0.90   residual is over plan segment 2, a deliberate ~9 m step,
+     *                              seen from an eye at y 10.28 that is above it — and `hero`
+     *                              is the shot whose brief asks for the Great Pyramid hazed in
+     *                              the distance, so some of this is the vista, not a leak
+     *   night       1.22 -> 1.11   barely moves: its leak was always the breach, not height
+     *   guard       0.00 -> 0.00   but sky rays 303 -> 0; the wall now fills that frame
+     *   combat / sly-closeup       0.00, sealed outright
+     *   traversal   0.78           past the run's north end, and over the top from y 14.0
+     *
+     * So the raise did the thing it was for: on the camera it was argued from it removes two
+     * thirds of the leak and confines the rest to the breach.
+     *
+     * So: no unintended hole anywhere in the wall — every through-wall candidate dissolved once
+     * the top was probed at the crossing's own z rather than at the nearest grid sample, bar 5
+     * rays (0.03%) at the breach's own ragged edge. But "the horizon is gone" is overstated as
+     * an absolute and is corrected here: the breach is a hole BY DESIGN and it still shows
+     * desert to two of the eight enclosed cameras, and an eye above the wall top legitimately
+     * sees over it. Left standing, because a collapsed section that shows the desert beyond is
+     * the ruin reading this wall is for. If it ever needs closing, the cheap fix is to raise
+     * the rubble mound rather than to re-close the wall.
      *
      * Three things had to move together, and two of them are not free:
      *

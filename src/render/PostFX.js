@@ -113,15 +113,29 @@ const TUNE = {
      subject. 0 = shipped behaviour, exactly (the mix collapses); 1 = the subject is gated
      only by the depth-step mask, as it was before `rimPlanar` existed.
 
-     Why this exists. `rimPlanar` asks "is the neighbourhood one surface", and answers no only
-     where inverse depth stops being affine. That is the right question for a floor and the
-     wrong question for a character standing on one: in `temple` Sly is on the nave floor with
-     the floor running away behind him, so the background a few pixels past his silhouette is
-     very nearly the continuation of a plane through him, the gate reads "still one surface",
-     and it shuts on the one silhouette in the frame that §2.1.5 most wants separated.
-     Measured (RESULT-rim3 §3): temple subject mean rim lift 30.31 ungated -> 8.91 shipped,
-     29.4% retained, against 65.8-124% on the other five shots. That is §7.3's "no rim light
-     separating silhouettes from the background" arriving on a frame that previously passed.
+     **The measurement this knob was built on has been WITHDRAWN. Do not raise it on the
+     strength of the paragraph below.** Kept, at 0, and the reasoning kept with it, because the
+     mechanism is still a coherent thing to test — but its evidence is gone and it now has none.
+
+     Why this was thought to exist. `rimPlanar` asks "is the neighbourhood one surface", and
+     answers no only where inverse depth stops being affine. That is the right question for a
+     floor and the wrong question for a character standing on one: in `temple` Sly is on the
+     nave floor with the floor running away behind him, so the background a few pixels past his
+     silhouette is very nearly the continuation of a plane through him, the gate reads "still
+     one surface", and it shuts on the one silhouette in the frame that §2.1.5 most wants
+     separated. Measured (RESULT-rim3 §3): temple subject mean rim lift 30.31 ungated -> 8.91
+     shipped, 29.4% retained, against 65.8-124% on the other five shots.
+
+     Why that is withdrawn. rim3 §3 reached it by construction from a chain of shader readings,
+     and its reference leg `gateoff` moves TWO knobs at once, so it never isolated this gate.
+     gate5 moved them one at a time: `planaroff` turns this gate off EVERYWHERE and moves the
+     character by **±0.4 L** (temple 3.77 -> 3.70, sly-closeup 2.92 -> 3.98 against a base2 of
+     3.41, hero 4.40 -> 4.68). A gate costing 21.4 L of subject rim cannot also be worth 0.4 L
+     when switched off. The retraction is recorded at `ToonMaterial.js` `rimMagExempt` and at
+     `toon.glsl.js` `rimSil`; **this was the third site and it did not get updated with them**,
+     which is §7's "when a bug has a shape, grep for the shape" arriving from the other side —
+     one retraction, three sites, two of them fixed. A knob whose justification has been
+     retracted at two of its three call sites reads, at the third, exactly like a live finding.
 
      Why not just relax the thresholds: already measured and declined. RESULT-task8c ran
      `planarlo [0.015, 0.09, 1]` on `interior`, the same close-background case, for -1.7 pts

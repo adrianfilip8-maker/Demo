@@ -250,15 +250,32 @@ export const TUNE = {
    * that was not the defect.
    *
    * `Body.furTint` already accepts a colour `shift`, so this needs no new plumbing and no
-   * other agent's file. Solved against the measured per-channel transfer (rendered ÷ albedo:
-   * R 1260, G 1073, B 839) for a target render of (163, 156, 147): sat 0.38 → **0.10**, and
-   * luma held at 156.8 against the measured 156.0 — the hierarchy above is a *constraint*
-   * that this change is required not to disturb, not the thing being optimised.
+   * other agent's file.
    *
-   * Local linearisation caveat, stated because AgX is not a ratio: those transfers are valid
-   * near this amplitude, which is why luma is deliberately pinned rather than moved. If the
-   * next frame shows the eye off-white but the luma shifted, the linearisation is the suspect. */
-  scleraTint: { r: 0.133, g: 0.153, b: 0.194 },
+   * **Solved through the validated chain, not by hand — and the hand answer was wrong by ~3x.**
+   * My first value here was (0.133, 0.153, 0.194), derived by linearising the measured
+   * per-channel transfer (rendered ÷ albedo) as if it were a constant ratio. Run through
+   * `scratchpad/tintcolour.mjs` — tintsweep/bloomcalc's transcription of the live grade, which
+   * reproduces this very surface to within 3/255 per channel (predicts 184,152,110 L156.0
+   * against the measured 183,153,113 L156.0) — that value reaches only sat 0.301, against the
+   * 0.10 it was chosen for. The reason is `SATURATION = 1.30` in PostFX: it re-expands chroma
+   * *after* the compensation, so any hand-computed correction comes out roughly a third of the
+   * size it needs to be. A ratio is not a chain.
+   *
+   * Solved instead: hold display L at the measured 156.0 exactly and minimise saturation. The
+   * optimum is this triple, predicted display **(155, 156, 155), sat 0.005, L 156.0** — a true
+   * neutral white at the incumbent luma. So the hierarchy #15 closed on is preserved to the
+   * decimal and *only* chroma moves, which is the one thing the acceptance never constrained.
+   *
+   * Why the albedo has to look wrong to render right: the light on this surface is
+   * `BASE = (3.157, 2.173, 1.087)`, i.e. **2.9x more red than blue**. A neutral albedo under
+   * that cannot come out neutral, so the eye-white is authored pale blue on purpose. Low risk
+   * of a split-lit eye, because `biasNormals` flattens the lens to a near-constant normal, so
+   * the disc shades as one value rather than wrapping into the blue shadow light.
+   *
+   * Still to be judged on the frame, and the gate is qualitative: does the face read as Sly in
+   * a bandit mask, or as an owl. The numbers above are a constraint, not the goal. */
+  scleraTint: { r: 0.094, g: 0.154, b: 0.330 },
 
   /* --- fur, read from the OUTLINE (§7.3 "fur reads as smooth plastic") ---
    * A cel-shaded character carries no fur information in its shading, so all of it has to be
@@ -353,11 +370,21 @@ const PAL = {
    * L156) and still does not read as a bandit mask, because it is the same warm brown as the
    * eye it surrounds — so it reads as socket shading rather than as a shape.
    *
-   * Authored warm, it could not do anything else: the albedo is R/G 1.47 and the warm key then
-   * multiplies red about 1.5x harder than blue (the transfer measured at `scleraTint`). Cooling
-   * the albedo to R/G 0.84 spends that bias instead of compounding it. **Luma is deliberately
-   * unchanged** — this is a hue correction, and if the mask gets darker as well as cooler I
-   * will not know which one bought the read.
+   * Authored warm, it could not do anything else. Recovered by inverting the validated grade
+   * against the measured pixel (`scratchpad/inkcalc.mjs`; the solved radiance regrades to
+   * (59.3, 34.1, 40.5) exactly, so the inversion is anchored, and the old hex reproduces the
+   * measurement as a check), the light reaching this surface is **(3.977, 3.405, 1.817)** —
+   * B/R 0.457, the same warm bias the sclera sees. A warm albedo under that compounds; a cool
+   * one spends it. Predicted: **R/G 1.74 → 0.92 at L 39.9 → 40.1.**
+   *
+   * **Luma is deliberately unchanged** — this is a hue correction, and if the mask got darker
+   * as well as cooler I would not know which one bought the read.
+   *
+   * Upper bound, stated because a near-black is the worst case for this model: part of this
+   * surface's radiance is *additive* (rim 0.12, ambient fill, shadow wash) and does not scale
+   * with albedo, so the real move will be smaller than R/G 0.92 — expect ~1.1–1.3. Cooler hexes
+   * were evaluated and rejected: 0x0b1220 lands sat 0.64 and 0x0a1426 sat 0.76, i.e. a visibly
+   * blue mask, which trades one chroma failure for another.
    *
    * Not a §2.1 violation: that rule is about *ink lines* (`TUNE.outlineColor`, still `0x1a1210`
    * and still warm) and it already spans warm brown in sun to dark violet in shadow. This is a

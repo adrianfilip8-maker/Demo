@@ -25,6 +25,10 @@
  * are not here to occlude an escaping ray. That is the harmless direction — a dune standing in
  * an escaped ray is still the desert beyond the enclosure, still not the enclosure.
  *
+ * `floorGap` is reported but is NOT a defect count for the same reason: it is rays that reach
+ * y=0 inside the court without meeting paving, and TERRAIN's sand is under all of it in the
+ * real render. It is here only to keep those rays out of the horizon number.
+ *
  *   node tools/horizon.mjs [--w 160] [--h 90] [shot ...]
  */
 import * as THREE from 'three';
