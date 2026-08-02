@@ -191,16 +191,11 @@ if (argv.includes('--profile')) {
   }
 }
 
-/* Precomputed skyline, so a temenos crossing can be charged to the right cause. "Over the
-   wall" from a 14 m rooftop camera is not an enclosure failure and must not be summed with
-   "through the wall", which is. */
-const RUN = { z0: -15.5, z1: 33.5, step: 0.25 };
-const SKY = { 'temenos W': wallProfile(-25.6, RUN.z0, RUN.z1, RUN.step), 'temenos E': wallProfile(25.6, RUN.z0, RUN.z1, RUN.step) };
-/* Local top and local roughness. The top of this wall is not a line: every block is jittered,
-   chamfered and mortar-recessed, and the plan steps between segments, so the honest statement
-   about "the top at z" is a height plus a tolerance. ±1 m of neighbourhood covers both the
-   jitter and a profile step landing between samples. */
-/* The wall top at the crossing's OWN z, probed on demand rather than looked up in the 0.25 m
+/* A temenos crossing has to be charged to the right cause: "over the wall" from a 14 m rooftop
+   camera is not an enclosure failure and must not be summed with "through the wall", which is.
+   The wall's own extent along z — outside it there is no wall to be over or through. */
+const RUN = { z0: -15.5, z1: 33.5 };
+/* The wall top at the crossing's OWN z, probed on demand rather than looked up in a 0.25 m
    grid. The grid was the last source of misclassification: the breach edge is a hard step from
    12.5 m to 0, its z is jittered, and any nearest-sample lookup charges rays on the open side
    of that step to the solid side of it. Memoised at centimetre resolution — there are only a
