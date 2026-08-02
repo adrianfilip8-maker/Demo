@@ -1057,8 +1057,10 @@ export class PostFX {
       bloom: { enabled: true }, grade: { enabled: true }, fxaa: { enabled: true },
     };
 
-    /* Raw-scene bypass for shader-term visualisers. Off = every pass runs as normal. */
+    /* Raw-buffer bypass for shader-term visualisers. Off = every pass runs as normal. */
     this._debugRaw = false;
+    /* Which intermediate buffer debugRaw presents. See debugRaw(). */
+    this._debugSrc = 'scene';
 
     /** Uniforms shared with sub-passes (AOPass reads these by reference). */
     this.shared = {
@@ -1173,11 +1175,19 @@ export class PostFX {
          to the PNG. */
       this.rawMat = this._mat(passMaterial('postfx.raw', {
         uSrc: { value: null },
+        /* 0 = present RGB as-is (the scene case). 1 = splat R to all three channels, for
+           single-channel buffers like AO, whose G carries linear depth for the bilateral
+           blur and would otherwise be read as "green means occluded". */
+        uSplatR: { value: 0 },
       }, `
         precision highp float;
         varying vec2 vUv;
         uniform sampler2D uSrc;
-        void main() { gl_FragColor = vec4( texture2D( uSrc, vUv ).rgb, 1.0 ); }
+        uniform float uSplatR;
+        void main() {
+          vec4 s = texture2D( uSrc, vUv );
+          gl_FragColor = vec4( uSplatR > 0.5 ? vec3( s.r ) : s.rgb, 1.0 );
+        }
       `));
 
       if (this.engine.settings.ssao) {
@@ -1247,9 +1257,26 @@ export class PostFX {
    *
    * Prove it before quoting anything read through it: `debugTerm(4)` writes (0.25, 0.50, 0.75)
    * and, with this on, the PNG must read (64, 128, 191).
+   *
+   * `src` selects which buffer is presented. All three stop the chain at the point the buffer
+   * is finished, so later passes are skipped by control flow rather than by a zeroed uniform:
+   *
+   *   'scene'   linear HDR scene target, before AO/ink/bloom/grade/AgX  (the debugTerm pair)
+   *   'normal'  the view-space normal prepass, RGB as written
+   *   'ao'      the AO buffer's R channel, splatted to grey, AFTER the bilateral blur —
+   *             i.e. exactly the scalar the composite multiplies by
+   *
+   * **The 'ao' arm carries its own known-input control, so use it.** `AO.js` returns a hard
+   * `vec4(1.0)` on any pixel that fails `slyIsSky`, and again wherever the distance fade has
+   * closed. So in an 'ao' frame the sky MUST be pure 255 white. If it is not, the bypass is
+   * not a bypass and no occlusion number read off that frame means anything — the same
+   * procedure `debugTerm(4)` prescribes for the scene path, using a control the pass already
+   * writes rather than a constant added for the occasion.
    */
-  debugRaw(on = true) {
+  debugRaw(on = true, src = 'scene') {
     this._debugRaw = !!on;
+    this._debugSrc = typeof on === 'string' ? on : src;
+    if (typeof on === 'string') this._debugRaw = true;
   }
 
   update(dt, t) {
@@ -1307,14 +1334,19 @@ export class PostFX {
        flow rather than by a uniform set to zero — a pass whose strength is 0 still runs, still
        samples, and still gets to clamp or resolve; skipping is the only thing that is
        provably nothing. */
-    if (this._debugRaw) {
+    if (this._debugRaw && this._debugSrc === 'scene') {
       this.rawMat.uniforms.uSrc.value = this.sceneRT.texture;
+      this.rawMat.uniforms.uSplatR.value = 0;
       blit.render(renderer, this.rawMat, null);
       return;
     }
 
     /* ---- 2. view-space normals, for AO and for the crease pass ---- */
-    const needNormals = (this.passes.edge.enabled || (this.ao && this.passes.ao.enabled));
+    /* The two buffer visualisers need the prepass even when the pass that normally consumes
+       it is switched off, or `debugRaw('ao')` with the edge pass disabled would present a
+       stale normal buffer and read as an AO change. */
+    const debugNeedsNormals = this._debugRaw && (this._debugSrc === 'normal' || this._debugSrc === 'ao');
+    const needNormals = (this.passes.edge.enabled || (this.ao && this.passes.ao.enabled) || debugNeedsNormals);
     if (needNormals) {
       /* SHADING publishes beginNormalPass()/endNormalPass() precisely for this, and this
        * pass was reaching past them straight to `normalMaterial`.
@@ -1413,9 +1445,27 @@ export class PostFX {
       this.shared.uNormal.value = this.normalRT.texture;
     }
 
+    if (this._debugRaw && this._debugSrc === 'normal') {
+      this.rawMat.uniforms.uSrc.value = this.normalRT.texture;
+      this.rawMat.uniforms.uSplatR.value = 0;
+      blit.render(renderer, this.rawMat, null);
+      return;
+    }
+
     /* ---- 3. AO ---- */
     let aoTex = null;
     if (this.ao && this.passes.ao.enabled) aoTex = this.ao.render();
+
+    /* Present the finished AO scalar and stop. Deliberately AFTER the blur, because the blur
+       is part of what the composite consumes — visualising the pre-blur target would answer a
+       question nobody asked. If the pass is off or absent there is nothing to show, and the
+       frame is left as the untouched scene rather than faked with a constant. */
+    if (this._debugRaw && this._debugSrc === 'ao' && aoTex) {
+      this.rawMat.uniforms.uSrc.value = aoTex;
+      this.rawMat.uniforms.uSplatR.value = 1;
+      blit.render(renderer, this.rawMat, null);
+      return;
+    }
 
     /* ---- 4. ink creases ---- */
     if (this.passes.edge.enabled && needNormals) {

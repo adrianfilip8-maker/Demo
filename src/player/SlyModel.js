@@ -298,9 +298,34 @@ export const TUNE = {
    *   · a row of many small equal spikes reads as a comb or a pinecone at any distance.
    *     Fur reads as a few big overlapping locks.
    * `tuftLen` scales every clump's reach in one place so the three regions stay in step. */
-  tuftDensity: 1.05,      // clump count multiplier
-  tuftWidth: 1.90,        // clumps are broad flat wedges, not needles (needles read as spikes)
-  tuftLen: 1.12,          // clump reach multiplier — the outline break is a length, not a count
+  /* ── CRITIC PASS 5 §3.1, AND THE HOLD-OUT THAT SETTLED IT ────────────────────────────────
+   * Everything above this note is true and was measured, and the system it tuned was NET
+   * NEGATIVE ON THE FRAME. The evidence is a picture, not a statistic: rasterise the posed
+   * figure in flat albedo with the ink hull on, then rasterise it again with EVERY clump
+   * family suppressed (`scratchpad/charread.mjs`, hold-out A/B, no capture lock). With the
+   * clumps on, the character is a mottled shredded mass and the critic's five separate faults
+   * all appear — the mask is buried in black clutter, the tail is "plates with pale gaps", the
+   * legs read as "bare mottled skin". With the clumps off, the SAME MODEL immediately reads as
+   * Sly Cooper: cap, mask band, cream muzzle, blue shirt, clean banded tail.
+   *
+   * Four of the critic's five character faults therefore have ONE cause, and it is this system.
+   *
+   * Why the previous tuning could not have found it. Every instrument above scores a clump row
+   * by *how much outer contour it breaks* — a row is judged against zero, i.e. against not
+   * existing. None of them can see what a clump does when it is NOT on the contour, and for any
+   * single camera most clumps in a ring are not: they land on the FACE of the form, where a
+   * ~8 px card wrapped in a ~2.5 px ink hull is a black chip. The rows were optimised for the
+   * one view in which each clump is an edge, and rendered in the frame where it is a blemish.
+   * That is §36 exactly — rigorous apparatus, wrong layer.
+   *
+   * The critic's own action is what these three numbers implement: "fewer, larger, rounded,
+   * shaded, and clipped to the silhouette." Count is halved and size raised so a clump is a
+   * fur LOBE (its hull is a line round a shape) rather than a chip (its hull is most of it).
+   * The columns that only ever face away are removed at their sites, which is where the
+   * "clipped to the silhouette" half lives. */
+  tuftDensity: 0.46,      // clump count multiplier — halved; see the hold-out note above
+  tuftWidth: 3.30,        // clumps are broad rounded lobes, not needles (needles read as spikes)
+  tuftLen: 1.24,          // clump reach multiplier — the outline break is a length, not a count
   /* Tail clump width in the ROLL axis only. Separate from `tuftWidth` because the tail's comb
      is in a different axis from the limbs': along the tail this row is already at a
      spacing/reach of ~0.7 (fur), while around it the ratio was ~8 (saw). Widening every tuft
@@ -980,6 +1005,41 @@ export class SlyModel {
        reference; a tail slimmer than the torso reads as a rope. The root stays narrow (0.058)
        so the fat lobe reads as its own mass rather than as a hump on his back. */
     const G = TUNE.tailGirth;
+
+    /* Ring bands. Crisp material boundaries at ring positions — no vertex duplication needed,
+       so the surface stays watertight and the normals stay smooth across the colour change.
+       Six bands, and the dark ones are the wider pair: a raccoon tail reads dark-dominant. */
+    const BANDS = [[0.14, 0.255], [0.335, 0.445], [0.520, 0.625], [0.700, 0.795], [0.860, 0.935], [0.975, 1.001]];
+    const isDark = (t) => BANDS.some(([a, b]) => t >= a && t < b);
+
+    /**
+     * **Critic pass 5's first tail action: "sweep a tube whose radius profile bulges at ring
+     * centres."** Until now the rings were a pure colour event on a smoothly tapering tube, and
+     * every scrap of tail *mass* came from ~88 separate clump cards stuck to the surface. That
+     * is the "hard-edged navy plates with pale gaps between them" read: the plates were the only
+     * thing making the tail look furry, and they are separate objects, so each carries its own
+     * ink hull and the pale tube shows through between them.
+     *
+     * A ring of fur is thicker than the fur beside it — that is what a ring IS on a real
+     * raccoon, and it is why the reference silhouette scallops gently six times along its length
+     * instead of tapering like a cone. Putting the bulge in the SWEPT SURFACE gets the same read
+     * out of geometry that is watertight, shares one smoothing group, and takes exactly one ink
+     * line round the whole tail. It is also the only version that survives the 40 px test, where
+     * every card is sub-pixel and only the tube's own outline is left.
+     *
+     * `RING_BULGE` is a fraction of the local radius, raised-cosine over each dark band so the
+     * derivative is continuous at the band edges (a step would crease the loft and re-introduce
+     * a hard edge, which is the defect being removed).
+     */
+    const RING_BULGE = 0.17;
+    const ringSwell = (t) => {
+      for (const [a, b] of BANDS) {
+        if (t < a || t >= b) continue;
+        const f = (t - a) / (b - a);                       // 0..1 across the band
+        return 1 + RING_BULGE * 0.5 * (1 - Math.cos(2 * Math.PI * f));
+      }
+      return 1;
+    };
     const radius = (t) => {
       const prof = [
         [0.00, 0.058], [0.09, 0.100], [0.20, 0.152], [0.34, 0.180],
@@ -988,17 +1048,11 @@ export class SlyModel {
       for (let i = 0; i < prof.length - 1; i++) {
         if (t <= prof[i + 1][0]) {
           const f = (t - prof[i][0]) / (prof[i + 1][0] - prof[i][0]);
-          return THREE.MathUtils.lerp(prof[i][1], prof[i + 1][1], f) * G;
+          return THREE.MathUtils.lerp(prof[i][1], prof[i + 1][1], f) * G * ringSwell(t);
         }
       }
       return 0.026 * G;
     };
-
-    /* Ring bands. Crisp material boundaries at ring positions — no vertex duplication needed,
-       so the surface stays watertight and the normals stay smooth across the colour change.
-       Six bands, and the dark ones are the wider pair: a raccoon tail reads dark-dominant. */
-    const BANDS = [[0.14, 0.255], [0.335, 0.445], [0.520, 0.625], [0.700, 0.795], [0.860, 0.935], [0.975, 1.001]];
-    const isDark = (t) => BANDS.some(([a, b]) => t >= a && t < b);
 
     const RAMP = [
       [0.00, { hips: 0.55, tailA: 0.45 }],
@@ -1066,7 +1120,12 @@ export class SlyModel {
        about the tail axis and rotate the lumpy cross-section against the ring it is supposed to
        continue. The cone is straight, so one frame serves all four rings. */
     const CONE_OFF = [0, 0.035, 0.075, 0.115];      // along the tube's end tangent, ×G
-    const CONE_R = [0.026, 0.017, 0.008, 0.0];      // 0.026·G == radius(1.0): no step at the seam
+    /* Base ring taken from `radius(1)` rather than the literal 0.026, because `ringSwell` now
+       multiplies the profile and the last band [0.975, 1.001] covers t = 1: the literal would
+       leave a 0.5% step exactly at the seam this cone exists to close. Ratios below are the
+       authored taper against that base, so the cone's shape is unchanged. */
+    const R1 = radius(1) / G;
+    const CONE_R = [R1, R1 * 0.654, R1 * 0.308, 0.0];
     const TF = frames(spine, new THREE.Vector3(0, 1, 0));
     const iEnd = spine.length - 1;
     const cT = TF.T[iEnd], cR = TF.R[iEnd], cU = TF.U[iEnd];
@@ -2288,9 +2347,14 @@ export class SlyModel {
        MULTIPLY their material (see Body.furTint), so the group owns the hue and they stay
        neutral. They exist for the ragged silhouette edge, not for tone. */
     /* `tipW` 0.34 → 0.52: a clump that tapers to a point is a spike, and a row of spikes is
-       the "torn or burnt edge" read however wide the base is. Fur locks end bluntly. */
+       the "torn or burnt edge" read however wide the base is. Fur locks end bluntly.
+       0.52 → 0.88 for critic pass 5's "rounded". At 0.52 the lock still halves its width by the
+       tip and reads as a wedge — a shard with a black line round it. At 0.88 it is a blunt lobe,
+       which is the one shape that survives a 2.5 px ink hull without the hull becoming most of
+       what you see. `flat` stays 0.52: a lobe wants thickness, and a flatter card is what floats
+       off the silhouette when the surface turns. */
     const put = (o) => addTuft(mb, {
-      sg: mb.newSg(), color: 0xffffff, flat: 0.52, tipW: 0.52,
+      sg: mb.newSg(), color: 0xffffff, flat: 0.52, tipW: 0.88,
       ...o,
       width: (o.width ?? 0.015) * WF,
       length: (o.length ?? 0.05) * TUNE.tuftLen,
@@ -2487,7 +2551,18 @@ export class SlyModel {
            edge. Adding a ≈ 0 puts every azimuth within 45° of a column. This is the same
            reasoning the legs already use (their three columns sit at 0 and ±π/2 in their own
            convention), and the legs are the region that measures +26%. */
-        const COLS = [{ a: 0.02, n: 3 }, { a: 1.52, n: 3 }, { a: -1.52, n: 3 }, { a: 3.02, n: 2 }];
+        /* **Four columns → the two silhouette tangents, and this reverses the measured decision
+           in the paragraph above on purpose.** That reasoning is correct about what it measured:
+           adding a ≈ 0 and a ≈ π does put every camera azimuth within 45° of a column, and it did
+           raise the arm's share of the outer contour. What it could not see is the cost, because
+           the instrument scores contour only — a column at a ≈ 0 is the FRONT of the forearm to a
+           near-frontal camera, so at `sly-closeup` those clumps are not an edge, they are three
+           dark cards lying on the middle of his arm. The critic's read of the shipped frame names
+           exactly that: cards "float clear of the silhouette", limbs "read as bare mottled skin".
+           Contour share bought at the price of chips on the face of the limb is a bad trade, and
+           only one of the two terms was ever on the scoreboard. ±1.52 are the true side tangents
+           and stay. */
+        const COLS = [{ a: 1.52, n: 3 }, { a: -1.52, n: 3 }];
         for (let ci = 0; ci < COLS.length; ci++) {
           const col = COLS[ci];
           for (let r = 0; r < col.n; r++) {
@@ -2573,13 +2648,20 @@ export class SlyModel {
            Cost: 12 → 23 clumps per leg, +22 clumps overall at 18 tris each = **+396 tris on a
            14.5k body (+2.7%)**. The leg is the largest smooth surface on him and owns ~5% of
            the outline against the tail's 18%; the tail's own ragged edge cost ~290. */
+        /* **Three columns → one, and the leg is the surface the critic named.** "The legs read
+           as bare mottled skin, not trousers" is a description of the front and back columns:
+           to a near-frontal camera the a = ±1.4 lines are the *face* of the thigh, so twelve
+           clumps per leg render as dark blotches scattered over a pale limb — mottling, not fur.
+           Only a = 0, the outer tangent, is an edge in the frames that judge the character
+           (`sly-closeup` 33°, `sly-key`, `sly-profile`, `combat` 45°). The side cameras lose
+           their leg fringe; they are also the frames where the leg is 5% of the outline and the
+           tail and cap carry the read. Keeping a blemish in four hero frames to buy an edge in
+           the frames that do not look at him is the trade the old note took without pricing.
+           `n` 7 → 4 because `tuftDensity` no longer multiplies this row's authored count and the
+           clumps are now ~1.7x wider: at 7 they would touch and re-fuse into the slab that the
+           `tuftRollW` 3.40 note records as falsified. */
         const COLS = [
-          // a = 0 is the outer tangent — the line a near-frontal camera (`sly-closeup`, 33°)
-          // sees. ±1.4 are the tangents a side camera (`hero` 70°, and the seven shots at ≥70°)
-          // sees. Nothing at a = π: those clumps push through the opposite thigh.
-          { a: 0.00, n: 7, u0: 0.10, u1: 0.66, len: 0.062, alt: 0.76, k: 3 },   // outer edge
-          { a: -1.42, n: 7, u0: 0.14, u1: 0.64, len: 0.058, alt: 0.78, k: 11 }, // back of thigh/calf
-          { a: 1.46, n: 6, u0: 0.28, u1: 0.62, len: 0.046, alt: 0.80, k: 19 },  // front
+          { a: 0.00, n: 4, u0: 0.12, u1: 0.64, len: 0.072, alt: 0.80, k: 3 },   // outer edge only
         ];
         for (let ci = 0; ci < COLS.length; ci++) {
           const col = COLS[ci];
@@ -2758,70 +2840,64 @@ export class SlyModel {
        the spacing/reach ratio by the same factor while leaving each lock's aspect alone, which
        is what a comb in the roll axis actually calls for. Widening the lock instead traded the
        comb for a slab. */
-    const STEP = 2;
-    for (let i = 2; i < n - 2; i += STEP) {
+    /* ── CRITIC PASS 5: "reduce silhouette tufts to 5–7 large rounded lobes on the OUTER EDGE
+     * ONLY", and the whole apparatus above is retired to get there.
+     *
+     * Everything from "STEP 3 → 2" to here is a two-axis argument about the spacing/reach ratio
+     * of a dense clump lattice — along the tail, then in the roll axis. Both halves are correct
+     * about the lattice they were tuning and neither could ask the question the critic asked,
+     * which is whether the lattice should exist. Eight rolls at every second station is ~88
+     * separate objects welded to a tube; at 3× that is the "hard-edged navy plates each carrying
+     * its own black outline, with pale gaps between them so the rings do not close", and at
+     * 40 px it is a smear, because 88 sub-pixel cards average to noise while their ink hulls
+     * survive as grey.
+     *
+     * The mass those clumps were supplying now comes from `ringSwell` in the swept surface,
+     * where it costs one ink line instead of 88 and cannot leave a gap. What is left for cards
+     * is the job cards are actually good at: putting a few soft interruptions in the OUTER
+     * contour so the edge is fur and not moulding.
+     *
+     * Six lobes, one per ring band, on the outer (up-and-away) edge only. `LOBE_ROLLS` covers
+     * the two outer tangents rather than a full ring, so a clump can never land on the face of
+     * the tail facing any of the four character cameras. Each is ~3× the width of the old clump
+     * and sits at the band's own centre, so it reads as the ring's fur parting rather than as a
+     * plate stuck across a colour boundary — which also removes the midpoint-colouring problem
+     * the old row needed (a lobe centred in its band cannot lie across the next one).
+     *
+     * Deliberately NOT parameterised by `tuftDensity`: this row's count is the critic's
+     * criterion (5–7), not a density, and a global multiplier is how it would drift back. */
+    const LOBE_ROLLS = [-0.62, 0.30];
+    let lobeN = 0;
+    for (const [ba, bb] of BANDS) {
+      const tc = Math.min(0.955, (ba + bb) / 2);
+      const i = Math.round(tc * (n - 1));
+      if (i < 2 || i > n - 3) continue;
       const t = i / (n - 1);
       const c = spine[i];
       const tan = new THREE.Vector3().subVectors(spine[Math.min(n - 1, i + 1)], spine[Math.max(0, i - 1)]).normalize();
-      /* Underside pair at EVERY station (PREREG-tailtip.md B). The alternating sets carried
-         |roll| ∈ {1.9, 2.5} in every OTHER station's set, so along the lower contour each
-         underside roll line appeared at half the station rate and the clumps read as isolated
-         dark studs — cap5's verdict residual. Each set now appends the *mirrored* underside
-         pair, so all four of {±1.9, ±2.5} exist at every station and the along-contour spacing
-         halves. The alternation of the other four rolls is untouched. */
-      const rings = (i / STEP) % 2
-        ? [-2.5, -1.62, -0.74, 0.14, 1.02, 1.9, 2.5, -1.9]
-        : [2.5, 1.62, 0.74, -0.14, -1.02, -1.9, -2.5, 1.9];
-      for (const roll0 of rings) {
-        /* Roll phase is jittered per station for the same reason the cheek row jitters pitch:
-           four rolls repeated at eleven uniform stations is a lattice, and the silhouette test
-           at `hero`'s 70° reads the lattice as saw teeth however well each clump lays back.
-           ±0.17 rad against a ~1.4 rad roll gap cannot cross neighbouring rolls. */
-        const roll = roll0 + (hash(i, roll0 + 13) - 0.5) * 0.34;
-        const up = new THREE.Vector3(Math.sin(roll) * 0.85, Math.cos(roll), 0).normalize();
-        const side2 = new THREE.Vector3().crossVectors(tan, up).normalize();
-        const outward = new THREE.Vector3().crossVectors(side2, tan).normalize();
-        const base = c.clone().addScaledVector(outward, radius(t) * 0.90);
-        // a band edge gets the longest clumps — that is where fur actually parts
-        /* Edge boost 1.30 → 1.12. The longest clumps in the row were exactly the ones the
-           midpoint-colouring rule paints with the *neighbouring* band's value, so the boost was
-           buying reach for the highest-contrast chips on the tail — a dark lock lying a third of
-           its length across a cream band, at cap4's 2x the single worst "thorn" class. The parts
-           still part; they just stop being the longest spikes on the silhouette. */
-        const edge = isDark(t) !== isDark(Math.max(0, t - 0.035)) ? 1.12 : 1.0;
-        /* Colour the clump by the band at its own MIDPOINT, not at its root. `dir` lays it
-           back along the tail toward the root, so it covers ~0.06 of t — half a ring band —
-           and a clump coloured by its root lies across the neighbouring band as a hard patch
-           of the wrong value. That is what turned the tail into camouflage at three-quarter
-           views while looking correct end-on, which is why it survived a frontal check. */
-        const tMid = Math.max(0, t - 0.030);
-        put({
-          base, shadeN: outward.clone(),
-          /* Lay-back on the underside rolls (PREREG-tailtip.md B): for |roll| > 1.7 the
-             outward component drops 0.46 → 0.30 — the exact change that fixed the leg row.
-             A stud protrudes; a laid-back clump scallops the band it grew from. Keyed on the
-             authored roll0, not the jittered roll, so the jitter cannot flip a clump between
-             the two regimes station to station. */
-          dir: outward.clone().multiplyScalar(Math.abs(roll0) > 1.7 ? 0.30 : 0.46).addScaledVector(tan, -1.0).normalize(),
-          /* Base reach 0.070 → 0.058 and bend 0.26 → 0.34 — the "softer" half of the cap4
-             stegosaurus read (the ridge of separated near-black triangles along both tail
-             contours at 2x). Count is deliberately untouched: STEP 2 closed a measured
-             along-tail saw and six rolls closed a measured 3.52 px broadside comb, so "fewer"
-             here means fewer clumps *breaking the silhouette*, bought by pulling the length
-             distribution down and curling tips back along the surface — most clumps now stay
-             overlapped in the mass and the long tail of the jitter supplies the few locks that
-             project. A spike is a length past the edge, not a clump that exists. */
-          length: (0.058 + 0.020 * Math.sin(t * 7)) * TUNE.tailGirth * edge * jit(i, roll),
-          /* Width jittered like the cheek row, and for the recorded reason there: "length
-             variation on a row of equally-spaced, equally-wide clumps still reads as a comb —
-             it is a comb with uneven teeth." The tail rows had jittered length only. */
-          width: 0.025 * TUNE.tuftRollW * TUNE.tailGirth * (0.78 + 0.44 * hash(i, roll0 + 5)),
-          bend: 0.34, bendDir: outward.clone(),
-          group: isDark(tMid) ? 'furDark' : 'furCream',
-          weights: ramp(t, this._tailRamp),
-        });
-      }
+      const roll = LOBE_ROLLS[lobeN % LOBE_ROLLS.length] + (hash(lobeN, 17) - 0.5) * 0.30;
+      lobeN++;
+      const up = new THREE.Vector3(Math.sin(roll) * 0.85, Math.cos(roll), 0).normalize();
+      const side2 = new THREE.Vector3().crossVectors(tan, up).normalize();
+      const outward = new THREE.Vector3().crossVectors(side2, tan).normalize();
+      put({
+        base: c.clone().addScaledVector(outward, radius(t) * 0.86),
+        shadeN: outward.clone(),
+        // Laid back along the tail: flat against the surface on the face, projecting past the
+        // edge where the surface turns away. Same rule the old row used, applied to six clumps.
+        dir: outward.clone().multiplyScalar(0.34).addScaledVector(tan, -1.0).normalize(),
+        length: 0.115 * TUNE.tailGirth * (0.86 + 0.28 * hash(lobeN, 23)),
+        width: 0.082 * TUNE.tailGirth * (0.88 + 0.24 * hash(lobeN, 29)),
+        bend: 0.40, bendDir: outward.clone(),
+        // Coloured by its own band — a lobe centred in the band cannot cross into its neighbour.
+        group: isDark(t) ? 'furDark' : 'furCream',
+        weights: ramp(t, this._tailRamp),
+      });
     }
+    /* The dense clump lattice that stood here (8 rolls x every 2nd station, ~88 cards) is
+       retired above. Its two tuning notes are kept in the ledger rather than in the source:
+       both were correct about the lattice and neither could ask whether the lattice belonged.
+       See KNOWN_ISSUES for the hold-out that settled it. */
     /* Merged terminal lock (PREREG-tailtip.md A), replacing the 4-lock radial tip fan. The
        fan's one ring diverging at perp 0.30 was separated *by construction* — cap5 read it as
        a crown of separated near-black triangles on the raised tip, and no width/roll knob has

@@ -1063,11 +1063,29 @@ export function cornerRolls({ w, d, h, r = 0.4, batter = 0.09, rng }) {
        which masses happen to swallow their ends. */
     const g = new THREE.CylinderGeometry(r * 0.82, r, h, 16, 1, false);
     normaliseAttrs(g);
-    // Lean with the batter so the roll hugs the wall for its whole run.
+    /* Lean with the batter so the roll hugs the wall for its whole run.
+     *
+     * Both the sign and the mid-height offset were wrong, and together they took the roll off
+     * the building entirely. `place` composes about the geometry's own centre, and a rotation
+     * of `-sx·lean` about Z carries the top of a +Y cylinder *outward* (proved in
+     * `leansign.mjs`: rz = −lean moves the top from x 4.30 to 5.70). So every roll splayed away
+     * from the mass like a tepee pole. On the entry pylon, measured against the battered face
+     * it is supposed to hug, the roll sat 0.97 m *inside* the wall at its foot and **4.08 m
+     * clear of it in open air at its head**; on the inner pylon, 5.42 m. That is the whole of
+     * critic pass 5's "about ten thin untextured poles stand around the columns doing nothing"
+     * in `dunes` — they are not props and they are not scaffolding, they are this moulding,
+     * detached from the building by its own placement. Fixing the sign alone is not enough:
+     * rotating about the centre also needs the centre pulled in by `batter·h/2`, or the roll
+     * tracks the corner with the right slope but the wrong intercept and flares at the base.
+     *
+     * With both terms the roll centre is at `w/2 − 0.35r − batter·y` for every y, which is the
+     * battered corner exactly, so the bead stands a constant 0.65r proud of both faces all the
+     * way up — the torus roll the §7.3 vocabulary asks for rather than a stick beside a wall. */
     const lean = Math.atan(batter);
     place(g, {
-      x: sx * (w * 0.5 - r * 0.35), y: h * 0.5, z: sz * (d * 0.5 - r * 0.35),
-      rx: sz * lean, rz: -sx * lean,
+      x: sx * (w * 0.5 - r * 0.35 - batter * h * 0.5), y: h * 0.5,
+      z: sz * (d * 0.5 - r * 0.35 - batter * h * 0.5),
+      rx: -sz * lean, rz: sx * lean,
     });
     out.push(g);
   }
@@ -1095,7 +1113,7 @@ export function papyrusColumn(o = {}) {
   const {
     hShaft = 13.2, rBase = 1.9, rTop = 1.4, capH = 2.4, abacus = 0.62,
     lobes = 8, rib = 0.075, rng, bandCount = 4, shaftSegs = 4, belly = 1.92, neck = 0.80,
-    abacusK = 3.68, lean = 0, leanZ = 0,
+    abacusK = 3.68, lean = 0, leanZ = 0, campaniform = false, abacusOver = 0.20,
   } = o;
   // Enough radial samples to resolve the ribs, rounded up to a multiple of the lobe count so
   // every stem is identical and the seam at a=0 lands on a crest.
@@ -1141,14 +1159,41 @@ export function papyrusColumn(o = {}) {
   // top-heavy profile, and the neck it springs from is thinner. Ratio bell/neck was 2.07; it
   // is now 2.56.
   const capBase = y;
-  const bud = [
-    [0.00, 1.00], [0.10, 1.34], [0.22, 1.66], [0.36, 1.88],
-    [0.50, 2.00], [0.62, 2.05], [0.78, 1.94], [1.00, 1.44],
+  /* Rows are [t, radius/rTop, ribScale].
+   *
+   * **The third column is the fix for "the capitals are lumpy undifferentiated blobs".** It
+   * used to be a flat 1.25 on every bell row, which put a rib amplitude of `r · rib · 1.25` —
+   * 22 cm on a 2.4 m bell — into the *silhouette* of the widest part of the capital, as eight
+   * cosine lobes. That is a cauliflower, not a bud, and it is why critic pass 5 read no bell
+   * profile at 3×. A papyrus bundle's stems are separate where they spring and closed where
+   * they bind, so the rib now decays from 0.85 at the spring to 0.10 at the mouth: the stems
+   * still read as flutes on the *shading*, where the three-band ramp turns them into vertical
+   * lines, but the outline the eye traces is a clean bell.
+   *
+   * `campaniform` swaps the closed papyrus bud for the open lotus/palm capital that flares at
+   * the mouth. Both profiles are period-correct and the pair is what stops a hall of twelve
+   * columns reading as one part copied twelve times. */
+  const bud = campaniform ? [
+    [0.00, 1.00, 0.80], [0.12, 1.20, 0.74], [0.26, 1.42, 0.64], [0.42, 1.64, 0.52],
+    [0.58, 1.83, 0.40], [0.74, 1.97, 0.28], [0.88, 2.05, 0.18], [1.00, 2.08, 0.12],
+  ] : [
+    [0.00, 1.00, 0.85], [0.10, 1.34, 0.78], [0.22, 1.66, 0.68], [0.36, 1.88, 0.56],
+    [0.50, 2.00, 0.44], [0.62, 2.05, 0.32], [0.78, 1.94, 0.20], [1.00, 1.44, 0.10],
   ];
   const bk = belly / 2.05;   // `bud` is authored at belly = 2.05; `belly` rescales it
-  for (const [t, k] of bud) push(capBase + capH * t, rTop * k * bk, 1.25);
+  /* The widest point on the bell, taken off the rows that are actually emitted and including
+     the rib crest that rides on top of them, rather than re-derived as `rTop · belly`. The
+     campaniform profile peaks at 2.08 where the bud peaks at 2.05, and the ribs add up to
+     another 2.4% — small numbers, but this feeds the clerestory clearance test at x = ±8
+     where the whole margin is 24 cm, so it is worth having exact instead of nominal. */
+  let rBell = 0;
+  for (const [t, k, rs] of bud) {
+    const rr = rTop * k * bk * (1 + rib * rs);
+    if (rr > rBell) rBell = rr;
+    push(capBase + capH * t, rTop * k * bk, rs);
+  }
   const capTop = capBase + capH;
-  push(capTop, rTop * 1.44 * bk, 0.2);
+  push(capTop, rTop * bud[bud.length - 1][1] * bk, 0.08);
 
   /* V is *registered to the column*, not tiled in world metres — see COLUMN_V_TILE. One
      texture repeat spans base to the top of the bell, so the painted binding bands land on
@@ -1199,17 +1244,28 @@ export function papyrusColumn(o = {}) {
   }
   nn.needsUpdate = true;
 
-  // The abacus is deliberately oversized against the neck it sits on — a wide flat plate
-  // capping a narrow bundle is most of what makes an Egyptian capital read as top-heavy.
-  const ab = chamferBox(rTop * abacusK, abacus, rTop * abacusK, { rng, jitter: 0.012, c: 0.06 });
+  /* The abacus is deliberately oversized against the neck it sits on — a wide flat plate
+   * capping a narrow bundle is most of what makes an Egyptian capital read as top-heavy.
+   *
+   * **It also has to be wider than the bell, and it was not.** At the nave's `rTop` 1.25 the
+   * plate was `1.25 · 3.68 / 2` = 2.30 m half-width under a bell of `1.25 · 1.92` = 2.40 m, so
+   * the widest thing on the capital was the bud and the abacus was hidden behind it from every
+   * eye level below the architrave. Critic pass 5 reported "no abacus" on a part that is built
+   * and drawn every frame: it was occluded by its own capital. The plate is sized from the
+   * bell rather than from `rTop` now, so `abacusOver` is a *guaranteed* overhang — the square
+   * shadow line under a square plate, which is the read — and it cannot silently invert again
+   * when a caller retunes `belly`. */
+  const abHalf = Math.max(rTop * abacusK * 0.5, rBell + abacusOver);
+  const ab = chamferBox(abHalf * 2, abacus, abHalf * 2, { rng, jitter: 0.012, c: 0.06 });
   place(boxProjectUVs(ab), {
     x: lean * (capTop + abacus * 0.5), y: capTop + abacus * 0.5, z: leanZ * (capTop + abacus * 0.5),
   });
 
   return {
     geo: mergeAll([shaft, ab]), height: capTop + abacus, capBase, capTop,
-    // What the caller needs to keep proxies and neighbours clear of the bell.
-    rMax: rTop * belly, rAbacus: rTop * abacusK * 0.5,
+    // What the caller needs to keep proxies and neighbours clear of the bell. `rAbacus` is now
+    // the widest part of the whole column, so it is what clearance must actually be tested on.
+    rMax: rBell, rAbacus: abHalf,
   };
 }
 

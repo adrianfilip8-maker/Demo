@@ -482,6 +482,93 @@ export const GLYPHS = {
     c.fill('evenodd');
     c.restore();
   }),
+
+  /* ── The flat class, part two: signs that are short AND shape-distinct ──────────────────────
+   *
+   * `quadrat` draws three of its five layouts by stacking, and asks `pick()` for a sign under
+   * `maxH` 0.36–0.5 each time, so **the flat signs are the majority of every inscription this
+   * file paints** — and until now the flat set was `water · mouth · scroll · pool · arm ·
+   * basket · bread · eye · neb · hand`, of which nine are a horizontal bar, arc or oval of
+   * roughly 3:1. Individually they are correct signs. Together, resampled to the 8–25 px a
+   * sign actually subtends in the canonical framings, they are one shape drawn ten ways, which
+   * is what critic pass 5 read as *"rows of identical rounded rectangles"* on `interior`'s
+   * upper wall and *"a visibly repeating tile of identical rounded rectangles"* on `traversal`.
+   *
+   * This is the §13 falcon defect one level up, and it is worth naming as its own class: that
+   * one was **one sign** repeated, and the census fixed it by spreading the *identity*
+   * distribution. Identity variety is not shape variety. A field can be perfectly uniform over
+   * sign names and still be perfectly uniform over silhouettes, and the eye reads silhouettes.
+   *
+   * So the criterion for every addition below is not "is it a real sign" — the old ten are all
+   * real — it is **"does its outline survive a box filter down to 10 px as something other than
+   * a bar"**: a П, three humps, a ring, a hatched disc, a stepped mat, a stool. Two are
+   * deliberately *round* and one deliberately *square*, because those are the two silhouettes
+   * the old set had none of at all. Paint follows Egyptian practice as elsewhere, and the five
+   * additions are balanced three-cool to two-warm to push against the one-hue reading of §36
+   * without swinging `b−r` (see the recipe-side note on `PAINT_HUE`). */
+
+  /* --- N1 sky, "pt" — a flat lintel with two short drops. The one flat sign whose silhouette
+   *     is concave, which is why it survives minification as something other than a bar. --- */
+  sky: G(1.05, 0.30, PAL.lapis, (c) => {
+    rect(c, 0.02, 0.02, 1.01, 0.12);
+    rect(c, 0.02, 0.10, 0.10, 0.19);
+    rect(c, 0.93, 0.10, 0.10, 0.19);
+  }),
+
+  /* --- N25 hill country, "khaset" — three humps. Reads as a scallop at any size. --- */
+  hills: G(0.94, 0.36, PAL.ochre, (c) => {
+    for (let i = 0; i < 3; i++) {
+      const x = 0.10 + i * 0.32, h = i === 1 ? 0.34 : 0.26;
+      c.beginPath();
+      c.moveTo(x - 0.10, 0.35);
+      c.bezierCurveTo(x - 0.09, 0.35 - h, x + 0.09, 0.35 - h, x + 0.10, 0.35);
+      c.closePath(); c.fill();
+    }
+  }),
+
+  /* --- V9 shen ring — a closed ring on a bar. Round, and the only outlined void in the flat
+   *     set, so at distance it holds a hole where every other flat sign holds a solid. --- */
+  shen: G(0.52, 0.50, PAL.turquoise, (c) => {
+    c.save();
+    c.beginPath();
+    c.ellipse(0.26, 0.22, 0.24, 0.20, 0, 0, TAU);
+    c.ellipse(0.26, 0.22, 0.13, 0.10, 0, 0, TAU);
+    c.fill('evenodd');
+    c.restore();
+    rect(c, 0.06, 0.40, 0.40, 0.09);
+  }, (c) => { line(c, [[0.12, 0.22], [0.40, 0.22]], 0.02); }),
+
+  /* --- R4 hetep, offering loaf on a mat, "htp" — a stepped profile: low mat, high loaf. --- */
+  hetep: G(0.86, 0.40, PAL.white, (c) => {
+    rect(c, 0.02, 0.26, 0.82, 0.13);
+    c.beginPath();
+    c.moveTo(0.22, 0.27);
+    c.bezierCurveTo(0.24, 0.02, 0.62, 0.02, 0.64, 0.27);
+    c.closePath(); c.fill();
+  }),
+
+  /* --- Q3 stool, "p" — a square. The flat set had no orthogonal silhouette at all. --- */
+  stool: G(0.52, 0.46, PAL.malachite, (c) => {
+    rect(c, 0.04, 0.03, 0.44, 0.30);
+    rect(c, 0.04, 0.31, 0.16, 0.14);
+  }),
+
+  /* --- N16 land with grains, "ta" — a bar, but a bar with three dots under it, which is a
+   *     different mark from a plain bar once the bar itself has blurred. --- */
+  land: G(0.98, 0.30, PAL.ochre, (c) => {
+    rect(c, 0.02, 0.03, 0.94, 0.13);
+    for (let i = 0; i < 3; i++) circ(c, 0.22 + i * 0.27, 0.23, 0.055);
+  }),
+
+  /* --- W24 pot, "nw" — a round-bottomed bowl. Round, and taller than it is wide at the rim,
+   *     so it breaks the 3:1 aspect the whole flat class shared. --- */
+  pot: G(0.50, 0.48, PAL.carnelian, (c) => {
+    c.beginPath();
+    c.moveTo(0.04, 0.12);
+    c.bezierCurveTo(0.02, 0.48, 0.46, 0.48, 0.44, 0.12);
+    c.closePath(); c.fill();
+    rect(c, 0.01, 0.04, 0.46, 0.10);
+  }),
 };
 
 export const GLYPH_NAMES = Object.keys(GLYPHS);

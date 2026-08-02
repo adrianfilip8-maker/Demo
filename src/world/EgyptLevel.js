@@ -972,9 +972,13 @@ function hypostyleHall(A) {
     // Inward only (−sx), never less than 0.4°, so the bell always moves away from the wall.
     const lean = -sx * D(0.4 + NAVE_LEAN_IN[String(cz)] * (sx < 0 ? 1 : 0.7));
     const leanZ = D(R.jitter(1.1));
+    /* `belly` 1.92 -> 1.74. The bell gives up 22 cm of radius and the abacus takes 20 cm of
+       overhang with it, because a capital whose widest element is the bud has no abacus as far
+       as the camera is concerned (see `papyrusColumn`). Net: the capital is the same width at
+       its widest, but the widest thing is now a square plate with a shadow under it. */
     const col = K.papyrusColumn({
       hShaft: hSh, rBase: 1.9, rTop: 1.25, capH: 2.4 + R.jitter(0.12), abacus: 0.62,
-      rng: R, bandCount: 4, belly: 1.92 * (1 + R.jitter(0.04)), lean, leanZ,
+      rng: R, bandCount: 4, belly: 1.74 * (1 + R.jitter(0.03)), lean, leanZ,
     });
     A.add('hall', 'column_papyrus', K.place(col.geo, { x: cx, y: 0.35, z: cz, ry: D(R.range(0, 45)) }));
     vol(A, 'hall', 'sandstone_block', cx - 2.35, cx + 2.35, 0, 0.42, cz - 2.35, cz + 2.35, { jitter: 0.02, chip: 0.12 });
@@ -992,9 +996,13 @@ function hypostyleHall(A) {
     // Aisle columns sit against the outer wall, so their lean is spent along z where there
     // is room, and only a token amount across x.
     const lean = D(R.jitter(0.35)), leanZ = D(R.jitter(1.0));
+    /* The aisles carry the *open* campaniform capital against the nave's closed bud. There is
+       6.3 m to the wall out here, so the flare is free, and one hall with two capital orders in
+       it is the difference between an Egyptian temple and one part instanced twelve times. */
     const col = K.papyrusColumn({
       hShaft: 9.5 + R.jitter(0.2), rBase: 1.62, rTop: 1.07, capH: 1.9, abacus: 0.55,
-      rng: R, bandCount: 3, seg: 32, belly: 1.92 * (1 + R.jitter(0.05)), lean, leanZ,
+      rng: R, bandCount: 3, seg: 32, belly: 1.74 * (1 + R.jitter(0.04)), lean, leanZ,
+      campaniform: true, abacusOver: 0.17,
     });
     A.add('hall', 'column_papyrus', K.place(col.geo, { x: cx, y: 0.34, z: cz, ry: D(R.range(0, 45)) }));
     vol(A, 'hall', 'sandstone_block', cx - 2.0, cx + 2.0, 0, 0.4, cz - 2.0, cz + 2.0, { jitter: 0.02 });
