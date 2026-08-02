@@ -1470,6 +1470,25 @@ anything changed. Every saving quoted for this cache — the 33–41% here and t
 overstated and must be re-derived after the census fix rather than re-used.** No saving number
 for the shadow cache is quotable until then.
 
+**RE-DERIVED 2026-08-02 after the census fix (§31, §33), and the struck figures stay struck.**
+With the unconditional reset gone the measured refresh rate is **r = 0.00000** over N = 100
+frames × C = 2 cached cascades, so the cache eliminates **(1 − r) × S = 579,260 architecture-
+static shadow triangles per frame against D = 713,738**, the same census's all-cascade
+architecture-static shadow redraw — **81.2% of D**. It is 81% rather than 100% because cascade 0
+is deliberately never cached. Two constraints travel with the number and must travel with every
+re-quote: **S is an architecture-only floor** (Vegetation, Terrain and Props do not build
+headless, so the absolute saving is understated while the ratio stays internally consistent
+because S and D share a population), and **no counted-column figure appears anywhere in the
+derivation.**
+
+The §33 pre-registered-luck clause applies here **inverted, and the inversion is the
+interesting part**. The prediction was that the new figure might land near the struck 33–41% and
+that a near miss would be coincidence rather than vindication. It landed at 81.2% instead — and
+a *far* miss is exactly as uninformative. The gap is a denominator difference, not a
+disagreement: the struck figures used a whole-frame denominator that was never restated, and a
+whole-frame version is declined here because that denominator is a counted-column number.
+**Near-miss and far-miss are both non-evidence about a figure whose input was never measured.**
+
 The general form: *a counter measures a window, and shipping work into a different window
 changes the number without changing the machine.* Before trusting a delta, check that the thing
 you changed executes inside the interval the counter covers — and when you move work across
