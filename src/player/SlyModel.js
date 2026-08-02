@@ -93,11 +93,17 @@ export const TUNE = {
    * **Quote a head count with its pose or do not quote it.** Get both with
    * `node tools/shotsil.mjs <out> sly-closeup` (standing) and `... hero` (perch).
    *
-   * Ledger figure, current tree: `tools/propprobe.mjs` standing `idle_confident` reads
-   * figure 1.766 m / chin→crown 0.428 m ⇒ **1 : 4.13** (shotsil concurring; perch ~4.10).
-   * The 4.5x standing rows above were measured mid-cap-pass on an earlier tree — chin→crown
-   * grew 0.391 → 0.428 m between the two, by the rows' own arithmetic. 4.13 is the figure
-   * on the ledger; do not re-quote 4.52 (or the superseded 5.29) as current.
+   * Ledger figure, current tree: **1 : 4.57** standing `idle_confident`, measured where the
+   * condition lives — projected through the real `sly-closeup` lens at 1280×720, chin at the
+   * jaw and top at the top of the cap: figure 516.6 px / head 113.1 px (`tools/headpx.mjs`).
+   * Bare skull, no hat, is 1 : 6.30.
+   *
+   * **Do not use `tools/propprobe.mjs` for this number.** Its "chin" is the throat bib —
+   * `furCream` carried on the head bone, min y 1.334 against the real jaw at 1.377 — so it
+   * measures a head that runs 4.3 cm into the neck and returns 1 : 4.13. That figure was
+   * briefly the published record and is wrong; the 4.52 row above is a third answer under a
+   * third definition. All three are reproducible, which is the point: the definition is not a
+   * detail of the measurement, it *is* the measurement.
    *
    * The cartoon read is not the head count on its own, it is the *set*: big head, tiny waist,
    * narrow shoulders, long thin limbs, oversized hands and feet, and a tail with more mass

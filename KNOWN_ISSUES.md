@@ -654,12 +654,23 @@ Still open on the character, honestly scored by the agent that did the work:
   that landed (`66d57aa` and the cap pass after it) moved the *other* levers: `TUNE.legLift`
   — the lever that works and the one the design wants, legs 41% → ~47% of figure — plus
   `TUNE.torsoShrink`, pushed to 0.16 by the old argument and backed off to 0.09 to give the
-  spinal S its lever back. Current tree, `tools/propprobe.mjs`, standing `idle_confident`,
-  chin→crown over ground→crown: figure 1.766 m, head 0.428 m ⇒ **1 : 4.13** (`perch_idle`
-  ~4.10; `shotsil.mjs` concurs). Squarely cartoon; §7.3's proportions condition is met. The
-  like-for-like tables — and the pose-label trap that briefly had a `perch_idle` number quoted
-  as the standing figure — are recorded at the `TUNE` block in `src/player/SlyModel.js`.
-  Quote a head count with its pose or do not quote it.
+  spinal S its lever back. Squarely cartoon; §7.3's proportions condition is met.
+
+  **The number itself has now been wrong twice, in opposite directions, and both times the
+  instrument was the reason.** This bullet briefly carried **1 : 4.13** from
+  `tools/propprobe.mjs` — but that tool's "chin" is the *throat bib* (`furCream` carried on the
+  head bone), which sits 4.3 cm below the actual jaw, so it measured a head that extends into
+  the neck and returned too small a count. Measured instead where the condition actually lives
+  — projected through the real `sly-closeup` lens at 1280×720, chin at the jaw, top at the top
+  of the cap — the standing `idle_confident` figure is 516.6 px against a 113.1 px head:
+  **1 : 4.57**, with the bare skull at 1 : 6.30 (`tools/headpx.mjs`). Against the recorded 5.53
+  start that is the real distance travelled.
+
+  At least three defensible answers exist — 4.13, 4.52, 4.57 — differing only in where "chin"
+  and "top" are placed, and every one of them is reproducible. So: **quote a head count with its
+  definition *and* its pose, or do not quote it.** The pose half of that rule was learned first,
+  when a `perch_idle` number was briefly cited as the standing figure; the definition half cost
+  a published record. Like-for-like tables are at the `TUNE` block in `src/player/SlyModel.js`.
 - **Eye emissive lift is CPU-verified only.** The re-capture was queued behind other agents for
   32 minutes and the work was reported without it. Check `sly-closeup`, and check `night`
   (`tod 0.02`) where a warmer, brighter eye emissive previously failed as "two yellow dots".
