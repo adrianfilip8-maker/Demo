@@ -1083,12 +1083,30 @@ that returns immediately — is outside the tree and untouchable. Keeping a wrap
 attached and mortal.
 
 **The recipe, stated once:**
-- Long captures: launch detached — `nohup node tools/shot.mjs … > "$SCRATCH/run.log" 2>&1 &`,
-  write `$!` to a pid file, let the call return. Exit codes go to the log
+- Long captures: launch detached — `setsid nohup node tools/shot.mjs … > "$SCRATCH/run.log" 2>&1 &`,
+  write the pid to a file, let the call return. Exit codes go to the log
   (`echo` an epilogue from the script itself, not from a waiting parent).
 - Wakes: watchers must each live under the hour. A 50-minute poll loop that exits on its
   condition *or* on heartbeat — re-armed on every wake — never meets the reaper; a single
   until-loop armed for "however long the queue takes" always does.
+
+**Three refinements, each paid for by a lost run.**
+
+`nohup` alone is not always enough. It suppresses SIGHUP, but the wrapper shell can stay in the
+task's process group and take the reap with it — one capture died at ~114 s that way, far
+inside the hour, which is the failure that does *not* look like the reaper and so gets
+mis-diagnosed. `setsid` puts the process in its own session and its own group, which is the
+property that actually matters; it costs one word and removes the whole class.
+
+`$!` names the wrapper, not the work. In `VAR=… && nohup node … &` the `&` backgrounds the
+entire `&&` list, so `$!` is the subshell's pid and the node process is its child. A pid file
+written from it points at something that exits early, so a liveness watcher reports a dead
+capture while the capture is still rendering. Resolve the real child before writing the file.
+
+Variables do not survive into that subshell either. `$SC` expanded to empty inside a
+backgrounded list and the run's log was silently written to `/` — the capture was fine and its
+output was simply not where anyone was looking for it. Expand paths before the `&`, or use
+absolute ones.
 
 **The general point:** a fleet of independent failures with one hidden cause will hand you a
 different plausible story per failure — this one died at a handover, that one at an hour, the
