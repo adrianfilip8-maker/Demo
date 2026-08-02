@@ -5644,3 +5644,90 @@ equivalent number +49%.** Mean albedo 0.5244 → 0.5237, so nothing is relit; `d
 
 Checking the condition you are *not* trying to fix, with a numeric scale for what failure looked
 like last time, is what makes "no regression" a measurement instead of a hope.
+
+
+---
+
+## §68 — most of "reads as flat" is the tone curve, and it is bigger than anything authoring can reach
+
+TEXTURES, closing its side of §7.3's flat-vertex-colour condition and routing the larger half away
+from itself. `src/textures/**` is **FINAL** and byte-identical to `1420def`; frozen to the pass-6
+boot.
+
+### 68.1 Coverage collapses with brightness, and it is not foreshortening
+
+Aggregated over **every architecture pixel**, in-frame coverage at base luma `<0.35` against
+`≥0.50`:
+
+| shot | dark | bright | ratio |
+|---|---|---|---|
+| `traversal` | 82.5% | 39.4% | **0.48** |
+| `hero` | 78.5% | 42.7% | 0.54 |
+| `temple` | 73.0% | 46.2% | 0.63 |
+| `combat` | 69.6% | 50.8% | 0.73 |
+| `courtyard` | — | — | 0.78 |
+| `night` | — | — | 0.84 |
+| `interior` | — | — | 0.99 |
+
+**The obvious confound is excluded rather than argued away.** It survives restricting to
+`cosθ ≥ 0.6` inside a narrow depth band, so it is not minification — and `temple`'s `ceiling_stars`
+still runs **63% → 21%** across the luma range *at fixed distance and near face-on*. Same texture,
+same authoring, different place on the tone curve.
+
+> **Detail is being crushed in the highlights, and that residual is POSTFX/SHADING's.**
+> It is also **larger than anything authoring can move**: the entire authoring range between this
+> project's two historic failure states is **±5 points, against 40.**
+
+That reframes a critic finding. "Reads as flat vertex colour" has been treated as a texture item for
+five sections; most of it is a grade item, and the ordering — dark surfaces carry detail, bright
+ones do not — is exactly what a shoulder that compresses before it clips looks like. Routed, and
+deliberately **not** actioned before pass 6: it is a new finding on a freezing tree, and §17's rule
+holds.
+
+### 68.2 The only true flat *panels* are the hazed pyramid, and that is §2.3 working
+
+`limestone_polished` at z ≈ 200 m: `traversal` **57.5%** of its area inside contiguous dead blobs
+(one of 30,738 px), `courtyard` 17.5%, `hero` 17.3%. **Everything in the near field is ≤3.7%.**
+At 0.05 texel-px nothing authored can survive there — that is atmospheric blend doing its job, not a
+texture defect.
+
+The methodological point: **a per-material bucket silently mixes a 10 m wall with a 200 m pyramid.**
+The instrument now prints per-blob depth for exactly that reason. Same family as §49's "a zero is
+not one state" — an aggregate that merges two populations reports a number belonging to neither.
+
+### 68.3 The instrument states its own blind spot and pairs itself with one that covers it
+
+`cov1` passes the control test **on one side only.** It separates a dead control (0.0%) decisively
+and it separates this change (+17.6 points) — but the two historic **ashlar** failure states move it
+only **±3 points**, because that defect lived in low-frequency amplitude, which a 1.6 px band-pass
+is nearly blind to. Squint standard deviation covers that axis and does separate the known-bad busy
+state at **+49%**.
+
+> **Quote them as a pair, never `cov1` alone.**
+
+Two further limits volunteered rather than found later: `flatcov` reads albedo only with no relief,
+which is why in-frame coverage (68.4%) exceeds the albedo's (50.7%) for the same material — the gap
+is normal maps and geometry, not an error; and `matflat`'s mask has no terrain, character, FX or sky,
+so a large occluder's interior lands in the wrong bucket.
+
+### 68.4 The pre-registration is a difference-in-differences, with an upper bound
+
+`progress/records/PREREG-mottle-critic6.md`, committed **before** the capture boots. Registered
+against an **in-frame control** rather than against the baseline, because the pass-6 tree also
+carries SHADING's and GEOMETRY's changes and the grade will not be the baseline's — so the primary
+is `Δcolumn − Δwall`.
+
+Two features worth copying:
+
+- **The band has a ceiling: +2.0 to +12.0 points.** Texture-side gain is +17.6, and this recipe's
+  last measured texture→frame transfer was ~0.45, so *a full-size gain in frame would itself be
+  suspicious.* Registering an upper bound means an implausibly good result cannot be claimed as a
+  win.
+- **The falsifier says revert, not defend.** If `Δcol − Δwall` < +2.0 while the nulls hold, the
+  change did not reach the frame in an amount worth its risk and it is reverted *rather than
+  defended with the texture-side number.* And if the busy guard fails, revert **regardless** of the
+  primary — because the busy condition is the one this recipe has historically broken while fixing
+  the flat one.
+
+Nulls are registered too: if the untouched materials disagree by more than ±2.5 points, the frame
+moved for reasons outside this change and the primary is **unquotable, not passed.**
