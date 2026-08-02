@@ -493,6 +493,18 @@ Recorded so they are not re-derived:
   were named by inspecting a term's coefficients; none survives being turned off. The split's
   cool leg is G/R **1.09**, so it *raises* G relative to R and is partly undoing the defect.
 
+  **Second correction, to the correction above: it answered a channel-order claim with a hue
+  measurement, and those are different statistics.** "Makes green the darkest channel" is
+  `argmin(R,G,B)`; "266° → 278°" is an angle. A leg that raises B moves both at once — hue
+  rotates toward blue *and* B climbs past G — so "the opposite" was a category difference, not a
+  contradiction, and the same trap caught both writers. Measured with the ordering statistic
+  itself (`t16f.mjs`, `argmin` printed with the split on and off): green is **already** the
+  darkest channel in the scene-linear composite, before the grade exists, at `shadowBounceMix`
+  0.20 and at the shipped value; the split leaves the ordering unchanged in every cell but one,
+  where it moves G **out** of last place. So the original claim is withdrawn on its own terms,
+  not on the hue toggle's — and the real owner is the albedo multiply, as below. Two statistics,
+  two verdicts, one term: name which one a sign belongs to before quoting it.
+
   The real owner is the **albedo multiply**, and it is a share argument rather than a hue one:
   88.4% of shadow-side radiance is albedo-multiplied (the multiplied leg 57.3% plus the fill
   31.1%) and therefore inherits sandstone's own linear G/R of **0.483**, while the one
@@ -4974,6 +4986,55 @@ lands at frame-predicted 233/247/237. Either the levers are insufficient or the 
 (+8/+23/+24, calibrated at one operating point) is not constant in hue. One `bmix05` arm settles
 which, pre-registered: **>6° from prediction and the whole table is withdrawn.**
 
+> ### WITHDRAWN, in full, and the withdrawal is the finding. The table above models a tree that shipped its fix 23 hours earlier.
+>
+> **`t16f.mjs`'s constant block reads `shadowBounceMix: 0.20` and has no `shadowTeal` at all. The
+> tree ships `0.05` + `shadowTeal 0.15`, landed in `07fe98c` at 2026-08-01 23:13.** Every
+> "shipped"/"base" row above — the 266 base, the toggle table, the candidate ladder, the ruling
+> that 226 is unreachable — is computed at the **pre-fix** operating point. So is the evidence:
+> `shots/eye1` stamps **commit `6f1d1f4`, captured 2026-08-01 20:26**, also before the fix. The
+> model agreeing with those frames is therefore not a validation of anything shipped — *both
+> sides of that validation predate the change.*
+>
+> **Measured on the shipped tree instead of modelled** (`framehue.mjs` over rim4's `base` frames,
+> tree `2f99d55`, post-fix; architecture masks; character excluded; shadow split L<90):
+>
+> | shot | material | px | shadow hue p50 | G-darkest | sat p50 |
+> |---|---|---|---|---|---|
+> | temple | `column_papyrus` | 426k | **213** | 5.0% | 0.26 |
+> | temple | `sandstone_block` | 56k | **224** | 17.7% | 0.34 |
+> | night | `sandstone_worn` | 127k | **226** | 6.5% | 0.79 |
+> | night | `sandstone_block` | 153k | **226** | 4.7% | 0.78 |
+> | night | `paving_courtyard` | 100k | **223** | 5.3% | 0.74 |
+> | interior | `hieroglyph_wall` | 108k | **215** | 7.8% | 0.28 |
+> | interior | `granite_pink` | 348k | **227** | 19.8% | 0.45 |
+>
+> Against a registered acceptance of **≤226° with G ≥ R at comparable saturation**: every large
+> population lands **213–227**, G-darkest runs **5–20%** where the pre-fix record has 90–99%, and
+> **`night` — the falsifier the coordinator required first — sits at 223–226 inside §2.2's
+> [215, 235] violet-blue band with saturation RISING to 0.74–0.79**, not collapsing to grey as
+> the interlock note warned. The one material over the line is `granite_pink` at 227, by 1°.
+> Controlled against rim contamination: the same statistic on the `norim` arm reads 227 / 213 /
+> 227 against base's 226 / 213 / 227 — the cool rim moves the shadow median by ≤1°, so this is
+> the shading chain, not the rim.
+>
+> **The acceptance is met on the shipped tree, and `bmix05` is not an arm.** It pokes
+> `shadowBounceMix` to 0.05, which *is* the shipped value — the arm would have compared 0.05
+> against 0.05 and measured its own noise, and I had it pre-registered as the run that would
+> settle the table. `ToonMaterial.TUNE.shadowTeal`'s own comment already recorded the t16ab
+> frame verification (worn/block/paving 275/282/261 → 224/226/211); this section contradicted a
+> declaration site that was right, four hours later, from a model of the state it replaced.
+>
+> **The lesson is not "check provenance", which this file says four times already. It is that an
+> instrument's CONSTANT BLOCK is provenance.** `t16f.mjs` stamps its tree (`2f99d55`), validates
+> its light to 4.69e-5 and its composite against real frame medians, carries a §11 scope
+> paragraph — and none of that could see that two numbers transcribed into it by hand had moved
+> in `src/`. A transcribed constant is a silent copy of a value someone else owns, and it goes
+> stale without changing, without erroring, and without failing any validation the instrument
+> performs on itself. Instruments that read `TUNE` from source cannot have this bug; every one
+> that retypes it can. Where retyping is unavoidable, diff the block against source at run time
+> and print the comparison, the way `rim4` prints its uniform readback rather than its request.
+
 ### 61.8 `spec *= sh` confirmed at source, and it is the asymmetry
 
 ```glsl
@@ -5007,3 +5068,83 @@ is the wrong statistic, because night's whole-frame rim count is **dominated by 
 population the floor is meant to reduce — so lowering the floor scores itself.** Use the character's
 contour ring instead; night's baseline is now measured at 22.5% coverage / 33.6 L ungated, 14.1% /
 29.7 L shipped.
+
+
+---
+
+## §62 — an instrument's constant block is provenance, and the falsifier I required could not fire
+
+Two withdrawals from SHADING, both at their declaration sites, both landing while I was drafting a
+section that would have duplicated one and contradicted the other. The corrections themselves are
+recorded inline at §8 and §61.7; this section records **what they cost me and what they change
+about how instruments are built.**
+
+### 62.1 §61.7's entire table is withdrawn — it modelled a tree that had shipped its fix 23 hours earlier
+
+`t16f.mjs`'s constant block reads `shadowBounceMix: 0.20` and carries **no `shadowTeal` at all.**
+The tree ships **`0.05` + `shadowTeal 0.15`**, landed in `07fe98c` at 2026-08-01 23:13. So every
+"shipped"/"base" row in §61.7 — the 266 base, the toggle table, the candidate ladder, and the
+ruling that ≤226° is unreachable — is computed at the **pre-fix operating point.**
+
+The evidence was pre-fix too: `shots/eye1` stamps `6f1d1f4`, captured 2026-08-01 20:26. **Both
+sides of that validation predate the change**, which is why agreement between them proved nothing
+about anything shipped.
+
+Measured on the shipped tree instead (`framehue.mjs` over rim4's `base` frames at `2f99d55`,
+architecture masks, character excluded): every large population lands **213–227°**, G-darkest runs
+**5–20%** where the pre-fix record shows 90–99%, and **`night` sits at 223–226° inside §2.2's
+[215, 235] band with saturation *rising* to 0.74–0.79** rather than collapsing to grey as the
+interlock warned. One material is over the line — `granite_pink` at 227°, by one degree. Controlled
+against rim contamination: the `norim` arm reads within ≤1° of `base`, so this is the shading chain
+and not the rim.
+
+**The registered acceptance is met on the shipped tree.** The line was closed before the section
+declaring it unreachable was written.
+
+### 62.2 The falsifier I required could not fire
+
+I asked for `bmix05` as the arm that would settle the table. **`bmix05` pokes `shadowBounceMix` to
+0.05, which is the shipped value** — the arm would have compared 0.05 against 0.05 and measured its
+own noise, then reported a null indistinguishable from "the lever does nothing".
+
+That is §52.1's collapsed-arm failure with one difference that makes it worse: there, the collapse
+came from a clamp nobody had read. Here **the arm was collapsed by the shipped state itself**, and
+the check that would have caught it is the one this ledger has demanded five times — *ask what the
+instrument reads in the state you have not created yet.* I required the falsifier; I did not ask
+what it would read if the fix were already in.
+
+### 62.3 The lesson is not "check provenance". It is that a transcribed constant is provenance
+
+`t16f.mjs` is not a careless instrument. It **stamps its tree** (`2f99d55`), validates its light
+against a live `uShadowColor` readback to **4.69e-5**, checks its composite against real frame
+medians, and carries a §11 scope paragraph. None of that could see that **two numbers typed into it
+by hand had moved in `src/`.**
+
+> A transcribed constant is a silent copy of a value someone else owns. It goes stale **without
+> changing, without erroring, and without failing any validation the instrument performs on
+> itself** — because every one of those checks is internally consistent with the wrong number.
+
+**Instruments that read `TUNE` from source cannot have this bug; every instrument that retypes it
+can.** Where retyping is unavoidable, diff the block against source at run time and print the
+comparison — the way `rim4` prints its uniform *readback* rather than its request, and the way
+`compositecheck.mjs` was hardened in §17 after it drifted one revision.
+
+This is the fifth member of the "number without its definition travelling with it" family (§34,
+§48.3, §56.1, §58.3), and the first where the number had a perfectly good definition and simply
+stopped matching the thing it named.
+
+### 62.4 What survives, and one rule worth keeping
+
+Standing after both withdrawals: the **albedo multiply** is the mechanism (88.4% of shadow-side
+radiance, sandstone's linear G/R 0.483); `shadowWash` is the wrong lever; the PostFX citation fix at
+`c3a4cfa` rests on the corridor model rather than the withdrawn sentence; and the teal blend keeps
+its **direction** while losing its **justification**.
+
+And the rule SHADING extracted from its own confusion, which I had recorded backwards in §61.7:
+
+> **Name the statistic before quoting a sign.** "Makes green the darkest channel" is
+> `argmin(R,G,B)`; "266° → 278°" is an angle. A leg that raises B moves *both at once* — hue
+> rotates toward blue **and** B climbs past G — so "the opposite direction" was a category
+> difference, not a contradiction, and it caught both writers. Measured with the ordering statistic
+> itself, green is already darkest in the scene-linear composite before the grade exists, and the
+> split moves it *out* of last place in the single cell where it matters at all.

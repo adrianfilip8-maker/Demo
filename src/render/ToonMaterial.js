@@ -266,13 +266,35 @@ const TUNE = {
         as a target for a shadowed-sandstone *pixel* is the same category error as reading
         §3's "after" table as a target; the albedo alone puts the floor at 0.935.
 
-     2. **This knob is not what makes green the darkest channel — the split-tone is.** The
-        cool leg multiplies by unit-luma #2a3f66, i.e. per-channel (0.914, 0.999, 1.265) at
-        strength 0.16, so it lifts blue 26.5% and cuts red 8.6% and leaves green alone. That
-        is what promotes green past blue into the darkest slot: at mix 0.20 the surface is
-        darkest-in-BLUE before the split and darkest-in-GREEN after it. Since a shadow pixel
-        sits on the cool leg under any sane `splitRange`, the two levers are not
-        interchangeable — this one sets R/G, that one decides which of G and B is lowest.
+     2. ~~**This knob is not what makes green the darkest channel — the split-tone is.**~~
+        **WITHDRAWN — measured with the ordering statistic itself, and the split does not
+        decide the ordering at any operating point.** The gains are right: the cool leg
+        multiplies by unit-luma #2a3f66, i.e. per-channel (0.914, 0.999, 1.265) at strength
+        0.16, so it lifts blue 26.5%, cuts red 8.6% and leaves green alone. The *inference*
+        from them was not. Running the validated chain (`scratchpad/t16f.mjs`, the same
+        `shadowPixel` + `grade` validated against a live `uShadowColor` readback and the eye1
+        frame medians) and printing `argmin(R,G,B)` with the split ON and OFF:
+
+          mix        material          pre-split min   post-split min
+          shipped    sandstone_worn          G               G
+          shipped    sandstone_block         G               G
+          0.20       sandstone_worn          G               G
+          0.20       sandstone_block         G               G
+          0.10       sandstone_block         G               R      <- split REMOVES G from last
+          0.05/0.00  all three               R               R
+
+        Green is already the darkest channel in the scene-linear composite, before the grade
+        exists, because 88.4% of shadow-side radiance is albedo-multiplied and sandstone's own
+        linear G/R is 0.483. In the one cell where the split changes the ordering it moves G
+        *out* of last place. So the split is not the mechanism in either statistic — not in
+        hue (toggling it off moves 266 -> 278, toward magenta) and not in channel order.
+
+        **Why this was wrong is worth more than the correction.** Both this claim and the
+        toggle that "refuted" it were measuring different things — an ordering and an angle —
+        and each was read as authority over the other. A term that raises B rotates hue toward
+        blue AND pushes B above G simultaneously; "opposite directions" was an artefact of
+        comparing two statistics, not a contradiction. Name the statistic before quoting a
+        sign, and reach for `argmin` when the claim is about which channel is lowest.
 
      0.20 -> 0.05 (task #16, t16ab A/B). At 0.20 every shadowed wall in every daylight shot
      measured hue 261-298 — B-max with R > G, a channel order no §2.2 colour has (every
