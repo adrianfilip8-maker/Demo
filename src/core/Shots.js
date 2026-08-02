@@ -187,29 +187,37 @@ export const SHOTS = {
      nearest yaw putting view at 34° — a three-quarter read — while keeping the key 21° off
      his face so it still models. Visibility is flat across yaw here, so the two were solved
      separately without either fighting the other. */
-  /* FRAMING IS BROKEN AND THE FIX IS NOT A CAMERA NUDGE — see KNOWN_ISSUES §39.
+  /* The courtyard seen through its gate — and the reason it moved outside is worth reading
+     before anyone moves it back.
 
-     Every prop placed through a `Bag` was rendering at the world origin, so the colossi, the
-     sphinx avenue and most of the set dressing were invisible when this camera was composed.
-     This shot is named for those props and was framed around their absence. Now that they are
-     placed, the west colossus (13 m tall on a 2 m plinth at x -9.5, z 25) sits 11.1 m away in a
-     50° vertical fov that spans only 10.37 m there — so head and feet both leave the frame and
-     what remains reads as a stack of slabs.
+     Every prop placed through a `Bag` was rendering at the world origin (KNOWN_ISSUES §39), so
+     the colossi, the sphinx avenue and most of the set dressing were invisible when this camera
+     was composed. This shot is named for those props and was framed around their absence. Once
+     they appeared, the west colossus (13 m on a 2 m plinth at x -9.5, z 25) overflowed the frame
+     at both ends from 11.1 m away.
 
-     Three corrections were measured and all three are worse, which is the useful finding: the
-     courtyard is ENCLOSED, and there is no distance to buy.
-       · back along the view axis to (-22.7, 5.6, 33.3) — camera 1.3 m off the west wall, the
-         statue drops to 2.8% of frame;
-       · back in z to (-19, 5.6, 36) — 0.2 m from the hieroglyph wall, which then fills 93%;
-       · up and back to (-20, 11.5, 34) — `camclear` passes, but a wall at 1.6 m takes 34% and
-         the colossus falls out of the top five entirely.
+     I then eliminated three corrections by measurement and concluded the courtyard was enclosed
+     with no distance to buy. **That conclusion was an artefact of a broken clearance test**
+     (§43): the box raycaster clamps `t0` at 0 and returns `Infinity` when the origin is *inside*
+     a box, so a camera embedded in masonry scored as perfectly clear. Re-audited with a real
+     clearance gate, two of those three were not compositions that failed — they were cameras
+     standing in the west pylon (0.00 m and 0.50 m). With clearance ≥ 2 m enforced, 8,232
+     candidates pass: the distance is bought by moving *along the approach axis*, not by backing
+     into the enclosure.
 
-     So this needs a composition decision by the level's owner, not arithmetic from here: either
-     the camera moves outside the courtyard and looks in, or the shot accepts a partial statue
-     and re-aims so the HEAD is in frame and the plinth clips (a figure cropped at the base
-     reads; one cropped at both ends does not). Left at its original values deliberately — a
-     known-wrong frame beats an unmeasured guess. */  courtyard: {
-    pos: [-19.0, 5.6, 30.0], target: [1.0, 9.0, 12.0], fov: 50, tod: 0.76, roll: 1.0,
+     Scored against real triangles, z-buffered, with occlusion counted: both colossi land
+     complete — crown, face, knee and base inside the frame — obelisk centred behind, braziers in
+     the bottom corners as dark foreground framing, the sphinx avenue leading in, and the west
+     statue nearer than the east so the pair is not a mirror. Clearance 7.5 m. Statue coverage
+     15.9% + 10.1% against 28.3% + 5.4% shipped, with crown and base previously OUT on both.
+
+     The cost, stated because it is a change in what the shot *is*: the camera now sits at z 41.5,
+     outside the courtyard on the approach. And the staged player falls to ~41 px at 720 rows. He
+     is the scale figure here rather than the subject (see below), but if he needs to be larger,
+     `(-3.5, 0, 27)` computes to ~83 px on open paving between the statues — that is arithmetic
+     and wants `charvis` before it is trusted, so it is not applied here. */
+  courtyard: {
+    pos: [-2.5, 4.0, 41.5], target: [1.5, 6.4, 16.0], fov: 55, tod: 0.76, roll: 0.8,
     player: { pos: [-6.6, 5.12, 12.4], yaw: 5.08, pose: 'run' },
   },
 

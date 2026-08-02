@@ -3148,3 +3148,45 @@ runs/row (−43%)**, torso **2.16 → 1.67 (−23%)** — and **the arms still f
 outright**, unchanged from before the redirect. Limb ink is still not tonally separable from limb
 dark fur, which is §7.3's "smooth plastic" signature, and it is now the character's largest open
 item.
+
+---
+
+## 43. The clearance test scored a camera standing inside a wall as perfectly clear
+
+I eliminated three `courtyard` camera candidates by measurement and concluded the courtyard was
+enclosed with no distance to buy — and recorded that conclusion in the source as reconnaissance
+for whoever tried next. **Two of the three were not compositions that failed. They were cameras
+standing in the west pylon.**
+
+The box raycaster clamps `t0` at 0 and returns `Infinity` when the ray origin is **inside** a box,
+so an embedded camera reports *no hit* — indistinguishable from open air, and in fact scoring
+better than a camera merely close to something. Re-audited with a real clearance gate:
+
+| candidate | clearance to nearest surface |
+|---|---|
+| shipped `(-19, 5.6, 30)` | 1.00 m (west entry pylon) |
+| back along the view axis | 1.35 m |
+| back in z `(-19, 5.6, 36)` | **0.00 m — inside the pylon** |
+| up and back `(-20, 11.5, 34)` | **0.50 m — effectively inside it** |
+
+With clearance ≥ 2 m actually enforced, **8,232 candidates pass.** The distance was always
+available; it is bought by moving *along the approach axis*, not by backing into the enclosure.
+The recommended camera clears by 7.5 m and puts both colossi complete in frame — crown, face,
+knee and base — with the obelisk centred behind and the sphinx avenue leading in.
+
+**This is the third instrument in this session that returned a healthy number for the worst
+possible state**, and the family is now clear enough to name: §39's destructure produced
+*defaults* for a wrong-shaped argument, §42's median measured from a ray origin outside every
+population it sampled, and this returns *no obstruction* for total obstruction. In each case the
+failure mode maps onto the "everything is fine" output rather than onto an error, which is
+precisely why none of them was caught by looking at results.
+
+**The check: ask what your instrument returns for the pathological input, and confirm it differs
+from what it returns for the ideal one.** Here, "camera in open air" and "camera inside masonry"
+both returned `Infinity`. That test takes one line and would have saved three eliminated
+candidates and a false conclusion committed into the source.
+
+`Shots.js` already recorded two instances of exactly this defect — `temple` framed from 0.78 m
+inside a nave column for its whole life, and `guard` standing on a plinth deck with the subject
+two metres below the lens. The file warns about it in its own header. **The warning was there and
+the tool used to check it could not see the condition it warned about.**
