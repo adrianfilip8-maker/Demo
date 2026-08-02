@@ -483,7 +483,14 @@ export const TOON_SHADE = /* glsl */ `
 		   leaving little signal for those blue terms to sit against. That is the hypothesis to
 		   test first, it is a one-line A/B, and per the handoff's own sequencing it should be
 		   measured only AFTER the split-tone cast is fixed — otherwise it is sized against a
-		   moving baseline. TEXTURES holds the material masks and owns that verification. */
+		   moving baseline. TEXTURES holds the material masks and owns that verification.
+
+		   **68% is the value at metal 0.85 — the WORLD's gilding — and it is quoted for the
+		   character's cane, where it is wrong.** SlyModel.js binarises metal to (spec.metal ? 1 : 0),
+		   so every gilded surface on Sly runs uMetal **1.0**, the maximum in the project, and the
+		   multiply is 0.20 — **80% removed, not 68%.** The figure is stated per-metal-value here
+		   because it has already travelled without its qualifier (KNOWN_ISSUES §48.3). If you
+		   quote it, quote the uMetal it belongs to. */
 		float rgh = clamp( roughnessFactor, 0.03, 1.0 );
 		vec3 Lv = slyToViewDir( L );
 		vec3 H = normalize( Lv + V );

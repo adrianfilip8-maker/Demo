@@ -518,6 +518,12 @@ Recorded so they are not re-derived:
   and `diff *= mix(1.0, 0.20, slyMetal)` strips **68% of gold's own colour** at metal 0.85.
   That is the one-line A/B, after the cast fix.
 
+  **68% is the metal-0.85 value — the world's gilding — and it has been quoted for the cane,
+  where it is wrong.** `SlyModel.js:3331` binarises `metal: spec.metal ? 1 : 0`, so every gilded
+  surface on the character runs uMetal **1.0** and the multiply is 0.20: **80% removed.** Corrected
+  here at the declaration site as well as in §48.3, because §34 is the record of what leaving a
+  constant right in one place and wrong in another costs. Quote the uMetal with the percentage.
+
   **The general lesson, which is mine.** A narrow measured claim ("`goldSpec` reaches no
   specular term") and a broad architectural one ("there is no specular path") differ by one
   word and by everything. I relayed the second, opened a task on it, and wrote it in here as
@@ -3679,7 +3685,198 @@ curve replacing three stacked `chunkAt` slabs, whose whole point is a normal tur
 quarter-circle so the cel ramp can put a terminator on the back. That is sphinx-only and appears in
 none of geo3's three framings.
 
+### 50.2 The author's own restatement, which is less kind than mine and more accurate
+
+Recorded here at the declaration site, in GEOMETRY's words, because the project's rule is that a
+correction lives where the claim lives (§34, §41) — and because this one is better than the version
+I wrote:
+
+> It is true that a triangle count is blind to a chamfer widening. But I did not merely use a blind
+> instrument: I wrote "the nemes, lappet, head-core and plinth-cap changes cost exactly zero
+> triangles" and then reasoned *from that zero* to "no evidence about the statue work in this run".
+> **I read a null from an instrument as a null in the world.** That is the same error as §49's "a
+> zero is not one state", one commit earlier in this very log, and I made it anyway. The instrument
+> being blind is the mechanism; the fault is that I did not ask what the zero was made of. The cheap
+> guard, had I applied it, was one grep for callers of `nemes()` — the helper is four lines from the
+> code I edited.
+
+Two things follow that my framing had lost. The blindness is the *mechanism*, not the *fault* — an
+instrument is entitled to be blind, and the discipline is on the person reading it. And the guard
+was not expensive: it was a single grep, four lines from the edit. A lesson whose remedy costs one
+command is not a lesson about difficulty.
+
+GEOMETRY then re-measured the frustum rather than accepting my arithmetic, and got a stronger
+result than my estimate: **660/660 crown vertices inside on both colossi**, at 23.9° and 18.9°
+off-axis against a 42.8° horizontal half-angle — where I had guessed ~28°/32°. The quantity under
+test subtends **5.4 → 9.8 px at 19.5 m against 1.3 → 2.4 px on the avenue sphinx**, so courtyard is
+not a consolation view of the nemes change, it is the **decisive** one: if the widened arris cannot
+be seen there it will never be seen on a sphinx. Bands are sealed in
+`progress/records/PREREG-nemes-colossi.md` before the frame exists, including N4 — an explicit
+falsifier registering "melted rather than carved" as a **loss**, which is the failure mode a chamfer
+widening actually has and the one most easily absorbed as "smoother is better".
+
+The freeze itself paid for something neither of us anticipated. geo3 acquired the lock at 21:12:36
+from a clean tree; **SHADING wrote to `src/render/shaders/toon.glsl.js` at 21:15:53** — 3 m 17 s
+later. A shader reaching every pixel missed the boot window by three minutes, and had it not, the
+report would have recorded only `dirty: true`.
+
 The lesson is not "GEOMETRY was careless" — the accounting was careful and its every number
 survives. It is that **a cost audit and a change audit are different instruments, and a triangle
 count is only the first.** When the deliverable is a silhouette, the count is close to the least
 informative thing that can be measured about it.
+
+
+---
+
+## §51 — the replacement measured worse than what it replaced, and the reason was that a box is not flat
+
+GEOMETRY's statue-form work, delivered against §48.1's routed finding. Three results, and the one
+worth the section is a failure it caught on itself.
+
+### 51.1 A ruled flank turns through exactly zero degrees; a chamfered box does not
+
+The sphinx body was three stacked `chunkAt` slabs with a hard arris across the back at the waist and
+again at the shoulder. Replacing them with a single lofted mass is obviously the better structure —
+and **the first loft measured worse than the boxes it replaced**: swept-normal area over the figure
+fell **82.1% → 72.1%**.
+
+The reason is exact and generalises well beyond statues. `chamferBox` **pillows its face interiors
+by about 7°**, so a "flat" box face is not flat and contributes real normal variation. A ruled
+flank on a loft turns through **precisely zero**. Swapping boxes for a straight-sided loft therefore
+*removes* curvature that nobody had noticed was there, because it was hiding inside a primitive
+whose name says "box". The `belly` parameter exists solely because of this, and the shipped sections
+carry it.
+
+> **A primitive's name describes its topology, not its shading behaviour.** The thing being replaced
+> was contributing a quantity that no one had attributed to it.
+
+This was caught by measuring the replacement against the original, not by looking at the silhouette
+— where the loft is plainly better and always was. An instrument that had only ever scored the loft
+against *nothing* would have reported a large win, which is §37's hold-out lesson arriving in a new
+place.
+
+### 51.2 An offline cel rasteriser, and what it found about the old sphinx
+
+`scratchpad/celraster.mjs` renders built geometry through the shader's **own band edges (0.52 /
+0.14)** in about a second, with no WebGL and **without taking the capture lock**. That let every
+iteration be looked at rather than reasoned about.
+
+Its first output settles what the critic actually saw: the old sphinx was **one flat tone across the
+entire animal — no terminator anywhere on it.** "Reads as stacked boxes" was not a figure of speech
+and not a shading-tint problem; the geometry presented the band system with nothing to quantise.
+After the loft, a curved terminator sweeps the haunch and flank. Cost: **+2,240 triangles
+level-wide, 0.19% of budget**; the nemes/lappet/head/plinth changes cost zero.
+
+### 51.3 §1 closes on all ten shots
+
+| column | before (pass 2) | now |
+|---|---|---|
+| counted, like-for-like | 548 draws / 2.355 M | **265 draws / 1.747 M** (worst: night) |
+| scored main-view (§1 ruling) | — | **93 draws / 0.668 M** (worst: night) |
+
+Four shots measured directly, five bounded, combat measured-in-bands. Worst case is **37% of the
+draw budget and 56% of the triangle budget**; architecture sits at 33 draws / 296 k. The specified
+column trade was made as described — papyrus shafts **22 → 48 radial, 9 → 4 vertical**.
+
+### 51.4 A previously-closed item is reopened by its own author, and re-routed
+
+GEOMETRY had reported the "no AO in crevices" defect closed. It corrects that: **it was closed on
+the strength of a source comment.** `PREREG-kerb.md`'s calibrated instrument measures **1,704 px
+still live on `hero`** at tree `f026ef3`, and `81b773f` — the stylobate-apron fix that was supposed
+to have closed it — is verifiably an **ancestor** of that tree. So the apron fix landed and the
+defect class did not close.
+
+The margin analysis decides ownership rather than leaving it to preference: the rim lifts that band
+by **~110 L** against a luma margin over threshold of **7.2 L**. A cause fifteen times larger than
+the margin is the cause. **It is rim-caused, the registered lever is a shader uniform, and the owner
+is SHADING**, with a geometry fallback available (chamfer edge-masking, already used once for the
+night paving case).
+
+Closing an item on a source comment is the same failure as §18's stale reference and §50's null:
+reading what the code is specified to do, in place of measuring what it does.
+
+---
+
+## §52 — the check that pays, run before the capture instead of after
+
+SHADING's turn produced four things. The first would have cost a lock; the last three are all cases
+of an author catching their own instrument.
+
+### 52.1 Three of `aokey`'s four sealed arms are one applied state
+
+The §40 discipline — *read back applied state, never `tune`* — was applied **before** the run rather
+than in the post-mortem, and it killed the run as sealed. Full detail and the working poke are in
+`progress/records/ADDENDUM-aokey-arms-collapse.md`; the finding:
+
+`uAoStrength` is per-material, computed once at `toon()` time (`ToonMaterial.js:805`) and frozen at
+`:896`. **A grep for writers returns three hits: that line, the GLSL declaration, the GLSL use.
+There is no writer.** `TUNE.bakedAO` is read at construction and never again, so `k1`, `k1b70` and
+`k1b85` all apply **0.5500** and are the same arm. Only `k0` vs `k1` was ever real.
+
+Worse than a no-op: `r3(o.ao)` sits in the option hash at `:837`, so any `toon()` *after* the poke
+mints a **new** material (probe: `same instance returned? false`, new one at 0.8500) while every
+mesh already in the scene keeps the old one — a half-applied state plus a silent duplicate program.
+The A/B's own poke would have manufactured a §23 foreign change inside its own window, producing a
+small, real, entirely spurious delta with a plausible story attached.
+
+The sealed **falsifier** fails too, in §48.3's shape: `uAoKey` multiplies `alb * keyRad * key` and
+`key = ramp * sh`, so where `sh = 0` the term is exactly zero at any `uAoKey` — and only **~1.4% of
+`hero`'s gilded population is key-lit** by `ToonMaterial.js`'s own record. The falsifier scores a
+population of which 98.6% cannot move, so it can fire against a correct diagnosis.
+
+**This is the fifth instrument-blindness instance (§39, §40, §43, §50, §52.1) and the first caught
+before it cost anything.** The difference was timing alone: the question was asked of a state that
+did not exist yet.
+
+### 52.2 The `ef` floor is sized, and it is the aimed lever
+
+`ef` floor **0.25 → 0.60** takes shaft hue **160.0° → 45.0°** against an authored gold of 45.1°,
+with L ×1.31, chroma 12 → 24, and rim:shaft falling 1.51× → 1.21×. It is *aimed*: metalEnv ×2.40 on
+the shaft against ×1.09 on the rim, and at true grazing `ef = 1` for every floor — **exactly null
+where the frame already works**, against §48.3's predicted ×1.91 rim disturbance from the naive
+diffuse multiply. Acceptance window **0.45–0.60**; at 0.70+ the rim stops reading (ratio < 1.15).
+
+The §12 neighbour holds: lit gilding moves L ×1.124 / ×1.062 / ×1.021 at key shares .70/.85/.95
+with hue ≤ 0.6° — large where the defect is, small where the frame works — and it does not push hot
+gilding into §25's AgX shoulder (at p 0.95 the pixel moves one count).
+
+**Two brackets that SHADING broke and fixed on itself**, both of which would have produced confident
+wrong numbers:
+
+- Its first model **hand-rolled a display transform** instead of using the validated AgX + split-tone
+  one, and put shaft hue at 98.8° against the validated 160.0°. Hue is the entire claim, so the
+  control was load-bearing rather than ceremonial. Replaced verbatim; the control now reproduces
+  `canegold.mjs` exactly.
+- Its first §12 neighbour **re-solved the key magnitude per floor**, so the key grew with the thing
+  being measured and returned an identical ×1.414 at *every* share — a collapsed bracket that looks
+  like a clean invariant. Held fixed as the scene fixes it, the numbers separate.
+
+Stated limits, not papered over: chroma 24 is still low against §48.1's scale (lit sand 123), so
+this reads as **"not green" rather than "gleaming"**; `spec *= sh` remains exactly zero in shade and
+is probably the larger lever for "reads as metal"; the model omits bloom, GTAO, ink shell and the
+real reflection vector. **Verdict: sized, not shipped** — it is global to every metal and needs a
+frame. `PREREG-cane1` already pre-committed "do not run `aokey` in the same arm as A1–A3", which is
+exactly this situation.
+
+### 52.3 An agent's context had silently lost 33 sections of the record
+
+SHADING reports that its visible context began the turn with a `KNOWN_ISSUES.md` of **1120 lines,
+§1–§15**, while the working tree holds **3542 lines through §48**. It noticed, **verified against
+the file rather than reconstructing from messages**, and confirmed the claim it had been given by
+reading `KNOWN_ISSUES.md:310` directly.
+
+This is an operational hazard worth naming: **an agent's recollection of the ledger is not the
+ledger.** A long-running agent can hold a stale snapshot and reason confidently from it, and nothing
+in the transcript looks wrong. The remedy is the cheap one SHADING used — when a claim depends on
+the record, open the record.
+
+### 52.4 A comment-only edit broke the module
+
+The 68% → 80% correction (§48.3) was applied at **both** declaration sites per §34 —
+`toon.glsl.js:482` and `KNOWN_ISSUES.md §8:518`. The first version of the shader edit used backticks
+inside the JS template literal and **terminated it**, breaking the module. It was caught because
+SHADING checked rather than assuming a comment change was safe; now verified by module load,
+block-comment depth 0, and `compilecheck.mjs` linking both skinned and static with `gl.getError 0`.
+
+"It is only a comment" is a claim about intent. In a shader stored as a template literal it is not a
+claim about syntax.
