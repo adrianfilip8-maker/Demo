@@ -255,8 +255,19 @@ const TUNE = {
 
      [0] radiusWorld  metres. The contact band this term is allowed to see. 0.045 sits in the
          middle of the 2-10 cm target.
-     [1] strength     0 = OFF and bit-identical to base (the mix collapses exactly). The null
-         control arm.
+     [1] strength     **SHIPS AT 0 = OFF, and 0 is bit-identical to base** (verified, not
+         assumed: the null control differs from a strength-0 build by 0 of 4096 px in
+         scratchpad/compositecheck.mjs). The A/B value is **0.85**.
+
+         Defaulted to a no-op deliberately, following §17. This term has been verified to
+         compile, to fire 18.3 L beside an analytic 4 cm step, and to read *exactly* 0.000
+         across 1084 px of open grazing plane — but all of that is on a synthetic depth
+         buffer, and **no rendered frame has ever been captured with it on.** §17's rule is
+         that plumbing lands as a no-op and the look change is held as its own pre-registered
+         A/B; §3 records this project twice producing on-target numbers over a plainly wrong
+         image. Turn it on by poking `tune.contact[1] = 0.85` — the composite re-reads the
+         uniform every frame, so a one-boot A/B needs no rebuild — and score it against
+         PREREG-contact.md §7's bands before changing this default.
      [2] minPx        floor on the screen-space sample radius. Below ~1.2 px every tap lands
          in the centre texel and the term silently dies — the §40 failure mode (a value
          clamped to a texel floor produces a null indistinguishable from a decisive one), so
@@ -271,13 +282,18 @@ const TUNE = {
      eye — which is a concave corner or something standing on a surface. Using the lobe the rim
      gate throws away is why this term is exactly zero on open floor, which is the property the
      whole rim-gate investigation was about. */
-  contact: [0.045, 0.85, 1.2, 24.0],
-  /* Rise-above-tangent-plane window, metres. Below [0] the deviation is depth quantisation
-     and normal-map-free geometry noise; past [1] the "occluder" is too far in front of this
-     pixel to be touching it (a character 5 m in front of a wall is a silhouette, not a
-     contact) and the term must fall off or it becomes a dark halo around every figure —
-     PREREG-contact.md's counter-risk 1. */
-  contactRise: [0.008, 0.22],
+  contact: [0.045, 0.0, 1.2, 24.0],
+  /* Occluder step height above this pixel's tangent plane, in METRES — the window that makes
+     this a contact term rather than an AO term.
+     [0] noise floor: under 6 mm the deviation is depth quantisation, not geometry. Response
+         reaches full at 5x this (3 cm), so the 2-10 cm band the critic's finding lives in is
+         at or near full weight.
+     [1] contact ceiling: past 20 cm the thing in front is a separate object, not something
+         touching this surface, and the response falls to zero by 50 cm. Without this upper
+         edge the term draws a dark halo around every figure standing clear of a background —
+         PREREG-contact.md's counter-risk 1, which is a different §7.3 failure and not the one
+         being fixed. */
+  contactRise: [0.006, 0.20],
 
   /* --- bloom ---
      §7.3 wants "a tight coloured halo on bright things", not a wash. At threshold 1.02 with
@@ -928,16 +944,23 @@ float slyContact( vec2 uv, float z0 ) {
     float wa = slyIsSky( da ) ? w0 : 1.0 / max( slyLinearZ( da ), 1e-4 );
     float wb = slyIsSky( db ) ? w0 : 1.0 / max( slyLinearZ( db ), 1e-4 );
 
-    /* Positive = the pair sits NEARER than the tangent plane predicts, i.e. concave. */
-    float dev = ( wa + wb - 2.0 * w0 ) * 0.5;
+    /* Positive = the pair sits NEARER than the tangent plane predicts, i.e. concave.
+       NOT halved. In the case this term exists for, exactly one of the two taps is on the
+       occluder and the other is on the surface, where the affine identity makes its
+       contribution cancel — so the undivided sum is the occluder's own step height, and
+       riseM below is in the same units as the thing TUNE.contactRise names (a 4 cm boot
+       reads 4 cm). Averaging the pair instead would report half the step and needed a window
+       at half the stated scale to compensate, which is how a knob ends up meaning something
+       other than its name. */
+    float dev = wa + wb - 2.0 * w0;
     float riseM = dev * zz;
 
     /* In-band only. Under uContactRise.x it is depth quantisation; over .y the neighbour is a
        separate object in front, not something touching this surface — without that upper edge
        this term draws a dark halo round every figure, which is a different §7.3 failure and
        not the one being fixed. */
-    occ += smoothstep( uContactRise.x, uContactRise.y * 0.45, riseM )
-         * ( 1.0 - smoothstep( uContactRise.y, uContactRise.y * 2.2, riseM ) );
+    occ += smoothstep( uContactRise.x, uContactRise.x * 5.0, riseM )
+         * ( 1.0 - smoothstep( uContactRise.y, uContactRise.y * 2.5, riseM ) );
   }
 
   return clamp( occ * 0.25 * uContact.y, 0.0, 1.0 );
