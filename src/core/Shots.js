@@ -267,17 +267,26 @@ export const SHOTS = {
      inherits its proven key angle (sun 37° off his face) instead of re-deriving one.
 
      Camera swung to view 95°: from the player at (0,0,30), `atan2(dx,dz) − yaw` = 1.657 rad.
-     3.46 m out at fov 38 puts him ~729 px at the harness's 900 rows, so the head is large
-     enough that the bill and the ear tips resolve rather than merging into the ink line — the
-     failure `hero` hits at 111 px. Elevation 10° so it looks slightly down the way the other
-     character cameras do, rather than being a turntable elevation nothing else uses.
+     3.9 m out at fov 38 puts him 648 px at the harness's 900 rows and 495 px at the critic's
+     720, so the head is large enough that the bill and the ear tips resolve rather than merging
+     into the ink line — the failure `hero` hits at 111 px. Elevation 10° so it looks slightly
+     down the way the other character cameras do, rather than being a turntable elevation
+     nothing else uses.
+
+     **The first version of this entry put his feet 15 px below the bottom edge** — figure rows
+     171…735 at H 720 — which is precisely the defect this file's own header records for
+     `temple` and `courtyard`, shipped again in a brand-new shot and caught only because the
+     landmarks were projected through the real camera instead of eyeballed. Pulled back 3.46 →
+     3.9 m and the aim dropped 1.15 → 0.88: rows 118…613, so 118 px of headroom and 106 px under
+     his boots for the contact shadow. Checked with `camclear` (clear), `charvis` (100% of 481
+     samples, no occluder at all) and a landmark projection at 1280x720.
 
      **This is the eleventh shot, and a default `node tools/critic.mjs` with no shot names now
      scores eleven.** The standing 4.2 baseline is over ten; compare against it by passing the
      ten names explicitly, or re-baseline deliberately. Nothing here changes any existing
      entry. */
   'sly-profile': {
-    pos: [1.96, 1.62, 32.78], target: [0.0, 1.15, 30.0], fov: 38, tod: 0.80,
+    pos: [2.21, 1.70, 33.13], target: [0.0, 0.88, 30.0], fov: 38, tod: 0.80,
     player: { pos: [0, 0, 30], yaw: 5.24, pose: 'idle_confident' },
   },
 };
