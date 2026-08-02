@@ -3306,3 +3306,54 @@ published that rather than quietly re-reading.
 *both* directions across these trees, because the downstream cool shift concentrates one framing
 into a single hue bin and raises a two-window concentration score regardless of albedo. **Whole-frame
 M11 cannot score a texture change across trees that differ in grade.**
+
+---
+
+## 45. The shadow-hue line closes — measured, not fixed — and the closing cost no capture at all
+
+Scored on frames that already existed (`shots/tx8`, stamp `671dd39` dirty:false), against the band
+re-derived from §2.2's surface intent:
+
+| shot | lit stone | shaded stone | Δh | from exact complement | verdict |
+|---|---|---|---|---|---|
+| `courtyard` (daylight) | 17.9° | 217.2° | 160.7 | 19.3° | **PASS** |
+| `traversal` (daylight) | 33.2° | 230.8° | 162.4 | 17.6° | **PASS** |
+| `temple` (shaft-lit) | 33.1° | 211.4° | 178.3 | **1.7°** | **PASS** |
+| `interior` (torch-lit) | 24.5° | 226.7° | 157.7 | 22.3° | **PASS** |
+
+All four also land inside the absolute band [177°, 237°], all with `G ≥ R`. **So there is nothing
+to fix: the pre-registered lever arms are moot, and `night` never needed re-measuring — it was a
+regression guard for a fix that is not happening.** §41's "shipped fails by 37–45°" is retired as
+stale, exactly as its own correction predicted.
+
+**The whole closure cost zero capture time.** The frames existed; the question was whether the
+constants that matter had moved since, which is a `git log` question answered in two minutes.
+`ToonMaterial.js`, `toon.glsl.js` and `Lighting.js` are unchanged across the interval; the only
+post-chain change ships at strength 0. The one plausible confound — a texture commit landing in
+between — was checked and dismissed structurally: it is entirely inside `glyphWall()`, so it
+cannot reach bare stone, and every ROI is bare stone verified in its crop. **Before queueing an
+hour of exclusive lock, ask whether the frame you need already exists on a tree where the inputs
+you care about are unchanged.**
+
+### The band's stated form had an unreachable half
+
+The target was written `Δh ∈ [150°, 210°]`. **A circular separation cannot exceed 180°**, so the
+upper half of that interval could never be entered by any measurement — §33's reachability rule,
+in a form nobody had thought to check because the arithmetic looks innocuous. The operative
+statement is `|180 − Δh| ≤ 30°`. It changes no verdict here, and it changes how every verdict
+*reads*: 178.3° is **1.7° from dead centre**, where the old wording invites "near the top of the
+band". Corrected at its declaration site.
+
+### Three ROIs rejected, and the closest call passed its own guard
+
+All three failures were §11's shape — a well-behaved statistic about the wrong surface — and
+**every one was caught by looking at the crop, never by the number**. The instructive one read a
+clean 28.4° at concentration 0.993 and was **the torch flame and its bloom halo**, not stone. Its
+author had *just added* a guard for exactly this class, and the guard passed it. A statistic
+cannot tell you it is describing the wrong object; only the picture can.
+
+Two instrument bugs found in the same pass, both the author's own and both specific to circular
+quantities: a **linear** median of a circular value put a plainly orange surface at "p50 313°" by
+straddling 0°/360°, and a circular **mean** over a bimodal region landed between the modes
+describing nothing (351.8° against a median of 31.1°). Both fixed, with every reported region now
+gated at mean resultant length ≥ 0.964.

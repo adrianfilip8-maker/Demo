@@ -124,3 +124,55 @@ there is nothing to fix and the correct action is to close the line, not to tune
 **The derived band stands unchanged.** It was derived from §2.2's surface intent and from a
 measured lit mass; nothing in this addendum touches it. What changed is the *distance the shipped
 state sits from it*, and that distance is now unmeasured rather than known to be 37–45°.
+
+---
+
+## 5. RESULT — the prediction was measured, and it holds. The line closes.
+
+Measured on `shots/tx8/` (stamp **`671dd39` dirty:false**), scored by `scratchpad/dhscore.mjs`.
+**No capture was taken for this**: the frames already existed, and the question "is the tree they
+were rendered on still current for the constants I care about" is a `git log` question.
+
+**Provenance, verified rather than accepted.** `ToonMaterial.js`, `toon.glsl.js` and `Lighting.js`
+are *unchanged* between `671dd39` and HEAD, so the `shadowBounceMix 0.05` / `shadowTeal 0.15` pair
+re-read in §1 is exactly what these frames rendered with. `PostFX.js` carries only the contact
+term, which ships at `contact[1] = 0.0` and is verified bit-identical to base. `Materials.js`
+moved at `59e3328`, but that commit is *entirely inside* `glyphWall()`, so it cannot reach an ROI
+on bare stone — which is why every ROI below is bare stone, checked in its crop.
+
+| shot | lit stone | shaded stone | Δh | from exact complement | G≥R | verdict |
+|---|---|---|---|---|---|---|
+| `courtyard` (daylight) | 17.9° | **217.2°** | 160.7 | 19.3° | yes | **PASS** |
+| `traversal` (daylight) | 33.2° | **230.8°** | 162.4 | 17.6° | yes | **PASS** |
+| `temple` (shaft-lit) | 33.1° | **211.4°** | 178.3 | **1.7°** | yes | **PASS** |
+| `interior` (torch-lit) | 24.5° | **226.7°** | 157.7 | 22.3° | yes | **PASS** |
+
+Every shaded mass also lands inside the absolute band **[177°, 237°]** derived in
+`DERIV-shadowhue-target.md` §3. Both §3 predictions above are confirmed, on the framings §3 said
+would carry the claim.
+
+**`DERIV` §4's "shipped fails by 37–45°" row is now retired as stale**, exactly as §4 of this file
+predicted it would be: those 274/282/261 hues predate the `bounceMix` + `shadowTeal` change. The
+shipped state does not need a fix, so the pre-registered lever arms are moot and `night` — a
+regression guard for a fix that is not happening — does not need re-measuring.
+
+**A defect in the acceptance's own statement, found by applying it.** `DERIV` §4 writes the target
+as `Δh ∈ [150°, 210°]`. A *circular* separation cannot exceed 180°, so the upper half of that
+interval is unreachable by construction. The operative form is `|180 − Δh| ≤ 30°`, which is what
+the fourth column reports and what the ±30° split-complementary tolerance actually meant.
+
+**Three ROIs were rejected before these four survived, and all three were the §11 failure mode** —
+a well-behaved statistic about the wrong surface. `interior`'s first lit ROI was a dim clipped
+frame corner; its second read a clean 28.4° at concentration 0.993 and was **the torch flame and
+its bloom halo**, not stone. `traversal`'s first shade ROI sat on the glyph register — the one
+recipe `59e3328` touches. Each was caught by looking at the crop, never by the number.
+
+**Two instrument bugs were found and fixed while scoring, both mine.** The median was a *linear*
+median of a circular quantity, so any warm mass straddling 0°/360° reported a hue in the empty
+half of the circle — the interior torch floor read "p50 313°" for a plainly orange surface. And a
+circular *mean* over a bimodal ROI lands between the modes and describes nothing: the first
+interior lit ROI read mean 351.8° against median 31.1°. Both are now guarded — circular median by
+rotation, and multimodality by the mean resultant length `R`, with every reported ROI at
+`R ≥ 0.964`. `temple`'s shaft caveat was likewise **discharged by measurement, not assumed**:
+on-shaft 33.1° against off-shaft 34.0° and 34.3° on the same wall, so the volumetric moves luma
+but not hue.

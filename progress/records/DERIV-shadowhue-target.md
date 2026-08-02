@@ -119,6 +119,13 @@ Score the **circular separation between the shaded mass and the lit mass in the 
 
 > **ACCEPTANCE — `Δh = |hue(shaded stone) − hue(lit stone)|` circular, target `180° ± 30°`,
 > i.e. `Δh ∈ [150°, 210°]`, with `G ≥ R` on the shaded mass.**
+>
+> **CORRECTION to this statement's FORM (its content is unchanged).** A circular separation cannot
+> exceed 180°, so the upper half of `[150, 210]` is **unreachable by construction** — a band whose
+> top half no measurement can enter (§33's reachability rule, applied to a circular quantity). The
+> operative form is **`|180 − Δh| ≤ 30°`**, which is what the ±30° split-complementary tolerance
+> always meant. It matters for reading results, not for passing them: a Δh of 178° is **1.7° from
+> dead centre**, and the old wording would have had someone read it as "near the top of the band".
 
 Three properties, and they are why this form is preferred:
 
