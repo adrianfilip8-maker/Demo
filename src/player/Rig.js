@@ -643,11 +643,25 @@ export class Rig {
       _v3.set(-_v1.z, 0, _v1.x).multiplyScalar(spin * f * f);
       _v2.add(_v3);
 
-      const p = this.tailP[i], v = this.tailV[i];
-      if (!this.tailSeeded) { p.copy(_v2); v.set(0, 0, 0); }
-
       const stiff = T.tailStiff * Math.pow(T.tailStiffFall, i);
       const damp = T.tailDamp * Math.pow(0.94, i);
+
+      const p = this.tailP[i], v = this.tailV[i];
+      /* Seed at the spring's STEADY STATE, not at the authored tip.
+         `settle()` advertises "snap the tail onto its target" and seeding at `_v2` did not do
+         that: `tailSag` is a constant force this integrator has to *fall into*, so a re-seeded
+         tail needed ~240 frames at dt 1/60 to come to rest. `Debug.setShot` freezes the pose and
+         then steps 14 + 3, so every character capture rendered a tail ~22 mm short of where the
+         same pose settles, varying with frame count and dt — a nondeterministic silhouette on
+         the half of the silhouette that is tail, and the reason a tail-cone lobe count off a
+         capture could not be trusted (KNOWN_ISSUES §35).
+         At rest v = 0 and the acceleration vanishes, so (_v2 - p)*stiff = (0, sag_i, 0): the
+         steady state is the authored tip lowered by sag_i/stiff. That lands it on frame one. */
+      if (!this.tailSeeded) {
+        p.copy(_v2);
+        p.y -= (T.tailSag * (1 + i * 0.35)) / stiff;
+        v.set(0, 0, 0);
+      }
       // semi-implicit Euler; dt is clamped upstream so this stays stable
       _v4.copy(_v2).sub(p).multiplyScalar(stiff).addScaledVector(v, -damp);
       _v4.y -= T.tailSag * (1 + i * 0.35);

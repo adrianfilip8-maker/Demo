@@ -2606,3 +2606,51 @@ number of ticks. The falsifier is cheap and should come first: **boot the same s
 one process, and boot it twice in two processes, and difference the cane region.** If one-process
 repeats are identical and two-process repeats are not, it is initialisation; if both differ, it
 is a settle that never converged.
+
+### 35.1 The falsifier ran and returned a third outcome — and found a different bug on the way
+
+Both legs came back **identical**: two fresh builds in one process, three separate processes
+(fingerprint-diffed), 1 vs 14 vs 60 vs 240 frames, 0 vs 100 vs 377 pre-freeze warm frames, and
+dt 1/60 vs 1/30 vs 1/120 at equal elapsed time — **0.000 mm on cane tip, hook, grip and hand in
+every leg.** The rule above enumerated two outcomes and the world produced a third, which is
+worth recording as a habit: *a falsifier that partitions its own expectations can still be
+surprised, and "neither branch" is data, not a broken test.* The cane divergence is **not** in
+the player module's frozen path, and `settle()` does clear the integrators it owns.
+
+**What the same probe did find is a bug nobody was looking for: the tail never reached
+equilibrium in any capture.** `tailSag` is a constant force the spring had to fall into over
+~240 frames, while `Debug.setShot` freezes and then steps 14 + 3. Measured drift: **19.8 mm
+(1→14 frames), 21.7 mm (14→60), 0.217 mm (60→240)**, plus 6.3 mm of dt-sensitivity. So **every
+character capture this project has ever taken rendered the tail ~22 mm short of its rest
+position** — including every frame the tail-tip and tail-cone seals were scored on, and
+including `critic5`. Fixed by seeding `tailLayer` at the spring's steady state (solving
+`(_v2 − p)·stiff = sag` at `v = 0`) rather than at the authored tip: after, **0.000 mm across
+every frame count and every dt**, with the tip settling 19.7 mm down into where it always
+should have been.
+
+**The cane divergence is bounded rather than explained, and the honest limit is stated.** A
+magnitude probe says only two candidates reach the observed size — "the freeze never took"
+(50–78 cm) or "the rig never bound" (110 cm) — while every mechanism in force during a *correct*
+capture moves the cane 0.000 mm. Both candidates are staging/registration races in `Debug.js`,
+and **both were completely silent**. The probe's own skipped suffix is declared per §11: no
+browser, no renderer, no `setShot` staging, no `teleport()`, no collision under foot IK, no
+module ordering — so a null there does not clear the project, and the two-boot cane-region
+differencing still owes a real capture.
+
+Two changes followed, both narrow: `freezePose()` now resets the one damped integrator that
+does not live on the rig (behaviour-neutral while frozen — it removes a trap rather than moving
+a frame), and `update()` warns once into `engine.warnings`, and therefore into `report.json`,
+when a freeze is active but the rig never bound. **That converts a silent 1.10 m error into a
+line in the manifest**, which is the pattern worth generalising: when a race has no symptom
+except a wrong picture, the fix is to give it a symptom.
+
+### 35.2 Frame observations from a stale capture are stale observations
+
+The same report described `sly-closeup` as showing "eyes blown to large near-white glowing
+discs that dominate the face" — which, taken at face value, would mean the eye-hierarchy line
+had regressed. It has not: those frames are `cap2`, whose tree is `b96409c`, and the per-channel
+`scleraTint` fix (`efb2e79`) landed the following morning. The observation is true about a build
+that stopped existing sixteen hours earlier. Its author correctly labelled `cap2` as a pre-fix
+baseline in one paragraph and then read frames from it in another without re-attaching the
+caveat — which is exactly how §18 and §27.4 keep happening, and why the caveat belongs on the
+*observation*, not on the capture that produced it.

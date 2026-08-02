@@ -374,6 +374,16 @@ export class Animation {
       : THREE.MathUtils.clamp(phase, 0, 1) * c.dur;
     // Springs must not drag a stale swing into a still frame.
     this.rig?.settle();
+    /* `caneCur` is the one damped integrator of the character that does NOT live on Rig, so
+       `settle()` — which clears the tail, the brim/ear springs, hipsVel, the look chain and
+       hipDrop — never reached it. `_applyCane`'s `k = 1` branch masks that for as long as
+       `this.frozen` holds, which is why it has never shown up in a still; the moment anything
+       renders a frame with the freeze not in force, this carries a lag state that converges
+       toward its target and never arrives (measured: still moving 9.2 cm of tip between frame
+       17 and frame 120). Reset it here so the invariant is the same one `settle()` states,
+       rather than one that depends on a branch elsewhere staying true. */
+    this.caneCur.identity();
+    this.caneHas = false;
     this.lean.bank = 0; this.lean.pitch = 0;
     this.squash = 0; this.squashT = -1;
     this.breath = 0;
@@ -403,7 +413,22 @@ export class Animation {
   /* ====================================================================== */
 
   update(dt, t) {
-    if (!this.ready && !this._bind()) return;
+    if (!this.ready && !this._bind()) {
+      /* Silent until now, and it is the failure that produces §35's symptom. If a capture asks
+         for a frozen pose and the rig never binds, `_applyCane` never runs, so the cane renders
+         at its bind orientation — measured 1.10 m of hook displacement from where the pose puts
+         it — while the frame looks plausible and nothing anywhere says so. `_bind()` returns
+         false with no warning when the skeleton has not arrived, so this is the only place that
+         can report it. §4.5 routes engine.warnings into report.json; §5 forbids throwing. */
+      if (this.frozen && !this._warned.unbound) {
+        this._warned.unbound = 1;
+        this.engine.warn(
+          `ANIMATION: freezePose("${this.frozen.name}") is active but the rig never bound — ` +
+          `character and cane are rendering the bind pose, not the clip.`
+        );
+      }
+      return;
+    }
     const d = dt > 0 ? Math.min(dt, 1 / 20) : 0;
 
     this.pose.clear();
