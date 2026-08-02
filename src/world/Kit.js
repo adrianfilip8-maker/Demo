@@ -220,6 +220,31 @@ function pillowN(n, p, cx, cy, cz, k) {
  *
  * `c` is the chamfer in metres; `only:'top'` bevels just the top rim (24 tris instead of 44),
  * which is what anything sitting on the ground wants.
+ *
+ * MEASURED, on a shipped frame rather than in principle (`tools/bandprobe.mjs`, which joins the
+ * per-pixel geometric N·L to the graded frame's luma). `courtyard`, the west colossus throne
+ * back at world (−12.5, 7.5, 23.8), 9.2 m from the shot camera — a chamferBox arris. Walking
+ * the profile across it, N·L sweeps 0.90 → 0.04 over ~13 px and the luma does this:
+ *
+ *     inside the light band   N·L 0.631 → 0.829   L 151.0 → 154.0    |ΔL|  3.0
+ *     ACROSS the 0.52 terminator  0.631 → 0.436   L 151.0 → 119.4    |ΔL| 31.6
+ *     inside the MID band     N·L 0.436 → 0.242   L 119.4 → 116.6    |ΔL|  2.8
+ *     ACROSS the 0.14 terminator  0.242 → 0.078   L 116.6 →  72.6    |ΔL| 44.0
+ *
+ * Matched interval widths (Δ N·L ≈ 0.19), so those four numbers are directly comparable: 15
+ * L per unit N·L inside a band against 216 across one, a ratio of 14.7× where a smooth ramp
+ * gives ~1×. The mid tone sits at 0.57 of the way from shadow to light — the quantiser's 0.5
+ * level, biased up as AgX compresses the highlight end. The mid band is 3 px wide here, which
+ * is the "thin mid" the read is supposed to have, and it is bounded on BOTH sides within a
+ * pixel of where the terminators predict.
+ *
+ * That is the §7.3 banded-ramp condition demonstrated on architecture. It is worth knowing it
+ * is also the ONLY site in six canonical frames that survives all three tests — a step alone
+ * is not evidence, because a cast-shadow edge or a mortar recess produces one too. What
+ * separates them is the mid-level check: the temple column site scores a 4.7× ratio and fails
+ * at 0.13, the courtyard limestone 2.0× and 0.25. Both are shadow edges wearing a ramp's
+ * clothes. Chamfer width is what buys the honest one, so do not economise `c` on anything a
+ * camera comes within ~15 m of.
  */
 export function chamferBox(w, h, d, opts = {}) {
   const { rng, jitter = 0.0, chip = 0, taper = 0, lean = 0, shear = 0, round = 0, c = 0.035, only = 'all',

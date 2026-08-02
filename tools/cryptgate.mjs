@@ -110,7 +110,7 @@ await withGame({ width: 1280, height: 720, quality: 'high' }, async ({ page, inf
     for (const wide of [true, false]) {
       await setWide(wide);
       await page.evaluate(async (n) => { await window.__GAME.setShot(n); }, nm);
-      const st = await page.evaluate(SETTLE + '(40)');
+      const st = await page.evaluate(`(${SETTLE})(40)`);
       const shot = await page.evaluate(() => ({ dataUrl: window.__GAME.capture() }));
       const buf = png(shot.dataUrl);
       await writeFile(path.join(OUT, `${nm}.${wide ? 'wide' : 'narrow'}.png`), buf);
