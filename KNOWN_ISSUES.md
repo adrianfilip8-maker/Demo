@@ -2811,3 +2811,61 @@ from the *posed* sclera. And the character tool's projection is **mirrored relat
 shipped frame**, inherited from `silmerge`'s phi derivation — harmless for before/after
 comparisons, invalid for any "his left arm" claim, and **`silmerge`'s own left/right part
 attributions are therefore suspect** for anyone relying on them.
+
+---
+
+## 38. The palette is two colours in the *albedo*, and the biggest cause is not in the albedo
+
+Three findings from the texture side of critic finding #2, each of which changes where the work
+has to happen.
+
+### 38.1 It is worse in the material than in the frame
+
+Rebuilt CPU-side with the critic's own statistic — same chroma gate, same two-40°-windows, and
+its controls return **0.222 and 1.000** against the critic's 0.223/1.000, so the reading is
+faithful — **nine of ten architecture recipes score 1.000 on their built albedo**, and
+`hieroglyph_wall` puts **94.9% of its chromatic texels in a single 20–30° bin**. The *frames*
+measured less concentrated (0.69–0.95) than the materials underneath them. The grade was being
+blamed for a concentration that the materials already had.
+
+### 38.2 Wear was implemented as opacity when it needed to be coverage
+
+Eleven of twenty signs in the wall's pool are authored blue, green or turquoise, and **0.54% of
+its texels came out cool.** Two mechanisms, both measured:
+
+- `paintRemnants` bleaches pigment toward stone **before it is laid down**, so Egyptian blue
+  arrives at **chroma 8 — exactly on the critic's chroma gate**, i.e. authored as colour and
+  delivered as something the statistic cannot see as colour.
+- the consumer recipe then multiplies by a saturated warm in linear, **attenuating blue 3.7×
+  harder than red**. Full-strength malachite survives it (display hue 95°); a 60:40
+  malachite-stone mix does not (43° — back in the warm bin).
+
+**Fading a pigment toward its substrate destroys the hue; removing the pigment in patches keeps
+it.** Worn paint is not paint at lower alpha, it is paint in fewer places. Cool share went
+0.54% → 8.22% (wall) and 0.86% → 6.41% (column) by changing that one idea, with the coverage
+knob that caused the old "flat decal" failure left untouched.
+
+### 38.3 Identity variety is not shape variety
+
+§13's pool fix spread the distribution over *sign identities* and left the distribution over
+*silhouettes* untouched: nine of the ten flat signs are a horizontal bar, arc or oval at ~3:1,
+and the layout draws flats in three of five slots. **A field can be uniform over names and
+uniform over outlines at the same time, and the eye reads outlines** — which is precisely the
+critic's "rows of identical rounded rectangles". The fix selected seven new signs by exactly one
+criterion — *does the outline survive a box filter to 10 px as something other than a bar* — and
+deduplicated the pools by silhouette rather than by name. Commonest sign 17.9% → 10.3%.
+
+### 38.4 And the part that is not the texture owner's, registered before the capture
+
+`huelab`'s **shaded column reads 1.000 on all ten framings**: under the committed chain every
+§2.2 pigment collapses to 152–244° in shadow, so **authored hue cannot arrive on a shaded
+surface at all**. That is the same wall §34 hit on gold from the other direction — gold was being
+judged on the one shot where it is 98.6% shadowed — and it means finding #2 is **not closable
+from `src/textures/**`**. Three causes, ranked: the stone family is 60–100% of every framing and
+§2.2 gives it one hue; the consumer's material colour is a saturated warm and lives in
+ARCHITECTURE's file; and the shadow regime belongs to SHADING/LIGHTING.
+
+**The practice worth copying: the prereg states, before any pixel exists, that the whole-frame
+number is expected to move little, and why.** Three of the shots are 83–98% stone and cannot
+move on decoration alone. That converts a small result from something to explain away into
+something predicted — and it is the difference between a finding and a spin, decided in advance.
