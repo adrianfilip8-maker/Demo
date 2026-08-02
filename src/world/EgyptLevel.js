@@ -968,7 +968,12 @@ function hypostyleHall(A) {
   const NAVE_LEAN_IN = { '-22': 0.55, '-30': 1.15, '-38': 1.75, '-46': 0.75 };
   for (const cz of naveZ) for (const sx of [-1, 1]) {
     const cx = sx * 8;
-    const hSh = 12.3 + R.jitter(0.25);
+    /* 12.3 -> 11.6 with `capH` 2.4 -> 3.1: the capital takes 70 cm off the shaft and spends it
+       on itself, so `col.height` and the abacus top are unchanged to the centimetre and the
+       architrave at y 16.2 still lands where it did. A bell 4.4 m across and only 2.4 m tall is
+       a mushroom; the same bell 3.1 m tall is a capital, and a heavier capital on a shorter
+       shaft is the §7.3 "exaggerated-cartoon" proportion rather than the archaeological one. */
+    const hSh = 11.6 + R.jitter(0.25);
     // Inward only (−sx), never less than 0.4°, so the bell always moves away from the wall.
     const lean = -sx * D(0.4 + NAVE_LEAN_IN[String(cz)] * (sx < 0 ? 1 : 0.7));
     const leanZ = D(R.jitter(1.1));
@@ -977,18 +982,24 @@ function hypostyleHall(A) {
        as the camera is concerned (see `papyrusColumn`). Net: the capital is the same width at
        its widest, but the widest thing is now a square plate with a shadow under it. */
     const col = K.papyrusColumn({
-      hShaft: hSh, rBase: 1.9, rTop: 1.25, capH: 2.4 + R.jitter(0.12), abacus: 0.62,
+      hShaft: hSh, rBase: 1.9, rTop: 1.25, capH: 3.1 + R.jitter(0.12), abacus: 0.62,
       rng: R, bandCount: 4, belly: 1.74 * (1 + R.jitter(0.03)), lean, leanZ,
       spin: D(R.range(0, 45)),
     });
     A.add('hall', 'column_papyrus', K.place(col.geo, { x: cx, y: 0.35, z: cz }));
     vol(A, 'hall', 'sandstone_block', cx - 2.35, cx + 2.35, 0, 0.42, cz - 2.35, cz + 2.35, { jitter: 0.02, chip: 0.12 });
-    poleProxy(A, cx, cz, 0.42, 12.6, 1.62);
+    // Climbable to the cord bundle under the bell, which moved down with the shorter shaft.
+    poleProxy(A, cx, cz, 0.42, 11.9, 1.62);
     colProxies.push([cx, cz, col.height + 0.35]);
     /* The abacus travels with the lean — up to 47 cm at 2.15° — so the ledge collider has to
        travel with it, or the top 0.6 m of the capital is art you can see and cannot land on. */
+    /* Sized off `col.rAbacus` rather than a literal, so the plate and the surface you can land
+       on cannot drift apart the next time the capital is retuned — which is exactly how the
+       abacus came to be narrower than its own bell. 5 cm inset keeps the collider off the
+       chamfered rim. */
     const abY = col.capTop + 0.31, ox = lean * abY, oz = leanZ * abY;
-    ledgeProxy(A, cx + ox - 2.3, cx + ox + 2.3, col.height + 0.35, cz + oz - 2.3, cz + oz + 2.3, { thick: 0.62 });
+    const aR = col.rAbacus - 0.05;
+    ledgeProxy(A, cx + ox - aR, cx + ox + aR, col.height + 0.35, cz + oz - aR, cz + oz + aR, { thick: 0.62 });
   }
   for (const cz of aisleZ) for (const sx of [-1, 1]) {
     const cx = sx * 16.5;
@@ -1009,7 +1020,8 @@ function hypostyleHall(A) {
     vol(A, 'hall', 'sandstone_block', cx - 2.0, cx + 2.0, 0, 0.4, cz - 2.0, cz + 2.0, { jitter: 0.02 });
     poleProxy(A, cx, cz, 0.4, 12.3, 1.38);
     const abY = col.capTop + 0.275, ox = lean * abY, oz = leanZ * abY;
-    ledgeProxy(A, cx + ox - 1.98, cx + ox + 1.98, col.height + 0.34, cz + oz - 1.98, cz + oz + 1.98, { thick: 0.55 });
+    const aR = col.rAbacus - 0.05;
+    ledgeProxy(A, cx + ox - aR, cx + ox + aR, col.height + 0.34, cz + oz - aR, cz + oz + aR, { thick: 0.55 });
   }
 
   /* ---- Interior tiptoe cornice at y 10.0: the §8.3 ledge circuit round the room. ---- */

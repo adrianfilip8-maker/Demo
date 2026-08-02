@@ -3878,7 +3878,7 @@ function glyphWall(ctx, size, mode, seed, o = {}) {
    * `tall`/`frieze` still hold the *proportion* of wall that is writing at 40%, so the majority
    * is plain dressed stone — §2.3's "large simple areas of colour, detail concentrated at focal
    * points" is unchanged. Only the sign size moved. */
-  const { worldTile = 10.4, glyphM = 0.72, cartouche = true, tall = 0.30 } = o;
+  const { worldTile = 10.4, glyphM = 0.72, cartouche = true, tall = 0.26, kheker = 0 } = o;
   const cols = Math.max(2, Math.round((0.76 * worldTile) / glyphM));
   /* `rowRegister` takes its quadrat size from the band *height*, so the frieze's sign size is
    * the band height and nothing else. Left at the old fixed 0.10 of the tile it drew 1.04 m
@@ -3893,18 +3893,51 @@ function glyphWall(ctx, size, mode, seed, o = {}) {
 
   const pitch = size / cols;
   const margin = pitch * 0.12;
-  const cartCol = cartouche ? Math.floor(rnd() * cols) : -1;
 
-  /* Band 0 — the tall text register, sitting just under the top rule. */
+  /* **Cartouches: many, not one.** `cartouche` used to select a *single* column at random, and
+   * that is precisely the shape §13 records as the largest visible-repetition defect this recipe
+   * ever had — one 0.7 x 1.8 m outlined oval, the most distinctive silhouette in the sign set,
+   * occurring exactly once per repeat, i.e. a beacon marking every seam. It was turned off, and
+   * critic pass 5 then read the resulting wall as *"no cartouches"* (§3.9) — which it was.
+   *
+   * Both readings are right and the fix is neither of the two states that were tried. A royal
+   * name on a temple wall is not rare; it is the most repeated thing on it. Drawn in every other
+   * text column the cartouche occurs `floor(cols/2)` = **5 times per repeat**, so the rhythm the
+   * eye locks onto has period `2 x pitch` — one fifth of the tile — and cannot mark the tile
+   * boundary. The countability argument in §13 is a statement about a *once-per-repeat* landmark
+   * and does not carry over to a five-per-repeat one; that is the thing to check in the
+   * `wallstrip` render at the framing's own px/repeat, which is the only instrument here that
+   * has ever separated the known-bad. */
+  const cartEvery = cartouche ? 2 : 0;
+  const cartPhase = cartouche ? (rnd() < 0.5 ? 0 : 1) : -1;
+
+  /* Band -1 — the kheker frieze that crowns a temple wall.
+   *
+   * This is the polychrome answer to critic pass 5's finding #2 on the surface that carries it:
+   * 86.7 % of the frame's chromatic pixels sit in two hue windows, and measured on the built
+   * albedo (`scratchpad/huelab.mjs`) this recipe was **100 % of its chromatic texels inside one
+   * 30 deg bucket** before this change. A kheker row is the right vehicle rather than another
+   * stripe: it is large (0.8 m finials), it is a *silhouette* so it survives the squint pass as
+   * a scallop rather than as a line, it alternates four pigments by construction, and it is the
+   * single most recognisable crown motif on an Egyptian wall — so it pays for its area twice,
+   * once in hue and once in "reads as Egypt in 200 ms". */
+  const khTop = size * 0.012;
+  const khH = size * kheker;
+  if (kheker > 0) {
+    HG.khekerFrieze(ctx, -2, khTop, size + 4, khH, Math.max(4, Math.round(worldTile / 1.15)), mode);
+    HG.registerRule(ctx, size, khTop + khH + size * 0.014, rule, mode);
+  }
+
+  /* Band 0 — the tall text register, sitting under the crown. */
   {
-    const y0 = size * 0.055;
+    const y0 = khTop + khH + size * (kheker > 0 ? 0.040 : 0.043);
     const y1 = y0 + size * tall;
     HG.registerRule(ctx, size, y1 + size * 0.020, rule, mode);
     for (let c = 0; c <= cols; c++) HG.columnRule(ctx, size, c * pitch, rule * 0.6, y0, y1, mode);
     for (let c = 0; c < cols; c++) {
       const x = c * pitch + margin;
       const w = pitch - margin * 2;
-      if (c === cartCol) {
+      if (cartEvery && c % cartEvery === cartPhase) {
         const ch = Math.min((y1 - y0) * 0.58, w * 2.5);
         HG.cartouche(ctx, x, y0, w, ch, seed + c * 31, mode);
         HG.columnRegister(ctx, x, y0 + ch + size * 0.014, w, y1 - y0 - ch - size * 0.014, seed + c * 17, HG.POOLS.offering, mode);
@@ -3919,15 +3952,25 @@ function glyphWall(ctx, size, mode, seed, o = {}) {
    * bands of unequal weight give the eye somewhere to rest and read as deliberate; two equal
    * bands read as wallpaper. */
   {
-    const y0 = size * (0.055 + tall + 0.215);
+    const y0 = size * (0.055 + kheker + tall + 0.215);
     const y1 = y0 + size * frieze;
     HG.registerRule(ctx, size, y0 - size * 0.020, rule, mode);
     HG.rowRegister(ctx, 0, y0, size, y1 - y0, seed + 907, HG.POOLS.divine, mode);
-    // A painted stripe under the frieze. Purely horizontal, one repeat per tile: it puts colour
-    // and an edge back on the plain area without giving the eye anything to resolve, which is
-    // the only kind of detail a large wall can carry and still hold its shape when you squint.
-    HG.paintedBand(ctx, -2, y1 + size * 0.020, size + 4, size * 0.045, mode,
-      [PAL.ochre, PAL.red, PAL.white, PAL.lapis]);
+    /* A painted stripe under the frieze. Purely horizontal, one repeat per tile: it puts colour
+     * and an edge back on the plain area without giving the eye anything to resolve, which is
+     * the only kind of detail a large wall can carry and still hold its shape when you squint.
+     *
+     * Five stripes rather than four, and the fifth is malachite. The four-stripe version was
+     * `ochre · red · white · lapis` — three warm-or-neutral and one blue, i.e. one sample from
+     * each of exactly the two hue windows critic pass 5 measured the whole project inside.
+     * Green is the hue Egypt has and this project did not: `malachite #2f8f5a` after the
+     * consumer's warm material colour and the full light+grade chain lands at display hue
+     * **95 deg** in sun and **128 deg** in the ramp's mid band (`scratchpad/huechain.mjs`),
+     * clear of both the 10-30 deg and 200-220 deg bins. In *shadow* it collapses to 188 deg
+     * with everything else, so this buys nothing on a shaded wall and that limit is stated
+     * rather than hidden. */
+    HG.paintedBand(ctx, -2, y1 + size * 0.020, size + 4, size * 0.052, mode,
+      [PAL.ochre, PAL.red, PAL.white, PAL.lapis, PAL.malachite]);
   }
 }
 

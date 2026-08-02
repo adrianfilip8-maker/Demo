@@ -1174,11 +1174,17 @@ export function papyrusColumn(o = {}) {
    * the mouth. Both profiles are period-correct and the pair is what stops a hall of twelve
    * columns reading as one part copied twelve times. */
   const bud = campaniform ? [
-    [0.00, 1.00, 0.80], [0.12, 1.20, 0.74], [0.26, 1.42, 0.64], [0.42, 1.64, 0.52],
+    [0.00, 1.00, 0.80], [0.12, 1.18, 0.74], [0.26, 1.40, 0.64], [0.42, 1.63, 0.52],
     [0.58, 1.83, 0.40], [0.74, 1.97, 0.28], [0.88, 2.05, 0.18], [1.00, 2.08, 0.12],
   ] : [
-    [0.00, 1.00, 0.85], [0.10, 1.34, 0.78], [0.22, 1.66, 0.68], [0.36, 1.88, 0.56],
-    [0.50, 2.00, 0.44], [0.62, 2.05, 0.32], [0.78, 1.94, 0.20], [1.00, 1.44, 0.10],
+    /* An ogee, not an arc. The old rows put on two thirds of the flare in the first fifth of
+       the height, which is a mushroom cap: the bell left the neck almost horizontally and was
+       at full width before it was a quarter tall. A closed papyrus bud leaves the binding
+       nearly vertically, carries its swell in the middle third, and turns back in hard at the
+       mouth — so the waist above the cord bundle stays visible and the capital reads as a bound
+       bundle of stems rather than as a ball on a stick. */
+    [0.00, 1.00, 0.85], [0.14, 1.20, 0.78], [0.30, 1.52, 0.68], [0.46, 1.80, 0.56],
+    [0.62, 1.98, 0.44], [0.76, 2.05, 0.32], [0.89, 1.97, 0.20], [1.00, 1.58, 0.10],
   ];
   const bk = belly / 2.05;   // `bud` is authored at belly = 2.05; `belly` rescales it
   /* The widest point on the bell, taken off the rows that are actually emitted and including

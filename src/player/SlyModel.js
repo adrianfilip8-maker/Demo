@@ -2343,6 +2343,12 @@ export class SlyModel {
   _buildTufts(mb) {
     const S = TUNE.headScale;
     const D = TUNE.tuftDensity;
+    /* Row counts floor at 2. Several rows below parameterise position as `i / (N - 1)`,
+       which is 0/0 — a NaN vertex, and a NaN vertex poisons the whole merged geometry's
+       bounding sphere — the moment `D` rounds a row down to one clump. That is reachable
+       now that `tuftDensity` is 0.46: `round(3 * 0.46)` is 1. Caught by a NaN scan over the
+       built positions, not by anything throwing. */
+    const cnt = (k) => Math.max(2, Math.round(k * D));
     const WF = TUNE.tuftWidth;
     /* Tufts carry no colour of their own: like every vertex colour on this model they would
        MULTIPLY their material (see Body.furTint), so the group owns the hue and they stay
@@ -2407,8 +2413,8 @@ export class SlyModel {
          cannot cross each other, and `th` is clamped at 0.86: nothing may drift back toward
          the face, which is the failure this row already had once (clumps at θ 0.60 stood in
          front of the eyes and captured as black lashes). */
-      for (let i = 0; i < Math.round(5 * D); i++) {
-        const f = i / (Math.round(5 * D) - 1);
+      for (let i = 0; i < cnt(5); i++) {
+        const f = i / (cnt(5) - 1);
         const th = side * Math.max(0.86,
           THREE.MathUtils.lerp(0.86, 1.46, f) + (hash(i, side + 31) - 0.5) * 0.045);
         const phi = THREE.MathUtils.lerp(-0.38, 0.30, f) + (hash(i, side + 47) - 0.5) * 0.050;
@@ -2425,8 +2431,8 @@ export class SlyModel {
       }
       /* a second, shorter cheek layer set between the first — overlapping clumps are what
          turn a row of spikes into a ruff */
-      for (let i = 0; i < Math.round(4 * D); i++) {
-        const f = (i + 0.5) / Math.round(4 * D);
+      for (let i = 0; i < cnt(4); i++) {
+        const f = (i + 0.5) / cnt(4);
         const th = side * THREE.MathUtils.lerp(0.92, 1.38, f);
         // kept at or below eye level: clumps that climb past it crowd the mask and the face
         // stops reading as a face at any distance
@@ -2445,8 +2451,8 @@ export class SlyModel {
          instead of under it, and an albedo render showed the cream reading as an angular star
          rather than as a jaw line. Dropped by the same 0.070 of head space, expressed here as
          the elevation it subtends (0.070/0.184 ≈ 0.38 rad). */
-      for (let i = 0; i < Math.round(3 * D); i++) {
-        const f = i / (Math.round(3 * D) - 1);
+      for (let i = 0; i < cnt(3); i++) {
+        const f = i / (cnt(3) - 1);
         const th = side * THREE.MathUtils.lerp(0.48, 1.10, f);
         const base = this.headSurf(th, -0.44 - TUNE.muzzleDrop / 0.184 + f * 0.14, 0.96);
         const out = base.clone().sub(this.headCenter).normalize();
@@ -2477,7 +2483,7 @@ export class SlyModel {
            ruff is a *scallop on an edge*; the moment it has area it stops being fur. */
         for (const row of [{ y: by(1.330), len: 0.040, w: 0.015, sp: 0.50, k: 1 },
           { y: by(1.306), len: 0.030, w: 0.018, sp: 0.64, k: 2 }]) {
-          const N = Math.round(4 * D);
+          const N = cnt(4);
           for (let i = 0; i < N; i++) {
             const f = (i + 0.5) / N;
             const th = THREE.MathUtils.lerp(-row.sp, row.sp, f);
@@ -2497,7 +2503,7 @@ export class SlyModel {
       /* Neck ruff around the collar. This row had *no* variation of any kind — seven clumps at
          exactly 0.55 rad pitch, identical width, identical length — so it was the most
          literally comb-like family on the model. Same three axes jittered as the cheeks. */
-      for (let i = 0; i < Math.round(3 * D); i++) {
+      for (let i = 0; i < cnt(3); i++) {
         const th = side * (0.95 + i * 0.55 + (hash(i, side + 71) - 0.5) * 0.22);
         const y = by(1.352) + (hash(i, side + 83) - 0.5) * 0.012;
         const r = this._torsoRadius(y);
@@ -2766,8 +2772,8 @@ export class SlyModel {
 
       // fur spilling over the boot cuff
       const bootV0 = mb.vertexCount;
-      for (let i = 0; i < Math.round(5 * D); i++) {
-        const N = Math.round(5 * D);
+      for (let i = 0; i < cnt(5); i++) {
+        const N = cnt(5);
         const a = (i / N) * Math.PI * 2 + 0.4;
         const base = new THREE.Vector3(side * 0.088 + Math.sin(a) * 0.042, 0.308, -0.004 + Math.cos(a) * 0.042);
         put({
