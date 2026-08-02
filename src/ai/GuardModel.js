@@ -43,8 +43,24 @@ export const TUNE = {
   colorJitter: 0.055,      // per-vertex tone break-up so no region is one flat value
   /* Albedo multiplier on the sclera only — see `buildEyes`. `PAL.eyeWhite` is luma 0.953, which
      on Sly's identical palette entry rendered as a flat blown disc with no pupil left in it and
-     was the frame's only >L230 region. Ported at the value measured to fix it there. */
-  scleraTint: 0.82,
+     was the frame's only >L230 region.
+
+     0.82 → 0.15. The 0.82 this file carried was Sly's *first* attempt, which his own A/B then
+     refuted: at lit-sclera radiance the AgX shoulder returns almost no output change for an 18%
+     albedo trim (SlyModel.js `scleraTint` comment, PREREG-bloom1), so 0.82 was still a blown
+     disc and the fix that landed was a cut to 0.15. That argument is chain arithmetic, not
+     Sly-specific, so the cut is the part that transfers.
+
+     Deliberately NOT ported: Sly's later per-channel triple (0.094, 0.154, 0.330). That triple
+     is a chroma solve against `sly-closeup`'s staged warm daylight (BASE 2.9x more red than
+     blue); the guard's canonical frame is `guard` at tod 0.10 — night — and, verified on
+     shots/cap2/guard.png, the framed guard faces AWAY from the camera, so no canonical view
+     shows a guard sclera at all. A guard-specific chroma solve therefore has no test view
+     (KNOWN_ISSUES §11: no view that would show it = not testable), while leaving 0.82 keeps a
+     known-blown value for any gameplay view of an alerted guard's face. The neutral scalar at
+     Sly's measured luma is the defensible transfer; it ships as a correctness alignment on the
+     shared chain, not as a frame-judged change. */
+  scleraTint: 0.15,
 };
 
 /* ============================ PALETTE ===================================== */
