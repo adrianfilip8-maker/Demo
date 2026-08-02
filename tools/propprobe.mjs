@@ -1,4 +1,23 @@
 /**
+ * !! THE RATIOS THIS PRINTS ARE **NOT** AGENTS.md §7.3's BINDING head:body MEASURE. !!
+ *
+ * §7.3 defines head:body as chin -> TOP OF CRANIUM with cap AND ears excluded, and the binding
+ * instrument is `tools/headratio.mjs`. On the same rig that reads **5.72 heads (FAILING)**.
+ * This file prints **1 : 3.98**, which is inside §7.3's 4.5-5.5 pass band — so quoting it reads
+ * as a PASS on a condition that is failing by 0.72 heads. That is why this warning exists.
+ *
+ * The two disagree because they are different measurements, not because either is wrong:
+ *   - `chin` here is the LOWEST vertex over the whole head cluster, and that cluster includes
+ *     `capBrim`, `earL` and `earR` — so the cap's brim edge and the ear bottoms drag it down to
+ *     1.315, against headratio's jaw-only 1.3774.
+ *   - `skull crown` here excludes cap and ears BY BONE, but cap crown geometry weighted to `head`
+ *     still counts, giving 1.762 against headratio's material-group-excluded cranium at 1.6875.
+ * Net: a taller head over the same figure, hence a smaller ratio.
+ *
+ * Keep this file — the limb fractions, ground contact and cap-share breakdown are useful and are
+ * not published anywhere else. Just do not quote its head:body against §7.3. See KNOWN_ISSUES
+ * §58.3 (four numbers, one figure), §65.4 (the definition landing) and §66.2 (this hazard).
+ *
  * Head:body ratio, limb fractions and per-clip ground contact — the numbers behind §7.3's
  * proportion condition, measured off the built mesh in a named pose.
  *
@@ -123,7 +142,8 @@ const hip = at('hips'), ank = at('footL'), sh = at('shoulderL'), hand = at('hand
 console.log(`pose ${clipName}`);
 console.log(`  figure            ${figLow.toFixed(3)} … ${figTop.toFixed(3)}  =  ${total.toFixed(3)} m`);
 console.log(`  chin              ${chin.toFixed(3)}`);
-console.log(`  skull crown       ${skullTop.toFixed(3)}   head ${skull.toFixed(3)} m  ⇒  1 : ${(total / skull).toFixed(2)}`);
+console.log('  NOTE: the two ratios below are NOT §7.3\'s binding measure — run tools/headratio.mjs.');
+console.log(`  skull crown       ${skullTop.toFixed(3)}   head ${skull.toFixed(3)} m  ⇒  1 : ${(total / skull).toFixed(2)}  [diagnostic, not §7.3]`);
 console.log(`  cap crown         ${capTop.toFixed(3)}   head+cap ${withCap.toFixed(3)} m  ⇒  1 : ${(total / withCap).toFixed(2)}`);
 console.log(`  ear tip           ${earTop.toFixed(3)}`);
 console.log(`  cap adds          ${(Math.max(0, capTop - skullTop)).toFixed(3)} m above the crown (${(100 * Math.max(0, capTop - skullTop) / skull).toFixed(0)}% of head height)`);

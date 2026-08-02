@@ -446,7 +446,7 @@ Esc            release pointer lock
 - [ ] Sly's proportions are realistic instead of ~1:5 head:body cartoon
       **head:body = standing height ÷ head height, where head height is chin to top of cranium
       in `idle_confident`, EXCLUDING cap and ears. Target 5.0; fails outside 4.5–5.5.**
-      Reproduce with `scratchpad/headratio.mjs`. The definition is here because without it the
+      Reproduce with `tools/headratio.mjs` (no arguments needed). The definition is here because without it the
       condition could not be scored: three numbers were in circulation for one figure — 4.44
       (chin to cap/ear tip), 6.73 (a profile-table skull span narrower than the rendered head)
       and a quoted 5.29 — and they *bracket* "~1:5" rather than test it. Current rig **5.72**,

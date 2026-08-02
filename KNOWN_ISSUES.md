@@ -5502,3 +5502,78 @@ unambiguous, that lever is a legitimate item — after pass 6, not before it.
 One finding routed away from CHARACTER: at 4× the arms carry a **vinyl specular band**, and fur spec
 is already 0.02–0.03 at gloss 8–9. **That sheen is cloth (spec 0.18 / gloss 34), not fur** — it
 belongs to whoever owns sleeve shading.
+
+
+---
+
+## §66 — the arms were unmeasurable by construction, and a checklist cited a tool that did not exist
+
+### 66.1 No scored shot puts a forearm on the outline — and the first sweep that said otherwise was counting the glove
+
+CHARACTER built `armframe.mjs`, which assigns outline ownership by **dominant skin bone** rather
+than by colour. That distinction is the whole tool: arms are body-blue, so a colour-based probe
+cannot separate an arm edge from a flank edge **even in principle**.
+
+Its first sweep ranked `sly-closeup` as qualifying at 44 rows. **That was the glove.** Counting
+`handL/R` as "arm" made a shot whose forearm count is exactly zero look like a pass — and *a glove
+is cloth, so it cannot answer a fur condition* whatever its row count. With gloves excluded, on the
+exact shipped camera:
+
+```
+left-outline owners:   CANE 365   HEAD 76   HAND 66   ARM 0
+right-outline owners:  LEG 234    TAIL 214  HEAD 68   ARM 0
+depth-qualified forearm rows: 0
+```
+
+**So §65.2's abort was right, and for exactly the predicted reason** — the cane owns one side and
+the tail the other. But that is a property *of `sly-closeup`*, not of the character: the "no pose
+can do it" clause does **not** fire.
+
+`sly-arm` is now in `Shots.js`, verified **before it existed**: **62 consecutive rows, y 372–433**,
+outboard edge owned by `lowerArm`, median **34 px** proud (min 5, max 43) against a ~2–3 px ink hull
+— **11× clear**. Negative control, same tool on `sly-closeup`'s own camera: **0 rows**. Camera
+clearance checked at 3.6 m of open air, bearing 30° off the sun's so the presented side is lit.
+**Only the bearing moves** — lens, distance, elevation and yaw are all `sly-closeup`'s, per the
+`sly-perch`/`sly-startle` discipline.
+
+It is **not** in the critic's scored roster. A diagnostic framing should be graded as evidence, not
+as a composition; it rides the same boot at negligible cost.
+
+The general point is worth more than the shot: **"the defect was never fixed" and "the defect was
+never observable" look identical from the outside.** The arms item survived four sessions of
+attention — two authored fixes, both withdrawn on measurement — while no capture in the roster could
+have shown either the defect or a repair.
+
+### 66.2 §7.3's new definition cited a tool that is not in the repository, and a tool that contradicts it is
+
+Landing the head:body definition in `AGENTS.md` (§65.4) created two hazards immediately, both caught
+by CHARACTER, both in files it cannot edit.
+
+**The citation did not resolve.** §7.3 said *"reproduce with `scratchpad/headratio.mjs`"* — and that
+path does not exist in the repository at all; the tool lived in a session scratchpad. **A checklist
+item that names an unreproducible instrument is an item nobody can score**, which is precisely the
+failure the definition was written to end. `headratio.mjs` is now promoted to **`tools/headratio.mjs`**
+and the citation fixed. It also printed **nothing** and exited **0** when given no arguments — the
+silent-success shape of §59.1 — and now defaults to `idle_confident`, the clip the definition names,
+reproducing **5.72** unprompted.
+
+**And a tool already in `tools/` prints a passing number for a failing condition.** `propprobe.mjs`
+reports **1 : 3.98**, inside §7.3's 4.5–5.5 band, on the same rig that measures **5.72 (failing)**.
+They disagree because they are different measurements, not because either is broken:
+
+- its `chin` is the **lowest vertex over the whole head cluster**, and that cluster contains
+  `capBrim`, `earL`, `earR` — so the cap's brim edge and the ear bottoms drag it to **1.315**,
+  against the binding jaw-only **1.3774**;
+- its `skull crown` excludes cap and ears **by bone**, but cap crown geometry weighted to `head`
+  still counts — **1.762** against the binding material-group-excluded cranium at **1.6875**.
+
+A taller head over the same figure, hence a smaller ratio. `propprobe.mjs` now carries a header
+saying its ratios are **not** §7.3's measure, why, and where the binding one lives, and prints that
+caveat inline with the number. **The file is kept** — its limb fractions, ground contact and
+cap-share breakdown are published nowhere else.
+
+> **A definition does not settle a question while a second instrument still answers it.** §58.3
+> diagnosed four numbers for one figure and §65.4 fixed it by writing a definition — but writing the
+> definition is only half. The other half is finding every tool that still emits a rival number and
+> either retiring it or labelling it, because the one that reads as a **pass** is the one that will
+> be quoted.

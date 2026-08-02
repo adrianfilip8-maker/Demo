@@ -163,6 +163,35 @@ export const SHOTS = {
     player: { pos: [0, 0, 30], yaw: 5.24, pose: 'perch_idle' },
   },
 
+  /* DIAGNOSTIC framing, not a composition — added because the arms condition was unmeasurable in
+     every scored shot and therefore could never be closed by capture (§65.2, §66.1).
+
+     `sly-closeup` aborts its own arm measurement: scanning the outboard outline by dominant skin
+     bone, the left edge is owned CANE 365 / HEAD 76 / HAND 66 / **ARM 0**, and the right edge
+     LEG 234 / TAIL 214 / HEAD 68 / **ARM 0**. Zero depth-qualified forearm rows. The cane owns one
+     side and the tail the other, so no width number taken there is measuring an arm — which is
+     what the pre-registered abort caught before a number was published.
+
+     This framing puts a forearm on the outline and was verified BEFORE it existed: **62
+     consecutive rows, y 372-433**, outboard edge owned by `lowerArm`, median **34 px** proud
+     (min 5, max 43) against a ~2-3 px ink hull — 11x clear. Negative control, same tool on
+     `sly-closeup`'s own camera: **0 rows**. Gloves are excluded from "arm" on purpose: counting
+     `handL/R` made `sly-closeup` look like it qualified at 44 rows, and a glove is cloth and
+     cannot answer a fur condition.
+
+     **Only the bearing moves.** Lens, distance, elevation and player yaw are all `sly-closeup`'s,
+     for the reason `sly-perch` above is a pure translation and `sly-startle`'s comment records:
+     re-inventing a twin's camera is how a framing artefact gets blamed on the feature under test.
+     Camera clearance checked (3.6 m of open courtyard air); bearing sits 30 degrees off the sun's,
+     so the presented side is lit.
+
+     NOT in the critic's scored roster — a diagnostic framing should be graded as evidence, not as
+     a composition. It rides the same boot at negligible cost. */
+  'sly-arm': {
+    pos: [-3.10, 1.45, 28.21], target: [0.0, 0.95, 30.0], fov: 38, tod: 0.80,
+    player: { pos: [0, 0, 30], yaw: 5.24, pose: 'cane_combo_2' },
+  },
+
   /* Composition + props: obelisk, colossi, braziers, palms, banners.
 
      Camera untouched — this shot exists to show the architecture, and turning it toward the
