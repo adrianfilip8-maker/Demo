@@ -254,6 +254,21 @@ export const TUNE = {
   tuftDensity: 1.05,      // clump count multiplier
   tuftWidth: 1.90,        // clumps are broad flat wedges, not needles (needles read as spikes)
   tuftLen: 1.12,          // clump reach multiplier — the outline break is a length, not a count
+  /* Tail clump width in the ROLL axis only. Separate from `tuftWidth` because the tail's comb
+     is in a different axis from the limbs': along the tail this row is already at a
+     spacing/reach of ~0.7 (fur), while around it the ratio was ~8 (saw). Widening every tuft
+     to fix the tail would push the limb rows past the overlap they were measured into. */
+  /* ×0.025 m base ⇒ ~0.58 rad against a 0.88 rad roll gap ⇒ ratio ~1.5, i.e. inside the
+     overlap band the forearm row proved (1.22 reads as fur).
+     **Set from the image, NOT from the roughness number, and the gap between the two is the
+     finding.** Contour roughness in the tail band moved 3.52 → 3.32 → 3.06 px across
+     rollW 1.0 → 2.2 → 3.4 — a 13% move — while the rendered silhouette went from a uniform
+     thistle to a solid mass with a broken edge. The metric is a mean |2nd difference| over a
+     horizontal band that also contains the arm, the cane and the torso, so the tail is a
+     minority of its support and a large change in the tail is a small change in the number.
+     Anyone re-tuning this should look at `az70`/`az90` from `shotsil.mjs`; the number is only
+     good for ranking azimuths against each other, which is what it was written for. */
+  tuftRollW: 3.40,
   furLobe: 0.055,         // amplitude of the low-frequency lumpiness on furred lofts
 
   /* --- idle life, only used while ANIMATION is absent --- */
@@ -2516,12 +2531,37 @@ export class SlyModel {
        pinecone failure this row replaced is not the risk here: those stood 87° off the surface,
        these lay along it, so density buys overlap rather than more spikes. ~68 clumps, +~290
        tris on a 14k-tri body. */
+    /* **The STEP fix was applied to the wrong axis, and the tail has been a comb in the other
+       one ever since.** STEP 3 → 2 closed the gap *along* the tail, which is the axis a camera
+       looking down the tail's local X reads — and that is the axis the roll placement below is
+       also chosen for ("away from ±90° ... the silhouette for a camera looking down the tail's
+       local X"). Both mitigations aim at the same view. Measured across thirteen azimuths on
+       geometry-only silhouettes, contour roughness in the tail band is *worst at exactly the
+       azimuth neither of them covers*: 1.34 px at 0°, 2.94 at `hero`'s 70°, **3.52 at 90°**,
+       falling back to 1.36 at 180°. A 2.6× swing peaking on the broadside view.
+
+       The cause is this row's spacing/reach ratio in the ROLL axis, which is the discriminator
+       the leg row already established (1.22 reads as fur; 2.4–5.9 is the saw blade). At the
+       tail's mid radius 0.180 × `tailGirth` = 0.166 m, a clump 0.025 × G wide subtends ~0.17
+       rad against a roll gap of ~1.4 rad — **a ratio of ~8**, half again outside the worst leg
+       column that was diagnosed as a comb. Along the tail the same row is at ~0.7 and reads
+       fine, which is why the defect is invisible end-on and dominates broadside: only the
+       clumps near the view tangent project, and in the roll axis they are eight times further
+       apart than they are wide, so which one is nearest the tangent alternates station to
+       station and the envelope sawtooths.
+
+       Six rolls across the same span the four occupied (the inner sector facing the body stays
+       empty — clumps there push through his back) takes the gap to 0.88 rad, and `tuftRollW`
+       widens the clump so the ratio lands near the forearm's proven value. Density is spent in
+       the axis the measurement names, not uniformly: along-tail STEP is untouched at 2. */
     const STEP = 2;
     for (let i = 2; i < n - 2; i += STEP) {
       const t = i / (n - 1);
       const c = spine[i];
       const tan = new THREE.Vector3().subVectors(spine[Math.min(n - 1, i + 1)], spine[Math.max(0, i - 1)]).normalize();
-      const rings = (i / STEP) % 2 ? [-2.5, -0.9, 0.5, 1.9] : [2.5, 0.9, -0.5, -1.9];
+      const rings = (i / STEP) % 2
+        ? [-2.5, -1.62, -0.74, 0.14, 1.02, 1.9]
+        : [2.5, 1.62, 0.74, -0.14, -1.02, -1.9];
       for (const roll0 of rings) {
         /* Roll phase is jittered per station for the same reason the cheek row jitters pitch:
            four rolls repeated at eleven uniform stations is a lattice, and the silhouette test
@@ -2547,7 +2587,8 @@ export class SlyModel {
           /* Width jittered like the cheek row, and for the recorded reason there: "length
              variation on a row of equally-spaced, equally-wide clumps still reads as a comb —
              it is a comb with uneven teeth." The tail rows had jittered length only. */
-          width: 0.025 * TUNE.tailGirth * (0.78 + 0.44 * hash(i, roll0 + 5)), bend: 0.26, bendDir: outward.clone(),
+          width: 0.025 * TUNE.tuftRollW * TUNE.tailGirth * (0.78 + 0.44 * hash(i, roll0 + 5)),
+          bend: 0.26, bendDir: outward.clone(),
           group: isDark(tMid) ? 'furDark' : 'furCream',
           weights: ramp(t, this._tailRamp),
         });
