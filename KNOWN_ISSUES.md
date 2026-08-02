@@ -4154,13 +4154,53 @@ once and the kheker crown crowns it exactly once, as authored.
 
 ---
 
-## §54 — the contact experiment was FLAT, and the reason is upstream of everything it tested
+## §14.8 — "sweep by explicit filename" is not sufficient for a file two agents both append to
+
+**My error, committed at `3d20157` and found within the minute by a numbering collision.**
+
+The rule I have been enforcing all session is: never `git add -A`; name every file. I did name it —
+`git add KNOWN_ISSUES.md` — and it was still a blind sweep, because **TEXTURES had already appended
+its own §54 to that file and I had not read it.** I ran `cat >> KNOWN_ISSUES.md`, staged the path by
+name, and shipped 122 lines of another agent's unread work inside a commit whose message described
+only my own.
+
+The commit is harmless — the content was good, and it is now read and kept. That is luck, not
+process. The same motion would have committed a half-written section, or a section contradicting the
+one above it, with a message claiming it was something else.
+
+**What actually failed:** "explicit filename" is a guard against *breadth* — it stops `-A` sweeping
+files nobody looked at. It is no guard at all against *depth*, because a filename says nothing about
+whether the file's current contents are the contents you think they are. `KNOWN_ISSUES.md` is the
+one file every agent appends to, so it is precisely the file where the rule is weakest.
+
+**The strengthened rule, for a shared append-only file:**
+
+1. `git diff` the file **before** appending, not after. A non-empty diff means someone else is
+   mid-write, and their work is now inside your blast radius.
+2. If the diff is non-empty, **read it** and either name it in your commit message or commit it
+   separately with its author credited. Never let it ride anonymously.
+3. Take the **next free section number after the diff**, not after `HEAD`. My §54 collided because I
+   numbered from the committed file while an uncommitted §54 already existed three lines above where
+   I was writing.
+
+The general form, which is the same shape as §18 and §50: **a name is a reference, and a reference
+can be stale.** `git add <path>` names a path, not a state — and a path resolves to whatever is
+there at the moment it is staged, including things that arrived while you were composing.
+
+For the record: TEXTURES's section keeps **§54**, since it was written first and sits first in the
+file; FX's contact/determinism section is renumbered to **§55**. The commit message on `3d20157`
+calls the latter "§54" and is now wrong; it is left in place rather than rewritten, because a pushed
+history that quietly changes is worse than a message that needs this footnote to read correctly.
+
+---
+
+## §55 — the contact experiment was FLAT, and the reason is upstream of everything it tested
 
 FX's `fx16`. Full write-up in `scratchpad/RESULT-fx16.md`. It reported **two defects in its own
 experiment before scoring it**, then a flat result, then the cause — which turns out not to be a
 tuning question at all.
 
-### 54.1 The probe mis-located the sole and returned a confident false positive
+### 55.1 The probe mis-located the sole and returned a confident false positive
 
 The auto-locator put the boot sole at **(866, 660)** — open floor sitting on a cast-shadow edge —
 and returned **+17.2 L**. That number reads *exactly* like "the contact shadow now exists". Cropping
@@ -4176,7 +4216,7 @@ conclusion is not caught by disbelieving good news. Re-scored at the true sole, 
 reproduces critic5's table exactly, which is the check that establishes the ROI rather than assuming
 it.
 
-### 54.2 `minbias` never applied — §40's clamp, inside a sealed experiment, again
+### 55.2 `minbias` never applied — §40's clamp, inside a sealed experiment, again
 
 `normalBiasClamp[0] = 0.012 m` pinned it. At c0's texel of 0.0105, both `nbt 0.5` → raw 0.00525 and
 `nbt 0.1` → raw 0.00105 clamp to **0.012**. The two "reduced" states are an identical c0. The sweep
@@ -4185,7 +4225,7 @@ near-zero offset" argument is not available**, because that state never rendered
 argument rather than keeping the conclusion it supported (contrast §42, where a disqualified
 instrument's conclusion was kept; that was my error).
 
-### 54.3 The band is flat, and flat harder than it was asked to be
+### 55.3 The band is flat, and flat harder than it was asked to be
 
 Band 1 was sealed at "< 3 L". The result is **0 px changed, max delta 0** across the whole contact
 neighbourhood, in both reduced states. Meanwhile the same toggle moves **26,150 px with max delta
@@ -4198,7 +4238,7 @@ rewriting the rule after seeing the number, while noting 88.5% of it is large co
 and a 4× crop shows a rail shadow tightening rather than speckle. Reporting the sealed verdict and
 the mitigating observation *separately* is the correct handling. `back` is byte-identical to `base`.
 
-### 54.4 The cause: there is no direct light there to remove
+### 55.4 The cause: there is no direct light there to remove
 
 Measured, not inferred. The sampled region sits on floor receiving **no direct key light**:
 
@@ -4233,7 +4273,7 @@ just relocated.
 one-liner) or specify the term against ambient. Building first risks specifying against the wrong
 lighting condition.
 
-### 54.5 The determinism lead: one emitter eliminated free, one mechanism named
+### 55.5 The determinism lead: one emitter eliminated free, one mechanism named
 
 **`LightShafts` is eliminated at zero cost.** `fx6` and `fx7` are two independent boots and their
 shaft counts agree **exactly** on all six shared shots (dunes 12, guard 10, hero 27, interior 20,
@@ -4267,7 +4307,7 @@ comparison, which is worth far more than the measurement that prompted it.
 `det3` is queued — two boots in one process, dumping every emitter's `instanceCount` plus the
 latched **and** freshly re-queried sparkle count, so a stale latch shows up **within a single boot**.
 
-### 54.6 A §14 footnote worth keeping
+### 55.6 A §14 footnote worth keeping
 
 FX verified `det3`'s detachment by a **full ancestry walk** (init → wrapper → node, the survivor
 shape). Its earlier one-level "ppid must be 1" test is the too-strict version §14 already corrected,
