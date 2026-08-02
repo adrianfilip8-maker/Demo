@@ -1984,3 +1984,15 @@ band — honest, but explanation-after-measurement is what seals exist to preven
 prose claim in a prereg either carries a number and a threshold at seal time, or is marked
 non-binding. "Materially" is a judgment deferred to exactly the moment it should have been
 made.
+
+**26.3 A remedy clause has a tense, and the schedule can falsify it.** The fingerprint seal
+wrote its verification as running "before the fix ships". The fix shipped first — the queue
+was two hours deep and the edit was committed for restart-safety in between — so on a FAIL
+the remedy is no longer "withhold the patch" but "revert a shipped commit". The bands, the
+procedure, and the instrument are all untouched by this; only the consequence changed. FX
+caught it in its own seal and recorded it in the runner header rather than letting the record
+imply a withholding that could no longer happen. Rule: **write the remedy as a function of
+state, not of schedule** — "if FAIL, the change does not remain in the tree" holds whenever it
+runs. And when a seal's assumed ordering is broken by the queue, say which ordering actually
+happened; a verification's authority comes from its bands, but its *honesty* comes from the
+record matching what was really done.
