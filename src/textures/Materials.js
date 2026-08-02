@@ -187,6 +187,69 @@ const JOINT = 0.24;
  * sun-times-gold, arrived at without any palette entry. The lever that makes gold read is the
  * **metalness mask** (`s.metal`) and the value range under it, both of which live here. That is
  * what the rework below is about.
+ *
+ * ── "Gold cannot reach bloom" is true of one recipe and false of the other ────────────────────
+ *
+ * Two numbers in the record disagreed, and they were being read as the same quantity:
+ *
+ *   - `PostFX.js:228`'s client table — "gold spec glints ~6.8", comfortably ABOVE the 1.90
+ *     feed onset (threshold 2.20 - knee 0.30).
+ *   - a chain inversion reported as "spec at scene 1.46-1.57", i.e. BELOW it, which was taken
+ *     to mean gold can never glint and was used to close the question.
+ *
+ * **Neither is wrong; they are different terms of the same expression.** 1.46-1.57 is
+ * `specAmt` — `uSpec · (1 − 0.75·rgh) · mix(1, 3.4, metal)` at `gold_leaf`'s median roughness
+ * 0.638, which computes to **1.506**. That is a mid-chain *coefficient*. The scene value the
+ * bloom feed thresholds on is `specTint · specAmt · specStep`, and the two factors omitted are
+ * `specTint` (1.2–1.9 on metal, being `alb·2 + 0.25·specColor`) and `specStep` (**1.35** at the
+ * lobe peak, not 1.0). Scoring a coefficient against an output threshold is the same category
+ * error KNOWN_ISSUES §8 records for the shadow work — a surface measurement against a light
+ * spec — and it produced the same shape of answer: a confident impossibility claim.
+ *
+ * Measured off the built Surfaces, per texel, at `ndh = 1` and `sh = 1`
+ * (`scratchpad/goldbloom.mjs`; percentiles over the gild mask, `metal > 0.5`):
+ *
+ * | recipe | consumer `spec` | gild p50 | p99 | max | **% ≥ 1.90 onset** |
+ * |---|---|---|---|---|---|
+ * | `gold_leaf` | 0.95 (Architecture) | 1.82 | 4.77 | 6.07 | **46.4 %** |
+ * | `gold_leaf` | 0.90 (Props `gold`) | 1.72 | 4.52 | 5.75 | **41.9 %** |
+ * | `hieroglyph_gilded` | 0.55 (Architecture) | 0.95 | 1.74 | 2.26 | **0.38 %** |
+ * | `bronze_aged` | 0.60 (Props `bronze`) | 0.51 | 0.96 | 1.65 | 0 % |
+ * | `ceiling_stars` | 0.20 (Architecture) | 0.28 | 0.34 | 0.35 | 0 % |
+ *
+ * `gold_leaf`'s max of 6.07 is PostFX's "~6.8" (the earlier 7.02 here was the same sweep at a
+ * different size/seed), so that table row was right about `gold_leaf` all along. **Gold reaches
+ * bloom easily on the hook rings, the cane and the gilded Ra.** What does not reach it is
+ * `hieroglyph_gilded` — and per KNOWN_ISSUES §8 that recipe is **28.7 % of `hero`**, so it is
+ * the surface deciding §7.3's "gold doesn't read as metal", while the recipe that works sits on
+ * small props. That is why the frame kept reading as painted plaster while the numbers on
+ * `gold_leaf` looked fine.
+ *
+ * **The lever is not in this file, and I checked rather than assumed.** Sweeping the two
+ * candidates on `hieroglyph_gilded`, % of gild mask over onset:
+ *
+ *     consumer `spec`  0.55 → 0.38 %   0.70 → 4.76 %   0.85 → 16.4 %   0.95 → 29.9 %
+ *     uniform roughness (this file)   rgh 0.50 → 0 %   0.30 → 0.38 %   0.10 → 9.36 %
+ *
+ * Driving *every* texel of the gilding to a mirror polish — far past anything defensible, and
+ * past what `goldRough` should ever author, since the crest/body split is what breaks one lobe
+ * into a scatter of glints — buys 9.36 %, less than moving `spec` to 0.85. **So TEXTURES cannot
+ * fix this line from its own files.** `spec: 0.55` in `Architecture.RECIPES` is the binding
+ * constraint; `gold_leaf` next to it is already 0.95.
+ *
+ * The decisive experiment is one boot, no new geometry: poke `uSpec` (`ToonMaterial.js:825`, a
+ * live uniform) on the material named `arch:hieroglyph_gilded` (`Architecture.js:199`) across
+ * 0.55 / 0.85 in a single capture, the same shape as `scratchpad/bloomsweep.mjs`. Owner:
+ * ARCHITECTURE, whose constant it is.
+ *
+ * **What these numbers are not.** They are an upper bound at mip 0 with the half-vector on the
+ * texel's normal. Six transforms sit between them and the frame, listed in the probe header;
+ * the two that matter are that nothing here checks any normal is so oriented (the lobe is
+ * 10.8–14.1° half-angle, against normal tilts whose p50 is 33.8°, which is the intended
+ * scatter) and that mip filtering box-averages a sparse peak away. A texel *below* the onset
+ * here provably cannot feed bloom in frame; one above it still might not. The asymmetry is the
+ * point — this is a necessary condition, which is exactly what was needed to refute an
+ * impossibility claim, and it is not evidence that the glints are landing.
  */
 /** Deep shadowed gold — a recess in gilding, still gold-brown, never neutral and never black. */
 const GOLD_DEEP = MX(PAL.goldDark, PAL.sandCrev, 0.58);

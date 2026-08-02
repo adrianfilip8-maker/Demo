@@ -911,6 +911,9 @@ export class PostFX {
       bloom: { enabled: true }, grade: { enabled: true }, fxaa: { enabled: true },
     };
 
+    /* Raw-scene bypass for shader-term visualisers. Off = every pass runs as normal. */
+    this._debugRaw = false;
+
     /** Uniforms shared with sub-passes (AOPass reads these by reference). */
     this.shared = {
       uDepth: { value: null },
@@ -1014,6 +1017,21 @@ export class PostFX {
         uSrc: { value: null }, uTexel: { value: new THREE.Vector2() },
       }, FXAA_FRAG));
 
+      /* The bypass half of `debugRaw()`. Deliberately the shortest shader in the file: one
+         texture fetch, no encode, no clamp beyond what the 8-bit canvas does on its own.
+         A ShaderMaterial writing to the canvas gets no output colour-space conversion from
+         three (the same fact COMPOSITE_FRAG relies on when it calls slyLinearToSrgb itself),
+         so a value of v in `sceneRT` lands at round(255*v) and a visualiser's numbers survive
+         to the PNG. */
+      this.rawMat = this._mat(passMaterial('postfx.raw', {
+        uSrc: { value: null },
+      }, `
+        precision highp float;
+        varying vec2 vUv;
+        uniform sampler2D uSrc;
+        void main() { gl_FragColor = vec4( texture2D( uSrc, vUv ).rgb, 1.0 ); }
+      `));
+
       if (this.engine.settings.ssao) {
         this.ao = new AOPass(this);
         await this.ao.init();
@@ -1068,6 +1086,24 @@ export class PostFX {
     if (this.passes[name]) this.passes[name].enabled = !!on;
   }
 
+  /**
+   * Present the raw linear scene target, skipping AO, ink, bloom, the composite (exposure,
+   * lift, gain, split-tone, saturation, contrast, AgX, sRGB encode) and FXAA.
+   *
+   * This is not a look; it is the second half of a shader-term visualiser. KNOWN_ISSUES §1 is
+   * the record of what a visualiser costs when it goes through the chain it is inspecting —
+   * `debugShadow`'s channels rode AgX, a 1.30 saturation, a split-tone and a broken AO
+   * multiply, came out uniformly green, and sent an investigation down eight dead ends. A term
+   * painted by `shading.debugTerm(n)` and read through the normal chain would repeat that
+   * exactly.
+   *
+   * Prove it before quoting anything read through it: `debugTerm(4)` writes (0.25, 0.50, 0.75)
+   * and, with this on, the PNG must read (64, 128, 191).
+   */
+  debugRaw(on = true) {
+    this._debugRaw = !!on;
+  }
+
   update(dt, t) {
     if (!this.ok) return;
     this.compositeMat.uniforms.uTime.value = t;
@@ -1117,6 +1153,17 @@ export class PostFX {
     renderer.render(scene, cam);
 
     this.shared.uDepth.value = this.sceneRT.depthTexture;
+
+    /* ---- 1b. debugRaw: present the scene target and stop. See debugRaw() above. ----
+       Placed immediately after the scene draw so that every later pass is skipped by control
+       flow rather than by a uniform set to zero — a pass whose strength is 0 still runs, still
+       samples, and still gets to clamp or resolve; skipping is the only thing that is
+       provably nothing. */
+    if (this._debugRaw) {
+      this.rawMat.uniforms.uSrc.value = this.sceneRT.texture;
+      blit.render(renderer, this.rawMat, null);
+      return;
+    }
 
     /* ---- 2. view-space normals, for AO and for the crease pass ---- */
     const needNormals = (this.passes.edge.enabled || (this.ao && this.passes.ao.enabled));

@@ -102,6 +102,8 @@ uniform float uTermSoft;
 uniform vec3  uShadowBands;   // cast-shadow penumbra quantiser: steps, softness, amount (0 = off)
 uniform float uShadowSat;
 uniform float uDebugShadow;   // >0.5 → output shadow diagnostics instead of shading
+uniform float uDebugTerm;     // >0.5 → output a rim-gate term instead of shading — see the
+                              // block at the end of TOON_SHADE, and read it before using this
 uniform float uRim;
 uniform vec3  uRimColor;
 uniform float uRimPower;
@@ -736,6 +738,47 @@ export const TOON_SHADE = /* glsl */ `
 		outgoingLight = mix( outgoingLight, slyHazeColor( rd ), haze );
 		/* Emitters punch through haze — a torch at 60 m should still be a hot point. */
 		outgoingLight += emissiveTerm * haze * 0.6;
+
+		/* ---- rim-gate term visualiser. shading.debugTerm(n); 0 = off and bit-identical. ----
+		 *
+		 * This exists because §20 ended with "no un-confounded lever has moved this character's
+		 * rim at all", and the way past that is to stop inferring the terms from their effect on
+		 * a graded frame and read them directly. KNOWN_ISSUES §1 is the standing warning about
+		 * how NOT to do it: debugShadow writes into outgoingLight and is then carried through
+		 * haze, AgX, the grade, the split-tone and bloom, so it reports the pipeline rather than
+		 * the value, and it cost eight dead ends.
+		 *
+		 * Two things make this one a measurement instead of a repeat of that:
+		 *
+		 *   1. It is written HERE — after the haze mix, which is the last statement in this
+		 *      shader — so nothing downstream *in this file* can touch it. debugShadow writes
+		 *      ~50 lines earlier and is hazed on its way out.
+		 *   2. PostFX.debugRaw(true) blits the scene target straight to the canvas, skipping
+		 *      AO, the ink pass, bloom, the composite (exposure/lift/gain/split/saturation/
+		 *      contrast/AgX/sRGB) and FXAA. Without that half, everything below is a lie.
+		 *
+		 * Mode 4 is the calibration: it writes the constants (0.25, 0.50, 0.75), which must
+		 * arrive at the PNG as (64, 128, 191) ±1 on every toon-shaded pixel. If it does not, the
+		 * bypass is not a bypass and no other mode's numbers mean anything. Prove it first —
+		 * that is the §1 lesson stated as a procedure. scratchpad/termproof.mjs does it offline
+		 * in about a second, without the capture lock.
+		 *
+		 * Mode 4 doubles as the population map: every pixel that reaches this shader is stamped
+		 * with a colour nothing else in the frame produces, so "is this pixel toon-shaded" stops
+		 * being a guess made from a graded image.
+		 *
+		 * Caveat that travels with the numbers: sceneRT is allocated with engine.settings.msaa
+		 * samples, and a resolve AVERAGES these values across a geometry edge — which is exactly
+		 * where the rim band lives. Read interiors of bands, not their outermost pixel, or
+		 * capture with msaa 0. */
+		if ( uDebugTerm > 0.5 ) {
+			vec3 dbgT;
+			if      ( uDebugTerm < 1.5 ) dbgT = vec3( vSlySkin, rimMag, slyConvex );
+			else if ( uDebugTerm < 2.5 ) dbgT = vec3( rimBand, rimSil, rimBand * rimSil );
+			else if ( uDebugTerm < 3.5 ) dbgT = vec3( clamp( slyTurn / 40.0, 0.0, 1.0 ), ndv, fres );
+			else                         dbgT = vec3( 0.25, 0.50, 0.75 );
+			outgoingLight = dbgT;
+		}
 	}
 `;
 

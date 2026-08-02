@@ -570,6 +570,10 @@ export class Shading {
       /* Diagnostic channel. window.__ENGINE.get('shading').debugShadow(true) paints
          red=getShadowMask, green=receiveShadow, blue=N.L across the scene. */
       uDebugShadow:  { value: 0 },
+      /* Rim-gate term visualiser — see the block at the end of TOON_SHADE. Only meaningful
+         with PostFX.debugRaw(true); on its own it is another `debugShadow`, i.e. a value
+         reported through the chain that is supposed to be bypassed. */
+      uDebugTerm:    { value: 0 },
     };
 
     this._refreshShadowColor();
@@ -1162,6 +1166,26 @@ export class Shading {
    */
   debugShadow(mode = true) {
     this.uniforms.uDebugShadow.value = mode === true ? 1 : (mode === false ? 0 : (+mode || 0));
+  }
+
+  /**
+   * Paint a rim-gate term over the scene, in raw shader units.
+   *
+   * **Only valid with `engine.get('postfx').debugRaw(true)`.** On its own this is exactly the
+   * mistake KNOWN_ISSUES §1 records: a value written into `outgoingLight` and then carried
+   * through AgX, the grade and bloom describes the chain, not the term. `debugRaw` is the half
+   * that makes it a measurement.
+   *
+   *   0  off — bit-identical to shipping
+   *   1  R = vSlySkin, G = rimMag (magnitude gate), B = slyConvex (convexity gate)
+   *   2  R = rimBand (the fresnel band), G = rimSil (both gates), B = their product
+   *   3  R = slyTurn/40, G = N.V, B = fres
+   *   4  constants (0.25, 0.50, 0.75) — the calibration. Run this FIRST: it must arrive at the
+   *      PNG as (64, 128, 191). It is also the toon-population map, since nothing else in a
+   *      frame writes that triple.
+   */
+  debugTerm(mode = 1) {
+    this.uniforms.uDebugTerm.value = mode === true ? 1 : (mode === false ? 0 : (+mode || 0));
   }
 
   /**
