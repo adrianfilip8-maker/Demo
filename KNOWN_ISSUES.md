@@ -3615,3 +3615,71 @@ quoted alongside these.
 Refusing to emit a single project-wide number, when a single number was what was asked for, is the
 correct answer here: it would misstate an individual shot by up to ~6 pp to correct an effect
 of 0.40%.
+
+---
+
+## §50 — the fourth instrument blind to its own pathological input: a triangle-count audit cannot see a chamfer
+
+GEOMETRY froze `src/world/*` at `d542055` so that `geo3` would boot a named commit rather than a
+live edit (the hazard: `tools/shot.mjs` calls `acquire()` at line 129 and `gitDesc()` at line 172,
+so **a queued run stamps and loads its modules when it ACQUIRES the lock, not when it was queued** —
+`SANDS_NO_HMR=1` stops a mid-run reload destroying the execution context, it does **not** pin the
+module text read at the initial `goto`). With the freeze, `PropKit.js` is verifiably **163
+insertions, 0 deletions**, one new export (`loft`), so nothing outside `Statues.js` can move. Good
+provenance, correctly argued.
+
+It then reported the change's cost, thoroughly and correctly:
+
+> +2,240 triangles level-wide (sphinx 1024 → 1164, ×16 instances) … **The nemes, lappet, head-core
+> and plinth-cap changes cost exactly zero triangles**; they are chamfer/round parameter changes on
+> geometry that was already `chamferBox`.
+
+Every number there is right. And that last sentence is precisely why the audit could not see what
+it had done: **a count-based instrument is structurally blind to a change that costs no
+primitives.** Widening a chamfer moves the silhouette and re-aims the normals — it is a shading and
+outline change of exactly the kind this project is graded on — and it emits a delta of zero.
+
+The concrete miss: `nemes()` (`Statues.js:76`) is a **shared helper**, and the diff modifies it
+(crown terrace `round 0.05w → 0.13w`, `c 0.055w → 0.10w`; lappet gaining `round 0.07w`, `c 0.05w →
+0.09w`). Four builders call it —
+
+| caller | line | `w` | placement |
+|---|---|---|---|
+| `seatedColossus` | 210 | **2.4** | x = ±9.5, **z = 25** |
+| `sphinx` | 281 | 1.02 | avenue, z 40–84 |
+| `coffinLid` | 456 | 0.70 L | vault (interior) |
+| `fallenHead` | 492 | 1.65 | x −8.6, z 71.5 |
+
+— so the edit reaches **four statue kinds across three framings**, and the two 13 m colossi stand
+directly in the new `courtyard` camera's forward cone (`pos [-2.5, 4.0, 41.5]` → `target
+[1.5, 6.4, 16.0]`, straight down −z through z = 25). On that basis GEOMETRY's two conclusions both
+invert: there **is** statue change in geo3's frames, and there **is** evidence about the statue work
+in this run.
+
+**This is the fourth member of a family the ledger should now name explicitly.** §39 (`Bag.transform`
+forwarding a `Matrix4` into a destructuring signature → all defaults, identity, no throw), §40
+(`normalBiasClamp` flooring both arms to one value), §43 (`hit()` returning `Infinity` — "perfectly
+clear" — for a camera *inside* masonry), and now §50. Every one returned a **healthy number for the
+worst possible state**, and in every case the defect was invisible to the instrument by
+construction rather than by accident. The standing check — *ask what the instrument returns for the
+pathological input and confirm it differs from the ideal* — would have caught all four, and did
+catch none of them at the time.
+
+### 50.1 The correction cuts both ways, and the second half is the useful half
+
+GEOMETRY wrote "there is also no evidence about the statue work in this run." The opposite is true,
+and in its favour: `geo3`'s `courtyard` frame gives a **free read of the nemes work on the two
+largest statues in the game, at w 2.4 against the sphinx's 1.02** — more than twice the scale, so
+the widened arris subtends more pixels there than it ever will on the avenue. No `dunes` capture is
+needed to find out whether the crown terraces stopped reading as plateaux; this run answers it
+better than the shot it was authored for.
+
+What `dunes` is still genuinely needed for is the **`loft` body** — the continuous rump-to-chest
+curve replacing three stacked `chunkAt` slabs, whose whole point is a normal turning through a
+quarter-circle so the cel ramp can put a terminator on the back. That is sphinx-only and appears in
+none of geo3's three framings.
+
+The lesson is not "GEOMETRY was careless" — the accounting was careful and its every number
+survives. It is that **a cost audit and a change audit are different instruments, and a triangle
+count is only the first.** When the deliverable is a silhouette, the count is close to the least
+informative thing that can be measured about it.
