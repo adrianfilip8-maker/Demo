@@ -2092,7 +2092,24 @@ export class SlyModel {
     const hash = (i, k) => { const s = Math.sin(i * 12.9898 + k * 78.233) * 43758.5453; return s - Math.floor(s); };
     const jit = (i, k) => 0.66 + 0.68 * hash(i, k);
 
+    /* Vertex ranges per clump family, published for the offline silhouette probes.
+       `toGeometry` welds normals but never removes a vertex, so these indices are still valid
+       against the finished BufferGeometry.
+       They exist because the only measurement that has ever separated "this row breaks the
+       outline" from "this row costs triangles and lands on the face of the limb" is a hold-out
+       A/B — rasterise the figure, rasterise it again with one family suppressed, diff the outer
+       boundary. Guessing from the authored numbers said the forearm row was working; the
+       hold-out said it was **−12.4%**, i.e. actively worse than nothing.
+       Metadata only: adds no vertex, no triangle, and nothing reads it at runtime. */
+    const ranges = (this.tuftRanges = []);
+    const mark = (name, v0) => { if (mb.vertexCount > v0) ranges.push({ name, v0, v1: mb.vertexCount }); };
+
     for (const side of [1, -1]) {
+      /* Everything from here to the forearm is head + neck + chest. Marked as one family
+         because it is the *calibration* for the limbs: the cheek and neck rows are the ones
+         the critic stopped failing, so whatever they measure on a hold-out is what "reads as
+         fur" looks like in these units. A limb row is not judged against zero. */
+      const headV0 = mb.vertexCount;
       /* cheek ruffs — the widest part of his head, so the most valuable place to break up.
        *
        * **Start moved off the face plane.** These began at θ 0.60 against eyes centred at
@@ -2219,6 +2236,9 @@ export class SlyModel {
          — the band they grow from was 8 cm at the wrist (see `cuffStart`), and three columns
          only ever face a camera dead in front or dead behind.
          Built off the published arm loft so a radius change cannot silently float them. */
+      mark(`head${side > 0 ? 'L' : 'R'}`, headV0);
+
+      const armV0 = mb.vertexCount;
       const arm = this._armInfo?.[side];
       if (arm) {
         const armAt = (u) => {
@@ -2277,6 +2297,8 @@ export class SlyModel {
           }
         }
       }
+      mark(`arm${side > 0 ? 'L' : 'R'}`, armV0);
+
       /* Whole leg, hip to boot cuff. This replaces a row of seven wisps that all sat on the
          *back* of the thigh: measured through the real `sly-closeup` projection, the leg
          outline moved 0.26 px per row — against 3.9 on the head and 1.5 on the tail — so it
@@ -2287,6 +2309,7 @@ export class SlyModel {
          opposite thigh and nothing is ever positioned to see them. Row spacing works out at
          ~22 px at closeup against a ~10 px clump, so the 2.5 px ink hull leaves a real gap
          between neighbours instead of welding them into one fat line. */
+      const legV0 = mb.vertexCount;
       const leg = this._legInfo?.[side];
       if (leg) {
         const legAt = (u) => {
@@ -2307,27 +2330,116 @@ export class SlyModel {
            and a side camera (`guard` at 98°) puts it at a ≈ ±π/2. So the clumps live in three
            columns on those tangents and the rest of the leg stays clean. Alternating long/short
            down each column is what makes an edge read as fur rather than as a comb. */
+        /* **Counts set by arithmetic, not by taste: spacing/length.**
+           A row of clumps reads as fur when neighbours overlap and as a saw blade when they do
+           not, and that is one ratio — the gap between consecutive clump roots divided by the
+           clump's own reach. It is the same quantity the tail row changed when it went STEP 3
+           → 2 ("the laid-back clumps project past the edge as *separated* triangles ... nothing
+           overlaps"), and it explains, measured, why the forearm reads and the leg does not:
+
+             forearm  spacing/length 1.22   → 7 lobes on the outline, pitch CV 0.59
+             leg outer            2.36      ┐ 5 lobes, pitch CV 0.05 — evenly spaced isolated
+             leg back             3.47      │ flaps, which is the saw blade in the closeup
+             leg front            5.87      ┘ silhouette and the comb signature in the numbers
+
+           The leg clumps were 2.4–5.9× further apart than they were long, so no amount of
+           length or width jitter could have made that row read: the notches *between* clumps
+           were the dominant feature, and jitter only varies the teeth of a comb. Counts below
+           put every column at ~1.0–1.2, i.e. at the forearm's proven ratio.
+
+           This is deliberately NOT the pinecone the paragraph above warns about. That failure
+           was clumps on a ring at *every* station standing 87% proud of the surface; these are
+           three columns lying along the leg (`dir` is 0.92 −Y against 0.46 outward), so extra
+           density buys overlap on the two silhouette tangents rather than scales on the face.
+
+           Cost: 12 → 23 clumps per leg, +22 clumps overall at 18 tris each = **+396 tris on a
+           14.5k body (+2.7%)**. The leg is the largest smooth surface on him and owns ~5% of
+           the outline against the tail's 18%; the tail's own ragged edge cost ~290. */
         const COLS = [
-          { a: 0.00, n: 4, u0: 0.10, u1: 0.66, len: 0.062, alt: 0.62 },   // outer edge
-          { a: -1.42, n: 3, u0: 0.16, u1: 0.64, len: 0.054, alt: 0.66 },  // back of thigh/calf
-          { a: 1.46, n: 2, u0: 0.32, u1: 0.60, len: 0.038, alt: 0.74 },   // front, sparse
+          // a = 0 is the outer tangent — the line a near-frontal camera (`sly-closeup`, 33°)
+          // sees. ±1.4 are the tangents a side camera (`hero` 70°, and the seven shots at ≥70°)
+          // sees. Nothing at a = π: those clumps push through the opposite thigh.
+          { a: 0.00, n: 7, u0: 0.10, u1: 0.66, len: 0.062, alt: 0.76, k: 3 },   // outer edge
+          { a: -1.42, n: 7, u0: 0.14, u1: 0.64, len: 0.058, alt: 0.78, k: 11 }, // back of thigh/calf
+          { a: 1.46, n: 6, u0: 0.28, u1: 0.62, len: 0.046, alt: 0.80, k: 19 },  // front
         ];
         for (let ci = 0; ci < COLS.length; ci++) {
           const col = COLS[ci];
+          const step = (col.u1 - col.u0) / (col.n - 1);
+          /* A clump scales with the surface it grows from. The leg tapers 0.070 → 0.052 m over
+             the banded region and to 0.036 at the ankle, so a column of constant-length clumps
+             is proportionally half again as big at the calf as at the thigh — which is what
+             rendered as hanging strands round the lower leg rather than as fur, and what closed
+             part of the gap between the legs from below. Clamped: the point is to track the
+             taper, not to shrink the ankle clumps below the ink hull. */
+          const radRef = legAt(col.u0).r;
           for (let r = 0; r < col.n; r++) {
-            const u = col.u0 + (r / (col.n - 1)) * (col.u1 - col.u0);
+            /* Pitch jitter, which this row had none of — `u` was exactly uniform, so the only
+               varied axis was length, and the cheek row's note already says what that gives you:
+               "a comb with uneven teeth". Bounded to ±0.30 of a step so two clumps in a column
+               can never cross or swap order. */
+            const u = col.u0 + r * step + (hash(r, col.k + side * 29) - 0.5) * 0.60 * step;
             const { c, r: rad } = legAt(u);
-            const a = col.a + 0.34 * Math.sin(r * 4.7 + ci * 2.3);
+            /* Roll was `0.34 * sin(r * 4.7 + ci * 2.3)` — deterministic, but a *periodic*
+               function of the row index, i.e. a lattice, which is what the tail row had to
+               replace with hash jitter for the same reason. ±0.31 rad against a ~1.4 rad column
+               gap cannot walk one column into the next, and keeps every clump off the exact
+               tangent, where it would render edge-on as a hard line. */
+            const a = col.a + (hash(r, col.k + 5) - 0.5) * 0.62;
             const out = new THREE.Vector3(side * Math.cos(a), 0, Math.sin(a));
             put({
               base: c.clone().addScaledVector(out, rad * 0.88),
-              // laid down the leg, same reason as the forearm: a clump standing off the face
-              // of a limb is a barb, a clump lying along it is fur that only shows at an edge
-              dir: out.clone().multiplyScalar(0.46).add(new THREE.Vector3(0, -0.92, 0)).normalize(),
+              /* Laid down the leg, same reason as the forearm: a clump standing off the face
+                 of a limb is a barb, a clump lying along it is fur that only shows at an edge.
+                 Outward 0.46 → 0.30, and the reason is that these are **two separate knobs I
+                 had conflated**. Overlap — whether the row reads as fur or as a saw — is set by
+                 along-leg spacing against along-leg reach. How far the edge is broken is set by
+                 the *outward* component alone. Raising the count at 0.46 fixed the first and
+                 dragged the second with it: protrusion went p50 6.2 → 10.7 px at `sly-closeup`
+                 and the leg rendered as a hanging fringe, closer to the tail's deliberate rag
+                 (p50 14.0) than to fur on a limb. At 0.30 the overlap is untouched and the
+                 break comes back to ~7 px — clear of the 2.5 px ink hull, short of a skirt. */
+              /* Swept away from the body's midline as well as down, because fur on a leg falls
+                 outward and down, and it puts a little more of each clump on the outer tangent
+                 that `sly-closeup` sees.
+
+                 **It was authored to fix something else, and that something else was not real.**
+                 `legR`'s outline perimeter inside its own bbox reads 0.88× with these clumps as
+                 without them, and I took the drop for clumps bridging the gap between the legs.
+                 It is not: painting boundary-lost against boundary-gained shows the two contours
+                 running *parallel* — the clumps replace a long thin isolated spike with a
+                 continuous scalloped edge, and a saw blade has more perimeter than a scallop.
+                 The metric rewards the exact defect this row exists to remove, so the number was
+                 evidence the change worked. Three separate knobs each moved it a few points and
+                 none fixed it, which was the tell. Kept on its own merits; the ratio is not a
+                 fur measure and nothing here should be tuned against it. */
+              dir: out.clone().multiplyScalar(0.30)
+                .add(new THREE.Vector3(side * 0.17, -0.95, 0)).normalize(),
               shadeN: out.clone().normalize(),
-              length: col.len * (r % 2 ? col.alt : 1.0) * jit(r * 3 + ci, side * 23),
-              width: 0.019 - 0.004 * u, bend: 0.34,
+              /* `alt` raised 0.62/0.66/0.74 → 0.76/0.78/0.80. The alternating short clump is
+                 what stops a row reading as one welded fringe, but at the new spacing a 0.62
+                 clump no longer reaches its neighbour and re-opens the gap this change exists
+                 to close. Short enough to vary, long enough to still overlap. */
+              length: col.len * THREE.MathUtils.clamp(rad / radRef, 0.74, 1.10)
+                * (r % 2 ? col.alt : 1.0) * jit(r * 3 + ci, side * 23),
+              // width was the one axis with no variation at all on this row
+              width: (0.019 - 0.004 * u) * (0.78 + 0.44 * hash(r, col.k + 41)), bend: 0.34,
               bendDir: new THREE.Vector3(0, -1, 0),
+              /* 0.82 → 0.90, and this is the one change here aimed at *shading* rather than at
+                 the outline. In `shots/cap2/sly-closeup.png` the existing leg clumps render as
+                 solid dark wedges lying on a near-white leg — the "black chips" read — while
+                 the same clumps in a CPU 3-band shade render blend into the limb. The
+                 difference is the real frame's exposure: the leg's lit band is close to blown,
+                 so a clump that steps one band steps from near-white to navy and reads as a
+                 hole rather than as fur. Doubling the clump count on this row without touching
+                 that would have doubled the artefact.
+                 0.90 is not a new number — `_buildEye` and the muzzle already bias at 0.90/0.95
+                 for the same reason. The clump keeps its silhouette and gives up some of its
+                 own form, which is the trade fur cards exist to make.
+                 **The residual is not mine and is not fixed here:** the blown lit band is the
+                 exposure, and the ink hull's translate-instead-of-inflate on biased clumps is
+                 `Outline.js`. Both are SHADING's. This only stops the geometry making it worse. */
+              shadeMix: 0.90,
               group: 'fur', weights: ramp(u, leg.ramp),
             });
           }
@@ -2349,7 +2461,10 @@ export class SlyModel {
           });
         }
       }
+      mark(`leg${side > 0 ? 'L' : 'R'}`, legV0);
+
       // fur spilling over the boot cuff
+      const bootV0 = mb.vertexCount;
       for (let i = 0; i < Math.round(5 * D); i++) {
         const N = Math.round(5 * D);
         const a = (i / N) * Math.PI * 2 + 0.4;
@@ -2362,12 +2477,14 @@ export class SlyModel {
           weights: [[side > 0 ? 'lowerLegL' : 'lowerLegR', 1]],
         });
       }
+      mark(`boot${side > 0 ? 'L' : 'R'}`, bootV0);
     }
 
     /* tail: a ragged top edge plus a fan at the tip. The tail silhouette does the heaviest
        lifting of any shape on the character, so it gets the most tufts. */
     const spine = this._tailSpine, radius = this._tailRadius, isDark = this._tailIsDark;
     const n = spine.length;
+    const tailV0 = mb.vertexCount;
     /* **The pinecone.** The previous set put 4–5 clumps around *every* ring of a 32-segment
        spine — ~130 of them — pointing 87% straight out of the surface. That is the exact
        failure the leg code below already documents and avoids ("a ring of clumps at every
@@ -2447,6 +2564,7 @@ export class SlyModel {
         group: 'furDark', weights: [['tailD', 1]],
       });
     }
+    mark('tail', tailV0);
   }
 
   /* ====================================================================== */
