@@ -4828,3 +4828,161 @@ So it is SHADING's, the registered lever is `uRimShadowFloorArch` (landed inert 
 its A/B must re-measure `night` — because the 0.55 floor is what carries `night`'s silhouette rims.
 A hypothesis in a work order is not a finding, and this one was retired by the cheapest possible
 test: a term that goes to zero when the rim is switched off is the rim.
+
+
+---
+
+## §61 — the temporal bracket is global, a shipped gate is inert, and two ledger entries have the wrong sign
+
+SHADING's `rim4`: six shots the rim gate had never been measured on, seven arms, one boot, tree
+`2f99d55` clean, lock released 22:13. Every shot was opened by eye as well as measured.
+
+### 61.1 The bracket is not "combat-shaped". It is global, and it silently rewrites three earlier runs
+
+`norim` was captured first **and again last** on every shot, and pixels where the two duplicates
+disagree are excluded before any statistic. The excluded fraction:
+
+| temple | interior | traversal | night | courtyard | combat |
+|---|---|---|---|---|---|
+| 11.9% | 14.4% | 16.6% | 18.6% | **46.4%** | **46.9%** |
+
+at mean deltas of 13–51 L, with whole 64-px cells differing 4096/4096 on `combat`.
+
+The cost of not bracketing, measured on `traversal`: base FLAT VIS reads **44 unbracketed against 3
+bracketed**, and `scroff` reads **432 against 3**.
+
+> Without the bracket, the screen-space gate would have appeared to remove **429 px of artefact
+> that it does not remove at all.**
+
+`RESULT-combatrim.md` recorded this hazard as "combat-shaped, not global". **It is global**, and
+**every unbracketed rim number in rim1, rim2 and rim3 carries it.** This is the §30 lesson —
+measure the null in the same statistic as the claim — arriving as a retroactive correction to three
+completed runs rather than as advice.
+
+### 61.2 The screen-space half of the rim gate is inert in both directions, on all six shots
+
+`surfoff` reproduces `gateoff` and `scroff` reproduces `base`, **everywhere**. The surface gate does
+~100% of both the artefact removal and the silhouette cost; `rimPlanar [0.04, 0.20, 1.0]` is paying
+per-pixel cost for **no measured effect on any of these six frames.**
+
+Decomposing the gate into halves was the whole reason `surfoff`/`scroff` exist rather than
+`gateoff` alone — and it found that half of a shipped feature does nothing. A combined toggle would
+have shown a working gate and hidden which half was working.
+
+### 61.3 Artefact removal: clear on five of six, and `courtyard`'s "wrong way" reading is retired
+
+| shot | FLAT artefact `gateoff`→`base` | lower ROI |
+|---|---|---|
+| traversal | 574 → **3** | 571 → **1** |
+| night | 281 → **142** | 278 → **142** |
+| temple | 90 → **22** | 72 → **5** |
+| combat | 982 → **31** | 951 → **0** |
+| courtyard | 2 → **1** | 1 → **0** |
+| interior | 679 → **3** | 676 → **0** |
+
+`courtyard`'s rim3 reading — that its count "went the wrong way", 6293 → 6602 — was **the loose
+criterion counting drifting cloud filaments.** Under the calibrated criterion plus the bracket it is
+**2 → 1 px in 921,600.** (rim3's frame no longer exists in any case: `courtyard`'s camera moved in
+`9c5edf8`.)
+
+### 61.4 `night` carries a real 142 px residual, and it is the kerb class
+
+It localises to five cells at (224–448, 512–576) — at 4×, the pale tops of a worn kerb/step run
+**inside cast shadow**. Same defect as `hero`'s 1,704 px band, produced by the same
+`mix(0.55, 1.0, sh)` shadow floor. So `rim4` hands the reopened kerb item (§51.4) **a second frame,
+on the very shot `PREREG-kerb` names as the floor's beneficiary** — which is what makes the A/B
+non-trivial: the term you would lower to kill the artefact is the term `night`'s silhouette rims
+depend on.
+
+### 61.5 One genuine silhouette regression — `temple` — and the fix was withheld
+
+`temple` retains **15.0%** of inked-contour coverage at **56.3%** of the lift, against a
+pre-registered regression line of <15%. It is the only shot where the *ungated* baseline was strong
+(51.6% at 48.1 L), so the absolute threshold is calibrated there — unlike `traversal`/`night`, where
+`gateoff` itself only reached 18.6%/22.5% and the absolute bar does not apply. The frames agree: at
+4×, `gateoff` puts a thick continuous white-cyan band round the whole figure and `base` is a thin
+intermittent fringe.
+
+`interior`'s 19.5% is **not** a regression — the character's own edge is essentially unchanged and
+the difference is floor wash falling inside the mask boundary. Distinguishing those two by opening
+the frames is why the number alone was not trusted.
+
+**No fix landed, and the reason is the section's best line.** `surfoff` restores the rim but
+restores the artefact with it (90 vs 22; lower 72 vs 5), so full-off is not the fix. `rimSkinExempt`
+already ships at 1, so the convexity half is off on skinned geometry, leaving the **magnitude** half
+— `TUNE.rimMagExempt`, whose own comment records a measured null against a coarser mask.
+
+> *"I am not shipping a knob its own file says is null on the strength of a different instrument."*
+
+That is one arm, pre-registered, not a guess.
+
+### 61.6 Two dead knobs in the rim's own plumbing
+
+**`uRimGain` never tracks time of day.** `Lighting.js:532` sends `rim: { direction, color, strength }`;
+`ToonMaterial.setKeyLight` reads `rim.gain` / `rim.intensity` only — so `A.rimStrength` **has no
+consumer**. `_applyAutoLight`'s night ×1.45 is dead too, because `_autoKey` goes false on LIGHTING's
+first `setKeyLight`. Measured live: `uRimGain` reads **2.05 at tod 0.02** in two independent runs,
+against intended 1.025 day / 1.476 night.
+
+**Do not fix the plumbing alone.** 2.05 was tuned *with the interface already broken*, so wiring
+`strength` through halves the daylight rim; `TUNE.rimGain` must be re-bracketed in the same change.
+This is §3's clamped-knob shape in a new costume: a value tuned against a broken path is load-bearing
+for the broken path.
+
+**`uRimColor` is applied once at boot and never again.** `_setRimColor`'s
+`if (this._rimApplied === c) return;` compares **by reference**, and LIGHTING passes the same
+`THREE.Color` instance it mutates in place every frame — so the guard always fires after the first
+call. Frame evidence rather than source reading: on rim1's `night` the surface term's mean added RGB
+is **(20.9, 38.0, 31.5)**, unambiguously cool, where `A.rimColor` at tod 0.02 is `#ff521b`.
+
+A reference-equality guard against a mutated-in-place object is a **cache that can never miss**.
+
+### 61.7 Task #16: two ledger entries have the wrong sign
+
+No single term owns the green suppression: **88.4% of shadow-side energy is albedo-multiplied**, and
+sandstone's albedo is G/R **0.483**; the only albedo-free term is the wash at 11.6%, whose own
+`#2a3f66` has G/R 1.42 against B/R 3.2. **Green is last because it is poor in both factors.**
+
+Two recorded claims are contradicted by single-stage toggles: turning the split-tone **off** moves
+hue 266 → **278**, i.e. *toward* magenta — §8 names the split as the term making green darkest, and
+**the sign is the other way.** Wash off gives 277, also worse. *Reaching for `shadowWash` here will
+move the image and make it worse.*
+
+The registered **≤226° acceptance is not reachable with these levers** — the strongest combination
+lands at frame-predicted 233/247/237. Either the levers are insufficient or the model→frame offset
+(+8/+23/+24, calibrated at one operating point) is not constant in hue. One `bmix05` arm settles
+which, pre-registered: **>6° from prediction and the whole table is withdrawn.**
+
+### 61.8 `spec *= sh` confirmed at source, and it is the asymmetry
+
+```glsl
+spec = specTint * ( specAmt * specStep * sh * step(0.02, ndl) )   // hard zero in cast shadow
+metalEnv … mix(0.35, 1.0, sh)                                     // floored
+rim     … mix(0.55, 1.0, sh)                                      // floored
+```
+
+**Of the three view-dependent terms, the one that most makes "reads as metal" is the only one with
+no shade floor.** Gilded stone in shadow gets diffuse ×0.20, env ×0.35, spec ×0.
+
+The symmetric scaffold is `uSpecShadowFloor`, default 0.0 = bit-identical (`mix(0,1,sh) == sh`).
+SHADING has **not sized it and declines to claim it beats the `ef` floor yet**: the honest sizing
+splits the non-sunlit gild into `ndl ≤ 0.02` (unreachable by any shade floor) and `ndl > 0.02,
+sh ≈ 0` (reachable), and only the second is this lever's population.
+
+### 61.9 The `aokey` re-scope, and two withdrawals
+
+`uAoKey` multiplies only `alb * keyRad * key`, which is ~0 where `key` is ~0, so **any statistic over
+the whole gilded mask is near-null by construction whether or not the knob works** — and TEXTURES'
+independent 1.4% figure makes that 98.6% of `hero`. The fix is structural, not a threshold tweak:
+**add a `keyoff` arm and define the key-lit population by differencing**, exactly as `nosly` defines
+the subject mask, then restate span, median and falsifier over that population only. And choose the
+verdict frame from an offline key-lit census first — **`hero` cannot answer it in either direction.**
+
+SHADING **withdraws `ef` from the queue** on its own challenge, and states **`aokey` is not ready to
+ticket.** Two capture slots given back rather than spent.
+
+A reporting addendum, filed as an addendum rather than a seal edit: V3's "night whole-frame rimPx"
+is the wrong statistic, because night's whole-frame rim count is **dominated by the deck/kerb
+population the floor is meant to reduce — so lowering the floor scores itself.** Use the character's
+contour ring instead; night's baseline is now measured at 22.5% coverage / 33.6 L ungated, 14.1% /
+29.7 L shipped.
