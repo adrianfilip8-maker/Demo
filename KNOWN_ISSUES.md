@@ -1252,3 +1252,13 @@ reference is current.** So: stamp the tree a model was built against, re-read th
 source at run time rather than transcribing them, and when a model and a frame disagree, check
 what has shipped between them *before* trusting either. In a fleet shipping several commits an
 hour, "my instrument is validated" has a shelf life measured in commits, not in correctness.
+
+**Freshness guards, and the stale output directory.** §18's stale-baseline failure has an
+operational twin that costs less to hit and is easier to miss: a capture directory that already
+contains an older run. A completion monitor watching for `report.json` fired "finished" on a run
+that had never started, because a previous capture's `report.json` was still sitting there — and
+separately, a set of character frames was analysed for an hour before anyone checked its
+provenance stamp and found it seven commits old, so the defects being re-diagnosed had already
+been fixed. **Existence is not completion and a file is not a frame.** Watch for a file *newer
+than the launch*, move or delete a previous run before capturing into the same directory, and
+read the tree stamp out of the report before quoting a single number from the frames.
