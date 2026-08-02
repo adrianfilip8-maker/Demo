@@ -307,10 +307,20 @@ Recorded so they are not re-derived:
   point. The ripples are a *normal map*, so the mesh under them is planar and the new gate is
   identically zero there: 902 artefact px → 0. Reducing the ripple slope 4.3× scaled the
   artefact down but could never remove it, because slope was never what produced it.
-- **Not yet verified after the rim gate:** `temple`, `interior`, `night`, `traversal`,
-  `combat`, `courtyard`. The change is global to the rim term and only four shots were
-  measured. `courtyard`'s rim sits mostly on edges rather than grazing floors so the effect
-  there should be small, but that is a prediction, not a measurement.
+- ~~**Not yet verified after the rim gate:** `temple`, `interior`, `night`, `traversal`,
+  `combat`, `courtyard`.~~ **All six are now measured** (rim1/rim2/term1 boots; full record
+  §17, §20, §22–§24). Artefact side: `interior` 2788 → 37 causal px (visFlat 1028 → 0),
+  `traversal`/`combat` residuals went thin (thinness 87.5 → 99.6% / 57.1 → 97.0%, i.e. the
+  planar wash is gone and what counts now is edge-shaped), `courtyard` 8,520 → 8,610 is the
+  metric counting its own intended edge rim — §24.4 confirms the §8 prediction, there was no
+  planar artefact there to remove. Retention side: the gates read 93–99% on the character's
+  own rim band (`temple`/`sly-closeup`/`night`, §24.1) after c612db0's subject exemption;
+  the one real regression found on the way — `temple`'s subject rim at 29.4% under the
+  screen-space planar gate — was fixed by that exemption, not by relaxing the gate
+  (planarlo ran −1.7 pts against a required +1.5 and was declined). Still open from that
+  sweep: `hero`'s 1,692 px kerb band (§24.3, gates pass it correctly, not fixable from the
+  gate knobs) and `combat`'s additive-model anomaly (§24.4, flagged before quoting any
+  `combat` rim number).
 - **Stone mean albedo is 4–5% darker family-wide** (granite −13%) since the grime film landed.
   If LIGHTING wants it back, the lever is `ashlar`'s `tone`, not the grime.
 - **The paving UV fix is measured-correct and visually unverified.** `Kit.pavingField` replaced
