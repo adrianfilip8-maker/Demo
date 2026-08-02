@@ -334,7 +334,14 @@ const TUNE = {
      other canonical camera: combat/temple/sly-closeup sit past both windows (0.150), the
      four saturated cameras keep pen < 0 = 1.000 EXACT since the window start stays 0. */
   courtBandWin: [0, 2.2],   // metres of camera penetration below bandTop: fade-in window
-  courtBandFloor: 0.15,     // what survives of a court blade for a fully in-band camera
+  /* floor 0.15 -> 0.10, ledger #21a closure (coordinator call, post-fx12): the <=9.5 stake
+     is declared bounded by the AgX power-model's own error class — fx9/fx12 measured that
+     model at 1.25-1.71x spread, so it cannot resolve a 0.84-luma miss, and the visual
+     verdict (fx12 holds violet-blue shadow where fx11 laid warm milk) is the authority.
+     Arithmetic that carries the drop: combat's 4x margin makes it free there; courtyard's
+     predicted wash falls to ~+6.1 (error class +7.6-10.4). Verification rides the next
+     courtyard-bearing capture — #21b re-stages courtyard anyway; no dedicated pair. */
+  courtBandFloor: 0.10,     // what survives of a court blade for a fully in-band camera
   /* **Metres of gap between the blade and whatever is behind it**, not metres from the
      camera, which is what this used to be. The absolute form was doing two jobs and failing
      the second: excluding the sky (already handled — Sky.js's dome has `depthWrite: false`,
