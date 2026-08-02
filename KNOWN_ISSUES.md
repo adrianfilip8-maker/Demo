@@ -1903,3 +1903,36 @@ a bloom change on the halo (bloom adds display-space energy past the shoulder; t
 crest scatter — is done and verified in the texture (§8); no texture change ships from this
 finding. Full working: `scratchpad/RESULT-goldmip.md` (pre-registered, `PREREG-goldmip.md`);
 instruments kept in the scratchpad: `gildmip.mjs`, `gildmips.mjs`, `gildresp.mjs`.
+
+---
+
+## 26. Two prereg design flaws, found by the seals' own verdicts — bands that don't partition, and an adjective with no metric
+
+Both from cap5's sealed read (`progress/records/RESULT-cap5.md`), and both are flaws in how
+the *seal* was written, discovered only because the measurement was honest against it.
+
+**26.1 The registered bands left gaps, and the measurement landed in one.** The tail ratio
+bands were pass 0.97–1.16 · fail-low < 0.75 · fail-null ≥ 1.22 — which leaves (1.16, 1.22)
+and [0.75, 0.97) unassigned. The verdict frame measured **1.168**: 0.008 above the pass
+ceiling, 0.051 below the null floor, claimable as nothing. The seal survived this only
+because it had pre-declared the routing for an out-of-band result ("a finding, not a
+verdict"), so the gap did not turn into a post-hoc judgment call — but that was the backstop
+working, not the design. Rule: **registered bands must partition the outcome line.** Every
+value the instrument can emit belongs to exactly one band at seal time; if a deliberate
+buffer zone is wanted, it is itself a named band with a declared meaning. (The look-criterion
+half of the same verdict failed independently — tip crown of separated triangles, underside
+stud row — so the shipped 1.35 stays neither falsified nor exonerated, and the next lever is
+authoring, not the ratio: the tip/underside spikes are separate authored structures that
+`tuftRollW` never touched.)
+
+**26.2 A sealed adjective is not a sealed metric.** K2 registered "materially brighter mean L"
+for the keyed face. The frame delivered the *mechanism* unambiguously — cream muzzle under
+the warm key, cap-brim terminator crossing the brow — while matched-mask mean L moved only
+72.8 → 75.4 (+3.6%), because the mask/ink/hood population is lighting-invariant and
+compresses the aggregate; the gain lives in p75 (+11 L) and below the mask. The only frozen
+number in the seal (litFrac ≥ L110, +2.5 pp) moved in the predicted direction; the adjective
+had no threshold to meet. The verdict had to *explain* the compression rather than claim a
+band — honest, but explanation-after-measurement is what seals exist to prevent. Rule: every
+prose claim in a prereg either carries a number and a threshold at seal time, or is marked
+non-binding. "Materially" is a judgment deferred to exactly the moment it should have been
+made.
