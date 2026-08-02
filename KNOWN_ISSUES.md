@@ -1641,3 +1641,18 @@ restart. The distinguishing test is cheap and should be run on any process whose
 matters: walk `ppid` upward — a chain that terminates at `1` is safe; a chain that terminates
 at the `claude` process is on that task's clock, whatever the process's own age. Unverified;
 recorded so the next death can test it instead of starting cold.
+
+**Scope correction to the HMR block above, and it narrows the trap.** `shot.mjs` has spawned
+vite with `SANDS_NO_HMR=1` since `e04c9ec` (2026-07-30), and `vite.config.js` turns that into
+`hmr: false` plus `watch: { ignored: ['**/*'] }` — so for any capture taken through `shot.mjs`,
+mid-run edits never reach the page and the guard is automatic, not something the launcher must
+remember. The exposure is **custom runners that spawn vite themselves** without the env var —
+which is exactly the population `e04c9ec` was patching when it added the guard to
+`cryptgate.mjs` and `horizon.mjs`. A `shot.mjs` frame with a clean log (no 404/reload marker)
+is trustworthy even when source mtimes fall inside its render window; the frames are served by
+a booted page that holds its modules.
+
+Same report, one more counting rule paid for three times in one night: **the manifest is the
+authority, not the directory.** One capture was reported as 7, 8 and 9 shots by three different
+counts; `ls | wc -l` counts whatever else lives in the directory, while `report.json`'s shot
+rows are written by the harness that rendered them. Count from the manifest.
