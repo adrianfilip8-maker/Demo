@@ -249,6 +249,35 @@ const TUNE = {
   bloomKnee: 0.30,
   bloomIntensity: 0.50,
   bloomMips: 5,
+  /* Metal-aware bloom feed (KNOWN_ISSUES §25 routing; re-typed after the 11:33 restart from
+     the committed record — the original PREREG/draft were scratchpad files and are gone).
+
+     §7.3's "gold-hot" cannot be met by surface spec under the shipped grade: the AgX shoulder
+     caps the hot cohort at L≈204 + 21.7·log2(0.05+u), so surface L235 needs ≈2.7× the scene
+     spec of the 0.95 arm, and every texture-side recovery stacks to <×1.9. Bloom adds
+     display-space energy PAST the shoulder, so the halo is where 235 is reachable (the old
+     blown combat frame at 237.7 is the precedent). The responsive gilded cluster feeds
+     ~2.2–3.6 scene against the 1.90 feed onset — a thin margin this gain multiplies without
+     touching stone.
+
+     Mechanism: the toon shader tags scene alpha with 1−slyMetal on OPAQUE draws only
+     (ToonMaterial `SLY_METAL_TAG`), and the bright pass multiplies its feed weight by
+     `1 + gain·(1−alpha)`. The encoding is inverted for the same reason Ledger #31 inverts
+     the prepass subject flag: every way of NOT writing the tag — sky, FX, transparent
+     materials, the RT's own clear, any material that never runs the toon fragment — leaves
+     alpha at 1, which decodes to metal 0 and boost ×1. Normal blending pulls dst alpha
+     toward 1 and additive blending accumulates it toward 1, so partial FX coverage over
+     metal can only REDUCE the boost. Fail-closed on every path.
+
+     A gain (not an onset drop) on purpose: w is exactly 0 below the feed onset, and
+     gain·0 = 0, so this can only amplify pixels already legitimately over the bar — it
+     cannot recruit dim distant gilding, which is the "whole architraves glow uniformly"
+     failure §25 measured and declined on the mip route.
+
+     0 = shipped no-op (w × 1.0 exactly, and nothing else reads scene alpha — bright/down/up/
+     composite/raw all sample .rgb only). Arms {0, 4, 12, 24} registered in
+     scratchpad/PREREG-goldhalo.md; do not ship a nonzero value without that A/B's verdict. */
+  bloomMetalGain: 0,
 
   /* --- grade --- */
   // Was lifted to 1.45 to fight darkness that turned out to be the AO feedback bug below.
@@ -660,14 +689,20 @@ precision highp float;
 varying vec2 vUv;
 uniform sampler2D uScene;
 uniform vec2 uThreshold;   // threshold, knee
+uniform float uMetalBloom; // metal feed gain; 0 = exact no-op (see TUNE.bloomMetalGain)
 void main() {
-  vec3 c = texture2D( uScene, vUv ).rgb;
+  vec4 s = texture2D( uScene, vUv );
+  vec3 c = s.rgb;
   float l = max( c.r, max( c.g, c.b ) );
   // Soft knee, so a surface drifting past the threshold ramps in instead of snapping on.
   float k = uThreshold.y;
   float soft = clamp( l - uThreshold.x + k, 0.0, 2.0 * k );
   soft = soft * soft / ( 4.0 * k + 1e-5 );
   float w = max( soft, l - uThreshold.x ) / max( l, 1e-5 );
+  // Metal-aware gain. Scene alpha is 1 - slyMetal on opaque toon draws and 1 on every other
+  // path (see TUNE.bloomMetalGain), so unflagged content decodes to metal 0 and w is exact.
+  // Multiplies w, never the onset: below-onset pixels stay at w = 0 at any gain.
+  w *= 1.0 + uMetalBloom * clamp( 1.0 - s.a, 0.0, 1.0 );
   gl_FragColor = vec4( c * w, 1.0 );
 }
 `;
@@ -1027,6 +1062,7 @@ export class PostFX {
 
       this.brightMat = this._mat(passMaterial('postfx.bright', {
         uScene: { value: null }, uThreshold: { value: new THREE.Vector2() },
+        uMetalBloom: { value: this.tune.bloomMetalGain },
       }, BRIGHT_FRAG));
 
       this.downMat = this._mat(passMaterial('postfx.down', {
@@ -1358,6 +1394,7 @@ export class PostFX {
     if (this.passes.bloom.enabled && this.bloomRTs.length) {
       this.brightMat.uniforms.uScene.value = this.sceneRT.texture;
       this.brightMat.uniforms.uThreshold.value.set(this.tune.bloomThreshold, this.tune.bloomKnee);
+      this.brightMat.uniforms.uMetalBloom.value = this.tune.bloomMetalGain;
       blit.render(renderer, this.brightMat, this.bloomRTs[0]);
 
       for (let i = 1; i < this.bloomRTs.length; i++) {

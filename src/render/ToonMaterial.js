@@ -840,6 +840,13 @@ export class Shading {
     mat.defines = {};
     if (useDetail) mat.defines.SLY_DETAIL = '';
     if (useDetail2) mat.defines.SLY_DETAIL2 = '';
+    /* Metal tag for PostFX's metal-aware bloom feed (TUNE.bloomMetalGain there; KNOWN_ISSUES
+       §25). Opaque draws only: on transparent materials alpha is real coverage and must stay
+       so. The encode is 1 - slyMetal so that every surface that never writes it — and every
+       blend toward an unwritten background — decodes as metal 0 (see the PostFX comment for
+       the full fail-closed argument). The option hash above already keys on `transparent`,
+       so the define cannot alias across the material cache. */
+    if (!o.transparent) mat.defines.SLY_METAL_TAG = '';
 
     mat.userData.sly = true;
     mat.userData.slyUniforms = own;
@@ -885,6 +892,18 @@ export class Shading {
       `#include <normal_fragment_maps>\n${TOON_DETAIL}`, this, 'detail');
     s = replaceOnce(s, 'vec3 outgoingLight = totalDiffuse + totalSpecular + totalEmissiveRadiance;',
       TOON_SHADE, this, 'shade');
+    /* After <opaque_fragment> has written gl_FragColor = vec4(outgoingLight, diffuseColor.a),
+       overwrite alpha with the metal tag on opaque draws. TOON_SHADE scopes its body in a
+       bare block, so `slyMetal` itself is NOT visible here — it exports `slyMetalOut` at
+       main depth exactly the way it exports `outgoingLight` (scratchpad/goldproof.mjs
+       failed the naive `slyMetal` version on the resolved source; the out-variable is the
+       fix, proven by the same tool). Scene alpha has no other consumer — bright/down/up/
+       composite/raw in PostFX all sample .rgb — so on the HalfFloat scene target this is
+       invisible until PostFX's uMetalBloom leaves 0. No backticks in this string (§24.6's
+       Common.js trap). */
+    s = replaceOnce(s, '#include <opaque_fragment>',
+      '#include <opaque_fragment>\n\t#ifdef SLY_METAL_TAG\n\t\tgl_FragColor.a = 1.0 - slyMetalOut;\n\t#endif',
+      this, 'metal-tag');
     return s;
   }
 

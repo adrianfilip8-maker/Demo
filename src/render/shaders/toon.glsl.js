@@ -278,6 +278,12 @@ export const TOON_DETAIL = /* glsl */ `
  */
 export const TOON_SHADE = /* glsl */ `
 	vec3 outgoingLight;
+	/* Exported for the SLY_METAL_TAG alpha write that ToonMaterial splices in after
+	   <opaque_fragment> — the block below scopes everything else, so the tag cannot see
+	   slyMetal itself (proven the hard way: scratchpad/goldproof.mjs failed the naive
+	   version on exactly this). Initialised to 0.0 = non-metal so any future path that
+	   skips the assignment fails closed, per the PostFX.bloomMetalGain contract. */
+	float slyMetalOut = 0.0;
 	{
 		vec3 N = normalize( normal );
 		vec3 V = normalize( vViewPosition );
@@ -405,6 +411,7 @@ export const TOON_SHADE = /* glsl */ `
 		#ifdef USE_METALNESSMAP
 			slyMetal *= texture2D( metalnessMap, vMetalnessMapUv ).b;
 		#endif
+		slyMetalOut = slyMetal;
 
 		/* Metals have almost no diffuse; that plus a hot lobe is what reads as gold. */
 		diff *= mix( 1.0, 0.20, slyMetal );
