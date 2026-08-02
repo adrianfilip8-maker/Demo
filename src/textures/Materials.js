@@ -4047,13 +4047,24 @@ function glyphWall(ctx, size, mode, seed, o = {}) {
    * kind §13 records — subtler than the once-per-repeat cartouche it replaced, but in the same
    * place and countable for the same reason. Found by arithmetic and then read off the
    * `wallstrip` render at temple's 248 px/repeat, where the doubled plain column sits at the
-   * seam. Snapping to 10 makes the alternation exact and buys ~10 % wider columns, i.e. larger
-   * signs, which is the direction §7.3's carving-detail condition wants anyway.
+   * seam.
+   *
+   * **Rounded *up*, and the down-rounding was tried first and measured worse.** 10 columns is
+   * the nearer even number and buys ~10 % wider columns, which looks like a free win for
+   * §7.3's carving-detail condition. It is not free: `tools/census.mjs` on the built tile puts
+   * the rarest-and-largest sign at **3.86x** the median sign area at 10 columns against 2.24x
+   * at the original 11 — a wider column lets the layout pick a bigger quadrat, and a rare
+   * *large* sign is precisely §13's beacon mechanism, i.e. the defect this change exists to
+   * remove. At 12 it is **2.31x**, statistically the pre-change profile, for 8 % narrower
+   * signs. So: 12, and the reason is the census, not the arithmetic. (§12's rule again — a
+   * seam fix was about to be paid for out of the sign field's beacon budget, and no seam
+   * metric could have shown it, because the payment lands somewhere the seam metric does not
+   * look.)
    *
    * The general form, worth keeping in mind for anything drawn n-per-tile: **a motif with an
    * internal period p is only seamless when p divides the count.** Grep for the shape before
    * adding another one. */
-  const cols = Math.max(2, 2 * Math.round((0.76 * worldTile) / glyphM / 2));
+  const cols = Math.max(2, 2 * Math.ceil((0.76 * worldTile) / glyphM / 2));
   /* `rowRegister` takes its quadrat size from the band *height*, so the frieze's sign size is
    * the band height and nothing else. Left at the old fixed 0.10 of the tile it drew 1.04 m
    * signs — and one of them, a tall green sign, was still legible as the same mark once per

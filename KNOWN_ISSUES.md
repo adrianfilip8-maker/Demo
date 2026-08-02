@@ -3190,3 +3190,63 @@ candidates and a false conclusion committed into the source.
 inside a nave column for its whole life, and `guard` standing on a plinth deck with the subject
 two metres below the lens. The file warns about it in its own header. **The warning was there and
 the tool used to check it could not see the condition it warned about.**
+
+---
+
+## 44. A cycle whose period does not divide the tile, introduced by the fix for the critic's finding
+
+Two independent instances in one recipe, both created while fixing critic finding #9, and both
+found by arithmetic rather than by looking:
+
+- **Cartouche alternation.** `cols = round(0.76 × 10.4 / 0.72) = 11` — **odd**, so `c % 2` does
+  not survive the wrap: column 10 and column 0 of the next repeat carry the same state, and the
+  alternation the eye is following **doubles exactly at the seam**, once per repeat.
+- **Kheker frieze.** The four-pigment cycle drew `round(10.4 / 0.72) = 14` finials per tile.
+  14 mod 4 = 2, so the colour rhythm breaks at every seam. Measured on the built strip: frieze
+  autocorrelation **r@71 px = 0.366** at a period that does not divide the tile.
+
+**The second one is the instructive one: the previous two-pigment version closed cleanly, because
+14 is even. Going from two pigments to four — the change made to answer the critic — is what
+introduced the defect.** Fixed by rounding the column count to the nearest *even* value and the
+finial count to the nearest multiple of 4; after, r@62 = 0.705 and r@124 = 0.690 with r@71 down to
+0.114, i.e. the cycle closes at the tile.
+
+**Rule: whenever a repeating decoration carries a cycle, the cycle length must divide the tile
+count, and changing either one re-opens the question.** This is §13's beacon logic one level down —
+§13 is about a landmark making repeats *countable*; this is about a rhythm making the seam
+*visible* — and neither the pitch argument that was registered nor any seam metric could see it,
+because the pitch was right and the parity was not.
+
+**A second trap avoided in the same fix, worth as much as the fix.** The obvious repair was to
+round the column count *down* to 10. Measured by census, 10 columns pushes the rarest-and-largest
+sign to **3.86× median area** against 2.24× before and **2.31×** at 12 — because a wider column
+lets the layout pick a bigger quadrat. **The seam fix was about to be paid for out of §13's beacon
+budget, and no seam metric would ever have shown it.** Rounding up costs nothing and was chosen on
+that measurement rather than on the arithmetic being tidier.
+
+### The registered band failed while the thing it tested succeeded
+
+P1 read FAIL on all four framings, and its registered meaning — "the albedo change did not survive
+to the frame" — is **falsified by measurement in the same read**. On temple's left column the
+malachite band moved hue **300° → 194°** and gained **+83% chroma at unchanged luma**, while the
+bare shaft 3 cm below it moved 284° → 214° and *lost* chroma. The decoration moved 106° against the
+stone's 70° and got more saturated while the frame got less.
+
+P1 could not see it for two reasons, both fixable only at registration time: it gates on
+`luma > 140` while the decoration is in **shade**, and its absolute window was transcribed from a
+chain before the tree moved **70–80° cool** (whole-frame hue p50 264° → 212°). **A band written
+against absolute values expires when anything upstream shifts the distribution** — and the honest
+handling here was to report FAIL as registered, then present the falsifier for its interpretation
+separately, which is what happened.
+
+The replacement statistic was registered **mid-capture, before two of the four frames existed**,
+and is linear (`G − (R+B)/2`) precisely so it cannot wrap like a hue angle — a first draft using
+median hue was discarded before registration when it returned 255° separations between a 28° and a
+284° population. Its author's written expectation was then **wrong in both directions** (it
+predicted interior would fail and courtyard would pass cleanly; the reverse happened), and it
+published that rather than quietly re-reading.
+
+**And a whole-frame statistic was retired with its reason:** critic-style M11 moved ±0.02–0.08 in
+*both* directions across these trees, because the downstream cool shift concentrates one framing
+into a single hue bin and raises a two-window concentration score regardless of albedo. **Whole-frame
+M11 cannot score a texture change across trees that differ in grade.**
