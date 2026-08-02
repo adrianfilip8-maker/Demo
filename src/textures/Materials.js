@@ -4040,7 +4040,20 @@ function glyphWall(ctx, size, mode, seed, o = {}) {
   const { worldTile = 10.4, glyphM = 0.72, cartouche = true, tall = 0.26, kheker = 0 } = o;
   const isBand = mode === 'bandpaint';        // flat painted decoration only
   const gm = isBand ? 'paint' : mode;         // styling mode handed to the HG primitives
-  const cols = Math.max(2, Math.round((0.76 * worldTile) / glyphM));
+  /* **Even, because the cartouche alternates and a tile has to close.** The natural count here
+   * is `round(0.76 x 10.4 / 0.72) = 11`, and 11 is odd, so `c % 2` does not survive the wrap:
+   * column 10 and column 0 of the next repeat carry the *same* state, and the alternation the
+   * eye is following doubles once per repeat. That is a tile-boundary landmark of exactly the
+   * kind §13 records — subtler than the once-per-repeat cartouche it replaced, but in the same
+   * place and countable for the same reason. Found by arithmetic and then read off the
+   * `wallstrip` render at temple's 248 px/repeat, where the doubled plain column sits at the
+   * seam. Snapping to 10 makes the alternation exact and buys ~10 % wider columns, i.e. larger
+   * signs, which is the direction §7.3's carving-detail condition wants anyway.
+   *
+   * The general form, worth keeping in mind for anything drawn n-per-tile: **a motif with an
+   * internal period p is only seamless when p divides the count.** Grep for the shape before
+   * adding another one. */
+  const cols = Math.max(2, 2 * Math.round((0.76 * worldTile) / glyphM / 2));
   /* `rowRegister` takes its quadrat size from the band *height*, so the frieze's sign size is
    * the band height and nothing else. Left at the old fixed 0.10 of the tile it drew 1.04 m
    * signs — and one of them, a tall green sign, was still legible as the same mark once per
@@ -4087,7 +4100,16 @@ function glyphWall(ctx, size, mode, seed, o = {}) {
   const khTop = size * 0.012;
   const khH = size * kheker;
   if (kheker > 0 && mode !== 'paint') {
-    HG.khekerFrieze(ctx, -2, khTop, size + 4, khH, Math.max(4, Math.round(worldTile / 0.72)), gm);
+    /* **A multiple of four, because the frieze cycles four pigments.** `khekerFrieze` paints
+     * `CYCLE[i % 4]`, so the colour rhythm only wraps cleanly when the count divides by 4. The
+     * natural `round(10.4 / 0.72) = 14` does not: the tile ends `… lapis, malachite` and the
+     * next one opens `lapis, malachite`, giving a doubled pair that occurs nowhere inside the
+     * tile — a once-per-repeat break in the one rhythm on this wall regular enough for the eye
+     * to be following. Sampled off the built strip at temple's 248 px/repeat, the sequence
+     * confirms it, and it was *introduced here*: the two-pigment version this replaced happened
+     * to close because 14 is even. Snapping to 16 costs 9 cm of finial width. */
+    const khCount = 4 * Math.max(1, Math.round(worldTile / 0.72 / 4));
+    HG.khekerFrieze(ctx, -2, khTop, size + 4, khH, khCount, gm);
     if (!isBand) HG.registerRule(ctx, size, khTop + khH + size * 0.014, rule, mode);
   }
 

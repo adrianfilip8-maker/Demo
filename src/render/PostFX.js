@@ -238,6 +238,47 @@ const TUNE = {
      saturation/splitStrength pokes. 0 = bit-identical legacy (lerp at 0 exact). */
   aoTintNeutral: 0.0,
 
+  /* --- contact occlusion (critic5 M12: "no contact shadow at all"; PREREG-contact.md) ---
+     A SEPARATE term from the AO pass above, and the separation is the whole point. AO.js is
+     correctly built for 1.35 m crevices: its march is quadratic, so at AO_STEPS 5 exactly one
+     of five offsets per direction lands inside a 2-10 cm contact band; it runs at half
+     resolution, so that band is ~3 texels; and its 9-tap blur is sigma = 2 half-res texels,
+     which a depth-continuous floor under a boot cannot hide from (the bilateral gate rejects
+     taps across depth *discontinuities*, and there is none between a floor pixel and the floor
+     pixel next to it). One radius cannot serve 1.35 m and 0.03 m — measured ceiling for the
+     existing pass at the contact is +0.6 L against a 2.0 L null. Retuning AOPass.tune.radius
+     would trade §7.3's crevice condition for §7.3's contact condition, which is §12 exactly.
+     AOPass.tune.radius is therefore OUT OF SCOPE for this term and must not be touched.
+
+     Runs full-resolution in the composite, with no blur, because half-res plus an 8 px kernel
+     is precisely where the signal died.
+
+     [0] radiusWorld  metres. The contact band this term is allowed to see. 0.045 sits in the
+         middle of the 2-10 cm target.
+     [1] strength     0 = OFF and bit-identical to base (the mix collapses exactly). The null
+         control arm.
+     [2] minPx        floor on the screen-space sample radius. Below ~1.2 px every tap lands
+         in the centre texel and the term silently dies — the §40 failure mode (a value
+         clamped to a texel floor produces a null indistinguishable from a decisive one), so
+         this clamp is explicit and is read back rather than inferred.
+     [3] maxPx        ceiling, so a near-field pixel cannot turn a contact term into a 40 px
+         blob. Also bounds the cost.
+
+     The signal is the NEGATIVE lobe of the same second difference of inverse depth that
+     `slyBackStep` uses, and rejects, for the rim: under a perspective projection 1/a + 1/b -
+     2/z0 is identically zero across any plane at any grazing angle, positive where the
+     neighbourhood falls away behind a silhouette, and negative where it comes back toward the
+     eye — which is a concave corner or something standing on a surface. Using the lobe the rim
+     gate throws away is why this term is exactly zero on open floor, which is the property the
+     whole rim-gate investigation was about. */
+  contact: [0.045, 0.85, 1.2, 24.0],
+  /* Rise-above-tangent-plane window, metres. Below [0] the deviation is depth quantisation
+     and normal-map-free geometry noise; past [1] the "occluder" is too far in front of this
+     pixel to be touching it (a character 5 m in front of a wall is a silhouette, not a
+     contact) and the term must fall off or it becomes a dark halo around every figure —
+     PREREG-contact.md's counter-risk 1. */
+  contactRise: [0.008, 0.22],
+
   /* --- bloom ---
      §7.3 wants "a tight coloured halo on bright things", not a wash. At threshold 1.02 with
      six mips, every sunlit limestone face in a golden-hour frame cleared the bar and the
@@ -823,12 +864,84 @@ uniform float uAOEnabled, uEdgeEnabled, uBloomEnabled, uInkStrength;
 uniform float uAOStrength, uAODepth, uRimStrength, uRimShadowFloor;
 uniform vec3  uLift, uGain, uSplitShadow, uSplitHighlight, uInkWarm, uInkCool;
 uniform vec3  uAOTint, uRimLit, uRimShade;
+uniform vec4  uContact;      // radiusWorld(m), strength, minPx, maxPx
+uniform vec2  uContactRise;  // rise window in metres: noise floor, contact ceiling
 ${GLSL_VIEW}
 ${GLSL_NOISE}
 ${GLSL_AGX}
 ${GLSL_SRGB}
 
 const float SLY_PIVOT = 0.18;   // scene-linear middle grey; the contrast pivot
+
+/**
+ * Contact occlusion, full resolution, from depth alone. See TUNE.contact.
+ *
+ * Answers "is something resting against this surface within a few centimetres", which is a
+ * different question from the AO pass's "how open is this hemisphere over a metre and a
+ * third", and it is asked with the *negative* lobe of the planarity test the rim gate uses:
+ *
+ *   w = 1/z is affine across any plane under perspective, so for taps either side of a pixel
+ *   w(a) + w(b) - 2*w(0) is identically zero on a plane AT ANY GRAZING ANGLE, positive where
+ *   the far side falls away (silhouette; the rim's lobe), negative where the neighbourhood
+ *   rises toward the eye (concave corner, or an object standing on this surface).
+ *
+ * Being exactly zero on a plane is not a nicety here — it is the reason an open floor running
+ * away from a standing camera gets nothing from this term, which is the failure a naive
+ * depth-difference contact AO produces and which cost this project a long investigation on
+ * the rim (see slyBackStep above, and toon.glsl.js).
+ *
+ * The rise is converted to metres before it is thresholded (dz = -dw * z^2) so the window is
+ * a world-space window and a contact reads the same at 3 m and at 30 m.
+ */
+float slyContact( vec2 uv, float z0 ) {
+  /* World radius -> UV radius. uProjInv's diagonal holds tan(fovY/2) and tan(fovY/2)*aspect,
+     so 1/uProjInv[i][i] is the projection scale on that axis and a world offset r at distance
+     z subtends r*scale/z in NDC, half that in UV. Doing x and y separately keeps the sampled
+     footprint circular in WORLD space on a non-square frame — sampling a circle in UV would
+     sample an ellipse on the ground and give the term an aspect-dependent radius. */
+  vec2 scale = vec2( 1.0 / uProjInv[0][0], 1.0 / uProjInv[1][1] );
+  vec2 rUv = uContact.x * scale * 0.5 / max( z0, 1e-3 );
+  /* Clamp in PIXELS, not in UV: the failure being guarded is "every tap lands in the centre
+     texel", which is a pixel-domain fact. Explicit and read back (§40) — a term clamped to a
+     texel floor returns a null that looks exactly like a decisive one. */
+  vec2 rPx = clamp( rUv / uTexel, vec2( uContact.z ), vec2( uContact.w ) );
+  vec2 o = rPx * uTexel;
+
+  float w0 = 1.0 / max( z0, 1e-4 );
+  float zz = z0 * z0;
+  float occ = 0.0;
+
+  /* Four axes, eight taps, one radius. No jitter and no blur: the feature is ~6 px and every
+     kernel this project has pointed at it has eaten it. Deterministic taps also keep the
+     null control bit-exact. */
+  vec2 dirs[4];
+  dirs[0] = vec2( 1.0, 0.0 ); dirs[1] = vec2( 0.0, 1.0 );
+  dirs[2] = vec2( 0.7071, 0.7071 ); dirs[3] = vec2( 0.7071, -0.7071 );
+
+  for ( int i = 0; i < 4; i++ ) {
+    vec2 s = dirs[i] * o;
+    float da = texture2D( uDepth, uv + s ).x;
+    float db = texture2D( uDepth, uv - s ).x;
+    /* Sky is the far plane. A tap on sky is not an occluder, and letting it into the affine
+       test would make every silhouette against sky read as a giant positive bend. */
+    if ( slyIsSky( da ) && slyIsSky( db ) ) continue;
+    float wa = slyIsSky( da ) ? w0 : 1.0 / max( slyLinearZ( da ), 1e-4 );
+    float wb = slyIsSky( db ) ? w0 : 1.0 / max( slyLinearZ( db ), 1e-4 );
+
+    /* Positive = the pair sits NEARER than the tangent plane predicts, i.e. concave. */
+    float dev = ( wa + wb - 2.0 * w0 ) * 0.5;
+    float riseM = dev * zz;
+
+    /* In-band only. Under uContactRise.x it is depth quantisation; over .y the neighbour is a
+       separate object in front, not something touching this surface — without that upper edge
+       this term draws a dark halo round every figure, which is a different §7.3 failure and
+       not the one being fixed. */
+    occ += smoothstep( uContactRise.x, uContactRise.y * 0.45, riseM )
+         * ( 1.0 - smoothstep( uContactRise.y, uContactRise.y * 2.2, riseM ) );
+  }
+
+  return clamp( occ * 0.25 * uContact.y, 0.0, 1.0 );
+}
 
 void main() {
   // Radial chromatic aberration. uChroma is 0 by default (see TUNE) — the taps collapse to
@@ -858,9 +971,22 @@ void main() {
   // normalised against its peak channel (see tintColor) so occlusion can only ever subtract
   // light, and the strength stays well under 1 because the baked aoMaps carry part of the
   // same term.
+  /* One occlusion multiply, two contributors. Combined by screen (a + b - ab) rather than
+     added, so a crevice that both terms see does not get darkened twice — and so the contact
+     term darkens toward the SAME §2.1.3 tint rather than toward grey, and inherits whatever
+     the shadow-hue work does to that tint instead of fighting it. */
+  float occ = 0.0;
   if ( uAOEnabled > 0.5 ) {
-    float ao = texture2D( uAO, vUv ).r;
-    float occ = ( 1.0 - ao ) * uAOStrength;
+    occ = ( 1.0 - texture2D( uAO, vUv ).r ) * uAOStrength;
+  }
+  if ( uContact.y > 0.0 ) {
+    float dC = texture2D( uDepth, vUv ).x;
+    if ( !slyIsSky( dC ) ) {
+      float c = slyContact( vUv, slyLinearZ( dC ) );
+      occ = occ + c * ( 1.0 - occ );
+    }
+  }
+  if ( occ > 0.0 ) {
     scene *= mix( vec3( 1.0 ), uAOTint * uAODepth, occ );
   }
 
@@ -1150,6 +1276,8 @@ export class PostFX {
         // Occlusion is applied while the image is still linear, so the tint stays linear —
         // normalised against its peak channel so it can only ever darken (see tintColor).
         uAOTint: { value: tintColor(new THREE.Color(this.tune.aoTint)) },
+        uContact: { value: new THREE.Vector4(...this.tune.contact) },
+        uContactRise: { value: new THREE.Vector2(...this.tune.contactRise) },
         // The rim lands after slyLinearToSrgb, alongside the ink, so it is display-space.
         uRimLit: { value: displayColor(this.tune.rimLit) },
         uRimShade: { value: displayColor(this.tune.rimShade) },
@@ -1277,6 +1405,46 @@ export class PostFX {
     this._debugRaw = !!on;
     this._debugSrc = typeof on === 'string' ? on : src;
     if (typeof on === 'string') this._debugRaw = true;
+  }
+
+  /**
+   * Applied state of the contact term, read back from the LIVE uniform objects the shader
+   * received — never from `this.tune`. Mandated by PREREG-contact.md §6.1, which exists
+   * because §40's decisive A/B arm never ran: a bias clamp floored two arms to the same value
+   * and the only thing that could have caught it was reading the value the shader got rather
+   * than the value that was requested.
+   *
+   * `refZ` is a view distance in metres at which to evaluate the screen radius, because the
+   * radius is per-pixel. Pass the depth of the surface being scored (the floor under the boot)
+   * so `clamped` answers the question that matters: did every tap land in the centre texel.
+   *
+   * An arm whose returned object matches another arm's is COLLAPSED and scores nothing.
+   */
+  contactState(refZ = 6.0) {
+    const cu = this.compositeMat?.uniforms;
+    if (!cu?.uContact) return { available: false };
+    const c = cu.uContact.value, rise = cu.uContactRise.value;
+    const pi = cu.uProjInv.value.elements;
+    const h = this.sceneRT?.height ?? this.engine.height;
+    const w = this.sceneRT?.width ?? this.engine.width;
+    // Same arithmetic as slyContact, so a mismatch here is a mismatch there.
+    const rUvY = c.x * (1 / pi[5]) * 0.5 / Math.max(refZ, 1e-3);
+    const rUvX = c.x * (1 / pi[0]) * 0.5 / Math.max(refZ, 1e-3);
+    const rawPx = { x: rUvX * w, y: rUvY * h };
+    const appPx = { x: Math.min(Math.max(rawPx.x, c.z), c.w), y: Math.min(Math.max(rawPx.y, c.z), c.w) };
+    return {
+      available: true,
+      radiusM: c.x, strength: c.y, minPx: c.z, maxPx: c.w,
+      riseLoM: rise.x, riseHiM: rise.y,
+      refZ, rtW: w, rtH: h,
+      rawPx: [+rawPx.x.toFixed(3), +rawPx.y.toFixed(3)],
+      appliedPx: [+appPx.x.toFixed(3), +appPx.y.toFixed(3)],
+      // The §40 tripwire. If this is true the world radius is NOT what is being sampled and
+      // no number from the arm describes `radiusM`.
+      clamped: rawPx.y < c.z || rawPx.y > c.w || rawPx.x < c.z || rawPx.x > c.w,
+      aoEnabled: cu.uAOEnabled.value > 0.5, aoStrength: cu.uAOStrength.value, aoDepth: cu.uAODepth.value,
+      aoTint: [...cu.uAOTint.value.toArray()].map((v) => +v.toFixed(4)),
+    };
   }
 
   update(dt, t) {
@@ -1534,6 +1702,9 @@ export class PostFX {
     cu.uInkStrength.value = this.tune.inkStrength;
     cu.uAOStrength.value = this.tune.aoStrength;
     cu.uAODepth.value = this.tune.aoDepth;
+    // Re-read every frame so a one-boot A/B can poke tune.contact between arms.
+    cu.uContact.value.set(this.tune.contact[0], this.tune.contact[1], this.tune.contact[2], this.tune.contact[3]);
+    cu.uContactRise.value.set(this.tune.contactRise[0], this.tune.contactRise[1]);
     cu.uRimStrength.value = this.passes.edge.enabled ? this.tune.rimStrength : 0;
     cu.uRimShadowFloor.value = this.tune.rimShadowFloor;
     cu.uBloomIntensity.value = this.tune.bloomIntensity;
