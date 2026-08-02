@@ -254,10 +254,33 @@ const TUNE = {
      simply does not contain the volume they occupy.
      Which means this is not FX's to fix and not LIGHTING's. The three real options are: move
      the camera (`Shots.js` — SHOTS/lead), give the courtyard an opening the camera is looking
-     *at* rather than standing inside (ARCHITECTURE — a gate or clerestory in the north wall
-     around z = 0 would put a blade across the obelisk), or accept it. What FX *can* put in
+     *at* rather than standing inside (ARCHITECTURE), or accept it. What FX *can* put in
      that frame without an opening is airborne particulate and the three braziers that project
-     inside it, at 38.1, 44.3 and 56.1 m — see `Particles.js` TUNE.flameFade. */
+     inside it, at 38.1, 44.3 and 56.1 m — see `Particles.js` TUNE.flameFade.
+
+     **Correction, and the earlier version of this comment was wrong in two ways.** It said "a
+     gate or clerestory in the **north wall around z = 0** would put a blade across the
+     obelisk". (1) Wrong z: a blade travels (0.899, −0.438, **0**) — pure x and y, zero z — so
+     it never leaves its opening's z-plane. An opening at z = 0 puts a blade 11 m south of an
+     obelisk that stands at z = 11 (§8.1). The opening would have to be at z ≈ 11, on the
+     *west* side, for the beam to reach the obelisk's own plane at all.
+     (2) Wrong premise, and this is the part that kills the idea: a west opening at z ≈ 11 was
+     gated headlessly (blade spines projected against architecture depth through this exact
+     camera, `gate21b*.mjs`) and **fails at every height the wall could plausibly carry.** The
+     occluder is this camera's own near field — `arch:court:hieroglyph_wall` and
+     `arch:court:sandstone_block` at x ≈ −12.7, z ≈ 22–25, top y ≈ 5.2, sitting only 7–9 m
+     from a lens that is 26–31 m from the beam's eastern half. Everything low and east of
+     x ≈ −4 is behind it. Since a beam is *by construction* near the floor by the time it is
+     east of x = 0, sweeping the opening height 9 → 24 m gives **zero** visible pixels past
+     x = 0 until y ≈ 23 m, and only 31 px at 24 m (R5 wants ≥120). The west court wall tops
+     out at y = 8.96 (measured), so this would mean ~14 m of new wall — not a clerestory, a
+     redesign of the court enclosure, and it would still barely register.
+     What the same sweep *does* show, recorded because it is a different and cheaper prize: an
+     opening at y ≈ 13–14, z ≈ 11.75 puts ~13 m of blade (41 % of it) visibly raking the
+     upper-left of this frame at ~190 px wide with a 22 m backdrop gap — i.e. it satisfies
+     §2.3's "shafts raking through at least one opening in every interior/courtyard" while
+     *not* satisfying "past the obelisk". That still costs ~5 m of new wall above the 9 m
+     architrave §8.1 specifies, so it is ARCHITECTURE's and the lead's call, not FX's. */
 
   /* Torch / brazier cones. Built from whatever registered through addLocalLight(), so they
      follow PROPS rather than a second hardcoded list of sconces. */
@@ -1369,11 +1392,29 @@ export class Lighting {
     for (let k = 0; k < list.length; k++) {
       const m = list[k];
       if (!m.parent) { sig = NaN; break; }          // removed since census → refresh now
-      const e = m.matrixWorld.elements;
       let vis = m.visible ? 1 : 0;
       for (let p = m.parent; vis && p; p = p.parent) if (!p.visible) vis = 0;
+      /* An invisible caster contributes **nothing** to the depth image, so nothing about it
+         except its own visibility may enter the fingerprint. It used to contribute its full
+         transform, which meant an invisible mesh that merely moved dirtied the cache and
+         forced a refresh that reproduced the previous map pixel for pixel.
+         That is not hypothetical here: `main.js`'s central sweep turns `castShadow` on for
+         every opaque mesh, which includes ARCHITECTURE's collider proxies
+         (`architecture:colliders`, invisible unless `showColliders` is on), so the static set
+         is dominated by meshes that cannot cast anything.
+         **Why the fix is here and not a `visible` test in the census, which is the cheaper-
+         looking version.** Dropping invisible meshes from `_staticCasters` would also drop
+         them from this loop, and this loop is the *only* thing that notices a reveal: the
+         census re-runs on `%8`, so a mesh that becomes visible would keep a stale shadow map
+         for up to eight frames. Both live reveal paths flip an ancestor's flag rather than
+         the mesh's — `Architecture`'s `showColliders` handler and its `tomb` zone list — so
+         they are exactly the case that would lag. Keeping the member and zeroing its
+         *contribution* gets the saving with immediate detection intact: a visible member
+         always contributes at least the +11, so any flip in either direction moves `sig`. */
+      if (!vis) continue;
+      const e = m.matrixWorld.elements;
       sig += e[12] * 3.1 + e[13] * 5.7 + e[14] * 7.3 + e[0] + e[5] + e[10]
-           + vis * 11 + (m.castShadow ? 17 : 0) + (m.material?.side ?? 0) * 23
+           + 11 + (m.castShadow ? 17 : 0) + (m.material?.side ?? 0) * 23
            + (m.isInstancedMesh ? m.instanceMatrix.version * 29 : 0);
     }
     const dirty = !(sig === this._staticSig) || this._seenEpoch !== this._cacheEpoch;
