@@ -1155,6 +1155,16 @@ backgrounded list and the run's log was silently written to `/` — the capture 
 output was simply not where anyone was looking for it. Expand paths before the `&`, or use
 absolute ones.
 
+**A fourth, paid for only in luck: a mid-queue src edit races the next boot.** The goldhalo
+splice (b77b614) was briefly broken on disk — a compile-breaker caught by its own proof
+script — inside the window where cap5's queued run could have booted vite and baked the broken
+module into all of its frames. cap5 booted clean (`7b0e3f8 dirty:false`, zero errors) by
+roughly thirty seconds, which is luck, not process. The HMR guard (`SANDS_NO_HMR=1`, e04c9ec)
+protects a run only *after* its boot; the boot itself reads whatever is on disk at that
+moment. Rule: before editing `src/` while the capture queue is non-empty, check who holds the
+lock and where they are in their run — if a boot is imminent (holder just acquired, or next
+ticket is about to), wait it out. Seconds of patience against a five-minute-per-shot rerun.
+
 **The general point:** a fleet of independent failures with one hidden cause will hand you a
 different plausible story per failure — this one died at a handover, that one at an hour, the
 other while its owner slept. The tell was two lifetimes agreeing to within two seconds. When
@@ -1814,6 +1824,20 @@ minimum channel to 0.
 - First attempt at this edit put **backticks inside the GLSL template literal** and broke
   `Common.js` at module load. Caught in seconds by importing it; it would otherwise have been a
   black frame for whichever agent booted next. Prose comments go into GLSL strings without them.
+
+**CLOSED by the agx1 frame A/B (boot `7b0e3f8 dirty:false`), read 2026-08-02 ~12:04.** The
+corrected prediction is what the frames show. The R-pin census is invariant under the map,
+in-frame: sly-closeup **5,400** vs the committed pre-map 5,407 (0.13%), hero **333** vs 334 —
+across five intervening commits, which doubles as magnitude validation of the rebuilt reader
+(the original died with the restart; the rebuild self-diffed zero and reproduced a constructed
+known exactly). G/B pins are **0 in all three frames** — §23's rec2020→sRGB asymmetry argument
+holds post-map. `night`'s 300 vs 126 is not like-for-like (1–8 px FXAA-edge specks; 44dede5's
+tail retune moved exactly the dark-fur population that pins there) and was rejected as a
+comparison, not explained away. And the thing the map was for: sly-closeup's 195-px pinned boot
+component now carries **98 distinct (G,B) pairs, interior |∇B| 4.17** — at 4× it reads as a
+modelled form (shaft gradient, seam, ink line), not a hole. Durable copy:
+`progress/records/RESULT-agx1.md`. This closes §23's fix chain end-to-end: attribution (§23),
+arithmetic (§24.6), driver bytes (agxcmp), and now the shipped frame.
 
 ### 24.7 `GuardModel.js`'s `scleraTint` — closed by CHARACTER at `b87f79a`, and I nearly filed it as a misread
 
