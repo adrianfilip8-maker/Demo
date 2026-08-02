@@ -231,6 +231,30 @@ vec3 slyAgX( vec3 color, float exposure ) {
   color = outset * color;
   color = pow( max( color, vec3( 0.0 ) ), vec3( 2.2 ) );
   color = SLY_REC2020_TO_SRGB * color;
+
+  /* Gamut-map instead of amputating. The rec2020->sRGB red row subtracts 0.5876 of green — an
+     order of magnitude more than anything in the green or blue rows — so deep, cool, low-red
+     surfaces (the character's clothDark boots, gloves and brim) arrive here with red slightly
+     NEGATIVE and the old clamp pinned them flat at 0. Measured on the shipped frames: 5,407 px
+     of sly-closeup (0.59%), 36.5% of the boot box, and red is the ONLY channel ever pinned in
+     any of the ten shots. A flat pinned patch reads as a dead black hole in a surface that has
+     modelling in it.
+
+     Blending toward the pixel's own luminance by exactly enough to lift the minimum channel to 0
+     desaturates that pixel instead of deleting a channel of it. It cannot touch a pixel the clamp
+     was not already firing on: the branch is gated on mn < 0, and that no-op property is
+     verified rather than asserted — scratchpad/gamutcheck.mjs parses these very constants out
+     of this file and finds **0 of 42,123 in-gamut grid samples change by any amount** (float64,
+     not a tolerance), while the out-of-gamut population moves by up to 20 display bytes, mostly
+     in blue. It does NOT restore red: the colour is genuinely outside sRGB by this point.
+
+     What it is NOT: the character's blue cast. That is the light reaching him (the architecture
+     in the same frame is warm at R/G 1.55-1.65 through this identical code), and a global chain
+     cannot be warm on the wall and cool on the subject. See KNOWN_ISSUES §23. */
+  float lum = dot( color, vec3( 0.2126, 0.7152, 0.0722 ) );
+  float mn  = min( color.r, min( color.g, color.b ) );
+  if ( mn < 0.0 && lum > mn ) color = mix( color, vec3( lum ), min( 1.0, -mn / ( lum - mn ) ) );
+
   return clamp( color, 0.0, 1.0 );
 }
 `;
