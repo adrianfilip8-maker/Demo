@@ -107,6 +107,36 @@ const TUNE = {
      currently landing warm — flagged with numbers rather than changed, because it moves the
      look of a shot rather than fixing a defect. */
   rimPlanar: [0.04, 0.20, 1.0],
+
+  /* --- ledger #31: exempt the SUBJECT from the planar gate above ---
+     Fraction of the planar gate waived on pixels the normal prepass marks as a skinned
+     subject. 0 = shipped behaviour, exactly (the mix collapses); 1 = the subject is gated
+     only by the depth-step mask, as it was before `rimPlanar` existed.
+
+     Why this exists. `rimPlanar` asks "is the neighbourhood one surface", and answers no only
+     where inverse depth stops being affine. That is the right question for a floor and the
+     wrong question for a character standing on one: in `temple` Sly is on the nave floor with
+     the floor running away behind him, so the background a few pixels past his silhouette is
+     very nearly the continuation of a plane through him, the gate reads "still one surface",
+     and it shuts on the one silhouette in the frame that §2.1.5 most wants separated.
+     Measured (RESULT-rim3 §3): temple subject mean rim lift 30.31 ungated -> 8.91 shipped,
+     29.4% retained, against 65.8-124% on the other five shots. That is §7.3's "no rim light
+     separating silhouettes from the background" arriving on a frame that previously passed.
+
+     Why not just relax the thresholds: already measured and declined. RESULT-task8c ran
+     `planarlo [0.015, 0.09, 1]` on `interior`, the same close-background case, for -1.7 pts
+     against a required +1.5 — "the depth ratios, not the thresholds, are what starves the
+     screen rim here". The gate is answering its own question correctly; the subject is simply
+     not what it was built to police.
+
+     It cannot re-admit what the gate is for. The paving, the dune ripples and the wall/ground
+     contacts that motivated `rimPlanar` are all static geometry, so their subject mask is 0
+     and the mix is the identity there — off-subject pixels are bit-identical by construction,
+     not by tuning. That is the acceptance, and it is checked as bit-identity rather than
+     asserted. Same shape and same population as ToonMaterial's `rimSkinExempt`, which waives
+     the *surface* gate's convexity half on the same `USE_SKINNING` set. */
+  rimSubjExempt: 0.0,
+
   // The shadow side keeps 45% of the lit side's strength — enough that a dark silhouette
   // always separates, little enough that the light still reads as coming from one direction.
   rimShadowFloor: 0.45,
@@ -138,6 +168,10 @@ const TUNE = {
          `side: BackSide` while the override is FrontSide, so every dome triangle is already
          back-face culled and hiding it can only remove a draw, never a pixel. If a frame
          moves, that reading is wrong and this knob is the thing that says so.
+         Scope is the DOME ONLY, and that is load-bearing: `sky.birds` shares the name prefix
+         but is `DoubleSide`, so it rasters and hiding it is a real change. It belongs to the
+         transparent knob below. Widening this one back to `/^sky\./` re-breaks the
+         acceptance in both directions at once — see the note at the gate site.
        - `prepassSkipTransparent` MUST change the frame where transparent geometry sits near
          an AO-relevant surface, and must not change it anywhere else. A gate that changes
          nothing at all would mean it is not reaching the queue it targets.
@@ -374,6 +408,7 @@ uniform vec2  uFade;       // fadeStart, fadeEnd (metres)
 uniform vec4  uWeight;     // nearMul, farMul, nearZ(m), farZ(m)
 uniform vec4  uRimRadius;  // inner, mid, outer band radius in px; w = tail weight
 uniform vec3  uRimPlanar;  // planarity gate: lo, hi, strength (0 = off, legacy behaviour)
+uniform float uRimSubjExempt; // ledger #31: waive the planar gate on the skinned subject
 uniform vec3  uKeyDirView; // unit vector toward the key light, view space
 ${GLSL_VIEW}
 
@@ -436,7 +471,16 @@ vec2 slyBackStep( vec2 uv, float z0, vec2 o ) {
   float bend = max(
     ( 2.0 * w0 - 1.0 / max( a, 1e-4 ) - 1.0 / max( b, 1e-4 ) ) / w0,
     ( 2.0 * w0 - 1.0 / max( c, 1e-4 ) - 1.0 / max( d, 1e-4 ) ) / w0 );
-  mask *= mix( 1.0, smoothstep( uRimPlanar.x, uRimPlanar.y, bend ), uRimPlanar.z );
+  /* Ledger #31. The normal prepass writes 1-isSkinned into alpha (ToonMaterial's
+     normalMaterial), so subj is 1 on the character and 0 on everything else, including sky
+     and any pixel the prepass never wrote. Sampled at the centre tap only: the exemption is
+     a property of the pixel being shaded, not of its neighbourhood, and widening it to the
+     taps would let a subject pixel exempt the background *behind* the silhouette — which is
+     the flat ground the gate is there to protect.
+     uRimSubjExempt = 0 collapses the inner mix to uRimPlanar.z and is bit-identical. */
+  float subj = 1.0 - texture2D( uNormal, uv ).a;
+  mask *= mix( 1.0, smoothstep( uRimPlanar.x, uRimPlanar.y, bend ),
+               uRimPlanar.z * ( 1.0 - uRimSubjExempt * subj ) );
 
   return vec2( mask, frac );
 }
@@ -912,6 +956,7 @@ export class PostFX {
         uWeight: { value: new THREE.Vector4() },
         uRimRadius: { value: new THREE.Vector4(this.tune.rimInner, this.tune.rimMid, this.tune.rimOuter, this.tune.rimTail) },
         uRimPlanar: { value: new THREE.Vector3(...this.tune.rimPlanar) },
+        uRimSubjExempt: { value: this.tune.rimSubjExempt },
         uKeyDirView: { value: new THREE.Vector3(0, 0, 1) },
       }, EDGE_FRAG));
 
@@ -1114,6 +1159,13 @@ export class PostFX {
       renderer.shadowMap.autoUpdate = false;
       renderer.shadowMap.needsUpdate = false;
 
+      /* Ledger #31. Alpha in this buffer is the subject mask, written INVERTED (1 = not the
+         subject) so that every way of failing lands on "not the subject". Clearing to alpha 1
+         is the last of those: a pixel no geometry covers must not read as a character. The
+         RGB clear is untouched, and no consumer of `uNormal` reads alpha except the rim gate. */
+      const prevClearAlpha = renderer.getClearAlpha();
+      renderer.setClearAlpha(1.0);
+
       /* Ledger #26 — see `prepassSkipSky` / `prepassSkipTransparent` in TUNE. Same shipped
          mechanism as the shell gate above (hide for the duration, restore in `finally`),
          extended to the two other populations that cannot define a surface normal.
@@ -1127,7 +1179,20 @@ export class PostFX {
           /* `depthWrite === false` is part of the test rather than `transparent` alone:
              additive FX (shafts, sparkles) are the population that most needs excluding and
              several of them are opaque-flagged but non-depth-writing. */
-          const isSky = /^sky\./.test(o.name || '');
+          /* Narrowed from /^sky\./ deliberately. The bit-identical acceptance below rests on
+             ONE property — the dome is `side: BackSide` (`Sky.js:559`) against a FrontSide
+             override, so every one of its triangles is back-face culled and hiding it can
+             remove a draw but never a fragment. `sky.birds` shares the name prefix and NOT
+             that property: it is `DoubleSide` (`Sky.js:657`), so it does raster into the
+             normal buffer and hiding it is a real change. Under the old regex the birds would
+             have made a correct sky gate score as an acceptance violation, and a genuine dome
+             difference could have hidden behind that expected-looking delta.
+             The birds are not dropped from scope, they move to the knob whose acceptance is
+             true of them: `transparent:true, depthWrite:false` (`Sky.js:658-659`) puts them in
+             `prepassSkipTransparent`, whose criterion is "MUST change the frame".
+             The side test is checked here rather than assumed, so that if the dome is ever
+             reauthored FrontSide the gate stops claiming a zero it no longer has. */
+          const isSky = o.name === 'sky.dome' && m.side === THREE.BackSide;
           const isVeil = m.transparent === true || m.depthWrite === false;
           if ((this.tune.prepassSkipSky && isSky) || (this.tune.prepassSkipTransparent && isVeil)) {
             o.visible = false;
@@ -1146,6 +1211,7 @@ export class PostFX {
         for (const o of prepassHidden) o.visible = true;
         scene.overrideMaterial = prevOverride;
         scene.background = prevBg;
+        renderer.setClearAlpha(prevClearAlpha);
         renderer.shadowMap.autoUpdate = prevShadowAuto;
         if (canGate) { try { shading.endNormalPass(); } catch { /* shells stay hidden at worst */ } }
       }
@@ -1165,6 +1231,7 @@ export class PostFX {
         this.tune.edgeNearZ, this.tune.edgeFarZ);
       u.uRimRadius.value.set(this.tune.rimInner, this.tune.rimMid, this.tune.rimOuter, this.tune.rimTail);
       u.uRimPlanar.value.set(this.tune.rimPlanar[0], this.tune.rimPlanar[1], this.tune.rimPlanar[2]);
+      u.uRimSubjExempt.value = this.tune.rimSubjExempt;
 
       /* The rim wraps from the lit side, so this pass needs to know where the key is. SHADING
          holds the one authoritative copy — LIGHTING pushes the sun into it every frame — and

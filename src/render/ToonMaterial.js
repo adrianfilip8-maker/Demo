@@ -552,8 +552,48 @@ export class Shading {
      * POSTFX's interior-crease pass needs view-space normals. three's default depth texture
      * covers the depth term, so all that is missing is this: a plain MeshNormalMaterial used
      * as scene.overrideMaterial. It picks up skinning/instancing/morphing automatically.
+     *
+     * Ledger #31 — the ALPHA channel additionally carries "is this pixel the subject".
+     *
+     * Why here and not in PostFX: PostFX has depth and normals and no idea which pixels are a
+     * character. The surface rim solved the identical problem with `vSlySkin` (`_patchVert`),
+     * because `USE_SKINNING` is a vertex-stage define and a fragment `#ifdef` on it is always
+     * false. The screen-space rim needs the same answer one stage further downstream, and the
+     * normal prepass is the only pass that already visits every mesh with per-object identity
+     * intact. So the same varying is written out as alpha and PostFX reads it as a mask.
+     *
+     * This channel was previously a constant: three's meshnormal_frag ends
+     * `gl_FragColor = vec4( ..., diffuseColor.a ); #ifdef OPAQUE gl_FragColor.a = 1.0; #endif`
+     * and every consumer of `uNormal` samples `.xyz` only (AO.js:63, PostFX.js:476-480, :549).
+     * So this is strictly additive: no existing reader can see it, and the RGB is untouched.
+     * The OPAQUE block is *replaced* rather than appended to, because it runs last and would
+     * otherwise stamp 1.0 over the mask.
+     *
+     * Population is identical to the surface gate's exemption by construction — both are
+     * `USE_SKINNING` — so the cane, which is not skinned, is not a subject in either. That is
+     * deliberate: one concept, applied at two stages, not two definitions that can drift.
+     *
+     * THE SENSE IS INVERTED ON PURPOSE: alpha is 1 for "not subject", 0 for "subject".
+     * `replaceOnce` degrades to a warning on a miss (l.1440) rather than throwing, and three's
+     * own tail already writes `a = 1.0`. Under the obvious encoding a missed splice would
+     * therefore hand PostFX a subject mask of 1 EVERYWHERE, silently exempting the whole frame
+     * from the planar gate and re-admitting the paving artefact the gate exists to remove —
+     * a shader-splice failure presenting as a lighting regression three files away. Inverted,
+     * a miss leaves alpha at three's constant 1.0, which decodes to subject = 0, which makes
+     * the exemption inert and the shipped behaviour exact. The prepass clear alpha is set to 1
+     * for the same reason (PostFX), so untouched background also decodes to "not subject".
      */
     this.normalMaterial = new THREE.MeshNormalMaterial({ name: 'slyNormalPass' });
+    this.normalMaterial.onBeforeCompile = (shader) => {
+      shader.vertexShader = this._patchVert(shader.vertexShader);
+      shader.fragmentShader = replaceOnce(shader.fragmentShader,
+        'void main() {', 'varying float vSlySkin;\nvoid main() {',
+        this, 'normalpass-subject-varying');
+      shader.fragmentShader = replaceOnce(shader.fragmentShader,
+        '\t#ifdef OPAQUE\n\t\tgl_FragColor.a = 1.0;\n\t#endif',
+        '\tgl_FragColor.a = 1.0 - vSlySkin;',
+        this, 'normalpass-subject-alpha');
+    };
 
     this._onTimeOfDay = () => { if (this._autoKey) this._applyAutoLight(); };
     engine.on?.('timeOfDay', this._onTimeOfDay);
