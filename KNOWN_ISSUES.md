@@ -6035,6 +6035,14 @@ real local texture amplitude. **The dry test used `temple`'s positive reference 
 absence control on this frame's own sand.** A positive control proves an instrument can fire; only
 an absence control proves it can decline.
 
+**And the adaptive threshold was inert, which the full result (`RESULT-dunesloft.md` §3.4) makes
+exact.** `plateaus()` segments a column into runs whose max−min ≤ `win` (2.5 L) and reports the
+median spread *inside those runs* as `noise` — so `noise` is **bounded above by 2.5 L by
+construction**. The threshold is `max(6.0, 3 × noise)`, which with `noise ≤ 2.5` can only ever land
+in **[6.0, 7.5]** — and the scored table shows it pinned at exactly **6.00 in every row.** *The
+"3× measured noise" adaptivity never engaged once.* A knob whose range is bounded by its own input's
+construction is not adaptive; it is a constant wearing an adaptive name.
+
 ### 71.4 L4 does not fire — the one clause the frames answer
 
 At 3× and 6× the animals read chunky and slab-sided: crisp planar facets, hard shoulder corners,
