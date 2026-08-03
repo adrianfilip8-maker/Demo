@@ -71,7 +71,7 @@ the harness's 900 rows, which is a 26%-different number and has been mixed in be
 | `sly-closeup` | 33 | 484 | everything, incl. face, eyes, hands | — |
 | `sly-key` | 33 | 484 | everything; key-light behaviour | — |
 | `sly-profile` | 95 | 443 | silhouette, bill/ear resolve, tail | frontal face, eyes |
-| `combat` | 45 | 281 | pose, cane, FX interaction | fine facial detail |
+| `combat` | 45 | 281 | pose, silhouette, cane, FX | **all character colour/material — see below** |
 | `sly-startle` | 9 | head shot | face, eyes, pupils, expression | **feet, stance, contact shadow, full silhouette** |
 | `interior` | 70 | 187 | environment, light shafts, materials | facial detail |
 | `dunes` | 70 | 170 | environment, haze, horizon | facial detail |
@@ -81,6 +81,22 @@ the harness's 900 rows, which is a 26%-different number and has been mixed in be
 | `temple` | 35 | 99 | architecture, shafts, materials | any character detail |
 | `courtyard` | 77 | **42** | architecture, layout, composition | **any character condition whatsoever** |
 | `guard` | 116 | **behind lens** | environment, guard staging, cones | **any character condition whatsoever** |
+
+**`combat` is a fourth limited frame, and it was found by looking rather than by arithmetic.**
+The figure is 281 px — the second-largest in the roster — so every count said it was sound. In
+`shots/char12/combat.png` the FX impact flash blows him to a **flat cream cutout with a black
+outline**: no mask, no cap colour, no tail rings, no blue on the clothing, no material read of any
+kind. Pose and silhouette survive; nothing else does. **A pixel count is not an evaluability
+check**, and this one was wrong by the widest margin in the table.
+
+**The consequence for this pass, stated plainly:** with `courtyard` and `guard` mute on character,
+`sly-startle` limited to the face, `sly-perch` out of the roster and `combat` reduced to
+silhouette, **`sly-closeup` and `sly-key` are effectively the only frames that can score character
+colour, fur and material**, with `sly-profile` on silhouette and `hero` on tail and cane-hook
+alone. That is a **roster weakness, not a licence to go easy** — it means character findings will
+come from few frames and should be weighted by what those frames genuinely show, and it means a
+character defect visible in `sly-closeup` has no second frame to confirm it. Say which frame each
+character claim rests on.
 
 **Requirement:** before filing a finding, name the shot and confirm the condition is in that
 shot's "can carry" column. A finding in the "cannot" column is not a weak finding — it is an

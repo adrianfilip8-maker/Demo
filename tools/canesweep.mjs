@@ -122,7 +122,33 @@ for (const r of rows.slice(0, 12)) {
     `  hook ${r.hook.x.toFixed(2)},${r.hook.y.toFixed(2)},${r.hook.z.toFixed(2)}`);
 }
 
-/* SCOPE, stated because §57.2 cost a wrong selection: this score models crook clearance against
+/* ============================ READ THIS BEFORE QUOTING A RANK ============================
+   **THE MODEL IS BUILT INTO `new THREE.Scene()`, SO THERE IS NO FLOOR, NO LEDGE AND NO LEVEL.**
+   Line 13: the engine stub's scene is empty and nothing else is ever added to it. Every term
+   below that claims to be about *background* — `clearHead`, `clearBody`, the `hook.y - 1.45`
+   height bonus — is therefore scored in a void. "The crook is against open background" here
+   means "the crook is not against the CHARACTER", which is a different and much weaker claim.
+
+   Found by CHARACTER, in the frame rather than in the code: `perch_idle`'s shipped aim put the
+   crook **0.38 m through the deck**, and `char12/sly-perch.png` renders the part that survives
+   as a gold crescent lying beside the boot. The aim that did that scored **RANK 1 of 10351**.
+   Rank 1 in a room with no floor.
+
+   **And note which way my own repair to this file cut.** The SHIPPED/RANK block above was added
+   because the tool could announce a winner while staying silent about the value already in the
+   file — a real defect, correctly fixed. But the fix's whole effect is to attach a confident
+   ordinal to the score, and the score was measuring the wrong world. **A number that was merely
+   unquoted became a number that was quoted with authority.** Making an instrument speak is only
+   an improvement if what it says is true; §11's lesson is that a tool's stated scope and its
+   actual pipeline drift apart, and this is that drift with a rank number on top.
+
+   USE THIS TO SHORTLIST AGAINST THE BODY. It cannot see the ground, so it can and did select an
+   aim that puts the cane through it. Any candidate must be checked for floor penetration
+   separately (lowest cane vertex ≥ 0 at the clip's breath trough, not just at the frozen key)
+   and then taken to a silhouette render.
+   =========================================================================================
+
+   SCOPE, stated because §57.2 cost a wrong selection: this score models crook clearance against
    `head` and `chest` ONLY. It does not know about the tail, which in perch_idle is the largest
    mass in frame. Two aims tied at 3.455 / 3.475 there, and the loser rendered as a ring fused
    into the tail. SHORTLIST WITH THIS SCORE, NEVER SELECT WITH IT — take the top rows to a

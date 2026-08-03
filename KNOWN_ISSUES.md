@@ -8255,3 +8255,81 @@ The uncomfortable part is the direction of the errors. Two tasks claimed *more* 
 existed and one claimed *less* — so the aggregate looked roughly right and no summary statistic
 would have flagged it. **A status field is a claim about the filesystem, and it decays silently in
 both directions.**
+
+---
+
+## §96 — rank 1 in a room with no floor, and a fourth frame that every count called sound
+
+Two findings from CHARACTER, and both are cases where a number was right about the wrong world.
+
+### 96.1 `canesweep.mjs` scores "against open background" in an empty scene
+
+Line 13 builds the engine stub around `new THREE.Scene()` and nothing is ever added to it. So
+`clearHead`, `clearBody` and the `hook.y − 1.45` height bonus — every term that claims to be about
+*background* — are computed with **no floor, no ledge and no level present.** "The crook is against
+open background" means only "the crook is not against the character."
+
+`perch_idle`'s shipped aim put the crook **0.38 m through the deck**. `char12/sly-perch.png` renders
+the surviving arc as a gold crescent lying beside his boot — §82.4's "floating brown prop", seen at
+last rather than inferred. That aim scored **RANK 1 of 10351.**
+
+**My own repair to that file made this worse, and that is the part worth keeping.** §59 records me
+fixing the tool's silence: it could announce a winner while saying nothing about the value already
+shipped, so I added the SHIPPED/RANK line and verified it spoke on a known input. That was a real
+defect and a correct fix. But its entire effect is to attach a **confident ordinal** to the score —
+and the score was measuring a world with no ground in it. A number that was merely unquoted became
+a number quoted with authority.
+
+> **Making an instrument speak is an improvement only if what it says is true.** Check what a tool
+> models before you fix how loudly it reports. The scope note now sits at the top of the file's
+> footer, above the §57.2 note it belongs with.
+
+The trade was never "rank 1 versus 6 cm", which is how §86.3 framed it when it declined the fix
+"without a frame". CHARACTER got the frame, moved the aim x 116 → 140 on all four keys, and took
+the lowest cane vertex **−0.0621 → +0.0373 m**, sizing Δ against the **breath trough** (base−4)
+rather than the frozen key — because a clip that dips below its key will put the cane back through
+the floor on the frames nobody sampled.
+
+### 96.2 `combat` is a fourth limited frame, and the figure count said it was fine
+
+§86.6 lists `combat` (45°, 281 px) as sound, and §93's table inherited that. It is the
+**second-largest figure in the roster** and every count agrees it is fine.
+
+`shots/char12/combat.png` shows him **blown to a flat cream cutout with a black outline** by the FX
+impact flash: no mask, no cap colour, no tail rings, no blue on the clothing, no material read at
+all. Pose and silhouette survive; nothing else does.
+
+**A pixel count is not an evaluability check.** §93.3 built its table from `charview.mjs` — view
+angle and figure height — and those are the two things `combat` passes. The condition that
+disqualifies it is *exposure*, which nothing in that table measures, and it was found by opening
+the frame. The pass-7 brief is corrected, and it now states the consequence plainly: with
+`courtyard` and `guard` mute on character, `sly-startle` limited to the face, `sly-perch` out of
+the roster and `combat` reduced to silhouette, **`sly-closeup` and `sly-key` are effectively the
+only frames that can score character colour, fur and material.** That is a roster weakness the
+critic should know about, not a reason to grade gently.
+
+### 96.3 Two more instruments that ignore their own printed evidence
+
+- **`caneall.mjs`** prints a negative `hook.y` for six clips and then reports *"0 clips with the
+  tip through the floor."* Both statements are true — it checks the **tip** — but the verdict line
+  is the only thing anyone reads, and it sits directly under six numbers that contradict the
+  impression it gives. Same family as §11.
+- **`shotsil.mjs`** prints *"skull only ⇒ 5.91 heads"* for a model `headratio.mjs` scores at
+  **5.03**. Not a disagreement: cranium-only 0.314 m versus chin→cranium 0.3688 m, two different
+  head definitions. `headratio.mjs` implements the scoreable §65.4 one. **Do not cross-quote them**
+  — and note that the wrong one is the one that looks like a failure.
+
+### 96.4 The fur brief was aimed at the wrong geometry, and the residual is not smoothness
+
+CHARACTER measured the contour on the shots that score it: **68% cane, 35% cloth, 34% tail.** The
+bare furred limbs own almost none of it, and the arms and legs are *clothed*, so their smoothness
+is correct rather than a defect. The tail is the only fur on the contour and it is **not** smooth —
+at 3× it carries visible lobes and notches.
+
+The real residual is different from the one the brief named: several tuft cards render as **black
+ink chips**, because a small card wrapped in a ~2.5 px ink hull is mostly hull. So the fur reads
+**torn**, not plastic — the opposite failure to the one being hunted. One row fixed (jaw tuft θ
+0.48–1.10 → 0.98–1.30, the row the earlier cheek fix walked past); two rows deliberately left,
+documented at the site, because a collar ruff exists to scallop an interior edge and moving it to
+the silhouette tangent deletes its purpose. Removing it is legitimate under §37 and needs its own
+hold-out.

@@ -2709,9 +2709,37 @@ export class SlyModel {
          instead of under it, and an albedo render showed the cream reading as an angular star
          rather than as a jaw line. Dropped by the same 0.070 of head space, expressed here as
          the elevation it subtends (0.070/0.184 ≈ 0.38 rad). */
+      /* **θ floor 0.48 → 0.98, and this is the row the cheek fix missed.** The cheek row above
+         carries a long note ending "the cheek row earns its place at the head's silhouette
+         tangent and nowhere else", and its floor was raised 0.86 → 1.18 because "past the eye is
+         still ON THE FACE at the three-quarter azimuths every character shot uses". That fix
+         moved ONE row. This row sits at θ 0.48 — *more frontal than the 0.86 that was already
+         judged too frontal* — and was left where it was, which is KNOWN_ISSUES §7's "when a bug
+         has a shape, grep for the shape" in miniature.
+         `tuftDensity` 0.46 makes `cnt(3)` exactly 2, so this row is two cards per side and the
+         θ=0.48 one stood on the frontal plane of the jaw. Rendered (`shots/char12/sly-closeup.png`
+         at 3×) that is not a cream jaw line, it is a black slab: §37's mechanism — a small card
+         wrapped by a ~2.5 px ink hull is mostly hull, so a colour feature authored as cards
+         renders as ink. The row keeps its job of framing the muzzle from the side, where the
+         cream can actually be seen, and gives up the frontal card that was only ever ink.
+
+         Offline check: the head silhouette loses exactly the two frontal muzzle protrusions and
+         keeps the jaw-line serration, the cap, the ears and the muzzle outline; triangle count
+         is unchanged at 14044 because cards moved rather than being added. **FRAME VERIFICATION
+         PENDING** in `shots/char13/sly-closeup.png` against `shots/char12/sly-closeup.png` as
+         control — the chip is an ink-hull artefact and no offline probe here renders the hull.
+
+         THE SAME DEFECT SHAPE REMAINS IN TWO ROWS I DELIBERATELY DID NOT TOUCH, both below:
+         the neck ruff's inner card sits at θ 0.95, and the chest ruff spans θ ∈ [−0.64, 0.64],
+         i.e. entirely across the FRONT of the chest. Those are the black chips visible down the
+         collar in `char12/sly-closeup.png` at 3×. They are NOT the same fix: this row frames the
+         muzzle and can do that from the side, whereas a collar ruff exists to scallop an
+         interior edge and moving it to the silhouette tangent deletes its purpose. §37 found the
+         card population was net negative overall, so *removing* the chest row is a legitimate
+         option — but it needs its own frame-level hold-out, not a guess. */
       for (let i = 0; i < cnt(3); i++) {
         const f = i / (cnt(3) - 1);
-        const th = side * THREE.MathUtils.lerp(0.48, 1.10, f);
+        const th = side * THREE.MathUtils.lerp(0.98, 1.30, f);
         const base = this.headSurf(th, -0.44 - TUNE.muzzleDrop / 0.184 + f * 0.14, 0.96);
         const out = base.clone().sub(this.headCenter).normalize();
         put({

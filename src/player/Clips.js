@@ -635,7 +635,42 @@ def('perch_idle', {
        the two levers that would not touch the aim — shaft length and grip height — are global
        across all 52 clips and would shrink the hook everywhere. Handed over with the numbers
        rather than guessed at. */
-    { t: 0, e: 'soft', P: PERCH, pos: [0.045, -0.30, 0.07], cane: [116, -30, 45] },
+    /* ── x 116 → 140 (+24° on all four keys, drift untouched). THE FRAME THE NOTE ABOVE ASKED
+       FOR NOW EXISTS, and it went against the aim. `shots/char12/hero.png` at 5× and
+       `shots/char12/sly-perch.png` both render the crook CUT BY THE FLOOR: on `sly-perch` the
+       surviving arc is a gold crescent lying beside his boot — KNOWN_ISSUES §82.4's "floating
+       brown prop", finally seen rather than inferred — and on `hero` it is a dark detached rod.
+       §86.6 says `hero` "carries on tail and cane-hook silhouette alone"; the tail carries and
+       the hook does not.
+
+       So the trade the note declined is no longer rank-1-vs-6cm. The rank-1 hook read is scored
+       by `tools/canesweep.mjs`, which builds the model against `new THREE.Scene()` — **no level
+       geometry at all** — so its "is the crook high enough to be against open background" is
+       measured against a void. In a void a crook at ankle height IS against open background;
+       with a deck under him it is buried. Rank 1 of 10351 was rank 1 in a room with no floor.
+       (§11's instrument family, and the fifth instance in this ledger.)
+
+       Δ chosen against the breath, not just the frozen key: `scratchpad/canelow.mjs` (which
+       reproduces the destroyed probe exactly — shipped aim decodes to [116,-30,45] and gives
+       lowest cane vertex −0.0621, matching the −0.062 recorded below) puts first clearance at
+       x = 132, but that is +1.7 mm, which is grazing rather than clearing, and the drift dips
+       to base−4 at t=1.7. Base 140 clears by 3.7 cm frozen and 2.0 cm at the drift trough.
+       All four keys move by the same +24 so only the centre moves — §9's orphaned-key trap,
+       which this clip's own tail and cane notes already document.
+
+       SELECTED BY SILHOUETTE, not by score, which is the rule the note above states: canesweep
+       models the crook against `head` and `chest` only and the tail is the largest mass in this
+       pose. Checked on `shotsil` at `hero`'s own 70°/1° — crook clear of tail and body.
+
+       **FRAME VERIFICATION PENDING — do not read this as closed.** Everything above is offline:
+       `canelow.mjs` for the clearance and `shotsil` for the read, and neither has the ink hull,
+       the level, or the lighting. The capture that closes it was queued as `shots/char13/`
+       (sly-closeup, sly-perch, hero) behind two other agents' runs and may not have landed.
+       The control is `shots/char12/` — same three framings, this clip at x = 116. What to check:
+       the crook is over open air along its whole arc in `hero`, and the gold crescent beside the
+       boot in `sly-perch` is gone. If it is not, the honest revert is back to 116 and the item
+       goes back to being a staging question (`sly-perch` frames a ledge pose on flat paving). */
+    { t: 0, e: 'soft', P: PERCH, pos: [0.045, -0.30, 0.07], cane: [140, -30, 45] },
     /* In-between keys re-derived as the SAME breath drifts on the new base — these are
        absolute angles, and §9's orphaned-key trap is exactly a base pose moving under keys
        like these. Old drift preserved: hips +[2,1,-1] / chest +[-3,-2,1] / head +[-3,3,-1]
@@ -648,12 +683,12 @@ def('perch_idle', {
        twice every 3.2 s, on the one clip the money shot freezes. */
     { t: 0.8, e: 'soft', P: { chest: [-17, -13, 15], head: [-21, 18, 1], hips: [28, 11, -14],
       // re-authored with the base pose's tail arc — these are absolute, not deltas
-      tailA: [-22, -36, 0], tailB: [22, -40, 0], tailD: [12, 30, 0] }, pos: [0.045, -0.325, 0.078], cane: [120, -34, 45] },
+      tailA: [-22, -36, 0], tailB: [22, -40, 0], tailD: [12, 30, 0] }, pos: [0.045, -0.325, 0.078], cane: [144, -34, 45] },
     { t: 1.7, e: 'soft', P: { chest: [-11, -9, 13], head: [-15, 12, 3], hips: [24, 9, -12],
-      tailA: [-14, -25, 0], tailB: [30, -29, 0], tailD: [4, 22, 0] }, pos: [0.045, -0.285, 0.062], cane: [112, -26, 45] },
+      tailA: [-14, -25, 0], tailB: [30, -29, 0], tailD: [4, 22, 0] }, pos: [0.045, -0.285, 0.062], cane: [136, -26, 45] },
     // a small head-flick as something below catches his eye
     { t: 2.3, e: 'out', P: { head: [-14, 26, -3], neck: [-14, 13, 4], earL: [-20, 8, -24] } },
-    { t: 3.2, e: 'soft', P: PERCH, pos: [0.045, -0.30, 0.07], cane: [116, -30, 45] },
+    { t: 3.2, e: 'soft', P: PERCH, pos: [0.045, -0.30, 0.07], cane: [140, -30, 45] },
   ],
 });
 
