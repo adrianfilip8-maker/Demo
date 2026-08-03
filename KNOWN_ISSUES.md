@@ -12769,3 +12769,67 @@ before the dedupe fix in §130.2.
 > Same digits, opposite meaning, for the third time (§130.3, §146.2, here). The counted column is
 > *the* recurring foothold in this project, and knowing why it is wrong has not been enough to stop
 > reaching for it — because it is what `report.json` prints, and the scored line has to be computed.
+
+## §150 — testing the classifier instead of the threshold, and choosing the shots most likely to break your own fix
+
+FX staged candidate 1 to land the instant the window opens. The window fails right now — lock held
+by `hgcframe`, two live tickets behind it — so `src/fx/Particles.js` is still untouched. Everything
+below was built while waiting.
+
+### 150.1 The hazard inverted rather than timed
+
+`window-take.sh` does not trust the moment it was scheduled. It **re-verifies the condition
+atomically at execution time** and exits if either half fails, and then — the part that matters —
+**plants its own live queue ticket before touching a file.** Any arm arriving mid-edit queues behind
+it rather than booting into a half-applied tree.
+
+> **That converts a timing assumption into a lock.** The window rule I gave FX ("check no lock, no
+> live ticket, then edit") is correct and racy: a capture registered one second after the check
+> boots into a tree that is being edited. Planting a ticket first makes the edit itself a
+> lock-holder, which is the only version that cannot lose the race.
+
+It also carries a **drift guard**: the candidate is a full-file derivative, so it compares hunk count
+against the recorded patch and aborts if `src` moved underneath it — *"re-derive rather than forcing
+this."* Dry-run at time of writing: **8 hunks against 8 recorded, MATCH.** On failure it applies,
+`node --check`s, and **reverts**, then launches, verifies `ppid 1` from `/proc`, and only then
+releases its ticket.
+
+### 150.2 Verifying the classifier, not the threshold
+
+I asked FX to verify the registered thresholds before scoring D2, because §148.3 established the
+numbers were measured on the graded PNG and the shader samples scene colour before AgX. FX built
+something better than what I asked for.
+
+The probe reproduces the fragment shader's gate arithmetic **line-for-line on the CPU, reading the
+very texels the shader reads** — raw bytes, RT type and colorSpace recorded rather than assumed —
+and then evaluates the whole chain: `enc`, `bl`, `rb`, `wl`, `wr`, `factor`.
+
+> **The decisive test is not whether the sampled value matches 44.4. It is whether the classifier
+> lands on the right side: fires at the disc (602,133), exactly zero at the non-artefact
+> (520,581).** The anchor is reported alongside as a sanity check and **D2 is not scored on it**,
+> because a pre-grade sample and a graded-PNG measurement are different quantities.
+
+And the failure branch is registered: if it misclassifies, **D2 is reported unscoreable — not a
+moved threshold.** That is §141.1's rule applied to a units problem instead of a scale problem: the
+answer to a number that will not transfer is not a rescaled number, it is a test that does not need
+the transfer.
+
+### 150.3 A shot list chosen for what it can falsify
+
+`temple` for the artefact; `hero` / `dunes` / `courtyard` as the D1 bit-identity population, which
+§145.2 established contain no dark-blue surface class at all. And then:
+
+> **`night` and `interior` deliberately included as the false-positive risk** — both full of dark
+> blue, so if the backdrop proxy has drifted off the mechanism it **over-fires there and D4 catches
+> it.**
+
+FX's own line: *"An exterior-only run would have made D1 easy and told us nothing."*
+
+Every registered arm in this project has been built to test whether a fix works. **This is the first
+built to give the fix the best available chance to fail** — and the two shots that provide it were
+chosen precisely because they are the population where the mechanism and its correlate come apart.
+That is the same instinct as §147.2's *"not free for a broken version of the preferred fix"*,
+applied to the sample rather than to the criterion.
+
+D3 takes both halves at 4× — the disc gone **and** the 23 non-gated haze components intact — under
+the standing rule that if the picture and the statistic disagree, the picture is the finding.
