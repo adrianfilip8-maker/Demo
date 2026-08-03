@@ -230,7 +230,7 @@ const out = await page.evaluate(async ({ SIZE }) => {
     return (h >>> 0).toString(16);
   };
 
-  const NAMES = ['hieroglyph_gilded', 'hieroglyph_wall', 'column_papyrus', 'sandstone_block', 'gold_leaf'];
+  const NAMES = ['hieroglyph_gilded', 'hieroglyph_wall', 'column_papyrus', 'sandstone_block', 'gold_leaf', 'paving_courtyard'];
   const ARMS = [['ctl', 'hgchisel'], ['hgt', 'hgsignval'], ['cand', '']];
 
   const res = {};
@@ -255,7 +255,13 @@ const out = await page.evaluate(async ({ SIZE }) => {
       if (name === 'hieroglyph_gilded') {
         row.band = bandStats(s, der, sz);
         row.bandSquint8 = bandSquint(der, sz);
+        // The leaf itself, inside the seam band — not the limestone rail above and below it.
+        row.gild = colour(s, der, sz, (i, row2) => {
+          const v = row2 / sz;
+          return (v <= BAND_VH || v >= 1 - BAND_VH) && s.metal[i] > 0.5;
+        });
       }
+      if (name === 'paving_courtyard') row.paving = colour(s, der, sz, () => true);
       res[arm][name] = row;
       if (name === 'hieroglyph_gilded') surfaces[arm][name] = { r: Array.from(s.r), g: Array.from(s.g), b: Array.from(s.b), h: Array.from(s.h), size: sz };
     }
@@ -332,7 +338,7 @@ for (const a of ['ctl', 'hgt', 'cand']) {
 }
 
 console.log('\nNULLS — every other recipe must be BIT-IDENTICAL across arms (the change is scoped)');
-for (const name of ['hieroglyph_wall', 'column_papyrus', 'sandstone_block', 'gold_leaf']) {
+for (const name of ['hieroglyph_wall', 'column_papyrus', 'sandstone_block', 'gold_leaf', 'paving_courtyard']) {
   const h = ['ctl', 'hgt', 'cand'].map((a) => res[a][name].hash);
   console.log(`  ${name.padEnd(20)} ${h.join('  ')}   ${h[0] === h[1] && h[1] === h[2] ? 'IDENTICAL' : '*** MOVED ***'}`);
 }
@@ -342,6 +348,19 @@ console.log('  arm    lumaP5   lumaP50  lumaP95  span    lumaSd(1:1)  squint sd(
 for (const a of ['ctl', 'hgt', 'cand']) {
   const r = res[a].hieroglyph_gilded, b = r.band;
   console.log(`  ${a.padEnd(6)} ${String(b.lumaP5).padEnd(8)} ${String(b.lumaP50).padEnd(8)} ${String(b.lumaP95).padEnd(8)} ${String(b.span).padEnd(7)} ${String(b.lumaSd).padEnd(12)} ${String(r.bandSquint8).padEnd(15)} ${b.hP5}/${b.hP50}   ${b.roughP5}/${b.roughP95}`);
+}
+
+console.log('\nCROSS-MATERIAL CONTROL — the gild against ordinary paving. ALBEDO ONLY, no lighting;');
+console.log('GEOMETRY\'s in-frame row (gild L 69.9 / chroma 0.335 / b-r -0.061 vs paving 94.8 / 0.559');
+console.log('/ -0.288) is a different quantity — read the MOVEMENT here, not the absolute gap.');
+console.log('  arm                    L      chroma   (b-r)/255   mean RGB');
+for (const a of ['ctl', 'hgt', 'cand']) {
+  const c = res[a].hieroglyph_gilded.gild;
+  console.log(`  gild ${a.padEnd(18)} ${String(c.L).padEnd(6)} ${String(c.chroma).padEnd(8)} ${String(c.bMinusR).padEnd(11)} ${c.rgb.join(', ')}`);
+}
+{
+  const p = res.cand.paving_courtyard.paving;
+  console.log(`  paving_courtyard (bar) ${String(p.L).padEnd(6)} ${String(p.chroma).padEnd(8)} ${String(p.bMinusR).padEnd(11)} ${p.rgb.join(', ')}`);
 }
 
 console.log('\nWHERE THE CHANGE LANDED — signed luma diff vs ctl, split on whether the chisel cut the texel');
