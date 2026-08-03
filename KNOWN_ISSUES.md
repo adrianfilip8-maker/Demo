@@ -6187,6 +6187,15 @@ it is not reaching these clumps or its strength is insufficient. **Two separable
 want separate fixes:** the tube silhouette is smooth, **and** the clumps shade as chips rather than
 continuously with the host.
 
+> **HALF-WITHDRAWN BY ITS AUTHOR (§77.3), on a tone census rather than on the crop.** *Supported:*
+> the forearm's outboard half sits at ink value — **51.4% below luma 45** against **27.7%** on the
+> sleeve — so silhouette line and shadowed fur do not separate in value. **NOT supported: the "flat
+> chip that does not shade continuously with its host" half.** Mid-tone share is **17.2% on the
+> forearm and 17.2% on the sleeve — identical, no ramp collapse.** What read as a flat chip off the
+> crop is *the shadowed side of the arm at ink value*. Its author's own words: **"I would have filed
+> that as a finding from the image alone."** The cyan specular stripe survives but belongs to the
+> **sleeve** (cloth, y=364, ~13 px at luma 147–155), not to the fur condition.
+
 ### 72.7 A number that needs its population
 
 §66 records the `sly-arm` precondition as *"median 34 px proud"*; `armframe.mjs` as shipped prints
@@ -6530,3 +6539,85 @@ The instruments this session built are genuinely better: preregistration with re
 falsifiers, absence controls, scatter nulls, applied-state readback, provenance gates. **None of
 them was watching whether the cane is in the hand.** A blind observer at thumbnail size found that
 in one frame.
+
+
+---
+
+## §77 — the abort clause was unmeetable for any grounded pose, and reading B is met
+
+CHARACTER scoring `sly-arm` against `PREREG-slyarm.md`. Freshness established first:
+`git diff 8d558b1 4e6601b -- src/player src/core/Shots.js` is **empty**, so sealing tree and capture
+tree are bit-identical over everything the instruments read, and both tools reproduce the sealed
+numbers on the capture tree rather than quoting them.
+
+### 77.1 The height abort failed, and the clause is defective rather than the staging
+
+`543 ± 8 px` registered; **524 px measured.** Rather than report an abort, CHARACTER did landmark
+registration between PNG ink edge and geometry edge (the hull displaces outward ~2–3 px by design):
+
+```
+figure top       118 vs 119   −1.0        leg left y=550   588 vs 596    −8.0
+head left  y=150 632 vs 634   −2.0        leg left y=560   581 vs 593   −12.0
+head right y=150 676 vs 673   +3.0        leg left y=570   575 vs 589   −14.0
+ARM right y=350–382  +2.12 ± 0.59 (n=33)  figure bottom    641 vs 661   −20
+```
+
+> **A staging difference is a rigid transform. It cannot leave the head within 1 px and the arm
+> within 0.6 px while moving the feet 20 px.** Only a below-knee pose difference does — **foot IK**,
+> the first entry in `armprofile.mjs`'s own not-implemented list.
+
+Bracketed with repo tools: the un-IK'd bottom projects to world y ≈ **−0.145 m**, while `footall.mjs`
+reads `cane_combo_2`'s IK-solved lowest boot at **−0.015 m** — a lift of order 30–40 px against a
+±8 px (2.6 cm) tolerance. **The clause was unmeetable by construction for any grounded pose.**
+
+§69.2's shape a third time — *and* committed in §5 of the very document whose §0 catches exactly
+this for the cuff ruler. The registration table is the replacement, and it passes.
+
+### 77.2 Reading B is met, on the row that was sealed
+
+- gross step at **y = 371**, the exact sealed row: **+10.25 px** (outer ink) / **+10.31 px**
+  (sub-pixel), against a predicted +10.00;
+- drift slopes measured 0.240 and 0.647 px/row against registered ~0.2 and ~0.8 → **net +8.54 px**
+  against a registered ~8;
+- secondaries: `R_arm` **0.163** (predicted 0.159), `R_fig` **0.0189** (predicted 0.0184);
+- **4× the ~2.5 px ink hull.**
+
+Bands were A ≤ 3 / indeterminate 3–6 / **B ≥ 6**. **The authored sleeve hem survives shader, ink
+hull, tonemap and AA, and breaks the silhouette. The arms sub-claim is met in this pose, and
+geometry is not the lever there.** The control passed too — `SLEEVE 60 + FOREARM 63 = 123` against
+`armframe`'s independent `ARM 123`, re-derived on the capture tree.
+
+### 77.3 Its author half-withdrew §72.6 on a census, and named what it would have filed
+
+Recorded at §72.6's declaration site. The half that survives is measured; the half that dies is the
+half that came from looking at a crop — *"I would have filed that as a finding from the image
+alone."* This is the mirror of §74.2, where a diff image pointed exactly where its author expected
+and was wrong: **the image is where hypotheses come from and never where they are settled.**
+
+### 77.4 Two things it could not do, said plainly rather than approximated
+
+- **The band labelling is not checkable against the frame.** Bone and material labels are *mesh
+  identity with no pixel signature* — which is precisely why §66.1 retired the colour predicate. What
+  *is* checkable is edge registration across the band boundary, which is what the table above does.
+- **The PNG edge predicate is only valid to y ≈ 382**, below which the background is itself in
+  shadow. Past that it substituted the registered geometry edge **and named it as the one borrowed
+  transform.**
+
+### 77.5 An incidental defect in a tool that was just promoted
+
+`armframe.mjs`'s `spec` mode builds a bone-granularity label array (`const fine = …`) **and never
+uses it** — it reports through the coarse `isArmPart`, so it neither splits `upperArm` from
+`lowerArm` as its own comment claims, nor distinguishes left arm from right. Both tools' ARM
+predicates are `[LR]`-agnostic, **so `123 = 123` would have agreed even if the outboard edge handed
+over between arms at y = 371.**
+
+Checked separately rather than assumed: `armframe`'s depth column runs smoothly through the boundary
+(Rdep 24 → 32 → 39 → 43 over y 370–400) and the PNG tracks geometry at constant offset across it —
+both inconsistent with a limb handover at a different depth. **A control that would pass under the
+defect is not a control**, and this one was rescued by an independent check rather than by luck.
+
+### 77.6 A ledger figure that needs re-deriving
+
+`tools/headratio.mjs` on `idle_confident` reports **5.72 heads**, against **5.29** recorded in §9.
+That is *worse*, not better. Either the rig drifted since or §9's figure used a different basis —
+**re-derive it rather than re-quote either number.** Fourth instance of §58.3's family.
