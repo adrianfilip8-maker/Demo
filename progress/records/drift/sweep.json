@@ -1,0 +1,698 @@
+[
+ {
+  "shot": "hero",
+  "arm": "base",
+  "fillSkyMix": 0.7,
+  "rimGain": 2.05,
+  "shadowBounceMix": 0.05,
+  "shadowTeal": 0.15,
+  "bloomThreshold": 2.2,
+  "bloomKnee": 0.3,
+  "subjWarmShade": 0.5,
+  "uShadowColor": [
+   0.09610110548811887,
+   0.3131151084062172,
+   0.49658292862905856
+  ],
+  "mark": {
+   "poke": 0,
+   "step": 11,
+   "capture": 19456
+  },
+  "mismatch": [
+   "rimGain"
+  ]
+ },
+ {
+  "shot": "hero",
+  "arm": "fill0",
+  "fillSkyMix": 0,
+  "rimGain": 2.05,
+  "shadowBounceMix": 0.05,
+  "shadowTeal": 0.15,
+  "bloomThreshold": 2.2,
+  "bloomKnee": 0.3,
+  "subjWarmShade": 0.5,
+  "uShadowColor": [
+   0.09610110548811887,
+   0.3131151084062172,
+   0.49658292862905856
+  ],
+  "mark": {
+   "poke": 0,
+   "step": 13,
+   "capture": 19066
+  },
+  "mismatch": [
+   "rimGain"
+  ]
+ },
+ {
+  "shot": "hero",
+  "arm": "sbm20",
+  "fillSkyMix": 0.7,
+  "rimGain": 2.05,
+  "shadowBounceMix": 0.2,
+  "shadowTeal": 0.15,
+  "bloomThreshold": 2.2,
+  "bloomKnee": 0.3,
+  "subjWarmShade": 0.5,
+  "uShadowColor": [
+   0.15893501882289637,
+   0.30152904532452285,
+   0.4263317145162342
+  ],
+  "mark": {
+   "poke": 0,
+   "step": 14,
+   "capture": 19055
+  },
+  "mismatch": [
+   "rimGain"
+  ]
+ },
+ {
+  "shot": "hero",
+  "arm": "teal0",
+  "fillSkyMix": 0.7,
+  "rimGain": 2.05,
+  "shadowBounceMix": 0.05,
+  "shadowTeal": 0,
+  "bloomThreshold": 2.2,
+  "bloomKnee": 0.3,
+  "subjWarmShade": 0.5,
+  "uShadowColor": [
+   0.10335597860116319,
+   0.1931888320772324,
+   0.49580604355441954
+  ],
+  "mark": {
+   "poke": 0,
+   "step": 15,
+   "capture": 19103
+  },
+  "mismatch": [
+   "rimGain"
+  ]
+ },
+ {
+  "shot": "hero",
+  "arm": "rim205",
+  "fillSkyMix": 0.7,
+  "rimGain": 1.025,
+  "shadowBounceMix": 0.05,
+  "shadowTeal": 0.15,
+  "bloomThreshold": 2.2,
+  "bloomKnee": 0.3,
+  "subjWarmShade": 0.5,
+  "uShadowColor": [
+   0.09610110548811887,
+   0.3131151084062172,
+   0.49658292862905856
+  ],
+  "mark": {
+   "poke": 0,
+   "step": 11,
+   "capture": 19195
+  },
+  "mismatch": [
+   "rimGain"
+  ]
+ },
+ {
+  "shot": "hero",
+  "arm": "bloom155",
+  "fillSkyMix": 0.7,
+  "rimGain": 2.05,
+  "shadowBounceMix": 0.05,
+  "shadowTeal": 0.15,
+  "bloomThreshold": 1.55,
+  "bloomKnee": 0.45,
+  "subjWarmShade": 0.5,
+  "uShadowColor": [
+   0.09610110548811887,
+   0.3131151084062172,
+   0.49658292862905856
+  ],
+  "mark": {
+   "poke": 0,
+   "step": 12,
+   "capture": 19156
+  },
+  "mismatch": [
+   "rimGain"
+  ]
+ },
+ {
+  "shot": "hero",
+  "arm": "fill0sbm20",
+  "fillSkyMix": 0,
+  "rimGain": 2.05,
+  "shadowBounceMix": 0.2,
+  "shadowTeal": 0.15,
+  "bloomThreshold": 2.2,
+  "bloomKnee": 0.3,
+  "subjWarmShade": 0.5,
+  "uShadowColor": [
+   0.15893501882289637,
+   0.30152904532452285,
+   0.4263317145162342
+  ],
+  "mark": {
+   "poke": 0,
+   "step": 11,
+   "capture": 19070
+  },
+  "mismatch": [
+   "rimGain"
+  ]
+ },
+ {
+  "shot": "hero",
+  "arm": "tx7all",
+  "fillSkyMix": 0,
+  "rimGain": 1.025,
+  "shadowBounceMix": 0.2,
+  "shadowTeal": 0,
+  "bloomThreshold": 1.55,
+  "bloomKnee": 0.45,
+  "subjWarmShade": 0.5,
+  "uShadowColor": [
+   0.1415814555664013,
+   0.18915314214896492,
+   0.4232241742176782
+  ],
+  "mark": {
+   "poke": 0,
+   "step": 16,
+   "capture": 19476
+  },
+  "mismatch": [
+   "rimGain"
+  ]
+ },
+ {
+  "shot": "hero",
+  "arm": "subjwarm0",
+  "fillSkyMix": 0.7,
+  "rimGain": 2.05,
+  "shadowBounceMix": 0.05,
+  "shadowTeal": 0.15,
+  "bloomThreshold": 2.2,
+  "bloomKnee": 0.3,
+  "subjWarmShade": 0,
+  "uShadowColor": [
+   0.09610110548811887,
+   0.3131151084062172,
+   0.49658292862905856
+  ],
+  "mark": {
+   "poke": 0,
+   "step": 12,
+   "capture": 19041
+  },
+  "mismatch": [
+   "rimGain"
+  ]
+ },
+ {
+  "shot": "hero",
+  "arm": "base2",
+  "fillSkyMix": 0.7,
+  "rimGain": 2.05,
+  "shadowBounceMix": 0.05,
+  "shadowTeal": 0.15,
+  "bloomThreshold": 2.2,
+  "bloomKnee": 0.3,
+  "subjWarmShade": 0.5,
+  "uShadowColor": [
+   0.09610110548811887,
+   0.3131151084062172,
+   0.49658292862905856
+  ],
+  "mark": {
+   "poke": 0,
+   "step": 12,
+   "capture": 17976
+  },
+  "mismatch": [
+   "rimGain"
+  ]
+ },
+ {
+  "shot": "temple",
+  "arm": "base",
+  "fillSkyMix": 0.7,
+  "rimGain": 2.05,
+  "shadowBounceMix": 0.05,
+  "shadowTeal": 0.15,
+  "bloomThreshold": 2.2,
+  "bloomKnee": 0.3,
+  "subjWarmShade": 0.5,
+  "uShadowColor": [
+   0.09594484161473013,
+   0.3131499340626409,
+   0.49669808638540497
+  ],
+  "mark": {
+   "poke": 0,
+   "step": 6,
+   "capture": 150104
+  },
+  "mismatch": [
+   "rimGain"
+  ]
+ },
+ {
+  "shot": "temple",
+  "arm": "fill0",
+  "fillSkyMix": 0,
+  "rimGain": 2.05,
+  "shadowBounceMix": 0.05,
+  "shadowTeal": 0.15,
+  "bloomThreshold": 2.2,
+  "bloomKnee": 0.3,
+  "subjWarmShade": 0.5,
+  "uShadowColor": [
+   0.09594484161473013,
+   0.3131499340626409,
+   0.49669808638540497
+  ],
+  "mark": {
+   "poke": 0,
+   "step": 6,
+   "capture": 14729
+  },
+  "mismatch": [
+   "rimGain"
+  ]
+ },
+ {
+  "shot": "temple",
+  "arm": "sbm20",
+  "fillSkyMix": 0.7,
+  "rimGain": 2.05,
+  "shadowBounceMix": 0.2,
+  "shadowTeal": 0.15,
+  "bloomThreshold": 2.2,
+  "bloomKnee": 0.3,
+  "subjWarmShade": 0.5,
+  "uShadowColor": [
+   0.1583099633293409,
+   0.30166834795021785,
+   0.42679234554162
+  ],
+  "mark": {
+   "poke": 0,
+   "step": 8,
+   "capture": 15128
+  },
+  "mismatch": [
+   "rimGain"
+  ]
+ },
+ {
+  "shot": "temple",
+  "arm": "fill0sbm20",
+  "fillSkyMix": 0,
+  "rimGain": 2.05,
+  "shadowBounceMix": 0.2,
+  "shadowTeal": 0.15,
+  "bloomThreshold": 2.2,
+  "bloomKnee": 0.3,
+  "subjWarmShade": 0.5,
+  "uShadowColor": [
+   0.1583099633293409,
+   0.30166834795021785,
+   0.42679234554162
+  ],
+  "mark": {
+   "poke": 0,
+   "step": 11,
+   "capture": 14773
+  },
+  "mismatch": [
+   "rimGain"
+  ]
+ },
+ {
+  "shot": "temple",
+  "arm": "tx7all",
+  "fillSkyMix": 0,
+  "rimGain": 1.025,
+  "shadowBounceMix": 0.2,
+  "shadowTeal": 0,
+  "bloomThreshold": 1.55,
+  "bloomKnee": 0.45,
+  "subjWarmShade": 0.5,
+  "uShadowColor": [
+   0.14114440228022437,
+   0.18925054577306039,
+   0.4235462581053258
+  ],
+  "mark": {
+   "poke": 0,
+   "step": 7,
+   "capture": 15041
+  },
+  "mismatch": [
+   "rimGain"
+  ]
+ },
+ {
+  "shot": "temple",
+  "arm": "base2",
+  "fillSkyMix": 0.7,
+  "rimGain": 2.05,
+  "shadowBounceMix": 0.05,
+  "shadowTeal": 0.15,
+  "bloomThreshold": 2.2,
+  "bloomKnee": 0.3,
+  "subjWarmShade": 0.5,
+  "uShadowColor": [
+   0.09594484161473013,
+   0.3131499340626409,
+   0.49669808638540497
+  ],
+  "mark": {
+   "poke": 0,
+   "step": 6,
+   "capture": 14745
+  },
+  "mismatch": [
+   "rimGain"
+  ]
+ },
+ {
+  "shot": "dunes",
+  "arm": "base",
+  "fillSkyMix": 0.7,
+  "rimGain": 2.05,
+  "shadowBounceMix": 0.05,
+  "shadowTeal": 0.15,
+  "bloomThreshold": 2.2,
+  "bloomKnee": 0.3,
+  "subjWarmShade": 0.5,
+  "uShadowColor": [
+   0.0813036356378327,
+   0.2630502298250008,
+   0.4174802794016253
+  ],
+  "mark": {
+   "poke": 0,
+   "step": 7,
+   "capture": 128060
+  },
+  "mismatch": [
+   "rimGain"
+  ]
+ },
+ {
+  "shot": "dunes",
+  "arm": "fill0",
+  "fillSkyMix": 0,
+  "rimGain": 2.05,
+  "shadowBounceMix": 0.05,
+  "shadowTeal": 0.15,
+  "bloomThreshold": 2.2,
+  "bloomKnee": 0.3,
+  "subjWarmShade": 0.5,
+  "uShadowColor": [
+   0.0813036356378327,
+   0.2630502298250008,
+   0.4174802794016253
+  ],
+  "mark": {
+   "poke": 0,
+   "step": 9,
+   "capture": 14382
+  },
+  "mismatch": [
+   "rimGain"
+  ]
+ },
+ {
+  "shot": "dunes",
+  "arm": "sbm20",
+  "fillSkyMix": 0.7,
+  "rimGain": 2.05,
+  "shadowBounceMix": 0.2,
+  "shadowTeal": 0.15,
+  "bloomThreshold": 2.2,
+  "bloomKnee": 0.3,
+  "subjWarmShade": 0.5,
+  "uShadowColor": [
+   0.1356815828095865,
+   0.2528337411631583,
+   0.35856173538825786
+  ],
+  "mark": {
+   "poke": 0,
+   "step": 9,
+   "capture": 13484
+  },
+  "mismatch": [
+   "rimGain"
+  ]
+ },
+ {
+  "shot": "dunes",
+  "arm": "fill0sbm20",
+  "fillSkyMix": 0,
+  "rimGain": 2.05,
+  "shadowBounceMix": 0.2,
+  "shadowTeal": 0.15,
+  "bloomThreshold": 2.2,
+  "bloomKnee": 0.3,
+  "subjWarmShade": 0.5,
+  "uShadowColor": [
+   0.1356815828095865,
+   0.2528337411631583,
+   0.35856173538825786
+  ],
+  "mark": {
+   "poke": 0,
+   "step": 12,
+   "capture": 13524
+  },
+  "mismatch": [
+   "rimGain"
+  ]
+ },
+ {
+  "shot": "dunes",
+  "arm": "tx7all",
+  "fillSkyMix": 0,
+  "rimGain": 1.025,
+  "shadowBounceMix": 0.2,
+  "shadowTeal": 0,
+  "bloomThreshold": 1.55,
+  "bloomKnee": 0.45,
+  "subjWarmShade": 0.5,
+  "uShadowColor": [
+   0.14331028753778133,
+   0.1886240395793325,
+   0.4233746517895027
+  ],
+  "mark": {
+   "poke": 0,
+   "step": 10,
+   "capture": 13954
+  },
+  "mismatch": [
+   "rimGain"
+  ]
+ },
+ {
+  "shot": "dunes",
+  "arm": "base2",
+  "fillSkyMix": 0.7,
+  "rimGain": 2.05,
+  "shadowBounceMix": 0.05,
+  "shadowTeal": 0.15,
+  "bloomThreshold": 2.2,
+  "bloomKnee": 0.3,
+  "subjWarmShade": 0.5,
+  "uShadowColor": [
+   0.0813036356378327,
+   0.2630502298250008,
+   0.4174802794016253
+  ],
+  "mark": {
+   "poke": 0,
+   "step": 8,
+   "capture": 13652
+  },
+  "mismatch": [
+   "rimGain"
+  ]
+ },
+ {
+  "shot": "sly-closeup",
+  "arm": "base",
+  "fillSkyMix": 0.7,
+  "rimGain": 2.05,
+  "shadowBounceMix": 0.05,
+  "shadowTeal": 0.15,
+  "bloomThreshold": 2.2,
+  "bloomKnee": 0.3,
+  "subjWarmShade": 0.5,
+  "uShadowColor": [
+   0.09611643093103707,
+   0.3131104181116351,
+   0.4965842625559385
+  ],
+  "mark": {
+   "poke": 0,
+   "step": 5,
+   "capture": 169066
+  },
+  "mismatch": [
+   "rimGain"
+  ]
+ },
+ {
+  "shot": "sly-closeup",
+  "arm": "fill0",
+  "fillSkyMix": 0,
+  "rimGain": 2.05,
+  "shadowBounceMix": 0.05,
+  "shadowTeal": 0.15,
+  "bloomThreshold": 2.2,
+  "bloomKnee": 0.3,
+  "subjWarmShade": 0.5,
+  "uShadowColor": [
+   0.09611643093103707,
+   0.3131104181116351,
+   0.4965842625559385
+  ],
+  "mark": {
+   "poke": 0,
+   "step": 9,
+   "capture": 17199
+  },
+  "mismatch": [
+   "rimGain"
+  ]
+ },
+ {
+  "shot": "sly-closeup",
+  "arm": "sbm20",
+  "fillSkyMix": 0.7,
+  "rimGain": 2.05,
+  "shadowBounceMix": 0.2,
+  "shadowTeal": 0.15,
+  "bloomThreshold": 2.2,
+  "bloomKnee": 0.3,
+  "subjWarmShade": 0.5,
+  "uShadowColor": [
+   0.1589963205945689,
+   0.3015102841461944,
+   0.4263370502237539
+  ],
+  "mark": {
+   "poke": 0,
+   "step": 7,
+   "capture": 17746
+  },
+  "mismatch": [
+   "rimGain"
+  ]
+ },
+ {
+  "shot": "sly-closeup",
+  "arm": "fill0sbm20",
+  "fillSkyMix": 0,
+  "rimGain": 2.05,
+  "shadowBounceMix": 0.2,
+  "shadowTeal": 0.15,
+  "bloomThreshold": 2.2,
+  "bloomKnee": 0.3,
+  "subjWarmShade": 0.5,
+  "uShadowColor": [
+   0.1589963205945689,
+   0.3015102841461944,
+   0.4263370502237539
+  ],
+  "mark": {
+   "poke": 0,
+   "step": 15,
+   "capture": 17612
+  },
+  "mismatch": [
+   "rimGain"
+  ]
+ },
+ {
+  "shot": "sly-closeup",
+  "arm": "tx7all",
+  "fillSkyMix": 0,
+  "rimGain": 1.025,
+  "shadowBounceMix": 0.2,
+  "shadowTeal": 0,
+  "bloomThreshold": 1.55,
+  "bloomKnee": 0.45,
+  "subjWarmShade": 0.5,
+  "uShadowColor": [
+   0.1416243191857666,
+   0.18914002389830473,
+   0.423227905068026
+  ],
+  "mark": {
+   "poke": 0,
+   "step": 8,
+   "capture": 17495
+  },
+  "mismatch": [
+   "rimGain"
+  ]
+ },
+ {
+  "shot": "sly-closeup",
+  "arm": "subjwarm0",
+  "fillSkyMix": 0.7,
+  "rimGain": 2.05,
+  "shadowBounceMix": 0.05,
+  "shadowTeal": 0.15,
+  "bloomThreshold": 2.2,
+  "bloomKnee": 0.3,
+  "subjWarmShade": 0,
+  "uShadowColor": [
+   0.09611643093103707,
+   0.3131104181116351,
+   0.4965842625559385
+  ],
+  "mark": {
+   "poke": 0,
+   "step": 8,
+   "capture": 17224
+  },
+  "mismatch": [
+   "rimGain"
+  ]
+ },
+ {
+  "shot": "sly-closeup",
+  "arm": "base2",
+  "fillSkyMix": 0.7,
+  "rimGain": 2.05,
+  "shadowBounceMix": 0.05,
+  "shadowTeal": 0.15,
+  "bloomThreshold": 2.2,
+  "bloomKnee": 0.3,
+  "subjWarmShade": 0.5,
+  "uShadowColor": [
+   0.09611643093103707,
+   0.3131104181116351,
+   0.4965842625559385
+  ],
+  "mark": {
+   "poke": 0,
+   "step": 7,
+   "capture": 17111
+  },
+  "mismatch": [
+   "rimGain"
+  ]
+ }
+]

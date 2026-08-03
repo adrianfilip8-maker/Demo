@@ -9357,6 +9357,13 @@ warm. Golden-hour Egypt with cold stone in it.
 
 ### 111.1 The synthesis, which no single owner could see
 
+> **THIS SYNTHESIS IS WRONG, and the discriminator registered against it in §111.3 is what killed
+> it.** SHADING fired all three legs: architecture warms **strongly**, the character moves only
+> marginally (subject-mask R/G 0.881 → 0.931, hue 222 → 225 — he stays blue), and the **sphinxes do
+> not move at all** (hue 195 → 200). **Two of three, so it is not one cause.** Recorded as a win
+> for the discriminator rather than for the hypothesis: I wrote the falsifier into the same section
+> as the guess, and it did its job against its author. See §115.
+
 Three findings were filed separately by three owners and are all *"it has gone blue"*:
 
 1. **Teal sphinxes** — the critic's finding; §104 refuted the surface rim as its cause and routed
@@ -9597,14 +9604,27 @@ pylons show lit faces; the avenue shows none.
 ### 114.3 The knob owns the turquoise and not the coolness — which points at §111
 
 With `shadowTeal` fully off the animals are still **hue 220, sat 0.43**. The residual is the
-daylight shadow light itself, which `ToonMaterial` documents as identical `(0.123, 0.175, 0.423)`
+daylight shadow light itself, which `ToonMaterial` ~~documents as identical `(0.123, 0.175, 0.423)`~~
+**— and that documented figure is STALE. `shadowTeal: 0.15` released the `shadowTintPeak` clamp
+(it binds at teal ≤ 0.05 and is free at ≥ 0.10), so the live daylight shadow light is
+`(0.096, 0.313, 0.497)` and `shadowFloor` is a live daylight knob for the first time. The clamp
+table in `_refreshShadowColor` describes a régime the build left. Quoting a documented constant
+without reading it back is §80.5's hazard in a comment instead of a uniform.** The stale value read
 for *every* daylight shot — **3.4× more blue than red.**
 
 And in the `shadowTeal = 0` frame the foreground **dune goes lavender**. That is §3's lavender
 frames and task #4's *"the build is lavender-grey"*. So the likely history is: lavender shadows →
 add `shadowTeal` to push them toward turquoise → size it on sandstone → limestone overshoots.
 
-**This is very likely §111's thread.** A shadow term that is 3.4× more blue than red, plus a
+> **REFUTED — and refuted on §111's own discriminator, which is the cleanest way to lose an
+> argument.** `shadowTeal → 0` moves frame b−r **the wrong way, by −10 %**. The reason is
+> structural and is the finding: `shadowBounceMix` is the **red** knob (ΔR +66 %, ΔG −4 %) and
+> `shadowTeal` is the **green** knob (ΔR +7 %, ΔG −38 %). **b−r cannot see green.** So §111's
+> statistic is blind by construction to §114's culprit, and §114's hue statistic is sensitive to
+> it — two correct measurements that could never have agreed. §114 remains right about the
+> sphinxes. See §115.
+
+~~**This is very likely §111's thread.**~~ A shadow term that is 3.4× more blue than red, plus a
 turquoise blend on top, is exactly the shape of a global b−r swing — and it satisfies §111's
 registered discriminator, which demands a single term that simultaneously warms the architecture,
 raises the character's authored contrast **and** clears the sphinxes. Handed to SHADING as a
@@ -9645,3 +9665,90 @@ dead"** from it.
 no sphinx is. The warning is now in `lvl.mjs`'s header. That is the same countermeasure that caught
 §104.2 and §113's ROI errors — *derive the region, then look at it* — working for a third owner on
 a fourth instance.
+
+---
+
+## §115 — the drift is `shadowBounceMix`, and b−r was structurally blind to the knob §114 found
+
+SHADING attributed §111 with a 29-arm single-boot sweep, `dt = 0` between arms, live TUNE/uniform
+pokes, **`base2` bit-identical to `base` on all four shots**. Seal, measurements and instruments
+swept into `progress/records/drift/`; the 55 MB of raw arms are left behind because `sweep.json`
+holds their outputs and §83.2's rule is that an instrument is cheap to rebuild when its output was
+recorded.
+
+### 115.1 The answer, and the revert overshoots
+
+Δ frame b−r against base:
+
+| arm | hero | temple | sly-closeup |
+|---|---|---|---|
+| **`shadowBounceMix` 0.05 → 0.20** | **−0.0487 (120 %)** | **−0.0578 (65 %)** | **−0.0625 (74 %)** |
+| `fillSkyMix` 0.70 → 0 | −0.0131 (32 %) | −0.0211 (24 %) | −0.0127 (15 %) |
+| `shadowTeal` 0.15 → 0 | **+0.0040 (−10 %)** | — | — |
+| bloom → tx7 | **−0.0000 (0 %)** | — | — |
+| all six | −0.0456 (112 %) | −0.0543 (61 %) | −0.0520 (61 %) |
+
+`shadowBounceMix` owns it, and at 120 % on `hero` **a straight revert overshoots** — the fix is an
+intermediate value. Bloom is exactly zero; rim is −0.0010; AgX shoulder is an exact no-op at 1.0.
+
+### 115.2 The result that matters most: two right statistics that could never agree
+
+Live shadow-light readback:
+
+| arm | R | G | B | ΔR | ΔG |
+|---|---|---|---|---|---|
+| base | 0.096 | 0.313 | 0.497 | — | — |
+| `sbm20` | 0.159 | 0.302 | 0.426 | **+66 %** | −4 % |
+| `teal0` | 0.103 | 0.193 | 0.496 | +7 % | **−38 %** |
+
+> **`shadowBounceMix` is the red knob. `shadowTeal` is the green knob. And `b−r` cannot see green.**
+
+So §111's statistic was **structurally incapable** of detecting §114's culprit, while §114's hue
+statistic is sensitive to it. Neither measurement was wrong; they were blind in different
+directions, and I read their disagreement as a lead rather than as a warning about my instrument.
+This is §3's *"R/G cannot see blue"* and §8's *"B/max would call this solved"* recurring **on the
+one remaining channel** — third instance, and the first where two owners' correct numbers pointed
+at different culprits because of it.
+
+**Choose the statistic that can see the axis you are arguing about, and say which axis it is blind
+to in the same breath.** A two-channel index has a null direction; mine did, and I did not name it.
+
+### 115.3 My synthesis was wrong and my own falsifier killed it
+
+§111.3 registered: *"if one term accounts for the swing, restoring it should simultaneously warm the
+architecture, raise the character's authored contrast, and clear the sphinxes — any fix that moves
+only one of the three is not the cause."* Fired: architecture **yes, strongly**; character
+**marginal** (mask R/G 0.881 → 0.931, hue 222 → 225, still blue — and `subjWarmShade` alone moves
+R/G 0.494 → 0.881, so the character's cast is a different term already compensated); sphinxes
+**not at all** (hue 195 → 200).
+
+**Two of three. Not one cause.** Writing the falsifier into the same section as the guess is what
+made this cheap — the discriminator cost one line and saved a fix aimed at a hypothesis.
+
+### 115.4 The knob does two jobs with opposite optima, so it must not be reverted blind
+
+Temple's shadowed bay, scored on the ledger's own acceptance line (hue ≤ 226°, G-darkest < 50 %):
+
+| arm | hueP50 | G-darkest | verdict |
+|---|---|---|---|
+| base (shipped) | 211 | 5.7 % | **passes** |
+| `sbm20` (the revert) | 270 | 66.7 % | fails both |
+| `tx7all` | 285 | 78.2 % | fails both |
+
+**Restoring the old value re-creates precisely the magenta defect task #16 shipped to fix.**
+`shadowMix` is non-zero over ~88.8 % of frame, so the shadow light's **red** reaches nearly
+everything while its **hue** only matters in deep shade — one knob, two jobs, opposite optima. The
+structural candidate SHADING names is the only shape that satisfies both: make the warm-bounce
+share a **function of shadow depth**, so deep shade keeps the teal that fixed the magenta while
+terminator and near-lit stone keep the sand bounce.
+
+### 115.5 Loose ends worth carrying
+
+- **~39 % of `temple`'s drift is outside `src/render/`** (`tx7all` residual: hero +0.005, temple
+  −0.035). Not all of this is SHADING's.
+- **A free bisect**: the drift is a *step* inside `4b58fee..52d4a43`, confirmed on three shots from
+  archived captures with **no lock spent**.
+- **Harness**: `step()` only queues GL and `capture()`'s `toDataURL` forces the flush, so a naive
+  instrumentation reports `step` as free and `capture` as 265 s. Real cost ~12.6 s/frame.
+- SHADING made **the same y = 0 sphinx-ROI error** §114.6 records, independently, and caught it
+  with an overlay before quoting a number — two owners, same trap, same countermeasure, same hour.
