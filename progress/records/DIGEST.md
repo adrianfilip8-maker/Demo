@@ -49,10 +49,6 @@ this file sat committed, because **a resumed agent reads its transcript, not the
 - **After a rollback: sweep the lock queue against `/proc` before believing it is busy** (§140.2).
   Tickets survive the restore naming pids that died with it. And **a missing `shots/` directory is
   not evidence about whether a run happened** (§14, §139.3) — the committed `RESULT` is the record.
-- **Use `tools/launch.sh`.** §14's `setsid nohup` form is struck (§131): it leaves `node` parented
-  to a wrapper that then orphans — the tree detaches, the process does not. The launcher proves
-  `node` at ppid 1 from `/proc` and refuses rather than warns. It has now caught the hazard
-  **three times automatically** in one recovery sequence (§140.1, §141.5).
 - **"Uncontaminated arbitrary is still arbitrary"** (§141.1). If a metric has never been run across
   a known-bad, it has no scale, and no amount of disinterest in the person choosing fixes that.
   §13's remedy is a **calibration**, not a more neutral chooser.
@@ -95,8 +91,9 @@ nobody runs (§129.2).
   question. **Do not spend an arm on the multiply.**
 - **CLOSED: §119.4 composition.** Additive within noise (factor 0.976–0.981), all three shots inside
   their bands. §115.1's 0.776 subadditivity was a six-leg artefact. (§133.1)
-- **OPEN, and it is a gap in your own seal:** P-night moved 2.1 % warm-ward with **no registered
-  threshold**. Someone other than the person looking at the number must draw that line. (§133.2)
+- ~~**OPEN:** P-night moved 2.1 % warm-ward with no registered threshold; someone other than the
+  person looking at the number must draw that line. (§133.2)~~ — **superseded by §141: that framing
+  was mine and it was wrong.** See the P-night entry at the top of this section.
 - **Your ink arm's group list was stale (8 of 11)** and the run's own probe printed `mats 11` beside
   it. Patched with a hard assertion. The 26.3/28.8 % figures measure body-fur ink against a partial
   floor — they are **not** a score of B.3. (§133.3)
