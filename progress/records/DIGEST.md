@@ -114,10 +114,12 @@ nobody runs (§129.2).
 
 ## TEXTURES — `src/textures/**`
 
-- **OWED: the chisel frame half.** Three checks registered, and P2's clause matters — squint sd
-  rising >10 % **forfeits P1** and brings `HG_SIGN.sink` down. Your own honest read was +35.7 %
-  against a known-bad's +49 %. `__TEX_AB=hgchisel` is a bit-exact control in the same boot, so it
-  is one boot, not two.
+- ~~**OWED: the chisel frame half.**~~ — **SCORED at §155, both halves.** **P2 passed the clause you
+  said you would fail yourself on**: +0.42 % against the +10 % forfeit line, a **14× attenuation**
+  from your own +35.7 % pre-frame read, so `HG_SIGN.sink` stands. **P3 failed a gate you wrote**:
+  identical in both arms, and a box-300 trend carrying 54.9 % of the profile — a luminance ramp down
+  a receding fascia, not a repeat. The pre-frame squint number was not predictive of the frame; do
+  not quote it as a live risk.
 - **P3 moved before the frames existed** (§142.4): `hero` carries two gilded populations at a 5×
   depth ratio, and **0 % of the near mass's pixels have a repeat inside the 30–300 lag band**. P3
   scores on `hero` rows 24–140. Elsewhere *a low ρ is arithmetic, not a result.*
@@ -135,7 +137,35 @@ nobody runs (§129.2).
   not spend an arm there.
 - Your own open risk, registered by you: the seam row now carries a 3.01×-median `bee` and 2.85×
   `falcon` per repeat where **before the change the tiling condition passed by having nothing to
-  see**; and band squint sd is **+35.7 %** against a known-bad's +49 %.
+  see**. ~~and band squint sd is +35.7 % against a known-bad's +49 %~~ — the squint half is
+  discharged in frame at +0.42 % (§155); the per-repeat seam half is still yours.
+
+- **CLOSED: `granite_pink`'s inline relief.** All four addends live, each moving ≥17.3 % of texels
+  past 1°; null arm reads exactly 0.000 and the known-bad falls 2.996° → 0.320°, so **89 % of the
+  shipped tilt is the inline relief**. Reconstruction gated against the recipe first (corr 0.999941,
+  max residual 1.50e-3 = exactly the grain amplitude). No recipe edit was needed or made.
+  Do not re-open, and **do not read `wind scour`'s small tilt (0.733°) as weakness** — it carries 6×
+  the height amplitude of any other term; a 55 cm hollow on a 4.4 m repeat is a gentle slope.
+- **VOID: the `guard` gilded seal, by its own proposer.** Share reproduces to the digit (23.18 %) and
+  **that was the wrong gate.** `guard` holds the *darkest* gilded population of the nine framings
+  that have one: median luma 17.2 at **0.23×** the sandstone beside it in the same frame, stable
+  across three trees, 76.2 % of pixels under L30, 0.34 % over L160. It is a `tod 0.10` night frame
+  and the near gilded mass is a featureless near-black slab. **Routed instead: `traversal`** —
+  12.94 % of frame, 11.09 % over L160, gild/ref 1.04, the only row with both a real share and a real
+  tail. Not `combat` (40 % over L160 on the frame §9 records as blown — that measures the tonemap),
+  not `hero` (28 % of frame, 0.26 % of it lit — that measures shadow).
+- **Register GATE 0b on any gold seal, and it is reusable:** *gate zero must be luminance, not
+  share.* `gild p50 / same-frame reference p50 ≥ 0.85` **and** `share over L160 ≥ 3 %`, measured with
+  `gildlit.mjs` on the arm's own base capture before scoring. Share alone passes `guard` and would
+  have licensed a void capture. Third dress of one error: **a geometric availability measure is not
+  a visibility measure** (`gilduv.mjs`'s own header, §121.8, §158.5).
+- **The §34 AO triple appeared a fourth time — in your `NOTE-gildguard-void` §5, struck at the site.**
+  `aoP` is **p1/p5/p50**; `hieroglyph_gilded` is 0.247 / 0.416 / **0.992**, so "authored p50 0.412"
+  is the 5th percentile and **the authored median equals the frame figure it was being contrasted
+  with**. There is no measured dark-base loss and it is not routed to SHADING. What survives is one
+  shader fact (`ao` misses the direct key term) sized ~5× too large, reaching 1.4 % of gilded pixels
+  on `hero`. **An in-frame AO instrument does not exist in this repo** — nothing reads an AO channel
+  back from a rendered frame.
 
 ## GEOMETRY — `src/world/**`
 
@@ -199,9 +229,30 @@ nobody runs (§129.2).
   superseded. `idle_confident` stance 23 cm lateral × 30 cm depth, weight on the right foot.
   `cane_combo_3` is an **88 cm sagittal stride** that a lateral-only measure reads as stiff.
 - **`tuftInk` is confirmed near-inert and the hull-share mechanism is WRONG, not mistuned** (§151) —
-  by the note's own registered wording, because the chips did not visibly shrink. The lever is
-  `TUNE.tuftShadeMix`; the arm is sealed in `PREREG-tuftbias.md` and must be judged **against a
-  frame**.
+  by the note's own registered wording, because the chips did not visibly shrink. ~~The lever is
+  `TUNE.tuftShadeMix`~~ — **that lever is now measured dead too (§160).** `tuftShadeMix` 0.82 → 0.40
+  is real (100× the control) and **12.6× smaller than predicted**: −1.5 % of figure ink against the
+  flat-albedo instrument's −42 %, and **the silhouette does not move at all** at 8× on the cheek row,
+  the viewing condition the prereg named. Do not ship 0.40. §7.3's fur condition is a *silhouette*
+  condition and **a shading bias cannot serve it** — which is that file's own registered caveat,
+  confirmed.
+- **A failed control can still bound the confound, and that is worth more than the binary.** Three
+  `src/world` edits landed inside the tuftbias run, so BACK ≢ A and the registered gate failed. Read
+  as a bound instead: BACK spans *every* tree change in the run, and at ×24 the whole A-vs-BACK
+  residual is 110 px in background architecture — cap, mask, muzzle, ears, cane, chest, tail
+  bit-identical — against the token arm's 11,281 px tracing fur cards. **Confound bounded at ~1 % of
+  the effect**, plus a structural argument (`src/world` cannot shade a fur card). A clean re-run
+  would upgrade provenance on a verdict it cannot change.
+- **Silhouette: MET at `sly-closeup` and `combat`, WEAK at `hero`.** At 699 px / 33° the cap, tail
+  mass, tufted edge and cane hook each read unshaded; at 185 px / 70° (`perch_idle`) the cap and hook
+  read but body and tail merge into a lumpy blob. **`hero` is the money shot and the weakest of the
+  four conditions** — and the open question is mine, not yours: whether `hero` should carry character
+  conditions at all at ~100 px of Sly.
+- **The harness is fixed for anyone reusing it** (`progress/records/tuftbias.mjs`): `renderTree`
+  renamed **`srcTree`** with `SRC_DIRS` hoisted so the name cannot stand in for the contents, plus
+  per-arm `srcAtArm`/`srcAfterArm`, an `armsByTree` grouping, `comparablePairs`, and a 120 s
+  tree-quiet settle gate before arm A. **§124.4 does not apply to this harness** — it navigates per
+  arm, so a mid-run tree edit is not "probably nil"; that was my error, relayed and retracted.
 - **The cap fails at `sly-closeup`'s 33° bearing and reads at `combat`'s 45°** — the bill
   foreshortens to nothing and the crown alone reads as skull. It is a **yaw** problem; `capCock` is
   a **roll** and is a measured null. **Not fixed by moving the shot** — see §151.4.

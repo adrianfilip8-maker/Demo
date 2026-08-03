@@ -13787,3 +13787,144 @@ carries on tail plus cane-hook alone** — cap and mask cannot read at that size
 
 That is a scoring-roster question, not a model defect, and it belongs with the same decision as
 §151.4's cap-at-33°.
+
+## §160 — a fourth appearance of the withdrawn AO triple, a seal voided by its own proposer, and a control read as a bound instead of a gate
+
+Three owners closed out inside one window. Two of the three results are negative, and the negative
+results are the useful ones.
+
+### 160.1 The §34 AO triple came back a fourth time, and the guard that should have caught it was in the wrong place
+
+TEXTURES closed `NOTE-gildguard-void` §5 with:
+
+> *"The dark-base half of it is measured and is not TEXTURES': the authored map carries AO p50 0.412
+> and the frame shows 0.992, because `ao` never multiplies the key term."*
+
+`tools/texlab.mjs:174` emits `aoP: [1, 5, 50]`. `hieroglyph_gilded` is **p1 0.247 · p5 0.416 ·
+p50 0.992**. Read with `roughP`'s p5/p50/p95 labels — a different field, two lines below — p5 0.416
+becomes "the authored median". **So the authored median is 0.992: the same number as the frame
+figure it is being contrasted against.** There is no 0.412→0.992 loss. There never was one. And the
+in-frame figure had no instrument behind it either: nothing in this repo reads an AO channel back
+from a rendered frame, and the only 0.992 anywhere is `aoP[2]` itself.
+
+Struck at the declaration site in the note, with the routing struck alongside it — **a conclusion
+resting on a withdrawn premise is withdrawn too** (§149.3). What survives is one shader fact, `ao`
+not multiplying the direct key term at `toon.glsl.js:365`, sized against percentiles two steps off,
+over-predicting ~5×, and reaching 1.4 % of gilded pixels on `hero`. A candidate, not a finding.
+
+The instructive part is *why it recurred*. `texlab.mjs` was fixed after §122.2: it now carries a
+nine-line warning naming this exact mistake **and** ships `pcts` beside every array so a reader of
+the JSON never has to open the file. That fix is real and it did not help here, because **the author
+was not reading `texlab.mjs` or its JSON — they were quoting a report that quoted it.** Hardening the
+emitter does nothing for the citation chain downstream of it. Appearances so far: §34 (original),
+`PREREG-aokey.md`, two shipped source comments, §122.2 (mine, 87 sections later), and now this. Every
+one after the first is a *quotation*, and not one of them went back to the source.
+
+The rule that would actually have caught it, and the only one I can enforce from here: **a percentile
+you did not measure yourself is a citation, and a citation gets re-derived before it licenses a
+routing.** DIGEST carries the correct triple in the SHADING section; it did not carry it in TEXTURES'.
+It does now.
+
+### 160.2 TEXTURES voided its own seal, on a gate the coordinator asked for in the wrong quantity
+
+I had declined to route a gilded seal on `guard` without its share re-measured as gate zero. The
+share reproduces **to the digit** — 23.18 % on two independent rasters — and the seal is void anyway.
+
+`gildlit.mjs` (new, offline, no lock) crossed the architecture material mask with three existing
+`guard` captures spanning three trees: gild median luma **17.2**, i.e. **0.23× the plain sandstone in
+the same frame**, stable to three decimals across all three; 76.2 % of the population under L30,
+0.34 % over L160. `guard` is staged at `tod 0.10` and the near gilded mass is a featureless near-black
+slab with a thin lit lip. It holds the **darkest** gilded population of the nine framings that have
+one. A "hard spec + bloom + dark occlusion" test needs the gold to read first.
+
+Their sentence, and it corrects mine: **"A geometric availability measure is not a visibility
+measure. The correction needed one number with a light in it."** §158.5 had crossed share against
+mm/px — both geometric — and ranked the true worst row first. `gilduv.mjs`'s own header says this and
+§121.8 says it; this is the third dress of it.
+
+Registered, reusable, and adopted for every gold seal from here:
+
+```
+GATE 0a  share      re-measure the material's share of frame; void if |Δ| > 20 % relative
+GATE 0b  luminance  gild p50 / same-frame reference p50 >= 0.85, AND share over L160 >= 3 %
+                    measured on the arm's own base capture, BEFORE scoring
+```
+
+0a alone passes `guard` and would have licensed the whole capture. **Routed instead: `traversal`** —
+12.94 % of frame, 11.09 % over L160, gild/ref 1.04, the only framing with both a real share and a
+real highlight tail. Explicitly not `combat`, whose numbers look best (40 % over L160, p95 198.7) on
+the frame §9 already records as blown to near-white: *a specular test inside a clipped highlight
+measures the tonemap*. Explicitly not `hero`, which has the most gold and almost none of it lit
+(0.26 % over L160) — *that would measure shadow*.
+
+TEXTURES also self-corrected inside the note rather than quietly: an early "~93 % under L40" had been
+inferred by summing the pixel counts of cells whose *median* was under 40. Per-pixel it is 82.2 %.
+Same direction, 11 points out, left in the file with the reason — *"summarise the summary" is the
+cheap version of the mistake this note is about.*
+
+### 160.3 `granite_pink` closes with its calibration doing the work
+
+The recipe writes its relief in one statement (`Materials.js:1338`), so `reliefreach.mjs` — which
+works by reassigning a wrapped primitive binding — has nothing to hold, and a composite mean tilt of
+3.00° is equally consistent with "all four addends reach the map" and "three reach it and one is at
+bit-exact zero". Reconstructing the four addends in the tool and subtracting them one at a time
+answers it: **every addend moves ≥17.3 % of texels past 1° of tilt**, against `chiselMarks`' 0.4–4.4 %
+and `grain`/`speckle`'s 0.0 %.
+
+What licenses reading that table is §13, done properly: the **null arm reads exactly 0.000 in every
+column** (the floor is a real zero, not a small number), and the **known-bad arm** — all four removed
+— falls 2.996° → **0.320°**, below the flattest map in any framing. And the model was gated against
+the recipe *before* any arm was read: corr 0.999941, max residual **1.50e-3, exactly the grain
+amplitude with no structure left over**. No `src/textures/**` edit was needed or made.
+
+One result worth keeping because it will otherwise be misread later: `wind scour` has **6× the height
+amplitude of any other term** and only the **third** largest tilt, because a 55 cm hollow on a 4.4 m
+repeat is a gentle slope; `crystal edge` is the mirror image, second-smallest amplitude and the
+largest tilt, because a 23 mm grain boundary is steep. A future edit must not read the scour's small
+tilt as weakness.
+
+### 160.4 `tuftShadeMix` is dead, and a broken control turned out to bound the thing it failed to gate
+
+CHARACTER's registered arm ran with three `src/world` edits landing inside its window, so BACK ≢ A
+and the gate failed. The move that made the run salvageable was to stop reading BACK as pass/fail and
+read it as a **bound on the confound**:
+
+| pair | inside character ROI (d≥4) | max Δ |
+|---|---|---|
+| A vs BACK (control) | **110 px**, confined to y55–320, background architecture | 25 |
+| A vs B (token) | **11,281 px**, whole body, tracing fur cards | 172 |
+
+BACK spans *every* tree change in the run, so whatever `src/world` could do to this frame, it did in
+that pair. The confound is bounded at **~1 % of the effect** — which is a stronger statement than the
+binary gate would have produced — and attribution is structural besides: `src/world` cannot alter a
+fur card's shading. A clean re-run upgrades provenance on a verdict it cannot change.
+
+The verdict is negative. `tuftShadeMix` 0.82 → 0.40 on flat albedo takes ink −42 % and more than
+doubles visible card area. In the graded frame it is **−1.5 % of figure ink** — real (100× the
+control), and **12.6× smaller than predicted**. At 8× on the cheek row, the viewing condition the
+prereg itself named, A and B differ by a few pixels of rim brightness on card edges and **the
+silhouette does not move at all**. That file's own registered caveat — that a flat-albedo instrument
+is blind to the shading the bias exists for — is confirmed from the other side: **§7.3's fur
+condition is a silhouette condition, and a shading bias cannot serve it.** Do not ship 0.40.
+
+With `tuftInk` near-inert (§127.2/§151), the hull-share mechanism wrong rather than mistuned (§151),
+and `tuftShadeMix` now measured dead, **the fur condition has no remaining tuning lever** — the
+geometry side is present and visibly scallops the outline at cheek, jaw, collar, tail edge and arm
+backs. It is met by the cards or not at all.
+
+### 160.5 The misroute was retracted by re-derivation rather than accepted on trust
+
+I had told CHARACTER a mid-run `src/render` handoff was involved. Rather than take the correction,
+it re-derived: `git log` shows **no `src/render/**` change since 15:22**, and the only `src/` edits
+inside the capture window were `Props.js`, `EgyptLevel.js` and `Kit.js` — all GEOMETRY's. It
+retracted the relay itself.
+
+Two fixes landed in `progress/records/tuftbias.mjs` from this. `renderTree` is renamed **`srcTree`**
+with the six directories hoisted into a `SRC_DIRS` constant, *so the name cannot stand in for the
+contents* — the name was the bug, not the hashing. And each arm now records `srcAtArm` immediately
+before its own `goto` plus `srcAfterArm`, with an `armsByTree` grouping and `comparablePairs`.
+Applied retroactively to the dead run it pinpoints what a before/after pair could not: **one
+`src/world` edit landed between each pair of arms, so all three arms built from different trees.**
+
+It also wrote the qualification I got wrong at §159.3 into the file: **§124.4 does not apply to a
+harness that navigates per arm.** My "probably nil" came from a harness that boots once.
