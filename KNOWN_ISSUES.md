@@ -1209,9 +1209,22 @@ that returns immediately — is outside the tree and untouchable. Keeping a wrap
 attached and mortal.
 
 **The recipe, stated once:**
-- Long captures: launch detached — `setsid nohup node tools/shot.mjs … > "$SCRATCH/run.log" 2>&1 &`,
-  write the pid to a file, let the call return. Exit codes go to the log
-  (`echo` an epilogue from the script itself, not from a waiting parent).
+- Long captures: launch detached — ~~`setsid nohup node tools/shot.mjs … > "$SCRATCH/run.log" 2>&1 &`~~
+  **use `tools/launch.sh <script.mjs> <log> [pidfile] [args…]`** — write the pid to a file, let the
+  call return. Exit codes go to the log (`echo` an epilogue from the script itself, not from a
+  waiting parent).
+
+  > **CORRECTION, 2026-08-03 — the struck form does not detach the process it is supposed to
+  > detach, and I handed it to owners as a "survivor recipe" all session.** CHARACTER walked the
+  > tree after using it: **node landed at ppid 9034, a bash wrapper**, which then orphaned to init.
+  > *The tree detached; the node process did not.* `setsid` reports success and the run still dies
+  > with the task tree — §78.4 records that happening three times, each caught by hand.
+  >
+  > `tools/launch.sh` enforces the stricter condition — **`node` itself at ppid 1, proven from
+  > `/proc`** — with a double fork, and **refuses (exit 3, killing the process) rather than
+  > warning** when it cannot. It finds the pid by scanning `/proc/*/cmdline`, never `pgrep -f`,
+  > which matches the wrapper and is how the hazard went unnoticed the first time. §129 / §130's
+  > lesson in a different place: *the check must be the condition, not something adjacent to it.*
 - Wakes: watchers must each live under the hour. A 50-minute poll loop that exits on its
   condition *or* on heartbeat — re-armed on every wake — never meets the reaper; a single
   until-loop armed for "however long the queue takes" always does.
@@ -11230,3 +11243,94 @@ Also closed the other way: `PAL.goldSpec` should get **neither** the `PAL.sun` s
 colour of its own — `ToonMaterial.js` declares its own private palette copy, so `Materials.js`'s
 `goldSpec` reaches no specular term anywhere and the shader derives gold's tint from albedo. **A
 palette hex cannot reach it.**
+
+## §131 — a knob proven live in the real renderer before the frame that tests it exists
+
+CHARACTER was blocked behind two captures for 39 minutes and did not idle. What it did instead is
+the entry.
+
+### 131.1 The "dead knob" escape, closed in advance and by a different owner
+
+A null in `char-ink` could always have been read two ways: *the mechanism is wrong*, or *the knob
+never reached the shader*. That ambiguity has cost this project whole runs — §13's rule about
+calibration arms exists because of it.
+
+SHADING's in-page probe, sitting in `compose1/run.log` for its own unrelated reasons, settles it:
+
+```
+INK PROBE {"count":8454,"min":0.40,"groups":11,"weights":[1×8, 0.4,0.4,0.4],"hasShell":true}
+```
+
+Three `furTuft*` groups at **0.40 across 8454 shell vertices**, in the real renderer, on the real
+mesh. Recorded in the prereg at **15:50, before any frame of the run existed.**
+
+> **A null is now confirmatory rather than merely un-falsifying.** The delivery question is
+> answered, so whatever the frame says is about the mechanism. And the evidence came from *another
+> owner's log*, gathered for another purpose — the value of five agents sharing one tree is not
+> just parallelism, it is that instruments built for one question are lying around when a different
+> one needs them.
+
+### 131.2 An instrument that returned the same answer for both arms, caught before it was used
+
+`chipscore.mjs` destructured `width` from `readPNG` and `await`ed it — the function is **synchronous
+and returns `{w, h, ch, data}`**. It printed **`dark 0 (0.00%)` for both arms.**
+
+A flat null on both sides is exactly what a *clean result* looks like at a glance. Caught before
+scoring, fixed, and the failure written into the file. Corrected baseline: **27.81 % dark /
+17.76 % very dark.**
+
+This is the §39 / §43 / §50 family for the fourth time this session — after `void.mjs` counting
+front-facing stone, `scenebudget.mjs` triple-counting vegetation, and the `hf` scalar scoring the
+frieze above its own legible control. **Four instruments, four owners, one shape: a number that
+does not depend on the thing it claims to measure.** The three that were caught in time were caught
+by running a control first; the one that was not (`void.mjs`) had its control written in prose above
+the code.
+
+### 131.3 A prereg that rules out the tempting outcome in advance
+
+`PREREG-tuftbias.md` registers the better-silhouette signature **and four specific worse-cel-ramp
+signatures** — speckle in the lit band, ragged terminator, clumps as detached debris, tail-ring
+noise. Then:
+
+> **If B wins silhouette and loses shading, neither value ships** — because that outcome is the
+> positive evidence that SHADING's `slyNormal` attribute split (§127.5) is worth doing.
+
+Split-the-difference tuning is ruled out *before* the frame, and the "bad" outcome is given a job.
+A third lever is also registered ahead of time — sweeping clump `dir` **tangentially** rather than
+along the normal, since the proxy shows the chip population is the face-on cards — explicitly as a
+later arm, and `src/player/**` was left untouched while a capture was queued to boot.
+
+### 131.4 The framing question the two proxy arms settle
+
+With cards removed the figure is **an unmistakable smooth plastic capsule**; with them it is
+serrated at cheeks, ruff, tail, elbows and knees. **So the cards must not be deleted** — §7.3's
+"fur reads as smooth plastic" is caused by *how the hull treats the cards*, not by the cards. That
+retires deletion as an option and leaves the bias.
+
+`char15-ship` vs `char14-ship` are **byte-identical**, which is correct (`1fa7549` was gated and
+proven inert) and establishes that any delta in `char-ink` is signal rather than boot noise.
+
+### 131.5 Proportions pass, and the "before" number was never comparable
+
+§9's 5.53 → 5.29 came from an instrument that **filed the cap crown as skull** (the crown is
+weighted `[['head', 1]]`), so it does not measure the same quantity. Two tools now agree: **5.03
+heads** (`headratio.mjs`, `idle_confident`) and **5.11** (`shotsil.mjs`, `perch_idle`). Including
+cap and ears — *the shape the eye actually reads* — **3.65–3.90**. §7.3 asks ~1:5 and it passes on
+both readings.
+
+### 131.6 A silhouette finding at true on-screen scale
+
+Run black-on-white at each shot's **real** size: the cane hook is unmistakable in all three framings
+that contain Sly, including `hero` at 185 px, and cap and tail read everywhere. But **at `hero`'s
+real size the torso, arms and cane shaft merge into one mass** — the extremities read and the body
+does not, and the culprit is the cane shaft crossing the torso diagonally. That is `perch_idle`'s
+cane aim: **ANIMATION's**, recorded not edited.
+
+The mask condition **cannot pass as worded** — it is a colour marking and a pure-black silhouette
+cannot show it. It is not flat, though: `_buildMask` is real geometry at r = 1.058, standing ~3.6 mm
+proud, a ~2.4 px depth step at closeup, and it reads clearly in the shaded render.
+
+Pose: `perch_idle` went from **literally zero** lateral line of action (0.000 / 0.006 / −0.007) to
+0.045 / 0.082 / 0.045 — with the caveat kept visible that the measure is **lateral only**, and
+`cane_combo_3` scores near zero on it while being the strongest line in the set, because its lunge
+is sagittal. *Any pose number quoted from here names its plane.*
