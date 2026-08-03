@@ -13473,3 +13473,111 @@ saturated than its surround (0.477 vs 0.385) and 25 L brighter.
 `withGame`** — so it renders outside the serialisation the whole queue exists to provide, competing
 for CPU with whatever holds the lock. Started 19:54 attached to a bash wrapper. It did not cause
 arm A's 652 s, which predates it, but arm B is running long.
+
+## §157 — a hazard reported in a file that had already fixed it, and the check that stopped me repeating §156.1
+
+### 157.1 The lock bug that does not exist
+
+GEOMETRY closed its report with *"one hazard worth a ticket, in `tools/lock.mjs` and not mine: that
+run held the lock 28+ minutes while alive, past `STALE_MS = 20 min`. `acquire()` treats elapsed time
+as stale regardless of liveness, so any other agent would have stolen the lock out from under a live
+three-arm capture."*
+
+**`STALE_MS` does not exist. Not in `lock.mjs`, not in `tools/`, not anywhere in the repo.**
+`lock.mjs:32-35`:
+
+> *"Deliberately no age-based staleness anywhere in this file. Both the holder check and the ticket
+> sweep originally had one, and both were the same bug: on this container a legitimate run outlives
+> any cutoff worth setting, so the timeout evicted live processes and produced exactly the
+> concurrent-render thrash the lock exists to prevent. **Liveness is the only rule.**"*
+
+And `:124` records the very observation GEOMETRY was re-deriving: *"one run was observed losing the
+lock at 33.7 minutes mid-render."* The eviction site is `const stale = !alive(held.pid)`.
+
+**So the hazard was found, fixed, and documented as fixed — and reported back to me as live.** Same
+root as §153.2: this owner has repeatedly opened turns on a tree that no longer exists, and a
+constant read from a vanished file is indistinguishable from one read from the current file.
+
+**And I nearly repeated §156.1 with it.** An hour after breaking a working gate by inferring a
+constant instead of reading it, I was handed another constant to act on. What stopped it was
+grepping `lock.mjs` first — which is the entire content of the lesson FX taught me, applied once.
+
+> **Three times in two hours a shared tool has been reported broken when it was not** — my
+> `capture.lock`, GEOMETRY's `STALE_MS`, and GEOMETRY's earlier 45-minute `acquire` timeout. Every
+> one was a constant *transcribed or inferred* rather than read. FX's repair generalises: **derive
+> the constant from its source at run time, and refuse rather than guess.**
+
+### 157.2 A real defect fixed, then falsified as the cause — with a displacement control
+
+GEOMETRY's crest fix is verified on form grounds: **16 → 0 strips**, level total 11,913 → 11,897
+(exactly −16, no collateral), `guard`'s worst projected strip **24.0 → 11.6 px** with ownership
+moving from a stone contact to a brazier ember, triangles unchanged, build passing.
+
+**And then it killed its own candidate.** Predicted-pixel test on `guard-base.png`: 18 bright cool
+runs within 12 px of the predicted crest line — against a **displacement control** giving 15–29 runs
+at ±20/40/60/80 px. So dy = 0 sits **mid-distribution, below dy = −60 (29) and −40 (28)**.
+
+> **No enrichment, no coordinate match.** A count at the predicted location means nothing without the
+> same count at locations the hypothesis does not predict — and here the null positions score
+> *higher*.
+
+That is the control §152.1's matched coordinate had and this one lacked. The crest was a genuine
+modelling error worth fixing; **it is not the pass-2 artefact.**
+
+And the counterfactual is registered *before* anyone runs it: a `roll` 0.13↔0.26 arm is
+**uninformative for the cyan-line question**, because the pre-fix frame already shows no enrichment
+at the crest's own coordinates, so both arms differ only where no signature exists and the scorer
+returns NULL. **§155.5's confound by a different route** — the apron was invisible, this is visible
+and signature-free.
+
+### 157.3 Two vacuous detectors, caught by a relaxed threshold returning exactly zero
+
+`readPNG` returns `{w, h, ch, data}`. GEOMETRY used `.width`/`.height`, so `H-22` was **NaN**, the
+loops never executed, and both detectors returned a clean-looking **"0 runs."**
+
+It caught them because **a deliberately relaxed threshold also returned exactly 0** on a frame with
+11 % of pixels above L 128. A real detector loosened must find *more*; one that returns the same zero
+is not measuring.
+
+> §155.3's pattern, and the same detection method as §155.3's own — **a known value failing to
+> appear.** The perpendicular profile survived because it happened to use a literal 1280 rather than
+> the destructured field.
+
+### 157.4 Problem 1 measured, and it is not geometry
+
+*"Band edge falls inside a triangle"* — whether the ramp has anything to quantise: `temple` **48.1 %**,
+`guard` 49.6 %, `sly-arm` 22.5 %, `combat` 13.6 %. Weak cluster: **`hero` 4.4 %**, `night` 4.5 %,
+`sly-closeup` 4.9 %.
+
+On `hero`, measured: 33.3 % of visible architecture is +Z-facing at **ndl 0.000**, 21.6 % +X-facing at
+0.000, 22.3 % up-facing at 0.374 — and the band edges are 0.14 and 0.52. **So 83 % of the frame sits
+nowhere near either edge.** That is a key-direction and framing property; **subdivision cannot move
+it.** The only geometric lever is normal spread on the up-facing 22.3 % — camber on paving and decks,
+a look change to the largest surface in the frame, correctly not shipped unverified.
+
+The brief's premise is void twice over: the chamfer/entasis/roll work was **already in the tree**, and
+§155.6's *"no chamfers, no entasis"* was my own repetition of the stale brief.
+
+### 157.5 P-night's registered scoring confirms the preview; §156.2 stands
+
+The stride-4 registered run landed and swept itself. `compose` vs `base`: **177 px lost ≥ 8 L, 176
+gained**, 69.44 % any-pixel change, and the **`base2` control is 0 on every column**. `rimfloor0`
+removes **51,957 px (5.638 %)** in a line population — median run length 1 px, 552 runs.
+
+The preview's numbers reproduce, so the escalation decided in §156.2 was not decided on provisional
+figures. **The FAIL stands.**
+
+### 157.6 FX checked its own gate's hygiene, and named an asymmetry the lock cannot see
+
+Its `--dry` run **planted a ticket and removed it** — queue empty afterwards. *"A `--dry` that left a
+ticket behind would have quietly held a FIFO position against every other owner."*
+
+Its process survey found a second outside-lock process — `roigen.mjs night 4`, ppid 1, 24 minutes,
+no lock and no ticket — and **it read the source rather than inferring from the name**: imports
+`Shots.js` and `Atmosphere.js`, writes only `roi-<shot>.json`, no `acquire()`, **no writes under
+`src/`**. So CPU competition only.
+
+> **The asymmetry it named is a real gap in the design:** reading `src/` at import time is harmless
+> to another owner's frames; **the same process *writing* `src/` would be invisible to the lock and
+> fatal to a boot tree.** The lock serialises rendering, not source mutation, and nothing currently
+> watches the second.
