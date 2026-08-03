@@ -4908,6 +4908,13 @@ completed runs rather than as advice.
 
 ### 61.2 The screen-space half of the rim gate is inert in both directions, on all six shots
 
+> **OVERSTATED — corrected by its author at §80.5.** "Inert in both directions / no measured effect"
+> was established with the **artefact statistic**, which counts bright **cool** pixels *by
+> construction*. Measured hue-blind, `rimPlanar` moves **3–7% of every frame, max pixel delta 381.**
+> The decision below survives — the surface gate does the work — but **this wording must not be
+> quoted as grounds for deleting `rimPlanar`.** A term measured only by a statistic that is blind to
+> most of what it does is not inert; it is unmeasured.
+
 `surfoff` reproduces `gateoff` and `scroff` reproduces `base`, **everywhere**. The surface gate does
 ~100% of both the artefact removal and the silhouette cost; `rimPlanar [0.04, 0.20, 1.0]` is paying
 per-pixel cost for **no measured effect on any of these six frames.**
@@ -6784,3 +6791,98 @@ or a frame the project already had.
 > causes it."** Both halves matter: pass 6's verdict of 2.1 stands untouched — fourteen frames still
 > lose their side-by-side — and four of its thirteen findings would have sent an owner into the
 > wrong file.
+
+
+---
+
+## §80 — the second P1 is also refuted, a fix exposed a defect it did not predict, and an instrument was blind by construction
+
+SHADING, on pass-6 findings #2, #5, #8, #9 and its own §61. **`ToonMaterial.js` only.**
+
+### 80.1 Finding #2's caster-membership diagnosis is wrong — and it does not moot §55
+
+`main.js:153` sets `castShadow` on **every opaque mesh including `SkinnedMesh`** (verified: the
+traverse takes `isMesh || isSkinnedMesh || isInstancedMesh`, skips only `noShadow`, outline shells
+and non-opaque, and logs its counts at boot). §1 measured it in-page. **The character is in the
+caster set.**
+
+So the critic's *"either the character is excluded from the caster set or the cascade does not reach
+him"* is **false on the first branch** — and I routed it as P1 on that diagnosis.
+
+**And SHADING declined to let the correction close FX's item too**, which is the part worth keeping:
+the critic's −13 to −20 L expectation *presumes direct key on that floor*, and §55 measured that
+floor as receiving **none** (R/B 0.68 against 2.74 sunlit). *"It does not moot FX's §55."* A refuted
+mechanism does not license discarding a separate, correctly-measured result that happens to sit
+nearby.
+
+**That is five of thirteen findings corrected on mechanism** (§78: #7, #12; §79: #1, #3; §80: #2),
+with every observation intact.
+
+### 80.2 §61.6 fixed, and the fix exposed a third defect nobody predicted
+
+`rim.strength` now has a consumer; `TUNE.rimGain` re-bracketed 2.05 → 4.10 so that `4.10 × 0.50 =
+2.050` reproduces the old daylight value — **bit-identical on 14 of 16 framings**, since
+`nightAmount` is 1.0 only at `night` and `guard` — and `4.10 × 0.72 = 2.952` at night.
+`_setRimColor` now guards **by value** instead of by a reference LIGHTING mutates in place.
+
+§61.6 warned *"do not fix the plumbing alone"* because 2.05 was tuned against the broken interface.
+**The real hazard was larger than that warning.** Un-freezing the colour made the global walk run
+**per-frame**, and that walk **overwrote per-material rim complements** — `Vegetation.js:318/324`
+(`0xd8ff9a`), `:329`, `Guard.js:1072` (`0xffd9a0`). A cache that could never miss had been
+*concealing* a second bug; fixing the cache exposed it.
+
+**The offline probe caught it as a FAIL before it reached a frame.** The walk now skips them.
+
+### 80.3 Critic #5 has a second mechanism, and the image settled it against the instrument
+
+`OUTLINE_FRAG` blends **two constants** by `dot(N, uKeyDir)` — so at night every moon-facing surface
+is outlined in `inkSun #1a1210`, *a sunlight colour*. That is a distinct cause from §61.6's frozen
+rim colour, and it was not in the ledger.
+
+SHADING's first instrument **appeared to refute it**: 94.5% cool. That census was frame-wide and
+**drowned the character in blue masonry**. What settled it was the image — **the warm line survives
+`norim`, an arm with both rim terms at zero.** A term that persists when the rim is switched off is
+not the rim.
+
+Shipped as a **proven no-op lever** (`inkNightMix: 0.0`), on the grounds that *what the night line
+should be is an art call* rather than a correctness one. Correct handling: the mechanism is now
+reachable, and nothing moved.
+
+### 80.4 Finding #9 is not chromatic aberration
+
+`TUNE.chroma` is **0.0** — the term never ships. At 4× the `traversal` "fringe" is **the painted
+hieroglyph frieze**. The real candidate in SHADING's own file is PostFX's ink pass selecting
+warm/cool ink **by pixel luminance** across a 2 px moulding, which would produce orange-one-side /
+cool-the-other on exactly the features the critic named. **Left unattributed pending an
+`inkStrength 0` arm** rather than asserted.
+
+Finding **#8** (`combat` palette collapse) is confirmed in frame and **unattributed** between FX
+brightness, bloom and exposure — also left open rather than guessed.
+
+### 80.5 An instrument blind by construction, and a poke that now silently reverts
+
+**§61.2 is overstated and is corrected at its declaration site.** "Inert in both directions" was
+measured with the artefact statistic, which counts bright **cool** pixels by construction. Hue-blind,
+`rimPlanar` moves **3–7% of every frame at max pixel delta 381.** The conclusion survives; the
+wording must not become grounds for deleting the term.
+
+> **A term measured only by a statistic blind to most of what it does is not inert. It is
+> unmeasured.**
+
+And a hazard SHADING created and disclosed rather than discovered later: **its fix makes `uRimGain` a
+per-frame write, so poking `uniforms.uRimGain.value` is now silently reverted before capture.** Poke
+`shading.tune.rimGain`. It is documented at the knob — and SHADING's own in-flight `rim5` carries the
+bug in one arm. It caught it *post-launch*, **kept the queue place rather than abandon the run, and
+pre-registered that arm as VOID** with rim4 as the fallback baseline. Declaring an arm dead before
+its frames exist is the cheapest possible handling.
+
+### 80.6 Task #16 is met, and my routing quoted a pre-fix build
+
+`shots/eye1` was captured 2026-08-01 20:36; the fix `07fe98c` landed 23:13, and `git merge-base`
+puts it inside rim4's tree. Reproduced independently on shipped frames: `night`
+`sandstone_worn`/`block`/`paving` at **226/226/223**, saturation 0.79/0.78/0.74; `granite_pink`
+**227, not 259**; G-darkest **5–20%** against a pre-fix 90–99%; lit splits **30–34°** warm.
+**Acceptance met on both legs, night first — the leg I required first. No capture spent.**
+
+This is §64.2's failure repeating on my side: I routed a task whose answer was already in the record,
+against a build that predated its own fix.

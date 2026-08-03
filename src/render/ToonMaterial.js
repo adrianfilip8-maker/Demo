@@ -370,7 +370,20 @@ const TUNE = {
 
      Still true and still worth heeding: take an A/B baseline off `uniforms.uRimGain` after
      staging each shot, per shot, never off this constant — it is now a *pre-strength* factor
-     and is not the live value on any frame. */
+     and is not the live value on any frame.
+
+     **HARNESS AUTHORS, READ THIS — the fix changed how you poke the rim.** `uRimGain` used to
+     be written exactly once, at boot, so poking `uniforms.uRimGain.value` stuck for the life
+     of the page. It is now recomputed inside `setKeyLight`, which `Lighting.update()` calls
+     via `_publishKeyLight()` on EVERY frame — so a poked uniform is silently reverted by the
+     next `__GAME.step()`, before the capture, and the arm renders the baseline while the
+     harness log happily reports the value it asked for. Poke `shading.tune.rimGain` instead
+     (it is the live `TUNE` object, and the per-frame recompute reads it); or poke both, which
+     is what `rimsweep2.mjs` already does and why that harness survives this change.
+     The same applies to `uRimColor`: `_setRimColor` re-asserts it per frame, so a direct
+     write to a material's uniform is reverted too — override via the payload, or stub
+     `_setRimColor` for the duration of the arm.
+     Verify with a readback after the step, never before it. */
 
   /* Silhouette gate on the fresnel rim — see the long note at the term in toon.glsl.js.
      [lo, hi] are "normal turn per screen height": zero on any planar patch at any grazing
