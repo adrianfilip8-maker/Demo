@@ -31,9 +31,12 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { execSync } from 'node:child_process';
 
-const ROOT = '/home/user/Demo';
-const MIME = { '.js': 'text/javascript', '.mjs': 'text/javascript', '.html': 'text/html' };
 const opt = (n, d) => { const i = process.argv.indexOf(`--${n}`); return i >= 0 ? process.argv[i + 1] : d; };
+/* `--root` serves `src/**` from somewhere other than the working tree, so the *pre-edit* build can
+ * be produced by this same instrument rather than compared against a JSON written by a different
+ * one. Used to attribute the single baseline field that moved. */
+const ROOT = opt('root', '/home/user/Demo');
+const MIME = { '.js': 'text/javascript', '.mjs': 'text/javascript', '.html': 'text/html' };
 const SIZE = parseInt(opt('size', '1024'), 10);
 
 /* Provenance, per §125.5 — a tree hash over what the bundler actually reads, not the git SHA. */

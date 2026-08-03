@@ -87,9 +87,14 @@ const page = await browser.newPage();
 page.on('pageerror', (e) => console.error('  [pageerror]', e.message));
 await page.goto(`http://127.0.0.1:${port}/lab.html`);
 
-const got = await page.evaluate(async ({ recipeName, SIZE }) => {
+/* `--ab` sets `globalThis.__TEX_AB` before the recipe builds, so the two arms of a texture A/B
+ * can be rendered by the same instrument at the same px/repeat instead of being compared across
+ * an edit. Additive: the default is the empty string, which is the shipped state. */
+const AB = opt('ab', '');
+const got = await page.evaluate(async ({ recipeName, SIZE, AB }) => {
   const M = await import('/src/textures/Materials.js');
   const C = await import('/src/textures/Canvas2D.js');
+  globalThis.__TEX_AB = AB;
   const hashName = (s) => { let h = 0x811c9dc5; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 0x01000193); } return h >>> 0; };
   const recipe = M.MATERIALS[recipeName];
   if (!recipe) return { error: 'no recipe ' + recipeName };
@@ -101,7 +106,7 @@ const got = await page.evaluate(async ({ recipeName, SIZE }) => {
     h: Array.from(s.h), occ: Array.from(s.occ),
     bump: recipe.bump ?? 0.05, tileU: Array.isArray(recipe.tile) ? recipe.tile[0] : recipe.tile,
   };
-}, { recipeName, SIZE });
+}, { recipeName, SIZE, AB });
 await browser.close(); server.close();
 if (got.error) { console.error(got.error); process.exit(1); }
 

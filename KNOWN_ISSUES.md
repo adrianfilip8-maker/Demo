@@ -11019,3 +11019,94 @@ GEOMETRY also flagged, unprompted, that it wrote three files outside its six (`g
 against itself: it edited `Kit.js` at 15:33 while a 15:15 capture was booted. UV-only, geometry
 bit-identical, verified `hero` 0.87 % before and after — so the frames stand for every claim above,
 and the hazard is on the record anyway.
+
+## §129 — I searched for one spelling of a mechanism and reported the mechanism absent
+
+SHADING returned three corrections, all owed to me, all checkable in under a minute. Two were mine
+and one was its own.
+
+### 129.1 The cane's heavier ink exists. I looked for it under one name.
+
+Commit `2417356` carries, in my words: *"the cane's heavier ink does not exist … no outline weight
+is declared anywhere in `src/player/**`."* I had grepped for `outline: <number>` and
+`userData.outline`, found `SlyModel.js:3629` giving every material a uniform 1.0, and concluded the
+feature was missing — contradicting CHARACTER's report, which had said 1.25×.
+
+**CHARACTER was right.** `SlyModel.js:3953` calls `sh.outline(this.cane.mesh, { thickness: 1.25 })`,
+and `ToonMaterial.js:1159` computes `px = max(TUNE.inkPx * thickness, 0.35)`. It is a **multiplier**,
+so the cane renders at **3.125 px against the body's 2.5 px**, delivered by a *separate shell
+material* rather than by a per-group weight.
+
+> **I searched for the mechanism I had in mind instead of for the effect.** Per-group weights and a
+> separate shell are two ways to spend the same intent, and a grep for one is silent about the
+> other. The tell I ignored was that I was contradicting an owner's direct report of their own
+> file — that is the moment to widen the search, not to write the flag.
+
+The `Cane.js:10` comment I cited as evidence of an unrealised intent — *"it wants its own material
+and its own outline thickness"* — is a plain description of what the code does.
+
+### 129.2 `Shading.applyOutlines()` is never called by anything
+
+Confirmed by grep across `src/` and `tools/`: the method is defined at `ToonMaterial.js:1207`,
+documented at `:23`, and **has no call sites.** The only three paths to an ink shell in the shipped
+game are `Guard.js:1147`, `SlyModel.js:3879` (the body) and `:3953` (the cane) — all direct
+`shading.outline()` calls.
+
+**So every `outline:` weight authored outside the character reaches nothing.** Twenty of them:
+`Props.js` (wood 0.85, rope 0.6, cloth 0.8, dark 0.9, lapis/carnelian 0.9, glass 0, ember/flame 0,
+cork 0.7 …), `Vegetation.js` (0.85, 0.6, 0.4, 0), `Terrain.js` (0). They are read by a walker nobody
+runs.
+
+> **§2.1 specifies "hulls on characters *and hero props*". The build is characters-only**, and has
+> been for the whole project. Not a tuning gap — an unwired feature, sitting behind a table of
+> carefully chosen numbers that made it look wired.
+
+This is the same shape as §125.1 (a comment asserting a pass the code never performs) and §127.1 (a
+constant hardcoded where no one would look): **the authored intent is present and legible, and the
+route from it to the frame does not exist.** Three instances in one session, in three different
+owners' files. Routed, not fixed — `Props.js`/`Vegetation.js` are GEOMETRY's, the call site is
+SHADING's, and whether hero props *should* carry hulls at the current draw budget is a decision, not
+a repair.
+
+### 129.3 SHADING registered §128.5 as a predicted null, from arithmetic, before any frame
+
+I routed the cel-ramp refutation to SHADING as a live lead. It registered the opposite, in
+`PREREG-compose1.md` §E, **before the arms exist**:
+
+`fillSkyMix` is **luminance-matched by construction** — evaluated on §2.2's constants it holds
+`slyLum` at **0.4577 across 0.70 / 0.35 / 0.00** while swinging G/R from 1.210 to 0.485. A
+plateau-and-step structure is a **luminance-domain** phenomenon, so a luminance-preserving hue
+rotation cannot smear or unsmear it.
+
+> And the falsifier is the interesting half: **if the arms move plateau-and-step by ≥ 5 points, the
+> luma-matching does not hold in frame — and *that* is the finding**, not the banding.
+
+A predicted null derived from the shader's own arithmetic, with a named consequence for being wrong,
+registered before the capture. That is §120's shape reaching a different owner.
+
+### 129.4 Two ROI controls disqualified by counting their denominators first
+
+Heeding §128.2, SHADING counted every ROI's sample population **before** quoting any share, and put
+two disqualifications on the record rather than discovering them in the scoring: **`sly-closeup` sky
+is 3 samples** and **`temple` sky is 227.** Neither can serve as the *"control must not move"* check
+on those shots.
+
+Three samples would have produced a control that passes or fails on noise, and it would have passed
+or failed *silently*. §104's ROI was caught after the fact by looking; this one was caught before
+the fact by counting.
+
+### 129.5 §127.5's decoupling confirmed at both sites, and correctly not touched
+
+`Body.js:495` writes the 0.82 bias into `normal`; `weldNormals` averages **that same attribute**, so
+the hull inherits it and a card's shell translates instead of inflating. The fix is one option on one
+function — **weld the hull field from *positions* rather than from the authored normal.**
+
+Left untouched pending CHARACTER's capture, per instruction, because the bias is load-bearing for the
+cel ramp and the flat-albedo instrument that found it is blind to exactly that.
+
+### 129.6 SHADING's correction to its own registered prediction
+
+Its §116 mechanism claim conflated two levers, and CHARACTER's sweep separates them: **removing fur
+cards moves ink 40.6 %; the hull *weight* moves 105 px (~0.7 %).** SHADING's mechanism delivers the
+second. The 38 % belongs to the first, and the real lever is `Body.addTuft`'s normal bias — so the
+number that made the hull-weight case look strong was never measuring the hull weight.
