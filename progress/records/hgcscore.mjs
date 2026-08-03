@@ -175,7 +175,7 @@ function ncc(L, keep, y0, y1, maxLag) {
   }
   const inBand = out.filter(([l]) => l >= 30 && l <= 300).sort((a, b) => b[1] - a[1]);
   const at = (l) => { const e = out.find(([q]) => q === l); return e ? e[1] : null; };
-  return { ok: true, x0, x1, N, topLag: top, top: inBand.slice(0, 6), at137: at(137), at154: at(154), at157: at(157), at192: at(192) };
+  return { ok: true, x0, x1, N, topLag: top, top: inBand.slice(0, 6), at, at137: at(137), at154: at(154), at157: at(157), at192: at(192) };
 }
 
 const Lc = luma(CAND), Lo = luma(CTL);
@@ -223,24 +223,53 @@ for (const mat of [GILD, ...NULLS]) {
 
   if (isGild) {
     const b = bandRows(keep);
-    console.log(`\nP3    band by rule (rows >=25% of max column count): y${b.y0}-${b.y1}, peak row ${b.maxRow} px`);
+    /* `--p3rows y0,y1[,label,repmin]` — extra explicitly-registered bands. On `hero` the material
+       spans a 5x depth range, so the rule-selected band lands on the near mass where the repeat is
+       469-1202 px and fewer than two repeats are on screen; a low rho there is arithmetic. */
+    const extra = argv.filter((a, i) => argv[i - 1] === '--p3rows').map((s) => s.split(','));
+    const bands = [{ y0: b.y0, y1: b.y1, label: 'by rule', repmin: REPMIN }];
+    for (const e of extra) bands.push({ y0: +e[0], y1: +e[1], label: e[2] || 'registered', repmin: +(e[3] || 0) });
+    console.log(`\nP3    peak masked row ${b.maxRow} px`);
+    for (const bd of bands) scoreBand(mat, keep, bd);
+    /* Not a gate — a scoping fact for §7.3's gold line. RESULT-tx7 §4 found only 1.4 % of hero's
+       gilded pixels are sunlit and concluded no frame in the tested set has key-lit gilded at
+       size. Same L >= 120 cut PREREG-goldspec registered. If a band here is lit, that band is
+       where the gold-as-metal question can be asked; if none is, that is the answer to why it
+       cannot be asked here. */
+    console.log(`\n      [scoping, not a gate] sunlit share of gilded mask (L >= 120/255):`);
+    for (const bd of bands) {
+      for (const [arm, L] of [['ctl', Lo], ['cand', Lc]]) {
+        let n2 = 0, lit = 0, sum = 0;
+        for (let y = bd.y0; y < bd.y1; y++) for (let x = 0; x < W; x++) { const k = y * W + x; if (keep[k]) { n2++; sum += L[k]; if (L[k] * 255 >= 120) lit++; } }
+        if (n2) console.log(`        ${bd.label.padEnd(10)} ${arm.padEnd(4)} ${n2} px, mean L ${(255 * sum / n2).toFixed(1)}, sunlit ${(100 * lit / n2).toFixed(2)}%`);
+      }
+    }
+  }
+}
+
+function scoreBand(mat, keep, bd) {
+  {
+    const b = bd;
+    console.log(`      --- band "${b.label}" y${b.y0}-${b.y1}${b.repmin ? `, repeat >= ${b.repmin} px` : ''} ---`);
     for (const [arm, L] of [['ctl', Lo], ['cand', Lc]]) {
+      const REPMIN = b.repmin;
       const a = ncc(L, keep, b.y0, b.y1, 300);
+      const key = `ncc_${b.label.replace(/\W+/g, '_')}_${arm}`;
       if (!a.ok) {
         console.log(`      ${arm}: longest CONTIGUOUS supported column run is ${a.cols} px — NOT TESTABLE`);
-        res.materials[mat][`ncc_${arm}`] = { ok: false, cols: a.cols };
+        res.materials[mat][key] = { ok: false, cols: a.cols };
         continue;
       }
-      res.materials[mat][`ncc_${arm}`] = a;
+      res.materials[mat][key] = a;
       /* A lag band that stops short of the surface's own repeat cannot see a repeat, so a low
          maximum in it is not a pass. Print the verdict, not just the number (§11). */
       if (REPMIN && a.topLag < REPMIN) {
-        a.notTestable = `max measurable lag ${a.topLag} px (half the ${a.N} px contiguous run) is below this shot's minimum repeat ${REPMIN} px`;
+        a.notTestable = `max measurable lag ${a.topLag} px (half the ${a.N} px contiguous run) is below this band's minimum repeat ${REPMIN} px`;
         console.log(`      ${arm.padEnd(4)} NOT TESTABLE — ${a.notTestable}`);
       }
       console.log(`      ${arm.padEnd(4)} x${a.x0}-${a.x1} (${a.N}px contiguous, lags to ${a.topLag})  max ρ in 30-300: ${a.top.map(([l, r]) => `${l}:${r.toFixed(3)}`).join('  ')}`);
       const f = (v) => (v == null ? 'n/a' : v.toFixed(3));
-      console.log(`           ρ at the run's own repeats — 137px ${f(a.at137)}  154px ${f(a.at154)}  157px ${f(a.at157)}  192px ${f(a.at192)}`);
+      console.log(`           ρ at repeat lags — 137 ${f(a.at137)}  154 ${f(a.at154)}  157 ${f(a.at157)}  176 ${f(a.at(176))}  192 ${f(a.at192)}  207 ${f(a.at(207))}`);
     }
   }
 }

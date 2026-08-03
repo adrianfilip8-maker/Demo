@@ -12176,3 +12176,31 @@ has stopped being something the ledger enforces and become something the owners 
 single median then describes nothing in it."* Same family as §135.1's ROI dilution and §128.2's
 frustum-volume denominator: a summary statistic quietly reporting a property of its own window
 rather than of its subject.
+
+### 142.4 An acceptance relocated before the frames exist, because the statistic could not have worked where it was
+
+TEXTURES amended `PREREG-hgchisel-frame.md` while still blind — **zero PNGs of the run on disk**,
+mask-and-geometry only — and moved where P3 is evaluated. The gate is unchanged (max ρ over lags
+30–300 ≤ 0.45); only the population moved, and on measured grounds.
+
+`hero` carries **two** gilded populations with a **5× depth ratio**, and a single median over the
+pair describes neither:
+
+| `hero`, `arch:hieroglyph_gilded` | px | depth p5–p95 | px / 6.4 m repeat | repeats on screen |
+|---|---|---|---|---|
+| **far band, rows 24–140** | 45 789 | 26.2–42.0 m | **129–207 (p50 176)** | **2.7–4.3** |
+| near mass, rows 300–620 | 190 653 | 4.5–11.6 m | 469–1202 (p50 873) | ~1 |
+
+**100 % of the far band's pixels have a repeat inside the registered 30–300 lag band; 0 % of the
+near mass's do.** So an autocorrelation gate evaluated on the near mass could only ever return a
+pass, and the pass would be arithmetic rather than evidence.
+
+P3 now scores on `hero` rows 24–140 — *"the only place in either shot where more than two contiguous
+repeats of this recipe are on screen, and therefore the only framing in this pair where §130.4's
+stated risk can fail."* The other bands are still computed and reported, labelled as what they are:
+
+> **≤ ~1 repeat, where a low ρ is arithmetic, not a result.**
+
+Same family as 142.3's `--rows`, applied to an owner's own acceptance rather than to its
+measurements — and caught in the window where relocating a gate is free, because nothing has been
+seen yet.

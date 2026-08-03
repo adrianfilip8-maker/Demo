@@ -242,6 +242,49 @@ frames show, the finding is *"the tiling risk §130.4 raised is not reachable at
 framings"* — which is a different claim from *"the tiling is fine"*, and it must be written as the
 first one.
 
+## AMENDMENT 4 — P3 *is* answerable, on `hero`'s far gilded band, registered before the frames
+
+Still zero PNGs of this run on disk. Mask-and-geometry only, so still blind to both arms. **The
+gate is unchanged: max ρ over lags 30–300 ≤ 0.45.** What changes is *where* it is evaluated, and
+the reason is measured rather than preferred.
+
+`hero` carries **two** gilded populations with a 5× depth ratio between them, and a single median
+over the pair describes neither:
+
+| `hero`, `arch:hieroglyph_gilded` | px | depth p5–p95 | px / 6.4 m repeat | longest contiguous run | repeats on screen |
+|---|---|---|---|---|---|
+| **far band, rows 24–140** | 45 789 | 26.2–42.0 m | **129–207 (p50 176)** | **552 px** | **2.7–4.3** |
+| near mass, rows 300–620 | 190 653 | 4.5–11.6 m | 469–1202 (p50 873) | 844 px | ~1 |
+
+100 % of the far band's pixels have a repeat inside the registered 30–300 lag band, and half of a
+552 px run reaches lag 276, so every repeat in it is measurable. **0 %** of the near mass's pixels
+do.
+
+So P3 is scored on **`hero` rows 24–140** — registered here, before any frame — and this is the
+only place in either shot where more than two contiguous repeats of this recipe are on screen. It
+is therefore the only framing in this pair where §130.4's stated risk (*"the seam row now carries a
+bee and a falcon per repeat"*) can fail. The rule-selected band and the near mass are still
+computed and reported, labelled as what they are: **≤ ~1 repeat, where a low ρ is arithmetic, not a
+result.**
+
+`temple` stays **NOT TESTABLE** per Amendment 2. Nothing about Amendment 4 rescues it: its longest
+contiguous run is 194 px against a 127–244 px repeat.
+
+## AMENDMENT 5 — one scoping diagnostic added, registered as a non-gate
+
+Still zero PNGs on disk. The scorer additionally prints, per gilded band and per arm, the **sunlit
+share** of the mask at the `L ≥ 120/255` cut `PREREG-goldspec` already registered. It is **not a
+gate and cannot pass or fail anything here.**
+
+Why it is worth printing at all: `RESULT-tx7` §4 measured **only 1.4 %** of `hero`'s gilded pixels
+sunlit and concluded that no frame in the tested set has key-lit gilded at size — which is why the
+`aoKey` A/B *"could not have tested §7.3's gold-occlusion line either way"*. That measurement was
+over the whole gilded mask, and Amendment 4 has since shown the mask is two populations 5× apart in
+depth. If the far band is lit where the near mass is not, the scoping conclusion needs narrowing;
+if neither is, it is confirmed on a second run. Either way it is an observation about **framing**,
+which is not TEXTURES' to fix, and it is recorded here so it cannot later be presented as a result
+this run was designed to produce.
+
 ## Not claimed
 
 - Nothing here is about gold reading as **metal**. §130.5's chroma loss is `slyMetal`'s and the
