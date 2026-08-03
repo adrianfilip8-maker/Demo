@@ -10135,3 +10135,168 @@ The lever with range is the lobe's **width**, i.e. `gloss` in `Architecture.RECI
 not TEXTURES'.** Together with `spec: 0.55` (same file) and POSTFX's metal-aware bloom feed, §7.3's
 "gold doesn't read as metal" is now **handed on with the arithmetic attached** rather than asserted:
 TEXTURES has bounded its own side to ≈1.0 code of 255 and shown the bound is structural.
+
+## §121 — the predicted null lands, the calibration passes, and the prediction's own instrument is weaker than its record
+
+§120 registered a null **before** the arms rendered. They have rendered. The seal is
+`progress/records/PREREG-goldspec.md` (sealed 14:05:58, two amendments, all with zero PNGs of the
+run on disk) and `progress/records/RESULT-goldspec.md`; three arms, one tree, `goldspec.log`.
+
+**`hieroglyph_gilded`'s specular route is a confirmed null.** But the value of the run is not the
+null — a null predicted in advance is barely news. It is the six things below, four of which
+would have been unavailable if the prediction had simply been believed.
+
+### 121.1 The prediction scored, and the residual was checked rather than assumed
+
+Predicted ≈ 104 px on `sly-startle` and ≈ 74 px on `sly-key`, both inside the 83–122 px same-tree
+floor. Observed, inside `arch:hieroglyph_gilded`:
+
+| shot | mask px | differ | max Δ | ≥8 | largest **bit-identical** material in the same pair |
+|---|---|---|---|---|---|
+| `sly-startle` | 113 863 | **420** (0.37 %) | 5 | **0** | `paving_courtyard` **2 145** (max 14) |
+| `sly-key` | 127 789 | **8** (0.006 %) | 3 | **0** | `sandstone_block` **5 337** (max 52) |
+
+The treated material moves **5× less than an untouched one on `sly-startle` and 670× less on
+`sly-key`.** A null this size sits inside the noise, and the honest move was to ask whether the 420
+were the treatment at all or arm-1's residual (121.6) leaking in. **All 420 lie inside the union of
+the pixel sets the two larger comparisons move — 0 of 420 outside it** — and they select the lit
+population: mean control luma **142.5** against the mask's **63.6**. That is what a specular term
+does and what a shadow-boundary residual does not. The 420 are the treatment. They are simply
+invisible.
+
+### 121.2 A hazard registered before the capture, then observed — the rarest shape in this file
+
+§120.3 predicted the treatment is **not monotone in the image**: below the step's shoulder the
+narrower lobe falls under `smoothstep` faster than the amplitude rises. The ×8.5 arm's bright
+gilded subset moves **−0.115 mean signed luma**. At 8.5× the notch the highlight gets **smaller and
+darker**.
+
+> **`arrisPolish` pushes against §7.3's spec, not with it. More polish is not more highlight.**
+
+Every other entry in the §101 / §112.1 family — a statistic invalidated by a property of the
+treatment nobody checked — was caught in *correction*. This one was caught in *advance*, and the
+constraint it imposed (only the unsigned count is safe to read) is the reason 121.1's table has no
+signed column to be embarrassed by.
+
+### 121.3 A positive calibration arm is not a gold result
+
+P2 clears its pre-registered bar on `sly-startle`: **699 px, mean Δ 2.42, max 17, 81 px at |Δ| ≥ 6**
+against a bar of ≥ 400 px and ≥ 40 at ≥ 6; on the bright subset, mean Δ **7.29** against ≈ 8.6
+predicted. So the chain texture → ORM → sampler → specular → grade → PNG *does* transmit a
+roughness change here, and §13's rule is satisfied: **the null is measured, not blind.**
+
+Then P4, registered for exactly this, splits the 699 on the control arm's chroma:
+**lime-candidate 386 px with 53 at |Δ| ≥ 8; gild-candidate 46 px with 0 at ≥ 8.** The calibration
+arm passed *on the limestone inside the recipe*. Only **7.3 %** of the delivered roughness delta
+lands on gold — `carve()`'s ring is authored outside the cut, the gilding inside it, and the gold
+pass re-lerps roughness over the overlap. **Without P4 this run would have reported a working
+instrument on a material the instrument barely touches.**
+
+### 121.4 In a multi-agent tree the git SHA is the wrong provenance fact
+
+The three arms stamp `e82a4e4+dirty`, `fe70c02+dirty`, and the same tree again — **the SHA moved
+between arms because other agents committed while the arms ran.** The `src/**/*.js` hash is
+**`d42810d313bc` before arm 1 and after arm 3**, and the one commit that landed inside the window
+touched only `KNOWN_ISSUES.md` and `progress/**`.
+
+> **A git SHA is a fact about the repository. A tree hash over what the bundler actually reads is
+> the fact an A/B comparison needs.** In a single-author tree they coincide, which is why the
+> distinction has never mattered before in this file. With five agents committing concurrently it
+> is the difference between a valid comparison and an unreadable one.
+
+### 121.5 §110.3 must be read narrowly, and this run is the evidence
+
+`gs-ship` vs `gs-x8` are **two independent boots seven minutes apart** and differ by **0 pixels
+outside the treated material** on both shots — the whole-frame diffs (606 px and 13 px) are
+*entirely* inside the gilded mask. Cross-boot rendering is bit-deterministic in these framings.
+
+§110.3's "frames are not bit-deterministic across boots" came from a **perched bird at a different
+animation phase**. It is a statement about animated background elements, not a property of the
+renderer, and it should not be quoted as the latter. The operative rule stands unchanged — keep A/B
+ROIs off animated elements — but a framing with nothing animated in it *can* carry a cross-boot
+bit-identity control, and this run used one.
+
+### 121.6 A residual I cannot explain, reported rather than smoothed over
+
+`gs-pol0` differs from **both** other arms on untouched materials — `sly-key` **10 240 px, max Δ
+52**; `sly-startle` 2 148 px — and the `pol0→ship` and `pol0→x8` counts are **identical to the
+pixel**, so `ship` and `x8` agree exactly there and **arm 1 is the outlier**. It is a localised soft
+band on the left wall (x ≈ 230–420, y ≈ 30–350), the shape of a shadow or shaft boundary landing a
+texel differently. Arm 1 was the first boot after a 26-minute lock hold released.
+
+**It is not post-chain coupling, and that is checkable rather than arguable:** coupling would grow
+with the size of the texture change, and the *larger* change (`ship → x8`) produces **exactly zero**
+pixels outside the treated material on both shots. It does not touch the gilded mask (121.1's
+overlap check), so no verdict here depends on it. Left open under its own name.
+
+### 121.7 Found-not-taken, with the condition named
+
+`PREREG-hgarris2` P5 registered: *"if both land null, gilded's arris goes to 0 and stays there."*
+Both landed null. The rule says zero it now.
+
+The rule is **not** being applied, and the reason is a fact this run turned up *after* the rule was
+written: 121.9's `gloss` lever is 4.6× recoverable, and if ARCHITECTURE takes it the notch's
+in-lobe area rises with it, so zeroing now would have to be undone then. Recorded as a conditional
+with the condition named — *if `gloss` stays 64, set `arrisPolish` to 0, and `shots/gs-pol0`
+already **is** a frame-verified capture of that state; if `gloss` drops, re-run the prediction
+offline at the new value first.*
+
+> Applying a rule mechanically after the ground under it moved, and quietly dropping a rule one has
+> stopped liking, are both failures this file records. A conditional with its condition written
+> down is neither.
+
+### 121.8 The instrument got the right answer for reasons it cannot see
+
+`goldspec.mjs` ranked `sly-startle` (7.72 % area-in-lobe) above `sly-key` (4.91 %), and that is
+exactly where the calibration moved 699 px versus 15. A predictive ranking from a new instrument is
+the only evidence that it works — **and it is weaker here than it looks.** The stage models **no
+shadow map and no occlusion**, and `sly-startle` turns out to be a tight face close-up where the
+gilded architecture is a *shadowed background sliver*. The instrument ranked it first without
+knowing either of those things.
+
+> It is a **geometric availability** measure, not a visibility measure, and must be quoted as one.
+> A correct prediction from an instrument blind to the dominant mechanism is a coincidence with a
+> good track record, not a validated model.
+
+### 121.9 Curvature, not texture, is what puts a cel specular on screen
+
+The clinching comparison is **inside one frame** — same key light, same shader, selected by colour
+rather than by mask:
+
+| | mean RGB | L | (b−r)/255 | chroma | px ≥ L 170 |
+|---|---|---|---|---|---|
+| **cane gold** (curved tube, `gold_leaf`, gloss **110**) | 164.8, 101.0, 50.1 | 110.9 | **−0.450** | **0.696** | 970 |
+| **architrave gilding** (flat, `hieroglyph_gilded`, gloss **64**) | 57.6, 64.6, 71.7 | 63.6 | +0.055 | 0.197 | 432 |
+
+The cane runs the **narrower** lobe and still carries a clean hot streak, because a tube's normal
+sweeps through the half-vector *somewhere* along its length — the lobe is guaranteed a place to
+land. A flat architrave has one normal and either catches it or does not. At golden hour the gilded
+architecture reads as **near-achromatic cool grey** (chroma 0.084 on `sly-key`) and on `sly-startle`
+its *brightest* pixels are **cyan** — the rim colour, not gold.
+
+Sized for the owner: `gloss` 64 → 24 takes in-lobe area **1.75 % → 8.08 %** on `sly-key` and
+**2.46 % → 11.21 %** on `sly-closeup`. `Architecture.RECIPES` is ARCHITECTURE's file. A wider lobe
+is **not** a softer one — `specStep` is a hard step.
+
+**§7.3's gold line, honestly split and closed from TEXTURES' side:** the specular route *cannot*
+deliver it (measured, mechanism named at three points); the albedo route was already null on `hero`;
+the dark occlusion is authored correctly (2.1:1 span) and lost downstream in §8, which is SHADING's;
+the lobe's width is ARCHITECTURE's; the bloom feed is POSTFX's.
+
+Two things TEXTURES got wrong by eye and corrected by measuring, recorded because that rule cuts
+both ways: the `sly-key` architrave read at 4× as "flat colour, no detail" carries **the most**
+detail of any material in that frame (fineMed 0.0296, cov1 79.0 %); and `hero`'s pale top arris edge
+is **not** gold.
+
+### 121.10 A new §13-family defect, found and deliberately not fixed
+
+`hieroglyph_gilded` carries a **countable once-per-repeat landmark**: a single filled gold disc
+(`sun`, **n = 1**, tile-U 159) on a near-empty pale field. At `courtyard`'s 171 px/repeat it recurs
+**8 times across the frame** — verified at the shipped tile size, not the lab default. Same shape as
+§13's scarab pair, found by the same instrument.
+
+**Not fixed, for a reason that is itself the right call:** three arms of that exact recipe were
+queued, and a mid-queue edit to `src/textures/**` would have given them different textures — which
+is precisely 121.4's hazard, avoided rather than discovered. Open, and open on **`courtyard` /
+`night`**: `hero` is 98.6 % shadowed there and both goldspec framings carry only 1.3–1.6 repeats
+across.

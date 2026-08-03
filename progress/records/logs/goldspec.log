@@ -1,0 +1,165 @@
+# ---- run log preserved by tools/keeplog.sh ----
+# run:      goldspec
+# source:   /tmp/claude-0/-home-user-Demo/94022f73-a328-5e86-b2ec-031aa9c720ce/scratchpad/goldspec-full.log
+# copied:   2026-08-03T14:46:51Z
+# tree at copy time (NOT the run's build): dd88335 — working tree DIRTY
+#   For the commit this run actually rendered, read shots/goldspec/report.json or goldspec.json.
+# NOTE: this is a COPY. The scratchpad original is ephemeral and may already be gone.
+# ------------------------------------------------
+=== ARM shots/gs-pol0  VITE_TEX_AB='hgpolish'  treehash=d42810d313bc  14:06:33
+· waiting for capture lock (10s, held by pid 17680)
+· waiting for capture lock (20s, held by pid 17680)
+· waiting for capture lock (31s, held by pid 17680)
+· waiting for capture lock (41s, held by pid 17680)
+· waiting for capture lock (51s, held by pid 17680)
+· waiting for capture lock (62s, held by pid 17680)
+· waiting for capture lock (72s, held by pid 17680)
+· waiting for capture lock (83s, held by pid 17680)
+· waiting for capture lock (93s, held by pid 17680)
+· waiting for capture lock (104s, held by pid 17680)
+· waiting for capture lock (114s, held by pid 17680)
+· waiting for capture lock (124s, held by pid 17680)
+· waiting for capture lock (135s, held by pid 17680)
+· waiting for capture lock (145s, held by pid 17680)
+· waiting for capture lock (155s, held by pid 17680)
+· waiting for capture lock (166s, held by pid 17680)
+· waiting for capture lock (177s, held by pid 17680)
+· waiting for capture lock (187s, held by pid 17680)
+· waiting for capture lock (198s, held by pid 17680)
+· waiting for capture lock (208s, held by pid 17680)
+· waiting for capture lock (218s, held by pid 17680)
+· waiting for capture lock (229s, held by pid 17680)
+· waiting for capture lock (240s, held by pid 17680)
+· waiting for capture lock (250s, held by pid 17680)
+· waiting for capture lock (261s, held by pid 17680)
+· waiting for capture lock (271s, held by pid 17680)
+· waiting for capture lock (282s, held by pid 17680)
+· waiting for capture lock (292s, held by pid 17680)
+· waiting for capture lock (303s, held by pid 17680)
+· waiting for capture lock (314s, held by pid 17680)
+· waiting for capture lock (324s, held by pid 17680)
+· waiting for capture lock (334s, held by pid 17680)
+· waiting for capture lock (345s, held by pid 17680)
+· waiting for capture lock (356s, held by pid 17680)
+· waiting for capture lock (367s, held by pid 17680)
+· waiting for capture lock (377s, held by pid 17680)
+· waiting for capture lock (387s, held by pid 17680)
+· waiting for capture lock (398s, held by pid 17680)
+· waiting for capture lock (408s, held by pid 17680)
+· waiting for capture lock (418s, held by pid 17680)
+· waiting for capture lock (428s, held by pid 17680)
+· waiting for capture lock (439s, held by pid 17680)
+· waiting for capture lock (449s, held by pid 17680)
+· waiting for capture lock (460s, held by pid 17680)
+· waiting for capture lock (470s, held by pid 17680)
+· waiting for capture lock (481s, held by pid 17680)
+· waiting for capture lock (491s, held by pid 17680)
+· waiting for capture lock (502s, held by pid 17680)
+· waiting for capture lock (512s, held by pid 17680)
+· waiting for capture lock (522s, held by pid 17680)
+· waiting for capture lock (533s, held by pid 17680)
+· waiting for capture lock (545s, held by pid 17680)
+· waiting for capture lock (555s, held by pid 17680)
+· waiting for capture lock (565s, held by pid 17680)
+· waiting for capture lock (576s, held by pid 17680)
+· waiting for capture lock (587s, held by pid 17680)
+· waiting for capture lock (597s, held by pid 17680)
+· waiting for capture lock (608s, held by pid 17680)
+· waiting for capture lock (619s, held by pid 17680)
+· waiting for capture lock (630s, held by pid 17680)
+· waiting for capture lock (641s, held by pid 17680)
+· waiting for capture lock (651s, held by pid 17680)
+· waiting for capture lock (662s, held by pid 17680)
+· waiting for capture lock (672s, held by pid 17680)
+· waiting for capture lock (683s, held by pid 17680)
+· waiting for capture lock (694s, held by pid 17680)
+· waiting for capture lock (704s, held by pid 17680)
+· waiting for capture lock (715s, held by pid 17680)
+· waiting for capture lock (725s, held by pid 17680)
+· waiting for capture lock (736s, held by pid 17680)
+· waiting for capture lock (747s, held by pid 17680)
+· waiting for capture lock (757s, held by pid 17680)
+· waiting for capture lock (768s, held by pid 17680)
+· waiting for capture lock (778s, held by pid 17680)
+· waiting for capture lock (789s, held by pid 17680)
+· waiting for capture lock (799s, held by pid 17680)
+· waiting for capture lock (810s, held by pid 17680)
+· waiting for capture lock (820s, held by pid 17680)
+· waiting for capture lock (831s, held by pid 17680)
+· waiting for capture lock (842s, held by pid 17680)
+· waiting for capture lock (852s, held by pid 17680)
+· waiting for capture lock (863s, held by pid 17680)
+· waiting for capture lock (873s, held by pid 17680)
+· waiting for capture lock (884s, held by pid 17680)
+· waiting for capture lock (894s, held by pid 17680)
+· waiting for capture lock (904s, held by pid 17680)
+· waiting for capture lock (914s, held by pid 17680)
+· waiting for capture lock (925s, held by pid 17680)
+· waiting for capture lock (936s, held by pid 17680)
+· waiting for capture lock (946s, held by pid 17680)
+· waiting for capture lock (957s, held by pid 17680)
+· waiting for capture lock (968s, held by pid 17680)
+· waiting for capture lock (979s, held by pid 17680)
+· waiting for capture lock (989s, held by pid 17680)
+· waiting for capture lock (1000s, held by pid 17680)
+· waiting for capture lock (1011s, held by pid 17680)
+· waiting for capture lock (1021s, held by pid 17680)
+· waiting for capture lock (1032s, held by pid 17680)
+· waiting for capture lock (1043s, held by pid 17680)
+· waiting for capture lock (1053s, held by pid 17680)
+· waiting for capture lock (1064s, held by pid 17680)
+· waiting for capture lock (1074s, held by pid 17680)
+· waiting for capture lock (1084s, held by pid 17680)
+· waiting for capture lock (1095s, held by pid 17680)
+· waiting for capture lock (1106s, held by pid 17680)
+· waiting for capture lock (1116s, held by pid 17680)
+· waiting for capture lock (1126s, held by pid 17680)
+· starting dev server on :5300
+· loading game
+· ready
+· renderer: ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)
+· modules present (17): shading postfx sky lighting textures architecture props terrain collision character animation movement camera fx guards hud audio
+· 2 boot warning(s):
+    ! textures: A/B CONTROL BUILD — treatments disabled: hgpolish
+    ! textures: prewarm took 17.2s at size 1024
+  ✓ sly-startle   126883ms  draws  180  tris 1241k
+  ✓ sly-key       158830ms  draws  249  tris 1651k
+· 1 console error(s):
+    ! Failed to load resource: the server responded with a status of 404 (Not Found)
+  · page closed
+
+→ shots/gs-pol0/  (2 shots, 0 failed)
+=== arm1 pid gone 14:31:56
+=== ARM shots/gs-ship  VITE_TEX_AB=''  treehash=d42810d313bc  14:31:56
+· starting dev server on :5300
+· loading game
+· ready
+· renderer: ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)
+· modules present (17): shading postfx sky lighting textures architecture props terrain collision character animation movement camera fx guards hud audio
+· 1 boot warning(s):
+    ! textures: prewarm took 17.0s at size 1024
+  ✓ sly-startle   136272ms  draws  180  tris 1241k
+  ✓ sly-key       161771ms  draws  249  tris 1651k
+· 1 console error(s):
+    ! Failed to load resource: the server responded with a status of 404 (Not Found)
+  · page closed
+
+→ shots/gs-ship/  (2 shots, 0 failed)
+=== ARM shots/gs-ship done  treehash=d42810d313bc  14:37:59
+=== ARM shots/gs-x8  VITE_TEX_AB='hgpolishx8'  treehash=d42810d313bc  14:37:59
+· starting dev server on :5300
+· loading game
+· ready
+· renderer: ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)
+· modules present (17): shading postfx sky lighting textures architecture props terrain collision character animation movement camera fx guards hud audio
+· 2 boot warning(s):
+    ! textures: A/B CONTROL BUILD — treatments disabled: hgpolishx8
+    ! textures: prewarm took 16.7s at size 1024
+  ✓ sly-startle   122737ms  draws  180  tris 1241k
+  ✓ sly-key       153580ms  draws  249  tris 1651k
+· 1 console error(s):
+    ! Failed to load resource: the server responded with a status of 404 (Not Found)
+  · page closed
+
+→ shots/gs-x8/  (2 shots, 0 failed)
+=== ALL ARMS DONE 14:43:48  treehash=d42810d313bc
