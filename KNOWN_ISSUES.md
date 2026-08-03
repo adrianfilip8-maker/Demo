@@ -5848,3 +5848,101 @@ looks.**
 *An instrument that cannot distinguish two causes should report the ambiguity, not pick one.* That
 is the same rule §49 recorded for a null with two opposite mechanisms, arriving here in a tool I
 wrote after recording it.
+
+
+---
+
+## §70 — the mottle passed every offline check and delivered exactly zero, and the tone curve has a name
+
+### 70.1 The falsifier fired and TEXTURES reverted rather than defended
+
+`PREREG-mottle-critic6.md` was sealed before the pass-6 boot with a primary of
+`Δcolumn − Δwall ≥ +2.0` points. Scored on `shots/critic6/temple.png` at `1bc8938` against
+`shots/rim4/temple-base.png` at `2f99d55` — whose `src/textures/**` is this file minus the block:
+
+> **+0.1 points of `cov1` against the control's +0.1 — i.e. zero.** The nulls held to ±0.1, so the
+> frame did not move for outside reasons and **that zero is the change's own.**
+
+The seal said *revert, not defend*, and it was reverted. The texture-side +17.6 points was not
+offered as mitigation. **This is the first pre-registered falsifier in the project to fire against
+its author's own shipped work and be honoured without argument.**
+
+**Why it did not transfer is the part worth keeping.** The mottle is 16.7 cm ≈ **9.4 px** at
+`temple`'s 17.8 mm/px; `cov1` band-passes at **1.6 px**.
+
+> On the resampled albedo a 9.4 px blob still moves a 1.6 px statistic — *because the albedo is all
+> the signal there is.* In the frame that band is already occupied by relief, joints, ink and
+> shafts, so the feature landed where it actually lives: the **coarse** scale.
+
+Measured there, it is not absent at all — `covC2` **+1.7 points** against the wall's +0.1, coarse
+amplitude **+3.9%** against the controls' +0.6%. **It reached the GPU and bought coarse-scale
+energy, which is the currency of the *busy* failure, not the flat one.** `deadBig` rose 2.0 → 2.1
+with its largest dead blob 4044 → 4236 px.
+
+So the offline instrument was not wrong; it was measuring a band that the frame fills from other
+sources. **A texture statistic computed on albedo alone has no way to know which scales the frame
+has already spent.**
+
+### 70.2 The tone curve has a governing quantity, and the attribution is unambiguous
+
+SHADING sized §68.1 offline. The right quantity falls out of `cov1`'s own definition rather than
+being assumed: `cov1` thresholds **relative** display contrast, and texture detail is a
+*multiplicative* modulation on albedo, so the chain's effect on it is exactly
+**`G(c) = dlnD/dlnc`**, the log-log slope of the shipped grade + tonemap. The authored modulation
+needed to clear 1% is `0.01/G`.
+
+| bin | mean `G` | authored modulation to clear 1% |
+|---|---|---|
+| `base < 0.35` | 0.625 | 1.60% |
+| `base ≥ 0.50` | 0.244 | **4.10%** |
+| ratio | **0.390** | **×2.56 harder** |
+
+**It is AgX.** Neutralising contrast leaves the ratio at 0.406, saturation 0.387, the split 0.382 —
+**bypassing AgX takes it to 0.990.**
+
+**No scalar in this grade can fix it, and that is sized rather than asserted.** Raising contrast
+makes highlights *worse* (`G` at scene 3 falls 0.084 → 0.066). Exposure has the right sign and a
+brutal ceiling: reaching merely the *current dark-bin* `G` needs exposure 0.95 → 0.182, putting lit
+sandstone at **L 125.7 from 202.2.** So the fix is structural, it is a look change, and it lands
+after pass 6 with its own A/B. §17 holds.
+
+### 70.3 The instrument failed its own validation twice, and both failures were the author's
+
+- At **136 L** off: a bare number-regex over the matrix declarations matched the `3` in
+  `mat3`/`vec3` and the `2020` in `SLY_REC2020_TO_SRGB`, so **every AgX matrix was garbage.**
+- At **39 L** off: the expected values were taken from `bloomcalc.mjs`'s inline comment, which
+  quotes a **retracted** row.
+
+Both were caught by validating on a known input before quoting a result. The final model matches
+the live frame-validated row to **0.35 L** and reproduces `bloomcalc` to the digit. The stale
+comment is now annotated, with the tool's output verified bit-unchanged — §62.3's shape again, *and
+it had already misled one run before this.*
+
+### 70.4 Two things deliberately not done, and the reasons are the discipline
+
+- **The 0.390 was not converted into a coverage number.** `G` is a contrast-*gain* ratio; §68.1's
+  0.48–0.99 are *threshold-crossing* ratios. Bridging them needs the CDF of authored modulation,
+  which nobody has. Two ratios that look comparable and are not is §62.4's "name the statistic
+  before quoting a sign" in its arithmetic form.
+- **A whole-frame per-shot check was declined**, because without a material mask it mixes **sky**
+  into the bright bin — which is §68.2's own error (an aggregate that merges two populations
+  reports a number belonging to neither).
+
+Both are pre-registered instead, as a rank-correlation test with a stated falsifier (**ρ < 0.7 kills
+the routing**) and an `interior` null.
+
+### 70.5 Provenance of the revert, verified rather than asserted
+
+The revert's mtime is **00:07:13**, inside the capture window (23:33 → ~00:30), which
+`BRIEF-critic6.md` requirement 4 treats as grounds to void a run. **It does not void this one, and
+that is checked rather than argued:**
+
+- `shot.mjs` contains no per-shot prewarm, rebuild, dispose or re-`init` — modules resolve once at
+  the single `page.goto`;
+- the capture log carries **exactly one** prewarm warning, so the texture atlas was built once, at
+  boot, from the tree as it stood at 23:33;
+- `SANDS_NO_HMR=1` freezes the build for the run's duration.
+
+So **all fourteen frames carry the mottle**, the set is internally consistent, and `report.json`
+stamps `1bc8938` truthfully. What the critic will score is a column texture that, as of `00:07`, no
+longer ships — recorded here so that a later reader comparing frames to source is not misled.
