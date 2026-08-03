@@ -1,8 +1,8 @@
 # ---- run log preserved by tools/keeplog.sh ----
 # run:      t16ab
 # source:   /tmp/claude-0/-home-user-Demo/94022f73-a328-5e86-b2ec-031aa9c720ce/scratchpad/t16ab.log
-# copied:   2026-08-03T05:32:42Z
-# tree:     44fc5f9 (DIRTY at copy time)
+# copied:   2026-08-03T10:28:11Z
+# tree:     f7bc2cc (DIRTY at copy time)
 # NOTE: this is a COPY. The scratchpad original is ephemeral and may already be gone.
 # ------------------------------------------------
 · queued 2026-08-01T21:47:52.404Z  tree@queue = {"head":"77e1eabbadb3fa9651257cf0fc057508cf865094","dirty":[],"at":"2026-08-01T21:47:52.404Z"}

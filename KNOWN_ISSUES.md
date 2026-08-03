@@ -8211,3 +8211,47 @@ arithmetic and stand; nothing in that document was ever scored against a frame, 
 claims to have been. **A status word that is accurate under one reading and misleading under the
 likelier one is worth replacing, not defending** — and the author flagged it rather than leaving it
 to be re-derived by whoever reads the two documents in the wrong order.
+
+---
+
+## §95 — three runs that produced nothing, three different causes, and a wrong theory abandoned
+
+§94.2c found `t16ab` had never rendered. Extending that audit to every run behind an open task
+found **three** empty runs — and by the third I had a theory: §14's reaper eating processes that
+had queued without a clean detachment, which would have made §92.2's ppid hazard the root cause of
+a whole class of lost work. It was wrong for all three.
+
+| run | ends | actual cause |
+|---|---|---|
+| `tone1` | `TypeError` **after** taking the lock | a callback-signature bug in the runner (§94.1) |
+| `fx9` | mid-queue at 1746 s, `held by pid 9870` | **the first container rollback**, while queued |
+| `t16ab` | mid-queue at 1487 s, `held by pid 9870` | same rollback, same lock holder |
+| `geobud` | mid-queue at 647 s | **GEOMETRY killed it deliberately** |
+
+`fx9` and `t16ab` were waiting on the *same* pid, so they died together to the Aug 1 ~22:12
+restart. `geobud` is not a loss at all: GEOMETRY realised mid-wait that its measurement needed no
+GPU, built `scenebudget.mjs` offline instead, and **released its own slot by exact pid resolved
+from the ticket — never `pkill -f`** — rather than delay three agents for a frame it no longer
+wanted. That is the queue working.
+
+**The theory was attractive because it explained all three with one mechanism I had just written
+up an hour earlier.** §92.2 is a real finding, it had just been promoted from "hazard" to
+"default", and it was fresh. A newly-sharpened tool looks like the right tool for the next thing
+that moves. What killed the theory was the cheapest possible check — reading the last line of each
+log and noticing that two named the *same lock holder*, which a per-process reaper has no reason
+to do.
+
+> **Where a recent finding is in scope, prefer the evidence that could distinguish it from
+> alternatives over the evidence that merely fits it.** Every one of these logs was consistent
+> with the reaper. Only the pid told them apart.
+
+### 95.1 What the audit actually cost, and what it bought
+
+Four open tasks were checked. **Three of the four had wrong status**: #13 and #16 said "queued" and
+"rendering" for runs that never existed, #14 said "queued" for a run that finished two days ago and
+had never been read. Only #17 was accurate. All of it was `ls` and `tail`.
+
+The uncomfortable part is the direction of the errors. Two tasks claimed *more* progress than
+existed and one claimed *less* — so the aggregate looked roughly right and no summary statistic
+would have flagged it. **A status field is a claim about the filesystem, and it decays silently in
+both directions.**
