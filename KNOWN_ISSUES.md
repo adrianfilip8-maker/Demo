@@ -8670,3 +8670,82 @@ Bands were cut on the **baseline arm's** P33/P66 and held fixed across arms, so 
 over the same pixels. Scoring each arm on its own percentiles is the trap: a curve that darkens
 everything moves its own P66 down, re-selects a darker population, and can report "more highlight
 detail" purely by measuring somewhere else. The partition is asserted per shot, not assumed.
+
+---
+
+## §102 — the puff bands, actually computed, and the prediction §99 left standing in their place
+
+§99 scored `fx19` at whole-frame level, found the bracket mis-sited, and then wrote: *"Band 2
+should catch that, and if it does, the seal has worked exactly as designed."*
+
+**That is a prediction of a band's verdict standing where the band's verdict belongs.** It happened
+to be right. It was still the one thing the seal exists to prevent — a registered rule left
+uncomputed because the author already believed he knew the answer. `tools/puffscore.mjs` computes
+it. The run is now scored; before this it was only characterised.
+
+### 102.1 The registered scoring, in full
+
+Regions derived in-run from this run's own frames, per the seal (§73.2, §63.2 — `fx18`'s frames
+are gone, so no coordinate from it is reusable):
+
+```
+ATTESTATION  back vs base: 0 differing px            PASS — arms attested
+REGION P  largest component: area 4429 px, centroid (693,419)
+  centroid within 150 px of (666,412): 28.1 px       PASS
+  area >= 3000 px: 4429                              PASS
+REGION G  sandLow-attributed outside P: 8838 px      PASS (>= 2000)
+
+ceiling   Band 1 PUFF        Band 2 HAZE (binding)
+  0.120   1.000  PASS          0.059  FAIL
+  0.085   1.000  PASS          0.009  FAIL
+  0.055   1.000  PASS          0.005  FAIL
+```
+
+**NOTHING SHIPS.** Every ceiling passes Band 1 and fails Band 2, and the seal's rule — *a Band 1
+pass alongside a Band 2 fail is NOT banked* — refuses all three. The attestation ran **before** any
+band, because a band scored on unattested arms is worse than no band at all.
+
+### 102.2 Band 1 = 1.000 is literal, not rounded
+
+Checked because an exact 1.000 on three different ceilings is not a result, it is a smell:
+
+> **Inside P, all three caps are BIT-IDENTICAL to `no-sandLow` — 0 differing pixels of 4429, max
+> channel Δ 0.**
+
+So the "ceiling" does not attenuate the puff, it **removes** it, at every value tested including
+the deliberately weak one. That resolves §99.1's open question in favour of the culling branch, or
+of a clamp so far below the sprite distribution that it is indistinguishable from culling — and
+Band 2 says the same thing about the sheet outside P, where 94.1 %, 99.1 % and 99.5 % of the
+ground-haze signal is destroyed.
+
+Band 2 degrades monotonically with the ceiling (0.059 → 0.009 → 0.005), which is the only part of
+this run that behaves like a dose-response.
+
+### 102.3 What the poke's own instruction got right that I had not
+
+The re-brief specified deriving P as a **connected component** with an asserted centroid and area.
+§99 used whole-frame pixel counts, which is why it could see "cap120 is within 0.078 % of deletion"
+but could not say *of what* — the 718 differing pixels were never localised, so the puff and the
+haze were never separated. **The band structure is what turns one number into two, and only the
+two-number version can produce a "passes the primary, fails the counter-risk" verdict.**
+
+A single aggregate over a frame containing two populations reports their mixture and calls it a
+result.
+
+### 102.4 The pink disc, named as far as the evidence goes
+
+`temple.base` at (615,160), cropped 120×120 **at 6×** — the magnification is stated because
+`crop.mjs`'s own header records that a described read is only true at the zoom it was taken at.
+
+Observed: a soft-edged, roughly circular, **semi-transparent** wash about 55 px across at 1×; the
+ceiling's star pattern reads through it at reduced contrast; it has **no internal structure**, so
+it is one sprite and not a cluster; and it is occluded by the beam in front of it, so it is
+depth-sorted correctly. That last point is consistent with §84.4's ruling that this is **not** a
+depth-state bug.
+
+**Attribution, ranked and not asserted:** `dust` is the only batch that differs between the two
+staged shots — `temple` 290 live and visible, `sly-profile` 0 live and not visible — and the disc
+appears in `temple` only. That is one differentiating variable, which is a strong lead and not a
+proof. **The discriminating arm is a `temple` capture with `dust` off**, which this run does not
+contain. Until then the disc is *"most likely `dust`, on a single-variable match"*, and it should
+be quoted that way.
