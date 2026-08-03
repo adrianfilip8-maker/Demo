@@ -8088,7 +8088,16 @@ TypeError: page.evaluate is not a function
 
 **Verified by me and not taken on report**, because a correction to the ledger deserves the same
 standard as a finding: `shots/tone1/` **does not exist**. Not an empty directory — no directory.
-`shot.mjs` never got as far as creating one, which is a cleaner signal than the log.
+~~`shot.mjs` never got as far as creating one, which is a cleaner signal than the log.~~
+
+> **CORRECTED by TEXTURES, at the declaration site.** That inference is wrong, and it is wrong in
+> the direction that flatters the check I was writing. **`tone1.mjs` is a custom runner and never
+> calls `shot.mjs`'s `mkdir` at all**, so the absent directory says nothing about how far it got —
+> the log is the only evidence, not the weaker of two. Verified in source rather than taken on
+> report: `tools/shot.mjs:126` is `await mkdir(OUTDIR, { recursive: true })` and `:129` is
+> `acquire(…)`, so for **`shot.mjs` runs the directory is created BEFORE the lock is taken.** An
+> existing-but-empty `shots/<run>/` therefore means *the process started*, not *the capture ran*.
+> **Only PNGs and `report.json` discriminate.** See §98.1.
 
 ### 94.2 A log that is 99.8% queue wait looks exactly like a long successful run
 
@@ -8385,3 +8394,83 @@ a processional way, and **no frame in the roster presents it.** A critic scores 
 cannot reward an asset it never sees. Whether that earns a fourteenth scored shot is a roster
 decision, it interacts with the pass-7 brief, and it should be made on a frame rather than on this
 table.
+
+---
+
+## §98 — the check I wrote three times, corrected a third time by the runner it assumed
+
+§94.2 stated `ls shots/<run>/` as the standing capture check. §94.2's own body then narrowed it
+once (it cannot distinguish "never ran" from "rolled back"). TEXTURES has now narrowed it again,
+and the two qualifications together are the whole rule.
+
+### 98.1 A directory is created before the lock, so its existence means nothing
+
+`tools/shot.mjs:126` runs `mkdir(OUTDIR, { recursive: true })`; `:129` calls `acquire()`. **The
+output directory exists from the moment the process starts, minutes or hours before any frame.**
+So for a `shot.mjs` run:
+
+| observed | means |
+|---|---|
+| no directory | **the runner is not `shot.mjs`** — says nothing about progress |
+| directory, no PNGs | the process **started**; it may have died queued, or be queued right now |
+| PNGs but no `report.json` | it captured and did not finish |
+| PNGs + `report.json` | it ran |
+
+`shots/t16ab/` exists and is empty; `shots/tone1/` does not exist. I read those as the same
+observation with different strengths. They are **different runners**: `t16ab` is `shot.mjs` (dir
+made, then it waited and died), `tone1` is a bespoke script that never makes one.
+
+**Final form of the check:** *only PNGs and `report.json` are evidence a capture ran, and after a
+rollback not even those, because the tree was restored without them.* Everything else — the
+directory, the log's length, the process being gone — is compatible with more than one story.
+
+### 98.2 Three narrowings of one rule, and what that says about writing rules from one instance
+
+The rule was born correct on `tone1`, generalised on the next four cases, and has now been cut back
+twice by evidence I did not have when I wrote it. Both cuts came from someone checking the
+*mechanism* — one read the logs' pid, one read the runner's line numbers — while I had checked only
+the outputs.
+
+> **A check derived from a single incident is a hypothesis about every future incident.** The
+> honest move is to write it down *with* the instance it came from, so the next person can see how
+> far it has actually been tested. §94.2 said "bind this into the standing routine" after one case.
+
+Note the shape shared with §93.2 and §95: three times in one day I have taken something true of the
+case in front of me and stated it one clause too wide. Every time, the correction came from
+someone reading the *implementation* of the thing I had reasoned about from its behaviour.
+
+### 98.3 The arris fix, and a defect class the sweeps were never able to see
+
+TEXTURES found the lip landing on the bevel wall — the surface `carve()` sinks by `depth * r` — so
+most of it cancelled where it was painted. Gated on `(1 − r)` and taken from a blur at twice the
+bevel radius, above-field support goes **20–41 mm → ~81 mm**: 4.0 px at `interior`, 2.4 px at
+`traversal`, against a 2 px floor.
+
+The sign flip is the result. At `traversal` the old lip **lost** fine energy — `fineMed −3.4%` —
+which is the +0.3% the first seal read as a weak pass. The new one is **+8.6%** there and positive
+at every framing measured. `ring − field` −0.0177 → **+0.0047**. Invariants hold: 44 recipes,
+`darkTail` 0.0000 on every stone and carved recipe, 0 joint-sign violations, ACF top prominence
+0.0305 → 0.0303 so tiling is not re-exposed.
+
+**And the failed seal had picked the two framings where this feature is smallest.** `ringpx.mjs`
+reproduces §90.2's recorded 20.6 mm/px for `interior` at 20.3, and shows what was never measured:
+`column_papyrus` at **54.1% of `temple`** — the largest single-material share in the roster,
+written off as "absent from both captured shots", which is true and is a fact about the *shots*.
+
+The generalisable defect is in the sweep class itself, including §8's: `detailMm` is the
+**dominant** scale from the mip half-life, and the arris lip at 20–102 mm sits far below
+`hieroglyph_wall`'s 325 mm dominant detail. **That kind of sweep answers "is the recipe's main
+character resolvable", not "is every authored feature resolvable"** — which is exactly how a 1 px
+lip got sealed as a primary and passed.
+
+### 98.4 Two clauses retired before they could cost a cycle
+
+- **`hero` is a valid framing for gold's albedo half and an invalid one for its specular half.**
+  `goldlit.mjs` puts `hieroglyph_gilded` above the specular terminator at 25.5% on `sly-closeup`
+  and **0.5% on `hero` — last in the roster**, reproducing §81.2's "98.6% shadowed" from geometry
+  instead of from a render. Albedo multiplies every lighting term; specular multiplies only the
+  key. One shot, two answers, and the clause had assumed one.
+- **TEXTURES caught its own arithmetic before it shipped:** an ad-hoc lip table took `mmPerTexel`
+  from a `texlab --size 512` run while tier-0 recipes build at 1024 (`Textures.js:107`), doubling
+  every figure for two materials. The seal's numbers come from `abtex`, which builds at the shipped
+  size, and are unaffected.

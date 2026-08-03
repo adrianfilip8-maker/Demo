@@ -28,11 +28,15 @@ node $R/hgarris2diff.mjs $T
 
 echo
 echo "=== P2 — busy guard: squint sd at 1/8 inside the hieroglyph_wall mask"
-for S in traversal interior temple; do
+# The guard must watch the recipe that dominates each shot, not one name everywhere:
+# `temple` is 53.8% column_papyrus and only 17.1% hieroglyph_wall.
+for PAIR in "traversal arch:hieroglyph_wall" "interior arch:hieroglyph_wall" \
+            "temple arch:column_papyrus" "temple arch:hieroglyph_wall"; do
+  set -- $PAIR; S=$1; M=$2
   [ -f "$T/$S-mask.bin" ] || node $R/matmask.mjs $S 1280 720 $T/$S-mask.bin >/dev/null
-  echo "--- $S"
-  node $R/hgframe.mjs $OFF/$S.png $T/$S-mask.bin arch:hieroglyph_wall 2>/dev/null | head -1
-  node $R/hgframe.mjs $ON/$S.png  $T/$S-mask.bin arch:hieroglyph_wall 2>/dev/null | head -1
+  echo "--- $S  $M"
+  node $R/hgframe.mjs $OFF/$S.png $T/$S-mask.bin $M 2>/dev/null | head -1
+  node $R/hgframe.mjs $ON/$S.png  $T/$S-mask.bin $M 2>/dev/null | head -1
 done
 
 echo

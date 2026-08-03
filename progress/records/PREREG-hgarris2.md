@@ -115,6 +115,18 @@ Shots: `traversal`, `interior`, `temple`, `hero`. 1280×720, quality high.
   coefficient; +2.5 % sits below the expectation band and above the ±1.0 % floor §90.1 measured.
   **Registered upper bound: > +9 % is not a better result, it is a reason to suspect the frame
   moved for another reason** (§68.4) — check P3 before claiming it.
+
+  **Assumption stated rather than buried (added 10:43 UTC, still queued, zero PNGs on disk, no threshold changed):
+  both transfer coefficients were measured on `fineMed` / `coarseMed`, and the bar above applies
+  them to `fineP90`.** Nothing establishes that an order statistic in the upper tail transfers at
+  the same rate as a median — the tail is where the grade's shoulder compresses hardest (§70.2:
+  `G` 0.244 in the bright bin against 0.625 in the dark one), so **if the two differ, fineP90's
+  transfer is more likely to be lower than higher**. That makes +2.5 % a bar that could fail a
+  real effect, which is the safe direction for a seal to be wrong in, and it is registered here
+  so a null can be read as "possibly a transfer question" rather than as "the change does
+  nothing". The run's own P6 nulls measure fineP90's noise floor for the first time; **its
+  transfer coefficient still will not be known after this run**, and no verdict below should be
+  written as though it is.
   *Falsifier: under the bar with P6 holding ⇒ report as a null and set all four `arris` values to 0
   permanently. Do not defend it with the texture number.*
 
@@ -151,12 +163,52 @@ Shots: `traversal`, `interior`, `temple`, `hero`. 1280×720, quality high.
   *If both land null, gilded's `arris` goes to 0 and stays there* — the value would then be
   decoration, and the record should say so rather than carry it.
 
+  **SECOND AMENDMENT, 10:46 UTC, zero PNGs on disk: half of this clause was unmeetable on the
+  framing it named, and that is caught here rather than discovered in the scoring.** The clause
+  said the roughness route "is judged on the image at 8× on `hero`". `progress/records/goldlit.mjs`
+  (new, tracked) area-weights `ndl = max(0, n·keyDir)` over frustum-visible front-facing triangles
+  of one material — an **upper bound**, since it models no shadow map and no occlusion, so it can
+  understate light but never overstate it. `hieroglyph_gilded` above the **high** terminator 0.52,
+  which is the band a specular lobe needs:
+
+  ```
+  sly-closeup 25.5%   sly-perch 24.8%   night 23.2%   sly-key 20.3%   courtyard 13.3%
+  temple 4.4%   traversal 2.7%   interior 1.3%   hero 0.5%
+  ```
+
+  **`hero` is last.** It independently reproduces §81.2's "hero's gilded mass is 98.6 % shadowed"
+  from geometry rather than from a render. So of the four shots in this run, the best gold-specular
+  framing is `temple` at 4.4 % and the named one is the worst in the roster.
+
+  The clause splits rather than being dropped, and the split is the mechanism: **albedo multiplies
+  every lighting term including the shadow ones, and specular multiplies only the key.**
+  - *Albedo half — still scored on `hero`, and `hero` is the right framing for it*: 29 % of frame,
+    lip 2.2 px, and being shadowed is no objection at all. Predicted null.
+  - *Specular half — NOT TESTABLE IN THIS RUN.* No shot captured here puts more than 4.4 % of the
+    gilding in the specular band. It is not scored, not claimed, and not counted against P5.
+    Testing it needs `sly-closeup`, `sly-perch` or `sly-key` (~25 %), and that is a separate
+    capture with its own seal.
+
+  *A clause that cannot be met by the frames it is sealed against is worth more caught now than
+  argued later* (§69: an abort clause that was unmeetable the day it was sealed).
+
 - **P6 — NULLS, and they are the error bar.** `sandstone_block`, `sandstone_worn`,
   `paving_courtyard`, `granite_pink`, `limestone_polished`, `mudbrick`, `ceiling_stars` are
   untouched by `hgarris` and therefore **bit-identical between the arms by construction**. Whatever
   fineP90 spread they show is boot-to-boot render noise and is the floor every delta above must
   clear. §90.1 measured that floor for fineMed (±1.0 %); **fineP90's floor has never been measured
   and this run measures it.** A large null spread does not invalidate the run — it raises the bar.
+
+  **Correction to this clause's own reasoning, entered 10:45 UTC with zero PNGs on disk.** §90's
+  version of it said a null violation "cannot be the tree moving". That was true when both arms
+  booted minutes apart; **it is not true here.** These arms are queued behind two other agents and
+  may boot 40+ minutes apart, and four agents are committing throughout — so a `src/world/**`
+  change landing between them would move the geometry, the masks and the shares, and would show up
+  in P6 exactly like render noise. The discriminator is not P6, it is the tree hash:
+  `find src -name '*.js' | sort | xargs sha1sum | sha1sum` is **`0268a477…` recorded at 10:44:45,
+  before either arm booted**, and is re-taken after both land. **If it moved, P6 does not measure a
+  noise floor and P1 is unquotable** — the same verdict P3 gives for a brightness confound, for the
+  same reason: a delta whose cause is not isolated is not a result.
 
 - **P7 — THE IMAGE, and it is not subordinate to any number above.** At 4× and 8×: the glyphs on
   `interior` and `traversal` must read as **cut** — a lighter lip around a darker recess — and must
