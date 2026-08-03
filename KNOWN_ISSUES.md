@@ -12833,3 +12833,86 @@ applied to the sample rather than to the criterion.
 
 D3 takes both halves at 4× — the disc gone **and** the 23 non-gated haze components intact — under
 the standing rule that if the picture and the statistic disagree, the picture is the finding.
+
+## §151 — the note refuted by its own registered sentence, and a statistic that was 97 % something else
+
+### 151.1 The inconvenient sentence did its job
+
+CHARACTER's source note registered, before the frame existed: *"Do not read the capture as confirming
+this note unless the chips visibly shrink."* **They did not.** So by the note's own wording the
+hull-share mechanism is **wrong rather than mistuned**, and `tuftInk` is confirmed near-inert.
+
+Per §5b this is **confirmatory rather than a delivery failure** — the boot re-stamped
+`INK PROBE … hasShell:true`, 2484 card indices at 0.4 across three groups, so the knob demonstrably
+reached the shader and did nothing.
+
+A sentence written to be inconvenient later, and honoured later, is the cheapest instrument in this
+file.
+
+### 151.2 §147.1 found by an owner inside its own scoring
+
+`chipscore` reads **28.10 % dark / 18.10 % very dark** against a corrected baseline of 27.81 / 17.76
+— a marginal *increase*, which is a result until you ask what the number contains.
+
+`darkparts.mjs` decomposes it: **one fused component** — mask + body ink + cast shadow + shadowed
+backdrop — is **67.9 %** of the jaw/chest numerator, **97.2 %** of the tail's and **91.5 %** of
+`hero`'s. Chip-scale components (≤ 60 px) hold **1.1–2.7 %**.
+
+> **A 60 % shrink of every chip moves this statistic by less than the +0.29 pp of cross-agent drift
+> already present in it.** The metric cannot rule on the question it was built for, in either
+> direction.
+
+Backdrop dilution adds ~9 % of the dark budget on top (character columns 19–69 % dark against
+backdrop columns 7–17 %). This is §147.1's shape — a cost figure mostly composed of something other
+than the subject — caught by the owner in its *own* headline number rather than by a reader.
+
+### 151.3 The frame ruled, and it was unambiguous
+
+The cards **do** serrate the tail contour. And every serration renders as a **solid black filled
+wedge** — notches bitten out of the silhouette, black wedges at the jaw, black patches on blue
+trousers.
+
+> **Not one reads as "a lobe with an edge."**
+
+The geometry side is delivering exactly what it was asked for; the hull is destroying it. The lever
+is `TUNE.tuftShadeMix`, sealed in `PREREG-tuftbias.md`, needing one arm judged **against a frame**.
+
+And `hero` was **discarded rather than recorded as a null** — ~110 px tall, unlit, cards 1–2 px,
+torso/arms/cane one mass. §144.1's *"untestable is not pass"*, applied by an owner to its own second
+shot.
+
+### 151.4 A defect at 33° that a camera move would hide
+
+`shotsil.mjs`, pure black on white, three framings: **cane hook passes and is the strongest element**
+— a clean crook with real enclosed negative space everywhere. **Tail passes**, roughly torso-weight.
+**Cap reads at `combat`'s 45° and fails at `sly-closeup`'s 33°**: the bill points near the view axis,
+foreshortens to nothing, and the crown alone carries the outline — reading as skull. The mask is
+unpassable in pure black by construction.
+
+CHARACTER tried `capCock` 0.086 → 0.160 and **reverted it**: 0.37 % of the head crop differs, no
+visible change, and at 0.230 `occlude.mjs` regresses into the documented brim-over-eye defect.
+
+> *"The knob is connected but it is not the lever — the bill's projected extent at 33° is a **yaw**
+> problem and `capCock` is a **roll**."*
+
+It then offered the cheap fix: move `sly-closeup`'s bearing ~10° toward `combat`'s 45° and the cap
+reads with no geometry change.
+
+**Declined, and the reason is the point.** `sly-closeup` is one of §7.2's ten canonical shots and has
+carried A/Bs, bit-identity controls and baselines all session; moving it invalidates that basis. More
+importantly the game is played from arbitrary angles, so **a cap that only reads at 45° is a defect
+of the model, and moving the camera to a bearing where it happens to read is hiding it, not fixing
+it.** The finding stands as a model defect at 33°, unfixed, with the two rotations that would work
+both documented as regressions — and CHARACTER declining to ship a blind change against capture-won
+wins with no GPU to verify is the right call, not a gap.
+
+### 151.5 Pose passes, measured in both planes
+
+`idle_confident`: stance **23 cm lateral × 30 cm depth**, weight on the right foot (5.8 cm height
+difference), lateral S hips→chest→head +0.031 / −0.063, tail 45 cm off-axis. `perch_idle`: hips
+**0.045** / chest **0.082** / head **0.045**, plus a **7.7 cm forward sagittal lean** and the tail
+above the head. `cane_combo_3`: an **88 cm sagittal stride** — *"a lateral-only measure reads that
+lunge as stiff, which is exactly the trap."*
+
+§4.7 intact: 52/52 names, exactly 52 keys, every clip sampling cleanly at 5 phases, 31 bones driven,
+all 52 carrying a cane track. `src/player/**` byte-identical to where it was found.

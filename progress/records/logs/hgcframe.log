@@ -264,3 +264,6 @@
 · vite on :5600
 · [cand] loading
 · [cand] ready (abStamp=false)
+  ✓ [cand] temple     313660ms  draws 244  tris 1756k
+  ✓ [cand] hero       219778ms  draws 265  tris 1786k
+· [ctl] installing __TEX_AB=hgchisel and reloading

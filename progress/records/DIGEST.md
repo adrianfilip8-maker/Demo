@@ -194,6 +194,17 @@ nobody runs (§129.2).
   **ANIMATION's**. (§131.6)
 - Any pose number you quote must **name its plane** — the line-of-action measure is lateral only and
   reads `cane_combo_3`'s sagittal lunge as near zero.
+- **POSE PASSES, measured in both planes** (§151). `perch_idle` hips/chest/head **0.045 / 0.082 /
+  0.045** plus a 7.7 cm forward sagittal lean — any "zero lateral line of action" reading is
+  superseded. `idle_confident` stance 23 cm lateral × 30 cm depth, weight on the right foot.
+  `cane_combo_3` is an **88 cm sagittal stride** that a lateral-only measure reads as stiff.
+- **`tuftInk` is confirmed near-inert and the hull-share mechanism is WRONG, not mistuned** (§151) —
+  by the note's own registered wording, because the chips did not visibly shrink. The lever is
+  `TUNE.tuftShadeMix`; the arm is sealed in `PREREG-tuftbias.md` and must be judged **against a
+  frame**.
+- **The cap fails at `sly-closeup`'s 33° bearing and reads at `combat`'s 45°** — the bill
+  foreshortens to nothing and the crown alone reads as skull. It is a **yaw** problem; `capCock` is
+  a **roll** and is a measured null. **Not fixed by moving the shot** — see §151.4.
 
 ## FX — `src/fx/**`, `Atmosphere.js`, `Lighting.js`
 
