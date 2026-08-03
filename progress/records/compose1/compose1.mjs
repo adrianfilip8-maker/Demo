@@ -30,7 +30,19 @@ import { writeFileSync, mkdirSync } from 'node:fs';
 import { execSync } from 'node:child_process';
 import path from 'node:path';
 
-const OUT = '/tmp/claude-0/-home-user-Demo/94022f73-a328-5e86-b2ec-031aa9c720ce/scratchpad/compose1/frames';
+/* Subset selector, added for the item-B re-run (§133.3). Two flags, both opt-in, so the
+   default invocation is byte-for-byte the run this file already documents:
+     --only=ink   skip the composition loop entirely
+     --tag=<t>    write frames/json under scratchpad/compose1-<t>/ instead of compose1/
+   `--only=ink` exists because §133.1's composition result STANDS and must not be re-run: the
+   bands are scored and closed, and a second run would mint a second set of composition numbers
+   for the same question, which is §122.1's failure mode with one owner instead of two. The ink
+   arms are the only part of this file with an open question attached. */
+const ARGV = process.argv.slice(2);
+const ONLY = (ARGV.find((a) => a.startsWith('--only=')) || '').slice(7);
+const TAG = (ARGV.find((a) => a.startsWith('--tag=')) || '').slice(6);
+const RUNDIR = `/tmp/claude-0/-home-user-Demo/94022f73-a328-5e86-b2ec-031aa9c720ce/scratchpad/compose1${TAG ? '-' + TAG : ''}`;
+const OUT = path.join(RUNDIR, 'frames');
 mkdirSync(OUT, { recursive: true });
 const T0 = Date.now();
 const log = (s) => console.log(`[${new Date().toISOString().slice(11, 19)} +${String(Math.round((Date.now() - T0) / 1000)).padStart(4)}s] ${s}`);
@@ -71,7 +83,7 @@ const ARMS = [
 ];
 
 /* night first — P-night. Then the three registered shots. */
-const PLAN = ['night', 'hero', 'temple', 'sly-closeup'];
+const PLAN = ONLY === 'ink' ? [] : ['night', 'hero', 'temple', 'sly-closeup'];
 
 /* Ink arms, sly-closeup only. `inkbase` re-establishes a base AFTER the composition arms have
    restored, so the ink deltas are measured against their own reference rather than across a

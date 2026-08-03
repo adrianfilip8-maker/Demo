@@ -12029,3 +12029,101 @@ exist. FX did this, and it is why `fx21` started immediately instead of queueing
 > **Ordering is the mechanism here, not the thresholds.** A scorer that computes the interesting
 > number first and the disqualifiers afterwards will always find a reason the disqualifier does not
 > apply. This one cannot reach the interesting number without passing the gate.
+
+## §141 — "pick a number" was the wrong request, and the owner said so instead of complying
+
+I asked SHADING to close §133.2 by having *"that line drawn by someone who is not looking at the
+number."* SHADING registered `PREREG-pnight.md` and used it to refuse the request as framed.
+
+### 141.1 Uncontaminated arbitrary is still arbitrary
+
+> **§13's remedy is not a more disinterested chooser; it is a calibration.** Run the metric across a
+> state known to have the defect and publish the separation next to the number.
+
+Δb−r on `night` **has never been run across a known-bad night**, so it has no scale — a line at 1 %,
+5 % or 20 % is equally arbitrary, *and would be equally arbitrary if drawn by someone who had never
+seen −0.0033.* My request treated contamination as the defect when the defect was the absent unit.
+
+SHADING also **disclosed that it had read the measurement** — unavoidable for anyone reconstructing
+the item from the committed ledger — declined to assert a verdict, and instead registered a
+*procedure whose free parameter is fixed before the numbers it will be applied to exist*. That is a
+stronger guarantee than handing a broken check to an uncontaminated person, who would still be
+picking an uncalibrated number.
+
+### 141.2 The instrument was the larger defect, and it inverts the run's own priorities
+
+P-night was scored as **frame-wide Δb−r**. Three ledger facts say that statistic cannot carry the
+acceptance: **§115.2** — frame-wide b−r cannot localise and **cannot see green at all**, while §8's
+live residual *is* green-suppression; **§133.2's own result** localises the movement to shaded
+architecture only, so a frame-wide mean over a mostly-dark frame can only dilute it — *"the 2.1 % is
+that measurement divided by an unknown amount of unaffected frame"*; and **the same run scored the
+day shots with a strictly better instrument** (`huescore.mjs` over ROI populations, reporting hue,
+saturation, R/G, B/max and G-darkest share together).
+
+> **The inversion is the finding.** `night` — the shot the acceptance calls most fragile, the one
+> the cool terms are *paid for* — got the weakest instrument in the run, while the three shots least
+> at risk got the strongest. True regardless of where anyone puts the threshold.
+
+SHADING corrected its own §133.2 wording too: not merely that the line was missing, but that **the
+quantity the line would be drawn on is the wrong quantity.** A threshold on frame-wide Δb−r would
+have been unjustified at any value.
+
+### 141.3 Two known-bads, neither nominated by the person who needs them
+
+- **`rimfloor0`** — `uRimShadowFloorArch = 0`. Known-bad **by a seal that is not SHADING's**:
+  `PREREG-kerb.md` already registers a `night` arm on this exact lever with V3's retention bands,
+  and floor 0 lies *below that seal's entire swept range*. **That is the independence a calibration
+  point needs.**
+- **`sbm040`** — `shadowBounceMix = 0.40`, four times §119.4's ledger ceiling. Known-bad *by the
+  ledger's own commitment*, not by judgement.
+
+Plus `base`/`base2` bit-identity (§119.3's P1: a falsified fix and a dead fix are indistinguishable
+without it) and `sky` as the population that must not move.
+
+**And the escape hatch is registered in advance:** if `rimfloor0` comes back *passing* V3's 0.85
+then it is not a known-bad, the calibration has no valid unit, and **P-night is reported unscoreable
+rather than scored against it.**
+
+### 141.4 The line, and the honesty about its free parameter
+
+Let `S = min(|Δhue(rimfloor0)|, |Δhue(sbm040)|)` on `archShade` — the *smaller* separation, i.e. the
+conservative unit. **`night` passes iff the composite's `archShade` hue shift is ≤ S/5, warm-ward,
+`sky` does not move, and the frame is looked at.**
+
+**The 1/5 is the single free parameter, fixed before `S` is known**, and described as *registered
+rather than derived* — the honest label. §133.1's lesson applied by its own author: register the
+interval you would accept, not the value you expect.
+
+Two further guards carried unprompted: `roigen.mjs` derives `archShade` from the shot's **own** key
+direction rather than a fixed vector, because §8 records a band-crossing measurement that was **4.7×
+wrong** for exactly that mistake and `night`'s key sits in the opposite quadrant; and roigen's §11
+gap travels with the number — `archShade` means *"on an away-facing architecture surface"*, **not**
+*"in shadow"*.
+
+Finally, a cross-seal warning that no one asked for: these frames serve both P-night and
+`PREREG-kerb`'s V3, and **whichever seal reads them first must not quietly rescore the other's
+question in its own statistic** — §122.1 being the record of one run scored 1.86× apart by two
+instruments.
+
+### 141.5 Meanwhile, the other three owners
+
+**GEOMETRY wired task #28's call site, gated.** `HULL_KEYS` is six accent/hero keys, not the eleven
+the table declares, and it calls `outline()` **per hero mesh rather than `applyOutlines()` over the
+group** — deliberately, because the walker would read the table's weight on all eleven declaring
+keys and shell the set dress too. Shells are tagged `propsHull` so a same-boot A/B can toggle
+exactly these. Registered in `PREREG-propshull.md` with `hullscore.mjs` written to score it.
+
+**CHARACTER relaunched `char-ink` and re-stamped the INK PROBE in its own run** rather than citing
+the destroyed `compose1/run.log`, with a hard group-count assertion that aborts on mismatch — §133.3
+closed at its own site. It also caught a false alarm of its own making: comparing `playerTree` with a
+*relative* `find` path gave a different digest than the harness's absolute one, because **`sha256sum`
+hashes the paths too.** `src/player` is bit-identical to the launch stamp.
+
+And a **deliberate non-action with its reason registered**: there is **no chest clump row** — the
+named rows are head, arm, leg, boot, tail — and the brief names the chest explicitly. CHARACTER did
+not add one, because at these framings the chest is on-face, on-face cards are exactly the chip
+population, and adding chest clumps *before* the bias verdict would most likely deepen the defect
+they are meant to fix.
+
+**The launcher caught the wrapper a third time in one recovery sequence** (`char-ink`: wrapper 8747
+killed, pid 8748 at ppid 1). Fifth recurrence of §78.4 overall, third consecutive automatic catch.

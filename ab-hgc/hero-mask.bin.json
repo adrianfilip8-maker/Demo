@@ -1,0 +1,36 @@
+{
+ "shot": "hero",
+ "W": 1280,
+ "H": 720,
+ "mats": [
+  "arch:paving_courtyard",
+  "arch:gold_leaf",
+  "arch:column_papyrus",
+  "arch:sandstone_worn",
+  "arch:sandstone_block",
+  "arch:granite_pink",
+  "arch:limestone_polished",
+  "arch:hieroglyph_gilded",
+  "arch:hieroglyph_wall",
+  "arch:mudbrick",
+  "arch:ceiling_stars",
+  "arch:bronze_dark",
+  "arch:rope_fibre"
+ ],
+ "counts": {
+  "(none)": 84644,
+  "arch:granite_pink": 116526,
+  "arch:rope_fibre": 5973,
+  "arch:hieroglyph_gilded": 271772,
+  "arch:hieroglyph_wall": 123131,
+  "arch:sandstone_block": 65880,
+  "arch:ceiling_stars": 8625,
+  "arch:sandstone_worn": 34957,
+  "arch:gold_leaf": 2174,
+  "arch:column_papyrus": 17887,
+  "arch:bronze_dark": 333,
+  "arch:limestone_polished": 49707,
+  "arch:mudbrick": 5808,
+  "arch:paving_courtyard": 134183
+ }
+}

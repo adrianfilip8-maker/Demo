@@ -69,6 +69,47 @@ const L = {
   hallX:      22,
 };
 
+/**
+ * Task #28 — which props get an inverted-hull ink shell.
+ *
+ * The table above declares `outline` on 11 of 14 keys, which had never rendered: until now
+ * `Shading.applyOutlines()` had no call sites anywhere in `src/`, so no weight in that table
+ * was ever read. Wiring the walker as-is would shell every non-emissive material — and that
+ * is the wrong call, for a reason that is about what the hull is *for* rather than what it
+ * costs.
+ *
+ * PostFX already runs a full-screen depth+normal edge detector (1.5 px base, near/far
+ * weighted, fade 45–190 m) that draws prop silhouettes perfectly well. **The marginal value
+ * of a hull is only where that pass structurally fails** — low depth/normal contrast, a prop
+ * standing against a wall a short distance behind it. That is a hero-prop argument, not an
+ * all-props one, and Architecture reached the same conclusion independently: it restricts
+ * `HULL_OUTLINE` to 3 of its 14 keys and documents why.
+ *
+ * The hero/set-dress split is already in the census without needing a new flag. `Statues.js`
+ * (the colossi, sphinxes, Anubis pair, gilded Ra — the sculpture the shots are composed
+ * around) owns the great majority of these six keys; the PropKit set dress owns the rest:
+ *
+ *     hero sculpture    stone 28/39   lime 11/14   gold 43/49
+ *                       dark 19/20    lapis 12/14  carnelian 5/7
+ *     set dress         bronze 7/7    wood 6/10    rope 2/5    cork, cloth, emissives
+ *
+ * So this is the §7.3 Sly-guard lesson applied to props — a flat coloured silhouette with one
+ * saturated accent, parsing instantly at distance — rather than a uniform ink pass that
+ * competes with PostFX everywhere.
+ *
+ * Priced offline against the real merged meshes, not estimated: **+6 draws / +55.7 k tris**,
+ * every canonical camera. It does not vary by shot, and that is worth stating plainly rather
+ * than reporting the flattering per-shot number — these meshes are merged by material across
+ * the *whole level*, so each one's bounding sphere spans the complex and frustum culling
+ * removes none of them. Against the measured main-view worst case (71 draws / 0.572 M) that
+ * lands at 77 draws (31 % of the 250 budget) and 0.628 M (52 % of 1.2 M). Cost is not the
+ * objection to this change and never was.
+ *
+ * `cloth` is excluded by topology, not by taste, and would be even if it were hero — see the
+ * note on its table entry. The emissives are excluded so fire never takes an ink line.
+ */
+const HULL_KEYS = new Set(['stone', 'lime', 'gold', 'dark', 'lapis', 'carnelian']);
+
 const _v = new THREE.Vector3();
 
 export class Props {
@@ -479,6 +520,7 @@ export class Props {
 
   /** Merge each material bucket into one mesh — 12 draw calls instead of ~1200. */
   _flushBuckets() {
+    const shading = this.engine.get('shading');
     for (const [key, geos] of this.buckets) {
       const merged = mergeAll(geos);
       if (!merged) continue;
@@ -495,6 +537,23 @@ export class Props {
       this.group.add(mesh);
       this.stats.draws++;
       this.stats.tris += (merged.index?.count ?? merged.attributes.position.count) / 3;
+
+      /* Task #28's gated call site — see HULL_KEYS. Deliberately `outline()` per hero mesh
+         rather than `applyOutlines()` over the group, because the walker would read the
+         table's weight on all 11 declaring keys and shell the set dress too.
+         `outline()` builds the shell from a welded copy of the normals written to a separate
+         `slyNormal` attribute, so the host's own shading is bit-identical either way, and it
+         sets `noShadow`/`isOutlineShell`/`castShadow=false` itself — a shell must never reach
+         the shadow map, since it is its host's geometry at identity and every fragment would
+         then test against its own depth. Tagged so a same-boot A/B can toggle exactly these
+         and nothing else. */
+      if (HULL_KEYS.has(key) && spec.outline > 0) {
+        const shell = shading?.outline?.(mesh, { thickness: spec.outline });
+        if (shell) {
+          shell.userData.propsHull = true;
+          this.stats.hulls = (this.stats.hulls || 0) + 1;
+        }
+      }
 
       // Solid props are standable; cloth, flame and glass are not.
       if (!spec.transparent && !spec.emissive && key !== 'rope') {

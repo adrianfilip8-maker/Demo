@@ -1,0 +1,33 @@
+{
+ "shot": "temple",
+ "W": 1280,
+ "H": 720,
+ "mats": [
+  "arch:paving_courtyard",
+  "arch:gold_leaf",
+  "arch:column_papyrus",
+  "arch:sandstone_worn",
+  "arch:sandstone_block",
+  "arch:granite_pink",
+  "arch:limestone_polished",
+  "arch:hieroglyph_gilded",
+  "arch:hieroglyph_wall",
+  "arch:mudbrick",
+  "arch:ceiling_stars",
+  "arch:bronze_dark",
+  "arch:rope_fibre"
+ ],
+ "counts": {
+  "arch:hieroglyph_wall": 157727,
+  "arch:limestone_polished": 18926,
+  "arch:column_papyrus": 495809,
+  "arch:ceiling_stars": 81218,
+  "arch:rope_fibre": 3639,
+  "arch:sandstone_block": 62797,
+  "arch:hieroglyph_gilded": 16451,
+  "(none)": 15710,
+  "arch:sandstone_worn": 11321,
+  "arch:mudbrick": 2867,
+  "arch:paving_courtyard": 55135
+ }
+}
