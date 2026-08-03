@@ -12,15 +12,21 @@
 import { readFileSync, existsSync } from 'node:fs';
 const T = process.argv[2];
 const SHOTS = ['traversal', 'interior', 'temple', 'hero'];
-const NULLS = ['arch:sandstone_block', 'arch:sandstone_worn', 'arch:paving_courtyard',
-  'arch:granite_pink', 'arch:limestone_polished', 'arch:mudbrick', 'arch:ceiling_stars'];
+/* Bare recipe names. `matflat --json` emits `hieroglyph_wall`, not `arch:hieroglyph_wall` —
+ * the first version of this file matched on the `arch:` form, so `NULLS.includes()` and every
+ * `get()` missed, and the run printed "P6 n=0" and "P1 material absent" while the table above
+ * it showed both. Names are normalised on load now so a future rename of either side fails
+ * loudly instead of silently scoring nothing. No threshold in this file changed. */
+const bare = (n) => n.replace(/^arch:/, '');
+const NULLS = ['sandstone_block', 'sandstone_worn', 'paving_courtyard',
+  'granite_pink', 'limestone_polished', 'mudbrick', 'ceiling_stars'];
 
 const pc = (a, b) => (a === 0 || a == null || b == null ? NaN : 100 * (b - a) / a);
 const load = (s, arm) => {
   const p = `${T}/${s}-${arm}.json`;
   if (!existsSync(p)) return null;
   const j = JSON.parse(readFileSync(p, 'utf8'));
-  const m = {}; for (const r of j.rows) m[r.name] = r;
+  const m = {}; for (const r of j.rows) m[bare(r.name)] = r;
   return m;
 };
 
@@ -45,7 +51,7 @@ console.log('\n--- all materials >=1% of frame, control -> shipped ---');
 console.log('shot'.padEnd(11) + 'material'.padEnd(24) + 'share%'.padStart(7) + 'dFineP90'.padStart(10) +
   'dFineMed'.padStart(10) + 'dCov1pt'.padStart(9) + 'dLumaMed'.padStart(10));
 for (const r of rows.sort((x, y) => x.shot.localeCompare(y.shot) || y.share - x.share)) {
-  console.log(r.shot.padEnd(11) + r.name.replace('arch:', '').padEnd(24) + String(r.share).padStart(7) +
+  console.log(r.shot.padEnd(11) + r.name.padEnd(24) + String(r.share).padStart(7) +
     (isNaN(r.dFineP90) ? '-' : r.dFineP90.toFixed(1) + '%').padStart(10) +
     (isNaN(r.dFineMed) ? '-' : r.dFineMed.toFixed(1) + '%').padStart(10) +
     r.dCov1.toFixed(1).padStart(9) + r.dLuma.toFixed(4).padStart(10));
@@ -66,7 +72,7 @@ const verdict = (ok) => (ok ? 'PASS' : 'FAIL');
 
 console.log('\n--- registered clauses ---');
 for (const s of ['traversal', 'interior']) {
-  const r = get(s, 'arch:hieroglyph_wall');
+  const r = get(s, 'hieroglyph_wall');
   if (!r) { console.log(`P1 ${s}: material absent`); continue; }
   const ok = r.dFineP90 >= BAR;
   console.log(`P1  ${s.padEnd(10)} hieroglyph_wall fineP90 ${r.dFineP90.toFixed(1)}%  vs bar +${BAR.toFixed(2)}%  -> ${verdict(ok)}` +
@@ -74,8 +80,8 @@ for (const s of ['traversal', 'interior']) {
   console.log(`P3  ${s.padEnd(10)} lumaMed ${r.lumaOff} -> ${r.lumaOn}  (d ${r.dLuma.toFixed(4)}, bound +-0.010) -> ${verdict(Math.abs(r.dLuma) <= 0.010)}` +
     (Math.abs(r.dLuma) > 0.010 ? '   [P1 IS UNQUOTABLE, NOT PASSED]' : ''));
 }
-const p4 = get('temple', 'arch:column_papyrus');
+const p4 = get('temple', 'column_papyrus');
 if (p4) console.log(`P4  temple     column_papyrus fineP90 ${p4.dFineP90.toFixed(1)}%  vs bar +2.0%  -> ${verdict(p4.dFineP90 >= 2.0)}   (does not kill P1)`);
-const p5 = get('hero', 'arch:hieroglyph_gilded');
+const p5 = get('hero', 'hieroglyph_gilded');
 if (p5) console.log(`P5  hero       hieroglyph_gilded fineP90 ${p5.dFineP90.toFixed(1)}%  — predicted NULL (<+2.0%) -> ${Math.abs(p5.dFineP90) < 2.0 ? 'as predicted' : 'PREDICTION BROKEN — the albedo lab is wrong about this recipe'}`);
 console.log('\nP2 (busy guard) and P7 (the image) are scored outside this script.');
