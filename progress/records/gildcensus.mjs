@@ -60,16 +60,52 @@ await page.goto(`http://127.0.0.1:${port}/lab.html`);
 /* ── the pool/branch degeneracy audit, run in-page so it reads the shipped GLYPHS/POOLS ── */
 const audit = await page.evaluate(async () => {
   const H = await import('/src/textures/Hieroglyphs.js');
-  /* `quadrat`'s five branches, with the (maxH, maxW) each passes to `pick()` and the branch
-     probability from its own `r` thresholds. Read off `quadrat` source; if that changes this
-     table is stale and must be re-read. */
-  const BRANCH = [
-    { p: 0.34, slots: [[1.01, 1.0]] },
-    { p: 0.24, slots: [[0.5, 2], [0.5, 2]] },
-    { p: 0.14, slots: [[0.36, 2], [0.36, 2], [0.36, 2]] },
-    { p: 0.16, slots: [[1.01, 0.7], [0.5, 2], [0.5, 2]] },
-    { p: 0.12, slots: [[0.4, 1.3]] },
-  ];
+  /**
+   * `quadrat`'s branches and the `(maxH, maxW)` each passes to `pick()`, **parsed out of the
+   * shipped source** rather than transcribed into a table here.
+   *
+   * The transcribed version is exactly §13's own failure shape: a hand-copied constant that stays
+   * plausible after the thing it describes has moved, so the probe keeps printing a clean audit
+   * of a `quadrat` that no longer exists. Parsing means a `quadrat` edit either changes this
+   * table with it or throws — and throwing is the outcome §13 says to prefer over a plausible
+   * wrong answer. `pick`'s defaults are in its own signature and are read from there too.
+   */
+  const src = await (await fetch('/src/textures/Hieroglyphs.js')).text();
+  const body = (() => {
+    const i = src.indexOf('export function quadrat(');
+    if (i < 0) throw new Error('gildcensus: quadrat() not found in Hieroglyphs.js');
+    const j = src.indexOf('\n}', i);
+    return src.slice(i, j);
+  })();
+  const defW = (() => {
+    const m = /function pick\(rand, pool, maxH, maxW = ([\d.]+)\)/.exec(src);
+    if (!m) throw new Error('gildcensus: pick() signature not found — its default maxW cannot be read');
+    return parseFloat(m[1]);
+  })();
+  /* Segment the body at its own branch keywords, so the terminal `else` is a segment of its own
+     rather than having its pick() folded into the branch above it. */
+  const marks = [];
+  for (const m of body.matchAll(/\br\s*<\s*([\d.]+)/g)) marks.push({ i: m.index, thr: parseFloat(m[1]) });
+  for (const m of body.matchAll(/\}\s*else\s*\{/g)) marks.push({ i: m.index, thr: null });
+  marks.sort((a, b) => a.i - b.i);
+  const BRANCH = [];
+  let prev = 0;
+  for (let s = 0; s < marks.length; s++) {
+    const seg = body.slice(marks[s].i, s + 1 < marks.length ? marks[s + 1].i : body.length);
+    const slots = [...seg.matchAll(/pick\(\s*rand,\s*pool,\s*([\d.]+)\s*(?:,\s*([\d.]+)\s*)?\)/g)]
+      .map((m) => [parseFloat(m[1]), m[2] === undefined ? defW : parseFloat(m[2])]);
+    const p = marks[s].thr === null ? 1 - prev : marks[s].thr - prev;
+    if (marks[s].thr !== null) prev = marks[s].thr;
+    /* A pick() inside a loop is ONE textual site and several draws. The parse counts sites, so
+       flag the branch rather than pretend the two are the same number. */
+    BRANCH.push({ p, slots, loop: /\bfor\s*\(/.test(seg) });
+  }
+  const tot = BRANCH.reduce((t, b) => t + b.p, 0);
+  if (!BRANCH.length || !BRANCH.every((b) => b.slots.length) || Math.abs(tot - 1) > 1e-9) {
+    throw new Error(`gildcensus: quadrat() parse failed — ${BRANCH.length} branches, ` +
+      `slots [${BRANCH.map((b) => b.slots.length).join(',')}], p sums to ${tot.toFixed(4)}`);
+  }
+  const branches = BRANCH.map((b) => ({ p: +b.p.toFixed(4), slots: b.slots, loop: b.loop }));
   const out = {};
   for (const pool of ['royal', 'divine', 'offering']) {
     const P = H.POOLS[pool];
@@ -77,7 +113,7 @@ const audit = await page.evaluate(async () => {
     for (const b of BRANCH) {
       for (const [maxH, maxW] of b.slots) {
         const ok = P.filter((n) => H.GLYPHS[n] && H.GLYPHS[n].h <= maxH + 0.02 && H.GLYPHS[n].w <= maxW);
-        rows.push({ maxH, maxW, p: b.p / b.slots.length, n: ok.length, ok });
+        rows.push({ maxH, maxW, pBranch: b.p, loop: b.loop, n: ok.length, ok });
       }
     }
     out[pool] = rows;
@@ -90,15 +126,17 @@ const audit = await page.evaluate(async () => {
       .map((n) => ({ n, w: H.GLYPHS[n].w, h: H.GLYPHS[n].h, area: +(H.GLYPHS[n].w * H.GLYPHS[n].h).toFixed(3) }))
       .sort((a, b) => b.area - a.area);
   }
-  return { out, full };
+  return { out, full, branches };
 });
 
-console.log('=== pick() filter width per quadrat branch (a branch with 1 candidate is a §13 degeneracy)');
+console.log('=== quadrat() branch table, PARSED from Hieroglyphs.js (not transcribed)');
+console.log('  ' + audit.branches.map((b) => `p(branch)=${b.p} [${b.slots.map((s) => s.join('/')).join(' ')}]${b.loop ? '  (site is inside a loop: 1 site, several draws)' : ''}`).join('\n  '));
+console.log('\n=== pick() filter width per quadrat pick() SITE (a site with 1 candidate is a §13 degeneracy)');
 for (const pool of Object.keys(audit.out)) {
   const rows = audit.out[pool];
   const worst = Math.min(...rows.map((r) => r.n));
-  console.log(`  POOLS.${pool}  pool ${rows.length} slots, min candidates = ${worst}${worst <= 2 ? '   <-- DEGENERATE' : ''}`);
-  for (const r of rows) console.log(`    maxH ${String(r.maxH).padEnd(5)} maxW ${String(r.maxW).padEnd(4)} p=${r.p.toFixed(3)}  ${String(r.n).padStart(2)} candidates  ${r.ok.slice(0, 10).join(' ')}`);
+  console.log(`  POOLS.${pool}  ${rows.length} pick() sites, min candidates = ${worst}${worst <= 2 ? '   <-- DEGENERATE' : ''}`);
+  for (const r of rows) console.log(`    maxH ${String(r.maxH).padEnd(5)} maxW ${String(r.maxW).padEnd(4)} p(branch)=${r.pBranch.toFixed(3)}${r.loop ? '*' : ' '}  ${String(r.n).padStart(2)} candidates  ${r.ok.slice(0, 10).join(' ')}`);
 }
 console.log('\n=== signs that can be drawn at FULL quadrat size (branch r<0.34), by glyph-box area');
 for (const pool of Object.keys(audit.full)) {
@@ -196,16 +234,45 @@ for (const recipeName of names) {
     const rare = rows.filter((r) => r.n <= 2).sort((a, b) => b.maxA - a.maxA);
     console.log(`  rarest-and-largest (n<=2) in this register, median box ${Math.round(med)} px^2:`);
     for (const r of rare.slice(0, 5)) console.log(`    ${r.name.padEnd(10)} n=${r.n}  ${Math.round(r.maxA)} px^2 = ${(r.maxA / med).toFixed(2)}x  ${r.paint}`);
+    /* Tile-UV boxes for the top landmarks, in the form `gilduv.mjs --landmark` takes, so the
+       in-frame recurrence count is measured against the box this census actually found rather
+       than one re-derived by hand. A row box wraps the seam, so v0 > v1 there. */
+    for (const r of rare.slice(0, 3)) {
+      const inst = list.filter((g) => g.name === r.name).sort((a, b) => b.area - a.area)[0];
+      const v0 = ((inst.v0 % 1) + 1) % 1, v1 = ((inst.v1 % 1) + 1) % 1;
+      console.log(`    --landmark ${r.name}-${gname}:${(inst.u0).toFixed(4)},${(inst.u1).toFixed(4)},${v0.toFixed(4)},${v1.toFixed(4)}`);
+    }
   }
 
-  console.log('\n--- which register each real consumer can see (V window from local-y box projection)');
-  console.log('  consumer                        h(m)   V window          row?  frieze?');
+  /**
+   * Does a sign box [v0, v1] intersect the consumer's V window [-half, +half] around the seam?
+   * V wraps, so the window is [0, half] u [1 - half, 1] and a box may sit at any integer offset
+   * (`glyphArchitrave` draws the row at y0 = -half, i.e. v1 > 1). Test all three shifts.
+   *
+   * This is the box-overlap test the "frieze?" column claims. A first version of this probe
+   * computed it, then printed a coarser V-band constant instead and left the careful expression
+   * dead — the §39/§43/§50 shape, a column header promising a test the code did not run. Both
+   * are printed now, side by side, so a disagreement is visible rather than resolved silently.
+   */
+  const overlapsWindow = (v0, v1, half) => {
+    for (const sh of [-1, 0, 1]) if (v0 + sh <= half && v1 + sh >= -half) return true;
+    return false;
+  };
+  const friezeV = groups.frieze.length
+    ? [Math.min(...groups.frieze.map((g) => g.v0)), Math.max(...groups.frieze.map((g) => g.v1))]
+    : [NaN, NaN];
+  console.log(`\n--- which register each real consumer can see (V window from local-y box projection)`);
+  console.log(`    frieze register spans V ${friezeV[0].toFixed(4)}..${friezeV[1].toFixed(4)}`);
+  console.log('  consumer                          h(m)   V window   row?  frieze(box)  frieze(band)');
   for (const [nm, h, zone] of CONSUMERS) {
     const half = h / (2 * worldTile);
-    const seesRow = groups.row.some((g) => Math.min(seamD(g.v0), seamD(g.v1), seamD(g.vc)) <= half);
-    const seesFri = groups.frieze.some((g) => g.v0 <= 0.5 + half && g.v1 >= 0.5 - half) && half >= 0.5 - 0.5365;
-    const friIn = half >= (0.5 - 0.0365);   // the frieze sits at V 0.4635..0.5365
-    console.log(`  ${(nm + ' [' + zone + ']').padEnd(32)}${h.toFixed(2).padStart(5)}   +/-${half.toFixed(3)}      ${seesRow ? 'yes ' : 'NO  '}   ${friIn ? 'yes' : 'NO'}`);
+    const seesRow = groups.row.some((g) => overlapsWindow(g.v0, g.v1, half));
+    /* The test the column names: does any frieze sign's own box reach the window? */
+    const seesFri = groups.frieze.some((g) => overlapsWindow(g.v0, g.v1, half));
+    /* The coarser rule, kept as a cross-check: does the window reach the frieze's near edge? */
+    const friBand = half >= 0.5 - (0.5 - friezeV[0]);
+    console.log(`  ${(nm + ' [' + zone + ']').padEnd(34)}${h.toFixed(2).padStart(5)}   +/-${half.toFixed(3)}   ${seesRow ? 'yes ' : 'NO  '}     ${seesFri ? 'yes' : 'NO '}` +
+      `          ${friBand ? 'yes' : 'NO'}${seesFri !== friBand ? '   <-- TESTS DISAGREE' : ''}`);
   }
 }
 await browser.close(); server.close();

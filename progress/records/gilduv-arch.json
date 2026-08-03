@@ -1,0 +1,283 @@
+{
+ "W": 1280,
+ "H": 720,
+ "mat": "arch:hieroglyph_gilded",
+ "tile": 3.2,
+ "props": false,
+ "tree": {
+  "hash": "efa7fc61d7a1",
+  "n": 16
+ },
+ "shots": {
+  "courtyard": {
+   "px": 54193,
+   "sharePct": 5.88,
+   "uSpan": 6.48,
+   "pxPerRepeat": 277,
+   "vbins": [
+    21,
+    14.3,
+    4.4,
+    14,
+    18.7,
+    7.1,
+    3.6,
+    1.3,
+    1.5,
+    1.1,
+    1.7,
+    0.2,
+    0.2,
+    0,
+    0,
+    0.1,
+    0.1,
+    0.8,
+    4.2,
+    5.7
+   ],
+   "land": [
+    {
+     "nm": "sun-frieze",
+     "px": 65,
+     "comps": 5,
+     "comps4": 3,
+     "extentMax": 5,
+     "extentMed": 5
+    },
+    {
+     "nm": "bee-row",
+     "px": 2184,
+     "comps": 41,
+     "comps4": 28,
+     "extentMax": 38,
+     "extentMed": 10
+    },
+    {
+     "nm": "falcon-row",
+     "px": 1124,
+     "comps": 26,
+     "comps4": 14,
+     "extentMax": 31,
+     "extentMed": 12
+    }
+   ]
+  },
+  "night": {
+   "px": 105409,
+   "sharePct": 11.44,
+   "uSpan": 6.78,
+   "pxPerRepeat": 176,
+   "vbins": [
+    18.4,
+    17.7,
+    6,
+    3.2,
+    5,
+    4.9,
+    3.4,
+    3,
+    2,
+    1.4,
+    2.8,
+    0,
+    0,
+    0,
+    0,
+    0.1,
+    0.1,
+    2.9,
+    12.2,
+    16.7
+   ],
+   "land": [
+    {
+     "nm": "sun-frieze",
+     "px": 235,
+     "comps": 5,
+     "comps4": 5,
+     "extentMax": 11,
+     "extentMed": 8
+    },
+    {
+     "nm": "bee-row",
+     "px": 6298,
+     "comps": 69,
+     "comps4": 53,
+     "extentMax": 55,
+     "extentMed": 9
+    },
+    {
+     "nm": "falcon-row",
+     "px": 4832,
+     "comps": 55,
+     "comps4": 42,
+     "extentMax": 49,
+     "extentMed": 8
+    }
+   ]
+  },
+  "hero": {
+   "px": 271575,
+   "sharePct": 29.47,
+   "uSpan": 6.78,
+   "pxPerRepeat": 501,
+   "vbins": [
+    22.8,
+    23.3,
+    6.2,
+    1.6,
+    2.3,
+    2.2,
+    1.9,
+    1.7,
+    1.1,
+    0.9,
+    1.9,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    1,
+    13.7,
+    19.2
+   ],
+   "land": [
+    {
+     "nm": "sun-frieze",
+     "px": 364,
+     "comps": 6,
+     "comps4": 6,
+     "extentMax": 14,
+     "extentMed": 11
+    },
+    {
+     "nm": "bee-row",
+     "px": 22196,
+     "comps": 129,
+     "comps4": 31,
+     "extentMax": 176,
+     "extentMed": 21
+    },
+    {
+     "nm": "falcon-row",
+     "px": 8527,
+     "comps": 54,
+     "comps4": 23,
+     "extentMax": 116,
+     "extentMed": 24
+    }
+   ]
+  },
+  "temple": {
+   "px": 16451,
+   "sharePct": 1.79,
+   "uSpan": 3.47,
+   "pxPerRepeat": 158,
+   "vbins": [
+    14.4,
+    14.6,
+    7,
+    7.2,
+    4.4,
+    0.3,
+    0.3,
+    0.3,
+    0.7,
+    0.9,
+    0.9,
+    1.7,
+    1.6,
+    0.7,
+    0.7,
+    3.7,
+    5.9,
+    5.8,
+    14.1,
+    14.7
+   ],
+   "land": [
+    {
+     "nm": "sun-frieze",
+     "px": 10,
+     "comps": 3,
+     "comps4": 1,
+     "extentMax": 8,
+     "extentMed": 8
+    },
+    {
+     "nm": "bee-row",
+     "px": 543,
+     "comps": 12,
+     "comps4": 4,
+     "extentMax": 19,
+     "extentMed": 18
+    },
+    {
+     "nm": "falcon-row",
+     "px": 242,
+     "comps": 11,
+     "comps4": 5,
+     "extentMax": 18,
+     "extentMed": 8
+    }
+   ]
+  },
+  "interior": {
+   "px": 47608,
+   "sharePct": 5.17,
+   "uSpan": 12.29,
+   "pxPerRepeat": 304,
+   "vbins": [
+    8.3,
+    5.9,
+    0.2,
+    1.8,
+    1.8,
+    1.9,
+    2,
+    2,
+    1.4,
+    0.6,
+    2.6,
+    7.8,
+    7.7,
+    7.8,
+    7.9,
+    7.9,
+    8,
+    8.1,
+    8.1,
+    8.2
+   ],
+   "land": [
+    {
+     "nm": "sun-frieze",
+     "px": 161,
+     "comps": 8,
+     "comps4": 1,
+     "extentMax": 20,
+     "extentMed": 20
+    },
+    {
+     "nm": "bee-row",
+     "px": 863,
+     "comps": 20,
+     "comps4": 1,
+     "extentMax": 31,
+     "extentMed": 31
+    },
+    {
+     "nm": "falcon-row",
+     "px": 1078,
+     "comps": 22,
+     "comps4": 1,
+     "extentMax": 38,
+     "extentMed": 38
+    }
+   ]
+  }
+ }
+}
