@@ -20,3 +20,9 @@ shots/*/
 # backgrounds the whole list, so the trailing `echo $! > run.pid` runs back in the repo
 # root — twice now. Runtime state, never source.
 *.pid
+
+# keeplog.sh (tools/keeplog.sh, KNOWN_ISSUES §88/§89.5) writes preserved capture logs here.
+# They MUST be tracked — that is the entire point of the tool, and the *.log rule above
+# silently defeated it on first use.
+!progress/records/logs/
+!progress/records/logs/*.log

@@ -7545,3 +7545,122 @@ Applied immediately to the three captures in flight: `fx18` (59 lines), `char11`
 
 > The frames are evidence, the ledger is the record — and **the log is what says the evidence is
 > admissible.**
+
+
+---
+
+## §89 — the latch is falsified, the run's own bit-identity control failed, and the pixel ranking is the wrong statistic for the object
+
+`fx18` completed at 04:36 — 13 frames plus `fx18.json`. FX's monitor did not report, so this is the
+coordinator scoring it against the rules registered in §63.1, §73.1 and §78.2. **Log preserved first**
+via `tools/keeplog.sh` (§88), before any measurement.
+
+### 89.1 TASK #30: the latch hypothesis is FALSIFIED
+
+`temple` was the first staging by design (§84.2), at focus **[1, 0, −32.5]** — 62.5 m from spawn, the
+disjoint case the shot was chosen for:
+
+```
+LATCH: latched=25  fresh=25  sharedXZ=25  timer=0.1867  focus=[1,0,-32.5]
+       freshTags={pole:15, rail:3, hook:3, spire:4}
+```
+
+The registered three-way rule: *latched 17 against fresh 25 with disjoint XZ* = stale confirmed;
+***latched == fresh == 25* = falsified**; anything else reported as-is.
+
+> **`latched == fresh == 25`, fully shared. The latch re-evaluated correctly at a position 62.5 m
+> from where it was last computed. §55.5's named suspect does not explain the 31-instance cross-boot
+> difference.**
+
+Every subsequent arm reads `latched = fresh = 17` at spawn-adjacent focuses, which is the correct
+count for those positions — so the mechanism is working, not merely appearing to.
+
+The third branch of the rule — *nothing differs by 31, so it is not in `src/fx` at all* — cannot be
+closed here: that comparison needs the **two-boot** pair, and `det3`'s frames died in the rollback.
+**Recorded as falsified-for-this-mechanism, not as solved.**
+
+### 89.2 The run's own bit-identity control FAILED, and it caught a real leak
+
+`back` was registered to reproduce `base` **bit-identically**. It does not. It is bit-identical to
+**`softoff`**:
+
+```
+sly-profile.base.png     09a2ede8f05125225b9896f621ee8068
+sly-profile.softoff.png  f01c6c6226b5591735d8956fd6d4d661
+sly-profile.back.png     f01c6c6226b5591735d8956fd6d4d661   <- equals SOFTOFF, not BASE
+```
+
+**The `softoff` poke was never reverted**, so the `back` arm rendered the softoff state and is a
+duplicate of it rather than a control on anything.
+
+**Scope, established by timestamp rather than assumed:** the five emitter arms ran 04:20–04:25 and
+`softoff` at 04:26, so **every emitter arm predates the leak and is unaffected.** What the run has
+lost is its bit-identity control — the thing that would have proved no other state drifted across the
+sequence. The per-arm `applied:` lines remain, and they are now the only attestation.
+
+*The control did its job by failing.* A run whose `back` arm had silently matched `base` while
+something else leaked would have been worse.
+
+### 89.3 §78.2's emitter prediction: right about the object, wrong about the ranking
+
+Difference from `base` on `sly-profile`:
+
+| arm | px | % frame | mean | shape |
+|---|---|---|---|---|
+| `no-shimmer` | **72,058** | 7.819% | +3.76 | broad wash, top rows and left column |
+| `no-sandLow` | 17,807 | 1.932% | +1.88 | **compact central mass**, peak (666,412) |
+| `no-sandHigh` | 217 | 0.024% | +2.96 | negligible |
+| `no-airMotes` | **0** | 0.000% | — | contributes nothing to this frame |
+| `no-dust` | **0** | 0.000% | — | contributes nothing to this frame |
+
+**`shimmer` moves four times the pixels of `sandLow`** — so on raw count the registered prediction
+loses. But the claim was about **the cream mass**, a localised object, and the spatial distributions
+separate cleanly: `sandLow`'s difference is a **compact blob at frame centre**, while `shimmer`'s is a
+**diffuse wash across the sky and left edge.**
+
+> **Total pixels moved is the wrong statistic for "which emitter is that object."** A thin haze over
+> half the frame outscores a solid mass every time, exactly as §74.2's diff image let the material
+> occupying half the frame dominate the attribution.
+
+So: **prediction upheld for the puff, and the ranking it would have been scored on is the wrong
+ranking.** And two emitters are eliminated outright at exactly zero pixels — a cleaner result than any
+threshold.
+
+### 89.4 §78.1's magnitude prediction is falsified; its mechanism claim is untouched
+
+Registered: *"`softoff` changes nothing that matters."* Measured: **28,136 px, 3.053% of frame, mean
+−3.49, peak −43.** That is not nothing.
+
+But note the **sign**. `softoff` *darkens* — 24,593 pixels down against 441 up. Removing the soft fade
+makes sprites **more** opaque where they meet geometry, which is what the fade is for. **§78.1's
+mechanism — soft particles soften intersections, never occlusions — is untouched by this**; what fails
+is the prediction that the effect would be negligible in this frame.
+
+*A mechanism and a magnitude are separate claims, and this run confirmed one while refuting the other.*
+
+
+### 89.5 §88's fix was itself broken, and `git add` caught it on first use
+
+`tools/keeplog.sh` copies capture logs into `progress/records/logs/` **so they are tracked and
+pushed**. `.gitignore` line 4 is `*.log`.
+
+> **The tool built to make logs durable was writing them into an ignored path.** It printed
+> "59 lines -> progress/records/logs/fx18.log" and exited 0, and the copies were as ephemeral as
+> the originals.
+
+§88 was committed claiming the hazard closed. It was not closed; it was *relocated*. Caught only
+because `git add` refused the path — **the same shape as §83.1, where a refused push corrected a
+wrong diagnosis.** Twice now the durable-state error was found by a git command declining to do
+something, and not by any check I wrote.
+
+Fixed with a negation for that directory only, and **verified in both directions rather than one**:
+`git ls-files --error-unmatch` confirms the three preserved logs are tracked, and a stray `.log` at
+the repo root is confirmed **still ignored**, so the rule was not over-widened.
+
+One more misleading check on the way: `git check-ignore -v` printed the matching line and exited 0
+*for a negation pattern*, which reads as "still ignored" and is not. **`check-ignore` answers
+"which pattern matched", not "is this ignored"** — the definitive test is whether `git ls-files`
+knows the path.
+
+*Third instance in this session of a verification step that reports on something adjacent to the
+question asked* (§14.9's hardcoded verdict, §69.5's append-only assumption, and this).

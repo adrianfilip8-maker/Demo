@@ -1,0 +1,76 @@
+# ---- run log preserved by tools/keeplog.sh ----
+# run:      fx18
+# source:   /tmp/claude-0/-home-user-Demo/94022f73-a328-5e86-b2ec-031aa9c720ce/scratchpad/fx18.log
+# copied:   2026-08-03T05:14:15Z
+# tree:     a608390 (DIRTY at copy time)
+# NOTE: this is a COPY. The scratchpad original is ephemeral and may already be gone.
+# ------------------------------------------------
+renderer: ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)
+   ! textures: prewarm took 29.9s at size 1024
+
+--- temple [latch]  305s  t=0.5833 f=26 -> /home/user/Demo/shots/fx18/temple.latch.png
+    applied: baseline
+    LATCH: latched=25 fresh=25 sharedXZ=25 timer=0.1867 focus=[1,0,-32.5] freshTags={"pole":15,"rail":3,"hook":3,"spire":4}
+    live: dust=290 smoke=220 spark=700 ring=0(hidden) sandLow=460 sandHigh=900 airMotes=1000 shimmer=90 motes=900
+
+--- sly-profile [base]  281s  t=0.8667 f=47 -> /home/user/Demo/shots/fx18/sly-profile.base.png
+    applied: baseline
+    LATCH: latched=17 fresh=17 sharedXZ=17 timer=0.1867 focus=[0,0,30] freshTags={"rail":2,"pole":6,"hook":8,"spire":1}
+    live: dust=290 smoke=220 spark=700 ring=0(hidden) sandLow=460 sandHigh=900 airMotes=1000 shimmer=90 motes=900
+
+--- sly-profile [no-sandLow]  57s  t=0.8667 f=51 -> /home/user/Demo/shots/fx18/sly-profile.no-sandLow.png
+    applied: OFF sandLow (cap 460)
+    LATCH: latched=17 fresh=17 sharedXZ=17 timer=0.1867 focus=[0,0,30] freshTags={"rail":2,"pole":6,"hook":8,"spire":1}
+    live: dust=290 smoke=220 spark=700 ring=0(hidden) sandLow=460(hidden) sandHigh=900 airMotes=1000 shimmer=90 motes=900
+
+--- sly-profile [no-sandHigh]  48s  t=0.8667 f=55 -> /home/user/Demo/shots/fx18/sly-profile.no-sandHigh.png
+    applied: OFF sandHigh (cap 900)
+    LATCH: latched=17 fresh=17 sharedXZ=17 timer=0.1867 focus=[0,0,30] freshTags={"rail":2,"pole":6,"hook":8,"spire":1}
+    live: dust=290 smoke=220 spark=700 ring=0(hidden) sandLow=460 sandHigh=900(hidden) airMotes=1000 shimmer=90 motes=900
+
+--- sly-profile [no-shimmer]  54s  t=0.8667 f=59 -> /home/user/Demo/shots/fx18/sly-profile.no-shimmer.png
+    applied: OFF shimmer (cap 90)
+    LATCH: latched=17 fresh=17 sharedXZ=17 timer=0.1867 focus=[0,0,30] freshTags={"rail":2,"pole":6,"hook":8,"spire":1}
+    live: dust=290 smoke=220 spark=700 ring=0(hidden) sandLow=460 sandHigh=900 airMotes=1000 shimmer=90(hidden) motes=900
+
+--- sly-profile [no-airMotes]  58s  t=0.8667 f=63 -> /home/user/Demo/shots/fx18/sly-profile.no-airMotes.png
+    applied: !! no batch named air_motes
+    LATCH: latched=17 fresh=17 sharedXZ=17 timer=0.1867 focus=[0,0,30] freshTags={"rail":2,"pole":6,"hook":8,"spire":1}
+    live: dust=290 smoke=220 spark=700 ring=0(hidden) sandLow=460 sandHigh=900 airMotes=1000 shimmer=90 motes=900
+
+--- sly-profile [no-dust]  56s  t=0.8667 f=67 -> /home/user/Demo/shots/fx18/sly-profile.no-dust.png
+    applied: OFF dust (cap 900)
+    LATCH: latched=17 fresh=17 sharedXZ=17 timer=0.1867 focus=[0,0,30] freshTags={"rail":2,"pole":6,"hook":8,"spire":1}
+    live: dust=290(hidden) smoke=220 spark=700 ring=0(hidden) sandLow=460 sandHigh=900 airMotes=1000 shimmer=90 motes=900
+
+--- sly-profile [softoff]  59s  t=0.8667 f=71 -> /home/user/Demo/shots/fx18/sly-profile.softoff.png
+    applied: softness->0 on 9 batches
+    LATCH: latched=17 fresh=17 sharedXZ=17 timer=0.1867 focus=[0,0,30] freshTags={"rail":2,"pole":6,"hook":8,"spire":1}
+    live: dust=290 smoke=220 spark=700 ring=0(hidden) sandLow=460 sandHigh=900 airMotes=1000 shimmer=90 motes=900
+
+--- sly-profile [back]  55s  t=0.8667 f=75 -> /home/user/Demo/shots/fx18/sly-profile.back.png
+    applied: baseline
+    LATCH: latched=17 fresh=17 sharedXZ=17 timer=0.1867 focus=[0,0,30] freshTags={"rail":2,"pole":6,"hook":8,"spire":1}
+    live: dust=290 smoke=220 spark=700 ring=0(hidden) sandLow=460 sandHigh=900 airMotes=1000 shimmer=90 motes=900
+
+--- guard [base]  186s  t=1.15 f=96 -> /home/user/Demo/shots/fx18/guard.base.png
+    applied: baseline
+    LATCH: latched=17 fresh=17 sharedXZ=17 timer=0.1867 focus=[-9,0,31.5] freshTags={"pole":6,"rail":2,"hook":8,"spire":1}
+    live: dust=290 smoke=220 spark=700 ring=0(hidden) sandLow=460 sandHigh=900 airMotes=1000 shimmer=90 motes=900
+
+--- guard [no-sandLow]  35s  t=1.15 f=100 -> /home/user/Demo/shots/fx18/guard.no-sandLow.png
+    applied: OFF sandLow (cap 460)
+    LATCH: latched=17 fresh=17 sharedXZ=17 timer=0.1867 focus=[-9,0,31.5] freshTags={"pole":6,"rail":2,"hook":8,"spire":1}
+    live: dust=290 smoke=220 spark=700 ring=0(hidden) sandLow=460(hidden) sandHigh=900 airMotes=1000 shimmer=90 motes=900
+
+--- combat [base]  278s  t=1.4333 f=121 -> /home/user/Demo/shots/fx18/combat.base.png
+    applied: baseline
+    LATCH: latched=17 fresh=17 sharedXZ=17 timer=0.1867 focus=[0,0,28] freshTags={"rail":2,"pole":6,"hook":8,"spire":1}
+    live: dust=308 smoke=220 spark=700 ring=1 sandLow=460 sandHigh=900 airMotes=1000 shimmer=90 motes=900
+
+--- combat [no-sandLow]  50s  t=1.4333 f=125 -> /home/user/Demo/shots/fx18/combat.no-sandLow.png
+    applied: OFF sandLow (cap 460)
+    LATCH: latched=17 fresh=17 sharedXZ=17 timer=0.1867 focus=[0,0,28] freshTags={"rail":2,"pole":6,"hook":8,"spire":1}
+    live: dust=308 smoke=220 spark=700 ring=1 sandLow=460(hidden) sandHigh=900 airMotes=1000 shimmer=90 motes=900
+
+fx18 DONE — wrote /home/user/Demo/shots/fx18/fx18.json
