@@ -10067,3 +10067,71 @@ republished value. **`teal0` matched at the wrong `keyLum` while the other two m
 identical constant ratio** — a constant ratio across arms localises a scale error; a hue error
 would not have been constant. The corrected chain then reproduced all three live readbacks to
 **1.06e-11**.
+
+---
+
+## §120 — gold's specular route is predicted null before its capture, and three premises fall on the way
+
+TEXTURES sealed `PREREG-goldspec` at 14:05:58 with zero PNGs of the run on disk, then predicted the
+outcome from **frames that already existed**. Default build verified bit-identical: with no A/B
+string the new expression yields the same `arrisPolish: 0.08` it replaced.
+
+### 120.1 The prediction, and why it is a prediction rather than a hope
+
+| `hero`, masked pixel diff | differing px | % of mask |
+|---|---|---|
+| gilded mask — the **albedo** half of this arris | **55 014** | 20.64 % |
+| `sandstone_block` — untouched, same tree | **83** | 0.13 % |
+| gilded mask, same build, two boots | 122 | 0.05 % |
+| **specular route — predicted** | **74–104** | *at the floor* |
+
+**The same-tree floor is 83–122 px. The albedo route clears it by 550×. The specular route is
+predicted to land inside it.** That comparison needed no capture and it is the whole result.
+
+The arms are queued anyway, and the seal carries `hgpolishx8` at **0.60 — 7.5× the shipped notch
+and a candidate for nothing.** Its only job is §13's rule: *a statistic never shown to move on a
+state known to carry the effect is not evidence about that effect in either direction.* A null
+without a calibration arm is indistinguishable from a blind instrument.
+
+### 120.2 Three premises fall, and one of them was a framing method I endorsed
+
+**The `+3.1 %` on record overstates the delivered effect ~1.8×.** `rgh` feeds **two** terms, not
+one: `specAmt = 0.55·(1 − 0.75·rgh)·3.04` **and** `glossP = max(64·(1 − 0.6·rgh), 4)`. Polishing
+raises the amplitude *and narrows the lobe*. Delivery chain plus restricting to the class that is
+actually gold takes 3.25 → 2.16 %; the exponent route takes it to ≈ 1.7 %.
+
+**The polish barely lands on gold.** Of 10 616 texels whose roughness changes, **773 (7.3 %) are on
+the gild class** — `carve()`'s ring is *outside* the cut and the gilding is *inside* it, and where
+they overlap the gold pass overwrites the notch in proportion to `g`.
+
+**And `goldlit.mjs`'s `ndl > 0.52` ordering — which `PREREG-hgarris2` used to choose its framings,
+with my agreement — is necessary but not sufficient, and it reorders the roster.** It ranks
+`sly-closeup` first and `sly-key` fourth; the lobe condition ranks `sly-startle` first.
+
+> **Key-lit is not the same question as half-vector-aligned, and only the second is the one a
+> specular lobe asks.** A framing chosen on illumination will systematically mis-rank framings for
+> a specular test — the two criteria are correlated enough to look interchangeable and are not.
+
+### 120.3 A treatment that is not monotone in the image
+
+Nothing on the record anticipated this: just below the step's shoulder (ndh ≈ 0.977 at this
+roughness) the **narrower lobe falls under `smoothstep(0.30, 0.52, lobe)` faster than the amplitude
+rises**, so polishing makes the pixel **darker** by up to −0.019 in linear radiance.
+
+**A signed statistic over the gilded mask can therefore cancel against itself, and only the
+unsigned count is safe to read.** Registered before the arms land, which is the only time such a
+constraint can be imposed without looking like an excuse. This is the same hazard shape as §101's
+Weber and §112.1's P80 — a statistic whose validity depends on a property of the treatment nobody
+checked — caught here *in advance* rather than in correction.
+
+### 120.4 Where gold actually closes
+
+**Not from the roughness map, and the reason is geometric.** At the gild's shipped ORM roughness
+`glossP` = 40.7, so the lobe leaves zero only past N·H > 0.9083 and reaches its main leg past
+0.9708 — a **24.7° cap** — and gilded architecture is flat, so area-in-lobe is 0.46–7.10 % across
+the roster and **0.71 % on `hero`**, the shot that carries 28.9 % gilding.
+
+The lever with range is the lobe's **width**, i.e. `gloss` in `Architecture.RECIPES` — **ARCHITECTURE's,
+not TEXTURES'.** Together with `spec: 0.55` (same file) and POSTFX's metal-aware bloom feed, §7.3's
+"gold doesn't read as metal" is now **handed on with the arithmetic attached** rather than asserted:
+TEXTURES has bounded its own side to ≈1.0 code of 255 and shown the bound is structural.

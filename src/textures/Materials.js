@@ -2042,8 +2042,14 @@ export const MATERIALS = {
        * key-lit specular alone). §7.3's gold line is the second one, and no albedo lab can see
        * it. Scoped to this recipe so every other material in the level stays bit-identical
        * between the arms and supplies the coupling floor a control-vs-control run showed is
-       * NOT zero (mudbrick moved +2.17 % on a bit-identical texture). */
-      const ramp = carve(s, cut, lines, { depth: 0.42, bevelPx: 2.6, lip: 0.10, bulge: 0.5, lineDepth: 0.56, seed: cx.seed + 5, arris: 0.16, arrisHex: PAL.goldLight, arrisPolish: abOff('hgpolish') ? 0 : 0.08 });
+       * NOT zero (mudbrick moved +2.17 % on a bit-identical texture).
+       *
+       * `hgpolishx8` is the *calibration* arm, and it exists because of §13's rule: a statistic
+       * that has never been shown to move on a state known to carry the effect is not evidence
+       * about that effect in either direction. 0.60 is 7.5x the shipped notch and is not a
+       * candidate for anything — its only job is to tell a null apart from a blind instrument. */
+      const arrisPolish = abOff('hgpolish') ? 0 : abOff('hgpolishx8') ? 0.60 : 0.08;
+      const ramp = carve(s, cut, lines, { depth: 0.42, bevelPx: 2.6, lip: 0.10, bulge: 0.5, lineDepth: 0.56, seed: cx.seed + 5, arris: 0.16, arrisHex: PAL.goldLight, arrisPolish });
 
       // Gold leaf laid into the sunk glyphs over a red bole ground; the leaf lifts at the arrises.
       const lift = s.field(2, (u, v) => sat(warpN(u, v, 14, 4, 1.1, cx.seed + 31) * 1.4 + 0.5));

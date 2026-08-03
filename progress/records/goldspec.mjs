@@ -41,6 +41,7 @@ const argv = process.argv.slice(2);
 const opt = (n, d) => { const i = argv.indexOf(`--${n}`); return i >= 0 ? argv[i + 1] : d; };
 const RECIPE = opt('recipe', 'hieroglyph_gilded');
 const OFF = opt('off', 'hgpolish');
+const ON = opt('on', '');          // treatment arm's VITE_TEX_AB string; '' = the shipped build
 const SIZE = parseInt(opt('size', '1024'), 10);
 const MATNAME = opt('mat', `arch:${RECIPE}`);
 /* The consumer's real uniforms — Architecture.RECIPES[hieroglyph_gilded] plus Architecture's
@@ -72,7 +73,7 @@ page.on('pageerror', (e) => console.error('  [pageerror]', e.message));
 page.on('console', (m) => { if (m.type() === 'error') console.error('  [console]', m.text()); });
 await page.goto(`http://127.0.0.1:${port}/lab.html`);
 
-const tex = await page.evaluate(async ({ RECIPE, OFF, SIZE, USPEC, UGLOSS, UMETAL, SPECCOL }) => {
+const tex = await page.evaluate(async ({ RECIPE, OFF, ON, SIZE, USPEC, UGLOSS, UMETAL, SPECCOL }) => {
   const M = await import('/src/textures/Materials.js');
   const C = await import('/src/textures/Canvas2D.js');
   const N = await import('/src/textures/NormalMap.js');
@@ -94,7 +95,7 @@ const tex = await page.evaluate(async ({ RECIPE, OFF, SIZE, USPEC, UGLOSS, UMETA
   };
 
   const A = build(OFF);        // treatment OFF (control)
-  const B = build('');         // shipped
+  const B = build(ON);         // treatment arm ('' = shipped)
   const sz = A.sz, os = A.d.orm.size, n = os * os;
   if (B.sz !== sz) throw new Error('arm size mismatch');
 
@@ -199,7 +200,13 @@ const tex = await page.evaluate(async ({ RECIPE, OFF, SIZE, USPEC, UGLOSS, UMETA
     return out;
   };
   const allGild = []; for (let i = 0; i < n; i++) if (cls(i) === 'gild') allGild.push(i);
-  const devTreated = devAngle(treated), devGild = devAngle(allGild);
+  const treatedGild = treated.filter((i) => cls(i) === 'gild');
+  const devTreated = devAngle(treated), devGild = devAngle(allGild), devTreatedGild = devAngle(treatedGild);
+  /* Sampled deviation lists, exported so stage 2 can CONVOLVE the geometric N.H with the real
+   * texel-normal distribution instead of quoting a p90 as a bound. A bound of 36.9 deg turns
+   * "0.24% of the area is in the lobe" into "up to 49%", which is a range wide enough to be
+   * useless for choosing a framing. */
+  const sampleN = (a, k) => { if (a.length <= k) return a.slice(); const o = []; for (let i = 0; i < k; i++) o.push(a[Math.floor(i * a.length / k)]); return o; };
 
   const summ = (a) => a.length ? { n: a.length, min: +pct(a, 0).toFixed(5), p50: +pct(a, 0.5).toFixed(5), p90: +pct(a, 0.9).toFixed(5), max: +pct(a, 0.999).toFixed(5), mean: +(a.reduce((x, y) => x + y, 0) / a.length).toFixed(5) } : { n: 0 };
 
@@ -222,14 +229,19 @@ const tex = await page.evaluate(async ({ RECIPE, OFF, SIZE, USPEC, UGLOSS, UMETA
     censusPct: { gild: +(100 * census.gild / n).toFixed(2), lime: +(100 * census.lime / n).toFixed(2), edge: +(100 * census.edge / n).toFixed(2) },
     treated: treated.length, treatedPct: +(100 * treated.length / n).toFixed(3),
     rows: outRows,
-    devTreated: summ(devTreated), devGild: summ(devGild),
+    devTreated: summ(devTreated), devGild: summ(devGild), devTreatedGild: summ(devTreatedGild),
+    devGildSample: sampleN(devGild.slice().sort((a, b) => a - b), 512),
+    devTreatedGildSample: sampleN(devTreatedGild.slice().sort((a, b) => a - b), 512),
+    /* Shipped roughness of the gild class, both arms — the lobe's width is a function of it,
+     * so a lobe threshold quoted at a guessed field value is a guess. */
+    rghGild: { off: summ(allGild.map((i) => rA[i])), on: summ(allGild.map((i) => rB[i])) },
     /* Raw authored delta, for comparison with what survives to the ORM. */
     authored: (() => {
       const d = []; for (let i = 0; i < sz * sz; i++) { const v = B.s.rough[i] - A.s.rough[i]; if (v !== 0) d.push(v); }
       return { texels: d.length, pctOfTile: +(100 * d.length / (sz * sz)).toFixed(3), ...summ(d) };
     })(),
   };
-}, { RECIPE, OFF, SIZE, USPEC, UGLOSS, UMETAL, SPECCOL });
+}, { RECIPE, OFF, ON, SIZE, USPEC, UGLOSS, UMETAL, SPECCOL });
 
 await browser.close();
 server.close();
@@ -262,13 +274,67 @@ const tris = [];
 /* The lobe's live window, from the shader: specStep is non-zero once lobe = ndh^glossP > 0.02,
  * and reaches its main leg at lobe > 0.30. Both thresholds depend on the roughness, so quote
  * them at the gild's own shipped median. */
-const rghGild = tex.rows.gild.dRgh.n ? null : null;   // filled below from the sweep if needed
 const glossAt = (rgh) => Math.max(UGLOSS * (1 - 0.6 * rgh), 4);
-const RG_FIELD = parseFloat(opt('rghfield', '0.60'));
+/* Measured, not guessed: the gild class's own shipped ORM roughness median. */
+const RG_FIELD = parseFloat(opt('rghfield', String(tex.rghGild.on.p50)));
 const gp = glossAt(RG_FIELD);
 const NDH_ON = Math.pow(0.02, 1 / gp);      // specStep leaves zero
 const NDH_MAIN = Math.pow(0.30, 1 / gp);    // main leg
 const devBound = tex.devGild.p90 ?? 0;
+
+/* Convolution of the geometric N.H with the real texel-normal distribution.
+ *
+ * A texel normal sits `delta` degrees off the face normal at an azimuth the UV frame decides,
+ * which this tool does not model — so azimuth is averaged uniformly. That is an approximation
+ * and it is stated: it gives the EXPECTED in-lobe fraction over unknown tangent frames, not the
+ * fraction for one particular wall's UV rotation. It is not a bound in either direction. */
+const PHI = 64;
+const lut = (samples, thresh) => {
+  const NT = 361, out = new Float64Array(NT);          // theta 0..90 deg in 0.25 deg steps
+  const cosphi = new Float64Array(PHI);
+  for (let p = 0; p < PHI; p++) cosphi[p] = Math.cos(2 * Math.PI * p / PHI);
+  for (let t = 0; t < NT; t++) {
+    const th = t * 0.25 * Math.PI / 180, ct = Math.cos(th), st = Math.sin(th);
+    let hit = 0, tot = 0;
+    for (const dDeg of samples) {
+      const d = dDeg * Math.PI / 180, cd = Math.cos(d), sd = Math.sin(d);
+      for (let p = 0; p < PHI; p++) { if (ct * cd + st * sd * cosphi[p] > thresh) hit++; tot++; }
+    }
+    out[t] = tot ? hit / tot : 0;
+  }
+  return out;
+};
+/* WHAT-IF: the in-lobe fraction is a function of the gild's own NORMAL distribution, which is
+ * TEXTURES' to author, and not of its roughness. A flat gild has a highlight only when the face
+ * happens to align with the half-vector; a hammered or burnished one always has some texels
+ * aligned. These synthetic half-normal slope distributions size that lever before anyone spends
+ * a capture on it. `sigma` is the per-axis slope sd in degrees; the built map's own gild
+ * distribution sits at p50 %P50% / p90 %P90%.
+ * NOT a prediction of the frame: it moves only the geometric availability of the lobe, and says
+ * nothing about the busy/flat trade a rougher normal field would also buy. */
+const SIGMAS = [5, 10, 15, 20, 30];
+const synth = (sigma) => {
+  const out = [];
+  let seed = 12345;
+  const rnd = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return (seed >>> 8) / 16777216; };
+  for (let i = 0; i < 512; i++) {
+    let u = Math.max(1e-9, rnd()), v = rnd();
+    out.push(Math.abs(Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v)) * sigma);
+  }
+  return out.sort((a, b) => a - b);
+};
+const lutSyn = SIGMAS.map((sg) => lut(synth(sg), NDH_ON));
+
+/* WHAT-IF 2: the lobe's WIDTH is set by `gloss`, which is ARCHITECTURE's RECIPES entry, not
+ * TEXTURES'. Same convolution, same built normal distribution, only the threshold moves. This
+ * is the handoff number for "the lobe is too narrow to exist on flat architecture". */
+const GLOSSES = [64, 40, 24, 16, 10];
+const lutGloss = GLOSSES.map((g) => lut(tex.devGildSample, Math.pow(0.02, 1 / Math.max(g * (1 - 0.6 * RG_FIELD), 4))));
+const lutGildOn = lut(tex.devGildSample, NDH_ON);
+const lutGildMain = lut(tex.devGildSample, NDH_MAIN);
+const lutRingOn = lut(tex.devTreatedGildSample, NDH_ON);
+const lutRingMain = lut(tex.devTreatedGildSample, NDH_MAIN);
+const luLook = (L, thDeg) => L[Math.min(L.length - 1, Math.max(0, Math.round(thDeg / 0.25)))];
 
 const shots = [];
 const e1 = new THREE.Vector3(), e2 = new THREE.Vector3(), nn = new THREE.Vector3(), ctr = new THREE.Vector3();
@@ -284,7 +350,9 @@ for (const name of Object.keys(SHOTS)) {
   cam.updateMatrixWorld(true); cam.updateProjectionMatrix();
   const fr = new THREE.Frustum().setFromProjectionMatrix(new THREE.Matrix4().multiplyMatrices(cam.projectionMatrix, cam.matrixWorldInverse));
   const eye = cam.position;
-  let aTot = 0, aOn = 0, aMain = 0, aOnB = 0, aMainB = 0, ndhMax = -1;
+  let aTot = 0, aOn = 0, aMain = 0, aOnB = 0, aMainB = 0, ndhMax = -1, aGildOn = 0, aGildMain = 0, aRingOn = 0;
+  const aSyn = new Array(SIGMAS.length).fill(0);
+  const aGls = new Array(GLOSSES.length).fill(0);
   for (const [p0, p1, p2] of tris) {
     ctr.copy(p0).add(p1).add(p2).multiplyScalar(1 / 3);
     if (!fr.containsPoint(ctr)) continue;
@@ -296,6 +364,11 @@ for (const name of Object.keys(SHOTS)) {
     Hh.copy(key).add(Vv).normalize();
     const ndh = nn.dot(Hh);
     aTot += area;
+    /* `spec` is multiplied by `step(0.02, ndl)`, so a face turned away from the key carries no
+     * highlight however favourable its half-vector is. Counted geometrically at 0.14 (the low
+     * terminator) rather than at 0.02, because the normal map can only move a face so far and
+     * a face this far from the key has no highlight to change. */
+    const keyFacing = nn.dot(key) > 0.14;
     if (ndh > ndhMax) ndhMax = ndh;
     if (ndh > NDH_ON) aOn += area;
     if (ndh > NDH_MAIN) aMain += area;
@@ -306,12 +379,23 @@ for (const name of Object.keys(SHOTS)) {
     const ndhB = Math.cos(thB * Math.PI / 180);
     if (ndhB > NDH_ON) aOnB += area;
     if (ndhB > NDH_MAIN) aMainB += area;
+    if (keyFacing) {
+      for (let k = 0; k < SIGMAS.length; k++) aSyn[k] += area * luLook(lutSyn[k], th);
+      for (let k = 0; k < GLOSSES.length; k++) aGls[k] += area * luLook(lutGloss[k], th);
+      aGildOn += area * luLook(lutGildOn, th);
+      aGildMain += area * luLook(lutGildMain, th);
+      aRingOn += area * luLook(lutRingOn, th);
+    }
   }
   if (aTot > 0.5) shots.push({
     shot: name, areaM2: +aTot.toFixed(0),
     ndhMax: +ndhMax.toFixed(4),
     geoOnPct: +(100 * aOn / aTot).toFixed(2), geoMainPct: +(100 * aMain / aTot).toFixed(2),
     boundOnPct: +(100 * aOnB / aTot).toFixed(2), boundMainPct: +(100 * aMainB / aTot).toFixed(2),
+    cnvGildOnPct: +(100 * aGildOn / aTot).toFixed(2), cnvGildMainPct: +(100 * aGildMain / aTot).toFixed(2),
+    cnvRingOnPct: +(100 * aRingOn / aTot).toFixed(2),
+    synOnPct: aSyn.map((v) => +(100 * v / aTot).toFixed(2)),
+    glossOnPct: aGls.map((v) => +(100 * v / aTot).toFixed(2)),
   });
 }
 
@@ -325,23 +409,37 @@ const out = {
 const jf = opt('json', null);
 if (jf) fs.writeFileSync(jf, JSON.stringify(out, null, 1));
 
-console.log(`# goldspec  recipe=${RECIPE}  control arm=${OFF}  size=${tex.size} (orm ${tex.ormSize})  tile=${tex.tile} m`);
+console.log(`# goldspec  recipe=${RECIPE}  control arm=${OFF}  treatment arm=${ON || '(shipped)'}  size=${tex.size} (orm ${tex.ormSize})  tile=${tex.tile} m`);
 console.log(`# uniforms: uSpec ${USPEC}  uGloss ${UGLOSS}  uMetal ${UMETAL}  specColor #fffbe8`);
 console.log(`\n## bit-identity between arms (only s.rough may move)`);
 for (const [k, v] of Object.entries(tex.ident)) console.log(`   ${k.padEnd(11)} ${v ? 'identical' : '*** DIFFERS ***'}`);
 console.log(`\n## class census on the tile:  gild ${tex.censusPct.gild}%   limestone ${tex.censusPct.lime}%   edge ${tex.censusPct.edge}%`);
 console.log(`## authored delta (s.rough, before refineRoughness/packORM): ${tex.authored.texels} texels = ${tex.authored.pctOfTile}% of tile, min ${tex.authored.min}, p50 ${tex.authored.p50}`);
 console.log(`## delivered delta (shipped ORM.g, after div-2 box + 8-bit): ${tex.treated} texels = ${tex.treatedPct}% of ORM`);
-console.log(`\n## per class, on the DELIVERED treated set`);
-console.log(`class  texels  %ofclass  %ofORM |  dRgh min/p50   | best |dSpec| over any ndh: p50/max  (base spec there) | ndh at best`);
+console.log(`\n## per class, on the DELIVERED treated set  (dSpec is the SIGNED delta at the ndh that maximises |dSpec|,`);
+console.log(`##  i.e. the treatment's best case at ANY light/view geometry; rel% = dSpec / base spec there)`);
+console.log(`class  texels  %ofclass  %ofORM |   dRgh p50    min   |  dSpec p50    base p50    rel%  | ndh at best | specTint luma`);
 for (const c of ['gild', 'edge', 'lime']) {
   const R = tex.rows[c];
-  console.log(`${c.padEnd(6)} ${String(R.treatedTexels).padStart(6)} ${String(R.shareOfClass).padStart(8)}  ${String(R.shareOfTile).padStart(6)} | ${String(R.dRgh.min ?? 0).padStart(8)} ${String(R.dRgh.p50 ?? 0).padStart(8)} | ${String(R.dSpecBest.p50 ?? 0).padStart(9)} ${String(R.dSpecBest.min ?? 0).padStart(9)} (${String(R.specBaseAtBest.p50 ?? 0).padStart(7)}) | ${String(R.ndhBest.p50 ?? 0).padStart(7)}`);
+  const rel = R.specBaseAtBest.p50 ? 100 * R.dSpecBest.p50 / R.specBaseAtBest.p50 : 0;
+  console.log(`${c.padEnd(6)} ${String(R.treatedTexels).padStart(6)} ${String(R.shareOfClass).padStart(8)}  ${String(R.shareOfTile).padStart(6)} | ${String(R.dRgh.p50 ?? 0).padStart(8)} ${String(R.dRgh.min ?? 0).padStart(9)} | ${String(R.dSpecBest.p50 ?? 0).padStart(9)} ${String(R.specBaseAtBest.p50 ?? 0).padStart(10)} ${rel.toFixed(2).padStart(7)}% | ${String(R.ndhBest.p50 ?? 0).padStart(11)} | ${String(R.tintLum.p50 ?? 0).padStart(8)}`);
 }
-console.log(`\n## normal-map deviation from flat (deg): treated p50 ${tex.devTreated.p50} p90 ${tex.devTreated.p90} | gild p50 ${tex.devGild.p50} p90 ${tex.devGild.p90}`);
-console.log(`\n## the lobe at the gild's field roughness ${RG_FIELD}: glossP ${gp.toFixed(2)}, live once N.H > ${NDH_ON.toFixed(4)} (${(Math.acos(NDH_ON) * 180 / Math.PI).toFixed(1)} deg half-angle), main leg > ${NDH_MAIN.toFixed(4)}`);
-console.log(`\n## geometry: how much visible gilded area is inside the lobe (area-weighted, no shadow/occlusion)`);
-console.log(`shot           area m2   max N.H | geometric: live%  main% | +-${devBound.toFixed(1)} deg normal-map bound: live%  main%`);
+console.log(`\n## gild roughness as shipped (ORM.g): control p50 ${tex.rghGild.off.p50}  shipped p50 ${tex.rghGild.on.p50}`);
+console.log(`## normal-map deviation from flat (deg): treated p50 ${tex.devTreated.p50} p90 ${tex.devTreated.p90} | gild p50 ${tex.devGild.p50} p90 ${tex.devGild.p90} | treated&gild p50 ${tex.devTreatedGild.p50} p90 ${tex.devTreatedGild.p90}`);
+console.log(`\n## the lobe at the gild's own shipped roughness ${RG_FIELD}: glossP ${gp.toFixed(2)}, live once N.H > ${NDH_ON.toFixed(4)} (${(Math.acos(NDH_ON) * 180 / Math.PI).toFixed(1)} deg half-angle), main leg > ${NDH_MAIN.toFixed(4)} (${(Math.acos(NDH_MAIN) * 180 / Math.PI).toFixed(1)} deg)`);
+console.log(`\n## geometry: how much visible gilded area is inside the lobe (area-weighted; no shadow, no occlusion)`);
+console.log(`shot            area   maxN.H | flat faces: live%  main% | convolved+keyfacing: gild live%  main%  ring live% | loose +-${devBound.toFixed(0)}deg bound live%`);
 for (const r of shots) {
-  console.log(`${r.shot.padEnd(13)} ${String(r.areaM2).padStart(8)} ${String(r.ndhMax).padStart(9)} | ${String(r.geoOnPct).padStart(16)} ${String(r.geoMainPct).padStart(6)} | ${String(r.boundOnPct).padStart(24)} ${String(r.boundMainPct).padStart(6)}`);
+  console.log(`${r.shot.padEnd(13)} ${String(r.areaM2).padStart(6)} ${String(r.ndhMax).padStart(8)} | ${String(r.geoOnPct).padStart(17)} ${String(r.geoMainPct).padStart(6)} | ${String(r.cnvGildOnPct).padStart(32)} ${String(r.cnvGildMainPct).padStart(6)} ${String(r.cnvRingOnPct).padStart(11)} | ${String(r.boundOnPct).padStart(24)}`);
+}
+console.log(`\n## WHAT-IF: gilded area inside the lobe if the GILD's normal slope sd were sigma deg`);
+console.log(`##  (geometric availability only; the built map's gild sits at p50 ${tex.devGild.p50.toFixed(1)} / p90 ${tex.devGild.p90.toFixed(1)} deg)`);
+console.log(`shot          ` + SIGMAS.map((s2) => `  sd=${s2}deg`).join('') + `   | as built (gild)`);
+for (const r of shots) {
+  console.log(`${r.shot.padEnd(13)} ` + r.synOnPct.map((v) => String(v).padStart(9)).join('') + `   | ${String(r.cnvGildOnPct).padStart(8)}`);
+}
+console.log(`\n## WHAT-IF 2: gilded area inside the lobe vs uGloss (the lobe WIDTH; ARCHITECTURE's RECIPES entry)`);
+console.log(`shot          ` + GLOSSES.map((g) => `  gloss${g}`).join('') + `      half-angle at each: ` + GLOSSES.map((g) => (Math.acos(Math.pow(0.02, 1 / Math.max(g * (1 - 0.6 * RG_FIELD), 4))) * 180 / Math.PI).toFixed(0) + 'deg').join(' '));
+for (const r of shots) {
+  console.log(`${r.shot.padEnd(13)} ` + r.glossOnPct.map((v) => String(v).padStart(8)).join(''));
 }
