@@ -7899,8 +7899,18 @@ rather than reckless.
 > reason this was five seconds instead of an hour.** The ledger paid for itself inside one working
 > day of being written.
 
+> **CORRECTED 2026-08-03 by SHADING, at the declaration site per §34/§41.** `tone1` does not
+> belong on this list. **It rendered zero frames** — it waited 2101 s for the lock, took it, booted,
+> and died on its first `setShot` with `TypeError: page.evaluate is not a function`, a callback
+> signature bug in the runner. Verified independently by the coordinator: `shots/tone1/` **does not
+> exist** — not empty, absent — so `shot.mjs` never reached the point of creating it. The restart
+> took nothing from `tone1` because there was nothing there. **And the rest of this list is weaker
+> than it reads:** auditing all six found `fx18` and `char11` confirmed lost, `tone1` confirmed
+> never-rendered, and `txab-off` / `txab-on` / `geofix` **unknown** — no log was kept for them, so
+> nothing here distinguishes "lost" from "never ran". See §94.2b.
+
 **Lost again, and permanently:** every capture frame rendered since the last restart — `fx18`'s 13
-arms, `char11`, `tone1`, `txab-off`, `txab-on`, `geofix`. PNGs are still not tracked and still cannot
+arms, `char11`, ~~`tone1`~~, `txab-off`, `txab-on`, `geofix`. PNGs are still not tracked and still cannot
 be. **But this time the run logs for `fx18`, `char11` and `tone1` survive**, because §88's
 `keeplog.sh` copied them into `progress/records/logs/` and §89.5 fixed the `.gitignore` rule that had
 been silently discarding them. §89's entire scoring of `fx18` — the falsified latch, the failed
@@ -8048,3 +8058,156 @@ So pass 7's brief does not shorten the roster. It attaches to each shot **what t
 cannot support**, and requires the critic to say which bucket a finding is in before filing it.
 That converts three "unsupportable frames" into thirteen scored frames with honest scope — and
 costs nothing, because the frames were always going to be captured anyway.
+
+---
+
+## §94 — a loss list, twice wrong in one day, and both times from the same move
+
+§92.1 removed `casters2.mjs` from §84.1's loss list. SHADING now removes `tone1` from §91's. Two
+corrections, twenty-four hours apart, to two different loss lists written by two different authors,
+**with the same defect in both**: the list was derived from *what the event plausibly destroyed*
+rather than from *what is actually there now.*
+
+### 94.1 `tone1` did not lose its frames. It never rendered one.
+
+The evidence is `progress/records/logs/tone1.log` — preserved only because §88 wrote `keeplog.sh`
+during this run and §89.5 rescued it from `.gitignore` hours later. Its last lines:
+
+```
+· waiting for capture lock (2101s, held by pid 7370)
+
+=== hero ===
+    await page.evaluate((s) => window.__GAME.setShot(s), shot);
+               ^
+TypeError: page.evaluate is not a function
+    at withGame (file:///home/user/Demo/tools/harness.mjs:121:18)
+```
+
+`harness.mjs:121` is `return await fn({ page, info })` — the harness passes **one object**.
+`tone1.mjs` bound it as `page`. A missing pair of braces in a callback signature.
+
+**Verified by me and not taken on report**, because a correction to the ledger deserves the same
+standard as a finding: `shots/tone1/` **does not exist**. Not an empty directory — no directory.
+`shot.mjs` never got as far as creating one, which is a cleaner signal than the log.
+
+### 94.2 A log that is 99.8% queue wait looks exactly like a long successful run
+
+2101 s of `waiting for capture lock` scrolls past identically to 35 minutes of capture. SHADING's
+statement of it:
+
+> **A queue wait is not progress, and a log that is 99.8 % queue wait is not evidence of a capture.**
+> The only lines that carry information are the ones after the lock is taken.
+
+And the check that would have caught it, available free at any point in the five hours the wrong
+belief stood: **`ls shots/<run>/`.** A run that produces no `report.json` produced no frames.
+
+**Bind this into the standing capture routine, next to `keeplog.sh`:** when a run is declared
+finished — by notification, by log, or by a dead pid — `ls shots/<run>/` *before* anything is said
+about what it produced. It costs one command and it is the only statement in the sequence that is
+about the artefact rather than about the process.
+
+**But it does not generalise to "or lost", and I wrote it that way first.** Running it across all
+six names on §91's list returned `NO DIRECTORY` for **every one**, including `fx18` — whose own log
+ends `fx18 DONE — wrote /home/user/Demo/shots/fx18/fx18.json` and whose thirteen arms §89 scored in
+detail. After a rollback, absence is exactly what both hypotheses predict: *never rendered* and
+*rendered then destroyed* are indistinguishable by `ls`. The check is decisive on a **live** tree
+and worthless on a **restored** one, and the difference is invisible in the output.
+
+That is §93.2 twice in one day — taking a rule that is sound on the instance that produced it and
+stating it one clause too wide. Both times the tell was the same: **the rule started returning the
+same answer for every input.** A discriminator that never discriminates has stopped being one.
+
+### 94.2b What the six names actually are, from the only surviving discriminator
+
+The logs, not the directories. `keeplog.sh` preserved five:
+
+| run | log's last word | verdict |
+|---|---|---|
+| `fx18` | `DONE — wrote …/fx18.json` | **rendered, then lost.** §91 correct |
+| `char11` | `→ shots/char11/  (3 shots, 0 failed)` | **rendered, then lost.** §91 correct |
+| `tone1` | `TypeError` before the first shot | **never rendered.** §91 wrong |
+| `t16ab` | `waiting for capture lock (1487s…)` | **never got the lock** — see below |
+| `txab-off`, `txab-on`, `geofix` | *no log kept* | **unknown, and must be said as unknown** |
+
+Three of six is not a list that can be repaired by editing one name. The correct form of §91's
+sentence is *"two confirmed lost, one confirmed never-rendered, three unknown"* — and the three
+unknowns are unknown **because `keeplog.sh` did not exist yet when they ran**, which is the
+strongest argument for §88 that the record contains.
+
+### 94.2c `t16ab` never ran, and my own task list says it is rendering
+
+Task #16 has stood as *"two-lever fix pre-registered, t16ab rendering"* for hours. `t16ab.log` ends
+mid-queue at 1487 s, holding nothing, and the container restarted under it. **It was never
+rendering; it was waiting, and then it was gone.**
+
+Found only because §94.2's rule was being tested rather than trusted — I ran it to check the rule's
+own reach, and it turned up a stale task state that nothing else in the run was looking at. The
+generalisable bit: **the list of things a check was not written for is where its cheap runs pay.**
+Task #16 is re-opened as *pre-registered, never captured*, and its capture must be re-queued.
+
+### 94.2d And the same sweep found the opposite error: a finished result nobody scored
+
+Extending the `ls` across the other open tasks, **`shots/wedge1/` holds six PNGs and a manifest,
+written 2026-08-01 21:34–21:38 — before both rollback points, so it survived both.** Task #14 has
+said *"wedge1 verification queued"* ever since. It was not queued. It was **done, on disk, and
+unread for two days.**
+
+It is also a better-built A/B than the task's status implies, and it passes on its own terms:
+
+| arm | `colNight` | `beamNight` | `beam0` (R,G,B) | role |
+|---|---|---|---|---|
+| `night-fix` | `bfe6ff` | 0.55 | 0.081, 0.123, 0.155 | treatment |
+| `night-before` | `fff0c2` | 1.00 | 0.282, 0.246, 0.152 | reverted knobs |
+| `night-back` | `bfe6ff` | 0.55 | 0.081, 0.123, 0.155 | **restored** |
+| `night-eyes` | `bfe6ff` | 0.55 | 0.080, 0.121, 0.153 | re-staged subject |
+| `guard-fix` | `bfe6ff` | 0.55 | 0.253, 0.233, 0.163 | **daylight — absence control** |
+
+`night-fix` and `night-back` are **byte-identical** (md5 `441dfdb…`). My first reading of two equal
+file sizes was "suspect a §40 no-op arm" — **backwards.** This is the revert-and-restore control
+*passing*: the knobs went out and came back and the frame round-tripped exactly, which is what
+proves the knob is the only thing that moved. **Bit-identity is a failure between a treatment and
+its control and a success between a state and its restoration; the same observation, opposite
+verdicts, and only the arm's declared role tells them apart.**
+
+The effect is large and correctly signed — the cone inverts from warm-dominant (R>G>B) to
+blue-dominant (B>G>R) and drops 3.5× in red — and `guard-fix` at `time 0.89` stays warm, so the
+grade is gated to night rather than applied globally. `Guard.js:109–110` still carries `colNight:
+0xbfe6ff` / `beamNight: 0.55`, so the values verified here are the values shipped now.
+
+**Standing correction to how I track captures:** a task status of "verification queued" is a claim
+about the filesystem, and it was wrong in both directions on the same day — `t16ab` said rendering
+and had never started, `wedge1` said queued and had finished. Neither was expensive to check.
+
+### 94.3 The cost was the lock, not the frames
+
+35 minutes of exclusive capture lock, with three agents queued behind, spent on a run whose first
+line of real work was fatal. **The whole wait was dead by the time it started.** That is the case
+for SHADING's `tone2` guard — a pre-flight *inside the same boot, before any arm* — and it is §52's
+rule ("the check that pays runs before") pointed at the runner instead of at the shader.
+
+`tone2` also writes each arm's PNG and a cumulative manifest **as the arm completes**, so a run
+killed at any point yields everything up to that point. `tone1` was all-or-nothing on a container
+that has now restarted twice.
+
+### 94.4 "Poke `tune`, not the uniform" is not a general rule, and stating it as one is a hazard
+
+Building `tone2` turned up §80.5's hazard **and its exact inverse, in the same file**:
+
+| knob | written every render? | poke the uniform | poke `tune` |
+|---|---|---|---|
+| `uInkStrength` | **yes** — `PostFX.js:1794` from `tune.inkStrength` | silently reverted | **works** |
+| `uToneShoulder` | **no** — `:1322` init, `:1523` setter only | **works** | silently does nothing |
+
+The correct poke for one is the broken poke for the other, and **both failure modes are silent** —
+they yield a complete run of arms that are all quietly the shipped value, which is §40. There is no
+rule to memorise here; there is only *read the file for the specific knob*, and assert
+requested-vs-applied per arm so a wrong guess voids the arm instead of publishing it.
+
+### 94.5 RESULT-tone1.md's "PENDING" is correct and reads wrong
+
+Its §5 says *"Frame verdict — PENDING."* True. But read beside §91's loss list, "PENDING" parses as
+*we had frames and lost them* rather than *the capture never produced an image*. Sections 1–4 are
+arithmetic and stand; nothing in that document was ever scored against a frame, and nothing in it
+claims to have been. **A status word that is accurate under one reading and misleading under the
+likelier one is worth replacing, not defending** — and the author flagged it rather than leaving it
+to be re-derived by whoever reads the two documents in the wrong order.
