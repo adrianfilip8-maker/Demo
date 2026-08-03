@@ -1,0 +1,86 @@
+{
+ "pregoto": {
+  "when": "queued",
+  "note": "taken while the run was still waiting for the lock — NOT the boot tree",
+  "wallclock": "2026-08-03T17:39:26.220Z",
+  "head": "a190e81",
+  "dirty": false,
+  "files": {
+   "src/render/Outline.js": {
+    "sha": "d88ae445f398",
+    "mtime": "2026-08-03T17:36:20.031Z"
+   },
+   "src/render/ToonMaterial.js": {
+    "sha": "e02f4154b6af",
+    "mtime": "2026-08-03T17:36:20.035Z"
+   },
+   "src/render/shaders/toon.glsl.js": {
+    "sha": "2aa97c5e1f85",
+    "mtime": "2026-08-03T17:36:20.035Z"
+   },
+   "src/fx/Particles.js": {
+    "sha": "c10b0d884840",
+    "mtime": "2026-08-03T17:36:20.023Z"
+   },
+   "src/fx/Emitters.js": {
+    "sha": "3418037cd51c",
+    "mtime": "2026-08-01T14:07:33.265Z"
+   },
+   "src/render/Lighting.js": {
+    "sha": "00b8924eda1e",
+    "mtime": "2026-08-03T17:36:20.031Z"
+   },
+   "src/world/EgyptLevel.js": {
+    "sha": "741a7c7a7770",
+    "mtime": "2026-08-03T17:36:20.043Z"
+   },
+   "src/world/Kit.js": {
+    "sha": "963ac368e42e",
+    "mtime": "2026-08-03T17:36:20.043Z"
+   }
+  }
+ },
+ "atgoto": {
+  "when": "at-goto",
+  "note": "stamped on the harness's first post-boot line",
+  "wallclock": "2026-08-03T17:40:42.313Z",
+  "head": "a190e81",
+  "dirty": false,
+  "files": {
+   "src/render/Outline.js": {
+    "sha": "d88ae445f398",
+    "mtime": "2026-08-03T17:36:20.031Z"
+   },
+   "src/render/ToonMaterial.js": {
+    "sha": "e02f4154b6af",
+    "mtime": "2026-08-03T17:36:20.035Z"
+   },
+   "src/render/shaders/toon.glsl.js": {
+    "sha": "2aa97c5e1f85",
+    "mtime": "2026-08-03T17:36:20.035Z"
+   },
+   "src/fx/Particles.js": {
+    "sha": "c10b0d884840",
+    "mtime": "2026-08-03T17:36:20.023Z"
+   },
+   "src/fx/Emitters.js": {
+    "sha": "3418037cd51c",
+    "mtime": "2026-08-01T14:07:33.265Z"
+   },
+   "src/render/Lighting.js": {
+    "sha": "00b8924eda1e",
+    "mtime": "2026-08-03T17:36:20.031Z"
+   },
+   "src/world/EgyptLevel.js": {
+    "sha": "741a7c7a7770",
+    "mtime": "2026-08-03T17:36:20.043Z"
+   },
+   "src/world/Kit.js": {
+    "sha": "963ac368e42e",
+    "mtime": "2026-08-03T17:36:20.043Z"
+   }
+  }
+ },
+ "post": null,
+ "driftFromQueued": []
+}
