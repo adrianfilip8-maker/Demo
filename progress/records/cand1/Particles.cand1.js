@@ -702,9 +702,9 @@ void main() {
      silhouetted against something that is not sand — measured as dark AND blue.
 
      D1 requires EXACT inertness outside the gated population, so the two ramps are built to
-     return exactly 0.0 there: `1.0 - smoothstep(e0, e1, x)` is exactly 0 for x >= e1, and
-     `mix(1.0, g, 0.0)` is exactly 1.0. A fragment outside the population therefore executes
-     `a *= 1.0`, which is bit-exact — not "within a percentage".
+     return exactly 0.0 there: "1.0 - smoothstep(e0, e1, x)" is exactly 0 for x >= e1, and
+     "mix(1.0, g, 0.0)" is exactly 1.0. A fragment outside the population therefore executes
+     "a *= 1.0", which is bit-exact — not "within a percentage".
 
      Fails OPEN like the soft term above: an unbound or black backdrop sample (nothing rendered
      there yet) leaves the sprite alone rather than deleting it. */

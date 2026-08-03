@@ -1,5 +1,5 @@
---- src/fx/Particles.js	2026-08-03 17:36:20.023212358 +0000
-+++ /tmp/claude-0/-home-user-Demo/94022f73-a328-5e86-b2ec-031aa9c720ce/scratchpad/Particles.cand1.js	2026-08-03 18:30:00.466752851 +0000
+--- /home/user/Demo/src/fx/Particles.js	2026-08-03 20:19:31.944663862 +0000
++++ /home/user/Demo/progress/records/cand1/Particles.cand1.js	2026-08-03 20:20:20.910987274 +0000
 @@ -371,6 +371,31 @@
    softDepth: 0.55,          // metres of depth over which a sprite fades into geometry
    nearFade: [0.28, 0.95],   // don't smear the lens with a particle inside the near plane
@@ -55,9 +55,9 @@
 +     silhouetted against something that is not sand — measured as dark AND blue.
 +
 +     D1 requires EXACT inertness outside the gated population, so the two ramps are built to
-+     return exactly 0.0 there: `1.0 - smoothstep(e0, e1, x)` is exactly 0 for x >= e1, and
-+     `mix(1.0, g, 0.0)` is exactly 1.0. A fragment outside the population therefore executes
-+     `a *= 1.0`, which is bit-exact — not "within a percentage".
++     return exactly 0.0 there: "1.0 - smoothstep(e0, e1, x)" is exactly 0 for x >= e1, and
++     "mix(1.0, g, 0.0)" is exactly 1.0. A fragment outside the population therefore executes
++     "a *= 1.0", which is bit-exact — not "within a percentage".
 +
 +     Fails OPEN like the soft term above: an unbound or black backdrop sample (nothing rendered
 +     there yet) leaves the sprite alone rather than deleting it. */
