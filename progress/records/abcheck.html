@@ -1,4 +1,26 @@
 <!doctype html><meta charset=utf8><body><pre id=o>…</pre>
+<!--
+  abcheck — does `VITE_TEX_AB` actually reach the texture build?
+
+  The A/B control arm (PREREG-txab) is invisible in a PNG and identical in the SHA, so a broken
+  env path would silently capture the SHIPPED build twice and every delta would read as zero.
+  That is a ten-minute capture spent proving nothing, and it would look exactly like a null —
+  which is the one result this project has learned to distrust on sight (§49: two opposite
+  mechanisms produced identical nulls).
+
+  Run it against a dev server started the way `tools/shot.mjs` starts one:
+
+    VITE_TEX_AB=base ./node_modules/.bin/vite --port 5399 --strictPort --host 127.0.0.1 &
+    # then open http://127.0.0.1:5399/progress/records/abcheck.html
+
+  Expected with the variable set:
+    {"metaEnv":"object","raw":"base","list":["base"],"hgOff":true,"granOff":true,"paveOff":true}
+  With it unset, `raw` is null and all three flags are false.
+
+  This page is the pre-flight. The receipt is the boot warning `Textures.init()` pushes into
+  `window.__GAME.warnings`, which `shot.mjs` writes into `report.json` — a capture directory
+  whose report does not carry "A/B CONTROL BUILD" is not a control, whatever it is called.
+-->
 <script type="module">
 import { TEX_AB, abOff } from '/src/textures/Canvas2D.js';
 document.getElementById('o').textContent = JSON.stringify({
