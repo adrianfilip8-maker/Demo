@@ -13,7 +13,11 @@ list of retractions, closed items, and new hazards. If an entry is only interest
 closes an item. If you find it stale, say so — a stale digest is worse than none, which is the
 same defect it exists to prevent (§39/§43/§50).
 
-Last updated: §133.
+Last updated: §143.
+
+**How to use it.** The coordinator pastes the relevant section into the resume message. Leaving it
+in the tree does not work — §143.3 is the record of an owner receiving a stale brief *twice* while
+this file sat committed, because **a resumed agent reads its transcript, not the repo.**
 
 ---
 
@@ -42,6 +46,20 @@ Last updated: §133.
   that module's own header.
 - **Register a band, not a point** (§133.1). A tighter interval around a correctly-reasoned point
   prediction would have falsified a correct result.
+- **After a rollback: sweep the lock queue against `/proc` before believing it is busy** (§140.2).
+  Tickets survive the restore naming pids that died with it. And **a missing `shots/` directory is
+  not evidence about whether a run happened** (§14, §139.3) — the committed `RESULT` is the record.
+- **Use `tools/launch.sh`.** §14's `setsid nohup` form is struck (§131): it leaves `node` parented
+  to a wrapper that then orphans — the tree detaches, the process does not. The launcher proves
+  `node` at ppid 1 from `/proc` and refuses rather than warns. It has now caught the hazard
+  **three times automatically** in one recovery sequence (§140.1, §141.5).
+- **"Uncontaminated arbitrary is still arbitrary"** (§141.1). If a metric has never been run across
+  a known-bad, it has no scale, and no amount of disinterest in the person choosing fixes that.
+  §13's remedy is a **calibration**, not a more neutral chooser.
+- **A guard can bless the broken thing** (§143.1). SHADING's shell-count guard would have printed a
+  healthy `6` for an A/B that could not work, because it counted shells *touched* rather than
+  shells *rendered*. Caught by reading another owner's header — so **write headers that carry the
+  mechanism, not the usage.**
 
 **The recurring defect shape, five instances, five owners:** *a number that does not depend on the
 thing it claims to measure.* `void.mjs` counting front-facing stone as seal leaks with the facing
@@ -58,6 +76,15 @@ nobody runs (§129.2).
 ---
 
 ## SHADING — `src/render/**`
+
+- **P-night is registered, not scored** (`PREREG-pnight.md`, §141): the instrument was the larger
+  defect, and a threshold on frame-wide Δb−r *"would have been unjustified at any value."* Two
+  known-bads neither of them nominated by you, and **"unscoreable" is a registered outcome** if
+  they fail to separate.
+- **Never A/B a hull by toggling `shell.visible`** (§143): `setOutlinesVisible` rewrites it on
+  every shell every frame via `beginNormalPass`/`endNormalPass`.
+- Do not borrow the ≤226° hue line for `night` — daylight-shadow-light spec, moonlit frame, §8's
+  category error.
 
 - **WITHDRAWN: §8's `ao` item.** The figures it was sized on (`AO p5 0.247 / p50 0.408`) were
   retracted at **§34** — `texlab` emits `aoP: [1, 5, 50]`, so those are p1/p5 and the authored median
@@ -90,6 +117,14 @@ nobody runs (§129.2).
 
 ## TEXTURES — `src/textures/**`
 
+- **OWED: the chisel frame half.** Three checks registered, and P2's clause matters — squint sd
+  rising >10 % **forfeits P1** and brings `HG_SIGN.sink` down. Your own honest read was +35.7 %
+  against a known-bad's +49 %. `__TEX_AB=hgchisel` is a bit-exact control in the same boot, so it
+  is one boot, not two.
+- **P3 moved before the frames existed** (§142.4): `hero` carries two gilded populations at a 5×
+  depth ratio, and **0 % of the near mass's pixels have a repeat inside the 30–300 lag band**. P3
+  scores on `hero` rows 24–140. Elsewhere *a low ρ is arithmetic, not a result.*
+
 - **CLOSED NULL: gilded's specular route.** Measured at the shipped notch and at 8.5×; the
   calibration arm passed *on the limestone*, not the gold. (§121)
 - **REFUTED: §121.10's landmark.** The `sun` disc is absent from 7 of 16 framings and is 3 blobs of
@@ -106,6 +141,16 @@ nobody runs (§129.2).
   see**; and band squint sd is **+35.7 %** against a known-bad's +49 %.
 
 ## GEOMETRY — `src/world/**`
+
+- **Task #28 is wired and live** (§141.5): `HULL_KEYS` = six accent keys, calling `outline()` per
+  hero mesh rather than `applyOutlines()` over the group, because the walker would shell the set
+  dress too. Shells tagged `propsHull`. Registered in `PREREG-propshull.md` with `hullscore.mjs`.
+- **`sliver.mjs`'s count is not a defect count** (§142.1). 11 913 strips, and the majority are the
+  chamfer work this project deliberately added — `paving:court` alone is 2 744 at a 5.6 cm median.
+  It cannot separate an intended chamfer from a kerb defect. **Generate suspects with it; settle
+  them in a frame. Do not score with it.**
+- The apron clearance is now **extremal over built geometry**, not nominal: worst apron vertex
+  against worst paving vertex is still 2.4 cm below (§143.4).
 
 - **ANSWERED: rounded arris.** `beadRoll` on seven gilded beams, 0.69 → 0.87 % area-in-lobe, ~1 k
   tris, zero extra draws. **It does not fix gold.** (§128)
@@ -126,6 +171,13 @@ nobody runs (§129.2).
 
 ## CHARACTER — `src/player/SlyModel.js` (+ `Body.js`, `Cane.js`)
 
+- **There is no chest clump row, and it was deliberately not added** — the named rows are head,
+  arm, leg, boot, tail. At these framings the chest is on-face, on-face cards are exactly the chip
+  population, so adding it *before* the bias verdict would deepen the defect it is meant to fix.
+  First thing to revisit if arm B says the bias is the lever (§141.5).
+- `sha256sum` **hashes the paths too** — a relative `find` path gives a different digest than an
+  absolute one for a bit-identical tree.
+
 - **REFUTED: §121.9's curvature claim** — by you. *A constant cannot explain a varying outcome.*
 - **The fur lever is `Body.addTuft`'s normal bias, not the hull weight** — 56× the effect. Deletion
   is retired: without cards the figure is a smooth plastic capsule. (§127.1, §131.4)
@@ -143,6 +195,15 @@ nobody runs (§129.2).
   reads `cane_combo_3`'s sagittal lunge as near zero.
 
 ## FX — `src/fx/**`, `Atmosphere.js`, `Lighting.js`
+
+- **§124.1's near-plane guard is falsified before build** (§138): the guard already ships at
+  `nearFade [0.28, 0.95]`, the disc sits at 4–28 m, and a size ceiling removes the **larger
+  invisible** blob2 (70×71, −0.71 L) before the disc (58×61, +17.28).
+- **The discriminator is the backdrop, not the sprite.** `Emitters.js:624-630` says sand_haze's
+  invisibility is by design and conditional on a sand backdrop — so the defect is the *pairing*,
+  and no property of the sprite can express it. The artefact sprite is an ordinary member of the
+  field.
+- The `temple` pink disc is **`sandHigh`** (§135).
 
 - **CLOSED MET: `fx9`** — `courtCap` 0.259 against a pre-registered 0.2564.
 - **`fx19` is "premise absent"**, not a null: the artefact is not in the frame. The run measured
