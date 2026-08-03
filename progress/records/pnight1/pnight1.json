@@ -1,0 +1,110 @@
+{
+ "prov": {
+  "startedAt": "2026-08-03T17:54:36.931Z",
+  "sha": "c318ac2",
+  "dirty": [
+   "M progress/records/compose1/compose1.mjs",
+   " M shotsil/combat-headparts.png",
+   " M shotsil/courtyard-headparts.png",
+   " M shotsil/dunes-headparts.png",
+   " M shotsil/guard-headparts.png",
+   " M shotsil/hero-headparts.png",
+   " M shotsil/interior-headparts.png",
+   " M shotsil/night-headparts.png",
+   " M shotsil/sly-arm-headparts.png",
+   " M shotsil/sly-closeup-headparts.png",
+   " M shotsil/sly-key-headparts.png",
+   " M shotsil/sly-perch-headparts.png",
+   " M shotsil/sly-profile-headparts.png",
+   " M shotsil/sly-startle-headparts.png",
+   " M shotsil/temple-headparts.png",
+   " M shotsil/traversal-headparts.png",
+   " M src/world/Props.js",
+   "?? ab-hgc/",
+   "?? progress/records/PREREG-hgchisel-frame.md",
+   "?? progress/records/PREREG-pnight.md",
+   "?? progress/records/PREREG-propshull.md",
+   "?? progress/records/charink.mjs",
+   "?? progress/records/gilddepth.mjs",
+   "?? progress/records/hgcframe.mjs",
+   "?? progress/records/hgcscore.mjs",
+   "?? progress/records/hullscore.mjs",
+   "?? progress/records/kerbline.mjs",
+   "?? progress/records/logs/hgcframe.log",
+   "?? progress/records/pnight1.mjs",
+   "?? progress/records/propshull.mjs",
+   "?? progress/records/sliver.mjs"
+  ],
+  "srcTreeBefore": "f964e9cf577a6dce",
+  "renderTreeBefore": "5b075ca0b494f8d2",
+  "lever": {
+   "hasUniform": true,
+   "shipValue": 0.55,
+   "hasFill": true,
+   "tuneSbm": 0.05
+  },
+  "srcTreeAfter": "5a1e7cbcb69fcd08",
+  "renderTreeAfter": "5b075ca0b494f8d2",
+  "finishedAt": "2026-08-03T18:59:41.705Z"
+ },
+ "ship": {
+  "fillSkyMix": 0.7,
+  "shadowBounceMix": 0.05,
+  "shadowBounceMixLit": 0.05,
+  "rimShadowFloorArch": 0.55
+ },
+ "uniform": 0.1,
+ "bad": 0.4,
+ "rows": [
+  {
+   "kind": "night",
+   "shot": "night",
+   "arm": "base",
+   "fillSkyMix": 0.7,
+   "shadowBounceMix": 0.05,
+   "shadowBounceMixLit": 0.05,
+   "rimShadowFloorArch": 0.55,
+   "mismatch": []
+  },
+  {
+   "kind": "night",
+   "shot": "night",
+   "arm": "rimfloor0",
+   "fillSkyMix": 0.7,
+   "shadowBounceMix": 0.05,
+   "shadowBounceMixLit": 0.05,
+   "rimShadowFloorArch": 0,
+   "mismatch": []
+  },
+  {
+   "kind": "night",
+   "shot": "night",
+   "arm": "sbm040",
+   "fillSkyMix": 0.7,
+   "shadowBounceMix": 0.4,
+   "shadowBounceMixLit": 0.4,
+   "rimShadowFloorArch": 0.55,
+   "mismatch": []
+  },
+  {
+   "kind": "night",
+   "shot": "night",
+   "arm": "compose",
+   "fillSkyMix": 0,
+   "shadowBounceMix": 0.1,
+   "shadowBounceMixLit": 0.1,
+   "rimShadowFloorArch": 0.55,
+   "mismatch": []
+  },
+  {
+   "kind": "night",
+   "shot": "night",
+   "arm": "base2",
+   "fillSkyMix": 0.7,
+   "shadowBounceMix": 0.05,
+   "shadowBounceMixLit": 0.05,
+   "rimShadowFloorArch": 0.55,
+   "mismatch": []
+  }
+ ]
+}
