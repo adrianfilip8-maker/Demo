@@ -217,7 +217,11 @@ for (const mat of [GILD, ...NULLS]) {
   console.log(`\n${isGild ? 'P1/P3 ' : 'P4    '}${mat}  (${n} px eroded, ${(100 * n / (W * H)).toFixed(2)}% of frame)`);
   console.log(`      relLocalContrast r=8  ctl ${r8o.rlc.toFixed(5)}  cand ${r8c.rlc.toFixed(5)}   Δ ${m.r8.deltaPct >= 0 ? '+' : ''}${m.r8.deltaPct.toFixed(2)}%   ← ${isGild ? 'P1 GATE' : 'null floor'}`);
   console.log(`      profile  r=4  ${r4o.rlc.toFixed(5)} → ${r4c.rlc.toFixed(5)}  (${m.r4.deltaPct >= 0 ? '+' : ''}${m.r4.deltaPct.toFixed(2)}%)   r=16  ${r16o.rlc.toFixed(5)} → ${r16c.rlc.toFixed(5)}  (${m.r16.deltaPct >= 0 ? '+' : ''}${m.r16.deltaPct.toFixed(2)}%)`);
-  console.log(`      mean L   ${r8o.mean.toFixed(5)} → ${r8c.mean.toFixed(5)}  (${m.meanL.deltaPct >= 0 ? '+' : ''}${m.meanL.deltaPct.toFixed(2)}%)`);
+  /* rlc is rms/mean, so a pure darkening raises it with no extra detail. Print the numerator and
+     the denominator separately so that confound is visible rather than argued about. */
+  const absC = r8c.rlc * r8c.mean, absO = r8o.rlc * r8o.mean;
+  m.rms8 = { cand: absC, ctl: absO, deltaPct: pct(absC, absO) };
+  console.log(`      decomposed: rms(L-box8) ${absO.toFixed(5)} → ${absC.toFixed(5)} (${m.rms8.deltaPct >= 0 ? '+' : ''}${m.rms8.deltaPct.toFixed(2)}%)   over mean L ${r8o.mean.toFixed(5)} → ${r8c.mean.toFixed(5)}  (${m.meanL.deltaPct >= 0 ? '+' : ''}${m.meanL.deltaPct.toFixed(2)}%)`);
   console.log(`      in-mask squint sd 1/8  ${so.sd.toFixed(5)} → ${sc.sd.toFixed(5)}  (${m.squint.deltaPct >= 0 ? '+' : ''}${m.squint.deltaPct.toFixed(2)}%, ${sc.cells} cells)   [diagnostic, NOT a gate]`);
   console.log(`      px changed >2 codes ${dpx} (${(100 * dpx / n).toFixed(2)}% of mask)`);
 

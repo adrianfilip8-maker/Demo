@@ -285,6 +285,18 @@ if neither is, it is confirmed on a second run. Either way it is an observation 
 which is not TEXTURES' to fix, and it is recorded here so it cannot later be presented as a result
 this run was designed to produce.
 
+## AMENDMENT 6 — P1's gate is decomposed, because a pure darkening would pass it
+
+Still zero PNGs on disk. **The gate is unchanged.** P1's statistic is `rms(L − box(L,8)) / mean(L)`,
+and the chisel pass *sinks* the sign floors (§130.4: signed diff **−0.0439** on cut texels), so a
+treatment that only darkened the band would lower the denominator and raise the ratio **with no
+extra detail at all**. The scorer now prints the numerator and the denominator separately.
+
+Registered reading rule, fixed now so it cannot be chosen afterwards: **P1 passes on the ratio, as
+sealed** — but if the ratio rises while `rms(L − box8)` is flat or down, the report must say the
+gate was carried by the darkening and **not** by added detail, and that is a *weaker* result than
+the seal intended. Numerator and denominator are both reported either way.
+
 ## Not claimed
 
 - Nothing here is about gold reading as **metal**. §130.5's chroma loss is `slyMetal`'s and the

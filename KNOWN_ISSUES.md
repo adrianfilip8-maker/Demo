@@ -12281,3 +12281,85 @@ Re-measured over the up-facing vertices in the contact band around the whole per
 paving vertex anywhere — the apron is still **2.4 cm below**. So no placement of the jitter puts it
 proud and the channel is continuous. A nominal-value argument replaced by an extremal one over the
 geometry that actually shipped.
+
+## §144 — a gate that could not be measured where it was registered, and an estimator that returns −1.370
+
+TEXTURES took the chisel frame work as far as it goes without frames. Its capture is queued behind
+`fx21`; **everything below was measured before any frame of the run exists.**
+
+### 144.1 P3 is not testable on `temple`, and the seal's number was right by two cancelling errors
+
+`temple`'s gilded material is **167,801 px unoccluded (18.2 %) but 16,451 px visible (1.79 %)** —
+**90.2 % is behind the column forest**, itself 53.8 % of the frame. Longest *contiguous* gilded run:
+**194 px**, against a repeat of **127–244 px**.
+
+> **A 154 px lag cannot be measured inside a 194 px strip.** Recorded as **untestable**, not as a
+> pass — the distinction §125 turned on and the one an autocorrelation gate makes easiest to blur,
+> because a short series returns a number rather than an error.
+
+And the seal's original 157 px repeat was **right by two errors that cancelled**: it used `fov/H`
+(1.333 mrad/px) where the correct angular scale is `2·tan(fov/2)/H` = **1.446**, and its assumed
+30.6 m against a measured 28.7 m absorbed the 8.4 % difference. *Two wrong inputs agreeing to the
+right answer is not a check passing; it is a check that could not have failed.*
+
+### 144.2 P2 is vacuous on `temple` too, and that is pre-registered rather than discovered
+
+Squint cells ≥ 80 % gilded: `temple` **119 / 14,400 (0.83 %)**, `hero` **3,751 (26.05 %)**. A
+`temple` P2 pass is arithmetic. Registered as vacuous *in advance*, with `hero` deciding P2 — so the
+run cannot later be read as two shots agreeing.
+
+### 144.3 The tiling condition passes for a reason nobody had established
+
+| `temple` | % frame | px/repeat | longest contiguous run | repeats on screen |
+|---|---|---|---|---|
+| `column_papyrus` | 53.8 % | 257–892 | 435 px | 0.5–1.7 |
+| `hieroglyph_wall` | 17.1 % | 202–503 | 317 px | 0.6–1.6 |
+| `hieroglyph_gilded` | 1.79 % | 127–244 | 194 px | 0.8–1.5 |
+
+**No material at `temple` shows more than ~1.7 contiguous repeats.** This agrees with tx7's by-eye
+and NCC result and supplies the missing *reason*:
+
+> The condition passes because **the column forest never shows two repeats side by side** — not
+> because the tile is unusually good. Different claims, and only the first is supported.
+
+That matters beyond bookkeeping: a tile validated by occlusion is not validated for any framing that
+opens the forest up.
+
+### 144.4 An estimator that returns −1.370, recorded rather than silently patched
+
+`progress/records/hgframe.mjs:64` and `acf.mjs:15` normalise by `v0 * k / N`, where `k = N − lag`
+**shrinks as the lag grows**. The denominator shrinks with it, ρ inflates at long lags on short
+series, and on the 194 px strip it printed **ρ = −1.370** — a value no correlation coefficient can
+take.
+
+**Not patched, and the reason is the interesting part.** Published numbers were scored with that
+expression; changing the estimator would retroactively alter what they mean without touching the
+text that quotes them. Contrast `void.mjs` (§130.1), which *was* fixed — there the headline had
+never been the condition its own comment defined, so **no published result depended on the old
+behaviour.** Here one does.
+
+Both files now carry a header naming the defect, the measured out-of-range value, the corrected
+implementation to use instead, and the instruction to quote any surviving number as *"the §144
+estimator", never as a correlation.*
+
+> **Fix an instrument when nothing true rests on it; annotate it when something does.** The choice
+> is about what the old numbers mean, not about which code is nicer.
+
+### 144.5 A gate the repo had already withdrawn a finding on
+
+TEXTURES then checked its own P3 statistic against the record and found `wallstrip.mjs`'s header:
+across a bit-exact known-bad A/B, **none of 28 scalars separated shipped from known-bad** — 2D luma
+NCC **0.482 vs 0.488** — and *"a withdrawn 0.482-against-0.45 finding was produced exactly that
+way."*
+
+So P3's number will be **reported but not treated as evidence alone**, with
+`progress/records/gild/x-cmp-temple.png` — the known-bad carrying a stamped oval per repeat — as the
+calibrated instrument. That is §13's rule applied by an owner to *the gate it had already
+registered*, which is the expensive moment to apply it.
+
+Two more self-caught, both before frames: **first-to-last column spans bridge occlusion gaps** and
+were correlating the interpolator, now longest *contiguous* run; and a **sign error in its own
+draft** — `px = size/(d·mrad)`, so the corrected *larger* pixel scale makes features **smaller**.
+§130.4's 5.2 px minimum sign body becomes **~4.8 px, not 5.6.** Still above one pixel, so nothing in
+the chisel feature is sub-pixel and the conclusion stands — but the direction was wrong and it is
+recorded that way.

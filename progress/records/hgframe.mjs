@@ -1,6 +1,14 @@
 /**
  * hgframe — P2 (squint sd) and P3 (horizontal ACF) for PREREG-hgrelief, inside a material mask.
  *
+ * ── THE P3 ACF AT LINE ~64 IS NOT AN NCC AND IS NOT BOUNDED TO [-1, 1]. KNOWN_ISSUES §144. ───
+ * `s / (v0 * k / N)` shrinks its own denominator as the lag grows (`k = N - lag`), inflating ρ at
+ * long lags on short series; **−1.370 was measured on a 194 px strip.** Deliberately not patched,
+ * because published numbers were scored with it and changing the estimator would retroactively
+ * alter what they mean. Do not start a new measurement here — use the bounded per-lag Pearson NCC
+ * in `progress/records/hgcscore.mjs`. Same defect, same expression, in `acf.mjs`.
+ * ────────────────────────────────────────────────────────────────────────────────────────────
+ *
  * SCOPE — the transforms between this and what the renderer drew (what it does NOT do):
  *   the mask is ARCHITECTURE-ONLY, built offline from the CURRENT tree with the shot's camera:
  *   no props, terrain, character, FX or sky, so any frame pixel those cover is attributed to

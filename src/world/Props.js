@@ -551,7 +551,13 @@ export class Props {
         const shell = shading?.outline?.(mesh, { thickness: spec.outline });
         if (shell) {
           shell.userData.propsHull = true;
+          /* A shell is a real draw of the same triangles, so it is counted into this module's
+             own totals rather than hidden in a separate field — a self-report that excluded
+             them would understate Props by exactly the amount this change costs. `hulls` is
+             the breakdown, not the accounting. */
           this.stats.hulls = (this.stats.hulls || 0) + 1;
+          this.stats.draws++;
+          this.stats.tris += (merged.index?.count ?? merged.attributes.position.count) / 3;
         }
       }
 

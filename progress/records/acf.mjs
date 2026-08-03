@@ -1,4 +1,24 @@
-/** Horizontal NCC autocorrelation of a PNG band. No lighting/geometry: reads the given PNG only. */
+/**
+ * Horizontal autocorrelation of a PNG band. No lighting/geometry: reads the given PNG only.
+ *
+ * ── THIS IS NOT AN NCC AND ITS OUTPUT IS NOT BOUNDED TO [-1, 1]. KNOWN_ISSUES §144. ──────────
+ * The normaliser below is `v0 * n / W`, where `n = W - lag` shrinks as the lag grows. So the
+ * denominator shrinks with it and ρ is inflated at long lags on short series — TEXTURES measured
+ * **ρ = −1.370** on a 194 px strip, which no correlation coefficient can return.
+ *
+ * **Deliberately NOT patched.** Published numbers were scored with this expression, and silently
+ * changing the estimator would retroactively alter what those numbers mean without changing the
+ * text that quotes them. Compare `void.mjs`, which WAS fixed: there the headline had never been
+ * the condition its own comment defined, so no published result depended on the old behaviour.
+ * Here one does.
+ *
+ * **So: do not start a new measurement with this file.** Use a bounded per-lag Pearson NCC —
+ * `progress/records/hgcscore.mjs` has one. Read this only to reproduce an existing number, and
+ * quote it as "the §144 estimator", never as a correlation.
+ *
+ * Same defect, same expression, at `progress/records/hgframe.mjs:64`.
+ * ────────────────────────────────────────────────────────────────────────────────────────────
+ */
 import { readPNG } from '/home/user/Demo/tools/png.mjs';
 const [file, y0s, y1s] = process.argv.slice(2);
 const _p = readPNG(file); const W = _p.w, H = _p.h, CH = _p.ch, data = _p.data;
