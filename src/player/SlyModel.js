@@ -29,6 +29,39 @@ import { Cane } from './Cane.js';
  * on top of it, so moving it would shift all 52.
  */
 
+/* ======================= diagnostic hold-out gate ========================= */
+
+/**
+ * Hold-out switch for CHARACTER diagnostics, mirroring `VITE_TEX_AB` in
+ * `src/textures/Canvas2D.js`. **Empty is the shipped state and is what every process that does
+ * not deliberately set it gets**, so a hold-out build never reaches another agent's capture.
+ *
+ * This exists because the alternative — editing a row out, capturing, editing it back — puts a
+ * modified character into whatever *other* agents boot in that window. That is not hypothetical:
+ * a TEXTURES arris A/B was queued behind this work with `hero` in its shot list, and an edit
+ * landing between its two arms would not have cancelled out, it would have corrupted the
+ * comparison silently. Both arms of a gated A/B are the same commit and differ only in the
+ * named treatment.
+ *
+ * **A hold-out build is a diagnostic, never a shipping candidate.** Nothing here is a knob to
+ * ship at. Read per call rather than latched at import, for the reason `Canvas2D.js` records:
+ * a lab that builds both arms in one process cannot change a value frozen into a module
+ * constant, and a latched flag reports the first arm twice.
+ *
+ * Tokens:
+ *   `noruff` — omit the neck ruff row and both chest ruff rows (KNOWN_ISSUES §96.4 attribution).
+ */
+function charABRaw() {
+  try {
+    if (typeof globalThis !== 'undefined' && globalThis.__CHAR_AB != null) return String(globalThis.__CHAR_AB);
+    if (typeof import.meta !== 'undefined' && import.meta.env) return String(import.meta.env.VITE_CHAR_AB || '');
+  } catch { /* plain-module and node hosts have no import.meta.env; that is the shipped path */ }
+  return '';
+}
+export function CHAR_AB(token) {
+  return charABRaw().split(/[,\s]+/).filter(Boolean).includes(token);
+}
+
 /* ============================ TUNE ======================================== */
 
 export const TUNE = {
@@ -2725,9 +2758,16 @@ export class SlyModel {
 
          Offline check: the head silhouette loses exactly the two frontal muzzle protrusions and
          keeps the jaw-line serration, the cap, the ears and the muzzle outline; triangle count
-         is unchanged at 14044 because cards moved rather than being added. **FRAME VERIFICATION
-         PENDING** in `shots/char13/sly-closeup.png` against `shots/char12/sly-closeup.png` as
-         control — the chip is an ink-hull artefact and no offline probe here renders the hull.
+         is unchanged at 14044 because cards moved rather than being added.
+
+         **FRAME VERIFIED** — `shots/char13/sly-closeup.png` against `shots/char12/sly-closeup.png`.
+         Dark fraction (luma < 60) over the jaw ROI **54.8% → 38.3%**, mean luma **59.0 → 79.9**.
+         At 5x the black slab under the muzzle is gone and reads as a cream jaw line.
+         The control that makes that number mean something: two ROIs on unchanged character
+         surfaces (cheek fur, chest V) are **bit-identical** across the two builds — 0.0pp and
+         mean luma equal to the decimal — so TEXTURES' `Materials.js` moving between `52d4a43`
+         and `f47e0e4` does not reach these pixels, and the jaw delta is this row's and not the
+         material's. That confound was expected to bite and measurably does not.
 
          THE SAME DEFECT SHAPE REMAINS IN TWO ROWS I DELIBERATELY DID NOT TOUCH, both below:
          the neck ruff's inner card sits at θ 0.95, and the chest ruff spans θ ∈ [−0.64, 0.64],
@@ -2736,7 +2776,20 @@ export class SlyModel {
          muzzle and can do that from the side, whereas a collar ruff exists to scallop an
          interior edge and moving it to the silhouette tangent deletes its purpose. §37 found the
          card population was net negative overall, so *removing* the chest row is a legitimate
-         option — but it needs its own frame-level hold-out, not a guess. */
+         option — but it needs its own frame-level hold-out, not a guess.
+
+         **Fixing this row promoted those two to the worst thing in the region, which is §12's
+         shape and was not predicted.** On char13 the neck ROIs are now the darkest character
+         surface in the frame — neck L 61.9% and neck R 53.7% dark at luma < 60, mean luma 54.8
+         and 57.1, against the jaw's repaired 79.9 — and at luma < 80 the neck band is ~80% dark
+         mass. The jaw slab was in front of them; removing it uncovered them. So the reading
+         "the chips are fixed" is available from the jaw ROI alone and is wrong.
+
+         **What is still NOT established is attribution**, and the census cannot establish it: an
+         ROI rectangle cannot separate a card wrapped in ink hull from cast shadow under the jaw
+         or from the collar material. That is what the hold-out below is gated for, scored
+         against a pre-registration written before the capture existed
+         (`PREREG-ruff.md`, arms + thresholds + a void condition fixed in advance). */
       for (let i = 0; i < cnt(3); i++) {
         const f = i / (cnt(3) - 1);
         const th = side * THREE.MathUtils.lerp(0.98, 1.30, f);
@@ -2762,7 +2815,7 @@ export class SlyModel {
 
       /* chest ruff bursting out of the open collar. Two rows at different heights so the
          collar edge is a scalloped mass rather than a single fringe. */
-      if (side > 0) {
+      if (side > 0 && !CHAR_AB('noruff')) {
         /* Pulled up to the collar and cut down. Two rows of wide clumps starting 5 cm below
            the collar covered the whole cream chest V in overlapping slabs — rendered, it reads
            as a bib or a folded napkin rather than as fur bursting out of an open collar. A
@@ -2789,7 +2842,7 @@ export class SlyModel {
       /* Neck ruff around the collar. This row had *no* variation of any kind — seven clumps at
          exactly 0.55 rad pitch, identical width, identical length — so it was the most
          literally comb-like family on the model. Same three axes jittered as the cheeks. */
-      for (let i = 0; i < cnt(3); i++) {
+      for (let i = 0; CHAR_AB('noruff') ? false : i < cnt(3); i++) {
         const th = side * (0.95 + i * 0.55 + (hash(i, side + 71) - 0.5) * 0.22);
         const y = by(1.352) + (hash(i, side + 83) - 0.5) * 0.012;
         const r = this._torsoRadius(y);
