@@ -11978,3 +11978,54 @@ instruction of the form *"score the frames in `shots/X`"* is now unsatisfiable, 
 discovers this mid-task will reasonably suspect its own tooling first. **Each owner must be told
 what is missing before it is given anything to do** — the same obligation §133.6 identified, arriving
 by a different route.
+
+## §140 — the launcher caught the hazard on its first real use, and two dead tickets held the lock
+
+### 140.1 A tool built this session validated itself on the first run after the rollback
+
+`launch.sh` was written by FX because §78.4's wrapper hazard had recurred **three times** and been
+caught by a manual `/proc` walk each time. I promoted it to `tools/` on the grounds that it is
+everyone's problem rather than FX's.
+
+Its first real use after the rollback:
+
+```
+launch: wrapper 8311 lingering (§78.4) — killing it
+launch OK: fx21.mjs pid 8312 ppid 1 (detached, verified from /proc)
+```
+
+**Fourth recurrence, first automatic catch.** `hashwatch` was launched the same way and hit the
+wrapper too; both were refused-and-fixed rather than warned about. Verified independently: pid 8312
+sits at **ppid 1**, state S, holding the lock and rendering.
+
+> A tool whose whole contract is *"refuse rather than warn"* is only worth what it does on the run
+> nobody is watching. This was that run, twice in one launch sequence.
+
+### 140.2 Stale lock tickets survive a rollback and hold the lock for nobody
+
+Two queue tickets were still in `/tmp/sands-of-ra/queue/` naming pids that **died with the
+rollback**. The lock's liveness eviction is what eventually clears those, but until it does the
+queue looks contended when it is empty.
+
+**Add this to rollback recovery:** after a restore, sweep the queue against `/proc` before
+concluding the lock is busy — otherwise the first owner back waits on processes that no longer
+exist. FX did this, and it is why `fx21` started immediately instead of queueing behind two ghosts.
+
+### 140.3 A scorer whose gates cannot be skipped, and which checks the falsifier first
+
+`fx21an.mjs` is staged before its frames exist and evaluates in the registered order:
+
+- **Per-shot control first.** A shot whose `back` differs from its `base` by even one pixel prints
+  VOID, and no number from that shot is quoted.
+- **The falsifier is checked *before* any baseline is quoted, not after.** If any exterior carries a
+  ΔL ≥ 8 component over a backdrop of luma < 60 and R/B < 0.5, it prints that the artefact is **not**
+  temple-specific, that the ARTEFACT/FIELD split must be rewritten, and that **no candidate fix may
+  be selected on this run.** Backdrop is read off the `no-sandHigh` frame — the surface the sprite
+  was actually covering.
+- Only if the falsifier stays quiet does it emit Arm B's cost ceiling, and it scores FX's own
+  registered prediction including the one that would embarrass it: whether any exterior carries a
+  ΔL ≈ +17 component.
+
+> **Ordering is the mechanism here, not the thresholds.** A scorer that computes the interesting
+> number first and the disqualifiers afterwards will always find a reason the disqualifier does not
+> apply. This one cannot reach the interesting number without passing the gate.
