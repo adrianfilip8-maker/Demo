@@ -8474,3 +8474,68 @@ lip got sealed as a primary and passed.
   from a `texlab --size 512` run while tier-0 recipes build at 1024 (`Textures.js:107`), doubling
   every figure for two materials. The seal's numbers come from `abtex`, which builds at the shipped
   size, and are unaffected.
+
+---
+
+## §99 — a bracket whose arms pile on each other, and the absence control that revealed it
+
+`fx19` landed after FX had stopped, so the coordinator scored it against `PREREG-puff.md` as
+sealed at `b5ec3f1`. Full working in `progress/records/RESULT-fx19.md`. Nothing shipped, as the
+seal required.
+
+### 99.1 The cleanest control in the record
+
+**`base` vs `back` — poke out, poke back — differ by 0 pixels of 921 600.** Not "small": zero. The
+restore-from-boot-originals fix §89.2 forced into the harness works, the poke leaves no residue,
+and the scene is deterministic frame-for-frame. Requested-vs-applied readback matches on every arm
+(`cap120` reads 0.12, `cap085` reads 0.085, `cap055` reads 0.055), so no arm is VOID.
+
+### 99.2 The three ceilings are one ceiling
+
+| pair | differing px | % of frame |
+|---|---|---|
+| `base` vs `no-sandLow` (absence control) | 34 258 | 3.717 |
+| `base` vs `cap120` | 34 253 | 3.717 |
+| **`cap120` vs `no-sandLow`** | **718** | **0.078** |
+| `cap120` vs `cap085` | 788 | 0.086 |
+| `cap085` vs `cap055` | 217 | 0.024 |
+
+**Capping at 0.120 — the arm the seal calls "deliberately weak" — is within 0.078 % of deleting the
+ground-haze sheet outright.** No ceiling → any ceiling moves 34 000 pixels; traversing the whole
+bracket moves about 1 000. The transition the bracket was built to locate happens *below its
+weakest arm.* The ship rule ("largest ceiling passing both bands") would therefore select a value
+empirically equivalent to deletion — which Band 2 exists to refuse, and should.
+
+### 99.3 §57's rule in a second shape
+
+§57: *a search whose winners pile against an edge is reporting that its optimum is outside the box.*
+Here the winners do not pile against an edge — **they pile on top of each other, and on top of the
+absence control.**
+
+> **Same signal, different shape: a bracket whose arms cannot be distinguished from each other or
+> from absence is reporting that its entire range lies on one side of the transition.** The fix is
+> to move the range, not to pick a winner inside it.
+
+And the diagnosis this run *cannot* make: whether the ceiling **clamps** (with every sprite already
+above 0.120) or **culls** at any non-zero value. Both fit these frames exactly. `fx19.json` cannot
+settle it — its `maxSize` field reports the **ceiling uniform**, not the observed sprite size, so
+`base`'s `sandLow.maxSize: 0` is the no-ceiling sentinel and is not a measurement of anything.
+Reading it as one would be §11 again, from a field that looks like data.
+
+**The separating arm is cheap and is the next thing FX should run:** ceilings at 0.5 and 1.0. Under
+clamping they must converge on `base`; under culling they stay pinned at deletion level.
+
+### 99.4 The control that was not needed until it was
+
+`base → cap120` at 3.717 % reads like a large healthy effect, and it *is* large — it is simply the
+wrong effect. The only number that reclassifies the run from success to mis-sited bracket is the
+**0.078 % against `no-sandLow`**, and that comparison exists solely because someone registered an
+absence arm before having any reason to think they would need it.
+
+> **An absence control's value is not that it detects a null. It is that it supplies the SCALE
+> against which a non-null is judged.** Without one, "3.7 % of the frame changed" has no
+> denominator, and the natural denominator — zero — flatters every result.
+
+Fifth entry in this ledger where a pre-registered control did the work the primary could not
+(§25, §40, §89, §94.2d, §99.4), and the second in one day where a run's whole verdict turned on an
+arm that shipped nothing.
