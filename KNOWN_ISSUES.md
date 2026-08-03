@@ -7132,3 +7132,78 @@ insisted a number travel with its definition and its population.
    the wrong answer; `git fetch` settled it in one command.
 4. **A restored tree does not restore its agents.** The five owners must be re-briefed from the
    ledger, and their sections are the brief.
+
+
+---
+
+## §84 — the first agent to work after the rollback read its sections instead of reconstructing them
+
+FX, on §83's re-brief. `fx18` is running detached and holding the lock (verified: pid 4070,
+**ppid 1**, 3 min elapsed).
+
+### 84.1 The rollback cost the instruments and not the results
+
+FX's scratchpad reverted too — `affcount.mjs`, `fx17.mjs`, `m12.mjs`, `casters2.mjs` are gone. Its
+own assessment: *"that cost less than it looks, because their results are in the ledger — the shot
+choice, the disjointness table, the three-way rule, the `maxSize` arithmetic. Only the in-page probe
+needed rewriting."*
+
+**That is §83.2 tested on its first day.** An instrument is cheap to rewrite when its output was
+recorded; it is irreplaceable when the output lived only in the tool.
+
+### 84.2 Boot order is load-bearing, and it is keyed to a number in the seal
+
+`fx18` stages **`temple` first, by construction** — not for convenience:
+
+> The registered rule is keyed to **17 at spawn**. Staging any other shot first would **re-latch and
+> silently change the number the rule is written against.**
+
+A seal whose predicate references a live piece of state constrains the *order of operations* of the
+run that scores it, and nothing in the seal's own text says so. Worth carrying: **check whether a
+registered constant is a property of the build or a property of the moment.**
+
+The `fx17` design was rebuilt as a second job **behind** the latch job in the same boot — one boot
+instead of two, and it cannot contaminate the latch because it runs after.
+
+### 84.3 A matching rule chosen to avoid confirming its own hypothesis
+
+The probe matches spawn-set against staged-set **on XZ only**, and the reason is recorded in the
+probe itself: `_updateSparkles` applies a **per-tag Y lift (0.0 / 0.22 / 0.34)**, so matching on Y
+would **manufacture disjointness and confirm staleness for free.**
+
+That is the §46 discipline applied to a *join key*: a comparison that cannot fail to find a
+difference is not a comparison. It is the same family as §71.3's shuffle-proof predicate and §68.3's
+band-blind statistic, arriving in the least glamorous place available.
+
+### 84.4 The pink disc is not a depth-state bug, settled from source
+
+The only FX material with `depthTest: false` is `fx.depthCopy`, which renders **offscreen into the
+depth RT in its own scene**. Every main-frame FX material — `fx.shafts`, `fx.sparkle`, `fx.flames`,
+all batches — has `depthTest: true`.
+
+So the disc is a sprite **genuinely nearer than the 26 m architecture**, consistent with §82.4's
+raycast, and the open question is *which emitter and why pink* rather than *why it ignores depth*.
+Naming it needs the frame, and `fx18`'s `temple` job supplies one — so FX declined to speculate and
+will crop (615,160) when it lands.
+
+### 84.5 A hypothesis that would close finding #2, flagged rather than banked
+
+The most valuable thing in the report, and it is offered against FX's own interest:
+
+> If that floor receives no direct key **because it is already inside a cast shadow**, then the
+> cascade *is* reaching and working, and the character's contact shadow is invisible because **it
+> cannot darken already-shadowed floor.**
+
+That would close §80.1's remaining branch and retire finding #2 entirely. **FX declines to bank it:**
+*"it is a hypothesis, not a measurement, and the ledger's own rule says a mechanism I can tell a
+clean story about is exactly the kind I should not bank."* It needs the shadow term at those pixels,
+which needs a render.
+
+**A clean story is the strongest possible reason to demand a measurement**, because it is the state
+in which nobody will ask for one. Recorded as the shape the test should take, not as a result.
+
+### 84.6 §78.4 recurred and was caught by the recipe that caught it before
+
+Node launched at **ppid 4067**, not 1. Detected by walking `/proc/<pid>/cmdline` and reading ppid
+from `/proc/<pid>/stat` — **never `pgrep -f`, which is what matched the wrapper the last two times.**
+Wrapper killed, ppid re-verified as 1, run confirmed holding the lock.
