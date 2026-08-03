@@ -11631,3 +11631,74 @@ metal: r.metal ? (r.metalAmount ?? 0.85) : 0
 control materials cannot move by accident. The scoring harness (`tools/gilddiff.mjs`) refuses in
 order — `pin` (base vs base2 must be 0 px or the dt=0 clock pin failed and everything below is
 noise), then `revert`, then the P3 control — **before** it reports any treatment number.
+
+## §135 — the disc is `sandHigh`, and the statistic that named it understated it 4.6×
+
+`fx20` landed and scored. **Control first: `back` vs `base` bit-identical, 0 px**, so the rows are
+scoreable — the registered ordering, applied before any treatment number was read. Full working in
+`progress/records/RESULT-fx20.md`.
+
+**One pool clears the registered 3.0 bar and every other is under 1.0: the `temple` pink disc is
+`sandHigh`.** The named branch fired; §124.5's escalation branch — *"if no pool clears 3.0 the disc
+is not a batch sprite"* — did not, so `shafts` stays counted-but-never-toggled and nothing now
+depends on it.
+
+### 135.1 The ROI mean reported a fraction of a total effect
+
+`no-sandHigh` moves the ROI by **−3.24** against a 3.0 bar. An 8 % margin reads as marginal.
+**Cropped at 3× and looked at, the disc is simply gone** — `base` carries a soft mauve-pink blob
+over the blue star ceiling; `no-sandHigh` is clean blue with the star motifs legible where it was.
+
+The ROI is 121 × 121 px and the disc occupies **21.7 %** of it, so the mean was diluted **~4.6×**
+across mostly-unchanged pixels. The margin was thin because the ROI was drawn generously around a
+feature that does not fill it.
+
+> **A mean over an ROI larger than its subject reports a fraction of the effect, and the fraction is
+> set by the ROI's generosity rather than by anything about the treatment.** Here it erred
+> conservatively and the bar was cleared anyway. The same dilution with a 3.5× ROI would have
+> **failed a total removal.** Quote the changed-fraction beside the mean, or size the ROI to the
+> subject.
+
+This is the §104 family again — an ROI whose composition decides the number — but inverted: §104's
+ROI was mostly sky and *inflated* nothing, this one was mostly unchanged ceiling and *deflated* a
+complete result. Both are the same defect and neither is visible from the number alone.
+
+### 135.2 Four arms moved zero whole-frame pixels, and the inference still holds
+
+`dust` (290 live), `smoke` (220), `airMotes` (1000) and `flames` (24) are all present at `base` per
+the probe, and removing each changes **zero pixels in the entire frame.**
+
+That is not a failed toggle — those pools contribute nothing visible in this framing, and **a pool
+contributing zero pixels cannot be producing a disc that is visibly there.** The direction matters:
+this run can say *"`dust` is not the disc"* precisely because the disc **is** in `base`. §122.3's
+premise-absent trap runs the other way and does not apply here. Discrimination came down to
+`sandHigh` / `sandLow` / `shimmer`, all three live and visible in-frame (15 423 and 48 436
+whole-frame px for the latter two), and only `sandHigh` touches the ROI.
+
+### 135.3 The boot-tree question, answered from the stamp rather than argued
+
+`hashwatch` stamped at the lock-acquisition transition — §124.4's only moment that matters.
+SHADING's three render files are **byte-identical between the queued stamp and `at-goto`**
+(`d88ae445f398` / `e02f4154b6af` / `2aa97c5e1f85`), having been written at 15:18–15:19, *before*
+`fx20` was even queue-stamped. `driftFromQueued` is **`src/world/Kit.js` alone** — GEOMETRY's
+bead-UV fix landing eight seconds before `goto`.
+
+**So both `2417356` and `831f6de` are on the boot side: `fx20`'s frames contain the 0.40 fur
+cards.** And the `back`-vs-`base` control passed at 0 px, which settles empirically what §126
+settled structurally.
+
+> **My own scheduled poke restated the retracted claim** — that the ink change endangers the
+> bit-identity control — because it was written before §126 corrected it. *A scheduled reminder
+> carries whatever framing was current when it was written, and it does not learn.* Anything
+> self-scheduled must be re-checked against the ledger at fire time, not executed on trust.
+
+### 135.4 What the answer unlocks, and what it does not
+
+The mechanism candidate from §122.3 is now specific rather than a family: only `air_motes` carries a
+`maxSize` ceiling (`Particles.js:2012`), **`sandHigh` is uncapped, and `sandHigh` is the pool.**
+
+But §124's own bracket already showed the obvious fix is wrong: capping `sandLow` at 0.12 removes
+**~97.8 %** of that field's visible contribution — a cap chosen to kill a near-lens artefact deletes
+the haze the field exists to provide. **The fix is a per-sprite distance/near-plane guard, not a
+global screen-size ceiling**, and that is now a design decision on a named pool with the mechanism
+measured rather than a hunt.
