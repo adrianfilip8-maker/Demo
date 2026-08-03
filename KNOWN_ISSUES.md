@@ -7143,7 +7143,16 @@ FX, on §83's re-brief. `fx18` is running detached and holding the lock (verifie
 
 ### 84.1 The rollback cost the instruments and not the results
 
-FX's scratchpad reverted too — `affcount.mjs`, `fx17.mjs`, `m12.mjs`, `casters2.mjs` are gone. Its
+> **CORRECTED 2026-08-03 by FX, at the declaration site per §34/§41.** `casters2.mjs` was **never
+> lost.** FX's words: *"`progress/records/` is tracked and already contains `casters2.mjs` — a tool
+> §84.1 records as lost to the rollback. It was never lost; it was in the durable half while my copy
+> was in the ephemeral one. Both rollbacks ate my scratchpad and neither touched the repo."* The
+> other three names **stand, and were checked rather than assumed** — `git ls-files` returns nothing
+> for `affcount.mjs`, `fx17.mjs`, `m12.mjs`, and `progress/records/casters2.mjs` for the fourth. See
+> §92.1 for why this one slipped through: the list was assembled by looking at the half that was
+> destroyed, and never at the half that wasn't.
+
+FX's scratchpad reverted too — `affcount.mjs`, `fx17.mjs`, `m12.mjs`, ~~`casters2.mjs`~~ are gone. Its
 own assessment: *"that cost less than it looks, because their results are in the ledger — the shot
 choice, the disjointness table, the three-way rule, the `maxSize` arithmetic. Only the in-page probe
 needed rewriting."*
@@ -7904,3 +7913,56 @@ lost. That section is now a demonstration rather than a warning.
 **And the agents have lost the day again.** Their transcripts are back at Aug 1 21:33 for the second
 time, so none of them holds §84–§90 — the work they themselves did. The ledger holds it; they do not.
 Re-brief from their sections, as §83.3 rule 4 says.
+
+---
+
+## §92 — the rollback boundary is tracked-vs-untracked, and a file can live on both sides
+
+Two findings from FX, both arriving after §91 was sealed, and both about the same thing: what a
+container rollback actually takes.
+
+### 92.1 A loss list assembled from the destroyed half only
+
+§84.1 named four instruments as lost. **`casters2.mjs` was not.** It sat in `progress/records/` —
+tracked, committed, restored with the repo — while FX's working copy sat in the scratchpad, which
+is where FX looked. The file was in **both halves at once**, and the check only ever ran against
+the half that was gone.
+
+> `progress/records/` is tracked and already contains `casters2.mjs` … It was never lost; it was in
+> the durable half while my copy was in the ephemeral one.
+
+**The rule:** the rollback boundary is not *mine vs. not-mine* and not *tool vs. result* — it is
+**tracked vs. untracked**, and those cut across each other. Before declaring an instrument lost,
+`git ls-files | grep <name>` — one command against the surviving half. A loss list built by
+inventorying the wreckage will always be an overcount, and an overcount here is expensive in the
+one direction that matters: it authorises rewriting a tool that already exists, which is how two
+divergent copies of the same instrument get made.
+
+**The rule caught one more error on the way in.** The §84.1 correction above was first written
+saying "the other three names stand" — asserted, not checked, in the very paragraph that exists
+because a set was asserted without being opened. Running `git ls-files` against all four is one
+command and it confirmed the three; the sentence now says so. A rule that its own correction does
+not obey is a rule you have written down rather than adopted.
+
+This is §83.2 ("recorded output survives, in-tool output does not") holding — but with its
+boundary drawn in the wrong place for a day. Note the shape it shares with §71.5 and §76.4: three
+times now the error has been *asserting the contents of a set I had access to but did not open.*
+
+### 92.2 The ppid hazard is not intermittent — it is the default
+
+§78.4 and §84.6 each recorded the wrapper capturing a launch as a recurrence. FX's third instance
+closes the question:
+
+> §78.4/§84.6 recurred a third time — node launched at **ppid 29184**. Caught by the `/proc` walk,
+> wrapper killed, ppid 1 re-verified. **It has now happened on every launch I have made; it is not
+> intermittent.**
+
+Three for three changes what the check *is*. §14's `/proc/<pid>/stat` walk has been written down as
+a **precaution against a flaky detachment** — something you run because it might have happened. It
+is not that. On this container `setsid nohup … &` **reliably** leaves node parented to the wrapper,
+and the walk is the step that finishes the detachment, not the step that audits it.
+
+**Therefore:** a launch is not detached until the walk has run and killed the wrapper. Treat a
+skipped walk exactly like a skipped `setsid` — the run is parented to a shell that will exit, and
+`pgrep -f` will confirm it is fine, because `pgrep -f` matches the wrapper. That last clause is why
+this took three recurrences to see: **the cheap check agrees with the wrong answer.**
