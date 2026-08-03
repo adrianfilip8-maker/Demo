@@ -231,3 +231,75 @@ index has a null direction and b−r cannot see green. A run that scored only A.
 report a clean subadditive result and say nothing about the axis that decides whether the composite
 may ship. This addendum names the axis in advance so a pass on the bands cannot be read as a pass
 overall — which is exactly §119.3's A1 clause applied to a different statistic.
+
+---
+
+## E. Secondary — §128.5's cel-ramp plateau, registered as a PREDICTED NULL
+
+Added at the coordinator's request while the arms were still queued; **zero frames of this run
+existed when this was written**, and the ROIs were already on disk. Registered as a secondary so it
+cannot be read to taste afterwards.
+
+§128.5 refutes the geometry explanation for §7.3's cel-ramp condition: a `temple` column now carries
+a **50–58 L gradient across its width** and still shows no plateau-and-step structure (30–51 %
+plateau, 15–17 % steep, monotone drift). The proposed cause is that the additive fill / bounce / rim
+terms smear the 3-band quantiser — the same terms these arms sweep.
+
+**I predict these arms move it by approximately nothing, and the reason is arithmetic rather than a
+hunch.**
+
+`fillSkyMix` is **luminance-matched by construction**. `toon.glsl.js:395–397` blends the bounce leg
+toward `uSkyColor * (slyLum(uBounceColor) / slyLum(uSkyColor))` — the sky is rescaled to the
+bounce's own luminance before the blend, and the shader comment says so explicitly ("Luma-matched so
+the blend cannot change how bright the fill is, only what colour it is"). Evaluated on the §2.2
+palette constants (`PAL.fillSky #6fa8d8`, `PAL.bounce #e8a852`):
+
+| `fillSkyMix` | fill leg RGB | G/R | hue | **slyLum** |
+|---|---|---|---|---|
+| 0.70 (ship) | 0.3822, 0.4627, 0.6307 | 1.210 | 221° | **0.4577** |
+| 0.35 | 0.5946, 0.4271, 0.3575 | 0.718 | 18° | **0.4577** |
+| 0.00 (`fill0`) | 0.8070, 0.3916, 0.0844 | 0.485 | 26° | **0.4577** |
+
+Luminance is identical to four decimals across the whole range — by design, not by luck.
+
+> **A plateau-and-step structure is a LUMINANCE-domain phenomenon, and `fillSkyMix` is a
+> luminance-preserving hue rotation. It cannot smear or unsmear a luminance quantiser.** The leg
+> that could is the one that changes fill *magnitude* (`uBounceGain`, `uAmbIntensity`), and neither
+> is in these arms.
+
+`shadowBounceMix` is the weaker half of the same argument: `_refreshShadowColor` re-scales through
+the `k` peak cap, so it is not exactly luma-preserving, but §115.2 measured its effect as
+overwhelmingly *channel-balance* (R +66 %, G −4 % at 0.20) rather than level.
+
+**Registered prediction:** on a `temple` nave-column band, plateau share and steep share move by
+**< 5 percentage points** across `base` → `compose`, and the profile stays monotone drift.
+
+**Falsified** if any arm moves plateau share by ≥ 5 points. That would be the interesting outcome,
+and it would mean the luma-matching does **not** hold in frame — most likely because the cap in
+`_refreshShadowColor` or a downstream term (AgX shoulder, split-tone) breaks it — and *that* would
+be the finding, not the banding.
+
+**Why register a predicted null at all:** it is free (a column band off frames this run already
+produces, no capture), and §119 is the record of a lever that was proposed from the physics of the
+problem without checking the distribution of the variable it acts on. One table of the shader's own
+arithmetic is the cheap version of that check, done before the arm rather than after it.
+
+### E.1 ROI denominators — check what is inside before quoting a share (§128.2)
+
+§128.2 records a second owner taking a denominator from the frustum *volume* rather than from what
+the camera can see, wrong by 7×. These arms quote shares over `roigen.mjs` populations, so the
+denominators are stated and checked before any percentage is published:
+
+| shot | archShade | archLit | sky |
+|---|---|---|---|
+| night | 10 696 | 820 | 2 293 |
+| hero | 8 927 | 3 597 | 1 368 |
+| temple | 6 746 | 5 169 | 227 |
+| sly-closeup | 4 501 | 9 730 | **3** |
+
+Two are already disqualifying for one statistic each and are recorded here rather than discovered
+later: **`sly-closeup`'s `sky` population is 3 samples** and cannot serve as the "control must not
+move" check on that shot, and **`temple`'s sky is 227**, thin for the same purpose. `archShade` is
+adequate everywhere. The ROI is also, per `roigen.mjs`'s own header, "on an away-facing
+architecture surface" and **not** "in shadow" — no shadow map is involved — so it must not be
+quoted as a shadowed-pixel share.

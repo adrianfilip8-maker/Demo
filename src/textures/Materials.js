@@ -451,6 +451,42 @@ const worldTileOf = (tile) => (Array.isArray(tile) ? tile[0] : tile) * ARCH_UV;
 const PAINT_WEAR_M = 2.08;
 
 const GOLD_BIAS = 1.75;
+
+/**
+ * The chisel pass on `glyphArchitrave`'s seam row — see KNOWN_ISSUES §125.
+ *
+ * These three numbers exist because the signs on the largest gilded surface in the level had **no
+ * route to the relief at all**. `gildsil.mjs` measured it bit-exactly: neutralising every glyph
+ * silhouette moved the seam row by `8.50e-6` against the mid frieze's `4.63e-2` — **5454x** — while
+ * the same test on `hieroglyph_wall` reads 0.6x, i.e. even. Three source facts composed to it and
+ * each was individually visible: the band is filled solid in `'cut'` mode *before* the register is
+ * drawn, so a sign's silhouette is already inside the cut and adds nothing; the recipe builds no
+ * `'paint'` pass; and `drawGlyph` returns immediately in `'line'` mode for the 16 of 21 `royal`
+ * signs with no interior-detail `d()`. **20 of 28 row placements per repeat reached the relief as
+ * nothing**, and the 8 that survived left strokes rather than signs.
+ *
+ * `depth` is in the same units as `carve`'s: one unit of `s.h` is `bump x ARCH_UV` = **84 mm** of
+ * world here, and the panel's own floor lands at 0.21 (17.6 mm) because `bulge` halves it over the
+ * band's interior. 0.30 through `bulge 0.30` gives another 17.6 mm, so a sign bottoms out 35 mm
+ * below the architrave face — inside the 10-30 mm real Egyptian sunk relief cuts, at the deep end
+ * because these signs are large (0.28 m).
+ *
+ * `sink` and `burnish` are the half that reaches a *shadowed* surface, and they are the reason
+ * this is not a height-only change. `hero`'s gilded mass is 98.6 % shadowed and the normal map
+ * goes flat there, so relief alone would be a feature that exists in the buffer and never in the
+ * frame — the `MOTES.size` / `sand_ripples` failure class one level up. They move gold's value
+ * placement, not its hue: the sign floor drops to `t 0.28` (deep, dirty, rough) and the sign's own
+ * bevel rises to `t 0.92` (burnished, glossy), which is the value span §7.3's gold line asks for
+ * — "hard spec + dark occlusion" is a span, and this recipe was authoring it only across the
+ * band's own 25 mm bevel, i.e. under a pixel at every framing.
+ *
+ * `darkTail` cannot open on this recipe as a result, and that is arithmetic rather than a hope:
+ * `rampFloor(crevice: GOLD_DEEP)` runs last with `lo = 0.2981`, its pull is `(lo - y)/lo`, so the
+ * output `y + (lo - y)^2 / lo` minimises at `y = lo/2` and returns **0.75 lo = 0.2236** — above
+ * §2.2's `crevice` luminance of 0.2031 for every possible input.
+ */
+const HG_SIGN = { depth: 0.30, sink: 0.34, burnish: 0.30 };
+
 function goldRamp(t, out = T3) {
   const k = Math.pow(sat(t), GOLD_BIAS);
   if (k < 0.34) return mixHex(GOLD_DEEP, PAL.goldDark, k / 0.34, out);
@@ -1775,9 +1811,16 @@ export const MATERIALS = {
        * This is the failure `glyphWall`'s own note says it fixed — *"a dense field of small
        * varied marks has no landmark in it, so the eye has nothing to recognise on the next
        * repeat: the repetition is solved by removing the thing that repeats visibly"* — and the
-       * note is right; the default simply put the landmark back. `hieroglyph_gilded` keeps its
-       * cartouche on purpose (it is passed explicitly there): an architrave carries a royal name,
-       * it is 11.7% gilded, and at `courtyard`'s 41 px per repeat there is nothing to count.
+       * note is right; the default simply put the landmark back.
+       *
+       * **This paragraph used to end "`hieroglyph_gilded` keeps its cartouche on purpose (it is
+       * passed explicitly there)", and that was false in every part.** That recipe does not use
+       * `glyphWall` — it uses `glyphArchitrave`, which has **no cartouche path at all**, so there
+       * is nothing there to pass and nothing being kept. The `41 px per repeat` in the same
+       * sentence was `courtyard`'s figure for a framing that has since changed. KNOWN_ISSUES §125
+       * records it as reported-and-not-fixed; it is fixed here. A note asserting a mechanism the
+       * code does not have is the same defect that hid the missing chisel pass on that very
+       * recipe for the whole of this project's history — see `glyphArchitrave`.
        *
        * Worth recording that the spectral tiling measure missed this completely. Binning the
        * tile's row/column mean profiles by cycles-per-tile put `hieroglyph_wall` among the
@@ -2023,6 +2066,14 @@ export const MATERIALS = {
       const layout = (mode) => (ctx) => glyphArchitrave(ctx, size, mode, cx.seed + 4, { worldTile: worldTileOf(HG_GILDED_TILE), signM: 0.85 });
       const cut = rasterMask(size, layout('cut'));
       const lines = rasterMask(size, layout('line'));
+      /* A/B arm `hgchisel`: the whole of KNOWN_ISSUES §125's fix off, which restores the shipped
+       * state bit-exactly — `signRamp` is then null and every term below that reads it is zero.
+       * That is the control the offline comparison is scored against, not a tuning knob.
+       * `hgsignval` is the narrower arm: the chisel cut stays in the height field and only its
+       * *albedo* half is disabled, which separates "the relief landed" from "the value span
+       * landed" — two different claims that reach the shader by different paths and, on a surface
+       * that is 98.6 % shadowed in `hero`, have very different chances of arriving. */
+      const signs = abOff('hgchisel') ? null : rasterMask(size, layout('sign'));
       /* Arris on the gilding too — see `carve`. The hex is `goldLight` rather than the stone
        * pale because the raised edge of a gilded relief is where the burnisher can reach, so it
        * is the *brightest gold on the surface*, not exposed limestone. That is also the shape
@@ -2048,8 +2099,36 @@ export const MATERIALS = {
        * that has never been shown to move on a state known to carry the effect is not evidence
        * about that effect in either direction. 0.60 is 7.5x the shipped notch and is not a
        * candidate for anything — its only job is to tell a null apart from a blind instrument. */
-      const arrisPolish = abOff('hgpolish') ? 0 : abOff('hgpolishx8') ? 0.60 : 0.08;
+      /* **Shipped value 0.08 -> 0, and it is a rule discharging rather than a tuning.**
+       *
+       * `PREREG-hgarris2` P5 registered, before the arms rendered: *"if both land null, gilded's
+       * arris goes to 0 and stays there."* Both landed null (§121.1 — 420 px of 113 863 on
+       * `sly-startle` with **0** texels at |d| >= 8, and 8 px on `sly-key`; the treated material
+       * moved 5x less than an untouched one and 670x less respectively). §121.7 then suspended the
+       * rule rather than applying it, with the condition written down: the notch's in-lobe area
+       * rises with `gloss`, so zeroing while a 64 -> 24 change was live would have had to be
+       * undone. **GEOMETRY has since decided `gloss` stays at 64, so the condition is discharged
+       * and the rule applies.** `shots/gs-pol0` is a frame-verified capture of this exact state.
+       *
+       * `hgpolish` is now degenerate with the shipped build by construction; it is kept so the
+       * seal's arm names still resolve, and `hgpolishx8` is kept because it is the only calibration
+       * that separates a null from a blind instrument on this term. If gilded architecture is ever
+       * staged into the key light, `gloss 40` is the sized next step and this notch wants
+       * re-deriving at that value first — not restoring at 0.08. */
+      const arrisPolish = abOff('hgpolishx8') ? 0.60 : 0;
       const ramp = carve(s, cut, lines, { depth: 0.42, bevelPx: 2.6, lip: 0.10, bulge: 0.5, lineDepth: 0.56, seed: cx.seed + 5, arris: 0.16, arrisHex: PAL.goldLight, arrisPolish });
+      /* The signs, cut into the panel the line above sank. A second `carve` rather than a deeper
+       * `lineDepth` because the two cuts want different profiles: the panel is a wide flat field
+       * whose edge is the only thing that bevels, a sign is a small shape that is nearly all edge.
+       * `bulge 0.30` (against the panel's 0.5) keeps the floor of a broad sign from filling back
+       * in, and `arris: 0` because the gilding's albedo lip is laid by the panel's `carve` and a
+       * second ring on top of it would double the highlight the panel already carries. */
+      const signRamp = signs
+        ? carve(s, signs, null, { depth: HG_SIGN.depth, bevelPx: 1.8, lip: 0.05, bulge: 0.30, chatter: 0.05, seed: cx.seed + 23, arris: 0 })
+        : null;
+      // The albedo half of the chisel pass, off under `hgsignval`. See `HG_SIGN`.
+      const signSink = signRamp && !abOff('hgsignval') ? HG_SIGN.sink : 0;
+      const signBurn = signRamp && !abOff('hgsignval') ? HG_SIGN.burnish : 0;
 
       // Gold leaf laid into the sunk glyphs over a red bole ground; the leaf lifts at the arrises.
       const lift = s.field(2, (u, v) => sat(warpN(u, v, 14, 4, 1.1, cx.seed + 31) * 1.4 + 0.5));
@@ -2120,7 +2199,16 @@ export const MATERIALS = {
          * reintroduced through a different door. 0.62 gives `k = 0.437`, between `goldDark` and
          * `goldMid`, so the body sits mid-ramp and the arrises still reach `GOLD_HOT`. */
         const bevel = 4 * ramp[i] * (1 - ramp[i]);
-        const t = sat(0.62 + bevel * 0.50 + (swathe[i] - 0.5) * 0.42 + (wrinkle[i] - 0.5) * 0.26);
+        /* The sign's own ramp, spending the same two shapes the panel spends one level down:
+         * `sr` is the recess (floor of the cut) and `4sr(1-sr)` is its bevel — the only part of a
+         * sunk sign a burnisher can reach, exactly as `bevel` is for the panel. So a sign reads as
+         * a dark cut with a hot lip *in* gold, which is what the note above `glyphArchitrave`'s
+         * band fill has claimed since it was written. `goldRough` is keyed to `t`, so the floor
+         * goes rough and the lip goes glossy for free — that is the "hard spec" half of §7.3's
+         * gold line arriving on the same term as the "dark occlusion" half. */
+        const sr = signRamp ? signRamp[i] : 0;
+        const t = sat(0.62 + bevel * 0.50 + 4 * sr * (1 - sr) * signBurn - sr * signSink
+          + (swathe[i] - 0.5) * 0.42 + (wrinkle[i] - 0.5) * 0.26);
         goldRamp(t, t3);
         s.r[i] += (t3[0] - s.r[i]) * g; s.g[i] += (t3[1] - s.g[i]) * g; s.b[i] += (t3[2] - s.b[i]) * g;
         /* Red bole under lifted leaf. 0.75 -> 0.40 for the same reason as the base above: `worn`
@@ -2131,9 +2219,20 @@ export const MATERIALS = {
         s.metal[i] = g * (1 - worn * 0.85);
         s.rough[i] = lerp(s.rough[i], sat(goldRough(t) + worn * 0.4), g);
         s.h[i] += g * 0.03 * wrinkle[i];
-        // Dirt in the bottom of a gilded recess. This is the dark occlusion §7.3 asks for and
-        // it is albedo, so unlike the baked AO it survives minification and carries no
-        // lighting direction of its own.
+        /* Dirt in the bottom of a gilded recess.
+         *
+         * **This comment used to claim "it is albedo, so unlike the baked AO it survives
+         * minification" and that is false — `s.occ` is the artist-authored occlusion channel and
+         * its only consumer is `heightAO(..., occ: s.occ)` (`NormalMap.js:307`), i.e. it is
+         * exactly the baked AO it says it is not.** Same class as the `'line'`-mode claim above
+         * and found in the same read: a note asserting a mechanism the code does not have.
+         *
+         * It matters because §8 establishes that `ao` never multiplies the direct key term and
+         * SHADING has ruled `aoKey = 0` final, so this line is close to inert on a sunlit surface
+         * and cannot be quoted as §7.3's dark occlusion. It is kept — it is correct as *authoring*
+         * and it is what a recess should carry if the key term ever gets an `ao` factor — but the
+         * dark occlusion that actually reaches a frame is the value span `HG_SIGN.sink` puts into
+         * the albedo above. */
         s.occ[i] *= 1 - g * sat(ramp[i] * 1.2) * 0.40;
       }
       weather(s, { source: ramp, seed: cx.seed + 6, crevice: 0x54441c, creviceAmt: 0.50, streakAmt: 0.22, dustAmt: 0.16, roughGrime: 0.08 });
@@ -4635,9 +4734,35 @@ function glyphArchitrave(ctx, size, mode, seed, o = {}) {
      * actually is — leaf laid over a sunk field, the burnisher reaching only the arrises — and
      * what this recipe's own value policy was rebuilt around (see the long note on `bevel` in
      * `hieroglyph_gilded`: "leaf covers the whole sunk field, because that is what gilding a
-     * sunk relief means"). The signs stay legible because they are also drawn in `'line'` mode,
-     * which `carve` incises at `lineDepth`, so they read as dark cuts *in* the gold. */
+     * sunk relief means").
+     *
+     * **The sentence that used to end this paragraph — "the signs stay legible because they are
+     * also drawn in `'line'` mode, which `carve` incises at `lineDepth`" — was false as built, and
+     * it is why nobody looked.** `'line'` mode reaches `drawGlyph`, which returns immediately for
+     * any sign with no interior-detail `d()`: 16 of the 21 `royal` signs. Composed with the fill
+     * on the line below (which puts every silhouette *inside* the cut, where it adds nothing) and
+     * with this recipe having no `'paint'` pass, **20 of 28 row placements per repeat reached the
+     * relief as nothing** and the 8 that survived left strokes rather than signs. Measured
+     * bit-exactly by `gildsil.mjs` at 5454x against a 0.6x control; KNOWN_ISSUES §125.
+     *
+     * A comment asserting the mechanism that would have saved it, sitting directly above the code
+     * that does not do it. The fix is `mode 'sign'` below — the silhouettes get their own mask and
+     * their own `carve` — and this note now describes what the code does. */
     if (mode === 'cut') { ctx.fillStyle = '#fff'; ctx.fillRect(-2, y0, size + 4, half * 2); }
+    /* `'sign'` — the seam row's silhouettes alone, as their own cut mask. It is a fourth mode
+     * rather than an extra draw into `'line'` for two reasons. `carve` applies `sat(ln * 1.5)` to
+     * the line mask and then one shared `lineDepth`, so a silhouette pushed through it would be
+     * clamped flat and would drag the register rules and the painted bands with it; and drawing a
+     * silhouette at a reduced `globalAlpha` composites *per overlapping sub-path*, so a sign built
+     * from a body plus two limbs would come out with a stepped floor. A separate mask carved
+     * separately keeps the sign's own depth, bevel and lip independent of the panel's.
+     *
+     * The RNG is untouched: `rowRegister` seeds `rng(seed)` and `quadrat` calls `pick()` before
+     * `drawGlyph` in every branch, so sign choice and placement do not depend on `mode` — this
+     * draws exactly the signs the `'line'` and `'cut'` passes already agree on. The mid-tile
+     * frieze is deliberately excluded (it has no cut fill, so its signs already *are* its cut
+     * mask, and cutting them twice would double their depth). */
+    if (mode === 'sign') { HG.rowRegister(ctx, 0, y0, size, half * 2, seed + 41, HG.POOLS.royal, 'cut'); continue; }
     HG.rowRegister(ctx, 0, y0, size, half * 2, seed + 41, HG.POOLS.royal, mode);
     HG.registerRule(ctx, size, y0 - size * 0.018, rule, mode);
     HG.registerRule(ctx, size, y0 + half * 2 + size * 0.018, rule, mode);
@@ -4646,6 +4771,8 @@ function glyphArchitrave(ctx, size, mode, seed, o = {}) {
     HG.paintedBand(ctx, -2, y0 + half * 2 + size * 0.018 + size * 0.004, size + 4, size * 0.026, mode,
       [PAL.lapis, PAL.white, PAL.red, PAL.ochre]);
   }
+  // The frieze is already its own cut mask; `'sign'` is the seam row's mask and stops here.
+  if (mode === 'sign') return;
   /* One secondary frieze at mid-tile. Nothing that samples a band ever sees this; it is here so
    * the single wall-shaped consumer — the tomb false door at `EgyptLevel.js:1263`, 6.2 m tall and
    * the only one that spans a whole repeat — is not 84 % bare stone. */
