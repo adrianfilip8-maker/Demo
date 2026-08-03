@@ -440,7 +440,25 @@ function courtyard(A) {
        this is where the moulding the throne back cannot carry actually goes. Sized so the
        cornice top lands exactly on `L.colossi.plinth`, keeping the y = 2.0 ground proxy and
        the seat that stands on it where they were. */
-    const plCor = K.cornice({ w: 8.0 - 2 * 0.04 * 1.4, d: 7.0 - 2 * 0.04 * 1.4, h: 0.22, roll: 0.13, flare: 0.34 });
+    /* `roll` 0.13 -> 0.26, and the reason is measured, not stylistic.
+       A cornice's torus roll ends in a CREST: the profile's top-quarter segment, which turns
+       from vertical to horizontal and is therefore up-facing (n.y = 0.960 exactly — the value
+       is fixed by the profile's angular step, so it is a signature you can grep the built tree
+       for). Its width is `roll * 0.4791`. At `roll` 0.13 that is **6.2 cm**, which is not a
+       moulding surface, it is a wire — and on this piece it was a *gilded* wire, 2 m from the
+       `guard` camera, projecting 24 px, the widest narrow up-facing strip in that whole frame.
+       Measured on the built tree: 16 triangles at world y 1.423..1.440, n.y 0.960, and with
+       `guard`'s key (0.508, 0.473, -0.719) the two sides sit at ndl 0.655 and 0.253 — i.e. the
+       lit side lands within 0.04 of the 0.62 the cyan-contact-line report quotes. This is the
+       "kerb top a few pixels wide" that brief asked to stop existing.
+       Every other cornice in the level already clears this: rolls 0.30..0.46 give 14..22 cm
+       crests, which read as the intended highlight band. This one was the only one below it —
+       confirmed by a level-wide census of the n.y = 0.960 signature, which returns exactly one
+       architecture cluster. `h` drops 0.22 -> 0.12 so the podium grows only 0.82 -> 0.98 m
+       rather than to 1.08; `plCor.height` feeds nothing but the placement below, and
+       `L.colossi.plinth` (the y = 2.0 ground proxy and the throne that stands on it) does not
+       move. See Kit.corniceProfile's note on the crest constraint. */
+    const plCor = K.cornice({ w: 8.0 - 2 * 0.04 * 1.4, d: 7.0 - 2 * 0.04 * 1.4, h: 0.12, roll: 0.26, flare: 0.34 });
     A.add('court', 'hieroglyph_gilded', K.place(plCor.geo, { x: cx, y: L.colossi.plinth - plCor.height, z: cz }));
     groundProxy(A, cx - 4, cx + 4, L.colossi.plinth, cz - 3.5, cz + 3.5);
     /* Throne: seat block to the knee ledge at 4.5, then the high back slab. */

@@ -1108,6 +1108,31 @@ export function sweep(profile, len, opts = {}) {
  * The Egyptian cornice profile: a torus roll moulding, then a cavetto hollow flaring out,
  * capped by a flat fillet. Nearly vertical where it leaves the wall, then it throws itself
  * outward at the top — that overhang is the whole silhouette, so `flare` is generous.
+ *
+ * ── `roll` HAS A FLOOR, AND IT IS NOT COSMETIC: keep it >= 0.25 m. ──────────────────────
+ * The roll is swept as a half-round from a = -pi/2 to +pi/2 in 6 steps, so its top-quarter
+ * segment turns from vertical to horizontal and comes out UP-FACING at exactly n.y = 0.960 —
+ * the value depends only on the angular step, never on `roll`, which makes it a signature you
+ * can grep the built tree for. What DOES scale with `roll` is that crest's width:
+ *
+ *     crest width = roll * 0.4791
+ *
+ * Above ~0.25 m the crest reads as the intended highlight band along the moulding. Below it,
+ * the crest is a narrow up-facing strip sitting between two surfaces that face elsewhere —
+ * which is the exact mechanism of the `guard` bright-contact-line family: it collects the key
+ * at a high N·L while its neighbours do not, so it renders one band brighter than both,
+ * precisely where the eye expects a contact crease to be darker. A small cornice does not get
+ * a small highlight, it gets a wire.
+ *
+ * This is a real defect that shipped: the colossi plinth podium ran `roll: 0.13` -> a 6.2 cm
+ * crest, gilded, 2 m from the `guard` camera at 24 projected px, with the lit side landing at
+ * ndl 0.655 against the 0.62 that report quotes. Fixed at the call site in EgyptLevel.js.
+ *
+ * The floor is NOT enforced here on purpose. `height` (= 2*roll + h + 0.34) is what every roof
+ * deck and ledge in EgyptLevel positions from, several of them §8.1 contract surfaces, so a
+ * silent clamp would move contract geometry as a side effect of a shape fix. Callers pick
+ * `roll`; this note tells them what they are picking.
+ * ────────────────────────────────────────────────────────────────────────────────────────
  */
 export function corniceProfile({ h = 2.0, flare = 1.15, roll = 0.42, steps = 9 } = {}) {
   const p = [[0, 0]];
