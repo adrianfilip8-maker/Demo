@@ -135,13 +135,21 @@ Shots: `traversal`, `interior`, `temple`, `hero`. 1280×720, quality high.
   P1** — it is scored and reported on its own, and if it is null this recipe's `arris` goes to 0
   while the wall's is decided on the wall's evidence.
 
-- **P5 — `hieroglyph_gilded` on `hero`: a prediction of NO EFFECT.** |ΔfineP90| expected **< +2.0 %**
-  (texture-side +0.5 % at 13.5 mm/px). Registered in advance because a null is the *expected*
-  result and must not be read later as a failure of P1.
-  The gilded recipe's actual claim is **not** albedo: it is `arrisPolish 0.08`, a roughness notch on
-  the ring feeding a `spec 0.55 / gloss 64 / metal true` material — §7.3's "hard spec". **The albedo
-  lab is structurally blind to that**, so it is judged on the image at 8× on `hero` and on nothing
-  else. If the image shows no glint either, gilded's `arris` goes to 0.
+- **P5 — `hieroglyph_gilded` on `hero`: a prediction of NO EFFECT, on both of its routes.**
+  |ΔfineP90| expected **< +2.0 %** (texture-side +0.5 % at 13.5 mm/px). Registered in advance
+  because a null is the *expected* result and must not be read later as a failure of P1.
+
+  **AMENDED 10:34 UTC, before either arm booted** (this file's mtime is the receipt; the capture's
+  `report.json` timestamp is later) (§81.3's discipline: amend and timestamp, never
+  adjust afterwards). The gilded recipe's second route is `arrisPolish 0.08`, a roughness notch
+  feeding a `spec 0.55 / gloss 64 / metal true` material — §7.3's "hard spec" — and the albedo lab
+  was structurally blind to it. It is now measured rather than left as a caveat: lip roughness
+  (d 1–4 outside the cut) **0.6565 → 0.6345**, field bit-stable at 0.6493. Through
+  `specAmt ∝ (1 − 0.75·rgh)` that is **+3.1 % on the specular amount**, against a recipe this
+  file has already measured at **0.38 % of its gild mask over the bloom onset** at `spec 0.55`.
+  **So the roughness route is predicted null in the image too**, and P5 now predicts *both*.
+  *If both land null, gilded's `arris` goes to 0 and stays there* — the value would then be
+  decoration, and the record should say so rather than carry it.
 
 - **P6 — NULLS, and they are the error bar.** `sandstone_block`, `sandstone_worn`,
   `paving_courtyard`, `granite_pink`, `limestone_polished`, `mudbrick`, `ceiling_stars` are

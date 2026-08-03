@@ -14,7 +14,12 @@
     # then open http://127.0.0.1:5399/progress/records/abcheck.html
 
   Expected with the variable set:
-    {"metaEnv":"object","raw":"base","list":["base"],"hgOff":true,"granOff":true,"paveOff":true}
+    {"metaEnv":"object","raw":"base","list":["base"],"hgOff":true,"granOff":true,"paveOff":true,"hgArrisOff":true}
+
+  PREREG-hgarris2 uses the narrower key `hgarris` (the albedo lip alone, with the layout jitter
+  left live in both arms), so that flag is reported separately: with VITE_TEX_AB=hgarris expect
+  hgArrisOff true and hgOff/granOff/paveOff all FALSE — a control that turned off more than the
+  seal names is not that seal's control.
   With it unset, `raw` is null and all three flags are false.
 
   This page is the pre-flight. The receipt is the boot warning `Textures.init()` pushes into
@@ -26,6 +31,8 @@ import { TEX_AB, abOff } from '/src/textures/Canvas2D.js';
 document.getElementById('o').textContent = JSON.stringify({
   metaEnv: typeof import.meta.env, raw: import.meta.env?.VITE_TEX_AB ?? null,
   list: TEX_AB(), hgOff: abOff('hgrelief'), granOff: abOff('granite'), paveOff: abOff('pavecrack'),
+  hgArrisOff: abOff('hgarris'), hgLayoutOff: abOff('hglayout'),
 });
-window.__ABCHECK = { list: TEX_AB(), raw: import.meta.env?.VITE_TEX_AB ?? null };
+window.__ABCHECK = { list: TEX_AB(), raw: import.meta.env?.VITE_TEX_AB ?? null,
+  hgArrisOff: abOff('hgarris'), hgLayoutOff: abOff('hglayout'), granOff: abOff('granite') };
 </script>

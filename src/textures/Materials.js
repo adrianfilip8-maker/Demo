@@ -694,6 +694,9 @@ function carve(s, cut, line, o = {}) {
   const rb = Math.max(2, Math.round((bevelPx * size) / 1024));
   const cb = blurWrap(cut, size, rb, 2);
   const cw = blurWrap(cut, size, rb * 4, 2);
+  /* A second, intermediate blur that exists only for the arris — see the ring term below for
+   * why `cb` could not do the job and why `cw` is too wide. */
+  const cm = arrisIn > 0 ? blurWrap(cut, size, rb * 2, 2) : null;
   const chat = chatter > 0
     ? s.field(1.5, (u, v) => fbmN(u, v, 90, 3, 0.5, seed + 77) * 0.5 + 0.5)
     : null;
@@ -741,7 +744,31 @@ function carve(s, cut, line, o = {}) {
      * Physically it is edge wear, not lighting: three thousand years of hand, wind and rain take
      * the dirt film off an exposed arris and leave the sheltered floor of the cut holding it. */
     if (arris > 0) {
-      const ring = sat((cb[i] - cut[i]) * 3.0);
+      /* **Where the ring lands, which the first version got wrong, measured rather than argued.**
+       *
+       * `sat((cb - cut) * 3.0)` puts its whole weight in the first two texels outside the cut
+       * mask — which is the **bevel wall**, the surface this same loop is sinking by `depth * r`.
+       * So most of the lip was painted onto the darkest part of the carving and cancelled there.
+       * Profiled on the built Surface (luma against texels outside the cut, `hieroglyph_wall`,
+       * 10.16 mm/texel, control -> arris-on):
+       *
+       *     d texels    1       2       3       4       5       6
+       *     off      0.4533  0.4791  0.4779  0.4771  0.4790  0.4819    field 0.4926
+       *     on       0.4772  0.5145  0.5074  0.4973  0.4902  0.4867
+       *
+       * The lip cleared the field only at d = 2..4 and peaked at d = 2. **Above-field support was
+       * ~2-3 texels = 20-30 mm, not the 61 mm this comment used to claim** — the 61 mm is the
+       * support of the ring *term*, and most of that support sits below the field because it is
+       * on the bevel. At `interior`'s 20.3 mm/px that is 1.0-1.5 px and at `traversal`'s 34.3 it
+       * is 0.6-0.9 px, i.e. the feature the seal was asking a frame to show was **sub-pixel at
+       * the framing that holds 33 % of it.**
+       *
+       * Two changes, both from that profile. Gate on `(1 - r)` so the lip is suppressed exactly
+       * where the bevel is sunk — the same ramp, so the two cannot fight — and take the ring from
+       * a blur of twice the bevel radius so what is left after the gate is still wide. `cw`
+       * (4 x rb, 244 mm) was rejected for the same job when the height burr was written, and for
+       * the same reason: at that width it reads as a halo rather than an edge. */
+      const ring = sat((cm[i] - cut[i]) * 2.4) * (1 - r);
       if (ring > 0.01) {
         s.mixHex(i, arrisHex, ring * arris);
         // A worn arris is burnished as well as clean; a touch of gloss gives the spec term an
@@ -1797,8 +1824,18 @@ export const MATERIALS = {
        * cannot see a 20 %-coverage feature — §67.1's "coverage is not amplitude" applied at the
        * wrong end by the same file that recorded it. A re-seal wants `fineP90`, or `cov1` on a
        * glyph-adjacent sub-mask, and it wants a framing where the ring clears 2 px. That
-       * observation is post-hoc and licenses **re-sealing**, not keeping. */
-      const ramp = carve(s, cut, lines, { depth: 0.46, bevelPx: 3.0, lip: 0.12, bulge: 0.42, lineDepth: 0.62, seed: cx.seed + 5, arris: 0 /* was 0.22 */ });
+       * observation is post-hoc and licenses **re-sealing**, not keeping.
+       *
+       * RE-SEALED under `PREREG-hgarris2`, and the framing half turned out to matter more than
+       * the statistic half. `progress/records/ringpx.mjs` measures surface mm/px per material
+       * per framing (it reproduces this comment's own 20.6 for `interior` at 20.3), and the
+       * first seal had picked **the two framings where this feature is smallest**: the 61 mm
+       * ring is **1.78 px** at `traversal` — below the 2 px where it was measured to stop
+       * paying — and 3.01 px at `interior`. It is **4.51 px on `hero`, where `hieroglyph_gilded`
+       * is 29 % of frame**, 3.07 px on `temple` where `column_papyrus` is 54 %, and 20.9 px on
+       * `guard`. Three of the four recipes carrying the arris were unmeasurable at the framings
+       * the first seal chose, and the fourth was at the threshold. */
+      const ramp = carve(s, cut, lines, { depth: 0.46, bevelPx: 3.0, lip: 0.12, bulge: 0.42, lineDepth: 0.62, seed: cx.seed + 5, arris: 0.22 });
       freshCutTint(s, ramp, { amount: 0.16 });
       /* `freq` derived from a metre figure, not written as a bare cycle count — see
        * `PAINT_WEAR_M`. At 10.4 m of world per repeat and a 2.08 m cell this is 5 cycles/tile,
@@ -1994,9 +2031,11 @@ export const MATERIALS = {
        * 0.478 against face 0.629 with the raised class at 0.622, i.e. *below* the field. 0.16
        * rather than the wall's 0.22 because gold's own ramp already spends range across the cut
        * and doubling it would flatten the ramp's top. */
-      // Arris reverted with the rest of the family — see `hieroglyph_wall`. Measured null here
-      // too: `traversal` fineMed -0.3 %, `interior` +0.3 %, both inside the noise floor.
-      const ramp = carve(s, cut, lines, { depth: 0.42, bevelPx: 2.6, lip: 0.10, bulge: 0.5, lineDepth: 0.56, seed: cx.seed + 5, arris: 0 /* was 0.16 */, arrisHex: PAL.goldLight, arrisPolish: 0.08 });
+      /* Restored under `PREREG-hgarris2`. The first seal read this recipe as a null on
+       * `traversal` (fineMed -0.3 %) and `interior` (+0.3 %) — both framings where the ring is
+       * 2.25 px and 2.91 px. It is **29 % of `hero` at 4.51 px**, which is the framing that
+       * decides §7.3's gold line and which that seal never captured. */
+      const ramp = carve(s, cut, lines, { depth: 0.42, bevelPx: 2.6, lip: 0.10, bulge: 0.5, lineDepth: 0.56, seed: cx.seed + 5, arris: 0.16, arrisHex: PAL.goldLight, arrisPolish: 0.08 });
 
       // Gold leaf laid into the sunk glyphs over a red bole ground; the leaf lifts at the arrises.
       const lift = s.field(2, (u, v) => sat(warpN(u, v, 14, 4, 1.1, cx.seed + 31) * 1.4 + 0.5));
@@ -2106,9 +2145,12 @@ export const MATERIALS = {
       const cut = rasterMask(size, layout('cut'));
       const lines = rasterMask(size, layout('line'));
       const paint = rasterRGBA(size, layout('paint'));
-      // Arris reverted with the rest of the family — see `hieroglyph_wall`. Not measured in
-      // frame: this recipe holds under 1 % of both captured shots.
-      const ramp = carve(s, cut, lines, { depth: 0.50, bevelPx: 3.2, lip: 0.14, bulge: 0.52, lineDepth: 0.52, seed: cx.seed + 5, arris: 0 /* was 0.20 */ });
+      /* Restored with the family under `PREREG-hgarris2`, and flagged as **unscoreable by
+       * construction rather than merely unmeasured**: `ringpx.mjs` renders this recipe at
+       * **zero pixels in all fourteen framings**, which agrees with this file's own PREWARM note
+       * that it has no consumer in `Architecture.RECIPES` or `Props.MATERIALS`. Nothing authored
+       * here can appear in any frame until something wires it up. */
+      const ramp = carve(s, cut, lines, { depth: 0.50, bevelPx: 3.2, lip: 0.14, bulge: 0.52, lineDepth: 0.52, seed: cx.seed + 5, arris: 0.20 });
       freshCutTint(s, ramp, { amount: 0.18 });
       paintRemnants(s, ramp, paint, { survival: 0.48, freq: 4, seed: cx.seed + 9, edgeLoss: 0.68, fade: 0.44 });
       chiselMarks(s, { amount: 0.014, angle: -0.30, freq: 44, seed: cx.seed + 1, mask: m.edge });
@@ -2734,9 +2776,12 @@ export const MATERIALS = {
       /* Publish the joint mask so the build-time joint-sign assertion in `Textures._build()`
          covers this recipe too. It only reads `.joint`; there are no blocks here to id. */
       s.masonry = { joint: drum };
-      // Arris reverted with the rest of the family — see `hieroglyph_wall`. Not measured in
-      // frame: `column_papyrus` is absent from both captured shots.
-      const ramp = carve(s, textCut, textLine, { depth: 0.40, bevelPx: 2.4, lip: 0.09, bulge: 0.45, lineDepth: 0.60, seed: cx.seed + 5, arris: 0 /* was 0.18 */ });
+      /* Restored under `PREREG-hgarris2`, and this recipe is the reason the first seal's framing
+       * choice was the error rather than its statistic. "Absent from both captured shots" was
+       * true and was a fact about the shots: `column_papyrus` is **54.1 % of `temple`** — the
+       * largest single-material share of any framing in the set — at 19.9 mm/px, so its 61 mm
+       * ring is 3.07 px there. `temple` is now in the seal. */
+      const ramp = carve(s, textCut, textLine, { depth: 0.40, bevelPx: 2.4, lip: 0.09, bulge: 0.45, lineDepth: 0.60, seed: cx.seed + 5, arris: 0.18 });
       freshCutTint(s, ramp, { amount: 0.14 });
       /* `survival` 0.34 → 0.46. With the registers above landing, the band interior measured
        * relative local contrast **0.0231 in frame against `hieroglyph_wall`'s 0.0305**, and its

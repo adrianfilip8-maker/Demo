@@ -103,7 +103,68 @@ const out = await page.evaluate(async ({ names, OFF, MMPX, UV, SIZE, KNOBS }) =>
     const n = sz * sz, lum = new Float32Array(n);
     for (let i = 0; i < n; i++) lum[i] = (d.albedo[i * 4] * 0.2126 + d.albedo[i * 4 + 1] * 0.7152 + d.albedo[i * 4 + 2] * 0.0722) / 255;
     const tu = Array.isArray(r.tile) ? r.tile[0] : r.tile;
-    return { sz, lum, albedo: d.albedo, tile: tu, worldTile: tu * UV, mmPerTexel: (tu * UV) / sz * 1000 };
+    /* Glyph-adjacent sub-mask, taken from the HEIGHT field.
+     *
+     * Why height: the arris is albedo + roughness only (`carve()` writes `mixHex` and `rough`,
+     * never `s.h`), so `s.h` is bit-identical between the arms and a mask derived from it
+     * cannot be tuned by the treatment. Choosing the sub-mask from the *difference set* would
+     * be circular; choosing it from the control's albedo would still be arm-dependent.
+     * cut = texels sunk below a 12-texel local mean; ring = raised stone within RING texels
+     * of a cut texel. That is where a lip lives, by construction. */
+    const cutN = (() => {
+      const h = s.h, N2 = sz * sz;
+      // 12-texel separable box mean, wrapped (the tile is periodic).
+      const R = 12, tmp = new Float32Array(N2), lm = new Float32Array(N2);
+      for (let y = 0; y < sz; y++) { let acc = 0; for (let i = -R; i <= R; i++) acc += h[y * sz + ((i + sz) % sz)];
+        for (let x = 0; x < sz; x++) { tmp[y * sz + x] = acc / (2 * R + 1);
+          acc += h[y * sz + ((x + R + 1) % sz)] - h[y * sz + ((x - R + sz) % sz)]; } }
+      for (let x = 0; x < sz; x++) { let acc = 0; for (let i = -R; i <= R; i++) acc += tmp[((i + sz) % sz) * sz + x];
+        for (let y = 0; y < sz; y++) { lm[y * sz + x] = acc / (2 * R + 1);
+          acc += tmp[(((y + R + 1) % sz)) * sz + x] - tmp[(((y - R + sz) % sz)) * sz + x]; } }
+      let m = 0, m2 = 0; for (let i = 0; i < N2; i++) { const d2 = h[i] - lm[i]; m += d2; m2 += d2 * d2; }
+      m /= N2; const sdv = Math.sqrt(Math.max(1e-9, m2 / N2 - m * m));
+      const cut = new Uint8Array(N2);
+      for (let i = 0; i < N2; i++) if (h[i] - lm[i] < m - 0.75 * sdv) cut[i] = 1;
+      return cut;
+    })();
+    const RING = 6;                                   // texels; the measured p50 ring width
+    const ring = new Uint8Array(sz * sz);
+    {
+      // Chebyshev dilation of `cut` by RING, minus `cut` itself.
+      const dil = new Uint8Array(sz * sz), tmp = new Uint8Array(sz * sz);
+      for (let y = 0; y < sz; y++) for (let x = 0; x < sz; x++) { let v = 0;
+        for (let i = -RING; i <= RING && !v; i++) if (cutN[y * sz + ((x + i + sz) % sz)]) v = 1; tmp[y * sz + x] = v; }
+      for (let x = 0; x < sz; x++) for (let y = 0; y < sz; y++) { let v = 0;
+        for (let i = -RING; i <= RING && !v; i++) if (tmp[((y + i + sz) % sz) * sz + x]) v = 1; dil[y * sz + x] = v; }
+      for (let i = 0; i < ring.length; i++) ring[i] = dil[i] && !cutN[i] ? 1 : 0;
+    }
+    /* Chebyshev distance outside the cut, 0 = inside the cut, capped at 15. Wrapped, because a
+     * tile is periodic. Derived from `s.h`, which `carve()`'s arris never writes, so this is
+     * bit-identical between the arms — asserted below rather than assumed. */
+    const dist = new Uint8Array(sz * sz).fill(15);
+    {
+      for (let i = 0; i < dist.length; i++) if (cutN[i]) dist[i] = 0;
+      for (let pass = 1; pass <= 14; pass++) {
+        const prev = dist.slice();
+        for (let y = 0; y < sz; y++) for (let x = 0; x < sz; x++) {
+          const k = y * sz + x; if (prev[k] < pass) continue;
+          let near = 0;
+          for (let dy = -1; dy <= 1 && !near; dy++) for (let dx = -1; dx <= 1; dx++) {
+            if (prev[((y + dy + sz) % sz) * sz + ((x + dx + sz) % sz)] === pass - 1) { near = 1; break; }
+          }
+          if (near) dist[k] = pass;
+        }
+      }
+    }
+    return { sz, lum, albedo: d.albedo, tile: tu, worldTile: tu * UV, mmPerTexel: (tu * UV) / sz * 1000,
+      /* Raw authored roughness, NOT the shipped ORM: `derive()` runs `refineRoughness` and
+       * `packORM` (ormDiv 2) after this, so a delta here is what `carve()` wrote and not what the
+       * sampler reads. Included because `arrisPolish` is a roughness-only treatment and an
+       * albedo lab that ignored it would report "no effect" for a term it never looked at. */
+      rough: Float32Array.from(s.rough),
+      ring, cut: cutN, dist,
+      ringShare: +(100 * ring.reduce((a, b) => a + b, 0) / ring.length).toFixed(1),
+      cutShare: +(100 * cutN.reduce((a, b) => a + b, 0) / cutN.length).toFixed(1) };
   };
 
   const score = (b) => {
@@ -111,6 +172,41 @@ const out = await page.evaluate(async ({ names, OFF, MMPX, UV, SIZE, KNOBS }) =>
     let m = 0, dark = 0;
     for (let i = 0; i < b.lum.length; i++) { m += b.lum[i]; if (b.lum[i] < 0.2031) dark++; }
     res.mean = m / b.lum.length; res.darkTail = dark / b.lum.length;
+    /* Class value ordering at 1:1. A carving reads as cut because the raised edge is LIGHTER
+     * than the field and the recess is DARKER — a value *span* with the right sign, which is a
+     * different claim from "more band-pass energy" and needs its own statistic. §7.3's gold line
+     * ("hard spec + dark occlusion") is this quantity, not a contrast one. */
+    if (b.ring) {
+      let cs = 0, cn = 0, rs = 0, rn = 0, fs = 0, fn = 0;
+      for (let i = 0; i < b.lum.length; i++) {
+        if (b.cut[i]) { cs += b.lum[i]; cn++; }
+        else if (b.ring[i]) { rs += b.lum[i]; rn++; }
+        else { fs += b.lum[i]; fn++; }
+      }
+      res.cutL = cn ? cs / cn : NaN; res.ringL = rn ? rs / rn : NaN; res.fieldL = fn ? fs / fn : NaN;
+      res.spanRingCut = res.ringL - res.cutL;          // must be > 0 for a carving to read as cut
+      res.ringOverField = res.ringL - res.fieldL;      // must be > 0 for the lip to be a lip
+      /* Luma against distance OUTSIDE the cut boundary, in texels. A fixed dilation cannot
+       * separate the bevel wall (genuinely dark) from the lip beyond it, and averaging them
+       * reports a lip as absent when it is merely outnumbered — §67.1 again. The profile does
+       * not average them: it shows where the minimum is, where the maximum is and how wide. */
+      const prof = [], profN = [];
+      for (let d = 0; d <= 14; d++) { prof.push(0); profN.push(0); }
+      for (let i = 0; i < b.dist.length; i++) {
+        const d = b.dist[i];
+        if (d >= 1 && d <= 14) { prof[d] += b.lum[i]; profN[d]++; }
+      }
+      res.profile = prof.map((v, d) => (profN[d] ? +(v / profN[d]).toFixed(4) : null));
+      res.profileN = profN;
+      if (b.rough) {
+        let rr = 0, rn = 0, rf = 0, nf = 0;
+        for (let i = 0; i < b.rough.length; i++) {
+          if (b.dist[i] >= 1 && b.dist[i] <= 4) { rr += b.rough[i]; rn++; }
+          else if (b.dist[i] >= 12) { rf += b.rough[i]; nf++; }
+        }
+        res.roughRing = rn ? rr / rn : NaN; res.roughField = nf ? rf / nf : NaN;
+      }
+    }
     res.sd11 = sd(b.lum);
     res.squint8 = sd(box(b.lum, b.sz, Math.max(8, b.sz >> 3)));
     for (const mmpx of MMPX) {
@@ -125,13 +221,33 @@ const out = await page.evaluate(async ({ names, OFF, MMPX, UV, SIZE, KNOBS }) =>
         f.push(Math.abs(L[i] - g1[i]) / base);
         c.push(Math.abs(g1[i] - g6[i]) / base);
       }
-      f.sort((x, y) => x - y); c.sort((x, y) => x - y);
+      /* Ring-restricted population. The mask is texel-resolution; box-downsample it to `w` and
+       * keep an output cell only if the ring owns >= 50% of it, so a cell straddling the cut and
+       * the field is not counted as either. */
+      const fR = [];
+      if (b.ring) {
+        const acc = new Float32Array(w * w), cnt = new Float32Array(w * w);
+        for (let y = 0; y < b.sz; y++) for (let x = 0; x < b.sz; x++) {
+          const k = ((y * w / b.sz) | 0) * w + ((x * w / b.sz) | 0);
+          acc[k] += b.ring[y * b.sz + x]; cnt[k]++;
+        }
+        for (let i = 0; i < w * w; i++) if (cnt[i] && acc[i] / cnt[i] >= 0.5) {
+          const base = Math.max(0.02, g14[i]);
+          fR.push(Math.abs(L[i] - g1[i]) / base);
+        }
+      }
+      f.sort((x, y) => x - y); c.sort((x, y) => x - y); fR.sort((x, y) => x - y);
       const med = (a) => a[a.length >> 1];
+      const p = (a, q) => (a.length ? a[Math.min(a.length - 1, Math.floor(q * a.length))] : NaN);
       res.at[mmpx] = {
         px: w,
         fineMed: +med(f).toFixed(4), coarseMed: +med(c).toFixed(4),
+        fineP90: +p(f, 0.9).toFixed(4), fineP75: +p(f, 0.75).toFixed(4),
         cov1: +(100 * f.filter((v) => v >= 0.01).length / f.length).toFixed(1),
         covC2: +(100 * c.filter((v) => v >= 0.02).length / c.length).toFixed(1),
+        ringN: fR.length,
+        ringFineMed: fR.length ? +med(fR).toFixed(4) : null,
+        ringCov1: fR.length ? +(100 * fR.filter((v) => v >= 0.01).length / fR.length).toFixed(1) : null,
       };
     }
     return res;
@@ -152,6 +268,10 @@ const out = await page.evaluate(async ({ names, OFF, MMPX, UV, SIZE, KNOBS }) =>
     rows.push({
       name, sz: B.sz, worldTile: +B.worldTile.toFixed(2), mmPerTexel: +B.mmPerTexel.toFixed(2),
       changedPct: +(100 * diff / A.lum.length).toFixed(2),
+      ringShare: B.ringShare, cutShare: B.cutShare,
+      /* The sub-mask must be arm-independent by construction; assert it rather than assume it. */
+      ringIdentical: (() => { for (let i = 0; i < A.ring.length; i++) if (A.ring[i] !== B.ring[i]) return false;
+        for (let i = 0; i < A.dist.length; i++) if (A.dist[i] !== B.dist[i]) return false; return true; })(),
       off: score(A), on: score(B),
       pngA: KNOBS.__png ? await toPNG(A.sz, A.sz, A.albedo) : null,
       pngB: KNOBS.__png ? await toPNG(B.sz, B.sz, B.albedo) : null,
@@ -172,21 +292,46 @@ const pc = (a, b) => (a === 0 ? 'n/a' : `${b > a ? '+' : ''}${(100 * (b - a) / a
 for (const r of out) {
   if (r.err) { console.log(`${r.name}: ${r.err}`); continue; }
   console.log(`\n=== ${r.name}  size ${r.sz}  worldTile ${r.worldTile} m  ${r.mmPerTexel} mm/texel  ` +
-    `| arm OFF="${OFF}" vs shipped | ${r.changedPct}% of texels differ`);
+    `| arm OFF="${OFF}" vs shipped | ${r.changedPct}% of texels differ` +
+    (r.ringShare != null ? `  | height-derived masks: cut ${r.cutShare}%, ring ${r.ringShare}%, arm-independent ${r.ringIdentical}` : ''));
   console.log('  stat'.padEnd(22) + 'OFF'.padStart(10) + 'shipped'.padStart(10) + 'delta'.padStart(10));
   const line = (k, a, b, f = 4) => console.log(`  ${k}`.padEnd(22) + a.toFixed(f).padStart(10) + b.toFixed(f).padStart(10) + pc(a, b).padStart(10));
   line('meanAlbedo', r.off.mean, r.on.mean);
   line('darkTail', r.off.darkTail, r.on.darkTail);
   line('sd 1:1', r.off.sd11, r.on.sd11);
   line('squint sd 1/8', r.off.squint8, r.on.squint8);
+  if (r.off.ringL != null) {
+    line('cut luma', r.off.cutL, r.on.cutL);
+    line('ring luma', r.off.ringL, r.on.ringL);
+    line('field luma', r.off.fieldL, r.on.fieldL);
+    line('span ring-cut', r.off.spanRingCut, r.on.spanRingCut);
+    line('ring - field', r.off.ringOverField, r.on.ringOverField);
+    if (r.off.roughRing != null && !isNaN(r.off.roughRing)) {
+      line('rough d1-4 (lip)', r.off.roughRing, r.on.roughRing);
+      line('rough d>=12 (fld)', r.off.roughField, r.on.roughField);
+    }
+    const mm = r.mmPerTexel;
+    console.log('  luma by texels outside the cut (field = ' + r.on.fieldL.toFixed(4) + '):');
+    console.log('    d(tx)  ' + [1,2,3,4,5,6,7,8,10,12,14].map((d)=>String(d).padStart(8)).join(''));
+    console.log('    mm     ' + [1,2,3,4,5,6,7,8,10,12,14].map((d)=>(d*mm).toFixed(0).padStart(8)).join(''));
+    console.log('    OFF    ' + [1,2,3,4,5,6,7,8,10,12,14].map((d)=>String(r.off.profile[d] ?? '-').padStart(8)).join(''));
+    console.log('    ON     ' + [1,2,3,4,5,6,7,8,10,12,14].map((d)=>String(r.on.profile[d] ?? '-').padStart(8)).join(''));
+    console.log('    ON-fld ' + [1,2,3,4,5,6,7,8,10,12,14].map((d)=>(r.on.profile[d]==null?'-':(r.on.profile[d]-r.on.fieldL).toFixed(4))).map((v)=>String(v).padStart(8)).join(''));
+  }
   for (const mm of MMPX) {
     const a = r.off.at[mm], b = r.on.at[mm];
     if (a?.note) { console.log(`  @${mm} mm/px: ${a.note} (${a.px} px)`); continue; }
-    console.log(`  @${mm} mm/px  (${b.px} px across the tile)`);
+    console.log(`  @${mm} mm/px  (${b.px} px across the tile; ring sub-mask ${b.ringN} cells)`);
     line('   fineMed', a.fineMed, b.fineMed);
+    line('   fineP75', a.fineP75, b.fineP75);
+    line('   fineP90', a.fineP90, b.fineP90);
     line('   coarseMed', a.coarseMed, b.coarseMed);
     line('   cov1 %', a.cov1, b.cov1, 1);
     line('   covC2 %', a.covC2, b.covC2, 1);
+    if (a.ringFineMed != null && b.ringFineMed != null) {
+      line('   ringFineMed', a.ringFineMed, b.ringFineMed);
+      line('   ringCov1 %', a.ringCov1, b.ringCov1, 1);
+    }
   }
 }
 await browser.close(); server.close();
