@@ -9063,7 +9063,18 @@ same tail region, luma P20/P80 separation:
 | authored (flat-lit) | 4.8 | 7.0 | 169.3 | **164.5** |
 | delivered (`char13`) | 36.7 | 43.5 | 82.7 | **46.0** |
 
-**27.9 % of the authored separation survives to the frame.** The pale band lands at 82.7 where it
+> **CORRECTED by SHADING — the 27.9 % below is a P80 artefact and the real figure is 52.3 %.**
+> Splitting the two bands by Otsu inside a printed box gives authored separation **162.3** and
+> delivered **84.8**. The authored side reproduces this section exactly (7.0 / 169.3); the
+> delivered side does not — my P20 36.7 and P50 43.5 reproduce (37.5 / 41.8) but my **P80 82.7
+> does not**, against 122.8 and 116.5 on SHADING's boxes. **The pale band is only ~25 % of any
+> all-tail box, so P80 falls inside the pale class's bottom tail and reports the crop's BAND MIX
+> rather than the band separation.** Change how much dark ring the crop includes and the number
+> moves. That is the identical denominator failure §107.2 congratulates itself for catching in
+> Weber — committed one statistic later, in the number I then quoted as the headline. **Catching a
+> class of error once does not immunise the next line.** See §112.1.
+
+~~**27.9 % of the authored separation survives to the frame.**~~ The pale band lands at 82.7 where it
 was authored at 169.3 — half its luma — so the tail reads as *grey against darker navy* rather than
 *cream against near-black*.
 
@@ -9363,3 +9374,97 @@ holding — **which may be the same question.** Stated as a hypothesis with its 
 grade term accounts for the b−r swing, restoring it should simultaneously warm the architecture,
 raise the character's authored contrast, and clear the sphinxes, and any fix that moves only one of
 the three is not the cause.
+
+---
+
+## §112 — the compression claim collapses on all three features, and the loss is lighting, not the chain
+
+SHADING measured §106.5's two untested claims and re-measured §107's tested one. **All three go the
+same way: the features read.** Nothing in `src/` was changed, because nothing measured here is
+broken — every lever tested moves the numbers by less than the noise.
+
+| feature | delivered | authored | retained |
+|---|---|---|---|
+| face mask vs muzzle | 164.4 L | 203.8 L | **80.5 %** |
+| chest V | L 187.0, hue 31°, R/G 1.20 | 222.6 | reads; local step ~170 L |
+| tail pale vs ring | 84.8 | 162.3 | **52.3 %** |
+
+The chest V is *the second-brightest surface on the character* and replicates in `sly-perch` at
+L 189.7, 2.7 L from the closeup. The mask is the darkest thing on the head, uniform to **sd 1.3**.
+"Compressed toward uniform dark blue" is not what any of the three does.
+
+### 112.1 My P80 was the same mistake I had just caught in Weber
+
+§107 replaced Weber with absolute separation because Weber's denominator was pathological, wrote
+that up as a lesson — *"ask what your denominator is doing on this data"* — and then quoted a
+**P80** that fails for the same reason. The pale band is ~25 % of an all-tail box, so P80 sits
+inside its bottom tail and measures the crop's band mix. Otsu splits the two populations and the
+figure goes 27.9 % → **52.3 %**.
+
+> **Catching a class of error in one line does not immunise the next.** The Weber fix and the P80
+> bug are the same defect, one paragraph apart, written by the same author in the same hour.
+> Neither a self-control nor a duplicate arm would have caught it: both statistics are stable,
+> reproducible, and wrong about what they name.
+
+SHADING also corrected **its own** working number the same way: a first chest statistic of "34.8 %
+retained" paired cream against shirt, which are **not adjacent** — a near-black band separates
+them — and the same statistic reads **123 %** on `sly-perch` where the sampled shirt is shadowed.
+A non-adjacent pair measures which neighbour you picked.
+
+### 112.2 The loss factorises, and it is illumination — the chain is net restorative
+
+`chain.mjs` inverts the grade (COMPOSITE_FRAG 1058–1087 transcribed verbatim, round-trip residual
+1e-5 display bytes) so no lighting term is fitted. For an adjacent co-oriented pair the pedestal
+cancels and `scene_A − scene_B = T·(albedo_A − albedo_B)`:
+
+| pair | illumination factor | chain + encode factor |
+|---|---|---|
+| mask vs muzzle | 1.546 | 0.52 |
+| chest V vs shirt | 0.703 | 0.50 |
+| **tail pale vs ring** | **0.294** | **1.93** |
+
+**The tail is in shade and the light delivers 29 % of the authored pair separation. The chain then
+returns 1.93× — it is giving contrast back, not eating it.** So §107's "72 % lost" is ~70 %
+*lighting doing its job* and ~0 % chain, and the routing that followed from it was aimed at the
+wrong stage. Neutralising each PostFX stage individually moves the chest pair by ≤1.5 L and the
+tail by ≤7 L: **no PostFX knob is the lever.**
+
+The 0.52 / 0.50 / 1.93 spread is 3.9× and matches §70.2/§85.2's independently derived log-slope
+frontier (0.625 dark against 0.244 bright, 2.56×) in direction and rough size — two derivations,
+different methods, same frontier.
+
+### 112.3 The rim gate is exonerated a second time, and opening it is a regression
+
+Two-sided silhouette step, 3 px inside against 3 px outside, starting 3 px in to clear the ink
+shell, on one-boot bit-exact arms:
+
+| shot | norim | shipping | **gateoff** |
+|---|---|---|---|
+| `hero` | −30.5 | −26.1 (+4.4) | −25.8 (+4.7) |
+| `sly-closeup` | −15.1 | −12.4 (+2.7) | **−23.1 (−8.0)** |
+| `night` | +9.6 | +11.7 (+2.1) | **−0.9 (−10.6)** |
+
+**Opening the gate destroys silhouette separation on two of three shots**, because it lifts the
+*background* more than the subject — `sly-closeup` outer 55.9 → 73.5 L against inner 40.9 → 50.4.
+That is §8's defect measured for the first time as a **cost to §7.3's condition** rather than as an
+artefact count.
+
+And `rimSkinExempt: 1.0` was already in both `char12` and `char13`, so the exemption was live in
+the frame CHARACTER reported and cannot explain what it saw. The shipped rim contributes +1.9 to
++4.4 L of net step, ~40 % of which its own bloom cancels by lifting the background. On `hero` the
+subject sits 26 L *darker* than its background with only 21 % of boundary pixels brighter inside —
+**he separates by value and ink, not by rim.** CHARACTER's read is fair; the cause is amplitude on
+a 111–138 px subject inside a ~2.5–3 px ink shell, not a gate.
+
+### 112.4 A wrong hue caught before it was quoted
+
+Over the whole silhouette band, `base − norim` reads hue **75–164** — green, against the palette's
+200. Restricted to band pixels the ink pass does not own (3–8 px inside, `norim` L ≥ 55) it reads
+**190–202**, matching the authored 200 and a forward calculation through both the scene-linear and
+display-space paths (187–194).
+
+The green was **the ink pass responding to the rim**: a brighter pixel takes more ink and *warmer*
+ink (`#1a1210`, R>G>B), suppressing B in the difference. Reported together because either number
+alone misleads — and it is the third time today an A/B difference has been contaminated by a term
+that reacts to the treatment rather than being held fixed by it (§105.1's fringe survival, §111's
+`mudbrick` null, this).
