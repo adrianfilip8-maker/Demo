@@ -208,7 +208,36 @@ vec3 slyAgxContrast( vec3 x ) {
          - 6.868 * x2 * x + 0.4298 * x2 + 0.1191 * x - 0.00232;
 }
 
-vec3 slyAgX( vec3 color, float exposure ) {
+/* Highlight-detail shoulder. KNOWN_ISSUES §68 measured texture coverage collapsing with
+   brightness (dark surfaces 73-82%, bright 39-46%) and §70.2 attributed it to this curve:
+   the log-log display slope G = dlnD/dlnc runs 0.625 in the dark bin against 0.244 in the
+   bright one, so a texture modulation must be 2.56x larger to survive in a highlight.
+
+   The governing identity is the fundamental theorem of calculus, not a curve shape argument:
+   the MEAN of d(ln poly)/dx across any band equals ( ln poly(b) - ln poly(a) ) / (b - a) —
+   fixed entirely by the curve's values at the band's two ENDS, so no reshaping INSIDE the band
+   can change it. (G inherits this only up to the sRGB encode's mild nonlinearity: treat the
+   identity as exact for the tonemap's own log-slope, and the measured frontier table as the
+   authority for G.) Since poly is bounded by display white, buying highlight slope REQUIRES
+   lowering the curve below the highlights — holding the upper-mid anchor fixed, the ceiling on
+   that mean is x1.19 even if all separation above scene ~4.4 is sacrificed, against a x2.56
+   gap. So this knob does not "recover" detail for free; it TRADES brightness for it,
+   and it is a look change. It is cheaper than the only lever previously sized: at matched
+   detail gain (x1.5) it holds lit sandstone at L 180 against exposure's L 164, and shadow at
+   L 52 against L 37.
+
+   b = 1.0 makes both branches reduce to poly(x) identically, so the default is bit-exact. */
+vec3 slyAgxShoulder( vec3 p, vec3 x, float b ) {
+  if ( b == 1.0 ) return p;
+  const float xLo = 0.60, xHi = 0.86;
+  float P1 = slyAgxContrast( vec3( 1.0 ) ).x;
+  float k  = pow( max( slyAgxContrast( vec3( xLo ) ).x, 1e-9 ) / P1, b - 1.0 );
+  vec3 lo = p * k;
+  vec3 hi = P1 * pow( max( p, vec3( 1e-9 ) ) / P1, vec3( b ) );
+  return mix( lo, hi, smoothstep( vec3( xLo ), vec3( xHi ), x ) );
+}
+
+vec3 slyAgX( vec3 color, float exposure, float shoulder ) {
   const mat3 inset = mat3(
     vec3( 0.856627153315983, 0.137318972929847, 0.11189821299995 ),
     vec3( 0.0951212405381588, 0.761241990602591, 0.0767994186031903 ),
@@ -227,7 +256,9 @@ vec3 slyAgX( vec3 color, float exposure ) {
   color = log2( color );
   color = ( color - minEv ) / ( maxEv - minEv );
   color = clamp( color, 0.0, 1.0 );
+  vec3 agxX = color;                       // normalised log-exposure, kept for the shoulder
   color = slyAgxContrast( color );
+  color = slyAgxShoulder( color, agxX, shoulder );
   color = outset * color;
   color = pow( max( color, vec3( 0.0 ) ), vec3( 2.2 ) );
   color = SLY_REC2020_TO_SRGB * color;

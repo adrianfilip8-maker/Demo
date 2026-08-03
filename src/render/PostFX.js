@@ -383,6 +383,24 @@ const TUNE = {
   // With that fixed the lift became a double correction and blew the stone out to white,
   // which is what AgX then desaturated into pale lavender.
   exposure: 0.95,
+  /* AgX highlight-shoulder boost — the §68/§70 tone-curve item (task #32). Multiplies the
+     tonemap's log-log slope in the highlights, which is where §68.1 measured texture coverage
+     collapsing (bright bin 39-46% against dark 73-82%).
+
+     1.0 is BIT-IDENTICAL to the shipped curve and is the shipped value; nothing changes until
+     this is moved. It is NOT a free recovery — see the derivation at `slyAgxShoulder` in
+     passes/Common.js: highlight slope can only be bought by darkening the upper mid-tones, so
+     this is a LOOK CHANGE and ships only on a frame verdict. Modelled cost on the grey axis
+     (scratchpad/toneclosed.mjs, chain validated to 0.35 L against the row at line ~524):
+
+       b      G@lit-sandstone   L(sand)  L(mid)  L(shadow)
+       1.00   0.191  x1.00      202.2    151.4   65.1
+       1.20   0.267  x1.40      186.9    131.4   55.3
+       1.50   0.382  x2.00      166.5    105.8   42.8
+
+     Poke `postfx.tune.toneShoulder` then call `setToneShoulder()`, or set the uniform and read
+     it back with `toneState()` — §40: score the value the shader got, not the one requested. */
+  toneShoulder: 1.0,
   contrast: 1.08,
   /* AgX desaturates hard; the sandstone has to be pushed back. **But this is applied BEFORE
      the tonemap** (line ~541, `c = mix(vec3(l), c, uSaturation)`, with `slyAgX` at ~554), so it
@@ -892,7 +910,7 @@ uniform sampler2D uAO;
 uniform sampler2D uDepth;
 uniform vec2  uTexel;
 uniform float uTime;
-uniform float uExposure, uContrast, uSaturation;
+uniform float uExposure, uContrast, uSaturation, uToneShoulder;
 uniform float uBloomIntensity, uSplitStrength, uVignette, uChroma, uGrain;
 uniform vec2  uSplitRange;
 uniform float uAOEnabled, uEdgeEnabled, uBloomEnabled, uInkStrength;
@@ -1063,7 +1081,7 @@ void main() {
   c = SLY_PIVOT * pow( max( c, vec3( 1e-6 ) ) / SLY_PIVOT, vec3( uContrast ) );
 
   /* ---- tonemap: exactly once, here. Exposure is already folded in above, so pass 1. ---- */
-  c = slyAgX( c, 1.0 );
+  c = slyAgX( c, 1.0, uToneShoulder );
   // AgX returns linear sRGB. Nothing downstream encodes for us — a ShaderMaterial writing to
   // the canvas doesn't get three.js's output conversion — so do it here, once.
   c = slyLinearToSrgb( c );
@@ -1301,6 +1319,7 @@ export class PostFX {
         uTexel: { value: new THREE.Vector2() },
         uTime: { value: 0 },
         uExposure: { value: this.tune.exposure },
+        uToneShoulder: { value: this.tune.toneShoulder },
         uContrast: { value: this.tune.contrast },
         uSaturation: { value: this.tune.saturation },
         uBloomIntensity: { value: this.tune.bloomIntensity },
@@ -1486,6 +1505,37 @@ export class PostFX {
       clamped: rawPx.y < c.z || rawPx.y > c.w || rawPx.x < c.z || rawPx.x > c.w,
       aoEnabled: cu.uAOEnabled.value > 0.5, aoStrength: cu.uAOStrength.value, aoDepth: cu.uAODepth.value,
       aoTint: [...cu.uAOTint.value.toArray()].map((v) => +v.toFixed(4)),
+    };
+  }
+
+  /**
+   * Push `tune.toneShoulder` into the composite. Returns the value the shader will actually
+   * sample, so an A/B arm can assert it rather than assume it (§40: the decisive arm that never
+   * ran was a knob whose requested value was never the applied one).
+   *
+   * Deliberately a setter rather than a per-frame write in `update()`: KNOWN_ISSUES §80 records
+   * `uRimGain` becoming a per-frame write, which made poking that uniform silently revert.
+   */
+  setToneShoulder(b) {
+    if (b !== undefined) this.tune.toneShoulder = b;
+    const u = this.compositeMat?.uniforms?.uToneShoulder;
+    if (!u) return null;
+    u.value = this.tune.toneShoulder;
+    return u.value;
+  }
+
+  /** Readback for capture arms and for `report.json` provenance. */
+  toneState() {
+    const u = this.compositeMat?.uniforms;
+    if (!u) return { available: false };
+    return {
+      available: true,
+      toneShoulder: u.uToneShoulder.value,
+      exposure: u.uExposure.value,
+      contrast: u.uContrast.value,
+      saturation: u.uSaturation.value,
+      // bit-identity guarantee: at exactly 1.0 the shoulder's two branches coincide
+      shippedCurve: u.uToneShoulder.value === 1.0,
     };
   }
 

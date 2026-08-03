@@ -7207,3 +7207,81 @@ in which nobody will ask for one. Recorded as the shape the test should take, no
 Node launched at **ppid 4067**, not 1. Detected by walking `/proc/<pid>/cmdline` and reading ppid
 from `/proc/<pid>/stat` — **never `pgrep -f`, which is what matched the wrapper the last two times.**
 Wrapper killed, ppid re-verified as 1, run confirmed holding the lock.
+
+
+---
+
+## §85 — no curve fixes it either: a ceiling theorem that turns task #32 into a look call
+
+SHADING on task #32. **The instrument §70.2 used was destroyed by the rollback and was rebuilt and
+re-validated**, with both of §70.3's traps live again and both re-avoided: matrices parsed **by name**
+with a rec2020 round-trip self-check, and validation taken from `PostFX.js:524` rather than from
+`bloomcalc.mjs`'s comment. It reproduces four recorded numbers, three to the digit — grey row
+**0.35 L** (§70.3's exact figure), `G(scene 3) = 0.084`, contrast 1.25 → **0.066**, exposure 0.182 →
+L **126.0** against a recorded 125.7.
+
+### 85.1 One number is declared non-quotable rather than reconciled
+
+§70.2's bin **ratio** of 0.390 is computed over **in-frame material base luma** — a population the
+offline instrument does not have. Its proxy gives 0.319.
+
+> **Different populations, so the ratio is not quotable from this instrument.** Designed on
+> point-wise `G` instead.
+
+Fifth section in this ledger to refuse a number on population grounds (§56.1, §58.3, §72.7, §77.6,
+§85.1), and the first where the author had every incentive to call 0.319 a confirmation of 0.390.
+
+### 85.2 The ceiling theorem — the main result, and it cost no capture
+
+For any curve, the **mean** of `d(ln poly)/dx` across a band equals
+`(ln poly(hi) − ln poly(lo)) / (hi − lo)`. It depends **only on the endpoint values**. *No reshaping
+inside the band can change it.*
+
+Since `poly` is bounded above by display white, **buying highlight slope requires darkening below the
+highlights.** Holding the upper-mid anchor fixed, the ceiling is **×1.19** — and that is with *every*
+sky gradient and specular rolloff above scene ≈4.4 sacrificed — against §70.2's **×2.56** gap.
+
+> **§70.2 established that no scalar fixes it. §85.2 generalises: no *curve* fixes it either.**
+>
+> Task #32 is therefore not "find a better curve". It is **"decide how much brightness to trade"** —
+> which is a look call, not a correctness one, and belongs to whoever owns the art direction.
+
+That is a genuinely different kind of result from everything else in this file: not a measurement of
+what is, but a proof of what cannot be. It closes a search space rather than a question.
+
+### 85.3 A cheaper lever, and a rejected variant recorded so it is not re-derived
+
+At matched ×1.5 detail gain, the **shoulder** holds lit sandstone at **L 180 against exposure's 164**,
+and shadow at **52 against 37** — materially cheaper than exposure, the only lever previously sized.
+
+A **redistributive variant that pins both curve ends was built and rejected on measurement**: it sags
+the whole mid-range and is worse at matched gain. Recorded precisely so the next reader does not
+rebuild it.
+
+Shipped as `TUNE.toneShoulder`, **default 1.0 = bit-exact** (both branches reduce to `poly(x)`). And
+the model→driver gap was closed *before* spending a capture, the §24.6 way: the real `GLSL_AGX`
+compiled on the harness's own SwiftShader, `glError 0`, **max |shader − model| = 0 of 255** across 24
+radiances including off-grey colours.
+
+### 85.4 Finding #10 is task #32 on a second population
+
+**The observation is right and the mechanism is wrong** — §78's shape for the third time. It is *not*
+clipping: at `flame`'s **shipped** intensity only **37%** of authored saturation survives, and at ×1.0
+with nothing pinned it is already **56%**. That is progressive AgX per-channel compression, not an
+on/off clip.
+
+**The trap worth carrying:** *raising `emissiveIntensity` moves it monotonically toward white* — so
+the obvious response to "the coals don't read as fire" produces **exactly GEOMETRY's "pale grey-cream"**
+(§82.3). The lever lives in PROPS' file, so SHADING routed rather than took it.
+
+**Finding #10 and task #32 are the same defect on two populations.**
+
+### 85.5 A live trap the rollback re-opened, now tracked
+
+`bloomcalc.mjs` still quotes the row its own comment retracts. **§70.3's annotation was itself lost in
+the rollback**, because that file lived only in an ephemeral scratchpad — so the trap that cost one
+run 39 L was live again for the next reader.
+
+Restored, and the file is now **tracked in `progress/records/`** rather than left in scratch. §83.3
+rule 2 in its first concrete application: *a warning that lives only in a scratchpad is one container
+restart from not existing.*
