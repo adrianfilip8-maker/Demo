@@ -50,6 +50,11 @@ import { Cane } from './Cane.js';
  *
  * Tokens:
  *   `noruff` — omit the neck ruff row and both chest ruff rows (KNOWN_ISSUES §96.4 attribution).
+ *   `tuftbias40` — fur-clump normal bias 0.82 → 0.40, i.e. arm B of `PREREG-tuftbias.md`.
+ *     Scoped deliberately to the **default** (`TUNE.tuftShadeMix`) only: the one explicit
+ *     per-row override in the file (the boot-cuff row at 0.90) is individually justified at its
+ *     site against a different failure — a blown lit band on near-white cloth — and is not the
+ *     population this arm is about. Widening the token to it would put two treatments in one arm.
  */
 function charABRaw() {
   try {
@@ -2775,7 +2780,10 @@ export class SlyModel {
       sg: mb.newSg(), color: 0xffffff, flat: 0.52, tipW: 0.88,
       ...o,
       group: o.group ? (TUFT_GROUP[o.group] ?? o.group) : undefined,
-      shadeMix: o.shadeMix ?? TUNE.tuftShadeMix,
+      /* Read per call, never latched — `charABRaw`'s note records why: a lab that builds both
+         arms in one process cannot change a value frozen into a module constant, and a latched
+         flag reports the first arm twice. Empty token is the shipped 0.82 path. */
+      shadeMix: o.shadeMix ?? (CHAR_AB('tuftbias40') ? 0.40 : TUNE.tuftShadeMix),
       width: (o.width ?? 0.015) * WF,
       length: (o.length ?? 0.05) * TUNE.tuftLen,
     });
