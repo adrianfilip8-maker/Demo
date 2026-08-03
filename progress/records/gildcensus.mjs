@@ -248,18 +248,23 @@ for (const recipeName of names) {
   }
 
   /**
-   * Does a logged sign actually leave a mark in the RELIEF?
+   * Does a logged sign leave a mark in the RELIEF? — **register-dependent, and only the seam row
+   * is affected. Read this table with `gildsil.mjs`, which is the authority.**
    *
-   * It is not a given, and on this recipe it turns out mostly not to. `glyphArchitrave` fills the
-   * whole band white in `'cut'` mode before calling `rowRegister`, so a sign's SILHOUETTE adds
-   * nothing to the cut mask — it is already inside the cut. The only pass that can still incise
-   * it is `'line'`, and `drawGlyph` returns immediately in that mode for any glyph without an
-   * interior-detail `d()` path. So a sign with no `d()` is drawn, logged, counted by every census
-   * — and is invisible in the height field.
+   * `glyphArchitrave` fills the seam band white in `'cut'` mode *before* calling `rowRegister`,
+   * so in THAT register a sign's silhouette adds nothing — it is already inside the cut — and the
+   * only pass that can still incise it is `'line'`, which `drawGlyph` skips entirely for any
+   * glyph with no interior-detail `d()`. The mid-tile frieze a few lines below has **no such
+   * fill**, so there its silhouettes *are* the cut mask and `d()` decides nothing.
    *
-   * Measured, not inferred: height p2..p98 spread inside each sign's own box, against the spread
-   * of the band it sits in. A sign that is incised has a larger spread than its band; a sign that
-   * is not has the band's.
+   * `gildsil.mjs` settles it bit-exactly by neutralising the silhouette path and rebuilding:
+   * with silhouettes off the seam row moves **8.50e-6** and the frieze **4.63e-2**, a factor of
+   * 5454. So `d()` predicts relief contribution in the row and predicts nothing in the frieze.
+   *
+   * The spread column below is kept because it is what first pointed here, but it is NOT the
+   * evidence: p2..p98 inside a sign's box also contains the sunk-panel bevel and the ashlar
+   * joints, so it separates the two populations by only 1.4x where the bit-exact A/B separates
+   * them by 5454x. A confounded statistic that points the right way is still not proof.
    */
   const Hf = Float64Array.from(got.h);
   const spread = (x0, y0, x1, y1) => {
@@ -287,10 +292,16 @@ for (const recipeName of names) {
     const med = (a) => (a.length ? a.map((e) => e.s).sort((p, q) => p - q)[a.length >> 1] : NaN);
     const ys = list.map((g) => g.y), hs = list.map((g) => g.h);
     const bandSpread = spread(0, Math.min(...ys), sz, Math.max(...ys.map((y, i) => y + hs[i])));
+    /* Only the seam row is cut-filled, so only there does a missing d() silence a sign. */
+    const filled = gname === 'row';
     console.log(`  ${gname.padEnd(7)} whole-band spread ${bandSpread.toFixed(4)}` +
       `   signs WITH d(): n=${withD.length} median ${med(withD).toFixed(4)}` +
       `   WITHOUT d(): n=${without.length} median ${med(without).toFixed(4)}`);
-    if (without.length) console.log(`          silent-in-relief signs: ${[...new Set(without.map((e) => e.n))].join(' ')}`);
+    if (without.length) {
+      console.log(filled
+        ? `          band is cut-filled, so these ${without.length} of ${withD.length + without.length} placements reach the relief ONLY as nothing: ${[...new Set(without.map((e) => e.n))].join(' ')}`
+        : `          band is NOT cut-filled, so these still carve as silhouettes (d() irrelevant here): ${[...new Set(without.map((e) => e.n))].join(' ')}`);
+    }
   }
 
   /**

@@ -90,9 +90,9 @@
 
 --- does each sign leave a mark in the HEIGHT field? (p2..p98 spread inside its box)
   row     whole-band spread 0.5856   signs WITH d(): n=8 median 0.4517   WITHOUT d(): n=20 median 0.3267
-          silent-in-relief signs: nefer hetep arm water djed stool mouth
+          band is cut-filled, so these 20 of 28 placements reach the relief ONLY as nothing: nefer hetep arm water djed stool mouth
   frieze  whole-band spread 0.4562   signs WITH d(): n=1 median 0.5000   WITHOUT d(): n=22 median 0.4256
-          silent-in-relief signs: water hills neb stool mouth sky papyrus pot djed netjer lotus
+          band is NOT cut-filled, so these still carve as silhouettes (d() irrelevant here): water hills neb stool mouth sky papyrus pot djed netjer lotus
 
 --- which register each real consumer can see (V window from local-y box projection)
     frieze register spans V 0.4635..0.5365
@@ -177,9 +177,9 @@
 
 --- does each sign leave a mark in the HEIGHT field? (p2..p98 spread inside its box)
   row     whole-band spread 0.9873   signs WITH d(): n=3 median 0.5436   WITHOUT d(): n=50 median 0.4897
-          silent-in-relief signs: hetep stool water mouth sky neb djed arm strokes pot hills ankh hand land cone bread sedge
+          band is cut-filled, so these 50 of 53 placements reach the relief ONLY as nothing: hetep stool water mouth sky neb djed arm strokes pot hills ankh hand land cone bread sedge
   frieze  whole-band spread 0.8321   signs WITH d(): n=5 median 0.7325   WITHOUT d(): n=53 median 0.5625
-          silent-in-relief signs: ka stool mouth water pot djed neb was sky bread hetep arm hills land strokes papyrus
+          band is NOT cut-filled, so these still carve as silhouettes (d() irrelevant here): ka stool mouth water pot djed neb was sky bread hetep arm hills land strokes papyrus
 
 --- which register each real consumer can see (V window from local-y box projection)
     frieze register spans V 0.3258..0.7507

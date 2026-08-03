@@ -1,0 +1,21 @@
+Does a glyph silhouette / interior detail reach the built Surface?
+  "same" = the built texture is BIT-IDENTICAL with that drawing path neutralised,
+  i.e. that path contributes nothing to this recipe.
+
+recipe                size   rebuild-control      silhouettes off        detail-lines off
+hieroglyph_gilded      512   IDENTICAL d=0.00e+0   differs   d=4.17e-3   differs   d=2.29e-4
+hieroglyph_wall       1024   IDENTICAL d=0.00e+0   differs   d=1.34e-2   differs   d=1.17e-4
+column_papyrus        1024   IDENTICAL d=0.00e+0   differs   d=9.09e-3   differs   d=2.30e-4
+relief_figures        1024   IDENTICAL d=0.00e+0   differs   d=5.93e-3   differs   d=8.55e-4
+ceiling_stars          512   IDENTICAL d=0.00e+0   IDENTICAL d=0.00e+0   IDENTICAL d=0.00e+0
+
+Same diffs restricted to the two registers `glyphArchitrave` draws (whole-tile
+numbers average the two and hide which one moved). Those two V windows are
+`hieroglyph_gilded`-specific; for any other recipe they are two arbitrary strips and
+the ratio means nothing — they are here only to show no other recipe is lopsided:
+recipe                  silhouettes off: seam row / mid frieze     detail off: row / frieze
+hieroglyph_gilded       8.50e-6 / 4.63e-2   ratio 5453.9x      1.55e-3 / 3.40e-4
+hieroglyph_wall         9.37e-5 / 5.31e-5   ratio 0.6x      0.00e+0 / 2.45e-10
+column_papyrus          4.32e-4 / 6.92e-3   ratio 16.0x      6.04e-5 / 6.21e-5
+relief_figures          1.89e-3 / 8.53e-3   ratio 4.5x      1.07e-3 / 8.69e-4
+ceiling_stars           0.00e+0 / 0.00e+0   ratio 0.0x      0.00e+0 / 0.00e+0
