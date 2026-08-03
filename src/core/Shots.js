@@ -348,9 +348,28 @@ export const SHOTS = {
      "blank lower 60%" is the deck, at 61% of frame; and the guard has never been in shot
      because the subject is on the courtyard floor two metres below the camera's feet.
 
-     Raised 2.0 m so the camera stands *over* the plinth rather than on it, with the target
-     lifted equally to keep the original pitch and aim. The plinth itself is an §8.1 contract
-     surface and is correct — nothing about the level needed changing. */
+     ~~Raised 2.0 m so the camera stands *over* the plinth rather than on it, with the target
+     lifted equally to keep the original pitch and aim.~~
+
+     **CORRECTION — this paragraph describes a commit that was REVERTED, and the values below are
+     not the ones it explains.** KNOWN_ISSUES §152. The +2.0 m version (`b81747d`, y 4.05) put the
+     eye *inside the throne* — throne volume x -12.9..-6.1, y 2.0..4.5, z 22.0..27.6 contains
+     (-11.5, 4.05, 25.4) on all three axes — so it was reverted. What ships is `e5f8260`:
+     **+0.55 m and a +5.1 m southward dolly**, and the target was re-aimed rather than "lifted
+     equally".
+
+     So the stated intent — get the camera *over* the plinth — is **not met by the shipped value**,
+     measured offline through this camera: the eye is **0.60 m** above the deck plane (not 2.05),
+     the plinth SW top corner still projects in frame at **px (1022, 338), d = 2.9 m**, and the S
+     top edge still crosses the frame diagonally with the same tilt sense the critic recorded.
+
+     What actually changed is the *width* of the exposed up-facing deck band: **36-70 px at pass 2,
+     239-265 px as shipped.** That matters for anyone reading a `kerbline` null off this frame — a
+     thin-line detector cannot match a 240 px band, because its interior is not a local maximum, so
+     absence of the signature is not evidence the surface left the shot.
+
+     The plinth itself is an §8.1 contract surface and is correct — nothing about the level needed
+     changing. */
   guard: {
     pos: [-11.5, 2.6, 30.5], target: [-17.0, 1.1, 28.0], fov: 38, tod: 0.10,
     player: { pos: [-9.0, 0, 31.5], yaw: 2.3, pose: 'sneak_idle' },

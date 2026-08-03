@@ -12916,3 +12916,91 @@ lunge as stiff, which is exactly the trap."*
 
 §4.7 intact: 52/52 names, exactly 52 keys, every clip sampling cleanly at 5 phases, 31 bones driven,
 all 52 carrying a cane track. `src/player/**` byte-identical to where it was found.
+
+## §152 — a null pre-scored as uninformative, and an instrument confounded by its own detector shape
+
+I asked GEOMETRY to decide **in writing, before the frames**, what a `kerbline` null on `guard`
+licenses, given three candidate causes and one changed variable. `progress/records/PREREG-kerbnull.md`,
+written with no PNG of the run opened. Its opening line is the reason it exists:
+
+> *"A null is the uninformative outcome here, and an uninformative outcome is exactly the one that
+> gets written up as a win after the fact."*
+
+### 152.1 The rival candidate's retrodiction reproduced, independently
+
+`Shots.js` claims the pass-2 artefact **is** the west colossus plinth's far edge — *"predicted to
+project at y 255–264, measured at y 260 and 278."* GEOMETRY projected the plinth's NW top corner
+through the **pass-2 camera** from the `L.colossi` table:
+
+```
+plinth NW  →  px (1090, 255)   IN FRAME, d = 4.4 m
+```
+
+**Nothing was fitted.** A rival candidate's account, corroborated by geometry derived independently
+of it, by the owner of the competing candidate.
+
+### 152.2 The shipped camera is not the camera its own docstring describes
+
+Two commits, not one. `b81747d` raised the eye 2.0 m — and was **reverted because y 4.05 is inside
+the throne** (volume x −12.9…−6.1, y 2.0…4.5, z 22.0…27.6 contains (−11.5, 4.05, 25.4) on all three
+axes). What ships is `e5f8260`: **+0.55 m and a +5.1 m southward dolly**, with the target re-aimed
+rather than "lifted equally".
+
+**The docstring explains the reverted commit's rationale while the file ships the other one's
+values.** At the shipped camera the eye is **0.60 m** above the deck plane, and the plinth SW top
+corner still projects in frame at **px (1022, 338), d = 2.9 m**. **Candidate 2 did not remove the
+plinth from the frame.** What changed is the exposed deck band: **36–70 px → 239–265 px.**
+
+Corrected at the declaration site in `src/core/Shots.js`. Same family as §125.1 and §129.2 —
+authored intent legible, route to the shipped state absent — here a *description* whose subject was
+reverted.
+
+### 152.3 The confound is in the detector's own shape, and its author found it
+
+`kerbline.mjs` requires a **thin** run: a local vertical maximum over ±2 px with ≥12 px of horizontal
+continuity. **A 240 px band cannot match that, because its interior is not a local maximum.**
+
+> **A null is therefore at least as consistent with "the artefact got wider and stopped matching a
+> thin-line detector" as with "a geometric defect was removed."**
+
+That is not a limitation of the frame; it is the instrument's selectivity turned against the
+question. And GEOMETRY went further and **corrected its own tool's header**, which claimed a *hit*
+"points at 3 and routes cleanly" — an inference that assumed candidate 2 had removed the plinth from
+frame. §152.2 shows it did not, so a hit is also consistent with the edge having merely moved.
+*"My own instrument's header is wrong on this point and is corrected here rather than left to be
+quoted."*
+
+### 152.4 The decision, and it resolves against the owner's own candidate
+
+**A null licenses exactly one sentence:** *the pass-2 signature is not present anywhere in the
+`guard` frame at this tree.* That is what §7.3 scores, and it closes the symptom for all three
+owners at once.
+
+**It does not license "the apron fix is verified."** My conditional was *"a null attributes to the
+apron only if the other two were already independently eliminated."* Neither is eliminated, and
+**candidate 2 is strictly better-evidenced than candidate 1** — it has a matched coordinate;
+candidate 1 has a mechanism and a clearance but has never been tied to this frame's artefact at any
+coordinate. Candidate 3 is unchanged and still produces its class at 1,704 px on `hero`.
+
+> The correct entry for a null is **"symptom absent, cause unattributed"**, not "§137's item
+> verified". §137 exists because this item was collapsed from *"a fix is in the tree"* to *"already
+> found and fixed"* once. **Doing it again with a null attached would be the same error with a frame
+> for cover.**
+
+And the asymmetry is stated *before* the frames so it cannot be reversed after: **the informative
+outcome is a hit, not a null.**
+
+### 152.5 What would attribute, none of which needs this run
+
+- **Candidate 2 ↔ the pass-2 line is already settled** by §152.1 — and note what it attributes it
+  *to*: a camera standing 5 cm above a deck, i.e. **a framing error, not a modelling error.** If that
+  holds, candidate 1 fixed a real defect that was never this symptom.
+- **Candidate 1** needs a two-arm capture toggling the apron y between +0.02 and −0.07 on a *fixed*
+  camera, scored on the apron arris ROI — which §152.2's projection confirms is in frame at 12–17 m.
+  One variable, GEOMETRY's, and it does not exist yet.
+- **Candidate 3** is SHADING's `uRimShadowFloorArch` arm on this frame.
+
+One caveat GEOMETRY labelled rather than buried: the projections use **nominal** extents from
+`L.colossi` and the `masonryShell` arguments, not built vertex positions — jitter ±0.018–0.03 m ≈ 1 px
+at 2.9 m, moving no conclusion, *"but §143.4 corrected me for exactly this substitution once, and an
+unlabelled nominal argument is how that happened."*
