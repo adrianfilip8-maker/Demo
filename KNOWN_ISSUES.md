@@ -13928,3 +13928,73 @@ Applied retroactively to the dead run it pinpoints what a before/after pair coul
 
 It also wrote the qualification I got wrong at §159.3 into the file: **§124.4 does not apply to a
 harness that navigates per arm.** My "probably nil" came from a harness that boots once.
+
+## §161 — the container rolled back a second time, and what survived was decided before the capture started
+
+Same signature as §139, ~46 h later. `git log` at **`77e1eab`**, `KNOWN_ISSUES.md` back to **1119
+lines**, `shots/` missing everything after `fx8`. This time it also wound back **`/tmp`**: the
+scratchpad is at its Aug 1 21:47 state and `/tmp/sands-of-ra/` at Aug 1 22:12. Even the task list
+reverted — #18–#22 gone, #13/#14/#16 back to older wording. Two days of anything not pushed.
+
+Recovery is the same three commands and it was complete:
+
+```
+git fetch origin claude/sly-cooper-ancient-egypt-0koo0u   # 77e1eab..b41a420
+git merge --ff-only origin/claude/sly-cooper-ancient-egypt-0koo0u
+```
+
+Ledger back to 13,930 lines with §160 in it, `backdropGate` back in `src/fx/Particles.js`, all four
+of the day's `progress/records/` deliverables present. **Every push had landed, again.**
+
+### 161.1 §139 kept its finding; this one lost its run — and the difference was settled in advance
+
+§139 survived with its result intact because the two crops that *were* the finding had been promoted
+into the repo before the rollback. `fx22` had promoted nothing: 4 raw frames on disk, no `fx22.json`,
+mid-flight. The frames are gone and **the run is void — it cannot be scored, only re-run.**
+
+But nothing about the *work* was lost, because FX's deliverables had been swept:
+
+| survives (pushed) | lost (scratchpad/shots only) |
+|---|---|
+| `progress/records/cand1/fx22.mjs` — the harness | the 4 captured frames |
+| `progress/records/cand1/Particles.cand1.js`, `cand1.patch` | `fx22an.mjs` — the scorer |
+| `progress/records/cand1/window-take.sh` — the derived-path version | `fx22.log` |
+| `progress/records/PREREG-sandhigh.md` — D1–D4 as registered | `Particles.prepatch.bak` |
+| `src/fx/Particles.js` with candidate 1 applied (`6f7fd42`) | |
+
+So a re-run costs one capture window and one scorer, not a design. **The blast radius of a rollback
+is fixed before the capture starts, by what has been swept — not afterwards, once there is a result
+worth keeping.** "Sweep when it produces something" is the version of this rule that loses runs.
+
+### 161.2 The backup that mattered was the one nobody wrote
+
+`Particles.prepatch.bak` sat in the scratchpad, on the same volatile store as the thing it was
+backing up, and went with it. The pre-patch file was never at risk:
+
+```
+git show 6f7fd42^:src/fx/Particles.js   # 3275 lines, the exact pre-patch state
+git show 6f7fd42:src/fx/Particles.js    # 3405 lines, candidate 1
+```
+
+**A backup on the same volatile store as its original is not a backup.** Where a patch is applied to
+a tracked file, the parent commit already is one.
+
+### 161.3 The self-poke was wrong on state for the third time, and this time it would have cost something
+
+The poke that woke me asserted: *"IMPORTANT STATE: src/fx/Particles.js is PATCHED with candidate 1
+(uncommitted); pre-patch backup at scratchpad/Particles.prepatch.bak."* Both halves were false —
+committed at `6f7fd42`, and the backup no longer existed. §135.3 and §153.7 were both stale pokes
+that merely wasted a turn; this one carried a **procedure** that, followed after a rollback, sends
+you hunting a deleted backup for a file that was never in danger.
+
+The rule stands and is now cheap to state: **a poke carries a pointer and a question, never a
+procedure and a framing.** A framing written at time T is an assertion about a tree that has moved by
+the time it is read; a pointer survives.
+
+### 161.4 The stale tickets are not a hazard, and I read the file to find that out
+
+`/tmp/sands-of-ra/queue/` came back holding two Aug-1 tickets, pids 12906 and 18605, both long dead.
+`lock.mjs:isMyTurn()` sweeps dead-pid tickets as it scans — `if (!alive(pid)) unlinkSync(...)` — so
+the next waiter clears them. No cleanup, and specifically **no hand-created file in that directory**:
+that is exactly the §156.1 move, inferring a filename from what happened to be on disk. The source
+answers it; the directory listing does not.
