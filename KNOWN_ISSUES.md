@@ -8604,3 +8604,69 @@ fired on `hero` R and `combat` R — minor axes of 0.4 px and 4.9 px, near-edge-
 samples cannot resolve — at ratios of 1.0007 and 1.0025. A check tuned so tightly that sampling
 noise trips it stops being a check and becomes a second thing to explain away. Now 2 %, with the
 degenerate case reported on its own terms as `EDGE-ON — aspect not meaningful`.
+
+---
+
+## §101 — §85.2 confirmed on delivered pixels, with an exchange rate and a statistic that lied first
+
+§85.2 proved the ceiling theorem about the **polynomial**: the mean of `d(ln poly)/dx` across a
+band depends only on the endpoints, so no reshaping inside it buys slope for free. That is an
+argument about the curve in isolation, and §11's standing lesson is that a stated prefix is not the
+pipeline — between that curve and the framebuffer sit AgX, the ink pass, bloom and the sRGB encode.
+
+`tone2`'s nine landed arms (three shots × shoulder 1.00 / 1.20 / 1.50, uniform poke, per-arm
+readback, no VOIDs) allow the theorem to be tested where it is delivered. `tools/tonetrade.mjs`
+does it. **It holds.**
+
+### 101.1 The statistic that inverted the answer
+
+The first version measured **absolute** mean |Laplacian| per band, and every arm came back
+**negative** — reading as *"raising the shoulder loses highlight detail"*, i.e. strictly worse on
+both axes and a flat refutation of §85.2.
+
+That is an artefact. |Laplacian| carries luma units, so when the frame darkens ~30 % the absolute
+local contrast falls with it **even if relative contrast is unchanged.** Comparing absolute
+contrast across arms of different brightness is §72.1's units mix wearing different clothes: every
+number correct, the comparison meaningless.
+
+On Weber contrast — detail ÷ mean luma within the band — every arm **gains**. Same pixels, same
+frames, opposite conclusion.
+
+> **When the treatment changes the scale, no absolute measure of structure is comparable across
+> arms.** Ask first whether the intervention moves the units the statistic is denominated in. Here
+> it moves them by 30 %, and the sign of the headline flipped on it.
+
+Both columns are printed now so the confound stays visible rather than being quietly corrected.
+
+### 101.2 The exchange rate, which is what the decision actually turns on
+
+| arm | ΔmeanL | ΔWeber (highlight) | **Weber % per 1 % brightness** |
+|---|---|---|---|
+| hero b1.20 | −12.96 % | +3.43 % | 0.265 |
+| hero b1.50 | −30.21 % | +9.50 % | 0.315 |
+| temple b1.20 | −14.18 % | +6.37 % | **0.449** |
+| temple b1.50 | −31.40 % | +12.10 % | 0.385 |
+| interior b1.20 | −13.65 % | +3.67 % | 0.269 |
+| interior b1.50 | −31.86 % | +5.41 % | **0.170** |
+
+**Between two and six units of mean brightness per unit of relative highlight contrast.** That is
+the quantitative form of §85.2's "only a brightness trade", and it is a poor rate at every setting
+measured.
+
+**The error bar comes from the run's own duplicate arm**, not from an assumption:
+`tone-hero-b1.00-DUP` against `tone-hero-b1.00` differs by **0.50 % meanL and 0.20 % Weber** at
+identical settings. Every treatment effect above is an order of magnitude clear of it. This is the
+second time today (§99.1 was the first) that an arm shipping nothing carried the run's whole
+interpretive weight.
+
+### 101.3 The rate is shot-dependent, so no single shoulder is right
+
+It **improves** with shoulder on `hero` (0.265 → 0.315) and **worsens** on `temple`
+(0.449 → 0.385) and `interior` (0.269 → 0.170). There is no ordering of these three shots on which
+one shoulder value is best, so a global constant is a compromise whichever way it is set — which
+is a stronger statement than "it is a look call": **it is a look call with no dominant option.**
+
+Bands were cut on the **baseline arm's** P33/P66 and held fixed across arms, so every arm is scored
+over the same pixels. Scoring each arm on its own percentiles is the trap: a curve that darkens
+everything moves its own P66 down, re-selects a darker population, and can report "more highlight
+detail" purely by measuring somewhere else. The partition is asserted per shot, not assumed.
