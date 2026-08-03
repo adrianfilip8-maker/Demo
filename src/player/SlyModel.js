@@ -383,7 +383,15 @@ export const TUNE = {
   segLimb: 13,            // radial segments: limbs
   segTorso: 20,
   segHead: 22,
-  segTail: 18,
+  /* 18 -> 26. Critic pass 6 names "visibly faceted quads" on the tail in `sly-closeup`, and 18
+     radial segments is a 20 deg facet. The tail is the largest single surface on the character
+     and the one that fills the most screen area in the closeup, so its facets are the coarsest
+     in the frame even though the torso (20) and head (22) carry more segments on far smaller
+     radii — the defect is facet size on screen, not segment count. 26 puts the facet at 13.8
+     deg, comparable to the head's, for ~250 triangles on the half of the silhouette §7.3 scores
+     hardest. The band and skin-weight ramps are expressed in `t` along the spine and are
+     unaffected by radial resolution, so no clip changes. */
+  segTail: 26,
 };
 
 /* ============================ PALETTE ===================================== */
@@ -1040,7 +1048,22 @@ export class SlyModel {
      * derivative is continuous at the band edges (a step would crease the loft and re-introduce
      * a hard edge, which is the defect being removed).
      */
-    const RING_BULGE = 0.17;
+    /* 0.17 -> 0.24. Critic pass 6: "a rigid horizontal bar of hard-edged bands on visibly
+       faceted quads". The bar half is not the bone chain — measured across the eight shots that
+       frame him (`scratchpad/tailshape.mjs`), the tailA->tailD chain turns 65-106 deg, so the
+       clips are authoring a real curve and the outline is not reading it. The tail is 1.39 m of
+       loft at up to 0.33 m across, and at that girth a 95 deg bend over the length still leaves
+       an outline whose local direction is dominated by the tube's own width; the eye reads the
+       envelope, not the spine. What is missing from the envelope is the *scallop*.
+
+       This is also the §7.3 "fur reads as smooth plastic" lever on the one part that is half the
+       silhouette. Cel fur is read from the outline, and six raised-cosine swells put six contour
+       extrema on the tail's edge where a smooth taper has none. At the widest band the radius
+       goes 0.166 -> 0.206 m, a ~4 cm scallop that projects ~25 px at `sly-closeup` — visible,
+       and it costs no triangles because the swell rides the existing rings. Between bands the
+       radius is untouched, so mean girth barely moves and the 4:1 aspect the note above fought
+       for survives. */
+    const RING_BULGE = 0.24;
     const ringSwell = (t) => {
       for (const [a, b] of BANDS) {
         if (t < a || t >= b) continue;
@@ -1357,8 +1380,23 @@ export class SlyModel {
     }
     // thumb
     const tb = palm.clone().addScaledVector(fwd, 0.038 * S).addScaledVector(dir, -0.006 * S);
-    const td = new THREE.Vector3().copy(fwd).multiplyScalar(0.82).addScaledVector(dir, 0.42)
-      .addScaledVector(nrm, -side * 0.12).normalize();
+    /* Thumb OPPOSITION. Critic pass 6: "hands are flat splayed mitts with no thumb opposition",
+       and the silhouette instrument (`scratchpad/silhouette.mjs`) shows exactly that — the free
+       left hand in `sly-closeup` reads as a starfish of four equal stubs.
+
+       The thumb was already here; what it lacked was a third dimension. `nrm` is the palm's
+       *thin* axis (the palm ellipsoid is 0.030 across it against 0.058/0.052), so the old
+       0.82 fwd / 0.42 dir / 0.12 nrm split put 97% of the thumb's direction in the plane of the
+       fingers and pointed it the same way they point. In silhouette that is a fourth finger by
+       construction, from any camera — no pose or hand scale could have separated it.
+
+       Opposition is the thumb leaving the palm plane and turning *across* the fingers, so the
+       nrm term becomes the largest and the dir term (which ran it parallel to the fingers)
+       drops. Sign is inherited, not chosen: -side*nrm is the palm side, which is where the old
+       term already pointed; only its magnitude is new. Verified in silhouette before shipping,
+       which is the whole reason to fix a shape defect with a shape instrument. */
+    const td = new THREE.Vector3().copy(fwd).multiplyScalar(0.66).addScaledVector(dir, 0.16)
+      .addScaledVector(nrm, -side * 0.58).normalize();
     const tpts = [tb.clone(), tb.clone().addScaledVector(td, 0.022 * S),
       tb.clone().addScaledVector(td, 0.040 * S), tb.clone().addScaledVector(td, 0.052 * S)];
     addTube(mb, {
@@ -2005,10 +2043,22 @@ export class SlyModel {
        ~L224 — scene radiance on the AgX shoulder, not glint and not bloom. The actual fix is
        `TUNE.scleraTint` 0.82 → 0.15 (see its note); the glint shrink here stays, correct on
        its own terms. */
+    /* `segTheta` 8 -> 14 / `segPhi` 5 -> 9, and this is a *resolution* fix, not a size or a
+       value one, so it is independent of everything the block above argues about.
+       Measured on `shots/critic6/sly-closeup.png` at 12x: each catchlight renders as a hard
+       axis-aligned blob ~5x4 px with straight edges and corners. Critic pass 6 read that as
+       "a magnified single texel" and prescribed authoring it at render resolution — but the
+       glint is geometry, not a map, so there is no texel to magnify. The blockiness is this
+       ellipsoid's own tessellation: at 8x5 segments its silhouette is an octagon, and the
+       block above deliberately sized it to project ~7.5 px, so each facet is ~2 px — bigger
+       than a pixel, which is exactly when a facetted silhouette stops reading as round.
+       14x9 puts the facet under a pixel at closeup for ~90 extra triangles on the one feature
+       §7.3 calls the character's "alive" cue. The diagnosis was wrong and the prescription was
+       right for the wrong reason; the symptom was real and is measured above. */
     const v2 = mb.vertexCount;
     addEllipsoid(mb, {
       center: hc, radii: new THREE.Vector3(0.013 * S, 0.013 * S, 0.009 * S), basis,
-      segTheta: 8, segPhi: 5,
+      segTheta: 14, segPhi: 9,
       /* Rides the pupil bone with the pupil (SPEC-startle-pupils): at 0.35 constriction a
          full-size glint would cover the whole disc, so it shares the scale and stays a
          catchlight on black rather than becoming the eye. */

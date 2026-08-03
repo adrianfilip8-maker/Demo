@@ -6470,7 +6470,10 @@ and anti-aliasing from every finding, because those could be harness artefacts.
 
 ### 76.3 The findings, and what they mean for nine hours of work
 
-1. **The cane is not parented to the hand.** In `courtyard` it is drawn at world scale diagonally
+1. ~~**The cane is not parented to the hand.**~~ **REFUTED — see §79.1. The `courtyard` crook is a
+   RAIL and belongs to `src/world/**`; the `interior` "detached rod" is the tail occluding the
+   shaft's middle.** The cane is socketed in all 15 shots at the authored 0.0540 m pivot offset.
+   The original finding, kept for the record: in `courtyard` it is drawn at world scale diagonally
    across the entire composition **while the character's hands are empty** — both verified by crop.
    In `interior` it is a detached rod behind the tail; in `sly-profile`, a rod through the hip.
    **Task #10 in this project's own list reads "DONE — cane planted, verified in GPU geometry".**
@@ -6698,3 +6701,86 @@ artefact of the orange patch spanning a narrow depth range**, so it must not be 
 `pgrep -f` matched FX's own wrapper shell on launch and the wrapper lingered, leaving node at
 `ppid = 31697`. Caught by walking `/proc/<pid>/stat`, wrapper killed, `ppid = 1` re-verified. §14's
 recurring hazard, now with a reliable detection recipe rather than a warning.
+
+
+---
+
+## §79 — the P1 finding is refuted by a frame that was already on disk
+
+CHARACTER on pass-6 findings #1 and #3. **This is the second time tonight a critic finding has been
+routed with the wrong mechanism** — FX did the same for #7 and #12 in §78 — and it is the strongest
+vindication yet of treating a finding as a symptom rather than a diagnosis.
+
+### 79.1 The cane is socketed. The `courtyard` crook is a rail.
+
+Three independent instruments, none of which is the one that would be tempting:
+
+- `_canePivot.parent === bones.handR`;
+- hand→grip world distance is **0.0540 m in all fifteen shots** — exactly the authored pivot offset
+  — and **a rotation about a pivot at the grip cannot detach a prop by construction**;
+- projected into `courtyard`'s *own* camera, the cane's pixel box is x[427..445] y[361..393],
+  **inside** the body box x[418..455] y[353..396], with grip-to-hand separation **1.0 px**.
+
+**And the decisive evidence was already on disk.** `shots/kerb2/courtyard-nosly.png` — captured at
+23:32 for an entirely different experiment — hides every `SkinnedMesh` plus everything matching
+`/^sly|sly_|cane/i`, which catches the cane mesh, its group, and its ink shell (a child of the mesh,
+so hierarchically hidden). **The giant crook is still there.**
+
+At 4× it is a constant-radius tube with a handrail return bend: **no grip collars, no ferrule, no
+knurl, no swell into a chunky hook.** The critic's own crop resolves to source ~(222,623); Sly's
+entire cane lives at x[427..445]. **It is a real and serious composition defect — it bisects the
+frame — and it is `src/world/**`'s, not the character's.**
+
+**The `interior` half is genuinely CHARACTER's, and the cause is occlusion rather than detachment:**
+the cane spans y[434..597] with its grip at (661,513), and the tail lies across its middle at 4.4°
+elevation, so only the tip above and the hook below survive. *"Two rod-ends either side of the
+tail"* is exactly what that produces.
+
+### 79.2 The eye headline does not reproduce, and the decode explains why
+
+Measured on the **exact scored frame**: sclera RGB (154,154,151), linear **L = 32.3%**; the wall
+behind it (56,65,85), **L = 5.3%**. **The sclera is 6× brighter than the wall, not darker.**
+
+The critic's quoted (84,88,118) is a **blue-grey — mask or fur** — so its box straddled the mask.
+CHARACTER confirmed the decode rather than merely asserting a discrepancy: reading their "L" as
+linear luminance ×100 **reproduces their figure exactly from their own RGB**, which identifies the
+ROI as misplaced rather than the measurement as wrong. Pupil is ~half the eye, not 10%.
+
+That is §11's failure mode and the critic's own §76.2 self-catch in the same frame — it killed one
+eye ROI for landing on the mask and then filed a second finding from another one that did the same.
+
+**The blocky catchlight is real, and its mechanism is not the stated one.** It is not a magnified
+texel: the glint is **geometry**, and 8×5 segments on a deliberately ~7.5 px feature makes each
+facet ~2 px. Now 14×9.
+
+### 79.3 What shipped, and one measurement that is its own argument
+
+`src/player/SlyModel.js` only: catchlight 8×5 → 14×9; `segTail` 18 → 26 (the critic's "visibly
+faceted quads"); `RING_BULGE` 0.17 → 0.24; and **thumb opposition** — `td` was 0.82/0.42/**0.12**,
+i.e. **97% in the finger plane, which makes the thumb a fourth finger by construction from any
+camera**. Now 0.66/0.16/**0.58**, verified in silhouette before shipping.
+
+That 0.12 is the kind of number that explains a subjective complaint completely: the critic wrote
+*"flat splayed mitts with no thumb opposition"*, and the rig could not have produced opposition from
+any viewpoint.
+
+### 79.4 A framing fact that limits what `courtyard` can ever say about the character
+
+**`courtyard` frames Sly at 43 px in a 720-row frame.** The critic's "empty hands" crop is a 90×70
+region containing a 43 px figure. No character work is visible there in either direction — so
+`courtyard` should either push him closer or **stop being scored on character conditions**. That is
+`Shots.js`, which is mine.
+
+Together with §76.4's `sly-perch` error, that is **two of fourteen frames whose staging I own and
+which cannot support the conditions they were scored against.**
+
+### 79.5 The pattern, now three deep in one pass
+
+§78 corrected findings #7 and #12; §79 corrects #1 and #3. In every case the **observation was
+real** and the **attribution was wrong**, and in every case the correction came from an instrument
+or a frame the project already had.
+
+> **A blind critic is the right instrument for "is this frame good" and the wrong one for "what
+> causes it."** Both halves matter: pass 6's verdict of 2.1 stands untouched — fourteen frames still
+> lose their side-by-side — and four of its thirteen findings would have sent an owner into the
+> wrong file.
