@@ -13184,3 +13184,134 @@ measured line and the reason** before setting the flag. *"Do not silently edit t
 The one thing that must be chosen from a frame is isolated, named, and blocked behind an explicit
 amendment — rather than the whole seal waiting on the frame, or the coordinates quietly acquiring
 their values from it.
+
+## §155 — the clause that passed, the gate that measured a ramp, and an ROI nothing could see
+
+### 155.1 TEXTURES passed the clause it had said it would fail itself on
+
+P2 was registered as binding: squint sd rising more than **+10 %** forfeits P1 and brings
+`HG_SIGN.sink` down. TEXTURES' own pre-frame read was **+35.7 %** texture-side, and it wrote *"the
+one number I would fail this on."*
+
+Delivered: **+0.42 % on `hero`**, whole-frame — a **14× attenuation** between the texture-side
+figure and the frame. *"It was sign-scale structure, not mass-scale blotching."* `temple` is
+**−0.00 % and vacuous** (119 of 14,400 cells), reported as vacuous exactly as §144.2 pre-registered.
+
+**P1 passes on `hero` at +5.22 %**, 104× the null floor, with the decomposition Amendment 6 required:
+numerator `rms(L−box8)` **+4.30 %**, denominator **−0.87 %** — so **82 % of the rise is added detail,
+not darkening.** `temple` is the reverse (61 % sink) and is reported as the weaker result *the
+amendment defined in advance*.
+
+And the picture agrees: the control architrave is *"a smooth rust-teal mottle with nothing readable
+on 27 % of the money shot"*; the candidate carries carved signs with dark cores and lit arrises,
+**legible at 1:1, not just at 4×.**
+
+P4 ran first as the floor — r=8 nulls ±0.05 % / ±0.01 %, and **95.6 % of all changed pixels inside
+the gilded mask** — which is what makes P1 quotable at all.
+
+### 155.2 A gate that measured a ramp, and its author said so
+
+**P3 fails as sealed on `hero`: cand 0.816, ctl 0.815, gate 0.45 — identically in both arms.**
+Reported as a fail, **not converted**. The Δ is 0.001, against the 0.365 separating the control from
+the gate.
+
+The diagnosis is the entry. Detrended, ρ falls **0.987 / 0.965 / 0.944 / 0.927 monotonically from
+lag 1**, a box-300 trend carries **54.9 %** of the profile, and max ρ inside the band's *own*
+129–207 px repeat range is **0.283**.
+
+> **It is a luminance ramp down a receding fascia, not a repeat.** *"I registered a threshold my
+> instrument could not meet on that band for any texture — I picked the band from where the repeats
+> are without checking what else was in the profile."*
+
+A band selected for containing the signal, without asking what else it contains. §142.4 relocated P3
+onto that band precisely because the repeats were there; the relocation was right about the repeats
+and silent about the ramp.
+
+And the registered tiling risk resolves the same way: at `hero`'s near mass ≤1 repeat is on screen so
+a sequence cannot appear, and at the far band **the diff panel is black** — those pixels are the top
+fascia edge-on at 26–42 m, not the sign face. **The risk is not reachable at these two framings,
+which is not "the tiling is fine."** Closing it needs the band square-on at 15–25 m and no canonical
+shot does that.
+
+### 155.3 A dirty capture stamp that can only dilute
+
+The capture stamps `5b3d9ae` **dirty** — GEOMETRY's Task #28 landed during the queue wait. Both arms
+share one module graph with no HMR, so the A/B is unaffected; and the 17:46 masks **predate** the
+prop hulls, which is common-mode and can only **dilute** every Δ.
+
+> **So P1's figures are lower bounds.** A provenance defect whose direction is established is worth
+> more than one that is merely disclosed.
+
+Also caught: TEXTURES' first invariant check **passed both invariants while iterating zero rows** —
+`!r.ok` against a schema with no `ok` field, and `jointDeltaY` where the lab nests it under `joint`.
+It was caught *because a 0.0005 it already knew about failed to appear.* **A known value's absence is
+a better detector of a vacuous check than the check's own verdict.**
+
+One `RESULT-tx7` sentence is retracted: `temple`'s gilded band is **56.6 % sunlit at mean L 114**, so
+tx7 §4's *"no frame in the tested set has key-lit gilded **at size**"* survives, and the shorter *"no
+canonical frame has key-lit gilded"* is false and must not be repeated.
+
+### 155.4 Task #28 rejected — and the prediction its author most expected to be wrong came out right
+
+Validity held: `base`/`base2` and `base`/`restore` both **0 px** on `courtyard` and `interior`.
+
+**The look condition fails on the shot the prereg registered as decisive.** On the canopic jars the
+shell reads as a **ragged, visibly doubled crust that eats the shoulder highlight** — two of the
+three named REJECT conditions present. So `HULL_KEYS` is now an **empty `Set`, dormant rather than
+deleted**, with the verdict recorded at the site.
+
+**But P4 is confirmed and it is the useful half:** the gilded Ra's sun disc **merges into the pale
+wall in `base` and gains a clean continuous dark ring in `hull`** — exactly §132.5's low-depth-
+contrast case, where a hull earns its draw. So the evidence is *"this key set is too wide"*, not
+*"hulls don't work here."*
+
+**And GEOMETRY refused to ship the obvious follow-up.** A `gold`-only gate *"has never been scored
+and the evidence for it was gathered after unblinding. It needs its own prereg and its own arm."*
+That is the discipline that makes the rejection trustworthy — the same run that killed the wide set
+produced a tempting narrow one, and the temptation was declined.
+
+It also corrected the scorer's own summary line without editing the sealed scorer: `validity gates:
+FAIL` is its walker counting `guard`/`night` as missing arms **they were never registered to have**.
+An enumeration artifact, not a validity failure.
+
+### 155.5 An ROI nothing could see, and the check that paid better than the arm
+
+The apron ROI **failed its fill-in**, and not in any of the three ways §154.5 anticipated.
+
+The projection is correct — recomputed independently against the shipped camera, **(41.1, 324.2)**
+and **(1250.2, 233.0)** against the registered (41,324) and (1250,233). The problem is elsewhere:
+
+> **The west temenos wall footprint is x ∈ [−26.05, −24.55]. The scored arris at x = −26 lies
+> *inside* it, beneath the wall. Every sightline is blocked at the wall's inner face for all
+> z ∈ [10, 32].**
+
+Confirmed on pixels: the swath crosses mid-height masonry, piers, a jar, a statue and a brazier bowl
+along its whole length, with **no ground contact anywhere on it.**
+
+So there is **no measured line to amend to** — §154.5's procedure assumed the arris would be
+somewhere, and it is nowhere visible. Both arms would have rendered identically inside the ROI and
+the scorer would have returned **NULL: the same confound a third time, now living in the ROI rather
+than in the statistic.** `confirmed` stays false and the arm is **blocked, not ready.**
+
+**And the failed check bought more than the arm would have.** No part of the apron — at −0.07 or at
+the +0.02 the `hi` arm would have restored — is in the `guard` frame at all. **Candidate 1 cannot be
+the `guard` cyan line, on visibility grounds.** §137's item is retired for `guard` by geometry,
+without a capture, and it promotes neither of the other two candidates and says nothing about
+`hero`/`courtyard`/`night`.
+
+The kerb itself is reported weaker than asked: `kerbline` returns **81 runs ≥ 12 px**, not a bare
+null, and two of roughly four clusters were inspected (backlit gaps through architecture; specular
+streaking on the defocused plinth deck). Registered only as *"the pass-2 signature was not located in
+the regions inspected"* — **not** "not present in the frame", because the detector is width-blind by
+construction.
+
+### 155.6 The counted column, a fourth time
+
+GEOMETRY closed by reporting *"draws and triangles are unchanged at 548 / 2.355 M."* That is the
+counted column again, and by now it is a **reflex rather than a misunderstanding** — §153.1 stated
+the invariant as a quantity and it still reached for the number lying on disk. The scored main-view
+line is **71 draws (28 %) / 0.572 M (48 %)**, measured three times today.
+
+It also flagged, unprompted, that **its actual assignment is untouched** — no chamfers, no entasis,
+no column segments, no budget work; the scoring passes consumed the session. Stated plainly rather
+than left to be inferred, which is the correct handling of an unfinished brief.

@@ -210,3 +210,83 @@ pre-registration's clothes, which is the failure the seal exists to prevent.
 **Caveat, stated rather than buried** (§143.4 corrected me for exactly this substitution once): the
 projection is against **nominal** extents, not built vertex positions. Corner jitter here is ±0.03 m
 ≈ 1 px at 12–17 m, well inside the 40 px pad — but it is a nominal, and it is labelled as one.
+
+---
+
+## 7. AMENDMENT — the ROI was filled in, and the fill-in failed. `confirmed` stays **false**.
+
+Written against `shots/propshull/guard-base.png` (1280×720, so the projection's own pixel space),
+following the §6 procedure. The procedure has three outcomes registered — within pad, outside pad,
+or amend-then-confirm — and the frame produced a **fourth that §6 did not anticipate**, so the arm
+is blocked rather than confirmed.
+
+**The projection reproduces exactly.** Recomputed independently (camera basis by hand, not by
+re-running §152.C's script) against the shipped `guard` camera, which I first checked is still
+`pos: [-11.5, 2.6, 30.5], target: [-17.0, 1.1, 28.0], fov 38` in `src/core/Shots.js`:
+
+```
+arris (-26, -0.07, z=32)  ->  px (41.1, 324.2)     registered (41, 324)
+arris (-26, -0.07, z=10)  ->  px (1250.2, 233.0)   registered (1250, 233)
+```
+
+So the ROI line is not wrong, and the §143.4 nominal-vs-built caveat is not what bit. The line is
+where the apron arris *would* project. **The problem is that nothing can see it.**
+
+### The arris is buried under the temenos wall for its whole scored length
+
+`courtyard()` builds the west temenos wall at `x = -(pe.x + 2.3) = -25.3` with `w: 1.5`, so its
+footprint spans **x ∈ [-26.05, -24.55]**, `buried: 0.6` putting its base near y −0.33, height 5.6 m,
+z ∈ [-16, 33]. The scored arris is the apron strip's inner edge at **x = -26** — which lies *inside*
+that footprint, 5 cm courtward of the wall's outer face, at y −0.07, i.e. **beneath the wall**.
+
+Every sightline from the guard camera to it is blocked. Crossing the wall's inner face at
+x = −24.55, the ray to the arris is at y = 0.197 for every z in [10, 32] — inside the wall's
+0…5.6 band along the whole run:
+
+```
+ z=10  y=0.197  BLOCKED     z=22  y=0.197  BLOCKED
+ z=14  y=0.197  BLOCKED     z=26  y=0.197  BLOCKED
+ z=18  y=0.197  BLOCKED     z=30  y=0.197  BLOCKED   z=32  y=0.197  BLOCKED
+```
+
+Confirmed on the pixels, not only in arithmetic: `shots/_scratch/roi-overlay.png` draws the line and
+its ±40 px pad on the frame, and `shots/_scratch/roi-left.png` is the left end at 4×. The swath runs
+across **mid-height masonry, piers, a jar, a statue and a brazier bowl** — nearer geometry along its
+entire length. There is no ground contact anywhere on it.
+
+The other two apron strips do not rescue it: the south strip (z ≥ 34) is behind a camera that looks
+toward −z, and the east strip (x ≈ +26.7) is out of frame to the west-facing view.
+
+### Why this blocks the arm instead of moving the ROI
+
+There is no measured line to amend *to*. The manipulated geometry has no visible pixels in this
+frame, so both arms would render identically inside the ROI: S3 ≈ 0 moved, |ΔS1| ≈ 0, and §4's
+table would return **NULL**.
+
+That null would be worthless, and worse, it would be worthless *in the exact way this document was
+built to prevent*. §3 rejected `kerbline` as scorer because it could return "a null for the wrong
+reason"; §3.1 records S1 failing its own control the same way one level up. **This is the same
+confound a third time, now in the ROI rather than in the statistic** — an instrument pointed at
+something it cannot see, returning an answer that would read as evidence against candidate 1 while
+actually being evidence about occlusion. §5's NULL row must not be quoted off this arm.
+
+### What the finding does license, and it is not nothing
+
+This is a **cheaper and stronger** result than the arm was going to buy, and it needed no boot:
+
+> **Candidate 1 cannot be the `guard` cyan line, on visibility grounds.** No part of the stylobate
+> apron — at −0.07 *or* at the +0.02 the `hi` arm would have restored — is visible from this camera.
+> A mechanism that cannot reach the frame cannot be the frame's artefact.
+
+§137's item is therefore **retired for `guard`** by geometry rather than by measurement, on the same
+terms §5's NULL row set out: the apron fix corrected a real, measured clearance defect (§143.4, not
+in doubt) that was **not this symptom**. §2's scope limit still holds untouched — this says nothing
+about `hero`, `courtyard` or `night`, where the same arris is in frame and may well matter.
+
+**Not licensed:** nothing here promotes candidate 2 or candidate 3. Neither was tested.
+
+### Consequence
+
+`ROI.confirmed` stays **false** and `apronarm.mjs` is not booted — it would spend a capture to
+manufacture a null the geometry already guarantees. If the apron is to be tested at all it needs a
+camera that can see it, which is a different arm against a different shot, pre-registered separately.

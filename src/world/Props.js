@@ -108,7 +108,31 @@ const L = {
  * `cloth` is excluded by topology, not by taste, and would be even if it were hero — see the
  * note on its table entry. The emissives are excluded so fire never takes an ink line.
  */
-const HULL_KEYS = new Set(['stone', 'lime', 'gold', 'dark', 'lapis', 'carnelian']);
+/* SCORED — REJECT. `PREREG-propshull.md` pre-committed "REJECT ships as a revert of the
+   HULL_KEYS call site", and the arms returned one, so the set is empty and the mechanism below
+   is dormant rather than deleted. Frames: `shots/propshull/`, scorer `progress/records/hullscore.mjs`.
+
+   Validity held on both 4-arm shots: P1 (base vs base2) and P2 (base vs restore) are 0 px on
+   `courtyard` and `interior`. (`hullscore` prints a global FAIL, but that is its shot walker
+   counting `guard`/`night` as missing base2/restore — those two are registered as 2-arm
+   ride-alongs and never had them. The decisive shots' gates passed.)
+
+   What failed is the look condition, on the shot the prereg registered as decisive. On the
+   canopic jars the shell reads as a ragged, visibly doubled crust that eats the shoulder
+   highlight — "sticker edge" and "doubles visibly against the PostFX line" are two of the three
+   named REJECT conditions, and both are present.
+
+   What SUCCEEDED, and is the reason this is dormant and not deleted: P4 — the prediction the
+   author recorded as the one they most expected to be wrong — is CONFIRMED on the gilded Ra.
+   Its sun disc merges into the pale wall behind it in `base` and gains a clean continuous dark
+   ring in `hull`, which is exactly the low-depth-contrast case §132.5 argued a hull earns its
+   draw for. So the evidence is not "hulls don't work here", it is "this key set is too wide".
+
+   A `gold`-only gate is therefore worth one arm — but it is NOT shipped here, because that
+   configuration has never been scored and the evidence for it was gathered after unblinding.
+   Shipping it on this run's post-hoc read is the exact substitution these seals exist to stop.
+   It needs its own prereg and its own capture. */
+const HULL_KEYS = new Set();
 
 const _v = new THREE.Vector3();
 
