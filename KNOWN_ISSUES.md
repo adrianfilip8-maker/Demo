@@ -12442,3 +12442,82 @@ under the ≥4 delta cut are excluded, so a thinning fix **over-reports its loss
 direction but is not a linear density measure. And the §144.4 audit found **no autocorrelation
 anywhere in the path**, the only normalisers being a bounded percentage and a mean over its own
 population.
+
+## §146 — I routed an item my own section had closed, and the digest built to prevent that carried the same error
+
+### 146.1 The error, plainly
+
+My resume message to GEOMETRY described gold metalness as *"still the live question"* with *"two
+preconditions both still standing."* **§136 — which I wrote, this session — had already run the arm
+and closed it.**
+
+`hieroglyph_gilded` at metal 0.45 against 0.85, one boot, `base`/`base2` **0 px**, `base`/`restore`
+**0 px**, and the bit-identity control passing on *magnitude* (control mean L moved **0.132** against
+the treatment's **6.78**, a 51:1 ratio). **Verdict: regression** — lowering metal made the gild
+**bluer**, R−B −4.62 → −9.79, not warmer. The mechanism shipped anyway as per-recipe `metalAmount`
+(`Architecture.js:207`, `Props.js:600`), absent = 0.85, so everything is bit-identical and **no
+recipe declares one today — a measured result, not an omission.**
+
+GEOMETRY verified this from disk rather than re-running it, and told me the item was closed instead
+of spending a contended lock re-deriving my mistake.
+
+### 146.2 The part that matters more than the error
+
+`DIGEST.md` exists **specifically** to stop briefs from carrying superseded facts. §143.3 recorded
+that it had failed once because agents read transcripts, not the repo, and I fixed *that* by adding
+the instruction to paste sections into resume messages.
+
+**It failed again, differently: the digest's GEOMETRY section still said "LIVE: gold is yours."**
+The file built to prevent stale routing was itself stale about the very item I then mis-routed.
+
+> A digest is a cache, and a cache is only as good as its invalidation. **The section that closes an
+> item and the digest entry that advertises it are two writes, and I was doing one of them.** Both
+> now carry the correction, and the digest's maintenance rule needs to be *"update the digest in the
+> same commit that lands the section"*, not "when a section lands."
+
+That is now the third distinct failure of the same mechanism — a stale brief (§128.6), a digest an
+agent never reads (§143.3), and a digest that is itself out of date (§146). Each fix exposed the
+next layer.
+
+### 146.3 Task #28 decided, priced exactly, and the frame judgement withheld
+
+**Six accent/hero keys**, `outline()` per hero mesh rather than `applyOutlines()` over the group.
+Priced *exactly* rather than estimated: **+6 draws / +55,718 tris, identical on every canonical
+camera** — these meshes are merged by material across the whole level, so **frustum culling removes
+none of them**. Against 71 / 0.572 M that is **77 draws (31 %) / 0.628 M (52 %)**. Gate verified
+offline by `gatetest.mjs`: exactly six keys, correct thicknesses, nothing else.
+
+**And GEOMETRY found a control that cuts against its own change.** The hull-on-PostFX stack *already
+ships* at 0.85 on Architecture's three keys, and the obelisk crop shows **one clean 2–3 px line, no
+doubling or halo** — so the stack is fine. But the same frame shows the **un-hulled colossi already
+carry an adequate silhouette against sky**, so the hull's justification rests entirely on the
+low-contrast case. Registered before the frames: **`interior` is decisive, and a clean `courtyard`
+does not rescue a null `interior`.**
+
+### 146.4 The cel ramp: geometry delivered, and the brief's premise is now falsified
+
+The geometry landed — `chamferBox`, `torusRoll`, `beadRoll`, `bevelPrism`, `pillowN`, and a papyrus
+column at **48 radial × 4 vertical** (segments where the terminator lives, almost none where it
+doesn't). In `temple` the chamfered arrises visibly catch the key as bright lines.
+
+**The ramp still measures smooth, and geometry is no longer the reason.** On the `courtyard` jar — a
+curved, lit, near prop with smooth normals — the profile spans **124.5 L over 66 px with 3.1 %
+plateau and zero steps.** *The gradient exists; nothing quantises it.*
+
+That contradicts my brief **and** `toon.glsl.js:174-179`, both of which say geometry is the only fix
+on that path. **Owner: SHADING**, most likely the same `diff`-assembly defect as §136.3 — `key =
+ramp * sh` is quantised, but the hemispheric fill added after it varies continuously.
+
+### 146.5 Three of four regions could not answer, and only the crops said so
+
+GEOMETRY measured four regions for §146.4. **Three were unanswerable** — a shadowed pier, a
+texture-mottled slab, haze-flattened distant columns — and two of them returned **"16 steps"** and a
+**"120× spike ratio"**, *"which I would have reported as banding."*
+
+> **Only looking at the crops caught it.** A step-counting statistic on a mottled or hazed surface
+> manufactures the structure it is looking for, and it does so most convincingly on exactly the
+> populations where the real answer is "this region cannot say."
+
+Fourth instance this session of a region that could not carry the question it was asked (§104's sky
+ROI, §144.1's 194 px strip, §145.2's absent backdrop class, and now this) — and the first where the
+failing instrument produced a *positive* result rather than a null.

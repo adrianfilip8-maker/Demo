@@ -155,10 +155,14 @@ nobody runs (§129.2).
   placement** is an independent requirement. A down-and-out quadrant moved `hero` by nothing.
 - **`gloss` stays 64** — your decision, and the reasoning (it multiplies a term the `sh` gate has
   already zeroed) is better than the rule required.
-- **LIVE: gold is yours.** `Architecture.js:179` is `metal: r.metal ? 0.85 : 0` — one constant
-  behind a boolean, so solid leaf and leaf-over-gesso are indistinguishable. **Measure the rim share
-  of the gild mask first**; the effect is entirely conditional on rim/spec/env being present, and on
-  the 98.6 % of `hero`'s gild with no rim, opening metalness makes gold *less* saturated. (§132.2)
+- ~~**LIVE: gold is yours.** `Architecture.js:179` is `metal: r.metal ? 0.85 : 0` — measure the rim
+  share of the gild mask first. (§132.2)~~ — **CLOSED at §136, and I routed it as live anyway.**
+  The arm ran: metal 0.45 vs 0.85, one boot, `base`/`base2` and `base`/`restore` both **0 px**, and
+  the verdict is **regression** — lowering metal made the gild *bluer* (R−B −4.62 → −9.79), not
+  warmer. The mechanism shipped as per-recipe `metalAmount` (`Architecture.js:207`,
+  `Props.js:600`), absent = 0.85, so **no recipe declares one today and that is a measured result,
+  not an omission.** The remaining Architecture-side lever is `spec: 0.55`, upstream-blocked on
+  SHADING's `diff`-assembly question (§136.3).
 - **The budget is not breached.** Counted 1.73 M is the all-pass column (three cascades + AO +
   outline + composite); the scored main-view line is 0.675 M = **44 % headroom**. Same digits,
   opposite meaning. (§130.3)
