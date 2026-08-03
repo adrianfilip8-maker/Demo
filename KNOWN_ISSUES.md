@@ -11836,3 +11836,85 @@ It is not. What is left on the Architecture side is **`spec: 0.55`**, which TEXT
 as the binding constraint, and it is upstream-blocked by SHADING's `diff`-assembly question (§136.3)
 — because a lever measured through a term that attenuates an additive blue wash is a lever measured
 through a known defect.
+
+## §138 — registering the acceptance killed the design, and both arms were computable from disk
+
+I routed FX the fix it had itself named in §124.1: *a per-sprite distance / near-plane guard, with
+the mechanism now measured rather than hypothesised.* **The mechanism, once measured, says that
+guard is the wrong shape.** FX did not build it, and the prereg records why rather than quietly
+substituting a different fix.
+
+What killed it is the part worth keeping: **writing down the two acceptance arms revealed that both
+were measurable on frames already on disk.**
+
+### 138.1 The guard I asked for already ships, and the disc is nowhere near it
+
+Every batch already runs `a *= smoothstep(uNearFade.x, uNearFade.y, vViewZ)` with
+`TUNE.nearFade = [0.28, 0.95]` (`Particles.js:372`). Using the sprite-size arithmetic the shader
+itself documents, the disc at **58 × 61 px implies a depth of 4–28 m** across the pool's size range
+and the fov band. **It is not a near-plane artefact and never was**, and widening `nearFade` to
+catch it would reach into the body of the field.
+
+### 138.2 The largest sprite in the frame is the invisible one
+
+Component decomposition of `base − no-sandHigh` on `temple`:
+
+| component | px | size | ΔL |
+|---|---|---|---|
+| **the disc** | 2 803 | **58 × 61** | **+17.28** |
+| blob2 | 2 101 | **70 × 71** | **−0.71** |
+
+**Any screen-size ceiling that removes the disc removes blob2 first.** That is §124's `sandLow`
+bracket — cap 0.12 deleting 97.8 % of the field — reproduced on `sandHigh` at component granularity,
+and it closes the size route the same way.
+
+### 138.3 The discriminator is the backdrop, not the sprite — and the pool's own comment said so
+
+| sprite | backdrop luma | backdrop R/B | ΔL |
+|---|---|---|---|
+| **disc** | **44.6** | **0.13** | **+13.70** |
+| blob2 | 139.9 | 1.28 | −0.34 |
+| blob3–6 | 59.8–104.8 | 0.39–1.35 | +0.94 … +1.96 |
+
+The disc is the only sprite over the painted **blue star ceiling**. And `Emitters.js:624-630` states
+the design outright: `sand_haze` is *"sand-coloured alpha sprites over sand-coloured geometry, so
+however many of them there are they measure within a few luma of whatever is behind them."*
+
+> **The invisibility is the design, and it is conditional on a sand backdrop.** So the defect is the
+> *pairing*, not the sprite — which is exactly why no property of the sprite separates artefact from
+> field: **the artefact sprite is an ordinary member of the field.** Every knob I and FX reached for
+> — size, distance, cap — is a property of the sprite, and none of them can express the condition
+> that is actually violated.
+
+Caveat kept rather than fitted away: **blob6 is also blue-ish at only +0.94**, so a dark backdrop is
+**necessary but not sufficient.**
+
+### 138.4 An acceptance that refuses the tempting partial
+
+ARTEFACT = component with ΔL ≥ 8.0 over backdrop luma < 60 **and** R/B < 0.5; FIELD = everything
+else. PASS needs the disc under ΔL 3.0 **and** each exterior shot within 15 % of its baseline
+contribution and scattered fraction:
+
+> **A fix that removes the disc by thinning the field is a FAIL, not a partial success.**
+
+That clause exists because §124 already showed the shape of the trap once, and because *"the disc is
+gone"* is the half that is easy to measure.
+
+Arm A is the half FX cannot compute — `temple` is an interior and cannot say what an exterior haze
+field is worth — so `fx21` is capturing `base`/`no-sandHigh`/`back` on **dunes, hero, courtyard**,
+with `temple` **re-captured same-boot** so interior and exterior numbers are never compared across
+boots. Per-shot `back` controls, and a shot whose control fails has its rows voided *before* any
+baseline is quoted. The registered falsifier is aimed at FX's own split: **if an exterior carries a
+ΔL ≥ 8 component over a dark blue backdrop, the ARTEFACT/FIELD definition needs rewriting before any
+fix.**
+
+### 138.5 A candidate declined on ownership rather than on merit
+
+Three ranked, none implemented. The middle one — an **enclosure/zone gate** — is the best-targeted
+after backdrop conditioning, and `Lighting._updateEnclosure` **already computes that signal, graded**,
+sitting inert at `encloseStrength` 0. FX declined to take it: *"a cross-module ask, not mine to take
+unilaterally."*
+
+Correct call, and worth naming because the opposite is the more common failure here — an owner
+reaching one file sideways because the value is obvious from where they sit. **Nothing ships until
+Arm A lands.**
