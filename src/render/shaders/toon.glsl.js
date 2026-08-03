@@ -29,6 +29,18 @@ uniform vec3  uSkyColor;      // fill from above  (sky bounce)
 uniform vec3  uBounceColor;   // fill from below  (hot sand GI)
 uniform float uAmbIntensity;
 uniform vec3  uShadowColor;   // pre-scaled: shadow hue at uShadowFloor x key luminance
+/* Depth-dependent warm bounce (§115.4). uShadowColorLit is the SAME light built with a
+   different `shadowBounceMix`, for the shallow end of the shade; uShadowDepth is the
+   smoothstep window over shadowMix that hands over between them. Both colours are built by
+   the one `_refreshShadowColor`, so the teal blend, the floor and the peak cap apply to each
+   identically and only the bounce share differs.
+
+   INERT BY DEFAULT: ToonMaterial ships shadowBounceMixLit == shadowBounceMix, which makes
+   uShadowColorLit bit-identical to uShadowColor, and mix(a, a, t) == a for every t. So the
+   default build is bit-for-bit the shipped one and the A/B is clean in the same way
+   rimCurve [0,0,0] and rimPlanar strength 0 are. */
+uniform vec3  uShadowColorLit;
+uniform vec2  uShadowDepth;
 uniform float uShadowWash;
 uniform vec2  uShadowSharp;
 uniform vec3  uHaze;          // horizon haze colour
@@ -419,7 +431,14 @@ export const TOON_SHADE = /* glsl */ `
 		float slySubjT  = clamp( uSubjWarmShade, 0.0, 1.0 ) * vSlySkin;
 		vec3  slyWarmT  = uSssColor / max( slyLum( uSssColor ), 1e-4 );
 		vec3  slyFillX  = mix( fill, vec3( slyLum( fill ) ), clamp( uNeutralFill, 0.0, 1.0 ) );
-		vec3  slyShadX  = mix( uShadowColor, vec3( slyLum( uShadowColor ) ), clamp( uNeutralShadow, 0.0, 1.0 ) );
+		/* One knob, two jobs with opposite optima (§115.4): the shadow light's RED reaches
+		   ~88.8% of frame while its HUE only decides the image in deep shade. Both terms that
+		   carry this light are multiplied by shadowMix, so the knob's authority is exactly
+		   proportional to shadow depth — which is also where the magenta risk lives. Blending
+		   toward a warmer build at the shallow end spends the bounce where it costs no hue. */
+		vec3  slyShadD  = mix( uShadowColorLit, uShadowColor,
+		                       smoothstep( uShadowDepth.x, uShadowDepth.y, shadowMix ) );
+		vec3  slyShadX  = mix( slyShadD, vec3( slyLum( slyShadD ) ), clamp( uNeutralShadow, 0.0, 1.0 ) );
 		slyFillX = mix( slyFillX, slyWarmT * slyLum( slyFillX ), slySubjT );
 		slyShadX = mix( slyShadX, slyWarmT * slyLum( slyShadX ), slySubjT );
 

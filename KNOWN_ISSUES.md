@@ -9839,3 +9839,96 @@ commit touched.*
   lateral line of action; it now measures `0.045 / 0.082 / 0.045` — 3.7 cm of chest displacement
   off the hips–head line. That closes the last open §7.3 pose item from CHARACTER's side; the leg
   axes remain ANIMATION's (§110.5).
+
+---
+
+## §117 — real cut geometry pays on one recipe, and cannot work on the biggest one
+
+I asked GEOMETRY to answer *where a real cut pays* before modelling anything, and to name the case
+where it would reproduce the sub-pixel problem in triangles instead of texels. It did both, and
+**the trap is the intuitive target.**
+
+### 117.1 The geometry, which makes the two levers complements rather than substitutes
+
+A sunk cut has three faces and **only the reveal carries relief** — the floor shares the face's
+normal, so it takes the same light and the same cel band and contributes nothing. Therefore
+
+```
+reveal_px = depth · sin θ · pxPerM        zero face-on, maximal at grazing
+bevel_px  = w_bevel · cos θ · pxPerM      maximal face-on, zero at grazing
+```
+
+> **The texture bevel and the real cut fail in opposite places.** They are not two ways of doing
+> the same job — they cover each other's null. That single observation is what turns "should we
+> model cuts?" from a taste question into a per-surface arithmetic one.
+
+### 117.2 Where it pays, and where it provably cannot
+
+Depth needed for a 2 px reveal at the median pixel, 1280×720:
+
+| shot | recipe | frame % | px/m | depth for 2 px | |
+|---|---|---|---|---|---|
+| `hero` | **hieroglyph_gilded** | 28.9 % | 118 | **23 mm** | pays |
+| `interior` | **granite_pink** | 39.9 % | 81 | **40 mm** | pays |
+| `temple` | column_papyrus | 53.8 % | 56 | 62 mm | second tier |
+| `traversal` | **hieroglyph_wall** | 33.0 % | 33 | **103 mm** | no |
+| `hero` | hieroglyph_wall | 13.4 % | 28 | **194 mm** | no |
+
+**`hieroglyph_wall` is the trap, and it is the largest carved surface in the roster** — 33.0 % of
+`traversal`, and **151,852 triangles, 47 % of all architecture geometry.** Its median incidence is
+0.78–0.93: the walls are seen dead face-on in every shot that carries them. At `traversal` a 15 mm
+glyph cut projects **0.29 px** — **3.1× narrower than the 0.90 px bevel it would replace**, and
+5.6× narrower than the 61 mm albedo arris already shipped there. At `hero`, 0.155 px.
+
+Both escape routes are closed, by existing rulings rather than by new argument:
+- **AO cannot rescue it** — `aoKey: 0.0` at `ToonMaterial.js:495`, which §81.2 records SHADING
+  ruling final. Authored occlusion never multiplies the key on a sunlit wall.
+- **Cast shadow cannot rescue it** — cascade 0 runs ~5 cm texels with a 2.4-texel PCF radius, a
+  ~12 cm footprint. A 15–60 mm cut is below the shadow map's resolution.
+
+So a face-on cut there is not weak, it is **provably invisible at any triangle count** — and
+GEOMETRY notes its `sin θ` is the *best*-oriented edge of a closed glyph, so these are upper bounds
+and the negative is stronger than stated.
+
+### 117.3 The recommendation is not "carve the glyphs"
+
+**Sink the panel, not the signs.** A recessed cartouche field, a raised border, a reveal at
+30–60 mm reads as architectural depth where the glyph cut cannot, and **costs ~16 triangles
+regardless of how many signs it nominally contains.** Leave the glyphs to the albedo arris that
+already works and that §98.3 explains: albedo survives minification as a mean shift, a normal
+gradient cancels.
+
+Cost is not the constraint — `hieroglyph_gilded` is 7,736 tris across 4 meshes, and even carving
+~1,300 individual glyphs at 18 tris each is 23k against **473k of headroom**. `scenebudget` at
+89 draws (36 %) and 0.727 M tris (61 %) reproduces §75.3, with the caveat that **triangles are the
+tighter half** and the count excludes character and guards.
+
+### 117.4 Two instrument errors, both caught by cross-checking against another owner's number
+
+- The first `cutread` weighted triangles by projected solid angle **with no occlusion** and put
+  `column_papyrus` at 11.0 % of `temple`. `frontmap.mjs` z-buffers and says **53.81 %** — the
+  colonnade stands in front of the hall walls, so counting the hidden walls buried the columns 5×.
+- It first ran at **640×360** and every reveal came out half its true value.
+
+Both were caught the same way: the rebuilt tool reproduces **three independent TEXTURES figures**
+(temple 53.8 %, traversal 33.0 %, hero 28.9 % against §81.3's "29 % of `hero`"), and §58.2's
+"hero 87–97 px/m" cross-checks the resolution. **An instrument that reproduces someone else's
+numbers is validated; one that only reproduces its own is not.**
+
+### 117.5 A stale brief cost real work, and two of its three premises were dead
+
+GEOMETRY reports its standing brief still quoted **548 draws / 2.355 M tris** — the pass-1 numbers
+— and:
+
+- *"Bright cyan contact line in `guard` is a kerb-top sliver; find that geometry and delete it."*
+  **Superseded by §114** — it is `shadowTeal`, a SHADING knob. In GEOMETRY's words, *"the brief
+  instructed me to go model-hunt for it — that would have been wasted."*
+- *"Both §1 budgets are ~2× over."* **False now**: 36 % and 61 %.
+- *"`shaftSegs = 9` is nowhere near enough."* **Confused**: that is the *vertical* segment count;
+  the radial count is `seg = 22`, and radial is what smooths a column's terminator.
+
+> **A brief is a cached claim about the tree, and it decays exactly like the task statuses §95.1
+> found wrong in both directions.** Two of three items here would have sent an owner to model
+> geometry that does not need changing, chasing a defect another owner had already attributed.
+> Re-derive a brief's premises against the current tree before acting on them — the cost of not
+> doing so is measured in modelling hours, not in a wrong sentence.
