@@ -7383,3 +7383,96 @@ Neither can carry a character condition — which, with §76.4's `sly-perch` ros
 43 px note, makes **three of fourteen scored frames unable to support conditions they were scored
 against.** `sly-closeup` (33°, 699 px) and `combat` (45°, 406 px) are sound; `hero` at 70° / 185 px
 carries on tail and cane-hook silhouette alone.
+
+
+---
+
+## §87 — the rail was wrecking three frames, and each reroute had been checked against only the frame it was fixing
+
+GEOMETRY, after §83's re-brief. It first corrected its own brief: the three problems it carried were
+from the rolled-back tree, and against the recovered ledger all three are closed or re-owned (§75
+refuted the budget breach; §68/§70 re-attributed "reads as flat" to the tone curve; the cyan kerb
+became SHADING's rim work). It worked its actual open items instead.
+
+### 87.1 The rail: under-reported by the critic, and the cause is a review pattern
+
+`tools/railroute.mjs` scores a candidate spline against **all fifteen cameras**, no GPU and no lock.
+It showed pass 6's finding #1 was worse than filed — the shipped west line was wrecking **three**
+frames:
+
+| shot | samples in frustum | nearest | tube width |
+|---|---|---|---|
+| `courtyard` | 200/400 | 4.2 m | **42.5 px** |
+| `combat` | 114/400 | 5.7 m | **45.3 px** |
+| `sly-profile` | 109/400 | 4.9 m | **55.6 px** |
+
+> **Root cause: the rail was rerouted twice, and each time it was checked only against the one frame
+> it was fixing.** `courtyard` stands at (−2.5, 4, 41.5) — *on the approach*, the corridor the rail
+> descends — so no west or centre line can be far from that lens.
+
+That is a review failure rather than a geometry one, and the instrument that fixes it is the one that
+scores *all fifteen* frusta at once.
+
+**A prior note was true and misleading.** It recorded east as unavailable — "puts the line inside the
+east pylon" — which is **true of a line that still reaches the courtyard floor and false of one that
+goes *round* the tower.** The new route descends the peristyle's east flank to a newel post on the
+colonnade's south-east return architrave (20.7, 9.8, 31.8), landing the player on the existing y = 9.0
+ledge circuit.
+
+Result: **0 samples in 14 of 15 frusta**, and in `dunes` — the approach shot, *where this rail is the
+subject* — 8.1 px at 27.7 m. Clearances stated rather than assumed: 4.12 m over `Terrain.heightAt`,
+1.8–2.1 m from the pylon's battered face, and **6 m from `pylon-drop`'s terminus, where an earlier
+candidate converged to 0.4 m and would have fused two rails.** And the terminal "handrail return
+bend" — the last 5 m flattening, which **in screen space curls back up and is exactly a crook** — is
+gone.
+
+### 87.2 "Buried" was the wrong word, and the 69% decomposes into three mechanisms
+
+`tools/avenuevis.mjs` reproduces the figure exactly (**11/16 = 69%**) and then splits it:
+
+- **6 are off-frame** — the camera's 42° fov, not GEOMETRY's;
+- **5 are occluded by an intervening dune crest** (0.13–1.34 m of penetration);
+- **0 are sunk into the ground.** Every sphinx stands **2.03–3.59 m clear of its local sand**, so
+  `heightAt` placement is working.
+
+It shipped only the unambiguously-owned part: a 0.65 m base course under each avenue sphinx.
+
+**And its prediction was wrong, in the source comment, with the reason.** It predicted 69% → 44%;
+the measured result is **56%** — two animals recovered, not four. *"The prediction treated the
+occluder as a fixed step; it is a crest 11–28 m along a ray whose far end moves, so penetration does
+not fall 1:1."* The sweep (0 / 0.4 / 0.65 / 1.0 / 1.4 m → 11 / 11 / 9 / 9 / 9 hidden) identifies
+0.65 as the knee that captures the entire available gain. **Both the failed prediction and the sweep
+are recorded at the knob.**
+
+### 87.3 What it declined to claim
+
+**No GPU frame.** Verification is the offline rasteriser plus the analytic frustum test, and GEOMETRY
+flagged that *"for this specific claim that is sufficient — whether a tube is in a frustum is not
+something the shading pipeline can change — but it is not a real frame."* It judged a fourth queued
+job unjustified with three already waiting.
+
+The remaining 8 hidden sphinxes are the **camera-versus-dune decision** and remain unowned by it. And
+item 3 needed no authoring at all — the de-mirroring is already in the tree (pylons differing by
+sag/height/collapsed corner plus debris, colossi back pillars differing by 1.5 m with a lost head,
+colonnade piers breaking at different bays, the obelisk channel already at ~8 px). *"It needs a critic
+frame to judge, not more geometry."*
+
+### 87.4 Two process disclosures, one of them serious
+
+**The mild one:** it spent ~30 minutes on a GPU diagnostic before realising `tools/raster.mjs` —
+*whose own header says it exists to answer "is the geometry where I think it is" without the queue* —
+answers it in one minute. **The rasteriser should be the first instrument for any silhouette
+question, not the fallback.**
+
+**The serious one, disclosed unprompted:** it ran **`pkill -f chromium`** to free what it believed was
+its own stuck job. That pattern matches **other agents' captures and this session's own parent
+process.** It reported the risk rather than hoping nobody noticed, did not repeat it, and named the
+window to check.
+
+**Checked: nothing died.** At 04:29 all four captures are alive — `fx18` (pid 4070, holding the lock,
+22 min), `txab-off`, `char11` and `tone1` queued behind it, each orphaned to init in §14's survivor
+shape.
+
+> **A blast-radius pattern that happens not to fire is still a blast-radius pattern.** The standing
+> rule: never `pkill -f` on a shared machine — resolve the pid from the lock ticket or `/proc`, and
+> kill that.
