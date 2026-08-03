@@ -12599,3 +12599,85 @@ is the first place to re-test.**
 
 > An n=1 that cannot be increased is a different object from an n=1 nobody has tried to increase.
 > Saying which one you have is the whole of the honesty available.
+
+## §148 — the backdrop that contains the sprite, and a fix that would have failed as a stable fixed point
+
+I told FX *"there is nothing left to establish before implementing."* **There was one thing, and it
+would have shipped a fix that passes code review and fails silently.**
+
+### 148.1 A gate whose input contains its own output
+
+Candidate 1 needs the backdrop colour behind each sprite. The obvious source is
+`postfx.sceneRT.texture` — free, and sitting right beside the depth texture the soft-particle term
+already samples.
+
+**It contains the previous frame, including the particle pass.** So a sprite reads a backdrop that
+contains itself. On the one component that matters this is not marginal:
+
+| | luma |
+|---|---|
+| disc backdrop on the `no-sandHigh` frame | **44.4** |
+| same region with the sprite present (+17.28 ΔL) | **≈ 61.7** |
+
+The registered gate is **luma < 60**. So the sprite pushes its own backdrop across the threshold,
+**the gate never fires on the disc**, and the failure is *self-sustaining*:
+
+> doesn't fire → the contamination persists → keeps not firing.
+
+**A stable fixed point at the wrong answer.** It fails D2 while looking correct in code, and nothing
+in review would catch it, because every line is right and the *feedback* is the defect.
+
+The patch therefore renders its own particle-free backdrop (`_copyBackdrop`, quarter-res, FX root
+hidden, `shadowMap.autoUpdate` suppressed) — a second scene render, which is exactly the *"most
+invasive, most likely to cost frame time"* the seal predicted for this candidate. **The honest price
+of keying on the mechanism instead of a correlate.** Frame time is unmeasurable on a software
+raster, and FX will report it as **unmeasured, not estimated**.
+
+> A statistic measured on a frame and a quantity sampled *inside* the frame's own construction are
+> not the same thing even when they have the same name. §145's ROI, §144's estimator, and this are
+> the same error at three different layers.
+
+### 148.2 D1 satisfied by construction, and a compiler ruled out as an explanation
+
+Both ramps are `1.0 - smoothstep(e0, e1, x)` — exactly `0.0` outside the population — and
+`mix(1.0, g, 0.0)` is exactly `1.0`, so an ungated fragment executes `a *= 1.0`, bit-exact.
+
+**And the gate is a uniform, not a `#define`, deliberately:** a define compiles a *different program*,
+and then a D1 null could be the compiler rather than the gate. One program, one uniform, apples to
+apples. That is §147.2's *"not free for a broken version of the preferred fix"* extended to *"not
+free for a different binary either."*
+
+### 148.3 The units the thresholds were measured in are not the units the shader samples
+
+The registered thresholds — **luma < 60, R/B < 0.5** — were measured on the **final graded PNG**:
+AgX, grade, tonemap. **The shader samples scene colour before all of that.**
+
+FX encoded the sample toward that space, flagged it in `TUNE`, and refused to treat the numbers as
+transferable:
+
+> *"These are not the same numbers, and quoting the frame-space values as if the shader used them is
+> the units error this ledger keeps recording."*
+
+So the capture will report the sampled backdrop **at the two registered component centres — the disc
+and (520,581)** — verifying the thresholds against the very 2×2 that defined them (§147.3) *before*
+D2 is scored, rather than assuming they carry across the transform.
+
+### 148.4 The edit window was not taken, and the reason was checkable
+
+I told FX to announce its window and I would hold the others. It reports `SendMessage` found no
+reachable coordinator — so instead of proceeding on my general permission, **it checked the lock
+itself** and found three arms alive and queued behind a running capture:
+
+```
+lock  13810  compose1.mjs --only=ink --tag=ink2
+queued 23078  hgcframe.mjs      (TEXTURES)
+queued 27024  pnight1.mjs       (SHADING)
+queued  3253  propshull.mjs     (GEOMETRY)
+```
+
+**All three registered before the edit and booting after it — §121.4's fatal case, three times
+over.** So the work went into a scratchpad copy with a `patch --dry-run`-verified diff, and
+`src/fx/Particles.js` is untouched.
+
+Preserved at `progress/records/cand1/`. **An owner that cannot reach the coordinator and re-derives
+the constraint from the lock is better than one that waits, and much better than one that proceeds.**
