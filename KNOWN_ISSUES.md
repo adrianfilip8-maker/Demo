@@ -13673,3 +13673,117 @@ But the caution matters more than the opportunity:
 That is the counted-column and stale-tree failure in a third dress: a number that was true, is
 written down, and is now false — with nothing about the record marking it. Framing is mine; the
 measurement is TEXTURES'.
+
+## §159 — the BACK gate fired, §124.4 needs qualifying, and the blame lands on me rather than where it was sent
+
+`tuftbias` completed all three arms and **the arm is VOID by its own registered gate**: `BACK` sha
+`7741a6fb` ≠ `A` sha `50d9128f`. CHARACTER applied the rule with no exceptions, and the fur
+normal-bias question is unsettled.
+
+### 159.1 §124.4 is qualified: it holds for a harness that navigates once, not for an arm loop
+
+§124.4 established, from FX's `fx9`, that *"the bundler reads the tree at boot, not at capture — a
+mid-run edit is harmless, a between-runs edit is fatal."* That was true **of a harness that calls
+`page.goto` once and captures every job against that one navigation.**
+
+**`tuftbias.mjs:100` calls `p.goto(baseUrl, …)` inside the arm loop — a fresh navigation per arm.**
+Every arm is therefore its own boot, and a source edit landing between arms is a *between-runs* edit
+wearing a mid-run edit's clothes.
+
+> **The rule is about how many times the page is loaded, not about how long the process lives.**
+> `SANDS_NO_HMR` stops the server *watching*; it does not stop a fresh navigation re-requesting every
+> module. Any harness that re-navigates per arm gets a fresh read of the tree at each one.
+
+I handed §124.4 to five owners as a general rule. It is not general, and this is the case that shows
+where it stops.
+
+### 159.2 The cause is `src/world`, not `src/render`, and CHARACTER's own label misled it
+
+CHARACTER reported *"another agent edited `src/render/**` mid-run"* and routed a complaint to
+RENDER. The only `src/` changes inside the capture window were:
+
+| | |
+|---|---|
+| 19:47 | `src/world/Props.js` |
+| 20:07 | `src/world/EgyptLevel.js`, `src/world/Kit.js` |
+
+**No `src/render/**` change since 15:22.** And `tuftbias.mjs:54`:
+
+```js
+const renderTree = () => treeHash('src/player src/fx src/textures src/render src/world src/core');
+```
+
+**`renderTree` hashes six directories.** The name says render; the contents include `src/world`. So a
+GEOMETRY edit moved a hash CHARACTER read as RENDER's, and the misrouting followed directly from the
+identifier.
+
+*A variable named for one of the six things it covers will be read as meaning only that thing* —
+including by the person who wrote it. The complaint to RENDER is withdrawn; nothing in `src/render`
+moved.
+
+### 159.3 The exposure was mine, I was warned by my own words, and I called it wrong
+
+GEOMETRY edited `src/world/**` while this capture was live. **I noticed at the time and assessed it
+as harmless**, writing: *"The exposure is probably nil: one vite server, `SANDS_NO_HMR` …, and the
+module graph was fully populated during arm A — §124.4's rule."*
+
+That assessment assumed FX's single-navigation harness shape **without checking CHARACTER's**, which
+re-navigates. And I wrote, in the same message, *"'probably nil' isn't the standard, and what
+actually protects this is CHARACTER's registered BACK ≡ A gate, which would catch a moved tree and
+throw the run away."*
+
+**It did exactly that.** The guard belonging to a third owner absorbed a hazard I had identified,
+mis-sized, and swept anyway. The cost is one three-arm capture and an unsettled question.
+
+> Two things follow. **A rule quoted from the ledger still has to be checked against the specific
+> harness it is being applied to** — §124.4 is a fact about `fx9`'s control flow, not about vite.
+> And **noticing a hazard and reasoning it away is not the same as clearing it**; the reasoning was
+> available to be wrong, and the gate was not.
+
+### 159.4 A frame that was fresh when it entered the queue and 310 commits old when it came out
+
+`shots/cap2/*.png` are stamped `b96409c` against a HEAD of `dd33681` — **310 commits, ~30 of them
+character work** (per-channel `scleraTint`, the mask annulus, proportions, tail, tufts).
+
+On that frame the eyes blow out to glowing discs and the mask is gone, and CHARACTER was **one step
+from filing "the face reads as an owl, mask destroyed."** On the current tree, same shot, the mask
+reads correctly as a dark bandit mask, the cap reads, and the tail reads as properly ringed.
+
+**The defect was real of `b96409c` and is not true now.** §10's provenance failure with a new
+mechanism: *the frame was fresh when it entered the queue and two days old when it came out.* Queue
+latency is a provenance risk in its own right, and nothing in the harness marks it.
+
+### 159.5 Proportions are met, and the push-back is worth recording
+
+`idle_confident`: **5.03 heads** chin→cranium (3.90 including cap and ears). Authored bind-pose
+extents against the 0.366 m cranium: **hands 0.62 head-units, feet 0.84** — already generously
+oversized rather than undersized — chest 0.268 / waist 0.158, and **tail 0.731 × 0.647 × 1.300 m,
+2.20× the head's max dimension and 4.9× the chest's longest axis.**
+
+> **Measurement says this condition passes**, so whatever the critic is reacting to is the pose, or
+> the fact that **7 of 10 shots see him at ≥ 70° and small.**
+
+And the comparand trap is named: hands read as 0.38 head-units — apparently undersized — **if you
+divide by the 0.590 m head-with-ears instead of the cranium.** Same family as §8's spec-versus-surface
+error.
+
+Pose is scored as the weakest of the four, honestly: real contrapposto *is* authored and measurable
+(pelvis over the weight foot to 2 mm, hips −19° against chest +24°, feet staggered dx 0.232 /
+dz −0.300) but lateral centre-line travel is **0.063 m on a 1.85 m figure — 3.4 %**, and
+`perch_idle`, the `hero` pose, is shallower at 0.037 m **and is a C-curve, not an S.**
+
+### 159.6 Why no edit shipped, and a framing question that is mine
+
+*"Every lever I opened — cap bill, crown, mask band, sclera, tail aim — already carries a measured
+record explaining why it sits where it does, several documenting a reverted attempt in the direction
+I was considering."* With the queue this contended, a speculative change that cannot be verified in a
+frame is the failure mode. **Correct, and the restraint is the result.**
+
+Routed to me, and it is a real question rather than a complaint: **`hero` renders Sly at ~100 px and
+carries on tail plus cane-hook alone** — cap and mask cannot read at that size.
+
+> *"If `hero` is meant to prove the character, it needs him larger; if it is meant to prove the
+> vista, then the character conditions should not be scored against it."*
+
+That is a scoring-roster question, not a model defect, and it belongs with the same decision as
+§151.4's cap-at-33°.
