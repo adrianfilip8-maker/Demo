@@ -155,7 +155,10 @@ for (const recipeName of names) {
     globalThis.__GLYPHLOG = [];
     const s = new C.Surface(sz, (recipe.seed ?? hashName(recipeName)) >>> 0);
     recipe.build(s, { seed: s.seed, size: sz, name: recipeName, quality: 'high' });
-    return { sz, log: globalThis.__GLYPHLOG, tile: recipe.tile, tier: recipe.tier };
+    const HG = await import('/src/textures/Hieroglyphs.js');
+    const hasD = {};
+    for (const n of Object.keys(HG.GLYPHS)) hasD[n] = !!HG.GLYPHS[n].d;
+    return { sz, log: globalThis.__GLYPHLOG, tile: recipe.tile, tier: recipe.tier, h: Array.from(s.h), hasD };
   }, { recipeName, SHIPPED });
   if (got.error) { console.error(got.error); continue; }
   const sz = got.sz;
@@ -242,6 +245,52 @@ for (const recipeName of names) {
       const v0 = ((inst.v0 % 1) + 1) % 1, v1 = ((inst.v1 % 1) + 1) % 1;
       console.log(`    --landmark ${r.name}-${gname}:${(inst.u0).toFixed(4)},${(inst.u1).toFixed(4)},${v0.toFixed(4)},${v1.toFixed(4)}`);
     }
+  }
+
+  /**
+   * Does a logged sign actually leave a mark in the RELIEF?
+   *
+   * It is not a given, and on this recipe it turns out mostly not to. `glyphArchitrave` fills the
+   * whole band white in `'cut'` mode before calling `rowRegister`, so a sign's SILHOUETTE adds
+   * nothing to the cut mask — it is already inside the cut. The only pass that can still incise
+   * it is `'line'`, and `drawGlyph` returns immediately in that mode for any glyph without an
+   * interior-detail `d()` path. So a sign with no `d()` is drawn, logged, counted by every census
+   * — and is invisible in the height field.
+   *
+   * Measured, not inferred: height p2..p98 spread inside each sign's own box, against the spread
+   * of the band it sits in. A sign that is incised has a larger spread than its band; a sign that
+   * is not has the band's.
+   */
+  const Hf = Float64Array.from(got.h);
+  const spread = (x0, y0, x1, y1) => {
+    const a = [];
+    for (let y = Math.round(y0); y < Math.round(y1); y++) {
+      for (let x = Math.round(x0); x < Math.round(x1); x++) {
+        /* Canvas y -> surface row (rasterMask flips on readback), both wrapped. */
+        const sy = (((sz - 1 - y) % sz) + sz) % sz, sx = ((x % sz) + sz) % sz;
+        a.push(Hf[sy * sz + sx]);
+      }
+    }
+    if (a.length < 8) return NaN;
+    a.sort((p, q) => p - q);
+    return a[Math.floor(a.length * 0.98)] - a[Math.floor(a.length * 0.02)];
+  };
+  console.log('\n--- does each sign leave a mark in the HEIGHT field? (p2..p98 spread inside its box)');
+  for (const [gname, list] of Object.entries(groups)) {
+    if (!list.length) continue;
+    const withD = [], without = [];
+    for (const g of list) {
+      const sp = spread(g.x, g.y, g.x + g.w, g.y + g.h);
+      if (!isFinite(sp)) continue;
+      (got.hasD[g.name] ? withD : without).push({ n: g.name, s: sp });
+    }
+    const med = (a) => (a.length ? a.map((e) => e.s).sort((p, q) => p - q)[a.length >> 1] : NaN);
+    const ys = list.map((g) => g.y), hs = list.map((g) => g.h);
+    const bandSpread = spread(0, Math.min(...ys), sz, Math.max(...ys.map((y, i) => y + hs[i])));
+    console.log(`  ${gname.padEnd(7)} whole-band spread ${bandSpread.toFixed(4)}` +
+      `   signs WITH d(): n=${withD.length} median ${med(withD).toFixed(4)}` +
+      `   WITHOUT d(): n=${without.length} median ${med(without).toFixed(4)}`);
+    if (without.length) console.log(`          silent-in-relief signs: ${[...new Set(without.map((e) => e.n))].join(' ')}`);
   }
 
   /**

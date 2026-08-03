@@ -106,8 +106,46 @@ await browser.close(); server.close();
 if (got.error) { console.error(got.error); process.exit(1); }
 
 const sz = got.sz;
-const R = Float64Array.from(got.r), G = Float64Array.from(got.g), B = Float64Array.from(got.b);
+let R = Float64Array.from(got.r), G = Float64Array.from(got.g), B = Float64Array.from(got.b);
 const enc = (v) => Math.max(0, Math.min(255, Math.round(255 * (v <= 0.0031308 ? v * 12.92 : 1.055 * Math.pow(v, 1 / 2.4) - 0.055))));
+
+/**
+ * `--chan lit` — the RELIEF read, and this recipe cannot be judged without it.
+ *
+ * `glyphArchitrave`'s own note says the signs "read as dark cuts *in* the gold": the gild covers
+ * the whole sunk band, so the glyphs are carried by `carve`'s depth, not by pigment. An
+ * albedo-only render therefore shows a soft gold field with almost no writing in it and would
+ * support exactly the "flat colour, no detail" by-eye verdict that §121.9 recorded as WRONG when
+ * it was checked against the built maps. This shades the height field instead.
+ *
+ * SCOPE: this is not the game's shader. It is a single Lambert term on the height gradient at
+ * `derive()`'s slope scale (`bump * size / tile`, Textures.js:309), with no cel ramp, no shadow,
+ * no specular, no AO tint and no grade. It answers "is a mark present in the relief at this
+ * scale", not "how does it look".
+ */
+const CHAN = opt('chan', 'albedo');
+if (CHAN !== 'albedo') {
+  const Hf = Float64Array.from(got.h), OC = Float64Array.from(got.occ);
+  const ku = got.bump * sz / got.tileU;
+  const at = (x, y) => Hf[(((y % sz) + sz) % sz) * sz + (((x % sz) + sz) % sz)];
+  const lx = -0.55, ly = 0.55, lz = 0.63;   // raking from upper-left, the way a chisel reads
+  const out = new Float64Array(sz * sz);
+  for (let y = 0; y < sz; y++) for (let x = 0; x < sz; x++) {
+    const dx = (at(x + 1, y) - at(x - 1, y)) * 0.5 * ku;
+    const dy = (at(x, y + 1) - at(x, y - 1)) * 0.5 * ku;
+    const il = 1 / Math.hypot(dx, dy, 1);
+    const nd = Math.max(0, (-dx * lx - dy * ly + lz) * il);
+    out[y * sz + x] = nd;
+  }
+  if (CHAN === 'lit') { R = out; G = out; B = out; }
+  else if (CHAN === 'height') { R = Hf; G = Hf; B = Hf; }
+  else if (CHAN === 'occ') { R = OC; G = OC; B = OC; }
+  else if (CHAN === 'litalbedo') {
+    const r2 = new Float64Array(sz * sz), g2 = new Float64Array(sz * sz), b2 = new Float64Array(sz * sz);
+    for (let i = 0; i < sz * sz; i++) { const k = 0.25 + 1.35 * out[i]; r2[i] = R[i] * k; g2[i] = G[i] * k; b2[i] = B[i] * k; }
+    R = r2; G = g2; B = b2;
+  } else { console.error('unknown --chan', CHAN); process.exit(1); }
+}
 
 /** Box-downsample the V window [vc - vh, vc + vh] over `nu` wrapped U repeats into W x H. */
 function strip(W, H) {
