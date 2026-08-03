@@ -1882,7 +1882,15 @@ export const MATERIALS = {
       const layout = (mode) => (ctx) => glyphArchitrave(ctx, size, mode, cx.seed + 4, { worldTile: worldTileOf(HG_GILDED_TILE), signM: 0.85 });
       const cut = rasterMask(size, layout('cut'));
       const lines = rasterMask(size, layout('line'));
-      const ramp = carve(s, cut, lines, { depth: 0.42, bevelPx: 2.6, lip: 0.10, bulge: 0.5, lineDepth: 0.56, seed: cx.seed + 5 });
+      /* Arris on the gilding too — see `carve`. The hex is `goldLight` rather than the stone
+       * pale because the raised edge of a gilded relief is where the burnisher can reach, so it
+       * is the *brightest gold on the surface*, not exposed limestone. That is also the shape
+       * §7.3's gold line asks for — "hard spec + dark occlusion" is a value *span*, and the span
+       * this recipe was authoring ran the wrong way round: measured on the built Surface, floor
+       * 0.478 against face 0.629 with the raised class at 0.622, i.e. *below* the field. 0.16
+       * rather than the wall's 0.22 because gold's own ramp already spends range across the cut
+       * and doubling it would flatten the ramp's top. */
+      const ramp = carve(s, cut, lines, { depth: 0.42, bevelPx: 2.6, lip: 0.10, bulge: 0.5, lineDepth: 0.56, seed: cx.seed + 5, arris: 0.16, arrisHex: PAL.goldLight, arrisPolish: 0.08 });
 
       // Gold leaf laid into the sunk glyphs over a red bole ground; the leaf lifts at the arrises.
       const lift = s.field(2, (u, v) => sat(warpN(u, v, 14, 4, 1.1, cx.seed + 31) * 1.4 + 0.5));
@@ -1992,7 +2000,7 @@ export const MATERIALS = {
       const cut = rasterMask(size, layout('cut'));
       const lines = rasterMask(size, layout('line'));
       const paint = rasterRGBA(size, layout('paint'));
-      const ramp = carve(s, cut, lines, { depth: 0.50, bevelPx: 3.2, lip: 0.14, bulge: 0.52, lineDepth: 0.52, seed: cx.seed + 5 });
+      const ramp = carve(s, cut, lines, { depth: 0.50, bevelPx: 3.2, lip: 0.14, bulge: 0.52, lineDepth: 0.52, seed: cx.seed + 5, arris: 0.20 });
       freshCutTint(s, ramp, { amount: 0.18 });
       paintRemnants(s, ramp, paint, { survival: 0.48, freq: 4, seed: cx.seed + 9, edgeLoss: 0.68, fade: 0.44 });
       chiselMarks(s, { amount: 0.014, angle: -0.30, freq: 44, seed: cx.seed + 1, mask: m.edge });
@@ -2618,7 +2626,7 @@ export const MATERIALS = {
       /* Publish the joint mask so the build-time joint-sign assertion in `Textures._build()`
          covers this recipe too. It only reads `.joint`; there are no blocks here to id. */
       s.masonry = { joint: drum };
-      const ramp = carve(s, textCut, textLine, { depth: 0.40, bevelPx: 2.4, lip: 0.09, bulge: 0.45, lineDepth: 0.60, seed: cx.seed + 5 });
+      const ramp = carve(s, textCut, textLine, { depth: 0.40, bevelPx: 2.4, lip: 0.09, bulge: 0.45, lineDepth: 0.60, seed: cx.seed + 5, arris: 0.18 });
       freshCutTint(s, ramp, { amount: 0.14 });
       /* `survival` 0.34 → 0.46. With the registers above landing, the band interior measured
        * relative local contrast **0.0231 in frame against `hieroglyph_wall`'s 0.0305**, and its
@@ -4182,8 +4190,8 @@ function glyphWall(ctx, size, mode, seed, o = {}) {
     HG.registerRule(ctx, size, size, rule, mode);
   }
 
+  // Nominal pitch, kept only as the scale the jittered column boundaries are drawn around.
   const pitch = size / cols;
-  const margin = pitch * 0.12;
 
   /* **Cartouches: many, not one.** `cartouche` used to select a *single* column at random, and
    * that is precisely the shape §13 records as the largest visible-repetition defect this recipe
@@ -4258,10 +4266,37 @@ function glyphWall(ctx, size, mode, seed, o = {}) {
     const y0 = khTop + khH + size * (kheker > 0 ? 0.040 : 0.043);
     const y1 = y0 + size * tall;
     HG.registerRule(ctx, size, y1 + size * 0.020, rule, mode);
-    for (let c = 0; c <= cols; c++) HG.columnRule(ctx, size, c * pitch, rule * 0.6, y0, y1, mode);
+    /* **The column pitch is the rhythm that is left, and it was measured rather than guessed.**
+     * Horizontal NCC autocorrelation of the built tile at `interior`'s own 504 px/repeat
+     * (`acf.mjs` over the tall register): before the cartouche change the top peak was **lag 84
+     * at 0.799** with harmonics at 168 (0.723) and 252 (0.767) — the every-other-column
+     * cartouche, and exactly the "visible ~90 px repeat" critic pass 6 filed against
+     * `interior`'s hieroglyph band. Irregular cartouche spacing broke that series (84 → 0.678,
+     * 168 → 0.564, 252 → 0.606) and left the **column pitch itself** on top at lag 42 (0.748) —
+     * which is the *other* half of the same finding, the "~42 px mechanical grid, reads as a
+     * keypad". Fixing one rhythm promoted the other; both have to go.
+     *
+     * So the boundaries are jittered and renormalised to the tile, the same construction
+     * `cellWeights` uses vertically: the register still ends exactly on the seam, no column rule
+     * lands where the last one did, and there is no pitch for a correlation to peak at. A scribe
+     * laying out a wall adjusts column width to the text, so this is also what the writing does.
+     * ±14 % is bounded by the beacon census the same way the cell jitter is — a wider column
+     * takes a bigger sign, and a rare large sign is §13's landmark mechanism. */
+    const cw = new Array(cols);
+    {
+      const wr = rng((seed ^ 0x2545f491) >>> 0);
+      let sum = 0;
+      for (let c = 0; c < cols; c++) { cw[c] = 0.86 + wr() * 0.28; sum += cw[c]; }
+      for (let c = 0; c < cols; c++) cw[c] = (cw[c] / sum) * size;
+    }
+    const colX = new Array(cols + 1);
+    colX[0] = 0;
+    for (let c = 0; c < cols; c++) colX[c + 1] = colX[c] + cw[c];
+    for (let c = 0; c <= cols; c++) HG.columnRule(ctx, size, colX[c], rule * 0.6, y0, y1, mode);
     for (let c = 0; c < cols; c++) {
-      const x = c * pitch + margin;
-      const w = pitch - margin * 2;
+      const margin = cw[c] * 0.12;
+      const x = colX[c] + margin;
+      const w = cw[c] - margin * 2;
       if (cartAt[c]) {
         /* Height and lead-in both vary — see the placement note above. A cartouche sitting part
          * way down a column, under two or three signs of titulary, is also what the writing
