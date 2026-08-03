@@ -7062,3 +7062,73 @@ Left explicitly unaddressed: the teal sphinxes (cyan `rimColor` at rim 0.55 on s
 **interacts with §61.6's stuck `uRimColor`**, SHADING), the `dunes` shadow blob (confirmed *not*
 architecture or props geometry), and the sphinx-avenue framing, **which needs a camera-versus-dune
 decision GEOMETRY declined to take alone.**
+
+
+---
+
+## §83 — the container rolled back thirty hours, and the ledger is why that cost re-verification instead of knowledge
+
+At **03:53 UTC the container restarted and its filesystem came back at ~Aug 1 22:12.** Not a git
+operation — the whole working copy. Symptoms, in the order they were checked:
+
+- `uptime` reported **4 minutes**;
+- `git log` showed HEAD at `77e1eab`, and **`git reflog` held eight entries, none of them mine** —
+  a rollback of the same working copy would have left the reflog intact, so this was an older
+  filesystem, not a reset;
+- `KNOWN_ISSUES.md` was **1119 lines through §15** against 7064 through §82;
+- `tools/preappend.sh`, `headratio.mjs`, `armframe.mjs`, `armprofile.mjs` were **absent**;
+- the newest file in the session scratchpad was **Aug 1 22:12**;
+- the **task list had reverted** to its Aug 1 state, showing captures as "queued" that had completed
+  and been superseded hours earlier;
+- **all five sub-agent transcripts were back at Aug 1 21:33.**
+
+### 83.1 The first conclusion was wrong, and the thing that corrected it was a refused push
+
+I wrote a recovery document on the premise that thirty hours were gone, committed it, and pushed.
+**The push was rejected — `the remote contains work that you do not have locally`.**
+
+That single error message inverted the diagnosis: the remote was not behind, it was **180 commits
+ahead**. Every push during the session had landed. `git fetch` brought `9a08009` back, and
+`git reset --hard origin/...` restored **§1–§82 in full, every promoted instrument, and every source
+fix.** The recovery document was discarded with the reset, correctly — its premise was false and its
+content duplicated §76.
+
+*A failed operation was more informative than any of the six checks that preceded it.* All six were
+consistent with total loss; the seventh distinguished it from local-only loss, and it was the one I
+had not thought to run.
+
+### 83.2 What was actually lost, and what it cost
+
+**Permanently lost: every capture frame rendered on Aug 2** — `critic6`, `geofix`, `kerb2`, `rim4`,
+`rim5`, `dunesloft`, `det1/2/3`, `cap9`, `slyarm`, `tx8`, `tx9`, `fx16`, `fx17`, `sprobe`, `geo3`.
+**PNGs are not tracked**, so nothing in git could have held them. All in-flight captures were killed.
+
+**Also lost: the sub-agents' memory of the entire day.** Their transcripts predate every result they
+produced, so the five owners no longer hold the reasoning behind §45–§82 — *the ledger holds it and
+they do not.*
+
+**And what it did not cost: the knowledge.** Every measurement in those seventeen capture sets was
+written into this file **with its numbers, its population, its instrument and its caveats** at the
+time it was made. §76's verdict, §79's socket distances, §80's caster-set line reference, §81's
+autocorrelation table, §82's raycast distances — all survive, because none of them lived only in a
+frame.
+
+> **The frames were evidence. The ledger is the record.** A project that had treated the capture
+> directory as its memory would have lost thirty hours of findings; this one lost thirty hours of
+> *re-verifiability* and kept every conclusion, each already carrying the caveat that says how much
+> it can bear.
+
+That is not a happy accident. It is what §34, §41, §56.1 and §58.3 were enforcing every time they
+insisted a number travel with its definition and its population.
+
+### 83.3 The operational rules this makes explicit
+
+1. **The remote is the durable artifact; the container is not.** Commit and push on every meaningful
+   result rather than at the end of a batch. The session's habit of committing each section
+   immediately is the only reason the loss was bounded.
+2. **Anything not committed does not exist.** Frames never can be — so a measurement that lives only
+   in a PNG is a measurement that can evaporate. Write the numbers down.
+3. **Diagnose a suspected loss against the remote before acting on it.** Six local checks agreed on
+   the wrong answer; `git fetch` settled it in one command.
+4. **A restored tree does not restore its agents.** The five owners must be re-briefed from the
+   ledger, and their sections are the brief.
