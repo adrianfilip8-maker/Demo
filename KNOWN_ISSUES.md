@@ -8333,3 +8333,55 @@ ink chips**, because a small card wrapped in a ~2.5 px ink hull is mostly hull. 
 documented at the site, because a collar ruff exists to scallop an interior edge and moving it to
 the silhouette tangent deletes its purpose. Removing it is legitimate under §37 and needs its own
 hold-out.
+
+---
+
+## §97 — the avenue's problem is a stance, not a lens, and the fix is a candidate not a proposal
+
+GEOMETRY routed the sphinx-avenue framing to me because `Shots.js` is mine, having established
+that §8.1 pins the avenue at x = ±7, z = 40…84, that the pedestal lever is exhausted at its knee,
+and that including every animal from where `dunes` stands needs **vfov 107°** against a shipped 42°.
+Its conclusion — *"this is a camera-MOVE question, not an fov one"* — is right, and the reason is
+sharper than the fov number makes it look.
+
+**`dunes` stands at x = 26.** The avenue's axis is x = 0. So the camera sits twenty-six metres east
+of a processional way and aims at (−2, 9, 18) — it looks **diagonally across** the avenue from
+beside its near end. The near animals fall at horizontal **−67°**, nearly behind the lens, and the
+seven that are in frame are the far, smallest ones. **No fov fixes a stance**: widening to 107°
+would put the near animals at the frame edge, where a rectilinear projection stretches them worst.
+
+`tools/avenueshot.mjs` sweeps 576 on-axis and near-axis stations at the near end looking down the
+way — how a processional avenue has been composed since Karnak.
+
+| station | visible | occluded | frame span |
+|---|---|---|---|
+| **`dunes` as shipped** | **7/16** | 3 | 49% × 48% |
+| x 0, z 88, 16 m AGL, fov 38 | **14/16** | **0** | **99% × 20%** |
+| x 10, z 92, 16 m AGL, fov 50 | 15/16 | 0 | 56% × 48% |
+
+The 99% × 20% row is the processional signature: two rows converging across the **full width** of
+the frame in a thin band, which is what the vanishing point is for. The 15/16 row sees one more
+animal and clusters them in the middle, which is a row of statues rather than a way.
+
+### 97.1 Why this is not a proposal, and what would make it one
+
+**Zero of 576 stations see all sixteen animals unoccluded**, and the count stops discriminating
+long before the top of the table — 14 and 15 are separated by composition, not by geometry. That is
+§57.2's rule, and the tool prints it rather than folding both into one score.
+
+Three things this measurement cannot see, all stated in the tool's own SCOPE note: it ray-marches
+**terrain only**, so a station that scores well here can still be looking through a pylon; it
+scores geometry **in frame**, which is necessary and nowhere near sufficient; and it has **no sun
+term at all**, while `dunes`' bearing was chosen partly for its light. Every top station also sits
+at **16 m AGL** — an elevated establishing vantage, not a character-height one, which is a
+different kind of shot from the rest of the roster and has to be judged as such.
+
+So: a candidate, pending a render. It must not displace `dunes`, whose subject is the dune field —
+§93.3's rule is that a frame answers what its staging supports, and bending `dunes` into an avenue
+shot would lose the thing it was built for while gaining a thing it was never framed for.
+
+**The real finding underneath is not about a camera.** The avenue is sixteen animals, pedestals and
+a processional way, and **no frame in the roster presents it.** A critic scores what it is shown; it
+cannot reward an asset it never sees. Whether that earns a fourteenth scored shot is a roster
+decision, it interacts with the pass-7 brief, and it should be made on a frame rather than on this
+table.
