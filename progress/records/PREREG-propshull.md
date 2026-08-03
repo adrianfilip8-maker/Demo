@@ -74,3 +74,29 @@ worth exactly as much as the three.
 Explicitly **not** claimed by this capture: anything about `spec: 0.55` (§137.2's remaining
 Architecture-side lever, upstream-blocked on SHADING's `diff`-assembly question), and anything
 about the guard's unmasked `uMetal` (§137.1, routed to an owner-less module).
+
+---
+
+## Rider: the `guard` cyan line, and where I have registered that I expect to find it
+
+`guard` and `night` ride along in this boot at base/hull only, to answer §137's separate
+never-verified-in-a-frame item. `kerbline.mjs` scans them offline for the artefact's signature.
+That scanner carries a **positive control** — it synthesises critic pass 2's own measured run
+(`wall 87 → ink 26 → 72 → #598aa2 129 → 34 → ground 65`) and aborts if it fails to detect it —
+because a null from an instrument never shown to fire would be worthless. It fires at lift
++57.3 against pass 2's +57.
+
+Registered before the frames exist, from `sliver.mjs`'s offline census: the narrowest
+up-facing strip the `guard` camera can see is on **`arch:court:hieroglyph_gilded` at
+(−14.1, 1.42, 28.5)** — 6.2 cm wide, ~3.4 m from the camera, projecting **~24 px**, the widest
+of any candidate in that frame by a factor of six. `EgyptLevel.js:431` identifies it: the
+**cornice fillet on the west colossus plinth**. That is the same object `Shots.js` names as the
+original cause, seen from the camera that used to stand 5 cm above it.
+
+**And if it does light up, the fix is probably not mine.** A cornice's top fillet is *supposed*
+to be a narrow up-facing band — `corniceProfile()` builds it deliberately as the "walkable top,
+back to the wall plane", and it is intended architecture rather than a modelling error. Burying
+or widening it would damage the silhouette that is the whole point of an Egyptian cornice. So a
+hit here routes to §137's third candidate (`uRimShadowFloorArch`, SHADING) rather than back
+into `Kit.js`. I am registering that *now*, before the frame, so it cannot look like a
+convenient reading afterwards.

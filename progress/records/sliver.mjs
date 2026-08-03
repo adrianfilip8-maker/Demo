@@ -28,6 +28,28 @@
  * Not handled: occlusion. A strip found here may be hidden behind something. That makes this a
  * census of CANDIDATES, and it is reported as such — the frame test is what settles visibility.
  *
+ * ── READ THIS BEFORE QUOTING THE COUNT ──────────────────────────────────────────────────────
+ * **The headline number is not a defect count, and it must not be reported as one.** The first
+ * run returned 11 913 strips, and the great majority of them are the CHAMFER WORK THIS PROJECT
+ * DELIBERATELY ADDED. A 2–4 cm chamfer along every masonry arris is the single highest-value
+ * item in the geometry brief — it is what catches the cel ramp as a bright line and makes stone
+ * read as carved rather than as a box — and a chamfer facet is, geometrically, precisely a
+ * narrow up-facing strip. `paving:court` alone contributes 2 744 of them at a 5.6 cm median:
+ * that is the paving doing its job, not 2 744 bugs.
+ *
+ * So this instrument **cannot by itself separate an intended chamfer from a kerb defect**, and
+ * the threshold that would do it does not exist in this data — both are narrow, both are
+ * up-facing, and the difference is whether the strip sits at a silhouette the eye reads as an
+ * edge or at a contact the eye reads as a crease. That is a question about context, not about
+ * width.
+ *
+ * What the census IS good for: (a) confirming the shape class is present or absent at a
+ * specific location, (b) ranking by projected width per camera, which is the one place a
+ * chamfer and a defect genuinely differ — a chamfer is meant to be a hairline, so anything
+ * resolving to tens of pixels is worth looking at by name. Use it to generate suspects, and
+ * settle them in a frame. Do not use it to score.
+ * ────────────────────────────────────────────────────────────────────────────────────────────
+ *
  * usage: node progress/records/sliver.mjs
  */
 import * as THREE from 'three';

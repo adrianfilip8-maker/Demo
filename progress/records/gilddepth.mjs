@@ -102,8 +102,12 @@ A.root.traverse((o) => {
 
 const fovRad = THREE.MathUtils.degToRad(s.fov ?? 50);
 const mradPerPx = (2 * Math.tan(fovRad / 2) / H) * 1000;   // small-angle at frame centre
+/* `--rows y0,y1` restricts the report to a horizontal band, because a material can span a 10x
+   depth range in one frame and a single median then describes nothing in it. */
+const ROWS = (process.argv.find((a) => a.startsWith('--rows=')) || '').slice(7);
+const [ry0, ry1] = ROWS ? ROWS.split(',').map(Number) : [0, H];
 const ds = [];
-for (let i = 0; i < W * H; i++) if (isMat[i]) ds.push(zb[i]);
+for (let i = 0; i < W * H; i++) if (isMat[i] && (i / W | 0) >= ry0 && (i / W | 0) < ry1) ds.push(zb[i]);
 ds.sort((a, b) => a - b);
 if (!ds.length) { console.log(`${shotName}: ${MAT} not visible`); process.exit(0); }
 const q = (p) => ds[Math.min(ds.length - 1, Math.max(0, Math.round(p * (ds.length - 1))))];

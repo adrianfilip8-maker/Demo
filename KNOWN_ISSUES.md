@@ -12127,3 +12127,52 @@ they are meant to fix.
 
 **The launcher caught the wrapper a third time in one recovery sequence** (`char-ink`: wrapper 8747
 killed, pid 8748 at ppid 1). Fifth recurrence of §78.4 overall, third consecutive automatic catch.
+
+## §142 — two instruments disarmed by their own authors before anyone quoted them
+
+The session's most-repeated defect is *a number that does not depend on the thing it claims to
+measure* — five instances, five owners, all caught **after** someone had reasoned from the number.
+Two arrived today caught **before**.
+
+### 142.1 A census that refuses to be a score
+
+`sliver.mjs` returned **11 913 up-facing narrow strips**. GEOMETRY wrote the header rather than the
+finding:
+
+> **The headline number is not a defect count, and it must not be reported as one.** The great
+> majority are the **chamfer work this project deliberately added** — a 2–4 cm chamfer along every
+> masonry arris is the single highest-value item in the geometry brief, and a chamfer facet is
+> geometrically *precisely* a narrow up-facing strip. `paving:court` alone contributes **2 744 at a
+> 5.6 cm median: that is the paving doing its job, not 2 744 bugs.**
+
+And it states what the instrument **cannot** do: separate an intended chamfer from a kerb defect.
+Both are narrow, both up-facing, and *"the difference is whether the strip sits at a silhouette the
+eye reads as an edge or at a contact the eye reads as a crease — a question about context, not about
+width."* The threshold that would separate them does not exist in the data.
+
+What it *is* for: confirming the shape class is present or absent at a named location, and ranking
+by **projected width per camera** — the one axis where a chamfer and a defect genuinely differ,
+since a chamfer is meant to be a hairline and anything resolving to tens of pixels is worth opening
+by name. **Use it to generate suspects and settle them in a frame. Do not use it to score.**
+
+A four-figure count is the most quotable kind of number there is. This one arrived with its own
+retraction attached.
+
+### 142.2 A scanner that aborts unless it can first detect a known positive
+
+`kerbline.mjs` answers §137's never-verified-in-a-frame item — does `guard` still render a bright
+cyan contact line. It carries a **positive control that synthesises critic pass 2's own measured
+run** (`wall 87 → ink 26 → 72 → #598aa2 129 → 34 → ground 65`) and **aborts if it fails to detect
+it**, on the stated grounds that *a null from an instrument never shown to fire would be worthless.*
+It fires at lift **+57.3** against pass 2's **+57**.
+
+That is §13's calibration rule applied unprompted — in the same hour SHADING was arguing the same
+rule back at me over P-night (§141.1), by a different owner, on an unrelated question. **The rule
+has stopped being something the ledger enforces and become something the owners reach for.**
+
+### 142.3 And one measurement given a band because a median could not describe it
+
+`gilddepth.mjs` gained `--rows`, because *"a material can span a 10× depth range in one frame and a
+single median then describes nothing in it."* Same family as §135.1's ROI dilution and §128.2's
+frustum-volume denominator: a summary statistic quietly reporting a property of its own window
+rather than of its subject.
