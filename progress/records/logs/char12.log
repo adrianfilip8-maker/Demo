@@ -1,0 +1,23 @@
+# ---- run log preserved by tools/keeplog.sh ----
+# run:      char12
+# source:   /tmp/claude-0/-home-user-Demo/94022f73-a328-5e86-b2ec-031aa9c720ce/scratchpad/char12.log
+# copied:   2026-08-03T10:24:04Z
+# tree:     314cb40 (DIRTY at copy time)
+# NOTE: this is a COPY. The scratchpad original is ephemeral and may already be gone.
+# ------------------------------------------------
+· starting dev server on :5300
+· loading game
+· ready
+· renderer: ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)
+· modules present (17): shading postfx sky lighting textures architecture props terrain collision character animation movement camera fx guards hud audio
+· 1 boot warning(s):
+    ! textures: prewarm took 18.7s at size 1024
+  ✓ sly-closeup   261711ms  draws  253  tris 1653k
+  ✓ sly-perch     180580ms  draws  253  tris 1654k
+  ✓ hero          194979ms  draws  250  tris 1730k
+  ✓ combat        181213ms  draws  212  tris 1531k
+· 1 console error(s):
+    ! Failed to load resource: the server responded with a status of 404 (Not Found)
+  · page closed
+
+→ shots/char12/  (4 shots, 0 failed)
