@@ -306,7 +306,20 @@ function courtyard(A) {
   groundProxy(A, c.x0, c.x1, 0, c.z0, c.z1, { material: 'stone' });
 
   /* Stylobate apron so the complex is planted rather than floating on TERRAIN's sand.
-     Top at −0.07: BELOW the lowest jittered slab top (±0.055), not the +0.02 it used to be.
+     Top at −0.07: BELOW the lowest jittered slab top, not the +0.02 it used to be.
+
+     The clearance is now MEASURED off the built geometry rather than reasoned from the
+     nominal values, because the reasoning was not airtight — it compared the apron's nominal
+     top against the slabs' ±0.055 sink while ignoring the apron's own corner jitter and the
+     slabs' tilt, either of which could have eaten the margin. Over the up-facing vertices in
+     the contact band around the whole perimeter:
+
+         apron  top   min −0.0901   median −0.0786   max −0.0691
+         paving top   min −0.0452   median −0.0010   max +0.0351
+
+     Worst case against worst case — the highest apron vertex anywhere against the lowest
+     perimeter paving vertex anywhere — the apron is still **2.4 cm below**. So there is no
+     placement of the jitter that puts it proud, and the channel is continuous.
      Proud of the paving, its chamfered inner arris ran the whole court perimeter as one
      up-facing sliver — under the night key that sliver renders one band brighter than both
      neighbours and was the `guard` shot's cyan "kerb" contact line at the wall/ground

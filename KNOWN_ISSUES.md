@@ -12204,3 +12204,80 @@ stated risk can fail."* The other bands are still computed and reported, labelle
 Same family as 142.3's `--rows`, applied to an owner's own acceptance rather than to its
 measurements — and caught in the window where relocating a gate is free, because nothing has been
 seen yet.
+
+## §143 — a guard that would have blessed the broken arm, caught by reading another owner's file
+
+SHADING drafted a `propsHull` A/B into `pnight1.mjs` that toggled `shell.visible`. Reading
+`propshull.mjs`'s header — **GEOMETRY's instrument, for a different question** — showed why that
+cannot work.
+
+`ToonMaterial.js:1221`:
+
+```js
+setOutlinesVisible(v) {
+  this._outlinesVisible = !!v;
+  for (const s of this._shells) s.visible = this._outlinesVisible;
+}
+```
+
+It rewrites `.visible` on **every** shell, and `beginNormalPass()`/`endNormalPass()` call it **on
+every frame** so shells cannot contaminate the normal buffer. **The "off" arm would silently not be
+off.** SHADING killed the queued job, stripped the half, recorded the reason at the declaration
+site, and relaunched night-only.
+
+### 143.1 The part that makes this the sharpest instance of the session's defect
+
+> *"My own guard — counting the shells I touched — would have printed a healthy `6` and caught
+> nothing."*
+
+Every other instance this session was a number that failed to depend on its subject. **This one is
+a guard that would have actively confirmed the broken thing**, because it counted shells *touched*
+rather than shells *rendered*, and the touch genuinely happened. A green check from it would have
+been evidence *for* the arm.
+
+And it was not found by better self-scrutiny. **It was found by reading a different owner's
+instrument header, written for an unrelated question.** Five agents in one tree is usually justified
+by parallelism; §131.1 recorded the second benefit (an instrument built for one question answering
+another), and this is the third: *a header written to warn its own author warns everyone who reads
+it.* That only pays if headers carry mechanisms rather than usage.
+
+### 143.2 Two refusals in the same report
+
+**SHADING declined to borrow the ≤226° hue line for `night`** — *"that is a daylight-shadow-light
+spec, and applying it to a moonlit frame is §8's category error."* A ready-made threshold with the
+right units and the wrong provenance is the most tempting thing available to someone who has been
+asked for a number.
+
+**And it added `--only=` / `--tag=` to `compose1.mjs` specifically so the composition arms are not
+re-run**, on the grounds that *"a second run would mint a second set of numbers for a closed
+question."* §133.1's result stands; re-running it after a rollback would have produced a second
+answer to a question already settled, and then someone would have had to reconcile them.
+
+### 143.3 §133.6 recurred against the same owner, and it checked first
+
+SHADING's brief in this transcript was again anchored to the rolled-back volume — `KNOWN_ISSUES.md`
+at 1120 lines against the tree's 11,980 — so its assigned six-shot rim-gate measurement was
+**already done** as §61's `rim4` (six shots, seven arms, one boot, every frame opened by eye), and
+the task-#16 hue chain was superseded by §90/§111/§114/§115. It checked before spending the lock,
+for the second time.
+
+`DIGEST.md` exists for exactly this and did not prevent it, because a resumed agent reads its
+transcript, not the repo. **The digest has to be handed to the owner in the resume message, not left
+in the tree for it to find.**
+
+### 143.4 A clearance re-derived from built geometry rather than from nominals
+
+GEOMETRY replaced its own reasoning on the stylobate apron. The original argument compared the
+apron's *nominal* top against the slabs' ±0.055 sink — *"not airtight, because it ignored the
+apron's own corner jitter and the slabs' tilt, either of which could have eaten the margin."*
+Re-measured over the up-facing vertices in the contact band around the whole perimeter:
+
+| | min | median | max |
+|---|---|---|---|
+| apron top | −0.0901 | −0.0786 | −0.0691 |
+| paving top | −0.0452 | −0.0010 | **+0.0351** |
+
+**Worst case against worst case** — the highest apron vertex anywhere against the lowest perimeter
+paving vertex anywhere — the apron is still **2.4 cm below**. So no placement of the jitter puts it
+proud and the channel is continuous. A nominal-value argument replaced by an extremal one over the
+geometry that actually shipped.
