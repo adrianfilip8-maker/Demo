@@ -438,6 +438,58 @@ export const TUNE = {
      ~2.4. If the next frame reads runs/row < 2.4 the width overshot and 1.35 joins 3.40 in
      this note as falsified. */
   tuftRollW: 1.35,
+  /* --- ink-hull weight on fur CARDS only ---------------------------------------------------
+   * §116.3 closed the fur condition with "fur cards need a per-group thinner or zero outline —
+   * that is the only remaining lever and it is SHADING's." **The first clause is right and the
+   * attribution is wrong, and that is why this sat closed.** `Outline.js:129-200`
+   * (`applyInkWeights`) already writes a per-vertex `slyInk` weight, sourced from each material
+   * group's `userData.outline`, and its own header says it was built for *this* mesh — "for the
+   * one mesh in the game built from eight material groups — Sly — every group's authored weight
+   * was being discarded ... at the cost of one float stream and **zero extra draw calls**".
+   * The machinery shipped. What defeated it was `SlyModel._material()` passing a hardcoded
+   * `outline: 1.0` for every group — in CHARACTER's own file. So the lever was never SHADING's
+   * and no SHADING change was ever going to move it.
+   *
+   * Why cards specifically. The hull is ~2.5 px at any resolution (`TUNE.outline`), and the
+   * clumps that survive the `tuftDensity` cut are ~4–8 px wide on screen (`tuftRollW`'s note
+   * measures exactly this). A 2.5 px border on a 6 px card is most of the card, so a clump that
+   * is not exactly on the silhouette tangent renders as a black chip rather than as fur — which
+   * is the "mottled shredded mass", "black chips", "torn or burnt edge" the critic has logged
+   * repeatedly, and which the cut to `tuftDensity` 0.46 reduced without removing.
+   *
+   * Measured at HEAD, `sly-closeup`, flat albedo with the hull on (three-arm hold-out,
+   * `scratchpad/furheld.mjs`, derived from `progress/records/charread.mjs`):
+   *
+   *     arm                tris     figure px    ink px    ink fraction
+   *     A shipped         14044        66275     14153        0.2135
+   *     B tail row only   13108        64657      8887        0.1374
+   *     C no cards        12964        63453      8341        0.1315
+   *
+   * The non-tail card families cost 936 triangles and **+7.6 points of ink fraction** — they
+   * raise the figure's ink by 55% relative — while the tail row costs 144 triangles and +0.6.
+   * Arm B is visibly the best of the three and had never been rendered before.
+   *
+   * Why this knob and not deleting the offending rows. `tools/tuftface.mjs` across the four
+   * character bearings (33° `sly-closeup`, 45° `combat`, 70° `hero`, 116° `guard`) says `headL`
+   * is 95.5/97.4/84.6/61.5% ON-FACE and `legL` 82.1/100/100/85.7% — never an edge in any
+   * canonical framing — while `headR` is 0% on-face in all four and `legR` ≤7.1%. So the
+   * offenders are real, but they are *the side facing the camera*: deleting them fixes the four
+   * staged shots and leaves the character bald on whichever cheek faces a player who walks
+   * round him. The chip is caused by the hull's share of a small card, not by the card, so the
+   * fix that survives an arbitrary camera is to thin the hull on cards and keep the fur.
+   *
+   * 0.40 takes a card's border from ~2.5 px to ~1.0 px — a line thin enough that a 6 px clump
+   * reads as a lobe with an edge instead of a blot, and deliberately NOT 0: an un-inked card on
+   * an inked body is the other failure, a fur patch that reads as painted-on. §2.1 wants
+   * inked silhouettes, so this thins the line rather than removing it.
+   *
+   * **Not verified in a rendered frame at the time of writing, and it cannot be verified
+   * offline** — `charread.mjs`'s hull is a whole-mesh triangle expansion that does not read
+   * per-group ink weights, so no instrument in `tools/` can see this change. Only a capture
+   * closes it. If a capture shows the cards now reading as pale unlined patches, this is too
+   * low; if the chips survive at 1.0 px, the mechanism is not hull share and this whole note is
+   * wrong rather than mistuned. */
+  tuftInk: 0.40,
   furLobe: 0.055,         // lobe amplitude on the HEAD only — see `furLobeLimb`
   /* **The lobe knob was one knob doing two jobs, and the cheek was holding the limbs hostage.**
    *
@@ -580,8 +632,24 @@ const PAL = {
   eyeWhite: 0xf7f3e6,
 };
 
-/* Material group order — index into the material array, so also the draw-call order. */
-const GROUPS = ['fur', 'furCream', 'furDark', 'cloth', 'clothDark', 'gold', 'ink', 'eye'];
+/* Material group order — index into the material array, so also the draw-call order.
+ *
+ * **The three `furTuft*` groups are APPENDED, never inserted, and that is load-bearing.**
+ * `tools/headratio.mjs` — the binding instrument for §7.3's head:body condition — identifies
+ * the cap by raw material index (`CAP_GROUPS = new Set([3, 4])`), and `tools/shotsil.mjs`'s
+ * `PART_COL` does the same. Inserting a group ahead of `cloth` renumbers both and they would go
+ * on printing confident wrong numbers rather than failing. Append only.
+ *
+ * They exist so the fur CARDS can carry a different ink-hull weight from the body loft they
+ * grow out of; see `TUNE.tuftInk` for the measurement that motivates it. They are the same
+ * three fur tones — `_matSpec` delegates so the colour, maps and shading terms cannot drift
+ * apart from their parents — and cost three draw calls on a mesh that already spends eight. */
+const GROUPS = ['fur', 'furCream', 'furDark', 'cloth', 'clothDark', 'gold', 'ink', 'eye',
+  'furTuft', 'furTuftCream', 'furTuftDark'];
+
+/* A tuft card's material group, given the body group it grows from. One place, because the
+   mapping is used by every clump row and a row that misses it silently keeps the body's hull. */
+const TUFT_GROUP = { fur: 'furTuft', furCream: 'furTuftCream', furDark: 'furTuftDark' };
 
 /**
  * Head space. `headScale` has to move the skull, the face, the cap, the ears *and* the head
@@ -2639,9 +2707,18 @@ export class SlyModel {
        which is the one shape that survives a 2.5 px ink hull without the hull becoming most of
        what you see. `flat` stays 0.52: a lobe wants thickness, and a flatter card is what floats
        off the silhouette when the surface turns. */
+    /* Every card is routed to its group's `furTuft*` twin so it carries `TUNE.tuftInk`'s thinner
+       hull instead of the body's — see that note. Done here rather than at the twelve call sites
+       because a row that missed the mapping would silently keep the 2.5 px border and read as
+       the chips this is meant to remove, with nothing in the build to say so.
+       `clothDark` (the two boot-cuff rows) is deliberately absent from `TUFT_GROUP` and keeps
+       the body hull: it is 48 of ~720 card vertices, and `clothDark` is the boot-and-trouser
+       material that already owns 35.4% of `sly-closeup`'s contour, so a fourth material group
+       would buy very little for a fourth draw call. Revisit if a capture shows boot-cuff chips. */
     const put = (o) => addTuft(mb, {
       sg: mb.newSg(), color: 0xffffff, flat: 0.52, tipW: 0.88,
       ...o,
+      group: o.group ? (TUFT_GROUP[o.group] ?? o.group) : undefined,
       width: (o.width ?? 0.015) * WF,
       length: (o.length ?? 0.05) * TUNE.tuftLen,
     });
@@ -3446,6 +3523,13 @@ export class SlyModel {
         normalScale: 1.25, repeat: [3, 3], sss: TUNE.furSSS * 0.6, rim: TUNE.rim * 1.15,
         spec: 0.03, gloss: 9,
       };
+      /* Fur CARDS. Delegate to the loft group they grow from so colour, maps, normal scale and
+         every shading term stay identical by construction — the only difference is `ink`, the
+         hull weight. Written as a spread rather than as copied literals precisely so a future
+         edit to `fur`/`furCream`/`furDark` cannot leave the cards behind on stale values. */
+      case 'furTuft': return { ...this._matSpec('fur'), ink: TUNE.tuftInk };
+      case 'furTuftCream': return { ...this._matSpec('furCream'), ink: TUNE.tuftInk };
+      case 'furTuftDark': return { ...this._matSpec('furDark'), ink: TUNE.tuftInk };
       case 'cloth': return {
         color: PAL.shirt, map: C.detail, normalMap: C.normal,
         normalScale: 0.75, repeat: [4, 4], sss: 0.14, rim: TUNE.rim * 0.85,
@@ -3626,7 +3710,10 @@ export class SlyModel {
              Each changes a shading read on every surface it touches, so each wants its own
              capture rather than being folded in with a geometry pass. */
           metal: spec.metal ? 1 : 0,
-          outline: 1.0,
+          /* Per-group ink-hull weight. This was a hardcoded 1.0 for every group, which is what
+             discarded `Outline.js`'s per-group weight stream — see `TUNE.tuftInk`. Groups that
+             do not author `ink` keep 1.0, so every existing surface is bit-identical. */
+          outline: spec.ink ?? 1.0,
           sss: spec.sss ?? 0,
           detail: spec.detail ?? null,
           emissive: spec.emissive ?? 0x000000,
