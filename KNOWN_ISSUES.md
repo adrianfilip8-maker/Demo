@@ -10824,3 +10824,198 @@ character is on the floor.)
 
 Recorded because the correction came from the owner I was warning, citing a rule I had written down
 and then failed to apply four messages later.
+
+## §127 — three generations of fur tuning were downstream of a constant nobody had named
+
+CHARACTER was routed §7.3's four-condition character block. Two conditions were already passing,
+one has an untestable element, and the fourth turned out to be controlled by a term that did not
+exist as a named constant until this pass.
+
+### 127.1 A registered prediction, its own null, recorded before the verdict
+
+`tuftInk` (fur cards' ink-hull weight, 1.0 → 0.40) moved ink by **105 px**, while *deleting* the
+same cards removes **5179**. CHARACTER wrote that null into the source **before** scoring it, along
+with the mechanism:
+
+> Clump normals are biased **82 % toward the host surface**, and the hull extrudes along that same
+> attribute — so a card's shell **translates bodily instead of inflating.** A translated
+> card-sized black silhouette does not shrink when you scale the translation; a border would have.
+
+So the premise held (a card really is ~3.1× more hull than fur) and the lever did not. The term that
+does is `Body.addTuft`'s hardcoded `shadeMix ?? 0.82`, now surfaced as `TUNE.tuftShadeMix` — **0.82
+is that default, so the constant is behaviour-identical** — on the stated grounds that *a hypothesis
+which cannot be swept cannot be tested.*
+
+| `tuftShadeMix` | ink px | visible card px |
+|---|---|---|
+| **0.82 (ship)** | 14 048 | 3 124 |
+| 0.40 | 8 166 | 7 155 |
+| 0.00 | 7 942 | 7 380 |
+| *(no cards at all)* | 8 341 | — |
+
+**56× the effect of `tuftInk`.** As the bias falls, cards stop being ink and become fur — and at
+0.40 the figure carries **less ink than with no cards at all**.
+
+> **The three prior tuning generations — density 2.2 → 1.05 → 0.46, card width, roll width — were
+> all downstream of this one term.** Every one of them was a real measurement of a real quantity,
+> and none of them was the knob. A parameter that is hardcoded inside a helper is not a parameter
+> anyone can find; it is a property of the code, and it will absorb generations of tuning aimed at
+> its neighbours.
+
+**And it was deliberately not shipped.** The instrument is flat albedo — it sees the hull and is
+structurally blind to the shading, which is *the entire reason the bias exists*. Shipping on it
+would be §36: rigorous apparatus aimed at the wrong layer. It is queued for a two-arm capture.
+
+### 127.2 Correcting my own commit message
+
+`831f6de` called `tuftInk` **"NOT INERT"**. It is probably near-inert, and CHARACTER had predicted
+that in the note before measuring. My description was written from the change's *intent* rather
+than from its measured effect — the same substitution §121.9 made about curvature. It ships pending
+the capture for two stated reasons: the proxy overstates ink at internal creases and *a card lying
+on a limb is exactly that*, and groups not authoring `ink` are untouched, so a null costs three draw
+calls and nothing else.
+
+### 127.3 A stale frame caught by testing its sensitivity rather than arguing about it
+
+`shots/cap2/` stamps commit `b96409c` — **249 commits behind** the tree at launch — and the stamp
+could not be reconciled with the mtimes (the ~43 h clock jump of §123.5 is in this window).
+
+CHARACTER did not try to settle the provenance. It asked whether the frame was *sensitive to the
+gap*: at `b96409c`, `tuftDensity` was **1.05 against the shipped 0.46**. That frame shows **twice
+the clump count that ships** — precisely the dimension it was being read for. Discarded.
+
+> **When provenance is unresolvable, the useful question is not "which tree is this?" but "would
+> this frame differ between the candidate trees on the axis I am about to read?"** That is
+> answerable from source in minutes and it is decisive either way.
+
+### 127.4 Three errors in the brief I wrote, all mine
+
+- **Head:body was already passing.** `headratio.mjs` reads **5.03 heads** against §7.3's ~1:5,
+  unchanged before and after. My brief's premise came from §9's superseded 5.53 → 5.29; **§116.5
+  already records the fix.** §122.4's stale-brief pattern, from the coordinator, again.
+- **`guard` does not frame Sly at all** — he is *behind the camera by design*, and the subject is a
+  guard at 297 px. I listed it as one of four framing shots for a character block.
+- **The mask cannot read in a pure-black silhouette by construction** — it is a colour marking that
+  does not break the outline. That is a flaw in the test the brief asked for, not in the model; the
+  `-headparts` artefact shows the mask reading correctly. Silhouette passes on all three achievable
+  elements: cap, tail mass and cane hook, unmistakable in `hero`, `sly-closeup` and `combat`.
+
+### 127.5 Routed, and one of them lands on a shared attribute
+
+- **`sneak_idle` has the weakest line of action** (2.4 cm chest offset) and is the frozen pose in
+  **`temple`, `interior` and `guard`** — three canonical shots. `Clips.js` is ANIMATION's
+  (AGENTS.md:115) and there is no ANIMATION agent this session, so it is recorded, not touched.
+- **For SHADING, and it is the interesting one:** `slyNormal` is a position-welded average of the
+  **biased** `normal` (`Outline.js:100-120`), so the 82 % bias reaches the hull and **cannot be
+  separated from CHARACTER's side.** Decoupling the shading normal from the ink normal would remove
+  the trade entirely — the bias is load-bearing for the cel ramp (it stops a clump reading as an
+  independent dark chip) and harmful for the hull (it makes the shell translate rather than
+  inflate). One attribute is doing two jobs across an ownership boundary.
+- **For the critic:** score the character block on `sly-closeup` / `combat` and the `sly-*` family,
+  never `guard`; `hero` at 185 px of subject is too small for fur.
+
+A caveat CHARACTER attached to its own pose result, which is the kind that usually goes unsaid: the
+line-of-action measure is **lateral only** and is blind to `cane_combo_3`, whose line is sagittal
+(0.88 m stride). **A low number there is not a stiff pose.**
+
+## §128 — the bead works, the gilding still loses to paving, and §121.7's conditional fires
+
+GEOMETRY answered §123.4's routed question. **Yes: gilded elements can carry a rounded arris.**
+`beadRoll` plus a `roll` option on `beam`, on all seven gilded beams — **~1 k triangles, zero extra
+draw calls**, and `hero`'s gilded area-in-lobe goes **0.69 % → 0.87 %** once the arc spans the sky
+side (§123.4's correction). The kiosk ring visibly reads as carved rather than boxed.
+
+**And it does not fix gold.** Measured on `courtyard` with §121.9's own statistics:
+
+| surface | L | chroma | (b−r) |
+|---|---|---|---|
+| gilded plinth cavetto (lit side) | 85.3 | 0.387 | −0.084 |
+| kiosk lintel ring (beaded) | 69.9 | 0.335 | −0.061 |
+| **plain sunlit paving — not gilded at all** | **94.8** | **0.559** | **−0.288** |
+| §121.9's target (cane gold) | 110.9 | 0.696 | −0.450 |
+
+The gilding has crossed to the correct side of zero on b−r (from §121.9's +0.055), so the bead did
+something real. But:
+
+> **The gilding reads cooler and less saturated than ordinary sandstone paving, in the same frame,
+> under the same light.** That is not a lobe-width problem and no arris geometry fixes it.
+
+A control nobody registered — *the unremarkable material next to the one under test* — settled in
+one row what four sections of lobe arithmetic could not. Ordinary paving is the bar gold has to
+clear, and it is currently losing to it.
+
+### 128.1 §121.7's conditional fires: `arrisPolish` goes to 0
+
+`PREREG-hgarris2` P5 registered *"if both land null, gilded's arris goes to 0 and stays there"*, and
+§121.7 suspended it on one named condition: **if `gloss` stays at 64, zero it; if `gloss` drops,
+re-run first.**
+
+**GEOMETRY has decided `gloss` stays at 64**, and its reasoning is better than the rule required.
+64 → 24 is a genuine 3–5× on availability, but it multiplies a term **the `sh` gate has already
+zeroed on most gilded area**, and the blown-patch failure mode cannot be checked while nothing is
+lit. *Changing a number that is structurally incapable of showing its effect is not tuning, it is
+guessing with extra steps.* If gilded architecture is ever staged into the key, **gloss 40** is the
+sized next step (`hero` 0.87 → 1.55 %, `night` 3.51 → 6.71 %) and wants a visual check.
+
+So the condition is discharged and the rule executes. **`shots/gs-pol0` is already a frame-verified
+capture of the zeroed state**, which is the whole reason §120.5 kept that arm.
+
+### 128.2 §121.8's error reproduced by a second owner, and caught by the same question
+
+GEOMETRY's first shadow test reported `hero`'s gild as **6.1 % lit**. The denominator was every
+gilded triangle in the frustum **volume** — including tomb architraves 100 m away behind a wall.
+Culled to camera-visible, the kiosk lintel ring — **63 % of `hero`'s projected gild** — is **45.4 %
+lit, with 7.0 % already inside the lobe at the shipped gloss.**
+
+> §121.8 named this exact failure about `goldspec.mjs`: **availability is not visibility.** It cuts
+> both ways. There it made a null look explicable; here it made a workable surface look hopeless by
+> a factor of seven. A denominator drawn from a volume rather than from what the camera can see is
+> wrong in whichever direction the geometry happens to fall.
+
+### 128.3 A tracer validated against a control, which it failed
+
+Before trusting the shadow tracer, GEOMETRY ran it on **paving** and got **2.5 % lit against §1's
+known ~43 %.** Root cause: **`lvl.mjs` builds no terrain**, so the occluder set excluded the desert
+entirely — the hazard written in that module's own header, which already cost one agent a false
+conclusion. Reconciled, with the residual stated as an **upper bound on "lit"**, which is the safe
+direction for a claim that gold is under-lit.
+
+### 128.4 A fix that made the defect worse before it made it better, all three states measured
+
+`beadRoll` shipped as an open-ended half cylinder — a **hole**. `tools/backface.mjs` caught **6 rays
+per `hero` frustum** reaching the *inside* of the beads, the same defect class as the unsealed
+shells and single-leaf openings. Adding semicircular caps with the winding backwards turned them
+into two **more** inward-facing surfaces and took `hero` from **6 to 11**. Fixed: **0 backface hits
+on all seven probe shots.** All three states are recorded, not just the last.
+
+### 128.5 The geometry hypothesis for §7.3's first condition is refuted by measurement
+
+My brief asserted the cel ramp reads flat because the geometry gives it nothing to band. **The
+precondition is now demonstrably present** — a `temple` column carries a **50–58 L gradient across
+its width** — and there is still **no plateau-and-step structure**: 30–51 % plateau, 15–17 % steep,
+monotone drift.
+
+**Owner: SHADING.** Likely the additive fill / bounce / rim terms smearing the 3-band quantiser —
+which is the same family §119 established is bimodal by construction, and the same terms §122.5's
+composition arms are about to sweep.
+
+### 128.6 My brief was stale on all three of its problems — the fourth owner to report this
+
+`chamferBox`, `chamferFor`, entasis and per-mass `bow`/`drift`/`sag` **all already exist**;
+`shaftSegs: 4` is deliberate (radial segments do the smoothing, vertical ones do not). The cyan kerb
+in `guard` was **already found and fixed** — the stylobate apron's chamfered inner arris, sunk to
+y = −0.07 — and `Kit.js:546` already records that the batter-ledge hypothesis was refuted by
+z-buffered count and that the plinth "fix" measured **worse** (86 → 464 px). The budget I quoted as
+548 draws / 2.355 M tris is **250 draws (exactly at budget) / 1.73 M tris**.
+
+TEXTURES, SHADING, CHARACTER and now GEOMETRY have each reported a brief anchored to a superseded
+tree. §122.4 framed this as a property of resuming agents from transcripts. **Four for four makes it
+a property of how I brief, not of how they resume:** I have been writing tasks from the ledger's
+narrative rather than from the tree, and the ledger's narrative is a record of what was *once* true.
+Every one of these was caught by an owner spending ten minutes before taking the lock.
+
+GEOMETRY also flagged, unprompted, that it wrote three files outside its six (`goldshadow.mjs`,
+`goldcurve.mjs`, `PREREG-bead.md` — all in `progress/records/`, none in `src/`), and logged §121.4
+against itself: it edited `Kit.js` at 15:33 while a 15:15 capture was booted. UV-only, geometry
+bit-identical, verified `hero` 0.87 % before and after — so the frames stand for every claim above,
+and the hazard is on the record anyway.
