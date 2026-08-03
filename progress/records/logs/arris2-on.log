@@ -1,0 +1,54 @@
+# ---- run log preserved by tools/keeplog.sh ----
+# run:      arris2-on
+# source:   /tmp/claude-0/-home-user-Demo/94022f73-a328-5e86-b2ec-031aa9c720ce/scratchpad/arris2-on.log
+# copied:   2026-08-03T12:14:27Z
+# tree at copy time (NOT the run's build): 76611f2 — working tree DIRTY
+#   For the commit this run actually rendered, read shots/arris2-on/report.json or arris2-on.json.
+# NOTE: this is a COPY. The scratchpad original is ephemeral and may already be gone.
+# ------------------------------------------------
+· waiting for capture lock (10s, held by pid 16208)
+· waiting for capture lock (21s, held by pid 3655)
+· waiting for capture lock (32s, held by pid 3655)
+· waiting for capture lock (42s, held by pid 3655)
+· waiting for capture lock (52s, held by pid 3655)
+· waiting for capture lock (62s, held by pid 3655)
+· waiting for capture lock (72s, held by pid 3655)
+· waiting for capture lock (83s, held by pid 3655)
+· waiting for capture lock (94s, held by pid 3655)
+· waiting for capture lock (104s, held by pid 3655)
+· waiting for capture lock (115s, held by pid 3655)
+· waiting for capture lock (126s, held by pid 3655)
+· waiting for capture lock (137s, held by pid 3655)
+· waiting for capture lock (148s, held by pid 3655)
+· waiting for capture lock (158s, held by pid 3655)
+· waiting for capture lock (168s, held by pid 3655)
+· waiting for capture lock (179s, held by pid 3655)
+· waiting for capture lock (189s, held by pid 3655)
+· waiting for capture lock (200s, held by pid 3655)
+· waiting for capture lock (211s, held by pid 3655)
+· waiting for capture lock (222s, held by pid 3655)
+· waiting for capture lock (232s, held by pid 3655)
+· waiting for capture lock (243s, held by pid 3655)
+· waiting for capture lock (253s, held by pid 3655)
+· waiting for capture lock (264s, held by pid 3655)
+· waiting for capture lock (274s, held by pid 3655)
+· waiting for capture lock (285s, held by pid 3655)
+· waiting for capture lock (296s, held by pid 3655)
+· waiting for capture lock (306s, held by pid 3655)
+· starting dev server on :5300
+· loading game
+· ready
+· renderer: ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)
+· modules present (17): shading postfx sky lighting textures architecture props terrain collision character animation movement camera fx guards hud audio
+· 1 boot warning(s):
+    ! textures: prewarm took 16.7s at size 1024
+  ✓ traversal     224170ms  draws  242  tris 1736k
+  ✓ interior      102859ms  draws  156  tris 710k
+  ✓ temple        191606ms  draws  229  tris 1699k
+  ✓ hero          239161ms  draws  246  tris 1713k
+· 1 console error(s):
+    ! Failed to load resource: the server responded with a status of 404 (Not Found)
+  · page closed
+
+→ shots/arris2-on/  (4 shots, 0 failed)
+ARM-ON-DONE rc=0
