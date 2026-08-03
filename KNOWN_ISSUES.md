@@ -12681,3 +12681,91 @@ over.** So the work went into a scratchpad copy with a `patch --dry-run`-verifie
 
 Preserved at `progress/records/cand1/`. **An owner that cannot reach the coordinator and re-derives
 the constraint from the lock is better than one that waits, and much better than one that proceeds.**
+
+## §149 — the derivation withdrawn, the conclusion stronger, and a second finding of mine that died with it
+
+### 149.1 Conceded on disk, with the term nobody had quoted
+
+GEOMETRY verified §148's correction against the file and withdrew its own derivation. `uMetal` is
+0.85, the metal branch is live, and the 1.254 ceiling is **a floor for the non-gild limestone, not a
+ceiling for the gild.**
+
+It also supplied the missing quantity, which was sitting in the comment above the recipe all along:
+**11.0 % of `hieroglyph_gilded`'s texels carry the gild mask** in the ORM blue channel. Re-run with
+`slyMetal = 0.85 · ORM.b`: on gild texels `specAmt` ×**3.04**, `diff` ×**0.32**, `metalEnv` live, and
+a naive rescale puts the ceiling near **3.8** against a 1.90 onset.
+
+> *"The derivation does not survive and I withdraw it."*
+
+### 149.2 The conclusion survives on measurement, and is stronger for it
+
+All three pieces of evidence were captured **with the metal branch live**, so none of them depended
+on the broken arithmetic:
+
+| evidence | result |
+|---|---|
+| TEXTURES' `uSpec` sweep 0.55 / 0.85 / 0.95 | L 187.9 / 200.6 / 203.9 — **0 px over L 235** |
+| `RESULT-goldhalo.md` | `hero` whole-frame max L **226.4**, `px ≥ 235: 0` at every arm |
+| `RESULT-goldonset.md` | L 235 predicted unreachable, upper bound **201** |
+
+§7.3's *"gold-hot ≥ 235"* closes as **unreachable — empirically rather than by derivation.**
+Weaker-looking and actually stronger: measured on the correct branch, where the withdrawn ceiling
+was not.
+
+### 149.3 The `specColor` finding dies with it, and I am the one who said it survives
+
+When I corrected §148 I wrote that *"the `specColor` finding stands: Architecture never sets it, so
+the highlight is near-neutral white rather than gold."* **That is the same disabled-metal artifact,
+one layer along, and I preserved it while refuting the thing it rested on.**
+
+`specTint = mix(uSpecColor, alb*2 + uSpecColor*0.25, slyMetal)`, which at slyMetal 0.85 resolves to
+`0.3625·specColor + 1.7·alb`:
+
+| | specTint (linear) | normalised | R/B |
+|---|---|---|---|
+| slyMetal 0 — the error | 1.000, 0.965, 0.807 | 1.00, 0.97, 0.81 | **1.24 — near-neutral** |
+| slyMetal 0.85 — the truth | 1.579, 1.069, 0.483 | 1.00, 0.68, 0.31 | **3.27 — strongly gold** |
+
+The 1.24 row *is* where "the highlight is near-white" came from. On the 11 % of texels that are
+actually gilded, `uSpecColor` carries ~0.36 weight against albedo's 1.7 and the highlight is already
+albedo-dominated and warm. On the other 89 % `specTint` **is** `uSpecColor` — but that is limestone
+and plaster, where a gold specular tint would be **wrong**.
+
+Two corollaries: `PAL.goldSpec` `#fffbe8` is SHADING's **deliberately named default**, not an
+accidental white — *"Architecture never sets it"* is true and the consequence I drew from it was not.
+And setting `specColor` here would barely move the gild while wrongly gilding the limestone.
+
+> **There is no remaining Architecture-side gold defect from this analysis.** Nothing to route.
+
+**The lesson is about how I corrected.** I refuted a premise and then hand-picked which of its
+conclusions to keep, by eye, without re-deriving them. **A conclusion that rested on a withdrawn
+premise is withdrawn too until someone re-derives it** — and the one I kept was the one that sounded
+independently plausible, which is exactly the selection a careful reader cannot audit.
+
+### 149.4 The budget is not outstanding work, and the trap is §130.3 in the owner who resolved it
+
+GEOMETRY named the budget as *"the real outstanding work"*, citing `shots/geo2` (Aug 1):
+
+| | geo2 | budget |
+|---|---|---|
+| draws | 296–393 | ≤ 250 |
+| tris | 2.26–2.69 M | ≤ 1.2 M |
+
+**Those are `report.json` numbers — the counted column, all passes.** §130.3 exists because I made
+the same mistake: `Engine.js:267-274` resets `renderer.info` *before* the PostFX chain, so counted
+totals accumulate three cascade passes plus AO, outline and composite, and `RESULT-bud34-repin.md`
+ends by saying that column **must never be quoted against 250 / 1.2 M**.
+
+Re-run live just now:
+
+```
+WORST main-view: 71 draws (budget 250, 28%), 0.572M tris (budget 1.2M, 48%)
+```
+
+**Inside both budgets with room.** A merge/instancing/LOD reclamation campaign would have been
+planned against triangles that are not over budget — and the numbers are also two days stale, from
+before the dedupe fix in §130.2.
+
+> Same digits, opposite meaning, for the third time (§130.3, §146.2, here). The counted column is
+> *the* recurring foothold in this project, and knowing why it is wrong has not been enough to stop
+> reaching for it — because it is what `report.json` prints, and the scored line has to be computed.
