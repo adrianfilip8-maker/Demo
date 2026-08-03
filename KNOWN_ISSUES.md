@@ -9932,3 +9932,48 @@ GEOMETRY reports its standing brief still quoted **548 draws / 2.355 M tris** �
 > geometry that does not need changing, chasing a defect another owner had already attributed.
 > Re-derive a brief's premises against the current tree before acting on them — the cost of not
 > doing so is measured in modelling hours, not in a wrong sentence.
+
+---
+
+## §118 — I committed a live shader change unread, and it was fine, which is the wrong reason to feel better
+
+The §117 commit was staged with `git add -A`. It carried `src/render/shaders/toon.glsl.js` — **21
+lines of live shader, SHADING's file, mid-task** — which I had not opened.
+
+§14.8 records the rule this breaks: *an explicit filename guards breadth, not depth.* I have cited
+it repeatedly today, corrected §110.5 with it, and then defeated it from the other side — not by
+naming a file and skipping the diff, but by **naming no files at all.** `git add -A` is the failure
+mode `git add <path>` was adopted to prevent, and it took one convenient keystroke to reintroduce.
+
+### 118.1 The change was good, and that is not exculpatory
+
+It is SHADING's depth-dependent bounce scaffolding, exactly the shape §115.4 called for, and it is
+built inert:
+
+```glsl
+vec3 slyShadD = mix( uShadowColorLit, uShadowColor,
+                     smoothstep( uShadowDepth.x, uShadowDepth.y, shadowMix ) );
+```
+
+with `shadowBounceMix: 0.05` and `shadowBounceMixLit: 0.05` shipped equal, so `uShadowColorLit` is
+bit-identical to `uShadowColor` and `mix(a, a, t) == a` for every `t`. **Verified against
+`ToonMaterial.js:306/331` rather than against the comment claiming it** — which is the same
+discipline §115.5 had just imposed on the stale `(0.123, 0.175, 0.423)` shadow-light constant, and
+would have been the check regardless of who wrote the comment.
+
+**A good outcome from a bad process is a near-miss, not a vindication.** The identical keystroke on
+a live file mid-edit could have committed a half-written shader as though I had reviewed it, and
+the commit message would have said §117 while the diff said something else entirely — which is
+precisely the provenance corruption §116.4 and §109 spend paragraphs disentangling *after* the
+fact.
+
+### 118.2 The rule, tightened
+
+> **Never `git add -A` or `git add .` in a tree with live agents.** Stage by explicit path, and
+> read each path's diff. If a path appears that you did not expect, that is the signal — an
+> unexpected path in a sweep is another owner's work in flight, and the cost of committing it
+> blind scales with how good it looks.
+
+The mitigation that actually caught this was cheap and unglamorous: reading `git show --stat HEAD`
+*after* pushing, because the pre-commit `git status` had printed a file I did not stop to explain.
+**The tell was there and I read past it.**
