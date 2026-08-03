@@ -1,0 +1,48 @@
+# ---- run log preserved by tools/keeplog.sh ----
+# run:      arris2-off2
+# source:   /tmp/claude-0/-home-user-Demo/94022f73-a328-5e86-b2ec-031aa9c720ce/scratchpad/arris2-off2.log
+# copied:   2026-08-03T12:34:54Z
+# tree at copy time (NOT the run's build): d01c5f6 — working tree DIRTY
+#   For the commit this run actually rendered, read shots/arris2-off2/report.json or arris2-off2.json.
+# NOTE: this is a COPY. The scratchpad original is ephemeral and may already be gone.
+# ------------------------------------------------
+· waiting for capture lock (11s, held by pid 26070)
+· waiting for capture lock (21s, held by pid 26070)
+· waiting for capture lock (33s, held by pid 26070)
+· waiting for capture lock (43s, held by pid 26070)
+· waiting for capture lock (54s, held by pid 26070)
+· waiting for capture lock (64s, held by pid 26070)
+· waiting for capture lock (74s, held by pid 26070)
+· waiting for capture lock (85s, held by pid 26070)
+· waiting for capture lock (95s, held by pid 26070)
+· waiting for capture lock (106s, held by pid 26070)
+· waiting for capture lock (117s, held by pid 26070)
+· waiting for capture lock (127s, held by pid 26070)
+· waiting for capture lock (137s, held by pid 26070)
+· waiting for capture lock (148s, held by pid 26070)
+· waiting for capture lock (159s, held by pid 26070)
+· waiting for capture lock (169s, held by pid 26070)
+· waiting for capture lock (179s, held by pid 26070)
+· waiting for capture lock (190s, held by pid 26070)
+· waiting for capture lock (200s, held by pid 26070)
+· waiting for capture lock (211s, held by pid 26070)
+· waiting for capture lock (222s, held by pid 26070)
+· waiting for capture lock (232s, held by pid 26070)
+· starting dev server on :5300
+· loading game
+· ready
+· renderer: ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)
+· modules present (17): shading postfx sky lighting textures architecture props terrain collision character animation movement camera fx guards hud audio
+· 2 boot warning(s):
+    ! textures: A/B CONTROL BUILD — treatments disabled: hgarris
+    ! textures: prewarm took 17.5s at size 1024
+  ✓ traversal     226344ms  draws  242  tris 1736k
+  ✓ interior      104975ms  draws  156  tris 710k
+  ✓ temple        199446ms  draws  229  tris 1699k
+  ✓ hero          241247ms  draws  246  tris 1713k
+· 1 console error(s):
+    ! Failed to load resource: the server responded with a status of 404 (Not Found)
+  · page closed
+
+→ shots/arris2-off2/  (4 shots, 0 failed)
+ARM-OFF2-DONE rc=0
