@@ -11918,3 +11918,63 @@ unilaterally."*
 Correct call, and worth naming because the opposite is the more common failure here — an owner
 reaching one file sideways because the value is obvious from where they sit. **Nothing ships until
 Arm A lands.**
+
+## §139 — the container rolled back, and the sweep discipline is why that is a paragraph rather than a session
+
+**What happened.** The working volume was restored to an earlier snapshot. `git log` came back at
+`77e1eab` — a commit from the *first* hours of the session — with a **reflog that had no memory of
+anything since**, `KNOWN_ISSUES.md` at 1119 lines, and `shots/` and the scratchpad reverted to
+matching vintage. Every capture process was gone.
+
+**Every push had landed.** `git ls-remote` showed `fe833ae` on both `HEAD` and the branch, and
+`77e1eab..fe833ae` was a clean **fast-forward** — no force, no reconstruction, no merge. One
+`git merge --ff-only` restored the ledger to 11,920 lines and 92 sections, and the tree came back
+clean.
+
+### 139.1 What survived, and why it is the right things
+
+Everything that had been committed after a report: the ledger §16–§138; every `PREREG-*` and
+`RESULT-*`; the promoted tools (`launch.sh`, `hashwatch.mjs`, `furheld.mjs`, `roilift.mjs`,
+`gildmetal/gildrim/gildwhy.mjs`, and the fixed `void.mjs` and `scenebudget.mjs`); `DIGEST.md`; and
+every `src/` change — `arrisPolish` at 0, `beadRoll`, `tuftShadeMix`, `cloth: outline 0`, `slyInk`,
+the chisel pass.
+
+**And, decisively, the promoted crops.** `shots/fx20/` is gone, but
+`progress/records/crops/fx20-disc-{base,nosandhigh}.png` are in the repo — *the two images that
+carried §135's whole finding*, since the ROI mean understated it 4.6× and only the picture settled
+it. Likewise CHARACTER's eight cane crops behind §123.
+
+> **The frames are gone; the results derived from them are not.** That is not luck. It is the
+> consequence of a rule that had felt like bookkeeping overhead all session: sweep by explicit
+> filename, commit, and push *after every report* — and promote anything load-bearing out of the
+> ephemeral scratchpad into the repo, including images.
+
+`keeplog.sh` prints *"an unpushed log is not a durable log"* on every run. It was right about more
+than logs.
+
+### 139.2 What was actually lost
+
+- **`fx21` mid-flight** — §138's Arm A, the exterior half of the `sandHigh` question. Its harness
+  and seal survive (`progress/records/fx21.mjs`, `PREREG-sandhigh.md`) because both were promoted,
+  so it is a re-launch rather than a rebuild.
+- **This session's `shots/`** — `fx20`, `gs-*`, `compose1`, `char-ink`, `geo-bead`. Every one had
+  been scored and written up first.
+- **Scratchpad working files** not promoted. Nothing load-bearing: the one item that would have
+  hurt, SHADING's **patched `compose1.mjs` with its group-count assertion**, was promoted and is
+  intact at `progress/records/compose1/compose1.mjs:205`.
+- **The harness task list**, which reverted with the volume. The ledger is the durable record; the
+  task list was always the convenience view.
+
+### 139.3 The failure mode this did *not* hit, and the one it warns about
+
+§14's family — *"`ls shots/<run>/` returns NO DIRECTORY for every run after a rollback, including
+ones that provably rendered"* — is exactly this event, recorded long before it recurred. The
+directories are genuinely gone this time, and **the way to know a run happened is its committed
+`RESULT`, not its directory.**
+
+The warning for what comes next: **agents resumed from transcripts now hold a worldview containing
+files that no longer exist.** Their reasoning is intact and their conclusions are committed, but any
+instruction of the form *"score the frames in `shots/X`"* is now unsatisfiable, and an agent that
+discovers this mid-task will reasonably suspect its own tooling first. **Each owner must be told
+what is missing before it is given anything to do** — the same obligation §133.6 identified, arriving
+by a different route.
