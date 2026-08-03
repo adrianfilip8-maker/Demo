@@ -6982,3 +6982,83 @@ is unattributed and that is the honest state.
   of `interior`, *and it is one of the sealed capture's own null controls.* Moving it would have made
   the primary unquotable **by TEXTURES' own rules.** Declining to fix a real defect because fixing it
   would invalidate the measurement in flight is the discipline working at its least comfortable.
+
+
+---
+
+## §82 — the pyramid is built twice, and one module's rewrite had never been on screen
+
+GEOMETRY against finding #4, verified in frame (`shots/geofix/`, 2 shots, 0 failed, 0 console
+errors, both opened plus 4× crops).
+
+### 82.1 Two modules build the same pyramid, and the invisible one is the one that was fixed
+
+`EgyptLevel.background()` and `Terrain.js:298 PYRAMIDS` **both** place a pyramid at (−150,−190) and
+(95,−250). Terrain's are larger — halfBase 82 against 74 — so **every triangle Architecture emitted
+was sealed inside Terrain's mass: invisible from every camera, and `castShadow` on all of them.**
+
+Proven rather than inferred: the `arch:far:limestone_polished` silhouette was rasterised against the
+`dunes` camera, then those same pixels raycast through Terrain — **every hit on the photographed
+edge returns `pyramid_105` at d = 296–316 m, in front of Architecture's at ~325 m.**
+
+The consequences rewrite the finding:
+
+- **The "~13 px hard geometric courses" are Terrain's**: `courses: 24` over 105 m is 4.4 m, and at
+  the camera's 2.88 px/m that is **12.6 px** — the critic's number, from the other module.
+- **`K.steppedPyramid` was rewritten on 08-01 into a cased mass** whose silhouette rasterises at
+  **exactly 1 px per row, y = 100→230, with no step anywhere.** *That rewrite was correct and had
+  never been on screen.*
+- **"No tread/riser value difference" is structural, not a missing tint.** Camera at y 19.5, base at
+  6.5, apex at 111.5 — so **21 of 24 treads face away and are never drawn.** No tone applied to them
+  can read.
+- And the critic's silhouette predicate returning 556/388/274/654 on consecutive rows is now
+  explained: **two overlapping pyramids plus a cloud deck**, not one edge. Its instrument failing was
+  a correct signal about the world.
+
+> **A module can be fixed, correct, and invisible.** Nothing in this project's instrumentation was
+> watching whether the geometry it measures is the geometry that renders.
+
+### 82.2 Three defects where the mechanism is a line of code doing nothing
+
+- **`faceTone`'s `sz > 0` branch lerped `limeMid → limeMid`** — so the **+Z face, the larger of the
+  two in frame**, shipped with no aspect tone at all. A no-op that looked like a tuning choice.
+- **The brazier coal bed sat 18 cm *below* the bowl rim and was hidden by the bowl.** That is why the
+  braziers read unlit — not lighting, occlusion by their own container.
+- **Grass blades had all three vertex normals hardcoded to `(0,1,0)`.** With a low key, `n·l` is
+  `sin(elevation)` for *every* blade, so all six in every tuft land in the same dark band —
+  **exactly the critic's "3–5 hard black strokes."**
+
+Also fixed: a scratch-colour aliasing bug where `cap` was overwritten before any apex triangle was
+pushed, and the obelisk inscription channel, which was **3.5 px across both trough walls** at the
+courtyard camera — under the width at which a wall can hold its own value.
+
+### 82.3 Verified in frame, and the two things that could not be fixed
+
+Course pitch **12.6 px → ~28 px** (reads as terracing rather than an aliased edge); tufts render as
+pale shaded blades; brazier bowls read as fuelled; **644 invisible triangles and their shadow-caster
+cost deleted.** Budget: +34k submission triangles and +1 draw across `dunes`/`courtyard`, ~10.8k of
+it the new tuft blade.
+
+**Pyramid/sky separation could not be fixed from geometry**, and the measurement says why: vertex
+colour moved the rendered pyramid by **1–2 L** (scanned at y = 110/160/210). **At ~85–90% haze,
+albedo has essentially no leverage.** It needs fog density or height falloff — **ATMOSPHERE** — and
+GEOMETRY declined to move a landmark that sits in the §8.1 table unilaterally.
+
+**Braziers still do not read as lit**: the coals are visible now but render pale grey-cream because
+emissive clips toward neutral. That is finding #10 — **SHADING/POSTFX**.
+
+### 82.4 Three things eliminated as its own, with measurements
+
+- **`temple`'s pink disc** at (615,160): the geometry behind it is `arch:hall:ceiling_stars` at 26 m,
+  so the disc is drawn **in front of** architecture → FX/PostFX.
+- **`sly-perch`'s floating brown prop** at (747,477): raycast hits `paving:court` at 4.4–4.9 m
+  through those pixels **with props included**, so the object is nearer than both → **CHARACTER**.
+  Note this is a *third* frame in the cane family, and §79 refuted the general claim while confirming
+  `interior` as tail occlusion — so this one is genuinely open.
+- **Column texturing is not a geometry defect**: UVs are finite and correctly tiled (u −1.19…8.00,
+  v −1.19…4.50) and the recipe exists. Per §68/§70 it is the tone curve → TEXTURES/SHADING.
+
+Left explicitly unaddressed: the teal sphinxes (cyan `rimColor` at rim 0.55 on shadowed stone —
+**interacts with §61.6's stuck `uRimColor`**, SHADING), the `dunes` shadow blob (confirmed *not*
+architecture or props geometry), and the sphinx-avenue framing, **which needs a camera-versus-dune
+decision GEOMETRY declined to take alone.**
