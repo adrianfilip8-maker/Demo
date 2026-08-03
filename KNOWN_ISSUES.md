@@ -5885,7 +5885,15 @@ its author's own shipped work and be honoured without argument.**
 
 Measured there, it is not absent at all — `covC2` **+1.7 points** against the wall's +0.1, coarse
 amplitude **+3.9%** against the controls' +0.6%. **It reached the GPU and bought coarse-scale
-energy, which is the currency of the *busy* failure, not the flat one.** `deadBig` rose 2.0 → 2.1
+energy, which is the currency of the *busy* failure, not the flat one.**
+
+> **WITHDRAWN BY ITS AUTHOR (§74.1). This paragraph claims more than the data supports.** Over the
+> same 21-commit range, *untouched* controls move as much: `interior`'s `hieroglyph_wall` moves
+> `covC2` +0.8 and coarse amplitude **+3.9% — the identical figure**. Raw per-pixel delta inside the
+> eroded masks: treated recipe 1.50 mean |dL| / 22.9% past 2, against untouched `hieroglyph_wall`
+> 1.13 / 19.9% and `sandstone_worn` 1.39 / 19.6%; on `night`, untouched `paving_courtyard` reads
+> 5.46 and `mudbrick` 8.89. **The frame moved comparably everywhere.** So "it reached the GPU and
+> bought coarse-scale energy" is not established — what is established is the primary's zero. `deadBig` rose 2.0 → 2.1
 with its largest dead blob 4044 → 4236 px.
 
 So the offline instrument was not wrong; it was measuring a band that the frame fills from other
@@ -6260,3 +6268,77 @@ It also notes what would have happened on the wrong frame: **had this been read 
 nulls would have failed and the primary would have been unquotable** — which is precisely what that
 clause in the seal exists for, and it is rare for a prereg clause to be shown working on a frame it
 was not used on.
+
+
+---
+
+## §74 — the diff image lied, and its author killed his own claim rather than file it
+
+TEXTURES' full scoring of `PREREG-mottle-critic6`. The verdict (§70.1) is unchanged; **two of the
+supporting claims are not.**
+
+### 74.1 "It reached the GPU" is withdrawn by its author
+
+§70.1 recorded that the mottle *did* reach the frame and bought coarse-scale energy. **That is
+retracted at its declaration site.** Untouched controls move as much or more over the same
+21-commit range — `interior`'s `hieroglyph_wall` moves coarse amplitude **+3.9%, the identical
+figure** — and raw per-pixel deltas inside the eroded masks are comparable across treated and
+untouched recipes alike (1.50 / 22.9% vs 1.13 / 19.9% and 1.39 / 19.6%; on `night`, untouched masks
+read 5.46 and 8.89).
+
+**The frame moved comparably everywhere.** What survives is the primary: `Δcol − Δwall` = **0.0**
+against a floor of +2.0, with all three nulls holding within 0.1 of each other and per-material
+median luma stable to ±0.001 — *so the primary was quotable, and it was zero.*
+
+### 74.2 The diff image lied, and the rate table is the correction
+
+> *"Red-over-grey, the columns look unmistakably like the thing that changed. They are 54% of the
+> frame — same ~20% rate, four times the pixels."*
+
+A whole-frame difference visualisation shows **absolute pixel counts**, so the material occupying
+half the frame dominates it *whether or not it changed differentially*. The picture is not lying
+about the pixels; it is lying about the **attribution**, and it is the most persuasive artefact in
+the project so far because it points exactly where the author expected.
+
+The correction is a **rate** table — delta per unit area, treated against untouched — and it turns
+a confident visual identification into a null. This is §55.1's auto-located sole in a different
+costume: *an instrument that fails toward your conclusion is not caught by disbelieving good news.*
+
+### 74.3 The busy guard was under-specified, and its author says so rather than banking the pass
+
+`ΔcovC2(col) − ΔcovC2(wall)` = **+1.6** against ≤ +3.0, passes. But `deadBig(column)` rose 2.0 →
+2.1, which breaches a "must not rise" clause — **and untouched `ceiling_stars` moved 12.4 → 12.7 in
+the same frame.** A clause with no noise band cannot discriminate at this resolution.
+
+Registered as *"my error, not a result."* A guard that fires on noise is not a guard, and the honest
+move is to say the clause was mis-written rather than to claim a breach or quietly drop it.
+
+The **secondary** predictions are likewise reported unscoreable rather than skipped: no pre-mottle
+1280×720 `hero` exists anywhere in `shots/`, and `tx7`/`tx8` textures differ from the baseline in
+*both* directions.
+
+### 74.4 The revert's invariants were re-measured, not assumed
+
+`src/textures/Materials.js` is **zero non-comment lines different** from the pre-mottle tree
+(mechanically verified). Post-revert: 44 recipes through `texlab.mjs`, `darkTail` **0.0000 on every
+stone recipe**, **9 masonry recipes with 0 inverted joints**, and texture-side `cov1` back to the
+documented **45.2**.
+
+### 74.5 An in-frame corroboration of the tone-curve routing, obtained for free
+
+Across **17 (material, framing) pairs** in `temple`, `interior` and `courtyard` whose textures did
+**not** change: Δcov1 against Δmedian-luma gives **r = −0.88**, slope **−0.72 points per 0.01
+luma**. Every pair that held its luma held coverage to ≤0.2; every pair that lost 0.02–0.03 gained
+1.4–3.1.
+
+Observational rather than an intervention — and **same sign and order as §68's controlled sweep,
+measured in delivered frames rather than on a tile.** Attached to task #32. Two independent routes
+to the same conclusion, neither built to check the other, is the strongest form the evidence takes
+in this project (cf. §64.2).
+
+### 74.6 Provenance to carry wherever the pass-6 sheet is quoted
+
+**`shots/critic6/*` were all rendered *with* the mottle (`1bc8938`); the tree no longer contains
+it.** The measured delta is 0.1 points and invisible at 3×, so the critic's read is unaffected — but
+the frames and the tree do not match, and that must be stamped wherever the sheet is cited rather
+than left for a later reader to trip over.
