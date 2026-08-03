@@ -191,3 +191,43 @@ surface in the game.
 
 **Recommendation: do not spend a capture on the routed claim.** Spend one on the crevice claim if
 §7.3's AO line is the target, and score it on midtones.
+
+---
+
+## D. Addendum, sealed while the arms sat in the FIFO — the two legs share a channel
+
+Written **before any frame of this run existed** (capture queued, second ticket, nothing captured).
+Recorded here rather than in the result because it is a prediction and it is falsifiable.
+
+A.3 registered superadditivity as the dangerous outcome on the grounds that the hue line was only
+ever verified **per leg**. Reading what the second leg actually does supplies the *mechanism*, and
+it makes the danger specific rather than generic:
+
+- `shadowBounceMix` 0.05 → 0.10 mixes **warm sand bounce** into the shadow light. §115.2 measured
+  it as **the red knob** (R +66 % at 0.20, G −4 %).
+- `fillSkyMix` 0.70 → 0 does **not** merely remove a cool term. `toon.glsl.js:386–397` states its
+  purpose outright: the sand bounce is *"the one remaining G-poor light term (G/R 0.78 on a wall at
+  golden hour), and on shadow-side pixels it is what keeps green in last place."* `fillSkyMix` was
+  shipped at 0.70 **as a green-recovery term**. Setting it to 0 therefore *reverts a green fix*.
+
+> **Both legs are warm-ward, and both suppress the same channel.** So the b−r statistic and the
+> safety constraint are not measuring the same competition. The legs compete for shade-side pixels
+> in **b−r** (A.3's subadditive prior, 0.776), but they **agree** in the green deficit — and the
+> ledger line (hue ≤ 226°, i.e. the blue side of G ≥ R) and the G-darkest share are both statistics
+> *about green*.
+
+**Registered prediction, in addition to A.2's bands and not replacing them:** the composite is
+subadditive in Δb−r (inside the registered bands) **while being additive or superadditive in the
+green statistics** — G-darkest % on `archShade` at least the sum of the two legs' excursions. If
+that lands, the pair closes drift the ledger cannot accept, and per A.3 the required action is to
+back off, not to bank the closure.
+
+**Falsified** if the composite's G-darkest excursion is materially *below* the sum of its legs'
+(i.e. green subadditive too), which would mean the hue and b−r axes share one saturating mechanism
+after all and the ≤226° line is safer than this addendum claims.
+
+**Why this is worth registering rather than just measuring:** §115.2's lesson is that a two-channel
+index has a null direction and b−r cannot see green. A run that scored only A.2's bands would
+report a clean subadditive result and say nothing about the axis that decides whether the composite
+may ship. This addendum names the axis in advance so a pass on the bands cannot be read as a pass
+overall — which is exactly §119.3's A1 clause applied to a different statistic.

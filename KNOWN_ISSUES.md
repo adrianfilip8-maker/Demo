@@ -10318,12 +10318,21 @@ both ways: the `sly-key` architrave read at 4× as "flat colour, no detail" carr
 detail of any material in that frame (fineMed 0.0296, cov1 79.0 %); and `hero`'s pale top arris edge
 is **not** gold.
 
-### 121.10 A new §13-family defect, found and deliberately not fixed
+### 121.10 ~~A new §13-family defect, found and deliberately not fixed~~ — REFUTED, see §125
 
-`hieroglyph_gilded` carries a **countable once-per-repeat landmark**: a single filled gold disc
+> **CORRECTION, 2026-08-03 — refuted by the owner who reported it, in the task I routed to fix it.**
+> The disc is **not a countable landmark on any framing.** It is **absent (0 px) from 7 of 16**
+> framings, and its best case anywhere is 12 px median. On `courtyard` it is **3 blobs of 5 px**.
+> "171 px/repeat, recurs 8 times" does not reproduce: 171 was the *material's headline* px/repeat,
+> and the disc lives in the mid-tile `divine` frieze, which is only reached by geometry presenting
+> it at **27 % of that scale**. Nor is it a `pick()` degeneracy — every site has ≥ 5 candidates and
+> `sun` came from a 17-candidate filter, so §13's fallback is absent here. **Do not remove the
+> disc**; it would spend a rebuild of a 29.5 %-of-`hero` recipe on a 5 px feature.
+
+~~`hieroglyph_gilded` carries a **countable once-per-repeat landmark**: a single filled gold disc
 (`sun`, **n = 1**, tile-U 159) on a near-empty pale field. At `courtyard`'s 171 px/repeat it recurs
 **8 times across the frame** — verified at the shipped tile size, not the lab default. Same shape as
-§13's scarab pair, found by the same instrument.
+§13's scarab pair, found by the same instrument.~~
 
 **Not fixed, for a reason that is itself the right call:** three arms of that exact recipe were
 queued, and a mid-queue edit to `src/textures/**` would have given them different textures — which
@@ -10699,3 +10708,119 @@ or every row is void. And it is **immune to concurrent `src` edits by constructi
 all variants dt-0 on it — rather than by luck, with a pre-run content hash re-computed on completion.
 
 §78.4's wrapper hazard recurred a third time (node at ppid 31595) and was caught by the `/proc` walk.
+
+## §125 — the hieroglyphs on the largest gilded surface in the level were never cut
+
+TEXTURES was routed §121.10's landmark and refuted it (corrected at the declaration site above).
+The refutation is sound and is not the finding. **Underneath it is a defect on 29.5 % of `hero`
+that nobody had looked for, because everyone — me included — was arguing about a 5 px disc.**
+
+### 125.1 A hieroglyph's silhouette contributes nothing to the built texture
+
+`gildsil.mjs` neutralises every glyph's silhouette in the lab and rebuilds, bit-exactly:
+
+| recipe | silhouettes off: **seam row** | **mid frieze** | ratio |
+|---|---|---|---|
+| `hieroglyph_gilded` | **8.50e-6** | 4.63e-2 | **5454×** |
+| `hieroglyph_wall` (control) | 9.37e-5 | 5.31e-5 | 0.6× |
+
+Three source facts compose to it, and each was individually visible:
+
+- `glyphArchitrave:4640` fills the whole band white in `'cut'` mode **before** drawing the
+  register, so a sign's silhouette is already inside the cut and adds nothing to the cut mask.
+- The recipe builds **no `'paint'` pass at all.**
+- `drawGlyph` returns immediately in `'line'` mode for any glyph without an interior-detail `d()`
+  path — **16 of 21 `royal` signs.**
+
+> **20 of 28 row placements per repeat reach the relief as nothing**, and the 8 that survive leave
+> strokes rather than signs.
+
+Predicted from source at three named positions and observed at all three: `djed` (no `d()`) → bare
+masonry; `bee` and `falcon` (both have `d()`) → their wing strokes and eye dot, no outline.
+Controls pass — rebuild bit-identical, `ceiling_stars` identical across arms, and the control
+recipe's register renders as a **fully legible carved inscription** at 0.6×.
+
+**The recipe's own note claims the opposite** — *"the signs stay legible because they are also drawn
+in `'line'` mode"* — and it is false as built. A comment asserting the mechanism that would have
+saved it, sitting directly above the code that doesn't do it.
+
+### 125.2 Why this sits underneath §121.9, and partially rescues it
+
+§121.9 attributed the flat gilded read to **geometry** and sized a `gloss` fix for ARCHITECTURE.
+§123 then corrected the mechanism to rounded edges and GEOMETRY built `beadRoll`. All of that
+stands *for the plane*. But:
+
+> **The relief that would have supplied local curvature was never cut, and that is TEXTURES' side,
+> not ARCHITECTURE's.** A carved sign is a normal-map feature whose walls sweep normals exactly the
+> way §123.4's bead does — at a far smaller scale and across the entire band rather than along one
+> arris.
+
+So §7.3's *"carvings look painted-on rather than chiselled"* is not a shading complaint about
+gilded architecture. It is literally true of the largest gilded surface in the level: **the
+carvings are painted on, because the chisel pass was skipped.**
+
+### 125.3 A prediction that models its own mechanism, unlike §121.8's
+
+The disc's frame size is predicted from the frieze's *own* px/repeat rather than the material's
+headline scale: box 0.0637 of a repeat × frieze px/repeat gives **4.8 / 8.0 / 11.7 / 8.0 / 20.4**
+against measured **5 / 8 / 11 / 8 / 20** — five for five, and robust to props (5.88 % → 5.76 %,
+disc unchanged).
+
+§121.8 recorded `goldspec.mjs` getting the right ranking while blind to the dominant mechanism, and
+warned that such a prediction is *"a coincidence with a good track record, not a validated model."*
+This is the contrast case: **the model contains the term that makes it work.** Worth naming, because
+"the prediction matched" is the same sentence in both.
+
+### 125.4 Four instrument corrections, all self-reported
+
+- **Bounding box → connected components.** The first version grouped gilded pixels by repeat index
+  and reported a bbox, which called *two smudges 900 px apart* one "932 px landmark". This is
+  §110.4's oscillating instrument in a new shape: a summary statistic that cannot distinguish one
+  object from two.
+- **A high-frequency-energy scalar failed its control and is kept, printing, labelled.** Gilded row
+  0.00473 vs legible wall 0.00723 — but gilded's own frieze scores 0.00741, *above* the legible
+  control, because it counts ashlar joints as chisel detail. §13's twenty-ninth failed scalar.
+- **`gildcensus`'s "silent-in-relief" column was wrong for the frieze** (no cut fill there, so
+  `d()` is irrelevant); now register-aware and deferring to `gildsil` as the authority.
+- **A V-window model derived from a source note disagreed with measurement.** The note reasons only
+  about beams' *side* faces; in fact **27–36 % of gilded pixels are on soffits and tops**, where box
+  projection takes V from a horizontal axis, and `Kit.cornice` is not centred on local y = 0 the way
+  `Kit.beam` is. *A note that is correct about the case it discusses is not a model of the level.*
+
+### 125.5 §121.4 fired from the geometry side, and the tell was the triangle count
+
+`src/world/EgyptLevel.js` and `Kit.js` were modified and unstaged **during** TEXTURES' first
+measurement pass. The triangle count moved **322,068 → 322,588 between two runs at an unchanged git
+SHA** — GEOMETRY's `beadRoll` landing mid-measurement.
+
+`gilduv.mjs` now stamps a tree hash over `src/world` + `src/core`, and everything in §125 is at
+`efa7fc61d7a1`; re-runs are bit-identical within a tree. **A tree hash belongs in every instrument
+that rasterises the level, not only in capture harnesses** — this one is offline and had no lock to
+lose, and the hazard reached it anyway.
+
+Also stale and not fixed, reported by its owner: the `hieroglyph_wall` note claims
+*"`hieroglyph_gilded` keeps its cartouche on purpose (it is passed explicitly there)"* —
+`glyphArchitrave` has **no cartouche path at all.**
+
+## §126 — I warned an owner about the wrong risk, and it worked out which risk was real
+
+I told FX that CHARACTER's fur-card ink change (`831f6de`, weight 1.0 → 0.40, not inert) would land
+in `fx20`'s boot tree and put its **`back`-vs-`base` bit-identity control** at risk.
+
+**That was wrong, and the reason is §124.4 — the rule FX itself established one turn earlier.** All
+ten `fx20` jobs are dt-0 variants on a single staging in a single boot, and the bundler reads the
+tree once at `page.goto`. So a different Sly is **equally present in `base` and in `back`**, nothing
+animates between them, and the control is untouched. I applied "the tree changed" as though it were
+a per-frame hazard when the rule I had just written into the ledger says it is a per-*boot* one.
+
+What the change actually invalidates is **cross-run comparison against `fx19`'s frames** — a
+different claim, and one FX is not making from this run. (The disc ROI is ceiling at (615,160); the
+character is on the floor.)
+
+> **A warning aimed at the wrong artefact costs more than no warning**: it invites the owner to
+> re-verify something that was never in danger, and it spends the credibility that makes the next
+> warning land. Getting the mechanism right matters as much when raising an alarm as when making a
+> claim.
+
+Recorded because the correction came from the owner I was warning, citing a rule I had written down
+and then failed to apply four messages later.
