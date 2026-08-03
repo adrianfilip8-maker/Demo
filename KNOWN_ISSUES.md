@@ -13581,3 +13581,95 @@ no lock and no ticket — and **it read the source rather than inferring from th
 > to another owner's frames; **the same process *writing* `src/` would be invisible to the lock and
 > fatal to a boot tree.** The lock serialises rendering, not source mutation, and nothing currently
 > watches the second.
+
+## §158 — the class check returns "not a class", and an instrument whose own filter would have hidden the defect
+
+I asked TEXTURES whether other recipes were in the state `hieroglyph_gilded` was in before `c54e41f`
+— authored relief with no route to the frame. **14 recipes × 24 arms. The answer is no.**
+
+**Every relief-authoring primitive that is called produces a non-zero height delta**, and the
+call-count cross returns **zero** primitives called-but-silent. Structurally, `glyphArchitrave`'s
+fill-then-draw was unique: `glyphWall`, `figureRegisters`, `HG.cartouche(interiorOnly)` and
+`column_papyrus`'s `glyphColumns`/`glyphBands` all put silhouettes **straight into the cut mask with
+no preceding solid fill.**
+
+> **It was one defect, not a class.** A negative result, and the only kind that closes a question
+> rather than deferring it.
+
+### 158.1 An instrument whose own filtering rule would have hidden the thing it was built to find
+
+`reliefreach.mjs` drops an arm whose deltas are all zero, on the grounds that the recipe does not
+call that primitive. **But a primitive that *is* called and contributes nothing is dropped by the
+identical rule** — so *"absent from the table"* could not distinguish **"not used"** from **"used and
+silent"**, and the second is precisely the defect the sweep exists to find.
+
+TEXTURES wrote `rrcalls.mjs` to count invocations with **no diffing at all**, closing the hole before
+reading any result.
+
+> A filter that removes uninteresting rows by the same test that would remove the interesting one is
+> not a filter, it is a blind spot with a justification. This one was found by asking what the
+> instrument's *silence* meant — the same question §145.2 asked of a falsifier that could not fire.
+
+### 158.2 The calibration sharpens §125.1 rather than confirming it
+
+`__TEX_AB='hgchisel'` restores the recipe bit-exactly to its pre-`c54e41f` build:
+
+| | seam row dH | row texels moving a normal > 1° | frieze dH |
+|---|---|---|---|
+| **known-bad** | **exactly 0.00e+0** | **0.0 %** | 8.09e-2 |
+| **shipped** | 6.69e-2 | 35.3 % | 8.09e-2 *(identical)* |
+
+**Measured on height alone the pre-fix state was not "5454× smaller" — it was bit-exact zero.** The
+silhouette had no route to the height field at all, which is what the source said and what the
+composite r,g,b,h figure blurred. Nulls hold: a second untouched build is dH/dTilt/dAlb **exactly 0**
+on all 14 recipes.
+
+### 158.3 Small is not silent, and the difference was measured rather than assumed
+
+`grain.heightAmt` (14 call sites) and `speckle.heightDelta` (3) change **92–97 % of texels' height**
+and move **0.0 %** of them past 1° of tilt on every recipe. That looks exactly like the §125.1 shape.
+
+**Before calling them inert, TEXTURES measured the height field's *other* consumers:** `grain`
+reaches the ORM at **AO 12–48 % of texels ≥ 1/255** and roughness 1.6–14.7 %.
+
+> **So they are small, not silent — the opposite of the bit-exact-zero shape.** Not touched. A
+> parameter with one dead consumer and two live ones is not the defect that was being hunted, and
+> only checking all three could tell them apart.
+
+`chiselMarks` **confirms its own comment**, which is rare enough in this file family to record: it
+claims a 2–4 mm gouge cannot survive the slope knee and `microSoft` and compensates in albedo, and
+measured, only 0.4 % / 2.3 % / 4.4 % of its height-changed area moves a normal past 1°.
+
+### 158.4 Four recipes author relief that cannot appear, and one is invisible to the sweep
+
+`relief_figures`, `cartouche_gold`, `plaster_painted`, `rubble_ground` are **0 px in all ten
+framings** at HEAD. Only the first is documented at its site; `plaster_painted` is declared in
+`Architecture.RECIPES` and never `A.add`ed, and `rubble_ground`/`cartouche_gold` have no reference
+outside `src/textures/**`. All four are already out of `PREWARM`, so **nothing is being paid for** —
+recorded rather than actioned.
+
+**`granite_pink` cannot be measured by this instrument at all:** its relief is written **inline in
+the recipe body**, not through a wrapped primitive, so no arm can isolate it. It is 12.5 % of `hero`
+and ~44 % of `interior`. Recipe-level only: mean tilt 3.00°, height p05/p50/p95 0.406/0.512/0.614.
+
+And TEXTURES declined the available look claim: `ceiling_stars` (0.77° mean tilt) and
+`limestone_polished` (1.17°) are the flattest maps that appear, **both defended at their sites**, and
+*"any claim that either reads flat is a look claim needing a frame and a seal, not a number from this
+sweep — I am not making it."*
+
+### 158.5 A framing fact worth acting on, and a caution that outranks it
+
+**`guard` holds `hieroglyph_gilded` at 23.18 % of frame at 2.2 mm/px, zMed 2.3 m** — 160 gilded
+vertices within 4 m of the lens, nearest at 2.5 m. That is **3.8× closer than `hero`**, the closest
+gilded view in the canonical set, where the chisel pass's signs subtend ~100 px and the arris ring
+~23 px. **No gilded seal has ever used it.**
+
+But the caution matters more than the opportunity:
+
+> The Aug-1 `angsize` run did **not list gilded in `guard` at all**, and put `limestone_polished` at
+> **9.69 % of `hero` against 5.76 % now.** **Framing shares are not stable across this tree.** They
+> have to be re-measured, not quoted from the record.
+
+That is the counted-column and stale-tree failure in a third dress: a number that was true, is
+written down, and is now false — with nothing about the record marking it. Framing is mine; the
+measurement is TEXTURES'.
