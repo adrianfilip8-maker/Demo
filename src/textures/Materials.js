@@ -678,7 +678,10 @@ function ashlar(s, o = {}) {
  * flat stamp, and the stone displaced by the cut piles into a faint lip just outside it.
  */
 function carve(s, cut, line, o = {}) {
-  const { depth = 0.34, bevelPx = 3.0, lip = 0.10, bulge = 0.40, lineDepth = 0.55, chatter = 0.03, seed = 5 } = o;
+  const {
+    depth = 0.34, bevelPx = 3.0, lip = 0.10, bulge = 0.40, lineDepth = 0.55, chatter = 0.03, seed = 5,
+    arris = 0, arrisHex = PAL.limeLight, arrisPolish = 0.05,
+  } = o;
   const size = s.size;
   /* Bevel width scales with resolution so a tier-1 half-size map keeps the same *physical*
    * chisel edge. It also has a hard floor of 2 texels: at 1 texel the cut wall is a single-texel
@@ -704,6 +707,44 @@ function carve(s, cut, line, o = {}) {
     s.h[i] += outer * lip * depth - d;
     if (ln) s.h[i] -= sat(ln[i] * 1.5) * depth * lineDepth;
     ramp[i] = r;
+    /* **The arris — the one part of a carving that is missing from the albedo, and the reason
+     * critic pass 6 read these walls as printed rather than cut** ("no bevel, no chisel
+     * highlight, no recess occlusion, not even a 1 px lip"). Measured on the built Surface
+     * before this: cut floor luma 0.292 against a face at 0.468 — the *recess* is authored and
+     * survives — while the raised stone just outside the cut sat at 0.484, i.e. **+3 % of the
+     * face and nothing the eye can find.** A dark shape on a flat field with no lighter edge is
+     * exactly what printing looks like.
+     *
+     * Everything else this recipe has for the job is downstream of a term the frame does not
+     * spend. `heightAO` authors a real gradient (floor 0.158 against face 0.863) and
+     * KNOWN_ISSUES §8 establishes that `ao` never multiplies the key term — SHADING has since
+     * ruled `aoKey = 0` final — so on a sunlit wall the authored occlusion is not in the image
+     * at all. The normal map turns with the sun, which is right, and goes flat in shadow, which
+     * is where most of this recipe's frame area actually is (`hero`'s gilded mass is 98.6 %
+     * shadowed). **Albedo is the only channel that reaches every lighting state**, so the lip
+     * has to be authored there or it does not exist.
+     *
+     * Two things this is deliberately *not*, because both are recorded failures. It is not
+     * `wallDark`/`skyward`'s baked top-left key — that is directional, it contradicts the sun on
+     * half the building, and it is §7.3's "carvings look painted-on"; this ring is **symmetric
+     * about the cut**, a function of distance from the edge alone, so it says nothing about
+     * where the light is and reads identically on the lit and shaded face of the same pylon.
+     * And it is not a glow: the ring is taken from `cb`, the bevel-scale blur, so it spans about
+     * `2 x rb` texels — **61 mm at `hieroglyph_wall`'s 10.16 mm/texel, i.e. 1.5–3 px** at the
+     * `temple` (41.9 mm/px), `traversal` (30.6) and `interior` (20.6) framings. The wider `cw`
+     * blur that drives the height burr is 244 mm and would have read as a halo.
+     *
+     * Physically it is edge wear, not lighting: three thousand years of hand, wind and rain take
+     * the dirt film off an exposed arris and leave the sheltered floor of the cut holding it. */
+    if (arris > 0) {
+      const ring = sat((cb[i] - cut[i]) * 3.0);
+      if (ring > 0.01) {
+        s.mixHex(i, arrisHex, ring * arris);
+        // A worn arris is burnished as well as clean; a touch of gloss gives the spec term an
+        // edge to catch, which is the same read at grazing angles where albedo contrast fails.
+        if (arrisPolish > 0) s.rough[i] = sat(s.rough[i] - ring * arrisPolish);
+      }
+    }
   }
   return ramp;
 }
@@ -1653,7 +1694,7 @@ export const MATERIALS = {
       /* Deeper cut, tighter bevel, no baked highlight. All of the carving's contrast now lives
        * in the height field, so the normal map and `heightAO` produce it — which means it turns
        * with the sun and goes flat in shadow, the way a chisel line does. */
-      const ramp = carve(s, cut, lines, { depth: 0.46, bevelPx: 3.0, lip: 0.12, bulge: 0.42, lineDepth: 0.62, seed: cx.seed + 5 });
+      const ramp = carve(s, cut, lines, { depth: 0.46, bevelPx: 3.0, lip: 0.12, bulge: 0.42, lineDepth: 0.62, seed: cx.seed + 5, arris: 0.22 });
       freshCutTint(s, ramp, { amount: 0.16 });
       /* `freq` derived from a metre figure, not written as a bare cycle count — see
        * `PAINT_WEAR_M`. At 10.4 m of world per repeat and a 2.08 m cell this is 5 cycles/tile,
