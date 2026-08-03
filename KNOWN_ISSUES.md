@@ -6179,3 +6179,84 @@ from y = 372, side R, max 43, 0-row negative control), so this is a **median ove
 versus over all 118 qualified rows** — a population difference, not an error. Both are ≥8× the ink
 hull so nothing downstream changes. Recorded because §56.1 and §58.3 are both sections about a
 number quoted without its population, and this is the third.
+
+
+---
+
+## §73 — an automatic re-locator is not a fix, and the naive heuristic picks the worst shot
+
+### 73.1 The shot for the latch test is `temple`, chosen on disjointness rather than distance
+
+FX built `affcount.mjs` to reproduce `collision.query`'s affordance-selection prefix, with its
+unimplemented transforms named in the header — and **gated it before using it**: it returns **17 at
+spawn, exactly the count the engine reported in both `det3` boots**, so it is selecting the same
+population rather than a plausible-looking different one.
+
+| shot | d(spawn) | aff ≤34 m | shared with spawn |
+|---|---|---|---|
+| **temple** | 62.5 m | **25** | **0 (0%) — disjoint** |
+| interior | 96.8 m | 9 | 0 (0%) — disjoint |
+| traversal | 35.3 m | 24 | 10 (42%) |
+| hero | 23.5 m | 26 | **17 (65%)** |
+| dunes | 53.6 m | 1 | 1 (100%) |
+
+`temple` wins on **set-disjointness**, not distance: a stale latch there is wrong in count (17 vs 25)
+*and* in every marker position, with composition inverting too — spawn is hook-dominated, temple
+pole-dominated. **Three observables instead of one.**
+
+Two rejections that each save a lock:
+
+- **`hero` has the largest raw |Δ| and is nearly useless**, because its set *contains all 17 of
+  spawn's*. A stale latch would reproduce a strict subset at correct positions, so only the count
+  could discriminate.
+- **`dunes` is exactly the trap flagged before the work started** — it ranks **first** on
+  distance-and-delta, and has **one** affordance in radius, that one shared with spawn, on the shot
+  most dependent on terrain colliders the instrument cannot build. *The naive heuristic picks the
+  worst candidate in the set.*
+
+The mechanism is also confirmed in code rather than inferred: `_sparkleTimer -= dt` never decrements
+under `renderFrame(0)`, so a frozen-clock capture keeps the last-computed set.
+
+### 73.2 §63.2 generalises, and the generalisation is worse than the original
+
+§63.2 said a fixed pixel is not a landmark when the world moves under it. The stronger form:
+
+> **An automatic re-locator is not a fix, because it fails silently in the same direction.**
+
+Two live instances, one of them FX's own:
+
+- **`m12.findSole` failed on the fx16 frames** — it relocated **250 px** onto open floor sitting on
+  a cast-shadow edge and produced a textbook false positive (under-boot 48.1 against controls
+  70/75, a **+17.2 L** rise) that reads exactly like *"a strong contact pool has appeared"*. **The
+  published coordinate (617, 638) was still correct. The protection failed, not the coordinate.**
+  Caught by cropping and looking.
+- **FX's own sealed acne ROIs do not hold their stated property**: R1, named `litwall`, is **1.2%
+  sunlit**. Acne is a lit-surface artefact, so that ROI **could not have shown acne either way**.
+  Its PASS is withdrawn as evidence rather than kept as a weak pass — the ship decision is unchanged
+  (Band 1 was flat; there was nothing to bank) but the counter-risk is now **untested on a proper
+  canvas**, and if a future change reduces bias, acne must be re-scored on an ROI *verified sunlit at
+  scoring time*.
+
+Remaining exposure ranked, with `charbox.mjs` highest **because its box names assert both surface
+and lighting state — both invalidated by §39's prop relocation.** The cheap general fix:
+
+> **Make every ROI assert a property it can check** (`R/B > 2.0 over >50%`, `luma sd < N`) and fail
+> loudly, so it reports *"my ROI is no longer what it claims"* instead of confidently measuring the
+> wrong surface.
+
+### 73.3 TEXTURES supplied the control that a null most needs
+
+The obvious objection to §70.1's zero is whether `cov1` could have detected anything at all in
+frame. TEXTURES answered it against **a frame that did move**: scored the same way across the same
+two SHAs, `courtyard`'s *untouched* materials shift **+1.4 to +3.1** points (`paving_courtyard`
+78.1 → 81.2) alongside a median-luma drop of 0.03, while `interior`'s two biggest masks (332 k and
+304 k px) sit at **0.0**. And `temple`'s per-material median luma is stable to ±0.001.
+
+So the instrument **moves several points when something real changes, holds at zero when nothing
+does, and returned zero here.** That converts "we measured no effect" into "we measured no effect
+with an instrument demonstrated to have effects to measure".
+
+It also notes what would have happened on the wrong frame: **had this been read on `courtyard`, the
+nulls would have failed and the primary would have been unquotable** — which is precisely what that
+clause in the seal exists for, and it is rare for a prereg clause to be shown working on a frame it
+was not used on.

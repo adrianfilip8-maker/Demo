@@ -2200,8 +2200,16 @@ export const MATERIALS = {
        * against a pre-registered floor of +2.0 (`progress/records/PREREG-mottle-critic6.md`,
        * sealed before the boot; scored on `shots/critic6/temple.png` at `1bc8938` against
        * `shots/rim4/temple-base.png` at `2f99d55`, whose `src/textures/**` is this file minus
-       * this block). The nulls held to ±0.1, so the frame did not move for outside reasons and
-       * that zero is the change's own.
+       * this block). The nulls held to ±0.1 and `temple`'s per-material median luma is stable to
+       * ±0.001, so the frame did not move for outside reasons and that zero is the change's own.
+       *
+       * **The instrument is not blind — it was checked against a frame that did move.** Scored
+       * the same way over the same two SHAs, `courtyard`'s *untouched* materials shift +1.4 to
+       * **+3.1** points of cov1 (`paving_courtyard` 78.1 → 81.2) alongside a median-luma drop of
+       * 0.03, and `interior`'s biggest two masks (332 k and 304 k px) sit at 0.0. So cov1 moves
+       * several points in frame when something real changes, holds at zero when nothing does,
+       * and returned zero here. Had this been read on `courtyard` the nulls would have failed and
+       * the primary would have been unquotable — which is what that clause in the prereg is for.
        *
        * **Why the texture number did not transfer, which is the part worth keeping.** The mottle
        * is 16.7 cm ≈ 9.4 px at `temple`'s 17.8 mm/px. cov1 band-passes at 1.6 px. On the resampled
@@ -2213,20 +2221,33 @@ export const MATERIALS = {
        * masks, with `deadBig` up 2.0 → 2.1 and its largest dead blob 4044 → 4236 px.
        *
        * **Do not read that +1.7 as proof the change reached the GPU. It is suggestive and it is
-       * not separated from pipeline drift.** The two captures are 12 commits apart, and an
+       * not separated from pipeline drift.** The two captures are 21 commits apart, and an
        * untouched control moves by a comparable amount in the other framing scored the same way:
        * `interior`'s `hieroglyph_wall` (114 k px, no texture change) moves covC2 +0.8 and its
        * coarse amplitude +3.9 % — the same +3.9 % this recipe shows in `temple`. So the coarse
        * amplitude number carries no signal at all, and the covC2 number is about 2× the largest
-       * control move rather than 17× the smallest. Isolating it needs an A/B in one boot, which
-       * is a capture-lock cost this result does not justify.
+       * control move rather than 17× the smallest. The raw per-pixel delta says the same thing
+       * more bluntly: inside the eroded masks this recipe reads mean |dLuma| **1.50** with 22.9 %
+       * of pixels past 2/255, against an untouched `hieroglyph_wall` at **1.13 / 19.9 %** and
+       * `sandstone_worn` at 1.39 / 19.6 %. The frame moved comparably everywhere. Isolating the
+       * recipe needs an A/B in one boot, which is a capture-lock cost this result does not merit.
+       *
+       * **And the diff *image* misleads here, which is worth one line.** Painted as red-over-grey
+       * it looks unmistakably as though the columns changed most — they are 54 % of the frame, so
+       * the same 20 % rate covers four times the pixels. The rate table above is the correction.
        *
        * The general form, for whoever authors the next flat-side fix here: a feature only moves
        * an in-frame statistic measured at scale X if the feature is near X. Size the feature
        * against the framings *and* against the band the statistic reads, or the texture-side
        * gain is real and unbankable. The larger reason this recipe measures flat is now
        * §68's — most of it is the tone curve, not the authoring — and that is routed to
-       * POSTFX/SHADING as task #32, not fixable in this file. */
+       * POSTFX/SHADING as task #32, not fixable in this file. This experiment's own null
+       * materials corroborate that for free: across 17 (material, framing) pairs in `temple`,
+       * `interior` and `courtyard` whose textures did **not** change, Δcov1 against Δmedian-luma
+       * gives **r = −0.88** at −0.72 points per 0.01 of luma — every pair that held its luma held
+       * its coverage to ≤0.2 points, and every pair that lost 0.02–0.03 of luma gained 1.4–3.1
+       * points. Observational, not an intervention, but it is the same sign and order as §68's
+       * controlled sweep and it is measured in delivered frames. */
 
       /* ---- Drum courses. -----------------------------------------------------------------
        *
