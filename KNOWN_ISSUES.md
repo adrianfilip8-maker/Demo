@@ -8879,3 +8879,80 @@ conclusion never depended on getting the population right — every version of i
 the cause. **That is luck, not method**, and it is worth saying so: had the true answer been near
 the 20 %/60 % decision boundaries, the first ROI would have produced a confident wrong verdict with
 a working self-control sitting right beside it attesting to nothing relevant.
+
+---
+
+## §105 — the ink pass is exonerated too, and a test that failed its own known-bad was thrown away
+
+SHADING scored `PREREG-inkfringe` against `tone2`'s four ink arms. All four MATCH
+requested-vs-applied (`inkStrength` 0.95 / 0, every other knob identical per pair), `pngdiff`
+self-diff 0 on both shots before any real diff. **Outcome 3: finding #9 is not the ink pass.**
+Nothing shipped; no source file touched.
+
+### 105.1 Both legs of the registered falsifier resolve against the accused
+
+- **The fringe survives `inkStrength 0`.** Warm/cool saturated adjacent pairs: `traversal` 937 ON
+  / 937 OFF, `hero` 1897 / 1249 — **66 % survives** with the ink pass entirely off. Spatial overlap
+  56.5 / 56.6 %, the remainder displaced ~1 px because the ink line lands *on* the boundary. The
+  937/937 is flagged by its own author as a **coincidence of counts, not population identity** —
+  which is the kind of thing that gets quoted as a bit-identity result by someone reading fast.
+- **The ink's own contribution is asymmetric**, exactly as `smoothstep(0.05,0.20,lum)` predicts:
+  mean |Δ| **5.7–7.8** below surface luma 38 against **32–188** above it. Asymmetric is the
+  opposite of the CA-like signature finding #9 describes.
+
+### 105.2 The frames reframe the finding
+
+At `hero` (992,576) the "fringe" is a **saturated orange sunlit band on a shadowed blue-grey pylon
+face**, pixel-identical in both arms — only the black ink lines differ. `traversal` (1024,256) is
+the same story on a sunlit pier. That is §2.2's warm/cool complementary tension, corroborating
+§80.4's "at 4× the traversal fringe is the painted frieze".
+
+And the violet lines are **the art bible being implemented**: `inkWarm #1a1210` is hue 12°,
+`inkCool #161022` is hue 260° — §2.2's *"very dark, slightly warm brown in sunlight and a dark
+violet in shadow"*. At frame scale the selection tracks lit-versus-shadowed **surfaces**, not two
+sides of one moulding, so the seal's §2 mechanism is real and does not scale up into the defect.
+
+> Flagged in §23 terms rather than asserted: **finding #9 may be an observation of the intended
+> palette rather than a defect at all.** That is a read off two crops, not an attribution.
+
+### 105.3 The test that was killed by its own calibration
+
+This is the part worth keeping. SHADING's test C synthesised **real symmetric CA** (R/B shifted
+±1 px) as a known-bad, and the test scored it **3.9 % opposite-sign against the ink pass's 10.4 %**
+— ranking genuine chromatic aberration as *more* asymmetric than the shipped state. Backwards. Its
+±2 px geometry cannot resolve a 1 px fringe.
+
+> *"Had I not calibrated it I would have quoted it as evidence."*
+
+**Discarded, not quoted, not repaired-and-quoted.** §13's rule — a metric never shown to move on a
+state known to have the defect is not a metric — enforced against the author's own instrument at
+the moment it would have supported the conclusion he was reaching. `mkca.mjs`, the known-bad
+generator, is promoted out of the scratchpad into `tools/` because a defect synthesiser is reusable
+infrastructure and the scratchpad is the half two rollbacks have eaten.
+
+### 105.4 The statistic that would have misled, and the one that separated
+
+**Pair count alone is useless here:** the ink pass adds +51.9 % pairs on `hero`, synthetic CA adds
++68.5 %. Comparable, and pointing the wrong way.
+
+| statistic | ink pass | known-bad CA | separation |
+|---|---|---|---|
+| warm px with cool px 4-adjacent | 9.9–14.7 % | 80.2–83.2 % | 6–8× |
+| violet line paired with warm ≤1 px | 9.0 / 9.5 % | 19.4 / 34.4 % | 2.2–3.6× |
+| **violet line's own surface was warm** | 10.2 / 13.3 % | 64.3 / 64.2 % | 6.3×, opposite |
+| cooler:warmer count ratio | 0.22–0.51 | 1.27 | one-sided vs balanced |
+
+The provenance row decides it: under real CA a violet fringe lands **on a warm surface** — that is
+what makes it a fringe. The ink pass's violet lines land on surfaces already at hue 216°/222°.
+
+### 105.5 Two seals, two exonerations, one afternoon
+
+§104 refuted the surface rim on the sphinxes; §105 refutes the ink pass on finding #9. Both were
+capability results whose arithmetic was correct and whose attribution was wrong, both were killed
+by a discriminating arm the seal itself registered, and **in both cases the proposed fix would have
+been aimed at a term that is not the cause** — `rimShadowFloorArch`'s ramp and the ink re-keying
+respectively. Neither shipped.
+
+**Finding #9 now returns to unattributed with both candidates killed by test rather than by
+argument** — `TUNE.chroma = 0.0` in §80.4, and the ink pass here. That is a better state than a
+plausible fix: the observation is intact and nothing has been changed on a wrong theory.
