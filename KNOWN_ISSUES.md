@@ -8723,10 +8723,17 @@ Checked because an exact 1.000 on three different ceilings is not a result, it i
 > channel Δ 0.**
 
 So the "ceiling" does not attenuate the puff, it **removes** it, at every value tested including
-the deliberately weak one. That resolves §99.1's open question in favour of the culling branch, or
-of a clamp so far below the sprite distribution that it is indistinguishable from culling — and
+the deliberately weak one. ~~That resolves §99.1's open question in favour of the culling branch~~,
+or of a clamp so far below the sprite distribution that it is indistinguishable from culling — and
 Band 2 says the same thing about the sheet outside P, where 94.1 %, 99.1 % and 99.5 % of the
 ground-haze signal is destroyed.
+
+> **CORRECTED — it is the second branch, and the source says so without a capture.**
+> `Particles.js:616` is `sz = min( sz, uMaxSize * max(-mvPosition.z,1e-3) / max(projectionMatrix[1][1],1e-4) )`.
+> That is a **clamp**; nothing is discarded, and no arm at 0.5 or 1.0 was needed to establish it —
+> §84.4's precedent of settling a mechanism from source applies and I should have read the shader
+> before proposing to spend a lock. **"Indistinguishable from culling" and "culling" are different
+> claims, and §102.2 leant on the wrong one.** See §108 for why a clamp reads as a deletion here.
 
 Band 2 degrades monotonically with the ceiling (0.059 → 0.009 → 0.005), which is the only part of
 this run that behaves like a dose-response.
@@ -9094,3 +9101,70 @@ arbitrarily.
 
 Two statistics, computed from the same pixels in the same run, differing by **6×** in how bad they
 make the result look. The one that agreed with the hypothesis under test was the broken one.
+
+---
+
+## §108 — the puff ceiling clamps, the bracket was 4–18× below the sprites, and the shader said so for free
+
+§99.1 left clamp-versus-cull open and proposed two more arms at 0.5 and 1.0 to settle it. §102.2
+then leant toward culling. **Both were unnecessary and the second was wrong.** `Particles.js:616`:
+
+```glsl
+if ( uMaxSize > 0.0 ) {
+  sz = min( sz, uMaxSize * max( -mvPosition.z, 1e-3 ) / max( projectionMatrix[1][1], 1e-4 ) );
+}
+```
+
+A `min`. **It clamps.** Nothing is discarded, no particle count changes, and the whole question was
+answerable by reading one line — §84.4's precedent of settling a mechanism from source, which I
+cited approvingly and then did not apply. **I proposed spending an exclusive capture lock on a
+question the shader answers in a grep.**
+
+### 108.1 Why a clamp reads as a deletion, in numbers
+
+The ceiling on a sprite's half-extent is `sz ≤ uMaxSize · d / P11`, and `sand_drift` (`sandLow`)
+authors `size: [0.35, 1.5]` metres over an 80 × 2.2 × 80 box. At `sly-profile`'s fov 38,
+P11 = 2.904:
+
+| depth | cap at 0.120 | at 0.085 | at 0.055 | authored 0.35–1.50 |
+|---|---|---|---|---|
+| 2 m | **0.083** | 0.059 | 0.038 | binds on **all**, 4–18× |
+| 5 m | 0.207 | 0.146 | 0.095 | binds on **all** |
+| 10 m | 0.413 | 0.293 | 0.189 | binds on the larger half |
+| 40 m | 1.653 | 1.171 | 0.758 | binds on none at 0.120 |
+
+**Every sandLow sprite inside 5 m is clamped by even the weakest arm, by 4–18× in linear size —
+16–320× in area.** A veil's optical depth is accumulated coverage, and the near field is where the
+coverage is, so removing it removes the veil. The frame cannot tell that from deletion, and §102's
+bit-identity result is exactly what a clamp of that severity predicts.
+
+`uMaxSize` at which the cap stops binding on the largest authored sprite: **2.18** at 2 m, 0.87 at
+5 m, 0.44 at 10 m. The bracket ran 0.055–0.120.
+
+> **The bracket was not merely mis-sited, it was mis-scaled by more than an order of magnitude**,
+> and the seal's own label for 0.120 — *"deliberately weak"* — was written against an intuition
+> about screen pixels (86 px at 720) rather than against the authored metre sizes the clamp
+> actually competes with. **86 px sounds generous; 0.083 m against an authored 1.5 m does not.**
+> The two descriptions are the same number and only one of them makes the defect visible.
+
+### 108.2 What FX should do instead, and it is not another bracket
+
+Nothing here says the ceiling is broken — it does precisely what its comment says. The finding is
+that **a screen-fraction ceiling and a metre-authored size distribution are not commensurable
+without the depth term**, so any future bracket must be chosen from the depths that carry the
+coverage, not from round numbers in screen fraction.
+
+Concretely: at the depths where `sand_drift` has its mass, a *non-destructive* ceiling starts
+around **0.4–0.9**, and the interesting region — where the cap trims the largest sprites without
+gutting the near field — is above the entire range fx19 tested. That is a candidate range derived
+from arithmetic and it is **not a proposal**: the run that tests it should be pre-registered the
+way `PREREG-puff` was, whose two-band structure was sound and which failed only because it was
+pointed at the wrong decade.
+
+### 108.3 The cost, stated plainly
+
+`fx19` spent an exclusive lock on seven arms, ran a textbook-clean revert-restore control returning
+**zero** differing pixels, derived its regions in-run with asserted centroid and area, scored two
+bands, and correctly shipped nothing. **All of that was sound, and the whole run was decided before
+it booted by a value chosen in the wrong units.** No control anywhere in the design would have
+caught that; only reading `Particles.js` would, and that was free the entire time.
