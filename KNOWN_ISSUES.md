@@ -13102,3 +13102,85 @@ procedure and a framing.** *"Has `fx21` been scored? If not, the seal is at
 instead restated an entire scoring procedure, a falsifier threshold and a provenance question — all
 of which had already been answered, and any of which could have been re-executed against a
 superseded framing.
+
+## §154 — an instrument that reproduced the confound it was built to avoid, and a refusal to capture
+
+GEOMETRY built the apron toggle — the arm that can promote §152's *"symptom absent, cause
+unattributed"* to an attribution. `progress/records/apronarm.mjs` + `PREREG-apronarm.md`. Read-only
+throughout; no frame from `shots/propshull` opened.
+
+### 154.1 The scorer failed its own first control, in the exact way it was built to prevent
+
+S1 was written against **the ROI's own median**. The selftest requires a synthetic 2 px sliver *and*
+a 240 px band to both register. The band failed: **at 240 px the artefact fills an 81 px ROI, becomes
+its own reference, and S1 returned 0.**
+
+> **That is §152.3's `kerbline` confound reproduced one level up, inside the instrument written to
+> avoid it** — and it would have produced a confident null.
+
+Reference is now the frame median. And the fix is not asserted, it is **demonstrated on every
+invocation**: the selftest runs `kerbline`'s own thin-line predicate on the identical images, so the
+two instruments are compared rather than described. Verified by running it:
+
+```
+none (control)   S1      0 px  not seen  |  thin-line      0 px blind
+2 px sliver      S1   2420 px  SEEN      |  thin-line   2420 px fires
+240 px band      S1  98010 px  SEEN      |  thin-line      0 px BLIND
+```
+
+**A confound shown side by side with the instrument that has it is a different object from a
+paragraph claiming the instrument has it.**
+
+### 154.2 A gate rejected by measurement rather than by argument
+
+GEOMETRY drafted a *"peak within 12 px of the arris"* gate and then exercised the scoring path on
+synthetic arm frames across all three verdicts. On the synthetic **HIT** (96,801 ROI px moved, S1
+delta +98,010) the S2 profile peak landed at **d = −40 px — the far edge of the swath.**
+
+**The drafted gate would have downgraded an unambiguous hit to AMBIGUOUS.** *"A wide effect has no
+narrow peak."* Rejected on a measurement of its own behaviour, not on a judgement about it.
+
+### 154.3 A rigid translation chosen so the confound cannot arise
+
+The apron moves as a **rigid +0.09 translation**, so **every normal stays bit-identical.** A stretch
+back to the historical box would have moved the chamfer normals too, confounding *"the arris is
+higher"* with *"the arris faces elsewhere."*
+
+The cost is stated rather than hidden: the apron's bottom edge sits at −1.41 instead of −1.50, which
+is 1.4 m below the contact and buried. Vertex selection is proved against the apron's nominal extents
+and **aborts if it catches anything else**, and each arm re-reports its measured apron top so **an
+arm cannot silently no-op** — `lo → hi → lo2`, with `lo2` as the validity gate rather than a second
+knob.
+
+### 154.4 A null that is a counterfactual, not a shared prediction
+
+§152's `kerbline` null was uninformative *because every candidate predicted it*. This one is not, and
+GEOMETRY registered the distinction before running:
+
+> The `hi` arm is a **counterfactual** — if the apron were the cause, `hi` **must** show the
+> artefact. So a null bears specifically on candidate 1, and bears **against** it.
+
+It licenses *"§137's fix corrected a real defect that was **not** this symptom"* and explicitly
+**not** *"candidate 2 is proved"* (this arm cannot test candidate 2) and **not** *"the apron is
+invisible"* (it is in frame on `hero` / `courtyard` / `night` too).
+
+That is the difference between an outcome every hypothesis predicts and an outcome one hypothesis
+forbids — the first is worthless and the second is decisive, and they look identical in a results
+table.
+
+### 154.5 The runner refuses to capture
+
+`ROI.confirmed = false`, and the tool **will not boot**:
+
+```
+Refusing to capture: an ROI chosen after the frames is not a pre-registration.
+```
+
+The *rule* is sealed — a ±40 px swath on the projected west apron arris, with §152's endpoints
+`(1250,233) → (41,324)` recorded and **labelled nominal** — and the fill-in procedure is printed:
+locate the arris in `guard-base`, and if it lies outside the pad, **amend the prereg with the
+measured line and the reason** before setting the flag. *"Do not silently edit the coordinates."*
+
+The one thing that must be chosen from a frame is isolated, named, and blocked behind an explicit
+amendment — rather than the whole seal waiting on the frame, or the coordinates quietly acquiring
+their values from it.
