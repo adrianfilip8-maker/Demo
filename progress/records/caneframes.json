@@ -1,0 +1,67 @@
+{
+ "hero": {
+  "file": "/home/user/Demo/shots/arris2-off2/hero.png",
+  "sha": "ad1b3a5",
+  "n_sets": 22
+ },
+ "temple": {
+  "file": "/home/user/Demo/shots/arris2-off2/temple.png",
+  "sha": "ad1b3a5",
+  "n_sets": 14
+ },
+ "sly-closeup": {
+  "file": "/home/user/Demo/shots/char15-wide/sly-closeup.png",
+  "sha": "27beccb",
+  "n_sets": 17
+ },
+ "sly-startle": {
+  "file": "/home/user/Demo/shots/gs-x8/sly-startle.png",
+  "sha": "dd88335",
+  "n_sets": 3
+ },
+ "sly-perch": {
+  "file": "/home/user/Demo/shots/char13/sly-perch.png",
+  "sha": "f47e0e4",
+  "n_sets": 2
+ },
+ "courtyard": {
+  "file": "/home/user/Demo/shots/tx5/courtyard.png",
+  "sha": "c3eac2c",
+  "n_sets": 7
+ },
+ "dunes": {
+  "file": "/home/user/Demo/shots/geo1/dunes.png",
+  "sha": "de2feb1",
+  "n_sets": 5
+ },
+ "interior": {
+  "file": "/home/user/Demo/shots/arris2-off2/interior.png",
+  "sha": "ad1b3a5",
+  "n_sets": 8
+ },
+ "night": {
+  "file": "/home/user/Demo/shots/bud/night.png",
+  "sha": null,
+  "n_sets": 5
+ },
+ "traversal": {
+  "file": "/home/user/Demo/shots/arris2-off2/traversal.png",
+  "sha": "ad1b3a5",
+  "n_sets": 7
+ },
+ "combat": {
+  "file": "/home/user/Demo/shots/char12/combat.png",
+  "sha": "52d4a43",
+  "n_sets": 5
+ },
+ "guard": {
+  "file": "/home/user/Demo/shots/eye1/guard.png",
+  "sha": "6f1d1f4",
+  "n_sets": 9
+ },
+ "sly-key": {
+  "file": "/home/user/Demo/shots/gs-x8/sly-key.png",
+  "sha": "dd88335",
+  "n_sets": 3
+ }
+}

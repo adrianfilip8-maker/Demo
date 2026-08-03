@@ -10258,19 +10258,33 @@ knowing either of those things.
 > A correct prediction from an instrument blind to the dominant mechanism is a coincidence with a
 > good track record, not a validated model.
 
-### 121.9 Curvature, not texture, is what puts a cel specular on screen
+### 121.9 ~~Curvature~~ **Rounded cross-section**, not texture, is what puts a cel specular on screen
 
-The clinching comparison is **inside one frame** — same key light, same shader, selected by colour
-rather than by mask:
+> **CORRECTION, 2026-08-03, same day — refuted by the falsifier I commissioned against it. See
+> §123.** Three things below are wrong. (a) The cane is **not `gold_leaf` and not gloss 110** — it
+> is `SlyModel._matSpec('gold')` at **gloss 96**, `metal: true`, procedural `makeMetalMaps`;
+> `gold_leaf`/110 is `Architecture.js:70`. The "narrower lobe" contrast is **96-vs-64**, not
+> 110-vs-64. (b) *"The lobe is guaranteed a place to land"* is **false**: the cane reads **zero**
+> px ≥ L 170 in **6 of 11** scoreable framings, and the four where it is metal are one staging
+> (yaw 5.24, tod 0.80) sampled with four lenses. (c) The mechanism is the wrong term — the cane is
+> the same mesh in all of them, and **a constant cannot explain 4.88 % → 0.00 %**. The lobe is
+> gated by the **shadow term `sh`** (`toon.glsl.js:527`); in shadow specular is identically zero at
+> any curvature.
+>
+> **What survives, and it is the more useful half:** the load-bearing feature is the **circular
+> cross-section, not the bend** — a *straight* tube already fans 180° of normal perpendicular to its
+> axis. So **gilded architecture does not need to be curved; it needs rounded edges.**
+
+The comparison as originally recorded, kept because §123's refutation is only legible against it:
 
 | | mean RGB | L | (b−r)/255 | chroma | px ≥ L 170 |
 |---|---|---|---|---|---|
-| **cane gold** (curved tube, `gold_leaf`, gloss **110**) | 164.8, 101.0, 50.1 | 110.9 | **−0.450** | **0.696** | 970 |
+| **cane gold** (curved tube, ~~`gold_leaf`, gloss 110~~ → `_matSpec('gold')`, gloss **96**) | 164.8, 101.0, 50.1 | 110.9 | **−0.450** | **0.696** | 970 |
 | **architrave gilding** (flat, `hieroglyph_gilded`, gloss **64**) | 57.6, 64.6, 71.7 | 63.6 | +0.055 | 0.197 | 432 |
 
-The cane runs the **narrower** lobe and still carries a clean hot streak, because a tube's normal
+~~The cane runs the **narrower** lobe and still carries a clean hot streak, because a tube's normal
 sweeps through the half-vector *somewhere* along its length — the lobe is guaranteed a place to
-land. A flat architrave has one normal and either catches it or does not. At golden hour the gilded
+land.~~ A flat architrave has one normal and either catches it or does not. At golden hour the gilded
 architecture reads as **near-achromatic cool grey** (chroma 0.084 on `sly-key`) and on `sly-startle`
 its *brightest* pixels are **cyan** — the rim colour, not gold.
 
@@ -10280,8 +10294,24 @@ is **not** a softer one — `specStep` is a hard step.
 
 **§7.3's gold line, honestly split and closed from TEXTURES' side:** the specular route *cannot*
 deliver it (measured, mechanism named at three points); the albedo route was already null on `hero`;
-the dark occlusion is authored correctly (2.1:1 span) and lost downstream in §8, which is SHADING's;
+~~the dark occlusion is authored correctly (2.1:1 span) and lost downstream in §8, which is SHADING's;~~
 the lobe's width is ARCHITECTURE's; the bloom feed is POSTFX's.
+
+> **CORRECTION, 2026-08-03, same day — the struck clause repeats a statistic §34 withdrew, and I
+> am the one who repeated it.** SHADING caught it. "Lost downstream" was sized on
+> `AO p5 0.247 / p50 0.408`; `tools/texlab.mjs:170` emits `aoP: [1, 5, 50]`, so those are **p1 and
+> p5**, and `hieroglyph_gilded`'s authored median is **0.992**. The "authored dark" and the "in
+> frame" figure §34 compared were **the same number wearing different labels**, and nothing in the
+> repo reads an AO channel back out of a rendered frame at all. §34 stated the rule — *a percentile
+> triple must carry its percentiles at every hop* — and I re-imported the mislabelled triple from a
+> sub-agent report **87 sections later without checking the file I was writing into.** See §122.2.
+>
+> What survives: `ao` genuinely does not multiply the direct key term. But the knob already ships
+> (`uAoKey`, `TUNE.aoKey = 0.0`), and at `uAoStrength = 0.55` enabling it scales the key term by
+> **0.9956 at the authored median — −0.44 %, invisible** — biting only in the p1–p5 crevice tail
+> (−32 % / −41 %). **It cannot deliver "the dark half of gold" as a value span, because the
+> authored input has no such span.** Gold's dark half is not routed to SHADING; it is not a live
+> route at all.
 
 Two things TEXTURES got wrong by eye and corrected by measuring, recorded because that rule cuts
 both ways: the `sly-key` architrave read at 4× as "flat colour, no detail" carries **the most**
@@ -10300,3 +10330,266 @@ queued, and a mid-queue edit to `src/textures/**` would have given them differen
 is precisely 121.4's hazard, avoided rather than discovered. Open, and open on **`courtyard` /
 `night`**: `hero` is 98.6 % shadowed there and both goldspec framings carry only 1.3–1.6 repeats
 across.
+
+## §122 — three findings that arrived by someone checking the thing nobody checks, and one of them is mine
+
+Three owners reported inside an hour. What links their results is not the subject matter — it is
+that each came from asking a question that costs almost nothing and that nobody had asked:
+*was the subject in the frame*, *is this statistic still current*, *what threshold does this count
+use*. Two of the three overturned a conclusion already written down. One of those was mine.
+
+### 122.1 The same run scored twice, independently, and the disagreement was the instrument
+
+`fx19` was scored by the coordinator against `PREREG-puff.md`, and then — four hours later,
+without knowledge of that scoring — by FX, which found it by auditing its own open items against
+§94.2d ("a finished result nobody scored"). Both scored the same seven PNGs.
+
+**Every absolute count disagreed by 1.86×. Every ratio agreed to 0.1 percentage points.**
+
+| pair | coordinator | FX |
+|---|---|---|
+| `base` vs `no-sandLow` | 34 258 | 18 422 |
+| `cap120` vs `no-sandLow` | 718 | 412 |
+| **cap120 retains, as a share** | **2.10 %** | **2.24 %** |
+
+Re-measured on the frames as they sit on disk, the cause is exact: the coordinator counted **any
+channel differing at all**; FX counted **`|ΔR|+|ΔG|+|ΔB| ≥ 4`**. Both reproduce their own document
+to the pixel. Neither is a bug.
+
+> **A differing-pixel count is not a measurement until its threshold is stated.** Neither document
+> stated one, and both read as if the number were a property of the frames. Where a run's
+> conclusion is a *ratio*, this does not matter — which is why both scorings reached ~98 % by
+> different routes. Where a conclusion is an absolute count against a floor, it decides the verdict:
+> §120's whole prediction was "74–104 px against an 83–122 px floor", and a 1.86× instrument
+> difference would have moved that from *inside the floor* to *clear of it*.
+
+That last point is the one to carry. §121's null is not endangered — both arms there were counted
+by one instrument — but the reasoning would have been invalid if the floor and the prediction had
+come from different tools, and nothing in the seal required them to match.
+
+### 122.2 I repeated, 87 sections later, the exact error §34 exists to prevent
+
+§121.9 shipped the clause *"the dark occlusion is authored correctly (2.1:1 span) and lost
+downstream in §8, which is SHADING's"*, and I routed it to SHADING as a live task sized on
+`AO p5 0.247 / p50 0.408`.
+
+**§34 withdrew that statistic on 2 August.** `tools/texlab.mjs:170` emits `aoP: [1, 5, 50]` — those
+figures are **p1 and p5**, `hieroglyph_gilded`'s authored median is **0.992**, and the "authored
+dark" and "in frame" numbers §34 compared were the same number wearing different labels. Nothing in
+the repo reads an AO channel back out of a rendered frame at all.
+
+§34 did not merely record the error. It stated the general rule:
+
+> *A percentile triple must carry its percentiles at every hop.* `[0.247, 0.412, 0.992]` is not
+> data, it is data plus a convention held in someone's head, and conventions do not survive hops.
+
+**And the hop it did not survive was mine.** A sub-agent's report quoted the triple; I copied it
+into the ledger and into a routed task without checking the file I was writing into — the file that
+contains the correction, the rule, and the instruction to look. The correction is now written at
+§121.9's declaration site with the clause struck.
+
+> The failure is not that a stale number existed. It is that **the coordinator is the one hop every
+> finding passes through**, and the check that would have caught it was a search of the file I had
+> open. §118 tightened staging after I committed unread lines; this tightens the same discipline one
+> step earlier, at *relaying*: **a number arriving from a sub-agent is a claim, not a fact, until it
+> is checked against the ledger it is about to be written into.**
+
+What survives, and it shrinks the item to nothing: `ao` genuinely does not multiply the direct key
+term, but the knob **already ships** (`uAoKey`, `TUNE.aoKey = 0.0`), and at `uAoStrength = 0.55`
+enabling it scales the key term by **0.9956 at the authored median — −0.44 %, invisible** — biting
+only in the p1–p5 crevice tail. It cannot deliver a value span the authored input does not have.
+**Gold's dark half is not a live route, and a capture on it would have been spent on a withdrawn
+premise.**
+
+### 122.3 A scoring that answered every registered band and never asked whether the subject was there
+
+The coordinator's `fx19` scoring discusses provenance, applied-state readback, a zero-residue
+restore control, an absence control, a mis-sited bracket and §57's edge rule. Its arithmetic
+reproduces exactly. **It never asks whether the artefact the bracket was aimed at is in the
+picture.**
+
+FX asked, by opening `sly-profile.base.png` and looking. **There is no cream mass** — none of the
+four observations §78.1 confirmed at 4× on the critic's frame. So §78.2's registered prediction is
+**"premise absent"**: not confirmed, not refuted, and the run measured `sand_drift`'s ordinary
+ground haze instead — a different quantity from the one it was built to test.
+
+This is §104 in a new place: an ROI that was 13.54 % of frame and mostly sky, caught by looking
+rather than by measuring harder. The generalisation is FX's and it is exactly right:
+
+> **The cheapest question a null result raises is "was the subject even in the frame", and a probe
+> that cannot answer it converts a finding into an unknown.**
+
+FX then logged the same defect against its own instrument: `fx19`'s probe stamped `time` and
+`frame` but **no `tod` and no camera state**, which is precisely why the question cannot now be
+settled retroactively. Every FX probe should stamp `tod` and the staged camera, for the same reason
+`report.json` stamps a commit.
+
+**A second correction to that scoring, on the record because it is the failure this file exists to
+catch:** it proposed a further two-arm capture (ceilings at 0.5 and 1.0) to separate *clamping*
+from *culling*. `Particles.js:616` is a `min()`. It clamps. **A grep answered a question that had
+been scoped as a lock spend.**
+
+### 122.4 A sub-agent brief anchored ~100 sections in the past, and the cost of not checking
+
+SHADING reports that the `KNOWN_ISSUES.md` it read at session start was **1120 lines ending at
+§15**. The file at `HEAD` is **10302 lines ending at §121**. Its brief, and the handoff line that
+brief quotes (`KNOWN_ISSUES.md:310`), describe a world that is ~100 sections stale — and that exact
+line is now **struck through**, its six unverified shots all measured and re-measured.
+
+It checked before taking the lock, and the check cost about ten minutes:
+
+- Its **primary task was already done.** Six captures at 2–5 min each on a contended lock would
+  have re-derived a documented result.
+- **My routed task #16 was superseded** — §114 attributes the teal to `shadowTeal` and §115's
+  29-arm sweep attributes the drift to `shadowBounceMix`, which is the attribution the task asked
+  it to produce.
+- **My §8 item rested on the withdrawn statistic of §122.2.**
+
+Three of the things it was told to do rested on facts the tree had moved past or retracted, and
+**all three came from me.** The standing instruction "do the offline half first" was written to save
+lock time; here it saved seven captures by exposing that the briefs were stale. **Resuming an agent
+from its transcript re-anchors it to the file as it was when that transcript began** — the resumed
+context is not refreshed, and the coordinator is the only party positioned to notice.
+
+### 122.5 What SHADING registered instead, and why one clause of it matters
+
+Seal at `PREREG-compose1.md`. The **"73/44/41 %" headline for §119.4 is a linear sum** —
+it decomposes exactly as (41+32), (20+24), (26+15) against §115.1's legs, with no composition term
+in it at all. But composition *has* been measured once, in §115.1's `all six` row: six legs summing
+to −0.0588 measured **−0.0456, a composition factor of 0.776**, and adding five legs to
+`shadowBounceMix` alone moved the total *down*, 120 % → 112 %. **Subadditivity is the prior, not a
+hypothesis.** Registered bands: `hero` 52–76 %, `temple` 30–46 %, `closeup` 28–43 %.
+
+The clause worth keeping is what it registered about the *other* direction. I asked it to name the
+superadditive outcome as well as the subadditive one. It went further and named superadditivity the
+**dangerous** result: the hue line was verified **per leg** (§119.3 P5, 213–217°), so a
+superadditive composite can cross the ≤226° limit *while every leg passes alone*.
+
+> **A composite that beats its own prediction is not a win when the safety constraint was only ever
+> checked leg-by-leg.** That result mandates backing off, not banking the closure.
+
+`Outline.js` is confirmed as the remaining lever and deliberately **not** implemented yet:
+`SlyModel.js:808` is one `SkinnedMesh` with a material array, `:3729` calls `outline()` once, and
+`buildOutlineShell` builds a single-material shell, so three.js renders it as one draw and the
+groups are discarded. The plumbing already exists and is simply unreached — `toon()` accepts
+`outline:` (`:949`), stores it (`:1064`), `outlineAll()` honours it (`:1215`). The fix is a
+per-vertex `slyInk` attribute from `geometry.groups`, consumed in `OUTLINE_VERT` exactly as
+`slyNormal` is: **zero extra draw calls and no `src/player/**` change.** Left unimplemented because
+it is a live change to the pass that draws every silhouette in the game, and §118 is the record of
+what committing one of those unread costs.
+
+## §123 — the falsifier I commissioned against my own section returned, and the section does not survive
+
+§121.9 generalised from **one object in one frame** to a mechanism, and that mechanism was already
+routing geometry work to another owner. I asked CHARACTER to try to break it, on the grounds that a
+one-frame generalisation is worth attacking before someone builds on it. It broke.
+
+### 123.1 The count, and the shape of the count is worse than the count
+
+The cane across all scoreable framings, one gate applied identically to every shot:
+
+| shot | cane px | px ≥ L 170 | hot % of mask | chroma |
+|---|---|---|---|---|
+| `sly-startle` | 31 512 | **1 538** | 4.88 | 0.653 |
+| `sly-closeup` | 8 093 | 171 | 2.11 | 0.492 |
+| `sly-key` | 8 093 | 89 | 1.10 | 0.516 |
+| `sly-perch` | 5 984 | 21 | 0.35 | 0.423 |
+| `dunes` | 1 541 | **0** | 0.00 | 0.379 |
+| `interior` | 1 338 | **0** | 0.00 | 0.153 |
+| `traversal` | 773 | **0** | 0.00 | 0.244 |
+| `hero` | 565 | **0** | 0.00 | 0.185 |
+| `night` / `temple` | 335 / 307 | **0** | 0.00 | — |
+
+**Zero pixels above L 170 in six of eleven.** And the four that pass are all **player yaw 5.24 at
+the spawn, tod 0.80** — one staging in one lit corridor, sampled with four different lenses.
+
+> It is not "metal in 4 of 10 shots". It is **metal in one lighting setup, sampled four times.**
+> That is the lucky-half-vector reading §121.8 named for `goldspec.mjs`, arriving one subsection
+> later in my own prose, about a different object, without my noticing the shape was identical.
+
+Exclusions were stated rather than silently averaged: `guard` (all 805 cane verts behind the lens
+by design), `courtyard` (58 px — real chroma 0.642, but 58 px cannot score anything and averaging
+it in would be §104's error), `combat` (hot, but §96.2 disqualifies it — the FX flash, not a lobe),
+`sly-arm`/`sly-profile` (no frame on disk).
+
+### 123.2 A constant cannot explain a varying outcome — the structural kill
+
+This is the part that makes the refutation airtight rather than statistical. **The cane is the same
+mesh in every one of those frames** — same 191.9° crook, same tube radii, same gloss, verified
+identical at three commits. Curvature does not vary. The outcome varies from 4.88 % to 0.00 %.
+
+> **A constant cannot explain an outcome that varies.** No amount of additional framings could have
+> rescued the claim, because the proposed cause is invariant across exactly the axis the effect
+> moves on. One sentence of reasoning, available at the moment §121.9 was written, and I did not
+> write it.
+
+The variable is `src/render/shaders/toon.glsl.js:527`:
+
+```glsl
+vec3 spec = specTint * ( specAmt * specStep * sh * step( 0.02, ndl ) );
+```
+
+The lobe is gated by the **shadow term `sh`**. In shadow, specular is identically zero at any
+curvature — and `hero`, `temple`, `night`, `interior`, `traversal` are precisely the frames where
+the subject is shadowed, confirmed by opening the crops rather than inferred (on `hero` the cane is
+a flat navy silhouette; on `temple` it is indistinguishable from its own ink line).
+
+**So the binding constraint on gold is key light reaching the surface, not geometry — and I had
+routed GEOMETRY to build geometry to satisfy a term that is already satisfied.**
+
+### 123.3 Two factual errors in my table, both checkable in seconds
+
+- **The cane is not `gold_leaf` and not gloss 110.** It is `SlyModel._matSpec('gold')`
+  (`SlyModel.js:3459`): gloss **96**, `spec 0.9`, `metal: true`, `outline 1.25×`, maps from
+  `makeMetalMaps` in `Body.js:663` — procedural, not a `src/textures/**` recipe at all.
+  `gold_leaf` at gloss 110 is `Architecture.js:70`, a *different owner's* material.
+- So the headline contrast **"the cane runs the narrower lobe"** was 110-vs-64 on paper and is
+  really **96-vs-64** — still narrower, but a materially smaller gap than the one I used to make
+  the point feel decisive.
+
+I attributed a material by its colour name. Two greps would have caught it.
+
+### 123.4 What survives, and it is cheaper than what it replaces
+
+**The load-bearing feature is the circular cross-section, not the bend.** A *straight* tube already
+fans 180° of normal in the plane perpendicular to its axis — which is why the cane's shaft carries a
+lengthwise streak with no bend involved. The crook's 191.9° sweep only adds a second plane.
+
+> **Gilded architecture does not need to be curved. It needs rounded edges.**
+
+Sized as a tolerance budget off the shipped `specStep`, so the next owner can dimension it:
+
+| gloss | full-strength half-angle | onset half-angle | arc to span the onset window |
+|---|---|---|---|
+| 96 (cane) | 6.68° | 16.25° | 32.5° |
+| 110 (`gold_leaf`) | 6.24° | 15.19° | 30.4° |
+| 64 (`hieroglyph_gilded`) | 8.18° | 19.83° | 39.7° |
+| 24 (§121.9's proposal) | 13.31° | 31.83° | 63.7° |
+
+**Each degree of arc a surface sweeps buys one degree of tolerance in half-vector placement, in the
+plane of the sweep.** A flat architrave at gloss 64 catches the lobe only if its one normal lands
+within **±19.8°** of H; a **90° bullnose roll widens that to ±64.8°** — roughly 3× the catch window,
+for an *edge treatment* rather than a curved wall. That is a far cheaper ask than the one §121.9
+put in flight, and it is the version now routed.
+
+### 123.5 The commission is the method, not the courtesy
+
+§121.9 was published, committed, pushed, and used to route work, all inside one hour. It was wrong
+in its mechanism, wrong in its material attribution, and right in a way it could not articulate.
+**None of that was found by re-reading it.** It was found because the falsifier was commissioned
+*against* it, given the specific reason to doubt it (one object, one frame), and told that a
+refutation was the valued outcome.
+
+> A published section is not evidence that it was checked. **The check is a separate action with a
+> separate owner, and it has to be asked for while the section is still cheap to withdraw.**
+
+Two smaller things carried out of the same report, both instrument defects worth having:
+
+- **A stale `report.json` from a previous run of the same name was already on disk**, and a
+  liveness check testing `[ -f report.json ]` fired an immediate false "capture finished" on it.
+  **Existence is not completion when output paths are reused** — test mtime against a baseline
+  taken before the run.
+- **The container clock jumped ~43 h forward mid-session** (Aug 1 19:36 → Aug 3 14:58), same family
+  as §83/§91. It made a *fresh* capture look two days stale, and the frames were nearly discarded on
+  that basis. What identified it correctly was the run log's 1458 s lock wait matching the ticket
+  timestamp — **elapsed intervals inside one log survive a clock jump; absolute mtimes do not.**
