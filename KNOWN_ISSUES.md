@@ -11016,7 +11016,8 @@ composition arms are about to sweep.
 
 `chamferBox`, `chamferFor`, entasis and per-mass `bow`/`drift`/`sag` **all already exist**;
 `shaftSegs: 4` is deliberate (radial segments do the smoothing, vertical ones do not). The cyan kerb
-in `guard` was **already found and fixed** — the stylobate apron's chamfered inner arris, sunk to
+in `guard` was ~~**already found and fixed**~~ **— a geometric cause was found and a fix is in the
+tree** — the stylobate apron's chamfered inner arris, sunk to
 y = −0.07 — and `Kit.js:546` already records that the batter-ledge hypothesis was refuted by
 z-buffered count and that the plinth "fix" measured **worse** (86 → 464 px). The budget I quoted as
 548 draws / 2.355 M tris is **250 draws (exactly at budget) / 1.73 M tris**.
@@ -11787,3 +11788,51 @@ props metals are solid objects that do not want a reduced amount today.
 **The untested Architecture-side lever on this surface is `spec`**, which TEXTURES sized and named
 this file's **0.55** as the binding constraint. That is where gold goes next from this side — after
 SHADING's `diff`-assembly question, which is upstream of both.
+
+## §137 — "found and fixed" was my word for it, and the owner would not claim it
+
+GEOMETRY's final report on the gold arm contains a sentence that contradicts something I wrote into
+§128.6: *"Problem 2, the cyan kerb line in `guard`, I have not touched this session … That one is
+unresolved and I am not claiming it."*
+
+**Both statements are true and mine was the wrong one.** Checked in the tree rather than adjudicated
+between reports: `EgyptLevel.js:308-317` does sink the stylobate apron to **−0.07** with the full
+reasoning at the site, and it is committed, not dirty — so a geometric cause was found and a fix is
+in the tree, from an earlier session. What I wrote was *"already found and fixed."* What is true is
+**a fix is in the tree and has never been verified in a frame**, and GEOMETRY has since found a
+*second* candidate for the same artefact: `uRimShadowFloorArch` (`toon.glsl.js:130`), a shadow-side
+rim floor for non-skinned geometry, sized offline at ~110 L against a 7.2 L margin and **still at
+its no-op default of 0.55**.
+
+> **"Fixed" and "a fix is in the tree" are different claims, and I collapsed them.** An owner
+> reading §128.6 would have taken the item as closed; the owner who did the work would not. §128.6
+> is corrected at its declaration site.
+
+The remaining A/B is scoped rather than tuned and carries its own constraint: it **must re-measure
+`night`**, because the same floor that lifts an architectural shadow rim is the term §133.2 left
+without a threshold on that shot.
+
+### 137.1 A routed defect with no owner in this session
+
+**`guard_metal` runs `uMetal 0.85` with no `metalnessMap`.** `Guard.js:1066-1073` passes
+`normalMap` and `roughnessMap` from the bronze recipe and no metalness map at all, so
+`toon.glsl.js:464`'s `slyMetal *= texture2D(metalnessMap, …).b` never fires and the guard's metal is
+**unmasked, whole-surface** — unlike every Architecture and Props metal, all of which mask through
+the ORM blue channel.
+
+Recorded and routed to **GUARDS**, which has no agent this session, alongside ANIMATION's
+`sneak_idle` (§127.5) and `perch_idle`'s cane aim (§131.6). *An owner-less finding is not a smaller
+finding; it is one with a longer wait.*
+
+### 137.2 What the gold sweep actually closed, stated as the owner stated it
+
+GEOMETRY registered its own result as a **partial**, unprompted: *"this does not close the
+paving-vs-gold gap. It closes `metal` as a lever."* The distinction matters because three separate
+routes into §7.3's gold line have now returned null or regression — specular (§121), albedo
+(hgarris2 P5), and metalness (§136) — and each closing was clean enough that the *absence* of a
+remaining candidate could be mistaken for the question being answered.
+
+It is not. What is left on the Architecture side is **`spec: 0.55`**, which TEXTURES sized and named
+as the binding constraint, and it is upstream-blocked by SHADING's `diff`-assembly question (§136.3)
+— because a lever measured through a term that attenuates an additive blue wash is a lever measured
+through a known defect.
