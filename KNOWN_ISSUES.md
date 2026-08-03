@@ -6621,3 +6621,80 @@ defect is not a control**, and this one was rescued by an independent check rath
 `tools/headratio.mjs` on `idle_confident` reports **5.72 heads**, against **5.29** recorded in §9.
 That is *worse*, not better. Either the rig drifted since or §9's figure used a different basis —
 **re-derive it rather than re-quote either number.** Fourth instance of §58.3's family.
+
+
+---
+
+## §78 — soft particles soften intersections, never occlusions: the critic's observation is right and its mechanism is wrong
+
+FX on pass-6 findings #7 and #12. **Nothing shipped**, deliberately, and both findings are corrected
+before anyone acts on them.
+
+### 78.1 The observation is confirmed; the stated cause cannot produce it
+
+Everything the critic describes in `sly-profile` is there at 4×: a cream mass, brightest object in
+frame, mid-air, **~10 countable discs**, a hard vertical value seam, razor edges, no directional
+stretch. But its diagnosis — *"no soft-particle depth fade"* — is wrong, and wrong in a way worth
+keeping:
+
+`SOFT` **is** compiled into the `dust`/`smoke`/`sandLow`/`sandHigh` materials, the term is live at
+`PARTICLE_FRAG:666–668`, and the boot logged **none** of the three warnings `_copyDepth()` raises
+when the depth copy fails. (Verified independently: `Particles.js:1971` builds a `SOFT` define list,
+`:1986` and `:2002` apply it, `:1450` wires `uSoftness`.)
+
+> **Soft fade attenuates where a sprite approaches geometry *in depth*. The tail is a much
+> **nearer** occluder — `sceneZ − vViewZ` goes large-negative, clamps to 0, and the sprite is cut
+> exactly at the silhouette, identical to the plain depth test.**
+>
+> **Soft particles soften *intersections*, never *occlusions*.** Widening `softDepth` would have
+> changed nothing.
+
+A blind critic naming a real artefact and attributing it to the one system that provably cannot
+cause it is the strongest argument yet for the standing rule: **a finding is a symptom, and routing
+it is not the same as accepting its mechanism.**
+
+### 78.2 The mechanism FX can support, with arithmetic
+
+`sand_drift` runs sprites to **1.5 m** (shimmer 2.6 m) at α 0.18–0.38, 460 of them in a
+camera-following box — and is **exempt from the screen-size ceiling**: `maxSize` is set only for
+`air_motes` and is **0 for everything else** (`Particles.js:2012`, confirmed).
+
+The exemption's stated justification is *"low alpha-blended sheets"* — **a per-sprite argument
+against a defect that is entirely about stacking.** Ten sprites along the view ray at α ≈ 0.3
+composite to `1 − 0.7¹⁰ ≈ 0.97`: **opaque.** And each sprite boundary steps the stack count by one,
+so a crossing is a visible value step —
+
+> **the countable discs and the hard vertical seam are the same artefact.**
+
+Measured: 185 × 170 px at fov 38 gives `size/d ≈ 0.163`, the top of `sand_drift`'s range, uncapped.
+
+`fx17` is running detached to name the emitter by toggling `sandLow`/`sandHigh`/`shimmer`/
+`airMotes`/`dust` one at a time, with `guard` and `combat` included, **a `softoff` job that settles
+the fade question either way**, and a bit-identity `back` control. Fixes are drafted and stay
+unshipped until it reports.
+
+### 78.3 Finding #12 is routed to the wrong owner, and the argument excludes rather than suggests
+
+The `sly-key` floor squiggles are real, but **they cannot be decals**, and each reason is
+independently sufficient:
+
+- all three `decal()` call sites are **impact events** (land force > 1.1, dive impact, cane slam),
+  and `sly-key` stages a **frozen `idle_confident` pose** — none can have spawned;
+- the catalogue's **smallest** decal is 1.2 m and cracks are 2.2 m, which near the lens is hundreds
+  of pixels, not a 2 px hair;
+- decals are **world-space metre-sized quads**, so the critic's own *"no perspective
+  foreshortening"* **positively excludes them**.
+
+The candidate that fits is `paving_courtyard`'s documented per-flag Worley crazing web —
+*"a dark polygon net at higher frequency than the paving pattern itself, laid over the whole largest
+surface in the level"* (`Materials.js:1403–1425`). **Re-routed to TEXTURES**, with a decisive test
+offered rather than an assertion: stage `sly-key` with `fx.decals.mesh.visible = false`.
+
+And FX volunteered the caveat that weakens its own case: **"no foreshortening" may itself be an
+artefact of the orange patch spanning a narrow depth range**, so it must not be the acceptance test.
+
+### 78.4 The wrapper caught the launch again
+
+`pgrep -f` matched FX's own wrapper shell on launch and the wrapper lingered, leaving node at
+`ppid = 31697`. Caught by walking `/proc/<pid>/stat`, wrapper killed, `ppid = 1` re-verified. §14's
+recurring hazard, now with a reliable detection recipe rather than a warning.
