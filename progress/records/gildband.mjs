@@ -148,12 +148,13 @@ if (CHAN !== 'albedo') {
 }
 
 /** Box-downsample the V window [vc - vh, vc + vh] over `nu` wrapped U repeats into W x H. */
+const U0 = parseFloat(opt('u0', '0'));
 function strip(W, H) {
   const out = new Uint8Array(W * H * 3);
   const fx = (NU * sz) / W, fy = (2 * VH * sz) / H;
   for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
     let ar = 0, ag = 0, ab = 0, c = 0;
-    const x0 = x * fx;
+    const x0 = U0 * sz + x * fx;
     /* Surface row 0 is V = 0 (rasterMask flips on readback), and the image's top row is the top
        of the window, so V decreases down the image. */
     const vTop = VC + VH - (y * fy) / sz;
@@ -183,6 +184,47 @@ function strip(W, H) {
     }
   }
   return out;
+}
+
+/**
+ * `hf` = mean |x - blur3(x)| over the V window, on the height field and on albedo luma.
+ *
+ * **THIS METRIC FAILED ITS CONTROL. Do not quote it as evidence about carving legibility.**
+ * Kept, printing, and labelled, so the next person does not build it again.
+ *
+ * It was written to put a number behind a render that separates two states instantly:
+ * `hieroglyph_wall`'s register is a fully legible incised inscription, and
+ * `hieroglyph_gilded`'s architrave band is two courses of ashlar with three stroke-clusters on
+ * it. Measured: gilded row 0.00473, wall register 0.00723 — a factor of 1.5, and the gilded
+ * recipe's own mid-tile frieze scores 0.00741, i.e. *above* the legible control. The metric is
+ * counting the sunk-panel bevel and the ashlar joints as chisel detail, which they are; it
+ * cannot see whether any of that detail is sign-shaped. It is also not comparable across
+ * recipes at all, because the two differ in built size (512 vs 1024) and in world tile
+ * (6.4 vs 10.4 m), and hf per texel moves with both.
+ *
+ * This is §13's finding arriving a second time on the same recipe family: a global scalar over a
+ * band is dominated by the band, and where the defect is "what the marks are" rather than "how
+ * much marking there is", expect no scalar and budget for the render. The claim this file
+ * actually rests on is the targeted A/B at three named sign positions plus the pool census.
+ */
+{
+  const Hf = Float64Array.from(got.h);
+  const y0 = Math.round((VC - VH) * sz), y1 = Math.round((VC + VH) * sz);
+  const wrap = (v) => ((v % sz) + sz) % sz;
+  const hfOf = (buf) => {
+    let acc = 0, n = 0;
+    for (let y = y0; y < y1; y++) for (let x = 0; x < sz; x++) {
+      let s = 0;
+      for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) s += buf[wrap(y + j) * sz + wrap(x + i)];
+      acc += Math.abs(buf[wrap(y) * sz + wrap(x)] - s / 9); n++;
+    }
+    return acc / Math.max(1, n);
+  };
+  const lum = new Float64Array(sz * sz);
+  for (let i = 0; i < sz * sz; i++) lum[i] = 0.2126 * got.r[i] + 0.7152 * got.g[i] + 0.0722 * got.b[i];
+  console.log(`# ${recipeName} V ${(VC - VH).toFixed(3)}..${(VC + VH).toFixed(3)} at ${sz}px: ` +
+    `height hf ${hfOf(Hf).toFixed(5)}   albedo-luma hf ${hfOf(lum).toFixed(5)}   ` +
+    `[hf FAILED ITS CONTROL — see note; not evidence about carving legibility]`);
 }
 
 const W = Math.round(REP * NU), H = Math.max(4, Math.round(REP * 2 * VH));
