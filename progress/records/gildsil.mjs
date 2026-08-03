@@ -148,7 +148,9 @@ for (const r of rows) {
   console.log(`${r.name.padEnd(22)}${String(r.size).padStart(4)}   ${f(r.ctl)}   ${f(r.sil)}   ${f(r.det)}`);
 }
 console.log('\nSame diffs restricted to the two registers `glyphArchitrave` draws (whole-tile');
-console.log('numbers average the two and hide which one moved):');
+console.log('numbers average the two and hide which one moved). Those two V windows are');
+console.log('`hieroglyph_gilded`-specific; for any other recipe they are two arbitrary strips and');
+console.log('the ratio means nothing — they are here only to show no other recipe is lopsided:');
 console.log('recipe                  silhouettes off: seam row / mid frieze     detail off: row / frieze');
 for (const r of rows) {
   if (r.error) continue;

@@ -3799,6 +3799,12 @@ export class SlyModel {
       m.customProgramCacheKey = () => `slyToon|${rim}|${wrap}`;
     }
     if (spec.normalScale && m.normalScale) m.normalScale.setScalar(spec.normalScale);
+    /* `Outline.js:applyInkWeights` reads this key off whatever material the mesh actually has,
+       so the fallback has to publish it too or the fur cards would silently take the body's full
+       2.5 px hull whenever SHADING is unavailable — the same "authored weight discarded" defect
+       `TUNE.tuftInk` documents, just one path further out. Absent means 1.0 there, so only the
+       groups that author `ink` change. */
+    m.userData.outline = spec.ink ?? 1.0;
     this._applyRepeat(spec, m);
     m.__owned = true;
     this._materials.push(m);
