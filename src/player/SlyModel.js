@@ -2671,6 +2671,41 @@ export class SlyModel {
        Metadata only: adds no vertex, no triangle, and nothing reads it at runtime. */
     const ranges = (this.tuftRanges = []);
     const mark = (name, v0) => { if (mb.vertexCount > v0) ranges.push({ name, v0, v1: mb.vertexCount }); };
+    /* The two collar rows get their OWN published array rather than another `tuftRanges` entry.
+       `tuftRanges`' consumers assign a family per vertex by iterating the list in order, so a
+       nested range would be silently overwritten by the enclosing `headL`/`headR` mark that is
+       pushed after it — the probe would read a family that is never assigned and report zero
+       cards without erroring. Separate array, no existing reader disturbed. Metadata only. */
+    const ruffRanges = (this.ruffRanges = []);
+    const markRuff = (name, v0) => { if (mb.vertexCount > v0) ruffRanges.push({ name, v0, v1: mb.vertexCount }); };
+
+    /* ---- collar card WIDTH, the lever §37's mechanism actually names ----------------------
+       The `noruff` hold-out (§110, `PREREG-ruff.md`) came back INCONCLUSIVE on attribution —
+       best ROI +14.5 against a pre-committed 15 — and, separately, its registered secondary
+       BLOCKED shipping the removal: with these rows gone the collar goes a clean geometric arc,
+       which is §7.3's "smooth plastic" read the cards exist to prevent. The prereg's own named
+       follow-on is therefore this: keep the cards, make them WIDER, because §37's mechanism is
+       a RATIO. A ~2.5 px ink hull round a card only ~11 px wide is most of what you see; the
+       same hull round a wider card is a rim on a lobe. Removal was the wrong lever and the
+       hold-out established that rather than assuming it.
+
+       Widening has a hard ceiling in the other direction and it is the SAME failure this row
+       was tuned away from once already — see the chest-ruff comment below: wide clumps
+       "covered the whole cream chest V in overlapping slabs ... it reads as a bib or a folded
+       napkin". A scallop is lobes SEPARATED BY NOTCHES; a row whose cards touch has no notches
+       and is a bib. So the bound is a duty cycle, not a taste call, and it is measured rather
+       than guessed (`scratchpad/ruffwidth.mjs`, reported in `PREREG-widecards.md`).
+
+       `tuftWidth` (2.50) is deliberately NOT the knob here: it is global, so it would move the
+       cheek row too — and the cheek row is one of the two CONTROL surfaces the seal uses to
+       prove a cross-owner material drift did not reach these pixels. A global knob would void
+       its own validity gate. */
+    const WIDE = CHAR_AB('widecards');
+    /* Duty cycle = card width / centre-to-centre pitch along the row, measured on the posed
+       model at the `sly-closeup` camera. Shipped chest row 1 sits at 0.47; row 2 at 0.36.
+       0.68 is the widest that still leaves every adjacent pair a clear notch at that camera. */
+    const CHEST_RUFF_W = WIDE ? [0.0216, 0.0320] : [0.015, 0.018];
+    const NECK_RUFF_W = WIDE ? 0.0225 : 0.015;
 
     for (const side of [1, -1]) {
       /* Everything from here to the forearm is head + neck + chest. Marked as one family
@@ -2816,12 +2851,13 @@ export class SlyModel {
       /* chest ruff bursting out of the open collar. Two rows at different heights so the
          collar edge is a scalloped mass rather than a single fringe. */
       if (side > 0 && !CHAR_AB('noruff')) {
+        const chestRuffV0 = mb.vertexCount;
         /* Pulled up to the collar and cut down. Two rows of wide clumps starting 5 cm below
            the collar covered the whole cream chest V in overlapping slabs — rendered, it reads
            as a bib or a folded napkin rather than as fur bursting out of an open collar. A
            ruff is a *scallop on an edge*; the moment it has area it stops being fur. */
-        for (const row of [{ y: by(1.330), len: 0.040, w: 0.015, sp: 0.50, k: 1 },
-          { y: by(1.306), len: 0.030, w: 0.018, sp: 0.64, k: 2 }]) {
+        for (const row of [{ y: by(1.330), len: 0.040, w: CHEST_RUFF_W[0], sp: 0.50, k: 1 },
+          { y: by(1.306), len: 0.030, w: CHEST_RUFF_W[1], sp: 0.64, k: 2 }]) {
           const N = cnt(4);
           for (let i = 0; i < N; i++) {
             const f = (i + 0.5) / N;
@@ -2838,7 +2874,9 @@ export class SlyModel {
             });
           }
         }
+        markRuff('chestRuff', chestRuffV0);
       }
+      const neckRuffV0 = mb.vertexCount;
       /* Neck ruff around the collar. This row had *no* variation of any kind — seven clumps at
          exactly 0.55 rad pitch, identical width, identical length — so it was the most
          literally comb-like family on the model. Same three axes jittered as the cheeks. */
@@ -2850,11 +2888,12 @@ export class SlyModel {
         put({
           base, dir: new THREE.Vector3(Math.sin(th) * 0.75, -0.42, Math.cos(th) * 0.75).normalize(),
           shadeN: new THREE.Vector3(Math.sin(th), 0.18, Math.cos(th)).normalize(),
-          length: 0.042 * jit(i, side + 11), width: 0.015 * (0.80 + 0.40 * hash(i, side + 97)),
+          length: 0.042 * jit(i, side + 11), width: NECK_RUFF_W * (0.80 + 0.40 * hash(i, side + 97)),
           bend: 0.3,
           group: 'furCream', weights: [['neck', 1]],
         });
       }
+      markRuff(`neckRuff${side > 0 ? 'L' : 'R'}`, neckRuffV0);
 
       /* Backs of the forearms — §7.3 names this surface explicitly, and until this pass it was
          the only named surface where the clumps measurably did nothing. Rendered through each
