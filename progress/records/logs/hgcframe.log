@@ -257,3 +257,9 @@
 · waiting for capture lock (2701s, held by pid 13810)
 · waiting for capture lock (2711s, held by pid 13810)
 · waiting for capture lock (2722s, held by pid 13810)
+· waiting for capture lock (2732s, held by pid 13810)
+· waiting for capture lock (2743s, held by pid 13810)
+· waiting for capture lock (2754s, held by pid 13810)
+· lock acquired
+· vite on :5600
+· [cand] loading
