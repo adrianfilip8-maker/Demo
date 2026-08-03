@@ -8539,3 +8539,68 @@ absence arm before having any reason to think they would need it.
 Fifth entry in this ledger where a pre-registered control did the work the primary could not
 (§25, §40, §89, §94.2d, §99.4), and the second in one day where a run's whole verdict turned on an
 arm that shipped nothing.
+
+---
+
+## §100 — the eye is 0.905 wide-to-tall, and the tool that says so was wrong twice first
+
+`ROUTE-char12-sighted.md` filed the eye finding as an adjective — *"large circles where Sly's are
+narrow angled lens shapes"* — and this file's standing rule is that a shape claim needs a shape
+statistic before anything ships. No such statistic existed: `eyeprobe.mjs` samples colour at the
+sclera centre, `eyefacing.mjs` tests orientation, and **neither measures the outline.**
+`tools/eyeshape.mjs` is that measurement.
+
+### 100.1 The number
+
+The visible eye is not the sclera sphere. `_buildEye`'s own mask comment states it: *"the eye's
+silhouette on the head IS an ellipse in (theta, phi) … with semi-axes equal to the sclera radii
+over the head radii"*, and the ink ring is the annulus from **1.00** outward — so nothing clips the
+aperture inboard, and projecting the sphere would return a disc at every pose and answer nothing.
+
+```
+eAx 0.4524 (horizontal)   eAy 0.5000 (vertical)
+model-space width : height = 0.905
+```
+
+**The eye is 10 % taller than it is wide.** Projected: `sly-closeup` 1.067 / 1.108,
+`sly-startle` 0.882 / 0.948, `sly-profile` 0.842 / 0.629. Sly's reference eye is a **wide** lens
+shape — well above 1.0 — so the model is not merely short of the target, it is **on the wrong side
+of square.** The adjective was right and now it has a number, which is the difference between a
+complaint and a task.
+
+Internal check that came free: `sly-closeup` and `sly-key` return identical axes (52.5 / 43.7 at
+40°), which is what a pure translation with the same pose and yaw must do.
+
+### 100.2 Two bugs in my own tool, and how each was caught
+
+**Every eye in every shot reported `facing < 0`** — including `sly-closeup`, whose frame plainly
+shows both eyes down the lens. Cause: `outward` was taken from the head **bone origin** while
+`headSurf` builds every point around `this.headCenter`, a bone-local offset. **The value looked
+plausible — −0.5, not NaN, not 12 — which is exactly why it survived a first read.** What caught it
+was not the number but the contradiction with a frame I had open.
+
+**The major axis exceeded the bounding-box diagonal**: 74.2 px inside a 50.0 × 46.9 box whose
+diagonal is 68.5. Geometrically impossible. Cause: the boundary is sampled uniformly in the **angle
+parameter**, not in arc length, so for `(a cos t, b sin t)` the variances are `a²/2` and `b²/2` and
+the extent is `2√(2λ)` — I had used `4√λ`, over by exactly √2.
+
+> **The extents and the axes are computed by two independent routes from the same points, so they
+> can falsify each other.** That check is now asserted in the tool rather than left to be noticed.
+> A statistic derived twice is worth more than a statistic derived carefully once.
+
+### 100.3 The third fix was deleting a column rather than reconciling it
+
+With the origin corrected the signs came right and the **magnitudes still disagreed** with
+`eyefacing.mjs` — 0.686 against 0.898 on `sly-closeup` L — because that tool uses the eye's own
+authored frame and mine used the sphere normal. Two defensible quantities under one name.
+
+§96.3 had recorded this hazard hours earlier, from `shotsil`'s 5.91 heads against `headratio`'s
+5.03, with the rule **do not cross-quote them**. So the column is gone, not reconciled:
+`eyefacing.mjs` owns visibility, `eyeshape.mjs` owns shape, and a row here is not evidence until
+that tool says the eye is visible.
+
+**The tolerance on the consistency check was also wrong in the cautious direction.** At 0.1 % it
+fired on `hero` R and `combat` R — minor axes of 0.4 px and 4.9 px, near-edge-on ellipses that 128
+samples cannot resolve — at ratios of 1.0007 and 1.0025. A check tuned so tightly that sampling
+noise trips it stops being a check and becomes a second thing to explain away. Now 2 %, with the
+degenerate case reported on its own terms as `EDGE-ON — aspect not meaningful`.
