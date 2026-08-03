@@ -77,6 +77,47 @@ about the guard's unmasked `uMetal` (§137.1, routed to an owner-less module).
 
 ---
 
+## Addendum, written while the run is still queued and before any arm frame exists
+
+The capture is stuck behind five other agents' jobs on the single capture lock. While waiting I
+realised the central question has **evidence already on disk that I had not thought to use**: the
+2.5 px-hull-on-1.5 px-line stack is not new. `Architecture.js:80` has shipped `HULL_OUTLINE` at
+0.85 on `gold_leaf`, `granite_pink` and `bronze_dark` all along, so every existing frame already
+shows the stack — just on architecture instead of props.
+
+Looked at, at 4× on the `courtyard` obelisk (`granite_pink`, hull 0.85), promoted to
+`crops/hull-obelisk-085-courtyard.png`:
+
+- the silhouette carries **one clean dark line of 2–3 source px** — no doubling, no halo, no
+  sticker edge, which are the three named REJECT conditions;
+- the chamfered arris between the lit and shadow faces reads as a **bright orange key line**,
+  which is the geometry brief's stated purpose for chamfers, working;
+- the `gold_leaf` hook ring in the same crop reads cleanly at a much smaller screen size.
+
+The same frame also offers a free control I had not thought to use either: the **colossi are
+`props_stone` with no hull**, at a similar distance to the obelisk, so `courtyard` already
+contains hulled and un-hulled stone side by side. Cropped at the same 4× and region size
+(`crops/`, `colossus-nohull` vs `hull-obelisk-085`), the un-hulled colossus **already carries an
+adequate dark silhouette against the sky** — PostFX's depth+normal pass is doing its job there,
+and the hull would add little. What actually hurts that crop is texture: blue lappet stripes over
+brown mottling, reading as high-frequency noise rather than as carved stone (KNOWN_ISSUES §2,
+unrelated to this change).
+
+**That cuts against my own change, and it is the more useful half of this addendum.** It means the
+hull's justification rests *entirely* on the low-depth-contrast case — a prop against a wall a
+short distance behind it — exactly as §132.5 argued. So **`interior` is the decisive shot, not
+`courtyard`**, and if `interior` shows no legible gain the honest verdict is REJECT even if
+`courtyard` looks fine. Registered before the frames so the shot ordering cannot be re-weighted
+after seeing them.
+
+**This does not settle the registered question and I am not treating it as if it does.** It is
+architecture at 0.85; the gate ships props at the table's 1.0 / 0.9, which is 6–18 % heavier, and
+§132.5's concern was specifically about hero props reading heavier *than* architecture. What it
+does establish is that the stack itself is sound at a nearby weight, so the plausible failure is
+now a matter of degree rather than of kind. Recorded here, before the arms, so that if the frames
+come back clean it is visible that I had reason to expect it — and if they come back doubled, that
+expectation was wrong and the record says so.
+
 ## Rider: the `guard` cyan line, and where I have registered that I expect to find it
 
 `guard` and `night` ride along in this boot at base/hull only, to answer §137's separate

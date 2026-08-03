@@ -39,6 +39,12 @@ Profile, left to right across the jar: `.......::::. .:-=+*#%%@@@@@@%%##@@@@%%##
 That is a textbook smooth diffuse falloff. The geometry supplied a full 124 L of normal gradient
 and **nothing quantised it**.
 
+The obvious objection — *"the jar is too coarse to band"* — is checked and fails. `vessel()`
+(`PropKit.js:577`) is a `lathe` at `seg: 12` over 9 profile rows with smooth vertex normals, so
+the visible half of the pot is ~6 facets across 66 px and the interpolated normal sweeps
+continuously through the terminator. Coarser geometry would push the result *toward* visible
+steps, not away from it. It shows none.
+
 ## Three regions that could not answer, and why that matters
 
 I picked four regions. Only one could answer the question, and I only found that out by looking

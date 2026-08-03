@@ -12363,3 +12363,82 @@ draft** — `px = size/(d·mrad)`, so the corrected *larger* pixel scale makes f
 §130.4's 5.2 px minimum sign body becomes **~4.8 px, not 5.6.** Still above one pixel, so nothing in
 the chisel feature is sub-pixel and the conclusion stands — but the direction was wrong and it is
 recorded that way.
+
+## §145 — the falsifier stayed silent because it could not speak, and an acceptance that the preferred fix passes for free
+
+`fx21` scored. All four `back == base` at **0 px**; nothing void. Arm A exists, which was the
+registered precondition for choosing any fix. `progress/records/RESULT-fx21.md`.
+
+### 145.1 Provenance adjudicated rather than inferred
+
+`page.goto` at **17:40:42.313Z** on head `a190e81`, clean. `EgyptLevel.js` mtime **18:01:32**,
+`Props.js` **18:02:18**, with the commits touching them at 17:59:19 / 18:02:50 / 18:12:01 — **all
+after**. So the harness's BEFORE/AFTER whole-`src` hash difference is entirely post-`goto` and
+harmless per §124.4.
+
+The part worth keeping: **`EgyptLevel.js` is *in* the watched set**, so `driftFromQueued: []` covers
+it *directly* rather than by appeal to the general rule. Asked which side of `goto` the change fell
+on, FX answered with timestamps instead of with §124.4.
+
+### 145.2 The falsifier did not fire, and it could not have
+
+No exterior component reaches ΔL 8 — maxima +4.12 / +3.20 / −3.18. That reads as clean
+confirmation. It is not.
+
+| shot | components ≥40 px | luma < 60 | R/B < 0.5 | **both** |
+|---|---|---|---|---|
+| dunes | 42 | 0 | 1 | **0** |
+| hero | 32 | 8 | 0 | **0** |
+| courtyard | 59 | 1 | 0 | **0** |
+| temple | 25 | 5 | 2 | **2** |
+
+> **0 of 133 exterior components met the backdrop precondition.** The gate's silence records that
+> daylight exteriors contain no dark-blue surface class — consistent with the registered mechanism,
+> but **not an independent test of it.**
+
+So the ARTEFACT half of the split still rests on **one component in one shot**, and FX declined to
+bank the exterior silence as support. §144.1's *"untestable is a verdict and it is not pass"*,
+applied one hour later by a different owner, on a gate whose silence would have been read as
+success by anyone not looking for the precondition.
+
+**A falsifier is only evidence where its precondition is satisfiable.** Checking *whether the gate
+could have fired* is a separate measurement from running it, and nothing in the seal required it —
+FX wrote `fx21power.mjs` to do it anyway.
+
+### 145.3 An acceptance the preferred fix passes for free
+
+This is the finding with consequences for what ships.
+
+**Candidate 1 (backdrop-conditioned suppression) acts only where the backdrop is dark and blue — 0
+of 133 exterior components.** It is therefore **inert outdoors by construction**, and passes the
+±15 % exterior ceiling *trivially*, without that pass carrying any information.
+
+> The ceiling really constrains the **global** candidates — vertical-box, screen-size, alpha
+> thinning. **Whoever reads a future "Arm B PASS" needs to know which kind of fix it scored.**
+
+An acceptance criterion that the preferred candidate satisfies by construction is not a test of that
+candidate; it is a test of the alternatives, wearing the candidate's name. That is the same family
+as §144.2's vacuous `temple` P2 — registered in advance there, discovered here — and both were
+caught by asking what population the statistic could act on *before* reading its value.
+
+### 145.4 Arm A, with §135.1's lesson applied unprompted
+
+Means over the **changed population** (`absSum / changed`), never a fixed ROI, with the
+changed-fraction beside each:
+
+| shot | changed px | % frame | mean ΔL | scattered | budget |
+|---|---|---|---|---|---|
+| dunes | 14 046 | 1.52 % | 2.05 | 21.9 % | 28 725 |
+| hero | 13 788 | 1.50 % | 2.03 | 13.6 % | 27 958 |
+| courtyard | 14 799 | 1.61 % | 2.12 | 26.5 % | 31 323 |
+
+All three registered predictions scored YES on all three exteriors. **And the disc reproduced at
++17.28 over backdrop luma 44.4 / R/B 0.13 — matching the offline `fx20` value from a different boot
+on a different tree**, which is the strongest cross-check available for a component measurement and
+nobody asked for it.
+
+Two caveats kept rather than dropped: `total |ΔL|` is a **floor** and threshold-sensitive — pixels
+under the ≥4 delta cut are excluded, so a thinning fix **over-reports its loss**, which is the safe
+direction but is not a linear density measure. And the §144.4 audit found **no autocorrelation
+anywhere in the path**, the only normalisers being a bounded percentage and a mean over its own
+population.
