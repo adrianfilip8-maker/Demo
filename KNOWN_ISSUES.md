@@ -5946,3 +5946,115 @@ that is checked rather than argued:**
 So **all fourteen frames carry the mottle**, the set is internally consistent, and `report.json`
 stamps `1bc8938` truthfully. What the critic will score is a column texture that, as of `00:07`, no
 longer ships — recorded here so that a later reader comparing frames to source is not misled.
+
+
+---
+
+## §71 — the raycast beat the arithmetic, the L-series predicate passes on sand, and I was wrong about `dunes`
+
+GEOMETRY on `dunesloft`. Zero source edits; the freeze held throughout.
+
+### 71.1 Arm 2 is VOID, and the instrument that killed it was added for exactly this
+
+`report.json`'s `arms.flank.geo.firstHits`, from the arm-2 camera toward the flank centre:
+
+| hit | dist |
+|---|---|
+| **`arch:court:sandstone_block`** | **2.66 m** |
+| `props_lime` | 11.18 m |
+| `props_lime` | 12.86 m |
+
+The sphinx is reached — at 11.18 m, **behind courtyard architecture at 2.66 m.** §60.2's clearance
+arithmetic was *correct about the neighbouring sphinx* (x 10.65 against a 9.18 footprint) and never
+considered the court wall. The pixels agree: source x 480–735 in `dunes-flank.png` is flat shadowed
+masonry, and the scorer's scan window is **~70% occluder.**
+
+> GEOMETRY had the run raycast the live scene *"so the frame carries its own proof of clearance
+> instead of my arithmetic."* **The arithmetic lost.** That instrument existed for one turn before
+> it earned its place.
+
+### 71.2 L3 is unscoreable, and its "PASS" was the wall
+
+L3 was registered to run **only** on arm 2 — the scorer's own header says the canonical arm at
+26–37 px cannot express a 3 px deviation. Arm 2 is a wall, so there is no measurement. The sealed
+scorer nonetheless returned *"PASS, 113.8 px deviation"*: **the wall's silhouette against the sky,
+traced as a terminator.** 113.8 px of deviation on a ~135 px flank was the tell.
+
+### 71.3 L2 is unscoreable and it is an artefact twice over
+
+The sealed scorer returned **10/10 PASS**. Both halves are wrong.
+
+**The population.** A visibility diagnostic (limestone signature G−R ≥ 22; sphinx 33–38, dune shadow
+≤ 13, lit sand < 0) over each projected silhouette:
+
+| flank | % limestone |
+|---|---|
+| +X z40 / z46.3 / **z52.6** | 0.0 / 0.0 / **0.1** |
+| +X z58.9 | 23.5 |
+| **+X z65.2 / z71.5** | **84.7 / 89.6** |
+| −X z40 … z58.9 | 0.0–0.1 |
+
+**Seven of ten "in-frustum" flanks contain no animal at all** — the foreground dune is in front of
+them, and three of the scorer's mask patches sit on bare lit sand. **`+X z52.6` — the seal's
+designated primary instrument, "the largest available flank at 40.8 m" — is buried behind a dune.**
+The two animals that *are* visible, z65.2 and z71.5, are the two the seal's table declared **out of
+frustum**. *The pixel table computed in §60.2 is wrong in both directions.*
+
+**The discriminator.** Rebuilt geometrically with every sealed threshold byte-identical, then run
+against two controls it had never had:
+
+- **Absence control:** 3 of 4 flat background **sand** patches "carry a band transition", maxStep
+  18–33 L — *the same range as the flanks' 11–32 L.*
+- **Scatter null:** shuffling each column's pixels destroys all spatial contiguity. Both genuinely
+  visible flanks **still "CARRY"** (z65.2 74 cols real / 52 shuffled; z71.5 66 / 46).
+
+> **A terminator is by definition a contiguous spatial step and cannot survive shuffling.** The
+> predicate was reading the value *distribution*, not spatial structure.
+
+And the dry test that appeared to validate it reproduced its 1.9 L noise floor exactly (1.57–1.99)
+**while measuring the wrong thing**: that floor is the residual *within segments the algorithm had
+already chosen to be flat*, so it is guaranteed small, and the 6 L threshold sits below the frame's
+real local texture amplitude. **The dry test used `temple`'s positive reference and never ran an
+absence control on this frame's own sand.** A positive control proves an instrument can fire; only
+an absence control proves it can decline.
+
+### 71.4 L4 does not fire — the one clause the frames answer
+
+At 3× and 6× the animals read chunky and slab-sided: crisp planar facets, hard shoulder corners,
+flat haunch tops, drawn incised detail. **Nothing reads inflated, blobby, balloon-like or rubbery.**
+The registered over-rounding falsifier is clean, and if anything the residual risk is the opposite —
+they still read somewhat boxy.
+
+**Form verdict: OPEN.** Not closed, not mitigated. Established: the loft beats what it replaced on
+every offline measure (+25.0 body-only) and does not read inflated. Not established: that the
+gradient survives to any viewing distance. Closing it needs an unoccluded animal at size, which
+`dunes` **structurally cannot provide** while the dune crest sits in front of the avenue.
+
+### 71.5 My error: `dunes` IS in the critic's fourteen
+
+I told GEOMETRY *"`dunes` is not in the critic's fourteen, so the critic will not see the avenue at
+all — which means your L-series is the only evidence about the lofted body either way."* **False.**
+`dunes` is shot 7 of the running capture and `shots/critic6/dunes.png` was written at 00:04. I wrote
+the roster myself, twice, and then mis-stated it to the agent whose work depended on it.
+
+GEOMETRY re-ran its visibility diagnostic against the **actual graded frame** rather than accepting
+the correction abstractly: **identical — 2 of 10 visible, the same two animals.** So pass 6 *will*
+deliver an independent verdict on the sphinx form, and it will be looking at an avenue that is
+**70% buried.**
+
+### 71.6 A budget comparison to check before acting on it
+
+GEOMETRY reads the in-flight capture at draws **157–270** and triangles **0.709–1.691 M**, and
+concludes *"triangles remain the live breach at ~1.6–1.7 M against 1.2 M"*, re-weighting its work
+toward triangle reduction.
+
+**That comparison needs the check §53.5 forced once already.** `report.json`'s `triangles` is
+`Engine.js:274` → `info.render.triangles` with `autoReset = false`: a **per-frame, all-passes
+submission counter**, and §8 documents a **4.5–5.4× pass multiplication**. §1's 1.2 M is a *visible
+triangle* budget. GEOMETRY's own **§56.4** established exactly this for `drawCalls` — same quantity,
+not a like-for-like comparison — and §51.3 already separates the two columns, with §1 scored on
+**main-view (0.668 M)**, not on the counted column.
+
+So the breach may be arithmetic rather than real. **Flagged before the re-weighting, not after**,
+because re-prioritising a work queue on a mis-scaled number is expensive in a way that is hard to
+unwind.
