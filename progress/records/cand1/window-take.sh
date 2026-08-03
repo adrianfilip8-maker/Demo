@@ -16,8 +16,8 @@ SRC=$R/src/fx/Particles.js
 CAND=$R/progress/records/cand1/Particles.cand1.js
 
 # ---- 1. re-verify the window, now ----
-if [ -f /tmp/sands-of-ra/capture.lock ]; then
-  echo "WINDOW CLOSED: lock held by $(cat /tmp/sands-of-ra/capture.lock 2>/dev/null | cut -d' ' -f1)"; exit 1; fi
+if [ -f /tmp/sands-of-ra/lock ]; then
+  echo "WINDOW CLOSED: lock held by $(cat /tmp/sands-of-ra/lock 2>/dev/null | cut -d' ' -f1)"; exit 1; fi
 for t in $(ls $Q 2>/dev/null); do
   pid=${t##*-}
   if [ -d /proc/$pid ]; then echo "WINDOW CLOSED: live ticket $t ($(tr '\0' ' ' < /proc/$pid/cmdline | cut -c1-50))"; exit 1; fi

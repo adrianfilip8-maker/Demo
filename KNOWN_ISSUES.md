@@ -13315,3 +13315,140 @@ line is **71 draws (28 %) / 0.572 M (48 %)**, measured three times today.
 It also flagged, unprompted, that **its actual assignment is untouched** — no chamfers, no entasis,
 no column segments, no budget work; the scoring passes consumed the session. Stated plainly rather
 than left to be inferred, which is the correct handling of an unfinished brief.
+
+## §156 — a gate that tested a filename that does not exist, and a FAIL reported rather than argued away
+
+### 156.1 The lock check that always passed, traced to my own poke
+
+CHARACTER flagged that `lock.mjs:170` **drops the ticket on acquisition**, so the queue is empty
+*while a capture holds the lock* — meaning FX's "patch when the queue is empty" trigger would fire
+mid-capture.
+
+It is worse than that. `window-take.sh:19` tested:
+
+```sh
+if [ -f /tmp/sands-of-ra/capture.lock ]; then
+```
+
+**The lock file is `/tmp/sands-of-ra/lock`.** `capture.lock` has never existed, so **that check always
+passed**, and the empty-queue test was the only real gate — which, per CHARACTER's finding, is empty
+during every capture.
+
+> So a patch to `src/fx/Particles.js` could have landed **between two arms of another owner's A/B**,
+> giving arm A and arm B different trees, with both gates reporting the window open.
+
+**The wrong filename is mine.** My scheduled poke said *"no `/tmp/sands-of-ra/capture.lock`"*, and FX
+built the script against the path I gave it. §155's note that *"a poke carrying a path is a poke
+carrying a fact"* was written about the same string, one section before it did damage.
+
+Fixed in both copies and verified — with a lock present the script now prints `WINDOW CLOSED: lock
+held by …` and exits 1. **Two independent wrong things had to line up for the hazard: my bad path,
+and a ticket lifecycle nobody had read against it.** Either alone was harmless.
+
+### 156.2 P-night FAILS as registered, and the failure is a calibration-design artefact
+
+`S = min(|Δhue(rimfloor0)|, |Δhue(sbm040)|) = min(0.882°, 13.025°) = 0.882°`, so `S/5 = 0.176°`
+against `compose`'s **1.882° — 2.1× over the line. FAIL.**
+
+`base`/`base2` are **bit-identical**, so this is not a dead fix. The escape hatch does **not** fire:
+`rimfloor0` is a genuine known-bad, removing **51,957 px at ≥8 L (5.64 % of frame)** in a *line*
+population (run-length median 2 px, 12,091 runs) across every course, ledge lip and pier corner.
+
+**But `min()` selected the wrong unit, and SHADING said so instead of using it:**
+
+> `rimfloor0` is a known-bad for **rim removal** — a defect this statistic is nearly blind to. It
+> destroys 51,957 px of rim and rotates `archShade` hue **0.88°**. So **`S` measures the metric's
+> insensitivity to a defect it was never meant to see.**
+
+Against `sbm040` — the arm actually on the warm/cool axis the acceptance is about — `compose` is
+**14.4 %**, comfortably inside 1/5. Against `rimfloor0`, 213 %.
+
+**Conservative in magnitude is not conservative in relevance.** `min()` was chosen to be the cautious
+option and instead selected the arm least able to see the thing being measured.
+
+**Coordinator's escalation, decided: the FAIL stands and `compose` does not ship on this seal.**
+Re-deriving the line is §141.1's forbidden move; "unscoreable" is unavailable because `sbm040`
+separates cleanly at 13.03°; and re-registering a corrected calibration **against frames whose
+numbers are now known is not a pre-registration.** If `compose` is wanted it needs a fresh seal with
+same-axis known-bads and a **new capture**.
+
+> The cost of honouring this is near zero — `compose` is visually indistinguishable from `base`, 177
+> px lost against 176 gained. **The cheapest time to honour a seal is when the thing it blocks does
+> not matter**, and a rule bent only when it is expensive is not a rule.
+
+Two corroborations SHADING derived rather than assumed: warm-ward is **positive** (`sbm040` +13.03°
+with R/G 0.548 → 0.838), and B/max *rising* is not a contradiction — G fell at constant B, which is
+§115.2's "b−r cannot see green" appearing as expected. §133.2's four published figures reproduce
+digit-for-digit.
+
+**And it falsified its own §3.2 prediction:** pnight1 captured **no `norim` arm**, so V3's denominator
+does not exist in this boot and the claim that this run yields *"the night half of `PREREG-kerb`'s V3
+for free"* **does not hold.** It declined to substitute a cross-boot `night-norim.png` — which exists
+under three other run directories — and did not score kerb's question in its own statistic.
+
+### 156.3 §146.4's cel-ramp refutation is not established
+
+I routed GEOMETRY's finding — a `courtyard` jar spanning **124.5 L over 66 px with 3.1 % plateau and
+zero steps** — to SHADING as a refutation of the geometry hypothesis. SHADING transcribed
+`slyRamp`/`slyTerm` with shipped uniforms and self-tested it first:
+
+**The quantiser is active on 9.6 % of N·L**, in two windows `[0.116, 0.164]` and `[0.496, 0.544]`.
+**90.4 % is flat plateau where a smooth gradient is correct**, and above N·L **0.544** `ramp ≡ 1.000`
+— zero steps *by construction*.
+
+> **The missing number is the jar's visible N·L span.** Without it, "zero steps over 124.5 L" is
+> uninterpretable — 3.1 % plateau is exactly what a span sitting inside one plateau looks like, with
+> fill, spec and rim supplying the gradient.
+
+That is §8's band-crossing error in its exact recorded form, and it means the refutation I relayed is
+**unestablished, not wrong** — the measurement is real and its interpretation needs one more number.
+
+### 156.4 The ink arms cannot decide, and the missing arm is a TUNE poke
+
+All seven `INK_ARMS` in `compose1.mjs` poke **per-group hull weight**; **not one touches
+`inkStrength`**, which sits at 0.95 in every arm. So the residual dark line at `allink0` cannot be
+attributed between the hull and the crease pass by this set.
+
+The missing arm is `postfx.tune.inkStrength = 0` — a **live TUNE poke, no source edit**, and bit-exact
+off because the composite is `mix(c, ink, line * uInkStrength)`. §132.5's hull-on-line stack has been
+waiting on a distinction the arm set could not make.
+
+### 156.5 My diagnosis of the `tuftbias` failure was wrong
+
+I told CHARACTER the run died on a port collision. `harness.mjs:35` already picks a free port
+(`freePort(start=5400)`) *after* taking the lock, and the boot had **succeeded** — the renderer string
+and a 21.1 s prewarm warning sit in the log **above** the failure, and the stack lands at
+`tuftbias.mjs:66`, CHARACTER's own `p.goto`, not the harness's.
+
+**Real cause:** `withGame` hands back a page **already booted** and keeps it open for the whole
+callback, so arm A's `goto` started a **second full game** — second SwiftShader context, second
+1024 px prewarm — on a GPU-less box with every core busy. Hence a 90 s `domcontentloaded` timeout.
+Fixed by closing the harness's context before the arm loop, making *"exactly one game instance
+alive"* true by construction. **A re-run on my diagnosis would have hit the same wall.**
+
+CHARACTER also fixed its own provenance probe: `playerTree()` used `git ls-files -s`, which reads the
+**index** and is blind to a live working-tree edit — *exactly the event it existed to catch.* Replaced
+with a content hash validated by a null control, and it immediately earned its keep by catching
+`src/world/Props.js` changing mid-run.
+
+### 156.6 Two claims CHARACTER killed before reporting them
+
+`poseprobe` reports the cane tip at y 0.000 — "planted" — while the **render** shows the shaft ending
+~15–20 px above the boot soles. Different quantities; the "cane floats" item stands.
+
+And it nearly reported a **191° sandstone hue error**. Palette arithmetic refutes it: sunlit wall
+**28°** against a 30° spec, shadowed wall **214–219°** against `#2a3f66` = **219°**, shirt 200°
+against `PAL.shirt` 208° — all on spec. **It had compared a shadowed surface to the sunlit spec.**
+
+The real fact is structural and better than the error: SHADOW 219°, SKY 211°, RIM cool 200° and Sly's
+costume 208° all sit within ~19°, so **hue cannot separate him in shadow by palette construction.**
+He separates by value (+25 L) and ink — independently corroborating §112.3, and making critic pass 4's
+routing of *"commit Sly's local blue"* to CHARACTER **unsupported**: his blue is already more
+saturated than its surround (0.477 vs 0.385) and 25 L brighter.
+
+### 156.7 A tool rendering outside the lock
+
+`reliefreach.mjs` imports `chromium` and launches a browser with **no `acquire()` and no
+`withGame`** — so it renders outside the serialisation the whole queue exists to provide, competing
+for CPU with whatever holds the lock. Started 19:54 attached to a bash wrapper. It did not cause
+arm A's 652 s, which predates it, but arm B is running long.

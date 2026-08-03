@@ -1,0 +1,18 @@
+night archShade   42812 samples  bbox [1,1277,1,717]
+night archLit      3400 samples  bbox [1,1277,1,717]
+night sphinx          0 samples  bbox null
+night sky          9097 samples  bbox [321,1277,1,433]
+node:fs:2430
+    return binding.writeFileUtf8(
+                   ^
+
+Error: ENOENT: no such file or directory, open '/tmp/claude-0/-home-user-Demo/94022f73-a328-5e86-b2ec-031aa9c720ce/scratchpad/drift/roi-night.json'
+    at writeFileSync (node:fs:2430:20)
+    at file:///home/user/Demo/progress/records/drift/roigen.mjs:73:1 {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: '/tmp/claude-0/-home-user-Demo/94022f73-a328-5e86-b2ec-031aa9c720ce/scratchpad/drift/roi-night.json'
+}
+
+Node.js v22.22.2
