@@ -447,12 +447,41 @@ function courtyard(A) {
        of lean instead of 28 cm, which is the difference between a wall the eye reads as leaning
        and one it reads as vertical with a perspective error. The rolls take the same number and
        follow it. Battering also tips the top of the slab *north*, away from the colossus. */
-    const tbW = 6.4, tbTop = 9.6, tbBat = 0.09;
+    /* ---- The pair is no longer mirror-symmetric above the seat. ----
+       Critic pass 6, `courtyard`: "left and right buildings are mirrored duplicates". These
+       two are that finding — they are the frame's flanking masses, they sit at ±9.5 on the
+       camera's own axis, and `bow`/`drift` at 6–7 cm cannot answer it: over the 6–9 m these
+       are seen from, centimetres are a pixel or two, and a mirror read survives that intact.
+       It needs the same order of move the entry pylons got (a 0.9 m height split and a
+       collapsed corner), so the east back pillar has lost its head: 1.5 m shorter, and the
+       top three courses of its outer half are gone, with the block spill at its foot.
+       The west one keeps the full 9.6 m. Both `ledge` proxies follow `tbTop`, so the
+       traversal circuit keeps a perch on each — one just steps down to the other. */
+    const tbW = 6.4, tbTop = sx > 0 ? 8.1 : 9.6, tbBat = 0.09;
     A.add('court', 'hieroglyph_wall', K.place(K.masonryShell({
       w: tbW, d: 1.8, h: tbTop - L.colossi.knee, batter: tbBat, course: 0.62, thick: 0.8, rng: R,
       blockLen: [1.4, 2.3], recess: 0.06, chipChance: 0.2, gapChance: 0.015, hollow: false,
       bow: 0.06, drift: 0.05,
+      /* Outer half only — the inner half frames the entry axis and stays square. */
+      openings: sx > 0
+        ? [{ face: 0, a0: 0.4, a1: 3.4, y0: tbTop - L.colossi.knee - 1.5, y1: 99 },
+           { face: 1, a0: 0.4, a1: 3.4, y0: tbTop - L.colossi.knee - 1.5, y1: 99 }]
+        : [],
     }), { x: cx, y: L.colossi.knee, z: cz - 2.1 }));
+    if (sx > 0) {
+      for (let i = 0; i < 5; i++) {
+        const s = R.range(0.55, 1.05);
+        const g = K.chamferBox(s * 1.4, s * 0.55, s * 1.0, { rng: R, jitter: 0.03, c: 0.045 });
+        /* On the courtyard paving outboard of the plinth (which runs to x 13.5, z 21.5…28.5),
+           not on the plinth top — the seat block occupies that from y 2.0 to 4.5 and anything
+           dropped there would be inside it. */
+        K.place(g, {
+          x: cx + R.range(4.5, 7.2), y: s * 0.28, z: cz + R.range(-3.6, 1.4),
+          rx: D(R.jitter(13)), ry: D(R.range(0, 360)), rz: D(R.jitter(15)),
+        });
+        A.add('court', 'hieroglyph_wall', K.boxProjectUVs(g));
+      }
+    }
     A.add('court', 'sandstone_worn', K.place(
       K.cornerRolls({ w: tbW, d: 1.8, h: tbTop - L.colossi.knee, r: 0.24, batter: tbBat, rng: R }),
       { x: cx, y: L.colossi.knee, z: cz - 2.1 }));
@@ -1444,16 +1473,37 @@ function tomb(A) {
 
 function background(A) {
   const R = A.rng;
-  /* Both pyramids sat at a hard-coded y = -1.5. Sampled against the real height field that
-     left pyr1's footprint hanging 3.9–4.3 m in the air over three of its four corners and
-     buried pyr2 by 5.5 m. Bed each one to the lowest sand under its own footprint and then
-     sink it a further 1.2 m, so the base line is a dune contact rather than a floating edge. */
-  for (const p of [L.pyr1, L.pyr2]) {
-    const y = sandFloor(A, p.x, p.z, p.base * 0.5) - 1.2;
-    A.add('far', 'limestone_polished', K.place(
-      K.steppedPyramid({ base: p.base, h: p.h, rng: R, casing: 0.2 }),
-      { x: p.x, y, z: p.z, ry: D(R.range(-3, 3)) }));
-  }
+
+  /* ---- THE PYRAMIDS ARE NOT BUILT HERE. They are TERRAIN's. ----------------------------
+   *
+   * They were built here *as well*, and that is the whole of critic pass 6's finding #4.
+   *
+   * `Terrain.js:276 PYRAMIDS` places `pyramid_105` at (-150, -190) h 105 halfBase 82 and
+   * `pyramid_72` at (95, -250) h 72 halfBase 57 — the same two landmarks, at the same two
+   * coordinates, as `L.pyr1` / `L.pyr2` below. Terrain's are the LARGER of each pair
+   * (halfBase 82 against this module's 74), so every triangle this loop emitted was sealed
+   * inside Terrain's mass and could not be seen from any camera in the level. Measured by
+   * rasterising the merged `arch:far:limestone_polished` mask against the `dunes` camera and
+   * then raycasting the same pixels through Terrain: every hit along the silhouette the
+   * critic photographed returns `pyramid_105` at d = 296–316 m, in front of this module's
+   * geometry at ~325 m. 644 triangles, drawn nowhere, and `castShadow` on all of them.
+   *
+   * That duplication is also why the critic's silhouette predicate returned edge-x values of
+   * 556, 388, 274, 654 on consecutive rows: there is not one edge there to find. There are
+   * two overlapping pyramids of different size and value plus a cloud deck, and its threshold
+   * was landing on whichever happened to win that row.
+   *
+   * The ~13 px "hard geometric courses" it measured are Terrain's `courses: 24` over 105 m —
+   * 4.4 m per course at the `dunes` camera's 2.88 px/m, i.e. 12.6 px. They are NOT this
+   * module's: `K.steppedPyramid` was rewritten on 08-01 into a single cased mass whose
+   * silhouette, rasterised above, advances exactly 1 px per row from y=100 to y=230 with no
+   * step anywhere in it. The rewrite was correct and it has never been on screen.
+   *
+   * So the surviving landmark is Terrain's, the fix belongs there, and this loop is deleted
+   * rather than reconciled — two modules cannot both own a landmark. `L.pyr1`/`L.pyr2` stay
+   * as the §8.1 coordinate record (nothing outside this file reads them) and Terrain's
+   * PYRAMIDS table is held to the same two positions.
+   * ------------------------------------------------------------------------------------- */
   /* A third, distant, half-buried mastaba field staggers the horizon further. Each one is
      dropped onto its own patch of sand — one of the five used to be 7.6 m under the dune,
      which is 12 k triangles and a shadow caster for nothing at all. */

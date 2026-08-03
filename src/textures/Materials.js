@@ -4199,8 +4199,33 @@ function glyphWall(ctx, size, mode, seed, o = {}) {
    * and does not carry over to a five-per-repeat one; that is the thing to check in the
    * `wallstrip` render at the framing's own px/repeat, which is the only instrument here that
    * has ever separated the known-bad. */
-  const cartEvery = cartouche ? 2 : 0;
-  const cartPhase = cartouche ? (rnd() < 0.5 ? 0 : 1) : -1;
+  /* **Every other column is a period, and a period is a rhythm the eye can count.** The
+   * alternation above fixed §13's once-per-repeat beacon and replaced it with a
+   * `2 x pitch` one: critic pass 6 reports `interior`'s hieroglyph band "tiling with a visible
+   * ~90 px repeat", and `interior` runs 504 px per repeat over `cols = 12`, so `2 x pitch` is
+   * **84 px**. That is the cartouche rhythm being read as tiling, and at `traversal`'s 4x crop
+   * it is unmistakable — a row of identical ovals, all the same height, all starting at the same
+   * y, marching across the wall.
+   *
+   * The fix keeps the *count* (a royal wall is covered in cartouches; that was the correct half
+   * of the previous change) and removes the *period*. Gaps are drawn from {2, 3} columns and
+   * forced to sum to `cols`, so the sequence wraps across the tile seam with no anomaly there —
+   * §44's rule, satisfied by construction rather than by a divisibility check — while no lag
+   * short of the whole tile has a peak. Height and vertical position vary per cartouche as well,
+   * because a row of ovals of one size at one height is a rhythm even when its spacing is
+   * irregular. */
+  const cartAt = new Array(cols).fill(0);
+  if (cartouche) {
+    const want = Math.max(1, Math.round(cols / 2.5));
+    const base = Math.max(2, Math.floor(cols / want));
+    const gaps = new Array(want).fill(base);
+    let rem = cols - base * want;
+    for (let i = 0; rem > 0 && i < want; i++, rem--) gaps[i]++;
+    // Fisher-Yates on the seeded stream: the multiset of gaps is fixed, their order is not.
+    for (let i = gaps.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); const t = gaps[i]; gaps[i] = gaps[j]; gaps[j] = t; }
+    let c = Math.floor(rnd() * cols);
+    for (const g of gaps) { cartAt[c % cols] = 1; c += g; }
+  }
 
   /* Band -1 — the kheker frieze that crowns a temple wall.
    *
@@ -4237,10 +4262,18 @@ function glyphWall(ctx, size, mode, seed, o = {}) {
     for (let c = 0; c < cols; c++) {
       const x = c * pitch + margin;
       const w = pitch - margin * 2;
-      if (cartEvery && c % cartEvery === cartPhase) {
-        const ch = Math.min((y1 - y0) * 0.58, w * 2.5);
-        HG.cartouche(ctx, x, y0, w, ch, seed + c * 31, mode);
-        HG.columnRegister(ctx, x, y0 + ch + size * 0.014, w, y1 - y0 - ch - size * 0.014, seed + c * 17, HG.POOLS.offering, mode);
+      if (cartAt[c]) {
+        /* Height and lead-in both vary — see the placement note above. A cartouche sitting part
+         * way down a column, under two or three signs of titulary, is also what the writing
+         * actually does: the name follows the epithet. */
+        const gap = size * 0.014;
+        const span = y1 - y0;
+        const lead = rnd() < 0.45 ? span * (0.10 + rnd() * 0.11) : 0;
+        const ch = Math.min(span * (0.42 + rnd() * 0.22), w * 2.9, span - lead - gap * 2);
+        if (lead > 0) HG.columnRegister(ctx, x, y0, w, lead - gap, seed + c * 53, HG.POOLS.offering, mode);
+        HG.cartouche(ctx, x, y0 + lead, w, ch, seed + c * 31, mode);
+        const tailY = y0 + lead + ch + gap;
+        if (y1 - tailY > w * 0.5) HG.columnRegister(ctx, x, tailY, w, y1 - tailY, seed + c * 17, HG.POOLS.offering, mode);
       } else {
         const pool = c % 2 ? HG.POOLS.divine : HG.POOLS.offering;
         HG.columnRegister(ctx, x, y0, w, y1 - y0, seed + c * 17, pool, mode);

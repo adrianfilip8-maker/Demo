@@ -273,9 +273,31 @@ function paveDrift(x, z) {
 }
 
 /* Background pyramids (§8.1). They stand on low rock plateaus, as Giza's do. */
+/* `courses` 24 -> 11 and 18 -> 9.
+ *
+ * These are the ONLY pyramids in the level now — `EgyptLevel.background()` used to build a
+ * second, smaller pair at these exact coordinates, sealed invisibly inside these ones, and
+ * that duplicate is deleted (see the note there).
+ *
+ * The count is set from the camera, not from archaeology. At the `dunes` camera pyr1 is
+ * 105 m tall over ~302 px, i.e. 2.88 px/m, so 24 courses put a hard step every 4.4 m = 12.6 px
+ * down both silhouette edges — which is exactly the "~13 px hard geometric courses" critic
+ * pass 6 filed, and it is the frequency that reads as aliasing rather than as masonry.
+ *
+ * The step also cannot pay for itself in shading here, and that is the part worth writing
+ * down: a course tread is an up-facing surface, and the `dunes` camera sits at y 19.5 with
+ * this pyramid's base at y 6.5 and its apex at 111.5. The camera is below every course but
+ * the lowest two or three, so **21 of the 24 treads face away from it and are never drawn**.
+ * That is the mechanism behind "no tread/riser value difference" — it is not a missing tint,
+ * the surfaces that would carry it are not visible from this camera and no amount of tone on
+ * them can be. Only risers are in frame, and within one side every riser shares one normal.
+ *
+ * So the stepping is spent entirely on the silhouette, and 11 courses spend it better than
+ * 24: 9.5 m per course reads as deliberate massing at ~27 px instead of as a jagged edge at
+ * 12.6 px, and the per-course width jitter below has room to make it irregular. */
 const PYRAMIDS = [
-  { x: -150, z: -190, h: 105, halfBase: 82, baseY: 6.5, courses: 24, brokenApex: 0.055, rot: 0.05, seed: 4021 },
-  { x: 95, z: -250, h: 72, halfBase: 57, baseY: 4.0, courses: 18, brokenApex: 0.0, rot: -0.11, seed: 8093 },
+  { x: -150, z: -190, h: 105, halfBase: 82, baseY: 6.5, courses: 11, brokenApex: 0.055, rot: 0.05, seed: 4021 },
+  { x: 95, z: -250, h: 72, halfBase: 57, baseY: 4.0, courses: 9, brokenApex: 0.0, rot: -0.11, seed: 8093 },
 ];
 
 function pyramidPlateau(x, z, out) {
@@ -1104,12 +1126,21 @@ Object.assign(Terrain.prototype, {
 
     // Aspect tint: the sun is west and low, so −X blazes and +X falls into shadow.
     // Bake ~24 % of the haze in as well, so they read as distant even before fog.
+    /* The two faces the `dunes` camera actually sees are +X and +Z, and only one of them was
+       being treated. `sz > 0` lerped limeMid toward limeMid — `c` is already limeMid when the
+       test is reached, so that branch was a no-op and the +Z face shipped as flat base colour.
+       It is the larger of the two in frame (the camera bears 33° off the +Z normal), so the
+       "monumental landmark is invisible" reading is substantially this one line: the big lit
+       face carried no aspect at all, which left the mass with one tone and a dark edge.
+
+       +Z now takes a real sunward lift and +X keeps the shadow side, so the arris between them
+       is a genuine light/dark split rather than a colour that happens to change. */
     const faceTone = (sx, sz, up) => {
       c.set(PAL.limeMid);
       if (up) c.lerp(_cTmp.set(PAL.limeLight), 0.75);
       else if (sx < 0) c.lerp(_cTmp.set(PAL.limeLight), 0.85);
       else if (sx > 0) c.lerp(_cTmp.set(PAL.limeDark), 0.72).lerp(_cTmp.set(PAL.shadow), 0.22);
-      else if (sz > 0) c.lerp(_cTmp.set(PAL.limeMid), 0.5);
+      else if (sz > 0) c.lerp(_cTmp.set(PAL.limeLight), 0.42);
       else c.lerp(_cTmp.set(PAL.limeDark), 0.45).lerp(_cTmp.set(PAL.shadow), 0.12);
       return c;
     };
@@ -1138,10 +1169,23 @@ Object.assign(Terrain.prototype, {
         const [sx, sz] = SIDES[s];
         const wa = w[i] * sideScale[s], wb = w[i + 1] * sideScale[s];
         const tone = faceTone(sx, sz, false);
-        c.multiplyScalar(jit);
+        /* Course banding. With the treads invisible from below (see PYRAMIDS), alternating the
+           risers is the only way the coursing can carry any value at all rather than only
+           notching the outline. Faded out at the buried foot, where sand owns the tone. */
+        c.multiplyScalar(jit * (1 + (i % 2 ? -0.05 : 0.05) * (1 - buried)));
         c.lerp(_cTmp.set(PAL.sandMid), 0.55 * buried);
-        c.lerp(_cTmp.set(PAL.limeLight), 0.18 * bleach);
-        c.lerp(_cTmp.set(PAL.haze), 0.24);
+        /* Apex bleach 0.18 -> 0.05. Measured on `shots/critic6/dunes.png` against a rasterised
+           silhouette mask, the pyramid ran L 147–155 across y 60–130 while the sky beside it at
+           matched altitude ran 149–153 — a separation of −2.0 to +1.7 L, i.e. none. The bleach
+           was lifting exactly the band where the apex has open sky behind it straight onto the
+           sky's own value. The landmark has to sit *under* the sky it is seen against. */
+        c.lerp(_cTmp.set(PAL.limeLight), 0.05 * bleach);
+        /* Baked haze 0.24 -> 0.10. Real aerial perspective is applied again in the shader
+           (Atmosphere `fogDensity`/`heightFalloff`), so this constant was a second, distance-
+           independent flattening on top of it — it cost the mass a quarter of its tonal range
+           before the frame had even been fogged, and it is the reason the interior measured at
+           sd 1.5 L. Some is still wanted so the pyramids read behind the temple. */
+        c.lerp(_cTmp.set(PAL.haze), 0.10);
 
         // Riser
         if (sx !== 0) {
@@ -1155,7 +1199,7 @@ Object.assign(Terrain.prototype, {
         const up = faceTone(0, 0, true);
         c.multiplyScalar(jit);
         c.lerp(_cTmp.set(PAL.sandMid), 0.62 * buried);
-        c.lerp(_cTmp.set(PAL.haze), 0.24);
+        c.lerp(_cTmp.set(PAL.haze), 0.10);
         if (sx !== 0) {
           quad(sx * wa, y1, -wa, sx * wa, y1, wa, sx * wb, y1, wb, sx * wb, y1, -wb, up);
         } else {
@@ -1168,13 +1212,16 @@ Object.assign(Terrain.prototype, {
     const ay = yOf(C) + p.h * 0.02 * (1 - p.brokenApex * 6);
     const apx = p.halfBase * r.jitter(0.05), apz = p.halfBase * r.jitter(0.05);
     const wt = w[C];
-    const cap = faceTone(-1, 0, true);
-    c.lerp(_cTmp.set(PAL.haze), 0.24);
+    /* `faceTone` returns the shared `c`, so `cap` was an alias of it and the first
+       `faceTone` call inside the loop below overwrote the cap colour before a single apex
+       triangle had been pushed — the tip was taking the last side's tone, not the sunlit cap's.
+       Clone it out of the scratch colour. */
+    const cap = faceTone(-1, 0, true).clone().lerp(_cTmp.set(PAL.haze), 0.10);
     for (let s = 0; s < 4; s++) {
       const [sx, sz] = SIDES[s];
       const t = faceTone(sx, sz, false);
       c.lerp(_cTmp.set(PAL.limeLight), 0.2);
-      c.lerp(_cTmp.set(PAL.haze), 0.24);
+      c.lerp(_cTmp.set(PAL.haze), 0.10);
       const a = sx !== 0 ? [sx * wt, yOf(C), -wt] : [-wt, yOf(C), sz * wt];
       const b = sx !== 0 ? [sx * wt, yOf(C), wt] : [wt, yOf(C), sz * wt];
       push(a[0], a[1], a[2], t.r, t.g, t.b);

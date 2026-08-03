@@ -1431,7 +1431,17 @@ export function obelisk({ h = 22, base = 2.6, rng, relief = true } = {}) {
     [shaftH + 0.22, rt * 0.54, c * 0.8],
     [h - 0.04, base * 0.035, c * 0.3],
     [h, 0.012, c * 0.2],
-  ], relief ? { channel: { frac: 0.46, depth: Math.max(0.045, base * 0.038), y0: cy0, y1: cy1 } } : {});
+  /* Channel depth `base*0.038` -> `base*0.085`, and `frac` 0.46 -> 0.40.
+     Critic pass 6, `courtyard`: "the obelisk is the focal point and the least detailed object
+     in frame". The sunk inscription column was already here and it was cut too shallow to be
+     the answer: on the 2.6 m courtyard obelisk `base*0.038` is 9.9 cm, and at the `courtyard`
+     camera's ~35 px/m that trough is 3.5 px wide across BOTH its walls together — under the
+     width at which a wall can carry a value distinct from the face it is cut into. At 0.085 it
+     is 22 cm and ~8 px, which is enough for the sunward wall and the shaded wall to separate.
+     Narrowing `frac` at the same time keeps the flanking margins wide enough to stay readable
+     as faces rather than as two more edges. This is the one object every `courtyard` frame is
+     composed around, so the relief on it is worth more than the same relief anywhere else. */
+  ], relief ? { channel: { frac: 0.40, depth: Math.max(0.06, base * 0.085), y0: cy0, y1: cy1 } } : {});
   place(g, { ry: Math.PI * 0.25 + (rng ? rng.jitter(0.02) : 0) });
   return boxProjectUVs(g);
 }
@@ -1743,6 +1753,24 @@ export function sandDrift({ len = 12, h = 1.5, depth = 3.2, seg = 14, rng }) {
  * footprint centre, so no elevation is a symmetric trapezoid.
  *
  * 114 triangles against ~560, and not one interior face.
+ *
+ * ---------------------------------------------------------------------------------------------
+ * **DORMANT: nothing calls this, and that is deliberate — do not wire it back in casually.**
+ *
+ * `EgyptLevel.background()` used to build the two background pyramids from here, at the same
+ * coordinates `Terrain.js:276 PYRAMIDS` builds its own larger pair. Terrain's win on size
+ * (halfBase 82 vs 74), so every triangle this function produced was sealed inside Terrain's
+ * mass and had never been visible from any camera in the level — while still being a shadow
+ * caster. Critic pass 6's finding #4 (the pyramid is 2.8 L from the sky, ~13 px hard courses)
+ * was measured entirely off Terrain's geometry; the ~13 px pitch is its `courses` value at the
+ * `dunes` camera, not anything this function does. See the note at that call site.
+ *
+ * The rewrite documented above is still the better shape — its silhouette rasterises at exactly
+ * 1 px per row with no step anywhere — and it is kept for that reason. If the pyramids are ever
+ * consolidated back onto this function, TERRAIN's `_buildPyramids()` has to stop emitting its
+ * mass in the same commit, and its plateau/rubble-apron have to be kept or replaced, because
+ * `pyramidPlateau` feeds the height field that everything else beds onto.
+ * ---------------------------------------------------------------------------------------------
  */
 export function steppedPyramid({ base = 105, h = 105, rng, casing = 0.22 } = {}) {
   const hb = base * 0.5;

@@ -254,26 +254,61 @@ function papyrusClump(rand) {
   return BufferGeometryUtils.mergeGeometries(parts, false);
 }
 
-/** A dry grass tuft — crossed blades, cheap, instanced in bulk. */
+/**
+ * A dry grass tuft — crossed blades, cheap, instanced in bulk.
+ *
+ * Critic pass 6, `dunes`: the tufts read as "3–5 hard black strokes". Two causes, both here.
+ *
+ * **The normals were the bigger one.** Every blade was a single triangle whose three vertex
+ * normals were hard-coded to `(0, 1, 0)`. A blade is a near-vertical sliver, so an up-facing
+ * normal is not merely wrong, it is the one direction that makes the whole tuft shade as a
+ * single flat value: with the key low (`dunes` runs `tod 0.83`), n·l on a straight-up normal is
+ * sin(elevation), which is small and identical for all six blades, so every blade in every tuft
+ * landed in the dark band of a 2-band ramp. There was no lit side to any tuft anywhere in the
+ * level. The blade normal now faces out of the blade's own plane and tilts up along its length,
+ * and because each blade is then rotated to its own bearing the six of them spread around the
+ * compass — so a tuft shades as a small rounded mass with a lit side and a shadow side.
+ *
+ * **The width was the other.** 2.2 cm at the base, against ~94 px/m for a foreground tuft at the
+ * `dunes` camera, is a 2 px sliver — thin enough that whatever value it does take reads as a
+ * stroke rather than as a plant. The blade is now 4.5 cm at the base and carries a mid row, so
+ * it has a curved silhouette and enough area to show the ramp it is finally being given.
+ *
+ * 3 triangles per blade against 1. The tuft mesh is one InstancedMesh, so this is 12 extra
+ * triangles on a unit geometry — the instance count is unchanged.
+ */
 function grassTuft(rand) {
   const parts = [];
+  const N = [];
   for (let i = 0; i < 6; i++) {
     const h = TUNE.tuftH * rand.range(0.5, 1.5);
-    const a = rand.range(0, Math.PI * 2);
     const bend = rand.range(0.15, 0.5);
     const g = new THREE.BufferGeometry();
-    const w = 0.022;
+    const w = 0.045;
+    /* Canonical blade: base along X, leaning toward +Z. `rotateY` below gives it its bearing
+       and carries the normals with it. */
+    const bz = bend * h;
     const pos = new Float32Array([
-      -w, 0, 0, w, 0, 0,
-      Math.cos(a) * bend * h, h, Math.sin(a) * bend * h,
+      -w, 0, 0,
+      w, 0, 0,
+      -w * 0.58, h * 0.52, bz * 0.34,
+      w * 0.58, h * 0.52, bz * 0.34,
+      0, h * 0.98, bz,
     ]);
+    /* Out of the blade plane (−Z side), tilting up toward the tip as the blade lays over. */
+    const n0 = new THREE.Vector3(0, 0.42, -1).normalize();
+    const n1 = new THREE.Vector3(0, 0.62, -0.86).normalize();
+    const n2 = new THREE.Vector3(0, 0.86, -0.58).normalize();
+    N.length = 0;
+    N.push(n0.x, n0.y, n0.z, n0.x, n0.y, n0.z, n1.x, n1.y, n1.z, n1.x, n1.y, n1.z, n2.x, n2.y, n2.z);
     g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-    g.setAttribute('normal', new THREE.BufferAttribute(new Float32Array([0, 1, 0, 0, 1, 0, 0, 1, 0]), 3));
-    g.setAttribute('uv', new THREE.BufferAttribute(new Float32Array([0, 0, 1, 0, 0.5, 1]), 2));
-    g.setAttribute('flex', new THREE.BufferAttribute(new Float32Array([0, 0, 1]), 1));
+    g.setAttribute('normal', new THREE.BufferAttribute(new Float32Array(N), 3));
+    g.setAttribute('uv', new THREE.BufferAttribute(new Float32Array([0, 0, 1, 0, 0.16, 0.52, 0.84, 0.52, 0.5, 1]), 2));
+    g.setAttribute('flex', new THREE.BufferAttribute(new Float32Array([0, 0, 0.45, 0.45, 1]), 1));
+    g.setIndex([0, 1, 3, 0, 3, 2, 2, 3, 4]);
     g.rotateY(rand.range(0, Math.PI * 2));
     g.translate(rand.jitter(0.16), 0, rand.jitter(0.16));
-    parts.push(g);
+    parts.push(g.toNonIndexed());
   }
   return BufferGeometryUtils.mergeGeometries(parts, false);
 }

@@ -770,14 +770,40 @@ export function brazier(opts = {}) {
   place(ring, { y: h * 0.38, rx: Math.PI / 2 });
   bag.add('bronze', boxProjectUVs(ring));
 
-  // Coal bed: chunky lumps, deliberately over-scale so they read at ten metres.
+  /* Coal bed: chunky lumps, deliberately over-scale so they read at ten metres.
+     Heaped to `r*0.72`, up from `r*0.52`. The bowl's rim is at `h + r*0.80`, so at the old
+     height the entire coal bed sat 18 cm BELOW it and was hidden by the bowl from every
+     camera that is not looking straight down into it — which is why critic pass 6 read the
+     `courtyard` braziers as unlit. The bed now crowns just proud of the rim. */
   for (let i = 0; i < 7; i++) {
     const a = rng ? rng.range(0, TAU) : i, rr = rng ? rng.range(0, r * 0.62) : 0;
     bag.add('ember', place(
       chunk(rng ? rng.range(0.13, 0.24) : 0.18, 0.11, rng ? rng.range(0.13, 0.22) : 0.16, { rng, jitter: 0.03, chip: 0.05 }),
-      { x: Math.cos(a) * rr, y: h + r * 0.52, z: Math.sin(a) * rr, ry: rng ? rng.range(0, 1) : 0, rz: rng ? rng.jitter(0.3) : 0 }
+      { x: Math.cos(a) * rr, y: h + r * 0.72 - rr * 0.28, z: Math.sin(a) * rr, ry: rng ? rng.range(0, 1) : 0, rz: rng ? rng.jitter(0.3) : 0 }
     ));
   }
+
+  /* ---- A flame made of geometry, not of a promise from another module. ----
+     `Props._brazier` registers a light with LIGHTING and an `embers` emitter with FX, and
+     ships the brazier with nothing burning of its own. Both of those have been failing for
+     six critic passes — the manifest has carried `fx: no emitter named "embers"` since pass 2,
+     and pass 6's finding #10 is that point lights fall below ambient 50 px out — so the prop
+     has never once appeared alight, and "unlit braziers emitting embers" is on the pass-6
+     defect list. A brazier that owns its own flame reads as lit whatever those two do.
+     Two nested teardrops in the `flame` material (emissive, no ink outline, double-sided),
+     the inner one squatter and brighter-read, twisted off-axis so the pair is not a lathe of
+     revolution the eye can lock onto. ~120 triangles, and it merges into the existing
+     `flame` bucket with the wall torches, so it costs no additional draw call. */
+  const fy = h + r * 0.78;
+  for (const [k, tw] of [[1.0, 0.0], [0.62, 0.5]]) {
+    const fl = lathe([
+      [r * 0.40 * k, 0], [r * 0.46 * k, r * 0.30 * k], [r * 0.34 * k, r * 0.66 * k],
+      [r * 0.19 * k, r * 0.96 * k], [r * 0.06 * k, r * 1.18 * k], [0.004, r * 1.32 * k],
+    ], { seg: 9, rng, wobble: 0.06, capTop: false });
+    place(fl, { y: fy, ry: tw + (rng ? rng.jitter(0.4) : 0), rz: rng ? rng.jitter(0.09) : 0 });
+    bag.add('flame', fl);
+  }
+
   bag.flameAt = [0, h + r * 0.62, 0];
   bag.lightAt = [0, h + r * 0.95, 0];
   return bag;

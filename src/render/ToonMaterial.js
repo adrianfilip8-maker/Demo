@@ -347,14 +347,30 @@ const TUNE = {
      radiance so the hue survives the shoulder) — do not chase it in PostFX's display-space
      rim, whose placement was evaluated and kept (see the headroom note in PostFX.js TUNE),
      and re-measure `night` first: its silhouettes are what this term's magnitude buys. */
-  rimGain: 2.05,         // scales the art-directed rim colour into bloom range
-  /* This is NOT the live value. `_applyAutoLight()` republishes `uRimGain = rimGain * (day ?
-     1 : 1.45)` every time the clock moves, so on a night shot the uniform reads 2.9725 while
-     this constant still reads 2.05. Any A/B harness that snapshots `tune.rimGain` and restores
-     the *uniform* from it therefore renders its own baseline with a 31% weaker rim than the
-     shipping build — which, on the shots that depend on rim for silhouette separation in near
-     darkness, manufactures exactly the regression such a harness is usually looking for. Take
-     the baseline off `uniforms.uRimGain` after staging each shot, and take it per shot. */
+  rimGain: 4.10,         // scales the art-directed rim colour into bloom range
+  /* 2.05 -> 4.10 is a RE-BRACKET, not a brightening. It lands in the same change that gives
+     `rim.strength` a consumer (`setKeyLight`), and the two only make sense together.
+     `Atmosphere.rimStrength` is `lerp(0.5, 0.72, nightAmount)`, so:
+         day    4.10 * 0.50 = 2.050   <- identical to the value every shot rendered before
+         night  4.10 * 0.72 = 2.952   <- what the dead `_applyAutoLight` path always intended
+     Every canonical shot except `night` (tod 0.02) and `guard` (0.10) has nightAmount 0.000,
+     so this change is arithmetically bit-identical on fourteen of sixteen framings and moves
+     exactly two. That is the whole reason it is shaped this way: wiring `strength` through
+     against the old 2.05 would have silently halved the daylight rim on every shot at once.
+
+     **The paragraph that used to be here was false, and it is why the constant is documented
+     with its arithmetic now.** It claimed `_applyAutoLight()` "republishes uRimGain every time
+     the clock moves, so on a night shot the uniform reads 2.9725". It never did: `_autoKey`
+     goes false on LIGHTING's first `setKeyLight` (l.1155) and `_applyAutoLight` is then never
+     called again, so the uniform held its boot value for the life of the process. Measured
+     live, not read: rim1 and rim2 print `uRimGain=2.05` at the staging line of every shot they
+     captured, including `night` at tod 0.02 — two independent boots, six and five shots.
+     KNOWN_ISSUES §61.6. A comment asserting a runtime behaviour is not evidence of it, and
+     this one sat directly on the knob it was wrong about (§61.7).
+
+     Still true and still worth heeding: take an A/B baseline off `uniforms.uRimGain` after
+     staging each shot, per shot, never off this constant — it is now a *pre-strength* factor
+     and is not the live value on any frame. */
 
   /* Silhouette gate on the fresnel rim — see the long note at the term in toon.glsl.js.
      [lo, hi] are "normal turn per screen height": zero on any planar patch at any grazing
@@ -493,6 +509,30 @@ const TUNE = {
   inkFalloff: 150,       // metres over which lines thin out so distant clutter stays quiet
   inkSun: 0x1a1210,
   inkShade: 0x161022,
+  /* `OUTLINE_FRAG` picks the line colour as `mix(uInkShade, uInkSun, lit)` where
+     `lit = smoothstep(-0.20, 0.35, dot(N, uKeyDir))`. Both endpoints are CONSTANTS: nothing in
+     the project ever tells the ink what time it is. So at `night` (tod 0.02) every surface
+     facing the moon is outlined in `inkSun` — a colour named, and authored, for sunlight.
+     `inkMoon` + `inkNightMix` are the lever for that. At `inkNightMix: 0` the lerp is the
+     identity and this is BIT-IDENTICAL to the shipping build; `_setInkNight()` only ever
+     writes a uniform, so the A/B is `shading.setInkNight(1)` with no rebuild.
+
+     **Evidence, because this is a finding and not a hunch, and because my first two
+     instruments both got it wrong.** A frame-wide "dark thin feature" hue census on
+     `rim4/night-norim.png` reported 94.5% cool and appeared to REFUTE this — it was counting
+     the whole frame's blue masonry joints, in which the character's few hundred ink pixels
+     are noise. What settled it was the image: at 6x on `rim4/night-base.png` (px 640,370
+     +180x125) Sly carries a plainly warm brown line round tail, ear and legs, and that line
+     is STILL THERE in `night-norim.png` — an arm with `uRim = 0` and PostFX `rimStrength = 0`,
+     so it cannot be either rim term. `norim` removes the rim and not the ink; that asymmetry
+     is what makes the pair a clean attribution.
+
+     NOT SHIPPED ON. What the night line should become is an art call (§2.2 gives no night ink
+     pair, and §2.1 specifies the existing two by *lighting* — "warm brown in sunlight, violet
+     in shadow" — which at midnight selects a leg that has no referent). Registered so the
+     next capture can settle it in one poke rather than rediscovering it. */
+  inkMoon: 0x101826,
+  inkNightMix: 0.0,
 
   /* --- atmosphere (SKY overrides these) --- */
   hazeDensity: 0.020,
@@ -588,6 +628,9 @@ const _v2 = new THREE.Vector2();
 const _col = new THREE.Color();
 const _tintBlend = new THREE.Color();
 const _turq = new THREE.Color(PAL.turquoise);
+/* Scratch for _setRimColor's value comparison. Module scope because that path runs from the
+   per-frame setKeyLight and §5 forbids allocating in it. */
+const _rimIn = new THREE.Color();
 
 export class Shading {
   constructor(engine) {
@@ -610,6 +653,14 @@ export class Shading {
     this._wireframe = false;
     this._outlinesVisible = true;
     this.shadowMatrix = null;
+
+    /* The rim colour actually applied to the cache, held by value. See _setRimColor: the
+       previous guard compared the *caller's object identity*, which LIGHTING mutates in
+       place, so it could never miss. `_rimHas` distinguishes "never set" from "set to
+       something that happens to equal black". */
+    this._rimLive = new THREE.Color();
+    this._rimHas = false;
+    this._inkNight = 0;            // see setInkNight(); 0 = ink is bit-identical to shipping
 
     this._shadowTint = new THREE.Color(PAL.shadowHue);
     /* No cached tint luminance here any more: _refreshShadowColor derives everything from the
@@ -828,6 +879,11 @@ export class Shading {
       termSoft: num(opts.bandSoftness, TUNE.termSoft),
       rim: num(opts.rim, TUNE.rim),
       rimColor: hex(opts.rimColor, PAL.rim),
+      /* Whether the CALLER named a rim colour, as opposed to falling through to PAL.rim.
+         `_build` needs the distinction to know if the live global may overwrite the uniform,
+         and by then `opts` is out of scope. Not part of the option hash — `rimColor` above
+         already keys it, and this is derived from the same field. */
+      rimColorSet: opts.rimColor !== undefined,
       rimPower: num(opts.rimPower, TUNE.rimPower),
       spec: num(opts.spec, TUNE.spec),
       specColor: hex(opts.specColor, PAL.goldSpec),
@@ -950,6 +1006,17 @@ export class Shading {
        so the define cannot alias across the material cache. */
     if (!o.transparent) mat.defines.SLY_METAL_TAG = '';
 
+    /* Adopt the live global rim colour. `_setRimColor` walks `_cache`, so it can only reach
+       materials that already exist — a material built after a time-of-day flip would
+       otherwise keep `PAL.rim` (the daylight cool) forever, because `o.rimColor` defaults to
+       that constant. Only for callers that did not name a rim colour themselves: an explicit
+       `rimColor` is art direction for that one surface (a gold trinket's complement) and the
+       global must not overwrite it. The option hash is unaffected — every defaulting caller
+       still keys on `PAL.rim`, so this changes the value in the uniform, not the cache
+       identity. */
+    if (!o.rimColorSet && this._rimHas) own.uRimColor.value.copy(this._rimLive);
+    mat.userData.slyRimPinned = o.rimColorSet;
+
     mat.userData.sly = true;
     mat.userData.slyUniforms = own;
     mat.userData.outline = o.outline;
@@ -1060,8 +1127,13 @@ export class Shading {
           thickness: px, inkSun: sun, inkShade: shade, opacity,
           falloff: TUNE.inkFalloff,
         });
+        /* The authored endpoints, kept so `_setInkNight` can lerp FROM them every time
+           instead of from wherever it left the uniform last — a relative nudge applied per
+           call would drift with the clock. */
+        inkMat.userData.slyInkBase = { sun, shade };
         this._inkCache.set(ck, inkMat);
       }
+      if (this._inkNight > 0) this._applyInkNight(inkMat);
 
       const shell = buildOutlineShell(mesh, inkMat);
       if (shell) {
@@ -1151,9 +1223,14 @@ export class Shading {
    * @param {THREE.Matrix4} [p.shadowMatrix] accepted and stored; unused, because the shell of
    *        three's own shadow varyings is what getShadowMask() reads.
    */
-  setKeyLight({ direction, color, intensity, ambient, rim, shadowMatrix } = {}) {
+  setKeyLight({ direction, color, intensity, ambient, rim, shadowMatrix, nightAmount } = {}) {
     this._autoKey = false;
     const u = this.uniforms;
+
+    /* `nightAmount` has been in LIGHTING's payload (`Lighting.js:1837`) with no consumer here,
+       the same way `rim.strength` was. Consumed only by the ink lever, which is a no-op at
+       `TUNE.inkNightMix = 0`, so reading it changes nothing until that ships. */
+    if (typeof nightAmount === 'number') this.setInkNight(nightAmount);
 
     if (direction) {
       _v3.set(direction.x ?? 0, direction.y ?? 1, direction.z ?? 0);
@@ -1215,6 +1292,14 @@ export class Shading {
         if (rim.color !== undefined) this._setRimColor(rim.color);
         if (typeof rim.gain === 'number') u.uRimGain.value = TUNE.rimGain * rim.gain;
         if (typeof rim.intensity === 'number') u.uRimGain.value = TUNE.rimGain * rim.intensity;
+        /* `strength` is the name LIGHTING has always sent (`Lighting.js:532` publishes
+           `rim: { direction, color, strength }`), and until now this block read `gain` and
+           `intensity` only — so `Atmosphere.rimStrength` had no consumer anywhere in the
+           project and the rim never learned the time of day. Accepted here as a third spelling
+           rather than renamed at the sender, because the payload is a published interface
+           (AGENTS §4.4) and two other keys are already tolerated.
+           See TUNE.rimGain for why this arrives with a re-bracket and not on its own. */
+        if (typeof rim.strength === 'number') u.uRimGain.value = TUNE.rimGain * rim.strength;
       }
     }
 
@@ -1263,13 +1348,58 @@ export class Shading {
    * the per-frame auto-light path and must not iterate every material every frame.
    */
   _setRimColor(c, isOverride = true) {
-    if (this._rimApplied === c) return;
-    this._rimApplied = c;
-    for (const m of this._cache.values()) {
-      const u = m.userData?.slyUniforms;
-      if (u?.uRimColor) setCol(u.uRimColor.value, c);
+    /* Guard by VALUE, never by reference.
+       `if (this._rimApplied === c) return;` was a cache that could never miss: LIGHTING passes
+       the same `THREE.Color` instance every frame (`Lighting.js:475` allocates it once,
+       l.1119 `copy()`s into it), so after the first call the identity test always fired and
+       `uRimColor` held its boot value for the life of the process — while `_rimOverride` was
+       simultaneously left truthy, which disabled `_applyAutoLight`'s day/night fallback too.
+       Both paths dead from one `===`. KNOWN_ISSUES §61.6.
+       Reading the value into a scratch first also means callers may keep mutating whatever
+       they passed us; we never retain their object. */
+    setCol(_rimIn, c);
+    if (this._rimHas && _rimIn.equals(this._rimLive)) {
+      if (isOverride) this._rimOverride = true;
+      return;
     }
-    if (isOverride) this._rimOverride = c;
+    this._rimLive.copy(_rimIn);
+    this._rimHas = true;
+    for (const m of this._cache.values()) {
+      /* Skip materials whose caller named their own rim colour. This method's docstring
+         always said "a gold trinket may want a different complement from fur" — and the walk
+         then overwrote exactly those. It was invisible while the reference guard above froze
+         this whole path after one call; un-freezing it made a latent defect live, which is
+         why it is fixed in the same change. Real callers that would have been clobbered:
+         `Vegetation.js:318/324` (0xd8ff9a foliage), `Vegetation.js:329` and
+         `Guard.js:1072` (0xffd9a0). */
+      if (m.userData?.slyRimPinned) continue;
+      const u = m.userData?.slyUniforms;
+      if (u?.uRimColor) u.uRimColor.value.copy(_rimIn);
+    }
+    if (isOverride) this._rimOverride = true;
+  }
+
+  /**
+   * How far the ink's *lit* leg is carried toward `TUNE.inkMoon`, 0..1.
+   *
+   * 0 is bit-identical to the shipping build (the lerp is the identity), which is what makes
+   * this a one-poke A/B: `engine.get('shading').setInkNight(1)`. Normally driven by
+   * `nightAmount`, which is 1.000 at `night`/`guard` and 0.000 at every other canonical shot,
+   * so it touches exactly the two framings where `inkSun` has no referent.
+   */
+  setInkNight(amount) {
+    const a = clamp(+amount || 0, 0, 1);
+    if (a === this._inkNight) return;
+    this._inkNight = a;
+    for (const m of this._inkCache.values()) this._applyInkNight(m);
+  }
+
+  _applyInkNight(m) {
+    const base = m.userData?.slyInkBase;
+    if (!base || !m.uniforms?.uInkSun) return;
+    const k = this._inkNight * TUNE.inkNightMix;
+    setCol(m.uniforms.uInkSun.value, base.sun);
+    if (k > 0) m.uniforms.uInkSun.value.lerp(_colOf(TUNE.inkMoon), k);
   }
 
   /**
@@ -1532,7 +1662,17 @@ export class Shading {
     u.uSkyColor.value.copy(_colOf(PAL.fillSky)).lerp(_colOf(PAL.fillSkyNight), night);
     u.uBounceColor.value.copy(_colOf(PAL.bounce)).lerp(_colOf(PAL.bounceNight), night);
     u.uAmbIntensity.value = day ? TUNE.ambIntensity : TUNE.ambIntensity * 0.55;
-    u.uRimGain.value = TUNE.rimGain * (day ? 1 : 1.45);
+    /* Mirrors `Atmosphere.rimStrength = lerp(0.5, 0.72, nightAmount)`, because `TUNE.rimGain`
+       is now a PRE-strength factor (see its note) and this fallback has to apply a strength of
+       its own or it would render 2x the rim LIGHTING asks for. 4.10 * 0.5 = 2.05 day,
+       4.10 * 0.72 = 2.952 night — the same two numbers the wired path produces.
+       Reachable only while LIGHTING is absent (`_autoKey`), so no canonical capture exercises
+       it; kept in step so that when it IS the path, it is not a different look.
+       Flagged, not changed: `PAL.rimNight` (#a8e0ff, cool) contradicts both AGENTS §2.2's
+       "warm variant for night #ff9a5c" and `Atmosphere`'s own `rimWarm`, which is what
+       LIGHTING actually publishes. Changing it is an art call on a path no shot renders, so
+       it is recorded here rather than taken blind. */
+    u.uRimGain.value = TUNE.rimGain * (day ? 0.5 : 0.72);
     if (!this._rimOverride) this._setRimColor(day ? PAL.rim : PAL.rimNight, false);
     if (!this._fogSynced) {
       u.uHaze.value.copy(_colOf(PAL.haze)).lerp(_colOf(PAL.hazeNight), night);

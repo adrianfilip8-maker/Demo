@@ -738,20 +738,73 @@ export function quadrat(ctx, x, y, w, h, rand, pool, mode) {
   }
 }
 
+/**
+ * Quadrat height weights for one register.
+ *
+ * **A uniform division is what critic pass 6 called "a keypad".** Both registers used to split
+ * their box into `q` identical cells, and every text column in a wall gets the same box — so
+ * cell boundary `k` landed at exactly the same y in all twelve columns, and the wall carried a
+ * *lattice*: 42 px column rules crossing 42 px cell divisions in perfect register. Rendered at
+ * `interior`'s 20.6 mm/px that is a grid of equal boxes with one or two marks in each, which is
+ * what a keypad is and is not what an inscription looks like.
+ *
+ * Real quadrats are as tall as their contents need: a standing figure takes a full square, a
+ * stacked pair takes two thirds, a wide flat sign takes a third. The scribe's constraint is that
+ * the *column* fills between the rules, not that the cells match. So: jitter the weights and
+ * renormalise, which keeps the column exactly filling its box while the divisions inside it stop
+ * agreeing with the neighbouring column's.
+ *
+ * **±18 %, and the bound is set by the beacon census rather than by eye.** Cell height scales the
+ * sign inside it (`drawGlyph` fits to the box), so widening this widens the largest-sign tail —
+ * and §13's mechanism is that a *rare large* sign is a landmark the eye can match across a
+ * repeat. Width is untouched, so area scales with height alone; at ±18 % the rarest-and-largest
+ * ratio stays inside the profile the census already accepts (~2.3x) instead of the 3.86x that
+ * ten columns produced. Divisions de-register by the accumulated weight error — about 7 % of the
+ * register height by the third cell, i.e. ~9 px at `interior` — which is enough to break the
+ * lattice and far short of making the columns look ragged.
+ */
+/* **On its own stream, and that is not a detail.** Drawing the weights from the register's own
+ * `rand` would shift every subsequent draw by `q` steps, which changes *which layout branch and
+ * which sign* each quadrat picks — so a change meant to be pure geometry would silently
+ * re-roll the whole inscription. Measured when it did: `column_papyrus` lost 8 of 65 sign
+ * placements and its largest sign went 44.3 → 62.3 tile px, i.e. straight at §13's rare-large
+ * beacon, while its albedo `lumaRms` fell 3.1 % — on the surface critic pass 6 already calls
+ * flat. Off a derived stream the sign sequence is bit-identical to before and only the cell
+ * boundaries move, which is the change that was intended. §12's rule, arriving through an RNG:
+ * a feature paid for out of a neighbour's budget, invisible in its own metrics. */
+function cellWeights(q, seed) {
+  const wr = rng((seed ^ 0x9e3779b9) >>> 0);
+  const wt = new Array(q);
+  let sum = 0;
+  for (let i = 0; i < q; i++) { wt[i] = 0.82 + wr() * 0.36; sum += wt[i]; }
+  for (let i = 0; i < q; i++) wt[i] /= sum;
+  return wt;
+}
+
 /** A vertical column of quadrats — how a temple wall is normally read. */
 export function columnRegister(ctx, x, y, w, h, seed, pool, mode) {
   const rand = rng(seed >>> 0);
   const q = Math.max(1, Math.round(h / (w * 1.02)));
-  const qh = h / q;
-  for (let i = 0; i < q; i++) quadrat(ctx, x, y + i * qh, w, qh * 0.97, rand, pool, mode);
+  const wt = cellWeights(q, seed >>> 0);
+  let yy = y;
+  for (let i = 0; i < q; i++) {
+    const qh = h * wt[i];
+    quadrat(ctx, x, yy, w, qh * 0.97, rand, pool, mode);
+    yy += qh;
+  }
 }
 
 /** A horizontal band of quadrats, for lintels and architraves. */
 export function rowRegister(ctx, x, y, w, h, seed, pool, mode) {
   const rand = rng(seed >>> 0);
   const q = Math.max(1, Math.round(w / (h * 1.02)));
-  const qw = w / q;
-  for (let i = 0; i < q; i++) quadrat(ctx, x + i * qw, y, qw * 0.97, h, rand, pool, mode);
+  const wt = cellWeights(q, (seed ^ 0x51ed270b) >>> 0);
+  let xx = x;
+  for (let i = 0; i < q; i++) {
+    const qw = w * wt[i];
+    quadrat(ctx, xx, y, qw * 0.97, h, rand, pool, mode);
+    xx += qw;
+  }
 }
 
 /* ------------------------------------------------------------------------- */
