@@ -870,6 +870,22 @@ export const OUTLINE_VERT = /* glsl */ `
 
 attribute vec3 slyNormal;   // position-welded, averaged normal (see Outline.js)
 
+/* Per-vertex ink weight, derived from geometry.groups + each group material's
+   userData.outline (see Outline.js applyInkWeights). It exists because Sly is ONE
+   SkinnedMesh with a material ARRAY: three renders the single-material shell as one draw,
+   so the per-material outline weight that outlineAll() already honours for props was
+   being thrown away for the one mesh that most needs it. A float stream costs no extra
+   draw call, where giving the shell a material array would cost one draw per group.
+
+   ALWAYS WRITTEN. buildOutlineShell is the only path that creates a shell and it fills
+   this for every geometry, uniformly 1.0 where nothing asks otherwise. That is not
+   defensive tidiness: an unbound float attribute reads 0.0 from the generic vertex
+   attribute, which would silently collapse EVERY ink line in the game.
+
+   (No backticks in this file's comments — the GLSL lives in a template literal and a
+   stray backtick terminates it, which is a boot-time SyntaxError, not a shader warning.) */
+attribute float slyInk;
+
 uniform vec2  uRes;
 uniform float uThickness;   // target line width in device pixels
 uniform float uDepthPush;
@@ -931,7 +947,10 @@ void main() {
 	float dl = length( dpx );
 	vec2 dir = dl > 1e-5 ? dpx / dl : vec2( 0.0 );
 	float dist = - mvPosition.z;
-	float w = uThickness * mix( 1.0, 0.62, smoothstep( 18.0, uFalloff, dist ) );
+	/* Multiplying by slyInk is bit-exact at the shipped weight of 1.0 — unlike §119.5's
+	   mix(x, x, a), an IEEE754 multiply by exactly 1.0 returns its operand unchanged. The
+	   null arm still measures it rather than trusting that (§119.3 P1). */
+	float w = uThickness * slyInk * mix( 1.0, 0.62, smoothstep( 18.0, uFalloff, dist ) );
 	gl_Position.xy += dir * ( w * 2.0 / uRes ) * gl_Position.w;
 
 	vSlyViewPos = mvPosition.xyz;

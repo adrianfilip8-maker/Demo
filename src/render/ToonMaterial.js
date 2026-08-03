@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { TOON_PARS, TOON_DETAIL, TOON_SHADE } from './shaders/toon.glsl.js';
 import {
-  weldNormals, createOutlineMaterial, buildOutlineShell, removeOutlineShell,
+  weldNormals, applyInkWeights, createOutlineMaterial, buildOutlineShell, removeOutlineShell,
 } from './Outline.js';
 
 /**
@@ -1239,6 +1239,14 @@ export class Shading {
 
   /** Rebuild welded normals for a geometry whose positions changed after the shell was built. */
   reweld(geometry) { return weldNormals(geometry, true); }
+
+  /**
+   * Re-derive a shelled mesh's per-vertex ink weights after its materials' `outline` values
+   * changed. This is the live A/B path — set `mesh.material[i].userData.outline` and call
+   * this — and it is the reason the weight lives on the material rather than in a uniform:
+   * one boot can sweep it, which is the difference between one lock hold and five.
+   */
+  reink(mesh) { return applyInkWeights(mesh, true); }
 
   removeOutline(mesh) {
     const shell = mesh?.userData?.slyShell;

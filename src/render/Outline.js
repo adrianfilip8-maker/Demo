@@ -25,6 +25,7 @@ import { OUTLINE_VERT, OUTLINE_FRAG } from './shaders/toon.glsl.js';
  */
 
 const WELD_ATTR = 'slyNormal';
+const INK_ATTR = 'slyInk';
 
 /* Positions are quantised to this grid before hashing. 0.1 mm is far below any authored
    feature size here and far above float32 noise from geometry merges. */
@@ -125,6 +126,92 @@ export function weldNormals(geometry, force = false) {
 }
 
 /**
+ * Write the per-vertex `slyInk` weight the outline shader multiplies its thickness by.
+ *
+ * **Why this exists.** A mesh with a material ARRAY has real `geometry.groups`, and every one
+ * of those materials already carries its own ink weight — `toon()` accepts `outline:`
+ * (ToonMaterial.js:949) and stores it (`:1064`), and `outlineAll()` already honours it
+ * (`:1215`) for props. But `outlineAll()` reads `material[0]` only, and the shell built here
+ * takes a *single* material, which three renders as one draw over the whole geometry. So for
+ * the one mesh in the game built from eight material groups — Sly — every group's authored
+ * weight was being discarded. This attribute is how it reaches the shader, at the cost of one
+ * float stream and **zero extra draw calls**; handing the shell a material array instead would
+ * cost one draw per group.
+ *
+ * **Always called, always complete.** An attribute declared in the shader but not present on
+ * the geometry does not read 1.0 — it reads the generic vertex attribute, i.e. **0.0**, which
+ * would collapse every ink line in the game to nothing. So this fills 1.0 for meshes with no
+ * groups, no material array, or no declared weights, and `buildOutlineShell` calls it for
+ * every shell it creates. There is no path to a shelled geometry that skips it.
+ *
+ * **Shared geometry caveat, stated because `weldNormals` has the same shape and it is benign
+ * there and is not benign here.** A welded normal is a property of the *geometry*, so two
+ * meshes sharing one geometry agree about it. An ink weight is a property of the *mesh's
+ * materials*, so two meshes sharing a geometry with different weights would fight, last
+ * writer winning. `geometry.userData.slyInkSig` records which material signature produced the
+ * current buffer so the condition is detectable rather than silent; nothing in the shipped
+ * level does this (Sly is one mesh, architecture caches one material per key).
+ *
+ * @param {THREE.Mesh} mesh   the host mesh, NOT the shell — weights come off its materials
+ * @param {boolean} force     rewrite even if the signature is unchanged
+ * @returns {boolean} whether the geometry now carries a usable weight stream
+ */
+export function applyInkWeights(mesh, force = false) {
+  if (!mesh || !mesh.isMesh) return false;
+  const geo = mesh.geometry;
+  if (!geo || !geo.isBufferGeometry) return false;
+  const pos = geo.getAttribute('position');
+  if (!pos) return false;
+
+  const n = pos.count;
+  const mats = Array.isArray(mesh.material) ? mesh.material : null;
+  const groups = geo.groups;
+  const weightOf = (i) => {
+    const w = mats?.[i]?.userData?.outline;
+    return Number.isFinite(w) ? Math.max(0, w) : 1;
+  };
+
+  let attr = geo.getAttribute(INK_ATTR);
+  if (!attr || attr.count !== n) {
+    attr = new THREE.BufferAttribute(new Float32Array(n), 1);
+    geo.setAttribute(INK_ATTR, attr);
+    force = true;                     // a fresh buffer is all zeros; it MUST be filled
+  }
+
+  const usable = mats && groups && groups.length > 0;
+  // The signature is the whole input: which ranges, and what weight each one asks for.
+  const sig = usable
+    ? groups.map((g) => `${g.start}:${g.count}:${weightOf(g.materialIndex)}`).join('|')
+    : 'uniform';
+  if (!force && geo.userData.slyInkSig === sig) return true;
+  geo.userData.slyInkSig = sig;
+
+  const arr = attr.array;
+  arr.fill(1);
+  if (usable) {
+    /* Groups index the INDEX buffer when the geometry is indexed, and vertices when it is
+       not — getting this backwards writes weights to unrelated vertices and still renders. */
+    const index = geo.index;
+    const seen = new Uint8Array(n);
+    for (const g of groups) {
+      const w = weightOf(g.materialIndex);
+      const end = Math.min(g.start + g.count, index ? index.count : n);
+      for (let i = g.start; i < end; i++) {
+        const v = index ? index.getX(i) : i;
+        if (v < 0 || v >= n) continue;
+        /* A vertex claimed by two groups takes the LARGEST weight, so a shared seam can only
+           ever keep a line, never silently thin one that another group asked to keep. Merged
+           geometry makes groups vertex-disjoint, so in practice this is a safety net. */
+        arr[v] = seen[v] ? Math.max(arr[v], w) : w;
+        seen[v] = 1;
+      }
+    }
+  }
+  attr.needsUpdate = true;
+  return true;
+}
+
+/**
  * The shell material. One per (thickness, colour) pair — the caller caches them, because a
  * program switch per prop would eat the draw-call budget for nothing.
  *
@@ -182,6 +269,9 @@ export function buildOutlineShell(mesh, material) {
   if (!mesh || !mesh.isMesh || !mesh.geometry || !material) return null;
   if (mesh.userData.slyShell) return mesh.userData.slyShell;
   if (!weldNormals(mesh.geometry)) return null;
+  /* Before the shell exists, so no shell can ever be drawn against a missing weight stream
+     (which reads 0.0, not 1.0 — see applyInkWeights). */
+  applyInkWeights(mesh);
 
   let shell;
   if (mesh.isSkinnedMesh && mesh.skeleton) {
