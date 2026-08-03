@@ -6417,3 +6417,116 @@ and slab-sided, not inflated** — so if the critic reaches for "blobby", it wil
 loft. But it will be judging the loft on **two shadowed animals at 50–57 m**, which is not a fair
 test of it in either direction. Registered before the verdict, alongside §72.5's arms clause, so
 neither a positive nor a negative remark about the sphinxes can be over-read afterwards.
+
+
+---
+
+## §76 — critic pass 6: REJECT 2.1/10, 14 of 14 lose. It went DOWN, and the reasons are first-order
+
+Pass 5 returned 2.88/10 on 13 shots. **Pass 6 returns 2.1/10 on 14, with every frame losing its
+blind side-by-side.** The critic states it scored each frame before summing and was never told the
+prior score — the anti-anchoring clause in `BRIEF-critic6.md` §"On the 2.88" was written to prevent
+a soft 4, and it prevented a soft 4 in the other direction too.
+
+**This is the honest headline: nine hours of measurement, seventy-five ledger sections, and the
+number went down.**
+
+### 76.1 The critic adjudicated provenance itself, and did it better than I could have
+
+It was handed the raw facts with no interpretation — including the one `src/` mtime inside the
+capture window — and ruled the run **SOUND**, on evidence I had not thought to gather:
+
+> `tools/shot.mjs:194` performs a single `page.goto` with `SANDS_NO_HMR=1`, **and I grepped all of
+> `src/` for runtime `import(` — every hit is a JSDoc type annotation, no dynamic import exists** —
+> so the module graph (including `Materials.js`, reachable only via `Textures.js:4`, a static
+> import) was evaluated exactly once at ~23:33, before 00:14:19.
+
+My §70.5 argument was "no per-shot rebuild, one prewarm entry, HMR frozen". **The critic closed the
+remaining hole: a dynamic import could have re-pulled the module regardless of HMR, and it proved
+none exists.** That is the difference between a sound argument and a complete one.
+
+It also volunteered two caveats it declined to use: `consoleErrors` carries a 404 that `errors: []`
+does not surface, and the renderer is **software (SwiftShader)** — so it excluded texture filtering
+and anti-aliasing from every finding, because those could be harness artefacts.
+
+### 76.2 It killed three of its own findings before filing them
+
+- An eye ROI placed by eye landed on **the mask, not the sclera**, and returned a plausible number.
+  Re-derived from a verified 3× crop, confirmed at 8×, then measured.
+- **"The cane crosses the hero's face" was retracted**: a 12× crop showed the head is 68×50 source
+  px and the gold element is *not resolvable* as cane versus shoulder detail.
+- Its automated pyramid-silhouette predicate returned edge-x values of 556, 388, 274, 654 on
+  consecutive rows — and it diagnosed **why** rather than tuning it: the pyramid and sky are not
+  separable. *The instrument's failure became finding #4.*
+
+### 76.3 The findings, and what they mean for nine hours of work
+
+1. **The cane is not parented to the hand.** In `courtyard` it is drawn at world scale diagonally
+   across the entire composition **while the character's hands are empty** — both verified by crop.
+   In `interior` it is a detached rod behind the tail; in `sly-profile`, a rod through the hip.
+   **Task #10 in this project's own list reads "DONE — cane planted, verified in GPU geometry".**
+   A whole session of cane *aim* work (§57, §58.1, §65.1) was spent on a prop that is not attached
+   in three of fourteen frames. The aim was measured to rank 1 of 10,350; the socket was never
+   checked.
+2. **Nothing the character stands on knows he is there.** Measured in `sly-key`: **−0.4 to +1.1 L**
+   under both boots against open floor beside them, where a contact shadow should read −13 to
+   −20 L. The environment shadow map *is* running — the same frame carries large soft architectural
+   shadows. So the character is either excluded from the caster set or the cascade does not reach
+   him. **This is a caster-membership bug, not the contact-term question §55 spent a capture on.**
+3. **The eyes are dark holes** — sclera L **10.2**, RGB (84,88,118), *darker than the wall behind
+   him*, because the eye material takes the same shadowed key as the head. Pupil is ~10% of eye area
+   against Sly's 30–40%, and the catchlight is a **magnified single texel — a hard 5 px square**.
+   Task #15 reads "CLOSED — eye hierarchy restored end-to-end … verified on eye1".
+4. **The pyramid is 2.8 L from the sky.** The monumental landmark is invisible; tread and riser
+   carry no value difference so the stepping gives nothing either.
+5. **The character does not read against his backdrop anywhere** — `hero` 2.4 L separation; `night`
+   a black mass with **a warm brown rim that has no source at night**. That last is
+   §61.6's `uRimColor` reference-equality bug reaching the frame: the guard compares by reference
+   against an object LIGHTING mutates in place, so the rim colour is stuck at its boot value. **An
+   independent blind observer named the visible symptom of a defect measured hours earlier.**
+6. **The hieroglyph walls are printed, not carved** — no bevel, no chisel highlight, no recess
+   occlusion, ~42 px mechanical grid pitch, "reads as a keypad". Largest surface area in the game.
+7. **FX are unanchored and opaque** — countable billboard seams, no soft-particle depth fade, the
+   tail's outline slicing a dust puff cleanly, impact spikes centred off the character.
+8. **`combat` blows the character's palette away** — 99.8% warm in the torso against 51.7% blue +
+   28.5% cyan for the same body region in `sly-key`.
+9. Chromatic fringing **on interior architectural lines**, not just frame edges.
+10. **Point lights light nothing** — an interior sconce falls *below ambient* 50 px out and its core
+    clips to neutral white, losing the flame hue.
+11. **Two shots do not deliver their own shot type** — see §76.4.
+12. Floor decals with uniform 2 px width and **no perspective foreshortening**.
+13. Composition defaults: mirrored duplicate buildings, the least-detailed object as focal point,
+    unlit braziers emitting embers, quantised 4-step penumbrae, no sun disc in any daylight sky.
+
+### 76.4 `sly-perch` was scored as a composition and it is a diagnostic framing — my error
+
+The critic's finding: *"the shot type is not delivered — there is no perch, ledge or rail under him;
+he stands on open floor."* **Correct, and it is exactly what I authored.** §58.2 says so in the
+source comment: *"it is deliberately NOT on the ledge — `perch_idle` is frozen here over flat
+ground. That is correct for this measurement."*
+
+I built it as a **measurement rig** to resolve a 3.7 cm spine excursion that `hero` provably cannot
+show — and then put it in the **scored roster**. I excluded `sly-arm` from the roster as diagnostic
+and included `sly-perch`, which is diagnostic in exactly the same way. **One frame of the 2.1 is an
+artefact of my roster.**
+
+The lesson generalises past this instance: **a diagnostic framing and a beauty framing cannot share
+a roster**, because the critic is asked which frame an art director would pick, and a measurement
+rig has no answer to that question. `guard`'s staging complaint (subject at ~6% of frame width,
+edge-jammed, occluded) may be the same category and is worth checking before it is treated as an
+art defect.
+
+### 76.5 What this pass actually says about the method
+
+Three of the top findings sit on tasks this project marked **CLOSED**: the cane (#10 "verified in
+GPU geometry"), the eyes (#15 "restored end-to-end"), and contact shadow (§55's whole capture, which
+answered a question about *direct light* while the real defect is caster membership).
+
+> **The measurements were not wrong. They were pointed at the wrong layer, and every one of them
+> passed.** §36 recorded this after pass 5 — *"the apparatus was rigorous, honest, self-correcting —
+> and pointed at the wrong layer"* — and pass 6 is the same verdict with more instruments.
+
+The instruments this session built are genuinely better: preregistration with revert-not-defend
+falsifiers, absence controls, scatter nulls, applied-state readback, provenance gates. **None of
+them was watching whether the cane is in the hand.** A blind observer at thumbnail size found that
+in one frame.
