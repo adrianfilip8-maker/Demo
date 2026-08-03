@@ -8749,3 +8749,70 @@ appears in `temple` only. That is one differentiating variable, which is a stron
 proof. **The discriminating arm is a `temple` capture with `dust` off**, which this run does not
 contain. Until then the disc is *"most likely `dust`, on a single-variable match"*, and it should
 be quoted that way.
+
+---
+
+## §103 — a provenance line that named the wrong commit, and the guard that would have frozen it there
+
+Raised by a stop-hook noticing one dirty file whose entire diff was a timestamp.
+
+### 103.1 `keeplog.sh` stamped the copy-time tree and called it the tree
+
+```
+# tree:     db803df (DIRTY at copy time)
+```
+
+`fx19` rendered under **52d4a43**. `db803df` is where HEAD stood an hour later when the log was
+re-copied. The parenthetical says *"at copy time"* and is still misread, because the field is
+called `tree:` and sits in a provenance block — everything around it describes the run, so the
+reader carries that frame onto this line too.
+
+**A capture that waits an hour in the queue and is preserved afterwards will always stamp a commit
+made long after it started**, so the gap is the normal case and not an edge case. Relabelled to
+`# tree at copy time (NOT the run's build):` with a following line pointing at the run's own
+manifest, which is the actual authority on what it rendered.
+
+Note what this is *not*: the field was never wrong, it was **mis-framed**. §98 corrected a
+directory-existence signal I had over-read; this is the same failure in a field that was correct
+and read as answering a question it does not answer.
+
+### 103.2 The idempotence guard would have preserved the defect forever
+
+Re-running `keeplog.sh` is *encouraged* by the standing routine, and it rewrote the header every
+time, producing commits whose whole diff was a fresher timestamp. So the copy became conditional
+on the body having changed.
+
+**Tested, and the first version failed in a way that only a test could show.** With the body
+identical — which it is for every log already preserved — the guard suppressed the rewrite, so
+**not one existing log would ever have received the header correction.** The guard added in the
+same commit as the fix would have frozen every file at the pre-fix header, permanently.
+
+> **An idempotence check keyed on content freezes the format the content is wrapped in.** If the
+> wrapper can be wrong, the check needs a version marker, not just a content compare.
+
+Fixed: the body test is necessary and not sufficient — a header lacking the marker string forces a
+rewrite regardless.
+
+### 103.3 A hardcoded offset into a format being edited in the same commit
+
+The strip-the-header step was first written `tail -n +8`, correct for the 7-line header it was
+written against — **in a commit that takes the header to 8 lines.** It would have compared header
+text against log text and reported "changed" forever. Now `sed '1,/^# -\+$/d'`, matching the
+all-dashes terminator, which line 1 does not match because it carries text.
+
+### 103.4 The three tests, because a guard whose failure mode is silence must be made to speak
+
+§59's rule. All three exercised against the real file:
+
+| case | expected | got |
+|---|---|---|
+| body identical, header current | no-op | no-op |
+| body changed (sentinel appended) | rewrite | rewrote, sentinel present |
+| body restored | rewrite | rewrote, sentinel gone |
+| **header marker stripped, body identical** | **rewrite** | **rewrote, marker restored** |
+
+The fourth is the one that matters and it is the one I nearly did not run: my first attempt at it
+was mislabelled — the file already carried the new header from a previous test's restore step, so
+"not rewriting" was the correct answer to a question I thought I was asking differently. **A test
+whose setup drifted is a test of nothing**, and the only tell was that the header printed after it
+was already the new one.

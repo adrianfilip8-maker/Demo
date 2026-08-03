@@ -1,8 +1,9 @@
 # ---- run log preserved by tools/keeplog.sh ----
 # run:      fx19
 # source:   /tmp/claude-0/-home-user-Demo/94022f73-a328-5e86-b2ec-031aa9c720ce/scratchpad/fx19.log
-# copied:   2026-08-03T10:50:25Z
-# tree:     d1e8f49 (DIRTY at copy time)
+# copied:   2026-08-03T11:17:12Z
+# tree at copy time (NOT the run's build): 1c7bcb0 — working tree DIRTY
+#   For the commit this run actually rendered, read shots/fx19/report.json or fx19.json.
 # NOTE: this is a COPY. The scratchpad original is ephemeral and may already be gone.
 # ------------------------------------------------
 · waiting for capture lock (10s, held by pid 21760)
