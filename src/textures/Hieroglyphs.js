@@ -776,7 +776,7 @@ function cellWeights(q, seed) {
   const wr = rng((seed ^ 0x9e3779b9) >>> 0);
   const wt = new Array(q);
   let sum = 0;
-  for (let i = 0; i < q; i++) { wt[i] = 0.82 + wr() * 0.36; sum += wt[i]; }
+  for (let i = 0; i < q; i++) { wt[i] = 0.90 + wr() * 0.20; sum += wt[i]; }
   for (let i = 0; i < q; i++) wt[i] /= sum;
   return wt;
 }

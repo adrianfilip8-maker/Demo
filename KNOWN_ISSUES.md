@@ -6886,3 +6886,99 @@ puts it inside rim4's tree. Reproduced independently on shipped frames: `night`
 
 This is §64.2's failure repeating on my side: I routed a task whose answer was already in the record,
 against a build that predated its own fix.
+
+
+---
+
+## §81 — §54's own fix created the repeat the critic found, and a guard caught an overshoot before the capture booted
+
+TEXTURES against pass-6 finding #6. Frames not in yet — its capture is queued fourth. Everything
+below is texture-side and measured, with the frame check sealed and turnkey.
+
+### 81.1 The "~90 px repeat" is §54's parity fix being read as tiling
+
+Horizontal NCC autocorrelation of the built tile at `interior`'s own 504 px/repeat. `interior` runs
+**cols = 12**, so a column is **42 px and 2 × pitch is 84** — arithmetic I checked independently.
+
+| lag | HEAD | cartouche fix only | shipped |
+|---|---|---|---|
+| 42 | 0.678 | 0.748 | **0.080** |
+| **84** | **0.799** | 0.678 | **0.053** |
+| 168 | 0.723 | 0.564 | −0.048 |
+| 252 | 0.767 | 0.606 | −0.033 |
+
+> **The top peak at lag 84 is §54's every-other-column cartouche alternation, read as tiling.** The
+> parity fix passed in pixels (§54.1, finial fundamental swapping k14 → k16) and **produced the
+> defect the critic named.**
+
+And the middle column is the part that matters: **fixing the cartouche rhythm alone *promoted* the
+column pitch to top peak** (42: 0.678 → 0.748). Half the fix would have moved the repeat rather than
+removed it. Shipped state has no structural peak — largest non-trivial lag 46 at **0.211**, a 15:1
+separation — and reads as writing rather than a lattice by eye at the same scale.
+
+*A fix that passes its own seal can still author the next defect, and only a statistic that looks at
+a different property will see it.* §54's instrument measured **which integer bin holds the finial
+peak**; it could not have seen a period-2 column rhythm, and was never asked to.
+
+### 81.2 The arris is albedo, and the reason is a shader ruling
+
+The recess **is** authored — `hieroglyph_wall` cut floor luma 0.292 against a face at 0.468 — and
+the AO gradient is real (floor 0.158, face 0.863). But §8 establishes that `ao` never multiplies the
+key term and SHADING has ruled `aoKey = 0` **final**, so **authored occlusion cannot appear on a
+sunlit wall no matter how good it is.**
+
+What was actually missing is the **lip**: raised stone outside the cut measured **0.484, i.e. +3% of
+the face — nothing an eye can find.** *A dark shape on a flat field with no lighter edge is what
+printing looks like.*
+
+Isolated A/B on the built surface, arris-off root against live, same seed: **21.6% of texels
+changed**, ring luma 0.4844 → 0.5168 (**+6.7%**), field bit-stable 0.4510 → 0.4512, ring width p50
+**6 texels = 61 mm** — which is **1.11 px at `dunes` to 4.0 px at `courtyard`**, clearing the
+sub-pixel line at every framing where the recipe is ≥13% of frame. Both §7.3 conditions move the
+right way at once: 1:1 sd **+3.7%**, squint sd at 1/8 **−3.2%**.
+
+### 81.3 A guard caught an overshoot before the capture booted, on an asymmetry nobody would guess
+
+The beacon census (rarest-and-largest sign against median sign area) at the first jitter setting put
+`hieroglyph_gilded` at **4.04×** — past the **3.86×** that was measured and rejected in an earlier
+pass — on a recipe that is **29% of `hero`**.
+
+The mechanism is the interesting part: **a sign is fitted by `min(bw/g.w, bh/g.h)`, so jitter that is
+symmetric in cell height is *asymmetric in sign area*.** Amended ±18% → **±10%** *before the capture
+booted*, and timestamped in the seal rather than adjusted afterwards.
+
+A second hazard caught in the same work: drawing the jitter from the register's **own** RNG stream
+re-rolled the entire inscription — costing `column_papyrus` 8 of 65 placements and pushing its
+largest sign 44.3 → 62.3 px. Fixed by deriving a separate stream. **§12's shape arriving through an
+RNG**: a change that looks local and is not.
+
+### 81.4 Finding #12 is now unowned by both candidate owners, on evidence
+
+TEXTURES accepts FX's decals-hidden test **and registers in advance that "not decals" will not make
+the marks its own by elimination.** Rendered at `sly-key`'s own ~8 mm/px, `paving_courtyard`'s
+crazing is a **connected polygon net of long straight boundaries**, low-contrast in albedo (stain
+0.14; 86% of the crack lives in the height field). The frame's marks are **short, curved,
+disconnected, high-contrast**, and present identically in `sly-startle`. `chiselMarks` is excluded
+too — single angle 0.9 rad, and the observed strokes are not parallel.
+
+> **The discriminating test is zeroing the paving crack term, not hiding the decals** — and TEXTURES
+> declined to run it because it is a texture edit that would have broken its own capture's null
+> control.
+
+Both owners have now argued themselves *out* of finding #12 with mechanism rather than assertion. It
+is unattributed and that is the honest state.
+
+### 81.5 Two things routed away with numbers, and one deliberately not shipped
+
+- **`hero`'s "untextured column" is not a column.** The mask says **68.7% `granite_pink` at lumaMed
+  0.187, in deep shadow** where the only light is flat ambient and wash — *no relief can read there
+  whatever the albedo does.* Routed to task #32. And in `temple`, `column_papyrus` is 54.1% of frame
+  at `cov1` 68.5% while in `hero` it is the **brightest material in frame at the worst coverage
+  (58.0%)** — which is §70.2's `G` = 0.390 tone crush, stated as an ordering rather than a guess.
+- **"No sand glint" is not authorable at that scale**: ripples are 30 cm ≈ 3.6 px at the median
+  `dunes` ground pixel, grain is 3.2 cm ≈ **0.4 px and cannot resolve by construction**, and a quartz
+  facet is two orders below a pixel. It has to be screen-space FX or a roughness change.
+- **`granite_pink` was left alone on purpose** — it is the flattest normal in the catalogue and 43.3%
+  of `interior`, *and it is one of the sealed capture's own null controls.* Moving it would have made
+  the primary unquotable **by TEXTURES' own rules.** Declining to fix a real defect because fixing it
+  would invalidate the measurement in flight is the discipline working at its least comfortable.
