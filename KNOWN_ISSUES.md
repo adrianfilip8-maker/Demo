@@ -9038,3 +9038,59 @@ currently shading-limited, not modelling-limited**, and further card-level work 
 cannot see past. It is a read off two artefacts and needs its own measurement before it is banked;
 the natural one is a per-band luma comparison between the authored albedo and the delivered pixels
 over the same ROIs the controls above already validate.
+
+---
+
+## §107 — the render is compressing the model, but not obliterating it, and one of my two statistics was junk
+
+§106.5 routed CHARACTER's claim that *"the authored model reads far more like Sly than the
+delivered frame does"* to SHADING/LIGHTING and flagged it as needing its own measurement before
+being banked. This is that measurement, on the tail rings, and it **partly refutes the strong form
+of the claim it was testing.**
+
+Authored artefact `shotsil/sly-closeup-shade.png` against delivered `shots/char13/sly-closeup.png`,
+same tail region, luma P20/P80 separation:
+
+| | P20 | P50 | P80 | separation |
+|---|---|---|---|---|
+| authored (flat-lit) | 4.8 | 7.0 | 169.3 | **164.5** |
+| delivered (`char13`) | 36.7 | 43.5 | 82.7 | **46.0** |
+
+**27.9 % of the authored separation survives to the frame.** The pale band lands at 82.7 where it
+was authored at 169.3 — half its luma — so the tail reads as *grey against darker navy* rather than
+*cream against near-black*.
+
+### 107.1 What that does and does not support
+
+**Directionally CHARACTER is right**: there is real compression and it is large. **The strong form
+is not supported for the tail.** At 4× the rings are plainly legible — alternating pale and dark
+bands, clearly separated — and 46 levels is far above the two-to-three levels at which adjacent
+large patches become distinguishable. *"Compressed toward uniform dark blue"* overstates what the
+tail actually does.
+
+That distinction matters for routing: SHADING should be told the tail loses ~72 % of its authored
+contrast and still reads, **not** that the rings are being destroyed. The second brief would send
+someone hunting a defect that is partly a legitimate consequence of lighting a flat-lit asset.
+
+**Scope, stated because this is one region in one shot:** the tail only. The cream chest V and the
+face mask are separate claims in §106.5 and are **not** tested here. And the artefact is flat-lit
+while the frame is scene-lit at a specific time of day, so some of the 72 % is correct behaviour
+rather than loss — this bounds how much is left, it does not attribute what went.
+
+### 107.2 I quoted a second statistic that was junk, and caught it before banking it
+
+The tool also printed Weber contrast, `(P80−P20)/P50`, giving **"4.5 % retained"** — a far more
+alarming number than 27.9 %, and the one that would have been quoted.
+
+It is meaningless here. The authored crop is dominated by near-black, so its **P50 is 7.0**, and
+dividing a 164.5 separation by 7.0 gives a ratio of 23.5 that describes the crop's framing rather
+than the model's contrast. Change how much dark ring the crop includes and the number moves
+arbitrarily.
+
+> §101 chose Weber *over* absolute because the treatment moved the scale. Here the denominator is
+> pathological and **absolute is the sound choice.** There is no rule "use Weber" or "use absolute"
+> — there is only *ask what your denominator is doing on this data*, and a P50 of 7.0 in an
+> 8-bit range should stop the quote every time.
+
+Two statistics, computed from the same pixels in the same run, differing by **6×** in how bad they
+make the result look. The one that agreed with the hypothesis under test was the broken one.
