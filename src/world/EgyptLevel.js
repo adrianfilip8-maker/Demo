@@ -397,9 +397,14 @@ function courtyard(A) {
        flat y = 9.0 and MOVEMENT snaps to that, so any deviation of the art from level is a gap
        between where Sly stands and where the stone is drawn. `tilt x half-span + bow` is held
        under ~6 cm — inside a foot's thickness, and invisible as a float. */
+    /* Astragal along both lower arrises. This ring is 63% of `hero`'s projected gilded area
+       at 7–14 m — the closest gold to any canonical camera — and as four flat-faced beams it
+       was the single biggest contributor to §121.9's "gilded architecture is flat, so the
+       specular lobe has nowhere to land". A bead is 14 triangles per side and its normal
+       sweeps the whole quadrant from soffit to face. */
     const g = K.beam(len, 1.25, 1.5, {
       rng: R, pieces: Math.max(2, Math.round(len / 2.4)), crack, chip: 0.14,
-      tilt: R.jitter(0.35), bow: crack > 0 ? 0.04 : 0.014,
+      tilt: R.jitter(0.35), bow: crack > 0 ? 0.04 : 0.014, roll: 0.15,
     });
     A.add('court', 'hieroglyph_gilded', K.place(g, { x: px, y: ki.top - 0.625, z: pz, ry }));
   }
@@ -824,7 +829,7 @@ function entryPylons(A) {
   const span = 2 * (p.x - p.w / 2) + 1.6;
   // The gate lintel spans 20 m between two towers that have settled by different amounts,
   // so it cannot be level: it rides 0.5° down toward the west tower, which is the shorter one.
-  const lint = K.beam(span, 2.6, 5.4, { rng: R, pieces: 7, crack: 0.06, chip: 0.2, tilt: -0.35, bow: 0.06 });
+  const lint = K.beam(span, 2.6, 5.4, { rng: R, pieces: 7, crack: 0.06, chip: 0.2, tilt: -0.35, bow: 0.06, roll: 0.22 });
   A.add('court', 'hieroglyph_gilded', K.place(lint, { x: 0, y: 14.3, z: p.z - 0.2 }));
   ledgeProxy(A, -span / 2, span / 2, 15.6, p.z - 2.9, p.z + 2.5, { thick: 2.6 });
   const gcor = K.cornice({ w: span, d: 5.6, h: 1.5, flare: 0.95, roll: 0.34 });
@@ -1023,7 +1028,7 @@ function hypostyleHall(A) {
   for (const [x0, x1] of [[-24, -17.6], [-14.4, -4.4], [4.4, 14.4], [17.6, 24]]) wallProxy(A, x0, x1, 0, WALL_H, h.z1 - 2.1, h.z1);
   for (const [x0, x1, y] of [[-4.4, 4.4, 9.4], [-17.6, -14.4, 4.8], [14.4, 17.6, 4.8]]) wallProxy(A, x0, x1, y, WALL_H, h.z1 - 2.1, h.z1);
   /* Great doorway lintel + its own cornice: the landing pad at the end of the hook chain. */
-  A.add('hall', 'hieroglyph_gilded', K.place(K.beam(10.4, 1.5, 3.4, { rng: R, pieces: 4, crack: 0.045, chip: 0.18, tilt: 0.35, bow: 0.05 }), { x: 0, y: 10.15, z: h.z1 - 0.9 }));
+  A.add('hall', 'hieroglyph_gilded', K.place(K.beam(10.4, 1.5, 3.4, { rng: R, pieces: 4, crack: 0.045, chip: 0.18, tilt: 0.35, bow: 0.05, roll: 0.16 }), { x: 0, y: 10.15, z: h.z1 - 0.9 }));
   const dcor = K.cornice({ w: 11.2, d: 3.9, h: 0.86, flare: 0.86, roll: 0.3 });
   A.add('hall', 'sandstone_block', K.place(dcor.geo, { x: 0, y: 10.9, z: h.z1 - 0.9 }));
   ledgeProxy(A, -6.4, 6.4, 10.9 + dcor.height, h.z1 - 3.2, h.z1 + 1.2, { thick: 0.6 });
@@ -1148,6 +1153,7 @@ function hypostyleHall(A) {
        two of them converging on the vanishing point as a pair of perfect straight lines. */
     const g = K.beam(h.z1 - h.z0 - 2, 0.8, 3.0, {
       rng: R, pieces: 13, crack: 0.03, chip: 0.16, tilt: sx > 0 ? 0.20 : -0.28, bow: 0.11,
+      roll: 0.12,
     });
     A.add('hall', 'hieroglyph_gilded', K.place(g, { x: sx * 8, y: 16.6, z: zc, ry: Math.PI / 2 }));
     const a = K.beam(h.z1 - h.z0 - 2, 0.85, 2.6, { rng: R, pieces: 13, chip: 0.14, tilt: sx > 0 ? -0.18 : 0.24, bow: 0.09 });
@@ -1313,7 +1319,7 @@ function innerPylon(A) {
    * the difference and leaving a lip at both. */
   vol(A, 'pylon', 'paving_courtyard', -4.3, 4.3, -0.6, 0.02, -54.1, -51.0, { jitter: 0.02 });
   vol(A, 'pylon', 'ceiling_stars', -3.2, 3.2, 8.2, 8.5, p.z - p.d / 2, p.z + p.d / 2, { c: 0.03 });
-  A.add('pylon', 'hieroglyph_gilded', K.place(K.beam(8.6, 1.4, p.d + 0.6, { rng: R, pieces: 3, crack: 0.05, chip: 0.16 }), { x: 0, y: 8.9, z: p.z }));
+  A.add('pylon', 'hieroglyph_gilded', K.place(K.beam(8.6, 1.4, p.d + 0.6, { rng: R, pieces: 3, crack: 0.05, chip: 0.16, roll: 0.15 }), { x: 0, y: 8.9, z: p.z }));
   doorFrame(A, 'pylon', 'sandstone_worn', { halfW: 3.55, y0: 0, y1: 8.2, z: p.z + p.d / 2 + 0.02, r: 0.28 });
   A.api.doorways.push({ center: new THREE.Vector3(0, 4.1, p.z), w: 6.8, h: 8.2 });
 
@@ -1468,7 +1474,7 @@ function tomb(A) {
         K.cornerRolls({ w: 2.2, d: 2.2, h: ph - 0.12, r: 0.2, batter: 0.025, rng: R }), { x: sx * 5.5, y: F + 0.06, z: pz }));
       wallProxy(A, sx * 5.5 - 1.1, sx * 5.5 + 1.1, F, C - 1.2, pz - 1.1, pz + 1.1);
     }
-    A.add('tomb', 'hieroglyph_gilded', K.place(K.beam(15.6, 1.2, 2.4, { rng: R, pieces: 5, crack: 0.04, chip: 0.14 }), { x: sx * 5.5, y: C - 0.6, z: -68, ry: Math.PI / 2 }));
+    A.add('tomb', 'hieroglyph_gilded', K.place(K.beam(15.6, 1.2, 2.4, { rng: R, pieces: 5, crack: 0.04, chip: 0.14, roll: 0.13 }), { x: sx * 5.5, y: C - 0.6, z: -68, ry: Math.PI / 2 }));
     /* West-wall shelves: the vent's landing chain down to the floor. */
     if (sx < 0) {
       for (const [sy, z0, z1] of [[-3.2, -70, -60.5], [-6.4, -72, -64], [-9.4, -74, -66]]) {
@@ -1574,7 +1580,7 @@ function foreground(A) {
       A.proxy(K.proxyBattered(2.6, 3.0, 12.6, 0.085, A._proxyMat()), { tag: 'wall', material: 'stone', climbable: true }, { x: px, y: 0, z: 1.0 });
     }
     const span = Math.abs(outer - inner) + 2.2;
-    A.add('court', 'hieroglyph_gilded', K.place(K.beam(span, 1.7, 3.4, { rng: R, pieces: 4, crack: sx > 0 ? 0.05 : 0, chip: 0.16 }), { x: (inner + outer) / 2, y: 12.0, z: 1.0 }));
+    A.add('court', 'hieroglyph_gilded', K.place(K.beam(span, 1.7, 3.4, { rng: R, pieces: 4, crack: sx > 0 ? 0.05 : 0, chip: 0.16, roll: 0.18 }), { x: (inner + outer) / 2, y: 12.0, z: 1.0 }));
     const cor = K.cornice({ w: span, d: 3.6, h: 0.9, flare: 0.95, roll: 0.34 });
     A.add('court', 'sandstone_block', K.place(cor.geo, { x: (inner + outer) / 2, y: 12.85, z: 1.0 }));
     ledgeProxy(A, Math.min(inner, outer) - 1.1, Math.max(inner, outer) + 1.1, 12.85 + cor.height, -0.9, 2.9, { thick: 0.6 });

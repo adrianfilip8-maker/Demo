@@ -843,11 +843,52 @@ export function masonryShell(o) {
   return g ? boxProjectUVs(g) : null;
 }
 
-/** Flat slab / lintel / architrave built from a short run of blocks so the joints show. */
+/**
+ * A bead / astragal: a half-round roll running along X, its flat back against a face.
+ *
+ * The only primitive in the kit whose normal is *guaranteed* to sweep, and the arc is a full
+ * 180° for a measured reason rather than a stylistic one. The first version of this ran the
+ * quadrant from "straight down" to "straight out", which is where an astragal's mass actually
+ * sits — and it moved `hero`'s gilded area-in-lobe by **nothing** (0.69% → 0.67%). The
+ * half-vector at that framing is (−0.21, 0.71, 0.69): it is 45° **above** the horizon, and a
+ * down-and-out quadrant contains no upward-facing normal at all, so the sweep stopped about 6°
+ * short of the lobe. A roll only helps if its arc actually crosses the half-vector.
+ *
+ * So the arc runs the whole outward hemisphere, soffit → face → sky. That is what makes the
+ * "guaranteed somewhere to land" property true rather than nearly true: for ANY half-vector in
+ * the plane normal to the bead's axis, some point on the bead is exactly aligned.
+ *
+ * `radial` is the one number that matters for shading: these are smooth-shaded (Cylinder
+ * geometry writes true radial normals and `normaliseAttrs` keeps them), so `radial` sets how
+ * finely the ramp's bands can step across the roll, not how round the silhouette is.
+ *
+ * `side` +1 puts the bead on the +Z arris, −1 on −Z. The buried half is never built.
+ */
+export function beadRoll(len, r, { radial = 10, side = 1 } = {}) {
+  // theta is measured so the surface normal in beam space is (0, sin t, cos t):
+  //   t = 0 -> +Z (outward),  t = -pi/2 -> -Y (down),  t = +pi/2 -> +Y (up).
+  const t0 = side > 0 ? -Math.PI * 0.5 : Math.PI * 0.5;
+  const g = new THREE.CylinderGeometry(r, r, len, radial, 1, true, t0, Math.PI);
+  normaliseAttrs(g);
+  place(g, { rz: Math.PI * 0.5 });          // stand the axis up along X
+  return g;
+}
+
+/**
+ * Flat slab / lintel / architrave built from a short run of blocks so the joints show.
+ *
+ * `roll` adds a bead along the lower arris of both long faces. It is off by default and opted
+ * into per call site, because `beam` builds most of the level's horizontal stone and a bead on
+ * every one of them would be both a triangle cost and the high-frequency busy-ness §7.3 fails
+ * under the squint test. Where it *is* on, it is doing a specific job — see KNOWN_ISSUES §121.9
+ * and §122: a flat gilded architrave has one normal and either catches the specular lobe or
+ * does not, and at golden hour it does not. A bead is the cheapest geometry that guarantees the
+ * lobe somewhere to land, and it hands the diffuse ramp a terminator on the same triangles.
+ */
 export function beam(len, h, d, opts = {}) {
   const {
     rng, pieces = Math.max(1, Math.round(len / 2.2)), crack = 0, chip = 0.1, chamfer = 0.05,
-    tilt = 0, bow = 0,
+    tilt = 0, bow = 0, roll = 0, rollRadial = 10,
   } = opts;
   const out = [];
   let a = -len * 0.5;
@@ -875,6 +916,21 @@ export function beam(len, h, d, opts = {}) {
     });
     out.push(g);
     a += bl + 0.03;
+  }
+  /* The bead runs the beam's full length as ONE piece rather than per-block: a moulding is
+     carved after the stones are set, so it crosses the joints, and one long bead is also a
+     third of the triangles of `pieces` short ones. It follows the beam's tilt and droop so it
+     stays on the arris. */
+  if (roll > 0) {
+    for (const side of [1, -1]) {
+      const b = beadRoll(len, roll, { radial: rollRadial, side });
+      place(b, {
+        x: 0, y: -h * 0.5 + roll - bow * 0.5,
+        z: side * (d * 0.5 - roll * 0.1),
+        rz: THREE.MathUtils.degToRad(tilt),
+      });
+      out.push(b);
+    }
   }
   const g = mergeAll(out);
   return g ? boxProjectUVs(g) : null;
