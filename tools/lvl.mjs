@@ -9,6 +9,21 @@ import * as THREE from 'three';
  * about the building, but it is the *wrong* one for "what is in this frame" — the colossi,
  * the sphinx avenue and the tomb furniture are props, and a frame analysis that omits them
  * attributes their pixels to whatever masonry stands behind them.
+ *
+ * **THIS BUILDS NO TERRAIN, AND ANYTHING PLACED BY GROUND HEIGHT LANDS AT y = 0.**
+ * The engine stub returns `null` from `get('terrain')`, so `Props._sphinxAvenue` — and every
+ * other placement that asks the terrain how high the ground is — silently falls back to zero.
+ * The sphinx avenue belongs at **y 7–18 m**; here it sits on the origin plane, *underneath the
+ * dune it is supposed to stand on*.
+ *
+ * This is not hypothetical. GEOMETRY raycast the avenue through this builder while attributing
+ * §114's teal sphinxes, sampled the dune instead of the animals, and came within one step of
+ * reporting "the shadow-side hypothesis is dead" from it. **What caught it was printing the
+ * ROI's bounding box** — y 503..706, the bottom of the frame, where no sphinx is.
+ *
+ * So: this module answers questions about *architecture geometry*. It cannot answer any question
+ * whose answer depends on where a prop actually stands. For those, use a real boot, or assert the
+ * placement before trusting the sample — and print the region you measured, every time.
  */
 export async function buildLevel({ withProps = false } = {}) {
   const warnings = [];

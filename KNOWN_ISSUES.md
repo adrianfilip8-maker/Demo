@@ -8863,7 +8863,14 @@ are indistinguishable; the ×4 difference panel shows the change confined to **t
 edges and architectural highlights — with the sphinx bodies black, i.e. unchanged. The rim moves
 edges. The tint is in the material.
 
-Routing changes accordingly: the teal belongs to whoever owns the statue's material, **not** to
+> **THE ROUTING BELOW IS WRONG — corrected by GEOMETRY, see §114.** It is not the statue's
+> material: `MATERIALS.lime` is `0xd4c19a`, *exactly* §2.2's `LIMESTONE mid`, its texture is built
+> from warm `limeLight/limeMid/limeDark`, `props_lime` has **0 % winding disagreement**, and its
+> metalness is zero. The owner is **`ToonMaterial.TUNE.shadowTeal`** — a SHADING knob. Ruling out
+> one term and then naming the next thing you can think of is not attribution; the next thing was
+> `rimGain`'s neighbour in the same file, and I reached past it to the mesh.
+
+~~Routing changes accordingly: the teal belongs to whoever owns the statue's material,~~ **not** to
 SHADING's rim, and `PREREG-sphinxrim`'s proposed time-of-day ramp on `rimShadowFloorArch` would
 have been a fix aimed at the wrong term. The seal's own falsifier caught that before anything
 shipped, which is the entire reason it was written as a capability claim with a capture attached.
@@ -9549,3 +9556,92 @@ launch — the shipped arm's vertex hash is **bit-identical to a build of the pr
 ruff vertices move and **0** outside them, 14044 tris on both arms, 52/52 clips sample with 0
 non-finite. **The blocking secondary is visual and still owed**: the collar must still scallop at
 5×, and no number substitutes for that.
+
+---
+
+## §114 — the teal is `shadowTeal`, sized against the wrong stone, and it is probably §111's thread
+
+GEOMETRY attributed the sphinxes and **the answer is a SHADING knob, not a material** — which
+overturns §104's routing and my own reasoning behind it.
+
+### 114.1 The measurement
+
+`tools/tealarm.mjs`, one boot, three arms:
+
+| arm | retain % | median hue | median sat |
+|---|---|---|---|
+| base (`shadowTeal` 0.15) | 100 | **201** | 0.44 |
+| `shadowTeal = 0` | 78.5 | **220** | 0.43 |
+| self-control | 100 | 201 | 0.44 |
+
+Self-control **bit-identical, 0 px** — verified here independently, and the treatment moves 78.6 %
+of the frame on a whole-frame max-channel diff. **Looked at, not just counted:** shipped is
+turquoise, `shadowTeal = 0` is slate blue-grey. Frames rescued from the scratchpad into
+`progress/frames/teal/`, because that half has been eaten twice.
+
+### 114.2 The mechanism: a tint calibrated on one stone applied to another
+
+`shadowTeal` blends the shadow tint toward §2.2 turquoise, and its own comment records that it was
+sized against **sandstone at "G/R 0.483 linear"**. GEOMETRY measured sandstone at **0.485** — so it
+is reading the quantity the comment names — and **limestone at 0.810**, with B/R 0.491 against
+0.175.
+
+> **A tint that merely neutralises sandstone's green drives limestone's past red.** The knob is not
+> wrong; it is *calibrated on one material and applied to every material*, and the sphinxes are the
+> shot where the other material fills the frame.
+
+Why only there: at `tod 0.83` (sun elev 15°, az 191°) every camera-facing avenue surface is
+self-shadowed — flanks `n·l` −0.184, west-row faces −0.948 — while the sand is lit at +0.259. The
+pylons show lit faces; the avenue shows none.
+
+### 114.3 The knob owns the turquoise and not the coolness — which points at §111
+
+With `shadowTeal` fully off the animals are still **hue 220, sat 0.43**. The residual is the
+daylight shadow light itself, which `ToonMaterial` documents as identical `(0.123, 0.175, 0.423)`
+for *every* daylight shot — **3.4× more blue than red.**
+
+And in the `shadowTeal = 0` frame the foreground **dune goes lavender**. That is §3's lavender
+frames and task #4's *"the build is lavender-grey"*. So the likely history is: lavender shadows →
+add `shadowTeal` to push them toward turquoise → size it on sandstone → limestone overshoots.
+
+**This is very likely §111's thread.** A shadow term that is 3.4× more blue than red, plus a
+turquoise blend on top, is exactly the shape of a global b−r swing — and it satisfies §111's
+registered discriminator, which demands a single term that simultaneously warms the architecture,
+raises the character's authored contrast **and** clears the sphinxes. Handed to SHADING as a
+candidate, not a conclusion: §111's discriminator still has to fire.
+
+### 114.4 What GEOMETRY declined to do, and it was right
+
+It changed nothing. Swapping the sphinxes to sandstone **would not fix it** — shadowed sandstone
+measures hue 217–227 in `hero`, the same blue they already land on with `shadowTeal` off. And the
+albedo cannot be warmed without breaking §2.2, since it is already the palette value exactly.
+
+It also priced the sand drifts, and **the budget premise is wrong by two orders of magnitude**: all
+eight are **792 triangles, 560 verts, 0.066 % of budget, and zero draw calls** — they merge into
+existing `sandstone_worn` buckets. Deleting or moving them saves nothing measurable. It is an art
+call, and GEOMETRY declined to make it on a rationale that does not survive measurement.
+
+### 114.5 §97's 16 m is forced by the terrain, not chosen by the search
+
+Rendered rather than ray-marched: at 6 m AGL on the avenue axis **the camera is inside the dune** —
+~85 % sand ripples, the avenue a sliver. So §97's "every top station sits at 16 m AGL", which I
+flagged as a suspicious artefact of my sweep, is a **fact about the ground**. The ray-march table
+could not have shown it and the render did in one frame.
+
+Station A (on-axis, 16 m, fov 38) delivers the processional signature — two converging rows
+full-width, gate on the vanishing point, three depth planes — and no frame in the roster does.
+GEOMETRY's recommendation, which I accept: **yes to a dedicated avenue frame, but not yet.** Both
+candidates put sixteen turquoise animals across the frame at full scale, so shipping either before
+§114.1 lands hands the critic a larger version of the defect.
+
+### 114.6 `lvl.mjs` builds no terrain, and it nearly cost a false negative
+
+The engine stub returns `null` for `get('terrain')`, so `Props._sphinxAvenue` places every animal
+at **y = 0** instead of 7–18 m — *underneath the dune it should stand on*. GEOMETRY raycast through
+it, sampled the dune, and came within one step of reporting **"the shadow-side hypothesis is
+dead"** from it.
+
+**What caught it was printing the ROI's bounding box**: y 503..706, the bottom of the frame, where
+no sphinx is. The warning is now in `lvl.mjs`'s header. That is the same countermeasure that caught
+§104.2 and §113's ROI errors — *derive the region, then look at it* — working for a third owner on
+a fourth instance.
