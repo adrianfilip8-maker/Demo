@@ -10612,3 +10612,90 @@ Two smaller things carried out of the same report, both instrument defects worth
   as §83/§91. It made a *fresh* capture look two days stale, and the frames were nearly discarded on
   that basis. What identified it correctly was the run log's 1458 s lock wait matching the ticket
   timestamp — **elapsed intervals inside one log survive a clock jump; absolute mtimes do not.**
+
+## §124 — a pass whose most useful line is the author's own failed prediction
+
+`fx9` verified the `courtStackBudget` family cap and **task #13 closes as MET** — open as RE-OPENED
+for days on the grounds that the change was shipped and never rendered, which is a worse state than
+a known failure because it looks finished from outside. `progress/records/RESULT-fx9.md`.
+
+The passes are clean and are not the interesting part:
+
+| ROI | fx8 pin | target | fx9 | |
+|---|---|---|---|---|
+| `combat` left edge | +29.11 | ≤ 9.5 | **+1.50** | 6.3× inside |
+| `combat` doorway | +15.95 | ≤ 5.1 | **+3.25** | pass |
+
+`courtCap` reads **0.259** against a pre-registered ≈ 0.2564 — the mechanism confirmed *at the value
+it was predicted to take*, not merely in direction.
+
+### 124.1 The author's own sealed prediction failed, and the reason overturns an attribution
+
+`fx9`'s header predicted the `dunes` haze would drop **to roughly a quarter**. It dropped **~22 %**
+(1.13 % / +7.5 → 0.88 % / +6.14). Reported as a failed prediction rather than as an accepted cost
+coming in under budget — which is how it could easily have been written, since the number moved the
+*welcome* way.
+
+The reason is the finding. The dominant blob reads **+7.1** against fx5's **+7.0** at essentially
+the same bbox — **unchanged by a 4× cut to the court family**, which is only possible if it is not
+court family. `courtCap` is 0.25 there and the blades did take their cut; they simply are not what
+that frame's haze is made of.
+
+> **The acceptance mis-attributed `dunes`' haze to the court family.** The accepted cost is smaller
+> than accepted, and *"record, do not chase"* must not now be read as evidence that court blades
+> drive dunes haze. They do not.
+
+A prediction that fails in the direction you wanted is the easiest kind to quietly not mention. The
+entry exists because it was mentioned.
+
+### 124.2 A fail-safe verified by construction rather than by pixels
+
+On `traversal`, `courtCap` = **1.000 exactly** (smoothN 1.38 < budget 2.0) on both variants. The cap
+is therefore **inert in that framing by construction**, and the change under test cannot have
+altered the frame at all — *no pixel comparison is required to establish that half.*
+
+FX then declined to claim the pixel delta that was available: the beam blob is ~1.9× the fx5 pin,
+and it attributed that to the intervening tree rather than to its own change. **Refusing a
+favourable number whose provenance is cross-tree** is the same discipline as 124.1 in the other
+direction.
+
+### 124.3 §122.1's threshold rule, applied one turn after it was written
+
+Both instruments are now stated *with* their numbers, unprompted: `roilift.mjs` takes the mean over
+**every pixel of the rect with no difference threshold** — and is the instrument the fx8 pins were
+produced by, so the comparison is like-for-like — while every px count and bbox is at
+**`|ΔR|+|ΔG|+|ΔB| ≥ 4`**, flagged as ~1.9× movable if the convention were swapped, with no bug
+involved. This matters here specifically because **fx9's thresholds are absolute lifts, not ratios**,
+which is exactly the case §122.1 identified as the one where the convention decides the verdict.
+
+### 124.4 §121.4's hazard fired for real, and was disarmed by reading the config
+
+GEOMETRY wrote `EgyptLevel.js` at **15:07:38** and `Kit.js` at **15:08:49** — *between*
+`traversal.full` (15:07) and `traversal.noshaft` (15:08). That is the tree-moving-under-an-arm
+hazard landing squarely inside a capture window.
+
+It could not reach the run, and the proof is structural rather than statistical: `harness.mjs:54`
+sets `SANDS_NO_HMR=1`, `vite.config.js:12-13` turns that into `hmr:false` +
+`watch:{ignored:['**/*']}`, and the harness navigates **once** with no reload between jobs. All six
+frames are on the **boot-time tree**; each pair is dt-0 within its shot.
+
+> **The bundler reads the tree at boot, not at capture.** So the §121.4 discipline is sharper than
+> "check the tree hash before and after": what matters is the tree at the moment of `page.goto`, and
+> a mid-run edit is harmless where a between-runs edit is fatal. Worth knowing before someone voids
+> a good run over an mtime.
+
+### 124.5 The probe defect from §122.3, fixed in the next instrument rather than filed
+
+`fx20` (the `temple` pink-disc pool toggle, ten jobs, queued) stamps **`tod`, `keyIsMoon`, and the
+full staged camera** — position, direction, quaternion, fov, aspect, near/far — plus live counts for
+every batch *and* for flames/sparkles/shafts. That is the exact gap that leaves `fx19` unable to
+distinguish "the artefact was fixed" from "this framing never had it", closed one run later by the
+agent that logged it against itself.
+
+Its acceptance is registered in the header before the frames exist: the pool whose removal moves the
+disc ROI by **> 3.0 mean ΔL** while others stay under 1.0 is named; **if none clears 3.0 the disc is
+not a batch sprite** and escalates to the systems the probe also counts; `back` must be bit-identical
+or every row is void. And it is **immune to concurrent `src` edits by construction** — one staging,
+all variants dt-0 on it — rather than by luck, with a pre-run content hash re-computed on completion.
+
+§78.4's wrapper hazard recurred a third time (node at ppid 31595) and was caught by the `/proc` walk.
