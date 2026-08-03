@@ -491,7 +491,10 @@ function courtyard(A) {
     wallProxy(A, cx - 3.2, cx + 3.2, L.colossi.knee, tbTop, cz - 3.0, cz - 1.2);
     ledgeProxy(A, cx - 3.2, cx + 3.2, tbTop, cz - 3.0, cz - 1.2, { thick: 0.7 });
     /* Sand banked against the north face — the wind comes down the valley. */
-    A.add('court', 'sandstone_worn', K.place(K.sandDrift({ len: 7.4, h: 1.35, depth: 3.4, rng: R }), { x: cx, z: cz - 3.0, ry: Math.PI }));
+    /* Same wind, same reason as the entry pylons — the colossi are the other mirrored pair. */
+    A.add('court', 'sandstone_worn', K.place(K.sandDrift({
+      len: 7.4, h: 1.35, depth: 3.4, rng: R, skew: sx > 0 ? 0.34 : 0.66,
+    }), { x: cx, z: cz - 3.0, ry: Math.PI }));
   }
 
   /* ---- Peristyle colonnade: the §8.1 architrave ledge ring at y = 9.0, x = ±23. ---- */
@@ -784,8 +787,14 @@ function entryPylons(A) {
       { tag: 'wall', material: 'stone', climbable: true, batter: B }, { x: cx, y: 0, z: p.z });
 
     /* Sand drift on the north (leeward) face. */
-    A.add('court', 'sandstone_worn', K.place(K.sandDrift({ len: p.w * 0.95, h: A.TUNE.sandHeight, depth: 4.2, rng: R }),
-      { x: cx, z: p.z - p.d / 2, ry: Math.PI }));
+    /* `skew` flips with `sx` because the drift is placed mirrored (`x: cx = ±p.x`), so a single
+       local value would give the two towers mirror-image crests — which is precisely the tell
+       that made them read as a matched pair of smiles in `courtyard`. Flipping it means both
+       crests pile toward the same WORLD direction, i.e. one wind over the whole site, which is
+       both the physically coherent choice and the one that breaks the symmetry. */
+    A.add('court', 'sandstone_worn', K.place(K.sandDrift({
+      len: p.w * 0.95, h: A.TUNE.sandHeight, depth: 4.2, rng: R, skew: sx > 0 ? 0.30 : 0.70,
+    }), { x: cx, z: p.z - p.d / 2, ry: Math.PI }));
 
     /* The stone that came off the collapsed corner is lying at its foot. A bite with no
        debris under it reads as a design decision; a bite with a spill of blocks under it

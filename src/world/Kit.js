@@ -1676,7 +1676,7 @@ export function spire({ r = 0.55, h = 2.3, rng } = {}) {
  * which is deliberately tallest where two forms meet. Local X = along the wall, the drift
  * spills toward +Z.
  */
-export function sandDrift({ len = 12, h = 1.5, depth = 3.2, seg = 14, rng }) {
+export function sandDrift({ len = 12, h = 1.5, depth = 3.2, seg = 14, rng, skew = null }) {
   const verts = [], uvs = [], idx = [];
   /* Three rows, not two. A two-row ribbon is a single flat slope with one normal across its
      whole width, which is the same "nothing for the ramp to quantise" problem the walls had —
@@ -1688,11 +1688,64 @@ export function sandDrift({ len = 12, h = 1.5, depth = 3.2, seg = 14, rng }) {
     [0.16, 0.58],   // shoulder, about 21 deg
     [0.00, 1.00],   // toe feathering into the ground, about 10 deg
   ];
+  /* **The crest is skewed, and it used to be a symmetric arch.** `0.55 + 0.45·sin(t·π)` peaks
+     at exactly t = 0.5, so every drift in the game put its high point at the dead centre of its
+     own run — and drifts come in mirrored pairs (both entry pylons, both colossi), so each pair
+     got two crests of identical shape at identical height. That is a real latent mirror tell.
+
+     **What it is NOT:** I started this change believing those crests were the twin crescents
+     visible on the two masses in `courtyard`. They are not. Raycasting those pixels returns
+     `props_stone` at 16–20 m — the colossi statues themselves — so the arcs that read as a
+     matched pair of smiles are the figures' own collars, and they belong to Statues/PropKit,
+     not here. The crop that suggested otherwise was read at 2× without checking what it
+     contained; the raycast took a minute and settled it. Recorded because the wrong attribution
+     is the kind that survives into a ledger if only the fix is written down.
+
+     The old ±0.175 m `wob` on a 1.7 m drift is ~10% and nowhere near enough to break an arch.
+     What breaks it is moving the peak: `pk` remaps t so the crest sits at `pk` instead of the
+     middle, giving the two flanks different lengths — a short steep windward rise and a long
+     lee tail, which is also what wind-blown sand against an obstacle actually does. A second
+     harmonic at 12% keeps the crest line from being a clean arc of any kind.
+
+     `pk` and `ph` are drawn from `rng` when not supplied, so consecutive calls sharing one rng
+     de-mirror automatically and no call site has to opt in. Callers that need a specific lee
+     direction can pass `skew`.
+
+     TOPOLOGY IS UNCHANGED: vertex count is `(seg+1)·ROWS.length` and neither moves, so this
+     cannot alter a triangle count, a draw call, or a merge bucket. It is a vertex-position
+     change only. Checked rather than asserted — 60 verts / 84 tris at skew null/0.30/0.50/0.70.
+
+     **DISCLOSURE: this fix is very nearly invisible, and I found that out after making it.**
+     `tools/driftvis.mjs` raycasts 15 samples over each of the level's eight drifts —
+     along the run and out from the wall — against all fifteen canonical cameras, and asks
+     whether the first hit is the drift itself:
+
+       pylon −X 1/15 (`guard`)   pylon +X 1/15 (`courtyard`, `sly-key`)
+       colossi −X 1/15 (`dunes`)  inner pylon 1/15 (`dunes`)
+       colossi +X, hall ±X, court corner: front-most at ZERO samples in ANY camera
+
+     So the crescent I set out to break was never the thing on screen — the arcs in
+     `courtyard` are `props_stone` at 16–20 m, i.e. the colossi themselves, which I confirmed
+     by raycast after the crop misled me. Drifts sit on leeward/far faces and behind other
+     masses, so they are close to dead geometry: they cost triangles and shadow-casting for
+     ~1/15 of one sample's worth of screen presence.
+
+     The skew is kept because it is free, topology-neutral and removes a real latent mirror
+     tell — but it is **unverified in any graded frame** and must not be reported as a fix to
+     the mirroring finding. The live question this exposes is whether drifts should be on the
+     windward faces the hero cameras actually look at; that is a placement decision in
+     EgyptLevel.js, it changes triangle counts, and it is deliberately NOT bundled in here. */
+  const pk = THREE.MathUtils.clamp(skew ?? (rng ? 0.5 + rng.jitter(0.34) : 0.5), 0.12, 0.88);
+  const ph = rng ? rng.range(0, Math.PI * 2) : 0.7;
   for (let i = 0; i <= seg; i++) {
     const t = i / seg, x = (t - 0.5) * len;
     const wob = rng ? rng.jitter(0.5) : 0;
-    const hh = Math.max(0.12, h * (0.55 + 0.45 * Math.sin(t * Math.PI)) + wob * 0.35);
-    const dd = depth * (0.6 + 0.4 * Math.sin(t * Math.PI * 1.3 + 0.7)) + (rng ? rng.jitter(0.4) : 0);
+    // Remap t so sin() peaks at `pk`: [0,pk] -> [0,0.5] and [pk,1] -> [0.5,1].
+    const u = t < pk ? 0.5 * (t / pk) : 0.5 + 0.5 * ((t - pk) / (1 - pk));
+    const arch = 0.42 + 0.58 * Math.sin(u * Math.PI);
+    const ripple = 0.12 * Math.sin(t * Math.PI * 2.7 + ph);
+    const hh = Math.max(0.12, h * (arch + ripple) + wob * 0.35);
+    const dd = depth * (0.6 + 0.4 * Math.sin(t * Math.PI * 1.3 + ph * 0.6)) + (rng ? rng.jitter(0.4) : 0);
     for (const [hk, dk] of ROWS) {
       const jx = hk < 1 ? (rng ? rng.jitter(0.3 * dk) : 0) : 0;
       verts.push(x + jx, Math.max(0.015, hh * hk), dd * dk);

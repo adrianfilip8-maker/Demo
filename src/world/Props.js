@@ -95,7 +95,20 @@ export class Props {
 
   _colossi() {
     for (const p of L.colossus) {
-      const bag = seatedColossus({ rng: this.rng, worn: 0.55 });
+      /* The pair was built from identical parameters, so the two broad collars were the same
+         arc at the same height — and in `courtyard` those two crescents are the loudest
+         "mirrored buildings" tell in the frame (raycast: `props_stone` at 16–20 m, i.e. these
+         figures, not the masonry behind them). The east figure now carries a shorter, 3-row
+         collar and heavier wear, which reads as the inlay having been robbed out of the outer
+         row — consistent with the lost head and 1.5 m back-pillar difference already in the
+         tree, rather than a second unrelated kind of damage. */
+      const west = p.x < 0;
+      const bag = seatedColossus({
+        rng: this.rng,
+        worn: west ? 0.44 : 0.68,
+        collarArc: west ? Math.PI * 1.25 : Math.PI * 0.86,
+        collarRows: west ? 4 : 3,
+      });
       // Both face down the axis toward the approach, mirrored about x.
       bag.transform(matrixOf({ x: p.x, y: L.colossusY, z: p.z, ry: p.x < 0 ? 0.06 : -0.06 }));
       this._absorb(bag);
@@ -140,21 +153,51 @@ export class Props {
    *      wrong word for what is happening.
    *
    * I predicted 0.65 m would clear four of the five occluded and take 69% → 44%. **It clears
-   * two, for 69% → 56%**, and the sweep says that is all there is to buy:
+   * two, for 69% → 56%**:
    *
-   *   pedestal   0     0.4    0.65    1.0    1.4
-   *   hidden    11/16  11/16   9/16   9/16   9/16
+   *   pedestal   0     0.4    0.65    1.0    1.4    2.0    3.0
+   *   hidden    11/16  11/16   9/16   9/16   9/16   8/16   8/16
    *
    * The prediction was wrong because it treated the occluder as a fixed step — subtract the
    * lift from the penetration and count the sign. It is a crest 11–28 m along a ray whose far
    * end is what moves, so raising the animal swings the ray across a different part of the
-   * dune and the penetration does not fall 1:1. 0.65 m is kept because it is the *knee*: it
-   * captures the entire available gain, and 1.4 m — a plinth taller than the animal's own body
-   * — captures no more.
+   * dune and the penetration does not fall 1:1.
    *
-   * So the two still-occluded and the six off-frame are the camera-versus-dune decision
-   * GEOMETRY has twice declined to take alone, and this does not pre-empt it. It is the part
-   * that is unambiguously ours, and it is worth 2 of 16 rather than the 4 I expected.
+   * **CORRECTION to my own headline, made where it is declared.** The sweep above originally
+   * stopped at 1.4 m and I wrote that 0.65 "captures the entire available gain". Extending it
+   * to 2.0/3.0 shows that is overstated: 2.0 m buys one more animal, and 3.0 m buys nothing
+   * beyond it. So the accurate claim is narrower — **0.65 m is the knee, and everything past it
+   * costs a plinth taller than half the animal for at most one animal.** The reason to keep
+   * 0.65 is that trade, not the absence of any further gain. A sweep that stops where the
+   * curve first flattens cannot tell a knee from an asymptote; this one stopped too early and
+   * the stronger word went into the ledger on the strength of it.
+   *
+   * ── The remaining nine are NOT reachable from this file, and the numbers say why ──
+   *
+   * §8.1 pins the avenue at `x = ±7, z = 40…84`, so the avenue itself cannot move: that is the
+   * hard coordinate contract, not a preference. With the lift at its knee, what is left is:
+   *
+   *   6 OFF-FRAME. The `dunes` camera stands at (26, 19.5, 84) — **at the avenue's own near
+   *     end**, z 84. Half the processional way is therefore beside and behind the lens by
+   *     construction. Measured as the vfov each would need from that position
+   *     (`tools/avenueangle.mjs`): 47°, 62°, 68°, 82°, 106°, 107° against the shipped 42°.
+   *     **Covering all six needs vfov ≥ 107°** — a fisheye that would bow the pyramids and the
+   *     temple front. This is not an fov fix, and no geometry change can put an object that is
+   *     behind a camera in front of it.
+   *   3 OCCLUDED by a dune crest 14–18 m along the ray, by 0.19 / 0.36 / 1.08 m. That crest is
+   *     `Terrain.js`.
+   *
+   * Dollying back along the view axis — which preserves the bearing, and so keeps sun-to-subject
+   * and view-to-subject identical to the shipped framing — **makes it worse**: at 60 m back only
+   * 10 of 16 are visible and the occluded count rises 3 → 6, because the longer rays graze more
+   * dune, while the camera climbs to 27 m above the sand and the shot stops being "standing on
+   * the ridge" at all.
+   *
+   * **Routing, stated so it can be acted on rather than re-derived:** the lever is `Shots.js`
+   * (move the camera down the avenue toward lower z, keeping fov) or `Terrain.js` (lower the
+   * crest at z ≈ 46). Neither is GEOMETRY's file. What is settled and should not be re-opened:
+   * placement is correct (0 of 16 sunk; all stand 2.03–3.59 m clear of their local sand), the
+   * lift is at its knee, and "buried" was the wrong word for all nine.
    */
   static AVENUE_PEDESTAL = 0.65;
 

@@ -127,7 +127,12 @@ function nemes(bag, { w, browY, topY, faceZ, backZ, stripes = 8, rng, lappetDrop
  * registered `ledge` at world y 4.5 and Sly has to be able to stand on it.
  */
 export function seatedColossus(opts = {}) {
-  const { rng, worn = 0.5 } = opts;
+  /* `collarArc`/`collarRows` exist so the two courtyard colossi can differ. The broad collar
+     is the widest horizontal feature on the figure and it sits at the centre of the mass, so
+     when both animals carry the identical arc the pair reads as matched — measured as the
+     dominant mirror tell in `courtyard`, where raycasting the two crescents returns these
+     statues at 16–20 m. Defaults reproduce the previous single shape exactly. */
+  const { rng, worn = 0.5, collarArc = Math.PI * 1.25, collarRows = 4 } = opts;
   const bag = new Bag();
   const R = rng;
 
@@ -186,7 +191,7 @@ export function seatedColossus(opts = {}) {
   bag.add('lapis', chunkAt(-0.50, 0.50, HIP - 0.18, HIP + 0.46, 1.42, 1.50, { rng: R, jitter: 0.005 }));
 
   /* ---- broad collar ---- */
-  const col = collar({ r: 1.92, rows: 4, arc: Math.PI * 1.25, rng: R, keys: ['gold', 'lapis', 'gold', 'turquoise'] });
+  const col = collar({ r: 1.92, rows: collarRows, arc: collarArc, rng: R, keys: ['gold', 'lapis', 'gold', 'turquoise'] });
   col.transform({ y: CHEST - 0.30, z: 1.18, rx: D(-9), sz: 0.55 });
   bag.absorb(col);
 
