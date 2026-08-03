@@ -8328,6 +8328,16 @@ critic should know about, not a reason to grade gently.
   head definitions. `headratio.mjs` implements the scoreable §65.4 one. **Do not cross-quote them**
   — and note that the wrong one is the one that looks like a failure.
 
+  > **UPDATED — and the update makes the rule stronger than it was written.** `shotsil` now prints
+  > **5.11**, not 5.91, with the cranium unchanged at 0.314 m. Nothing about the head moved: the
+  > figure is `perch_idle`, `shotsil` measures the **silhouette extent**, and CHARACTER's cane fix
+  > raised the crook out of the deck — so the silhouette's lowest point rose, the total shortened,
+  > and the ratio fell. **A number that changes when a prop moves is not an anatomical measurement**,
+  > and this one carries a head-count name. So the reason not to cross-quote is not merely that the
+  > two use different head definitions; it is that only one of them is measuring the body at all.
+  > §100's eye statistic is deliberately built the same way round — off the mesh, not off a
+  > silhouette — for this reason.
+
 ### 96.4 The fur brief was aimed at the wrong geometry, and the residual is not smoothness
 
 CHARACTER measured the contour on the shots that score it: **68% cane, 35% cloth, 34% tail.** The
@@ -8956,3 +8966,75 @@ respectively. Neither shipped.
 **Finding #9 now returns to unattributed with both candidates killed by test rather than by
 argument** — `TUNE.chroma = 0.0` in §80.4, and the ink pass here. That is a better state than a
 plausible fix: the observation is intact and nothing has been changed on a wrong theory.
+
+---
+
+## §106 — the cane was two objects, the fix uncovered the next defect, and the render is losing the model
+
+CHARACTER's `char13` against `char12` as control (`f47e0e4`+dirty vs `52d4a43`, 3 shots, 0 failed).
+
+### 106.1 The cane, and §96.1's void finally shown as a picture
+
+In `char12/sly-perch.png` the cane is **two disconnected gold fragments** — a stub at the hand and
+a separate crescent lying half-sunk in the deck. That is §82.4's "floating brown prop", and it is
+what `canesweep.mjs` scored **rank 1 of 10351** while building into an empty scene with no floor.
+In `char13` it is a **single continuous J-crook clear of the deck**, and at `hero` the hook now
+leaves the torso and silhouettes against open ground. The difference panel localises the change to
+grip and hook only.
+
+### 106.2 The colour confound was expected and is measured absent
+
+`Materials.js` moved underneath between the two builds, so a jaw-brightness delta could have been
+TEXTURES' work. **Two control ROIs on unchanged character surfaces are bit-identical across the
+builds** — cheek fur 59.8 % dark in both, mean luma 86.4 → 86.4; chest V 54.7 %, 65.0 → 65.0 —
+equal to the decimal. So the drift does not reach these pixels and the jaw delta (54.8 % → 38.3 %
+dark, mean luma 59.0 → 79.9) is attributable to the tuft row.
+
+**A cross-owner confound that everyone expected to bite, retired by a control rather than by an
+argument that it probably did not matter.**
+
+### 106.3 Fixing the row promoted its neighbours — §12's shape, unpredicted
+
+Neck L/R are now **the darkest character surface in the frame** — 61.9 % and 53.7 % dark, ~80 % at
+luma < 80 — against the jaw's repaired 79.9 mean luma. The jaw slab had been standing *in front of*
+them. **"The chips are fixed" is a reading available from the jaw ROI alone and it is wrong.**
+
+Attribution for those two is explicitly **not** established, and CHARACTER says why the census
+cannot establish it: an ROI rectangle cannot separate an ink-hulled card from cast shadow under the
+jaw or from collar material, and no offline probe here renders the hull. `PREREG-ruff.md` is swept
+into `progress/records/` — it fixes arms, thresholds (**≥15 levels on two of three ROIs =
+confirmed; <5 on all three = refuted**), a void condition on the controls, and a decision rule that
+**pre-commits against removal** if the collar stops scalloping, preferring card *width* because
+§37's mechanism is a ratio.
+
+### 106.4 The hold-out is gated, and the gate had a real near-miss to prevent
+
+`VITE_CHAR_AB=noruff`, mirroring `VITE_TEX_AB`, default-off and verified inert. The alternative —
+edit the rows out, capture, edit them back — would have put a modified character into **TEXTURES'
+arris A/B, which was queued behind this work with `hero` in its shot list.** An edit landing
+between its two arms does not cancel out; it corrupts the comparison silently and neither owner
+would see it.
+
+> **Both arms of a gated A/B are the same commit and differ only in the named treatment.** In a
+> multi-agent tree, editing the shipped state to make a diagnostic is not a local act.
+
+Verified before sweeping: `CHAR_AB('noruff')` false with no env and no global, true only when set,
+false when cleared, false for an unrelated token; 14044 body tris unchanged; head:body still 5.03;
+52/52 clips, 0 sample failures, 0 non-finite.
+
+### 106.5 Two findings CHARACTER cannot fix, and the second is the important one
+
+- **`combat` is blown to a flat cream cutout** by the FX impact flash. Exposure, not geometry →
+  **FX/POSTFX**. With `guard` mute and `courtyard` at 42 px, this leaves `sly-closeup` and
+  `sly-key` as effectively the only frames that score character colour.
+- **The authored model reads far more like Sly than the delivered frame does.** The shaded artefact
+  has high-contrast cream/dark tail rings and a legible cream chest; the render **compresses him
+  toward uniform dark blue**. Geometry is not the lever → **SHADING/LIGHTING**.
+
+That second one reframes a lot of this session's character work. Every §7.3 condition has been
+chased in geometry — proportions, silhouette, fur cards, pose — and the claim here is that the
+model already carries contrast the frame is throwing away. **If it holds, character quality is
+currently shading-limited, not modelling-limited**, and further card-level work has a ceiling it
+cannot see past. It is a read off two artefacts and needs its own measurement before it is banked;
+the natural one is a per-band luma comparison between the authored albedo and the delivered pixels
+over the same ROIs the controls above already validate.
