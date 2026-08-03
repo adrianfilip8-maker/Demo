@@ -43,9 +43,18 @@ async function build(label, path, cls, pick) {
 }
 await build('architecture', '../src/world/Architecture.js', 'Architecture', o => o.root);
 await build('props',        '../src/world/Props.js',        'Props',        o => o.group || o.root);
+/* `terrain` INCLUDES vegetation and water — do not build them again.
+ *
+ * `Terrain`'s constructor builds both, and `Vegetation.init()` parents into `terrain.group`
+ * (`Vegetation.js:467`). This file used to build them a second time AND list them as separate
+ * roots, so every vegetation triangle was counted three times: once inside `terrain`, once in
+ * its own root, once more from the duplicate build. The over-report was **+18 draws /
+ * +0.155 M tris** — it turned a deduped 71 / 0.572 M into 89 / 0.728 M, and I quoted the
+ * inflated figure back to an owner as if it were the tree's. KNOWN_ISSUES §130.
+ *
+ * Verified by walking the terrain subtree: it contains `vegetation/` and `water/nile`. If you
+ * want them broken out, split the subtree by name — do not instantiate the modules twice. */
 await build('terrain',      '../src/world/Terrain.js',      'Terrain',      o => o.group || o.root || o.mesh);
-await build('vegetation',   '../src/world/Vegetation.js',   'Vegetation',   o => o.group || o.root);
-await build('water',        '../src/world/Water.js',        'Water',        o => o.group || o.root || o.mesh);
 
 const tri = (m) => {
   const g = m.geometry; if (!g?.attributes?.position) return 0;

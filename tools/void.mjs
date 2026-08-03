@@ -126,15 +126,15 @@ function cast(o, d, maxT = 400) {
 const W = 160, H = 90;
 const names = ['hero','temple','dunes','courtyard','guard','night','interior','traversal','combat','sly-closeup'];
 console.log(`${TRI.length} tris;  ${W}x${H} = ${W*H} rays per shot\n`);
-console.log('shot          rays   into-void   where');
-let total = 0;
+console.log('shot          rays       LEAKS   front-in   where');
+let total = 0, totalFront = 0;
 for (const nm of names) {
   const s = SHOTS[nm]; if (!s) continue;
   const cam = new THREE.PerspectiveCamera(s.fov, 16/9, 0.1, 1000);
   cam.position.fromArray(s.pos); cam.lookAt(new THREE.Vector3().fromArray(s.target));
   cam.updateMatrixWorld(true);
   const o = cam.position.clone();
-  let hits = 0; const tally = new Map();
+  let hits = 0, front = 0; const tally = new Map();
   for (let py=0; py<H; py++) for (let px=0; px<W; px++) {
     const ndc = new THREE.Vector3((px+0.5)/W*2-1, 1-(py+0.5)/H*2, 0.5);
     const d = ndc.unproject(cam).sub(o).normalize();
@@ -145,11 +145,34 @@ for (const nm of names) {
     if (!v) continue;
     /* In the void is not enough on its own: a reveal pier or a niche back legitimately STANDS
        in the void, and its outward face is what the camera is supposed to see. The leak is the
-       ray that reaches the *inside* of a leaf — a face pointing away from the camera. */
+       ray that reaches the *inside* of a leaf — a face pointing away from the camera.
+
+       THE LINE BELOW USED TO BE `hits++` — the paragraph above specified the test and the code
+       never ran it, so the headline counted every into-void first hit including front-facing
+       stone. KNOWN_ISSUES §130: that made a clean tree read as 10 leaks, and GEOMETRY came one
+       step from reporting its own seal work as a regression. A probe whose headline number is
+       not the condition its comment defines is the §39/§43/§50 family, and this one had the
+       definition written directly above the omission. */
+    const T = TRI[r.n];
+    const e1x=T[3]-T[0], e1y=T[4]-T[1], e1z=T[5]-T[2];
+    const e2x=T[6]-T[0], e2y=T[7]-T[1], e2z=T[8]-T[2];
+    const nx=e1y*e2z-e1z*e2y, ny=e1z*e2x-e1x*e2z, nz=e1x*e2y-e1y*e2x;
+    const nl=Math.hypot(nx,ny,nz) || 1;
+    /* Winding is CCW-outward throughout the kit, so n·d > 0 means the ray is arriving at the
+       BACK of the face: the camera is inside. Validated against a synthetic BoxGeometry, which
+       reads +1.000 from inside and −1.000 from outside. */
+    const nd = (nx*d.x + ny*d.y + nz*d.z) / nl;
+    front++;
+    if (nd <= 0) continue;                  // outside face of real stone — not a leak
     hits++; tally.set(v[0], (tally.get(v[0])||0)+1);
   }
-  total += hits;
+  total += hits; totalFront += front - hits;
   const top = [...tally.entries()].sort((a,b)=>b[1]-a[1]).map(([k,v])=>`${k}:${v}`).join('  ');
-  console.log(`${nm.padEnd(13)} ${String(W*H).padStart(5)}  ${String(hits).padStart(9)}   ${top}`);
+  console.log(`${nm.padEnd(13)} ${String(W*H).padStart(5)}  ${String(hits).padStart(9)}   ${String(front-hits).padStart(7)}   ${top}`);
 }
-console.log(`\nTOTAL into-void first hits: ${total}`);
+console.log(`\nTOTAL LEAKS (backfacing, into-void first hits): ${total}`);
+console.log(`front-facing into-void hits (NOT leaks — stone standing in the void): ${totalFront}`);
+if (total === 0 && totalFront > 0) {
+  console.log('Seal is intact. The front-facing column is expected and is not a regression;\n' +
+    'use progress/records/voidwhere.mjs to place them if the count moves.');
+}

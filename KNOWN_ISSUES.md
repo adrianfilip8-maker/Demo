@@ -11110,3 +11110,123 @@ Its §116 mechanism claim conflated two levers, and CHARACTER's sweep separates 
 cards moves ink 40.6 %; the hull *weight* moves 105 px (~0.7 %).** SHADING's mechanism delivers the
 second. The 38 % belongs to the first, and the real lever is `Body.addTuft`'s normal bias — so the
 number that made the hull-weight case look strong was never measuring the hull weight.
+
+## §130 — two probes whose headline numbers were not their documented conditions, and gold's real culprit
+
+### 130.1 `void.mjs` counted something other than the leak its own comment defines
+
+GEOMETRY's seal check read **10 into-void hits against a recorded 0**, with the triangle count up
+319,840 → 323,108. It looked exactly like its own bead work breaking a shell.
+
+It had not. The probe's loop comment states the condition — *"the leak is the ray that reaches the
+**inside** of a leaf — a face pointing away from the camera"* — and the next line was `hits++`,
+with no facing test anywhere. It counted every into-void first hit, **front-facing stone included**.
+A reveal pier or niche back legitimately stands in the void and its outward face is what the camera
+is *supposed* to see.
+
+With the facing test applied: **0 backface, 10 frontface**, all at `n·d` −0.748…−0.918 — the camera
+is looking at the *outside* of stone, so no interior is visible along those rays whatever block they
+hit. All ten are 0.050–0.162 m inside the analytic boundary, against the probe's own 0.30 m margin
+documented as covering `bow`+`drift` but not tracking `settle`, `chip`, `recess` or the chamfer.
+Boundary misclassifications inside the model's slop.
+
+**Fixed in `tools/void.mjs`, and the headline is now the leak count** — with the front-facing
+population printed in its own column, since it is expected and its movement is informative rather
+than alarming. Re-run confirms GEOMETRY's numbers exactly: **0 leaks, 10 front-in, 144,000 rays.**
+
+> This is the §39 / §43 / §50 family with the definition written **directly above the omission**.
+> The previous owner wrote the test out in prose, then did not run it — and the next reader (twice
+> now) takes the headline as a regression. **A probe that reports a number its comment does not
+> define will be believed, because the comment is what makes it look rigorous.**
+
+GEOMETRY also control-validated the facing test *before* trusting it, citing §128.3: a synthetic
+`BoxGeometry` reads `n·d` **+1.000 from inside, −1.000 from outside**. Its in-level control was weak
+(1 backface / 35), and it said so rather than quoting the strong-sounding number.
+
+### 130.2 `scenebudget.mjs` counted vegetation three times, and I quoted the inflated figure
+
+`Terrain`'s constructor builds `Vegetation` and `Water`, and `Vegetation.init()` parents into
+`terrain.group` (`Vegetation.js:467`). The tool built both **again** *and* listed them as separate
+roots — so every vegetation triangle was counted three times.
+
+Over-report: **+18 draws / +0.155 M tris.** Deduped truth is **71 draws / 0.572 M**, not the
+89 / 0.728 M I relayed back to GEOMETRY as though it were the tree's. Fixed; re-run gives 71 /
+0.572 M, matching GEOMETRY's independent walk of the terrain subtree.
+
+### 130.3 The budget "breach" was the same digits meaning the opposite thing
+
+My brief said 548 draws / 2.355 M tris and called it over budget. `shots/geo-bead/report.json` says
+**250 draws / 1,728,539 tris** — and `Engine.js:267-274` calls `renderer.info.reset()` **before** the
+PostFX chain, so `stats` accumulates three cascade passes plus AO, outline and composite.
+`RESULT-bud34-repin.md` ends by saying that counted column must never be quoted against 250/1.2 M.
+
+> **Counted is 1.73 M = 44 % OVER. The scored main-view line is 0.675 M = 56 % of budget = 44 %
+> HEADROOM.** Same two digits, opposite meaning. That is almost certainly how it entered my brief
+> as a breach.
+
+Fresh census at `high`, worst camera: **88 draws / 0.675 M — 35 % of the draw budget, 56 % of the
+triangle budget**, agreeing to ~1 % with ledger #34's in-boot measurement (93 / 0.668 M).
+Counted/main-view for `hero` is **2.68×**, inside the measured 2.46–3.14 band. **Not a §1 breach.**
+Content split: architecture 47.8 %, terrain incl. veg/water 25.6 %, props 11.3 %, guards 10.7 %,
+Sly 4.6 %.
+
+### 130.4 The chisel pass landed, measured against a control that passes 9/9
+
+§125's missing chisel pass is cut. `hgchisel` reproduces the registered baseline exactly on 8 of 9
+fields; the ninth (`roughP`) moved, and rather than assert it was `arrisPolish`, TEXTURES **rebuilt
+`ee0ed99` through `--root` with the same instrument** and got an exact match — so the only baseline
+field the edit set moves is roughness, attributable to the separately-mandated `arrisPolish` → 0.
+
+| | ctl | cand |
+|---|---|---|
+| band luma span p95/p5 | 1.549 | **2.275** |
+| `lumaRms` | 0.0954 | **0.1026** |
+| `darkTail` | 0 | **0** *(as predicted from `rampFloor`'s arithmetic)* |
+| `tiltP` p99 | 50.36 | **50.36** *(`lineDepth` did not over-carve)* |
+
+§125's own metric closes: seam row **8.50e-6 → 4.67e-2**, and the row/frieze ratio **5454× → 1.0×**.
+The image agrees — the control is a pale band with four disconnected ticks; the candidate is a
+legible inscription of falcon, sun-disc, water ripples and reed leaves. The signed diff is
+**−0.0439 on cut texels and +0.0031 on the field**: a dark cut *in* gold, not a general darkening.
+
+**Sub-pixel sweep applied to its own feature**, which is the discipline that killed the last two
+treatments on this recipe: sign bodies subtend **16.0 / 9.2 / 5.8 / 5.2 px** at the smallest and
+54.5 / 31.4 / 19.8 / 17.8 at the largest. Nothing is sub-pixel — against the arris ring's 2.25–4.51
+px and the panel bevel's 0.75–2 px, both of which returned nulls.
+
+**Two risks TEXTURES raised against its own change rather than waiting to be asked.** The seam row
+now carries a `bee` (3.01× median area) and a `falcon` (2.85×) per repeat — *"before this change
+none of them rendered, so the tiling condition passed by having nothing to see."* And **band squint
+sd is +35.7 %**, against the +49 % the historic ashlar-blotching known-bad moves: *"the one number I
+would fail this on."* Both are frame questions, and both are registered in its capture prereg.
+
+### 130.5 Gold's culprit is one line, and it is not a texture problem
+
+The paving control I routed from §128 returned the answer:
+
+| | chroma in **albedo** | chroma **in frame** |
+|---|---|---|
+| `paving_courtyard` | 0.549 | 0.559 *(+2 %)* |
+| `hieroglyph_gilded` leaf | **0.787** | **0.335** *(−57 %)* |
+
+> **In albedo the gilding is far *more* saturated than paving. In frame it is far less. Paving's
+> chroma survives the chain intact; gold's is halved — same frame, same light, same chain.**
+
+Cutting the relief moves gild chroma 0.787 → 0.775, about **2 % of the gap**: the chisel pass does
+not close it, and **it was never an authoring gap.** The one thing that differs between the two
+materials is `metal` — and the mechanism is already written down in the shader that does it:
+
+```glsl
+diff *= mix( 1.0, 0.20, slyMetal );          // toon.glsl.js:469
+```
+
+`toon.glsl.js:506` even states the consequence: *"removes 68 % of gold's own colour at metal 0.85."*
+
+**Four sections of lobe arithmetic, two null A/B seals, a bead, and a chisel pass — and §7.3's
+"gold doesn't read as metal" is one multiply in the diffuse term, documented at the site.** It is a
+one-line A/B and it is SHADING's. Routed.
+
+Also closed the other way: `PAL.goldSpec` should get **neither** the `PAL.sun` substitution nor a
+colour of its own — `ToonMaterial.js` declares its own private palette copy, so `Materials.js`'s
+`goldSpec` reaches no specular term anywhere and the shader derives gold's tint from albedo. **A
+palette hex cannot reach it.**

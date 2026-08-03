@@ -34,7 +34,9 @@ function inVoid(p) {
     if (hw <= 0 || hd <= 0) continue;
     if (!(Math.abs(p.x - S.x) < hw && Math.abs(p.z - S.z) < hd)) continue;
     if (S.pass && Math.abs(p.x - S.x) <= S.pass) continue;
-    return S.n;
+    /* How far INSIDE the analytic void boundary the point sits. A hit a few centimetres in is
+       the boundary model disagreeing with a settled/chipped block, not stone missing. */
+    return [S.n, Math.min(hw - Math.abs(p.x - S.x), hd - Math.abs(p.z - S.z))];
   }
   return null;
 }
@@ -145,7 +147,7 @@ for (const nm of names) {
     console.log(`${nm.padEnd(12)} px(${String(px).padStart(3)},${String(py).padStart(2)})  `
       + `p=(${p.x.toFixed(2)}, ${p.y.toFixed(2)}, ${p.z.toFixed(2)})  dist=${r.t.toFixed(1)}  `
       + `n·d=${dot.toFixed(3)} ${dot > 0 ? 'BACKFACE(leak)' : 'frontface(occupied)'}  `
-      + `${v}  mesh=${NAME[r.n] || '(unnamed)'}`);
+      + `depth-inside-boundary=${v[1].toFixed(3)}m  ${v[0]}  mesh=${NAME[r.n] || '(unnamed)'}`);
   }
 }
 console.log(`\nbackface (genuine leak): ${back}    frontface (legitimate occupancy): ${front}`);
