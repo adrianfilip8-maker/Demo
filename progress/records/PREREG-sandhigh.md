@@ -106,3 +106,102 @@ Deliberately not chosen before Arm A exists, and none is a sprite-property guard
 **Nothing ships until Arm A is measured.** The offline half is done and it removed a design; the
 remaining claim — *"the disc is gone and the haze is intact"* — is two-part and only the first
 part is countable from what I hold.
+
+---
+
+# Amendment 1 — written after Arm A, before any fix is chosen or written
+
+**Why.** §145.3 established that Arm B's exterior ±15 % ceiling is **passed for free by candidate 1**:
+backdrop-conditioned suppression acts only where the backdrop is dark and blue, and 0 of 133
+exterior components meet that precondition, so it is inert outdoors *by construction*. An
+acceptance the preferred candidate satisfies by construction is not a test of it. Choosing a fix
+on that acceptance is the §144.2 shape.
+
+**Nothing below relaxes an existing threshold.** Arm B's numbers stand exactly as sealed. This
+adds arms and relabels one. All new baselines are measured from frames already on disk
+(`shots/fx21`, `temple.base` vs `temple.no-sandHigh`) by `scratchpad/temple2.mjs`, before any
+candidate exists to be flattered by them.
+
+## A1.1 Relabel: Arm B tests the GLOBAL candidates only
+
+Arm B is renamed **Arm B (global-candidate ceiling)**. It meaningfully constrains vertical-box,
+screen-size and alpha-thinning, all of which act outdoors. It cannot constrain candidate 1.
+*Whoever reads a future "Arm B PASS" must be told which kind of fix it scored* — a PASS from
+candidate 1 carries no information about candidate 1.
+
+## A1.2 Arm C — interior cost, enumerated rather than averaged
+
+If candidate 1 is inert outdoors, its entire cost is indoors, and `temple` is the only interior.
+The population is small enough to list, so it is listed. Baseline, `temple`, 25 components ≥ 40 px,
+total |ΔL| **73,628**:
+
+| role | component | size | mean ΔL | backdrop luma | R/B | share of temple |ΔL| |
+|---|---|---|---|---|---|---|
+| the artefact | (602,133)-(659,193) | 2803 px | **+17.28** | 44.4 | 0.13 | **65.8 %** |
+| strict-gate collateral | (433,68)-(456,118) | 646 px | +1.63 | 54.6 | 0.29 | **1.43 %** |
+| near-boundary band (3 comps) | luma < 75 & R/B < 0.65 | — | ≤ +5.91 | — | — | **2.7 %** |
+
+> The strict gate covers **67.2 %** of `temple`'s field — but **65.8 % of that is the disc itself**.
+> Candidate 1's actual interior cost is the non-disc remainder: **1.43 %** at a hard gate, and
+> **≤ 4.1 %** if a smooth gate also takes the whole near-boundary band.
+
+    ARM C PASS   temple's total |ΔL| EXCLUDING the disc component stays within 15 % of the
+                 73,628 − 48,436 = 25,192 baseline, AND no non-disc component listed above
+                 loses more than 50 % of its own |ΔL|.
+    ARM C FAIL   either bound breached.
+
+The per-component clause exists because a 15 % whole-field budget can be spent entirely on one
+component while the average stays clean — the §135.1/§145.4 reason for measuring over the changed
+population rather than a fixed region.
+
+## A1.3 Arm D — discriminators that are not the ceiling
+
+The ceiling asks *what does it cost*. These ask *is it right*. D1 and D2 are countable; D3 is the
+picture, and §135.1 is the precedent for treating that as decisive rather than decorative.
+
+- **D1 selectivity (mechanism).** Outside the gated population the frame must be **bit-identical
+  to base, 0 px**, not merely within a percentage. Candidate 1 predicts this exactly; every global
+  candidate fails it by construction. A backdrop gate that leaks — wrong buffer, over-wide ramp —
+  fails it too, so it is not free for a *badly implemented* candidate 1, only for a correct one.
+- **D2 removal, not thinning.** The disc must cease to exist as a ≥ 40 px connected component,
+  not merely fall under ΔL 3.0. Dimming until a threshold is cleared is the §124 `sandLow` failure
+  mode and this states it as a structural test rather than a number.
+- **D3 the picture (both halves, looked at).** At 4×: the disc gone and the star ceiling reading
+  cleanly, **and** `temple`'s legitimate haze — the 23 non-gated components — visibly intact. The
+  claim was always two-part; only the first part was ever countable.
+- **D4 no new false negative.** Every component the shipped gate attenuates by > 20 % must be
+  either the disc or under ΔL 3.0, enumerated by name. This is the anti-proxy test: the gate keys
+  on backdrop colour, which is a *proxy* for "silhouetted against something that is not sand", and
+  D4 is what would catch the proxy drifting off the mechanism.
+
+## A1.4 The classifier's two conjuncts are each load-bearing — measured, not assumed
+
+The registered ARTEFACT rule conjoins `ΔL ≥ 8` **and** a dark-blue backdrop. The population
+contains a case that satisfies exactly one conjunct and fails to be an artefact, in each direction:
+
+| component | ΔL | backdrop | classified | looked at |
+|---|---|---|---|---|
+| (602,133) disc | +17.28 | luma 44.4, R/B 0.13 | ARTEFACT | a large soft mauve wash over the star ceiling — plainly wrong |
+| (520,581) | **+8.68** | luma 76.6, R/B **0.66** | not artefact | a faint pale wisp at a wall junction — ordinary haze |
+| (433,68) | +1.63 | luma 54.6, R/B **0.29** | not artefact | negligible; nothing reads at 4× |
+
+So **ΔL ≥ 8 alone is not sufficient** — (520,581) clears it and is not an artefact — and **a dark
+blue backdrop alone is not sufficient** either, which the seal already suspected from blob6 and
+now has a second instance of. Both conjuncts do discriminating work, each demonstrated by a case
+that isolates it. This is the strongest available evidence that candidate 1 targets the mechanism
+rather than a correlate, and it cost no capture.
+
+## A1.5 The n = 1 limit, restated precisely rather than chased
+
+Across the four shots there are **158 components ≥ 40 px; exactly 2 meet the backdrop
+precondition, and exactly 1 produces a visible artefact.** Daylight exteriors contain no dark-blue
+surface class at all (§145.2), so more instances cannot be found by capturing more exteriors —
+that is a property of the level, not a gap in the sampling.
+
+> **n = 1 because n = 1 is all there is.** This is an interior-only defect against an interior-only
+> surface class. Recorded as a finding, not as an outstanding action.
+
+The consequence for selection is bounded and stated: the ARTEFACT/FIELD split rests on one
+instance, so candidate 1 is chosen on a mechanism supported by A1.4's 2×2 and on a cost measured
+in A1.2 — **not** on a demonstrated repeat of the artefact. If a second interior ever ships, it is
+the first place to re-test.

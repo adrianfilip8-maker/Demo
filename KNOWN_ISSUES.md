@@ -12521,3 +12521,81 @@ texture-mottled slab, haze-flattened distant columns — and two of them returne
 Fourth instance this session of a region that could not carry the question it was asked (§104's sky
 ROI, §144.1's 194 px strip, §145.2's absent backdrop class, and now this) — and the first where the
 failing instrument produced a *positive* result rather than a null.
+
+## §147 — a cost figure that was 65.8 % the thing being removed, and a discriminator the preferred fix does not pass for free
+
+FX amended `PREREG-sandhigh.md` after Arm A and **before any fix is chosen or written**, with every
+new baseline measured from frames already on disk — *before a candidate exists to be flattered by
+them.* Arm B's sealed numbers are untouched; it is relabelled **Arm B (global-candidate ceiling)** so
+that a future "Arm B PASS" states which kind of fix it scored (§145.3).
+
+### 147.1 The cost figure that was mostly the defect
+
+`temple` carries 25 components totalling |ΔL| **73,628**, and the strict gate covers **67.2 %** of
+the field. That reads as a two-thirds collateral cost and FX nearly reported it as one.
+
+> **65.8 % of that 67.2 % is the disc itself** — the thing the fix exists to remove.
+
+Candidate 1's actual collateral is the non-disc remainder: **1.43 %** at a hard gate, **≤ 4.1 %** if
+a smooth gate takes the whole near-boundary band. So Arm C scores `temple`'s |ΔL| **excluding the
+disc**, against a 25,192 baseline.
+
+**Plus a per-component clause**, because the whole-field average hides the failure it most needs to
+catch: *no non-disc component may lose more than 50 % of its own |ΔL|.* A 15 % whole-field budget can
+be spent entirely on one component while the mean stays clean.
+
+A cost statistic that includes the thing being removed measures the *treatment*, not the *cost* —
+and it is inflated in the direction that makes the fix look expensive, so nothing about the incentive
+would have surfaced it.
+
+### 147.2 A discriminator that is not free for the preferred fix
+
+§145.3 recorded that candidate 1 passes the exterior ceiling **by construction** — inert outdoors, 0
+of 133 components — so that ceiling tests the alternatives while wearing candidate 1's name. Arm D
+answers it:
+
+- **D1 — selectivity.** Outside the gated population the frame must be **bit-identical, 0 px.**
+  Candidate 1 *predicts exactly that*; every global candidate fails it by construction; **and a
+  badly-implemented backdrop gate fails it too.** That last clause is what makes D1 a test rather
+  than a formality — *it is not free for a broken version of the preferred fix.*
+- **D2 — the disc must cease to exist as a ≥ 40 px component**, not merely fall under ΔL 3.0.
+  Thinning-to-threshold is §124's `sandLow` failure mode reproduced on the new knob.
+- **D3 —** the picture, both halves.
+- **D4 — anti-proxy.** Every component the shipped gate attenuates > 20 % must be named, and must be
+  either the disc or under ΔL 3.0.
+
+> **The way out of an acceptance the favoured fix satisfies by construction is not a stricter
+> threshold on the same quantity — it is a criterion whose failure mode is a *wrong implementation
+> of that same fix*.**
+
+### 147.3 A 2×2 that isolates both conjuncts, found by looking rather than by capturing
+
+FX opened the two components meeting the precondition and the one that clears ΔL 8 but fails it:
+
+| component | ΔL | backdrop luma | R/B | what it is at 4–6× |
+|---|---|---|---|---|
+| **the disc** | **+17.28** | 44.4 | 0.13 | large soft mauve wash over the star ceiling — plainly wrong |
+| (520,581) | **+8.68** | **76.6** | **0.66** | faint pale wisp at a wall junction — ordinary haze |
+| (433,68) | **+1.63** | 54.6 | 0.29 | nothing readable |
+
+**So ΔL ≥ 8 alone is not sufficient, and a dark-blue backdrop alone is not sufficient** — each
+conjunct is demonstrated by a case that isolates it. That 2×2 is the evidence candidate 1 targets the
+mechanism rather than a correlate, which is precisely the *"right rather than merely cheap"* question
+I asked, and **it cost no capture and no lock.** It also establishes **no false negative** in the
+available population: the one component escaping the gate while exceeding the ΔL threshold is not an
+artefact.
+
+### 147.4 n = 1 stated as a finding rather than left as an action
+
+Across four shots: **158 components ≥ 40 px, exactly 2 meet the backdrop precondition, exactly 1 is a
+visible artefact.** Since daylight exteriors contain no dark-blue surface class at all (§145.2), more
+instances **cannot** be found by capturing more exteriors — that is a property of the level, not of
+the sampling.
+
+Recorded as *"n = 1 because n = 1 is all there is"*: an interior-only defect against an interior-only
+surface class. The consequence is written in place rather than left implicit — **candidate 1 would be
+chosen on mechanism evidence and measured cost, not on a demonstrated repeat, and a second interior
+is the first place to re-test.**
+
+> An n=1 that cannot be increased is a different object from an n=1 nobody has tried to increase.
+> Saying which one you have is the whole of the honesty available.
