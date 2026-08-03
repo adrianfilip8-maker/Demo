@@ -9168,3 +9168,49 @@ pointed at the wrong decade.
 bands, and correctly shipped nothing. **All of that was sound, and the whole run was decided before
 it booted by a value chosen in the wrong units.** No control anywhere in the design would have
 caught that; only reading `Particles.js` would, and that was free the entire time.
+
+---
+
+## §109 — the auto-keeplog watchers dirty the tree, and the dirty flag is what later arms are judged on
+
+CHARACTER's ruff hold-out landed both arms clean — `char14-ship` and `char14-noruff`, 1 shot each,
+0 failed, both at commit **76611f2**, treatment confirmed by a **−500 triangle** delta and a 2.34 %
+frame delta confined to `x 479..861, y 0..636`, i.e. the character.
+
+But their manifests disagree on provenance: **`ship` records `dirty: false` and `noruff` records
+`dirty: true`.** On an A/B whose seal requires both arms to be one tree, that reads as a voiding
+condition.
+
+**It is not, and the check that settles it is the one `BRIEF-critic7` requirement 4 already
+names:** *confirm no `src/` mtime falls inside the capture window.* The only `src/` file touched
+all session is `SlyModel.js` at **11:46**; `ship` booted **11:55:16** and `noruff` **12:14:13**.
+The edit precedes both arms. Same source, same commit, sound comparison.
+
+### 109.1 What actually dirtied the tree, and it was my own durability mechanism
+
+`progress/records/logs/*.log`. The detached watchers I armed to run `keeplog.sh` on capture exit
+write into the tracked tree, so **every completed capture dirties the working tree for every
+capture still queued behind it.**
+
+> The mechanism added to stop logs being lost (§88, and the watchers in §106's queue) degrades the
+> **provenance signal** of every later run in the same queue. Two safeguards, one silently taxing
+> the other.
+
+That is a live hazard rather than a curiosity: a reader who takes `dirty: true` at face value voids
+a sound arm, and the natural response to a voided arm is to re-shoot it — 40+ minutes of exclusive
+lock spent because a log file appeared. It is the same expensive direction as §98's
+"material absent" and §103's mis-framed `tree:` line: **a provenance field that is technically
+correct and points at the wrong thing costs a capture, not a correction.**
+
+### 109.2 The fix is to make the flag say what it means
+
+`dirty` currently answers *"was anything in the working tree uncommitted?"* when every consumer of
+it is asking *"could the thing I rendered have changed?"* Those differ by exactly the paths that
+cannot affect a render — `progress/`, `shots/`, `KNOWN_ISSUES.md`.
+
+Not changed here, because `shot.mjs` is shared infrastructure and three owners have runs queued
+against it right now; changing the manifest schema underneath a queued capture is precisely the
+class of thing §106.4's gate exists to prevent. **Registered as the next safe-window change**, with
+the interim rule written down: *`dirty: true` alone never voids an arm — check `src/` mtimes
+against the capture window, which is the check the brief already required and which answers it in
+one command.*

@@ -1,0 +1,67 @@
+# ---- run log preserved by tools/keeplog.sh ----
+# run:      char14-ship
+# source:   /tmp/claude-0/-home-user-Demo/94022f73-a328-5e86-b2ec-031aa9c720ce/scratchpad/char14-ship.log
+# copied:   2026-08-03T12:23:51Z
+# tree at copy time (NOT the run's build): 717c7f9 — working tree DIRTY
+#   For the commit this run actually rendered, read shots/char14-ship/report.json or char14-ship.json.
+# NOTE: this is a COPY. The scratchpad original is ephemeral and may already be gone.
+# ------------------------------------------------
+· waiting for capture lock (10s, held by pid 17471)
+· waiting for capture lock (20s, held by pid 17471)
+· waiting for capture lock (30s, held by pid 17471)
+· waiting for capture lock (40s, held by pid 17471)
+· waiting for capture lock (52s, held by pid 17471)
+· waiting for capture lock (62s, held by pid 17471)
+· waiting for capture lock (72s, held by pid 17471)
+· waiting for capture lock (83s, held by pid 17471)
+· waiting for capture lock (93s, held by pid 17471)
+· waiting for capture lock (104s, held by pid 17471)
+· waiting for capture lock (114s, held by pid 17471)
+· waiting for capture lock (124s, held by pid 17471)
+· waiting for capture lock (135s, held by pid 17471)
+· waiting for capture lock (145s, held by pid 17471)
+· waiting for capture lock (155s, held by pid 17471)
+· waiting for capture lock (166s, held by pid 17471)
+· waiting for capture lock (176s, held by pid 17471)
+· waiting for capture lock (187s, held by pid 17471)
+· waiting for capture lock (197s, held by pid 17471)
+· waiting for capture lock (207s, held by pid 17471)
+· waiting for capture lock (218s, held by pid 17471)
+· waiting for capture lock (228s, held by pid 17471)
+· waiting for capture lock (238s, held by pid 17471)
+· waiting for capture lock (249s, held by pid 17471)
+· waiting for capture lock (259s, held by pid 17471)
+· waiting for capture lock (270s, held by pid 17471)
+· waiting for capture lock (281s, held by pid 17471)
+· waiting for capture lock (291s, held by pid 17471)
+· waiting for capture lock (301s, held by pid 17471)
+· waiting for capture lock (312s, held by pid 17471)
+· waiting for capture lock (322s, held by pid 17471)
+· waiting for capture lock (333s, held by pid 17471)
+· waiting for capture lock (344s, held by pid 17471)
+· waiting for capture lock (354s, held by pid 17471)
+· waiting for capture lock (365s, held by pid 17471)
+· waiting for capture lock (376s, held by pid 17471)
+· waiting for capture lock (387s, held by pid 17471)
+· waiting for capture lock (397s, held by pid 17471)
+· waiting for capture lock (407s, held by pid 17471)
+· waiting for capture lock (417s, held by pid 17471)
+· waiting for capture lock (428s, held by pid 17471)
+· waiting for capture lock (438s, held by pid 17471)
+· waiting for capture lock (449s, held by pid 17471)
+· waiting for capture lock (459s, held by pid 17471)
+· waiting for capture lock (470s, held by pid 16208)
+· starting dev server on :5300
+· loading game
+· ready
+· renderer: ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)
+· modules present (17): shading postfx sky lighting textures architecture props terrain collision character animation movement camera fx guards hud audio
+· 1 boot warning(s):
+    ! textures: prewarm took 17.5s at size 1024
+  ✓ sly-closeup   226222ms  draws  255  tris 1651k
+· 1 console error(s):
+    ! Failed to load resource: the server responded with a status of 404 (Not Found)
+  · page closed
+
+→ shots/char14-ship/  (1 shots, 0 failed)
+SHIP-DONE rc=0
