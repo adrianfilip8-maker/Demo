@@ -1,8 +1,8 @@
 # ---- run log preserved by tools/keeplog.sh ----
 # run:      char15
 # source:   /tmp/claude-0/-home-user-Demo/94022f73-a328-5e86-b2ec-031aa9c720ce/scratchpad/char15.log
-# copied:   2026-08-03T13:43:51Z
-# tree at copy time (NOT the run's build): 27beccb — working tree DIRTY
+# copied:   2026-08-03T13:47:12Z
+# tree at copy time (NOT the run's build): a09d55d — working tree DIRTY
 #   For the commit this run actually rendered, read shots/char15/report.json or char15.json.
 # NOTE: this is a COPY. The scratchpad original is ephemeral and may already be gone.
 # ------------------------------------------------
@@ -210,3 +210,10 @@
 · modules present (17): shading postfx sky lighting textures architecture props terrain collision character animation movement camera fx guards hud audio
 · 1 boot warning(s):
     ! textures: prewarm took 16.7s at size 1024
+  ✓ sly-closeup   235811ms  draws  255  tris 1651k
+· 1 console error(s):
+    ! Failed to load resource: the server responded with a status of 404 (Not Found)
+  · page closed
+
+→ shots/char15-wide/  (1 shots, 0 failed)
+CHAR15-DONE rc=0

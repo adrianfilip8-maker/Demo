@@ -9752,3 +9752,90 @@ terminator and near-lit stone keep the sand bounce.
   instrumentation reports `step` as free and `capture` as 265 s. Real cost ~12.6 s/frame.
 - SHADING made **the same y = 0 sphinx-ROI error** §114.6 records, independently, and caught it
   with an overlay before quoting a number — two owners, same trap, same countermeasure, same hour.
+
+---
+
+## §116 — widening is refuted with the sign wrong, and the card-geometry lever is closed
+
+`char15-ship` against `char15-wide`, both one shot, validity gate passed (cheek fur −0.04, cap
+crown +0.00, chest V −0.01):
+
+| ROI | ship ink % | wide ink % | Δ | **prereg predicted** |
+|---|---|---|---|---|
+| collar-R | 42.3 | 65.4 | **+23.1** | −7.6 |
+| collar-C | 57.1 | 78.8 | **+21.7** | −9.6 |
+| collar-L | 35.4 | 49.3 | **+13.9** | −0.7 |
+
+**Every ROI moved hard in the direction opposite to the registration.** Not a magnitude miss — a
+**sign** miss on all three, by roughly 3×. §113.2's modelled curve said ink would fall 44.3 → 35.4 %
+across the widening; it rose.
+
+### 116.1 The mechanism, attributed rather than inferred
+
+Sampling the dark pixels: mean RGB **(22, 14, 38) in both arms** — the `#161022` shadow-ink family,
+i.e. **hull ink, not cel shading**. Only the *count* changed, 448 → 618, **+38 %**. Widening added
+38 % more ink of exactly the same colour.
+
+Which is what `ruffsweep.mjs`'s **own header** says happens: the shell is one BackSide duplicate, so
+every card carries its full ~2.5 px border *including where it overlaps another card* — overlap
+**adds** interior ink rather than sharing it.
+
+> **The tool's header described the right model and its sweep computed a different one.** §113.2
+> quoted that sweep's monotone-falling table as "the knee", with the per-card reasoning stated
+> correctly one paragraph above the numbers that contradict it. That is §11 in its purest form —
+> a stated pipeline and an implemented pipeline diverging — and it survived because the header and
+> the table were read as agreeing rather than checked against each other.
+
+**Withdrawing the absolute model for a ratio (§113.3) did not save it.** The ratio was the honest
+move and it inherited the same wrong overlap model, so it failed in sign too. **A ratio protects
+against an offset, not against a mechanism.**
+
+### 116.2 The visual secondary, and the ship arm fails it too
+
+Crop placed on the **measured** card projection (`cardbox.mjs`: 8 cards, union x 574–655, y 238–270,
+an 81×32 px band), at 12×:
+
+- **ship (narrow):** does *not* scallop. A near-clean diagonal cream/blue boundary with one large
+  dark wedge and a few bumps — nearer "clean arc with specks" than a fur edge.
+- **wide:** a **single solid ink-black mass** swallowing the cream chest V to a sliver. No notches,
+  no lobes. Precisely the bib the prereg registered against, made of ink rather than of cards.
+
+So the secondary does not merely block the widening — **it reveals the shipped state was already
+failing it**, which the removal hold-out (§110) could not show because it only compared *with* and
+*without*.
+
+### 116.3 The lever is closed, and the ceiling belongs to SHADING
+
+Cards are 18–26 px wide. A 2.5 px hull on every edge is **~40 % of a median card's footprint before
+any overlap**, and eight overlapping cards in an 81×32 px band saturate.
+
+> **No card-geometry change can produce a scallop under a constant 2.5 px border.** CHARACTER has
+> now bounded its own side of §37's ratio from both directions — removal (§110, inconclusive and
+> blocked) and widening (here, refuted) — and the denominator is exhausted.
+
+`Outline.js` builds one shell at one thickness for the whole body and `_material()` hardcodes
+`outline: 1.0` for every group. Fur cards need a per-group thinner or zero outline. **That is the
+only remaining lever and it is SHADING's.** `CHAR_AB('widecards')` stays opt-in and default-off;
+recommend it be deleted rather than kept as a tempting knob.
+
+### 116.4 A provenance confound found and cleared, not waved through
+
+The two arms captured at **different commits** — ship `9f0914a`, wide `27beccb`, both `dirty:false`.
+CHARACTER checked rather than assumed: that commit touched only `KNOWN_ISSUES.md`,
+`progress/frames/*.png` and `tools/*.mjs` — **no `src/**` file at all** — so the rendered build is
+identical between arms except the gate. This is §109's rule (`dirty` alone never voids an arm)
+applied to its harder sibling: *a different commit alone never voids an arm either; check what the
+commit touched.*
+
+### 116.5 The four §7.3 conditions, and where each now stands
+
+- **Proportions — fixed**, 5.03 heads measured on two tools, and §9's old "5.53 → 5.29, needs a
+  shorter torso" is **superseded**: that probe filed the cap crown as skull, because the crown is
+  weighted `[['head',1]]`.
+- **Silhouette — passes 3 of 4.** `hero`'s cane hook now reads, which cap6 had as ambiguous. The
+  mask cannot read in pure silhouette by construction — it is a colour marking.
+- **Fur — ceilinged, not solved**, per §116.3.
+- **Pose — improved.** `perch_idle` was `hips 0.000 / chest 0.006 / head −0.007`, literally zero
+  lateral line of action; it now measures `0.045 / 0.082 / 0.045` — 3.7 cm of chest displacement
+  off the hips–head line. That closes the last open §7.3 pose item from CHARACTER's side; the leg
+  axes remain ANIMATION's (§110.5).
