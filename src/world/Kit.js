@@ -864,7 +864,7 @@ export function masonryShell(o) {
  *
  * `side` +1 puts the bead on the +Z arris, −1 on −Z. The buried half is never built.
  */
-export function beadRoll(len, r, { radial = 10, side = 1 } = {}) {
+export function beadRoll(len, r, { radial = 10, side = 1, caps = true } = {}) {
   // theta is measured so the surface normal in beam space is (0, sin t, cos t):
   //   t = 0 -> +Z (outward),  t = -pi/2 -> -Y (down),  t = +pi/2 -> +Y (up).
   const t0 = side > 0 ? -Math.PI * 0.5 : Math.PI * 0.5;
@@ -884,7 +884,38 @@ export function beadRoll(len, r, { radial = 10, side = 1 } = {}) {
   uv.needsUpdate = true;
 
   place(g, { rz: Math.PI * 0.5 });          // stand the axis up along X
-  return g;
+  if (!caps) return g;
+
+  /* Semicircular end caps. An open-ended half cylinder is a hole: `tools/backface.mjs` caught
+     6 rays per `hero` frustum reaching the INSIDE of these beads through their open ends, which
+     is the same class of defect as the unsealed shells and the single-leaf openings, and the
+     kit's own `sweep()` caps its profile for exactly this reason. `radial` triangles per end. */
+  const half = len * 0.5, seg = radial;
+  const v = [], nr = [], cuv = [], ix = [];
+  for (const e of [-1, 1]) {
+    const base = v.length / 3;
+    v.push(e * half, 0, 0); nr.push(e, 0, 0); cuv.push(0, 0);       // fan centre, on the axis
+    for (let i = 0; i <= seg; i++) {
+      const t = t0 + (i / seg) * Math.PI;
+      v.push(e * half, Math.sin(t) * r, Math.cos(t) * r);
+      nr.push(e, 0, 0);
+      cuv.push((i / seg) * Math.PI * r * UV_PER_M, r * UV_PER_M);
+    }
+    for (let i = 0; i < seg; i++) {
+      /* Wind each fan so its face points out along its own end's axis. The fan (C, Pi, Pi+1)
+         has normal proportional to -sin(t(i+1) - t(i)) in X, i.e. -X for increasing t — so the
+         +X end takes the REVERSED order. Getting this backwards turned the caps into two more
+         inward-facing surfaces and took `hero`'s backface hits from 6 to 11 instead of to 0. */
+      if (e > 0) ix.push(base, base + 2 + i, base + 1 + i);
+      else ix.push(base, base + 1 + i, base + 2 + i);
+    }
+  }
+  const cap = new THREE.BufferGeometry();
+  cap.setAttribute('position', new THREE.Float32BufferAttribute(v, 3));
+  cap.setAttribute('normal', new THREE.Float32BufferAttribute(nr, 3));
+  cap.setAttribute('uv', new THREE.Float32BufferAttribute(cuv, 2));
+  cap.setIndex(ix);
+  return mergeAll([g, cap]);
 }
 
 /**

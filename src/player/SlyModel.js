@@ -483,13 +483,69 @@ export const TUNE = {
    * an inked body is the other failure, a fur patch that reads as painted-on. §2.1 wants
    * inked silhouettes, so this thins the line rather than removing it.
    *
-   * **Not verified in a rendered frame at the time of writing, and it cannot be verified
-   * offline** — `charread.mjs`'s hull is a whole-mesh triangle expansion that does not read
-   * per-group ink weights, so no instrument in `tools/` can see this change. Only a capture
-   * closes it. If a capture shows the cards now reading as pale unlined patches, this is too
-   * low; if the chips survive at 1.0 px, the mechanism is not hull share and this whole note is
-   * wrong rather than mistuned. */
+   * **Not verified in a rendered frame at the time of writing.** If a capture shows the cards
+   * reading as pale unlined patches, this is too low; if the chips survive at 1.0 px, the
+   * mechanism is not hull share and this whole note is wrong rather than mistuned.
+   *
+   * ── A DISCOURAGING PRELIMINARY, RECORDED BEFORE THE VERDICT RATHER THAN AFTER IT ──────────
+   * `charread.mjs`'s hull ignores per-group weights, so it is blind to this knob by
+   * construction. I taught the scratchpad copy to honour them (scale the normal expansion by
+   * the material's `userData.outline`, which is the same operation the real shader does) and it
+   * reports a **null**: ink 14153 px → 14048, i.e. **−105 px**, while *deleting* the same cards
+   * removes **5179**. Per-material pixel counts, `sly-closeup`, arm A:
+   *
+   *     visible card px 1649 (non-tail)      ink px attributable to those cards 5179
+   *
+   * So a card really is ~3.1× more hull than fur — the premise holds — but thinning that hull
+   * 60% did not remove it in the proxy. The likely reason is written a few lines above, in this
+   * file's own `addTuft` note: clump normals are biased **82% toward the host surface**, and the
+   * hull extrudes along that same attribute, so a card's shell **translates bodily instead of
+   * inflating**. A translated card-sized black silhouette does not shrink much when you scale
+   * the translation; a border would have. If that is what is happening, the lever that works is
+   * the normal BIAS (`Body.addTuft`), not the hull weight, and `tuftInk` is close to inert.
+   *
+   * Two reasons it ships pending the capture rather than being reverted now. The proxy expands
+   * every triangle of one merged mesh and its own header warns it **overstates ink at internal
+   * creases** — a card lying on a limb is exactly an internal crease, so this is the regime
+   * where it is least trustworthy. And the change is provably free where it is wrong: groups
+   * that do not author `ink` are untouched, so a null here costs three draw calls and nothing
+   * else. **Do not read the capture as confirming this note unless the chips visibly shrink.**
+   * A null is the predicted-and-registered outcome, not a surprise, and the follow-up it points
+   * at is the 82% bias — which is `Body.addTuft`'s, i.e. still CHARACTER's, not SHADING's. */
   tuftInk: 0.40,
+  /* Normal bias toward the host surface for fur cards, surfacing `Body.addTuft`'s hardcoded
+     `o.shadeMix ?? 0.82` as a named constant. **0.82 is that default, so this is behaviour-
+     identical** — it exists because the note above identifies this, not `tuftInk`, as the term
+     most likely to control card ink, and a hypothesis that cannot be swept cannot be tested.
+     The bias is load-bearing for SHADING (it is what stops a clump reading as an independent
+     dark chip under the cel ramp) and harmful for the HULL (it makes the shell translate rather
+     than inflate), so it is a genuine trade and must not be dropped to 0 on the strength of an
+     ink number alone. Sweep it against a frame, not against a statistic.
+
+     ── THE SWEEP, AND IT CONFIRMS THE REGISTERED PREDICTION ────────────────────────────────
+     `sly-closeup`, flat albedo, hull honouring per-group weights (scratchpad/furheld.mjs):
+
+         tuftShadeMix   ink px   ink frac   visible CARD px
+           0.82 (ship)   14048     0.2125         3124
+           0.40           8166     0.1241         7155
+           0.00           7942     0.1207         7380
+         (no cards at all, for scale:  8341 ink)
+
+     **`tuftInk` moved ink by 105 px; this moves it by 5882 — 56x larger.** And the direction is
+     the whole point: as the bias falls the cards stop being ink and start being *fur* — visible
+     card area more than doubles while ink collapses, and at 0.40 the figure carries LESS ink
+     than it does with no cards at all. That is the "black chips" defect located, and it is the
+     normal bias, not the hull weight and not the clump count. The three tuning generations above
+     — density 2.2 -> 1.05 -> 0.46, width, roll width — were all moving terms downstream of it.
+
+     **Deliberately NOT shipped, and the reason is the one this file keeps relearning.** The
+     instrument is FLAT ALBEDO: it can see the hull and is *structurally blind to the shading*,
+     which is the entire reason the bias exists. Lowering it trades an ink win for a shading loss
+     the measurement cannot price, and shipping on it would be §36 exactly — rigorous apparatus,
+     wrong layer. It needs a two-arm capture (0.82 vs 0.40) judged on the frame, on a head where
+     the cheek row is largest. Registered here so the next agent inherits the lever and the
+     caveat together rather than re-deriving one and missing the other. */
+  tuftShadeMix: 0.82,
   furLobe: 0.055,         // lobe amplitude on the HEAD only — see `furLobeLimb`
   /* **The lobe knob was one knob doing two jobs, and the cheek was holding the limbs hostage.**
    *
@@ -2719,6 +2775,7 @@ export class SlyModel {
       sg: mb.newSg(), color: 0xffffff, flat: 0.52, tipW: 0.88,
       ...o,
       group: o.group ? (TUFT_GROUP[o.group] ?? o.group) : undefined,
+      shadeMix: o.shadeMix ?? TUNE.tuftShadeMix,
       width: (o.width ?? 0.015) * WF,
       length: (o.length ?? 0.05) * TUNE.tuftLen,
     });
