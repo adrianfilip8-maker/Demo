@@ -7476,3 +7476,72 @@ shape.
 > **A blast-radius pattern that happens not to fire is still a blast-radius pattern.** The standing
 > rule: never `pkill -f` on a shared machine — resolve the pid from the lock ticket or `/proc`, and
 > kill that.
+
+
+---
+
+## §88 — the run log is the third artefact, and it was the one with no durability
+
+SHADING, verifying rather than re-running. **It spent no capture and closed both routed tasks by
+reading the ledger**, having first hit §84's trap itself: the `KNOWN_ISSUES.md` it opened was the
+1120-line rolled-back copy, which is exactly why the six-shot work looked outstanding.
+
+### 88.1 Both routed tasks were already closed, and it said so instead of re-measuring
+
+**The six-shot rim measurement is §61's `rim4`** — six shots, seven arms, one boot, every frame
+eyeballed. It answered both of the brief's risks *and went past them*: artefact removal
+(`gateoff`→`base`: traversal 574→3, interior 679→3, combat 982→31, temple 90→22, night 281→142,
+courtyard 2→1 in 921,600), and — the risk that matters — **§61.5's genuine `temple` silhouette
+regression at 15.0% retention, with the fix deliberately withheld** because `surfoff` restores the
+rim *and* the artefact together.
+
+**Task #16 is §80.6**, closed on SHADING's own reproduction, and the earlier routing had quoted
+`shots/eye1` — captured at 20:36 against a fix that landed at 23:13, *a pre-fix build*.
+
+Three results it notes it would have missed by measuring the way its brief specified: the temporal
+bracket being **global rather than combat-shaped** (46.9% of `combat` excluded, retroactively
+invalidating every unbracketed number in rim1–rim3); `courtyard`'s "wrong way" reading retired as
+loose-criterion cloud filaments; and **§61.2 self-corrected at §80.5** — `rimPlanar` is *unmeasured*,
+not inert, and must not be quoted as grounds for deletion.
+
+### 88.2 It checked the failure mode that would have cost its queue place
+
+`tone1.mjs` passes `timeout: 3600000`. **If that hour had covered the lock wait, a long queue would
+have voided the run.** It does not: `acquire()` returns *before* the browser launches, and `timeout`
+governs only the post-boot `__GAME.ready` wait. **No void risk from queueing** — established by
+reading the harness rather than by hoping.
+
+Its ticket is 2nd of 3, pid alive, parented to init via a `nohup` chain, outside the task tree and
+outside §14's reaper. And `toneShoulder` ships at 1.0 with `if (b == 1.0) return p;` — **bit-exact by
+construction, so the control arm is the shipped look rather than an approximation of it.**
+
+### 88.3 The hazard it flagged against its own run, and the fix
+
+> The PNGs land in `shots/`, the seal and result in `progress/records/` — **both durable.** The run
+> log goes to the scratchpad **alone**. That is precisely what §83 destroyed.
+
+And the log is not incidental: it carries the **`toneState` readback lines, which are the only
+evidence for the VOID check and for N2's duplicate-arm bracket.** §40, §52.1 and §80.5 all turn on
+readback lines. **If the log dies, a seal can still be "scored" against numbers whose validity is no
+longer checkable — which is worse than not scoring it at all.**
+
+A capture has **three** artefacts with three different lifetimes, and only two were ever being
+protected:
+
+| artefact | tracked? | survives a restart? |
+|---|---|---|
+| `shots/<run>/*.png` | no | **no** |
+| `progress/records/*.md` | yes | yes |
+| `scratchpad/<run>.log` | no | **no** |
+
+**`tools/keeplog.sh` closes it.** It copies a run's log into `progress/records/logs/<run>.log` with a
+provenance header — source path, copy time, tree sha with a dirty flag, and a note that the original
+is ephemeral — so the log is tracked, committed and pushed with everything else. Proved on both
+inputs before being trusted: exit 0 on a live log, **exit 1 with a refusal on a run that does not
+exist**.
+
+Applied immediately to the three captures in flight: `fx18` (59 lines), `char11` (90), `tone1` (85).
+**Run it when a capture lands and *before* scoring it.**
+
+> The frames are evidence, the ledger is the record — and **the log is what says the evidence is
+> admissible.**
