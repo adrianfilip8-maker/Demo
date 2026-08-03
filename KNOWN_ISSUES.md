@@ -9299,3 +9299,67 @@ is why the gap went unnoticed. The leg-axis work is genuinely blocked on an owne
 measurement — and CHARACTER noting that its own file reads `upperLegR z 4.0°` against the clip's
 **24°**, a ~6× error for anyone reading the wrong file to understand the rendered pose, is the more
 useful half of the finding.
+
+---
+
+## §111 — three separately-reported symptoms are probably one cause, and the frames have gone cold
+
+TEXTURES flagged a whole-frame drift from `tx7` (Aug 1, `7dc4442`) to now, same cameras, and
+explicitly disowned it: the arris accounts for +0.0004 to +0.0014 luma and ≤0.0007 b−r frame-wide.
+
+**Reproduced independently on SHIPPED frames**, not on experimental arms — `char12` and `char13`
+are plain `shot.mjs` captures at the shipped state:
+
+| `hero` | luma | mean b−r |
+|---|---|---|
+| `tx7` (Aug 1) | 0.2721 | **−0.0292** |
+| `char12` (today) | 0.2956 | **+0.0119** |
+| `char13` (today) | 0.2966 | +0.0112 |
+
+TEXTURES reported −0.0293 → +0.0113. **Agreement to four decimal places from a different tool and
+a different frame set.** `temple` and `interior` swing the same way, 0.04–0.10.
+
+Side by side the change is not subtle: on Aug 1 the architecture is warm tan and purple-brown under
+a cream sky; today the same stone reads **blue-grey and teal** while the sky and far paving stay
+warm. Golden-hour Egypt with cold stone in it.
+
+### 111.1 The synthesis, which no single owner could see
+
+Three findings were filed separately by three owners and are all *"it has gone blue"*:
+
+1. **Teal sphinxes** — the critic's finding; §104 refuted the surface rim as its cause and routed
+   the tint to "the material".
+2. **The character reads as uniform dark blue** — §106.5, and §107 measured the tail retaining
+   27.9 % of its authored luma separation.
+3. **Global b−r swung cool on all three architecture shots** — TEXTURES, above.
+
+**§104 concluded the sphinx tint was "in the material" because removing the rim did not clear it.
+That inference is sound about the rim and unsound about the material** — a global grade would
+produce exactly the same result, and I did not consider one, because the seal I was scoring was
+about a rim and I scored the question it asked instead of the question the frame poses.
+
+### 111.2 What is ruled out, by measurement not by argument
+
+- **Textures** — TEXTURES' own arithmetic, ≤0.0007 b−r frame-wide.
+- **The surface rim** — §104, `rimGain` 4.10 → 0, teal retained 96.1 %.
+- **The split shadow** — I had this as the prime suspect: `#2a3f66` normalises per-channel to
+  (0.914, 0.999, **1.265**), a 1.38× blue-over-red on shadowed surfaces, which is precisely the
+  signature. **It is not the cause: `#2a3f66` and `splitStrength: 0.16` are byte-identical at
+  `7dc4442` and at HEAD.** Hypothesis formed and discarded in one command.
+- **The new cool-shadow scaffolding** — `aoTintTeal`, `aoTintNeutral`, `splitShadowTeal` all ship
+  at **0.0**, SHADING's verified-no-op discipline holding.
+
+### 111.3 What this costs if it is not chased
+
+`src/render/` took **1941 insertions across five files** in this window, so the cause is in there
+and a bisect needs captures. That is expensive — and cheaper than the alternative, which is that
+**every character and material judgement made today was made on a frame with a global cool cast.**
+§107's "the render compresses the model" and §110's ruff ROI luma readings are all downstream of
+whatever this is. None of those conclusions is wrong, but the thing they are measuring against may
+be.
+
+Routed to SHADING as the owner of `src/render/`, alongside the compression question it is already
+holding — **which may be the same question.** Stated as a hypothesis with its discriminator: if one
+grade term accounts for the b−r swing, restoring it should simultaneously warm the architecture,
+raise the character's authored contrast, and clear the sphinxes, and any fix that moves only one of
+the three is not the cause.
