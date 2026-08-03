@@ -9214,3 +9214,88 @@ class of thing §106.4's gate exists to prevent. **Registered as the next safe-w
 the interim rule written down: *`dirty: true` alone never voids an arm — check `src/` mtimes
 against the capture window, which is the check the brief already required and which answers it in
 one command.*
+
+---
+
+## §110 — the ruff hold-out returns INCONCLUSIVE and is not rounded up, and I swept a cross-owner edit
+
+### 110.1 The seal held against its author
+
+| ROI | ship | noruff | Δ mean luma |
+|---|---|---|---|
+| neck L | 54.9 | 69.4 | **+14.5** |
+| chest | 101.9 | 107.4 | +5.5 |
+| neck R | 57.1 | 57.2 | +0.1 |
+
+`PREREG-ruff` requires **≥15 on two of three** for CONFIRMED and **<5 on all three** for REFUTED.
+Best is 14.5, second 5.5. Neither branch is reached. CHARACTER's own words: *"I am not rounding
+14.5 up to 15; that threshold was pre-committed precisely to stop this."*
+
+Validity gate passed first — both controls bit-identical (cheek fur 86.4 → 86.4, chest V 65.0 →
+65.0) — and the treatment is attested by **−500 triangles**, so the arm is not a no-op.
+
+**Decision: do not ship the removal**, and the rows are **not exonerated** either. Independently,
+the registered secondary blocks shipping even under CONFIRMED: at 5× the collar in `noruff` goes
+**smooth** — a clean geometric arc where the shipped arm has a broken scalloped mass — which is the
+§7.3 "smooth plastic" read the cards exist to prevent. The prereg's own named follow-on stands:
+**widen the cards so the hull fraction falls**, because §37's mechanism is a ratio.
+
+### 110.2 A symmetric code row producing asymmetric results
+
+Neck L moved **+14.5** and neck R **+0.1** — from `th = side * (0.95 + i*0.55 + jitter)`, identical
+geometry mirrored. So on his right the dark mass is **not** the cards (it is shadow or material)
+while on his left it substantially is.
+
+> **"The chip" is not one phenomenon, and a symmetric fix will half-miss.** An unregistered finding
+> that only exists because the seal scored three ROIs separately instead of pooling them — a pooled
+> mean would have read ~6.7 and hidden both halves.
+
+### 110.3 Frames are not bit-deterministic across boots, and §99.1 must be read narrowly
+
+CHARACTER chased the out-of-character residue in the char14 diff and **looked at it**: a **perched
+bird on a background ledge at a different animation phase**, two boots 19 minutes apart. Not
+contamination.
+
+But it means **animated FX make frames non-bit-deterministic across boots.** §99.1 reports
+`fx19`'s `base` vs `back` at **0 differing pixels** and calls the scene deterministic — that is
+true *within one boot*, which is where those arms ran, and it does not generalise. **A/B ROIs must
+stay off animated background elements**, and a bit-identity control is only meaningful between arms
+of the same process.
+
+### 110.4 An instrument that oscillated, caught by physics rather than by code review
+
+CHARACTER's first two pose probes binned **vertices** by height and aliased against the leg loft's
+10 rings: adjacent bands read 0.249 / 0.025 / 0.243 m of gap. *"Geometry does not oscillate at 6 cm
+pitch; an instrument does."* Rewritten to rasterise triangles; the vertex numbers discarded, not
+reconciled. `legras.mjs` is promoted into `tools/` — CHARACTER correctly left it in the scratchpad
+because `tools/**` is `[LOCKED]` for it, and flagged it for promotion instead.
+
+The result, with "near-parallel" turned into a number:
+
+| pose | thigh splay (hip→knee) | whole-leg splay (hip→ankle) | absorbed by knee |
+|---|---|---|---|
+| `idle_confident` | 19.96° | **8.08°** | 60 % |
+| `perch_idle` | 37.59° | **6.85°** | **82 %** |
+
+**The splay is authored at the hip and cancelled at the knee.** Ankles are 23.2 cm apart in idle
+and **7.7 cm** in perch. Single-leg width against tail width is **0.54**; silhouette area is legs
+27.5 %, tail 29.8 %.
+
+### 110.5 My error: I swept a cross-owner edit without checking the map
+
+CHARACTER declined to change the leg axes because `IDLE_A` lives in `src/player/Clips.js`, which
+**`AGENTS.md:115` assigns to ANIMATION, not CHARACTER.** It is right, and I had the ownership wrong
+in my own working model.
+
+Which means the **`perch_idle` cane re-aim — `cane: [140,-30,45]`, now at `Clips.js:673`/`:691` —
+is a CHARACTER edit to ANIMATION's file that I committed twice** (`94d076b`, `841ed95`) without
+checking. §14.8's rule is that an explicit filename guards breadth, not depth; this is a third
+axis it does not guard at all — **whose file it is.**
+
+The edit stays: it is frame-verified (§106.1, the cane was two disconnected fragments and is now a
+continuous crook) and reverting a good fix to satisfy a boundary would be theatre. **But the record
+should not imply CHARACTER owns that file**, and no ANIMATION agent exists in this session, which
+is why the gap went unnoticed. The leg-axis work is genuinely blocked on an owner rather than on a
+measurement — and CHARACTER noting that its own file reads `upperLegR z 4.0°` against the clip's
+**24°**, a ~6× error for anyone reading the wrong file to understand the rendered pose, is the more
+useful half of the finding.
