@@ -6350,3 +6350,70 @@ in this project (cf. §64.2).
 it.** The measured delta is 0.1 points and invisible at 3×, so the critic's read is unaffected — but
 the frames and the tree do not match, and that must be stamped wherever the sheet is cited rather
 than left for a later reader to trip over.
+
+
+---
+
+## §75 — a rescaling argument is not a measurement, and architecture is nowhere near the constraint
+
+§71.6 flagged that GEOMETRY was about to re-weight its work queue toward triangle reduction on a
+comparison between two different quantities. It confirmed the flag **and then declined to stop
+there**, which is the part worth recording.
+
+### 75.1 The counter, confirmed in code rather than inferred
+
+`Engine.js:67` sets `renderer.info.autoReset = false`; `:267` calls `info.reset()` immediately
+**before** the render; `:273–274` read `info.render.calls` and `info.render.triangles` after. So it
+is an **all-passes per-frame submission counter**, exactly as §53.5 established. §1's budget reads
+*"1.2 M triangles **visible**"*.
+
+For the observed 1.566 M counted to breach that, **the pass multiplier would have to be under
+1.31×** — against a measured **2.62×** and a documented 4.5–5.4×. The breach was arithmetic.
+
+GEOMETRY names it as its own repeat: *"This is §56.4 exactly, which I established for `drawCalls`
+and then repeated on `triangles` one section later."* Establishing a distinction and then violating
+it in the adjacent quantity is a normal failure and worth logging without ceremony.
+
+### 75.2 The measurement it did instead
+
+> *"I did not stop at the rescaling argument, because a rescaling argument is not a measurement."*
+
+`scratchpad/archbudget.mjs` computes the **main-view** numerator headlessly through `tools/lvl.mjs`
+— no lock, no GPU, ~40 s:
+
+```
+architecture across all fifteen cameras:
+  9–44 draws          (budget 250)
+  0.124–0.323 M tris  (budget 1.200 M)
+```
+
+**Worst case is 44 draws / 0.323 M — 18% of the draw budget and 27% of the triangle budget.** The
+module GEOMETRY was about to start deleting geometry from is not near the constraint at all.
+
+So the tension it had assumed between *spending* triangles on normal gradients and *paying* for them
+by deletion is **much weaker than concluded, and in architecture is not currently binding**.
+Triangle reduction drops down the queue; draw-call merging keeps its place on its own merits.
+
+**No geometry was deleted on the strength of the bad number.** The flag arrived before the edit,
+which is the entire value of raising it early rather than at review.
+
+### 75.3 What is still owed, and how to get it without a lock
+
+`archbudget.mjs` gives **architecture's numerator only**. The scene total also includes Props,
+Statues, Terrain, Vegetation, Water, character and guards, and the last direct scene-total figure
+(0.668 M) **predates this tree**. `tools/budget.mjs` needs a boot.
+
+GEOMETRY's proposal, which I am adopting: **ride it along on the next capture that already holds the
+lock** rather than spending one on it. A measurement that needs a boot and nothing else should never
+buy its own boot while another is running.
+
+### 75.4 The buried avenue is proposed, not actioned — and it pre-limits the pass-6 reading
+
+The fix is the camera (`Shots.js`), the dune (`Terrain.js`) or the avenue (`Props.js`/`Statues.js`),
+and **two of those three are not GEOMETRY's files**, so it proposed rather than reached.
+
+The routing note matters more than the proposal: the two animals that *are* visible read **angular
+and slab-sided, not inflated** — so if the critic reaches for "blobby", it will not be about the
+loft. But it will be judging the loft on **two shadowed animals at 50–57 m**, which is not a fair
+test of it in either direction. Registered before the verdict, alongside §72.5's arms clause, so
+neither a positive nor a negative remark about the sphinxes can be over-read afterwards.
