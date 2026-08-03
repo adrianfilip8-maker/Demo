@@ -157,20 +157,37 @@ const result = await page.evaluate(async (cfg) => {
     const worldTile = tu * (CONSUMER_UV_SCALE[name] ?? 2);
     const mmPerTexel = (worldTile / sz) * 1000;
 
+    /* THE PERCENTILE ARRAYS BELOW USE FOUR DIFFERENT CONVENTIONS, AND THAT HAS COST REAL WORK.
+     *
+     * `lumaP` is p1/5/50/95/99, `aoP` is p1/5/50, `roughP` is p5/50/95, `tiltP` is p50/90/99.
+     * KNOWN_ISSUES §34 records `aoP` being read with **`roughP`'s** convention — i.e. the labels
+     * of another field two lines below — which turned p1 0.247 · p5 0.416 · p50 0.992 into
+     * "authored median 0.412". That single mislabelling propagated into `PREREG-aokey.md`, two
+     * shipped source comments, and (§122.2) a ledger section and a routed task 87 sections later.
+     *
+     * §34's rule is *a percentile triple must carry its percentiles at every hop*, and a bare
+     * array in a JSON file on disk is the hop where that rule was silently not being kept: the
+     * emitted record had the numbers and none of the labels. So `pcts` ships beside them. It is
+     * additive — every existing key keeps its name, order and value, so older baselines still
+     * compare field-for-field — and it means a reader of the JSON never has to find this file.
+     *
+     * If you add a percentile array here, add it to `pcts` in the same edit. */
+    const PCTS = { lumaP: [1, 5, 50, 95, 99], aoP: [1, 5, 50], roughP: [5, 50, 95], tiltP: [50, 90, 99] };
     rows.push({
       name, group: recipe.group, tier: recipe.tier ?? 0, size: sz,
       tile: recipe.tile, worldTile: +worldTile.toFixed(2), bump: recipe.bump,
       mmPerTexel: +mmPerTexel.toFixed(2),
-      lumaP: [1, 5, 50, 95, 99].map((p) => +pct(ys, p / 100).toFixed(3)),
+      lumaP: PCTS.lumaP.map((p) => +pct(ys, p / 100).toFixed(3)),
       lumaRms: +full.toFixed(4),
       mipLadder: ladder, tailP99, joint,
       // world size of the dominant detail, from the mip half-life
       detailMm: +(Math.pow(2, half + 1) * mmPerTexel).toFixed(0),
       darkTail: +(dark / n).toFixed(4),
-      aoP: [1, 5, 50].map((p) => +pct(aoS, p / 100).toFixed(3)),
-      roughP: [5, 50, 95].map((p) => +pct(rghS, p / 100).toFixed(3)),
-      tiltP: [50, 90, 99].map((p) => +pct(tiltS, p / 100).toFixed(2)),
+      aoP: PCTS.aoP.map((p) => +pct(aoS, p / 100).toFixed(3)),
+      roughP: PCTS.roughP.map((p) => +pct(rghS, p / 100).toFixed(3)),
+      tiltP: PCTS.tiltP.map((p) => +pct(tiltS, p / 100).toFixed(2)),
       slopeScale: +out.normalStrength.toFixed(2),
+      pcts: PCTS,
     });
 
     /* ---- images ---- */
