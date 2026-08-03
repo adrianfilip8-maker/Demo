@@ -526,7 +526,13 @@ export class Props {
       gloss: spec.gloss ?? 28,
       // See the note at Architecture.mat(): MATERIALS.gold.metal existed but only ever reached
       // the fallback MeshStandardMaterial, so the toon path never knew gold was metal.
-      metal: spec.metal ? 0.85 : 0,
+      /* Per-recipe amount, mirroring Architecture.mat(). Absent = 0.85, so both recipes here
+         are bit-identical to before. Props' two metals (`gold`, `bronze`) are both SOLID metal
+         objects — the gilded Ra, the hook rings, bronze fittings — so neither wants a reduced
+         amount today; the reason this is spelled out rather than left as a shared constant is
+         that Architecture's version of this line collapsed leaf-over-stone and solid leaf into
+         one value, and the next metal added here would inherit the same collapse silently. */
+      metal: spec.metal ? (spec.metalAmount ?? 0.85) : 0,
       outline: spec.outline ?? 1.0,
       sss: spec.side ? 0.5 : 0.1,
       emissive: spec.emissive ?? 0x000000,

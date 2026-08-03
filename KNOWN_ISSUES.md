@@ -11702,3 +11702,88 @@ But §124's own bracket already showed the obvious fix is wrong: capping `sandLo
 the haze the field exists to provide. **The fix is a per-sprite distance/near-plane guard, not a
 global screen-size ceiling**, and that is now a design decision on a named pool with the mechanism
 measured rather than a hunt.
+
+## §136 — the metalness arm is a regression, and the reason is a term sitting inside the wrong multiply
+
+`hieroglyph_gilded` at metal **0.45 against 0.85**, one boot, pre-registered at
+`PREREG-gildmetal.md`, scored at `RESULT-gildmetal.md`. **Verdict: no. Ship the mechanism, keep the
+value.** The recipe stays at 0.85 and no recipe declares a `metalAmount` today — *a measured result,
+not an omission.*
+
+Validity gates both pass, and the expensive one first: `base` vs `base2` (dt=0 clock pin) **0 px**,
+`base` vs `restore` **0 px**.
+
+### 136.1 P1 falsified, in the informative direction
+
+Predicted **warmer and more saturated**. Delivered **brighter and bluer at flat saturation**: over
+the 271 k-px gild population R−B goes **−4.62 → −9.79**. The gild already measures blue-dominant,
+and lowering metal *doubles* it. Looked at as well as counted — in `hero-lo.png` the kiosk lintel
+loses its warm mottling and flattens to grey-blue.
+
+### 136.2 §132.1's carried caution is refuted by the shape of the data
+
+I passed on SHADING's caution that the R/G/B asymmetry would be **the AgX shoulder compressing R**.
+For this population it is not, and the test is clean: *if R were shoulder-limited its deficit would
+grow with base luma.* It shrinks, monotonically, and reverses.
+
+| base L band | n | dR−dG |
+|---|---|---|
+| 0–20 | 6 811 | **−8.26** |
+| 20–35 | 78 092 | −6.98 |
+| 35–50 | 82 302 | −8.72 |
+| 50–70 | 41 337 | −3.15 |
+| 70–95 | 40 552 | −0.13 |
+| 95–130 | 18 673 | **+0.08** |
+| 130–256 | 3 627 | **+1.00** |
+
+The blue skew lives entirely in the **dark** half and dies at L ≈ 70.
+
+*(Narrowly: this refutes the shoulder as the driver of the **metalness response**. §132.1's separate
+measurement — an identical cool add moving paving 0.398 → 0.316 and gild 0.419 → 0.349 — is a
+different experiment and is not touched by this.)*
+
+### 136.3 The mechanism: an additive wash inside a multiply that should not reach it
+
+```glsl
+diff = albKey*…  +  albAmb*slyFillX*ao
+     + albShadow*slyShadX*shadowMix*mix(0.55,1.0,ao)
+     + slyShadX * uShadowWash * shadowMix * ao;     // <- NOT multiplied by albedo, and blue
+diff *= mix( 1.0, 0.20, slyMetal );                 // <- scales all four, including the wash
+```
+
+**The additive blue shadow wash sits inside `diff`, so `slyMetal` attenuates it along with the three
+albedo-multiplied terms.** Raising the diffuse multiplier 0.32 → 0.64 therefore restores the *blue
+wash* at the same rate as it restores the gold — and **167 205 of 271 394 gild px sit below L 50**,
+where the wash is the larger term.
+
+> On lit gild (L ≥ 95) the albedo term dominates and the response goes correctly **warm**
+> (`dR−dG` +0.08 → +1.00). **That is the same mechanism seen from the other side, and it is what
+> makes this an explanation rather than a curve fit** — the account predicts a sign reversal at a
+> particular luma and the data reverses there.
+
+**This is arguably a shader defect and it is not ARCHITECTURE's.** Metalness suppresses a surface's
+diffuse *albedo response*; there is no physical reason for it to attenuate an additive atmospheric
+wash. Moving that term outside the multiply would make the metalness knob mean what its name says,
+on exactly the population where it currently misbehaves. **Owner: SHADING** (`toon.glsl.js`, the
+`diff` assembly). Untouched.
+
+### 136.4 The control passed on magnitude, not just on count
+
+P3 required `gold_leaf`, `bronze_dark`, `props_gold`, `props_bronze` and the cane to be
+**pixel-identical**. It passes in substance, and the number that matters is not the changed count
+but the ratio: **control mean L moved 0.132 while gild mean L moved 6.78 — 51:1.** A shared constant
+would have moved all 2 570 control px by a comparable amount. *A control that is merely "small"
+proves less than a control whose smallness is two orders below the treatment.*
+
+### 136.5 What is now known and what is left
+
+**`metal` is tested and it is the wrong lever.** Do not reach for a lower value on this surface —
+it has been tried and the frame is on disk. The mechanism ships (per-recipe `metalAmount`, absent =
+0.85, so everything is bit-identical) because the *collapse* it fixes is real: five materials, five
+deliberately different `uSpec` values, **one `uMetal`** — and the next metal added would have
+inherited that silently. GEOMETRY mirrored it into `Props.js` for the same reason, while noting both
+props metals are solid objects that do not want a reduced amount today.
+
+**The untested Architecture-side lever on this surface is `spec`**, which TEXTURES sized and named
+this file's **0.55** as the binding constraint. That is where gold goes next from this side — after
+SHADING's `diff`-assembly question, which is upstream of both.

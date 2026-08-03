@@ -179,11 +179,31 @@ export class Architecture {
           /* Per-recipe metal AMOUNT, not one shared constant behind a boolean.
              `gold_leaf` (solid leaf, spec 0.95, rough 0.22) and `hieroglyph_gilded` (leaf over
              gesso over limestone, spec 0.55, rough 0.55) were indistinguishable in metal amount
-             while the recipes carefully distinguished everything else about them.
+             while the recipes carefully distinguished everything else — five materials, five
+             deliberately different uSpec values, one uMetal.
              `metalAmount` absent = 0.85, so every recipe that does not declare one is
              bit-identical to before and the control materials cannot move by accident.
-             See progress/records/PREREG-gildmetal.md for what the value is allowed to be
-             decided by, and RESULT-gildmetal.md for what it was. */
+
+             **No recipe declares one today, and that is a measured result, not an omission.**
+             `hieroglyph_gilded` at 0.45 was captured against 0.85 in one boot
+             (progress/records/RESULT-gildmetal.md, pre-registered in PREREG-gildmetal.md) and it
+             is a REGRESSION: over the 271k-px gild population R−B goes −4.62 → −9.79, i.e. the
+             gild measures blue-dominant already and lowering metal doubles that, at flat
+             saturation. In frame the kiosk lintel loses its warm mottling and flattens to
+             grey-blue.
+
+             The cause is not the AgX shoulder (tested: the R deficit SHRINKS with luma, which is
+             the wrong sign for a shoulder) but a term ordering in toon.glsl.js: the additive
+             blue shadow wash sits INSIDE `diff`, so `diff *= mix(1.0, 0.20, slyMetal)` attenuates
+             it along with the albedo terms. Raising the diffuse multiplier therefore restores
+             blue wash at the same rate as gold, and 62% of hero's gild sits below L 50 where the
+             wash is the larger term. That is SHADING's to fix if anyone wants this knob to mean
+             what its name says; until then, do not reach for a lower value here — it has been
+             tried and the frame is on disk.
+
+             The untested Architecture-side lever on this surface is `spec` (TEXTURES sized it at
+             Materials.js:230-270 and named this file's 0.55 as the binding constraint), not
+             `metal`. */
           metal: r.metal ? (r.metalAmount ?? 0.85) : 0,
           outline: HULL_OUTLINE.has(key) ? 0.85 : 0.0,
           sss: 0.0,
