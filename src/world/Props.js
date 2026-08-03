@@ -122,16 +122,53 @@ export class Props {
    * than perched. Falls back to y = 0 if TERRAIN is absent — `main.js` registers it before
    * PROPS, so it normally is not.
    */
+  /**
+   * Lift for every avenue sphinx, as a base course under its plinth (§8.1 gives the avenue
+   * x and z, not a height, so this is ours to set).
+   *
+   * Measured with `tools/avenuevis.mjs` against `Terrain.heightAt` and the `dunes` frustum,
+   * because "70% of the avenue is buried" has two mechanisms that want opposite fixes and the
+   * numbers separate them cleanly:
+   *
+   *   11 of 16 pedestals do not reach the `dunes` frame (69%, which is the reported figure)
+   *    6 of those 11 are OFF-FRAME — the west row from z 65 north, and both z 77.8 / z 84
+   *      pairs. That is the camera's 42° fov at (26, 19.5, 84), and it is not ours.
+   *    5 are occluded by a dune crest between camera and animal, by 0.13 / 0.16 / 0.40 /
+   *      0.57 / 1.34 m of penetration at 11–28 m along the ray.
+   *    0 are sunk into the ground. Every one of the sixteen stands 2.03–3.59 m clear of the
+   *      sand ring around it, so `heightAt` placement is doing its job and "buried" is the
+   *      wrong word for what is happening.
+   *
+   * I predicted 0.65 m would clear four of the five occluded and take 69% → 44%. **It clears
+   * two, for 69% → 56%**, and the sweep says that is all there is to buy:
+   *
+   *   pedestal   0     0.4    0.65    1.0    1.4
+   *   hidden    11/16  11/16   9/16   9/16   9/16
+   *
+   * The prediction was wrong because it treated the occluder as a fixed step — subtract the
+   * lift from the penetration and count the sign. It is a crest 11–28 m along a ray whose far
+   * end is what moves, so raising the animal swings the ray across a different part of the
+   * dune and the penetration does not fall 1:1. 0.65 m is kept because it is the *knee*: it
+   * captures the entire available gain, and 1.4 m — a plinth taller than the animal's own body
+   * — captures no more.
+   *
+   * So the two still-occluded and the six off-frame are the camera-versus-dune decision
+   * GEOMETRY has twice declined to take alone, and this does not pre-empt it. It is the part
+   * that is unambiguously ours, and it is worth 2 of 16 rather than the 4 I expected.
+   */
+  static AVENUE_PEDESTAL = 0.65;
+
   _sphinxAvenue() {
+    const AVENUE_PEDESTAL = Props.AVENUE_PEDESTAL;
     const terrain = this.engine.get('terrain');
     const groundY = (x, z) => (terrain?.heightAt ? terrain.heightAt(x, z) : 0);
     for (let i = 0; i < L.sphinxZ.length; i++) {
       const z = L.sphinxZ[i];
       for (const sx of [-1, 1]) {
-        const bag = sphinx({ rng: this.rng, worn: 0.35 + i * 0.05 });
+        const bag = sphinx({ rng: this.rng, worn: 0.35 + i * 0.05, pedestal: AVENUE_PEDESTAL });
         const x = sx * L.sphinxX;
         bag.transform(matrixOf({
-          x, y: groundY(x, z) - 0.15, z,
+          x, y: groundY(x, z) - 0.15 + AVENUE_PEDESTAL, z,
           ry: sx > 0 ? -Math.PI / 2 : Math.PI / 2,
           s: 1 + this.rng.jitter(0.04),
         }));

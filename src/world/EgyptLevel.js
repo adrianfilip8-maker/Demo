@@ -49,8 +49,11 @@ import * as K from './Kit.js';
  *    in the level, whole complex and both pyramids in frame.
  *
  *  RAIL ENTRY (§8.1 "first rail slide down into the complex"): rail 'approach' runs from the
- *  ridge anchor mast (10, 15.4, 61) down to the courtyard paving at (-4.4, 1.1, 23), swinging
- *  west of the spawn axis on the way so it stays out of the `sly-closeup` frame.
+ *  ridge anchor mast (10, 15.4, 61) down the peristyle's east flank to a newel post on the
+ *  colonnade's south-east return architrave at (20.7, 9.8, 31.8) — landing the player on the
+ *  y = 9.0 ledge circuit, which the rooftop run then continues north. Routed east because the
+ *  entry-axis corridor is where every character camera and `courtyard` itself stand; scored
+ *  against all fifteen with `tools/railroute.mjs`.
  * =============================================================================
  */
 
@@ -892,30 +895,57 @@ function courtyardTraversal(A) {
   const mast = new THREE.CylinderGeometry(0.24, 0.4, mastH, 12, 1);
   K.normaliseAttrs(mast);
   A.add('court', 'bronze_dark', K.boxProjectUVs(K.place(mast, { x: 10, y: ancDeck + mastH * 0.5, z: 61 })));
-  /* The descent swings WEST of the spawn axis on its way down, and that is deliberate.
+  /* The descent runs down the peristyle's EAST flank and lands on the colonnade, and the
+   * reason is that this rail had been routed twice against one camera at a time.
    *
-   * The old line ran (5.2,3.9,34.5) -> (3.4,1.7,28) -> (2.2,1.15,23), which put it straight
-   * through the `sly-closeup` frame: 131 of 501 sampled points on screen, passing **17 px from
-   * the head centre at 9.4 m depth** and sweeping screen y 71..243 against a head at y 214. It
-   * merged with the tail silhouette and cost that shot — the most-used character frame in the
-   * project — its cleanest read. The rail was never staged against this camera; the camera's
-   * placement came out of a 6480-position sweep, so the rail is the cheap thing to move.
+   * Critic pass 6 filed as its #1 of thirteen "a constant-radius tube with a handrail return
+   * bend, drawn at world scale diagonally across the entire composition" in `courtyard`. §79
+   * refuted the cane attribution and handed it here. What the two previous reroutes had both
+   * missed is that **each was checked against the one frame it was fixing.** The first line
+   * (x +5.2 → +2.2) was moved west to clear `sly-closeup`; the west line it became was then
+   * never checked against anything else. Scored across all fifteen cameras with
+   * `tools/railroute.mjs`, that west line was in three frames, not one:
    *
-   * Dropping the low end does NOT fix it (0.5–2.0 m of drop leaves all 105 in-frame samples in
-   * frame) because the offending run is the whole last 11 m, not its tail. Lateral is the only
-   * axis that works, and east is unavailable: +4 m or more puts the line inside the east pylon
-   * tower (x 8.5..19.5 at z 31..37). West clears at −6 m of shift.
+   *     courtyard    200/400 samples   nearest 4.2 m   42.5 px of tube   [452,170 .. 1256,546]
+   *     combat       114/400 samples   nearest 5.7 m   45.3 px           [3,220 .. 688,333]
+   *     sly-profile  109/400 samples   nearest 4.9 m   55.6 px           [234,6 .. 679,186]
    *
-   * Routed as a progressive swing rather than a dogleg so a 9.5 m/s slide stays smooth, and
-   * checked against the three things in the way: it crosses the gate at x −0.5 (opening is
-   * |x| < 8.5) and 10 m under the lintel, and its terminus at x −4.4 clears the west colossus
-   * plinth (x −13.5..−5.5, z 21.5..28.5) and sits south of the obelisk terrace (z1 19.4).
-   * Verified 0/501 samples in the `sly-closeup` frustum. The mast, the §8.1 rail head height
-   * and the "slide down into the complex" beat are all unchanged. */
+   * The px column is the one that matters: a traversal affordance crossing a wide shot is
+   * normal, and a 45 px bronze bar four metres from the lens is a different object. `courtyard`
+   * stands at (−2.5, 4, 41.5) — *on the approach*, which is the corridor this rail descends —
+   * so no west or centre line can be far from that lens. The whole character cluster
+   * (`sly-*`, `combat`, at z 28…33 on the entry axis) rules out the middle for the same reason.
+   *
+   * East is available after all. The note this replaces said it was not — "+4 m or more puts
+   * the line inside the east pylon tower (x 8.5..19.5 at z 31..37)" — which is true of a line
+   * that still has to reach the courtyard floor on the entry axis, and false of one that goes
+   * *round* the tower: at z 36 this line is at x 20.2, clearing the tower's battered face
+   * (19.5 − 0.105·10.6 = 18.4) by 1.8 m.
+   *
+   * It lands on the peristyle's south-east return architrave — an existing `ledge` at y 9.0
+   * spanning x 17.4…23, z 30.7…32.3 — which is a better beat than the old terminus anyway:
+   * the slide delivers you onto the §8.1 ledge circuit instead of onto open paving, and the
+   * rooftop run continues north from where you land. Landing there rather than on the
+   * architrave proper also keeps it 6 m from `pylon-drop`'s terminus at (22.6, 9.25, 26); an
+   * earlier candidate that landed at (23, 9.45, 25) converged with it to within 0.4 m and
+   * would have fused two rails into one blob.
+   *
+   * Verified, not asserted: 0 samples in fourteen of the fifteen frusta, and in `dunes` —
+   * the approach shot, where this rail is the subject matter — 8.1 px at 27.7 m. Minimum
+   * clearance over `Terrain.heightAt` along the whole run is 4.12 m, at the anchor itself,
+   * which is unchanged. The mast, the §8.1 rail head height and the "first rail slide down
+   * into the complex" beat are all unchanged. */
   rail(A, 'approach', [
-    [10.0, 15.3, 61.0], [7.8, 12.0, 51.0], [4.4, 7.6, 42.0],
-    [-0.5, 3.9, 34.5], [-3.0, 1.7, 28.0], [-4.4, 1.15, 23.0],
-  ], 'bronze_dark', 0.13);
+    [10.0, 15.3, 61.0], [13.2, 13.6, 52.0], [16.6, 12.0, 43.0],
+    [20.2, 10.6, 36.0], [20.7, 9.8, 31.8],
+  ], 'bronze_dark', 0.12);
+  /* Newel post at the landing. The critic's reading of the old line as a *cane* was helped by
+     it ending in mid-air on an upward flick — the last 5 m flattened from a steep descent to
+     1.15 m over 5 m of z, which in screen space curls back up and is exactly a crook. This
+     line descends monotonically into a post instead, so it terminates on an object. */
+  const newel = new THREE.CylinderGeometry(0.13, 0.17, 1.0, 10, 1);
+  K.normaliseAttrs(newel);
+  A.add('court', 'bronze_dark', K.boxProjectUVs(K.place(newel, { x: 20.7, y: 9.3, z: 31.8 })));
 
   /* Rooftop-run entry: east pylon deck down to the peristyle architrave. */
   rail(A, 'pylon-drop', [[13.6, 26.3, 32.0], [15.6, 22.0, 31.0], [19.0, 15.0, 29.4], [21.8, 10.2, 28.2], [22.6, 9.25, 26.0]], 'bronze_dark', 0.13);

@@ -26,6 +26,7 @@ const {
   masonry, weather, chiselMarks, pitting, speckle, brushwork, paintRemnants, grain, flowStreaks,
   blurWrap, concavity, skyward, streakDown, rasterMask, rasterRGBA, rampFloor,
   nz, nzA, vz, fbmN, fbmA, ridgeN, warpN, worleyN, rng, warpedFbm2,
+  abOff,
 } = C;
 
 /* ========================================================================= */
@@ -680,8 +681,11 @@ function ashlar(s, o = {}) {
 function carve(s, cut, line, o = {}) {
   const {
     depth = 0.34, bevelPx = 3.0, lip = 0.10, bulge = 0.40, lineDepth = 0.55, chatter = 0.03, seed = 5,
-    arris = 0, arrisHex = PAL.limeLight, arrisPolish = 0.05,
+    arris: arrisIn = 0, arrisHex = PAL.limeLight, arrisPolish = 0.05,
   } = o;
+  // A/B arm `hgrelief`: the control build carves the identical height field with no albedo lip,
+  // which is the state PREREG-hgrelief was sealed against.
+  const arris = abOff('hgrelief') ? 0 : arrisIn;
   const size = s.size;
   /* Bevel width scales with resolution so a tier-1 half-size map keeps the same *physical*
    * chisel edge. It also has a hard floor of 2 texels: at 1 texel the cut wall is a single-texel
@@ -1174,6 +1178,73 @@ export const MATERIALS = {
        * Ridged noise because scour has crests where the harder crystals stand out. */
       const scour = s.field(3, (u, v) => ridgeN(u, v, 8, 4, 0.55, cx.seed + 733));
 
+      /* **The scour was authored into height and roughness only, and neither of those channels
+       * reaches this recipe where it is largest.** The comment further down says the polish loss
+       * "costs nothing in the albedo" as though that were the virtue. It is the defect.
+       *
+       * `granite_pink` is **43.3 % of `interior`** — the tomb walls, the gate frame, the
+       * sarcophagus — and that frame is torch-lit, so most of its granite sits at base luma
+       * 0.18. A height feature reaches the eye through the normal map, which needs a direction
+       * to turn against and goes flat in ambient; a roughness feature reaches it through the
+       * specular lobe, which is not there either. §81.2 made exactly this argument for the
+       * hieroglyph arris and it applies here unchanged: **albedo is the only channel that
+       * reaches every lighting state.**
+       *
+       * The band it is aimed at was measured, not assumed. `matflat` on `shots/tx7/interior.png`
+       * puts this recipe's *fine* (1.6 px) energy level with the rest of the frame — fineMed
+       * 0.0240 against `paving_courtyard` 0.0236 and `hieroglyph_wall` 0.0245 — while its
+       * **coarse** energy is 21–29 % short: coarseMed **0.0377** against 0.0478 and 0.0531. That
+       * is the shape of the read as well as the number: at 2x the tomb wall is a uniform fine
+       * mottle with nothing organising it, which is *both* §7.3 conditions at once — busy at the
+       * fine end, flat at the coarse one. So the fix has to add coarse structure without adding
+       * fine variance, and adding a *new* field would have been §70's mottle mistake again.
+       * There is already a field of exactly the right scale and the right physical meaning in
+       * the recipe, spending itself on two channels the frame does not read.
+       *
+       * Scale: 8 cycles over a 4.4 m repeat is a **55 cm** hollow, i.e. ~27 px at `interior`'s
+       * 20.6 mm/px and ~11 px at `courtyard`'s — coarse-band at both, and nowhere near the
+       * sub-pixel line that `MOTES` and `sand_ripples` fell over. It is a smooth field with no
+       * isolated feature, so it adds no countable landmark to a 22 m shaft showing five repeats.
+       *
+       * Direction is the physics and it is the one the roughness term already encodes: blown
+       * sand frosts polished granite, so a scoured hollow returns *more* light than the
+       * sheltered stone beside it, which keeps its mirror.
+       *
+       * **Multiplicative, and the additive form was measured and thrown away.** Written first as
+       * `mixHex(i, paleHex, sq * 0.17)` — a lerp toward a constant — it *lowered* every statistic
+       * it was aimed at: at `interior`'s scale coarseMed **−7.8 %**, cov1 −1.5 %, sd 1:1 −2.7 %.
+       * A lerp toward a constant contracts the contrast already present by `(1 - t)` everywhere
+       * it acts, and that loss beat the smooth field it added. The whole `cov1`/`covC2` family is
+       * *relative* contrast (band-pass over local base), so a multiplicative modulation is the
+       * one that survives the ratio. It is also why this is centred on the field's own mean: a
+       * one-sided term would move mean albedo, and §8's handoff already has LIGHTING watching
+       * stone brightness. */
+      /* **The sign is the opposite of the one this started with, and the measurement is what
+       * turned it round.** The first form brightened the scoured stone — frosting, the physics
+       * of the roughness term two lines below — and it *lowered* every statistic it was aimed
+       * at (coarseMed −12.0 %, cov1 −2.3 %, squint sd −5.2 %). The reason is that the premise
+       * above is not quite true: `weather()` below seeds its varnish streaks from this very
+       * field (`varnishSrc`), so the scour **is** already spent in albedo, in the *darkening*
+       * direction. A brightening term correlated with the same field cancels it. The same
+       * magnitude with the sign flipped gains instead of cancels, and it agrees with the other
+       * two channels the field drives: high scour is a hollow (`h -= sq * 0.30`) and matte
+       * (`rough += sq * 0.34`), and a hollow holds patina. **An "unused field" is only unused
+       * until you check who else reads it** — §12's shape, found by an A/B rather than by
+       * reading the recipe.
+       *
+       * Low-passed first, and that is a sampling argument like §67.3's. `ridgeN(..., 8, 4, ...)`
+       * is four octaves, so its top octave is 64 cycles per tile = **3.3 px at `interior`** —
+       * squarely in the *fine* band this change must not feed. Un-blurred at the same amplitude
+       * it put +17.4 % into fineMed and +18.4 % into the squint sd, which is a third of the way
+       * to the historic ashlar blotching state (+49 %) and is the busy failure. Blurring to the
+       * fundamental leaves the 55 cm structure and drops the octaves that were buying nothing:
+       * fineMed +1.7 %, and the coarse band still gains +18.4 %. */
+      const FROST = abOff('granite') ? 0 : -0.26;
+      const scourLo = blurWrap(scour, size, Math.max(1, Math.round(size / 64)), 2);
+      let sqMean = 0;
+      for (let i = 0; i < s.n; i++) sqMean += scourLo[i] * scourLo[i];
+      sqMean /= s.n;
+
       const wA = {}, wB = {};
       // Crystal cells, capped so a half-resolution tier still gets ≥6 texels per crystal —
       // below that the Worley is finer than the mip chain can carry and returns as sparkle.
@@ -1194,13 +1265,13 @@ export const MATERIALS = {
           if (k < 0.48) { hex = fHex; rgh = 0.22; hh = 0.62; }        // pink feldspar
           else if (k < 0.91) { hex = qHex; rgh = 0.20; hh = 0.60; }   // grey quartz
           else { hex = bHex; rgh = 0.34; hh = 0.56; }                 // biotite / hornblende
+          const sq = scour[i] * scour[i];
           const shadeK = 0.95 + big.id * 0.06 + (sm.id - 0.5) * 0.04
-            + (macro[i] - 0.5) * 0.10 + sc * 0.30;
+            + (macro[i] - 0.5) * 0.10 + sc * 0.30 + (scourLo[i] * scourLo[i] - sqMean) * FROST;
           const c = hexRGB(hex);
           s.r[i] = c[0] * shadeK; s.g[i] = c[1] * shadeK; s.b[i] = c[2] * shadeK;
           // Crystals stand a hair apart even after polishing; grain edges catch light.
           const edge = sat((big.f2 - big.f1) / 0.16);
-          const sq = scour[i] * scour[i];
           s.h[i] = hh + (1 - edge) * 0.10 + (sm.id - 0.5) * 0.06 - sq * 0.30;
           // Scoured stone lost its polish; sheltered stone kept it. That is the whole read of a
           // weathered monolith under a raking sun, and it costs nothing in the albedo.
@@ -1503,12 +1574,22 @@ export const MATERIALS = {
       // Measurement hook (same shape as Hieroglyphs' __GLYPHLOG): the census instrument reads
       // what shipped rather than re-deriving it. Free when unset.
       const logCrack = globalThis.__PAVELOG ? new Float32Array(s.n) : null;
+      /* A/B arm `pavecrack` — a **discriminating test, not a candidate**. Critic pass 6's
+       * finding #12 (short curved high-contrast marks on the courtyard paving) is unowned:
+       * §81.4 records FX excluding decals by A/B and TEXTURES excluding this crazing by
+       * mechanism — a connected polygon net of long straight low-contrast boundaries, against
+       * marks that are short, curved and disconnected. Elimination by mechanism is not
+       * attribution, so the seal registered in advance that "not decals" would not make them
+       * mine either. This is the test that settles it: zero the crack term and see whether the
+       * marks survive. It was declined last session because it would have broken that capture's
+       * own null control; the control is now a same-tree arm, so the objection is gone. */
+      const noCrack = abOff('pavecrack');
       for (let i = 0; i < s.n; i++) {
         const bu = m.bu[i] * 2 - 1, bv = m.bv[i] * 2 - 1;
         const dish = (1 - bu * bu) * (1 - bv * bv);
         const wear = traffic[i];
         const cz = crazeOf(i);
-        const crack = lerp(crackThin[i], crackWide[i], cz[1]) * cz[0];
+        const crack = noCrack ? 0 : lerp(crackThin[i], crackWide[i], cz[1]) * cz[0];
         if (logCrack) logCrack[i] = crack;
         s.h[i] -= dish * wear * 0.16;                        // worn hollow in the flag
         s.h[i] -= crack * 0.22;
@@ -4233,6 +4314,13 @@ function glyphWall(ctx, size, mode, seed, o = {}) {
     for (let i = gaps.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); const t = gaps[i]; gaps[i] = gaps[j]; gaps[j] = t; }
     let c = Math.floor(rnd() * cols);
     for (const g of gaps) { cartAt[c % cols] = 1; c += g; }
+    /* A/B arm `hgrelief`: the control build restores the every-other-column alternation whose
+     * `2 x pitch` period is what critic pass 6 filed as `interior`'s "~90 px repeat". Written
+     * *after* the draws above rather than instead of them, so both arms consume `rnd` the same
+     * number of times and the two tiles differ in cartouche placement and in nothing else —
+     * §81.3's trap, where taking the jitter off the register's own stream re-rolled the whole
+     * inscription and moved a metric the change was not supposed to touch. */
+    if (abOff('hgrelief')) for (let i = 0; i < cols; i++) cartAt[i] = i % 2 === 0 ? 1 : 0;
   }
 
   /* Band -1 — the kheker frieze that crowns a temple wall.
@@ -4284,9 +4372,12 @@ function glyphWall(ctx, size, mode, seed, o = {}) {
      * takes a bigger sign, and a rare large sign is §13's landmark mechanism. */
     const cw = new Array(cols);
     {
+      // A/B arm `hgrelief`: the control build rules the register at a constant pitch — the
+      // "~42 px mechanical grid" half of the same finding. Own stream in both arms.
+      const jit = abOff('hgrelief') ? 0 : 0.28;
       const wr = rng((seed ^ 0x2545f491) >>> 0);
       let sum = 0;
-      for (let c = 0; c < cols; c++) { cw[c] = 0.86 + wr() * 0.28; sum += cw[c]; }
+      for (let c = 0; c < cols; c++) { cw[c] = (1 - jit * 0.5) + wr() * jit; sum += cw[c]; }
       for (let c = 0; c < cols; c++) cw[c] = (cw[c] / sum) * size;
     }
     const colX = new Array(cols + 1);

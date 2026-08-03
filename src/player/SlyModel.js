@@ -110,7 +110,40 @@ export const TUNE = {
    * than the torso. At headScale 0.90 the head is still 0.34 m across against a 0.27 m chest —
    * wider than his own ribcage — so "big head" survives the cut with room to spare.
    */
-  headScale: 0.90,        // cranium scale about the neck joint (§7.3 "~1:5 head:body")
+  /* **0.90 → 1.07, and the number this is scored against finally has one definition.**
+   *
+   * Everything above this note argued the ratio down with `legLift`/`torsoShrink` because
+   * `headScale` "asymptotes". That is true and it is not a reason to leave the head small:
+   * the asymptote argument was made against a *chin→crown-including-cap* measure, and
+   * AGENTS.md §7.3 now fixes the definition as **standing height ÷ (chin → top of cranium),
+   * cap and ears EXCLUDED, in `idle_confident`**, target 5.0, failing outside 4.5–5.5.
+   * Under that definition the shipped rig measured **5.72 — a FAIL**, not a pass, and the
+   * three numbers this block has argued over (4.44 / 4.16 / 5.29) are all under other
+   * definitions and none of them is the scored one. `tools/headratio.mjs` is the instrument.
+   *
+   * Swept with a fresh build per value (`scratchpad/headsweep.mjs`, which asserts it
+   * reproduces headratio.mjs at the shipped value before it is read):
+   *
+   *     headScale   0.90    1.00    1.05    1.07    1.10    1.20
+   *     head:body   5.72    5.26    5.07   ~5.03    4.89    4.58
+   *
+   * 1.07 lands on the target rather than merely inside the band. The asymptote is real —
+   * the head sits on a fixed body, so this buys less per unit than `legLift` does — but it
+   * is the only lever left that does not cost something the character needs: `torsoShrink`
+   * was deliberately backed off 0.16 → 0.09 to give the spine its contrapposto lever (the
+   * §7.3 pose condition), and `legLift` is what makes him lanky. Taking head-count out of
+   * either of those trades one §7.3 condition for another.
+   *
+   * **What it costs, stated rather than buried:** total skinned height 1.774 → 1.838 m,
+   * i.e. +3.6% against §6's nominal 1.8 m. That is the visual mesh only — the physics
+   * capsule is `Controller.js`'s own constant and is untouched — but it does mean he reads
+   * slightly larger in every frame, which §79.4 wanted anyway for the shots that score him.
+   * Head width goes 0.34 → 0.40 m against a 0.27 m chest; `headWide` is deliberately NOT
+   * reduced to compensate, because the mask/brim geometry at `_buildHead` is bounded in
+   * head-space RATIOS (see the lobe bound there) and those are scale-invariant, while
+   * `headWide` is not — narrowing it to claw back width would move the mask under its own
+   * clearance check for no gain the ratio can see. */
+  headScale: 1.07,        // cranium scale about the neck joint (§7.3 "~1:5 head:body")
   headWide: 1.08,         // extra width-only on the cranium: rounder from the front
   /* Length and girth are separate knobs now, and they were not before. A single `tailScale`
    * multiplying both can only make a *fatter longer* sausage, and the defect the captures kept
@@ -372,7 +405,74 @@ export const TUNE = {
      ~2.4. If the next frame reads runs/row < 2.4 the width overshot and 1.35 joins 3.40 in
      this note as falsified. */
   tuftRollW: 1.35,
-  furLobe: 0.055,         // amplitude of the low-frequency lumpiness on furred lofts
+  furLobe: 0.055,         // lobe amplitude on the HEAD only — see `furLobeLimb`
+  /* **The lobe knob was one knob doing two jobs, and the cheek was holding the limbs hostage.**
+   *
+   * §7.3's "fur reads as smooth plastic" is a SILHOUETTE condition, and this file's own note
+   * above says so: a cel-shaded character carries no fur in its shading, so a smooth capsule
+   * stays a smooth capsule whatever the texture does. There are exactly two instruments for
+   * it here — clumps, and low-frequency lobing of the loft itself. The clump family was
+   * measured NET NEGATIVE on the frame and correctly cut to `tuftDensity` 0.46, because a
+   * card on the FACE of a form is a black chip once the ~2.5 px ink hull wraps it. That left
+   * lobing as the only instrument still available, and lobing cannot produce that failure by
+   * construction: it deforms the loft, so it adds no cards, no second normal set and no extra
+   * hull — its failure mode is "lumpy", never "shredded".
+   *
+   * So why was the tube still smooth? Because `furLobe` was **clamped by a constraint in a
+   * different body region**. `_buildHead` lobes the cheek by `furLobe * 0.55 * back` and
+   * carries a bound in its own comment — the lobe must stay inside the mask patch at 1.058 —
+   * which pins the GLOBAL knob at:
+   *
+   *     1 + 0.869 · (furLobe · 0.55) · 1.62  ≤  1.058   ⇒   furLobe ≤ 0.0749
+   *
+   * (1.62 is the lobe's peak deviation, `amp·(1 + 0.62)`.) The shipped 0.055 is already 73%
+   * of that ceiling, so the knob named after the defect could only ever move the limbs by
+   * +36% before it pushed the cheek fur through the domino mask — and the mask is one of the
+   * four things §7.3 names in the silhouette condition. **A knob that is pinned still moves
+   * when you turn it**, which is KNOWN_ISSUES §3's shape and is exactly how this survived
+   * tuning: every increase that was tried either did nothing visible or broke the face, and
+   * neither outcome points at the ceiling.
+   *
+   * Split, so the bound governs only the surface it was derived for. `furLobe` keeps the head
+   * at its measured-safe 0.055 (cap 1.0426, unchanged, so `_buildHead`'s bound arithmetic is
+   * still literally true), and the arm/leg/tail lofts move on their own knob.
+   *
+   * ── AND THEN THE SPLIT DID NOT FIX THE CONDITION. Recorded because the number is the useful
+   * part. Hold-out A/B at `sly-closeup`, same camera, same resolution, before vs after
+   * (`scratchpad/furab.mjs`): doubling this knob 0.055 → 0.115 moved outboard contour RMS by
+   * **+1% on the left and −8% on the right** — nothing, and the normalised figure went DOWN.
+   *
+   * The reason is ownership, and it is structural rather than a tuning miss
+   * (`scratchpad/contourown.mjs`, which reports the material group and dominant bone of the
+   * triangle owning the outermost pixel of every contour row):
+   *
+   *     sly-closeup LEFT   68.0% CANE (a smooth metal rod, no fur at all)
+   *                        12.0% glove · 5.6% cap cloth · 4.4% head fur · 4.1% cap brim
+   *     sly-closeup RIGHT  35.4% CLOTH (boot + trouser) · 33.7% tail · 8.1% cap · 7.0% ear
+   *
+   * **The bare furred arm and the bare furred leg — the two surfaces this knob deforms — own
+   * essentially none of the contour in the shots that score the condition.** The leg rows on
+   * the outline are all `clothDark`, i.e. boot and trouser, not the bare fur band. So no value
+   * of this knob could have moved that silhouette; it is §3's clamped-knob shape a second time
+   * in the same file, one layer out — the first clamp was the cheek bound, and removing it
+   * revealed the knob was aimed at a surface that is not on the edge.
+   *
+   * It is NOT inert, which is why it is kept and why it is at 0.095 rather than back at 0.055:
+   * at the `sly-arm` framing the forearm does own **9.8%** of the right contour, and the bare
+   * fur leg is exposed in poses that lift the trouser. 0.095 is a real +73% where the surface
+   * is visible, chosen over 0.115 because the forearm is also seen on the FACE of the form in
+   * `sly-closeup`, where a large radius wobble is a lumpy arm with no compensating edge gain.
+   *
+   * **Where the fur condition actually lives, with the measurement to justify it:** the tail,
+   * which owns 33.7% of `sly-closeup`'s right contour, and whose edge rows are `furDark` —
+   * the TUFT CARD material, not the loft. The loft lobe sits inside the tuft envelope and
+   * never reaches the edge. So the lever is the tuft system on the tail specifically, and that
+   * system was cut globally to `tuftDensity` 0.46 for a good and well-evidenced reason (a card
+   * on the face of a form is a black chip inside the ink hull). Tufts on the CONTOUR help and
+   * tufts on the FACE hurt; the tail is the one surface where they are reliably on the contour.
+   * Reopening that trade needs a frame-level hold-out A/B of the quality that closed it the
+   * first time, and it is deliberately not done blind here. */
+  furLobeLimb: 0.095,
 
   /* --- idle life, only used while ANIMATION is absent --- */
   breathRate: 0.62,
@@ -1115,7 +1215,7 @@ export class SlyModel {
       // lumpiness plus a mild vertical squash makes it read as fur over a spine.
       shape: (a, i, t) => {
         const s = superEllipse(a, 1.06);
-        const lump = furLobe(a, t * 6, TUNE.furLobe * 1.5, 3, 26);
+        const lump = furLobe(a, t * 6, TUNE.furLobeLimb * 1.5, 3, 26);
         return { u: s.u * lump * 1.03, v: s.v * lump * 0.94 };
       },
       groupAt: (i, t) => (isDark(t) ? 'furDark' : 'furCream'),
@@ -1171,7 +1271,7 @@ export class SlyModel {
          visible kink, because the lump and the super-ellipse both deform the ring. */
       shape: (a) => {
         const s = superEllipse(a, 1.06);
-        const lump = furLobe(a, 6, TUNE.furLobe * 1.5, 3, 26);
+        const lump = furLobe(a, 6, TUNE.furLobeLimb * 1.5, 3, 26);
         return { u: s.u * lump * 1.03, v: s.v * lump * 0.94 };
       },
       // The last authored band [0.975, 1.001] is dark, so the cone continues the dark tip
@@ -1282,7 +1382,7 @@ export class SlyModel {
         const s = superEllipse(a, 1.05);
         // the bare forearm band is fur, so it gets the lumpy loft; the sleeve does not
         if (ts[Math.min(i, ts.length - 1)] >= cuffStart && ts[Math.min(i, ts.length - 1)] < gloveStart) {
-          const k = furLobe(a, i, TUNE.furLobe * 1.3, 4, 11);
+          const k = furLobe(a, i, TUNE.furLobeLimb * 1.3, 4, 11);
           return { u: s.u * k, v: s.v * k };
         }
         return s;
@@ -1453,7 +1553,7 @@ export class SlyModel {
       // as moulded plastic. Amplitude falls off toward the ankle, where the boot takes over.
       shape: (a, i, t) => {
         const s = superEllipse(a, 1.04);
-        const k = furLobe(a, i, TUNE.furLobe * (1 - 0.55 * t), 5, 13);
+        const k = furLobe(a, i, TUNE.furLobeLimb * (1 - 0.55 * t), 5, 13);
         return { u: s.u * k, v: s.v * k };
       },
       /* ── CRITIC PASS 5 §3.1 FAULT 5: "the legs read as bare mottled skin, not trousers."

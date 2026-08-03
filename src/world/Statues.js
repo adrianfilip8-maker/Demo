@@ -227,11 +227,25 @@ export function seatedColossus(opts = {}) {
 
 /* ============================ sphinx =================================== */
 
-/** Recumbent sphinx. `s` scales the whole animal; the avenue wants 3.5 m overall. */
+/**
+ * Recumbent sphinx. `s` scales the whole animal; the avenue wants 3.5 m overall.
+ *
+ * `pedestal` adds a stepped base course *below* the plinth, from −pedestal up to the plinth
+ * foot, so the animal rides that much higher while the stone still meets the sand. The caller
+ * must raise its placement by the same amount — see `Props._sphinxAvenue`, which is the only
+ * user and which measured why it needs it.
+ */
 export function sphinx(opts = {}) {
-  const { rng, s = 1, worn = 0.5 } = opts;
+  const { rng, s = 1, worn = 0.5, pedestal = 0 } = opts;
   const bag = new Bag();
   const R = rng;
+
+  if (pedestal > 0.01) {
+    /* Wider than the plinth by 13 cm a side so the two courses read as a step rather than as
+       one tall block, and chipped harder: this is the course the sand actually attacks. */
+    bag.add('lime', chunkAt(-1.28, 1.28, -pedestal, 0.04, -2.68, 2.48,
+      { rng: R, jitter: 0.035, chip: worn * 0.2, c: 0.10 }));
+  }
 
   /* plinth. The cap slab is 19.4% of the whole animal's surface area — measured, and it was
      carrying it on twelve unchamfered triangles, which made it the single largest flat

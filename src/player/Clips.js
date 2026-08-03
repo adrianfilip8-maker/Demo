@@ -593,7 +593,48 @@ def('perch_idle', {
        Verified offline only (shotsil: no ink hull, no scene). **What a capture still has to
        confirm is the one thing no offline probe here can see: he is perched on a ledge and the
        hook now swings low and outboard, so `hero` must show it over open air rather than through
-       the ledge.** */
+       the ledge.**
+
+       ── ANSWERED, and it did not need a capture: it needed two existing probes composed.
+       Projecting the posed cane into the shot's own camera and raycasting the LEVEL through the
+       same pixels (`scratchpad/perchpix.mjs` + `tools/pixat.mjs`) gives depth on both sides of
+       every pixel, which is exactly the "no offline probe can see this" gap above — neither
+       tool can answer it alone and the pair answers it in seconds.
+
+       **Most of the crook is over open air, and the bottom of it is buried in the deck.**
+       At `hero`, along the crook (cane depth vs level depth, m):
+
+           (679,297)  11.174 vs 40.78   open air behind it — the intent, achieved
+           (660,309)  11.181 vs 11.33   clearing the deck by 0.15
+           (670,310)  11.182 vs 11.18   grazing
+           (670,314)  11.214 vs 10.83   *** 0.38 m BEHIND the deck plane (y = 9.00) ***
+
+       The same crossover is in `sly-perch` at (718,532): cane 4.061 against paving 3.81. That
+       is KNOWN_ISSUES §82.4's open "floating brown prop at (747,477)" — which this probe
+       confirms is the cane at 4.121 m, in front of the paving at 4.58 m, exactly as GEOMETRY's
+       raycast implied. **The floor cuts the crook, and the arc that survives above the cut
+       reads as a rod lying detached in front of him.** It is not a detachment: projected alone,
+       the character is ONE connected component.
+
+       Root cause is the whole cane mesh, not the tip. `tools/caneall.mjs` reports "0 clips with
+       the tip through the floor" and is right — the TIP is at y 1.172 here. A crook is a swept
+       tube and its lowest surface is neither the tip nor the `hook` point (y 0.143): the arc
+       swings ~20 cm below the hook reference. Measured over the whole mesh
+       (`scratchpad/canelow.mjs`), **12 clips put cane geometry under the floor** — `crawl`
+       −0.517, `land_hard` −0.444, `land_roll` −0.402, `dive_impact` −0.366, `rail_slide` −0.210,
+       `sneak_walk` −0.208, `ko` −0.152, `crouch_idle` −0.118, `crouch_walk` −0.099,
+       `sneak_idle` −0.096, **`perch_idle` −0.062**, `pickpocket` −0.060. Another instrument
+       measuring two named points on a swept tube and returning a confident zero (§11).
+
+       **NOT fixed here, deliberately, and the cost is why.** Sweeping this aim's X against
+       ground clearance (`scratchpad/caneaim.mjs`) the crook does not clear until **x = 132**,
+       i.e. **+16°** off the 116 above, for 6.2 cm — 0.004 m/deg. That aim is the one the note
+       above selected as rank 1 of 10351 on broad/across/bodyGap AND chose by silhouette over a
+       scoring tie, on the single most recognisable prop in the series. Trading a measured
+       rank-1 hook read for 6 cm of floor clearance is not a trade to make without a frame, and
+       the two levers that would not touch the aim — shaft length and grip height — are global
+       across all 52 clips and would shrink the hook everywhere. Handed over with the numbers
+       rather than guessed at. */
     { t: 0, e: 'soft', P: PERCH, pos: [0.045, -0.30, 0.07], cane: [116, -30, 45] },
     /* In-between keys re-derived as the SAME breath drifts on the new base — these are
        absolute angles, and §9's orphaned-key trap is exactly a base pose moving under keys

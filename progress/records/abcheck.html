@@ -1,0 +1,9 @@
+<!doctype html><meta charset=utf8><body><pre id=o>…</pre>
+<script type="module">
+import { TEX_AB, abOff } from '/src/textures/Canvas2D.js';
+document.getElementById('o').textContent = JSON.stringify({
+  metaEnv: typeof import.meta.env, raw: import.meta.env?.VITE_TEX_AB ?? null,
+  list: TEX_AB(), hgOff: abOff('hgrelief'), granOff: abOff('granite'), paveOff: abOff('pavecrack'),
+});
+window.__ABCHECK = { list: TEX_AB(), raw: import.meta.env?.VITE_TEX_AB ?? null };
+</script>

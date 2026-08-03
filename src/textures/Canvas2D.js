@@ -22,6 +22,56 @@
 import { rng, warpedFbm2, ridged2, worley2 } from '../core/Rand.js';
 
 /* ------------------------------------------------------------------------- */
+/*  A/B harness — one tree, two builds                                        */
+/* ------------------------------------------------------------------------- */
+
+/**
+ * Which texture treatments are switched **off** for this build.
+ *
+ * Every in-frame claim this module has ever made was scored by comparing a capture of the
+ * shipped tree against a capture taken at an *older commit* — `PREREG-mottle-critic6` against
+ * `rim4`, `PREREG-hgrelief` against `critic6`. That comparison carries every other agent's work
+ * in the interval as a confound, which is why those seals all needed a null-control clause
+ * ("if the nulls move, the primary is unquotable"), and §74.1 is the case where the nulls moved
+ * as much as the treatment and the claim had to be withdrawn.
+ *
+ * This removes the confound instead of bounding it: **both arms are the same commit**, booted
+ * minutes apart, differing only in the named treatments. Everything not named is bit-identical
+ * by construction rather than by measurement, so an untouched recipe becomes a true null and
+ * the residual it reports is the instrument's own noise floor — the number every previous seal
+ * had to assume.
+ *
+ * Read from `VITE_TEX_AB` (vite injects it into the dev build `tools/shot.mjs` boots, so no
+ * capture tool has to change and no source file is edited between the two arms) or from
+ * `globalThis.__TEX_AB`, which is how the CPU-side labs in `progress/records/` set it before
+ * they import this module. Empty — the default, and what ships — means every treatment is on.
+ *
+ * `base` turns off all of them at once. **A control build is a diagnostic, never a candidate:**
+ * nothing here is a knob to ship at, and the shipped state is always the empty string.
+ */
+function abRaw() {
+  try {
+    if (typeof globalThis !== 'undefined' && globalThis.__TEX_AB != null) return String(globalThis.__TEX_AB);
+    if (typeof import.meta !== 'undefined' && import.meta.env) return String(import.meta.env.VITE_TEX_AB || '');
+  } catch { /* plain-module and node hosts have no import.meta.env; that is the shipped path */ }
+  return '';
+}
+/* Read per call, not once at import. A texture lab that wants both arms in one process builds
+ * the recipe twice with `globalThis.__TEX_AB` set differently between the two — and a value
+ * frozen into a module constant at import time cannot be changed by the second build, because
+ * the module graph is cached and only the *entry* specifier can be busted. A latched flag would
+ * have silently reported the first arm twice, which is §46's shape: an instrument that cannot
+ * distinguish its own two inputs. Cached on the raw string so the common case is one compare. */
+let _abStr = null, _abList = [];
+export function TEX_AB() {
+  const raw = abRaw();
+  if (raw !== _abStr) { _abStr = raw; _abList = raw.split(',').map((s) => s.trim()).filter(Boolean); }
+  return _abList;
+}
+/** True when treatment `key` is disabled for this build. */
+export const abOff = (key) => { const l = TEX_AB(); return l.length > 0 && (l.includes(key) || l.includes('base')); };
+
+/* ------------------------------------------------------------------------- */
 /*  scalar helpers                                                           */
 /* ------------------------------------------------------------------------- */
 

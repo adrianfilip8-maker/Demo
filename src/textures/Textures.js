@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { Surface, mkCanvas, css } from './Canvas2D.js';
+import { Surface, mkCanvas, css, TEX_AB } from './Canvas2D.js';
 import { derive } from './NormalMap.js';
 import { MATERIALS, MATERIAL_NAMES, MATERIAL_GROUPS, PREWARM } from './Materials.js';
 
@@ -110,6 +110,16 @@ export class Textures {
 
   async init() {
     const t0 = performance.now();
+
+    /* **Stamp the A/B arm into the boot warnings, so a frame carries which build it is.**
+     * `shot.mjs` copies `window.__GAME.warnings` into `report.json` (it stamps the SHA for the
+     * same reason — see its header, and KNOWN_ISSUES §10 for the 25-commit-old PNG that was read
+     * as a live bug). A control arm is invisible in a PNG and identical in the SHA, which is
+     * exactly the provenance hole that stamp exists to close: two capture directories that
+     * differ only in an environment variable are indistinguishable after the fact unless one of
+     * them says so. Silent on the shipped path, so nothing is added to a normal run. */
+    const ab = TEX_AB();
+    if (ab.length) this.engine.warn(`textures: A/B CONTROL BUILD — treatments disabled: ${ab.join(',')}`);
 
     // Build only what the canonical shots actually put on screen; everything else is built
     // lazily on first get(). Yielding between recipes keeps the loading bar painting.

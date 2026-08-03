@@ -24,7 +24,7 @@
  */
 
 import { rng } from '../core/Rand.js';
-import { PAL, css, TAU, clamp } from './Canvas2D.js';
+import { PAL, css, TAU, clamp, abOff } from './Canvas2D.js';
 
 /* ------------------------------------------------------------------------- */
 /*  path primitives (unit space)                                             */
@@ -754,14 +754,23 @@ export function quadrat(ctx, x, y, w, h, rand, pool, mode) {
  * renormalise, which keeps the column exactly filling its box while the divisions inside it stop
  * agreeing with the neighbouring column's.
  *
- * **±18 %, and the bound is set by the beacon census rather than by eye.** Cell height scales the
+ * **±10 %, and the bound is set by the beacon census rather than by eye.** Cell height scales the
  * sign inside it (`drawGlyph` fits to the box), so widening this widens the largest-sign tail —
  * and §13's mechanism is that a *rare large* sign is a landmark the eye can match across a
- * repeat. Width is untouched, so area scales with height alone; at ±18 % the rarest-and-largest
- * ratio stays inside the profile the census already accepts (~2.3x) instead of the 3.86x that
- * ten columns produced. Divisions de-register by the accumulated weight error — about 7 % of the
- * register height by the third cell, i.e. ~9 px at `interior` — which is enough to break the
+ * repeat. Divisions de-register by the accumulated weight error, which is enough to break the
  * lattice and far short of making the columns look ragged.
+ *
+ * **Amended from ±18 % before the sealed capture booted, and the census is why** (KNOWN_ISSUES
+ * §81.3). Width is untouched here, so it is tempting to say area scales with height alone — but
+ * `drawGlyph` fits a sign by `min(bw/g.w, bh/g.h)`, so a *taller* cell grows only the
+ * height-limited signs while a shorter cell shrinks everything: **a jitter symmetric in cell
+ * height is asymmetric in sign area.** It pulls the median down and pushes §13's
+ * rarest-and-largest ratio up. Measured at ±18 %, `hieroglyph_gilded` went 3.10 → **4.04x**,
+ * past the 3.86x already measured and rejected when `cols = 10` was tried, on a recipe that is
+ * 29 % of `hero`. At ±10 % it is 3.33x, and `hieroglyph_wall` (2.31 → 2.12x) and
+ * `column_papyrus` (2.05 → 1.92x) come out *better* than the state they replace. The
+ * de-registration is carried by the column-width jitter and is unaffected: ACF at lag 42/84 is
+ * 0.079/0.054 at ±10 % against 0.080/0.053 at ±18 %.
  */
 /* **On its own stream, and that is not a detail.** Drawing the weights from the register's own
  * `rand` would shift every subsequent draw by `q` steps, which changes *which layout branch and
@@ -773,6 +782,10 @@ export function quadrat(ctx, x, y, w, h, rand, pool, mode) {
  * boundaries move, which is the change that was intended. §12's rule, arriving through an RNG:
  * a feature paid for out of a neighbour's budget, invisible in its own metrics. */
 function cellWeights(q, seed) {
+  // A/B arm `hgrelief`: the control build divides the register uniformly — critic pass 6's
+  // "keypad". Drawn from its own stream either way, so the sign sequence is identical in both
+  // arms and the two builds differ *only* in where the cell boundaries land.
+  if (abOff('hgrelief')) return new Array(q).fill(1 / q);
   const wr = rng((seed ^ 0x9e3779b9) >>> 0);
   const wt = new Array(q);
   let sum = 0;
