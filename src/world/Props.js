@@ -32,7 +32,19 @@ const MATERIALS = {
   bronze:    { tex: 'bronze_aged',        color: 0x8a6a3a, rough: 0.52, metal: true, outline: 1.0, spec: 0.6, gloss: 48 },
   wood:      { tex: 'wood_old',           color: 0x6b4a2c, rough: 0.9,  outline: 0.85 },
   rope:      { tex: 'rope',               color: 0xa8875c, rough: 0.95, outline: 0.6, noShadow: true },
-  cloth:     { tex: 'linen_cloth',        color: 0xe8ddc4, rough: 0.85, outline: 0.8, side: THREE.DoubleSide },
+  /* `outline: 0` is a TOPOLOGY refusal, not a taste one, and it is the same class as the
+     emissive refusals below rather than a thinner line. An inverted hull needs a closed
+     manifold: it extrudes along welded normals and draws the result BackSide. `banner()`
+     (PropKit.js:946) is an open single-layer grid — one sheet of triangles, no back face, no
+     volume — and every cloth geometry in this file is one. On an open sheet the shell is
+     backface-culled from the side the normals face, and sits *behind* the host (so the
+     DoubleSide host occludes it) from the other, which means it cannot draw the silhouette
+     line it is asking for from any angle. It would cost a draw call and the banner's
+     triangles to render nothing, with grazing-angle z-fighting as the one visible symptom.
+     Was 0.8, which had never rendered: `Shading.applyOutlines()` has no call sites, so no
+     weight in this table has ever been read. Fixed here so wiring that call site later
+     cannot surface the defect. */
+  cloth:     { tex: 'linen_cloth',        color: 0xe8ddc4, rough: 0.85, outline: 0, side: THREE.DoubleSide },
   dark:      { tex: null,                 color: 0x241a16, rough: 0.9,  outline: 0.9 },
   lapis:     { tex: 'lapis_inlay',        color: 0x1f4f96, rough: 0.35, outline: 0.9, noShadow: true },
   carnelian: { tex: 'carnelian_inlay',    color: 0xb8452c, rough: 0.4,  outline: 0.9, noShadow: true },

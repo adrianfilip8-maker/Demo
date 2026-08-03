@@ -11235,9 +11235,30 @@ diff *= mix( 1.0, 0.20, slyMetal );          // toon.glsl.js:469
 
 `toon.glsl.js:506` even states the consequence: *"removes 68 % of gold's own colour at metal 0.85."*
 
-**Four sections of lobe arithmetic, two null A/B seals, a bead, and a chisel pass — and §7.3's
+~~**Four sections of lobe arithmetic, two null A/B seals, a bead, and a chisel pass — and §7.3's
 "gold doesn't read as metal" is one multiply in the diffuse term, documented at the site.** It is a
-one-line A/B and it is SHADING's. Routed.
+one-line A/B and it is SHADING's. Routed.~~
+
+> **CORRECTION, 2026-08-03 — the routing is wrong on arithmetic visible in the line I quoted.**
+> SHADING checked it. `mix(1.0, 0.20, slyMetal)` is **one scalar applied to a `vec3`**: it scales
+> all three channels identically, so **it cannot change `diff`'s chromaticity at all.** Measured:
+> `0.4985 / 0.3602 / 0.1413` at 0.20 and the same at 1.00.
+>
+> I read the neighbouring comment's word *"colour"* as *chroma* and treated it as the mechanism
+> **without checking the operator in front of me.** It removes 68 % of the diffuse *contribution*,
+> not 68 % of the hue. This is §129.1's shape again — trusting a written description over the code
+> it sits beside — one section later.
+>
+> What the multiply actually does is act **through the ratio to the terms it does not scale**
+> (`metalEnv`, `rim`, `spec`), so its effect is *conditional on those being present*. On the
+> non-key-lit gild — **98.6 % of `hero`'s mask** — opening it makes gold **less** saturated
+> (satHSV 0.462 at 0.20 → **0.321** at 1.00): it only brightens, and AgX desaturates as it climbs.
+> Where a rim *is* present, gold at the shipped 0.20 renders **rgb(126, 128, 124) — grey** — and
+> opening it is worth ~6× in chromaAB.
+>
+> **So the arm is a rim-contrast fix wearing a metal constant's clothes**, and its size is set by
+> a quantity nobody has measured: *the rim share of the gild mask.* That measurement must precede
+> any tuning. See §132.
 
 Also closed the other way: `PAL.goldSpec` should get **neither** the `PAL.sun` substitution nor a
 colour of its own — `ToonMaterial.js` declares its own private palette copy, so `Materials.js`'s
@@ -11334,3 +11355,106 @@ Pose: `perch_idle` went from **literally zero** lateral line of action (0.000 / 
 0.045 / 0.082 / 0.045 — with the caveat kept visible that the measure is **lateral only**, and
 `cane_combo_3` scores near zero on it while being the strongest line in the set, because its lunge
 is sagittal. *Any pose number quoted from here names its plane.*
+
+## §132 — the gold routing was wrong, and the fix is a boolean in a different owner's file
+
+### 132.1 What §130.5's control was actually measuring
+
+`PostFX.js:94` had already measured the mechanism, on the courtyard plinth lip: **a cool
+scene-linear add on warm stone lands `+3R / +73G / +105B`, because R is on the AgX shoulder.**
+SHADING reproduced it on both materials under an *identical* cool add — paving 0.398 → 0.316, gild
+0.419 → **0.349**.
+
+> **`metal` is a 3.1× amplifier of that asymmetry, not an independent cause.** §130.5's
+> paving-vs-gold split is real and its explanation was mine to get wrong: the two materials differ
+> in `metal`, so I attributed the gap to `metal`. They also differ in how much cool additive lands
+> on them, and the tonemapper is not channel-symmetric about that.
+
+This puts the **surface rim's scene-space colour handling** — named in `PostFX.js`'s own note as the
+lever for the lip — in scope for the same defect, and it was on nobody's list.
+
+### 132.2 The real fix is a boolean, and it is not in the shader
+
+`Architecture.js:179` reads:
+
+```js
+metal: r.metal ? 0.85 : 0
+```
+
+**One shared constant behind a boolean.** `gold_leaf` (solid leaf, spec 0.95 / rough 0.22) and
+`hieroglyph_gilded` (leaf over gesso over limestone, spec 0.55 / rough 0.55) are **indistinguishable
+in metal amount** — the recipes carefully distinguish their specular and roughness and then collapse
+to the same metalness.
+
+Gilding *is* a few microns of leaf over a dielectric. Solid cast gold is not. Lowering the recipe's
+metal leaves the cane, `gold_leaf`, bronze and the guard fittings **bit-identical**, which no shader
+constant can do — the shader value is shared by every metal in the game, including the one object
+that already reads correctly.
+
+> **The question I asked SHADING as a caveat — "should the architecture be `metal` at all?" — turns
+> out to be the whole answer, and it lives in ARCHITECTURE's file.** Routed there.
+
+### 132.3 SHADING declined to size the cane control, and said why
+
+Its no-spec model predicts the arm *helps* the cane. It reported that it **does not believe its own
+model**, because the same model predicts grey at the shipped value against a *measured* 0.696 — the
+cane reads as metal precisely because its diffuse is suppressed and the ×3.4 lobe dominates, and
+zeroing `spec` removes exactly that.
+
+> *"Your concern is the physically-motivated direction; my arithmetic is silent on it, not
+> supportive."* **A model that reproduces a known-wrong value must not be used to reassure anyone
+> about a nearby one** — and reporting the disagreement instead of the number is the behaviour that
+> makes the rest of the report usable.
+
+Also confirmed live rather than from the doc: `compose1`'s boot telemetry puts the shadow light at
+`(0.096, 0.313, 0.497)`, **G/R 3.26**, against §3's stale `(0.123, 0.175, 0.423)` at 1.42.
+
+### 132.4 Task #16's violet chain was already shipped as an interlocked pair
+
+`shadowTeal: 0.15` **+** `shadowBounceMix: 0.05`, because either alone fails: `mixonly` still lands
+violet at 252/256, and teal at the old mix collapses shadow saturation to 0.02–0.11 (grey).
+Measured: `sly-closeup` 275/282/261 → **224/226/211**; `night` 236–242 → **224–232 with saturation
+rising** 0.69 → 0.78; `temple` papyrus 294 → **224**. That meets the ledger's acceptance (≤ 226°,
+`night` re-measured first). **G has no champion in any term** — fill G/R 0.79, mult 0.81, wash 1.34.
+
+Residual and next lever: `temple`'s 233–256 on wall/block/paving is the **fill leg's sand-bounce
+R-dominance**, untouched by both levers (31 % share on the validated wall, larger in enclosures).
+More teal is the wrong move — teal20 buys ~8° on a 30° residual while pushing paving to 204.
+
+### 132.5 Task #28: cheap, and *half* right
+
+GEOMETRY's census, offline, no lock. **Scope correction first — my brief missed a module.**
+`Architecture.js:62` declares `HULL_OUTLINE = {gold_leaf, granite_pink, bronze_dark}` at 0.85, read
+by the same walker nobody runs. **14 dead keys, not 11.**
+
+Cost, bounded from committed measurements: a shell shares its host's geometry and sets
+`castShadow = false`, so it is exactly **+1 draw and +N triangles per shelled mesh** — no memory, no
+cascade multiplication. Props 11 keys ≈ +11 draws / ~73 k tris; Architecture ≈ +13 draws / < 30 k.
+**Total ≈ +25 draws / +100 k**, landing at ~118 draws (47 % of budget) and ~0.77 M (64 %).
+**Cost is not the objection.**
+
+**`cloth: 0.8` is a topology bug and cannot ever work.** `banner()` (`PropKit.js:946`) builds an
+**open single-layer grid** — one sheet, no back face, no volume — and an inverted hull needs a
+closed manifold. The BackSide shell is culled from the side the normals face and sits behind the
+DoubleSide host from the other, so **it cannot draw a silhouette line from any angle** while still
+costing a draw and the banner's triangles; grazing-angle z-fighting is the visible symptom. Set to
+0 by its owner, correct under either routing decision, inert today.
+
+**And the population contradicts the project's own policy.** Architecture restricts hulls to **3 of
+14** keys and documents why; Props declares non-zero on **11 of 14** — every non-emissive material.
+But PostFX's ink pass is already a full-screen depth+normal edge detector (1.5 px base, near/far
+weighted, fade 45–190 m) that draws prop silhouettes. **The marginal value of a hull is only where
+that pass structurally fails** — low depth/normal contrast, a prop against a wall just behind it —
+which is a *hero-prop* argument, not an all-props one.
+
+The split is already in the data without a new flag: `Statues.js` dominates `stone` 28/39, `gold`
+43/49, `dark` 19/20, `lapis` 12/14, `carnelian` 5/7, `lime` 11/14, while PropKit set dress owns
+`bronze` 7/7, `wood` 6/10, `rope` 2/5, `cork`, `cloth` and the emissives.
+
+**Recommendation taken: gate the call site on the accent/hero keys** (~6 draws, ~50 k tris) rather
+than all 11 — which buys what §7.3's own Sly-guard lesson asks for, flat silhouettes with one
+saturated accent parsing instantly at distance. **And it needs one capture to judge, not zero:** a
+2.5 px hull lands on top of a 1.5 px post-process line on the same silhouettes, so hero props will
+carry a visibly heavier line than architecture. That is the intended §2.1 distinction, but
+*"intended"* and *"looks right at this exposure"* are different claims, and no such weight has ever
+reached a frame.
