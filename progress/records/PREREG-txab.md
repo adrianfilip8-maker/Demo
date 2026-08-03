@@ -118,3 +118,25 @@ Statistics are `matflat`'s, inside the architecture mask eroded 3 px, per materi
   largest dead area in `interior` — a 4923 px blob at luma 0.659, measured on `shots/tx7` — sits
   in that regime, and P4 does **not** predict it moves.
 - Nothing here is a claim about pass 6's score. See "why the arm changed".
+
+
+---
+
+## SCORED — verdicts, appended after the frames landed
+
+`shots/txab-off` (control, carries the A/B stamp) and `shots/txab-on` (shipped, does not), both
+`a608390+dirty`, 3 shots each, 0 failed. `src/**` sha1 identical before and after both runs.
+Full write-up: KNOWN_ISSUES §90.
+
+| | verdict | number |
+|---|---|---|
+| **P1** arris relief | **FAIL** | fineMed `traversal` +0.3 %, `interior` +2.4 %, bar +3 %. **Arris reverted to 0**, per the seal. |
+| **P2** busy guard | **PASS** | squint sd −1.1 % / −1.0 % (bar: not above +5 %) |
+| **P3** tiling | **UNSCOREABLE as written; PASS on a prominence statistic** | absolute max-ACF gave control 0.393 / shipped 0.655 and `traversal` 0.835 in *both* arms. Peak prominence at the 42 px column pitch: control **0.052**, shipped **−0.021**. Post-hoc statistic, flagged. |
+| **P4** granite | **PASS** | coarseMed +4.2 % (bar +4 %, noise floor ±0.1 %), fineMed +0.4 % (bound +5 %), cov1 flat, largest dead blob 915 → 402 px |
+| **P5** nulls | **PASS, and it is a new number** | six untouched recipes: fineMed ±1.0 %, mostly 0.0 %; coarseMed ±0.1 % |
+| **P6** finding #12 | **ANSWERED: not TEXTURES** | marks survive the crack term being zeroed, Jaccard **0.971**; they are shadowed paving (lit:mark luma 2.36 vs §1's 2.6, `B/max` 1.35). Not thereby anyone else's — routed with a test. |
+| **P7** image | **split** | tiling: control is a marching row of identical ovals, shipped reads as writing — clear win. Relief: the lip reads at 8× on `interior`, not at `traversal`. Granite: weathered stone, masses intact, no camouflage. |
+
+Correction to this file's own text: the arms do **not** carry identical signs — the column-width
+jitter changes the quadrat count and therefore the `rand()` consumption. See §90.6.

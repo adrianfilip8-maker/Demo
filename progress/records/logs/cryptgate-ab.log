@@ -1,0 +1,12 @@
+# ---- run log preserved by tools/keeplog.sh ----
+# run:      cryptgate-ab
+# source:   /tmp/claude-0/-home-user-Demo/94022f73-a328-5e86-b2ec-031aa9c720ce/scratchpad/cryptgate-ab.log
+# copied:   2026-08-03T05:32:42Z
+# tree:     44fc5f9 (DIRTY at copy time)
+# NOTE: this is a COPY. The scratchpad original is ephemeral and may already be gone.
+# ------------------------------------------------
+renderer: ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)
+gated sets (post-B visibility): sand_ring0:true, sand_ring1:true, sand_ring2:true, sand_ring3:true, water:true
+state A: {"tag":"A","calls":288,"tris":1461725,"sealed":true,"hidden":["sand_ring0","sand_ring1","sand_ring2","sand_ring3","water"]}
+state B: {"tag":"B","calls":310,"tris":1970269,"sealed":true,"hidden":[]}
+delta B-A: 22 draws, 0.509M tris

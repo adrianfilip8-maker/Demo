@@ -685,7 +685,7 @@ function carve(s, cut, line, o = {}) {
   } = o;
   // A/B arm `hgrelief`: the control build carves the identical height field with no albedo lip,
   // which is the state PREREG-hgrelief was sealed against.
-  const arris = abOff('hgrelief') ? 0 : arrisIn;
+  const arris = (abOff('hgrelief') || abOff('hgarris')) ? 0 : arrisIn;
   const size = s.size;
   /* Bevel width scales with resolution so a tier-1 half-size map keeps the same *physical*
    * chisel edge. It also has a hard floor of 2 texels: at 1 texel the cut wall is a single-texel
@@ -1775,7 +1775,30 @@ export const MATERIALS = {
       /* Deeper cut, tighter bevel, no baked highlight. All of the carving's contrast now lives
        * in the height field, so the normal map and `heightAO` produce it — which means it turns
        * with the sun and goes flat in shadow, the way a chisel line does. */
-      const ramp = carve(s, cut, lines, { depth: 0.46, bevelPx: 3.0, lip: 0.12, bulge: 0.42, lineDepth: 0.62, seed: cx.seed + 5, arris: 0.22 });
+      /* **ARRIS REVERTED TO 0 — PREREG-txab's P1 falsifier fired.** Kept as a named constant
+       * rather than deleted, because the mechanism is measured and re-proposing it is one number.
+       *
+       * Registered: fineMed inside the `arch:hieroglyph_wall` mask must gain >= +3 % control ->
+       * shipped. Delivered `interior` **+2.4 %**, `traversal` **+0.3 %**, against a boot-to-boot
+       * noise floor of **+-1.0 %** measured on six untouched recipes in the same pair. So the
+       * effect is real and of the predicted sign, and it is **under the bar its author set**.
+       * The seal's words were "report it as a null and revert, do not defend it with the texture
+       * number", and that is what this is.
+       *
+       * What is given up, recorded so a re-seal does not have to re-measure it: `interior`
+       * fineP90 +11.9 %, ampAct +9.0 % (`traversal` +4.6 % / +3.2 %), squint sd **-1.0 %** — the
+       * busy guard the risk clause existed for moved the *right* way — and at 8x on `interior`
+       * the shipped glyphs carried a visible pale lip along each cut where the control arm's did
+       * not. Texture-side, isolated with the `hgarris` arm: fineMed +8.7 % at 20.6 mm/px and
+       * **-3.9 % at 30.6 mm/px**, i.e. the 61 mm ring stops paying at about 2 px.
+       *
+       * The primary was the wrong statistic and that is a criticism of the seal, not a defence of
+       * the change: the ring covers ~20 % of the mask, and a **median** over the whole mask
+       * cannot see a 20 %-coverage feature — §67.1's "coverage is not amplitude" applied at the
+       * wrong end by the same file that recorded it. A re-seal wants `fineP90`, or `cov1` on a
+       * glyph-adjacent sub-mask, and it wants a framing where the ring clears 2 px. That
+       * observation is post-hoc and licenses **re-sealing**, not keeping. */
+      const ramp = carve(s, cut, lines, { depth: 0.46, bevelPx: 3.0, lip: 0.12, bulge: 0.42, lineDepth: 0.62, seed: cx.seed + 5, arris: 0 /* was 0.22 */ });
       freshCutTint(s, ramp, { amount: 0.16 });
       /* `freq` derived from a metre figure, not written as a bare cycle count — see
        * `PAINT_WEAR_M`. At 10.4 m of world per repeat and a 2.08 m cell this is 5 cycles/tile,
@@ -1971,7 +1994,9 @@ export const MATERIALS = {
        * 0.478 against face 0.629 with the raised class at 0.622, i.e. *below* the field. 0.16
        * rather than the wall's 0.22 because gold's own ramp already spends range across the cut
        * and doubling it would flatten the ramp's top. */
-      const ramp = carve(s, cut, lines, { depth: 0.42, bevelPx: 2.6, lip: 0.10, bulge: 0.5, lineDepth: 0.56, seed: cx.seed + 5, arris: 0.16, arrisHex: PAL.goldLight, arrisPolish: 0.08 });
+      // Arris reverted with the rest of the family — see `hieroglyph_wall`. Measured null here
+      // too: `traversal` fineMed -0.3 %, `interior` +0.3 %, both inside the noise floor.
+      const ramp = carve(s, cut, lines, { depth: 0.42, bevelPx: 2.6, lip: 0.10, bulge: 0.5, lineDepth: 0.56, seed: cx.seed + 5, arris: 0 /* was 0.16 */, arrisHex: PAL.goldLight, arrisPolish: 0.08 });
 
       // Gold leaf laid into the sunk glyphs over a red bole ground; the leaf lifts at the arrises.
       const lift = s.field(2, (u, v) => sat(warpN(u, v, 14, 4, 1.1, cx.seed + 31) * 1.4 + 0.5));
@@ -2081,7 +2106,9 @@ export const MATERIALS = {
       const cut = rasterMask(size, layout('cut'));
       const lines = rasterMask(size, layout('line'));
       const paint = rasterRGBA(size, layout('paint'));
-      const ramp = carve(s, cut, lines, { depth: 0.50, bevelPx: 3.2, lip: 0.14, bulge: 0.52, lineDepth: 0.52, seed: cx.seed + 5, arris: 0.20 });
+      // Arris reverted with the rest of the family — see `hieroglyph_wall`. Not measured in
+      // frame: this recipe holds under 1 % of both captured shots.
+      const ramp = carve(s, cut, lines, { depth: 0.50, bevelPx: 3.2, lip: 0.14, bulge: 0.52, lineDepth: 0.52, seed: cx.seed + 5, arris: 0 /* was 0.20 */ });
       freshCutTint(s, ramp, { amount: 0.18 });
       paintRemnants(s, ramp, paint, { survival: 0.48, freq: 4, seed: cx.seed + 9, edgeLoss: 0.68, fade: 0.44 });
       chiselMarks(s, { amount: 0.014, angle: -0.30, freq: 44, seed: cx.seed + 1, mask: m.edge });
@@ -2707,7 +2734,9 @@ export const MATERIALS = {
       /* Publish the joint mask so the build-time joint-sign assertion in `Textures._build()`
          covers this recipe too. It only reads `.joint`; there are no blocks here to id. */
       s.masonry = { joint: drum };
-      const ramp = carve(s, textCut, textLine, { depth: 0.40, bevelPx: 2.4, lip: 0.09, bulge: 0.45, lineDepth: 0.60, seed: cx.seed + 5, arris: 0.18 });
+      // Arris reverted with the rest of the family — see `hieroglyph_wall`. Not measured in
+      // frame: `column_papyrus` is absent from both captured shots.
+      const ramp = carve(s, textCut, textLine, { depth: 0.40, bevelPx: 2.4, lip: 0.09, bulge: 0.45, lineDepth: 0.60, seed: cx.seed + 5, arris: 0 /* was 0.18 */ });
       freshCutTint(s, ramp, { amount: 0.14 });
       /* `survival` 0.34 → 0.46. With the registers above landing, the band interior measured
        * relative local contrast **0.0231 in frame against `hieroglyph_wall`'s 0.0305**, and its
@@ -4320,7 +4349,7 @@ function glyphWall(ctx, size, mode, seed, o = {}) {
      * number of times and the two tiles differ in cartouche placement and in nothing else —
      * §81.3's trap, where taking the jitter off the register's own stream re-rolled the whole
      * inscription and moved a metric the change was not supposed to touch. */
-    if (abOff('hgrelief')) for (let i = 0; i < cols; i++) cartAt[i] = i % 2 === 0 ? 1 : 0;
+    if (abOff('hgrelief') || abOff('hglayout')) for (let i = 0; i < cols; i++) cartAt[i] = i % 2 === 0 ? 1 : 0;
   }
 
   /* Band -1 — the kheker frieze that crowns a temple wall.
@@ -4374,7 +4403,7 @@ function glyphWall(ctx, size, mode, seed, o = {}) {
     {
       // A/B arm `hgrelief`: the control build rules the register at a constant pitch — the
       // "~42 px mechanical grid" half of the same finding. Own stream in both arms.
-      const jit = abOff('hgrelief') ? 0 : 0.28;
+      const jit = (abOff('hgrelief') || abOff('hglayout')) ? 0 : 0.28;
       const wr = rng((seed ^ 0x2545f491) >>> 0);
       let sum = 0;
       for (let c = 0; c < cols; c++) { cw[c] = (1 - jit * 0.5) + wr() * jit; sum += cw[c]; }

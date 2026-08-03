@@ -1,8 +1,8 @@
 # ---- run log preserved by tools/keeplog.sh ----
 # run:      fx18
 # source:   /tmp/claude-0/-home-user-Demo/94022f73-a328-5e86-b2ec-031aa9c720ce/scratchpad/fx18.log
-# copied:   2026-08-03T05:14:15Z
-# tree:     a608390 (DIRTY at copy time)
+# copied:   2026-08-03T05:32:53Z
+# tree:     44fc5f9 (DIRTY at copy time)
 # NOTE: this is a COPY. The scratchpad original is ephemeral and may already be gone.
 # ------------------------------------------------
 renderer: ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)

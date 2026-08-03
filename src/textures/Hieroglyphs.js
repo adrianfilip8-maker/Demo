@@ -785,7 +785,7 @@ function cellWeights(q, seed) {
   // A/B arm `hgrelief`: the control build divides the register uniformly — critic pass 6's
   // "keypad". Drawn from its own stream either way, so the sign sequence is identical in both
   // arms and the two builds differ *only* in where the cell boundaries land.
-  if (abOff('hgrelief')) return new Array(q).fill(1 / q);
+  if (abOff('hgrelief') || abOff('hglayout')) return new Array(q).fill(1 / q);
   const wr = rng((seed ^ 0x9e3779b9) >>> 0);
   const wt = new Array(q);
   let sum = 0;

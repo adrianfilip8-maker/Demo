@@ -7664,3 +7664,201 @@ knows the path.
 
 *Third instance in this session of a verification step that reports on something adjacent to the
 question asked* (§14.9's hardcoded verdict, §69.5's append-only assumption, and this).
+
+
+---
+
+## §90 — the lost baseline was replaced with a better control, and the seal it rescued then failed on its own primary
+
+TEXTURES, on §83's re-brief. Two captures, same commit, 3 shots each, 0 failed:
+`shots/txab-off` (control) and `shots/txab-on` (shipped), both at `a608390+dirty`.
+
+### 90.1 A destroyed baseline forced a strictly better experiment
+
+`PREREG-hgrelief` was sealed against `shots/critic6/{traversal,interior}.png` at `1bc8938`. The
+rollback destroyed those PNGs (§83.2) and its P1/P4 baselines were `matflat` output *on the
+images*, so they died with them. The seal itself was written before any frame existed and stayed
+valid; only its control was gone.
+
+Rebuilt as a **same-commit A/B arm** — `Canvas2D.abOff()`, fed by `VITE_TEX_AB`, read per call so
+one process can build both arms. This is not a concession, it is the experiment the seal wanted:
+
+- `critic6` was 21 commits and three agents away from the candidate. **That interval is why every
+  seal in this file carries a null clause**, and §74.1 is the case where the nulls moved as much
+  as the treatment and the claim had to be withdrawn. Two arms of one commit have no interval.
+- Untouched recipes are bit-identical **by construction**, so their residual is the instrument's
+  own noise floor. Measured over six of them (`sandstone_block`, `sandstone_worn`, `mudbrick`,
+  `gold_leaf`, `limestone_polished`, `ceiling_stars`): **fineMed +-1.0 %, mostly 0.0 %; coarseMed
+  +-0.1 %.** *Every previous in-frame delta in this file was quoted without knowing that number.*
+- Provenance is a receipt rather than a directory name: `Textures.init()` pushes
+  `textures: A/B CONTROL BUILD — treatments disabled: base` into `window.__GAME.warnings`, which
+  `shot.mjs` writes into `report.json`. The control run carries it, the shipped run does not.
+  `progress/records/abcheck.html` is the pre-flight that proves the env path *before* ten minutes
+  of lock is spent on a pair of frames that would look identical if it were broken.
+- `find src -name '*.js' | xargs sha1sum | sha1sum` is **identical before the control run, after
+  it, and after the shipped run** — four agents were committing throughout, so this is checked,
+  not assumed.
+
+What it cost: the pair no longer answers "is `interior` better than at pass 6". Nothing below
+claims it does.
+
+### 90.2 The seal's own primary fired against it, and the arris is reverted
+
+| statistic, `arch:hieroglyph_wall` mask, eroded 3 px | `traversal` | `interior` |
+|---|---|---|
+| fineMed control -> shipped | 0.0383 -> 0.0384 (**+0.3 %**) | 0.0288 -> 0.0295 (**+2.4 %**) |
+| fineP90 | 0.1566 -> 0.1638 (+4.6 %) | 0.1210 -> 0.1354 (**+11.9 %**) |
+| ampAct | 0.0783 -> 0.0808 (+3.2 %) | 0.0608 -> 0.0663 (+9.0 %) |
+| squint sd 1/8 (P2 guard, must not rise +5 %) | 0.0649 -> 0.0642 (**-1.1 %**) | 0.0586 -> 0.0580 (**-1.0 %**) |
+
+P1 required **>= +3 % on fineMed**. It got +0.3 % and +2.4 % against a +-1.0 % floor — real, of the
+predicted sign, and **under the bar its author set six hours earlier**. The seal said "report it as
+a null and revert, do not defend it with the texture number". **The four `arris` values are 0.**
+
+Because the arm bundled the lip with the layout jitter, the attribution was checked rather than
+assumed: splitting into `hgarris` / `hglayout` and re-measuring texture-side puts **all** of the
+bundled fine-band gain on the lip (bundled +8.1 % at 20.6 mm/px, lip alone **+8.7 %**), so the
+falsifier lands on the arris and on nothing else.
+
+Three things recorded so a re-seal need not re-measure them:
+
+- **Transfer was 0.28, not the 0.45 the seal budgeted** — texture-side +8.7 %, in frame +2.4 %.
+  The change performed as its mechanism predicts; the threshold was set from a coefficient
+  borrowed from another pass. *That is exactly the sentence a pre-registration exists to stop
+  someone writing, which is why the revert happened anyway.*
+- **The lip stops paying at about 2 px.** The ring is 61 mm; texture-side fineMed is +8.7 % at
+  `interior`'s 20.6 mm/px and **-3.9 % at `traversal`'s 30.6**, which is the +0.3 % in frame.
+- **The primary was the wrong statistic, and this is a criticism of the seal, not a defence of the
+  change.** The ring covers ~20 % of the mask and a **median over the whole mask cannot see a
+  20 %-coverage feature** — §67.1's "coverage is not amplitude", applied at the wrong end by the
+  file that recorded it. A re-seal wants `fineP90` or `cov1` on a glyph-adjacent sub-mask, at a
+  framing where the ring clears 2 px. Post-hoc, so it licenses **re-sealing, not keeping**.
+
+> **Cost of honouring it, stated rather than buried:** at 8x on `interior` the shipped arm's glyphs
+> carry a visible pale lip along each cut and the control arm's do not, the busy guard moved the
+> *right* way, and the shipped state after this revert (layout on, lip off) **has never been
+> captured.** The revert is safe only because the two are separable by construction and were
+> measured apart. If the coordinator overrules this, the number to re-seal against is fineP90.
+
+### 90.3 P3 was unscoreable as written, and the fix is a different statistic, not a different threshold
+
+P3 asked for max ACF in lags 30–300 below 0.45. Scored: control `interior` **0.393 (pass)**,
+shipped **0.655 (fail)** — the shipped arm reading *worse*, and `traversal` returning **0.835 in
+both arms**, i.e. the same failing number whichever build it is handed.
+
+The instrument is not broken; the predicate is. `hgframe`'s own header says its ACF carries shadow
+edges and light shafts alongside texture. Its top lags decay monotonically from lag 1 (0.942 ->
+0.826 -> 0.718 …), so **max(ACF) in a window scores overall smoothness** — and removing a regular
+column rhythm makes a profile *smoother*, which raises correlation at every short lag. Confirmed
+independently: on the raw un-masked band the two arms agree to 0.01 at every lag.
+
+Periodicity is a **local maximum standing above the trend**, so measure prominence (r(lag) minus
+its +-12-lag mean):
+
+| prominence, `interior` band | control | shipped |
+|---|---|---|
+| top peak in 30–300 | **40 : 0.086** | 38 : 0.030 |
+| at lag 42 (= the column pitch, `cols` 12 over 504 px/repeat) | **0.052** | **-0.021** |
+| at lag 84 | 0.015 | 0.027 |
+
+The control reproduces §81.1's predicted **42 px lattice in the frame**; the shipped arm has no
+peak there at all. `traversal` shows 0.008–0.009 in both — no lattice at that framing either way.
+**Changing the statistic after seeing the data is flagged as post-hoc**; it is defensible only
+because the replacement was chosen from the mechanism and because the control then reproduced the
+predicted lag, which the absolute form never did.
+
+The image says the same thing without arithmetic. At 4x on `traversal` the control is a row of
+identical cartouche ovals, same size, same height, marching at a constant pitch — critic pass 6's
+sentence, rendered. The shipped arm reads as writing. **That half of the change stays.**
+
+### 90.4 `granite_pink`: an "unused" field was already spent, and only the A/B could see it
+
+Motivation, measured in frame: this recipe is **43.3 % of `interior`** and its *fine* energy is
+level with everything around it (fineMed 0.0229 against `paving_courtyard` 0.0218 and
+`hieroglyph_wall` 0.0288) while its **coarse** energy is short. Both §7.3 conditions at once —
+busy at the fine end, flat at the coarse one — which is why more albedo variance was never the fix.
+
+The recipe's own comment says its wind scour is in height and roughness and "costs nothing in the
+albedo". **That is false, and the A/B found it in one run:** `weather()` seeds its varnish streaks
+from that same field. Adding the frosting term the physics asks for — scoured stone is paler —
+*cancelled* the varnish and took **every statistic it was aimed at down**: coarseMed **-12.0 %**,
+cov1 -2.3 %, squint sd -5.2 %. Sign flipped, low-passed to the fundamental first (the field's top
+octave is 3.3 px at `interior`, squarely in the band it must not feed — un-blurred it put +17.4 %
+into fineMed and +18.4 % into squint, a third of the way to the historic ashlar blotching state),
+and folded multiplicatively into `shadeK` because `cov1` is *relative* contrast and a lerp toward a
+constant contracts what is already there.
+
+| `granite_pink`, `interior` | control | shipped | P4 |
+|---|---|---|---|
+| coarseMed | 0.0353 | 0.0368 (**+4.2 %**) | pass (bar +4 %, floor +-0.1 %) |
+| covC2 | 68.2 % | 69.6 % | — |
+| fineMed | 0.0229 | 0.0230 (+0.4 %) | pass (bound +5 %) |
+| cov1 | 75.6 % | 75.6 % | pass |
+| largest dead blob | 915 px | **402 px** | — |
+
+Texture-side was +18.4 %, so transfer is **0.23** — the same order as the arris's 0.28, and worth
+carrying as this recipe family's working figure. At 3x the tomb pier reads as weathered stone with
+soft mid-scale banding rather than as uniform speckle, and the masses are intact.
+
+**Two corrections to §81.5 fall out.** `granite_pink` is *not* "the flattest normal in the
+catalogue": by median normal tilt it is **third** among stone and carved (2.95 deg, behind
+`ceiling_stars` 1.95 and `limestone_polished` 2.05) and ninth of 44 by `slopeScale`. The phrase came
+from `bump` alone, and `Textures.js`'s own comment warns that `bump` is not the normal strength —
+`slopeScale = bump * size / tile` reorders the table. And the deficit it names is a **coarse-band**
+one, not a normal one; nothing here touched the normal map, so the flat-normal lever is still
+unspent.
+
+### 90.5 Finding #12 is answered: the marks are not the paving, and they are shadow
+
+§81.4 left this unattributed with both candidate owners excluded by *mechanism*. The discriminating
+test it named — zero the crack term — was declined then because it would have broken that capture's
+null control; the same-tree arm removed the objection, and it ran:
+
+- With `paving_courtyard`'s crazing **zeroed**, the short curved high-contrast marks are still
+  there. Mark-mask overlap between the arms in the paving ROI: **Jaccard 0.971**, 4006 shared
+  against 52 control-only and 66 shipped-only. They do not move.
+- The crack term *does* change the frame there (mean |dL| 4.27/255 in the same ROI), so this is not
+  a dead toggle — it is a live one that does not place the marks.
+- **The marks are shadowed paving.** Mark pixels mean `rgb(42, 57, 77)`, luma 0.217, `B/max` 1.35,
+  against lit paving `rgb(200, 116, 71)`, luma 0.512, `B/max` 0.36. Lit:mark luma ratio **2.36**
+  against §1's measured lit:shadowed ground step of **2.6**, and the hue is the project's shadow
+  light, not ink (`#1a1210` / `#161022` are far darker) and not a stain (which would be a *warmer*
+  version of the surface, not its complement).
+- They are 4–16 cm on the ground at `sly-key`'s ~8 mm/px, i.e. **1–3 shadow-map texels** at §1's
+  ~5 cm cascade-0 texel, under a 21 deg raking key.
+
+> **TEXTURES is excluded by test rather than by mechanism, and — as §81.4 registered in advance —
+> that still does not assign the finding to anyone else.** The characterisation points at the
+> shadow cascade (self-shadow acne at grazing incidence) and the discriminating test is a bias
+> sweep, which is **LIGHTING/RENDER's** to run. The paving normal map is separately cleared: the
+> crack changes it and the marks did not move.
+
+### 90.6 One claim in `PREREG-txab` was wrong and is corrected here
+
+The seal says the two arms "carry the same signs and differ only in layout and lip". They do not.
+Column-width jitter changes `w`, `columnRegister` takes `q = round(h / (w * 1.02))` from it, and a
+different quadrat count consumes a different number of `rand()` draws — so the sign *sequence*
+shifts too. The cell-height jitter alone is clean (own stream, `q` unchanged); the width jitter is
+not. It does not affect P1–P4, which are population statistics over a mask rather than per-glyph
+comparisons, but the arm is "this layout package versus the old one", not a surgical isolation of
+two knobs. **§81.3's trap, in the one place I asserted I had avoided it.**
+
+
+### 90.9 Coordinator verification, and one gap the run has
+
+Checked independently before committing, because a control arm is invisible in a PNG:
+
+```
+txab-off   sha a608390+dirty | textures: A/B CONTROL BUILD — treatments disabled: base
+txab-on    sha a608390+dirty | (no A/B stamp — SHIPPED build)
+```
+
+**Same commit, one arm stamped and one not** — the design working, and the receipt `score-txab.sh`
+demands is present where it should be and absent where it should be.
+
+**The gap: neither run has a preserved log.** `tools/keeplog.sh` finds nothing under either name, so
+§88's third artefact is missing for exactly the run that most needed it. It does not make the run
+unscoreable — the load-bearing receipt is the `report.json` stamp, which survives — but the
+per-arm applied-state lines are gone. **§88 was written two hours before this and its own tool was
+not reached for.** A durability tool that nobody runs is a durability tool that does not exist;
+recorded so the next capture starts with it rather than ends with it.
