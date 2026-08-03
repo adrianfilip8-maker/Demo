@@ -870,6 +870,19 @@ export function beadRoll(len, r, { radial = 10, side = 1 } = {}) {
   const t0 = side > 0 ? -Math.PI * 0.5 : Math.PI * 0.5;
   const g = new THREE.CylinderGeometry(r, r, len, radial, 1, true, t0, Math.PI);
   normaliseAttrs(g);
+
+  /* Cylindrical UVs at world scale, set HERE and deliberately preserved by `beam` rather than
+     left to `boxProjectUVs`. Box projection picks a plane from the dominant normal axis, and a
+     bead's normal sweeps through 180° — so the dominant axis flips from Y to Z at the 45°
+     points and the projection mirrors the texture across the bead's crown, twice along every
+     arris. On a 34 m architrave that is two hard seams running the length of the shot.
+     CylinderGeometry's own uv.y runs along the axis (which `place` below turns into world X)
+     and uv.x runs around the arc, so both rescale to metres directly. */
+  const uv = g.attributes.uv;
+  const arc = Math.PI * r;
+  for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getY(i) * len * UV_PER_M, uv.getX(i) * arc * UV_PER_M);
+  uv.needsUpdate = true;
+
   place(g, { rz: Math.PI * 0.5 });          // stand the axis up along X
   return g;
 }
@@ -917,23 +930,29 @@ export function beam(len, h, d, opts = {}) {
     out.push(g);
     a += bl + 0.03;
   }
+  /* Blocks are box-projected as one group AFTER placement, which is what keeps the coursing's
+     texture continuous across the joints (see `boxProjectUVs`). The beads are merged in after
+     that projection has run, so they keep the cylindrical UVs `beadRoll` gave them. */
+  const blocks = mergeAll(out);
+  if (!blocks) return null;
+  boxProjectUVs(blocks);
+  if (roll <= 0) return blocks;
+
   /* The bead runs the beam's full length as ONE piece rather than per-block: a moulding is
      carved after the stones are set, so it crosses the joints, and one long bead is also a
-     third of the triangles of `pieces` short ones. It follows the beam's tilt and droop so it
-     stays on the arris. */
-  if (roll > 0) {
-    for (const side of [1, -1]) {
-      const b = beadRoll(len, roll, { radial: rollRadial, side });
-      place(b, {
-        x: 0, y: -h * 0.5 + roll - bow * 0.5,
-        z: side * (d * 0.5 - roll * 0.1),
-        rz: THREE.MathUtils.degToRad(tilt),
-      });
-      out.push(b);
-    }
+     third of the triangles of `pieces` short ones. It follows the beam's tilt and mean droop so
+     it stays on the arris. */
+  const beads = [];
+  for (const side of [1, -1]) {
+    const b = beadRoll(len, roll, { radial: rollRadial, side });
+    place(b, {
+      x: 0, y: -h * 0.5 + roll - bow * 0.5,
+      z: side * (d * 0.5 - roll * 0.1),
+      rz: THREE.MathUtils.degToRad(tilt),
+    });
+    beads.push(b);
   }
-  const g = mergeAll(out);
-  return g ? boxProjectUVs(g) : null;
+  return mergeAll([blocks, ...beads]);
 }
 
 /* ======================= swept mouldings =============================== */

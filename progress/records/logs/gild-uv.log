@@ -1,0 +1,154 @@
+# gilduv  1280x720  props=false  tris=322588  mat="arch:hieroglyph_gilded"  tile=3.2 (world 6.4 m/repeat)
+# src/world+src/core tree hash efa7fc61d7a1 over 16 files  (NOT the git SHA — see the treeHash note)
+
+=== hero  fov 46  271575 px of arch:hieroglyph_gilded  (29.47 % of frame)
+  faces: 63.9 % side (|n.y|<0.5, V = height up the band)  36.1 % soffit/top (V from a horizontal axis)
+  tile-V hist, ALL  (bins 0 and 19 straddle the seam): 0.00:22.8 0.05:23.3 0.10:6.2 0.15:1.6 0.20:2.3 0.25:2.2 0.30:1.9 0.35:1.7 0.40:1.1 0.45:0.9 0.50:1.9 0.55:0.0 0.60:0.0 0.65:0.0 0.70:0.0 0.75:0.0 0.80:0.0 0.85:1.0 0.90:13.7 0.95:19.2
+  tile-V hist, SIDE faces only                       : 0.00:25.8 0.05:23.4 0.10:1.2 0.15:2.1 0.20:3.0 0.25:0.1 0.30:0.1 0.35:0.0 0.40:0.0 0.45:1.5 0.50:3.0 0.55:0.0 0.60:0.0 0.65:0.0 0.70:0.0 0.75:0.0 0.80:0.0 0.85:0.5 0.90:15.8 0.95:23.5
+  U span -3.86 .. 2.92 = 6.78 repeats over 7 distinct repeat indices
+  px per repeat (median):  all 501 [n=270114]   seam row 553 [n=148322]   mid-tile frieze 183 [n=6856]
+  landmark "sun-frieze" u[0.3115,0.3752] v[0.4681,0.5319]: 364 px in 6 components, 6 of them >= 4 px across  (extent max 14 px, median 11 px; largest blob 128 px = 14x11)
+  landmark "bee-row" u[0.5733,0.701] v[0.9505,0.0495]: 22196 px in 129 components, 31 of them >= 4 px across  (extent max 176 px, median 21 px; largest blob 7016 px = 85x142)
+  landmark "falcon-row" u[0.7365,0.8379] v[0.9411,0.0589]: 8527 px in 54 components, 23 of them >= 4 px across  (extent max 116 px, median 24 px; largest blob 3047 px = 39x96)
+
+=== temple  fov 55  16451 px of arch:hieroglyph_gilded  (1.79 % of frame)
+  faces: 34.7 % side (|n.y|<0.5, V = height up the band)  65.3 % soffit/top (V from a horizontal axis)
+  tile-V hist, ALL  (bins 0 and 19 straddle the seam): 0.00:14.4 0.05:14.6 0.10:7.0 0.15:7.2 0.20:4.4 0.25:0.3 0.30:0.3 0.35:0.3 0.40:0.7 0.45:0.9 0.50:0.9 0.55:1.7 0.60:1.6 0.65:0.7 0.70:0.7 0.75:3.7 0.80:5.9 0.85:5.8 0.90:14.1 0.95:14.7
+  tile-V hist, SIDE faces only                       : 0.00:25.2 0.05:25.3 0.10:1.2 0.15:0.0 0.20:0.0 0.25:0.0 0.30:0.0 0.35:0.0 0.40:0.0 0.45:0.0 0.50:0.0 0.55:0.0 0.60:0.0 0.65:0.0 0.70:0.0 0.75:0.0 0.80:0.0 0.85:0.0 0.90:22.8 0.95:25.5
+  U span -1.12 .. 2.35 = 3.47 repeats over 5 distinct repeat indices
+  px per repeat (median):  all 158 [n=16102]   seam row 152 [n=6123]   mid-tile frieze 126 [n=219]
+  landmark "sun-frieze" u[0.3115,0.3752] v[0.4681,0.5319]: 10 px in 3 components, 1 of them >= 4 px across  (extent max 8 px, median 8 px; largest blob 8 px = 8x1)
+  landmark "bee-row" u[0.5733,0.701] v[0.9505,0.0495]: 543 px in 12 components, 4 of them >= 4 px across  (extent max 19 px, median 18 px; largest blob 254 px = 18x15)
+  landmark "falcon-row" u[0.7365,0.8379] v[0.9411,0.0589]: 242 px in 11 components, 5 of them >= 4 px across  (extent max 18 px, median 8 px; largest blob 137 px = 8x18)
+
+=== sly-closeup  fov 38  54047 px of arch:hieroglyph_gilded  (5.86 % of frame)
+  faces: 66.4 % side (|n.y|<0.5, V = height up the band)  33.6 % soffit/top (V from a horizontal axis)
+  tile-V hist, ALL  (bins 0 and 19 straddle the seam): 0.00:25.9 0.05:26.9 0.10:7.5 0.15:19.0 0.20:20.8 0.25:0.0 0.30:0.0 0.35:0.0 0.40:0.0 0.45:0.0 0.50:0.0 0.55:0.0 0.60:0.0 0.65:0.0 0.70:0.0 0.75:0.0 0.80:0.0 0.85:0.0 0.90:0.0 0.95:0.0
+  tile-V hist, SIDE faces only                       : 0.00:23.7 0.05:9.6 0.10:6.7 0.15:28.6 0.20:31.3 0.25:0.0 0.30:0.0 0.35:0.0 0.40:0.0 0.45:0.0 0.50:0.0 0.55:0.0 0.60:0.0 0.65:0.0 0.70:0.0 0.75:0.0 0.80:0.0 0.85:0.0 0.90:0.0 0.95:0.0
+  U span -0.72 .. 0.64 = 1.36 repeats over 2 distinct repeat indices
+  px per repeat (median):  all 604 [n=53661]   seam row 590 [n=17037]   mid-tile frieze n/a [n=0]
+  landmark "sun-frieze" u[0.3115,0.3752] v[0.4681,0.5319]: 0 px in 0 components, 0 of them >= 4 px across
+  landmark "bee-row" u[0.5733,0.701] v[0.9505,0.0495]: 1226 px in 2 components, 2 of them >= 4 px across  (extent max 45 px, median 45 px; largest blob 708 px = 45x19)
+  landmark "falcon-row" u[0.7365,0.8379] v[0.9411,0.0589]: 779 px in 1 components, 1 of them >= 4 px across  (extent max 43 px, median 43 px; largest blob 779 px = 43x23)
+
+=== sly-startle  fov 22  113863 px of arch:hieroglyph_gilded  (12.35 % of frame)
+  faces: 51.3 % side (|n.y|<0.5, V = height up the band)  48.7 % soffit/top (V from a horizontal axis)
+  tile-V hist, ALL  (bins 0 and 19 straddle the seam): 0.00:38.8 0.05:35.6 0.10:2.9 0.15:22.6 0.20:0.0 0.25:0.0 0.30:0.0 0.35:0.0 0.40:0.0 0.45:0.0 0.50:0.0 0.55:0.0 0.60:0.0 0.65:0.0 0.70:0.0 0.75:0.0 0.80:0.0 0.85:0.0 0.90:0.0 0.95:0.0
+  tile-V hist, SIDE faces only                       : 0.00:46.2 0.05:9.7 0.10:0.0 0.15:44.1 0.20:0.0 0.25:0.0 0.30:0.0 0.35:0.0 0.40:0.0 0.45:0.0 0.50:0.0 0.55:0.0 0.60:0.0 0.65:0.0 0.70:0.0 0.75:0.0 0.80:0.0 0.85:0.0 0.90:0.0 0.95:0.0
+  U span -0.72 .. 0.64 = 1.36 repeats over 2 distinct repeat indices
+  px per repeat (median):  all 1065 [n=113420]   seam row 1047 [n=54788]   mid-tile frieze n/a [n=0]
+  landmark "sun-frieze" u[0.3115,0.3752] v[0.4681,0.5319]: 0 px in 0 components, 0 of them >= 4 px across
+  landmark "bee-row" u[0.5733,0.701] v[0.9505,0.0495]: 4429 px in 2 components, 2 of them >= 4 px across  (extent max 61 px, median 61 px; largest blob 3098 px = 61x53)
+  landmark "falcon-row" u[0.7365,0.8379] v[0.9411,0.0589]: 3203 px in 2 components, 1 of them >= 4 px across  (extent max 88 px, median 88 px; largest blob 3200 px = 88x44)
+
+=== sly-perch  fov 38  55836 px of arch:hieroglyph_gilded  (6.06 % of frame)
+  faces: 64.4 % side (|n.y|<0.5, V = height up the band)  35.6 % soffit/top (V from a horizontal axis)
+  tile-V hist, ALL  (bins 0 and 19 straddle the seam): 0.00:25.7 0.05:26.7 0.10:9.3 0.15:18.4 0.20:19.9 0.25:0.0 0.30:0.0 0.35:0.0 0.40:0.0 0.45:0.0 0.50:0.0 0.55:0.0 0.60:0.0 0.65:0.0 0.70:0.0 0.75:0.0 0.80:0.0 0.85:0.0 0.90:0.0 0.95:0.0
+  tile-V hist, SIDE faces only                       : 0.00:23.8 0.05:9.8 0.10:6.8 0.15:28.6 0.20:30.9 0.25:0.0 0.30:0.0 0.35:0.0 0.40:0.0 0.45:0.0 0.50:0.0 0.55:0.0 0.60:0.0 0.65:0.0 0.70:0.0 0.75:0.0 0.80:0.0 0.85:0.0 0.90:0.0 0.95:0.0
+  U span -0.72 .. 0.63 = 1.35 repeats over 2 distinct repeat indices
+  px per repeat (median):  all 610 [n=55442]   seam row 593 [n=17357]   mid-tile frieze n/a [n=0]
+  landmark "sun-frieze" u[0.3115,0.3752] v[0.4681,0.5319]: 0 px in 0 components, 0 of them >= 4 px across
+  landmark "bee-row" u[0.5733,0.701] v[0.9505,0.0495]: 1121 px in 2 components, 2 of them >= 4 px across  (extent max 44 px, median 44 px; largest blob 713 px = 44x19)
+  landmark "falcon-row" u[0.7365,0.8379] v[0.9411,0.0589]: 797 px in 1 components, 1 of them >= 4 px across  (extent max 42 px, median 42 px; largest blob 797 px = 42x23)
+
+=== sly-arm  fov 38  21301 px of arch:hieroglyph_gilded  (2.31 % of frame)
+  faces: 70.0 % side (|n.y|<0.5, V = height up the band)  30.0 % soffit/top (V from a horizontal axis)
+  tile-V hist, ALL  (bins 0 and 19 straddle the seam): 0.00:26.4 0.05:36.4 0.10:14.9 0.15:10.5 0.20:11.8 0.25:0.0 0.30:0.0 0.35:0.0 0.40:0.0 0.45:0.0 0.50:0.0 0.55:0.0 0.60:0.0 0.65:0.0 0.70:0.0 0.75:0.0 0.80:0.0 0.85:0.0 0.90:0.0 0.95:0.0
+  tile-V hist, SIDE faces only                       : 0.00:24.7 0.05:25.8 0.10:17.8 0.15:15.0 0.20:16.8 0.25:0.0 0.30:0.0 0.35:0.0 0.40:0.0 0.45:0.0 0.50:0.0 0.55:0.0 0.60:0.0 0.65:0.0 0.70:0.0 0.75:0.0 0.80:0.0 0.85:0.0 0.90:0.0 0.95:0.0
+  U span -0.72 .. 0.65 = 1.37 repeats over 2 distinct repeat indices
+  px per repeat (median):  all 1052 [n=20841]   seam row 1026 [n=6959]   mid-tile frieze n/a [n=0]
+  landmark "sun-frieze" u[0.3115,0.3752] v[0.4681,0.5319]: 0 px in 0 components, 0 of them >= 4 px across
+  landmark "bee-row" u[0.5733,0.701] v[0.9505,0.0495]: 2058 px in 1 components, 1 of them >= 4 px across  (extent max 72 px, median 72 px; largest blob 2058 px = 72x30)
+  landmark "falcon-row" u[0.7365,0.8379] v[0.9411,0.0589]: 0 px in 0 components, 0 of them >= 4 px across
+
+=== courtyard  fov 55  54193 px of arch:hieroglyph_gilded  (5.88 % of frame)
+  faces: 66.4 % side (|n.y|<0.5, V = height up the band)  33.6 % soffit/top (V from a horizontal axis)
+  tile-V hist, ALL  (bins 0 and 19 straddle the seam): 0.00:21.0 0.05:14.3 0.10:4.4 0.15:14.0 0.20:18.7 0.25:7.1 0.30:3.6 0.35:1.3 0.40:1.5 0.45:1.1 0.50:1.7 0.55:0.2 0.60:0.2 0.65:0.0 0.70:0.0 0.75:0.1 0.80:0.1 0.85:0.8 0.90:4.2 0.95:5.7
+  tile-V hist, SIDE faces only                       : 0.00:22.1 0.05:10.2 0.10:4.6 0.15:20.5 0.20:24.8 0.25:0.3 0.30:0.1 0.35:0.1 0.40:0.1 0.45:1.2 0.50:2.3 0.55:0.3 0.60:0.3 0.65:0.0 0.70:0.0 0.75:0.0 0.80:0.0 0.85:0.6 0.90:5.2 0.95:7.4
+  U span -2.65 .. 3.83 = 6.48 repeats over 7 distinct repeat indices
+  px per repeat (median):  all 277 [n=52749]   seam row 206 [n=18091]   mid-tile frieze 75 [n=1304]
+  landmark "sun-frieze" u[0.3115,0.3752] v[0.4681,0.5319]: 65 px in 5 components, 3 of them >= 4 px across  (extent max 5 px, median 5 px; largest blob 20 px = 5x4)
+  landmark "bee-row" u[0.5733,0.701] v[0.9505,0.0495]: 2184 px in 41 components, 28 of them >= 4 px across  (extent max 38 px, median 10 px; largest blob 386 px = 38x11)
+  landmark "falcon-row" u[0.7365,0.8379] v[0.9411,0.0589]: 1124 px in 26 components, 14 of them >= 4 px across  (extent max 31 px, median 12 px; largest blob 342 px = 31x13)
+
+=== dunes  fov 42  44225 px of arch:hieroglyph_gilded  (4.80 % of frame)
+  faces: 67.8 % side (|n.y|<0.5, V = height up the band)  32.2 % soffit/top (V from a horizontal axis)
+  tile-V hist, ALL  (bins 0 and 19 straddle the seam): 0.00:8.8 0.05:10.3 0.10:9.1 0.15:6.2 0.20:6.7 0.25:7.4 0.30:6.6 0.35:6.3 0.40:6.2 0.45:5.7 0.50:4.3 0.55:2.5 0.60:2.2 0.65:0.8 0.70:2.5 0.75:0.2 0.80:3.0 0.85:3.6 0.90:5.2 0.95:2.4
+  tile-V hist, SIDE faces only                       : 0.00:10.0 0.05:12.7 0.10:12.1 0.15:6.6 0.20:8.5 0.25:7.6 0.30:5.1 0.35:2.8 0.40:2.9 0.45:4.3 0.50:2.7 0.55:0.2 0.60:0.2 0.65:1.0 0.70:3.5 0.75:0.2 0.80:4.4 0.85:5.1 0.90:7.1 0.95:3.1
+  U span -3.86 .. 3.86 = 7.71 repeats over 8 distinct repeat indices
+  px per repeat (median):  all 93 [n=42388]   seam row 87 [n=6758]   mid-tile frieze 90 [n=3299]
+  landmark "sun-frieze" u[0.3115,0.3752] v[0.4681,0.5319]: 146 px in 14 components, 6 of them >= 4 px across  (extent max 9 px, median 6 px; largest blob 50 px = 9x7)
+  landmark "bee-row" u[0.5733,0.701] v[0.9505,0.0495]: 648 px in 45 components, 27 of them >= 4 px across  (extent max 17 px, median 6 px; largest blob 81 px = 11x8)
+  landmark "falcon-row" u[0.7365,0.8379] v[0.9411,0.0589]: 602 px in 39 components, 26 of them >= 4 px across  (extent max 12 px, median 8 px; largest blob 73 px = 11x7)
+
+=== interior  fov 52  47608 px of arch:hieroglyph_gilded  (5.17 % of frame)
+  faces: 98.9 % side (|n.y|<0.5, V = height up the band)  1.1 % soffit/top (V from a horizontal axis)
+  tile-V hist, ALL  (bins 0 and 19 straddle the seam): 0.00:8.3 0.05:5.9 0.10:0.2 0.15:1.8 0.20:1.8 0.25:1.9 0.30:2.0 0.35:2.0 0.40:1.4 0.45:0.6 0.50:2.6 0.55:7.8 0.60:7.7 0.65:7.8 0.70:7.9 0.75:7.9 0.80:8.0 0.85:8.1 0.90:8.1 0.95:8.2
+  tile-V hist, SIDE faces only                       : 0.00:8.4 0.05:5.9 0.10:0.2 0.15:1.7 0.20:1.8 0.25:1.9 0.30:2.0 0.35:2.0 0.40:1.4 0.45:0.6 0.50:2.5 0.55:7.8 0.60:7.7 0.65:7.8 0.70:7.9 0.75:7.9 0.80:8.0 0.85:8.1 0.90:8.2 0.95:8.2
+  U span -11.90 .. 0.40 = 12.29 repeats over 13 distinct repeat indices
+  px per repeat (median):  all 304 [n=46253]   seam row 304 [n=10235]   mid-tile frieze 321 [n=586]
+  landmark "sun-frieze" u[0.3115,0.3752] v[0.4681,0.5319]: 161 px in 8 components, 1 of them >= 4 px across  (extent max 20 px, median 20 px; largest blob 154 px = 8x20)
+  landmark "bee-row" u[0.5733,0.701] v[0.9505,0.0495]: 863 px in 20 components, 1 of them >= 4 px across  (extent max 31 px, median 31 px; largest blob 844 px = 29x31)
+  landmark "falcon-row" u[0.7365,0.8379] v[0.9411,0.0589]: 1078 px in 22 components, 1 of them >= 4 px across  (extent max 38 px, median 38 px; largest blob 1054 px = 29x38)
+
+=== night  fov 48  105409 px of arch:hieroglyph_gilded  (11.44 % of frame)
+  faces: 73.3 % side (|n.y|<0.5, V = height up the band)  26.7 % soffit/top (V from a horizontal axis)
+  tile-V hist, ALL  (bins 0 and 19 straddle the seam): 0.00:18.4 0.05:17.7 0.10:6.0 0.15:3.2 0.20:5.0 0.25:4.9 0.30:3.4 0.35:3.0 0.40:2.0 0.45:1.4 0.50:2.8 0.55:0.0 0.60:0.0 0.65:0.0 0.70:0.0 0.75:0.1 0.80:0.1 0.85:2.9 0.90:12.2 0.95:16.7
+  tile-V hist, SIDE faces only                       : 0.00:21.8 0.05:21.4 0.10:3.8 0.15:3.0 0.20:4.9 0.25:0.2 0.30:0.1 0.35:0.0 0.40:0.0 0.45:2.0 0.50:3.9 0.55:0.0 0.60:0.0 0.65:0.0 0.70:0.0 0.75:0.0 0.80:0.0 0.85:2.2 0.90:15.3 0.95:21.5
+  U span -2.92 .. 3.86 = 6.78 repeats over 7 distinct repeat indices
+  px per repeat (median):  all 176 [n=104490]   seam row 223 [n=47616]   mid-tile frieze 125 [n=3951]
+  landmark "sun-frieze" u[0.3115,0.3752] v[0.4681,0.5319]: 235 px in 5 components, 5 of them >= 4 px across  (extent max 11 px, median 8 px; largest blob 79 px = 11x9)
+  landmark "bee-row" u[0.5733,0.701] v[0.9505,0.0495]: 6298 px in 69 components, 53 of them >= 4 px across  (extent max 55 px, median 9 px; largest blob 1816 px = 55x40)
+  landmark "falcon-row" u[0.7365,0.8379] v[0.9411,0.0589]: 4832 px in 55 components, 42 of them >= 4 px across  (extent max 49 px, median 8 px; largest blob 1408 px = 39x44)
+
+=== traversal  fov 44  128980 px of arch:hieroglyph_gilded  (14.00 % of frame)
+  faces: 56.2 % side (|n.y|<0.5, V = height up the band)  43.8 % soffit/top (V from a horizontal axis)
+  tile-V hist, ALL  (bins 0 and 19 straddle the seam): 0.00:8.5 0.05:13.8 0.10:9.4 0.15:7.5 0.20:10.5 0.25:9.9 0.30:8.1 0.35:7.4 0.40:3.7 0.45:4.0 0.50:8.2 0.55:0.0 0.60:0.0 0.65:0.0 0.70:0.0 0.75:0.1 0.80:0.1 0.85:0.8 0.90:3.6 0.95:4.3
+  tile-V hist, SIDE faces only                       : 0.00:7.6 0.05:21.7 0.10:7.5 0.15:10.1 0.20:15.1 0.25:0.5 0.30:0.4 0.35:0.1 0.40:0.0 0.45:7.2 0.50:14.6 0.55:0.0 0.60:0.0 0.65:0.0 0.70:0.0 0.75:0.0 0.80:0.0 0.85:1.4 0.90:6.1 0.95:7.5
+  U span -3.64 .. 2.92 = 6.56 repeats over 7 distinct repeat indices
+  px per repeat (median):  all 254 [n=128234]   seam row 258 [n=23686]   mid-tile frieze 277 [n=14007]
+  landmark "sun-frieze" u[0.3115,0.3752] v[0.4681,0.5319]: 902 px in 7 components, 5 of them >= 4 px across  (extent max 25 px, median 12 px; largest blob 404 px = 25x19)
+  landmark "bee-row" u[0.5733,0.701] v[0.9505,0.0495]: 2332 px in 26 components, 16 of them >= 4 px across  (extent max 39 px, median 16 px; largest blob 1075 px = 39x29)
+  landmark "falcon-row" u[0.7365,0.8379] v[0.9411,0.0589]: 2145 px in 23 components, 15 of them >= 4 px across  (extent max 34 px, median 13 px; largest blob 726 px = 22x34)
+
+=== combat  fov 40  45226 px of arch:hieroglyph_gilded  (4.91 % of frame)
+  faces: 71.5 % side (|n.y|<0.5, V = height up the band)  28.5 % soffit/top (V from a horizontal axis)
+  tile-V hist, ALL  (bins 0 and 19 straddle the seam): 0.00:25.2 0.05:20.5 0.10:4.8 0.15:19.7 0.20:25.8 0.25:2.8 0.30:1.1 0.35:0.0 0.40:0.0 0.45:0.0 0.50:0.0 0.55:0.0 0.60:0.0 0.65:0.0 0.70:0.0 0.75:0.0 0.80:0.0 0.85:0.0 0.90:0.0 0.95:0.0
+  tile-V hist, SIDE faces only                       : 0.00:23.1 0.05:7.8 0.10:6.7 0.15:27.6 0.20:34.8 0.25:0.0 0.30:0.0 0.35:0.0 0.40:0.0 0.45:0.0 0.50:0.0 0.55:0.0 0.60:0.0 0.65:0.0 0.70:0.0 0.75:0.0 0.80:0.0 0.85:0.0 0.90:0.0 0.95:0.0
+  U span -0.72 .. 0.72 = 1.45 repeats over 2 distinct repeat indices
+  px per repeat (median):  all 544 [n=44637]   seam row 526 [n=14031]   mid-tile frieze n/a [n=0]
+  landmark "sun-frieze" u[0.3115,0.3752] v[0.4681,0.5319]: 0 px in 0 components, 0 of them >= 4 px across
+  landmark "bee-row" u[0.5733,0.701] v[0.9505,0.0495]: 2587 px in 5 components, 4 of them >= 4 px across  (extent max 79 px, median 32 px; largest blob 1539 px = 79x25)
+  landmark "falcon-row" u[0.7365,0.8379] v[0.9411,0.0589]: 1355 px in 3 components, 2 of them >= 4 px across  (extent max 57 px, median 57 px; largest blob 1196 px = 57x26)
+
+=== guard  fov 38  193844 px of arch:hieroglyph_gilded  (21.03 % of frame)
+  faces: 71.0 % side (|n.y|<0.5, V = height up the band)  29.0 % soffit/top (V from a horizontal axis)
+  tile-V hist, ALL  (bins 0 and 19 straddle the seam): 0.00:10.3 0.05:7.8 0.10:5.7 0.15:20.7 0.20:33.9 0.25:17.0 0.30:4.7 0.35:0.0 0.40:0.0 0.45:0.0 0.50:0.0 0.55:0.0 0.60:0.0 0.65:0.0 0.70:0.0 0.75:0.0 0.80:0.0 0.85:0.0 0.90:0.0 0.95:0.0
+  tile-V hist, SIDE faces only                       : 0.00:13.7 0.05:10.9 0.10:8.0 0.15:29.2 0.20:38.2 0.25:0.0 0.30:0.0 0.35:0.0 0.40:0.0 0.45:0.0 0.50:0.0 0.55:0.0 0.60:0.0 0.65:0.0 0.70:0.0 0.75:0.0 0.80:0.0 0.85:0.0 0.90:0.0 0.95:0.0
+  U span -0.72 .. 0.65 = 1.37 repeats over 2 distinct repeat indices
+  px per repeat (median):  all 2753 [n=192619]   seam row 1994 [n=22927]   mid-tile frieze n/a [n=0]
+  landmark "sun-frieze" u[0.3115,0.3752] v[0.4681,0.5319]: 0 px in 0 components, 0 of them >= 4 px across
+  landmark "bee-row" u[0.5733,0.701] v[0.9505,0.0495]: 14319 px in 1 components, 1 of them >= 4 px across  (extent max 151 px, median 151 px; largest blob 14319 px = 151x133)
+  landmark "falcon-row" u[0.7365,0.8379] v[0.9411,0.0589]: 0 px in 0 components, 0 of them >= 4 px across
+
+=== sly-profile  fov 38  60852 px of arch:hieroglyph_gilded  (6.60 % of frame)
+  faces: 68.4 % side (|n.y|<0.5, V = height up the band)  31.6 % soffit/top (V from a horizontal axis)
+  tile-V hist, ALL  (bins 0 and 19 straddle the seam): 0.00:26.0 0.05:27.6 0.10:6.5 0.15:18.9 0.20:21.0 0.25:0.0 0.30:0.0 0.35:0.0 0.40:0.0 0.45:0.0 0.50:0.0 0.55:0.0 0.60:0.0 0.65:0.0 0.70:0.0 0.75:0.0 0.80:0.0 0.85:0.0 0.90:0.0 0.95:0.0
+  tile-V hist, SIDE faces only                       : 0.00:23.5 0.05:10.7 0.10:7.5 0.15:27.6 0.20:30.7 0.25:0.0 0.30:0.0 0.35:0.0 0.40:0.0 0.45:0.0 0.50:0.0 0.55:0.0 0.60:0.0 0.65:0.0 0.70:0.0 0.75:0.0 0.80:0.0 0.85:0.0 0.90:0.0 0.95:0.0
+  U span -0.65 .. 0.72 = 1.37 repeats over 2 distinct repeat indices
+  px per repeat (median):  all 501 [n=60276]   seam row 494 [n=19699]   mid-tile frieze n/a [n=0]
+  landmark "sun-frieze" u[0.3115,0.3752] v[0.4681,0.5319]: 0 px in 0 components, 0 of them >= 4 px across
+  landmark "bee-row" u[0.5733,0.701] v[0.9505,0.0495]: 2898 px in 3 components, 2 of them >= 4 px across  (extent max 84 px, median 84 px; largest blob 1998 px = 84x29)
+  landmark "falcon-row" u[0.7365,0.8379] v[0.9411,0.0589]: 1426 px in 1 components, 1 of them >= 4 px across  (extent max 60 px, median 60 px; largest blob 1426 px = 60x29)
+
+=== sly-key  fov 38  127789 px of arch:hieroglyph_gilded  (13.87 % of frame)
+  faces: 68.3 % side (|n.y|<0.5, V = height up the band)  31.7 % soffit/top (V from a horizontal axis)
+  tile-V hist, ALL  (bins 0 and 19 straddle the seam): 0.00:25.0 0.05:27.0 0.10:9.0 0.15:18.8 0.20:20.3 0.25:0.0 0.30:0.0 0.35:0.0 0.40:0.0 0.45:0.0 0.50:0.0 0.55:0.0 0.60:0.0 0.65:0.0 0.70:0.0 0.75:0.0 0.80:0.0 0.85:0.0 0.90:0.0 0.95:0.0
+  tile-V hist, SIDE faces only                       : 0.00:23.5 0.05:11.6 0.10:7.9 0.15:27.5 0.20:29.6 0.25:0.0 0.30:0.0 0.35:0.0 0.40:0.0 0.45:0.0 0.50:0.0 0.55:0.0 0.60:0.0 0.65:0.0 0.70:0.0 0.75:0.0 0.80:0.0 0.85:0.0 0.90:0.0 0.95:0.0
+  U span -0.72 .. 0.72 = 1.45 repeats over 2 distinct repeat indices
+  px per repeat (median):  all 744 [n=126676]   seam row 717 [n=39305]   mid-tile frieze n/a [n=0]
+  landmark "sun-frieze" u[0.3115,0.3752] v[0.4681,0.5319]: 0 px in 0 components, 0 of them >= 4 px across
+  landmark "bee-row" u[0.5733,0.701] v[0.9505,0.0495]: 7671 px in 5 components, 4 of them >= 4 px across  (extent max 115 px, median 71 px; largest blob 3694 px = 115x38)
+  landmark "falcon-row" u[0.7365,0.8379] v[0.9411,0.0589]: 3270 px in 3 components, 2 of them >= 4 px across  (extent max 86 px, median 86 px; largest blob 2719 px = 86x40)
+
+json -> progress/records/gilduv-arch.json

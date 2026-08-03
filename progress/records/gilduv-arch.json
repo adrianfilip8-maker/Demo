@@ -9,114 +9,6 @@
   "n": 16
  },
  "shots": {
-  "courtyard": {
-   "px": 54193,
-   "sharePct": 5.88,
-   "uSpan": 6.48,
-   "pxPerRepeat": 277,
-   "vbins": [
-    21,
-    14.3,
-    4.4,
-    14,
-    18.7,
-    7.1,
-    3.6,
-    1.3,
-    1.5,
-    1.1,
-    1.7,
-    0.2,
-    0.2,
-    0,
-    0,
-    0.1,
-    0.1,
-    0.8,
-    4.2,
-    5.7
-   ],
-   "land": [
-    {
-     "nm": "sun-frieze",
-     "px": 65,
-     "comps": 5,
-     "comps4": 3,
-     "extentMax": 5,
-     "extentMed": 5
-    },
-    {
-     "nm": "bee-row",
-     "px": 2184,
-     "comps": 41,
-     "comps4": 28,
-     "extentMax": 38,
-     "extentMed": 10
-    },
-    {
-     "nm": "falcon-row",
-     "px": 1124,
-     "comps": 26,
-     "comps4": 14,
-     "extentMax": 31,
-     "extentMed": 12
-    }
-   ]
-  },
-  "night": {
-   "px": 105409,
-   "sharePct": 11.44,
-   "uSpan": 6.78,
-   "pxPerRepeat": 176,
-   "vbins": [
-    18.4,
-    17.7,
-    6,
-    3.2,
-    5,
-    4.9,
-    3.4,
-    3,
-    2,
-    1.4,
-    2.8,
-    0,
-    0,
-    0,
-    0,
-    0.1,
-    0.1,
-    2.9,
-    12.2,
-    16.7
-   ],
-   "land": [
-    {
-     "nm": "sun-frieze",
-     "px": 235,
-     "comps": 5,
-     "comps4": 5,
-     "extentMax": 11,
-     "extentMed": 8
-    },
-    {
-     "nm": "bee-row",
-     "px": 6298,
-     "comps": 69,
-     "comps4": 53,
-     "extentMax": 55,
-     "extentMed": 9
-    },
-    {
-     "nm": "falcon-row",
-     "px": 4832,
-     "comps": 55,
-     "comps4": 42,
-     "extentMax": 49,
-     "extentMed": 8
-    }
-   ]
-  },
   "hero": {
    "px": 271575,
    "sharePct": 29.47,
@@ -225,6 +117,330 @@
     }
    ]
   },
+  "sly-closeup": {
+   "px": 54047,
+   "sharePct": 5.86,
+   "uSpan": 1.36,
+   "pxPerRepeat": 604,
+   "vbins": [
+    25.9,
+    26.9,
+    7.5,
+    19,
+    20.8,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "land": [
+    {
+     "nm": "sun-frieze",
+     "px": 0,
+     "comps": 0,
+     "comps4": 0,
+     "extentMax": 0,
+     "extentMed": 0
+    },
+    {
+     "nm": "bee-row",
+     "px": 1226,
+     "comps": 2,
+     "comps4": 2,
+     "extentMax": 45,
+     "extentMed": 45
+    },
+    {
+     "nm": "falcon-row",
+     "px": 779,
+     "comps": 1,
+     "comps4": 1,
+     "extentMax": 43,
+     "extentMed": 43
+    }
+   ]
+  },
+  "sly-startle": {
+   "px": 113863,
+   "sharePct": 12.35,
+   "uSpan": 1.36,
+   "pxPerRepeat": 1065,
+   "vbins": [
+    38.8,
+    35.6,
+    2.9,
+    22.6,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "land": [
+    {
+     "nm": "sun-frieze",
+     "px": 0,
+     "comps": 0,
+     "comps4": 0,
+     "extentMax": 0,
+     "extentMed": 0
+    },
+    {
+     "nm": "bee-row",
+     "px": 4429,
+     "comps": 2,
+     "comps4": 2,
+     "extentMax": 61,
+     "extentMed": 61
+    },
+    {
+     "nm": "falcon-row",
+     "px": 3203,
+     "comps": 2,
+     "comps4": 1,
+     "extentMax": 88,
+     "extentMed": 88
+    }
+   ]
+  },
+  "sly-perch": {
+   "px": 55836,
+   "sharePct": 6.06,
+   "uSpan": 1.35,
+   "pxPerRepeat": 610,
+   "vbins": [
+    25.7,
+    26.7,
+    9.3,
+    18.4,
+    19.9,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "land": [
+    {
+     "nm": "sun-frieze",
+     "px": 0,
+     "comps": 0,
+     "comps4": 0,
+     "extentMax": 0,
+     "extentMed": 0
+    },
+    {
+     "nm": "bee-row",
+     "px": 1121,
+     "comps": 2,
+     "comps4": 2,
+     "extentMax": 44,
+     "extentMed": 44
+    },
+    {
+     "nm": "falcon-row",
+     "px": 797,
+     "comps": 1,
+     "comps4": 1,
+     "extentMax": 42,
+     "extentMed": 42
+    }
+   ]
+  },
+  "sly-arm": {
+   "px": 21301,
+   "sharePct": 2.31,
+   "uSpan": 1.37,
+   "pxPerRepeat": 1052,
+   "vbins": [
+    26.4,
+    36.4,
+    14.9,
+    10.5,
+    11.8,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "land": [
+    {
+     "nm": "sun-frieze",
+     "px": 0,
+     "comps": 0,
+     "comps4": 0,
+     "extentMax": 0,
+     "extentMed": 0
+    },
+    {
+     "nm": "bee-row",
+     "px": 2058,
+     "comps": 1,
+     "comps4": 1,
+     "extentMax": 72,
+     "extentMed": 72
+    },
+    {
+     "nm": "falcon-row",
+     "px": 0,
+     "comps": 0,
+     "comps4": 0,
+     "extentMax": 0,
+     "extentMed": 0
+    }
+   ]
+  },
+  "courtyard": {
+   "px": 54193,
+   "sharePct": 5.88,
+   "uSpan": 6.48,
+   "pxPerRepeat": 277,
+   "vbins": [
+    21,
+    14.3,
+    4.4,
+    14,
+    18.7,
+    7.1,
+    3.6,
+    1.3,
+    1.5,
+    1.1,
+    1.7,
+    0.2,
+    0.2,
+    0,
+    0,
+    0.1,
+    0.1,
+    0.8,
+    4.2,
+    5.7
+   ],
+   "land": [
+    {
+     "nm": "sun-frieze",
+     "px": 65,
+     "comps": 5,
+     "comps4": 3,
+     "extentMax": 5,
+     "extentMed": 5
+    },
+    {
+     "nm": "bee-row",
+     "px": 2184,
+     "comps": 41,
+     "comps4": 28,
+     "extentMax": 38,
+     "extentMed": 10
+    },
+    {
+     "nm": "falcon-row",
+     "px": 1124,
+     "comps": 26,
+     "comps4": 14,
+     "extentMax": 31,
+     "extentMed": 12
+    }
+   ]
+  },
+  "dunes": {
+   "px": 44225,
+   "sharePct": 4.8,
+   "uSpan": 7.71,
+   "pxPerRepeat": 93,
+   "vbins": [
+    8.8,
+    10.3,
+    9.1,
+    6.2,
+    6.7,
+    7.4,
+    6.6,
+    6.3,
+    6.2,
+    5.7,
+    4.3,
+    2.5,
+    2.2,
+    0.8,
+    2.5,
+    0.2,
+    3,
+    3.6,
+    5.2,
+    2.4
+   ],
+   "land": [
+    {
+     "nm": "sun-frieze",
+     "px": 146,
+     "comps": 14,
+     "comps4": 6,
+     "extentMax": 9,
+     "extentMed": 6
+    },
+    {
+     "nm": "bee-row",
+     "px": 648,
+     "comps": 45,
+     "comps4": 27,
+     "extentMax": 17,
+     "extentMed": 6
+    },
+    {
+     "nm": "falcon-row",
+     "px": 602,
+     "comps": 39,
+     "comps4": 26,
+     "extentMax": 12,
+     "extentMed": 8
+    }
+   ]
+  },
   "interior": {
    "px": 47608,
    "sharePct": 5.17,
@@ -276,6 +492,330 @@
      "comps4": 1,
      "extentMax": 38,
      "extentMed": 38
+    }
+   ]
+  },
+  "night": {
+   "px": 105409,
+   "sharePct": 11.44,
+   "uSpan": 6.78,
+   "pxPerRepeat": 176,
+   "vbins": [
+    18.4,
+    17.7,
+    6,
+    3.2,
+    5,
+    4.9,
+    3.4,
+    3,
+    2,
+    1.4,
+    2.8,
+    0,
+    0,
+    0,
+    0,
+    0.1,
+    0.1,
+    2.9,
+    12.2,
+    16.7
+   ],
+   "land": [
+    {
+     "nm": "sun-frieze",
+     "px": 235,
+     "comps": 5,
+     "comps4": 5,
+     "extentMax": 11,
+     "extentMed": 8
+    },
+    {
+     "nm": "bee-row",
+     "px": 6298,
+     "comps": 69,
+     "comps4": 53,
+     "extentMax": 55,
+     "extentMed": 9
+    },
+    {
+     "nm": "falcon-row",
+     "px": 4832,
+     "comps": 55,
+     "comps4": 42,
+     "extentMax": 49,
+     "extentMed": 8
+    }
+   ]
+  },
+  "traversal": {
+   "px": 128980,
+   "sharePct": 14,
+   "uSpan": 6.56,
+   "pxPerRepeat": 254,
+   "vbins": [
+    8.5,
+    13.8,
+    9.4,
+    7.5,
+    10.5,
+    9.9,
+    8.1,
+    7.4,
+    3.7,
+    4,
+    8.2,
+    0,
+    0,
+    0,
+    0,
+    0.1,
+    0.1,
+    0.8,
+    3.6,
+    4.3
+   ],
+   "land": [
+    {
+     "nm": "sun-frieze",
+     "px": 902,
+     "comps": 7,
+     "comps4": 5,
+     "extentMax": 25,
+     "extentMed": 12
+    },
+    {
+     "nm": "bee-row",
+     "px": 2332,
+     "comps": 26,
+     "comps4": 16,
+     "extentMax": 39,
+     "extentMed": 16
+    },
+    {
+     "nm": "falcon-row",
+     "px": 2145,
+     "comps": 23,
+     "comps4": 15,
+     "extentMax": 34,
+     "extentMed": 13
+    }
+   ]
+  },
+  "combat": {
+   "px": 45226,
+   "sharePct": 4.91,
+   "uSpan": 1.45,
+   "pxPerRepeat": 544,
+   "vbins": [
+    25.2,
+    20.5,
+    4.8,
+    19.7,
+    25.8,
+    2.8,
+    1.1,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "land": [
+    {
+     "nm": "sun-frieze",
+     "px": 0,
+     "comps": 0,
+     "comps4": 0,
+     "extentMax": 0,
+     "extentMed": 0
+    },
+    {
+     "nm": "bee-row",
+     "px": 2587,
+     "comps": 5,
+     "comps4": 4,
+     "extentMax": 79,
+     "extentMed": 32
+    },
+    {
+     "nm": "falcon-row",
+     "px": 1355,
+     "comps": 3,
+     "comps4": 2,
+     "extentMax": 57,
+     "extentMed": 57
+    }
+   ]
+  },
+  "guard": {
+   "px": 193844,
+   "sharePct": 21.03,
+   "uSpan": 1.37,
+   "pxPerRepeat": 2753,
+   "vbins": [
+    10.3,
+    7.8,
+    5.7,
+    20.7,
+    33.9,
+    17,
+    4.7,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "land": [
+    {
+     "nm": "sun-frieze",
+     "px": 0,
+     "comps": 0,
+     "comps4": 0,
+     "extentMax": 0,
+     "extentMed": 0
+    },
+    {
+     "nm": "bee-row",
+     "px": 14319,
+     "comps": 1,
+     "comps4": 1,
+     "extentMax": 151,
+     "extentMed": 151
+    },
+    {
+     "nm": "falcon-row",
+     "px": 0,
+     "comps": 0,
+     "comps4": 0,
+     "extentMax": 0,
+     "extentMed": 0
+    }
+   ]
+  },
+  "sly-profile": {
+   "px": 60852,
+   "sharePct": 6.6,
+   "uSpan": 1.37,
+   "pxPerRepeat": 501,
+   "vbins": [
+    26,
+    27.6,
+    6.5,
+    18.9,
+    21,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "land": [
+    {
+     "nm": "sun-frieze",
+     "px": 0,
+     "comps": 0,
+     "comps4": 0,
+     "extentMax": 0,
+     "extentMed": 0
+    },
+    {
+     "nm": "bee-row",
+     "px": 2898,
+     "comps": 3,
+     "comps4": 2,
+     "extentMax": 84,
+     "extentMed": 84
+    },
+    {
+     "nm": "falcon-row",
+     "px": 1426,
+     "comps": 1,
+     "comps4": 1,
+     "extentMax": 60,
+     "extentMed": 60
+    }
+   ]
+  },
+  "sly-key": {
+   "px": 127789,
+   "sharePct": 13.87,
+   "uSpan": 1.45,
+   "pxPerRepeat": 744,
+   "vbins": [
+    25,
+    27,
+    9,
+    18.8,
+    20.3,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "land": [
+    {
+     "nm": "sun-frieze",
+     "px": 0,
+     "comps": 0,
+     "comps4": 0,
+     "extentMax": 0,
+     "extentMed": 0
+    },
+    {
+     "nm": "bee-row",
+     "px": 7671,
+     "comps": 5,
+     "comps4": 4,
+     "extentMax": 115,
+     "extentMed": 71
+    },
+    {
+     "nm": "falcon-row",
+     "px": 3270,
+     "comps": 3,
+     "comps4": 2,
+     "extentMax": 86,
+     "extentMed": 86
     }
    ]
   }

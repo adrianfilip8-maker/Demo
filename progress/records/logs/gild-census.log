@@ -1,0 +1,198 @@
+=== quadrat() branch table, PARSED from Hieroglyphs.js (not transcribed)
+  p(branch)=0.34 [1.01/1]
+  p(branch)=0.24 [0.5/2 0.5/2]
+  p(branch)=0.14 [0.36/2]  (site is inside a loop: 1 site, several draws)
+  p(branch)=0.16 [1.01/0.7 0.5/2 0.5/2]
+  p(branch)=0.12 [0.4/1.3]
+
+=== pick() filter width per quadrat pick() SITE (a site with 1 candidate is a §13 degeneracy)
+  POOLS.royal  8 pick() sites, min candidates = 8
+    maxH 1.01  maxW 1    p(branch)=0.340   19 candidates  sedge bee sun ankh was djed netjer nefer neb falcon
+    maxH 0.5   maxW 2    p(branch)=0.240   10 candidates  neb mouth scroll arm water sky shen hetep land stool
+    maxH 0.5   maxW 2    p(branch)=0.240   10 candidates  neb mouth scroll arm water sky shen hetep land stool
+    maxH 0.36  maxW 2    p(branch)=0.140*   8 candidates  neb mouth scroll arm water sky hetep land
+    maxH 1.01  maxW 0.7  p(branch)=0.160    9 candidates  sedge ankh was djed netjer nefer star shen stool
+    maxH 0.5   maxW 2    p(branch)=0.160   10 candidates  neb mouth scroll arm water sky shen hetep land stool
+    maxH 0.5   maxW 2    p(branch)=0.160   10 candidates  neb mouth scroll arm water sky shen hetep land stool
+    maxH 0.4   maxW 1.3  p(branch)=0.120    9 candidates  neb mouth scroll arm water sky hetep land stool
+  POOLS.divine  8 pick() sites, min candidates = 5
+    maxH 1.01  maxW 1    p(branch)=0.340   17 candidates  falcon scarab feather lotus papyrus ankh was djed netjer sun
+    maxH 0.5   maxW 2    p(branch)=0.240    8 candidates  neb mouth water sky shen hills stool pot
+    maxH 0.5   maxW 2    p(branch)=0.240    8 candidates  neb mouth water sky shen hills stool pot
+    maxH 0.36  maxW 2    p(branch)=0.140*   5 candidates  neb mouth water sky hills
+    maxH 1.01  maxW 0.7  p(branch)=0.160   10 candidates  feather lotus papyrus ankh was djed netjer shen stool pot
+    maxH 0.5   maxW 2    p(branch)=0.160    8 candidates  neb mouth water sky shen hills stool pot
+    maxH 0.5   maxW 2    p(branch)=0.160    8 candidates  neb mouth water sky shen hills stool pot
+    maxH 0.4   maxW 1.3  p(branch)=0.120    7 candidates  neb mouth water sky hills stool pot
+  POOLS.offering  8 pick() sites, min candidates = 5
+    maxH 1.01  maxW 1    p(branch)=0.340   13 candidates  bread water mouth hand cone pool ka strokes hetep pot
+    maxH 0.5   maxW 2    p(branch)=0.240   12 candidates  bread water mouth hand arm cone pool hetep pot stool
+    maxH 0.5   maxW 2    p(branch)=0.240   12 candidates  bread water mouth hand arm cone pool hetep pot stool
+    maxH 0.36  maxW 2    p(branch)=0.140*   8 candidates  bread water mouth arm pool hetep land hills
+    maxH 1.01  maxW 0.7  p(branch)=0.160    5 candidates  cone ka strokes pot stool
+    maxH 0.5   maxW 2    p(branch)=0.160   12 candidates  bread water mouth hand arm cone pool hetep pot stool
+    maxH 0.5   maxW 2    p(branch)=0.160   12 candidates  bread water mouth hand arm cone pool hetep pot stool
+    maxH 0.4   maxW 1.3  p(branch)=0.120   11 candidates  bread water mouth hand arm pool hetep pot stool land
+
+=== signs that can be drawn at FULL quadrat size (branch r<0.34), by glyph-box area
+  POOLS.royal: falcon 0.86  sun 0.74  ankh 0.6  cobra 0.589  bee 0.496  djed 0.46  sedge 0.44  star 0.436  was 0.4  nefer 0.38  netjer 0.36  hetep 0.292  scroll 0.258  land 0.255  mouth 0.234  shen 0.229  water 0.228  stool 0.218  neb 0.216
+  POOLS.divine: falcon 0.86  scarab 0.78  sun 0.74  papyrus 0.66  lotus 0.62  ankh 0.6  djed 0.46  feather 0.4  was 0.4  netjer 0.36  hills 0.301  mouth 0.234  shen 0.229  water 0.228  stool 0.218  neb 0.216  pot 0.21
+
+
+########## hieroglyph_gilded   tile 3.2 (world 6.4 m)  tier 1  built 512px  51 placements/repeat
+
+--- register "row"  28 placements  |V-seam| 0.000..0.046
+  n  sign        box(px)  x/median  paint      unique U (tile px)
+   2  bee             58     3.01x  #d4823a    294
+   2  falcon          56     2.85x  #241a16    377
+   2  djed            41     1.54x  #2fa8a0    156
+   2  shen            35     1.10x  #2fa8a0    237
+   2  hetep           32     0.96x  #f2e8d4    86
+   2  water           32     0.91x  #1f4f96    80
+   2  scroll          32     0.90x  #f2e8d4    228
+   2  stool           28     0.73x  #2f8f5a    187
+   4  nefer           38     1.30x  #2f8f5a    26 451
+   4  arm             33     1.00x  #a83828    80 478
+   4  mouth           17     0.26x  #a83828    187 478
+  rarest-and-largest (n<=2) in this register, median box 1100 px^2:
+    bee        n=2  3315 px^2 = 3.01x  #d4823a
+    falcon     n=2  3133 px^2 = 2.85x  #241a16
+    djed       n=2  1692 px^2 = 1.54x  #2fa8a0
+    shen       n=2  1207 px^2 = 1.10x  #2fa8a0
+    hetep      n=2  1053 px^2 = 0.96x  #f2e8d4
+    --landmark bee-row:0.5733,0.7010,0.9505,0.0495
+    --landmark falcon-row:0.7365,0.8379,0.9411,0.0589
+    --landmark djed-row:0.3039,0.3584,0.9408,0.0592
+
+--- register "frieze"  23 placements  |V-seam| 0.474..0.500
+  n  sign        box(px)  x/median  paint      unique U (tile px)
+   1  sun             33     2.64x  #a83828    159
+   1  papyrus         27     1.85x  #2f8f5a    282
+   1  lotus           27     1.77x  #1f4f96    483
+   1  djed            23     1.31x  #2fa8a0    366
+   1  netjer          20     1.00x  #2fa8a0    441
+   2  mouth           20     0.99x  #a83828    197 456
+   2  water           18     0.82x  #1f4f96    2 334
+   2  pot             16     0.67x  #b8452c    334 456
+   2  sky             16     0.62x  #1f4f96    239
+   3  hills           22     1.16x  #d4823a    43 197
+   3  stool           20     0.95x  #2f8f5a    126 315
+   4  neb             19     0.94x  #966a18    43 81 239 394
+  rarest-and-largest (n<=2) in this register, median box 403 px^2:
+    sun        n=1  1065 px^2 = 2.64x  #a83828
+    papyrus    n=1  746 px^2 = 1.85x  #2f8f5a
+    lotus      n=1  713 px^2 = 1.77x  #1f4f96
+    djed       n=1  527 px^2 = 1.31x  #2fa8a0
+    netjer     n=1  403 px^2 = 1.00x  #2fa8a0
+    --landmark sun-frieze:0.3115,0.3752,0.4681,0.5319
+    --landmark papyrus-frieze:0.5501,0.5934,0.4672,0.5328
+    --landmark lotus-frieze:0.9432,0.9843,0.4669,0.5331
+
+--- does each sign leave a mark in the HEIGHT field? (p2..p98 spread inside its box)
+  row     whole-band spread 0.5856   signs WITH d(): n=8 median 0.4517   WITHOUT d(): n=20 median 0.3267
+          silent-in-relief signs: nefer hetep arm water djed stool mouth
+  frieze  whole-band spread 0.4562   signs WITH d(): n=1 median 0.5000   WITHOUT d(): n=22 median 0.4256
+          silent-in-relief signs: water hills neb stool mouth sky papyrus pot djed netjer lotus
+
+--- which register each real consumer can see (V window from local-y box projection)
+    frieze register spans V 0.4635..0.5365
+  consumer                          h(m)   V window   row?  frieze(box)  frieze(band)
+  peristyle architrave (hero ledge) [court] 1.25   +/-0.098   yes      NO           NO
+  courtyard beam z=1.0 [court]       1.70   +/-0.133   yes      NO           NO
+  great gate lintel [court]          2.60   +/-0.203   yes      NO           NO
+  pylon cornice [court]              0.86   +/-0.067   yes      NO           NO
+  colossi plinth cornice [court]     0.22   +/-0.017   yes      NO           NO
+  fallen block (court ruin) [court]  1.50   +/-0.117   yes      NO           NO
+  hall doorway lintel [hall]         1.50   +/-0.117   yes      NO           NO
+  nave architrave [hall]             0.80   +/-0.063   yes      NO           NO
+  hall exterior cornice [hall]       1.30   +/-0.102   yes      NO           NO
+  pylon beam [pylon]                 1.40   +/-0.109   yes      NO           NO
+  tomb beam [tomb]                   1.20   +/-0.094   yes      NO           NO
+  tomb false door (wall-shaped) [tomb] 6.20   +/-0.484   yes      yes          yes
+
+
+########## hieroglyph_wall   tile 5.2 (world 10.4 m)  tier 0  built 1024px  111 placements/repeat
+
+--- register "row"  53 placements  |V-seam| 0.133..0.250
+  n  sign        box(px)  x/median  paint      unique U (tile px)
+   1  strokes         54     2.82x  #a83828    189
+   1  cone            36     1.26x  #f2e8d4    701
+   1  sedge           23     0.51x  #2f8f5a    975
+   1  djed            22     0.46x  #2fa8a0    117
+   1  land            20     0.38x  #d4823a    544
+   1  pool            16     0.24x  #1f4f96    823
+   2  ankh            42     1.76x  #2fa8a0    372 454
+   2  hand            36     1.28x  #a83828    550 876
+   2  shen            33     1.06x  #2fa8a0    301 629
+   3  bread           37     1.32x  #f2e8d4    734 823 876
+   3  hills           33     1.06x  #d4823a    272 443
+   3  sky             32     1.00x  #1f4f96    116 439 804
+   3  stool           30     0.90x  #2f8f5a    15 271 701
+   3  pot             28     0.75x  #b8452c    301 556 793
+   4  hetep           41     1.62x  #f2e8d4    15 365 734 804
+   5  water           32     1.02x  #1f4f96    49 133 439 621 967
+   5  mouth           29     0.80x  #a83828    49 365 544 621 966
+   6  arm             32     0.99x  #a83828    133 184 365 544 734
+   6  neb             29     0.84x  #966a18    116 271 365 621 804 966
+  rarest-and-largest (n<=2) in this register, median box 1015 px^2:
+    strokes    n=1  2866 px^2 = 2.82x  #a83828
+    ankh       n=2  1791 px^2 = 1.76x  #2fa8a0
+    hand       n=2  1298 px^2 = 1.28x  #a83828
+    cone       n=1  1278 px^2 = 1.26x  #f2e8d4
+    shen       n=2  1073 px^2 = 1.06x  #2fa8a0
+    --landmark strokes-row:0.1845,0.2339,0.7499,0.8052
+    --landmark ankh-row:0.4438,0.4758,0.8162,0.8695
+    --landmark hand-row:0.8558,0.9078,0.7643,0.7881
+
+--- register "frieze"  58 placements  |V-seam| 0.254..0.379
+  n  sign        box(px)  x/median  paint      unique U (tile px)
+   1  ka              53     2.04x  #a83828    22
+   1  papyrus         52     2.00x  #2f8f5a    891
+   1  strokes         44     1.41x  #a83828    962
+   1  djed            41     1.26x  #2fa8a0    286
+   1  feather         40     1.19x  #2f8f5a    385
+   1  was             37     1.00x  #2fa8a0    459
+   1  hetep           36     0.97x  #f2e8d4    793
+   1  shen            36     0.97x  #2fa8a0    239
+   1  arm             28     0.59x  #a83828    876
+   1  land            27     0.56x  #d4823a    876
+   3  bread           42     1.28x  #f2e8d4    703 883 958
+   3  pool            37     0.99x  #1f4f96    354 701
+   4  hills           38     1.09x  #d4823a    225 415 876 953
+   5  water           31     0.71x  #1f4f96    77 106 337 673 814
+   6  pot             59     2.55x  #b8452c    160 195 439 457 613
+   6  stool           56     2.30x  #2f8f5a    28 301 493 532 683 822
+   6  neb             33     0.81x  #966a18    4 271 337 415 744
+   7  sky             33     0.79x  #1f4f96    4 77 493 536 621 953
+   8  mouth           35     0.89x  #a83828    15 106 184 271 365 621 744 876
+  rarest-and-largest (n<=2) in this register, median box 1352 px^2:
+    ka         n=1  2763 px^2 = 2.04x  #a83828
+    papyrus    n=1  2698 px^2 = 2.00x  #2f8f5a
+    strokes    n=1  1912 px^2 = 1.41x  #a83828
+    djed       n=1  1701 px^2 = 1.26x  #2fa8a0
+    feather    n=1  1610 px^2 = 1.19x  #2f8f5a
+    --landmark ka-frieze:0.0217,0.0704,0.6849,0.7391
+    --landmark papyrus-frieze:0.8700,0.9112,0.3292,0.3916
+    --landmark strokes-frieze:0.9398,0.9801,0.6655,0.7107
+
+--- does each sign leave a mark in the HEIGHT field? (p2..p98 spread inside its box)
+  row     whole-band spread 0.9873   signs WITH d(): n=3 median 0.5436   WITHOUT d(): n=50 median 0.4897
+          silent-in-relief signs: hetep stool water mouth sky neb djed arm strokes pot hills ankh hand land cone bread sedge
+  frieze  whole-band spread 0.8321   signs WITH d(): n=5 median 0.7325   WITHOUT d(): n=53 median 0.5625
+          silent-in-relief signs: ka stool mouth water pot djed neb was sky bread hetep arm hills land strokes papyrus
+
+--- which register each real consumer can see (V window from local-y box projection)
+    frieze register spans V 0.3258..0.7507
+  consumer                          h(m)   V window   row?  frieze(box)  frieze(band)
+  peristyle architrave (hero ledge) [court] 1.25   +/-0.060   NO       NO           NO
+  courtyard beam z=1.0 [court]       1.70   +/-0.082   NO       NO           NO
+  great gate lintel [court]          2.60   +/-0.125   NO       NO           NO
+  pylon cornice [court]              0.86   +/-0.041   NO       NO           NO
+  colossi plinth cornice [court]     0.22   +/-0.011   NO       NO           NO
+  fallen block (court ruin) [court]  1.50   +/-0.072   NO       NO           NO
+  hall doorway lintel [hall]         1.50   +/-0.072   NO       NO           NO
+  nave architrave [hall]             0.80   +/-0.038   NO       NO           NO
+  hall exterior cornice [hall]       1.30   +/-0.063   NO       NO           NO
+  pylon beam [pylon]                 1.40   +/-0.067   NO       NO           NO
+  tomb beam [tomb]                   1.20   +/-0.058   NO       NO           NO
+  tomb false door (wall-shaped) [tomb] 6.20   +/-0.298   yes      yes          NO   <-- TESTS DISAGREE
