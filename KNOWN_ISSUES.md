@@ -7862,3 +7862,45 @@ unscoreable — the load-bearing receipt is the `report.json` stamp, which survi
 per-arm applied-state lines are gone. **§88 was written two hours before this and its own tool was
 not reached for.** A durability tool that nobody runs is a durability tool that does not exist;
 recorded so the next capture starts with it rather than ends with it.
+
+
+---
+
+## §91 — the container rolled back a second time, and the recovery took one command
+
+At **10:02 UTC the container restarted again**, filesystem back at the same ~Aug 1 22:12 snapshot as
+§83: `uptime` 2 minutes, HEAD at `77e1eab`, `shots/` showing only Aug 1 directories, the two stale
+queue tickets, no live captures.
+
+**§83 cost six local checks, a wrong conclusion, a recovery document written on a false premise, and
+a commit that had to be discarded. §91 cost one command.**
+
+```
+git fetch origin <branch>      →  77e1eab..d6618c5   remote is 191 commits ahead
+git reset --hard origin/<branch>
+```
+
+Restored: **§1–§90 (7864 lines)**, every promoted instrument (`keeplog.sh`, `preappend.sh`,
+`railroute.mjs`, `avenuevis.mjs`, `tonecurve.mjs`, `armframe.mjs` …), and every source change through
+TEXTURES' arris revert. Nothing local-only existed to preserve — checked with
+`git log HEAD --not origin/<branch>` before resetting, which is the step that makes a hard reset safe
+rather than reckless.
+
+> **§83.3 rule 3 — "diagnose a suspected loss against the remote before acting on it" — is the only
+> reason this was five seconds instead of an hour.** The ledger paid for itself inside one working
+> day of being written.
+
+**Lost again, and permanently:** every capture frame rendered since the last restart — `fx18`'s 13
+arms, `char11`, `tone1`, `txab-off`, `txab-on`, `geofix`. PNGs are still not tracked and still cannot
+be. **But this time the run logs for `fx18`, `char11` and `tone1` survive**, because §88's
+`keeplog.sh` copied them into `progress/records/logs/` and §89.5 fixed the `.gitignore` rule that had
+been silently discarding them. §89's entire scoring of `fx18` — the falsified latch, the failed
+bit-identity control, the emitter attribution — rests on a log that would otherwise have died with
+the container **for the second time in five hours.**
+
+`txab-off` and `txab-on` have no preserved log, exactly as §90.9 flagged an hour before they were
+lost. That section is now a demonstration rather than a warning.
+
+**And the agents have lost the day again.** Their transcripts are back at Aug 1 21:33 for the second
+time, so none of them holds §84–§90 — the work they themselves did. The ledger holds it; they do not.
+Re-brief from their sections, as §83.3 rule 4 says.
