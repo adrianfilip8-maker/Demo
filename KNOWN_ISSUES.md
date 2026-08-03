@@ -9254,12 +9254,26 @@ the registered secondary blocks shipping even under CONFIRMED: at 5× the collar
 ### 110.2 A symmetric code row producing asymmetric results
 
 Neck L moved **+14.5** and neck R **+0.1** — from `th = side * (0.95 + i*0.55 + jitter)`, identical
-geometry mirrored. So on his right the dark mass is **not** the cards (it is shadow or material)
-while on his left it substantially is.
+geometry mirrored. ~~So on his right the dark mass is **not** the cards (it is shadow or material)
+while on his left it substantially is.~~
 
-> **"The chip" is not one phenomenon, and a symmetric fix will half-miss.** An unregistered finding
-> that only exists because the seal scored three ROIs separately instead of pooling them — a pooled
-> mean would have read ~6.7 and hidden both halves.
+> **REFUTED by CHARACTER, and it was my ROI, not the model.** Re-measured with boxes placed on the
+> **measured projected card centres** rather than on fixed rectangles, removal moves all three rows
+> **+14.8 / +35.1 / +12.8**. The cards are present on his right; the +0.1 was a box that largely
+> missed them. **§110's VERDICT stands** — a pre-registration is scored against the ROIs it fixed
+> in advance, and that is the whole point of fixing them — but the *unregistered* finding I drew
+> out of it does not.
+>
+> **This is the third ROI-placement error in one day** (§104.2's sphinx window that was mostly sky
+> and dune; §112.1's P80 that reported a crop's band mix; this). In every case the arithmetic was
+> correct and the population was not what its name said. **A fixed rectangle is a hypothesis about
+> where something is**, and on a posed, projected, animated model that hypothesis needs the same
+> evidence as any other. The countermeasure that has actually worked each time is the cheapest one:
+> derive the region from the thing itself, then *look at it*.
+
+An unregistered finding of this kind only exists because the seal scored three ROIs separately
+instead of pooling them — a pooled mean would have read ~6.7 and hidden the structure. Separate
+scoring was still right; it surfaced something real to check, and checking it is what killed it.
 
 ### 110.3 Frames are not bit-deterministic across boots, and §99.1 must be read narrowly
 
@@ -9468,3 +9482,70 @@ ink (`#1a1210`, R>G>B), suppressing B in the difference. Reported together becau
 alone misleads — and it is the third time today an A/B difference has been contaminated by a term
 that reacts to the treatment rather than being held fixed by it (§105.1's fringe survival, §111's
 `mudbrick` null, this).
+
+---
+
+## §113 — the hull premise measured at last, a ceiling found, and two of my briefing premises falsified
+
+CHARACTER's card-widening. **The premise §37 has carried since it was written is now measured on
+delivered pixels for the first time**: over the `noruff` hold-out footprint the shipped frame is
+**47.9 % at L < 30**, sampling RGB (17,13,45) and (23,15,32) — §2.2's ink hexes exactly. With the
+cards removed the same pixels are **9.0 %** ink. **Roughly half of what these cards deliver is
+hull**, which is what the ratio argument always claimed and nobody had shown.
+
+### 113.1 The bib bound I briefed does not exist
+
+I told CHARACTER to register the collar-scallop condition because *"a card wide enough to beat the
+hull is a card that can re-fill the collar into a bib"*. **That premise is false, and CHARACTER
+falsified its own version of it.** The bib state (`e19b80c`) was `w` 0.020/0.024 at `tuftWidth`
+**1.55** → an effective 0.0310. Today's cards are 0.015 × **2.50 = 0.0375** — already **21 % wider
+than the bib's**. What made the bib was **count** (11 cards per row against today's 2) and length.
+
+> **Width was never what was falsified.** The fear came from comparing authored numbers across a
+> change in the global multiplier that scales them — the same units error as §72.1 and §108.1,
+> now three for three: *a constant is not comparable across builds until you have checked what
+> multiplies it.*
+
+The scallop condition stays registered anyway — it is cheap and it blocks a real failure — but it
+is no longer the binding constraint, and I should not have stated it as one.
+
+### 113.2 The lever's ceiling, and a rejected alternative
+
+A depth-aware sweep with a **per-card** hull model — correct because the shell is one BackSide
+duplicate of the whole mesh, so overlapping cards add *interior* ink rather than sharing it, and a
+union-then-dilate model predicts the opposite:
+
+| k | 1.00 | 1.25 | 1.50 | **1.75** | 2.00 | 2.50 | 3.00 |
+|---|---|---|---|---|---|---|---|
+| modelled ink | 44.3 % | 40.0 % | 36.5 % | **35.4 %** | 35.7 % | 34.6 % | 34.3 % |
+
+**k = 1.75 is the knee** — 8.9 of the ~10 available points — and the curve is flat past it, which
+is §108's lesson applied prospectively rather than after the fact.
+
+**Spreading the cards was tested and rejected**: un-stacking makes ink *worse*, 44.3 → 51.7 %. An
+alternative killed by measurement before it could become a second bracket.
+
+### 113.3 CHARACTER withdrew its own forward model rather than fit it
+
+Its predictive model, run against the shipped frame **it had already seen**, missed by
+**−9.9 / −16.8 / +13.4** points. Rather than tune it, it withdrew it and registered the model's
+**ratio between arms** — where the constant offset cancels — predicting −7.6 / −9.6 / −0.7.
+
+> A model that cannot hit the state it was built on is not a model of that state. **Using a
+> quantity it *can* get right (a ratio) instead of repairing one it cannot (an absolute) is the
+> honest move**, and it is the same reasoning §101 and §112.1 arrive at from the opposite
+> direction — asking what the statistic's denominator is doing.
+
+### 113.4 The other half of the ratio is not CHARACTER's
+
+Ink fraction is hull ÷ card. CHARACTER owns the denominator and has now taken it as far as it goes.
+**The numerator is `Outline.js`, which builds one shell at one thickness for the whole body, and
+`_material()` hardcodes `outline: 1.0` for every group.** A ~2.5–3 px shell is correct for a 700 px
+figure's torso and is most of a 11 px card. **Routed to SHADING**: per-group outline weight, or a
+thickness that scales with the feature rather than the body.
+
+`char15-ship` / `char15-wide` are queued, one boot each, same commit, `ppid 1`. Gate verified before
+launch — the shipped arm's vertex hash is **bit-identical to a build of the pre-gate tree**, 96/96
+ruff vertices move and **0** outside them, 14044 tris on both arms, 52/52 clips sample with 0
+non-finite. **The blocking secondary is visual and still owed**: the collar must still scallop at
+5×, and no number substitutes for that.

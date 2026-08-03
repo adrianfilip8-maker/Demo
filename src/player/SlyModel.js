@@ -2701,11 +2701,38 @@ export class SlyModel {
        prove a cross-owner material drift did not reach these pixels. A global knob would void
        its own validity gate. */
     const WIDE = CHAR_AB('widecards');
-    /* Duty cycle = card width / centre-to-centre pitch along the row, measured on the posed
-       model at the `sly-closeup` camera. Shipped chest row 1 sits at 0.47; row 2 at 0.36.
-       0.68 is the widest that still leaves every adjacent pair a clear notch at that camera. */
-    const CHEST_RUFF_W = WIDE ? [0.0216, 0.0320] : [0.015, 0.018];
-    const NECK_RUFF_W = WIDE ? 0.0225 : 0.015;
+    /* k = 1.75, and it is the KNEE of a measured curve rather than a step in a direction.
+       `scratchpad/ruffsweep.mjs` rasterises all 8 collar cards through the real `sly-closeup`
+       camera with a depth-aware, PER-CARD 2.5 px hull (the shell is one BackSide duplicate of
+       the whole body mesh, so a card lying on another card still carries its own full border —
+       ink between overlapping cards is INTERIOR, and unioning the cards before dilating would
+       have predicted the opposite of the truth here):
+
+           k     1.00   1.25   1.50   1.75   2.00   2.50   3.00
+           ink   44.3%  40.0%  36.5%  35.4%  35.7%  34.6%  34.3%
+
+       1.75 takes 8.9 of the ~10 points the lever has in it; k 3.00 buys 1.1 more for +57% card
+       area. Interior ink rises monotonically with width (182 -> 524 px), which is why the curve
+       flattens: widening shrinks each card's own border share and grows the overlap that adds
+       new border. The 44.3% model is calibrated against delivered pixels — the `noruff` hold-out
+       footprint measures **47.9% at L<30** in the shipped frame, RGB (17,13,45) / (23,15,32),
+       i.e. §2.2's ink hexes. So the ratio §37 asserts is now measured on both sides, not assumed.
+
+       THE OTHER AXIS WAS TESTED AND REJECTED. Spreading the cards apart (they are stacked: the
+       right neck pair sits at 7.0 px pitch with 17 px cards) makes ink share WORSE, 44.3% ->
+       46.5% at 1.6x -> 51.7% at 2.0x, because the cards rotate off the collar and lose more area
+       than they save border. Width is the lever; spread is not.
+
+       THE BIB BOUND DOES NOT BITE HERE, and this is why widening is safe now when it was not
+       before. The state this row was cut back FROM (`e19b80c`, "covered the whole cream chest V
+       in overlapping slabs ... a bib or a folded napkin") was `w` 0.020/0.024 at `tuftWidth`
+       1.55 — final half-width **0.0310**, against today's 0.015 x 2.50 = **0.0375**. The shipped
+       cards are already 21% WIDER than the bib's. What made it a bib was COUNT and LENGTH:
+       `N = round(5 * D)` at `tuftDensity` 2.2 is **11 cards per row** against today's 2, and
+       lengths 0.056/0.042 against 0.040/0.030. Row area is ~6.4x under the bib today, and ~3.6x
+       under it at k 1.75. Widening was never the thing that was falsified. */
+    const CHEST_RUFF_W = WIDE ? [0.02625, 0.0315] : [0.015, 0.018];
+    const NECK_RUFF_W = WIDE ? 0.02625 : 0.015;
 
     for (const side of [1, -1]) {
       /* Everything from here to the forearm is head + neck + chest. Marked as one family
