@@ -13004,3 +13004,101 @@ One caveat GEOMETRY labelled rather than buried: the projections use **nominal**
 `L.colossi` and the `masonryShell` arguments, not built vertex positions — jitter ±0.018–0.03 m ≈ 1 px
 at 2.9 m, moving no conclusion, *"but §143.4 corrected me for exactly this substitution once, and an
 unlabelled nominal argument is how that happened."*
+
+## §153 — a correction that attached to a file instead of a quantity, and two owners catching themselves
+
+### 153.1 The counted column, a third time, from a different file
+
+§149.4 corrected GEOMETRY for quoting `shots/geo2/report.json`'s counted totals against 250 / 1.2 M.
+It accepted the correction, withdrew the reclamation plan — and in the **same report** wrote:
+
+> *"Budgets have moved 548 draws / 2.355 M tris → **451 / 1.80 M** (`shots/report.json`). Still over
+> 250 / 1.2 M."*
+
+`shots/report.json` is dated **Aug 1 11:16** — two days stale — and `drawCalls: 451, triangles:
+1804641` is **the same counted column**, from a different file. Live re-run, just now: **71 draws
+(28 %) / 0.572 M (48 %)**. Inside both.
+
+> **I corrected the file, and the correction attached to the file.** The invariant is about the
+> *column* — anything from `renderer.info` after the PostFX chain includes three cascade passes plus
+> AO, outline and composite — and stating it as *"don't quote geo2"* left every other `report.json`
+> in the tree still able to produce it. A correction phrased around an instance teaches the
+> instance.
+
+Third occurrence (§130.3, §149.4, here), two of them mine. The foothold survives because **counted is
+what `report.json` prints and the scored line has to be computed** — the wrong number is the one
+lying on disk.
+
+### 153.2 A filesystem read that returned a tree which no longer exists
+
+GEOMETRY opened its turn on reads showing `Kit.js` at **674 lines** (actual: 2070), `lock.mjs` at
+**89 lines with a 45-minute default and no ticket system** (actual: the FIFO), and `progress/`
+without `records/`. **That is where its "45-minute give-up" claim came from** — not a
+misreading of the current file but an accurate reading of a vanished one.
+
+Its own words: *"my opening instinct was to start the three geometry problems from scratch …
+re-executing the brief would have overwritten a session's work with a stale copy."* It caught it by
+re-reading against the actual tree before editing, and edited nothing.
+
+This is the §139 rollback's aftermath arriving a second time — the same owner previously reported
+*"the restore landed between two of my tool calls."* **A stale read is not distinguishable from a
+current one by inspection; only a cross-check against something known-recent separates them.** The
+cheap tell here was line counts against the ledger's own quoted figures.
+
+### 153.3 CHARACTER: a mapping table tells you where things are sent, not what the set contains
+
+Registered before any frame, then corrected before any frame: the `tuftbias40` token was scoped from
+`TUFT_GROUP`, which remaps only `fur` / `furCream` / `furDark`. But the **knee-ruff row**
+(`SlyModel.js:3305`) is a fur card **filed under `clothDark`** — coloured to match the trouser it
+grows from — and passes no `shadeMix`, so it takes the default and *is inside the treatment*.
+
+**624 vertices, not 552.** No body-loft vertex moves.
+
+> *"A mapping table tells you where things are sent, not what the set contains."*
+
+The arm was scoped from a router rather than from the population, and the two differ wherever
+something is filed by appearance instead of by kind.
+
+### 153.4 §150's shape reproduced by its author's neighbour within the hour
+
+CHARACTER wrote §7.1 of its own prereg — registering that `chipscore` cannot rule in either
+direction — and then, **within an hour**, its first normal-comparison probe returned a confident
+`PROBLEM` verdict from a `> 1e-4 deg` threshold **sitting below `acos`'s precision floor.** It
+flagged **263 `fur` vertices as "moved" whose normals were bitwise identical.**
+
+The null control caught it — *and the null control only existed because it wanted to protect a
+different gate.* An instrument built for one purpose catching a defect in another is the same
+mechanism §143.1 recorded across owners, here inside one owner's own toolchain.
+
+### 153.5 Two arms designed so the tree cannot confound them
+
+`tuftbias40` ships as a **`CHAR_AB` token rather than an edited constant** — *"editing-and-reverting
+has already silently corrupted one queued A/B"* — and the run takes **three arms in one lock hold**
+(A / B / BACK), so every other agent's code is identical between arms **by construction**, with BACK
+required bit-identical to A or the arm is void. Two builds with the same token are **bitwise
+identical (0 differing floats)**, so a BACK mismatch cannot be blamed on build noise.
+
+And `cap2` was discarded as arm A: by the time it was read it was **298 commits and 1387 changed
+`SlyModel.js` lines stale.** Rescued, then not used — the rescue and the usability are separate
+questions and it answered both.
+
+### 153.6 The cap defect, diagnosed
+
+`-headparts.png` shows why 33° fails: **the bill sits as a band wrapped round the brow instead of
+projecting.** So the crown merges into the skull and reads as "round head top". That is consistent
+with §151.4's yaw-vs-roll finding and sharpens it — the fix needs **projected extent that survives a
+near-axis view**, which is a shape change, not a rotation of any kind.
+
+### 153.7 The second stale self-poke, and the fix
+
+A `send_later` poke fired asking me to score `fx21`, check its falsifier and report its
+`driftFromQueued`. All three were done and committed hours earlier (§145, §147). §135.3 recorded
+this once — *"a scheduled reminder carries whatever framing was current when it was written, and it
+does not learn"* — and observing it did not prevent the second instance.
+
+**The fix is structural: a self-scheduled poke must carry a pointer and a question, never a
+procedure and a framing.** *"Has `fx21` been scored? If not, the seal is at
+`progress/records/PREREG-sandhigh.md`"* costs one lookup and cannot go stale. The poke that fired
+instead restated an entire scoring procedure, a falsifier threshold and a provenance question — all
+of which had already been answered, and any of which could have been re-executed against a
+superseded framing.

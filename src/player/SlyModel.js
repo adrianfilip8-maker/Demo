@@ -51,10 +51,16 @@ import { Cane } from './Cane.js';
  * Tokens:
  *   `noruff` — omit the neck ruff row and both chest ruff rows (KNOWN_ISSUES §96.4 attribution).
  *   `tuftbias40` — fur-clump normal bias 0.82 → 0.40, i.e. arm B of `PREREG-tuftbias.md`.
- *     Scoped deliberately to the **default** (`TUNE.tuftShadeMix`) only: the one explicit
- *     per-row override in the file (the boot-cuff row at 0.90) is individually justified at its
- *     site against a different failure — a blown lit band on near-white cloth — and is not the
- *     population this arm is about. Widening the token to it would put two treatments in one arm.
+ *     Scoped to the **default** (`TUNE.tuftShadeMix`), so the boot-cuff row's explicit
+ *     `shadeMix: 0.90` is untouched — that value is justified at its own site against a
+ *     different failure (a blown lit band on near-white cloth) and putting it in this arm would
+ *     put two treatments in one arm.
+ *     **Measured population, because inferring it from `TUFT_GROUP` gets it wrong: 624 vertices,
+ *     not 552.** `TUFT_GROUP` remaps only `fur`/`furCream`/`furDark`, but the knee-ruff row
+ *     below is a fur card filed under `clothDark` (it is coloured to match the trouser it grows
+ *     from) and passes no `shadeMix`, so it takes the default and is inside the treatment —
+ *     72 vertices. No body-loft vertex moves in any group. A mapping table tells you where
+ *     things are sent, not what the set contains.
  */
 function charABRaw() {
   try {

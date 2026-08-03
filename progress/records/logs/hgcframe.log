@@ -269,3 +269,5 @@
 · [ctl] installing __TEX_AB=hgchisel and reloading
 · [ctl] ready (abStamp=true)
   ✓ [ctl] temple     217596ms  draws 244  tris 1756k
+  ✓ [ctl] hero       257880ms  draws 265  tris 1786k
+→ /home/user/Demo/shots/hgc
