@@ -176,7 +176,15 @@ export class Architecture {
              undimmed diffuse under a near-white highlight, which is exactly how a saturated
              gold albedo measures neutral (#72696b, R/G 1.08) in frame. Not 1.0: at full metal
              the diffuse term all but vanishes, and §2.1 wants stylised metal, not a mirror. */
-          metal: r.metal ? 0.85 : 0,
+          /* Per-recipe metal AMOUNT, not one shared constant behind a boolean.
+             `gold_leaf` (solid leaf, spec 0.95, rough 0.22) and `hieroglyph_gilded` (leaf over
+             gesso over limestone, spec 0.55, rough 0.55) were indistinguishable in metal amount
+             while the recipes carefully distinguished everything else about them.
+             `metalAmount` absent = 0.85, so every recipe that does not declare one is
+             bit-identical to before and the control materials cannot move by accident.
+             See progress/records/PREREG-gildmetal.md for what the value is allowed to be
+             decided by, and RESULT-gildmetal.md for what it was. */
+          metal: r.metal ? (r.metalAmount ?? 0.85) : 0,
           outline: HULL_OUTLINE.has(key) ? 0.85 : 0.0,
           sss: 0.0,
           detail: r.detail ?? null,

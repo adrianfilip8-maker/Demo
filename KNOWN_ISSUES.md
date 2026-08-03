@@ -11560,3 +11560,74 @@ five owners out of five received stale briefs. The fix cannot be *"read the ledg
 thousand lines and growing by ~1500 a session. **A resumed owner needs a digest of what changed in
 its own domain since its transcript began, and producing that is the coordinator's job, not a
 reading assignment.**
+
+## §134 — my precondition was structurally impossible, and the owner said so before measuring
+
+I re-routed gold to GEOMETRY (§132.2) and attached a gate: *"measure the rim share of the gild mask
+first, because the multiply's effect is entirely conditional on rim/spec/env being present."*
+
+**Rim is not a metalness consumer at all.** `Architecture.js:168` sets
+`rim: TUNE.rimStrength * (r.metal ? 1.15 : 1.0)` — from the **boolean**, not the amount — and
+`slyMetal` reaches `diff`, `specAmt`, `specTint` and `metalEnv` in the shader and **no rim term**.
+Changing 0.85 to any other non-zero value leaves the rim **bit-identical by construction**.
+
+So the gate I imposed could not have decided the question either way. I inherited SHADING's
+"conditional on rim/spec/env" framing — which was correct about the *multiply* — and promoted it to
+a precondition on a *different* change without checking that rim was on that path. **Third routing
+error in a row on this one item**, after §130.5's chromaticity and §132's inheritance of it.
+
+> GEOMETRY registered the correction **before measuring, not after** — in the prereg, as a thing to
+> be scored against. That is the difference between a correction and an excuse, and it is only
+> available to someone who reads the routing instead of executing it.
+
+### 134.1 The lever relocated rather than dismissed
+
+The rim share was measured anyway and is small — **6.3 %** of the gild mask above 0.001. The
+tempting conclusion, which my own gate invited, was *"small rim share, so metalness is not the
+lever."* GEOMETRY refused it:
+
+| `slyMetal` consumer | changes chroma? | population |
+|---|---|---|
+| `diff *= mix(1.0, 0.20, m)` | **no** — scalar on a vec3 (§132) | 100 % of mask |
+| `specAmt *= mix(1.0, 3.4, m)` | no | ≤ 4.9 % of gild px |
+| `specTint = mix(uSpecColor, alb·2 + …, m)` | **yes** | ≤ 4.9 % |
+| `metalEnv = alb · env · (m · uMetalGain · ef)` | **yes** | **100 % of mask** |
+
+> **The pre-measurement does not support "metalness is not the lever either"; it relocates the
+> lever from rim/spec to env/diffuse.** `metalEnv` acts on the whole mask, and metalness is live on
+> ~3.3 % of `hero`'s pixels.
+
+**Instrument validated against an independent measurement before its other columns were quoted:**
+§8 records this recipe at **28.7 % of `hero`**; `gildrim.mjs` measures **29.7 %** from geometry the
+earlier number did not use. Agreement to 1 pp is the stated reason the remaining columns are
+trusted — a control run *first*, which is the discipline §131.2's four failed instruments lacked.
+
+### 134.2 The prediction registers a trade, not a win
+
+Arm: `hieroglyph_gilded` metal **0.85 → 0.45**, poked on `uMetal` of one named material in a single
+boot. Arithmetic fixed in advance: diffuse **+100 %**, spec **−32 %**, env **−47 %**, rim **0.000 %
+(structural)**.
+
+- **P1** — gild pixels get brighter and warmer, driven by the diffuse restore against a `0xdcae5e`
+  albedo.
+- **P2** — *the same change reduces the metal read.* `metalEnv`, whose own comment calls it the
+  difference between gold and *"a yellow ball with a dot on it"*, drops 47 %; the lobe drops 32 %.
+
+> **P1 and P2 point in opposite art directions, and the honest result is a trade.** Registering that
+> before the frame means the run cannot be reported as a win by quoting only the half that moved.
+
+**P3 is a hard bit-identity control, not a tolerance:** `arch:gold_leaf`, `arch:bronze_dark`,
+`props_gold`, `props_bronze` and Sly's cane must be **pixel-identical** between arms. That check
+exists *only* because the change is per-recipe — it is precisely the failure mode where "fixing
+gold" moves a constant shared with the one object that already reads correctly.
+
+### 134.3 The edit ships inert by construction
+
+```js
+metal: r.metal ? (r.metalAmount ?? 0.85) : 0
+```
+
+**No recipe declares `metalAmount` yet**, so every material is bit-identical to before and the
+control materials cannot move by accident. The scoring harness (`tools/gilddiff.mjs`) refuses in
+order — `pin` (base vs base2 must be 0 px or the dt=0 clock pin failed and everything below is
+noise), then `revert`, then the P3 control — **before** it reports any treatment number.
