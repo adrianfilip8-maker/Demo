@@ -7966,3 +7966,85 @@ and the walk is the step that finishes the detachment, not the step that audits 
 skipped walk exactly like a skipped `setsid` — the run is parented to a shell that will exit, and
 `pgrep -f` will confirm it is fine, because `pgrep -f` matches the wrapper. That last clause is why
 this took three recurrences to see: **the cheap check agrees with the wrong answer.**
+
+---
+
+## §93 — the roster audited by measurement instead of by memory, and one near-miss
+
+Pass 7's roster is mine to fix and needs no capture lock. `charview.mjs` answers it in a second,
+so it was run instead of recalled — **at 720 rows, the critic's own units, because §72.1 cost a
+26% error by mixing 900 with 720.** At 900 the same table reads `courtyard` 52 px; at 720 it reads
+42, against the 43 §79.4 recorded from a frame. Agreement across two independent routes.
+
+| shot | view° | figure px @720 | scored? |
+|---|---|---|---|
+| sly-closeup | 33 | 484 | yes |
+| sly-key | 33 | 484 | yes |
+| sly-perch | 33 | 495 | **no — diagnostic (§76.4)** |
+| sly-profile | 95 | 443 | yes |
+| combat | 45 | 281 | yes |
+| interior | 70 | 187 | yes |
+| dunes | 70 | 170 | yes |
+| traversal | 59 | 147 | yes |
+| hero | 70 | 133 | yes |
+| night | −111 | 101 | yes |
+| temple | 35 | 99 | yes |
+| courtyard | 77 | **42** | environment only |
+| guard | 116 | **behind lens** | environment only |
+| sly-startle | 9 | feet out of frame | yes, face conditions only |
+| sly-arm | −60 | 484 | no — diagnostic, already excluded |
+
+### 93.1 The near-miss: a flag that means the feet, read as if it meant the head
+
+`charview` printed **`sly-startle … 1047 px  OFF-SCREEN, dead-on, flat`** — a figure 45% taller
+than the 720-row frame it is rendered into. I had it written down as a fourth unsupportable frame
+and a framing defect before checking what the flag tests.
+
+`onScreen` is `!behind && |a.x| ≤ 1 && |a.y| ≤ 1` on **`p` alone — the character's base point.**
+`b` (`p.y + H`) is used for the pixel height and *not* for the flag. So OFF-SCREEN here means **the
+feet are outside NDC**, which is not a defect in a 22° fov head shot at 2.8 m — it is the shot
+working. The head is not cut; nothing in the flag says it is.
+
+**One `grep` for the flag's definition separated "the frame is broken" from "the frame is a
+close-up."** This is §92.1 again inside a day — asserting the contents of something I had open in
+another pane — and it is the fourth instance in the run of the same shape (§71.5, §76.4, §92.1).
+The countermeasure that keeps working is uniform and cheap: *read the definition of the thing you
+are about to quote.* Note also that the number that nearly carried it — 1047 px — was real,
+correctly computed, and completely irrelevant. **A true number attached to the wrong predicate is
+the most persuasive kind of wrong.**
+
+### 93.2 `sly-startle` stays, and §76.4's rule is narrower than it reads
+
+`sly-startle` is authored as a *"Pupil-state verification twin for the startle work"* — its camera
+was chosen to equalise eye presentation for a threshold test (0.907 / 0.920 dot, against 0.963 /
+0.684 at the closeup's bearing). By the letter of §76.4 — *a diagnostic framing and a beauty
+framing cannot share a roster* — it should come out, and for about ten minutes I had it out.
+
+**That over-reads §76.4.** What sank `sly-perch` was not that its camera was chosen for
+measurement; it was that **its shot type is undeliverable by construction** — the name promises a
+perch and §58.2 deliberately stages him on flat ground, so the critic's *"there is no perch, ledge
+or rail under him"* is unanswerable. `sly-startle` promises a startle reaction close-up and
+delivers exactly that: pose `hurt`, framed on the head. A camera picked for measurement reasons
+can still produce a frame an art director would pick.
+
+> **Corrected rule.** Exclude a shot when **the shot type it advertises cannot be delivered from
+> the staging it uses.** Do *not* exclude a shot merely because its camera was derived from a
+> measurement. The first is a promise the frame cannot keep; the second is only how the lens got
+> where it is.
+
+Restated that way, §76.4's own count survives: **one** frame of the 2.1 is a roster artefact, not
+two. I talked myself into a second and back out of it, and the way out was re-reading what the
+first one actually failed at.
+
+### 93.3 Evaluability is per-condition, and that is the real fix
+
+The recurring defect is not that bad shots are in the roster. It is that **every shot has been
+treated as able to answer every question.** `courtyard` at 42 px and `guard` behind the lens are
+sound *compositions* — they are simply mute on character, and pass 6 scored character findings in
+both. `sly-startle` is mute on feet, stance and contact shadow; `hero` at 133 px carries tail and
+cane-hook silhouette and not muzzle detail.
+
+So pass 7's brief does not shorten the roster. It attaches to each shot **what that frame can and
+cannot support**, and requires the critic to say which bucket a finding is in before filing it.
+That converts three "unsupportable frames" into thirteen scored frames with honest scope — and
+costs nothing, because the frames were always going to be captured anyway.
