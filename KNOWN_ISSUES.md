@@ -8816,3 +8816,66 @@ was mislabelled — the file already carried the new header from a previous test
 "not rewriting" was the correct answer to a question I thought I was asking differently. **A test
 whose setup drifted is a test of nothing**, and the only tell was that the header printed after it
 was already the new one.
+
+---
+
+## §104 — the teal sphinxes are not the surface rim, settled by the seal's own discriminating arm
+
+`tone2` landed all 18 arms. `PREREG-sphinxrim` had proved, offline, that the surface rim **can**
+turn shadowed sandstone from `rgb(93,69,71)` hue 355° into `rgb(138,175,189)` hue 196° at ×2.26
+luma — a rim 6.5× the stone's own radiance and 14× its blue. The seal labelled that correctly:
+
+> **This is a capability result, not an attribution.** §23: a term can be present, firing, and
+> provably able to produce the exact signature — and still not be the cause.
+
+The capture answers it. **It is not the cause.**
+
+### 104.1 The result
+
+`sphinx-dunes-base` against `sphinx-dunes-surfoff` (`rimGain` 4.10 → 0), scored on a verified ROI:
+
+```
+accused population (teal, in the sphinx ROI): 184,188 px
+mean hue   ON 201.5deg  ->  OFF 202.6deg
+mean luma  ON 72.6      ->  OFF 70.9
+RETENTION with the rim OFF: 96.1%     self-control on the same population: 100.0%
+```
+
+The sphinxes are **still teal with the surface rim entirely off.** Side by side at 2× the bodies
+are indistinguishable; the ×4 difference panel shows the change confined to **thin bright lines** —
+edges and architectural highlights — with the sphinx bodies black, i.e. unchanged. The rim moves
+edges. The tint is in the material.
+
+Routing changes accordingly: the teal belongs to whoever owns the statue's material, **not** to
+SHADING's rim, and `PREREG-sphinxrim`'s proposed time-of-day ramp on `rimShadowFloorArch` would
+have been a fix aimed at the wrong term. The seal's own falsifier caught that before anything
+shipped, which is the entire reason it was written as a capability claim with a capture attached.
+
+### 104.2 The ROI was wrong first, and hue could not fix it
+
+The first run took every pixel with hue in [170,220] and luma ≤ 200: **124,759 px, 13.54 % of the
+frame**, retention 94.6 %. I was about to quote that as a verdict about the sphinxes.
+
+**Looking at the frame killed it.** The population was dominated by the pale lavender **sky** and
+the blue-grey shadowed **dune** — neither of which anyone is arguing about. Adding an HSV
+saturation floor at 0.30 removed only 13,831 px and left the bounding box spanning `x 0..1123,
+y 161..719`: still the whole lower frame, because the shadowed dune is as saturated as the statues.
+
+> **Hue and saturation cannot separate "turquoise statue" from "dusk sky over blue-grey sand" —
+> they share both axes.** No threshold on colour was going to isolate this population, and turning
+> the knob harder was the wrong move; the answer was to look, derive the region spatially, and
+> then *show a crop of it* so the claim "this ROI contains the sphinxes" is checkable rather than
+> asserted.
+
+That is `BRIEF-critic7`'s requirement 6 — *state how every ROI was derived and show it contains
+what it claims* — applied to my own measurement within an hour of my writing it. The tool now
+prints the accused population's bounding box next to the instruction to check it, because a
+statistic over the wrong pixels reads exactly like a statistic over the right ones.
+
+### 104.3 The retention verdict is robust to the ROI, which is the only reason 104.2 is not fatal
+
+Whole frame 94.6 %, saturated subset 97.4 %, verified sphinx ROI 96.1 %, self-control 100.0 %. The
+conclusion never depended on getting the population right — every version of it says the rim is not
+the cause. **That is luck, not method**, and it is worth saying so: had the true answer been near
+the 20 %/60 % decision boundaries, the first ROI would have produced a confident wrong verdict with
+a working self-control sitting right beside it attesting to nothing relevant.

@@ -1,0 +1,160 @@
+# ---- run log preserved by tools/keeplog.sh ----
+# run:      tone2
+# source:   /tmp/claude-0/-home-user-Demo/94022f73-a328-5e86-b2ec-031aa9c720ce/scratchpad/tone2.log
+# copied:   2026-08-03T11:33:13Z
+# tree at copy time (NOT the run's build): f47e0e4 — working tree DIRTY
+#   For the commit this run actually rendered, read shots/tone2/report.json or tone2.json.
+# NOTE: this is a COPY. The scratchpad original is ephemeral and may already be gone.
+# ------------------------------------------------
+· waiting for capture lock (10s, held by pid 21760)
+· waiting for capture lock (21s, held by pid 21760)
+· waiting for capture lock (31s, held by pid 21760)
+· waiting for capture lock (42s, held by pid 21760)
+· waiting for capture lock (53s, held by pid 21760)
+· waiting for capture lock (63s, held by pid 21760)
+· waiting for capture lock (74s, held by pid 21760)
+· waiting for capture lock (84s, held by pid 21760)
+· waiting for capture lock (94s, held by pid 21760)
+· waiting for capture lock (104s, held by pid 21760)
+· waiting for capture lock (115s, held by pid 21760)
+· waiting for capture lock (126s, held by pid 21760)
+· waiting for capture lock (136s, held by pid 21760)
+· waiting for capture lock (147s, held by pid 21760)
+· waiting for capture lock (157s, held by pid 21760)
+· waiting for capture lock (167s, held by pid 21760)
+· waiting for capture lock (177s, held by pid 21760)
+· waiting for capture lock (188s, held by pid 21760)
+· waiting for capture lock (198s, held by pid 21760)
+· waiting for capture lock (209s, held by pid 21760)
+· waiting for capture lock (219s, held by pid 21760)
+· waiting for capture lock (230s, held by pid 21760)
+· waiting for capture lock (240s, held by pid 21760)
+· waiting for capture lock (251s, held by pid 21760)
+· waiting for capture lock (261s, held by pid 21760)
+· waiting for capture lock (272s, held by pid 21760)
+· waiting for capture lock (283s, held by pid 21760)
+· waiting for capture lock (293s, held by pid 21760)
+· waiting for capture lock (304s, held by pid 21760)
+· waiting for capture lock (314s, held by pid 21760)
+· waiting for capture lock (324s, held by pid 21760)
+· waiting for capture lock (335s, held by pid 21760)
+· waiting for capture lock (346s, held by pid 21760)
+· waiting for capture lock (356s, held by pid 21760)
+· waiting for capture lock (367s, held by pid 21760)
+· waiting for capture lock (377s, held by pid 21760)
+· waiting for capture lock (387s, held by pid 21760)
+· waiting for capture lock (399s, held by pid 21760)
+· waiting for capture lock (409s, held by pid 21760)
+· waiting for capture lock (419s, held by pid 21760)
+· waiting for capture lock (430s, held by pid 21760)
+· waiting for capture lock (440s, held by pid 21760)
+· waiting for capture lock (450s, held by pid 21760)
+· waiting for capture lock (461s, held by pid 21760)
+· waiting for capture lock (471s, held by pid 21760)
+· waiting for capture lock (482s, held by pid 21760)
+· waiting for capture lock (492s, held by pid 21760)
+· waiting for capture lock (502s, held by pid 21760)
+· waiting for capture lock (512s, held by pid 21760)
+· waiting for capture lock (523s, held by pid 21760)
+· waiting for capture lock (533s, held by pid 21760)
+· waiting for capture lock (543s, held by pid 21760)
+· waiting for capture lock (553s, held by pid 21760)
+· waiting for capture lock (564s, held by pid 21760)
+· waiting for capture lock (575s, held by pid 21760)
+· waiting for capture lock (585s, held by pid 21760)
+· waiting for capture lock (596s, held by pid 21760)
+· waiting for capture lock (607s, held by pid 21760)
+· waiting for capture lock (618s, held by pid 21760)
+· waiting for capture lock (628s, held by pid 21760)
+· waiting for capture lock (639s, held by pid 21760)
+· waiting for capture lock (650s, held by pid 21760)
+· waiting for capture lock (660s, held by pid 21760)
+· waiting for capture lock (671s, held by pid 21760)
+· waiting for capture lock (682s, held by pid 21760)
+· waiting for capture lock (692s, held by pid 21760)
+· waiting for capture lock (702s, held by pid 21760)
+· waiting for capture lock (713s, held by pid 21760)
+· waiting for capture lock (723s, held by pid 21760)
+· waiting for capture lock (733s, held by pid 21760)
+· waiting for capture lock (744s, held by pid 29186)
+· waiting for capture lock (755s, held by pid 29186)
+· waiting for capture lock (765s, held by pid 29186)
+· waiting for capture lock (775s, held by pid 29186)
+· waiting for capture lock (786s, held by pid 29186)
+· waiting for capture lock (796s, held by pid 29186)
+· waiting for capture lock (807s, held by pid 29186)
+· waiting for capture lock (818s, held by pid 29186)
+· waiting for capture lock (828s, held by pid 29186)
+· waiting for capture lock (838s, held by pid 29186)
+· waiting for capture lock (849s, held by pid 29186)
+· waiting for capture lock (859s, held by pid 29186)
+· waiting for capture lock (870s, held by pid 29186)
+· waiting for capture lock (880s, held by pid 29186)
+· waiting for capture lock (891s, held by pid 29186)
+· waiting for capture lock (901s, held by pid 29186)
+· waiting for capture lock (911s, held by pid 29186)
+· waiting for capture lock (921s, held by pid 29186)
+· waiting for capture lock (932s, held by pid 29186)
+· waiting for capture lock (943s, held by pid 29186)
+· waiting for capture lock (953s, held by pid 29186)
+· waiting for capture lock (963s, held by pid 29186)
+· waiting for capture lock (973s, held by pid 29186)
+· waiting for capture lock (984s, held by pid 29186)
+· waiting for capture lock (995s, held by pid 29186)
+· waiting for capture lock (1005s, held by pid 29186)
+· waiting for capture lock (1016s, held by pid 29186)
+· waiting for capture lock (1027s, held by pid 29186)
+· waiting for capture lock (1038s, held by pid 29186)
+· waiting for capture lock (1048s, held by pid 29186)
+· waiting for capture lock (1058s, held by pid 29186)
+· waiting for capture lock (1069s, held by pid 29186)
+· waiting for capture lock (1080s, held by pid 29186)
+· waiting for capture lock (1090s, held by pid 29186)
+· waiting for capture lock (1100s, held by pid 29186)
+· waiting for capture lock (1111s, held by pid 29186)
+· waiting for capture lock (1121s, held by pid 29186)
+· waiting for capture lock (1131s, held by pid 29186)
+· waiting for capture lock (1142s, held by pid 29186)
+· waiting for capture lock (1153s, held by pid 29186)
+· waiting for capture lock (1163s, held by pid 29186)
+· waiting for capture lock (1174s, held by pid 29186)
+· waiting for capture lock (1184s, held by pid 29186)
+· waiting for capture lock (1195s, held by pid 29186)
+· waiting for capture lock (1205s, held by pid 29186)
+· waiting for capture lock (1215s, held by pid 29186)
+· waiting for capture lock (1226s, held by pid 29186)
+· waiting for capture lock (1237s, held by pid 29186)
+· waiting for capture lock (1248s, held by pid 29186)
+· waiting for capture lock (1258s, held by pid 29186)
+· waiting for capture lock (1268s, held by pid 29186)
+· waiting for capture lock (1279s, held by pid 29186)
+· waiting for capture lock (1289s, held by pid 29186)
+· waiting for capture lock (1300s, held by pid 29186)
+· waiting for capture lock (1310s, held by pid 29186)
+· waiting for capture lock (1321s, held by pid 29186)
+renderer: ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)
+shots: hero,temple,sly-closeup,sly-startle,sly-perch,sly-arm,courtyard,dunes,interior,night,traversal,combat,guard,sly-profile,sly-key
+BOOT CONSOLE ERRORS: ["Failed to load resource: the server responded with a status of 404 (Not Found)"]
+PREFLIGHT {"havePostfx":true,"haveShading":true,"haveSetter":true,"haveState":true,"toneAfterTuneOnly":1,"toneAfterSetter":1.5,"toneRestored":1,"inkShipped":0.95,"inkAfterTune":0,"inkRestored":0.95,"rimGainShipped":4.1}
+PREFLIGHT PASS — tone setter 1.5, tune-only 1 (expect 1 = the trap), ink 0
+ok   tone-hero-b1.00              sha 2798ea1be2640137 498s tone=1 ink=0.95 rimGain=4.1
+ok   tone-temple-b1.00            sha c6e96adc6f266dbd 168s tone=1 ink=0.95 rimGain=4.1
+ok   tone-interior-b1.00          sha 4242f70ec075e03a 91s tone=1 ink=0.95 rimGain=4.1
+ok   tone-hero-b1.20              sha 239bdcae4f9a8c7e 209s tone=1.2 ink=0.95 rimGain=4.1
+ok   tone-temple-b1.20            sha eb3f41e13bf53da3 168s tone=1.2 ink=0.95 rimGain=4.1
+ok   tone-interior-b1.20          sha f183dbb19a7bb8b2 89s tone=1.2 ink=0.95 rimGain=4.1
+ok   tone-hero-b1.50              sha 09ab39e7caac267e 214s tone=1.5 ink=0.95 rimGain=4.1
+ok   tone-temple-b1.50            sha 4fbe66b19e68b2c2 171s tone=1.5 ink=0.95 rimGain=4.1
+ok   tone-interior-b1.50          sha 193acb7aab0efd76 86s tone=1.5 ink=0.95 rimGain=4.1
+ok   tone-hero-b1.00-DUP          sha e6a1f645a3a9ab2b 212s tone=1 ink=0.95 rimGain=4.1
+ok   tone-temple-b1.00-DUP        sha 2665606014ebea64 174s tone=1 ink=0.95 rimGain=4.1
+ok   tone-interior-b1.00-DUP      sha cf977c33edd5324f 91s tone=1 ink=0.95 rimGain=4.1
+ok   ink-traversal-on             sha c74be75ec7619685 193s tone=1 ink=0.95 rimGain=4.1
+ok   ink-traversal-off            sha 8ee7663a06a21fb2 190s tone=1 ink=0 rimGain=4.1
+ok   ink-hero-on                  sha 6cdcd63b010be248 208s tone=1 ink=0.95 rimGain=4.1
+ok   ink-hero-off                 sha 9d30ddd120b5f5a3 205s tone=1 ink=0 rimGain=4.1
+ok   sphinx-dunes-base            sha 136b16e2d4a8f1ac 192s tone=1 ink=0.95 rimGain=4.1
+ok   sphinx-dunes-surfoff         sha 63d7641f2ac8d226 184s tone=1 ink=0.95 rimGain=0
+ok   sphinx-dunes-screenoff       sha 106b8b5b3db4e651 189s tone=1 ink=0.95 rimGain=4.1
+
+DONE 19 arms, 0 VOID
