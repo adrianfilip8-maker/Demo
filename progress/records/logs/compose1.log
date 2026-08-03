@@ -1,0 +1,181 @@
+# ---- run log preserved by tools/keeplog.sh ----
+# run:      compose1
+# source:   /tmp/claude-0/-home-user-Demo/94022f73-a328-5e86-b2ec-031aa9c720ce/scratchpad/compose1/run.log
+# copied:   2026-08-03T16:20:03Z
+# tree at copy time (NOT the run's build): 8999c1a — working tree DIRTY
+#   For the commit this run actually rendered, read shots/compose1/report.json or compose1.json.
+# NOTE: this is a COPY. The scratchpad original is ephemeral and may already be gone.
+# ------------------------------------------------
+[15:23:19 +   0s] provenance sha 8726629  srcTree 2c13300b9f767aaa  renderTree 5b075ca0b494f8d2  dirty 5 file(s)
+· waiting for capture lock (10s, held by pid 14908)
+· waiting for capture lock (20s, held by pid 14908)
+· waiting for capture lock (30s, held by pid 14908)
+· waiting for capture lock (40s, held by pid 14908)
+· waiting for capture lock (51s, held by pid 14908)
+· waiting for capture lock (61s, held by pid 14908)
+· waiting for capture lock (72s, held by pid 14908)
+· waiting for capture lock (82s, held by pid 14908)
+· waiting for capture lock (92s, held by pid 14908)
+· waiting for capture lock (103s, held by pid 14908)
+· waiting for capture lock (114s, held by pid 14908)
+· waiting for capture lock (125s, held by pid 14908)
+· waiting for capture lock (135s, held by pid 14908)
+· waiting for capture lock (146s, held by pid 14908)
+· waiting for capture lock (157s, held by pid 14908)
+· waiting for capture lock (167s, held by pid 14908)
+· waiting for capture lock (178s, held by pid 14908)
+· waiting for capture lock (188s, held by pid 14908)
+· waiting for capture lock (198s, held by pid 14908)
+· waiting for capture lock (209s, held by pid 14908)
+· waiting for capture lock (220s, held by pid 14908)
+· waiting for capture lock (231s, held by pid 14908)
+· waiting for capture lock (241s, held by pid 14908)
+· waiting for capture lock (252s, held by pid 14908)
+· waiting for capture lock (263s, held by pid 14908)
+· waiting for capture lock (273s, held by pid 14908)
+· waiting for capture lock (284s, held by pid 14908)
+· waiting for capture lock (294s, held by pid 14908)
+· waiting for capture lock (305s, held by pid 14908)
+· waiting for capture lock (316s, held by pid 14908)
+· waiting for capture lock (326s, held by pid 14908)
+· waiting for capture lock (336s, held by pid 14908)
+· waiting for capture lock (347s, held by pid 14908)
+· waiting for capture lock (357s, held by pid 14908)
+· waiting for capture lock (368s, held by pid 14908)
+· waiting for capture lock (378s, held by pid 14908)
+· waiting for capture lock (389s, held by pid 14908)
+· waiting for capture lock (399s, held by pid 14908)
+· waiting for capture lock (410s, held by pid 14908)
+· waiting for capture lock (421s, held by pid 14908)
+· waiting for capture lock (432s, held by pid 14908)
+· waiting for capture lock (443s, held by pid 14908)
+· waiting for capture lock (453s, held by pid 14908)
+· waiting for capture lock (463s, held by pid 14908)
+· waiting for capture lock (474s, held by pid 14908)
+· waiting for capture lock (484s, held by pid 14908)
+· waiting for capture lock (495s, held by pid 14908)
+· waiting for capture lock (505s, held by pid 14908)
+· waiting for capture lock (516s, held by pid 14908)
+· waiting for capture lock (527s, held by pid 14908)
+· waiting for capture lock (538s, held by pid 14908)
+· waiting for capture lock (548s, held by pid 14908)
+· waiting for capture lock (559s, held by pid 14908)
+· waiting for capture lock (570s, held by pid 14908)
+· waiting for capture lock (580s, held by pid 14908)
+· waiting for capture lock (590s, held by pid 14908)
+· waiting for capture lock (601s, held by pid 14908)
+· waiting for capture lock (612s, held by pid 14908)
+· waiting for capture lock (622s, held by pid 14908)
+· waiting for capture lock (633s, held by pid 14908)
+· waiting for capture lock (644s, held by pid 14908)
+· waiting for capture lock (655s, held by pid 14908)
+· waiting for capture lock (665s, held by pid 14908)
+· waiting for capture lock (676s, held by pid 31597)
+· waiting for capture lock (686s, held by pid 31597)
+· waiting for capture lock (697s, held by pid 31597)
+· waiting for capture lock (707s, held by pid 31597)
+· waiting for capture lock (717s, held by pid 31597)
+· waiting for capture lock (728s, held by pid 31597)
+· waiting for capture lock (739s, held by pid 31597)
+· waiting for capture lock (750s, held by pid 31597)
+· waiting for capture lock (760s, held by pid 31597)
+· waiting for capture lock (771s, held by pid 31597)
+· waiting for capture lock (781s, held by pid 31597)
+· waiting for capture lock (792s, held by pid 31597)
+· waiting for capture lock (803s, held by pid 31597)
+· waiting for capture lock (813s, held by pid 31597)
+· waiting for capture lock (824s, held by pid 31597)
+· waiting for capture lock (834s, held by pid 31597)
+· waiting for capture lock (845s, held by pid 31597)
+· waiting for capture lock (856s, held by pid 31597)
+· waiting for capture lock (866s, held by pid 31597)
+· waiting for capture lock (876s, held by pid 31597)
+· waiting for capture lock (887s, held by pid 31597)
+· waiting for capture lock (897s, held by pid 31597)
+· waiting for capture lock (908s, held by pid 31597)
+· waiting for capture lock (918s, held by pid 31597)
+· waiting for capture lock (929s, held by pid 31597)
+· waiting for capture lock (939s, held by pid 31597)
+· waiting for capture lock (949s, held by pid 31597)
+· waiting for capture lock (960s, held by pid 31597)
+· waiting for capture lock (971s, held by pid 31597)
+· waiting for capture lock (981s, held by pid 31597)
+· waiting for capture lock (992s, held by pid 31597)
+· waiting for capture lock (1003s, held by pid 31597)
+· waiting for capture lock (1013s, held by pid 31597)
+· waiting for capture lock (1023s, held by pid 31597)
+· waiting for capture lock (1034s, held by pid 31597)
+· waiting for capture lock (1044s, held by pid 31597)
+· waiting for capture lock (1055s, held by pid 31597)
+· waiting for capture lock (1066s, held by pid 31597)
+· waiting for capture lock (1077s, held by pid 31597)
+· waiting for capture lock (1087s, held by pid 31597)
+· waiting for capture lock (1097s, held by pid 31597)
+· waiting for capture lock (1108s, held by pid 31597)
+· waiting for capture lock (1119s, held by pid 31597)
+· waiting for capture lock (1129s, held by pid 31597)
+· waiting for capture lock (1140s, held by pid 31597)
+· waiting for capture lock (1150s, held by pid 31597)
+· waiting for capture lock (1161s, held by pid 31597)
+· waiting for capture lock (1172s, held by pid 31597)
+· waiting for capture lock (1182s, held by pid 31597)
+· waiting for capture lock (1193s, held by pid 31597)
+· waiting for capture lock (1203s, held by pid 31597)
+· waiting for capture lock (1214s, held by pid 31597)
+· waiting for capture lock (1225s, held by pid 31597)
+· waiting for capture lock (1236s, held by pid 31597)
+· waiting for capture lock (1246s, held by pid 31597)
+· waiting for capture lock (1257s, held by pid 31597)
+· waiting for capture lock (1267s, held by pid 31597)
+· waiting for capture lock (1278s, held by pid 31597)
+· waiting for capture lock (1289s, held by pid 31597)
+· waiting for capture lock (1299s, held by pid 31597)
+· waiting for capture lock (1310s, held by pid 31597)
+· waiting for capture lock (1321s, held by pid 31597)
+· waiting for capture lock (1331s, held by pid 31597)
+· waiting for capture lock (1341s, held by pid 31597)
+· waiting for capture lock (1352s, held by pid 31597)
+· waiting for capture lock (1362s, held by pid 31597)
+· waiting for capture lock (1372s, held by pid 31597)
+· waiting for capture lock (1382s, held by pid 31597)
+· waiting for capture lock (1392s, held by pid 31597)
+[15:48:26 +1507s] boot ok — ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)  warnings 1
+[15:48:26 +1507s]   WARN textures: prewarm took 17.1s at size 1024
+[15:48:26 +1507s] INK PROBE {"ok":true,"count":8454,"min":0.4000000059604645,"max":1,"groups":11,"mats":11,"weights":[1,1,1,1,1,1,1,1,0.4,0.4,0.4],"hasShell":true,"sig":"0:2712:1|2712:5028:1|7740:3096:1|10836:6042:1|16878:12774:1|29652:792:1|30444:61"}
+[15:48:26 +1507s] ===== night =====
+[15:49:01 +1543s]   staged 35s  draws 287 tris 1844065
+[15:54:27 +1868s]   base        325s  shadow(0.013,0.047,0.078) lit(0.013,0.047,0.078) fill 0.7  applied ok
+[15:54:47 +1889s]   sbm010      21s  shadow(0.015,0.046,0.078) lit(0.015,0.046,0.078) fill 0.7  applied ok
+[15:55:07 +1908s]   fill0       19s  shadow(0.013,0.047,0.078) lit(0.013,0.047,0.078) fill 0  applied ok
+[15:55:26 +1927s]   compose     19s  shadow(0.015,0.046,0.078) lit(0.015,0.046,0.078) fill 0  applied ok
+[15:55:45 +1946s]   base2       19s  shadow(0.013,0.047,0.078) lit(0.013,0.047,0.078) fill 0.7  applied ok
+[15:55:45 +1946s] ===== hero =====
+[15:55:45 +1946s]   staged 0s  draws 259 tris 1729899
+[15:58:53 +2134s]   base        188s  shadow(0.096,0.313,0.497) lit(0.096,0.313,0.497) fill 0.7  applied ok
+[15:59:12 +2153s]   sbm010      19s  shadow(0.117,0.309,0.473) lit(0.117,0.309,0.473) fill 0.7  applied ok
+[15:59:31 +2172s]   fill0       19s  shadow(0.096,0.313,0.497) lit(0.096,0.313,0.497) fill 0  applied ok
+[15:59:50 +2191s]   compose     19s  shadow(0.117,0.309,0.473) lit(0.117,0.309,0.473) fill 0  applied ok
+[16:00:09 +2210s]   base2       19s  shadow(0.096,0.313,0.497) lit(0.096,0.313,0.497) fill 0.7  applied ok
+[16:00:09 +2210s] ===== temple =====
+[16:00:09 +2210s]   staged 0s  draws 238 tris 1701085
+[16:02:38 +2359s]   base        148s  shadow(0.096,0.313,0.497) lit(0.096,0.313,0.497) fill 0.7  applied ok
+[16:02:52 +2373s]   sbm010      14s  shadow(0.117,0.309,0.473) lit(0.117,0.309,0.473) fill 0.7  applied ok
+[16:03:07 +2389s]   fill0       15s  shadow(0.096,0.313,0.497) lit(0.096,0.313,0.497) fill 0  applied ok
+[16:03:22 +2404s]   compose     15s  shadow(0.117,0.309,0.473) lit(0.117,0.309,0.473) fill 0  applied ok
+[16:03:37 +2419s]   base2       15s  shadow(0.096,0.313,0.497) lit(0.096,0.313,0.497) fill 0.7  applied ok
+[16:03:37 +2419s] ===== sly-closeup =====
+[16:03:38 +2419s]   staged 0s  draws 262 tris 1654849
+[16:06:31 +2592s]   base        173s  shadow(0.096,0.313,0.497) lit(0.096,0.313,0.497) fill 0.7  applied ok
+[16:06:49 +2611s]   sbm010      18s  shadow(0.117,0.309,0.473) lit(0.117,0.309,0.473) fill 0.7  applied ok
+[16:07:07 +2629s]   fill0       18s  shadow(0.096,0.313,0.497) lit(0.096,0.313,0.497) fill 0  applied ok
+[16:07:25 +2647s]   compose     18s  shadow(0.117,0.309,0.473) lit(0.117,0.309,0.473) fill 0  applied ok
+[16:07:43 +2664s]   base2       17s  shadow(0.096,0.313,0.497) lit(0.096,0.313,0.497) fill 0.7  applied ok
+[16:07:43 +2664s] ===== sly-closeup / INK ARMS =====
+[16:10:37 +2838s]   inkbase     174s  weights null  zeroVerts 0/8454
+[16:10:55 +2856s]   inknull     18s  weights [1,1,1,1,1,1,1,1]  zeroVerts 0/8454
+[16:11:13 +2874s]   fur0        18s  weights [0,0,0,1,1,1,1,1]  zeroVerts 1965/8454
+[16:11:30 +2891s]   allink0     17s  weights [0,0,0,0,0,0,0,0]  zeroVerts 7877/8454
+[16:11:48 +2910s]   inkrestore  18s  weights [1,1,1,1,1,1,1,1]  zeroVerts 0/8454
+[16:11:49 +2910s] srcTree  before 2c13300b9f767aaa after 05564fe0494bd87e  *** MOVED — arms straddle an edit, see PREREG note ***
+[16:11:49 +2910s] renderTree before 5b075ca0b494f8d2 after 5b075ca0b494f8d2  STABLE
+[16:11:49 +2910s] done

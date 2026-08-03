@@ -11458,3 +11458,105 @@ saturated accent parsing instantly at distance. **And it needs one capture to ju
 carry a visibly heavier line than architecture. That is the intended §2.1 distinction, but
 *"intended"* and *"looks right at this exposure"* are different claims, and no such weight has ever
 reached a frame.
+
+## §133 — the band was load-bearing, and the probe that answered the question was in the run's own log
+
+`compose1` landed and scored against its seal. Lock held 15:46 → 16:11 and handed cleanly to
+`char-ink`; queue now empty. `renderTree` STABLE across the run, `srcTree` MOVED (GEOMETRY editing
+`src/world` live) — and the base2/inkrestore self-controls came back **0 px**, so it did not leak.
+
+### 133.1 The seal's point prediction was wrong and the brief's was right — and the band saved it
+
+| shot | composite closes | registered band | factor |
+|---|---|---|---|
+| `hero` | **71 %** | 52–76 | 0.981 |
+| `temple` | **45 %** | 30–46 | 0.976 |
+| `sly-closeup` | **40 %** | 28–43 | 0.979 |
+
+**P-null: PASS on all four shots, 0 px, bit-identical.**
+
+SHADING registered **0.776 subadditivity**, derived from §115.1's `all six` row, predicting
+57/34/32 %. The measured factor is **0.976–0.981 — additive within noise**, and all three landed at
+the *top* of their bands, essentially on my brief's plain additive claim (73/44/41 → 71/45/40).
+
+> **The §115.1 composition factor was a six-leg artefact and does not generalise.** A prior derived
+> from one measurement of a different composite is still a prior, not a law.
+
+And the methodological point is the one to keep:
+
+> **A tighter band around SHADING's own point prediction would have falsified a correct result.**
+> It registered a *range* rather than the number it believed, and the range is what let the run
+> report "additive" instead of "my prediction failed". Registering the interval you would accept,
+> rather than the value you expect, is what makes a seal survive being wrong.
+
+The factor is **not > 1.0**, so §122.5's dangerous superadditive outcome did not fire, and there are
+no hue-line grounds from this statistic for backing the composite off.
+
+### 133.2 A registered check with no threshold, and the refusal to invent one after the fact
+
+P-night moved: Δb−r **−0.0033** on a base of +0.1605 (2.1 % warm-ward), Δluma +0.0004, 69.4 % anyCh
+but only **4.09 % at sum4**. All four arms look identical by eye; the amplified diff localises the
+shift to **shaded architecture only** — moon, torch and the cool palette untouched.
+
+SHADING registered P-night **without a numeric threshold**, and declined to score it:
+
+> *"Choosing a line now that happens to clear is precisely the move §13 forbids."*
+
+Reported as **a gap in the seal, not a result.** The movement is small, warm-ward and confined to
+shaded stone, and the prior gate moved night by −0.0000 — but somebody must draw that line before
+this ships, and it cannot be drawn by the person looking at the number.
+
+### 133.3 The arm did not test the prediction it was named for, and the run's own log said so
+
+The character has **11** material groups (`SlyModel.js:703`). The ink poke hardcoded a stale **8**.
+The three missing are `furTuft`/`furTuftCream`/`furTuftDark` — **the fur cards**, at
+`TUNE.tuftInk = 0.40`.
+
+So `fur0` zeroed the fur *body* and left the *cards* inked — while B.3's prediction is explicitly
+about cards (*"a 2.5 px border on every edge of an 18–26 px card"*) — and `allink0` left **577 / 8454
+verts (6.8 %) still inked**, so the "total figure ink" denominator is short too. **Numerator and
+denominator both understated; the net bias is not determinable from this run.** The 26.3 % / 28.8 %
+figures are real and measure *body-fur ink against a partial floor*. They are not a score of B.3.
+
+**And the answer was in the run's own provenance the whole time.** The in-page probe recorded:
+
+```
+weights [1,1,1,1,1,1,1,1,0.4,0.4,0.4], mats 11
+```
+
+That is the *same probe* §131.1 credits with closing CHARACTER's dead-knob escape before its frame
+existed. **It printed `mats 11` beside a poke that named 8, in one log, and neither owner read it
+against the other.** An instrument can be correct, in the right file, at the right moment, and still
+not be *looked at* — provenance that nobody diffs against the arm is decoration.
+
+Patched: real 11-group list, split `furcards0`/`furbody0`/`furall0` arms, a true `allink0` floor, a
+restore that returns tufts to 0.4 rather than 1.0, and **a hard group-count assertion that aborts
+the arms on mismatch.** The defect is recorded at the declaration site so the patched script cannot
+be mistaken for the one that produced these numbers.
+
+### 133.4 An arm that cannot separate two candidates, said so
+
+`allink0` still shows a residual dark line with every hull weight SHADING could reach set to zero —
+consistent with the three un-zeroed tuft groups **and/or** PostFX's independent edge pass. **This
+arm cannot separate them**, so it is *not yet* evidence about the 2.5 px-hull-on-1.5 px-line stack
+§132.5 wants judged. The corrected `allink0` separates it in one arm.
+
+### 133.5 Two corrections that post-date the brief, carried forward
+
+- The **`norim` bracket is global, not combat-shaped**, and *every unbracketed rim number in
+  rim1/rim2/rim3 carries that error.*
+- **§61.2's "the screen-space gate is inert" was overstated and self-corrected at §80.5.** Measured
+  hue-blind, `rimPlanar` moves **3–7 % of every frame at max pixel delta 381** — so it is
+  **unmeasured**, not inert, and must not be quoted as grounds for deleting it.
+
+### 133.6 The context gap is now structural, and it is mine to fix
+
+SHADING states plainly that `KNOWN_ISSUES.md` was **1120 lines** when it read it at session start
+and is **11460** now, that it has read §61/§80.5 and the sections it cites, and that everything
+outside them should be treated as unverified framing.
+
+That is the correct disclosure and it is also an indictment of the process. §128.6 established that
+five owners out of five received stale briefs. The fix cannot be *"read the ledger"* — it is ten
+thousand lines and growing by ~1500 a session. **A resumed owner needs a digest of what changed in
+its own domain since its transcript began, and producing that is the coordinator's job, not a
+reading assignment.**

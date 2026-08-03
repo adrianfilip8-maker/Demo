@@ -1,0 +1,505 @@
+{
+ "prov": {
+  "startedAt": "2026-08-03T15:23:19.232Z",
+  "sha": "8726629",
+  "dirty": [
+   "M progress/records/gilduv-arch.json",
+   " M src/player/SlyModel.js",
+   " M src/world/Kit.js",
+   "?? progress/records/logs/gild-census.log",
+   "?? progress/records/logs/gild-uv.log"
+  ],
+  "srcTreeBefore": "2c13300b9f767aaa",
+  "renderTreeBefore": "5b075ca0b494f8d2",
+  "inkProbe": {
+   "ok": true,
+   "count": 8454,
+   "min": 0.4000000059604645,
+   "max": 1,
+   "groups": 11,
+   "mats": 11,
+   "weights": [
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    0.4,
+    0.4,
+    0.4
+   ],
+   "hasShell": true,
+   "sig": "0:2712:1|2712:5028:1|7740:3096:1|10836:6042:1|16878:12774:1|29652:792:1|30444:61"
+  },
+  "srcTreeAfter": "05564fe0494bd87e",
+  "renderTreeAfter": "5b075ca0b494f8d2",
+  "finishedAt": "2026-08-03T16:11:49.152Z"
+ },
+ "ship": {
+  "fillSkyMix": 0.7,
+  "shadowBounceMix": 0.05,
+  "shadowBounceMixLit": 0.05
+ },
+ "uniform": 0.1,
+ "rows": [
+  {
+   "kind": "compose",
+   "shot": "night",
+   "arm": "base",
+   "fillSkyMix": 0.7,
+   "shadowBounceMix": 0.05,
+   "shadowBounceMixLit": 0.05,
+   "uShadowColor": [
+    0.012895755468330918,
+    0.04676854125689067,
+    0.07805322250511793
+   ],
+   "uShadowColorLit": [
+    0.012895755468330918,
+    0.04676854125689067,
+    0.07805322250511793
+   ],
+   "mismatch": []
+  },
+  {
+   "kind": "compose",
+   "shot": "night",
+   "arm": "sbm010",
+   "fillSkyMix": 0.7,
+   "shadowBounceMix": 0.1,
+   "shadowBounceMixLit": 0.1,
+   "uShadowColor": [
+    0.014573747547771517,
+    0.04622545989467298,
+    0.07849187450191877
+   ],
+   "uShadowColorLit": [
+    0.014573747547771517,
+    0.04622545989467298,
+    0.07849187450191877
+   ],
+   "mismatch": []
+  },
+  {
+   "kind": "compose",
+   "shot": "night",
+   "arm": "fill0",
+   "fillSkyMix": 0,
+   "shadowBounceMix": 0.05,
+   "shadowBounceMixLit": 0.05,
+   "uShadowColor": [
+    0.012895755468330918,
+    0.04676854125689067,
+    0.07805322250511793
+   ],
+   "uShadowColorLit": [
+    0.012895755468330918,
+    0.04676854125689067,
+    0.07805322250511793
+   ],
+   "mismatch": []
+  },
+  {
+   "kind": "compose",
+   "shot": "night",
+   "arm": "compose",
+   "fillSkyMix": 0,
+   "shadowBounceMix": 0.1,
+   "shadowBounceMixLit": 0.1,
+   "uShadowColor": [
+    0.014573747547771517,
+    0.04622545989467298,
+    0.07849187450191877
+   ],
+   "uShadowColorLit": [
+    0.014573747547771517,
+    0.04622545989467298,
+    0.07849187450191877
+   ],
+   "mismatch": []
+  },
+  {
+   "kind": "compose",
+   "shot": "night",
+   "arm": "base2",
+   "fillSkyMix": 0.7,
+   "shadowBounceMix": 0.05,
+   "shadowBounceMixLit": 0.05,
+   "uShadowColor": [
+    0.012895755468330918,
+    0.04676854125689067,
+    0.07805322250511793
+   ],
+   "uShadowColorLit": [
+    0.012895755468330918,
+    0.04676854125689067,
+    0.07805322250511793
+   ],
+   "mismatch": []
+  },
+  {
+   "kind": "compose",
+   "shot": "hero",
+   "arm": "base",
+   "fillSkyMix": 0.7,
+   "shadowBounceMix": 0.05,
+   "shadowBounceMixLit": 0.05,
+   "uShadowColor": [
+    0.09610110548811887,
+    0.3131151084062172,
+    0.49658292862905856
+   ],
+   "uShadowColorLit": [
+    0.09610110548811887,
+    0.3131151084062172,
+    0.49658292862905856
+   ],
+   "mismatch": []
+  },
+  {
+   "kind": "compose",
+   "shot": "hero",
+   "arm": "sbm010",
+   "fillSkyMix": 0.7,
+   "shadowBounceMix": 0.1,
+   "shadowBounceMixLit": 0.1,
+   "uShadowColor": [
+    0.11704574326637804,
+    0.30925308737898577,
+    0.47316585725811716
+   ],
+   "uShadowColorLit": [
+    0.11704574326637804,
+    0.30925308737898577,
+    0.47316585725811716
+   ],
+   "mismatch": []
+  },
+  {
+   "kind": "compose",
+   "shot": "hero",
+   "arm": "fill0",
+   "fillSkyMix": 0,
+   "shadowBounceMix": 0.05,
+   "shadowBounceMixLit": 0.05,
+   "uShadowColor": [
+    0.09610110548811887,
+    0.3131151084062172,
+    0.49658292862905856
+   ],
+   "uShadowColorLit": [
+    0.09610110548811887,
+    0.3131151084062172,
+    0.49658292862905856
+   ],
+   "mismatch": []
+  },
+  {
+   "kind": "compose",
+   "shot": "hero",
+   "arm": "compose",
+   "fillSkyMix": 0,
+   "shadowBounceMix": 0.1,
+   "shadowBounceMixLit": 0.1,
+   "uShadowColor": [
+    0.11704574326637804,
+    0.30925308737898577,
+    0.47316585725811716
+   ],
+   "uShadowColorLit": [
+    0.11704574326637804,
+    0.30925308737898577,
+    0.47316585725811716
+   ],
+   "mismatch": []
+  },
+  {
+   "kind": "compose",
+   "shot": "hero",
+   "arm": "base2",
+   "fillSkyMix": 0.7,
+   "shadowBounceMix": 0.05,
+   "shadowBounceMixLit": 0.05,
+   "uShadowColor": [
+    0.09610110548811887,
+    0.3131151084062172,
+    0.49658292862905856
+   ],
+   "uShadowColorLit": [
+    0.09610110548811887,
+    0.3131151084062172,
+    0.49658292862905856
+   ],
+   "mismatch": []
+  },
+  {
+   "kind": "compose",
+   "shot": "temple",
+   "arm": "base",
+   "fillSkyMix": 0.7,
+   "shadowBounceMix": 0.05,
+   "shadowBounceMixLit": 0.05,
+   "uShadowColor": [
+    0.09594484161473013,
+    0.3131499340626409,
+    0.49669808638540497
+   ],
+   "uShadowColorLit": [
+    0.09594484161473013,
+    0.3131499340626409,
+    0.49669808638540497
+   ],
+   "mismatch": []
+  },
+  {
+   "kind": "compose",
+   "shot": "temple",
+   "arm": "sbm010",
+   "fillSkyMix": 0.7,
+   "shadowBounceMix": 0.1,
+   "shadowBounceMixLit": 0.1,
+   "uShadowColor": [
+    0.11673321551960034,
+    0.30932273869183324,
+    0.47339617277081
+   ],
+   "uShadowColorLit": [
+    0.11673321551960034,
+    0.30932273869183324,
+    0.47339617277081
+   ],
+   "mismatch": []
+  },
+  {
+   "kind": "compose",
+   "shot": "temple",
+   "arm": "fill0",
+   "fillSkyMix": 0,
+   "shadowBounceMix": 0.05,
+   "shadowBounceMixLit": 0.05,
+   "uShadowColor": [
+    0.09594484161473013,
+    0.3131499340626409,
+    0.49669808638540497
+   ],
+   "uShadowColorLit": [
+    0.09594484161473013,
+    0.3131499340626409,
+    0.49669808638540497
+   ],
+   "mismatch": []
+  },
+  {
+   "kind": "compose",
+   "shot": "temple",
+   "arm": "compose",
+   "fillSkyMix": 0,
+   "shadowBounceMix": 0.1,
+   "shadowBounceMixLit": 0.1,
+   "uShadowColor": [
+    0.11673321551960034,
+    0.30932273869183324,
+    0.47339617277081
+   ],
+   "uShadowColorLit": [
+    0.11673321551960034,
+    0.30932273869183324,
+    0.47339617277081
+   ],
+   "mismatch": []
+  },
+  {
+   "kind": "compose",
+   "shot": "temple",
+   "arm": "base2",
+   "fillSkyMix": 0.7,
+   "shadowBounceMix": 0.05,
+   "shadowBounceMixLit": 0.05,
+   "uShadowColor": [
+    0.09594484161473013,
+    0.3131499340626409,
+    0.49669808638540497
+   ],
+   "uShadowColorLit": [
+    0.09594484161473013,
+    0.3131499340626409,
+    0.49669808638540497
+   ],
+   "mismatch": []
+  },
+  {
+   "kind": "compose",
+   "shot": "sly-closeup",
+   "arm": "base",
+   "fillSkyMix": 0.7,
+   "shadowBounceMix": 0.05,
+   "shadowBounceMixLit": 0.05,
+   "uShadowColor": [
+    0.09611643093103707,
+    0.3131104181116351,
+    0.4965842625559385
+   ],
+   "uShadowColorLit": [
+    0.09611643093103707,
+    0.3131104181116351,
+    0.4965842625559385
+   ],
+   "mismatch": []
+  },
+  {
+   "kind": "compose",
+   "shot": "sly-closeup",
+   "arm": "sbm010",
+   "fillSkyMix": 0.7,
+   "shadowBounceMix": 0.1,
+   "shadowBounceMixLit": 0.1,
+   "uShadowColor": [
+    0.11707639415221431,
+    0.3092437067898215,
+    0.47316852511187696
+   ],
+   "uShadowColorLit": [
+    0.11707639415221431,
+    0.3092437067898215,
+    0.47316852511187696
+   ],
+   "mismatch": []
+  },
+  {
+   "kind": "compose",
+   "shot": "sly-closeup",
+   "arm": "fill0",
+   "fillSkyMix": 0,
+   "shadowBounceMix": 0.05,
+   "shadowBounceMixLit": 0.05,
+   "uShadowColor": [
+    0.09611643093103707,
+    0.3131104181116351,
+    0.4965842625559385
+   ],
+   "uShadowColorLit": [
+    0.09611643093103707,
+    0.3131104181116351,
+    0.4965842625559385
+   ],
+   "mismatch": []
+  },
+  {
+   "kind": "compose",
+   "shot": "sly-closeup",
+   "arm": "compose",
+   "fillSkyMix": 0,
+   "shadowBounceMix": 0.1,
+   "shadowBounceMixLit": 0.1,
+   "uShadowColor": [
+    0.11707639415221431,
+    0.3092437067898215,
+    0.47316852511187696
+   ],
+   "uShadowColorLit": [
+    0.11707639415221431,
+    0.3092437067898215,
+    0.47316852511187696
+   ],
+   "mismatch": []
+  },
+  {
+   "kind": "compose",
+   "shot": "sly-closeup",
+   "arm": "base2",
+   "fillSkyMix": 0.7,
+   "shadowBounceMix": 0.05,
+   "shadowBounceMixLit": 0.05,
+   "uShadowColor": [
+    0.09611643093103707,
+    0.3131104181116351,
+    0.4965842625559385
+   ],
+   "uShadowColorLit": [
+    0.09611643093103707,
+    0.3131104181116351,
+    0.4965842625559385
+   ],
+   "mismatch": []
+  },
+  {
+   "kind": "ink",
+   "shot": "sly-closeup",
+   "arm": "inkbase",
+   "applied": null,
+   "zeroVerts": 0,
+   "totalVerts": 8454
+  },
+  {
+   "kind": "ink",
+   "shot": "sly-closeup",
+   "arm": "inknull",
+   "applied": [
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1
+   ],
+   "zeroVerts": 0,
+   "totalVerts": 8454
+  },
+  {
+   "kind": "ink",
+   "shot": "sly-closeup",
+   "arm": "fur0",
+   "applied": [
+    0,
+    0,
+    0,
+    1,
+    1,
+    1,
+    1,
+    1
+   ],
+   "zeroVerts": 1965,
+   "totalVerts": 8454
+  },
+  {
+   "kind": "ink",
+   "shot": "sly-closeup",
+   "arm": "allink0",
+   "applied": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "zeroVerts": 7877,
+   "totalVerts": 8454
+  },
+  {
+   "kind": "ink",
+   "shot": "sly-closeup",
+   "arm": "inkrestore",
+   "applied": [
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1
+   ],
+   "zeroVerts": 0,
+   "totalVerts": 8454
+  }
+ ]
+}
