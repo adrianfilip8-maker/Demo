@@ -4607,7 +4607,16 @@ readings.** Converted: **A = 1.4 px** (no event, buried inside the 2.5 px ink hu
 
 The registered primary verdict is therefore the **unit-free ratio** to the forearm→cuff step
 measured in the same frame: **A = 0.07, B = 0.58**, indeterminate between 0.15 and 0.40, with an
-abort if the forearm→cuff ruler itself misses 15–28 px. Scoring a ratio rather than a length is what
+abort if the forearm→cuff ruler itself misses 15–28 px.
+
+> **CORRECTION (§72.1): this subsection's own arithmetic is inconsistent, and its B is a units
+> mix.** The stated "1.44× conversion" does not match its own converted values — 1.7 → 1.4 and
+> 19 → 15.4 are ~1.23×, which is the 900 → 720 ratio, so the conversion factor quoted here is
+> wrong. Worse, **`A = 0.07` is `1.7/26` with both terms @900, while `B = 0.58` is `15.2/26` — a
+> 720 numerator over a 900 denominator.** Computed consistently, **B = 19/26 = 0.73**, so the
+> registered target was **26% low**. The verdict would not have flipped, but nothing here should be
+> quoted onward. And the whole ratio construction is moot in the frame it was to be scored on —
+> see §72.2: the forearm→cuff ruler is **not on the outline** there. Scoring a ratio rather than a length is what
 makes the clause immune to the error that nearly broke it.
 
 ### 58.5 Reading C: the probe has a demonstrated false positive of exactly the shape the finding needs
@@ -6058,3 +6067,115 @@ not a like-for-like comparison — and §51.3 already separates the two columns,
 So the breach may be arithmetic rather than real. **Flagged before the re-weighting, not after**,
 because re-prioritising a work queue on a mis-scaled number is expensive in a way that is hard to
 unwind.
+
+
+---
+
+## §72 — the ruler was not in the frame, and the tool the whole item rests on was not in the repository
+
+CHARACTER, sealing `PREREG-slyarm.md` at 00:07 with `shots/slyarm/` still non-existent.
+
+### 72.1 §58.4's arithmetic is inconsistent and its ratio was a units mix
+
+Corrected at its declaration site above. The quoted 1.44× conversion does not reproduce its own
+numbers (they are ~1.23×, the 900 → 720 ratio), and **A and B were computed on different bases** —
+`A = 1.7/26` both @900, `B = 15.2/26` with a 720 numerator over a 900 denominator. Consistently
+computed **B = 0.73, not 0.58**: the registered target was **26% low**.
+
+The irony is exact and worth stating: §58.4 exists *because* the raw figures carried a unit error
+larger than the effect, and the fix for it introduced a second one. **A ratio is only unit-free if
+both of its terms are in the same units** — which is a sentence nobody needs until they have written
+the other kind.
+
+### 72.2 The registered verdict was not computable in the frame it was registered for
+
+§58.4's primary is a ratio to the forearm→cuff step *"measured in the same frame"*. In `sly-arm`
+that ruler **is not on the outline at all**: `CUFF = 0` rows. The arm run ends at y = 433 into the
+**cane**, which crosses the wrist in `cane_combo_2`.
+
+> So the abort clause would have fired on a **missing ruler**, and the boot would have produced an
+> abort that said nothing whatever about fur.
+
+That is §69.2's shape — *an abort unmeetable in the frame it is scored on* — caught **before the
+frame existed** rather than in the post-mortem. Re-registered against what is actually there, at
+1280×720, **with no conversion anywhere** (the unit trap dissolved structurally rather than by a
+better ratio):
+
+```
+figure 543 px; right outline: HEAD 181  LEG 137  CANE 91  FOREARM 63  SLEEVE 60  SHOULDER 11
+sleeve → forearm (t = 0.76):  y = 371   706.3 → 716.3   STEP +10.00 px  (~8 px net of local drift)
+forearm → cuff   (t = 0.965): NOT ON THE OUTLINE
+```
+
+**A ≤ 3 px** (buried in ink), **B ≥ 6 px** (predicted, at 10), indeterminate 3–6. **Control passed:**
+`SLEEVE 60 + FOREARM 63 = 123` reproduces `armframe.mjs`'s independent `ARM = 123` exactly, so the
+material-band labelling is sound and §66's 62 depth-qualified rows are confirmed as the bare-fur
+band.
+
+**Reading C is retired rather than left open**, and the reasoning is the useful part: C existed
+because `armscale.mjs` bins by vertex and has a known false positive at `u = 0.662, n = 4`.
+`armprofile.mjs` has **no bins** — it reads per-row ownership off a z-buffer — so a sparse bin
+cannot manufacture an event in it. *C was a property of the retired instrument, not a hypothesis
+about the arm.*
+
+### 72.3 §66.2's defect was live again, on the very item being registered
+
+`armframe.mjs` — the tool **§66 rests on entirely** — and the new `armprofile.mjs` existed only in a
+session scratchpad, which does not survive the session. §66.2 is the section about a checklist
+citing an instrument that is not in the repository, and the same defect had reappeared one section
+later on the item it was written about.
+
+Both are now promoted to **`tools/`** (`tools/**` is locked to CHARACTER, so this needed the
+coordinator), along with `progress/records/PREREG-slyarm.md`. Both parse.
+
+**A recurring shape, now three instances:** `headratio.mjs` cited from a path that did not exist
+(§66.2), `t16f.mjs` transcribing constants that had moved (§62.3), and now the two instruments an
+open item depends on living outside the repo. *Work that only exists in a scratchpad is work that
+has not been done yet, from the point of view of anyone who comes after.*
+
+### 72.4 The `hero` re-look is a hard null, and it re-confirms §35 for free
+
+`src/**` is **bit-identical** between critic6's boot (`1bc8938`) and HEAD, so those frames describe
+shipped code. Between `cap9` (`5c17500`) and `critic6`, `src/player/**` is unchanged — but
+`ToonMaterial.js` and `PostFX.js` both moved, and both shade the character, so CHARACTER **diffed
+rather than assumed**:
+
+- `hero` whole frame: **10.6%** of pixels differ, max delta 151;
+- `hero` **character ROI: 0 of 17,061 pixels differ** — and the ROI was cropped and inspected to
+  confirm it contains cap, ears, ringed tail and cane, *"not a probe pointed at empty sky"* (§42's
+  lesson applied unprompted).
+
+So critic6's `hero` is **not a second independent look at the cane — it is the identical image.** It
+carries zero new character evidence, and it independently re-confirms §35's closure: two separate
+boots, same character pixels, exactly. The 10.6% that moved is stone.
+
+### 72.5 The arms must not be scored against pass 6, and the silence is registered as uninformative NOW
+
+`sly-arm` is out of the roster by design, and §66.1 measured that **no scored shot puts a forearm on
+the outline**. So a pass-6 silence on the arms is consistent with *fixed*, *unfixed* and
+*unobservable* alike — §49's "a zero is not one state", arriving before the report rather than after.
+Written into the seal so it cannot be re-litigated once a verdict is in hand.
+
+The converse is registered too: pass 6's fur verdict **does** carry for tail, cheeks, chest and
+legs. **A fur remark from the critic must not be routed to the arms item, and an arms result must
+not be quoted as answering the fur condition overall.**
+
+### 72.6 Fur is the live failure, and it is two separable defects
+
+At 3× in `critic6/sly-closeup`: the limbs are smooth glossy tubes with a cyan specular stripe, and
+the clumps that do exist render as **hard, flat, near-black quadrilateral chips stuck on a lit
+surface** — shins, thighs, muzzle, neck.
+
+That is *precisely the mode `Body.js`'s `biasNormals` comment says it exists to prevent*, so either
+it is not reaching these clumps or its strength is insufficient. **Two separable defects, and they
+want separate fixes:** the tube silhouette is smooth, **and** the clumps shade as chips rather than
+continuously with the host.
+
+### 72.7 A number that needs its population
+
+§66 records the `sly-arm` precondition as *"median 34 px proud"*; `armframe.mjs` as shipped prints
+*"median depth 26 px over 118 rows"*. The load-bearing facts reproduce exactly (62 consecutive rows
+from y = 372, side R, max 43, 0-row negative control), so this is a **median over the 62-row run
+versus over all 118 qualified rows** — a population difference, not an error. Both are ≥8× the ink
+hull so nothing downstream changes. Recorded because §56.1 and §58.3 are both sections about a
+number quoted without its population, and this is the third.
