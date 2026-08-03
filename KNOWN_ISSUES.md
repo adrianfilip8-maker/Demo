@@ -9956,10 +9956,20 @@ vec3 slyShadD = mix( uShadowColorLit, uShadowColor,
 ```
 
 with `shadowBounceMix: 0.05` and `shadowBounceMixLit: 0.05` shipped equal, so `uShadowColorLit` is
-bit-identical to `uShadowColor` and `mix(a, a, t) == a` for every `t`. **Verified against
+bit-identical to `uShadowColor` and ~~`mix(a, a, t) == a` for every `t`~~. **Verified against
 `ToonMaterial.js:306/331` rather than against the comment claiming it** — which is the same
 discipline §115.5 had just imposed on the stale `(0.123, 0.175, 0.423)` shadow-light constant, and
 would have been the check regardless of who wrote the comment.
+
+> **CORRECTED by SHADING: the bit-identity was an overclaim, and the shipped comment is careful
+> not to make it.** GLSL specifies `mix(x,y,a)` as `x·(1−a) + y·a`, so for `x == y` it evaluates
+> `x − x·a + x·a` — algebraically `x`, and **not guaranteed bit-exact in floating point**, since
+> each product and sum rounds. I asserted an identity where the language only promises arithmetic.
+> The null *is* clean, and the evidence for that is `PREREG-gate1`'s **P1: `base2` bit-identical
+> to `base`, 0 px, on all four shots — measured on this driver**, not derived. §119.
+>
+> This is the third time in two sections that the right move was *read the source of truth rather
+> than the sentence about it* — and here the sentence was mine.
 
 **A good outcome from a bad process is a near-miss, not a vindication.** The identical keystroke on
 a live file mid-edit could have committed a half-written shader as though I had reviewed it, and
@@ -9977,3 +9987,83 @@ fact.
 The mitigation that actually caught this was cheap and unglamorous: reading `git show --stat HEAD`
 *after* pushing, because the pre-commit `git status` had printed a file I did not stop to explain.
 **The tell was there and I read past it.**
+
+---
+
+## §119 — the gate is correct, inert, cheap, and not the fix; the shade it needed does not exist
+
+I briefed SHADING that the depth-dependent bounce was *"the only shape that satisfies both
+acceptances"*. **It built it, sealed it, and falsified it against predictions registered before any
+frame existed.** That premise was mine and it was wrong.
+
+### 119.1 The result
+
+`gate20_85` closes **0.7 % / 0.0 % / 0.2 %** of §111's drift on hero/temple/sly-closeup, against a
+registered band of **20–60 %**. Falsified by roughly two orders of magnitude, and **not by tuning**:
+
+> `key = ramp · sh` is a **product of two banded quantisers**, so `shadowMix` is effectively
+> **bimodal at 0 and 1**. There is no shallow shade for the gate to act on.
+
+The changed set is **0.26–7.8 % of frame** against 85–98 % for the uniform arms, and the mask image
+settles it — magenta appears as **thin scattered ribbons along band edges**, which SHADING calls
+*"piping, not a population"*. Looked at, not inferred.
+
+**It cannot be rescued by a larger `Lit` value.** The only way this lever gains authority is by
+colouring exactly the band edges, which is the failure mode it would be introduced to avoid.
+
+### 119.2 A cel-shaded renderer has no shallow shade, and that is the generalisable part
+
+Depth-dependent grading is a standard and sound idea in a continuously-lit renderer. **Banding
+destroys the continuum the technique needs.** Any future proposal keyed on "how deep is this
+shadow" — mine or anyone's — must first check whether the quantity it keys on is continuous in
+*this* pipeline, and `shadowMix` is not.
+
+I proposed the shape from the physics of the problem without checking the distribution of the
+variable it gates on. **One histogram of `shadowMix` would have killed the brief before the build.**
+
+### 119.3 The predictions, including two that earned their registration
+
+- **P1 null PASS** — `base2` bit-identical to `base`, 0 px, all four shots.
+- **P2 falsified** by ~2 orders. **P4 monotone HOLDS**, which is the tell that the implementation
+  is *live rather than dead* — a falsified fix and a broken fix look identical without it.
+- **A1 confirmed exactly** — gate arms are *identical to base in deep shade*, registered in advance
+  **precisely so "the hue line still passes" could not be reported as evidence the gate works.** It
+  is measured where the gate is switched off. That is a falsifier written against the author's own
+  most likely self-deception, and it is the best-designed clause in the seal.
+- **P5 falsified in the useful direction** — SHADING predicted `sbm085` would fail the hue line; it
+  **passes** at 213–217°. The hue response is non-linear and the two-point interpolation was
+  pessimistic — the caveat §115.5 attached to those extrapolations is the one that fired.
+- **P6 night PASS** — gate moves night by 0.11 % of frame, Δb−r −0.0000.
+
+### 119.4 The corrected picture, and the next lever
+
+The ledger ceiling on the **uniform** knob is **~0.10** (temple binds) — not 0.088, not 0.175.
+`sbm175` does hit hero's b−r parity at 99.3 % but fails the hue line on all three shots.
+
+Next lever, and it needs its own pre-registration rather than an amendment to this one: **uniform
+~0.10 composed with `fillSkyMix`** — the term that is *not* gated by `shadowMix`, measured at
+32 / 24 / 15 % in §115.1. Together ≈ **73 / 44 / 41 %** of the drift with the ledger line intact.
+Both legs are already measured; **composition is the only untested claim**, which is exactly the
+right shape for a seal.
+
+**Keep the gate. Do not ship it non-inert.** It is proven correct, proven inert, and cheap. It is
+not the fix and must not be described as one.
+
+### 119.5 Two corrections to me, and one instrument I broke by sweeping it
+
+- **§118.1's bit-identity was an overclaim**, corrected at its declaration site: GLSL's `mix` is
+  `x·(1−a) + y·a`, which for `x == y` is algebraically but not bit-exactly `x`. The shipped comment
+  declines to claim it; I claimed it. P1's measured 0-px null is the actual evidence.
+- **My §111.3 brief's premise** — "the only shape that satisfies both acceptances" — is falsified
+  here.
+- **I swept `roiscore.mjs` without `roigen.mjs`**, leaving the preserved scorer unrunnable for want
+  of its input generator. Fixed. **A rescued instrument is only rescued if its inputs come with
+  it** — §83.2 says an instrument is cheap to rebuild when its output was recorded, and says
+  nothing about a *half*-rescued toolchain, which is worse than neither: it looks preserved.
+
+An offline transcription check caught its own scale bug on the way in: `TUNE.keyIntensity 2.55`
+under-scales `k` by 19.74 % because LIGHTING republishes the key and the peak cap binds on the
+republished value. **`teal0` matched at the wrong `keyLum` while the other two missed by an
+identical constant ratio** — a constant ratio across arms localises a scale error; a hue error
+would not have been constant. The corrected chain then reproduced all three live readbacks to
+**1.06e-11**.

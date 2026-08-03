@@ -1,0 +1,938 @@
+[
+ {
+  "shot": "hero",
+  "arm": "base",
+  "shadowBounceMix": 0.05,
+  "shadowBounceMixLit": 0.05,
+  "uShadowColor": [
+   0.09610110548811887,
+   0.3131151084062172,
+   0.49658292862905856
+  ],
+  "uShadowColorLit": [
+   0.09610110548811887,
+   0.3131151084062172,
+   0.49658292862905856
+  ],
+  "uShadowDepth": [
+   0.45,
+   0.85
+  ],
+  "mark": {
+   "poke": 0,
+   "step": 10,
+   "capture": 347922
+  },
+  "mismatch": []
+ },
+ {
+  "shot": "hero",
+  "arm": "gate20_70",
+  "shadowBounceMix": 0.05,
+  "shadowBounceMixLit": 0.2,
+  "uShadowColor": [
+   0.09610110548811887,
+   0.3131151084062172,
+   0.49658292862905856
+  ],
+  "uShadowColorLit": [
+   0.15893501882289637,
+   0.30152904532452285,
+   0.4263317145162342
+  ],
+  "uShadowDepth": [
+   0.3,
+   0.7
+  ],
+  "mark": {
+   "poke": 0,
+   "step": 8,
+   "capture": 19243
+  },
+  "mismatch": []
+ },
+ {
+  "shot": "hero",
+  "arm": "gate20_85",
+  "shadowBounceMix": 0.05,
+  "shadowBounceMixLit": 0.2,
+  "uShadowColor": [
+   0.09610110548811887,
+   0.3131151084062172,
+   0.49658292862905856
+  ],
+  "uShadowColorLit": [
+   0.15893501882289637,
+   0.30152904532452285,
+   0.4263317145162342
+  ],
+  "uShadowDepth": [
+   0.45,
+   0.85
+  ],
+  "mark": {
+   "poke": 0,
+   "step": 9,
+   "capture": 19043
+  },
+  "mismatch": []
+ },
+ {
+  "shot": "hero",
+  "arm": "gate20_95",
+  "shadowBounceMix": 0.05,
+  "shadowBounceMixLit": 0.2,
+  "uShadowColor": [
+   0.09610110548811887,
+   0.3131151084062172,
+   0.49658292862905856
+  ],
+  "uShadowColorLit": [
+   0.15893501882289637,
+   0.30152904532452285,
+   0.4263317145162342
+  ],
+  "uShadowDepth": [
+   0.55,
+   0.95
+  ],
+  "mark": {
+   "poke": 0,
+   "step": 11,
+   "capture": 19539
+  },
+  "mismatch": []
+ },
+ {
+  "shot": "hero",
+  "arm": "gate35_85",
+  "shadowBounceMix": 0.05,
+  "shadowBounceMixLit": 0.35,
+  "uShadowColor": [
+   0.09610110548811887,
+   0.3131151084062172,
+   0.49658292862905856
+  ],
+  "uShadowColorLit": [
+   0.22176893215767393,
+   0.2899429822428285,
+   0.3560805004034099
+  ],
+  "uShadowDepth": [
+   0.45,
+   0.85
+  ],
+  "mark": {
+   "poke": 0,
+   "step": 16,
+   "capture": 19136
+  },
+  "mismatch": []
+ },
+ {
+  "shot": "hero",
+  "arm": "sbm20",
+  "shadowBounceMix": 0.2,
+  "shadowBounceMixLit": 0.2,
+  "uShadowColor": [
+   0.15893501882289637,
+   0.30152904532452285,
+   0.4263317145162342
+  ],
+  "uShadowColorLit": [
+   0.15893501882289637,
+   0.30152904532452285,
+   0.4263317145162342
+  ],
+  "uShadowDepth": [
+   0.45,
+   0.85
+  ],
+  "mark": {
+   "poke": 0,
+   "step": 9,
+   "capture": 18555
+  },
+  "mismatch": []
+ },
+ {
+  "shot": "hero",
+  "arm": "sbm085",
+  "shadowBounceMix": 0.085,
+  "shadowBounceMixLit": 0.085,
+  "uShadowColor": [
+   0.11076235193290028,
+   0.31041169368715515,
+   0.4801909786693995
+  ],
+  "uShadowColorLit": [
+   0.11076235193290028,
+   0.31041169368715515,
+   0.4801909786693995
+  ],
+  "uShadowDepth": [
+   0.45,
+   0.85
+  ],
+  "mark": {
+   "poke": 0,
+   "step": 9,
+   "capture": 19398
+  },
+  "mismatch": []
+ },
+ {
+  "shot": "hero",
+  "arm": "sbm175",
+  "shadowBounceMix": 0.175,
+  "shadowBounceMixLit": 0.175,
+  "uShadowColor": [
+   0.14846269993376685,
+   0.30346005583813856,
+   0.4380402502017049
+  ],
+  "uShadowColorLit": [
+   0.14846269993376685,
+   0.30346005583813856,
+   0.4380402502017049
+  ],
+  "uShadowDepth": [
+   0.45,
+   0.85
+  ],
+  "mark": {
+   "poke": 0,
+   "step": 8,
+   "capture": 18724
+  },
+  "mismatch": []
+ },
+ {
+  "shot": "hero",
+  "arm": "base2",
+  "shadowBounceMix": 0.05,
+  "shadowBounceMixLit": 0.05,
+  "uShadowColor": [
+   0.09610110548811887,
+   0.3131151084062172,
+   0.49658292862905856
+  ],
+  "uShadowColorLit": [
+   0.09610110548811887,
+   0.3131151084062172,
+   0.49658292862905856
+  ],
+  "uShadowDepth": [
+   0.45,
+   0.85
+  ],
+  "mark": {
+   "poke": 0,
+   "step": 16,
+   "capture": 18441
+  },
+  "mismatch": []
+ },
+ {
+  "shot": "temple",
+  "arm": "base",
+  "shadowBounceMix": 0.05,
+  "shadowBounceMixLit": 0.05,
+  "uShadowColor": [
+   0.09594484161473013,
+   0.3131499340626409,
+   0.49669808638540497
+  ],
+  "uShadowColorLit": [
+   0.09594484161473013,
+   0.3131499340626409,
+   0.49669808638540497
+  ],
+  "uShadowDepth": [
+   0.45,
+   0.85
+  ],
+  "mark": {
+   "poke": 0,
+   "step": 5,
+   "capture": 147917
+  },
+  "mismatch": []
+ },
+ {
+  "shot": "temple",
+  "arm": "gate20_70",
+  "shadowBounceMix": 0.05,
+  "shadowBounceMixLit": 0.2,
+  "uShadowColor": [
+   0.09594484161473013,
+   0.3131499340626409,
+   0.49669808638540497
+  ],
+  "uShadowColorLit": [
+   0.1583099633293409,
+   0.30166834795021785,
+   0.42679234554162
+  ],
+  "uShadowDepth": [
+   0.3,
+   0.7
+  ],
+  "mark": {
+   "poke": 0,
+   "step": 11,
+   "capture": 15048
+  },
+  "mismatch": []
+ },
+ {
+  "shot": "temple",
+  "arm": "gate20_85",
+  "shadowBounceMix": 0.05,
+  "shadowBounceMixLit": 0.2,
+  "uShadowColor": [
+   0.09594484161473013,
+   0.3131499340626409,
+   0.49669808638540497
+  ],
+  "uShadowColorLit": [
+   0.1583099633293409,
+   0.30166834795021785,
+   0.42679234554162
+  ],
+  "uShadowDepth": [
+   0.45,
+   0.85
+  ],
+  "mark": {
+   "poke": 0,
+   "step": 7,
+   "capture": 19335
+  },
+  "mismatch": []
+ },
+ {
+  "shot": "temple",
+  "arm": "gate20_95",
+  "shadowBounceMix": 0.05,
+  "shadowBounceMixLit": 0.2,
+  "uShadowColor": [
+   0.09594484161473013,
+   0.3131499340626409,
+   0.49669808638540497
+  ],
+  "uShadowColorLit": [
+   0.1583099633293409,
+   0.30166834795021785,
+   0.42679234554162
+  ],
+  "uShadowDepth": [
+   0.55,
+   0.95
+  ],
+  "mark": {
+   "poke": 0,
+   "step": 7,
+   "capture": 14820
+  },
+  "mismatch": []
+ },
+ {
+  "shot": "temple",
+  "arm": "gate35_85",
+  "shadowBounceMix": 0.05,
+  "shadowBounceMixLit": 0.35,
+  "uShadowColor": [
+   0.09594484161473013,
+   0.3131499340626409,
+   0.49669808638540497
+  ],
+  "uShadowColorLit": [
+   0.22067508504395175,
+   0.29018676183779474,
+   0.3568866046978349
+  ],
+  "uShadowDepth": [
+   0.45,
+   0.85
+  ],
+  "mark": {
+   "poke": 0,
+   "step": 10,
+   "capture": 15339
+  },
+  "mismatch": []
+ },
+ {
+  "shot": "temple",
+  "arm": "sbm20",
+  "shadowBounceMix": 0.2,
+  "shadowBounceMixLit": 0.2,
+  "uShadowColor": [
+   0.1583099633293409,
+   0.30166834795021785,
+   0.42679234554162
+  ],
+  "uShadowColorLit": [
+   0.1583099633293409,
+   0.30166834795021785,
+   0.42679234554162
+  ],
+  "uShadowDepth": [
+   0.45,
+   0.85
+  ],
+  "mark": {
+   "poke": 0,
+   "step": 7,
+   "capture": 14944
+  },
+  "mismatch": []
+ },
+ {
+  "shot": "temple",
+  "arm": "sbm085",
+  "shadowBounceMix": 0.085,
+  "shadowBounceMixLit": 0.085,
+  "uShadowColor": [
+   0.11049670334813926,
+   0.31047089730307553,
+   0.4803867468551885
+  ],
+  "uShadowColorLit": [
+   0.11049670334813926,
+   0.31047089730307553,
+   0.4803867468551885
+  ],
+  "uShadowDepth": [
+   0.45,
+   0.85
+  ],
+  "mark": {
+   "poke": 0,
+   "step": 8,
+   "capture": 15113
+  },
+  "mismatch": []
+ },
+ {
+  "shot": "temple",
+  "arm": "sbm175",
+  "shadowBounceMix": 0.175,
+  "shadowBounceMixLit": 0.175,
+  "uShadowColor": [
+   0.14791577637690578,
+   0.30358194563562163,
+   0.43844330234891743
+  ],
+  "uShadowColorLit": [
+   0.14791577637690578,
+   0.30358194563562163,
+   0.43844330234891743
+  ],
+  "uShadowDepth": [
+   0.45,
+   0.85
+  ],
+  "mark": {
+   "poke": 0,
+   "step": 7,
+   "capture": 14318
+  },
+  "mismatch": []
+ },
+ {
+  "shot": "temple",
+  "arm": "base2",
+  "shadowBounceMix": 0.05,
+  "shadowBounceMixLit": 0.05,
+  "uShadowColor": [
+   0.09594484161473013,
+   0.3131499340626409,
+   0.49669808638540497
+  ],
+  "uShadowColorLit": [
+   0.09594484161473013,
+   0.3131499340626409,
+   0.49669808638540497
+  ],
+  "uShadowDepth": [
+   0.45,
+   0.85
+  ],
+  "mark": {
+   "poke": 0,
+   "step": 7,
+   "capture": 14091
+  },
+  "mismatch": []
+ },
+ {
+  "shot": "sly-closeup",
+  "arm": "base",
+  "shadowBounceMix": 0.05,
+  "shadowBounceMixLit": 0.05,
+  "uShadowColor": [
+   0.09611643093103707,
+   0.3131104181116351,
+   0.4965842625559385
+  ],
+  "uShadowColorLit": [
+   0.09611643093103707,
+   0.3131104181116351,
+   0.4965842625559385
+  ],
+  "uShadowDepth": [
+   0.45,
+   0.85
+  ],
+  "mark": {
+   "poke": 0,
+   "step": 4,
+   "capture": 172659
+  },
+  "mismatch": []
+ },
+ {
+  "shot": "sly-closeup",
+  "arm": "gate20_70",
+  "shadowBounceMix": 0.05,
+  "shadowBounceMixLit": 0.2,
+  "uShadowColor": [
+   0.09611643093103707,
+   0.3131104181116351,
+   0.4965842625559385
+  ],
+  "uShadowColorLit": [
+   0.1589963205945689,
+   0.3015102841461944,
+   0.4263370502237539
+  ],
+  "uShadowDepth": [
+   0.3,
+   0.7
+  ],
+  "mark": {
+   "poke": 0,
+   "step": 8,
+   "capture": 19650
+  },
+  "mismatch": []
+ },
+ {
+  "shot": "sly-closeup",
+  "arm": "gate20_85",
+  "shadowBounceMix": 0.05,
+  "shadowBounceMixLit": 0.2,
+  "uShadowColor": [
+   0.09611643093103707,
+   0.3131104181116351,
+   0.4965842625559385
+  ],
+  "uShadowColorLit": [
+   0.1589963205945689,
+   0.3015102841461944,
+   0.4263370502237539
+  ],
+  "uShadowDepth": [
+   0.45,
+   0.85
+  ],
+  "mark": {
+   "poke": 0,
+   "step": 7,
+   "capture": 17689
+  },
+  "mismatch": []
+ },
+ {
+  "shot": "sly-closeup",
+  "arm": "gate20_95",
+  "shadowBounceMix": 0.05,
+  "shadowBounceMixLit": 0.2,
+  "uShadowColor": [
+   0.09611643093103707,
+   0.3131104181116351,
+   0.4965842625559385
+  ],
+  "uShadowColorLit": [
+   0.1589963205945689,
+   0.3015102841461944,
+   0.4263370502237539
+  ],
+  "uShadowDepth": [
+   0.55,
+   0.95
+  ],
+  "mark": {
+   "poke": 0,
+   "step": 15,
+   "capture": 17961
+  },
+  "mismatch": []
+ },
+ {
+  "shot": "sly-closeup",
+  "arm": "gate35_85",
+  "shadowBounceMix": 0.05,
+  "shadowBounceMixLit": 0.35,
+  "uShadowColor": [
+   0.09611643093103707,
+   0.3131104181116351,
+   0.4965842625559385
+  ],
+  "uShadowColorLit": [
+   0.2218762102581008,
+   0.2899101501807537,
+   0.3560898378915692
+  ],
+  "uShadowDepth": [
+   0.45,
+   0.85
+  ],
+  "mark": {
+   "poke": 0,
+   "step": 9,
+   "capture": 17515
+  },
+  "mismatch": []
+ },
+ {
+  "shot": "sly-closeup",
+  "arm": "sbm20",
+  "shadowBounceMix": 0.2,
+  "shadowBounceMixLit": 0.2,
+  "uShadowColor": [
+   0.1589963205945689,
+   0.3015102841461944,
+   0.4263370502237539
+  ],
+  "uShadowColorLit": [
+   0.1589963205945689,
+   0.3015102841461944,
+   0.4263370502237539
+  ],
+  "uShadowDepth": [
+   0.45,
+   0.85
+  ],
+  "mark": {
+   "poke": 0,
+   "step": 8,
+   "capture": 18402
+  },
+  "mismatch": []
+ },
+ {
+  "shot": "sly-closeup",
+  "arm": "sbm085",
+  "shadowBounceMix": 0.085,
+  "shadowBounceMixLit": 0.085,
+  "uShadowColor": [
+   0.11078840518586112,
+   0.31040372018636553,
+   0.4801932463450954
+  ],
+  "uShadowColorLit": [
+   0.11078840518586112,
+   0.31040372018636553,
+   0.4801932463450954
+  ],
+  "uShadowDepth": [
+   0.45,
+   0.85
+  ],
+  "mark": {
+   "poke": 0,
+   "step": 7,
+   "capture": 19516
+  },
+  "mismatch": []
+ },
+ {
+  "shot": "sly-closeup",
+  "arm": "sbm175",
+  "shadowBounceMix": 0.175,
+  "shadowBounceMixLit": 0.175,
+  "uShadowColor": [
+   0.1485163389839803,
+   0.3034436398071012,
+   0.43804491894578457
+  ],
+  "uShadowColorLit": [
+   0.1485163389839803,
+   0.3034436398071012,
+   0.43804491894578457
+  ],
+  "uShadowDepth": [
+   0.45,
+   0.85
+  ],
+  "mark": {
+   "poke": 0,
+   "step": 16,
+   "capture": 17217
+  },
+  "mismatch": []
+ },
+ {
+  "shot": "sly-closeup",
+  "arm": "base2",
+  "shadowBounceMix": 0.05,
+  "shadowBounceMixLit": 0.05,
+  "uShadowColor": [
+   0.09611643093103707,
+   0.3131104181116351,
+   0.4965842625559385
+  ],
+  "uShadowColorLit": [
+   0.09611643093103707,
+   0.3131104181116351,
+   0.4965842625559385
+  ],
+  "uShadowDepth": [
+   0.45,
+   0.85
+  ],
+  "mark": {
+   "poke": 0,
+   "step": 8,
+   "capture": 18275
+  },
+  "mismatch": []
+ },
+ {
+  "shot": "night",
+  "arm": "base",
+  "shadowBounceMix": 0.05,
+  "shadowBounceMixLit": 0.05,
+  "uShadowColor": [
+   0.012895755468330918,
+   0.04676854125689067,
+   0.07805322250511793
+  ],
+  "uShadowColorLit": [
+   0.012895755468330918,
+   0.04676854125689067,
+   0.07805322250511793
+  ],
+  "uShadowDepth": [
+   0.45,
+   0.85
+  ],
+  "mark": {
+   "poke": 0,
+   "step": 6,
+   "capture": 205847
+  },
+  "mismatch": []
+ },
+ {
+  "shot": "night",
+  "arm": "gate20_70",
+  "shadowBounceMix": 0.05,
+  "shadowBounceMixLit": 0.2,
+  "uShadowColor": [
+   0.012895755468330918,
+   0.04676854125689067,
+   0.07805322250511793
+  ],
+  "uShadowColorLit": [
+   0.017929731706652713,
+   0.0451392971702376,
+   0.07936917849552044
+  ],
+  "uShadowDepth": [
+   0.3,
+   0.7
+  ],
+  "mark": {
+   "poke": 0,
+   "step": 15,
+   "capture": 25956
+  },
+  "mismatch": []
+ },
+ {
+  "shot": "night",
+  "arm": "gate20_85",
+  "shadowBounceMix": 0.05,
+  "shadowBounceMixLit": 0.2,
+  "uShadowColor": [
+   0.012895755468330918,
+   0.04676854125689067,
+   0.07805322250511793
+  ],
+  "uShadowColorLit": [
+   0.017929731706652713,
+   0.0451392971702376,
+   0.07936917849552044
+  ],
+  "uShadowDepth": [
+   0.45,
+   0.85
+  ],
+  "mark": {
+   "poke": 0,
+   "step": 13,
+   "capture": 25177
+  },
+  "mismatch": []
+ },
+ {
+  "shot": "night",
+  "arm": "gate20_95",
+  "shadowBounceMix": 0.05,
+  "shadowBounceMixLit": 0.2,
+  "uShadowColor": [
+   0.012895755468330918,
+   0.04676854125689067,
+   0.07805322250511793
+  ],
+  "uShadowColorLit": [
+   0.017929731706652713,
+   0.0451392971702376,
+   0.07936917849552044
+  ],
+  "uShadowDepth": [
+   0.55,
+   0.95
+  ],
+  "mark": {
+   "poke": 0,
+   "step": 11,
+   "capture": 25623
+  },
+  "mismatch": []
+ },
+ {
+  "shot": "night",
+  "arm": "gate35_85",
+  "shadowBounceMix": 0.05,
+  "shadowBounceMixLit": 0.35,
+  "uShadowColor": [
+   0.012895755468330918,
+   0.04676854125689067,
+   0.07805322250511793
+  ],
+  "uShadowColorLit": [
+   0.022963707944974508,
+   0.04351005308358453,
+   0.08068513448592297
+  ],
+  "uShadowDepth": [
+   0.45,
+   0.85
+  ],
+  "mark": {
+   "poke": 0,
+   "step": 9,
+   "capture": 25752
+  },
+  "mismatch": []
+ },
+ {
+  "shot": "night",
+  "arm": "sbm20",
+  "shadowBounceMix": 0.2,
+  "shadowBounceMixLit": 0.2,
+  "uShadowColor": [
+   0.017929731706652713,
+   0.0451392971702376,
+   0.07936917849552044
+  ],
+  "uShadowColorLit": [
+   0.017929731706652713,
+   0.0451392971702376,
+   0.07936917849552044
+  ],
+  "uShadowDepth": [
+   0.45,
+   0.85
+  ],
+  "mark": {
+   "poke": 0,
+   "step": 8,
+   "capture": 25272
+  },
+  "mismatch": []
+ },
+ {
+  "shot": "night",
+  "arm": "sbm085",
+  "shadowBounceMix": 0.085,
+  "shadowBounceMixLit": 0.085,
+  "uShadowColor": [
+   0.014070349923939338,
+   0.04638838430333829,
+   0.07836027890287851
+  ],
+  "uShadowColorLit": [
+   0.014070349923939338,
+   0.04638838430333829,
+   0.07836027890287851
+  ],
+  "uShadowDepth": [
+   0.45,
+   0.85
+  ],
+  "mark": {
+   "poke": 0,
+   "step": 15,
+   "capture": 24823
+  },
+  "mismatch": []
+ },
+ {
+  "shot": "night",
+  "arm": "sbm175",
+  "shadowBounceMix": 0.175,
+  "shadowBounceMixLit": 0.175,
+  "uShadowColor": [
+   0.017090735666932415,
+   0.04541083785134645,
+   0.07914985249712002
+  ],
+  "uShadowColorLit": [
+   0.017090735666932415,
+   0.04541083785134645,
+   0.07914985249712002
+  ],
+  "uShadowDepth": [
+   0.45,
+   0.85
+  ],
+  "mark": {
+   "poke": 0,
+   "step": 10,
+   "capture": 19353
+  },
+  "mismatch": []
+ },
+ {
+  "shot": "night",
+  "arm": "base2",
+  "shadowBounceMix": 0.05,
+  "shadowBounceMixLit": 0.05,
+  "uShadowColor": [
+   0.012895755468330918,
+   0.04676854125689067,
+   0.07805322250511793
+  ],
+  "uShadowColorLit": [
+   0.012895755468330918,
+   0.04676854125689067,
+   0.07805322250511793
+  ],
+  "uShadowDepth": [
+   0.45,
+   0.85
+  ],
+  "mark": {
+   "poke": 0,
+   "step": 18,
+   "capture": 20085
+  },
+  "mismatch": []
+ }
+]
