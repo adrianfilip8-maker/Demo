@@ -10566,11 +10566,30 @@ Sized as a tolerance budget off the shipped `specStep`, so the next owner can di
 | 64 (`hieroglyph_gilded`) | 8.18° | 19.83° | 39.7° |
 | 24 (§121.9's proposal) | 13.31° | 31.83° | 63.7° |
 
-**Each degree of arc a surface sweeps buys one degree of tolerance in half-vector placement, in the
-plane of the sweep.** A flat architrave at gloss 64 catches the lobe only if its one normal lands
+~~**Each degree of arc a surface sweeps buys one degree of tolerance in half-vector placement, in the
+plane of the sweep.**~~ A flat architrave at gloss 64 catches the lobe only if its one normal lands
 within **±19.8°** of H; a **90° bullnose roll widens that to ±64.8°** — roughly 3× the catch window,
 for an *edge treatment* rather than a curved wall. That is a far cheaper ask than the one §121.9
 put in flight, and it is the version now routed.
+
+> **CORRECTION, 2026-08-03 — arc magnitude is not sufficient; arc PLACEMENT is a second and
+> independent requirement, and my table did not carry it.** Found by GEOMETRY, by building the
+> thing. Its first `beadRoll` ran the quadrant from *straight down* to *straight out* — which is
+> where an astragal's mass actually sits, and is the shape anyone would author — and moved `hero`'s
+> gilded area-in-lobe by **nothing: 0.69 % → 0.67 %**. The half-vector at that framing is
+> **(−0.21, 0.71, 0.69)**, i.e. **45° above the horizon**, and a down-and-out quadrant contains no
+> upward-facing normal at all. The sweep stopped about **6° short of the lobe**.
+>
+> **A roll only helps if its arc actually crosses the half-vector.** The corrected primitive runs
+> the whole outward hemisphere — soffit → face → sky — which is what makes "guaranteed somewhere to
+> land" *true* rather than nearly true: for any half-vector in the plane normal to the bead's axis,
+> some point on the bead is exactly aligned.
+>
+> Note the shape of this: §123 refuted §121.9's "guaranteed a place to land" as false, and the
+> replacement I wrote **re-imported the same over-claim one layer down** — a tolerance budget stated
+> as though only the size of the arc mattered. A quantity that must be *sited* as well as *sized*
+> cannot be reported as a single number, and one build attempt found in minutes what neither the
+> refutation nor its correction noticed.
 
 ### 123.5 The commission is the method, not the courtesy
 
