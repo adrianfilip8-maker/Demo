@@ -2035,7 +2035,15 @@ export const MATERIALS = {
        * `traversal` (fineMed -0.3 %) and `interior` (+0.3 %) — both framings where the ring is
        * 2.25 px and 2.91 px. It is **29 % of `hero` at 4.51 px**, which is the framing that
        * decides §7.3's gold line and which that seal never captured. */
-      const ramp = carve(s, cut, lines, { depth: 0.42, bevelPx: 2.6, lip: 0.10, bulge: 0.5, lineDepth: 0.56, seed: cx.seed + 5, arris: 0.16, arrisHex: PAL.goldLight, arrisPolish: 0.08 });
+      /* A/B arm `hgpolish`, gilded only: the *roughness* half of the arris off, the albedo lip
+       * left live. `hgarris` moves both at once, and the two reach the shader by different
+       * paths — the lip through `alb` (every lighting term, plus `specTint`, which on metal is
+       * `alb*2 + uSpecColor*0.25`), the notch through `rgh` (`specAmt` and `glossP`, i.e. the
+       * key-lit specular alone). §7.3's gold line is the second one, and no albedo lab can see
+       * it. Scoped to this recipe so every other material in the level stays bit-identical
+       * between the arms and supplies the coupling floor a control-vs-control run showed is
+       * NOT zero (mudbrick moved +2.17 % on a bit-identical texture). */
+      const ramp = carve(s, cut, lines, { depth: 0.42, bevelPx: 2.6, lip: 0.10, bulge: 0.5, lineDepth: 0.56, seed: cx.seed + 5, arris: 0.16, arrisHex: PAL.goldLight, arrisPolish: abOff('hgpolish') ? 0 : 0.08 });
 
       // Gold leaf laid into the sunk glyphs over a red bole ground; the leaf lifts at the arrises.
       const lift = s.field(2, (u, v) => sat(warpN(u, v, 14, 4, 1.1, cx.seed + 31) * 1.4 + 0.5));

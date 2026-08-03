@@ -305,6 +305,33 @@ const TUNE = {
      INTERLOCKED with `shadowTeal` below. */
   shadowBounceMix: 0.05,
 
+  /* ---- depth-dependent bounce (§115.4) --------------------------------------------
+   * `shadowBounceMix` does two jobs with opposite optima. §115.1 measured the revert to
+   * 0.20 as recovering 120%/65%/74% of §111's cool drift on hero/temple/sly-closeup; §115.4
+   * measured that same revert re-creating task #16's magenta exactly (temple's shadowed bay
+   * hue 211 -> 270, G-darkest 5.7% -> 66.7%, failing both ledger lines). So the value cannot
+   * be chosen globally.
+   *
+   * The split: `shadowBounceMixLit` is the share used at the SHALLOW end of the shade and
+   * `shadowBounceMix` stays the deep-shade value, handed over across `shadowDepth`
+   * (a smoothstep window on shadowMix = 1 - key).
+   *
+   * **Read the arithmetic before tuning these.** Both shader terms carrying the shadow light
+   * are multiplied by shadowMix, so the knob's per-pixel authority is exactly proportional to
+   * shadow depth (scratchpad/gateauth.mjs derives it from the shipped expression; it does not
+   * depend on albedo, ao, normal or the tone curve). Protecting deep shade therefore forfeits
+   * most of the available authority by construction: handing over at shadowMix 0.85 retains
+   * only ~32-60% of a full revert's effect depending on how the frame's depth distribution
+   * falls. This lever is a PARTIAL recovery with an arithmetic ceiling, not a complete one —
+   * the authority it cannot reach lives in terms that are NOT gated by shadowMix, i.e. the
+   * ambient fill (`uFillSkyMix`, measured at 32%/24%/15% in §115.1).
+   *
+   * DEFAULT IS INERT: Lit == Mix makes the two uniforms bitwise equal, so the shader's mix()
+   * is a no-op. Whether that is bit-identical in the frame depends on how the driver spells
+   * mix(); the A/B carries a null arm to verify it rather than assume it. */
+  shadowBounceMixLit: 0.05,
+  shadowDepth: [0.45, 0.85],
+
   /* Blend of the shadow tint toward §2.2 TURQUOISE #2fa8a0, applied inside
      `_refreshShadowColor` — NOT to `PAL.shadowHue` — because LIGHTING's `ambient.tint`
      republish overwrites `_shadowTint` every frame, and because the blend must feed the
@@ -707,6 +734,8 @@ export class Shading {
       uSubjWarmShade: { value: TUNE.subjWarmShade },
       uAmbIntensity: { value: TUNE.ambIntensity },
       uShadowColor:  { value: new THREE.Color(0x000000) },
+      uShadowColorLit: { value: new THREE.Color(0x000000) },
+      uShadowDepth:  { value: new THREE.Vector2(TUNE.shadowDepth[0], TUNE.shadowDepth[1]) },
       uShadowWash:   { value: TUNE.shadowWash },
       uShadowSharp:  { value: new THREE.Vector2(TUNE.shadowSharp[0], TUNE.shadowSharp[1]) },
       uShadowBands:  { value: new THREE.Vector3(...TUNE.shadowBands) },
@@ -1561,9 +1590,25 @@ export class Shading {
      * to set how bright a shadow is. */
     const bounce = u.uBounceColor.value;
     const bl = lum(bounce);
-    _col.copy(bounce).multiplyScalar(bl > 1e-4 ? tintLum / bl : 1);
+    const bScale = bl > 1e-4 ? tintLum / bl : 1;
+
+    /* Two builds of the SAME light differing only in bounce share, so the teal blend, the
+     * floor and the peak cap `k` above apply identically to both and the pair cannot drift
+     * apart when LIGHTING republishes. The shader picks between them on shadow depth.
+     * With shadowBounceMixLit == shadowBounceMix the two are bit-identical and the shader's
+     * mix() is an exact no-op — that is the shipped default and the A/B's null arm. */
+    _col.copy(bounce).multiplyScalar(bScale);
     _col.lerp(_tintBlend, 1 - TUNE.shadowBounceMix);
     u.uShadowColor.value.copy(_col).multiplyScalar(k);
+
+    _col.copy(bounce).multiplyScalar(bScale);
+    _col.lerp(_tintBlend, 1 - TUNE.shadowBounceMixLit);
+    u.uShadowColorLit.value.copy(_col).multiplyScalar(k);
+
+    /* Kept in step with TUNE here rather than only at construction, so a live poke of
+     * TUNE.shadowDepth followed by _refreshShadowColor() moves the window — the same
+     * poke-and-refresh path §115's 29-arm sweep drove the other shadow knobs through. */
+    u.uShadowDepth.value.set(TUNE.shadowDepth[0], TUNE.shadowDepth[1]);
   }
 
   /* ======================================================================
