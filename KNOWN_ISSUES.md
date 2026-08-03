@@ -13318,32 +13318,53 @@ than left to be inferred, which is the correct handling of an unfinished brief.
 
 ## §156 — a gate that tested a filename that does not exist, and a FAIL reported rather than argued away
 
-### 156.1 The lock check that always passed, traced to my own poke
+### 156.1 ~~The lock check that always passed, traced to my own poke~~ — **this section was wrong, and the "fix" broke a working gate**
 
-CHARACTER flagged that `lock.mjs:170` **drops the ticket on acquisition**, so the queue is empty
-*while a capture holds the lock* — meaning FX's "patch when the queue is empty" trigger would fire
-mid-capture.
+> **RETRACTED IN FULL, 2026-08-03. FX checked the source; I had not.** `tools/lock.mjs:29` is
+> `const LOCK = path.join(DIR, 'capture.lock')`. **The lock file *is* `capture.lock`**, it was on
+> disk holding pid 22966 when I claimed it could not exist, and `/tmp/sands-of-ra/lock` is the name
+> that has never existed. **FX's original line 19 was correct and my correction pointed the gate at a
+> filename that can never be true — inverting the defect into exactly the one I said I was fixing.**
+>
+> **How I got there.** I ran `ls /tmp/sands-of-ra/` at a moment when no capture held the lock, saw
+> only `queue/`, and inferred the filename from the absence of a file. **The absence of a file is not
+> evidence about its name.**
+>
+> **And my verification could not have failed.** I hand-created `/tmp/sands-of-ra/lock`, ran the
+> script, saw `WINDOW CLOSED: lock held by 99999`, and called it verified. That tests only that the
+> code reads the file it is told to read. It is the §39 / §43 / §50 family — *a check whose
+> conclusion does not depend on the thing it claims to test* — built by me, one section after I
+> recorded two other instances of it, while correcting someone else's instrument.
+>
+> Also wrong in the retracted text: *"fixed in both copies"*. There was one authored copy; the second
+> was mine, made by sweeping the first.
 
-It is worse than that. `window-take.sh:19` tested:
+**What survives, and it is CHARACTER's half.** `lock.mjs` calls `dropTicket()` immediately after the
+acquire loop succeeds, so **the queue is genuinely empty while a capture holds the lock.** During a
+capture the lock file is therefore *the only signal that exists* — which is precisely why breaking
+its name would have been fatal, and why the two-errors framing was right about the shape and wrong
+about which two. FX's refinement: **the ticket lifecycle, plus a transcribed constant** — and the
+transcription is the half §155 had already flagged one section earlier.
 
-```sh
-if [ -f /tmp/sands-of-ra/capture.lock ]; then
+**FX's repair is better than the original.** The path is now **derived from `lock.mjs` at run time**,
+honouring `SANDS_LOCK_DIR` the same way, and the script **refuses to run (exit 7)** if the parse
+returns empty rather than falling back to a guess. That is the `is_ancestor` move applied to a
+constant: *it cannot drift from its source without the source changing.* Plus stale-lock handling
+(a lock naming a dead pid is treated as open, since eviction is by liveness), ticket-planted-first
+ordering, a pre-boot survey of live node processes for the `reliefreach.mjs` class that renders
+outside the lock entirely, and a `--dry` mode that exercises the real path — *"because testing a
+transcribed duplicate of a gate is how a gate ships broken."*
+
+**And it got the control mine never had.** Dry-run against live state:
+
+```
+LOCK=/tmp/sands-of-ra/capture.lock  QUEUE=/tmp/sands-of-ra/queue
+ticket planted: 1785787720156-24924
+WINDOW CLOSED: lock held by pid 22966 (node tuftbias.mjs)   exit 1
 ```
 
-**The lock file is `/tmp/sands-of-ra/lock`.** `capture.lock` has never existed, so **that check always
-passed**, and the empty-queue test was the only real gate — which, per CHARACTER's finding, is empty
-during every capture.
-
-> So a patch to `src/fx/Particles.js` could have landed **between two arms of another owner's A/B**,
-> giving arm A and arm B different trees, with both gates reporting the window open.
-
-**The wrong filename is mine.** My scheduled poke said *"no `/tmp/sands-of-ra/capture.lock`"*, and FX
-built the script against the path I gave it. §155's note that *"a poke carrying a path is a poke
-carrying a fact"* was written about the same string, one section before it did damage.
-
-Fixed in both copies and verified — with a lock present the script now prints `WINDOW CLOSED: lock
-held by …` and exits 1. **Two independent wrong things had to line up for the hazard: my bad path,
-and a ticket lifecycle nobody had read against it.** Either alone was harmless.
+**A state known to have the defect**, where the broken gate would have said *open* and patched
+between `tuftbias`'s arms. `src/fx/Particles.js` untouched throughout.
 
 ### 156.2 P-night FAILS as registered, and the failure is a calibration-design artefact
 
