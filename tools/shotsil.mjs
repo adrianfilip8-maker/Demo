@@ -275,12 +275,12 @@ function proportions(bodyV) {
   const HEADB = new Set(['head', 'jaw', 'capBrim', 'earL', 'earR', 'browL', 'browR'].map((n) => bi[n]));
   const TAILB = new Set(['tailA', 'tailB', 'tailC', 'tailD'].map((n) => bi[n]));
   const dominant = (i) => { let b = -1, bw = -1; for (let k = 0; k < 4; k++) { const w = sw.getComponent(i, k); if (w > bw) { bw = w; b = si.getComponent(i, k); } } return b; };
-  let headMax = -1e9, chin = 1e9, allMin = 1e9, allMax = -1e9, earSpan = 0, tailN = 0, bodyN = 0;
+  let headMax = -1e9, chin = 1e9, allMin = 1e9, allMax = -1e9, earL = 1e9, earR = -1e9, tailN = 0, bodyN = 0;
   for (let i = 0; i < g2.attributes.position.count; i++) {
     const y = bodyV[i * 3 + 1], x = bodyV[i * 3];
     if (y < allMin) allMin = y; if (y > allMax) allMax = y;
     const d = dominant(i);
-    if (HEADB.has(d)) { if (y > headMax) headMax = y; earSpan = Math.max(earSpan, Math.abs(x)); }
+    if (HEADB.has(d)) { if (y > headMax) headMax = y; if (x < earL) earL = x; if (x > earR) earR = x; }
     if (TAILB.has(d)) tailN++; else bodyN++;
     if (d === bi.jaw && y < chin) chin = y;
   }
@@ -291,7 +291,14 @@ function proportions(bodyV) {
   return {
     total, headH, skullH,
     cranium: Math.max(...H2.map((r) => r[1])) * 2 * TUNE.headScale,
-    ear: earSpan * 2,
+    /* Ear span is max(x) - min(x), NOT 2 * max|x| (KNOWN_ISSUES §86.5). The old form measured
+       about the MODEL ORIGIN and is only correct if the head is centred on it. The head sits at
+       x = -0.090, so it printed 0.905 m for a true span of 0.725 — inflated by exactly twice the
+       offset. The dangerous property is the direction of the error: it GROWS AS THE POSE
+       IMPROVES, because contrapposto moves the head further off-axis, so better character work
+       makes this readout look worse. Found by CHARACTER, which flagged it rather than editing a
+       locked file. */
+    ear: earR - earL,
     chest: Math.max(...T2.map((r) => r[1])) * 2,
     waist: Math.min(...T2.slice(3, 7).map((r) => r[1])) * 2,
     headsWithCap: total / headH, headsSkull: total / skullH,

@@ -7285,3 +7285,101 @@ run 39 L was live again for the next reader.
 Restored, and the file is now **tracked in `progress/records/`** rather than left in scratch. §83.3
 rule 2 in its first concrete application: *a warning that lives only in a scratchpad is one container
 restart from not existing.*
+
+
+---
+
+## §86 — head:body closes at 5.03, the floating prop is the cane buried in the deck, and a readout that gets worse as the work gets better
+
+CHARACTER, after §83's re-brief. **It verified two contradictory coordinator messages against the
+filesystem before acting** — its first `AGENTS.md` read caught the file **mid-recovery** (1090 lines
+through §11; `wc` a minute later gave 7134 through §83), and it identified that its *binding brief
+had changed under it*: §65.4's scoreable head:body definition was not in the stale read.
+
+### 86.1 head:body: 5.72 → 5.03, and the levers it refused to use
+
+`headScale` 0.90 → **1.07**, swept with a **fresh build per value**, and the sweep asserts it
+reproduces `tools/headratio.mjs` at the shipped value *before* being read. Against §7.3's target of
+5.0 and band 4.5–5.5, that is a **PASS from a FAIL**.
+
+**It declined to buy head-count from `torsoShrink` or `legLift`** — those are the contrapposto lever
+and the lanky lever, so spending them **trades one §7.3 condition for another.** Cost stated plainly
+rather than buried: total height 1.774 → **1.854 m** (+4.5% against §6's nominal 1.8, *visual mesh
+only — the physics capsule is untouched*), head width 0.34 → 0.40 m against a 0.27 m chest.
+
+And the risk §9 names was checked rather than assumed: **the mask slides off the eyes the moment
+`headScale` moves**, so eye occlusion was re-verified after the change — clear, with only pupil ink
+in front of the sclera.
+
+### 86.2 Fur: a knob clamped by a constraint in a different body region, and it still was not the lever
+
+`_buildHead`'s documented lobe bound pins the **global** `furLobe` at ≤ 0.0749, and it shipped at
+0.055 — so **the knob named after the defect could only move the limbs +36% before pushing cheek fur
+through the mask.** Split into `furLobeLimb`, leaving the head's bound literally intact.
+
+**Then the split did not fix the condition, and CHARACTER checked rather than claimed.** Hold-out
+A/B at matched camera and resolution: doubling the knob moved contour RMS **+1% left, −8% right** —
+nothing. The reason is a contour census:
+
+| `sly-closeup` contour | composition |
+|---|---|
+| LEFT | **68% CANE** (smooth metal, no fur), 12% glove, 5.6% cap cloth |
+| RIGHT | **35.4% cloth** (boot/trouser), **33.7% tail**, 8.1% cap |
+
+> **The bare furred arm and leg own essentially none of the contour in the shots that score the
+> condition. No value of that knob could have moved it.**
+
+The real lever is the **tail at 33.7% of contour** — and its edge rows are `furDark`, the *tuft-card*
+material, so the loft lobe sits **inside the tuft envelope and never reaches the edge.** Acting on
+that means reopening §37's tuft trade, which was closed on a frame-level hold-out, and CHARACTER
+**declined to reopen it blind.** The knob stays at 0.095 because it is *not* inert — the forearm owns
+9.8% of contour at `sly-arm`.
+
+### 86.3 The floating prop is the cane, and the floor is cutting it
+
+§82.4 routed `sly-perch`'s "floating brown prop" at (747,477). It is **the cane at 4.121 m**, in
+front of paving at 4.58 m — consistent with GEOMETRY's raycast — **and it is not detached**; the
+character projects as one connected component.
+
+Composing projection with `pixat` gives depth on *both sides* of each pixel, which is the gap
+`perch_idle`'s own comment said only a capture could close. On `hero`, along the crook:
+(679,297) 11.174 against 40.78 — open air; (670,310) grazing; **(670,314) 11.214 against 10.83 —
+0.38 m buried in the deck.**
+
+> **The floor cuts the crook, and the arc surviving above the cut reads as a detached rod.**
+
+And the root cause is an instrument, again: `caneall.mjs` reports *"0 clips with the tip through the
+floor"* **and is correct about the tip** — while **12 clips put cane geometry under the floor**
+(`crawl` −0.517 … `perch_idle` −0.062). *Another instrument measuring two named points on a swept
+tube* (cf. §57.1, §59.1).
+
+**Not fixed, deliberately:** the aim needs **+16°** to buy 6.2 cm, forfeiting a documented rank-1
+hook read on the series' most recognisable prop. Handed over with the numbers rather than guessed at.
+
+### 86.4 The pose item was stale
+
+Measured rather than assumed: `perch_idle` hips 0.045 → chest 0.082 → head 0.046, and
+`idle_confident` −0.078 → −0.047 → −0.110 with stance dx 0.232 / dz −0.300. **Both are genuine
+S-curves with weight on one leg.** The open item was fixed before the rollback and the brief had not
+caught up.
+
+### 86.5 A readout whose error grows as the work improves
+
+`tools/shotsil.mjs`'s PROPORTION block printed **ear span = 2 × max|x| about the model origin**,
+which is only correct if the head is centred on it. The head sits at x = −0.090, so it printed
+**0.905 m for a true span of 0.725** — inflated by exactly twice the offset.
+
+> **The dangerous property is the direction of the error: it grows as the pose improves**, because
+> contrapposto moves the head further off-axis. *Better character work makes this readout look
+> worse.*
+
+CHARACTER flagged it rather than editing a locked file. **Fixed here** to `max(x) − min(x)`, with the
+mechanism and its perverse direction recorded at the site.
+
+### 86.6 Two shots cannot support character scoring, and one is worse than framing
+
+`guard` stages the player **behind the camera by design**, and `courtyard` frames him at **43 px**.
+Neither can carry a character condition — which, with §76.4's `sly-perch` roster error and §79.4's
+43 px note, makes **three of fourteen scored frames unable to support conditions they were scored
+against.** `sly-closeup` (33°, 699 px) and `combat` (45°, 406 px) are sound; `hero` at 70° / 185 px
+carries on tail and cane-hook silhouette alone.
