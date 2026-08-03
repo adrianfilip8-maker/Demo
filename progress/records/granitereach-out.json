@@ -1,0 +1,94 @@
+{
+ "tree": "ab02f1b6afca",
+ "size": 1024,
+ "result": {
+  "name": "granite_pink",
+  "size": 512,
+  "seed": 3832995382,
+  "tile": 2.2,
+  "bump": 0.011,
+  "normalStrength": 2.56,
+  "mmPerTexel": 8.59,
+  "abOffGranite": false,
+  "builtH": {
+   "p05": 0.4058,
+   "p50": 0.5123,
+   "p95": 0.6144
+  },
+  "baseTiltMean": 2.996,
+  "gate": {
+   "corr": 0.999941,
+   "residAbs": {
+    "p50": 0.0005351,
+    "p95": 0.001242,
+    "max": 0.001498
+   }
+  },
+  "termSpread": {
+   "mineral": {
+    "p05": 0.56,
+    "p50": 0.6,
+    "p95": 0.62
+   },
+   "edge": {
+    "p05": 0,
+    "p50": 0,
+    "p95": 0.0877
+   },
+   "smallCell": {
+    "p05": -0.027,
+    "p50": 0.0002,
+    "p95": 0.0269
+   },
+   "scour": {
+    "p05": -0.2014,
+    "p50": -0.1101,
+    "p95": -0.0399
+   }
+  },
+  "arms": [
+   {
+    "arm": "null (control)",
+    "dH": 0,
+    "dTilt": 0,
+    "tiltFrac1": 0,
+    "armTiltMean": 2.996
+   },
+   {
+    "arm": "mineral step",
+    "dH": 0.0135,
+    "dTilt": 0.482,
+    "tiltFrac1": 17.3,
+    "armTiltMean": 2.839
+   },
+   {
+    "arm": "crystal edge",
+    "dH": 0.01899,
+    "dTilt": 1.345,
+    "tiltFrac1": 50.8,
+    "armTiltMean": 2.056
+   },
+   {
+    "arm": "small cell",
+    "dH": 0.01498,
+    "dTilt": 0.797,
+    "tiltFrac1": 30.9,
+    "armTiltMean": 2.668
+   },
+   {
+    "arm": "wind scour",
+    "dH": 0.114,
+    "dTilt": 0.733,
+    "tiltFrac1": 26.5,
+    "armTiltMean": 2.733
+   },
+   {
+    "arm": "ALL inline (known-bad)",
+    "dH": 0.09846,
+    "dTilt": 2.676,
+    "tiltFrac1": 85.4,
+    "armTiltMean": 0.32
+   }
+  ]
+ }
+}
