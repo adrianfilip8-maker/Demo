@@ -21,6 +21,36 @@ this file sat committed, because **a resumed agent reads its transcript, not the
 
 ---
 
+## Everyone — READ FIRST: two hard constraints changed (§162)
+
+**Both are user decisions, not findings. `AGENTS.md` §1 has been rewritten; every ledger section
+before §162 was written under the old rules and quotes them accurately for its own date.**
+
+- **You may now download external assets while working.** The ban is lifted. Reference photography,
+  material scans, HDRIs, source imagery to derive a palette or normal map from — and **actual
+  screenshots of Sly Cooper / Mario Odyssey / Zelda for the blind side-by-side**. Outbound HTTPS goes
+  through the agent proxy; never disable TLS verification to make a fetch work.
+- **What ships still fetches nothing.** The test is operational: *pull the cable after `npm install`
+  and not one pixel changes.* No runtime fetch, no CDN, no download step in `npm run build`. An
+  external asset reaches the build **by being committed or not at all** — `derive` (extract the
+  number, write code, leave the source out) stays the default; `bake` (commit bytes under
+  `src/assets/`, let the bundler inline them) is now legitimate where derivation would be dishonest
+  work. **Reference imagery is a working input**: scratchpad only, never committed, never shipped.
+  Determinism is the reason — every A/B in this file needs two arms differing only by the thing under
+  test, and a build that fetches cannot give you that. See `AGENTS.md` §1.1.
+- **NEW `AGENTS.md` §7.4 — the blind comparison can now hold the real frame.** §7.3's last checkbox
+  has been scored *from memory* for this entire project. Fetch comparands matched to your shot's
+  staging, equal height, randomised order, look before reading filenames — and **name the losing
+  quantity, not the verdict.** "Theirs wins" is not routable; *"their terminator carries three hues
+  across 40 px and ours carries one"* is.
+- **Target frame rate is 30 fps at 1080p, and the budget numbers did NOT move.** ≤ 250 draws,
+  ≤ 1.2 M tris, ≤ 350 MB are unchanged, because they are the denominator of every budget figure in
+  this ledger and in `scenebudget.mjs` — moving them silently rewrites what past measurements meant
+  (§144's hazard). **30 fps is the acceptance bar for frame time; a lower target buys headroom
+  against fixed limits.** Do not read it as licence for double the geometry. See `AGENTS.md` §1.2.
+- **AUDIO only:** `src/audio/Audio.js:10` cites §1 for a rule that has changed. What it says about its
+  own behaviour is still right; the citation is yours to fix.
+
 ## Everyone — hazards that have each cost real work
 
 - **`tools/launch.sh` is the launch recipe.** §14's `setsid nohup … &` is **struck** (§131): it
