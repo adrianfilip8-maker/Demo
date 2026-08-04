@@ -13,7 +13,7 @@ without embarrassment — while remaining unmistakably **Sly Cooper**: comic-boo
 inked silhouettes, saturated complementary palettes, exaggerated cartoon anatomy, and a world built
 entirely out of traversal affordances.
 
-Runs in a browser, keyboard + mouse, 60 fps at 1080p on a mid-range GPU.
+Runs in a browser, keyboard + mouse, **30 fps at 1080p on a mid-range GPU**.
 
 **The bar:** a hostile art director compares a screenshot of this game, blind, against a screenshot of
 Mario Odyssey or a Sly Cooper HD remaster, and picks ours. Anything less is not done.
@@ -24,12 +24,66 @@ Mario Odyssey or a Sly Cooper HD remaster, and picks ours. Anything less is not 
 
 | Constraint | Rule |
 |---|---|
-| **No external asset downloads** | The network is not guaranteed. **Every texture, mesh, animation, and sound is generated procedurally in code.** No `.glb`, no `.png` fetches, no CDNs. This is a feature — it makes the repo self-contained and infinitely tweakable. |
+| **The shipped build is self-contained** | Downloading reference and source assets **during development is allowed** (§1.1). What ships must not: **the final build performs no network fetch of its own** — no CDN, no runtime `.glb`/`.png`/audio fetch, no build-time download. Anything external you use must be **baked in before the build**, either converted to code or committed as bytes. |
 | **Three.js only** | `three` + `three/examples/jsm/*`. No physics engines, no game frameworks. Physics is hand-rolled (see §6). |
 | **Module ownership** | You edit **only the files assigned to you** (§3). Need a change elsewhere? Extend the shared interface, don't reach in. |
 | **No `import` of another agent's internals** | Talk through the interfaces in §4 only. |
-| **60 fps budget** | ≤ 250 draw calls, ≤ 1.2M triangles visible, ≤ 350 MB texture memory. Instance everything repeated. |
+| **30 fps budget** | ≤ 250 draw calls, ≤ 1.2M triangles visible, ≤ 350 MB texture memory. Instance everything repeated. **The limits are unchanged by the 30 fps target** — see §1.2. |
 | **Deterministic** | All randomness goes through `rng(seed)` from `src/core/Rand.js`. The same seed must always build the same level — the screenshot critic depends on it. |
+
+### 1.1 External assets: allowed while creating, never at runtime
+
+The old rule was *"every texture, mesh, animation and sound is generated procedurally in code — no
+`.glb`, no `.png` fetches, no CDNs."* **The prohibition on downloading is lifted. The requirement
+that the shipped build stand alone is not.** Those were always two different things, and conflating
+them cost us reference material we were entitled to use.
+
+**You may download during development.** Reference photography, real-world material scans, source
+imagery to derive a palette or a normal map from, HDRIs to sample a sky gradient out of, and — this
+is the one that matters most — **actual screenshots of Sly Cooper, Mario Odyssey and Zelda for the
+blind side-by-side critic (§7.4)**. Outbound HTTPS goes through the configured agent proxy; never
+disable TLS verification to make a fetch work.
+
+Three rules govern what happens next, and they are what "self-contained" now means:
+
+1. **Nothing is fetched by the build or by the game.** No `fetch`/`XHR`/`<img src=http…>` at runtime,
+   no CDN `<script>`/`<link>`, no download step in `npm run build`. If pulling the network cable
+   after `npm install` changes a single pixel, the rule is broken.
+2. **An external asset reaches the build by being committed, or not at all.** Two legitimate routes:
+   *derive* — read the asset offline, extract what you need (a palette, a tiling frequency, a
+   measured albedo, a curve) and write **code** that reproduces it, keeping the source out of the
+   repo; or *bake* — commit the bytes under `src/assets/` and import them so the bundler inlines
+   them. Deriving stays the default, because a number in a file is tweakable and a PNG is not.
+   Baking is now legitimate where derivation would be dishonest work — a real 4K photograph is not
+   reproducible in fifty lines of noise, and pretending otherwise has been a slow tax on this repo.
+3. **Reference imagery is a working input, not a build input.** Screenshots of other studios' games
+   are for looking at. They are downloaded to the scratchpad, they are **never committed and never
+   shipped**, and nothing derived from them may reproduce protected content — you are matching
+   *lighting, palette, contrast, silhouette weight and composition*, not copying art. The same
+   licensing test applies to anything you do commit: if it cannot ship, it does not go in `src/`.
+
+Determinism (§1) is unchanged and is the reason for rule 1: a build that fetches is a build that
+cannot be reproduced, and every A/B in `KNOWN_ISSUES.md` rests on two arms differing only by the
+thing under test. A committed asset has pinned bytes and is fine; a fetched one does not.
+
+Procedural generation remains the house style and the bulk of the renderer — `src/textures/**` is
+not being retired, and "download it instead" is not a licence to stop authoring. It is a licence to
+stop *faking* the things code cannot honestly produce.
+
+### 1.2 Why the 30 fps target does not raise the budget numbers
+
+The frame-rate target is now **30 fps**, and the draw-call / triangle / texture-memory limits above
+are **deliberately left where they were**. Halving the target does not double the geometry allowance:
+
+- Those limits are the denominator of every budget figure in `KNOWN_ISSUES.md` and in
+  `tools/scenebudget.mjs`. Moving them silently rewrites what past measurements meant — the §144
+  hazard exactly, where changing an estimator retroactively alters numbers nobody re-measured.
+- The mid-range GPU in §0 is a floor, not a description of the capture box. Headroom against a fixed
+  limit is what a lower target buys.
+
+So read the change this way: **30 fps is the acceptance bar for frame time; the resource limits are
+unchanged.** If the limits should move too, that is a separate, explicit decision with a correction
+written at the declaration site — not a side effect of this one.
 
 ---
 
@@ -457,6 +511,28 @@ Esc            release pointer lock
 
 **Overall**
 - [ ] Placed blind next to Mario Odyssey / Sly 4, an art director picks the other one
+
+### 7.4 The blind side-by-side, now with the reference actually on screen
+
+The last checkbox in §7.3 is the whole bar, and until now it was scored **from memory** — the critic
+recalled what Mario Odyssey looks like and compared our PNG against that recollection. Memory
+flatters us. §1.1 lifts the download ban, so the comparison can be run the way it was always
+specified:
+
+1. **Fetch the comparands to the scratchpad.** Real frames from Sly 2/3/4, Mario Odyssey, Bowser's
+   Fury, BotW/TotK — chosen to match *our* shot's staging (a hypostyle interior wants an interior
+   comparand, not a vista), at a resolution close to ours.
+2. **Downscale both to the same height and put them side by side**, ours in a randomised left/right
+   position, and look at the pair before reading any filename.
+3. **Name the losing quantity, not the verdict.** "Theirs picks ours" is not actionable. *"Their
+   shadow terminator carries three hues across 40 px and ours carries one"* is. The output of a
+   comparison is a **measurable difference with an owner**, routed like any other finding.
+4. **The reference frames stay in the scratchpad.** Never committed, never in `src/`, never shipped
+   (§1.1 rule 3). What lands in the repo is the measurement and the fix.
+
+A comparison that produces only a score has not been run. The point of holding the real frame beside
+ours is that the gap stops being arguable — and gaps that survive that test are the only ones worth
+a capture window.
 
 ---
 

@@ -13998,3 +13998,92 @@ the time it is read; a pointer survives.
 the next waiter clears them. No cleanup, and specifically **no hand-created file in that directory**:
 that is exactly the §156.1 move, inferring a filename from what happened to be on disk. The source
 answers it; the directory listing does not.
+
+## §162 — the mandate changed: downloads allowed while creating, 30 fps target, and a rollback survived mid-edit
+
+Two instructions from the user, both changes to `AGENTS.md` §1's hard constraints. Recorded here
+because **every ledger section before this one was written under the old rule**, and a reader who
+finds "no external asset downloads" quoted in §§1–161 needs to know it was true when written.
+
+### 162.1 What the asset rule now says, and what it does not
+
+Old rule: *"No external asset downloads. Every texture, mesh, animation and sound is generated
+procedurally in code. No `.glb`, no `.png` fetches, no CDNs."*
+
+New rule, at `AGENTS.md` §1 and §1.1: **downloading during development is allowed; the shipped build
+still fetches nothing.** Those were always two claims welded into one row, and welding them cost us
+reference material we were entitled to use.
+
+Three clauses carry it:
+
+1. **Nothing is fetched by the build or by the game.** No runtime `fetch`/CDN, no download step in
+   `npm run build`. The operational test: *pull the cable after `npm install` and not one pixel
+   changes.*
+2. **An external asset reaches the build by being committed, or not at all.** *Derive* — read it
+   offline, extract the palette / frequency / curve, write code — stays the default, because a
+   number is tweakable and a PNG is not. *Bake* — commit the bytes under `src/assets/` and let the
+   bundler inline them — is now legitimate where derivation would be dishonest work. A real 4K
+   photograph is not reproducible in fifty lines of noise and pretending otherwise was a slow tax.
+3. **Reference imagery is a working input, not a build input.** Other studios' screenshots go to the
+   scratchpad, are never committed, never shipped, and nothing derived from them reproduces
+   protected content. We match lighting, palette, contrast, silhouette weight and composition.
+
+**Determinism is the reason for clause 1, not tradition.** Every A/B in this ledger rests on two arms
+differing only by the thing under test; a build that fetches cannot supply that. A committed asset
+has pinned bytes and is fine. This is why the rule survives in the form it does rather than being
+dropped outright.
+
+The largest immediate consequence is `AGENTS.md` §7.4, new: **the blind side-by-side can now hold the
+actual reference frame.** §7.3's final checkbox — *"placed blind next to Mario Odyssey / Sly 4, an
+art director picks the other one"* — has been scored **from memory** for this entire project, and
+memory flatters us. A comparison now fetches real comparands matched to the shot's staging, puts them
+beside ours at equal height in randomised order, and must **name the losing quantity, not the
+verdict**: *"their terminator carries three hues across 40 px and ours carries one"* is routable;
+"theirs wins" is not.
+
+Not changed: procedural generation remains the house style, `src/textures/**` is not retired, and
+"download it instead" is not a licence to stop authoring.
+
+### 162.2 30 fps is the new target, and the budget numbers deliberately did not move
+
+`AGENTS.md` §0 now reads 30 fps at 1080p. The budget row is renamed to match and its limits are
+**unchanged**: ≤ 250 draw calls, ≤ 1.2 M triangles, ≤ 350 MB texture memory.
+
+Halving the target does not double the geometry allowance, for a reason this ledger has paid for
+twice. Those limits are the **denominator of every budget figure** in here and in
+`tools/scenebudget.mjs` — the deduped 71 draws / 0.572 M tris reads as 28 % / 48 % *of them*. Moving
+them silently rewrites what past measurements meant without touching the text that quotes them,
+which is §144's hazard exactly, and the counted-vs-scored column has already been misquoted five
+times (§130.3, §146.2, §149.4, §153.1, §155.6) without anyone helping it along.
+
+So: **30 fps is the acceptance bar for frame time; the resource limits are unchanged, and a lower
+target buys headroom against them.** If the limits should move too, that is a separate explicit
+decision with a correction at the declaration site — not a side effect of this one. Written into
+`AGENTS.md` §1.2 so the next reader does not have to infer it.
+
+### 162.3 One stale citation, left for its owner
+
+`src/audio/Audio.js:10` says *"Everything is synthesised (AGENTS.md §1): no files, no CDN, no
+decodeAudioData."* The description of what that file does is still exactly right; the **citation** now
+points at a rule that says something else. AUDIO's file, AUDIO's edit — flagged rather than reached
+into, per §3.
+
+### 162.4 The container rolled back a third time, mid-edit, and the recovery is different when the tree is dirty
+
+It happened **between** the two `AGENTS.md` edits and the attempt to update `DIGEST.md`: HEAD back at
+`77e1eab`, ledger at 1119 lines, `progress/records/DIGEST.md` gone. §139 and §161 both recovered from
+a *clean* tree, where `merge --ff-only` is the whole recipe. Here the uncommitted mandate edits were
+the only copy of work the remote had never seen, and `--ff-only` refuses to run over them.
+
+```
+git stash push -m mandate-revision AGENTS.md README.md
+git fetch origin <branch> && git merge --ff-only origin/<branch>
+git stash pop                     # three-way merge, no conflict
+```
+
+Verified after popping that **both** sides survived — the new §1.1/§1.2/§7.4 text *and* the seven
+lines of head:body-ratio definition that had landed in `AGENTS.md` after `77e1eab`. A stash pop is a
+merge, not a restore, and on a rolled-back tree it is merging against an older base than the one the
+stash was taken from; checking both directions is not optional.
+
+The rule that keeps working: **the remote is the only durable store.** Push, then continue.

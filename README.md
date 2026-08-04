@@ -3,11 +3,16 @@
 A stealth-platformer in **Three.js**, starring Sly Cooper, set in a Temple of Ra complex on the
 edge of the Nile. Keyboard and mouse, runs in the browser.
 
-Every asset in this repository is **generated in code**. There are no downloaded meshes, no
-downloaded textures, no downloaded animation clips, no audio files. The sandstone, the carved
-hieroglyphs, the gold leaf, Sly's fur, the dunes, the palm fronds, the character rig and every
-animation clip are all built procedurally at load time. That constraint keeps the repo
-self-contained and makes every visual decision a tunable number rather than an opaque binary.
+**The build is self-contained: it fetches nothing.** No CDN, no runtime asset download, no network
+step in `npm run build` — pull the cable after `npm install` and every pixel is identical.
+
+Almost all of it is **generated in code**: the sandstone, the carved hieroglyphs, the gold leaf,
+Sly's fur, the dunes, the palm fronds, the character rig and every animation clip are built
+procedurally at load time, which is what makes each visual decision a tunable number rather than an
+opaque binary. That remains the house style. Where an external source is genuinely better than code
+can honestly fake, it is **baked in before the build** — committed under `src/assets/` and bundled,
+never fetched (see `AGENTS.md` §1.1). Reference imagery used while developing stays out of the repo
+entirely.
 
 ```bash
 npm install
