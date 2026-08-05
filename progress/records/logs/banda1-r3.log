@@ -1,0 +1,2 @@
+[13:23:31 +   0s] chunk A: all frames present — skipping (idempotent resume)
+[13:23:32 +   1s] chunk B1: srcTree 820ace395b9664ae — booting (own lock hold)
