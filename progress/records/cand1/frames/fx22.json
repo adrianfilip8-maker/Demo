@@ -2,7 +2,8 @@
  "warnings": [
   "textures: prewarm took 22.6s at size 1024",
   "textures: prewarm took 20.2s at size 1024",
-  "textures: prewarm took 19.9s at size 1024"
+  "textures: prewarm took 19.9s at size 1024",
+  "textures: prewarm took 20.8s at size 1024"
  ],
  "jobs": {
   "temple.base": {
@@ -889,6 +890,170 @@
       "bl": 23.12,
       "rb": 0.832,
       "wl": 1,
+      "wr": 0,
+      "factor": 1,
+      "fires": false
+     }
+    },
+    "backdropRT": {
+     "w": 320,
+     "h": 180,
+     "type": 1009,
+     "colorSpace": "",
+     "bound": true
+    },
+    "sandHigh": {
+     "live": 900,
+     "vis": true
+    }
+   }
+  },
+  "interior.base": {
+   "applied": "gate=OFF",
+   "probe": {
+    "time": 0.5602,
+    "frame": 26,
+    "gate": {
+     "on": 0,
+     "lumaMax": 60,
+     "rbMax": 0.5,
+     "lumaSoft": 8,
+     "rbSoft": 0.08,
+     "min": 0
+    },
+    "centres": {
+     "disc": {
+      "px": [
+       602,
+       133
+      ],
+      "rtpx": [
+       150,
+       146
+      ],
+      "raw": [
+       11,
+       15,
+       15
+      ],
+      "bmax": 0.0588,
+      "enc": [
+       61.1,
+       70.3,
+       70.3
+      ],
+      "bl": 68.38,
+      "rb": 0.869,
+      "wl": 0,
+      "wr": 0,
+      "factor": 1,
+      "fires": false
+     },
+     "nonartefact": {
+      "px": [
+       520,
+       581
+      ],
+      "rtpx": [
+       130,
+       34
+      ],
+      "raw": [
+       13,
+       15,
+       17
+      ],
+      "bmax": 0.0667,
+      "enc": [
+       65.9,
+       70.3,
+       74.5
+      ],
+      "bl": 69.7,
+      "rb": 0.885,
+      "wl": 0,
+      "wr": 0,
+      "factor": 1,
+      "fires": false
+     }
+    },
+    "backdropRT": {
+     "w": 320,
+     "h": 180,
+     "type": 1009,
+     "colorSpace": "",
+     "bound": true
+    },
+    "sandHigh": {
+     "live": 900,
+     "vis": true
+    }
+   }
+  },
+  "interior.gated": {
+   "applied": "gate=ON",
+   "probe": {
+    "time": 0.5602,
+    "frame": 30,
+    "gate": {
+     "on": 1,
+     "lumaMax": 60,
+     "rbMax": 0.5,
+     "lumaSoft": 8,
+     "rbSoft": 0.08,
+     "min": 0
+    },
+    "centres": {
+     "disc": {
+      "px": [
+       602,
+       133
+      ],
+      "rtpx": [
+       150,
+       146
+      ],
+      "raw": [
+       11,
+       15,
+       15
+      ],
+      "bmax": 0.0588,
+      "enc": [
+       61.1,
+       70.3,
+       70.3
+      ],
+      "bl": 68.38,
+      "rb": 0.869,
+      "wl": 0,
+      "wr": 0,
+      "factor": 1,
+      "fires": false
+     },
+     "nonartefact": {
+      "px": [
+       520,
+       581
+      ],
+      "rtpx": [
+       130,
+       34
+      ],
+      "raw": [
+       13,
+       15,
+       17
+      ],
+      "bmax": 0.0667,
+      "enc": [
+       65.9,
+       70.3,
+       74.5
+      ],
+      "bl": 69.7,
+      "rb": 0.885,
+      "wl": 0,
       "wr": 0,
       "factor": 1,
       "fires": false

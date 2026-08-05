@@ -1,0 +1,24 @@
+renderer: ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)
+   ! textures: prewarm took 19.9s at size 1024
+
+--- courtyard [base]  424s -> /home/user/Demo/shots/fx22/courtyard.base.png
+    gate=OFF  sandHigh={"live":900,"vis":true}  rt={"w":320,"h":180,"type":1009,"colorSpace":"","bound":true}
+    centre disc: raw [8,10,11] enc [52.9,58.5,61.1] bl=57.49 rb=0.865 wl=0.2329 wr=0 factor=1 fires=false
+    centre nonartefact: raw [9,11,13] enc [55.8,61.1,65.9] bl=60.31 rb=0.846 wl=0 wr=0 factor=1 fires=false
+
+--- courtyard [gated]  55s -> /home/user/Demo/shots/fx22/courtyard.gated.png
+    gate=ON  sandHigh={"live":900,"vis":true}  rt={"w":320,"h":180,"type":1009,"colorSpace":"","bound":true}
+    centre disc: raw [8,10,11] enc [52.9,58.5,61.1] bl=57.49 rb=0.865 wl=0.2329 wr=0 factor=1 fires=false
+    centre nonartefact: raw [9,11,13] enc [55.8,61.1,65.9] bl=60.31 rb=0.846 wl=0 wr=0 factor=1 fires=false
+
+--- night [base]  311s -> /home/user/Demo/shots/fx22/night.base.png
+    gate=OFF  sandHigh={"live":900,"vis":true}  rt={"w":320,"h":180,"type":1009,"colorSpace":"","bound":true}
+    centre disc: raw [13,22,46] enc [65.9,83.7,117.1] bl=82.35 rb=0.563 wl=0 wr=0 factor=1 fires=false
+    centre nonartefact: raw [2,1,3] enc [28.2,20.5,33.8] bl=23.12 rb=0.832 wl=1 wr=0 factor=1 fires=false
+
+--- night [gated]  48s -> /home/user/Demo/shots/fx22/night.gated.png
+    gate=ON  sandHigh={"live":900,"vis":true}  rt={"w":320,"h":180,"type":1009,"colorSpace":"","bound":true}
+    centre disc: raw [13,22,46] enc [65.9,83.7,117.1] bl=82.35 rb=0.563 wl=0 wr=0 factor=1 fires=false
+    centre nonartefact: raw [2,1,3] enc [28.2,20.5,33.8] bl=23.12 rb=0.832 wl=1 wr=0 factor=1 fires=false
+
+fx22 DONE — wrote /home/user/Demo/shots/fx22/fx22.json (11 jobs total, this chunk: courtyard+night)
