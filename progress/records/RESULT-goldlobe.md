@@ -222,7 +222,82 @@ was **area**: it modeled the lobe's angular width and never modeled how much of 
 ~zero, which is the same flat-facet mechanism the seal's own §1 diagnosis named for the old
 `ndh` term (and R-G1 half-named for this one, in its fail-high direction).
 
-## 5. Verdict
+## 5. VERDICT
 
-Pending. Ship decisions are the coordinator's; on any FAIL the registered move is
-`TUNE.goldGlint` back to 0.0 (one constant — the scaffold itself stays, inert).
+```
+GATE G-0a    PASS   12.94 % eroded-2 (raw 14.00 %), Δ = 0.0 % vs registered 12.94 %
+GATE G-0base PASS   base tail 2.08 % ∈ [1.2, 3.0] %; base lobe 5 px ≤ 20 (gold1 reproduced)
+GATE G-0c    PASS   registration confirmed on the exact base capture, crops saved
+OCCLUDER     PASS   re-derived; positive control 170 px found lifted / 5 px applied
+P-F2 null    PASS   null vs base 0 px at ΣRGB ≥ 4 (bit-identical), both shots — scaffold inert
+P-F4 restore PASS   same comparison (null arm IS the restored 0/20 state; readback 0/20)
+P-F3         does not fire (all G-gates pass)
+P-F5         does not fire (B4 = 0.32 ≤ 0.65)
+P-F6         does not fire as worded (KB-chrome did NOT pass — but see the anomaly below)
+
+CAND (2.6/20):
+B1'   FAIL   5 px vs [30, 400]   (aim 84–146; identical component to base)
+B2'   FAIL   2.17 % vs [3, 20] % (combat re-anchor 42.12 % > 20 % — separator holds)
+B3'   PASS   1.35 ∈ [0.85, 1.8]
+B4    PASS   0.32 ≤ 0.65 (contrast 8.4 — the winning half held again)
+B5    PASS   0 px ∈ [0, 40]
+B-p99 FAIL   186.5 vs [222, 252] — "p99 < 222 ⇒ the term under-delivers ⇒ REVERT"
+CANE  PASS   0.000 % ≥ L250 (≤ 2 %); cane visually unchanged at 4x, named in §4-cane
+A-lo  PASS   dose ordering base < A-lo < cand on tail (2.08 < 2.13 < 2.17) and p99
+```
+
+**VERDICT: P-F1 REVERT — three bands out on the cand arm (B1', B2', B-p99), each a
+registered revert on its own.** Per the seal: *"REVERT (`TUNE.goldGlint` back to 0.0 — one
+constant; the scaffold stays, inert, for the next candidate's prereg)"* and B-p99's own
+clause *"a bigger gain is a NEW prereg, not a live retune."*
+
+**Executing the revert requires no edit: the shipped tree already carries
+`TUNE.goldGlint 0.0`** — the arms were runtime pokes, the scaffold landed inert (255df09)
+and P-F2 proves it inert to the pixel. There is nothing to un-ship. The ship decision on
+2.6 was the coordinator's and the registered answer is **NO SHIP**.
+
+### The KB-chrome anomaly, recorded for the next seal (not adjudicated here)
+
+The chrome arm was registered to prove the metric sees a facet-wide over-lobe "at a dose
+where it is certain" — and the frame never produced one (7 px / 2.50 %, a **low** failure,
+an outcome the seal did not enumerate). Strictly worded, P-F6 fires only on KB *passing*,
+so this scoring stands — and nothing in it leans on the chrome arm, because the cand
+verdict is REVERT on three independent bands; no pass is being claimed that the chrome arm
+was guarding. But the finding is real and binding on any successor: **the metric's
+over-lobe separation power remains unproven in-frame**, and the port's dose model
+over-predicts delivered area on this ROI at every exponent (§4b). A next KB arm must be
+anchored to a measured in-frame over-lobe, not a ported one.
+
+### What the frames bought (routing evidence for the next candidate's prereg)
+
+1. **The term is live, dose-ordered, correctly scoped, and inert at 0** — P-F2 bit-exact,
+   A-lo strictly between base and cand, and the glint respects the slyMetal/sh/ao gating
+   everywhere it lands (B3'/B4/B5 all pass; no body wash, no shadow leak, no bloom halo).
+2. **The term produces the registered target value on curved gold**: hook-ring abs L
+   244.3 inside the 239–244 reference aim, connected and sun-aligned
+   (`crops/ring-4x.png`). The mechanism class is not refuted — it under-delivers only on
+   the flat-faceted `hieroglyph_gilded` population the bands were registered on.
+3. **The blocker is geometry×ROI, not gain**: 99 % of the ROI moved < 4.3 L while the ring
+   moved +94, and even KB-chrome's 29.5° cone could not push a flat facet near max. A
+   bigger gain would brighten the wash (B2' direction) long before it forms a compact lobe
+   (B1' direction) — the two bands would fail in opposite directions. The lobe the
+   references carry lives on curvature the ROI's beams do not have: the next seal must
+   either bring curvature into the lit gilded population (GEOMETRY: bead/roll scale, or
+   normal detail with in-cone variance), or register the lobe where the curvature is
+   (`gold_leaf` ring/disc — currently outside the ROI by mask construction, §3's census),
+   or both. That is a design decision for the coordinator, not this scoring.
+
+**This RESULT makes no src edit. The scaffold stays as committed (inert); `TUNE.goldGlint`
+remains 0.0.**
+
+---
+
+Files of this scoring (coordinator sweep list — no git run by this task):
+`progress/records/RESULT-goldlobe.md` (this, modified),
+`progress/records/goldlobe1/goldgap-jobs-goldlobe1.json` (new),
+`progress/records/goldlobe1/RESULT-goldlobe-raw.json` (new),
+`progress/records/goldlobe1/reg-tinted-overview.png`, `goldlobe1/reg-crop-1to1.png` (new),
+`progress/records/goldlobe1/crops/` (new: `ring-1to1.png`, `ring-4x.png`,
+`radisc-1to1.png`, `radisc-4x.png`, `arris-1to1.png`, `arris-4x.png`,
+`cane-combat-1to1.png`, `cane-hook-4x.png`). Mask bins scratchpad-only (regenerable from
+the tree by `matmask.mjs`; shares recorded in §0 and the raw JSON).
