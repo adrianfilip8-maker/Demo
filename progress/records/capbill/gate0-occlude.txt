@@ -1,0 +1,56 @@
+# GATE 0 raw outputs — occlude.mjs, 2026-08-05, shadow tree at srcTree 3fea650a4d645857 + registered token edit only
+# base runs are the REAL tree (no edit, token off); shadow-off runs confirmed identical to real-tree base.
+
+== REAL TREE base — sly-closeup
+shot sly-closeup — ray from each eye toward the camera (model space)
+  eyeL centre : CLEAR to camera
+  eyeL white+x : CLEAR to camera
+  eyeL white+y : ink@0.005m[pupilL]
+  eyeR centre : CLEAR to camera
+  eyeR white+x : CLEAR to camera
+  eyeR white+y : ink@0.006m[pupilR]
+
+== REAL TREE base — combat
+shot combat — ray from each eye toward the camera (model space)
+  eyeL centre : CLEAR to camera
+  eyeL white+x : CLEAR to camera
+  eyeL white+y : ink@0.003m[head] -> clothDark@0.022m[capBrim]
+  eyeR centre : clothDark@0.177m[capBrim]
+  eyeR white+x : clothDark@0.181m[capBrim]
+  eyeR white+y : ink@0.004m[pupilR] -> clothDark@0.022m[head] -> cloth@0.085m[capBrim] -> clothDark@0.160m[capBrim]
+
+== SHADOW token OFF — sly-closeup (shadow control)
+shot sly-closeup — ray from each eye toward the camera (model space)
+  eyeL centre : CLEAR to camera
+  eyeL white+x : CLEAR to camera
+  eyeL white+y : ink@0.005m[pupilL]
+  eyeR centre : CLEAR to camera
+  eyeR white+x : CLEAR to camera
+  eyeR white+y : ink@0.006m[pupilR]
+
+== SHADOW token ON capyaw10 — sly-closeup (GATE 0 binding site)
+shot sly-closeup — ray from each eye toward the camera (model space)
+  eyeL centre : CLEAR to camera
+  eyeL white+x : CLEAR to camera
+  eyeL white+y : ink@0.005m[pupilL]
+  eyeR centre : CLEAR to camera
+  eyeR white+x : CLEAR to camera
+  eyeR white+y : ink@0.006m[pupilR]
+
+== SHADOW token OFF — combat (shadow control)
+shot combat — ray from each eye toward the camera (model space)
+  eyeL centre : CLEAR to camera
+  eyeL white+x : CLEAR to camera
+  eyeL white+y : ink@0.003m[head] -> clothDark@0.022m[capBrim]
+  eyeR centre : clothDark@0.177m[capBrim]
+  eyeR white+x : clothDark@0.181m[capBrim]
+  eyeR white+y : ink@0.004m[pupilR] -> clothDark@0.022m[head] -> cloth@0.085m[capBrim] -> clothDark@0.160m[capBrim]
+
+== SHADOW token ON capyaw10 — combat
+shot combat — ray from each eye toward the camera (model space)
+  eyeL centre : CLEAR to camera
+  eyeL white+x : CLEAR to camera
+  eyeL white+y : ink@0.003m[head] -> clothDark@0.009m[pupilL]
+  eyeR centre : clothDark@0.184m[capBrim]
+  eyeR white+x : clothDark@0.166m[capBrim]
+  eyeR white+y : ink@0.004m[pupilR] -> cloth@0.029m[head] -> clothDark@0.042m[head] -> cloth@0.090m[head] -> clothDark@0.156m[capBrim]
