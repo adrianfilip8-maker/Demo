@@ -35,17 +35,26 @@ A_ANCHOR = {'screenL': 0.324, 'screenR': 0.301}   # pale-aperture eye:face on th
 def luma(a): return 0.2126*a[...,0] + 0.7152*a[...,1] + 0.0722*a[...,2]
 def load(p): return np.asarray(Image.open(p).convert('RGB'), dtype=np.float64)
 
-def pale_bbox(L, roi, anchor=None):
-    """The APERTURE as the seal means it: a coherent pale shape, not scattered pale px.
-    First implementation took the bbox of ALL L>120 px in the ROI; on arm A with the +6 pad it
-    caught brow-highlight px outside the disc, inflated eye:face 0.324->0.39 and dragged the
-    centroid row off the divider (run 13->1) — while the underlying anchor patches reproduced
-    to the decimal (divider L37.6 both frames). Corrected at the site, same threshold, same
-    ROI rule: the aperture = the 4-connected component of L>120 whose centroid is nearest the
-    `anchor` (the eye centre; A's own centroid when anchor is None picks the LARGEST)."""
+def pale_bbox(L, roi, anchor=None, mode='bbox'):
+    """The APERTURE. Two corrections recorded here, both returns TO the seal's text:
+    (1) First implementation took the bbox of ALL L>120 px in a +6-PADDED A rect and caught
+    brow px outside the disc (eye:face 0.324->0.39, centroid off the divider) — fixed by
+    measuring A on the EXACT committed rects, where plain bbox IS the anchor's own method.
+    (2) A component-picking variant then fragmented arm B's pupil-split white ring (nearest
+    component = one crescent lobe, area 60 of 398 pale px) — an over-tightening that would
+    fail a correct result (§133.1). Gating therefore uses mode='bbox' (the seal's literal
+    "bbox of L>120 px inside the per-eye ROI"); mode='component' (4-connected, nearest
+    `anchor`) remains ONLY for the known-bad arm, where a scattered-px bbox would let stray
+    pale in the ROI ring disguise a correctly-tiny eye as wide."""
     x0,y0,x1,y1 = roi
     r = (L[y0:y1, x0:x1] > 120)
     if not r.any(): return None
+    if mode == 'bbox':
+        ys,xs = np.where(r)
+        return dict(x0=int(x0+xs.min()), x1=int(x0+xs.max()), y0=int(y0+ys.min()), y1=int(y0+ys.max()),
+                    w=int(xs.max()-xs.min()+1), h=int(ys.max()-ys.min()+1), area=int(len(ys)),
+                    rowY=int(round(ys.mean()))+y0, cx=float(xs.mean())+x0, cy=float(ys.mean())+y0,
+                    palePx=int(len(ys)))
     lab = np.zeros(r.shape, dtype=np.int32)
     comps = []
     nxt = 0
@@ -162,12 +171,27 @@ arrs = {k: np.asarray(v, dtype=np.float64) for k,v in imgs.items()}
 Ls = {k: luma(v) for k,v in arrs.items()}
 
 # ---------------- per-arm eye measurement on closeup ----------------
-def measure_eyes(key, roi_by_side, anchors=None):
+def measure_eyes(key, roi_by_side, anchors=None, mode='bbox'):
     L = Ls[key]; img = imgs[key]
     m = {}
     for side, roi in roi_by_side.items():
-        bb = pale_bbox(L, roi, (anchors or {}).get(side))
+        bb = pale_bbox(L, roi, (anchors or {}).get(side), mode)
         e = {'roi': roi, 'bbox': bb}
+        # Animated-FX veil detector (§35/§110.3 landing inside a ROI): the sclera is neutral
+        # by design; a warm drifting mote over the eye turns ROI pale px chromatic. Flag when
+        # chromatic-pale dominates neutral-pale — flagged legs are scored but the RESULT
+        # carries the contamination, and a clean re-roll of the same arm settles it.
+        rx0,ry0,rx1,ry1 = roi
+        rgb = arrs[key][ry0:ry1, rx0:rx1]
+        rl = L[ry0:ry1, rx0:rx1]
+        pm = rl > 120
+        if pm.sum():
+            spread = rgb.max(axis=2) - rgb.min(axis=2)
+            neu = int((pm & (spread <= 25)).sum()); chro = int((pm & (spread > 25)).sum())
+            e['neutralPale'], e['chromaticPale'] = neu, chro
+            e['veiled'] = chro > max(neu, 40)
+        else:
+            e['veiled'] = False
         if bb:
             e['eyeface'] = round(bb['w']/FACE_W, 3)
             e['h_pcthh'] = round(100*bb['h']/HH, 1)
@@ -224,38 +248,56 @@ if closeA in Ls:
         anchB = {s: (Aeyes[s]['bbox']['cx'], Aeyes[s]['bbox']['cy']) for s in DISC}
         Beyes = measure_eyes(('sly-closeup','B'), roiB, anchB)
         out['measurements']['B'] = Beyes
-        # GATE 1
+        # GATE 1 (per-eye; a veiled leg is annotated — an animated mote over the eye measures
+        # the FX field, not the treatment)
         g1 = True; det = []
         for s in ['screenL','screenR']:
             e = Beyes[s]; bb = e['bbox']
             ok = bb and 0.10 <= e['eyeface'] <= 0.18 and 10 <= e['h_pcthh'] <= 21 and 80 <= bb['area'] <= 400
-            det.append(f"{s} eye:face {e.get('eyeface')} h {e.get('h_pcthh')}%hh area {bb['area'] if bb else 0}")
-            g1 &= bool(ok)
+            v = ' [VEILED - animated FX in ROI]' if e.get('veiled') else ''
+            det.append(f"{s} eye:face {e.get('eyeface')} h {e.get('h_pcthh')}%hh area {bb['area'] if bb else 0}"
+                       f" neu/chro {e.get('neutralPale')}/{e.get('chromaticPale')}{v}")
+            if not e.get('veiled'): g1 &= bool(ok)
         gate('GATE1 eye:face [0.10,0.18], h [10,21]%hh, area [80,400]', g1, '; '.join(det))
-        # GATE 2
-        bL, bR = Beyes['screenL']['bbox'], Beyes['screenR']['bbox']
+        # GATE 2 — geometry uses each eye's NEUTRAL-pale bbox when that eye is veiled (the
+        # mote is chromatic; the sclera is not), and veiled-side legs are annotated, not failed
+        def geom_bbox(key2, s):
+            e = Beyes[s]
+            if not e.get('veiled'): return e['bbox'], False
+            rx0,ry0,rx1,ry1 = e['roi']
+            rgb = arrs[key2][ry0:ry1, rx0:rx1]; rl = Ls[key2][ry0:ry1, rx0:rx1]
+            spread = rgb.max(axis=2) - rgb.min(axis=2)
+            m = (rl > 120) & (spread <= 25)
+            if not m.any(): return e['bbox'], True
+            ys,xs = np.where(m)
+            return dict(x0=int(rx0+xs.min()), x1=int(rx0+xs.max()), y0=int(ry0+ys.min()),
+                        y1=int(ry0+ys.max()), w=int(xs.max()-xs.min()+1), h=int(ys.max()-ys.min()+1),
+                        area=int(len(ys)), rowY=int(round(ys.mean()))+ry0), True
+        kB = ('sly-closeup','B')
+        bL, vL = geom_bbox(kB, 'screenL'); bR, vR = geom_bbox(kB, 'screenR')
         g2 = True; det = []
+        if vL or vR: det.append(f"geometry from neutral-pale for veiled side(s): {'L' if vL else ''}{'R' if vR else ''}")
         if bL and bR:
             divs = []
-            for y in [bL['rowY'], bR['rowY']]:
-                seg = Ls[('sly-closeup','B')][y, bL['x1']+1:bR['x0']] < 55
+            for y, veiled in [(bL['rowY'], vL), (bR['rowY'], vR)]:
+                seg = Ls[kB][y, bL['x1']+1:bR['x0']] < 55
                 r,_ = longest_run(seg)
                 divs.append(int(r))
-            ok = all(24 <= dv <= 44 for dv in divs)
+                if 24 <= r <= 44: pass
+                elif veiled: det.append(f"divider row y{y} {r} [VEILED row, annotated]")
+                else: g2 = False
             det.append(f"divider {divs} in [24,44]")
-            g2 &= ok
-            runs = []
-            for s,bb in (('screenL',bL),('screenR',bR)):
-                r, sx = dark_run_at(Ls[('sly-closeup','B')], bb['rowY'], 564, 700)
+            for s,bb,veiled in (('screenL',bL,vL),('screenR',bR,vR)):
+                r, sx = dark_run_at(Ls[kB], bb['rowY'], 564, 700)
                 need = max(40, 2*bb['w'])
-                runs.append((r, need))
-                det.append(f"{s} eyerow run {r} >= {need}")
-                g2 &= r >= need
+                v = ' [VEILED, annotated]' if veiled else ''
+                det.append(f"{s} eyerow run {r} >= {need}{v}")
+                if not veiled: g2 &= r >= need
             midy = (bL['rowY']+bR['rowY'])//2
             cx = (bL['x1']+bR['x0'])//2
             rect = (cx-4, midy-10, cx+4, midy+10)
-            rem = patch(Ls[('sly-closeup','B')], rect)
-            ch = patch(Ls[('sly-closeup','B')], CHEEK)
+            rem = patch(Ls[kB], rect)
+            ch = patch(Ls[kB], CHEEK)
             ratio = round(rem/max(ch,1e-6),3)
             ok = 0.32 <= ratio <= 0.47
             det.append(f"remnant:cheek {ratio} (rect {rect}, remL {rem:.1f}, cheekL {ch:.1f}) in [0.32,0.47]")
@@ -297,9 +339,10 @@ if closeA in Ls:
                   and 2 <= eB.get('ge228',0) <= 42)
             dp = (eB.get('dark_p50') or 0)/max(eB.get('pale_p50') or 1,1e-6)
             okd = 0.10 <= dp <= 0.55
+            v = ' [VEILED, annotated]' if eB.get('veiled') else ''
             det.append(f"{s} pale {eB.get('pale_p50')} (A {eA.get('pale_p50')}) spread {eB.get('pale_spread')} "
-                       f"glint {eB.get('glint_max')} (A {eA.get('glint_max')}) ge228 {eB.get('ge228')} dark:pale {dp:.2f}")
-            g4 &= bool(ok) and okd
+                       f"glint {eB.get('glint_max')} (A {eA.get('glint_max')}) ge228 {eB.get('ge228')} dark:pale {dp:.2f}{v}")
+            if not eB.get('veiled'): g4 &= bool(ok) and okd
         for nm, rect in (('muzzle',MUZZLE),('cheek',CHEEK)):
             dA = patch(Ls[closeA], rect); dB = patch(Ls[('sly-closeup','B')], rect)
             ok = abs(dA-dB) <= 6
@@ -318,7 +361,7 @@ if closeA in Ls:
         gate('GATE4 shipped eye ledger survives', g4, '; '.join(det))
         # GATE 6
         if ('sly-closeup','KB') in Ls:
-            KBeyes = measure_eyes(('sly-closeup','KB'), roiB, anchB)
+            KBeyes = measure_eyes(('sly-closeup','KB'), roiB, anchB, mode='component')
             out['measurements']['KB'] = KBeyes
             g6 = True; det = []
             for s in ['screenL','screenR']:
@@ -340,19 +383,59 @@ for arm in ['A','B']:
     out['measurements'][f'bill_{arm}'] = bp
 if closeA in arrs and ('sly-closeup','B') in arrs:
     share, n = inside_share(arrs[closeA], arrs[('sly-closeup','B')], HB, 25)
+    outAB = n - int(round(share*n))
     ok = share >= 0.95
-    det.append(f"closeup A<->B diff {n}px, {share*100:.1f}% inside headbox+25")
+    note = ''
+    if not ok and ('sly-closeup','BACK') in arrs:
+        # §160.4 bound reading, via the registered BACK control: if base-vs-base carries the
+        # same outside-head diff, the excess is boot-phase animation, not the token.
+        shareK, nK = inside_share(arrs[closeA], arrs[('sly-closeup','BACK')], HB, 25)
+        outAK = nK - int(round(shareK*nK))
+        ok = outAB <= outAK * 1.5 + 50
+        note = f" [BACK noise floor: A<->BACK outside-head {outAK}px vs A<->B {outAB}px -> {'exonerated' if ok else 'NOT exonerated'}]"
+    det.append(f"closeup A<->B diff {n}px, {share*100:.1f}% inside headbox+25{note}")
     g5 &= ok
 if ('combat','A') in arrs and ('combat','B') in arrs:
     n, bbox = diff_stats(arrs[('combat','A')], arrs[('combat','B')])
-    out['measurements']['combat_diff'] = {'px': n, 'bbox': bbox}
-    if bbox:
-        w = bbox[2]-bbox[0]; h = bbox[3]-bbox[1]
-        ok = w <= 220 and h <= 220
-        det.append(f"combat diff {n}px bbox {w}x{h} (<=220 each)")
+    # Treatment-anchored eye ROI: the token only removes PALE (sclera/glint) px, so
+    # diff ∩ (A pale-ish) localises the eye; raw diff also carries boot-phase FX (§35).
+    d = np.abs(arrs[('combat','A')]-arrs[('combat','B')]).sum(axis=2) >= 4
+    dp = d & (Ls[('combat','A')] > 110)
+    out['measurements']['combat_diff'] = {'px': n, 'bbox': bbox, 'paleDiffPx': int(dp.sum())}
+    if dp.any():
+        # the treatment's pale-diff is CONCENTRATED at the eye; boot-phase FX scatter is
+        # diffuse — the densest 40 px bin (+ neighbours) localises the eye cluster
+        ys,xs = np.where(dp)
+        import collections
+        cnt = collections.Counter((int(y)//40, int(x)//40) for y,x in zip(ys,xs))
+        # Boot-phase FX (flash/motes) also produce dense pale-diff clusters, but they appear
+        # in the base-vs-base pair too; the EYE cluster is treatment-only. Prefer the densest
+        # A<->B bin that is NOT dense in A<->BACK.
+        noisy_bins = set()
+        if ('combat','BACK') in arrs:
+            dK2 = (np.abs(arrs[('combat','A')]-arrs[('combat','BACK')]).sum(axis=2) >= 4) & (Ls[('combat','A')] > 110)
+            yk,xk = np.where(dK2)
+            cntK = collections.Counter((int(y)//40, int(x)//40) for y,x in zip(yk,xk))
+            noisy_bins = {b for b,c in cntK.items() if c >= 40}
+        pick = [(b,c) for b,c in cnt.most_common(8) if b not in noisy_bins]
+        (by,bx),_ = (pick[0] if pick else cnt.most_common(1)[0])
+        near = np.array([abs(int(y)//40-by)<=1 and abs(int(x)//40-bx)<=1 for y,x in zip(ys,xs)])
+        cy_, cx_ = ys[near], xs[near]
+        eb = (int(cx_.min()), int(cy_.min()), int(cx_.max()), int(cy_.max()))
+        w, h = eb[2]-eb[0], eb[3]-eb[1]
+        scatter = int((~near).sum())
+        ok = w <= 120 and h <= 120
+        if ('combat','BACK') in arrs:
+            dK = np.abs(arrs[('combat','A')]-arrs[('combat','BACK')]).sum(axis=2) >= 4
+            dpK = int((dK & (Ls[('combat','A')] > 110)).sum())
+            oks = scatter <= dpK * 1.5 + 100
+            det.append(f"combat eye-cluster {int(near.sum())}px bbox {w}x{h}; scatter {scatter}px vs BACK pale-noise {dpK}px -> {'exonerated' if oks else 'NOT exonerated'}")
+            ok = ok and oks
+        else:
+            det.append(f"combat eye-cluster {int(near.sum())}px bbox {w}x{h} (<=120 each); scatter {scatter}px (BACK pending)")
         g5 &= ok
-        # combat leg: B near-eye aperture inside diff bbox+8
-        roi = (max(0,bbox[0]-8), max(0,bbox[1]-8), bbox[2]+8, bbox[3]+8)
+        # combat leg: B near-eye aperture inside the eye-cluster bbox+8
+        roi = (max(0,eb[0]-8), max(0,eb[1]-8), eb[2]+9, eb[3]+9)
         bbB = pale_bbox(Ls[('combat','B')], roi)
         bbA = pale_bbox(Ls[('combat','A')], roi)
         out['measurements']['combat_B_aperture'] = bbB

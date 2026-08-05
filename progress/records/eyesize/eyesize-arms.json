@@ -62,6 +62,108 @@
       ],
       "srcAfterArm": "4df7983d8cc7d715",
       "secs": 668
+    },
+    "B": {
+      "token": "eyesize55",
+      "charAB": "eyesize55",
+      "srcAtArm": "4df7983d8cc7d715",
+      "shots": {
+        "sly-closeup": {
+          "file": "progress/records/eyesize/frames/sly-closeup-B.png",
+          "sha": "bbc9d620b204ab322ae5a4bb008caf8b19e621e4e62846688d848871dd9ecb31",
+          "bytes": 1892212,
+          "stats": {
+            "fps": 41,
+            "drawCalls": 265,
+            "triangles": 1665343,
+            "programs": 98,
+            "ms": 13.199999999254942
+          }
+        },
+        "combat": {
+          "file": "progress/records/eyesize/frames/combat-B.png",
+          "sha": "0ac19576764c10a0f02784a134df6a4a1d70c1c490f0622b212a714563e59c6e",
+          "bytes": 1944434,
+          "stats": {
+            "fps": 41,
+            "drawCalls": 224,
+            "triangles": 1543119,
+            "programs": 100,
+            "ms": 15.700000001117587
+          }
+        }
+      },
+      "consoleErrors": [],
+      "srcAfterArm": "4df7983d8cc7d715",
+      "secs": 672
+    },
+    "KB": {
+      "token": "eyebead15",
+      "charAB": "eyebead15",
+      "srcAtArm": "4df7983d8cc7d715",
+      "shots": {
+        "sly-closeup": {
+          "file": "progress/records/eyesize/frames/sly-closeup-KB.png",
+          "sha": "8e5262a50db68f204255acd7df24e3f81aa2237f7b69d564875f1e8650f27bdd",
+          "bytes": 1891813,
+          "stats": {
+            "fps": 38,
+            "drawCalls": 265,
+            "triangles": 1665343,
+            "programs": 98,
+            "ms": 12.900000000372529
+          }
+        },
+        "combat": {
+          "file": "progress/records/eyesize/frames/combat-KB.png",
+          "sha": "06fbb40fdfb5d0bb803bb36bda77ad8ae820a61545c38133d90702a4e0d1293b",
+          "bytes": 1944753,
+          "stats": {
+            "fps": 38,
+            "drawCalls": 224,
+            "triangles": 1543119,
+            "programs": 100,
+            "ms": 10.299999998882413
+          }
+        }
+      },
+      "consoleErrors": [],
+      "srcAfterArm": "4df7983d8cc7d715",
+      "secs": 675
+    },
+    "BACK": {
+      "token": "(none)",
+      "charAB": "",
+      "srcAtArm": "4df7983d8cc7d715",
+      "shots": {
+        "sly-closeup": {
+          "file": "progress/records/eyesize/frames/sly-closeup-BACK.png",
+          "sha": "542b9de2f349f8831d80efead76579fd3f4db30fefacbc8f332ced9e63db5f4e",
+          "bytes": 1892191,
+          "stats": {
+            "fps": 42,
+            "drawCalls": 265,
+            "triangles": 1665343,
+            "programs": 98,
+            "ms": 12.399999998509884
+          }
+        },
+        "combat": {
+          "file": "progress/records/eyesize/frames/combat-BACK.png",
+          "sha": "1e0b0a8a985314aad298b98230faed55b51cdb8e36a587dd70a7a0d2dfd7440c",
+          "bytes": 1944455,
+          "stats": {
+            "fps": 42,
+            "drawCalls": 224,
+            "triangles": 1543119,
+            "programs": 100,
+            "ms": 10.5
+          }
+        }
+      },
+      "consoleErrors": [],
+      "srcAfterArm": "4df7983d8cc7d715",
+      "secs": 666
     }
   },
   "srcEdited": "4df7983d8cc7d715",
@@ -91,5 +193,21 @@
   "headratio": {
     "base": 5.03,
     "eyesize55": 5.03
-  }
+  },
+  "backIdenticalByShot": {
+    "sly-closeup": false,
+    "combat": false
+  },
+  "armsByTree": {
+    "4df7983d8cc7d715": [
+      "A",
+      "B",
+      "KB",
+      "BACK"
+    ]
+  },
+  "finishedArmsAt": "2026-08-05T11:49:04.525Z",
+  "srcAfterRevert": "1368435ab38aaded",
+  "revertMatchesCommitted": true,
+  "doneAt": "2026-08-05T11:49:04.800Z"
 }

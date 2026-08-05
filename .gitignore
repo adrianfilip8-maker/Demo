@@ -26,3 +26,4 @@ shots/*/
 # silently defeated it on first use.
 !progress/records/logs/
 !progress/records/logs/*.log
+__pycache__/

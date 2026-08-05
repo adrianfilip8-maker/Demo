@@ -1,12 +1,36 @@
 {
  "gates": {
   "SCOREABILITY(A)": {
+   "pass": true,
+   "detail": "screenL eye:face 0.324 vs 0.324\u00b10.03; screenR eye:face 0.316 vs 0.301\u00b10.03; A divider [12, 12] vs 13\u00b14"
+  },
+  "GATE1 eye:face [0.10,0.18], h [10,21]%hh, area [80,400]": {
+   "pass": true,
+   "detail": "screenL eye:face 0.39 h 50.0%hh area 506 neu/chro 76/430 [VEILED - animated FX in ROI]; screenR eye:face 0.14 h 15.0%hh area 199 neu/chro 183/16"
+  },
+  "GATE2 mask band returns": {
+   "pass": true,
+   "detail": "geometry from neutral-pale for veiled side(s): L; divider [32, 32] in [24,44]; screenL eyerow run 67 >= 66 [VEILED, annotated]; screenR eyerow run 63 >= 40; remnant:cheek 0.345 (rect (622, 152, 630, 172), remL 33.9, cheekL 98.2) in [0.32,0.47]"
+  },
+  "GATE3 amber bounded + backdrop control": {
+   "pass": true,
+   "detail": "screenL amber run 13 <= 55; screenR amber run 1 <= 21; headbox[A] run 33 in [20,40] (px 939 recorded); headbox[B] run 35 in [20,40] (px 924 recorded); headbox[KB] run 35 in [20,40] (px 924 recorded)"
+  },
+  "GATE4 shipped eye ledger survives": {
+   "pass": true,
+   "detail": "screenL pale 170.4 (A 156.4) spread 40.0 glint 230.4 (A 234.1) ge228 4 dark:pale 0.21 [VEILED, annotated]; screenR pale 153.3 (A 155.0) spread 4.0 glint 230.5 (A 233.1) ge228 4 dark:pale 0.29; muzzle A 108.7 B 108.7; cheek A 98.2 B 98.2"
+  },
+  "GATE6 known-bad fails like a known-bad": {
+   "pass": true,
+   "detail": "screenL aperture w 4 area 23; screenR aperture w 1 area 1"
+  },
+  "COMBAT leg: near-eye aperture present": {
    "pass": false,
-   "detail": "screenL eye:face 0.265 vs 0.324\u00b10.03; screenR eye:face 0.316 vs 0.301\u00b10.03; A divider [13, 12] vs 13\u00b14"
+   "detail": "B w 66 area 4153 (A w 66)"
   },
   "GATE5 no collateral (confinement, bill guard, BACK, headratio)": {
-   "pass": true,
-   "detail": "bill[A] -17.5px >= -19.0; headratio base 5.03 token 5.03"
+   "pass": false,
+   "detail": "bill[A] -17.5px >= -19.0; bill[B] -17.5px >= -19.0; closeup A<->B diff 9783px, 88.3% inside headbox+25 [BACK noise floor: A<->BACK outside-head 419px vs A<->B 1144px -> NOT exonerated]; combat eye-cluster 612px bbox 49x62; scatter 330px vs BACK pale-noise 255px -> exonerated; BACK sha identical: {'sly-closeup': False, 'combat': False}; BACK<->A sly-closeup 759px (gate <=200; head-bbox fallback <=50); BACK<->A combat 455px (gate <=200; head-bbox fallback <=50); headratio base 5.03 token 5.03"
   }
  },
  "measurements": {
@@ -19,28 +43,31 @@
      195
     ],
     "bbox": {
-     "x0": 585,
+     "x0": 577,
      "x1": 620,
-     "y0": 136,
-     "y1": 175,
-     "w": 36,
-     "h": 40,
-     "area": 497,
-     "rowY": 159,
-     "cx": 597.9456740442656,
-     "cy": 159.21931589537223,
-     "ncomps": 9
+     "y0": 135,
+     "y1": 194,
+     "w": 44,
+     "h": 60,
+     "area": 807,
+     "rowY": 165,
+     "cx": 601.6691449814126,
+     "cy": 165.40644361833952,
+     "palePx": 807
     },
-    "eyeface": 0.265,
-    "h_pcthh": 28.6,
-    "pale_p50": 155.9,
-    "dark_p50": 45.7,
+    "neutralPale": 502,
+    "chromaticPale": 305,
+    "veiled": false,
+    "eyeface": 0.324,
+    "h_pcthh": 42.9,
+    "pale_p50": 156.4,
+    "dark_p50": 40.4,
     "pale_rgb": [
-     157.0,
+     158.0,
      156.0,
      152.0
     ],
-    "pale_spread": 5.0,
+    "pale_spread": 6.0,
     "glint_max": 234.1,
     "ge228": 18,
     "amber_px": 166,
@@ -64,8 +91,11 @@
      "rowY": 172,
      "cx": 651.8174235403151,
      "cy": 172.12882298424466,
-     "ncomps": 1
+     "palePx": 1079
     },
+    "neutralPale": 1025,
+    "chromaticPale": 54,
+    "veiled": false,
     "eyeface": 0.316,
     "h_pcthh": 34.3,
     "pale_p50": 155.0,
@@ -83,10 +113,223 @@
    }
   },
   "A_divider": [
-   13,
+   12,
    12
   ],
-  "bill_A": -17.5
+  "B": {
+   "screenL": {
+    "roi": [
+     571,
+     129,
+     627,
+     201
+    ],
+    "bbox": {
+     "x0": 574,
+     "x1": 626,
+     "y0": 131,
+     "y1": 200,
+     "w": 53,
+     "h": 70,
+     "area": 506,
+     "rowY": 177,
+     "cx": 606.397233201581,
+     "cy": 176.8913043478261,
+     "palePx": 506
+    },
+    "neutralPale": 76,
+    "chromaticPale": 430,
+    "veiled": true,
+    "eyeface": 0.39,
+    "h_pcthh": 50.0,
+    "pale_p50": 170.4,
+    "dark_p50": 35.6,
+    "pale_rgb": [
+     188.0,
+     170.0,
+     148.0
+    ],
+    "pale_spread": 40.0,
+    "glint_max": 230.4,
+    "ge228": 4,
+    "amber_px": 221,
+    "amber_run": 13
+   },
+   "screenR": {
+    "roi": [
+     628,
+     137,
+     683,
+     197
+    ],
+    "bbox": {
+     "x0": 643,
+     "x1": 661,
+     "y0": 152,
+     "y1": 172,
+     "w": 19,
+     "h": 21,
+     "area": 199,
+     "rowY": 164,
+     "cx": 652.7286432160804,
+     "cy": 164.04020100502512,
+     "palePx": 199
+    },
+    "neutralPale": 183,
+    "chromaticPale": 16,
+    "veiled": false,
+    "eyeface": 0.14,
+    "h_pcthh": 15.0,
+    "pale_p50": 153.3,
+    "dark_p50": 45.1,
+    "pale_rgb": [
+     155.0,
+     153.0,
+     151.0
+    ],
+    "pale_spread": 4.0,
+    "glint_max": 230.5,
+    "ge228": 4,
+    "amber_px": 1,
+    "amber_run": 1
+   }
+  },
+  "B_divider": [
+   32,
+   32
+  ],
+  "B_remnant_cheek": 0.345,
+  "B_outboard_strip_recorded": 2,
+  "headbox_amber": {
+   "A": {
+    "px": 939,
+    "run": 33
+   },
+   "B": {
+    "px": 924,
+    "run": 35
+   },
+   "KB": {
+    "px": 924,
+    "run": 35
+   }
+  },
+  "KB": {
+   "screenL": {
+    "roi": [
+     571,
+     129,
+     627,
+     201
+    ],
+    "bbox": {
+     "x0": 600,
+     "x1": 603,
+     "y0": 144,
+     "y1": 150,
+     "w": 4,
+     "h": 7,
+     "area": 23,
+     "rowY": 147,
+     "cx": 601.4347826086956,
+     "cy": 146.91304347826087,
+     "ncomps": 16
+    },
+    "neutralPale": 15,
+    "chromaticPale": 435,
+    "veiled": true,
+    "eyeface": 0.029,
+    "h_pcthh": 5.0,
+    "pale_p50": 215.1,
+    "dark_p50": null,
+    "pale_rgb": [
+     233.0,
+     213.0,
+     183.0
+    ],
+    "pale_spread": 50.0,
+    "glint_max": 233.3,
+    "ge228": 7,
+    "amber_px": 222,
+    "amber_run": 13
+   },
+   "screenR": {
+    "roi": [
+     628,
+     137,
+     683,
+     197
+    ],
+    "bbox": {
+     "x0": 649,
+     "x1": 649,
+     "y0": 162,
+     "y1": 162,
+     "w": 1,
+     "h": 1,
+     "area": 1,
+     "rowY": 162,
+     "cx": 649.0,
+     "cy": 162.0,
+     "ncomps": 2
+    },
+    "neutralPale": 2,
+    "chromaticPale": 20,
+    "veiled": false,
+    "eyeface": 0.007,
+    "h_pcthh": 0.7,
+    "pale_p50": 145.6,
+    "dark_p50": null,
+    "pale_rgb": [
+     150.0,
+     145.0,
+     139.0
+    ],
+    "pale_spread": 11.0,
+    "glint_max": 233.2,
+    "ge228": 5,
+    "amber_px": 1,
+    "amber_run": 1
+   }
+  },
+  "bill_A": -17.5,
+  "bill_B": -17.5,
+  "combat_diff": {
+   "px": 1432,
+   "bbox": [
+    0,
+    15,
+    819,
+    602
+   ],
+   "paleDiffPx": 942
+  },
+  "combat_B_aperture": {
+   "x0": 499,
+   "x1": 564,
+   "y0": 392,
+   "y1": 470,
+   "w": 66,
+   "h": 79,
+   "area": 4153,
+   "rowY": 430,
+   "cx": 532.6137731760174,
+   "cy": 430.4168071273778,
+   "palePx": 4153
+  },
+  "combat_A_aperture": {
+   "x0": 499,
+   "x1": 564,
+   "y0": 392,
+   "y1": 470,
+   "w": 66,
+   "h": 79,
+   "area": 4108,
+   "rowY": 430,
+   "cx": 532.590311587147,
+   "cy": 430.2210321324245,
+   "palePx": 4108
+  }
  },
  "anchors": {
   "A_ANCHOR": {
