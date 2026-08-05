@@ -1,0 +1,9 @@
+[15:39:37 +   0s] pre-edit: 4 seam(s) to apply — taking the capture lock (seal §1: queued on the lock, before chunk 1)
+[15:39:37 +   1s] pre-edit: lock held; srcTree before 2b7683df9d0ef6ad
+[15:39:37 +   1s]   seam [A: Guard.js heading tip + widened clamp]: applied
+[15:39:37 +   1s]   seam [B-a: Particles.js SparkleField.preroll]: applied
+[15:39:37 +   1s]   seam [B-b: Particles.js _stageShot debug-gated preroll call]: applied
+[15:39:37 +   1s]   seam [C-c: Particles.js EMITTERS poke path]: applied
+[15:39:37 +   1s] pre-edit: done; srcTree after 3be168ae28832f69
+[15:39:37 +   1s] chunk 1: all frames present — skipping (idempotent resume)
+[15:39:38 +   1s] chunk 2 (traversal+combat): srcTree 3be168ae28832f69 — booting (own lock hold)
