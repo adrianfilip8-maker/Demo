@@ -141,6 +141,26 @@
       "ts": 1785920783540
     },
     {
+      "shot": "hero",
+      "label": "base",
+      "file": "progress/records/hullkerb/frames/hero-base.png",
+      "attached": false,
+      "thicknessMult": 1,
+      "inkReadback": [
+        {
+          "clonePx": 2.5,
+          "cachePx": 2.5,
+          "sameObject": false
+        }
+      ],
+      "draws": 252,
+      "tris": 1701835,
+      "live": 0,
+      "moved": 0,
+      "srcAtArm": "0aaea246cfb9ca90716b8d3b7578e30bc1caedc2378ecf324320b22e87f91924",
+      "ts": 1785921803091
+    },
+    {
       "shot": "interior",
       "label": "base",
       "file": "progress/records/hullkerb/frames/interior-base.png",
@@ -300,7 +320,8 @@
     },
     "guard+night+hero": {
       "startedAt": "2026-08-05T09:00:24.764Z",
-      "done": false
+      "done": true,
+      "finishedAt": "2026-08-05T09:23:23.096Z"
     }
   },
   "consoleErrors": [

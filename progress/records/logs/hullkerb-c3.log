@@ -26,3 +26,14 @@ capturing night [base hull] (dt pinned to 0 on every step):
       srcAtArm 0aaea246cfb9ca90…  -> progress/records/hullkerb/frames/night-hull.png
 
 capturing hero [base] (dt pinned to 0 on every step):
+  ✓ base     live  0 (moved 0)  ink readback: clone 2.500 / cache 2.500
+      counted-column stats (arm-to-arm sanity ONLY, never vs 250/1.2M — §153.1): draws 252  tris 1701k
+      srcAtArm 0aaea246cfb9ca90…  -> progress/records/hullkerb/frames/hero-base.png
+
+CHUNK guard+night+hero DONE — 5 frames on the durable path
+· 1 console error(s):
+    ! Failed to load resource: the server responded with a status of 404 (Not Found)
+edit REVERTED — src/world/Props.js byte-identical to pre-run snapshot: true
+src tree AFTER revert: 4bf8b093c5b2ed808ccfda70af5f073cb81ab57b6de52cd70d2e2086df7dbd04  MATCHES COMMITTED: true
+lock RELEASED
+edit REVERTED — src/world/Props.js byte-identical to pre-run snapshot: true
