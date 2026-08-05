@@ -1,2 +1,56 @@
 [13:23:31 +   0s] chunk A: all frames present — skipping (idempotent resume)
 [13:23:32 +   1s] chunk B1: srcTree 820ace395b9664ae — booting (own lock hold)
+[13:24:55 +  84s]   boot ok — warnings 1
+[13:24:55 +  84s]   LEVER {"hasShading":true,"hasTune":true,"hasSubjU":true,"hasRefresh":true,"subjW":0.5,"tintPeak":0.52,"sbm":0.05,"sbmLit":0.05,"uSubjW":0.5,"uShadowColor":[0.09609963379551392,0.31311543639412576,0.49658401318439915]}
+[13:25:10 +  99s]   setShot(hero) 15s  tod 0.79  draws 260 tris 1741863
+[13:31:52 + 501s]   settle(hero) 402s (10 frozen frames + throwaway capture)
+[13:32:14 + 523s]   hero.base       22s  subjW 0.5 peak 0.52 sbm 0.05/0.05  uShadow (0.096101, 0.313115, 0.496583)  uShadowColor ≡ base (bit-equal)  applied ok
+[13:32:37 + 546s]   hero.B          22s  subjW 0.5 peak 0.62 sbm 0.05/0.05  uShadow (0.103868, 0.338422, 0.536719)  uShadowColor ×[1.0808,1.0808,1.0808] vs base  applied ok
+[13:32:59 + 568s]   hero.AB         22s  subjW 0.65 peak 0.62 sbm 0.05/0.05  uShadow (0.103868, 0.338422, 0.536719)  uShadowColor ×[1.0808,1.0808,1.0808] vs base  applied ok
+[13:33:21 + 590s]   hero.KBwarmmud  22s  subjW 0.5 peak 0.52 sbm 0.2/0.2  uShadow (0.158935, 0.301529, 0.426332)  uShadowColor ×[1.6538,0.9630,0.8585] vs base  applied ok
+[13:33:44 + 613s]   hero.restore    22s  subjW 0.5 peak 0.52 sbm 0.05/0.05  uShadow (0.096101, 0.313115, 0.496583)  uShadowColor ≡ base (bit-equal)  applied ok
+[13:33:44 + 613s]   chunk B1 done — srcTree after 820ace395b9664ae (STABLE)
+[13:33:44 + 613s] chunk B1: lock released
+[13:33:44 + 613s] chunk B2: srcTree 820ace395b9664ae — booting (own lock hold)
+[13:34:58 + 687s]   boot ok — warnings 1
+[13:34:58 + 687s]   LEVER {"hasShading":true,"hasTune":true,"hasSubjU":true,"hasRefresh":true,"subjW":0.5,"tintPeak":0.52,"sbm":0.05,"sbmLit":0.05,"uSubjW":0.5,"uShadowColor":[0.09609963379551392,0.31311543639412576,0.49658401318439915]}
+[13:34:58 + 687s]   setShot(interior) 0s  tod 0.5  draws 166 tris 723565
+[13:38:49 + 918s]   settle(interior) 230s (10 frozen frames + throwaway capture)
+[13:38:59 + 928s]   interior.base       10s  subjW 0.5 peak 0.52 sbm 0.05/0.05  uShadow (0.094613, 0.313447, 0.497680)  uShadowColor ≡ base (bit-equal)  applied ok
+[13:39:08 + 937s]   interior.B          10s  subjW 0.5 peak 0.62 sbm 0.05/0.05  uShadow (0.112807, 0.373725, 0.593387)  uShadowColor ×[1.1923,1.1923,1.1923] vs base  applied ok
+[13:39:18 + 947s]   interior.AB         10s  subjW 0.65 peak 0.62 sbm 0.05/0.05  uShadow (0.112807, 0.373725, 0.593387)  uShadowColor ×[1.1923,1.1923,1.1923] vs base  applied ok
+[13:39:27 + 956s]   interior.KBwarmmud  10s  subjW 0.5 peak 0.52 sbm 0.2/0.2  uShadow (0.152981, 0.302856, 0.430719)  uShadowColor ×[1.6169,0.9662,0.8655] vs base  applied ok
+[13:39:37 + 966s]   interior.restore    9s  subjW 0.5 peak 0.52 sbm 0.05/0.05  uShadow (0.094613, 0.313447, 0.497680)  uShadowColor ≡ base (bit-equal)  applied ok
+[13:39:37 + 966s]   chunk B2 done — srcTree after 820ace395b9664ae (STABLE)
+[13:39:37 + 966s] chunk B2: lock released
+[13:39:37 + 966s] chunk C: srcTree 820ace395b9664ae — booting (own lock hold)
+[13:40:50 +1039s]   boot ok — warnings 1
+[13:40:50 +1039s]   LEVER {"hasShading":true,"hasTune":true,"hasSubjU":true,"hasRefresh":true,"subjW":0.5,"tintPeak":0.52,"sbm":0.05,"sbmLit":0.05,"uSubjW":0.5,"uShadowColor":[0.09609963379551392,0.31311543639412576,0.49658401318439915]}
+[13:41:19 +1068s]   setShot(night) 29s  tod 0.02  draws 288 tris 1856037
+[13:47:49 +1458s]   settle(night) 390s (10 frozen frames + throwaway capture)
+[13:48:11 +1480s]   night.base       22s  subjW 0.5 peak 0.52 sbm 0.05/0.05  uShadow (0.012896, 0.046769, 0.078053)  uShadowColor ≡ base (bit-equal)  applied ok
+[13:48:33 +1502s]   night.AB         22s  subjW 0.65 peak 0.62 sbm 0.05/0.05  uShadow (0.012896, 0.046769, 0.078053)  uShadowColor ≡ base (bit-equal)  applied ok
+[13:48:55 +1524s]   night.restore    22s  subjW 0.5 peak 0.52 sbm 0.05/0.05  uShadow (0.012896, 0.046769, 0.078053)  uShadowColor ≡ base (bit-equal)  applied ok
+[13:48:55 +1524s]   chunk C done — srcTree after 820ace395b9664ae (STABLE)
+[13:48:55 +1524s] chunk C: lock released
+[13:48:55 +1524s] chunk D1: srcTree 820ace395b9664ae — booting (own lock hold)
+[13:50:09 +1598s]   boot ok — warnings 1
+[13:50:09 +1598s]   LEVER {"hasShading":true,"hasTune":true,"hasSubjU":true,"hasRefresh":true,"subjW":0.5,"tintPeak":0.52,"sbm":0.05,"sbmLit":0.05,"uSubjW":0.5,"uShadowColor":[0.09609963379551392,0.31311543639412576,0.49658401318439915]}
+[13:50:09 +1598s]   setShot(temple) 0s  tod 0.72  draws 239 tris 1712413
+[13:55:56 +1945s]   settle(temple) 347s (10 frozen frames + throwaway capture)
+[13:56:14 +1963s]   temple.base       18s  subjW 0.5 peak 0.52 sbm 0.05/0.05  uShadow (0.095945, 0.313150, 0.496698)  uShadowColor ≡ base (bit-equal)  applied ok
+[13:56:32 +1981s]   temple.AB         18s  subjW 0.65 peak 0.62 sbm 0.05/0.05  uShadow (0.108804, 0.355122, 0.563271)  uShadowColor ×[1.1340,1.1340,1.1340] vs base  applied ok
+[13:56:50 +1999s]   temple.restore    18s  subjW 0.5 peak 0.52 sbm 0.05/0.05  uShadow (0.095945, 0.313150, 0.496698)  uShadowColor ≡ base (bit-equal)  applied ok
+[13:56:50 +1999s]   chunk D1 done — srcTree after 820ace395b9664ae (STABLE)
+[13:56:50 +1999s] chunk D1: lock released
+[13:56:50 +1999s] chunk D2: srcTree 820ace395b9664ae — booting (own lock hold)
+[13:58:01 +2070s]   boot ok — warnings 1
+[13:58:01 +2070s]   LEVER {"hasShading":true,"hasTune":true,"hasSubjU":true,"hasRefresh":true,"subjW":0.5,"tintPeak":0.52,"sbm":0.05,"sbmLit":0.05,"uSubjW":0.5,"uShadowColor":[0.09609963379551392,0.31311543639412576,0.49658401318439915]}
+[13:59:00 +2129s]   setShot(combat) 60s  tod 0.74  draws 224 tris 1542305
+[14:04:26 +2455s]   settle(combat) 325s (10 frozen frames + throwaway capture)
+[14:04:45 +2474s]   combat.base       19s  subjW 0.5 peak 0.52 sbm 0.05/0.05  uShadow (0.096025, 0.313132, 0.496639)  uShadowColor ≡ base (bit-equal)  applied ok
+[14:05:04 +2493s]   combat.AB         19s  subjW 0.65 peak 0.62 sbm 0.05/0.05  uShadow (0.106265, 0.346523, 0.549598)  uShadowColor ×[1.1066,1.1066,1.1066] vs base  applied ok
+[14:05:23 +2512s]   combat.restore    19s  subjW 0.5 peak 0.52 sbm 0.05/0.05  uShadow (0.096025, 0.313132, 0.496639)  uShadowColor ≡ base (bit-equal)  applied ok
+[14:05:23 +2512s]   chunk D2 done — srcTree after 820ace395b9664ae (STABLE)
+[14:05:23 +2512s] chunk D2: lock released
+[14:05:23 +2512s] ALL DONE
