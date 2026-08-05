@@ -1,1 +1,17 @@
 [14:09:10 +   0s] chunk E: srcTree 2b7683df9d0ef6ad — booting (own lock hold)
+[14:10:24 +  74s]   boot ok — warnings 1
+[14:10:24 +  74s]   LEVER {"hasGlint":true,"hasPow":true,"glint":0,"pow":20,"tuneGlint":0,"tunePow":20}
+[14:10:53 + 103s]   setShot(traversal) 29s  tod 0.77  draws 252 tris 1750993
+[14:15:27 + 377s]   traversal.base      273s  uGoldGlint 0 uGlintPow 20  applied ok
+[14:15:47 + 397s]   traversal.Alo       20s  uGoldGlint 1.6 uGlintPow 20  applied ok
+[14:16:07 + 417s]   traversal.cand      20s  uGoldGlint 2.6 uGlintPow 20  applied ok
+[14:16:27 + 437s]   traversal.KBchrome  20s  uGoldGlint 2.6 uGlintPow 5  applied ok
+[14:16:47 + 457s]   traversal.null      20s  uGoldGlint 0 uGlintPow 20  applied ok
+[14:16:47 + 457s]   setShot(combat) 0s  tod 0.74  draws 222 tris 1542483
+[14:19:54 + 643s]   combat.base      186s  uGoldGlint 0 uGlintPow 20  applied ok
+[14:20:13 + 663s]   combat.Alo       19s  uGoldGlint 1.6 uGlintPow 20  applied ok
+[14:20:32 + 682s]   combat.cand      19s  uGoldGlint 2.6 uGlintPow 20  applied ok
+[14:20:51 + 701s]   combat.KBchrome  19s  uGoldGlint 2.6 uGlintPow 5  applied ok
+[14:21:11 + 720s]   combat.null      19s  uGoldGlint 0 uGlintPow 20  applied ok
+[14:21:11 + 720s]   chunk E done — srcTree after 2b7683df9d0ef6ad (STABLE)
+[14:21:11 + 720s] ALL DONE

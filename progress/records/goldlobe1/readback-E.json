@@ -3,5 +3,176 @@
  "chunk": "E",
  "startedAt": "2026-08-05T14:09:10.753Z",
  "srcTreeBefore": "2b7683df9d0ef6ad",
- "shots": []
+ "shots": [
+  {
+   "shot": "traversal",
+   "arms": [
+    {
+     "arm": "base",
+     "requested": {
+      "gain": 0,
+      "pow": 20
+     },
+     "readback": {
+      "glint": 0,
+      "pow": 20
+     },
+     "mismatch": [],
+     "secs": 273
+    },
+    {
+     "arm": "Alo",
+     "requested": {
+      "gain": 1.6,
+      "pow": 20
+     },
+     "readback": {
+      "glint": 1.6,
+      "pow": 20
+     },
+     "mismatch": [],
+     "secs": 20
+    },
+    {
+     "arm": "cand",
+     "requested": {
+      "gain": 2.6,
+      "pow": 20
+     },
+     "readback": {
+      "glint": 2.6,
+      "pow": 20
+     },
+     "mismatch": [],
+     "secs": 20
+    },
+    {
+     "arm": "KBchrome",
+     "requested": {
+      "gain": 2.6,
+      "pow": 5
+     },
+     "readback": {
+      "glint": 2.6,
+      "pow": 5
+     },
+     "mismatch": [],
+     "secs": 20
+    },
+    {
+     "arm": "null",
+     "requested": {
+      "gain": 0,
+      "pow": 20
+     },
+     "readback": {
+      "glint": 0,
+      "pow": 20
+     },
+     "mismatch": [],
+     "secs": 20
+    }
+   ],
+   "setShot": {
+    "stats": {
+     "fps": 39,
+     "drawCalls": 252,
+     "triangles": 1750993,
+     "programs": 98,
+     "ms": 29035.200000000186
+    },
+    "tod": 0.77
+   }
+  },
+  {
+   "shot": "combat",
+   "arms": [
+    {
+     "arm": "base",
+     "requested": {
+      "gain": 0,
+      "pow": 20
+     },
+     "readback": {
+      "glint": 0,
+      "pow": 20
+     },
+     "mismatch": [],
+     "secs": 186
+    },
+    {
+     "arm": "Alo",
+     "requested": {
+      "gain": 1.6,
+      "pow": 20
+     },
+     "readback": {
+      "glint": 1.6,
+      "pow": 20
+     },
+     "mismatch": [],
+     "secs": 19
+    },
+    {
+     "arm": "cand",
+     "requested": {
+      "gain": 2.6,
+      "pow": 20
+     },
+     "readback": {
+      "glint": 2.6,
+      "pow": 20
+     },
+     "mismatch": [],
+     "secs": 19
+    },
+    {
+     "arm": "KBchrome",
+     "requested": {
+      "gain": 2.6,
+      "pow": 5
+     },
+     "readback": {
+      "glint": 2.6,
+      "pow": 5
+     },
+     "mismatch": [],
+     "secs": 19
+    },
+    {
+     "arm": "null",
+     "requested": {
+      "gain": 0,
+      "pow": 20
+     },
+     "readback": {
+      "glint": 0,
+      "pow": 20
+     },
+     "mismatch": [],
+     "secs": 19
+    }
+   ],
+   "setShot": {
+    "stats": {
+     "fps": 60,
+     "drawCalls": 222,
+     "triangles": 1542483,
+     "programs": 100,
+     "ms": 8.600000000093132
+    },
+    "tod": 0.74
+   }
+  }
+ ],
+ "lever": {
+  "hasGlint": true,
+  "hasPow": true,
+  "glint": 0,
+  "pow": 20,
+  "tuneGlint": 0,
+  "tunePow": 20
+ },
+ "srcTreeAfter": "2b7683df9d0ef6ad",
+ "finishedAt": "2026-08-05T14:21:11.073Z"
 }
