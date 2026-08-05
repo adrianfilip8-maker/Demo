@@ -108,7 +108,7 @@ chin y242, HH = 140 px; face width cheek-to-cheek 136 px (to-ear 148, both state
 | amber-iris px (CRITIC's exact classifier, head box) | **947 px**, longest run 30 px | stale eye1 frame: 1,864 px, run 35 px | still goggle-scale; the *count* halved because on this frame the discs are ~50% dark pupil (`eye_dark_share_pct` 49.8) and the amber is shadowed — the count is lighting-dependent, the **disc geometry is the stable number**; do not read 947 as "eyes shrank" |
 
 **The eye:face finding is confirmed on the fresh tree, not inherited from the stale frame.** The
-rest-state discs are ~2.5× canon width. Owner: **CHARACTER** (rest-state eye geometry + iris/sclera
+rest-state discs are ~2.5–3× canon width (0.32–0.38 against 0.10–0.15). Owner: **CHARACTER** (rest-state eye geometry + iris/sclera
 albedo). `SPEC-startle-pupils.md` remains orthogonal — that is a *pupil dynamics* mechanism; this
 is rest-state disc size.
 
