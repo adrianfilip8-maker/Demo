@@ -3,10 +3,227 @@
  "chunk": "1",
  "startedAt": "2026-08-05T14:41:23.459Z",
  "srcTreeBefore": "3be168ae28832f69",
- "arms": [],
+ "arms": [
+  {
+   "shot": "guard",
+   "arm": "base",
+   "at": "2026-08-05T14:42:58.163Z",
+   "setShot": {
+    "tod": 0.1,
+    "drift": 0,
+    "onScreen": false,
+    "draws": 205,
+    "tris": 1428881,
+    "warnings": 1
+   },
+   "probe": {
+    "guardTowardCamera": null,
+    "guard0": {
+     "pos": [
+      -15.487,
+      0,
+      27.545
+     ],
+     "yaw": -0.0691,
+     "forward": [
+      -0.069,
+      0,
+      0.998
+     ]
+    },
+    "light": 0.2628,
+    "uOpacity": 0.8358,
+    "beamCol0": [
+     0.2417,
+     0.2226,
+     0.1559
+    ]
+   },
+   "cam": {
+    "pos": [
+     -11.5,
+     2.6,
+     30.5
+    ],
+    "fwd": [
+     -0.884,
+     -0.241,
+     -0.402
+    ],
+    "fov": 38
+   },
+   "tod": 0.1,
+   "srcAtArm": "3be168ae28832f69",
+   "secs": 287
+  },
+  {
+   "shot": "guard",
+   "arm": "base2",
+   "at": "2026-08-05T14:47:44.970Z",
+   "setShot": {
+    "tod": 0.1,
+    "drift": 0,
+    "onScreen": false,
+    "draws": 205,
+    "tris": 1429225,
+    "warnings": 1
+   },
+   "probe": {
+    "guardTowardCamera": null,
+    "guard0": {
+     "pos": [
+      -15.487,
+      0,
+      27.545
+     ],
+     "yaw": -0.0691,
+     "forward": [
+      -0.069,
+      0,
+      0.998
+     ]
+    },
+    "light": 0.2628,
+    "uOpacity": 0.8358,
+    "beamCol0": [
+     0.2573,
+     0.237,
+     0.166
+    ]
+   },
+   "cam": {
+    "pos": [
+     -11.5,
+     2.6,
+     30.5
+    ],
+    "fwd": [
+     -0.884,
+     -0.241,
+     -0.402
+    ],
+    "fov": 38
+   },
+   "tod": 0.1,
+   "srcAtArm": "3be168ae28832f69",
+   "secs": 235
+  },
+  {
+   "shot": "guard",
+   "arm": "cand",
+   "at": "2026-08-05T14:51:39.589Z",
+   "poke": {
+    "set": -0.2
+   },
+   "setShot": {
+    "tod": 0.1,
+    "drift": 0,
+    "onScreen": false,
+    "draws": 205,
+    "tris": 1429225,
+    "warnings": 1
+   },
+   "probe": {
+    "guardTowardCamera": -0.2,
+    "guard0": {
+     "pos": [
+      -15.487,
+      0,
+      27.545
+     ],
+     "yaw": -0.628,
+     "forward": [
+      -0.588,
+      0,
+      0.809
+     ]
+    },
+    "light": 0.2628,
+    "uOpacity": 0.8358,
+    "beamCol0": [
+     0.2866,
+     0.264,
+     0.1849
+    ]
+   },
+   "cam": {
+    "pos": [
+     -11.5,
+     2.6,
+     30.5
+    ],
+    "fwd": [
+     -0.884,
+     -0.241,
+     -0.402
+    ],
+    "fov": 38
+   },
+   "tod": 0.1,
+   "srcAtArm": "3be168ae28832f69",
+   "secs": 183
+  },
+  {
+   "shot": "guard",
+   "arm": "restore",
+   "at": "2026-08-05T14:54:42.387Z",
+   "poke": {
+    "deleted": true
+   },
+   "setShot": {
+    "tod": 0.1,
+    "drift": 0,
+    "onScreen": false,
+    "draws": 205,
+    "tris": 1429225,
+    "warnings": 1
+   },
+   "probe": {
+    "guardTowardCamera": null,
+    "guard0": {
+     "pos": [
+      -15.487,
+      0,
+      27.545
+     ],
+     "yaw": -0.0691,
+     "forward": [
+      -0.069,
+      0,
+      0.998
+     ]
+    },
+    "light": 0.2628,
+    "uOpacity": 0.8358,
+    "beamCol0": [
+     0.2586,
+     0.2381,
+     0.1668
+    ]
+   },
+   "cam": {
+    "pos": [
+     -11.5,
+     2.6,
+     30.5
+    ],
+    "fwd": [
+     -0.884,
+     -0.241,
+     -0.402
+    ],
+    "fov": 38
+   },
+   "tod": 0.1,
+   "srcAtArm": "3be168ae28832f69",
+   "secs": 184
+  }
+ ],
  "lever": {
   "hasEMITTERS": true,
   "hasPreroll": true,
   "hasGuards": true
- }
+ },
+ "srcTreeAfter": "3be168ae28832f69",
+ "finishedAt": "2026-08-05T14:57:46.309Z"
 }
