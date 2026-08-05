@@ -1,0 +1,236 @@
+{
+  "seal": "PREREG-capbill.md",
+  "scoredAt": "2026-08-05T07:21:12.144Z",
+  "srcTree0": "0ac0479e279468e3",
+  "srcTreeEdited": "086fd03ab4469745",
+  "selftest": "PASS",
+  "geom": {
+    "sly-closeup": {
+      "pxPerM": 294.3,
+      "crownTop": 99,
+      "chin": 234,
+      "headCx": 662,
+      "outboard": "left",
+      "coreRows": [
+        102,
+        146
+      ],
+      "scanRows": [
+        101,
+        171
+      ],
+      "scanStartX": 521,
+      "strip": {
+        "x0": 531,
+        "x1": 570,
+        "rows": [
+          102,
+          146
+        ]
+      },
+      "billROI": [
+        546,
+        658,
+        77,
+        171
+      ],
+      "headBboxPad": [
+        531,
+        793,
+        74,
+        286
+      ],
+      "contribBase": {
+        "px": 582,
+        "maxRunPx": 42,
+        "bbox": [
+          576,
+          633,
+          105,
+          144
+        ]
+      },
+      "contribYawR10": {
+        "px": 819,
+        "maxRunPx": 43,
+        "bbox": [
+          571,
+          623,
+          102,
+          146
+        ]
+      }
+    },
+    "combat": {
+      "pxPerM": 175.1,
+      "crownTop": 373,
+      "chin": 468,
+      "headCx": 569,
+      "outboard": "left",
+      "coreRows": [
+        411,
+        433
+      ],
+      "scanRows": [
+        386,
+        458
+      ],
+      "scanStartX": 459,
+      "strip": {
+        "x0": 469,
+        "x1": 508,
+        "rows": [
+          411,
+          433
+        ]
+      },
+      "billROI": [
+        484,
+        562,
+        386,
+        458
+      ],
+      "headBboxPad": [
+        476,
+        661,
+        348,
+        512
+      ],
+      "contribBase": {
+        "px": 294,
+        "maxRunPx": 25,
+        "bbox": [
+          510,
+          537,
+          414,
+          433
+        ]
+      },
+      "contribYawR10": {
+        "px": 342,
+        "maxRunPx": 24,
+        "bbox": [
+          509,
+          536,
+          411,
+          433
+        ]
+      }
+    }
+  },
+  "scoreability": {
+    "sly-closeup": {
+      "n": 1800,
+      "bad": 1780,
+      "minL": 25.3,
+      "allSky": false
+    },
+    "combat": {
+      "n": 920,
+      "bad": 110,
+      "minL": 29.7,
+      "allSky": false
+    }
+  },
+  "E": {
+    "sly-closeup-A": {
+      "E": null,
+      "reason": "anchor band <3 valid rows",
+      "crown": null,
+      "cheek": null
+    },
+    "sly-closeup-B": {
+      "E": null,
+      "reason": "anchor band <3 valid rows",
+      "crown": null,
+      "cheek": null
+    },
+    "sly-closeup-BACK": {
+      "E": null,
+      "reason": "anchor band <3 valid rows",
+      "crown": null,
+      "cheek": null
+    },
+    "combat-A": {
+      "E": 53.6,
+      "atRow": 435,
+      "rowsUsed": 68,
+      "invalidRows": 5,
+      "crownAnchor": {
+        "x": 549.19,
+        "n": 12
+      },
+      "cheekAnchor": {
+        "x": 507.81,
+        "n": 7
+      }
+    },
+    "combat-B": {
+      "E": 52.5,
+      "atRow": 435,
+      "rowsUsed": 68,
+      "invalidRows": 5,
+      "crownAnchor": {
+        "x": 540.05,
+        "n": 12
+      },
+      "cheekAnchor": {
+        "x": 507.81,
+        "n": 7
+      }
+    },
+    "combat-BACK": {
+      "E": 53.6,
+      "atRow": 435,
+      "rowsUsed": 68,
+      "invalidRows": 5,
+      "crownAnchor": {
+        "x": 549.19,
+        "n": 12
+      },
+      "cheekAnchor": {
+        "x": 507.81,
+        "n": 7
+      }
+    }
+  },
+  "gates": {
+    "g3": {
+      "sameTree": true,
+      "diffs": {
+        "sly-closeup": {
+          "shaEqual": false,
+          "wholeFramePx": 429,
+          "inBillROI": 37
+        },
+        "combat": {
+          "shaEqual": false,
+          "wholeFramePx": 271,
+          "inBillROI": 0
+        }
+      },
+      "pass": false
+    },
+    "g4": {
+      "shots": {
+        "sly-closeup": {
+          "diffPx": 9739,
+          "inHeadBbox": 8948,
+          "share": 0.9188
+        },
+        "combat": {
+          "diffPx": 4136,
+          "inHeadBbox": 3415,
+          "share": 0.8257
+        }
+      },
+      "headratio": {
+        "tokenOff": "5.03",
+        "tokenOn": "5.03",
+        "unchangedTo2dp": true
+      },
+      "pass": false
+    }
+  },
+  "verdict": "UNSCOREABLE — registered outcome: the 40 px outboard of the projected bill region is not sky in arm A (prereg §6). E-gates not interpreted; GATE 3/4 evidence recorded above. Fallback per §7: re-registration against the backdrop the frame actually has, not a threshold change. Coordinator's call."
+}
