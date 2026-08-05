@@ -1,0 +1,187 @@
+{
+ "prereg": "PREREG-banda.md",
+ "chunk": "A",
+ "startedAt": "2026-08-05T11:56:59.273Z",
+ "srcTreeBefore": "820ace395b9664ae",
+ "shipExpected": {
+  "subjW": 0.5,
+  "tintPeak": 0.52,
+  "sbm": 0.05,
+  "sbmLit": 0.05
+ },
+ "shots": [
+  {
+   "shot": "sly-closeup",
+   "arms": [
+    {
+     "arm": "base",
+     "requested": {
+      "subjW": 0.5,
+      "tintPeak": 0.52,
+      "sbm": 0.05,
+      "sbmLit": 0.05
+     },
+     "readback": {
+      "subjW": 0.5,
+      "uSubjW": 0.5,
+      "tintPeak": 0.52,
+      "sbm": 0.05,
+      "sbmLit": 0.05,
+      "uShadowColor": [
+       0.09611643093103707,
+       0.3131104181116351,
+       0.4965842625559385
+      ],
+      "uShadowColorLit": [
+       0.09611643093103707,
+       0.3131104181116351,
+       0.4965842625559385
+      ]
+     },
+     "mismatch": [],
+     "secs": 349
+    },
+    {
+     "arm": "A",
+     "requested": {
+      "subjW": 0.65,
+      "tintPeak": 0.52,
+      "sbm": 0.05,
+      "sbmLit": 0.05
+     },
+     "readback": {
+      "subjW": 0.65,
+      "uSubjW": 0.65,
+      "tintPeak": 0.52,
+      "sbm": 0.05,
+      "sbmLit": 0.05,
+      "uShadowColor": [
+       0.09611643093103707,
+       0.3131104181116351,
+       0.4965842625559385
+      ],
+      "uShadowColorLit": [
+       0.09611643093103707,
+       0.3131104181116351,
+       0.4965842625559385
+      ]
+     },
+     "mismatch": [],
+     "secs": 26
+    },
+    {
+     "arm": "AB",
+     "requested": {
+      "subjW": 0.65,
+      "tintPeak": 0.62,
+      "sbm": 0.05,
+      "sbmLit": 0.05
+     },
+     "readback": {
+      "subjW": 0.65,
+      "uSubjW": 0.65,
+      "tintPeak": 0.62,
+      "sbm": 0.05,
+      "sbmLit": 0.05,
+      "uShadowColor": [
+       0.10322818765110171,
+       0.33627779020980797,
+       0.5333270591007294
+      ],
+      "uShadowColorLit": [
+       0.10322818765110171,
+       0.33627779020980797,
+       0.5333270591007294
+      ]
+     },
+     "mismatch": [],
+     "secs": 26
+    },
+    {
+     "arm": "KBoverwarm",
+     "requested": {
+      "subjW": 1,
+      "tintPeak": 0.52,
+      "sbm": 0.05,
+      "sbmLit": 0.05
+     },
+     "readback": {
+      "subjW": 1,
+      "uSubjW": 1,
+      "tintPeak": 0.52,
+      "sbm": 0.05,
+      "sbmLit": 0.05,
+      "uShadowColor": [
+       0.09611643093103707,
+       0.3131104181116351,
+       0.4965842625559385
+      ],
+      "uShadowColorLit": [
+       0.09611643093103707,
+       0.3131104181116351,
+       0.4965842625559385
+      ]
+     },
+     "mismatch": [],
+     "secs": 30
+    },
+    {
+     "arm": "restore",
+     "requested": {
+      "subjW": 0.5,
+      "tintPeak": 0.52,
+      "sbm": 0.05,
+      "sbmLit": 0.05
+     },
+     "readback": {
+      "subjW": 0.5,
+      "uSubjW": 0.5,
+      "tintPeak": 0.52,
+      "sbm": 0.05,
+      "sbmLit": 0.05,
+      "uShadowColor": [
+       0.09611643093103707,
+       0.3131104181116351,
+       0.4965842625559385
+      ],
+      "uShadowColorLit": [
+       0.09611643093103707,
+       0.3131104181116351,
+       0.4965842625559385
+      ]
+     },
+     "mismatch": [],
+     "secs": 26
+    }
+   ],
+   "setShot": {
+    "stats": {
+     "fps": 37,
+     "drawCalls": 265,
+     "triangles": 1665419,
+     "programs": 98,
+     "ms": 22.799999998882413
+    },
+    "tod": 0.8
+   }
+  }
+ ],
+ "lever": {
+  "hasShading": true,
+  "hasTune": true,
+  "hasSubjU": true,
+  "hasRefresh": true,
+  "subjW": 0.5,
+  "tintPeak": 0.52,
+  "sbm": 0.05,
+  "sbmLit": 0.05,
+  "uSubjW": 0.5,
+  "uShadowColor": [
+   0.09609963379551392,
+   0.31311543639412576,
+   0.49658401318439915
+  ]
+ },
+ "srcTreeAfter": "820ace395b9664ae",
+ "finishedAt": "2026-08-05T12:06:32.833Z"
+}

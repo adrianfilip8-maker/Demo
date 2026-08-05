@@ -880,6 +880,27 @@ function modeScore(dir) {
   };
   const inBand = (v, b) => v >= b[0] && v <= b[1];
   // sly-closeup arms
+  if (have(f('sly-closeup', 'base'))) {
+    const b = readPNG(f('sly-closeup', 'base'));
+    const bg = lRoiBmr(b, [802, 306, 862, 356], 90, 200);
+    const rg = lRoiBmr(b, TAIL_DARK_ROIS, 26, 55);
+    say('BaseGate creamROI b−r', bg.bmr, [-28, -12], inBand);
+    say('BaseGate rings b−r', rg.bmr, [15, 35], inBand);
+    if (have(f('sly-closeup', 'A'))) {
+      // P-F5: architecture invariance of arm A — WALL-SHADOW box (coolskew), 0 px at ΣRGB≥4
+      const a = readPNG(f('sly-closeup', 'A'));
+      let n = 0;
+      for (let y = 210; y < 320; y++) for (let x = 922; x < 962; x++) {
+        const i = (y * b.w + x) * b.ch, j = (y * a.w + x) * a.ch;
+        const d = Math.abs(b.data[i] - a.data[j]) + Math.abs(b.data[i + 1] - a.data[j + 1]) + Math.abs(b.data[i + 2] - a.data[j + 2]);
+        if (d >= 4) n++;
+      }
+      say('P-F5 arch invariance (A) px', n, [0, 0], inBand);
+    }
+    if (have(f('sly-closeup', 'restore'))) {
+      console.log(`  P-F4 sly-closeup restore-vs-base differing px (ΣRGB≥4): ${frameDiffPx(b, readPNG(f('sly-closeup', 'restore')))}`);
+    }
+  }
   for (const arm of ['A', 'AB']) {
     if (!have(f('sly-closeup', arm))) continue;
     const im = readPNG(f('sly-closeup', arm));
@@ -935,8 +956,31 @@ function modeScore(dir) {
   if (have(f('night', 'base')) && have(f('night', 'AB'))) {
     const b = readPNG(f('night', 'base')), a = readPNG(f('night', 'AB'));
     const subj = [560, 300, 900, 560]; // generous Sly box for the night staging; stated, checked in-crop at scoring
-    say('P7 night off-subject Δpx', frameDiffPx(b, a, 4, null) - frameDiffPx(b, a, 4, subj) >= 0 ? frameDiffPx(b, a, 4, subj) : NaN, BANDS.P7_nightDiff, (v, band) => v === band[0]);
-    console.log(`    (in-subject Δpx, allowed and expected warm-ward: ${frameDiffPx(b, a) - frameDiffPx(b, a, 4, subj)})`);
+    const offSubj = frameDiffPx(b, a, 4, subj);
+    say('P7 night off-subject Δpx', offSubj, BANDS.P7_nightDiff, (v, band) => v === band[0]);
+    console.log(`    (in-subject Δpx, allowed and expected warm-ward: ${frameDiffPx(b, a) - offSubj})`);
+    if (have(f('night', 'restore'))) {
+      console.log(`  P-F4 night restore-vs-base differing px (ΣRGB≥4): ${frameDiffPx(b, readPNG(f('night', 'restore')))}`);
+    }
+  }
+  // P6 honesty rows (reported, not gated) + P8 combat regression watch
+  for (const shot of ['hero', 'interior']) {
+    if (!have(f(shot, 'base')) || !have(f(shot, 'AB'))) continue;
+    const rect = shot === 'hero' ? [200, 300, 900, 600] : [0, 0, 1280, 720];
+    const w0 = rectStats(readPNG(f(shot, 'base')), rect).warmPct;
+    const w1 = rectStats(readPNG(f(shot, 'AB')), rect).warmPct;
+    console.log(`  P6 ${shot} warm% ${w0.toFixed(1)} → ${w1.toFixed(1)} (Δ ${(w1 - w0).toFixed(1)} pp; honesty row, ≤ +3–4 pp expected)`);
+  }
+  if (have(f('combat', 'base')) && have(f('combat', 'AB'))) {
+    const w0 = rectStats(readPNG(f('combat', 'base')), [360, 390, 720, 670]).warmPct;
+    const w1 = rectStats(readPNG(f('combat', 'AB')), [360, 390, 720, 670]).warmPct;
+    say('P8 combat warm% ratio (AB/base)', w1 / Math.max(w0, 1e-4), [0.85, 1.15], inBand);
+    if (have(f('combat', 'restore'))) {
+      console.log(`  P-F4 combat restore-vs-base differing px (ΣRGB≥4): ${frameDiffPx(readPNG(f('combat', 'base')), readPNG(f('combat', 'restore')))}`);
+    }
+    if (have(f('temple', 'base')) && have(f('temple', 'restore'))) {
+      console.log(`  P-F4 temple restore-vs-base differing px (ΣRGB≥4): ${frameDiffPx(readPNG(f('temple', 'base')), readPNG(f('temple', 'restore')))}`);
+    }
   }
   const fails = R.filter((r) => !r[3]).length;
   console.log(`\n  ${R.length} scored, ${fails} FAIL — the RESULT quotes this table verbatim.`);

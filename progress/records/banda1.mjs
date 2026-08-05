@@ -62,15 +62,16 @@ const ARM_POKES = {
 
 const CHUNKS = [
   { id: 'A', shots: [{ shot: 'sly-closeup', arms: ['base', 'A', 'AB', 'KBoverwarm', 'restore'] }] },
-  { id: 'B', shots: [
-    { shot: 'hero', arms: ['base', 'B', 'AB', 'KBwarmmud', 'restore'] },
-    { shot: 'interior', arms: ['base', 'B', 'AB', 'KBwarmmud', 'restore'] },
-  ] },
+  /* B split B1/B2 (one shot per boot): the seal grouped hero+interior in one boot, but the
+     measured arm cost (~5 min/arm on this container, pnightcal pace) puts 10 arms + 2 stagings
+     over any sane single-boot budget against the ~45-min rollback cadence — §164's own
+     chunking rule. Nothing in the seal's scoring crosses the two shots (P3/P4/P-F4 are all
+     within-shot, arm-vs-base same-boot). Deviation DISCLOSED in RESULT-banda. */
+  { id: 'B1', shots: [{ shot: 'hero', arms: ['base', 'B', 'AB', 'KBwarmmud', 'restore'] }] },
+  { id: 'B2', shots: [{ shot: 'interior', arms: ['base', 'B', 'AB', 'KBwarmmud', 'restore'] }] },
   { id: 'C', shots: [{ shot: 'night', arms: ['base', 'AB', 'restore'] }] },
-  { id: 'D', shots: [
-    { shot: 'temple', arms: ['base', 'AB', 'restore'] },
-    { shot: 'combat', arms: ['base', 'AB', 'restore'] },
-  ] },
+  { id: 'D1', shots: [{ shot: 'temple', arms: ['base', 'AB', 'restore'] }] },
+  { id: 'D2', shots: [{ shot: 'combat', arms: ['base', 'AB', 'restore'] }] },
 ];
 
 const only = process.argv[2] && process.argv[2] !== 'all' ? process.argv[2].toUpperCase() : null;
@@ -89,7 +90,7 @@ for (const chunk of CHUNKS) {
   save();
   log(`chunk ${chunk.id}: srcTree ${report.srcTreeBefore} — booting (own lock hold)`);
 
-  await withGame({ width: 1280, height: 720, quality: 'high', timeout: 30 * 60 * 1000 }, async ({ page, info }) => {
+  await withGame({ width: 1280, height: 720, quality: 'high', timeout: 90 * 60 * 1000 }, async ({ page, info }) => {
     log(`  boot ok — warnings ${info.warnings?.length ?? 0}`);
     page.on('console', (m) => { if (m.type() === 'error') log(`    page error: ${m.text().slice(0, 200)}`); });
 
@@ -127,6 +128,21 @@ for (const chunk of CHUNKS) {
       }, shot);
       sRec.setShot = staged;
       log(`  setShot(${shot}) ${((Date.now() - t1) / 1000).toFixed(0)}s  tod ${staged.tod}  draws ${staged.stats?.drawCalls} tris ${staged.stats?.triangles}`);
+      save();
+
+      /* Settle per the seal §8 ("poke AFTER setShot settles") — implemented properly after
+         the voidA lesson: the first post-stage render carries ~350 s of program compile and
+         a one-off async settle that flipped 216 px (cane-hook FX strip, disjoint from every
+         scored ROI) between base and restore ~7 min into the boot. Absorb compiles AND the
+         settle BEFORE any scored frame: frozen steps + one thrown-away capture, so the
+         scored base→restore span is ~2 min of warm arms. */
+      const t2 = Date.now();
+      await page.evaluate(async () => {
+        await window.__GAME.step(10, 0);
+        window.__GAME.capture('image/png');   // throwaway: warms the capture path too
+      });
+      log(`  settle(${shot}) ${((Date.now() - t2) / 1000).toFixed(0)}s (10 frozen frames + throwaway capture)`);
+      sRec.settleSecs = Math.round((Date.now() - t2) / 1000);
       save();
 
       let baseShadow = null;

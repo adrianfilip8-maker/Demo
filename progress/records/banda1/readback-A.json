@@ -1,7 +1,7 @@
 {
  "prereg": "PREREG-banda.md",
  "chunk": "A",
- "startedAt": "2026-08-05T11:56:59.273Z",
+ "startedAt": "2026-08-05T12:10:10.796Z",
  "srcTreeBefore": "820ace395b9664ae",
  "shipExpected": {
   "subjW": 0.5,
@@ -9,5 +9,36 @@
   "sbm": 0.05,
   "sbmLit": 0.05
  },
- "shots": []
+ "shots": [
+  {
+   "shot": "sly-closeup",
+   "arms": [],
+   "setShot": {
+    "stats": {
+     "fps": 36,
+     "drawCalls": 265,
+     "triangles": 1665419,
+     "programs": 98,
+     "ms": 17255.199999999255
+    },
+    "tod": 0.8
+   }
+  }
+ ],
+ "lever": {
+  "hasShading": true,
+  "hasTune": true,
+  "hasSubjU": true,
+  "hasRefresh": true,
+  "subjW": 0.5,
+  "tintPeak": 0.52,
+  "sbm": 0.05,
+  "sbmLit": 0.05,
+  "uSubjW": 0.5,
+  "uShadowColor": [
+   0.09609963379551392,
+   0.31311543639412576,
+   0.49658401318439915
+  ]
+ }
 }
