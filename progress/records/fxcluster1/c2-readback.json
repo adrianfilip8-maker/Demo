@@ -3,5 +3,329 @@
  "chunk": "c2",
  "startedAt": "2026-08-05T20:59:37.601Z",
  "srcTreeBefore": "bb822753ae7949e8",
- "arms": []
+ "arms": [
+  {
+   "shot": "combat",
+   "arm": "base",
+   "at": "2026-08-05T21:25:19.053Z",
+   "poke": {
+    "mode": "base",
+    "poolsBeforeWipe": {
+     "dust": {
+      "used": 0,
+      "head": 0,
+      "dMax": -1,
+      "loop": false,
+      "inst": 0
+     },
+     "smoke": {
+      "used": 15,
+      "head": 15,
+      "dMax": 3.148,
+      "loop": false,
+      "inst": 15
+     },
+     "spark": {
+      "used": 66,
+      "head": 66,
+      "dMax": 2.903,
+      "loop": false,
+      "inst": 66
+     },
+     "ring": {
+      "used": 0,
+      "head": 0,
+      "dMax": -1,
+      "loop": false,
+      "inst": 0
+     },
+     "sandLow": {
+      "used": 460,
+      "head": 0,
+      "dMax": null,
+      "loop": true,
+      "inst": 460
+     },
+     "sandHigh": {
+      "used": 900,
+      "head": 0,
+      "dMax": null,
+      "loop": true,
+      "inst": 900
+     },
+     "airMotes": {
+      "used": 1000,
+      "head": 0,
+      "dMax": null,
+      "loop": true,
+      "inst": 1000
+     },
+     "shimmer": {
+      "used": 90,
+      "head": 0,
+      "dMax": null,
+      "loop": true,
+      "inst": 90
+     },
+     "motes": {
+      "used": 900,
+      "head": 0,
+      "dMax": null,
+      "loop": true,
+      "inst": 900
+     },
+     "__decals": {
+      "used": 0,
+      "head": 0,
+      "inst": 0
+     }
+    },
+    "poolsAfterWipe": {
+     "dust": {
+      "used": 0,
+      "head": 0,
+      "dMax": -1,
+      "loop": false,
+      "inst": 0
+     },
+     "smoke": {
+      "used": 0,
+      "head": 0,
+      "dMax": -1,
+      "loop": false,
+      "inst": 0
+     },
+     "spark": {
+      "used": 0,
+      "head": 0,
+      "dMax": -1,
+      "loop": false,
+      "inst": 0
+     },
+     "ring": {
+      "used": 0,
+      "head": 0,
+      "dMax": -1,
+      "loop": false,
+      "inst": 0
+     },
+     "sandLow": {
+      "used": 460,
+      "head": 0,
+      "dMax": null,
+      "loop": true,
+      "inst": 460
+     },
+     "sandHigh": {
+      "used": 900,
+      "head": 0,
+      "dMax": null,
+      "loop": true,
+      "inst": 900
+     },
+     "airMotes": {
+      "used": 1000,
+      "head": 0,
+      "dMax": null,
+      "loop": true,
+      "inst": 1000
+     },
+     "shimmer": {
+      "used": 90,
+      "head": 0,
+      "dMax": null,
+      "loop": true,
+      "inst": 90
+     },
+     "motes": {
+      "used": 900,
+      "head": 0,
+      "dMax": null,
+      "loop": true,
+      "inst": 900
+     },
+     "__decals": {
+      "used": 0,
+      "head": 0,
+      "inst": 0
+     }
+    }
+   },
+   "setShot": {
+    "tod": 0.74,
+    "drift": 0,
+    "onScreen": true,
+    "draws": 224,
+    "tris": 1542149,
+    "warnings": 1
+   },
+   "probe": {
+    "hasEMITTERS": true,
+    "defs": {
+     "cane_flash": {
+      "alpha": [
+       2.6,
+       2.6
+      ],
+      "col0": 16771496,
+      "col1": 15251778
+     },
+     "cane_arc": {
+      "alpha": [
+       1.6,
+       2.6
+      ],
+      "col0": 16776168,
+      "col1": 15251778
+     },
+     "cane_spark": {
+      "alpha": [
+       2.2,
+       3.4
+      ],
+      "col0": 16776168,
+      "col1": 15251778
+     },
+     "cane_ring": {
+      "alpha": [
+       2,
+       2
+      ],
+      "col0": 16776168,
+      "col1": 8377599
+     }
+    },
+    "pools": {
+     "dust": {
+      "used": 18,
+      "head": 18,
+      "dMax": 0.546,
+      "loop": false,
+      "inst": 18
+     },
+     "smoke": {
+      "used": 208,
+      "head": 208,
+      "dMax": 3.153,
+      "loop": false,
+      "inst": 208
+     },
+     "spark": {
+      "used": 525,
+      "head": 525,
+      "dMax": 3.078,
+      "loop": false,
+      "inst": 525
+     },
+     "ring": {
+      "used": 1,
+      "head": 1,
+      "dMax": 0.21,
+      "loop": false,
+      "inst": 1
+     },
+     "sandLow": {
+      "used": 460,
+      "head": 0,
+      "dMax": null,
+      "loop": true,
+      "inst": 460
+     },
+     "sandHigh": {
+      "used": 900,
+      "head": 0,
+      "dMax": null,
+      "loop": true,
+      "inst": 900
+     },
+     "airMotes": {
+      "used": 1000,
+      "head": 0,
+      "dMax": null,
+      "loop": true,
+      "inst": 1000
+     },
+     "shimmer": {
+      "used": 90,
+      "head": 0,
+      "dMax": null,
+      "loop": true,
+      "inst": 90
+     },
+     "motes": {
+      "used": 900,
+      "head": 0,
+      "dMax": null,
+      "loop": true,
+      "inst": 900
+     },
+     "__decals": {
+      "used": 2,
+      "head": 2,
+      "inst": 2
+     }
+    },
+    "playerPos": [
+     0,
+     0,
+     28
+    ]
+   },
+   "cam": {
+    "pos": [
+     4.6,
+     2.35,
+     31.4
+    ],
+    "fwd": [
+     -0.758,
+     -0.124,
+     -0.641
+    ],
+    "fov": 40
+   },
+   "tod": 0.74,
+   "srcAtArm": "4ae5982932ab36be",
+   "secs": 419
+  }
+ ],
+ "lever": {
+  "hasEMITTERS": true,
+  "hasBatches": true,
+  "hasDecals": true,
+  "shipped": {
+   "cane_flash": {
+    "alpha": [
+     2.6,
+     2.6
+    ],
+    "col0": 16771496,
+    "col1": 15251778
+   },
+   "cane_arc": {
+    "alpha": [
+     1.6,
+     2.6
+    ],
+    "col0": 16776168,
+    "col1": 15251778
+   },
+   "cane_spark": {
+    "alpha": [
+     2.2,
+     3.4
+    ],
+    "col0": 16776168,
+    "col1": 15251778
+   },
+   "cane_ring": {
+    "alpha": [
+     2,
+     2
+    ],
+    "col0": 16776168,
+    "col1": 8377599
+   }
+  }
+ }
 }

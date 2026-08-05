@@ -1193,6 +1193,149 @@ function sectionW() {
 }
 function lum3v(c) { return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]; }
 
+/* ============================== WSCORE — atmowire1 capture ============================== */
+/* AMENDMENT 2026-08-05 (capture executor, per PREREG-atmowire.md §6 "section W gains a
+ * score path"): scores a landed atmowire1 capture. WBANDS below is the seal's §3 table
+ * duplicated VERBATIM — the prereg is authoritative; a disagreement is a bug HERE.
+ * Frames: progress/records/atmowire1/ (env ATMO_DIR overrides). Sections A–E and the W
+ * diagnosis above are byte-untouched by this amendment. */
+
+const WBANDS = {
+  rects: {
+    pyrInterior: [470, 30, 650, 90], skyLeft: [130, 30, 280, 90],
+    skyTopLeft: [0, 0, 300, 60], skyTopRight: [900, 0, 1280, 60],
+    complex: [300, 140, 900, 420], nearGround: [200, 500, 1100, 700],
+  },
+  baseGates: { QW1: [2.5, 5.0], complexMedL: [100, 120], nearGroundMedL: [70, 85], skyLeftMedL: [156, 168] }, // VOID not FAIL
+  noiseGateQW1: 1.0,             // |Q-W1(base2) − Q-W1(base)| ≤ 1.0 else UNSCOREABLE (P-A6)
+  QW1_CT40: [8, 22],             // Q-W1 decisive band (predicted 10.4; ref class 21.4 = target class, not gate)
+  QW1_CT55: [1, 9],              // Q-W1b bracket point
+  QDIR_max: 1.0,                 // Q-DIR: wire-only (s=1.0) Q-W1 < +1.0 (predicted −13.5)
+  QCPX_corridor: [-35, -12],     // Q-CPX: Δcomplex vs base, wired arms W/CT55/CT40
+  QCPX_floor: 70,                // + floor: complex medL ≥ 70
+  QNEAR_absMax: 4.0,             // Q-NEAR: |ΔnearGround| ≤ 4.0, wired arms
+  QDOME_absMax: 1.0,             // Q-DOME: |ΔmedL| ≤ 1.0 on skyTopLeft/skyTopRight/skyLeft, every arm
+  /* Q-SEAM strips (executor-chosen REPORTED rows, verified on sbs2 dunes 2026-08-05): the
+   * SOFT hazy horizon segment is x 1030-1150 (skyline wanders y 241-265 there, max col-grad
+   * 3-7 L; x<1010 carries hard silhouette edges, grad 50-90 — wrong probe). Strips hug the
+   * wander band: dome above (y 230-238), world below (y 268-276); base step measures 2.2 L. */
+  seamStrips: { world: [1030, 268, 1150, 276], dome: [1030, 230, 1150, 238] },
+  regRects: {                    // Q-REG reported rows (executor-chosen fixed rects, stated)
+    hero: { far: [200, 300, 900, 600], skyCtrl: [340, 2, 700, 50] },
+    night: { far: [700, 260, 1250, 430], skyCtrl: [1150, 90, 1275, 205] },
+  },
+  diffThresh: 4,                 // ΣRGB ≥ 4 (§122.1) for P-F4 diff counts
+};
+
+function wDiffPx(imA, imB) {
+  let n = 0;
+  const w = Math.min(imA.w, imB.w), h = Math.min(imA.h, imB.h);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const i = (y * imA.w + x) * imA.ch, j = (y * imB.w + x) * imB.ch;
+    const d = Math.abs(imA.data[i] - imB.data[j]) + Math.abs(imA.data[i + 1] - imB.data[j + 1]) + Math.abs(imA.data[i + 2] - imB.data[j + 2]);
+    if (d >= WBANDS.diffThresh) n++;
+  }
+  return n;
+}
+
+function sectionWScore() {
+  say('\n=== WSCORE — atmowire1 vs PREREG-atmowire.md §3 (prereg authoritative) ===');
+  const dir = process.env.ATMO_DIR || R('./atmowire1/');
+  const S = { verdicts: [], arms: {} };
+  const load = (name) => { try { return readPNG(`${dir}${name}.png`); } catch { return null; } };
+  const rect = (im, r) => rectStats(im, r[0], r[1], r[2], r[3]).medL;
+  const V2 = (line) => { S.verdicts.push(line); say(`  ${line}`); };
+
+  /* ---- chunk 1: dunes ---- */
+  const armNames = ['base', 'base2', 'W', 'CT55', 'CT40', 'KBdense', 'restore'];
+  const A = {};
+  for (const a of armNames) A[a] = load(`dunes.${a}`);
+  if (!A.base) { say(`  dunes.base absent under ${dir} — nothing to score`); OUT.sections.WSCORE = S; return; }
+  const q = {};
+  for (const a of armNames) {
+    if (!A[a]) { say(`  dunes.${a}: MISSING`); continue; }
+    q[a] = {
+      QW1: +(rect(A[a], WBANDS.rects.skyLeft) - rect(A[a], WBANDS.rects.pyrInterior)).toFixed(2),
+      skyLeft: +rect(A[a], WBANDS.rects.skyLeft).toFixed(1),
+      pyrInterior: +rect(A[a], WBANDS.rects.pyrInterior).toFixed(1),
+      complex: +rect(A[a], WBANDS.rects.complex).toFixed(1),
+      nearGround: +rect(A[a], WBANDS.rects.nearGround).toFixed(1),
+      skyTopLeft: +rect(A[a], WBANDS.rects.skyTopLeft).toFixed(1),
+      skyTopRight: +rect(A[a], WBANDS.rects.skyTopRight).toFixed(1),
+    };
+    say(`  dunes.${a.padEnd(8)} Q-W1 ${String(q[a].QW1).padStart(7)}  sky ${q[a].skyLeft}  pyr ${q[a].pyrInterior}  complex ${q[a].complex}  near ${q[a].nearGround}`);
+  }
+  S.arms.dunes = q;
+  // base gates (VOID not FAIL)
+  const bg = WBANDS.baseGates;
+  const inB = (v, b) => v >= b[0] && v <= b[1];
+  const baseOk = inB(q.base.QW1, bg.QW1) && inB(q.base.complex, bg.complexMedL)
+    && inB(q.base.nearGround, bg.nearGroundMedL) && inB(q.base.skyLeft, bg.skyLeftMedL);
+  V2(`base gates: QW1 ${q.base.QW1} in [${bg.QW1}], complex ${q.base.complex} in [${bg.complexMedL}], near ${q.base.nearGround} in [${bg.nearGroundMedL}], skyLeft ${q.base.skyLeft} in [${bg.skyLeftMedL}]: ${baseOk ? 'PASS' : 'FAIL → CAPTURE VOID (not a candidate verdict)'}`);
+  if (q.base2) {
+    const nz = Math.abs(q.base2.QW1 - q.base.QW1);
+    V2(`noise gate |Q-W1(base2)−Q-W1(base)| ${nz.toFixed(2)} ≤ ${WBANDS.noiseGateQW1}: ${nz <= WBANDS.noiseGateQW1 ? 'PASS' : 'FAIL → P-A6 UNSCOREABLE'}`);
+  }
+  if (q.W) V2(`Q-DIR wire-only Q-W1 ${q.W.QW1} < +${WBANDS.QDIR_max}: ${q.W.QW1 < WBANDS.QDIR_max ? 'PASS (curve carries; separation collapses as predicted)' : 'FAIL → P-A2 candidate VOID (curve port wrong upstream)'}`);
+  if (q.CT55) V2(`Q-W1b CT55 ${q.CT55.QW1} in [${WBANDS.QW1_CT55}]: ${inB(q.CT55.QW1, WBANDS.QW1_CT55) ? 'PASS' : 'OUT (bracket point — informs s′; not a revert alone)'}`);
+  if (q.CT40) V2(`Q-W1 CT40 ${q.CT40.QW1} in [${WBANDS.QW1_CT40}]: ${inB(q.CT40.QW1, WBANDS.QW1_CT40) ? 'PASS' : (q.CT40.QW1 < WBANDS.QW1_CT40[0] ? 'FAIL → P-A1 (dose insufficient; resolve s′ for ONE successor re-seal)' : 'FAIL (overshoot — revert-not-defend)')}`);
+  if (q.CT55 && q.CT40) {
+    const ord = q.base.QW1 <= q.CT55.QW1 && q.CT55.QW1 < q.CT40.QW1;
+    V2(`Q-ORD base ${q.base.QW1} ≤ CT55 ${q.CT55.QW1} < CT40 ${q.CT40.QW1}: ${ord ? 'PASS (monotone dose-response)' : 'FAIL'}`);
+  }
+  for (const a of ['W', 'CT55', 'CT40']) {
+    if (!q[a]) continue;
+    const dC = +(q[a].complex - q.base.complex).toFixed(1);
+    const okC = dC >= WBANDS.QCPX_corridor[0] && dC <= WBANDS.QCPX_corridor[1] && q[a].complex >= WBANDS.QCPX_floor;
+    V2(`Q-CPX ${a} Δcomplex ${dC} in [${WBANDS.QCPX_corridor}] + floor ${q[a].complex} ≥ ${WBANDS.QCPX_floor}: ${okC ? 'PASS' : 'FAIL'}`);
+    const dN = +(q[a].nearGround - q.base.nearGround).toFixed(2);
+    V2(`Q-NEAR ${a} |Δnear| ${Math.abs(dN)} ≤ ${WBANDS.QNEAR_absMax}: ${Math.abs(dN) <= WBANDS.QNEAR_absMax ? 'PASS' : 'FAIL'}`);
+  }
+  for (const a of armNames.slice(1)) {
+    if (!q[a]) continue;
+    const dd = ['skyTopLeft', 'skyTopRight', 'skyLeft'].map((r2) => +(q[a][r2] - q.base[r2]).toFixed(2));
+    const ok = dd.every((v) => Math.abs(v) <= WBANDS.QDOME_absMax);
+    V2(`Q-DOME ${a.padEnd(8)} ΔmedL [${dd.join(', ')}] each |≤ ${WBANDS.QDOME_absMax}|: ${ok ? 'PASS' : 'FAIL → P-A5 CAPTURE VOID (world-only premise broke)'}`);
+  }
+  if (q.KBdense) {
+    const breachC = q.KBdense.complex < WBANDS.QCPX_floor;
+    const breachN = Math.abs(q.KBdense.nearGround - q.base.nearGround) > WBANDS.QNEAR_absMax;
+    V2(`KB-dense breach: complex ${q.KBdense.complex} < ${WBANDS.QCPX_floor} (${breachC}) OR |Δnear| ${Math.abs(q.KBdense.nearGround - q.base.nearGround).toFixed(2)} > ${WBANDS.QNEAR_absMax} (${breachN}): ${breachC || breachN ? 'PASS (reads as its own failure — correct)' : 'FAIL → P-A3 UNSCOREABLE'}`);
+  }
+  if (A.restore) {
+    const n = wDiffPx(A.base, A.restore);
+    V2(`P-F4 dunes restore-vs-base ${n} px at ΣRGB≥${WBANDS.diffThresh} in [0, 0]: ${n === 0 ? 'PASS (bit-identical)' : 'FAIL → every arm number in this boot VOID'}`);
+  }
+  // Q-SEAM honesty row (REPORTED, not gated): skyline strip step per CT arm
+  for (const a of ['CT55', 'CT40']) {
+    if (!A[a]) continue;
+    const wS = rect(A[a], WBANDS.seamStrips.world), dS = rect(A[a], WBANDS.seamStrips.dome);
+    const wB = rect(A.base, WBANDS.seamStrips.world), dB = rect(A.base, WBANDS.seamStrips.dome);
+    say(`  Q-SEAM ${a}: world strip medL ${wS.toFixed(1)} vs dome strip ${dS.toFixed(1)} (step ${(dS - wS).toFixed(1)}; base step ${(dB - wB).toFixed(1)}) — REPORTED; crop it for the RESULT`);
+    S[`seam_${a}`] = { world: +wS.toFixed(1), dome: +dS.toFixed(1), step: +(dS - wS).toFixed(1), baseStep: +(dB - wB).toFixed(1) };
+  }
+
+  /* ---- chunk 2: hero + night Q-REG reported rows ---- */
+  for (const shot of ['hero', 'night']) {
+    const b = load(`${shot}.base`), c = load(`${shot}.CT40`), r = load(`${shot}.restore`);
+    if (!b || !c) { say(`  ${shot}: Q-REG pair absent (chunk 2)`); continue; }
+    const rr = WBANDS.regRects[shot];
+    const rows = {
+      farBase: +rect(b, rr.far).toFixed(1), farCT40: +rect(c, rr.far).toFixed(1),
+      skyCtrlBase: +rect(b, rr.skyCtrl).toFixed(1), skyCtrlCT40: +rect(c, rr.skyCtrl).toFixed(1),
+    };
+    rows.dFar = +(rows.farCT40 - rows.farBase).toFixed(2);
+    rows.dSkyCtrl = +(rows.skyCtrlCT40 - rows.skyCtrlBase).toFixed(2);
+    S.arms[shot] = rows;
+    say(`  Q-REG ${shot}: far ${rr.far} ΔmedL ${rows.dFar} (${rows.farBase} → ${rows.farCT40});  skyCtrl ${rr.skyCtrl} ΔmedL ${rows.dSkyCtrl} — REPORTED (declared §17 radius)`);
+    if (r) {
+      const n = wDiffPx(b, r);
+      V2(`P-F4 ${shot} restore-vs-base ${n} px at ΣRGB≥${WBANDS.diffThresh} in [0, 0]: ${n === 0 ? 'PASS (bit-identical)' : 'FAIL → chunk-2 numbers VOID'}`);
+    }
+  }
+  OUT.sections.WSCORE = S;
+}
+
 /* ============================== run ============================== */
 
 const want = process.argv.slice(2).map((s) => s.toUpperCase());
@@ -1203,6 +1346,7 @@ try { if (all || want.includes('C')) sectionC(); } catch (e) { say('C FAILED:', 
 try { if (all || want.includes('D')) sectionD(); } catch (e) { say('D FAILED:', e.message); OUT.sections.D = { error: e.message }; }
 try { if (all || want.includes('E')) sectionE(); } catch (e) { say('E FAILED:', e.message); OUT.sections.E = { error: e.message }; }
 try { if (want.includes('W')) sectionW(); } catch (e) { say('W FAILED:', e.message); OUT.sections.W = { error: e.message }; }
+try { if (want.includes('WSCORE')) sectionWScore(); } catch (e) { say('WSCORE FAILED:', e.message); OUT.sections.WSCORE = { error: e.message }; }
 
 writeFileSync(R('./fxcluster-diag-out.json'), JSON.stringify(OUT, null, 1));
 say('\nwrote fxcluster-diag-out.json');
