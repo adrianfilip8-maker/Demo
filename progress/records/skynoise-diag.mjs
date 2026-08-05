@@ -5,6 +5,10 @@
  *
  *   node progress/records/skynoise-diag.mjs [frames|grain|project|sim|all]      (default: all)
  *   node progress/records/skynoise-diag.mjs sim --png     also writes sim crops to the scratchpad
+ *   node progress/records/skynoise-diag.mjs swirl [--png]      residual-class ablation (amendment)
+ *   node progress/records/skynoise-diag.mjs sweep              elevation-term value sweep
+ *   node progress/records/skynoise-diag.mjs swirlcrops         tall sim renders for eyeballing
+ *   node progress/records/skynoise-diag.mjs swirlscore <dir>   score a skyswirl1 capture
  *
  * WHAT IT ANSWERS
  *   1. `frames`  — reproduces CRITIC-sbs1's hf metric on the committed frames
@@ -76,6 +80,25 @@
  *   Every Sky.js / PostFX.js constant the ports below embed is parsed OUT of the committed
  *   source at runtime and asserted. If someone retunes TUNE.decks or the grade, this
  *   instrument refuses to run rather than print numbers about a tree that no longer exists.
+ *
+ * ── AMENDMENT 2026-08-05 (SKY successor, skyswirl seal) — recorded change, not a fork ──
+ *   The skynoise candidate SHIPPED: Sky.js TUNE.decks now carries scale 0.000105/0.000138/
+ *   0.000105 and soft 0.36/0.38/0.40 (RESULT-skynoise.md §17; CRITIC-sbs2 frames confirm).
+ *   The deck parse was always generic, so the guard passes on the shipped tree with NO
+ *   pattern change — `C.decks` now MEANS the shipped values, and the file-local CANDIDATE
+ *   table below is the shipped tree restated (kept so `sim`/`cand` history reruns).
+ *   What this amendment adds, for CRITIC-sbs2's residual finding (dunes worst band hf 8.05
+ *   unmasked = 14.6x ref; night "liquid swirl" at 1:1; courtyard clean at 4.00):
+ *     1. FRAMES entries for the committed sbs2 shipped-tree frames at CRITIC-sbs2's rects
+ *        (their hf numbers are UNMASKED — reproduced here both unmasked for correspondence
+ *        and masked/clean-subrect to split geometry ink out of the sky number).
+ *     2. `swirl` mode — the successor per-term ablation at the SHIPPED values on the
+ *        residual rects: deck solos, warp arms (incl. the pre-named deck2 1.25→0.7),
+ *        streak arms, drift/seam arms (uTime + border-feathered texture), and the
+ *        graze-fade candidate term (sim-only shader-term probe, marked as such).
+ *     3. `swirlscore` mode — scores a landed skyswirl capture against PREREG-skyswirl.md.
+ *   Baselines from the skynoise seal (cand1/gold1 FRAMES rows, SEAL table, runScore) are
+ *   left byte-identical: they score the PREDECESSOR's capture and still reproduce.
  */
 
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
@@ -112,6 +135,22 @@ const FRAMES = [
   { shot: 'traversal', file: `${REC}/gold1/traversal.png`, thresh: 60,
     rects: { clean: [80, 5, 700, 55] },
     criticHf: null, criticNote: 'newest committed frame (gold1); persistence check' },
+  /* ── AMENDMENT 2026-08-05 (skyswirl): shipped-tree sbs2 frames, CRITIC-sbs2 rects. ──
+   * CRITIC-sbs2's hf numbers are UNMASKED (thresh:null reproduces 8.05 / 4.98 / 4.00 to
+   * the digit); the extra rects split geometry ink out of the sky number by PLACEMENT,
+   * because on the night staging the architecture silhouette (p50 L≈11.6) and the deep
+   * swirl sky (p25 L≈11.3) OVERLAP in luma — no threshold separates them (verified on
+   * boosted crops: obelisk x≈785-880 full height, roof x≈880-1050 y≈100-230, rings
+   * y≤60, all invisible at 1x against the night sky). */
+  { shot: 'courtyard-sbs2', file: `${REC}/sbs2/courtyard.png`, thresh: null,
+    rects: { critic2: [850, 0, 1150, 55] },
+    criticHf: 4.00, criticNote: 'CRITIC-sbs2 clean sky 4.00 vs ref 1.22 — shipped decks, the now-clean day control (geometry-free: 0% under L60)' },
+  { shot: 'dunes-sbs2', file: `${REC}/sbs2/dunes.png`, thresh: null,
+    rects: { critic2: [760, 0, 1120, 45], clean: [920, 0, 1115, 45], top: [0, 0, 1280, 50] },
+    criticHf: 8.05, criticNote: 'CRITIC-sbs2 worst band 8.05 UNMASKED — includes the pylon-top ink corner (x≈760-905, masked-at-60 variant reads 5.48) and birds; `clean` (0% under L60) is the sky-only residual; `top` includes the pale pyramid (correspondence only)' },
+  { shot: 'night-sbs2', file: `${REC}/sbs2/night.png`, thresh: null,
+    rects: { critic2: [750, 0, 1250, 220], cleanR: [1150, 90, 1275, 205] },
+    criticHf: 4.98, criticNote: 'CRITIC-sbs2 swirl band 4.98 UNMASKED — contains obelisk/roof/rings (see amendment note); cleanR is open swirl sky by placement (FX petals remain in it, stated: pale motes L≈30-90, unmodelled by the sim)' },
 ];
 
 const luma709 = (r, g, b) => 0.2126 * r + 0.7152 * g + 0.0722 * b;
@@ -128,6 +167,7 @@ function lumaGrid(im, [x0, y0, x1, y1]) {
 
 function darkMask({ L, w, h }, thresh, dil = 2) {
   const m0 = new Uint8Array(w * h);
+  if (thresh == null) return m0;   // amendment: thresh null = unmasked (CRITIC-sbs2 convention)
   for (let i = 0; i < w * h; i++) m0[i] = L[i] < thresh ? 1 : 0;
   if (!dil) return m0;
   const m = new Uint8Array(w * h);
@@ -362,7 +402,9 @@ function runFrames() {
       console.log(`  ${F.shot}.${rname} ${JSON.stringify(rect)} mask<${F.thresh}${flag}`);
       console.log(`    n ${st.n} (masked ${st.maskedPct.toFixed(1)}%)  meanL ${st.mean.toFixed(1)}  sd ${st.sd.toFixed(2)}`);
       console.log(`    hf ${st.hf.toFixed(2)}  (hf_x ${st.hfx.toFixed(2)} + hf_y ${st.hfy.toFixed(2)})` +
-        (F.criticHf ? `   [CRITIC, their lost frame: ${F.criticHf}]` : ''));
+        (F.criticHf ? (F.shot.includes('-sbs2')
+          ? `   [CRITIC-sbs2, committed frame, their headline rect: ${F.criticHf}]`
+          : `   [CRITIC, their lost frame: ${F.criticHf}]`) : ''));
     console.log(`    hf by row quarter (top→bottom): ${prof.map((v) => v.toFixed(2)).join('  ')}`);
       console.log(`    acf x(row-detrended): zero@${ax.z0} min@${ax.minLag}(${ax.minV?.toFixed(2)}) peak2@${ax.secPeak}(${ax.secV?.toFixed(2)})`);
       console.log(`    acf y(col-detrended): zero@${ay.z0} min@${ay.minLag}(${ay.minV?.toFixed(2)}) peak2@${ay.secPeak}(${ay.secV?.toFixed(2)})`);
@@ -640,6 +682,15 @@ function makeSkySim(C, A, opts = {}) {
   const coverAdd = opts.coverAdd ?? 0;
   const sampler = opts.sampler;
   const uTime = opts.uTime ?? 0;   // capture boots freeze an arbitrary t; drift = per-deck uv translation
+  /* AMENDMENT (skyswirl): candidate elevation-dependent terms, SIM-ONLY probes of a
+   * proposed shader change — NOT ports of shipped code. Defaults reproduce the shipped
+   * shader exactly (grazeEdge 0.085 is the shipped alpha smoothstep edge; grazeCover 0
+   * disables the coverage lift; grazeBand only read when grazeCover > 0). */
+  const grazeEdge = opts.grazeEdge ?? 0.085;
+  const grazeCover = opts.grazeCover ?? 0;
+  const grazeBand = opts.grazeBand ?? [0.06, 0.22];
+  const grazeLod = opts.grazeLod ?? 0;      // mip-bias at grazing (texture2D bias equivalent)
+  const grazeSoft = opts.grazeSoft ?? 0;    // soft widening at grazing
   const cover = [A.cloudCover.x + coverAdd, A.cloudCover.y + coverAdd, A.cloudCover.z + coverAdd];
   const col3 = (c) => [c.r, c.g, c.b];
   const uZenith = col3(A.zenith), uHorizon = col3(A.horizon), uHaze = col3(A.haze);
@@ -649,14 +700,14 @@ function makeSkySim(C, A, opts = {}) {
   const sun = A.sunDir, moon = A.moonDir;
   const milky = new THREE.Vector3(-0.58, 0.50, 0.64).normalize();
 
-  function deckDensity(ax, ay, gx, gy, streak, cov, soft) {
-    const s1 = sampler(ax, ay, gx, gy);
+  function deckDensity(ax, ay, gx, gy, streak, cov, soft, lodK = 1) {
+    const s1 = sampler(ax, ay, [gx[0] * lodK, gx[1] * lodK], [gy[0] * lodK, gy[1] * lodK]);
     const n1 = s1[1];
-    const s2 = sampler(ax * 2.31 + 0.37, ay * 2.31 + 0.11, [gx[0] * 2.31, gx[1] * 2.31], [gy[0] * 2.31, gy[1] * 2.31]);
+    const s2 = sampler(ax * 2.31 + 0.37, ay * 2.31 + 0.11, [gx[0] * 2.31 * lodK, gx[1] * 2.31 * lodK], [gy[0] * 2.31 * lodK, gy[1] * 2.31 * lodK]);
     const n2 = s2[0];
-    const s3 = sampler(ax * 5.7 - 0.19, ay * 5.7 - 0.53, [gx[0] * 5.7, gx[1] * 5.7], [gy[0] * 5.7, gy[1] * 5.7]);
+    const s3 = sampler(ax * 5.7 - 0.19, ay * 5.7 - 0.53, [gx[0] * 5.7 * lodK, gx[1] * 5.7 * lodK], [gy[0] * 5.7 * lodK, gy[1] * 5.7 * lodK]);
     const n3 = s3[2];
-    const sp = sampler(ax * 1.7 + 0.61, ay * 1.7 + 0.23, [gx[0] * 1.7, gx[1] * 1.7], [gy[0] * 1.7, gy[1] * 1.7]);
+    const sp = sampler(ax * 1.7 + 0.61, ay * 1.7 + 0.23, [gx[0] * 1.7 * lodK, gx[1] * 1.7 * lodK], [gy[0] * 1.7 * lodK, gy[1] * 1.7 * lodK]);
     const puff = sp[3];
     const raw = n1 * 0.58 + n2 * 0.30 + n3 * 0.16 + puff * 0.20;
     return { dens: sstep(cov, cov + soft, raw), core: puff };
@@ -678,18 +729,22 @@ function makeSkySim(C, A, opts = {}) {
     }
     const a = [uv[0] / D.streak, uv[1]];
     const agx = [gx[0] / D.streak, gx[1]], agy = [gy[0] / D.streak, gy[1]];
-    const { dens, core } = deckDensity(a[0], a[1], agx, agy, D.streak, cover[k], D.soft);
+    const gz = (grazeCover > 0 || grazeLod > 0 || grazeSoft > 0) ? (1 - sstep(grazeBand[0], grazeBand[1], d.y)) : 0;
+    const covK = cover[k] + grazeCover * gz;
+    const softK = D.soft + grazeSoft * gz;
+    const lodK = grazeLod > 0 ? Math.pow(2, grazeLod * gz) : 1;
+    const { dens, core } = deckDensity(a[0], a[1], agx, agy, D.streak, covK, softK, lodK);
     if (dens <= 0.001) return skyBehind;
     const sl = Math.hypot(sun.x, sun.z) || 1e-4;
     const sunUv = [(sun.x / sl) * 0.030 * (1 + 2.2 * (1 - clamp01(sun.y))), (sun.z / sl) * 0.030 * (1 + 2.2 * (1 - clamp01(sun.y)))];
-    const dL = deckDensity(a[0] + sunUv[0], a[1] + sunUv[1], agx, agy, D.streak, cover[k], D.soft).dens;
+    const dL = deckDensity(a[0] + sunUv[0], a[1] + sunUv[1], agx, agy, D.streak, covK, softK, lodK).dens;
     let lit = clamp01((dens - dL) * 2.6 + 0.52 + sun.y * 0.22);
     lit = bandRamp(lit, 3, 0.16);
     let col = [0, 1, 2].map((c) => mixN(uCloudShadow[c], uCloudLit[c], lit) * A.cloudBright);
     const rim = Math.pow(1 - dens, 3.2) * lit;
     col = col.map((v, c) => v + uCloudRim[c] * rim * 1.35);
     col = col.map((v, c) => mixN(v, uCloudShadow[c] * 0.82, (1 - lit) * 0.45 * core));
-    let alpha = dens * D.opacity * sstep(0.004, 0.085, d.y);
+    let alpha = dens * D.opacity * sstep(0.004, grazeEdge, d.y);
     const far = sstep(0.55, 0.03, d.y);
     col = col.map((v, c) => mixN(v, uHaze[c], far * 0.42 * 1.0));
     alpha *= mixN(1, 0.72, far);
@@ -958,6 +1013,211 @@ function runCand(C, wantPNG2) {
   }
 }
 
+/* ══════════════════ AMENDMENT: section swirl (skyswirl seal) ══════════════════
+ * Per-term ablation of the RESIDUAL swirl/streak class at the SHIPPED deck values, on
+ * geometry-free rects of the committed sbs2 frames (CRITIC-sbs2's finding). Sim renders
+ * sky-only, so the frame row above each table carries FX petals/birds the sim lacks —
+ * compare as statistics with that stated (skynoise R3's discipline).
+ * All stats UNMASKED (the sbs2 correspondence convention; sim rects are geometry-free). */
+
+const SWIRL_RECTS = {
+  dunes: { rect: [920, 0, 1115, 45], frame: `${REC}/sbs2/dunes.png` },
+  night: { rect: [1150, 90, 1275, 205], frame: `${REC}/sbs2/night.png` },
+  courtyard: { rect: [850, 0, 1150, 55], frame: `${REC}/sbs2/courtyard.png` },
+};
+
+function decksWith(C, fn) { return C.decks.map((d, k) => ({ ...d, ...fn(d, k) })); }
+
+/** Border-feathered texture: seam-step ablation. Interior byte-identical; the 2 texels
+ * beside each wrap boundary are cross-faded to their mutual wrap mean, so the lattice
+ * seam (hash2(6,y) != hash2(0,y), non-integer R/A frequencies) becomes a short ramp.
+ * Diagnostic ONLY — quantifies how much of a rect's hf the seams carry; not a fix. */
+function featherSeams(tex, size) {
+  const t = new Uint8Array(tex);
+  const at = (x, y, c) => (y * size + x) * 4 + c;
+  for (let c = 0; c < 4; c++) {
+    for (let y = 0; y < size; y++) {
+      const m = Math.round((tex[at(0, y, c)] + tex[at(size - 1, y, c)]) / 2);
+      t[at(0, y, c)] = m; t[at(size - 1, y, c)] = m;
+      t[at(1, y, c)] = Math.round((tex[at(1, y, c)] + m) / 2);
+      t[at(size - 2, y, c)] = Math.round((tex[at(size - 2, y, c)] + m) / 2);
+    }
+    for (let x = 0; x < size; x++) {
+      const m = Math.round((t[at(x, 0, c)] + t[at(x, size - 1, c)]) / 2);
+      t[at(x, 0, c)] = m; t[at(x, size - 1, c)] = m;
+      t[at(x, 1, c)] = Math.round((t[at(x, 1, c)] + m) / 2);
+      t[at(x, size - 2, c)] = Math.round((t[at(x, size - 2, c)] + m) / 2);
+    }
+  }
+  return t;
+}
+
+function seamMagnitude(tex, size) {
+  const names = ['R(cirrus 2.52cyc — cannot tile)', 'G(cumulus 6cyc — lattice unwrapped)', 'B(ridged 13.8cyc)', 'A(worley 8.1cyc — cannot tile)'];
+  console.log('  texture wrap-seam magnitude per channel (mean |step| across the boundary vs interior):');
+  for (let c = 0; c < 4; c++) {
+    let seam = 0, inter = 0, ni = 0;
+    for (let y = 0; y < size; y++) {
+      seam += Math.abs(tex[(y * size + size - 1) * 4 + c] - tex[(y * size) * 4 + c]);
+      for (let x = 0; x < size - 1; x++) { inter += Math.abs(tex[(y * size + x + 1) * 4 + c] - tex[(y * size + x) * 4 + c]); ni++; }
+    }
+    console.log(`    ${names[c]}: seam ${(seam / size).toFixed(1)}/255 vs interior ${(inter / ni).toFixed(1)}/255 = ${(seam / size / (inter / ni)).toFixed(1)}x`);
+  }
+}
+
+/** Elevation + per-deck screen-period table for a rect (the projection-compression attribution). */
+function swirlProject(C, shot, rect) {
+  const cam = shotCamera(shot);
+  const [x0, y0, x1, y1] = rect;
+  const midX = Math.round((x0 + x1) / 2);
+  for (const py of [y0, Math.round((y0 + y1) / 2), y1 - 1]) {
+    const d = rayAt(cam, midX, py);
+    const elev = (Math.asin(d.y) * 180) / Math.PI;
+    if (d.y <= 0.004) { console.log(`    row ${py}: below deck horizon`); continue; }
+    const parts = C.decks.map((D, k) => {
+      const uvOf = (dd) => { const t = D.h / dd.y; return [dd.x * t * D.scale, dd.z * t * D.scale]; };
+      const uv0 = uvOf(d), uvx = uvOf(rayAt(cam, midX + 1, py)), uvy = uvOf(rayAt(cam, midX, py + 1));
+      const g1x = Math.hypot((uvx[0] - uv0[0]) / D.streak, uvx[1] - uv0[1]);
+      const g1y = Math.hypot((uvy[0] - uv0[0]) / D.streak, uvy[1] - uv0[1]);
+      return `d${k} P6y ${(1 / (C.texBase * Math.max(1e-9, g1y))).toFixed(0)}px/P6x ${(1 / (C.texBase * Math.max(1e-9, g1x))).toFixed(0)}px aniso ${(g1y / Math.max(1e-9, g1x)).toFixed(1)}`;
+    });
+    console.log(`    row y=${py} (x=${midX}): elev ${elev.toFixed(1)}°  ${parts.join('  ')}`);
+  }
+}
+
+function runSwirl(C, wantPNG) {
+  console.log('\n══ SWIRL — residual-class ablation at the SHIPPED deck values (sbs2 rects, unmasked) ══');
+  const t0 = Date.now();
+  const tex = buildCloudTextureData(C.noiseSize, (C.seed ^ 0x5b1e) >>> 0);
+  const sampler = makeSampler(tex, C.noiseSize);
+  const samplerFeather = makeSampler(featherSeams(tex, C.noiseSize), C.noiseSize);
+  console.log(`  texture built in ${Date.now() - t0} ms`);
+  seamMagnitude(tex, C.noiseSize);
+  const arms = [
+    ['full', {}],
+    ['nodecks', { deckOn: [false, false, false] }],
+    ['deck0', { deckOn: [true, false, false] }],
+    ['deck1', { deckOn: [false, true, false] }],
+    ['deck2', { deckOn: [false, false, true] }],
+    ['nowarp', { warpOn: false }],
+    ['warp2_0.7', { decks: decksWith(C, (d, k) => (k === 2 ? { warp: 0.7 } : {})) }],
+    ['warpLo', { decks: decksWith(C, (d, k) => ({ warp: [0.45, 0.60, 0.70][k] })) }],
+    ['streak0_1', { decks: decksWith(C, (d, k) => (k === 0 ? { streak: 1.0 } : {})) }],
+    ['t300', { uTime: 300 }],
+    ['seamfeather', { sampler: samplerFeather }],
+    ['grazeA_.18', { grazeEdge: 0.18 }],
+    ['grazeC_.12', { grazeCover: 0.12 }],
+    /* the sealed skyswirl candidate + its over-corrected known-bad (PREREG-skyswirl.md) */
+    ['CANDSW', { grazeCover: 0.15, grazeBand: [0.10, 0.30] }],
+    ['KBOVER', { grazeCover: 0.60, grazeBand: [0.10, 0.45] }],
+  ];
+  const out = {};
+  for (const [shot, S] of Object.entries(SWIRL_RECTS)) {
+    const rect = S.rect;
+    console.log(`\n  ${shot} rect ${JSON.stringify(rect)} — elevation/screen-period per deck:`);
+    swirlProject(C, shot, rect);
+    out[shot] = {};
+    try {
+      const im = readPNG(S.frame);
+      const grid = lumaGrid(im, rect);
+      const mask = darkMask(grid, null);
+      const st = stats(grid, mask);
+      const pd = pd9(grid, mask);
+      out[shot].FRAME = { hf: st.hf, hfx: st.hfx, hfy: st.hfy, sd: st.sd, pd9: pd.pd9 };
+      console.log(`    FRAME(sbs2)    hf ${st.hf.toFixed(2).padStart(6)} (x ${st.hfx.toFixed(2)} + y ${st.hfy.toFixed(2)})  sd ${st.sd.toFixed(2).padStart(6)}  PD9 ${pd.pd9.toFixed(2).padStart(6)}  meanL ${st.mean.toFixed(0)}   [carries FX petals/birds the sim lacks]`);
+    } catch { console.log(`    FRAME(sbs2)    missing ${S.frame}`); }
+    for (const [name, o] of arms) {
+      const wantRGBA = wantPNG && ['full', 'nowarp', 'warp2_0.7', 'warpLo', 'streak0_1', 'seamfeather', 'grazeA_.18', 'grazeC_.12', 't300', 'CANDSW', 'KBOVER'].includes(name);
+      const r = renderRect(C, shot, rect, { ...o, sampler: o.sampler ?? sampler }, true, wantRGBA);
+      const mask = darkMask(r, null);
+      const st = stats(r, mask);
+      const ay = acf(r, mask, 'y'), ax = acf(r, mask, 'x');
+      const pd = pd9(r, mask);
+      out[shot][name] = { hf: st.hf, hfx: st.hfx, hfy: st.hfy, sd: st.sd, pd9: pd.pd9 };
+      console.log(`    ${name.padEnd(12)} hf ${st.hf.toFixed(2).padStart(6)} (x ${st.hfx.toFixed(2)} + y ${st.hfy.toFixed(2)})  sd ${st.sd.toFixed(2).padStart(6)}  PD9 ${pd.pd9.toFixed(2).padStart(6)}  acfY z0@${String(ay.z0).padStart(3)} acfX z0@${String(ax.z0).padStart(3)}  meanL ${st.mean.toFixed(0)}`);
+      if (wantRGBA) {
+        const p = `${SCRATCH}/swirl-${shot}-${name.replace(/[^a-zA-Z0-9]/g, '')}.png`;
+        writeSimPNG(p, r);
+        console.log(`      → ${p}`);
+      }
+    }
+  }
+  console.log('\n  Reading: (full − nodecks) = deck residual at shipped values; deck solos split it;');
+  console.log('  nowarp/warp2_0.7/warpLo = the warp term (R2\'s pre-named lever); streak0_1 = cirrus');
+  console.log('  anisotropy; t300+seamfeather = the R1 seam; grazeA/grazeC = elevation-term probes.');
+  console.log('  The projection table above is the compression attribution: P6y vs P6x per row.');
+  return out;
+}
+
+/** AMENDMENT: value sweep for the elevation-term candidate shapes. Prints per-shot deltas
+ * vs the shipped `full` arm; {courtyard, hero, traversal} are the null-check surfaces
+ * (mid-elevation day, cloudless low wedge, day band) — the term must not move them. */
+const SWEEP_RECTS = {
+  dunes: [920, 0, 1115, 45], night: [1150, 90, 1275, 205],
+  courtyard: [850, 0, 1150, 55], hero: [340, 2, 700, 50], traversal: [80, 5, 700, 55],
+};
+
+function runSweep(C) {
+  console.log('\n══ SWEEP — elevation-term shapes at the SHIPPED deck values (unmasked rects) ══');
+  const tex = buildCloudTextureData(C.noiseSize, (C.seed ^ 0x5b1e) >>> 0);
+  const sampler = makeSampler(tex, C.noiseSize);
+  const shapes = [];
+  for (const band of [[0.08, 0.26], [0.10, 0.30], [0.12, 0.34]]) {
+    for (const gc of [0.10, 0.15, 0.22]) shapes.push([`cover+${gc}@[${band}]`, { grazeCover: gc, grazeBand: band }]);
+    for (const gl of [1.5, 2.5]) shapes.push([`lod+${gl}@[${band}]`, { grazeLod: gl, grazeBand: band }]);
+    shapes.push([`soft+0.30@[${band}]`, { grazeSoft: 0.30, grazeBand: band }]);
+    shapes.push([`cover+.12+lod2@[${band}]`, { grazeCover: 0.12, grazeLod: 2.0, grazeBand: band }]);
+  }
+  const base = {};
+  for (const [shot, rect] of Object.entries(SWEEP_RECTS)) {
+    const r = renderRect(C, shot, rect, { sampler }, true, false);
+    const st = stats(r, darkMask(r, null));
+    base[shot] = st;
+  }
+  console.log('  full(shipped): ' + Object.entries(base).map(([s, v]) => `${s} ${v.hf.toFixed(2)}`).join('  '));
+  for (const [name, o] of shapes) {
+    const row = [name.padEnd(24)];
+    for (const [shot, rect] of Object.entries(SWEEP_RECTS)) {
+      const r = renderRect(C, shot, rect, { ...o, sampler }, true, false);
+      const st = stats(r, darkMask(r, null));
+      const d = st.hf - base[shot].hf;
+      row.push(`${shot.slice(0, 5)} ${st.hf.toFixed(2)} (${d >= 0 ? '+' : ''}${d.toFixed(2)})`);
+    }
+    console.log('  ' + row.join('  '));
+  }
+  console.log('  null-check: courtyard/hero/traversal deltas must be ~0.00 for a scoped term.');
+}
+
+/** AMENDMENT: tall-rect sim renders for eyeballing candidate looks (scratchpad only).
+ * These rects run DOWN toward the horizon so the low-band look (dunes stratus, night
+ * veils) is visible, unlike the scored bands. Used to choose the candidate; the capture
+ * owner reuses it for P7 side-by-sides. */
+function runSwirlCrops(C) {
+  console.log('\n══ SWIRLCROPS — tall sim renders to the scratchpad ══');
+  const tex = buildCloudTextureData(C.noiseSize, (C.seed ^ 0x5b1e) >>> 0);
+  const sampler = makeSampler(tex, C.noiseSize);
+  const jobs = [
+    ['dunes', [920, 0, 1120, 170]], ['night', [1150, 0, 1275, 205]],
+  ];
+  const arms = [
+    ['full', {}],
+    ['deck0', { deckOn: [true, false, false] }],
+    ['deck12', { deckOn: [false, true, true] }],
+    ['cover15', { grazeCover: 0.15, grazeBand: [0.10, 0.30] }],
+    ['cover22', { grazeCover: 0.22, grazeBand: [0.10, 0.30] }],
+    ['lod25', { grazeLod: 2.5, grazeBand: [0.10, 0.30] }],
+    ['soft30', { grazeSoft: 0.30, grazeBand: [0.10, 0.30] }],
+  ];
+  for (const [shot, rect] of jobs) {
+    for (const [name, o] of arms) {
+      const r = renderRect(C, shot, rect, { ...o, sampler }, true, true);
+      const p = `${SCRATCH}/tall-${shot}-${name}.png`;
+      writeSimPNG(p, r);
+      console.log(`  → ${p}`);
+    }
+  }
+}
+
 /* ────────────────────────── section: score ──────────────────────────
  * Scores a landed skynoise1 capture against PREREG-skynoise.md. That file is AUTHORITATIVE;
  * the SEAL table below is a convenience mirror sealed the same day — if they ever disagree,
@@ -1056,9 +1316,123 @@ function runScore(dir) {
   }
 }
 
+/* ══════════════════ AMENDMENT: section swirlscore (PREREG-skyswirl.md) ══════════════════
+ * Scores a landed skyswirl1 capture. PREREG-skyswirl.md is AUTHORITATIVE; SEAL2 is a
+ * sealed convenience mirror — if they disagree, the prereg wins and this table is the bug.
+ * Expects <dir>/<chunk>/<shot>.<arm>.png, arms base|cand|kb|restore (dunes, night) and
+ * base|cand|restore (courtyard, hero). */
+const SEAL2 = {
+  rect: { dunes: [920, 0, 1115, 45], night: [1150, 90, 1275, 205], courtyard: [850, 0, 1150, 55], hero: [340, 2, 700, 50] },
+  mask: { dunes: null, night: null, courtyard: null, hero: 60 },
+  baseGate: { dunes: [4.2, 5.2], night: [3.3, 4.4] },          // P-F3 outside
+  baseMinusKbMin: { dunes: 0.55, night: 0.80 },                 // known-bad separation
+  kbBand: { dunes: [3.4, 4.2], night: [1.4, 2.6] },             // out => floor model wrong, say so
+  candExcess: { dunes: [0.08, 0.55], night: [0.00, 0.45] },     // P1 / P3 (excess = arm − kb)
+  dunesTotalDropMin: 0.35,                                      // P2: base − cand >= this
+  nightTotalRatioMax: 0.75,                                     // P3 total: cand <= 0.75 * base
+  pd9KbRatioMax: 0.6,                                           // P4: PD9(kb) <= 0.6 * PD9(base)
+  heroBase: [3.5, 4.1], heroCand: [3.2, 4.1],                   // P6
+  restoreDiffThresh: 4,                                         // P-F4 (§122.1: state the threshold)
+  nonSkyZoneY: 400,                                             // P-F5 proxy zone
+};
+
+function runSwirlScore(dir) {
+  console.log(`\n══ SWIRLSCORE — ${dir} vs PREREG-skyswirl.md (prereg authoritative) ══`);
+  const find = (shot, arm) => {
+    for (const sub of ['.', 'A', 'B', 'C']) {
+      const p = `${dir}/${sub}/${shot}.${arm}.png`;
+      if (existsSync(p)) return p;
+    }
+    return null;
+  };
+  const load = (shot, arm) => {
+    const p = find(shot, arm);
+    if (!p) return null;
+    const im = readPNG(p);
+    const grid = lumaGrid(im, SEAL2.rect[shot]);
+    const mask = darkMask(grid, SEAL2.mask[shot]);
+    return { p, im, st: stats(grid, mask), pd: pd9(grid, mask) };
+  };
+  for (const shot of ['dunes', 'night']) {
+    const arms = {};
+    for (const arm of ['base', 'cand', 'kb', 'restore']) { const a = load(shot, arm); if (a) arms[arm] = a; }
+    if (!Object.keys(arms).length) { console.log(`  ${shot}: no frames found`); continue; }
+    console.log(`  ${shot} rect ${JSON.stringify(SEAL2.rect[shot])} mask ${SEAL2.mask[shot] ?? 'none'}:`);
+    for (const [arm, a] of Object.entries(arms)) console.log(`    ${arm.padEnd(8)} hf ${a.st.hf.toFixed(2).padStart(6)}  PD9 ${a.pd.pd9.toFixed(2).padStart(6)}  sd ${a.st.sd.toFixed(2)}  (${a.p})`);
+    const V = [];
+    if (arms.base) {
+      const [lo, hi] = SEAL2.baseGate[shot];
+      V.push(`base gate hf in [${lo}, ${hi}]: ${arms.base.st.hf >= lo && arms.base.st.hf <= hi ? 'PASS' : 'FAIL → P-F3 CAPTURE VOID'}`);
+    }
+    if (arms.base && arms.kb) {
+      const sep = arms.base.st.hf - arms.kb.st.hf;
+      V.push(`base − kb = ${sep.toFixed(2)} >= ${SEAL2.baseMinusKbMin[shot]}: ${sep >= SEAL2.baseMinusKbMin[shot] ? 'PASS' : 'FAIL → known-bads did not separate → P-F7 UNSCOREABLE'}`);
+      const [klo, khi] = SEAL2.kbBand[shot];
+      V.push(`kb hf in [${klo}, ${khi}]: ${arms.kb.st.hf >= klo && arms.kb.st.hf <= khi ? 'PASS' : 'OUT → floor model wrong, say so in RESULT (excess stays computable)'}`);
+      const r = arms.kb.pd.pd9 / Math.max(1e-9, arms.base.pd.pd9);
+      V.push(`P4 PD9(kb)/PD9(base) ${r.toFixed(2)} <= ${SEAL2.pd9KbRatioMax}: ${r <= SEAL2.pd9KbRatioMax ? 'PASS' : 'FAIL'}`);
+    }
+    if (arms.cand && arms.kb) {
+      const ex = arms.cand.st.hf - arms.kb.st.hf;
+      const [lo, hi] = SEAL2.candExcess[shot];
+      V.push(`cand excess (cand − kb) ${ex.toFixed(2)} in [${lo}, ${hi}]: ${ex >= lo && ex <= hi ? 'PASS' : ex > hi ? 'FAIL → P-F1 REVERT' : 'FAIL → P-F2 REVERT (over-corrected to poster)'}`);
+      if (arms.base && shot === 'dunes') {
+        const drop = arms.base.st.hf - arms.cand.st.hf;
+        V.push(`P2 base − cand = ${drop.toFixed(2)} >= ${SEAL2.dunesTotalDropMin}: ${drop >= SEAL2.dunesTotalDropMin ? 'PASS' : 'FAIL'}`);
+        const ordered = arms.kb.pd.pd9 < arms.cand.pd.pd9 && arms.cand.pd.pd9 < arms.base.pd.pd9;
+        V.push(`P4 PD9 strict order kb ${arms.kb.pd.pd9.toFixed(2)} < cand ${arms.cand.pd.pd9.toFixed(2)} < base ${arms.base.pd.pd9.toFixed(2)}: ${ordered ? 'PASS' : 'FAIL'}`);
+      }
+      if (arms.base && shot === 'night') {
+        const r = arms.cand.st.hf / arms.base.st.hf;
+        V.push(`night total cand/base ${r.toFixed(2)} <= ${SEAL2.nightTotalRatioMax}: ${r <= SEAL2.nightTotalRatioMax ? 'PASS' : 'FAIL'}`);
+      }
+    }
+    if (arms.base && arms.restore) {
+      const n = diffPx(arms.base.im, arms.restore.im, 0, arms.base.im.h);
+      V.push(`restore-vs-base diff ${n} px at ΣRGB>=${SEAL2.restoreDiffThresh}: ${n === 0 ? 'PASS (bit-identical)' : 'FAIL → P-F4 ALL ARM NUMBERS IN THIS BOOT VOID'}`);
+    }
+    if (arms.base && arms.cand) {
+      const zone = arms.base.im.h - SEAL2.nonSkyZoneY;
+      const n = diffPx(arms.base.im, arms.cand.im, SEAL2.nonSkyZoneY, arms.base.im.h);
+      const pct = 100 * n / (zone * arms.base.im.w);
+      V.push(`cand-vs-base non-sky proxy (y>=${SEAL2.nonSkyZoneY}) ${n} px = ${pct.toFixed(3)}%: ${pct <= 0.2 ? 'PASS' : 'FAIL → P-F5 coupling, investigate'}`);
+    }
+    for (const v of V) console.log(`      ${v}`);
+    console.log('      P7 (eyeball, registered words, stated zoom) and P-F8 (seam scan) are human steps — do them.');
+  }
+  { // courtyard null (P5 / P-F6) — bit-exact inside the rect
+    const base = load('courtyard', 'base'), cand = load('courtyard', 'cand'), rest = load('courtyard', 'restore');
+    if (base && cand) {
+      const [x0, y0, x1, y1] = SEAL2.rect.courtyard;
+      let n = 0;
+      for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) {
+        const i = (y * base.im.w + x) * base.im.ch, j = (y * cand.im.w + x) * cand.im.ch;
+        const d = Math.abs(base.im.data[i] - cand.im.data[j]) + Math.abs(base.im.data[i + 1] - cand.im.data[j + 1]) + Math.abs(base.im.data[i + 2] - cand.im.data[j + 2]);
+        if (d >= SEAL2.restoreDiffThresh) n++;
+      }
+      console.log(`  courtyard P5 null: cand-vs-base inside ${JSON.stringify(SEAL2.rect.courtyard)} = ${n} px at ΣRGB>=${SEAL2.restoreDiffThresh}: ${n === 0 ? 'PASS (bit-exact scope claim holds)' : 'FAIL → P-F6 REVERT (term not scoped as designed)'}`);
+      if (rest) {
+        const r = diffPx(base.im, rest.im, 0, base.im.h);
+        console.log(`  courtyard restore-vs-base ${r} px: ${r === 0 ? 'PASS' : 'FAIL → P-F4'}`);
+      }
+    } else console.log('  courtyard: null-pair frames not found (chunk B)');
+  }
+  { // hero regression (P6)
+    const base = load('hero', 'base'), cand = load('hero', 'cand');
+    if (base && cand) {
+      const [blo, bhi] = SEAL2.heroBase, [clo, chi] = SEAL2.heroCand;
+      console.log(`  hero base hf ${base.st.hf.toFixed(2)} in [${blo}, ${bhi}]: ${base.st.hf >= blo && base.st.hf <= bhi ? 'PASS' : 'FAIL'};  cand hf ${cand.st.hf.toFixed(2)} in [${clo}, ${chi}]: ${cand.st.hf >= clo && cand.st.hf <= chi ? 'PASS' : 'FAIL → regression'}`);
+    } else console.log('  hero: regression-pair frames not found (chunk B)');
+  }
+}
+
 if (mode === 'frames' || mode === 'all') runFrames();
 if (mode === 'grain' || mode === 'all') runGrain(C);
 if (mode === 'project' || mode === 'all') runProject(C);
 if (mode === 'sim' || mode === 'all') runSim(C, wantPNG);
 if (mode === 'cand') runCand(C, wantPNG);
+if (mode === 'swirl') runSwirl(C, wantPNG);
+if (mode === 'sweep') runSweep(C);
+if (mode === 'swirlcrops') runSwirlCrops(C);
 if (mode === 'score') runScore(argv.find((a) => !a.startsWith('-') && a !== 'score') || `${REC}/skynoise1`);
+if (mode === 'swirlscore') runSwirlScore(argv.find((a) => !a.startsWith('-') && a !== 'swirlscore') || `${REC}/skyswirl1`);
