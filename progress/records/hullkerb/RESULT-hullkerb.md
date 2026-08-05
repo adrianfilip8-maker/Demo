@@ -68,7 +68,13 @@ pre-run snapshot) before each release. Frames land directly on this durable path
 
 - [x] chunk 1: interior — landed 05:45Z, adjudicated §165 (coordinator's Particles.js revert
       mid-run; base==base2==restore at ONE sha256 `6b3be800…`, chunk STANDS)
-- [ ] chunk 2: courtyard
+- [ ] chunk 2: courtyard — **r1 (pid 25140) killed by the §167 rollback before its first
+      frame** (`log-chunk2.txt` preserved as that record); **r2 relaunched 08:1xZ pid 11456**,
+      log `log-chunk2-r2.txt`. Tree note (per seal P1/P2 wording, WITHIN-chunk comparisons):
+      the committed tree has moved since chunk 1 — Particles.js revert (`1ef6ec0`) and the
+      §166 capYaw ship in SlyModel.js (`03a71c4`) — so r2's srcAtArm stamps will differ from
+      chunk 1's `520bd541…`. Neither touches Props.js or world geometry; cross-chunk stamp
+      drift does not void P1/P2, and the stamps are stated plainly below when scored.
 - [ ] chunk 3: guard + night + hero
 
 ## Interior scores (decisive shot)
