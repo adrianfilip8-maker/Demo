@@ -115,9 +115,9 @@ const TUNE = {
 
   /* Cloud decks: altitude (m), uv scale, drift speed (m/s), softness, opacity, bands. */
   decks: [
-    { h: 2600, scale: 0.00030, drift: 0.9,  soft: 0.30, opacity: 0.72, warp: 0.55, streak: 3.4 }, // cirrus
-    { h: 1450, scale: 0.00052, drift: 1.6,  soft: 0.16, opacity: 0.86, warp: 0.85, streak: 1.5 }, // mid deck
-    { h:  760, scale: 0.00088, drift: 2.4,  soft: 0.09, opacity: 0.97, warp: 1.25, streak: 1.0 }, // cumulus
+    { h: 2600, scale: 0.000105, drift: 0.9,  soft: 0.36, opacity: 0.72, warp: 0.55, streak: 3.4 }, // cirrus
+    { h: 1450, scale: 0.000138, drift: 1.6,  soft: 0.38, opacity: 0.86, warp: 0.85, streak: 1.5 }, // mid deck
+    { h:  760, scale: 0.000105, drift: 2.4,  soft: 0.40, opacity: 0.97, warp: 1.25, streak: 1.0 }, // cumulus
   ],
   cloudBands: 3,            // cel quantisation of cloud lighting (§2.1.1)
   cloudLightStep: 0.030,    // uv offset toward the sun used for the self-shadow gradient
