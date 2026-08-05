@@ -9,7 +9,7 @@
  *
  * usage: node roidiff.mjs <a.png> <b.png> <x0> <y0> <x1> <y1>
  */
-import { readPNG } from '../../tools/png.mjs';
+import { readPNG } from '../../../tools/png.mjs';
 
 const [A, B, ...r] = process.argv.slice(2);
 const [x0, y0, x1, y1] = r.map(Number);
