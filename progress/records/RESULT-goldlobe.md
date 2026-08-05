@@ -3,7 +3,9 @@
 Scored by SHADING, 2026-08-05, per `PREREG-goldlobe.md` exactly as sealed. **Written
 incrementally (§163/§164); an abrupt end means a rollback took the session.**
 
-**STATUS: SCORING IN PROGRESS — capture landed (commit f023921), fresh scoring session.**
+**STATUS: COMPLETE — VERDICT: P-F1 REVERT (NO SHIP); B1'/B2'/B-p99 out on the cand arm,
+all guards held, boot valid. The shipped tree already carries the reverted value
+(`TUNE.goldGlint 0.0`); no src edit exists or is needed. See §5.**
 
 ## Sequencing note, recorded before the fact
 
@@ -16,7 +18,7 @@ reference the scaffold, chunk E boots the scaffolded tree and stamps its own has
 [1.2, 3.0] %, lobe ≤ 20 px). The banda↔goldlobe cross-chunk tree difference is exactly the
 inert scaffold, whose in-boot null arm (P-F2, 0 px vs base) is the inertness proof.
 
-## Evidence and provenance (filled as the phase runs)
+## Evidence and provenance (as run)
 
 - Scaffold: `src/render/ToonMaterial.js` (TUNE.goldGlint 0.0 / glintPow 20 + shared uniforms
   uGoldGlint/uGlintPow) and `src/render/shaders/toon.glsl.js` (TOON_PARS decls + the glint
@@ -124,6 +126,11 @@ Worked-example rects NOT reused — re-derived on this capture's own frames:
   attributed to `hieroglyph_wall`/`hieroglyph_gilded` behind him, inside rect 1) and on the
   guard's fittings (cell x800–960 y0–120, inside rect 2 where gilded). Both stay covered in
   every arm.
+- **Pass 2 (excludes applied):** ROI 104,379 px, max L 230.4, thr 211.9 → **200 hot px
+  spread x183–1174, y133–214** — the thin 1–2 px rim-lit line along the beams' top arris,
+  genuine architecture highlight, kept. Identical to gold1's pass 2 (200 px, same span).
+  Saved: `goldlobe1/occluder-rects-derived.png` (rects over the base frame),
+  `goldlobe1/occluder-surviving-arris.png` (survivors in red).
 - **Lobe-detector positive control (seal §3):** exclusion lifted, the detector returns the
   **170 px (17×15) FX glow lobe at (594,256)** (gold1: 173 px at (594,255)); exclusion
   applied, **5 px**. The instrument finds a lobe when one exists and the exclusion removes
@@ -146,12 +153,12 @@ occluder-excluded, `lobe_min_rmb -5`) + `gildlit.mjs` (erode 2). Raw outputs:
 | band | seal text (verbatim) | measured on cand | verdict |
 |---|---|---|---|
 | **B1'** | *"largest 4-connected component of L ≥ 0.92·ROImax ∈ [30, 400] px (the goldtraversal B1 band verbatim; the reference 84–146 px is the aim inside it)"* | **5 px (5×1) at (885,157)** — identical component to base; the glint formed no new lobe in the ROI | **FAIL — below interval** |
-| **B2'** | *"gild share over L160 ∈ [3 %, 20 %] (the registered defect floor becomes the pass floor; combat same-boot re-anchor must stay > 20 %)"* | **2.17 %** (base 2.08 %); combat re-anchor **42.12 %** > 20 % ✓ | **FAIL — below floor** (re-anchor clause holds) |
-| **B3'** | *"gild p50 / same-frame `sandstone_worn` p50 ∈ [0.85, 1.8] — the glint must not wash the body"* | **1.35** (86.3 / 64.0) | **PASS** |
-| **B4** | *"ring p05 / gold body p50 ≤ 0.65 … > 0.65 ⇒ REVERT regardless of B1–B3"* | **0.32** (27.6 / 85.9), contrast 8.4 | **PASS — the winning half held** |
+| **B2'** | *"gild share over L160 ∈ [3 %, 20 %] (the registered defect floor becomes the pass floor; combat same-boot re-anchor must stay > 20 % — the blown-frame separator)"* | **2.17 %** (base 2.08 %); combat re-anchor **42.12 %** > 20 % ✓ | **FAIL — below floor** (re-anchor clause holds) |
+| **B3'** | *"gild p50 / same-frame `sandstone_worn` p50 ∈ [0.85, 1.8] — the glint must not wash the body (it is lobe-shaped by construction; a body-wide lift here means the exponent/geometry model failed)"* | **1.35** (86.3 / 64.0) | **PASS** |
+| **B4** | *"ring p05 / gold body p50 ≤ 0.65 (gold1: 0.32, contrast 8.4 — ours wins there; port worst-case ring texel moves +0.1 L under the glint). > 0.65 ⇒ REVERT regardless of B1–B3 (goldtraversal's own rule)"* | **0.32** (27.6 / 85.9), contrast 8.4 — port's +0.1 L worst case confirmed in class | **PASS — the winning half held** |
 | **B5** | *"px past lobe edge ∈ [0, 40] (march convention as committed)"* | **0 px** (march [0,1], bg p50 80.8) | **PASS** |
-| **B-p99** | *"gold ROI p99 ∈ [222, 252], reference window 239–244 named as the aim; p99 < 222 ⇒ the term under-delivers ⇒ REVERT (a bigger gain is a NEW prereg, not a live retune)"* | **186.5** (base 185.1; +1.4 L); ROI max 231.1 (base 230.4) | **FAIL — below 222 ⇒ REVERT** |
-| **Cane guard** | *"on the same-boot `combat` frames, the cane region share over L250 must stay ≤ 2 % and the look note names the cane explicitly"* | measured below (§4-cane) | see §4-cane |
+| **B-p99** | *"gold ROI p99 ∈ [222, 252], reference window 239–244 named as the aim; p99 < 222 ⇒ the term under-delivers ⇒ REVERT (a bigger gain is a NEW prereg, not a live retune); p99 > 252 or max pinned 255 over > 0.5 % of ROI ⇒ clip ⇒ REVERT"* | **186.5** (base 185.1; +1.4 L); ROI max 231.1 (base 230.4) — clip clause clean: 0.000 % of ROI at 255 | **FAIL — below 222 ⇒ REVERT** |
+| **Cane guard** | *"on the same-boot `combat` frames, the cane region share over L250 must stay ≤ 2 % and the look note names the cane explicitly (the cane runs uMetal 1.0 — the strongest glint in the game; gold_leaf/bronze inherit too)"* | measured below (§4-cane) | see §4-cane |
 
 ### Calibration arms, same boot
 
@@ -296,7 +303,8 @@ Files of this scoring (coordinator sweep list — no git run by this task):
 `progress/records/RESULT-goldlobe.md` (this, modified),
 `progress/records/goldlobe1/goldgap-jobs-goldlobe1.json` (new),
 `progress/records/goldlobe1/RESULT-goldlobe-raw.json` (new),
-`progress/records/goldlobe1/reg-tinted-overview.png`, `goldlobe1/reg-crop-1to1.png` (new),
+`progress/records/goldlobe1/reg-tinted-overview.png`, `goldlobe1/reg-crop-1to1.png`,
+`goldlobe1/occluder-rects-derived.png`, `goldlobe1/occluder-surviving-arris.png` (new),
 `progress/records/goldlobe1/crops/` (new: `ring-1to1.png`, `ring-4x.png`,
 `radisc-1to1.png`, `radisc-4x.png`, `arris-1to1.png`, `arris-4x.png`,
 `cane-combat-1to1.png`, `cane-hook-4x.png`). Mask bins scratchpad-only (regenerable from
