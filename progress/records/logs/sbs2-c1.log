@@ -1,0 +1,9 @@
+· starting dev server on :5300
+· loading game
+· ready
+· renderer: ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)
+· modules present (17): shading postfx sky lighting textures architecture props terrain collision character animation movement camera fx guards hud audio
+· 1 boot warning(s):
+    ! textures: prewarm took 27.3s at size 1024
+  ✓ hero          342514ms  draws  260  tris 1742k
+  ✓ temple        202745ms  draws  239  tris 1713k
