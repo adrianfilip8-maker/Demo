@@ -1,0 +1,98 @@
+{
+  "sly-closeup": {
+    "pxPerM": 294.3,
+    "crownTop": 99,
+    "chin": 234,
+    "headCx": 662,
+    "outboard": "left",
+    "coreRows": [
+      101,
+      166
+    ],
+    "scanRows": [
+      101,
+      191
+    ],
+    "scanStartX": 520,
+    "strip": {
+      "x0": 530,
+      "x1": 569,
+      "rows": [
+        101,
+        166
+      ]
+    },
+    "billROI": [
+      545,
+      713,
+      76,
+      191
+    ],
+    "headBboxPad": [
+      531,
+      793,
+      74,
+      286
+    ],
+    "baseBrim": [
+      575.5,
+      688.1,
+      104.1,
+      165.9
+    ],
+    "yawBrim": [
+      570.1,
+      678.2,
+      101,
+      160.1
+    ]
+  },
+  "combat": {
+    "pxPerM": 175.1,
+    "crownTop": 373,
+    "chin": 468,
+    "headCx": 569,
+    "outboard": "left",
+    "coreRows": [
+      411,
+      450
+    ],
+    "scanRows": [
+      386,
+      466
+    ],
+    "scanStartX": 459,
+    "strip": {
+      "x0": 469,
+      "x1": 508,
+      "rows": [
+        411,
+        450
+      ]
+    },
+    "billROI": [
+      484,
+      586,
+      386,
+      475
+    ],
+    "headBboxPad": [
+      476,
+      661,
+      348,
+      512
+    ],
+    "baseBrim": [
+      509.2,
+      561.1,
+      413.8,
+      450.1
+    ],
+    "yawBrim": [
+      508.7,
+      554.9,
+      410.8,
+      447.5
+    ]
+  }
+}

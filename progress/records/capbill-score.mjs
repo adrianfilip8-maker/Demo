@@ -82,17 +82,26 @@ function measureE(im, geom) {
     if (L(x) <= SKY) return null; // start px must be sky
     const stop = headCx;
     while (dirIn > 0 ? x < stop : x > stop) {
-      if (L(x) <= SKY && L(x + dirIn) <= SKY && L(x + 2 * dirIn) <= SKY) return x; // run of ≥3
+      if (L(x) <= SKY && L(x + dirIn) <= SKY && L(x + 2 * dirIn) <= SKY) {
+        // subpixel: position where luma crosses SKY between the last sky px and this one
+        const a = L(x - dirIn), b = L(x);
+        if (a > SKY && a > b) return x - dirIn + dirIn * ((a - SKY) / (a - b));
+        return x;
+      }
       x += dirIn;
     }
     return null;
   };
+  // Anchor = trimmed mean (drop min+max) of subpixel outline x over the band's valid rows.
+  // Mean, not median: a median re-quantizes a staircase edge and the selftest's slanted-edge
+  // control failed at E=1.1 px on exactly that; the trim keeps single-speck robustness.
   const band = (rows) => {
     const xs = [];
     for (const y of rows) { const x = outlineAt(y); if (x != null) xs.push(x); }
     if (xs.length < 3) return null;
     xs.sort((a, b) => a - b);
-    return { x: xs[xs.length >> 1], n: xs.length };
+    const use = xs.length > 4 ? xs.slice(1, -1) : xs;
+    return { x: +(use.reduce((a, b) => a + b, 0) / use.length).toFixed(2), n: xs.length };
   };
   // crown band: ≤BANDN figure rows immediately above the core; cheek band: immediately below
   const crownRows = [], cheekRows = [];
