@@ -1,0 +1,77 @@
+{
+ "prereg": "PREREG-skynoise.md",
+ "chunk": "D",
+ "shot": "hero",
+ "startedAt": "2026-08-05T09:54:36.678Z",
+ "srcTreeBefore": "3e2477e7456b540b",
+ "cand": {
+  "scale": [
+   0.000105,
+   0.000138,
+   0.000105
+  ],
+  "soft": [
+   0.36,
+   0.38,
+   0.4
+  ]
+ },
+ "shipExpected": {
+  "scale": [
+   0.0003,
+   0.00052,
+   0.00088
+  ],
+  "soft": [
+   0.3,
+   0.16,
+   0.09
+  ]
+ },
+ "arms": [],
+ "lever": {
+  "hasSky": true,
+  "hasScale": true,
+  "hasSoft": true,
+  "hasCover": true,
+  "scale": [
+   0.0003,
+   0.00052,
+   0.00088
+  ],
+  "soft": [
+   0.3,
+   0.16,
+   0.09
+  ]
+ },
+ "setShot": {
+  "stats": {
+   "fps": 37,
+   "drawCalls": 259,
+   "triangles": 1729891,
+   "programs": 98,
+   "ms": 14.299999999813735
+  },
+  "warnings": 1
+ },
+ "orig": {
+  "scale": [
+   0.0003,
+   0.00052,
+   0.00088
+  ],
+  "soft": [
+   0.3,
+   0.16,
+   0.09
+  ],
+  "cover": [
+   0.59,
+   0.68,
+   0.72
+  ],
+  "time": 0.5833333333333335,
+  "tod": 0.79
+ }
+}
