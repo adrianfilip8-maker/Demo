@@ -18,7 +18,300 @@
  "shots": [
   {
    "shot": "dunes",
-   "arms": [],
+   "arms": [
+    {
+     "arm": "base",
+     "readback": {
+      "uAtmoWire": 0,
+      "uHaze": [
+       0.77918,
+       0.43532,
+       0.17391
+      ],
+      "uHazeSun": [
+       0.97397,
+       0.54415,
+       0.21738
+      ],
+      "uHazeGain": 1.3,
+      "uHazeDensity": 0.012879,
+      "uHazeFalloff": 0.055,
+      "uHazeBase": 0,
+      "uHazeStart": 26,
+      "uHazeHeightFalloff": 58,
+      "uHazeInscatter": 0.62,
+      "uHazeTint": [
+       1,
+       0.58408,
+       0.25415
+      ],
+      "fogAnchor": {
+       "color": [
+        0.77918,
+        0.43532,
+        0.17391
+       ],
+       "density": 0.004953575,
+       "heightFalloff": 54.619,
+       "inscatter": 0.6764
+      },
+      "tod": 0.83
+     },
+     "mismatch": false,
+     "secs": 16
+    },
+    {
+     "arm": "base2",
+     "readback": {
+      "uAtmoWire": 0,
+      "uHaze": [
+       0.77918,
+       0.43532,
+       0.17391
+      ],
+      "uHazeSun": [
+       0.97397,
+       0.54415,
+       0.21738
+      ],
+      "uHazeGain": 1.3,
+      "uHazeDensity": 0.012879,
+      "uHazeFalloff": 0.055,
+      "uHazeBase": 0,
+      "uHazeStart": 26,
+      "uHazeHeightFalloff": 58,
+      "uHazeInscatter": 0.62,
+      "uHazeTint": [
+       1,
+       0.58408,
+       0.25415
+      ],
+      "fogAnchor": {
+       "color": [
+        0.77918,
+        0.43532,
+        0.17391
+       ],
+       "density": 0.004953575,
+       "heightFalloff": 54.619,
+       "inscatter": 0.6764
+      },
+      "tod": 0.83
+     },
+     "mismatch": false,
+     "secs": 16
+    },
+    {
+     "arm": "W",
+     "readback": {
+      "uAtmoWire": 1,
+      "_fogSynced": true,
+      "uHaze": [
+       0.77918,
+       0.43532,
+       0.17391
+      ],
+      "uHazeSun": [
+       0.97397,
+       0.54415,
+       0.21738
+      ],
+      "uHazeGain": 1,
+      "uHazeDensity": 0.004954,
+      "uHazeFalloff": 0.055,
+      "uHazeBase": 0,
+      "uHazeStart": 26,
+      "uHazeHeightFalloff": 54.619,
+      "uHazeInscatter": 0.6764,
+      "uHazeTint": [
+       1,
+       0.51056,
+       0.2127
+      ],
+      "fogAnchor": {
+       "color": [
+        0.77918,
+        0.43532,
+        0.17391
+       ],
+       "density": 0.004953575,
+       "heightFalloff": 54.619,
+       "inscatter": 0.6764
+      },
+      "tod": 0.83
+     },
+     "mismatch": false,
+     "secs": 16
+    },
+    {
+     "arm": "CT55",
+     "readback": {
+      "uAtmoWire": 1,
+      "_fogSynced": true,
+      "uHaze": [
+       0.42855,
+       0.23942,
+       0.09565
+      ],
+      "uHazeSun": [
+       0.53569,
+       0.29928,
+       0.11956
+      ],
+      "uHazeGain": 1,
+      "uHazeDensity": 0.004954,
+      "uHazeFalloff": 0.055,
+      "uHazeBase": 0,
+      "uHazeStart": 26,
+      "uHazeHeightFalloff": 54.619,
+      "uHazeInscatter": 0.6764,
+      "uHazeTint": [
+       0.55,
+       0.28081,
+       0.11698
+      ],
+      "fogAnchor": {
+       "color": [
+        0.77918,
+        0.43532,
+        0.17391
+       ],
+       "density": 0.004953575,
+       "heightFalloff": 54.619,
+       "inscatter": 0.6764
+      },
+      "tod": 0.83
+     },
+     "mismatch": false,
+     "secs": 16
+    },
+    {
+     "arm": "CT40",
+     "readback": {
+      "uAtmoWire": 1,
+      "_fogSynced": true,
+      "uHaze": [
+       0.31167,
+       0.17413,
+       0.06956
+      ],
+      "uHazeSun": [
+       0.38959,
+       0.21766,
+       0.08695
+      ],
+      "uHazeGain": 1,
+      "uHazeDensity": 0.004954,
+      "uHazeFalloff": 0.055,
+      "uHazeBase": 0,
+      "uHazeStart": 26,
+      "uHazeHeightFalloff": 54.619,
+      "uHazeInscatter": 0.6764,
+      "uHazeTint": [
+       0.4,
+       0.20422,
+       0.08508
+      ],
+      "fogAnchor": {
+       "color": [
+        0.77918,
+        0.43532,
+        0.17391
+       ],
+       "density": 0.004953575,
+       "heightFalloff": 54.619,
+       "inscatter": 0.6764
+      },
+      "tod": 0.83
+     },
+     "mismatch": false,
+     "secs": 17
+    },
+    {
+     "arm": "KBdense",
+     "readback": {
+      "uAtmoWire": 1,
+      "_fogSynced": true,
+      "uHaze": [
+       0.31167,
+       0.17413,
+       0.06956
+      ],
+      "uHazeSun": [
+       0.38959,
+       0.21766,
+       0.08695
+      ],
+      "uHazeGain": 1,
+      "uHazeDensity": 0.014861,
+      "uHazeFalloff": 0.055,
+      "uHazeBase": 0,
+      "uHazeStart": 26,
+      "uHazeHeightFalloff": 54.619,
+      "uHazeInscatter": 0.6764,
+      "uHazeTint": [
+       0.4,
+       0.20422,
+       0.08508
+      ],
+      "fogAnchor": {
+       "color": [
+        0.77918,
+        0.43532,
+        0.17391
+       ],
+       "density": 0.004953575,
+       "heightFalloff": 54.619,
+       "inscatter": 0.6764
+      },
+      "tod": 0.83
+     },
+     "mismatch": false,
+     "secs": 17
+    },
+    {
+     "arm": "restore",
+     "readback": {
+      "uAtmoWire": 0,
+      "_fogSynced": false,
+      "uHaze": [
+       0.77918,
+       0.43532,
+       0.17391
+      ],
+      "uHazeSun": [
+       0.97397,
+       0.54415,
+       0.21738
+      ],
+      "uHazeGain": 1.3,
+      "uHazeDensity": 0.012879,
+      "uHazeFalloff": 0.055,
+      "uHazeBase": 0,
+      "uHazeStart": 26,
+      "uHazeHeightFalloff": 58,
+      "uHazeInscatter": 0.62,
+      "uHazeTint": [
+       1,
+       0.58408,
+       0.25415
+      ],
+      "fogAnchor": {
+       "color": [
+        0.77918,
+        0.43532,
+        0.17391
+       ],
+       "density": 0.004953575,
+       "heightFalloff": 54.619,
+       "inscatter": 0.6764
+      },
+      "tod": 0.83
+     },
+     "mismatch": false,
+     "secs": 17
+    }
+   ],
    "setShot": {
     "stats": {
      "fps": 41,
@@ -28,7 +321,8 @@
      "ms": 10.399999998509884
     },
     "tod": 0.83
-   }
+   },
+   "settleSecs": 289
   }
  ],
  "lever": {
@@ -48,5 +342,7 @@
    "inscatter": 0.6197561347355586
   },
   "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)"
- }
+ },
+ "srcTreeAfter": "be5c1da17ca5bad4",
+ "finishedAt": "2026-08-05T23:23:09.629Z"
 }
