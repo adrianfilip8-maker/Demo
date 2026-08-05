@@ -12,7 +12,95 @@
  "shots": [
   {
    "shot": "night",
-   "arms": [],
+   "arms": [
+    {
+     "arm": "base",
+     "requested": {
+      "subjW": 0.5,
+      "tintPeak": 0.52,
+      "sbm": 0.05,
+      "sbmLit": 0.05
+     },
+     "readback": {
+      "subjW": 0.5,
+      "uSubjW": 0.5,
+      "tintPeak": 0.52,
+      "sbm": 0.05,
+      "sbmLit": 0.05,
+      "uShadowColor": [
+       0.012895755468330918,
+       0.04676854125689067,
+       0.07805322250511793
+      ],
+      "uShadowColorLit": [
+       0.012895755468330918,
+       0.04676854125689067,
+       0.07805322250511793
+      ],
+      "inkNight": 1
+     },
+     "mismatch": [],
+     "secs": 24
+    },
+    {
+     "arm": "ABg",
+     "requested": {
+      "subjW": 0.5,
+      "tintPeak": 0.62,
+      "sbm": 0.05,
+      "sbmLit": 0.05
+     },
+     "readback": {
+      "subjW": 0.5,
+      "uSubjW": 0.5,
+      "tintPeak": 0.62,
+      "sbm": 0.05,
+      "sbmLit": 0.05,
+      "uShadowColor": [
+       0.012895755468330918,
+       0.04676854125689067,
+       0.07805322250511793
+      ],
+      "uShadowColorLit": [
+       0.012895755468330918,
+       0.04676854125689067,
+       0.07805322250511793
+      ],
+      "inkNight": 1
+     },
+     "mismatch": [],
+     "secs": 24
+    },
+    {
+     "arm": "restore",
+     "requested": {
+      "subjW": 0.5,
+      "tintPeak": 0.52,
+      "sbm": 0.05,
+      "sbmLit": 0.05
+     },
+     "readback": {
+      "subjW": 0.5,
+      "uSubjW": 0.5,
+      "tintPeak": 0.52,
+      "sbm": 0.05,
+      "sbmLit": 0.05,
+      "uShadowColor": [
+       0.012895755468330918,
+       0.04676854125689067,
+       0.07805322250511793
+      ],
+      "uShadowColorLit": [
+       0.012895755468330918,
+       0.04676854125689067,
+       0.07805322250511793
+      ],
+      "inkNight": 1
+     },
+     "mismatch": [],
+     "secs": 23
+    }
+   ],
    "setShot": {
     "stats": {
      "fps": 37,
@@ -22,7 +110,9 @@
      "ms": 12.700000000186265
     },
     "tod": 0.02
-   }
+   },
+   "settleSecs": 421,
+   "nightAmount": 1
   }
  ],
  "lever": {
@@ -41,5 +131,7 @@
    0.31311543639412576,
    0.49658401318439915
   ]
- }
+ },
+ "srcTreeAfter": "3be168ae28832f69",
+ "finishedAt": "2026-08-05T18:43:56.409Z"
 }
