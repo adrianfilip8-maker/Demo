@@ -798,8 +798,8 @@ function modeGold() {
   }
   console.log(`\n  measured gold1: ROI p99 185.1, max 230.4 (FX-excluded), lobe 5 px; reference p99 239–244, lobe 84–146 px.`);
   console.log('\n  candidate glint leg  spec += glintTint · uGoldGlint · pow(max(dot(R,uKeyDir),0), uGlintPow) · slyMetal · mix(0.25,1,sh):');
-  for (const gain of [0.6, 1.0, 1.4, 2.0, 3.0]) {
-    for (const pow_ of [12, 24]) {
+  for (const gain of [0.6, 1.0, 1.4, 1.6, 2.0, 2.6, 3.0]) {
+    for (const pow_ of [5, 12, 20, 24]) {
       const rows = [];
       for (const cosRK of [1.0, 0.99, 0.97, 0.94, 0.90]) {
         const r = texelReport(st, alb, { ...base, ndh: 0.9, glintGain: gain, glintPow: pow_, cosRK });
@@ -834,9 +834,10 @@ function modeGold() {
  * sealed prereg; a mismatch between the two files voids the scoring, not the seal. */
 
 /* coolskew-read ROI convention (PREREG-coolskew-grade.md, verbatim; n/L-filter per spec) */
-function lRoiBmr(im, [x0, y0, x1, y1], lLo, lHi) {
+function lRoiBmr(im, rects, lLo, lHi) {
+  if (typeof rects[0] === 'number') rects = [rects];
   let n = 0; const bmr = [];
-  for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) {
+  for (const [x0, y0, x1, y1] of rects) for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) {
     const i = (y * im.w + x) * im.ch;
     const r = im.data[i], b = im.data[i + 2];
     const L = 0.2126 * r + 0.7152 * im.data[i + 1] + 0.0722 * b;
@@ -845,6 +846,7 @@ function lRoiBmr(im, [x0, y0, x1, y1], lLo, lHi) {
   }
   return { n, bmr: median(bmr) };
 }
+const TAIL_DARK_ROIS = [[802, 306, 862, 356], [820, 250, 880, 300]];  // coolskew union, verbatim
 function frameDiffPx(imA, imB, thresh = 4, excl = null) {
   let n = 0;
   for (let y = 0; y < imA.h; y++) for (let x = 0; x < imA.w; x++) {
@@ -882,7 +884,7 @@ function modeScore(dir) {
     if (!have(f('sly-closeup', arm))) continue;
     const im = readPNG(f('sly-closeup', arm));
     const cream = lRoiBmr(im, [802, 306, 862, 356], 90, 200);
-    const ringsA = lRoiBmr(im, [802, 306, 862, 356], 26, 55);
+    const ringsA = lRoiBmr(im, TAIL_DARK_ROIS, 26, 55);
     say(`P1 creamROI b−r (${arm})`, cream.bmr, BANDS.P1_creamRoi_A, inBand);
     say(`P1 rings b−r (${arm})`, ringsA.bmr, BANDS.P1_rings_A, inBand);
     const s = rectStats(im, [630, 290, 780, 410]);
@@ -890,7 +892,7 @@ function modeScore(dir) {
   }
   if (have(f('sly-closeup', 'KBoverwarm'))) {
     const im = readPNG(f('sly-closeup', 'KBoverwarm'));
-    const rings = lRoiBmr(im, [802, 306, 862, 356], 26, 55);
+    const rings = lRoiBmr(im, TAIL_DARK_ROIS, 26, 55);
     say('KB-overwarm rings b−r', rings.bmr, [-999, BANDS.KBoverwarm_rings], (v, b) => v < b[1]); // must FAIL rings-hold ⇒ PASS here = the KB read as its own failure
   }
   // hero / interior arms
