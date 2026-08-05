@@ -1,5 +1,5 @@
 {
- "at": "2026-08-05T10:54:21.959Z",
+ "at": "2026-08-05T10:59:57.728Z",
  "sections": {
   "A": {
    "frame": "hullkerb/frames/guard-base.png",
@@ -54,7 +54,129 @@
     "airColumnMaxSampleT": 0.035,
     "airColumnBucketSum": 1.0991,
     "approxDisplayDeltaL": 27.84
-   }
+   },
+   "bodySliver": [
+    {
+     "px": 12,
+     "py": 492,
+     "predMeanAlphaPerFacing": 0.499,
+     "frame": {
+      "medL": 91.8,
+      "meanRmB": 23.9,
+      "warmN": 576
+     },
+     "control": {
+      "medL": 92.6,
+      "meanRmB": 21.7,
+      "warmN": 546
+     }
+    },
+    {
+     "px": 36,
+     "py": 372,
+     "predMeanAlphaPerFacing": 0.491,
+     "frame": {
+      "medL": 88,
+      "meanRmB": 18.7,
+      "warmN": 506
+     },
+     "control": {
+      "medL": 86.3,
+      "meanRmB": 13.8,
+      "warmN": 348
+     }
+    },
+    {
+     "px": 252,
+     "py": 396,
+     "predMeanAlphaPerFacing": 0.391,
+     "frame": {
+      "medL": 112.2,
+      "meanRmB": 32.9,
+      "warmN": 455
+     },
+     "control": {
+      "medL": 133.7,
+      "meanRmB": 32,
+      "warmN": 458
+     }
+    },
+    {
+     "px": 252,
+     "py": 420,
+     "predMeanAlphaPerFacing": 0.389,
+     "frame": {
+      "medL": 120.1,
+      "meanRmB": 43.9,
+      "warmN": 576
+     },
+     "control": {
+      "medL": 142.5,
+      "meanRmB": 41.2,
+      "warmN": 576
+     }
+    },
+    {
+     "px": 84,
+     "py": 420,
+     "predMeanAlphaPerFacing": 0.388,
+     "frame": {
+      "medL": 86.3,
+      "meanRmB": 19.1,
+      "warmN": 509
+     },
+     "control": {
+      "medL": 93.3,
+      "meanRmB": 21,
+      "warmN": 571
+     }
+    },
+    {
+     "px": 252,
+     "py": 444,
+     "predMeanAlphaPerFacing": 0.384,
+     "frame": {
+      "medL": 121.7,
+      "meanRmB": 41.7,
+      "warmN": 576
+     },
+     "control": {
+      "medL": 141,
+      "meanRmB": 40,
+      "warmN": 576
+     }
+    },
+    {
+     "px": 228,
+     "py": 372,
+     "predMeanAlphaPerFacing": 0.384,
+     "frame": {
+      "medL": 109.1,
+      "meanRmB": 31.2,
+      "warmN": 475
+     },
+     "control": {
+      "medL": 122.7,
+      "meanRmB": 37.8,
+      "warmN": 576
+     }
+    },
+    {
+     "px": 228,
+     "py": 348,
+     "predMeanAlphaPerFacing": 0.38,
+     "frame": {
+      "medL": 123,
+      "meanRmB": 42.6,
+      "warmN": 576
+     },
+     "control": {
+      "medL": 114.7,
+      "meanRmB": 30.9,
+      "warmN": 519
+     }
+    }
+   ]
   },
   "B": {
    "frame": "gold1/traversal.png",
@@ -268,7 +390,56 @@
       255
      ]
     }
-   ]
+   ],
+   "relaxedBlue": {
+    "bbox": [
+     183,
+     0,
+     816,
+     450
+    ],
+    "topBins64": [
+     {
+      "bin": [
+       640,
+       0
+      ],
+      "n": 1082
+     },
+     {
+      "bin": [
+       704,
+       0
+      ],
+      "n": 801
+     },
+     {
+      "bin": [
+       576,
+       0
+      ],
+      "n": 781
+     },
+     {
+      "bin": [
+       768,
+       0
+      ],
+      "n": 168
+     },
+     {
+      "bin": [
+       640,
+       384
+      ],
+      "n": 46
+     }
+    ]
+   },
+   "slyCloseup": {
+    "relaxedBluePx": 3345,
+    "inBandPx": 0
+   }
   },
   "C": {
    "gold1": {
@@ -865,6 +1036,31 @@
      219
     ],
     "displayL": 213.1
+   },
+   "leftEdge": {
+    "rows": 107,
+    "meanEdgeStep": 5.08,
+    "skyNoiseStep16px": 11.75
+   },
+   "rects": {
+    "pyramidInterior": {
+     "n": 10800,
+     "medL": 158.0888,
+     "medR": 176,
+     "medG": 155,
+     "medB": 134,
+     "medSat": 0.23121387283236994,
+     "meanRmB": 31.65361111111111
+    },
+    "skyLeft": {
+     "n": 9000,
+     "medL": 162.7076,
+     "medR": 171,
+     "medG": 160,
+     "medB": 166,
+     "medSat": 0.0755813953488372,
+     "meanRmB": 6.1803333333333335
+    }
    }
   }
  }

@@ -76,6 +76,38 @@
  */
 import { readPNG } from '../../tools/png.mjs';
 import { writeFileSync } from 'node:fs';
+import zlib from 'node:zlib';
+
+/* Minimal PNG writer (RGB8, filter 0) for evidence crops. */
+function writePNG(path, w, h, rgb) {
+  const crcTable = [];
+  for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; crcTable[n] = c >>> 0; }
+  const crc = (buf) => { let c = 0xffffffff; for (const b of buf) c = crcTable[(c ^ b) & 255] ^ (c >>> 8); return (c ^ 0xffffffff) >>> 0; };
+  const chunk = (type, data) => {
+    const out = Buffer.alloc(12 + data.length);
+    out.writeUInt32BE(data.length, 0); out.write(type, 4);
+    data.copy(out, 8);
+    out.writeUInt32BE(crc(Buffer.concat([Buffer.from(type), data])), 8 + data.length);
+    return out;
+  };
+  const ihdr = Buffer.alloc(13);
+  ihdr.writeUInt32BE(w, 0); ihdr.writeUInt32BE(h, 4); ihdr[8] = 8; ihdr[9] = 2;
+  const raw = Buffer.alloc(h * (w * 3 + 1));
+  for (let y = 0; y < h; y++) { raw[y * (w * 3 + 1)] = 0; rgb.copy(raw, y * (w * 3 + 1) + 1, y * w * 3, (y + 1) * w * 3); }
+  writeFileSync(path, Buffer.concat([
+    Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
+    chunk('IHDR', ihdr), chunk('IDAT', zlib.deflateSync(raw)), chunk('IEND', Buffer.alloc(0)),
+  ]));
+}
+function saveCrop(im, x0, y0, x1, y1, path) {
+  const w = x1 - x0, h = y1 - y0;
+  const rgb = Buffer.alloc(w * h * 3);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const si = ((y + y0) * im.w + (x + x0)) * im.ch, di = (y * w + x) * 3;
+    rgb[di] = im.data[si]; rgb[di + 1] = im.data[si + 1]; rgb[di + 2] = im.data[si + 2];
+  }
+  writePNG(path, w, h, rgb);
+}
 
 const R = (p) => new URL(p, import.meta.url).pathname;
 const FRAMES = {
@@ -359,6 +391,69 @@ function sectionA() {
   A.port.approxDisplayDeltaL = +(lum(...withBeam.map(lin2srgb255)) - lum(...without.map(lin2srgb255))).toFixed(2);
   say(`A3 approx display ΔL if that max sample x2 facings landed on the column median backdrop: ${A.port.approxDisplayDeltaL} L (approximate AgX, context only)`);
 
+  /* A4 — adjudication: the port says a sliver of UN-suppressed beam body (t 0.16-0.265,
+     near()=1, alpha per facing up to ~0.5) projects in frame low-left. If the beam renders
+     at all in this capture, THOSE pixels must carry a warm additive lift. Measure the frame
+     at the strongest predicted buckets, against a same-size control offset +80 px right. */
+  const bodyBuckets = [];
+  {
+    // re-walk shell, keep only t>0.16 in-frame samples, bucket 24 px
+    const bmap = new Map();
+    for (let it = Math.ceil(0.16 * NT); it <= NT; it++) {
+      const tt = it / NT;
+      const ringR = rBase * tt;
+      for (let is = 0; is < NS; is++) {
+        const a = (is / NS) * Math.PI * 2;
+        const wpos = add(add(add(eye, mul(bdir, tt * reach)), mul(brgt, Math.cos(a) * ringR)), mul(bup, Math.sin(a) * ringR));
+        const p = cam.project(wpos);
+        if (!p.visible) continue;
+        const rel = sub(wpos, eye);
+        const along = dot(rel, bdir);
+        const radial = sub(rel, mul(bdir, along));
+        const rl = len(radial);
+        const rdir = rl > 1e-4 ? mul(radial, 1 / rl) : V(0, 1, 0);
+        const N = norm(sub(rdir, mul(bdir, rl / Math.max(along, 1e-3))));
+        const view = sub(cam.pos, wpos);
+        const body = Math.pow(Math.abs(dot(N, norm(view))), 1.85);
+        const alpha = clamp(body * (1 / (1 + 7 * tt * tt)) * smoothstep(0, 0.16, tt) * (1 - smoothstep(0.56, 1, tt)) * 0.84 * smoothstep(0.4, 2.0, len(view)) * day, 0, 4);
+        const k = `${(p.px / 24) | 0},${(p.py / 24) | 0}`;
+        const cur = bmap.get(k) || { sum: 0, n: 0 };
+        cur.sum += alpha; cur.n++;
+        bmap.set(k, cur);
+      }
+    }
+    const rows = [...bmap.entries()].map(([k, v]) => {
+      const [bx, by] = k.split(',').map(Number);
+      return { px: bx * 24 + 12, py: by * 24 + 12, meanAlpha: v.sum / v.n, n: v.n };
+    }).filter((r) => r.meanAlpha > 0.05).sort((a, b2) => b2.meanAlpha - a.meanAlpha);
+    for (const r of rows.slice(0, 8)) {
+      // frame measurement in a 24px box at the bucket vs control box +80 px to the right
+      const meas = (cx, cy) => {
+        let warmN = 0, tot = 0; const Ls = []; let rmb = 0;
+        for (let y = cy - 12; y < cy + 12; y++) for (let x = cx - 12; x < cx + 12; x++) {
+          if (x < 0 || y < 0 || x >= im.w || y >= im.h) continue;
+          const i = (y * im.w + x) * im.ch;
+          const rr2 = im.data[i], gg = im.data[i + 1], bb = im.data[i + 2];
+          tot++; Ls.push(lum(rr2, gg, bb)); rmb += rr2 - bb;
+          if (rr2 - bb >= 12 && lum(rr2, gg, bb) >= 40) warmN++;
+        }
+        return { medL: +median(Ls).toFixed(1), meanRmB: +(rmb / (tot || 1)).toFixed(1), warmN };
+      };
+      bodyBuckets.push({
+        px: r.px, py: r.py, predMeanAlphaPerFacing: +r.meanAlpha.toFixed(3),
+        frame: meas(r.px, r.py), control: meas(Math.min(im.w - 13, r.px + 80), r.py),
+      });
+    }
+  }
+  A.bodySliver = bodyBuckets;
+  say('A4 predicted un-suppressed beam-body buckets in frame (t>0.16) vs the actual frame:');
+  for (const b of bodyBuckets) {
+    say(`   px(${b.px},${b.py}) predAlpha/facing ${b.predMeanAlphaPerFacing}  frame medL ${b.frame.medL} meanR-B ${b.frame.meanRmB} warm ${b.frame.warmN}  | control(+80px) medL ${b.control.medL} meanR-B ${b.control.meanRmB}`);
+  }
+  saveCrop(im, 0, 250, 480, 620, R('./fxcluster-A-guard-bodysliver-crop.png'));
+  saveCrop(im, 700, 300, 850, 500, R('./fxcluster-A-guard-aircolumn-crop.png'));
+  say('A4 crops saved: fxcluster-A-guard-bodysliver-crop.png (0,250..480,620), fxcluster-A-guard-aircolumn-crop.png');
+
   OUT.sections.A = A;
 }
 
@@ -436,6 +531,42 @@ function sectionB() {
   });
   say(`B3 modelled sparkle core (uCore x (0.9+0.9·vGain), half strength, approx AgX): ${JSON.stringify(B.modelledCore)}`);
   say('B3 => tells whether an in-frame marker could even land inside the ±40/±35/±40 box after the grade');
+
+  /* B4 — where do the relaxed bright-blue pixels actually live (sky vs sparkle-shaped
+     blobs), and does ANY committed frame show a drawn sparkle? Cross-check the sly-closeup
+     (sbs1) — the one staging whose in-page probe recorded `sparkles latched=17 fresh=17`. */
+  const blueBox = { minX: im.w, maxX: 0, minY: im.h, maxY: 0 };
+  const blueBins = new Map();
+  for (let y = 0; y < im.h; y++) for (let x = 0; x < im.w; x++) {
+    const i = (y * im.w + x) * im.ch;
+    const r = im.data[i], g = im.data[i + 1], b = im.data[i + 2];
+    if (b - r >= 30 && b >= 180 && lum(r, g, b) >= 80) {
+      blueBox.minX = Math.min(blueBox.minX, x); blueBox.maxX = Math.max(blueBox.maxX, x);
+      blueBox.minY = Math.min(blueBox.minY, y); blueBox.maxY = Math.max(blueBox.maxY, y);
+      const k = `${(x / 64) | 0},${(y / 64) | 0}`;
+      blueBins.set(k, (blueBins.get(k) || 0) + 1);
+    }
+  }
+  B.relaxedBlue = {
+    bbox: [blueBox.minX, blueBox.minY, blueBox.maxX, blueBox.maxY],
+    topBins64: [...blueBins.entries()].sort((p, q) => q[1] - p[1]).slice(0, 5)
+      .map(([k, n2]) => ({ bin: k.split(',').map((v) => v * 64), n: n2 })),
+  };
+  say(`B4 relaxed bright-blue bbox ${JSON.stringify(B.relaxedBlue.bbox)}  top 64px bins ${JSON.stringify(B.relaxedBlue.topBins64)}`);
+  try {
+    const im2 = readPNG(R('./sbs1/sly-closeup.png'));
+    let n2 = 0, band2 = 0;
+    for (let y = 0; y < im2.h; y++) for (let x = 0; x < im2.w; x++) {
+      const i = (y * im2.w + x) * im2.ch;
+      const r = im2.data[i], g = im2.data[i + 1], b = im2.data[i + 2];
+      if (b - r >= 30 && b >= 180 && lum(r, g, b) >= 80) n2++;
+      if (Math.abs(r - 143) <= 40 && Math.abs(g - 216) <= 35 && Math.abs(b - 255) <= 40) band2++;
+    }
+    B.slyCloseup = { relaxedBluePx: n2, inBandPx: band2 };
+    say(`B4 sbs1/sly-closeup.png: in-band px ${band2}, relaxed bright-blue px ${n2} (probe once latched 17 sparkles at this staging)`);
+  } catch (e) { say('B4 sly-closeup check skipped:', e.message); }
+  saveCrop(im, Math.max(0, 591 - 60), Math.max(0, 185 - 60), Math.min(im.w, 591 + 60), Math.min(im.h, 185 + 60), R('./fxcluster-B-hook4-crop.png'));
+  say('B4 crop saved: fxcluster-B-hook4-crop.png (120px box on hook#4, the swing hook)');
 
   OUT.sections.B = B;
 }
@@ -593,6 +724,10 @@ function sectionD() {
   say('   any component wider than ~21 px is NOT the clamped mote/airMotes population;');
   say('   unclamped warm-bright candidates: fire_body 0.30-0.55 m additive (Emitters.js:557-562),');
   say('   torch_smoke 0.16-1.1 m lit smoke (:563-568), FlameField billboard, + POSTFX bloom.');
+  const imh = readPNG(FRAMES.interior);
+  saveCrop(imh, 940, 100, 1120, 200, R('./fxcluster-D-interior-widest-crop.png'));
+  saveCrop(imh, 500, 0, 1280, 200, R('./fxcluster-D-interior-ceilingband-crop.png'));
+  say('D2 crops saved: fxcluster-D-interior-widest-crop.png (940,100..1120,200), fxcluster-D-interior-ceilingband-crop.png');
   OUT.sections.D = D;
 }
 
@@ -699,6 +834,34 @@ function sectionE() {
   const disp = agx(...fogCol.map((v) => v * 1.30)).map(lin2srgb255).map((v) => Math.round(v));
   E.hazeColour = { linear: fogCol.map((v) => +v.toFixed(3)), displayApprox: disp, displayL: +lum(...disp).toFixed(1) };
   say(`E3 haze colour (fog.color x uHazeGain 1.30) ≈ display rgb ${disp} L ${E.hazeColour.displayL} (approx AgX) — vs measured sky ${E.skyMedL} and pyramid ${E.pyramidMedL}`);
+
+  /* E4 — does the pyramid's silhouette EDGE exist at all in the frame? Along the predicted
+     left edge (apex->baseL line), rows 4..110: mean |L(edge-8px out) - L(edge+8px in)|,
+     against a control column 70 px further left in open sky (sky noise floor). */
+  if (!apex.behind && !baseL.behind) {
+    let edgeSum = 0, ctrlSum = 0, nRows = 0;
+    for (let y = 4; y <= 110; y++) {
+      const f = (y - apex.py) / (baseL.py - apex.py);
+      if (f <= 0 || f >= 1) continue;
+      const xe = Math.round(apex.px + (baseL.px - apex.px) * f);
+      if (xe - 78 < 0 || xe + 8 >= im.w) continue;
+      const g = (X) => { const i = (y * im.w + X) * im.ch; return lum(im.data[i], im.data[i + 1], im.data[i + 2]); };
+      edgeSum += Math.abs(g(xe - 8) - g(xe + 8));
+      ctrlSum += Math.abs(g(xe - 78) - g(xe - 62));
+      nRows++;
+    }
+    E.leftEdge = { rows: nRows, meanEdgeStep: +(edgeSum / (nRows || 1)).toFixed(2), skyNoiseStep16px: +(ctrlSum / (nRows || 1)).toFixed(2) };
+    say(`E4 predicted left-edge |ΔL| across 16 px: ${E.leftEdge.meanEdgeStep} vs open-sky control ${E.leftEdge.skyNoiseStep16px} over ${nRows} rows`);
+    say('E4 => if edge step ≈ sky noise, the landmark silhouette is unrecoverable at these rows');
+  }
+  // CRITIC-style rect check for continuity with their numbers.
+  E.rects = {
+    pyramidInterior: rectStats(im, 470, 30, 650, 90),
+    skyLeft: rectStats(im, 130, 30, 280, 90),
+  };
+  say(`E4 rect check: pyramid interior (470,30,650,90) medL ${E.rects.pyramidInterior.medL.toFixed(1)}  vs left sky (130,30,280,90) medL ${E.rects.skyLeft.medL.toFixed(1)}`);
+  saveCrop(im, 240, 0, 760, 290, R('./fxcluster-E-dunes-pyramid-crop.png'));
+  say('E4 crop saved: fxcluster-E-dunes-pyramid-crop.png (240,0..760,290)');
 
   OUT.sections.E = E;
 }
