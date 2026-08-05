@@ -173,8 +173,10 @@ vs 1-px edges (unmodelled, direction known).
   bit-identity is expected because `setShot` freezes rAF/uTime per KNOWN_ISSUES §19, so drift
   cannot move clouds between arms) ⇒ the poke/restore path leaked ⇒ **every arm number in the
   boot is void** (pnight1's own recorded failure mode).
-- **P-F5** sky-only claim: diff(cand, base) outside the sky/dome pixels > 0.2% of frame at
-  ΣRGB ≥ 4 ⇒ unexpected coupling (fog/bloom/outline) ⇒ investigate before any verdict ships.
+- **P-F5** sky-only claim: diff(cand, base) in the non-sky proxy zone (rows y ≥ 400, below
+  every horizon in all four shots) > 0.2% of that zone at ΣRGB ≥ 4 ⇒ unexpected coupling
+  (fog/bloom/outline) ⇒ investigate before any verdict ships. (Proxy stated because a true
+  dome mask is not available offline; the score mode implements exactly this zone.)
 - **P-F6** a straight full-height discontinuity in any candidate sky ⇒ risk R1 surfaced (see
   §7); the frame still scores, but the seam is logged as its own defect with the crop, and if
   it dominates the 1× read the candidate does not ship until the tiling fix lands.
@@ -223,8 +225,9 @@ inert, so pokes are the only valid arm mechanism):
   `uCloudCover` (shared Vector3 with the atmosphere state). Poke AFTER `setShot` settles,
   capture immediately, never re-`setShot` inside an arm.
 - Chunk A: `courtyard` — capture `base`, `cand`, `flat`, `restore`; commit frames + stamp
-  JSON (src-tree hash per §121.4, tod, quality, 1280×720, match cand1 conditions) to
-  `progress/records/skynoise1/A/` before releasing anything else.
+  JSON (src-tree hash per §121.4, tod, quality, resolution) to `progress/records/skynoise1/A/`
+  before releasing anything else. Conditions: 1280×720 (verified from the cand1 PNG headers —
+  fx22.json itself carries no resolution stamp), harness quality matching the baselines.
 - Chunk B: `night` — same four arms, commit to `skynoise1/B/`.
 - Chunk C: `dunes` — same, `skynoise1/C/`.
 - Chunk D (only if the lock is quiet): `hero` — `base`, `cand`, `restore`, `skynoise1/D/`.
