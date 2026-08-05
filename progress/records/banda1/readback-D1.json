@@ -12,7 +12,92 @@
  "shots": [
   {
    "shot": "temple",
-   "arms": [],
+   "arms": [
+    {
+     "arm": "base",
+     "requested": {
+      "subjW": 0.5,
+      "tintPeak": 0.52,
+      "sbm": 0.05,
+      "sbmLit": 0.05
+     },
+     "readback": {
+      "subjW": 0.5,
+      "uSubjW": 0.5,
+      "tintPeak": 0.52,
+      "sbm": 0.05,
+      "sbmLit": 0.05,
+      "uShadowColor": [
+       0.09594484161473013,
+       0.3131499340626409,
+       0.49669808638540497
+      ],
+      "uShadowColorLit": [
+       0.09594484161473013,
+       0.3131499340626409,
+       0.49669808638540497
+      ]
+     },
+     "mismatch": [],
+     "secs": 18
+    },
+    {
+     "arm": "AB",
+     "requested": {
+      "subjW": 0.65,
+      "tintPeak": 0.62,
+      "sbm": 0.05,
+      "sbmLit": 0.05
+     },
+     "readback": {
+      "subjW": 0.65,
+      "uSubjW": 0.65,
+      "tintPeak": 0.62,
+      "sbm": 0.05,
+      "sbmLit": 0.05,
+      "uShadowColor": [
+       0.10880443000913055,
+       0.3551217502645965,
+       0.5632710551839905
+      ],
+      "uShadowColorLit": [
+       0.10880443000913055,
+       0.3551217502645965,
+       0.5632710551839905
+      ]
+     },
+     "mismatch": [],
+     "secs": 18
+    },
+    {
+     "arm": "restore",
+     "requested": {
+      "subjW": 0.5,
+      "tintPeak": 0.52,
+      "sbm": 0.05,
+      "sbmLit": 0.05
+     },
+     "readback": {
+      "subjW": 0.5,
+      "uSubjW": 0.5,
+      "tintPeak": 0.52,
+      "sbm": 0.05,
+      "sbmLit": 0.05,
+      "uShadowColor": [
+       0.09594484161473013,
+       0.3131499340626409,
+       0.49669808638540497
+      ],
+      "uShadowColorLit": [
+       0.09594484161473013,
+       0.3131499340626409,
+       0.49669808638540497
+      ]
+     },
+     "mismatch": [],
+     "secs": 18
+    }
+   ],
    "setShot": {
     "stats": {
      "fps": 37,
@@ -22,7 +107,8 @@
      "ms": 6.7999999998137355
     },
     "tod": 0.72
-   }
+   },
+   "settleSecs": 347
   }
  ],
  "lever": {
@@ -40,5 +126,7 @@
    0.31311543639412576,
    0.49658401318439915
   ]
- }
+ },
+ "srcTreeAfter": "820ace395b9664ae",
+ "finishedAt": "2026-08-05T13:56:50.108Z"
 }

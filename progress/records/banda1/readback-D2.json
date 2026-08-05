@@ -1,0 +1,44 @@
+{
+ "prereg": "PREREG-banda.md",
+ "chunk": "D2",
+ "startedAt": "2026-08-05T13:56:50.260Z",
+ "srcTreeBefore": "820ace395b9664ae",
+ "shipExpected": {
+  "subjW": 0.5,
+  "tintPeak": 0.52,
+  "sbm": 0.05,
+  "sbmLit": 0.05
+ },
+ "shots": [
+  {
+   "shot": "combat",
+   "arms": [],
+   "setShot": {
+    "stats": {
+     "fps": 39,
+     "drawCalls": 224,
+     "triangles": 1542305,
+     "programs": 100,
+     "ms": 6.2999999998137355
+    },
+    "tod": 0.74
+   }
+  }
+ ],
+ "lever": {
+  "hasShading": true,
+  "hasTune": true,
+  "hasSubjU": true,
+  "hasRefresh": true,
+  "subjW": 0.5,
+  "tintPeak": 0.52,
+  "sbm": 0.05,
+  "sbmLit": 0.05,
+  "uSubjW": 0.5,
+  "uShadowColor": [
+   0.09609963379551392,
+   0.31311543639412576,
+   0.49658401318439915
+  ]
+ }
+}
