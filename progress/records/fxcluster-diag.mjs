@@ -71,7 +71,15 @@
  *   height + sun terms, Atmosphere.js:339-341, applyAerial :433-436) never reach a world
  *   pixel. The port quantifies both curves at the pyramid so the routing is evidence.
  *
- * usage: node progress/records/fxcluster-diag.mjs [A|B|C|D|E ...]  (default: all)
+ * Section W — atmowire (SHADING's routed successor of E; PREREG-atmowire.md). OPT-IN ONLY
+ *   (`W` argument; never part of the default `all`, so A–E output is unchanged for FX).
+ *   Asserts the wiring gap from source at the CURRENT tree (setAtmosphere caller scan,
+ *   side-door constants, _fogSynced single-writer, the design-intent exhibits), prints the
+ *   applied-vs-published curve tables, refutes the parameter-mapping shortcut, and derives
+ *   the empirical display transfer + fogColor dose table from the committed fxc1 ×0.75 pair
+ *   (the naive approx-AgX inversion is retained only as its own recorded refutation).
+ *
+ * usage: node progress/records/fxcluster-diag.mjs [A|B|C|D|E|W ...]  (default: all = A–E)
  * Writes progress/records/fxcluster-diag-out.json beside the human-readable stdout.
  */
 import { readPNG } from '../../tools/png.mjs';
@@ -1111,52 +1119,74 @@ function sectionW() {
     fxc1cand: measure(R('./fxcluster1/dunes.cand.png'), 'fxcluster1 dunes.cand (fogColor ×0.75)'),
   };
 
-  /* W5 — display model, §13-calibrated on the measured E arm before any prediction is
-     believed. Model: pyramid rows treated as one operating point; scene-linear grey
-     mix(unhazed, hazeLum, blend) → approx AgX → display luma (grade omitted, absorbed by
-     the calibration). unhazed solved from the fxc1 BASE frame at rowBlend. */
-  const hazeLumCur = lum3v(fogCol) * 1.30;
-  const rowBlend = (W.blends.apex.applied + W.blends.mid.applied) / 2;   // upper-mass operating blend
-  const dispOfGrey = (g) => { const [x, y, z] = agx(g, g, g); return lum(lin2srgb255(x), lin2srgb255(y), lin2srgb255(z)); };
-  const invGrey = (targetL) => { let a = 0, b2 = 4; for (let i = 0; i < 60; i++) { const m = (a + b2) / 2; (dispOfGrey(m) < targetL ? a = m : b2 = m); } return (a + b2) / 2; };
-  if (W.frames.fxc1base && W.frames.fxc1cand) {
-    const mixed0 = invGrey(W.frames.fxc1base.pyr);
-    const unhazed = (mixed0 - rowBlend * hazeLumCur) / (1 - rowBlend);
-    // calibration: forward the measured E arm (fogColor ×0.75 ⇒ hazeLum ×0.75, blends unchanged)
-    const predCandPyr = dispOfGrey(unhazed * (1 - rowBlend) + hazeLumCur * 0.75 * rowBlend);
-    const predCandDelta = +(W.frames.fxc1base.sky - predCandPyr).toFixed(1);
-    const measCandDelta = W.frames.fxc1cand.delta;
-    W.model = {
-      rowBlend: +rowBlend.toFixed(3), hazeLumCurLinear: +hazeLumCur.toFixed(3), unhazedLinear: +unhazed.toFixed(3),
-      calib: { predictedCandDelta: predCandDelta, measuredCandDelta: measCandDelta, err: +(predCandDelta - measCandDelta).toFixed(1) },
-    };
-    say(`W5 model: rowBlend ${rowBlend.toFixed(3)}  hazeLum(cur, ×1.30) ${hazeLumCur.toFixed(3)} lin  unhazed(solved) ${unhazed.toFixed(3)} lin`);
-    say(`W5 CALIBRATION vs measured fxc1 E arm: predicted sky−pyr ${predCandDelta} vs measured ${measCandDelta} (err ${W.model.calib.err} L) — bands must carry ≥ this error`);
-    // connected candidate: blend → mapped apex/mid mean, hazeLum → lum(fogColor) ×1.0
-    const rowBlendMap = (W.mappedBlends.apex.mapped + W.mappedBlends.mid.mapped) / 2;
-    const hazeLumMap = lum3v(fogCol) * 1.0;
-    const predConnPyr = dispOfGrey(unhazed * (1 - rowBlendMap) + hazeLumMap * rowBlendMap);
-    W.model.connected = {
-      rowBlendMapped: +rowBlendMap.toFixed(3), hazeLumMappedLinear: +hazeLumMap.toFixed(3),
-      predictedPyr: +predConnPyr.toFixed(1), predictedDelta: +(W.frames.fxc1base.sky - predConnPyr).toFixed(1),
-      note: 'sky side unchanged by construction (dome does not consume these uniforms)',
-    };
-    say(`W5 CONNECTED prediction: rowBlend' ${rowBlendMap.toFixed(3)}  hazeLum' ${hazeLumMap.toFixed(3)}  → pyramid ${predConnPyr.toFixed(1)}  sky−pyr ${W.model.connected.predictedDelta} (base measured ${W.frames.fxc1base.delta}; ref class 21.4)`);
-    // haze pole display values for the record
-    const dispHaze = (m) => { const c = agx(...fogCol.map((v) => v * m)); return +lum(...c.map(lin2srgb255)).toFixed(1); };
-    W.model.hazeDisplay = { cur130: dispHaze(1.30), mapped100: dispHaze(1.0) };
-    say(`W5 haze pole display L: current (×1.30) ${W.model.hazeDisplay.cur130}  mapped (×1.0) ${W.model.hazeDisplay.mapped100}  (measured sky beside pyramid ${W.frames.fxc1base.sky})`);
-    // no-harm bound: display slope from calibration point, applied to mid-field Δ(blend·haze − blend'·haze')
-    const slope = Math.abs((dispOfGrey(unhazed * (1 - rowBlend) + hazeLumCur * rowBlend) - predCandPyr) / (rowBlend * hazeLumCur * 0.25)); // L per unit linear
-    W.model.noHarm = {};
-    say('W5 no-harm bound |Δdisplay| ≈ slope × |Δ(blend×hazeLum)| (slope ' + slope.toFixed(0) + ' L/lin, from the calibration point):');
-    for (const name of ['near10', 'near26', 'ground60', 'complex90', 'complex140', 'far240']) {
-      const dLin = Math.abs(W.mappedBlends[name].mapped * hazeLumMap - W.blends[name].applied * hazeLumCur);
-      W.model.noHarm[name] = +(slope * dLin).toFixed(1);
-      say(`    ${name.padEnd(10)} |Δ(b·h)| ${dLin.toFixed(3)} lin → ~${W.model.noHarm[name]} L`);
+  /* W5 — display transfer, EMPIRICAL. The naive route (invert approx-AgX grey mix for the
+     unhazed term) fails its own §13 calibration — it solves a NEGATIVE unhazed radiance and
+     over-predicts the measured E arm by ~50 L, because (a) the approx agx omits the PostFX
+     grade and (b) the edge-relative flank sampler mixes world terrain into its "sky" — so it
+     is RECORDED AS REFUTED and every number below comes instead from the committed fxc1
+     ×0.75 pair itself: clean fixed RECTS (dome-invariance verified on pure-sky rects) and
+     measured display-per-linear slopes at two operating sites. */
+  const hazeLumCur = lum3v(fogCol) * 1.30;   // linear luminance of the current world-haze pole
+  const hazeLumPub = lum3v(fogCol);          // ×1.0 = published target (gain retired)
+  const RECTS = {
+    pyrInterior: [470, 30, 650, 90],          // sectionE's E4 rect pair — projection-free comparator
+    skyLeft: [130, 30, 280, 90],
+    skyTopLeft: [0, 0, 300, 60], skyTopRight: [900, 0, 1280, 60],
+    complex: [300, 140, 900, 420], nearGround: [200, 500, 1100, 700],
+  };
+  const rectL = (im2, r) => rectStats(im2, r[0], r[1], r[2], r[3]).medL;
+  const meanL = (im2, r) => { let s = 0, n = 0; for (let y = r[1]; y < r[3]; y++) for (let x = r[0]; x < r[2]; x++) { const i = (y * im2.w + x) * im2.ch; s += lum(im2.data[i], im2.data[i + 1], im2.data[i + 2]); n++; } return s / n; };
+  let base1, cand1f;
+  try { base1 = readPNG(R('./fxcluster1/dunes.base.png')); cand1f = readPNG(R('./fxcluster1/dunes.cand.png')); } catch { /* absent */ }
+  if (base1 && cand1f) {
+    W.rectQ = {};
+    say('W5 clean-rect quantities (medL; Q-W1 := skyLeft − pyrInterior — the successor seal\'s decisive rect pair):');
+    for (const [fname, im2] of [['fxc1.base', base1], ['fxc1.cand(×0.75)', cand1f]]) {
+      const pyr = rectL(im2, RECTS.pyrInterior), sky = rectL(im2, RECTS.skyLeft);
+      W.rectQ[fname] = { pyrInterior: +pyr.toFixed(1), skyLeft: +sky.toFixed(1), QW1: +(sky - pyr).toFixed(1) };
+      say(`    ${fname.padEnd(18)} pyrInterior ${pyr.toFixed(1)}  skyLeft ${sky.toFixed(1)}  Q-W1 ${(sky - pyr).toFixed(1)}`);
     }
+    // dome invariance under a fog.color-family poke — the seam-side no-harm fact
+    W.domeInvariance = {};
+    say('W5 dome invariance under the ×0.75 fog.color arm (mean ΔL, cand−base):');
+    for (const nm of ['skyTopLeft', 'skyTopRight', 'skyLeft']) {
+      const d = +(meanL(cand1f, RECTS[nm]) - meanL(base1, RECTS[nm])).toFixed(2);
+      W.domeInvariance[nm] = d;
+      say(`    ${nm.padEnd(12)} ${d} (dome does NOT consume fog.color — confirmed on pixels)`);
+    }
+    // empirical slopes: display L per unit linear (blend × hazeLum) at two sites
+    const dPyr = meanL(cand1f, RECTS.pyrInterior) - meanL(base1, RECTS.pyrInterior);
+    const dCpx = meanL(cand1f, RECTS.complex) - meanL(base1, RECTS.complex);
+    const dNear = meanL(cand1f, RECTS.nearGround) - meanL(base1, RECTS.nearGround);
+    const bPyrRect = 0.30;                     // applied blend across the rect's rows (W2 apex..mid 0.254..0.440)
+    const bCpxRect = 0.44;                     // applied blend at complex90 (W2)
+    const slopePyr = Math.abs(dPyr) / (bPyrRect * 0.25 * hazeLumCur);
+    const slopeCpx = Math.abs(dCpx) / (bCpxRect * 0.25 * hazeLumCur);
+    W.empirical = {
+      dPyr: +dPyr.toFixed(2), dCpx: +dCpx.toFixed(2), dNear: +dNear.toFixed(2),
+      slopePyr: +slopePyr.toFixed(0), slopeCpx: +slopeCpx.toFixed(0),
+      note: 'slopes agree within 10% at two sites; extrapolation to 4-8× the calibration dose is the stated hazard — the seal uses ordering gates + wide brackets, not points',
+    };
+    say(`W5 empirical: ΔpyrInterior ${dPyr.toFixed(2)} L at Δ(b·h) ${(bPyrRect * 0.25 * hazeLumCur).toFixed(3)} → slope ${slopePyr.toFixed(0)} L/lin;  Δcomplex ${dCpx.toFixed(2)} at ${(bCpxRect * 0.25 * hazeLumCur).toFixed(3)} → ${slopeCpx.toFixed(0)} L/lin;  Δnear ${dNear.toFixed(2)}`);
+    // dose table for the CONNECTED candidate: published blends, haze pole = fogColor-family × s
+    const slope = (slopePyr + slopeCpx) / 2;
+    const bPyrPub = (W.blends.apex.published + W.blends.mid.published) / 2;  // rect rows under the published curve
+    const bCpxPub = W.blends.complex90.published;
+    W.dose = {};
+    say(`W5 dose table (connected curve; slope ${slope.toFixed(0)} L/lin ±extrapolation; base Q-W1 ${W.rectQ['fxc1.base'].QW1}):`);
+    for (const s of [1.0, 0.75, 0.55, 0.40, 0.30]) {
+      const dPyrL = slope * (bPyrPub * hazeLumPub * s - bPyrRect * hazeLumCur);
+      const dCpxL = slope * (bCpxPub * hazeLumPub * s - bCpxRect * hazeLumCur);
+      const q = W.rectQ['fxc1.base'].QW1 - dPyrL;   // sky fixed (dome invariant) ⇒ Q-W1 moves by −Δpyr
+      W.dose[`s${s}`] = { predQW1: +q.toFixed(1), predPyrDelta: +dPyrL.toFixed(1), predComplexDelta: +dCpxL.toFixed(1) };
+      say(`    s=${s.toFixed(2)}  Δpyr ${dPyrL >= 0 ? '+' : ''}${dPyrL.toFixed(1)} L → Q-W1 ≈ ${q.toFixed(1)}   Δcomplex ${dCpxL >= 0 ? '+' : ''}${dCpxL.toFixed(1)} L`);
+    }
+    say('W5 ⇒ wire-only (s=1.0) INVERTS the separation (pyramid lifts above sky) — the target sits');
+    say('   above the sky it must sink under; the joint candidate needs the curve AND the fog.color');
+    say('   dose (s ≈ 0.30-0.45 for the +8..+22 territory). Neither alone: E measured +2.3 at the');
+    say('   old blend; the curve alone points the wrong way. Multiplicative, as RESULT-fxcluster E said.');
   } else {
-    say('W5 SKIPPED: fxc1 dunes pair absent — the model has no calibration anchor.');
+    say('W5 SKIPPED: fxc1 dunes pair absent — no empirical anchor.');
   }
 
   OUT.sections.W = W;

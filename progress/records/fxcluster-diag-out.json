@@ -1,5 +1,5 @@
 {
- "at": "2026-08-05T20:58:09.723Z",
+ "at": "2026-08-05T21:05:42.216Z",
  "sections": {
   "W": {
    "drift": [],
@@ -140,33 +140,56 @@
      "delta": 2.3
     }
    },
-   "model": {
-    "rowBlend": 0.347,
-    "hazeLumCurLinear": 0.636,
-    "unhazedLinear": -0.232,
-    "calib": {
-     "predictedCandDelta": 56.8,
-     "measuredCandDelta": 2.3,
-     "err": 54.5
+   "rectQ": {
+    "fxc1.base": {
+     "pyrInterior": 158.2,
+     "skyLeft": 161.8,
+     "QW1": 3.7
     },
-    "connected": {
-     "rowBlendMapped": 0.709,
-     "hazeLumMappedLinear": 0.49,
-     "predictedPyr": 192.8,
-     "predictedDelta": -41.3,
-     "note": "sky side unchanged by construction (dome does not consume these uniforms)"
+    "fxc1.cand(×0.75)": {
+     "pyrInterior": 150,
+     "skyLeft": 161.8,
+     "QW1": 11.8
+    }
+   },
+   "domeInvariance": {
+    "skyTopLeft": 0,
+    "skyTopRight": -0.07,
+    "skyLeft": -0.08
+   },
+   "empirical": {
+    "dPyr": -5.9,
+    "dCpx": -7.92,
+    "dNear": -0.28,
+    "slopePyr": 124,
+    "slopeCpx": 113,
+    "note": "slopes agree within 10% at two sites; extrapolation to 4-8× the calibration dose is the stated hazard — the seal uses ordering gates + wide brackets, not points"
+   },
+   "dose": {
+    "s1": {
+     "predQW1": -13.5,
+     "predPyrDelta": 17.2,
+     "predComplexDelta": -21.1
     },
-    "hazeDisplay": {
-     "cur130": 213,
-     "mapped100": 207
+    "s0.75": {
+     "predQW1": -3.5,
+     "predPyrDelta": 7.2,
+     "predComplexDelta": -24.1
     },
-    "noHarm": {
-     "near10": 38.6,
-     "near26": 87.6,
-     "ground60": 3.1,
-     "complex90": 27.7,
-     "complex140": 15.1,
-     "far240": 76.8
+    "s0.55": {
+     "predQW1": 4.4,
+     "predPyrDelta": -0.7,
+     "predComplexDelta": -26.5
+    },
+    "s0.4": {
+     "predQW1": 10.4,
+     "predPyrDelta": -6.7,
+     "predComplexDelta": -28.3
+    },
+    "s0.3": {
+     "predQW1": 14.4,
+     "predPyrDelta": -10.7,
+     "predComplexDelta": -29.5
     }
    }
   }
