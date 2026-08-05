@@ -1,0 +1,136 @@
+{
+ "at": "2026-08-05T20:45:24.295Z",
+ "run": "b2 corrected re-run (restore-by-restage)",
+ "arms": {
+  "base": {
+   "hookDiscBlue": 0,
+   "hookDiscUnionPx": 8463,
+   "strictBand": 0,
+   "relaxedBlueFrame": 2778,
+   "hooksInFrame": [
+    {
+     "i": 4,
+     "px": [
+      591,
+      185
+     ],
+     "maxL": 147,
+     "maxBmR": 55
+    },
+    {
+     "i": 5,
+     "px": [
+      507,
+      239
+     ],
+     "maxL": 115,
+     "maxBmR": 63
+    },
+    {
+     "i": 6,
+     "px": [
+      434,
+      268
+     ],
+     "maxL": 126,
+     "maxBmR": 54
+    }
+   ]
+  },
+  "cand": {
+   "hookDiscBlue": 440,
+   "hookDiscUnionPx": 8463,
+   "strictBand": 236,
+   "relaxedBlueFrame": 3387,
+   "hooksInFrame": [
+    {
+     "i": 4,
+     "px": [
+      591,
+      185
+     ],
+     "maxL": 246,
+     "maxBmR": 59
+    },
+    {
+     "i": 5,
+     "px": [
+      507,
+      239
+     ],
+     "maxL": 210,
+     "maxBmR": 77
+    },
+    {
+     "i": 6,
+     "px": [
+      434,
+      268
+     ],
+     "maxL": 208,
+     "maxBmR": 82
+    }
+   ]
+  },
+  "restore": {
+   "hookDiscBlue": 0,
+   "hookDiscUnionPx": 8463,
+   "strictBand": 0,
+   "relaxedBlueFrame": 2646,
+   "hooksInFrame": [
+    {
+     "i": 4,
+     "px": [
+      591,
+      185
+     ],
+     "maxL": 147,
+     "maxBmR": 55
+    },
+    {
+     "i": 5,
+     "px": [
+      507,
+      239
+     ],
+     "maxL": 115,
+     "maxBmR": 63
+    },
+    {
+     "i": 6,
+     "px": [
+      434,
+      268
+     ],
+     "maxL": 126,
+     "maxBmR": 54
+    }
+   ]
+  }
+ },
+ "quantities": {
+  "B": {
+   "Q-B1 hook-disc bright-blue px (base)": {
+    "value": 0,
+    "band": "base <= 10"
+   },
+   "Q-B1 hook-disc bright-blue px (cand)": {
+    "value": 440,
+    "band": "[60, 4000]"
+   },
+   "Q-B2 strict #8fd8ff band frame-wide (cand)": {
+    "value": 236,
+    "band": "[10, 3000] NON-GATING"
+   },
+   "noise |restore-base| on Q-B1": {
+    "value": 0,
+    "band": "<= 5 px"
+   }
+  }
+ },
+ "gates": {
+  "baseKnownBad": true,
+  "candInBand": true,
+  "restoreEqBase": true
+ }
+}

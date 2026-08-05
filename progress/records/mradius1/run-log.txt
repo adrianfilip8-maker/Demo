@@ -112,3 +112,7 @@
 [20:44:34 +1152s]   · waiting for capture lock (1151s, held by pid 31114)
 [20:44:44 +1163s]   · waiting for capture lock (1162s, held by pid 31114)
 [20:44:55 +1173s]   · waiting for capture lock (1173s, held by pid 31114)
+[20:45:06 +1184s]   · waiting for capture lock (1183s, held by pid 31114)
+[20:45:16 +1194s]   · waiting for capture lock (1194s, held by pid 31114)
+[20:45:27 +1205s]   · waiting for capture lock (1204s, held by pid 31114)
+[20:45:37 +1215s]   · waiting for capture lock (1215s, held by pid 31114)
