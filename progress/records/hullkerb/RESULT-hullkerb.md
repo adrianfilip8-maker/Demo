@@ -66,10 +66,38 @@ pre-run snapshot) before each release. Frames land directly on this durable path
 
 (updated incrementally as chunks complete — see `arms.json` for the per-arm record)
 
-- [ ] chunk 1: interior
+- [x] chunk 1: interior — landed 05:45Z, adjudicated §165 (coordinator's Particles.js revert
+      mid-run; base==base2==restore at ONE sha256 `6b3be800…`, chunk STANDS)
 - [ ] chunk 2: courtyard
 - [ ] chunk 3: guard + night + hero
 
+## Interior scores (decisive shot)
+
+- **P1 PASS** — base vs base2 **0 px** (threshold any-channel Δ>0); in fact base, base2 AND
+  restore are sha256-identical.
+- **P2 PASS** — base vs restore **0 px**.
+- **P3** — hull vs base: 25,862 px (2.806 %), maxΔ 159, **entirely inside the gold objects'
+  regions** (bbox x 612..993 y 53..487 = Ra statue + gilded chest + treasure pile; strong
+  diff Δ≥16 is 7,249 px, bbox x 637..964 y 119..473). Amplitude structure: 58 % of changed
+  px are Δ<8 (PostFX/bloom spill around the new lines, not surface repaints).
+  **Canopic jars: 0 changed px** (ROI x 450..620 y 340..450, both hull AND hull3x —
+  `roidiff.mjs`). Nothing on Sly, walls, floor, or any non-gold prop. Confined: **PASS**.
+- **P4 PASS** — the Ra sun disc regains the clean continuous dark ring
+  (`crops/int-radisc-{base,hull,hull3x}-4x.png`): in `base` the disc melts into the pale
+  wall; in `hull` a single 2–3 px ring runs the full circumference.
+- **P5 interior read** (1:1 + 4×, hull3x beside as known-bad; obelisk crop as reference):
+  - Ra disc: single continuous ring, no sticker edge, no doubling. hull3x: fat ~7 px band
+    swallowing the disc edge — the known-bad reads as known-bad, so the condition scores
+    (§141 satisfied; hull vs hull3x differ by 33,238 px, unmistakable at every crop).
+  - Gilded chest chunks: hull's line lands into the existing heavy PostFX stroke and reads
+    as ONE slightly heavier line — no railroad doubling anywhere found at 4×.
+  - Treasure pile (grazing, smallest gold): each coin gains an individual closed loop; at
+    1:1 the pile reads as *coins* where base reads as pale speckle; no crawl smears. hull3x
+    fuses the near cluster into one solid navy mass (total glitter kill) — hull is far from
+    the failure shape and the §155.4 jar-crust signature (ragged doubled crust on a smooth
+    highlight shoulder) is absent.
+  - Interior P5: **no REJECT condition present.**
+
 ## Verdict
 
-NOT YET SCORED.
+NOT YET SCORED — courtyard (collateral guard) + ride-alongs outstanding.
