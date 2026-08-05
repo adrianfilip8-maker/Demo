@@ -14242,3 +14242,17 @@ ticket in the next free window, then swept with this section cited. The E-gate f
 re-armed, must be re-registered against the actual backdrop (wall, not sky) — recorded so the
 next session does not re-run a gate whose premise this capture measured false.
 
+
+## §167 — the seventh rollback took the courtyard chunk mid-render; everything scored survived
+
+Found by the 07:57Z check-in signature (board reverted). HEAD at `77e1eab`, remote at `ca8582b`
+— the WIP snapshot pushed minutes before the strike. Recovered ff-only, clean. Cadence note for
+the record: 43 min twice, then ~3.5 h of uptime through five landed captures and four verdicts —
+irregular, planning stays at the ~45-minute worst case.
+
+Lost: GEOMETRY's `propshull2 courtyard` chunk mid-render (one window; interior chunk, all crops
+and both logs are committed) and, again, every agent transcript — the §166 yaw edit had queued on
+that chunk's lock and now applies in the free window instead. The §164 chunked-sweep discipline
+has now been paid for seven times: the total session loss to seven rollbacks is wall-clock and
+re-runs, not one scored number.
+
