@@ -89,3 +89,76 @@ Pending. Per the seal: PASS requires P1–P5 in-band on the candidate arms with 
 reading as their own failures, P-F4 = 0 px per chunk, P-F5 = 0 px, and P7 = 0 px off-subject
 at night (P-F6: without the night proof the candidate does not ship regardless).
 Ship decisions are the coordinator's.
+
+---
+
+## VERDICT — scored by the coordinator at first wake per §163.2 (sealed scorer, unmodified; SHADING's transcripts died in the §170 rollback)
+
+**The candidate does not ship on this seal.** Two independent registered outcomes:
+
+1. **P-F6 fires.** P7 (night, AB vs base, same boot) read **63 differing px outside the subject
+   box** against the registered band [0,0]. The seal's own words: "candidate does not ship on
+   this seal regardless of P1–P5." The §6 collision arithmetic claimed zero by construction —
+   63 real pixels falsify that proof, which is itself the finding: some term in the
+   shadowTintPeak/subjWarmShade pair reaches night off-subject pixels through a path the
+   arithmetic did not cover. (In-subject night movement, expected and allowed: 2,067 px.)
+2. **KB-warmmud never showed its signature.** Grey-collapse requires satP50 falling ≥35%
+   relative on ≥2 of 3 wall rects; measured hero 13%, interior 23%/27% — zero of three. Per the
+   seal's §13 clause the gates it guards are UNSCOREABLE. The port predicted 40–55% drops; the
+   frame delivered a third of that — the port-vs-frame gap is the second finding, and it is the
+   §18-family hazard (a model validated against percentiles the frame does not reproduce).
+
+Everything else held: all five restores bit-identical (P-F4 = 0 px on every chunk), arch
+invariance exact, KB-overwarm separated correctly, every P1–P5/P8 band PASS. The full scorer
+table is quoted verbatim below per the seal's requirement.
+
+**Routing:** the night-leak mechanism and the KB port gap go to the next SHADING candidate's
+prereg as its first two obligations; the warm-restoration goal itself remains live (the P1–P5
+numbers show the levers do what the port said ON DAY SHOTS — what failed is the collision
+guarantee, not the direction). No src was touched; there is nothing to revert.
+
+```
+banda-diag — drift guard PASS (47 constants + 13 load-bearing lines asserted against committed source)
+
+═══ score — PREREG-banda quantities on progress/records/banda1 (bands verbatim from the seal) ═══
+  BaseGate creamROI b−r      -20.00  band [-28,-12]  PASS
+  BaseGate rings b−r         27.00  band [15,35]  PASS
+  P-F5 arch invariance (A) px 0.00  band [0,0]  PASS
+  P-F4 sly-closeup restore-vs-base differing px (ΣRGB≥4): 0
+  P1 creamROI b−r (A)        -45.00  band [-58,-30]  PASS
+  P1 rings b−r (A)           13.00  band [5,45]  PASS
+  P2 tail body R−B (A)       0.37  band [-4,18]  PASS
+  P1 creamROI b−r (AB)       -45.00  band [-58,-30]  PASS
+  P1 rings b−r (AB)          13.00  band [5,45]  PASS
+  P2 tail body R−B (AB)      0.46  band [-4,18]  PASS
+  KB-overwarm rings b−r      -20.00  band [-999,5]  PASS
+  P3 hero.arch Δ<L40pp (B)   -2.43  band [-6,-0.5]  PASS
+  P5 hero body hue (B)       221.33  band [200,246]  PASS
+  P3 hero.arch Δ<L40pp (AB)  -2.42  band [-6,-0.5]  PASS
+  P5 hero body hue (AB)      221.33  band [200,246]  PASS
+  KB-warmmud hero body satP50 0.323→0.281 (rel drop 13%; needs ≥35% on ≥2 wall rects overall)
+  P-F4 hero restore-vs-base differing px (ΣRGB≥4): 0
+  P4 int wall0 ΔmedL (B)     4.36  band [1,8]  PASS
+  P4 int wall1 ΔmedL (B)     4.37  band [1,8]  PASS
+  P5 interior body hue (B)   225.00  band [200,246]  PASS
+  P5 interior body hue (B)   225.00  band [200,246]  PASS
+  P4 int wall0 ΔmedL (AB)    4.36  band [1,8]  PASS
+  P4 int wall1 ΔmedL (AB)    4.37  band [1,8]  PASS
+  P5 interior body hue (AB)  225.00  band [200,246]  PASS
+  P5 interior body hue (AB)  225.00  band [200,246]  PASS
+  KB-warmmud interior body satP50 0.391→0.300 (rel drop 23%; needs ≥35% on ≥2 wall rects overall)
+  KB-warmmud interior body satP50 0.430→0.316 (rel drop 27%; needs ≥35% on ≥2 wall rects overall)
+  P-F4 interior restore-vs-base differing px (ΣRGB≥4): 0
+  P5 temple body hue (AB)    207.00  band [200,246]  PASS
+  P-F4 temple restore-vs-base differing px (ΣRGB≥4): 0
+  P7 night off-subject Δpx   63.00  band [0,0]  FAIL
+    (in-subject Δpx, allowed and expected warm-ward: 2067)
+  P-F4 night restore-vs-base differing px (ΣRGB≥4): 0
+  P6 hero warm% 9.1 → 9.0 (Δ -0.1 pp; honesty row, ≤ +3–4 pp expected)
+  P6 interior warm% 7.5 → 7.3 (Δ -0.2 pp; honesty row, ≤ +3–4 pp expected)
+  P8 combat warm% ratio (AB/base) 1.00  band [0.85,1.15]  PASS
+  P-F4 combat restore-vs-base differing px (ΣRGB≥4): 0
+  P-F4 temple restore-vs-base differing px (ΣRGB≥4): 0
+
+  25 scored, 1 FAIL — the RESULT quotes this table verbatim.
+```
