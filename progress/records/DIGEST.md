@@ -21,6 +21,12 @@ this file sat committed, because **a resumed agent reads its transcript, not the
 
 ---
 
+## Wave outcome (sbs2, 2026-08-05): blind score vs real references moved 1–9 → 5–5.
+Flips: sly-closeup, dunes, interior, traversal (+ temple held); every flip traces to a named
+ship (eyesize, sky decks, hull, capYaw, violet pair), every unmoved loss to a no-ship (banda
+warm half, fxcluster, goldlobe). Remaining top gaps: the warm half (SHADING), the FX cluster
+(combat/guard), residual dunes/night sky streaks (new SKY prereg). Details: CRITIC-sbs2.md.
+
 ## Everyone — READ FIRST: the container rolls back every ~45 minutes (§163–§164)
 
 Six rollbacks so far, found by check-ins, uncorrelated with our actions. Operating consequences:
