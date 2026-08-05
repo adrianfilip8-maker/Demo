@@ -1,0 +1,1348 @@
+{
+ "srcTree": "820ace395b9664ae",
+ "variants": {
+  "base": {
+   "sly-closeup": {
+    "E": 1,
+    "glintE": 1,
+    "pupilXY": 1,
+    "pxPerM": 511.42315806923204,
+    "eyes": {
+     "hisL": {
+      "scl": {
+       "n": 3054,
+       "x0": 155,
+       "x1": 230,
+       "y0": 171,
+       "y1": 253,
+       "w": 76,
+       "h": 83
+      },
+      "unit": {
+       "n": 4418,
+       "x0": 155,
+       "x1": 230,
+       "y0": 171,
+       "y1": 253,
+       "w": 76,
+       "h": 83
+      },
+      "gliPx": 129,
+      "rowY": 212,
+      "sclLongestRun": 71,
+      "unitToFace": 0.278,
+      "sclToFace": 0.278
+     },
+     "hisR": {
+      "scl": {
+       "n": 2181,
+       "x0": 67,
+       "x1": 137,
+       "y0": 142,
+       "y1": 224,
+       "w": 71,
+       "h": 83
+      },
+      "unit": {
+       "n": 3354,
+       "x0": 67,
+       "x1": 137,
+       "y0": 142,
+       "y1": 224,
+       "w": 71,
+       "h": 83
+      },
+      "gliPx": 122,
+      "rowY": 183,
+      "sclLongestRun": 46,
+      "unitToFace": 0.26,
+      "sclToFace": 0.26
+     }
+    },
+    "face": {
+     "hisL": {
+      "toEar": 319,
+      "cheek": 273
+     },
+     "hisR": {
+      "toEar": 344,
+      "cheek": 273
+     }
+    },
+    "divider": [
+     {
+      "y": 212,
+      "gap": 17,
+      "inkPct": 100
+     },
+     {
+      "y": 183,
+      "gap": 17,
+      "inkPct": 100
+     },
+     {
+      "y": 198,
+      "gap": 17,
+      "inkPct": 100
+     }
+    ],
+    "strip": {
+     "hisL": 9,
+     "hisR": 2
+    },
+    "bandV": {
+     "hisL": {
+      "above": 0,
+      "below": 32
+     },
+     "hisR": {
+      "above": 0,
+      "below": 19
+     }
+    },
+    "eyeRowInk": {
+     "hisL": {
+      "run": 58,
+      "start": 103,
+      "startsInsideUnit": false
+     },
+     "hisR": {
+      "run": 45,
+      "start": 118,
+      "startsInsideUnit": true
+     }
+    }
+   },
+   "combat": {
+    "E": 1,
+    "glintE": 1,
+    "pupilXY": 1,
+    "pxPerM": 518.0401638837438,
+    "eyes": {
+     "hisL": {
+      "scl": {
+       "n": 2285,
+       "x0": 97,
+       "x1": 178,
+       "y0": 249,
+       "y1": 304,
+       "w": 82,
+       "h": 56
+      },
+      "unit": {
+       "n": 2737,
+       "x0": 97,
+       "x1": 178,
+       "y0": 249,
+       "y1": 304,
+       "w": 82,
+       "h": 56
+      },
+      "gliPx": 0,
+      "rowY": 277,
+      "sclLongestRun": 72,
+      "unitToFace": 0.225,
+      "sclToFace": 0.225
+     },
+     "hisR": {
+      "scl": {
+       "n": 209,
+       "x0": 72,
+       "x1": 86,
+       "y0": 226,
+       "y1": 255,
+       "w": 15,
+       "h": 30
+      },
+      "unit": {
+       "n": 212,
+       "x0": 72,
+       "x1": 86,
+       "y0": 226,
+       "y1": 255,
+       "w": 15,
+       "h": 30
+      },
+      "gliPx": 0,
+      "rowY": 241,
+      "sclLongestRun": 13,
+      "unitToFace": 0.066,
+      "sclToFace": 0.066
+     }
+    },
+    "face": {
+     "hisL": {
+      "toEar": 364,
+      "cheek": 364
+     },
+     "hisR": {
+      "toEar": 308,
+      "cheek": 226
+     }
+    },
+    "divider": [
+     {
+      "y": 277,
+      "gap": 10,
+      "inkPct": 100
+     },
+     {
+      "y": 241,
+      "gap": 10,
+      "inkPct": 100
+     },
+     {
+      "y": 259,
+      "gap": 10,
+      "inkPct": 100
+     }
+    ],
+    "strip": {
+     "hisL": 18,
+     "hisR": 0
+    },
+    "bandV": {
+     "hisL": {
+      "above": 0,
+      "below": 20
+     },
+     "hisR": {
+      "above": 0,
+      "below": 24
+     }
+    },
+    "eyeRowInk": {
+     "hisL": {
+      "run": 24,
+      "start": 76,
+      "startsInsideUnit": false
+     },
+     "hisR": {
+      "run": 16,
+      "start": 81,
+      "startsInsideUnit": true
+     }
+    }
+   }
+  },
+  "e65": {
+   "sly-closeup": {
+    "E": 0.65,
+    "glintE": 0.65,
+    "pupilXY": 1,
+    "pxPerM": 511.42315806923204,
+    "eyes": {
+     "hisL": {
+      "scl": {
+       "n": 949,
+       "x0": 169,
+       "x1": 212,
+       "y0": 182,
+       "y1": 227,
+       "w": 44,
+       "h": 46
+      },
+      "unit": {
+       "n": 1581,
+       "x0": 169,
+       "x1": 212,
+       "y0": 182,
+       "y1": 227,
+       "w": 44,
+       "h": 46
+      },
+      "gliPx": 53,
+      "rowY": 205,
+      "sclLongestRun": 42,
+      "unitToFace": 0.162,
+      "sclToFace": 0.162
+     },
+     "hisR": {
+      "scl": {
+       "n": 550,
+       "x0": 82,
+       "x1": 120,
+       "y0": 155,
+       "y1": 196,
+       "w": 39,
+       "h": 42
+      },
+      "unit": {
+       "n": 1047,
+       "x0": 82,
+       "x1": 120,
+       "y0": 155,
+       "y1": 196,
+       "w": 39,
+       "h": 42
+      },
+      "gliPx": 55,
+      "rowY": 176,
+      "sclLongestRun": 28,
+      "unitToFace": 0.154,
+      "sclToFace": 0.154
+     }
+    },
+    "face": {
+     "hisL": {
+      "toEar": 320,
+      "cheek": 271
+     },
+     "hisR": {
+      "toEar": 346,
+      "cheek": 254
+     }
+    },
+    "divider": [
+     {
+      "y": 205,
+      "gap": 48,
+      "inkPct": 100
+     },
+     {
+      "y": 176,
+      "gap": 48,
+      "inkPct": 100
+     },
+     {
+      "y": 191,
+      "gap": 48,
+      "inkPct": 100
+     }
+    ],
+    "strip": {
+     "hisL": 22,
+     "hisR": 14
+    },
+    "bandV": {
+     "hisL": {
+      "above": 7,
+      "below": 58
+     },
+     "hisR": {
+      "above": 2,
+      "below": 47
+     }
+    },
+    "eyeRowInk": {
+     "hisL": {
+      "run": 113,
+      "start": 57,
+      "startsInsideUnit": false
+     },
+     "hisR": {
+      "run": 101,
+      "start": 92,
+      "startsInsideUnit": true
+     }
+    }
+   },
+   "combat": {
+    "E": 0.65,
+    "glintE": 0.65,
+    "pupilXY": 1,
+    "pxPerM": 518.0401638837438,
+    "eyes": {
+     "hisL": {
+      "scl": {
+       "n": 538,
+       "x0": 111,
+       "x1": 155,
+       "y0": 258,
+       "y1": 285,
+       "w": 45,
+       "h": 28
+      },
+      "unit": {
+       "n": 756,
+       "x0": 111,
+       "x1": 155,
+       "y0": 257,
+       "y1": 285,
+       "w": 45,
+       "h": 29
+      },
+      "gliPx": 0,
+      "rowY": 272,
+      "sclLongestRun": 42,
+      "unitToFace": 0.129,
+      "sclToFace": 0.129
+     },
+     "hisR": {
+      "scl": {
+       "n": 14,
+       "x0": 81,
+       "x1": 84,
+       "y0": 229,
+       "y1": 234,
+       "w": 4,
+       "h": 6
+      },
+      "unit": {
+       "n": 14,
+       "x0": 81,
+       "x1": 84,
+       "y0": 229,
+       "y1": 234,
+       "w": 4,
+       "h": 6
+      },
+      "gliPx": 0,
+      "rowY": 232,
+      "sclLongestRun": 4,
+      "unitToFace": 0.02,
+      "sclToFace": 0.02
+     }
+    },
+    "face": {
+     "hisL": {
+      "toEar": 349,
+      "cheek": 349
+     },
+     "hisR": {
+      "toEar": 309,
+      "cheek": 199
+     }
+    },
+    "divider": [
+     {
+      "y": 272,
+      "gap": 26,
+      "inkPct": 100
+     },
+     {
+      "y": 232,
+      "gap": 26,
+      "inkPct": 0
+     },
+     {
+      "y": 252,
+      "gap": 26,
+      "inkPct": 100
+     }
+    ],
+    "strip": {
+     "hisL": 35,
+     "hisR": 2
+    },
+    "bandV": {
+     "hisL": {
+      "above": 0,
+      "below": 39
+     },
+     "hisR": {
+      "above": 0,
+      "below": 54
+     }
+    },
+    "eyeRowInk": {
+     "hisL": {
+      "run": 39,
+      "start": 72,
+      "startsInsideUnit": false
+     },
+     "hisR": {
+      "run": 2,
+      "start": 79,
+      "startsInsideUnit": false
+     }
+    }
+   }
+  },
+  "e55": {
+   "sly-closeup": {
+    "E": 0.55,
+    "glintE": 0.62,
+    "pupilXY": 1,
+    "pxPerM": 511.42315806923204,
+    "eyes": {
+     "hisL": {
+      "scl": {
+       "n": 607,
+       "x0": 172,
+       "x1": 205,
+       "y0": 185,
+       "y1": 222,
+       "w": 34,
+       "h": 38
+      },
+      "unit": {
+       "n": 1058,
+       "x0": 172,
+       "x1": 205,
+       "y0": 185,
+       "y1": 222,
+       "w": 34,
+       "h": 38
+      },
+      "gliPx": 49,
+      "rowY": 204,
+      "sclLongestRun": 33,
+      "unitToFace": 0.125,
+      "sclToFace": 0.125
+     },
+     "hisR": {
+      "scl": {
+       "n": 326,
+       "x0": 86,
+       "x1": 116,
+       "y0": 159,
+       "y1": 193,
+       "w": 31,
+       "h": 35
+      },
+      "unit": {
+       "n": 690,
+       "x0": 86,
+       "x1": 116,
+       "y0": 159,
+       "y1": 193,
+       "w": 31,
+       "h": 35
+      },
+      "gliPx": 52,
+      "rowY": 176,
+      "sclLongestRun": 23,
+      "unitToFace": 0.122,
+      "sclToFace": 0.122
+     }
+    },
+    "face": {
+     "hisL": {
+      "toEar": 323,
+      "cheek": 273
+     },
+     "hisR": {
+      "toEar": 346,
+      "cheek": 254
+     }
+    },
+    "divider": [
+     {
+      "y": 204,
+      "gap": 55,
+      "inkPct": 100
+     },
+     {
+      "y": 176,
+      "gap": 55,
+      "inkPct": 100
+     },
+     {
+      "y": 190,
+      "gap": 55,
+      "inkPct": 100
+     }
+    ],
+    "strip": {
+     "hisL": 28,
+     "hisR": 18
+    },
+    "bandV": {
+     "hisL": {
+      "above": 11,
+      "below": 63
+     },
+     "hisR": {
+      "above": 6,
+      "below": 50
+     }
+    },
+    "eyeRowInk": {
+     "hisL": {
+      "run": 115,
+      "start": 57,
+      "startsInsideUnit": false
+     },
+     "hisR": {
+      "run": 100,
+      "start": 93,
+      "startsInsideUnit": true
+     }
+    }
+   },
+   "combat": {
+    "E": 0.55,
+    "glintE": 0.62,
+    "pupilXY": 1,
+    "pxPerM": 518.0401638837438,
+    "eyes": {
+     "hisL": {
+      "scl": {
+       "n": 308,
+       "x0": 113,
+       "x1": 145,
+       "y0": 259,
+       "y1": 281,
+       "w": 33,
+       "h": 23
+      },
+      "unit": {
+       "n": 479,
+       "x0": 113,
+       "x1": 145,
+       "y0": 258,
+       "y1": 281,
+       "w": 33,
+       "h": 24
+      },
+      "gliPx": 1,
+      "rowY": 270,
+      "sclLongestRun": 32,
+      "unitToFace": 0.095,
+      "sclToFace": 0.095
+     },
+     "hisR": {
+      "scl": {
+       "n": 0
+      },
+      "unit": {
+       "n": 0
+      },
+      "gliPx": 0
+     }
+    },
+    "face": {
+     "hisL": {
+      "toEar": 348,
+      "cheek": 348
+     }
+    },
+    "strip": {
+     "hisL": 41
+    },
+    "bandV": {
+     "hisL": {
+      "above": 0,
+      "below": 42
+     }
+    },
+    "eyeRowInk": {
+     "hisL": {
+      "run": 41,
+      "start": 72,
+      "startsInsideUnit": false
+     }
+    }
+   }
+  },
+  "e45": {
+   "sly-closeup": {
+    "E": 0.45,
+    "glintE": 0.62,
+    "pupilXY": 1,
+    "pxPerM": 511.42315806923204,
+    "eyes": {
+     "hisL": {
+      "scl": {
+       "n": 346,
+       "x0": 174,
+       "x1": 200,
+       "y0": 188,
+       "y1": 218,
+       "w": 27,
+       "h": 31
+      },
+      "unit": {
+       "n": 644,
+       "x0": 174,
+       "x1": 200,
+       "y0": 188,
+       "y1": 218,
+       "w": 27,
+       "h": 31
+      },
+      "gliPx": 49,
+      "rowY": 203,
+      "sclLongestRun": 26,
+      "unitToFace": 0.098,
+      "sclToFace": 0.098
+     },
+     "hisR": {
+      "scl": {
+       "n": 185,
+       "x0": 90,
+       "x1": 113,
+       "y0": 163,
+       "y1": 189,
+       "w": 24,
+       "h": 27
+      },
+      "unit": {
+       "n": 428,
+       "x0": 90,
+       "x1": 113,
+       "y0": 163,
+       "y1": 189,
+       "w": 24,
+       "h": 27
+      },
+      "gliPx": 55,
+      "rowY": 176,
+      "sclLongestRun": 18,
+      "unitToFace": 0.094,
+      "sclToFace": 0.094
+     }
+    },
+    "face": {
+     "hisL": {
+      "toEar": 325,
+      "cheek": 275
+     },
+     "hisR": {
+      "toEar": 346,
+      "cheek": 254
+     }
+    },
+    "divider": [
+     {
+      "y": 203,
+      "gap": 60,
+      "inkPct": 100
+     },
+     {
+      "y": 176,
+      "gap": 60,
+      "inkPct": 100
+     },
+     {
+      "y": 190,
+      "gap": 60,
+      "inkPct": 100
+     }
+    ],
+    "strip": {
+     "hisL": 32,
+     "hisR": 22
+    },
+    "bandV": {
+     "hisL": {
+      "above": 16,
+      "below": 67
+     },
+     "hisR": {
+      "above": 10,
+      "below": 54
+     }
+    },
+    "eyeRowInk": {
+     "hisL": {
+      "run": 118,
+      "start": 57,
+      "startsInsideUnit": false
+     },
+     "hisR": {
+      "run": 83,
+      "start": 110,
+      "startsInsideUnit": true
+     }
+    }
+   },
+   "combat": {
+    "E": 0.45,
+    "glintE": 0.62,
+    "pupilXY": 1,
+    "pxPerM": 518.0401638837438,
+    "eyes": {
+     "hisL": {
+      "scl": {
+       "n": 188,
+       "x0": 116,
+       "x1": 140,
+       "y0": 259,
+       "y1": 277,
+       "w": 25,
+       "h": 19
+      },
+      "unit": {
+       "n": 310,
+       "x0": 116,
+       "x1": 140,
+       "y0": 258,
+       "y1": 277,
+       "w": 25,
+       "h": 20
+      },
+      "gliPx": 7,
+      "rowY": 268,
+      "sclLongestRun": 24,
+      "unitToFace": 0.072,
+      "sclToFace": 0.072
+     },
+     "hisR": {
+      "scl": {
+       "n": 0
+      },
+      "unit": {
+       "n": 0
+      },
+      "gliPx": 0
+     }
+    },
+    "face": {
+     "hisL": {
+      "toEar": 348,
+      "cheek": 348
+     }
+    },
+    "strip": {
+     "hisL": 44
+    },
+    "bandV": {
+     "hisL": {
+      "above": 0,
+      "below": 46
+     }
+    },
+    "eyeRowInk": {
+     "hisL": {
+      "run": 44,
+      "start": 72,
+      "startsInsideUnit": false
+     }
+    }
+   }
+  },
+  "e38": {
+   "sly-closeup": {
+    "E": 0.38,
+    "glintE": 0.62,
+    "pupilXY": 1,
+    "pxPerM": 511.42315806923204,
+    "eyes": {
+     "hisL": {
+      "scl": {
+       "n": 210,
+       "x0": 176,
+       "x1": 197,
+       "y0": 191,
+       "y1": 215,
+       "w": 22,
+       "h": 25
+      },
+      "unit": {
+       "n": 434,
+       "x0": 176,
+       "x1": 197,
+       "y0": 190,
+       "y1": 215,
+       "w": 22,
+       "h": 26
+      },
+      "gliPx": 50,
+      "rowY": 203,
+      "sclLongestRun": 21,
+      "unitToFace": 0.08,
+      "sclToFace": 0.08
+     },
+     "hisR": {
+      "scl": {
+       "n": 116,
+       "x0": 92,
+       "x1": 111,
+       "y0": 168,
+       "y1": 187,
+       "w": 20,
+       "h": 20
+      },
+      "unit": {
+       "n": 295,
+       "x0": 92,
+       "x1": 111,
+       "y0": 165,
+       "y1": 187,
+       "w": 20,
+       "h": 23
+      },
+      "gliPx": 59,
+      "rowY": 178,
+      "sclLongestRun": 15,
+      "unitToFace": 0.077,
+      "sclToFace": 0.077
+     }
+    },
+    "face": {
+     "hisL": {
+      "toEar": 325,
+      "cheek": 275
+     },
+     "hisR": {
+      "toEar": 346,
+      "cheek": 259
+     }
+    },
+    "divider": [
+     {
+      "y": 203,
+      "gap": 64,
+      "inkPct": 100
+     },
+     {
+      "y": 178,
+      "gap": 64,
+      "inkPct": 100
+     },
+     {
+      "y": 191,
+      "gap": 64,
+      "inkPct": 100
+     }
+    ],
+    "strip": {
+     "hisL": 35,
+     "hisR": 25
+    },
+    "bandV": {
+     "hisL": {
+      "above": 18,
+      "below": 70
+     },
+     "hisR": {
+      "above": 12,
+      "below": 56
+     }
+    },
+    "eyeRowInk": {
+     "hisL": {
+      "run": 120,
+      "start": 57,
+      "startsInsideUnit": false
+     },
+     "hisR": {
+      "run": 87,
+      "start": 108,
+      "startsInsideUnit": true
+     }
+    }
+   },
+   "combat": {
+    "E": 0.38,
+    "glintE": 0.62,
+    "pupilXY": 1,
+    "pxPerM": 518.0401638837438,
+    "eyes": {
+     "hisL": {
+      "scl": {
+       "n": 123,
+       "x0": 118,
+       "x1": 138,
+       "y0": 262,
+       "y1": 275,
+       "w": 21,
+       "h": 14
+      },
+      "unit": {
+       "n": 226,
+       "x0": 118,
+       "x1": 138,
+       "y0": 258,
+       "y1": 275,
+       "w": 21,
+       "h": 18
+      },
+      "gliPx": 15,
+      "rowY": 269,
+      "sclLongestRun": 20,
+      "unitToFace": 0.06,
+      "sclToFace": 0.06
+     },
+     "hisR": {
+      "scl": {
+       "n": 0
+      },
+      "unit": {
+       "n": 0
+      },
+      "gliPx": 0
+     }
+    },
+    "face": {
+     "hisL": {
+      "toEar": 348,
+      "cheek": 348
+     }
+    },
+    "strip": {
+     "hisL": 46
+    },
+    "bandV": {
+     "hisL": {
+      "above": 0,
+      "below": 48
+     }
+    },
+    "eyeRowInk": {
+     "hisL": {
+      "run": 46,
+      "start": 72,
+      "startsInsideUnit": false
+     }
+    }
+   }
+  },
+  "e45dark": {
+   "sly-closeup": {
+    "E": 0.45,
+    "glintE": 0.62,
+    "pupilXY": 1.35,
+    "pxPerM": 511.42315806923204,
+    "eyes": {
+     "hisL": {
+      "scl": {
+       "n": 123,
+       "x0": 174,
+       "x1": 200,
+       "y0": 196,
+       "y1": 218,
+       "w": 27,
+       "h": 23
+      },
+      "unit": {
+       "n": 737,
+       "x0": 174,
+       "x1": 200,
+       "y0": 185,
+       "y1": 218,
+       "w": 27,
+       "h": 34
+      },
+      "gliPx": 45,
+      "rowY": 207,
+      "sclLongestRun": 18,
+      "unitToFace": 0.099,
+      "sclToFace": 0.099
+     },
+     "hisR": {
+      "scl": {
+       "n": 49,
+       "x0": 90,
+       "x1": 103,
+       "y0": 175,
+       "y1": 189,
+       "w": 14,
+       "h": 15
+      },
+      "unit": {
+       "n": 526,
+       "x0": 90,
+       "x1": 116,
+       "y0": 160,
+       "y1": 189,
+       "w": 27,
+       "h": 30
+      },
+      "gliPx": 45,
+      "rowY": 182,
+      "sclLongestRun": 10,
+      "unitToFace": 0.1,
+      "sclToFace": 0.052
+     }
+    },
+    "face": {
+     "hisL": {
+      "toEar": 321,
+      "cheek": 272
+     },
+     "hisR": {
+      "toEar": 344,
+      "cheek": 269
+     }
+    },
+    "divider": [
+     {
+      "y": 207,
+      "gap": 57,
+      "inkPct": 100
+     },
+     {
+      "y": 182,
+      "gap": 57,
+      "inkPct": 100
+     },
+     {
+      "y": 195,
+      "gap": 57,
+      "inkPct": 100
+     }
+    ],
+    "strip": {
+     "hisL": 36,
+     "hisR": 25
+    },
+    "bandV": {
+     "hisL": {
+      "above": 13,
+      "below": 67
+     },
+     "hisR": {
+      "above": 7,
+      "below": 53
+     }
+    },
+    "eyeRowInk": {
+     "hisL": {
+      "run": 141,
+      "start": 57,
+      "startsInsideUnit": false
+     },
+     "hisR": {
+      "run": 107,
+      "start": 92,
+      "startsInsideUnit": true
+     }
+    }
+   },
+   "combat": {
+    "E": 0.45,
+    "glintE": 0.62,
+    "pupilXY": 1.35,
+    "pxPerM": 518.0401638837438,
+    "eyes": {
+     "hisL": {
+      "scl": {
+       "n": 80,
+       "x0": 117,
+       "x1": 140,
+       "y0": 268,
+       "y1": 277,
+       "w": 24,
+       "h": 10
+      },
+      "unit": {
+       "n": 324,
+       "x0": 116,
+       "x1": 140,
+       "y0": 257,
+       "y1": 277,
+       "w": 25,
+       "h": 21
+      },
+      "gliPx": 7,
+      "rowY": 273,
+      "sclLongestRun": 17,
+      "unitToFace": 0.071,
+      "sclToFace": 0.068
+     },
+     "hisR": {
+      "scl": {
+       "n": 0
+      },
+      "unit": {
+       "n": 0
+      },
+      "gliPx": 0
+     }
+    },
+    "face": {
+     "hisL": {
+      "toEar": 353,
+      "cheek": 353
+     }
+    },
+    "strip": {
+     "hisL": 44
+    },
+    "bandV": {
+     "hisL": {
+      "above": 0,
+      "below": 46
+     }
+    },
+    "eyeRowInk": {
+     "hisL": {
+      "run": 53,
+      "start": 139,
+      "startsInsideUnit": true
+     }
+    }
+   }
+  },
+  "bead15": {
+   "sly-closeup": {
+    "E": 0.15,
+    "glintE": 0.62,
+    "pupilXY": 1,
+    "pxPerM": 511.42315806923204,
+    "eyes": {
+     "hisL": {
+      "scl": {
+       "n": 25,
+       "x0": 182,
+       "x1": 189,
+       "y0": 202,
+       "y1": 207,
+       "w": 8,
+       "h": 6
+      },
+      "unit": {
+       "n": 94,
+       "x0": 181,
+       "x1": 189,
+       "y0": 194,
+       "y1": 207,
+       "w": 9,
+       "h": 14
+      },
+      "gliPx": 61,
+      "rowY": 205,
+      "sclLongestRun": 7,
+      "unitToFace": 0.033,
+      "sclToFace": 0.03
+     },
+     "hisR": {
+      "scl": {
+       "n": 15,
+       "x0": 99,
+       "x1": 104,
+       "y0": 177,
+       "y1": 180,
+       "w": 6,
+       "h": 4
+      },
+      "unit": {
+       "n": 84,
+       "x0": 98,
+       "x1": 106,
+       "y0": 168,
+       "y1": 180,
+       "w": 9,
+       "h": 13
+      },
+      "gliPx": 65,
+      "rowY": 179,
+      "sclLongestRun": 5,
+      "unitToFace": 0.035,
+      "sclToFace": 0.023
+     }
+    },
+    "face": {
+     "hisL": {
+      "toEar": 320,
+      "cheek": 271
+     },
+     "hisR": {
+      "toEar": 345,
+      "cheek": 259
+     }
+    },
+    "divider": [
+     {
+      "y": 205,
+      "gap": 74,
+      "inkPct": 100
+     },
+     {
+      "y": 179,
+      "gap": 74,
+      "inkPct": 100
+     },
+     {
+      "y": 192,
+      "gap": 74,
+      "inkPct": 100
+     }
+    ],
+    "strip": {
+     "hisL": 45,
+     "hisR": 31
+    },
+    "bandV": {
+     "hisL": {
+      "above": 24,
+      "below": 78
+     },
+     "hisR": {
+      "above": 15,
+      "below": 63
+     }
+    },
+    "eyeRowInk": {
+     "hisL": {
+      "run": 125,
+      "start": 57,
+      "startsInsideUnit": false
+     },
+     "hisR": {
+      "run": 92,
+      "start": 104,
+      "startsInsideUnit": true
+     }
+    }
+   },
+   "combat": {
+    "E": 0.15,
+    "glintE": 0.62,
+    "pupilXY": 1,
+    "pxPerM": 518.0401638837438,
+    "eyes": {
+     "hisL": {
+      "scl": {
+       "n": 12,
+       "x0": 124,
+       "x1": 130,
+       "y0": 264,
+       "y1": 268,
+       "w": 7,
+       "h": 5
+      },
+      "unit": {
+       "n": 67,
+       "x0": 119,
+       "x1": 130,
+       "y0": 260,
+       "y1": 268,
+       "w": 12,
+       "h": 9
+      },
+      "gliPx": 48,
+      "rowY": 266,
+      "sclLongestRun": 5,
+      "unitToFace": 0.034,
+      "sclToFace": 0.02
+     },
+     "hisR": {
+      "scl": {
+       "n": 0
+      },
+      "unit": {
+       "n": 0
+      },
+      "gliPx": 0
+     }
+    },
+    "face": {
+     "hisL": {
+      "toEar": 348,
+      "cheek": 348
+     }
+    },
+    "strip": {
+     "hisL": 47
+    },
+    "bandV": {
+     "hisL": {
+      "above": 0,
+      "below": 55
+     }
+    },
+    "eyeRowInk": {
+     "hisL": {
+      "run": 50,
+      "start": 72,
+      "startsInsideUnit": false
+     }
+    }
+   }
+  }
+ },
+ "controls": {
+  "zero": {
+   "differingPx": 0
+  },
+  "monotone": true,
+  "knownBad": {
+   "unitToFaceMax": 0.035,
+   "failsBelow006": true
+  }
+ }
+}
