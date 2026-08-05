@@ -1,0 +1,95 @@
+{
+  "startedAt": "2026-08-05T11:04:15.882Z",
+  "head": "13512a2",
+  "srcCommitted": "1368435ab38aaded",
+  "plan": {
+    "arms": [
+      [
+        "A",
+        ""
+      ],
+      [
+        "B",
+        "eyesize55"
+      ],
+      [
+        "KB",
+        "eyebead15"
+      ],
+      [
+        "BACK",
+        ""
+      ]
+    ],
+    "shots": [
+      "sly-closeup",
+      "combat"
+    ]
+  },
+  "arms": {
+    "A": {
+      "token": "(none)",
+      "charAB": "",
+      "srcAtArm": "4df7983d8cc7d715",
+      "shots": {
+        "sly-closeup": {
+          "file": "progress/records/eyesize/frames/sly-closeup-A.png",
+          "sha": "230d5b2a617829fc63377fffb42529fd8a0b414d27e3e0eec9aaf9682c48a18c",
+          "bytes": 1892443,
+          "stats": {
+            "fps": 41,
+            "drawCalls": 265,
+            "triangles": 1665343,
+            "programs": 98,
+            "ms": 259.09999999962747
+          }
+        },
+        "combat": {
+          "file": "progress/records/eyesize/frames/combat-A.png",
+          "sha": "962df9ee0e8b1172dd9450fde3372a34b389e6ba03ef5223c9426bbc6fc1c22c",
+          "bytes": 1944398,
+          "stats": {
+            "fps": 41,
+            "drawCalls": 224,
+            "triangles": 1543119,
+            "programs": 100,
+            "ms": 13.600000001490116
+          }
+        }
+      },
+      "consoleErrors": [
+        "Failed to load resource: the server responded with a status of 404 (Not Found)"
+      ],
+      "srcAfterArm": "4df7983d8cc7d715",
+      "secs": 668
+    }
+  },
+  "srcEdited": "4df7983d8cc7d715",
+  "gate0": {
+    "base": {
+      "clear": true,
+      "centreLines": [
+        "eyeL centre : CLEAR to camera",
+        "eyeR centre : CLEAR to camera"
+      ]
+    },
+    "eyesize55": {
+      "clear": true,
+      "centreLines": [
+        "eyeL centre : CLEAR to camera",
+        "eyeR centre : CLEAR to camera"
+      ]
+    },
+    "eyebead15": {
+      "clear": true,
+      "centreLines": [
+        "eyeL centre : CLEAR to camera",
+        "eyeR centre : CLEAR to camera"
+      ]
+    }
+  },
+  "headratio": {
+    "base": 5.03,
+    "eyesize55": 5.03
+  }
+}

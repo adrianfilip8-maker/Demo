@@ -110,16 +110,20 @@ function saveCrop(im, x0, y0, x1, y1, path) {
 }
 
 const R = (p) => new URL(p, import.meta.url).pathname;
+/* Frame paths are env-overridable (FXC_GUARD=…, FXC_TRAVERSAL=…, …) so the same sections
+ * score the PREREG-fxcluster capture arms later without this file changing. Defaults are the
+ * newest committed capture of each shot at diagnosis time. */
+const E = process.env;
 const FRAMES = {
-  guard: R('./hullkerb/frames/guard-base.png'),
-  guardHull: R('./hullkerb/frames/guard-hull.png'),
-  night: R('./hullkerb/frames/night-base.png'),
-  traversal: R('./gold1/traversal.png'),
-  combat: R('./gold1/combat.png'),
-  combatSbs: R('./sbs1/combat.png'),
-  interior: R('./hullkerb/frames/interior-base.png'),
-  interiorCand: R('./cand1/frames/interior.base.png'),
-  dunes: R('./cand1/frames/dunes.base.png'),
+  guard: E.FXC_GUARD || R('./hullkerb/frames/guard-base.png'),
+  guardHull: E.FXC_GUARD_B || R('./hullkerb/frames/guard-hull.png'),
+  night: E.FXC_NIGHT || R('./hullkerb/frames/night-base.png'),
+  traversal: E.FXC_TRAVERSAL || R('./gold1/traversal.png'),
+  combat: E.FXC_COMBAT || R('./gold1/combat.png'),
+  combatSbs: E.FXC_COMBAT_B || R('./sbs1/combat.png'),
+  interior: E.FXC_INTERIOR || R('./hullkerb/frames/interior-base.png'),
+  interiorCand: E.FXC_INTERIOR_B || R('./cand1/frames/interior.base.png'),
+  dunes: E.FXC_DUNES || R('./cand1/frames/dunes.base.png'),
 };
 
 /* ---------------------------------------------------------------- helpers --- */
@@ -454,6 +458,59 @@ function sectionA() {
   saveCrop(im, 700, 300, 850, 500, R('./fxcluster-A-guard-aircolumn-crop.png'));
   say('A4 crops saved: fxcluster-A-guard-bodysliver-crop.png (0,250..480,620), fxcluster-A-guard-aircolumn-crop.png');
 
+  /* A5 — candidate-heading sweep. towardCamera is applied as heading = profile·√(1−t²) −
+     camFwdFlat·t (Guard.js:1829-1832, t clamped 0..0.9 — negative values need that clamp
+     widened, a one-line change). For each candidate: beam-body in-frame share, the axis
+     screen trace, and the frame's CURRENT backdrop along it (what the beam would have to
+     read against). Also measures the frozen candidate-path ROI both ways. */
+  const candidates = [
+    ['shipped +0.35', 0.35, -1], ['profile 0.00', 0.0, -1], ['away -0.20', -0.20, -1], ['away -0.35', -0.35, -1],
+  ];
+  A.headingSweep = [];
+  for (const [label, tc, sd] of candidates) {
+    const prof = mul(rgtFlat, sd);
+    let hh = add(mul(prof, Math.sqrt(Math.max(0, 1 - tc * tc))), mul(fwdFlat, -tc));
+    hh = norm(hh);
+    const bd = norm(V(hh.x * cp, -Math.sin(0.115), hh.z * cp));
+    const ey = V(best.pos.x + hh.x * 0.45, eyeY, best.pos.z + hh.z * 0.45);
+    // body share
+    let inF = 0, tot = 0;
+    let rg = cross(V(0, 1, 0), bd); if (len(rg) < 1e-6) rg = V(1, 0, 0); rg = norm(rg);
+    const up2 = norm(cross(bd, rg));
+    for (let it = Math.ceil(0.16 * 200); it <= Math.ceil(0.56 * 200); it++) {
+      const tt = it / 200;
+      const ringR = rBase * tt;
+      for (let is = 0; is < 48; is++) {
+        const a = (is / 48) * Math.PI * 2;
+        const wpos = add(add(add(ey, mul(bd, tt * reach)), mul(rg, Math.cos(a) * ringR)), mul(up2, Math.sin(a) * ringR));
+        tot++;
+        if (cam.project(wpos).visible) inF++;
+      }
+    }
+    // axis trace + backdrop along it
+    const trace = [];
+    for (let s = 0.5; s <= reach; s += 1.0) {
+      const p = cam.project(add(ey, mul(bd, s)));
+      if (p.behind || !p.visible) continue;
+      const X = Math.round(p.px), Y = Math.round(p.py);
+      const box = rectStats(im, X - 8, Y - 8, X + 8, Y + 8);
+      trace.push({ s, t: +(s / reach).toFixed(2), px: [X, Y], backdropMedL: +box.medL.toFixed(0), backdropRmB: +box.meanRmB.toFixed(0) });
+    }
+    A.headingSweep.push({ label, heading: [+hh.x.toFixed(3), +hh.z.toFixed(3)], bodyInFrameShare: +(inF / tot).toFixed(3), axisTrace: trace });
+    say(`A5 ${label}: heading (${hh.x.toFixed(2)},${hh.z.toFixed(2)})  body-in-frame ${(100 * inF / tot).toFixed(1)}%  axis: ` +
+      trace.map((q) => `t${q.t}@(${q.px})L${q.backdropMedL}`).join(' '));
+  }
+  // Frozen candidate-path ROI for the away -0.35 heading (from its trace band): x 340..700, y 280..350.
+  A.candPathROI = rectStats(im, 340, 280, 700, 350);
+  let roiWarm = 0;
+  for (let y = 280; y < 350; y++) for (let x = 340; x < 700; x++) {
+    const i = (y * im.w + x) * im.ch;
+    const r = im.data[i], g = im.data[i + 1], b = im.data[i + 2];
+    if (r - b >= 12 && lum(r, g, b) >= 40) roiWarm++;
+  }
+  A.candPathROI.warmPx = roiWarm;
+  say(`A5 frozen path ROI (340,280,700,350) on the CURRENT frame: medL ${A.candPathROI.medL.toFixed(1)}  meanR-B ${A.candPathROI.meanRmB.toFixed(1)}  warmPx ${roiWarm} of ${A.candPathROI.n}`);
+
   OUT.sections.A = A;
 }
 
@@ -637,6 +694,39 @@ function sectionC() {
   say('C3 emitted colours through approx AgX (sat after grade):');
   for (const [k, v] of Object.entries(C.emitted)) say(`   ${k}: rgb ${v.srgb} sat ${v.sat}`);
   say('C3 => goldSpec/goldLight arrive near-white at emitter gains; PAL.flameBody\'s own note (Emitters.js:41-54) names the mechanism');
+
+  // C4 — the flash blob itself on gold1: largest L>=230 connected component in (300,300,760,600).
+  {
+    const im = readPNG(FRAMES.combat);
+    const x0 = 300, y0 = 300, x1 = 760, y1 = 600, W = x1 - x0, H = y1 - y0;
+    const m = new Uint8Array(W * H);
+    for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) {
+      const i = (y * im.w + x) * im.ch;
+      if (lum(im.data[i], im.data[i + 1], im.data[i + 2]) >= 230) m[(y - y0) * W + (x - x0)] = 1;
+    }
+    const seen = new Uint8Array(W * H); let bestC = null;
+    for (let s = 0; s < W * H; s++) {
+      if (!m[s] || seen[s]) continue;
+      const st = [s]; seen[s] = 1;
+      let minX = W, maxX = 0, minY = H, maxY = 0, cnt = 0;
+      while (st.length) {
+        const q = st.pop(); cnt++;
+        const qx = q % W, qy = (q / W) | 0;
+        minX = Math.min(minX, qx); maxX = Math.max(maxX, qx); minY = Math.min(minY, qy); maxY = Math.max(maxY, qy);
+        for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+          const nx = qx + dx, ny = qy + dy;
+          if (nx < 0 || ny < 0 || nx >= W || ny >= H) continue;
+          const ni = ny * W + nx;
+          if (m[ni] && !seen[ni]) { seen[ni] = 1; st.push(ni); }
+        }
+      }
+      if (!bestC || cnt > bestC.px) bestC = { px: cnt, bbox: [minX + x0, minY + y0, maxX + x0, maxY + y0], w: maxX - minX + 1, h: maxY - minY + 1 };
+    }
+    C.flashBlob = bestC;
+    say(`C4 largest L>=230 component near the impact: ${JSON.stringify(bestC)} (staged impact projects to px 452,433)`);
+    saveCrop(im, 340, 330, 740, 620, R('./fxcluster-C-combat-flash-crop.png'));
+    say('C4 crop saved: fxcluster-C-combat-flash-crop.png (340,330..740,620)');
+  }
 
   OUT.sections.C = C;
 }

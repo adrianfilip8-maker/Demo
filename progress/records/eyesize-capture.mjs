@@ -42,12 +42,19 @@ const FRAMES = path.join(OUT, 'frames');
 const ARMS_JSON = path.join(OUT, 'eyesize-arms.json');
 
 const SHOT_LIST = ['sly-closeup', 'combat'];
-const ARMS = [
-  ['A', ''],
-  ['B', 'eyesize55'],
-  ['KB', 'eyebead15'],
-  ['BACK', ''],
-];
+/* Arm labels -> tokens. `A2` exists for the §168-style rollback-recovery chunk: a second
+   base arm captured in the SAME recovery boot as `A`, giving a within-boot base pair when a
+   rollback has eaten the original A (boot 1's BACK then pairs with A cross-boot, recorded as
+   a deviation in the RESULT, never silently converted). argv selects arms; default full plan. */
+const TOKEN_OF = { A: '', B: 'eyesize55', KB: 'eyebead15', BACK: '', A2: '' };
+const argLabels = process.argv.slice(2).filter((a) => !a.startsWith('--'));
+for (const l of argLabels) if (!(l in TOKEN_OF)) { console.error(`unknown arm label ${l}`); process.exit(2); }
+const LABELS = argLabels.length ? argLabels : ['A', 'B', 'KB', 'BACK'];
+const ARMS = LABELS.map((l) => [l, TOKEN_OF[l]]);
+/* A base-only chunk needs NO src edit: EYE_E() = 1.0 is float-exact identity (x*1.0 === x for
+   every finite IEEE value), so base-with-edit builds bit-identical geometry to pristine — and
+   skipping the edit removes all src risk from a recovery chunk. */
+const NEED_EDIT = ARMS.some(([, t]) => t !== '');
 
 /* ---------------- the registered edit (PREREG-eyesize §1), byte-exact ---------------- */
 const sha = (buf) => createHash('sha256').update(buf).digest('hex');
@@ -203,34 +210,38 @@ console.log('lock ACQUIRED — ticket held; applying the registered token edit')
 
 let server = null, browser = null;
 try {
-  applyEdit();
-  const srcEdited = srcTree();
-  console.log(`src tree EDITED (capture tree, all four arms boot from it): ${srcEdited}`);
-  saveRecord({ srcEdited });
+  if (NEED_EDIT) {
+    applyEdit();
+    const srcEdited = srcTree();
+    console.log(`src tree EDITED (capture tree, token arms boot from it): ${srcEdited}`);
+    saveRecord({ srcEdited });
 
-  /* ---- GATE 0: occlude under both tokens, inside the hold, before boot (PREREG §6) ---- */
-  const gate0 = {};
-  for (const token of ['', 'eyesize55', 'eyebead15']) {
-    const outTxt = nodeWithToken(token, path.join(ROOT, 'tools', 'occlude.mjs'), 'sly-closeup');
-    const centreLines = outTxt.split('\n').filter((l) => l.includes('centre'));
-    const clear = centreLines.length === 2 && centreLines.every((l) => l.includes('CLEAR to camera'));
-    gate0[token || 'base'] = { clear, centreLines: centreLines.map((s) => s.trim()) };
-    console.log(`GATE 0 occlude [${token || 'base'}]: centre rays ${clear ? 'BOTH CLEAR' : 'NOT CLEAR — ABORTING'}`);
-    if (!clear) { for (const l of centreLines) console.log(`   ${l.trim()}`); }
-    if (!clear) throw new Error(`GATE 0 failed for token '${token}' — arm abandoned unrun per PREREG §6`);
-  }
-  saveRecord({ gate0 });
+    /* ---- GATE 0: occlude under both tokens, inside the hold, before boot (PREREG §6) ---- */
+    const gate0 = {};
+    for (const token of ['', 'eyesize55', 'eyebead15']) {
+      const outTxt = nodeWithToken(token, path.join(ROOT, 'tools', 'occlude.mjs'), 'sly-closeup');
+      const centreLines = outTxt.split('\n').filter((l) => l.includes('centre'));
+      const clear = centreLines.length === 2 && centreLines.every((l) => l.includes('CLEAR to camera'));
+      gate0[token || 'base'] = { clear, centreLines: centreLines.map((s) => s.trim()) };
+      console.log(`GATE 0 occlude [${token || 'base'}]: centre rays ${clear ? 'BOTH CLEAR' : 'NOT CLEAR — ABORTING'}`);
+      if (!clear) { for (const l of centreLines) console.log(`   ${l.trim()}`); }
+      if (!clear) throw new Error(`GATE 0 failed for token '${token}' — arm abandoned unrun per PREREG §6`);
+    }
+    saveRecord({ gate0 });
 
-  /* ---- headratio pair (GATE 5 input), inside the hold, offline ---- */
-  const headratio = {};
-  for (const token of ['', 'eyesize55']) {
-    const txt = nodeWithToken(token, path.join(ROOT, 'tools', 'headratio.mjs'), '');
-    const m = txt.match(/HEAD:BODY\s*=\s*([0-9.]+)/);
-    headratio[token || 'base'] = m ? parseFloat(m[1]) : null;
-    console.log(`headratio [${token || 'base'}]: ${m ? m[1] : 'UNPARSED — raw follows'}`);
-    if (!m) console.log(txt.slice(0, 400));
+    /* ---- headratio pair (GATE 5 input), inside the hold, offline ---- */
+    const headratio = {};
+    for (const token of ['', 'eyesize55']) {
+      const txt = nodeWithToken(token, path.join(ROOT, 'tools', 'headratio.mjs'), '');
+      const m = txt.match(/HEAD:BODY\s*=\s*([0-9.]+)/);
+      headratio[token || 'base'] = m ? parseFloat(m[1]) : null;
+      console.log(`headratio [${token || 'base'}]: ${m ? m[1] : 'UNPARSED — raw follows'}`);
+      if (!m) console.log(txt.slice(0, 400));
+    }
+    saveRecord({ headratio });
+  } else {
+    console.log('base-only chunk — no src edit, no GATE 0 re-run (boot 1 recorded them)');
   }
-  saveRecord({ headratio });
 
   /* ---- boot ---- */
   const port = await freePort();
@@ -281,10 +292,12 @@ try {
 
   /* ---- gates that live in the record, computed now for the scorer ---- */
   const rec = JSON.parse(readFileSync(ARMS_JSON, 'utf8'));
-  const backIdentical = {};
+  const backIdentical = {}, a2Identical = {};
   for (const s of SHOT_LIST) {
     backIdentical[s] = !!rec.arms?.A?.shots?.[s]?.sha && rec.arms.A.shots[s].sha === rec.arms?.BACK?.shots?.[s]?.sha;
+    if (rec.arms?.A2) a2Identical[s] = !!rec.arms?.A?.shots?.[s]?.sha && rec.arms.A.shots[s].sha === rec.arms.A2.shots?.[s]?.sha;
   }
+  if (rec.arms?.A2) saveRecord({ a2IdenticalByShot: a2Identical });
   const armsByTree = {};
   for (const [k, v] of Object.entries(rec.arms || {})) (armsByTree[v.srcAtArm] ??= []).push(k);
   saveRecord({ backIdenticalByShot: backIdentical, armsByTree, finishedArmsAt: new Date().toISOString() });

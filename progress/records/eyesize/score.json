@@ -1,0 +1,98 @@
+{
+ "gates": {
+  "SCOREABILITY(A)": {
+   "pass": false,
+   "detail": "screenL eye:face 0.265 vs 0.324\u00b10.03; screenR eye:face 0.316 vs 0.301\u00b10.03; A divider [13, 12] vs 13\u00b14"
+  },
+  "GATE5 no collateral (confinement, bill guard, BACK, headratio)": {
+   "pass": true,
+   "detail": "bill[A] -17.5px >= -19.0; headratio base 5.03 token 5.03"
+  }
+ },
+ "measurements": {
+  "A": {
+   "screenL": {
+    "roi": [
+     577,
+     132,
+     621,
+     195
+    ],
+    "bbox": {
+     "x0": 585,
+     "x1": 620,
+     "y0": 136,
+     "y1": 175,
+     "w": 36,
+     "h": 40,
+     "area": 497,
+     "rowY": 159,
+     "cx": 597.9456740442656,
+     "cy": 159.21931589537223,
+     "ncomps": 9
+    },
+    "eyeface": 0.265,
+    "h_pcthh": 28.6,
+    "pale_p50": 155.9,
+    "dark_p50": 45.7,
+    "pale_rgb": [
+     157.0,
+     156.0,
+     152.0
+    ],
+    "pale_spread": 5.0,
+    "glint_max": 234.1,
+    "ge228": 18,
+    "amber_px": 166,
+    "amber_run": 13
+   },
+   "screenR": {
+    "roi": [
+     634,
+     139,
+     685,
+     215
+    ],
+    "bbox": {
+     "x0": 634,
+     "x1": 676,
+     "y0": 143,
+     "y1": 190,
+     "w": 43,
+     "h": 48,
+     "area": 1079,
+     "rowY": 172,
+     "cx": 651.8174235403151,
+     "cy": 172.12882298424466,
+     "ncomps": 1
+    },
+    "eyeface": 0.316,
+    "h_pcthh": 34.3,
+    "pale_p50": 155.0,
+    "dark_p50": 43.9,
+    "pale_rgb": [
+     156.0,
+     155.0,
+     152.0
+    ],
+    "pale_spread": 4.0,
+    "glint_max": 233.1,
+    "ge228": 20,
+    "amber_px": 8,
+    "amber_run": 5
+   }
+  },
+  "A_divider": [
+   13,
+   12
+  ],
+  "bill_A": -17.5
+ },
+ "anchors": {
+  "A_ANCHOR": {
+   "screenL": 0.324,
+   "screenR": 0.301
+  },
+  "FACE_W": 136.0
+ }
+}
