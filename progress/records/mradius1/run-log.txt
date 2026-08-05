@@ -232,3 +232,6 @@
 [21:37:45 +4344s]   · waiting for capture lock (827s, held by pid 32027)
 [21:37:56 +4355s]   · waiting for capture lock (838s, held by pid 32027)
 [21:38:07 +4365s]   · waiting for capture lock (848s, held by pid 32027)
+[21:38:17 +4376s]   · waiting for capture lock (859s, held by pid 32027)
+[21:38:28 +4386s]   · waiting for capture lock (869s, held by pid 32027)
+[21:38:38 +4396s]   · waiting for capture lock (879s, held by pid 32027)

@@ -82,3 +82,6 @@
 [21:37:50]   waiting for lock (854s, holder pid 32027)
 [21:38:01]   waiting for lock (864s, holder pid 32027)
 [21:38:11]   waiting for lock (875s, holder pid 32027)
+[21:38:22]   waiting for lock (885s, holder pid 32027)
+[21:38:32]   waiting for lock (896s, holder pid 32027)
+[21:38:43]   waiting for lock (907s, holder pid 32027)
