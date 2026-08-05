@@ -14256,3 +14256,13 @@ that chunk's lock and now applies in the free window instead. The §164 chunked-
 has now been paid for seven times: the total session loss to seven rollbacks is wall-clock and
 re-runs, not one scored number.
 
+
+## §168 — the eighth rollback kills the courtyard chunk a second time; the relaunch drops the prep window
+
+Same signature, found by the 08:39Z check-in; recovered ff-only to `eedad02`, clean, no flag
+stragglers (the in-ticket Props.js edit rolled back with the tree, which is the token mechanism
+working). `propshull2.mjs` proved able to self-manage ticket, edit and revert in chunk 1, so the
+re-run launches directly — the agent's ~8 minutes of prep before each launch was exposure buying
+nothing; the scorer spawns when frames exist. Interior chunk and all scoring prep remain
+committed; the courtyard window is the only thing being re-bought, now for the third time.
+
