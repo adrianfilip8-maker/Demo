@@ -14282,3 +14282,12 @@ token removed) under a held capture-lock ticket per §165 — the banda capture 
 this is written, so the edit lands at the next free window citing this section. Riders adopted
 as registered: the §7.4 re-pair after ship; GATE 5's letter cure is optional and not scheduled.
 
+
+## §170 — the ninth rollback; banda's second chunk re-runs, everything else held
+
+Same signature at the 13:08Z check-in; recovered ff-only to `bc90bcb`, clean, no flag
+stragglers. Lost: banda r2's in-flight second chunk (the sly-closeup chunk was already
+committed with its readbacks) and the agent transcripts again. The runner is committed and
+per-chunk resumable; it relaunches direct per §168's pattern and skips the landed chunk by
+design. The §169 eyeScale edit still queues behind it.
+
