@@ -201,3 +201,77 @@ once the gate flips; nothing to revert.
 reproducible cross-boot AND restorable within-boot once marker identity is rebuilt through
 the staging pass — the persistence that voided the first letter was the treatment's own
 back-dated stamps surviving `mark()`'s keep-known-keys path, not nondeterminism in staging.
+
+---
+
+## C SUCCESSOR RUN (c2) — PREREG-fxcluster-c2, scored 2026-08-05. The parent C verdict
+## stands; this is the successor it named (warmer core), run under the c2 seal's pool-wipe.
+
+**Runner/scorer:** `fxcluster1/c2rerun.mjs` / `c2score.mjs` (sealed instrument §C +
+score-aux, c2-prefixed). Frames `c2-combat.{base,cand,restore}.png`, probes
+`c2-readback.json`, log `c2-run.log`, scores `c2-scores.json`, crops `crops/c2-combat.*`.
+
+### Provenance and drift (§128.6 flag, not a void)
+
+Seal registered on `3be168ae28832f69`; the runner started on `bb822753ae7949e8` and every
+arm stamped `4ae5982932ab36be` — the drift is another owner's uncommitted `src/world/
+{EgyptLevel,Kit}.js` edits (18 lines) landing during the ~20-min FIFO queue wait; the tree
+never moved between arms. `src/fx/**` + `src/core/Debug.js` were verified byte-identical to
+HEAD before launch, and the base arm reproduced all three frame anchors (below), so the
+drift is immaterial to every scored band. One boot, arms base → cand → restore, tod 0.74,
+identical camera/player rows.
+
+### The pool-wipe staging pin: PROVEN
+
+Wipe verified per arm (all non-looping rings + decals read 0 after wipe), staged content
+rebuilt by the shipped pass. **restore ≡ base EXACTLY on every scored stat**: blob 7250 =
+7250 px, bbox identical, chalk 0.136 = 0.136, figure medSat 0.372 = 0.372, blobL200n
+12961 = 12961, brightBand 7904 = 7904 (Q-C5r = 0% vs the parent's 17% and the predicted
+≤ 5%). The parent letter's restore wobble is thereby CONFIRMED as pool residue
+(`Batch.commit`'s `time > _deathMax` test unreachable after `_stageShot`'s clock re-base —
+Particles.js:1527, Decals.js:209), and the §0 hygiene note rides to the COORDINATOR as a
+capture-protocol item. Benign recorded variance: post-staging smoke/spark counts decrease
+10/33 per arm (fire-age-coupled `_prerollFires` emission, engine.time monotone); dust 18 /
+ring 1 / decals 2 identical every arm; the scored rects show zero effect (restore ≡ base).
+
+### Scores (sealed bands beside every count)
+
+| quantity | band | value | gate |
+|---|---|---|---|
+| Q-C1 figure medSat base / cand | 0.370±0.02 / [0.40, 0.62] | 0.372 / **0.435** | PASS / PASS |
+| Q-C2 chalk share base / cand | 0.137±0.010 / [0.015, 0.095] | 0.136 / **0.022** | PASS / PASS — the chalk is gone |
+| Q-C3 blob px base / cand | 7304±15% / [400, 4800] | 7250 / **3** | PASS / **FAIL — P-C2c fires** |
+| Q-C4 blob-bbox medSat@L≥200 cand (base ref) | ≥ 0.20 (KB ~0.16) | 0.259 (base 0.158) | numerically in band — **but see below** |
+| restore ≡ base (Q-C1..C3) | base tolerances | exact | PASS |
+| separation (Q-C4 gap vs 2×noise) | gap > 2×\|restore−base\| | 0.101 > 0.000 | PASS |
+
+### Adjudication: NO SHIP by P-C2c, and Q-C4 is not certified despite its number
+
+- **Q-C3 = 3 px** means the largest L≥230 component collapsed — and with it Q-C4's
+  denominator: the 0.259 was measured over **n = 4 pixels** (blobL200n), which §128.2 does
+  not let stand as a certification. Recorded as the seal's own pre-named P-C2c reading:
+  *the carnelian core dropped below the L230 instrument floor — the blob metric was
+  calibrated on the white-blowout class and cannot see a core that no longer blows out.*
+- **The design goal is nonetheless visibly and measurably achieved** (context, masks and
+  thresholds stated, NOT registered gates): in the flash region (360,350,560,450), cand
+  holds n=3794 px at L≥200 with medSat **0.373** vs base's 15434 at **0.167**, and n=8586
+  at L≥180 medSat **0.396** vs base 0.174 — the chroma survives the tonemap at scale; the
+  crops show a structured carnelian flash where base is a white wash. Figure-wide
+  consequences recorded for the coordinator's look call: figMedL 154→120, goldPx
+  22966→6912, bluePx 9→**853** (the `cane_ring` rimCool tail and backdrop read through now
+  that the flash no longer blows the region to white — visible as the blue glint in the
+  crop), chalk 0.136→0.022.
+- Per the seal's decision table: **NO SHIP; nothing on disk to revert (runtime pokes).**
+  No mid-run iteration (§141).
+
+### Successor (named, not run): the instrument must move before the colour does again.
+Re-anchor the core metrics off the L230 white-class floor — a fixed-geometry denominator
+(disc at the staged impact projection, as B2's hook discs) carrying a sat gate at L≥180-200,
+plus a blob floor re-anchored at L200 — then re-run this exact block (its Q-C1/Q-C2 numbers
+are already in band and the restore story is now exact). Whether an alpha midpoint
+(1.3→~1.8) belongs in that seal is the coordinator's routing call, not this run's.
+
+**KB calibration honoured:** base measured the known-bad class at 0.158 (predicted ≈0.16);
+the wipe's validity gate (base anchors) held; the separation condition held. The seal's
+falsifier fired exactly where it was written to fire, and the finding it pre-named is the
+verdict.

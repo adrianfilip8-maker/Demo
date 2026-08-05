@@ -1,0 +1,112 @@
+{
+ "at": "2026-08-05T23:12:30.002Z",
+ "sections": {
+  "C": {
+   "gold1": {
+    "figure": {
+     "medL": 154.5,
+     "medSat": 0.372,
+     "n": 100800
+    },
+    "bluePx": 9,
+    "chalkPx": 13752,
+    "chalkShare": 0.136,
+    "goldPx": 22949,
+    "brightBand": {
+     "n": 7904,
+     "medSat": 0.145
+    }
+   },
+   "sbs1": {
+    "figure": {
+     "medL": 154.5,
+     "medSat": 0.372,
+     "n": 100800
+    },
+    "bluePx": 9,
+    "chalkPx": 13752,
+    "chalkShare": 0.136,
+    "goldPx": 22949,
+    "brightBand": {
+     "n": 7904,
+     "medSat": 0.145
+    }
+   },
+   "impact": {
+    "world": [
+     0.31,
+     1.38,
+     29
+    ],
+    "px": [
+     452,
+     433
+    ],
+    "depth": 4.91,
+    "pxPerMetre": 201.6,
+    "flashStartDiameterPx": 408
+   },
+   "emitted": {
+    "goldSpec@1": {
+     "srgb": [
+      216,
+      221,
+      246
+     ],
+     "sat": 0.122
+    },
+    "goldSpec@2.6": {
+     "srgb": [
+      228,
+      235,
+      255
+     ],
+     "sat": 0.106
+    },
+    "goldLight@1": {
+     "srgb": [
+      217,
+      218,
+      231
+     ],
+     "sat": 0.061
+    },
+    "goldLight@2.6": {
+     "srgb": [
+      228,
+      233,
+      253
+     ],
+     "sat": 0.099
+    },
+    "goldMid@1": {
+     "srgb": [
+      216,
+      208,
+      192
+     ],
+     "sat": 0.111
+    },
+    "goldMid@2.6": {
+     "srgb": [
+      229,
+      228,
+      223
+     ],
+     "sat": 0.026
+    }
+   },
+   "flashBlob": {
+    "px": 7250,
+    "bbox": [
+     363,
+     358,
+     534,
+     442
+    ],
+    "w": 172,
+    "h": 85
+   }
+  }
+ }
+}

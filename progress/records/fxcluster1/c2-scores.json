@@ -1,0 +1,134 @@
+{
+ "at": "2026-08-05T23:12:28.659Z",
+ "run": "c2 successor (warmer flash core, pool-wiped staging)",
+ "arms": {
+  "base": {
+   "figMedSat": 0.372,
+   "figMedL": 154.4,
+   "chalkShare": 0.136,
+   "goldPx": 22966,
+   "bluePx": 9,
+   "blobPx": 7250,
+   "blobBbox": [
+    363,
+    358,
+    534,
+    442
+   ],
+   "blobMedSatL200": 0.158,
+   "blobL200n": 12961,
+   "brightBand": {
+    "n": 7904,
+    "medSat": 0.145
+   }
+  },
+  "cand": {
+   "figMedSat": 0.435,
+   "figMedL": 120,
+   "chalkShare": 0.022,
+   "goldPx": 6912,
+   "bluePx": 853,
+   "blobPx": 3,
+   "blobBbox": [
+    508,
+    405,
+    509,
+    406
+   ],
+   "blobMedSatL200": 0.259,
+   "blobL200n": 4,
+   "brightBand": {
+    "n": 5,
+    "medSat": 0.259
+   }
+  },
+  "restore": {
+   "figMedSat": 0.372,
+   "figMedL": 154.5,
+   "chalkShare": 0.136,
+   "goldPx": 22949,
+   "bluePx": 9,
+   "blobPx": 7250,
+   "blobBbox": [
+    363,
+    358,
+    534,
+    442
+   ],
+   "blobMedSatL200": 0.158,
+   "blobL200n": 12961,
+   "brightBand": {
+    "n": 7904,
+    "medSat": 0.145
+   }
+  }
+ },
+ "quantities": {
+  "C2": {
+   "Q-C1 figure medSat (base)": {
+    "value": 0.372,
+    "band": "0.370±0.02 (anchor)"
+   },
+   "Q-C1 figure medSat (cand)": {
+    "value": 0.435,
+    "band": "[0.40, 0.62]"
+   },
+   "Q-C2 chalk share (base)": {
+    "value": 0.136,
+    "band": "0.137±0.010"
+   },
+   "Q-C2 chalk share (cand)": {
+    "value": 0.022,
+    "band": "[0.015, 0.095]"
+   },
+   "Q-C3 flash blob px (base)": {
+    "value": 7250,
+    "band": "7304±15%"
+   },
+   "Q-C3 flash blob px (cand)": {
+    "value": 3,
+    "band": "[400, 4800]"
+   },
+   "Q-C4 blob-bbox medSat at L>=200 (cand)": {
+    "value": 0.259,
+    "band": ">= 0.20"
+   },
+   "Q-C4 known-bad reference (base, report)": {
+    "value": 0.158,
+    "band": "known-bad class ~0.16, report"
+   },
+   "restore gates (vs base tolerances)": {
+    "medSat": {
+     "value": 0.372,
+     "band": "base±0.02"
+    },
+    "chalk": {
+     "value": 0.136,
+     "band": "base±0.010"
+    },
+    "blob": {
+     "value": 7250,
+     "band": "base±15%"
+    }
+   },
+   "Q-C5r |restore-base| blob share (report)": {
+    "value": "0%",
+    "band": "predicted <= 5%, non-gating"
+   },
+   "separation: (cand-base) vs 2x|restore-base| on Q-C4": {
+    "treatmentGap": 0.101,
+    "noise2x": 0,
+    "band": "gap > 2x noise, else UNSCOREABLE"
+   }
+  }
+ },
+ "gates": {
+  "baseAnchors": true,
+  "candC1": true,
+  "candC2": true,
+  "candC3": false,
+  "candC4": true,
+  "restore": true,
+  "separation": true
+ }
+}
