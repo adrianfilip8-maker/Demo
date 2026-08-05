@@ -225,6 +225,7 @@ export const TUNE = {
   brimLift: 0.112,
   capTip: 0.018,
   capCock: 0.086,
+  capYaw: -0.175,          // §166: bill yawed off the view axis so it reads at near-axis bearings
   torsoShrink: 0.09,      // see `by()`: hips→neck 0.49 → 0.40 m. Was 0.16, which bought ~0.1
                           //  heads and cost the spine every centimetre of contrapposto lever.
   /* Metres added between ankle and hip, stretching the leg loft and carrying everything from
@@ -2538,7 +2539,8 @@ export class SlyModel {
     // Tipped down over the brow and cocked to his left. A level, symmetric cap reads as a
     // swimming hat; the cock is most of what makes it read as *his* cap.
     const tilt = new THREE.Matrix4().makeRotationX(TUNE.capTip)
-      .premultiply(new THREE.Matrix4().makeRotationZ(TUNE.capCock));
+      .premultiply(new THREE.Matrix4().makeRotationZ(TUNE.capCock))
+      .premultiply(new THREE.Matrix4().makeRotationY(TUNE.capYaw));
     const place = (p) => {
       p.sub(pivot).applyMatrix4(tilt).add(pivot);
       p.set(hw(p.x), hy(p.y), hx(p.z));
