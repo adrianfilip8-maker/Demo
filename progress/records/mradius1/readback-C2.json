@@ -9,5 +9,22 @@
   "lvlSha": "b2527f77f0676d6ac8ccaa2f172f69157d7e2661f96c47843faa96ef7a42272b",
   "tree": "7a4630875cac6e36"
  },
- "arms": []
+ "arms": [
+  {
+   "arm": "base",
+   "desc": "pristine",
+   "srcAtArm": "dfa198283676610f",
+   "srcAfterArm": "dfa198283676610f",
+   "file": "/home/user/Demo/progress/records/mradius1/night.base.png",
+   "sha256": "506cfef8c03031c9e4ecdcb2bcfe69df06cee626a3079457792ee2377dba0528",
+   "draws": 288,
+   "tris": 1855983,
+   "trisDeltaVsBase": 0,
+   "tod": 0.02,
+   "consoleErrors": [
+    "Failed to load resource: the server responded with a status of 404 (Not Found)"
+   ],
+   "secs": 488
+  }
+ ]
 }
