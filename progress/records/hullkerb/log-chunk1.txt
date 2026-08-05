@@ -22,3 +22,14 @@ capturing interior [base base2 hull hull3x restore] (dt pinned to 0 on every ste
   ✓ hull3x   live  1 (moved 0)  ink readback: clone 7.500 / cache 2.500
       counted-column stats (arm-to-arm sanity ONLY, never vs 250/1.2M — §153.1): draws 166  tris 723k
       srcAtArm 520bd5416d14faa0…  -> progress/records/hullkerb/frames/interior-hull3x.png
+  ✓ restore  live  0 (moved 1)  ink readback: clone 2.500 / cache 2.500
+      counted-column stats (arm-to-arm sanity ONLY, never vs 250/1.2M — §153.1): draws 165  tris 711k
+      srcAtArm 520bd5416d14faa0…  -> progress/records/hullkerb/frames/interior-restore.png
+
+CHUNK interior DONE — 5 frames on the durable path
+· 1 console error(s):
+    ! Failed to load resource: the server responded with a status of 404 (Not Found)
+edit REVERTED — src/world/Props.js byte-identical to pre-run snapshot: true
+src tree AFTER revert: 152f2da97d6dc50dbb0127608c7dc8845b827cc260bc09fa2209ffd5f79dab67  MATCHES COMMITTED: false
+lock RELEASED
+edit REVERTED — src/world/Props.js byte-identical to pre-run snapshot: true

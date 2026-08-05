@@ -79,6 +79,26 @@
       "moved": 0,
       "srcAtArm": "520bd5416d14faa05c646bf7bac97198b75b4bb93a4bd96c160df41c6acacd92",
       "ts": 1785908681411
+    },
+    {
+      "shot": "interior",
+      "label": "restore",
+      "file": "progress/records/hullkerb/frames/interior-restore.png",
+      "attached": false,
+      "thicknessMult": 1,
+      "inkReadback": [
+        {
+          "clonePx": 2.5,
+          "cachePx": 2.5,
+          "sameObject": false
+        }
+      ],
+      "draws": 165,
+      "tris": 711593,
+      "live": 0,
+      "moved": 1,
+      "srcAtArm": "520bd5416d14faa05c646bf7bac97198b75b4bb93a4bd96c160df41c6acacd92",
+      "ts": 1785908706412
     }
   ],
   "prereg": "PREREG-hullkerb.md",
@@ -90,7 +110,12 @@
   "chunks": {
     "interior": {
       "startedAt": "2026-08-05T05:39:25.007Z",
-      "done": false
+      "done": true,
+      "finishedAt": "2026-08-05T05:45:06.417Z"
     }
-  }
+  },
+  "consoleErrors": [
+    "Failed to load resource: the server responded with a status of 404 (Not Found)"
+  ],
+  "bootWarnings": 1
 }
