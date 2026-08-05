@@ -22,7 +22,9 @@
      "ms": 11.899999999906868
     },
     "tod": 0.8
-   }
+   },
+   "settleSecs": 379,
+   "nightAmount": 0
   }
  ],
  "lever": {
