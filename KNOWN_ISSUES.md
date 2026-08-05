@@ -14087,3 +14087,57 @@ merge, not a restore, and on a rolled-back tree it is merging against an older b
 stash was taken from; checking both directions is not optional.
 
 The rule that keeps working: **the remote is the only durable store.** Push, then continue.
+
+## §163 — the fifth rollback took a landed capture, a running one, a queued one, and every agent
+
+Found by the 03:17Z check-in wearing its now-familiar signature: the task board reverted to
+pre-resumption wording. Verified against the tree before acting (§161.3's form held): HEAD back at
+`77e1eab`, remote at `ab7c96f`, `shots/fx22/` empty, `progress/records/cand1/` nonexistent locally,
+all three capture pids dead, and `/tmp` — queue directory *and* agent transcripts — restored to an
+Aug-1 snapshot. Recovery was the clean-tree recipe: `git merge --ff-only` to `ab7c96f`, nothing to
+stash, nothing lost that had been pushed.
+
+### 163.1 What died, exactly, and what each loss costs
+
+- **fx22 run #2: VOID, unscored — the same death as §161, one commit later.** The capture completed
+  at 02:19Z (13 frames + `fx22.json`, run log ending `fx22 DONE`, the pre-D2 CPU classifier
+  verification PASSING on both registered points: fires at the disc centre, exactly zero at the
+  non-artefact). It was destroyed 30–60 minutes later, before any scoring wake. The §161 lesson
+  held to its letter — the scorer (`fx22an.mjs`) and tree stamp were committed at `888f69b` *before*
+  the capture, so this time the instrument survived and only the frames are gone. What §161 did not
+  cover: **frames in gitignored `shots/` are volatile no matter what has been swept.** A landed
+  capture is not evidence until scored, and not durable until its scored verdict is committed. The
+  window between `DONE` and the scoring wake is uninsurable at ~26 MB of PNG; the fix is to shrink
+  the window, not to widen the store. Re-run costs one lock window; the run's registered arms and
+  the committed harness are unchanged.
+- **sbs1 (sly-closeup + combat, 1280×720 q-high): killed mid-render** at ~54 min of wall time. Both
+  its consumers had already banked their reference-side work: CRITIC-sbs1 scored ten *existing*
+  Aug-1 frames (`c47189c`), and `sbs1-measure.py` (`ab7c96f`) carries the real-Sly head-box rects
+  with the ours-side fields waiting. Re-run costs one short window.
+- **pnightcal: killed while queued** — it never held the lock, so nothing of its run existed to
+  lose. Prereg, runner, scorer, selftest, calibrators: all committed. Re-launch is free.
+- **All six Fable-5 agents: transcripts gone with `/tmp`.** GEOMETRY, TEXTURES and CRITIC had
+  fully reported and been swept — no loss. FX, SHADING and CHARACTER were mid-task; their durable
+  state was already committed (that is what the sweeps are for), but their conversational context
+  is unrecoverable — **SendMessage resume is dead; scoring and capture-follow-through need fresh
+  spawns briefed from the committed record.** This is the first rollback to kill agents outright.
+- The restored queue directory contained two Aug-1 relic tickets (pids 12906, 18605, both dead) —
+  left for `lock.mjs` liveness eviction, per §156.1: the queue is lock.mjs's to groom.
+
+### 163.2 The cadence argument, run against five data points
+
+Rollbacks at §139, §161, §162.4, the silent fourth (found at resumption), and now §163 — roughly
+one per few hours of session time, uncorrelated with what the session is doing (this one struck no
+edit, no capture start, no sweep; just render time). Consequences adopted:
+
+- **The sweep cadence is right and stays**: everything registerable was on the remote before this
+  rollback; total unique loss was frames and wall-clock, the two things sweeps cannot carry.
+- **Captures must be scored promptly or expect to be re-run.** The §161.1 blast-radius rule gets
+  its missing half: *what has been swept* fixes what a rollback can take, and *how fast a landed
+  capture is scored* fixes whether it was worth taking. Long multi-shot captures whose scoring
+  waits on an agent wake are the exposed shape. Where a runner can score-as-it-goes (fx22's own
+  probes already print per-arm), prefer it; where it cannot, the scorer runs at the first wake
+  after `DONE`, before anything else in that wake.
+- **Check-in interval stays ≤ 45 min** — it is now the rollback detector of record; all five were
+  found by a check-in or a resumption state-check, none by an error.
+
