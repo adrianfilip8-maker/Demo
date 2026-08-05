@@ -1,0 +1,253 @@
+{
+ "warnings": [
+  "textures: prewarm took 22.6s at size 1024"
+ ],
+ "jobs": {
+  "temple.base": {
+   "applied": "gate=OFF",
+   "probe": {
+    "time": 0.5333,
+    "frame": 25,
+    "gate": {
+     "on": 0,
+     "lumaMax": 60,
+     "rbMax": 0.5,
+     "lumaSoft": 8,
+     "rbSoft": 0.08,
+     "min": 0
+    },
+    "centres": {
+     "disc": {
+      "px": [
+       602,
+       133
+      ],
+      "rtpx": [
+       150,
+       146
+      ],
+      "raw": [
+       1,
+       5,
+       14
+      ],
+      "bmax": 0.0549,
+      "enc": [
+       20.5,
+       42.7,
+       68.2
+      ],
+      "bl": 39.82,
+      "rb": 0.301,
+      "wl": 1,
+      "wr": 1,
+      "factor": 0,
+      "fires": true
+     },
+     "nonartefact": {
+      "px": [
+       520,
+       581
+      ],
+      "rtpx": [
+       130,
+       34
+      ],
+      "raw": [
+       13,
+       16,
+       17
+      ],
+      "bmax": 0.0667,
+      "enc": [
+       65.9,
+       72.4,
+       74.5
+      ],
+      "bl": 71.2,
+      "rb": 0.885,
+      "wl": 0,
+      "wr": 0,
+      "factor": 1,
+      "fires": false
+     }
+    },
+    "backdropRT": {
+     "w": 320,
+     "h": 180,
+     "type": 1009,
+     "colorSpace": "",
+     "bound": true
+    },
+    "sandHigh": {
+     "live": 900,
+     "vis": true
+    }
+   }
+  },
+  "temple.gated": {
+   "applied": "gate=ON",
+   "probe": {
+    "time": 0.5333,
+    "frame": 29,
+    "gate": {
+     "on": 1,
+     "lumaMax": 60,
+     "rbMax": 0.5,
+     "lumaSoft": 8,
+     "rbSoft": 0.08,
+     "min": 0
+    },
+    "centres": {
+     "disc": {
+      "px": [
+       602,
+       133
+      ],
+      "rtpx": [
+       150,
+       146
+      ],
+      "raw": [
+       1,
+       5,
+       14
+      ],
+      "bmax": 0.0549,
+      "enc": [
+       20.5,
+       42.7,
+       68.2
+      ],
+      "bl": 39.82,
+      "rb": 0.301,
+      "wl": 1,
+      "wr": 1,
+      "factor": 0,
+      "fires": true
+     },
+     "nonartefact": {
+      "px": [
+       520,
+       581
+      ],
+      "rtpx": [
+       130,
+       34
+      ],
+      "raw": [
+       13,
+       16,
+       17
+      ],
+      "bmax": 0.0667,
+      "enc": [
+       65.9,
+       72.4,
+       74.5
+      ],
+      "bl": 71.2,
+      "rb": 0.885,
+      "wl": 0,
+      "wr": 0,
+      "factor": 1,
+      "fires": false
+     }
+    },
+    "backdropRT": {
+     "w": 320,
+     "h": 180,
+     "type": 1009,
+     "colorSpace": "",
+     "bound": true
+    },
+    "sandHigh": {
+     "live": 900,
+     "vis": true
+    }
+   }
+  },
+  "temple.back": {
+   "applied": "gate=OFF",
+   "probe": {
+    "time": 0.5333,
+    "frame": 33,
+    "gate": {
+     "on": 0,
+     "lumaMax": 60,
+     "rbMax": 0.5,
+     "lumaSoft": 8,
+     "rbSoft": 0.08,
+     "min": 0
+    },
+    "centres": {
+     "disc": {
+      "px": [
+       602,
+       133
+      ],
+      "rtpx": [
+       150,
+       146
+      ],
+      "raw": [
+       1,
+       5,
+       14
+      ],
+      "bmax": 0.0549,
+      "enc": [
+       20.5,
+       42.7,
+       68.2
+      ],
+      "bl": 39.82,
+      "rb": 0.301,
+      "wl": 1,
+      "wr": 1,
+      "factor": 0,
+      "fires": true
+     },
+     "nonartefact": {
+      "px": [
+       520,
+       581
+      ],
+      "rtpx": [
+       130,
+       34
+      ],
+      "raw": [
+       13,
+       16,
+       17
+      ],
+      "bmax": 0.0667,
+      "enc": [
+       65.9,
+       72.4,
+       74.5
+      ],
+      "bl": 71.2,
+      "rb": 0.885,
+      "wl": 0,
+      "wr": 0,
+      "factor": 1,
+      "fires": false
+     }
+    },
+    "backdropRT": {
+     "w": 320,
+     "h": 180,
+     "type": 1009,
+     "colorSpace": "",
+     "bound": true
+    },
+    "sandHigh": {
+     "live": 900,
+     "vis": true
+    }
+   }
+  }
+ }
+}
