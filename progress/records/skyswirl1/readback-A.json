@@ -25,5 +25,45 @@
    1.25
   ]
  },
- "shots": []
+ "shots": [
+  {
+   "shot": "dunes",
+   "arms": [],
+   "setShot": {
+    "stats": {
+     "fps": 39,
+     "drawCalls": 272,
+     "triangles": 1616715,
+     "programs": 124,
+     "ms": 13.099999999627471
+    },
+    "tod": 0.83
+   }
+  }
+ ],
+ "lever": {
+  "hasSky": true,
+  "hasGraze": true,
+  "graze": [
+   0,
+   0.1,
+   0.3
+  ],
+  "deckScale": [
+   0.000105,
+   0.000138,
+   0.000105
+  ],
+  "deckSoft": [
+   0.36,
+   0.38,
+   0.4
+  ],
+  "deckWarp": [
+   0.55,
+   0.85,
+   1.25
+  ],
+  "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)"
+ }
 }
