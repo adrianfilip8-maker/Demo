@@ -1,0 +1,5 @@
+propshull2 chunk [courtyard]  pid 2983
+src tree COMMITTED (pre-edit): 4bf8b093c5b2ed808ccfda70af5f073cb81ab57b6de52cd70d2e2086df7dbd04   [src/player src/fx src/textures src/render src/world src/core]
+lock ACQUIRED — ticket held; applying the registered one-line edit
+edit APPLIED inside held ticket: Props.js:135 const HULL_KEYS = new Set(); -> const HULL_KEYS = new Set(['gold']);
+src tree EDITED (capture tree): 0aaea246cfb9ca90716b8d3b7578e30bc1caedc2378ecf324320b22e87f91924
