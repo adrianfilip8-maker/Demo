@@ -1,2 +1,14 @@
 · starting dev server on :5300
 · loading game
+· ready
+· renderer: ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)
+· modules present (17): shading postfx sky lighting textures architecture props terrain collision character animation movement camera fx guards hud audio
+· 1 boot warning(s):
+    ! textures: prewarm took 20.9s at size 1024
+  ✓ traversal     193857ms  draws  251  tris 1739k
+  ✓ combat        179500ms  draws  221  tris 1531k
+· 1 console error(s):
+    ! Failed to load resource: the server responded with a status of 404 (Not Found)
+  · page closed
+
+→ shots/gold1/  (2 shots, 0 failed)
