@@ -1,0 +1,7 @@
+[04:20:02 +   0s] provenance sha a35e37e  srcTree bc13c4632863fc15  renderTree 5b075ca0b494f8d2  dirty 5 file(s)
+· waiting for capture lock (10s, held by pid 5554)
+· waiting for capture lock (21s, held by pid 5554)
+· waiting for capture lock (32s, held by pid 5554)
+· waiting for capture lock (43s, held by pid 5554)
+· waiting for capture lock (53s, held by pid 5554)
+· waiting for capture lock (63s, held by pid 5554)
