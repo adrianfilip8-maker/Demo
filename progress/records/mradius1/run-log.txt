@@ -380,3 +380,6 @@
 [22:33:48 +7707s]   · waiting for capture lock (980s, held by pid 20155)
 [22:33:59 +7717s]   · waiting for capture lock (990s, held by pid 20155)
 [22:34:09 +7728s]   · waiting for capture lock (1001s, held by pid 20155)
+[22:34:20 +7738s]   · waiting for capture lock (1011s, held by pid 20155)
+[22:34:30 +7749s]   · waiting for capture lock (1022s, held by pid 20155)
+[22:34:40 +7759s]   · waiting for capture lock (1032s, held by pid 20155)
