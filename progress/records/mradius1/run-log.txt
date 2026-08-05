@@ -141,3 +141,5 @@
 [20:57:34 +1933s]   hero.base: CAPTURED sha ca4e0b1ec4630b62 504s  kerbband2 n=1708  consoleErrors 1
 [20:57:34 +1933s]   arm cand (cand s=0.372/0.348) srcAtArm bb822753ae7949e8 — fresh vite + fresh context
 [20:58:50 +2008s]   hero.cand: setShot ok tod 0.79 draws 260 tris 1741983
+[21:06:24 +2463s]   hero.cand: CAPTURED sha 48a7a7d3a5fe2f3c 530s  kerbband2 n=721
+[21:06:25 +2463s]   arm kb (kb s=0/0) srcAtArm 2325e84e3dc23f7d — fresh vite + fresh context
