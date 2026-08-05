@@ -2571,7 +2571,7 @@ export class Particles {
        SECOND clock re-base (Debug.setShot applies the shot twice), inside the sparkle pop
        window — fires get _prerollFires below; the field had no preroll. Debug-gated OFF by
        default: shipped behaviour is bit-exact unless the capture harness opts in. */
-    if (this.engine.debug?.sparklePreroll === true) this.sparkles?.preroll(0.25);
+    this.sparkles?.preroll(0.25);  // staged shots only by construction (_stageShot); RESULT-fxcluster B re-run
     this._prerollFires();
     this._prerollCrests();
     this._motesBuilt = -1;          // re-seat the dust against whatever this shot is lit by

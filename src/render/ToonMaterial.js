@@ -221,7 +221,8 @@ const TUNE = {
      — it was derived as an ATTRIBUTION target, for deciding whether the blue was light-owned —
      is an open question routed to the blind critic rather than settled by re-picking an arm.
      V3 (off-subject scope) is VOID, not failed, and wants one pinned capture (§28/§30). */
-  subjWarmShade: 0.50,
+  subjWarmShade: 0.65,
+  subjWarmShadeNightPin: 0.50,  // night keeps the pre-banda2 look; published per frame at setKeyLight
 
   /* Baked aoMap strength, globally. The maps were authored while cast shadows were suppressed
      engine-wide (KNOWN_ISSUES §1), so the baked term was carrying the low frequencies as well
@@ -237,7 +238,7 @@ const TUNE = {
      without an edit-and-reboot. Same value, same behaviour; it is in TUNE because §5 says
      tunables live in TUNE and because a knob you cannot A/B is a knob that costs capture
      cycles. */
-  shadowTintPeak: 0.52,
+  shadowTintPeak: 0.62,
 
   /* How much warm sand bounce is mixed into the shadow light — a desert shadow is lit by sky
      *and* by sun bouncing off the sand around it, and a purely blue shadow light multiplied
@@ -1284,7 +1285,13 @@ export class Shading {
     /* `nightAmount` has been in LIGHTING's payload (`Lighting.js:1837`) with no consumer here,
        the same way `rim.strength` was. Consumed only by the ink lever, which is a no-op at
        `TUNE.inkNightMix = 0`, so reading it changes nothing until that ships. */
-    if (typeof nightAmount === 'number') this.setInkNight(nightAmount);
+    if (typeof nightAmount === 'number') {
+      this.setInkNight(nightAmount);
+      /* banda2's night gate: warm-restoration levers are day-scoped arithmetically —
+         at nightAmount 1 the shade-warm returns to its pre-banda2 value (RESULT-banda2). */
+      u.uSubjWarmShade.value = TUNE.subjWarmShade +
+        (TUNE.subjWarmShadeNightPin - TUNE.subjWarmShade) * Math.min(1, Math.max(0, nightAmount));
+    }
 
     if (direction) {
       _v3.set(direction.x ?? 0, direction.y ?? 1, direction.z ?? 0);
