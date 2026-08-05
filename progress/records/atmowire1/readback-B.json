@@ -15,5 +15,24 @@
   "CT40": 1,
   "KBdense": 3
  },
- "shots": []
+ "shots": [],
+ "lever": {
+  "hasShading": true,
+  "hasSky": true,
+  "hasWire": true,
+  "wire": 0,
+  "hasHF": true,
+  "hasIns": true,
+  "hasTint": true,
+  "uHazeDensity": 0.012215773002083015,
+  "uHazeGain": 1.3,
+  "uHazeFalloff": 0.055,
+  "fog": {
+   "density": 0.00469837423157039,
+   "heightFalloff": 58.034547579129196,
+   "inscatter": 0.6197561347355586
+  },
+  "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)"
+ },
+ "fatal": "_fogSynced at boot is undefined, expected false (side-door active) — W1 premise broke"
 }

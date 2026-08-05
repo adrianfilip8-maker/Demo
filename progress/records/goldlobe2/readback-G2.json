@@ -3,5 +3,137 @@
  "chunk": "G2",
  "startedAt": "2026-08-05T21:44:42.508Z",
  "srcTreeBefore": "dfa198283676610f",
- "shots": []
+ "shots": [
+  {
+   "shot": "traversal",
+   "arms": [
+    {
+     "arm": "base",
+     "requested": {
+      "gain": 0,
+      "pow": 20,
+      "sharp": 1
+     },
+     "readback": {
+      "glint": 0,
+      "pow": 20,
+      "sharp": 1,
+      "tuneGlint": 0,
+      "tunePow": 20,
+      "tuneSharp": 1
+     },
+     "mismatch": [],
+     "secs": 21
+    },
+    {
+     "arm": "As",
+     "requested": {
+      "gain": 2.6,
+      "pow": 20,
+      "sharp": 1.25
+     },
+     "readback": {
+      "glint": 2.6,
+      "pow": 20,
+      "sharp": 1.25,
+      "tuneGlint": 2.6,
+      "tunePow": 20,
+      "tuneSharp": 1.25
+     },
+     "mismatch": [],
+     "secs": 21
+    },
+    {
+     "arm": "cand",
+     "requested": {
+      "gain": 2.6,
+      "pow": 20,
+      "sharp": 1.5
+     },
+     "readback": {
+      "glint": 2.6,
+      "pow": 20,
+      "sharp": 1.5,
+      "tuneGlint": 2.6,
+      "tunePow": 20,
+      "tuneSharp": 1.5
+     },
+     "mismatch": [],
+     "secs": 21
+    },
+    {
+     "arm": "KBwidelobe",
+     "requested": {
+      "gain": 5.2,
+      "pow": 2,
+      "sharp": 1
+     },
+     "readback": {
+      "glint": 5.2,
+      "pow": 2,
+      "sharp": 1,
+      "tuneGlint": 5.2,
+      "tunePow": 2,
+      "tuneSharp": 1
+     },
+     "mismatch": [],
+     "secs": 21
+    },
+    {
+     "arm": "null",
+     "requested": {
+      "gain": 0,
+      "pow": 20,
+      "sharp": 1
+     },
+     "readback": {
+      "glint": 0,
+      "pow": 20,
+      "sharp": 1,
+      "tuneGlint": 0,
+      "tunePow": 20,
+      "tuneSharp": 1
+     },
+     "mismatch": [],
+     "secs": 21
+    }
+   ],
+   "setShot": {
+    "stats": {
+     "fps": 35,
+     "drawCalls": 252,
+     "triangles": 1750993,
+     "programs": 98,
+     "ms": 29717.89999999851
+    },
+    "tod": 0.77
+   },
+   "settleSecs": 379
+  },
+  {
+   "shot": "combat",
+   "arms": [],
+   "setShot": {
+    "stats": {
+     "fps": 60,
+     "drawCalls": 222,
+     "triangles": 1542483,
+     "programs": 100,
+     "ms": 11.900000000372529
+    },
+    "tod": 0.74
+   }
+  }
+ ],
+ "lever": {
+  "hasGlint": true,
+  "hasPow": true,
+  "hasSharp": true,
+  "glint": 0,
+  "pow": 20,
+  "sharp": 1,
+  "tuneGlint": 0,
+  "tunePow": 20,
+  "tuneSharp": 1
+ }
 }
