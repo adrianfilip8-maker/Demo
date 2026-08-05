@@ -1,6 +1,7 @@
 {
  "warnings": [
-  "textures: prewarm took 22.6s at size 1024"
+  "textures: prewarm took 22.6s at size 1024",
+  "textures: prewarm took 20.2s at size 1024"
  ],
  "jobs": {
   "temple.base": {
@@ -230,6 +231,334 @@
       ],
       "bl": 71.2,
       "rb": 0.885,
+      "wl": 0,
+      "wr": 0,
+      "factor": 1,
+      "fires": false
+     }
+    },
+    "backdropRT": {
+     "w": 320,
+     "h": 180,
+     "type": 1009,
+     "colorSpace": "",
+     "bound": true
+    },
+    "sandHigh": {
+     "live": 900,
+     "vis": true
+    }
+   }
+  },
+  "hero.base": {
+   "applied": "gate=OFF",
+   "probe": {
+    "time": 0.5333,
+    "frame": 25,
+    "gate": {
+     "on": 0,
+     "lumaMax": 60,
+     "rbMax": 0.5,
+     "lumaSoft": 8,
+     "rbSoft": 0.08,
+     "min": 0
+    },
+    "centres": {
+     "disc": {
+      "px": [
+       602,
+       133
+      ],
+      "rtpx": [
+       150,
+       146
+      ],
+      "raw": [
+       33,
+       37,
+       27
+      ],
+      "bmax": 0.1451,
+      "enc": [
+       100.7,
+       106,
+       91.9
+      ],
+      "bl": 103.88,
+      "rb": 1.096,
+      "wl": 0,
+      "wr": 0,
+      "factor": 1,
+      "fires": false
+     },
+     "nonartefact": {
+      "px": [
+       520,
+       581
+      ],
+      "rtpx": [
+       130,
+       34
+      ],
+      "raw": [
+       6,
+       7,
+       11
+      ],
+      "bmax": 0.0431,
+      "enc": [
+       46.4,
+       49.8,
+       61.1
+      ],
+      "bl": 49.85,
+      "rb": 0.759,
+      "wl": 1,
+      "wr": 0,
+      "factor": 1,
+      "fires": false
+     }
+    },
+    "backdropRT": {
+     "w": 320,
+     "h": 180,
+     "type": 1009,
+     "colorSpace": "",
+     "bound": true
+    },
+    "sandHigh": {
+     "live": 900,
+     "vis": true
+    }
+   }
+  },
+  "hero.gated": {
+   "applied": "gate=ON",
+   "probe": {
+    "time": 0.5333,
+    "frame": 29,
+    "gate": {
+     "on": 1,
+     "lumaMax": 60,
+     "rbMax": 0.5,
+     "lumaSoft": 8,
+     "rbSoft": 0.08,
+     "min": 0
+    },
+    "centres": {
+     "disc": {
+      "px": [
+       602,
+       133
+      ],
+      "rtpx": [
+       150,
+       146
+      ],
+      "raw": [
+       33,
+       37,
+       27
+      ],
+      "bmax": 0.1451,
+      "enc": [
+       100.7,
+       106,
+       91.9
+      ],
+      "bl": 103.88,
+      "rb": 1.096,
+      "wl": 0,
+      "wr": 0,
+      "factor": 1,
+      "fires": false
+     },
+     "nonartefact": {
+      "px": [
+       520,
+       581
+      ],
+      "rtpx": [
+       130,
+       34
+      ],
+      "raw": [
+       6,
+       7,
+       11
+      ],
+      "bmax": 0.0431,
+      "enc": [
+       46.4,
+       49.8,
+       61.1
+      ],
+      "bl": 49.85,
+      "rb": 0.759,
+      "wl": 1,
+      "wr": 0,
+      "factor": 1,
+      "fires": false
+     }
+    },
+    "backdropRT": {
+     "w": 320,
+     "h": 180,
+     "type": 1009,
+     "colorSpace": "",
+     "bound": true
+    },
+    "sandHigh": {
+     "live": 900,
+     "vis": true
+    }
+   }
+  },
+  "dunes.base": {
+   "applied": "gate=OFF",
+   "probe": {
+    "time": 0.8167,
+    "frame": 50,
+    "gate": {
+     "on": 0,
+     "lumaMax": 60,
+     "rbMax": 0.5,
+     "lumaSoft": 8,
+     "rbSoft": 0.08,
+     "min": 0
+    },
+    "centres": {
+     "disc": {
+      "px": [
+       602,
+       133
+      ],
+      "rtpx": [
+       150,
+       146
+      ],
+      "raw": [
+       148,
+       97,
+       53
+      ],
+      "bmax": 0.5804,
+      "enc": [
+       199.1,
+       164.3,
+       124.9
+      ],
+      "bl": 168.88,
+      "rb": 1.595,
+      "wl": 0,
+      "wr": 0,
+      "factor": 1,
+      "fires": false
+     },
+     "nonartefact": {
+      "px": [
+       520,
+       581
+      ],
+      "rtpx": [
+       130,
+       34
+      ],
+      "raw": [
+       169,
+       36,
+       11
+      ],
+      "bmax": 0.6627,
+      "enc": [
+       211.5,
+       104.7,
+       61.1
+      ],
+      "bl": 124.28,
+      "rb": 3.462,
+      "wl": 0,
+      "wr": 0,
+      "factor": 1,
+      "fires": false
+     }
+    },
+    "backdropRT": {
+     "w": 320,
+     "h": 180,
+     "type": 1009,
+     "colorSpace": "",
+     "bound": true
+    },
+    "sandHigh": {
+     "live": 900,
+     "vis": true
+    }
+   }
+  },
+  "dunes.gated": {
+   "applied": "gate=ON",
+   "probe": {
+    "time": 0.8167,
+    "frame": 54,
+    "gate": {
+     "on": 1,
+     "lumaMax": 60,
+     "rbMax": 0.5,
+     "lumaSoft": 8,
+     "rbSoft": 0.08,
+     "min": 0
+    },
+    "centres": {
+     "disc": {
+      "px": [
+       602,
+       133
+      ],
+      "rtpx": [
+       150,
+       146
+      ],
+      "raw": [
+       148,
+       97,
+       53
+      ],
+      "bmax": 0.5804,
+      "enc": [
+       199.1,
+       164.3,
+       124.9
+      ],
+      "bl": 168.88,
+      "rb": 1.595,
+      "wl": 0,
+      "wr": 0,
+      "factor": 1,
+      "fires": false
+     },
+     "nonartefact": {
+      "px": [
+       520,
+       581
+      ],
+      "rtpx": [
+       130,
+       34
+      ],
+      "raw": [
+       169,
+       36,
+       11
+      ],
+      "bmax": 0.6627,
+      "enc": [
+       211.5,
+       104.7,
+       61.1
+      ],
+      "bl": 124.28,
+      "rb": 3.462,
       "wl": 0,
       "wr": 0,
       "factor": 1,
