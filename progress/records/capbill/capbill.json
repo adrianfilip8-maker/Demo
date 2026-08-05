@@ -19,6 +19,18 @@
     "tokenOn": "5.03",
     "unchangedTo2dp": true
   },
-  "arms": {},
+  "arms": {
+    "A": {
+      "token": "(none)",
+      "charAB": "",
+      "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+      "triangles": 14044,
+      "srcAtArm": "086fd03ab4469745",
+      "shots": {},
+      "consoleErrors": [
+        "Failed to load resource: the server responded with a status of 404 (Not Found)"
+      ]
+    }
+  },
   "phase": "arms"
 }

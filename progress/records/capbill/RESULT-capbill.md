@@ -112,9 +112,29 @@ coordinator's re-registration would score against.
 
 ## 3. Capture run
 
-(Filled in as the run proceeds — launched detached via `tools/launch.sh`, log at
+Launched detached via `tools/launch.sh` (pid 5064, ppid 1 verified), log at
 `progress/records/capbill/capbill-run.log`, provenance at `capbill.json`, frames landing
-directly in `progress/records/capbill/frames/`.)
+directly in `progress/records/capbill/frames/` (§164.1 durability).
+
+- **Tree at capture ≠ registration tree, and the delta is named:** between GATE 0 (§1) and the
+  launch, other owners landed edits in `src/world/Props.js` and `src/fx/Particles.js`, moving
+  srcTree `3fea650a4d645857` → `0ac0479e279468e3`. `src/player/SlyModel.js` pre-edit sha256 is
+  byte-identical to §0's record, and `src/core/Shots.js` is untouched — **the model, poses,
+  cameras and therefore the registered rows/tables are unaffected**; what may move is the
+  scene backdrop (world/fx), which the scoreability check measures on the run's own arm A
+  anyway. All three arms boot inside one lock hold on one tree, so BACK ≡ A is uncontaminated
+  by the delta (§153.5's design).
+- 06:02:58 lock HELD (FIFO, queue was empty). Settle gate: tree quiet 120 s at `0ac0479e`.
+- 06:04:58 token edit APPLIED at SlyModel.js:2540 (srcTree → `086fd03ab4469745` for the hold).
+- 06:05:01 **in-ticket GATE 0 re-run on the real edited tree: PASS** — closeup token output
+  line-for-line identical to base, registered rays CLEAR (`occlude-inticket.txt`).
+- 06:05:03 **headratio idle_confident: 5.03 → 5.03 under the token — unchanged to 2 dp**
+  (GATE 4's skull-ratio clause holds; structural expectation confirmed — a pure yaw about the
+  vertical head axis cannot change any y-measure).
+- 06:05:03 vite up (SANDS_NO_HMR=1), born on the edited tree; arms A → B → BACK, each a fresh
+  navigation with `__CHAR_AB` set via addInitScript ('' / 'capyaw10' / ''), two shots per arm.
+
+(Arm results appended below as they land.)
 
 ## Files this task writes (sweep list, updated as they appear)
 
