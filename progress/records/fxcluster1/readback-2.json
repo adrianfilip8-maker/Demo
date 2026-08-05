@@ -729,6 +729,77 @@
    "tod": 0.77,
    "srcAtArm": "3be168ae28832f69",
    "secs": 446
+  },
+  {
+   "shot": "combat",
+   "arm": "base",
+   "at": "2026-08-05T16:04:48.173Z",
+   "setShot": {
+    "tod": 0.74,
+    "drift": 0,
+    "onScreen": true,
+    "draws": 222,
+    "tris": 1542483,
+    "warnings": 1
+   },
+   "probe": {
+    "hasEMITTERS": true,
+    "defs": {
+     "cane_flash": {
+      "alpha": [
+       2.6,
+       2.6
+      ],
+      "col0": 16771496,
+      "col1": 15251778
+     },
+     "cane_arc": {
+      "alpha": [
+       1.6,
+       2.6
+      ],
+      "col0": 16776168,
+      "col1": 15251778
+     },
+     "cane_spark": {
+      "alpha": [
+       2.2,
+       3.4
+      ],
+      "col0": 16776168,
+      "col1": 15251778
+     },
+     "cane_ring": {
+      "alpha": [
+       2,
+       2
+      ],
+      "col0": 16776168,
+      "col1": 8377599
+     }
+    },
+    "playerPos": [
+     0,
+     0,
+     28
+    ]
+   },
+   "cam": {
+    "pos": [
+     4.6,
+     2.35,
+     31.4
+    ],
+    "fwd": [
+     -0.758,
+     -0.124,
+     -0.641
+    ],
+    "fov": 40
+   },
+   "tod": 0.74,
+   "srcAtArm": "3be168ae28832f69",
+   "secs": 427
   }
  ],
  "lever": {
