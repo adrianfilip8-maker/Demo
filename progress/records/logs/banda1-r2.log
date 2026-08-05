@@ -2,3 +2,15 @@
 [12:12:12 + 122s]   boot ok — warnings 1
 [12:12:12 + 122s]   LEVER {"hasShading":true,"hasTune":true,"hasSubjU":true,"hasRefresh":true,"subjW":0.5,"tintPeak":0.52,"sbm":0.05,"sbmLit":0.05,"uSubjW":0.5,"uShadowColor":[0.09609963379551392,0.31311543639412576,0.49658401318439915]}
 [12:12:30 + 139s]   setShot(sly-closeup) 18s  tod 0.8  draws 265 tris 1665419
+[12:20:18 + 608s]   settle(sly-closeup) 469s (10 frozen frames + throwaway capture)
+[12:20:44 + 634s]   sly-closeup.base       26s  subjW 0.5 peak 0.52 sbm 0.05/0.05  uShadow (0.096116, 0.313110, 0.496584)  uShadowColor ≡ base (bit-equal)  applied ok
+[12:21:09 + 659s]   sly-closeup.A          25s  subjW 0.65 peak 0.52 sbm 0.05/0.05  uShadow (0.096116, 0.313110, 0.496584)  uShadowColor ≡ base (bit-equal)  applied ok
+[12:21:35 + 684s]   sly-closeup.AB         26s  subjW 0.65 peak 0.62 sbm 0.05/0.05  uShadow (0.103228, 0.336278, 0.533327)  uShadowColor ×[1.0740,1.0740,1.0740] vs base  applied ok
+[12:22:01 + 711s]   sly-closeup.KBoverwarm 26s  subjW 1 peak 0.52 sbm 0.05/0.05  uShadow (0.096116, 0.313110, 0.496584)  uShadowColor ≡ base (bit-equal)  applied ok
+[12:22:26 + 736s]   sly-closeup.restore    25s  subjW 0.5 peak 0.52 sbm 0.05/0.05  uShadow (0.096116, 0.313110, 0.496584)  uShadowColor ≡ base (bit-equal)  applied ok
+[12:22:26 + 736s]   chunk A done — srcTree after 820ace395b9664ae (STABLE)
+[12:22:26 + 736s] chunk A: lock released
+[12:22:27 + 736s] chunk B1: srcTree 820ace395b9664ae — booting (own lock hold)
+[12:24:18 + 848s]   boot ok — warnings 1
+[12:24:18 + 848s]   LEVER {"hasShading":true,"hasTune":true,"hasSubjU":true,"hasRefresh":true,"subjW":0.5,"tintPeak":0.52,"sbm":0.05,"sbmLit":0.05,"uSubjW":0.5,"uShadowColor":[0.09609963379551392,0.31311543639412576,0.49658401318439915]}
+[12:24:36 + 866s]   setShot(hero) 18s  tod 0.79  draws 260 tris 1741863
