@@ -275,3 +275,21 @@
 [21:52:50 +5248s]   night.base: CAPTURED sha 506cfef8c03031c9 488s  consoleErrors 1
 [21:52:50 +5248s]   arm cand (cand s=0.372/0.348) srcAtArm cf51f3448499c256 — fresh vite + fresh context
 [21:54:02 +5321s]   night.cand: setShot ok tod 0.02 draws 288 tris 1856175
+[22:01:10 +5748s]   night.cand: CAPTURED sha c8e354aaab43f63d 500s
+[22:01:10 +5749s]   arm kb (kb s=0/0) srcAtArm 92a443c9cfa54731 — fresh vite + fresh context
+[22:02:24 +5822s]   night.kb: setShot ok tod 0.02 draws 288 tris 1856175
+[22:09:20 +6239s]   night.kb: CAPTURED sha 682f5730dc29a85b 490s
+[22:09:21 +6239s]   arm restore (pristine) srcAtArm dfa198283676610f — fresh vite + fresh context
+[22:10:34 +6313s]   night.restore: setShot ok tod 0.02 draws 288 tris 1855983
+[22:17:28 +6726s]   night.restore: CAPTURED sha 6e657d155d2d3c8a 487s
+[22:17:28 +6726s] RESTORE pristine: files byte-verified; tree now dfa198283676610f (pristine 7a4630875cac6e36 — OTHER OWNERS EDITED MID-RUN, files above still verified)
+[22:17:28 +6726s] chunk C2: pristine restored + lock released
+[22:17:28 +6726s] chunk C3 (courtyard): acquiring capture lock (FIFO — politely behind whatever holds it)
+[22:17:38 +6736s]   · waiting for capture lock (10s, held by pid 1924)
+[22:17:48 +6747s]   · waiting for capture lock (20s, held by pid 1924)
+[22:17:59 +6757s]   · waiting for capture lock (31s, held by pid 1924)
+[22:18:10 +6768s]   · waiting for capture lock (41s, held by pid 1924)
+[22:18:20 +6779s]   · waiting for capture lock (52s, held by pid 1924)
+[22:18:31 +6789s]   · waiting for capture lock (62s, held by pid 1924)
+[22:18:41 +6799s]   · waiting for capture lock (73s, held by pid 1924)
+[22:18:52 +6810s]   · waiting for capture lock (83s, held by pid 1924)

@@ -1,0 +1,19 @@
+{
+ "prereg": "PREREG-atmowire.md",
+ "chunk": "B",
+ "startedAt": "2026-08-05T22:18:56.592Z",
+ "srcTreeBefore": "a8925573a9ec3ff6",
+ "scales": {
+  "W": 1,
+  "CT55": 0.55,
+  "CT40": 0.4,
+  "KBdense": 0.4
+ },
+ "densMul": {
+  "W": 1,
+  "CT55": 1,
+  "CT40": 1,
+  "KBdense": 3
+ },
+ "shots": []
+}
