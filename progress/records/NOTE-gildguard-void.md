@@ -90,10 +90,25 @@ come from different trees (`tx7` ≈ 7dc4442, `r3` much older).
 
 Reading it:
 
-- **`traversal` is the best-balanced candidate** — 12.94 % of frame *and* an 11 % highlight tail,
+- ~~**`traversal` is the best-balanced candidate** — 12.94 % of frame *and* an 11 % highlight tail,
   with the gild at parity with the sandstone reference. It is the only row with both a real share
-  and a real tail.
-- `courtyard` is the second, at half the share and half the tail.
+  and a real tail.~~
+- ~~`courtyard` is the second, at half the share and half the tail.~~
+
+  > **CORRECTION, TEXTURES, 2026-08-05 — struck at the declaration site; the withdrawal is mine
+  > this time.** The `traversal` row crossed a **post-`c7e51c5` mask against the pre-`c7e51c5`
+  > `r3` capture** — the traversal camera moved 6 m west at Aug 1 15:57, and the row's 11.09 %
+  > "highlight tail" localises to **sunset sky** in the old composition (14,703 of its over-L160
+  > pixels sit in the upper-left cells where the old frame holds sky; confirmed on a tinted-mask
+  > crop). On the two correctly-registered newest captures (`rim2-base`, `fx5-full`, both stamped
+  > cam `(6,14,6)`) the true figures are **tail 2.11 %, gild/ref 1.41**. The `courtyard` row has
+  > the same defect from the other side: its current mask visibly misregisters against every
+  > existing courtyard capture (mask patches on open sky — gilded beams moved after Aug 1). Every
+  > row of this table pairing an old capture with a newer-tree mask is a crossing, not a
+  > measurement; only the `guard` rows were validated across trees and visually. This is
+  > `gildlit.mjs`'s own PROVENANCE warning firing on its author, and §158.5's instability hazard
+  > in camera form. Full re-measurement and the corrected gate run:
+  > `PREREG-goldtraversal.md` §0.
 - **`hero` has by far the most gold and almost none of it lit** (0.26 % over L160, gild/ref 0.76),
   which is the in-frame form of the record's "98.6 % shadowed on this material". A gold-as-metal
   seal on `hero` would be measuring shadow.
@@ -122,8 +137,10 @@ GATE 0b  luminance  gild L p50 / same-frame reference L p50 >= 0.85, AND share o
                     measured with gildlit.mjs on the arm's own base capture, before scoring
 ```
 
-0b is what `guard` fails (0.23 and 0.34 %) and what `traversal` passes (1.04 and 11.09 %). **0a
-alone passes `guard` at 23.18 % and would have licensed the whole capture.**
+0b is what `guard` fails (0.23 and 0.34 %) and what ~~`traversal` passes (1.04 and 11.09 %)~~
+`traversal` **half-passes: 1.41 on the ratio clause, 2.11 % on the tail clause — the 11.09 % was
+sky through a misregistered mask; see the correction block in §3 and `PREREG-goldtraversal.md`
+§0.3**. **0a alone passes `guard` at 23.18 % and would have licensed the whole capture.**
 
 This is the third dress of the same error the record keeps naming — `gilduv.mjs`'s own header says
 it, §121.8 says it, and I made it anyway: **a geometric availability measure is not a visibility

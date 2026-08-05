@@ -1,0 +1,574 @@
+{
+ "_what": "Raw outputs behind PREREG-goldtraversal.md \u00a70/\u00a74/\u00a75, measured 2026-08-05 at tree 47de8f1. Captures are Aug-1 vintage (see prereg \u00a70.1). Masks: matmask.mjs at 47de8f1, 1280x720. Reference frames are scratchpad-only per AGENTS.md \u00a71.1 rule 3; re-fetch pins in prereg \u00a75.1.",
+ "gildlit": {
+  "traversal_fx5_full": {
+   "shot": "traversal",
+   "png": "shots/fx5/traversal.full.png",
+   "capturedAt": "fx5-full-Aug1-1819",
+   "erode": 2,
+   "size": "1280x720",
+   "arch:hieroglyph_gilded": {
+    "px": 119251,
+    "shareOfFrame": 12.94,
+    "L": {
+     "p01": 21.4,
+     "p05": 26.3,
+     "p50": 78.3,
+     "p95": 131.9,
+     "p99": 187.4,
+     "max": 255
+    },
+    "tail": {
+     "over160": 2.11,
+     "over200": 0.62,
+     "over230": 0.16
+    },
+    "span": 5.02,
+    "chroma": {
+     "p50": 24,
+     "p95": 61
+    },
+    "RmB": {
+     "p50": 6
+    }
+   },
+   "arch:sandstone_worn": {
+    "px": 23347,
+    "shareOfFrame": 2.53,
+    "L": {
+     "p01": 21.6,
+     "p05": 26.7,
+     "p50": 55.4,
+     "p95": 146.3,
+     "p99": 159.6,
+     "max": 190.5
+    },
+    "tail": {
+     "over160": 0.98,
+     "over200": 0,
+     "over230": 0
+    },
+    "span": 5.48,
+    "chroma": {
+     "p50": 30,
+     "p95": 68
+    },
+    "RmB": {
+     "p50": -12
+    }
+   }
+  },
+  "traversal_rim2_base": {
+   "shot": "traversal",
+   "png": "shots/rim2/traversal-base.png",
+   "capturedAt": "rim2-base-Aug1-1800",
+   "erode": 2,
+   "size": "1280x720",
+   "arch:hieroglyph_gilded": {
+    "px": 119251,
+    "shareOfFrame": 12.94,
+    "L": {
+     "p01": 21.4,
+     "p05": 26.3,
+     "p50": 78.3,
+     "p95": 132.8,
+     "p99": 187.1,
+     "max": 255
+    },
+    "tail": {
+     "over160": 2.1,
+     "over200": 0.63,
+     "over230": 0.14
+    },
+    "span": 5.06,
+    "chroma": {
+     "p50": 24,
+     "p95": 61
+    },
+    "RmB": {
+     "p50": 6
+    }
+   },
+   "arch:sandstone_worn": {
+    "px": 23347,
+    "shareOfFrame": 2.53,
+    "L": {
+     "p01": 21.6,
+     "p05": 26.9,
+     "p50": 55.9,
+     "p95": 147.1,
+     "p99": 160.4,
+     "max": 183.1
+    },
+    "tail": {
+     "over160": 1.04,
+     "over200": 0,
+     "over230": 0
+    },
+    "span": 5.47,
+    "chroma": {
+     "p50": 30,
+     "p95": 67
+    },
+    "RmB": {
+     "p50": -11
+    }
+   }
+  },
+  "traversal_rim2_nosly": {
+   "shot": "traversal",
+   "png": "shots/rim2/traversal-nosly.png",
+   "capturedAt": "rim2-nosly-Aug1-1801",
+   "erode": 2,
+   "size": "1280x720",
+   "arch:hieroglyph_gilded": {
+    "px": 119251,
+    "shareOfFrame": 12.94,
+    "L": {
+     "p01": 21.5,
+     "p05": 26.5,
+     "p50": 78.9,
+     "p95": 136.2,
+     "p99": 197,
+     "max": 254.5
+    },
+    "tail": {
+     "over160": 2.45,
+     "over200": 0.92,
+     "over230": 0.24
+    },
+    "span": 5.14,
+    "chroma": {
+     "p50": 24,
+     "p95": 61
+    },
+    "RmB": {
+     "p50": 7
+    }
+   },
+   "arch:sandstone_worn": {
+    "px": 23347,
+    "shareOfFrame": 2.53,
+    "L": {
+     "p01": 21.6,
+     "p05": 27.2,
+     "p50": 56.1,
+     "p95": 152.3,
+     "p99": 202.6,
+     "max": 215.6
+    },
+    "tail": {
+     "over160": 3.17,
+     "over200": 1.2,
+     "over230": 0
+    },
+    "span": 5.6,
+    "chroma": {
+     "p50": 30,
+     "p95": 66
+    },
+    "RmB": {
+     "p50": -12
+    }
+   }
+  },
+  "traversal_rim2_norim": {
+   "shot": "traversal",
+   "png": "shots/rim2/traversal-norim.png",
+   "capturedAt": "rim2-norim-Aug1-1801",
+   "erode": 2,
+   "size": "1280x720",
+   "arch:hieroglyph_gilded": {
+    "px": 119251,
+    "shareOfFrame": 12.94,
+    "L": {
+     "p01": 21.1,
+     "p05": 25.8,
+     "p50": 78,
+     "p95": 125.7,
+     "p99": 154.7,
+     "max": 254.7
+    },
+    "tail": {
+     "over160": 0.77,
+     "over200": 0.2,
+     "over230": 0.08
+    },
+    "span": 4.88,
+    "chroma": {
+     "p50": 24,
+     "p95": 77
+    },
+    "RmB": {
+     "p50": 7
+    }
+   },
+   "arch:sandstone_worn": {
+    "px": 23347,
+    "shareOfFrame": 2.53,
+    "L": {
+     "p01": 21.4,
+     "p05": 25.7,
+     "p50": 55.1,
+     "p95": 151.5,
+     "p99": 181.7,
+     "max": 194.4
+    },
+    "tail": {
+     "over160": 2.99,
+     "over200": 0,
+     "over230": 0
+    },
+    "span": 5.9,
+    "chroma": {
+     "p50": 30,
+     "p95": 67
+    },
+    "RmB": {
+     "p50": -11
+    }
+   }
+  },
+  "traversal_r3_VOID_misregistered": {
+   "shot": "traversal",
+   "png": "shots/r3/traversal.png",
+   "capturedAt": "r3-Aug1-1348-OLD-CAMERA-VOID",
+   "erode": 2,
+   "size": "1280x720",
+   "arch:hieroglyph_gilded": {
+    "px": 119251,
+    "shareOfFrame": 12.94,
+    "L": {
+     "p01": 23.9,
+     "p05": 30.6,
+     "p50": 57.6,
+     "p95": 179.9,
+     "p99": 183.8,
+     "max": 233.9
+    },
+    "tail": {
+     "over160": 11.09,
+     "over200": 0.12,
+     "over230": 0
+    },
+    "span": 5.89,
+    "chroma": {
+     "p50": 29,
+     "p95": 114
+    },
+    "RmB": {
+     "p50": 0
+    }
+   },
+   "arch:sandstone_worn": {
+    "px": 23347,
+    "shareOfFrame": 2.53,
+    "L": {
+     "p01": 20.6,
+     "p05": 24.7,
+     "p50": 55.2,
+     "p95": 127.7,
+     "p99": 187.8,
+     "max": 205.1
+    },
+    "tail": {
+     "over160": 3.35,
+     "over200": 0.01,
+     "over230": 0
+    },
+    "span": 5.17,
+    "chroma": {
+     "p50": 28,
+     "p95": 86
+    },
+    "RmB": {
+     "p50": -11
+    }
+   }
+  },
+  "combat_fx5_full_calibration": {
+   "shot": "combat",
+   "png": "shots/fx5/combat.full.png",
+   "capturedAt": "fx5-full-Aug1-1823",
+   "erode": 2,
+   "size": "1280x720",
+   "arch:hieroglyph_gilded": {
+    "px": 50019,
+    "shareOfFrame": 5.43,
+    "L": {
+     "p01": 28,
+     "p05": 47.7,
+     "p50": 143.9,
+     "p95": 198.7,
+     "p99": 213,
+     "max": 221.3
+    },
+    "tail": {
+     "over160": 39.78,
+     "over200": 4.38,
+     "over230": 0
+    },
+    "span": 4.16,
+    "chroma": {
+     "p50": 93,
+     "p95": 107
+    },
+    "RmB": {
+     "p50": 93
+    }
+   },
+   "arch:sandstone_worn": {
+    "px": 310352,
+    "shareOfFrame": 33.68,
+    "L": {
+     "p01": 12.4,
+     "p05": 13.7,
+     "p50": 50.4,
+     "p95": 148.4,
+     "p99": 203.6,
+     "max": 223.2
+    },
+    "tail": {
+     "over160": 3.82,
+     "over200": 1.39,
+     "over230": 0
+    },
+    "span": 10.87,
+    "chroma": {
+     "p50": 28,
+     "p95": 98
+    },
+    "RmB": {
+     "p50": -12
+    }
+   }
+  }
+ },
+ "goldgap": [
+  {
+   "name": "OURS traversal fx5-full (gild mask minus Sly/FX occluders)",
+   "png": "/home/user/Demo/shots/fx5/traversal.full.png",
+   "roi_rect": [
+    0,
+    0,
+    1280,
+    720
+   ],
+   "gold": {
+    "px": 107280,
+    "p05": 25.9,
+    "p50": 77.6,
+    "p95": 129.3,
+    "p99": 180.8,
+    "max": 229.4,
+    "span_p99_minus_p50": 103.2,
+    "ratio_p99_over_p50": 2.33
+   },
+   "lobe_thr": 211.0,
+   "lobe": {
+    "area_px": 4,
+    "w": 4,
+    "h": 1,
+    "centroid": [
+     975,
+     150
+    ]
+   },
+   "occlusion_beside_highlight": {
+    "ring_px": 566,
+    "p05": 29.5,
+    "p25": 66.0,
+    "contrast_lobe_over_ring_p05": 7.8
+   },
+   "bloom": {
+    "halo_px_past_edge": 5,
+    "bg_p50": 81.1,
+    "halo_tint_RmB_minus_bg": 37.0,
+    "direction": [
+     0,
+     1
+    ]
+   }
+  },
+  {
+   "name": "OURS traversal rim2-base (gild mask minus Sly/FX occluders)",
+   "png": "/home/user/Demo/shots/rim2/traversal-base.png",
+   "roi_rect": [
+    0,
+    0,
+    1280,
+    720
+   ],
+   "gold": {
+    "px": 107280,
+    "p05": 25.8,
+    "p50": 77.6,
+    "p95": 128.0,
+    "p99": 180.7,
+    "max": 229.4,
+    "span_p99_minus_p50": 103.1,
+    "ratio_p99_over_p50": 2.33
+   },
+   "lobe_thr": 211.0,
+   "lobe": {
+    "area_px": 4,
+    "w": 4,
+    "h": 1,
+    "centroid": [
+     975,
+     150
+    ]
+   },
+   "occlusion_beside_highlight": {
+    "ring_px": 566,
+    "p05": 29.5,
+    "p25": 66.0,
+    "contrast_lobe_over_ring_p05": 7.8
+   },
+   "bloom": {
+    "halo_px_past_edge": 5,
+    "bg_p50": 81.1,
+    "halo_tint_RmB_minus_bg": 38.0,
+    "direction": [
+     0,
+     1
+    ]
+   }
+  },
+  {
+   "name": "REF odyssey checkpoint-flag gold pole+ball (sunlit, geometric ROI)",
+   "png": "refprobe/yoshistar/2DAssets/Screenshots/1080p/0100000000010000_2021-04-29_10-06-46-270.png",
+   "roi_rect": [
+    1094,
+    438,
+    1124,
+    660
+   ],
+   "gold": {
+    "px": 4112,
+    "p05": 110.6,
+    "p50": 193.6,
+    "p95": 227.2,
+    "p99": 244.5,
+    "max": 253.8,
+    "span_p99_minus_p50": 50.9,
+    "ratio_p99_over_p50": 1.26
+   },
+   "lobe_thr": 233.5,
+   "lobe": {
+    "area_px": 84,
+    "w": 13,
+    "h": 10,
+    "centroid": [
+     1109,
+     448
+    ]
+   },
+   "occlusion_beside_highlight": {
+    "ring_px": 781,
+    "p05": 55.0,
+    "p25": 115.1,
+    "contrast_lobe_over_ring_p05": 4.6
+   },
+   "bloom": {
+    "halo_px_past_edge": 0,
+    "bg_p50": 144.7,
+    "halo_tint_RmB_minus_bg": null,
+    "direction": [
+     -1,
+     0
+    ]
+   }
+  },
+  {
+   "name": "REF sly2 rajan gold dome (night)",
+   "png": "refprobe/ps2thumbs/Named_Snaps/Sly 2 - Band of Thieves (USA).png",
+   "roi_rect": [
+    60,
+    120,
+    215,
+    310
+   ],
+   "gold": {
+    "px": 9819,
+    "p05": 43.8,
+    "p50": 87.0,
+    "p95": 132.3,
+    "p99": 156.1,
+    "max": 170.2,
+    "span_p99_minus_p50": 69.1,
+    "ratio_p99_over_p50": 1.79
+   },
+   "lobe_thr": 156.6,
+   "lobe": {
+    "area_px": 95,
+    "w": 18,
+    "h": 12,
+    "centroid": [
+     71,
+     238
+    ]
+   },
+   "occlusion_beside_highlight": {
+    "ring_px": 663,
+    "p05": 44.1,
+    "p25": 59.3,
+    "contrast_lobe_over_ring_p05": 3.9
+   },
+   "bloom": {
+    "halo_px_past_edge": 2,
+    "bg_p50": 62.7,
+    "halo_tint_RmB_minus_bg": 53.5,
+    "direction": [
+     -1,
+     0
+    ]
+   }
+  },
+  {
+   "name": "REF sly3 cane gold hook (night)",
+   "png": "refprobe/ps2thumbs/Named_Snaps/Sly 3 - Honor Among Thieves (USA).png",
+   "roi_rect": [
+    28,
+    172,
+    122,
+    238
+   ],
+   "gold": {
+    "px": 1234,
+    "p05": 72.1,
+    "p50": 137.9,
+    "p95": 236.6,
+    "p99": 239.4,
+    "max": 240.6,
+    "span_p99_minus_p50": 101.5,
+    "ratio_p99_over_p50": 1.74
+   },
+   "lobe_thr": 221.4,
+   "lobe": {
+    "area_px": 146,
+    "w": 53,
+    "h": 30,
+    "centroid": [
+     61,
+     194
+    ]
+   },
+   "occlusion_beside_highlight": {
+    "ring_px": 960,
+    "p05": 73.4,
+    "p25": 109.0,
+    "contrast_lobe_over_ring_p05": 3.3
+   },
+   "bloom": {
+    "halo_px_past_edge": 1,
+    "bg_p50": 79.1,
+    "halo_tint_RmB_minus_bg": 158.0,
+    "direction": [
+     0,
+     -1
+    ]
+   }
+  }
+ ]
+}
