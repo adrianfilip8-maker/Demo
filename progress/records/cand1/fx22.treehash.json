@@ -1,0 +1,11 @@
+{
+ "prelaunch": {
+  "when": "2026-08-05T01:32:27.148Z",
+  "note": "taken before launch — the run may queue; the boot tree is stamped by comparing this to postrun",
+  "rule": "cd /home/user/Demo && find src -name \"*.js\" -type f | sort | xargs sha256sum | sha256sum  (RELATIVE paths — sha256sum hashes paths too, per DIGEST CHARACTER note)",
+  "srcTree": "3fea650a4d645857e4843149d19e5445f133ac33172a321c128517a87a7a7a57",
+  "head": "47de8f1",
+  "srcDirtyFiles": 0
+ },
+ "postrun": null
+}
