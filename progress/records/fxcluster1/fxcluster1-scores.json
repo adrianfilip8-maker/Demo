@@ -1,0 +1,398 @@
+{
+ "at": "2026-08-05T16:39:45.158Z",
+ "arms": {
+  "guard.base": {
+   "roiMedL": 94.12,
+   "roiMeanRmB": 21.29,
+   "roiWarmPx": 19033,
+   "airColMedL": 27.55,
+   "figureMedL": 23.4
+  },
+  "guard.base2": {
+   "roiMedL": 96.18,
+   "roiMeanRmB": 22.43,
+   "roiWarmPx": 19574,
+   "airColMedL": 27.5,
+   "figureMedL": 23.39
+  },
+  "guard.cand": {
+   "roiMedL": 100.6,
+   "roiMeanRmB": 24.06,
+   "roiWarmPx": 20368,
+   "airColMedL": 27.76,
+   "figureMedL": 23.4
+  },
+  "guard.restore": {
+   "roiMedL": 98.39,
+   "roiMeanRmB": 22.96,
+   "roiWarmPx": 19754,
+   "airColMedL": 27.57,
+   "figureMedL": 22.9
+  },
+  "traversal.base": {
+   "hookDiscBlue": 0,
+   "hookDiscUnionPx": 8463,
+   "strictBand": 0,
+   "relaxedBlueFrame": 2786,
+   "hooksInFrame": [
+    {
+     "i": 4,
+     "px": [
+      591,
+      185
+     ],
+     "maxL": 147,
+     "maxBmR": 55
+    },
+    {
+     "i": 5,
+     "px": [
+      507,
+      239
+     ],
+     "maxL": 115,
+     "maxBmR": 63
+    },
+    {
+     "i": 6,
+     "px": [
+      434,
+      268
+     ],
+     "maxL": 126,
+     "maxBmR": 54
+    }
+   ]
+  },
+  "traversal.cand": {
+   "hookDiscBlue": 440,
+   "hookDiscUnionPx": 8463,
+   "strictBand": 236,
+   "relaxedBlueFrame": 3387,
+   "hooksInFrame": [
+    {
+     "i": 4,
+     "px": [
+      591,
+      185
+     ],
+     "maxL": 246,
+     "maxBmR": 59
+    },
+    {
+     "i": 5,
+     "px": [
+      507,
+      239
+     ],
+     "maxL": 210,
+     "maxBmR": 77
+    },
+    {
+     "i": 6,
+     "px": [
+      434,
+      268
+     ],
+     "maxL": 208,
+     "maxBmR": 82
+    }
+   ]
+  },
+  "traversal.restore": {
+   "hookDiscBlue": 440,
+   "hookDiscUnionPx": 8463,
+   "strictBand": 236,
+   "relaxedBlueFrame": 3341,
+   "hooksInFrame": [
+    {
+     "i": 4,
+     "px": [
+      591,
+      185
+     ],
+     "maxL": 246,
+     "maxBmR": 59
+    },
+    {
+     "i": 5,
+     "px": [
+      507,
+      239
+     ],
+     "maxL": 210,
+     "maxBmR": 77
+    },
+    {
+     "i": 6,
+     "px": [
+      434,
+      268
+     ],
+     "maxL": 208,
+     "maxBmR": 82
+    }
+   ]
+  },
+  "combat.base": {
+   "figMedSat": 0.37,
+   "figMedL": 154.2,
+   "chalkShare": 0.136,
+   "goldPx": 21602,
+   "bluePx": 10,
+   "blobPx": 7235,
+   "blobBbox": [
+    363,
+    358,
+    534,
+    442
+   ],
+   "blobMedSatL200": 0.159,
+   "blobL200n": 12956,
+   "brightBand": {
+    "n": 7878,
+    "medSat": 0.146
+   }
+  },
+  "combat.cand": {
+   "figMedSat": 0.408,
+   "figMedL": 146.1,
+   "chalkShare": 0.061,
+   "goldPx": 17560,
+   "bluePx": 7,
+   "blobPx": 1655,
+   "blobBbox": [
+    393,
+    383,
+    490,
+    438
+   ],
+   "blobMedSatL200": 0.192,
+   "blobL200n": 5210,
+   "brightBand": {
+    "n": 4054,
+    "medSat": 0.177
+   }
+  },
+  "combat.restore": {
+   "figMedSat": 0.382,
+   "figMedL": 157.6,
+   "chalkShare": 0.147,
+   "goldPx": 21928,
+   "bluePx": 10,
+   "blobPx": 8465,
+   "blobBbox": [
+    357,
+    358,
+    553,
+    442
+   ],
+   "blobMedSatL200": 0.165,
+   "blobL200n": 14780,
+   "brightBand": {
+    "n": 9356,
+    "medSat": 0.15
+   }
+  },
+  "interior.ship": {
+   "coverageL120": 0.0125,
+   "nComps": 6,
+   "widest": 44,
+   "top": [
+    {
+     "w": 44,
+     "h": 51,
+     "px": 1453,
+     "cx": 1013,
+     "cy": 176,
+     "medRGB": [
+      207,
+      172,
+      141
+     ],
+     "dNearestFlame": 515
+    },
+    {
+     "w": 15,
+     "h": 5,
+     "px": 62,
+     "cx": 569,
+     "cy": 5,
+     "medRGB": [
+      149,
+      140,
+      125
+     ],
+     "dNearestFlame": 226
+    },
+    {
+     "w": 14,
+     "h": 2,
+     "px": 20,
+     "cx": 1024,
+     "cy": 47,
+     "medRGB": [
+      202,
+      149,
+      125
+     ],
+     "dNearestFlame": 552
+    }
+   ]
+  },
+  "dunes.base": {
+   "deltaMedL": 1.7,
+   "pyramidMedL": 149.8,
+   "skyMedL": 151.5,
+   "leftEdge": {
+    "rows": 107,
+    "meanEdgeStep": 5.08,
+    "skyNoiseStep16px": 11.39
+   },
+   "templeMedL": 109.78,
+   "groundMedL": 77.53
+  },
+  "dunes.cand": {
+   "deltaMedL": 2.3,
+   "pyramidMedL": 142.4,
+   "skyMedL": 144.7,
+   "leftEdge": {
+    "rows": 107,
+    "meanEdgeStep": 5.17,
+    "skyNoiseStep16px": 12.81
+   },
+   "templeMedL": 101.14,
+   "groundMedL": 77.46
+  },
+  "dunes.restore": {
+   "deltaMedL": 1.7,
+   "pyramidMedL": 149.8,
+   "skyMedL": 151.5,
+   "leftEdge": {
+    "rows": 107,
+    "meanEdgeStep": 5.08,
+    "skyNoiseStep16px": 11.39
+   },
+   "templeMedL": 109.78,
+   "groundMedL": 77.53
+  }
+ },
+ "quantities": {
+  "A": {
+   "Q-A1 ΔmedL cand-base, ROI(340,280,700,350)": {
+    "value": 6.48,
+    "band": "[+3.0, +45.0]"
+   },
+   "noise |base2-base| ROI": {
+    "value": 2.06,
+    "band": "<= 1.0"
+   },
+   "noise |restore-base| ROI": {
+    "value": 4.27,
+    "band": "<= 1.0"
+   },
+   "Q-A2 figure(852,220,990,700) medL cand-base": {
+    "value": 0,
+    "band": ">= -3.0"
+   },
+   "Q-A3 air column |Δ| (context, not a gate)": {
+    "value": 0.21,
+    "band": "expected <= 8, report"
+   }
+  },
+  "B": {
+   "Q-B1 hook-disc bright-blue px (base)": {
+    "value": 0,
+    "band": "base <= 10"
+   },
+   "Q-B1 hook-disc bright-blue px (cand)": {
+    "value": 440,
+    "band": "[60, 4000]"
+   },
+   "Q-B2 strict #8fd8ff band frame-wide (cand)": {
+    "value": 236,
+    "band": "[10, 3000] NON-GATING"
+   },
+   "noise |restore-base| on Q-B1": {
+    "value": 440,
+    "band": "<= 5 px"
+   }
+  },
+  "C": {
+   "Q-C1 figure medSat (base)": {
+    "value": 0.37,
+    "band": "0.370±0.02 (frame-anchored)"
+   },
+   "Q-C1 figure medSat (cand)": {
+    "value": 0.408,
+    "band": "[0.40, 0.62]"
+   },
+   "Q-C2 chalk share (base)": {
+    "value": 0.136,
+    "band": "0.137±0.010"
+   },
+   "Q-C2 chalk share (cand)": {
+    "value": 0.061,
+    "band": "[0.015, 0.095]"
+   },
+   "Q-C3 flash blob px (base)": {
+    "value": 7235,
+    "band": "7304±15% (frame-anchored)"
+   },
+   "Q-C3 flash blob px (cand)": {
+    "value": 1655,
+    "band": "[400, 4800]"
+   },
+   "Q-C4 blob-bbox medSat at L>=200 (cand)": {
+    "value": 0.192,
+    "band": ">= 0.20"
+   },
+   "restore gates (vs base tolerances)": {
+    "medSat": {
+     "value": 0.382,
+     "band": "base±0.02"
+    },
+    "chalk": {
+     "value": 0.147,
+     "band": "base±0.010"
+    },
+    "blob": {
+     "value": 8465,
+     "band": "base±15%"
+    }
+   }
+  },
+  "D": {
+   "rail: ceiling warm-bright coverage (R-B>=10 & L>=120)": {
+    "value": "1.25%",
+    "band": "<= 2.5%"
+   },
+   "rail: widest warm-bright component (>=20px comps)": {
+    "value": "44 px",
+    "band": "<= 60 px"
+   }
+  },
+  "E": {
+   "Q-E1 sky-pyramid ΔmedL (base)": {
+    "value": 1.7,
+    "band": "1.7±1.5 (known-bad)"
+   },
+   "Q-E1 sky-pyramid ΔmedL (cand)": {
+    "value": 2.3,
+    "band": "[+8, +22]"
+   },
+   "Q-E2 temple rect |ΔmedL| cand-base": {
+    "value": 8.64,
+    "band": "<= 6.0"
+   },
+   "Q-E3 ground band |ΔmedL| cand-base": {
+    "value": 0.07,
+    "band": "<= 4.0"
+   },
+   "noise |restore-base| on Q-E1": {
+    "value": 0,
+    "band": "<= 1.0"
+   }
+  }
+ }
+}

@@ -92,3 +92,37 @@ sealed masks verbatim and measures only — every threshold below is quoted from
 ## 6. Verdicts, ship list, seam fate
 
 (pending scoring)
+
+---
+
+## PER-ARM VERDICTS — scored by the coordinator at first wake per §163.2 (committed scorer score-all.mjs over the sealed instrument; FX transcripts died in the §172 rollback)
+
+- **A (cone heading −0.20): UNSCOREABLE.** Q-A1 +6.48 sits in [+3,+45] and Q-A2 holds (0 ≥ −3),
+  but the arm's own noise gate breached: |base2−base| 2.06 and |restore−base| 4.27 against the
+  registered ≤1.0. The ROI is noisier across identical arms than the seal registered (guard idle
+  + FX flicker), so the §13 calibration the 3× clause rests on is void — a +6.48 signal cannot
+  be certified at 3× the *measured* noise. Nothing to revert (runtime poke). Successor: a
+  noise-tolerant design (multi-frame median or frozen guard animation in staging), same lever.
+- **B (sparkle preroll): UNSCOREABLE on the letter; mechanism PROVEN.** Base 0 ≤ 10 (attribution
+  correct), cand 440 ∈ [60,4000] — the §2.1.6 mandatory grammar renders, and Q-B2's 236 strict-
+  band px mean no colour re-registration is needed. But the restore gate read 440 vs ≤5: the
+  preroll's born-stamp back-dating persists after the flag re-asserts OFF, so restore ≠ base and
+  §94.2d's success reading fails. The contamination is downstream of base→cand and mechanistically
+  the treatment's own persistence — recorded, not defended. NO SHIP this seal; the corrected
+  re-run (restore by re-stage, one boot, traversal only) is the cheapest item in the queue.
+- **C (cane flash recolour): NO SHIP by Q-C4.** Seven of eight quantities in band (chalk halved
+  0.136→0.061, blob 7235→1655 px, medSat 0.370→0.408, base anchors reproduce), but the blob-bbox
+  medSat at L≥200 read 0.192 against ≥0.20 — the recoloured core is still a shade too pale, and
+  the restore blob (8465 vs 7304±15%) wobbles with the registered flash-phase caveat. Successor:
+  warmer col0 on the same block; the direction and magnitude are proven.
+- **D (interior motes): VERIFICATION PASS.** Coverage 1.25% ≤ 2.5%, widest 44 px ≤ 60. CRITIC's
+  156-px/11.3% population is confirmed absent on the current tree; the stale-frame hazard stands
+  recorded; the rails become regression guards.
+- **E (dunes fog anchor): NO SHIP.** Q-E1 cand 2.3 against [+8,+22] — the ×0.75 anchor barely
+  moves the pyramid separation — and Q-E2's temple collateral breached (8.64 > 6.0). The
+  isoluminance driver is not the anchor colour alone; the finding reinforces the seal's own
+  routing: the dead `setAtmosphere()` side-door wiring (SHADING's) is the real fix.
+
+**Ships from this seal: none. The committed seams stay (registered, debug-gated, proven inert
+by base-arm bit-identity). Successor queue: B's corrected re-run (cheapest), C's warmer core,
+A's noise-tolerant re-design, E rides SHADING's atmosphere-wiring fix.**
