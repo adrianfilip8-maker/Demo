@@ -7,16 +7,21 @@
  *   and the cheek band below.
  *
  * Rows and outboard side come from capbill-proj.mjs's projection machinery at the capture
- * tree (the model built by THIS file with the same skin/pose/yaw math, projected through the
- * REAL perspective shot camera at 1280x720 rather than the 420-crop orthographic basis —
- * validated by reproducing the prereg's own px/m figures, 289.6 closeup / 168.3 combat).
- * The bill rows are padded ±25 px per the seal ("pose/IK offsets the projector cannot see").
+ * tree (the model built by THIS file with the same skin/pose/yaw/raster math, projected
+ * through the REAL perspective shot camera at 1280x720 rather than the 420-crop orthographic
+ * basis — validated by reproducing the prereg's own px/m figures, 289.6 closeup / 168.3
+ * combat, and its px-scale E predictions). The bill rows are padded ±25 px per the seal
+ * ("pose/IK offsets the projector cannot see").
  *
  * Implementation choices the seal leaves to the scorer, STATED before frames are read:
- *  - "registered bill rows" = union of the projected brim-tube row extents of the base AND
- *    yawR10 variants (the rows where a bill silhouette event can live in either arm), padded
- *    ±25 and clamped inside the figure (crownTop+2 .. chin-2). One row set per shot, shared
- *    by all arms — E(A) and E(B) are compared on identical rows.
+ *  - "registered bill rows" = the rows of the bill's silhouette CONTRIBUTION — pixels present
+ *    with the brim tris drawn that vanish with them deleted (capbill-proj.mjs's own
+ *    billContribution definition, rasterised here at capture perspective), union of the base
+ *    AND yawR10 variants (the rows where a bill event can live in either arm), padded ±25 and
+ *    clamped inside the figure (crownTop+2 .. chin-2). One row set per shot, shared by all
+ *    arms — E(A) and E(B) are compared on identical rows. NOT the raw brim-vert row extent:
+ *    the brim tube wraps the head, and at sly-closeup its occluded wrap rows reach the crown
+ *    apex, which would leave no crown band above (caught by the --dryrun before any frame).
  *  - crown band = the ≤12 figure rows immediately ABOVE the unpadded bill core rows;
  *    cheek band = the ≤12 figure rows immediately BELOW. Anchors abut the unpadded core, not
  *    the padded scan band, because at sly-closeup the +25 pad reaches the crown apex (sky).
@@ -103,9 +108,12 @@ function measureE(im, geom) {
     const use = xs.length > 4 ? xs.slice(1, -1) : xs;
     return { x: +(use.reduce((a, b) => a + b, 0) / use.length).toFixed(2), n: xs.length };
   };
-  // crown band: ≤BANDN figure rows immediately above the core; cheek band: immediately below
+  // crown band: ≤BANDN rows immediately above the core; cheek band: immediately below.
+  // Deliberately NOT clamped to the projected crownTop: the projector's apex can sit below the
+  // real one (runtime look/spring/IK layers the offline basis lacks — Animation.js:447-456),
+  // and per-row validity (outline found on the frame) already drops rows above the real apex.
   const crownRows = [], cheekRows = [];
-  for (let y = coreRows[0] - 1; y >= Math.max(crownTop + 2, coreRows[0] - BANDN) ; y--) crownRows.push(y);
+  for (let y = coreRows[0] - 1; y >= Math.max(0, coreRows[0] - BANDN); y--) crownRows.push(y);
   for (let y = coreRows[1] + 1; y <= Math.min(chin - 2, coreRows[1] + BANDN); y++) cheekRows.push(y);
   const crown = band(crownRows), cheek = band(cheekRows);
   if (!crown || !cheek) return { E: null, reason: 'anchor band <3 valid rows', crown, cheek };
@@ -262,6 +270,47 @@ async function buildProjection() {
     return out;
   }
 
+  /* tris tagged with an isBill flag (any corner in brimSet) — capbill-proj's buildTris */
+  const idx = geo.index.array;
+  const TRIS = [];
+  for (let i = 0; i < idx.length; i += 3) {
+    const a = idx[i], b = idx[i + 1], c = idx[i + 2];
+    TRIS.push([a, b, c, brimSet.has(a) || brimSet.has(b) || brimSet.has(c)]);
+  }
+
+  /* coverage raster at capture resolution (depth-buffered, no shading — shape only), same
+   * scheme as capbill-proj.mjs's raster() with the ortho toPx swapped for the perspective
+   * projection. `drop` skips bill tris. Returns a Uint8Array coverage mask. */
+  function rasterCoverage(P /* Float32Array x,y,viewZ per vert */, drop) {
+    const cov = new Uint8Array(W * H);
+    const depth = new Float32Array(W * H).fill(1e9); // smaller viewZ = nearer
+    for (const [a, b, c, isBill] of TRIS) {
+      if (drop && isBill) continue;
+      const ax = P[a * 3], ay = P[a * 3 + 1], az = P[a * 3 + 2];
+      const bx = P[b * 3], by = P[b * 3 + 1], bz = P[b * 3 + 2];
+      const cx2 = P[c * 3], cy2 = P[c * 3 + 1], cz2 = P[c * 3 + 2];
+      if (az <= 0 || bz <= 0 || cz2 <= 0) continue; // behind camera
+      const x0 = Math.max(0, Math.floor(Math.min(ax, bx, cx2)));
+      const x1 = Math.min(W - 1, Math.ceil(Math.max(ax, bx, cx2)));
+      const y0 = Math.max(0, Math.floor(Math.min(ay, by, cy2)));
+      const y1 = Math.min(H - 1, Math.ceil(Math.max(ay, by, cy2)));
+      if (x1 < x0 || y1 < y0) continue;
+      const d = (bx - ax) * (cy2 - ay) - (cx2 - ax) * (by - ay);
+      if (Math.abs(d) < 1e-9) continue;
+      for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
+        const w0 = ((bx - x) * (cy2 - y) - (cx2 - x) * (by - y)) / d;
+        const w1 = ((cx2 - x) * (ay - y) - (ax - x) * (cy2 - y)) / d;
+        const w2 = 1 - w0 - w1;
+        if (w0 < 0 || w1 < 0 || w2 < 0) continue;
+        const z = w0 * az + w1 * bz + w2 * cz2;
+        const o = y * W + x;
+        if (z >= depth[o]) continue;
+        depth[o] = z; cov[o] = 1;
+      }
+    }
+    return cov;
+  }
+
   /* perspective projection through the REAL shot camera at capture resolution */
   const out = {};
   for (const shotName of SHOT_NAMES) {
@@ -274,61 +323,114 @@ async function buildProjection() {
     cam.lookAt(new THREE.Vector3().fromArray(shot.target));
     cam.updateMatrixWorld(true);
     cam.updateProjectionMatrix();
-    const proj = (mx, my, mz) => {
-      // world = RotY(yaw)·model + player.pos (occlude.mjs's convention, inverted)
-      const wx = mx * cy + mz * sy, wz = -mx * sy + mz * cy;
-      const v = new THREE.Vector3(wx + pp[0], my + pp[1], wz + pp[2]).project(cam);
-      return [(v.x + 1) / 2 * W, (1 - v.y) / 2 * H];
+    const viewInv = cam.matrixWorldInverse;
+    const projAll = (V) => {
+      const P = new Float32Array(V.length);
+      const v = new THREE.Vector3();
+      for (let i = 0; i < V.length; i += 3) {
+        // world = RotY(yaw)·model + player.pos (occlude.mjs's convention, inverted)
+        const wx = V[i] * cy + V[i + 2] * sy, wz = -V[i] * sy + V[i + 2] * cy;
+        v.set(wx + pp[0], V[i + 1] + pp[1], wz + pp[2]);
+        const vz = -(viewInv.elements[2] * v.x + viewInv.elements[6] * v.y + viewInv.elements[10] * v.z + viewInv.elements[14]);
+        v.project(cam);
+        P[i] = (v.x + 1) / 2 * W; P[i + 1] = (1 - v.y) / 2 * H; P[i + 2] = vz;
+      }
+      return P;
     };
     const sets = {};
     for (const [vn, deg] of [['base', 0], ['yawR10', -10]]) {
       applyCapYaw(deg);
       applyClip(shot.player.pose);
       const V = skin();
+      const P = projAll(V);
       const bbox = (idxSet) => {
         let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9;
         for (const i of idxSet) {
-          const [px, py] = proj(V[i * 3], V[i * 3 + 1], V[i * 3 + 2]);
+          const px = P[i * 3], py = P[i * 3 + 1];
           if (px < x0) x0 = px; if (px > x1) x1 = px;
           if (py < y0) y0 = py; if (py > y1) y1 = py;
         }
         return [x0, x1, y0, y1];
       };
       let chin = -1e9;
-      for (const i of JAWV) { const [, py] = proj(V[i * 3], V[i * 3 + 1], V[i * 3 + 2]); if (py > chin) chin = py; }
-      sets[vn] = { head: bbox(new Set([...HEADF, ...capSet])), brim: bbox(brimSet), chin };
+      for (const i of JAWV) { const py = P[i * 3 + 1]; if (py > chin) chin = py; }
+      /* the bill's silhouette contribution at capture perspective: coverage with brim minus
+         coverage without — capbill-proj.mjs's billContribution, at frame scale */
+      const covWith = rasterCoverage(P, false);
+      const covNo = rasterCoverage(P, true);
+      let cPx = 0, cx0 = 1e9, cx1 = -1e9, cyr0 = 1e9, cyr1 = -1e9, maxRun = 0;
+      const rows = new Set();
+      for (let y = 0; y < H; y++) {
+        let run = 0;
+        for (let x = 0; x < W; x++) {
+          const o = y * W + x;
+          const added = covWith[o] === 1 && covNo[o] === 0;
+          if (added) {
+            cPx++; rows.add(y); run++;
+            if (run > maxRun) maxRun = run;
+            if (x < cx0) cx0 = x; if (x > cx1) cx1 = x;
+            if (y < cyr0) cyr0 = y; if (y > cyr1) cyr1 = y;
+          } else run = 0;
+        }
+      }
+      sets[vn] = { head: bbox(new Set([...HEADF, ...capSet])), chin,
+        contrib: { px: cPx, maxRunPx: maxRun, bbox: cPx ? [cx0, cx1, cyr0, cyr1] : null, rows } };
+      if (process.env.CAPBILL_DEBUG) {
+        // PGM dump of coverage (grey), brim-only contribution (white) — scratchpad diagnostics
+        const dump = Buffer.alloc(W * H);
+        for (let o = 0; o < W * H; o++) dump[o] = covWith[o] ? (covNo[o] ? 100 : 255) : 0;
+        const hdr = Buffer.from(`P5\n${W} ${H}\n255\n`, 'ascii');
+        writeFileSync(path.join(process.env.CAPBILL_DEBUG, `dbg-${shotName}-${vn}.pgm`), Buffer.concat([hdr, dump]));
+      }
+      if (process.env.CAPBILL_DEBUG) {
+        const crownOnly = new Set([...capSet].filter((i) => !brimSet.has(i)));
+        const cb = bbox(crownOnly), bb = bbox(brimSet);
+        console.log(`  [dbg ${shotName} ${vn}] crown-vert bbox [${cb.map((v) => v.toFixed(1))}]  brim-vert bbox [${bb.map((v) => v.toFixed(1))}]`);
+        if (vn === 'base' && shotName === 'sly-closeup') {
+          const rows2 = [...crownOnly].map((i) => {
+            const [xh, yh, zh] = toHead(pos0[i * 3], pos0[i * 3 + 1], pos0[i * 3 + 2]);
+            return { i, py: P[i * 3 + 1], px: P[i * 3], g: vGroup[i], dom: sly.boneNames[dominant(i)], yh: +yh.toFixed(3), xh: +xh.toFixed(3), zh: +zh.toFixed(3) };
+          }).sort((a, b) => b.py - a.py).slice(0, 12);
+          for (const r of rows2) console.log(`    [dbg outlier] v${r.i} g${r.g} dom=${r.dom} head(${r.xh},${r.yh},${r.zh}) -> px(${r.px.toFixed(1)},${r.py.toFixed(1)})`);
+        }
+      }
       if (vn === 'base') {
-        // px/m at the head, vertical: prereg cross-check (289.6 / 168.3)
-        const hc = [(sets.base.head[0] + sets.base.head[1]) / 2, 0];
         let cxm = 0, cym = 0, czm = 0, n = 0;
         for (const i of HEADF) { cxm += V[i * 3]; cym += V[i * 3 + 1]; czm += V[i * 3 + 2]; n++; }
         cxm /= n; cym /= n; czm /= n;
-        const [, pa] = proj(cxm, cym - 0.05, czm), [, pb] = proj(cxm, cym + 0.05, czm);
+        // px/m at the head, vertical: prereg cross-check (289.6 / 168.3)
+        const pa = projAll(new Float32Array([cxm, cym - 0.05, czm]))[1];
+        const pb = projAll(new Float32Array([cxm, cym + 0.05, czm]))[1];
         sets.pxPerM = Math.abs(pa - pb) / 0.10;
-        sets.headCx = hc[0];
+        sets.headCx = (sets.base.head[0] + sets.base.head[1]) / 2;
       }
     }
     applyCapYaw(0);
     const u = (a, b) => [Math.min(a[0], b[0]), Math.max(a[1], b[1]), Math.min(a[2], b[2]), Math.max(a[3], b[3])];
     const headU = u(sets.base.head, sets.yawR10.head);
-    const brimU = u(sets.base.brim, sets.yawR10.brim);
     const crownTop = Math.round(headU[2]);
     const chin = Math.round(Math.max(sets.base.chin, sets.yawR10.chin));
     const headCx = Math.round(sets.headCx);
-    const brimCx = (brimU[0] + brimU[1]) / 2;
-    const outboard = brimCx < headCx ? 'left' : 'right';
-    const coreRows = [Math.round(brimU[2]), Math.round(brimU[3])];
+    /* union of the two variants' contribution regions — the registered bill region */
+    const cbA = sets.base.contrib.bbox, cbB = sets.yawR10.contrib.bbox;
+    if (!cbB) throw new Error(`${shotName}: yawR10 bill contribution is EMPTY in projection — mapping broken, do not score`);
+    const contribU = cbA ? u(cbA, cbB) : cbB;
+    const allRows = [...new Set([...sets.base.contrib.rows, ...sets.yawR10.contrib.rows])].sort((a, b) => a - b);
+    const coreRows = [allRows[0], allRows[allRows.length - 1]];
+    const contribCx = (contribU[0] + contribU[1]) / 2;
+    const outboard = contribCx < headCx ? 'left' : 'right';
     const scanRows = [Math.max(crownTop + 2, coreRows[0] - PAD), Math.min(chin - 2, coreRows[1] + PAD)];
-    const billOutX = outboard === 'left' ? Math.round(brimU[0]) : Math.round(brimU[1]);
+    const billOutX = outboard === 'left' ? Math.round(contribU[0]) : Math.round(contribU[1]);
     const strip = outboard === 'left'
       ? { x0: billOutX - 40, x1: billOutX - 1, rows: coreRows }
       : { x0: billOutX + 1, x1: billOutX + 40, rows: coreRows };
     const scanStartX = outboard === 'left' ? billOutX - 50 : billOutX + 50;
-    const billROI = [Math.round(brimU[0]) - PAD, Math.round(brimU[1]) + PAD, coreRows[0] - PAD, coreRows[1] + PAD];
+    const billROI = [Math.round(contribU[0]) - PAD, Math.round(contribU[1]) + PAD, coreRows[0] - PAD, coreRows[1] + PAD];
     const headBboxPad = [Math.round(headU[0]) - PAD, Math.round(headU[1]) + PAD, Math.round(headU[2]) - PAD, Math.round(headU[3]) + PAD];
     out[shotName] = { pxPerM: +sets.pxPerM.toFixed(1), crownTop, chin, headCx, outboard,
       coreRows, scanRows, scanStartX, strip, billROI, headBboxPad,
-      baseBrim: sets.base.brim.map((v) => +v.toFixed(1)), yawBrim: sets.yawR10.brim.map((v) => +v.toFixed(1)) };
+      contribBase: { px: sets.base.contrib.px, maxRunPx: sets.base.contrib.maxRunPx, bbox: cbA },
+      contribYawR10: { px: sets.yawR10.contrib.px, maxRunPx: sets.yawR10.contrib.maxRunPx, bbox: cbB } };
   }
   return out;
 }
@@ -371,8 +473,10 @@ for (const s of SHOT_NAMES) {
   const g = projGeom[s];
   console.log(`\n${s}: pxPerM ${g.pxPerM} (prereg ${s === 'sly-closeup' ? '289.6' : '168.3'})  outboard ${g.outboard}`
     + `\n  crownTop ${g.crownTop}  chin ${g.chin}  headCx ${g.headCx}`
+    + `\n  bill contribution: base ${g.contribBase.px}px maxRun ${g.contribBase.maxRunPx}px bbox [${g.contribBase.bbox}]`
+    + `\n                     yawR10 ${g.contribYawR10.px}px maxRun ${g.contribYawR10.maxRunPx}px bbox [${g.contribYawR10.bbox}]`
+    + `\n  (prereg projection at 420-crop said: closeup 50/648px, combat 2336/2941px; maxProtr closeup 4.6/11.9px, combat 22.4px at capture scale)`
     + `\n  bill core rows ${g.coreRows[0]}..${g.coreRows[1]}  scan rows ${g.scanRows[0]}..${g.scanRows[1]}  scanStartX ${g.scanStartX}`
-    + `\n  base brim bbox [${g.baseBrim}]  yawR10 brim bbox [${g.yawBrim}]`
     + `\n  scoreability strip x ${g.strip.x0}..${g.strip.x1} rows ${g.strip.rows[0]}..${g.strip.rows[1]}  billROI [${g.billROI}]  headBbox+25 [${g.headBboxPad}]`);
 }
 writeFileSync(path.join(REC, 'capbill-rows.json'), JSON.stringify(projGeom, null, 2));
@@ -380,6 +484,14 @@ if (mode === '--dryrun') { console.log('\n(dry run — rows written to capbill-r
 
 /* ------------------------------- scoring ---------------------------------- */
 const run = JSON.parse(readFileSync(path.join(REC, 'capbill.json'), 'utf8'));
+{ // rows provenance: the projection above was built from the CURRENT tree — it must be the
+  // capture's base tree (the harness reverts the token line, so scoring tree == srcTree0).
+  const { execSync } = await import('node:child_process');
+  const treeNow = execSync('find src -name \'*.js\' | sort | xargs sha256sum | sha256sum', { cwd: ROOT }).toString().trim().slice(0, 16);
+  if (treeNow !== run.srcTree0) {
+    console.log(`WARNING: srcTree at scoring ${treeNow} != capture base tree ${run.srcTree0} — the rows above are from a MOVED tree; note this in the record`);
+  }
+}
 const frames = {};
 for (const arm of ['A', 'B', 'BACK']) for (const s of SHOT_NAMES) {
   const f = path.join(REC, 'frames', `${s}-${arm}.png`);
@@ -391,7 +503,9 @@ const R = { seal: 'PREREG-capbill.md', scoredAt: new Date().toISOString(),
   srcTree0: run.srcTree0, srcTreeEdited: run.srcTreeEdited, selftest: 'PASS', geom: projGeom,
   scoreability: {}, E: {}, gates: {}, verdict: null };
 
-/* scoreability FIRST (registered order) */
+/* scoreability FIRST (registered order). An UNSCOREABLE result stops the E-gates from being
+ * interpreted, but GATE 3 (validity) and GATE 4 (collateral) do not depend on the backdrop
+ * and are computed regardless — the verdict stays UNSCOREABLE; the evidence still lands. */
 let unscoreable = false;
 for (const s of SHOT_NAMES) {
   const r = stripSky(frames[`${s}-A`], projGeom[s].strip);
@@ -399,14 +513,8 @@ for (const s of SHOT_NAMES) {
   console.log(`\nscoreability ${s}: strip ${r.n}px  non-sky ${r.bad}  minLuma ${r.minL}  -> ${r.allSky ? 'SCOREABLE' : 'UNSCOREABLE'}`);
   if (!r.allSky) unscoreable = true;
 }
-if (unscoreable) {
-  R.verdict = 'UNSCOREABLE — registered outcome (prereg §7: fallback is re-registration against the actual backdrop, not a threshold change)';
-  writeFileSync(path.join(REC, 'capbill-score-out.json'), JSON.stringify(R, null, 2));
-  console.log(`\nVERDICT: ${R.verdict}`);
-  process.exit(0);
-}
 
-/* E for every arm x shot */
+/* E attempted for every arm x shot (reported even under UNSCOREABLE, labeled as unofficial) */
 for (const s of SHOT_NAMES) for (const arm of ['A', 'B', 'BACK']) {
   const r = measureE(frames[`${s}-${arm}`], projGeom[s]);
   R.E[`${s}-${arm}`] = r;
@@ -414,13 +522,8 @@ for (const s of SHOT_NAMES) for (const arm of ['A', 'B', 'BACK']) {
 }
 const EA1 = R.E['sly-closeup-A'].E, EB1 = R.E['sly-closeup-B'].E;
 const EA2 = R.E['combat-A'].E, EB2 = R.E['combat-B'].E;
-if ([EA1, EB1, EA2, EB2].some((v) => v == null)) {
-  R.verdict = 'INSTRUMENT-SUSPECT: E extraction returned null on a scored arm — do not convert; see reasons above';
-  writeFileSync(path.join(REC, 'capbill-score-out.json'), JSON.stringify(R, null, 2));
-  console.log(`\nVERDICT: ${R.verdict}`); process.exit(0);
-}
 
-/* GATE 3 — validity (checked before interpreting E: a void run scores nothing) */
+/* GATE 3 — validity (independent of backdrop) */
 const sameTree = run.arms?.A?.srcAtArm && run.arms.A.srcAtArm === run.arms.BACK?.srcAtArm;
 R.gates.g3 = { sameTree, diffs: {} };
 let g3pass = true;
@@ -439,22 +542,7 @@ if (!sameTree) {
 }
 R.gates.g3.pass = g3pass;
 
-/* SIGN control in frame */
-if (EB1 < EA1) {
-  R.verdict = 'VOID — sign control failed in frame (B reduced closeup E): projector sign convention or token wiring wrong; fix the instrument, do not interpret (prereg §7)';
-  writeFileSync(path.join(REC, 'capbill-score-out.json'), JSON.stringify(R, null, 2));
-  console.log(`\nVERDICT: ${R.verdict}`); process.exit(0);
-}
-
-/* GATE 1 */
-const g1cal = EA1 >= 1 && EA1 <= 7;
-const g1 = g1cal && EB1 >= 8 && (EB1 - EA1) >= 5;
-R.gates.g1 = { calibration: g1cal, EA: EA1, EB: EB1, delta: +(EB1 - EA1).toFixed(1), pass: g1, calibrationNote: g1cal ? 'E(A,closeup) in [1,7] — instrument calibrated (projection said 4.6)' : `E(A,closeup)=${EA1} OUTSIDE [1,7] — instrument suspect, B not scored against it` };
-/* GATE 2 */
-const g2cal = EA2 >= 15 && EA2 <= 30;
-const g2 = g2cal && EB2 >= EA2 - 3;
-R.gates.g2 = { calibration: g2cal, EA: EA2, EB: EB2, pass: g2, calibrationNote: g2cal ? 'E(A,combat) in [15,30] (projection said 22.4)' : `E(A,combat)=${EA2} OUTSIDE [15,30] — instrument suspect` };
-/* GATE 4 */
+/* GATE 4 — collateral (independent of backdrop) */
 R.gates.g4 = { shots: {}, headratio: run.headratio, pass: true };
 for (const s of SHOT_NAMES) {
   const d = diffCount(frames[`${s}-A`], frames[`${s}-B`], projGeom[s].headBboxPad);
@@ -464,27 +552,39 @@ for (const s of SHOT_NAMES) {
   console.log(`GATE 4 ${s}: A-B ${d.total} px differ, ${(share * 100).toFixed(1)}% inside head bbox+25`);
 }
 if (!run.headratio?.unchangedTo2dp) R.gates.g4.pass = false;
+console.log(`GATE 3 ${R.gates.g3.pass ? 'PASS' : 'FAIL'}  (sameTree ${sameTree})   GATE 4 ${R.gates.g4.pass ? 'PASS' : 'FAIL'}  (headratio ${run.headratio?.tokenOff} -> ${run.headratio?.tokenOn})`);
 
-console.log(`\nGATE 1 ${R.gates.g1.pass ? 'PASS' : 'FAIL'}  (E closeup A ${EA1} / B ${EB1}, Δ ${R.gates.g1.delta}; cal ${g1cal})`);
-console.log(`GATE 2 ${R.gates.g2.pass ? 'PASS' : 'FAIL'}  (E combat  A ${EA2} / B ${EB2}; cal ${g2cal})`);
-console.log(`GATE 3 ${R.gates.g3.pass ? 'PASS' : 'FAIL'}  (sameTree ${sameTree})`);
-console.log(`GATE 4 ${R.gates.g4.pass ? 'PASS' : 'FAIL'}  (headratio ${run.headratio?.tokenOff} -> ${run.headratio?.tokenOn})`);
-
-/* verdict per prereg §7/§8 — revert, not defend */
-if (!g1cal || !g2cal) {
-  R.verdict = 'INSTRUMENT-SUSPECT: an arm-A calibration band failed — do not score B against it; re-examine the scorer before any re-queue (registered wording of GATE 1/2)';
-} else if (!R.gates.g3.pass) {
-  R.verdict = 'VOID — GATE 3 (BACK ≢ A beyond threshold and/or bound reading failed); re-queue (prereg §6)';
-} else if (R.gates.g1.pass && R.gates.g2.pass && R.gates.g4.pass) {
-  R.verdict = 'OUTCOME A — all gates pass. Registered meaning: the yaw mechanism holds in the graded frame; ship decision (capYaw −0.175 as TUNE constant, token retired) is the COORDINATOR\'s, per §8. §151.4 closes as "model fixed at 33–45°; dead band relocated to −5..+10 where no scored camera sits" with §5\'s sweep as the honest statement.';
-} else if (!R.gates.g1.pass && R.gates.g2.pass) {
-  R.verdict = 'OUTCOME C — closeup fails: the yaw mechanism is refuted in the graded frame (the shader/ink/PostFX gap shotsil\'s header names). Token off is already the shipped state; do not ship, do not re-tune ψ in this window. §153.6 stands confirmed for all three rotation axes; the bill is not deliverable at 33° by geometry within the measured records (prereg §8C).';
-} else if (R.gates.g1.pass && !R.gates.g2.pass) {
-  R.verdict = 'OUTCOME B — combat paid for closeup: the no-trade premise is wrong in frame. Revert path; do NOT argue elevation/pose after the fact (they are in the projection). Coordinator decides per-shot-condition vs geometry (prereg §8B).';
-} else if (!R.gates.g4.pass) {
-  R.verdict = 'GATE 4 FAIL — the token gated more than the cap (collateral pixels or headratio moved): treat as instrument/wiring defect, revert, re-queue only after the leak is explained.';
+/* verdict per prereg §6/§7/§8 — revert, not defend */
+if (unscoreable) {
+  R.verdict = 'UNSCOREABLE — registered outcome: the 40 px outboard of the projected bill region is not sky in arm A (prereg §6). E-gates not interpreted; GATE 3/4 evidence recorded above. Fallback per §7: re-registration against the backdrop the frame actually has, not a threshold change. Coordinator\'s call.';
+} else if ([EA1, EB1, EA2, EB2].some((v) => v == null)) {
+  R.verdict = 'INSTRUMENT-SUSPECT: E extraction returned null on a scored arm — do not convert; see reasons above';
+} else if (EB1 < EA1) {
+  R.verdict = 'VOID — sign control failed in frame (B reduced closeup E): projector sign convention or token wiring wrong; fix the instrument, do not interpret (prereg §7)';
 } else {
-  R.verdict = 'REFUTED on both bearings — revert (token off is shipped state); record and stop.';
+  const g1cal = EA1 >= 1 && EA1 <= 7;
+  const g1 = g1cal && EB1 >= 8 && (EB1 - EA1) >= 5;
+  R.gates.g1 = { calibration: g1cal, EA: EA1, EB: EB1, delta: +(EB1 - EA1).toFixed(1), pass: g1, calibrationNote: g1cal ? 'E(A,closeup) in [1,7] — instrument calibrated (projection said 4.6)' : `E(A,closeup)=${EA1} OUTSIDE [1,7] — instrument suspect, B not scored against it` };
+  const g2cal = EA2 >= 15 && EA2 <= 30;
+  const g2 = g2cal && EB2 >= EA2 - 3;
+  R.gates.g2 = { calibration: g2cal, EA: EA2, EB: EB2, pass: g2, calibrationNote: g2cal ? 'E(A,combat) in [15,30] (projection said 22.4)' : `E(A,combat)=${EA2} OUTSIDE [15,30] — instrument suspect` };
+  console.log(`\nGATE 1 ${R.gates.g1.pass ? 'PASS' : 'FAIL'}  (E closeup A ${EA1} / B ${EB1}, Δ ${R.gates.g1.delta}; cal ${g1cal})`);
+  console.log(`GATE 2 ${R.gates.g2.pass ? 'PASS' : 'FAIL'}  (E combat  A ${EA2} / B ${EB2}; cal ${g2cal})`);
+  if (!g1cal || !g2cal) {
+    R.verdict = 'INSTRUMENT-SUSPECT: an arm-A calibration band failed — do not score B against it; re-examine the scorer before any re-queue (registered wording of GATE 1/2)';
+  } else if (!R.gates.g3.pass) {
+    R.verdict = 'VOID — GATE 3 (BACK ≢ A beyond threshold and/or bound reading failed); re-queue (prereg §6)';
+  } else if (R.gates.g1.pass && R.gates.g2.pass && R.gates.g4.pass) {
+    R.verdict = 'OUTCOME A — all gates pass. Registered meaning: the yaw mechanism holds in the graded frame; ship decision (capYaw −0.175 as TUNE constant, token retired) is the COORDINATOR\'s, per §8. §151.4 closes as "model fixed at 33–45°; dead band relocated to −5..+10 where no scored camera sits" with §5\'s sweep as the honest statement.';
+  } else if (!R.gates.g1.pass && R.gates.g2.pass) {
+    R.verdict = 'OUTCOME C — closeup fails: the yaw mechanism is refuted in the graded frame (the shader/ink/PostFX gap shotsil\'s header names). Token off is already the shipped state; do not ship, do not re-tune ψ in this window. §153.6 stands confirmed for all three rotation axes; the bill is not deliverable at 33° by geometry within the measured records (prereg §8C).';
+  } else if (R.gates.g1.pass && !R.gates.g2.pass) {
+    R.verdict = 'OUTCOME B — combat paid for closeup: the no-trade premise is wrong in frame. Revert path; do NOT argue elevation/pose after the fact (they are in the projection). Coordinator decides per-shot-condition vs geometry (prereg §8B).';
+  } else if (!R.gates.g4.pass) {
+    R.verdict = 'GATE 4 FAIL — the token gated more than the cap (collateral pixels or headratio moved): treat as instrument/wiring defect, revert, re-queue only after the leak is explained.';
+  } else {
+    R.verdict = 'REFUTED on both bearings — revert (token off is shipped state); record and stop.';
+  }
 }
 writeFileSync(path.join(REC, 'capbill-score-out.json'), JSON.stringify(R, null, 2));
 console.log(`\nVERDICT: ${R.verdict}`);

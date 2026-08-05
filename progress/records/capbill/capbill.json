@@ -1,0 +1,24 @@
+{
+  "seal": "progress/records/PREREG-capbill.md",
+  "startedAt": "2026-08-05T06:02:56.876Z",
+  "regTree": "3fea650a4d645857",
+  "srcTree0": "0ac0479e279468e3",
+  "srcTreeEdited": "086fd03ab4469745",
+  "srcTreeAfterRevert": null,
+  "slySha0": "9d411b84929440600910da5019b3af150bbc2123413bc7bfb98423450ffc0bb7",
+  "slyShaEdited": "98e1cbad2f65d79ebfb9cf88c1e238a4759d2491b2793fbd061e8b02edd3238a",
+  "slyShaAfterRevert": null,
+  "settle": true,
+  "gate0inticket": {
+    "pass": true,
+    "closeupIdenticalToBase": true,
+    "closeupClearRays": true
+  },
+  "headratio": {
+    "tokenOff": "5.03",
+    "tokenOn": "5.03",
+    "unchangedTo2dp": true
+  },
+  "arms": {},
+  "phase": "locked"
+}

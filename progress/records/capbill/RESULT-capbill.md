@@ -62,6 +62,60 @@ Results (full outputs in `gate0-occlude.txt` beside this file):
 
 **The capture is authorized to queue.**
 
+## 2. Scorer built and validated BEFORE the frames (capbill-score.mjs, committed with the run)
+
+Per the seal ("a records scorer implementing exactly this definition, to be committed with the
+run before scoring"), `progress/records/capbill-score.mjs` implements E and all gates verbatim;
+its header states every choice the seal left to the scorer. Validation, all pre-frame:
+
+- **Synthetic selftest (known-good and known-bad, §141.1):** straight edge E=0, slanted edge
+  E=0.4, 12 px bump on straight edge E=12, on slanted edge E=12.4 — all inside ±1. The FIRST
+  version failed the slanted-edge control at E=1.1 (median-anchor staircase quantisation); fixed
+  with subpixel luma-crossing refinement + trimmed-mean anchors. The control caught a real
+  instrument defect before any frame was read.
+- **Projection mapping (dry run):** px/m at the head 294.3 (closeup) / 175.1 (combat) against
+  the prereg's fov-and-distance 289.6 / 168.3 — the perspective mapping reproduces the
+  registered scale. Skinned vertex positions verified BIT-IDENTICAL to `capbill-proj.mjs`'s
+  (same probe verts through both pipelines, 5 decimals).
+- **Registered rows derived from the bill CONTRIBUTION** (pixels present with brim drawn that
+  vanish without it — capbill-proj's own definition, rasterised at capture perspective), union
+  of base ∪ yawR10, padded ±25: closeup rows 102..146 (scan 77..171), combat rows 411..433
+  (scan 386..458), outboard LEFT at both. The first draft used raw brim-vert row extents; the
+  dry run caught the brim's occluded wrap rows reaching the crown apex at closeup (no crown
+  band would remain) and the contribution definition replaced it.
+- **Offline-vs-runtime pose delta, found and understood:** overlaying the projection on the
+  committed same-tree `sbs1/sly-closeup.png` frame registers face/ears/body well, but the cap
+  sits ~10-30 px up-left in the real frame vs the offline basis. Cause read from
+  `Animation.js:447-456`: even under `freezePose` the runtime applies `lookAtLayer`,
+  `springLayer`, `tailLayer` and `_footIK` on top of the sampled clip — exactly the layers the
+  projector's inherited header disclaims, and exactly what the seal's ±25 px pad exists for.
+  The padded row bands bracket the real brim band (~115-150 at closeup) with room.
+
+### 2.1 Scoreability preview on the committed same-tree frames (recorded for honesty, converts nothing)
+
+Measured on `progress/records/sbs1/{sly-closeup,combat}.png` (same shot, same srcTree, same
+tod as the capture will stage — the registered check itself runs on the capture's own arm A):
+
+- closeup strip (x531..570, rows 102..146): median luma **80.5**, share>120 **1.1%** — the
+  backdrop at the bill rows is a wall, not sky.
+- combat strip (x469..508, rows 411..433): median luma 232.1, share>120 **88.0%** — bright,
+  but 12% of strip px are dark (min 29.7).
+
+The scorer's pre-stated reading of "must be sky" is strict (every strip px luma > 120 — written
+into the committed scorer BEFORE this preview). On these numbers the registered E-gates will
+return **UNSCOREABLE at both shots** on the capture too. That is the seal's registered outcome:
+*"UNSCOREABLE, registered as such; the fallback is a re-registration against whatever backdrop
+the frame actually has, not a silent threshold change"* (§7). The capture still runs as sealed:
+GATE 3 (BACK ≡ A validity), GATE 4 (collateral confinement + headratio), and the A↔B in-frame
+pixel evidence are scoreable regardless of backdrop, and the frames are the record the
+coordinator's re-registration would score against.
+
+## 3. Capture run
+
+(Filled in as the run proceeds — launched detached via `tools/launch.sh`, log at
+`progress/records/capbill/capbill-run.log`, provenance at `capbill.json`, frames landing
+directly in `progress/records/capbill/frames/`.)
+
 ## Files this task writes (sweep list, updated as they appear)
 
 - `progress/records/capbill/RESULT-capbill.md` (this file)
