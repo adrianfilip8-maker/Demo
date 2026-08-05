@@ -188,6 +188,30 @@
      },
      "mismatch": false,
      "secs": 25
+    },
+    {
+     "arm": "kb",
+     "requested": [
+      0.6,
+      0.1,
+      0.45
+     ],
+     "readback": {
+      "graze": [
+       0.6,
+       0.1,
+       0.45
+      ],
+      "uTime": 0.8465666666661089,
+      "cover": [
+       0.67,
+       0.72,
+       0.74
+      ],
+      "tod": 0.02
+     },
+     "mismatch": false,
+     "secs": 27
     }
    ],
    "setShot": {

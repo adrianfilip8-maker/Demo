@@ -1,0 +1,13 @@
+{
+ "prereg": "PREREG-mradius.md",
+ "addendum": "ADDENDUM-mradius-arrisweight.md",
+ "chunk": "C1",
+ "shot": "hero",
+ "startedAt": "2026-08-05T20:25:22.245Z",
+ "pristine": {
+  "kitSha": "9ee3506f47a90969fd9e603c7a18dd16530a53f9dc409508bb5f787112dee3cd",
+  "lvlSha": "b2527f77f0676d6ac8ccaa2f172f69157d7e2661f96c47843faa96ef7a42272b",
+  "tree": "7a4630875cac6e36"
+ },
+ "arms": []
+}
