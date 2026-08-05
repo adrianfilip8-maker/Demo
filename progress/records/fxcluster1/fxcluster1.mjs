@@ -62,22 +62,19 @@ const SEAMS = [
     const t = clamp(this.engine.debug?.guardTowardCamera ?? spec.towardCamera ?? 0.35, -0.6, 0.9);`,
   },
   {
+    /* Anchored on the dispose-directly-before-the-FlameField-banner sequence: the
+       _autoHidden fold + one-line dispose alone appears in FOUR classes (LightShafts, Batch,
+       SparkleField, FlameField) and a first-occurrence replace landed the method in
+       LightShafts on the first attempt — caught by chunk 1's lever probe, no frames taken. */
     name: 'B-a: Particles.js SparkleField.preroll',
     file: 'src/fx/Particles.js',
     probe: 'preroll(sec)',
-    old: `    } else if (this._autoHidden) {
-      this.mesh.visible = true; this._autoHidden = false;
-    }
-  }
+    old: `  dispose() { this.geometry.dispose(); this.material.dispose(); }
+}
 
-  dispose() { this.geometry.dispose(); this.material.dispose(); }
-}`,
-    neu: `    } else if (this._autoHidden) {
-      this.mesh.visible = true; this._autoHidden = false;
-    }
-  }
-
-  /** PREREG-fxcluster §1 seam (a): back-date every live marker's born stamp so SPARKLE_VERT's
+/* =========================================================================================
+   FlameField — one analytic billboard per live fire. See FLAME_VERT for why this exists.`,
+    neu: `  /** PREREG-fxcluster §1 seam (a): back-date every live marker's born stamp so SPARKLE_VERT's
    *  pop is fully open at a staged capture — \`_prerollFires\`' treatment, which this field
    *  never had. Inert unless called; the only caller is debug-gated (see \`_stageShot\`). */
   preroll(sec) {
@@ -86,7 +83,10 @@ const SEAMS = [
   }
 
   dispose() { this.geometry.dispose(); this.material.dispose(); }
-}`,
+}
+
+/* =========================================================================================
+   FlameField — one analytic billboard per live fire. See FLAME_VERT for why this exists.`,
   },
   {
     name: 'B-b: Particles.js _stageShot debug-gated preroll call',

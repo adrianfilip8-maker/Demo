@@ -59,6 +59,18 @@ sealed masks verbatim and measures only — every threshold below is quoted from
   - Expected A-cand applied heading from the committed port: (−0.588, 0.809), yaw ≈ −0.629;
     base heading (−0.069, 0.998), yaw −0.069.
 
+- **Attempt 1 aborted by its own lever probe, zero frames taken.** Seam (a)'s anchor (the
+  `_autoHidden` fold + one-line `dispose()`) is NOT unique in Particles.js — it closes four
+  classes — and a first-occurrence replace put `preroll` on **LightShafts** instead of
+  SparkleField. Chunk 1's boot probed `fx.sparkles.preroll` → absent → FATAL before any
+  capture; chunks 1–2 refused, runner stopped before chunk 3 staged anything. Fix applied
+  under a fresh lock ticket (anchor = the dispose directly before the FlameField banner,
+  uniqueness asserted): srcTree `a27b9bf12f7e1a82` → **`3be168ae28832f69`** — the capture
+  tree for attempt 2. The runner's seam table now carries the corrected anchor
+  (rollback-resume safe). Log of the aborted attempt: `fxcluster1/run-attempt1.log`.
+  (The §143.1 lesson landing on this task's own tooling: the guard that "would have blessed
+  the broken thing" was the reason it didn't.)
+
 (per-chunk boot + arm rows appended below as they land)
 
 ## 2. Sub-arm A — cone heading (guard)
