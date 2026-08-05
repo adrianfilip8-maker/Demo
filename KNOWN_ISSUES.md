@@ -14167,12 +14167,12 @@ an expected yield near zero. Three data points on fx22 prove it empirically. The
   `progress/records/cand1/frames/` and pushed at the sweep, with a same-wake D1 bit-identity quick
   check recorded beside them. The full D1–D4 scoring still happens once, by the sealed scorer, when
   the last chunk is in — on committed evidence a rollback cannot take.
-- **Launch method: coordinator-session background execution (wake-on-exit) instead of
-  `tools/launch.sh`.** Recorded as a deviation from §78.4's launcher with its reason: the property
-  launch.sh proves (surviving an agent task tree's reaping) is void under container rollback, which
-  kills ppid-1 processes just as dead — while wake-on-exit is exactly the §163.2 "score at first
-  wake" requirement made structural. The FIFO lock protocol via `tools/lock.mjs` is unchanged;
-  every chunk still tickets and queues.
+- **Wake-on-exit: `tools/launch.sh` stays the launcher (§78.4 unchanged); the coordinator arms a
+  Monitor on each run log** so the completion of a chunk wakes the sweep instead of waiting for the
+  next scheduled check-in. That is the §163.2 "score at first wake" requirement made structural.
+  *(Correction at first writing: an earlier draft of this bullet said the launcher itself changed —
+  it does not; only the wake signal does.)* The FIFO lock protocol via `tools/lock.mjs` is
+  unchanged; every chunk still tickets and queues.
 - `sbs1` and `pnightcal` keep their registered single-boot designs (short, and §124.4-protected
   respectively); they queue behind the first fx22 chunk and are simply retried if a rollback takes
   them. `pnightcal` at ~25 minutes is the longest exposure left in the pipeline; its frames land on

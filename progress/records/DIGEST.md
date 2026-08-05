@@ -21,6 +21,15 @@ this file sat committed, because **a resumed agent reads its transcript, not the
 
 ---
 
+## Everyone — READ FIRST: the container rolls back every ~45 minutes (§163–§164)
+
+Six rollbacks so far, found by check-ins, uncorrelated with our actions. Operating consequences:
+**anything not pushed does not exist**; `/tmp`, `shots/`, agent transcripts and the task board are
+already lost the moment they matter; captures run **chunked** (≈ 10-minute boots, whole registered
+pairs per chunk) with frames **committed per chunk** to `progress/records/`; a landed capture is
+scored at the first wake after DONE, before anything else (§163.2); brief every new agent from
+committed files only. The FIFO lock protocol is unchanged.
+
 ## Everyone — READ FIRST: two hard constraints changed (§162)
 
 **Both are user decisions, not findings. `AGENTS.md` §1 has been rewritten; every ledger section
