@@ -34,8 +34,49 @@ took the session, not that scoring stopped.**
 
 ## Chunk log
 
-(filled as chunks land; per-chunk partial `score2` runs land here durably before the next
-chunk is awaited)
+### Chunk N (night) — LANDED, scored: **P7-fw = 0 PASS. The collision guarantee held.**
+
+Boot 18:34:02, srcTree `3be168ae28832f69` before AND after (STABLE). Settle 421 s.
+**P-F7 ok: live nightAmount = 1 exactly.** Arms base / ABg / restore; per-arm readback:
+ABg poked subjW **0.50** (the gate's night output = the pin) + tintPeak 0.62, and
+`uShadowColor` read **≡ base bit-equal** on every arm (0.012896, 0.046769, 0.078053) — the
+L2 cap-dead proof live, again. Scored at first wake (§163.2):
+**night ABg-vs-base differing px frame-wide = 0** (off-subject 0, in-subject 0) against
+band [0,0]; P-F4 night restore = 0. The predecessor's 2,130-px failure (63 off-box guard +
+2,067 in-box Sly) is measured GONE under the gate — the §3 arithmetic (pin ⇒ uniform
+bit-equal; L2 capped-dead; boot determinism) predicted exactly this and the frame delivered
+exactly this.
+
+**§122.3 null-hazard check (a 0-px pass must not be an empty frame):** banda2's
+`night.base` vs banda1's committed `night.base` cross-boot differs by **0.27 %** of pixels
+(guard patrol phase + per-boot variation — two independent boots of the same staging), and
+the subject crop shows Sly in `sneak_walk` inside the box with the warm doorway glow behind
+him. The frame is the diagnosed night staging; the zero is a result, not an absence.
+
+### Chunk A (sly-closeup) — LANDED, scored: all rows PASS
+
+Boot 18:43:56 (own lock hold, released after). Settle 379 s. **P-F7 ok: nightAmount = 0
+exactly.** ABg `uShadowColor` moved **×1.0740** per channel vs base — the port predicted
+×1.0736 (kUsed 3.37/3.139 at tod 0.80), agreement to 4e-4, reproducing banda1. A and
+KBoverwarm left `uShadowColor` bit-equal (subjW does not touch `_refreshShadowColor` ✓).
+Scores: BaseGates −20 / +27 in-band; P1 (A and ABg) −45 / +13; P2 +0.30 / +0.46;
+**P-F5 arch invariance 0 px**; **KB-overwarm rings −20 < +5 — reads as its own failure**;
+P-F4 restore 0 px.
+
+### Chunk B1 (hero) — LANDED, scored: all rows PASS; KB anchor reproduced to the digit
+
+Boot 18:53:56. Settle 407 s. **P-F7 ok: 0 exactly.** B/ABg `uShadowColor` **×1.0808**
+(predicted ×1.0800 at kAsked 3.39). KBwarmmud's uniform signature ×[1.6538, 0.9630, 0.8585]
+— the warm-mud asymmetry, correctly NOT the candidate's uniform scale. Scores: BaseGate
+<L40 37.62 ∈ [30,46]; P3 −2.43 (B and ABg) in band; P5 221.33; **KB-warmmud hero satP50
+0.323→0.281, rel drop 13.0 % — fires at the recalibrated ≥10 % line, identical to the banda1
+anchor**; W2 −0.11 pp and W3 +0.01 pp in their gated bands; P-F4 restore 0 px.
+
+**Partial-scoring note (expected, resolves when B2 lands):** the `KB-warmmud rects fired`
+tally row reads 1/3 = FAIL at this point because only hero's KB rect exists yet — interior's
+two rects (banda1 anchors 23.2/26.6 %) are in chunk B2, currently queued FIFO behind another
+owner's capture (pid 2028; the runner released the lock between chunks as designed). The row
+is meaningful only at full scoring.
 
 ## Scores
 

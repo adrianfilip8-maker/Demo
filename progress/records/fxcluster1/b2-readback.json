@@ -3,5 +3,10 @@
  "chunk": "b2",
  "startedAt": "2026-08-05T18:58:09.707Z",
  "srcTreeBefore": "3be168ae28832f69",
- "arms": []
+ "arms": [],
+ "lever": {
+  "hasEMITTERS": true,
+  "hasPreroll": true,
+  "flagAtBoot": null
+ }
 }
