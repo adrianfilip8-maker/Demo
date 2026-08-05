@@ -9,5 +9,37 @@
   "sbm": 0.05,
   "sbmLit": 0.05
  },
- "shots": []
+ "shots": [
+  {
+   "shot": "interior",
+   "arms": [],
+   "setShot": {
+    "stats": {
+     "fps": 39,
+     "drawCalls": 166,
+     "triangles": 723565,
+     "programs": 98,
+     "ms": 11.300000000745058
+    },
+    "tod": 0.5
+   }
+  }
+ ],
+ "lever": {
+  "hasShading": true,
+  "hasTune": true,
+  "hasSubjU": true,
+  "hasRefresh": true,
+  "hasInkNight": true,
+  "subjW": 0.5,
+  "tintPeak": 0.52,
+  "sbm": 0.05,
+  "sbmLit": 0.05,
+  "uSubjW": 0.5,
+  "uShadowColor": [
+   0.09609963379551392,
+   0.31311543639412576,
+   0.49658401318439915
+  ]
+ }
 }
