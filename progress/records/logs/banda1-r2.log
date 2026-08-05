@@ -1,0 +1,4 @@
+[12:10:10 +   0s] chunk A: srcTree 820ace395b9664ae — booting (own lock hold)
+[12:12:12 + 122s]   boot ok — warnings 1
+[12:12:12 + 122s]   LEVER {"hasShading":true,"hasTune":true,"hasSubjU":true,"hasRefresh":true,"subjW":0.5,"tintPeak":0.52,"sbm":0.05,"sbmLit":0.05,"uSubjW":0.5,"uShadowColor":[0.09609963379551392,0.31311543639412576,0.49658401318439915]}
+[12:12:30 + 139s]   setShot(sly-closeup) 18s  tod 0.8  draws 265 tris 1665419
