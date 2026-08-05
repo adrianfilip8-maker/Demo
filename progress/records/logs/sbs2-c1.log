@@ -7,3 +7,11 @@
     ! textures: prewarm took 27.3s at size 1024
   ✓ hero          342514ms  draws  260  tris 1742k
   ✓ temple        202745ms  draws  239  tris 1713k
+  ✓ sly-closeup   238706ms  draws  263  tris 1667k
+  ✓ courtyard     261902ms  draws  281  tris 1710k
+  ✓ dunes         184206ms  draws  272  tris 1620k
+· 1 console error(s):
+    ! Failed to load resource: the server responded with a status of 404 (Not Found)
+  · page closed
+
+→ shots/sbs2/  (5 shots, 0 failed)
