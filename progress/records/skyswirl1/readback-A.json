@@ -28,7 +28,104 @@
  "shots": [
   {
    "shot": "dunes",
-   "arms": [],
+   "arms": [
+    {
+     "arm": "base",
+     "requested": [
+      0,
+      0.1,
+      0.3
+     ],
+     "readback": {
+      "graze": [
+       0,
+       0.1,
+       0.3
+      ],
+      "uTime": 0.5632333333327747,
+      "cover": [
+       0.5928175,
+       0.6828175000000001,
+       0.72
+      ],
+      "tod": 0.83
+     },
+     "mismatch": false,
+     "secs": 17
+    },
+    {
+     "arm": "cand",
+     "requested": [
+      0.15,
+      0.1,
+      0.3
+     ],
+     "readback": {
+      "graze": [
+       0.15,
+       0.1,
+       0.3
+      ],
+      "uTime": 0.5632333333327747,
+      "cover": [
+       0.5928175,
+       0.6828175000000001,
+       0.72
+      ],
+      "tod": 0.83
+     },
+     "mismatch": false,
+     "secs": 17
+    },
+    {
+     "arm": "kb",
+     "requested": [
+      0.6,
+      0.1,
+      0.45
+     ],
+     "readback": {
+      "graze": [
+       0.6,
+       0.1,
+       0.45
+      ],
+      "uTime": 0.5632333333327747,
+      "cover": [
+       0.5928175,
+       0.6828175000000001,
+       0.72
+      ],
+      "tod": 0.83
+     },
+     "mismatch": false,
+     "secs": 17
+    },
+    {
+     "arm": "restore",
+     "requested": [
+      0,
+      0.1,
+      0.3
+     ],
+     "readback": {
+      "graze": [
+       0,
+       0.1,
+       0.3
+      ],
+      "uTime": 0.5632333333327747,
+      "cover": [
+       0.5928175,
+       0.6828175000000001,
+       0.72
+      ],
+      "tod": 0.83
+     },
+     "mismatch": false,
+     "secs": 17
+    }
+   ],
    "setShot": {
     "stats": {
      "fps": 39,
@@ -38,7 +135,72 @@
      "ms": 13.099999999627471
     },
     "tod": 0.83
-   }
+   },
+   "settleSecs": 296
+  },
+  {
+   "shot": "night",
+   "arms": [
+    {
+     "arm": "base",
+     "requested": [
+      0,
+      0.1,
+      0.3
+     ],
+     "readback": {
+      "graze": [
+       0,
+       0.1,
+       0.3
+      ],
+      "uTime": 0.8465666666661089,
+      "cover": [
+       0.67,
+       0.72,
+       0.74
+      ],
+      "tod": 0.02
+     },
+     "mismatch": false,
+     "secs": 24
+    },
+    {
+     "arm": "cand",
+     "requested": [
+      0.15,
+      0.1,
+      0.3
+     ],
+     "readback": {
+      "graze": [
+       0.15,
+       0.1,
+       0.3
+      ],
+      "uTime": 0.8465666666661089,
+      "cover": [
+       0.67,
+       0.72,
+       0.74
+      ],
+      "tod": 0.02
+     },
+     "mismatch": false,
+     "secs": 25
+    }
+   ],
+   "setShot": {
+    "stats": {
+     "fps": 60,
+     "drawCalls": 289,
+     "triangles": 1856535,
+     "programs": 124,
+     "ms": 8.099999999627471
+    },
+    "tod": 0.02
+   },
+   "settleSecs": 413
   }
  ],
  "lever": {
