@@ -14186,3 +14186,24 @@ agents from committed files only; and keep the check-in at ≤ 40 minutes — it
 six. The remote is not "the durable store" as a slogan; it is the only part of this machine that
 is real.
 
+
+## §165 — the coordinator broke §150.1: the fx22 revert was applied while a ticketed capture ran
+
+Declared before the outcome is known, which is the only honest time to declare it. The fx22
+verdict (REJECT, `RESULT-fx22.md`) obligated reverting `src/fx/Particles.js`; I applied it at
+`1ef6ec0` immediately — while GEOMETRY's `propshull2 interior` capture (ticketed, lock held,
+mid-arms) was running. The vite dev server hot-pushes src changes into a captured page, so a
+lock-free tree edit during someone else's window is exactly the hazard §150.1/§159.1 name, and
+the rule binds the coordinator the same as any agent. The revert was DUE; its timing was WRONG —
+it should have planted a ticket and waited like any other tree change.
+
+What decides the damage, and it is already in place: propshull2 stamps `srcAtArm` per arm
+(base/base2/hull all read `520bd541…`, pre-revert; any later arm will read differently) and its
+sealed falsifiers P1 (base==base2) and P2 (restore==base) compare frames across the boundary.
+If P2 fails or the stamps split, the run is **VOID by its own guards** and the window re-runs
+with no argument; if the arms hold bit-identical, the page demonstrably did not reload and the
+run stands. Either way the guards adjudicate — nothing is defended.
+
+Rule adopted: **a verdict's src consequence queues on the capture lock like the capture that
+produced it.** Revert-on-REJECT is not exempt from §150.1; nothing that edits `src/**` is.
+

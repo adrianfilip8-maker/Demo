@@ -10,3 +10,15 @@ props hull shells found: 1
 ink clone: 1 material(s) cloned onto 1 shell(s) (0 reuse)  basePx 2.5  private uniforms per clone: [uThickness]
 
 capturing interior [base base2 hull hull3x restore] (dt pinned to 0 on every step):
+  ✓ base     live  0 (moved 1)  ink readback: clone 2.500 / cache 2.500
+      counted-column stats (arm-to-arm sanity ONLY, never vs 250/1.2M — §153.1): draws 165  tris 711k
+      srcAtArm 520bd5416d14faa0…  -> progress/records/hullkerb/frames/interior-base.png
+  ✓ base2    live  0 (moved 0)  ink readback: clone 2.500 / cache 2.500
+      counted-column stats (arm-to-arm sanity ONLY, never vs 250/1.2M — §153.1): draws 165  tris 711k
+      srcAtArm 520bd5416d14faa0…  -> progress/records/hullkerb/frames/interior-base2.png
+  ✓ hull     live  1 (moved 1)  ink readback: clone 2.500 / cache 2.500
+      counted-column stats (arm-to-arm sanity ONLY, never vs 250/1.2M — §153.1): draws 166  tris 723k
+      srcAtArm 520bd5416d14faa0…  -> progress/records/hullkerb/frames/interior-hull.png
+  ✓ hull3x   live  1 (moved 0)  ink readback: clone 7.500 / cache 2.500
+      counted-column stats (arm-to-arm sanity ONLY, never vs 250/1.2M — §153.1): draws 166  tris 723k
+      srcAtArm 520bd5416d14faa0…  -> progress/records/hullkerb/frames/interior-hull3x.png
