@@ -43,6 +43,22 @@
    "secs": 530,
    "kerbband2": "non-causal artefact px in ROI: 721",
    "n": 721
+  },
+  {
+   "arm": "kb",
+   "desc": "kb s=0/0",
+   "srcAtArm": "2325e84e3dc23f7d",
+   "srcAfterArm": "2325e84e3dc23f7d",
+   "file": "/home/user/Demo/progress/records/mradius1/hero.kb.png",
+   "sha256": "5ae5c8918439d6c7e738a2c44f6b3bb771f53bcbb267bf0b7555b9ada65b7eb8",
+   "draws": 260,
+   "tris": 1741983,
+   "trisDeltaVsBase": 192,
+   "tod": 0.79,
+   "consoleErrors": [],
+   "secs": 532,
+   "kerbband2": "non-causal artefact px in ROI: 0",
+   "n": 0
   }
  ]
 }

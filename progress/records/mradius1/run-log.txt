@@ -143,3 +143,7 @@
 [20:58:50 +2008s]   hero.cand: setShot ok tod 0.79 draws 260 tris 1741983
 [21:06:24 +2463s]   hero.cand: CAPTURED sha 48a7a7d3a5fe2f3c 530s  kerbband2 n=721
 [21:06:25 +2463s]   arm kb (kb s=0/0) srcAtArm 2325e84e3dc23f7d — fresh vite + fresh context
+[21:07:39 +2537s]   hero.kb: setShot ok tod 0.79 draws 260 tris 1741983
+[21:15:17 +2995s]   hero.kb: CAPTURED sha 5ae5c8918439d6c7 532s  kerbband2 n=0
+[21:15:17 +2995s]   arm restore (pristine) srcAtArm 3be168ae28832f69 — fresh vite + fresh context
+[21:16:33 +3071s]   hero.restore: setShot ok tod 0.79 draws 260 tris 1741791
