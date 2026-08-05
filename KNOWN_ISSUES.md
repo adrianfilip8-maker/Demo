@@ -14302,3 +14302,12 @@ tenth event and takes §172 because a §171 heading was never written — the co
 ten, the ledger's last rollback section is this one, and the gap is recorded here rather than
 renumbered (§34: corrections at the site, not rewrites of history).
 
+
+## §173 — the eleventh rollback lands after the wave closed; nothing was in flight
+
+Found at the 18:08Z check-in, recovered ff-only to `81b9015` — the wave-closing commit itself.
+For the first time a rollback took nothing at all: no capture was running, no agent held
+unswept state, and the CRITIC-sbs2 verdict, the DIGEST wave banner, and every successor route
+were already on the remote. The §164 discipline's end state: a rollback with an empty blast
+radius.
+
