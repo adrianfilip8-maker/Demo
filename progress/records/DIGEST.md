@@ -298,6 +298,15 @@ nobody runs (§129.2).
 
 ## FX — `src/fx/**`, `Atmosphere.js`, `Lighting.js`
 
+- **Candidate 1 (backdropGate) REJECTED by the sealed fx22 scoring and REVERTED** — the shipped
+  `Particles.js` is back to its pre-candidate state. `RESULT-fx22.md` is the decision: D2's disc
+  removal genuinely worked, but D1 leaked 258 out-of-population px on `courtyard`, D3 stripped
+  temple's legitimate haze/glow, and D4 logged 53 violations including deleting `night`'s entire
+  haze field (47,108 |ΔL| — comparable to the disc itself). Findings for the next design: the
+  night sky blob is a candidate SECOND instance of the artefact class (A1.5's re-test clause);
+  §145.2's "no dark-blue exterior class" was boot-local, not a level property; the gate reached
+  every particle batch, not just sand haze. A next candidate needs a narrower population or a
+  per-batch scope, and its own prereg.
 - **§124.1's near-plane guard is falsified before build** (§138): the guard already ships at
   `nearFade [0.28, 0.95]`, the disc sits at 4–28 m, and a size ceiling removes the **larger
   invisible** blob2 (70×71, −0.71 L) before the disc (58×61, +17.28).

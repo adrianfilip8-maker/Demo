@@ -371,31 +371,6 @@ const TUNE = {
   softDepth: 0.55,          // metres of depth over which a sprite fades into geometry
   nearFade: [0.28, 0.95],   // don't smear the lens with a particle inside the near plane
 
-  /* ---- Backdrop-conditioned suppression (candidate 1, PREREG-sandhigh Amendment 1) ----
-     The `temple` pink disc is a `sandHigh` sprite that is invisible outdoors and plainly wrong
-     indoors, and §147.3 measured WHY at component granularity: the artefact sits on a dark blue
-     backdrop (luma 44.4, R/B 0.13) while the one non-artefact component clearing the same ΔL
-     threshold sits on a pale one (76.6, 0.66). Both conjuncts are load-bearing — each is
-     falsified by a case — so the gate keys on the backdrop rather than on any sprite property.
-
-     Inertness is a REQUIREMENT, not a nicety (D1): outside the gated population the frame must
-     be bit-identical, 0 px. That is why the ramps below are evaluated so that their weight is
-     EXACTLY zero at the population boundary — `mix(1.0, g, 0.0)` returns 1.0 exactly, and
-     `a *= 1.0` is exact. Nothing continuously-varying multiplies the general case.
-
-     **Units caveat, stated because the registered thresholds are not in the shader's space.**
-     60 / 0.5 were measured on the FINAL graded PNG (AgX + grade + tonemap, 0..255). The gate
-     samples the scene colour BEFORE any of that. `uGate` is therefore expressed in the sampled
-     space and its defaults are the sRGB-encoded equivalents; the capture reports the sampled
-     backdrop at the two registered component centres so these are VERIFIED rather than assumed
-     before D2 is scored. Do not quote the frame-space numbers as if the shader used them. */
-  backdropGate: true,       // kill switch; false restores current behaviour exactly
-  backdropLumaMax: 60,      // gate population: backdrop luma below this (0..255, encoded)
-  backdropRBMax: 0.50,      // ...AND backdrop R/B below this
-  backdropLumaSoft: 8,      // ramp width INSIDE the population; weight hits 0 exactly at the edge
-  backdropRBSoft: 0.08,
-  backdropMin: 0.0,         // what survives at full gate. 0 = removal, per D2 (not thinning)
-
   /* sparkle markers (§2.1 point 6) */
   sparkleMax: 96,
   sparkleRadius: 34,        // metres of affordance search around the player
@@ -669,14 +644,10 @@ precision highp float;
 
 uniform sampler2D uAtlas;
 uniform sampler2D uDepth;
-uniform sampler2D uBackdrop;   // particle-free scene colour (see Particles._copyBackdrop)
 uniform vec2  uInvRes;
 uniform float uSoftness;
 uniform vec2  uNearFade;
 uniform float uOpacity;
-/* x = enabled, y = luma max, z = R/B max, w = luma ramp width. See TUNE.backdropGate. */
-uniform vec4  uGate;
-uniform vec2  uGate2;          // x = R/B ramp width, y = surviving fraction at full gate
 
 varying vec2  vUv;
 varying vec4  vCol;
@@ -697,30 +668,6 @@ void main() {
       a *= clamp( ( sceneZ - vViewZ ) / uSoftness, 0.0, 1.0 );
     }
   #endif
-
-  /* Backdrop-conditioned suppression (candidate 1). Attenuate only where this sprite is
-     silhouetted against something that is not sand — measured as dark AND blue.
-
-     D1 requires EXACT inertness outside the gated population, so the two ramps are built to
-     return exactly 0.0 there: "1.0 - smoothstep(e0, e1, x)" is exactly 0 for x >= e1, and
-     "mix(1.0, g, 0.0)" is exactly 1.0. A fragment outside the population therefore executes
-     "a *= 1.0", which is bit-exact — not "within a percentage".
-
-     Fails OPEN like the soft term above: an unbound or black backdrop sample (nothing rendered
-     there yet) leaves the sprite alone rather than deleting it. */
-  if ( uGate.x > 0.5 ) {
-    vec3 bg = texture2D( uBackdrop, gl_FragCoord.xy * uInvRes ).rgb;
-    float bmax = max( bg.r, max( bg.g, bg.b ) );
-    if ( bmax > 0.002 ) {                       // fail open on an unwritten sample
-      // Encode to the space the registered thresholds were measured in (see TUNE note).
-      vec3 enc = pow( clamp( bg, 0.0, 1.0 ), vec3( 1.0 / 2.2 ) ) * 255.0;
-      float bl = dot( enc, vec3( 0.2126, 0.7152, 0.0722 ) );
-      float rb = enc.b > 0.5 ? enc.r / enc.b : 999.0;
-      float wl = 1.0 - smoothstep( uGate.y - uGate.w, uGate.y, bl );
-      float wr = 1.0 - smoothstep( uGate.z - uGate2.x, uGate.z, rb );
-      a *= mix( 1.0, uGate2.y, wl * wr );
-    }
-  }
 
   a *= smoothstep( uNearFade.x, uNearFade.y, vViewZ );
   if ( a < 0.004 ) discard;
@@ -1499,14 +1446,6 @@ class Batch {
         uMaxSize: { value: opts.maxSize ?? 0 },
         uAtlas: { value: opts.shared.atlas },
         uDepth: opts.shared.depth,           // shared uniform object: one assignment re-points all
-        uBackdrop: opts.shared.backdrop,     // ditto — particle-free scene colour
-        /* Gate ON by default but exactly inert outside its population (D1). Kept as a uniform
-           rather than a #define ON PURPOSE: D1 compares gated against ungated, and a define
-           would compile a different program, so a null could be the compiler rather than the
-           gate. One program, one uniform, apples to apples. */
-        uGate: { value: new THREE.Vector4(
-          TUNE.backdropGate ? 1 : 0, TUNE.backdropLumaMax, TUNE.backdropRBMax, TUNE.backdropLumaSoft) },
-        uGate2: { value: new THREE.Vector2(TUNE.backdropRBSoft, TUNE.backdropMin) },
         uInvRes: { value: opts.shared.invRes },
         uSoftness: { value: opts.softness ?? TUNE.softDepth },
         uNearFade: { value: new THREE.Vector2(TUNE.nearFade[0], TUNE.nearFade[1]) },
@@ -1904,7 +1843,6 @@ export class Particles {
       ambTint: new THREE.Color(0.5, 0.55, 0.62),
       atlas: null,
       depth: { value: null },     // replaced by a real uniform object below
-      backdrop: { value: null },  // particle-free scene colour, filled by _copyBackdrop()
       invRes: new THREE.Vector2(1 / 1280, 1 / 720),
       shaftA: [], shaftB: [], shaftC: [],
     };
@@ -2667,7 +2605,6 @@ export class Particles {
     const still = !(dt > 0);
     if (!still) this._frame++;
 
-    this._copyBackdrop();
     this._copyDepth();
     this._updateWind(t);
     if (!still) this._updateGround();
@@ -2704,72 +2641,6 @@ export class Particles {
     if (!this.depthRT) return;
     const size = this.engine.renderer.getDrawingBufferSize(_size);
     this.depthRT.setSize(Math.max(2, size.x >> 1), Math.max(2, size.y >> 1));
-  }
-
-  /**
-   * A quarter-res colour render of the scene **with the FX root hidden**, for the backdrop gate.
-   *
-   * **Why not `postfx.sceneRT.texture`, which is free and sits right next to the depth texture
-   * the soft term already uses.** `sceneRT` holds the previous frame *including the particle
-   * pass*, so a sprite reading it reads a backdrop containing its own contribution — and the
-   * disc is the case where that bites hardest. Its backdrop measures luma 44.4 on the
-   * `no-sandHigh` frame; with the sprite present the same region is +17.28 ΔL brighter, i.e.
-   * ~61.7, which is on the **wrong side of the registered luma < 60 threshold**. A gate built on
-   * that buffer never fires on the one component it exists to remove, and it sits in a stable
-   * bad fixed point: gate does not fire → contamination persists → gate keeps not firing.
-   * It would have passed code review and failed D2 silently.
-   *
-   * The cost is a second scene render. That is what the seal predicted for candidate 1 — *"the
-   * most invasive and the most likely to cost frame time"* — and it is the price of keying on
-   * the mechanism rather than on a correlate. Quarter res because the gate needs a colour class,
-   * not detail. Frame-time cost is NOT measurable on this container (software raster, no GPU) and
-   * is reported as unmeasured rather than estimated.
-   *
-   * Shadow map auto-update is suppressed for this pass: re-rendering three cascades to sample a
-   * backdrop would be a large hidden cost with no effect on the result.
-   */
-  _copyBackdrop() {
-    const engine = this.engine;
-    if (!TUNE.backdropGate) { this.shared.backdrop.value = null; return; }
-    const renderer = engine.renderer;
-    const size = renderer.getDrawingBufferSize(_size);
-    const w = Math.max(1, size.x >> 2), h = Math.max(1, size.y >> 2);
-
-    if (this.backdropRT && (this.backdropRT.width !== w || this.backdropRT.height !== h)) {
-      this.backdropRT.setSize(w, h);
-    }
-    if (!this.backdropRT) {
-      this.backdropRT = new THREE.WebGLRenderTarget(w, h, {
-        depthBuffer: true, stencilBuffer: false,
-        minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter,
-        generateMipmaps: false,
-      });
-      this.backdropRT.texture.name = 'fx.backdrop';
-    }
-
-    const prevTarget = renderer.getRenderTarget();
-    const prevShadowAuto = renderer.shadowMap.autoUpdate;
-    const rootVis = this.root.visible;
-    try {
-      renderer.shadowMap.autoUpdate = false;
-      this.root.visible = false;              // the whole point — no particle self-contamination
-      renderer.setRenderTarget(this.backdropRT);
-      renderer.render(engine.scene, engine.camera);
-      this.shared.backdrop.value = this.backdropRT.texture;
-      this._backdropOK = true;
-    } catch (err) {
-      // Fail open to current behaviour: the gate reads an unbound sampler, `bmax` is 0, and
-      // every sprite is left alone. Never costs the frame.
-      this.shared.backdrop.value = null;
-      if (!this._backdropWarned) {
-        this._backdropWarned = true;
-        engine.warn(`fx: backdrop copy failed, gate inert — ${err?.message || err}`);
-      }
-    } finally {
-      this.root.visible = rootVis;
-      renderer.setRenderTarget(prevTarget);
-      renderer.shadowMap.autoUpdate = prevShadowAuto;
-    }
   }
 
   _copyDepth() {
@@ -3397,7 +3268,6 @@ export class Particles {
     this.trails?.dispose();
     this.atlas?.dispose();
     this.depthRT?.dispose();
-    this.backdropRT?.dispose();
     this.depthMat?.dispose();
     this._depthQuad?.geometry?.dispose();
     this.root.removeFromParent();
