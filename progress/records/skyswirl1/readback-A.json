@@ -1,0 +1,29 @@
+{
+ "prereg": "PREREG-skyswirl.md",
+ "chunk": "A",
+ "startedAt": "2026-08-05T20:15:12.264Z",
+ "srcTreeBefore": "7a4630875cac6e36",
+ "grazeDefault": [
+  0,
+  0.1,
+  0.3
+ ],
+ "shipDecks": {
+  "scale": [
+   0.000105,
+   0.000138,
+   0.000105
+  ],
+  "soft": [
+   0.36,
+   0.38,
+   0.4
+  ],
+  "warp": [
+   0.55,
+   0.85,
+   1.25
+  ]
+ },
+ "shots": []
+}
