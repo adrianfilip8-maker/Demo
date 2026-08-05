@@ -1,0 +1,29 @@
+[
+    {
+        "name": "OURS traversal gold1 (fresh Aug-5 base; gild mask minus Sly/FX-glow and rooftop-guard occluders, re-derived per PREREG-goldtraversal §6)",
+        "png": "/home/user/Demo/progress/records/gold1/traversal.png",
+        "rect": [0, 0, 1280, 720],
+        "bgrect": [500, 400, 1000, 500],
+        "direction": [0, 1],
+        "maskbin": "traversal.mask.bin",
+        "maskid": 7,
+        "gold_filter": false,
+        "exclude": [
+            [500, 190, 740, 400],
+            [870, 0, 940, 100]
+        ],
+        "lobe_min_rmb": -5
+    },
+    {
+        "name": "POSITIVE CONTROL traversal gold1 (occluder exclusion LIFTED - detector must return the known non-gold FX glow lobe, per PREREG §4)",
+        "png": "/home/user/Demo/progress/records/gold1/traversal.png",
+        "rect": [0, 0, 1280, 720],
+        "bgrect": [500, 400, 1000, 500],
+        "direction": [0, 1],
+        "maskbin": "traversal.mask.bin",
+        "maskid": 7,
+        "gold_filter": false,
+        "exclude": [],
+        "lobe_min_rmb": -5
+    }
+]

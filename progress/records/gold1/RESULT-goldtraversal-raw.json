@@ -1,0 +1,258 @@
+{
+ "_what": "Raw outputs behind progress/records/gold1/RESULT-goldtraversal.md, measured 2026-08-05 on the fresh gold1 capture (committed 1ccce96, captured 06:42Z at commit 36d9b90-dirty). Masks rebuilt by matmask.mjs at scoring tree 0ac0479e279468e3 (find-based src/**/*.js hash, relative paths). Mask bins scratchpad-only (regenerable).",
+ "mask_shares_raw": {
+  "traversal": {
+   "arch:hieroglyph_gilded": 14.0,
+   "arch:sandstone_worn": 3.61
+  },
+  "combat": {
+   "arch:hieroglyph_gilded": 5.81,
+   "arch:sandstone_worn": 34.98
+  }
+ },
+ "gildlit": {
+  "traversal_gold1": {
+   "shot": "traversal",
+   "png": "/home/user/Demo/progress/records/gold1/traversal.png",
+   "capturedAt": "gold1-Aug5-0642Z-37f0545db3e9",
+   "erode": 2,
+   "size": "1280x720",
+   "arch:hieroglyph_gilded": {
+    "px": 119251,
+    "shareOfFrame": 12.94,
+    "L": {
+     "p01": 21.1,
+     "p05": 28.2,
+     "p50": 86.3,
+     "p95": 131.7,
+     "p99": 187.7,
+     "max": 255
+    },
+    "tail": {
+     "over160": 2.1,
+     "over200": 0.64,
+     "over230": 0.17
+    },
+    "span": 4.67,
+    "chroma": {
+     "p50": 20,
+     "p95": 59
+    },
+    "RmB": {
+     "p50": -16
+    }
+   },
+   "arch:sandstone_worn": {
+    "px": 23347,
+    "shareOfFrame": 2.53,
+    "L": {
+     "p01": 31.3,
+     "p05": 47,
+     "p50": 64,
+     "p95": 149.7,
+     "p99": 162.4,
+     "max": 200.8
+    },
+    "tail": {
+     "over160": 1.66,
+     "over200": 0.01,
+     "over230": 0
+    },
+    "span": 3.18,
+    "chroma": {
+     "p50": 37,
+     "p95": 62
+    },
+    "RmB": {
+     "p50": -32
+    }
+   }
+  },
+  "combat_gold1_calibration": {
+   "shot": "combat",
+   "png": "/home/user/Demo/progress/records/gold1/combat.png",
+   "capturedAt": "gold1-Aug5-0642Z-b613c959b603",
+   "erode": 2,
+   "size": "1280x720",
+   "arch:hieroglyph_gilded": {
+    "px": 50019,
+    "shareOfFrame": 5.43,
+    "L": {
+     "p01": 24.1,
+     "p05": 29.2,
+     "p50": 147.8,
+     "p95": 195.7,
+     "p99": 205.1,
+     "max": 211.8
+    },
+    "tail": {
+     "over160": 41.99,
+     "over200": 2.86,
+     "over230": 0
+    },
+    "span": 6.7,
+    "chroma": {
+     "p50": 72,
+     "p95": 107
+    },
+    "RmB": {
+     "p50": 72
+    }
+   },
+   "arch:sandstone_worn": {
+    "px": 310352,
+    "shareOfFrame": 33.68,
+    "L": {
+     "p01": 20.3,
+     "p05": 27.1,
+     "p50": 61,
+     "p95": 144.3,
+     "p99": 204.1,
+     "max": 219.4
+    },
+    "tail": {
+     "over160": 3.64,
+     "over200": 1.46,
+     "over230": 0
+    },
+    "span": 5.33,
+    "chroma": {
+     "p50": 33,
+     "p95": 57
+    },
+    "RmB": {
+     "p50": -32
+    }
+   }
+  }
+ },
+ "occluder_derivation": {
+  "procedure": "cell map of >=0.92*max px inside raw gild mask -> visual crop per hot cell -> exclusion rects over character/FX (PREREG-goldtraversal \u00a76; the Aug-5 rect [460,140,720,380] was a worked example, not reused)",
+  "pass1_no_exclude": {
+   "maxL": 255.0,
+   "thr": 234.6,
+   "hot_px": 178,
+   "hot_cells": {
+    "x480-640 y240-360": 178
+   },
+   "identified": "white FX glow sprite behind Sly, brightest px ~(588-603, 245-262)"
+  },
+  "exclusion_rects": [
+   [
+    500,
+    190,
+    740,
+    400
+   ],
+   [
+    870,
+    0,
+    940,
+    100
+   ]
+  ],
+  "rects_cover": [
+   "Sly + FX glow + banded tail + cane hook",
+   "rooftop guard incl. light headwrap"
+  ],
+  "pass2_with_excludes": {
+   "maxL": 230.4,
+   "thr": 211.9,
+   "hot_px": 200,
+   "hot_span": "x183-1174, y133-214, spread over 6 cells",
+   "identified": "thin rim-lit top arris line of the gilded beams - genuine architecture highlight, kept"
+  }
+ },
+ "goldgap": [
+  {
+   "name": "OURS traversal gold1 (fresh Aug-5 base; gild mask minus Sly/FX-glow and rooftop-guard occluders, re-derived per PREREG-goldtraversal \u00a76)",
+   "png": "/home/user/Demo/progress/records/gold1/traversal.png",
+   "roi_rect": [
+    0,
+    0,
+    1280,
+    720
+   ],
+   "gold": {
+    "px": 104379,
+    "p05": 28.5,
+    "p50": 85.9,
+    "p95": 134.5,
+    "p99": 185.1,
+    "max": 230.4,
+    "span_p99_minus_p50": 99.2,
+    "ratio_p99_over_p50": 2.15
+   },
+   "lobe_thr": 212.0,
+   "lobe": {
+    "area_px": 5,
+    "w": 5,
+    "h": 1,
+    "centroid": [
+     885,
+     157
+    ]
+   },
+   "occlusion_beside_highlight": {
+    "ring_px": 571,
+    "p05": 27.6,
+    "p25": 51.2,
+    "contrast_lobe_over_ring_p05": 8.4
+   },
+   "bloom": {
+    "halo_px_past_edge": 0,
+    "bg_p50": 80.5,
+    "halo_tint_RmB_minus_bg": null,
+    "direction": [
+     0,
+     1
+    ]
+   }
+  },
+  {
+   "name": "POSITIVE CONTROL traversal gold1 (occluder exclusion LIFTED - detector must return the known non-gold FX glow lobe, per PREREG \u00a74)",
+   "png": "/home/user/Demo/progress/records/gold1/traversal.png",
+   "roi_rect": [
+    0,
+    0,
+    1280,
+    720
+   ],
+   "gold": {
+    "px": 128997,
+    "p05": 27.6,
+    "p50": 85.8,
+    "p95": 130.8,
+    "p99": 186.1,
+    "max": 255.0,
+    "span_p99_minus_p50": 100.3,
+    "ratio_p99_over_p50": 2.17
+   },
+   "lobe_thr": 234.6,
+   "lobe": {
+    "area_px": 173,
+    "w": 17,
+    "h": 16,
+    "centroid": [
+     594,
+     255
+    ]
+   },
+   "occlusion_beside_highlight": {
+    "ring_px": 1235,
+    "p05": 27.4,
+    "p25": 57.9,
+    "contrast_lobe_over_ring_p05": 9.3
+   },
+   "bloom": {
+    "halo_px_past_edge": 0,
+    "bg_p50": 80.5,
+    "halo_tint_RmB_minus_bg": null,
+    "direction": [
+     0,
+     1
+    ]
+   }
+  }
+ ]
+}
