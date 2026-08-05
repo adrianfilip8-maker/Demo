@@ -106,6 +106,11 @@ check('Kit sweep() is indexed (normals average along the profile)',
 }
 const tm = read('src/render/ToonMaterial.js');
 check('ToonMaterial TUNE: rimPower 3.1, rimCurve [3,10,1]', /rimPower: 3\.1,/.test(tm) && /rimCurve: \[3\.0, 10\.0, 1\.0\]/.test(tm));
+const atm = read('src/render/Atmosphere.js');
+check('Atmosphere sun track: tod 0.79 -> elevation 22 deg, azimuth 186 deg (0=+X east, 90=+Z south, 180=-X west)',
+  /\[0\.79,\s*22\]/.test(atm) && /\[0\.79,\s*186\]/.test(atm));
+check('Atmosphere moon track: tod 0.02 -> elevation ~12 deg, azimuth ~292 deg (night key is the moon, NNE, low)',
+  /\[0\.02,\s*12\]/.test(atm) && /\[0\.00,\s*292\]/.test(atm));
 const glsl = read('src/render/shaders/toon.glsl.js');
 check('toon.glsl rimBand = smoothstep(0.26, 0.58, fres * mix(0.60, 1.0, wrapRim))',
   /rimBand = smoothstep\( 0\.26, 0\.58, fres \* mix\( 0\.60, 1\.0, wrapRim \) \)/.test(glsl));
@@ -258,18 +263,68 @@ for (const [tag, ratio] of [['current', 1.0], ['-25%', 0.75], ['-40% (CAND)', 0.
   console.log(`      predicted kerbband2 non-causal on hero: ${ratio > 0 ? `${n}  (interval [${Math.round(N0 * (ratio - 0.15))}, ${Math.round(N0 * (ratio + 0.15))}])` : '<= 400, expected <= 170 (see KB signature)'}`);
 }
 
-/* retention: the same cornices' KEY-CATCH side in hero — the west rim runs down frame-left, sunlit
- * at tod 0.79 (the R2 crop's own orange raking stripes are this sun reaching the terrace). */
-console.log('\n   key-catch retention site (hero, tc2 WEST rim, lit side — frame-left):');
+/* ---- retention sites, MEASURED on the committed frames (not assumed) ---- */
+console.log('\n   retention — where the treated cornices\' INTENDED edge-light features are measurable:');
 {
-  const xWall = -(13.3 / 2);                                           // west wall plane x = -6.65
+  /* hero west rim: the sun at tod 0.79 is west (az 186 deg) but the west court sits in the
+     peristyle wall's cast shadow. Measured on the live hero-base: luma across the west annulus. */
+  const b = readPNG(path.join(root, FR.live));
+  const prof = [];
   for (const z of [6.5, 8.5]) {
-    const w = project([xWall, T2.y, z]), a = project([xWall - T2.A, T2.y, z]);
-    const span = Math.hypot(w.px - a.px, w.py - a.py);
-    console.log(`      z=${z}: wall (${w.px.toFixed(0)},${w.py.toFixed(0)}) arris (${a.px.toFixed(0)},${a.py.toFixed(0)}) — lit turn zone ${span.toFixed(1)} px`
-      + ` -> cand ${(span * 0.6).toFixed(1)} px, KB 0 px (dead)`);
+    const w = project([-6.65, T2.y, z]), a = project([-7.23, T2.y, z]);
+    let mx = 0;
+    for (let t = 0; t <= 1.0; t += 0.1) {
+      const X = Math.round(w.px + (a.px - w.px) * t), Y = Math.round(w.py + (a.py - w.py) * t);
+      const [r, g, bb] = px(b, X, Y); mx = Math.max(mx, L(r, g, bb));
+    }
+    prof.push(`z=${z}: max L ${mx.toFixed(0)} across the annulus`);
   }
+  console.log(`      hero west rim (frame-left, px ~265-395): ${prof.join('; ')} — IN CAST SHADOW,`);
+  console.log('      no lit line exists in base; hero is DECISIVE FOR THE BAND ONLY, carries no retention crop.');
 }
+{
+  /* night: toon.glsl.js:719 — "base traces every deck edge that norim loses". Locate those traces
+     on the treated annuli in the committed night-base and print peak luma + coords, so the
+     retention crops are registered from committed bytes. Night cam (Shots.js): */
+  const nightFile = 'progress/records/hullkerb/frames/night-base.png';
+  check('night camera anchors: pos [-13.4,8.4,22.0] target [2.0,6.0,2.0] fov 48',
+    /night:\s*\{\s*\n?\s*pos:\s*\[-13\.4,\s*8\.4,\s*22\.0\],\s*target:\s*\[2\.0,\s*6\.0,\s*2\.0\],\s*fov:\s*48,\s*tod:\s*0\.02/.test(shots));
+  if (existsSync(path.join(root, nightFile))) {
+    const nb = readPNG(path.join(root, nightFile));
+    const NC = camera({ pos: [-13.4, 8.4, 22.0], target: [2.0, 6.0, 2.0], fov: 48, roll: 0 });
+    const nproj = (p) => {
+      const v = [p[0] - NC.c[0], p[1] - NC.c[1], p[2] - NC.c[2]];
+      const d = -dot(v, NC.zbk);
+      return d > 0 ? { px: (dot(v, NC.x) / d / NC.tanH + 1) / 2 * W, py: (1 - dot(v, NC.y) / d / NC.tanV) / 2 * H } : null;
+    };
+    const runs = [
+      ['tc2 north run', (x) => [[x, T2.y, T2.zWall], [x, T2.y, T2.zWall - T2.A]], [-6.6, 0.5]],
+      ['tc2 south run', (x) => [[x, T2.y, 16.65], [x, T2.y, 16.65 + T2.A]], [1.0, 5.5]],
+      ['tc2 west run', (z) => [[-6.65, T2.y, z], [-7.23, T2.y, z]], [8.5, 10.5]],
+    ];
+    console.log('      night (committed night-base) — the treated annuli DO carry the intended traces:');
+    for (const [tag, mk, range] of runs) {
+      let peak = 0, box = [1e9, 1e9, -1e9, -1e9];
+      for (let i = 0; i <= 24; i++) {
+        const u = range[0] + (range[1] - range[0]) * i / 24;
+        const [wp, ap] = mk(u); const w = nproj(wp), a = nproj(ap);
+        if (!w || !a) continue;
+        for (let t = 0; t <= 1.2; t += 0.1) {
+          const X = Math.round(w.px + (a.px - w.px) * t), Y = Math.round(w.py + (a.py - w.py) * t);
+          if (X < 0 || X >= W || Y < 0 || Y >= H) continue;
+          const [r, g, bb] = px(nb, X, Y); const l = L(r, g, bb);
+          if (l > 60) { peak = Math.max(peak, l); box = [Math.min(box[0], X), Math.min(box[1], Y), Math.max(box[2], X), Math.max(box[3], Y)]; }
+        }
+      }
+      console.log(`        ${tag}: trace peak L ${peak.toFixed(0)}, lifted-px bbox (${box[0]},${box[1]})..(${box[2]},${box[3]}) — registered retention crop site`);
+    }
+    console.log('      retention gate: cand keeps each trace as a continuous lifted line (thinner ~x0.6 is the');
+    console.log('      prediction); KB kills or guts them — that death is PART of the KB failure signature.');
+  } else console.log('      night-base not on this container — the coords recorded in PREREG-mradius.md stand from the run that had it.');
+}
+console.log('      courtyard: camera y 4.0 sits BELOW the stage-2 deck plane (5.2) and 2 m over stage-1 —');
+console.log('      both annuli are edge-on slivers, and the cornice PROFILE faces are position-identical in');
+console.log('      every arm. courtyard rides as the CONFINEMENT guard (prediction: ~0 diff px there).');
 /* context: tc1's north rim (same class, below the ROI) */
 {
   const xw = xAtCol({ y: T1.y, z: T1.zWall }, 940);
@@ -294,10 +349,10 @@ E. numbers PREREG-mradius.md registers (quote from here, not from memory):
               (b) a hard shading edge at the arris line: the previously-soft 15 px gradient collapses
                   to a 1-2 px transition that shows the raster staircase (grazing crawl), possibly plus
                   a new thin screen-space/PostFX edge line on the now-discontinuous normals;
-              (c) key-catch DEAD on the lit runs (west rim crop: no bright rounded-edge line) and
-                  night's deck-edge traces dead. KB passing (a) while ALSO passing the retention
-                  crops as 'fine' would mean the viewing condition cannot score this question:
-                  UNSCOREABLE (§141) -> revert, no ship, no re-threshold.
+              (c) the night deck-edge traces at the three registered crop sites dead or gutted.
+                  KB passing (a) while ALSO passing the retention crops as 'fine' would mean the
+                  viewing condition cannot score this question: UNSCOREABLE (§141) -> revert,
+                  no ship, no re-threshold.
    silhouette invariant: ALL arms keep positions on the same planes — any arm whose diff moves a
               silhouette edge (not just shading inside the annuli + bloom halo + temporal mask)
               is a broken mechanism: VOID + revert, not a result.
