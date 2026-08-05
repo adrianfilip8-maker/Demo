@@ -112,7 +112,98 @@
   },
   {
    "shot": "combat",
-   "arms": [],
+   "arms": [
+    {
+     "arm": "base",
+     "requested": {
+      "gain": 0,
+      "pow": 20,
+      "sharp": 1
+     },
+     "readback": {
+      "glint": 0,
+      "pow": 20,
+      "sharp": 1,
+      "tuneGlint": 0,
+      "tunePow": 20,
+      "tuneSharp": 1
+     },
+     "mismatch": [],
+     "secs": 20
+    },
+    {
+     "arm": "As",
+     "requested": {
+      "gain": 2.6,
+      "pow": 20,
+      "sharp": 1.25
+     },
+     "readback": {
+      "glint": 2.6,
+      "pow": 20,
+      "sharp": 1.25,
+      "tuneGlint": 2.6,
+      "tunePow": 20,
+      "tuneSharp": 1.25
+     },
+     "mismatch": [],
+     "secs": 20
+    },
+    {
+     "arm": "cand",
+     "requested": {
+      "gain": 2.6,
+      "pow": 20,
+      "sharp": 1.5
+     },
+     "readback": {
+      "glint": 2.6,
+      "pow": 20,
+      "sharp": 1.5,
+      "tuneGlint": 2.6,
+      "tunePow": 20,
+      "tuneSharp": 1.5
+     },
+     "mismatch": [],
+     "secs": 20
+    },
+    {
+     "arm": "KBwidelobe",
+     "requested": {
+      "gain": 5.2,
+      "pow": 2,
+      "sharp": 1
+     },
+     "readback": {
+      "glint": 5.2,
+      "pow": 2,
+      "sharp": 1,
+      "tuneGlint": 5.2,
+      "tunePow": 2,
+      "tuneSharp": 1
+     },
+     "mismatch": [],
+     "secs": 20
+    },
+    {
+     "arm": "null",
+     "requested": {
+      "gain": 0,
+      "pow": 20,
+      "sharp": 1
+     },
+     "readback": {
+      "glint": 0,
+      "pow": 20,
+      "sharp": 1,
+      "tuneGlint": 0,
+      "tunePow": 20,
+      "tuneSharp": 1
+     },
+     "mismatch": [],
+     "secs": 20
+    }
+   ],
    "setShot": {
     "stats": {
      "fps": 60,
@@ -122,7 +213,8 @@
      "ms": 11.900000000372529
     },
     "tod": 0.74
-   }
+   },
+   "settleSecs": 354
   }
  ],
  "lever": {
@@ -135,5 +227,7 @@
   "tuneGlint": 0,
   "tunePow": 20,
   "tuneSharp": 1
- }
+ },
+ "srcTreeAfter": "a8925573a9ec3ff6",
+ "finishedAt": "2026-08-05T22:38:01.259Z"
 }

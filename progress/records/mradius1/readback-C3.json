@@ -9,5 +9,22 @@
   "lvlSha": "b2527f77f0676d6ac8ccaa2f172f69157d7e2661f96c47843faa96ef7a42272b",
   "tree": "7a4630875cac6e36"
  },
- "arms": []
+ "arms": [
+  {
+   "arm": "base",
+   "desc": "pristine",
+   "srcAtArm": "a8925573a9ec3ff6",
+   "srcAfterArm": "a8925573a9ec3ff6",
+   "file": "/home/user/Demo/progress/records/mradius1/courtyard.base.png",
+   "sha256": "a27e0dd90b80bbd58d4017302697e4309c1563ea54c7cbf7a03ea4d9197cf6aa",
+   "draws": 281,
+   "tris": 1708385,
+   "trisDeltaVsBase": 0,
+   "tod": 0.76,
+   "consoleErrors": [
+    "Failed to load resource: the server responded with a status of 404 (Not Found)"
+   ],
+   "secs": 451
+  }
+ ]
 }
