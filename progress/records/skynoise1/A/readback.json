@@ -1,0 +1,32 @@
+{
+ "prereg": "PREREG-skynoise.md",
+ "chunk": "A",
+ "shot": "courtyard",
+ "startedAt": "2026-08-05T09:28:34.042Z",
+ "srcTreeBefore": "3e2477e7456b540b",
+ "cand": {
+  "scale": [
+   0.000105,
+   0.000138,
+   0.000105
+  ],
+  "soft": [
+   0.36,
+   0.38,
+   0.4
+  ]
+ },
+ "shipExpected": {
+  "scale": [
+   0.0003,
+   0.00052,
+   0.00088
+  ],
+  "soft": [
+   0.3,
+   0.16,
+   0.09
+  ]
+ },
+ "arms": []
+}
