@@ -7,5 +7,11 @@
   "head": "47de8f1",
   "srcDirtyFiles": 0
  },
- "postrun": null
+ "postrun": {
+  "when": "2026-08-05T05:30:19.637Z",
+  "note": "taken at scoring, after all four r4 chunks landed (logs fx22-r4c1..c4 all end 'fx22 DONE'); computed with the prelaunch rule verbatim (relative paths). Equal to prelaunch AND to the registered stamp, so the source tree never moved across the whole r4 capture window — §121.4 closed for this run. head not stamped: the scoring agent runs under a no-git rule; the coordinator's sweep commit is the head record.",
+  "srcTree": "3fea650a4d645857e4843149d19e5445f133ac33172a321c128517a87a7a7a57",
+  "matchesPrelaunch": true,
+  "matchesRegisteredStamp": true
+ }
 }

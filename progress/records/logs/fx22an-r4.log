@@ -1,0 +1,162 @@
+========================================================================================
+fx22 — candidate 1 scored against PREREG-sandhigh Amendment 1, D1..D4 in registered order
+========================================================================================
+
+--- arm stamps (from each job probe; the gate is one uniform on one program) ---
+  temple.base        uGate.on=0  lumaMax=60 rbMax=0.5 soft=8/0.08 min=0  sandHigh live=900  backdropRT=320x180 bound=true
+  temple.gated       uGate.on=1  lumaMax=60 rbMax=0.5 soft=8/0.08 min=0  sandHigh live=900  backdropRT=320x180 bound=true
+  temple.back        uGate.on=0  lumaMax=60 rbMax=0.5 soft=8/0.08 min=0  sandHigh live=900  backdropRT=320x180 bound=true
+  hero.base          uGate.on=0  lumaMax=60 rbMax=0.5 soft=8/0.08 min=0  sandHigh live=900  backdropRT=320x180 bound=true
+  hero.gated         uGate.on=1  lumaMax=60 rbMax=0.5 soft=8/0.08 min=0  sandHigh live=900  backdropRT=320x180 bound=true
+  dunes.base         uGate.on=0  lumaMax=60 rbMax=0.5 soft=8/0.08 min=0  sandHigh live=900  backdropRT=320x180 bound=true
+  dunes.gated        uGate.on=1  lumaMax=60 rbMax=0.5 soft=8/0.08 min=0  sandHigh live=900  backdropRT=320x180 bound=true
+  courtyard.base     uGate.on=0  lumaMax=60 rbMax=0.5 soft=8/0.08 min=0  sandHigh live=900  backdropRT=320x180 bound=true
+  courtyard.gated    uGate.on=1  lumaMax=60 rbMax=0.5 soft=8/0.08 min=0  sandHigh live=900  backdropRT=320x180 bound=true
+  night.base         uGate.on=0  lumaMax=60 rbMax=0.5 soft=8/0.08 min=0  sandHigh live=900  backdropRT=320x180 bound=true
+  night.gated        uGate.on=1  lumaMax=60 rbMax=0.5 soft=8/0.08 min=0  sandHigh live=900  backdropRT=320x180 bound=true
+  interior.base      uGate.on=0  lumaMax=60 rbMax=0.5 soft=8/0.08 min=0  sandHigh live=900  backdropRT=320x180 bound=true
+  interior.gated     uGate.on=1  lumaMax=60 rbMax=0.5 soft=8/0.08 min=0  sandHigh live=900  backdropRT=320x180 bound=true
+
+========================================================================================
+D1 — selectivity. "Bit-identical, 0 px" = ANY byte differing (threshold stated per §122.1;
+     the fx21an ΣRGB>=4 count is shown beside it and is NOT the D1 number).
+  hero       base vs gated: strict 0 px  (ΣRGB>=4: 0 px)  OK
+  dunes      base vs gated: strict 0 px  (ΣRGB>=4: 0 px)  OK
+  courtyard  base vs gated: strict 660 px  (ΣRGB>=4: 500 px)  <<< D1 FAIL
+  temple     back vs base (restore control): strict 0 px  (ΣRGB>=4: 0 px)  OK
+  D1: FAIL
+
+========================================================================================
+CLASSIFIER VERIFICATION (§148.3/§150.2) — must precede D2. The shader arithmetic reproduced
+on the CPU over the texels the shader samples. Decisive: fires at disc, exactly zero at
+(520,581). Anchor comparison is a sanity report only — pre-grade vs graded-PNG quantities.
+  temple.gated   disc         raw(1,5,14) enc[20.5,42.7,68.2] bl=39.82 rb=0.301 wl=1 wr=1 factor=0 fires=true
+  temple.gated   nonartefact  raw(13,16,17) enc[65.9,72.4,74.5] bl=71.2 rb=0.885 wl=0 wr=0 factor=1 fires=false
+  temple.base    disc         raw(1,5,14) enc[20.5,42.7,68.2] bl=39.82 rb=0.301 wl=1 wr=1 factor=0 fires=true
+  temple.base    nonartefact  raw(13,16,17) enc[65.9,72.4,74.5] bl=71.2 rb=0.885 wl=0 wr=0 factor=1 fires=false
+  disc fires: true (factor 0, full)   non-artefact weight: 0.0000 (must be exactly 0, factor exactly 1: true)
+  anchors (sanity, NOT the test): disc sampled bl=39.82 vs graded-PNG anchor 44.4; non-artefact bl=71.2 vs 76.6
+  CLASSIFIER: CORRECT — D2 is scoreable
+
+========================================================================================
+D2 — removal, not thinning. Detector: residual vs ring-median >= 3 (registered Arm B
+     line), components 4-conn >= 40 px, window = registered bbox (602,133)-(659,193) pad 40.
+  calibration on temple.base: ring bg L=46.1, 2546 px >= +3, components: 2496px mean +19.23, 48px mean +18.86
+  control (-110,+0) on base: bg L=74.3, 1834 px >= +3, components: 1139px +78.24, 683px +60.53  <<< FIRED on disc-free region
+  control (+150,+0) on base: bg L=73.9, 2426 px >= +3, components: 2426px +70.77  <<< FIRED on disc-free region
+  control (+0,+110) on base: bg L=140.1, 2533 px >= +3, components: 1687px +22.48, 695px +16.50, 88px +18.37, 59px +12.54  <<< FIRED on disc-free region
+  control (+0,-110) on base: bg L=76.4, 1246 px >= +3, components: 890px +7.07  <<< FIRED on disc-free region
+  !! detector fired on 4/4 disc-free controls — its positive answers are not trustworthy where it fired; adjudicate on the D3 crops (the picture is the finding).
+  temple.gated: ring bg L=46.1, 635 px >= +3, components: 583px mean +29.36, 48px mean +18.86
+  removed-at-disc component: 2195 px 58x59 at (602,135) mean ΔL +18.71 total|ΔL| 41108   [registered disc: 2803 px, +17.28, 48436]
+  D2: FAIL — residual component(s) survive: thinning, the sandLow failure mode
+
+========================================================================================
+D3 — the picture, both halves at 4x. Crops written; THE VERDICT IS TAKEN BY LOOKING AT THEM,
+     and if picture and statistic disagree the picture is the finding.
+  wrote /home/user/Demo/progress/records/cand1/crops/temple-disc-base-4x.png
+  wrote /home/user/Demo/progress/records/cand1/crops/temple-disc-gated-4x.png
+  wrote /home/user/Demo/progress/records/cand1/crops/temple-nonart-base-4x.png
+  wrote /home/user/Demo/progress/records/cand1/crops/temple-nonart-gated-4x.png
+  wrote /home/user/Demo/progress/records/cand1/crops/temple-collat-base-4x.png
+  wrote /home/user/Demo/progress/records/cand1/crops/temple-collat-gated-4x.png
+
+========================================================================================
+D4 — anti-proxy: every attenuated component, named. night/interior are the deliberate
+     false-positive population (§150.3). Registered rule: attenuated >20% => must be the
+     disc or under ΔL 3.0. Attenuation fraction is unmeasurable without no-sandHigh arms;
+     removed mean |ΔL| >= 3.0 on a non-disc component is a violation either way (see header).
+
+  temple: changed(ΣRGB>=4) 4504 px, total|ΔL| removed 64583, components >=40px: 20
+      2195 px     58x59 at (602,135)  removed ΔL +18.71  behind-after rgb(3,47,101) luma 41.7 R/B 0.03   = THE DISC
+       269 px     18x29 at (438,68)  removed ΔL +1.88  behind-after rgb(2,47,102) luma 41.3 R/B 0.02
+       211 px     18x16 at (767,145)  removed ΔL +19.01  behind-after rgb(111,101,107) luma 103.9 R/B 1.04   <<< D4 VIOLATION (non-disc, removed >= 3.0)
+       193 px     20x20 at (567,196)  removed ΔL -2.30  behind-after rgb(151,129,113) luma 132.4 R/B 1.34
+       174 px     16x17 at (596,25)  removed ΔL +14.75  behind-after rgb(81,79,101) luma 80.8 R/B 0.80   <<< D4 VIOLATION (non-disc, removed >= 3.0)
+       132 px     22x10 at (652,107)  removed ΔL +14.34  behind-after rgb(61,72,110) luma 72.1 R/B 0.55   <<< D4 VIOLATION (non-disc, removed >= 3.0)
+       126 px     17x11 at (736,176)  removed ΔL -2.07  behind-after rgb(161,137,118) luma 141.1 R/B 1.37
+       110 px      23x8 at (406,14)  removed ΔL +32.70  behind-after rgb(34,59,92) luma 56.2 R/B 0.37   <<< D4 VIOLATION (non-disc, removed >= 3.0)
+       102 px     10x17 at (553,192)  removed ΔL +5.38  behind-after rgb(167,142,119) luma 145.8 R/B 1.40   <<< D4 VIOLATION (non-disc, removed >= 3.0)
+        97 px     12x11 at (543,181)  removed ΔL +7.77  behind-after rgb(155,132,116) luma 135.8 R/B 1.34   <<< D4 VIOLATION (non-disc, removed >= 3.0)
+        90 px     15x10 at (776,82)  removed ΔL +20.25  behind-after rgb(81,80,104) luma 82.1 R/B 0.78   <<< D4 VIOLATION (non-disc, removed >= 3.0)
+        89 px     15x10 at (750,200)  removed ΔL +11.89  behind-after rgb(22,59,104) luma 54.6 R/B 0.21   <<< D4 VIOLATION (non-disc, removed >= 3.0)
+        86 px     11x10 at (827,7)  removed ΔL +9.66  behind-after rgb(93,87,101) luma 89.5 R/B 0.92   <<< D4 VIOLATION (non-disc, removed >= 3.0)
+        83 px     11x11 at (422,36)  removed ΔL +12.82  behind-after rgb(1,42,91) luma 36.6 R/B 0.01   <<< D4 VIOLATION (non-disc, removed >= 3.0)
+        73 px     11x10 at (731,150)  removed ΔL +8.49  behind-after rgb(161,137,119) luma 141.2 R/B 1.36   <<< D4 VIOLATION (non-disc, removed >= 3.0)
+        64 px      6x14 at (491,1)  removed ΔL +17.42  behind-after rgb(82,77,93) luma 79.4 R/B 0.88   <<< D4 VIOLATION (non-disc, removed >= 3.0)
+        49 px       9x8 at (810,185)  removed ΔL +7.91  behind-after rgb(172,147,124) luma 150.2 R/B 1.39   <<< D4 VIOLATION (non-disc, removed >= 3.0)
+        48 px      6x12 at (750,0)  removed ΔL +7.15  behind-after rgb(177,153,129) luma 156.4 R/B 1.37   <<< D4 VIOLATION (non-disc, removed >= 3.0)
+        42 px       7x7 at (756,19)  removed ΔL +6.49  behind-after rgb(192,169,143) luma 171.9 R/B 1.34   <<< D4 VIOLATION (non-disc, removed >= 3.0)
+        42 px      7x12 at (385,156)  removed ΔL +2.41  behind-after rgb(54,64,89) luma 63.5 R/B 0.61
+    crops of largest: /home/user/Demo/progress/records/cand1/crops/temple-biggest-base-4x.png / /home/user/Demo/progress/records/cand1/crops/temple-biggest-gated-4x.png
+
+  hero: changed(ΣRGB>=4) 0 px, total|ΔL| removed 0, components >=40px: 0
+
+  dunes: changed(ΣRGB>=4) 0 px, total|ΔL| removed 0, components >=40px: 0
+
+  courtyard: changed(ΣRGB>=4) 500 px, total|ΔL| removed 6512, components >=40px: 6
+        92 px      14x9 at (64,160)  removed ΔL +12.49  behind-after rgb(15,48,81) luma 43.2 R/B 0.18   <<< D4 VIOLATION (non-disc, removed >= 3.0)
+        89 px     12x10 at (286,217)  removed ΔL +9.39  behind-after rgb(2,41,80) luma 35.8 R/B 0.02   <<< D4 VIOLATION (non-disc, removed >= 3.0)
+        76 px      13x8 at (960,191)  removed ΔL +25.36  behind-after rgb(25,52,81) luma 48.7 R/B 0.31   <<< D4 VIOLATION (non-disc, removed >= 3.0)
+        75 px      13x8 at (230,336)  removed ΔL +14.84  behind-after rgb(69,60,79) luma 63.7 R/B 0.88   <<< D4 VIOLATION (non-disc, removed >= 3.0)
+        57 px      13x7 at (1040,160)  removed ΔL +6.24  behind-after rgb(16,49,83) luma 44.5 R/B 0.20   <<< D4 VIOLATION (non-disc, removed >= 3.0)
+        51 px      12x9 at (120,609)  removed ΔL +8.26  behind-after rgb(83,55,44) luma 60.1 R/B 1.89   <<< D4 VIOLATION (non-disc, removed >= 3.0)
+    crops of largest: /home/user/Demo/progress/records/cand1/crops/courtyard-biggest-base-4x.png / /home/user/Demo/progress/records/cand1/crops/courtyard-biggest-gated-4x.png
+
+  night: changed(ΣRGB>=4) 8314 px, total|ΔL| removed 47108, components >=40px: 40
+      1401 px     47x41 at (959,42)  removed ΔL +5.15  behind-after rgb(18,52,107) luma 48.4 R/B 0.17   <<< D4 VIOLATION (non-disc, removed >= 3.0)
+       523 px     45x39 at (108,621)  removed ΔL +8.77  behind-after rgb(10,17,36) luma 17.1 R/B 0.28   <<< D4 VIOLATION (non-disc, removed >= 3.0)
+       507 px     26x25 at (1165,173)  removed ΔL +7.26  behind-after rgb(14,56,112) luma 50.8 R/B 0.12   <<< D4 VIOLATION (non-disc, removed >= 3.0)
+       336 px     21x25 at (746,84)  removed ΔL +5.45  behind-after rgb(12,52,110) luma 47.4 R/B 0.11   <<< D4 VIOLATION (non-disc, removed >= 3.0)
+       331 px     28x30 at (765,346)  removed ΔL +10.78  behind-after rgb(12,14,36) luma 15.3 R/B 0.33   <<< D4 VIOLATION (non-disc, removed >= 3.0)
+       275 px     25x21 at (116,648)  removed ΔL +8.67  behind-after rgb(8,18,37) luma 17.3 R/B 0.22   <<< D4 VIOLATION (non-disc, removed >= 3.0)
+       210 px     18x17 at (1024,213)  removed ΔL +4.04  behind-after rgb(10,57,118) luma 51.7 R/B 0.09   <<< D4 VIOLATION (non-disc, removed >= 3.0)
+       202 px     18x17 at (1077,195)  removed ΔL +7.35  behind-after rgb(10,56,116) luma 50.3 R/B 0.09   <<< D4 VIOLATION (non-disc, removed >= 3.0)
+       166 px     30x11 at (989,236)  removed ΔL +1.48  behind-after rgb(13,59,119) luma 53.6 R/B 0.11
+       139 px     15x19 at (1202,58)  removed ΔL +5.80  behind-after rgb(16,49,101) luma 46.1 R/B 0.16   <<< D4 VIOLATION (non-disc, removed >= 3.0)
+       121 px     13x13 at (1197,241)  removed ΔL +6.47  behind-after rgb(11,57,115) luma 51.3 R/B 0.09   <<< D4 VIOLATION (non-disc, removed >= 3.0)
+       120 px     15x16 at (649,8)  removed ΔL +9.19  behind-after rgb(38,68,118) luma 65.2 R/B 0.32   <<< D4 VIOLATION (non-disc, removed >= 3.0)
+       116 px      22x8 at (712,143)  removed ΔL +1.80  behind-after rgb(14,56,116) luma 51.5 R/B 0.12
+       111 px     19x10 at (1058,125)  removed ΔL +4.89  behind-after rgb(15,55,113) luma 50.8 R/B 0.13   <<< D4 VIOLATION (non-disc, removed >= 3.0)
+       108 px     13x13 at (715,161)  removed ΔL +1.37  behind-after rgb(26,62,113) luma 58.1 R/B 0.24
+       108 px     10x17 at (920,184)  removed ΔL +7.68  behind-after rgb(6,10,33) luma 10.4 R/B 0.17   <<< D4 VIOLATION (non-disc, removed >= 3.0)
+       100 px     17x13 at (1035,11)  removed ΔL +4.87  behind-after rgb(17,51,103) luma 47.3 R/B 0.16   <<< D4 VIOLATION (non-disc, removed >= 3.0)
+       100 px     15x10 at (648,236)  removed ΔL +6.80  behind-after rgb(18,32,59) luma 31.1 R/B 0.31   <<< D4 VIOLATION (non-disc, removed >= 3.0)
+        94 px     12x11 at (901,52)  removed ΔL +2.35  behind-after rgb(11,49,107) luma 45.5 R/B 0.11
+        92 px     16x15 at (1027,171)  removed ΔL +1.74  behind-after rgb(16,53,107) luma 48.9 R/B 0.15
+        85 px     10x15 at (1044,223)  removed ΔL +6.45  behind-after rgb(10,58,118) luma 52.1 R/B 0.09   <<< D4 VIOLATION (non-disc, removed >= 3.0)
+        85 px     18x10 at (42,703)  removed ΔL +10.51  behind-after rgb(21,21,37) luma 22.2 R/B 0.56   <<< D4 VIOLATION (non-disc, removed >= 3.0)
+        83 px      9x15 at (1209,31)  removed ΔL +6.90  behind-after rgb(20,50,100) luma 47.5 R/B 0.20   <<< D4 VIOLATION (non-disc, removed >= 3.0)
+        83 px     11x11 at (1016,203)  removed ΔL +3.18  behind-after rgb(10,56,117) luma 50.8 R/B 0.08   <<< D4 VIOLATION (non-disc, removed >= 3.0)
+        81 px     19x10 at (897,97)  removed ΔL +2.19  behind-after rgb(22,57,114) luma 53.8 R/B 0.19
+        78 px      9x13 at (762,207)  removed ΔL +3.22  behind-after rgb(12,51,105) luma 46.7 R/B 0.12   <<< D4 VIOLATION (non-disc, removed >= 3.0)
+        69 px     14x10 at (440,252)  removed ΔL +5.34  behind-after rgb(9,13,37) luma 13.8 R/B 0.25   <<< D4 VIOLATION (non-disc, removed >= 3.0)
+        67 px      14x8 at (1034,85)  removed ΔL +6.30  behind-after rgb(18,56,112) luma 51.7 R/B 0.16   <<< D4 VIOLATION (non-disc, removed >= 3.0)
+        65 px      12x9 at (430,242)  removed ΔL +4.89  behind-after rgb(12,18,44) luma 18.5 R/B 0.27   <<< D4 VIOLATION (non-disc, removed >= 3.0)
+        61 px     13x10 at (766,341)  removed ΔL +5.92  behind-after rgb(14,16,36) luma 17.1 R/B 0.39   <<< D4 VIOLATION (non-disc, removed >= 3.0)
+        60 px       9x9 at (1143,225)  removed ΔL +7.06  behind-after rgb(10,57,116) luma 51.1 R/B 0.09   <<< D4 VIOLATION (non-disc, removed >= 3.0)
+        55 px      8x10 at (1124,24)  removed ΔL +6.13  behind-after rgb(14,47,99) luma 44.1 R/B 0.14   <<< D4 VIOLATION (non-disc, removed >= 3.0)
+        54 px       9x9 at (938,100)  removed ΔL +2.90  behind-after rgb(13,53,112) luma 48.9 R/B 0.12
+        51 px      9x13 at (99,621)  removed ΔL +4.92  behind-after rgb(14,24,44) luma 23.2 R/B 0.32   <<< D4 VIOLATION (non-disc, removed >= 3.0)
+        47 px      12x7 at (966,91)  removed ΔL +3.18  behind-after rgb(23,61,117) luma 57.0 R/B 0.20   <<< D4 VIOLATION (non-disc, removed >= 3.0)
+        47 px       9x9 at (1159,703)  removed ΔL +3.27  behind-after rgb(9,14,35) luma 14.7 R/B 0.27   <<< D4 VIOLATION (non-disc, removed >= 3.0)
+        44 px      7x10 at (766,179)  removed ΔL +5.15  behind-after rgb(11,55,114) luma 49.9 R/B 0.10   <<< D4 VIOLATION (non-disc, removed >= 3.0)
+        44 px      10x7 at (660,226)  removed ΔL +4.80  behind-after rgb(23,39,68) luma 37.6 R/B 0.33   <<< D4 VIOLATION (non-disc, removed >= 3.0)
+        41 px      8x12 at (0,200)  removed ΔL +1.92  behind-after rgb(4,17,40) luma 16.1 R/B 0.10
+        40 px      7x10 at (32,375)  removed ΔL +5.69  behind-after rgb(11,25,49) luma 23.5 R/B 0.24   <<< D4 VIOLATION (non-disc, removed >= 3.0)
+    crops of largest: /home/user/Demo/progress/records/cand1/crops/night-biggest-base-4x.png / /home/user/Demo/progress/records/cand1/crops/night-biggest-gated-4x.png
+
+  interior: changed(ΣRGB>=4) 1 px, total|ΔL| removed 2, components >=40px: 0
+
+  D4: FAIL — 53 non-disc component(s) with removed mean |ΔL| >= 3.0, named above
+
+========================================================================================
+Arm C (supplementary — registered against fx21-boot baselines that no longer exist as
+frames; scored here as removed-amount bounds, cross-boot, and labelled as such):
+  temple non-disc removed total |ΔL| = 22550 across 19 components.
+  Arm C baseline (non-disc field) 25,192; 15% budget = 3,779. Estimated surviving field
+  = 25,192 - 22550 = 2642 (band 21,413..28,971) — OUTSIDE the band, cross-boot estimate.
+  per-component clause at the strict-gate collateral (433,68) [baseline 646 px x 1.63 ~= 1053]:
+    removed there 540 — OVER 50% of its own baseline |ΔL| (cross-boot).
+
+Done. This file evaluates; the RESULT decides, after the crops have been looked at.
