@@ -14215,3 +14215,30 @@ no window re-runs. The runner also detected and recorded the committed-tree moti
 (`MATCHES COMMITTED: false` at release), which is §160.5 doing exactly what it was written for.
 The rule above stays adopted — the outcome was luck plus guards, and only the guards are policy.
 
+
+## §166 — capbill: UNSCOREABLE as sealed; the yaw ships as a declared look change, not a verdict
+
+The seal returned its registered outcome — the E-gates' premise (sky outboard of the bill) is
+false on the actual frames, so no silhouette gate scored and nothing was converted (§141 held).
+What the run did establish, on measures committed before the capture: the token's effect is real
+and in the registered direction at the failing bearing — CHAR-sbs1's ink-boundary measure reads
+arm A at −22.5 px (reproducing its committed record to the digit), arm B at **−17.5 px** (+5.0 px
+≈ 1.7 cm of bill leading edge at 33°), BACK ≡ A to the digit; the offline projection table
+(verified twice at the registration tree) says −10° reaches base-45°'s outline-share level at 33°
+with the 45° read improving; and GATE 0 proved the eyes stay clear.
+
+**Coordinator decision: ship `capYaw −10°` as a §17-declared look change,** citing exactly that
+evidence and claiming no sealed verdict — the UNSCOREABLE stands on the record. The declared
+rationale: the close-up loses on the head (CRITIC-sbs1, CHAR-sbs1 concur), the bill's vanishing
+at 33° is one named cause (§151.4, in-frame −16.1 %hh vs canon +11.1), the yaw moves it the
+right way by a measured amount at zero measured cost elsewhere, and the token mechanism plus
+GATE 0 bound the blast radius. A regression guard for future closeup captures is registered
+here, choosing the bar before any future frame exists: **bill ink-boundary at 33° must read
+≥ −19.0 px on any future sly-closeup capture** (B's −17.5 + 1.5 px of slack); a future read
+below that voids the guard and reopens this section.
+
+Per §165's rule the edit queues on the capture lock: it is applied under a coordinator-held
+ticket in the next free window, then swept with this section cited. The E-gate family, if ever
+re-armed, must be re-registered against the actual backdrop (wall, not sky) — recorded so the
+next session does not re-run a gate whose premise this capture measured false.
+
