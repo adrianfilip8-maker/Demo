@@ -14266,3 +14266,19 @@ re-run launches directly — the agent's ~8 minutes of prep before each launch w
 nothing; the scorer spawns when frames exist. Interior chunk and all scoring prep remain
 committed; the courtyard window is the only thing being re-bought, now for the third time.
 
+
+## §169 — eyesize: every treatment gate green; eyeScale 0.55 ships as declared
+
+The seal's verdict (RESULT-eyesize.md §9): eye:face 0.316→0.140 into the canon band with the
+offline projection reproducing to a few px on every quantity; the mask divider and band-scale
+dark runs recovered; the shipped eye ledger bit-held; the §166 bill guard −17.5 ≥ −19.0 on both
+arms; the known-bad separating; the head reading as Sly in a domino mask. The two letter-fails
+are measured environmental (cross-timeline BACK residual at the cap crown, 0 px in either eye
+rect; combat's flash-blown head a registered §141 outcome).
+
+**Coordinator decision: ship `eyeScale 0.55` as the §17-declared look change the seal
+recommends**, applying the seal's §1 edit shape (the seven token sites at their B-arm values,
+token removed) under a held capture-lock ticket per §165 — the banda capture holds the lock as
+this is written, so the edit lands at the next free window citing this section. Riders adopted
+as registered: the §7.4 re-pair after ship; GATE 5's letter cure is optional and not scheduled.
+
