@@ -1,0 +1,854 @@
+{
+ "_what": "Raw outputs behind progress/records/RESULT-goldlobe.md, measured 2026-08-05 on the goldlobe1 capture (chunk E, committed f023921, captured 14:09-14:21Z at srcTree 2b7683df9d0ef6ad). Masks rebuilt by matmask.mjs at the identical scoring-time tree 2b7683df9d0ef6ad. Mask bins scratchpad-only (regenerable).",
+ "null_checks": {
+  "threshold_note": "differing px counted at SumRGB>=4 per section 122.1; SumRGB>=1 beside it",
+  "traversal.null_vs_base": {
+   "px_ge4": 0,
+   "px_ge1": 0,
+   "max_sumrgb": 0
+  },
+  "combat.null_vs_base": {
+   "px_ge4": 0,
+   "px_ge1": 0,
+   "max_sumrgb": 0
+  },
+  "arm_deltas_vs_base_px_ge4": {
+   "traversal": {
+    "Alo": 9769,
+    "cand": 13972,
+    "KBchrome": 37421
+   },
+   "combat": {
+    "Alo": 3459,
+    "cand": 5085,
+    "KBchrome": 12307
+   }
+  }
+ },
+ "mask_shares_raw": {
+  "traversal": {
+   "arch:hieroglyph_gilded": 14.0,
+   "arch:sandstone_worn": 3.61,
+   "arch:gold_leaf": 1.13
+  },
+  "combat": {
+   "arch:hieroglyph_gilded": 5.81,
+   "arch:sandstone_worn": 34.98
+  }
+ },
+ "gildlit": {
+  "traversal.base": {
+   "shot": "traversal",
+   "png": "/home/user/Demo/progress/records/goldlobe1/traversal.base.png",
+   "capturedAt": "goldlobe1-base",
+   "erode": 2,
+   "size": "1280x720",
+   "arch:hieroglyph_gilded": {
+    "px": 119251,
+    "shareOfFrame": 12.94,
+    "L": {
+     "p01": 21.1,
+     "p05": 28.2,
+     "p50": 86.2,
+     "p95": 131.5,
+     "p99": 187.5,
+     "max": 255
+    },
+    "tail": {
+     "over160": 2.08,
+     "over200": 0.63,
+     "over230": 0.16
+    },
+    "span": 4.66,
+    "chroma": {
+     "p50": 20,
+     "p95": 60
+    },
+    "RmB": {
+     "p50": -16
+    }
+   },
+   "arch:sandstone_worn": {
+    "px": 23347,
+    "shareOfFrame": 2.53,
+    "L": {
+     "p01": 31.4,
+     "p05": 47,
+     "p50": 64,
+     "p95": 149.7,
+     "p99": 162.4,
+     "max": 200.8
+    },
+    "tail": {
+     "over160": 1.66,
+     "over200": 0.01,
+     "over230": 0
+    },
+    "span": 3.18,
+    "chroma": {
+     "p50": 37,
+     "p95": 62
+    },
+    "RmB": {
+     "p50": -32
+    }
+   }
+  },
+  "traversal.Alo": {
+   "shot": "traversal",
+   "png": "/home/user/Demo/progress/records/goldlobe1/traversal.Alo.png",
+   "capturedAt": "goldlobe1-Alo",
+   "erode": 2,
+   "size": "1280x720",
+   "arch:hieroglyph_gilded": {
+    "px": 119251,
+    "shareOfFrame": 12.94,
+    "L": {
+     "p01": 21.2,
+     "p05": 28.2,
+     "p50": 86.3,
+     "p95": 131.7,
+     "p99": 188.3,
+     "max": 255
+    },
+    "tail": {
+     "over160": 2.13,
+     "over200": 0.66,
+     "over230": 0.16
+    },
+    "span": 4.67,
+    "chroma": {
+     "p50": 20,
+     "p95": 60
+    },
+    "RmB": {
+     "p50": -16
+    }
+   },
+   "arch:sandstone_worn": {
+    "px": 23347,
+    "shareOfFrame": 2.53,
+    "L": {
+     "p01": 31.4,
+     "p05": 47.1,
+     "p50": 64,
+     "p95": 149.7,
+     "p99": 162.4,
+     "max": 200.8
+    },
+    "tail": {
+     "over160": 1.66,
+     "over200": 0.01,
+     "over230": 0
+    },
+    "span": 3.18,
+    "chroma": {
+     "p50": 37,
+     "p95": 62
+    },
+    "RmB": {
+     "p50": -32
+    }
+   }
+  },
+  "traversal.cand": {
+   "shot": "traversal",
+   "png": "/home/user/Demo/progress/records/goldlobe1/traversal.cand.png",
+   "capturedAt": "goldlobe1-cand",
+   "erode": 2,
+   "size": "1280x720",
+   "arch:hieroglyph_gilded": {
+    "px": 119251,
+    "shareOfFrame": 12.94,
+    "L": {
+     "p01": 21.2,
+     "p05": 28.3,
+     "p50": 86.3,
+     "p95": 131.9,
+     "p99": 189,
+     "max": 255
+    },
+    "tail": {
+     "over160": 2.17,
+     "over200": 0.66,
+     "over230": 0.16
+    },
+    "span": 4.66,
+    "chroma": {
+     "p50": 20,
+     "p95": 59
+    },
+    "RmB": {
+     "p50": -16
+    }
+   },
+   "arch:sandstone_worn": {
+    "px": 23347,
+    "shareOfFrame": 2.53,
+    "L": {
+     "p01": 31.4,
+     "p05": 47.1,
+     "p50": 64,
+     "p95": 149.7,
+     "p99": 162.4,
+     "max": 200.8
+    },
+    "tail": {
+     "over160": 1.66,
+     "over200": 0.01,
+     "over230": 0
+    },
+    "span": 3.18,
+    "chroma": {
+     "p50": 37,
+     "p95": 62
+    },
+    "RmB": {
+     "p50": -32
+    }
+   }
+  },
+  "traversal.KBchrome": {
+   "shot": "traversal",
+   "png": "/home/user/Demo/progress/records/goldlobe1/traversal.KBchrome.png",
+   "capturedAt": "goldlobe1-KBchrome",
+   "erode": 2,
+   "size": "1280x720",
+   "arch:hieroglyph_gilded": {
+    "px": 119251,
+    "shareOfFrame": 12.94,
+    "L": {
+     "p01": 21.9,
+     "p05": 29,
+     "p50": 86.6,
+     "p95": 135.2,
+     "p99": 193,
+     "max": 255
+    },
+    "tail": {
+     "over160": 2.5,
+     "over200": 0.75,
+     "over230": 0.17
+    },
+    "span": 4.66,
+    "chroma": {
+     "p50": 20,
+     "p95": 59
+    },
+    "RmB": {
+     "p50": -16
+    }
+   },
+   "arch:sandstone_worn": {
+    "px": 23347,
+    "shareOfFrame": 2.53,
+    "L": {
+     "p01": 31.4,
+     "p05": 47,
+     "p50": 64,
+     "p95": 149.7,
+     "p99": 162.4,
+     "max": 200.8
+    },
+    "tail": {
+     "over160": 1.66,
+     "over200": 0.01,
+     "over230": 0
+    },
+    "span": 3.18,
+    "chroma": {
+     "p50": 37,
+     "p95": 62
+    },
+    "RmB": {
+     "p50": -32
+    }
+   }
+  },
+  "combat.base": {
+   "shot": "combat",
+   "png": "/home/user/Demo/progress/records/goldlobe1/combat.base.png",
+   "capturedAt": "goldlobe1-base",
+   "erode": 2,
+   "size": "1280x720",
+   "arch:hieroglyph_gilded": {
+    "px": 50019,
+    "shareOfFrame": 5.43,
+    "L": {
+     "p01": 24.1,
+     "p05": 29.2,
+     "p50": 147.8,
+     "p95": 195.7,
+     "p99": 205.1,
+     "max": 212.6
+    },
+    "tail": {
+     "over160": 42,
+     "over200": 2.86,
+     "over230": 0
+    },
+    "span": 6.7,
+    "chroma": {
+     "p50": 72,
+     "p95": 107
+    },
+    "RmB": {
+     "p50": 72
+    }
+   },
+   "arch:sandstone_worn": {
+    "px": 310352,
+    "shareOfFrame": 33.68,
+    "L": {
+     "p01": 20.3,
+     "p05": 27.1,
+     "p50": 61,
+     "p95": 144.4,
+     "p99": 204.1,
+     "max": 219.4
+    },
+    "tail": {
+     "over160": 3.65,
+     "over200": 1.46,
+     "over230": 0
+    },
+    "span": 5.33,
+    "chroma": {
+     "p50": 33,
+     "p95": 57
+    },
+    "RmB": {
+     "p50": -32
+    }
+   }
+  },
+  "combat.Alo": {
+   "shot": "combat",
+   "png": "/home/user/Demo/progress/records/goldlobe1/combat.Alo.png",
+   "capturedAt": "goldlobe1-Alo",
+   "erode": 2,
+   "size": "1280x720",
+   "arch:hieroglyph_gilded": {
+    "px": 50019,
+    "shareOfFrame": 5.43,
+    "L": {
+     "p01": 24.1,
+     "p05": 29.2,
+     "p50": 147.9,
+     "p95": 195.7,
+     "p99": 205.1,
+     "max": 212.6
+    },
+    "tail": {
+     "over160": 42.07,
+     "over200": 2.86,
+     "over230": 0
+    },
+    "span": 6.7,
+    "chroma": {
+     "p50": 72,
+     "p95": 107
+    },
+    "RmB": {
+     "p50": 72
+    }
+   },
+   "arch:sandstone_worn": {
+    "px": 310352,
+    "shareOfFrame": 33.68,
+    "L": {
+     "p01": 20.3,
+     "p05": 27.1,
+     "p50": 61,
+     "p95": 144.4,
+     "p99": 204.1,
+     "max": 219.4
+    },
+    "tail": {
+     "over160": 3.65,
+     "over200": 1.46,
+     "over230": 0
+    },
+    "span": 5.33,
+    "chroma": {
+     "p50": 33,
+     "p95": 57
+    },
+    "RmB": {
+     "p50": -32
+    }
+   }
+  },
+  "combat.cand": {
+   "shot": "combat",
+   "png": "/home/user/Demo/progress/records/goldlobe1/combat.cand.png",
+   "capturedAt": "goldlobe1-cand",
+   "erode": 2,
+   "size": "1280x720",
+   "arch:hieroglyph_gilded": {
+    "px": 50019,
+    "shareOfFrame": 5.43,
+    "L": {
+     "p01": 24.2,
+     "p05": 29.2,
+     "p50": 148,
+     "p95": 195.7,
+     "p99": 205.1,
+     "max": 212.6
+    },
+    "tail": {
+     "over160": 42.12,
+     "over200": 2.87,
+     "over230": 0
+    },
+    "span": 6.7,
+    "chroma": {
+     "p50": 72,
+     "p95": 107
+    },
+    "RmB": {
+     "p50": 72
+    }
+   },
+   "arch:sandstone_worn": {
+    "px": 310352,
+    "shareOfFrame": 33.68,
+    "L": {
+     "p01": 20.3,
+     "p05": 27.1,
+     "p50": 61,
+     "p95": 144.4,
+     "p99": 204.1,
+     "max": 219.4
+    },
+    "tail": {
+     "over160": 3.65,
+     "over200": 1.46,
+     "over230": 0
+    },
+    "span": 5.33,
+    "chroma": {
+     "p50": 33,
+     "p95": 57
+    },
+    "RmB": {
+     "p50": -32
+    }
+   }
+  },
+  "combat.KBchrome": {
+   "shot": "combat",
+   "png": "/home/user/Demo/progress/records/goldlobe1/combat.KBchrome.png",
+   "capturedAt": "goldlobe1-KBchrome",
+   "erode": 2,
+   "size": "1280x720",
+   "arch:hieroglyph_gilded": {
+    "px": 50019,
+    "shareOfFrame": 5.43,
+    "L": {
+     "p01": 24.5,
+     "p05": 29.6,
+     "p50": 148.6,
+     "p95": 195.8,
+     "p99": 205.1,
+     "max": 212.6
+    },
+    "tail": {
+     "over160": 42.41,
+     "over200": 2.93,
+     "over230": 0
+    },
+    "span": 6.62,
+    "chroma": {
+     "p50": 72,
+     "p95": 107
+    },
+    "RmB": {
+     "p50": 72
+    }
+   },
+   "arch:sandstone_worn": {
+    "px": 310352,
+    "shareOfFrame": 33.68,
+    "L": {
+     "p01": 20.3,
+     "p05": 27.1,
+     "p50": 61,
+     "p95": 144.4,
+     "p99": 204.1,
+     "max": 219.4
+    },
+    "tail": {
+     "over160": 3.65,
+     "over200": 1.46,
+     "over230": 0
+    },
+    "span": 5.33,
+    "chroma": {
+     "p50": 33,
+     "p95": 57
+    },
+    "RmB": {
+     "p50": -32
+    }
+   }
+  }
+ },
+ "occluder_derivation": {
+  "procedure": "cell map of >=0.92*max px inside raw gild mask -> visual crop per hot cell -> exclusion rects over character/FX, re-derived on goldlobe1 base (gold1 rects NOT reused as given; re-derived and found numerically coincident because staging reproduces)",
+  "pass1_no_exclude": {
+   "maxL": 255.0,
+   "thr": 234.6,
+   "hot_px": 172,
+   "hot_cells": {
+    "x480-640 y240-360": 172
+   },
+   "hot_bbox": "x585-601 y246-262",
+   "identified": "white FX glow sprite behind Sly, brightest ~(585-594, 259-261)"
+  },
+  "visual_extents": {
+   "sly_glow_tail_cane": "x~518-710, y~202-360",
+   "rooftop_guard": "x~878-940, y~10-95"
+  },
+  "exclusion_rects": [
+   [
+    500,
+    190,
+    740,
+    400
+   ],
+   [
+    870,
+    0,
+    940,
+    100
+   ]
+  ],
+  "arm_aware_check": "cand-vs-base diff cells confirm glinting cane (Sly) and guard fittings stay inside the rects in every arm",
+  "positive_control": {
+   "exclusion_lifted_lobe": {
+    "area_px": 170,
+    "w": 17,
+    "h": 15,
+    "centroid": [
+     594,
+     256
+    ]
+   },
+   "exclusion_applied_lobe_px": 5,
+   "gold1_reference": {
+    "area_px": 173,
+    "centroid": [
+     594,
+     255
+    ]
+   }
+  }
+ },
+ "goldgap": [
+  {
+   "name": "BASE traversal goldlobe1 (glint 0/20; G-0base gate + gold1 reproduction; gild mask minus Sly/FX-glow and rooftop-guard occluders, re-derived on this capture per PREREG-goldtraversal \u00a76)",
+   "png": "/home/user/Demo/progress/records/goldlobe1/traversal.base.png",
+   "roi_rect": [
+    0,
+    0,
+    1280,
+    720
+   ],
+   "gold": {
+    "px": 104379,
+    "p05": 28.5,
+    "p50": 85.9,
+    "p95": 134.5,
+    "p99": 185.1,
+    "max": 230.4,
+    "span_p99_minus_p50": 99.2,
+    "ratio_p99_over_p50": 2.15
+   },
+   "lobe_thr": 212.0,
+   "lobe": {
+    "area_px": 5,
+    "w": 5,
+    "h": 1,
+    "centroid": [
+     885,
+     157
+    ]
+   },
+   "occlusion_beside_highlight": {
+    "ring_px": 571,
+    "p05": 27.6,
+    "p25": 51.2,
+    "contrast_lobe_over_ring_p05": 8.4
+   },
+   "bloom": {
+    "halo_px_past_edge": 0,
+    "bg_p50": 80.8,
+    "halo_tint_RmB_minus_bg": null,
+    "direction": [
+     0,
+     1
+    ]
+   }
+  },
+  {
+   "name": "POSITIVE CONTROL traversal goldlobe1 (base arm, occluder exclusion LIFTED - detector must return the known non-gold FX glow lobe, per PREREG-goldlobe \u00a73)",
+   "png": "/home/user/Demo/progress/records/goldlobe1/traversal.base.png",
+   "roi_rect": [
+    0,
+    0,
+    1280,
+    720
+   ],
+   "gold": {
+    "px": 128997,
+    "p05": 27.6,
+    "p50": 85.7,
+    "p95": 130.5,
+    "p99": 185.9,
+    "max": 255.0,
+    "span_p99_minus_p50": 100.2,
+    "ratio_p99_over_p50": 2.17
+   },
+   "lobe_thr": 234.6,
+   "lobe": {
+    "area_px": 170,
+    "w": 17,
+    "h": 15,
+    "centroid": [
+     594,
+     256
+    ]
+   },
+   "occlusion_beside_highlight": {
+    "ring_px": 1196,
+    "p05": 27.3,
+    "p25": 61.3,
+    "contrast_lobe_over_ring_p05": 9.3
+   },
+   "bloom": {
+    "halo_px_past_edge": 0,
+    "bg_p50": 80.8,
+    "halo_tint_RmB_minus_bg": null,
+    "direction": [
+     0,
+     1
+    ]
+   }
+  },
+  {
+   "name": "A-LO traversal goldlobe1 (glint 1.6/20 dose row; same occluders)",
+   "png": "/home/user/Demo/progress/records/goldlobe1/traversal.Alo.png",
+   "roi_rect": [
+    0,
+    0,
+    1280,
+    720
+   ],
+   "gold": {
+    "px": 104379,
+    "p05": 28.5,
+    "p50": 85.9,
+    "p95": 134.9,
+    "p99": 186.1,
+    "max": 230.4,
+    "span_p99_minus_p50": 100.2,
+    "ratio_p99_over_p50": 2.17
+   },
+   "lobe_thr": 212.0,
+   "lobe": {
+    "area_px": 5,
+    "w": 5,
+    "h": 1,
+    "centroid": [
+     885,
+     157
+    ]
+   },
+   "occlusion_beside_highlight": {
+    "ring_px": 571,
+    "p05": 27.6,
+    "p25": 51.2,
+    "contrast_lobe_over_ring_p05": 8.4
+   },
+   "bloom": {
+    "halo_px_past_edge": 0,
+    "bg_p50": 80.8,
+    "halo_tint_RmB_minus_bg": null,
+    "direction": [
+     0,
+     1
+    ]
+   }
+  },
+  {
+   "name": "CAND traversal goldlobe1 (glint 2.6/20 - the candidate; B1'/B4/B5/p99 scoring arm; same occluders)",
+   "png": "/home/user/Demo/progress/records/goldlobe1/traversal.cand.png",
+   "roi_rect": [
+    0,
+    0,
+    1280,
+    720
+   ],
+   "gold": {
+    "px": 104379,
+    "p05": 28.5,
+    "p50": 85.9,
+    "p95": 135.2,
+    "p99": 186.5,
+    "max": 231.1,
+    "span_p99_minus_p50": 100.6,
+    "ratio_p99_over_p50": 2.17
+   },
+   "lobe_thr": 212.6,
+   "lobe": {
+    "area_px": 5,
+    "w": 5,
+    "h": 1,
+    "centroid": [
+     885,
+     157
+    ]
+   },
+   "occlusion_beside_highlight": {
+    "ring_px": 571,
+    "p05": 27.6,
+    "p25": 51.2,
+    "contrast_lobe_over_ring_p05": 8.4
+   },
+   "bloom": {
+    "halo_px_past_edge": 0,
+    "bg_p50": 80.8,
+    "halo_tint_RmB_minus_bg": null,
+    "direction": [
+     0,
+     1
+    ]
+   }
+  },
+  {
+   "name": "KB-CHROME traversal goldlobe1 (glint 2.6/5 known-bad - must over-lobe: B1' > 400 px OR B2' > 20 %, else UNSCOREABLE; same occluders)",
+   "png": "/home/user/Demo/progress/records/goldlobe1/traversal.KBchrome.png",
+   "roi_rect": [
+    0,
+    0,
+    1280,
+    720
+   ],
+   "gold": {
+    "px": 104379,
+    "p05": 28.9,
+    "p50": 86.2,
+    "p95": 138.9,
+    "p99": 191.0,
+    "max": 233.1,
+    "span_p99_minus_p50": 104.8,
+    "ratio_p99_over_p50": 2.22
+   },
+   "lobe_thr": 214.5,
+   "lobe": {
+    "area_px": 7,
+    "w": 3,
+    "h": 3,
+    "centroid": [
+     283,
+     206
+    ]
+   },
+   "occlusion_beside_highlight": {
+    "ring_px": 589,
+    "p05": 32.6,
+    "p25": 85.0,
+    "contrast_lobe_over_ring_p05": 7.2
+   },
+   "bloom": {
+    "halo_px_past_edge": 0,
+    "bg_p50": 81.2,
+    "halo_tint_RmB_minus_bg": null,
+    "direction": [
+     0,
+     1
+    ]
+   }
+  }
+ ],
+ "cane_guard_combat": {
+  "region_rect": [
+   400,
+   390,
+   730,
+   600
+  ],
+  "region_area_px": 69300,
+  "share_L_ge_250_pct": {
+   "base": 0.0,
+   "Alo": 0.0,
+   "cand": 0.0,
+   "KBchrome": 0.0
+  },
+  "share_L_ge_240_pct": {
+   "base": 0.688,
+   "Alo": 0.693,
+   "cand": 0.693,
+   "KBchrome": 0.711
+  },
+  "share_L_ge_230_pct": {
+   "base": 7.319,
+   "Alo": 7.343,
+   "cand": 7.352,
+   "KBchrome": 7.387
+  },
+  "region_maxL_all_arms": 249.5,
+  "region_max_is": "FX hit-spark, byte-identical across arms (glint-independent)",
+  "whole_frame_share_L_ge_250_pct": {
+   "base": 0.0,
+   "cand": 0.0
+  },
+  "look_note": "cane hook and shaft visually unchanged base-vs-cand at 4x (crops/cane-hook-4x.png); the cane carries no visible glint change in combat and nothing approaches clip"
+ },
+ "delivered_dose_analysis": {
+  "_what": "dL = L(arm) - L(base) per pixel; explains why B1'/B2'/p99 fail while the lever is live",
+  "cand_on_gilded_ROI_occluded": {
+   "dL_max": 71.4,
+   "dL_p999": 24.9,
+   "dL_p99": 4.3,
+   "dL_p95": 0.2,
+   "px_dL_ge_10": 446,
+   "px_dL_ge_25": 103
+  },
+  "KBchrome_on_gilded_ROI_occluded": {
+   "dL_max": 113.3,
+   "dL_p999": 67.2,
+   "dL_p99": 27.7,
+   "dL_p95": 6.1,
+   "px_dL_ge_10": 3607,
+   "px_dL_ge_25": 1235
+  },
+  "cand_max_mover_px": {
+   "at": [
+    525,
+    184
+   ],
+   "base_L": 92.9,
+   "cand_L": 164.3,
+   "note": "best-aligned beam px still 48 L below the 212.6 lobe window"
+  },
+  "cand_on_gold_leaf_hook_ring": {
+   "px": 5617,
+   "dL_max": 94.2,
+   "abs_L_base_max": 232.2,
+   "abs_L_cand_max": 244.3,
+   "brightest_cand_px": [
+    541,
+    180
+   ],
+   "note": "the term's actual lobe - on curved gold_leaf, OUTSIDE the registered hieroglyph_gilded ROI; abs 244.3 sits inside the reference 239-244 aim"
+  },
+  "cand_on_gold_leaf_ra_disc": {
+   "px": 2050,
+   "dL_max": 10.7,
+   "abs_L_max_unchanged": 156.6,
+   "note": "disc's visible face is its unlit underside at this camera; R never aligns with uKeyDir there"
+  }
+ }
+}
