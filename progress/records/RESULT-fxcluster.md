@@ -126,3 +126,78 @@ sealed masks verbatim and measures only — every threshold below is quoted from
 **Ships from this seal: none. The committed seams stay (registered, debug-gated, proven inert
 by base-arm bit-identity). Successor queue: B's corrected re-run (cheapest), C's warmer core,
 A's noise-tolerant re-design, E rides SHADING's atmosphere-wiring fix.**
+
+---
+
+## B CORRECTED RE-RUN (b2) — registered successor, scored 2026-08-05. The first letter above
+## stands untouched; this appendix is the successor run it named.
+
+**Owner:** FX (fresh spawn, committed files only). **Runner:** `fxcluster1/b2rerun.mjs`
+(per-chunk resumable, one boot, traversal only, FIFO lock queued behind a banda2 hold —
+handoff observed between banda2 chunks). **Scorer:** the SEALED instrument via
+`fxcluster1/b2score.mjs` — same path as score-all.mjs §B verbatim (relocated
+`fxcluster1/fxcluster-diag.mjs` section B with `FXC_TRAVERSAL` env-overridden per arm +
+`score-aux.mjs B` for the Q-B1 hook-disc union). Bands quoted from PREREG-fxcluster §1
+sub-arm B unchanged — this run re-scores the SAME seal; nothing was re-registered.
+
+### Provenance
+
+- srcTree `3be168ae28832f69` at seam-verify, at every arm (`srcAtArm` ×3), and after —
+  **STABLE, and byte-identical to the first letter's attempt-2 capture tree.** No src edits
+  were made (the sub-arm B seams were verified present before boot; the runner aborts if not).
+- One boot; arms base → cand (`debug.sparklePreroll=true`, re-setShot) → restore-by-restage.
+  All three arms tod 0.77, cam pos (6,14,6) fwd (−0.442,−0.147,−0.885) fov 44, player
+  (1,12.4,−3), 22 markers latched, uTime 0.05 at capture — matching the first run's staging
+  row for row. Frames + readback: `fxcluster1/b2-traversal.{base,cand,restore}.png`,
+  `b2-readback.json`, log `b2-run.log`, evidence crops `crops/b2-traversal.*-B-hook4-crop.png`.
+
+### The corrected restore — RESTORE BY RE-STAGE, mechanism as executed
+
+The first letter's restore failed because toggling the flag restores nothing the flag wrote:
+`SparkleField.mark()` stamps `born` only for NEW keys (Particles.js:1650-1654), so the cand
+arm's −0.25 stamps survived re-marking (restore read 440 vs ≤5). The corrected restore arm
+(1) deletes `debug.sparklePreroll`, (2) wipes ONLY the field's marker-identity table
+(`count`/`instanceCount`/`_keys`/`_seen`), (3) runs a fresh `setShot('traversal')` — so every
+stamp is REBUILT by the shipped staging refresh itself, not poked by hand. Provenance in
+`b2-readback.json`: the restore poke's `prePoke` snapshot shows all 22 stamps at **−0.25**
+(cand's contamination live at poke time); after the re-stage all 22 read **born +0.0167,
+pop 0.062** — written by `mark()`'s new-key path during the staging pass.
+
+### Scores (sealed bands beside every count)
+
+| registered quantity | band | b2 value | gate |
+|---|---|---|---|
+| Q-B1 hook-disc bright-blue px (B−R≥30 & B≥180 & L≥80, union of r=30 discs at (591,185)/(507,239)/(434,268)) — base | ≤ 10 | **0** | PASS (known-bad reproduces) |
+| Q-B1 — cand | [60, 4000] | **440** | PASS |
+| Q-B2 strict ±40/±35/±40 of #8fd8ff frame-wide — cand | [10, 3000], non-gating | **236** | in band → per the registered decision rule, NO colour re-registration is needed |
+| restore ≡ base on Q-B1 | \|Δ\| ≤ 5 px | **\|0 − 0\| = 0** | **PASS — §94.2d's success reading achieved** |
+
+- **Cross-boot determinism, for the record:** cand's 440 (Q-B1) and 236 (Q-B2) equal the
+  first letter's cand *to the pixel*, two boots and one banda2 run apart, on the same tree.
+- Benign distribution note (recorded, not defended): base's born histogram is 16×0.0167 +
+  6×0.0500 (six keys entered during setShot's second epoch) vs restore's 22×0.0167 (the wipe
+  makes every key new in epoch 1). Both classes sit at pop ≤ 0.062 and render **zero**
+  bright-blue px in the registered discs — the registered quantity is identical (0 = 0).
+- Context, thresholds stated (§122.1), NOT registered quantities: frame-wide any-channel
+  diff restore-vs-base is 183,374 px (ΣRGB≥4: 122,871) and cand-vs-base 196,545 px of
+  921,600 — arm-to-arm animated phase (birds/flame ride engine.time across setShots;
+  §110.3's narrow reading). This is exactly why the seal registered an occluder-free
+  hook-disc count rather than a frame diff; on the registered quantity restore−base = 0.
+
+### Verdict
+
+**B: PASS.** Base reproduces the shipped known-bad (0 ≤ 10, attribution correct), cand renders
+the §2.1.6 mandatory grammar (440 ∈ [60,4000]; strict-band 236 needs no colour follow-up), and
+the restore-by-restage gate holds at 0 ≤ 5 — the first letter's only failed clause, closed with
+the mechanism named there. Per the seal's decision table, **B ships on PASS: `_stageShot`
+sparkle preroll default ON.** The ship edit is the coordinator's: `src/fx/Particles.js:2574` —
+the debug-gated `if (this.engine.debug?.sparklePreroll === true) this.sparkles?.preroll(0.25);`
+becomes an unconditional `this.sparkles?.preroll(0.25);` beside `_prerollFires()` at :2575
+(same staging-only scope: `_stageShot` runs solely on the 'shot' event, so free-play behaviour
+is untouched by construction). Seam fate: the committed sub-arm B seams stay as shipped code
+once the gate flips; nothing to revert.
+
+**Staging-determinism finding (positive):** a staged shot's sparkle field is exactly
+reproducible cross-boot AND restorable within-boot once marker identity is rebuilt through
+the staging pass — the persistence that voided the first letter was the treatment's own
+back-dated stamps surviving `mark()`'s keep-known-keys path, not nondeterminism in staging.
