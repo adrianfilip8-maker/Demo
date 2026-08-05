@@ -14291,3 +14291,14 @@ committed with its readbacks) and the agent transcripts again. The runner is com
 per-chunk resumable; it relaunches direct per §168's pattern and skips the landed chunk by
 design. The §169 eyeScale edit still queues behind it.
 
+
+## §172 — the tenth rollback; fxcluster resumes at chunk 2
+
+Found at the 15:34Z check-in; recovered ff-only, clean, src byte-clean (the in-ticket seams
+rolled back with the tree — the token mechanism's now-familiar self-cleanup). Chunk 1 (guard)
+was committed before the strike; the per-chunk runner resumes at chunk 2 per §168's pattern.
+The §170/§171 numbering note: the ninth rollback's entry was recorded as §170; this is the
+tenth event and takes §172 because a §171 heading was never written — the count of events is
+ten, the ledger's last rollback section is this one, and the gap is recorded here rather than
+renumbered (§34: corrections at the site, not rewrites of history).
+
