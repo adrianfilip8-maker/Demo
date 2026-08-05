@@ -147,3 +147,14 @@
 [21:15:17 +2995s]   hero.kb: CAPTURED sha 5ae5c8918439d6c7 532s  kerbband2 n=0
 [21:15:17 +2995s]   arm restore (pristine) srcAtArm 3be168ae28832f69 — fresh vite + fresh context
 [21:16:33 +3071s]   hero.restore: setShot ok tod 0.79 draws 260 tris 1741791
+[21:23:58 +3516s]   hero.restore: CAPTURED sha 85cbf1788d81ed47 521s  kerbband2 n=1708
+[21:23:58 +3516s] RESTORE pristine: files byte-verified; tree now 3be168ae28832f69 (pristine 7a4630875cac6e36 — OTHER OWNERS EDITED MID-RUN, files above still verified)
+[21:23:58 +3517s] chunk C1: pristine restored + lock released
+[21:23:58 +3517s] chunk C2 (night): acquiring capture lock (FIFO — politely behind whatever holds it)
+[21:24:08 +3527s]   · waiting for capture lock (10s, held by pid 32027)
+[21:24:19 +3538s]   · waiting for capture lock (21s, held by pid 32027)
+[21:24:30 +3548s]   · waiting for capture lock (31s, held by pid 32027)
+[21:24:41 +3559s]   · waiting for capture lock (42s, held by pid 32027)
+[21:24:51 +3569s]   · waiting for capture lock (52s, held by pid 32027)
+[21:25:01 +3580s]   · waiting for capture lock (63s, held by pid 32027)
+[21:25:11 +3590s]   · waiting for capture lock (73s, held by pid 32027)

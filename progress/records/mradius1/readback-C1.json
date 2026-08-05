@@ -59,6 +59,24 @@
    "secs": 532,
    "kerbband2": "non-causal artefact px in ROI: 0",
    "n": 0
+  },
+  {
+   "arm": "restore",
+   "desc": "pristine",
+   "srcAtArm": "3be168ae28832f69",
+   "srcAfterArm": "3be168ae28832f69",
+   "file": "/home/user/Demo/progress/records/mradius1/hero.restore.png",
+   "sha256": "85cbf1788d81ed47ebac9087a2d0b161d94d33aabf36c347547b3120142c686d",
+   "draws": 260,
+   "tris": 1741791,
+   "trisDeltaVsBase": 0,
+   "tod": 0.79,
+   "consoleErrors": [],
+   "secs": 521,
+   "kerbband2": "non-causal artefact px in ROI: 1708",
+   "n": 1708
   }
- ]
+ ],
+ "finishedAt": "2026-08-05T21:23:58.436Z",
+ "restoredPristine": true
 }
