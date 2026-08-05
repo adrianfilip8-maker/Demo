@@ -29,7 +29,7 @@
  * and D2 is UNSCOREABLE — reported as that, never repaired by moving the threshold (§141.1).
  */
 import { withGame } from '/home/user/Demo/tools/harness.mjs';
-import { writeFile, mkdir } from 'node:fs/promises';
+import { writeFile, readFile, mkdir } from 'node:fs/promises';
 import path from 'node:path';
 
 const OUT = '/home/user/Demo/shots/fx22';
@@ -99,9 +99,15 @@ const PROBE = `() => {
 }`;
 
 const SHOTS = ['temple', 'hero', 'dunes', 'courtyard', 'night', 'interior'];
+// §164: argv selects a subset so a chunk fits inside the observed rollback interval. Every
+// registered comparison (base vs gated per shot; temple.back vs temple.base) stays within one
+// boot because a chunk carries whole pairs and temple's control rides the temple chunk.
+const FILTER = process.argv.slice(2).filter((a) => !a.startsWith('-'));
+for (const f of FILTER) if (!SHOTS.includes(f)) { console.error(`unknown shot: ${f}`); process.exit(2); }
+const RUN_SHOTS = FILTER.length ? SHOTS.filter((s) => FILTER.includes(s)) : SHOTS;
 const JOBS = [];
-for (const s of SHOTS) { JOBS.push([s, 'base', { gate: false }]); JOBS.push([s, 'gated', { gate: true }]); }
-JOBS.push(['temple', 'back', { gate: false }]);      // restore control: must equal temple.base
+for (const s of RUN_SHOTS) { JOBS.push([s, 'base', { gate: false }]); JOBS.push([s, 'gated', { gate: true }]); }
+if (RUN_SHOTS.includes('temple')) JOBS.push(['temple', 'back', { gate: false }]);  // restore control: must equal temple.base
 
 const res = await withGame({ width: W, height: H, quality: 'high', timeout: 3000000 }, async ({ page, info }) => {
   console.log(`renderer: ${info.renderer}`);
@@ -133,5 +139,15 @@ const res = await withGame({ width: W, height: H, quality: 'high', timeout: 3000
   }
   return acc;
 });
-await writeFile(path.join(OUT, 'fx22.json'), JSON.stringify(res, null, 1));
-console.log('\nfx22 DONE — wrote ' + path.join(OUT, 'fx22.json'));
+// §164: chunks accumulate — merge into any existing fx22.json so the scorer's contract
+// (one file, all jobs) holds once the last chunk lands.
+const jf = path.join(OUT, 'fx22.json');
+let merged = res;
+try {
+  const prev = JSON.parse(await readFile(jf, 'utf8'));
+  merged = { warnings: [...new Set([...(prev.warnings || []), ...res.warnings])],
+             jobs: { ...prev.jobs, ...res.jobs } };
+} catch { /* first chunk */ }
+await writeFile(jf, JSON.stringify(merged, null, 1));
+console.log(`\nfx22 DONE — wrote ${jf} (${Object.keys(merged.jobs).length} jobs total, ` +
+  `this chunk: ${RUN_SHOTS.join('+')})`);

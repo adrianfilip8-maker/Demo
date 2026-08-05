@@ -14126,8 +14126,10 @@ stash, nothing lost that had been pushed.
 
 ### 163.2 The cadence argument, run against five data points
 
-Rollbacks at §139, §161, §162.4, the silent fourth (found at resumption), and now §163 — roughly
-one per few hours of session time, uncorrelated with what the session is doing (this one struck no
+Rollbacks at §139, §161, §162.4, the silent fourth (found at resumption), and now §163 — ~~roughly
+one per few hours of session time~~ *(struck by §164: the sixth landed 43 minutes after this one;
+the working assumption is now ~45 min, shorter than a monolithic capture plus its scoring wake)*,
+uncorrelated with what the session is doing (this one struck no
 edit, no capture start, no sweep; just render time). Consequences adopted:
 
 - **The sweep cadence is right and stays**: everything registerable was on the remote before this
@@ -14140,4 +14142,47 @@ edit, no capture start, no sweep; just render time). Consequences adopted:
   after `DONE`, before anything else in that wake.
 - **Check-in interval stays ≤ 45 min** — it is now the rollback detector of record; all five were
   found by a check-in or a resumption state-check, none by an error.
+
+
+## §164 — the sixth rollback, 43 minutes after the fifth: the capture design yields, not the discipline
+
+Found by the 04:07Z check-in: HEAD at `77e1eab` again, all three §163-relaunched captures dead
+(fx22 r3 at ~40 minutes of a ~45-minute run — its third death; sbs1 r2 mid-queue; pnightcal r2
+queued), `/tmp` restored to the same Aug-1 snapshot, the two relic tickets back, the task board
+reverted. Recovery: `merge --ff-only` to `5f40fb7`, clean. Nothing pushed was lost — again.
+
+§163.2's cadence estimate is corrected at its site: two consecutive rollbacks 43 minutes apart.
+Under a ~45-minute ceiling, a 45-minute monolithic capture whose scoring waits on a later wake has
+an expected yield near zero. Three data points on fx22 prove it empirically. The design changes:
+
+### 164.1 Chunked captures, wake-on-exit, sweep-per-chunk
+
+- **`fx22.mjs` takes an argv shot filter** (edit recorded here; harness, not `src/**`). A chunk
+  carries whole base/gated pairs and `temple.back` rides the temple chunk, so **every registered
+  comparison remains within one boot** — the arms' letter is unchanged. Chunks merge into the one
+  `fx22.json` the sealed scorer expects. Chunk plan: `temple` (3 frames, decisive for D2) →
+  `hero dunes` → `courtyard night` → `interior`; each ≈ 8–12 minutes including boot.
+- **Frames are committed per chunk.** `shots/` is gitignored and §163.1 showed that makes a landed
+  capture worthless under rollback; each chunk's PNGs are copied to
+  `progress/records/cand1/frames/` and pushed at the sweep, with a same-wake D1 bit-identity quick
+  check recorded beside them. The full D1–D4 scoring still happens once, by the sealed scorer, when
+  the last chunk is in — on committed evidence a rollback cannot take.
+- **Launch method: coordinator-session background execution (wake-on-exit) instead of
+  `tools/launch.sh`.** Recorded as a deviation from §78.4's launcher with its reason: the property
+  launch.sh proves (surviving an agent task tree's reaping) is void under container rollback, which
+  kills ppid-1 processes just as dead — while wake-on-exit is exactly the §163.2 "score at first
+  wake" requirement made structural. The FIFO lock protocol via `tools/lock.mjs` is unchanged;
+  every chunk still tickets and queues.
+- `sbs1` and `pnightcal` keep their registered single-boot designs (short, and §124.4-protected
+  respectively); they queue behind the first fx22 chunk and are simply retried if a rollback takes
+  them. `pnightcal` at ~25 minutes is the longest exposure left in the pipeline; its frames land on
+  a durable path by design and its runner is committed, so a death costs only the window.
+
+### 164.2 What five recoveries have converged on
+
+The invariants that survive every rollback: push after every sweep; verify HEAD against origin at
+every wake before trusting anything on disk; treat `/tmp` and `shots/` as already lost; brief
+agents from committed files only; and keep the check-in at ≤ 40 minutes — it has now found six of
+six. The remote is not "the durable store" as a slogan; it is the only part of this machine that
+is real.
 
