@@ -1,0 +1,264 @@
+{
+ "at": "2026-08-05T16:39:48.192Z",
+ "sections": {
+  "B": {
+   "frame": "gold1/traversal.png",
+   "pxInBand": 236,
+   "blueBrightPx": 3341,
+   "nearestPixel": {
+    "d": 64,
+    "x": 506,
+    "y": 253,
+    "r": 176,
+    "g": 213,
+    "b": 227
+   },
+   "hooks": [
+    {
+     "i": 0,
+     "world": [
+      20,
+      14.9,
+      27
+     ],
+     "distToPlayer": 35.6,
+     "status": "behind camera"
+    },
+    {
+     "i": 1,
+     "world": [
+      14,
+      14.9,
+      20
+     ],
+     "distToPlayer": 26.5,
+     "status": "behind camera"
+    },
+    {
+     "i": 2,
+     "world": [
+      8.5,
+      14.9,
+      12
+     ],
+     "distToPlayer": 17,
+     "status": "behind camera"
+    },
+    {
+     "i": 3,
+     "world": [
+      4.2,
+      14.8,
+      4.5
+     ],
+     "distToPlayer": 8.5,
+     "px": [
+      197,
+      -110
+     ],
+     "depth": 2,
+     "status": "out of frame"
+    },
+    {
+     "i": 4,
+     "world": [
+      1,
+      14.5,
+      -3
+     ],
+     "distToPlayer": 2.1,
+     "px": [
+      591,
+      185
+     ],
+     "depth": 10.1,
+     "status": "in frame",
+     "discMedL": 134,
+     "discMaxL": 246,
+     "discMaxBminusR": 59,
+     "discMaxBpix": [
+      613,
+      191,
+      139,
+      174,
+      198
+     ]
+    },
+    {
+     "i": 5,
+     "world": [
+      -4,
+      13.9,
+      -8.5
+     ],
+     "distToPlayer": 7.6,
+     "px": [
+      507,
+      239
+     ],
+     "depth": 17.3,
+     "status": "in frame",
+     "discMedL": 81.5,
+     "discMaxL": 210,
+     "discMaxBminusR": 77,
+     "discMaxBpix": [
+      510,
+      252,
+      64,
+      108,
+      141
+     ]
+    },
+    {
+     "i": 6,
+     "world": [
+      -9.5,
+      13.2,
+      -13
+     ],
+     "distToPlayer": 14.5,
+     "px": [
+      434,
+      268
+     ],
+     "depth": 23.8,
+     "status": "in frame",
+     "discMedL": 61.5,
+     "discMaxL": 208,
+     "discMaxBminusR": 82,
+     "discMaxBpix": [
+      440,
+      275,
+      68,
+      114,
+      150
+     ]
+    },
+    {
+     "i": 7,
+     "world": [
+      -16.5,
+      11.6,
+      24
+     ],
+     "distToPlayer": 32.2,
+     "status": "behind camera"
+    },
+    {
+     "i": 8,
+     "world": [
+      -11,
+      11.7,
+      19
+     ],
+     "distToPlayer": 25.1,
+     "status": "behind camera"
+    },
+    {
+     "i": 9,
+     "world": [
+      -6,
+      11.8,
+      14
+     ],
+     "distToPlayer": 18.4,
+     "status": "behind camera"
+    },
+    {
+     "i": 10,
+     "world": [
+      -1.5,
+      11.9,
+      9.5
+     ],
+     "distToPlayer": 12.8,
+     "px": [
+      -13050,
+      4514
+     ],
+     "depth": 0.5,
+     "status": "out of frame"
+    }
+   ],
+   "modelledCore": [
+    {
+     "vGain": 0.5,
+     "addedHalf": [
+      203,
+      223,
+      255
+     ]
+    },
+    {
+     "vGain": 1,
+     "addedHalf": [
+      209,
+      228,
+      255
+     ]
+    },
+    {
+     "vGain": 1.76,
+     "addedHalf": [
+      215,
+      233,
+      255
+     ]
+    },
+    {
+     "vGain": 2.48,
+     "addedHalf": [
+      219,
+      235,
+      255
+     ]
+    }
+   ],
+   "relaxedBlue": {
+    "bbox": [
+     177,
+     0,
+     807,
+     450
+    ],
+    "topBins64": [
+     {
+      "bin": [
+       576,
+       0
+      ],
+      "n": 1403
+     },
+     {
+      "bin": [
+       640,
+       0
+      ],
+      "n": 950
+     },
+     {
+      "bin": [
+       448,
+       192
+      ],
+      "n": 186
+     },
+     {
+      "bin": [
+       128,
+       0
+      ],
+      "n": 152
+     },
+     {
+      "bin": [
+       704,
+       0
+      ],
+      "n": 142
+     }
+    ]
+   }
+  }
+ }
+}

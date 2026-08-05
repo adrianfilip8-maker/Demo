@@ -1,0 +1,96 @@
+{
+ "at": "2026-08-05T16:39:51.536Z",
+ "sections": {
+  "E": {
+   "frame": "cand1/frames/dunes.base.png",
+   "pyramid105": {
+    "apexPx": [
+     470,
+     -64
+    ],
+    "baseLeftPx": [
+     291,
+     258
+    ],
+    "baseRightPx": [
+     707,
+     265
+    ],
+    "apexDist": 338
+   },
+   "pyramid72ApexPx": [
+    1316,
+    15,
+    "out"
+   ],
+   "pyramidMedL": 142.4,
+   "skyMedL": 144.7,
+   "deltaMedL": 2.3,
+   "rows": [
+    2,
+    26
+   ],
+   "curves": {
+    "density": 0.00495,
+    "uHazeDensity": 0.01288,
+    "fogHeightPublished": 54.6,
+    "falloffApplied": 0.055
+   },
+   "blend": {
+    "apex": {
+     "dist": 338,
+     "applied": 0.254,
+     "reference": 0.647
+    },
+    "mid": {
+     "dist": 328,
+     "applied": 0.44,
+     "reference": 0.726
+    },
+    "base": {
+     "dist": 326,
+     "applied": 0.762,
+     "reference": 0.855
+    }
+   },
+   "hazeColour": {
+    "linear": [
+     0.779,
+     0.435,
+     0.174
+    ],
+    "displayApprox": [
+     218,
+     211,
+     219
+    ],
+    "displayL": 213.1
+   },
+   "leftEdge": {
+    "rows": 107,
+    "meanEdgeStep": 5.17,
+    "skyNoiseStep16px": 12.81
+   },
+   "rects": {
+    "pyramidInterior": {
+     "n": 10800,
+     "medL": 150.0246,
+     "medR": 165,
+     "medG": 148,
+     "medB": 131,
+     "medSat": 0.19254658385093168,
+     "meanRmB": 24.438148148148148
+    },
+    "skyLeft": {
+     "n": 9000,
+     "medL": 161.83599999999998,
+     "medR": 170,
+     "medG": 159,
+     "medB": 167,
+     "medSat": 0.07228915662650602,
+     "meanRmB": 2.3823333333333334
+    }
+   }
+  }
+ }
+}
