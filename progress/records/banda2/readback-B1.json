@@ -12,7 +12,153 @@
  "shots": [
   {
    "shot": "hero",
-   "arms": [],
+   "arms": [
+    {
+     "arm": "base",
+     "requested": {
+      "subjW": 0.5,
+      "tintPeak": 0.52,
+      "sbm": 0.05,
+      "sbmLit": 0.05
+     },
+     "readback": {
+      "subjW": 0.5,
+      "uSubjW": 0.5,
+      "tintPeak": 0.52,
+      "sbm": 0.05,
+      "sbmLit": 0.05,
+      "uShadowColor": [
+       0.09610110548811887,
+       0.3131151084062172,
+       0.49658292862905856
+      ],
+      "uShadowColorLit": [
+       0.09610110548811887,
+       0.3131151084062172,
+       0.49658292862905856
+      ],
+      "inkNight": 0
+     },
+     "mismatch": [],
+     "secs": 23
+    },
+    {
+     "arm": "B",
+     "requested": {
+      "subjW": 0.5,
+      "tintPeak": 0.62,
+      "sbm": 0.05,
+      "sbmLit": 0.05
+     },
+     "readback": {
+      "subjW": 0.5,
+      "uSubjW": 0.5,
+      "tintPeak": 0.62,
+      "sbm": 0.05,
+      "sbmLit": 0.05,
+      "uShadowColor": [
+       0.10386835009286081,
+       0.3384222224511441,
+       0.5367185863159294
+      ],
+      "uShadowColorLit": [
+       0.10386835009286081,
+       0.3384222224511441,
+       0.5367185863159294
+      ],
+      "inkNight": 0
+     },
+     "mismatch": [],
+     "secs": 23
+    },
+    {
+     "arm": "ABg",
+     "requested": {
+      "subjW": 0.65,
+      "tintPeak": 0.62,
+      "sbm": 0.05,
+      "sbmLit": 0.05
+     },
+     "readback": {
+      "subjW": 0.65,
+      "uSubjW": 0.65,
+      "tintPeak": 0.62,
+      "sbm": 0.05,
+      "sbmLit": 0.05,
+      "uShadowColor": [
+       0.10386835009286081,
+       0.3384222224511441,
+       0.5367185863159294
+      ],
+      "uShadowColorLit": [
+       0.10386835009286081,
+       0.3384222224511441,
+       0.5367185863159294
+      ],
+      "inkNight": 0
+     },
+     "mismatch": [],
+     "secs": 24
+    },
+    {
+     "arm": "KBwarmmud",
+     "requested": {
+      "subjW": 0.5,
+      "tintPeak": 0.52,
+      "sbm": 0.2,
+      "sbmLit": 0.2
+     },
+     "readback": {
+      "subjW": 0.5,
+      "uSubjW": 0.5,
+      "tintPeak": 0.52,
+      "sbm": 0.2,
+      "sbmLit": 0.2,
+      "uShadowColor": [
+       0.15893501882289637,
+       0.30152904532452285,
+       0.4263317145162342
+      ],
+      "uShadowColorLit": [
+       0.15893501882289637,
+       0.30152904532452285,
+       0.4263317145162342
+      ],
+      "inkNight": 0
+     },
+     "mismatch": [],
+     "secs": 24
+    },
+    {
+     "arm": "restore",
+     "requested": {
+      "subjW": 0.5,
+      "tintPeak": 0.52,
+      "sbm": 0.05,
+      "sbmLit": 0.05
+     },
+     "readback": {
+      "subjW": 0.5,
+      "uSubjW": 0.5,
+      "tintPeak": 0.52,
+      "sbm": 0.05,
+      "sbmLit": 0.05,
+      "uShadowColor": [
+       0.09610110548811887,
+       0.3131151084062172,
+       0.49658292862905856
+      ],
+      "uShadowColorLit": [
+       0.09610110548811887,
+       0.3131151084062172,
+       0.49658292862905856
+      ],
+      "inkNight": 0
+     },
+     "mismatch": [],
+     "secs": 24
+    }
+   ],
    "setShot": {
     "stats": {
      "fps": 38,
@@ -22,7 +168,9 @@
      "ms": 14552
     },
     "tod": 0.79
-   }
+   },
+   "settleSecs": 407,
+   "nightAmount": 0
   }
  ],
  "lever": {
@@ -41,5 +189,7 @@
    0.31311543639412576,
    0.49658401318439915
   ]
- }
+ },
+ "srcTreeAfter": "3be168ae28832f69",
+ "finishedAt": "2026-08-05T19:04:35.307Z"
 }

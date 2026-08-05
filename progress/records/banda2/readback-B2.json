@@ -1,0 +1,13 @@
+{
+ "prereg": "PREREG-banda2.md",
+ "chunk": "B2",
+ "startedAt": "2026-08-05T19:04:35.460Z",
+ "srcTreeBefore": "3be168ae28832f69",
+ "shipExpected": {
+  "subjW": 0.5,
+  "tintPeak": 0.52,
+  "sbm": 0.05,
+  "sbmLit": 0.05
+ },
+ "shots": []
+}
