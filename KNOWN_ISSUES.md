@@ -14311,3 +14311,13 @@ unswept state, and the CRITIC-sbs2 verdict, the DIGEST wave banner, and every su
 were already on the remote. The §164 discipline's end state: a rollback with an empty blast
 radius.
 
+
+## §174 — standing user instruction: continuous dispatch
+
+"Resume idle sub agents continuously with tasks whenever they finish one." Adopted as the
+operating mode: every agent completion wake immediately assigns the next item from the
+successor queue to that agent (its domain first) or spawns fresh if transcripts died; offline
+prereg items run in parallel with capture items since only captures contend on the lock. The
+queue lives in the newest check-in pointer and this ledger; the coordinator keeps every slot
+saturated until the queue is empty or the user says stop.
+
