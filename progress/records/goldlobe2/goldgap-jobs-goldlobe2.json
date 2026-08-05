@@ -1,0 +1,179 @@
+[
+ {
+  "name": "BASE traversal goldlobe2 (0/20/1; G-0base + reproduction; occluders re-derived on this capture)",
+  "png": "/home/user/Demo/progress/records/goldlobe2/traversal.base.png",
+  "exclude": [
+   [
+    480,
+    150,
+    740,
+    400
+   ],
+   [
+    860,
+    0,
+    945,
+    110
+   ]
+  ],
+  "rect": [
+   0,
+   0,
+   1280,
+   720
+  ],
+  "bgrect": [
+   500,
+   400,
+   1000,
+   500
+  ],
+  "direction": [
+   0,
+   1
+  ],
+  "maskbin": "traversal.mask.bin",
+  "maskid": 7,
+  "gold_filter": false,
+  "lobe_min_rmb": -5
+ },
+ {
+  "name": "POSITIVE CONTROL traversal goldlobe2 (base arm, exclusion LIFTED - detector must return the FX glow lobe)",
+  "png": "/home/user/Demo/progress/records/goldlobe2/traversal.base.png",
+  "exclude": [],
+  "rect": [
+   0,
+   0,
+   1280,
+   720
+  ],
+  "bgrect": [
+   500,
+   400,
+   1000,
+   500
+  ],
+  "direction": [
+   0,
+   1
+  ],
+  "maskbin": "traversal.mask.bin",
+  "maskid": 7,
+  "gold_filter": false,
+  "lobe_min_rmb": -5
+ },
+ {
+  "name": "A-S traversal goldlobe2 (2.6/20/1.25 bracket dose; same occluders)",
+  "png": "/home/user/Demo/progress/records/goldlobe2/traversal.As.png",
+  "exclude": [
+   [
+    480,
+    150,
+    740,
+    400
+   ],
+   [
+    860,
+    0,
+    945,
+    110
+   ]
+  ],
+  "rect": [
+   0,
+   0,
+   1280,
+   720
+  ],
+  "bgrect": [
+   500,
+   400,
+   1000,
+   500
+  ],
+  "direction": [
+   0,
+   1
+  ],
+  "maskbin": "traversal.mask.bin",
+  "maskid": 7,
+  "gold_filter": false,
+  "lobe_min_rmb": -5
+ },
+ {
+  "name": "CAND traversal goldlobe2 (2.6/20/1.5 - the candidate; B1p/B4/B5/p99 scoring arm)",
+  "png": "/home/user/Demo/progress/records/goldlobe2/traversal.cand.png",
+  "exclude": [
+   [
+    480,
+    150,
+    740,
+    400
+   ],
+   [
+    860,
+    0,
+    945,
+    110
+   ]
+  ],
+  "rect": [
+   0,
+   0,
+   1280,
+   720
+  ],
+  "bgrect": [
+   500,
+   400,
+   1000,
+   500
+  ],
+  "direction": [
+   0,
+   1
+  ],
+  "maskbin": "traversal.mask.bin",
+  "maskid": 7,
+  "gold_filter": false,
+  "lobe_min_rmb": -5
+ },
+ {
+  "name": "KB-WIDELOBE traversal goldlobe2 (5.2/2/1.0 - port-proven over-lobe: B2p>20% expected)",
+  "png": "/home/user/Demo/progress/records/goldlobe2/traversal.KBwidelobe.png",
+  "exclude": [
+   [
+    480,
+    150,
+    740,
+    400
+   ],
+   [
+    860,
+    0,
+    945,
+    110
+   ]
+  ],
+  "rect": [
+   0,
+   0,
+   1280,
+   720
+  ],
+  "bgrect": [
+   500,
+   400,
+   1000,
+   500
+  ],
+  "direction": [
+   0,
+   1
+  ],
+  "maskbin": "traversal.mask.bin",
+  "maskid": 7,
+  "gold_filter": false,
+  "lobe_min_rmb": -5
+ }
+]

@@ -243,7 +243,18 @@ async function runChunk(chunk) {
       report.fatal = 'seam uniforms absent from live page — pre-edit did not reach the boot'; log(`  FATAL: ${report.fatal}`); save(); return;
     }
     if (lever.wire !== 0) { report.fatal = `uAtmoWire boot default ${lever.wire} != 0`; log(`  FATAL: ${report.fatal}`); save(); return; }
-    if (lever.fogSynced !== false) { report.fatal = `_fogSynced at boot is ${lever.fogSynced}, expected false (side-door active) — W1 premise broke`; log(`  FATAL: ${report.fatal}`); save(); return; }
+    /* W1 premise gate, corrected after the 2026-08-05 VOID run (RESULT-atmowire.md §VOID-1):
+       ToonMaterial never INITIALIZES _fogSynced — it is undefined at every boot by design
+       (three sites total: `= true` in setAtmosphere, two `if (!this._fogSynced)` readers),
+       so "side-door active" means FALSY, not the literal false the first run demanded.
+       Gate on the mechanism instead (§143.1): truthy _fogSynced = a publisher already ran
+       (premise broken), AND the side-door's own arithmetic must be live in the uniforms. */
+    if (lever.fogSynced) { report.fatal = `_fogSynced at boot is truthy (${lever.fogSynced}) — a publisher already ran; W1 premise broke`; log(`  FATAL: ${report.fatal}`); save(); return; }
+    const sideDoorWant = Math.max(lever.fog.density * 2.6, 0.004);
+    if (Math.abs(lever.uHazeDensity - sideDoorWant) > 1e-9) {
+      report.fatal = `side-door arithmetic not live: uHazeDensity ${lever.uHazeDensity} != max(fog.density*2.6, 0.004) = ${sideDoorWant} — W1 premise broke`;
+      log(`  FATAL: ${report.fatal}`); save(); return;
+    }
 
     for (const { shot, arms } of chunk.shots) {
       const sRec = { shot, arms: [] };
