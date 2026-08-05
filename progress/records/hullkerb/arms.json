@@ -101,6 +101,46 @@
       "ts": 1785920263314
     },
     {
+      "shot": "guard",
+      "label": "base",
+      "file": "progress/records/hullkerb/frames/guard-base.png",
+      "attached": false,
+      "thicknessMult": 1,
+      "inkReadback": [
+        {
+          "clonePx": 2.5,
+          "cachePx": 2.5,
+          "sameObject": false
+        }
+      ],
+      "draws": 204,
+      "tris": 1416911,
+      "live": 0,
+      "moved": 1,
+      "srcAtArm": "0aaea246cfb9ca90716b8d3b7578e30bc1caedc2378ecf324320b22e87f91924",
+      "ts": 1785920748332
+    },
+    {
+      "shot": "guard",
+      "label": "hull",
+      "file": "progress/records/hullkerb/frames/guard-hull.png",
+      "attached": true,
+      "thicknessMult": 1,
+      "inkReadback": [
+        {
+          "clonePx": 2.5,
+          "cachePx": 2.5,
+          "sameObject": false
+        }
+      ],
+      "draws": 205,
+      "tris": 1428883,
+      "live": 1,
+      "moved": 1,
+      "srcAtArm": "0aaea246cfb9ca90716b8d3b7578e30bc1caedc2378ecf324320b22e87f91924",
+      "ts": 1785920783540
+    },
+    {
       "shot": "interior",
       "label": "base",
       "file": "progress/records/hullkerb/frames/interior-base.png",
@@ -199,11 +239,51 @@
       "moved": 1,
       "srcAtArm": "520bd5416d14faa05c646bf7bac97198b75b4bb93a4bd96c160df41c6acacd92",
       "ts": 1785908706412
+    },
+    {
+      "shot": "night",
+      "label": "base",
+      "file": "progress/records/hullkerb/frames/night-base.png",
+      "attached": false,
+      "thicknessMult": 1,
+      "inkReadback": [
+        {
+          "clonePx": 2.5,
+          "cachePx": 2.5,
+          "sameObject": false
+        }
+      ],
+      "draws": 280,
+      "tris": 1816213,
+      "live": 0,
+      "moved": 0,
+      "srcAtArm": "0aaea246cfb9ca90716b8d3b7578e30bc1caedc2378ecf324320b22e87f91924",
+      "ts": 1785921266218
+    },
+    {
+      "shot": "night",
+      "label": "hull",
+      "file": "progress/records/hullkerb/frames/night-hull.png",
+      "attached": true,
+      "thicknessMult": 1,
+      "inkReadback": [
+        {
+          "clonePx": 2.5,
+          "cachePx": 2.5,
+          "sameObject": false
+        }
+      ],
+      "draws": 281,
+      "tris": 1828185,
+      "live": 1,
+      "moved": 1,
+      "srcAtArm": "0aaea246cfb9ca90716b8d3b7578e30bc1caedc2378ecf324320b22e87f91924",
+      "ts": 1785921331354
     }
   ],
   "prereg": "PREREG-hullkerb.md",
-  "chunk": "courtyard",
-  "pid": 2983,
+  "chunk": "guard+night+hero",
+  "pid": 9915,
   "srcCommitted": "4bf8b093c5b2ed808ccfda70af5f073cb81ab57b6de52cd70d2e2086df7dbd04",
   "srcEdited": "0aaea246cfb9ca90716b8d3b7578e30bc1caedc2378ecf324320b22e87f91924",
   "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
@@ -217,6 +297,10 @@
       "startedAt": "2026-08-05T08:45:55.724Z",
       "done": true,
       "finishedAt": "2026-08-05T08:57:43.329Z"
+    },
+    "guard+night+hero": {
+      "startedAt": "2026-08-05T09:00:24.764Z",
+      "done": false
     }
   },
   "consoleErrors": [
