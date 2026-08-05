@@ -1884,7 +1884,7 @@ export class SlyModel {
        *top* of the sclera: a pupil centred on the lens centre sits low in the part of the eye
        you can actually see, and an albedo render of the face read both eyes as droopy for
        exactly that reason. It is centred in the visible aperture, not in the geometry. */
-    const pc = c.clone().addScaledVector(outward, 0.020 * S).addScaledVector(trueUp, 0.013 * S);
+    const pc = c.clone().addScaledVector(outward, 0.020 * S).addScaledVector(trueUp, 0.00715 * S);
     return { c, outward, right, trueUp, basis: { x: right, y: trueUp, z: outward }, pc };
   }
 
@@ -2249,7 +2249,10 @@ export class SlyModel {
        its one genuine bloom source, which §2.3 and the critic both want kept. */
     const v0 = mb.vertexCount;
     addEllipsoid(mb, {
-      center: c, radii: new THREE.Vector3(0.086 * S, 0.092 * S, 0.032 * S), basis,
+      /* Eye unit at lens-plane 0.55x rest scale (§17 look change; RESULT-eyesize §9, KNOWN_ISSUES
+       §169): right/trueUp radii and in-plane offsets only — z-radii and outward offsets are
+       unscaled so eye→mask→brim depth ordering is untouched; glint floored at 0.62. */
+    center: c, radii: new THREE.Vector3(0.0473 * S, 0.0506 * S, 0.032 * S), basis,
       segTheta: 16, segPhi: 10,
       group: 'eye', sg: mb.newSg(), weights: [['head', 1]],
       colorAt: (u, v, p) => furTint(_c, p.x, p.y, p.z, 0.018, 7, TUNE.scleraTint),
@@ -2265,7 +2268,7 @@ export class SlyModel {
     const pupilBone = side > 0 ? 'pupilL' : 'pupilR';
     const v1 = mb.vertexCount;
     addEllipsoid(mb, {
-      center: pc, radii: new THREE.Vector3(0.042 * S, 0.050 * S, 0.020 * S), basis,
+      center: pc, radii: new THREE.Vector3(0.0231 * S, 0.0275 * S, 0.020 * S), basis,
       segTheta: 14, segPhi: 9,
       group: 'ink', sg: mb.newSg(), weights: [[pupilBone, 1]],
     });
@@ -2281,7 +2284,7 @@ export class SlyModel {
        be ("a tight coloured halo on bright things", not a grey wash), and it is symmetric
        across the two eyes by construction because nothing about it is view-dependent. */
     const hc = pc.clone().addScaledVector(outward, 0.014 * S)
-      .addScaledVector(trueUp, 0.020 * S).addScaledVector(right, -side * 0.015 * S);
+      .addScaledVector(trueUp, 0.011 * S).addScaledVector(right, -side * 0.00825 * S);
     /* `0.021 → 0.013` radius, and this one is sized against a measurement of the defect it
        was blamed for. `shots/char9/sly-closeup.png` (15:28, scleraTint live) settles the split
        the scleraTint note predicted: the sclera *body* measures L144–146 median — off the
@@ -2326,7 +2329,7 @@ export class SlyModel {
        right for the wrong reason; the symptom was real and is measured above. */
     const v2 = mb.vertexCount;
     addEllipsoid(mb, {
-      center: hc, radii: new THREE.Vector3(0.013 * S, 0.013 * S, 0.009 * S), basis,
+      center: hc, radii: new THREE.Vector3(0.00806 * S, 0.00806 * S, 0.009 * S), basis,
       segTheta: 14, segPhi: 9,
       /* Rides the pupil bone with the pupil (SPEC-startle-pupils): at 0.35 constriction a
          full-size glint would cover the whole disc, so it shares the scale and stays a
@@ -2356,7 +2359,7 @@ export class SlyModel {
     const lidRight = new THREE.Vector3().crossVectors(lidUp, outward).normalize();
     addEllipsoid(mb, {
       center: c.clone().addScaledVector(outward, 0.005 * S),
-      radii: new THREE.Vector3(0.091 * S, 0.097 * S, 0.033 * S),
+      radii: new THREE.Vector3(0.05005 * S, 0.05335 * S, 0.033 * S),
       basis: { x: lidRight, y: lidUp, z: outward },
       segTheta: 16, segPhi: 5, phi0: 0.64, phi1: Math.PI / 2,
       group: 'ink', sg: mb.newSg(), weights: [['head', 1]],
