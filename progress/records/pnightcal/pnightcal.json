@@ -18,7 +18,10 @@
    "tuneSbm": 0.05,
    "tuneSbmLit": 0.05,
    "rimFloorShip": 0.55
-  }
+  },
+  "srcTreeAfter": "bc13c4632863fc15",
+  "renderTreeAfter": "5b075ca0b494f8d2",
+  "finishedAt": "2026-08-05T04:45:19.790Z"
  },
  "ship": {
   "fillSkyMix": 0.7,
@@ -26,5 +29,61 @@
   "shadowBounceMixLit": 0.05,
   "rimShadowFloorArch": 0.55
  },
- "rows": []
+ "rows": [
+  {
+   "kind": "night",
+   "shot": "night",
+   "arm": "base",
+   "fillSkyMix": 0.7,
+   "shadowBounceMix": 0.05,
+   "shadowBounceMixLit": 0.05,
+   "rimShadowFloorArch": 0.55,
+   "md5": "a46bae328c6c",
+   "mismatch": []
+  },
+  {
+   "kind": "night",
+   "shot": "night",
+   "arm": "sbm020",
+   "fillSkyMix": 0.7,
+   "shadowBounceMix": 0.2,
+   "shadowBounceMixLit": 0.2,
+   "rimShadowFloorArch": 0.55,
+   "md5": "351c1d17be3b",
+   "mismatch": []
+  },
+  {
+   "kind": "night",
+   "shot": "night",
+   "arm": "sbm040",
+   "fillSkyMix": 0.7,
+   "shadowBounceMix": 0.4,
+   "shadowBounceMixLit": 0.4,
+   "rimShadowFloorArch": 0.55,
+   "md5": "a68ba204b537",
+   "mismatch": []
+  },
+  {
+   "kind": "night",
+   "shot": "night",
+   "arm": "compose",
+   "fillSkyMix": 0,
+   "shadowBounceMix": 0.1,
+   "shadowBounceMixLit": 0.1,
+   "rimShadowFloorArch": 0.55,
+   "md5": "c27eb3fe1a9d",
+   "mismatch": []
+  },
+  {
+   "kind": "night",
+   "shot": "night",
+   "arm": "base2",
+   "fillSkyMix": 0.7,
+   "shadowBounceMix": 0.05,
+   "shadowBounceMixLit": 0.05,
+   "rimShadowFloorArch": 0.55,
+   "md5": "a46bae328c6c",
+   "mismatch": []
+  }
+ ]
 }
