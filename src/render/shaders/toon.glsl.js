@@ -135,6 +135,8 @@ uniform vec3  uSpecColor;
 uniform float uGloss;
 uniform float uMetal;
 uniform float uMetalGain;
+uniform float uGoldGlint;
+uniform float uGlintPow;
 uniform float uSss;
 uniform vec3  uSssColor;
 uniform float uAoStrength;
@@ -539,6 +541,12 @@ export const TOON_SHADE = /* glsl */ `
 			env = mix( env, uHaze * 0.8, 0.35 * ( 1.0 - abs( R.y ) ) );
 			float ef = mix( 0.25, 1.0, pow( 1.0 - ndv, 3.0 ) );
 			metalEnv = alb * env * ( slyMetal * uMetalGain * ef ) * mix( 0.35, 1.0, sh ) * ao;
+			/* Sun-glint leg (PREREG-goldlobe §2): the lobe term the spec assembly's L207
+			   ceiling cannot produce. INERT until uGoldGlint > 0 — the add is multiplied
+			   by exactly 0.0 at the shipped TUNE default. */
+			float slyGlint = pow( max( dot( R, uKeyDir ), 0.0 ), uGlintPow );
+			metalEnv += ( alb * 1.4 + uSpecColor * 0.45 )
+			          * ( uGoldGlint * slyGlint * slyMetal * mix( 0.25, 1.0, sh ) * ao );
 		}
 
 		/* Fresnel rim — §2.1.5, "the single biggest AAA tell".

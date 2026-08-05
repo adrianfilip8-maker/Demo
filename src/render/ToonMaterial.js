@@ -540,6 +540,8 @@ const TUNE = {
   gloss: 32,
   rough: 0.62,
   metalGain: 0.62,
+  goldGlint: 0.0,          // PREREG-goldlobe §2 scaffold — INERT at 0; candidate pokes only
+  glintPow: 20.0,
 
   /* --- sss --- */
   sss: 0.2,
@@ -762,6 +764,8 @@ export class Shading {
       uDetail2Scale: { value: TUNE.detail2Scale },
       uShadowSat:    { value: TUNE.shadowSat },
       uMetalGain:    { value: TUNE.metalGain },
+      uGoldGlint:    { value: TUNE.goldGlint },
+      uGlintPow:     { value: TUNE.glintPow },
       /* Diagnostic channel. window.__ENGINE.get('shading').debugShadow(true) paints
          red=getShadowMask, green=receiveShadow, blue=N.L across the scene. */
       uDebugShadow:  { value: 0 },
