@@ -1690,6 +1690,14 @@ class SparkleField {
     }
   }
 
+  /** PREREG-fxcluster §1 seam (a): back-date every live marker's born stamp so SPARKLE_VERT's
+   *  pop is fully open at a staged capture — `_prerollFires`' treatment, which this field
+   *  never had. Inert unless called; the only caller is debug-gated (see `_stageShot`). */
+  preroll(sec) {
+    for (let i = 0; i < this.count; i++) this.aData.array[i * 4 + 2] = -sec;
+    this.aData.needsUpdate = true;
+  }
+
   dispose() { this.geometry.dispose(); this.material.dispose(); }
 }
 
@@ -1820,6 +1828,7 @@ export class Particles {
     this.engine = engine;
     this.rand = rng(0x5c17c00 ^ 0xfada);
     this.TUNE = TUNE;
+    this.EMITTERS = EMITTERS;  // PREREG-fxcluster §1 seam (c): harness poke path; data untouched
     /* The FX clock. Zero outside shot mode, rebased at staging — see `update()`. */
     this._t0 = 0;
     this._t = 0;
@@ -2558,6 +2567,11 @@ export class Particles {
        left. Neither is visible, and both made the frame depend on the boot. */
     this._updateWind(0);
     this._sparkleTimer = 0;
+    /* PREREG-fxcluster §1 seam (sub-arm B): a staged still captures ~3 frames after the
+       SECOND clock re-base (Debug.setShot applies the shot twice), inside the sparkle pop
+       window — fires get _prerollFires below; the field had no preroll. Debug-gated OFF by
+       default: shipped behaviour is bit-exact unless the capture harness opts in. */
+    if (this.engine.debug?.sparklePreroll === true) this.sparkles?.preroll(0.25);
     this._prerollFires();
     this._prerollCrests();
     this._motesBuilt = -1;          // re-seat the dust against whatever this shot is lit by

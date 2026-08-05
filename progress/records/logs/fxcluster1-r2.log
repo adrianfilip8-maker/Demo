@@ -7,3 +7,23 @@
 [15:39:37 +   1s] pre-edit: done; srcTree after 3be168ae28832f69
 [15:39:37 +   1s] chunk 1: all frames present — skipping (idempotent resume)
 [15:39:38 +   1s] chunk 2 (traversal+combat): srcTree 3be168ae28832f69 — booting (own lock hold)
+[15:41:54 + 138s]   boot ok — warnings 1
+[15:41:54 + 138s]   LEVER {"hasEMITTERS":true,"hasPreroll":true,"shipped":{"cane_flash":{"alpha":[2.6,2.6],"col0":16771496,"col1":15251778},"cane_arc":{"alpha":[1.6,2.6],"col0":16776168,"col1":15251778},"cane_spark":{"alpha":[2.2,3.4],"col0":16776168,"col1":15251778},"cane_ring":{"alpha":[2,2],"col0":16776168,"col1":8377599}
+[15:49:51 + 614s]   traversal.base     477s  tod 0.77  {"sparklePreroll":null,"hasPreroll":true,"count":22,"uTime":0.05,"playerPos":[1,12.4,-3],"markers":[{"pos":[1,14.5,-3],"born":0.0167,"pop":0.062},{"pos":[-4,13.9,-8.5],"born":0.0167,"pop":0.062},{"pos":[4.2,14.8,4.5],"bo
+[15:57:21 +1065s]   traversal.cand     450s  tod 0.77  {"sparklePreroll":true,"hasPreroll":true,"count":22,"uTime":0.05,"playerPos":[1,12.4,-3],"markers":[{"pos":[1,14.5,-3],"born":-0.25,"pop":1},{"pos":[-4,13.9,-8.5],"born":-0.25,"pop":1},{"pos":[4.2,14.8,4.5],"born":-0.25,
+[16:04:48 +1511s]   traversal.restore  446s  tod 0.77  {"sparklePreroll":null,"hasPreroll":true,"count":22,"uTime":0.05,"playerPos":[1,12.4,-3],"markers":[{"pos":[1,14.5,-3],"born":-0.25,"pop":1},{"pos":[-4,13.9,-8.5],"born":-0.25,"pop":1},{"pos":[4.2,14.8,4.5],"born":-0.25,
+[16:11:54 +1938s]   combat.base     427s  tod 0.74  {"hasEMITTERS":true,"defs":{"cane_flash":{"alpha":[2.6,2.6],"col0":16771496,"col1":15251778},"cane_arc":{"alpha":[1.6,2.6],"col0":16776168,"col1":15251778},"cane_spark":{"alpha":[2.2,3.4],"col0":16776168,"col1":15251778}
+[16:19:11 +2374s]   combat.cand     436s  tod 0.74  {"hasEMITTERS":true,"defs":{"cane_flash":{"alpha":[1.3,1.3],"col0":15241514,"col1":13926970},"cane_arc":{"alpha":[1,1.6],"col0":15241514,"col1":15251778},"cane_spark":{"alpha":[1.6,2.4],"col0":16762957,"col1":15251778},"
+[16:26:16 +2800s]   combat.restore  426s  tod 0.74  {"hasEMITTERS":true,"defs":{"cane_flash":{"alpha":[2.6,2.6],"col0":16771496,"col1":15251778},"cane_arc":{"alpha":[1.6,2.6],"col0":16776168,"col1":15251778},"cane_spark":{"alpha":[2.2,3.4],"col0":16776168,"col1":15251778}
+[16:26:16 +2800s]   chunk 2 done — srcTree after 3be168ae28832f69 (STABLE)
+[16:26:17 +2800s] chunk 2: lock released
+[16:26:17 +2800s] chunk 3 (dunes+interior): srcTree 3be168ae28832f69 — booting (own lock hold)
+[16:27:54 +2897s]   boot ok — warnings 1
+[16:27:54 +2898s]   LEVER {"hasSky":true,"hasAtmoFog":true,"hasSceneFog":true,"hasUHaze":true}
+[16:34:40 +3304s]   dunes.base     406s  tod 0.83  {"sunElevation":15,"atmoFogColor":[0.7791783350507296,0.435317320669908,0.17390537723009983],"atmoFogHex":"e4b074","sceneFogColor":[0.7791783350507296,0.435317320669908,0.17390537723009983],"sceneFogHex":"e4b074","fogDen
+[16:35:09 +3332s]   dunes.cand      28s  tod 0.83  {"sunElevation":15,"atmoFogColor":[0.5839496129547221,0.3277713008235732,0.13093805324456972],"atmoFogHex":"c99b65","sceneFogColor":[0.5839496129547221,0.3277713008235732,0.13093805324456972],"sceneFogHex":"c99b65","fogD
+[16:35:37 +3361s]   dunes.restore   29s  tod 0.83  {"sunElevation":15,"atmoFogColor":[0.7791783350507296,0.435317320669908,0.17390537723009983],"atmoFogHex":"e4b074","sceneFogColor":[0.7791783350507296,0.435317320669908,0.17390537723009983],"sceneFogHex":"e4b074","fogDen
+[16:38:26 +3530s]   interior.ship     169s  tod 0.5  {"sunElevation":76,"atmoFogColor":[0.6583748172725346,0.5840784178830671,0.4178850708380236],"atmoFogHex":"d4c9ad","sceneFogColor":[0.6583748172725346,0.5840784178830671,0.4178850708380236],"sceneFogHex":"d4c9ad","fogDen
+[16:38:26 +3530s]   chunk 3 done — srcTree after 3be168ae28832f69 (STABLE)
+[16:38:27 +3530s] chunk 3: lock released
+[16:38:27 +3530s] ALL DONE

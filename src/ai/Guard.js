@@ -1826,7 +1826,10 @@ export class Guards {
     _v3.set(_rgt.x, 0, _rgt.z);
     if (_v3.lengthSq() < 1e-6) return true;
     _v3.normalize().multiplyScalar(side);                  // pure profile, beam to screen-`side`
-    const t = clamp(spec.towardCamera ?? 0.35, 0, 0.9);
+    /* PREREG-fxcluster §1 seam (sub-arm A lever). Look-neutral by construction: the debug
+       flag is undefined outside the registered capture, and the widened clamp only differs
+       for negative inputs no shipped SHOT_POSE produces (guard ships towardCamera 0.35). */
+    const t = clamp(this.engine.debug?.guardTowardCamera ?? spec.towardCamera ?? 0.35, -0.6, 0.9);
     _v2.set(_dir.x, 0, _dir.z);
     if (_v2.lengthSq() > 1e-6) _v2.normalize();
     _v3.multiplyScalar(Math.sqrt(Math.max(0, 1 - t * t))).addScaledVector(_v2, -t);
