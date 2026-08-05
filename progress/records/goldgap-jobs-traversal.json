@@ -1,0 +1,141 @@
+[
+    {
+        "name": "OURS traversal fx5-full (gild mask minus Sly/FX occluders)",
+        "png": "/home/user/Demo/shots/fx5/traversal.full.png",
+        "rect": [
+            0,
+            0,
+            1280,
+            720
+        ],
+        "bgrect": [
+            500,
+            400,
+            1000,
+            500
+        ],
+        "direction": [
+            0,
+            1
+        ],
+        "maskbin": "traversal.mask.bin",
+        "maskid": 7,
+        "gold_filter": false,
+        "exclude": [
+            [
+                460,
+                140,
+                720,
+                380
+            ]
+        ],
+        "lobe_min_rmb": -5
+    },
+    {
+        "name": "OURS traversal rim2-base (gild mask minus Sly/FX occluders)",
+        "png": "/home/user/Demo/shots/rim2/traversal-base.png",
+        "rect": [
+            0,
+            0,
+            1280,
+            720
+        ],
+        "bgrect": [
+            500,
+            400,
+            1000,
+            500
+        ],
+        "direction": [
+            0,
+            1
+        ],
+        "maskbin": "traversal.mask.bin",
+        "maskid": 7,
+        "gold_filter": false,
+        "exclude": [
+            [
+                460,
+                140,
+                720,
+                380
+            ]
+        ],
+        "lobe_min_rmb": -5
+    },
+    {
+        "name": "REF odyssey checkpoint-flag gold pole+ball (sunlit, geometric ROI)",
+        "png": "refprobe/yoshistar/2DAssets/Screenshots/1080p/0100000000010000_2021-04-29_10-06-46-270.png",
+        "rect": [
+            1094,
+            438,
+            1124,
+            660
+        ],
+        "bgrect": [
+            900,
+            430,
+            1050,
+            560
+        ],
+        "direction": [
+            -1,
+            0
+        ],
+        "gold_filter": false,
+        "exclude": [
+            [
+                1094,
+                478,
+                1099,
+                660
+            ],
+            [
+                1115,
+                478,
+                1124,
+                660
+            ]
+        ]
+    },
+    {
+        "name": "REF sly2 rajan gold dome (night)",
+        "png": "refprobe/ps2thumbs/Named_Snaps/Sly 2 - Band of Thieves (USA).png",
+        "rect": [
+            60,
+            120,
+            215,
+            310
+        ],
+        "bgrect": [
+            0,
+            120,
+            55,
+            310
+        ],
+        "direction": [
+            -1,
+            0
+        ]
+    },
+    {
+        "name": "REF sly3 cane gold hook (night)",
+        "png": "refprobe/ps2thumbs/Named_Snaps/Sly 3 - Honor Among Thieves (USA).png",
+        "rect": [
+            28,
+            172,
+            122,
+            238
+        ],
+        "bgrect": [
+            0,
+            138,
+            140,
+            172
+        ],
+        "direction": [
+            0,
+            -1
+        ]
+    }
+]

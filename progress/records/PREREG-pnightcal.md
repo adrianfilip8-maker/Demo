@@ -140,8 +140,19 @@ requirement for this seal. `rimfloor0` is deliberately **absent**: it is a rim-r
 demonstrated blind-spot bait for a hue statistic, and reusing it would rebuild the defect
 this seal exists to fix.
 
-- **G1 (sign):** dHue(sbm020) > 0 AND dHue(sbm040) > 0, with the corroborations agreeing on
-  both (R/G rises, B/max falls). Else UNSCOREABLE.
+- **G1 (sign):** dHue(sbm020) > 0 AND dHue(sbm040) > 0, with the corroboration agreeing on
+  both: **R/G rises**. Else UNSCOREABLE.
+
+  > **AMENDED 2026-08-05T01:5xZ, before the capture booted, caught by the scorer selftest.**
+  > As first written G1 also demanded "B/max falls" — but §156.2 itself records B/max
+  > **rising** on the real sbm040 (G fell at constant B; §115.2's green-blindness signature),
+  > and the durable O1 table shows it (2.062 → 2.152). The as-registered gate would have
+  > fired UNSCOREABLE on the genuine known-bad over a transcribed wrong direction — §143.1's
+  > "a guard can bless (here: kill) the broken (here: working) thing," caught because the
+  > selftest ran the real scorer on constructed inputs first. B/max is now REPORTED next to
+  > the gate with §156.2's explanation, never gated. The G-darkest share column is also
+  > restored to the report (the sealed scorer carried it; it is the green-suppression
+  > signature and belongs beside any hue verdict, §115.2).
 - **G2 (separation):** |dHue(sbm020)| ≥ **0.50°** — ten times the registered instrument
   noise floor of 0.05° (O2's δ=0 arm must read exactly 0.000; 0.05° is the operative bound).
   Else UNSCOREABLE. Explicitly **not** "fall back to sbm040 alone" — that is the permissive
