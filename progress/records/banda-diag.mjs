@@ -986,6 +986,138 @@ function modeScore(dir) {
   console.log(`\n  ${R.length} scored, ${fails} FAIL — the RESULT quotes this table verbatim.`);
 }
 
+/* ───────────────────── gold2 mode (PREREG-goldlobe2 diagnosis) ─────────────────────
+ * The goldlobe successor's offline measurement chain (RESULT-goldlobe routing: "the port's
+ * error was area, not amplitude"). Four steps, every number quoted by PREREG-goldlobe2:
+ *   1. face-class θ0 — the angle between each axis-aligned gilded face's reflection vector
+ *      and the sun, across the traversal framing (analytic; SHOTS + evalAtmosphere).
+ *   2. mover-θ inversion — the committed goldlobe1 frames' ΔL populations mapped back to
+ *      implied off-axis angles through the SAME anchored texel→display chain the seal's
+ *      bands ride on (grade port is anchor-validated at startup).
+ *   3. sharp forward table — predicted display L per mover percentile under the
+ *      uGlintSharp re-steepening (first-order tilt model, stated), plus the flat-body
+ *      selectivity check (tiltP50 1.15° from texlab, current tree).
+ *   4. KB-widelobe port PROOF — the dispatch's binding obligation: the KB (pow 2, gain
+ *      5.2) must provably over-lobe in the port BEFORE sealing (predecessor's KB-chrome
+ *      failed low because this table was never built).
+ */
+
+function modeGold2() {
+  console.log('\n═══ gold2 — goldlobe successor diagnosis (θ0 geometry, mover inversion, sharp table, KB proof) ═══');
+  const st = lightState(SHOT_TODS.traversal);
+  const key = new THREE.Vector3(...st.keyDir).normalize();
+  const shot = SHOTS.traversal;
+  const cam = new THREE.PerspectiveCamera(shot.fov, 1280 / 720, 0.1, 500);
+  cam.position.set(...shot.pos);
+  cam.lookAt(...shot.target);
+  cam.updateMatrixWorld(true);
+  console.log(`  traversal tod ${SHOT_TODS.traversal}  keyDir (${st.keyDir.map((v) => v.toFixed(3)).join(', ')})  cam pos (${shot.pos.join(',')}) target (${shot.target.join(',')}) fov ${shot.fov}`);
+
+  /* 1 — θ0 per face class. Rays through the gilded-band rows (the predecessor's arris span
+     x183-1174, y133-214 plus the beam bodies to y260), face normals axis-aligned. */
+  const FACES = { px: [1, 0, 0], nx: [-1, 0, 0], pz: [0, 0, 1], nz: [0, 0, -1], py: [0, 1, 0] };
+  console.log('\n— 1. face-class θ0 = angle(reflect(view, N), key) across ROI pixels (deg; p10/p50/p90 over sampled rays) —');
+  const ndc = (px, py) => new THREE.Vector3((px / 1280) * 2 - 1, -((py / 720) * 2 - 1), 0.5);
+  const theta0ByFace = {};
+  for (const [fname, n] of Object.entries(FACES)) {
+    const N = new THREE.Vector3(...n);
+    const ths = [];
+    for (let py = 120; py <= 270; py += 10) for (let px = 180; px <= 1180; px += 20) {
+      const dir = ndc(px, py).unproject(cam).sub(cam.position).normalize();
+      if (dir.dot(N) > -0.05) continue;                       // face not visible from this ray
+      const R = dir.clone().sub(N.clone().multiplyScalar(2 * dir.dot(N))).normalize();
+      ths.push(Math.acos(clamp01(R.dot(key))) * 180 / Math.PI);
+    }
+    if (!ths.length) { console.log(`    ${fname}: never camera-facing in the band`); continue; }
+    ths.sort((a, b) => a - b);
+    const p = (q) => ths[Math.floor(q * (ths.length - 1))].toFixed(1);
+    theta0ByFace[fname] = +p(0.5);
+    console.log(`    ${fname.padEnd(3)} n ${String(ths.length).padStart(4)}  θ0 p10 ${p(0.1)}  p50 ${p(0.5)}  p90 ${p(0.9)}`);
+  }
+
+  /* 2 — the ΔL→θ map through the real chain, then the committed movers inverted.
+     Canonical texel: lit gilded beam (ndl 0.55, sh 1, ao 1, metal 0.85) — the §gold base. */
+  const G1 = { specOn: true, metal: 0.85, rough: 0.55, spec: 0.55, gloss: 64, ndl: 0.55, sh: 1, ny: 0.5, ndv: 0.55, envRy: 0.4, ndh: 0.2 };
+  const dispAt = (cosRK, gain, pow_) => texelReport(st, ALB.gilded, { ...G1, glintGain: gain, glintPow: pow_, cosRK }).L;
+  const base0 = dispAt(0, 2.6, 20);
+  console.log(`\n— 2. ΔL→θ inversion table (chain: lit gilded texel, glint 2.6/pow 20; base display L ${base0.toFixed(1)}) —`);
+  const thGrid = [];
+  for (let th = 0; th <= 50; th += 1) {
+    const d = dispAt(Math.cos(th * Math.PI / 180), 2.6, 20) - base0;
+    thGrid.push([th, d]);
+  }
+  for (const th of [5, 10, 15, 20, 25, 30, 35, 40]) console.log(`    θ ${String(th).padStart(2)}° → ΔL ${thGrid[th][1].toFixed(1)}`);
+  const thetaOf = (dL) => { for (let i = thGrid.length - 1; i >= 0; i--) if (thGrid[i][1] >= dL) return thGrid[i][0]; return 0; };
+  /* committed movers (goldlobe1 cand vs base, exclusion rects applied) */
+  const EXCL = [[500, 190, 740, 400], [870, 0, 940, 100]];
+  const inEx = (x, y) => EXCL.some(([a, b, c, d]) => x >= a && y >= b && x < c && y < d);
+  let movers = [];
+  try {
+    const bIm = readPNG(`${REC}/goldlobe1/traversal.base.png`);
+    const cIm = readPNG(`${REC}/goldlobe1/traversal.cand.png`);
+    const L = (im, i) => 0.2126 * im.data[i] + 0.7152 * im.data[i + 1] + 0.0722 * im.data[i + 2];
+    for (let y = 0; y < bIm.h; y++) for (let x = 0; x < bIm.w; x++) {
+      if (inEx(x, y)) continue;
+      const i = (y * bIm.w + x) * bIm.ch;
+      const d = L(cIm, i) - L(bIm, i);
+      if (d >= 8) movers.push({ x, y, dL: d, th: thetaOf(d) });
+    }
+    movers.sort((a, b) => b.dL - a.dL);
+    const pth = (q) => movers[Math.floor(q * (movers.length - 1))];
+    console.log(`  committed movers (ΔL ≥ 8, excl applied): n ${movers.length}`);
+    for (const q of [0.02, 0.10, 0.25, 0.50]) console.log(`    p${(q * 100).toFixed(0).padStart(2)} by ΔL: ΔL ${pth(q).dL.toFixed(1)} → implied θ ≈ ${pth(q).th}°`);
+  } catch { console.log('  (goldlobe1 frames absent — mover inversion skipped)'); }
+
+  /* 3 — the uGlintSharp forward table. First-order model, stated plainly: a mover at
+     implied θ carries tilt-rotation δ = θ0 − θ (θ0 = its face's p50); sharp s rotates R to
+     θ'(s) = |θ0 − s·δ|. Body texels: δbody = 2 × tiltP50 = 2.3° (texlab, current tree). */
+  const th0 = Math.min(...Object.values(theta0ByFace));     // the best-aligned visible face class
+  console.log(`\n— 3. sharp forward table (θ0 = best visible face p50 = ${th0}°; first-order re-steepening; gain 2.6 pow 20) —`);
+  console.log('    texel class          s=1.0     s=1.5     s=2.0     s=2.5     s=3.0');
+  const rows = [
+    ['mover p02 (θ from frame)', movers.length ? movers[Math.floor(0.02 * (movers.length - 1))].th : 24],
+    ['mover p10', movers.length ? movers[Math.floor(0.10 * (movers.length - 1))].th : 30],
+    ['mover p25', movers.length ? movers[Math.floor(0.25 * (movers.length - 1))].th : 33],
+    ['flat body (δ 2.3°)', th0 - 2.3],
+  ];
+  for (const [label, th] of rows) {
+    const delta = th0 - th;
+    const cells = [1.0, 1.5, 2.0, 2.5, 3.0].map((s) => {
+      const thS = Math.abs(th0 - s * delta);
+      return dispAt(Math.cos(thS * Math.PI / 180), 2.6, 20).toFixed(0).padStart(6);
+    });
+    console.log(`    ${label.padEnd(22)} ${cells.join('   ')}`);
+  }
+  console.log(`    (lobe membership needs display ≥ 0.92 × ROImax ≈ 212; B-p99 band [222, 252])`);
+
+  /* 4 — KB-widelobe PORT PROOF (pow 2, gain 5.2): at pow 2 the half-peak half-width is
+     acos(0.5^(1/2)) = 45°, so EVERY visible face class sits inside the cone — the port must
+     show body-wide display ≥ the lobe window, i.e. a facet-wide over-lobe, BEFORE sealing. */
+  console.log('\n— 4. KB-widelobe proof (pow 2, gain 5.2, sharp 1.0 — body texels at each face-class θ0) —');
+  for (const [fname, th] of Object.entries(theta0ByFace)) {
+    const d = dispAt(Math.cos(th * Math.PI / 180), 5.2, 2);
+    console.log(`    face ${fname.padEnd(3)} θ0 p50 ${String(th).padStart(5)}° → display L ${d.toFixed(1)}  ${d >= 212 ? '≥ 0.92·max window (over-lobe)' : d >= 160 ? '≥ L160 (B2\' axis fires)' : 'below both'}`);
+  }
+  /* The binding obligation: the KB must read as its own failure IN THE PORT before sealing.
+     Signature = B2' explosion (share of gilded over L160). Share-weighted over every sampled
+     visible-face ray (each ray scored at its face's exact θ0), body texels only — crest
+     movers only ADD to it. */
+  let over160 = 0, tot = 0;
+  for (const [fname, n] of Object.entries(FACES)) {
+    const N = new THREE.Vector3(...n);
+    for (let py = 120; py <= 270; py += 10) for (let px = 180; px <= 1180; px += 20) {
+      const dir = ndc(px, py).unproject(cam).sub(cam.position).normalize();
+      if (dir.dot(N) > -0.05) continue;
+      const R = dir.clone().sub(N.clone().multiplyScalar(2 * dir.dot(N))).normalize();
+      const th = Math.acos(clamp01(R.dot(key))) * 180 / Math.PI;
+      const d = dispAt(Math.cos(th * Math.PI / 180), 5.2, 2);
+      tot++; if (d >= 160) over160++;
+    }
+  }
+  console.log(`    PROOF (share-weighted, body texels only): ${(100 * over160 / tot).toFixed(1)}% of visible-face rays ≥ L160 vs the B2' explosion line 20% — ${100 * over160 / tot > 20 ? 'KB-widelobe PROVABLY reads as its own failure in-port ✓' : 'KB INSUFFICIENT — re-dose before sealing'}`);
+  console.log(`    (predecessor's KB-chrome at pow 5 predicted body display ≤ ${dispAt(Math.cos(47 * Math.PI / 180), 5.2, 5).toFixed(0)} at the BEST face p10 47° — the low-failure the port never checked; this table is that check for the successor.)`);
+}
+
 /* ───────────────────── cal2 mode (PREREG-banda2 calibration) ─────────────────────
  * node banda-diag.mjs cal2 [dir=banda1] — the successor seal's frame-calibration pass over
  * the PREDECESSOR's committed arms (RESULT-banda obligation (b) + CRITIC-sbs2 warm-share
@@ -1191,12 +1323,13 @@ function modeScore2(dir) {
 const mode = process.argv[2] || 'all';
 console.log(`banda-diag — drift guard PASS (${Object.keys(T).length + Object.keys(G).length + Object.keys(PAL).length} constants + ${13} load-bearing lines asserted against committed source)`);
 if (mode === 'frames' || mode === 'all') modeFrames();
-if (mode === 'state' || mode === 'all' || mode === 'chain' || mode === 'attrib' || mode === 'cand' || mode === 'gold') modeState();
-if (mode === 'grade' || mode === 'all' || mode === 'chain' || mode === 'attrib' || mode === 'cand' || mode === 'gold') modeGrade();
+if (mode === 'state' || mode === 'all' || mode === 'chain' || mode === 'attrib' || mode === 'cand' || mode === 'gold' || mode === 'gold2') modeState();
+if (mode === 'grade' || mode === 'all' || mode === 'chain' || mode === 'attrib' || mode === 'cand' || mode === 'gold' || mode === 'gold2') modeGrade();
 if (mode === 'chain' || mode === 'all') modeChain();
 if (mode === 'attrib' || mode === 'all') modeAttrib();
 if (mode === 'cand' || mode === 'all') modeCand();
 if (mode === 'gold' || mode === 'all') modeGold();
+if (mode === 'gold2') modeGold2();
 if (mode === 'score') modeScore(process.argv[3] || `${REC}/banda1`);
 if (mode === 'cal2') modeCal2(process.argv[3] || `${REC}/banda1`);
 if (mode === 'score2') modeScore2(process.argv[3] || `${REC}/banda2`);
