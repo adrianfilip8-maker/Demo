@@ -1,0 +1,45 @@
+{
+ "prereg": "PREREG-banda2.md",
+ "chunk": "N",
+ "startedAt": "2026-08-05T18:34:02.426Z",
+ "srcTreeBefore": "3be168ae28832f69",
+ "shipExpected": {
+  "subjW": 0.5,
+  "tintPeak": 0.52,
+  "sbm": 0.05,
+  "sbmLit": 0.05
+ },
+ "shots": [
+  {
+   "shot": "night",
+   "arms": [],
+   "setShot": {
+    "stats": {
+     "fps": 37,
+     "drawCalls": 288,
+     "triangles": 1856037,
+     "programs": 98,
+     "ms": 12.700000000186265
+    },
+    "tod": 0.02
+   }
+  }
+ ],
+ "lever": {
+  "hasShading": true,
+  "hasTune": true,
+  "hasSubjU": true,
+  "hasRefresh": true,
+  "hasInkNight": true,
+  "subjW": 0.5,
+  "tintPeak": 0.52,
+  "sbm": 0.05,
+  "sbmLit": 0.05,
+  "uSubjW": 0.5,
+  "uShadowColor": [
+   0.09609963379551392,
+   0.31311543639412576,
+   0.49658401318439915
+  ]
+ }
+}

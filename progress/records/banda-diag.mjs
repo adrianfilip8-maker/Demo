@@ -986,6 +986,206 @@ function modeScore(dir) {
   console.log(`\n  ${R.length} scored, ${fails} FAIL — the RESULT quotes this table verbatim.`);
 }
 
+/* ───────────────────── cal2 mode (PREREG-banda2 calibration) ─────────────────────
+ * node banda-diag.mjs cal2 [dir=banda1] — the successor seal's frame-calibration pass over
+ * the PREDECESSOR's committed arms (RESULT-banda obligation (b) + CRITIC-sbs2 warm-share
+ * promotion). Prints, per wall rect and arm: bodySat (the KB-warmmud axis, frame-anchored),
+ * plus warm-share rows (CRITIC conventions restated inline), plus the night leak decomposed.
+ * Every PREREG-banda2 band is sized from THIS table; the file quotes it. */
+
+function warmShare(im, rect, { lFloor = 40 } = {}) {
+  const [x0, y0, x1, y1] = rect;
+  let n = 0, warm = 0, litWarm = 0;
+  for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) {
+    const i = (y * im.w + x) * im.ch;
+    const r = im.data[i], g = im.data[i + 1], b = im.data[i + 2];
+    const L = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    n++;
+    if (r > b + 10 && L > lFloor) warm++;
+    const [h] = hsv(r, g, b);
+    if (h >= 15 && h <= 60 && L > 100) litWarm++;              // CRITIC-sbs2 bible-lit-sandstone predicate
+  }
+  return { warmPct: 100 * warm / n, litWarmPct: 100 * litWarm / n };
+}
+
+function modeCal2(dir) {
+  console.log(`\n═══ cal2 — PREREG-banda2 calibration from ${dir} (predecessor arms; conventions §122.1-stated inline) ═══`);
+  const f = (shot, arm) => `${dir}/${shot}.${arm}.png`;
+  const have = (p) => { try { readFileSync(p); return true; } catch { return false; } };
+  const wallRects = [
+    ['hero', 'beam', [300, 330, 750, 430]],
+    ['interior', 'wall0', [60, 80, 320, 400]],
+    ['interior', 'wall1', [1050, 100, 1250, 500]],
+  ];
+  console.log('\n— KB-warmmud axis: wall-body satP50 (body = L≥rect medL, sat≥0.04) per arm —');
+  for (const [shot, label, rect] of wallRects) {
+    const row = [];
+    let baseSat = null;
+    for (const arm of ['base', 'B', 'AB', 'KBwarmmud']) {
+      if (!have(f(shot, arm))) { row.push(`${arm} —`); continue; }
+      const s = rectStats(readPNG(f(shot, arm)), rect);
+      if (arm === 'base') baseSat = s.bodySat;
+      const rel = baseSat ? (100 * (baseSat - s.bodySat) / baseSat) : 0;
+      row.push(`${arm} ${s.bodySat.toFixed(3)}${arm !== 'base' ? ` (drop ${rel.toFixed(1)}%)` : ''}`);
+    }
+    console.log(`  ${shot}.${label.padEnd(6)} ${row.join('  |  ')}`);
+  }
+  console.log('\n— warm-share rows (warm% = R>B+10 ∧ L>40; litWarm% = hue∈[15,60] ∧ L>100, CRITIC-sbs2) —');
+  const wsJobs = [
+    ['interior', 'frame', [0, 0, 1280, 720]],
+    ['hero', 'arch', [200, 300, 900, 600]],
+    ['hero', 'beam', [300, 330, 750, 430]],
+  ];
+  for (const [shot, label, rect] of wsJobs) {
+    const row = [];
+    for (const arm of ['base', 'B', 'AB']) {
+      if (!have(f(shot, arm))) continue;
+      const w = warmShare(readPNG(f(shot, arm)), rect);
+      row.push(`${arm} warm ${w.warmPct.toFixed(2)}% litWarm ${w.litWarmPct.toFixed(2)}%`);
+    }
+    console.log(`  ${shot}.${label.padEnd(6)} ${row.join('  |  ')}`);
+  }
+  console.log('\n— interior warm% by luma floor (base arm; the torch-gap decomposition; ref (Odyssey) frame warm% = 31.0 per CRITIC-sbs2) —');
+  if (have(f('interior', 'base'))) {
+    const im = readPNG(f('interior', 'base'));
+    for (const lf of [40, 60, 100, 140]) {
+      const w = warmShare(im, [0, 0, 1280, 720], { lFloor: lf });
+      console.log(`    L>${String(lf).padEnd(3)} warm% ${w.warmPct.toFixed(2)}`);
+    }
+  }
+  console.log('\n— night leak restated (base vs AB, ΣRGB≥4; banda2-nightleak.md carries the trace) —');
+  if (have(f('night', 'base')) && have(f('night', 'AB'))) {
+    const b = readPNG(f('night', 'base')), a = readPNG(f('night', 'AB'));
+    const subj = [560, 300, 900, 560];
+    const off = frameDiffPx(b, a, 4, subj);
+    console.log(`    off-subject ${off}, in-subject ${frameDiffPx(b, a) - off}, frame-wide ${frameDiffPx(b, a)} — the successor's P7 gate is FRAME-WIDE [0,0] under the night pin`);
+  }
+}
+
+/* ───────────────────── score2 mode (PREREG-banda2) ─────────────────────
+ * node banda-diag.mjs score2 <dir> — <dir> holds <shot>.<arm>.png, arms
+ * base / A / B / ABg / KBwarmmud / KBoverwarm / restore. ABg = the gate-emulated joint arm
+ * (day pokes subjW 0.65 + tintPeak 0.62; night pokes subjW 0.50 = the nightPin + tintPeak
+ * 0.62). BANDS2 duplicated VERBATIM from PREREG-banda2 §4; a mismatch between the files
+ * voids the scoring, not the seal. If <dir> has no ABg but has AB (the banda1 layout), AB is
+ * scored in its place WITH A LOUD COMPAT NOTE — that is the calibration smoke test: the
+ * ungated predecessor arm must FAIL P7-fw. */
+
+const BANDS2 = {
+  P1_creamRoi: [-58, -30],          // TAIL-LIGHT-SHADOW b−r, arm A/ABg (unchanged from banda)
+  P1_rings: [5, 45],                // TAIL-DARK b−r holds (unchanged)
+  P2_tailBody: [-4, 18],            // CRITIC tail rect body R−B, arm A/ABg (unchanged)
+  P3_heroArch_L40: [-6.0, -0.5],    // Δpp of <L40 on hero.arch, arm B/ABg (unchanged)
+  P4_intWallL: [1.0, 8.0],          // ΔmedL interior wall rects, arm B/ABg (unchanged)
+  P5_familyHue: [200, 246],         // wall-body hue family guard, every non-KB arm (unchanged)
+  P7fw_night: [0, 0],               // night base-vs-ABg differing px FRAME-WIDE, ΣRGB≥4 (successor: no subject box)
+  W1_intWarm: [-0.5, 2.0],          // interior frame warm% Δpp, ABg vs base (gated honesty)
+  W2_heroWarm: [-0.5, 2.0],         // hero arch warm% Δpp, ABg vs base (gated honesty)
+  W3_heroLitWarm: [-0.2, 2.0],      // hero beam litWarm% Δpp (hue 15-60 ∧ L>100), ABg vs base
+  KBmud_relDrop: 10,                // wall-body satP50 rel drop ≥10% on ≥2 of 3 wall rects (frame-calibrated: anchors 13/23/27%)
+  KBoverwarm_rings: 5,              // TAIL-DARK b−r must fall BELOW +5 (unchanged)
+  BG_creamRoi: [-28, -12], BG_rings: [15, 35], BG_heroL40: [30, 46], BG_intWallL: [44, 58], // base gates (P-F3)
+};
+
+function modeScore2(dir) {
+  console.log(`\n═══ score2 — PREREG-banda2 quantities on ${dir} (BANDS2 verbatim from the seal) ═══`);
+  const have = (p) => { try { readFileSync(p); return true; } catch { return false; } };
+  const joint = have(`${dir}/night.ABg.png`) || have(`${dir}/sly-closeup.ABg.png`) ? 'ABg' : 'AB';
+  if (joint === 'AB') console.log('  *** COMPAT: no ABg frames — scoring predecessor AB arms as the joint arm (smoke test; the ungated candidate must FAIL P7-fw) ***');
+  const f = (shot, arm) => `${dir}/${shot}.${arm === 'ABg' ? joint : arm}.png`;
+  const R = [];
+  const say = (id, val, band, cmp = (v, b) => v >= b[0] && v <= b[1]) => {
+    const ok = cmp(val, band);
+    R.push([id, val, band, ok]);
+    console.log(`  ${id.padEnd(30)} ${typeof val === 'number' ? val.toFixed(2) : val}  band ${JSON.stringify(band)}  ${ok ? 'PASS' : 'FAIL'}`);
+  };
+  const wallRects = { hero: [[300, 330, 750, 430]], interior: [[60, 80, 320, 400], [1050, 100, 1250, 500]], temple: [[80, 260, 200, 420]] };
+
+  /* night FIRST — the successor's decider */
+  if (have(f('night', 'base')) && have(f('night', 'ABg'))) {
+    const b = readPNG(f('night', 'base')), a = readPNG(f('night', 'ABg'));
+    const fw = frameDiffPx(b, a);
+    say('P7-fw night Δpx (frame-wide)', fw, BANDS2.P7fw_night, (v, band) => v === band[0]);
+    const subj = [560, 300, 900, 560];
+    const off = frameDiffPx(b, a, 4, subj);
+    console.log(`    (continuity split: off-subject ${off}, in-subject ${fw - off})`);
+    if (have(f('night', 'restore'))) say('P-F4 night restore px', frameDiffPx(b, readPNG(f('night', 'restore'))), [0, 0]);
+  }
+  /* sly-closeup */
+  if (have(f('sly-closeup', 'base'))) {
+    const b = readPNG(f('sly-closeup', 'base'));
+    say('BaseGate creamROI b−r', lRoiBmr(b, [802, 306, 862, 356], 90, 200).bmr, BANDS2.BG_creamRoi);
+    say('BaseGate rings b−r', lRoiBmr(b, TAIL_DARK_ROIS, 26, 55).bmr, BANDS2.BG_rings);
+    if (have(f('sly-closeup', 'A'))) {
+      const a = readPNG(f('sly-closeup', 'A'));
+      let n = 0;
+      for (let y = 210; y < 320; y++) for (let x = 922; x < 962; x++) {
+        const i = (y * b.w + x) * b.ch, j = (y * a.w + x) * a.ch;
+        const d = Math.abs(b.data[i] - a.data[j]) + Math.abs(b.data[i + 1] - a.data[j + 1]) + Math.abs(b.data[i + 2] - a.data[j + 2]);
+        if (d >= 4) n++;
+      }
+      say('P-F5 arch invariance (A) px', n, [0, 0]);
+    }
+    for (const arm of ['A', 'ABg']) {
+      if (!have(f('sly-closeup', arm))) continue;
+      const im = readPNG(f('sly-closeup', arm));
+      say(`P1 creamROI b−r (${arm})`, lRoiBmr(im, [802, 306, 862, 356], 90, 200).bmr, BANDS2.P1_creamRoi);
+      say(`P1 rings b−r (${arm})`, lRoiBmr(im, TAIL_DARK_ROIS, 26, 55).bmr, BANDS2.P1_rings);
+      say(`P2 tail body R−B (${arm})`, rectStats(im, [630, 290, 780, 410]).bodyRmB, BANDS2.P2_tailBody);
+    }
+    if (have(f('sly-closeup', 'KBoverwarm'))) {
+      say('KB-overwarm rings b−r', lRoiBmr(readPNG(f('sly-closeup', 'KBoverwarm')), TAIL_DARK_ROIS, 26, 55).bmr, [-999, BANDS2.KBoverwarm_rings], (v, b2) => v < b2[1]);
+    }
+    if (have(f('sly-closeup', 'restore'))) say('P-F4 sly-closeup restore px', frameDiffPx(b, readPNG(f('sly-closeup', 'restore'))), [0, 0]);
+  }
+  /* hero / interior / temple + KB-warmmud tally */
+  let kbFire = 0, kbSeen = 0;
+  for (const shot of ['hero', 'interior', 'temple']) {
+    if (!have(f(shot, 'base'))) continue;
+    const base = readPNG(f(shot, 'base'));
+    if (shot === 'hero') say('BaseGate hero <L40 %', rectStats(base, [200, 300, 900, 600]).below40Pct, BANDS2.BG_heroL40);
+    if (shot === 'interior') for (let k = 0; k < 2; k++) say(`BaseGate int wall${k} medL`, rectStats(base, wallRects.interior[k]).medL, BANDS2.BG_intWallL);
+    for (const arm of ['B', 'ABg']) {
+      if (!have(f(shot, arm))) continue;
+      const im = readPNG(f(shot, arm));
+      if (shot === 'hero') say(`P3 hero.arch Δ<L40pp (${arm})`, rectStats(im, [200, 300, 900, 600]).below40Pct - rectStats(base, [200, 300, 900, 600]).below40Pct, BANDS2.P3_heroArch_L40);
+      if (shot === 'interior') for (let k = 0; k < 2; k++) say(`P4 int wall${k} ΔmedL (${arm})`, rectStats(im, wallRects.interior[k]).medL - rectStats(base, wallRects.interior[k]).medL, BANDS2.P4_intWallL);
+      for (const rect of wallRects[shot]) say(`P5 ${shot} body hue (${arm})`, rectStats(im, rect).bodyHue, BANDS2.P5_familyHue);
+    }
+    if (have(f(shot, 'KBwarmmud'))) {
+      const im = readPNG(f(shot, 'KBwarmmud'));
+      for (const rect of wallRects[shot]) {
+        const s0 = rectStats(base, rect), s1 = rectStats(im, rect);
+        const rel = 100 * (s0.bodySat - s1.bodySat) / Math.max(s0.bodySat, 1e-4);
+        kbSeen++; if (rel >= BANDS2.KBmud_relDrop) kbFire++;
+        console.log(`  KB-warmmud ${shot} body satP50 ${s0.bodySat.toFixed(3)}→${s1.bodySat.toFixed(3)} rel drop ${rel.toFixed(1)}% (fires at ≥${BANDS2.KBmud_relDrop}%)`);
+      }
+    }
+    if (have(f(shot, 'restore'))) say(`P-F4 ${shot} restore px`, frameDiffPx(base, readPNG(f(shot, 'restore'))), [0, 0]);
+  }
+  if (kbSeen) say('KB-warmmud rects fired', kbFire, [2, 99], (v, b2) => v >= b2[0]); // PASS = the KB read as its own failure
+  /* W rows — gated warm-share (CRITIC-sbs2 promotion) */
+  for (const [id, shot, rect, band, key] of [
+    ['W1 interior frame warm% Δpp', 'interior', [0, 0, 1280, 720], BANDS2.W1_intWarm, 'warmPct'],
+    ['W2 hero arch warm% Δpp', 'hero', [200, 300, 900, 600], BANDS2.W2_heroWarm, 'warmPct'],
+    ['W3 hero beam litWarm% Δpp', 'hero', [300, 330, 750, 430], BANDS2.W3_heroLitWarm, 'litWarmPct'],
+  ]) {
+    if (!have(f(shot, 'base')) || !have(f(shot, 'ABg'))) continue;
+    const w0 = warmShare(readPNG(f(shot, 'base')), rect), w1 = warmShare(readPNG(f(shot, 'ABg')), rect);
+    say(id, w1[key] - w0[key], band);
+    console.log(`    (${key} ${w0[key].toFixed(2)} → ${w1[key].toFixed(2)}; ref interior frame warm% 31.0 (CRITIC-sbs2); the un-claimed remainder is routed, not scored)`);
+  }
+  /* P8 combat regression watch */
+  if (have(f('combat', 'base')) && have(f('combat', 'ABg'))) {
+    const w0 = rectStats(readPNG(f('combat', 'base')), [360, 390, 720, 670]).warmPct;
+    const w1 = rectStats(readPNG(f('combat', 'ABg')), [360, 390, 720, 670]).warmPct;
+    say('P8 combat warm% ratio', w1 / Math.max(w0, 1e-4), [0.85, 1.15]);
+    if (have(f('combat', 'restore'))) say('P-F4 combat restore px', frameDiffPx(readPNG(f('combat', 'base')), readPNG(f('combat', 'restore'))), [0, 0]);
+  }
+  const fails = R.filter((r) => !r[3]).length;
+  console.log(`\n  ${R.length} scored, ${fails} FAIL — RESULT-banda2 quotes this table verbatim.`);
+}
+
 /* ───────────────────────────── main ───────────────────────────── */
 
 const mode = process.argv[2] || 'all';
@@ -998,3 +1198,5 @@ if (mode === 'attrib' || mode === 'all') modeAttrib();
 if (mode === 'cand' || mode === 'all') modeCand();
 if (mode === 'gold' || mode === 'all') modeGold();
 if (mode === 'score') modeScore(process.argv[3] || `${REC}/banda1`);
+if (mode === 'cal2') modeCal2(process.argv[3] || `${REC}/banda1`);
+if (mode === 'score2') modeScore2(process.argv[3] || `${REC}/banda2`);
