@@ -75,7 +75,8 @@
  * Writes progress/records/fxcluster-diag-out.json beside the human-readable stdout.
  */
 import { readPNG } from '../../tools/png.mjs';
-import { writeFileSync } from 'node:fs';
+import { writeFileSync, readFileSync } from 'node:fs';
+import { execSync } from 'node:child_process';
 import zlib from 'node:zlib';
 
 /* Minimal PNG writer (RGB8, filter 0) for evidence crops. */
@@ -956,6 +957,212 @@ function sectionE() {
   OUT.sections.E = E;
 }
 
+/* ============================== W — atmowire (SHADING) ============================== */
+/* The routed successor of section E's finding (§4-R2 / RESULT E "NO SHIP … the dead
+ * setAtmosphere() side-door wiring is the real fix"), extended per PREREG-atmowire.md.
+ * Offline only: source asserts at the CURRENT tree + the two curves + the mapped-connection
+ * candidate + a display model CALIBRATED against the measured fxc1 E arm (+2.3 at ×0.75).
+ * Every constant is read out of committed source at runtime; a drift fails loudly. */
+
+function sectionW() {
+  say('\n=== W. atmowire — the dead published curve, diagnosed at the current tree ===');
+  const W = { drift: [] };
+  const ROOT = R('../../');
+  const src = {
+    toon: readFileSync(`${ROOT}src/render/ToonMaterial.js`, 'utf8'),
+    glsl: readFileSync(`${ROOT}src/render/shaders/toon.glsl.js`, 'utf8'),
+    sky: readFileSync(`${ROOT}src/render/Sky.js`, 'utf8'),
+    atmo: readFileSync(`${ROOT}src/render/Atmosphere.js`, 'utf8'),
+  };
+  const needIn = (file, needle, name) => {
+    if (!src[file].includes(needle)) { W.drift.push(`${file}: MISSING ${name}: ${needle.slice(0, 60)}`); say(`  DRIFT: ${file} missing ${name}`); }
+  };
+
+  /* W1 — the wiring facts, asserted from source (not quoted from an older record). */
+  // (a) setAtmosphere has no caller anywhere in src/** (its definition + docs excluded).
+  const files = execSync(`cd ${ROOT} && find src -name '*.js' | sort`, { encoding: 'utf8' }).trim().split('\n');
+  let callers = 0; const callerList = [];
+  for (const f of files) {
+    const txt = readFileSync(`${ROOT}${f}`, 'utf8');
+    const lines = txt.split('\n');
+    for (let i = 0; i < lines.length; i++) {
+      const l = lines[i];
+      if (!/setAtmosphere\s*\(/.test(l)) continue;
+      if (/^\s*(\*|\/\/|\/\*)/.test(l)) continue;                       // comment
+      if (/^\s*setAtmosphere\s*\(p = \{\}\)/.test(l)) continue;         // the definition
+      callers++; callerList.push(`${f}:${i + 1} ${l.trim().slice(0, 70)}`);
+    }
+  }
+  W.setAtmosphereCallers = { count: callers, sites: callerList };
+  say(`W1 setAtmosphere() call sites in src/** (definition/comments excluded): ${callers}${callers ? ' — ' + callerList.join(' | ') : '  ← the publisher is MISSING'}`);
+  // (b) the side-door + hardcoded TUNE haze constants, asserted verbatim.
+  needIn('toon', 'Math.max(fog.density * 2.6, 0.004)', 'side-door ×2.6');
+  needIn('toon', 'hazeDensity: 0.020', 'TUNE.hazeDensity');
+  needIn('toon', 'hazeFalloff: 0.055', 'TUNE.hazeFalloff');
+  needIn('toon', 'hazeBase: 0.0', 'TUNE.hazeBase');
+  needIn('toon', 'hazeStart: 26', 'TUNE.hazeStart');
+  needIn('toon', 'hazeGain: 1.30', 'TUNE.hazeGain');
+  const fogSyncedWrites = (src.toon.match(/_fogSynced = true/g) || []).length;
+  W.fogSyncedTrueWrites = fogSyncedWrites;
+  say(`W1 side-door + TUNE haze constants asserted; '_fogSynced = true' writers: ${fogSyncedWrites} (must be 1 = setAtmosphere only ⇒ a live poke is durable for the boot)`);
+  if (fogSyncedWrites !== 1) W.drift.push(`_fogSynced=true writers ${fogSyncedWrites} != 1`);
+  // (c) the four design-intent exhibits — the code's own answer to connect-vs-retire.
+  needIn('sky', 'Fallback fog only. SHADING is supposed to apply `sky.fogParams` in-shader', 'Sky intent');
+  needIn('toon', 'floor under a missing publisher, not a replacement for one', 'ToonMaterial hazeSun intent');
+  needIn('toon', 'SKY may express the haze as scene.fog before it learns about setAtmosphere().', 'ToonMaterial side-door intent');
+  needIn('toon', '--- atmosphere (SKY overrides these) ---', 'TUNE banner intent');
+  needIn('atmo', 'the exact curve SHADING/POSTFX', 'aerialBlend contract');
+  needIn('atmo', 'if they paste this snippet the horizon line', 'ATMOSPHERE_GLSL seamless contract');
+  say(`W1 design-intent exhibits present: ${6 - W.drift.filter((d) => d.includes('intent') || d.includes('contract')).length}/6 — all name the published path as the contract and the fog side-door as a stopgap ⇒ CONNECT, not retire.`);
+
+  /* W2 — the two curves at the dunes pyramid (tod 0.83 → el 15, anchors el2/el22 at k). */
+  const raw = clamp((15 - 2) / 20, 0, 1), k = raw * raw * (3 - 2 * raw);
+  const lerp1 = (a, b) => a + (b - a) * k;
+  const lerp3 = (a, b) => a.map((v, i) => v + (b[i] - v) * k);
+  const density = lerp1(0.0056, 0.0047), fogH = lerp1(46, 58), inscatter = lerp1(0.82, 0.62);
+  const fogCol = lerp3(hex2lin(0xdb9a68), hex2lin(0xe8b878), k);
+  const fogTint = lerp3(hex2lin(0xff9a5c), hex2lin(0xffc98a), k);
+  const uHazeDensity = Math.max(density * 2.6, 0.004);
+  W.state = { el: 15, k: +k.toFixed(4), density: +density.toFixed(5), fogHeight: +fogH.toFixed(1), inscatter: +inscatter.toFixed(3), uHazeDensitySideDoor: +uHazeDensity.toFixed(5) };
+  const cam = makeCamera({ pos: [26.0, 19.5, 84.0], target: [-2.0, 9.0, 18.0], fov: 42 });
+  const camY = 19.5;
+  const slyHazeAt = (w, D, b, base, start, gainGate = true) => {
+    const d = len(sub(w, cam.pos));
+    const rdY = (w.y - camY) / d;
+    const dy = rdY * b;
+    const dens = D * Math.exp(-(camY - base) * b);
+    const depth = Math.abs(dy) > 1e-4 ? dens * (1 - Math.exp(-d * dy)) / dy : dens * d;
+    const gate = gainGate ? smoothstep(start, start * 3 + 1, d) : 1;
+    return clamp(1 - Math.exp(-Math.max(depth, 0)), 0, 1) * gate;
+  };
+  const publishedAt = (w) => {
+    const d = len(sub(w, cam.pos));
+    const h = Math.exp(-Math.max(w.y, 0) / fogH);
+    const dd = d * density * (0.55 + 0.45 * h);
+    return 1 - Math.exp(-dd * dd);
+  };
+  const PTS = [
+    ['apex', V(-150, 111.5, -190)], ['mid', V(-150, 60, -190)], ['pbase', V(-150, 20, -190)],
+    ['near10', V(20, 15, 74)], ['near26', V(8, 12, 62)], ['ground60', V(-10, 8, 30)],
+    ['complex90', V(-40, 12, 0)], ['complex140', V(-70, 18, -40)], ['far240', V(-110, 12, -140)],
+  ];
+  W.blends = {};
+  say('W2 blends (applied side-door slyHaze vs published applyAerial):');
+  for (const [name, w] of PTS) {
+    const d = len(sub(w, cam.pos));
+    W.blends[name] = { dist: +d.toFixed(0), applied: +slyHazeAt(w, uHazeDensity, 0.055, 0, 26).toFixed(3), published: +publishedAt(w).toFixed(3) };
+    say(`    ${name.padEnd(10)} ${String(W.blends[name].dist).padStart(4)} m  applied ${W.blends[name].applied.toFixed(3)}  published ${W.blends[name].published.toFixed(3)}`);
+  }
+
+  /* W3 — the mapped-connection candidate: keep slyHaze's shader shape, publish through
+     setAtmosphere with falloff := 1/fogHeight, gain := 1.0 (kills the isoluminance driver),
+     start := 0, base := 0, haze := fogColor, hazeSun := fogColor + fogTint·inscatter, and
+     density' solved so the pyramid apex matches the published blend. */
+  const bMap = 1 / fogH;
+  const apexW = V(-150, 111.5, -190);
+  const target = publishedAt(apexW);
+  let lo = 0.0005, hi = 0.08;
+  for (let i = 0; i < 60; i++) {
+    const mid2 = (lo + hi) / 2;
+    (slyHazeAt(apexW, mid2, bMap, 0, 0) < target ? lo = mid2 : hi = mid2);
+  }
+  const densMap = (lo + hi) / 2;
+  W.mapped = { falloff: +bMap.toFixed(5), gain: 1.0, start: 0, base: 0, density: +densMap.toFixed(5), kVsFogDensity: +(densMap / density).toFixed(3) };
+  say(`W3 mapped set: falloff 1/fogHeight = ${bMap.toFixed(5)}  gain 1.0  start 0  density' ${densMap.toFixed(5)} (= ${(densMap / density).toFixed(2)} × fog.density; replaces the ×2.6 heuristic)`);
+  say('W3 mapped blends vs published (residual = shape mismatch that stays after mapping):');
+  W.mappedBlends = {};
+  for (const [name, w] of PTS) {
+    const m = slyHazeAt(w, densMap, bMap, 0, 0);
+    W.mappedBlends[name] = { mapped: +m.toFixed(3), published: W.blends[name].published, resid: +(m - W.blends[name].published).toFixed(3) };
+    say(`    ${name.padEnd(10)} mapped ${m.toFixed(3)}  published ${W.blends[name].published.toFixed(3)}  resid ${(m - W.blends[name].published).toFixed(3)}`);
+  }
+
+  /* W4 — pyramid vs sky measured on every committed dunes frame (same staging, stated trees). */
+  const measure = (path, label) => {
+    let im2; try { im2 = readPNG(path); } catch { say(`    ${label}: frame absent (${path})`); return null; }
+    const apex = cam.project(V(-150, 111.5, -190));
+    const baseL = cam.project(V(-150 - 82, 6.5, -190));
+    const baseR = cam.project(V(-150 + 82, 6.5, -190));
+    const inL = [], skyL = [];
+    for (let y = Math.max(2, Math.round(apex.py) + 4); y <= Math.min(im2.h - 1, Math.round(apex.py) + 90); y++) {
+      const f = (y - apex.py) / (baseL.py - apex.py);
+      if (f <= 0 || f >= 1) continue;
+      const xl = apex.px + (baseL.px - apex.px) * f, xr = apex.px + (baseR.px - apex.px) * f;
+      const half = (xr - xl) / 2, cx = (xl + xr) / 2;
+      for (const s of [0.0, 0.35, -0.35, 0.6, -0.6]) {
+        const X = Math.round(cx + s * half);
+        if (X >= 0 && X < im2.w) { const i = (y * im2.w + X) * im2.ch; inL.push(lum(im2.data[i], im2.data[i + 1], im2.data[i + 2])); }
+      }
+      for (const s of [1.5, 1.9, -1.5, -1.9]) {
+        const X = Math.round(cx + s * half);
+        if (X >= 0 && X < im2.w) { const i = (y * im2.w + X) * im2.ch; skyL.push(lum(im2.data[i], im2.data[i + 1], im2.data[i + 2])); }
+      }
+    }
+    const r = { pyr: +median(inL).toFixed(1), sky: +median(skyL).toFixed(1) };
+    r.delta = +(r.sky - r.pyr).toFixed(1);
+    say(`    ${label.padEnd(34)} pyramid ${r.pyr}  sky ${r.sky}  sky−pyr ${r.delta}`);
+    return r;
+  };
+  say('W4 sky−pyramid ΔmedL on committed dunes frames (Q-E1 convention, sign: sky brighter):');
+  W.frames = {
+    cand1: measure(R('./cand1/frames/dunes.base.png'), 'cand1 dunes.base (fx22 tree)'),
+    sbs2: measure(R('./sbs2/dunes.png'), 'sbs2 dunes (16a3817+dirty, newest)'),
+    fxc1base: measure(R('./fxcluster1/dunes.base.png'), 'fxcluster1 dunes.base (E arm pair)'),
+    fxc1cand: measure(R('./fxcluster1/dunes.cand.png'), 'fxcluster1 dunes.cand (fogColor ×0.75)'),
+  };
+
+  /* W5 — display model, §13-calibrated on the measured E arm before any prediction is
+     believed. Model: pyramid rows treated as one operating point; scene-linear grey
+     mix(unhazed, hazeLum, blend) → approx AgX → display luma (grade omitted, absorbed by
+     the calibration). unhazed solved from the fxc1 BASE frame at rowBlend. */
+  const hazeLumCur = lum3v(fogCol) * 1.30;
+  const rowBlend = (W.blends.apex.applied + W.blends.mid.applied) / 2;   // upper-mass operating blend
+  const dispOfGrey = (g) => { const [x, y, z] = agx(g, g, g); return lum(lin2srgb255(x), lin2srgb255(y), lin2srgb255(z)); };
+  const invGrey = (targetL) => { let a = 0, b2 = 4; for (let i = 0; i < 60; i++) { const m = (a + b2) / 2; (dispOfGrey(m) < targetL ? a = m : b2 = m); } return (a + b2) / 2; };
+  if (W.frames.fxc1base && W.frames.fxc1cand) {
+    const mixed0 = invGrey(W.frames.fxc1base.pyr);
+    const unhazed = (mixed0 - rowBlend * hazeLumCur) / (1 - rowBlend);
+    // calibration: forward the measured E arm (fogColor ×0.75 ⇒ hazeLum ×0.75, blends unchanged)
+    const predCandPyr = dispOfGrey(unhazed * (1 - rowBlend) + hazeLumCur * 0.75 * rowBlend);
+    const predCandDelta = +(W.frames.fxc1base.sky - predCandPyr).toFixed(1);
+    const measCandDelta = W.frames.fxc1cand.delta;
+    W.model = {
+      rowBlend: +rowBlend.toFixed(3), hazeLumCurLinear: +hazeLumCur.toFixed(3), unhazedLinear: +unhazed.toFixed(3),
+      calib: { predictedCandDelta: predCandDelta, measuredCandDelta: measCandDelta, err: +(predCandDelta - measCandDelta).toFixed(1) },
+    };
+    say(`W5 model: rowBlend ${rowBlend.toFixed(3)}  hazeLum(cur, ×1.30) ${hazeLumCur.toFixed(3)} lin  unhazed(solved) ${unhazed.toFixed(3)} lin`);
+    say(`W5 CALIBRATION vs measured fxc1 E arm: predicted sky−pyr ${predCandDelta} vs measured ${measCandDelta} (err ${W.model.calib.err} L) — bands must carry ≥ this error`);
+    // connected candidate: blend → mapped apex/mid mean, hazeLum → lum(fogColor) ×1.0
+    const rowBlendMap = (W.mappedBlends.apex.mapped + W.mappedBlends.mid.mapped) / 2;
+    const hazeLumMap = lum3v(fogCol) * 1.0;
+    const predConnPyr = dispOfGrey(unhazed * (1 - rowBlendMap) + hazeLumMap * rowBlendMap);
+    W.model.connected = {
+      rowBlendMapped: +rowBlendMap.toFixed(3), hazeLumMappedLinear: +hazeLumMap.toFixed(3),
+      predictedPyr: +predConnPyr.toFixed(1), predictedDelta: +(W.frames.fxc1base.sky - predConnPyr).toFixed(1),
+      note: 'sky side unchanged by construction (dome does not consume these uniforms)',
+    };
+    say(`W5 CONNECTED prediction: rowBlend' ${rowBlendMap.toFixed(3)}  hazeLum' ${hazeLumMap.toFixed(3)}  → pyramid ${predConnPyr.toFixed(1)}  sky−pyr ${W.model.connected.predictedDelta} (base measured ${W.frames.fxc1base.delta}; ref class 21.4)`);
+    // haze pole display values for the record
+    const dispHaze = (m) => { const c = agx(...fogCol.map((v) => v * m)); return +lum(...c.map(lin2srgb255)).toFixed(1); };
+    W.model.hazeDisplay = { cur130: dispHaze(1.30), mapped100: dispHaze(1.0) };
+    say(`W5 haze pole display L: current (×1.30) ${W.model.hazeDisplay.cur130}  mapped (×1.0) ${W.model.hazeDisplay.mapped100}  (measured sky beside pyramid ${W.frames.fxc1base.sky})`);
+    // no-harm bound: display slope from calibration point, applied to mid-field Δ(blend·haze − blend'·haze')
+    const slope = Math.abs((dispOfGrey(unhazed * (1 - rowBlend) + hazeLumCur * rowBlend) - predCandPyr) / (rowBlend * hazeLumCur * 0.25)); // L per unit linear
+    W.model.noHarm = {};
+    say('W5 no-harm bound |Δdisplay| ≈ slope × |Δ(blend×hazeLum)| (slope ' + slope.toFixed(0) + ' L/lin, from the calibration point):');
+    for (const name of ['near10', 'near26', 'ground60', 'complex90', 'complex140', 'far240']) {
+      const dLin = Math.abs(W.mappedBlends[name].mapped * hazeLumMap - W.blends[name].applied * hazeLumCur);
+      W.model.noHarm[name] = +(slope * dLin).toFixed(1);
+      say(`    ${name.padEnd(10)} |Δ(b·h)| ${dLin.toFixed(3)} lin → ~${W.model.noHarm[name]} L`);
+    }
+  } else {
+    say('W5 SKIPPED: fxc1 dunes pair absent — the model has no calibration anchor.');
+  }
+
+  OUT.sections.W = W;
+}
+function lum3v(c) { return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]; }
+
 /* ============================== run ============================== */
 
 const want = process.argv.slice(2).map((s) => s.toUpperCase());
@@ -965,6 +1172,7 @@ try { if (all || want.includes('B')) sectionB(); } catch (e) { say('B FAILED:', 
 try { if (all || want.includes('C')) sectionC(); } catch (e) { say('C FAILED:', e.message); OUT.sections.C = { error: e.message }; }
 try { if (all || want.includes('D')) sectionD(); } catch (e) { say('D FAILED:', e.message); OUT.sections.D = { error: e.message }; }
 try { if (all || want.includes('E')) sectionE(); } catch (e) { say('E FAILED:', e.message); OUT.sections.E = { error: e.message }; }
+try { if (want.includes('W')) sectionW(); } catch (e) { say('W FAILED:', e.message); OUT.sections.W = { error: e.message }; }
 
 writeFileSync(R('./fxcluster-diag-out.json'), JSON.stringify(OUT, null, 1));
 say('\nwrote fxcluster-diag-out.json');

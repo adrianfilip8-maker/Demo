@@ -137,3 +137,7 @@
 [20:48:59 +1417s]   · waiting for capture lock (1416s, held by pid 31114)
 [20:49:09 +1428s] chunk C1: lock HELD — edits are now inside the ticket
 [20:49:10 +1428s]   arm base (pristine) srcAtArm 3be168ae28832f69 — fresh vite + fresh context
+[20:50:26 +1504s]   hero.base: setShot ok tod 0.79 draws 260 tris 1741791
+[20:57:34 +1933s]   hero.base: CAPTURED sha ca4e0b1ec4630b62 504s  kerbband2 n=1708  consoleErrors 1
+[20:57:34 +1933s]   arm cand (cand s=0.372/0.348) srcAtArm bb822753ae7949e8 — fresh vite + fresh context
+[20:58:50 +2008s]   hero.cand: setShot ok tod 0.79 draws 260 tris 1741983
