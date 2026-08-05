@@ -1,0 +1,49 @@
+SELFTEST (synthetic pass-2 artefact):
+  candidate px 400, runs 2, artefact FOUND at y=18 lift +57.3 #598aa2
+  PASS — the detector fires on the signature. A null below is therefore meaningful.
+
+
+guard-base.png: 1280x720  candidate px 4758  runs >= 12px: 82
+   y= 180  x  768.. 782  n=  15  peakL 158.5  lift +148.6  #40657b
+   y= 129  x  773.. 788  n=  16  peakL 158.8  lift +148.5  #538398
+   y=  28  x  798.. 815  n=  18  peakL 157.8  lift +147.6  #5b8799
+   y= 128  x  747.. 767  n=  19  peakL 157.0  lift +146.3  #6998ac
+   y= 130  x  785.. 802  n=  18  peakL 156.2  lift +146.1  #6da1b3
+   y=  31  x  836.. 852  n=  17  peakL 155.0  lift +145.1  #4a6c80
+   y= 182  x  797.. 815  n=  18  peakL 153.2  lift +143.6  #6494a7
+   y= 181  x  784.. 799  n=  16  peakL 152.5  lift +142.3  #588b9f
+
+guard-hull.png: 1280x720  candidate px 4758  runs >= 12px: 82
+   y= 180  x  768.. 782  n=  15  peakL 158.5  lift +148.6  #40657b
+   y= 129  x  773.. 788  n=  16  peakL 158.8  lift +148.5  #538398
+   y=  28  x  798.. 815  n=  18  peakL 157.8  lift +147.6  #5b8799
+   y= 128  x  747.. 767  n=  19  peakL 157.0  lift +146.3  #6998ac
+   y= 130  x  785.. 802  n=  18  peakL 156.2  lift +146.1  #6da1b3
+   y=  31  x  836.. 852  n=  17  peakL 155.0  lift +145.1  #4a6c80
+   y= 182  x  797.. 815  n=  18  peakL 153.2  lift +143.6  #6494a7
+   y= 181  x  784.. 799  n=  16  peakL 152.5  lift +142.3  #588b9f
+
+night-base.png: 1280x720  candidate px 17986  runs >= 12px: 224
+   y= 302  x  586.. 630  n=  45  peakL 168.9  lift +159.9  #73a5b8
+   y= 310  x  905.. 952  n=  48  peakL 169.0  lift +159.6  #5f8497
+   y= 307  x  985..1028  n=  44  peakL 167.8  lift +158.4  #7aa9bb
+   y= 306  x  733.. 759  n=  27  peakL 171.5  lift +152.5  #547d8f
+   y= 311  x  876.. 912  n=  36  peakL 158.5  lift +149.4  #5b8192
+   y= 301  x  586.. 617  n=  32  peakL 158.9  lift +145.8  #6b9fb1
+   y= 307  x  763.. 782  n=  20  peakL 166.5  lift +145.1  #618da0
+   y= 309  x  926.. 954  n=  29  peakL 151.9  lift +142.9  #4e6d7e
+
+night-hull.png: 1280x720  candidate px 17986  runs >= 12px: 224
+   y= 302  x  586.. 630  n=  45  peakL 168.9  lift +159.9  #73a5b8
+   y= 310  x  905.. 952  n=  48  peakL 169.0  lift +159.6  #5f8497
+   y= 307  x  985..1028  n=  44  peakL 167.8  lift +158.4  #7aa9bb
+   y= 306  x  733.. 759  n=  27  peakL 171.5  lift +152.5  #547d8f
+   y= 311  x  876.. 912  n=  36  peakL 158.5  lift +149.4  #5b8192
+   y= 301  x  586.. 617  n=  32  peakL 158.9  lift +145.8  #6b9fb1
+   y= 307  x  763.. 782  n=  20  peakL 166.5  lift +145.1  #618da0
+   y= 309  x  926.. 954  n=  29  peakL 151.9  lift +142.9  #4e6d7e
+
+signature: local vertical max by >= 18 L on BOTH sides (sampled +/-2 px),
+           blue-dominant (B > R), horizontal run >= 12 px
+reference : critic pass 2 measured the artefact at #598aa2 L=129 between L=72 and L=34
+            -> lift +57 / +95, far above this threshold. A null here is not a near miss.

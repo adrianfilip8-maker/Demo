@@ -1,0 +1,77 @@
+{
+ "prereg": "PREREG-skynoise.md",
+ "chunk": "B",
+ "shot": "night",
+ "startedAt": "2026-08-05T09:37:50.803Z",
+ "srcTreeBefore": "3e2477e7456b540b",
+ "cand": {
+  "scale": [
+   0.000105,
+   0.000138,
+   0.000105
+  ],
+  "soft": [
+   0.36,
+   0.38,
+   0.4
+  ]
+ },
+ "shipExpected": {
+  "scale": [
+   0.0003,
+   0.00052,
+   0.00088
+  ],
+  "soft": [
+   0.3,
+   0.16,
+   0.09
+  ]
+ },
+ "arms": [],
+ "lever": {
+  "hasSky": true,
+  "hasScale": true,
+  "hasSoft": true,
+  "hasCover": true,
+  "scale": [
+   0.0003,
+   0.00052,
+   0.00088
+  ],
+  "soft": [
+   0.3,
+   0.16,
+   0.09
+  ]
+ },
+ "setShot": {
+  "stats": {
+   "fps": 39,
+   "drawCalls": 287,
+   "triangles": 1844011,
+   "programs": 98,
+   "ms": 15.700000000186265
+  },
+  "warnings": 1
+ },
+ "orig": {
+  "scale": [
+   0.0003,
+   0.00052,
+   0.00088
+  ],
+  "soft": [
+   0.3,
+   0.16,
+   0.09
+  ],
+  "cover": [
+   0.67,
+   0.72,
+   0.74
+  ],
+  "time": 0.5621333333331472,
+  "tod": 0.02
+ }
+}
