@@ -4,8 +4,14 @@ Scored by SHADING, 2026-08-05, per `PREREG-goldlobe2.md` exactly as sealed (seal
 67367ac with the extended `banda-diag.mjs gold2` diagnosis). **Written incrementally
 (§163/§164); an abrupt end means a rollback took the session, not that scoring stopped.**
 
-**STATUS: IN PROGRESS — pre-edit + capture queued FIFO on the capture lock (behind
-mradius-run → dual-ship-window → c2rerun at launch time).**
+**STATUS: COMPLETE — VERDICT: P-F6′ VOID + RE-DIAGNOSE. KB-widelobe read LOW a second time
+(B2′ 3.58 % against the >20 % port-proven explosion line), which the seal registered as a
+definite-claim contradiction ⇒ the capture is VOID for candidate purposes and the port's
+population model is falsified. The re-diagnosis is quantified below (§6): the port modeled a
+full-metal lit texel; the frame's metal-reachable population is 24.1 % of the ROI (per-texel
+`slyMetal` ORM leaf gating), and the predecessor's movers are geometry-curvature texels the
+sharp lever cannot amplify. Nothing ships, nothing needs reverting (runtime pokes; scaffold
+inert at `TUNE.goldGlint 0.0`, P-F2-proven to the pixel).**
 
 ## Evidence and provenance (filled as steps land)
 
@@ -39,25 +45,122 @@ mradius-run → dual-ship-window → c2rerun at launch time).**
 
 ## Chunk log
 
-(filled as the pre-edit and chunk G2 land)
+- **Pre-edit:** ticket HELD 21:44:41 (verified in capture.lock — the applier aborts if
+  acquire's timeout path returned unheld), patch applied + verified (anchors ×1 each, no
+  backticks, node --check ×2, module import, exported-strings), ticket released. Scaffold
+  committed by the coordinator at 8591a20 (staying, per seal).
+- **Chunk G2:** one boot 21:44:42–22:38:01, srcTree at boot `dfa198283676610f`. LEVER probe:
+  hasSharp true, boot values 0 / 20 / 1 (inert). Traversal tod 0.77 / 252 draws / 1.751 M
+  tris; combat tod 0.74 / 222 draws / 1.542 M tris — the goldlobe1 staging reproduced.
+  Settle 379 s / 354 s. All ten arms `applied ok`, `mismatch: []` × 10.
+- **Mid-boot tree move, identified (§121.4/§124.4):** srcTree after = `a8925573a9ec3ff6` —
+  the skyswirl uGraze edit (`src/render/Sky.js` only, committed ace14f3) landed on disk
+  during the boot window. Inert to this boot (the bundler read the tree at 21:44); **no
+  `src/world/**` or `Shots.js` change between boot and scoring** (git log over the window:
+  Sky.js + this seal's own scaffold files only), so the scoring-time masks describe exactly
+  the captured geometry/camera.
 
-## Scores
+## Scores — gates and structure first
 
-(the seal's §3 table lands here verbatim: gates G-0a/G-0base/G-0c + occluder derivation,
-then B1′/B2′/B3′/B4/B5/B-p99/cane guard on cand, dose ordering base < As < cand, KB and
-null verdicts. Scoring pipeline per the seal: fresh `matmask.mjs` masks at the captured
-tree, `gildlit.mjs`, `goldgap.py` with `goldgap-jobs-goldlobe2.json` — all offline, no lock.)
+- **G-0a PASS, Δ = 0.0 %:** fresh masks at scoring tree — traversal gilded eroded-2
+  **12.94 % / 119,251 px** (registered 12.94 %); combat gilded raw 5.81 % — both reproduce
+  the predecessor to the digit; gilded maskid 7 / sandstone_worn 3.
+- **G-0base PASS:** base tail over L160 **2.03 %** on the occluded ROI (∈ [1.2, 3.0]);
+  largest base lobe **5 px (5×1) at (885,157)** — the same arris component as gold1 and
+  goldlobe1. (Mask-only pre-occlusion tail 2.49 %, max 255 = the FX glow, expected.)
+- **G-0c PASS:** tinted overlay — magenta rides the gilded architrave/cornice bands and
+  stops at silhouettes, green tight on sandstone jambs, no tint on sky
+  (`goldlobe2/reg-tinted-overview.png`, `reg-crop-1to1.png`).
+- **Occluder derivation (this capture's own):** pass 1 raw-mask max 255.0, **325 hot px all
+  in one region bbox (582,198)–(601,262)** — the FX glow behind Sly (per-boot phase spread);
+  sparkle diamonds at x≈488 and the rooftop guard to y≈105 measured in crops. Derived rects
+  **[480,150,740,400] + [860,0,945,110]** (wider than goldlobe1's, from this boot's own
+  evidence). Pass 2: ROI 101,025 px, max 232.0, 148 survivors = the 1–2 px arris rim line
+  (x183–1159). **Positive control PASS:** exclusion lifted → the detector returns the
+  **170 px (17×15) FX glow lobe at (594,256)**; applied → 5 px.
+- **P-F2 + P-F4 PASS, exact:** null vs base = **0 px at ΣRGB ≥ 1** (not just ≥ 4), both
+  shots — the uGlintSharp scaffold is inert at gain 0 and the poke path restores bit-exactly.
+- Arm liveness (ΣRGB ≥ 4 vs base): traversal As 13,516 / cand 14,310 / KB **86,397**;
+  combat 5,094 / 5,096 / 23,533 — the lever is live and the KB's footprint is 6× the cand's.
 
-**Resume instructions if a rollback takes this session:** relaunch
-`bash tools/launch.sh <scratchpad>/banda2/goldlobe2-chain.mjs
-/home/user/Demo/progress/records/logs/goldlobe2-r2.log <scratchpad>/banda2/goldlobe2.pid`
-after sweeping `/tmp/sands-of-ra/queue` against /proc (§140.2) — the chain skips the
-pre-edit if `uGlintSharp` is already in the tree and the runner skips arms whose frames
-exist. If the scratchpad died, the pre-edit patch content is PREREG-goldlobe2 §2 verbatim
-and the runner is committed.
+## Scores — the registered table (recorded; P-F6′ below voids the candidate scoring)
+
+| band | seal | cand (2.6/20/1.5) measured | note |
+|---|---|---|---|
+| B1′ | [30, 400] px, aim 84–146 | **5 px (5×1) at (885,157)** — the base component, unchanged | FAIL-below (recorded) |
+| B2′ | [3, 20] % over L160 | **2.12 %** (base 2.03 %) | FAIL-below (recorded) |
+| B3′ | gild p50 / worn p50 ∈ [0.85, 1.8] | **1.36** (88.4 / 64.9) | held |
+| B4 | ring p05 / body p50 ≤ 0.65 REVERT-REGARDLESS | **0.317** (28.0 / 88.4), contrast 8.3 | held — the winning half again |
+| B5 | px past lobe edge [0, 40] | **0** | held |
+| B-p99 | [222, 252] | **185.8** (base 184.3) | FAIL-below (recorded) |
+| cane | combat cane region ≥ L250 ≤ 2 % | **0.000 %** all four arms, region max 249.5 (the FX spark, arm-invariant) | held |
+| order | base < As < cand on tail/p99 | over160 2.03 < 2.12 ≈ 2.12; ΔL max 61.0 < 81.6 | ordered at the extreme tail only — the sharp lever moves ~10² px, not the ported 10³ |
+
+**KB-widelobe (5.2 / pow 2 / sharp 1.0) — the deciding row:** over L160 **3.58 %** (base
+2.03 %), B1′ 22 px (6×4 at (304,205)), p99 201.0, max 240.1, ΔL p99 +84.1 —
+**against the port-proven claim of 33.2 % ≥ L160 and the registered > 20 % explosion line.
+KB READ LOW. P-F6′ FIRES: capture VOID for candidate purposes + re-diagnose.**
+
+## 6. The re-diagnosis P-F6′ demands — done on this capture's own pixels
+
+1. **The port modeled a texel; the frame is a population, and the population is 24 %
+   metal.** Under the maximal cone (pow 2 — every visible facet in-cone at half-peak), the
+   ROI pixels that moved AT ALL (ΔL ≥ 2) are **24.1 %**; the KB's ΔL **p50 is 0.0** — the
+   median gilded-ROI pixel received zero glint at gain 5.2. Mechanism, named: the glint is
+   scoped `× slyMetal` per-texel, and `hieroglyph_gilded` is **leaf over stone** — the ORM
+   blue-channel gilding mask gates metal to the leaf strokes; the stone between glyphs is
+   slyMetal 0. The gold2 KB proof multiplied a **metal-0.85 lit texel over 100 % of the
+   ROI**; the reachable set is a quarter of it, and dimmer (sh/ao) — the same §18-family
+   error as the predecessor's KB-chrome, now measured instead of suspected. The 33.2 %
+   in-port claim was falsified exactly as P-F6′ anticipated it could be.
+2. **The predecessor's movers are geometry-curvature texels, and the sharp lever cannot
+   reach them.** `uGlintSharp` amplifies only `(Nw − nonPerturbedNormal)` — texture relief +
+   detail. In-boot, sharp 1.25 → 1.5 moved the ROI ΔL p99 from +4.5 to +5.6 and the max
+   mover from +61 to +82: real, monotone, and **~100× smaller in population terms than the
+   §1 forward table predicted** (which attributed the movers' full θ-offset to texture
+   tilt). The movers therefore sit on **geometric** curvature — the beadRoll arris (the
+   eternal 5 px line) and the `gold_leaf` ring — whose normals live in `nonPerturbedNormal`
+   and pass through the sharp untouched. Corollary: the texture-relief tilt actually
+   reaching the shader at this framing is far below texlab's mip-0 distribution
+   (p90 17.7°); the surviving delta is small enough that ×1.5 of it stays sub-lobe.
+3. **What survives of the mechanism family:** the glint term itself remains live,
+   dose-ordered, correctly scoped and inert at 0 (P-F2 exact); B4/B5/B3′/cane held in every
+   arm of both captures. The compact-lobe-on-flat-`hieroglyph_gilded` goal is now bounded by
+   **three measured walls**: population 24.1 % metal-reachable, texture tilt mip-dead at
+   the framing, geometric curvature confined to 1–2 px arrises. The evidence-backed routes
+   for a successor are (a) **GEOMETRY meso-curvature** (bead/roll radius at molding scale —
+   the only structure all three captures keep finding at 0.92·max), and/or (b)
+   **re-registering the lobe where the curvature is** (`gold_leaf` ring/disc — outside this
+   ROI by mask construction; the ring hit the 239–244 reference aim in goldlobe1 and moved
+   again here, crops committed). A TEXTURES amplitude raise would amplify a mip-filtered
+   near-zero and should not be attempted without an at-mip in-frame tilt measurement first.
+   Routing is the coordinator's; this RESULT registers the walls.
 
 ## Verdict
 
-Pending. Per the seal: PASS requires B1′/B2′/B3′/B5/B-p99 in-band on cand with **B4 ≤ 0.65
-(revert-regardless)**, dose ordering monotone, KB-widelobe reading as its own failure
-(B2′ > 20 %), null bit-identical to base, gates clean. Ship decision is the coordinator's.
+```
+G-0a PASS 12.94 % Δ0.0    G-0base PASS 2.03 % / 5 px    G-0c PASS    occluder + control PASS
+P-F2 PASS 0 px (ΣRGB≥1)   P-F4 PASS (same arm)          cane guard PASS 0.000 %
+B4 0.317 ≤ 0.65 — revert-regardless does NOT fire
+KB-widelobe: B2′ 3.58 % vs registered >20 % — READ LOW
+⇒ P-F6′ VOID + RE-DIAGNOSE (the seal's own clause; re-diagnosis in §6, quantified)
+cand bands recorded, not adjudicated: B1′ 5 px / B2′ 2.12 % / B-p99 185.8 (all FAIL-below)
+```
+
+**No ship, no revert needed:** all arms were runtime pokes; the tree ships
+`TUNE.goldGlint 0.0` and the staying scaffold (`uGlintSharp` plumbing, 8591a20) is proven
+inert to the pixel by P-F2. The gain ship decision was the coordinator's and the registered
+answer is **VOID — the candidate was never validly tested because the metric's separation
+power failed low again; the §6 walls are the deliverable.**
+
+## Files of this scoring (coordinator sweep list — no git run by this task)
+
+- `progress/records/RESULT-goldlobe2.md` (this file, completed).
+- `progress/records/goldlobe2/` — 10 frames + `readback-G2.json` (committed at 1396aee) plus
+  the scoring evidence written now: `goldgap-jobs-goldlobe2.json`, `reg-tinted-overview.png`,
+  `reg-crop-1to1.png`, `occluder-rects-derived.png`, and six crops
+  (`crops-kb-cluster-{base,cand,KBwidelobe}.png`, `crops-cand-maxmover-*.png`).
+- `progress/records/goldlobe2.mjs` (runner), `progress/records/logs/goldlobe2.log`.
+- Src: the staying scaffold (8591a20) — unchanged by scoring.
+- Scratchpad only (regenerable): mask bins (`matmask.mjs` at the scoring tree; shares in §Scores),
+  `apply-goldlobe2.py`, `goldlobe2-chain.mjs`, occluder/diff one-liners, `g2-*.png` crops.
