@@ -14207,3 +14207,11 @@ run stands. Either way the guards adjudicate — nothing is defended.
 Rule adopted: **a verdict's src consequence queues on the capture lock like the capture that
 produced it.** Revert-on-REJECT is not exempt from §150.1; nothing that edits `src/**` is.
 
+**ADJUDICATED, same session, by the run's own controls: no contamination.** All three control
+arms of the interior chunk read one sha256 — `interior-base == interior-base2 ==
+interior-restore` at `6b3be800…` — with base captured before the revert and restore after it.
+The hot-reload hazard measurably did not reach the captured page's frames; the chunk STANDS and
+no window re-runs. The runner also detected and recorded the committed-tree motion on its own
+(`MATCHES COMMITTED: false` at release), which is §160.5 doing exactly what it was written for.
+The rule above stays adopted — the outcome was luck plus guards, and only the guards are policy.
+
