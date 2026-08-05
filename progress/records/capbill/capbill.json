@@ -4,10 +4,10 @@
   "regTree": "3fea650a4d645857",
   "srcTree0": "0ac0479e279468e3",
   "srcTreeEdited": "086fd03ab4469745",
-  "srcTreeAfterRevert": null,
+  "srcTreeAfterRevert": "0ac0479e279468e3",
   "slySha0": "9d411b84929440600910da5019b3af150bbc2123413bc7bfb98423450ffc0bb7",
   "slyShaEdited": "98e1cbad2f65d79ebfb9cf88c1e238a4759d2491b2793fbd061e8b02edd3238a",
-  "slyShaAfterRevert": null,
+  "slyShaAfterRevert": "9d411b84929440600910da5019b3af150bbc2123413bc7bfb98423450ffc0bb7",
   "settle": true,
   "gate0inticket": {
     "pass": true,
@@ -26,11 +26,151 @@
       "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
       "triangles": 14044,
       "srcAtArm": "086fd03ab4469745",
-      "shots": {},
+      "shots": {
+        "sly-closeup": {
+          "file": "progress/records/capbill/frames/sly-closeup-A.png",
+          "sha256": "8f0e77d4b2ebcfb617b83917eab6f05fa60f0d8a37053e993305d81623aaaafc",
+          "bytes": 1892810,
+          "stats": {
+            "fps": 39,
+            "drawCalls": 264,
+            "triangles": 1653371,
+            "programs": 98,
+            "ms": 11.200000000186265
+          },
+          "warningsTotal": 1,
+          "stagingWarnings": [],
+          "secs": 272
+        },
+        "combat": {
+          "file": "progress/records/capbill/frames/combat-A.png",
+          "sha256": "0f5633cf7337da8fa0d048a80bc46a414a3c76562440ead0a6398e0f35a00857",
+          "bytes": 1946834,
+          "stats": {
+            "fps": 39,
+            "drawCalls": 223,
+            "triangles": 1531147,
+            "programs": 100,
+            "ms": 10.700000000186265
+          },
+          "warningsTotal": 1,
+          "stagingWarnings": [],
+          "secs": 188
+        }
+      },
       "consoleErrors": [
         "Failed to load resource: the server responded with a status of 404 (Not Found)"
-      ]
+      ],
+      "srcAfterArm": "086fd03ab4469745",
+      "secs": 577
+    },
+    "B": {
+      "token": "capyaw10",
+      "charAB": "capyaw10",
+      "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+      "triangles": 14044,
+      "srcAtArm": "086fd03ab4469745",
+      "shots": {
+        "sly-closeup": {
+          "file": "progress/records/capbill/frames/sly-closeup-B.png",
+          "sha256": "a55123bf340afef44c1d99c4978a46098d0f8649fa8272925c815a2d4bb82031",
+          "bytes": 1892565,
+          "stats": {
+            "fps": 37,
+            "drawCalls": 264,
+            "triangles": 1653447,
+            "programs": 98,
+            "ms": 10.899999999441206
+          },
+          "warningsTotal": 1,
+          "stagingWarnings": [],
+          "secs": 216
+        },
+        "combat": {
+          "file": "progress/records/capbill/frames/combat-B.png",
+          "sha256": "6f19abc6e7168a5dd5f4a267c17193b9f86cd73d9326385a69a2e16cbf8c74a5",
+          "bytes": 1946610,
+          "stats": {
+            "fps": 37,
+            "drawCalls": 223,
+            "triangles": 1531147,
+            "programs": 100,
+            "ms": 9.200000000186265
+          },
+          "warningsTotal": 1,
+          "stagingWarnings": [],
+          "secs": 180
+        }
+      },
+      "consoleErrors": [],
+      "srcAfterArm": "086fd03ab4469745",
+      "secs": 500
+    },
+    "BACK": {
+      "token": "(none)",
+      "charAB": "",
+      "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+      "triangles": 14044,
+      "srcAtArm": "086fd03ab4469745",
+      "shots": {
+        "sly-closeup": {
+          "file": "progress/records/capbill/frames/sly-closeup-BACK.png",
+          "sha256": "17e470c72e526734be69054b52ee0e5c3b64927022b408397870c1a159978350",
+          "bytes": 1892677,
+          "stats": {
+            "fps": 38,
+            "drawCalls": 264,
+            "triangles": 1653371,
+            "programs": 98,
+            "ms": 8.399999999441206
+          },
+          "warningsTotal": 1,
+          "stagingWarnings": [],
+          "secs": 214
+        },
+        "combat": {
+          "file": "progress/records/capbill/frames/combat-BACK.png",
+          "sha256": "98b6c9d2a96c535e2c03843d1ee0e824eba1f69ab8019af4dd1f94e2bd50b30e",
+          "bytes": 1946731,
+          "stats": {
+            "fps": 38,
+            "drawCalls": 223,
+            "triangles": 1531147,
+            "programs": 100,
+            "ms": 12.099999999627471
+          },
+          "warningsTotal": 1,
+          "stagingWarnings": [],
+          "secs": 183
+        }
+      },
+      "consoleErrors": [],
+      "srcAfterArm": "086fd03ab4469745",
+      "secs": 498
     }
   },
-  "phase": "arms"
+  "phase": "done",
+  "armsByTree": {
+    "086fd03ab4469745": [
+      "A",
+      "B",
+      "BACK"
+    ]
+  },
+  "comparablePairs": [
+    [
+      "A",
+      "B",
+      "BACK"
+    ]
+  ],
+  "backIdentical": {
+    "sly-closeup": false,
+    "combat": false
+  },
+  "armsDiffer": {
+    "sly-closeup": true,
+    "combat": true
+  },
+  "finishedAt": "2026-08-05T06:31:24.024Z"
 }
