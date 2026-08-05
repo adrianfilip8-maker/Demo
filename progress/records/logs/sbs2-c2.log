@@ -1,2 +1,17 @@
 · starting dev server on :5300
 · loading game
+· ready
+· renderer: ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)
+· modules present (17): shading postfx sky lighting textures architecture props terrain collision character animation movement camera fx guards hud audio
+· 1 boot warning(s):
+    ! textures: prewarm took 27.0s at size 1024
+  ✓ interior      138601ms  draws  166  tris 724k
+  ✓ night         251973ms  draws  288  tris 1856k
+  ✓ traversal     225967ms  draws  252  tris 1751k
+  ✓ combat        215604ms  draws  222  tris 1542k
+  ✓ guard         145463ms  draws  207  tris 1429k
+· 1 console error(s):
+    ! Failed to load resource: the server responded with a status of 404 (Not Found)
+  · page closed
+
+→ shots/sbs2/  (5 shots, 0 failed)

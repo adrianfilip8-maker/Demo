@@ -1,52 +1,52 @@
 {
-  "at": "2026-08-05T16:41:54.745Z",
+  "at": "2026-08-05T17:04:52.483Z",
   "commit": {
-    "sha": "8a59c40",
+    "sha": "16a3817",
     "dirty": true
   },
   "width": 1280,
   "height": 720,
   "quality": "high",
   "shots": {
-    "hero": {
-      "file": "shots/sbs2/hero.png",
-      "ms": 15,
+    "interior": {
+      "file": "shots/sbs2/interior.png",
+      "ms": 7.400000000372529,
       "fps": 41,
-      "drawCalls": 260,
-      "triangles": 1741791,
+      "drawCalls": 166,
+      "triangles": 723565,
       "programs": 98
     },
-    "temple": {
-      "file": "shots/sbs2/temple.png",
-      "ms": 11,
+    "night": {
+      "file": "shots/sbs2/night.png",
+      "ms": 11.100000000558794,
       "fps": 41,
-      "drawCalls": 239,
-      "triangles": 1713057,
+      "drawCalls": 288,
+      "triangles": 1856249,
       "programs": 98
     },
-    "sly-closeup": {
-      "file": "shots/sbs2/sly-closeup.png",
-      "ms": 12.5,
+    "traversal": {
+      "file": "shots/sbs2/traversal.png",
+      "ms": 10.900000000372529,
       "fps": 60,
-      "drawCalls": 263,
-      "triangles": 1666821,
+      "drawCalls": 252,
+      "triangles": 1750993,
       "programs": 98
     },
-    "courtyard": {
-      "file": "shots/sbs2/courtyard.png",
-      "ms": 11.600000000558794,
+    "combat": {
+      "file": "shots/sbs2/combat.png",
+      "ms": 10.799999999813735,
       "fps": 60,
-      "drawCalls": 281,
-      "triangles": 1710297,
-      "programs": 98
+      "drawCalls": 222,
+      "triangles": 1542483,
+      "programs": 100
     },
-    "dunes": {
-      "file": "shots/sbs2/dunes.png",
-      "ms": 17,
+    "guard": {
+      "file": "shots/sbs2/guard.png",
+      "ms": 9.399999999441206,
       "fps": 60,
-      "drawCalls": 272,
-      "triangles": 1619553,
-      "programs": 123
+      "drawCalls": 207,
+      "triangles": 1429265,
+      "programs": 100
     }
   },
   "errors": [],
@@ -70,11 +70,11 @@
     "audio": true
   },
   "bootWarnings": [
-    "textures: prewarm took 27.3s at size 1024"
+    "textures: prewarm took 27.0s at size 1024"
   ],
   "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
   "warnings": [
-    "textures: prewarm took 27.3s at size 1024"
+    "textures: prewarm took 27.0s at size 1024"
   ],
   "consoleErrors": [
     "Failed to load resource: the server responded with a status of 404 (Not Found)"
