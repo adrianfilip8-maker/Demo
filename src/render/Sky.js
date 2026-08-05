@@ -119,6 +119,9 @@ const TUNE = {
     { h: 1450, scale: 0.000138, drift: 1.6,  soft: 0.38, opacity: 0.86, warp: 0.85, streak: 1.5 }, // mid deck
     { h:  760, scale: 0.000105, drift: 2.4,  soft: 0.40, opacity: 0.97, warp: 1.25, streak: 1.0 }, // cumulus
   ],
+  /* skyswirl (PREREG-skyswirl.md §3): decks dissolve into haze below ~17.5° elevation.
+     lift 0.0 is BIT-EXACT INERT (cover + 0.0*s == cover); the registered A/B pokes uGraze. */
+  graze: { lift: 0.15, dyLo: 0.10, dyHi: 0.30 },  // SHIPPED per RESULT-skyswirl (MEETS all gates)
   cloudBands: 3,            // cel quantisation of cloud lighting (§2.1.1)
   cloudLightStep: 0.030,    // uv offset toward the sun used for the self-shadow gradient
   cloudRimPower: 3.2,
@@ -227,6 +230,7 @@ const SKY_FRAG = /* glsl */`
   uniform vec3  uDeckOpacity;
   uniform vec3  uDeckWarp;
   uniform vec3  uDeckStreak;
+  uniform vec3  uGraze;    // skyswirl: (coverLift, dyLo, dyHi); lift 0 = bit-exact inert
 
   ${ATMOSPHERE_GLSL}
 
@@ -279,6 +283,8 @@ const SKY_FRAG = /* glsl */`
                  vec3 skyBehind, out float alpha) {
     alpha = 0.0;
     if (d.y <= 0.004) return skyBehind;
+    // skyswirl (PREREG-skyswirl.md §3): elevation-gated cover lift; lift 0 -> cov == cover.
+    float cov = cover + uGraze.x * (1.0 - smoothstep(uGraze.y, uGraze.z, d.y));
 
     // Ray/plane intersection: correct parallax, and the natural horizon compression
     // that stacks the deck into a band as it recedes.
@@ -291,7 +297,7 @@ const SKY_FRAG = /* glsl */`
     uv += w * warp * 0.9;
 
     float core;
-    float dens = deckDensity(uv, streak, cover, soft, core);
+    float dens = deckDensity(uv, streak, cov, soft, core);
     if (dens <= 0.001) return skyBehind;
 
     // Self-shadow gradient: sample again a short step toward the sun. Where density
@@ -299,7 +305,7 @@ const SKY_FRAG = /* glsl */`
     vec2 sunUv = normalize(uSunDir.xz + vec2(1e-4)) * ${TUNE.cloudLightStep.toFixed(3)}
                  * (1.0 + 2.2 * (1.0 - clamp(uSunDir.y, 0.0, 1.0)));
     float dummy;
-    float densL = deckDensity(uv + sunUv, streak, cover, soft, dummy);
+    float densL = deckDensity(uv + sunUv, streak, cov, soft, dummy);
     float lit = clamp((dens - densL) * 2.6 + 0.52 + uSunDir.y * 0.22, 0.0, 1.0);
     lit = bandRamp(lit, ${TUNE.cloudBands.toFixed(1)}, 0.16);      // cel bands
 
@@ -550,6 +556,7 @@ export class Sky {
       uDeckOpacity: { value: new THREE.Vector3(D[0].opacity, D[1].opacity, D[2].opacity) },
       uDeckWarp:    { value: new THREE.Vector3(D[0].warp, D[1].warp, D[2].warp) },
       uDeckStreak:  { value: new THREE.Vector3(D[0].streak, D[1].streak, D[2].streak) },
+      uGraze:       { value: new THREE.Vector3(TUNE.graze.lift, TUNE.graze.dyLo, TUNE.graze.dyHi) },
     };
 
     const mat = new THREE.ShaderMaterial({
