@@ -1,0 +1,37 @@
+# in-ticket GATE 0 re-run on the REAL edited tree (srcTree 086fd03ab4469745)
+== closeup base (token line present, token off)
+shot sly-closeup — ray from each eye toward the camera (model space)
+  eyeL centre : CLEAR to camera
+  eyeL white+x : CLEAR to camera
+  eyeL white+y : ink@0.005m[pupilL]
+  eyeR centre : CLEAR to camera
+  eyeR white+x : CLEAR to camera
+  eyeR white+y : ink@0.006m[pupilR]
+
+== closeup token capyaw10
+shot sly-closeup — ray from each eye toward the camera (model space)
+  eyeL centre : CLEAR to camera
+  eyeL white+x : CLEAR to camera
+  eyeL white+y : ink@0.005m[pupilL]
+  eyeR centre : CLEAR to camera
+  eyeR white+x : CLEAR to camera
+  eyeR white+y : ink@0.006m[pupilR]
+
+== combat base
+shot combat — ray from each eye toward the camera (model space)
+  eyeL centre : CLEAR to camera
+  eyeL white+x : CLEAR to camera
+  eyeL white+y : ink@0.003m[head] -> clothDark@0.022m[capBrim]
+  eyeR centre : clothDark@0.177m[capBrim]
+  eyeR white+x : clothDark@0.181m[capBrim]
+  eyeR white+y : ink@0.004m[pupilR] -> clothDark@0.022m[head] -> cloth@0.085m[capBrim] -> clothDark@0.160m[capBrim]
+
+== combat token capyaw10
+shot combat — ray from each eye toward the camera (model space)
+  eyeL centre : CLEAR to camera
+  eyeL white+x : CLEAR to camera
+  eyeL white+y : ink@0.003m[head] -> clothDark@0.009m[pupilL]
+  eyeR centre : clothDark@0.184m[capBrim]
+  eyeR white+x : clothDark@0.166m[capBrim]
+  eyeR white+y : ink@0.004m[pupilR] -> cloth@0.029m[head] -> clothDark@0.042m[head] -> cloth@0.090m[head] -> clothDark@0.156m[capBrim]
+
