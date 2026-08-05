@@ -3,3 +3,33 @@ src tree COMMITTED (pre-edit): 4bf8b093c5b2ed808ccfda70af5f073cb81ab57b6de52cd70
 lock ACQUIRED — ticket held; applying the registered one-line edit
 edit APPLIED inside held ticket: Props.js:135 const HULL_KEYS = new Set(); -> const HULL_KEYS = new Set(['gold']);
 src tree EDITED (capture tree): 0aaea246cfb9ca90716b8d3b7578e30bc1caedc2378ecf324320b22e87f91924
+boot OK — renderer: ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver); 1 boot warning(s)
+
+props hull shells found: 1
+  props_gold_ink         host props_gold          11972 tris  castShadow false noShadow true isOutlineShell true
+ink clone: 1 material(s) cloned onto 1 shell(s) (0 reuse)  basePx 2.5  private uniforms per clone: [uThickness]
+
+capturing courtyard [base base2 hull hull3x restore] (dt pinned to 0 on every step):
+  ✓ base     live  0 (moved 1)  ink readback: clone 2.500 / cache 2.500
+      counted-column stats (arm-to-arm sanity ONLY, never vs 250/1.2M — §153.1): draws 280  tris 1696k
+      srcAtArm 0aaea246cfb9ca90…  -> progress/records/hullkerb/frames/courtyard-base.png
+  ✓ base2    live  0 (moved 0)  ink readback: clone 2.500 / cache 2.500
+      counted-column stats (arm-to-arm sanity ONLY, never vs 250/1.2M — §153.1): draws 280  tris 1696k
+      srcAtArm 0aaea246cfb9ca90…  -> progress/records/hullkerb/frames/courtyard-base2.png
+  ✓ hull     live  1 (moved 1)  ink readback: clone 2.500 / cache 2.500
+      counted-column stats (arm-to-arm sanity ONLY, never vs 250/1.2M — §153.1): draws 281  tris 1708k
+      srcAtArm 0aaea246cfb9ca90…  -> progress/records/hullkerb/frames/courtyard-hull.png
+  ✓ hull3x   live  1 (moved 0)  ink readback: clone 7.500 / cache 2.500
+      counted-column stats (arm-to-arm sanity ONLY, never vs 250/1.2M — §153.1): draws 281  tris 1708k
+      srcAtArm 0aaea246cfb9ca90…  -> progress/records/hullkerb/frames/courtyard-hull3x.png
+  ✓ restore  live  0 (moved 1)  ink readback: clone 2.500 / cache 2.500
+      counted-column stats (arm-to-arm sanity ONLY, never vs 250/1.2M — §153.1): draws 280  tris 1696k
+      srcAtArm 0aaea246cfb9ca90…  -> progress/records/hullkerb/frames/courtyard-restore.png
+
+CHUNK courtyard DONE — 5 frames on the durable path
+· 1 console error(s):
+    ! Failed to load resource: the server responded with a status of 404 (Not Found)
+edit REVERTED — src/world/Props.js byte-identical to pre-run snapshot: true
+src tree AFTER revert: 4bf8b093c5b2ed808ccfda70af5f073cb81ab57b6de52cd70d2e2086df7dbd04  MATCHES COMMITTED: true
+lock RELEASED
+edit REVERTED — src/world/Props.js byte-identical to pre-run snapshot: true
