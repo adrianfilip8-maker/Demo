@@ -1,0 +1,132 @@
+{
+ "prereg": "PREREG-banda.md",
+ "chunk": "C",
+ "startedAt": "2026-08-05T13:39:37.644Z",
+ "srcTreeBefore": "820ace395b9664ae",
+ "shipExpected": {
+  "subjW": 0.5,
+  "tintPeak": 0.52,
+  "sbm": 0.05,
+  "sbmLit": 0.05
+ },
+ "shots": [
+  {
+   "shot": "night",
+   "arms": [
+    {
+     "arm": "base",
+     "requested": {
+      "subjW": 0.5,
+      "tintPeak": 0.52,
+      "sbm": 0.05,
+      "sbmLit": 0.05
+     },
+     "readback": {
+      "subjW": 0.5,
+      "uSubjW": 0.5,
+      "tintPeak": 0.52,
+      "sbm": 0.05,
+      "sbmLit": 0.05,
+      "uShadowColor": [
+       0.012895755468330918,
+       0.04676854125689067,
+       0.07805322250511793
+      ],
+      "uShadowColorLit": [
+       0.012895755468330918,
+       0.04676854125689067,
+       0.07805322250511793
+      ]
+     },
+     "mismatch": [],
+     "secs": 22
+    },
+    {
+     "arm": "AB",
+     "requested": {
+      "subjW": 0.65,
+      "tintPeak": 0.62,
+      "sbm": 0.05,
+      "sbmLit": 0.05
+     },
+     "readback": {
+      "subjW": 0.65,
+      "uSubjW": 0.65,
+      "tintPeak": 0.62,
+      "sbm": 0.05,
+      "sbmLit": 0.05,
+      "uShadowColor": [
+       0.012895755468330918,
+       0.04676854125689067,
+       0.07805322250511793
+      ],
+      "uShadowColorLit": [
+       0.012895755468330918,
+       0.04676854125689067,
+       0.07805322250511793
+      ]
+     },
+     "mismatch": [],
+     "secs": 22
+    },
+    {
+     "arm": "restore",
+     "requested": {
+      "subjW": 0.5,
+      "tintPeak": 0.52,
+      "sbm": 0.05,
+      "sbmLit": 0.05
+     },
+     "readback": {
+      "subjW": 0.5,
+      "uSubjW": 0.5,
+      "tintPeak": 0.52,
+      "sbm": 0.05,
+      "sbmLit": 0.05,
+      "uShadowColor": [
+       0.012895755468330918,
+       0.04676854125689067,
+       0.07805322250511793
+      ],
+      "uShadowColorLit": [
+       0.012895755468330918,
+       0.04676854125689067,
+       0.07805322250511793
+      ]
+     },
+     "mismatch": [],
+     "secs": 22
+    }
+   ],
+   "setShot": {
+    "stats": {
+     "fps": 38,
+     "drawCalls": 288,
+     "triangles": 1856037,
+     "programs": 98,
+     "ms": 9.5
+    },
+    "tod": 0.02
+   },
+   "settleSecs": 390
+  }
+ ],
+ "lever": {
+  "hasShading": true,
+  "hasTune": true,
+  "hasSubjU": true,
+  "hasRefresh": true,
+  "subjW": 0.5,
+  "tintPeak": 0.52,
+  "sbm": 0.05,
+  "sbmLit": 0.05,
+  "uSubjW": 0.5,
+  "uShadowColor": [
+   0.09609963379551392,
+   0.31311543639412576,
+   0.49658401318439915
+  ]
+ },
+ "srcTreeAfter": "820ace395b9664ae",
+ "finishedAt": "2026-08-05T13:48:55.697Z"
+}
