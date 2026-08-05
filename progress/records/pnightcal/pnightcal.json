@@ -1,0 +1,30 @@
+{
+ "prov": {
+  "prereg": "PREREG-pnightcal.md",
+  "startedAt": "2026-08-05T04:20:02.921Z",
+  "sha": "a35e37e",
+  "dirty": [
+   "M progress/records/logs/fx22-r3.log",
+   " M progress/records/logs/sbs1-r2.log",
+   "?? progress/records/logs/fx22-r4c1.log",
+   "?? progress/records/logs/pnightcal-r3.log",
+   "?? progress/records/logs/sbs1-r3.log"
+  ],
+  "srcTreeBefore": "bc13c4632863fc15",
+  "renderTreeBefore": "5b075ca0b494f8d2",
+  "lever": {
+   "hasFill": true,
+   "shipFill": 0.7,
+   "tuneSbm": 0.05,
+   "tuneSbmLit": 0.05,
+   "rimFloorShip": 0.55
+  }
+ },
+ "ship": {
+  "fillSkyMix": 0.7,
+  "shadowBounceMix": 0.05,
+  "shadowBounceMixLit": 0.05,
+  "rimShadowFloorArch": 0.55
+ },
+ "rows": []
+}
