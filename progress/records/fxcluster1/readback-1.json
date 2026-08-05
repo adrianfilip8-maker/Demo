@@ -1,0 +1,13 @@
+{
+ "prereg": "PREREG-fxcluster.md",
+ "chunk": "1",
+ "startedAt": "2026-08-05T14:37:24.765Z",
+ "srcTreeBefore": "a27b9bf12f7e1a82",
+ "arms": [],
+ "lever": {
+  "hasEMITTERS": true,
+  "hasPreroll": false,
+  "hasGuards": true
+ },
+ "fatal": "seams not live in this boot — pre-edit missing from the tree the bundler read"
+}
