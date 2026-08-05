@@ -543,6 +543,7 @@ const TUNE = {
   metalGain: 0.62,
   goldGlint: 0.0,          // PREREG-goldlobe §2 scaffold — INERT at 0; candidate pokes only
   glintPow: 20.0,
+  glintSharp: 1.0,         // PREREG-goldlobe2 §2 — read only when uGoldGlint > 0
 
   /* --- sss --- */
   sss: 0.2,
@@ -749,6 +750,12 @@ export class Shading {
       uHazeFalloff:  { value: TUNE.hazeFalloff },
       uHazeBase:     { value: TUNE.hazeBase },
       uHazeStart:    { value: TUNE.hazeStart },
+      /* atmowire seam (PREREG-atmowire.md C1): OFF by default — uAtmoWire 0.0 keeps every
+         program on the shipped side-door bit-identically; setAtmosphere() fills these. */
+      uAtmoWire:     { value: 0.0 },
+      uHazeHeightFalloff: { value: 58 },
+      uHazeInscatter: { value: 0.62 },
+      uHazeTint:     { value: new THREE.Color(0xffc98a) },
       uTime:         { value: 0 },
       uRes:          { value: new THREE.Vector2(1600, 900) },
       uTermLo:       { value: TUNE.termLo },
@@ -767,6 +774,7 @@ export class Shading {
       uMetalGain:    { value: TUNE.metalGain },
       uGoldGlint:    { value: TUNE.goldGlint },
       uGlintPow:     { value: TUNE.glintPow },
+      uGlintSharp:   { value: TUNE.glintSharp },
       /* Diagnostic channel. window.__ENGINE.get('shading').debugShadow(true) paints
          red=getShadowMask, green=receiveShadow, blue=N.L across the scene. */
       uDebugShadow:  { value: 0 },
@@ -1370,7 +1378,7 @@ export class Shading {
 
   /**
    * SKY pushes the atmosphere here so surfaces, ink lines and the sky dome agree on the haze.
-   * @param {{haze?, hazeSun?, density?, falloff?, base?, gain?, start?, shadowTint?, shadowFloor?}} p
+   * @param {{haze?, hazeSun?, density?, falloff?, base?, gain?, start?, heightFalloff?, inscatter?, tint?, shadowTint?, shadowFloor?}} p
    */
   setAtmosphere(p = {}) {
     const u = this.uniforms;
@@ -1383,6 +1391,10 @@ export class Shading {
     if (typeof p.base === 'number') u.uHazeBase.value = p.base;
     if (typeof p.gain === 'number') u.uHazeGain.value = p.gain;
     if (typeof p.start === 'number') u.uHazeStart.value = p.start;
+    /* atmowire (PREREG-atmowire.md C1): published-curve params; inert while uAtmoWire is 0. */
+    if (typeof p.heightFalloff === 'number') u.uHazeHeightFalloff.value = p.heightFalloff;
+    if (typeof p.inscatter === 'number') u.uHazeInscatter.value = p.inscatter;
+    if (p.tint !== undefined) setCol(u.uHazeTint.value, p.tint);
     if (p.shadowTint !== undefined) {
       setCol(this._shadowTint, p.shadowTint);
     }

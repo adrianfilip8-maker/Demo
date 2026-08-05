@@ -53,6 +53,12 @@ uniform float uHazeDensity;
 uniform float uHazeFalloff;   // 1 / height scale, metres^-1
 uniform float uHazeBase;      // world y the density is quoted at
 uniform float uHazeStart;     // metres of grace before haze bites
+/* atmowire seam (PREREG-atmowire.md C1): published-curve branch. uAtmoWire 0.0 = shipped
+   side-door bit-identically (the branch is untaken; no arithmetic changes). */
+uniform float uAtmoWire;
+uniform float uHazeHeightFalloff; // metres — published fog.heightFalloff (read only when wired)
+uniform float uHazeInscatter;     // published fog.inscatter (read only when wired)
+uniform vec3  uHazeTint;          // published fog.sunTint (read only when wired)
 uniform float uTime;
 uniform vec2  uRes;
 
@@ -82,6 +88,12 @@ float slyLum( vec3 c ) {
  * optical depth = integral of  d * exp( -(y - base) * falloff )  along the ray.
  */
 float slyHaze( vec3 camPos, vec3 rd, float dist ) {
+	if ( uAtmoWire > 0.5 ) {
+		/* atmowire: ATMOSPHERE_GLSL applyAerial's exact blend (PREREG-atmowire.md C1). */
+		float hw = exp( - max( camPos.y + rd.y * dist, 0.0 ) / max( uHazeHeightFalloff, 1.0 ) );
+		float dw = dist * uHazeDensity * mix( 0.55, 1.0, hw );
+		return clamp( 1.0 - exp( - dw * dw ), 0.0, 1.0 );
+	}
 	float b = max( uHazeFalloff, 1e-5 );
 	float dy = rd.y * b;
 	float base = uHazeDensity * exp( - ( camPos.y - uHazeBase ) * b );
@@ -95,6 +107,10 @@ float slyHaze( vec3 camPos, vec3 rd, float dist ) {
 /* Aerial perspective tint: cool haze away from the sun, hot flare into it. */
 vec3 slyHazeColor( vec3 rd ) {
 	float sunAmt = max( dot( rd, uKeyDir ), 0.0 );
+	if ( uAtmoWire > 0.5 ) {
+		/* atmowire: published haze colour — pole mix and uHazeGain retired when wired. */
+		return uHaze + uHazeTint * ( pow( sunAmt, 5.0 ) * uHazeInscatter );
+	}
 	vec3 c = mix( uHaze, uHazeSun, pow( sunAmt, 3.0 ) * 0.8 );
 	return c * uHazeGain;
 }
@@ -137,6 +153,7 @@ uniform float uMetal;
 uniform float uMetalGain;
 uniform float uGoldGlint;
 uniform float uGlintPow;
+uniform float uGlintSharp;
 uniform float uSss;
 uniform vec3  uSssColor;
 uniform float uAoStrength;
@@ -544,7 +561,15 @@ export const TOON_SHADE = /* glsl */ `
 			/* Sun-glint leg (PREREG-goldlobe §2): the lobe term the spec assembly's L207
 			   ceiling cannot produce. INERT until uGoldGlint > 0 — the add is multiplied
 			   by exactly 0.0 at the shipped TUNE default. */
-			float slyGlint = pow( max( dot( R, uKeyDir ), 0.0 ), uGlintPow );
+			/* goldlobe2 (PREREG-goldlobe2 §2): re-steepen the relief tilt for the glint's R
+			   only. nonPerturbedNormal = three r185's pre-normal-map view-space normal
+			   (normal_fragment_begin, unconditional); Nw carries normalMap + triplanar
+			   detail. uGlintSharp 1.0 reproduces the predecessor's arithmetic; the whole
+			   add stays x0.0-inert at the shipped TUNE.goldGlint 0.0. */
+			vec3 NgW = normalize( slyToWorldDir( nonPerturbedNormal ) );
+			vec3 Ns  = normalize( mix( NgW, Nw, uGlintSharp ) );
+			vec3 Rg  = reflect( - slyToWorldDir( V ), Ns );
+			float slyGlint = pow( max( dot( Rg, uKeyDir ), 0.0 ), uGlintPow );
 			metalEnv += ( alb * 1.4 + uSpecColor * 0.45 )
 			          * ( uGoldGlint * slyGlint * slyMetal * mix( 0.25, 1.0, sh ) * ao );
 		}
