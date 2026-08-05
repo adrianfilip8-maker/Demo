@@ -132,7 +132,7 @@ const L = {
    configuration has never been scored and the evidence for it was gathered after unblinding.
    Shipping it on this run's post-hoc read is the exact substitution these seals exist to stop.
    It needs its own prereg and its own capture. */
-const HULL_KEYS = new Set();
+const HULL_KEYS = new Set(['gold']);
 
 const _v = new THREE.Vector3();
 
