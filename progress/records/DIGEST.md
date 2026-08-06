@@ -21,11 +21,20 @@ this file sat committed, because **a resumed agent reads its transcript, not the
 
 ---
 
-## Wave outcome (sbs2, 2026-08-05): blind score vs real references moved 1–9 → 5–5.
-Flips: sly-closeup, dunes, interior, traversal (+ temple held); every flip traces to a named
-ship (eyesize, sky decks, hull, capYaw, violet pair), every unmoved loss to a no-ship (banda
-warm half, fxcluster, goldlobe). Remaining top gaps: the warm half (SHADING), the FX cluster
-(combat/guard), residual dunes/night sky streaks (new SKY prereg). Details: CRITIC-sbs2.md.
+## Wave outcome (sbs3, 2026-08-06): blind score 5–5 held, decisive losses HALVED 3→2.
+Round 3 was a margin wave, not a flip wave. Moves: combat decisive→narrow (the round's biggest,
+from c3's carnelian cane — chalk −62% on the rect, −99% frame-wide), interior and dunes both
+STRENGTHENED, traversal WEAKENED (figure-surround contrast Δ5.87→Δ3.41 — a flagged regression),
+guard byte-identical (nothing has ever shipped for it). Verified in frame: banda2's night gate
+(night −0.09, guard exactly 0.00, change stops dead at y=253), uGraze's courtyard null
+(bit-exact), the sparkle preroll (traversal 0→230 px, §2.1 item 6 served for the first time),
+and both scaffolds inert. **The re-ranked top three: (1) the LIT half of the palette — banda2
+closed the shade half but frame warm share FELL on 7 of 8 day shots and lit sandstone on hero's
+beam is 0.762%; hero and courtyard lose on this axis and nothing else → SHADING needs a vehicle
+aimed at lit stone; (2) combat is one CONTENT decision from a flip — the combo still hits air
+and Sly reads brown (22 blue px) → coordinator/GUARDS+FX; (3) guard's never-named top defect —
+a large near-black glossy wedge eats the lower-right third → coordinator.** Sky-streak class
+demoted (uGraze did enough). Details: CRITIC-sbs3.md.
 
 ## Everyone — READ FIRST: the container rolls back every ~45 minutes (§163–§164)
 

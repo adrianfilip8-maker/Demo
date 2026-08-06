@@ -1,8 +1,10 @@
 # CRITIC-sbs3 — the third §7.4 blind side-by-side, measured against round 2's baseline
 
-**STATUS: IN PROGRESS — written incrementally under §163/§164 rollback discipline. §5 lists every
-file produced. If this line still says IN PROGRESS, the container rolled back mid-review and
-everything above this line is nonetheless valid and final for the sections it covers.**
+**STATUS: COMPLETE — verdict: round 2's 5 wins / 5 losses holds at 5 wins / 5 losses, but the
+margins moved on five of ten shots and the decisive-loss count halved from three to two. combat
+went decisive → narrow (the round's biggest move); dunes and interior strengthened; traversal
+weakened; guard is byte-identical to round 2 and provably unmoved. Written incrementally under
+§163/§164 rollback discipline; §6 lists every file produced.**
 
 **Date:** 2026-08-06. **Critic:** adversarial visual review per `tools/CRITIC.md`; no `src/**`
 touched, no git run (the coordinator sweeps). **Baseline:** `CRITIC-sbs2.md` — 5 wins / 5 losses
@@ -388,3 +390,117 @@ round-2 number therefore reproduces exactly and no movement can be claimed or bl
   there in round 2 as well (the frame is identical) but no round has named it. It is the reason I
   could locate the guard this round and still called the margin decisive. → **COORDINATOR**
   (framing: the shot's own foreground prop is eating the shot) + **GUARDS** (pose/placement).
+
+---
+
+## 4. The three highest-leverage remaining gaps
+
+Reordered from round 2, because the wave changed which gap is binding. Round 2's list was
+(1) the warm half, (2) one FX cluster, (3) the sky streaks. One of those is now half-closed, one
+has changed owner, and one has demoted itself out of the list.
+
+### 1. The **lit** half of the palette — still the single axis that decides both Odyssey day losses
+
+banda2 closed the **shade** half and the frames prove it (all eight day shots warmed their L0–40
+band, +0.60 to +4.13 R−B; night and guard provably did not, §3.1). The **lit** half is untouched
+and is the whole remaining gap:
+
+| quantity | round 2 | round 3 | comparand |
+|---|---|---|---|
+| hero beam, bible-lit sandstone (hue 15–60, L>100) | 0.751% | **0.762%** | — |
+| hero frame warm share (R>B+10, L>40) | 23.69% | **23.16%** | Odyssey **59.38%** |
+| courtyard frame warm share | 34.07% | **33.80%** | Odyssey **63.68%** |
+| interior frame warm share | 7.24% | **7.05%** | Odyssey **31.03%** |
+| temple frame warm share | 18.31% | **18.08%** | Sly 2 (2004) **22.31%** |
+
+banda2 warms shade and *slightly cools* the L80+ registers, so a predicate gated at L>40 nets out
+negative on seven of eight day shots. **Hero and courtyard lose on this and nothing else** — their
+staging, sky, shadow floor and material detail are all now either fixed or not the deciding
+defect. Owner: **SHADING**, and it needs a registered vehicle aimed at *lit* sandstone, not another
+shade pass. Until it ships, hero and courtyard do not flip no matter what else lands.
+
+### 2. **Combat is one content decision away from a flip** — and the owner is no longer FX
+
+Round 2 bundled combat, guard and traversal into "one FX cluster." c3 dissolved that bundle: it
+took combat from decisive to **narrow**, sparkle preroll served traversal, and guard turned out to
+be bit-identical. What is left on combat is not effects work:
+
+- **The combo still hits air.** No enemy is in frame; the comparand's frame contains a *fight*.
+  In the blind view this was the deciding difference — a pose versus a beat. → **COORDINATOR** /
+  **GUARDS**.
+- **Sly reads brown, not blue: 22 blue px** (hue 200–250, sat>0.35, L>60) on the figure, against a
+  comparand figure at medSat 0.457 that is unmistakably blue. c3 fixed the blow-out by pulling the
+  figure toward the warm flash rather than restoring his albedo. → **FX** + **SHADING**.
+
+This is the cheapest available flip in the set: the margin is already narrow and both remaining
+items are named and small. Nothing else on the board is this close.
+
+### 3. **Guard — the only shot that has never received a ship, and its top defect is free**
+
+Guard is **byte-identical across rounds 2 and 3** (md5 `42ec9dae`, 0 px changed). It is a decisive
+loss to a 2004 PS2 frame, and it has now been measured three times with the same numbers: guard
+mass medL **18.64** / 78.48% under L30, patrol-cone air column medL **27.59**, doorway pool medL
+**113.46**, against a bear at medL 32.6–40.7. The new finding this round costs nothing to fix: a
+**large near-black glossy wedge occupies the lower-right third of the frame and buries the
+subject** — the shot's own foreground prop is eating the shot. Move the camera or the prop and the
+guard is at least visible; light him and the pair becomes arguable. → **COORDINATOR** (framing)
++ **GUARDS** (pose/placement) + **FX** (fill / the cone, whose heading candidate did not ship).
+
+### Demoted: the sky-streak class
+
+Round 2's gap #3 is no longer top-three, and `uGraze` is why. Dunes' worst band went **8.054 →
+7.612** (14.6× → **13.8×** ref) and its horizon now dissolves; night's swirl band went **4.976 →
+4.387** (6.7× → **5.9×**). More decisive than the ratios: **the class did not read at pair scale
+on either shot this round**, where in round 2 night's sky read "oily" to me blind. Dunes is a win
+and night now loses on warmth and staging, not sky. The residual is real (13.8× is not small) and
+one band regressed (night left band **4.979 → 5.558**), so it stays open — but it is **SKY**,
+low priority, and should be scheduled behind items 1–3.
+
+### Regression to flag
+
+**Traversal weakened** (narrow-to-clear → narrow): figure-to-surround contrast collapsed **Δ5.87 →
+Δ3.41**, a 42% loss of the separation that carried round 2's flip, because the surround warmed and
+lightened with the figure. The shot is still a win and the sparkle preroll is an honest gain, but
+this is the one place the wave cost us something. → **COORDINATOR** (staging) + **SHADING** (rim).
+
+---
+
+## 5. Honest wins, so they are not re-litigated
+
+- **banda2 landed and its gate is verified in the pixels.** All eight day shots warmed their
+  deepest shade band (+0.60 to +4.13 mean R−B); night moved −0.09 and guard moved exactly 0.00.
+  A registered night gate that holds bit-exactly in the delivered frames is a good result.
+- **The closeup tail is banda2's visible payoff:** the three registered tail rects went R−B
+  +18.4/+20.8/+30.7 → **+41.8/+45.1/+51.4**, and in the pair the tail reads warm cream-and-grey.
+  The muzzle went +4.6 → +12.1.
+- **c3 is the largest real change in the set and it did what it registered.** Chalk mass on the
+  CRITIC rect **−62%** (23,919 → 9,122 px); frame-wide at the tight predicate **−99%** (13,258 →
+  131 px); figure medSat **0.370 → 0.435**, reproducing c3's own projection exactly; the flash core
+  went pale-gold **[215,183,125] → carnelian [178,120,87]**. It moved a three-round decisive loss
+  to narrow — the biggest verdict movement of the round.
+- **The sparkle preroll served §2.1 item 6 for the first time in three rounds:** traversal
+  **0 → 230 px** in 14 blobs, two coherent marker clusters on the hook apparatus.
+- **`uGraze`'s courtyard null is bit-exact in the frame** (clean-sky rect max channel diff **0**),
+  and its dunes/night skies improved on every band but one. A change that is provably null where it
+  claimed to be null is worth as much as one that moves a number.
+- **Held from round 2, re-measured and stable:** the eye fix (226 pale-aperture px, identical
+  both rounds), the interior bloom-smear collapse (0.894% → 0.908%, round 1: 11.3%), the courtyard
+  black quarter staying dead (<L40 14.06% → 13.60%), the temple shaft carry (146.6 → 147.0), and
+  the hero shadow floor continuing to improve (37.61% → 35.19%).
+- **Two inert scaffolds behaved as inert.** `uGoldGlint` is committed at zero gain and the interior
+  treasure pile is unmoved (medHue **240.0° both rounds**, medL 37.1 → 38.1); `uAtmoWire` likewise.
+  Neither is credited anywhere above. The gold-renders-dark family still has no live arm.
+
+---
+
+## 6. Files this review produced
+
+- **This report: `/home/user/Demo/progress/records/CRITIC-sbs3.md` — the ONLY repo file written.**
+  No `src/**` touched, no captures taken, no git run (the coordinator sweeps).
+- Scratchpad only, never committed (§1.1 rule 3 / §162), under
+  `/tmp/claude-0/-home-user-Demo/94022f73-a328-5e86-b2ec-031aa9c720ce/scratchpad/`:
+  `ref/` (9 comparand images on round 1's pinned routes), `sbs/` (10 randomised composites +
+  `mapping.json`), `blind-verdicts.json` (the per-side verdicts with reasoning, written before
+  unmasking), `compose_sbs.py`, `measure.py`, `measure3.json`, `pass2.py`, `pass2.json`.
+
+**STATUS: COMPLETE.**
