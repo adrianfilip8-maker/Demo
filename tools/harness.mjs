@@ -133,12 +133,14 @@ export async function withGame(
 }
 
 /** Pose a canonical shot and return `{ stats, dataUrl }`. */
-export async function grab(page, name, { mime = 'image/png', quality = 0.92, maxWidth = 0 } = {}) {
+/* `dt` (§195/§28): pass 0 for within-boot A/Bs so the staging path's own settle frames do not
+   advance the world clock. Omit it (undefined) for today's live-settle behaviour, bit-for-bit. */
+export async function grab(page, name, { mime = 'image/png', quality = 0.92, maxWidth = 0, dt } = {}) {
   return page.evaluate(
-    async ([n, m, q, w]) => {
-      const r = await window.__GAME.setShot(n);
+    async ([n, m, q, w, d]) => {
+      const r = await window.__GAME.setShot(n, Number.isFinite(d) ? { dt: d } : {});
       return { stats: r.stats, warnings: r.warnings.length, dataUrl: window.__GAME.capture(m, q, w) };
     },
-    [name, mime, quality, maxWidth]
+    [name, mime, quality, maxWidth, dt]
   );
 }

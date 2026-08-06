@@ -74,9 +74,18 @@ export class Debug {
        * Pose the world for a canonical shot: camera, time of day, and the player's
        * position + frozen animation pose. Resolves once the frame is renderable.
        */
-      setShot: async (name) => {
+      /* `opts.dt` (§195/§28): the settle steps below default to LIVE dt on purpose — staging
+       * wants the sim to settle, and changing that default would silently change what every
+       * historical capture in this project meant. But a within-boot A/B needs the world clock
+       * frozen through EVERY frame-advancing call in the path, including these two, and until
+       * this option existed §28's "pass dt = 0" advice was unreachable from any runner that
+       * stages through setShot/grab — staging2's P-F4 [0,0] band was unachievable by
+       * construction (§195, two VOID runs). A/B runners pass { dt: 0 }; everything else passes
+       * nothing and gets today's behaviour bit-for-bit. */
+      setShot: async (name, opts = {}) => {
         const shot = SHOTS[name];
         if (!shot) throw new Error(`unknown shot "${name}" (have: ${SHOT_NAMES.join(', ')})`);
+        const dt = Number.isFinite(opts.dt) ? opts.dt : 1 / 60;
 
         // Take the camera away from the gameplay rig, and take frames away from rAF so the
         // capture is reproducible frame-for-frame.
@@ -136,9 +145,10 @@ export class Debug {
         const staged = character?.root?.position?.clone?.() ?? null;
 
         // Let particles seed, shadows settle, and any lazily-compiled program warm up.
-        await api.step(14);
+        // (At opts.dt = 0 the frames still render and flush — only the world clock stands still.)
+        await api.step(14, dt);
         applyShot(engine, name);
-        await api.step(3);
+        await api.step(3, dt);
 
         return {
           name, shot,
