@@ -290,6 +290,30 @@ hero frame warm% ∈ [21, 26] (measured 23.16); courtyard ∈ [31, 37] (33.80); 
   a day shot, **or** the readback shows a poked SkinnedMesh material, **or** fewer than 4
   architecture materials enrolled ⇒ that chunk **VOID** (not FAIL — the candidate was never on
   screen).
+
+  > **AMENDED 2026-08-06, at this site, BEFORE the capture booted (§154.5).** Two changes, both
+  > STRENGTHENING, recorded with their reasons rather than applied silently:
+  >
+  > 1. **The dispatch ships the candidate in src**, so there is no emulation to be exact about:
+  >    `Architecture.js:209` now carries `sss: 0.30, sssNightPin: 0.0` and `ToonMaterial.js`
+  >    carries the gate. The arms therefore poke **backwards** (`base` → 0.0) rather than forwards.
+  >    Every registered quantity is a C-vs-base difference, so **no band moves**; what changes is
+  >    that the night gate is now the *real shipped code path* being measured, not a poke standing
+  >    in for it — which is strictly more than the seal asked for.
+  > 2. **The population is `shading._sssPinned`**, not a walk of `engine.get('architecture')`.
+  >    That array is *by construction* the exact set the shipped gate publishes to, so a runner
+  >    cannot poke a material the ship would not have touched — the failure this falsifier was
+  >    written against. The architecture-subtree walk is **kept as a cross-check** and its count is
+  >    printed, and an **exhaustive scene-wide `isSkinnedMesh` test** now decides the SkinnedMesh
+  >    clause (every material used by any skinned mesh anywhere, not just Sly's). The subtree walk
+  >    is best-effort about ARCHITECTURE's internal field names, so a shortfall there is REPORTED,
+  >    not fatal; the skinned test is exhaustive and is what VOIDs.
+  >
+  > Also: the frames land in `progress/records/litwarm1/` (the coordinator's dispatch names that
+  > directory), and the scorer is `banda-diag.mjs score3`, **committed before the capture booted**
+  > as §8 requires. `P-F9` (KBnull) and `P-F4` (restore) are both "re-poke to base ⇒ 0 px"; they
+  > are captured as two independent instances in chunk A, with KBnull placed **after** KBover so
+  > it also proves the known-bad arm left no residue.
 - **P-F8** **the population falsifier.** If **W1 < +0.3 AND W2 < +0.3** — hero and courtyard being
   the two shots CRITIC says lose on this axis *and nothing else* — the lever is **REVERTED and the
   finding recorded**: the near-terminator, non-cast-shadow architecture population is too small on

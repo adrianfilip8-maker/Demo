@@ -14452,3 +14452,42 @@ is a local-light term in `TOON_SHADE` — SHADING's, not LIGHTING's, whose half 
 and correct.** Falloff table, `localCap 6` at high quality, the VSM no-shadow caveat, and the
 §17 gate requirement are all in `NOTE-torchpool.md`.
 
+
+## §181 — the guard was never dark; he was hidden, and the rect measured the thing hiding him
+
+Three CRITIC rounds quoted `guard`'s figure at **medL ≈ 18.6** against a 2004 comparand's ≈ 41
+and concluded the character renders as an unlit hole. STAGING's projection measured the rect
+that produced that number: it is **80.8% doorway void by area**. Split by hue, **the guard's own
+warm pixels read medL 33.6–38.3 — inside the comparand's own 32.57–40.7 band.**
+
+**He is not mostly dark. He is mostly hidden.** The occluder is now named to 3 cm: the west
+colossus plinth's gilded cavetto cornice (`EgyptLevel.js:462`), whose traced arris unprojects to
+world x = −14.03 ± 0.09 at y = 2.00 against `Kit.corniceProfile`'s fillet vertex at −14.004. It
+covers 26.8–29.4% of frame at medL 20.4 with **zero pixels above L180**, and four independent
+methods agree it hides **83–86% of the guard**, cutting him at world y 1.675 m of 1.95 m — his
+contact ground included.
+
+Corrected here rather than at each note: the *observation* (the shot reads as an unlit hole) was
+right in all three rounds, and the shot did fail; only the causal clause — "the character is
+underlit" — was wrong, and it survived three rounds because every round re-measured the same
+rect. **A statistic over a region can only describe what is in the region.** The §7.3 fail stands;
+its owner moves from lighting to framing.
+
+Sealed remedy (`PREREG-staging1.md`, coordinator-owned `src/core/Shots.js`): translate the
+`guard` camera 1.75 m west. Because `_solveShotPose` reads the live camera, the guard's stand
+translates identically — **feet px (844,625) and head px (864,244) are unchanged in both arms by
+construction**, so the subject's framing is preserved and only what stands in front of him
+changes. Occluder share 33.09% → 3.38%, clearance measured at 1.60 west with 1.75 for margin,
+west ≥ 2.0 as the known-bad that deletes the foreground. A dolly south is disqualified with
+evidence: z ≥ 31 puts the eye inside the west entry pylon (the `b81747d` throne defect again).
+
+Combat's recipient is **GUARDS', not framing's**: `Particles.js _stageShot()` hardcodes the
+impact anchor at world (0.3146, 1.3849, 28.996) — a fixed 1.05 m offset from Sly's chest, no
+target lookup — projecting 0.89 m *nearer the lens* than his own chest. The arc terminates on a
+coordinate. `SHOT_POSE` + `_solveShotPose` with `screenSide: +1` selects d = 5.0 and stands a
+guard at (0.102, 0, 29.035): **0.216 m from that anchor, at chest height inside his body
+volume.** `Shots.js` has no field that can place a guard, so the wiring is GUARDS'; three
+hazards ride with the spec (dead `spec.x/z/yaw` fields with no reader, `_poseForShot` never
+restoring `g.position` with the stand 0.97 m from a spawn four other shots use, and the
+recipient covering x 392–510 of Sly's cane-hook silhouette).
+
