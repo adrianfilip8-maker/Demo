@@ -1,0 +1,5 @@
+[08:23:03 +   0s] bootId 07c58491-17f  srcTree 4c83af2068ab9936 — booting (harness takes the FIFO ticket)
+· waiting for capture lock (10s, held by pid 2953)
+· waiting for capture lock (21s, held by pid 2953)
+· waiting for capture lock (31s, held by pid 2953)
+· waiting for capture lock (41s, held by pid 2953)
