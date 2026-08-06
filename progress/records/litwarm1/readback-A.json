@@ -2,13 +2,9 @@
  "prereg": "PREREG-litwarm.md",
  "chunk": "A",
  "shot": "hero",
- "startedAt": "2026-08-06T12:28:55.960Z",
- "srcTreeBefore": "9fb6101f27556a12",
+ "startedAt": "2026-08-06T22:17:53.183Z",
+ "srcTreeBefore": "9647e41e38635ef1",
  "shipSss": 0.3,
  "baseSss": 0,
- "arms": [],
- "population": {
-  "fatal": "_sssPinned absent — the litwarm gate is not on this tree"
- },
- "fatal": "_sssPinned absent — the litwarm gate is not on this tree"
+ "arms": []
 }
