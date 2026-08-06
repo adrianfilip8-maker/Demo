@@ -12,6 +12,41 @@ import { Debug } from './core/Debug.js';
 const MODULE_FILES = import.meta.glob('./{render,textures,world,player,fx,ai,ui,audio}/*.js');
 
 /**
+ * CHARACTER MODEL SELECTION — the incumbent is the DEFAULT, deliberately.
+ *
+ * Two character models can exist side by side: `SlyModel.js` (the shipped one) and
+ * `SlyModel3.js` (the Sly-3-reference rebuild). Which one boots is chosen by the same
+ * `__CHAR_AB` token mechanism the character already uses for its own A/B levers, so an A/B
+ * capture is a RUNTIME choice made in-page — no `src/` edit, no arm to install, and therefore
+ * none of §186's contamination hazard or §191/§192's install-vs-drift ambiguity. The capture
+ * runner sets `globalThis.__CHAR_AB` before boot exactly as `staging2` mutates the shot table.
+ *
+ * Restoring the incumbent is the ABSENCE of a token, not an action: if the token is missing, or
+ * misspelled, or the rebuild file has been deleted, this resolves to `SlyModel.js`. A rebuild
+ * can only ship by someone changing this default on purpose.
+ */
+const CHAR_MODELS = {
+  '': ['./player/SlyModel.js', 'SlyModel'],           // incumbent — the default in every sense
+  model3: ['./player/SlyModel3.js', 'SlyModel'],      // the Sly-3-reference rebuild
+};
+function characterModule() {
+  let raw = '';
+  try {
+    if (typeof globalThis !== 'undefined' && globalThis.__CHAR_AB != null) raw = String(globalThis.__CHAR_AB);
+    else if (typeof import.meta !== 'undefined' && import.meta.env) raw = String(import.meta.env.VITE_CHAR_AB || '');
+  } catch { /* plain-module hosts have no import.meta.env; that is the shipped path */ }
+  const tokens = raw.split(/[,\s]+/).filter(Boolean);
+  for (const t of tokens) {
+    const pick = CHAR_MODELS[t];
+    // Fall through to the incumbent if the file is not in the glob — a deleted or not-yet-written
+    // rebuild must degrade, never explode (the reason this whole map is data and not an import).
+    if (pick && MODULE_FILES[pick[0]]) return pick;
+  }
+  return CHAR_MODELS[''];
+}
+const CHARACTER = characterModule();
+
+/**
  * Registration order == update order. Producers before consumers:
  * textures → shading → sky/lighting → world → collision → player → fx → ai → ui → postfx last.
  */
@@ -24,7 +59,7 @@ const MANIFEST = [
   ['architecture', './world/Architecture.js',     'Architecture'],
   ['props',        './world/Props.js',            'Props'],
   ['collision',    './world/Collision.js',        'Collision'],
-  ['character',    './player/SlyModel.js',        'SlyModel'],
+  ['character',    CHARACTER[0],                  CHARACTER[1]],
   ['animation',    './player/Animation.js',       'Animation'],
   ['movement',     './player/Controller.js',      'Controller'],
   ['camera',       './player/CameraRig.js',       'CameraRig'],
