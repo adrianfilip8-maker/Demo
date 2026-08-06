@@ -1,11 +1,11 @@
 {
- "seed": 4,
+ "seed": 5,
  "pairs": {
   "sly-closeup": {
-   "A": "base",
-   "B": "model3",
-   "A_sha": "4afc59662f2e0144",
-   "B_sha": "cff21ba18d51bbac",
+   "A": "model3",
+   "B": "base",
+   "A_sha": "cff21ba18d51bbac",
+   "B_sha": "4afc59662f2e0144",
    "pair": "charab/blind/sly-closeup.pair.png"
   },
   "sly-profile": {
