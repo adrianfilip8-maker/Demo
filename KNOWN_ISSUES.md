@@ -15088,3 +15088,21 @@ have not yet swept for them. `courtCap 0.259 vs 0.2564` (fx9, §task 13) is the 
 because its margin is 0.0026 — far inside a 3 % floor if that comparison was cross-boot. Seals
 whose arms shared a boot (litwarm's night chunks, banda2's six chunks) are **not** affected and
 their numbers stand. The sweep is a queued item, not a conclusion.
+
+### 193.1 My own branch prediction was falsified by the seal's text, not by the data
+
+Before `restore` ran I wrote down both outcomes, which was right, and got the second one wrong,
+which is the point. The registered branch was:
+
+> *"Δ ≈ 10⁴–10⁵ px ⇒ the 0-px band was never achievable ⇒ P-F5 UNSCOREABLE ⇒ **P1–P3 attribution
+> survives ⇒ the P-F1 revert governs**."*
+
+Measured **28,431 px** — squarely in that branch. But its consequence was wrong. P-F6's actual text
+is *"every differing-pixel count in that pair is void"*, and P1, P1b, P2, P3 and P3b **are**
+differing-pixel counts on that pair. They do not survive; they were the first casualties. The seal
+was **stricter than my recollection of it**, and I had read that clause twice in the same session.
+
+Cheap lesson, recorded because it is the third time this batch that re-reading beat remembering:
+when a falsifier fires, quote its registered text into the verdict *before* reasoning from it. Two
+of the three verdicts I published for this seal were retracted, and both retractions came from the
+prereg's own words rather than from new data.
