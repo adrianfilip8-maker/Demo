@@ -14579,3 +14579,17 @@ only instrument that sees drawn pixels — and any letter quoting one must quote
 are tabulated in the seal with the side each lands on; two go to the instance path, one to the
 pixel path, one agrees only because the seal ports the frustum test.
 
+
+### 184.1 A second dispatch error of mine, caught the same way
+
+I told the sparkcount scorer "the probe has landed" because
+`fxcluster1/sparkcount-readback.json` existed on disk. **File existence is not data.** The runner
+(pid 29232) was and is correctly queued behind two other captures; the file was its shell. The
+agent checked the contents rather than the path, refused to score, left `skyCut` primary, claimed
+no number, and told me not to relaunch — a second launch takes a second ticket and jumps nobody.
+
+Same shape as §184's units error and the same correction: **a dispatch is an instruction, not
+evidence.** When a coordinator hands an agent a premise, the premise is exactly as checkable as
+anything else, and an agent that checks it is doing the job. Both of mine were caught this way in
+one cycle; recorded so the pattern is visible rather than the two instances.
+

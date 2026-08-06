@@ -18,7 +18,10 @@ import sys
 import numpy as np
 from PIL import Image
 
-DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'combatrecipient1')
+# CR_DIR exists so the scorer can be dry-run on synthetic frames before the real ones land;
+# a scorer that first executes on the evidence is a scorer whose crash costs a lock hold.
+DIR = os.environ.get('CR_DIR') or os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), 'combatrecipient1')
 SBS3 = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'sbs3', 'combat.png')
 W, H = 1280, 720
 FRAME = W * H
