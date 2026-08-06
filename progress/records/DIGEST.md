@@ -28,10 +28,15 @@ STRENGTHENED, traversal WEAKENED (figure-surround contrast Δ5.87→Δ3.41 — a
 guard byte-identical (nothing has ever shipped for it). Verified in frame: banda2's night gate
 (night −0.09, guard exactly 0.00, change stops dead at y=253), uGraze's courtyard null
 (bit-exact), the sparkle preroll (traversal 0→230 px, §2.1 item 6 served for the first time),
-and both scaffolds inert. **The re-ranked top three: (1) the LIT half of the palette — banda2
-closed the shade half but frame warm share FELL on 7 of 8 day shots and lit sandstone on hero's
-beam is 0.762%; hero and courtyard lose on this axis and nothing else → SHADING needs a vehicle
-aimed at lit stone; (2) combat is one CONTENT decision from a flip — the combo still hits air
+and both scaffolds inert. **The re-ranked top three: (1) ~~the LIT half of the palette~~ **CORRECTED at this
+site by PREREG-litwarm's diagnosis — the lit half is NOT broken: on CRITIC's own bible-lit
+predicate our hero frame scores 15.27% against the Odyssey comparand's 9.96%, and the 0.762%
+figure is a rect number on a rect that is 46.6% below L40. The real gap is the **bright-albedo
+SHADE band** (full shade renders to L78-106 by albedo alone), which the toon shader cannot even
+select — it never branches on luma. The lever is the WRAP leg (`toon.glsl.js:492-494`), which
+`Architecture.js:209` passes at `sss: 0.0` for every sandstone surface; at 0.30 the
+near-terminator band goes R-B -52 -> +15..+41 at the comparand's own warm hue. Warm share FELL
+on 7 of 8 day shots (genuine — verified larger on a fixed population than as published); (2) combat is one CONTENT decision from a flip — the combo still hits air
 and Sly reads brown (22 blue px) → coordinator/GUARDS+FX; (3) guard's never-named top defect —
 a large near-black glossy wedge eats the lower-right third → coordinator.** Sky-streak class
 demoted (uGraze did enough). Details: CRITIC-sbs3.md.
