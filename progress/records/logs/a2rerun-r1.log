@@ -1,0 +1,2 @@
+[01:34:08 +   0s] seam verify: heading seam + FX poke path present (srcTree be5c1da17ca5bad4)
+[01:34:08 +   0s] chunk a2 (guard only): srcTree be5c1da17ca5bad4 — booting (own FIFO lock hold; queueing politely)
