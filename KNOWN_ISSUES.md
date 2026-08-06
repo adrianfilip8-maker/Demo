@@ -14321,3 +14321,13 @@ prereg items run in parallel with capture items since only captures contend on t
 queue lives in the newest check-in pointer and this ledger; the coordinator keeps every slot
 saturated until the queue is empty or the user says stop.
 
+
+## §175 — the twelfth rollback; c3's window re-buys, the scoring lanes respawn
+
+Found at the 00:23Z check-in signature; recovered ff-only to `b0adf2f`, clean, no flag
+stragglers. Lost: c3's mid-render window (runner committed, resumable — relaunches direct) and
+every agent transcript again (atmowire's scoring, c3/a2's execution, and any idle lanes respawn
+from committed seals + RESULTs per the DIGEST-banner pattern). All batch evidence through the
+atmowire re-run was already on the remote; the §164 economics hold at twelve: wall-clock and
+re-runs, never a scored number.
+
