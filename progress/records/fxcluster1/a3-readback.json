@@ -1,0 +1,8 @@
+{
+ "prereg": "PREREG-fxcluster-a3.md",
+ "chunk": "a3",
+ "tPin": 1000,
+ "startedAt": "2026-08-06T02:21:36.840Z",
+ "srcTreeBefore": "adb5629032309d19",
+ "arms": []
+}

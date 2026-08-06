@@ -1,0 +1,2 @@
+[02:21:36 +   0s] seam verify: heading seam + FX poke path present (srcTree adb5629032309d19)
+[02:21:36 +   0s] chunk a3 (guard only): srcTree adb5629032309d19, tPin 1000 — booting (FIFO lock; queueing politely)
