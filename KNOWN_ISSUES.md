@@ -14339,3 +14339,27 @@ already committed, so the resumable runner re-buys only its remaining arms. Agen
 dead again; the a2 execution and c3 scoring respawn from committed seals when their evidence is
 ready. Thirteen rollbacks: the economics line holds.
 
+
+## §177 — two capture-protocol findings from a2, both reusable beyond FX
+
+**1. An absolute-time animation term defeats any state wipe.** a2's noise gates breached
+(|restore−base| 4.63 vs ≤1.0) while its pool wipe verifiably worked — because the dominant
+contaminant is `src/ai/Guard.js:1588`'s `bright *= 1 + beamFlicker·sin(t·6.3 + phase)` driven by
+**absolute engine time**. Arms captured 250–360 s apart sample different phases; measured spread
+±8.05% against the ±9% the term allows, with `_light` and uOpacity identical across all four
+probes. **A wipe cannot fix what isn't state.** Any A/B on a shot containing a time-driven
+animation term must either pin the clock per arm, or score a statistic in which the term cancels
+(a signed spatial contrast), or re-site onto a region the term does not drive. Recorded because
+three FX letters spent windows on "noise" that was a named oscillator all along.
+
+**2. A no-harm gate can pass by being structurally unable to move.** a2's Q-A2 read exactly
+0.00 — and its rect is **79% bit-identical across arms**, so its median is pinned by
+construction while 7,705 px inside it move by ≥10 L. The §143.1 shape in a new dress: a guard
+that cannot fail is not a guard. Any no-harm statistic must be shown able to move on the
+known-bad before it licenses a no-harm reading.
+
+The a2 cone question itself is not closed: the lever expresses (signed cells, base→cand mirrored
+exactly by cand→restore; frame-wide peak 80 L in the guard's ground pool). Two named successors
+with measured ratios: re-site the ROI onto the ground pool (24–80 L effect vs 4.6 L noise), or
+score the signed spatial contrast. Coordinator routing: the successor rides the next FX window.
+

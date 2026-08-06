@@ -367,6 +367,16 @@ verbatim as an `Emitters.js` data edit — the coordinator's commit.** Exact edi
 | :448 | `cane_spark` | `alpha: [2.2, 3.4]` → `[1.6, 2.4]`; `col0: PAL.goldSpec` → `0xe8912a`; `col1: PAL.goldMid` **keep** |
 | :460 | `cane_ring` | `alpha: [2.0, 2.0]` → `[1.4, 1.4]`; colours **keep** (`col0: PAL.goldSpec`, `col1: PAL.rimCool`) |
 
+**SHIPPED — the coordinator applied this block while the a2 capture was still running**
+(observed at 02:0xZ; `src/**/*.js` tree moved `be5c1da17ca5bad4` → `adb5629032309d19` after both
+of this session's captures had finished, so neither run is affected). The landed values match
+the sealed §1 block verbatim; a 3-line rationale comment above `cane_spark` shifted the line
+numbers, so **the table above is the pre-ship record and these are the current lines**:
+`Emitters.js:451` `cane_spark alpha [1.6, 2.4], col0 0xe8912a, col1 PAL.goldMid`; `:457`
+`cane_flash alpha [1.3, 1.3], col0 0xd4823a, col1 0xd4823a`; `:463` `cane_ring alpha [1.4, 1.4]`
+(colours kept); `:476` `cane_arc alpha [1.0, 1.6], col0 0xd4823a, col1 PAL.goldMid`. All four
+verified against the poked values this run scored.
+
 Colour provenance for the coordinator's naming call (a routing note, not a decision):
 **`0xd4823a` is already the tree's PAINT ochre** (`src/textures/Canvas2D.js:102`), and
 `Emitters.js:53` already cites it by name as one end of the §2.2 gold→carnelian axis — so a
@@ -380,3 +390,150 @@ blob), c2 failed on Q-C3 3 px (same instrument, treatment below its floor) while
 direction and the wipe, and c3 — changing *only* the instrument, exactly as c2's successor
 clause specified — passes every band with the treatment values untouched. Three letters, one
 lever moved once, the instrument moved once.
+
+---
+
+## A NOISE-TOLERANT RE-DESIGN (a2) — PREREG-fxcluster-a2, scored 2026-08-06. The parent A
+## verdict stands untouched; this is the successor it named (residue-pinned staging).
+
+**Registered question:** does the noise-tolerant viewing design beat the 2–4 L ROI noise that
+made the first letter UNSCOREABLE, and does the −0.20 heading express the cone?
+**Answer: no and yes.** The wipe does not close the gates — **UNSCOREABLE again by the seal's
+own P-A2a** — but the cone is expressed, and this run identifies the contaminant in source.
+
+**Runner/scorer:** `fxcluster1/a2rerun.mjs` / `a2score.mjs` (committed with the seal). Frames
+`a2-guard.{base,base2,cand,restore}.png`, probes `a2-readback.json`, log `logs/a2rerun-r1.log`,
+scores `a2-scores.json`, diag `diag-a2-guard.*.json`, crops `crops/a2-guard.*`, pair structure
+`a2-pairstruct.mjs` + `a2-pairstruct.json`.
+
+### Provenance
+
+- srcTree **`be5c1da17ca5bad4`** at seam-verify, at all four arms, and after — **STABLE, and
+  identical to this seal's registration tree.** No src edits; the Guard.js heading seam
+  (`:1832`) and the FX poke path (`Particles.js:1831`) were verified present before boot.
+- One boot 01:34:08Z–01:56:28Z, arms base (358s) → base2 (307s) → cand (303s) → restore (251s).
+  All four arms: tod 0.1, cam pos (−11.5, 2.6, 30.5) fwd (−0.884, −0.241, −0.402) fov 38,
+  draws 205, guard pos (−15.487, 0, 27.545), `_light` 0.2628, uOpacity 0.8358 — identical.
+- **Wipe verified per arm** exactly as designed: every non-looping pool zeroed after the wipe
+  (before-wipe smoke 178-180 / spark 447-455 at arms 2–4 — the residue — all → 0); ambient
+  fields untouched (sandLow 460, sandHigh 900, airMotes 1000, shimmer 90, motes 900).
+- **The lever applied exactly as the committed port predicted** (RESULT §1's offline
+  pre-check): cand `guardTowardCamera` −0.2, yaw −0.0691 → **−0.628**, forward
+  (−0.069, 0, 0.998) → **(−0.588, 0, 0.809)** against the port's predicted (−0.588, 0.809),
+  yaw ≈ −0.629. Restore deleted the flag; yaw and forward returned to base exactly.
+
+### Scores (sealed bands beside every value)
+
+| registered quantity | band | a2 value | gate |
+|---|---|---|---|
+| Q-A1 ΔmedL cand−base, ROI (340,280,700,350) | [+3.0, +45.0] | **+6.27** | in band (cf. parent +6.48) |
+| noise \|base2−base\| ROI medL | ≤ 1.0 | **1.36** | **BREACH — P-A2a fires** |
+| noise \|restore−base\| ROI medL | ≤ 1.0 | **4.63** | **BREACH — P-A2a fires** |
+| §13: Q-A1 ≥ 3 × max same-state Δ | 6.27 vs required 13.89 | **fails** | void, as the parent |
+| Q-A2 no-harm, figure (852,220,990,700) ΔmedL | ≥ −3.0 | **0.00** | nominally PASS — **but see caveat** |
+| Q-A3 air column (700,300,850,500) \|Δ\| | ≤ 8, report | **0.13** | reported |
+
+Per-arm ROI medL: base 94.19 → base2 95.55 → cand 100.46 → restore 98.82. The wipe **did**
+help where residue dominated (|base2−base| 2.06 → **1.36**, −34% vs the parent) and did nothing
+where it does not (|restore−base| 4.27 → **4.63**).
+
+### The finding P-A2a names: two mechanisms, and only one of them was residue
+
+Pair structure over the ROI (`a2-pairstruct.json`; |ΔL| ≥ 10 is the stated threshold, §122.1;
+cells are the ROI split 6×2, so cell 6 is x ∈ [640,700)):
+
+| pair | meanAbs\|ΔL\| | px ≥10 | ΔmedL | where the ≥10 px are |
+|---|---|---|---|---|
+| base→base2 | 2.067 | 945 | +1.36 | **942 of 945 in cell 6** (357 top + 585 bottom) |
+| base2→restore | 2.400 | **5** | +3.27 | none in cell 6 — a broad sub-threshold lift |
+| base→restore | 4.359 | 963 | +4.63 | 955 in cell 6 |
+| base→cand | 7.870 | 7770 | +6.27 | **all six cells**, signed (below) |
+
+1. **A once-only right-edge object, unaffected by the wipe.** 942 of base→base2's 945
+   ≥10 px sit in the ROI's right-edge cell, and base2→restore has **5** — reproducing the
+   seal's §0 measurement (679 of 684; then 5) in kind on wiped staging. It appears at the
+   first restage and then freezes. The wipe does not prevent it.
+2. **A broad monotone beam brightening — and this is what breaks the gate.** base2→restore
+   moves the ROI median +3.27 with only **5** pixels crossing ≥10: every cell lifts a little,
+   nothing lifts a lot. beamCol0[0] climbs 0.2440 → 0.2531 → 0.2861 → 0.2630 across the arms.
+
+**Mechanism 2 identified in source: `src/ai/Guard.js:1588`** —
+`bright *= 1 + TUNE.beamFlicker * Math.sin(t * 6.3 + g.senses.phase)`, with
+`TUNE.beamFlicker = 0.09` (`:97`) and `t` the **absolute** beam-material time. Arms capture
+250–360 s apart, so each samples a different flicker phase. Observed beamCol0[0] spread is
+**±8.05 % about its mean against the ±9 % that term allows** — the fit is the identification.
+Every other factor in that colour path is invariant across the four arms: `_light` 0.2628 and
+uOpacity 0.8358 identical in all four probes (eliminating the `day` grade at `:1543` and the
+`night` grade at `:1551`), guard position identical, suspicion/gain at rest.
+
+**This is why residue-pinning could not have worked: the dominant contaminant is not pool
+state.** It is a deterministic function of absolute engine time, and no wipe of a particle
+ring can touch it. The seal's §0 diagnosis was not wrong — mechanism 1 is real and the wipe
+measurably reduced it — it was **incomplete**. Per §141, recorded, not iterated mid-run.
+
+### The cone IS expressed — structural proof, offered as evidence, not as a gate
+
+The registered scalar cannot certify it, but the cone's signature is unmistakable and cannot
+be produced by any brightness drift:
+
+- **base→cand ROI cell mean ΔL is signed and spatially structured** — top row
+  [−5.75, +5.39, +11.21, +12.16, +10.32, +12.27], bottom [−11.37, +2.48, +3.54, +5.71, +3.75,
+  +2.67]. The leftmost cell **loses** light while the middle and right **gain**. A
+  multiplicative flicker scales every cell the same way; it cannot make one −11.37 and
+  another +12.16.
+- **cand→restore mirrors it exactly** — top [+8.4, −2.22, −7.19, −6.71, −6.82, −3.74], bottom
+  [+12.92, −0.23, +0.24, −1.48, −0.43, +4.79]. The sweep reverses when the flag is deleted.
+- Frame-wide (16×9 grid of meanAbs|ΔL|, base→cand) the effect is **far larger than the ROI
+  reports**: it peaks at **80.0 / 76.5 / 74.9 / 70.2 L in the bottom-left quadrant**
+  (x 0–320, y 400–720) — the guard's ground pool (`poolMesh`, `Guard.js:1603-1611`) sweeping
+  with his forward vector. The registered ROI sits *above* that, catching only 3–19 L.
+
+### Named successor design — the losing quantity, not the verdict
+
+The registered quantity is a **median of absolute luma over a fixed rect**. It is (a) maximally
+sensitive to a uniform multiplicative beam-brightness change — precisely the form of the
+flicker contaminant — and (b) sited where the cone's effect is weakest. Two independent
+repairs, either sufficient, both scoreable off frames this run already committed:
+
+1. **Re-site the ROI onto the ground pool** (x 0–560, y 400–700 by this run's grid), where the
+   cone moves **24–80 L** against the same ~4.6 L contamination — an effect-to-noise ratio of
+   5–17×, which satisfies the §13 3× clause with margin instead of failing it 6.27 vs 13.89.
+2. **Score a signed spatial contrast instead of a level** (e.g. left-cell minus right-cell mean
+   ΔL). A multiplicative flicker scales both regions and cancels in the difference; a heading
+   change moves light from one region to the other and does not.
+
+Pinning the flicker phase (freezing engine time at capture, or `beamFlicker = 0` under
+measurement) is a third route, but it alters shipped behaviour while measuring it — the
+coordinator's call, not FX's.
+
+### Q-A2 construct-validity caveat — recorded, and the gate is NOT relied upon
+
+Q-A2 read exactly **0.00**, and measurement shows why it could not read anything else: on the
+16×9 grid, the lower **380 of the rect's 480 rows are bit-identical (0.0) across arms** — the
+rect (852,220,990,700) is **79 % static**, so its median is pinned by the static majority.
+Meanwhile **7705 px inside that rect (11.6 %) do change by ≥10 L** base→cand, and base→**restore**
+changes it *more* (meanAbs 4.94, 7294 px ≥10) than base→cand does (3.32, 7705 px) — the flicker
+again. **Q-A2's "PASS" is therefore not evidence of no-harm; it is a median that cannot move.**
+This is the §143.1 shape ("a guard can bless the broken thing") caught by measurement rather
+than by reading. It does not change this letter's verdict — a2 is UNSCOREABLE on the noise
+gates regardless — but any successor must register a no-harm statistic that *can* move (mean
+|ΔL| over the guard's silhouette, or a rect trimmed to the lit region).
+
+### Verdict
+
+**A (a2): UNSCOREABLE by P-A2a** — |base2−base| 1.36 and |restore−base| 4.63 against the
+registered ≤ 1.0, despite a wipe that verifiably did its job. **Nothing ships; nothing to
+revert** (runtime poke, flag deleted and probed null in restore). Q-A1's +6.27 sits in band and
+reproduces the parent's +6.48 on independently-staged frames, and the cone's expression is
+proven structurally — but the seal registered a scalar the instrument cannot certify at the
+measured contamination, and UNSCOREABLE is the registered outcome (§141), recorded, not
+defended.
+
+**What this letter adds over the parent's UNSCOREABLE:** the parent attributed the ROI variance
+to "guard idle + FX flicker" and the a2 seal re-attributed it to pool residue. Both were
+partly right and neither was sufficient. This run **names the dominant term in source**
+(`Guard.js:1588`, `beamFlicker` 0.09, absolute-time phase, ±8.05 % measured against ±9 %
+allowed), shows the wipe removing the *other* term (2.06 → 1.36), and hands the successor two
+re-sited quantities with measured effect-to-noise ratios instead of a third guess at the
+staging. Per the parent's §4-R1 route, the cone item goes to the **COORDINATOR** with these
+numbers.
