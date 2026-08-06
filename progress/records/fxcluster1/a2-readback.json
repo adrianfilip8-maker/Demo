@@ -3,5 +3,245 @@
  "chunk": "a2",
  "startedAt": "2026-08-06T01:34:08.614Z",
  "srcTreeBefore": "be5c1da17ca5bad4",
- "arms": []
+ "arms": [
+  {
+   "shot": "guard",
+   "arm": "base",
+   "at": "2026-08-06T01:36:08.868Z",
+   "poke": {
+    "mode": "base",
+    "poolsBeforeWipe": {
+     "dust": {
+      "used": 0,
+      "head": 0,
+      "loop": false,
+      "inst": 0
+     },
+     "smoke": {
+      "used": 25,
+      "head": 25,
+      "loop": false,
+      "inst": 25
+     },
+     "spark": {
+      "used": 99,
+      "head": 99,
+      "loop": false,
+      "inst": 99
+     },
+     "ring": {
+      "used": 0,
+      "head": 0,
+      "loop": false,
+      "inst": 0
+     },
+     "sandLow": {
+      "used": 460,
+      "head": 0,
+      "loop": true,
+      "inst": 460
+     },
+     "sandHigh": {
+      "used": 900,
+      "head": 0,
+      "loop": true,
+      "inst": 900
+     },
+     "airMotes": {
+      "used": 1000,
+      "head": 0,
+      "loop": true,
+      "inst": 1000
+     },
+     "shimmer": {
+      "used": 90,
+      "head": 0,
+      "loop": true,
+      "inst": 90
+     },
+     "motes": {
+      "used": 900,
+      "head": 0,
+      "loop": true,
+      "inst": 900
+     },
+     "__decals": {
+      "used": 0,
+      "head": 0,
+      "inst": 0
+     }
+    },
+    "poolsAfterWipe": {
+     "dust": {
+      "used": 0,
+      "head": 0,
+      "loop": false,
+      "inst": 0
+     },
+     "smoke": {
+      "used": 0,
+      "head": 0,
+      "loop": false,
+      "inst": 0
+     },
+     "spark": {
+      "used": 0,
+      "head": 0,
+      "loop": false,
+      "inst": 0
+     },
+     "ring": {
+      "used": 0,
+      "head": 0,
+      "loop": false,
+      "inst": 0
+     },
+     "sandLow": {
+      "used": 460,
+      "head": 0,
+      "loop": true,
+      "inst": 460
+     },
+     "sandHigh": {
+      "used": 900,
+      "head": 0,
+      "loop": true,
+      "inst": 900
+     },
+     "airMotes": {
+      "used": 1000,
+      "head": 0,
+      "loop": true,
+      "inst": 1000
+     },
+     "shimmer": {
+      "used": 90,
+      "head": 0,
+      "loop": true,
+      "inst": 90
+     },
+     "motes": {
+      "used": 900,
+      "head": 0,
+      "loop": true,
+      "inst": 900
+     },
+     "__decals": {
+      "used": 0,
+      "head": 0,
+      "inst": 0
+     }
+    }
+   },
+   "setShot": {
+    "tod": 0.1,
+    "drift": 0,
+    "onScreen": false,
+    "draws": 205,
+    "tris": 1428635,
+    "warnings": 1
+   },
+   "probe": {
+    "guard": {
+     "guardTowardCamera": null,
+     "pos": [
+      -15.487,
+      0,
+      27.545
+     ],
+     "yaw": -0.0691,
+     "forward": [
+      -0.069,
+      0,
+      0.998
+     ],
+     "light": 0.2628,
+     "uOpacity": 0.8358,
+     "beamCol0": [
+      0.244,
+      0.2247,
+      0.1574
+     ]
+    },
+    "pools": {
+     "dust": {
+      "used": 0,
+      "inst": 0,
+      "loop": false
+     },
+     "smoke": {
+      "used": 178,
+      "inst": 178,
+      "loop": false
+     },
+     "spark": {
+      "used": 447,
+      "inst": 447,
+      "loop": false
+     },
+     "ring": {
+      "used": 0,
+      "inst": 0,
+      "loop": false
+     },
+     "sandLow": {
+      "used": 460,
+      "inst": 460,
+      "loop": true
+     },
+     "sandHigh": {
+      "used": 900,
+      "inst": 900,
+      "loop": true
+     },
+     "airMotes": {
+      "used": 1000,
+      "inst": 1000,
+      "loop": true
+     },
+     "shimmer": {
+      "used": 90,
+      "inst": 90,
+      "loop": true
+     },
+     "motes": {
+      "used": 900,
+      "inst": 900,
+      "loop": true
+     },
+     "__decals": {
+      "used": 0,
+      "inst": 0
+     }
+    },
+    "playerPos": [
+     -9,
+     0,
+     31.5
+    ]
+   },
+   "cam": {
+    "pos": [
+     -11.5,
+     2.6,
+     30.5
+    ],
+    "fwd": [
+     -0.884,
+     -0.241,
+     -0.402
+    ],
+    "fov": 38
+   },
+   "tod": 0.1,
+   "srcAtArm": "be5c1da17ca5bad4",
+   "secs": 358
+  }
+ ],
+ "lever": {
+  "hasGuards": true,
+  "hasEMITTERS": true,
+  "hasBatches": true,
+  "flagAtBoot": null
+ }
 }

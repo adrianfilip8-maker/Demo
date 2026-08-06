@@ -275,3 +275,108 @@ are already in band and the restore story is now exact). Whether an alpha midpoi
 the wipe's validity gate (base anchors) held; the separation condition held. The seal's
 falsifier fired exactly where it was written to fire, and the finding it pre-named is the
 verdict.
+
+---
+
+## C RE-ANCHORED INSTRUMENT (c3) — PREREG-fxcluster-c3, scored 2026-08-06. The parent C and
+## c2 verdicts stand untouched; this is the successor c2 named — same block, new instrument.
+
+**Registered question:** does the re-anchored instrument (fixed-geometry disc at the impact
+projection, sat gate L≥180, blob floor L200) certify the carnelian flash that c2 proved but
+could not measure? **Answer: yes, on every registered band.**
+
+**Runner/scorer:** `fxcluster1/c3rerun.mjs` / `c3score.mjs` (both committed WITH the seal,
+before the capture). Frames `c3-combat.{base,cand,restore}.png`, probes `c3-readback.json`,
+log `logs/c3rerun-r3.log`, scores `c3-scores.json`, diag `diag-c3-combat.*.json`, crops
+`crops/c3-combat.*-C-combat-flash-crop.png`.
+
+### Provenance and drift (§128.6 flag, not a void)
+
+- Seal registered on `4ae5982932ab36be`; this run stamped **`be5c1da17ca5bad4` at seam-verify,
+  at all three arms (`srcAtArm` ×3), and after — STABLE**. The drift is other owners' commits
+  landing between sealing and this boot; `src/fx/**` + `src/core/Debug.js` were verified
+  byte-identical to HEAD before launch and the EMITTERS seam (`Particles.js:1831`) was probed
+  live. Adjudicated per P-C3a's tree-drift clause (as c2): within-boot deltas remain valid.
+  **The stronger evidence is that the base arm reproduced all four frame anchors exactly**
+  (below) — a drifted tree that mattered could not do that.
+- One boot 01:08:09Z–01:33:42Z, arms base (507s) → cand (442s) → restore (450s), no src edits.
+  All three arms identical: tod 0.74, cam pos (4.6, 2.35, 31.4) fwd (−0.758, −0.124, −0.641)
+  fov 40, playerPos (0, 0, 28), subject drift 0, onScreen true, draws 224/222/222, tris ~1.542 M.
+- **Wipe verified per arm** (seal §0 / c2's pin): every non-looping pool reads 0 after the wipe
+  in every arm (before-wipe dust 18 / smoke 198 / spark 492 / ring 1 / decals 2 at the cand and
+  restore arms — the residue the pin exists to remove — all zeroed); looping/ambient fields are
+  untouched by design (sandLow 460, sandHigh 900, airMotes 1000, shimmer 90, motes 900).
+- **Requested ≡ applied (§94.4)** on every poked member: cand applied `cane_flash` alpha
+  [1.3,1.3] col0/col1 `0xd4823a`, `cane_arc` [1.0,1.6] col0 `0xd4823a`, `cane_spark` [1.6,2.4]
+  col0 `0xe8912a`, `cane_ring` [1.4,1.4]. Restore's applied defs are byte-identical to base's
+  shipped defs (`0xffe9a8`/`0xe8b942`, alphas 2.6/1.6-2.6/2.2-3.4/2.0).
+
+### Scores (sealed bands beside every value; masks as seal §0)
+
+| registered quantity | band | c3 value | gate |
+|---|---|---|---|
+| Q-C1 figure (360,390,720,670) medSat — base | 0.370±0.02 | **0.372** | PASS (anchor reproduces) |
+| Q-C1 — cand | [0.40, 0.62] | **0.435** | PASS |
+| Q-C2 chalk share (L≥180 & sat≤0.20) — base | 0.137±0.010 | **0.136** | PASS (anchor) |
+| Q-C2 — cand | [0.015, 0.095] | **0.022** | PASS — the chalk is gone |
+| Q-C3′ largest L≥200 comp in (300,300,760,600) — base | 16048±15% | **16048** | PASS (anchor) |
+| Q-C3′ — cand | [800, 12000] | **1899** | **PASS — the clause c2 failed** |
+| Q-C4′ medSat of L≥180 px in disc r=70 @ (452,433) — base | 0.153±0.03 | **0.153** (n=9392) | PASS (anchor) |
+| Q-C4′ — cand | [0.30, 0.55] | **0.398** (n=6657) | **PASS** |
+| Q-C4′ denominator floor, both arms | n ≥ 2000 | **9392 / 6657** | PASS — §128.2 failure mode excluded |
+| restore ≡ base (Q-C1/Q-C2/Q-C3′/Q-C4′) | ±0.02 / ±0.010 / ±15% / ±0.02 | **0.372 / 0.136 / 16048 / 0.153 — exact** | PASS |
+| separation (§13) | (cand−base) > 2×\|restore−base\| on Q-C4′ | **0.245 > 0.000** | PASS |
+
+**All eight gates PASS** (`c3-scores.json`: `baseAnchors, denomFloor, candC1, candC2, candC3p,
+candC4p, restore, separation` all true).
+
+### The instrument did the job it was re-anchored to do
+
+- **Q-C3′ is the direct repair of c2's P-C2c.** The same treatment that collapsed to **3 px**
+  under the L230 floor reads **1899 px** at L200 — mid-band, and the compact bbox
+  **(412,380)-(487,438)** is the carnelian core itself. Base's L200 component is 16048 px with
+  bbox (300,351,576,456), touching the rect's left edge exactly as the seal predicted (at L200
+  the white class merges with the doorway pool). The cand ceiling 12000 sits below the white
+  class, so a re-blown flash would have failed — and it did not.
+- **Q-C4′ carries a real denominator.** c2's 0.259 rested on **n=4 px**; c3's 0.398 rests on
+  **n=6657** against base's **n=9392**, both far above the sealed floor of 2000. The classes
+  separate 0.153 → 0.398 (2.6×), out-of-sample, at the magnitude measured before sealing.
+- **§122.3 checked:** the subject is in frame in every arm (drift 0, onScreen true), and the
+  crops show it — base is a white wash over the impact, cand a structured carnelian flash with
+  spark streaks, ring tail and backdrop reading through the un-blown region (the §17 picture).
+
+**Out-of-sample determinism, verified not assumed.** Every scored quantity reproduces the seal
+§0 in-sample calibration (measured on the *c2* frames) to the digit: 16048=16048, 1899=1899,
+0.153=0.153 at n 9392=9392, 0.398=0.398 at n 6657=6657, plus 0.435/0.022/0.136 from the c2
+table. That exactness was checked for the stale-frame hazard rather than trusted: the three c3
+PNGs are distinct files with md5s differing from all three c2 PNGs, and base vs restore differ
+in file size and by 0.1 on the **unscored** figure medL (154.4 vs 154.5) while agreeing exactly
+on every **scored** stat. This is b2's cross-boot determinism finding reproduced on sub-arm C —
+a deterministic staging measured by a geometric instrument — not one file scored three times.
+
+### Verdict
+
+**C (c3): PASS — all bands, restore, and separation.** The re-anchored instrument certifies
+what c2 proved but could not measure. Per the seal's decision table, **c3 ships the §1 block
+verbatim as an `Emitters.js` data edit — the coordinator's commit.** Exact edit, `src/fx/Emitters.js`:
+
+| line | member | old → new |
+|---|---|---|
+| :454 | `cane_flash` | `alpha: [2.6, 2.6]` → `[1.3, 1.3]`; `col0: PAL.goldLight` → `0xd4823a`; `col1: PAL.goldMid` → `0xd4823a` |
+| :473 | `cane_arc` | `alpha: [1.6, 2.6]` → `[1.0, 1.6]`; `col0: PAL.goldSpec` → `0xd4823a`; `col1: PAL.goldMid` **keep** |
+| :448 | `cane_spark` | `alpha: [2.2, 3.4]` → `[1.6, 2.4]`; `col0: PAL.goldSpec` → `0xe8912a`; `col1: PAL.goldMid` **keep** |
+| :460 | `cane_ring` | `alpha: [2.0, 2.0]` → `[1.4, 1.4]`; colours **keep** (`col0: PAL.goldSpec`, `col1: PAL.rimCool`) |
+
+Colour provenance for the coordinator's naming call (a routing note, not a decision):
+**`0xd4823a` is already the tree's PAINT ochre** (`src/textures/Canvas2D.js:102`), and
+`Emitters.js:53` already cites it by name as one end of the §2.2 gold→carnelian axis — so a
+named `PAL` constant may be preferable to a bare literal. `0xe8912a` is a new value one rank
+along that same axis. Seam fate: the EMITTERS exposure (`Particles.js:1831`) is a harness poke
+path only — the ship is pure data, nothing on disk to revert, and the seam stays or goes on the
+coordinator's judgement independent of this block.
+
+**Lineage closed:** the first C letter failed on Q-C4 0.192 (instrument reading a white-class
+blob), c2 failed on Q-C3 3 px (same instrument, treatment below its floor) while proving the
+direction and the wipe, and c3 — changing *only* the instrument, exactly as c2's successor
+clause specified — passes every band with the treatment values untouched. Three letters, one
+lever moved once, the instrument moved once.
