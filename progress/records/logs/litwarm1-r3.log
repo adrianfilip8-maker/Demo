@@ -1,0 +1,3 @@
+[06:30:25 +   0s] chunk N: all frames present — skipping (idempotent resume)
+[06:30:25 +   0s] chunk N2: all frames present — skipping (idempotent resume)
+[06:30:25 +   0s] chunk A (hero): srcTree adb5629032309d19 — booting (own lock hold)

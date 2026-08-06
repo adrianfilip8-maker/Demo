@@ -1,0 +1,6 @@
+[06:30:32 +   0s] bootId ac6c2432-9cb  srcTree adb5629032309d19 — booting (harness takes the FIFO ticket)
+· waiting for capture lock (10s, held by pid 2986)
+· waiting for capture lock (20s, held by pid 2986)
+· waiting for capture lock (31s, held by pid 2986)
+· waiting for capture lock (42s, held by pid 2986)
+· waiting for capture lock (52s, held by pid 2986)
