@@ -1563,6 +1563,31 @@ function modeLitSweep() {
       }
     }
   }
+  /* The wrap leg — the one warm, key-SCALED, sh-GATED term in the shader, and it is OFF on
+     architecture (`src/world/Architecture.js:209` passes `sss: 0.0`). Sized here across the
+     ndl range it covers, at the shipped TUNE default (0.2) and candidate values. `sh` is 1 in
+     every row: the term is multiplied by sh, so it contributes exactly nothing inside a cast
+     shadow — it cannot re-create the §pass-3 "unlit out-brightens lit" inversion the wash did. */
+  console.log('\n═══ lit/sss — the wrap leg on architecture (currently 0.0 by Architecture.js:209) ═══');
+  console.log('  rows are ndl (surface turn relative to the key); every row sh=1 (NOT in cast shadow).');
+  for (const shot of ['hero', 'temple', 'interior']) {
+    const st = lightState(SHOT_TODS[shot]);
+    console.log(`\n— ${shot} (worn / block albedo) —`);
+    for (const ndl of [-0.20, -0.10, 0.0, 0.05, 0.10, 0.20, 0.30, 0.50, 0.75]) {
+      const cells = [];
+      for (const v of [0.0, 0.12, 0.20, 0.30, 0.45]) {
+        const r = texelReport(st, ALB.worn, { ndl, sh: 1, ny: 0, sss: v });
+        cells.push(`sss${v.toFixed(2)}: L${r.L.toFixed(0).padStart(3)} h${r.h.toFixed(0).padStart(3)} R−B${((r.RmB >= 0 ? '+' : '') + r.RmB.toFixed(0)).padStart(4)}${r.RmB > 10 && r.L > 40 ? '*' : ' '}`);
+      }
+      const ramp = slyRamp(ndl, T.bands, T.termLo, T.termHi, T.termSoft);
+      console.log(`  ndl ${ndl.toFixed(2).padStart(5)} (ramp ${ramp.toFixed(2)})  ${cells.join(' | ')}`);
+    }
+  }
+  console.log('\n  * = clears the CRITIC warm predicate (R−B > +10 ∧ L > 40).');
+  console.log('  The ramp column is why this matters: between ndl −0.20 and +0.116 the ramp is 0,');
+  console.log('  so these pixels get NO key at all today and render the shade colour — while being');
+  console.log('  demonstrably out of cast shadow. That is the population the wrap leg is for.');
+
   /* The budget question, answered in one line per shot: how far can EVERY SHADING knob,
      pushed to its own known-bad edge simultaneously, carry the bright-shade band? */
   console.log('\n— the SHADING budget on the bright-shade band, all knobs at their known-bad edges at once —');
