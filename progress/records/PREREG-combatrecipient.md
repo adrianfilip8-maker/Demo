@@ -353,7 +353,18 @@ deliberately banded rather than pinned (§133.1).
 | **P4 — the four/five spawn shots do not regress** | `Δ(base, cand)` on **`sly-profile`**, frame-wide | **≤ 0.5% of frame (4,608 px)** | — | `norestore` predicted **≥ 8%** (a 272×498 body = 14.7% of frame) |
 | **P4b** | largest connected component of `Δ(base, cand)` on `sly-profile` | **< 3,000 px** | — | `norestore` **≥ 40,000 px** with bbox overlapping (652,67)–(924,565) |
 | **P4c** *(instrumented, covers all five)* | on the `cand` arm, at the moment `sly-profile` is captured: min over all 11 guards of the horizontal distance to (0.102, 0, 29.035) | **≥ 2.0 m** | — | `norestore` **≤ 0.5 m** |
-| **P4d** *(instrumented, covers all five)* | the dumped guard positions projected through all five spawn cameras: no guard bbox overlaps the viewport in any of them | **true for all 5** | — | `norestore` **false for all 5** |
+| ~~**P4d** *(instrumented, covers all five)*~~ | ~~the dumped guard positions projected through all five spawn cameras: no guard bbox overlaps the viewport in any of them~~ | ~~**true for all 5**~~ | — | ~~`norestore` **false for all 5**~~ |
+
+> **P4d STRUCK — DEMOTED TO REPORT-ONLY, 2026-08-06, at this site, from the `base` arm alone and
+> before any `cand` number existed (§190).** `spawnHits` counts every guard in the level whose body
+> box projects into a spawn camera, not the combat residue. The `base` arm carries **no residue**
+> (`minDist(stand)` 16.26 m / 15.87 m, B3 passes) and still reads `sly-closeup:7, sly-startle:1,
+> sly-perch:7, sly-profile:2, sly-key:7` — those guards standing **15.9 to 95.9 m** from the stand.
+> The gate is therefore **unpassable on `cand`** and **unfailable on `norestore`**: zero information
+> in both directions. Not repaired by adding a proximity radius, because the radius that lets `cand`
+> pass is a threshold chosen to produce a verdict (§141.1); the scorer now prints the threshold-free
+> **nearest-overlapping-guard distance to the stand** instead. The residue remains gated by **P4c**,
+> **P4** and **P4b**, which are position- or pixel-specific and unaffected.
 
 **P2b is deliberately marked weak and is reported, not decisive.** `base` already scores 0.037 on it
 (the flash's own dark speckle), so the band is barely above the null; it is here as a *direction*
@@ -441,8 +452,10 @@ somewhere", and a metric that cannot separate those two is a metric with no scal
 - **P-F3** — a base gate (B1–B3) out ⇒ that chunk is **VOID**, not FAIL. Re-boot. Three voids ⇒
   re-diagnose against the current tree.
 - **P-F4 — the residue falsifier, and it is a gate not a footnote.** P4 > 0.5% **or** P4b ≥ 3,000 px
-  *with its bbox overlapping the residue address (652, 67)–(924, 565)* **or** P4c < 2.0 m **or** P4d
-  false for any of the five ⇒ **REVERT both edits.** (A ≥ 3,000 px component confined to the
+  *with its bbox overlapping the residue address (652, 67)–(924, 565)* **or** P4c < 2.0 m ~~**or**
+  P4d false for any of the five~~ ⇒ **REVERT both edits.** (P4d struck at its declaration site above,
+  §190 — it could not be passed by any candidate. The three surviving terms are unchanged, and the
+  falsifier still fires on each of them independently.) (A ≥ 3,000 px component confined to the
   patrol-lag address — x ≳ 900, y ≲ 250 — is the registered confound of §2.2, reported not fatal;
   a large component in neither address is **UNSCOREABLE** until identified.) A recipient that
   ships a guard into five character-sheet frames is a net loss no matter how good `combat` looks, and

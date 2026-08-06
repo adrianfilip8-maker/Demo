@@ -322,9 +322,39 @@ def main():
                      (md is not None and md >= 2.0) if arm == 'cand'
                      else (md is not None and md <= 0.5),
                      '>= 2.0 m' if arm == 'cand' else '<= 0.5 m')
-                gate('P4d' if arm == 'cand' else 'KB-P4d', f'spawnHits {hits or "none"}',
-                     (not hits) if arm == 'cand' else bool(hits),
-                     'no viewport overlap in any of 5' if arm == 'cand' else 'overlaps expected')
+                # P4d — DEMOTED TO REPORT-ONLY, on the base arm's own evidence, before any
+                # `cand` number existed (only telemetry-base.json was on disk; see §190).
+                #
+                # As registered, P4d asked for "no guard bbox overlaps the viewport in any of
+                # the five spawn cameras". `spawnHits` counts EVERY guard in the level whose
+                # body box projects into a spawn camera, not the combat residue. The base arm
+                # — which carries NO residue, minDist(stand) 15.87 m — already reads
+                # sly-closeup:7, sly-startle:1, sly-perch:7, sly-profile:2, sly-key:7, with
+                # those guards standing 15.9 to 95.9 m from the stand. They are the level's
+                # ordinary roster.
+                #
+                # So the predicate is unpassable on `cand` (the 95.9 m scarab stays in frame
+                # however completely Edit 2 restores the spawn) and unfailable on `norestore`
+                # (hits are there either way). Both directions carry zero information, which
+                # is §177's unfailable gate seen from the other side. A gate that cannot be
+                # passed measures no more than one that cannot be failed.
+                #
+                # NOT repaired by choosing a proximity radius: picking the metres that would
+                # let `cand` pass is §141.1's defect built deliberately. Reported instead is a
+                # threshold-free quantity — the nearest overlapping guard's distance to the
+                # stand — which a later seal can register properly with a band set BEFORE it
+                # sees an arm. The residue itself remains gated three independent ways, all of
+                # them position- or pixel-specific and none of them affected by this: P4c
+                # (minDist to the stand), P4 (frame-wide delta), P4b (a component at the
+                # registered residue address). The seal loses a redundant gate, not its claim.
+                allh = [h for v in (d.get('spawnHits') or {}).values() for h in v]
+                nearest = min((((h['pos'][0] - STAND[0]) ** 2
+                                + (h['pos'][2] - STAND[2]) ** 2) ** 0.5 for h in allh),
+                              default=None)
+                print(f'    P4d      REPORT-ONLY (see §190): spawnHits {hits or "none"}; '
+                      f'nearest overlapping guard to stand = '
+                      f'{"n/a" if nearest is None else f"{nearest:.1f} m"} '
+                      f'(base, residue-free, read 15.9 m)')
     if not cal:
         print('\n!! instrument did not calibrate — treat every number above as unverified')
 

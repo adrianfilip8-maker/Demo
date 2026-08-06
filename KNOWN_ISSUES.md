@@ -14858,3 +14858,59 @@ identity first — §181's rect measured the wrong population, §183's occluder 
 denominator, §184.1's readback existed but held `arms: []`, and now a launcher confirmed the
 health of a process it did not start. Four instruments, one defect: the instrument found *a*
 subject and reported on it as if it were *the* subject.
+
+
+## §190 — a gate that could not be passed, caught by the base arm before the candidate ran
+
+`PREREG-combatrecipient` registers **P4d**: *"the dumped guard positions projected through all five
+spawn cameras: no guard bbox overlaps the viewport in any of them — true for all 5"* on `cand`,
+`false for all 5` on `norestore`. The scorer implemented it literally, gating `cand` on `not hits`.
+
+The base arm falsifies the predicate outright. Base is the shipped tree, it carries **no residue**
+— `minDist(stand)` **16.26 m** on `combat`, **15.87 m** on `sly-profile`, and B3 passes — and it
+still reads:
+
+```
+sly-profile  spawnHits = sly-closeup:7  sly-startle:1  sly-perch:7  sly-profile:2  sly-key:7
+             those guards' distance to the combat stand: 15.9, 29.3, 34.1, 41.9, 75.6, 88.3, 95.9 m
+             types: temple, heavy, scarab
+```
+
+`spawnHits` counts **every guard in the level** whose body box projects into a spawn camera. Those
+seven are the ordinary roster standing where the level places them, up to 95.9 m from the stand.
+The residue is a guard parked *at* the stand; these are not it.
+
+So the gate is **unpassable on `cand`** — the 95.9 m scarab remains in frame however completely
+Edit 2 restores the spawn — and **unfailable on `norestore`**, which reads hits either way. Both
+directions carry zero information. This is §177's unfailable gate seen from the other side, and
+the symmetry is the lesson: **a gate that cannot be passed measures exactly as much as one that
+cannot be failed, which is nothing.** §177 was caught because a gate never fired; this one would
+have fired always, and a permanent FAIL is the easier of the two to mistake for a real result.
+
+**Demoted to REPORT-ONLY, not repaired.** The tempting fix — count only guards within N metres of
+the stand — requires choosing N, and the N that lets `cand` pass is a threshold picked to produce
+a verdict. That is §141.1's defect built deliberately. What is reported instead is threshold-free:
+the **nearest overlapping guard's distance to the stand**, printed beside the raw hits, which a
+later seal can band properly *before* it sees an arm.
+
+**Timing, because it is the whole of the honesty here.** Only `telemetry-base.json` was on disk;
+`cand` was third in the FIFO queue behind `staging2` and `litwarm1` and had produced nothing. The
+correction is also **strictly conservative in the §164 sense** — it removes a gate rather than
+adding or loosening one — which is the same shape as the `score3` traversal-row correction made
+mid-capture on litwarm.
+
+**The seal does not depend on it.** The residue stays gated three independent ways, none touched:
+**P4c** (`minDist(stand)` ≥ 2.0 m on `cand`, ≤ 0.5 m on `norestore` — the same fact P4d was
+reaching for, measured against the stand instead of the viewport), **P4** (frame-wide Δ ≤ 0.5 %),
+and **P4b** (a ≥ 3,000 px component overlapping the registered residue address). P4d was the
+redundant fourth. Losing it costs the seal a confirmation, not a claim.
+
+Instrument state at the time of the call: `combatrecipient-score.py` **CALIBRATED** — all nine
+published `CRITIC-sbs3` combat numbers reproduce exactly (figure medL 119.98, core meanR−B 88.2,
+chalk 9122 px, blue 22 px, …). Base gates B1 (120.02 ∈ [112,128]) and B2 (+88.2 ∈ [+78,+98]) pass,
+so the capture is not VOID.
+
+*(Operational note: the scorer's `numpy`/`pillow` had to be reinstalled — pip packages live
+outside git and so do not survive a rollback, unlike everything committed. Reinstalling is
+seconds; it is recorded only so a future `ModuleNotFoundError` is read as a rollback artefact
+rather than a broken scorer.)*
