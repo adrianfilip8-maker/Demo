@@ -176,3 +176,85 @@ rather than a baseline.
 ## Verdict
 
 _(pending `cand` / `norestore` / `kbside`)_
+
+---
+
+## `cand` arm — measured, and **P-F1 FIRES**
+
+`srcStable=true` (launch == atLock, boot == postInstall — §191's corrected check), tree reverted to
+BASE `350dece5a1b13fb7` by the runner's own `finally`.
+
+### The residue half PASSES, cleanly
+
+| id | quantity | band | measured | |
+|---|---|---|---|---|
+| **P4** | `sly-profile` frame-wide Δ | ≤ 4,608 px (0.5 %) | **108 px (0.01 %)** | PASS |
+| **P4b** | largest component at the residue address | < 3,000 px | **0** | PASS |
+| **P4c** | `sly-profile` `minDist(stand)` | ≥ 2.0 m | **15.8106 m** | PASS |
+
+And the seal's central geometric claim lands **exactly**: on `combat` the recipient stands at
+`[0.1019, 0, 29.0349]`, **off-prediction 0.000 m** (P-F8a ok), with `lock=0` where base had
+`lock=-1`. Edit 1 puts a recipient at the stand the note computed, and Edit 2 removes him again by
+the next shot — `minDist(stand)` goes `0.0001 m` on `combat` → `15.8106 m` on `sly-profile`. The
+restore works.
+
+### The appearance half FAILS, and not narrowly
+
+```
+combat: base vs cand — frame-wide differing px 446,643 (48.46% of frame)
+        largest component: area 436,368  bbox (152,0)-(1279,719)
+  P1    area 436,368        band >= 20,000, centre +-60          **FAIL**
+  P1b   bbox inside RECIPBOX+70   band (237,238,613,813)         **FAIL**
+  P2    flash-disc changed 0.245  band >= 0.8                    **FAIL**
+  P3    SLYBB covered 0.474       band <= 0.4 (pred 0.28-0.34)   **FAIL**
+  P3b   component right edge x1 = 1279  band <= 560              **FAIL**
+  P2b   flash-disc ink 0.126      band >= 0.04 (weak, reported)  PASS
+  P3c   cane-hook ink 1000 -> 1207 (+21%)   [declared cost, NOT gated]
+```
+
+**What the frames show.** The recipient spawns **interpenetrating Sly** — his body and staff pass
+straight through the player character. P3 is the gate that caught it and it is the honest one:
+predicted occlusion 0.28–0.34 of Sly's bbox, measured **0.474**. Nearly half the player is behind
+the guard the seal added. The seal's geometry was right (the stand is exact to 0.000 m); what was
+underestimated is what standing 0.890 m nearer the lens than Sly's chest *looks like*.
+
+**The 48 % is real, not an instrument artefact — established by controls that should have been
+quiet and were.** Two regions far from the recipient are pixel-identical between arms:
+
+```
+top-left sky/tower   4.1% differing   base mean RGB [49.9 60.1 79.5] == cand [49.9 60.1 79.5]
+floor bottom-left    1.7% differing   base [142.0 96.6 74.5] ~ cand [140.4 95.7 74.1]
+```
+
+So there is no global grade shift and no exposure drift. The change is confined to the recipient
+**plus the right half of the frame**, where a large wall leaves shadow entirely:
+
+```
+right wall mid       100.0% differing  base [52.5 66.5 87.4] -> cand [103.9 98.6 91.0]
+floor bottom-right    99.4% differing  base [132.6 85.5 65.7] -> cand [149.7 104.6 76.1]
+```
+
+Dark blue-grey to light warm grey at every pixel is a surface going from shadowed to lit, which is
+consistent with the recipient joining the shadow-caster set and the cascade refitting around him.
+That is a **second, unpredicted consequence** of the edit, and it is registered here as an
+observation rather than folded into any gate — the seal did not band it, so it is not scored.
+
+### Verdict on the candidate
+
+**P-F1 fires: P1, P1b and P2 are all out of band on `cand` ⇒ REVERT both edits.** `src/ai/Guard.js`
+is already at BASE (the runner reverts inside the lock), so there is nothing to undo in the tree —
+the candidate simply **does not ship**.
+
+**No retune.** The seal forbids moving `minDist`, `screenSide`, `clip` or `t` toward a band, and a
+different stand is a different prereg (§141.1). The right next move is a new seal that registers
+occlusion of the player as a *first-class* quantity rather than a side condition, and that decides
+the shadow-cascade consequence before capturing, not after.
+
+**What this seal bought.** A recipient that interpenetrates the player would have been shipped on
+the strength of "the combat veil now has something to land on" — the residue half passes, the
+geometry is exact to a millimetre, and the telemetry all looks healthy. The frames are what said
+no. Pre-registering P3 with a numeric band is what turned "it looks wrong" into a falsifier that
+fired on its own terms.
+
+_(Formal seal closure still awaits `norestore` and `kbside` for P-F2 instrument certification —
+both are running. Their result cannot rescue the candidate; P-F1 is unconditional on `cand`.)_
