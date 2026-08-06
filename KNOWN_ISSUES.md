@@ -15235,7 +15235,22 @@ which is the opposite of what the seal asks. `litwarm1` was killed rather than l
 slot per chunk on a tree that cannot satisfy it.
 
 
-## §195 — `grab()` never freezes time, so arm order is a confound in every capture that uses it
+## §195 — `grab()` stages at LIVE dt, so §28's hazard is unavoidable for any runner that uses it
+
+> **CORRECTED AT THIS SITE, immediately after writing it.** I first wrote this section as a new
+> discovery. **It is not.** The world clock advancing within a boot is **§28**, it is already in
+> this ledger, it already killed `goldonset`, and `Debug.js`'s own `step()` docstring warns about
+> it in plain terms — *"for any within-boot A/B, pass `dt = 0`"* — and cites §28 by number. I
+> re-derived a documented hazard from its symptoms. The measurements below stand; the framing
+> "new finding" did not survive one grep.
+>
+> **What IS new, and is the actual content of this section:** the documented fix is **not reachable**
+> from a runner that stages through `grab()`. `grab()` calls `__GAME.setShot()`, and `setShot`
+> runs `api.step(14)` → `applyShot` → `api.step(3)` — **seventeen frames at the default LIVE dt**,
+> before the runner is handed control. A caller can pass `dt = 0` to its *own* steps and still have
+> the clock advanced 17 frames per arm underneath it. So §28's remedy, as written, is unavailable
+> to `staging2.mjs` and `combatrecipient.mjs`; the advice "pass dt=0" silently does not apply to
+> the staging path, and that is the gap worth recording.
 
 staging2 r11 was protocol-clean — one `bootId`, `srcTreeAtLock == srcTreeAtRelease`, `armTook`
 true on every arm, preroll present, feet/head pixel-identical across all six — and **still VOID**,
@@ -15308,3 +15323,30 @@ P4 14,060 in [2500,22000], P5 37.19 in [26,55], P7 3 in [0,4]), and the framing 
 exactly — feet `[843.9, 625.3]`, head `[863.6, 244.3]` on every arm. Those numbers are **not a
 verdict** and are recorded only to say that the candidate is not obviously wrong; they were
 measured under the confound this section describes.
+
+### 195.1 What is established vs what is inferred, kept apart
+
+**Established by measurement:**
+- `restore` and `base` share a camera to 4 dp and differ by **409,217 px (44.40 %)**, frame-wide.
+- Mean luma falls monotonically in **capture order**: 66.04 / 66.42 / 66.24 / 63.69 / 63.33 / 55.88
+  for preroll / base / cand / restore / KBmid / KBover. (KBover's camera differs, so only the first
+  five are order-comparable; the drop from `base` to `restore` — same camera — is the clean one.)
+- `setShot` advances the clock by **17 frames at live dt** per call, by inspection of `Debug.js`.
+- litwarm's arms, captured through `__GAME.step(n, 0)` instead of `grab()`, are **byte-identical**.
+
+**Inferred, and NOT relied on:** *which* clock-driven term produces the monotonic dimming. Torch
+flicker, dust, shafts and sparkle all ride `engine.time` (Debug.js names them), and a converging
+exposure or temporal filter would also produce a monotone. I have not isolated it, and the verdict
+does not need it: the frames differ, the difference is ordered by capture index, and P-F4's `[0,0]`
+cannot be met while it is. Naming a mechanism I have not measured is how §190 and §193 started.
+
+**The fix, and why it is not a one-line default change.** `setShot`'s live steps exist *on purpose*
+— staging wants the sim to settle before a shot is judged, and Debug.js says so. Making `dt = 0`
+the default would change what every historical capture in this project meant. The correct change is
+a **per-call option** (`setShot(name, { dt: 0 })` / `grab(page, name, { dt: 0 })`), defaulting to
+today's behaviour, taken up explicitly by the A/B runners. That is a `tools/` + `src/core/Debug.js`
+change, and `Debug.js` is `src/` — so it queues on the capture lock like any tree edit (§165).
+
+**Standing rule, now stated where a runner author will hit it:** a within-boot A/B is only valid if
+**every** frame-advancing call in the path — including the ones inside `setShot` — runs at `dt = 0`.
+Checking your own `step()` calls is not sufficient, because the staging path has its own.
