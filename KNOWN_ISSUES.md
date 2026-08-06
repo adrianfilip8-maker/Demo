@@ -15366,3 +15366,41 @@ not only before pushing.** A `git fetch` + ancestry check costs nothing next to 
 onto a base that no longer exists. The tell is a non-fast-forward push, and the fix is always
 `reset --hard origin/<branch>` then `cherry-pick` the stranded sha — never a merge, which would
 drag the dead base back in.
+
+
+## §195.4 — the clock leak is closed (3,700×), and the frozen-clock frames void the live-dt seal
+
+staging2 r12 ran end-to-end with the staging path frozen (`setShot(name, {dt: 0})` at both call
+sites). The §195 mechanism is confirmed fixed at its root:
+
+```
+P-F4 restore vs base:  r11 (live dt)  409,217 px (44.40%)
+                       r12 (dt 0)         110 px (0.012%)   maxΣ|Δ| 27
+```
+
+A 3,700× reduction from one option. The remaining 110 px is the restage cycle's own floor —
+staging2 re-stages between arms (`applyShot` → GUARDS re-solve), and that path is not bit-exact
+the way litwarm's poke-in-place is.
+
+**And yet r12 is VOID/UNSCOREABLE, on three registered grounds, quoted per §193.1:**
+
+1. **P-F4** registers `[0, 0]` and reads 110 ⇒ VOID by the seal's letter.
+2. **P-F3**: base gate `R2_guardMassRect_medL` = **69.1** vs band `[17.5, 19.8]` (r11 read 26.83).
+   This is the important one: **the seal's bands are live-dt quantities.** Freezing the clock
+   stops the settle at a different scene phase, so the base frame is a *different population*
+   than the frames the bands were sized on — and the base gate caught exactly that, which is what
+   base gates are for.
+3. **P-F2**: KBmid P1 (82.44) is not strictly between base (15.9) and cand (80.7) — the P1 metric
+   saturates by 1.0 m west, same shape as r11.
+
+**The honest conclusion: staging2 needs a RE-SEAL, not a re-run.** Its bands must be re-derived
+from frozen-clock base frames and declared before scoring (re-deriving them now, toward these
+numbers, is §141.1's defect). The re-seal should: size every band on a dt-0 base capture; set
+P-F4's band from a *measured* restage floor (two consecutive dt-0 stagings of the same arm) rather
+than asserting 0; and calibrate KBmid on P2, which demonstrably grades (306 → 642 → 668), rather
+than P1, which saturates. The two decisions staging2 gates — the guard camera 1.75 m west and the
+cone's §183 re-judgement — remain OPEN until that re-seal runs.
+
+Reported for completeness: all six candidate bands passed on r12's numbers (P1 80.7, P2 668, P3
+24.56, P4 11,036, P5 43.27, P7 0), and the framing identity held (feet/head pixel-identical).
+Encouraging, and not a verdict — the capture is void.
