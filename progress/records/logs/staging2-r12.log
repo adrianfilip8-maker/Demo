@@ -3,3 +3,11 @@
 [21:32:43 + 112s] srcTreeAtLock 9647e41e38635ef1 (pre-lock reading was 9647e41e38635ef1)
 [21:32:43 + 112s] LEVER {"gotShotObject":true,"livePos":[-11.5,2.6,30.5],"liveTarget":[-17,1.1,28],"liveFov":38,"liveTod":0.1,"hasGuards":true,"guardCount":11,"hasSolver":true}
 [21:40:16 + 565s] arm preroll (DISCARDED — preroll) 453s  cam [-11.5,2.6,30.5] took=true  stand [-15.4871,0,27.5446]  feet [843.9,625.3] head [863.6,244.3]
+[21:44:20 + 809s] arm base 244s  cam [-11.5,2.6,30.5] took=true  stand [-15.4871,0,27.5446]  feet [843.9,625.3] head [863.6,244.3]
+[21:48:03 +1032s] arm cand 223s  cam [-13.25,2.6,30.5] took=true  stand [-17.2371,0,27.5446]  feet [843.9,625.3] head [863.6,244.3]
+[21:51:58 +1267s] arm restore 235s  cam [-11.5,2.6,30.5] took=true  stand [-15.4871,0,27.5446]  feet [843.9,625.3] head [863.6,244.3]
+[21:55:48 +1497s] arm KBmid 230s  cam [-12.5,2.6,30.5] took=true  stand [-16.4871,0,27.5446]  feet [843.9,625.3] head [863.6,244.3]
+[21:59:29 +1718s] arm KBover 221s  cam [-15.5,2.6,30.5] took=true  stand [-19.4871,0,27.5446]  feet [843.9,625.3] head [863.6,244.3]
+[21:59:29 +1718s] shot table restored in-page to {"pos":[-11.5,2.6,30.5],"target":[-17,1.1,28]} (src/** never written)
+[21:59:29 +1718s] DONE — srcTree before 9647e41e38635ef1 after 9647e41e38635ef1 same=true
+[21:59:29 +1718s] wall-times: preroll 453s  base 244s  cand 223s  restore 235s  KBmid 230s  KBover 221s   <- §185's question
