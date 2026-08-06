@@ -1692,7 +1692,9 @@ class SparkleField {
 
   /** PREREG-fxcluster §1 seam (a): back-date every live marker's born stamp so SPARKLE_VERT's
    *  pop is fully open at a staged capture — `_prerollFires`' treatment, which this field
-   *  never had. Inert unless called; the only caller is debug-gated (see `_stageShot`). */
+   *  never had. Inert unless called; the only caller is `_stageShot`, which calls it
+   *  UNCONDITIONALLY on every staged shot (§187 — the earlier "debug-gated" claim was stale
+   *  from the seam era and is corrected here). */
   preroll(sec) {
     for (let i = 0; i < this.count; i++) this.aData.array[i * 4 + 2] = -sec;
     this.aData.needsUpdate = true;
@@ -2569,8 +2571,11 @@ export class Particles {
     this._sparkleTimer = 0;
     /* PREREG-fxcluster §1 seam (sub-arm B): a staged still captures ~3 frames after the
        SECOND clock re-base (Debug.setShot applies the shot twice), inside the sparkle pop
-       window — fires get _prerollFires below; the field had no preroll. Debug-gated OFF by
-       default: shipped behaviour is bit-exact unless the capture harness opts in. */
+       window — fires get _prerollFires below; the field had no preroll. SHIPPED
+       UNCONDITIONAL (RESULT-fxcluster B re-run, PASS): staged shots always preroll, which is
+       what serves §2.1 item 6's mandatory grammar in captures. Free play is unaffected because
+       _stageShot runs only on the 'shot' event. NOTE (§187): this makes a preroll-OFF arm
+       unstageable — any seal needing that control must gate it itself, not assume one here. */
     this.sparkles?.preroll(0.25);  // staged shots only by construction (_stageShot); RESULT-fxcluster B re-run
     this._prerollFires();
     this._prerollCrests();

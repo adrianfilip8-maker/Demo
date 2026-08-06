@@ -14771,3 +14771,16 @@ committed arms whenever a window happens to be long enough; they are not abandon
 simply no longer first. This is the §164 chunking argument applied one level up — to the *order*
 of the queue rather than the size of a chunk.
 
+
+### 188.3 `launch.sh` reports exit 4 for work that succeeded, when the work is fast
+
+The §187 comment correction ran, took the free lock immediately, made both edits and exited in
+under a second — faster than `launch.sh`'s 12-second `find_pid` window — so the launcher found no
+process and reported "never started" (exit 4). **The edit had already landed**: its log reads
+`EDIT IN` and the diff shows both comments corrected.
+
+Not a bug to fix in the launcher — its exit-4 contract is "started and crashed immediately, OR
+never started", and refusing to guess is what makes it trustworthy for long captures. The rule for
+callers: **`launch.sh` exit 4 on a sub-second job means "check the artefact", not "it failed."**
+Verified by the job's own output and by the tree, never by the launcher's return code alone.
+
