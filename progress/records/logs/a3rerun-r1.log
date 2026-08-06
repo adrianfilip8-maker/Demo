@@ -49,3 +49,8 @@
 [02:31:25 + 588s]   LEVER {"hasGuards":true,"hasEMITTERS":true,"hasBatches":true,"flagAtBoot":null,"engineTimeAtBoot":0.25,"sensesPhaseAtBoot":0.249678,"timeWritable":true}
 [02:37:25 + 949s]   guard.base     361s  t 1000.313333  beamCol0 [0.267404,0.24626,0.172505]  yaw -0.0691
 [02:41:36 +1199s]   guard.base2    250s  t 1000.283333  beamCol0 [0.262957,0.242165,0.169637]  yaw -0.0691
+[02:45:28 +1432s]   guard.cand     233s  t 1000.283333  beamCol0 [0.262957,0.242165,0.169637]  yaw -0.628
+[02:49:19 +1663s]   guard.restore  231s  t 1000.283333  beamCol0 [0.262957,0.242165,0.169637]  yaw -0.0691
+[02:49:19 +1663s]   chunk a3 done — srcTree after adb5629032309d19 (STABLE)
+[02:49:20 +1663s] chunk a3: lock released
+[02:49:20 +1663s] ALL DONE

@@ -14363,3 +14363,30 @@ exactly by cand→restore; frame-wide peak 80 L in the guard's ground pool). Two
 with measured ratios: re-site the ROI onto the ground pool (24–80 L effect vs 4.6 L noise), or
 score the signed spatial contrast. Coordinator routing: the successor rides the next FX window.
 
+
+## §178 — a metric agreed with its prediction twice by coincidence (a3's retroactive finding)
+
+a3 pinned `engine.time` (reachable at runtime, no token) and re-measured a2's registered ROI on
+the same lever: **−0.06 cand−base**. Unpinned, that ROI read **+6.27** (a2) and **+6.48** (the
+parent letter) — both "in band", both cited as the heading expressing the cone. **Both were the
+§177 oscillator sampled at two phases.** The metric did not depend on the quantity it claimed to
+measure, and it matched the port's forecast twice anyway.
+
+**Rule: agreement between a measurement and its prediction is not validation of either.** A
+metric earns trust from a control that can only move when the treatment moves — not from
+landing where the model said it would. The §13 calibration arm exists for exactly this and both
+prior letters ran without one that could separate flicker from lever. Where an animated term
+shares the ROI, pin the clock (all terms, not the one named — a3 found three in `Guard.js`:
+`:1588` CPU flicker ±9%, `:278-279` BEAM_FRAG dust ±19%, `:347` POOL_FRAG ±13.6%, the latter two
+spatially structured so no signed contrast cancels them) and prove the pin in the readback
+before reading any arm.
+
+Also recorded, from the same run: `Particles.js:2600-2612` and `Lighting.js:568-571` both
+re-base their clocks at the `shot` event and both document why — **the guard cone is the one
+animated subsystem that never got that re-base**, which is why this defect lived here and
+nowhere else. And a3's own V-1 breach localised to a staging-order defect, not a pin failure:
+`setShot` stops the rAF loop, so the *first* measured arm runs ~2 real frames late (0.03 s)
+while every later arm is bit-identical in both `engine.time` and `beamCol0`. Successor a4 is two
+one-liners — a discard `setShot('guard')` before the first measured arm, and a no-harm gate off
+the contaminated quadrant.
+

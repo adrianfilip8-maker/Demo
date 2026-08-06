@@ -537,3 +537,141 @@ allowed), shows the wipe removing the *other* term (2.06 → 1.36), and hands th
 re-sited quantities with measured effect-to-noise ratios instead of a third guess at the
 staging. Per the parent's §4-R1 route, the cone item goes to the **COORDINATOR** with these
 numbers.
+
+---
+
+## A RE-SITED INSTRUMENT + PINNED CLOCK (a3) — PREREG-fxcluster-a3, scored 2026-08-06. The
+## parent A, a2 verdicts stand untouched; this is the successor §177 named.
+
+**Registered question:** with the instrument re-sited by measurement and the capture clock
+pinned, does the −0.20 heading express the cone under gates that are each shown able to fail?
+**Answer: the cone expresses enormously and the instrument is vindicated — but the run is
+UNSCOREABLE by its own P-A3a**, because the clock pin reached three arms out of four and the
+one it missed is the reference arm.
+
+**Runner/scorer:** `fxcluster1/a3rerun.mjs` / `a3score.mjs` (committed with the seal, plus
+`a3-choose.mjs` pre-seal and `a3-pindiag.mjs` post-run diagnostic). Frames
+`a3-guard.{base,base2,cand,restore}.png`, probes `a3-readback.json`, log `logs/a3rerun-r1.log`,
+scores `a3-scores.json`, pool pair structure `a3-pairstruct.json`, clock diagnostic
+`a3-pindiag.json`, scorer control `a3-scorer-control.{json,txt}`.
+
+### Provenance
+
+- srcTree **`adb5629032309d19`** at seam-verify, at all four arms and after — **STABLE and
+  identical to the seal's registration tree.** No src edits; the Guard.js heading seam and the
+  FX poke path were verified present before boot. Lock taken FIFO behind an sbs3 capture
+  (9.8 min queued, ticket honoured).
+- One boot 02:31:25Z–02:49:20Z; arms base (361 s) → base2 (250 s) → cand (233 s) → restore
+  (231 s). `engine.time` writable confirmed at boot (`timeWritable: true`, boot t = 0.25, so
+  the pin to 1000.0 is a forward set).
+- **The lever applied exactly as both parents' port predicted:** cand yaw −0.0691 → **−0.628**;
+  base, base2 and restore all −0.0691. Restore deleted the flag and returned to base exactly.
+
+### Scores (sealed bands beside every value; a2's response beside every gate, §177 finding 2)
+
+| registered quantity | band | a2 shown-able-to-move | **a3 value** | gate |
+|---|---|---|---|---|
+| Q-A3-1 ΔmedL cand−base, POOL ROI (0,400,560,700) | [−100, −15] | −59.84 | **−58.63** | **in band** |
+| Q-A3-1m mirror ratio (restore−cand)/\|Q-A3-1\| | [0.60, 1.40] | 0.94 | **0.99** | **PASS** |
+| N-1 \|base2−base\| medL, POOL ROI | ≤ 4.0 | 1.49 | **0.36** | **PASS** |
+| N-2 \|restore−base\| medL, POOL ROI | ≤ 4.0 | 3.49 | **0.35** | **PASS** |
+| §13: \|Q-A3-1\| ≥ 3 × max same-state Δ | ≥ 1.08 | a2's ROI FAILED 6.27 vs 13.89 | **58.63** | **PASS, 54× margin** |
+| Q-A3-2 no-harm Δmean\|∇L\|, GUARD LIVE | ≥ −3.0 | −2.08 (mirror +2.56) | **−1.79** | nominal pass — **void, licence failed** |
+| L-2 licence: same-state \|Δmean∇L\|, GUARD LIVE | ≤ 1.0 | 2.40 | **1.86** | **BREACH — P-A3f** |
+| V-1 whole-frame px base vs base2 | ≤ 20 000 | 507 830 | **447 825** | **BREACH — P-A3a** |
+| V-2 engine.time spread across arms | ≤ 1e−6 | (a2 did not pin) | **0.03** | **BREACH** |
+| V-3 beamCol0 bit-identical base/base2/restore | exact | 0.2440 / 0.2531 / 0.2630 | **base ≠ base2** | **BREACH** |
+| C-1 ΔmeanL, POOL ROI (context) | report | −38.41 | **−40.11** | reported |
+| C-2 ΔmedL over a2's ROI (context) | report | +6.27 | **−0.06** | reported — see below |
+| C-3 ΔmedL over a2's untrimmed figure (context) | report | 0.00 | **+0.02** | reported |
+
+**Effect-to-noise on the registered quantity: 58.63 / 0.36 = 163×**, against a2's registered
+ROI at 1.35× on the same frames. The §13 clause it failed 6.27-vs-13.89 in a2 now passes
+58.63-vs-1.08.
+
+### The pin worked — on three arms, and the fourth is the one everything is scored against
+
+`a3-pindiag.json`, from the run's own probes:
+
+| arm | t at capture | beamCol0 | yaw |
+|---|---|---|---|
+| base | **1000.313333** | **[0.267404, 0.246260, 0.172505]** | −0.0691 |
+| base2 | 1000.283333 | [0.262957, 0.242165, 0.169637] | −0.0691 |
+| cand | 1000.283333 | [0.262957, 0.242165, 0.169637] | **−0.628** |
+| restore | 1000.283333 | [0.262957, 0.242165, 0.169637] | −0.0691 |
+
+**base2, cand and restore captured at a bit-identical clock and a bit-identical beam colour** —
+`beamCol0` equal to the last decimal across three arms including the poked one, which is the
+direct proof that `Guard.js:1588`'s ±9 % oscillator, the term §177 named, is fully pinned. a2's
+spread across the same probe was 0.2440 / 0.2531 / 0.2630.
+
+**base is 0.03 s (1.8 frames at 1/60) late, and that is a staging-order defect, not a pin
+failure.** `setShot` stops the rAF loop; on the first arm the loop is *still running* when the
+pin is written, so ~2 real frames advance `engine.time` before `setShot` halts it. Arms 2–4 are
+staged from an already-stopped loop and land on exactly 1000 + 17/60 = 1000.283333, the
+deterministic cost of `setShot`'s own `step(14)` + `step(3)` (Debug.js:139/141). One arm, one
+cause, one line to fix.
+
+### The finding that matters most: both parents' Q-A1 was measuring the contaminant
+
+**Under a pinned clock, a2's registered ROI (340,280,700,350) reads ΔmedL = −0.06 cand−base
+(and +0.72 cand−base2). Unpinned it read +6.27 in a2 and +6.48 in the parent.** The quantity
+that both earlier letters reported as "in band [+3, +45]" — the number that made the cone look
+expressed at that rect — **was the beam flicker sampled at two phases, not the heading.** With
+the phase pinned the lever moves that rect by essentially nothing, exactly as PREREG-fxcluster
+§0.1's port said it must (only the `near`-suppressed throat, t ≤ 0.06, crosses it). The cone is
+real and enormous; it was never in the registered rect. This is the §141.1 shape at full size:
+a metric that did not depend on the thing it claimed to measure, agreeing with the prediction
+twice by coincidence of phase.
+
+### Where the residual lives — measured, and it spares the registered quantity
+
+Between the two same-state arms that were **both** pinned (base2 → restore), 287 252 px still
+differ, and the 16×9 mean|ΔL| grid puts essentially all of it in the upper right:
+
+- pool ROI region (x 0–560, y 400–720): **0.01 – 1.53 L** — the registered quantity's ground.
+- x 720–1280, y 0–320: **13.3 – 31.4 L**, peaking 31.43 at (x 1040–1120, y 0–80) — the band that
+  contains the guard's live rect (hence L-2's 1.86) and the doorway air above him.
+- Looping ambient occupancy is **identical in all four arms** (sandLow 460, sandHigh 900,
+  airMotes 1000, shimmer 90, motes 900), so this is per-particle phase/history, not population.
+  Those fields are *looping* and therefore deliberately outside the c2/a2 wipe.
+
+So the two halves of the shot behave differently and the seal happened to site its primary gate
+on the clean half: **Δpool between two pinned same-state arms is 0.01 L.**
+
+### Verdict
+
+**A (a3): UNSCOREABLE by P-A3a** (V-1 447 825 px against the registered ≤ 20 000), with
+**P-A3f** also fired (L-2 1.86 against ≤ 1.0, so Q-A3-2's nominal −1.79 pass is **void** — an
+uncertified no-harm gate cannot license a no-harm reading, which is the whole point of §177
+finding 2 and was registered as such before the run). V-2 and V-3 breach for the same single
+cause. **Nothing ships; nothing to revert** (runtime poke; flag deleted and probed null in
+restore, yaw returned to base exactly).
+
+**What this letter adds over a2's UNSCOREABLE.** a2 handed the successor two candidate
+statistics with measured ratios; this run picked between them by measurement before sealing
+(`a3-choose.json`: pool re-siting E/N 17.15 vs the named contrast's 12.53, against the
+registered ROI's 1.35), showed every gate able to move *and* able to fail on committed pixels
+before the capture (`a3-scorer-control.txt` prints FAIL for L-2 and V-1 on the a2 frames), and
+then measured the redesigned instrument at **E/N 163 with the §13 clause passing 54×**. It also
+proves the clock pin is the right hook — bit-identical `beamCol0` across three arms — and
+retires the two earlier letters' central number as an artefact of the contaminant. The arm is
+unscoreable on a staging-order defect that is fully localised, not on anything about the design
+under test.
+
+### Named successor (a4) — two changes, both one-liners, no new lever
+
+1. **Stage a discard `setShot('guard')` before the first measured arm**, so every measured arm
+   is staged from an already-stopped rAF loop and the pin lands identically on all four. Fixes
+   V-1/V-2/V-3 at the root. Predicted: base2 ≡ base at ~0 px, as c2 achieved with the wipe.
+2. **The no-harm gate must leave the contaminated quadrant, or the wipe must reach the looping
+   ambient fields.** The guard's live band carries 13–31 L of same-state residual that the clock
+   pin does not touch; the pool ground carries 0.01 L. Either re-site no-harm onto a region the
+   ambient fields do not drive, or extend the wipe to the looping batches and re-verify — and
+   whichever is chosen, register it with its response on these a3 frames, which now exist as the
+   known-bad for exactly that question.
+
+Per the parents' §4-R1 route, the cone item stays with the **COORDINATOR**. The ship this seal
+would have named on a clean run is `src/ai/Guard.js:158`, `SHOT_POSE.guard.towardCamera: 0.35 →
+−0.20` (widened clamp at `:1832` stays) — **not claimed here**, because the registered gates did
+not clear and a3 is UNSCOREABLE.

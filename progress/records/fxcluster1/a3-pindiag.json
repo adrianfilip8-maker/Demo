@@ -1,0 +1,314 @@
+{
+ "at": "2026-08-06T02:51:37.795Z",
+ "note": "DIAGNOSTIC ONLY — scores nothing, registers nothing. The a3 verdict is a3score.mjs against the registered base arm.",
+ "clock": {
+  "base": {
+   "engineTimeBeforePin": 0.282,
+   "engineTimeAfterPin": 1000,
+   "engineTimeAfterSetShot": 1000.313333,
+   "engineTimeAtCapture": 1000.313333,
+   "beamCol0": [
+    0.267404,
+    0.24626,
+    0.172505
+   ],
+   "beamUTime": 1000.313333,
+   "yaw": -0.0691
+  },
+  "base2": {
+   "engineTimeBeforePin": 1000.313333,
+   "engineTimeAfterPin": 1000,
+   "engineTimeAfterSetShot": 1000.283333,
+   "engineTimeAtCapture": 1000.283333,
+   "beamCol0": [
+    0.262957,
+    0.242165,
+    0.169637
+   ],
+   "beamUTime": 1000.283333,
+   "yaw": -0.0691
+  },
+  "cand": {
+   "engineTimeBeforePin": 1000.283333,
+   "engineTimeAfterPin": 1000,
+   "engineTimeAfterSetShot": 1000.283333,
+   "engineTimeAtCapture": 1000.283333,
+   "beamCol0": [
+    0.262957,
+    0.242165,
+    0.169637
+   ],
+   "beamUTime": 1000.283333,
+   "yaw": -0.628
+  },
+  "restore": {
+   "engineTimeBeforePin": 1000.283333,
+   "engineTimeAfterPin": 1000,
+   "engineTimeAfterSetShot": 1000.283333,
+   "engineTimeAtCapture": 1000.283333,
+   "beamCol0": [
+    0.262957,
+    0.242165,
+    0.169637
+   ],
+   "beamUTime": 1000.283333,
+   "yaw": -0.0691
+  }
+ },
+ "pairs": {
+  "base->base2": {
+   "framePx": {
+    "anyChannelGE1": 447825,
+    "pct": 48.592,
+    "maxChannelDelta": 189
+   },
+   "poolMedLDelta": -0.36,
+   "a2RoiMedLDelta": -0.78,
+   "guardLiveGradDelta": -1.867
+  },
+  "base->restore": {
+   "framePx": {
+    "anyChannelGE1": 438825,
+    "pct": 47.616,
+    "maxChannelDelta": 196
+   },
+   "poolMedLDelta": -0.35,
+   "a2RoiMedLDelta": -1.14,
+   "guardLiveGradDelta": 0.722
+  },
+  "base->cand": {
+   "framePx": {
+    "anyChannelGE1": 600084,
+    "pct": 65.113,
+    "maxChannelDelta": 196
+   },
+   "poolMedLDelta": -58.63,
+   "a2RoiMedLDelta": -0.06,
+   "guardLiveGradDelta": -1.8
+  },
+  "base2->restore": {
+   "framePx": {
+    "anyChannelGE1": 287252,
+    "pct": 31.169,
+    "maxChannelDelta": 180
+   },
+   "poolMedLDelta": 0.01,
+   "a2RoiMedLDelta": -0.36,
+   "guardLiveGradDelta": 2.589
+  },
+  "base2->cand": {
+   "framePx": {
+    "anyChannelGE1": 584615,
+    "pct": 63.435,
+    "maxChannelDelta": 182
+   },
+   "poolMedLDelta": -58.27,
+   "a2RoiMedLDelta": 0.72,
+   "guardLiveGradDelta": 0.067
+  },
+  "cand->restore": {
+   "framePx": {
+    "anyChannelGE1": 569151,
+    "pct": 61.757,
+    "maxChannelDelta": 203
+   },
+   "poolMedLDelta": 58.28,
+   "a2RoiMedLDelta": -1.08,
+   "guardLiveGradDelta": 2.522
+  }
+ },
+ "residualGridBase2ToRestore": [
+  [
+   0.37,
+   0.47,
+   0.27,
+   0.1,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   1.04,
+   24.66,
+   31.43,
+   15.17,
+   9.85
+  ],
+  [
+   0.4,
+   0.14,
+   0.16,
+   0.2,
+   0.23,
+   0.12,
+   0,
+   0,
+   0,
+   2.54,
+   2.63,
+   17.97,
+   22.8,
+   8.9,
+   5.45,
+   8.52
+  ],
+  [
+   0.62,
+   0.98,
+   0.06,
+   0.03,
+   0.1,
+   0.31,
+   0.7,
+   0.42,
+   0,
+   13.27,
+   25.57,
+   23.26,
+   4.54,
+   6.52,
+   2.63,
+   4.3
+  ],
+  [
+   0.08,
+   0.3,
+   0.29,
+   0.08,
+   0.04,
+   0.14,
+   0.53,
+   0.9,
+   0.67,
+   15.87,
+   2.74,
+   16.39,
+   3.28,
+   3.76,
+   1.52,
+   2.49
+  ],
+  [
+   0.08,
+   0.1,
+   0.54,
+   0.1,
+   0.07,
+   0.07,
+   0.33,
+   0.58,
+   1.75,
+   0.03,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0
+  ],
+  [
+   0.09,
+   0.1,
+   0.64,
+   1.02,
+   0.98,
+   1.53,
+   2.33,
+   5.34,
+   8.02,
+   0.07,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0
+  ],
+  [
+   0.08,
+   0.07,
+   0.32,
+   0.12,
+   0.08,
+   0.13,
+   0.97,
+   1.94,
+   2.9,
+   0.53,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0
+  ],
+  [
+   0.06,
+   0.07,
+   0.05,
+   0.12,
+   0.15,
+   0.53,
+   1,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0
+  ],
+  [
+   0.16,
+   0.01,
+   0.01,
+   0.12,
+   0.37,
+   0.94,
+   0.01,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0
+  ]
+ ],
+ "loopingPoolsPerArm": {
+  "base": {
+   "sandLow": 460,
+   "sandHigh": 900,
+   "airMotes": 1000,
+   "shimmer": 90,
+   "motes": 900
+  },
+  "base2": {
+   "sandLow": 460,
+   "sandHigh": 900,
+   "airMotes": 1000,
+   "shimmer": 90,
+   "motes": 900
+  },
+  "cand": {
+   "sandLow": 460,
+   "sandHigh": 900,
+   "airMotes": 1000,
+   "shimmer": 90,
+   "motes": 900
+  },
+  "restore": {
+   "sandLow": 460,
+   "sandHigh": 900,
+   "airMotes": 1000,
+   "shimmer": 90,
+   "motes": 900
+  }
+ }
+}

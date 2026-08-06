@@ -1,0 +1,174 @@
+{
+ "at": "2026-08-06T02:49:49.677Z",
+ "prereg": "PREREG-fxcluster-a3.md",
+ "run": "a3 (same −0.20 heading lever; pool-sited instrument + pinned engine clock)",
+ "masks": {
+  "POOL_ROI": [
+   0,
+   400,
+   560,
+   700
+  ],
+  "GUARD_LIVE": [
+   852,
+   220,
+   990,
+   300
+  ],
+  "A2_ROI": [
+   340,
+   280,
+   700,
+   350
+  ],
+  "A2_FIGURE": [
+   852,
+   220,
+   990,
+   700
+  ]
+ },
+ "framesMissing": [],
+ "perArm": {
+  "base": {
+   "poolMedL": 86.76,
+   "poolMeanL": 88.75,
+   "guardLiveGrad": 10.45,
+   "a2RoiMedL": 98.18,
+   "a2FigureMedL": 23.4
+  },
+  "base2": {
+   "poolMedL": 86.4,
+   "poolMeanL": 88.31,
+   "guardLiveGrad": 8.59,
+   "a2RoiMedL": 97.4,
+   "a2FigureMedL": 23.39
+  },
+  "cand": {
+   "poolMedL": 28.13,
+   "poolMeanL": 48.64,
+   "guardLiveGrad": 8.66,
+   "a2RoiMedL": 98.12,
+   "a2FigureMedL": 23.42
+  },
+  "restore": {
+   "poolMedL": 86.41,
+   "poolMeanL": 88.3,
+   "guardLiveGrad": 11.18,
+   "a2RoiMedL": 97.04,
+   "a2FigureMedL": 22.9
+  }
+ },
+ "gates": {
+  "Q-A3-1 ΔmedL cand−base, POOL ROI (0,400,560,700)": {
+   "band": "[-100, -15]",
+   "a2shown": -59.84,
+   "value": -58.63,
+   "pass": true
+  },
+  "Q-A3-1m mirror ratio (restore−cand)/|Q-A3-1|": {
+   "band": "[0.6, 1.4]",
+   "a2shown": 0.94,
+   "value": 0.99,
+   "pass": true
+  },
+  "N-1 |base2−base| medL, POOL ROI": {
+   "band": "<= 4",
+   "a2shown": 1.49,
+   "value": 0.36,
+   "pass": true
+  },
+  "N-2 |restore−base| medL, POOL ROI": {
+   "band": "<= 4",
+   "a2shown": 3.49,
+   "value": 0.35,
+   "pass": true
+  },
+  "§13 clause: |Q-A3-1| >= 3 × max same-state Δ": {
+   "band": ">= 1.08",
+   "a2shown": "a2 registered ROI FAILED this clause 6.27 vs 13.89",
+   "value": 58.63,
+   "pass": true
+  },
+  "Q-A3-2 no-harm Δmean|∇L| cand−base, GUARD LIVE (852,220,990,300)": {
+   "band": ">= -3",
+   "a2shown": "-2.08 (mirror 2.56)",
+   "value": -1.79,
+   "pass": true
+  },
+  "L-2 licence: same-state |Δmean∇L|, GUARD LIVE": {
+   "band": "<= 1",
+   "a2shown": 2.4,
+   "value": 1.86,
+   "pass": false
+  },
+  "V-1 clock pin: whole-frame px differing base vs base2 (any channel |Δ|>=1 of 921600)": {
+   "band": "<= 20000",
+   "a2shown": 507830,
+   "value": 447825,
+   "pass": false
+  },
+  "V-2 engine.time identical at capture, all arms": {
+   "band": "spread <= 0.000001",
+   "a2shown": "a2 did not pin the clock",
+   "value": 0.03,
+   "pass": false
+  },
+  "V-3 beamCol0 bit-identical across base/base2/restore": {
+   "band": "exact",
+   "a2shown": "a2 read 0.2440 / 0.2531 / 0.2630",
+   "value": "b2 false / rest false",
+   "pass": false
+  }
+ },
+ "context": {
+  "C-1 ΔmeanL cand−base, POOL ROI": {
+   "value": -40.11,
+   "note": "a2 −38.41"
+  },
+  "C-2 ΔmedL cand−base, a2 ROI (340,280,700,350)": {
+   "value": -0.06,
+   "note": "a2 +6.27 — carried for comparability"
+  },
+  "C-3 ΔmedL cand−base, a2 untrimmed figure (852,220,990,700)": {
+   "value": 0.02,
+   "note": "a2 exactly 0.00, 82.9% static — the §177 finding-2 exhibit"
+  }
+ },
+ "clock": {
+  "perArm": {
+   "base": 1000.313333,
+   "base2": 1000.283333,
+   "cand": 1000.283333,
+   "restore": 1000.283333
+  },
+  "spread": 0.03
+ },
+ "beamCol0": {
+  "perArm": {
+   "base": [
+    0.267404,
+    0.24626,
+    0.172505
+   ],
+   "base2": [
+    0.262957,
+    0.242165,
+    0.169637
+   ],
+   "cand": [
+    0.262957,
+    0.242165,
+    0.169637
+   ],
+   "restore": [
+    0.262957,
+    0.242165,
+    0.169637
+   ]
+  },
+  "baseVsBase2": false,
+  "baseVsRestore": false,
+  "baseVsCand": false
+ }
+}
