@@ -85,7 +85,10 @@ const PAL = {
   goldDark: 0x8f6a12,
   cream: 0xe4dcc6,         // trousers, tail light bands
   furLight: 0xcfcdc4,      // muzzle, cheeks, neck
-  furMid: 0x8d8b84,        // ears, tail dark bands
+  furMid: 0x8d8b84,        // ears, muzzle shading
+  tailDark: 0x5e5c55,      // tail dark bands — darker than furMid ON PURPOSE: stage 2's bands
+                           // used furMid and washed out to a pale tube under SSS + rim; the
+                           // venice crop's dark rings read near-charcoal in shade
   black: 0x141414,         // mask, nose, pupils
   red: 0xc4222c,           // hip sash
   eyeIris: 0xd9821a,
@@ -158,7 +161,7 @@ const BONE_ORDER = SKELETON.map((s) => s[0]);
  * hex    [0x…, ...]          per-point colour
  * bone   [i, ...]            per-point bone index (rigid weight 1)
  */
-function tube(pts, rad, hex, bone, seg = 12) {
+function tube(pts, rad, hex, bone, seg = 12, jit = null) {
   const P = pts.map((p) => new THREE.Vector3(...p));
   const n = P.length;
   const t = [], up = new THREE.Vector3();
@@ -182,7 +185,10 @@ function tube(pts, rad, hex, bone, seg = 12) {
     B.crossVectors(t[i], N).normalize();
     c.setHex(hex[i]);
     for (let s = 0; s < seg; s++) {
-      const a = (s / seg) * Math.PI * 2, ca = Math.cos(a) * rad[i], sa = Math.sin(a) * rad[i];
+      /* jit[i] > 0 makes this ring ragged: deterministic per-vertex radius jitter (SPEC F4 — the
+         torn trouser hem is a silhouette feature; a straight hem is a registered defect). */
+      const j = jit && jit[i] ? 1 + jit[i] * Math.sin(s * 3.71 + i * 1.93) : 1;
+      const a = (s / seg) * Math.PI * 2, ca = Math.cos(a) * rad[i] * j, sa = Math.sin(a) * rad[i] * j;
       pos.push(P[i].x + N.x * ca + B.x * sa, P[i].y + N.y * ca + B.y * sa, P[i].z + N.z * ca + B.z * sa);
       col.push(c.r, c.g, c.b);
       bidx.push(bone[i], 0, 0, 0); bwt.push(1, 0, 0, 0);
@@ -316,14 +322,17 @@ export class SlyModel {
     // muzzle — oriented tube from the cranium's FRONT FACE outward (+Z), dipping slightly.
     // Stage 1's sat inside the ball; this one starts at z = 0.80·hw (proud of centre) and runs
     // muzzleLen HALF-WIDTHS from the front face, so the snout projects unambiguously.
-    const mzY = CY - HEAD_H * 0.10;
+    /* Stage 3: raised to MID-face and near-horizontal. Stage 2 set the muzzle a tenth of a head
+       LOW with a 2 cm droop and it read as a bird's bill pointing at the floor; the reference's
+       snout leaves the face at eye-cheek height, level, and only the nose tip dips. */
+    const mzY = CY - HEAD_H * 0.02;
     const mz0 = CR[2] * 0.80;
     const mzTip = CR[2] + hw * TUNE.muzzleLen - CR[2] * 0.2;
     parts.push(tube(
-      [[0, mzY, mz0], [0, mzY - 0.008, (mz0 + mzTip) / 2], [0, mzY - 0.020, mzTip]],
-      [hw * 0.52 * TUNE.muzzleGirth, hw * 0.40 * TUNE.muzzleGirth, hw * 0.20],
+      [[0, mzY, mz0], [0, mzY - 0.002, (mz0 + mzTip) / 2], [0, mzY - 0.006, mzTip]],
+      [hw * 0.52 * TUNE.muzzleGirth, hw * 0.42 * TUNE.muzzleGirth, hw * 0.22],
       [PAL.furLight, PAL.furLight, PAL.furLight], [headB, headB, headB], 12));
-    parts.push(blob([0, mzY - 0.014, mzTip + hw * 0.06], [hw * 0.13, hw * 0.10, hw * 0.11], PAL.black, headB, 10, 6));
+    parts.push(blob([0, mzY - 0.004, mzTip + hw * 0.07], [hw * 0.15, hw * 0.115, hw * 0.125], PAL.black, headB, 10, 6));
 
     // mask — black field across the eyes with pointed outer corners: two wing blobs proud of the
     // cranium plus a bridge across the face front (SPEC §2: it is a fur marking and wraps).
@@ -331,13 +340,15 @@ export class SlyModel {
     for (const s of [1, -1]) {
       parts.push(blob([s * hw * 0.72, eyeY, hw * 0.42], [hw * 0.40, hw * 0.26, hw * 0.34], PAL.black, headB, 10, 6));
     }
-    parts.push(blob([0, eyeY, hw * 0.86], [hw * 0.62, hw * 0.24, hw * 0.18], PAL.black, headB, 12, 6));
+    parts.push(blob([0, eyeY, hw * 0.86], [hw * 0.62, hw * 0.24, hw * 0.13], PAL.black, headB, 12, 6));
 
-    // eyes — sclera / iris / pupil, layered forward of the mask bridge
+    /* eyes — stage 3: ~30% bigger and pushed proud of a THINNER mask bridge. Stage 2's stack sat
+       flush with the bridge and read as one black lump; the amber is an identity cue and has to
+       survive the profile view. */
     for (const s of [1, -1]) {
-      parts.push(blob([s * hw * 0.30, eyeY + hw * 0.02, hw * 0.97], [hw * 0.155, hw * 0.15, hw * 0.085], PAL.eyeWhite, headB, 10, 6));
-      parts.push(blob([s * hw * 0.28, eyeY + hw * 0.02, hw * 1.045], [hw * 0.085, hw * 0.085, hw * 0.045], PAL.eyeIris, headB, 8, 5));
-      parts.push(blob([s * hw * 0.27, eyeY + hw * 0.02, hw * 1.085], [hw * 0.038, hw * 0.038, hw * 0.022], PAL.black, headB, 6, 4));
+      parts.push(blob([s * hw * 0.30, eyeY + hw * 0.02, hw * 1.00], [hw * 0.20, hw * 0.19, hw * 0.10], PAL.eyeWhite, headB, 10, 6));
+      parts.push(blob([s * hw * 0.27, eyeY + hw * 0.02, hw * 1.09], [hw * 0.115, hw * 0.115, hw * 0.055], PAL.eyeIris, headB, 8, 5));
+      parts.push(blob([s * hw * 0.255, eyeY + hw * 0.02, hw * 1.135], [hw * 0.048, hw * 0.048, hw * 0.026], PAL.black, headB, 6, 4));
     }
 
     // cap — blue dome over the cranium top + a forward brim (G1: PAL.blue)
@@ -390,16 +401,18 @@ export class SlyModel {
       const slim = TUNE.limbSlim;
       // wrist cuff: doubled point 3.5cm before the wrist along the forearm
       const cu = [wr[0] - (wr[0] - el[0]) * 0.18, wr[1] - (wr[1] - el[1]) * 0.18, wr[2] - (wr[2] - el[2]) * 0.18];
+      /* stage 3: +25% limb mass — stage 2's arms read starved next to both the reference and the
+         incumbent */
       parts.push(tube(
         [sh, el, cu, cu, wr],
-        [0.052 * slim, 0.044 * slim, 0.038 * slim, 0.046 * slim, 0.046 * slim],
+        [0.065 * slim, 0.055 * slim, 0.048 * slim, 0.058 * slim, 0.056 * slim],
         [PAL.blue, PAL.blue, PAL.blue, PAL.gold, PAL.gold],
         [bi(`upperArm${L}`), bi(`lowerArm${L}`), bi(`lowerArm${L}`), bi(`lowerArm${L}`), bi(`hand${L}`)], 10));
       // mitten + thumb (G1: PAL.blue)
-      parts.push(blob([wr[0] + s * 0.012, wr[1] - 0.035, wr[2] + 0.012], [0.052, 0.062, 0.056], PAL.blue, bi(`hand${L}`), 10, 6));
+      parts.push(blob([wr[0] + s * 0.014, wr[1] - 0.042, wr[2] + 0.014], [0.062, 0.074, 0.068], PAL.blue, bi(`hand${L}`), 10, 6));
       parts.push(tube(
-        [[wr[0], wr[1] - 0.020, wr[2] + 0.030], [wr[0] - s * 0.012, wr[1] - 0.052, wr[2] + 0.058]],
-        [0.020, 0.013], [PAL.blue, PAL.blue], [bi(`hand${L}`), bi(`hand${L}`)], 7));
+        [[wr[0], wr[1] - 0.024, wr[2] + 0.036], [wr[0] - s * 0.014, wr[1] - 0.062, wr[2] + 0.070]],
+        [0.024, 0.015], [PAL.blue, PAL.blue], [bi(`hand${L}`), bi(`hand${L}`)], 7));
     }
 
     /* ================= LEGS — cream to mid-calf, then blue boots ================= */
@@ -407,44 +420,57 @@ export class SlyModel {
       const L = s > 0 ? 'L' : 'R';
       const hip = A[`upperLeg${L}`], knee = A[`lowerLeg${L}`], ank = A[`foot${L}`];
       const slim = TUNE.limbSlim;
-      // boot top: 45% of the way down the shin — doubled for the cream|blue seam, with flare
-      const bt = [knee[0] + (ank[0] - knee[0]) * 0.45, knee[1] + (ank[1] - knee[1]) * 0.45, knee[2] + (ank[2] - knee[2]) * 0.45];
+      /* stage 3: baggy cream shorts from the hip, RAGGED hem at mid-calf (SPEC F4 — a straight
+         hem is a registered defect; the jitter ring is the tatter), boot below with a flare.
+         +25% mass throughout — stage 2's legs were noodles. */
+      const hem = [knee[0] + (ank[0] - knee[0]) * 0.42, knee[1] + (ank[1] - knee[1]) * 0.42, knee[2] + (ank[2] - knee[2]) * 0.42];
       parts.push(tube(
-        [hip, knee, bt, bt, ank],
-        [0.070 * slim, 0.052 * slim, 0.046 * slim, 0.056 * slim, 0.050 * slim],
+        [[hip[0], hip[1] + 0.02, hip[2]], knee, hem, hem, ank],
+        [0.096 * slim, 0.070 * slim, 0.078 * slim, 0.058 * slim, 0.062 * slim],
         [PAL.cream, PAL.cream, PAL.cream, PAL.blue, PAL.blue],
-        [bi(`upperLeg${L}`), bi(`lowerLeg${L}`), bi(`lowerLeg${L}`), bi(`lowerLeg${L}`), bi(`foot${L}`)], 10));
+        [bi(`upperLeg${L}`), bi(`lowerLeg${L}`), bi(`lowerLeg${L}`), bi(`lowerLeg${L}`), bi(`foot${L}`)], 12,
+        [0, 0, 0.20, 0, 0]));                       // ← the hem ring alone is ragged
       // foot: big rounded boot + heel (G1: PAL.blue)
       parts.push(blob([ank[0], ank[1] - 0.024, ank[2] + TUNE.footLen * 0.30],
-        [TUNE.footWidth, 0.055, TUNE.footLen * 0.62], PAL.blue, bi(`foot${L}`), 12, 6));
+        [TUNE.footWidth, 0.058, TUNE.footLen * 0.62], PAL.blue, bi(`foot${L}`), 12, 6));
       parts.push(blob([ank[0], ank[1] - 0.016, ank[2] - TUNE.footLen * 0.16],
-        [TUNE.footWidth * 0.72, 0.048, TUNE.footLen * 0.24], PAL.blue, bi(`foot${L}`), 8, 5));
+        [TUNE.footWidth * 0.72, 0.050, TUNE.footLen * 0.24], PAL.blue, bi(`foot${L}`), 8, 5));
     }
 
     /* ================= TAIL — thick, banded, splined ================= */
     {
       const rootR = hw * TUNE.tailRootFrac;                       // G4: 0.95·hw ⇒ 0.475 × head width
+      /* stage 3: the stage-2 tail hooked upward like a swan neck (the tip extension rose 0.16 m)
+         and its bands washed out. The arc now stays LOW and sweeps behind — S, not J — and the
+         tip extension is modest. */
       const spine = catmull([
         [0, HIP_Y + 0.010, -0.06],
         A.tailA, A.tailB, A.tailC, A.tailD,
-        [A.tailD[0] + 0.16 * TUNE.tailScale, A.tailD[1] + 0.16, A.tailD[2] - 0.14 * TUNE.tailScale],
-      ], 16);
+        [A.tailD[0] + 0.10 * TUNE.tailScale, A.tailD[1] + 0.05, A.tailD[2] - 0.11 * TUNE.tailScale],
+      ], 22);
       const tailBones = ['tailA', 'tailB', 'tailC', 'tailD'].map(bi);
       const pts = [], rad = [], hex = [], bone = [];
+      const bandOf = (t) => Math.min(TUNE.tailRings * 2 - 1, Math.floor(t * TUNE.tailRings * 2));
+      const colOf = (b) => (b % 2 === 0 ? PAL.tailDark : PAL.cream);   // dark first, HIGH contrast
+      const radOf = (t) => Math.max(hw * 0.10, rootR * (1 - 0.60 * t)); // gentler taper: keeps mid mass
+      const boneOf = (t) => tailBones[Math.min(tailBones.length - 1, Math.floor(t * tailBones.length))];
+      let prevBand = -1;
       for (let i = 0; i < spine.length; i++) {
         const t = i / (spine.length - 1);
-        pts.push(spine[i]);
-        rad.push(Math.max(hw * 0.06, rootR * (1 - 0.72 * t)));
-        /* band index: TUNE.tailRings alternations root→tip, dark first (SPEC: ringed grey/cream) */
-        const band = Math.min(TUNE.tailRings * 2 - 1, Math.floor(t * TUNE.tailRings * 2));
-        hex.push(band % 2 === 0 ? PAL.furMid : PAL.cream);
-        bone.push(tailBones[Math.min(tailBones.length - 1, Math.floor(t * tailBones.length))]);
+        const b = bandOf(t);
+        if (prevBand >= 0 && b !== prevBand) {
+          /* doubled ring at the band boundary — same position, both colours — so the ring edge is
+             CRISP. tube() interpolates colours between rings, which is what smeared stage 2's
+             bands into a pale gradient (the same defect, and the same fix, as the belt seam). */
+          pts.push(spine[i]); rad.push(radOf(t)); hex.push(colOf(prevBand)); bone.push(boneOf(t));
+        }
+        pts.push(spine[i]); rad.push(radOf(t)); hex.push(colOf(b)); bone.push(boneOf(t));
+        prevBand = b;
       }
       parts.push(tube(pts, rad, hex, bone, 12));
-      // rounded tip
       const tip = spine[spine.length - 1];
-      parts.push(blob([tip[0], tip[1], tip[2]], [hw * 0.10, hw * 0.10, hw * 0.10],
-        PAL.furMid, tailBones[3], 8, 5));
+      parts.push(blob([tip[0], tip[1], tip[2]], [hw * 0.115, hw * 0.115, hw * 0.115],
+        PAL.tailDark, tailBones[3], 8, 5));
     }
 
     /* ================= CANE — gold shaft + hook, in the right hand (G2: PAL.gold) ============ */
