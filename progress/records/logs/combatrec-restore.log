@@ -32,3 +32,17 @@
 · waiting for capture lock (321s, held by pid 13718)
 · waiting for capture lock (332s, held by pid 13718)
 · waiting for capture lock (342s, held by pid 13718)
+· waiting for capture lock (353s, held by pid 13718)
+· waiting for capture lock (364s, held by pid 13718)
+· waiting for capture lock (374s, held by pid 13718)
+· waiting for capture lock (384s, held by pid 13718)
+· waiting for capture lock (394s, held by pid 13718)
+· waiting for capture lock (405s, held by pid 13718)
+· waiting for capture lock (415s, held by pid 13718)
+· waiting for capture lock (426s, held by pid 13718)
+· waiting for capture lock (436s, held by pid 13718)
+· waiting for capture lock (447s, held by pid 13718)
+· waiting for capture lock (457s, held by pid 13718)
+· waiting for capture lock (467s, held by pid 13718)
+· lock held — installing arm "restore" into src/ai/Guard.js
+  installed arm "restore" -> /home/user/Demo/src/ai/Guard.js  sha 350dece5a1b13fb7

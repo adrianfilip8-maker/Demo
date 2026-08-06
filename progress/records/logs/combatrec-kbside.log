@@ -113,3 +113,7 @@
   installed arm "kbside" -> /home/user/Demo/src/ai/Guard.js  sha 0b9584a59092adcc
 !! TREE MOVED DURING THE FIFO WAIT — launch 13dde875b6f320fb -> atLock 59fd366596517cf2. Another owner changed src/ while this arm queued; it would render a different base than the `base` arm did. VOID.
   OK combat  267.7s  lock=0  minDist(anchor)=2.0378  minDist(stand)=2.2001  spawnHits=sly-closeup:7,sly-startle:1,sly-perch:7,sly-profile:2,sly-key:7
+  OK sly-profile  229.4s  lock=-1  minDist(anchor)=15.794  minDist(stand)=15.8912  spawnHits=sly-closeup:7,sly-startle:1,sly-perch:7,sly-profile:2,sly-key:7
+  reverted /home/user/Demo/src/ai/Guard.js to base (350dece5a1b13fb7)
+  tree: src/ai/Guard.js sha 350dece5a1b13fb7  (BASE)
+DONE arm=kbside srcTree=13dde875b6f320fb srcStable=false
