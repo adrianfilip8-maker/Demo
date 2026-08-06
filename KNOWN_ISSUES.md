@@ -14914,3 +14914,27 @@ so the capture is not VOID.
 outside git and so do not survive a rollback, unlike everything committed. Reinstalling is
 seconds; it is recorded only so a future `ModuleNotFoundError` is read as a rollback artefact
 rather than a broken scorer.)*
+
+
+### 188.6 Nineteenth rollback — the deepest yet, and it still took nothing
+
+Recovered ff-only to `3886742`. Different in magnitude from the eighteen before it: the tree came
+back at `77e1eab`, a commit from **days** earlier rather than the last hour, and the harness task
+board reverted with it. The recovery was nevertheless the same two commands, because `77e1eab` was
+an ancestor and every intervening commit was on the remote.
+
+Nothing was lost that the discipline exists to protect. §187's comment fix is in the tree for the
+**third** time across three rollbacks (`grep -c SHIPPED` = 1); §189's launcher fix and §190's P4d
+strike both came back; litwarm's night frames and readbacks — the settled `P7` half — and
+combatrecipient's `base` arm, which is the entire evidential basis of the P4d strike, are all on
+disk. The only casualty was `numpy`/`pillow`, which §190 had already recorded as living outside
+git; reinstalling is seconds.
+
+Depth turns out not to be the variable that matters. A four-day rollback and a four-minute one
+cost the same thing — the uncommitted remainder — so the interval between commits is the only
+number worth managing, and §164's per-chunk commits already hold it near zero.
+
+Five runners relaunched short-first: `combatrecipient` `cand`/`norestore`/`kbside` (~6 min each,
+very likely to finish inside the cadence), then `staging2`, then `litwarm1 all`. That relaunch was
+also §189's first production exercise — three concurrent arms of one script, distinct pids, all
+ppid 1. Before the fix, two of the three would have been falsely attested and left mis-parented.
