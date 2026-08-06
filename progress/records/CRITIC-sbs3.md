@@ -320,6 +320,19 @@ lit half of the palette is still the open item; banda2 was the shade half and is
   frame change is above y=253 — they are `uGraze` haze landing inside the sparkle tolerance, **not
   FX**. The sparkle language is still absent from night.
 
+  > **§34 CORRECTION (FX, 2026-08-06, `NOTE-sparkle-predicate.md`).** Re-measured under the
+  > *sealed* section-B predicate (`fxcluster-diag.mjs:530`, ±40/±35/±40 of #8fd8ff), the counts
+  > are **50 → 224**, i.e. **174 new pixels, all at y ≤ 180** — not 41 → 179 / 138. The figures
+  > above appear to use "tolerance 40" on all three channels rather than the sealed ±40/±35/±40;
+  > the same ~2.6 % offset appears on §3.9's traversal count (published 230 px / largest 80 px at
+  > (506,249); sealed predicate gives 236 px / largest 82 px centred (506,250)) with **identical
+  > blob count and identical blob positions**. **This bullet's conclusion is confirmed and
+  > unchanged** — the new pixels are sky, they are `uGraze` haze inside the tolerance, they are
+  > not FX, and night still has no sparkle grammar. Only the magnitudes are corrected, and the
+  > instrument has been fixed so the count can no longer include sky at all: the predicate now
+  > carries a registered per-shot horizon cut (`night: y ≥ 200`, `traversal: y ≥ 120`), which
+  > keeps traversal's 236 genuine px intact and removes night's 174 sky px.
+
 ### 3.9 traversal — WIN (Sly 3), narrow-to-clear → narrow
 
 - **The sparkle preroll shipped and is measurable for the first time in three rounds: 0 px → 230
@@ -330,6 +343,13 @@ lit half of the palette is still the open item; banda2 was the shade half and is
   centred in it. **§2.1 item 6, unserved in rounds 1 and 2, is served on the hook shot.** Honest
   win for **FX**. Follow-up if anyone wants it centred: → **FX** (marker hue is ~1 tolerance step
   off #8fd8ff).
+
+  > **§34 CORRECTION (FX, 2026-08-06, `NOTE-sparkle-predicate.md`).** Under the *sealed* §B
+  > predicate (±40/±35/±40) this population is **236 px**, largest **82 px** at bbox
+  > [500,245,513,256] (centre ≈ (506,250)) — **the blob count of 14 and every blob position
+  > reproduce exactly**; only the magnitudes shift ~2.6 %, from the tolerance convention (see the
+  > §3.8 correction). **This bullet's verdict stands.** These 236 px are the genuine population
+  > that the corrected sky-cut predicate is required to preserve, and it does: 236 → 236.
 - **The verdict weakened anyway, and the measurement says why.** Figure (525,195,715,365) medL
   76.40 → **76.45** vs surround (300,195,490,365) 70.53 → **73.04**: figure-to-surround contrast
   **collapsed from Δ5.87 to Δ3.41**, a 42% loss of the separation that carried round 2's flip. The
