@@ -14647,3 +14647,44 @@ and remain the cone's honest costs. Provisional non-verdict numbers from the voi
 such: P1 15.99 → 82.2, P2 306 → 668, warm pixels over the guard's column 4.3% → **43.6%** at medL
 **36.96** — inside the 2004 comparand's 32.57–40.7 band, with no new light added.
 
+
+## §186 — install-then-launch would have poisoned every other owner's boot; the ordering is now a rule
+
+GUARDS caught this in its own plan before executing it, which is the only reason it is a note and
+not an incident. The obvious shape for a ticketed capture — *install the src arm, then launch the
+runner* — is wrong, because **`withGame` acquires the capture lock first**. A runner that installs
+before launching leaves its candidate sitting in `src/**` for the entire time it waits in the FIFO
+queue: measured here at **20–60 minutes**, during which two other owners' boots (`sparkcount`,
+`litwarm1`) would have compiled and rendered against a modified `Guard.js` and recorded the result
+as their own. Silent, plausible frames; no error anywhere.
+
+**Rule: the runner performs `acquire → install → boot → capture → revert → release` itself.** The
+edit must not exist on disk outside the window the lock protects. This is §165's principle
+(a src consequence queues on the lock) extended to the case where the *waiting* is what does the
+damage. Nothing was installed here — `src/**` verified untouched at sha `350dece5a1b13fb7…`.
+
+### 186.1 Three corrections to the combat residue, one of them to my own count
+
+The `_poseForShot` position-restore hazard §181 recorded is worse and simpler than stated:
+
+- **It is FIVE shots, not four.** `sly-closeup`, `sly-startle`, `sly-perch`, `sly-arm` and
+  `sly-profile` all stage the player at exactly (0,0,30); only `sly-key` (at (4,0,30)) is clear.
+  My dispatch said four and STAGING's note listed a different four — both wrong, corrected here
+  against the source. In `sly-profile` the residue is a **272×498 px body standing 1 m behind the
+  character**.
+- **The hazard is index-independent**, so the mitigation of choosing a roster index other than 0
+  buys nothing: the residue follows the *stand*, which the solver computes from the camera alone.
+- **A canonical full-set run appears to self-heal** — `guard` restages roster #0 five shots later —
+  which is an accident of ordering, not a fix. Every subset run still carries it.
+
+### 186.2 Two more instruments caught measuring the wrong thing
+
+- **The Sly colour mask is struck by its own author.** On `sbs3/combat.png` the sunlit paving reads
+  medSat **0.579** against Sly's torso at **0.394** *at the same hue* — the floor is more saturated
+  than the character. The predicate returned 58,982 px in a box containing ~10,000 of him. P3 is
+  geometry now. (This is the third instrument this cycle whose population was not what its name
+  said: §181's rect, §183's denominator, this.)
+- Two further defects were caught in the same pass and named: a corner-in-viewport test that called
+  `sly-startle` safe **because the residue fills its frame**, and a launch-time source hash standing
+  in for the tree the boot actually renders.
+
