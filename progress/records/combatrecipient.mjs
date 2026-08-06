@@ -30,10 +30,14 @@
  * half way must still leave behind whatever it actually captured.
  */
 import { withGame, grab, ROOT } from '../../tools/harness.mjs';
+import { acquire } from '../../tools/lock.mjs';
+import { chromium } from 'playwright';
 import { writeFile, mkdir, readdir } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
+import { spawn, execFileSync } from 'node:child_process';
 import path from 'node:path';
+import net from 'node:net';
 
 const OUT = path.join(ROOT, 'progress', 'records', 'combatrecipient1');
 const argv = process.argv.slice(2);
