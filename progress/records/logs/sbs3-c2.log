@@ -114,3 +114,4 @@
 · 1 boot warning(s):
     ! textures: prewarm took 26.6s at size 1024
   ✓ interior      145566ms  draws  166  tris 724k
+  ✓ night         255169ms  draws  288  tris 1856k
