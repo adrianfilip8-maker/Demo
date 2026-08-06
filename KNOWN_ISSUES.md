@@ -14491,3 +14491,24 @@ hazards ride with the spec (dead `spec.x/z/yaw` fields with no reader, `_poseFor
 restoring `g.position` with the stand 0.97 m from a spawn four other shots use, and the
 recipient covering x 392–510 of Sly's cane-hook silhouette).
 
+
+## §182 — a budget flag, and why it is NOT yet a breach (the sixth chance to make the same mistake)
+
+SHADING's litwarm run logged `setShot(night)` at **288 draws / 1.86 M tris** against §1.2's
+≤ 250 / ≤ 1.2 M, flagged it as pre-existing and not its ticket's, and explicitly did not claim
+it as a finding. That was the right handling, and the number still must not be compared to the
+budget as it stands.
+
+**Reason: those are `__GAME.stats` — the COUNTED column.** PREREG-hullkerb §2.2 records that the
+counted column has been misquoted against the 250 / 1.2 M limits **five times** (§130.3, §146.2,
+§149.4, §153.1, §155.6), and that the comparable figure is the **SCORED main-view column**,
+whose measured baseline is 71 draws / 0.572 M — a factor of four apart from the counted numbers
+on the same frames. Every runner in this session prints the counted column per arm for
+arm-to-arm sanity, which is the legitimate use.
+
+**Status: OPEN as a question, not as a breach.** What would settle it is one scored-column
+measurement on `night` and `guard` (the two heaviest stagings observed: 287–288 draws counted),
+compared against the limits the way §153.1 did it. Until that exists, no ledger figure may cite
+288/1.86 M as over budget — and this section exists so the sixth misquote does not happen by
+someone reading SHADING's honest log line out of context.
+

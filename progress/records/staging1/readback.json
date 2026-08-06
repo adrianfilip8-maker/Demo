@@ -1,0 +1,19 @@
+{
+ "prereg": "PREREG-staging1.md",
+ "runner": "progress/records/staging1.mjs",
+ "startedAt": "2026-08-06T03:58:23.275Z",
+ "srcTreeBefore": "85bab2d30f5f7b59",
+ "shippedExpected": {
+  "pos": [
+   -11.5,
+   2.6,
+   30.5
+  ],
+  "target": [
+   -17,
+   1.1,
+   28
+  ]
+ },
+ "arms": []
+}

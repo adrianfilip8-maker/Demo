@@ -1776,8 +1776,12 @@ function modeScore3(dir) {
     const d0 = d(b), d1 = d(c);
     say('T1 traversal contrast Δ', d1 - d0, BANDS_LW.T1_contrast);
     note(`(fig−sur ${d0.toFixed(2)} → ${d1.toFixed(2)}; banda2 already took 2.46 — NOTE-traversal-contrast.md)`);
+    /* REPORT-ONLY. The seal's §5 registers H rows on hero/courtyard/temple/interior only;
+       traversal carries T1 and nothing else. Printing this as a scored row would be a gate
+       the seal never registered, so it is a note. Corrected before any traversal frame
+       existed (chunk E is last) and recorded in RESULT-litwarm. */
     const h = fixedMaskRmB(b, c, LW_RECTS.frame, 40, 140);
-    say('H traversal frame Δ(R−B) L40-140', h.d, BANDS_LW.H_frame);
+    note(`traversal frame Δ(R−B) L40-140 fixed = ${h.d.toFixed(2)} (REPORT-ONLY, not registered)`);
     if (have(f('traversal', 'restore'))) say('P-F4 traversal restore px', frameDiffPx(b, readPNG(f('traversal', 'restore'))), BANDS_LW.PF4_restore, (v, band) => v === band[0]);
   }
 

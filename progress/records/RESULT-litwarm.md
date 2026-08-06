@@ -61,6 +61,20 @@ gilded surfaces receive it at full strength. That is inside this seal's declared
 "every architecture surface"), it is not a separate lever, and it is **not** credited to the
 gold-renders-dark family unless a gold-specific quantity is registered by whoever owns that.
 
+### Scorer correction, made while the capture was still on chunk N (recorded, not silent)
+
+`score3` as first committed scored a **traversal `H` row** (frame Δ(R−B) on the L40–140 fixed
+mask) as a gated quantity. **The seal registers `H` rows on hero / courtyard / temple / interior
+only**; traversal carries `T1` and nothing else. That row was therefore a gate the seal never
+registered, inflating the scored tally with an invented line — the exact thing the seal's own
+"BANDS_LW duplicates §5, a mismatch voids the scoring" clause exists to prevent.
+
+It is now **REPORT-ONLY**. The correction is **strictly conservative** (it removes a gate rather
+than adding or loosening one), and it was made **before any traversal frame existed** — chunk E is
+last in the plan, and at the time of the edit only `readback-N.json` was on disk. No registered
+band moved, and no scored value changed. Stated here rather than quietly fixed because a scorer
+edited during a capture is exactly the kind of thing that has to be visible.
+
 ## Scores
 
 _(the `score3` table, verbatim, at full capture)_
