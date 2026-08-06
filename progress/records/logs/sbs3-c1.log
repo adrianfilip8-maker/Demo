@@ -9,3 +9,9 @@
   ✓ temple        214134ms  draws  239  tris 1713k
   ✓ sly-closeup   259595ms  draws  263  tris 1667k
   ✓ courtyard     258064ms  draws  281  tris 1710k
+  ✓ dunes         191842ms  draws  272  tris 1620k
+· 1 console error(s):
+    ! Failed to load resource: the server responded with a status of 404 (Not Found)
+  · page closed
+
+→ shots/sbs3/  (5 shots, 0 failed)

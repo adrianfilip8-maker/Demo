@@ -1,0 +1,82 @@
+{
+  "at": "2026-08-06T02:05:52.276Z",
+  "commit": {
+    "sha": "f71005a",
+    "dirty": true
+  },
+  "width": 1280,
+  "height": 720,
+  "quality": "high",
+  "shots": {
+    "hero": {
+      "file": "shots/sbs3/hero.png",
+      "ms": 20195.19999999972,
+      "fps": 41,
+      "drawCalls": 260,
+      "triangles": 1741791,
+      "programs": 98
+    },
+    "temple": {
+      "file": "shots/sbs3/temple.png",
+      "ms": 12.700000000186265,
+      "fps": 41,
+      "drawCalls": 239,
+      "triangles": 1713057,
+      "programs": 98
+    },
+    "sly-closeup": {
+      "file": "shots/sbs3/sly-closeup.png",
+      "ms": 9.799999999813735,
+      "fps": 60,
+      "drawCalls": 263,
+      "triangles": 1666821,
+      "programs": 98
+    },
+    "courtyard": {
+      "file": "shots/sbs3/courtyard.png",
+      "ms": 9.299999999813735,
+      "fps": 60,
+      "drawCalls": 281,
+      "triangles": 1710297,
+      "programs": 98
+    },
+    "dunes": {
+      "file": "shots/sbs3/dunes.png",
+      "ms": 14,
+      "fps": 60,
+      "drawCalls": 272,
+      "triangles": 1619553,
+      "programs": 123
+    }
+  },
+  "errors": [],
+  "modules": {
+    "shading": true,
+    "postfx": true,
+    "sky": true,
+    "lighting": true,
+    "textures": true,
+    "architecture": true,
+    "props": true,
+    "terrain": true,
+    "collision": true,
+    "character": true,
+    "animation": true,
+    "movement": true,
+    "camera": true,
+    "fx": true,
+    "guards": true,
+    "hud": true,
+    "audio": true
+  },
+  "bootWarnings": [
+    "textures: prewarm took 30.6s at size 1024"
+  ],
+  "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+  "warnings": [
+    "textures: prewarm took 30.6s at size 1024"
+  ],
+  "consoleErrors": [
+    "Failed to load resource: the server responded with a status of 404 (Not Found)"
+  ]
+}
