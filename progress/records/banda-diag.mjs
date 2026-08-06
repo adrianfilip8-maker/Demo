@@ -87,6 +87,7 @@ const SRC = {
 };
 
 let driftFail = 0;
+let lineChecks = 0;                      // counted, not hardcoded — the header must not overstate
 function need(file, re, name, expect, parse = parseFloat) {
   const m = SRC[file].match(re);
   if (!m) { console.error(`DRIFT: ${file} — pattern for ${name} not found (expected ${expect})`); driftFail++; return expect; }
@@ -98,6 +99,7 @@ function need(file, re, name, expect, parse = parseFloat) {
   return got;
 }
 function needLine(file, needle, name) {
+  lineChecks++;
   if (!SRC[file].includes(needle)) {
     console.error(`DRIFT: ${file} — load-bearing line for ${name} not found:\n  ${needle}`);
     driftFail++;
@@ -214,6 +216,13 @@ if (PALETTE.shadowHue !== 0x2a3f66) { console.error(`DRIFT: Atmosphere PALETTE.s
 /* Architecture recipe params the gold mode uses */
 needLine('arch', 'hieroglyph_gilded:   { color: 0xdcae5e, rough: 0.55, spec: 0.55, gloss: 64', 'gilded recipe');
 needLine('arch', "metal: r.metal ? (r.metalAmount ?? 0.85) : 0", 'metalAmount default');
+/* litwarm: the whole `lit` diagnosis rests on architecture running the wrap leg at ZERO.
+   Assert it, and assert the per-material uniforms it flows through. If ARCHITECTURE ships a
+   value, PREREG-litwarm's §1.4 is describing a tree that no longer exists ⇒ refuse. */
+needLine('arch', 'sss: 0.0,', 'Architecture wrap OFF (the litwarm premise)');
+needLine('toonMat', 'uSss:            { value: o.sss },', 'per-material uSss');
+needLine('toonMat', 'wrapColor: hex(opts.wrapColor ?? opts.sssColor, PAL.wrapWarm),', 'wrap colour default = PAL.wrapWarm');
+needLine('toonGlsl', 'vec3 sss = alb * uSssColor * keyRad * ( sssAmt * uSss * 2.4 * sh );', 'wrap leg assembly');
 
 if (driftFail) {
   console.error(`\n${driftFail} drift failure(s). This instrument describes a tree that no longer exists — re-derive before trusting any number it prints.`);
@@ -1609,7 +1618,7 @@ function modeLit(sub) {
 /* ───────────────────────────── main ───────────────────────────── */
 
 const mode = process.argv[2] || 'all';
-console.log(`banda-diag — drift guard PASS (${Object.keys(T).length + Object.keys(G).length + Object.keys(PAL).length} constants + ${13} load-bearing lines asserted against committed source)`);
+console.log(`banda-diag — drift guard PASS (${Object.keys(T).length + Object.keys(G).length + Object.keys(PAL).length} constants + ${lineChecks} load-bearing lines asserted against committed source)`);
 if (mode === 'frames' || mode === 'all') modeFrames();
 if (mode === 'state' || mode === 'all' || mode === 'chain' || mode === 'attrib' || mode === 'cand' || mode === 'gold' || mode === 'gold2') modeState();
 if (mode === 'grade' || mode === 'all' || mode === 'chain' || mode === 'attrib' || mode === 'cand' || mode === 'gold' || mode === 'gold2') modeGrade();

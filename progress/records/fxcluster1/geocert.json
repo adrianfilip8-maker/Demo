@@ -1,0 +1,213 @@
+{
+ "at": "2026-08-06T03:44:28.137Z",
+ "method": "z-buffered point rasterisation of the authored guard surface through the committed camera; no capture",
+ "validation": {
+  "committedPort": [
+   864,
+   244
+  ],
+  "thisInstrument": [
+   863.3,
+   244.4
+  ],
+  "agreesWithinPx": true
+ },
+ "key": {
+  "rimDir": null,
+  "tod": 0.1,
+  "sunElevationDeg": -41.5,
+  "moonElevationDeg": 28.25,
+  "moonAzimuthDeg": 305.25,
+  "keyDir": [
+   0.5084,
+   0.4733,
+   -0.7194
+  ],
+  "rimDirV": [
+   -0.4289,
+   0.6691,
+   0.6069
+  ],
+  "keyIsMoon": true
+ },
+ "camera": {
+  "pos": [
+   -11.5,
+   2.6,
+   30.5
+  ],
+  "fwd": [
+   -0.884,
+   -0.241,
+   -0.402
+  ],
+  "fov": 38,
+  "aspect": 1.7778,
+  "distanceToGuardM": 5.603,
+  "pxPerMetreAtGuard": 186.6
+ },
+ "arms": {
+  "base  (shipped towardCamera 0.35)": {
+   "tag": "base  (shipped towardCamera 0.35)",
+   "silhouettePxVisible": 6092,
+   "litPxVisible": 4754,
+   "litFractionVisible": 0.7804,
+   "rimFractionVisible": 0.6231,
+   "anyLightFractionVisible": 0.9961,
+   "silhouettePxFullFigure": 27122,
+   "litPxFullFigure": 12354,
+   "litFractionFullFigure": 0.4555,
+   "bbox": {
+    "minX": 761.6,
+    "maxX": 913.4,
+    "minY": 184.8,
+    "maxY": 640.3
+   },
+   "samplesOffFrame": 0
+  },
+  "cand  (towardCamera -0.20)": {
+   "tag": "cand  (towardCamera -0.20)",
+   "silhouettePxVisible": 6117,
+   "litPxVisible": 3730,
+   "litFractionVisible": 0.6098,
+   "rimFractionVisible": 0.6938,
+   "anyLightFractionVisible": 0.8888,
+   "silhouettePxFullFigure": 23879,
+   "litPxFullFigure": 12060,
+   "litFractionFullFigure": 0.505,
+   "bbox": {
+    "minX": 749.7,
+    "maxX": 914.5,
+    "minY": 185.1,
+    "maxY": 640.8
+   },
+   "samplesOffFrame": 0
+  }
+ },
+ "features": {
+  "base  (shipped towardCamera 0.35)": {
+   "name": "base  (shipped towardCamera 0.35)",
+   "offFrontalDeg": 57.4,
+   "muzzleProjM": 0.3515,
+   "muzzleProjPx": 65.6,
+   "earSepPx": 50.9,
+   "viewKeyAngleDeg": 78.3
+  },
+  "cand  (towardCamera -0.20)": {
+   "name": "cand  (towardCamera -0.20)",
+   "offFrontalDeg": 89.5,
+   "muzzleProjM": 0.4,
+   "muzzleProjPx": 74.6,
+   "earSepPx": 35.5,
+   "viewKeyAngleDeg": 78.3
+  }
+ },
+ "cone": {
+  "base  (shipped towardCamera 0.35)": {
+   "fullThrow": {
+    "apex": {
+     "x": 860,
+     "y": 306,
+     "inFrame": true
+    },
+    "onsetC": {
+     "x": 472,
+     "y": 698,
+     "inFrame": true
+    },
+    "farL": {
+     "behindCamera": true
+    },
+    "farR": {
+     "x": -1175,
+     "y": 393,
+     "inFrame": false
+    },
+    "onsetM": 1.912,
+    "pool": {
+     "inFrameShare": 0.0773,
+     "samples": 57600
+    }
+   },
+   "guaranteedFloor": {
+    "apex": {
+     "x": 860,
+     "y": 306,
+     "inFrame": true
+    },
+    "onsetC": {
+     "x": 472,
+     "y": 698,
+     "inFrame": true
+    },
+    "farL": {
+     "behindCamera": true
+    },
+    "farR": {
+     "x": -542,
+     "y": 466,
+     "inFrame": false
+    },
+    "onsetM": 1.912,
+    "pool": {
+     "inFrameShare": 0.1596,
+     "samples": 57600
+    }
+   }
+  },
+  "cand  (towardCamera -0.20)": {
+   "fullThrow": {
+    "apex": {
+     "x": 860,
+     "y": 306,
+     "inFrame": true
+    },
+    "onsetC": {
+     "x": 487,
+     "y": 591,
+     "inFrame": true
+    },
+    "farL": {
+     "behindCamera": true
+    },
+    "farR": {
+     "x": -33,
+     "y": 256,
+     "inFrame": false
+    },
+    "onsetM": 1.912,
+    "pool": {
+     "inFrameShare": 0.2917,
+     "samples": 57600
+    }
+   },
+   "guaranteedFloor": {
+    "apex": {
+     "x": 860,
+     "y": 306,
+     "inFrame": true
+    },
+    "onsetC": {
+     "x": 487,
+     "y": 591,
+     "inFrame": true
+    },
+    "farL": {
+     "x": -4792,
+     "y": 1881,
+     "inFrame": false
+    },
+    "farR": {
+     "x": 138,
+     "y": 328,
+     "inFrame": true
+    },
+    "onsetM": 1.912,
+    "pool": {
+     "inFrameShare": 0.542,
+     "samples": 57600
+    }
+   }
+  }
+ }
+}

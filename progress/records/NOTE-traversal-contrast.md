@@ -131,10 +131,27 @@ The genuine per-pixel movements are ±0.4 on architecture; the genuine warming i
 everywhere, which is what a `vSlySkin`-scoped lever should look like).
 
 This does not overturn CRITIC's verdicts and does not touch RESULT-banda2's 38/38 — none of
-banda2's registered bands is a luma-banded frame statistic. It does mean **the frame warm-share
-fall of −0.19 to −1.67 pp on seven day shots is partly the same denominator effect**: `warm% =
-R > B+10 ∧ L > 40` counted over the whole frame, on a change that pushes more dark cool pixels
-up over the L>40 floor. Measured both ways on the same pairs, `lit bins` prints the split.
+banda2's registered bands is a luma-banded frame statistic.
+
+**And the obvious next inference is WRONG, so it is written down rather than assumed.** The
+natural guess is that CRITIC's frame warm-share fall is the same denominator effect — `warm% =
+R > B+10 ∧ L > 40` over the whole frame, on a change that pushes more dark cool pixels up over
+the L>40 floor. It is not. Recomputed inside the **base arm's own L>40 population**, so the
+denominator cannot move:
+
+| shot | warm% (CRITIC denominator) | warm% (base arm's own L>40 population) | L>40 share |
+|---|---|---|---|
+| hero | 23.29 → 23.06 (**−0.23**) | 28.78 → 28.45 (**−0.33**) | 80.93 % → 82.38 % |
+| interior | 7.31 → 7.11 (**−0.20**) | 8.77 → 8.52 (**−0.25**) | 83.37 % → 85.78 % |
+| temple | 17.11 → 16.94 (**−0.17**) | 19.04 → 18.85 (**−0.19**) | 89.89 % → 91.17 % |
+| combat | 42.18 → 41.97 (**−0.21**) | 46.55 → 46.31 (**−0.24**) | 90.62 % → 91.37 % |
+| sly-closeup | 11.62 → 11.68 (**+0.07**) | 13.38 → 13.46 (**+0.07**) | 86.82 % → 87.81 % |
+
+The fixed-population fall is **slightly larger** than CRITIC's every time, i.e. the denominator
+shift was *helping* the published number. **CRITIC-sbs3's warm-share finding stands, unqualified
+and if anything understated; only §3.1's luma-BAND table is the artefact.** The two statistics
+had to be measured, not reasoned about — which is the same lesson one paragraph up, arriving
+again inside the correction to it.
 
 This is §143.1's family — *a number that does not depend on the thing it claims to measure* —
 and the remedy is the same one the ledger already uses: **state the mask with the band.** Any
