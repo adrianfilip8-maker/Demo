@@ -15,5 +15,272 @@
    28
   ]
  },
- "arms": []
+ "arms": [
+  {
+   "arm": "base",
+   "want": {
+    "pos": [
+     -11.5,
+     2.6,
+     30.5
+    ],
+    "target": [
+     -17,
+     1.1,
+     28
+    ]
+   },
+   "secs": 454,
+   "shotPos": [
+    -11.5,
+    2.6,
+    30.5
+   ],
+   "shotTarget": [
+    -17,
+    1.1,
+    28
+   ],
+   "shotFov": 38,
+   "shotTod": 0.1,
+   "camPos": [
+    -11.5,
+    2.6,
+    30.5
+   ],
+   "camFov": 38,
+   "tod": 0.1,
+   "guardIndex": 0,
+   "guardType": "temple",
+   "guardLocked": true,
+   "guardPos": [
+    -15.4871,
+    0,
+    27.5446
+   ],
+   "guardYaw": -0.0691,
+   "guardState": "patrol",
+   "feetPx": [
+    843.9,
+    625.3,
+    0.9626
+   ],
+   "headPx": [
+    863.6,
+    244.3,
+    0.959
+   ],
+   "roster": [
+    {
+     "i": 0,
+     "type": "temple",
+     "p": [
+      -15.49,
+      0,
+      27.54
+     ]
+    },
+    {
+     "i": 1,
+     "type": "temple",
+     "p": [
+      -17.48,
+      0,
+      26.86
+     ]
+    },
+    {
+     "i": 2,
+     "type": "heavy",
+     "p": [
+      16.91,
+      0,
+      -0.62
+     ]
+    },
+    {
+     "i": 3,
+     "type": "temple",
+     "p": [
+      4.71,
+      2,
+      13.79
+     ]
+    },
+    {
+     "i": 4,
+     "type": "temple",
+     "p": [
+      0.03,
+      1.27,
+      46.43
+     ]
+    },
+    {
+     "i": 5,
+     "type": "temple",
+     "p": [
+      -16.83,
+      0,
+      -20.96
+     ]
+    },
+    {
+     "i": 6,
+     "type": "heavy",
+     "p": [
+      11.63,
+      0,
+      -45.67
+     ]
+    },
+    {
+     "i": 7,
+     "type": "temple",
+     "p": [
+      2.14,
+      17,
+      -19.71
+     ]
+    },
+    {
+     "i": 8,
+     "type": "heavy",
+     "p": [
+      4.47,
+      -9.61,
+      -59.16
+     ]
+    },
+    {
+     "i": 9,
+     "type": "scarab",
+     "p": [
+      22.55,
+      9,
+      -6.43
+     ]
+    },
+    {
+     "i": 10,
+     "type": "scarab",
+     "p": [
+      6.03,
+      -12,
+      -66.65
+     ]
+    }
+   ],
+   "subject": {
+    "asked": [
+     -9,
+     0,
+     31.5
+    ],
+    "staged": [
+     -9,
+     0,
+     31.5
+    ],
+    "final": [
+     -9,
+     0,
+     31.5
+    ],
+    "drift": 0,
+    "visible": true,
+    "ndc": [
+     -0.102,
+     4.643
+    ],
+    "onScreen": false,
+    "present": true
+   },
+   "stats": {
+    "fps": 41,
+    "drawCalls": 205,
+    "triangles": 1429225,
+    "programs": 98,
+    "ms": 10425.299999998882
+   },
+   "warnings": 1,
+   "armTook": true
+  }
+ ],
+ "boot": {
+  "warnings": [
+   "textures: prewarm took 27.4s at size 1024"
+  ],
+  "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+  "modules": {
+   "shading": true,
+   "postfx": true,
+   "sky": true,
+   "lighting": true,
+   "textures": true,
+   "architecture": true,
+   "props": true,
+   "terrain": true,
+   "collision": true,
+   "character": true,
+   "animation": true,
+   "movement": true,
+   "camera": true,
+   "fx": true,
+   "guards": true,
+   "hud": true,
+   "audio": true
+  }
+ },
+ "lever": {
+  "gotShotObject": true,
+  "livePos": [
+   -11.5,
+   2.6,
+   30.5
+  ],
+  "liveTarget": [
+   -17,
+   1.1,
+   28
+  ],
+  "liveFov": 38,
+  "liveTod": 0.1,
+  "livePlayer": {
+   "pos": [
+    -9,
+    0,
+    31.5
+   ],
+   "yaw": 2.3,
+   "pose": "sneak_idle"
+  },
+  "camPos": [
+   -11.5,
+   2.6,
+   30.5
+  ],
+  "hasGuards": true,
+  "guardCount": 11,
+  "hasShotLock": true,
+  "hasSolver": true,
+  "shotNames": [
+   "hero",
+   "temple",
+   "sly-closeup",
+   "sly-startle",
+   "sly-perch",
+   "sly-arm",
+   "courtyard",
+   "dunes",
+   "interior",
+   "night",
+   "traversal",
+   "combat",
+   "guard",
+   "sly-profile",
+   "sly-key"
+  ]
+ },
+ "treeDrift": false
 }
