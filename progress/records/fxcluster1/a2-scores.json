@@ -1,0 +1,70 @@
+{
+ "at": "2026-08-06T01:56:52.549Z",
+ "run": "a2 (same -0.20 heading lever, residue-pinned staging)",
+ "arms": {
+  "base": {
+   "roiMedL": 94.19,
+   "roiMeanRmB": 21.11,
+   "roiWarmPx": 18840,
+   "airColMedL": 27.56,
+   "figureMedL": 23.4
+  },
+  "base2": {
+   "roiMedL": 95.55,
+   "roiMeanRmB": 22.29,
+   "roiWarmPx": 19539,
+   "airColMedL": 27.47,
+   "figureMedL": 23.39
+  },
+  "cand": {
+   "roiMedL": 100.46,
+   "roiMeanRmB": 24.02,
+   "roiWarmPx": 20360,
+   "airColMedL": 27.69,
+   "figureMedL": 23.4
+  },
+  "restore": {
+   "roiMedL": 98.82,
+   "roiMeanRmB": 23.07,
+   "roiWarmPx": 19796,
+   "airColMedL": 27.56,
+   "figureMedL": 22.9
+  }
+ },
+ "quantities": {
+  "A2": {
+   "Q-A1 ΔmedL cand-base, ROI(340,280,700,350)": {
+    "value": 6.27,
+    "band": "[+3.0, +45.0]"
+   },
+   "noise |base2-base| ROI": {
+    "value": 1.36,
+    "band": "<= 1.0"
+   },
+   "noise |restore-base| ROI": {
+    "value": 4.63,
+    "band": "<= 1.0"
+   },
+   "§13: Q-A1 vs 3x max same-state Δ": {
+    "value": 6.27,
+    "threshold": 13.89,
+    "band": "Q-A1 >= 3x max same-state Δ"
+   },
+   "Q-A2 figure(852,220,990,700) medL cand-base": {
+    "value": 0,
+    "band": ">= -3.0"
+   },
+   "Q-A3 air column |Δ| (context, not a gate)": {
+    "value": 0.13,
+    "band": "expected <= 8, report"
+   }
+  }
+ },
+ "gates": {
+  "qa1InBand": true,
+  "noiseBase2": false,
+  "noiseRestore": false,
+  "threeX": false,
+  "qa2NoHarm": true
+ }
+}
