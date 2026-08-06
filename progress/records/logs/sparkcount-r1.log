@@ -138,3 +138,4 @@
 [04:29:18 +1542s] boot ok — renderer ANGLE (Google, Vulkan 1.3.0 (SwiftShader
 [04:29:18 +1542s] LIVE {"hasFx":true,"hasSparkles":true,"hasPreroll":true,"capacity":96}
 [04:31:24 +1668s]   traversal-prerollOFF   rawCount   22  uTimeFx 0.05  meshVisible true
+[04:39:44 +2168s]   traversal-prerollON    rawCount   22  uTimeFx 0.05  meshVisible true

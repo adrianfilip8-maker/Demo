@@ -88,9 +88,16 @@ for (const a of rb.arms ?? []) {
 const kb1 = OUT.arms['traversal-prerollOFF'], kb2 = OUT.arms['traversal-prerollON'];
 OUT.licensed = !!(kb1?.pass && kb2?.pass);
 /* Arms exist but none carried a readable dump => P-S5 (fx.sparkles / aData unreadable), which is
- * a FATAL of the probe, not a failed control. Kept distinct for the same reason as NO DATA. */
+ * a FATAL of the probe, not a failed control. Kept distinct for the same reason as NO DATA.
+ * A control that is ABSENT is likewise not a control that FAILED — the runner writes arms one at a
+ * time, so a mid-flight read has fewer arms than shots. Saying "control(s) failed" there would
+ * repeat, one layer down, the exact conflation this scorer was corrected to stop making. */
+const missing = Object.keys(KB).filter((k) => !(k in OUT.arms));
+OUT.missingArms = missing;
 OUT.state = Object.keys(OUT.arms).length === 0 ? 'P-S5 FATAL (arms present, no readable dump)'
-  : OUT.licensed ? 'SCORED — licensed' : 'SCORED — control(s) failed';
+  : missing.length ? `SCORED — PARTIAL (${Object.keys(OUT.arms).length}/${Object.keys(KB).length} arms; not yet run: ${missing.join(', ')})`
+    : OUT.licensed ? 'SCORED — licensed' : 'SCORED — control(s) failed';
+if (missing.length) console.log(`\nPARTIAL RUN — arms not yet dumped: ${missing.join(', ')}. Absent is NOT failed.`);
 console.log(`\nSTATE: ${OUT.state}`);
 console.log(`CALIBRATION LICENCE (seal §4: KB1 AND KB2 must both hold): ${OUT.licensed ? 'GRANTED' : 'NOT GRANTED'}`);
 if (!OUT.licensed && Object.keys(OUT.arms).length === 0) console.log('  P-S5: record and stop — no claim may rest on this run.');

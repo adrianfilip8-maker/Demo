@@ -5,12 +5,18 @@
  *   node progress/records/combatrecipient.mjs <arm> [shot ...]
  *
  * ONE ARM PER BOOT. The arms are source values in `src/ai/Guard.js` (`SHOT_POSE.combat` and
- * `_poseForShot`'s restore), and the bundler reads the tree at BOOT, not at capture (§124.4) —
- * so the tree must already be in the arm's state before this is launched, and this script does
- * NOT edit source. It records the tree hash it actually rendered so a mis-staged arm is
- * detectable afterwards rather than silently scored (§121.4: hash `src/**\/*.js`, not the git SHA
- * — five owners commit concurrently and three arms of one A/B once stamped different SHAs on a
- * byte-identical tree).
+ * `_poseForShot`'s restore), and the bundler reads the tree at BOOT, not at capture (§124.4).
+ *
+ * **This script installs and reverts the arm ITSELF, inside the held lock** — see `withArm`. It
+ * has to: the FIFO queue here runs 20-60 minutes deep, so installing an arm before launching
+ * would leave `src/ai/Guard.js` modified across another owner's boot and their capture would
+ * silently render my candidate. `arm === 'base'` installs nothing. The revert runs from a
+ * `finally`, before the lock is released, so even a crash hands the tree back clean.
+ *
+ * It records the tree hash it actually rendered — hashed twice, at launch AND after the boot —
+ * so a mis-staged arm is detectable afterwards rather than silently scored (§121.4: hash
+ * `src/**\/*.js`, not the git SHA — five owners commit concurrently and three arms of one A/B
+ * once stamped different SHAs on a byte-identical tree).
  *
  * What it adds over `tools/critic.mjs`, and why:
  *
@@ -29,7 +35,7 @@
  * staged, because the container rolls back roughly every 45 minutes (§163) and a chunk that dies
  * half way must still leave behind whatever it actually captured.
  */
-import { withGame, grab, ROOT } from '../../tools/harness.mjs';
+import { grab, ROOT } from '../../tools/harness.mjs';
 import { acquire } from '../../tools/lock.mjs';
 import { chromium } from 'playwright';
 import { writeFile, mkdir, readdir } from 'node:fs/promises';
@@ -113,6 +119,131 @@ function bodyBox(cam, stand, h = 1.95, r = 0.42, W = 1280, H = 720) {
 const ANCHOR = [0.3146, 1.3849, 28.9963];   // Particles._stageShot()'s hardcoded impact point
 const STAND = [0.102, 0.0, 29.035];         // the predicted screenSide:+1 recipient stand
 
+/* ==========================================================================================
+   Locked boot — why this exists instead of `withGame`.
+
+   `withGame` acquires the FIFO lock as its FIRST action and boots Vite immediately after. That
+   is right for a capture that does not touch source, but every arm of this A/B IS a source
+   edit, and the queue here routinely runs 20-60 minutes deep. Installing an arm before
+   launching would leave `src/ai/Guard.js` modified across somebody else's boot — the tree is
+   shared, the bundler reads it at boot (§124.4), and their capture would silently render my
+   candidate. That is the worst kind of failure: invisible, in another owner's result.
+
+   So the ordering is inverted and made explicit:
+
+       acquire lock -> install arm -> boot vite -> capture -> revert arm -> release lock
+
+   `installArm` / `revertArm` shell out to `combatrecipient-arms.py`, which refuses to build on a
+   non-base tree and whose revert asserts the file back to base's sha256. The revert also runs
+   from a `finally`, so a crash mid-capture still hands the tree back clean.
+
+   The Vite env and the Chrome flags below are copied verbatim from `tools/harness.mjs` so these
+   frames are the same frames every other capture in this project produces. If that file's boot
+   changes, this must be re-synced — stated as the maintenance cost of not using it.
+   ========================================================================================== */
+const ARMS_PY = path.join(ROOT, 'progress', 'records', 'combatrecipient-arms.py');
+const CHROME_CANDIDATES = ['/opt/pw-browsers/chromium', '/usr/bin/chromium', '/usr/bin/chromium-browser'];
+const CHROME_ARGS = [
+  '--no-sandbox', '--disable-dev-shm-usage', '--use-gl=angle', '--use-angle=swiftshader',
+  '--enable-unsafe-swiftshader', '--enable-webgl', '--ignore-gpu-blocklist',
+  '--disable-frame-rate-limit', '--js-flags=--max-old-space-size=4096',
+  '--force-device-scale-factor=1', '--hide-scrollbars', '--mute-audio',
+];
+
+function armsPy(...args) {
+  return execFileSync('python3', [ARMS_PY, ...args], { cwd: ROOT, encoding: 'utf8' }).trim();
+}
+
+async function freePort(start = 5700) {
+  for (let p = start; p < start + 300; p++) {
+    const ok = await new Promise((res) => {
+      const s = net.createServer();
+      s.once('error', () => res(false));
+      s.once('listening', () => s.close(() => res(true)));
+      s.listen(p, '127.0.0.1');
+    });
+    if (ok) return p;
+  }
+  throw new Error('no free port');
+}
+
+async function startServer(port) {
+  const bin = path.join(ROOT, 'node_modules', '.bin', 'vite');
+  if (!existsSync(bin)) throw new Error('vite not installed');
+  const proc = spawn(bin, ['--port', String(port), '--strictPort', '--host', '127.0.0.1'], {
+    cwd: ROOT, stdio: ['ignore', 'pipe', 'pipe'],
+    env: { ...process.env, NO_COLOR: '1', SANDS_NO_HMR: '1' },
+  });
+  let log = '';
+  proc.stdout.on('data', (d) => { log += d; });
+  proc.stderr.on('data', (d) => { log += d; });
+  for (let i = 0; i < 160; i++) {
+    if (proc.exitCode !== null) throw new Error(`vite exited (${proc.exitCode}):\n${log}`);
+    const up = await new Promise((res) => {
+      const s = net.connect(port, '127.0.0.1');
+      s.once('connect', () => { res(true); s.destroy(); });
+      s.once('error', () => res(false));
+      s.setTimeout(2000, () => { res(false); s.destroy(); });
+    });
+    if (up) return proc;
+    await new Promise((r) => setTimeout(r, 250));
+  }
+  throw new Error(`vite never listened on ${port}:\n${log}`);
+}
+
+/** acquire -> install -> boot -> fn -> revert -> release. `arm === 'base'` installs nothing. */
+async function withArm(arm, fn) {
+  const release = await acquire({
+    onWait: (ms, pid) => process.stdout.write(
+      `· waiting for capture lock (${(ms / 1000) | 0}s, held by pid ${pid})\n`),
+  });
+  let installed = false;
+  let server = null, browser = null;
+  try {
+    if (arm !== 'base') {
+      process.stdout.write(`· lock held — installing arm "${arm}" into src/ai/Guard.js\n`);
+      process.stdout.write(`  ${armsPy('install', arm)}\n`);
+      installed = true;
+    }
+    const port = await freePort();
+    server = await startServer(port);
+    const executablePath = process.env.CHROME_PATH || CHROME_CANDIDATES.find((p) => existsSync(p));
+    browser = await chromium.launch({ executablePath, args: CHROME_ARGS });
+    const ctx = await browser.newContext({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 });
+    const page = await ctx.newPage();
+    const consoleErrors = [];
+    page.on('console', (m) => { if (m.type() === 'error') consoleErrors.push(m.text()); });
+    page.on('pageerror', (e) => consoleErrors.push(`pageerror: ${e.message}`));
+    await page.goto(`http://127.0.0.1:${port}/?shot=1&q=high`,
+      { waitUntil: 'domcontentloaded', timeout: 90000 });
+    await page.waitForFunction('window.__GAME && window.__GAME.ready === true', null,
+      { timeout: 300000, polling: 500 });
+    const info = await page.evaluate(() => ({
+      shots: window.__GAME.shots, modules: window.__GAME.modules(),
+      warnings: window.__GAME.warnings.slice(),
+      renderer: (() => {
+        const gl = window.__ENGINE?.renderer?.getContext?.();
+        const d = gl?.getExtension('WEBGL_debug_renderer_info');
+        return d ? gl.getParameter(d.UNMASKED_RENDERER_WEBGL) : 'unknown';
+      })(),
+    }));
+    info.consoleErrors = consoleErrors;
+    return await fn({ page, info });
+  } finally {
+    await browser?.close().catch(() => {});
+    server?.kill('SIGTERM');
+    setTimeout(() => server?.kill('SIGKILL'), 3000);
+    /* Revert BEFORE releasing, always — including on a crash. A released lock with a dirty tree
+       is the contamination this whole function exists to prevent. */
+    if (installed) {
+      try { process.stdout.write(`  ${armsPy('revert')}\n`); }
+      catch (e) { process.stdout.write(`!! REVERT FAILED: ${e?.message || e}\n`); }
+    }
+    try { process.stdout.write(`  tree: ${armsPy('check').split('\n')[0]}\n`); } catch { /* ignore */ }
+    release();
+  }
+}
+
 async function dumpGuards(page) {
   return page.evaluate(() => {
     const e = window.__ENGINE;
@@ -187,7 +318,7 @@ async function main() {
   const flush = () => writeFile(path.join(OUT, `telemetry-${ARM}.json`),
     JSON.stringify(telemetry, null, 2));
 
-  await withGame({ width: 1280, height: 720, quality: 'high' }, async ({ page, info }) => {
+  await withArm(ARM, async ({ page, info }) => {
     /* Re-hash the tree AFTER the boot, not only before the lock wait. The launch-time hash is
        taken minutes (sometimes an hour) before `withGame` acquires the FIFO lock and Vite reads
        the tree, so on its own it is a number that does not depend on the thing it claims to

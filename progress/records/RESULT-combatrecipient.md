@@ -18,9 +18,20 @@
 | `combatrecipient.mjs` (capture harness) | **written, syntax-checked**; its screen projector cross-validated against an independent Python implementation to the decimal on all seven cameras |
 | `combatrecipient-arms.py` (arm builder) | **written and verified**: four arms build, all parse under `node --check`, all revert to base **byte-exactly**; `cand` and `kbside` differ in exactly one token (the `screenSide` sign) |
 | `combatrecipient-score.py` (scorer) | **written, calibrated 9/9** against CRITIC-sbs3's published `combat` statistics, and **dry-run end-to-end on synthetic frames** so it cannot crash on the real ones |
-| chunk 1 `base` | **QUEUED** — launched via `tools/launch.sh` (pid verified detached at ppid 1), holding FIFO ticket `1785989642785-5947`, behind `litwarm1.mjs` and `sparkcount.mjs` |
-| chunks 2–5 | **PENDING** — not started; `src/**` is untouched and at base |
-| `src/ai/Guard.js` | **BASE, unmodified.** `combatrecipient-arms.py check` → `matches arm: ['restore']` |
+| chunk 1 `base` | **STILL QUEUED after 25 min of FIFO wait.** Launched via `tools/launch.sh` (pid 5947, detachment verified at ppid 1 from `/proc`), ticket `1785989642785-5947`. Ahead of it: `sparkcount.mjs` (holding, 17 min in) and `litwarm1.mjs all` (queued ahead). The process is **detached and will capture when its turn comes**, writing frames incrementally. |
+| chunks 2–5 | **PENDING** — not started; `src/**` untouched and at base |
+| `src/ai/Guard.js` | **BASE, unmodified.** `combatrecipient-arms.py check` → `matches arm: ['restore']`, sha `350dece5a1b13fb7…` |
+
+### What the next agent (or a resumed me) does first
+
+1. `ls /home/user/Demo/progress/records/combatrecipient1/` — if `combat-base.png` and
+   `sly-profile-base.png` are there, chunk 1 landed while nobody was watching.
+2. `python3 /home/user/Demo/progress/records/combatrecipient-score.py` — scores whatever is on
+   disk, self-tests the instrument first, and refuses to trust itself if the 9/9 calibration fails.
+3. `python3 /home/user/Demo/progress/records/combatrecipient-arms.py check` — must say **BASE**. If
+   it does not, a chunk died holding an arm: `revert` before anything else.
+4. Then chunk 2 per the seal's operator card (§5.1). **Do not hand-install an arm** — the harness
+   does it inside the held lock and reverts before releasing.
 
 **No `src/**` edit has been made.** The four arm variants exist only as a generator; nothing is
 installed until the lock is held, and `revert` runs before release.
@@ -58,9 +69,28 @@ These are settled and do not depend on any capture landing.
    sight. Every *subset* run — which is what everyone actually runs — still carries the residue.
 7. **`Shots.js`'s `guard` header's "d = 2.9 m" is a range, not an axial depth** (range 2.891,
    depth 2.715). Harmless; recorded so nobody spends a run on the 0.18 m.
-8. **Two instrument defects caught in my own tools before they could score anything:** a
-   corner-in-viewport test that called `sly-startle` safe *because* the residue fills its frame;
-   and a launch-time source hash standing in for the tree the boot actually renders.
+8. **Three defects caught in my own tools before they could cost anything:**
+   - a corner-in-viewport test that called `sly-startle` **safe** precisely *because* the residue
+     fills its frame (every corner falls outside the viewport). Replaced with bbox overlap.
+   - a **launch-time** source hash standing in for the tree the boot actually renders. On a FIFO
+     that runs 20–60 minutes deep those are different trees, so the hash was a number that did
+     not depend on the thing it claimed to measure. The harness now hashes at launch *and* after
+     the boot and records `srcStable`; false voids the arm.
+   - **a contamination hazard in my own capture plan.** `withGame` acquires the lock as its first
+     action, so the obvious procedure — install the arm, then launch — would have left
+     `src/ai/Guard.js` modified in the *shared* tree for the 20–60 minutes my run sat in the
+     queue, across other owners' boots. Because the bundler reads the tree at boot (§124.4),
+     **their captures would have silently rendered my candidate.** The harness now does
+     `acquire → install → boot → capture → revert → release` itself, with the revert in a
+     `finally` so a crash still hands the tree back clean, and `arms.py install` refusing to run
+     on a non-base tree. Nothing was installed before this was found: `src/**` has never been
+     modified by this task.
+9. **A confound inside P4 with a registered address.** Roster #0's own `south_gate` route projects
+   into `sly-profile` at four of seven waypoints (60–83 px tall, x 915…1270, y 121…209), and the
+   restore cannot return the 0.283 s of patrol he did not live through while frozen — so a
+   1,600–3,300 px change component is expected *there*. The residue this seal gates lives at
+   x 652…924, y 67…565. Both addresses are registered so that a borderline component cannot be
+   argued either way after the fact.
 
 ### Two pre-capture amendments to the seal, both recorded rather than silently swapped
 

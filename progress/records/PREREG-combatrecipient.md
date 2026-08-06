@@ -575,19 +575,31 @@ python3 /home/user/Demo/progress/records/combatrecipient-score.py --selftest   #
 # 1. IF the tree is not base (a previous chunk died holding an arm) — do this FIRST
 python3 /home/user/Demo/progress/records/combatrecipient-arms.py revert
 
-# 2. one chunk = install arm, launch, wait, revert, score
-python3 /home/user/Demo/progress/records/combatrecipient-arms.py install <arm>   # base: skip
+# 2. one chunk = launch and wait. DO NOT install the arm by hand — the harness does it
+#    itself, INSIDE the held lock, and reverts before releasing (see below).
 bash /home/user/Demo/tools/launch.sh \
      /home/user/Demo/progress/records/combatrecipient.mjs \
      <ABSOLUTE log> <ABSOLUTE pidfile> <arm> combat sly-profile
 #    ... wait for "DONE arm=<arm>" in the log ...
-python3 /home/user/Demo/progress/records/combatrecipient-arms.py revert         # BEFORE releasing
 python3 /home/user/Demo/progress/records/combatrecipient-score.py
 ```
 
-**The tree must be at base whenever this task is not holding the lock.** `arms.py check` answers
-that in one line and `revert` is byte-exact (it asserts back to sha `350dece5a1b13fb7…`). Chunk 4
-(`kbside`) captures `combat` only; chunk 5 (`restore`) captures `combat` only.
+**Never install an arm before launching.** The FIFO queue here routinely runs 20–60 minutes deep,
+and `src/` is shared: an arm installed at launch time sits in the tree across *other owners'*
+boots, and because the bundler reads the tree at boot (§124.4) their capture would silently render
+my candidate. That is the worst failure shape available here — invisible, and in someone else's
+result. So `combatrecipient.mjs` inverts the order itself:
+
+```
+acquire lock  ->  install arm  ->  boot vite  ->  capture  ->  revert arm  ->  release lock
+```
+
+The revert runs from a `finally`, **before** the lock is released, so a crash mid-capture still
+hands the tree back clean; `arms.py revert` asserts the file back to base's sha256 and `arms.py
+install` refuses to run on a tree that is not base. **The tree must be at base whenever this task
+is not holding the lock** — `arms.py check` answers that in one line.
+
+Chunk 4 (`kbside`) captures `combat` only; chunk 5 (`restore`) captures `combat` only.
 
 **Order matters and is not negotiable:** `combat` is staged **first** in every chunk, because it is
 what creates the residue that `sly-profile` then measures. A chunk that captures `sly-profile`

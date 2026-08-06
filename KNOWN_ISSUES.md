@@ -14593,3 +14593,57 @@ evidence.** When a coordinator hands an agent a premise, the premise is exactly 
 anything else, and an agent that checks it is doing the job. Both of mine were caught this way in
 one cycle; recorded so the pattern is visible rather than the two instances.
 
+
+## §185 — the first arm of a boot is not like the others, and that is now two independent findings
+
+staging1's `base` arm took **454 s** against 249/226/253 s for the three that followed, and
+differs from the committed `sbs3/guard.png` by **41.99%** — while `restore`, the same camera
+1,300 s later in the same boot, reproduces `sbs3` to **2.74%**. The first stage of a boot renders
+while shader programs are still compiling. The settle recipe in use (10 frozen frames + a
+throwaway, inherited from banda1) covers *subsequent* stages and not the first.
+
+This is the second independent instance of the same shape. a4 found the other: `setShot` stops the
+rAF loop, so the first measured arm runs ~2 real frames late (0.03 s) while every later arm is
+bit-identical in both `engine.time` and `beamCol0` — and a4's repair was a **discarded warm-up
+stage before arm 1**, which is exactly the repair staging1 now needs for a different reason.
+**Rule: every capture's first staged arm is suspect until a discard stage precedes it.**
+
+**Implication that must be checked, not assumed:** other captures in this session scored their
+first arm. Where a seal's first arm is a `base` that later arms are differenced against, the
+question is live. What settles it per capture is cheap and already in the logs — compare the
+first arm's wall time against the others', and compare the first arm against any committed frame
+of the same staging. Registered as a question, not a claim; a seal whose falsifiers passed with a
+bit-identical restore has already answered it in the affirmative direction.
+
+### 185.1 The void was refused rescue, and the refusal is the point
+
+The agent could have argued the void misses the claim: the divergence localises to the lit left
+half, and the six gated quantities agree between `base` and `restore` to ~1%. It declined —
+**"that argument is post-hoc scope-narrowing of a fired falsifier, chosen after seeing which
+regions moved."** P-F4 exists to prove the boot was settled and it proved the opposite. Re-run.
+
+Two self-corrections came with it, neither argued away: **P6 was a badly-derived band** (the rect
+median could never move, because the plinth pixels it would be replaced by sit at medL ≈21 and so
+do the guard's own ink outlines and shadowed flank — the signal is in the warm half, where P4 goes
+795 → 13,729 and P5 30.92 → 37.31), and **the predicted 3.4% residual corner was wrong** —
+delivered 33.4% against base's 91.9%, because the plinth's real silhouette falls further short of
+the AABB model than the 8 cm allowed. Its own note: §7.3's foreground-framing tenant should not be
+bought with a corner of the occluder.
+
+### 185.2 §183's inversion is now justified by measurement rather than by model
+
+`PLINTH_Y → 720` was an argued constant; it is now measured. In the delivered candidate the dense
+dark mass in the guard's own columns begins at py **668** with his boots at py **625** — nothing
+occludes him. On both shipped-camera arms the same measurement returns **306**, within 6 px of the
+`PLINTH_Y = 300` FX derived independently. The cone's lit-facing number therefore goes **−17.06 pp
+→ +4.95 pp**, with key-OR-rim **−2.77 pp**, because the shipped cut scores only the 22.5%
+head-and-shoulders sliver the plinth leaves — the part turned most directly into the key, which
+loses disproportionately when the figure rotates while the rest of it gains.
+
+**Three caveats ride with that and are not negotiable:** it is contingent on a *scored* wedge-free
+frame and this one is void; geocert is geometric, not photometric; and the **−12.0% full-figure
+silhouette shrink** with **−30.3% ear separation** are real, untouched by the denominator finding,
+and remain the cone's honest costs. Provisional non-verdict numbers from the void frame, quoted as
+such: P1 15.99 → 82.2, P2 306 → 668, warm pixels over the guard's column 4.3% → **43.6%** at medL
+**36.96** — inside the 2004 comparand's 32.57–40.7 band, with no new light added.
+

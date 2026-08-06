@@ -1,13 +1,25 @@
 {
- "at": "2026-08-06T04:24:31.937Z",
+ "at": "2026-08-06T04:38:10.236Z",
  "prereg": "PREREG-sparkcount.md",
  "popMin": 0.5,
- "arms": {},
- "state": "NO DATA",
- "why": "readback header present but arms[] empty — the runner started and has not yet dumped an arm (it writes the header before taking the capture lock)",
+ "arms": {
+  "traversal-prerollOFF": {
+   "rawCount": 22,
+   "popOpen": 22,
+   "inFrustum": 11,
+   "SPARKCOUNT": 11,
+   "uTimeFx": 0.05,
+   "meshVisible": true,
+   "control": "KB1",
+   "band": "SPARKCOUNT == 0 (raw expected ~14-17)",
+   "pass": false
+  }
+ },
  "licensed": false,
- "startedAt": "2026-08-06T04:03:36.391Z",
- "runnerFatal": null,
- "live": null,
- "finishedAt": null
+ "missingArms": [
+  "traversal-prerollON",
+  "night",
+  "interior"
+ ],
+ "state": "SCORED — PARTIAL (1/4 arms; not yet run: traversal-prerollON, night, interior)"
 }
