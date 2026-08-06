@@ -24,5 +24,50 @@
   "KBmid",
   "KBover"
  ],
- "arms": []
+ "arms": [],
+ "srcTreeAtLock": "4c83af2068ab9936",
+ "boot": {
+  "warnings": [
+   "textures: prewarm took 26.8s at size 1024"
+  ],
+  "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+  "modules": {
+   "shading": true,
+   "postfx": true,
+   "sky": true,
+   "lighting": true,
+   "textures": true,
+   "architecture": true,
+   "props": true,
+   "terrain": true,
+   "collision": true,
+   "character": true,
+   "animation": true,
+   "movement": true,
+   "camera": true,
+   "fx": true,
+   "guards": true,
+   "hud": true,
+   "audio": true
+  }
+ },
+ "lever": {
+  "gotShotObject": true,
+  "livePos": [
+   -11.5,
+   2.6,
+   30.5
+  ],
+  "liveTarget": [
+   -17,
+   1.1,
+   28
+  ],
+  "liveFov": 38,
+  "liveTod": 0.1,
+  "hasGuards": true,
+  "guardCount": 11,
+  "hasSolver": true
+ },
+ "treeDrift": false
 }

@@ -1,1 +1,4 @@
 [13:23:21 +   0s] bootId 959b7f54-13f  srcTree 4c83af2068ab9936 — booting (harness takes the FIFO ticket)
+[13:25:10 + 109s] boot ok — warnings 1; renderer ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)
+[13:25:10 + 109s] srcTreeAtLock 4c83af2068ab9936 (pre-lock reading was 4c83af2068ab9936)
+[13:25:10 + 109s] LEVER {"gotShotObject":true,"livePos":[-11.5,2.6,30.5],"liveTarget":[-17,1.1,28],"liveFov":38,"liveTod":0.1,"hasGuards":true,"guardCount":11,"hasSolver":true}
