@@ -1,0 +1,5 @@
+[07:44:09 +   0s] bootId f28e3092-152  srcTree 4c83af2068ab9936 — booting (harness takes the FIFO ticket)
+· waiting for capture lock (10s, held by pid 2984)
+· waiting for capture lock (20s, held by pid 2984)
+· waiting for capture lock (31s, held by pid 2984)
+· waiting for capture lock (42s, held by pid 2984)

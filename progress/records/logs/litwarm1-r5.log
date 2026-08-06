@@ -1,0 +1,7 @@
+[07:44:16 +   0s] chunk N: all frames present — skipping (idempotent resume)
+[07:44:16 +   0s] chunk N2: all frames present — skipping (idempotent resume)
+[07:44:16 +   0s] chunk A (hero): srcTree 4c83af2068ab9936 — booting (own lock hold)
+· waiting for capture lock (10s, held by pid 2984)
+· waiting for capture lock (21s, held by pid 2984)
+· waiting for capture lock (32s, held by pid 2984)
+· waiting for capture lock (42s, held by pid 2984)
