@@ -14331,3 +14331,11 @@ from committed seals + RESULTs per the DIGEST-banner pattern). All batch evidenc
 atmowire re-run was already on the remote; the §164 economics hold at twelve: wall-clock and
 re-runs, never a scored number.
 
+
+## §176 — the thirteenth rollback; c3 re-buys a second time
+
+Same signature at the 01:01Z check-in; recovered ff-only to `796c876`, clean. c3's base arm was
+already committed, so the resumable runner re-buys only its remaining arms. Agent transcripts
+dead again; the a2 execution and c3 scoring respawn from committed seals when their evidence is
+ready. Thirteen rollbacks: the economics line holds.
+
