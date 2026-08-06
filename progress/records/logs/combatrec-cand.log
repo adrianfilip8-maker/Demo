@@ -2,3 +2,4 @@
 · lock held — installing arm "cand" into src/ai/Guard.js
   installed arm "cand" -> /home/user/Demo/src/ai/Guard.js  sha aac2f0dc3715f9ca
 · srcStable OK — launch 59fd366596517cf2 == atLock; boot == postInstall 13dde875b6f320fb (own arm install accounted for)
+  OK combat  274.1s  lock=0  minDist(anchor)=0.2162  minDist(stand)=0.0001  spawnHits=sly-closeup:7,sly-startle:1,sly-perch:7,sly-arm:1,sly-profile:2,sly-key:6
