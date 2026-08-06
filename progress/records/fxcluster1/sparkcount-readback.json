@@ -834,6 +834,111 @@
     "prerollFlag": true
    },
    "srcAtArm": "85bab2d30f5f7b59"
+  },
+  {
+   "arm": "interior",
+   "shot": "interior",
+   "preroll": true,
+   "at": "2026-08-06T04:49:16.062Z",
+   "setShot": {
+    "tod": 0.5,
+    "draws": 166,
+    "warnings": 1
+   },
+   "dump": {
+    "rawCount": 6,
+    "instanceCount": 6,
+    "meshVisible": true,
+    "uTimeFx": 0.05,
+    "fxT0": 1.392733,
+    "engineTime": 1.442733,
+    "aPos": [
+     [
+      8,
+      0.64,
+      -46
+     ],
+     [
+      -8,
+      0.64,
+      -46
+     ],
+     [
+      8,
+      0.64,
+      -38
+     ],
+     [
+      -8,
+      0.64,
+      -38
+     ],
+     [
+      8.4,
+      12.97,
+      -45.5
+     ],
+     [
+      16,
+      13.72,
+      -50
+     ]
+    ],
+    "aData": [
+     [
+      0.436,
+      1,
+      -0.25,
+      0
+     ],
+     [
+      0.8032,
+      1,
+      -0.25,
+      0
+     ],
+     [
+      0.1704,
+      1,
+      -0.25,
+      0
+     ],
+     [
+      0.5376,
+      1,
+      -0.25,
+      0
+     ],
+     [
+      0.8889,
+      1,
+      -0.25,
+      0
+     ],
+     [
+      0.8381,
+      1,
+      -0.25,
+      0
+     ]
+    ],
+    "camera": {
+     "pos": [
+      3.2,
+      -9.2,
+      -60
+     ],
+     "fwd": [
+      -0.314,
+      -0.154,
+      -0.937
+     ],
+     "fov": 52,
+     "aspect": 1.7778
+    },
+    "prerollFlag": true
+   },
+   "srcAtArm": "85bab2d30f5f7b59"
   }
  ],
  "live": {
@@ -841,5 +946,7 @@
   "hasSparkles": true,
   "hasPreroll": true,
   "capacity": 96
- }
+ },
+ "srcTreeAfter": "85bab2d30f5f7b59",
+ "finishedAt": "2026-08-06T04:54:11.348Z"
 }

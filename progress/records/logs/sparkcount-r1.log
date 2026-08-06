@@ -140,3 +140,6 @@
 [04:31:24 +1668s]   traversal-prerollOFF   rawCount   22  uTimeFx 0.05  meshVisible true
 [04:39:44 +2168s]   traversal-prerollON    rawCount   22  uTimeFx 0.05  meshVisible true
 [04:49:16 +2740s]   night                  rawCount   21  uTimeFx 0.05  meshVisible true
+[04:54:11 +3035s]   interior               rawCount    6  uTimeFx 0.05  meshVisible true
+[04:54:11 +3035s] done — srcTree after 85bab2d30f5f7b59 (STABLE)
+[04:54:41 +3065s] ALL DONE (probe-only; no frames written)

@@ -6,5 +6,257 @@
  "srcTreeBefore": "85bab2d30f5f7b59",
  "shipSss": 0.3,
  "baseSss": 0,
- "arms": []
+ "arms": [
+  {
+   "arm": "base",
+   "requestedSss": 0,
+   "expectedUSss": 0,
+   "readback": {
+    "slySss": [
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "uSss": [
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "nightPin": [
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "inkNight": 1,
+    "uSubjW": 0.5,
+    "uShadowColor": [
+     0.012895755468330918,
+     0.04676854125689067,
+     0.07805322250511793
+    ]
+   },
+   "mismatch": [],
+   "secs": 16
+  },
+  {
+   "arm": "C",
+   "requestedSss": 0.3,
+   "expectedUSss": 0,
+   "readback": {
+    "slySss": [
+     0.3,
+     0.3,
+     0.3,
+     0.3,
+     0.3,
+     0.3,
+     0.3,
+     0.3,
+     0.3,
+     0.3,
+     0.3,
+     0.3,
+     0.3
+    ],
+    "uSss": [
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "nightPin": [
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "inkNight": 1,
+    "uSubjW": 0.5,
+    "uShadowColor": [
+     0.012895755468330918,
+     0.04676854125689067,
+     0.07805322250511793
+    ]
+   },
+   "mismatch": [],
+   "secs": 16
+  },
+  {
+   "arm": "restore",
+   "requestedSss": 0,
+   "expectedUSss": 0,
+   "readback": {
+    "slySss": [
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "uSss": [
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "nightPin": [
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "inkNight": 1,
+    "uSubjW": 0.5,
+    "uShadowColor": [
+     0.012895755468330918,
+     0.04676854125689067,
+     0.07805322250511793
+    ]
+   },
+   "mismatch": [],
+   "secs": 16
+  }
+ ],
+ "population": {
+  "pinnedCount": 13,
+  "pinnedNames": [
+   "arch:paving_courtyard",
+   "arch:gold_leaf",
+   "arch:column_papyrus",
+   "arch:sandstone_worn",
+   "arch:sandstone_block",
+   "arch:granite_pink",
+   "arch:limestone_polished",
+   "arch:hieroglyph_gilded",
+   "arch:hieroglyph_wall",
+   "arch:mudbrick",
+   "arch:ceiling_stars",
+   "arch:bronze_dark",
+   "arch:rope_fibre"
+  ],
+  "pinnedSss": [
+   0.3,
+   0.3,
+   0.3,
+   0.3,
+   0.3,
+   0.3,
+   0.3,
+   0.3,
+   0.3,
+   0.3,
+   0.3,
+   0.3,
+   0.3
+  ],
+  "pinnedNightPin": [
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0
+  ],
+  "pinnedInArch": 13,
+  "pinnedOnSkinned": [],
+  "archMatCount": 13,
+  "skinMatCount": 16,
+  "hasPublish": true,
+  "hasInkNight": true
+ },
+ "setShot": {
+  "stats": {
+   "fps": 38,
+   "drawCalls": 205,
+   "triangles": 1428883,
+   "programs": 98,
+   "ms": 12.399999998509884
+  },
+  "tod": 0.1
+ },
+ "settleSecs": 362,
+ "nightAmount": 1,
+ "srcTreeAfter": "85bab2d30f5f7b59",
+ "finishedAt": "2026-08-06T05:03:14.270Z"
 }
