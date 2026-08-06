@@ -2,3 +2,6 @@
 [99s] boot ok — renderer ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver); warnings 1
 [99s]    ! textures: prewarm took 28.2s at size 1024
 [99s] identity: root="sly3" mesh="sly3:mesh" bones=31 verts=2801
+[626s]   sly-closeup  527s -> sly-closeup.model3.png
+[1064s]   sly-profile  437s -> sly-profile.model3.png
+[1563s]   sly-perch  499s -> sly-perch.model3.png
