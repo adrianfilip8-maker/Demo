@@ -14796,3 +14796,16 @@ permanent at the commit, not at the edit.
 Three runners re-queued short-first per §188.2. `combatrecipient` and `staging2` had produced no
 committed arms this round, so they restart their chunks; `litwarm1` still resumes from its six.
 
+
+### 188.5 Eighteenth rollback; the §187 fix has now survived two, and the count is the point
+
+Recovered ff-only to `5d9b84c`; five in ~2 hours. `grep SHIPPED src/fx/Particles.js` returns 1 —
+the comment correction is still in the tree, its second survival, because it lives in a commit.
+Runners re-queued short-first; no committed arms were lost because none had landed this round.
+
+Recording the count rather than each event from here: the mechanism is unchanged (§139/§161/§163),
+the recovery is unchanged (`fetch` + `merge --ff-only`), and the design that absorbs it is
+unchanged (§164 chunking, §188.2 short-first ordering). Future rollbacks get a line in this
+subsection unless they take something the discipline was supposed to protect — which would be the
+finding worth writing up.
+
