@@ -115,7 +115,7 @@ These are settled and do not depend on any capture landing.
 a chunk lands, before anything else (§163.2), by
 `python3 /home/user/Demo/progress/records/combatrecipient-score.py`.
 
-## Verdict
+## Verdict (superseded — see the final Verdict at the end of this file)
 
 **PENDING.** Per the seal's degradation ladder (§5), chunks 1–2 alone give reported P1–P4 with
 **no SHIP** (the `kbside` known-bad is unresolved); chunks 1–4 give a full verdict. **The ship
@@ -173,9 +173,9 @@ residue address). Base's own 16.26 m is the control that makes P4c readable: it 
 the shipped tree has no residue, so `norestore`'s predicted collapse to ≤ 0.5 m is a real signal
 rather than a baseline.
 
-## Verdict
+## Verdict (superseded — see the final Verdict at the end of this file)
 
-_(pending `cand` / `norestore` / `kbside`)_
+_(was: pending `cand` / `norestore` / `kbside`)_
 
 ---
 
@@ -241,9 +241,14 @@ observation rather than folded into any gate — the seal did not band it, so it
 
 ### Verdict on the candidate
 
-**P-F1 fires: P1, P1b and P2 are all out of band on `cand` ⇒ REVERT both edits.** `src/ai/Guard.js`
-is already at BASE (the runner reverts inside the lock), so there is nothing to undo in the tree —
-the candidate simply **does not ship**.
+> **CORRECTED below, after the `norestore` arm landed — see "P-F5 and the real verdict".** The
+> reading in this subsection was taken with only `base` and `cand` on disk. P-F5 subsequently
+> fired, and its registered consequence explicitly covers the P1–P3 numbers this paragraph rests
+> on. The candidate still does not ship; the *outcome* is **WITHHELD**, not a P-F1 revert.
+
+~~**P-F1 fires: P1, P1b and P2 are all out of band on `cand` ⇒ REVERT both edits.**~~
+`src/ai/Guard.js` is already at BASE (the runner reverts inside the lock), so there is nothing to
+undo in the tree — the candidate **does not ship** either way.
 
 **No retune.** The seal forbids moving `minDist`, `screenSide`, `clip` or `t` toward a band, and a
 different stand is a different prereg (§141.1). The right next move is a new seal that registers
@@ -258,3 +263,72 @@ fired on its own terms.
 
 _(Formal seal closure still awaits `norestore` and `kbside` for P-F2 instrument certification —
 both are running. Their result cannot rescue the candidate; P-F1 is unconditional on `cand`.)_
+
+---
+
+## `norestore` arm, P-F5, and the real verdict
+
+### KB-P4c reads as its own failure — the residue mechanism is real
+
+| arm | edits | `sly-profile` `minDist(stand)` | |
+|---|---|---|---|
+| `base` | none | **15.8696 m** | no residue — the control |
+| `norestore` | Edit 1 only | **0.0001 m** | residue present; KB band ≤ 0.5 m ⇒ **reads as its own failure** |
+| `cand` | Edit 1 + Edit 2 | **15.8106 m** | Edit 2's restore removes it |
+
+**P-F2 does not fire on P4c.** The known-bad is detectable, so the residue instrument is certified
+in the direction that matters, and Edit 2 demonstrably does the job it was written for.
+
+**This also sharpens §190 rather than merely confirming it.** The residue's true signature in
+`spawnHits` is a **±1 delta buried in counts of 7**: `norestore` reads `sly-startle 1→2`,
+`sly-arm 0→1`, `sly-key 7→6` against base — roster #0 leaving one camera's view and entering two
+others as he moves to the stand. A boolean "any overlap in any of the five" can never see that. The
+struck gate was not merely unpassable; it was blind to the exact quantity it was named for.
+
+### P-F5 fires, and it governs
+
+```
+combat: cand vs norestore = 82,091 px differing   band == 0 (Edit 2 inert on combat)   **FAIL**
+```
+
+The seal argues in §1 that Edit 2 is a no-op on the treated frame, because the restore happens
+*after* `combat`. It is not a no-op. P-F5's registered consequence is precise about what that costs:
+
+> *"if it is not, the argument is wrong, and every P1–P3 number is attributing to Edit 1 something
+> Edit 2 did ⇒ **verdict WITHHELD**, re-seal with Edit 2 as a second lever."*
+
+P1, P1b and P2 are exactly the numbers P-F1 reverts on. P-F5 says those numbers cannot be
+attributed. **So the registered outcome is WITHHELD, and it supersedes the P-F1 reading above** —
+not because the candidate looks better than it did, but because the seal cannot say *which edit*
+produced what it measured. Claiming "P1 failed, therefore Edit 1's recipient is wrong" would be
+attributing to Edit 1 something Edit 2 may have done, which is the one inference P-F5 exists to
+forbid.
+
+**What is safe to say without attribution.** The candidate as a whole produces a broken combat
+frame: the recipient interpenetrates Sly and covers 47.4 % of his bbox, visible in the frames and
+independent of which edit causes it. **It does not ship.** What cannot yet be said is *why*.
+
+### One thing must be ruled out before P-F5 is believed: the noise floor
+
+P-F5's band is **0 px between two separate boots**. That is only a meaningful band if two boots of
+*identical source* actually agree to 0 px — and nothing in this capture has measured that yet. If
+boot-to-boot variation is itself of order 10⁴ px, then P-F5's band was unachievable from the start
+and the falsifier is unscoreable in the §190 sense, rather than a finding about Edit 2.
+
+The seal already contains the control: the **`restore` arm**, byte-identical to `base` by an
+assertion in the arm builder (`assert A['restore'] == base`), captured in its own boot — which is
+what **P-F6** compares. It was not in the original dispatch; it has now been queued **ahead of
+`staging2` and `litwarm1`** because it decides between two different verdicts:
+
+- **`Δ(base, restore)` ≈ 0** ⇒ boots are deterministic ⇒ the 82,091 px is really Edit 2 ⇒ **P-F5
+  stands, verdict WITHHELD**, re-seal with Edit 2 as a second lever.
+- **`Δ(base, restore)` ≈ 10⁴–10⁵ px** ⇒ the 0-px band was never achievable ⇒ **P-F5 UNSCOREABLE**,
+  and P1–P3 attribution survives ⇒ the **P-F1 revert governs** after all.
+
+Either way the candidate does not ship. The control decides what the seal is entitled to *say*, and
+it is registered rather than invented for the occasion.
+
+## Verdict
+
+**WITHHELD** (P-F5), pending the `restore` arm's determinism control. The candidate does not ship
+under any branch. `kbside` also outstanding for P-F7.
