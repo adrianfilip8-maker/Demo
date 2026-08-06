@@ -14731,3 +14731,20 @@ Two further findings the run produced, kept because they outlive the withdrawn s
   gate-dead detector where KB1 must fail, so KB1's failure is a fact about the build rather than
   a mis-port.
 
+
+## §188 — the fourteenth rollback: four runners lost at once, everything scored survived
+
+Found at the 05:45Z check-in; recovered ff-only to `5672ddf`, clean. This is the first rollback to
+take **four simultaneous runners** — litwarm (six arms committed, day arms mid-flight), staging2
+(queued), combatrecipient (two frames committed), and the §187 comment-fix window — plus every
+agent transcript and the scratchpad script for the comment fix.
+
+**What it cost and what it did not.** Lost: wall-clock, four queue positions, and one scratchpad
+script whose content lives in §187's text and is trivially rewritten. **Not lost:** every landed
+frame, every readback, all four seals, all eight of this cycle's ledger findings, and both
+scorers. The re-runs resume from committed arms because every runner in this session is per-chunk
+resumable by design — that property was bought at §164 and has now been paid back fourteen times.
+
+The comment fix is re-queued from §187's recorded text rather than from memory of the script,
+which is the point of recording the *content* of a repair and not merely that it was made.
+
