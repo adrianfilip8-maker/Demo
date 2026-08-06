@@ -1,0 +1,2 @@
+[01:08:09 +   1s] seam verify: EMITTERS poke path present (srcTree be5c1da17ca5bad4)
+[01:08:09 +   1s] chunk c3 (combat only): srcTree be5c1da17ca5bad4 — booting (own FIFO lock hold; skyswirl/mradius may be ahead — queueing politely)
