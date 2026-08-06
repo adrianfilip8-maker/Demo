@@ -14748,3 +14748,12 @@ resumable by design — that property was bought at §164 and has now been paid 
 The comment fix is re-queued from §187's recorded text rather than from memory of the script,
 which is the point of recording the *content* of a repair and not merely that it was made.
 
+
+### 188.1 Fifteenth rollback, ~35 minutes after the fourteenth
+
+Same four runners, same recovery, ff-only to `e528565`. The interval is back to the §164 worst
+case, so the chunked/resumable design is doing the work it was bought for: each relaunch resumes
+from committed arms, and nothing but wall-clock is spent. `staging2.mjs` takes no argv (it has no
+`process.argv` reader), so the empty-string argument the previous relaunch passed was inert —
+verified in source rather than assumed, and dropped from this relaunch regardless.
+
