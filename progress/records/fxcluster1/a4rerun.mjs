@@ -107,7 +107,7 @@ const armPoke = (ARG) => {
 };
 
 /* page-side probe: a2's guard probe + the clock evidence this seal adds */
-const probeGuardA3 = () => {
+const probeGuardA4 = () => {
   const e = window.__ENGINE;
   const gd = e.get('guards');
   const g0 = gd?.guards?.[0];
@@ -199,16 +199,34 @@ async function chunkA4() {
       report.fatal = 'guards/FX poke paths not live in this boot'; save(); log(`  FATAL: ${report.fatal}`); return;
     }
     if (!lever.timeWritable) {
-      report.fatal = 'engine.time is not writable in this boot — the a3 clock pin cannot be applied';
+      report.fatal = 'engine.time is not writable in this boot — the a4 clock pin cannot be applied';
       save(); log(`  FATAL: ${report.fatal}`); return;
     }
+
+    /* ===================== THE a4 CHANGE: the discard warm-up =====================
+       a3's V-1/V-2/V-3 breached because `setShot` stops the rAF loop, so the FIRST arm's pin
+       leaked ~2 real frames (0.03 s) before the loop halted, while arms 2-4 were bit-identical.
+       One discard staging puts arm 1 in the same state as the rest. Nothing here is captured or
+       scored; the clock readings around it are recorded so the seal's P-A4a can be judged on
+       evidence rather than on the hypothesis. */
+    report.warmup = await page.evaluate(async () => {
+      const e = window.__ENGINE;
+      const before = +e.time.toFixed(6);
+      await window.__GAME.setShot('guard');
+      const after = +e.time.toFixed(6);
+      /* second read after a dt=0 frame: if the loop is now stopped, this must not move */
+      await window.__GAME.step(1, 0);
+      return { engineTimeBeforeWarmup: before, engineTimeAfterWarmup: after, engineTimeAfterIdleFrame: +e.time.toFixed(6) };
+    });
+    save();
+    log(`  WARM-UP (discarded) ${JSON.stringify(report.warmup)}`);
 
     for (const [arm, extra] of [
       ['base', {}], ['base2', {}], ['cand', { value: -0.20 }], ['restore', {}],
     ]) {
       await armCapture(page, report, save, arm, {
         pokeArg: { mode: arm === 'cand' ? 'cand' : arm === 'restore' ? 'restore' : 'base', tPin: T_PIN, ...extra },
-        probe: probeGuardA3,
+        probe: probeGuardA4,
       });
     }
 
