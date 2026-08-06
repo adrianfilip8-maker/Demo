@@ -675,3 +675,124 @@ Per the parents' §4-R1 route, the cone item stays with the **COORDINATOR**. The
 would have named on a clean run is `src/ai/Guard.js:158`, `SHOT_POSE.guard.towardCamera: 0.35 →
 −0.20` (widened clamp at `:1832` stays) — **not claimed here**, because the registered gates did
 not clear and a3 is UNSCOREABLE.
+
+---
+
+## A CLOCK DEFECT REPAIRED (a4) — PREREG-fxcluster-a4, scored 2026-08-06. The parent A, a2, a3
+## verdicts stand untouched; this is the successor the coordinator dispatched under §174.
+
+**Registered question:** with a3's two named defects repaired, does the whole registered set
+clear at once? **Answer: nine gates of ten, including every verification gate — and the tenth
+fails for a defect in this seal's own design measurement, not in the treatment.** The warm-up
+worked exactly as predicted. **Nothing ships: P-A4f.**
+
+**Runner/scorer:** `fxcluster1/a4rerun.mjs` / `a4score.mjs`, with `a4-choose.mjs` (pre-seal),
+`a4-scorer-control.{json,txt}` (pre-capture control) and `a4-harmsearch.mjs` (post-run successor
+brief). Frames `a4-guard.{base,base2,cand,restore}.png`, probes `a4-readback.json`, log
+`logs/a4rerun-r1.log`, scores `a4-scores.json`, pool pair structure `a4-pairstruct.json`.
+
+### Provenance
+
+- srcTree **`adb5629032309d19`** at seam-verify, at all four arms and after — **STABLE**, and the
+  same tree a3 ran on. No src edits. Lock taken FIFO behind sbs3 chunk 2 (7.9 min queued).
+- One boot 03:10:12Z–03:32:00Z; warm-up + base (510 s) → base2 (242 s) → cand (314 s) →
+  restore (241 s).
+- **The warm-up's own evidence, recorded before any arm:** `engine.time` 0.299 → **0.582333**
+  across the discard `setShot` (exactly 17/60, i.e. `setShot`'s own `step(14)`+`step(3)`), then
+  **0.582333 again after a dt = 0 frame** — the rAF loop is provably stopped before arm 1 stages.
+  That is the a3 hypothesis confirmed directly, not inferred from the outcome.
+- Pose identical in every arm (pos (−15.487, 0, 27.545), `_light` 0.2628, uOpacity 0.8358);
+  cand yaw **−0.628**, all three others −0.0691.
+
+### Scores
+
+| registered quantity | band | a3 clean-pair | **a4** | gate |
+|---|---|---|---|---|
+| Q-A4-1 ΔmedL cand−base, POOL ROI | [−100, −15] | −58.273 | **−58.240** | **PASS** |
+| Q-A4-1m mirror ratio | [0.60, 1.40] | 1.063 | **1.000** | **PASS** |
+| N-1 \|base2−base\| medL, POOL ROI | ≤ 4.0 | 0.005 | **0.004** | **PASS** |
+| N-2 \|restore−base\| medL, POOL ROI | ≤ 4.0 | 0.005 | **0.004** | **PASS** |
+| §13: \|Q-A4-1\| ≥ 3 × max same-state Δ | ≥ 0.012 | — | **58.240** | **PASS, 4 853×** |
+| Q-A4-2 no-harm silhouette ratio | ≥ 0.75 | 0.843 | 1.014 | nominal — **VOID** |
+| L-2 licence \|silCount(base2)−silCount(base)\| | ≤ 400 px | 102 | **1 725** | **BREACH — P-A4f** |
+| V-1 px \|ΔL\| ≥ 10 in POOL ROI, base vs base2 | ≤ 2 000 | 377 | **293** | **PASS** |
+| V-2 engine.time spread, all four arms | ≤ 1e−6 | a3 failed 0.03 | **exactly 0** | **PASS** |
+| V-3 beamCol0 bit-identical, all four arms | exact | a3 failed | **true** | **PASS** |
+| C-1 ΔmeanL, POOL ROI | report | −39.672 | −39.631 | reported |
+| C-2 ΔmedL over a2's ROI | report | +0.72 | +0.70 | §178 holds |
+
+Pool medL per arm: base 86.404, base2 86.408, cand **28.164**, restore 86.408 — **three
+same-state arms agreeing to 0.004 L**, and the cand arm reproducing a3's independent boot to
+within 0.03 L (−58.240 vs −58.273). The instrument the coordinator told me to leave alone has
+now replicated across two boots with three same-state samples.
+
+### The one failure is this seal's own doing, and it is worth naming precisely
+
+**PREREG-fxcluster-a4 §0.2 chose the no-harm statistic on a noise estimate of ONE pair.** a3
+contained exactly one clean same-state pair (base2 ↔ restore), it read 102 px, and the seal
+licensed the choice at E/N 15.90 on that basis. a4 has **three** same-state arms; their
+silhouette-count spread is **3 016 px**, 30× the number that licensed the design. The gate that
+caught it is the licence L-2, which is exactly what a licence is for — but the licence should
+never have been needed, because **one sample is not a noise estimate**, and §133.1's sibling
+lesson was available in the ledger the whole time.
+
+### `a4-harmsearch.json` — the guard region cannot support a photometric no-harm gate at all
+
+Re-derived with replication: noise = max pairwise spread over **every** same-state arm (a4's
+three + a3's two = five samples over two independent boots); effect = the **weaker** of the two
+runs. Six sites × seven forms = 42 combinations:
+
+| | best E/N | sign consistent between runs? |
+|---|---|---|
+| **POOL ROI (control)** | **11 648** (medL); every form ≥ 124 | all seven forms consistent |
+| every guard-sited candidate | **0.32** | 30 of 35 **FLIP SIGN** |
+
+This is not "the wrong statistic was picked". **The guard's visible region in this shot is not
+measurable at the precision a no-harm gate needs**, on any of medL / meanL / mean|∇L| /
+silhouette counts at four thresholds, over four rects. The apparent −1622 that won a4's
+pre-seal table reverses to +140 in a4.
+
+**Mechanism, from a4's own probes.** Pool occupancies are *identical* in all four arms —
+non-looping smoke 180, spark 455, dust 0, ring 0, decals 0; looping sandLow 460, sandHigh 900,
+airMotes 1000, shimmer 90, motes 900 — and the guard's pose, `_light` and uOpacity are
+identical too. So the residual is **per-particle history, not population**: the 180 smoke and
+455 spark particles restaged at each arm land in different places because the emitter RNG
+advances with every staging, and they overlay the doorway and the guard's visible band. The
+ground pool is far enough from them to be immune, which is why one region reads 0.004 L and the
+other 3 016 px.
+
+### Verdict
+
+**A (a4): the cone is certified; the arm does not ship — P-A4f.** Q-A4-2's nominal 1.014 is
+**void** because its licence breached, and the seal registered that consequence before the run:
+*nothing ships on an uncertified no-harm gate.* **Nothing to revert** (runtime poke; flag
+deleted, yaw returned to base exactly).
+
+**What is now settled, across four letters and three boots.** The −0.20 heading moves the
+guard's ground pool by **−58.24 L**, mirrored to 1.000, against a same-state noise floor of
+**0.004 L**; V-1 puts 137 910 px of structural change inside the ROI against 293 px same-state.
+The §13 clause, which the parent and a2 both failed, passes by three orders of magnitude. The
+cone question is **not** what is blocking a ship any more.
+
+### Named successor (a5) — the blocker has moved, and so must the route
+
+The remaining question is no longer about the lever. It is: **how is "no harm to the guard"
+certified in a shot whose subject region carries per-arm particle noise that swamps any
+photometric statistic?** Three routes, and the choice is the coordinator's, not FX's:
+
+1. **Remove the source.** Pin the emitter RNG or preroll the smoke/spark cohorts identically per
+   arm, so the 180 + 455 particles land in the same places. This is a staging change with real
+   blast radius and needs its own prereg and its own control — it is not a one-liner.
+2. **Certify no-harm geometrically, not photometrically.** The pose solve is already
+   deterministic and probed (pos identical, yaw −0.0691 → −0.628 → back, exactly). A no-harm
+   claim about the guard's *read* can be made from projected silhouette geometry, which carries
+   none of the particle noise. This is the cheapest route and needs no new capture.
+3. **Take the §17 declaration as the decision.** The turn is 30° lens-away, declared in every
+   seal since the parent, and it is a look judgement a human can make from the committed cand
+   frame in seconds. FX cannot certify it photometrically at this staging; saying so plainly is
+   more useful than a fifth instrument.
+
+Per §4-R1 the cone item stays with the **COORDINATOR**. The ship this would name is
+`src/ai/Guard.js:158`, `SHOT_POSE.guard.towardCamera: 0.35 → −0.20` (widened clamp at `:1832`
+stays). Every quantity bearing on the *cone* clears with margin; the only thing unresolved is
+the no-harm certification route, which is a decision, not a measurement.

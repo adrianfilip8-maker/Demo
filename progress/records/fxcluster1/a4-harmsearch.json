@@ -1,0 +1,1020 @@
+{
+ "at": "2026-08-06T03:33:25.950Z",
+ "note": "measures only; registers nothing. noise = max pairwise spread over ALL same-state arms in a run; E/N uses the WEAKER of the two runs' effects and the LARGER noise.",
+ "results": {
+  "POOL ROI (0,400,560,700) [control]": {
+   "rect": [
+    0,
+    400,
+    560,
+    700
+   ],
+   "medL": {
+    "a4": {
+     "sameState": {
+      "base": 86.404,
+      "base2": 86.408,
+      "restore": 86.408
+     },
+     "spread": 0.004,
+     "effect": -58.24
+    },
+    "a3": {
+     "sameState": {
+      "base2": 86.404,
+      "restore": 86.409
+     },
+     "spread": 0.005,
+     "effect": -58.273
+    },
+    "noiseAcrossBothRuns": 0.005,
+    "weakerEffect": 58.24,
+    "signConsistent": true,
+    "EN": 11648
+   },
+   "meanL": {
+    "a4": {
+     "sameState": {
+      "base": 88.313,
+      "base2": 88.288,
+      "restore": 88.368
+     },
+     "spread": 0.08,
+     "effect": -39.631
+    },
+    "a3": {
+     "sameState": {
+      "base2": 88.311,
+      "restore": 88.304
+     },
+     "spread": 0.007,
+     "effect": -39.673
+    },
+    "noiseAcrossBothRuns": 0.08,
+    "weakerEffect": 39.631,
+    "signConsistent": true,
+    "EN": 495.39
+   },
+   "gradL": {
+    "a4": {
+     "sameState": {
+      "base": 7.528,
+      "base2": 7.522,
+      "restore": 7.535
+     },
+     "spread": 0.013,
+     "effect": -1.621
+    },
+    "a3": {
+     "sameState": {
+      "base2": 7.527,
+      "restore": 7.525
+     },
+     "spread": 0.002,
+     "effect": -1.627
+    },
+    "noiseAcrossBothRuns": 0.013,
+    "weakerEffect": 1.621,
+    "signConsistent": true,
+    "EN": 124.69
+   },
+   "sil40": {
+    "a4": {
+     "sameState": {
+      "base": 16736,
+      "base2": 16929,
+      "restore": 16850
+     },
+     "spread": 193,
+     "effect": 78081
+    },
+    "a3": {
+     "sameState": {
+      "base2": 16745,
+      "restore": 16976
+     },
+     "spread": 231,
+     "effect": 78105
+    },
+    "noiseAcrossBothRuns": 231,
+    "weakerEffect": 78081,
+    "signConsistent": true,
+    "EN": 338.01
+   },
+   "sil60": {
+    "a4": {
+     "sameState": {
+      "base": 27328,
+      "base2": 27466,
+      "restore": 27398
+     },
+     "spread": 138,
+     "effect": 78641
+    },
+    "a3": {
+     "sameState": {
+      "base2": 27344,
+      "restore": 27517
+     },
+     "spread": 173,
+     "effect": 78609
+    },
+    "noiseAcrossBothRuns": 173,
+    "weakerEffect": 78609,
+    "signConsistent": true,
+    "EN": 454.39
+   },
+   "sil80": {
+    "a4": {
+     "sameState": {
+      "base": 61007,
+      "base2": 61025,
+      "restore": 60981
+     },
+     "spread": 44,
+     "effect": 58153
+    },
+    "a3": {
+     "sameState": {
+      "base2": 61007,
+      "restore": 61019
+     },
+     "spread": 12,
+     "effect": 58144
+    },
+    "noiseAcrossBothRuns": 44,
+    "weakerEffect": 58144,
+    "signConsistent": true,
+    "EN": 1321.45
+   },
+   "sil100": {
+    "a4": {
+     "sameState": {
+      "base": 111763,
+      "base2": 111671,
+      "restore": 111655
+     },
+     "spread": 108,
+     "effect": 29100
+    },
+    "a3": {
+     "sameState": {
+      "base2": 111761,
+      "restore": 111656
+     },
+     "spread": 105,
+     "effect": 29325
+    },
+    "noiseAcrossBothRuns": 108,
+    "weakerEffect": 29100,
+    "signConsistent": true,
+    "EN": 269.44
+   }
+  },
+  "SIL BOX a4 (860,200,1000,300)": {
+   "rect": [
+    860,
+    200,
+    1000,
+    300
+   ],
+   "medL": {
+    "a4": {
+     "sameState": {
+      "base": 45.297,
+      "base2": 52.582,
+      "restore": 23.929
+     },
+     "spread": 28.653,
+     "effect": -9.358
+    },
+    "a3": {
+     "sameState": {
+      "base2": 45.156,
+      "restore": 34.079
+     },
+     "spread": 11.077,
+     "effect": 6.504
+    },
+    "noiseAcrossBothRuns": 28.653,
+    "weakerEffect": 6.504,
+    "signConsistent": false,
+    "EN": 0.23
+   },
+   "meanL": {
+    "a4": {
+     "sameState": {
+      "base": 49.118,
+      "base2": 55.265,
+      "restore": 36.465
+     },
+     "spread": 18.8,
+     "effect": -4.06
+    },
+    "a3": {
+     "sameState": {
+      "base2": 48.824,
+      "restore": 45.263
+     },
+     "spread": 3.561,
+     "effect": 5.393
+    },
+    "noiseAcrossBothRuns": 18.8,
+    "weakerEffect": 4.06,
+    "signConsistent": false,
+    "EN": 0.22
+   },
+   "gradL": {
+    "a4": {
+     "sameState": {
+      "base": 8.902,
+      "base2": 9.858,
+      "restore": 11.261
+     },
+     "spread": 2.359,
+     "effect": 2.044
+    },
+    "a3": {
+     "sameState": {
+      "base2": 8.9,
+      "restore": 11.677
+     },
+     "spread": 2.777,
+     "effect": 0.675
+    },
+    "noiseAcrossBothRuns": 2.777,
+    "weakerEffect": 0.675,
+    "signConsistent": true,
+    "EN": 0.24
+   },
+   "sil40": {
+    "a4": {
+     "sameState": {
+      "base": 5411,
+      "base2": 4914,
+      "restore": 10075
+     },
+     "spread": 5161,
+     "effect": 2129
+    },
+    "a3": {
+     "sameState": {
+      "base2": 5393,
+      "restore": 7620
+     },
+     "spread": 2227,
+     "effect": -312
+    },
+    "noiseAcrossBothRuns": 5161,
+    "weakerEffect": 312,
+    "signConsistent": false,
+    "EN": 0.06
+   },
+   "sil60": {
+    "a4": {
+     "sameState": {
+      "base": 10212,
+      "base2": 8487,
+      "restore": 11503
+     },
+     "spread": 3016,
+     "effect": 140
+    },
+    "a3": {
+     "sameState": {
+      "base2": 10315,
+      "restore": 10417
+     },
+     "spread": 102,
+     "effect": -1622
+    },
+    "noiseAcrossBothRuns": 3016,
+    "weakerEffect": 140,
+    "signConsistent": false,
+    "EN": 0.05
+   },
+   "sil80": {
+    "a4": {
+     "sameState": {
+      "base": 12231,
+      "base2": 11382,
+      "restore": 12573
+     },
+     "spread": 1191,
+     "effect": -224
+    },
+    "a3": {
+     "sameState": {
+      "base2": 12266,
+      "restore": 11882
+     },
+     "spread": 384,
+     "effect": -571
+    },
+    "noiseAcrossBothRuns": 1191,
+    "weakerEffect": 224,
+    "signConsistent": true,
+    "EN": 0.19
+   },
+   "sil100": {
+    "a4": {
+     "sameState": {
+      "base": 13324,
+      "base2": 12489,
+      "restore": 13449
+     },
+     "spread": 960,
+     "effect": 7
+    },
+    "a3": {
+     "sameState": {
+      "base2": 13363,
+      "restore": 13185
+     },
+     "spread": 178,
+     "effect": -626
+    },
+    "noiseAcrossBothRuns": 960,
+    "weakerEffect": 7,
+    "signConsistent": false,
+    "EN": 0.01
+   }
+  },
+  "guard tight (880,210,980,290)": {
+   "rect": [
+    880,
+    210,
+    980,
+    290
+   ],
+   "medL": {
+    "a4": {
+     "sameState": {
+      "base": 46.007,
+      "base2": 52.084,
+      "restore": 22.014
+     },
+     "spread": 30.07,
+     "effect": -11.055
+    },
+    "a3": {
+     "sameState": {
+      "base2": 45.513,
+      "restore": 33.549
+     },
+     "spread": 11.964,
+     "effect": 5.915
+    },
+    "noiseAcrossBothRuns": 30.07,
+    "weakerEffect": 5.915,
+    "signConsistent": false,
+    "EN": 0.2
+   },
+   "meanL": {
+    "a4": {
+     "sameState": {
+      "base": 45.52,
+      "base2": 50.632,
+      "restore": 31.749
+     },
+     "spread": 18.883,
+     "effect": -5.816
+    },
+    "a3": {
+     "sameState": {
+      "base2": 45.122,
+      "restore": 41.053
+     },
+     "spread": 4.069,
+     "effect": 4.748
+    },
+    "noiseAcrossBothRuns": 18.883,
+    "weakerEffect": 4.748,
+    "signConsistent": false,
+    "EN": 0.25
+   },
+   "gradL": {
+    "a4": {
+     "sameState": {
+      "base": 8.637,
+      "base2": 8.841,
+      "restore": 11.277
+     },
+     "spread": 2.64,
+     "effect": 2.061
+    },
+    "a3": {
+     "sameState": {
+      "base2": 8.565,
+      "restore": 12.593
+     },
+     "spread": 4.028,
+     "effect": -0.898
+    },
+    "noiseAcrossBothRuns": 4.028,
+    "weakerEffect": 0.898,
+    "signConsistent": false,
+    "EN": 0.22
+   },
+   "sil40": {
+    "a4": {
+     "sameState": {
+      "base": 2733,
+      "base2": 2460,
+      "restore": 6433
+     },
+     "spread": 3973,
+     "effect": 1830
+    },
+    "a3": {
+     "sameState": {
+      "base2": 2757,
+      "restore": 4458
+     },
+     "spread": 1701,
+     "effect": -215
+    },
+    "noiseAcrossBothRuns": 3973,
+    "weakerEffect": 215,
+    "signConsistent": false,
+    "EN": 0.05
+   },
+   "sil60": {
+    "a4": {
+     "sameState": {
+      "base": 6454,
+      "base2": 5254,
+      "restore": 7144
+     },
+     "spread": 1890,
+     "effect": 298
+    },
+    "a3": {
+     "sameState": {
+      "base2": 6545,
+      "restore": 6680
+     },
+     "spread": 135,
+     "effect": -1154
+    },
+    "noiseAcrossBothRuns": 1890,
+    "weakerEffect": 298,
+    "signConsistent": false,
+    "EN": 0.16
+   },
+   "sil80": {
+    "a4": {
+     "sameState": {
+      "base": 7834,
+      "base2": 7574,
+      "restore": 7540
+     },
+     "spread": 294,
+     "effect": -204
+    },
+    "a3": {
+     "sameState": {
+      "base2": 7844,
+      "restore": 7431
+     },
+     "spread": 413,
+     "effect": -101
+    },
+    "noiseAcrossBothRuns": 413,
+    "weakerEffect": 101,
+    "signConsistent": true,
+    "EN": 0.24
+   },
+   "sil100": {
+    "a4": {
+     "sameState": {
+      "base": 7901,
+      "base2": 7899,
+      "restore": 7773
+     },
+     "spread": 128,
+     "effect": -56
+    },
+    "a3": {
+     "sameState": {
+      "base2": 7909,
+      "restore": 7691
+     },
+     "spread": 218,
+     "effect": 55
+    },
+    "noiseAcrossBothRuns": 218,
+    "weakerEffect": 55,
+    "signConsistent": false,
+    "EN": 0.25
+   }
+  },
+  "guard wide (820,180,1020,300)": {
+   "rect": [
+    820,
+    180,
+    1020,
+    300
+   ],
+   "medL": {
+    "a4": {
+     "sameState": {
+      "base": 44.798,
+      "base2": 49.515,
+      "restore": 23.688
+     },
+     "spread": 25.827,
+     "effect": -11.85
+    },
+    "a3": {
+     "sameState": {
+      "base2": 44.798,
+      "restore": 31.584
+     },
+     "spread": 13.214,
+     "effect": 4.85
+    },
+    "noiseAcrossBothRuns": 25.827,
+    "weakerEffect": 4.85,
+    "signConsistent": false,
+    "EN": 0.19
+   },
+   "meanL": {
+    "a4": {
+     "sameState": {
+      "base": 50.978,
+      "base2": 54.69,
+      "restore": 37.774
+     },
+     "spread": 16.916,
+     "effect": -5.635
+    },
+    "a3": {
+     "sameState": {
+      "base2": 50.895,
+      "restore": 45.127
+     },
+     "spread": 5.768,
+     "effect": 3.775
+    },
+    "noiseAcrossBothRuns": 16.916,
+    "weakerEffect": 3.775,
+    "signConsistent": false,
+    "EN": 0.22
+   },
+   "gradL": {
+    "a4": {
+     "sameState": {
+      "base": 9.203,
+      "base2": 9.247,
+      "restore": 10.454
+     },
+     "spread": 1.251,
+     "effect": 0.759
+    },
+    "a3": {
+     "sameState": {
+      "base2": 9.184,
+      "restore": 10.114
+     },
+     "spread": 0.93,
+     "effect": -0.009
+    },
+    "noiseAcrossBothRuns": 1.251,
+    "weakerEffect": 0.009,
+    "signConsistent": false,
+    "EN": 0.01
+   },
+   "sil40": {
+    "a4": {
+     "sameState": {
+      "base": 10016,
+      "base2": 10096,
+      "restore": 16720
+     },
+     "spread": 6704,
+     "effect": 3475
+    },
+    "a3": {
+     "sameState": {
+      "base2": 10008,
+      "restore": 13674
+     },
+     "spread": 3666,
+     "effect": -73
+    },
+    "noiseAcrossBothRuns": 6704,
+    "weakerEffect": 73,
+    "signConsistent": false,
+    "EN": 0.01
+   },
+   "sil60": {
+    "a4": {
+     "sameState": {
+      "base": 16610,
+      "base2": 14723,
+      "restore": 18610
+     },
+     "spread": 3887,
+     "effect": 670
+    },
+    "a3": {
+     "sameState": {
+      "base2": 16670,
+      "restore": 17481
+     },
+     "spread": 811,
+     "effect": -1885
+    },
+    "noiseAcrossBothRuns": 3887,
+    "weakerEffect": 670,
+    "signConsistent": false,
+    "EN": 0.17
+   },
+   "sil80": {
+    "a4": {
+     "sameState": {
+      "base": 19345,
+      "base2": 18547,
+      "restore": 20802
+     },
+     "spread": 2255,
+     "effect": -42
+    },
+    "a3": {
+     "sameState": {
+      "base2": 19323,
+      "restore": 19264
+     },
+     "spread": 59,
+     "effect": -604
+    },
+    "noiseAcrossBothRuns": 2255,
+    "weakerEffect": 42,
+    "signConsistent": true,
+    "EN": 0.02
+   },
+   "sil100": {
+    "a4": {
+     "sameState": {
+      "base": 21976,
+      "base2": 20079,
+      "restore": 23044
+     },
+     "spread": 2965,
+     "effect": 212
+    },
+    "a3": {
+     "sameState": {
+      "base2": 22002,
+      "restore": 22120
+     },
+     "spread": 118,
+     "effect": -1666
+    },
+    "noiseAcrossBothRuns": 2965,
+    "weakerEffect": 212,
+    "signConsistent": false,
+    "EN": 0.07
+   }
+  },
+  "guard lower (852,250,990,300)": {
+   "rect": [
+    852,
+    250,
+    990,
+    300
+   ],
+   "medL": {
+    "a4": {
+     "sameState": {
+      "base": 43.297,
+      "base2": 49.437,
+      "restore": 19.385
+     },
+     "spread": 30.052,
+     "effect": -17.089
+    },
+    "a3": {
+     "sameState": {
+      "base2": 42.717,
+      "restore": 22.649
+     },
+     "spread": 20.068,
+     "effect": 5.937
+    },
+    "noiseAcrossBothRuns": 30.052,
+    "weakerEffect": 5.937,
+    "signConsistent": false,
+    "EN": 0.2
+   },
+   "meanL": {
+    "a4": {
+     "sameState": {
+      "base": 43.596,
+      "base2": 47.855,
+      "restore": 29.041
+     },
+     "spread": 18.814,
+     "effect": -7.126
+    },
+    "a3": {
+     "sameState": {
+      "base2": 43.198,
+      "restore": 35.925
+     },
+     "spread": 7.273,
+     "effect": 3.844
+    },
+    "noiseAcrossBothRuns": 18.814,
+    "weakerEffect": 3.844,
+    "signConsistent": false,
+    "EN": 0.2
+   },
+   "gradL": {
+    "a4": {
+     "sameState": {
+      "base": 8.079,
+      "base2": 8.242,
+      "restore": 9.49
+     },
+     "spread": 1.411,
+     "effect": 1.613
+    },
+    "a3": {
+     "sameState": {
+      "base2": 8,
+      "restore": 10.375
+     },
+     "spread": 2.375,
+     "effect": -0.682
+    },
+    "noiseAcrossBothRuns": 2.375,
+    "weakerEffect": 0.682,
+    "signConsistent": false,
+    "EN": 0.29
+   },
+   "sil40": {
+    "a4": {
+     "sameState": {
+      "base": 3063,
+      "base2": 2920,
+      "restore": 5706
+     },
+     "spread": 2786,
+     "effect": 1473
+    },
+    "a3": {
+     "sameState": {
+      "base2": 3078,
+      "restore": 4627
+     },
+     "spread": 1549,
+     "effect": -78
+    },
+    "noiseAcrossBothRuns": 2786,
+    "weakerEffect": 78,
+    "signConsistent": false,
+    "EN": 0.03
+   },
+   "sil60": {
+    "a4": {
+     "sameState": {
+      "base": 5326,
+      "base2": 4546,
+      "restore": 6258
+     },
+     "spread": 1712,
+     "effect": 426
+    },
+    "a3": {
+     "sameState": {
+      "base2": 5381,
+      "restore": 5795
+     },
+     "spread": 414,
+     "effect": -692
+    },
+    "noiseAcrossBothRuns": 1712,
+    "weakerEffect": 426,
+    "signConsistent": false,
+    "EN": 0.25
+   },
+   "sil80": {
+    "a4": {
+     "sameState": {
+      "base": 6389,
+      "base2": 6125,
+      "restore": 6624
+     },
+     "spread": 499,
+     "effect": 22
+    },
+    "a3": {
+     "sameState": {
+      "base2": 6411,
+      "restore": 6359
+     },
+     "spread": 52,
+     "effect": -174
+    },
+    "noiseAcrossBothRuns": 499,
+    "weakerEffect": 22,
+    "signConsistent": false,
+    "EN": 0.04
+   },
+   "sil100": {
+    "a4": {
+     "sameState": {
+      "base": 6752,
+      "base2": 6604,
+      "restore": 6771
+     },
+     "spread": 167,
+     "effect": 53
+    },
+    "a3": {
+     "sameState": {
+      "base2": 6766,
+      "restore": 6749
+     },
+     "spread": 17,
+     "effect": -71
+    },
+    "noiseAcrossBothRuns": 167,
+    "weakerEffect": 53,
+    "signConsistent": false,
+    "EN": 0.32
+   }
+  },
+  "guard+pool band (700,180,1160,340)": {
+   "rect": [
+    700,
+    180,
+    1160,
+    340
+   ],
+   "medL": {
+    "a4": {
+     "sameState": {
+      "base": 42.052,
+      "base2": 39.911,
+      "restore": 31.441
+     },
+     "spread": 10.611,
+     "effect": -6.48
+    },
+    "a3": {
+     "sameState": {
+      "base2": 41.939,
+      "restore": 34.843
+     },
+     "spread": 7.096,
+     "effect": -0.996
+    },
+    "noiseAcrossBothRuns": 10.611,
+    "weakerEffect": 0.996,
+    "signConsistent": true,
+    "EN": 0.09
+   },
+   "meanL": {
+    "a4": {
+     "sameState": {
+      "base": 53.066,
+      "base2": 53.835,
+      "restore": 45.291
+     },
+     "spread": 8.544,
+     "effect": -2.854
+    },
+    "a3": {
+     "sameState": {
+      "base2": 52.915,
+      "restore": 49.731
+     },
+     "spread": 3.184,
+     "effect": 1.393
+    },
+    "noiseAcrossBothRuns": 8.544,
+    "weakerEffect": 1.393,
+    "signConsistent": false,
+    "EN": 0.16
+   },
+   "gradL": {
+    "a4": {
+     "sameState": {
+      "base": 8.724,
+      "base2": 8.568,
+      "restore": 8.849
+     },
+     "spread": 0.281,
+     "effect": 0.15
+    },
+    "a3": {
+     "sameState": {
+      "base2": 8.719,
+      "restore": 8.802
+     },
+     "spread": 0.083,
+     "effect": -0.088
+    },
+    "noiseAcrossBothRuns": 0.281,
+    "weakerEffect": 0.088,
+    "signConsistent": false,
+    "EN": 0.31
+   },
+   "sil40": {
+    "a4": {
+     "sameState": {
+      "base": 34971,
+      "base2": 36855,
+      "restore": 43720
+     },
+     "spread": 8749,
+     "effect": 4997
+    },
+    "a3": {
+     "sameState": {
+      "base2": 34959,
+      "restore": 40607
+     },
+     "spread": 5648,
+     "effect": 1234
+    },
+    "noiseAcrossBothRuns": 8749,
+    "weakerEffect": 1234,
+    "signConsistent": true,
+    "EN": 0.14
+   },
+   "sil60": {
+    "a4": {
+     "sameState": {
+      "base": 48434,
+      "base2": 47750,
+      "restore": 51784
+     },
+     "spread": 4034,
+     "effect": 1402
+    },
+    "a3": {
+     "sameState": {
+      "base2": 48525,
+      "restore": 50525
+     },
+     "spread": 2000,
+     "effect": -1252
+    },
+    "noiseAcrossBothRuns": 4034,
+    "weakerEffect": 1252,
+    "signConsistent": false,
+    "EN": 0.31
+   },
+   "sil80": {
+    "a4": {
+     "sameState": {
+      "base": 53821,
+      "base2": 53947,
+      "restore": 57870
+     },
+     "spread": 4049,
+     "effect": 582
+    },
+    "a3": {
+     "sameState": {
+      "base2": 53885,
+      "restore": 54708
+     },
+     "spread": 823,
+     "effect": -109
+    },
+    "noiseAcrossBothRuns": 4049,
+    "weakerEffect": 109,
+    "signConsistent": false,
+    "EN": 0.03
+   },
+   "sil100": {
+    "a4": {
+     "sameState": {
+      "base": 63627,
+      "base2": 57471,
+      "restore": 67132
+     },
+     "spread": 9661,
+     "effect": -2418
+    },
+    "a3": {
+     "sameState": {
+      "base2": 64002,
+      "restore": 61559
+     },
+     "spread": 2443,
+     "effect": -6479
+    },
+    "noiseAcrossBothRuns": 9661,
+    "weakerEffect": 2418,
+    "signConsistent": true,
+    "EN": 0.25
+   }
+  }
+ }
+}

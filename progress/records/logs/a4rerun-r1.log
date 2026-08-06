@@ -38,3 +38,8 @@
 [03:10:13 + 472s]   WARM-UP (discarded) {"engineTimeBeforeWarmup":0.299,"engineTimeAfterWarmup":0.582333,"engineTimeAfterIdleFrame":0.582333}
 [03:18:43 + 982s]   guard.base     510s  t 1000.283333  beamCol0 [0.262957,0.242165,0.169637]  yaw -0.0691
 [03:22:45 +1224s]   guard.base2    242s  t 1000.283333  beamCol0 [0.262957,0.242165,0.169637]  yaw -0.0691
+[03:27:58 +1538s]   guard.cand     314s  t 1000.283333  beamCol0 [0.262957,0.242165,0.169637]  yaw -0.628
+[03:32:00 +1779s]   guard.restore  241s  t 1000.283333  beamCol0 [0.262957,0.242165,0.169637]  yaw -0.0691
+[03:32:00 +1779s]   chunk a4 done — srcTree after adb5629032309d19 (STABLE)
+[03:32:00 +1779s] chunk a4: lock released
+[03:32:00 +1779s] ALL DONE

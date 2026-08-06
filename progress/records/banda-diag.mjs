@@ -115,9 +115,15 @@ const T = {
   shadowSat: need('toonMat', /shadowSat:\s*(-?[\d.]+)/, 'shadowSat', -0.35),
   bounceGain: need('toonMat', /bounceGain:\s*([\d.]+)/, 'bounceGain', 0.42),
   fillSkyMix: need('toonMat', /fillSkyMix:\s*([\d.]+)/, 'fillSkyMix', 0.70),
-  subjWarmShade: need('toonMat', /subjWarmShade:\s*([\d.]+)/, 'subjWarmShade', 0.50),
+  /* 0.50 → 0.65 and 0.52 → 0.62: banda2 SHIPPED (RESULT-banda2 §Ship shape). The guard fired
+     on both when this file was next run, which is the guard doing its job — the numbers are
+     re-based here, not the assertion loosened. `subjWarmShadeNightPin` and the per-frame gate
+     publish line are asserted below, discharging RESULT-banda2's ship-time obligation. */
+  subjWarmShade: need('toonMat', /subjWarmShade:\s*([\d.]+)/, 'subjWarmShade', 0.65),
+  subjWarmShadeNightPin: need('toonMat', /subjWarmShadeNightPin:\s*([\d.]+)/, 'subjWarmShadeNightPin', 0.50),
   bakedAO: need('toonMat', /bakedAO:\s*([\d.]+)/, 'bakedAO', 0.55),
-  shadowTintPeak: need('toonMat', /shadowTintPeak:\s*([\d.]+)/, 'shadowTintPeak', 0.52),
+  shadowTintPeak: need('toonMat', /shadowTintPeak:\s*([\d.]+)/, 'shadowTintPeak', 0.62),
+  keyIntensity: need('toonMat', /keyIntensity:\s*([\d.]+)/, 'keyIntensity', 2.55), // boot value; LIGHTING republishes
   shadowBounceMix: need('toonMat', /shadowBounceMix:\s*([\d.]+)/, 'shadowBounceMix', 0.05),
   shadowBounceMixLit: need('toonMat', /shadowBounceMixLit:\s*([\d.]+)/, 'shadowBounceMixLit', 0.05),
   shadowDepth0: need('toonMat', /shadowDepth:\s*\[([\d.]+)/, 'shadowDepth[0]', 0.45),
@@ -154,6 +160,15 @@ needLine('toonGlsl', 'float specAmt = uSpec * ( 1.0 - 0.75 * rgh ) * mix( 1.0, 3
 needLine('toonGlsl', 'vec3 specTint = mix( uSpecColor, alb * 2.0 + uSpecColor * 0.25, slyMetal );', 'specTint');
 needLine('toonGlsl', 'metalEnv = alb * env * ( slyMetal * uMetalGain * ef ) * mix( 0.35, 1.0, sh ) * ao;', 'metalEnv');
 needLine('toonGlsl', 'vec3  slyShadD  = mix( uShadowColorLit, uShadowColor,', 'depth-dependent bounce');
+/* banda2's shipped night gate — the publish line RESULT-banda2 §Ship-shape says this guard
+   must assert once it lands. If it disappears, every "night is pinned" claim below is void. */
+needLine('toonMat', 'u.uSubjWarmShade.value = TUNE.subjWarmShade +', 'banda2 night gate publish');
+needLine('toonMat', '(TUNE.subjWarmShadeNightPin - TUNE.subjWarmShade) * Math.min(1, Math.max(0, nightAmount));', 'banda2 night gate lerp');
+/* litwarm: the two lines the lit-side attribution stands on. Term 1 is the ONLY term that
+   carries `key`; the fill term is NOT gated by shadowMix, which is why it reaches lit pixels
+   (that asymmetry is the whole `lit` mode). */
+needLine('toonGlsl', 'vec3 keyRad = uKeyColor * uKeyIntensity;', 'keyRad assembly');
+needLine('toonGlsl', 'vec3 fill = mix( bounceLeg * uBounceGain, uSkyColor, hemi ) * uAmbIntensity;', 'fill assembly');
 
 /* PostFX TUNE — the grade */
 const G = {
@@ -391,12 +406,32 @@ function modeState() {
       anchorFail++;
     }
   }
-  // §132.3 compose1 live readback anchor: uShadowColor (0.096, 0.313, 0.497) at a daylight tod
-  const st = lightState(0.80);
-  const ref = [0.096, 0.313, 0.497];
-  const err = st.shadowColor.map((v, i) => Math.abs(v - ref[i]));
-  console.log(`  compose1 anchor: port (${st.shadowColor.map((v) => v.toFixed(3)).join(', ')}) vs live boot readback (0.096, 0.313, 0.497), maxErr ${Math.max(...err).toFixed(4)}`);
-  if (Math.max(...err) > 0.01) { console.error('  ANCHOR FAIL: uShadowColor port does not reproduce the committed live readback (§132.3)'); anchorFail++; }
+  /* Live-readback anchors. The §132.3 compose1 anchor (0.096, 0.313, 0.497) was taken at
+     shadowTintPeak 0.52 — the PRE-banda2 tree — so it is now evaluated at that knob, and the
+     SHIPPED state is anchored against banda2's own committed per-shot readbacks (six shots,
+     one boot each, `mismatch: []` on every row). Those are strictly better anchors than one
+     daylight sample: they cover the k-cap's binding shot (interior) and night. */
+  const st52 = lightState(0.80, { shadowTintPeak: 0.52 });
+  const ref52 = [0.096, 0.313, 0.497];
+  const err52 = st52.shadowColor.map((v, i) => Math.abs(v - ref52[i]));
+  console.log(`  compose1 anchor (@tintPeak 0.52, pre-banda2): port (${st52.shadowColor.map((v) => v.toFixed(3)).join(', ')}) vs live boot readback (0.096, 0.313, 0.497), maxErr ${Math.max(...err52).toFixed(4)}`);
+  if (Math.max(...err52) > 0.01) { console.error('  ANCHOR FAIL: uShadowColor port does not reproduce the committed live readback (§132.3)'); anchorFail++; }
+  const RB62 = {                                   // banda2/readback-*.json, arms at tintPeak 0.62
+    hero: [0.103868, 0.338422, 0.536719],
+    temple: [0.108804, 0.355122, 0.563271],
+    interior: [0.112807, 0.373725, 0.593387],
+    'sly-closeup': [0.103228, 0.336278, 0.533327],
+    combat: [0.106265, 0.346523, 0.549598],
+    night: [0.012896, 0.046769, 0.078053],
+  };
+  let worst62 = 0;
+  for (const [shot, ref] of Object.entries(RB62)) {
+    const s = lightState(SHOT_TODS[shot]);
+    const e = Math.max(...s.shadowColor.map((v, i) => Math.abs(v - ref[i])));
+    worst62 = Math.max(worst62, e);
+    console.log(`  banda2 live anchor ${shot.padEnd(12)} port (${s.shadowColor.map((v) => v.toFixed(4)).join(', ')})  live (${ref.map((v) => v.toFixed(4)).join(', ')})  maxErr ${e.toFixed(5)}`);
+  }
+  if (worst62 > 0.002) { console.error(`  ANCHOR FAIL: shipped-tree uShadowColor port off the banda2 live readbacks by ${worst62.toFixed(4)}`); anchorFail++; }
   if (anchorFail) { console.error(`\n${anchorFail} state anchor failure(s) — the state port is NOT validated; chain/attrib numbers are void.`); process.exit(2); }
   console.log('  state anchors PASS (keyLum table + compose1 readback)');
 }
@@ -1318,6 +1353,185 @@ function modeScore2(dir) {
   console.log(`\n  ${R.length} scored, ${fails} FAIL — RESULT-banda2 quotes this table verbatim.`);
 }
 
+/* ═════════════════════════ lit mode (PREREG-litwarm) ═════════════════════════
+ *
+ * node banda-diag.mjs lit            — the whole diagnosis
+ * node banda-diag.mjs lit bins       — just the luma-bin artefact calibration
+ *
+ * WHAT IT ANSWERS, and why it is a new mode rather than a new toggle in `attrib`:
+ * `attrib` asks "what moves the hue of a texel class". This asks the prior question —
+ * **which texel class IS the L80+ band on architecture** — because CRITIC-sbs3 §4.1 assigns
+ * SHADING a gap named "the LIT half of the palette" and the frames say that band is not lit.
+ *
+ * Three parts:
+ *   1. `bins`  — the BIN-MIGRATION CALIBRATION. A luma-banded mean-R−B statistic computed on
+ *      two frames of different brightness measures the brightness change, not the hue change:
+ *      pixels cross the bin edges and change each bin's membership. Same statistic computed
+ *      two ways on the SAME committed pair (banda2 base vs ABg): "moving-bin" (each frame
+ *      binned by its own luma — CRITIC-sbs3 §3.1's convention) vs "fixed-mask" (bin membership
+ *      frozen at the base arm, Δ measured per pixel). If they disagree, the fixed-mask number
+ *      is the hue result and the moving-bin number is a luma result wearing a hue's name.
+ *   2. `pop`   — which shading condition produces a display-L80+ architecture pixel, from the
+ *      validated port: display L and hue for every (albedo × condition) cell, so "the L80+
+ *      band" can be resolved to shadowMix/key rather than assumed to be key-lit.
+ *   3. `levers`— per-knob attribution ON THE POPULATION part 2 identifies, for every knob
+ *      SHADING owns, with the night-side arithmetic (pnightcal L1 = 1.40° on archShade,
+ *      slope 40.5°/unit sbm ⇒ published night-safe sbm ceiling 0.0845) printed beside it.
+ */
+
+/* CRITIC-sbs3's own convention, verbatim: mean R−B per luma band, each frame binned by its
+   own luma. `fixed` freezes the mask at arm A and differences per pixel. */
+function bandTable(imA, imB) {
+  const bins = [[0, 40], [40, 80], [80, 140], [140, 256]];
+  const out = [];
+  const px = (im, i) => [im.data[i], im.data[i + 1], im.data[i + 2]];
+  const n = imA.w * imA.h;
+  for (const [lo, hi] of bins) {
+    let nA = 0, nB = 0, sA = 0, sB = 0, sFix = 0, sdL = 0;
+    for (let p = 0; p < n; p++) {
+      const iA = p * imA.ch, iB = p * imB.ch;
+      const [ra, ga, ba] = px(imA, iA), [rb2, gb, bb] = px(imB, iB);
+      const LA = 0.2126 * ra + 0.7152 * ga + 0.0722 * ba;
+      const LB = 0.2126 * rb2 + 0.7152 * gb + 0.0722 * bb;
+      if (LA >= lo && LA < hi) { nA++; sA += ra - ba; sFix += (rb2 - bb) - (ra - ba); sdL += LB - LA; }
+      if (LB >= lo && LB < hi) { nB++; sB += rb2 - bb; }
+    }
+    out.push({
+      lo, hi, shareA: 100 * nA / n, shareB: 100 * nB / n,
+      moving: (nB ? sB / nB : NaN) - (nA ? sA / nA : NaN),
+      fixed: nA ? sFix / nA : NaN, dL: nA ? sdL / nA : NaN,
+    });
+  }
+  return out;
+}
+
+/* warm% both ways: CRITIC's (each frame's own L>40 population) and fixed-mask (arm A's). */
+function warmBothWays(imA, imB) {
+  const n = imA.w * imA.h;
+  let wA = 0, nA = 0, wB = 0, nB = 0, wAfix = 0, wBfix = 0, nFix = 0;
+  for (let p = 0; p < n; p++) {
+    const iA = p * imA.ch, iB = p * imB.ch;
+    const ra = imA.data[iA], ga = imA.data[iA + 1], ba = imA.data[iA + 2];
+    const rb2 = imB.data[iB], gb = imB.data[iB + 1], bb = imB.data[iB + 2];
+    const LA = 0.2126 * ra + 0.7152 * ga + 0.0722 * ba;
+    const LB = 0.2126 * rb2 + 0.7152 * gb + 0.0722 * bb;
+    if (LA > 40) { nA++; if (ra > ba + 10) wA++; }
+    if (LB > 40) { nB++; if (rb2 > bb + 10) wB++; }
+    if (LA > 40) { nFix++; if (ra > ba + 10) wAfix++; if (rb2 > bb + 10) wBfix++; }
+  }
+  return {
+    critic: [100 * wA / n, 100 * wB / n],                       // share of WHOLE frame (CRITIC's denominator)
+    fixedPop: [100 * wAfix / Math.max(nFix, 1), 100 * wBfix / Math.max(nFix, 1)],
+    litPopShare: [100 * nA / n, 100 * nB / n],
+  };
+}
+
+function modeLitBins() {
+  console.log('\n═══ lit/bins — the luma-bin migration calibration (CRITIC-sbs3 §3.1 convention vs fixed-mask) ═══');
+  console.log('  moving = each frame binned by its own luma (CRITIC). fixed = bin frozen at base, Δ per pixel.');
+  for (const shot of ['hero', 'interior', 'temple', 'combat', 'sly-closeup']) {
+    const b = `${REC}/banda2/${shot}.base.png`, a = `${REC}/banda2/${shot}.ABg.png`;
+    let imB, imA;
+    try { imB = readPNG(b); imA = readPNG(a); } catch { continue; }
+    console.log(`\n— ${shot} (banda2 base → ABg, the SHIPPED change) —`);
+    for (const r of bandTable(imB, imA)) {
+      console.log(`  L${String(r.lo).padStart(3)}-${String(r.hi).padStart(3)}  share ${r.shareA.toFixed(2)}%→${r.shareB.toFixed(2)}%  movingΔ(R−B) ${r.moving >= 0 ? '+' : ''}${r.moving.toFixed(2)}   fixedΔ(R−B) ${r.fixed >= 0 ? '+' : ''}${r.fixed.toFixed(2)}   fixedΔL ${r.dL >= 0 ? '+' : ''}${r.dL.toFixed(2)}`);
+    }
+    const w = warmBothWays(imB, imA);
+    console.log(`  warm% (CRITIC denom = whole frame): ${w.critic[0].toFixed(2)} → ${w.critic[1].toFixed(2)}  (Δ ${(w.critic[1] - w.critic[0]).toFixed(2)} pp)`);
+    console.log(`  warm% within the BASE arm's own L>40 population: ${w.fixedPop[0].toFixed(2)} → ${w.fixedPop[1].toFixed(2)}  (Δ ${(w.fixedPop[1] - w.fixedPop[0]).toFixed(2)} pp)`);
+    console.log(`  L>40 population share: ${w.litPopShare[0].toFixed(2)}% → ${w.litPopShare[1].toFixed(2)}%  ← the denominator that moved`);
+  }
+}
+
+/* Part 2: which condition renders into which display band, per shot, per albedo. */
+function modeLitPop() {
+  console.log('\n═══ lit/pop — which shading condition IS the display-L80+ architecture band ═══');
+  const conds = [
+    ['fullShade   (sh 0, ndl −0.3, wall)', { ndl: -0.3, sh: 0, ny: 0 }],
+    ['fullShade+AO(occ 0.25)', { ndl: -0.3, sh: 0, ny: 0, occ: 0.25 }],
+    ['castShadow  (ndl +0.75 but sh 0)', { ndl: 0.75, sh: 0, ny: 0 }],
+    ['rampDark    (ndl +0.10, sh 1)', { ndl: 0.10, sh: 1, ny: 0 }],
+    ['corridor    (ndl +0.30, sh 1 ⇒ key 0.5)', { ndl: 0.30, sh: 1, ny: 0 }],
+    ['keyLit      (ndl +0.75, sh 1 ⇒ key 1)', { ndl: 0.75, sh: 1, ny: 0 }],
+  ];
+  for (const shot of ['hero', 'temple', 'interior', 'courtyard']) {
+    const st = lightState(SHOT_TODS[shot]);
+    console.log(`\n— ${shot} —`);
+    for (const [cLabel, cond] of conds) {
+      const cells = [];
+      for (const aName of ['worn', 'block', 'hiero', 'papyrus']) {
+        const r = texelReport(st, ALB[aName], cond, {}, cond.occ ?? 0);
+        cells.push(`${aName} L${r.L.toFixed(0).padStart(3)} h${r.h.toFixed(0).padStart(3)} R−B${(r.RmB >= 0 ? '+' : '') + r.RmB.toFixed(0)}`);
+      }
+      console.log(`  ${cLabel.padEnd(40)} ${cells.join(' | ')}`);
+    }
+  }
+  console.log('\n  Read: a display-L80+ architecture pixel is produced by FULL SHADE on a bright albedo,');
+  console.log('  not by the key. The key-lit cells sit at L150+ and are already warm (hue ~30, R−B ~+120).');
+}
+
+/* Part 3: knob attribution on the population part 2 identifies. */
+const LIT_KNOBS = [
+  ['shadowWash 0.05→0.00  (kill the albedo-independent blue coat)', { shadowWash: 0.0 }],
+  ['shadowWash 0.05→0.025', { shadowWash: 0.025 }],
+  ['shadowSat −0.35→−0.20 (albedo keeps more chroma in shade)', { shadowSat: -0.20 }],
+  ['shadowSat −0.35→0.00', { shadowSat: 0.0 }],
+  ['shadowBounceMix 0.05→0.08 (both legs; under pnightcal 0.0845)', { shadowBounceMix: 0.08, shadowBounceMixLit: 0.08 }],
+  ['shadowBounceMixLit only 0.05→0.20 (shallow end)', { shadowBounceMixLit: 0.20 }],
+  ['shadowTeal 0.15→0.08 (KNOWN-BAD direction: re-opens magenta)', { shadowTeal: 0.08 }],
+  ['fillSkyMix 0.70→0.40 (KNOWN-BAD: task19 revert, night-live)', { fillSkyMix: 0.40 }],
+  ['bounceGain 0.42→0.60 (warm sand fill up)', { bounceGain: 0.60 }],
+  ['shadowTintPeak 0.62→0.52 (undo banda2 — reference direction only)', { shadowTintPeak: 0.52 }],
+  ['termHi 0.52→0.38 (widen the key-lit population)', { termHi: 0.38 }],
+  ['termLo 0.14→0.06 + termHi 0.52→0.38', { termLo: 0.06, termHi: 0.38 }],
+];
+
+function modeLitLevers() {
+  console.log('\n═══ lit/levers — SHADING-owned knobs on the L80+ architecture population ═══');
+  console.log('  Population per lit/pop: fullShade on a bright albedo (hiero/papyrus) — the pixels that');
+  console.log('  land in display L80+. Deep-shade band (worn @ fullShade+AO, display L~69) carried beside');
+  console.log('  it: banda2\'s gains live there and must not regress.');
+  for (const shot of ['hero', 'temple', 'interior']) {
+    const st0 = lightState(SHOT_TODS[shot]);
+    const cases = [
+      ['L80+ band (hiero, fullShade)', 'hiero', { ndl: -0.3, sh: 0, ny: 0 }],
+      ['L80+ band (papyrus, fullShade)', 'papyrus', { ndl: -0.3, sh: 0, ny: 0 }],
+      ['deep band (worn, fullShade+AO)', 'worn', { ndl: -0.3, sh: 0, ny: 0, occ: 0.25 }],
+      ['key-lit  (worn, key 1)', 'worn', { ndl: 0.75, sh: 1, ny: 0 }],
+    ];
+    console.log(`\n— ${shot} —`);
+    const base = cases.map(([, a, c]) => texelReport(st0, ALB[a], c, {}, c.occ ?? 0));
+    console.log(`  ${'shipped'.padEnd(58)} ${cases.map(([lab], i) => `${lab.split(' ')[0]} h${base[i].h.toFixed(0)} R−B${(base[i].RmB >= 0 ? '+' : '') + base[i].RmB.toFixed(0)} L${base[i].L.toFixed(0)}`).join(' | ')}`);
+    for (const [label, knobs] of LIT_KNOBS) {
+      const st = lightState(SHOT_TODS[shot], knobs);
+      const cells = cases.map(([, a, c], i) => {
+        const r = texelReport(st, ALB[a], c, knobs, c.occ ?? 0);
+        const dh = ((r.h - base[i].h + 540) % 360) - 180;
+        return `Δh${(dh >= 0 ? '+' : '') + dh.toFixed(0)} ΔR−B${(r.RmB - base[i].RmB >= 0 ? '+' : '') + (r.RmB - base[i].RmB).toFixed(0)} ΔL${(r.L - base[i].L >= 0 ? '+' : '') + (r.L - base[i].L).toFixed(0)}`;
+      });
+      console.log(`  ${label.padEnd(58)} ${cells.join(' | ')}`);
+    }
+  }
+  /* Night arithmetic, printed with every candidate, per pnightcal's published constraint. */
+  console.log('\n— night collision arithmetic (pnightcal L1: |dHue(archShade)| ≤ 1.40°; slope 40.5°/unit sbm; ceiling 0.0845) —');
+  const stN = lightState(SHOT_TODS.night);
+  for (const [label, knobs] of LIT_KNOBS) {
+    const st = lightState(SHOT_TODS.night, knobs);
+    const dSC = Math.max(...st.shadowColor.map((v, i) => Math.abs(v - stN.shadowColor[i])));
+    const dSCL = Math.max(...st.shadowColorLit.map((v, i) => Math.abs(v - stN.shadowColorLit[i])));
+    const uniformMoves = dSC > 0 || dSCL > 0;
+    const shaderKnob = /Wash|Sat|fillSkyMix|bounceGain|term/.test(label);
+    console.log(`  ${label.padEnd(58)} uShadowColor Δmax ${dSC.toExponential(1)}  uShadowColorLit Δmax ${dSCL.toExponential(1)}  ${uniformMoves || shaderKnob ? 'NIGHT-LIVE ⇒ needs a gate' : 'night-inert by uniform identity'}`);
+  }
+}
+
+function modeLit(sub) {
+  if (!sub || sub === 'bins') modeLitBins();
+  if (!sub || sub === 'pop') modeLitPop();
+  if (!sub || sub === 'levers') modeLitLevers();
+}
+
 /* ───────────────────────────── main ───────────────────────────── */
 
 const mode = process.argv[2] || 'all';
@@ -1333,3 +1547,4 @@ if (mode === 'gold2') modeGold2();
 if (mode === 'score') modeScore(process.argv[3] || `${REC}/banda1`);
 if (mode === 'cal2') modeCal2(process.argv[3] || `${REC}/banda1`);
 if (mode === 'score2') modeScore2(process.argv[3] || `${REC}/banda2`);
+if (mode === 'lit') { modeState(); modeGrade(); modeLit(process.argv[3]); }
