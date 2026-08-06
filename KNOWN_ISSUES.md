@@ -15139,3 +15139,40 @@ weighting, so these bound the magnitude rather than reproduce its arithmetic. Wi
 
 **Verdict: `fx9` stands. Task #13 stays closed.** The audit continues for results that compare
 frame-vs-frame deltas across boots on FX-bearing shots — which `fx9`'s headline was not.
+
+### 192.1 The same defect inside a SEALED falsifier — staging2 r9 is VOID and re-runs
+
+`PREREG-staging2` **P-F8**: *"scored arms not all carrying the same `bootId`, **or
+`srcTreeBefore ≠ srcTreeAfter`** ⇒ VOID"*, with the outcome table saying **VOID, re-run**.
+
+Run r9 completed all six arms cleanly — one `bootId`, feet/head pixel-identical across every arm,
+`treeDrift` false, the shot table restored in-page, `src/**` never written — and then reported
+`before 9fb6101f27556a12 after 4c83af2068ab9936 same=false`. **P-F8 fires. The run is VOID.**
+
+**Why it fired is §192 again, one layer up.** Both hashes are taken **outside the held lock**:
+`srcTreeBefore` at process construction, `srcTreeAfter` after `withGame` has already released. On a
+20–60 minute FIFO that window belongs to *other* runners. `9fb6101f27556a12` was combatrecipient's
+`kbside` arm sitting in the tree during staging2's queue wait — corroborated independently, because
+`litwarm1` launched in the same second and recorded the **identical** hash. `4c83af2068ab9936` is
+base, recorded independently by `litwarm1` at 08:23 and by this run at 13:15. Nothing drifted while
+staging2 was rendering.
+
+**I did not adjudicate around it, and the distinction matters.** In §192 I corrected
+`fifoDrift` after it fired, because that was **my own instrument code** and the corrected
+comparison was computable from recorded data. P-F8 is different in kind: it is a **registered
+falsifier in a sealed prereg**, and reinterpreting one after seeing the frames is precisely
+§141.1 — the move this ledger exists to prevent. The condition was met; the consequence applies;
+the run is void and re-runs. That costs ~47 minutes of capture and it is the correct price.
+
+**Amended for the re-run only, recorded at P-F8's own site with that scope stated first.** The
+clause becomes `srcTreeAtLock ≠ srcTreeAtRelease`, both sampled **while the lock is held**. That is
+a **narrowing**: a genuine mid-render edit still voids, and what no longer voids is a sibling being
+mid-arm during the queue wait — an event the capture cannot see and which cannot reach its frames.
+`srcTreeBefore`/`srcTreeAfter` are kept and reported as `sameTreeOutsideLock`, because queue-wait
+drift is worth observing even when it is not a falsifier.
+
+**Fifth instance, and the first inside a seal.** §189 a name, §190 a population, §191 a
+self-inclusive baseline, §192 a start-of-process snapshot, §192.1 a **pair** of out-of-lock
+snapshots. The rule from the DIGEST holds without modification: *pin the reference to something
+declared, never to something observed in passing* — and note that here the declared thing ("the
+tree this capture rendered") was available the whole time, one line inside the lock.

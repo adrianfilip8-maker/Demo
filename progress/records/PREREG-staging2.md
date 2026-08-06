@@ -216,8 +216,36 @@ near-field claim is dropped rather than dressed up.
 - **P-F6** `cand` figure feet/head more than ±12 px from (625, 244) ⇒ verdict **WITHHELD**, rects
   re-anchored, re-seal.
 - **P-F7** any arm's `armTook` false (camera not at the arm's value to <1e-4) ⇒ that arm VOID.
-- **P-F8** scored arms not all carrying the same `bootId`, or `srcTreeBefore ≠ srcTreeAfter` ⇒
-  **VOID.**
+- **P-F8** scored arms not all carrying the same `bootId`, or ~~`srcTreeBefore ≠ srcTreeAfter`~~
+  **`srcTreeAtLock ≠ srcTreeAtRelease`** ⇒ **VOID.**
+
+  > **AMENDED 2026-08-06 at this site, §192.1. Read the next paragraph before the amendment: it
+  > does NOT rescue run r9, which is VOID and is being re-run.**
+  >
+  > Run **r9 fired this falsifier and stands VOID** — `srcTreeBefore` `9fb6101f27556a12` ≠
+  > `srcTreeAfter` `4c83af2068ab9936`. The condition as registered was met, the registered
+  > consequence is VOID/re-run, and it applies. I am not reinterpreting a criterion after seeing
+  > the frames (§141.1); the amendment below governs the **re-run only**.
+  >
+  > **Why the clause was defective.** Both hashes were taken **outside the held lock** —
+  > `srcTreeBefore` at process construction, `srcTreeAfter` after `withGame` had already released.
+  > On a FIFO that runs 20–60 minutes deep, that window is dominated by *other* runners installing
+  > and reverting their arms. In r9 the `before` reading was combatrecipient's `kbside` arm
+  > (independently corroborated: `litwarm1`, launched in the same second, recorded the identical
+  > `9fb6101f27556a12`), and `4c83af2068ab9936` is base — the tree this boot actually rendered,
+  > recorded independently by `litwarm1` at 08:23 and by this run at 13:15. **Nothing drifted while
+  > staging2 was rendering**, and the run's own finer `treeDrift` read `false` throughout.
+  >
+  > This is §192's defect inside a sealed falsifier: a check that names *"the tree this capture
+  > rendered"* but reads *whatever was on disk when my process happened to start and finish*.
+  >
+  > **The amendment is a narrowing, not a loosening.** `srcTreeAtLock` and `srcTreeAtRelease` are
+  > both sampled **while this process holds the lock**, so the clause now asks exactly the declared
+  > question — *did the tree move while I had exclusive access?* — and a genuine mid-render edit
+  > still VOIDs. What it no longer does is void a run because a sibling was mid-arm during the
+  > queue wait, which the capture cannot see and which cannot reach its frames. `srcTreeBefore`/
+  > `srcTreeAfter` are retained and still reported as `sameTreeOutsideLock`, since queue-wait drift
+  > is worth observing even though it is not a falsifier.
 - **P-F9** the `preroll` frame is *absent* ⇒ VOID (the repair under test did not run).
 
 ---

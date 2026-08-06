@@ -70,6 +70,18 @@ log(`bootId ${BOOT_ID}  srcTree ${report.srcTreeBefore} — booting (harness tak
 
 await withGame({ width: 1280, height: 720, quality: 'high', timeout: 90 * 60 * 1000 }, async ({ page, info }) => {
   log(`boot ok — warnings ${info.warnings?.length ?? 0}; renderer ${info.renderer}`);
+  /* §192.1 — P-F8's tree clause must be read INSIDE the held lock. `srcTreeBefore` above is taken
+     at process construction, before the FIFO ticket is granted, so on a queue that runs 20-60
+     minutes deep it routinely samples a SIBLING runner's transient arm install rather than the
+     tree this boot renders. That is what voided run r9: `before` 9fb6101f27556a12 was
+     combatrecipient's `kbside` arm, `after` 4c83af2068ab9936 was base, and nothing drifted while
+     this process was actually rendering. Both readings below are taken while the lock is held, so
+     the comparison answers the declared question — did the tree move while I had exclusive
+     access — and is immune to what siblings do in the queue. `srcTreeBefore` is kept and still
+     reported, as the queue-wait observation it actually is. */
+  report.srcTreeAtLock = treeHash();
+  log(`srcTreeAtLock ${report.srcTreeAtLock} (pre-lock reading was ${report.srcTreeBefore}` +
+      `${report.srcTreeAtLock === report.srcTreeBefore ? '' : ' — differs: a sibling held an arm during the queue wait'})`);
   report.boot = { warnings: info.warnings, renderer: info.renderer, modules: info.modules };
   page.on('console', (m) => { if (m.type() === 'error') log(`  page error: ${m.text().slice(0, 200)}`); });
 
@@ -170,11 +182,15 @@ await withGame({ width: 1280, height: 720, quality: 'high', timeout: 90 * 60 * 1
   }, SHIPPED);
   report.tableRestored = restored;
   log(`shot table restored in-page to ${JSON.stringify(restored)} (src/** never written)`);
+  report.srcTreeAtRelease = treeHash();       // §192.1 — still inside the held lock
 });
 
 report.srcTreeAfter = treeHash();
 report.finishedAt = new Date().toISOString();
-report.sameTree = report.srcTreeBefore === report.srcTreeAfter;
+/* §192.1: P-F8's tree clause is now the in-lock pair. `srcTreeBefore`/`srcTreeAfter` are both
+   taken outside the lock and are retained as reported observations only. */
+report.sameTree = report.srcTreeAtLock === report.srcTreeAtRelease;
+report.sameTreeOutsideLock = report.srcTreeBefore === report.srcTreeAfter;
 save();
 log(`DONE — srcTree before ${report.srcTreeBefore} after ${report.srcTreeAfter} same=${report.sameTree}`);
 log(`wall-times: ${report.arms.map((a) => `${a.arm} ${a.wallSecs}s`).join('  ')}   <- §185's question`);
