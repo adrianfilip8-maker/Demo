@@ -14995,3 +14995,50 @@ residue-free base arm, the `base` arm that could never trip the check it was val
 the installed arm, which would have left a candidate in the shared tree — §186's contamination
 hazard by another route. `arms.py revert` was run by hand and the tree confirmed back at
 `350dece5a1b13fb7` BASE before anything was relaunched.)*
+
+
+## §192 — my own §191 fix had the same defect one level up: the reference tree was incidental
+
+§191 split the drift check into `fifoDrift` (`atLock !== launch`) and `bootDrift`. The `bootDrift`
+half is right. The `fifoDrift` half kept a reference that only *looks* fixed:
+
+```
+norestore  launch = 13dde875b6f320fb   atLock = 59fd366596517cf2   -> fifoDrift TRUE
+cand       launch = 59fd366596517cf2   atLock = 59fd366596517cf2   -> fifoDrift false
+base       launch = 59fd366596517cf2                               (base tree)
+```
+
+`norestore`'s launch hash is **`cand`'s installed tree**. All five runners were dispatched in the
+same second, `cand` took the lock immediately and installed its candidate, and `norestore` computed
+its launch hash a moment later — reading a tree that existed for about four minutes and belonged to
+a sibling. By the time `norestore` held the lock the tree was back at `59fd366596517cf2`, the real
+base, identical to what `base` and `cand` both rendered.
+
+So the flag fired on the arm that was **correct**, and the reading it trusted was the anomalous one.
+
+**The defect is the reference, and it is the same shape as §189/§190/§191 one level up.** What the
+check must protect is A/B comparability: *does this arm render the same base the `base` arm was
+captured on?* That is a fixed, recorded quantity — `telemetry-base.json`'s `srcTree`. The check
+instead compared against "whatever `src/` looked like when my process happened to start", which is
+not that quantity and is not even stable across siblings. Fourth instance in this batch of an
+instrument naming one thing and reading another, and this one is mine, in the fix I wrote for the
+third.
+
+**Fixed** by reading the reference from `telemetry-base.json`'s `srcTree` when it exists, recording
+`srcTreeReference` and `srcTreeReferenceFrom` in every arm's telemetry so the comparison is
+auditable, and falling back to the launch hash only when no base arm has been captured yet.
+
+**The two affected arms are VALID and are not re-run**, because the corrected comparison is
+computable from data already on disk and does not touch a pixel: `norestore`'s `atLock` is
+`59fd366596517cf2`, byte-identical to the `srcTree` the `base` arm registered. Under the corrected
+reference `fifoDrift` is false. This is not §141.1 — no band moved, no measurement was re-judged; a
+plumbing flag was pointed at the quantity it always claimed to be measuring, and the arm's frames
+were rendered from the right tree either way. Re-running would produce the same pixels and cost
+twelve minutes of a queue that rolls back every half hour.
+
+**The general rule, now stated once for all four.** An instrument must pin its reference to
+something *declared*, never to something *observed in passing*. A name (§189), a population
+(§190), a self-inclusive baseline (§191) and now a start-of-process snapshot (§192) all failed the
+same way: each was a convenient stand-in for the real referent, and each was silently wrong exactly
+when a second actor was in play — a concurrent process, a level full of guards, the runner itself,
+a sibling arm.

@@ -352,7 +352,22 @@ async function main() {
     telemetry.srcTreeAtBoot = boot.hash;
     telemetry.srcTreeAtLock = marks.atLock;
     telemetry.srcTreePostInstall = marks.postInstall;
-    const fifoDrift = marks.atLock !== tree.hash;
+    /* §192: the reference for FIFO drift is the tree the `base` arm was captured on, NOT this
+       process's launch-time reading. Arms are dispatched together, so a sibling can already hold
+       the lock with ITS candidate installed when this process computes its launch hash — observed
+       exactly: `norestore` launched reading 13dde875b6f320fb, which was `cand`'s installed tree,
+       and reached the lock at 59fd366596517cf2, the real base. Comparing against the launch
+       reading called that drift; comparing against `base`'s registered srcTree calls it what it
+       is. What the check must protect is A/B comparability — that this arm renders the same base
+       the `base` arm did — and that is a fixed, recorded quantity, not an incidental reading. */
+    let reference = tree.hash, referenceFrom = 'launch (no base telemetry on disk)';
+    try {
+      const bt = JSON.parse(readFileSync(path.join(OUT, 'telemetry-base.json'), 'utf8')).srcTree;
+      if (bt) { reference = bt; referenceFrom = 'telemetry-base.json srcTree'; }
+    } catch { /* first run, or base not captured yet — fall back to launch */ }
+    telemetry.srcTreeReference = reference;
+    telemetry.srcTreeReferenceFrom = referenceFrom;
+    const fifoDrift = marks.atLock !== reference;
     const bootDrift = boot.hash !== marks.postInstall;
     telemetry.fifoDrift = fifoDrift;
     telemetry.bootDrift = bootDrift;
