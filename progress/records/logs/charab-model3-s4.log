@@ -1,1 +1,6 @@
 [0s] arm "model3" — SlyModel3.js (?char=model3)
+[95s] boot ok — renderer ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver); warnings 1
+[95s]    ! textures: prewarm took 26.6s at size 1024
+[95s] identity: root="sly3" mesh="sly3:mesh" bones=31 verts=2635
+[625s]   sly-closeup  531s -> sly-closeup.model3.png
+[1052s]   sly-profile  427s -> sly-profile.model3.png
