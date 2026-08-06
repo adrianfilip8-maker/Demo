@@ -332,3 +332,83 @@ it is registered rather than invented for the occasion.
 
 **WITHHELD** (P-F5), pending the `restore` arm's determinism control. The candidate does not ship
 under any branch. `kbside` also outstanding for P-F7.
+
+---
+
+## `kbside` — **P-F7 fires. The seal is UNSCOREABLE**, and the known-bad is the better frame
+
+```
+combat: base vs kbside — frame-wide differing px 443,048 (48.07%)
+        largest component: area 234,556  bbox (0,261)-(612,719)  centroid (272,495)
+  KB-P1   area 234,556              band >= 20,000 (a guard IS present)     PASS
+  KB-P2   flash-disc changed 0.824  band <= 0.15 (must NOT be on target)    **FAIL**
+  KB-P4   176,745 px                band > 4,608 (known-bad MUST regress)   PASS
+  KB-P4c  minDist(stand) 0.0001 m   band <= 0.5 m                           PASS
+```
+
+**P-F7's condition is met exactly**: *"if `kbside` scores P2 > 0.15 … then P2 cannot distinguish
+'a guard is in the frame' from 'the arc lands on him' ⇒ **UNSCOREABLE**, no verdict in either
+direction."* It scored **0.824**.
+
+**And the failure is an inversion, not a near-miss.** Each arm landed inside the *other's* band:
+
+| arm | intended | P2 band | P2 measured |
+|---|---|---|---|
+| `cand` | arc lands **on** the recipient | ≥ 0.80 | **0.245** |
+| `kbside` | arc **misses** by 2.038 m | ≤ 0.15 | **0.824** |
+
+An uncalibrated metric has no scale (§141.1). One that reads backwards has less than none, because
+every earlier P2 number in this file was quoted with a sign the metric does not support.
+
+### The frames say the known-bad is the shot the seal was trying to build
+
+This is the finding worth carrying forward, and it is visible rather than inferred:
+
+- **`cand`** — the recipient spawns **interpenetrating Sly**; body and staff pass through the
+  player character, covering 47.4 % of his bbox. The frame is broken.
+- **`kbside`** — **Sly reads clean and unobstructed in his combat pose, and the recipient stands to
+  his right, reeling from the strike.** Two separated silhouettes, correct depth order, the flash
+  behind them. It is the composition §1 set out to achieve.
+
+So the seal's premise about `screenSide` is **backwards in effect**: the sign it registered as the
+candidate puts the recipient on top of the player, and the sign it registered as the *known-bad*
+produces the intended staging. `kbside`'s stand is 2.200 m from the computed impact anchor, so the
+recipient is **not** where the arc mathematically lands — and it still reads better. That tension is
+the real content of this capture: **the impact anchor was assumed to be the right target for
+composition, and the frames say it is not.** A body placed exactly at the arc's terminus stands
+inside the player, because the arc terminates at arm's length.
+
+### Scope note on P-F8b, flagged not chased
+
+`P-F8b` fires on `kbside` (stand `[1.523, 0, 27.3554]`, off-prediction **2.200 m** > 1.20 m). But
+`kbside` is *defined* as the arm whose stand differs — a 2.038 m miss is its entire purpose. The
+check is reading the known-bad doing its job and calling it a premise violation. It is scoped to
+"the telemetry stand" without saying *whose*, which is the §189–§192 shape again in miniature. Not
+repaired here: it changes no outcome (the seal is already UNSCOREABLE), and the re-seal should
+scope it to the candidate arm explicitly rather than have me widen or narrow it mid-capture.
+
+## Verdict — FINAL for this seal
+
+> **~~WITHHELD (P-F5)~~ → UNSCOREABLE (P-F7), which subsumes it.** P-F5 withholds a verdict because
+> attribution between Edit 1 and Edit 2 is unsafe; P-F7 says the metric doing the attributing has
+> no scale at all. The stronger statement governs: **this seal returns no verdict in either
+> direction.**
+
+**The candidate does not ship**, and that conclusion needs none of the failed metrics — it rests on
+the frames: the recipient interpenetrates the player character.
+
+**What is certified and survives to the re-seal:**
+
+1. **The residue mechanism is real and Edit 2 fixes it.** base 15.87 m (no residue) → `norestore`
+   0.0001 m (residue) → `cand` 15.81 m (restored). KB-P4c passes at 0.0001 m against ≤ 0.5 m, so
+   this instrument *is* calibrated — it is the one that was.
+2. **The stand solver is exact.** `cand`/`norestore` land at `[0.1019, 0, 29.0349]`,
+   off-prediction **0.000 m**.
+3. **`screenSide −1` is the composition candidate**, on frame evidence, and the next seal should
+   register it as such — with occlusion of the player as a *first-class gated quantity*, a P2
+   replacement validated against both arms before capture, and the shadow-cascade refit (a wall
+   going from shadowed to lit at 100 % of its pixels) modelled rather than discovered.
+
+**Not re-tuned, not re-run under new bands.** `restore` is still queued and will settle whether
+boot-to-boot noise is 0 px or 10⁴ px; that number is worth having for the next seal's P-F5, but it
+cannot change this one's outcome.
