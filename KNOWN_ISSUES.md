@@ -14421,3 +14421,34 @@ residual is per-particle RNG in the 180 smoke + 455 spark particles over the doo
 The lever is banked, certified, and one decision from shipping. `src/ai/Guard.js:158`,
 `SHOT_POSE.guard.towardCamera 0.35 → −0.20`.
 
+
+## §180 — the tomb's local lights have never lit anything: `_patch` deletes the consumer
+
+FX's torch-pool diagnosis traced the chain end to end and found the break two stages downstream
+of where every prior note assumed it:
+
+- **PROPS registers correctly** — `Props.js:527` torch `{0xffb060, I 3.4, R 9}`, `:515` brazier
+  `{0xff9a4a, I 5.5, R 13}` → `addLocalLight`.
+- **LIGHTING pools and drives correctly** — slot promotion, two-octave flicker in intensity and
+  position, distance fade, `decay = 2`. Nothing wrong.
+- **`ToonMaterial._patch` strips `<lights_physical_fragment>` and
+  `<lights_fragment_begin|maps|end>` from the shader source before compilation.** Those *are*
+  three.js's punctual-light accumulation. `totalDiffuse` is never computed. `TOON_SHADE`'s
+  entire light budget is `uKeyDir` + hemi fill + shadow colour + emissive. **No point-light term
+  exists and no uniform carries one.** All tomb architecture is toon-shaded, so the light was
+  never emitted onto stone at any distance.
+
+**CRITIC-sbs1's "the light dies within ~2 m of each sconce" is therefore wrong about the
+mechanism** — corrected here rather than at that note, because the note's *observation* was
+right and only its causal clause fails. What is visible near a sconce is the additive sprite
+plus the torch head's emissive: exactly the two things that survive the patch. Measured
+signature, from the sprites outward: warm crosses neutral at ~25 px (0–10 px: 78.9% warm,
+R−B +39.8; 20–30 px: 19.7%, −0.68), which is a billboard's profile, not a 9 m light's.
+
+**Sizing, so nobody re-derives it:** the entire flame-adjacent warm population is 1.95% of frame
+(18,009 px); the interior warm-share gap needs +221,000 px. FX's ceiling on this axis is ≤ ~2 pp
+of the 24, and quadrupling sprite area to reach it would fail §7.3 on bloom. **The missing work
+is a local-light term in `TOON_SHADE` — SHADING's, not LIGHTING's, whose half is already built
+and correct.** Falloff table, `localCap 6` at high quality, the VSM no-shadow caveat, and the
+§17 gate requirement are all in `NOTE-torchpool.md`.
+

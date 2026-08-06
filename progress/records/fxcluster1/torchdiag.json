@@ -1,0 +1,211 @@
+{
+ "at": "2026-08-06T03:51:41.228Z",
+ "predicate": "warm = R > B+10 AND L > 40 (CRITIC-sbs3 frame predicate); core = L > 170 AND R > B+40",
+ "frames": {
+  "sbs3/interior.png (current)": {
+   "file": "sbs3/interior.png",
+   "w": 1280,
+   "h": 720,
+   "warmShare": 7.05,
+   "warmPx": 64927,
+   "litSharePct": 85.78,
+   "flameCoreShare": 0.188,
+   "flameCorePx": 1734
+  },
+  "sbs2/interior.base.png": {
+   "missing": "sbs2/interior.base.png"
+  },
+  "cand1/frames/interior.base.png": {
+   "file": "cand1/frames/interior.base.png",
+   "w": 1280,
+   "h": 720,
+   "warmShare": 7.35,
+   "warmPx": 67724,
+   "litSharePct": 83.68,
+   "flameCoreShare": 0.181,
+   "flameCorePx": 1669
+  },
+  "banda2/interior.base.png": {
+   "file": "banda2/interior.base.png",
+   "w": 1280,
+   "h": 720,
+   "warmShare": 7.31,
+   "warmPx": 67409,
+   "litSharePct": 83.37,
+   "flameCoreShare": 0.181,
+   "flameCorePx": 1671
+  }
+ },
+ "reachProfile": {
+  "frame": "sbs3/interior.png (current)",
+  "note": "annuli measured outward from the flame sprites themselves",
+  "rows": [
+   {
+    "annulusPx": "0-10",
+    "px": 10124,
+    "shareOfFrame": 1.1,
+    "warmShareOfAnnulus": 78.88,
+    "meanRmB": 39.81,
+    "litShare": 86.9
+   },
+   {
+    "annulusPx": "10-20",
+    "px": 12403,
+    "shareOfFrame": 1.35,
+    "warmShareOfAnnulus": 37.8,
+    "meanRmB": 12.33,
+    "litShare": 82.3
+   },
+   {
+    "annulusPx": "20-30",
+    "px": 15102,
+    "shareOfFrame": 1.64,
+    "warmShareOfAnnulus": 19.74,
+    "meanRmB": -0.68,
+    "litShare": 82.8
+   },
+   {
+    "annulusPx": "30-40",
+    "px": 17920,
+    "shareOfFrame": 1.94,
+    "warmShareOfAnnulus": 13.06,
+    "meanRmB": -8.69,
+    "litShare": 74.8
+   },
+   {
+    "annulusPx": "40-60",
+    "px": 42209,
+    "shareOfFrame": 4.58,
+    "warmShareOfAnnulus": 12.09,
+    "meanRmB": -13.77,
+    "litShare": 76.9
+   },
+   {
+    "annulusPx": "60-80",
+    "px": 43940,
+    "shareOfFrame": 4.77,
+    "warmShareOfAnnulus": 9.84,
+    "meanRmB": -19.65,
+    "litShare": 87.1
+   },
+   {
+    "annulusPx": "80-120",
+    "px": 98280,
+    "shareOfFrame": 10.66,
+    "warmShareOfAnnulus": 4.16,
+    "meanRmB": -26.39,
+    "litShare": 87.6
+   },
+   {
+    "annulusPx": "120-160",
+    "px": 105508,
+    "shareOfFrame": 11.45,
+    "warmShareOfAnnulus": 1.01,
+    "meanRmB": -29.15,
+    "litShare": 87.1
+   },
+   {
+    "annulusPx": "160-240",
+    "px": 217649,
+    "shareOfFrame": 23.62,
+    "warmShareOfAnnulus": 2.04,
+    "meanRmB": -27.67,
+    "litShare": 82.2
+   },
+   {
+    "annulusPx": "240-320",
+    "px": 161220,
+    "shareOfFrame": 17.49,
+    "warmShareOfAnnulus": 6.21,
+    "meanRmB": -17.53,
+    "litShare": 86.9
+   },
+   {
+    "annulusPx": "320-480",
+    "px": 162533,
+    "shareOfFrame": 17.64,
+    "warmShareOfAnnulus": 11,
+    "meanRmB": -13.49,
+    "litShare": 90.2
+   },
+   {
+    "annulusPx": "480-inf",
+    "px": 34712,
+    "shareOfFrame": 3.77,
+    "warmShareOfAnnulus": 0.04,
+    "meanRmB": -15.37,
+    "litShare": 90.3
+   }
+  ]
+ },
+ "warmAttribution": {
+  "frame": "sbs3/interior.png (current)",
+  "rows": {
+   "within 10px of a flame core": {
+    "px": 8141,
+    "shareOfFrame": 0.88,
+    "shareOfWarmPop": 12.5
+   },
+   "within 20px of a flame core": {
+    "px": 12726,
+    "shareOfFrame": 1.38,
+    "shareOfWarmPop": 19.6
+   },
+   "within 40px of a flame core": {
+    "px": 18009,
+    "shareOfFrame": 1.95,
+    "shareOfWarmPop": 27.7
+   },
+   "within 80px of a flame core": {
+    "px": 27425,
+    "shareOfFrame": 2.98,
+    "shareOfWarmPop": 42.2
+   },
+   "within 160px of a flame core": {
+    "px": 32582,
+    "shareOfFrame": 3.54,
+    "shareOfWarmPop": 50.2
+   },
+   "within 320px of a flame core": {
+    "px": 47042,
+    "shareOfFrame": 5.1,
+    "shareOfWarmPop": 72.5
+   }
+  }
+ },
+ "registeredLightReach": {
+  "formula": "I/d^2 * saturate(1-(d/R)^4)^2  (three.js decay=2, cutoff=radius)",
+  "lights": {
+   "wall torch (Props.js:527)": {
+    "I": 3.4,
+    "R": 9
+   },
+   "brazier (Props.js:515)": {
+    "I": 5.5,
+    "R": 13
+   }
+  },
+  "table": {
+   "wall torch (Props.js:527)": {
+    "1 m": 3.399,
+    "2 m": 0.846,
+    "3 m": 0.369,
+    "4 m": 0.196,
+    "5 m": 0.111,
+    "6 m": 0.061,
+    "8 m": 0.007
+   },
+   "brazier (Props.js:515)": {
+    "1 m": 5.5,
+    "2 m": 1.373,
+    "3 m": 0.608,
+    "4 m": 0.338,
+    "5 m": 0.21,
+    "6 m": 0.139,
+    "8 m": 0.063,
+    "10 m": 0.023,
+    "12 m": 0.003
+   }
+  }
+ }
+}

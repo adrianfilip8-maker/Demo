@@ -216,10 +216,22 @@ if (PALETTE.shadowHue !== 0x2a3f66) { console.error(`DRIFT: Atmosphere PALETTE.s
 /* Architecture recipe params the gold mode uses */
 needLine('arch', 'hieroglyph_gilded:   { color: 0xdcae5e, rough: 0.55, spec: 0.55, gloss: 64', 'gilded recipe');
 needLine('arch', "metal: r.metal ? (r.metalAmount ?? 0.85) : 0", 'metalAmount default');
-/* litwarm: the whole `lit` diagnosis rests on architecture running the wrap leg at ZERO.
-   Assert it, and assert the per-material uniforms it flows through. If ARCHITECTURE ships a
-   value, PREREG-litwarm's §1.4 is describing a tree that no longer exists ⇒ refuse. */
-needLine('arch', 'sss: 0.0,', 'Architecture wrap OFF (the litwarm premise)');
+/* litwarm: the wrap leg's shipped shape. The `lit` DIAGNOSIS was taken against architecture
+   running this term at ZERO (`sss: 0.0`, the premise of PREREG-litwarm §1.4); the SHIP is
+   `sss: 0.30` + `sssNightPin: 0.0`. Both are asserted, in order, so the instrument states
+   which tree it is describing instead of silently straddling them: LITWARM_SHIPPED tells the
+   `lit` mode to label its diagnosis rows "pre-ship (base arm)" rather than "shipped". */
+const LITWARM_SHIPPED = /sss: 0\.30,\s*\n\s*sssNightPin: 0\.0,/.test(SRC.arch);
+if (LITWARM_SHIPPED) {
+  need('arch', /sss:\s*(0\.30),\n\s*sssNightPin/, 'Architecture sss (litwarm L1)', '0.30', String);
+  need('arch', /sssNightPin:\s*(0\.0),/, 'Architecture sssNightPin (litwarm G)', '0.0', String);
+  needLine('toonMat', 'sssNightPin: clamp(num(opts.sssNightPin, num(opts.sss, TUNE.sss)), 0, 1),', 'sssNightPin option');
+  needLine('toonMat', 'd.slyUniforms.uSss.value = d.slySss + (d.slySssNightPin - d.slySss) * n;', 'litwarm gate publish');
+  needLine('toonMat', 'for (let i = 0; i < this._sssPinned.length; i++) this._publishSssPin(this._sssPinned[i]);', 'litwarm gate call site');
+  needLine('toonMat', 'r3(o.sss), r3(o.sssNightPin), o.wrapColor', 'sssNightPin in the cache key');
+} else {
+  needLine('arch', 'sss: 0.0,', 'Architecture wrap OFF (the pre-litwarm premise)');
+}
 needLine('toonMat', 'uSss:            { value: o.sss },', 'per-material uSss');
 needLine('toonMat', 'wrapColor: hex(opts.wrapColor ?? opts.sssColor, PAL.wrapWarm),', 'wrap colour default = PAL.wrapWarm');
 needLine('toonGlsl', 'vec3 sss = alb * uSssColor * keyRad * ( sssAmt * uSss * 2.4 * sh );', 'wrap leg assembly');
@@ -1577,7 +1589,7 @@ function modeLitSweep() {
      ndl range it covers, at the shipped TUNE default (0.2) and candidate values. `sh` is 1 in
      every row: the term is multiplied by sh, so it contributes exactly nothing inside a cast
      shadow — it cannot re-create the §pass-3 "unlit out-brightens lit" inversion the wash did. */
-  console.log('\n═══ lit/sss — the wrap leg on architecture (currently 0.0 by Architecture.js:209) ═══');
+  console.log(`\n═══ lit/sss — the wrap leg on architecture (${LITWARM_SHIPPED ? 'SHIPPED at 0.30 + nightPin 0.0; the sss0.00 column is the base arm' : 'currently 0.0 by Architecture.js:209'}) ═══`);
   console.log('  rows are ndl (surface turn relative to the key); every row sh=1 (NOT in cast shadow).');
   for (const shot of ['hero', 'temple', 'interior']) {
     const st = lightState(SHOT_TODS[shot]);
@@ -1615,6 +1627,164 @@ function modeLit(sub) {
   if (!sub || sub === 'sweep') modeLitSweep();
 }
 
+/* ═════════════════ score3 mode (PREREG-litwarm) ═════════════════
+ * node banda-diag.mjs score3 <dir> — <dir> holds <shot>.<arm>.png, arms
+ * base / C / KBover / KBnull / restore. BANDS_LW is duplicated VERBATIM from PREREG-litwarm
+ * §5; a mismatch between the files voids the scoring, not the seal. Committed BEFORE the
+ * capture, per the seal's §8.
+ *
+ * Every Δ(R−B) row uses the FIXED-MASK convention (mask built on the `base` arm's luma,
+ * difference taken per pixel) — NOT the moving-bin convention CRITIC-sbs3 §3.1 used. The
+ * reason is measured, not stylistic: `lit bins` shows a moving-bin band table reporting ±4
+ * R−B where the fixed-mask truth is ±0.4. See NOTE-traversal-contrast.md §4. */
+
+const BANDS_LW = {
+  W1_hero: [0.3, 8.0], W2_courtyard: [0.3, 8.0], W3_temple: [0.0, 10.0], W4_interior: [0.0, 12.0],
+  H_frame: [0.0, 30],               // H1–H4: frame Δ(R−B), fixed mask base L∈[40,140]
+  H_rect: [0.0, 45],                // H5–H6: arch rect Δ(R−B), fixed mask base L∈[80,140]
+  S1_shade: [0.0, 20],              // frame Δ(R−B), fixed mask base L<40 — banda2 must survive
+  S2_heroL40: [-12.0, 0.0],
+  S3_familyHue: [200, 246],         // banda2's P5 band, verbatim
+  S4_creamRoi: [-58, -30], S4_rings: [5, 45], S4_tailBody: [-4, 18],
+  S5_subjPx: [0, 0], T1_contrast: [-0.5, 5.0],
+  P7_night: [0, 0], PF4_restore: [0, 0], PF9_null: [0, 0],
+  KBover_hueMax: 200,               // KB must drive arch body hue BELOW this (its own failure)
+  BG_hero: [21, 26], BG_courtyard: [31, 37], BG_temple: [16, 21], BG_interior: [5.5, 9.0],
+  BG_heroL40: [30, 41],
+};
+
+/* Fixed-mask mean Δ(R−B): the mask is the BASE arm's luma band; the difference is per pixel. */
+function fixedMaskRmB(imBase, imArm, rect, lo, hi) {
+  const [x0, y0, x1, y1] = rect;
+  let n = 0, s = 0;
+  for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) {
+    const i = (y * imBase.w + x) * imBase.ch, j = (y * imArm.w + x) * imArm.ch;
+    const r0 = imBase.data[i], g0 = imBase.data[i + 1], b0 = imBase.data[i + 2];
+    const L = 0.2126 * r0 + 0.7152 * g0 + 0.0722 * b0;
+    if (L < lo || L >= hi) continue;
+    n++; s += (imArm.data[j] - imArm.data[j + 2]) - (r0 - b0);
+  }
+  return { d: n ? s / n : NaN, n };
+}
+
+const LW_RECTS = {
+  frame: [0, 0, 1280, 720],
+  heroArch: [200, 300, 900, 600],
+  templeCol: [80, 260, 200, 420],
+  intWall0: [60, 80, 320, 400], intWall1: [1050, 100, 1250, 500],
+  subjBox: [600, 200, 700, 300],
+  travFig: [525, 195, 715, 365], travSur: [300, 195, 490, 365],
+};
+
+function modeScore3(dir) {
+  console.log(`\n═══ score3 — PREREG-litwarm quantities on ${dir} (BANDS_LW verbatim from the seal) ═══`);
+  const have = (p) => { try { readFileSync(p); return true; } catch { return false; } };
+  const f = (shot, arm) => `${dir}/${shot}.${arm}.png`;
+  const R = [];
+  const say = (id, val, band, cmp = (v, b) => v >= b[0] && v <= b[1]) => {
+    const ok = Number.isFinite(val) ? cmp(val, band) : false;
+    R.push([id, val, band, ok]);
+    console.log(`  ${id.padEnd(34)} ${Number.isFinite(val) ? val.toFixed(2) : String(val)}  band ${JSON.stringify(band)}  ${ok ? 'PASS' : 'FAIL'}`);
+  };
+  const note = (s) => console.log(`    ${s}`);
+
+  /* ---- night FIRST: the decider ---- */
+  for (const [shot, id] of [['night', 'P7-fw night Δpx (frame-wide)'], ['guard', 'P7-g guard Δpx (frame-wide)']]) {
+    if (!have(f(shot, 'base')) || !have(f(shot, 'C'))) continue;
+    const b = readPNG(f(shot, 'base')), c = readPNG(f(shot, 'C'));
+    say(id, frameDiffPx(b, c), BANDS_LW.P7_night, (v, band) => v === band[0]);
+    if (have(f(shot, 'restore'))) say(`P-F4 ${shot} restore px`, frameDiffPx(b, readPNG(f(shot, 'restore'))), BANDS_LW.PF4_restore, (v, band) => v === band[0]);
+  }
+
+  /* ---- day shots: base gates, then the registered quantities ---- */
+  const dayJobs = [
+    ['hero', 'W1 hero frame warm% Δpp', BANDS_LW.W1_hero, BANDS_LW.BG_hero],
+    ['courtyard', 'W2 courtyard frame warm% Δpp', BANDS_LW.W2_courtyard, BANDS_LW.BG_courtyard],
+    ['temple', 'W3 temple frame warm% Δpp', BANDS_LW.W3_temple, BANDS_LW.BG_temple],
+    ['interior', 'W4 interior frame warm% Δpp', BANDS_LW.W4_interior, BANDS_LW.BG_interior],
+  ];
+  for (const [shot, wid, wband, bg] of dayJobs) {
+    if (!have(f(shot, 'base')) || !have(f(shot, 'C'))) continue;
+    const b = readPNG(f(shot, 'base')), c = readPNG(f(shot, 'C'));
+    const w0 = warmShare(b, LW_RECTS.frame), w1 = warmShare(c, LW_RECTS.frame);
+    say(`BaseGate ${shot} frame warm%`, w0.warmPct, bg);
+    say(wid, w1.warmPct - w0.warmPct, wband);
+    note(`(warm% ${w0.warmPct.toFixed(2)} → ${w1.warmPct.toFixed(2)}; comparand quoted in the seal, not claimed)`);
+    const h = fixedMaskRmB(b, c, LW_RECTS.frame, 40, 140);
+    say(`H ${shot} frame Δ(R−B) L40-140 fixed`, h.d, BANDS_LW.H_frame);
+    note(`(mask n ${h.n} = ${(100 * h.n / (1280 * 720)).toFixed(2)}% of frame — the fixed mask, base arm)`);
+    const s1 = fixedMaskRmB(b, c, LW_RECTS.frame, 0, 40);
+    say(`S1 ${shot} shade Δ(R−B) L<40 fixed`, s1.d, BANDS_LW.S1_shade);
+    note(`(banda2 non-regression: the wrap is a strictly additive warm term ⇒ negative is P-F5)`);
+    if (have(f(shot, 'restore'))) say(`P-F4 ${shot} restore px`, frameDiffPx(b, readPNG(f(shot, 'restore'))), BANDS_LW.PF4_restore, (v, band) => v === band[0]);
+    if (have(f(shot, 'KBnull'))) say(`P-F9 ${shot} KBnull px`, frameDiffPx(b, readPNG(f(shot, 'KBnull'))), BANDS_LW.PF9_null, (v, band) => v === band[0]);
+  }
+
+  /* ---- hero rect rows ---- */
+  if (have(f('hero', 'base')) && have(f('hero', 'C'))) {
+    const b = readPNG(f('hero', 'base')), c = readPNG(f('hero', 'C'));
+    say('BaseGate hero.arch <L40 %', rectStats(b, LW_RECTS.heroArch).below40Pct, BANDS_LW.BG_heroL40);
+    const h5 = fixedMaskRmB(b, c, LW_RECTS.heroArch, 80, 140);
+    say('H5 hero.arch Δ(R−B) L80-140 fixed', h5.d, BANDS_LW.H_rect);
+    note(`(mask n ${h5.n}; base mean R−B on this mask −15.98 per the seal)`);
+    say('S2 hero.arch Δ<L40 pp', rectStats(c, LW_RECTS.heroArch).below40Pct - rectStats(b, LW_RECTS.heroArch).below40Pct, BANDS_LW.S2_heroL40);
+    say('S3 hero.arch body hue (C)', rectStats(c, LW_RECTS.heroArch).bodyHue, BANDS_LW.S3_familyHue);
+  }
+  if (have(f('temple', 'base')) && have(f('temple', 'C'))) {
+    const b = readPNG(f('temple', 'base')), c = readPNG(f('temple', 'C'));
+    const h6 = fixedMaskRmB(b, c, LW_RECTS.templeCol, 80, 140);
+    say('H6 temple.col Δ(R−B) L80-140 fixed', h6.d, BANDS_LW.H_rect);
+    note(`(mask n ${h6.n}; base mean R−B on this mask −16.33 per the seal)`);
+    say('S3 temple.col body hue (C)', rectStats(c, LW_RECTS.templeCol).bodyHue, BANDS_LW.S3_familyHue);
+  }
+  if (have(f('interior', 'base')) && have(f('interior', 'C'))) {
+    const c = readPNG(f('interior', 'C'));
+    say('S3 interior wall0 body hue (C)', rectStats(c, LW_RECTS.intWall0).bodyHue, BANDS_LW.S3_familyHue);
+    say('S3 interior wall1 body hue (C)', rectStats(c, LW_RECTS.intWall1).bodyHue, BANDS_LW.S3_familyHue);
+  }
+
+  /* ---- KB-overwrap: must read as its OWN failure (P-F2) ---- */
+  let kbSeen = 0, kbFired = 0;
+  for (const [shot, rect] of [['hero', LW_RECTS.heroArch], ['interior', LW_RECTS.intWall0]]) {
+    if (!have(f(shot, 'KBover'))) continue;
+    const hue = rectStats(readPNG(f(shot, 'KBover')), rect).bodyHue;
+    kbSeen++; if (hue < BANDS_LW.KBover_hueMax) kbFired++;
+    console.log(`  KB-overwrap ${shot} body hue ${hue.toFixed(2)} (fires below ${BANDS_LW.KBover_hueMax}) — ${hue < BANDS_LW.KBover_hueMax ? 'reads as its own failure' : 'DID NOT FIRE'}`);
+  }
+  if (kbSeen) say('KB-overwrap rects fired', kbFired, [1, 99], (v, b2) => v >= b2[0]);
+
+  /* ---- character invariance ---- */
+  if (have(f('sly-closeup', 'base')) && have(f('sly-closeup', 'C'))) {
+    const b = readPNG(f('sly-closeup', 'base')), c = readPNG(f('sly-closeup', 'C'));
+    let s5 = 0;
+    { const [x0, y0, x1, y1] = LW_RECTS.subjBox;
+      for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) {
+        const i = (y * b.w + x) * b.ch, j = (y * c.w + x) * c.ch;
+        if (Math.abs(b.data[i] - c.data[j]) + Math.abs(b.data[i + 1] - c.data[j + 1]) + Math.abs(b.data[i + 2] - c.data[j + 2]) >= 4) s5++;
+      } }
+    say('S5 sly subject-interior Δpx', s5, BANDS_LW.S5_subjPx, (v, band) => v === band[0]);
+    say('S4 creamROI b−r (C)', lRoiBmr(c, [802, 306, 862, 356], 90, 200).bmr, BANDS_LW.S4_creamRoi);
+    say('S4 rings b−r (C)', lRoiBmr(c, TAIL_DARK_ROIS, 26, 55).bmr, BANDS_LW.S4_rings);
+    say('S4 tail body R−B (C)', rectStats(c, [630, 290, 780, 410]).bodyRmB, BANDS_LW.S4_tailBody);
+    if (have(f('sly-closeup', 'restore'))) say('P-F4 sly-closeup restore px', frameDiffPx(b, readPNG(f('sly-closeup', 'restore'))), BANDS_LW.PF4_restore, (v, band) => v === band[0]);
+  }
+
+  /* ---- T1: the traversal contrast this seal is required to bound ---- */
+  if (have(f('traversal', 'base')) && have(f('traversal', 'C'))) {
+    const b = readPNG(f('traversal', 'base')), c = readPNG(f('traversal', 'C'));
+    const d = (im) => rectStats(im, LW_RECTS.travFig).medL - rectStats(im, LW_RECTS.travSur).medL;
+    const d0 = d(b), d1 = d(c);
+    say('T1 traversal contrast Δ', d1 - d0, BANDS_LW.T1_contrast);
+    note(`(fig−sur ${d0.toFixed(2)} → ${d1.toFixed(2)}; banda2 already took 2.46 — NOTE-traversal-contrast.md)`);
+    const h = fixedMaskRmB(b, c, LW_RECTS.frame, 40, 140);
+    say('H traversal frame Δ(R−B) L40-140', h.d, BANDS_LW.H_frame);
+    if (have(f('traversal', 'restore'))) say('P-F4 traversal restore px', frameDiffPx(b, readPNG(f('traversal', 'restore'))), BANDS_LW.PF4_restore, (v, band) => v === band[0]);
+  }
+
+  const fails = R.filter((r) => !r[3]).length;
+  console.log(`\n  ${R.length} scored, ${fails} FAIL — RESULT-litwarm quotes this table verbatim.`);
+}
+
 /* ───────────────────────────── main ───────────────────────────── */
 
 const mode = process.argv[2] || 'all';
@@ -1631,3 +1801,4 @@ if (mode === 'score') modeScore(process.argv[3] || `${REC}/banda1`);
 if (mode === 'cal2') modeCal2(process.argv[3] || `${REC}/banda1`);
 if (mode === 'score2') modeScore2(process.argv[3] || `${REC}/banda2`);
 if (mode === 'lit') { modeState(); modeGrade(); modeLit(process.argv[3]); }
+if (mode === 'score3') modeScore3(process.argv[3] || `${REC}/litwarm1`);
