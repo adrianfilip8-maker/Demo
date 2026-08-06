@@ -1,0 +1,127 @@
+{
+ "at": "2026-08-06T01:34:22.541Z",
+ "run": "c3 (same block, re-anchored instrument per PREREG-fxcluster-c3)",
+ "arms": {
+  "base": {
+   "figMedSat": 0.372,
+   "figMedL": 154.4,
+   "chalkShare": 0.136,
+   "blobL200px": 16048,
+   "blobL200bbox": [
+    300,
+    351,
+    576,
+    456
+   ],
+   "discN": 9392,
+   "discTot": 15373,
+   "discMedSat": 0.153
+  },
+  "cand": {
+   "figMedSat": 0.435,
+   "figMedL": 120,
+   "chalkShare": 0.022,
+   "blobL200px": 1899,
+   "blobL200bbox": [
+    412,
+    380,
+    487,
+    438
+   ],
+   "discN": 6657,
+   "discTot": 15373,
+   "discMedSat": 0.398
+  },
+  "restore": {
+   "figMedSat": 0.372,
+   "figMedL": 154.5,
+   "chalkShare": 0.136,
+   "blobL200px": 16048,
+   "blobL200bbox": [
+    300,
+    351,
+    576,
+    456
+   ],
+   "discN": 9392,
+   "discTot": 15373,
+   "discMedSat": 0.153
+  }
+ },
+ "quantities": {
+  "C3": {
+   "Q-C1 figure medSat (base)": {
+    "value": 0.372,
+    "band": "0.370±0.02"
+   },
+   "Q-C1 figure medSat (cand)": {
+    "value": 0.435,
+    "band": "[0.40, 0.62]"
+   },
+   "Q-C2 chalk share (base)": {
+    "value": 0.136,
+    "band": "0.137±0.010"
+   },
+   "Q-C2 chalk share (cand)": {
+    "value": 0.022,
+    "band": "[0.015, 0.095]"
+   },
+   "Q-C3' blob L>=200 px (base)": {
+    "value": 16048,
+    "band": "16048±15%"
+   },
+   "Q-C3' blob L>=200 px (cand)": {
+    "value": 1899,
+    "band": "[800, 12000]"
+   },
+   "Q-C4' disc medSat@L>=180 (base)": {
+    "value": 0.153,
+    "band": "0.153±0.03",
+    "n": 9392
+   },
+   "Q-C4' disc medSat@L>=180 (cand)": {
+    "value": 0.398,
+    "band": "[0.30, 0.55]",
+    "n": 6657
+   },
+   "Q-C4' denominator floor": {
+    "base": 9392,
+    "cand": 6657,
+    "band": "n >= 2000 both, else UNSCOREABLE"
+   },
+   "restore gates": {
+    "medSat": {
+     "value": 0.372,
+     "band": "base±0.02"
+    },
+    "chalk": {
+     "value": 0.136,
+     "band": "base±0.010"
+    },
+    "blobL200": {
+     "value": 16048,
+     "band": "base±15%"
+    },
+    "discSat": {
+     "value": 0.153,
+     "band": "base±0.02"
+    }
+   },
+   "separation (Q-C4' gap vs 2x noise)": {
+    "treatmentGap": 0.245,
+    "noise2x": 0,
+    "band": "gap > 2x noise, else UNSCOREABLE"
+   }
+  }
+ },
+ "gates": {
+  "baseAnchors": true,
+  "denomFloor": true,
+  "candC1": true,
+  "candC2": true,
+  "candC3p": true,
+  "candC4p": true,
+  "restore": true,
+  "separation": true
+ }
+}
