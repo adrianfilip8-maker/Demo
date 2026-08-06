@@ -15233,3 +15233,78 @@ revert → release` — so the candidate never sits in the shared tree while oth
 Committing `sss: 0.30` directly would ship an unscored candidate to every capture in the queue,
 which is the opposite of what the seal asks. `litwarm1` was killed rather than left to burn a lock
 slot per chunk on a tree that cannot satisfy it.
+
+
+## §195 — `grab()` never freezes time, so arm order is a confound in every capture that uses it
+
+staging2 r11 was protocol-clean — one `bootId`, `srcTreeAtLock == srcTreeAtRelease`, `armTook`
+true on every arm, preroll present, feet/head pixel-identical across all six — and **still VOID**,
+on two registered conditions at once:
+
+```
+BASE GATE  OUT   base R2_guardMassRect_medL = 26.83   band [17.5, 19.8]   (P-F3 => VOID)
+P-F4       FAIL  restore vs base = 409,217 px (44.40%)  band [0, 0]       (=> VOID)
+```
+
+`restore` uses **the same camera as `base`** (`[-11.5, 2.6, 30.5]`, stand identical to 4 dp). It
+should be the same frame. It differs across the **whole frame** — bbox `(0,0)-(1279,719)`, 95 % of
+the leftmost column band — and the reason is visible the moment the arms are laid out in capture
+order:
+
+```
+arm       preroll   base    cand   restore  KBmid   KBover
+meanLuma   66.04    66.42   66.24   63.69   63.33   55.88
+```
+
+**The scene dims monotonically down the capture order.** `base` and `restore` are the same camera
+2.7 luma units apart, ~700 s of live scene time apart. Time-of-day is advancing while the runner
+captures.
+
+**The mechanism is one function.** `tools/harness.mjs`'s `grab()` is
+
+```js
+const r = await window.__GAME.setShot(n);
+return { ..., dataUrl: window.__GAME.capture(m, q, w) };
+```
+
+— stage, then capture. **No `renderFrame(0)`, no dt-0, no clock freeze.** The engine keeps running
+between arms and during them. Every runner built on `grab()` therefore measures each arm at a
+*different scene time*, and the arms are captured in a fixed order, so **the confound is ordered,
+not random**.
+
+**This explains three separate failures at once, which is why it is worth a section:**
+
+1. **P-F4's `[0, 0]` band was unachievable by construction** with this harness — §190's unpassable
+   gate again. No candidate could ever have satisfied it.
+2. **P-F2's calibration failure is an artefact of order.** `KBmid` is captured *after* `cand`, so it
+   carries extra dimming that has nothing to do with its camera being 1.0 m rather than 1.75 m
+   west. Grading a "graded stimulus" cannot work when the stimulus is confounded with capture
+   index.
+3. **The base gate R2 being out** (26.83 vs `[17.5, 19.8]`) is measured on a frame captured 233 s
+   into a live run, against a band derived from a differently-timed reference.
+
+**The fix already exists in this repository**, which is the frustrating part. `litwarm1`/`fx22` call
+`E.renderFrame(0)` explicitly — dt-0 frames — and their arms come out **byte-identical** within a
+boot. That is why litwarm's night chunks scored exactly `[0,0]` and staging2's `restore` cannot.
+
+**§193 is hereby refined, and my own earlier statement corrected.** I wrote that "within-boot
+comparisons are unaffected". That is true **only for runners that freeze time**. The correct rule
+is two-part:
+
+- **Across boots**: an FX-bearing shot carries a floor of ~28,431 px (§193). Measure it.
+- **Within a boot**: arms are comparable **only if the runner advances the clock deterministically**
+  (`renderFrame(0)`), otherwise later arms are systematically different from earlier ones and the
+  difference is ordered by capture index.
+
+**Consequence for staging2: VOID, and re-running as-is is pointless** — it would fail P-F4
+identically. The harness or the runner must freeze time first. Both `staging2.mjs` and
+`combatrecipient.mjs` are built on `grab()` and inherit this; `combatrecipient`'s 28,431 px floor
+should be re-read with this in mind, since part of what I attributed to boot-to-boot particle
+seeding may be intra-boot clock advance before the shot was captured.
+
+**What r11 nevertheless established, reported and not scored:** all six gated bands landed inside
+their registered ranges on `cand` (P1 83.77 in [70,100], P2 668 in [560,720], P3 28.18 in [0,70],
+P4 14,060 in [2500,22000], P5 37.19 in [26,55], P7 3 in [0,4]), and the framing identity held
+exactly — feet `[843.9, 625.3]`, head `[863.6, 244.3]` on every arm. Those numbers are **not a
+verdict** and are recorded only to say that the candidate is not obviously wrong; they were
+measured under the confound this section describes.
