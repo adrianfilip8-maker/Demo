@@ -15176,3 +15176,60 @@ self-inclusive baseline, §192 a start-of-process snapshot, §192.1 a **pair** o
 snapshots. The rule from the DIGEST holds without modification: *pin the reference to something
 declared, never to something observed in passing* — and note that here the declared thing ("the
 tree this capture rendered") was available the whole time, one line inside the lock.
+
+
+## §194 — the litwarm candidate was never committed, and a rollback took it
+
+`litwarm1` chunks A, B and C1 all aborted identically:
+
+```
+POPULATION {"fatal":"_sssPinned absent — the litwarm gate is not on this tree"}
+FATAL: _sssPinned absent — the litwarm gate is not on this tree — chunk VOID, no captures taken
+```
+
+The candidate is gone, and it was never in a commit:
+
+```
+grep -c '_sssPinned' src/render/ToonMaterial.js      -> 0
+git log -S'_sssPinned' -- src/render/ToonMaterial.js -> (nothing)
+git log -S'sssNightPin'                              -> 5 commits, ALL documentation
+src/world/Architecture.js:209                        -> sss: 0.0,
+```
+
+The seven-edit ship shape recorded in `RESULT-litwarm` — the `sssNightPin` option, the cache-key
+term, `_sssPinned`, `_publishSssPin`, the publish loop in `setKeyLight`, and
+`Architecture.js:209`'s `sss: 0.30` — existed **only as an uncommitted working-tree edit** at
+03:53, was captured against, and died in a rollback. The five commits that name `sssNightPin` are
+`RESULT-litwarm`, `PREREG-litwarm` and this ledger *talking about* it.
+
+**This is §188.4's own sentence, applied to a candidate instead of a repair:** *a change becomes
+permanent at the commit, not at the edit.* I wrote that down after the §187 comment fix died twice,
+and then failed to apply it to the thing the whole capture depended on.
+
+**What this does and does not cost.**
+
+- **The night measurement stands as a measurement.** Chunks N/N2 rendered from a tree that
+  genuinely carried the gate (`srcTree 85bab2d30f5f7b59`), and the readback proves it was live:
+  `slySss 0.30` across all 13 enrolled materials with `uSss 0`, `nightAmount` exactly 1. Those
+  frames are real and `score3` scored them [0,0].
+- **But my phrasing of it was wrong and is corrected here.** I wrote that the night gate under test
+  was "the real shipped code path". It was the real code path *of the tree at capture time*; it has
+  never been shipped, and is not in the repository now. The [0,0] result will need re-confirming
+  against the committed implementation — cheap, since it predicts exactly [0,0] by arithmetic.
+- **The day chunks were never capturable**, and no day number exists to be re-judged.
+
+**Credit where the instrument behaved well, since this batch has been unkind to instruments.**
+`litwarm1` **failed closed**. It checked for `shading._sssPinned`, did not find it, wrote
+`fatal` into the readback and took **no captures** — rather than poking a uniform that does not
+exist, capturing base-vs-base, and reporting a tidy null. A run that had silently produced
+"C − base = 0 px on every day shot" would have looked like a clean P-F8 population falsifier
+firing, and would have retired the wrap lever on evidence that never existed. Compare §190's gate,
+which could not fail, and §177's, which could not fire: this one *knew what it required* and said
+so by name.
+
+**Next step, and it is not "re-apply the edit".** The re-implementation must follow
+combatrecipient's §186 pattern — an arms generator plus `acquire → install → boot → capture →
+revert → release` — so the candidate never sits in the shared tree while other owners boot.
+Committing `sss: 0.30` directly would ship an unscored candidate to every capture in the queue,
+which is the opposite of what the seal asks. `litwarm1` was killed rather than left to burn a lock
+slot per chunk on a tree that cannot satisfy it.

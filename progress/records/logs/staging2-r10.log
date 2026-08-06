@@ -1,0 +1,13 @@
+[13:19:29 +   0s] bootId f2412d01-8e2  srcTree 4c83af2068ab9936 — booting (harness takes the FIFO ticket)
+· waiting for capture lock (10s, held by pid 29362)
+· waiting for capture lock (20s, held by pid 29362)
+[13:21:40 + 131s] boot ok — warnings 1; renderer ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)
+[13:21:40 + 131s] srcTreeAtLock 4c83af2068ab9936 (pre-lock reading was 4c83af2068ab9936)
+[13:21:41 + 131s] LEVER {"gotShotObject":true,"livePos":[-11.5,2.6,30.5],"liveTarget":[-17,1.1,28],"liveFov":38,"liveTod":0.1,"hasGuards":true,"guardCount":11,"hasSolver":true}
+[13:21:41 + 131s] arm preroll: frame present — skipping (idempotent resume; P-F8 will catch a cross-boot mix)
+[13:21:41 + 131s] arm base: frame present — skipping (idempotent resume; P-F8 will catch a cross-boot mix)
+[13:21:41 + 131s] arm cand: frame present — skipping (idempotent resume; P-F8 will catch a cross-boot mix)
+[13:21:41 + 131s] arm restore: frame present — skipping (idempotent resume; P-F8 will catch a cross-boot mix)
+[13:21:41 + 131s] arm KBmid: frame present — skipping (idempotent resume; P-F8 will catch a cross-boot mix)
+[13:21:41 + 131s] arm KBover: frame present — skipping (idempotent resume; P-F8 will catch a cross-boot mix)
+[13:21:41 + 131s] shot table restored in-page to {"pos":[-11.5,2.6,30.5],"target":[-17,1.1,28]} (src/** never written)

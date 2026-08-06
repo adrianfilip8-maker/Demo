@@ -269,3 +269,15 @@
 [13:17:21 +2906s]   FATAL: _sssPinned absent — the litwarm gate is not on this tree — chunk A VOID, no captures taken
 [13:17:38 +2923s] chunk A: lock released
 [13:17:38 +2923s] chunk B (courtyard): srcTree 4c83af2068ab9936 — booting (own lock hold)
+[13:19:37 +3042s]   boot ok — warnings 1
+[13:19:37 +3042s]   POPULATION {"fatal":"_sssPinned absent — the litwarm gate is not on this tree"}
+[13:19:37 +3042s]   FATAL: _sssPinned absent — the litwarm gate is not on this tree — chunk B VOID, no captures taken
+[13:19:51 +3056s] chunk B: lock released
+[13:19:51 +3056s] chunk C1 (interior): srcTree 4c83af2068ab9936 — booting (own lock hold)
+· waiting for capture lock (10s, held by pid 18041)
+· waiting for capture lock (20s, held by pid 18041)
+· waiting for capture lock (31s, held by pid 18041)
+· waiting for capture lock (42s, held by pid 18041)
+· waiting for capture lock (52s, held by pid 18041)
+· waiting for capture lock (63s, held by pid 18041)
+· waiting for capture lock (74s, held by pid 18041)
