@@ -1,5 +1,5 @@
 {
- "at": "2026-08-06T03:55:12.094Z",
+ "at": "2026-08-06T03:56:04.559Z",
  "strictPredicate": "|R-143|<=40 AND |G-216|<=35 AND |B-255|<=40 (fxcluster-diag.mjs:530, unchanged)",
  "frames": {
   "sbs2/night.png": {
@@ -610,6 +610,64 @@
     "strictPx": 0,
     "keptPx": 0,
     "rejectedPx": 0
+   }
+  }
+ },
+ "surroundTest": {
+  "annulus": "radii 5..11 px",
+  "note": "surroundMinL = darkest pixel in the annulus. A sprite drawn on geometry has dark surround; sky haze does not.",
+  "frames": {
+   "sbs3/night.png": {
+    "px": 224,
+    "surroundMinL": {
+     "p05": 10.4,
+     "p25": 18.2,
+     "median": 20.1,
+     "p75": 21.4,
+     "p95": 24.1
+    },
+    "pxWithDarkSurround_lt60": 221,
+    "pxWithDarkSurround_lt80": 223,
+    "pxWithDarkSurround_lt100": 224
+   },
+   "sbs2/night.png": {
+    "px": 50,
+    "surroundMinL": {
+     "p05": 10.1,
+     "p25": 10.4,
+     "median": 11.3,
+     "p75": 13.2,
+     "p95": 14.2
+    },
+    "pxWithDarkSurround_lt60": 50,
+    "pxWithDarkSurround_lt80": 50,
+    "pxWithDarkSurround_lt100": 50
+   },
+   "fxcluster1/b2-traversal.cand.png": {
+    "px": 236,
+    "surroundMinL": {
+     "p05": 20.1,
+     "p25": 21,
+     "median": 21.4,
+     "p75": 22.8,
+     "p95": 24.4
+    },
+    "pxWithDarkSurround_lt60": 235,
+    "pxWithDarkSurround_lt80": 236,
+    "pxWithDarkSurround_lt100": 236
+   },
+   "sbs3/traversal.png": {
+    "px": 239,
+    "surroundMinL": {
+     "p05": 20.1,
+     "p25": 21,
+     "median": 21.3,
+     "p75": 22.8,
+     "p95": 24.4
+    },
+    "pxWithDarkSurround_lt60": 238,
+    "pxWithDarkSurround_lt80": 239,
+    "pxWithDarkSurround_lt100": 239
    }
   }
  }

@@ -16,6 +16,8 @@
  * usage: node sparkdiag.mjs   (writes sparkdiag.json)
  */
 import { writeFileSync, existsSync } from 'node:fs';
+import { createRequire } from 'node:module';
+const require = createRequire(import.meta.url);
 import path from 'node:path';
 import { readPNG } from '../../../tools/png.mjs';
 
@@ -153,3 +155,58 @@ for (const [key, row] of Object.entries(OUT.capSweep)) {
   }
 }
 console.log('\nwrote sparkdiag.json');
+
+/* ---------------------------------------------------------------------------
+ * The size cap FAILED its control (see cap sweep): night's haze specks are SMALLER
+ * than traversal's genuine sparkles, so component area is backwards as a discriminator.
+ *
+ * What actually differs: a sparkle is an ADDITIVE SPRITE DRAWN ON GEOMETRY — it is a local
+ * maximum standing above a darker surround. Sky haze grazing the colour band is part of a
+ * smooth gradient with no dark surround anywhere near it. That is a depth-aware test in
+ * spirit ("is there geometry behind this pixel?") that is computable from a committed PNG.
+ * ------------------------------------------------------------------------- */
+function surroundStats(rel, R1 = 5, R2 = 11) {
+  const p = path.join(REC, rel);
+  if (!existsSync(p)) return null;
+  const im = readPNG(p);
+  const { w, h, ch, data } = im;
+  const lumAt = (x, y) => { const k = (y * w + x) * ch; return 0.2126 * data[k] + 0.7152 * data[k + 1] + 0.0722 * data[k + 2]; };
+  const rows = [];
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const k = (y * w + x) * ch;
+    if (!inBand(data[k], data[k + 1], data[k + 2])) continue;
+    let minL = Infinity, sum = 0, n = 0;
+    for (let dy = -R2; dy <= R2; dy++) for (let dx = -R2; dx <= R2; dx++) {
+      const d2 = dx * dx + dy * dy;
+      if (d2 < R1 * R1 || d2 > R2 * R2) continue;
+      const nx = x + dx, ny = y + dy;
+      if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
+      const L = lumAt(nx, ny);
+      if (L < minL) minL = L;
+      sum += L; n++;
+    }
+    if (!n) continue;
+    rows.push({ y, surroundMinL: minL, surroundMeanL: sum / n, selfL: lumAt(x, y) });
+  }
+  if (!rows.length) return { px: 0 };
+  const q = (arr, p2) => { const s = arr.slice().sort((a, b) => a - b); return +s[Math.min(s.length - 1, Math.floor(p2 * s.length))].toFixed(1); };
+  const mins = rows.map((r) => r.surroundMinL);
+  return {
+    px: rows.length,
+    surroundMinL: { p05: q(mins, 0.05), p25: q(mins, 0.25), median: q(mins, 0.5), p75: q(mins, 0.75), p95: q(mins, 0.95) },
+    pxWithDarkSurround_lt60: rows.filter((r) => r.surroundMinL < 60).length,
+    pxWithDarkSurround_lt80: rows.filter((r) => r.surroundMinL < 80).length,
+    pxWithDarkSurround_lt100: rows.filter((r) => r.surroundMinL < 100).length,
+  };
+}
+const SURR = {};
+for (const rel of ['sbs3/night.png', 'sbs2/night.png', 'fxcluster1/b2-traversal.cand.png', 'sbs3/traversal.png']) SURR[rel] = surroundStats(rel);
+const J2 = JSON.parse(require('node:fs').readFileSync(path.join(HERE, 'sparkdiag.json'), 'utf8'));
+J2.surroundTest = { annulus: 'radii 5..11 px', note: 'surroundMinL = darkest pixel in the annulus. A sprite drawn on geometry has dark surround; sky haze does not.', frames: SURR };
+writeFileSync(path.join(HERE, 'sparkdiag.json'), JSON.stringify(J2, null, 1));
+console.log('\n\nSURROUND TEST — darkest luma in an annulus (r 5..11) around each in-band pixel:');
+console.log(` ${'frame'.padEnd(44)} ${'px'.padStart(6)} ${'p05'.padStart(6)} ${'median'.padStart(7)} ${'p95'.padStart(6)}  ${'<60'.padStart(6)} ${'<80'.padStart(6)} ${'<100'.padStart(6)}`);
+for (const [f, v] of Object.entries(SURR)) {
+  if (!v || !v.px) { console.log(` ${f.padEnd(44)} ${String(v ? v.px : 0).padStart(6)}`); continue; }
+  console.log(` ${f.padEnd(44)} ${String(v.px).padStart(6)} ${String(v.surroundMinL.p05).padStart(6)} ${String(v.surroundMinL.median).padStart(7)} ${String(v.surroundMinL.p95).padStart(6)}  ${String(v.pxWithDarkSurround_lt60).padStart(6)} ${String(v.pxWithDarkSurround_lt80).padStart(6)} ${String(v.pxWithDarkSurround_lt100).padStart(6)}`);
+}
