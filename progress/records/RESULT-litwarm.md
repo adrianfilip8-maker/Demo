@@ -11,7 +11,8 @@ the seal's §5 and a mismatch voids the scoring, not the seal).
 **Written incrementally as chunks land (§163/§164); an abrupt end means a rollback took the
 session, not that scoring stopped.**
 
-**STATUS: IN PROGRESS — capture launched 2026-08-06 03:53 UTC.**
+**STATUS: IN PROGRESS — capture launched 2026-08-06 03:53 UTC. Night half SETTLED (P7-fw, P7-g,
+P-F4, P-F7 all pass on chunks N/N2); day chunks A–E pending the capture lock.**
 
 ## Ship shape under test (applied inside the held ticket, per the dispatch)
 
@@ -74,6 +75,49 @@ than adding or loosening one), and it was made **before any traversal frame exis
 last in the plan, and at the time of the edit only `readback-N.json` was on disk. No registered
 band moved, and no scored value changed. Stated here rather than quietly fixed because a scorer
 edited during a capture is exactly the kind of thing that has to be visible.
+
+### The night claim — P7-fw and P7-g both [0,0], settled on the real shipped gate
+
+Chunks `N` (night, 03:53:24 → 04:05:47) and `N2` (guard), both srcTree `85bab2d30f5f7b59`
+**before and after** — no tree drift inside either chunk (§165).
+
+| registered | band | measured | |
+|---|---|---|---|
+| **P7-fw** | [0, 0] | **0** | `night.C.png` ≡ `night.base.png`, md5 `5e09765e84e6a8c0…` |
+| **P7-g** | [0, 0] | **0** | `guard.C.png` ≡ `guard.base.png`, md5 `d0607fc25f93ef7d…` |
+| **P-F4** | [0, 0] | **0** | `restore` byte-identical to `base` on both chunks |
+
+The frames are **byte-identical**, which is strictly stronger than the registered band: [0,0]
+differing px was registered at ΣRGB ≥ 4, and byte-identity gives 0 differing px at *any*
+threshold. **P-F6 does not fire.**
+
+**The discrimination that makes this a pass rather than a null.** Bit-identity is also what a
+candidate that never reached the screen would produce, so it is only evidence if `sss 0.30` was
+genuinely live on the `C` arm. The readback separates the two cleanly:
+
+```
+C arm:  slySss [0.3 × 13]   uSss [0 × 13]   nightPin [0 × 13]   nightAmount 1   mismatch []
+```
+
+`slySss` is the material's **declared** value — 0.30, so the candidate was installed and live —
+while `uSss` is the **published** uniform, pinned to 0 by the gate. That is §3's arithmetic
+(`a + (b − a) · 1.0 = b = sssNightPin = 0.0`) observed on the real shipped code path, not on a
+poke standing in for it. The runner registered `expectedUSss: 0` ahead of the read and returned
+`mismatch: []`. A never-installed candidate would have shown `slySss 0`; it does not.
+
+**P-F7, half 2 — passes on both chunks.** `nightAmount = 1` **exactly** at `night` and at `guard`;
+`pinnedCount 13` (≥ 4); `pinnedOnSkinned []` against `skinMatCount 16`, so the exhaustive
+scene-wide test enrolled none of them; `pinnedInArch 13/13`; `hasPublish` and `hasInkNight` both
+true. Neither chunk is VOID.
+
+**Cross-chunk comparability, checked rather than assumed.** The day chunks start on srcTree
+`4c83af2068ab9936`, not the night chunks' `85bab2d3…`, which would ordinarily put the seal's
+**absolute** bands (S3's [200,246] wall-body hue, S4's verbatim BANDS2 rows) at risk of being
+compared across two different builds. The entire difference is **one commit, `0d543cf`, touching
+`src/fx/Particles.js`, and both of its hunks are inside `/* */` comment blocks** (§187's comment
+correction) — no executable line moved between the night chunks and the day chunks. The hash
+moved; the build did not. The C-vs-base *difference* rows were never exposed to this in any case,
+and P-F3's base gates remain the independent guard.
 
 ## Scores
 
