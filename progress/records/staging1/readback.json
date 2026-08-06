@@ -205,6 +205,576 @@
    },
    "warnings": 1,
    "armTook": true
+  },
+  {
+   "arm": "cand",
+   "want": {
+    "pos": [
+     -13.25,
+     2.6,
+     30.5
+    ],
+    "target": [
+     -18.75,
+     1.1,
+     28
+    ]
+   },
+   "secs": 249,
+   "shotPos": [
+    -13.25,
+    2.6,
+    30.5
+   ],
+   "shotTarget": [
+    -18.75,
+    1.1,
+    28
+   ],
+   "shotFov": 38,
+   "shotTod": 0.1,
+   "camPos": [
+    -13.25,
+    2.6,
+    30.5
+   ],
+   "camFov": 38,
+   "tod": 0.1,
+   "guardIndex": 0,
+   "guardType": "temple",
+   "guardLocked": true,
+   "guardPos": [
+    -17.2371,
+    0,
+    27.5446
+   ],
+   "guardYaw": -0.0691,
+   "guardState": "patrol",
+   "feetPx": [
+    843.9,
+    625.3,
+    0.9626
+   ],
+   "headPx": [
+    863.6,
+    244.3,
+    0.959
+   ],
+   "roster": [
+    {
+     "i": 0,
+     "type": "temple",
+     "p": [
+      -17.24,
+      0,
+      27.54
+     ]
+    },
+    {
+     "i": 1,
+     "type": "temple",
+     "p": [
+      -17.58,
+      0,
+      26.41
+     ]
+    },
+    {
+     "i": 2,
+     "type": "heavy",
+     "p": [
+      16.97,
+      0,
+      -0.33
+     ]
+    },
+    {
+     "i": 3,
+     "type": "temple",
+     "p": [
+      4.47,
+      2,
+      14.12
+     ]
+    },
+    {
+     "i": 4,
+     "type": "temple",
+     "p": [
+      0.03,
+      1.27,
+      46.43
+     ]
+    },
+    {
+     "i": 5,
+     "type": "temple",
+     "p": [
+      -16.98,
+      0,
+      -21.37
+     ]
+    },
+    {
+     "i": 6,
+     "type": "heavy",
+     "p": [
+      11.83,
+      0,
+      -45.46
+     ]
+    },
+    {
+     "i": 7,
+     "type": "temple",
+     "p": [
+      2.64,
+      17,
+      -19.72
+     ]
+    },
+    {
+     "i": 8,
+     "type": "heavy",
+     "p": [
+      4.47,
+      -9.61,
+      -59.16
+     ]
+    },
+    {
+     "i": 9,
+     "type": "scarab",
+     "p": [
+      22.54,
+      9,
+      -5.89
+     ]
+    },
+    {
+     "i": 10,
+     "type": "scarab",
+     "p": [
+      6.03,
+      -12,
+      -66.65
+     ]
+    }
+   ],
+   "subject": {
+    "asked": [
+     -9,
+     0,
+     31.5
+    ],
+    "staged": [
+     -9,
+     0,
+     31.5
+    ],
+    "final": [
+     -9,
+     0,
+     31.5
+    ],
+    "drift": 0,
+    "visible": true,
+    "ndc": [
+     -0.393,
+     2.925
+    ],
+    "onScreen": false,
+    "present": true
+   },
+   "stats": {
+    "fps": 60,
+    "drawCalls": 203,
+    "triangles": 1419737,
+    "programs": 98,
+    "ms": 12
+   },
+   "warnings": 1,
+   "armTook": true
+  },
+  {
+   "arm": "kbover",
+   "want": {
+    "pos": [
+     -15.5,
+     2.6,
+     30.5
+    ],
+    "target": [
+     -21,
+     1.1,
+     28
+    ]
+   },
+   "secs": 226,
+   "shotPos": [
+    -15.5,
+    2.6,
+    30.5
+   ],
+   "shotTarget": [
+    -21,
+    1.1,
+    28
+   ],
+   "shotFov": 38,
+   "shotTod": 0.1,
+   "camPos": [
+    -15.5,
+    2.6,
+    30.5
+   ],
+   "camFov": 38,
+   "tod": 0.1,
+   "guardIndex": 0,
+   "guardType": "temple",
+   "guardLocked": true,
+   "guardPos": [
+    -19.4871,
+    0,
+    27.5446
+   ],
+   "guardYaw": -0.0691,
+   "guardState": "patrol",
+   "feetPx": [
+    843.9,
+    625.3,
+    0.9626
+   ],
+   "headPx": [
+    863.6,
+    244.3,
+    0.959
+   ],
+   "roster": [
+    {
+     "i": 0,
+     "type": "temple",
+     "p": [
+      -19.49,
+      0,
+      27.54
+     ]
+    },
+    {
+     "i": 1,
+     "type": "temple",
+     "p": [
+      -17.65,
+      0,
+      25.96
+     ]
+    },
+    {
+     "i": 2,
+     "type": "heavy",
+     "p": [
+      17.02,
+      0,
+      -0.03
+     ]
+    },
+    {
+     "i": 3,
+     "type": "temple",
+     "p": [
+      4.22,
+      2,
+      14.45
+     ]
+    },
+    {
+     "i": 4,
+     "type": "temple",
+     "p": [
+      0.03,
+      1.27,
+      46.43
+     ]
+    },
+    {
+     "i": 5,
+     "type": "temple",
+     "p": [
+      -17.09,
+      0,
+      -21.8
+     ]
+    },
+    {
+     "i": 6,
+     "type": "heavy",
+     "p": [
+      12.03,
+      0,
+      -45.26
+     ]
+    },
+    {
+     "i": 7,
+     "type": "temple",
+     "p": [
+      3.13,
+      17,
+      -19.74
+     ]
+    },
+    {
+     "i": 8,
+     "type": "heavy",
+     "p": [
+      4.47,
+      -9.61,
+      -59.16
+     ]
+    },
+    {
+     "i": 9,
+     "type": "scarab",
+     "p": [
+      22.54,
+      9,
+      -5.34
+     ]
+    },
+    {
+     "i": 10,
+     "type": "scarab",
+     "p": [
+      6.03,
+      -12,
+      -66.65
+     ]
+    }
+   ],
+   "subject": {
+    "asked": [
+     -9,
+     0,
+     31.5
+    ],
+    "staged": [
+     -9,
+     0,
+     31.5
+    ],
+    "final": [
+     -9,
+     0,
+     31.5
+    ],
+    "drift": 0,
+    "visible": true,
+    "ndc": [
+     -0.527,
+     2.131
+    ],
+    "onScreen": false,
+    "present": true
+   },
+   "stats": {
+    "fps": 60,
+    "drawCalls": 202,
+    "triangles": 1418927,
+    "programs": 98,
+    "ms": 15.600000001490116
+   },
+   "warnings": 1,
+   "armTook": true
+  },
+  {
+   "arm": "restore",
+   "want": {
+    "pos": [
+     -11.5,
+     2.6,
+     30.5
+    ],
+    "target": [
+     -17,
+     1.1,
+     28
+    ]
+   },
+   "secs": 253,
+   "shotPos": [
+    -11.5,
+    2.6,
+    30.5
+   ],
+   "shotTarget": [
+    -17,
+    1.1,
+    28
+   ],
+   "shotFov": 38,
+   "shotTod": 0.1,
+   "camPos": [
+    -11.5,
+    2.6,
+    30.5
+   ],
+   "camFov": 38,
+   "tod": 0.1,
+   "guardIndex": 0,
+   "guardType": "temple",
+   "guardLocked": true,
+   "guardPos": [
+    -15.4871,
+    0,
+    27.5446
+   ],
+   "guardYaw": -0.0691,
+   "guardState": "patrol",
+   "feetPx": [
+    843.9,
+    625.3,
+    0.9626
+   ],
+   "headPx": [
+    863.6,
+    244.3,
+    0.959
+   ],
+   "roster": [
+    {
+     "i": 0,
+     "type": "temple",
+     "p": [
+      -15.49,
+      0,
+      27.54
+     ]
+    },
+    {
+     "i": 1,
+     "type": "temple",
+     "p": [
+      -17.71,
+      0,
+      25.5
+     ]
+    },
+    {
+     "i": 2,
+     "type": "heavy",
+     "p": [
+      17.08,
+      0,
+      0.26
+     ]
+    },
+    {
+     "i": 3,
+     "type": "temple",
+     "p": [
+      3.96,
+      2,
+      14.78
+     ]
+    },
+    {
+     "i": 4,
+     "type": "temple",
+     "p": [
+      0.03,
+      1.27,
+      46.43
+     ]
+    },
+    {
+     "i": 5,
+     "type": "temple",
+     "p": [
+      -17.17,
+      0,
+      -22.23
+     ]
+    },
+    {
+     "i": 6,
+     "type": "heavy",
+     "p": [
+      12.22,
+      0,
+      -45.05
+     ]
+    },
+    {
+     "i": 7,
+     "type": "temple",
+     "p": [
+      3.62,
+      17,
+      -19.75
+     ]
+    },
+    {
+     "i": 8,
+     "type": "heavy",
+     "p": [
+      4.47,
+      -9.61,
+      -59.16
+     ]
+    },
+    {
+     "i": 9,
+     "type": "scarab",
+     "p": [
+      22.54,
+      9,
+      -4.79
+     ]
+    },
+    {
+     "i": 10,
+     "type": "scarab",
+     "p": [
+      6.03,
+      -12,
+      -66.65
+     ]
+    }
+   ],
+   "subject": {
+    "asked": [
+     -9,
+     0,
+     31.5
+    ],
+    "staged": [
+     -9,
+     0,
+     31.5
+    ],
+    "final": [
+     -9,
+     0,
+     31.5
+    ],
+    "drift": 0,
+    "visible": true,
+    "ndc": [
+     -0.102,
+     4.643
+    ],
+    "onScreen": false,
+    "present": true
+   },
+   "stats": {
+    "fps": 60,
+    "drawCalls": 206,
+    "triangles": 1430501,
+    "programs": 98,
+    "ms": 12
+   },
+   "warnings": 1,
+   "armTook": true
   }
  ],
  "boot": {
@@ -282,5 +852,20 @@
    "sly-key"
   ]
  },
- "treeDrift": false
+ "treeDrift": false,
+ "tableRestored": {
+  "pos": [
+   -11.5,
+   2.6,
+   30.5
+  ],
+  "target": [
+   -17,
+   1.1,
+   28
+  ]
+ },
+ "srcTreeAfter": "85bab2d30f5f7b59",
+ "finishedAt": "2026-08-06T04:27:26.141Z",
+ "sameTree": true
 }

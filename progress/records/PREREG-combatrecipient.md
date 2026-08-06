@@ -287,10 +287,44 @@ known-bad) · `kbside` (Edit 1 with `screenSide: -1`, + Edit 2 — the on-target
   1,793 px. On `sbs3/combat.png` it is medL 191.03, medSat 0.396, median RGB [231, 185, 134] — flash
   over pale paving, with **67 ink px** (L < 45) inside it.
 - `RECIPBOX` = **(307, 308)–(543, 743)**, the projected recipient silhouette box.
-- `SLYMASK_A` = pixels inside (470, 315)–(690, 700) on the **`base`** arm with hue ∈ [8°, 48°],
-  sat > 0.25, L ∈ [35, 205] — Sly's own warm body/fur/jacket population. Computed on `base`, where
-  no guard exists (base-gate B3), so it cannot be contaminated by the recipient's own linen.
+- ~~`SLYMASK_A` = pixels inside (470, 315)–(690, 700) on the **`base`** arm with hue ∈ [8°, 48°],
+  sat > 0.25, L ∈ [35, 205]~~ — **STRUCK, see §2.0. There is no colour predicate that isolates Sly
+  in this frame.**
+- `SLYBB` = **(503, 334)–(648, 660)**, 145 × 326 = **47,270 px** — Sly's body box, obtained by
+  projecting a 0.60 m-wide, 1.75 m-tall figure at his staged (0, 0, 28) through the shipped combat
+  camera with the projector validated in §0.2. It is a **proxy and an under-estimate**: his
+  `cane_combo_3` lunge and his cane sweep both exceed it. Under-estimating the denominator makes
+  P3 **harder** to pass, which is the direction an honest proxy should err in.
 - `Δ` = the differing-pixel mask between two arms at **`ΣRGB ≥ 4`**.
+
+### 2.0 AMENDMENT, made before any frame of this seal existed — the Sly mask is struck
+
+Written, then falsified against `progress/records/sbs3/combat.png` **before the first capture**
+(no `combatrecipient1/` frame existed; the base arm was queued but had not acquired the lock).
+Recorded rather than silently swapped, because the failure is the one the DIGEST names five times.
+
+The sealed `SLYMASK_A` predicate selects **58,982 px** inside a box in which Sly occupies roughly
+ten thousand. The reason, measured:
+
+| population (sbs3/combat.png) | medL | medSat | medHue |
+|---|---|---|---|
+| Sly torso (555,420,615,500) | 131.8 | **0.394** | 18.3° |
+| Sly head/ears (560,345,640,410) | 121.0 | 0.469 | 20.4° |
+| Sly legs (520,560,600,650) | 105.2 | 0.564 | 20.0° |
+| **sunlit paving (300,600,400,690)** | 134.3 | **0.579** | 20.8° |
+| glow ellipse on the floor (480,430,560,470) | 129.1 | 0.452 | 25.5° |
+
+**The sunlit sandstone is warmer, brighter and MORE saturated than Sly's own torso, at the same
+hue.** A warm/saturated predicate cannot separate them, and neither can luma. Six alternative
+predicates were tried; the best still returned 34,562 px with a nearly flat column histogram
+across the whole box — i.e. it was measuring the floor. **This is §128.2's denominator hazard
+exactly**, and it would have produced a P3 that passed or failed on how much *paving* the
+recipient covered.
+
+**P3 is therefore re-registered below on geometry rather than colour**, using a box derived from
+the validated projector and the change mask itself. No mask, no hue, no threshold on saturation.
+The replacement is *stricter* on the thing that matters (it adds an absolute intrusion line), and
+its prediction is stated before the frame exists, as the original was.
 
 ### 2.1 Base gates — VOID (not FAIL) if out
 
@@ -313,8 +347,9 @@ deliberately banded rather than pinned (§133.1).
 | **P1b** | that component's bbox is inside `RECIPBOX` dilated by 70 px, i.e. within (237,238)–(613,813) | **true** | — | `kbside` predicted bbox (735,·)–(980,·) ⇒ **false** |
 | **P2 — the arc terminates ON him** | share of `FLASHDISC` inside `Δ(base, cand)` | **≥ 0.80** | 0.00 by construction | `kbside` **≤ 0.15**; `base` = 0.00 |
 | **P2b** | `FLASHDISC` ink share (L < 45) on `cand` | **≥ 0.04** (a body under the flash brings its ink hull and banded linen with it) | **0.037** (67/1793) — *reported, weak, see below* | — |
-| **P3 — Sly does not lose more than a registered share** | \|Δ(base, cand) ∩ `SLYMASK_A`\| / \|`SLYMASK_A`\| | **≤ 0.30** | 0.00 | — |
-| **P3b** | \|`SLYMASK_A`\| itself (the denominator must be real — §128.2) | **≥ 3,000 px** or P3 is UNSCOREABLE | — | — |
+| **P3 — Sly does not lose more than a registered share** (amended §2.0) | share of `SLYBB` covered by the recipient's change component | **≤ 0.40** — predicted **0.28–0.34** | 0.00 | — |
+| **P3b — the recipient may not cross Sly's centre line** | rightmost column `x1` of that component | **≤ 560** — predicted **543–550** (543 unsquashed, 549 with `stunned`'s `sq` 1.055 x); Sly's projected centre is **576** | n/a | — |
+| **P3c — the cane hook** *(reported, NOT gated — it is the declared cost)* | ink (L<45) px in (380,535,450,615) | — | **1,000 px / 17.86%** | — |
 | **P4 — the four/five spawn shots do not regress** | `Δ(base, cand)` on **`sly-profile`**, frame-wide | **≤ 0.5% of frame (4,608 px)** | — | `norestore` predicted **≥ 8%** (a 272×498 body = 14.7% of frame) |
 | **P4b** | largest connected component of `Δ(base, cand)` on `sly-profile` | **< 3,000 px** | — | `norestore` **≥ 40,000 px** with bbox overlapping (652,67)–(924,565) |
 | **P4c** *(instrumented, covers all five)* | on the `cand` arm, at the moment `sly-profile` is captured: min over all 11 guards of the horizontal distance to (0.102, 0, 29.035) | **≥ 2.0 m** | — | `norestore` **≤ 0.5 m** |
@@ -323,6 +358,29 @@ deliberately banded rather than pinned (§133.1).
 **P2b is deliberately marked weak and is reported, not decisive.** `base` already scores 0.037 on it
 (the flash's own dark speckle), so the band is barely above the null; it is here as a *direction*
 check on P2, and **P2 is the decisive leg.**
+
+**One confound inside P4, registered before it can be discovered.** The restore returns roster #0's
+*position, yaw, `u`, dwell and state* — it cannot return the 17 frames (0.283 s) of patrol and clip
+phase he did not live through while frozen. So in `cand` he is ~0.28 m and ~0.28 s **behind** where
+`base` left him for the rest of the boot. If he is visible at all in `sly-profile` he is on
+`south_gate`, ≈ 30 m down the lens at ~68 px tall, and a 0.28 m lag there is a few hundred pixels at
+most. **P4's 0.5% band is set with this in it.**
+
+**And the confound has a registered address, so P4b cannot be ambiguous.** Projecting roster #0's
+`south_gate` control points through the `sly-profile` camera, he is in that viewport at four of
+seven waypoints, **60–83 px tall at 24–34 m, at x 915…1270, y 121…209** — the far right of the
+frame. A 0.28 m lag there moves him ~11 px, which could plausibly make a connected component of
+1,600–3,300 px and would otherwise sit right on P4b's 3,000 line. **The residue this seal is
+gating lives somewhere else entirely: x 652…924, y 67…565, 272 × 498 px.** So P4b is scored on
+*both* area and bbox:
+
+- a component at **x ≳ 900, y ≲ 240, ≤ 3,300 px** is the patrol-lag confound → **reported, not a
+  failure**;
+- a component **overlapping (652, 67)–(924, 565)** at ≥ 3,000 px is the residue → **P-F4 fires**.
+
+If a component is large **and** in the confound's address, that is neither: it is an unmodelled
+change and the verdict is **UNSCOREABLE** for P4 until it is identified. Registering the two
+addresses before the frame exists is what stops "3,100 px" from being argued either way afterwards.
 
 **P4c/P4d are the honest way to gate five shots with two frames.** The residue is a *position* fact;
 `sly-profile` is the one I pay pixels for (it is the worst case that is also cheap: the residue lands
@@ -335,9 +393,12 @@ measured world positions through cameras this seal's projector has been validate
 at 35–50% fill); 20 k is a floor a correct result clears 2–3×. P2's model is ≈ 1.0 — the disc is
 48 px across, his body is ~164 px wide at chest depth, and the disc sits between his head (py 317)
 and chest (py 472) — but 0.80 leaves room for the flash being *additive over* him rather than
-replaced by him. P3's model is 15–25% (the overlap column is x 503…543 of Sly's 503…648, ≈ 28% of his
-bounding width, with ink concentrated on the outline); 30% is the composition line I am drawing
-**before** seeing the frame, and §3's P-F2 says what happens above it.
+replaced by him. P3's model is **28–34%**: the recipient's right edge lands at x 543 (549 once
+`stunned`'s `sq: [1.055, 0.905]` widens him 5.5%), so he covers columns 503…549 of `SLYBB`'s
+503…648 — 45 of 145 columns — over essentially all of its height. **0.40 is the composition line
+I am drawing before seeing the frame**, and §3's P-F2 says what happens above it. P3b's 560 is
+the sharper statement of the same judgement and is the one I would defend: *a recipient that
+reaches Sly's centre line has stopped being a recipient and started being the subject.*
 
 ### 2.3 The calibration this metric already has
 
@@ -370,8 +431,9 @@ somewhere", and a metric that cannot separate those two is a metric with no scal
 
 - **P-F1** — P1, P1b or P2 out of band on `cand` ⇒ **REVERT both edits.** No retune of `minDist`,
   `screenSide`, `clip` or `t` toward a band. A different stand is a different prereg.
-- **P-F2** — P3 > 0.30 (the recipient eats too much of Sly) ⇒ **REVERT, and report the measured
-  share.** The registered next candidate, so it is on record before the number exists, is
+- **P-F2** — P3 > 0.40 **or** P3b > 560 (the recipient eats too much of Sly, or crosses his centre
+  line) ⇒ **REVERT, and report the measured share.** The registered next candidate, so it is on
+  record before the number exists, is
   `minDist: 6.0` (stand (−0.798, 0, 28.562), anchor gap **1.194 m**, box x 325…523) — but note that
   **at any d > 5.0 the flash stops being inside his body** (gaps: d 5.5 → 0.691 m, d 6.0 → 1.194 m,
   d 6.5 → 1.700 m, against a 0.42 m radius), so that candidate trades P2 for P3 and needs its own
@@ -379,7 +441,10 @@ somewhere", and a metric that cannot separate those two is a metric with no scal
 - **P-F3** — a base gate (B1–B3) out ⇒ that chunk is **VOID**, not FAIL. Re-boot. Three voids ⇒
   re-diagnose against the current tree.
 - **P-F4 — the residue falsifier, and it is a gate not a footnote.** P4 > 0.5% **or** P4b ≥ 3,000 px
-  **or** P4c < 2.0 m **or** P4d false for any of the five ⇒ **REVERT both edits.** A recipient that
+  *with its bbox overlapping the residue address (652, 67)–(924, 565)* **or** P4c < 2.0 m **or** P4d
+  false for any of the five ⇒ **REVERT both edits.** (A ≥ 3,000 px component confined to the
+  patrol-lag address — x ≳ 900, y ≲ 250 — is the registered confound of §2.2, reported not fatal;
+  a large component in neither address is **UNSCOREABLE** until identified.) A recipient that
   ships a guard into five character-sheet frames is a net loss no matter how good `combat` looks, and
   this seal does not get to trade one shot's flip for four shots' regression. *If P4 fails while
   `norestore` also fails, the restore is insufficient and the mechanism is wrong. If P4 fails while
@@ -396,12 +461,41 @@ somewhere", and a metric that cannot separate those two is a metric with no scal
   P2 > 0.15, or fails P1), then P2 cannot distinguish "a guard is in the frame" from "the arc lands on
   him" ⇒ **UNSCOREABLE**, no verdict in either direction. This is the §141.1 rule: *an uncalibrated
   metric has no scale.*
-- **P-F8 — the premise falsifier, pre-capture and free.** If the `cand` boot's telemetry shows
-  `_solveShotPose` returned a stand more than **0.30 m** from (0.102, 0, 29.035), the offline solve did
-  not survive contact with the real `groundCheck`/`raycast` (the likely cause being a ground hit at a
-  y other than 0, or the chest ray being blocked, which would push the selection to d = 5.5 and the
-  anchor gap to 0.691 m). The registered rects are then not measuring the subject ⇒ **verdict
-  WITHHELD**, re-anchor, re-seal. Not a FAIL — a wrong instrument, not a wrong result.
+- **P-F8 — the premise check. AMENDED before capture; both versions recorded.**
+
+  ~~If the `cand` telemetry shows a stand more than **0.30 m** from (0.102, 0, 29.035), the registered
+  rects are not measuring the subject ⇒ verdict WITHHELD.~~ **Struck, because I falsified its stated
+  reason with my own arithmetic before any frame existed.** The likely deviation is the chest
+  line-of-sight ray or `groundCheck` pushing the selection one step out to d = 5.5, and the
+  contingency table below — computed offline, with `stunned`'s `sq: [1.055, 0.905]` applied — shows
+  the registered rects still measure the subject there:
+
+  | d | stand | anchor gap | box x | box y | `FLASHDISC` inside his silhouette? |
+  |---|---|---|---|---|---|
+  | 4.5 *(rejected on framing)* | (+0.552, 29.271) | 0.363 | 289…563 | 350…808 | yes |
+  | **5.0 (predicted)** | **(+0.102, 29.035)** | **0.216** | **302…549** | **340…746** | **yes** |
+  | 5.5 | (−0.348, 28.798) | 0.691 | 312…538 | 332…697 | yes |
+  | 6.0 | (−0.798, 28.562) | 1.194 | 321…528 | 325…656 | yes |
+  | 6.5 | (−1.248, 28.325) | 1.700 | 329…520 | 319…622 | yes |
+
+  A rule whose justification I know to be false is worse than one I have fixed and declared. So:
+
+  - **P-F8a — reported, never gated.** The telemetry stand's offset from (0.102, 0, 29.035). Any
+    offset > 0.30 m is a real finding (the offline solve did not survive the real probes) and is
+    reported with the selected `d` and the row above, whatever the verdict.
+  - **P-F8b — gated ⇒ WITHHELD.** Offset > **1.20 m**. Beyond that the *world-space* claim in §4 —
+    "the flash goes off inside his body volume" — is false by more than a body radius, and the §17
+    declaration stops describing the frame. Re-anchor, re-seal.
+
+  **This amendment loosens a falsifier, which is exactly the move to be suspicious of, so its blast
+  radius is stated: it touches no band that decides SHIP.** P2 — the decisive on-target leg — is a
+  *screen* test by design, because a screen is what CRITIC judges, and it is unchanged. P1, P1b, P2,
+  P3, P3b, P4, P4b and every known-bad are unchanged.
+
+  *A note the table makes visible and the seal should not hide:* `FLASHDISC` sits on his projected
+  silhouette at **every** candidate depth, so **P2 alone cannot distinguish d = 5.0 from d = 6.0.**
+  P2 distinguishes *on-target from off-target laterally* — which is what `kbside` calibrates and
+  what the defect actually is. Depth is settled by P-F8a's telemetry, and it is reported, not gated.
 - **P-F9 — the tautology guard, declared against myself.** P4c/P4d and the P-F8 stand readback all
   read `g.position`, which is *the value the mechanism sets*. **They cannot fail if the code ran**, so
   they are **plumbing checks, not results** (§143.1 — "a guard can bless the broken thing"). The
@@ -467,6 +561,38 @@ after a rollback is not evidence about whether a run happened (§14, §139.3) �
 **Resume rule.** Restart at the first chunk whose PNGs are not in `progress/records/combatrecipient1/`.
 Chunks are independent; chunk 3 does not need chunk 2 scored, only chunk 2's frames present.
 
+### 5.1 Operator card — everything a resumed agent needs, in one place
+
+The container rolls back roughly every 45 minutes and a resumed agent reads its transcript, not the
+repo (§143.3), so the procedure is here rather than in anyone's head. All paths absolute.
+
+```
+# 0. where am I?
+python3 /home/user/Demo/progress/records/combatrecipient-arms.py check     # tree state + which arm
+ls /home/user/Demo/progress/records/combatrecipient1/                      # which chunks landed
+python3 /home/user/Demo/progress/records/combatrecipient-score.py --selftest   # 9/9 or do not score
+
+# 1. IF the tree is not base (a previous chunk died holding an arm) — do this FIRST
+python3 /home/user/Demo/progress/records/combatrecipient-arms.py revert
+
+# 2. one chunk = install arm, launch, wait, revert, score
+python3 /home/user/Demo/progress/records/combatrecipient-arms.py install <arm>   # base: skip
+bash /home/user/Demo/tools/launch.sh \
+     /home/user/Demo/progress/records/combatrecipient.mjs \
+     <ABSOLUTE log> <ABSOLUTE pidfile> <arm> combat sly-profile
+#    ... wait for "DONE arm=<arm>" in the log ...
+python3 /home/user/Demo/progress/records/combatrecipient-arms.py revert         # BEFORE releasing
+python3 /home/user/Demo/progress/records/combatrecipient-score.py
+```
+
+**The tree must be at base whenever this task is not holding the lock.** `arms.py check` answers
+that in one line and `revert` is byte-exact (it asserts back to sha `350dece5a1b13fb7…`). Chunk 4
+(`kbside`) captures `combat` only; chunk 5 (`restore`) captures `combat` only.
+
+**Order matters and is not negotiable:** `combat` is staged **first** in every chunk, because it is
+what creates the residue that `sly-profile` then measures. A chunk that captures `sly-profile`
+without staging `combat` before it in the same boot answers a different question.
+
 **If a capture dies:** record what landed in `RESULT-combatrecipient.md` and **stop**. Degradation
 ladder, fixed in advance so it is not chosen after the fact:
 
@@ -481,6 +607,19 @@ ladder, fixed in advance so it is not chosen after the fact:
 yaw, type, route and clip; the resolved camera; `_shotLock`'s index; and the engine warning list.
 That is what feeds P4c/P4d and P-F8.
 
+**A tree gate, because the launch-time hash is not the rendered tree.** The harness hashes
+`src/**` twice — once at launch, once *after* the boot — and records `srcStable`. It has to: a run
+launched into a contended FIFO waits minutes to an hour before Vite reads the tree, so a
+launch-time hash on its own is *a number that does not depend on the thing it claims to measure*,
+which is the DIGEST's recurring defect and would have let an arm be scored against the wrong
+source. **`srcStable: false` voids that arm outright** — no gate on it is scored. (§121.4: hash the
+`src` tree, not the git SHA; §124.4: the bundler reads the tree at boot.)
+
+*Caveat, recorded rather than quietly fixed:* **chunk 1 was already in flight when this gate was
+added**, so its telemetry carries the launch-time hash only. Its tree state is instead guaranteed
+procedurally — no `src/**` edit is made by this task until chunk 1 reports `DONE`, and
+`combatrecipient-arms.py check` confirms the tree at base. Chunks 2–5 carry the gate.
+
 ---
 
 ## 6. Decision table
@@ -488,12 +627,13 @@ That is what feeds P4c/P4d and P-F8.
 | outcome | action |
 |---|---|
 | B1–B3 out | chunk **VOID**, re-boot |
-| P-F8 fires (stand > 0.30 m off) | verdict **WITHHELD**, re-anchor, re-seal |
+| P-F8b fires (stand > 1.20 m off) | verdict **WITHHELD**, re-anchor, re-seal |
+| P-F8a fires (stand 0.30–1.20 m off) | **reported**, verdict proceeds on the pixel gates |
 | P-F5 fires (`cand` ≠ `norestore` on `combat`) | verdict **WITHHELD**, re-seal with Edit 2 as a second lever |
 | P-F7 fires (`kbside` doesn't read as failure) | **UNSCOREABLE** — no verdict either way |
 | P-F4 fires and `norestore` also passes P4 | **UNSCOREABLE** (instrument wrong) |
 | P-F4 fires and `norestore` fails P4 | **REVERT both edits** — mechanism insufficient |
-| P3 > 0.30 | **REVERT both edits**; report the share; `minDist: 6.0` named as a *separate* seal, not a retune |
+| P3 > 0.40 or P3b > 560 | **REVERT both edits**; report the share; `minDist: 6.0` named as a *separate* seal, not a retune |
 | P1/P1b/P2 out | **REVERT both edits**; report which and by how much |
 | all gated bands in, both known-bads read as their own failures | **recommend SHIP** of Edit 1 + Edit 2 to the coordinator, with file/line/old→new as in §1. The ship decision is the coordinator's, not mine. |
 
@@ -524,7 +664,16 @@ frames.
 ## 8. Files of this seal (coordinator sweep list — no git run by this task)
 
 - `/home/user/Demo/progress/records/PREREG-combatrecipient.md` (this file)
-- `/home/user/Demo/progress/records/combatrecipient.mjs` (the capture harness)
+- `/home/user/Demo/progress/records/combatrecipient.mjs` — the capture harness (one arm per boot,
+  telemetry per staged shot, PNGs written incrementally)
+- `/home/user/Demo/progress/records/combatrecipient-arms.py` — builds / installs / reverts the four
+  arm variants of `src/ai/Guard.js` by exact string replacement. **Carries base's sha256
+  (`350dece5a1b13fb7…`) and refuses to build on a tree that is not base; `revert` is the exact
+  inverse edit and asserts the result back to that hash.** Verified: all four arms parse, and all
+  four revert to base byte-exactly.
+- `/home/user/Demo/progress/records/combatrecipient-score.py` — the scorer. Every band is a
+  constant copied from §2; `--selftest` reproduces 9/9 of CRITIC-sbs3's published `combat`
+  statistics on the committed frame before it will score anything.
 - `/home/user/Demo/progress/records/combatrecipient1/` (frames + telemetry, one commit per chunk)
 - `/home/user/Demo/progress/records/RESULT-combatrecipient.md` (written after scoring)
 

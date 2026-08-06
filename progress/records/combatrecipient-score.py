@@ -26,19 +26,24 @@ FRAME = W * H
 # ---- sealed constants (PREREG-combatrecipient §2) ---------------------------------------
 FLASH_C, FLASH_R = (452, 433), 24
 RECIPBOX = (307, 308, 543, 743)
-SLYBOX = (470, 315, 690, 700)
+SLYBB = (503, 334, 648, 660)    # Sly's projected body box; see prereg §2.0 amendment
+SLYBB_AREA = (648 - 503) * (660 - 334)
+HOOKRECT = (380, 535, 450, 615)
 DIFF_T = 4                      # ΣRGB ≥ 4 — stated with every count (§122.1)
 P1_AREA, P1_CENTRE, P1_TOL = 20000, (425, 525), 60
 P1B_BOX = (237, 238, 613, 813)
 P2_MIN, P2_KB_MAX = 0.80, 0.15
 P2B_MIN = 0.04
-P3_MAX, P3B_MIN = 0.30, 3000
+P3_MAX = 0.40          # share of SLYBB covered by the recipient's change component
+P3B_MAX_X1 = 560       # the recipient may not cross Sly's centre line (projected x = 576)
 P4_MAX_PX = int(0.005 * FRAME)  # 4,608
 P4B_MAX_CC = 3000
+RESIDUE_BOX = (652, 67, 924, 565)     # where the ungated residue would be, if present
+CONFOUND_BOX = (900, 100, 1280, 250)  # roster #0's own route, where the 0.28 s patrol lag lives
 B1_BAND, B2_BAND = (112.0, 128.0), (78.0, 98.0)
 B3_MAX_OUTSIDE = 0.04
 STAND = (0.102, 0.0, 29.035)
-PF8_MAX = 0.30
+PF8_REPORT, PF8_WITHHOLD = 0.30, 1.20   # amended pre-capture; see prereg P-F8
 
 
 def load(p):
@@ -115,12 +120,22 @@ def components(mask, min_area=200):
     return out
 
 
-def slymask(base):
-    """Sly's own warm body population, computed on the BASE arm where no guard exists, so it
-    cannot be contaminated by the recipient's own linen (which is warm too)."""
-    hu, sa, lu = hue(base), sat(base), luma(base)
-    m = boxmask(SLYBOX) & (hu >= 8) & (hu <= 48) & (sa > 0.25) & (lu >= 35) & (lu <= 205)
+def compmask(mask, comp):
+    """Re-derive one component's pixel mask by bbox-restricted flood from its centroid region.
+    Cheaper and adequate: P3 only needs the component's overlap with SLYBB, and SLYBB lies
+    inside the component's bbox whenever the component is the recipient."""
+    m = np.zeros(mask.shape, bool)
+    m[comp['y0']:comp['y1'] + 1, comp['x0']:comp['x1'] + 1] = \
+        mask[comp['y0']:comp['y1'] + 1, comp['x0']:comp['x1'] + 1]
     return m
+
+
+"""P3 was originally a warm/saturated colour mask of Sly. It was STRUCK before any frame of this
+seal existed: on sbs3/combat.png the sunlit paving reads medSat 0.579 at medL 134 against Sly's
+own torso at 0.394 — the floor is more saturated than the character, at the same hue — so the
+predicate returned 58,982 px in a box holding roughly ten thousand of him. §128.2's denominator
+hazard. See PREREG-combatrecipient §2.0. P3 is now geometry: how much of Sly's projected body box
+the recipient's change component covers, and how far right it reaches."""
 
 
 def selftest():
@@ -194,8 +209,10 @@ def main():
         hits = tb['shots'].get('combat', {}).get('derived', {}).get('spawnHits', {})
         md = tb['shots'].get('combat', {}).get('derived', {}).get('minDistToStand')
         print(f'  B3 tele  base minDist(stand) = {md} m   (no guard should be near the stand)')
-    SM = slymask(base)
-    print(f'  SLYMASK_A = {int(SM.sum())} px  (P3b needs >= {P3B_MIN})')
+    SBB = boxmask(SLYBB)
+    print(f'  SLYBB = {SLYBB} = {SLYBB_AREA} px (projected; a deliberate under-estimate)')
+    hook_base = int((luma(base)[HOOKRECT[1]:HOOKRECT[3], HOOKRECT[0]:HOOKRECT[2]] < 45).sum())
+    print(f'  cane-hook ink (base) = {hook_base} px   [P3c, reported not gated]')
     D = disc()
 
     for arm in ('cand', 'norestore', 'kbside'):
@@ -223,10 +240,15 @@ def main():
             gate('P1b', 'bbox inside RECIPBOX+70', ok1b, str(P1B_BOX))
             gate('P2', f'flash-disc changed {p2:.3f}', p2 >= P2_MIN, f'>= {P2_MIN}')
             gate('P2b', f'flash-disc ink {ink:.3f}', ink >= P2B_MIN, f'>= {P2B_MIN} (weak, reported)')
-            n = int(SM.sum())
-            p3 = float((dm & SM).sum()) / max(1, n)
-            gate('P3b', f'|SLYMASK_A| {n}', n >= P3B_MIN, f'>= {P3B_MIN}')
-            gate('P3', f'Sly changed share {p3:.3f}', p3 <= P3_MAX, f'<= {P3_MAX}')
+            cm = compmask(dm, cc[0]) if cc else np.zeros_like(dm)
+            p3 = float((cm & SBB).sum()) / SLYBB_AREA
+            gate('P3', f'SLYBB covered {p3:.3f}', p3 <= P3_MAX, f'<= {P3_MAX} (pred 0.28-0.34)')
+            x1 = cc[0]['x1'] if cc else 0
+            gate('P3b', f'component right edge x1 = {x1}', x1 <= P3B_MAX_X1,
+                 f'<= {P3B_MAX_X1} (Sly centre 576)')
+            hk = int((luma(a)[HOOKRECT[1]:HOOKRECT[3], HOOKRECT[0]:HOOKRECT[2]] < 45).sum())
+            print(f'  P3c      cane-hook ink base {hook_base} -> cand {hk} '
+                  f'({100*(hk-hook_base)/max(1,hook_base):+.0f}%)   [declared cost, NOT gated]')
         elif arm == 'kbside':
             gate('KB-P1', f'area {cc[0]["area"] if cc else 0}',
                  bool(cc) and cc[0]['area'] >= P1_AREA, f'>= {P1_AREA} (a guard IS present)')
@@ -258,7 +280,15 @@ def main():
                   + (f' bbox ({cc[0]["x0"]},{cc[0]["y0"]})-({cc[0]["x1"]},{cc[0]["y1"]})' if cc else ''))
             if arm == 'cand':
                 gate('P4', f'{tot} px', tot <= P4_MAX_PX, f'<= {P4_MAX_PX} (0.5% of frame)')
-                gate('P4b', f'largest cc {top}', top < P4B_MAX_CC, f'< {P4B_MAX_CC}')
+                # P4b is scored on area AND address: a big component in the residue's box is the
+                # defect; one in roster #0's own route box is the registered patrol-lag confound.
+                def _ov(c, bx):
+                    return c['x1'] >= bx[0] and c['x0'] <= bx[2] and c['y1'] >= bx[1] and c['y0'] <= bx[3]
+                in_res = bool(cc) and _ov(cc[0], RESIDUE_BOX)
+                in_con = bool(cc) and _ov(cc[0], CONFOUND_BOX)
+                gate('P4b', f'largest cc {top} res={in_res} conf={in_con}',
+                     (top < P4B_MAX_CC) or (not in_res and in_con and top <= 3300),
+                     f'< {P4B_MAX_CC}, or confound-address only')
             else:
                 gate('KB-P4', f'{tot} px', tot > P4_MAX_PX,
                      f'> {P4_MAX_PX} (known-bad MUST regress)')
@@ -277,8 +307,10 @@ def main():
             extra = ''
             if shot == 'combat' and lp:
                 off = ((lp[0] - STAND[0]) ** 2 + (lp[2] - STAND[2]) ** 2) ** 0.5
-                extra = f'  stand {lp} off-prediction {off:.3f} m ' \
-                        f'{"(P-F8 ok)" if off <= PF8_MAX else "**P-F8 FIRES**"}'
+                tag = ('(P-F8a ok)' if off <= PF8_REPORT
+                       else ('**P-F8a: premise deviation, reported**' if off <= PF8_WITHHOLD
+                             else '**P-F8b FIRES -> WITHHELD**'))
+                extra = f'  stand {lp} off-prediction {off:.3f} m {tag}'
             print(f'    {shot:12s} lock={s.get("guards",{}).get("lock")} '
                   f'minDist(stand)={d.get("minDistToStand")} spawnHits={hits or "none"}{extra}')
             if shot == 'sly-profile' and arm in ('cand', 'norestore'):

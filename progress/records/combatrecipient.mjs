@@ -184,6 +184,18 @@ async function main() {
     JSON.stringify(telemetry, null, 2));
 
   await withGame({ width: 1280, height: 720, quality: 'high' }, async ({ page, info }) => {
+    /* Re-hash the tree AFTER the boot, not only before the lock wait. The launch-time hash is
+       taken minutes (sometimes an hour) before `withGame` acquires the FIFO lock and Vite reads
+       the tree, so on its own it is a number that does not depend on the thing it claims to
+       measure — the DIGEST's recurring defect. Both are recorded; `srcStable` is the one to
+       read, and a false there voids the arm. */
+    const boot = await srcHash();
+    telemetry.srcTreeAtBoot = boot.hash;
+    telemetry.srcStable = boot.hash === tree.hash;
+    if (!telemetry.srcStable) {
+      process.stdout.write(`!! TREE MOVED between launch (${tree.hash}) and boot (${boot.hash}) `
+        + '— this arm is VOID, the frames do not render the tree that was registered\n');
+    }
     telemetry.renderer = info.renderer;
     telemetry.bootWarnings = info.warnings;
     telemetry.consoleErrors = info.consoleErrors;

@@ -12,9 +12,34 @@ import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import path from 'node:path';
 
 const HERE = path.dirname(new URL(import.meta.url).pathname);
-const RB = path.join(HERE, 'sparkcount-readback.json');
-if (!existsSync(RB)) { console.log('no sparkcount-readback.json yet — the probe has not landed. Nothing to score.'); process.exit(0); }
+/* Optional fixture override so the scorer's own arithmetic can be exercised against dumps whose
+ * answer is known by construction (sparkcount-scorer-control.mjs). Defaults are the real files;
+ * passing paths changes NOTHING about the arithmetic or the bands. */
+const RB = process.argv[2] ? path.resolve(process.argv[2]) : path.join(HERE, 'sparkcount-readback.json');
+const OUTPATH = process.argv[3] ? path.resolve(process.argv[3]) : path.join(HERE, 'sparkcount-scores.json');
+
+/* NO-DATA vs FAILED-CONTROLS must never print the same way.
+ * The runner writes this file's header BEFORE it takes the capture lock (sparkcount.mjs:35), so
+ * the file existing proves only that the runner started — not that it ever booted. Reporting an
+ * empty dump as "NOT GRANTED" would let an absence of measurement read as a falsification of the
+ * seal, which is §184's own defect (an output that cannot tell measuring zero from measuring
+ * nothing). The licence still fails closed in both cases; only the stated REASON differs. */
+const noData = (why, extra = {}) => {
+  const out = { at: new Date().toISOString(), prereg: 'PREREG-sparkcount.md', popMin: 0.5, arms: {}, state: 'NO DATA', why, licensed: false, ...extra };
+  writeFileSync(OUTPATH, JSON.stringify(out, null, 1));
+  console.log(`CALIBRATION LICENCE: NOT GRANTED — reason: NO DATA (${why}).`);
+  console.log('  This is NOT a falsified control. No falsifier P-S1..P-S5 is adjudicated by this run.');
+  console.log('  skyCut remains the registered primary predicate (seal §6 retires it only on KB1+KB2 holding).');
+  console.log(`\nwrote ${path.basename(OUTPATH)}`);
+  process.exit(0);
+};
+
+if (!existsSync(RB)) noData('sparkcount-readback.json absent — the probe never started');
 const rb = JSON.parse(readFileSync(RB, 'utf8'));
+if (!rb.arms || rb.arms.length === 0) {
+  noData(rb.fatal ? `runner recorded fatal: ${rb.fatal}` : 'readback header present but arms[] empty — the runner started and has not yet dumped an arm (it writes the header before taking the capture lock)',
+    { startedAt: rb.startedAt ?? null, runnerFatal: rb.fatal ?? null, live: rb.live ?? null, finishedAt: rb.finishedAt ?? null });
+}
 
 const POP_MIN = 0.5;                       // seal §2, registered, not a tuning knob
 const smoothstep = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a || 1e-6))); return t * t * (3 - 2 * t); };
@@ -62,10 +87,16 @@ for (const a of rb.arms ?? []) {
 }
 const kb1 = OUT.arms['traversal-prerollOFF'], kb2 = OUT.arms['traversal-prerollON'];
 OUT.licensed = !!(kb1?.pass && kb2?.pass);
-console.log(`\nCALIBRATION LICENCE (seal §4: KB1 AND KB2 must both hold): ${OUT.licensed ? 'GRANTED' : 'NOT GRANTED'}`);
+/* Arms exist but none carried a readable dump => P-S5 (fx.sparkles / aData unreadable), which is
+ * a FATAL of the probe, not a failed control. Kept distinct for the same reason as NO DATA. */
+OUT.state = Object.keys(OUT.arms).length === 0 ? 'P-S5 FATAL (arms present, no readable dump)'
+  : OUT.licensed ? 'SCORED — licensed' : 'SCORED — control(s) failed';
+console.log(`\nSTATE: ${OUT.state}`);
+console.log(`CALIBRATION LICENCE (seal §4: KB1 AND KB2 must both hold): ${OUT.licensed ? 'GRANTED' : 'NOT GRANTED'}`);
+if (!OUT.licensed && Object.keys(OUT.arms).length === 0) console.log('  P-S5: record and stop — no claim may rest on this run.');
 if (kb1 && kb1.rawCount > 0 && kb1.SPARKCOUNT === 0) {
   console.log(`  -> KB1 is the decisive one and it discriminates: raw ${kb1.rawCount} markers latched, SPARKCOUNT 0.`);
   console.log('     A raw count would have certified the grammar on a frame whose strict pixel count is 0.');
 }
-writeFileSync(path.join(HERE, 'sparkcount-scores.json'), JSON.stringify(OUT, null, 1));
-console.log('\nwrote sparkcount-scores.json');
+writeFileSync(OUTPATH, JSON.stringify(OUT, null, 1));
+console.log(`\nwrote ${path.basename(OUTPATH)}`);

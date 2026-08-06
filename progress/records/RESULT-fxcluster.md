@@ -796,3 +796,28 @@ Per §4-R1 the cone item stays with the **COORDINATOR**. The ship this would nam
 `src/ai/Guard.js:158`, `SHOT_POSE.guard.towardCamera: 0.35 → −0.20` (widened clamp at `:1832`
 stays). Every quantity bearing on the *cone* clears with margin; the only thing unresolved is
 the no-harm certification route, which is a decision, not a measurement.
+
+---
+
+## sparkcount — pointer (seal §8 filing); full verdict in `RESULT-sparkcount.md`
+
+**The sparkcount probe did not land. Nothing is adjudicated and `skyCut` remains the registered
+§2.1-item-6 primary.** `fxcluster1/sparkcount-readback.json` exists but carries `arms: []` — the
+runner (`sparkcount.mjs`, pid 29232) wrote its header at `:35`, *before* `withGame`, and has been
+queued on the capture lock since 04:03:36 behind `litwarm1` then `staging1` (1100 s+ and counting).
+**The file's existence is not evidence of its contents.**
+
+- **KB1–KB4 un-run. P-S1–P-S4 UN-ADJUDICATED. P-S5 NOT triggered** — it is a boot-side fatal and
+  there was no boot; the readback has neither the `fatal` nor the `live` key that branch writes.
+- **Blob↔marker correspondence untested.** Pixel side committed and unchanged (traversal
+  **236 px / 14 blobs**; `sbs2/night` **50 px / 16 blobs**; known-bad **0 / 0**; uncut `sbs3/night`
+  **224 px / 62 blobs**). Marker side: **no measurement**. P-S2 binds by forbidding a manufactured
+  comparison; `POP_MIN` stays `0.5` and was never a candidate to move.
+- **Scorer defect found and fixed (reporting only):** `NOT GRANTED` was printed identically for
+  "no data" and "KB1 failed" — §184's own defect one layer up, in the instrument built to catch it.
+  `NO DATA` / `P-S5 FATAL` / `SCORED` are now distinct states.
+- **Scorer arithmetic verified against 8 synthetic fixtures** (`sparkcount-scorer-control.txt`),
+  including a gate-dead detector in which KB1 *must* fail, and a reproduction of the b2 defect
+  (raw 17 in → `SPARKCOUNT` 0 out). Synthetic: this measures the scorer, not the game.
+- **The seal is NOT withdrawn** — no falsifier fired, and registration tree `85bab2d30f5f7b59` was
+  re-verified intact. **Do not re-launch the runner**; it already holds its queue position.

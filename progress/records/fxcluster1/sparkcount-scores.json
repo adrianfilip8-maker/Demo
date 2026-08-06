@@ -1,7 +1,13 @@
 {
- "at": "2026-08-06T04:04:15.921Z",
+ "at": "2026-08-06T04:24:31.937Z",
  "prereg": "PREREG-sparkcount.md",
  "popMin": 0.5,
  "arms": {},
- "licensed": false
+ "state": "NO DATA",
+ "why": "readback header present but arms[] empty — the runner started and has not yet dumped an arm (it writes the header before taking the capture lock)",
+ "licensed": false,
+ "startedAt": "2026-08-06T04:03:36.391Z",
+ "runnerFatal": null,
+ "live": null,
+ "finishedAt": null
 }

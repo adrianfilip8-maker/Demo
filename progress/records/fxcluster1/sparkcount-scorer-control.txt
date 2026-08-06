@@ -1,0 +1,26 @@
+sparkcount-scorer-control — SYNTHETIC fixtures, measures the SCORER not the game
+scorer: sparkcount-score.mjs   POP_MIN 0.5 (registered, untouched)
+
+ OK   F1  raw 17 popOpen 0 inFrust 17 SPARKCOUNT 0 gate PASS
+        KB1 shape — the b2 defect exactly: 17 markers latched, in frustum, scale>0, but pop 0.061 (dt 0.033)
+ OK   F2  raw 14 popOpen 14 inFrust 14 SPARKCOUNT 14 gate PASS
+        KB2 shape — 14 markers fully popped (dt 1.0) and on-screen
+ OK   F3  raw 17 popOpen 17 inFrust 17 SPARKCOUNT 17 gate FAIL
+        GATE-DEAD DETECTOR — KB1 arm with the pop gate satisfied (dt 1.0). KB1 MUST FAIL here; if it passes, SPARKCOUNT is a guard that cannot fail and the instrument is void
+ OK   F4  raw 10 popOpen 10 inFrust 3 SPARKCOUNT 3 gate FAIL
+        frustum clause alone — 10 popped, scale>0; 3 on-screen, 3 behind camera, 4 off-screen
+ OK   F5  raw 10 popOpen 10 inFrust 10 SPARKCOUNT 4 gate FAIL
+        scale clause alone — 10 popped and on-screen, 6 with scale 0
+ OK   F6  raw 12 popOpen 12 inFrust 12 SPARKCOUNT 12 gate PASS
+        POP_MIN half-open boundary — dt 0.11 gives pop EXACTLY 0.5, which the seal admits (>=)
+ OK   F7  raw 62 popOpen 62 inFrust 62 SPARKCOUNT 62 gate FAIL
+        KB3 must reject the re-acquired sky population — 62 markers all visible is NOT in 16 +/- 4
+ OK   F8  state "P-S5 FATAL (arms present, no readable dump)"
+        P-S5 shape — arms present, dump fatal. Must report P-S5 FATAL, distinct from NO DATA
+
+ALL FIXTURES AS CONSTRUCTED — the ported predicate discriminates on all three clauses,
+F3 is the load-bearing one: KB1 FAILS when the pop gate is satisfied, so a KB1 pass on real
+data is informative rather than automatic. F1 reproduces the b2 defect (raw 17 -> SPARKCOUNT 0).
+
+This licenses NOTHING about the game. It says only that when the probe lands, the arithmetic
+applied to it will be the seal's. KB1-KB4 remain un-run; skyCut remains primary.
