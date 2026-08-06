@@ -1,0 +1,7 @@
+[05:51:58 +   0s] bootId 905afa95-e65  srcTree adb5629032309d19 — booting (harness takes the FIFO ticket)
+· waiting for capture lock (10s, held by pid 2990)
+· waiting for capture lock (20s, held by pid 2990)
+· waiting for capture lock (31s, held by pid 2990)
+· waiting for capture lock (42s, held by pid 2990)
+· waiting for capture lock (52s, held by pid 2990)
+· waiting for capture lock (63s, held by pid 2990)
