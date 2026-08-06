@@ -445,19 +445,22 @@ export const EMITTERS = {
     batch: 'spark', tile: TILE.SPARK, count: [22, 28], life: [0.12, 0.22],
     speed: [9, 16], spread: 'disc', cone: 0.55, gravity: 12, drag: 13, turb: 0, wind: 0,
     size: [0.085, 0.02], sizeExp: 0.8, spin: [0, 0], fadeIn: 0.02, fadeOut: 1.1,
-    alpha: [2.2, 3.4], col0: PAL.goldSpec, col1: PAL.goldMid, stretch: 0.075, jitter: 0.05,
+    /* c3 (RESULT-fxcluster): the cane family emits carnelian, not near-white — the flash
+       was blowing the figure to chalk. Gains down, col0 one rank along the §2.2 gold→carnelian
+       axis. 0xe8912a / 0xd4823a are that axis; 0xd4823a is the tree's PAINT ochre. */
+    alpha: [1.6, 2.4], col0: 0xe8912a, col1: PAL.goldMid, stretch: 0.075, jitter: 0.05,
   },
   cane_flash: {
     batch: 'spark', tile: TILE.GLOW, count: [1, 1], life: [0.11, 0.11],
     speed: [0, 0], gravity: 0, drag: 0, turb: 0, wind: 0,
     size: [1.5, 0.5], sizeExp: 1.6, spin: [0, 0], fadeIn: 0.01, fadeOut: 2.0,
-    alpha: [2.6, 2.6], col0: PAL.goldLight, col1: PAL.goldMid,
+    alpha: [1.3, 1.3], col0: 0xd4823a, col1: 0xd4823a,
   },
   cane_ring: {
     batch: 'ring', tile: TILE.RING, count: [1, 1], life: [0.21, 0.21],
     speed: [0, 0], gravity: 0, drag: 0, turb: 0, wind: 0,
     size: [0.25, 2.5], sizeExp: 0.38, spin: [0, 0], fadeIn: 0.02, fadeOut: 1.35,
-    alpha: [2.0, 2.0], col0: PAL.goldSpec, col1: PAL.rimCool,
+    alpha: [1.4, 1.4], col0: PAL.goldSpec, col1: PAL.rimCool,
   },
   cane_debris: {
     batch: 'dust', tile: [TILE.DUST, TILE.CHUNK, TILE.DUST3], count: [6, 9], life: [0.30, 0.55],
@@ -470,7 +473,7 @@ export const EMITTERS = {
     batch: 'spark', tile: TILE.STREAK, count: [12, 12], life: [0.22, 0.30],
     speed: [0.2, 0.6], spread: 'cone', cone: 0.4, gravity: 0.4, drag: 4, turb: 0, wind: 0,
     size: [0.34, 0.10], sizeExp: 1.2, spin: [0, 0], fadeIn: 0.02, fadeOut: 1.4,
-    alpha: [1.6, 2.6], col0: PAL.goldSpec, col1: PAL.goldMid, stretch: 0.02,
+    alpha: [1.0, 1.6], col0: 0xd4823a, col1: PAL.goldMid, stretch: 0.02,
   },
 
   /* ── dive attack (Cane Slam) ───────────────────────────────────────────── */
