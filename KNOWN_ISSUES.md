@@ -15106,3 +15106,36 @@ Cheap lesson, recorded because it is the third time this batch that re-reading b
 when a falsifier fires, quote its registered text into the verdict *before* reasoning from it. Two
 of the three verdicts I published for this seal were retracted, and both retractions came from the
 prereg's own words rather than from new data.
+
+### 193.2 First audit item — `fx9` CLEARS §193, and task #13 does not need reopening
+
+I flagged `fx9`'s `courtCap` (0.259 vs a pre-registered 0.2564, margin 0.0026) as the first thing
+to re-check, on the reasoning that a 0.0026 margin sits far inside a 3 % floor. **That reasoning
+did not apply, and the check says so on two independent grounds.**
+
+**1. `courtCap` is not a pixel quantity.** It is a probe scalar read from the engine — the cap
+ratio `2.0 / 7.8 = 0.2564` — compared against the live value the shader took. There is no
+differing-pixel count anywhere in it, so cross-boot FX variance cannot reach it. §193 simply does
+not apply to the number that closed task #13. My flag mistook a *predicted-vs-measured scalar* for
+a *frame-vs-frame delta*, which is the same confusion in miniature that §189–§192 keep recording:
+I matched on the size of the margin without checking what the quantity was.
+
+**2. The supporting ROI claims ARE pixel means on `combat`, and they clear anyway — measured, not
+argued.** Using the `base`/`restore` pair (identical source, separate boots) on the same shot:
+
+| ROI | `fx9` measured | target | boot noise, signed mean ΔL | mean·abs· | max·abs· |
+|---|---|---|---|---|---|
+| left edge (0,28)-(150,355) | **+1.50** | ≤ 9.5 | **−0.861** | 1.516 | 99.3 |
+| doorway (652,95)-(821,192) | **+3.25** | ≤ 5.1 | **−0.067** | 0.120 | 15.3 |
+
+The left-edge margin is ~9× the noise; the doorway margin is ~23×. Note the pleasant accident worth
+stating because it will not always hold: the **tighter** of the two margins (doorway, 1.85 units of
+headroom) sits in the frame's **quietest** region, where boot variance is 0.067 — while the noisy
+region is the one with 8 units of headroom.
+
+*(The noise figures are Rec.709 luma means; `RESULT-fx9`'s own statistic may differ in channel or
+weighting, so these bound the magnitude rather than reproduce its arithmetic. With margins 9× and
+23× clear, the conclusion does not depend on which of those it is.)*
+
+**Verdict: `fx9` stands. Task #13 stays closed.** The audit continues for results that compare
+frame-vs-frame deltas across boots on FX-bearing shots — which `fx9`'s headline was not.
