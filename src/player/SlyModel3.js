@@ -55,7 +55,7 @@ export const TUNE = {
   earLen: 0.205,             // r1: "tall pointed ears ... instead of the small nubs"
   earSpread: 0.128,
 
-  legFraction: 0.520,
+  legFraction: 0.492,        // r3: "take the excess out of the shins" — lands ~5.3 heads rendered
   shinRatio: 0.52,
   footLen: 0.250,
   footWidth: 0.106,
@@ -67,7 +67,7 @@ export const TUNE = {
      tail root RADIUS as a fraction of head HALF-width. The gate divides by 2 to compare against
      F3's ≥ 0.40 × head WIDTH. 0.95 here ⇒ 0.475 × head width. */
   tailScale: 1.10,
-  tailRootFrac: 0.95,
+  tailRootFrac: 1.05,        // r3: "2-3x thicker at the root" — 0.525 x head width, G4 well clear
   tailRings: 5,
 
   shoulderW: 0.170,          // r1: "widen the shoulders so the tunic reads as a torso, not a tube"
@@ -108,7 +108,8 @@ const HIP_Y = H * TUNE.legFraction;
 const NECK_Y = H - HEAD_H;
 const CHEST_Y = HIP_Y + (NECK_Y - HIP_Y) * 0.62;
 const SPINE_Y = HIP_Y + (NECK_Y - HIP_Y) * 0.28;
-const HEAD_Y = NECK_Y + HEAD_H * 0.22;
+/* r3 (stage 6): 0.22 gave "a long pale tube neck". The head now sits ON the collar. */
+const HEAD_Y = NECK_Y + HEAD_H * 0.12;
 const HEAD_HW = HEAD_H * 0.40;
 const THIGH = HIP_Y * (1 - TUNE.shinRatio);
 const ANKLE_Y = HIP_Y - THIGH - HIP_Y * TUNE.shinRatio * 0.86;
@@ -167,7 +168,7 @@ const BONE_ORDER = SKELETON.map((s) => s[0]);
  * hex    [0x…, ...]          per-point colour
  * bone   [i, ...]            per-point bone index (rigid weight 1)
  */
-function tube(pts, rad, hex, bone, seg = 12, jit = null) {
+function tube(pts, rad, hex, bone, seg = 12, jit = null, bone2 = null, w2 = null) {
   const P = pts.map((p) => new THREE.Vector3(...p));
   const n = P.length;
   const t = [], up = new THREE.Vector3();
@@ -197,7 +198,14 @@ function tube(pts, rad, hex, bone, seg = 12, jit = null) {
       const a = (s / seg) * Math.PI * 2, ca = Math.cos(a) * rad[i] * j, sa = Math.sin(a) * rad[i] * j;
       pos.push(P[i].x + N.x * ca + B.x * sa, P[i].y + N.y * ca + B.y * sa, P[i].z + N.z * ca + B.z * sa);
       col.push(c.r, c.g, c.b);
-      bidx.push(bone[i], 0, 0, 0); bwt.push(1, 0, 0, 0);
+      /* r3 (§stage-6): a ring welded 100% to its nearest bone creases at every bone boundary the
+         moment the chain poses — the critic's "hard-faceted zigzag" was skinning, not sampling.
+         bone2/w2, when given, blend each ring across the two bones its param sits between. */
+      if (bone2 && bone2[i] != null && w2 && w2[i] > 0) {
+        bidx.push(bone[i], bone2[i], 0, 0); bwt.push(1 - w2[i], w2[i], 0, 0);
+      } else {
+        bidx.push(bone[i], 0, 0, 0); bwt.push(1, 0, 0, 0);
+      }
     }
   }
   for (let r = 0; r < n - 1; r++) {
@@ -353,16 +361,17 @@ export class SlyModel {
     // cranium plus a bridge across the face front (SPEC §2: it is a fur marking and wraps).
     const eyeY = CY + HEAD_H * 0.05;
     for (const s of [1, -1]) {
-      parts.push(blob([s * hw * 0.72, eyeY, hw * 0.42], [hw * 0.40, hw * 0.26, hw * 0.34], PAL.black, headB, 10, 6));
+      parts.push(blob([s * hw * 0.72, eyeY, hw * 0.55], [hw * 0.40, hw * 0.28, hw * 0.34], PAL.black, headB, 10, 6));
       /* r1/SPEC: "drawn to a point at each outer corner" — a tapering black spike sweeping from
          the wing outward and back toward the ear base. This is the mask's identity signature. */
       parts.push(tube(
         [[s * hw * 0.82, eyeY + hw * 0.02, hw * 0.30], [s * hw * 1.06, eyeY + hw * 0.10, -hw * 0.10]],
         [hw * 0.16, hw * 0.015], [PAL.black, PAL.black], [headB, headB], 8));
     }
-    /* r2 (closeup): "mask a lopsided blob covering one eye only" from three-quarter — the bridge
-       now spans wide enough to cover BOTH eyes from front-3/4, and the wings sit more frontal. */
-    parts.push(blob([0, eyeY, hw * 0.86], [hw * 0.78, hw * 0.24, hw * 0.13], PAL.black, headB, 12, 6));
+    /* r2 (closeup): "mask a lopsided blob covering one eye only"; r3: still half-missing. Stage 6
+       makes the bridge TALLER and WIDER than both sockets and pulls the wings frontal, so the
+       black field survives any three-quarter. */
+    parts.push(blob([0, eyeY, hw * 0.86], [hw * 0.88, hw * 0.30, hw * 0.13], PAL.black, headB, 12, 6));
 
     /* eyes — stage 3: ~30% bigger and pushed proud of a THINNER mask bridge. Stage 2's stack sat
        flush with the bridge and read as one black lump; the amber is an identity cue and has to
@@ -373,9 +382,12 @@ export class SlyModel {
       parts.push(blob([s * hw * 0.255, eyeY + hw * 0.02, hw * 1.135], [hw * 0.048, hw * 0.048, hw * 0.026], PAL.black, headB, 6, 4));
     }
 
-    // cap — blue dome over the cranium top + a forward brim (G1: PAL.blue)
-    parts.push(blob([0, CY + HEAD_H * 0.30, -hw * 0.06], [hw * 1.08, HEAD_H * 0.235, hw * 1.02], PAL.blue, headB, 14, 8));
-    parts.push(blob([0, CY + HEAD_H * 0.205, hw * 0.92], [hw * 0.58, HEAD_H * 0.038, hw * 0.46], PAL.blue, bi('capBrim'), 12, 5));
+    // r3: "the cap is a thin band leaving a bare tan crown" — the dome now ENCLOSES the crown
+    // (wider than the cranium in all axes, centred lower) with the brim forward (G1: PAL.blue)
+    parts.push(blob([0, CY + HEAD_H * 0.26, -hw * 0.04], [hw * 1.14, HEAD_H * 0.30, hw * 1.08], PAL.blue, headB, 14, 8));
+    parts.push(blob([0, CY + HEAD_H * 0.205, hw * 0.95], [hw * 0.60, HEAD_H * 0.040, hw * 0.48], PAL.blue, bi('capBrim'), 12, 5));
+    // r3: "a defined jaw" — a chin mass under the muzzle root, fusing face into skull
+    parts.push(blob([0, mzY - hw * 0.34, CR[2] * 0.52], [hw * 0.36, hw * 0.20, hw * 0.34], PAL.furLight, headB, 10, 6));
 
     // ears — big oriented fins, wide base to a sharp tip (SPEC: large, tall, pointed)
     for (const [n, s] of [['earL', 1], ['earR', -1]]) {
@@ -474,27 +486,35 @@ export class SlyModel {
       const pts = [], rad = [], hex = [], bone = [];
       const bandOf = (t) => Math.min(TUNE.tailRings * 2 - 1, Math.floor(t * TUNE.tailRings * 2));
       const colOf = (b) => (b % 2 === 0 ? PAL.tailDark : PAL.cream);   // dark first, HIGH contrast
-      /* r2 (traversal, 0-4): "uniform-diameter kinked tube that reads as a rope or a spare limb
-         at gameplay distance". Stronger tip taper restores the cone read; the root is untouched
-         (G4). The kink is sampling: see the 30-step spline below. */
-      const radOf = (t) => Math.max(hw * 0.07, rootR * (1 - 0.80 * Math.pow(t, 1.1)));
-      const boneOf = (t) => tailBones[Math.min(tailBones.length - 1, Math.floor(t * tailBones.length))];
+      /* r3 (stage 6): r2's "uniform rope" fix over-corrected into "a narrow tapering stick" — the
+         VISIBLE tail in posed shots is the mid and tip, so tip-weighted taper removed exactly the
+         mass the silhouette needed. Mid-weighted profile now: fatter root, slow mid decline, real
+         taper only in the last third. The critic's kinks were skinning (fixed via bone2/w2 below),
+         and the "ragged fur edge" it asked for is a small jitter on the light bands. */
+      const radOf = (t) => Math.max(hw * 0.12, rootR * (1 - 0.55 * Math.pow(t, 1.35)));
+      const boneParam = (t) => {
+        const x = Math.min(0.999, Math.max(0, t)) * tailBones.length;
+        const i = Math.floor(x);
+        return { a: tailBones[i], b: tailBones[Math.min(tailBones.length - 1, i + 1)], w: x - i };
+      };
+      const w2 = [], bone2 = [], jitv = [];
       let prevBand = -1;
+      const pushRing = (i, t, b) => {
+        const bp = boneParam(t);
+        pts.push(spine[i]); rad.push(radOf(t)); hex.push(colOf(b));
+        bone.push(bp.a); bone2.push(bp.b); w2.push(bp.w);
+        jitv.push(b % 2 === 1 ? 0.07 : 0);       // fur hint on the light bands only
+      };
       for (let i = 0; i < spine.length; i++) {
         const t = i / (spine.length - 1);
         const b = bandOf(t);
-        if (prevBand >= 0 && b !== prevBand) {
-          /* doubled ring at the band boundary — same position, both colours — so the ring edge is
-             CRISP. tube() interpolates colours between rings, which is what smeared stage 2's
-             bands into a pale gradient (the same defect, and the same fix, as the belt seam). */
-          pts.push(spine[i]); rad.push(radOf(t)); hex.push(colOf(prevBand)); bone.push(boneOf(t));
-        }
-        pts.push(spine[i]); rad.push(radOf(t)); hex.push(colOf(b)); bone.push(boneOf(t));
+        if (prevBand >= 0 && b !== prevBand) pushRing(i, t, prevBand);  // doubled ring: crisp band edge
+        pushRing(i, t, b);
         prevBand = b;
       }
-      parts.push(tube(pts, rad, hex, bone, 12));
+      parts.push(tube(pts, rad, hex, bone, 12, jitv, bone2, w2));
       const tip = spine[spine.length - 1];
-      parts.push(blob([tip[0], tip[1], tip[2]], [hw * 0.115, hw * 0.115, hw * 0.115],
+      parts.push(blob([tip[0], tip[1], tip[2]], [hw * 0.14, hw * 0.14, hw * 0.14],
         PAL.tailDark, tailBones[3], 8, 5));
     }
 
@@ -507,11 +527,13 @@ export class SlyModel {
          r2: "the cane detaches — floating clear of the hand, clipping the tail, stabbing through
          the hip". The shaft now runs THROUGH the mitten's centre (the grip is a spline point, not
          a hope), and the below-hand run is 40% shorter so a crouch cannot drive it into the hip. */
+      /* r3: "a second gold segment poking out at the hip" — the below-grip stub is DELETED. The
+         cane is one piece: shaft rising from the fist to the crook, nothing below the hand. */
       const grip = [wr[0] - 0.014, wr[1] - 0.042, wr[2] + 0.014];   // the mitten's centre, exactly
       const top = [wr[0] - 0.02, wr[1] + 0.55, wr[2] + 0.09];
       parts.push(tube(
-        [[grip[0] + 0.02, grip[1] - 0.25, grip[2] - 0.05], grip, top],
-        [0.022, 0.023, 0.021], [PAL.gold, PAL.gold, PAL.gold], [g, g, g], 9));
+        [[grip[0] + 0.006, grip[1] - 0.06, grip[2] - 0.012], grip, top],
+        [0.021, 0.023, 0.021], [PAL.gold, PAL.gold, PAL.gold], [g, g, g], 9));
       const hookPts = [], hookR = 0.115;
       for (let i = 0; i <= 7; i++) {
         const a = (i / 7) * Math.PI;                              // 180°
