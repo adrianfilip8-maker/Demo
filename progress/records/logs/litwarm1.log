@@ -6,3 +6,9 @@
 [04:04:17 + 653s]   P-F7 ok: night live nightAmount 1 (= 1 exactly)
 [04:04:48 + 684s]   night.base     31s  slySss→0  uSss seen by shader [0] (want exactly 0)  inkNight 1  uSubjW 0.5  applied ok
 [04:05:17 + 713s]   night.C        29s  slySss→0.3  uSss seen by shader [0] (want exactly 0)  inkNight 1  uSubjW 0.5  applied ok
+[04:05:47 + 743s]   night.restore  30s  slySss→0  uSss seen by shader [0] (want exactly 0)  inkNight 1  uSubjW 0.5  applied ok
+[04:05:47 + 743s]   chunk N done — srcTree after 85bab2d30f5f7b59 (STABLE)
+[04:05:47 + 743s] chunk N: lock released
+[04:05:47 + 743s] chunk N2 (guard): srcTree 85bab2d30f5f7b59 — booting (own lock hold)
+· waiting for capture lock (10s, held by pid 15982)
+· waiting for capture lock (20s, held by pid 15982)
