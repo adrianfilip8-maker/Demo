@@ -7,3 +7,5 @@
     ! textures: prewarm took 30.6s at size 1024
   ✓ hero          381688ms  draws  260  tris 1742k
   ✓ temple        214134ms  draws  239  tris 1713k
+  ✓ sly-closeup   259595ms  draws  263  tris 1667k
+  ✓ courtyard     258064ms  draws  281  tris 1710k
