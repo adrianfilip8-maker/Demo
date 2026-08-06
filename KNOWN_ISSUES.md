@@ -14549,3 +14549,33 @@ Consequences, none of them a ship decision:
   its committed head px `(864,244)` are exactly what STAGING's independent `_solveShotPose`
   replication derived without having read that file.
 
+
+## §184 — a units error in my dispatch, and the raw count that would have certified an absent grammar
+
+**My error first.** My §174 dispatch instructed the instance-data sparkle counter to reproduce
+"traversal 236, night 50, preroll-off 0" as its calibration. **236 and 50 are pixel counts; an
+instance count yields markers** — one marker paints 82 px on traversal and 1 px elsewhere. Tuning
+a marker count until it read 236 is §141.1's defect built deliberately, and FX refused it and
+said so. Corrected here at the site the instruction came from: the meaningful correspondence is
+**blob ↔ marker**, and the seal registers it against counts already committed in `sparkdiag.json`
+(traversal 14 blobs, night 16 post-`skyCut`, known-bad 0 — with `0 ↔ 0` genuine numeric
+agreement).
+
+**The near-miss it surfaced, which is the larger finding.** A raw `fx.sparkles.count` — the
+obvious implementation, and the one my dispatch would have accepted — **would have certified the
+mandatory §2.1.6 grammar through CRITIC rounds 1 and 2.** `sbs1/sly-closeup`'s probe recorded
+`sparkles latched=17 fresh=17` on a staging whose strict pixel count is **0**, because
+`SPARKLE_VERT:728` gates every marker on `pop = smoothstep(0, 0.22, uTime − born)` and the double
+`setShot` clock re-base leaves that at ≈0.02–0.09. Markers existed, were latched, and drew
+nothing. **That is §177's "a gate that cannot fail" and §178's "a metric that does not depend on
+what it claims to measure" arriving together in a third dress.** The seal therefore registers a
+**visibility-qualified** count (ported `pop ≥ 0.5` + frustum test + `scale > 0`) and explicitly
+**forbids the raw one**, with KB1 as the control that separates them.
+
+Also registered, and worth keeping because it is the rare honest asymmetry: the instance path
+**over-counts occluded markers and cannot fix it** (`depthTest: true` is a GPU fact the CPU probe
+cannot see). So `skyCut` is retired as primary but **kept as a published cross-check** — it is the
+only instrument that sees drawn pixels — and any letter quoting one must quote both. Four cases
+are tabulated in the seal with the side each lands on; two go to the instance path, one to the
+pixel path, one agrees only because the seal ports the frustum test.
+
