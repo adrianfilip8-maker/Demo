@@ -1,0 +1,288 @@
+{
+ "prereg": "PREREG-staging1.md",
+ "at": "2026-08-06T04:33:47.048Z",
+ "calibration": {
+  "P1": 15.89,
+  "P2": 306,
+  "P3": 89.56,
+  "P4": 692,
+  "P5": 29.99,
+  "P6": 23.19,
+  "R1_coneAir_medL": 27.59,
+  "R2_guardMassRect_medL": 18.64,
+  "R3_frameNBC_pct": 38.49,
+  "G_doorwayPool_medL": 113.46
+ },
+ "arms": {
+  "base": {
+   "P1": 15.88,
+   "P2": 306,
+   "P3": 89.84,
+   "P4": 771,
+   "P5": 30.99,
+   "P6": 23.25,
+   "R1_coneAir_medL": 27.54,
+   "R2_guardMassRect_medL": 31.41,
+   "R3_frameNBC_pct": 36.33,
+   "G_doorwayPool_medL": 111.02
+  },
+  "cand": {
+   "P1": 82.2,
+   "P2": 668,
+   "P3": 27.23,
+   "P4": 13729,
+   "P5": 37.31,
+   "P6": 23.36,
+   "R1_coneAir_medL": 29.07,
+   "R2_guardMassRect_medL": 15.64,
+   "R3_frameNBC_pct": 21.92,
+   "G_doorwayPool_medL": 125.08
+  },
+  "kbover": {
+   "P1": 84.28,
+   "P2": 672,
+   "P3": 28.58,
+   "P4": 12532,
+   "P5": 35.19,
+   "P6": 23.43,
+   "R1_coneAir_medL": 24.52,
+   "R2_guardMassRect_medL": 40.16,
+   "R3_frameNBC_pct": 40.69,
+   "G_doorwayPool_medL": 122.02
+  },
+  "restore": {
+   "P1": 15.99,
+   "P2": 306,
+   "P3": 89.56,
+   "P4": 795,
+   "P5": 30.92,
+   "P6": 23.19,
+   "R1_coneAir_medL": 27.61,
+   "R2_guardMassRect_medL": 18.66,
+   "R3_frameNBC_pct": 38.47,
+   "G_doorwayPool_medL": 113.52
+  }
+ },
+ "verdicts": {
+  "baseGate": "VOID",
+  "gated": [
+   "P6=23.36 ∉ [26,70]"
+  ],
+  "knownBad": "UNSCOREABLE",
+  "pf4": {
+   "px": 389975,
+   "maxSumAbs": 504
+  },
+  "pf5_base": [
+   {
+    "px": 269868,
+    "share": 29.28,
+    "bbox": [
+     350,
+     271,
+     1279,
+     719
+    ],
+    "touchesEdge": true
+   }
+  ],
+  "pf5_cand": [
+   {
+    "px": 64179,
+    "share": 6.96,
+    "bbox": [
+     815,
+     0,
+     1119,
+     330
+    ],
+    "touchesEdge": true
+   },
+   {
+    "px": 62531,
+    "share": 6.79,
+    "bbox": [
+     413,
+     573,
+     1279,
+     719
+    ],
+    "touchesEdge": true
+   }
+  ],
+  "pf5_kbover": [
+   {
+    "px": 119827,
+    "share": 13,
+    "bbox": [
+     0,
+     0,
+     226,
+     719
+    ],
+    "touchesEdge": true
+   },
+   {
+    "px": 108313,
+    "share": 11.75,
+    "bbox": [
+     982,
+     0,
+     1279,
+     378
+    ],
+    "touchesEdge": true
+   },
+   {
+    "px": 60621,
+    "share": 6.58,
+    "bbox": [
+     544,
+     0,
+     800,
+     440
+    ],
+    "touchesEdge": true
+   }
+  ],
+  "pf5_restore": [
+   {
+    "px": 270418,
+    "share": 29.34,
+    "bbox": [
+     364,
+     271,
+     1279,
+     719
+    ],
+    "touchesEdge": true
+   },
+   {
+    "px": 54279,
+    "share": 5.89,
+    "bbox": [
+     725,
+     0,
+     1002,
+     297
+    ],
+    "touchesEdge": true
+   }
+  ],
+  "armTook": {
+   "base": true,
+   "cand": true,
+   "kbover": true,
+   "restore": true
+  },
+  "pf6": "ok"
+ },
+ "readbackSummary": [
+  {
+   "arm": "base",
+   "armTook": true,
+   "camPos": [
+    -11.5,
+    2.6,
+    30.5
+   ],
+   "guardPos": [
+    -15.4871,
+    0,
+    27.5446
+   ],
+   "feetPx": [
+    843.9,
+    625.3,
+    0.9626
+   ],
+   "headPx": [
+    863.6,
+    244.3,
+    0.959
+   ],
+   "guardIndex": 0,
+   "guardType": "temple"
+  },
+  {
+   "arm": "cand",
+   "armTook": true,
+   "camPos": [
+    -13.25,
+    2.6,
+    30.5
+   ],
+   "guardPos": [
+    -17.2371,
+    0,
+    27.5446
+   ],
+   "feetPx": [
+    843.9,
+    625.3,
+    0.9626
+   ],
+   "headPx": [
+    863.6,
+    244.3,
+    0.959
+   ],
+   "guardIndex": 0,
+   "guardType": "temple"
+  },
+  {
+   "arm": "kbover",
+   "armTook": true,
+   "camPos": [
+    -15.5,
+    2.6,
+    30.5
+   ],
+   "guardPos": [
+    -19.4871,
+    0,
+    27.5446
+   ],
+   "feetPx": [
+    843.9,
+    625.3,
+    0.9626
+   ],
+   "headPx": [
+    863.6,
+    244.3,
+    0.959
+   ],
+   "guardIndex": 0,
+   "guardType": "temple"
+  },
+  {
+   "arm": "restore",
+   "armTook": true,
+   "camPos": [
+    -11.5,
+    2.6,
+    30.5
+   ],
+   "guardPos": [
+    -15.4871,
+    0,
+    27.5446
+   ],
+   "feetPx": [
+    843.9,
+    625.3,
+    0.9626
+   ],
+   "headPx": [
+    863.6,
+    244.3,
+    0.959
+   ],
+   "guardIndex": 0,
+   "guardType": "temple"
+  }
+ ],
+ "sameTree": true,
+ "srcTree": "85bab2d30f5f7b59"
+}
