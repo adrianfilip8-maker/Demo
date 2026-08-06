@@ -42,11 +42,15 @@ import * as THREE from 'three';
 export const TUNE = {
   height: 1.80,              // G3 — identical to the incumbent. Do not "improve" this.
 
-  headFraction: 1 / 5.5,     // SPEC §3 [read]: head INCLUDING cap ≈ 1/5.5 of height
+  /* SPEC §3 read 1/5.5; the blind critic (r1, judging vs the reference) called the rendered head
+     "~1/7" and asked for "about 1/5". The render eats head-share through the muzzle projecting
+     forward rather than up and the cap hugging the skull, so the budget is raised toward the
+     critic's number. SPEC's own rule: [read] values converge by rendering. */
+  headFraction: 1 / 5.1,
   capRise: 0.055,
   muzzleLen: 1.45,           // in head-HALF-WIDTH units, measured from the cranium's front face
   muzzleGirth: 0.78,
-  earLen: 0.165,
+  earLen: 0.205,             // r1: "tall pointed ears ... instead of the small nubs"
   earSpread: 0.128,
 
   legFraction: 0.520,
@@ -64,7 +68,7 @@ export const TUNE = {
   tailRootFrac: 0.95,
   tailRings: 5,
 
-  shoulderW: 0.150,
+  shoulderW: 0.170,          // r1: "widen the shoulders so the tunic reads as a torso, not a tube"
   hipW: 0.082,
 
   /* shading/line kept in family with the incumbent so the A/B is about FORM, not grade */
@@ -324,14 +328,21 @@ export class SlyModel {
     // muzzleLen HALF-WIDTHS from the front face, so the snout projects unambiguously.
     /* Stage 3: raised to MID-face and near-horizontal. Stage 2 set the muzzle a tenth of a head
        LOW with a 2 cm droop and it read as a bird's bill pointing at the floor; the reference's
-       snout leaves the face at eye-cheek height, level, and only the nose tip dips. */
+       snout leaves the face at eye-cheek height, level, and only the nose tip dips.
+       Stage 4 (r1: "a detached rectangular block ... with a visible seam"): the first ring now
+       starts DEEP INSIDE the cranium at a larger radius, so the tube emerges through the surface
+       and the junction is buried — fusion by overlap, plus cheek pads flanking the root. */
     const mzY = CY - HEAD_H * 0.02;
-    const mz0 = CR[2] * 0.80;
+    const mz0 = CR[2] * 0.48;
     const mzTip = CR[2] + hw * TUNE.muzzleLen - CR[2] * 0.2;
     parts.push(tube(
       [[0, mzY, mz0], [0, mzY - 0.002, (mz0 + mzTip) / 2], [0, mzY - 0.006, mzTip]],
-      [hw * 0.52 * TUNE.muzzleGirth, hw * 0.42 * TUNE.muzzleGirth, hw * 0.22],
+      [hw * 0.62 * TUNE.muzzleGirth, hw * 0.42 * TUNE.muzzleGirth, hw * 0.22],
       [PAL.furLight, PAL.furLight, PAL.furLight], [headB, headB, headB], 12));
+    for (const s of [1, -1]) {
+      parts.push(blob([s * hw * 0.34, mzY - hw * 0.06, CR[2] * 0.72], [hw * 0.26, hw * 0.22, hw * 0.24],
+        PAL.furLight, headB, 10, 6));                       // cheeks: blend muzzle root into skull
+    }
     parts.push(blob([0, mzY - 0.004, mzTip + hw * 0.07], [hw * 0.15, hw * 0.115, hw * 0.125], PAL.black, headB, 10, 6));
 
     // mask — black field across the eyes with pointed outer corners: two wing blobs proud of the
@@ -339,6 +350,11 @@ export class SlyModel {
     const eyeY = CY + HEAD_H * 0.05;
     for (const s of [1, -1]) {
       parts.push(blob([s * hw * 0.72, eyeY, hw * 0.42], [hw * 0.40, hw * 0.26, hw * 0.34], PAL.black, headB, 10, 6));
+      /* r1/SPEC: "drawn to a point at each outer corner" — a tapering black spike sweeping from
+         the wing outward and back toward the ear base. This is the mask's identity signature. */
+      parts.push(tube(
+        [[s * hw * 0.82, eyeY + hw * 0.02, hw * 0.30], [s * hw * 1.06, eyeY + hw * 0.10, -hw * 0.10]],
+        [hw * 0.16, hw * 0.015], [PAL.black, PAL.black], [headB, headB], 8));
     }
     parts.push(blob([0, eyeY, hw * 0.86], [hw * 0.62, hw * 0.24, hw * 0.13], PAL.black, headB, 12, 6));
 
@@ -382,7 +398,7 @@ export class SlyModel {
       [[0, beltHi, 0], 0.112, PAL.gold],
       [[0, beltHi, 0], 0.110, PAL.blue],     // ← doubled: gold|blue seam
       [[0, SPINE_Y, 0], 0.112, PAL.blue],
-      [[0, CHEST_Y, 0], 0.122, PAL.blue],
+      [[0, CHEST_Y, 0], 0.132, PAL.blue],
       [[0, collarLo, 0], 0.098, PAL.blue],
       [[0, collarLo, 0], 0.098, PAL.gold],   // ← doubled: blue|gold collar seam
       [[0, NECK_Y - 0.030, 0], 0.078, PAL.gold],
@@ -477,18 +493,19 @@ export class SlyModel {
     {
       const wr = A.handR;
       const g = bi('handR');
+      /* r1: the cane read as "a thin gold thread ... a hanging chain". Shaft and hook radii up
+         ~60%, hook radius up to a real crook, so it carries weight at gameplay distance. */
       const top = [wr[0] - 0.02, wr[1] + 0.62, wr[2] + 0.10];
       parts.push(tube(
         [[wr[0] + 0.01, wr[1] - 0.42, wr[2] - 0.07], [wr[0], wr[1], wr[2] + 0.0], top],
-        [0.014, 0.014, 0.013], [PAL.gold, PAL.gold, PAL.gold], [g, g, g], 8));
-      // hook: half-circle curling forward from the shaft top
-      const hookPts = [], hookR = 0.085;
-      for (let i = 0; i <= 6; i++) {
-        const a = (i / 6) * Math.PI;                              // 180°
+        [0.022, 0.023, 0.021], [PAL.gold, PAL.gold, PAL.gold], [g, g, g], 9));
+      const hookPts = [], hookR = 0.115;
+      for (let i = 0; i <= 7; i++) {
+        const a = (i / 7) * Math.PI;                              // 180°
         hookPts.push([top[0], top[1] + Math.sin(a) * hookR, top[2] + hookR - Math.cos(a) * hookR]);
       }
-      parts.push(tube(hookPts, hookPts.map(() => 0.012), hookPts.map(() => PAL.gold),
-        hookPts.map(() => g), 8));
+      parts.push(tube(hookPts, hookPts.map(() => 0.019), hookPts.map(() => PAL.gold),
+        hookPts.map(() => g), 9));
     }
 
     /* ---- assemble ---- */
