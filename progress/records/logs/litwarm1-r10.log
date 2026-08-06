@@ -48,3 +48,6 @@
 [22:47:47 +1794s] chunk C2 (temple): srcTree 9647e41e38635ef1 — booting (own lock hold)
 [22:47:47 +1794s]   lock held — installing candidate (litwarm-arms.py install cand)
 [22:47:47 +1794s]   installed arm "cand"  Toon sha 5052f4189ae9997a  Arch sha 7cd5b1d0a29d625f
+[22:49:49 +1916s]   boot ok — warnings 1
+[22:49:49 +1916s]   POPULATION {"pinnedCount":13,"pinnedNames":["arch:paving_courtyard","arch:gold_leaf","arch:column_papyrus","arch:sandstone_worn","arch:sandstone_block","arch:granite_pink","arch:limestone_polished","arch:hieroglyph_gilded","arch:hieroglyph_wall","arch:mudbrick","arch:ceiling_stars","arch:bronze_dark","arch:rope_fibre"],"pinnedSss":[0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3],"pinnedNightPin":[0,0,0,0,0,0,0,0,0,0,0,0,0],"pinnedInArch":13,"pinnedOnSkinned":[],"archMatCount":13,"skinMatCount":16,"hasPublish":true,"hasInkNight":true}
+[22:49:49 +1917s]   setShot(temple) 0s  tod 0.72  draws 239 tris 1712413
