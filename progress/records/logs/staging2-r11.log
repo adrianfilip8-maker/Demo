@@ -2,3 +2,12 @@
 [13:25:10 + 109s] boot ok — warnings 1; renderer ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)
 [13:25:10 + 109s] srcTreeAtLock 4c83af2068ab9936 (pre-lock reading was 4c83af2068ab9936)
 [13:25:10 + 109s] LEVER {"gotShotObject":true,"livePos":[-11.5,2.6,30.5],"liveTarget":[-17,1.1,28],"liveFov":38,"liveTod":0.1,"hasGuards":true,"guardCount":11,"hasSolver":true}
+[13:32:44 + 563s] arm preroll (DISCARDED — preroll) 453s  cam [-11.5,2.6,30.5] took=true  stand [-15.4871,0,27.5446]  feet [843.9,625.3] head [863.6,244.3]
+[13:36:37 + 796s] arm base 233s  cam [-11.5,2.6,30.5] took=true  stand [-15.4871,0,27.5446]  feet [843.9,625.3] head [863.6,244.3]
+[13:40:19 +1018s] arm cand 222s  cam [-13.25,2.6,30.5] took=true  stand [-17.2371,0,27.5446]  feet [843.9,625.3] head [863.6,244.3]
+[13:44:13 +1252s] arm restore 234s  cam [-11.5,2.6,30.5] took=true  stand [-15.4871,0,27.5446]  feet [843.9,625.3] head [863.6,244.3]
+[13:48:00 +1479s] arm KBmid 227s  cam [-12.5,2.6,30.5] took=true  stand [-16.4871,0,27.5446]  feet [843.9,625.3] head [863.6,244.3]
+[13:51:38 +1697s] arm KBover 218s  cam [-15.5,2.6,30.5] took=true  stand [-19.4871,0,27.5446]  feet [843.9,625.3] head [863.6,244.3]
+[13:51:38 +1697s] shot table restored in-page to {"pos":[-11.5,2.6,30.5],"target":[-17,1.1,28]} (src/** never written)
+[13:51:38 +1697s] DONE — srcTree before 4c83af2068ab9936 after 4c83af2068ab9936 same=true
+[13:51:38 +1697s] wall-times: preroll 453s  base 233s  cand 222s  restore 234s  KBmid 227s  KBover 218s   <- §185's question
