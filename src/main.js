@@ -32,9 +32,16 @@ const CHAR_MODELS = {
 function characterModule() {
   let raw = '';
   try {
-    if (typeof globalThis !== 'undefined' && globalThis.__CHAR_AB != null) raw = String(globalThis.__CHAR_AB);
-    else if (typeof import.meta !== 'undefined' && import.meta.env) raw = String(import.meta.env.VITE_CHAR_AB || '');
-  } catch { /* plain-module hosts have no import.meta.env; that is the shipped path */ }
+    /* `?char=` first: the selector is read at module-load time, so a capture harness cannot poke
+       it in-page after boot the way it pokes a uniform. A URL param is the only seam that is
+       reliably set BEFORE this module evaluates. */
+    if (typeof location !== 'undefined' && location.search) {
+      const q = new URLSearchParams(location.search).get('char');
+      if (q) raw = String(q);
+    }
+    if (!raw && typeof globalThis !== 'undefined' && globalThis.__CHAR_AB != null) raw = String(globalThis.__CHAR_AB);
+    else if (!raw && typeof import.meta !== 'undefined' && import.meta.env) raw = String(import.meta.env.VITE_CHAR_AB || '');
+  } catch { /* plain-module hosts have no location/import.meta.env; that is the shipped path */ }
   const tokens = raw.split(/[,\s]+/).filter(Boolean);
   for (const t of tokens) {
     const pick = CHAR_MODELS[t];

@@ -77,7 +77,7 @@ async function startServer(port, verbose) {
  * `info` carries the module map, boot warnings, and the WebGL renderer string.
  */
 export async function withGame(
-  { width = 1280, height = 720, quality = 'high', timeout = 300000, verbose = false } = {},
+  { width = 1280, height = 720, quality = 'high', timeout = 300000, verbose = false, query = '' } = {},
   fn
 ) {
   // Serialise with other capture runs — software rendering doesn't parallelise, it thrashes.
@@ -100,7 +100,12 @@ export async function withGame(
     });
     page.on('pageerror', (e) => consoleErrors.push(`pageerror: ${e.message}`));
 
-    await page.goto(`http://127.0.0.1:${port}/?shot=1&q=${quality}`,
+    /* `query` appends extra params, for choices that must be made BEFORE any module loads —
+       the character model selector in main.js is read at module-load time, so it cannot be poked
+       in-page after boot the way a uniform can. Empty by default, so every existing runner's URL
+       is byte-identical to what it was. */
+    const extra = query ? (query.startsWith('&') ? query : `&${query}`) : '';
+    await page.goto(`http://127.0.0.1:${port}/?shot=1&q=${quality}${extra}`,
       { waitUntil: 'domcontentloaded', timeout: 90000 });
     await page.waitForFunction('window.__GAME && window.__GAME.ready === true', null,
       { timeout, polling: 500 });
