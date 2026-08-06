@@ -1,271 +1,295 @@
-# RESULT-sparkcount — the probe did not land; nothing is adjudicated and `skyCut` stays primary
+# RESULT-sparkcount — P-S1 FIRED. The seal is withdrawn, `skyCut` stays primary, and the dump is the finding
 
-**Owner:** FX. **Date:** 2026-08-06. **Seal:** `PREREG-sparkcount.md` (sealed 04:03 the same day).
-**Scorer run:** `node progress/records/fxcluster1/sparkcount-score.mjs`, 04:17:49Z and 04:18:54Z.
-**No `src/**` edits. No captures taken, no lock ticket drawn.** No git — the coordinator sweeps; §7 lists files.
+**Owner:** FX. **Date:** 2026-08-06. **Seal:** `PREREG-sparkcount.md`.
+**Probe:** `fxcluster1/sparkcount.mjs` pid 29232 — queued 04:03:36, took the lock 04:29:18 (**1542 s**
+behind `litwarm1` then `staging1`), booted, dumped `traversal-prerollOFF` at 04:31:24 and
+`traversal-prerollON` at 04:39:44. **Scorer:** `node progress/records/fxcluster1/sparkcount-score.mjs`.
+**No `src/**` edits. No captures. No lock ticket drawn** — the probe already held its position.
+No git — the coordinator sweeps; §8 lists every file.
 
 ---
 
-## 0. Verdict in one line
+## 0. Verdict
 
-**The probe has not landed.** `sparkcount-readback.json` exists but carries `arms: []` — the runner
-wrote its header and has been **waiting for the capture lock ever since**. **No falsifier P-S1–P-S5
-is adjudicated, KB1–KB4 are un-run, the calibration licenses nothing, and `skyCut` therefore remains
-the registered §2.1-item-6 primary predicate** (seal §6 retires it *only* on KB1+KB2 holding).
+**KB1 returned `SPARKCOUNT = 11`, not `0`. P-S1 fires.** Per seal §5, which says *revert, do not
+defend*:
 
-**The dispatch's premise "the probe has landed — `sparkcount-readback.json` exists" is false, and the
-reason it is false is the finding of this result:** *the file's existence was read as evidence of its
-contents.* The runner writes that file at `sparkcount.mjs:35`, **before** `withGame` and therefore
-before the lock, the boot, and every arm. Existence proves the runner *started*. It says nothing
-about whether it ever measured anything.
+> **P-S1** — KB1 returns non-zero → the visibility gate does not work → **`skyCut` stays the
+> registered predicate**, this seal is withdrawn, and the probe dump is the finding.
 
-## 1. What the probe actually contains, quoted in full
+**`skyCut` remains the registered §2.1-item-6 grammar count. `SPARKCOUNT` is withdrawn as a
+candidate primary. The raw count stays forbidden.**
 
-```json
-{ "prereg": "PREREG-sparkcount.md", "startedAt": "2026-08-06T04:03:36.391Z",
-  "srcTreeBefore": "85bab2d30f5f7b59", "arms": [] }
-```
+**And the dump names why, which is worth more than the seal was:** the treatment that KB1 and KB2
+differ by **does not exist at runtime**. `src/fx/Particles.js:2574` calls `sparkles.preroll(0.25)`
+**unconditionally**, so "preroll OFF" is unstageable and **KB1 could not have passed on this build no
+matter how good the instrument was.** The instrument was refuted by a control it was never able to
+run. Both facts are reported; neither is used to excuse the other.
 
-That is the whole file — 130 bytes, four keys, **no `live` key, no `fatal` key, no `finishedAt`, and
-an empty `arms`.** Cross-read against `progress/records/logs/sparkcount-r1.log`:
-
-```
-[04:03:36 +   0s] seam verify ok (srcTree 85bab2d30f5f7b59)
-· waiting for capture lock (10s, held by pid 19148)      <- litwarm1
-   …
-· waiting for capture lock (134s, held by pid 15982)     <- staging1 takes it at ~134s
-   …
-· waiting for capture lock (847s, held by pid 15982)     <- still staging1, 14+ min in
-```
-
-And the runner is **still alive**: `ps` shows `pid 29232  node sparkcount.mjs`, started 04:03,
-alongside `pid 19148 litwarm1.mjs`, `pid 15982 staging1.mjs`, and `pid 5947 combatrecipient.mjs`.
-
-**So the probe did exactly what the seal told it to do.** §7 says "litwarm is running with staging1
-and combatrecipient queued — ticket and wait; do not jump". It ticketed and it is waiting. This is
-the queue discipline working, not a fault. It simply has not reached the front.
-
-**What did clear:** the seam verify passed and the registration tree is intact —
-`srcTreeBefore 85bab2d30f5f7b59`, byte-identical to the tree the seal registered. That is the only
-claim this run supports.
-
-## 2. Adjudication — every registered falsifier, against what the probe actually contains
-
-| falsifier | registered trigger | adjudication | why |
-|---|---|---|---|
-| **P-S1** | KB1 returns non-zero | **UN-ADJUDICATED** | KB1 never ran. No `traversal-prerollOFF` arm exists. |
-| **P-S2** | KB2 outside 14 ± 3 | **UN-ADJUDICATED** | KB2 never ran. **No marker↔blob comparison exists to report** — see §4. |
-| **P-S3** | KB3 lands near the uncut 62 | **UN-ADJUDICATED** | KB3 never ran. |
-| **P-S4** | KB4 non-zero | **UN-ADJUDICATED** | KB4 never ran. |
-| **P-S5** | `fx.sparkles` absent or `aData` unreadable **in the boot** | **NOT TRIGGERED — and it must not be recorded as triggered** | P-S5 is a *boot-side* fatal: it fires when the page is up and `fx.sparkles` is missing. **There was no boot.** The runner's own P-S5 branch (`sparkcount.mjs:80-82`) writes `report.fatal` and `report.live`; the readback has **neither key**, which is positive evidence that path was never reached. |
-
-### Every registered band, with the number that stands beside it
-
-The seal §4 bands, transcribed, each paired with the measured value. **The measured column is empty
-for every row, and writing anything else in it would be inventing the result:**
-
-| control | arm | registered band | measured | verdict |
-|---|---|---|---|---|
-| **KB1** | `traversal`, preroll **OFF** | `SPARKCOUNT = 0` while `rawCount ≈ 14–17` | **not measured** | **un-run** |
-| **KB2** | `traversal`, preroll **ON** | `SPARKCOUNT = 14 ± 3` → **[11, 17]** | **not measured** | **un-run** |
-| **KB3** | `night` | `SPARKCOUNT = 16 ± 4` → **[12, 20]**, and **not ≈ 62** | **not measured** | **un-run** |
-| **KB4** | `interior` | `SPARKCOUNT = 0` | **not measured** | **un-run** |
-
-Companion figures the seal §2 requires beside `SPARKCOUNT` — `rawCount`, `popOpen`, `inFrustumOnly`,
-`uTime_fx`, `fx._t0`, and the `aPos`/`aData` dump — are likewise **absent for all four arms**. The
-scorer's own table printed its header and not one data row:
+## 1. Measured, every number beside its registered band
 
 ```
  arm                        raw  popOpen  inFrust  SPARKCOUNT  gate
-(no rows)
+ traversal-prerollOFF        22       22       11          11  KB1 FAIL — SPARKCOUNT == 0 (raw expected ~14-17)
+ traversal-prerollON         22       22       11          11  KB2 PASS — SPARKCOUNT = 14 +/- 3 (14 committed blobs)
 ```
 
-**KB1 — the decisive control — is un-run, and that is the whole reason nothing is licensed.** The
-seal §4 is explicit: "The calibration licenses nothing until KB1 and KB2 both hold." Neither has
-been evaluated. Not failed — *not evaluated*. Those are different, and §3 is about keeping them so.
+| control | arm | registered band | measured | verdict |
+|---|---|---|---|---|
+| **KB1** | `traversal`, preroll **OFF** | `SPARKCOUNT = 0` while `rawCount ≈ 14–17` | **`SPARKCOUNT` = 11**, `rawCount` **22** | **FAIL — P-S1 fires** |
+| **KB2** | `traversal`, preroll **ON** | `14 ± 3` → **[11, 17]** | **`SPARKCOUNT` = 11** | in band, **but the pass is void — §3** |
+| **KB3** | `night` | `16 ± 4` → **[12, 20]**, not ≈ 62 | **not yet dumped** | un-run (§7) |
+| **KB4** | `interior` | `SPARKCOUNT = 0` | **not yet dumped** | un-run (§7) |
 
-## 3. A reporting defect found in the scorer, and fixed — `NOT GRANTED` was overloaded
+Companion figures the seal §2 requires beside `SPARKCOUNT`, both traversal arms **identical**:
+`rawCount` **22**, `popOpen` **22**, `inFrustumOnly` **11**, `uTime_fx` **0.05**,
+`fx._t0` 0.542733 (OFF) / 0.826067 (ON), `capacity` 96, `meshVisible` **true**,
+`instanceCount` 22, camera `pos [6,14,6] fwd [−0.442,−0.147,−0.885] fov 44 aspect 1.7778`,
+`setShot` `{tod 0.77, draws 252, warnings 1}`. Full `aPos`/`aData` in
+`fxcluster1/sparkcount-readback.json`, re-derivable without a second boot as seal §7 required.
 
-Run as dispatched, the scorer printed:
+**Frustum decomposition of the 22 → 11 cut:** 11 in-frame, **7 behind the camera**, 4 off-frame. The
+frustum clause is doing all of the work, and it is doing real work — `mesh.frustumCulled = false`
+(`:1620`) means without it the count would have been 22.
 
-```
-CALIBRATION LICENCE (seal §4: KB1 AND KB2 must both hold): NOT GRANTED
-```
+## 2. Why KB1 failed — the `pop` gate never closed, because `born` is back-dated on every staged shot
 
-…and wrote `sparkcount-scores.json` with `"arms": {}, "licensed": false`. **That output is correct
-about the licence and wrong about the reason, and the wrongness is the dangerous kind.** It is
-byte-identical to what the scorer would print if the probe *had* landed and KB1 had *failed* — i.e.
-if the visibility gate were broken and P-S1 had fired. A successor reading `licensed: false` would
-have no way to tell "the seal was falsified" from "nobody measured anything yet", and the seal's own
-§5 makes those opposite outcomes: the first withdraws the seal, the second withdraws nothing.
+The seal §2 gates on `pop = smoothstep(0, 0.22, uTime_fx − born)` and §1 predicted, from
+PREREG-fxcluster §0.2's double clock re-base, that a canonical capture leaves
+`uTime − born ≈ 0.033` → **`pop ≈ 0.02–0.09`**. That is the entire premise of the visibility gate.
 
-**This is §184's defect wearing a fourth dress.** §184 is about an instrument that cannot distinguish
-*measuring zero* from *measuring nothing* — the raw count read `latched=17 fresh=17` on a staging
-whose true sparkle pixel count was 0. Here the *scorer* could not distinguish a measured zero from an
-absent measurement. Same failure mode, one layer up, in the instrument built to catch it.
-
-**Fixed in `sparkcount-score.mjs` — reporting only; no registered arithmetic touched.** `POP_MIN`
-stays `0.5`, the smoothstep port, the frustum test and the four KB bands are transcribed exactly as
-before; §5's "no mid-run redesign" is respected because **no threshold moved**. What changed is that
-the three non-scoring outcomes now print and serialise distinctly:
-
-- **`NO DATA`** — readback absent, or present with `arms: []` (this run). Prints
-  `NOT GRANTED — reason: NO DATA`, plus "This is NOT a falsified control" and the reminder that
-  `skyCut` remains primary.
-- **`P-S5 FATAL`** — arms present but no readable dump. Prints "record and stop".
-- **`SCORED — control(s) failed`** — arms scored, KB1/KB2 not in band. *This* is the one that means
-  the seal is in trouble.
-
-The licence still fails closed in every case. Current output:
+**Measured:** `born = −0.25` for **all 22 markers, on both arms**, with `uTime_fx = 0.05`. So
 
 ```
-CALIBRATION LICENCE: NOT GRANTED — reason: NO DATA (readback header present but arms[] empty —
-  the runner started and has not yet dumped an arm (it writes the header before taking the capture lock)).
-  This is NOT a falsified control. No falsifier P-S1..P-S5 is adjudicated by this run.
-  skyCut remains the registered primary predicate (seal §6 retires it only on KB1+KB2 holding).
+dt = 0.05 − (−0.25) = 0.30  >  0.22   →   pop = 1.0, saturated, for every marker
 ```
 
-## 3a. What this run *can* establish: the scorer discriminates, verified against fixtures
+`popOpen` is **22 of 22**. **The `pop` clause rejected nothing.** The seal's mechanism premise does
+not reproduce on this build.
 
-The probe is unavailable, but the *scorer* is not — and the seal's worry applies to it too. If
-`SPARKCOUNT` were mis-ported, a future KB1 pass would be worthless, because `0` is also what a dead
-instrument returns. That is checkable offline, today, so it was checked:
-`fxcluster1/sparkcount-scorer-control.mjs` → `sparkcount-scorer-control.txt`, following the cluster's
-existing scorer-control convention (`a3-scorer-control.txt`, `a4-scorer-control.json`).
+`born = −0.25` is not an accident of the clock; it is a signature. `SparkleField.preroll(sec)`
+(`:1696`) is defined as *"back-date every live marker's born stamp"*:
 
-**These fixtures are synthetic and measure the scorer, not the game.** No number below is evidence
-about Sands of Ra; each is one chosen so the correct output is known in advance.
+```js
+preroll(sec) { for (let i = 0; i < this.count; i++) this.aData.array[i * 4 + 2] = -sec; … }
+```
 
-| fixture | construction | required | got |
+`born = −0.25` is exactly `preroll(0.25)` having run.
+
+## 3. The control's treatment does nothing — `preroll` is ungated, against two comments that say it is not
+
+`src/fx/Particles.js:2570-2574`, quoted:
+
+```js
+/* PREREG-fxcluster §1 seam (sub-arm B): a staged still captures ~3 frames after the
+   SECOND clock re-base (Debug.setShot applies the shot twice), inside the sparkle pop
+   window — fires get _prerollFires below; the field had no preroll. Debug-gated OFF by
+   default: shipped behaviour is bit-exact unless the capture harness opts in. */
+this.sparkles?.preroll(0.25);  // staged shots only by construction (_stageShot); …
+```
+
+**The comment says "Debug-gated OFF by default". The call on the next line has no gate.** There is no
+`if (debug.sparklePreroll)` anywhere on that path — `grep` over `src/**` finds the flag read nowhere.
+`preroll()`'s own docstring (`:1695`) makes the same false claim: *"Inert unless called; **the only
+caller is debug-gated** (see `_stageShot`)."*
+
+**Proved from the dump, not inferred.** The runner set the flag correctly and the page confirms it:
+
+| | `prerollFlag` read in-page | `born` | `aPos` | `aData` | camera |
+|---|---|---|---|---|---|
+| `traversal-prerollOFF` | **`null`** | **−0.25** | — | — | — |
+| `traversal-prerollON` | **`true`** | **−0.25** | **identical** | **identical** | **identical** |
+
+The flag differs. **Every instance buffer is byte-identical.** The only fields that differ between
+the two arms are `fx._t0` and `engineTime` — wall-clock, not treatment.
+
+**Consequences, stated plainly:**
+
+1. **KB1 is unstageable on this build.** Its arm is not "preroll off"; it is preroll on, mislabelled.
+   The seal's decisive control — the only one separating `SPARKCOUNT` from the raw count that would
+   have passed CRITIC rounds 1–2 — **cannot be run at all** until the gating is repaired.
+2. **KB2's pass is void.** `SPARKCOUNT = 11` sits inside `[11, 17]`, but it is *the same 11* that
+   fails KB1, from a byte-identical dump. A pass and a fail cannot be read off one measurement and
+   have both mean something. KB1 and KB2 are not two controls; they are one control run twice.
+   **This is not reported as a pass.**
+3. **It also lands at the very edge:** 11 is the floor of `14 ± 3`. One marker fewer and the arm
+   would have failed both bands.
+4. **Scope beyond sparkcount, for the coordinator:** if `preroll(0.25)` fires on every `_stageShot`,
+   then the comment's "shipped behaviour is bit-exact unless the capture harness opts in" is untrue
+   for staged captures, and **every canonical still taken since that line landed has sparkles fully
+   popped whether or not any harness asked.** This result does not chase that — it is a `src` matter
+   and this runner may not edit `src/**` — but it is flagged where it was found.
+
+## 4. Blob↔marker: a real disagreement, reported as the finding and NOT closed (P-S2)
+
+Seal §0 registers the correspondence as **blob↔marker**, never a numeric identity — §184's units
+correction. Measured against the committed pixel figures in `fxcluster1/sparkdiag.json`:
+
+| registered correspondence | pixel path (committed) | instance path (measured) | agreement |
 |---|---|---|---|
-| **F1** | **the b2 defect exactly** — 17 markers, in frustum, `scale > 0`, `dt = 0.033` → `pop ≈ 0.061` | `SPARKCOUNT 0`, KB1 **PASS** | raw 17, popOpen 0, inFrust 17, **SC 0**, PASS ✔ |
-| **F2** | 14 markers, `dt = 1.0`, on-screen | `SPARKCOUNT 14`, KB2 **PASS** | **SC 14**, PASS ✔ |
-| **F3** | **gate-dead detector** — KB1's arm with the pop gate *satisfied* (`dt = 1.0`) | KB1 **must FAIL** | **SC 17**, **FAIL** ✔ |
-| **F4** | frustum clause alone — 10 popped; 3 on-screen, 3 behind camera, 4 off-screen | `SPARKCOUNT 3` | inFrust 3, **SC 3** ✔ |
-| **F5** | `scale` clause alone — 10 popped and on-screen, 6 with `scale = 0` | `SPARKCOUNT 4` | inFrust 10, **SC 4** ✔ |
-| **F6** | `POP_MIN` half-open boundary — `dt = 0.11` → `pop` **exactly 0.5** | admitted (`≥`) | **SC 12** ✔ |
-| **F7** | 62 visible markers — the uncut sky population P-S3 guards against | KB3 **must FAIL** | **SC 62**, **FAIL** ✔ |
-| **F8** | arms present, dump `fatal` | state **`P-S5 FATAL`**, distinct from `NO DATA` | as required ✔ |
+| traversal `b2-cand` | **236 strict px in 14 blobs**, largest 82 px | **`SPARKCOUNT` 11** (raw 22, popOpen 22, inFrust 11) | **DISAGREE by 3 markers — 11 vs 14** |
+| `sbs2/night` post-`skyCut` | **50 px in 16 blobs** | **not yet dumped** | untested |
+| known-bad `b2-base` | **0 px / 0 blobs** | **not measurable — see below** | **the registered `0 ↔ 0` could not be tested** |
+| `sbs3/night` uncut *(guard)* | **224 px in 62 blobs** | not yet dumped | untested |
 
-All eight behave as constructed. **F3 is the load-bearing one:** KB1 *fails* when the pop gate is
-satisfied, so KB1 is capable of failing — which is the only thing that makes a future KB1 pass
-informative rather than automatic. **F1 reproduces §184's near-miss end to end**: raw 17 in, 0 out,
-on markers that are latched, on-screen and scaled. The clause that saves it is the `pop` gate alone.
+**P-S2 binds and is obeyed: the disagreement is the finding. `POP_MIN` stays 0.5.**
 
-**This licenses nothing about the game**, and the control says so in its own output. It establishes
-only that when the probe lands, the arithmetic applied to it will be the seal's. KB1–KB4 remain
-un-run; `skyCut` remains primary.
+**And on this dump no tuning could have closed it, which is worth recording:** `popOpen` is 22/22, so
+the `pop` clause is **inert** — *no* value of `POP_MIN` in `(0, 1]` moves the count off 22, and
+raising it only ever subtracts. The entire 22 → 11 reduction is the frustum test. **The 11-vs-14 gap
+is structural, not a threshold artefact**, so anyone who "fixed" it by moving `POP_MIN` would be
+fitting a curve to a number that clause does not control.
 
-## 4. Blob↔marker agreement: **not measurable from this run** — stated as measured, which is to say not at all
+**The direction of the disagreement contradicts the seal's declared asymmetry.** Seal §3 declares the
+instance path **over-counts** (occluded markers it cannot depth-reject). Measured, it **under-counts**:
+11 markers against 14 blobs. Over-counting is the error the seal predicted and accepted; under-counting
+by 3 is unexplained by anything the seal registered.
 
-The seal §0 registers the correspondence to be tested. The pixel side is committed and re-read here
-from `fxcluster1/sparkdiag.json`; the marker side **does not exist**:
+**Caveat, stated rather than smoothed over:** this probe's `traversal` stages its own camera
+(`pos [6,14,6] fov 44`) and `b2-traversal.cand.png` was a separate capture. The 11-vs-14 comparison is
+therefore *not* frame-matched, and part of the gap may be staging rather than instrument. **That
+uncertainty is itself a reason the correspondence is unproven, not a reason to assume it holds.**
 
-| registered correspondence | pixel path (committed, `sparkdiag.json`) | instance path (this run) | agreement |
-|---|---|---|---|
-| traversal `b2-cand` | **236 strict px in 14 blobs**, largest 82 px | **no measurement** | **untested** |
-| `sbs2/night`, post-`skyCut` | **50 strict px in 16 blobs**, largest 30 px | **no measurement** | **untested** |
-| known-bad `b2-base`, preroll off | **0 px / 0 blobs** | **no measurement** | **untested** — incl. the registered `0 ↔ 0` |
-| *(guard value)* `sbs3/night` uncut | **224 strict px in 62 blobs** — the population KB3 must **not** re-acquire | **no measurement** | **untested** |
-
-**P-S2 binds here in its strictest form, and binding it correctly means reporting *no* number.**
-P-S2 says: if markers and blobs disagree, report the disagreement as the finding; do not tune
-`POP_MIN` to close it. There is no disagreement to report because there is no marker count. **The
-one thing P-S2 forbids above all is manufacturing the comparison** — and inventing, estimating, or
-back-filling a marker count from the 14/16/0 blob figures would be exactly the curve-fit the seal
-§0 was written to refuse. `POP_MIN` remains `0.5`, untouched, and was never a candidate for
-adjustment because there was no number to adjust it toward.
+**The registered `0 ↔ 0` agreement — the one genuine numeric agreement in the seal — was not tested**,
+because the arm that would test it (`preroll` OFF) does not exist on this build (§3).
 
 ## 5. Both instruments, quoted together, as the seal requires
 
-Seal §6: "Any letter quoting one must quote both." Discharged as follows.
+Seal §6: *"Any letter quoting one must quote both."* Discharged:
 
-- **Pixel path (`skyCut`, `NOTE-sparkle-predicate.md` §4) — REGISTERED AND STILL PRIMARY.**
-  `sparkle px = |R−143| ≤ 40 ∧ |G−216| ≤ 35 ∧ |B−255| ≤ 40 ∧ y ≥ skyCut[shot]`, with
-  `skyCut = { night: 200, traversal: 120 }`. Controls as published: traversal 236 → **236** kept;
-  `sbs3/night` 224 → **50** kept / **174 rejected as sky**; known-bad **0 → 0**; `sbs2/night`
-  50 → **50**; `sbs3/traversal` 239 → **239**.
-- **Instance path (`SPARKCOUNT`, seal §2) — SEALED, BUILT, NOT YET MEASURED.** Runner and scorer
-  exist and are auditable; the registered quantity is
-  `#{ i : pop(i) ≥ 0.5 ∧ inFrustum(i) ∧ scale(i) > 0 }`. **It has produced no figure at all.**
+- **Pixel path (`skyCut`) — REGISTERED, AND NOW CONFIRMED AS PRIMARY BY P-S1.**
+  `|R−143| ≤ 40 ∧ |G−216| ≤ 35 ∧ |B−255| ≤ 40 ∧ y ≥ skyCut[shot]`, `skyCut = { night: 200,
+  traversal: 120 }`. Controls as published: traversal 236 → **236** kept; `sbs3/night` 224 → **50**
+  kept / **174 rejected as sky**; known-bad **0 → 0**; `sbs2/night` 50 → **50**; `sbs3/traversal`
+  239 → **239**.
+- **Instance path (`SPARKCOUNT`) — MEASURED, AND WITHDRAWN.** `traversal` = **11** markers
+  (raw 22, popOpen 22, inFrust 11) on both arms. Its decisive control failed; its `pop` clause was
+  inert; its treatment was a no-op.
 
-**Declared, not repaired, and unchanged by this result:** the instance path **over-counts markers
-occluded by geometry** and cannot fix it — `depthTest: true` (`Particles.js:1611`) is a GPU fact the
-CPU probe cannot see. That over-count is the standing reason `skyCut` is *retired, not deleted*,
-under §6. Since `skyCut` is not being retired today, the cross-check that would catch the over-count
-is simply still the primary, and no claim rests on the unmeasured side.
+**The known over-count is still declared and still unrepaired** (`depthTest: true`, `:1611`, is a GPU
+fact the CPU probe cannot see) — and it is now joined by an unexplained **under**-count of 3. Since
+`skyCut` is not being retired, the instrument that sees drawn pixels remains the primary, which is
+the arrangement seal §6 was written to protect.
 
-## 6. Does the verdict license replacing `skyCut` as primary? **No — precisely no.**
+## 6. Does this license replacing `skyCut` as primary? **No. The seal is withdrawn.**
 
-Seal §6 conditions the replacement on "KB1+KB2 holding". KB1 and KB2 have not been run, so the
-condition is not met, and it is not met *for want of evidence* rather than by refutation. Concretely:
-
-- **`skyCut` remains the registered §2.1-item-6 grammar count.** Nothing in §2.1 changes today.
-- **The seal is NOT withdrawn.** No falsifier fired. It stands, sealed, awaiting its probe. The
-  registration tree `85bab2d30f5f7b59` was re-verified intact at 04:03, so the seal's pre-registration
-  is still good against the current `src`.
-- **Nothing about the raw count is softened.** `fx.sparkles.count` stays forbidden as a grammar
-  count (§184, seal §1). A `latched=17` reading on a 0-pixel staging remains the reason.
+- **`skyCut` stays the registered §2.1-item-6 grammar count.** Nothing in §2.1 changes.
+- **`PREREG-sparkcount.md` is withdrawn**, by its own §5, on P-S1. Not paused — withdrawn. §5 says
+  *revert, do not defend*, and the fact that the failure traces to an ungated `src` call is **not** a
+  licence to keep the seal alive: a seal whose decisive control cannot be staged is not a seal that
+  is "nearly right", it is one that was never testable.
+- **The raw count stays forbidden** (§184, seal §1). Nothing here softens that. Note the raw count on
+  this staging is **22** against 14 committed blobs, so it remains exactly the over-reading §184
+  describes.
+- **`POP_MIN` was not moved.** It ends at 0.5, as registered, and §4 records that moving it could not
+  have helped.
 
 ### What any future letter must quote
 
-A letter that wants to move `SPARKCOUNT` to primary must carry **all** of the following, and a letter
-that quotes fewer is quoting a licence it does not have:
+A successor seal may only re-propose `SPARKCOUNT` as primary if it first fixes the staging, and any
+letter must carry **all** of:
 
-1. **KB1 — `traversal`, preroll OFF — `SPARKCOUNT = 0` beside a non-zero `rawCount`.** Both numbers,
-   together, in the same sentence. This is the only control that separates this instrument from the
-   raw count that would have passed CRITIC rounds 1 and 2; a KB1 pass reported without its `rawCount`
-   proves nothing, because `0` is also what a dead instrument returns.
-2. **KB2 — `traversal`, preroll ON — `SPARKCOUNT` within 14 ± 3**, quoted **beside the 14 committed
-   blobs / 236 strict px** it corresponds to, and labelled **blob↔marker, not a numeric identity**
-   (seal §0; §184's units correction).
-3. **KB3 — `night` — `SPARKCOUNT` within 16 ± 4, and demonstrably not ≈ 62**, quoted beside
-   **16 blobs / 50 px post-`skyCut`** and the **62-blob / 224-px uncut** figure it must avoid.
-4. **KB4 — `interior` — `SPARKCOUNT = 0`.**
-5. **The §2 companion figures for every arm:** `rawCount`, `popOpen`, `inFrustumOnly`, `uTime_fx`,
-   `fx._t0`, and the `aPos`/`aData` dump — reported *beside* `SPARKCOUNT`, never in place of it.
-6. **Both instruments' figures together** (§6), including the explicit restatement that the instance
-   path **over-counts occluded markers and that this is declared, not a defect to repair**.
-7. **The scorer's `state` field reading `SCORED — licensed`** — not merely `licensed: true` — so that
-   a `NO DATA` run can never be mistaken for a pass. See §3.
+1. **That `preroll` is gated** — a `src` change at `Particles.js:2574` putting the call behind the
+   `sparklePreroll` debug flag its own comment claims it is behind, **plus a dump showing
+   `born` differing between the OFF and ON arms.** Byte-identical `aData` across arms is the
+   signature of the defect and must be shown absent.
+2. **KB1 — `traversal`, preroll genuinely OFF — `SPARKCOUNT = 0` beside a non-zero `rawCount`**, both
+   numbers in the same sentence. `0` is also what a dead instrument returns, so the `rawCount` is not
+   optional.
+3. **KB2 — preroll ON — within `14 ± 3`**, quoted beside the **14 blobs / 236 px** it corresponds to,
+   labelled **blob↔marker, not numeric identity**, and **demonstrably from a different dump than
+   KB1's** — the defect this result found.
+4. **KB3 — `night` — within `16 ± 4` and not ≈ 62**, beside **16 blobs / 50 px** post-`skyCut` and the
+   **62-blob / 224-px** uncut figure it must avoid.
+5. **KB4 — `interior` — `SPARKCOUNT = 0`**, which on a 96-capacity buffer is also the check that the
+   instrument is not reporting its own capacity.
+6. **The §2 companions for every arm** — `rawCount`, `popOpen`, `inFrustumOnly`, `uTime_fx`, `fx._t0`,
+   and the `aPos`/`aData` dump — beside `SPARKCOUNT`, never instead of it. **`popOpen` is now
+   load-bearing**: `popOpen == rawCount` means the `pop` clause is inert and the gate is decorative.
+7. **Both instruments' figures together** (§6), including the declared occlusion over-count **and**
+   this result's measured under-count of 3, with the frame-matching caveat from §4 resolved rather
+   than repeated.
+8. **A frame-matched comparison** — the marker count and the blob count taken from the *same* staging,
+   which this run could not do.
+9. **The scorer's `state` field reading `SCORED — licensed`**, not merely `licensed: true`.
 
-## 7. Files created or modified by this run
+## 7. Arms still in flight
+
+At writing, the runner is alive and has dumped **2 of 4** arms (`night` and `interior` pending, ~8
+min each). **This does not affect the verdict:** seal §4 conditions the licence on KB1 *and* KB2, and
+KB1 has failed, so P-S1 has fired and nothing the remaining arms return can restore the seal.
+
+The runner writes each arm to `sparkcount-readback.json` as it lands, so re-running
+`node progress/records/fxcluster1/sparkcount-score.mjs` will pick them up with no second boot. The
+scorer now reports partial runs as `SCORED — PARTIAL (n/4 …)` rather than as failures — **absent is
+not failed** (§8). KB3/KB4 remain worth reading as diagnostics, particularly KB4 against the
+96-marker capacity.
+
+**Do not re-launch the runner.**
+
+## 8. Scorer defects found and fixed — reporting only, no registered arithmetic touched
+
+Run as dispatched against the pre-boot file, the scorer printed `CALIBRATION LICENCE: NOT GRANTED`
+for **"no data"** — byte-identical to what it prints when KB1 genuinely fails. Those are opposite
+outcomes under seal §5 (one withdraws the seal, one withdraws nothing), and at 04:17 the readback
+still held `arms: []` because the runner writes its header at `sparkcount.mjs:35` *before* taking the
+lock. **The file's existence is not evidence of its contents** — and mistaking one for the other is
+§184's own defect, one layer up, in the instrument built to catch it. A second instance appeared once
+arms began landing: a *missing* KB2 was being reported as a *failed* KB2.
+
+Fixed, with **`POP_MIN` = 0.5, the smoothstep port, the frustum test and all four KB bands
+transcribed unchanged** (seal §5's "no mid-run redesign" respected — no threshold moved):
+
+- **`NO DATA`** — readback absent, or present with `arms: []`. Prints "This is NOT a falsified
+  control" and that `skyCut` remains primary.
+- **`SCORED — PARTIAL (n/4; not yet run: …)`** — arms landing one at a time. **Absent is not failed.**
+- **`P-S5 FATAL`** — arms present, no readable dump.
+- **`SCORED — control(s) failed`** — the one that means the seal is in trouble. **This run's KB1 is
+  that case**, and it now says so distinctly.
+
+**P-S5 is definitively NOT triggered:** the boot reported
+`{hasFx: true, hasSparkles: true, hasPreroll: true, capacity: 96}`.
+
+**Scorer arithmetic verified against 8 synthetic fixtures** before the probe landed —
+`fxcluster1/sparkcount-scorer-control.mjs` → `.txt`, following the cluster's `a3`/`a4-scorer-control`
+convention. Synthetic: they measure the scorer, not the game. All 8 behave as constructed, including
+**F3, a gate-dead detector in which KB1 *must* fail** (so a KB1 pass could not have been automatic),
+**F1**, which reproduces §184's near-miss end to end (raw 17 in → `SPARKCOUNT` 0 out), and **F4/F5**,
+which show the frustum and `scale` clauses each rejecting alone. **The scorer computes the seal's
+predicate correctly — KB1's failure is a fact about the build, not a mis-port.**
+
+## 9. Files created or modified
 
 **Modified:**
-- `progress/records/fxcluster1/sparkcount-score.mjs` — two changes, **neither touching registered
-  arithmetic** (`POP_MIN` = 0.5, the smoothstep port, the frustum test and the four KB bands are all
-  transcribed unchanged): (a) §3 reporting fix, making `NO DATA` / `P-S5 FATAL` / `SCORED` distinct;
-  (b) optional `argv[2]`/`argv[3]` fixture-path override so the scorer can be exercised against
-  known-answer dumps (§3a). Defaults are the real files, so `node sparkcount-score.mjs` with no
-  arguments behaves exactly as the seal §7 specifies.
-- `progress/records/fxcluster1/sparkcount-scores.json` — regenerated by the scorer runs; now carries
-  `state: "NO DATA"` with `why`, `startedAt`, `runnerFatal`, `live`, `finishedAt`.
-- `progress/records/RESULT-fxcluster.md` — short pointer stanza appended, because seal §8 files the
-  sparkcount verdict there while this dispatch names `RESULT-sparkcount.md`. The pointer carries the
-  verdict in summary and refers here; it does not duplicate the detail.
+- `progress/records/fxcluster1/sparkcount-score.mjs` — §8 reporting fixes (`NO DATA` / `PARTIAL` /
+  `P-S5 FATAL` / `SCORED` made distinct) and an optional `argv[2]`/`argv[3]` fixture-path override so
+  the arithmetic can be exercised against known-answer dumps. **No registered threshold or arithmetic
+  altered.** `node sparkcount-score.mjs` with no arguments behaves exactly as seal §7 specifies.
+- `progress/records/fxcluster1/sparkcount-scores.json` — regenerated; now carries `state`,
+  `missingArms`, and the KB1/KB2 rows.
+- `progress/records/RESULT-fxcluster.md` — pointer stanza appended (seal §8 files the sparkcount
+  verdict there; this dispatch names `RESULT-sparkcount.md`). **Written while the probe was still
+  queued and now superseded by this file — see §10.**
 
 **Created:**
 - `progress/records/RESULT-sparkcount.md` (this result).
-- `progress/records/fxcluster1/sparkcount-scorer-control.mjs` — §3a synthetic fixtures.
-- `progress/records/fxcluster1/sparkcount-scorer-control.txt` — its output, 8/8 as constructed.
+- `progress/records/fxcluster1/sparkcount-scorer-control.mjs` / `.txt` — §8 fixtures and output.
 
-**Read, not modified:** `PREREG-sparkcount.md`, `KNOWN_ISSUES.md` §184,
-`NOTE-sparkle-predicate.md`, `fxcluster1/sparkcount.mjs`, `fxcluster1/sparkcount-readback.json`,
-`fxcluster1/sparkdiag.json`, `logs/sparkcount-r1.log`, `src/fx/Particles.js` (read for seam
-verification only).
+**Written by the probe, not by me:** `fxcluster1/sparkcount-readback.json`,
+`logs/sparkcount-r1.log` (both still being appended to — §7).
 
-**Not touched:** `src/**` (registration tree `85bab2d30f5f7b59` verified intact); no captures; no
-lock ticket drawn — `sparkcount.mjs` pid 29232 already holds the queue position from 04:03 and this
-result did not disturb it.
+**Read, not modified:** `PREREG-sparkcount.md`, `KNOWN_ISSUES.md` §184, `NOTE-sparkle-predicate.md`,
+`fxcluster1/sparkcount.mjs`, `fxcluster1/sparkdiag.json`, `src/fx/Particles.js` (read-only, for the
+§2/§3 mechanism).
 
-## 8. The one action that finishes this
+**Not touched:** `src/**` — registration tree `85bab2d30f5f7b59` verified identical at seal time, at
+probe start, and per-arm (`srcAtArm`). No captures; no lock ticket.
 
-**Do not re-launch the runner.** Pid 29232 is alive and correctly queued behind `staging1` (pid
-15982), with `combatrecipient` (pid 5947) also in the queue. A second launch would take a second
-ticket and jump nobody. When it reaches the front it will boot, stage the four arms, and write the
-dump — at which point `node progress/records/fxcluster1/sparkcount-score.mjs` scores it offline with
-no second boot, exactly as seal §7 designed, and §§2/4/6 of this result are replaced by measured
-numbers.
+## 10. Correction to the pointer already appended in `RESULT-fxcluster.md`
 
-**Until then this result stands as written: the seal is intact, the probe is pending, `skyCut` is
-primary, and no number has been claimed.**
+That stanza was written at 04:23, while the probe was still queued, and says *"the sparkcount probe
+did not land; nothing is adjudicated."* **It was true when written and is now superseded**: the probe
+took the lock at 04:29:18 and KB1/KB2 landed. Per §34 (*a correction lives where the claim lives*),
+the correction is applied at that stanza and the original left visible. **The one conclusion that
+survives unchanged is the operative one — `skyCut` remains primary** — though it now stands because
+**P-S1 fired**, not for want of data.

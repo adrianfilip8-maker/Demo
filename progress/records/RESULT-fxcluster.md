@@ -821,3 +821,45 @@ queued on the capture lock since 04:03:36 behind `litwarm1` then `staging1` (110
   (raw 17 in → `SPARKCOUNT` 0 out). Synthetic: this measures the scorer, not the game.
 - **The seal is NOT withdrawn** — no falsifier fired, and registration tree `85bab2d30f5f7b59` was
   re-verified intact. **Do not re-launch the runner**; it already holds its queue position.
+
+### §34 CORRECTION to the stanza immediately above — applied at the declaration site
+
+**The stanza above was written at 04:23 while the probe was still queued. It is superseded.** The
+probe took the capture lock at **04:29:18** (1542 s behind `litwarm1` then `staging1`), booted
+(`hasFx/hasSparkles/hasPreroll` all true, capacity 96 — **P-S5 definitively NOT triggered**), and
+dumped its first two arms. The original text is left visible per §34; the corrected verdict is:
+
+**KB1 returned `SPARKCOUNT = 11`, not `0`. P-S1 FIRED. `PREREG-sparkcount.md` is WITHDRAWN by its own
+§5, and `skyCut` remains the registered §2.1-item-6 primary** — now because a falsifier fired, not for
+want of data. The raw count stays forbidden; `POP_MIN` was not moved.
+
+```
+ arm                        raw  popOpen  inFrust  SPARKCOUNT  gate
+ traversal-prerollOFF        22       22       11          11  KB1 FAIL — SPARKCOUNT == 0
+ traversal-prerollON         22       22       11          11  KB2 in band, but the pass is VOID
+```
+
+**Why, and it is a `src` finding the coordinator should route:** `src/fx/Particles.js:2574` calls
+`this.sparkles?.preroll(0.25)` **unconditionally**, though the comment above it claims "Debug-gated
+OFF by default: shipped behaviour is bit-exact unless the capture harness opts in", and
+`preroll()`'s docstring (`:1695`) claims "the only caller is debug-gated". No gate exists.
+**Proved from the dump:** `prerollFlag` read `null` on the OFF arm and `true` on the ON arm, yet
+`aPos`, `aData` and camera are **byte-identical**, with `born = −0.25` (the `preroll(0.25)` signature)
+on **both**. Therefore `pop = 1.0` saturated, `popOpen` **22/22** — the seal's `pop` gate rejected
+nothing, and its premise of `pop ≈ 0.02–0.09` does not reproduce. **KB1 is unstageable on this build,
+KB2's pass is the same dump that fails KB1, and the two are one control run twice.**
+Beyond sparkcount: **every staged still since that line landed has sparkles fully popped whether or
+not a harness opted in.** Not chased here — no `src/**` edits by this runner.
+
+**Blob↔marker: DISAGREE, reported not closed (P-S2).** 11 markers vs the **14 committed blobs /
+236 px**. `POP_MIN` is **inert** on this dump (`popOpen` 22/22), so no threshold value could close
+the gap — the whole 22→11 cut is the frustum test (11 in-frame, 7 behind camera, 4 off-frame). The
+gap's direction also contradicts the seal's declared asymmetry: it predicted an occlusion
+**over**-count and measured an **under**-count of 3. Not frame-matched (probe camera `[6,14,6]`
+fov 44 vs `b2-traversal.cand.png`), which is a further reason it is unproven. The registered
+`0 ↔ 0` agreement **could not be tested** — the OFF arm does not exist on this build.
+
+**Still in flight:** `night` and `interior` had not dumped at writing; they cannot restore the seal
+(§4 conditions the licence on KB1 **and** KB2). Re-run
+`node progress/records/fxcluster1/sparkcount-score.mjs` to pick them up — no second boot.
+**Do not re-launch the runner.** Full verdict: `RESULT-sparkcount.md`.

@@ -1,5 +1,5 @@
 {
- "at": "2026-08-06T04:38:10.236Z",
+ "at": "2026-08-06T04:47:29.500Z",
  "prereg": "PREREG-sparkcount.md",
  "popMin": 0.5,
  "arms": {
@@ -13,13 +13,23 @@
    "control": "KB1",
    "band": "SPARKCOUNT == 0 (raw expected ~14-17)",
    "pass": false
+  },
+  "traversal-prerollON": {
+   "rawCount": 22,
+   "popOpen": 22,
+   "inFrustum": 11,
+   "SPARKCOUNT": 11,
+   "uTimeFx": 0.05,
+   "meshVisible": true,
+   "control": "KB2",
+   "band": "SPARKCOUNT = 14 +/- 3 (14 committed blobs)",
+   "pass": true
   }
  },
  "licensed": false,
  "missingArms": [
-  "traversal-prerollON",
   "night",
   "interior"
  ],
- "state": "SCORED — PARTIAL (1/4 arms; not yet run: traversal-prerollON, night, interior)"
+ "state": "SCORED — PARTIAL (2/4 arms; not yet run: night, interior)"
 }

@@ -1,0 +1,28 @@
+{
+ "prereg": "PREREG-staging2.md",
+ "runner": "progress/records/staging2.mjs",
+ "bootId": "67752b8a-e2a",
+ "startedAt": "2026-08-06T04:45:24.975Z",
+ "srcTreeBefore": "85bab2d30f5f7b59",
+ "shippedExpected": {
+  "pos": [
+   -11.5,
+   2.6,
+   30.5
+  ],
+  "target": [
+   -17,
+   1.1,
+   28
+  ]
+ },
+ "armOrder": [
+  "preroll",
+  "base",
+  "cand",
+  "restore",
+  "KBmid",
+  "KBover"
+ ],
+ "arms": []
+}
