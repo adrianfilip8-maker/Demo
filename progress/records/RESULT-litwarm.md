@@ -121,7 +121,36 @@ and P-F3's base gates remain the independent guard.
 
 ## Scores
 
-_(the `score3` table, verbatim, at full capture)_
+**Night chunks, scored by the registered instrument** — `node banda-diag.mjs score3
+progress/records/litwarm1`, verbatim:
+
+```
+banda-diag — drift guard PASS (49 constants + 29 load-bearing lines asserted against committed source)
+
+═══ score3 — PREREG-litwarm quantities on progress/records/litwarm1 (BANDS_LW verbatim from the seal) ═══
+  P7-fw night Δpx (frame-wide)       0.00  band [0,0]  PASS
+  P-F4 night restore px              0.00  band [0,0]  PASS
+  P7-g guard Δpx (frame-wide)        0.00  band [0,0]  PASS
+  P-F4 guard restore px              0.00  band [0,0]  PASS
+
+  4 scored, 0 FAIL — RESULT-litwarm quotes this table verbatim.
+```
+
+This is an **independent second method agreeing with the first**: the byte-identity result above
+was reached by hashing the PNGs, and `score3` reaches [0,0] by decoding them and differencing at
+ΣRGB ≥ 4 against `BANDS_LW`. Two different readings of the same frames, same answer.
+
+**On the drift guard reading 29 load-bearing lines here where the capture logged 32** — checked
+rather than waved through, because an instrument whose assertion count moves is exactly the kind
+of thing this ledger keeps finding to be meaningful. It is benign and by design. The guard
+branches on `LITWARM_SHIPPED`: with the candidate in the tree it asserts four lines (the
+`sssNightPin` option, the gate publish, the gate call site, the cache key); at base it asserts one
+(`sss: 0.0,`, the pre-litwarm premise). 4 − 1 = 3, which is exactly the difference. The tree is at
+base right now because the runner installs the candidate only inside the held lock, so the guard
+is correctly reporting *which* tree it is describing instead of straddling two — and the pixel
+scoring above does not depend on the current tree at all, since it reads committed PNGs.
+
+_(day chunks A–E to follow)_
 
 ## Verdict
 
