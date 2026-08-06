@@ -15042,3 +15042,49 @@ something *declared*, never to something *observed in passing*. A name (§189), 
 same way: each was a convenient stand-in for the real referent, and each was silently wrong exactly
 when a second actor was in play — a concurrent process, a level full of guards, the runner itself,
 a sibling arm.
+
+
+## §193 — FX shots are not reproducible across boots, and several bands were drawn as if they were
+
+Measured, not argued. Two boots of **byte-identical source** (`combatrecipient`'s `restore` arm is
+`assert A['restore'] == base` in the builder, and it installed sha `350dece5a1b13fb7` — base's own):
+
+```
+combat        28,431 px differ at SumRGB>=4   (3.0850% of frame)   max |dSumRGB| 288
+sly-profile        62 px                      (0.0067% of frame)   max |dSumRGB|  36
+```
+
+**460× apart, on the same two boots.** `sly-profile` is a character-sheet staging and is
+effectively deterministic. `combat` carries the veil, the spark burst and the flash disc, and is
+not: particle seeding and FX phase are not reproduced boot to boot.
+
+**The contrast that pins the mechanism.** litwarm's night arms — `base`, `C`, `restore` — were
+captured **inside one boot** and came out **byte-identical**, md5 for md5, and the registered
+`score3` scored them at exactly [0,0]. So the engine is bit-exact *within* a boot. The
+nondeterminism is entirely a **boot-to-boot** property, and it is concentrated in FX.
+
+**What this cost.** `combatrecipient` is one-arm-per-boot by design, so every cross-arm comparison
+in it was cross-boot. P-F6 caught it and voided the whole combat half — P1, P1b, P2, P3, P3b,
+P-F5's 82,091 px, KB-P1, KB-P2. Two verdicts I had already written (P-F5 ⇒ WITHHELD, then
+P-F7 ⇒ UNSCOREABLE) rested on those numbers and both had to be retracted. In particular the P2
+"inversion" — `cand` 0.245 against a ≥0.80 band, `kbside` 0.824 against a ≤0.15 band — needed no
+sign-convention explanation at all: **P2 sampled the flash disc, the single loudest region in the
+frame, across two boots.** It was not reading backwards; it was reading noise. A metric aimed at
+the most nondeterministic pixels in the image will return whatever they happened to be doing.
+
+**The rule.** Before registering any pixel band on a shot that carries FX, **measure the floor**:
+one `base`-vs-`base` pair, separate boots, same source. Then either state the band in units of that
+floor or move the quantity to a shot that has none. A band of `== 0 px` across boots on an
+FX-bearing shot is unachievable by construction — §190's unpassable gate again, arrived at from a
+different direction, and this time it consumed four capture arms before the control ran.
+
+**Cheapest possible fix, and it should be standard.** A determinism pair costs **one boot**. In this
+seal it would have redrawn or knowingly abandoned every combat band before a single candidate was
+captured. It is now the first obligation of the re-seal.
+
+**AUDIT OWED — do not treat this as closed.** Any earlier result that compared an FX-bearing shot
+**across boots** and quoted a small pixel or fraction delta is suspect by the same argument, and I
+have not yet swept for them. `courtCap 0.259 vs 0.2564` (fx9, §task 13) is the first to re-check
+because its margin is 0.0026 — far inside a 3 % floor if that comparison was cross-boot. Seals
+whose arms shared a boot (litwarm's night chunks, banda2's six chunks) are **not** affected and
+their numbers stand. The sweep is a queued item, not a conclusion.
