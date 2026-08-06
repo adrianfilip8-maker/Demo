@@ -1,0 +1,35 @@
+
+per-arm:
+ base     {"poolMedL":87.97,"poolMeanL":88.43,"guardLiveGrad":10.97,"a2RoiMedL":94.19,"a2FigureMedL":23.4}
+ base2    {"poolMedL":86.48,"poolMeanL":87.8,"guardLiveGrad":8.57,"a2RoiMedL":95.55,"a2FigureMedL":23.39}
+ cand     {"poolMedL":28.13,"poolMeanL":50.02,"guardLiveGrad":8.89,"a2RoiMedL":100.46,"a2FigureMedL":23.4}
+ restore  {"poolMedL":84.48,"poolMeanL":88.23,"guardLiveGrad":11.45,"a2RoiMedL":98.82,"a2FigureMedL":22.9}
+
+GATES (band | a2 shown-able-to-move | a3 value | pass):
+ PASS  Q-A3-1 ΔmedL cand−base, POOL ROI (0,400,560,700)
+        band [-100, -15]    a2-shown -59.84                       a3 -59.84
+ PASS  Q-A3-1m mirror ratio (restore−cand)/|Q-A3-1|
+        band [0.6, 1.4]     a2-shown 0.94                         a3 0.94
+ PASS  N-1 |base2−base| medL, POOL ROI
+        band <= 4           a2-shown 1.49                         a3 1.49
+ PASS  N-2 |restore−base| medL, POOL ROI
+        band <= 4           a2-shown 3.49                         a3 3.49
+ PASS  §13 clause: |Q-A3-1| >= 3 × max same-state Δ
+        band >= 10.47       a2-shown a2 registered ROI FAILED this clause 6.27 vs 13.89 a3 59.84
+ PASS  Q-A3-2 no-harm Δmean|∇L| cand−base, GUARD LIVE (852,220,990,300)
+        band >= -3          a2-shown -2.08 (mirror 2.56)          a3 -2.08
+ FAIL  L-2 licence: same-state |Δmean∇L|, GUARD LIVE
+        band <= 1           a2-shown 2.4                          a3 2.4
+ FAIL  V-1 clock pin: whole-frame px differing base vs base2 (any channel |Δ|>=1 of 921600)
+        band <= 20000       a2-shown 507830                       a3 507830
+  --   V-2 engine.time identical at capture, all arms
+        band spread <= 0.000001 a2-shown a2 did not pin the clock     a3 null
+  --   V-3 beamCol0 bit-identical across base/base2/restore
+        band exact          a2-shown a2 read 0.2440 / 0.2531 / 0.2630 a3 null
+
+context (not gates):
+ C-1 ΔmeanL cand−base, POOL ROI: -38.41   [a2 −38.41]
+ C-2 ΔmedL cand−base, a2 ROI (340,280,700,350): 6.27   [a2 +6.27 — carried for comparability]
+ C-3 ΔmedL cand−base, a2 untrimmed figure (852,220,990,700): 0   [a2 exactly 0.00, 82.9% static — the §177 finding-2 exhibit]
+
+wrote a3-scores.json + a3-pairstruct.json
