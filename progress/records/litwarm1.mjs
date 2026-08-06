@@ -42,7 +42,7 @@
  */
 import { withGame } from '/home/user/Demo/tools/harness.mjs';
 import { writeFileSync, mkdirSync, existsSync } from 'node:fs';
-import { execSync } from 'node:child_process';
+import { execSync, execFileSync } from 'node:child_process';
 import path from 'node:path';
 
 const OUT = '/home/user/Demo/progress/records/litwarm1';
@@ -101,7 +101,23 @@ for (const chunk of CHUNKS) {
   save();
   log(`chunk ${chunk.id} (${chunk.shot}): srcTree ${report.srcTreeBefore} — booting (own lock hold)`);
 
-  await withGame({ width: 1280, height: 720, quality: 'high', timeout: 90 * 60 * 1000 }, async ({ page, info }) => {
+  /* §194 conversion: the candidate is no longer expected in the tree — it is INSTALLED under the
+     held lock (acquire → install → boot → capture → revert → release) via litwarm-arms.py, whose
+     five arms round-trip to base byte-exactly. `onLocked`/`onReleasing` are the harness seam for
+     exactly this ordering; the revert runs in the finally so a crash hands the tree back clean.
+     The in-page logic below is unchanged: it was written for a tree that carries the gate, and
+     now the gate is guaranteed present by the install rather than hoped into the tree. */
+  const ARMSPY = '/home/user/Demo/progress/records/litwarm-arms.py';
+  await withGame({
+    width: 1280, height: 720, quality: 'high', timeout: 90 * 60 * 1000,
+    onLocked: () => {
+      log(`  lock held — installing candidate (litwarm-arms.py install cand)`);
+      log(`  ${execFileSync('python3', [ARMSPY, 'install', 'cand'], { encoding: 'utf8' }).trim()}`);
+    },
+    onReleasing: () => {
+      log(`  ${execFileSync('python3', [ARMSPY, 'revert'], { encoding: 'utf8' }).trim()}`);
+    },
+  }, async ({ page, info }) => {
     log(`  boot ok — warnings ${info.warnings?.length ?? 0}`);
     page.on('console', (m) => { if (m.type() === 'error') log(`    page error: ${m.text().slice(0, 200)}`); });
 

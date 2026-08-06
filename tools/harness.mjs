@@ -77,13 +77,21 @@ async function startServer(port, verbose) {
  * `info` carries the module map, boot warnings, and the WebGL renderer string.
  */
 export async function withGame(
-  { width = 1280, height = 720, quality = 'high', timeout = 300000, verbose = false, query = '' } = {},
+  { width = 1280, height = 720, quality = 'high', timeout = 300000, verbose = false, query = '',
+    onLocked = null, onReleasing = null } = {},
   fn
 ) {
   // Serialise with other capture runs — software rendering doesn't parallelise, it thrashes.
   const release = await acquire({
     onWait: (ms, pid) => process.stdout.write(`· waiting for capture lock (${(ms / 1000) | 0}s, held by pid ${pid})\n`),
   });
+
+  /* §186/§194: `onLocked` runs AFTER the lock is granted and BEFORE vite spawns — the only
+     correct moment to install a source-tree arm, because the bundler reads the tree at boot and
+     the FIFO wait can be an hour. `onReleasing` is its counterpart, run in the finally BEFORE the
+     lock releases, so a crash still hands the tree back clean (combatrecipient's ordering, now a
+     harness seam instead of a per-runner reimplementation). */
+  if (onLocked) await onLocked();
 
   const port = await freePort();
   const server = await startServer(port, verbose);
@@ -128,6 +136,10 @@ export async function withGame(
     await browser.close().catch(() => {});
     server.kill('SIGTERM');
     setTimeout(() => server.kill('SIGKILL'), 3000);
+    if (onReleasing) {
+      try { await onReleasing(); }
+      catch (e) { process.stdout.write(`!! onReleasing failed: ${e?.message || e}\n`); }
+    }
     release();
   }
 }
