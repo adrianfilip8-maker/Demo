@@ -87,7 +87,11 @@ await withGame({ width: 1280, height: 720, quality: 'high', timeout: 90 * 60 * 1
 
   /* ---- LEVER PROBE, before anything is believed (§7: specified is not live) ------------- */
   const lever = await page.evaluate(async () => {
-    const res = await window.__GAME.setShot('guard');
+    /* §195.3: setShot at dt 0 — its internal seventeen settle frames were the clock leak that
+       made P-F4's [0,0] band unachievable across arms (mean luma fell monotonically in capture
+       order). Our own step() calls were already frozen; the staging path's were not, until the
+       dt option existed. */
+    const res = await window.__GAME.setShot('guard', { dt: 0 });
     window.__SG = res.shot;                       // the live SHOTS.guard object
     const gm = window.__ENGINE.get('guards');
     return {
@@ -125,7 +129,7 @@ await withGame({ width: 1280, height: 720, quality: 'high', timeout: 90 * 60 * 1
          re-emits 'shot', so GUARDS re-solves the stand off the moved camera. */
       window.__SG.pos = a.pos.slice();
       window.__SG.target = a.target.slice();
-      const res = await window.__GAME.setShot('guard');
+      const res = await window.__GAME.setShot('guard', { dt: 0 });   // §195.3: frozen staging path
 
       /* Settle: 10 frozen frames + a thrown-away capture before the scored frame. Sufficient for
          a stage that is not the boot's first — which is what the preroll arm now guarantees. */
