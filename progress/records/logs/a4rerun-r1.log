@@ -33,3 +33,7 @@
 · waiting for capture lock (324s, held by pid 17939)
 · waiting for capture lock (335s, held by pid 17939)
 · waiting for capture lock (346s, held by pid 17939)
+[03:10:12 + 472s]   boot ok — renderer ANGLE (Google, Vulkan 1.3.0 (SwiftShader warnings 1
+[03:10:12 + 472s]   LEVER {"hasGuards":true,"hasEMITTERS":true,"hasBatches":true,"flagAtBoot":null,"engineTimeAtBoot":0.278,"sensesPhaseAtBoot":0.249678,"timeWritable":true}
+[03:10:13 + 472s]   WARM-UP (discarded) {"engineTimeBeforeWarmup":0.299,"engineTimeAfterWarmup":0.582333,"engineTimeAfterIdleFrame":0.582333}
+[03:18:43 + 982s]   guard.base     510s  t 1000.283333  beamCol0 [0.262957,0.242165,0.169637]  yaw -0.0691
