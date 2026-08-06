@@ -23,6 +23,14 @@
       "drawCalls": 288,
       "triangles": 1856249,
       "programs": 98
+    },
+    "traversal": {
+      "file": "shots/sbs3/traversal.png",
+      "ms": 11.5,
+      "fps": 60,
+      "drawCalls": 252,
+      "triangles": 1750993,
+      "programs": 98
     }
   },
   "errors": [],

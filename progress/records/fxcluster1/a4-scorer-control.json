@@ -1,0 +1,184 @@
+{
+ "at": "2026-08-06T03:02:02.544Z",
+ "prereg": "PREREG-fxcluster-a4.md",
+ "frames": "a3-guard",
+ "run": "a4 (a3 instrument unchanged; discard warm-up + silhouette no-harm + structural V-1)",
+ "masks": {
+  "POOL_ROI": [
+   0,
+   400,
+   560,
+   700
+  ],
+  "SIL_BOX": [
+   860,
+   200,
+   1000,
+   300
+  ],
+  "T_SIL": 60,
+  "A2_ROI": [
+   340,
+   280,
+   700,
+   350
+  ],
+  "A3_GUARD": [
+   852,
+   220,
+   990,
+   300
+  ]
+ },
+ "framesMissing": [],
+ "warmup": null,
+ "perArm": {
+  "base": {
+   "poolMedL": 86.762,
+   "poolMeanL": 88.751,
+   "silCount": 5993,
+   "a2RoiMedL": 98.183,
+   "a3GuardGrad": 10.455
+  },
+  "base2": {
+   "poolMedL": 86.404,
+   "poolMeanL": 88.311,
+   "silCount": 10315,
+   "a2RoiMedL": 97.396,
+   "a3GuardGrad": 8.588
+  },
+  "cand": {
+   "poolMedL": 28.131,
+   "poolMeanL": 48.639,
+   "silCount": 8693,
+   "a2RoiMedL": 98.115,
+   "a3GuardGrad": 8.655
+  },
+  "restore": {
+   "poolMedL": 86.409,
+   "poolMeanL": 88.304,
+   "silCount": 10417,
+   "a2RoiMedL": 97.043,
+   "a3GuardGrad": 11.177
+  }
+ },
+ "gates": {
+  "Q-A4-1 ΔmedL cand−base, POOL ROI (0,400,560,700)": {
+   "band": "[-100, -15]",
+   "a3": -58.273,
+   "value": -58.631,
+   "pass": true
+  },
+  "Q-A4-1m mirror ratio (restore−cand)/|Q-A4-1|": {
+   "band": "[0.6, 1.4]",
+   "a3": 1.063,
+   "value": 0.994,
+   "pass": true
+  },
+  "N-1 |base2−base| medL, POOL ROI": {
+   "band": "<= 4",
+   "a3": 0.005,
+   "value": 0.358,
+   "pass": true
+  },
+  "N-2 |restore−base| medL, POOL ROI": {
+   "band": "<= 4",
+   "a3": 0.005,
+   "value": 0.353,
+   "pass": true
+  },
+  "§13 clause: |Q-A4-1| >= 3 × max same-state Δ": {
+   "band": ">= 1.074",
+   "a3": "a2 ROI FAILED 6.27 vs 13.89",
+   "value": 58.631,
+   "pass": true
+  },
+  "Q-A4-2 no-harm silCount(cand)/silCount(base), SIL BOX L<=60": {
+   "band": ">= 0.75",
+   "a3": "0.843 (FAILS 0.581 on a3 dirty)",
+   "value": 1.451,
+   "pass": true
+  },
+  "L-2 licence |silCount(base2)−silCount(base)|": {
+   "band": "<= 400 px",
+   "a3": "102 (FAILS 4322 on a3 dirty)",
+   "value": 4322,
+   "pass": false
+  },
+  "V-1 px |ΔL|>=10 in POOL ROI, base vs base2": {
+   "band": "<= 2000",
+   "a3": "377 clean / 213 dirty; lever 137910",
+   "value": 213,
+   "pass": true
+  },
+  "V-2 engine.time spread across all four arms": {
+   "band": "<= 0.000001",
+   "a3": "a3 FAILED 0.03",
+   "value": 0.03,
+   "pass": false
+  },
+  "V-3 beamCol0 bit-identical across ALL FOUR arms": {
+   "band": "exact",
+   "a3": "a3 FAILED base != base2",
+   "value": false,
+   "pass": false
+  }
+ },
+ "context": {
+  "C-1 ΔmeanL cand−base, POOL ROI": {
+   "value": -40.112,
+   "note": "a3 clean −39.672"
+  },
+  "C-2 ΔmedL over a2 ROI (340,280,700,350)": {
+   "value": -0.068,
+   "note": "§178 exhibit: a2 read +6.27 unpinned, a3 −0.06 pinned"
+  },
+  "C-3 Δmean|∇L| over a3 guard rect (retired gate)": {
+   "value": -1.8,
+   "note": "a3 clean +0.067, E/N 0.03"
+  },
+  "silCount per arm (SIL BOX, L<=60)": {
+   "value": {
+    "base": 5993,
+    "base2": 10315,
+    "cand": 8693,
+    "restore": 10417
+   },
+   "note": "a3 clean: base2 10315, cand 8693, restore 10417"
+  }
+ },
+ "clock": {
+  "perArm": {
+   "base": 1000.313333,
+   "base2": 1000.283333,
+   "cand": 1000.283333,
+   "restore": 1000.283333
+  },
+  "spread": 0.03
+ },
+ "beamCol0": {
+  "perArm": {
+   "base": [
+    0.267404,
+    0.24626,
+    0.172505
+   ],
+   "base2": [
+    0.262957,
+    0.242165,
+    0.169637
+   ],
+   "cand": [
+    0.262957,
+    0.242165,
+    0.169637
+   ],
+   "restore": [
+    0.262957,
+    0.242165,
+    0.169637
+   ]
+  },
+  "allFourIdentical": false
+ }
+}
