@@ -1526,10 +1526,59 @@ function modeLitLevers() {
   }
 }
 
+/* Part 4: the candidate sweep — every cell the seal's bands are sized from, with the
+ * §2.2 ledger statistics (hue ≤ 226 on shadowed arch, G-darkest, B/max, sat) beside the
+ * warm statistic, so a warm gain bought by breaking the cool-shadow line is visible here
+ * and not discovered in a frame. */
+function modeLitSweep() {
+  console.log('\n═══ lit/sweep — candidate values on every sized cell (warm gain AND the §2.2 cool-shadow lines) ═══');
+  const cells = [
+    ['brightShade hiero', 'hiero', { ndl: -0.3, sh: 0, ny: 0 }],
+    ['brightShade papyrus', 'papyrus', { ndl: -0.3, sh: 0, ny: 0 }],
+    ['deepShade worn+AO', 'worn', { ndl: -0.3, sh: 0, ny: 0, occ: 0.25 }],
+    ['keyLit worn', 'worn', { ndl: 0.75, sh: 1, ny: 0 }],
+    ['corridor worn', 'worn', { ndl: 0.30, sh: 1, ny: 0 }],
+    ['cream shade (skin)', 'cream', { ndl: -0.2, sh: 0, ny: 0.2, skin: 1, sss: 0.2 }],
+  ];
+  const arms = [
+    ['ship (shadowSat −0.35)', {}],
+    ['shadowSat −0.30', { shadowSat: -0.30 }],
+    ['shadowSat −0.25', { shadowSat: -0.25 }],
+    ['shadowSat −0.22', { shadowSat: -0.22 }],
+    ['shadowSat −0.20', { shadowSat: -0.20 }],
+    ['shadowSat −0.15', { shadowSat: -0.15 }],
+    ['shadowSat −0.10 (KB probe)', { shadowSat: -0.10 }],
+    ['sbm 0.08 both legs', { shadowBounceMix: 0.08, shadowBounceMixLit: 0.08 }],
+    ['shadowSat −0.22 + sbm 0.08', { shadowSat: -0.22, shadowBounceMix: 0.08, shadowBounceMixLit: 0.08 }],
+  ];
+  for (const shot of ['hero', 'temple', 'interior']) {
+    console.log(`\n— ${shot} —`);
+    for (const [cLabel, aName, cond] of cells) {
+      console.log(`  ${cLabel}`);
+      for (const [aLabel, knobs] of arms) {
+        const st = lightState(SHOT_TODS[shot], knobs);
+        const r = texelReport(st, ALB[aName], cond, knobs, cond.occ ?? 0);
+        const warm = r.RmB > 10 && r.L > 40 ? 'WARM' : '    ';
+        console.log(`    ${aLabel.padEnd(28)} rgb(${r.d.map((v) => v.toFixed(0).padStart(3)).join(',')})  L ${r.L.toFixed(0).padStart(3)}  hue ${r.h.toFixed(0).padStart(3)}  sat ${r.s.toFixed(2)}  R−B ${(r.RmB >= 0 ? '+' : '') + r.RmB.toFixed(0)}  B/max ${r.BoverMax.toFixed(2)}  min${r.argmin}  ${warm}`);
+      }
+    }
+  }
+  /* The budget question, answered in one line per shot: how far can EVERY SHADING knob,
+     pushed to its own known-bad edge simultaneously, carry the bright-shade band? */
+  console.log('\n— the SHADING budget on the bright-shade band, all knobs at their known-bad edges at once —');
+  const allIn = { shadowSat: 0.0, shadowWash: 0.0, shadowBounceMix: 0.20, shadowBounceMixLit: 0.20, fillSkyMix: 0.0, bounceGain: 0.60, shadowTeal: 0.0 };
+  for (const shot of ['hero', 'temple', 'interior']) {
+    const b = texelReport(lightState(SHOT_TODS[shot]), ALB.hiero, { ndl: -0.3, sh: 0, ny: 0 });
+    const m = texelReport(lightState(SHOT_TODS[shot], allIn), ALB.hiero, { ndl: -0.3, sh: 0, ny: 0 }, allIn);
+    console.log(`  ${shot.padEnd(9)} shipped R−B ${b.RmB.toFixed(0).padStart(4)} → all-knobs-max R−B ${m.RmB.toFixed(0).padStart(4)}  (budget ${(m.RmB - b.RmB).toFixed(0)}); the warm predicate needs R−B > +10, i.e. ${(10 - b.RmB).toFixed(0)}`);
+  }
+}
+
 function modeLit(sub) {
   if (!sub || sub === 'bins') modeLitBins();
   if (!sub || sub === 'pop') modeLitPop();
   if (!sub || sub === 'levers') modeLitLevers();
+  if (!sub || sub === 'sweep') modeLitSweep();
 }
 
 /* ───────────────────────────── main ───────────────────────────── */
