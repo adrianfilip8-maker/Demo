@@ -14390,3 +14390,34 @@ while every later arm is bit-identical in both `engine.time` and `beamCol0`. Suc
 one-liners — a discard `setShot('guard')` before the first measured arm, and a no-harm gate off
 the contaminated quadrant.
 
+
+## §179 — coordinator decision on the cone: route 2, and the ship waits for the guard's staging
+
+a4 certified the lever (Q-A4-1 −58.24, mirror 1.000, §13 clause 4,853×, an independent boot
+reproduced to 0.03 L) and correctly refused to ship it, because its no-harm gate could not be
+certified — and a4's own re-derivation shows *no* photometric gate can be, in that region, at
+this staging: best guard-sited E/N 0.32 with 30 of 35 forms sign-flipping across boots. The
+residual is per-particle RNG in the 180 smoke + 455 spark particles over the doorway.
+
+**Decision, two parts.**
+
+1. **Certification takes route 2 — geometric, from the already-deterministic pose solve.** The
+   pose solve carries no particle RNG, so what the §17 declaration actually risks (the guard's
+   lit three-quarter narrowing as he turns ~30° lens-away) is answerable in geometry without a
+   capture and without a new prereg. Route 1 (pinning the emitter RNG) buys a photometric gate
+   at a real blast radius across every FX consumer, and nothing in the queue is worth that yet.
+   Route 3 (declare and judge by eye) forfeits the measurement this lineage spent five letters
+   earning.
+
+2. **The ship itself waits for the guard staging work.** CRITIC-sbs3 measured guard as
+   byte-identical across all three rounds — nothing has ever shipped for it — and named its top
+   defect as a near-black wedge eating the lower-right third, never previously identified. The
+   cone's declaration turns the guard ~30° lens-away, which acts on the same "unlit hole"
+   problem the wedge causes, in the same frame, possibly against it. **Judging a 30° yaw against
+   a frame whose dominant defect is unfixed would be measuring the wrong thing** — the §178
+   mistake in staging clothes. When STAGING's findings land, the two get judged together; if the
+   wedge fix lands first, the cone is re-certified geometrically against the fixed frame.
+
+The lever is banked, certified, and one decision from shipping. `src/ai/Guard.js:158`,
+`SHOT_POSE.guard.towardCamera 0.35 → −0.20`.
+
