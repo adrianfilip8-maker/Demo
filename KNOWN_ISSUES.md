@@ -15350,3 +15350,19 @@ change, and `Debug.js` is `src/` — so it queues on the capture lock like any t
 **Standing rule, now stated where a runner author will hit it:** a within-boot A/B is only valid if
 **every** frame-advancing call in the path — including the ones inside `setShot` — runs at `dt = 0`.
 Checking your own `step()` calls is not sufficient, because the staging path has its own.
+
+### 195.2 A rollback between two commits strands the second one on a dead base
+
+New failure mode, cheap to avoid, worth one paragraph. A rollback landed *between* two commits.
+The first (`9ed9d14`) was pushed and safe; the second was authored after the tree had silently
+reverted to `77e1eab`, so it committed onto a base 585 commits behind and the push was rejected
+non-fast-forward. Nothing was lost — `reset --hard origin` + `cherry-pick` replayed it — but the
+work existed only on a branch that could never be pushed, which is a strictly worse place than
+uncommitted: it *looks* saved.
+
+Until now the rule has been "commit early, because a rollback takes the uncommitted remainder"
+(§188.6). That is necessary and not sufficient. The addition: **verify `HEAD` before committing,
+not only before pushing.** A `git fetch` + ancestry check costs nothing next to authoring a commit
+onto a base that no longer exists. The tell is a non-fast-forward push, and the fix is always
+`reset --hard origin/<branch>` then `cherry-pick` the stranded sha — never a merge, which would
+drag the dead base back in.
