@@ -191,8 +191,13 @@ async function startServer(port) {
   throw new Error(`vite never listened on ${port}:\n${log}`);
 }
 
-/** acquire -> install -> boot -> fn -> revert -> release. `arm === 'base'` installs nothing. */
-async function withArm(arm, fn) {
+/** acquire -> install -> boot -> fn -> revert -> release. `arm === 'base'` installs nothing.
+ *
+ *  Records two hashes for the drift check (see the boot-side comment): the tree as it stood when
+ *  the lock was finally granted, BEFORE this arm was installed, and again immediately AFTER the
+ *  install. Both are needed because the runner is itself a writer to `src/`, so "the tree moved"
+ *  is ambiguous until its own edit is accounted for. */
+async function withArm(arm, fn, marks = {}) {
   const release = await acquire({
     onWait: (ms, pid) => process.stdout.write(
       `· waiting for capture lock (${(ms / 1000) | 0}s, held by pid ${pid})\n`),
@@ -200,11 +205,13 @@ async function withArm(arm, fn) {
   let installed = false;
   let server = null, browser = null;
   try {
+    marks.atLock = (await srcHash()).hash;
     if (arm !== 'base') {
       process.stdout.write(`· lock held — installing arm "${arm}" into src/ai/Guard.js\n`);
       process.stdout.write(`  ${armsPy('install', arm)}\n`);
       installed = true;
     }
+    marks.postInstall = (await srcHash()).hash;
     const port = await freePort();
     server = await startServer(port);
     const executablePath = process.env.CHROME_PATH || CHROME_CANDIDATES.find((p) => existsSync(p));
@@ -318,18 +325,50 @@ async function main() {
   const flush = () => writeFile(path.join(OUT, `telemetry-${ARM}.json`),
     JSON.stringify(telemetry, null, 2));
 
+  const marks = {};
   await withArm(ARM, async ({ page, info }) => {
     /* Re-hash the tree AFTER the boot, not only before the lock wait. The launch-time hash is
        taken minutes (sometimes an hour) before `withGame` acquires the FIFO lock and Vite reads
        the tree, so on its own it is a number that does not depend on the thing it claims to
-       measure — the DIGEST's recurring defect. Both are recorded; `srcStable` is the one to
-       read, and a false there voids the arm. */
+       measure — the DIGEST's recurring defect.
+
+       CORRECTED (§191): comparing the boot hash to the LAUNCH hash voided every candidate arm by
+       construction, because this runner is itself a writer to `src/` — it installs its own arm
+       between those two hashes. `base` never exposed it (base installs nothing), so the check
+       looked healthy until the first candidate ran and reported VOID for doing exactly what it
+       was told to do. "The tree moved" is ambiguous until the runner's own edit is accounted for,
+       so the two questions are now asked separately against the marks `withArm` records:
+
+         fifoDrift   atLock !== launch      another owner changed src during the queue wait.
+                                            THIS is the original hazard, and it is fatal: the
+                                            arm would render a different base than the one the
+                                            `base` arm was captured on, confounding every A/B.
+         bootDrift   boot !== postInstall   src changed between the install and the boot.
+
+       `srcStable` is the conjunction of both being clean, and only that voids the arm. The
+       installed delta between `atLock` and `postInstall` is this runner's own work and is
+       expected — it is reported, never counted as drift. */
     const boot = await srcHash();
     telemetry.srcTreeAtBoot = boot.hash;
-    telemetry.srcStable = boot.hash === tree.hash;
-    if (!telemetry.srcStable) {
-      process.stdout.write(`!! TREE MOVED between launch (${tree.hash}) and boot (${boot.hash}) `
-        + '— this arm is VOID, the frames do not render the tree that was registered\n');
+    telemetry.srcTreeAtLock = marks.atLock;
+    telemetry.srcTreePostInstall = marks.postInstall;
+    const fifoDrift = marks.atLock !== tree.hash;
+    const bootDrift = boot.hash !== marks.postInstall;
+    telemetry.fifoDrift = fifoDrift;
+    telemetry.bootDrift = bootDrift;
+    telemetry.srcStable = !fifoDrift && !bootDrift;
+    if (fifoDrift) {
+      process.stdout.write(`!! TREE MOVED DURING THE FIFO WAIT — launch ${tree.hash} -> atLock `
+        + `${marks.atLock}. Another owner changed src/ while this arm queued; it would render a `
+        + 'different base than the `base` arm did. VOID.\n');
+    }
+    if (bootDrift) {
+      process.stdout.write(`!! TREE MOVED BETWEEN INSTALL AND BOOT — postInstall `
+        + `${marks.postInstall} -> boot ${boot.hash}. VOID.\n`);
+    }
+    if (telemetry.srcStable) {
+      process.stdout.write(`· srcStable OK — launch ${tree.hash} == atLock; boot == postInstall `
+        + `${marks.postInstall}${ARM === 'base' ? '' : ' (own arm install accounted for)'}\n`);
     }
     telemetry.renderer = info.renderer;
     telemetry.bootWarnings = info.warnings;
@@ -363,10 +402,10 @@ async function main() {
         + `  minDist(anchor)=${d.minDistToAnchor}  minDist(stand)=${d.minDistToStand}`
         + `  spawnHits=${hits}\n`);
     }
-  });
+  }, marks);
 
   await flush();
-  process.stdout.write(`DONE arm=${ARM} srcTree=${tree.hash}\n`);
+  process.stdout.write(`DONE arm=${ARM} srcTree=${tree.hash} srcStable=${telemetry.srcStable}\n`);
 }
 
 main().catch((e) => { console.error('FAILED:', e?.stack || e); process.exit(1); });

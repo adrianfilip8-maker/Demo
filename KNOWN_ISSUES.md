@@ -14938,3 +14938,60 @@ Five runners relaunched short-first: `combatrecipient` `cand`/`norestore`/`kbsid
 very likely to finish inside the cadence), then `staging2`, then `litwarm1 all`. That relaunch was
 also §189's first production exercise — three concurrent arms of one script, distinct pids, all
 ppid 1. Before the fix, two of the three would have been falsely attested and left mis-parented.
+
+
+## §191 — the runner voided its own arms, because it audits a tree it is itself editing
+
+`combatrecipient.mjs` guards against a real hazard (finding 8 in `RESULT-combatrecipient`): the
+launch-time source hash is taken 20–60 minutes before the FIFO lock is granted, so on its own it
+describes a tree the boot may no longer be rendering. The fix was to re-hash after the boot and
+void the arm if the two disagree.
+
+The first candidate arm to reach a boot reported:
+
+```
+· arm "cand"  srcTree 59fd366596517cf2 (58 files)
+· lock held — installing arm "cand" into src/ai/Guard.js
+  installed arm "cand" -> sha aac2f0dc3715f9ca
+!! TREE MOVED between launch (59fd366596517cf2) and boot (13dde875b6f320fb) — this arm is VOID
+```
+
+The tree moved because **the runner moved it**. `withArm` installs the arm into `src/ai/Guard.js`
+between the launch hash and the boot hash, so for every non-`base` arm the two differ **by
+construction**. The check would have voided `cand`, `norestore` and `kbside` — every candidate the
+seal has — leaving it permanently unscoreable while reporting a plausible-sounding reason.
+
+`base` hid it perfectly: `arm === 'base'` installs nothing, so the launch and boot hashes agree and
+the check looks healthy. The defect was reachable only by the arms that had never yet run.
+
+**The VOID was spurious here, and that was established from evidence, not assumed.** At the moment
+of the report `git status --porcelain src/` listed exactly one file, `src/ai/Guard.js`;
+`arms.py check` returned `matches arm: ['cand']` and `reverts to base cleanly: True`; and the
+launch hash `59fd366596517cf2` was byte-for-byte the srcTree the `base` arm registered. The boot
+tree was therefore *base + exactly this arm* — precisely what the arm is meant to render.
+
+**Fixed by asking the two questions separately**, since "the tree moved" is ambiguous while the
+runner is one of the writers. `withArm` now records the tree when the lock is granted (`atLock`,
+before installing) and again straight after the install (`postInstall`):
+
+- **`fifoDrift` = `atLock !== launch`** — another owner changed `src/` during the queue wait. This
+  is the original hazard and it stays fatal: the arm would render a different base than the one
+  `base` was captured on, confounding every A/B in the seal.
+- **`bootDrift` = `boot !== postInstall`** — the tree changed between install and boot.
+
+`srcStable` is the conjunction, and only that voids an arm. The delta between `atLock` and
+`postInstall` is the runner's own work: reported, never counted as drift. Nothing was loosened —
+the hazard the check was written for is still fatal, and is now actually detectable, because
+previously it was indistinguishable from the runner's own install.
+
+**Third instance of one defect in this batch**, and the pattern is now explicit. §189: a launcher
+verified whatever answered to the script's name. §190: a gate counted every guard in the level and
+called it the residue. §191: a drift check counted the runner's own edit as someone else's. Each
+instrument found *a* subject and reported on it as *the* subject — and in every case the tell was
+the same, a control that should have been quiet and was not: the already-detached pid, the
+residue-free base arm, the `base` arm that could never trip the check it was validating.
+
+*(The three killed arms had one consequence to clear: SIGTERM can skip the `finally` that reverts
+the installed arm, which would have left a candidate in the shared tree — §186's contamination
+hazard by another route. `arms.py revert` was run by hand and the tree confirmed back at
+`350dece5a1b13fb7` BASE before anything was relaunched.)*
