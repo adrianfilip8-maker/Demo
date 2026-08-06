@@ -1,70 +1,73 @@
 /**
- * SlyModel3 — the Sly 3 reference rebuild. Selected at boot by `__CHAR_AB=model3` (see main.js);
- * absent that token the incumbent `SlyModel.js` boots, so this file can never ship by accident.
+ * SlyModel3 — the Sly 3 reference rebuild. Selected at boot by `?char=model3` / `__CHAR_AB`
+ * (see main.js); absent that token the incumbent `SlyModel.js` boots, so this file can never
+ * ship by accident.
  *
- * WHAT THIS IS, AND WHAT IT IS NOT YET
- * -----------------------------------
- * This is stage 1: the **reference-derived skeleton, proportions and palette**, plus a skinned
- * blockout that satisfies the whole CHARACTER contract so the swap is testable end to end before
- * a single hour goes into surface form. Building it in this order is deliberate — the incumbent
- * is 3,000 lines and a rebuild that cannot boot is unmeasurable, so the first milestone is "the
- * A/B path works and the silhouette is right", not "the fur is right".
+ * STAGE 2 — surface form. Stage 1 (the blockout) proved the swap end to end and put five
+ * defects on screen; this stage exists to fix what those frames showed:
  *
- * Every constant below is traceable to `progress/records/SPEC-sly3model.md`, which records the
- * four reference images and — importantly — labels which readings are measured and which are
- * visual. Three of the four references exist only in conversation context, so the palette here is
- * a **visual reading to be converged by rendering against the reference**, not a measurement.
- * §190/§193/§195 are all one mistake — treating a quantity as better-founded than it is — so the
- * distinction is carried in the code rather than left in a document.
+ *   · the muzzle was 90% swallowed by the cranium (its first ring sat INSIDE the head blob);
+ *   · the tail rendered as a flat ribbon;
+ *   · the belt smeared into shirt and shorts as a vertex-colour gradient;
+ *   · the head read ~1/7 of height instead of the reference's 1/5.5;
+ *   · the boots ran knee-high like socks.
  *
- * CONTRACT (from Rig.js, unchanged and deliberately so):
- *   · bone bind rotations are identity — a bone's local axes are world-aligned in bind pose
- *   · +X is Sly's LEFT, +Z is FORWARD, root origin at his feet
- *   · public surface: root · bones · mesh · bp(name) · update(dt,t) · dispose()
- * Bone NAMES and HIERARCHY are identical to the incumbent's, so every authored clip in Clips.js
- * and every spring chain in Rig.js drives this model with no change. Bone POSITIONS differ —
- * that is where the Sly 3 proportions live — and that is safe precisely because clips are
- * rotations, which are proportion-independent.
+ * The ribbon tail and the invisible muzzle shared one root cause, worth recording because it is
+ * a geometry lesson and not a tuning miss: stage 1's `loft()` built every ring in the horizontal
+ * XZ plane, so any tube whose axis is itself horizontal (tail along −Z, muzzle along +Z, arms
+ * along ±X) had its ring offsets lying ALONG the axis — a degenerate ribbon. Vertical tubes
+ * (torso, legs) were fine, which is exactly why the defect survived a vertical-primitives
+ * blockout unnoticed. Stage 2 builds every limb-like form with `tube()`: rings perpendicular to
+ * the path via parallel-transport frames.
+ *
+ * Colour boundaries: `tube()`/`loft()` interpolate vertex colours between rings, so a crisp
+ * material edge (belt, cuff, boot top) is made by DOUBLING a ring — two rings at the same
+ * position carrying the two colours. The gradient smear in stage 1 was the absence of this.
+ *
+ * Reference: progress/records/SPEC-sly3model.md (palette [read] from the user-supplied flat
+ * texture atlas; proportions [read] from the standing three-quarter). PREREG-charab gates:
+ *   G1 one blue by NAME across cap/shirt/gloves/boots — every blue below is `PAL.blue`;
+ *   G2 one gold by NAME across belt/collar/cuffs/cane — every gold below is `PAL.gold`;
+ *   G3 height parity with the incumbent (TUNE.height 1.80, unchanged);
+ *   G4 tail root ≥ 0.40 × head WIDTH — see `tailRootFrac`, units stated at the constant.
+ *
+ * CONTRACT (Rig.js, unchanged): identity bind rotations; +X is Sly's LEFT, +Z FORWARD, origin at
+ * feet; public surface root · bones · mesh · bp(name) · update(dt,t) · dispose(). Bone names and
+ * hierarchy are verbatim from the incumbent so every clip and spring chain drives this model.
  */
 
 import * as THREE from 'three';
 
-/* ============================ TUNE — proportions ==========================
- * SPEC §3, all [read] from the standing three-quarter reference. Ratios were read first and
- * converted to metres at a FIXED total height, because SPEC F6 requires height parity with the
- * incumbent: if the rebuild is a different size the A/B stops being about the model.
- */
+/* ============================ TUNE — proportions ========================== */
 export const TUNE = {
-  height: 1.80,              // F6 — identical to the incumbent. Do not "improve" this.
+  height: 1.80,              // G3 — identical to the incumbent. Do not "improve" this.
 
-  /* SPEC §3: head including cap ≈ 1/5.5 of height. The incumbent reads nearer 1/6.4, so this is
-     the single largest proportion change and the one most responsible for "reads as Sly". */
-  headFraction: 1 / 5.5,
-  capRise: 0.055,            // crown of cap above skull top
-  muzzleLen: 0.86,           // longer than the incumbent's 0.71 — SPEC §2 calls the muzzle the
-                             // feature that most says "raccoon" in silhouette
-  muzzleGirth: 0.72,
-  earLen: 0.150,             // large, tall, pointed (SPEC §2)
-  earSpread: 0.130,
+  headFraction: 1 / 5.5,     // SPEC §3 [read]: head INCLUDING cap ≈ 1/5.5 of height
+  capRise: 0.055,
+  muzzleLen: 1.45,           // in head-HALF-WIDTH units, measured from the cranium's front face
+  muzzleGirth: 0.78,
+  earLen: 0.165,
+  earSpread: 0.128,
 
-  /* Long thin legs, large feet (SPEC §3). */
-  legFraction: 0.520,        // hip height as a fraction of total height
-  shinRatio: 0.52,           // shin / (thigh+shin)
-  footLen: 0.245,            // large — cartoon proportion, F-checked against silhouette
-  footWidth: 0.104,
-  limbSlim: 0.86,            // limbs are slender relative to the incumbent
+  legFraction: 0.520,
+  shinRatio: 0.52,
+  footLen: 0.250,
+  footWidth: 0.106,
+  limbSlim: 0.86,
 
-  /* SPEC §2: the tail is roughly half the visual mass and must not be under-built. F3 gates the
-     root thickness at >= 0.4 x head width; this sits well clear at 0.62. */
+  /* G4 / SPEC F3. UNITS, stated because a units error already bit here once (the gate caught the
+     stage-1 comment claiming 0.62 "sat well clear" — 0.62 was in HALF-width units and the bar is
+     in WIDTH units, so the real figure was 0.31 and the tail was too thin): `tailRootFrac` is the
+     tail root RADIUS as a fraction of head HALF-width. The gate divides by 2 to compare against
+     F3's ≥ 0.40 × head WIDTH. 0.95 here ⇒ 0.475 × head width. */
   tailScale: 1.10,
-  tailRootFrac: 0.62,        // tail root radius as a fraction of head half-width
-  tailRings: 5,              // alternating grey/cream bands (SPEC §2)
+  tailRootFrac: 0.95,
+  tailRings: 5,
 
   shoulderW: 0.150,
   hipW: 0.082,
 
-  /* --- shading / line: kept in family with the incumbent so the A/B is about FORM, not grade.
-     Changing these would make the comparison unreadable. --- */
+  /* shading/line kept in family with the incumbent so the A/B is about FORM, not grade */
   outline: 0.0034,
   outlineColor: 0x1a1210,
   rim: 0.62,
@@ -74,40 +77,30 @@ export const TUNE = {
 };
 
 /* ============================ PAL — palette ===============================
- * SPEC §1, [read] from the flat texture atlas (the one reference that is unlit albedo).
- *
- * F1 in the spec: cap, shirt, gloves and boots are ONE blue in the reference. They therefore all
- * reference `blue` here, by name, rather than carrying four near-identical literals — the defect
- * F1 exists to catch is made structurally impossible rather than merely tested for.
- * Likewise F5 and `gold`.
- */
+ * SPEC §1 [read] from the flat atlas. G1/G5-by-construction: parts reference these BY NAME. */
 const PAL = {
-  blue: 0x2f5fc4,          // shirt · cap · gloves · boots — ONE colour (F1)
-  blueDark: 0x16264f,      // shade side / inner sleeve
-  gold: 0xd9a521,          // belt · collar V · wrist cuffs · cane (F5)
+  blue: 0x2f5fc4,          // shirt · cap · gloves · boots — ONE blue (G1)
+  blueDark: 0x16264f,
+  gold: 0xd9a521,          // belt · collar · cuffs · cane — ONE gold (G2)
   goldDark: 0x8f6a12,
   cream: 0xe4dcc6,         // trousers, tail light bands
-  furLight: 0xcfcdc4,      // muzzle, cheeks, brow
-  furMid: 0x8d8b84,        // ear interior, tail dark bands
-  black: 0x141414,         // the mask, the nose
+  furLight: 0xcfcdc4,      // muzzle, cheeks, neck
+  furMid: 0x8d8b84,        // ears, tail dark bands
+  black: 0x141414,         // mask, nose, pupils
   red: 0xc4222c,           // hip sash
-  eyeIris: 0xd9821a,       // amber
+  eyeIris: 0xd9821a,
   eyeWhite: 0xf2f0ea,
 };
 
-/* ============================ SKELETON ====================================
- * Names and hierarchy verbatim from the incumbent (the clip contract). Positions are derived
- * from TUNE above rather than authored, so a proportion change propagates instead of drifting
- * out of sync with the mesh — the failure the incumbent's own tail comment records.
- */
+/* ============================ SKELETON ==================================== */
 const H = TUNE.height;
-const HEAD_H = H * TUNE.headFraction;      // head incl. cap
+const HEAD_H = H * TUNE.headFraction;
 const HIP_Y = H * TUNE.legFraction;
-const NECK_Y = H - HEAD_H;                 // neck joint = underside of the head mass
+const NECK_Y = H - HEAD_H;
 const CHEST_Y = HIP_Y + (NECK_Y - HIP_Y) * 0.62;
 const SPINE_Y = HIP_Y + (NECK_Y - HIP_Y) * 0.28;
 const HEAD_Y = NECK_Y + HEAD_H * 0.22;
-const HEAD_HW = HEAD_H * 0.40;             // head half-width
+const HEAD_HW = HEAD_H * 0.40;
 const THIGH = HIP_Y * (1 - TUNE.shinRatio);
 const ANKLE_Y = HIP_Y - THIGH - HIP_Y * TUNE.shinRatio * 0.86;
 
@@ -126,12 +119,12 @@ const SKELETON = [
 
   ['shoulderL', 'chest', [0.052, NECK_Y - 0.055, 0]],
   ['upperArmL', 'shoulderL', [TUNE.shoulderW, NECK_Y - 0.070, 0]],
-  ['lowerArmL', 'upperArmL', [TUNE.shoulderW + 0.190, NECK_Y - 0.235, 0]],
-  ['handL', 'lowerArmL', [TUNE.shoulderW + 0.340, NECK_Y - 0.400, 0]],
+  ['lowerArmL', 'upperArmL', [TUNE.shoulderW + 0.190, NECK_Y - 0.245, 0]],
+  ['handL', 'lowerArmL', [TUNE.shoulderW + 0.345, NECK_Y - 0.455, 0]],
   ['shoulderR', 'chest', [-0.052, NECK_Y - 0.055, 0]],
   ['upperArmR', 'shoulderR', [-TUNE.shoulderW, NECK_Y - 0.070, 0]],
-  ['lowerArmR', 'upperArmR', [-(TUNE.shoulderW + 0.190), NECK_Y - 0.235, 0]],
-  ['handR', 'lowerArmR', [-(TUNE.shoulderW + 0.340), NECK_Y - 0.400, 0]],
+  ['lowerArmR', 'upperArmR', [-(TUNE.shoulderW + 0.190), NECK_Y - 0.245, 0]],
+  ['handR', 'lowerArmR', [-(TUNE.shoulderW + 0.345), NECK_Y - 0.455, 0]],
 
   ['upperLegL', 'hips', [TUNE.hipW, HIP_Y - 0.015, 0]],
   ['lowerLegL', 'upperLegL', [TUNE.hipW + 0.011, HIP_Y - THIGH, 0.012]],
@@ -142,9 +135,8 @@ const SKELETON = [
   ['footR', 'lowerLegR', [-(TUNE.hipW + 0.016), ANKLE_Y, -0.020]],
   ['toeR', 'footR', [-(TUNE.hipW + 0.016), ANKLE_Y - 0.044, TUNE.footLen * 0.62]],
 
-  /* The bind tail already carries the raccoon S-curve — it RISES across the chain rather than
-     trailing flat. The incumbent records why: a horizontal bind tail is hidden by the body from
-     every angle but pure side-on, which is how a metre of tail can read as no tail at all. */
+  /* Bind tail carries the raccoon S — rises across the chain (a horizontal bind tail hides
+     behind the body from almost every angle; the incumbent's own comment records this). */
   ['tailA', 'hips', [0, HIP_Y + 0.015, -0.150 * TUNE.tailScale]],
   ['tailB', 'tailA', [0.038 * TUNE.tailScale, HIP_Y + 0.020, -0.470 * TUNE.tailScale]],
   ['tailC', 'tailB', [0.110 * TUNE.tailScale, HIP_Y + 0.075, -0.775 * TUNE.tailScale]],
@@ -153,51 +145,122 @@ const SKELETON = [
 
 const BONE_ORDER = SKELETON.map((s) => s[0]);
 
-/* ============================ mesh helpers ================================ */
+/* ============================ mesh builders =============================== */
 
-/** A lofted tube through `rings` of [centre, radius, colour], skinned to one bone each. */
-function loft(rings, bone, seg = 12) {
+/**
+ * Oriented tube: rings PERPENDICULAR to the polyline, frames carried by parallel transport so
+ * the ring basis never flips at a bend. This is the stage-2 fix for the ribbon defect — rings
+ * must be ⟂ to the path, not to the world.
+ *
+ * pts    [[x,y,z], ...]      polyline (a repeated point makes a zero-length segment: a colour
+ *                            seam — both rings share a position, colours stay crisp)
+ * rad    [r, ...]            per-point radius
+ * hex    [0x…, ...]          per-point colour
+ * bone   [i, ...]            per-point bone index (rigid weight 1)
+ */
+function tube(pts, rad, hex, bone, seg = 12) {
+  const P = pts.map((p) => new THREE.Vector3(...p));
+  const n = P.length;
+  const t = [], up = new THREE.Vector3();
+  for (let i = 0; i < n; i++) {
+    const a = P[Math.max(0, i - 1)], b = P[Math.min(n - 1, i + 1)];
+    const d = new THREE.Vector3().subVectors(b, a);
+    if (d.lengthSq() < 1e-10) t.push(t[t.length - 1]?.clone() ?? new THREE.Vector3(0, 1, 0));
+    else t.push(d.normalize());
+  }
+  // initial normal: anything not parallel to t0
+  up.set(Math.abs(t[0].y) < 0.92 ? 0 : 1, Math.abs(t[0].y) < 0.92 ? 1 : 0, 0);
+  let N = new THREE.Vector3().crossVectors(up, t[0]).normalize();
   const pos = [], col = [], idx = [], bidx = [], bwt = [];
-  const c = new THREE.Color();
-  for (let r = 0; r < rings.length; r++) {
-    const [p, rad, hex] = rings[r];
-    c.setHex(hex);
+  const c = new THREE.Color(), B = new THREE.Vector3();
+  for (let i = 0; i < n; i++) {
+    if (i > 0) { // parallel transport: project previous normal off the new tangent
+      N = N.clone().sub(t[i].clone().multiplyScalar(N.dot(t[i])));
+      if (N.lengthSq() < 1e-8) N.set(0, 1, 0).sub(t[i].clone().multiplyScalar(t[i].y));
+      N.normalize();
+    }
+    B.crossVectors(t[i], N).normalize();
+    c.setHex(hex[i]);
     for (let s = 0; s < seg; s++) {
-      const a = (s / seg) * Math.PI * 2;
-      pos.push(p[0] + Math.cos(a) * rad, p[1], p[2] + Math.sin(a) * rad);
+      const a = (s / seg) * Math.PI * 2, ca = Math.cos(a) * rad[i], sa = Math.sin(a) * rad[i];
+      pos.push(P[i].x + N.x * ca + B.x * sa, P[i].y + N.y * ca + B.y * sa, P[i].z + N.z * ca + B.z * sa);
       col.push(c.r, c.g, c.b);
-      bidx.push(bone, 0, 0, 0);
-      bwt.push(1, 0, 0, 0);
+      bidx.push(bone[i], 0, 0, 0); bwt.push(1, 0, 0, 0);
     }
   }
-  for (let r = 0; r < rings.length - 1; r++) {
+  for (let r = 0; r < n - 1; r++) {
     for (let s = 0; s < seg; s++) {
-      const a = r * seg + s, b = r * seg + ((s + 1) % seg);
-      const d = a + seg, e = b + seg;
+      const a = r * seg + s, b2 = r * seg + ((s + 1) % seg), d = a + seg, e = b2 + seg;
+      idx.push(a, d, b2, b2, d, e);
+    }
+  }
+  return { pos, col, idx, bidx, bwt };
+}
+
+/** Vertical-axis ellipsoid (fine for heads/hands/blobs — its axis never lies flat). */
+function blob(centre, radii, hexv, bone, seg = 12, rows = 8) {
+  const pos = [], col = [], idx = [], bidx = [], bwt = [];
+  const c = new THREE.Color(hexv);
+  for (let i = 0; i <= rows; i++) {
+    const phi = (i / rows) * Math.PI;
+    const y = centre[1] + Math.cos(phi) * radii[1];
+    const rx = Math.max(1e-4, Math.sin(phi) * radii[0]);
+    const rz = Math.max(1e-4, Math.sin(phi) * radii[2]);
+    for (let s = 0; s < seg; s++) {
+      const a = (s / seg) * Math.PI * 2;
+      pos.push(centre[0] + Math.cos(a) * rx, y, centre[2] + Math.sin(a) * rz);
+      col.push(c.r, c.g, c.b);
+      bidx.push(bone, 0, 0, 0); bwt.push(1, 0, 0, 0);
+    }
+  }
+  for (let r = 0; r < rows; r++) {
+    for (let s = 0; s < seg; s++) {
+      const a = r * seg + s, b = r * seg + ((s + 1) % seg), d = a + seg, e = b + seg;
       idx.push(a, d, b, b, d, e);
     }
   }
   return { pos, col, idx, bidx, bwt };
 }
 
-/** Axis-aligned ellipsoid, skinned rigidly to one bone. */
-function blob(centre, radii, hex, bone, seg = 12, rows = 8) {
-  const rings = [];
-  for (let i = 0; i <= rows; i++) {
-    const t = i / rows, phi = t * Math.PI;
-    rings.push([
-      [centre[0], centre[1] + Math.cos(phi) * radii[1], centre[2]],
-      Math.max(1e-4, Math.sin(phi) * radii[0]),
-      hex,
+/** Vertical loft (axis = +Y): unchanged from stage 1, correct for the torso/neck. */
+function loft(rings, bone, seg = 14) {
+  const pos = [], col = [], idx = [], bidx = [], bwt = [];
+  const c = new THREE.Color();
+  for (const [p, rad, hexv] of rings) {
+    c.setHex(hexv);
+    for (let s = 0; s < seg; s++) {
+      const a = (s / seg) * Math.PI * 2;
+      pos.push(p[0] + Math.cos(a) * rad, p[1], p[2] + Math.sin(a) * rad);
+      col.push(c.r, c.g, c.b);
+      bidx.push(bone, 0, 0, 0); bwt.push(1, 0, 0, 0);
+    }
+  }
+  for (let r = 0; r < rings.length - 1; r++) {
+    for (let s = 0; s < seg; s++) {
+      const a = r * seg + s, b = r * seg + ((s + 1) % seg), d = a + seg, e = b + seg;
+      idx.push(a, d, b, b, d, e);
+    }
+  }
+  return { pos, col, idx, bidx, bwt };
+}
+
+/** Catmull-Rom through pts, sampled at `steps` points (for the tail spline). */
+function catmull(pts, steps) {
+  const P = pts.map((p) => new THREE.Vector3(...p));
+  const out = [];
+  const get = (i) => P[Math.max(0, Math.min(P.length - 1, i))];
+  for (let s = 0; s < steps; s++) {
+    const t = (s / (steps - 1)) * (P.length - 1);
+    const i = Math.min(P.length - 2, Math.floor(t)), u = t - i;
+    const p0 = get(i - 1), p1 = get(i), p2 = get(i + 1), p3 = get(i + 2);
+    const u2 = u * u, u3 = u2 * u;
+    out.push([
+      0.5 * ((2 * p1.x) + (-p0.x + p2.x) * u + (2 * p0.x - 5 * p1.x + 4 * p2.x - p3.x) * u2 + (-p0.x + 3 * p1.x - 3 * p2.x + p3.x) * u3),
+      0.5 * ((2 * p1.y) + (-p0.y + p2.y) * u + (2 * p0.y - 5 * p1.y + 4 * p2.y - p3.y) * u2 + (-p0.y + 3 * p1.y - 3 * p2.y + p3.y) * u3),
+      0.5 * ((2 * p1.z) + (-p0.z + p2.z) * u + (2 * p0.z - 5 * p1.z + 4 * p2.z - p3.z) * u2 + (-p0.z + 3 * p1.z - 3 * p2.z + p3.z) * u3),
     ]);
   }
-  const g = loft(rings, bone, seg);
-  // squash Z independently so a blob can be an egg rather than only a sphere
-  if (radii[2] !== radii[0]) {
-    const k = radii[2] / radii[0];
-    for (let i = 2; i < g.pos.length; i += 3) g.pos[i] = centre[2] + (g.pos[i] - centre[2]) * k;
-  }
-  return g;
+  return out;
 }
 
 function merge(parts) {
@@ -225,95 +288,190 @@ export class SlyModel {
   }
 
   async init() {
-    const THREEJS = THREE;
-    /* ---- skeleton ---- */
-    const boneIndex = {};
-    SKELETON.forEach(([name], i) => { boneIndex[name] = i; });
+    /* ---- skeleton (identical mechanism to stage 1) ---- */
     for (const [name, parent, p] of SKELETON) {
-      const b = new THREEJS.Bone();
+      const b = new THREE.Bone();
       b.name = name;
-      // Positions in SKELETON are ABSOLUTE model-space; convert to parent-local so every bind
-      // rotation stays identity (the contract Rig.js depends on).
       const par = parent === 'root' ? null : this.bones[parent];
       const parAbs = parent === 'root' ? [0, 0, 0] : this._abs[parent];
       b.position.set(p[0] - parAbs[0], p[1] - parAbs[1], p[2] - parAbs[2]);
       (this._abs ||= {})[name] = p;
       (par || this.root).add(b);
       this.bones[name] = b;
-      this._bindWorld[name] = new THREEJS.Vector3(p[0], p[1], p[2]);
+      this._bindWorld[name] = new THREE.Vector3(p[0], p[1], p[2]);
     }
-
     const boneList = BONE_ORDER.map((n) => this.bones[n]);
-    const skeleton = new THREEJS.Skeleton(boneList);
-
-    /* ---- blockout geometry ---- */
+    const skeleton = new THREE.Skeleton(boneList);
     const bi = (n) => BONE_ORDER.indexOf(n);
     const hw = HEAD_HW;
+    const A = this._abs;
     const parts = [];
 
-    // torso: hips -> chest, tapering, in shirt blue with the cream trouser block below the belt
+    /* ================= HEAD group ================= */
+    const headB = bi('head');
+    const CR = [hw * 1.04, HEAD_H * 0.46, hw * 0.98];            // cranium radii — fills the budget
+    const CY = HEAD_Y + HEAD_H * 0.14;                            // cranium centre height
+    parts.push(blob([0, CY, 0], CR, PAL.furLight, headB, 14, 10));
+
+    // muzzle — oriented tube from the cranium's FRONT FACE outward (+Z), dipping slightly.
+    // Stage 1's sat inside the ball; this one starts at z = 0.80·hw (proud of centre) and runs
+    // muzzleLen HALF-WIDTHS from the front face, so the snout projects unambiguously.
+    const mzY = CY - HEAD_H * 0.10;
+    const mz0 = CR[2] * 0.80;
+    const mzTip = CR[2] + hw * TUNE.muzzleLen - CR[2] * 0.2;
+    parts.push(tube(
+      [[0, mzY, mz0], [0, mzY - 0.008, (mz0 + mzTip) / 2], [0, mzY - 0.020, mzTip]],
+      [hw * 0.52 * TUNE.muzzleGirth, hw * 0.40 * TUNE.muzzleGirth, hw * 0.20],
+      [PAL.furLight, PAL.furLight, PAL.furLight], [headB, headB, headB], 12));
+    parts.push(blob([0, mzY - 0.014, mzTip + hw * 0.06], [hw * 0.13, hw * 0.10, hw * 0.11], PAL.black, headB, 10, 6));
+
+    // mask — black field across the eyes with pointed outer corners: two wing blobs proud of the
+    // cranium plus a bridge across the face front (SPEC §2: it is a fur marking and wraps).
+    const eyeY = CY + HEAD_H * 0.05;
+    for (const s of [1, -1]) {
+      parts.push(blob([s * hw * 0.72, eyeY, hw * 0.42], [hw * 0.40, hw * 0.26, hw * 0.34], PAL.black, headB, 10, 6));
+    }
+    parts.push(blob([0, eyeY, hw * 0.86], [hw * 0.62, hw * 0.24, hw * 0.18], PAL.black, headB, 12, 6));
+
+    // eyes — sclera / iris / pupil, layered forward of the mask bridge
+    for (const s of [1, -1]) {
+      parts.push(blob([s * hw * 0.30, eyeY + hw * 0.02, hw * 0.97], [hw * 0.155, hw * 0.15, hw * 0.085], PAL.eyeWhite, headB, 10, 6));
+      parts.push(blob([s * hw * 0.28, eyeY + hw * 0.02, hw * 1.045], [hw * 0.085, hw * 0.085, hw * 0.045], PAL.eyeIris, headB, 8, 5));
+      parts.push(blob([s * hw * 0.27, eyeY + hw * 0.02, hw * 1.085], [hw * 0.038, hw * 0.038, hw * 0.022], PAL.black, headB, 6, 4));
+    }
+
+    // cap — blue dome over the cranium top + a forward brim (G1: PAL.blue)
+    parts.push(blob([0, CY + HEAD_H * 0.30, -hw * 0.06], [hw * 1.08, HEAD_H * 0.235, hw * 1.02], PAL.blue, headB, 14, 8));
+    parts.push(blob([0, CY + HEAD_H * 0.205, hw * 0.92], [hw * 0.58, HEAD_H * 0.038, hw * 0.46], PAL.blue, bi('capBrim'), 12, 5));
+
+    // ears — big oriented fins, wide base to a sharp tip (SPEC: large, tall, pointed)
+    for (const [n, s] of [['earL', 1], ['earR', -1]]) {
+      const eb = A[n];
+      parts.push(tube(
+        [[eb[0], eb[1] - 0.012, eb[2]],
+         [eb[0] + s * 0.030, eb[1] + TUNE.earLen * 0.55, eb[2] - 0.012],
+         [eb[0] + s * 0.052, eb[1] + TUNE.earLen, eb[2] - 0.024]],
+        [hw * 0.36, hw * 0.20, hw * 0.035],
+        [PAL.furMid, PAL.furMid, PAL.furLight], [bi(n), bi(n), bi(n)], 10));
+    }
+
+    // neck — closes the stage-1 gap between torso top and head underside
     parts.push(loft([
-      [[0, HIP_Y - 0.10, 0], 0.098, PAL.cream],
-      [[0, HIP_Y, 0], 0.104, PAL.cream],
-      [[0, HIP_Y + 0.03, 0], 0.106, PAL.gold],      // the belt
-      [[0, SPINE_Y, 0], 0.108, PAL.blue],
-      [[0, CHEST_Y, 0], 0.116, PAL.blue],
-      [[0, NECK_Y - 0.03, 0], 0.086, PAL.blue],
+      [[0, NECK_Y - 0.045, 0.010], 0.058, PAL.furLight],
+      [[0, HEAD_Y + 0.010, 0.012], 0.062, PAL.furLight],
+    ], bi('neck')));
+
+    /* ================= TORSO — doubled rings for crisp edges ================= */
+    const beltLo = HIP_Y + 0.008, beltHi = HIP_Y + 0.052;
+    const collarLo = NECK_Y - 0.062;
+    parts.push(loft([
+      [[0, HIP_Y - 0.125, 0], 0.094, PAL.cream],
+      [[0, beltLo, 0], 0.108, PAL.cream],
+      [[0, beltLo, 0], 0.110, PAL.gold],     // ← doubled: cream|gold seam
+      [[0, beltHi, 0], 0.112, PAL.gold],
+      [[0, beltHi, 0], 0.110, PAL.blue],     // ← doubled: gold|blue seam
+      [[0, SPINE_Y, 0], 0.112, PAL.blue],
+      [[0, CHEST_Y, 0], 0.122, PAL.blue],
+      [[0, collarLo, 0], 0.098, PAL.blue],
+      [[0, collarLo, 0], 0.098, PAL.gold],   // ← doubled: blue|gold collar seam
+      [[0, NECK_Y - 0.030, 0], 0.078, PAL.gold],
     ], bi('chest')));
 
-    // head + muzzle + cap
-    parts.push(blob([0, HEAD_Y + HEAD_H * 0.12, 0], [hw, HEAD_H * 0.40, hw * 0.94], PAL.furLight, bi('head')));
-    parts.push(loft([
-      [[0, HEAD_Y + HEAD_H * 0.06, hw * 0.55], hw * 0.52 * TUNE.muzzleGirth, PAL.furLight],
-      [[0, HEAD_Y + HEAD_H * 0.02, hw * 0.55 + hw * TUNE.muzzleLen * 0.60], hw * 0.30 * TUNE.muzzleGirth, PAL.furLight],
-      [[0, HEAD_Y - HEAD_H * 0.02, hw * 0.55 + hw * TUNE.muzzleLen], hw * 0.13, PAL.black],
-    ], bi('head')));
-    parts.push(blob([0, HEAD_Y + HEAD_H * 0.40, -hw * 0.05], [hw * 1.03, HEAD_H * 0.20, hw * 1.00], PAL.blue, bi('head')));
+    // red hip sash — on Sly's RIGHT (−X): a wrap pad + a hanging flap (SPEC §2)
+    parts.push(blob([-0.078, HIP_Y - 0.028, 0.058], [0.070, 0.048, 0.070], PAL.red, bi('hips'), 10, 6));
+    parts.push(tube(
+      [[-0.062, HIP_Y - 0.052, 0.088], [-0.052, HIP_Y - 0.165, 0.098]],
+      [0.036, 0.020], [PAL.red, PAL.red], [bi('hips'), bi('hips')], 8));
 
-    // ears
-    for (const [n, sx] of [['earL', 1], ['earR', -1]]) {
-      parts.push(loft([
-        [[sx * TUNE.earSpread, HEAD_Y + HEAD_H * 0.34, -hw * 0.16], hw * 0.30, PAL.furMid],
-        [[sx * (TUNE.earSpread + 0.02), HEAD_Y + HEAD_H * 0.34 + TUNE.earLen * 0.6, -hw * 0.18], hw * 0.18, PAL.furLight],
-        [[sx * (TUNE.earSpread + 0.03), HEAD_Y + HEAD_H * 0.34 + TUNE.earLen, -hw * 0.20], hw * 0.03, PAL.furLight],
-      ], bi(n), 8));
-    }
-
-    // limbs
-    const limb = (a, b, ra, rb, hex, bone) => parts.push(loft([
-      [a, ra, hex], [[(a[0] + b[0]) / 2, (a[1] + b[1]) / 2, (a[2] + b[2]) / 2], (ra + rb) / 2, hex], [b, rb, hex],
-    ], bone, 10));
+    /* ================= ARMS — oriented tubes, gold cuffs, mitten hands ================= */
     for (const s of [1, -1]) {
       const L = s > 0 ? 'L' : 'R';
-      const A = this._abs;
-      limb(A[`upperArm${L}`], A[`lowerArm${L}`], 0.052 * TUNE.limbSlim, 0.043 * TUNE.limbSlim, PAL.blue, bi(`upperArm${L}`));
-      limb(A[`lowerArm${L}`], A[`hand${L}`], 0.043 * TUNE.limbSlim, 0.036 * TUNE.limbSlim, PAL.blue, bi(`lowerArm${L}`));
-      parts.push(blob(A[`hand${L}`], [0.055, 0.058, 0.050], PAL.blue, bi(`hand${L}`), 8, 6));
-      limb(A[`upperLeg${L}`], A[`lowerLeg${L}`], 0.070 * TUNE.limbSlim, 0.054 * TUNE.limbSlim, PAL.cream, bi(`upperLeg${L}`));
-      limb(A[`lowerLeg${L}`], A[`foot${L}`], 0.050 * TUNE.limbSlim, 0.040 * TUNE.limbSlim, PAL.blue, bi(`lowerLeg${L}`));
-      parts.push(blob([A[`foot${L}`][0], A[`foot${L}`][1] - 0.020, A[`foot${L}`][2] + TUNE.footLen * 0.30],
-        [TUNE.footWidth, 0.050, TUNE.footLen * 0.60], PAL.blue, bi(`foot${L}`), 10, 6));
+      const sh = A[`upperArm${L}`], el = A[`lowerArm${L}`], wr = A[`hand${L}`];
+      const slim = TUNE.limbSlim;
+      // wrist cuff: doubled point 3.5cm before the wrist along the forearm
+      const cu = [wr[0] - (wr[0] - el[0]) * 0.18, wr[1] - (wr[1] - el[1]) * 0.18, wr[2] - (wr[2] - el[2]) * 0.18];
+      parts.push(tube(
+        [sh, el, cu, cu, wr],
+        [0.052 * slim, 0.044 * slim, 0.038 * slim, 0.046 * slim, 0.046 * slim],
+        [PAL.blue, PAL.blue, PAL.blue, PAL.gold, PAL.gold],
+        [bi(`upperArm${L}`), bi(`lowerArm${L}`), bi(`lowerArm${L}`), bi(`lowerArm${L}`), bi(`hand${L}`)], 10));
+      // mitten + thumb (G1: PAL.blue)
+      parts.push(blob([wr[0] + s * 0.012, wr[1] - 0.035, wr[2] + 0.012], [0.052, 0.062, 0.056], PAL.blue, bi(`hand${L}`), 10, 6));
+      parts.push(tube(
+        [[wr[0], wr[1] - 0.020, wr[2] + 0.030], [wr[0] - s * 0.012, wr[1] - 0.052, wr[2] + 0.058]],
+        [0.020, 0.013], [PAL.blue, PAL.blue], [bi(`hand${L}`), bi(`hand${L}`)], 7));
     }
 
-    // tail — banded, thick at the root (F3)
-    const tailBones = ['tailA', 'tailB', 'tailC', 'tailD'];
-    const rootR = hw * TUNE.tailRootFrac;
-    for (let i = 0; i < tailBones.length; i++) {
-      const a = this._abs[tailBones[i]];
-      const b = i + 1 < tailBones.length ? this._abs[tailBones[i + 1]]
-        : [a[0] + 0.14, a[1] + 0.10, a[2] - 0.20];
-      const t0 = i / tailBones.length, t1 = (i + 1) / tailBones.length;
-      const r0 = rootR * (1 - t0 * 0.55), r1 = rootR * (1 - t1 * 0.55);
-      const hex = i % 2 === 0 ? PAL.furMid : PAL.cream;
-      parts.push(loft([[a, r0, hex], [b, r1, hex]], bi(tailBones[i]), 12));
+    /* ================= LEGS — cream to mid-calf, then blue boots ================= */
+    for (const s of [1, -1]) {
+      const L = s > 0 ? 'L' : 'R';
+      const hip = A[`upperLeg${L}`], knee = A[`lowerLeg${L}`], ank = A[`foot${L}`];
+      const slim = TUNE.limbSlim;
+      // boot top: 45% of the way down the shin — doubled for the cream|blue seam, with flare
+      const bt = [knee[0] + (ank[0] - knee[0]) * 0.45, knee[1] + (ank[1] - knee[1]) * 0.45, knee[2] + (ank[2] - knee[2]) * 0.45];
+      parts.push(tube(
+        [hip, knee, bt, bt, ank],
+        [0.070 * slim, 0.052 * slim, 0.046 * slim, 0.056 * slim, 0.050 * slim],
+        [PAL.cream, PAL.cream, PAL.cream, PAL.blue, PAL.blue],
+        [bi(`upperLeg${L}`), bi(`lowerLeg${L}`), bi(`lowerLeg${L}`), bi(`lowerLeg${L}`), bi(`foot${L}`)], 10));
+      // foot: big rounded boot + heel (G1: PAL.blue)
+      parts.push(blob([ank[0], ank[1] - 0.024, ank[2] + TUNE.footLen * 0.30],
+        [TUNE.footWidth, 0.055, TUNE.footLen * 0.62], PAL.blue, bi(`foot${L}`), 12, 6));
+      parts.push(blob([ank[0], ank[1] - 0.016, ank[2] - TUNE.footLen * 0.16],
+        [TUNE.footWidth * 0.72, 0.048, TUNE.footLen * 0.24], PAL.blue, bi(`foot${L}`), 8, 5));
     }
 
+    /* ================= TAIL — thick, banded, splined ================= */
+    {
+      const rootR = hw * TUNE.tailRootFrac;                       // G4: 0.95·hw ⇒ 0.475 × head width
+      const spine = catmull([
+        [0, HIP_Y + 0.010, -0.06],
+        A.tailA, A.tailB, A.tailC, A.tailD,
+        [A.tailD[0] + 0.16 * TUNE.tailScale, A.tailD[1] + 0.16, A.tailD[2] - 0.14 * TUNE.tailScale],
+      ], 16);
+      const tailBones = ['tailA', 'tailB', 'tailC', 'tailD'].map(bi);
+      const pts = [], rad = [], hex = [], bone = [];
+      for (let i = 0; i < spine.length; i++) {
+        const t = i / (spine.length - 1);
+        pts.push(spine[i]);
+        rad.push(Math.max(hw * 0.06, rootR * (1 - 0.72 * t)));
+        /* band index: TUNE.tailRings alternations root→tip, dark first (SPEC: ringed grey/cream) */
+        const band = Math.min(TUNE.tailRings * 2 - 1, Math.floor(t * TUNE.tailRings * 2));
+        hex.push(band % 2 === 0 ? PAL.furMid : PAL.cream);
+        bone.push(tailBones[Math.min(tailBones.length - 1, Math.floor(t * tailBones.length))]);
+      }
+      parts.push(tube(pts, rad, hex, bone, 12));
+      // rounded tip
+      const tip = spine[spine.length - 1];
+      parts.push(blob([tip[0], tip[1], tip[2]], [hw * 0.10, hw * 0.10, hw * 0.10],
+        PAL.furMid, tailBones[3], 8, 5));
+    }
+
+    /* ================= CANE — gold shaft + hook, in the right hand (G2: PAL.gold) ============ */
+    {
+      const wr = A.handR;
+      const g = bi('handR');
+      const top = [wr[0] - 0.02, wr[1] + 0.62, wr[2] + 0.10];
+      parts.push(tube(
+        [[wr[0] + 0.01, wr[1] - 0.42, wr[2] - 0.07], [wr[0], wr[1], wr[2] + 0.0], top],
+        [0.014, 0.014, 0.013], [PAL.gold, PAL.gold, PAL.gold], [g, g, g], 8));
+      // hook: half-circle curling forward from the shaft top
+      const hookPts = [], hookR = 0.085;
+      for (let i = 0; i <= 6; i++) {
+        const a = (i / 6) * Math.PI;                              // 180°
+        hookPts.push([top[0], top[1] + Math.sin(a) * hookR, top[2] + hookR - Math.cos(a) * hookR]);
+      }
+      parts.push(tube(hookPts, hookPts.map(() => 0.012), hookPts.map(() => PAL.gold),
+        hookPts.map(() => g), 8));
+    }
+
+    /* ---- assemble ---- */
     const m = merge(parts);
-    const geo = new THREEJS.BufferGeometry();
-    geo.setAttribute('position', new THREEJS.Float32BufferAttribute(m.pos, 3));
-    geo.setAttribute('color', new THREEJS.Float32BufferAttribute(m.col, 3));
-    geo.setAttribute('skinIndex', new THREEJS.Uint16BufferAttribute(m.bidx, 4));
-    geo.setAttribute('skinWeight', new THREEJS.Float32BufferAttribute(m.bwt, 4));
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(m.pos, 3));
+    geo.setAttribute('color', new THREE.Float32BufferAttribute(m.col, 3));
+    geo.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(m.bidx, 4));
+    geo.setAttribute('skinWeight', new THREE.Float32BufferAttribute(m.bwt, 4));
     geo.setIndex(m.idx);
     geo.computeVertexNormals();
 
@@ -324,9 +482,9 @@ export class SlyModel {
         rim: TUNE.rim, rimColor: TUNE.rimColor, sss: TUNE.furSSS,
         outline: TUNE.outline, outlineColor: TUNE.outlineColor,
       })
-      : new THREEJS.MeshStandardMaterial({ vertexColors: true, roughness: 0.85 });
+      : new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.85 });
 
-    this.mesh = new THREEJS.SkinnedMesh(geo, mat);
+    this.mesh = new THREE.SkinnedMesh(geo, mat);
     this.mesh.name = 'sly3:mesh';
     this.mesh.castShadow = true;
     this.mesh.receiveShadow = true;
@@ -341,11 +499,8 @@ export class SlyModel {
     this.engine?.scene?.add(this.root);
   }
 
-  /** Bind-pose world position of a bone — Rig.js calls this for the hips. */
   bp(name) { return this._bindWorld[name]; }
-
-  update() { /* all motion comes from Rig/Animation; nothing self-driven here */ }
-
+  update() { /* all motion comes from Rig/Animation */ }
   dispose() {
     this.mesh?.geometry?.dispose?.();
     const mm = this.mesh?.material;
