@@ -46,7 +46,9 @@ export const TUNE = {
      "~1/7" and asked for "about 1/5". The render eats head-share through the muzzle projecting
      forward rather than up and the cap hugging the skull, so the budget is raised toward the
      critic's number. SPEC's own rule: [read] values converge by rendering. */
-  headFraction: 1 / 5.1,
+  /* r2 measured the render at 6.1 heads — top of the window, still lean. Third nudge toward the
+     centre; the critic measures, so the number converges by rounds. */
+  headFraction: 1 / 4.85,
   capRise: 0.055,
   muzzleLen: 1.45,           // in head-HALF-WIDTH units, measured from the cranium's front face
   muzzleGirth: 0.78,
@@ -343,7 +345,9 @@ export class SlyModel {
       parts.push(blob([s * hw * 0.34, mzY - hw * 0.06, CR[2] * 0.72], [hw * 0.26, hw * 0.22, hw * 0.24],
         PAL.furLight, headB, 10, 6));                       // cheeks: blend muzzle root into skull
     }
-    parts.push(blob([0, mzY - 0.004, mzTip + hw * 0.07], [hw * 0.15, hw * 0.115, hw * 0.125], PAL.black, headB, 10, 6));
+    /* r2 (closeup): "flat-ended grey cylinder with no nose" — the nose now CAPS the muzzle tip
+       (overlapping the last ring) instead of floating ahead of it. */
+    parts.push(blob([0, mzY - 0.004, mzTip + hw * 0.02], [hw * 0.17, hw * 0.13, hw * 0.14], PAL.black, headB, 10, 6));
 
     // mask — black field across the eyes with pointed outer corners: two wing blobs proud of the
     // cranium plus a bridge across the face front (SPEC §2: it is a fur marking and wraps).
@@ -356,7 +360,9 @@ export class SlyModel {
         [[s * hw * 0.82, eyeY + hw * 0.02, hw * 0.30], [s * hw * 1.06, eyeY + hw * 0.10, -hw * 0.10]],
         [hw * 0.16, hw * 0.015], [PAL.black, PAL.black], [headB, headB], 8));
     }
-    parts.push(blob([0, eyeY, hw * 0.86], [hw * 0.62, hw * 0.24, hw * 0.13], PAL.black, headB, 12, 6));
+    /* r2 (closeup): "mask a lopsided blob covering one eye only" from three-quarter — the bridge
+       now spans wide enough to cover BOTH eyes from front-3/4, and the wings sit more frontal. */
+    parts.push(blob([0, eyeY, hw * 0.86], [hw * 0.78, hw * 0.24, hw * 0.13], PAL.black, headB, 12, 6));
 
     /* eyes — stage 3: ~30% bigger and pushed proud of a THINNER mask bridge. Stage 2's stack sat
        flush with the bridge and read as one black lump; the amber is an identity cue and has to
@@ -463,12 +469,15 @@ export class SlyModel {
         [0, HIP_Y + 0.010, -0.06],
         A.tailA, A.tailB, A.tailC, A.tailD,
         [A.tailD[0] + 0.10 * TUNE.tailScale, A.tailD[1] + 0.05, A.tailD[2] - 0.11 * TUNE.tailScale],
-      ], 22);
+      ], 30);
       const tailBones = ['tailA', 'tailB', 'tailC', 'tailD'].map(bi);
       const pts = [], rad = [], hex = [], bone = [];
       const bandOf = (t) => Math.min(TUNE.tailRings * 2 - 1, Math.floor(t * TUNE.tailRings * 2));
       const colOf = (b) => (b % 2 === 0 ? PAL.tailDark : PAL.cream);   // dark first, HIGH contrast
-      const radOf = (t) => Math.max(hw * 0.10, rootR * (1 - 0.60 * t)); // gentler taper: keeps mid mass
+      /* r2 (traversal, 0-4): "uniform-diameter kinked tube that reads as a rope or a spare limb
+         at gameplay distance". Stronger tip taper restores the cone read; the root is untouched
+         (G4). The kink is sampling: see the 30-step spline below. */
+      const radOf = (t) => Math.max(hw * 0.07, rootR * (1 - 0.80 * Math.pow(t, 1.1)));
       const boneOf = (t) => tailBones[Math.min(tailBones.length - 1, Math.floor(t * tailBones.length))];
       let prevBand = -1;
       for (let i = 0; i < spine.length; i++) {
@@ -494,10 +503,14 @@ export class SlyModel {
       const wr = A.handR;
       const g = bi('handR');
       /* r1: the cane read as "a thin gold thread ... a hanging chain". Shaft and hook radii up
-         ~60%, hook radius up to a real crook, so it carries weight at gameplay distance. */
-      const top = [wr[0] - 0.02, wr[1] + 0.62, wr[2] + 0.10];
+         ~60%, hook radius up to a real crook, so it carries weight at gameplay distance.
+         r2: "the cane detaches — floating clear of the hand, clipping the tail, stabbing through
+         the hip". The shaft now runs THROUGH the mitten's centre (the grip is a spline point, not
+         a hope), and the below-hand run is 40% shorter so a crouch cannot drive it into the hip. */
+      const grip = [wr[0] - 0.014, wr[1] - 0.042, wr[2] + 0.014];   // the mitten's centre, exactly
+      const top = [wr[0] - 0.02, wr[1] + 0.55, wr[2] + 0.09];
       parts.push(tube(
-        [[wr[0] + 0.01, wr[1] - 0.42, wr[2] - 0.07], [wr[0], wr[1], wr[2] + 0.0], top],
+        [[grip[0] + 0.02, grip[1] - 0.25, grip[2] - 0.05], grip, top],
         [0.022, 0.023, 0.021], [PAL.gold, PAL.gold, PAL.gold], [g, g, g], 9));
       const hookPts = [], hookR = 0.115;
       for (let i = 0; i <= 7; i++) {
