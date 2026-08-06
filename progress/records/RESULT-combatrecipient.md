@@ -412,3 +412,82 @@ the frames: the recipient interpenetrates the player character.
 **Not re-tuned, not re-run under new bands.** `restore` is still queued and will settle whether
 boot-to-boot noise is 0 px or 10⁴ px; that number is worth having for the next seal's P-F5, but it
 cannot change this one's outcome.
+
+---
+
+## `restore` — **P-F6 fires, and it is upstream of everything above**
+
+```
+base vs restore, byte-identical source, separate boots:
+  combat        28,431 px  (3.0850% of frame)   max |ΔSumRGB| 288
+  sly-profile        62 px (0.0067% of frame)   max |ΔSumRGB|  36
+```
+
+P-F6, verbatim: *"If `Δ(base, restore)` on `combat` is nonzero, the boot is not deterministic and
+**every differing-pixel count in that pair is void** (§122.1 precedent)."*
+
+It is 28,431. **P-F6 fires.** This runner is one-arm-per-boot by design, so *every* cross-arm
+comparison in this seal is a cross-boot comparison, and every combat differing-pixel count is void:
+P1, P1b, P2, P3, P3b, P-F5's 82,091 px, KB-P1 and KB-P2 alike.
+
+**That makes the two verdicts above unsound in turn, and both are corrected here.** P-F5's band was
+`== 0` and P-F7's trigger was a P2 reading — both are combat differing-pixel counts, so neither
+falsifier can be evaluated at all. The correct statement is not "P-F5 fires" or "P-F7 fires" but
+that **the combat half of this seal never had a measurable baseline**, and P-F6 is the check that
+was written to catch exactly that.
+
+### The noise is not diffuse — it is the FX, and that explains the inversion
+
+The 460× gap between the two shots localises it: `sly-profile` is a character-sheet staging and is
+effectively deterministic at **62 px**; `combat` carries the veil, the spark burst and the flash
+disc, and is nondeterministic at **28,431 px**. Boot-to-boot particle seeding and FX phase are not
+reproduced.
+
+**P2 measured the flash disc — the single most nondeterministic region in the frame.** So the
+inversion recorded above (`cand` 0.245 against a ≥0.80 band, `kbside` 0.824 against a ≤0.15 band)
+needs no exotic explanation about sign conventions: **P2's readings were noise-dominated.** A metric
+sampling the loudest region in the image across two boots will return whatever that region happened
+to be doing. That is the honest account, and it retracts the "P2 reads backwards" framing above —
+P2 does not read backwards, it reads *nothing*, which is worse and was invisible until the control
+ran.
+
+### What survives, and it is not nothing
+
+- **The residue half STANDS.** It lives on `sly-profile`, whose floor is **62 px**. `P4` measured
+  **108 px** against a band of ≤ 4,608 — comfortably inside the band and above the floor, and the
+  band is ~74× the floor either way. `P4b` = 0. `P4c` is telemetry, not pixels, and is immune to
+  this entirely: **15.8106 m** on `cand` vs a ≥ 2.0 m band, and **0.0001 m** on `norestore` vs a
+  ≤ 0.5 m known-bad band. **The residue instrument is calibrated, the residue mechanism is real,
+  and Edit 2 fixes it.** That conclusion is untouched by P-F6.
+- **The composition finding STANDS.** `cand` puts the recipient *inside* Sly; `kbside` puts him
+  beside Sly, reeling, with two clean silhouettes. A 3 % FX shimmer cannot move a body two metres —
+  this is a structural fact about where the solver puts the guard, not a pixel statistic.
+- **The stand solver is exact**: `[0.1019, 0, 29.0349]`, off-prediction **0.000 m**.
+
+### §192 verified in production, on the case that broke `norestore`
+
+`restore` launched reading srcTree `6460e59a72a87e57` — the tree while `kbside`'s arm was installed —
+and reached the lock at `59fd366596517cf2`. Under the old rule that is `fifoDrift` and a void arm.
+Under §192 it reads:
+
+```
+reference 59fd366596517cf2 from telemetry-base.json srcTree
+fifoDrift False   bootDrift False   srcStable True
+```
+
+The reference is the declared quantity, and the arm is correctly attested.
+
+## Verdict — FINAL, superseding both entries above
+
+> **The combat half is VOID (P-F6): it never had a determinism baseline, so no combat quantity in
+> this seal — including the ones I earlier read as P-F5 and P-F7 firing — is evaluable.**
+> **The residue half PASSES** (P4, P4b, P4c, KB-P4, KB-P4c all in band, on a shot whose floor is
+> 62 px).
+> **The candidate does not ship**, on frame evidence that needs no pixel metric: the recipient
+> interpenetrates the player character.
+
+**The re-seal's first obligation is now known and cheap:** measure the noise floor *before*
+registering any band on an FX-bearing shot. A `base`-vs-`restore` pair costs one boot and would
+have made every combat band in this seal either differently drawn or knowingly abandoned. Bands on
+`combat` must be set in units of that floor, not in absolute pixels — and `screenSide −1` is the
+composition candidate to register against them.

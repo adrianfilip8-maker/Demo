@@ -96,3 +96,5 @@
 · waiting for capture lock (996s, held by pid 28469)
 · waiting for capture lock (1007s, held by pid 28469)
 · waiting for capture lock (1018s, held by pid 28469)
+[12:47:55 +1148s] boot ok — warnings 1; renderer ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)
+[12:47:55 +1148s] LEVER {"gotShotObject":true,"livePos":[-11.5,2.6,30.5],"liveTarget":[-17,1.1,28],"liveFov":38,"liveTod":0.1,"hasGuards":true,"guardCount":11,"hasSolver":true}
