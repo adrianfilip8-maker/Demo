@@ -1,46 +1,7 @@
 {
  "prereg": "PREREG-fxcluster-c3.md",
  "chunk": "c3",
- "startedAt": "2026-08-05T23:20:36.280Z",
+ "startedAt": "2026-08-06T00:25:14.027Z",
  "srcTreeBefore": "be5c1da17ca5bad4",
- "arms": [],
- "lever": {
-  "hasEMITTERS": true,
-  "hasBatches": true,
-  "hasDecals": true,
-  "shipped": {
-   "cane_flash": {
-    "alpha": [
-     2.6,
-     2.6
-    ],
-    "col0": 16771496,
-    "col1": 15251778
-   },
-   "cane_arc": {
-    "alpha": [
-     1.6,
-     2.6
-    ],
-    "col0": 16776168,
-    "col1": 15251778
-   },
-   "cane_spark": {
-    "alpha": [
-     2.2,
-     3.4
-    ],
-    "col0": 16776168,
-    "col1": 15251778
-   },
-   "cane_ring": {
-    "alpha": [
-     2,
-     2
-    ],
-    "col0": 16776168,
-    "col1": 8377599
-   }
-  }
- }
+ "arms": []
 }
