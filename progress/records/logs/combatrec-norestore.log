@@ -57,3 +57,8 @@
 · lock held — installing arm "norestore" into src/ai/Guard.js
   installed arm "norestore" -> /home/user/Demo/src/ai/Guard.js  sha 0f2d57415844fbb2
 !! TREE MOVED DURING THE FIFO WAIT — launch 13dde875b6f320fb -> atLock 59fd366596517cf2. Another owner changed src/ while this arm queued; it would render a different base than the `base` arm did. VOID.
+  OK combat  264.9s  lock=0  minDist(anchor)=0.2162  minDist(stand)=0.0001  spawnHits=sly-closeup:7,sly-startle:1,sly-perch:7,sly-arm:1,sly-profile:2,sly-key:6
+  OK sly-profile  214.5s  lock=-1  minDist(anchor)=0.2162  minDist(stand)=0.0001  spawnHits=sly-closeup:7,sly-startle:2,sly-perch:7,sly-arm:1,sly-profile:2,sly-key:6
+  reverted /home/user/Demo/src/ai/Guard.js to base (350dece5a1b13fb7)
+  tree: src/ai/Guard.js sha 350dece5a1b13fb7  (BASE)
+DONE arm=norestore srcTree=13dde875b6f320fb srcStable=false
