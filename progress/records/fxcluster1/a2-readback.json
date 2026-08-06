@@ -236,6 +236,239 @@
    "tod": 0.1,
    "srcAtArm": "be5c1da17ca5bad4",
    "secs": 358
+  },
+  {
+   "shot": "guard",
+   "arm": "base2",
+   "at": "2026-08-06T01:42:07.183Z",
+   "poke": {
+    "mode": "base2",
+    "poolsBeforeWipe": {
+     "dust": {
+      "used": 0,
+      "head": 0,
+      "loop": false,
+      "inst": 0
+     },
+     "smoke": {
+      "used": 178,
+      "head": 178,
+      "loop": false,
+      "inst": 178
+     },
+     "spark": {
+      "used": 447,
+      "head": 447,
+      "loop": false,
+      "inst": 447
+     },
+     "ring": {
+      "used": 0,
+      "head": 0,
+      "loop": false,
+      "inst": 0
+     },
+     "sandLow": {
+      "used": 460,
+      "head": 0,
+      "loop": true,
+      "inst": 460
+     },
+     "sandHigh": {
+      "used": 900,
+      "head": 0,
+      "loop": true,
+      "inst": 900
+     },
+     "airMotes": {
+      "used": 1000,
+      "head": 0,
+      "loop": true,
+      "inst": 1000
+     },
+     "shimmer": {
+      "used": 90,
+      "head": 0,
+      "loop": true,
+      "inst": 90
+     },
+     "motes": {
+      "used": 900,
+      "head": 0,
+      "loop": true,
+      "inst": 900
+     },
+     "__decals": {
+      "used": 0,
+      "head": 0,
+      "inst": 0
+     }
+    },
+    "poolsAfterWipe": {
+     "dust": {
+      "used": 0,
+      "head": 0,
+      "loop": false,
+      "inst": 0
+     },
+     "smoke": {
+      "used": 0,
+      "head": 0,
+      "loop": false,
+      "inst": 0
+     },
+     "spark": {
+      "used": 0,
+      "head": 0,
+      "loop": false,
+      "inst": 0
+     },
+     "ring": {
+      "used": 0,
+      "head": 0,
+      "loop": false,
+      "inst": 0
+     },
+     "sandLow": {
+      "used": 460,
+      "head": 0,
+      "loop": true,
+      "inst": 460
+     },
+     "sandHigh": {
+      "used": 900,
+      "head": 0,
+      "loop": true,
+      "inst": 900
+     },
+     "airMotes": {
+      "used": 1000,
+      "head": 0,
+      "loop": true,
+      "inst": 1000
+     },
+     "shimmer": {
+      "used": 90,
+      "head": 0,
+      "loop": true,
+      "inst": 90
+     },
+     "motes": {
+      "used": 900,
+      "head": 0,
+      "loop": true,
+      "inst": 900
+     },
+     "__decals": {
+      "used": 0,
+      "head": 0,
+      "inst": 0
+     }
+    }
+   },
+   "setShot": {
+    "tod": 0.1,
+    "drift": 0,
+    "onScreen": false,
+    "draws": 205,
+    "tris": 1428655,
+    "warnings": 1
+   },
+   "probe": {
+    "guard": {
+     "guardTowardCamera": null,
+     "pos": [
+      -15.487,
+      0,
+      27.545
+     ],
+     "yaw": -0.0691,
+     "forward": [
+      -0.069,
+      0,
+      0.998
+     ],
+     "light": 0.2628,
+     "uOpacity": 0.8358,
+     "beamCol0": [
+      0.2531,
+      0.2331,
+      0.1633
+     ]
+    },
+    "pools": {
+     "dust": {
+      "used": 0,
+      "inst": 0,
+      "loop": false
+     },
+     "smoke": {
+      "used": 180,
+      "inst": 180,
+      "loop": false
+     },
+     "spark": {
+      "used": 455,
+      "inst": 455,
+      "loop": false
+     },
+     "ring": {
+      "used": 0,
+      "inst": 0,
+      "loop": false
+     },
+     "sandLow": {
+      "used": 460,
+      "inst": 460,
+      "loop": true
+     },
+     "sandHigh": {
+      "used": 900,
+      "inst": 900,
+      "loop": true
+     },
+     "airMotes": {
+      "used": 1000,
+      "inst": 1000,
+      "loop": true
+     },
+     "shimmer": {
+      "used": 90,
+      "inst": 90,
+      "loop": true
+     },
+     "motes": {
+      "used": 900,
+      "inst": 900,
+      "loop": true
+     },
+     "__decals": {
+      "used": 0,
+      "inst": 0
+     }
+    },
+    "playerPos": [
+     -9,
+     0,
+     31.5
+    ]
+   },
+   "cam": {
+    "pos": [
+     -11.5,
+     2.6,
+     30.5
+    ],
+    "fwd": [
+     -0.884,
+     -0.241,
+     -0.402
+    ],
+    "fov": 38
+   },
+   "tod": 0.1,
+   "srcAtArm": "be5c1da17ca5bad4",
+   "secs": 307
   }
  ],
  "lever": {

@@ -3,3 +3,4 @@
 [01:36:08 + 120s]   boot ok — renderer ANGLE (Google, Vulkan 1.3.0 (SwiftShader warnings 1
 [01:36:08 + 120s]   LEVER {"hasGuards":true,"hasEMITTERS":true,"hasBatches":true,"flagAtBoot":null}
 [01:42:07 + 479s]   guard.base     358s  tod 0.1  {"guardTowardCamera":null,"pos":[-15.487,0,27.545],"yaw":-0.0691,"forward":[-0.069,0,0.998],"light":0.2628,"uOpacity":0.8358,"beamCol0":[0.244,0.2247,0.1574]}
+[01:47:13 + 785s]   guard.base2    307s  tod 0.1  {"guardTowardCamera":null,"pos":[-15.487,0,27.545],"yaw":-0.0691,"forward":[-0.069,0,0.998],"light":0.2628,"uOpacity":0.8358,"beamCol0":[0.2531,0.2331,0.1633]}
