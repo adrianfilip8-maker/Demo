@@ -700,6 +700,694 @@
           ]
         }
       }
+    },
+    "sly-profile": {
+      "secs": 200,
+      "stats": {
+        "fps": 34,
+        "drawCalls": 239,
+        "triangles": 1605549,
+        "programs": 100,
+        "ms": 13.300000000046566
+      },
+      "warnings": 1,
+      "guards": {
+        "guards": [
+          {
+            "i": 0,
+            "type": "temple",
+            "name": "temple_south_gate",
+            "pos": [
+              -0.0522,
+              0,
+              -0.1063
+            ],
+            "yaw": 2.0123,
+            "u": 0.0163,
+            "state": "patrol",
+            "clip": "idle",
+            "frozen": false,
+            "animT": 0,
+            "visible": true
+          },
+          {
+            "i": 1,
+            "type": "temple",
+            "name": "temple_courtyard_ring",
+            "pos": [
+              -17.5121,
+              0,
+              26.7283
+            ],
+            "yaw": -2.9158,
+            "u": 0.0111,
+            "state": "patrol",
+            "clip": "idle",
+            "frozen": false,
+            "animT": 0,
+            "visible": true
+          },
+          {
+            "i": 2,
+            "type": "heavy",
+            "name": "heavy_courtyard_ring",
+            "pos": [
+              16.9249,
+              0,
+              -0.5316
+            ],
+            "yaw": 0.2128,
+            "u": 0.5272,
+            "state": "patrol",
+            "clip": "idle",
+            "frozen": false,
+            "animT": 0,
+            "visible": true
+          },
+          {
+            "i": 3,
+            "type": "temple",
+            "name": "temple_obelisk_watch",
+            "pos": [
+              4.6348,
+              2,
+              13.8881
+            ],
+            "yaw": -0.6143,
+            "u": 0.3345,
+            "state": "patrol",
+            "clip": "idle",
+            "frozen": false,
+            "animT": 0,
+            "visible": true
+          },
+          {
+            "i": 4,
+            "type": "temple",
+            "name": "temple_sphinx_avenue",
+            "pos": [
+              0.0324,
+              1.2723,
+              46.427
+            ],
+            "yaw": 0.0006,
+            "u": 0.1443,
+            "state": "patrol",
+            "clip": "idle",
+            "frozen": false,
+            "animT": 0.391,
+            "visible": true
+          },
+          {
+            "i": 5,
+            "type": "temple",
+            "name": "temple_hall_weave",
+            "pos": [
+              -16.8801,
+              0,
+              -21.0798
+            ],
+            "yaw": -2.7795,
+            "u": 0.0122,
+            "state": "patrol",
+            "clip": "idle",
+            "frozen": false,
+            "animT": 0,
+            "visible": true
+          },
+          {
+            "i": 6,
+            "type": "heavy",
+            "name": "heavy_hall_weave",
+            "pos": [
+              11.6931,
+              0,
+              -45.6059
+            ],
+            "yaw": 0.7916,
+            "u": 0.4879,
+            "state": "patrol",
+            "clip": "idle",
+            "frozen": false,
+            "animT": 0,
+            "visible": true
+          },
+          {
+            "i": 7,
+            "type": "temple",
+            "name": "temple_rooftop_run",
+            "pos": [
+              2.2896,
+              17,
+              -19.7146
+            ],
+            "yaw": 1.5928,
+            "u": 0.1637,
+            "state": "patrol",
+            "clip": "idle",
+            "frozen": false,
+            "animT": 0,
+            "visible": true
+          },
+          {
+            "i": 8,
+            "type": "heavy",
+            "name": "heavy_tomb_vault",
+            "pos": [
+              4.4783,
+              -9.6164,
+              -59.1642
+            ],
+            "yaw": 1.7072,
+            "u": 0.2138,
+            "state": "patrol",
+            "clip": "idle",
+            "frozen": false,
+            "animT": 0.6592,
+            "visible": true
+          },
+          {
+            "i": 9,
+            "type": "scarab",
+            "name": "scarab_architrave_ledge",
+            "pos": [
+              22.5443,
+              9,
+              -6.2715
+            ],
+            "yaw": -0.0057,
+            "u": 0.0515,
+            "state": "patrol",
+            "clip": "idle",
+            "frozen": false,
+            "animT": 0,
+            "visible": true
+          },
+          {
+            "i": 10,
+            "type": "scarab",
+            "name": "scarab_tomb_scarab",
+            "pos": [
+              6.0263,
+              -12,
+              -66.6519
+            ],
+            "yaw": 2.8461,
+            "u": 0.3981,
+            "state": "patrol",
+            "clip": "idle",
+            "frozen": false,
+            "animT": 0.851,
+            "visible": true
+          }
+        ],
+        "lock": -1,
+        "cam": {
+          "pos": [
+            2.21,
+            1.7,
+            33.13
+          ],
+          "fov": 38,
+          "aspect": 1.7777777777777777
+        },
+        "warnings": 1,
+        "shot": "sly-profile"
+      },
+      "derived": {
+        "minDistToAnchor": 15.7137,
+        "minDistToStand": 15.8106,
+        "lockPos": null,
+        "spawnHits": {
+          "sly-closeup": [
+            {
+              "i": 0,
+              "type": "temple",
+              "pos": [
+                -0.0522,
+                0,
+                -0.1063
+              ],
+              "box": {
+                "behind": false,
+                "x0": 154.5,
+                "x1": 191.8,
+                "y0": 196,
+                "y1": 265.2,
+                "d0": 29.56,
+                "d1": 30.95,
+                "overlaps": true
+              }
+            },
+            {
+              "i": 2,
+              "type": "heavy",
+              "pos": [
+                16.9249,
+                0,
+                -0.5316
+              ],
+              "box": {
+                "behind": false,
+                "x0": 659.9,
+                "x1": 701.9,
+                "y0": 192.1,
+                "y1": 254.7,
+                "d0": 37.23,
+                "d1": 39.03,
+                "overlaps": true
+              }
+            },
+            {
+              "i": 3,
+              "type": "temple",
+              "pos": [
+                4.6348,
+                2,
+                13.8881
+              ],
+              "box": {
+                "behind": false,
+                "x0": 447.8,
+                "x1": 506.9,
+                "y0": 74.7,
+                "y1": 185.4,
+                "d0": 18.96,
+                "d1": 20.35,
+                "overlaps": true
+              }
+            },
+            {
+              "i": 6,
+              "type": "heavy",
+              "pos": [
+                11.6931,
+                0,
+                -45.6059
+              ],
+              "box": {
+                "behind": false,
+                "x0": 307.7,
+                "x1": 327.6,
+                "y0": 203,
+                "y1": 234.3,
+                "d0": 74.84,
+                "d1": 76.64,
+                "overlaps": true
+              }
+            },
+            {
+              "i": 8,
+              "type": "heavy",
+              "pos": [
+                4.4783,
+                -9.6164,
+                -59.1642
+              ],
+              "box": {
+                "behind": false,
+                "x0": 194.7,
+                "x1": 212,
+                "y0": 321.9,
+                "y1": 350.8,
+                "d0": 84.99,
+                "d1": 86.79,
+                "overlaps": true
+              }
+            },
+            {
+              "i": 9,
+              "type": "scarab",
+              "pos": [
+                22.5443,
+                9,
+                -6.2715
+              ],
+              "box": {
+                "behind": false,
+                "x0": 724,
+                "x1": 740.9,
+                "y0": 25.5,
+                "y1": 36.6,
+                "d0": 44.22,
+                "d1": 44.96,
+                "overlaps": true
+              }
+            },
+            {
+              "i": 10,
+              "type": "scarab",
+              "pos": [
+                6.0263,
+                -12,
+                -66.6519
+              ],
+              "box": {
+                "behind": false,
+                "x0": 214.2,
+                "x1": 221.2,
+                "y0": 361.1,
+                "y1": 366,
+                "d0": 93.3,
+                "d1": 94.04,
+                "overlaps": true
+              }
+            }
+          ],
+          "sly-startle": [
+            {
+              "i": 2,
+              "type": "heavy",
+              "pos": [
+                16.9249,
+                0,
+                -0.5316
+              ],
+              "box": {
+                "behind": false,
+                "x0": -89,
+                "x1": 5.4,
+                "y0": -3.6,
+                "y1": 118.7,
+                "d0": 33.87,
+                "d1": 35.81,
+                "overlaps": true
+              }
+            }
+          ],
+          "sly-perch": [
+            {
+              "i": 0,
+              "type": "temple",
+              "pos": [
+                -0.0522,
+                0,
+                -0.1063
+              ],
+              "box": {
+                "behind": false,
+                "x0": 153.8,
+                "x1": 191.2,
+                "y0": 185.3,
+                "y1": 254.6,
+                "d0": 29.52,
+                "d1": 30.91,
+                "overlaps": true
+              }
+            },
+            {
+              "i": 2,
+              "type": "heavy",
+              "pos": [
+                16.9249,
+                0,
+                -0.5316
+              ],
+              "box": {
+                "behind": false,
+                "x0": 659.9,
+                "x1": 702,
+                "y0": 183.5,
+                "y1": 246.3,
+                "d0": 37.19,
+                "d1": 38.99,
+                "overlaps": true
+              }
+            },
+            {
+              "i": 3,
+              "type": "temple",
+              "pos": [
+                4.6348,
+                2,
+                13.8881
+              ],
+              "box": {
+                "behind": false,
+                "x0": 447.4,
+                "x1": 506.6,
+                "y0": 57.7,
+                "y1": 169.7,
+                "d0": 18.92,
+                "d1": 20.31,
+                "overlaps": true
+              }
+            },
+            {
+              "i": 6,
+              "type": "heavy",
+              "pos": [
+                11.6931,
+                0,
+                -45.6059
+              ],
+              "box": {
+                "behind": false,
+                "x0": 307.5,
+                "x1": 327.5,
+                "y0": 198.8,
+                "y1": 230,
+                "d0": 74.8,
+                "d1": 76.6,
+                "overlaps": true
+              }
+            },
+            {
+              "i": 8,
+              "type": "heavy",
+              "pos": [
+                4.4783,
+                -9.6164,
+                -59.1642
+              ],
+              "box": {
+                "behind": false,
+                "x0": 194.5,
+                "x1": 211.8,
+                "y0": 318.3,
+                "y1": 347.2,
+                "d0": 84.95,
+                "d1": 86.74,
+                "overlaps": true
+              }
+            },
+            {
+              "i": 9,
+              "type": "scarab",
+              "pos": [
+                22.5443,
+                9,
+                -6.2715
+              ],
+              "box": {
+                "behind": false,
+                "x0": 724.1,
+                "x1": 741,
+                "y0": 18.2,
+                "y1": 29.4,
+                "d0": 44.18,
+                "d1": 44.92,
+                "overlaps": true
+              }
+            },
+            {
+              "i": 10,
+              "type": "scarab",
+              "pos": [
+                6.0263,
+                -12,
+                -66.6519
+              ],
+              "box": {
+                "behind": false,
+                "x0": 214,
+                "x1": 221,
+                "y0": 357.8,
+                "y1": 362.7,
+                "d0": 93.26,
+                "d1": 93.99,
+                "overlaps": true
+              }
+            }
+          ],
+          "sly-arm": [],
+          "sly-profile": [
+            {
+              "i": 0,
+              "type": "temple",
+              "pos": [
+                -0.0522,
+                0,
+                -0.1063
+              ],
+              "box": {
+                "behind": false,
+                "x0": 1263.1,
+                "x1": 1311.7,
+                "y0": 126.4,
+                "y1": 202.1,
+                "d0": 27.2,
+                "d1": 28.75,
+                "overlaps": true
+              }
+            },
+            {
+              "i": 5,
+              "type": "temple",
+              "pos": [
+                -16.8801,
+                0,
+                -21.0798
+              ],
+              "box": {
+                "behind": false,
+                "x0": 930.4,
+                "x1": 954.1,
+                "y0": 131.2,
+                "y1": 170,
+                "d0": 53.45,
+                "d1": 55,
+                "overlaps": true
+              }
+            }
+          ],
+          "sly-key": [
+            {
+              "i": 0,
+              "type": "temple",
+              "pos": [
+                -0.0522,
+                0,
+                -0.1063
+              ],
+              "box": {
+                "behind": false,
+                "x0": -10,
+                "x1": 34.4,
+                "y0": 194.9,
+                "y1": 268.4,
+                "d0": 27.79,
+                "d1": 29.18,
+                "overlaps": true
+              }
+            },
+            {
+              "i": 2,
+              "type": "heavy",
+              "pos": [
+                16.9249,
+                0,
+                -0.5316
+              ],
+              "box": {
+                "behind": false,
+                "x0": 558.4,
+                "x1": 601.3,
+                "y0": 191,
+                "y1": 256.7,
+                "d0": 35.46,
+                "d1": 37.26,
+                "overlaps": true
+              }
+            },
+            {
+              "i": 3,
+              "type": "temple",
+              "pos": [
+                4.6348,
+                2,
+                13.8881
+              ],
+              "box": {
+                "behind": false,
+                "x0": 220.2,
+                "x1": 283.9,
+                "y0": 60.4,
+                "y1": 182.6,
+                "d0": 17.19,
+                "d1": 18.58,
+                "overlaps": true
+              }
+            },
+            {
+              "i": 6,
+              "type": "heavy",
+              "pos": [
+                11.6931,
+                0,
+                -45.6059
+              ],
+              "box": {
+                "behind": false,
+                "x0": 249.2,
+                "x1": 269.5,
+                "y0": 202.8,
+                "y1": 234.7,
+                "d0": 73.07,
+                "d1": 74.87,
+                "overlaps": true
+              }
+            },
+            {
+              "i": 8,
+              "type": "heavy",
+              "pos": [
+                4.4783,
+                -9.6164,
+                -59.1642
+              ],
+              "box": {
+                "behind": false,
+                "x0": 140.9,
+                "x1": 158.5,
+                "y0": 324.1,
+                "y1": 353.8,
+                "d0": 83.22,
+                "d1": 85.01,
+                "overlaps": true
+              }
+            },
+            {
+              "i": 9,
+              "type": "scarab",
+              "pos": [
+                22.5443,
+                9,
+                -6.2715
+              ],
+              "box": {
+                "behind": false,
+                "x0": 640.4,
+                "x1": 657.5,
+                "y0": 17.7,
+                "y1": 29.3,
+                "d0": 42.45,
+                "d1": 43.19,
+                "overlaps": true
+              }
+            },
+            {
+              "i": 10,
+              "type": "scarab",
+              "pos": [
+                6.0263,
+                -12,
+                -66.6519
+              ],
+              "box": {
+                "behind": false,
+                "x0": 165.4,
+                "x1": 172.3,
+                "y0": 364,
+                "y1": 368.9,
+                "d0": 91.53,
+                "d1": 92.26,
+                "overlaps": true
+              }
+            }
+          ]
+        }
+      }
     }
   },
   "srcTreeAtBoot": "13dde875b6f320fb",
