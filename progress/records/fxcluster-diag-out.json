@@ -1,9 +1,126 @@
 {
- "at": "2026-08-05T21:33:55.418Z",
+ "at": "2026-08-06T00:26:53.404Z",
  "sections": {
   "WSCORE": {
-   "verdicts": [],
-   "arms": {}
+   "verdicts": [
+    "base gates: QW1 1.61 in [2.5,5], complex 109.8 in [100,120], near 77.5 in [70,85], skyLeft 159.6 in [156,168]: FAIL → CAPTURE VOID (not a candidate verdict)",
+    "noise gate |Q-W1(base2)−Q-W1(base)| 0.00 ≤ 1: PASS",
+    "Q-DIR wire-only Q-W1 -1.67 < +1: PASS (curve carries; separation collapses as predicted)",
+    "Q-W1b CT55 18.99 in [1,9]: OUT (bracket point — informs s′; not a revert alone)",
+    "Q-W1 CT40 28.96 in [8,22]: FAIL (overshoot — revert-not-defend)",
+    "Q-ORD base 1.61 ≤ CT55 18.99 < CT40 28.96: PASS (monotone dose-response)",
+    "Q-CPX W Δcomplex -27.7 in [-35,-12] + floor 82.1 ≥ 70: PASS",
+    "Q-NEAR W |Δnear| 0.9 ≤ 4: PASS",
+    "Q-CPX CT55 Δcomplex -36.4 in [-35,-12] + floor 73.4 ≥ 70: FAIL",
+    "Q-NEAR CT55 |Δnear| 1.7 ≤ 4: PASS",
+    "Q-CPX CT40 Δcomplex -39.4 in [-35,-12] + floor 70.4 ≥ 70: FAIL",
+    "Q-NEAR CT40 |Δnear| 2 ≤ 4: PASS",
+    "Q-DOME base2    ΔmedL [0, 0, 0] each |≤ 1|: PASS",
+    "Q-DOME W        ΔmedL [0, 0, 0.1] each |≤ 1|: PASS",
+    "Q-DOME CT55     ΔmedL [0, 0, 0] each |≤ 1|: PASS",
+    "Q-DOME CT40     ΔmedL [0, 0, 0] each |≤ 1|: PASS",
+    "Q-DOME KBdense  ΔmedL [0, 0, 0] each |≤ 1|: PASS",
+    "Q-DOME restore  ΔmedL [0, 0, 0] each |≤ 1|: PASS",
+    "KB-dense breach: complex 101.4 < 70 (false) OR |Δnear| 0.00 > 4 (false): FAIL → P-A3 UNSCOREABLE",
+    "P-F4 dunes restore-vs-base 0 px at ΣRGB≥4 in [0, 0]: PASS (bit-identical)",
+    "P-F4 hero restore-vs-base 0 px at ΣRGB≥4 in [0, 0]: PASS (bit-identical)",
+    "P-F4 night restore-vs-base 0 px at ΣRGB≥4 in [0, 0]: PASS (bit-identical)"
+   ],
+   "arms": {
+    "dunes": {
+     "base": {
+      "QW1": 1.61,
+      "skyLeft": 159.6,
+      "pyrInterior": 158,
+      "complex": 109.8,
+      "nearGround": 77.5,
+      "skyTopLeft": 153.4,
+      "skyTopRight": 143.4
+     },
+     "base2": {
+      "QW1": 1.61,
+      "skyLeft": 159.6,
+      "pyrInterior": 158,
+      "complex": 109.8,
+      "nearGround": 77.5,
+      "skyTopLeft": 153.4,
+      "skyTopRight": 143.4
+     },
+     "W": {
+      "QW1": -1.67,
+      "skyLeft": 159.7,
+      "pyrInterior": 161.4,
+      "complex": 82.1,
+      "nearGround": 76.6,
+      "skyTopLeft": 153.4,
+      "skyTopRight": 143.4
+     },
+     "CT55": {
+      "QW1": 18.99,
+      "skyLeft": 159.6,
+      "pyrInterior": 140.6,
+      "complex": 73.4,
+      "nearGround": 75.8,
+      "skyTopLeft": 153.4,
+      "skyTopRight": 143.4
+     },
+     "CT40": {
+      "QW1": 28.96,
+      "skyLeft": 159.6,
+      "pyrInterior": 130.7,
+      "complex": 70.4,
+      "nearGround": 75.5,
+      "skyTopLeft": 153.4,
+      "skyTopRight": 143.4
+     },
+     "KBdense": {
+      "QW1": 29.61,
+      "skyLeft": 159.6,
+      "pyrInterior": 130,
+      "complex": 101.4,
+      "nearGround": 77.5,
+      "skyTopLeft": 153.4,
+      "skyTopRight": 143.4
+     },
+     "restore": {
+      "QW1": 1.61,
+      "skyLeft": 159.6,
+      "pyrInterior": 158,
+      "complex": 109.8,
+      "nearGround": 77.5,
+      "skyTopLeft": 153.4,
+      "skyTopRight": 143.4
+     }
+    },
+    "hero": {
+     "farBase": 47.3,
+     "farCT40": 47.3,
+     "skyCtrlBase": 162.9,
+     "skyCtrlCT40": 136.4,
+     "dFar": 0,
+     "dSkyCtrl": -26.5
+    },
+    "night": {
+     "farBase": 23.7,
+     "farCT40": 22.2,
+     "skyCtrlBase": 46,
+     "skyCtrlCT40": 46,
+     "dFar": -1.5,
+     "dSkyCtrl": 0
+    }
+   },
+   "seam_CT55": {
+    "world": 139.8,
+    "dome": 140.8,
+    "step": 1,
+    "baseStep": 2.2
+   },
+   "seam_CT40": {
+    "world": 126.5,
+    "dome": 126.7,
+    "step": 0.2,
+    "baseStep": 2.2
+   }
   }
  }
 }
