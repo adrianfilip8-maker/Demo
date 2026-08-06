@@ -116,3 +116,10 @@
   ✓ interior      145566ms  draws  166  tris 724k
   ✓ night         255169ms  draws  288  tris 1856k
   ✓ traversal     234675ms  draws  252  tris 1751k
+  ✓ combat        228950ms  draws  222  tris 1542k
+  ✓ guard         158897ms  draws  207  tris 1429k
+· 1 console error(s):
+    ! Failed to load resource: the server responded with a status of 404 (Not Found)
+  · page closed
+
+→ shots/sbs3/  (5 shots, 0 failed)

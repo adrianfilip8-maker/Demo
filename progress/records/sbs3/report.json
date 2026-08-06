@@ -31,6 +31,22 @@
       "drawCalls": 252,
       "triangles": 1750993,
       "programs": 98
+    },
+    "combat": {
+      "file": "shots/sbs3/combat.png",
+      "ms": 9.799999999813735,
+      "fps": 60,
+      "drawCalls": 222,
+      "triangles": 1542483,
+      "programs": 100
+    },
+    "guard": {
+      "file": "shots/sbs3/guard.png",
+      "ms": 16.600000000558794,
+      "fps": 60,
+      "drawCalls": 207,
+      "triangles": 1429265,
+      "programs": 100
     }
   },
   "errors": [],
@@ -56,5 +72,11 @@
   "bootWarnings": [
     "textures: prewarm took 26.6s at size 1024"
   ],
-  "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)"
+  "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+  "warnings": [
+    "textures: prewarm took 26.6s at size 1024"
+  ],
+  "consoleErrors": [
+    "Failed to load resource: the server responded with a status of 404 (Not Found)"
+  ]
 }
