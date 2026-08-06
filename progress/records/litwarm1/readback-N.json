@@ -60,5 +60,15 @@
   "skinMatCount": 16,
   "hasPublish": true,
   "hasInkNight": true
+ },
+ "setShot": {
+  "stats": {
+   "fps": 39,
+   "drawCalls": 288,
+   "triangles": 1855983,
+   "programs": 98,
+   "ms": 12.900000000372529
+  },
+  "tod": 0.02
  }
 }

@@ -33,7 +33,33 @@ ship-time obligation.
 
 ## Chunk log
 
-_(filled per chunk as it lands)_
+### The population — P-F7 half 1, clean on the first boot
+
+Boot 03:53:24, srcTree `85bab2d30f5f7b59`, enumeration at +115 s:
+
+```
+pinnedCount 13
+pinnedNames  arch:paving_courtyard, arch:gold_leaf, arch:column_papyrus, arch:sandstone_worn,
+             arch:sandstone_block, arch:granite_pink, arch:limestone_polished,
+             arch:hieroglyph_gilded, arch:hieroglyph_wall, arch:mudbrick, arch:ceiling_stars,
+             arch:bronze_dark, arch:rope_fibre
+pinnedSss    [0.3 × 13]        pinnedNightPin [0 × 13]
+pinnedInArch 13/13             pinnedOnSkinned []
+```
+
+Every one of the three clauses passes on its own evidence: **13 ≥ 4** enrolled; **13/13** are
+reachable from ARCHITECTURE's own scene subtree (the cross-check, which the amendment said would
+be reported rather than fatal — it did not need the licence); and the **exhaustive scene-wide
+`isSkinnedMesh` test returns an empty list**, so no material the ship would not touch is being
+poked. Every name carries the `arch:` prefix. This is the check the seal's P-F7 was written for
+and it is answered by enumeration, not by a count.
+
+**One scope fact worth stating before any number is read:** the enrolled set is *all* of
+ARCHITECTURE's recipes, which includes `gold_leaf`, `hieroglyph_gilded` and `bronze_dark`. The
+wrap is added **outside** `diff`, so it is not attenuated by `diff *= mix(1.0, 0.20, slyMetal)` —
+gilded surfaces receive it at full strength. That is inside this seal's declared scope (§7 says
+"every architecture surface"), it is not a separate lever, and it is **not** credited to the
+gold-renders-dark family unless a gold-specific quantity is registered by whoever owns that.
 
 ## Scores
 

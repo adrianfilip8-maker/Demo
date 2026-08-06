@@ -1,3 +1,4 @@
 [03:53:24 +   0s] chunk N (night): srcTree 85bab2d30f5f7b59 — booting (own lock hold)
 [03:55:19 + 115s]   boot ok — warnings 1
 [03:55:19 + 115s]   POPULATION {"pinnedCount":13,"pinnedNames":["arch:paving_courtyard","arch:gold_leaf","arch:column_papyrus","arch:sandstone_worn","arch:sandstone_block","arch:granite_pink","arch:limestone_polished","arch:hieroglyph_gilded","arch:hieroglyph_wall","arch:mudbrick","arch:ceiling_stars","arch:bronze_dark","arch:rope_fibre"],"pinnedSss":[0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3],"pinnedNightPin":[0,0,0,0,0,0,0,0,0,0,0,0,0],"pinnedInArch":13,"pinnedOnSkinned":[],"archMatCount":13,"skinMatCount":16,"hasPublish":true,"hasInkNight":true}
+[03:55:41 + 137s]   setShot(night) 22s  tod 0.02  draws 288 tris 1855983
