@@ -1,5 +1,5 @@
 {
- "at": "2026-08-06T03:56:04.559Z",
+ "at": "2026-08-06T03:58:36.920Z",
  "strictPredicate": "|R-143|<=40 AND |G-216|<=35 AND |B-255|<=40 (fxcluster-diag.mjs:530, unchanged)",
  "frames": {
   "sbs2/night.png": {
@@ -668,6 +668,41 @@
     "pxWithDarkSurround_lt60": 238,
     "pxWithDarkSurround_lt80": 239,
     "pxWithDarkSurround_lt100": 239
+   }
+  }
+ },
+ "correctedPredicate": {
+  "colour": "unchanged: |R-143|<=40 AND |G-216|<=35 AND |B-255|<=40",
+  "geometric": "AND y >= skyCut[shot]",
+  "skyCut": {
+   "night": 200,
+   "traversal": 120
+  },
+  "controls": {
+   "sbs2/night.png (shot: night, cut y<200)": {
+    "strictPx": 50,
+    "rejectedAsSky": 0,
+    "countedOnGeometry": 50
+   },
+   "sbs3/night.png (shot: night, cut y<200)": {
+    "strictPx": 224,
+    "rejectedAsSky": 174,
+    "countedOnGeometry": 50
+   },
+   "b2-traversal.cand.png (shot: traversal, cut y<120) — MUST keep 236": {
+    "strictPx": 236,
+    "rejectedAsSky": 0,
+    "countedOnGeometry": 236
+   },
+   "b2-traversal.base.png (known-bad, no preroll) — MUST stay 0": {
+    "strictPx": 0,
+    "rejectedAsSky": 0,
+    "countedOnGeometry": 0
+   },
+   "sbs3/traversal.png (shot: traversal, cut y<120)": {
+    "strictPx": 239,
+    "rejectedAsSky": 0,
+    "countedOnGeometry": 239
    }
   }
  }

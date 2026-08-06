@@ -210,3 +210,46 @@ for (const [f, v] of Object.entries(SURR)) {
   if (!v || !v.px) { console.log(` ${f.padEnd(44)} ${String(v ? v.px : 0).padStart(6)}`); continue; }
   console.log(` ${f.padEnd(44)} ${String(v.px).padStart(6)} ${String(v.surroundMinL.p05).padStart(6)} ${String(v.surroundMinL.median).padStart(7)} ${String(v.surroundMinL.p95).padStart(6)}  ${String(v.pxWithDarkSurround_lt60).padStart(6)} ${String(v.pxWithDarkSurround_lt80).padStart(6)} ${String(v.pxWithDarkSurround_lt100).padStart(6)}`);
 }
+
+/* ===========================================================================
+ * REGISTERED CORRECTED PREDICATE (see NOTE-sparkle-predicate.md §4)
+ *
+ * Four candidate restrictions were tested above and in the note; all four FAILED:
+ *   1. component-area cap      — backwards: haze specks (<=30 px) are SMALLER than genuine
+ *                                sparkles (82/67/42/34 px). Kills 148 of 236 genuine.
+ *   2. dark-surround test      — night sky is dark too; 221/224 haze px pass it.
+ *   3. sparkle-core adjacency  — keeps only 10 of 236 genuine: the in-band population is a
+ *                                sprite ANNULUS and no core survives the grade above it.
+ *   4. flood-fill sky mask     — self-defeating: any bright speck breaks the fill and is
+ *                                classified as geometry, including the haze specks.
+ * Colour and shape do not separate these populations. The restriction must be GEOMETRIC and
+ * REGISTERED PER SHOT: a horizon cut below which sky cannot appear, published with the count.
+ * ======================================================================== */
+const SKY_CUT = { night: 200, traversal: 120 };   // y below which the shot has no sky
+function scoreMasked(rel, cut) {
+  const p = path.join(REC, rel);
+  if (!existsSync(p)) return null;
+  const im = readPNG(p); const { w, h, ch, data } = im;
+  let sky = 0, geo = 0;
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const k = (y * w + x) * ch;
+    if (!inBand(data[k], data[k + 1], data[k + 2])) continue;
+    if (y < cut) sky++; else geo++;
+  }
+  return { strictPx: sky + geo, rejectedAsSky: sky, countedOnGeometry: geo };
+}
+const CONTROLS = {
+  'sbs2/night.png (shot: night, cut y<200)': scoreMasked('sbs2/night.png', SKY_CUT.night),
+  'sbs3/night.png (shot: night, cut y<200)': scoreMasked('sbs3/night.png', SKY_CUT.night),
+  'b2-traversal.cand.png (shot: traversal, cut y<120) — MUST keep 236': scoreMasked('fxcluster1/b2-traversal.cand.png', SKY_CUT.traversal),
+  'b2-traversal.base.png (known-bad, no preroll) — MUST stay 0': scoreMasked('fxcluster1/b2-traversal.base.png', SKY_CUT.traversal),
+  'sbs3/traversal.png (shot: traversal, cut y<120)': scoreMasked('sbs3/traversal.png', SKY_CUT.traversal),
+};
+const J3 = JSON.parse(require('node:fs').readFileSync(path.join(HERE, 'sparkdiag.json'), 'utf8'));
+J3.correctedPredicate = { colour: 'unchanged: |R-143|<=40 AND |G-216|<=35 AND |B-255|<=40', geometric: 'AND y >= skyCut[shot]', skyCut: SKY_CUT, controls: CONTROLS };
+writeFileSync(path.join(HERE, 'sparkdiag.json'), JSON.stringify(J3, null, 1));
+console.log('\n\nCORRECTED PREDICATE = strict colour AND y >= skyCut[shot]  (night 200, traversal 120):');
+for (const [f, v] of Object.entries(CONTROLS)) {
+  if (!v) { console.log(`  ${f.padEnd(64)} (missing)`); continue; }
+  console.log(`  ${f.padEnd(64)} strict ${String(v.strictPx).padStart(4)} -> counted ${String(v.countedOnGeometry).padStart(4)}  (rejected as sky ${v.rejectedAsSky})`);
+}
