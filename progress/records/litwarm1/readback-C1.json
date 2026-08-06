@@ -2,9 +2,322 @@
  "prereg": "PREREG-litwarm.md",
  "chunk": "C1",
  "shot": "interior",
- "startedAt": "2026-08-06T13:19:51.931Z",
- "srcTreeBefore": "4c83af2068ab9936",
+ "startedAt": "2026-08-06T22:41:08.332Z",
+ "srcTreeBefore": "9647e41e38635ef1",
  "shipSss": 0.3,
  "baseSss": 0,
- "arms": []
+ "arms": [
+  {
+   "arm": "base",
+   "requestedSss": 0,
+   "expectedUSss": 0,
+   "readback": {
+    "slySss": [
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "uSss": [
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "nightPin": [
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "inkNight": 0,
+    "uSubjW": 0.65,
+    "uShadowColor": [
+     0.11280744900295804,
+     0.37372505605577927,
+     0.5933874550960468
+    ]
+   },
+   "mismatch": [],
+   "secs": 11
+  },
+  {
+   "arm": "C",
+   "requestedSss": 0.3,
+   "expectedUSss": 0.3,
+   "readback": {
+    "slySss": [
+     0.3,
+     0.3,
+     0.3,
+     0.3,
+     0.3,
+     0.3,
+     0.3,
+     0.3,
+     0.3,
+     0.3,
+     0.3,
+     0.3,
+     0.3
+    ],
+    "uSss": [
+     0.3,
+     0.3,
+     0.3,
+     0.3,
+     0.3,
+     0.3,
+     0.3,
+     0.3,
+     0.3,
+     0.3,
+     0.3,
+     0.3,
+     0.3
+    ],
+    "nightPin": [
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "inkNight": 0,
+    "uSubjW": 0.65,
+    "uShadowColor": [
+     0.11280744900295804,
+     0.37372505605577927,
+     0.5933874550960468
+    ]
+   },
+   "mismatch": [],
+   "secs": 11
+  },
+  {
+   "arm": "KBover",
+   "requestedSss": 0.45,
+   "expectedUSss": 0.45,
+   "readback": {
+    "slySss": [
+     0.45,
+     0.45,
+     0.45,
+     0.45,
+     0.45,
+     0.45,
+     0.45,
+     0.45,
+     0.45,
+     0.45,
+     0.45,
+     0.45,
+     0.45
+    ],
+    "uSss": [
+     0.45,
+     0.45,
+     0.45,
+     0.45,
+     0.45,
+     0.45,
+     0.45,
+     0.45,
+     0.45,
+     0.45,
+     0.45,
+     0.45,
+     0.45
+    ],
+    "nightPin": [
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "inkNight": 0,
+    "uSubjW": 0.65,
+    "uShadowColor": [
+     0.11280744900295804,
+     0.37372505605577927,
+     0.5933874550960468
+    ]
+   },
+   "mismatch": [],
+   "secs": 11
+  },
+  {
+   "arm": "restore",
+   "requestedSss": 0,
+   "expectedUSss": 0,
+   "readback": {
+    "slySss": [
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "uSss": [
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "nightPin": [
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "inkNight": 0,
+    "uSubjW": 0.65,
+    "uShadowColor": [
+     0.11280744900295804,
+     0.37372505605577927,
+     0.5933874550960468
+    ]
+   },
+   "mismatch": [],
+   "secs": 11
+  }
+ ],
+ "population": {
+  "pinnedCount": 13,
+  "pinnedNames": [
+   "arch:paving_courtyard",
+   "arch:gold_leaf",
+   "arch:column_papyrus",
+   "arch:sandstone_worn",
+   "arch:sandstone_block",
+   "arch:granite_pink",
+   "arch:limestone_polished",
+   "arch:hieroglyph_gilded",
+   "arch:hieroglyph_wall",
+   "arch:mudbrick",
+   "arch:ceiling_stars",
+   "arch:bronze_dark",
+   "arch:rope_fibre"
+  ],
+  "pinnedSss": [
+   0.3,
+   0.3,
+   0.3,
+   0.3,
+   0.3,
+   0.3,
+   0.3,
+   0.3,
+   0.3,
+   0.3,
+   0.3,
+   0.3,
+   0.3
+  ],
+  "pinnedNightPin": [
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0
+  ],
+  "pinnedInArch": 13,
+  "pinnedOnSkinned": [],
+  "archMatCount": 13,
+  "skinMatCount": 16,
+  "hasPublish": true,
+  "hasInkNight": true
+ },
+ "setShot": {
+  "stats": {
+   "fps": 38,
+   "drawCalls": 166,
+   "triangles": 723565,
+   "programs": 98,
+   "ms": 9.300000000745058
+  },
+  "tod": 0.5
+ },
+ "settleSecs": 247,
+ "nightAmount": 0,
+ "srcTreeAfter": "a0b78d52f8be2f61",
+ "finishedAt": "2026-08-06T22:47:46.948Z"
 }

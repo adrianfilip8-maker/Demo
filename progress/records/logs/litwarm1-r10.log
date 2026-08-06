@@ -3,3 +3,48 @@
 [22:17:53 +   0s] chunk A (hero): srcTree 9647e41e38635ef1 — booting (own lock hold)
 [22:17:53 +   0s]   lock held — installing candidate (litwarm-arms.py install cand)
 [22:17:53 +   0s]   installed arm "cand"  Toon sha 5052f4189ae9997a  Arch sha 7cd5b1d0a29d625f
+[22:19:53 + 121s]   boot ok — warnings 1
+[22:19:54 + 121s]   POPULATION {"pinnedCount":13,"pinnedNames":["arch:paving_courtyard","arch:gold_leaf","arch:column_papyrus","arch:sandstone_worn","arch:sandstone_block","arch:granite_pink","arch:limestone_polished","arch:hieroglyph_gilded","arch:hieroglyph_wall","arch:mudbrick","arch:ceiling_stars","arch:bronze_dark","arch:rope_fibre"],"pinnedSss":[0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3],"pinnedNightPin":[0,0,0,0,0,0,0,0,0,0,0,0,0],"pinnedInArch":13,"pinnedOnSkinned":[],"archMatCount":13,"skinMatCount":16,"hasPublish":true,"hasInkNight":true}
+[22:20:11 + 138s]   setShot(hero) 17s  tod 0.79  draws 260 tris 1741863
+[22:28:11 + 619s]   settle(hero) 480s (10 frozen frames + throwaway capture)
+[22:28:11 + 619s]   P-F7 ok: hero live nightAmount 0 (= 0 exactly)
+[22:28:39 + 647s]   hero.base     28s  slySss→0  uSss seen by shader [0] (want exactly 0)  inkNight 0  uSubjW 0.65  applied ok
+[22:29:07 + 675s]   hero.C        28s  slySss→0.3  uSss seen by shader [0.3] (want exactly 0.3)  inkNight 0  uSubjW 0.65  applied ok
+[22:29:35 + 703s]   hero.KBover   28s  slySss→0.45  uSss seen by shader [0.45] (want exactly 0.45)  inkNight 0  uSubjW 0.65  applied ok
+[22:30:03 + 730s]   hero.KBnull   28s  slySss→0  uSss seen by shader [0] (want exactly 0)  inkNight 0  uSubjW 0.65  applied ok
+[22:30:32 + 759s]   hero.restore  29s  slySss→0  uSss seen by shader [0] (want exactly 0)  inkNight 0  uSubjW 0.65  applied ok
+[22:30:32 + 759s]   chunk A done — srcTree after a0b78d52f8be2f61 (MOVED — flag in RESULT)
+[22:30:32 + 760s]   reverted to base (Toon 38db1c1e0d8e81b7, Arch fc7b6b2737ed3192)
+[22:30:32 + 760s] chunk A: lock released
+[22:30:32 + 760s] chunk B (courtyard): srcTree 9647e41e38635ef1 — booting (own lock hold)
+[22:30:32 + 760s]   lock held — installing candidate (litwarm-arms.py install cand)
+[22:30:32 + 760s]   installed arm "cand"  Toon sha 5052f4189ae9997a  Arch sha 7cd5b1d0a29d625f
+[22:32:09 + 857s]   boot ok — warnings 1
+[22:32:09 + 857s]   POPULATION {"pinnedCount":13,"pinnedNames":["arch:paving_courtyard","arch:gold_leaf","arch:column_papyrus","arch:sandstone_worn","arch:sandstone_block","arch:granite_pink","arch:limestone_polished","arch:hieroglyph_gilded","arch:hieroglyph_wall","arch:mudbrick","arch:ceiling_stars","arch:bronze_dark","arch:rope_fibre"],"pinnedSss":[0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3],"pinnedNightPin":[0,0,0,0,0,0,0,0,0,0,0,0,0],"pinnedInArch":13,"pinnedOnSkinned":[],"archMatCount":13,"skinMatCount":16,"hasPublish":true,"hasInkNight":true}
+[22:32:26 + 874s]   setShot(courtyard) 17s  tod 0.76  draws 281 tris 1708385
+[22:39:52 +1319s]   settle(courtyard) 445s (10 frozen frames + throwaway capture)
+[22:39:52 +1319s]   P-F7 ok: courtyard live nightAmount 0 (= 0 exactly)
+[22:40:16 +1344s]   courtyard.base     25s  slySss→0  uSss seen by shader [0] (want exactly 0)  inkNight 0  uSubjW 0.65  applied ok
+[22:40:42 +1369s]   courtyard.C        25s  slySss→0.3  uSss seen by shader [0.3] (want exactly 0.3)  inkNight 0  uSubjW 0.65  applied ok
+[22:41:08 +1395s]   courtyard.restore  26s  slySss→0  uSss seen by shader [0] (want exactly 0)  inkNight 0  uSubjW 0.65  applied ok
+[22:41:08 +1395s]   chunk B done — srcTree after a0b78d52f8be2f61 (MOVED — flag in RESULT)
+[22:41:08 +1395s]   reverted to base (Toon 38db1c1e0d8e81b7, Arch fc7b6b2737ed3192)
+[22:41:08 +1395s] chunk B: lock released
+[22:41:08 +1395s] chunk C1 (interior): srcTree 9647e41e38635ef1 — booting (own lock hold)
+[22:41:08 +1395s]   lock held — installing candidate (litwarm-arms.py install cand)
+[22:41:08 +1395s]   installed arm "cand"  Toon sha 5052f4189ae9997a  Arch sha 7cd5b1d0a29d625f
+[22:42:54 +1502s]   boot ok — warnings 1
+[22:42:54 +1502s]   POPULATION {"pinnedCount":13,"pinnedNames":["arch:paving_courtyard","arch:gold_leaf","arch:column_papyrus","arch:sandstone_worn","arch:sandstone_block","arch:granite_pink","arch:limestone_polished","arch:hieroglyph_gilded","arch:hieroglyph_wall","arch:mudbrick","arch:ceiling_stars","arch:bronze_dark","arch:rope_fibre"],"pinnedSss":[0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3],"pinnedNightPin":[0,0,0,0,0,0,0,0,0,0,0,0,0],"pinnedInArch":13,"pinnedOnSkinned":[],"archMatCount":13,"skinMatCount":16,"hasPublish":true,"hasInkNight":true}
+[22:42:55 +1502s]   setShot(interior) 0s  tod 0.5  draws 166 tris 723565
+[22:47:01 +1749s]   settle(interior) 247s (10 frozen frames + throwaway capture)
+[22:47:01 +1749s]   P-F7 ok: interior live nightAmount 0 (= 0 exactly)
+[22:47:13 +1760s]   interior.base     11s  slySss→0  uSss seen by shader [0] (want exactly 0)  inkNight 0  uSubjW 0.65  applied ok
+[22:47:24 +1771s]   interior.C        11s  slySss→0.3  uSss seen by shader [0.3] (want exactly 0.3)  inkNight 0  uSubjW 0.65  applied ok
+[22:47:35 +1783s]   interior.KBover   11s  slySss→0.45  uSss seen by shader [0.45] (want exactly 0.45)  inkNight 0  uSubjW 0.65  applied ok
+[22:47:46 +1794s]   interior.restore  11s  slySss→0  uSss seen by shader [0] (want exactly 0)  inkNight 0  uSubjW 0.65  applied ok
+[22:47:46 +1794s]   chunk C1 done — srcTree after a0b78d52f8be2f61 (MOVED — flag in RESULT)
+[22:47:47 +1794s]   reverted to base (Toon 38db1c1e0d8e81b7, Arch fc7b6b2737ed3192)
+[22:47:47 +1794s] chunk C1: lock released
+[22:47:47 +1794s] chunk C2 (temple): srcTree 9647e41e38635ef1 — booting (own lock hold)
+[22:47:47 +1794s]   lock held — installing candidate (litwarm-arms.py install cand)
+[22:47:47 +1794s]   installed arm "cand"  Toon sha 5052f4189ae9997a  Arch sha 7cd5b1d0a29d625f

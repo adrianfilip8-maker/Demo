@@ -2,13 +2,261 @@
  "prereg": "PREREG-litwarm.md",
  "chunk": "B",
  "shot": "courtyard",
- "startedAt": "2026-08-06T13:17:38.573Z",
- "srcTreeBefore": "4c83af2068ab9936",
+ "startedAt": "2026-08-06T22:30:32.780Z",
+ "srcTreeBefore": "9647e41e38635ef1",
  "shipSss": 0.3,
  "baseSss": 0,
- "arms": [],
+ "arms": [
+  {
+   "arm": "base",
+   "requestedSss": 0,
+   "expectedUSss": 0,
+   "readback": {
+    "slySss": [
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "uSss": [
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "nightPin": [
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "inkNight": 0,
+    "uSubjW": 0.65,
+    "uShadowColor": [
+     0.10457978687882362,
+     0.3408261240290739,
+     0.5405405031557505
+    ]
+   },
+   "mismatch": [],
+   "secs": 25
+  },
+  {
+   "arm": "C",
+   "requestedSss": 0.3,
+   "expectedUSss": 0.3,
+   "readback": {
+    "slySss": [
+     0.3,
+     0.3,
+     0.3,
+     0.3,
+     0.3,
+     0.3,
+     0.3,
+     0.3,
+     0.3,
+     0.3,
+     0.3,
+     0.3,
+     0.3
+    ],
+    "uSss": [
+     0.3,
+     0.3,
+     0.3,
+     0.3,
+     0.3,
+     0.3,
+     0.3,
+     0.3,
+     0.3,
+     0.3,
+     0.3,
+     0.3,
+     0.3
+    ],
+    "nightPin": [
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "inkNight": 0,
+    "uSubjW": 0.65,
+    "uShadowColor": [
+     0.10457978687882362,
+     0.3408261240290739,
+     0.5405405031557505
+    ]
+   },
+   "mismatch": [],
+   "secs": 25
+  },
+  {
+   "arm": "restore",
+   "requestedSss": 0,
+   "expectedUSss": 0,
+   "readback": {
+    "slySss": [
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "uSss": [
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "nightPin": [
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "inkNight": 0,
+    "uSubjW": 0.65,
+    "uShadowColor": [
+     0.10457978687882362,
+     0.3408261240290739,
+     0.5405405031557505
+    ]
+   },
+   "mismatch": [],
+   "secs": 26
+  }
+ ],
  "population": {
-  "fatal": "_sssPinned absent — the litwarm gate is not on this tree"
+  "pinnedCount": 13,
+  "pinnedNames": [
+   "arch:paving_courtyard",
+   "arch:gold_leaf",
+   "arch:column_papyrus",
+   "arch:sandstone_worn",
+   "arch:sandstone_block",
+   "arch:granite_pink",
+   "arch:limestone_polished",
+   "arch:hieroglyph_gilded",
+   "arch:hieroglyph_wall",
+   "arch:mudbrick",
+   "arch:ceiling_stars",
+   "arch:bronze_dark",
+   "arch:rope_fibre"
+  ],
+  "pinnedSss": [
+   0.3,
+   0.3,
+   0.3,
+   0.3,
+   0.3,
+   0.3,
+   0.3,
+   0.3,
+   0.3,
+   0.3,
+   0.3,
+   0.3,
+   0.3
+  ],
+  "pinnedNightPin": [
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0
+  ],
+  "pinnedInArch": 13,
+  "pinnedOnSkinned": [],
+  "archMatCount": 13,
+  "skinMatCount": 16,
+  "hasPublish": true,
+  "hasInkNight": true
  },
- "fatal": "_sssPinned absent — the litwarm gate is not on this tree"
+ "setShot": {
+  "stats": {
+   "fps": 39,
+   "drawCalls": 281,
+   "triangles": 1708385,
+   "programs": 98,
+   "ms": 18
+  },
+  "tod": 0.76
+ },
+ "settleSecs": 445,
+ "nightAmount": 0,
+ "srcTreeAfter": "a0b78d52f8be2f61",
+ "finishedAt": "2026-08-06T22:41:08.125Z"
 }

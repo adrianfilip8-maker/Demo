@@ -6,5 +6,379 @@
  "srcTreeBefore": "9647e41e38635ef1",
  "shipSss": 0.3,
  "baseSss": 0,
- "arms": []
+ "arms": [
+  {
+   "arm": "base",
+   "requestedSss": 0,
+   "expectedUSss": 0,
+   "readback": {
+    "slySss": [
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "uSss": [
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "nightPin": [
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "inkNight": 0,
+    "uSubjW": 0.65,
+    "uShadowColor": [
+     0.10386835009286081,
+     0.3384222224511441,
+     0.5367185863159294
+    ]
+   },
+   "mismatch": [],
+   "secs": 28
+  },
+  {
+   "arm": "C",
+   "requestedSss": 0.3,
+   "expectedUSss": 0.3,
+   "readback": {
+    "slySss": [
+     0.3,
+     0.3,
+     0.3,
+     0.3,
+     0.3,
+     0.3,
+     0.3,
+     0.3,
+     0.3,
+     0.3,
+     0.3,
+     0.3,
+     0.3
+    ],
+    "uSss": [
+     0.3,
+     0.3,
+     0.3,
+     0.3,
+     0.3,
+     0.3,
+     0.3,
+     0.3,
+     0.3,
+     0.3,
+     0.3,
+     0.3,
+     0.3
+    ],
+    "nightPin": [
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "inkNight": 0,
+    "uSubjW": 0.65,
+    "uShadowColor": [
+     0.10386835009286081,
+     0.3384222224511441,
+     0.5367185863159294
+    ]
+   },
+   "mismatch": [],
+   "secs": 28
+  },
+  {
+   "arm": "KBover",
+   "requestedSss": 0.45,
+   "expectedUSss": 0.45,
+   "readback": {
+    "slySss": [
+     0.45,
+     0.45,
+     0.45,
+     0.45,
+     0.45,
+     0.45,
+     0.45,
+     0.45,
+     0.45,
+     0.45,
+     0.45,
+     0.45,
+     0.45
+    ],
+    "uSss": [
+     0.45,
+     0.45,
+     0.45,
+     0.45,
+     0.45,
+     0.45,
+     0.45,
+     0.45,
+     0.45,
+     0.45,
+     0.45,
+     0.45,
+     0.45
+    ],
+    "nightPin": [
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "inkNight": 0,
+    "uSubjW": 0.65,
+    "uShadowColor": [
+     0.10386835009286081,
+     0.3384222224511441,
+     0.5367185863159294
+    ]
+   },
+   "mismatch": [],
+   "secs": 28
+  },
+  {
+   "arm": "KBnull",
+   "requestedSss": 0,
+   "expectedUSss": 0,
+   "readback": {
+    "slySss": [
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "uSss": [
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "nightPin": [
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "inkNight": 0,
+    "uSubjW": 0.65,
+    "uShadowColor": [
+     0.10386835009286081,
+     0.3384222224511441,
+     0.5367185863159294
+    ]
+   },
+   "mismatch": [],
+   "secs": 28
+  },
+  {
+   "arm": "restore",
+   "requestedSss": 0,
+   "expectedUSss": 0,
+   "readback": {
+    "slySss": [
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "uSss": [
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "nightPin": [
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "inkNight": 0,
+    "uSubjW": 0.65,
+    "uShadowColor": [
+     0.10386835009286081,
+     0.3384222224511441,
+     0.5367185863159294
+    ]
+   },
+   "mismatch": [],
+   "secs": 29
+  }
+ ],
+ "population": {
+  "pinnedCount": 13,
+  "pinnedNames": [
+   "arch:paving_courtyard",
+   "arch:gold_leaf",
+   "arch:column_papyrus",
+   "arch:sandstone_worn",
+   "arch:sandstone_block",
+   "arch:granite_pink",
+   "arch:limestone_polished",
+   "arch:hieroglyph_gilded",
+   "arch:hieroglyph_wall",
+   "arch:mudbrick",
+   "arch:ceiling_stars",
+   "arch:bronze_dark",
+   "arch:rope_fibre"
+  ],
+  "pinnedSss": [
+   0.3,
+   0.3,
+   0.3,
+   0.3,
+   0.3,
+   0.3,
+   0.3,
+   0.3,
+   0.3,
+   0.3,
+   0.3,
+   0.3,
+   0.3
+  ],
+  "pinnedNightPin": [
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0
+  ],
+  "pinnedInArch": 13,
+  "pinnedOnSkinned": [],
+  "archMatCount": 13,
+  "skinMatCount": 16,
+  "hasPublish": true,
+  "hasInkNight": true
+ },
+ "setShot": {
+  "stats": {
+   "fps": 37,
+   "drawCalls": 260,
+   "triangles": 1741863,
+   "programs": 98,
+   "ms": 17005.60000000149
+  },
+  "tod": 0.79
+ },
+ "settleSecs": 480,
+ "nightAmount": 0,
+ "srcTreeAfter": "a0b78d52f8be2f61",
+ "finishedAt": "2026-08-06T22:30:32.251Z"
 }
