@@ -11,3 +11,5 @@
 [13:21:41 + 131s] arm KBmid: frame present — skipping (idempotent resume; P-F8 will catch a cross-boot mix)
 [13:21:41 + 131s] arm KBover: frame present — skipping (idempotent resume; P-F8 will catch a cross-boot mix)
 [13:21:41 + 131s] shot table restored in-page to {"pos":[-11.5,2.6,30.5],"target":[-17,1.1,28]} (src/** never written)
+[13:21:54 + 145s] DONE — srcTree before 4c83af2068ab9936 after 4c83af2068ab9936 same=true
+[13:21:54 + 145s] wall-times:    <- §185's question
