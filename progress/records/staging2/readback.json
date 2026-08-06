@@ -1,9 +1,9 @@
 {
  "prereg": "PREREG-staging2.md",
  "runner": "progress/records/staging2.mjs",
- "bootId": "ac6c2432-9cb",
- "startedAt": "2026-08-06T06:30:32.521Z",
- "srcTreeBefore": "adb5629032309d19",
+ "bootId": "01140b55-7ab",
+ "startedAt": "2026-08-06T07:08:40.285Z",
+ "srcTreeBefore": "4c83af2068ab9936",
  "shippedExpected": {
   "pos": [
    -11.5,
