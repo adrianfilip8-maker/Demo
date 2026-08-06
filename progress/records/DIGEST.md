@@ -13,11 +13,38 @@ list of retractions, closed items, and new hazards. If an entry is only interest
 closes an item. If you find it stale, say so — a stale digest is worse than none, which is the
 same defect it exists to prevent (§39/§43/§50).
 
-Last updated: §143.
+Last updated: §192.
 
 **How to use it.** The coordinator pastes the relevant section into the resume message. Leaving it
 in the tree does not work — §143.3 is the record of an owner receiving a stale brief *twice* while
 this file sat committed, because **a resumed agent reads its transcript, not the repo.**
+
+---
+
+## ALL OWNERS — the §189–§192 rule: pin a reference to something DECLARED, never something OBSERVED IN PASSING.
+
+Four instrument defects in one batch, each caught before it produced a false verdict, each the
+same shape: **the instrument found *a* subject and reported on it as *the* subject.** Read this
+before writing any check of the form "find the thing and confirm it is healthy."
+
+| § | the check | what it *named* | what it actually *read* | the tell |
+|---|---|---|---|---|
+| **189** | `launch.sh` detachment | the process I just started | the **first** `/proc` match for the script's basename — so arms 2 and 3 were attested "ppid 1 verified" for a process it never looked at, while running mis-parented | three pidfiles holding one pid |
+| **190** | combatrecipient `P4d` | the combat residue | **every guard in the level** projecting into a spawn camera — so it was unpassable on `cand` AND unfailable on `norestore` | the **residue-free base arm** read hits in all five cameras, from guards 15.9–95.9 m away |
+| **191** | the src drift check | another owner editing `src/` during my FIFO wait | **the runner's own arm install**, which happens between the two hashes — every non-`base` arm VOID by construction | `base` passed only because it installs nothing |
+| **192** | `fifoDrift` (my §191 fix) | the tree the `base` arm was captured on | **whatever `src/` looked like at my process start** — siblings dispatched in the same second mean that can be another arm's transient tree | the flag fired on the arm that was **correct** |
+
+**What to do differently.** Before trusting a check: (1) name the referent explicitly, and read it
+from a *recorded* value (`telemetry-base.json`'s `srcTree`, a snapshot taken before the fork, a
+declared address) rather than from whatever is on disk or in the process table at the moment you
+look; (2) ask *"if a second actor is in play — a concurrent process, a level full of guards, the
+runner itself, a sibling arm — does this still read the thing I named?"*; (3) **check a control
+that should be quiet.** Every one of the four was caught by exactly that and nothing else.
+
+**The counter-example, so the rule is not read as "instruments are untrustworthy":**
+`banda-diag`'s drift guard branches on `LITWARM_SHIPPED` and asserts *which* tree it is describing
+(four lines when the candidate is installed, one at base) instead of straddling both. That is what
+pinning to a declared referent looks like when it is done right.
 
 ---
 
