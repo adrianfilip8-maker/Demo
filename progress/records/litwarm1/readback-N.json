@@ -6,7 +6,69 @@
  "srcTreeBefore": "85bab2d30f5f7b59",
  "shipSss": 0.3,
  "baseSss": 0,
- "arms": [],
+ "arms": [
+  {
+   "arm": "base",
+   "requestedSss": 0,
+   "expectedUSss": 0,
+   "readback": {
+    "slySss": [
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "uSss": [
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "nightPin": [
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "inkNight": 1,
+    "uSubjW": 0.5,
+    "uShadowColor": [
+     0.012895755468330918,
+     0.04676854125689067,
+     0.07805322250511793
+    ]
+   },
+   "mismatch": [],
+   "secs": 31
+  }
+ ],
  "population": {
   "pinnedCount": 13,
   "pinnedNames": [
@@ -70,5 +132,7 @@
    "ms": 12.900000000372529
   },
   "tod": 0.02
- }
+ },
+ "settleSecs": 516,
+ "nightAmount": 1
 }

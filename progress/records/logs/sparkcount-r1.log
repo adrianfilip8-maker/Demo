@@ -1,0 +1,8 @@
+[04:03:36 +   0s] seam verify ok (srcTree 85bab2d30f5f7b59)
+· waiting for capture lock (10s, held by pid 19148)
+· waiting for capture lock (20s, held by pid 19148)
+· waiting for capture lock (31s, held by pid 19148)
+· waiting for capture lock (41s, held by pid 19148)
+· waiting for capture lock (51s, held by pid 19148)
+· waiting for capture lock (61s, held by pid 19148)
+· waiting for capture lock (71s, held by pid 19148)

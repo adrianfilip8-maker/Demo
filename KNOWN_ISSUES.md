@@ -14512,3 +14512,40 @@ compared against the limits the way §153.1 did it. Until that exists, no ledger
 288/1.86 M as over budget — and this section exists so the sixth misquote does not happen by
 someone reading SHADING's honest log line out of context.
 
+
+## §183 — the occluder chose the denominator twice, in two different measurement families
+
+§181 recorded that `guard`'s "medL 18.6, the character is underlit" was a statistic over a rect
+that is 80.8% doorway void. STAGING has now found **the same defect shape in the same shot, in a
+completely different instrument**, and the two together make a rule.
+
+FX's geometric certifier (`geocert.mjs`) carries `const PLINTH_Y = 300; // occlusion edge` — an
+honest, correct restriction to the visible band, derived independently and agreeing with
+STAGING's traced arris to within 6 px. On that visible band the cone lever's key-lit coverage
+reads **−17.06 pp**: the one claim §179 could not certify. Running the same certifier unmodified
+with the cut retired (`PLINTH_Y 300 → 720`), the same lever, same yaw, same key reads **+4.95 pp**
+on the full figure, with rim −6.25 pp and **key-OR-rim −2.77 pp — a wash, not a 17-point
+narrowing.** The visible set is 6,092 of 27,122 px: **77.5% of the subject was discarded by the
+occluder before the statistic was computed.**
+
+**Rule: when an occluder dominates a frame, it silently becomes the denominator of every
+statistic taken over the subject — photometric and geometric alike.** Neither instrument was
+wrong; both were honest about their region; and both produced a number about the occluder while
+appearing to describe the subject. The check is cheap and now mandatory for any subject-scoped
+figure in an occluded framing: **state the visible fraction of the subject beside the statistic**,
+and if it is not near 1, say what the statistic is a statistic *of*.
+
+Consequences, none of them a ship decision:
+- §179's hold was right for a stronger reason than it was chosen for. The cone's uncertified
+  claim is **a function of the wedge**, so it must be re-judged against the post-move frame, not
+  carried forward. The re-judgement costs three constants (`CAM.pos`, `G`, `PLINTH_Y`) — and the
+  camera translation provably cannot perturb the certifier, since `project()` differences the
+  camera position out (verified empirically: shipped vs translated output, no differences).
+- STAGING corrected its own NOTE at FX's expense-free site: "no round has named it" was false of
+  the tree — geocert had the edge and attributed it to the §152 plinth. What was missing was
+  *which piece* (the gilded cavetto cornice, matched to 3 cm), its 26–29% frame share, the 86%
+  figure occlusion, and this denominator finding.
+- Two independent corroborations fell out: geocert's hardcoded stand `[-15.487, 0, 27.545]` and
+  its committed head px `(864,244)` are exactly what STAGING's independent `_solveShotPose`
+  replication derived without having read that file.
+

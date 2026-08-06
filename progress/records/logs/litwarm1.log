@@ -2,3 +2,6 @@
 [03:55:19 + 115s]   boot ok — warnings 1
 [03:55:19 + 115s]   POPULATION {"pinnedCount":13,"pinnedNames":["arch:paving_courtyard","arch:gold_leaf","arch:column_papyrus","arch:sandstone_worn","arch:sandstone_block","arch:granite_pink","arch:limestone_polished","arch:hieroglyph_gilded","arch:hieroglyph_wall","arch:mudbrick","arch:ceiling_stars","arch:bronze_dark","arch:rope_fibre"],"pinnedSss":[0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3],"pinnedNightPin":[0,0,0,0,0,0,0,0,0,0,0,0,0],"pinnedInArch":13,"pinnedOnSkinned":[],"archMatCount":13,"skinMatCount":16,"hasPublish":true,"hasInkNight":true}
 [03:55:41 + 137s]   setShot(night) 22s  tod 0.02  draws 288 tris 1855983
+[04:04:17 + 653s]   settle(night) 516s (10 frozen frames + throwaway capture)
+[04:04:17 + 653s]   P-F7 ok: night live nightAmount 1 (= 1 exactly)
+[04:04:48 + 684s]   night.base     31s  slySss→0  uSss seen by shader [0] (want exactly 0)  inkNight 1  uSubjW 0.5  applied ok
