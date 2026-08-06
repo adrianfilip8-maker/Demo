@@ -1,15 +1,15 @@
 {
  "arm": "model3",
- "at": "2026-08-06T20:34:19.906Z",
+ "at": "2026-08-06T23:23:05.796Z",
  "shots": {
   "sly-closeup": {
-   "secs": 527,
+   "secs": 425,
    "stats": {
     "fps": 39,
     "drawCalls": 228,
-    "triangles": 1618049,
+    "triangles": 1619037,
     "programs": 92,
-    "ms": 8
+    "ms": 6.599999999976717
    },
    "subject": {
     "asked": [
@@ -38,13 +38,13 @@
    }
   },
   "sly-profile": {
-   "secs": 437,
+   "secs": 345,
    "stats": {
     "fps": 60,
     "drawCalls": 201,
-    "triangles": 1558811,
+    "triangles": 1559723,
     "programs": 92,
-    "ms": 15.400000000372529
+    "ms": 8.299999999813735
    },
    "subject": {
     "asked": [
@@ -73,13 +73,13 @@
    }
   },
   "sly-perch": {
-   "secs": 499,
+   "secs": 397,
    "stats": {
     "fps": 60,
     "drawCalls": 228,
-    "triangles": 1618939,
+    "triangles": 1619851,
     "programs": 92,
-    "ms": 9.599999999627471
+    "ms": 5.899999999906868
    },
    "subject": {
     "asked": [
@@ -108,13 +108,13 @@
    }
   },
   "traversal": {
-   "secs": 498,
+   "secs": 398,
    "stats": {
     "fps": 60,
     "drawCalls": 218,
-    "triangles": 1704911,
+    "triangles": 1705823,
     "programs": 92,
-    "ms": 11.399999998509884
+    "ms": 5.100000000093132
    },
    "subject": {
     "asked": [
@@ -148,7 +148,7 @@
   "rootName": "sly3",
   "meshName": "sly3:mesh",
   "bones": 31,
-  "verts": 2801,
+  "verts": 2957,
   "height": null
  }
 }
