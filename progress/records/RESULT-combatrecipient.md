@@ -18,8 +18,9 @@
 | `combatrecipient.mjs` (capture harness) | **written, syntax-checked**; its screen projector cross-validated against an independent Python implementation to the decimal on all seven cameras |
 | `combatrecipient-arms.py` (arm builder) | **written and verified**: four arms build, all parse under `node --check`, all revert to base **byte-exactly**; `cand` and `kbside` differ in exactly one token (the `screenSide` sign) |
 | `combatrecipient-score.py` (scorer) | **written, calibrated 9/9** against CRITIC-sbs3's published `combat` statistics, and **dry-run end-to-end on synthetic frames** so it cannot crash on the real ones |
-| chunk 1 `base` | **STILL QUEUED after 25 min of FIFO wait.** Launched via `tools/launch.sh` (pid 5947, detachment verified at ppid 1 from `/proc`), ticket `1785989642785-5947`. Ahead of it: `sparkcount.mjs` (holding, 17 min in) and `litwarm1.mjs all` (queued ahead). The process is **detached and will capture when its turn comes**, writing frames incrementally. |
-| chunks 2–5 | **PENDING** — not started; `src/**` untouched and at base |
+| chunk 1 `base` | **LANDED AND SCORED** (2026-08-06, srcTree `59fd366596517cf2`). `combat` 221.1 s, `sly-profile` 130 s; tree checked back to **BASE** (`Guard.js` sha `350dece5a1b13fb7`) by the runner's own `finally`. Instrument **CALIBRATED 9/9**. Base gates **PASS**: B1 figure medL **120.02** ∈ [112,128], B2 core meanR−B **+88.2** ∈ [+78,+98] ⇒ **not VOID**. B3 `minDist(stand)` **16.2638 m** (`combat`) / **15.8696 m** (`sly-profile`) — no guard near the stand, i.e. **base carries no residue**, which is what makes it the control the seal needs. |
+| **P4d** | **STRUCK — see §190 and the strikethrough at its declaration site.** Demoted to REPORT-ONLY from the `base` arm alone, with `cand` still third in the FIFO queue and no candidate number in existence. |
+| chunks 2–5 | **RUNNING** — `cand`, `norestore`, `kbside` dispatched 11:59 UTC (pids 3825/4328/4754, all ppid 1 verified per §189), queued ahead of `staging2` and `litwarm1` per §188.2 short-first |
 | `src/ai/Guard.js` | **BASE, unmodified.** `combatrecipient-arms.py check` → `matches arm: ['restore']`, sha `350dece5a1b13fb7…` |
 
 ### What the next agent (or a resumed me) does first
@@ -130,3 +131,48 @@ decision is the coordinator's**; this file will name file, line and old→new ei
 - `/home/user/Demo/progress/records/combatrecipient-arms.py`
 - `/home/user/Demo/progress/records/combatrecipient-score.py`
 - `/home/user/Demo/progress/records/combatrecipient1/` (frames + telemetry; empty until chunk 1 lands)
+
+---
+
+## Base arm — measured, 2026-08-06
+
+```
+--- SELFTEST vs CRITIC-sbs3 published combat numbers ---
+  figure medL 119.98 | figure medSat 0.435 | chalk 9122 px | blue 22 px
+  core medR 178 / medG 120 / medB 87 | core meanR-B 88.2 | frame L>200 sat<.15 131
+  => instrument CALIBRATED (9/9)
+
+--- BASE GATES (VOID, not FAIL, if out) ---
+  B1   figure medL 120.02   band [112.0, 128.0]   PASS
+  B2   core meanR-B +88.2   band [+78.0, +98.0]   PASS
+  B3   base minDist(stand) = 16.2638 m            (no guard near the stand)
+  SLYBB = (503, 334, 648, 660) = 47270 px (projected; a deliberate under-estimate)
+  cane-hook ink (base) = 1000 px   [P3c, reported not gated]
+
+  [base] srcTree 59fd366596517cf2
+    combat       minDist(stand)=16.2638  spawnHits={closeup:7, perch:7, profile:2, key:7}
+    sly-profile  minDist(stand)=15.8696  spawnHits={closeup:7, startle:1, perch:7, profile:2, key:7}
+```
+
+### What the base arm decided, beyond passing its own gates
+
+The `spawnHits` row is why **P4d is struck** (§190). Base is residue-free — B3 puts the nearest
+guard **16.26 m** from the combat stand — and it *still* registers overlaps in all five spawn
+cameras, from guards standing **15.9, 29.3, 34.1, 41.9, 75.6, 88.3 and 95.9 m** away, of types
+`temple`, `heavy` and `scarab`. That is the level's ordinary roster, not the residue.
+
+A predicate that a residue-free control cannot satisfy is not measuring the residue. P4d was
+therefore **unpassable on `cand`** and **unfailable on `norestore`**, and it is now report-only,
+printing the threshold-free nearest-overlapping-guard distance instead of a verdict.
+
+**The seal is unaffected in substance.** The residue keeps three independent gates, all
+position- or pixel-specific: **P4c** (`minDist(stand)` ≥ 2.0 m on `cand`, ≤ 0.5 m on `norestore`
+— the same fact P4d was reaching for, measured against the stand instead of the viewport), **P4**
+(frame-wide Δ ≤ 0.5 % of frame), and **P4b** (a ≥ 3,000 px component overlapping the registered
+residue address). Base's own 16.26 m is the control that makes P4c readable: it establishes that
+the shipped tree has no residue, so `norestore`'s predicted collapse to ≤ 0.5 m is a real signal
+rather than a baseline.
+
+## Verdict
+
+_(pending `cand` / `norestore` / `kbside`)_
