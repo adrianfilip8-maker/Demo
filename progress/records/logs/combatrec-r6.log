@@ -1,1 +1,5 @@
 · arm "base"  srcTree 59fd366596517cf2 (58 files)  shots: combat, sly-profile
+  OK combat  221.1s  lock=-1  minDist(anchor)=16.1652  minDist(stand)=16.2638  spawnHits=sly-closeup:7,sly-perch:7,sly-profile:2,sly-key:7
+  OK sly-profile  130s  lock=-1  minDist(anchor)=15.7725  minDist(stand)=15.8696  spawnHits=sly-closeup:7,sly-startle:1,sly-perch:7,sly-profile:2,sly-key:7
+  tree: src/ai/Guard.js sha 350dece5a1b13fb7  (BASE)
+DONE arm=base srcTree=59fd366596517cf2

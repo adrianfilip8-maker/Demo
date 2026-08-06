@@ -14809,3 +14809,52 @@ unchanged (§164 chunking, §188.2 short-first ordering). Future rollbacks get a
 subsection unless they take something the discipline was supposed to protect — which would be the
 finding worth writing up.
 
+
+
+## §189 — the launcher attested detachment for a process it never looked at
+
+`tools/launch.sh` exists for one reason, stated in its own header: *"a launcher that cannot PROVE
+detachment must refuse, not warn."* Dispatching three arms of one script exposed a path where it
+proved the wrong thing and returned 0.
+
+`find_pid()` scanned `/proc` for the script's **basename** and returned the **first** match. With
+`combatrecipient.mjs cand` already running at ppid 1, the launches of `norestore` and `kbside`
+each re-found pid 14928 — the *first* arm — verified its ppid, and printed
+
+```
+launch OK: combatrecipient.mjs pid 14928 ppid 1 (detached, verified from /proc)
+```
+
+three times, once per arm, with three different pidfiles all containing `14928`. The processes it
+had actually started were never examined. `ps` showed what the launcher did not:
+
+```
+14928     1 node combatrecipient.mjs cand        <- detached
+15030 15029 node combatrecipient.mjs norestore   <- ppid != 1, the §78.4 hazard, unreported
+15099 15098 node combatrecipient.mjs kbside      <- ppid != 1, the §78.4 hazard, unreported
+```
+
+This is worse than the failure mode the file was written against. §78.4's original hazard was a
+launcher that *silently did the wrong thing*; this is a launcher that **actively certifies** the
+wrong thing, and the certificate is the artefact a caller is told to trust. The three identical
+pids in three pidfiles were the tell, and they were only visible because the exit codes were
+checked against `ps` rather than believed — the §188.3 habit (*check the artefact, not the return
+code*) generalising past the case it was written for.
+
+**Fix — snapshot, not argv matching.** `match_pids()` now lists every match, `PRE_PIDS` snapshots
+that set **before** the double fork, and `find_pid()` accepts only a pid absent from the snapshot.
+Matching on argv would have fixed this instance (the arms differ by one word) and would fail the
+moment two arms are launched with identical arguments; the snapshot does not care. The membership
+test is space-delimited on both sides so a pid cannot match a prefix of another (`149` vs `14928`).
+
+Verified against the live condition rather than a clean one: relaunching `norestore` and `kbside`
+**while `cand` was still running** returned 16815 and 17257, distinct, both ppid 1 — and the
+"wrapper lingering — killing it" remediation fired for each, which it had never done for arms 2
+and 3 because the launcher believed it was already finished.
+
+**The standing lesson, sharpened.** A verifier keyed on a name verifies whatever answers to that
+name. Every check of the form "find the thing and confirm it is healthy" needs to establish
+identity first — §181's rect measured the wrong population, §183's occluder chose its own
+denominator, §184.1's readback existed but held `arms: []`, and now a launcher confirmed the
+health of a process it did not start. Four instruments, one defect: the instrument found *a*
+subject and reported on it as if it were *the* subject.

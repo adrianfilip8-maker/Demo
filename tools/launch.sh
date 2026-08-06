@@ -41,7 +41,18 @@ DIR="$(cd "$(dirname "$SCRIPT")" && pwd)"
 # Find the node pid by scanning /proc for our script's basename. Deliberately NOT `pgrep -f`:
 # that matches the wrapper shell (whose command line contains the script path) and the grep
 # itself, which is exactly how the hazard went unnoticed the first time.
-find_pid() {
+#
+#   3. BUG 3, found in production and the worst of the three because it FALSELY ATTESTED.
+#      `find_pid` returned the FIRST match for the basename, so launching a second arm of a
+#      script already running (`combatrecipient.mjs cand` then `... norestore`) verified the
+#      ALREADY-DETACHED first pid and printed "ppid 1 (verified from /proc)" for a process it
+#      never looked at. Both later arms were left at ppid != 1 — precisely the §78.4 hazard
+#      this launcher exists to make impossible — while reporting exit 0. A launcher that
+#      cannot prove detachment must refuse; this one proved the wrong thing.
+#      Fix: snapshot the matching pids BEFORE the fork and accept only a pid that is not in
+#      that set. Chosen over matching on argv (which would also work here) because it stays
+#      correct when two arms are launched with IDENTICAL arguments.
+match_pids() {
   local p cl
   for d in /proc/[0-9]*; do
     p="${d#/proc/}"
@@ -50,9 +61,18 @@ find_pid() {
     case "$cl" in
       *"$BASE"*)
         case "$cl" in *bash*|*/bin/sh*|*grep*|*launch.sh*) continue;; esac
-        case "$cl" in *node*) echo "$p"; return 0;; esac
+        case "$cl" in *node*) echo "$p";; esac
       ;;
     esac
+  done
+}
+# Space-delimited so a substring test cannot match a pid prefix (14928 vs 149).
+PRE_PIDS=" $(match_pids | tr '\n' ' ')"
+find_pid() {
+  local p
+  for p in $(match_pids); do
+    case "$PRE_PIDS" in *" $p "*) continue;; esac
+    echo "$p"; return 0
   done
   return 1
 }
