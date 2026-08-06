@@ -14784,3 +14784,15 @@ never started", and refusing to guess is what makes it trustworthy for long capt
 callers: **`launch.sh` exit 4 on a sub-second job means "check the artefact", not "it failed."**
 Verified by the job's own output and by the tree, never by the launcher's return code alone.
 
+
+### 188.4 Seventeenth rollback — and the first one where the cycle's repair was already permanent
+
+Recovered ff-only to `1476a5c`. Four in ~100 minutes. Nothing new to say about the mechanism; one
+thing worth saying about the result: **the §187 comment correction survived it**, because it had
+been committed rather than left as a running job. Its two predecessors — the same repair, twice —
+died as scratchpad scripts and running processes. The difference is not luck: a repair becomes
+permanent at the commit, not at the edit.
+
+Three runners re-queued short-first per §188.2. `combatrecipient` and `staging2` had produced no
+committed arms this round, so they restart their chunks; `litwarm1` still resumes from its six.
+
