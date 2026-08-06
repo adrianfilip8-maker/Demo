@@ -1,0 +1,4 @@
+· arm "cand"  srcTree 59fd366596517cf2 (58 files)  shots: combat, sly-profile
+· lock held — installing arm "cand" into src/ai/Guard.js
+  installed arm "cand" -> /home/user/Demo/src/ai/Guard.js  sha aac2f0dc3715f9ca
+· srcStable OK — launch 59fd366596517cf2 == atLock; boot == postInstall 13dde875b6f320fb (own arm install accounted for)
