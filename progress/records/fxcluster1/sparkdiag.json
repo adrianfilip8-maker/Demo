@@ -1,0 +1,616 @@
+{
+ "at": "2026-08-06T03:55:12.094Z",
+ "strictPredicate": "|R-143|<=40 AND |G-216|<=35 AND |B-255|<=40 (fxcluster-diag.mjs:530, unchanged)",
+ "frames": {
+  "sbs2/night.png": {
+   "file": "sbs2/night.png",
+   "w": 1280,
+   "h": 720,
+   "strictPx": 50,
+   "componentCount": 16,
+   "largestComponentPx": 30,
+   "largestShareOfPop": 60,
+   "top5ComponentPx": [
+    30,
+    3,
+    3,
+    2,
+    1
+   ],
+   "medianComponentPx": 1,
+   "largest3": [
+    {
+     "px": 30,
+     "bbox": [
+      399,
+      528,
+      427,
+      533
+     ],
+     "maxDim": 29
+    },
+    {
+     "px": 3,
+     "bbox": [
+      383,
+      536,
+      385,
+      536
+     ],
+     "maxDim": 3
+    },
+    {
+     "px": 3,
+     "bbox": [
+      373,
+      538,
+      375,
+      538
+     ],
+     "maxDim": 3
+    }
+   ],
+   "rowProfile": [
+    {
+     "band": "y 0-60",
+     "px": 0
+    },
+    {
+     "band": "y 60-120",
+     "px": 0
+    },
+    {
+     "band": "y 120-180",
+     "px": 0
+    },
+    {
+     "band": "y 180-240",
+     "px": 0
+    },
+    {
+     "band": "y 240-300",
+     "px": 0
+    },
+    {
+     "band": "y 300-360",
+     "px": 0
+    },
+    {
+     "band": "y 360-420",
+     "px": 0
+    },
+    {
+     "band": "y 420-480",
+     "px": 0
+    },
+    {
+     "band": "y 480-540",
+     "px": 42
+    },
+    {
+     "band": "y 540-600",
+     "px": 8
+    },
+    {
+     "band": "y 600-660",
+     "px": 0
+    },
+    {
+     "band": "y 660-720",
+     "px": 0
+    }
+   ]
+  },
+  "sbs3/night.png": {
+   "file": "sbs3/night.png",
+   "w": 1280,
+   "h": 720,
+   "strictPx": 224,
+   "componentCount": 62,
+   "largestComponentPx": 30,
+   "largestShareOfPop": 13.4,
+   "top5ComponentPx": [
+    30,
+    21,
+    19,
+    16,
+    13
+   ],
+   "medianComponentPx": 1,
+   "largest3": [
+    {
+     "px": 30,
+     "bbox": [
+      399,
+      528,
+      427,
+      533
+     ],
+     "maxDim": 29
+    },
+    {
+     "px": 21,
+     "bbox": [
+      688,
+      18,
+      697,
+      22
+     ],
+     "maxDim": 10
+    },
+    {
+     "px": 19,
+     "bbox": [
+      727,
+      15,
+      741,
+      19
+     ],
+     "maxDim": 15
+    }
+   ],
+   "rowProfile": [
+    {
+     "band": "y 0-60",
+     "px": 95
+    },
+    {
+     "band": "y 60-120",
+     "px": 66
+    },
+    {
+     "band": "y 120-180",
+     "px": 13
+    },
+    {
+     "band": "y 180-240",
+     "px": 0
+    },
+    {
+     "band": "y 240-300",
+     "px": 0
+    },
+    {
+     "band": "y 300-360",
+     "px": 0
+    },
+    {
+     "band": "y 360-420",
+     "px": 0
+    },
+    {
+     "band": "y 420-480",
+     "px": 0
+    },
+    {
+     "band": "y 480-540",
+     "px": 42
+    },
+    {
+     "band": "y 540-600",
+     "px": 8
+    },
+    {
+     "band": "y 600-660",
+     "px": 0
+    },
+    {
+     "band": "y 660-720",
+     "px": 0
+    }
+   ]
+  },
+  "sbs2/traversal.png": {
+   "file": "sbs2/traversal.png",
+   "w": 1280,
+   "h": 720,
+   "strictPx": 0,
+   "componentCount": 0,
+   "largestComponentPx": 0,
+   "largestShareOfPop": 0,
+   "top5ComponentPx": [],
+   "medianComponentPx": 0,
+   "largest3": [],
+   "rowProfile": [
+    {
+     "band": "y 0-60",
+     "px": 0
+    },
+    {
+     "band": "y 60-120",
+     "px": 0
+    },
+    {
+     "band": "y 120-180",
+     "px": 0
+    },
+    {
+     "band": "y 180-240",
+     "px": 0
+    },
+    {
+     "band": "y 240-300",
+     "px": 0
+    },
+    {
+     "band": "y 300-360",
+     "px": 0
+    },
+    {
+     "band": "y 360-420",
+     "px": 0
+    },
+    {
+     "band": "y 420-480",
+     "px": 0
+    },
+    {
+     "band": "y 480-540",
+     "px": 0
+    },
+    {
+     "band": "y 540-600",
+     "px": 0
+    },
+    {
+     "band": "y 600-660",
+     "px": 0
+    },
+    {
+     "band": "y 660-720",
+     "px": 0
+    }
+   ]
+  },
+  "sbs3/traversal.png": {
+   "file": "sbs3/traversal.png",
+   "w": 1280,
+   "h": 720,
+   "strictPx": 239,
+   "componentCount": 14,
+   "largestComponentPx": 82,
+   "largestShareOfPop": 34.3,
+   "top5ComponentPx": [
+    82,
+    67,
+    42,
+    34,
+    2
+   ],
+   "medianComponentPx": 2,
+   "largest3": [
+    {
+     "px": 82,
+     "bbox": [
+      500,
+      245,
+      513,
+      256
+     ],
+     "maxDim": 14
+    },
+    {
+     "px": 67,
+     "bbox": [
+      500,
+      221,
+      511,
+      231
+     ],
+     "maxDim": 12
+    },
+    {
+     "px": 42,
+     "bbox": [
+      429,
+      273,
+      437,
+      279
+     ],
+     "maxDim": 9
+    }
+   ],
+   "rowProfile": [
+    {
+     "band": "y 0-60",
+     "px": 0
+    },
+    {
+     "band": "y 60-120",
+     "px": 0
+    },
+    {
+     "band": "y 120-180",
+     "px": 5
+    },
+    {
+     "band": "y 180-240",
+     "px": 74
+    },
+    {
+     "band": "y 240-300",
+     "px": 160
+    },
+    {
+     "band": "y 300-360",
+     "px": 0
+    },
+    {
+     "band": "y 360-420",
+     "px": 0
+    },
+    {
+     "band": "y 420-480",
+     "px": 0
+    },
+    {
+     "band": "y 480-540",
+     "px": 0
+    },
+    {
+     "band": "y 540-600",
+     "px": 0
+    },
+    {
+     "band": "y 600-660",
+     "px": 0
+    },
+    {
+     "band": "y 660-720",
+     "px": 0
+    }
+   ]
+  },
+  "fxcluster1/b2-traversal.cand.png (the 236-px genuine population)": {
+   "file": "fxcluster1/b2-traversal.cand.png",
+   "w": 1280,
+   "h": 720,
+   "strictPx": 236,
+   "componentCount": 14,
+   "largestComponentPx": 82,
+   "largestShareOfPop": 34.7,
+   "top5ComponentPx": [
+    82,
+    66,
+    42,
+    33,
+    2
+   ],
+   "medianComponentPx": 1,
+   "largest3": [
+    {
+     "px": 82,
+     "bbox": [
+      500,
+      245,
+      513,
+      256
+     ],
+     "maxDim": 14
+    },
+    {
+     "px": 66,
+     "bbox": [
+      500,
+      221,
+      511,
+      231
+     ],
+     "maxDim": 12
+    },
+    {
+     "px": 42,
+     "bbox": [
+      429,
+      273,
+      437,
+      279
+     ],
+     "maxDim": 9
+    }
+   ],
+   "rowProfile": [
+    {
+     "band": "y 0-60",
+     "px": 0
+    },
+    {
+     "band": "y 60-120",
+     "px": 0
+    },
+    {
+     "band": "y 120-180",
+     "px": 5
+    },
+    {
+     "band": "y 180-240",
+     "px": 72
+    },
+    {
+     "band": "y 240-300",
+     "px": 159
+    },
+    {
+     "band": "y 300-360",
+     "px": 0
+    },
+    {
+     "band": "y 360-420",
+     "px": 0
+    },
+    {
+     "band": "y 420-480",
+     "px": 0
+    },
+    {
+     "band": "y 480-540",
+     "px": 0
+    },
+    {
+     "band": "y 540-600",
+     "px": 0
+    },
+    {
+     "band": "y 600-660",
+     "px": 0
+    },
+    {
+     "band": "y 660-720",
+     "px": 0
+    }
+   ]
+  },
+  "fxcluster1/b2-traversal.base.png": {
+   "file": "fxcluster1/b2-traversal.base.png",
+   "w": 1280,
+   "h": 720,
+   "strictPx": 0,
+   "componentCount": 0,
+   "largestComponentPx": 0,
+   "largestShareOfPop": 0,
+   "top5ComponentPx": [],
+   "medianComponentPx": 0,
+   "largest3": [],
+   "rowProfile": [
+    {
+     "band": "y 0-60",
+     "px": 0
+    },
+    {
+     "band": "y 60-120",
+     "px": 0
+    },
+    {
+     "band": "y 120-180",
+     "px": 0
+    },
+    {
+     "band": "y 180-240",
+     "px": 0
+    },
+    {
+     "band": "y 240-300",
+     "px": 0
+    },
+    {
+     "band": "y 300-360",
+     "px": 0
+    },
+    {
+     "band": "y 360-420",
+     "px": 0
+    },
+    {
+     "band": "y 420-480",
+     "px": 0
+    },
+    {
+     "band": "y 480-540",
+     "px": 0
+    },
+    {
+     "band": "y 540-600",
+     "px": 0
+    },
+    {
+     "band": "y 600-660",
+     "px": 0
+    },
+    {
+     "band": "y 660-720",
+     "px": 0
+    }
+   ]
+  }
+ },
+ "capSweep": {
+  "component <= 64 px AND maxDim <= 16 px": {
+   "sbs3/night.png (must -> ~0)": {
+    "strictPx": 224,
+    "keptPx": 194,
+    "rejectedPx": 30
+   },
+   "sbs2/night.png": {
+    "strictPx": 50,
+    "keptPx": 20,
+    "rejectedPx": 30
+   },
+   "b2-traversal.cand.png (must keep ~236)": {
+    "strictPx": 236,
+    "keptPx": 88,
+    "rejectedPx": 148
+   },
+   "b2-traversal.base.png (known-bad, no preroll)": {
+    "strictPx": 0,
+    "keptPx": 0,
+    "rejectedPx": 0
+   }
+  },
+  "component <= 128 px AND maxDim <= 24 px": {
+   "sbs3/night.png (must -> ~0)": {
+    "strictPx": 224,
+    "keptPx": 194,
+    "rejectedPx": 30
+   },
+   "sbs2/night.png": {
+    "strictPx": 50,
+    "keptPx": 20,
+    "rejectedPx": 30
+   },
+   "b2-traversal.cand.png (must keep ~236)": {
+    "strictPx": 236,
+    "keptPx": 236,
+    "rejectedPx": 0
+   },
+   "b2-traversal.base.png (known-bad, no preroll)": {
+    "strictPx": 0,
+    "keptPx": 0,
+    "rejectedPx": 0
+   }
+  },
+  "component <= 256 px AND maxDim <= 32 px": {
+   "sbs3/night.png (must -> ~0)": {
+    "strictPx": 224,
+    "keptPx": 224,
+    "rejectedPx": 0
+   },
+   "sbs2/night.png": {
+    "strictPx": 50,
+    "keptPx": 50,
+    "rejectedPx": 0
+   },
+   "b2-traversal.cand.png (must keep ~236)": {
+    "strictPx": 236,
+    "keptPx": 236,
+    "rejectedPx": 0
+   },
+   "b2-traversal.base.png (known-bad, no preroll)": {
+    "strictPx": 0,
+    "keptPx": 0,
+    "rejectedPx": 0
+   }
+  },
+  "component <= 512 px AND maxDim <= 48 px": {
+   "sbs3/night.png (must -> ~0)": {
+    "strictPx": 224,
+    "keptPx": 224,
+    "rejectedPx": 0
+   },
+   "sbs2/night.png": {
+    "strictPx": 50,
+    "keptPx": 50,
+    "rejectedPx": 0
+   },
+   "b2-traversal.cand.png (must keep ~236)": {
+    "strictPx": 236,
+    "keptPx": 236,
+    "rejectedPx": 0
+   },
+   "b2-traversal.base.png (known-bad, no preroll)": {
+    "strictPx": 0,
+    "keptPx": 0,
+    "rejectedPx": 0
+   }
+  }
+ }
+}
