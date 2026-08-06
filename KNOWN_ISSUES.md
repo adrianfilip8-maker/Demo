@@ -14688,3 +14688,46 @@ The `_poseForShot` position-restore hazard §181 recorded is worse and simpler t
   `sly-startle` safe **because the residue fills its frame**, and a launch-time source hash standing
   in for the tree the boot actually renders.
 
+
+## §187 — my own ship made a control unstageable, and left two comments asserting the opposite
+
+The sparkcount seal is **withdrawn**: KB1 returned `SPARKCOUNT = 11` where the seal registered
+`0`, and per its own §5 the agent reverted rather than defended. The cause is mine.
+
+The b2 ship (`b3f57db`) made `this.sparkles?.preroll(0.25)` **unconditional** at
+`Particles.js:2574` — deliberately, and RESULT-fxcluster's B letter names exactly that as the
+ship. What I did not do was update the two comments around it: the block above still read
+*"Debug-gated OFF by default: shipped behaviour is bit-exact unless the capture harness opts
+in"*, and `preroll()`'s own docstring still read *"the only caller is debug-gated"*. **Both were
+false the moment I shipped, and both were load-bearing** — the sparkcount seal registered a
+preroll-OFF known-bad on their authority, and that arm cannot exist on this build.
+
+Proved from the dump rather than inferred: across the two arms `prerollFlag` read `null` vs
+`true` while `aPos`/`aData`/camera came back **byte-identical**, with `born = −0.25` (the
+`preroll(0.25)` signature) on both, so `pop` saturated at 1.0 and the seal's `pop ≈ 0.02–0.09`
+premise did not reproduce. The agent **declined to report KB2's in-band reading as a pass**,
+because it is the same dump that fails KB1 — one control run twice — and declined to use the
+staging defect to keep the seal alive: *"a seal whose decisive control can't be staged was never
+testable."*
+
+**Corrected at the site**: both comments now state the shipped behaviour, and the second records
+that a preroll-OFF arm is unstageable so any future seal needing that control must gate it
+itself. Queued on the capture lock like any src edit — comments are inside the `srcTree` hash,
+so a comment-only change during someone else's capture is still a tree move.
+
+**Lesson, stated generally: a ship is not finished until the comments around it are true.** A
+stale comment is worse than no comment, because a seal can register a control on its authority —
+which is exactly what happened here, costing one capture window and one seal.
+
+Two further findings the run produced, kept because they outlive the withdrawn seal:
+- **Blob↔marker disagrees and no threshold could have closed it** (11 markers vs 14 blobs / 236
+  px): `popOpen` is 22/22, so the `pop` clause is inert at *any* `POP_MIN`, and the entire 22→11
+  cut is the frustum test. The gap's direction also **contradicts the seal's declared
+  asymmetry** — it predicted an occlusion over-count and measured an under-count of 3.
+- **Two scorer defects, found and fixed with no threshold moved**: `NOT GRANTED` printed
+  identically for "no data" and "KB1 failed" — opposite outcomes under §5, which is §184's own
+  defect one layer up, inside the instrument built to catch it; and a *missing* KB2 read as a
+  *failed* KB2. The scorer was then verified against eight synthetic fixtures including a
+  gate-dead detector where KB1 must fail, so KB1's failure is a fact about the build rather than
+  a mis-port.
+
