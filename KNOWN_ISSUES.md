@@ -14757,3 +14757,17 @@ from committed arms, and nothing but wall-clock is spent. `staging2.mjs` takes n
 `process.argv` reader), so the empty-string argument the previous relaunch passed was inert —
 verified in source rather than assumed, and dropped from this relaunch regardless.
 
+
+### 188.2 Sixteenth rollback; the cadence is now the binding constraint on capture design
+
+Third in ~70 minutes, same four runners. Recovered ff-only, clean. At this interval a capture
+that needs more than ~25 minutes of lock time cannot be expected to finish, and relaunching the
+long ones costs a queue slot the short ones could have used.
+
+**Priority rule adopted while the cadence holds:** short, decisive work first — the §187 comment
+correction (seconds under lock) and `combatrecipient`'s single-arm chunks ahead of `litwarm1`'s
+remaining day arms and `staging2`'s six-arm boot. The long runs stay queued and resume from
+committed arms whenever a window happens to be long enough; they are not abandoned, they are
+simply no longer first. This is the §164 chunking argument applied one level up — to the *order*
+of the queue rather than the size of a chunk.
+
