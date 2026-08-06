@@ -46,3 +46,9 @@
 · waiting for capture lock (467s, held by pid 13718)
 · lock held — installing arm "restore" into src/ai/Guard.js
   installed arm "restore" -> /home/user/Demo/src/ai/Guard.js  sha 350dece5a1b13fb7
+· srcStable OK — launch 6460e59a72a87e57 == atLock; boot == postInstall 59fd366596517cf2 (own arm install accounted for)
+  OK combat  247.8s  lock=-1  minDist(anchor)=16.2233  minDist(stand)=16.3221  spawnHits=sly-closeup:7,sly-perch:7,sly-profile:2,sly-key:7
+  OK sly-profile  204s  lock=-1  minDist(anchor)=15.8299  minDist(stand)=15.9272  spawnHits=sly-closeup:7,sly-startle:1,sly-perch:7,sly-profile:2,sly-key:7
+  reverted /home/user/Demo/src/ai/Guard.js to base (350dece5a1b13fb7)
+  tree: src/ai/Guard.js sha 350dece5a1b13fb7  (BASE)
+DONE arm=restore srcTree=6460e59a72a87e57 srcStable=true
