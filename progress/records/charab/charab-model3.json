@@ -1,0 +1,154 @@
+{
+ "arm": "model3",
+ "at": "2026-08-06T17:06:46.174Z",
+ "shots": {
+  "sly-closeup": {
+   "secs": 535,
+   "stats": {
+    "fps": 39,
+    "drawCalls": 228,
+    "triangles": 1615019,
+    "programs": 92,
+    "ms": 9.600000000558794
+   },
+   "subject": {
+    "asked": [
+     0,
+     0,
+     30
+    ],
+    "staged": [
+     0,
+     0,
+     30
+    ],
+    "final": [
+     0,
+     0,
+     30
+    ],
+    "drift": 0,
+    "visible": true,
+    "ndc": [
+     0,
+     -0.73
+    ],
+    "onScreen": true,
+    "present": true
+   }
+  },
+  "sly-profile": {
+   "secs": 435,
+   "stats": {
+    "fps": 60,
+    "drawCalls": 201,
+    "triangles": 1555781,
+    "programs": 92,
+    "ms": 8.800000000745058
+   },
+   "subject": {
+    "asked": [
+     0,
+     0,
+     30
+    ],
+    "staged": [
+     0,
+     0,
+     30
+    ],
+    "final": [
+     0,
+     0,
+     30
+    ],
+    "drift": 0,
+    "visible": true,
+    "ndc": [
+     0,
+     -0.609
+    ],
+    "onScreen": true,
+    "present": true
+   }
+  },
+  "sly-perch": {
+   "secs": 495,
+   "stats": {
+    "fps": 60,
+    "drawCalls": 228,
+    "triangles": 1615909,
+    "programs": 92,
+    "ms": 10.599999999627471
+   },
+   "subject": {
+    "asked": [
+     0,
+     0,
+     30
+    ],
+    "staged": [
+     0,
+     0,
+     30
+    ],
+    "final": [
+     0,
+     0,
+     30
+    ],
+    "drift": 0,
+    "visible": true,
+    "ndc": [
+     0,
+     -0.505
+    ],
+    "onScreen": true,
+    "present": true
+   }
+  },
+  "traversal": {
+   "secs": 500,
+   "stats": {
+    "fps": 60,
+    "drawCalls": 218,
+    "triangles": 1701881,
+    "programs": 92,
+    "ms": 11
+   },
+   "subject": {
+    "asked": [
+     1,
+     12.4,
+     -3
+    ],
+    "staged": [
+     1,
+     12.4,
+     -3
+    ],
+    "final": [
+     1,
+     12.4,
+     -3
+    ],
+    "drift": 0,
+    "visible": true,
+    "ndc": [
+     -0.059,
+     -0.021
+    ],
+    "onScreen": true,
+    "present": true
+   }
+  }
+ },
+ "identity": {
+  "ctor": "SlyModel",
+  "rootName": "sly3",
+  "meshName": "sly3:mesh",
+  "bones": 31,
+  "verts": 2244,
+  "height": null
+ }
+}
