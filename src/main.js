@@ -90,6 +90,9 @@ const MANIFEST = [
   ['terrain',      './world/Terrain.js',          'Terrain'],
   ['architecture', './world/Architecture.js',     'Architecture'],
   ['props',        './world/Props.js',            'Props'],
+  /* Inert unless ?kaykit= is set — see KayKit.js. Registered so the showcase can be captured
+     without a source edit at capture time. */
+  ['kaykit',       './world/KayKit.js',           'KayKit'],
   ['collision',    './world/Collision.js',        'Collision'],
   ['character',    CHARACTER[0],                  CHARACTER[1]],
   ['animation',    './player/Animation.js',       'Animation'],

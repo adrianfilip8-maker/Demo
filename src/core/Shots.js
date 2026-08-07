@@ -71,6 +71,14 @@ export const SHOTS = {
     player: { pos: [2.2, 9.0, 8.4], yaw: 5.72, pose: 'perch_idle' },
   },
 
+  /* Frames the KayKit showcase row on the courtyard deck (KayKit.js, ?kaykit=1). Data only —
+     it costs nothing when the module is inert, which is its default. */
+  kaykit: {
+    pos: [0.5, 11.6, 16.5], target: [0.5, 9.9, 6.0], fov: 44, tod: 0.30,
+    player: { pos: [-14.0, 9.0, 6.0], yaw: 0.0, pose: 'idle_confident' },
+  },
+
+
   /* Hypostyle hall — the column forest, clerestory light shafts, hieroglyph walls.
 
      The camera used to sit at (9, 3.4, -22), which is 1.0 m from the axis of the nave column
