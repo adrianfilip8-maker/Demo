@@ -15629,3 +15629,45 @@ died to disabling the animation for a single frame. In both cases the experiment
 from the start and I reached for explanations first. The pre-registration discipline caught it each
 time — because the guesses were written where they could visibly fail — but writing a falsifiable
 guess is a way of *containing* the cost of guessing, not a substitute for measuring.
+
+## §199 — the supplied model is the shipped character
+
+On direct instruction ("use this new character model and proceed"), `CHAR_MODELS['']` now
+resolves to `SlyModelDL.js` — the model supplied on 2026-08-07, auto-skinned onto the project
+skeleton. §196's procedural rebuild moves to `?char=model3`, the pre-rebuild model stays at
+`?char=legacy`, and the untouched import sits at `?char=dlraw`.
+
+**What this decision rests on, stated because the rest of this file is full of the opposite.** No
+blind round was run and none was required. The blind protocol (PREREG-charab) exists to stop *me*
+promoting work I am invested in; the project's owner choosing a model is not that failure mode,
+so the seal's machinery was never in play here. Nothing has been overridden.
+
+**Why `dl` and not `dlraw`, which is the more faithful of the two.** `dlraw` is the asset
+vertex-for-vertex and renders correctly standing still, but every vertex is rigid to `hips`: it
+holds its authored T-pose and never deforms. As the playable character it would cross the world
+arms-out in every frame. `dl` animates and deforms cleanly everywhere except the tail. One wrong
+element beats a character that does not move. Both are one token away in either direction.
+
+**Carried defect, honestly labelled.** The tail collapses under animation. `dltailprobe` settled
+the cause: with `animation.update` neutered and all 31 bones at rest, the tail renders as a proper
+rounded volume — so mesh, rebind, weights-as-bound, authored normals and textures are all sound,
+and only the response to the tail spring is wrong. Six attempts failed on it (path-dependence,
+mid-bone pinching, an eyeballed source centreline, flat shading, per-chain soft weights, and a
+plain geometry fault before those). The remaining approach worth trying is the one I passed over
+at the start: take the skin weights from the supplied FBX, which carries them, rather than
+auto-generating them. Auto-skinning avoided a retarget layer and was right for every chain driven
+by clips; it is wrong for the one chain driven by physics.
+
+**Fixed to get here, all from measurement:** NaN positions from an OBJLoader forward-reference
+(one bad vertex propagates through the bounding box into every position and the model draws
+nothing); bounding-box re-centring fighting the asset's own origin; the T-posed source against our
+relaxed skeleton; `flipY` inverting the atlas; linear segment weights pinching limb midpoints; a
+tail centreline eyeballed from a bounding box, wrong by ~2 tube radii; and `computeVertexNormals`
+discarding 6,739 authored normals on non-indexed geometry, which had the entire character
+flat-shaded from the first frame.
+
+**Standing lesson, twice today from unrelated directions.** On the guard camera both registered
+mechanisms died to a six-stage experiment costing one capture; on the tail five theories died to
+disabling animation for one frame. In both cases the decisive experiment was cheap and available
+from the start, and I reached for hypotheses first. The seals caught every wrong guess because
+they were written where they could fail visibly — but the guessing was the expensive part.
