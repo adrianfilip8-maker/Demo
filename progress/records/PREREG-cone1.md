@@ -4,19 +4,44 @@ Task #14, blocked since the guard camera went under review and unblocked by §20
 withdrew the arithmetic objection that held it up; this seal tests whether a **rendered capture**
 agrees with that arithmetic, which the geocert result explicitly declined to assert on its own.
 
-> # ⚠ NOT SEALED. This document is DRAFT and must not score a shipping decision.
-> 
-> Its ROI has been wrong twice, and I cannot validate a third guess without frames from this
-> camera. **A base-only exploratory capture runs first** (`cone0.mjs`: three prerolls + `base`,
-> no candidate arm), the ROI is placed on what that shows, and only then is this sealed and the
-> full A/B run. A base-only look reveals nothing about the candidate, so the candidate bands stay
-> honest.
-> 
-> **Why, in one line:** ROI attempt 1 (apex-derived, 1060×280) read the a2 arms *backwards* at
-> 0.71–0.87; ROI attempt 2 (pool-footprint-derived, 680×429) reads 190,449 warm-bright px on a
-> base frame — 65 % of itself — so it is saturated by ambient lit desert and is measuring the
-> ground, not the cone. Running a sealed capture on an instrument I cannot validate is what
-> produced three void captures in the staging series today.
+**SEALED 2026-08-07, after instrument validation, committed BEFORE the A/B boots.**
+
+## 0.1 How this instrument was validated, and the two versions that failed
+
+This seal was drafted, demoted, and re-sealed. Recorded because the failures were caught for the
+price of my time rather than a capture:
+
+- **ROI v1** (apex-derived, `x[120,1180] y[330,610]`, warm > 8): validated against the committed
+  `a2` frames — the SAME 0.35-vs-−0.20 lever on the old camera — it read **0.71–0.87**, i.e. it
+  claimed the candidate puts LESS cone in frame, contradicting both the arithmetic and a2's own
+  scoring. Too broad, dominated by ambient sand, reaching where no cone falls.
+- **ROI v2** (from geocert2's projected pool bbox, `x[0,680] y[290,719]`, warm > 8 ∧ L > 60):
+  **190,449 warm-bright px on a base frame, 65 % of its own area.** Saturated by lit desert floor.
+- Neither could be validated further, because a new-camera ROI cannot be checked against
+  old-camera frames.
+
+So `cone0.mjs` ran **base-only** — three prerolls, `base`, `restore`, no candidate arm — purely to
+place the ROI on evidence. A base-only look reveals nothing about the candidate, so the bands below
+remain honest.
+
+**Measured on that base frame**, saturation across candidate regions and thresholds:
+
+| region | area | warm>8 ∧ L>60 | warm>8 ∧ L>120 | **warm>20 ∧ L>150** |
+|---|---|---|---|---|
+| x[0,667] y[295,660] | 243,455 | 75.0 % | 21.9 % | **0.2 % (467 px)** |
+| x[0,560] y[300,520] | 123,200 | 89.2 % | 33.3 % | 0.4 % |
+| x[0,667] y[295,719] | 282,808 | 69.7 % | 18.9 % | 0.2 % |
+
+**Chosen: `x ∈ [0, 667], y ∈ [295, 660]` at (R−B) > 20 ∧ L > 150.**
+
+The region is the **discriminating band** — where geocert says the candidate has cone
+(`y[295,720]`) and the base does not (`y[664,720]` only) — so the bottom strip both share is
+excluded and cannot dilute the ratio. The threshold isolates bright warm light from ambient warm
+floor: at 0.2 % the base has enormous headroom, where every looser threshold was 20–90 % full.
+
+**That 467 px is also a finding in its own right.** It says the shipped cone is essentially absent
+from the band it should occupy — independently corroborating geocert's 0.7 % pool share from a
+rendered frame rather than arithmetic, and it is the design complaint §7.2 raises, measured.
 
 No `src/**` touched by this draft or its runner. No git run by the runner — the coordinator sweeps.
 
@@ -79,27 +104,13 @@ brackets exactly the window the verdict rests on.
 
 Conventions per §122.1: L = Rec.709 on 0–255 bytes; warm = (R−B) > +8; differing px at ΣRGB ≥ 4.
 
-**Ground ROI** — `x ∈ [0, 680], y ∈ [290, 719]`.
-
-**This is the second ROI this seal has had, and the first one was wrong** — recorded because
-catching it cost nothing here and would have cost a capture later. My first attempt,
-`x ∈ [120,1180], y ∈ [330,610]`, was written from the cone's *apex* alone. Running it over the
-committed `a2` frames (the SAME 0.35-vs-−0.20 lever, old camera) gave a cand/base ratio of
-**0.71–0.87 at every threshold** — i.e. it said the candidate put LESS cone in frame, the opposite
-of both the arithmetic and the original a2 scoring. The reason: at 1060×280 it was dominated by
-ambient warm sand, and it reached to x = 1180 where no cone ever falls while stopping at y = 610,
-above where the base cone actually sits. The prior a2 seal used a narrow purpose-placed strip
-(340,280,700,350) for exactly this reason.
-
-The corrected ROI is derived from `geocert2`'s projected pool footprint on THIS camera, extended
-to report its in-frame bounding box: base's pool lands at x [1,384], y [664,720] (375 samples);
-the candidate's at x [0,665], y [295,720] (11,853). The ROI is their union, and it excludes the
-figure column and the upper frame where §198.1 located sky/FX volatility.
+**Ground ROI** — `x ∈ [0, 667], y ∈ [295, 660]`, threshold (R−B) > 20 ∧ L > 150. Derivation and
+the two rejected versions are in §0.1. Base reference measured at **467 px (0.2 %)**.
 
 | id | quantity | band on `cand` |
 |---|---|---|
-| **C1** | ground-ROI warm-and-bright px ((R−B) > 8 ∧ L > 60), ratio `cand / base` | **≥ 1.5** |
-| C2 | ground-ROI warm-and-bright px, absolute on `cand` | ≥ 3000 |
+| **C1** | ROI bright-warm px, ratio `cand / base` | **≥ 2.0** |
+| C2 | ROI bright-warm px, absolute on `cand` | **≥ 2000** (0.8 % of the region — a pool a viewer can actually see, which is what §7.2 asks for) |
 | C3 | ground-ROI median L, `cand` | [base − 4, base + 40] — the cone should brighten the floor, not darken it |
 | C4 | figure-rect median L (820,244,900,625), `cand` | [base − 6, base + 6] — the lever must not regrade the character |
 | C5 | cone-air column median L (700,300,850,500), `cand` | [base − 5, base + 12] |

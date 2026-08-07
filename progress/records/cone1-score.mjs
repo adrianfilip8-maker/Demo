@@ -13,12 +13,12 @@ import path from 'node:path';
    cand x[0,665] y[295,720]), not from the apex alone. The first ROI this seal had was written
    from the apex and measured ambient sand — it read 0.71-0.87 on the a2 frames, i.e. backwards.
    See PREREG-cone1 §3. */
-const ROI = { x0: 0, y0: 290, x1: 680, y1: 719 };
+const ROI = { x0: 0, y0: 295, x1: 667, y1: 660 };   // discriminating band; see PREREG-cone1 §0.1
 const FIG = { x0: 820, y0: 244, x1: 900, y1: 625 };
 const AIR = { x0: 700, y0: 300, x1: 850, y1: 500 };
-const C1_MIN_RATIO = 1.5;      // ships on a directional gain; P-F10 separately judges geocert's ~29x
-const C2_MIN_ABS = 3000;
-const WARM_MIN = 8, L_MIN = 60;   // warm AND bright: the cone is a lit pool, not warm sand
+const C1_MIN_RATIO = 2.0;      // ships on a directional gain; P-F10 separately judges geocert's ~29x
+const C2_MIN_ABS = 2000;
+const WARM_MIN = 20, L_MIN = 150;   // bright warm light, not ambient warm floor (base = 467 px, 0.2%)
 const PF4_CEIL = 0;
 /* ========================================================================== */
 
