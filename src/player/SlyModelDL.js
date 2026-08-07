@@ -372,7 +372,12 @@ export class SlyModel {
       if (url) {
         map = texLoader.load(url);
         map.colorSpace = THREE.SRGBColorSpace;
-        map.flipY = false;                 // OBJ UVs are already bottom-up
+        /* flipY stays at three's default of TRUE. It was set false here on the reasoning that
+           "OBJ UVs are already bottom-up", which is backwards: glTF puts UV (0,0) at the image's
+           TOP-left and therefore wants flipY false, while OBJ puts it at the BOTTOM-left, which
+           is what the default already assumes. With it false the atlas sampled inverted — the
+           blue tunic landed on the legs and the tan trousers on the torso, and every face marking
+           came out scrambled. */
         map.anisotropy = 4;
       }
       return shading?.make
