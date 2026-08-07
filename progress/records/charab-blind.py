@@ -25,6 +25,8 @@ SRC = os.path.join(DIR, 'charab')
 OUT = os.path.join(DIR, 'charab', 'blind')
 KEY = os.path.join(DIR, 'charab', 'blind-key.json')
 SHOTS = ['sly-closeup', 'sly-profile', 'sly-perch', 'traversal']
+# Arms come from the command line now: the shipped model has changed twice, so a hardcoded pair
+# would quietly build a round between the wrong two builds. `build` takes them explicitly.
 ARMS = ['base', 'model3']
 
 
@@ -32,7 +34,9 @@ def sha(p):
     return hashlib.sha256(open(p, 'rb').read()).hexdigest()[:16]
 
 
-def build(seed):
+def build(seed, arms=None):
+    global ARMS
+    if arms: ARMS = arms
     from PIL import Image, ImageDraw
     if os.path.exists(KEY):
         prev = json.load(open(KEY))
@@ -83,8 +87,9 @@ def reveal():
 if __name__ == '__main__':
     cmd = sys.argv[1] if len(sys.argv) > 1 else 'reveal'
     if cmd == 'build':
-        build(int(sys.argv[2]) if len(sys.argv) > 2 else 1)
+        build(int(sys.argv[2]) if len(sys.argv) > 2 else 1,
+              sys.argv[3].split(',') if len(sys.argv) > 3 else None)
     elif cmd == 'reveal':
         reveal()
     else:
-        sys.exit('usage: charab-blind.py build <seed> | reveal')
+        sys.exit('usage: charab-blind.py build <seed> [armA,armB] | reveal')
