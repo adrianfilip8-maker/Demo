@@ -46,3 +46,49 @@ phase-contaminated; the clean final supersedes them all.
 arms re-render — base AND model3 — so the deciding frames are phase-free on both sides: same
 canonical staged pose, no idle-phase advance, C-F3 satisfiable for the first time. Then seed-9
 pairs, key before round, one fresh critic, and PREREG-charab §6 applied to THAT round.
+
+---
+
+# THE DECIDING ROUND (seed 9) — the first phase-free comparison, and the decision
+
+Both arms staged at `dt: 0` (C-F3 satisfied for the first time in the series), identities
+verified from the boot readbacks (`sly_root`/8454 vs `sly3`/2801), all five gates PASS, key
+committed before the spawn.
+
+## Verdict, translated through the key
+
+| pair | A | B | letters | by model |
+|---|---|---|---|---|
+| sly-closeup | model3 | base | A,B,A,A | **rebuild 3** — incumbent 1 |
+| sly-profile | model3 | base | A,A,A,A | **rebuild 4** — 0 |
+| sly-perch | model3 | base | A,A,A,A | **rebuild 4** — 0 |
+| traversal | base | model3 | B,B,B,B | **rebuild 4** — 0 |
+
+**Rebuild 15, incumbent 1.** By question, regrouped by model: **identity 4–0, silhouette 3–1,
+fidelity 4–0, craft 4–0 — the rebuild takes all four.** The critic's own caveat identifies the
+build flip in traversal correctly against the key — ninth consecutive round of verified blinding.
+
+The voided FINAL r1 (12–4 incumbent) and this round (1–15 rebuild) are the same two models; what
+changed is the pose lottery C-F3 exists to exclude. On frames where both models hold the same
+canonical pose, the palette-and-costume dominance that every round since r2 recorded for the
+rebuild decides all three studio shots, and traversal — the rebuild's historic collapse shot —
+goes 4–0 to it.
+
+## Decision per PREREG-charab §6, applied mechanically
+
+> "critic prefers rebuild on ≥3 of 4 questions **and** G1–G5 all pass ⇒ **SHIP** — change the
+> default in `main.js`, record in `KNOWN_ISSUES`."
+
+- Rebuild preferred on **4 of 4** questions ✓
+- G1–G5: **5 pass, 0 fail** (run immediately before the round) ✓
+- C-F1 arm identity ✓ · C-F3 clock ✓ (dt:0 both arms) · C-F4 not provisional (full-form model) ✓
+
+**⇒ SHIP.** The `main.js` default flips to `SlyModel3.js`, deliberately. The incumbent remains
+reachable under a `legacy` token — restoration stays one token away, per the seal's own asymmetry.
+
+## First post-ship work item, from the deciding critic's own flag
+
+The rebuild's cane: "a thread-thin wire in the closeup and detached from the hand in the profile
+(a floating gold hook behind the shoulder with the arm ending in a blue ball)" — nearly a
+`neither` on profile craft. The pose-camera cane interaction has now been named by four different
+judges; it is the top of the post-decision list.

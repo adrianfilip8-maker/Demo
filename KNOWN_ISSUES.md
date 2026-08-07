@@ -15404,3 +15404,44 @@ cone's §183 re-judgement — remain OPEN until that re-seal runs.
 Reported for completeness: all six candidate bands passed on r12's numbers (P1 80.7, P2 668, P3
 24.56, P4 11,036, P5 43.27, P7 0), and the framing identity held (feet/head pixel-identical).
 Encouraging, and not a verdict — the capture is void.
+
+
+## §196 — the character decision: the Sly 3 rebuild SHIPS, by the seal's own mechanism
+
+The user's instruction (2026-08-06 ~15:30Z): build a new Sly model from Sly 3 reference, then
+"let the critic decide between the current model and the new model, restoring the current one if
+it is still better." The decision is now taken, per PREREG-charab §6, on the deciding round's
+numbers.
+
+**The series, in full** (every round a fresh blind agent, sides randomised per shot, key committed
+before each round, blinding verified against the key nine times out of nine):
+
+| round | rebuild stage | score (incumbent–rebuild) | note |
+|---|---|---|---|
+| r1 | 2 | 16–0 | blockout era, provisional |
+| r2 | 4 | 9–7 | profile flips to the rebuild |
+| r3 | 5 | 10–5 | regression; stage 7 reverted by pre-committed rule |
+| r4 | 6 | 1–15 | |
+| r5 | 6 | 1–15 | same frames, fresh judge — variance ≈ 0 |
+| r6 | 7 | 9–7* | stage 7 re-try reverted by rule (*rebuild won, margin regressed) |
+| r7 | 8 | 4–11 | below the sealed 13 bar; stage 8 reverted |
+| FINAL r1 | 6 | 12–4 | **VOID by C-F3** — the pose lottery |
+| **DECIDING** | 6 | **1–15** | **first phase-free frames; rebuild takes all four questions** |
+
+**The C-F3 finding that reframed everything:** `charab.mjs` staged through `setShot`'s seventeen
+internal live-dt frames (§195), so every arm in every round was captured at a per-boot idle phase
+— and the voided FINAL r1 proved the stakes, describing pose artefacts (a one-piece cane as "a
+hook with no shaft"; a 5.3–6.1-head mesh as "~7 heads") as if they were geometry. With `dt: 0` on
+both arms, the same two models went from 12–4 incumbent to 15–1 rebuild. **The pose lottery was
+worth ±11 points of 16.** Every capture comparison in this project that stages via `setShot`
+should be read with that number in mind.
+
+**The decision:** rebuild preferred 4 of 4 questions (identity 4–0, silhouette 3–1, fidelity 4–0,
+craft 4–0); gates G1–G5 all pass. §6's ship row fires: `main.js`'s `CHAR_MODELS` default now
+resolves `''` → `SlyModel3.js`, deliberately. The pre-rebuild model stays reachable as
+`?char=legacy` — restoration remains one token away.
+
+**Top of the post-ship list**, named by four different judges across the series: the cane's
+pose-camera interaction (thread-thin at closeup; hook visually detached in profile poses). Then:
+closeup face construction (r7: mask-bar/crushed-eyes/nose at 5×), and the traversal backlight
+value-collapse both models share.

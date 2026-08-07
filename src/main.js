@@ -25,9 +25,15 @@ const MODULE_FILES = import.meta.glob('./{render,textures,world,player,fx,ai,ui,
  * misspelled, or the rebuild file has been deleted, this resolves to `SlyModel.js`. A rebuild
  * can only ship by someone changing this default on purpose.
  */
+/* DEFAULT FLIPPED — deliberately — 2026-08-07, per PREREG-charab §6's ship row. The deciding
+ * blind round (RESULT-charab-FINAL.md, seed 9, the series' first phase-free frames after C-F3
+ * voided every earlier round) scored the rebuild 15–1, taking all four questions, with all five
+ * gates passing. The pre-rebuild model remains one token away (`?char=legacy`) — restoration is
+ * still the cheap path, exactly as the seal designed. */
 const CHAR_MODELS = {
-  '': ['./player/SlyModel.js', 'SlyModel'],           // incumbent — the default in every sense
-  model3: ['./player/SlyModel3.js', 'SlyModel'],      // the Sly-3-reference rebuild
+  '': ['./player/SlyModel3.js', 'SlyModel'],          // the Sly-3-reference rebuild — SHIPPED
+  model3: ['./player/SlyModel3.js', 'SlyModel'],      // explicit alias, kept for existing runners
+  legacy: ['./player/SlyModel.js', 'SlyModel'],       // the pre-rebuild model, for A/Bs and rollback
 };
 function characterModule() {
   let raw = '';
