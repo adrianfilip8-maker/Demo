@@ -1,0 +1,30 @@
+{
+ "prereg": "PREREG-cone1.md",
+ "runner": "progress/records/cone1.mjs",
+ "bootId": "729f2af7-7b3",
+ "startedAt": "2026-08-07T22:36:55.861Z",
+ "srcTreeBefore": "9c36c0acb6c5d3e3",
+ "shippedExpected": {
+  "pos": [
+   -13.25,
+   2.6,
+   30.5
+  ],
+  "target": [
+   -18.75,
+   1.1,
+   28
+  ]
+ },
+ "armOrder": [
+  "preroll1",
+  "preroll2",
+  "preroll3",
+  "base",
+  "cand",
+  "restore",
+  "KBmid",
+  "KBover"
+ ],
+ "arms": []
+}
