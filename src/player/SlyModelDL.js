@@ -361,17 +361,30 @@ export class SlyModel {
           .compose(new THREE.Vector3(...abs[nm]), r.q, new THREE.Vector3(r.sc, r.sc, r.sc))
           .multiply(new THREE.Matrix4().makeTranslation(-srcAbs[nm][0], -srcAbs[nm][1], -srcAbs[nm][2]));
       });
+      /* Rotations alone, for the normals. Uniform scale and translation do not turn a normal, so
+         the rotation half of each bone's transform is the whole story. */
+      const Q = RIG3.BONE_ORDER.map((nm) => (rot[nm] ? rot[nm].q : new THREE.Quaternion()));
+
+      const nrm = merged.attributes.normal;
       const src = new THREE.Vector3(), acc = new THREE.Vector3(), tmp2 = new THREE.Vector3();
+      const nsrc = new THREE.Vector3(), nacc = new THREE.Vector3(), ntmp = new THREE.Vector3();
       for (let i = 0; i < n; i++) {
         src.fromBufferAttribute(pos, i);
         acc.set(0, 0, 0);
+        nsrc.fromBufferAttribute(nrm, i);
+        nacc.set(0, 0, 0);
         for (let k = 0; k < 2; k++) {
           const w = bwt[i * 4 + k];
-          if (w > 0) acc.addScaledVector(tmp2.copy(src).applyMatrix4(M[bidx[i * 4 + k]]), w);
+          if (w > 0) {
+            acc.addScaledVector(tmp2.copy(src).applyMatrix4(M[bidx[i * 4 + k]]), w);
+            nacc.addScaledVector(ntmp.copy(nsrc).applyQuaternion(Q[bidx[i * 4 + k]]), w);
+          }
         }
         pos.setXYZ(i, acc.x, acc.y, acc.z);
+        if (nacc.lengthSq() > 1e-12) { nacc.normalize(); nrm.setXYZ(i, nacc.x, nacc.y, nacc.z); }
       }
       pos.needsUpdate = true;
+      nrm.needsUpdate = true;
       merged.computeBoundingBox();
       const rb = merged.boundingBox;
       if (![rb.min.y, rb.max.y].every(Number.isFinite)) throw new Error('SlyModelDL: rebind produced a non-finite mesh');
@@ -380,7 +393,16 @@ export class SlyModel {
 
     merged.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(bidx, 4));
     merged.setAttribute('skinWeight', new THREE.Float32BufferAttribute(bwt, 4));
-    merged.computeVertexNormals();
+    /* NO computeVertexNormals() here — it was destroying the model.
+     *
+     * The asset ships 6,739 authored normals carrying its intended smoothing. This geometry is
+     * NON-INDEXED (a triangle soup, as OBJLoader delivers it and as the merge keeps it), and for
+     * non-indexed input three's computeVertexNormals assigns each triangle's own face normal to
+     * all three of its vertices — so calling it here replaced authored smooth shading with FLAT
+     * shading across the entire character. Under a cel shader that quantises lighting into hard
+     * bands, a faceted tube reads as angular flat panels, which is what the tail looked like, and
+     * a faceted head reads as a blotchy muzzle. The normals are now carried through the rebind by
+     * the same blended bone rotations that carry the positions. */
 
     /* ---- materials: project toon factory, one per source part, textures when present ---- */
     const shading = this.engine?.get?.('shading');
