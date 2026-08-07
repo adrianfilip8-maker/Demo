@@ -3,3 +3,5 @@
 [121s]    ! textures: prewarm took 28.3s at size 1024
 [121s] identity: root="sly_root" mesh="sly_body" bones=34 verts=8454
 [643s]   sly-closeup  521s -> sly-closeup.base.png
+[1075s]   sly-profile  432s -> sly-profile.base.png
+[1579s]   sly-perch  504s -> sly-perch.base.png
