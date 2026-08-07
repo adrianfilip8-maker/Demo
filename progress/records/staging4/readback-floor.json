@@ -50,6 +50,136 @@
     "programs": 92,
     "ms": 17027.800000000745
    }
+  },
+  {
+   "stage": "s1",
+   "bootId": "d79dd1a1-35c",
+   "discard": false,
+   "wallSecs": 239,
+   "elapsedSecs": 1879,
+   "armTook": true,
+   "camPos": [
+    -11.5,
+    2.6,
+    30.5
+   ],
+   "guardPos": [
+    -15.4871,
+    0,
+    27.5446
+   ],
+   "tod": 0.1,
+   "stats": {
+    "fps": 60,
+    "drawCalls": 170,
+    "triangles": 1381971,
+    "programs": 92,
+    "ms": 15.600000001490116
+   }
+  },
+  {
+   "stage": "s2",
+   "bootId": "d79dd1a1-35c",
+   "discard": false,
+   "wallSecs": 244,
+   "elapsedSecs": 2123,
+   "armTook": true,
+   "camPos": [
+    -11.5,
+    2.6,
+    30.5
+   ],
+   "guardPos": [
+    -15.4871,
+    0,
+    27.5446
+   ],
+   "tod": 0.1,
+   "stats": {
+    "fps": 60,
+    "drawCalls": 170,
+    "triangles": 1381971,
+    "programs": 92,
+    "ms": 7
+   }
+  },
+  {
+   "stage": "s3",
+   "bootId": "d79dd1a1-35c",
+   "discard": false,
+   "wallSecs": 241,
+   "elapsedSecs": 2365,
+   "armTook": true,
+   "camPos": [
+    -11.5,
+    2.6,
+    30.5
+   ],
+   "guardPos": [
+    -15.4871,
+    0,
+    27.5446
+   ],
+   "tod": 0.1,
+   "stats": {
+    "fps": 60,
+    "drawCalls": 170,
+    "triangles": 1381971,
+    "programs": 92,
+    "ms": 11.199999999254942
+   }
+  },
+  {
+   "stage": "s4",
+   "bootId": "d79dd1a1-35c",
+   "discard": false,
+   "wallSecs": 236,
+   "elapsedSecs": 2600,
+   "armTook": true,
+   "camPos": [
+    -11.5,
+    2.6,
+    30.5
+   ],
+   "guardPos": [
+    -15.4871,
+    0,
+    27.5446
+   ],
+   "tod": 0.1,
+   "stats": {
+    "fps": 60,
+    "drawCalls": 170,
+    "triangles": 1381971,
+    "programs": 92,
+    "ms": 6.699999999254942
+   }
+  },
+  {
+   "stage": "s5",
+   "bootId": "d79dd1a1-35c",
+   "discard": false,
+   "wallSecs": 241,
+   "elapsedSecs": 2841,
+   "armTook": true,
+   "camPos": [
+    -11.5,
+    2.6,
+    30.5
+   ],
+   "guardPos": [
+    -15.4871,
+    0,
+    27.5446
+   ],
+   "tod": 0.1,
+   "stats": {
+    "fps": 60,
+    "drawCalls": 170,
+    "triangles": 1381971,
+    "programs": 92,
+    "ms": 6.5
+   }
   }
  ],
  "srcTreeAtLock": "66f79606ed1746ee",
@@ -68,5 +198,8 @@
   ],
   "guardCount": 11,
   "character": "sly3"
- }
+ },
+ "srcTreeAtRelease": "327abf610e071b2d",
+ "finishedAt": "2026-08-07T15:27:01.388Z",
+ "sameTree": false
 }

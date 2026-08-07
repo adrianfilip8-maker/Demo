@@ -100,3 +100,9 @@
 [14:58:35 +1136s] boot ok — warnings 1
 [14:58:36 +1137s] LEVER {"ok":true,"livePos":[-11.5,2.6,30.5],"guardCount":11,"character":"sly3"}
 [15:06:59 +1640s] stage preroll 504s (elapsed 1640s)  took=true  guard [-15.4871,0,27.5446]
+[15:10:58 +1879s] stage s1 239s (elapsed 1879s)  took=true  guard [-15.4871,0,27.5446]
+[15:15:02 +2123s] stage s2 244s (elapsed 2123s)  took=true  guard [-15.4871,0,27.5446]
+[15:19:03 +2365s] stage s3 241s (elapsed 2365s)  took=true  guard [-15.4871,0,27.5446]
+[15:22:59 +2600s] stage s4 236s (elapsed 2600s)  took=true  guard [-15.4871,0,27.5446]
+[15:27:00 +2841s] stage s5 241s (elapsed 2841s)  took=true  guard [-15.4871,0,27.5446]
+[15:27:01 +2842s] DONE — in-lock tree pair same=false

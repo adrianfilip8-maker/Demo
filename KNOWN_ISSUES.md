@@ -15538,3 +15538,49 @@ capture." §198 is its instrument-side twin — **a gate is sized on a rect, and
 cross-boot floor that must be measured before a band is drawn around it.** Both captures executed
 perfectly and were voided by their own instruments; in both cases the instrument was right to
 fire and wrong in its construction.
+
+## §198.1 — the discriminating capture: I was wrong twice, and [0,0] was achievable all along
+
+`staging4-floor` ran six stages at the SAME shipped `guard` vectors — camera never moves, so
+excursion-count is pinned at zero while restage-count and elapsed time run their range. Full
+numbers in `RESULT-staging4-floor.md`; the two lines that matter:
+
+```
+  s1 vs s2:   2 px      s2 vs s3: 109 px      s3 vs s4: 7 px      s4 vs s5: 0 px (maxΣ|Δ| 0)
+```
+
+**Both mechanisms I registered are dead.** PREREG-staging3 §4.2 named *path-dependence* ("state
+the intermediate arm leaves behind"): this capture has no excursion at all and still produces the
+110 px, so the candidate arm was never the cause. §198 then replaced it with *boot-age drift*
+("grows with stage index and elapsed time"): it does not grow, it **steps** — and s4 vs s5 is
+**bit-identical**, which is the opposite of what a drift model predicts. Two seals, two proposed
+mechanisms, both wrong. What the data shows is a **one-time state transition early in the boot,
+after which the renderer is bit-exact** — a lazily-built sky/FX resource or a periodic light sweep
+reaching its first update, settled by the third or fourth staged frame.
+
+**The consequence is a repair, not a retreat: [0,0] IS achievable.** Two consecutive restage cycles
+of identical vectors came back byte-identical. The band was never unreachable; it was being
+measured *across the warm-up*. One discarded preroll absorbs shader compile (504 s vs ~240 s
+scored, four runs running) but does not absorb this. **PREREG-staging4 scores nothing until three
+discarded stages have passed**, and then keeps the registered [0,0] frame-wide — the stricter
+choice, which the measurement says is affordable. That is a protocol fix derived from measurement,
+not a band moved after a failure.
+
+**The base-gate rect, now with four boots.** Within one boot, across five stages, guard-mass medL
+is **69.104** every time, pool **116.153** every time, figure **23.187** every time — identical to
+three decimals. Cross-boot the same rect reads 59.51 / 65.86 / 69.10 / 69.104: a spread of **9.6 L,
+16 %**, against the ±6 % band I carried. **The rect is not noisy, it is boot-dependent.** §198's
+conclusion hardens: either move the gate to a cross-boot-stable rect (the figure column reproduces
+to 0.00–0.20) or anchor it inside the scored boot.
+
+**Standing lesson, and it is about me rather than the renderer:** across §193, §195, staging3 and
+now this, every time I named a mechanism *before* the discriminating measurement existed, I named
+the wrong one — and each time the seal's own structure caught it because the prediction was
+written down where it could be checked. The value was never in the guess; it was in registering
+the guess so specifically that its failure was unmissable.
+
+**Protocol breach, recorded against myself:** this capture reported `in-lock tree pair same=false`
+— I committed an unrelated change while it held the lock. It lands inside the discarded preroll,
+fifteen minutes before the s2→s3 transition, in a file absent from this boot's module graph
+(character `sly3`), so the frames are sound. §186 exists so that a capture's integrity never rests
+on an argument like that one.
