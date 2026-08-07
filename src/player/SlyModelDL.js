@@ -54,6 +54,13 @@ const MAT_FALLBACK = {
 const DL_TUNE = {
   yaw: 0,             // extra Y rotation if a future asset faces off-axis (+Z forward is target)
   heightScale: 1.0,   // multiplier on top of height normalization
+  /* Re-centre the mesh on its bounding box in x/z. OFF, deliberately: this asset is authored
+     about its own root — feet land at y = -0.0002 and x is centred to 0.001 — so its z = 0 is
+     the author's root too. Centring on the BOX instead would drag the body ~0.21 m forward to
+     counterweight the tail, which reaches z = -1.278 while the front of the model only reaches
+     +0.854. The character would then stand off the mark every shot frames. Turn on only for an
+     asset that is genuinely off-origin, and check the tail is not doing the same thing there. */
+  recentreXZ: false,
 };
 
 /* Core segments only — see header. */
@@ -65,6 +72,44 @@ const CORE = new Set([
   'upperLegR', 'lowerLegR', 'footR', 'toeR',
   'tailA', 'tailB', 'tailC', 'tailD',
 ]);
+
+/**
+ * Drop triangles with a non-finite corner, returning a fresh non-indexed geometry.
+ *
+ * WHY THIS EXISTS, because it looks like paranoia and is not. OBJLoader resolves a positive face
+ * index against its vertex array AS IT STANDS WHEN THE FACE IS PARSED. This asset's last faces in
+ * three of its four parts reference that part's highest vertex indices — including 6753, the very
+ * last vertex in the file — and read past the end, yielding `undefined` → NaN. The file itself is
+ * valid: 6,753 finite `v` lines, every face a triangle, every index within 1…6753, no zero or
+ * negative refs. All 48 poisoned floats (16 vertices of 39,963) came from the loader.
+ *
+ * Left alone this is catastrophic rather than cosmetic: 16 NaN vertices make the bounding box NaN,
+ * which makes the height-normalization scale NaN, which multiplies EVERY position to NaN — and a
+ * fully-NaN mesh draws nothing at all. That is exactly how this model reached the first capture
+ * invisible, with healthy bones, materials, textures and scene graph, and no clue in the log.
+ */
+function dropNonFiniteTriangles(g) {
+  const pos = g.attributes.position;
+  const tris = pos.count / 3;
+  const keep = [];
+  for (let t = 0; t < tris; t++) {
+    let ok = true;
+    for (let k = 0; k < 3 && ok; k++) {
+      const i = (t * 3 + k) * 3;
+      if (!Number.isFinite(pos.array[i]) || !Number.isFinite(pos.array[i + 1]) || !Number.isFinite(pos.array[i + 2])) ok = false;
+    }
+    if (ok) keep.push(t);
+  }
+  if (keep.length === tris) return { geo: g, dropped: 0 };
+  const out = new THREE.BufferGeometry();
+  for (const name of Object.keys(g.attributes)) {
+    const a = g.attributes[name], n = a.itemSize, span = 3 * n;
+    const arr = new a.array.constructor(keep.length * span);
+    for (let j = 0; j < keep.length; j++) arr.set(a.array.subarray(keep[j] * span, keep[j] * span + span), j * span);
+    out.setAttribute(name, new THREE.BufferAttribute(arr, n));
+  }
+  return { geo: out, dropped: tris - keep.length };
+}
 
 function textureFor(matName) {
   const stem = {
@@ -138,6 +183,16 @@ export class SlyModel {
     });
     if (!geos.length) throw new Error('SlyModelDL: asset has no meshes');
 
+    /* Sanitize per part, BEFORE the merge, so the group boundaries stay right (see
+       dropNonFiniteTriangles' header for what this is defending against and why it matters). */
+    let dropped = 0;
+    for (let i = 0; i < geos.length; i++) {
+      const r = dropNonFiniteTriangles(geos[i]);
+      if (r.dropped) { geos[i] = r.geo; dropped += r.dropped; }
+    }
+    if (dropped) this.engine?.warn?.(`SlyModelDL: dropped ${dropped} triangle(s) with non-finite corners (OBJLoader forward-reference; see dropNonFiniteTriangles)`);
+    this._droppedTris = dropped;
+
     /* Uniform attribute set across parts, so the merge cannot silently drop one. */
     for (const g of geos) {
       if (!g.attributes.uv) g.setAttribute('uv', new THREE.Float32BufferAttribute(new Float32Array((g.attributes.position.count) * 2), 2));
@@ -150,8 +205,19 @@ export class SlyModel {
     merged.applyMatrix4(new THREE.Matrix4().makeRotationY(DL_TUNE.yaw));
     merged.computeBoundingBox();
     const bb = merged.boundingBox;
+    /* Fail LOUDLY rather than invisibly. A single non-finite position makes this box NaN, the
+       scale below NaN, and then every position NaN — which renders as a perfectly healthy-looking
+       model that simply is not there. That cost a full capture round to diagnose; it will not
+       cost a second one. */
+    if (![bb.min.x, bb.min.y, bb.min.z, bb.max.x, bb.max.y, bb.max.z].every(Number.isFinite) || !(bb.max.y > bb.min.y)) {
+      throw new Error(`SlyModelDL: bounding box is non-finite or degenerate after sanitize (${JSON.stringify(bb.min)} .. ${JSON.stringify(bb.max)}) — refusing to normalize`);
+    }
     const s = (RIG3.TUNE.height / (bb.max.y - bb.min.y)) * DL_TUNE.heightScale;
-    merged.translate(-(bb.min.x + bb.max.x) / 2, -bb.min.y, -(bb.min.z + bb.max.z) / 2);
+    merged.translate(
+      DL_TUNE.recentreXZ ? -(bb.min.x + bb.max.x) / 2 : 0,
+      -bb.min.y,                                        // feet to the floor, always
+      DL_TUNE.recentreXZ ? -(bb.min.z + bb.max.z) / 2 : 0,
+    );
     merged.scale(s, s, s);
 
     /* ---- auto-skin onto the project skeleton ---- */
@@ -193,6 +259,13 @@ export class SlyModel {
       const o = i * 4;
       bidx[o] = best.i0; bidx[o + 1] = best.i1;
       bwt[o] = 1 - best.t; bwt[o + 1] = best.t;
+    }
+    /* A NaN vertex would have produced NaN `t` here, and since every comparison against NaN is
+       false the nearest-segment loop would silently keep its FIRST candidate — binding the whole
+       mesh rigidly to hips at weight NaN. Assert instead: the sanitize above should make this
+       unreachable, and if it ever is reached the message says which invariant broke. */
+    for (let i = 0; i < bwt.length; i++) {
+      if (!Number.isFinite(bwt[i])) throw new Error(`SlyModelDL: non-finite skin weight at ${i} — sanitize did not cover this input`);
     }
     merged.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(bidx, 4));
     merged.setAttribute('skinWeight', new THREE.Float32BufferAttribute(bwt, 4));
