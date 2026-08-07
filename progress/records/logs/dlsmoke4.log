@@ -156,3 +156,4 @@
 [1725s]    ! textures: prewarm took 28.1s at size 1024
 [1725s]    ! SlyModelDL: dropped 16 triangle(s) with non-finite corners (OBJLoader forward-reference; see dropNonFiniteTriangles)
 [1725s] identity: root="slydl" mesh="slydl:mesh" bones=31 verts=39915 mats=4
+[2290s]   sly-closeup  564s -> sly-closeup.dl.png
