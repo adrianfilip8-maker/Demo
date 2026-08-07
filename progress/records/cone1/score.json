@@ -1,0 +1,52 @@
+{
+ "prereg": "PREREG-cone1.md",
+ "at": "2026-08-07T22:59:58.077Z",
+ "arms": {
+  "preroll1": {
+   "roiWarmPx": 457,
+   "roiMedL": 94.26,
+   "figureMedL": 22.69,
+   "airMedL": 27.19
+  },
+  "preroll2": {
+   "roiWarmPx": 457,
+   "roiMedL": 94.26,
+   "figureMedL": 22.69,
+   "airMedL": 27.19
+  },
+  "preroll3": {
+   "roiWarmPx": 457,
+   "roiMedL": 94.26,
+   "figureMedL": 22.69,
+   "airMedL": 27.19
+  },
+  "base": {
+   "roiWarmPx": 457,
+   "roiMedL": 94.26,
+   "figureMedL": 22.69,
+   "airMedL": 27.19
+  },
+  "cand": {
+   "roiWarmPx": 342,
+   "roiMedL": 43.53,
+   "figureMedL": 21.77,
+   "airMedL": 24.56
+  },
+  "restore": {
+   "roiWarmPx": 457,
+   "roiMedL": 94.26,
+   "figureMedL": 22.69,
+   "airMedL": 27.19
+  }
+ },
+ "verdicts": {
+  "pf7": true,
+  "pf4": 0,
+  "C1": false,
+  "C2": false,
+  "C3": false,
+  "C4": true,
+  "C5": true,
+  "c1ratio": 0.748
+ }
+}

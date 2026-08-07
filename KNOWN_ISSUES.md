@@ -15836,3 +15836,44 @@ decided its camera — but no verdict that depends on guard behaviour is taken u
 
 **Redirected to:** work with no guard dependency — the perch pose item, placing the newly-installed
 CC0 architecture in the scene, and the atmosphere/lighting queue.
+
+### §203.1 — the partial capture answered the question anyway, and the answer is NO
+
+The kill landed later than I thought: `base`, `cand` and `restore` had all rendered. Only the two
+calibration arms were lost. Scoring the frames that exist cost nothing and retires a decision that
+has been open for a day.
+
+| band | result | |
+|---|---|---|
+| **C1** cone px ratio cand/base | **0.75** (342 vs 457) | **FAIL** — band ≥ 2.0 |
+| **C2** cone px absolute on cand | **342** | **FAIL** — band ≥ 2000 |
+| **C3** ground medL on cand | **43.53** | **FAIL** — band [90.26, 134.26] |
+| C4 figure medL | 21.77 vs 22.69 | pass |
+| C5 cone-air medL | 24.56 vs 27.19 | pass |
+| **P-F4** restore vs base | **0 differing px** | **pass** |
+
+**P-F1 fires: the candidate is NOT shipped.** `towardCamera` stays at 0.35. The candidate heading
+does not make the patrol cone more readable — it makes it *less* readable and darkens the court by
+half. Three bands out, and the seal's own clause is "no retune".
+
+**P-F10 fires, and this is the finding that outlives the guard deferral.** geocert2 predicted the
+candidate would put **~29×** more cone pool in frame. The render delivers **0.75×** — not
+overstated, **directionally wrong**. The seal already required that a rendered ratio below 10×
+retire geocert as a shipping instrument; a ratio below 1 does so emphatically. **No geocert number
+may carry a shipping argument again without a capture behind it**, and `RESULT-geocert2.md`'s
+withdrawal of the old objection must be read as "the old objection was an artefact", never as
+"therefore the candidate is good".
+
+**Honest limit on the verdict:** P-F2 could not be evaluated — `KBmid` and `KBover` were never
+captured — so the metric was not demonstrated to grade a graded stimulus. Strictly the seal calls
+that UNSCOREABLE. But a 0.75× measurement against a 29× prediction, with the ground at half its
+base luminance, is not a calibration artefact; it is a large directional effect in the opposite
+direction to the claim. The candidate is recorded as **not shipped on P-F1**, with the calibration
+gap stated rather than papered over. If guards return and someone wants to revisit the heading,
+the calibration arms must be captured first — but they would be re-opening a lever that measured
+worse on every quantity that matters.
+
+**What this cost and what it bought:** four captures across the session went into a lever that is
+now retired on evidence, and the instrument that argued for it is retired with it. That is a better
+outcome than shipping it on arithmetic, which is what the geocert result alone would have supported
+three hours ago.
