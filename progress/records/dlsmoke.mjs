@@ -46,7 +46,7 @@ await withGame({
   });
   report.identity = who;
   log(`identity: root="${who.rootName}" mesh="${who.meshName}" bones=${who.bones} verts=${who.verts} mats=${who.materials}`);
-  if (who.rootName !== 'slydl') {
+  if (who.rootName !== (CHAR === 'dlraw' ? 'slydlraw' : 'slydl')) {
     report.tokenMismatch = true;
     log(`!! TOKEN MISMATCH — expected root 'slydl', got '${who.rootName}'. The dl token did not take.`);
   }

@@ -1,0 +1,4 @@
+[93s] boot ok — renderer ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver); warnings 1
+[93s]    ! textures: prewarm took 26.7s at size 1024
+[93s] identity: root="slydlraw" mesh="slydlraw:mesh" bones=31 verts=39915 mats=4
+[93s] !! TOKEN MISMATCH — expected root 'slydl', got 'slydlraw'. The dl token did not take.
