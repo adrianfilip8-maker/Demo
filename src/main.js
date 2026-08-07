@@ -43,8 +43,9 @@ const MODULE_FILES = import.meta.glob('./{render,textures,world,player,fx,ai,ui,
  * deforms cleanly everywhere except the tail, which is one wrong element against a character that
  * does not move at all. Both remain one token away in either direction. */
 const CHAR_MODELS = {
-  '': ['./player/SlyModelDL.js', 'SlyModel'],         // the supplied model, auto-skinned — SHIPPED
-  dl: ['./player/SlyModelDL.js', 'SlyModel'],         // explicit alias, kept for existing runners
+  '': ['./player/SlyModelDLRig.js', 'SlyModel'],      // supplied model on its ARTIST rig — SHIPPED
+  dlrig: ['./player/SlyModelDLRig.js', 'SlyModel'],   // explicit alias
+  dl: ['./player/SlyModelDL.js', 'SlyModel'],         // supplied model, auto-skinned (tail defect)
   dlraw: ['./player/SlyModelDLRaw.js', 'SlyModel'],   // the supplied model untouched; T-pose, static
   model3: ['./player/SlyModel3.js', 'SlyModel'],      // the Sly-3-reference procedural rebuild
   legacy: ['./player/SlyModel.js', 'SlyModel'],       // the pre-rebuild procedural model
