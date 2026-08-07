@@ -2,3 +2,6 @@
 [93s]    ! textures: prewarm took 26.7s at size 1024
 [93s] identity: root="slydlraw" mesh="slydlraw:mesh" bones=31 verts=39915 mats=4
 [93s] !! TOKEN MISMATCH — expected root 'slydl', got 'slydlraw'. The dl token did not take.
+[644s]   sly-closeup  551s -> sly-closeup.dlraw.png
+[1154s]   traversal  509s -> traversal.dlraw.png
+[1154s] DONE  !! TOKEN MISMATCH
