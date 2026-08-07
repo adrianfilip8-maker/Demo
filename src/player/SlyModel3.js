@@ -329,15 +329,9 @@ export class SlyModel {
 
     /* ================= HEAD group ================= */
     const headB = bi('head');
-    /* Stage 8 — the closeup head, the one critique EVERY round has repeated (r4 "a nub on a long
-       thin neck", r6 "a smudge on a stalk neck"). Cranium up ~9% in all axes, and a fur RUFF blob
-       bridging skull-to-collar so no bare neck cylinder survives between them: the head must read
-       as sitting ON the shoulders, the reference's own construction. */
-    const CR = [hw * 1.13, HEAD_H * 0.50, hw * 1.07];
+    const CR = [hw * 1.04, HEAD_H * 0.46, hw * 0.98];            // cranium radii — fills the budget
     const CY = HEAD_Y + HEAD_H * 0.14;                            // cranium centre height
     parts.push(blob([0, CY, 0], CR, PAL.furLight, headB, 14, 10));
-    parts.push(blob([0, NECK_Y + 0.005, 0.012], [hw * 0.72, HEAD_H * 0.20, hw * 0.62],
-      PAL.furLight, bi('neck'), 10, 6));                          // the ruff: fills the stalk gap
 
     // muzzle — oriented tube from the cranium's FRONT FACE outward (+Z), dipping slightly.
     // Stage 1's sat inside the ball; this one starts at z = 0.80·hw (proud of centre) and runs
@@ -470,14 +464,11 @@ export class SlyModel {
         [PAL.cream, PAL.cream, PAL.cream, PAL.blue, PAL.blue],
         [bi(`upperLeg${L}`), bi(`lowerLeg${L}`), bi(`lowerLeg${L}`), bi(`lowerLeg${L}`), bi(`foot${L}`)], 12,
         [0, 0, 0.20, 0, 0]));                       // ← the hem ring alone is ragged
-      /* Stage 8 (r6 craft: "paddle-flat boots"): taller boot body with a raised rounded TOE CAP,
-         so the foot reads as a cartoon boot with volume rather than a flipper. */
-      parts.push(blob([ank[0], ank[1] - 0.016, ank[2] + TUNE.footLen * 0.28],
-        [TUNE.footWidth, 0.082, TUNE.footLen * 0.58], PAL.blue, bi(`foot${L}`), 12, 6));
-      parts.push(blob([ank[0], ank[1] - 0.002, ank[2] + TUNE.footLen * 0.52],
-        [TUNE.footWidth * 0.82, 0.070, TUNE.footLen * 0.30], PAL.blue, bi(`foot${L}`), 10, 6));
-      parts.push(blob([ank[0], ank[1] - 0.012, ank[2] - TUNE.footLen * 0.16],
-        [TUNE.footWidth * 0.72, 0.062, TUNE.footLen * 0.24], PAL.blue, bi(`foot${L}`), 8, 5));
+      // foot: big rounded boot + heel (G1: PAL.blue)
+      parts.push(blob([ank[0], ank[1] - 0.024, ank[2] + TUNE.footLen * 0.30],
+        [TUNE.footWidth, 0.058, TUNE.footLen * 0.62], PAL.blue, bi(`foot${L}`), 12, 6));
+      parts.push(blob([ank[0], ank[1] - 0.016, ank[2] - TUNE.footLen * 0.16],
+        [TUNE.footWidth * 0.72, 0.050, TUNE.footLen * 0.24], PAL.blue, bi(`foot${L}`), 8, 5));
     }
 
     /* ================= TAIL — thick, banded, splined ================= */
