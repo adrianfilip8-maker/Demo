@@ -15445,3 +15445,40 @@ resolves `''` → `SlyModel3.js`, deliberately. The pre-rebuild model stays reac
 pose-camera interaction (thread-thin at closeup; hook visually detached in profile poses). Then:
 closeup face construction (r7: mask-bar/crushed-eyes/nose at 5×), and the traversal backlight
 value-collapse both models share.
+
+## §197 — litwarm r11: capture VOID (P-F3) + UNSCOREABLE (P-F2); the candidate does not ship; v2 deferred
+
+The lit-palette wrap candidate (arch `sss` 0.30 + `sssNightPin` 0.0, PREREG-litwarm) completed
+its full seven-chunk capture cleanly — and the committed scorer's verdict is that **the seal's
+sizing no longer describes the tree it was sealed on**. `score3`: 41 scored, 5 FAIL.
+
+**Fires, by the seal's own text (full record: RESULT-litwarm.md):**
+- **P-F3** (base gate outside ⇒ VOID): courtyard base warm% 24.87 ∉ [31,37]. The other four base
+  gates hold within ~1 pp.
+- **P-F2** (KB fails to read as its own failure ⇒ UNSCOREABLE): KB-overwrap fired 0 of 2 rects —
+  the fire was registered on rect-median hue, which cast-shadowed pixels dominate; the port sized
+  it on touched cells. The instrument cannot see the registered failure at this population share.
+- **P-F1 bands outside on C** (no conviction on a VOID capture, recorded for any v2): S4 cream
+  −28 ∉ [−58,−30], S4 tail −8.62 ∉ [−4,+18], T1 −1.39 ∉ [−0.5,+5].
+
+**Attribution:** the §196 character ship sits between seal (08-06) and capture (08-07) — T1's
+base fig−sur measured 11.89 where the seal recorded 3.41 (the traversal figure rect now contains
+the rebuild), and S4's rects are incumbent-character rectangles. The base-gate comparison also
+crosses the §195 phase lottery (`litwarm1.mjs` stages `setShot` without `dt:0`; within-chunk arm
+deltas are immune — arms are pokes on one staged boot).
+
+**What held, exactly:** P7-fw = P7-g = **0 frame-wide** (the §3 night arithmetic, on the real
+shipped gate path), restore = 0 on all seven chunks, KBnull = 0, subject-interior = 0. And
+**P-F8 does NOT fire**: W1 +2.38 pp, W2 +1.83 pp — the near-terminator population is real,
+merely modest (interior's is empty: 0.00 across all three metrics).
+
+**Disposition:** candidate stays out (`litwarm-arms.py check` = BASE). litwarm v2 — dt:0 staging,
+base gates re-derived on the current tree, S4 re-rected on the rebuild, a KB the instrument can
+actually see, T1 re-derived with the §141.1 hazard stated — is **deferred behind the staging2
+§195.4 re-seal**, which gates two queued decisions. The lit gap stays routed per the seal's §1.5:
+coverage → LIGHTING/GEOMETRY, luma-scoped split → POSTFX, §2.2 shadow-hue → coordinator/critic.
+
+**Standing lesson, same family as §196's:** a seal sized on frames is sized on a *tree and a
+staging phase*. Between seal and capture, re-verify the base gates still describe the current
+tree — a shipped change elsewhere in the project (here: the character) is enough to void a
+capture that executed perfectly.

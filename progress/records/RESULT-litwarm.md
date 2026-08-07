@@ -150,11 +150,159 @@ base right now because the runner installs the candidate only inside the held lo
 is correctly reporting *which* tree it is describing instead of straddling two — and the pixel
 scoring above does not depend on the current tree at all, since it reads committed PNGs.
 
-_(day chunks A–E to follow)_
+## Day chunks A–E (r11, runner pid 25698, log `logs/litwarm1-r11.log`) — complete, ALL DONE at +2132s
 
-## Verdict
+Per-chunk discipline held end-to-end: P-F7 live `nightAmount` **0 exactly** on every day shot,
+`uSss` shader readback **exact** at 0 / 0.3 / 0 in every chunk, per-chunk revert verified
+(`litwarm-arms.py check` = BASE after exit), and the per-chunk `srcTree after` "MOVED" flags are
+the runner's own cand install measured before its revert — after-hash `9f06ac30` identical in all
+chunks, at-lock hash `1721f591` (base) every time, **no third value anywhere ⇒ no foreign drift**.
 
-_(pending)_
+## score3 — the committed scorer on the completed capture, table verbatim
+
+```
+banda-diag — drift guard PASS (49 constants + 29 load-bearing lines asserted against committed source)
+
+═══ score3 — PREREG-litwarm quantities on progress/records/litwarm1 (BANDS_LW verbatim from the seal) ═══
+  P7-fw night Δpx (frame-wide)       0.00  band [0,0]  PASS
+  P-F4 night restore px              0.00  band [0,0]  PASS
+  P7-g guard Δpx (frame-wide)        0.00  band [0,0]  PASS
+  P-F4 guard restore px              0.00  band [0,0]  PASS
+  BaseGate hero frame warm%          22.78  band [21,26]  PASS
+  W1 hero frame warm% Δpp            2.38  band [0.3,8]  PASS
+    (warm% 22.78 → 25.16; comparand quoted in the seal, not claimed)
+  H hero frame Δ(R−B) L40-140 fixed  2.26  band [0,30]  PASS
+    (mask n 657874 = 71.38% of frame — the fixed mask, base arm)
+  S1 hero shade Δ(R−B) L<40 fixed    1.83  band [0,20]  PASS
+  P-F4 hero restore px               0.00  band [0,0]  PASS
+  P-F9 hero KBnull px                0.00  band [0,0]  PASS
+  BaseGate courtyard frame warm%     24.87  band [31,37]  FAIL
+  W2 courtyard frame warm% Δpp       1.83  band [0.3,8]  PASS
+    (warm% 24.87 → 26.70)
+  H courtyard frame Δ(R−B) L40-140 fixed 2.89  band [0,30]  PASS
+  S1 courtyard shade Δ(R−B) L<40 fixed 1.12  band [0,20]  PASS
+  P-F4 courtyard restore px          0.00  band [0,0]  PASS
+  BaseGate temple frame warm%        17.11  band [16,21]  PASS
+  W3 temple frame warm% Δpp          0.11  band [0,10]  PASS
+  H temple frame Δ(R−B) L40-140 fixed 0.14  band [0,30]  PASS
+  S1 temple shade Δ(R−B) L<40 fixed  0.02  band [0,20]  PASS
+  P-F4 temple restore px             0.00  band [0,0]  PASS
+  BaseGate interior frame warm%      7.11  band [5.5,9]  PASS
+  W4 interior frame warm% Δpp        0.00  band [0,12]  PASS
+  H interior frame Δ(R−B) L40-140 fixed 0.00  band [0,30]  PASS
+  S1 interior shade Δ(R−B) L<40 fixed 0.00  band [0,20]  PASS
+  P-F4 interior restore px           0.00  band [0,0]  PASS
+  BaseGate hero.arch <L40 %          35.19  band [30,41]  PASS
+  H5 hero.arch Δ(R−B) L80-140 fixed  1.57  band [0,45]  PASS
+  S2 hero.arch Δ<L40 pp              -1.22  band [-12,0]  PASS
+  S3 hero.arch body hue (C)          218.30  band [200,246]  PASS
+  H6 temple.col Δ(R−B) L80-140 fixed 1.43  band [0,45]  PASS
+  S3 temple.col body hue (C)         207.00  band [200,246]  PASS
+  S3 interior wall0 body hue (C)     225.00  band [200,246]  PASS
+  S3 interior wall1 body hue (C)     225.00  band [200,246]  PASS
+  KB-overwrap hero body hue 218.71 (fires below 200) — DID NOT FIRE
+  KB-overwrap interior body hue 225.00 (fires below 200) — DID NOT FIRE
+  KB-overwrap rects fired            0.00  band [1,99]  FAIL
+  S5 sly subject-interior Δpx        0.00  band [0,0]  PASS
+  S4 creamROI b−r (C)                -28.00  band [-58,-30]  FAIL
+  S4 rings b−r (C)                   7.00  band [5,45]  PASS
+  S4 tail body R−B (C)               -8.62  band [-4,18]  FAIL
+  P-F4 sly-closeup restore px        0.00  band [0,0]  PASS
+  T1 traversal contrast Δ            -1.39  band [-0.5,5]  FAIL
+    (fig−sur 11.89 → 10.50; banda2 already took 2.46 — NOTE-traversal-contrast.md)
+    traversal frame Δ(R−B) L40-140 fixed = 5.31 (REPORT-ONLY, not registered)
+  P-F4 traversal restore px          0.00  band [0,0]  PASS
+
+  41 scored, 5 FAIL — RESULT-litwarm quotes this table verbatim.
+```
+
+## Verdict — each falsifier's registered text quoted before any reasoning (§193.1)
+
+**P-F3, verbatim:** *"a base gate outside ⇒ capture **VOID** (the tree/staging is not the
+diagnosed one)."* — Base gate `courtyard frame warm% ∈ [31, 37]` measured **24.87**. Outside.
+**P-F3 FIRES ⇒ the capture is VOID.**
+
+**P-F2, verbatim:** *"a KB arm fails to read as its own failure ⇒ **UNSCOREABLE**"*; §5:
+*"**Either KB failing to read as its own failure ⇒ UNSCOREABLE (P-F2)** — no verdict either
+way."* — KB-overwrap fired on **0 of 2** registered rects (hero body hue 218.71, interior 225.00;
+the registered fire is < 200). **P-F2 FIRES ⇒ UNSCOREABLE — no verdict either way.**
+
+**P-F1, verbatim:** *"any gated band (W1–W4, H1–H6, S1–S5, T1) outside on the `C` arm ⇒
+**candidate REVERTED**. No post-hoc retune toward a band; a different value is a different
+prereg."* — Three gated bands are outside on C: S4 creamROI **−28.00** ∉ [−58,−30], S4 tail
+**−8.62** ∉ [−4,+18], T1 **−1.39** ∉ [−0.5,+5]. On a VOID + UNSCOREABLE capture these attach no
+conviction to the lever — but they are recorded, because any v2 must face them.
+
+**P-F8, verbatim:** *"If **W1 < +0.3 AND W2 < +0.3** … the lever is **REVERTED and the finding
+recorded**."* — W1 = **+2.38**, W2 = **+1.83**, both ≥ +0.3. **P-F8 does NOT fire: the
+near-terminator population is real**, the one quantity the seal said it could not measure offline.
+
+**P-F5, verbatim:** *"**S1 negative on any day shot** ⇒ FAIL and revert."* — S1 = +1.83 / +1.12 /
++0.02 / +0.00; never negative. Clean: the term is additive-only, as constructed.
+
+**P-F6, verbatim:** *"P7-fw ≠ 0 or P7-g ≠ 0 ⇒ **the candidate does not ship on this seal**."* —
+Both **0 exactly**, frame-wide. The §3 night arithmetic (five steps, IEEE754) held on screen.
+
+P-F4 = 0 px on **all seven** chunks; P-F9 (KBnull) = 0 px; S5 subject-interior = 0 px (the
+enumeration did not leak onto the character); P-F7 exact on every chunk. The instrument and the
+runner did everything the seal asked, exactly.
+
+## Why the tree is not the diagnosed one — the fires attributed, each to a mechanism
+
+1. **The §196 character ship (`59c1f6b`) sits between the seal and the capture.** Sealed
+   2026-08-06 on sbs3/banda2-era frames with the incumbent character; captured 2026-08-07 with
+   `SlyModel3` as the default. Direct evidence in the table itself: **T1's base fig−sur is 11.89
+   where the seal recorded 3.41** — the traversal figure rect now contains the rebuild, which
+   raised figure contrast ~3.5× on its own. **S4's rects are incumbent-character pixel
+   rectangles** (cream muzzle b−r, tail-body R−B [−4,+18] sized on the incumbent's grey-brown
+   tail); the rebuild's muzzle geometry and `tailDark 0x5e5c55` sit differently in those same
+   rects. Both S4 misses and the T1 base shift are the shipped character, not the wrap.
+2. **The staging path crosses the §195 phase lottery.** `litwarm1.mjs:186` stages via
+   `setShot(n)` with no `dt`, so each boot's staging advances the world clock 17 live-dt frames —
+   fine *within* a chunk (arms are pokes on one staged boot, `step(1,0)` between arms; that is
+   why every P-F4/P-F9/S5/P7 is exactly 0), but the **base-gate comparison is cross-boot,
+   cross-era, cross-phase**. Courtyard, the shot with the most cloud/shaft variability, is 8.9 pp
+   below its sbs3-era gate while hero/temple/interior/hero.arch all hold within ~1 pp — a
+   shot-specific staging/era shift, exactly what P-F3 exists to catch.
+3. **The KB calibration was sized at cell scale, measured at rect-median scale.** The port
+   predicted 0.45 drives *touched cells* to hue 6–17; the registered fire was the **rect body
+   hue** (median) crossing below 200. The rect medians are dominated by cast-shadowed and
+   far-past-terminator pixels the wrap cannot touch (by construction), so KBover moved hero's
+   body hue by ~0.4°. The instrument cannot see the failure mode it was registered to see at
+   this population share — P-F8's own stated doubt, landing on the KB instead of the W bands.
+
+## Findings that survive (report-only — a VOID capture grounds no ship, but these are measured)
+
+- **The night discipline is exact end-to-end**: P7-fw = P7-g = 0 frame-wide, 7× restore = 0,
+  KBnull = 0, subject-interior = 0. The shipped-gate-measured-live pattern (§154.5 amendment)
+  worked on its first outing.
+- **The population exists but is modest on this geometry**: hero +2.38 pp warm, courtyard
+  +1.83 pp, H1 +2.26 R−B frame-wide — real, above P-F8's floor, well under the seal's ≈ +3 pp
+  centre. Interior is **0.00 across all three metrics**: its visible architecture is either fully
+  lit or cast-shadowed; the wrap's population there is empty.
+- **T1's cost is real in sign**: the wrap brightens traversal's surround (+5.31 R−B frame
+  report-only) and takes 1.39 L of figure−surround contrast — but from a base of 11.89, not the
+  3.41 the band was sized to protect. The scarcity that motivated [−0.5, +5.0] no longer exists.
+
+## Decision
+
+**The capture is VOID (P-F3) and UNSCOREABLE (P-F2). The candidate does not ship on this seal.**
+It is not installed — `litwarm-arms.py check` reads BASE on both files after the runner's exit —
+and no conviction attaches either. Per P-F1's own text, no band is retuned toward a seen number.
+
+**Disposition: litwarm v2 is DEFERRED behind the staging2 §195.4 re-seal**, which gates two
+queued decisions (guard-camera west, a4 cone) against this one lever's ≈ +2 pp. A v2, if taken
+up, must: stage both eras at `dt: 0` (the §195 fix charab already carries); re-derive base gates
+on current-tree frames; re-rect S4 on the shipped rebuild; register a KB whose fire is measured
+at the scale the instrument reads (or a cell-scale instrument); and re-derive T1 from the
+current base **with the §141.1 hazard stated out loud** — we have seen C land at −1.39, so any
+re-derivation that flips that number to PASS must be defended from base-side principle alone or
+not made at all.
+
+**The lit-palette gap itself stays routed per §1.5** — it does not close with this lever at any
+value: lit-area coverage → LIGHTING/GEOMETRY, the luma-scoped warm/cool split → POSTFX
+(`splitRange`/`splitStrength`/`splitHighlight`), the §2.2 shadow-hue direction → coordinator and
+the blind critic, with `banda-diag.mjs lit` giving each its scale.
 
 ## Files (coordinator sweep list — no git run by this task)
 
