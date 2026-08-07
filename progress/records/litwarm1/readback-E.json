@@ -1,8 +1,8 @@
 {
  "prereg": "PREREG-litwarm.md",
- "chunk": "D",
- "shot": "sly-closeup",
- "startedAt": "2026-08-07T12:02:27.200Z",
+ "chunk": "E",
+ "shot": "traversal",
+ "startedAt": "2026-08-07T12:13:51.434Z",
  "srcTreeBefore": "1721f591dea9a027",
  "shipSss": 0.3,
  "baseSss": 0,
@@ -60,9 +60,9 @@
     "inkNight": 0,
     "uSubjW": 0.65,
     "uShadowColor": [
-     0.10322818765110171,
-     0.33627779020980797,
-     0.5333270591007294
+     0.1042734570639914,
+     0.33979093006216915,
+     0.5388946550057868
     ]
    },
    "mismatch": [],
@@ -121,13 +121,13 @@
     "inkNight": 0,
     "uSubjW": 0.65,
     "uShadowColor": [
-     0.10322818765110171,
-     0.33627779020980797,
-     0.5333270591007294
+     0.1042734570639914,
+     0.33979093006216915,
+     0.5388946550057868
     ]
    },
    "mismatch": [],
-   "secs": 25
+   "secs": 24
   },
   {
    "arm": "restore",
@@ -182,13 +182,13 @@
     "inkNight": 0,
     "uSubjW": 0.65,
     "uShadowColor": [
-     0.10322818765110171,
-     0.33627779020980797,
-     0.5333270591007294
+     0.1042734570639914,
+     0.33979093006216915,
+     0.5388946550057868
     ]
    },
    "mismatch": [],
-   "secs": 25
+   "secs": 24
   }
  ],
  "population": {
@@ -247,16 +247,16 @@
  },
  "setShot": {
   "stats": {
-   "fps": 37,
-   "drawCalls": 228,
-   "triangles": 1618125,
+   "fps": 38,
+   "drawCalls": 217,
+   "triangles": 1703739,
    "programs": 92,
-   "ms": 11.900000000372529
+   "ms": 8.099999999627471
   },
-  "tod": 0.8
+  "tod": 0.77
  },
- "settleSecs": 509,
+ "settleSecs": 488,
  "nightAmount": 0,
  "srcTreeAfter": "9f06ac30dc2e01d4",
- "finishedAt": "2026-08-07T12:13:51.205Z"
+ "finishedAt": "2026-08-07T12:25:01.072Z"
 }
