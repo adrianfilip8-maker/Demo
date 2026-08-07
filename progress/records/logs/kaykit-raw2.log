@@ -1,0 +1,38 @@
+· waiting for capture lock (10s, held by pid 1605)
+· waiting for capture lock (21s, held by pid 1605)
+· waiting for capture lock (31s, held by pid 1605)
+· waiting for capture lock (42s, held by pid 1605)
+· waiting for capture lock (53s, held by pid 1605)
+· waiting for capture lock (64s, held by pid 1605)
+· waiting for capture lock (74s, held by pid 1605)
+· waiting for capture lock (85s, held by pid 1605)
+· waiting for capture lock (95s, held by pid 1605)
+· waiting for capture lock (106s, held by pid 1605)
+· waiting for capture lock (117s, held by pid 1605)
+· waiting for capture lock (128s, held by pid 1605)
+· waiting for capture lock (138s, held by pid 1605)
+· waiting for capture lock (149s, held by pid 1605)
+· waiting for capture lock (160s, held by pid 1605)
+· waiting for capture lock (170s, held by pid 1605)
+· waiting for capture lock (181s, held by pid 1605)
+· waiting for capture lock (192s, held by pid 1605)
+· waiting for capture lock (202s, held by pid 1605)
+· waiting for capture lock (212s, held by pid 1605)
+· waiting for capture lock (222s, held by pid 1605)
+· waiting for capture lock (233s, held by pid 1605)
+· waiting for capture lock (243s, held by pid 1605)
+· waiting for capture lock (254s, held by pid 1605)
+· waiting for capture lock (265s, held by pid 1605)
+· waiting for capture lock (275s, held by pid 1605)
+· waiting for capture lock (285s, held by pid 1605)
+· waiting for capture lock (295s, held by pid 1605)
+· waiting for capture lock (306s, held by pid 1605)
+· waiting for capture lock (317s, held by pid 1605)
+· waiting for capture lock (327s, held by pid 1605)
+· waiting for capture lock (338s, held by pid 1605)
+[415s] boot ok — warnings 2
+[415s]    ! textures: prewarm took 17.3s at size 1024
+[415s]    ! KayKit showcase (raw): 7 loaded, 0 failed, 2509 tris, row 22.1 m
+[415s] kaykit: mode=raw loaded=7 failed=0 tris=2509
+[688s]   wrote showcase.raw.png
+[688s] DONE
