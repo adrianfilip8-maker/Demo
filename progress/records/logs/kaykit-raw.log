@@ -1,0 +1,16 @@
+· waiting for capture lock (10s, held by pid 15457)
+· waiting for capture lock (21s, held by pid 15457)
+· waiting for capture lock (31s, held by pid 15457)
+· waiting for capture lock (41s, held by pid 15457)
+· waiting for capture lock (52s, held by pid 15457)
+· waiting for capture lock (63s, held by pid 15457)
+· waiting for capture lock (74s, held by pid 15457)
+· waiting for capture lock (84s, held by pid 15457)
+· waiting for capture lock (94s, held by pid 15457)
+· waiting for capture lock (105s, held by pid 15457)
+· waiting for capture lock (116s, held by pid 15457)
+· waiting for capture lock (126s, held by pid 15457)
+[196s] boot ok — warnings 2
+[196s]    ! textures: prewarm took 18.4s at size 1024
+[196s]    ! KayKit showcase (raw): 7 loaded, 0 failed, 2509 tris
+[196s] kaykit: mode=raw loaded=7 failed=0 tris=2509

@@ -71,11 +71,24 @@ export const SHOTS = {
     player: { pos: [2.2, 9.0, 8.4], yaw: 5.72, pose: 'perch_idle' },
   },
 
-  /* Frames the KayKit showcase row on the courtyard deck (KayKit.js, ?kaykit=1). Data only —
-     it costs nothing when the module is inert, which is its default. */
+  /* Frames the KayKit showcase row on the courtyard paving (KayKit.js, ?kaykit=1). Data only —
+     it costs nothing when the module is inert, which is its default.
+
+     Re-aimed after its first capture came back unreadable. The row is ~22 m of 4–5 m pieces, and
+     the old camera sat 10.6 m from it with a 44° field: two models filled the frame and the rest
+     were off it. The view is OBLIQUE because neither straight-on option exists — a camera due
+     north of the row is inside the hypostyle hall, and one due south looks straight through the
+     obelisk (x 0, z 11, h 22). From (−14, 14, 12) the sightline to the row passes x ≈ −13.2 at the
+     obelisk's z and clears terrace stage 1 (top y 2.0) at y 7.7, so nothing occludes it. Checked
+     by arithmetic against §8.1 before the boot, because the last frame was spent discovering a
+     framing error that the coordinate table already contained.
+
+     Sly stands at (−9, 0, −3), three metres in front of the 4 m `pillar_decorated` at the near end.
+     That is the point of him being here: "at this project's scale" is a claim the frame should
+     SHOW against a known 1.80 m character, not one the reader takes from the provenance note. */
   kaykit: {
-    pos: [0.5, 11.6, 16.5], target: [0.5, 9.9, 6.0], fov: 44, tod: 0.30,
-    player: { pos: [-14.0, 9.0, 6.0], yaw: 0.0, pose: 'idle_confident' },
+    pos: [-14.0, 14.0, 12.0], target: [0.0, 2.0, -6.0], fov: 34, tod: 0.30,
+    player: { pos: [-9.0, 0.0, -3.0], yaw: -0.20, pose: 'idle_confident' },
   },
 
 
