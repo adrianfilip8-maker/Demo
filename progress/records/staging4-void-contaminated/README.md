@@ -28,5 +28,13 @@ touching `src/**`, not after** — `ls /tmp/sands-of-ra/queue/` and `ps` for a r
 pass and moved here afterwards. Worth recording rather than tidying away silently: the runner is
 idempotent by design, so a single surviving frame is enough for the re-run to SKIP that stage and
 score a frame rendered under the contaminated tree — which is exactly the r10 failure, where a
-resumed run wrote a cured-looking readback over stale frames. Quarantining a directory means
-emptying it, and confirming it is empty.
+resumed run wrote a cured-looking readback over stale frames. Quarantining means removing every frame the
+re-run could resume onto, and then CHECKING that claim rather than asserting it.
+
+I first wrote here that `staging4/` "must be empty". That is wrong, and the correction matters
+more than the tidiness: `staging4/` still holds the FLOOR capture's frames — `guard.preroll.png`,
+`guard.s1`…`s5`, `readback-floor.json` — which are a valid, committed, uncontaminated experiment
+(`RESULT-staging4-floor.md`). Emptying the directory would have destroyed the evidence that
+produced §198.1. Checked rather than assumed: the scored run writes `preroll1/2/3`, `base`,
+`cand`, `restore`, `KBmid`, `KBover`; the floor run wrote `preroll`, `s1`…`s5`. **No collision** —
+the two captures share the directory safely, and the re-run cannot resume onto a floor frame.
