@@ -1,0 +1,5 @@
+[14:39:39 +   0s] bootId d79dd1a1-35c  srcTree 66f79606ed1746ee — booting (harness takes the FIFO ticket)
+· waiting for capture lock (10s, held by pid 14436)
+· waiting for capture lock (21s, held by pid 14436)
+· waiting for capture lock (31s, held by pid 14436)
+· waiting for capture lock (41s, held by pid 14436)

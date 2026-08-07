@@ -1,0 +1,28 @@
+{
+ "purpose": "discriminating capture for §198: does restage residue grow with stage index when the camera NEVER moves?",
+ "runner": "progress/records/staging4-floor.mjs",
+ "bootId": "d79dd1a1-35c",
+ "startedAt": "2026-08-07T14:39:39.446Z",
+ "srcTreeBefore": "66f79606ed1746ee",
+ "shipped": {
+  "pos": [
+   -11.5,
+   2.6,
+   30.5
+  ],
+  "target": [
+   -17,
+   1.1,
+   28
+  ]
+ },
+ "stageOrder": [
+  "preroll",
+  "s1",
+  "s2",
+  "s3",
+  "s4",
+  "s5"
+ ],
+ "stages": []
+}
