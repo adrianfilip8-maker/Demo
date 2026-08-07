@@ -32,10 +32,10 @@ const DERIVEA = path.join(DIR, 'guard.deriveA.png');
 
 /* ===== SEAL CONSTANTS (PREREG-staging3 §4 — filled from staging3-derive-analyze at seal time,
    committed BEFORE the scored capture boots) ===== */
-const GATE_GUARDMASS = null;   // [lo, hi] — deriveA anchor × carried widths
-const GATE_POOL = null;        // [lo, hi]
-const PF4_CEIL = null;         // 2 × F (measured single-restage floor, px)
-const DERIVE_ANCHORS = null;   // { gm, pool, P1, P2, P3, P7 } — deriveA, quoted in the seal
+const GATE_GUARDMASS = [55.9, 63.2];   // deriveA 59.51 × carried widths (-6.1%/+6.2%)
+const GATE_POOL = [108.9, 120.0];      // deriveA 114.45 × carried widths (-4.8%/+4.9%)
+const PF4_CEIL = 0;                    // 2F at measured F = 0 px (maxΣ|Δ| 1) — §4.2
+const DERIVE_ANCHORS = { gm: 59.51, pool: 114.45, P1: 15.99, P2: 306, P3: 89.99, P7: 33 };
 /* ================================================================================== */
 
 const lum = (r, g, b) => 0.2126 * r + 0.7152 * g + 0.0722 * b;

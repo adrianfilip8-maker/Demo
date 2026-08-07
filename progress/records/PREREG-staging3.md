@@ -89,9 +89,16 @@ bands' relative widths (§4.1):**
 
 | gate | band | anchor (`deriveA`) |
 |---|---|---|
-| guard-mass rect (790,100,980,330) medL, base arm | **[⟨A×0.939⟩, ⟨A×1.062⟩]** | ⟨DERIVE-A guard-mass medL⟩ |
-| doorway pool (220,360,640,560) medL, base arm | **[⟨A×0.952⟩, ⟨A×1.049⟩]** | ⟨DERIVE-A pool medL⟩ |
+| guard-mass rect (790,100,980,330) medL, base arm | **[55.9, 63.2]** | 59.51 (deriveB 59.51 — within-derive drift 0.000) |
+| doorway pool (220,360,640,560) medL, base arm | **[108.9, 120.0]** | 114.45 (deriveB 114.45 — drift 0.000) |
 | solved figure feet / head px y, every arm | 625 ± 12 / 244 ± 12 | carried (invariance, twice confirmed) |
+
+The anchor era-trace, stated because it is the story of this re-seal: guard-mass medL read 18.64
+on live-dt sbs3, 69.10 on r12 (dt-0, pre-§196 tree), 59.51 here (dt-0, current tree) — three
+eras, three populations, which is why §195.4 refuses anchors from any frame but the diagnosed
+one. Meanwhile the figure-column absolutes are era-stable to a rounding error (P1
+15.89/15.90/15.99, P2 306/306/306, P3 89.6/89.65/89.99, P7 33/33/33 across sbs3/r12/deriveA) —
+the volatility is confined to the background rect, exactly where §4.1's cross-boot duty points.
 
 **Candidate bands — VERBATIM from PREREG-staging2 §4, not renumbered, not retuned:**
 
@@ -103,7 +110,7 @@ bands' relative widths (§4.1):**
 | P4 | warm-pixel count, figure rect | [2500, 22000] |
 | P5 | warm-pixel medL, figure rect | [26, 55] |
 | P7 | per-row continuity: bands of 39 with NOT-NBC share < 40% | [0, 4] |
-| **P-F4** | restore vs base differing px, frame-wide | **[0, ⟨2 × floor⟩]** (§4.2) |
+| **P-F4** | restore vs base differing px, frame-wide | **[0, 0]** (= 2F at F = 0, §4.2) |
 | R1–R5 | cone-air medL; guard-mass medL per arm; frame NBC%; corner-NBC; wall-times | reported |
 
 ### 4.1 Why the base-gate widths are carried rather than chosen
@@ -130,7 +137,20 @@ its worst case under independent per-cycle perturbation is linear accumulation: 
 [0, 2 × F]**, declared before the scored capture boots. If F = 0 the band is [0, 0] and perfect
 restage determinism is required, as it then demonstrably holds. maxΣ|Δ| is reported beside it.
 
-- **F measured: ⟨FLOOR⟩ px (maxΣ|Δ| ⟨FLOORMAX⟩) ⇒ P-F4 band [0, ⟨2F⟩].**
+- **F measured: 0 px (maxΣ|Δ| 1, below the ΣRGB ≥ 4 threshold) ⇒ P-F4 band [0, 0].** Two
+  consecutive frozen-clock restages of the same vectors are byte-equivalent at the registered
+  threshold.
+
+**Disclosed tension, registered before the capture rather than discovered after it:** r12's
+restore-vs-base read 110 px (maxΣ|Δ| 27) — and that comparison ran **through the cand
+excursion** (base → cand → restore), which the same-arm pair A → B cannot see. If this run's
+P-F4 lands at 0 < px with small maxΣ|Δ|, the linear-accumulation model above was wrong in a
+specific, nameable way: the through-cand excursion is **path-dependent** (state the intermediate
+arm leaves behind), which is a determinism defect P-F4 exists to expose — the run is VOID, not
+re-banded, and the registered next step is a derivation that measures the through-cand floor
+directly (`base → cand → restore → restore2`, with restore2 − restore isolating the excursion
+residue). The band is not widened toward r12's seen number; the model is falsifiable and this
+capture tests it.
 
 ### 4.3 Calibration — KBmid graded on P2, because r12 showed P1 saturating
 

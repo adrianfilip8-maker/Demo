@@ -4,3 +4,5 @@
 [12:51:40 + 128s] LEVER {"gotShotObject":true,"livePos":[-11.5,2.6,30.5],"liveTarget":[-17,1.1,28],"liveTod":0.1,"hasGuards":true,"guardCount":11,"hasSolver":true,"characterRoot":"sly3"}
 [12:59:59 + 627s] stage preroll (DISCARDED — preroll) 498s  cam [-11.5,2.6,30.5] took=true  feet [843.9,625.3] head [863.6,244.3]
 [13:03:59 + 867s] stage deriveA 240s  cam [-11.5,2.6,30.5] took=true  feet [843.9,625.3] head [863.6,244.3]
+[13:07:52 +1099s] stage deriveB 233s  cam [-11.5,2.6,30.5] took=true  feet [843.9,625.3] head [863.6,244.3]
+[13:07:52 +1100s] DONE — in-lock tree pair same=true; wall-times preroll 498s  deriveA 240s  deriveB 233s
