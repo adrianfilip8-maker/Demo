@@ -1,0 +1,30 @@
+{
+ "prereg": "PREREG-staging4.md",
+ "runner": "progress/records/staging4.mjs",
+ "bootId": "45e8c28f-10a",
+ "startedAt": "2026-08-07T19:35:17.650Z",
+ "srcTreeBefore": "0a89a86acc56340d",
+ "shippedExpected": {
+  "pos": [
+   -11.5,
+   2.6,
+   30.5
+  ],
+  "target": [
+   -17,
+   1.1,
+   28
+  ]
+ },
+ "armOrder": [
+  "preroll1",
+  "preroll2",
+  "preroll3",
+  "base",
+  "cand",
+  "restore",
+  "KBmid",
+  "KBover"
+ ],
+ "arms": []
+}
