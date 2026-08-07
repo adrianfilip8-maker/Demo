@@ -38,6 +38,10 @@ const CHAR_MODELS = {
      skeleton — see SlyModelDL.js's header. Becomes the default when the real asset replaces the
      placeholder in src/assets/sly-dl.glb and a ?char=dl capture verifies it. */
   dl: ['./player/SlyModelDL.js', 'SlyModel'],
+  /* The supplied model EXACTLY as imported, textured, with none of the rigging revisions — see
+     SlyModelDLRaw.js. Holds its authored T-pose and is carried by the character rather than
+     deformed by it. */
+  dlraw: ['./player/SlyModelDLRaw.js', 'SlyModel'],
 };
 function characterModule() {
   let raw = '';

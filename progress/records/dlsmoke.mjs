@@ -15,7 +15,8 @@ import { withGame } from '/home/user/Demo/tools/harness.mjs';
 import { writeFile, mkdir } from 'node:fs/promises';
 import path from 'node:path';
 
-const OUT = '/home/user/Demo/progress/records/dlsmoke';
+const CHAR = (process.argv[2] || 'dl').trim();     // 'dl' = rigged integration, 'dlraw' = as imported
+const OUT = `/home/user/Demo/progress/records/dlsmoke${CHAR === 'dl' ? '' : '-' + CHAR}`;
 const SHOTS = ['sly-closeup', 'traversal'];
 
 const t0 = Date.now();
@@ -26,7 +27,7 @@ const report = { runner: 'dlsmoke.mjs', at: new Date().toISOString(), shots: {} 
 
 await withGame({
   width: 1280, height: 720, quality: 'high', timeout: 40 * 60 * 1000,
-  query: 'char=dl',
+  query: `char=${CHAR}`,
 }, async ({ page, info }) => {
   log(`boot ok — renderer ${info.renderer}; warnings ${info.warnings?.length ?? 0}`);
   for (const w of info.warnings || []) log(`   ! ${w}`);
@@ -60,7 +61,7 @@ await withGame({
       await G.step(1, 0);
       return { dataUrl: G.capture('image/png'), stats: staged?.stats ?? null };
     }, shot);
-    const file = path.join(OUT, `${shot}.dl.png`);
+    const file = path.join(OUT, `${shot}.${CHAR}.png`);
     await writeFile(file, Buffer.from(r.dataUrl.split(',')[1], 'base64'));
     report.shots[shot] = { secs: Math.round((Date.now() - s0) / 1000), stats: r.stats };
     log(`  ${shot}  ${report.shots[shot].secs}s -> ${path.basename(file)}`);
