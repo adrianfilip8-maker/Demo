@@ -30,18 +30,24 @@ const MODULE_FILES = import.meta.glob('./{render,textures,world,player,fx,ai,ui,
  * voided every earlier round) scored the rebuild 15–1, taking all four questions, with all five
  * gates passing. The pre-rebuild model remains one token away (`?char=legacy`) — restoration is
  * still the cheap path, exactly as the seal designed. */
+/* DEFAULT FLIPPED AGAIN — 2026-08-07, on direct instruction ("use this new character model and
+ * proceed"), to the SUPPLIED model. Note what this does and does not rest on: the blind-round
+ * requirement I had been enforcing exists to stop ME promoting work I am invested in, and an
+ * explicit choice by the project's owner is not that. So the seal's machinery is not being
+ * overridden — it never governed this decision.
+ *
+ * `dl` (auto-skinned) is the default rather than `dlraw` (untouched geometry), and that is a
+ * judgement worth stating: dlraw is the more faithful of the two and renders correctly standing
+ * still, but every vertex is rigid to `hips`, so it holds its authored T-pose and never animates.
+ * As the playable character it would cross the world arms-out in every shot. `dl` animates and
+ * deforms cleanly everywhere except the tail, which is one wrong element against a character that
+ * does not move at all. Both remain one token away in either direction. */
 const CHAR_MODELS = {
-  '': ['./player/SlyModel3.js', 'SlyModel'],          // the Sly-3-reference rebuild — SHIPPED
-  model3: ['./player/SlyModel3.js', 'SlyModel'],      // explicit alias, kept for existing runners
-  legacy: ['./player/SlyModel.js', 'SlyModel'],       // the pre-rebuild model, for A/Bs and rollback
-  /* The DOWNLOADED complete model (user instruction 2026-08-07), auto-skinned onto the project
-     skeleton — see SlyModelDL.js's header. Becomes the default when the real asset replaces the
-     placeholder in src/assets/sly-dl.glb and a ?char=dl capture verifies it. */
-  dl: ['./player/SlyModelDL.js', 'SlyModel'],
-  /* The supplied model EXACTLY as imported, textured, with none of the rigging revisions — see
-     SlyModelDLRaw.js. Holds its authored T-pose and is carried by the character rather than
-     deformed by it. */
-  dlraw: ['./player/SlyModelDLRaw.js', 'SlyModel'],
+  '': ['./player/SlyModelDL.js', 'SlyModel'],         // the supplied model, auto-skinned — SHIPPED
+  dl: ['./player/SlyModelDL.js', 'SlyModel'],         // explicit alias, kept for existing runners
+  dlraw: ['./player/SlyModelDLRaw.js', 'SlyModel'],   // the supplied model untouched; T-pose, static
+  model3: ['./player/SlyModel3.js', 'SlyModel'],      // the Sly-3-reference procedural rebuild
+  legacy: ['./player/SlyModel.js', 'SlyModel'],       // the pre-rebuild procedural model
 };
 function characterModule() {
   let raw = '';

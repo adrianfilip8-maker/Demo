@@ -15584,3 +15584,48 @@ the guess so specifically that its failure was unmissable.
 fifteen minutes before the s2→s3 transition, in a file absent from this boot's module graph
 (character `sly3`), so the frames are sound. §186 exists so that a capture's integrity never rests
 on an argument like that one.
+
+## §199 — the supplied model becomes the character; how it got there and what is still wrong
+
+**Decision, on direct instruction** ("use this new character model and proceed"): `main.js`'s
+`CHAR_MODELS` default now resolves `''` → `SlyModelDL.js`. **This does not override PREREG-charab.**
+That seal's blind-round requirement exists to stop *me* promoting work I am invested in; an
+explicit choice by the project's owner was never the thing it governed. The procedural models stay
+one token away (`?char=model3`, `?char=legacy`), as does the untouched import (`?char=dlraw`).
+
+**Why `dl` and not `dlraw`, stated because it is a judgement rather than a reading of the
+instruction.** `dlraw` is the more faithful of the two — the asset's geometry vertex for vertex,
+its authored normals, its textures, no re-posing — and it renders correctly standing still. But
+every vertex is rigid to `hips`, so it holds its authored T-pose and never deforms. As the playable
+character it would cross the world arms-out in every frame. `dl` animates and deforms cleanly
+everywhere except the tail. One wrong element beats a character that does not move.
+
+**The eight defects fixed to get `dl` there, each located by measurement:**
+
+| # | defect | how it was found |
+|---|---|---|
+| 1 | NaN positions — OBJLoader resolves a face index against its vertex array *mid-parse*, so faces citing late vertices read past the end. 16 verts of 39,963; the NaN propagates through the bbox into **every** position and the mesh draws nothing | live scene probe, after the model was invisible with healthy bones/materials/textures |
+| 2 | bbox re-centring dragged the body ~0.21 m forward to counterweight the tail | the normalization's own output |
+| 3 | asset is **T-posed**; our skeleton is not — arms bound to torso and head | per-height-band |x| scan: 0.20–0.27 everywhere except y 1.2–1.4, where it hits 0.946 |
+| 4 | `flipY` false inverted the atlas — tunic on the legs, trousers on the torso | the frame |
+| 5 | linear segment weights pinched every limb at its midpoint | reasoning from the blend, confirmed on limbs |
+| 6 | tail source centreline eyeballed off a bounding box, missing the geometry by ~2 tube radii | distance from tail verts to the assumed chain |
+| 7 | `computeVertexNormals()` on **non-indexed** geometry replaced 100 % of 13,321 authored smooth normals with flat face normals — the whole character rendered flat-shaded | counted authored vs face-identical normals |
+| 8 | rigid weighting applied to the tail as well as limbs | the rest-pose probe |
+
+**What is still wrong: the tail collapses under animation, and I did not fix it.** Six attempts.
+`dltailprobe` settled the geometry question by observation — animation neutered in-page, all 31
+bones at rest, and the tail renders as a proper rounded volume — so mesh, rebind, weights-as-bound,
+normals and textures are all sound, and the fault is in how those weights respond to Rig's
+spring-driven tail chain. **The remedy I would try next is not more weight tuning: the supplied FBX
+carries the asset's own skin weights, and I chose to auto-skin instead so that no retarget layer
+was needed.** That reasoning was right for every part of the body driven by clips and wrong for the
+one chain driven by physics.
+
+**Method note, and it is the session's real lesson.** Twice today, from unrelated directions, a
+cheap decisive experiment beat a sequence of plausible hypotheses. §198.1: both mechanisms I had
+registered for a pixel residue died to one six-stage capture. Here: five theories about the tail
+died to disabling the animation for a single frame. In both cases the experiment was available
+from the start and I reached for explanations first. The pre-registration discipline caught it each
+time — because the guesses were written where they could visibly fail — but writing a falsifiable
+guess is a way of *containing* the cost of guessing, not a substitute for measuring.
