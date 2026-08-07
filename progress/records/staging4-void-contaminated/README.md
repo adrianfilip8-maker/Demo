@@ -23,3 +23,10 @@ session — §198.1, the dlsmoke4 run, and this. Each time I checked *afterwards
 mattered and each time reasoned my way to "the frames are sound". Twice that was true; here it is
 not. Remembering the rule is evidently not working. The fix is mechanical: **check the lock before
 touching `src/**`, not after** — `ls /tmp/sands-of-ra/queue/` and `ps` for a runner, every time.
+
+**Sweep correction.** `guard.preroll1.png` was left behind in `staging4/` by the first quarantine
+pass and moved here afterwards. Worth recording rather than tidying away silently: the runner is
+idempotent by design, so a single surviving frame is enough for the re-run to SKIP that stage and
+score a frame rendered under the contaminated tree — which is exactly the r10 failure, where a
+resumed run wrote a cured-looking readback over stale frames. Quarantining a directory means
+emptying it, and confirming it is empty.
