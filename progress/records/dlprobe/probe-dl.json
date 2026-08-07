@@ -1,8 +1,3 @@
-· waiting for capture lock (10s, held by pid 27929)
-· waiting for capture lock (21s, held by pid 27929)
-· waiting for capture lock (31s, held by pid 27929)
-boot ok (char=dl) — warnings 1
-  PAGE ERROR: THREE.BufferGeometry.computeBoundingBox(): Computed min/max have NaN values. The "position" attribute is likely to have NaN values. BufferGeometry
 {
  "root": "slydl",
  "inScene": true,
@@ -161,4 +156,3 @@ boot ok (char=dl) — warnings 1
   33.2
  ]
 }
-DONE
