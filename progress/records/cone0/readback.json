@@ -1,0 +1,27 @@
+{
+ "prereg": "NONE — exploratory, base only, scores nothing",
+ "runner": "progress/records/cone0.mjs",
+ "bootId": "640edcec-28f",
+ "startedAt": "2026-08-07T22:17:05.122Z",
+ "srcTreeBefore": "9c36c0acb6c5d3e3",
+ "shippedExpected": {
+  "pos": [
+   -13.25,
+   2.6,
+   30.5
+  ],
+  "target": [
+   -18.75,
+   1.1,
+   28
+  ]
+ },
+ "armOrder": [
+  "preroll1",
+  "preroll2",
+  "preroll3",
+  "base",
+  "restore"
+ ],
+ "arms": []
+}
