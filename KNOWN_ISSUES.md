@@ -15803,3 +15803,36 @@ against both builds at once, which makes it a renderer item rather than a model 
 default stays on `dlrig`; `?char=model3` is one token away. Independent of the aesthetic verdict,
 `dlrig` carries the complete 39,963-vertex mesh, authored normals, artist weights and a tail with
 volume — none of which this round touches.
+
+## §203 — guards and everything downstream of them go to the backburner
+
+Owner instruction, 2026-08-07: *"don't worry about placing enemy guards in the build for now,
+placing all mechanics dependent on them on the backburner."*
+
+**Stopped mid-flight:** `cone1` — the sealed guard-cone-heading A/B — was killed at its second
+preroll and its capture lock released. The vision cone is a guard mechanic, so continuing to spend
+capture time on it would have been spending against an explicit deprioritisation. Six frames exist;
+they are kept but score nothing.
+
+**PREREG-cone1 stands as sealed and is NOT withdrawn.** Its bands were committed before any
+candidate frame rendered, its instrument was validated on a base-only exploratory, and both
+rejected instruments are recorded. When guards return, the A/B re-runs against that seal unchanged
+— re-sealing later, after I have seen partial frames, would be strictly worse than the seal already
+banked. Nothing about the deferral licenses touching those bands.
+
+**What carries forward regardless**, because it was measured rather than modelled:
+
+- The shipped cone occupies **467 bright-warm px of 243,455 (0.2 %)** in the band it should fill —
+  the design complaint of §7.2, quantified from a rendered frame for the first time.
+- `RESULT-geocert2.md` stands: the 17.06 pp lit-facing objection that blocked this decision for a
+  day was an artefact of the **old** camera and is 2.32 pp on the shipped one.
+- §201's camera move is unaffected — it shipped on its own sealed capture and is not a guard
+  mechanic.
+
+**Also on the backburner by the same instruction:** guard placement, patrol routing, vision/detection
+tuning, and the combat-recipient re-seal (task #20 in the older numbering). The `guard` SHOT remains
+useful as a camera and lighting probe — it is a framing of the temple court, and §201 already
+decided its camera — but no verdict that depends on guard behaviour is taken until this lifts.
+
+**Redirected to:** work with no guard dependency — the perch pose item, placing the newly-installed
+CC0 architecture in the scene, and the atmosphere/lighting queue.

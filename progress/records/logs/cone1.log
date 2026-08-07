@@ -3,3 +3,8 @@
 [22:38:23 +  87s] srcTreeAtLock 9c36c0acb6c5d3e3 (pre-lock reading was 9c36c0acb6c5d3e3)
 [22:38:23 +  88s] LEVER {"gotShotObject":true,"livePos":[-13.25,2.6,30.5],"liveTarget":[-18.75,1.1,28],"liveFov":38,"liveTod":0.1,"hasGuards":true,"guardCount":11,"hasSolver":true}
 [22:43:54 + 418s] arm preroll1 (DISCARDED — preroll) 331s  toward 0.35 took=true  stand [-17.2371,0,27.5446]  feet [843.9,625.3] head [863.6,244.3]
+[22:46:35 + 579s] arm preroll2 (DISCARDED — preroll) 161s  toward 0.35 took=true  stand [-17.2371,0,27.5446]  feet [843.9,625.3] head [863.6,244.3]
+[22:49:15 + 740s] arm preroll3 (DISCARDED — preroll) 160s  toward 0.35 took=true  stand [-17.2371,0,27.5446]  feet [843.9,625.3] head [863.6,244.3]
+[22:51:56 + 901s] arm base 161s  toward 0.35 took=true  stand [-17.2371,0,27.5446]  feet [843.9,625.3] head [863.6,244.3]
+[22:54:39 +1063s] arm cand 162s  toward -0.2 took=true  stand [-17.2371,0,27.5446]  feet [843.9,625.3] head [863.6,244.3]
+[22:57:20 +1224s] arm restore 161s  toward 0.35 took=true  stand [-17.2371,0,27.5446]  feet [843.9,625.3] head [863.6,244.3]
