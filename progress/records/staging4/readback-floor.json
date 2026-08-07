@@ -24,5 +24,22 @@
   "s4",
   "s5"
  ],
- "stages": []
+ "stages": [],
+ "srcTreeAtLock": "66f79606ed1746ee",
+ "boot": {
+  "warnings": [
+   "textures: prewarm took 27.5s at size 1024"
+  ],
+  "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)"
+ },
+ "lever": {
+  "ok": true,
+  "livePos": [
+   -11.5,
+   2.6,
+   30.5
+  ],
+  "guardCount": 11,
+  "character": "sly3"
+ }
 }
