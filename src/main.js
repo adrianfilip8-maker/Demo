@@ -90,8 +90,9 @@ const MANIFEST = [
   ['terrain',      './world/Terrain.js',          'Terrain'],
   ['architecture', './world/Architecture.js',     'Architecture'],
   ['props',        './world/Props.js',            'Props'],
-  /* Inert unless ?kaykit= is set — see KayKit.js. Registered so the showcase can be captured
-     without a source edit at capture time. */
+  /* The CC0 pack's props — barrels, crates, chests, the tomb hoard. Before `collision` on
+     purpose: it registers obstacle colliders during init and they must exist by the time
+     COLLISION builds. `?kaykit=off` removes it; `?kaykit=show` swaps it for the palette row. */
   ['kaykit',       './world/KayKit.js',           'KayKit'],
   ['collision',    './world/Collision.js',        'Collision'],
   ['character',    CHARACTER[0],                  CHARACTER[1]],
