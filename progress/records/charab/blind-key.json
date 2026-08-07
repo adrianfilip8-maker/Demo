@@ -1,24 +1,24 @@
 {
- "seed": 7,
+ "seed": 8,
  "pairs": {
   "sly-closeup": {
-   "A": "model3",
-   "B": "base",
-   "A_sha": "d9c67ab3ad8ad80e",
-   "B_sha": "4afc59662f2e0144",
+   "A": "base",
+   "B": "model3",
+   "A_sha": "4afc59662f2e0144",
+   "B_sha": "39ccbfb23b425f73",
    "pair": "charab/blind/sly-closeup.pair.png"
   },
   "sly-profile": {
-   "A": "base",
-   "B": "model3",
-   "A_sha": "3b3fcbc9da151c78",
-   "B_sha": "3fe6f4294aa624df",
+   "A": "model3",
+   "B": "base",
+   "A_sha": "1359c15d82aa8743",
+   "B_sha": "3b3fcbc9da151c78",
    "pair": "charab/blind/sly-profile.pair.png"
   },
   "sly-perch": {
    "A": "model3",
    "B": "base",
-   "A_sha": "831bf9f21de9c83b",
+   "A_sha": "75280c971b6051e1",
    "B_sha": "a2f886d98b65cd9f",
    "pair": "charab/blind/sly-perch.pair.png"
   },
@@ -26,7 +26,7 @@
    "A": "base",
    "B": "model3",
    "A_sha": "8af6b825f184a5e6",
-   "B_sha": "47bae7f03814b048",
+   "B_sha": "f05a6b9fa81320a9",
    "pair": "charab/blind/traversal.pair.png"
   }
  }
