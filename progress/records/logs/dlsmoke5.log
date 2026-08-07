@@ -28,3 +28,5 @@
 [360s]    ! SlyModelDL: dropped 16 triangle(s) with non-finite corners (OBJLoader forward-reference; see dropNonFiniteTriangles)
 [360s] identity: root="slydl" mesh="slydl:mesh" bones=31 verts=39915 mats=4
 [911s]   sly-closeup  551s -> sly-closeup.dl.png
+[1419s]   traversal  508s -> traversal.dl.png
+[1419s] DONE

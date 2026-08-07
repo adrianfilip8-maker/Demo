@@ -241,10 +241,17 @@ export class SlyModel {
         srcAbs[`lowerArm${S}`] = [side * 0.2906 * H, ARM_Y, ARM_Z];   // elbow, at our bone-length ratio
         srcAbs[`hand${S}`] = [side * 0.4611 * H, ARM_Y, ARM_Z];       // wrist; fingers run to 0.946
       }
-      srcAbs.tailA = [0, 0.5000 * H, -0.0994 * H];
-      srcAbs.tailB = [0, 0.4889 * H, -0.2944 * H];
-      srcAbs.tailC = [0, 0.4722 * H, -0.4889 * H];
-      srcAbs.tailD = [0, 0.4556 * H, -0.6889 * H];
+      /* MEASURED from the mesh — centroid per z-slice through the Sly_Tail vertices — not
+         assumed. The first version of these four lines was a straight line eyeballed from the
+         part's bounding box, and it missed: the asset's tail vertices sat up to 0.298 from it
+         against a tube radius of ~0.17, so the rebind was rotating tail segments about pivots
+         nearly two radii off the geometry, which is what kept collapsing the tube into a fan.
+         The real centreline runs y 0.73-0.79 where the assumed one ran 0.82-0.90. Fit with these:
+         median 0.096, p90 0.176, max 0.221 — inside the tube. */
+      srcAbs.tailA = [0, 0.4111 * H, -0.1369 * H];
+      srcAbs.tailB = [0, 0.4201 * H, -0.2730 * H];
+      srcAbs.tailC = [0, 0.4379 * H, -0.5152 * H];
+      srcAbs.tailD = [0, 0.4053 * H, -0.6492 * H];
     }
 
     /* ---- auto-skin, solved in the ASSET's pose ---- */
