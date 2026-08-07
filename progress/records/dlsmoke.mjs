@@ -46,9 +46,12 @@ await withGame({
   });
   report.identity = who;
   log(`identity: root="${who.rootName}" mesh="${who.meshName}" bones=${who.bones} verts=${who.verts} mats=${who.materials}`);
-  if (who.rootName !== (CHAR === 'dlraw' ? 'slydlraw' : 'slydl')) {
+  /* Derived from the token rather than hardcoded — this guard has now cried wolf twice by being
+     patched for one token at a time while the model set grew. */
+  const EXPECT_ROOT = { dl: 'slydl', dlraw: 'slydlraw', dlrig: 'slydlrig' }[CHAR] ?? CHAR;
+  if (who.rootName !== EXPECT_ROOT) {
     report.tokenMismatch = true;
-    log(`!! TOKEN MISMATCH — expected root 'slydl', got '${who.rootName}'. The dl token did not take.`);
+    log(`!! TOKEN MISMATCH — expected root "${EXPECT_ROOT}", got '${who.rootName}'. The dl token did not take.`);
   }
 
   for (const shot of SHOTS) {
