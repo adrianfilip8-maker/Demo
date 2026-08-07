@@ -15482,3 +15482,59 @@ coverage → LIGHTING/GEOMETRY, luma-scoped split → POSTFX, §2.2 shadow-hue �
 staging phase*. Between seal and capture, re-verify the base gates still describe the current
 tree — a shipped change elsewhere in the project (here: the character) is enough to void a
 capture that executed perfectly.
+
+## §198 — staging3 (the §195.4 re-seal): VOID again, but every fire is now a measured number
+
+The re-seal did what §195.4 ordered — bands re-anchored on frozen-clock frames from the current
+tree, P-F4's band derived from a measured restage floor, KBmid re-calibrated on P2 — and its
+capture is still **VOID**, on two falsifiers. Both are diagnosed, and neither is a mystery.
+
+**P-F3 (base gate out ⇒ VOID): the gate was narrower than its own noise.** Base guard-mass rect
+medL 65.86 vs band [55.9, 63.2]. §4.1's registered diagnosis duty fired with it, and the
+diagnosis set is unambiguous: on two dt-0 boots of identical vectors on an identical tree, every
+geometry-anchored statistic reproduces (figure rect medL 23.19 = 23.19, cone-air 27.62 = 27.62,
+P2 306 = 306, P7 33 = 33, P1 15.93 vs 15.99, P3 89.79 vs 89.99) while the guard-mass rect moves
+**6.35 L = 10.7%**. Within-boot drift for that same rect is **0.000**. The rect spans y ∈
+[100,330] — the sky/atmospheric-FX band — so this is the first measurement of §193's cross-boot
+FX floor for a rect **MEDIAN**, and it is an order of magnitude larger than the ±6% band I
+carried over from the original seal. Carrying a band's *width* is only safe if the *rect* is
+cross-boot stable, and I never asked that question. The repair is a base-gate rect outside the FX
+band, chosen from frame structure — not a wider band.
+
+**P-F4 (restore ≠ base ⇒ VOID): 110 px, and my named mechanism is under-determined.** The seal
+disclosed this tension in advance and named path-dependence as the mechanism a fire would prove.
+`staging3-residue.mjs` localizes the residue to ONE compact cluster in the upper-right sky
+(bbox x [1167,1278], y [107,277], mean ΣRGB 5.55, max 18) with **0 of 110 px inside any
+registered rect** — six rects, zero hits — and the guard's solved stand identical between the two
+arms. The residue is in the same sky/FX band as P-F3's volatility, not in anything the excursion
+moved. Path-dependence and plain boot-age drift both fit: the no-excursion pair (deriveA→deriveB,
+240 s) read maxΣ|Δ| 1, the through-cand pair (478 s) reads 18, and excursion-count, restage-count
+and elapsed time all rose together. **I registered a mechanism as though its fire would confirm
+it; it does not, and the RESULT says so rather than claiming the prediction landed.**
+
+**The registered next step is replaced with one that can actually discriminate** (a plan, not a
+band; the run stays VOID either way): one boot, five or six stages, ALL at the shipped vectors,
+evenly spaced. If residue grows with stage index with no camera change, it is boot-age drift and
+path-dependence is dead. §4.2's `restore2` shape cannot separate them — it holds excursion-count
+fixed at one.
+
+**Deliberately NOT decided here:** P-F4 is frame-wide and the residue misses every rect a verdict
+reads, so scoping it to the measured population is arguably right — but deciding that *after*
+seeing frame-wide fail and rect-scoped pass is §141.1's exact defect. Deferred to the next seal,
+to rest on the floor measurement above, with the frame-wide number reported regardless.
+
+**What the void capture nonetheless establishes.** The §195.4 calibration re-form WORKS: P2
+grades (306 → 642 → 668 → 720) with KBmid strictly inside by 336/26, where P1 saturates and
+inverts (KBmid 82.54 *above* cand 81.15) — the defect that made r12 UNSCOREABLE is fixed. The
+dt-0 fix holds at derivation level (two consecutive frozen restages byte-equivalent, F = 0). And
+the candidate's effect reproduces for the third time: base has 26 of 39 row-bands >60% occluded
+including **nineteen consecutive rows at exactly 0.000** NOT-NBC share — the subject's midsection
+wholly cut — against **zero** such rows on the candidate. That is P7's "nothing may cut the
+subject" intent, satisfied completely. None of it ships on a void capture; all of it says the
+next capture is worth running.
+
+**Standing lesson, the §197 pair:** §197 was "a seal is sized on a tree — re-verify before
+capture." §198 is its instrument-side twin — **a gate is sized on a rect, and a rect has a
+cross-boot floor that must be measured before a band is drawn around it.** Both captures executed
+perfectly and were voided by their own instruments; in both cases the instrument was right to
+fire and wrong in its construction.

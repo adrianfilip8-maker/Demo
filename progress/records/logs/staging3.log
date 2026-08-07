@@ -5,3 +5,9 @@
 [13:20:00 + 584s] arm preroll2 (DISCARDED — preroll) 485s  cam [-11.5,2.6,30.5] took=true  stand [-15.4871,0,27.5446]  feet [843.9,625.3] head [863.6,244.3]
 [13:24:05 + 829s] arm base 245s  cam [-11.5,2.6,30.5] took=true  stand [-15.4871,0,27.5446]  feet [843.9,625.3] head [863.6,244.3]
 [13:27:56 +1059s] arm cand 231s  cam [-13.25,2.6,30.5] took=true  stand [-17.2371,0,27.5446]  feet [843.9,625.3] head [863.6,244.3]
+[13:32:03 +1307s] arm restore 248s  cam [-11.5,2.6,30.5] took=true  stand [-15.4871,0,27.5446]  feet [843.9,625.3] head [863.6,244.3]
+[13:35:51 +1535s] arm KBmid 228s  cam [-12.5,2.6,30.5] took=true  stand [-16.4871,0,27.5446]  feet [843.9,625.3] head [863.6,244.3]
+[13:39:28 +1752s] arm KBover 217s  cam [-15.5,2.6,30.5] took=true  stand [-19.4871,0,27.5446]  feet [843.9,625.3] head [863.6,244.3]
+[13:39:28 +1752s] shot table restored in-page to {"pos":[-11.5,2.6,30.5],"target":[-17,1.1,28]} (src/** never written)
+[13:39:29 +1752s] DONE — srcTree before 1721f591dea9a027 after 1721f591dea9a027 same=true
+[13:39:29 +1752s] wall-times: preroll2 485s  base 245s  cand 231s  restore 248s  KBmid 228s  KBover 217s   <- §185's question

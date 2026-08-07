@@ -585,6 +585,567 @@
     "ms": 9.699999999254942
    },
    "warnings": 1
+  },
+  {
+   "arm": "restore",
+   "bootId": "bedb7315-ee4",
+   "discard": false,
+   "want": {
+    "pos": [
+     -11.5,
+     2.6,
+     30.5
+    ],
+    "target": [
+     -17,
+     1.1,
+     28
+    ]
+   },
+   "wallSecs": 248,
+   "armTook": true,
+   "shotPos": [
+    -11.5,
+    2.6,
+    30.5
+   ],
+   "shotTarget": [
+    -17,
+    1.1,
+    28
+   ],
+   "camPos": [
+    -11.5,
+    2.6,
+    30.5
+   ],
+   "camFov": 38,
+   "tod": 0.1,
+   "guardIndex": 0,
+   "guardType": "temple",
+   "guardLocked": true,
+   "guardPos": [
+    -15.4871,
+    0,
+    27.5446
+   ],
+   "guardYaw": -0.0691,
+   "feetPx": [
+    843.9,
+    625.3
+   ],
+   "headPx": [
+    863.6,
+    244.3
+   ],
+   "roster": [
+    {
+     "i": 0,
+     "type": "temple",
+     "p": [
+      -15.49,
+      0,
+      27.54
+     ]
+    },
+    {
+     "i": 1,
+     "type": "temple",
+     "p": [
+      -17.2,
+      0,
+      27.69
+     ]
+    },
+    {
+     "i": 2,
+     "type": "heavy",
+     "p": [
+      16.77,
+      0,
+      -1.17
+     ]
+    },
+    {
+     "i": 3,
+     "type": "temple",
+     "p": [
+      5.14,
+      2,
+      13.13
+     ]
+    },
+    {
+     "i": 4,
+     "type": "temple",
+     "p": [
+      0.03,
+      1.27,
+      46.43
+     ]
+    },
+    {
+     "i": 5,
+     "type": "temple",
+     "p": [
+      -16.42,
+      0,
+      -20.23
+     ]
+    },
+    {
+     "i": 6,
+     "type": "heavy",
+     "p": [
+      11.23,
+      0,
+      -46.04
+     ]
+    },
+    {
+     "i": 7,
+     "type": "temple",
+     "p": [
+      1.21,
+      17,
+      -19.7
+     ]
+    },
+    {
+     "i": 8,
+     "type": "heavy",
+     "p": [
+      4.46,
+      -9.6,
+      -59.16
+     ]
+    },
+    {
+     "i": 9,
+     "type": "scarab",
+     "p": [
+      22.55,
+      9,
+      -7.48
+     ]
+    },
+    {
+     "i": 10,
+     "type": "scarab",
+     "p": [
+      6.03,
+      -12,
+      -66.65
+     ]
+    }
+   ],
+   "subject": {
+    "asked": [
+     -9,
+     0,
+     31.5
+    ],
+    "staged": [
+     -9,
+     0,
+     31.5
+    ],
+    "final": [
+     -9,
+     0,
+     31.5
+    ],
+    "drift": 0,
+    "visible": true,
+    "ndc": [
+     -0.102,
+     4.643
+    ],
+    "onScreen": false,
+    "present": true
+   },
+   "stats": {
+    "fps": 60,
+    "drawCalls": 171,
+    "triangles": 1382635,
+    "programs": 92,
+    "ms": 9.699999999254942
+   },
+   "warnings": 1
+  },
+  {
+   "arm": "KBmid",
+   "bootId": "bedb7315-ee4",
+   "discard": false,
+   "want": {
+    "pos": [
+     -12.5,
+     2.6,
+     30.5
+    ],
+    "target": [
+     -18,
+     1.1,
+     28
+    ]
+   },
+   "wallSecs": 228,
+   "armTook": true,
+   "shotPos": [
+    -12.5,
+    2.6,
+    30.5
+   ],
+   "shotTarget": [
+    -18,
+    1.1,
+    28
+   ],
+   "camPos": [
+    -12.5,
+    2.6,
+    30.5
+   ],
+   "camFov": 38,
+   "tod": 0.1,
+   "guardIndex": 0,
+   "guardType": "temple",
+   "guardLocked": true,
+   "guardPos": [
+    -16.4871,
+    0,
+    27.5446
+   ],
+   "guardYaw": -0.0691,
+   "feetPx": [
+    843.9,
+    625.3
+   ],
+   "headPx": [
+    863.6,
+    244.3
+   ],
+   "roster": [
+    {
+     "i": 0,
+     "type": "temple",
+     "p": [
+      -16.49,
+      0,
+      27.54
+     ]
+    },
+    {
+     "i": 1,
+     "type": "temple",
+     "p": [
+      -17.2,
+      0,
+      27.69
+     ]
+    },
+    {
+     "i": 2,
+     "type": "heavy",
+     "p": [
+      16.77,
+      0,
+      -1.17
+     ]
+    },
+    {
+     "i": 3,
+     "type": "temple",
+     "p": [
+      5.14,
+      2,
+      13.13
+     ]
+    },
+    {
+     "i": 4,
+     "type": "temple",
+     "p": [
+      0.03,
+      1.27,
+      46.43
+     ]
+    },
+    {
+     "i": 5,
+     "type": "temple",
+     "p": [
+      -16.42,
+      0,
+      -20.23
+     ]
+    },
+    {
+     "i": 6,
+     "type": "heavy",
+     "p": [
+      11.23,
+      0,
+      -46.04
+     ]
+    },
+    {
+     "i": 7,
+     "type": "temple",
+     "p": [
+      1.21,
+      17,
+      -19.7
+     ]
+    },
+    {
+     "i": 8,
+     "type": "heavy",
+     "p": [
+      4.46,
+      -9.6,
+      -59.16
+     ]
+    },
+    {
+     "i": 9,
+     "type": "scarab",
+     "p": [
+      22.55,
+      9,
+      -7.48
+     ]
+    },
+    {
+     "i": 10,
+     "type": "scarab",
+     "p": [
+      6.03,
+      -12,
+      -66.65
+     ]
+    }
+   ],
+   "subject": {
+    "asked": [
+     -9,
+     0,
+     31.5
+    ],
+    "staged": [
+     -9,
+     0,
+     31.5
+    ],
+    "final": [
+     -9,
+     0,
+     31.5
+    ],
+    "drift": 0,
+    "visible": true,
+    "ndc": [
+     -0.306,
+     3.434
+    ],
+    "onScreen": false,
+    "present": true
+   },
+   "stats": {
+    "fps": 60,
+    "drawCalls": 170,
+    "triangles": 1375991,
+    "programs": 92,
+    "ms": 9.900000000372529
+   },
+   "warnings": 1
+  },
+  {
+   "arm": "KBover",
+   "bootId": "bedb7315-ee4",
+   "discard": false,
+   "want": {
+    "pos": [
+     -15.5,
+     2.6,
+     30.5
+    ],
+    "target": [
+     -21,
+     1.1,
+     28
+    ]
+   },
+   "wallSecs": 217,
+   "armTook": true,
+   "shotPos": [
+    -15.5,
+    2.6,
+    30.5
+   ],
+   "shotTarget": [
+    -21,
+    1.1,
+    28
+   ],
+   "camPos": [
+    -15.5,
+    2.6,
+    30.5
+   ],
+   "camFov": 38,
+   "tod": 0.1,
+   "guardIndex": 0,
+   "guardType": "temple",
+   "guardLocked": true,
+   "guardPos": [
+    -19.4871,
+    0,
+    27.5446
+   ],
+   "guardYaw": -0.0691,
+   "feetPx": [
+    843.9,
+    625.3
+   ],
+   "headPx": [
+    863.6,
+    244.3
+   ],
+   "roster": [
+    {
+     "i": 0,
+     "type": "temple",
+     "p": [
+      -19.49,
+      0,
+      27.54
+     ]
+    },
+    {
+     "i": 1,
+     "type": "temple",
+     "p": [
+      -17.2,
+      0,
+      27.69
+     ]
+    },
+    {
+     "i": 2,
+     "type": "heavy",
+     "p": [
+      16.77,
+      0,
+      -1.17
+     ]
+    },
+    {
+     "i": 3,
+     "type": "temple",
+     "p": [
+      5.14,
+      2,
+      13.13
+     ]
+    },
+    {
+     "i": 4,
+     "type": "temple",
+     "p": [
+      0.03,
+      1.27,
+      46.43
+     ]
+    },
+    {
+     "i": 5,
+     "type": "temple",
+     "p": [
+      -16.42,
+      0,
+      -20.23
+     ]
+    },
+    {
+     "i": 6,
+     "type": "heavy",
+     "p": [
+      11.23,
+      0,
+      -46.04
+     ]
+    },
+    {
+     "i": 7,
+     "type": "temple",
+     "p": [
+      1.21,
+      17,
+      -19.7
+     ]
+    },
+    {
+     "i": 8,
+     "type": "heavy",
+     "p": [
+      4.46,
+      -9.6,
+      -59.16
+     ]
+    },
+    {
+     "i": 9,
+     "type": "scarab",
+     "p": [
+      22.55,
+      9,
+      -7.48
+     ]
+    },
+    {
+     "i": 10,
+     "type": "scarab",
+     "p": [
+      6.03,
+      -12,
+      -66.65
+     ]
+    }
+   ],
+   "subject": {
+    "asked": [
+     -9,
+     0,
+     31.5
+    ],
+    "staged": [
+     -9,
+     0,
+     31.5
+    ],
+    "final": [
+     -9,
+     0,
+     31.5
+    ],
+    "drift": 0,
+    "visible": true,
+    "ndc": [
+     -0.527,
+     2.131
+    ],
+    "onScreen": false,
+    "present": true
+   },
+   "stats": {
+    "fps": 60,
+    "drawCalls": 167,
+    "triangles": 1372197,
+    "programs": 92,
+    "ms": 8.400000000372529
+   },
+   "warnings": 1
   }
  ],
  "srcTreeAtLock": "1721f591dea9a027",
@@ -631,5 +1192,22 @@
   "guardCount": 11,
   "hasSolver": true
  },
- "treeDrift": false
+ "treeDrift": false,
+ "tableRestored": {
+  "pos": [
+   -11.5,
+   2.6,
+   30.5
+  ],
+  "target": [
+   -17,
+   1.1,
+   28
+  ]
+ },
+ "srcTreeAtRelease": "1721f591dea9a027",
+ "srcTreeAfter": "1721f591dea9a027",
+ "finishedAt": "2026-08-07T13:39:29.087Z",
+ "sameTree": true,
+ "sameTreeOutsideLock": true
 }
