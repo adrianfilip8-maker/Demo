@@ -23,9 +23,13 @@ import { withGame } from '/home/user/Demo/tools/harness.mjs';
 import { writeFile, mkdir } from 'node:fs/promises';
 import path from 'node:path';
 
-const ARM = (process.argv[2] || 'base').trim();
-if (!['base', 'model3'].includes(ARM)) {
-  console.error(`unknown arm "${ARM}" (base|model3)`);
+/* Arms are CHAR tokens now, not a fixed pair: the shipped model has changed twice since this
+   runner was written, so hardcoding 'base' to mean "no token" would silently capture whatever is
+   currently default and label it as the incumbent. Every arm names its token explicitly. */
+const EXPECT_ROOT = { model3: 'sly3', legacy: 'sly_root', dlrig: 'slydlrig', dl: 'slydl', dlraw: 'slydlraw' };
+const ARM = (process.argv[2] || '').trim();
+if (!EXPECT_ROOT[ARM]) {
+  console.error(`unknown arm "${ARM}" — one of: ${Object.keys(EXPECT_ROOT).join(', ')}`);
   process.exit(2);
 }
 const OUT = '/home/user/Demo/progress/records/charab';
@@ -34,7 +38,7 @@ const SHOTS = ['sly-closeup', 'sly-profile', 'sly-perch', 'traversal'];
 const t0 = Date.now();
 const log = (s) => process.stdout.write(`[${((Date.now() - t0) / 1000) | 0}s] ${s}\n`);
 
-log(`arm "${ARM}" — ${ARM === 'model3' ? 'SlyModel3.js (?char=model3)' : 'SlyModel.js (incumbent)'}`);
+log(`arm "${ARM}" — expecting root "${EXPECT_ROOT[ARM]}"`);
 
 await mkdir(OUT, { recursive: true });
 
@@ -42,7 +46,7 @@ const report = { arm: ARM, at: new Date().toISOString(), shots: {} };
 
 await withGame({
   width: 1280, height: 720, quality: 'high', timeout: 40 * 60 * 1000,
-  query: ARM === 'model3' ? 'char=model3' : '',
+  query: `char=${ARM}`,
 }, async ({ page, info }) => {
   log(`boot ok — renderer ${info.renderer}; warnings ${info.warnings?.length ?? 0}`);
   for (const w of info.warnings || []) log(`   ! ${w}`);
@@ -62,9 +66,8 @@ await withGame({
   });
   report.identity = who;
   log(`identity: root="${who.rootName}" mesh="${who.meshName}" bones=${who.bones} verts=${who.verts}`);
-  const isRebuild = who.rootName === 'sly3';
-  if ((ARM === 'model3') !== isRebuild) {
-    log(`!! ARM MISMATCH — arm "${ARM}" but root name is "${who.rootName}". The URL param did not take.`);
+  if (who.rootName !== EXPECT_ROOT[ARM]) {
+    log(`!! ARM MISMATCH — arm "${ARM}" expects root "${EXPECT_ROOT[ARM]}", got "${who.rootName}". The URL param did not take.`);
     report.armMismatch = true;
   }
 
