@@ -99,3 +99,4 @@
 · waiting for capture lock (1030s, held by pid 14436)
 [14:58:35 +1136s] boot ok — warnings 1
 [14:58:36 +1137s] LEVER {"ok":true,"livePos":[-11.5,2.6,30.5],"guardCount":11,"character":"sly3"}
+[15:06:59 +1640s] stage preroll 504s (elapsed 1640s)  took=true  guard [-15.4871,0,27.5446]

@@ -24,7 +24,34 @@
   "s4",
   "s5"
  ],
- "stages": [],
+ "stages": [
+  {
+   "stage": "preroll",
+   "bootId": "d79dd1a1-35c",
+   "discard": true,
+   "wallSecs": 504,
+   "elapsedSecs": 1640,
+   "armTook": true,
+   "camPos": [
+    -11.5,
+    2.6,
+    30.5
+   ],
+   "guardPos": [
+    -15.4871,
+    0,
+    27.5446
+   ],
+   "tod": 0.1,
+   "stats": {
+    "fps": 41,
+    "drawCalls": 170,
+    "triangles": 1381971,
+    "programs": 92,
+    "ms": 17027.800000000745
+   }
+  }
+ ],
  "srcTreeAtLock": "66f79606ed1746ee",
  "boot": {
   "warnings": [
