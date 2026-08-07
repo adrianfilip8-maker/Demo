@@ -1,0 +1,111 @@
+{
+ "purpose": "derivation capture for the §195.4 re-seal (PREREG-staging3) — not a scored run",
+ "runner": "progress/records/staging3-derive.mjs",
+ "bootId": "6486111a-444",
+ "startedAt": "2026-08-07T12:49:32.711Z",
+ "srcTreeBefore": "1721f591dea9a027",
+ "shipped": {
+  "pos": [
+   -11.5,
+   2.6,
+   30.5
+  ],
+  "target": [
+   -17,
+   1.1,
+   28
+  ]
+ },
+ "stageOrder": [
+  "preroll",
+  "deriveA",
+  "deriveB"
+ ],
+ "stages": [
+  {
+   "stage": "preroll",
+   "bootId": "6486111a-444",
+   "discard": true,
+   "wallSecs": 498,
+   "armTook": true,
+   "camPos": [
+    -11.5,
+    2.6,
+    30.5
+   ],
+   "tod": 0.1,
+   "guardLocked": true,
+   "guardPos": [
+    -15.4871,
+    0,
+    27.5446
+   ],
+   "feetPx": [
+    843.9,
+    625.3
+   ],
+   "headPx": [
+    863.6,
+    244.3
+   ],
+   "subject": {
+    "asked": [
+     -9,
+     0,
+     31.5
+    ],
+    "staged": [
+     -9,
+     0,
+     31.5
+    ],
+    "final": [
+     -9,
+     0,
+     31.5
+    ],
+    "drift": 0,
+    "visible": true,
+    "ndc": [
+     -0.102,
+     4.643
+    ],
+    "onScreen": false,
+    "present": true
+   },
+   "stats": {
+    "fps": 33,
+    "drawCalls": 170,
+    "triangles": 1381971,
+    "programs": 92,
+    "ms": 18171.599999999627
+   }
+  }
+ ],
+ "srcTreeAtLock": "1721f591dea9a027",
+ "boot": {
+  "warnings": [
+   "textures: prewarm took 26.4s at size 1024"
+  ],
+  "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)"
+ },
+ "lever": {
+  "gotShotObject": true,
+  "livePos": [
+   -11.5,
+   2.6,
+   30.5
+  ],
+  "liveTarget": [
+   -17,
+   1.1,
+   28
+  ],
+  "liveTod": 0.1,
+  "hasGuards": true,
+  "guardCount": 11,
+  "hasSolver": true,
+  "characterRoot": "sly3"
+ },
+ "treeDrift": false
+}
