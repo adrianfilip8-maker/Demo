@@ -1,0 +1,4 @@
+[0s] arm "model3" — SlyModel3.js (?char=model3)
+· waiting for capture lock (10s, held by pid 9994)
+· waiting for capture lock (21s, held by pid 9994)
+· waiting for capture lock (31s, held by pid 9994)
