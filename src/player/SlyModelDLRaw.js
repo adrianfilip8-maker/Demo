@@ -150,6 +150,10 @@ export class SlyModel {
       if (url) {
         map = loader.load(url);
         map.colorSpace = THREE.SRGBColorSpace;
+        /* REPEAT: the asset's tail UVs run V past 1.0 (to 1.504) because its banded texture is
+           meant to tile along the tail. Clamping flattens the rings into a solid block. */
+        map.wrapS = THREE.RepeatWrapping;
+        map.wrapT = THREE.RepeatWrapping;
         map.anisotropy = 4;
       }
       return shading?.make

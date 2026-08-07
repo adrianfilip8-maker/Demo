@@ -332,7 +332,21 @@ export class SlyModel {
     const materials = parts.map((part) => {
       const url = textureUrl(part);
       let map = null;
-      if (url) { map = loader.load(url); map.colorSpace = THREE.SRGBColorSpace; map.anisotropy = 4; }
+      if (url) {
+        map = loader.load(url);
+        map.colorSpace = THREE.SRGBColorSpace;
+        map.anisotropy = 4;
+        /* REPEAT, not three's default clamp-to-edge. The tail's UVs run V from 0.114 to 1.504 —
+           deliberately past 1.0, because the asset tiles its banded texture along the tail's
+           length. Under clamping everything above V = 1 samples one edge row, so the rings
+           flatten into a solid block, which is exactly what a blind critic reported: "a solid
+           dark-brown lobe with zero ring pattern", costing this build identity twice and
+           reference fidelity four times out of four. Body, head and eyeball stay inside [0,1]
+           bar rounding, so only the tail was visibly affected — but the asset's UVs are the
+           authority on wrap mode, and they say repeat. */
+        map.wrapS = THREE.RepeatWrapping;
+        map.wrapT = THREE.RepeatWrapping;
+      }
       return shading?.make
         ? shading.make({
           name: `slydlrig:${part}`, color: map ? 0xffffff : FALLBACK[part], map,

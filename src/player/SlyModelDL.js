@@ -430,6 +430,10 @@ export class SlyModel {
       if (url) {
         map = texLoader.load(url);
         map.colorSpace = THREE.SRGBColorSpace;
+        /* REPEAT: the asset's tail UVs run V past 1.0 (to 1.504) because its banded texture is
+           meant to tile along the tail. Clamping flattens the rings into a solid block. */
+        map.wrapS = THREE.RepeatWrapping;
+        map.wrapT = THREE.RepeatWrapping;
         /* flipY stays at three's default of TRUE. It was set false here on the reasoning that
            "OBJ UVs are already bottom-up", which is backwards: glTF puts UV (0,0) at the image's
            TOP-left and therefore wants flipY false, while OBJ puts it at the BOTTOM-left, which
