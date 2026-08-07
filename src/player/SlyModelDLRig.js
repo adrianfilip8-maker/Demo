@@ -63,6 +63,23 @@ const BONE_MAP = {
   jaw: 'jaw', hat: 'capBrim',
 };
 
+/**
+ * Which FBX bone ANCHORS each project bone's bind position — a separate question from which
+ * bones carry weight, and conflating them cost a 60 % stretch in the tail root.
+ *
+ * `BONE_MAP` answers "whose influence is this?", so several asset bones fold onto one of ours.
+ * Taking the bind position from whichever of those happened to be listed first put `tailB` on
+ * `tail3`, giving a tailA→tailB span of 0.218 against our 0.354 and a conform-scale of 1.605.
+ * Anchors are therefore chosen by ARC POSITION against our chain: our tail joints sit at
+ * z = -0.165, -0.517, -0.853, -1.122, and the asset's nearest are tail_base (-0.214),
+ * tail4 (-0.564), tail7 (-0.836) and tail11 (-1.131). Anything not named here falls back to the
+ * first `BONE_MAP` entry, which is correct wherever the mapping is one-to-one.
+ */
+const ANCHOR = {
+  tailA: 'tail_base', tailB: 'tail4', tailC: 'tail7', tailD: 'tail11',
+  hips: 'a_body', spine: 'lower_back', chest: 'chest', neck: 'base_neck', head: 'base_head',
+};
+
 const TEX_BY_PART = { body: 'sly_body', eyeball: 'sly_eyeball', head: 'sly_head', tail: 'sly_tail' };
 const FALLBACK = { body: 0x2f5fc4, eyeball: 0xd9821a, head: 0xcfcdc4, tail: 0x8d8b84 };
 
@@ -149,9 +166,18 @@ export class SlyModel {
        independent of whatever pose the file happens to be left in). */
     const srcPos = {};
     const m = new THREE.Matrix4(), v = new THREE.Vector3();
+    const anchored = new Set(Object.values(ANCHOR));
+    /* Explicit anchors first, so an arc-matched choice always beats list order (see ANCHOR). */
+    srcSkel.bones.forEach((b, i) => {
+      if (!anchored.has(b.name)) return;
+      const nm = Object.keys(ANCHOR).find((k) => ANCHOR[k] === b.name);
+      if (!nm) return;
+      m.copy(srcSkel.boneInverses[i]).invert();
+      srcPos[nm] = v.setFromMatrixPosition(m).clone();
+    });
     srcSkel.bones.forEach((b, i) => {
       const nm = BONE_MAP[b.name];
-      if (!nm || srcPos[nm]) return;                       // first mapped bone wins the slot
+      if (!nm || srcPos[nm]) return;                       // fallback: first mapped bone wins
       m.copy(srcSkel.boneInverses[i]).invert();
       srcPos[nm] = v.setFromMatrixPosition(m).clone();
     });
@@ -217,18 +243,50 @@ export class SlyModel {
       }
     }
 
-    /* ---- carry the mesh from the FBX bind pose into ours ---- */
-    const firstCoreChild = {};
-    for (const [nm, par] of RIG3.SKELETON) if (!firstCoreChild[par]) firstCoreChild[par] = nm;
+    /* ---- carry the mesh from the FBX bind pose into ours -----------------------------------
+     *
+     * Two defects in the first version of this block, both visible in its capture:
+     *
+     * 1. STRUCTURAL CHILDREN ONLY. It took each bone's first child from the skeleton list without
+     *    filtering. For `head` that is `jaw`, so the head's whole transform was derived from the
+     *    head->jaw direction — a small facial offset, not a limb axis — which shrank the skull to
+     *    about 0.70 and scrambled its orientation. A bone's transform must come from the next
+     *    STRUCTURAL joint or from its parent, never from a detail bone hanging off it.
+     *
+     * 2. SCALE ONLY WHERE LENGTH MUST CONFORM. Per-bone scale exists so a limb whose proportions
+     *    differ from ours still lands its joints on our bones — the asset's arms are longer
+     *    relative to height (0.265 against our 0.19), so without it the hand overshoots. Applied
+     *    to the spine, neck or head it does something else entirely: it resizes body parts to the
+     *    ratio of two joint SPACINGS, so our short neck->head gap (0.064) against the asset's
+     *    (0.080) shrinks the entire skull by a fifth for no reason. Limbs and tail conform;
+     *    torso, neck and head are placed and turned but never resized.
+     */
+    const STRUCT = new Set([
+      'hips', 'spine', 'chest', 'neck', 'head',
+      'shoulderL', 'upperArmL', 'lowerArmL', 'handL',
+      'shoulderR', 'upperArmR', 'lowerArmR', 'handR',
+      'upperLegL', 'lowerLegL', 'footL', 'toeL',
+      'upperLegR', 'lowerLegR', 'footR', 'toeR',
+      'tailA', 'tailB', 'tailC', 'tailD',
+    ]);
+    const CONFORMS = (nm) => /^(shoulder|upperArm|lowerArm|hand|upperLeg|lowerLeg|foot|toe|tail)/.test(nm);
+
+    const structChild = {};
+    for (const [nm, par] of RIG3.SKELETON) {
+      if (STRUCT.has(nm) && STRUCT.has(par) && !structChild[par]) structChild[par] = nm;
+    }
     const rot = {};
     for (const [nm, par] of RIG3.SKELETON) {
-      const kid = firstCoreChild[nm];
+      const kid = structChild[nm];
       if (kid && srcPos[nm] && srcPos[kid]) {
         const dS = srcPos[kid].clone().sub(srcPos[nm]);
         const dO = new THREE.Vector3(...abs[kid]).sub(new THREE.Vector3(...abs[nm]));
         const lS = dS.length(), lO = dO.length();
         rot[nm] = (lS > 1e-6 && lO > 1e-6)
-          ? { q: new THREE.Quaternion().setFromUnitVectors(dS.divideScalar(lS), dO.divideScalar(lO)), sc: lO / lS }
+          ? {
+            q: new THREE.Quaternion().setFromUnitVectors(dS.divideScalar(lS), dO.divideScalar(lO)),
+            sc: CONFORMS(nm) ? lO / lS : 1,
+          }
           : { q: new THREE.Quaternion(), sc: 1 };
       } else rot[nm] = rot[par] || { q: new THREE.Quaternion(), sc: 1 };
     }
