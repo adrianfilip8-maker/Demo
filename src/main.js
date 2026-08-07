@@ -43,12 +43,13 @@ const MODULE_FILES = import.meta.glob('./{render,textures,world,player,fx,ai,ui,
  * deforms cleanly everywhere except the tail, which is one wrong element against a character that
  * does not move at all. Both remain one token away in either direction. */
 const CHAR_MODELS = {
-  /* Default reverted from `dlrig` after its first capture: the artist-weight remap has a bug
-     (shrunken head, distorted cane) and must not sit in the default slot while it is broken.
-     `dl` is the working supplied-model integration — animates, clean everywhere but the tail. */
-  '': ['./player/SlyModelDL.js', 'SlyModel'],         // supplied model, auto-skinned — SHIPPED
-  dl: ['./player/SlyModelDL.js', 'SlyModel'],         // explicit alias
-  dlrig: ['./player/SlyModelDLRig.js', 'SlyModel'],   // artist weights — UNDER REPAIR, not default
+  /* SHIPPED: the supplied model on its own artist skin weights. It took four captures and one
+     revert to get here — the first `dlrig` attempt went into this slot unseen and was broken,
+     which is why the default moved back to `dl` in between. It now beats `dl` on both counts:
+     the face reads correctly AND the tail holds volume, where `dl` never resolved its tail. */
+  '': ['./player/SlyModelDLRig.js', 'SlyModel'],      // supplied model, artist weights — SHIPPED
+  dlrig: ['./player/SlyModelDLRig.js', 'SlyModel'],   // explicit alias
+  dl: ['./player/SlyModelDL.js', 'SlyModel'],         // auto-skinned fallback (tail never fixed)
   dlraw: ['./player/SlyModelDLRaw.js', 'SlyModel'],   // the supplied model untouched; T-pose, static
   model3: ['./player/SlyModel3.js', 'SlyModel'],      // the Sly-3-reference procedural rebuild
   legacy: ['./player/SlyModel.js', 'SlyModel'],       // the pre-rebuild procedural model

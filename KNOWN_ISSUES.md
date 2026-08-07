@@ -15671,3 +15671,59 @@ mechanisms died to a six-stage experiment costing one capture; on the tail five 
 disabling animation for one frame. In both cases the decisive experiment was cheap and available
 from the start, and I reached for hypotheses first. The seals caught every wrong guess because
 they were written where they could fail visibly — but the guessing was the expensive part.
+
+## §200 — the supplied model ships on its own artist rig
+
+`CHAR_MODELS['']` → `SlyModelDLRig.js`: the model supplied on 2026-08-07, its geometry and
+authored normals untouched, driven by the **artist skin weights out of its own FBX**. `?char=dl`
+keeps the auto-skinned build, `?char=dlraw` the static import, `?char=model3` the procedural
+rebuild, `?char=legacy` the model before that.
+
+**Why the asset's own weights were always the right answer.** The FBX carries a full production
+rig — 117 bones, authored weights on all four meshes — and every earlier attempt discarded it to
+generate weights from bone-segment distance. That was adequate for limbs and hopeless on the
+tail, which the artist spreads across **twelve** bones with hand-tuned falloff. Six attempts to
+reproduce that with a nearest-segment heuristic all failed. The FBX route also carries the
+complete mesh: 39,963 vertices against the OBJ path's 39,915, because those 16 corrupt triangles
+were an artifact of text parsing and do not exist in the binary.
+
+**Four defects, each found by measurement after the preceding guess failed.**
+
+1. *Detail bones stole the transform.* The per-bone rotate/scale took each bone's first child from
+   the skeleton list unfiltered; for `head` that is `jaw`, so the skull's transform came from a
+   facial offset — scale 0.70, a shrunken head. Restricted to structural joints.
+2. *Scale applied where nothing needed conforming.* Per-bone scale exists so limbs with different
+   proportions land their joints on our bones (the asset's arms are 0.265 of height against our
+   0.19). On spine, neck and head it resized body parts by the ratio of two joint SPACINGS,
+   shrinking the skull a fifth. Limbs and tail conform; torso, neck and head never resize.
+3. *Bind anchors conflated with weight mapping.* `BONE_MAP` answers "whose influence is this", so
+   many asset bones fold onto one of ours — taking the bind POSITION from whichever was listed
+   first anchored `tailB` on `tail3`, a 0.218 span against our 0.354, stretching the tail root
+   **1.605×**. Anchors now chosen by arc position; that scale is 1.004.
+4. *Our clips drove the asset's expression rig.* `jaw` collected six of the asset's lip and mouth
+   bones, with `hat` and the ears likewise mapped to our like-named detail bones. Our animation
+   then moved that whole block with jaw motion authored for the procedural model's small jaw
+   blob — a compressed, smeared face under any crouch. They now fold into `head` and the face
+   rides the skull rigidly. The asset's expression rig has no counterpart in our procedural
+   animation, and pretending it did was the error.
+
+**The measurement that broke the deadlock, twice.** `dltailprobe` renders one boot twice: as posed,
+and with `animation.update` neutered and all 31 bones at rest. On the auto-skinned build it proved
+the mesh innocent (a proper tube at rest) and pinned the fault on the skinning's response to the
+spring. On this build it proved the rig correct (the best frame of the session) and pinned the
+fault on animation alone — which is what pointed at the jaw fold. Both times, five or six
+hypotheses had failed first and one observation settled it.
+
+**Carried, honestly.** The cane still reads large and angular in crouching poses. The tail holds
+volume but is blobbier than the procedural model's. Neither has been measured, and neither should
+be "fixed" by another guess.
+
+**Not blind-tested.** The default moved on direct instruction, not a critic round. PREREG-charab
+exists to stop me promoting work I am invested in; the owner choosing a model is not that failure
+mode. A blind round against `model3` remains available and is worth running before this counts as
+an aesthetic win rather than a delivered instruction.
+
+**Standing lesson, earned three times today.** §198.1 recorded it for the guard camera; this
+records it for the character. Every mechanism I named before the discriminating measurement
+existed was wrong. The measurements were cheap and available from the start. The seals and probes
+caught each wrong guess only because the guess was written where it could visibly fail.
