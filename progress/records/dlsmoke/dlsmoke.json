@@ -1,25 +1,25 @@
 {
  "runner": "dlsmoke.mjs",
- "at": "2026-08-07T14:37:22.455Z",
+ "at": "2026-08-07T14:59:59.611Z",
  "shots": {
   "sly-closeup": {
-   "secs": 543,
+   "secs": 564,
    "stats": {
-    "fps": 37,
+    "fps": 34,
     "drawCalls": 237,
     "triangles": 1643536,
     "programs": 92,
-    "ms": 12.800000000745058
+    "ms": 10.199999999254942
    }
   },
   "traversal": {
-   "secs": 522,
+   "secs": 513,
    "stats": {
     "fps": 60,
     "drawCalls": 227,
     "triangles": 1729904,
     "programs": 92,
-    "ms": 8.5
+    "ms": 9.399999998509884
    }
   }
  },
