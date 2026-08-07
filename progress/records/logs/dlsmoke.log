@@ -3,3 +3,5 @@
 [98s]    ! SlyModelDL: no texture for Sly_Body, Sly_Eyeball, Sly_Head, Sly_Tail — flat palette fallback in use
 [98s] identity: root="slydl" mesh="slydl:mesh" bones=31 verts=39963 mats=4
 [628s]   sly-closeup  530s -> sly-closeup.dl.png
+[1139s]   traversal  511s -> traversal.dl.png
+[1139s] DONE

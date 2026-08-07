@@ -1,0 +1,35 @@
+{
+ "runner": "dlsmoke.mjs",
+ "at": "2026-08-07T13:48:09.284Z",
+ "shots": {
+  "sly-closeup": {
+   "secs": 530,
+   "stats": {
+    "fps": 37,
+    "drawCalls": 237,
+    "triangles": 1643584,
+    "programs": 92,
+    "ms": 18
+   }
+  },
+  "traversal": {
+   "secs": 511,
+   "stats": {
+    "fps": 60,
+    "drawCalls": 227,
+    "triangles": 1729952,
+    "programs": 92,
+    "ms": 7.800000000745058
+   }
+  }
+ },
+ "identity": {
+  "rootName": "slydl",
+  "meshName": "slydl:mesh",
+  "bones": 31,
+  "verts": 39963,
+  "materials": 4,
+  "height": 1.8,
+  "source": null
+ }
+}
