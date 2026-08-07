@@ -1,0 +1,28 @@
+{
+ "prereg": "PREREG-staging3.md",
+ "runner": "progress/records/staging3.mjs",
+ "bootId": "bedb7315-ee4",
+ "startedAt": "2026-08-07T13:10:16.656Z",
+ "srcTreeBefore": "1721f591dea9a027",
+ "shippedExpected": {
+  "pos": [
+   -11.5,
+   2.6,
+   30.5
+  ],
+  "target": [
+   -17,
+   1.1,
+   28
+  ]
+ },
+ "armOrder": [
+  "preroll2",
+  "base",
+  "cand",
+  "restore",
+  "KBmid",
+  "KBover"
+ ],
+ "arms": []
+}
