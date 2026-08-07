@@ -220,19 +220,46 @@ export class SlyModel {
     );
     merged.scale(s, s, s);
 
-    /* ---- auto-skin onto the project skeleton ---- */
+    /* ---- the ASSET's own bind pose, which is NOT ours -------------------------------------
+     *
+     * Measured from the mesh, post-normalization: it is a narrow column (max |x| 0.20-0.27) at
+     * every height except y 1.2-1.4, where |x| reaches 0.946 across 1,900 vertices, with the arm's
+     * y pinned at 1.272 the whole way out. The asset is T-POSED. Our skeleton's arms hang down
+     * (hand at x 0.515, y 0.974), and its tail sweeps to +x while the asset's runs straight back.
+     *
+     * Skinning a T-posed mesh against a relaxed skeleton binds the outstretched arms to whatever
+     * bone happens to be nearest — torso, head — and the first capture showed exactly that. So the
+     * weights are solved against the ASSET's pose, and the mesh is then re-posed into OURS before
+     * binding. Fractions of TUNE.height, not metres, so the figures survive a height change.
+     */
+    const H = RIG3.TUNE.height;
+    const srcAbs = { ...abs };
+    {
+      const ARM_Y = 0.7067 * H, ARM_Z = -0.0056 * H;
+      for (const [S, side] of [['L', 1], ['R', -1]]) {
+        srcAbs[`upperArm${S}`] = [side * 0.1222 * H, ARM_Y, ARM_Z];   // where the arm leaves the torso
+        srcAbs[`lowerArm${S}`] = [side * 0.2906 * H, ARM_Y, ARM_Z];   // elbow, at our bone-length ratio
+        srcAbs[`hand${S}`] = [side * 0.4611 * H, ARM_Y, ARM_Z];       // wrist; fingers run to 0.946
+      }
+      srcAbs.tailA = [0, 0.5000 * H, -0.0994 * H];
+      srcAbs.tailB = [0, 0.4889 * H, -0.2944 * H];
+      srcAbs.tailC = [0, 0.4722 * H, -0.4889 * H];
+      srcAbs.tailD = [0, 0.4556 * H, -0.6889 * H];
+    }
+
+    /* ---- auto-skin, solved in the ASSET's pose ---- */
     const segs = [];
     for (const [name, parent] of RIG3.SKELETON) {
       if (!CORE.has(name)) continue;
       const iChild = RIG3.BONE_ORDER.indexOf(name);
       if (parent === 'root') {
-        const p = new THREE.Vector3(...abs[name]);
+        const p = new THREE.Vector3(...srcAbs[name]);
         segs.push({ a: p, b: p.clone().setY(p.y + 0.02), i0: iChild, i1: iChild });
         continue;
       }
       const iPar = RIG3.BONE_ORDER.indexOf(parent);
-      const a = new THREE.Vector3(...abs[parent]);
-      const b = new THREE.Vector3(...abs[name]);
+      const a = new THREE.Vector3(...srcAbs[parent]);
+      const b = new THREE.Vector3(...srcAbs[name]);
       segs.push({ a, b, i0: iPar, i1: iChild });
       const parentOfCore = RIG3.SKELETON.some(([n2, p2]) => p2 === name && CORE.has(n2));
       if (!parentOfCore) {
@@ -267,6 +294,68 @@ export class SlyModel {
     for (let i = 0; i < bwt.length; i++) {
       if (!Number.isFinite(bwt[i])) throw new Error(`SlyModelDL: non-finite skin weight at ${i} — sanitize did not cover this input`);
     }
+
+    /* ---- REBIND: carry the mesh from the asset's pose into ours -----------------------------
+     *
+     * Both skeletons hold identity bind rotations (the Rig contract), so a bone's bind transform
+     * is fixed entirely by its own position and the direction of its limb. For each bone we take
+     * the rotation that turns its ASSET-pose limb direction onto its OURS-pose direction, plus the
+     * length ratio, and apply it about that bone's asset-pose joint:
+     *
+     *     M = T(ours) · R(src→ours) · S(len ratio) · T(−src)
+     *
+     * then move every vertex by the same two-bone blend that skins it. Rotating rather than merely
+     * translating is the whole point: a translation would drag the T-posed arm down while leaving
+     * it horizontal. The scale term makes the asset's limbs match OUR bone lengths, so joints land
+     * on bones and the procedural clips — authored against these proportions — drive it cleanly.
+     *
+     * Leaf bones (hands, toes, tailD, head) have no limb of their own, so they inherit their
+     * parent's rotation instead of inventing one.
+     */
+    {
+      const firstCoreChild = {};
+      for (const [nm, par] of RIG3.SKELETON) {
+        if (CORE.has(nm) && CORE.has(par) && !firstCoreChild[par]) firstCoreChild[par] = nm;
+      }
+      const rot = {};                                   // name -> { q, sc }
+      for (const [nm, par] of RIG3.SKELETON) {
+        if (!CORE.has(nm)) continue;
+        const kid = firstCoreChild[nm];
+        if (kid) {
+          const dS = new THREE.Vector3(...srcAbs[kid]).sub(new THREE.Vector3(...srcAbs[nm]));
+          const dO = new THREE.Vector3(...abs[kid]).sub(new THREE.Vector3(...abs[nm]));
+          const lS = dS.length(), lO = dO.length();
+          rot[nm] = (lS > 1e-6 && lO > 1e-6)
+            ? { q: new THREE.Quaternion().setFromUnitVectors(dS.divideScalar(lS), dO.divideScalar(lO)), sc: lO / lS }
+            : { q: new THREE.Quaternion(), sc: 1 };
+        } else {
+          rot[nm] = rot[par] || { q: new THREE.Quaternion(), sc: 1 };   // leaf inherits
+        }
+      }
+      const M = RIG3.BONE_ORDER.map((nm) => {
+        const r = rot[nm];
+        if (!r) return new THREE.Matrix4();
+        return new THREE.Matrix4()
+          .compose(new THREE.Vector3(...abs[nm]), r.q, new THREE.Vector3(r.sc, r.sc, r.sc))
+          .multiply(new THREE.Matrix4().makeTranslation(-srcAbs[nm][0], -srcAbs[nm][1], -srcAbs[nm][2]));
+      });
+      const src = new THREE.Vector3(), acc = new THREE.Vector3(), tmp2 = new THREE.Vector3();
+      for (let i = 0; i < n; i++) {
+        src.fromBufferAttribute(pos, i);
+        acc.set(0, 0, 0);
+        for (let k = 0; k < 2; k++) {
+          const w = bwt[i * 4 + k];
+          if (w > 0) acc.addScaledVector(tmp2.copy(src).applyMatrix4(M[bidx[i * 4 + k]]), w);
+        }
+        pos.setXYZ(i, acc.x, acc.y, acc.z);
+      }
+      pos.needsUpdate = true;
+      merged.computeBoundingBox();
+      const rb = merged.boundingBox;
+      if (![rb.min.y, rb.max.y].every(Number.isFinite)) throw new Error('SlyModelDL: rebind produced a non-finite mesh');
+      this._rebindBBox = [rb.min.toArray().map((v) => +v.toFixed(3)), rb.max.toArray().map((v) => +v.toFixed(3))];
+    }
+
     merged.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(bidx, 4));
     merged.setAttribute('skinWeight', new THREE.Float32BufferAttribute(bwt, 4));
     merged.computeVertexNormals();
