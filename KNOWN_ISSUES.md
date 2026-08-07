@@ -15765,3 +15765,41 @@ three-preroll fix. The same move settled the character tail twice. In every case
 was available from the start and cost one capture.
 
 Next: task #14's cone re-judgement against `staging4/guard.cand.png` with `PLINTH_Y → 720`.
+
+## §202 — blind round seed 11: the procedural rebuild preferred 8–6, and the default does not move
+
+Full record in `RESULT-charab-dlrig.md`. Both arms captured after §201 shipped, identities verified,
+key committed at `869ed67` before the critic was spawned.
+
+**model3 8 — dlrig 6 — neither 2.** By question: dlrig takes **silhouette 3–1**, model3 takes
+**reference fidelity 4–0**, identity and craft level. The margin is narrow and comes from one
+question.
+
+**Blinding verified, tenth consecutive round, and by the strongest check yet.** The critic noticed
+the side assignment flips on traversal — from the ringed tail alone, no lookup — and regrouped its
+own totals by feature: *"the ringed-tail build scored 8; the big-head / large-cane / blob-tail build
+scored 6."* Translated through the committed key those are exactly model3 and dlrig. It
+reconstructed the grouping from the images and still could not name the builds.
+
+**The caveat I state rather than bury:** the brief describes Sly 3 (2005); the supplied model is Sly
+as he appears in Rift Apart (2021) — a different official design, sixteen years apart. The red thigh
+wraps the critic objected to three times are that design's costume. Judging one against the other's
+brief loads question 3 before anyone looks. The round stands (the brief was sealed, and the
+project's stated target IS the Sly 3 look), but "fails fidelity" here partly means "is a different
+official design".
+
+**Real defects, separated from design difference.** On dlrig: the tail shows **no rings in any
+frame**, which cost it identity twice and fidelity four times — and the supplied `sly_tail.png` IS a
+banded texture, so this is a tail-material mapping fault, not costume, and the highest-value fix
+available. Also gloves reading as five-to-six splayed rake fingers, plausibly the 20-bone-per-hand
+fold onto our single `hand` bone. On model3: its **cane hook is detached from the hand in all four
+frames** — the same defect five judges have now named. On **both**: *"neither matches flat cel
+shading — both use soft painterly gradient ramps on the blue"*, the first time a judge has named it
+against both builds at once, which makes it a renderer item rather than a model preference.
+
+**Decision: verification, not a gate.** PREREG-charab exists to govern decisions *I* make about work
+*I* am invested in. This default moved because the owner instructed it, and §200 records that. So
+8–6 does not fire a revert and I am not treating it as authority to undo an owner's choice. The
+default stays on `dlrig`; `?char=model3` is one token away. Independent of the aesthetic verdict,
+`dlrig` carries the complete 39,963-vertex mesh, authored normals, artist weights and a tail with
+volume — none of which this round touches.
