@@ -199,3 +199,6 @@
 [2164s] identity: root="sly3" mesh="sly3:mesh" bones=31 verts=2801
 [2731s]   sly-closeup  566s -> sly-closeup.model3.png
 [3185s]   sly-profile  454s -> sly-profile.model3.png
+[3685s]   sly-perch  500s -> sly-perch.model3.png
+[4202s]   traversal  517s -> traversal.model3.png
+[4202s] DONE arm=model3
