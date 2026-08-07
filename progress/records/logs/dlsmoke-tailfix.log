@@ -2,3 +2,5 @@
 [70s]    ! textures: prewarm took 18.9s at size 1024
 [70s] identity: root="slydlrig" mesh="slydlrig:mesh" bones=31 verts=39963 mats=4
 [457s]   sly-closeup  387s -> sly-closeup.dlrig.png
+[823s]   traversal  366s -> traversal.dlrig.png
+[823s] DONE
