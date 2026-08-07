@@ -72,7 +72,10 @@ await withGame({
     const s0 = Date.now();
     const r = await page.evaluate(async (name) => {
       const G = window.__GAME;
-      const staged = await G.setShot(name);
+      /* C-F3 (§195): setShot's INTERNAL seventeen settle frames ran at live dt, so every arm was
+         captured at a different idle-animation phase — the pose lottery that voided FINAL r1.
+         dt: 0 freezes the staging path itself; both arms now capture the same canonical pose. */
+      const staged = await G.setShot(name, { dt: 0 });
       /* §28/§195: freeze the world clock for the settle AND the capture, so this frame does not
          depend on how long the boot or the previous shot happened to take. */
       await G.step(12, 0);
