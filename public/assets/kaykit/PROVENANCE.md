@@ -25,10 +25,30 @@ from an external host.
 texture and one material. Two variants are installed:
 
 - `dungeon_texture.png` — the pack as shipped: dungeon grey stone and warm brown wood.
-- `dungeon_texture_sandstone.png` — retinted toward sandstone for this game's palette. Hue is SET
-  rather than rotated (so the pack's greys and browns land in one family), saturation scaled to 0.75
-  with a 0.18 floor, value gained 1.10. Value structure is preserved deliberately, because the cel
-  shader bands on luminance and a retint that flattened value would flatten the shading with it.
+- `dungeon_texture_sandstone.png` — retinted toward sandstone for this game's palette, **generated
+  by `tools/kaykit-retint.mjs`**, which is the authority on the recipe. Run it to reproduce the file;
+  run it with `--check` to print the numbers below without writing anything.
+
+  Saturation is `0.42 + 0.30 s` and hue is set toward sandstone with a blend weight that rises with
+  the texel's ORIGINAL saturation, so near-grey stone (whose hue is meaningless) is set outright
+  while vivid texels keep 35 % of their own and gold still reads as gold. Value is gained only 1.06:
+  the cel shader bands on luminance, so a retint that flattened value would flatten the shading
+  with it.
+
+  **The first version of this recipe was backwards, and the paragraph that used to sit here
+  described it approvingly.** It scaled saturation to 0.75 with a 0.18 floor. The architecture
+  texels — `wall_arched` and `stairs` sample only u[0.037, 0.215] × v[0.006, 0.214], the atlas's
+  top-left corner, which is near-neutral blue-grey at saturation 0.110 — fell under that floor and
+  came out at it, while the already-vivid props were scaled *down* from 0.610 to 0.459. Rendered,
+  the walls and stairs sat at median (R−B) +2 against this level's own stone at +45 in the same
+  shade. Recorded here because installing an asset and colour-matching it are separate jobs, and
+  the note claiming the second was done was written before anything had been rendered.
+
+  | patch | pack | old recipe | current recipe | this level's stone |
+  |---|---|---|---|---|
+  | architecture, median (R−B) | −12 | ≈ 0 | **+51** | +38…+45 |
+  | architecture, median sat | 0.110 | 0.182 | **0.453** | 0.50…0.55 |
+  | props, median sat | 0.610 | 0.459 | **0.604** | — |
 
 **Scale needs no adjustment:** `pillar` measures 1.5 × 1.5 × 4 m against this project's 1.80 m
 character, i.e. the pack was authored in metres at human scale.
