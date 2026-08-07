@@ -6,3 +6,17 @@
 [11:49:29 +   0s] chunk C2 (temple): srcTree 1721f591dea9a027 — booting (own lock hold)
 [11:49:29 +   0s]   lock held — installing candidate (litwarm-arms.py install cand)
 [11:49:29 +   0s]   installed arm "cand"  Toon sha 5052f4189ae9997a  Arch sha 7cd5b1d0a29d625f
+[11:52:14 + 166s]   boot ok — warnings 1
+[11:52:14 + 166s]   POPULATION {"pinnedCount":13,"pinnedNames":["arch:paving_courtyard","arch:gold_leaf","arch:column_papyrus","arch:sandstone_worn","arch:sandstone_block","arch:granite_pink","arch:limestone_polished","arch:hieroglyph_gilded","arch:hieroglyph_wall","arch:mudbrick","arch:ceiling_stars","arch:bronze_dark","arch:rope_fibre"],"pinnedSss":[0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3],"pinnedNightPin":[0,0,0,0,0,0,0,0,0,0,0,0,0],"pinnedInArch":13,"pinnedOnSkinned":[],"archMatCount":13,"skinMatCount":5,"hasPublish":true,"hasInkNight":true}
+[11:52:15 + 166s]   setShot(temple) 0s  tod 0.72  draws 204 tris 1665159
+[12:01:20 + 711s]   settle(temple) 545s (10 frozen frames + throwaway capture)
+[12:01:20 + 711s]   P-F7 ok: temple live nightAmount 0 (= 0 exactly)
+[12:01:42 + 733s]   temple.base     22s  slySss→0  uSss seen by shader [0] (want exactly 0)  inkNight 0  uSubjW 0.65  applied ok
+[12:02:04 + 755s]   temple.C        22s  slySss→0.3  uSss seen by shader [0.3] (want exactly 0.3)  inkNight 0  uSubjW 0.65  applied ok
+[12:02:26 + 777s]   temple.restore  22s  slySss→0  uSss seen by shader [0] (want exactly 0)  inkNight 0  uSubjW 0.65  applied ok
+[12:02:26 + 778s]   chunk C2 done — srcTree after 9f06ac30dc2e01d4 (MOVED — flag in RESULT)
+[12:02:27 + 778s]   reverted to base (Toon 38db1c1e0d8e81b7, Arch fc7b6b2737ed3192)
+[12:02:27 + 778s] chunk C2: lock released
+[12:02:27 + 778s] chunk D (sly-closeup): srcTree 1721f591dea9a027 — booting (own lock hold)
+[12:02:27 + 778s]   lock held — installing candidate (litwarm-arms.py install cand)
+[12:02:27 + 778s]   installed arm "cand"  Toon sha 5052f4189ae9997a  Arch sha 7cd5b1d0a29d625f
