@@ -80,6 +80,65 @@
     "programs": 92,
     "ms": 18171.599999999627
    }
+  },
+  {
+   "stage": "deriveA",
+   "bootId": "6486111a-444",
+   "discard": false,
+   "wallSecs": 240,
+   "armTook": true,
+   "camPos": [
+    -11.5,
+    2.6,
+    30.5
+   ],
+   "tod": 0.1,
+   "guardLocked": true,
+   "guardPos": [
+    -15.4871,
+    0,
+    27.5446
+   ],
+   "feetPx": [
+    843.9,
+    625.3
+   ],
+   "headPx": [
+    863.6,
+    244.3
+   ],
+   "subject": {
+    "asked": [
+     -9,
+     0,
+     31.5
+    ],
+    "staged": [
+     -9,
+     0,
+     31.5
+    ],
+    "final": [
+     -9,
+     0,
+     31.5
+    ],
+    "drift": 0,
+    "visible": true,
+    "ndc": [
+     -0.102,
+     4.643
+    ],
+    "onScreen": false,
+    "present": true
+   },
+   "stats": {
+    "fps": 60,
+    "drawCalls": 170,
+    "triangles": 1381971,
+    "programs": 92,
+    "ms": 8.699999999254942
+   }
   }
  ],
  "srcTreeAtLock": "1721f591dea9a027",
