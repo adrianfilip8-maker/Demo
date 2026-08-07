@@ -15902,3 +15902,52 @@ at y 0.24 with the swept arc clearing by ~3.7 cm frozen and ~2.0 cm at the breat
 available, and they disagreed — the task said unfixed, the comment claimed fixed with numbers. A
 probe run costs seconds and settles it. §11's instrument family in this ledger is full of confident
 zeros from tools measuring the wrong thing; a stale task line is the same failure in prose.
+
+## §205 — the first KayKit frame measured my spacing, not the pack
+
+The showcase row went in at 1.2–2.8 m spacing and came back an unreadable pile-up: two models
+filling the frame, the other five outside it, everything interpenetrating. The cause is that I
+placed seven models without ever asking how big they are.
+
+The glTF format had the answer for free the whole time. Every `POSITION` accessor carries `min`
+and `max` in the JSON header, so exact dimensions need no `.bin` parse, no boot and no lock:
+
+```
+pillar_decorated  2.23 x 4.00 x 1.71     stairs   5.00 x 5.10 x 4.00
+wall_arched       4.00 x 4.00 x 1.00     column   0.70 x 1.40 x 0.70
+```
+
+These are 4–5 m architectural pieces. The spacing assumed 1–2 m props. Reading nine accessor
+headers took one command; the frame that discovered the same fact took a 454-second render and a
+7.5-minute slot on the capture lock.
+
+**This is §11's pattern in a new place, and worth the entry for that reason alone.** The ledger's
+recurring lesson is that the discriminating measurement was cheap and available before the
+expensive instrument ran. Here it was not even a measurement — it was a field in a file I had
+already installed, catalogued and written a provenance note about. `PROVENANCE.md` even states
+`pillar` as 1.5 × 1.5 × 4 m, in a paragraph arguing that the pack needs no scale adjustment. I
+wrote the number down and then laid out the row as though I had not.
+
+Two things follow, and both are now in the code rather than in this entry:
+
+1. **The row packs itself from bounding boxes measured at load.** No hand-placed coordinates
+   remain in `KayKit.js`, so the layout cannot disagree with the geometry and swapping an entry
+   needs no re-measurement.
+2. **The shot's sightline was checked against the §8.1 table before the second boot** — it clears
+   the obelisk by x ≈ 13 m and terrace stage 1 by 5.7 m of elevation. The first camera was never
+   checked against anything.
+
+A third defect rode along and is worth separating, because it would have survived a correct
+spacing: the row was parked on the y = 9.0 kiosk deck at z = 6.0, and the kiosk's footprint is
+z 7.4…14.6. It was floating. The module header claimed it stood on "real level geometry rather
+than floating in a void" and cited §203.1's buried-crook lesson while doing precisely that. A
+comment asserting the property is not the property; the coordinates are. It now stands on the
+courtyard paving at y = 0 in the band z ∈ [−14, 0], which the paving-hole list shows is
+uninterrupted.
+
+**What the discarded frame does establish**, since it was paid for: the models load, take the cel
+shader and take the sandstone atlas. The navy on the pillar is our own shadow tint
+(`shadowTintPeak` 0.62, cool leg `#2fa8a0`) banding a faceted low-poly form — an 8×8 grid sample
+of both atlas PNGs finds warm ochre in every cell of the retint and no blue anywhere in it. So
+that frame refutes the alarming reading of itself, and the palette question it was built to answer
+is still open.
