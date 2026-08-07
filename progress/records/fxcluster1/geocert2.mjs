@@ -226,6 +226,7 @@ function poolInFrame(arm, reach, N = 240) {
   const B = bodyBasis(arm.fwd);
   const onset = EYE_HEIGHT / Math.tan(Math.min(1.45, CONE_PITCH + HALF_ANGLE));
   let inside = 0, total = 0;
+  const bx = { x0: 1e9, y0: 1e9, x1: -1e9, y1: -1e9, n: 0 };
   for (let i = 0; i < N; i++) {
     const t = onset + (reach - onset) * ((i + 0.5) / N);        // distance along the throw
     const halfW = Math.tan(HALF_ANGLE) * t;
@@ -234,10 +235,16 @@ function poolInFrame(arm, reach, N = 240) {
       const P = add(add(G, mul(B.F, t)), mul(B.R, lat));
       total++;
       const p = project([P[0], 0.035, P[2]]);
-      if (p && p.x >= 0 && p.x < W && p.y >= 0 && p.y < H) inside++;
+      if (p && p.x >= 0 && p.x < W && p.y >= 0 && p.y < H) {
+        inside++;
+        bx.n++;
+        if (p.x < bx.x0) bx.x0 = p.x; if (p.x > bx.x1) bx.x1 = p.x;
+        if (p.y < bx.y0) bx.y0 = p.y; if (p.y > bx.y1) bx.y1 = p.y;
+      }
     }
   }
-  return { inFrameShare: +(inside / total).toFixed(4), samples: total };
+  return { inFrameShare: +(inside / total).toFixed(4), samples: total,
+           bbox: bx.n ? { x0: Math.round(bx.x0), y0: Math.round(bx.y0), x1: Math.round(bx.x1), y1: Math.round(bx.y1), n: bx.n } : null };
 }
 
 /* ===================== feature reads ===================== */

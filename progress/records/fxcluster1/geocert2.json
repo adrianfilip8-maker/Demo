@@ -1,5 +1,5 @@
 {
- "at": "2026-08-07T20:18:10.401Z",
+ "at": "2026-08-07T22:14:57.445Z",
  "method": "z-buffered point rasterisation of the authored guard surface through the committed camera; no capture",
  "validation": {
   "committedPort": [
@@ -126,7 +126,14 @@
     "onsetM": 1.912,
     "pool": {
      "inFrameShare": 0.0065,
-     "samples": 57600
+     "samples": 57600,
+     "bbox": {
+      "x0": 1,
+      "y0": 664,
+      "x1": 384,
+      "y1": 720,
+      "n": 375
+     }
     }
    },
    "guaranteedFloor": {
@@ -151,7 +158,14 @@
     "onsetM": 1.912,
     "pool": {
      "inFrameShare": 0.0134,
-     "samples": 57600
+     "samples": 57600,
+     "bbox": {
+      "x0": 0,
+      "y0": 663,
+      "x1": 378,
+      "y1": 720,
+      "n": 773
+     }
     }
    }
   },
@@ -178,7 +192,14 @@
     "onsetM": 1.912,
     "pool": {
      "inFrameShare": 0.2058,
-     "samples": 57600
+     "samples": 57600,
+     "bbox": {
+      "x0": 0,
+      "y0": 295,
+      "x1": 665,
+      "y1": 720,
+      "n": 11853
+     }
     }
    },
    "guaranteedFloor": {
@@ -205,7 +226,14 @@
     "onsetM": 1.912,
     "pool": {
      "inFrameShare": 0.379,
-     "samples": 57600
+     "samples": 57600,
+     "bbox": {
+      "x0": 0,
+      "y0": 358,
+      "x1": 667,
+      "y1": 720,
+      "n": 21833
+     }
     }
    }
   }
