@@ -1,0 +1,5 @@
+[68s] boot ok (on) — warnings 3
+[68s]    ! textures: prewarm took 17.6s at size 1024
+[68s]    ! collision: unknown tag "obstacle" on "kaykit:solid" — treating as ground
+[68s]    ! KayKit (props): 30 placed from 11 models, 0 failed, 24800 tris, 23 colliders
+[68s] kaykit: {"mode":"props","stats":{"models":11,"placed":30,"failed":0,"tris":24800,"colliders":23}}

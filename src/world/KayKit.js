@@ -176,8 +176,25 @@ export class KayKit {
         const geo = parts.length === 1 ? parts[0] : mergeGeometries(parts, false);
         if (!geo) throw new Error('parts disagree on attributes');
         geo.computeBoundingBox();
-        const bb = geo.boundingBox;
+        let bb = geo.boundingBox;
         if (!bb || ![bb.min.y, bb.max.y].every(Number.isFinite)) throw new Error('non-finite bounds');
+
+        /* Re-centre on the model's own XZ centre, ONCE, here.
+         *
+         * These models are not authored around their origin and the amounts are not small:
+         * `rubble_half` sits 2.000 m off in x (it is a wall-segment piece, origin at one end)
+         * and both chests 0.355 m in z. A placement rotates about the origin, so without this
+         * a rotated prop swings that far off the coordinate the table names — and the collider,
+         * which is built at the named coordinate, would not follow it.
+         *
+         * Y is deliberately NOT touched: `bb.min.y` is what sets each prop down on its floor,
+         * and it is the one axis where the asset's own authoring is the useful reference. */
+        const cx = (bb.min.x + bb.max.x) / 2, cz = (bb.min.z + bb.max.z) / 2;
+        if (Math.abs(cx) > 1e-4 || Math.abs(cz) > 1e-4) {
+          geo.translate(-cx, 0, -cz);
+          geo.computeBoundingBox();
+          bb = geo.boundingBox;
+        }
         lib.set(file, { geo, bb: bb.clone() });
         this.stats.models++;
       } catch (err) {
@@ -227,7 +244,12 @@ export class KayKit {
     m.visible = false;
     m.name = 'kaykit:solid';
     this.group.add(m);
-    this.engine.registerCollider(m, { tag: 'obstacle', material: 'wood' });
+    /* `misc`, not `obstacle` — which is not a tag. Collision.js knows ground/wall/ledge/rail/
+       pole/hook/spire/vent/water/hazard/misc, and an unknown one is treated as GROUND, so the
+       first run silently turned every barrel into a piece of floor. `misc` is in SOLID_TAGS so
+       it blocks, without `wall`'s wall-run semantics (Controller.js:583), `ledge`'s grabbability
+       or `pole`'s climbability — none of which a crate should offer. */
+    this.engine.registerCollider(m, { tag: 'misc', material: 'wood' });
     this.stats.colliders++;
   }
 
