@@ -15877,3 +15877,28 @@ worse on every quantity that matters.
 now retired on evidence, and the instrument that argued for it is retired with it. That is a better
 outcome than shipping it on arithmetic, which is what the geocert result alone would have supported
 three hours ago.
+
+## §204 — the perch pose item was already fixed; closed on measurement, not on its own comment
+
+Task #17 ("`perch_idle` has zero lateral line of action — the one unfixed §7.3 pose item") has been
+carried as open. It is not. `tools/poseprobe.mjs perch_idle` now reports:
+
+```
+  S-curve hips x 0.045  chest x 0.082  head x 0.045
+  cane    tip -0.05,1.06,0.49  hook -0.06,0.24,-0.53
+```
+
+Against the original defect — hips 0.000, chest 0.006, head −0.007, i.e. dead straight on the
+frontal axis and reading as a mannequin on a plumb line from any azimuth off the 70° profile —
+that is a genuine lateral S: +4.5 cm out at the pelvis, +8.2 cm at the chest, back to +4.5 cm at
+the head. Authored as roll opposition rather than translation, so the feet hold their stance.
+
+The clip's second open defect is also closed: the cane crook was buried 0.38 m inside the deck at
+`hero` and cut by the floor at `sly-perch` (KNOWN_ISSUES §82.4's "floating brown prop", which the
+depth probe identified as the crook rather than a stray). Aim moved x 116 → 140; the hook now sits
+at y 0.24 with the swept arc clearing by ~3.7 cm frozen and ~2.0 cm at the breath trough.
+
+**Recorded because the checking is the point.** Both the task line and the clip's own comment were
+available, and they disagreed — the task said unfixed, the comment claimed fixed with numbers. A
+probe run costs seconds and settles it. §11's instrument family in this ledger is full of confident
+zeros from tools measuring the wrong thing; a stale task line is the same failure in prose.
