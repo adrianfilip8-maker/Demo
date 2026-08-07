@@ -587,3 +587,8 @@ export class SlyModel {
     this.mesh = null;
   }
 }
+
+/* The rig contract, exported for SlyModelDL: a downloaded mesh is auto-skinned onto THIS
+   skeleton so every clip, shot and readback keeps working against the same bone names and the
+   same identity bind pose. Values, not copies — the two models cannot drift apart. */
+export const RIG3 = { SKELETON, BONE_ORDER, TUNE, HEAD_HW };

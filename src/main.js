@@ -34,6 +34,10 @@ const CHAR_MODELS = {
   '': ['./player/SlyModel3.js', 'SlyModel'],          // the Sly-3-reference rebuild — SHIPPED
   model3: ['./player/SlyModel3.js', 'SlyModel'],      // explicit alias, kept for existing runners
   legacy: ['./player/SlyModel.js', 'SlyModel'],       // the pre-rebuild model, for A/Bs and rollback
+  /* The DOWNLOADED complete model (user instruction 2026-08-07), auto-skinned onto the project
+     skeleton — see SlyModelDL.js's header. Becomes the default when the real asset replaces the
+     placeholder in src/assets/sly-dl.glb and a ?char=dl capture verifies it. */
+  dl: ['./player/SlyModelDL.js', 'SlyModel'],
 };
 function characterModule() {
   let raw = '';
