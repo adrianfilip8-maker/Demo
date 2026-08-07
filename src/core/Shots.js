@@ -371,7 +371,13 @@ export const SHOTS = {
      The plinth itself is an §8.1 contract surface and is correct — nothing about the level needed
      changing. */
   guard: {
-    pos: [-11.5, 2.6, 30.5], target: [-17.0, 1.1, 28.0], fov: 38, tod: 0.10,
+    /* Moved 1.75 m west on 2026-08-07 per PREREG-staging4 §7's SHIP row (RESULT-staging4.md).
+       The near-black plinth mass cut 26 of 39 row-bands of the subject from this camera —
+       nineteen of them consecutively at exactly 0.000 unoccluded share, i.e. the whole midsection.
+       From here that count is zero. Four captures to prove: three were voided by their own
+       pre-registered falsifiers, each exposing a defect in the instrument rather than in this
+       lever, whose bands never moved. */
+    pos: [-13.25, 2.6, 30.5], target: [-18.75, 1.1, 28.0], fov: 38, tod: 0.10,
     player: { pos: [-9.0, 0, 31.5], yaw: 2.3, pose: 'sneak_idle' },
   },
 

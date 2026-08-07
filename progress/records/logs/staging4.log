@@ -1,1 +1,15 @@
 [19:35:17 +   0s] bootId 45e8c28f-10a  srcTree 0a89a86acc56340d — booting (harness takes the FIFO ticket)
+[19:36:25 +  68s] boot ok — warnings 1; renderer ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)
+[19:36:25 +  68s] srcTreeAtLock 0a89a86acc56340d (pre-lock reading was 0a89a86acc56340d)
+[19:36:25 +  68s] LEVER {"gotShotObject":true,"livePos":[-11.5,2.6,30.5],"liveTarget":[-17,1.1,28],"liveFov":38,"liveTod":0.1,"hasGuards":true,"guardCount":11,"hasSolver":true}
+[19:42:23 + 426s] arm preroll1 (DISCARDED — preroll) 358s  cam [-11.5,2.6,30.5] took=true  stand [-15.4871,0,27.5446]  feet [843.9,625.3] head [863.6,244.3]
+[19:45:12 + 595s] arm preroll2 (DISCARDED — preroll) 169s  cam [-11.5,2.6,30.5] took=true  stand [-15.4871,0,27.5446]  feet [843.9,625.3] head [863.6,244.3]
+[19:48:04 + 767s] arm preroll3 (DISCARDED — preroll) 172s  cam [-11.5,2.6,30.5] took=true  stand [-15.4871,0,27.5446]  feet [843.9,625.3] head [863.6,244.3]
+[19:50:53 + 936s] arm base 169s  cam [-11.5,2.6,30.5] took=true  stand [-15.4871,0,27.5446]  feet [843.9,625.3] head [863.6,244.3]
+[19:53:33 +1096s] arm cand 160s  cam [-13.25,2.6,30.5] took=true  stand [-17.2371,0,27.5446]  feet [843.9,625.3] head [863.6,244.3]
+[19:56:24 +1267s] arm restore 171s  cam [-11.5,2.6,30.5] took=true  stand [-15.4871,0,27.5446]  feet [843.9,625.3] head [863.6,244.3]
+[19:59:07 +1430s] arm KBmid 163s  cam [-12.5,2.6,30.5] took=true  stand [-16.4871,0,27.5446]  feet [843.9,625.3] head [863.6,244.3]
+[20:01:45 +1587s] arm KBover 157s  cam [-15.5,2.6,30.5] took=true  stand [-19.4871,0,27.5446]  feet [843.9,625.3] head [863.6,244.3]
+[20:01:45 +1587s] shot table restored in-page to {"pos":[-11.5,2.6,30.5],"target":[-17,1.1,28]} (src/** never written)
+[20:01:45 +1588s] DONE — srcTree before 0a89a86acc56340d after 0a89a86acc56340d same=true
+[20:01:45 +1588s] wall-times: preroll1 358s  preroll2 169s  preroll3 172s  base 169s  cand 160s  restore 171s  KBmid 163s  KBover 157s   <- §185's question

@@ -15727,3 +15727,41 @@ an aesthetic win rather than a delivered instruction.
 records it for the character. Every mechanism I named before the discriminating measurement
 existed was wrong. The measurements were cheap and available from the start. The seals and probes
 caught each wrong guess only because the guess was written where it could visibly fail.
+
+## §201 — the guard camera ships, and the zero-tolerance determinism band holds
+
+`SHOTS.guard` moves 1.75 m west — `pos [-11.5, 2.6, 30.5] → [-13.25, 2.6, 30.5]`, `target
+[-17.0, 1.1, 28.0] → [-18.75, 1.1, 28.0]`. Full record in `RESULT-staging4.md`.
+
+**Every gate passed and no falsifier fired.** Base gates 5/5 on the figure-column family; candidate
+bands 6/6, byte-identical to their first sealing three seals ago; P-F2 calibration inside by 336
+and 26 on P2; one bootId, in-lock tree pair identical, all three prerolls same-boot, framing within
+±12 px on every arm.
+
+**P-F4 = 0 differing px, maxΣ|Δ| 0.** The same frame-wide zero-tolerance band voided staging2 r12
+at 110 px and staging3 at 110 px. Nothing about it was relaxed. Three discarded prerolls were added
+instead, because `staging4-floor` measured a one-time early-boot state transition and showed two
+stages past it are byte-identical. §198.1 called it: *"the band was never unreachable — it was
+being measured across the warm-up"*. The proof is in the table's own columns — preroll1, preroll2,
+preroll3 and base agree to the last decimal on every quantity.
+
+**The base-gate move was right too.** `guard-mass medL` read **64.79** this boot, a fifth sample in
+the 59.51 / 65.86 / 69.10 / 69.104 spread §198.1 measured at 16 % cross-boot. It gates nothing now
+and is merely reported; the figure-column quantities it was replaced with all landed mid-band.
+
+**What the series cost.** Four captures for one decision: r12 unscoreable on a saturating
+calibration metric, staging3 void on a base gate narrower than its own rect's cross-boot floor and
+on determinism measured across the warm-up, one re-run contaminated because I edited source under
+its lock, and this one clean. Every void was called by a pre-registered falsifier rather than
+noticed afterwards, and every one indicted the INSTRUMENT, never the candidate — whose six bands
+never moved once across three seals. The lever was measurably right on the first capture and took
+four to prove. That ratio is correct when the alternative is shipping on an instrument that cannot
+tell you when it is lying.
+
+**Method note worth keeping.** Three separate repairs this series came from the same move: stop
+proposing mechanisms, run the cheap discriminating measurement. `staging4-floor` (six same-vector
+stages, one boot) killed both mechanisms I had registered for the residue and produced the
+three-preroll fix. The same move settled the character tail twice. In every case the measurement
+was available from the start and cost one capture.
+
+Next: task #14's cone re-judgement against `staging4/guard.cand.png` with `PLINTH_Y → 720`.
