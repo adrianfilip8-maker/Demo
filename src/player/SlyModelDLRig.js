@@ -59,8 +59,12 @@ const BONE_MAP = {
   tail7: 'tailC', tail8: 'tailC', tail9: 'tailC',
   tail11: 'tailD', tail12: 'tailD', tail_tip: 'tailD',
   staff: 'handR',                       // the cane, held in the right hand
-  LF_ear_base: 'earL', LF_ear_mid: 'earL', RT_ear_base: 'earR', RT_ear_mid: 'earR',
-  jaw: 'jaw', hat: 'capBrim',
+  /* jaw, hat and the ears are DELIBERATELY absent, so they fold into `head` with the rest of the
+     face. Mapping them onto our like-named detail bones looked tidy and distorted the muzzle:
+     `jaw` collected six of the asset's lip and mouth bones, and our clips then drove that whole
+     block with jaw motion authored for the PROCEDURAL model's small jaw blob — a compressed,
+     smeared face under any crouching pose. The asset's expression rig has no counterpart in our
+     procedural animation, so the face rides the skull rigidly, which is what it should do. */
 };
 
 /**
