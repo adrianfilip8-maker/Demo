@@ -1,0 +1,8 @@
+[11:49:29 +   0s] chunk N: all frames present — skipping (idempotent resume)
+[11:49:29 +   0s] chunk N2: all frames present — skipping (idempotent resume)
+[11:49:29 +   0s] chunk A: all frames present — skipping (idempotent resume)
+[11:49:29 +   0s] chunk B: all frames present — skipping (idempotent resume)
+[11:49:29 +   0s] chunk C1: all frames present — skipping (idempotent resume)
+[11:49:29 +   0s] chunk C2 (temple): srcTree 1721f591dea9a027 — booting (own lock hold)
+[11:49:29 +   0s]   lock held — installing candidate (litwarm-arms.py install cand)
+[11:49:29 +   0s]   installed arm "cand"  Toon sha 5052f4189ae9997a  Arch sha 7cd5b1d0a29d625f

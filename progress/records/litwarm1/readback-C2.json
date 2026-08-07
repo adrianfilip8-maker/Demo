@@ -2,73 +2,9 @@
  "prereg": "PREREG-litwarm.md",
  "chunk": "C2",
  "shot": "temple",
- "startedAt": "2026-08-06T22:47:47.151Z",
- "srcTreeBefore": "9647e41e38635ef1",
+ "startedAt": "2026-08-07T11:49:29.099Z",
+ "srcTreeBefore": "1721f591dea9a027",
  "shipSss": 0.3,
  "baseSss": 0,
- "arms": [],
- "population": {
-  "pinnedCount": 13,
-  "pinnedNames": [
-   "arch:paving_courtyard",
-   "arch:gold_leaf",
-   "arch:column_papyrus",
-   "arch:sandstone_worn",
-   "arch:sandstone_block",
-   "arch:granite_pink",
-   "arch:limestone_polished",
-   "arch:hieroglyph_gilded",
-   "arch:hieroglyph_wall",
-   "arch:mudbrick",
-   "arch:ceiling_stars",
-   "arch:bronze_dark",
-   "arch:rope_fibre"
-  ],
-  "pinnedSss": [
-   0.3,
-   0.3,
-   0.3,
-   0.3,
-   0.3,
-   0.3,
-   0.3,
-   0.3,
-   0.3,
-   0.3,
-   0.3,
-   0.3,
-   0.3
-  ],
-  "pinnedNightPin": [
-   0,
-   0,
-   0,
-   0,
-   0,
-   0,
-   0,
-   0,
-   0,
-   0,
-   0,
-   0,
-   0
-  ],
-  "pinnedInArch": 13,
-  "pinnedOnSkinned": [],
-  "archMatCount": 13,
-  "skinMatCount": 16,
-  "hasPublish": true,
-  "hasInkNight": true
- },
- "setShot": {
-  "stats": {
-   "fps": 35,
-   "drawCalls": 239,
-   "triangles": 1712413,
-   "programs": 98,
-   "ms": 10.300000000745058
-  },
-  "tod": 0.72
- }
+ "arms": []
 }
