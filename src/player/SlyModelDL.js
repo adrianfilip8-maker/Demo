@@ -267,11 +267,13 @@ export class SlyModel {
       const iPar = RIG3.BONE_ORDER.indexOf(parent);
       const a = new THREE.Vector3(...srcAbs[parent]);
       const b = new THREE.Vector3(...srcAbs[name]);
-      segs.push({ a, b, i0: iPar, i1: iChild });
+      /* `soft` marks the tail chain — see the weighting note below. */
+      const soft = name.startsWith('tail') || parent.startsWith('tail');
+      segs.push({ a, b, i0: iPar, i1: iChild, soft });
       const parentOfCore = RIG3.SKELETON.some(([n2, p2]) => p2 === name && CORE.has(n2));
       if (!parentOfCore) {
         const ext = b.clone().sub(a).normalize().multiplyScalar(0.08).add(b);
-        segs.push({ a: b.clone(), b: ext, i0: iChild, i1: iChild });
+        segs.push({ a: b.clone(), b: ext, i0: iChild, i1: iChild, soft });
       }
     }
     const pos = merged.attributes.position;
@@ -288,7 +290,7 @@ export class SlyModel {
         let t = L2 > 1e-12 ? tmp.subVectors(v, sg.a).dot(ab) / L2 : 0;
         t = t < 0 ? 0 : t > 1 ? 1 : t;
         const d2 = tmp.copy(sg.a).addScaledVector(ab, t).sub(v).lengthSq();
-        if (!best || d2 < best.d2) best = { d2, t, i0: sg.i0, i1: sg.i1 };
+        if (!best || d2 < best.d2) best = { d2, t, i0: sg.i0, i1: sg.i1, soft: sg.soft };
       }
       /* Weight shaping, and it is the difference between a limb and a ribbon.
        *
@@ -303,7 +305,19 @@ export class SlyModel {
        * So: rigid along the bone, ramping across the last BLEND of the segment. A vertex arriving
        * at joint B from the A side reaches 100 % B exactly as a vertex on the B→C segment starts
        * at 100 % B, so the two segments agree about the joint they share. */
-      const BLEND = 0.35;
+      /* ...but a TAIL is not a limb, and the distinction is load-bearing.
+       *
+       * Rigid-along-bone is right for an arm or a leg: those segments really are stiff, and it is
+       * what stopped them pinching at their midpoints. Applied to the tail it made four rigid
+       * cylinders that splay apart at the joints the moment Rig's spring bends them — which is
+       * the flat fan, and it is my own doing. The rest-pose probe settled this: with every bone
+       * at rest the tail renders as a proper rounded volume, so mesh, rebind, normals and
+       * textures are all sound and only the response to rotation was wrong.
+       *
+       * So the tail blends smoothly across its whole span (BLEND = 1, i.e. plain linear), the way
+       * the shipped procedural model's tail does — it survives this same spring for exactly that
+       * reason. Limbs keep the rigid treatment. */
+      const BLEND = best.soft ? 1.0 : 0.35;
       const tw = best.t <= 1 - BLEND ? 0 : (best.t - (1 - BLEND)) / BLEND;
       const o = i * 4;
       bidx[o] = best.i0; bidx[o + 1] = best.i1;
