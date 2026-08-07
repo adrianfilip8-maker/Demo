@@ -15951,3 +15951,52 @@ shader and take the sandstone atlas. The navy on the pillar is our own shadow ti
 of both atlas PNGs finds warm ochre in every cell of the retint and no blue anywhere in it. So
 that frame refutes the alarming reading of itself, and the palette question it was built to answer
 is still open.
+
+## §206 — the KayKit palette question, and the reference rect that was measuring KayKit
+
+Three arms of the showcase (pack grey, retint v1, retint v2) plus a difference mask settle the
+palette question, and overturn the number I first reported.
+
+**The reference was contaminated.** I quoted "this level's own stone, +38…+45 (R−B)" from a
+hand-drawn rect at the frame's left edge. That rect contained the leftmost KayKit model. Since only
+the atlas changes between arms, every pixel that differs between two arms IS KayKit geometry — so
+the mask is exact and free, and it says KayKit occupies 13.6 % of the frame. Measured on the
+untouched pixels, this level's own stone is **−17** in its shaded band and **+58** in its lit band,
+not +38…+45. A rect drawn by eye around "the level's wall" is the same class of instrument error as
+§11's family: confident, plausible, and measuring partly the thing it was meant to be the control
+for.
+
+**Matched-luminance comparison**, which removes the shade/lit confound a global rect cannot:
+
+| L band | level stone | KK pack grey | KK retint v1 | KK retint v2 |
+|---|---|---|---|---|
+| 40–55 | −33 | −21 | −1 | +23 |
+| 55–70 | −31 | −23 | +3 | +30 |
+| 70–85 | −14 | +5 | +30 | +54 |
+| 85–100 | +16 | +17 | +38 | +55 |
+| 100–120 | +46 | +24 | +45 | +62 |
+| 120–145 | +103 | +28 | +62 | +74 |
+
+**The finding that matters is not which column wins — it is the shape of the first column.** This
+level's stone swings **136 points** of chroma from its darkest band to its brightest (−33 → +103).
+The retinted atlas swings **51** (+23 → +74). The pack's own swings **49**. No global retint can
+follow that curve, because the difference is structural: our architecture carries per-texel albedo
+variation and detail maps under a cool shadow tint, and the KayKit atlas is flat colour per material
+patch. Chroma-vs-luminance is a *curve*, and a hue/saturation transform can only shift and scale it.
+
+So the honest reading is that each arm wins somewhere and none matches:
+
+- **pack grey** tracks the level closely in the dark bands (−21 vs −33) and fails badly in the light
+  (+28 vs +103) — it never becomes stone-coloured where stone shows its colour;
+- **v1** is nearest in the mid-bright bands and too warm in shadow;
+- **v2** is nearest at the brightest band and warmest everywhere else.
+
+**And the numbers disagree with the eye, for a reason worth writing down.** In the bands where these
+props actually sit (median L 54), the pack grey matches the level's chroma best — yet it *reads* as
+a foreign grey box, while v2 reads as warm stone that belongs. Matching the chroma of shaded stone
+is not the same as looking like stone: the level's own walls are read as sandstone-in-shadow because
+the viewer sees the same material lit elsewhere in frame and integrates across it. An isolated flat
+box at −21 has no lit counterpart to establish it, so it reads as grey rather than as shaded warm.
+
+That is a perceptual claim, not a measured one, and it is the reason this decision goes to the owner
+with the table rather than being settled from the table.

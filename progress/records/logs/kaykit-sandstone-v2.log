@@ -1,0 +1,6 @@
+[77s] boot ok — warnings 2
+[77s]    ! textures: prewarm took 17.8s at size 1024
+[77s]    ! KayKit showcase (sandstone): 7 loaded, 0 failed, 2509 tris, row 22.1 m
+[77s] kaykit: mode=sandstone loaded=7 failed=0 tris=2509
+[345s]   wrote showcase.sandstone.png
+[345s] DONE
