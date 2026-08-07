@@ -499,32 +499,20 @@ export class SlyModel {
       };
       const w2 = [], bone2 = [], jitv = [];
       let prevBand = -1;
-      /* Stage 7 (r5's "flat CREASED ribbon", closeup): the crisp-band rings used to be COINCIDENT,
-         which makes the quad band between them degenerate — undefined normals, a lighting crease
-         at every band edge. Invisible at distance, ugly at closeup. `off` nudges the paired rings
-         4 mm apart along the local path direction: the colour edge stays crisp at any distance,
-         the normals stay continuous, the crease goes. */
-      const pushRing = (i, t, b, off = 0) => {
+      const pushRing = (i, t, b) => {
         const bp = boneParam(t);
-        let p = spine[i];
-        if (off !== 0) {
-          const q = spine[Math.min(spine.length - 1, i + 1)], pr = spine[Math.max(0, i - 1)];
-          const d = [q[0] - pr[0], q[1] - pr[1], q[2] - pr[2]];
-          const L = Math.hypot(d[0], d[1], d[2]) || 1;
-          p = [p[0] + (d[0] / L) * off, p[1] + (d[1] / L) * off, p[2] + (d[2] / L) * off];
-        }
-        pts.push(p); rad.push(radOf(t)); hex.push(colOf(b));
+        pts.push(spine[i]); rad.push(radOf(t)); hex.push(colOf(b));
         bone.push(bp.a); bone2.push(bp.b); w2.push(bp.w);
         jitv.push(b % 2 === 1 ? 0.07 : 0);       // fur hint on the light bands only
       };
       for (let i = 0; i < spine.length; i++) {
         const t = i / (spine.length - 1);
         const b = bandOf(t);
-        if (prevBand >= 0 && b !== prevBand) pushRing(i, t, prevBand, -0.004);  // crisp edge, 4 mm shy
+        if (prevBand >= 0 && b !== prevBand) pushRing(i, t, prevBand);  // doubled ring: crisp band edge
         pushRing(i, t, b);
         prevBand = b;
       }
-      parts.push(tube(pts, rad, hex, bone, 16, jitv, bone2, w2));   // 16 segs: round up close
+      parts.push(tube(pts, rad, hex, bone, 12, jitv, bone2, w2));
       const tip = spine[spine.length - 1];
       parts.push(blob([tip[0], tip[1], tip[2]], [hw * 0.14, hw * 0.14, hw * 0.14],
         PAL.tailDark, tailBones[3], 8, 5));
