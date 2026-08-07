@@ -283,9 +283,24 @@ export class SlyModel {
         const d2 = tmp.copy(sg.a).addScaledVector(ab, t).sub(v).lengthSq();
         if (!best || d2 < best.d2) best = { d2, t, i0: sg.i0, i1: sg.i1 };
       }
+      /* Weight shaping, and it is the difference between a limb and a ribbon.
+       *
+       * The naive reading of the segment parameter — w = (1−t, t) — puts a vertex halfway along a
+       * bone at 50/50 between that bone and the next one. That is wrong on its own terms: the span
+       * from joint A to joint B *is* bone A's body, and should be rigid to A, blending toward B
+       * only as it nears the joint. Worse, a 50/50 blend of two divergent transforms lands the
+       * vertex on the average of them, which sits INSIDE the bend — so every bone body pinches
+       * toward the chord as the chain flexes. On the tail, four spring-driven bones each pinching
+       * at their midpoint collapsed the tube into a flat fan.
+       *
+       * So: rigid along the bone, ramping across the last BLEND of the segment. A vertex arriving
+       * at joint B from the A side reaches 100 % B exactly as a vertex on the B→C segment starts
+       * at 100 % B, so the two segments agree about the joint they share. */
+      const BLEND = 0.35;
+      const tw = best.t <= 1 - BLEND ? 0 : (best.t - (1 - BLEND)) / BLEND;
       const o = i * 4;
       bidx[o] = best.i0; bidx[o + 1] = best.i1;
-      bwt[o] = 1 - best.t; bwt[o + 1] = best.t;
+      bwt[o] = 1 - tw; bwt[o + 1] = tw;
     }
     /* A NaN vertex would have produced NaN `t` here, and since every comparison against NaN is
        false the nearest-segment loop would silently keep its FIRST candidate — binding the whole
