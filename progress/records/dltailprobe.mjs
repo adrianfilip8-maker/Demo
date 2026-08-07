@@ -21,12 +21,13 @@ import { withGame } from '/home/user/Demo/tools/harness.mjs';
 import { writeFile, mkdir } from 'node:fs/promises';
 import path from 'node:path';
 
-const OUT = '/home/user/Demo/progress/records/dltailprobe';
+const CHAR = (process.argv[2] || 'dl').trim();
+const OUT = `/home/user/Demo/progress/records/dltailprobe${CHAR === 'dl' ? '' : '-' + CHAR}`;
 const t0 = Date.now();
 const log = (s) => process.stdout.write(`[${((Date.now() - t0) / 1000) | 0}s] ${s}\n`);
 await mkdir(OUT, { recursive: true });
 
-await withGame({ width: 1280, height: 720, quality: 'high', timeout: 40 * 60 * 1000, query: 'char=dl' },
+await withGame({ width: 1280, height: 720, quality: 'high', timeout: 40 * 60 * 1000, query: `char=${CHAR}` },
   async ({ page, info }) => {
     log(`boot ok — warnings ${info.warnings?.length ?? 0}`);
     page.on('console', (m) => { if (m.type() === 'error') log(`  PAGE ERROR: ${m.text().slice(0, 200)}`); });
