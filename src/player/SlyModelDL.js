@@ -1,48 +1,62 @@
 /**
- * SlyModelDL — a DOWNLOADED complete Sly mesh, auto-skinned onto the project's own skeleton.
+ * SlyModelDL — the supplied complete Sly mesh, auto-skinned onto the project's own skeleton.
  *
- * The user's 2026-08-07 instruction: pick the best completed downloadable Sly model and use it
- * directly; downloaded content is allowed so long as the final build stays SELF-CONTAINED. This
- * class is the self-contained half of that: the asset lives in the repo at src/assets/sly-dl.glb
- * and is bundled by vite (`new URL(..., import.meta.url)`) — the shipped build fetches nothing.
+ * The asset is the user-supplied Sly Cooper model (`src/assets/sly-dl/sly.obj` + `sly.mtl`):
+ * 6,753 verts / 13,321 tris across four UV-mapped material groups — body, eyeball, head, tail.
+ * It arrives already in our coordinate convention: feet at y = 0, 1.853 m tall (against
+ * TUNE.height 1.80), symmetric in x, tail trailing −Z, so +Z is forward. Normalization below
+ * still runs — it is cheap and it makes the class asset-agnostic rather than tuned to one file.
  *
- * THE PICK (recorded in task #20 and KNOWN_ISSUES): the PlayStation All-Stars Battle Royale Sly
- * — Sony's own cel-shaded modern Sly (~10.6k polys), the official "modern version of the Sly 3
- * model" the project brief asks for — with SAB64's rigged FBX port as the secondary source.
- * At the time this class was written every host carrying either (models-resource.com,
- * deviantart.com + wixmp CDN, sketchfab.com, rigmodels.com, plus archive.org / huggingface.co
- * mirrors) was blocked by the workspace egress proxy, so src/assets/sly-dl.glb currently holds
- * the Khronos RiggedFigure sample as a PIPELINE PLACEHOLDER. Replacing it with the real asset
- * is the whole swap: drop the GLB in, adjust DL_TUNE.yaw if the model faces the wrong way,
- * verify with a `?char=dl` capture, then flip the CHAR_MODELS default.
+ * SELF-CONTAINED, which is the standing constraint on downloaded content: the mesh and any
+ * textures are bundled by vite through `new URL(..., import.meta.url)` and `import.meta.glob`.
+ * The shipped build fetches nothing at runtime.
  *
- * WHY AUTO-SKIN INSTEAD OF USING THE ASSET'S OWN RIG: the game's animation is procedural clips
- * generated against the project skeleton's bone NAMES and IDENTITY BIND rotations (SlyModel /
- * SlyModel3 share them; RIG3 exports them). Re-skinning the downloaded mesh onto that skeleton
- * means zero changes to Rig/Animation/Shots/guards — the mesh is the deliverable, the rig is
- * already ours. A foreign rig would need a full retarget layer instead.
+ * WHY OBJ AND NOT THE FBX/DAE: those carry the asset's own armature, and this class deliberately
+ * throws a foreign rig away. The game's animation is procedural — clips are generated against
+ * THIS project's bone names and identity bind rotations (SlyModel/SlyModel3 share them; RIG3
+ * exports them). Re-skinning the mesh onto that skeleton means Rig, Animation, Controller,
+ * CameraRig, Shots and the guard solver all keep working untouched. Keeping the foreign rig
+ * would instead require a full retarget layer, for no gain — the mesh is what we wanted, the rig
+ * was already ours.
  *
- * Skinning: nearest-segment, two-bone blend. Each SKELETON edge (parent joint -> child joint)
- * is a capsule segment; a vertex projects onto the nearest core segment at parameter t and
- * weights (1-t) to the parent bone, t to the child — the same blend family the procedural
- * model's bone2/w2 rings use, generalized. Face-detail bones (jaw/capBrim/brows/ears) are
- * EXCLUDED from candidacy: the head owns the face; detail bones would steal cheek vertices.
+ * Skinning: nearest-segment, two-bone blend. Each skeleton edge (parent joint → child joint) is
+ * a segment; a vertex projects onto the nearest one at parameter t and weights (1−t) to the
+ * parent, t to the child — the same blend family the procedural model's own rings use.
+ * Face-detail bones (jaw/capBrim/brows/ears) are excluded from candidacy so the head owns the
+ * face; leaf joints get a stub segment past the joint so hands, feet and the tail tip bind fully.
+ *
+ * TEXTURES are optional by design, via `import.meta.glob` — the same graceful-degradation
+ * pattern main.js uses for modules. Drop `sly_body.png`, `sly_eyeball.png`, `sly_head.png`,
+ * `sly_tail.png` into `src/assets/sly-dl/` and each material picks its map up automatically. Any
+ * that are absent fall back to the flat palette below, so the build never breaks on a missing
+ * file and no placeholder can silently ship pretending to be the real atlas.
  */
 import * as THREE from 'three';
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { RIG3 } from './SlyModel3.js';
 
-const ASSET_URL = new URL('../assets/sly-dl.glb', import.meta.url);
+const MESH_URL = new URL('../assets/sly-dl/sly.obj', import.meta.url);
 
-const DL_TUNE = {
-  yaw: 0,             // extra Y rotation if the asset faces off-axis (+Z forward is the target)
-  heightScale: 1.0,   // multiplier on top of the height normalization, for hats/poses
-  smoothK: 2.0,       // inverse-distance sharpness when a vertex sits between two segments
+/* Optional texture set. Empty object when the PNGs are not present — see header. */
+const TEX_FILES = import.meta.glob('../assets/sly-dl/*.png', { eager: true, query: '?url', import: 'default' });
+
+/* Per-material fallback colour, used only where the matching texture is absent. Values are the
+   SPEC-sly3model palette this project already read from the reference atlas, so an untextured
+   boot still reads as Sly rather than as grey clay. */
+const MAT_FALLBACK = {
+  Sly_Body: 0x2f5fc4,       // tunic/cap/gloves/boots dominate this atlas
+  Sly_Eyeball: 0xd9821a,
+  Sly_Head: 0xcfcdc4,
+  Sly_Tail: 0x8d8b84,
 };
 
-/* Core segments only — see header. Leaf joints get a short stub so hands/feet/tail tip own
-   their surroundings. */
+const DL_TUNE = {
+  yaw: 0,             // extra Y rotation if a future asset faces off-axis (+Z forward is target)
+  heightScale: 1.0,   // multiplier on top of height normalization
+};
+
+/* Core segments only — see header. */
 const CORE = new Set([
   'hips', 'spine', 'chest', 'neck', 'head',
   'shoulderL', 'upperArmL', 'lowerArmL', 'handL',
@@ -51,6 +65,15 @@ const CORE = new Set([
   'upperLegR', 'lowerLegR', 'footR', 'toeR',
   'tailA', 'tailB', 'tailC', 'tailD',
 ]);
+
+function textureFor(matName) {
+  const stem = {
+    Sly_Body: 'sly_body', Sly_Eyeball: 'sly_eyeball', Sly_Head: 'sly_head', Sly_Tail: 'sly_tail',
+  }[matName];
+  if (!stem) return null;
+  const key = Object.keys(TEX_FILES).find((k) => k.endsWith(`/${stem}.png`));
+  return key ? TEX_FILES[key] : null;
+}
 
 export class SlyModel {
   constructor(engine) {
@@ -65,7 +88,7 @@ export class SlyModel {
   }
 
   async init() {
-    /* ---- skeleton: byte-for-byte the SlyModel3 mechanism, from the exported contract ---- */
+    /* ---- skeleton: the SlyModel3 mechanism, from the exported contract ---- */
     const abs = {};
     for (const [name, parent, p] of RIG3.SKELETON) {
       const b = new THREE.Bone();
@@ -80,76 +103,91 @@ export class SlyModel {
     const boneList = RIG3.BONE_ORDER.map((n) => this.bones[n]);
     const skeleton = new THREE.Skeleton(boneList);
 
-    /* ---- load the bundled asset ---- */
-    const gltf = await new GLTFLoader().loadAsync(ASSET_URL.href);
+    /* ---- load the bundled mesh ---- */
+    const obj = await new OBJLoader().loadAsync(MESH_URL.href);
+    obj.updateMatrixWorld(true);
 
-    /* ---- flatten every mesh into world space, one geometry per material ---- */
-    gltf.scene.updateMatrixWorld(true);
-    const geos = [], mats = [];
-    gltf.scene.traverse((o) => {
+    const geos = [], matNames = [];
+    obj.traverse((o) => {
       if (!o.isMesh || !o.geometry?.attributes?.position) return;
+      const mats = Array.isArray(o.material) ? o.material : [o.material];
       let g = o.geometry.clone();
-      /* SkinnedMesh sources arrive in bind pose; static meshes carry node transforms. Either
-         way the WORLD-SPACE shape is what we re-skin, so bake the matrix and drop any rig. */
       g.applyMatrix4(o.matrixWorld);
-      for (const k of ['skinIndex', 'skinWeight']) if (g.attributes[k]) g.deleteAttribute(k);
-      if (g.index) g = g.toNonIndexed();       // groups after merge stay per-source this way
-      geos.push(g);
-      mats.push(Array.isArray(o.material) ? o.material[0] : o.material);
+      if (g.index) g = g.toNonIndexed();
+      /* OBJLoader emits one mesh per material group, so groups are already per-material; when a
+         mesh does carry several, split so each geometry keeps a single material identity. */
+      if (g.groups?.length > 1 && mats.length > 1) {
+        for (let i = 0; i < g.groups.length; i++) {
+          const gr = g.groups[i];
+          const sub = g.clone();
+          sub.setDrawRange(0, Infinity);
+          const slice = new THREE.BufferGeometry();
+          for (const key of Object.keys(g.attributes)) {
+            const a = g.attributes[key];
+            const arr = a.array.slice(gr.start * a.itemSize, (gr.start + gr.count) * a.itemSize);
+            slice.setAttribute(key, new THREE.BufferAttribute(arr, a.itemSize));
+          }
+          geos.push(slice);
+          matNames.push(mats[gr.materialIndex]?.name ?? `mat${i}`);
+          sub.dispose();
+        }
+      } else {
+        geos.push(g);
+        matNames.push(mats[0]?.name ?? 'mat0');
+      }
     });
     if (!geos.length) throw new Error('SlyModelDL: asset has no meshes');
-    const merged = mergeGeometries(geos, true);
 
-    /* ---- normalize: feet at y=0, centred, TUNE.height tall, facing +Z ---- */
+    /* Uniform attribute set across parts, so the merge cannot silently drop one. */
+    for (const g of geos) {
+      if (!g.attributes.uv) g.setAttribute('uv', new THREE.Float32BufferAttribute(new Float32Array((g.attributes.position.count) * 2), 2));
+      if (!g.attributes.normal) g.computeVertexNormals();
+      for (const k of Object.keys(g.attributes)) if (!['position', 'normal', 'uv'].includes(k)) g.deleteAttribute(k);
+    }
+    const merged = mergeGeometries(geos, true);   // groups preserved, one per source part
+
+    /* ---- normalize: feet at y=0, centred in x/z, TUNE.height tall, facing +Z ---- */
     merged.applyMatrix4(new THREE.Matrix4().makeRotationY(DL_TUNE.yaw));
     merged.computeBoundingBox();
     const bb = merged.boundingBox;
-    const h = bb.max.y - bb.min.y;
-    const s = (RIG3.TUNE.height / h) * DL_TUNE.heightScale;
-    const cx = (bb.min.x + bb.max.x) / 2, cz = (bb.min.z + bb.max.z) / 2;
-    merged.translate(-cx, -bb.min.y, -cz);
+    const s = (RIG3.TUNE.height / (bb.max.y - bb.min.y)) * DL_TUNE.heightScale;
+    merged.translate(-(bb.min.x + bb.max.x) / 2, -bb.min.y, -(bb.min.z + bb.max.z) / 2);
     merged.scale(s, s, s);
 
     /* ---- auto-skin onto the project skeleton ---- */
     const segs = [];
     for (const [name, parent] of RIG3.SKELETON) {
       if (!CORE.has(name)) continue;
-      const bChild = RIG3.BONE_ORDER.indexOf(name);
+      const iChild = RIG3.BONE_ORDER.indexOf(name);
       if (parent === 'root') {
-        /* hips: a stub around the joint itself */
         const p = new THREE.Vector3(...abs[name]);
-        segs.push({ a: p, b: p.clone().add(new THREE.Vector3(0, 0.02, 0)), i0: bChild, i1: bChild });
+        segs.push({ a: p, b: p.clone().setY(p.y + 0.02), i0: iChild, i1: iChild });
         continue;
       }
-      const bPar = RIG3.BONE_ORDER.indexOf(parent);
-      segs.push({
-        a: new THREE.Vector3(...abs[parent]),
-        b: new THREE.Vector3(...abs[name]),
-        i0: bPar, i1: bChild,
-      });
-      /* leaf stubs: extend past the joint so extremity vertices bind fully to the leaf bone */
-      const isParentOfCore = RIG3.SKELETON.some(([n2, p2]) => p2 === name && CORE.has(n2));
-      if (!isParentOfCore) {
-        const a = new THREE.Vector3(...abs[parent]);
-        const b = new THREE.Vector3(...abs[name]);
+      const iPar = RIG3.BONE_ORDER.indexOf(parent);
+      const a = new THREE.Vector3(...abs[parent]);
+      const b = new THREE.Vector3(...abs[name]);
+      segs.push({ a, b, i0: iPar, i1: iChild });
+      const parentOfCore = RIG3.SKELETON.some(([n2, p2]) => p2 === name && CORE.has(n2));
+      if (!parentOfCore) {
         const ext = b.clone().sub(a).normalize().multiplyScalar(0.08).add(b);
-        segs.push({ a: b, b: ext, i0: bChild, i1: bChild });
+        segs.push({ a: b.clone(), b: ext, i0: iChild, i1: iChild });
       }
     }
     const pos = merged.attributes.position;
     const n = pos.count;
     const bidx = new Uint16Array(n * 4);
     const bwt = new Float32Array(n * 4);
-    const v = new THREE.Vector3(), pa = new THREE.Vector3(), pb = new THREE.Vector3();
+    const v = new THREE.Vector3(), ab = new THREE.Vector3(), tmp = new THREE.Vector3();
     for (let i = 0; i < n; i++) {
       v.fromBufferAttribute(pos, i);
       let best = null;
       for (const sg of segs) {
-        pa.subVectors(sg.b, sg.a);
-        const L2 = pa.lengthSq();
-        let t = L2 > 1e-12 ? pb.subVectors(v, sg.a).dot(pa) / L2 : 0;
-        t = Math.max(0, Math.min(1, t));
-        const d2 = pb.copy(sg.a).addScaledVector(pa, t).sub(v).lengthSq();
+        ab.subVectors(sg.b, sg.a);
+        const L2 = ab.lengthSq();
+        let t = L2 > 1e-12 ? tmp.subVectors(v, sg.a).dot(ab) / L2 : 0;
+        t = t < 0 ? 0 : t > 1 ? 1 : t;
+        const d2 = tmp.copy(sg.a).addScaledVector(ab, t).sub(v).lengthSq();
         if (!best || d2 < best.d2) best = { d2, t, i0: sg.i0, i1: sg.i1 };
       }
       const o = i * 4;
@@ -160,20 +198,34 @@ export class SlyModel {
     merged.setAttribute('skinWeight', new THREE.Float32BufferAttribute(bwt, 4));
     merged.computeVertexNormals();
 
-    /* ---- materials through the project's toon factory, textures preserved ---- */
+    /* ---- materials: project toon factory, one per source part, textures when present ---- */
     const shading = this.engine?.get?.('shading');
-    const hasVC = !!merged.attributes.color;
     const T = RIG3.TUNE;
-    const finalMats = mats.map((m, i) => (shading?.make
-      ? shading.make({
-        name: `slydl:${m?.name || i}`, color: m?.color?.getHex?.() ?? 0xffffff,
-        map: m?.map ?? null, vertexColors: hasVC, bands: T.bands,
-        rim: T.rim, rimColor: T.rimColor, sss: T.furSSS,
-        outline: T.outline, outlineColor: T.outlineColor,
-      })
-      : new THREE.MeshStandardMaterial({ color: m?.color ?? 0xffffff, map: m?.map ?? null, roughness: 0.85 })));
+    const texLoader = new THREE.TextureLoader();
+    const missing = [];
+    const materials = matNames.map((nm) => {
+      const url = textureFor(nm);
+      if (!url) missing.push(nm);
+      let map = null;
+      if (url) {
+        map = texLoader.load(url);
+        map.colorSpace = THREE.SRGBColorSpace;
+        map.flipY = false;                 // OBJ UVs are already bottom-up
+        map.anisotropy = 4;
+      }
+      return shading?.make
+        ? shading.make({
+          name: `slydl:${nm}`, color: map ? 0xffffff : (MAT_FALLBACK[nm] ?? 0xcccccc), map,
+          bands: T.bands, rim: T.rim, rimColor: T.rimColor, sss: T.furSSS,
+          outline: T.outline, outlineColor: T.outlineColor,
+        })
+        : new THREE.MeshStandardMaterial({ color: map ? 0xffffff : (MAT_FALLBACK[nm] ?? 0xcccccc), map, roughness: 0.85 });
+    });
+    if (missing.length) {
+      this.engine?.warn?.(`SlyModelDL: no texture for ${missing.join(', ')} — flat palette fallback in use`);
+    }
 
-    this.mesh = new THREE.SkinnedMesh(merged, finalMats.length === 1 ? finalMats[0] : finalMats);
+    this.mesh = new THREE.SkinnedMesh(merged, materials.length === 1 ? materials[0] : materials);
     this.mesh.name = 'slydl:mesh';
     this.mesh.castShadow = true;
     this.mesh.receiveShadow = true;
@@ -183,7 +235,8 @@ export class SlyModel {
     this.mesh.bind(skeleton);
 
     this.root.userData.height = RIG3.TUNE.height;
-    this.root.userData.source = 'downloaded (see header: src/assets/sly-dl.glb)';
+    this.root.userData.parts = matNames;
+    this.root.userData.texturesMissing = missing;
     this.root.updateMatrixWorld(true);
     for (const nm of RIG3.BONE_ORDER) this._restQ[nm] = this.bones[nm].quaternion.clone();
 
@@ -195,7 +248,7 @@ export class SlyModel {
   dispose() {
     this.mesh?.geometry?.dispose?.();
     const mm = this.mesh?.material;
-    (Array.isArray(mm) ? mm : [mm]).forEach((x) => x?.dispose?.());
+    (Array.isArray(mm) ? mm : [mm]).forEach((x) => { x?.map?.dispose?.(); x?.dispose?.(); });
     this.root.parent?.remove(this.root);
     this.mesh = null;
   }
