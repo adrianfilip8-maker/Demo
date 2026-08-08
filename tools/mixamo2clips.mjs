@@ -343,7 +343,14 @@ for (const clip of gltf.animations) {
   }
   const vel = den > 0 ? [-num[0] / den, -num[1] / den] : [0, 0];
   const speed = Math.hypot(vel[0], vel[1]);
-  const loop = /idle|walk|run|hang_loose/.test(clip.name);
+  /* Which clips are CYCLES. Named by function, not by seam: `jump_from_ground` and `airtime_01`
+     both close to 0.04° — the float-noise figure `tests/rig.test.mjs` measured — and a seam rule
+     would therefore call a jump a cycle. `hang_crawl_*` (a shimmy) and `pole_up` (a climb) are
+     cycles the old regex missed, and `Animation.js` maps them onto `ledge_shimmy_l/r` and
+     `pole_climb`, which the tree replays continuously; left as one-shots they froze on their last
+     key. The seam is measured and printed below rather than used as the rule, so a clip that
+     claims to be a cycle and is not says so out loud. */
+  const loop = /idle|walk|run|hang|pole_up/.test(clip.name);
   /* CYCLES ONLY. `stride` is defined in Clips.js as "metres of ground travel per CYCLE", and
      `Animation._strideLength()` divides real speed by it to drive the shared stride phase. A
      one-shot has no cycle, so fitting one to it is a category error with teeth: `jump_from_ground`
@@ -357,8 +364,21 @@ for (const clip of gltf.animations) {
   if (stride > 0) rec.stride = stride;
   if (isLoco && steps.length) rec.events = steps.sort((a, b) => a.t - b.t);
   out[clip.name] = rec;
+  /* Loop seam, same statistic and same 0.5° tolerance as tests/rig.test.mjs. Printed for every
+     clip, not just the ones marked loop, because the interesting case is a clip whose declared
+     loop and whose measured seam disagree. */
+  let seam = 0, seamBone = '';
+  {
+    const first = keys[0].P, last = keys[keys.length - 1].P;
+    for (const b of ORDER) {
+      if (!first[b] || !last[b]) continue;
+      const d = 2 * Math.acos(Math.min(1, Math.abs(qOf(first[b]).dot(qOf(last[b]))))) * DEG;
+      if (d > seam) { seam = d; seamBone = b; }
+    }
+  }
   report.ground = report.ground || [];
   report.ground.push({
+    seam, seamBone, loop,
     name: clip.name, minToe: Math.min(minY(tL), minY(tR)), srcMinToe, lift, stride,
     plants: lift < PLANT_LIFT, steps: (isLoco ? steps.length : 0),
     hipsY: keys.reduce((m, k) => Math.min(m, k.pos[1]), Infinity),
@@ -401,9 +421,9 @@ if (report.sparseAudit) {
    it is 0.10 m above `rootY + ikAnkle`. Printed per clip, unrounded, whatever it says. */
 if (report.ground) {
   console.log('\ngrounding — where the retargeted feet actually land on RIG3 (bind toe y = 0.0205):');
-  console.log('clip                min toe y   SOURCE min toe   ankle lift   plants?   derived stride   footsteps   min hips offset');
+  console.log('clip                min toe y   SOURCE min toe   ankle lift   plants?   derived stride   footsteps   min hips offset   loop  seam');
   for (const g of report.ground) {
-    console.log(`${g.name.padEnd(19)} ${g.minToe.toFixed(4).padStart(9)}   ${g.srcMinToe.toFixed(4).padStart(14)}   ${g.lift.toFixed(3).padStart(10)}   ${(g.plants ? 'yes' : ' NO').padStart(7)}   ${(g.stride ? g.stride.toFixed(3) : '—').padStart(14)}   ${String(g.steps).padStart(9)}   ${g.hipsY.toFixed(3).padStart(15)}`);
+    console.log(`${g.name.padEnd(19)} ${g.minToe.toFixed(4).padStart(9)}   ${g.srcMinToe.toFixed(4).padStart(14)}   ${g.lift.toFixed(3).padStart(10)}   ${(g.plants ? 'yes' : ' NO').padStart(7)}   ${(g.stride ? g.stride.toFixed(3) : '—').padStart(14)}   ${String(g.steps).padStart(9)}   ${g.hipsY.toFixed(3).padStart(15)}   ${(g.loop ? 'yes' : ' no').padStart(4)}  ${g.seam.toFixed(2).padStart(6)}${g.loop && g.seam > 0.5 ? '  <-- declared a cycle, does not close: ' + g.seamBone : ''}`);
   }
   const n = report.ground.filter((g) => !g.plants).length;
   console.log(`\n${n}/${report.ground.length} clips never bring a foot within ${0.10} m of the floor — those cannot plant at runtime`);

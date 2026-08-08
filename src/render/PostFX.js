@@ -2036,7 +2036,7 @@ export class PostFX {
 
     /* Black lift. `debug.liftScale` is the in-page defeat lever (null = tune, 1 = shipped). */
     const liftDbg = this.engine?.debug?.liftScale;
-    const liftK = 1 + ((liftDbg == null ? this.tune.liftDayScale : liftDbg) - 1) * day;
+    const liftK = liftScale(liftDbg == null ? this.tune.liftDayScale : liftDbg, day);
     cu.uLift.value.set(this.tune.lift[0] * liftK, this.tune.lift[1] * liftK, this.tune.lift[2] * liftK);
 
     /* Rim colour. Gated on nightAmount > 0 so the daylight uniforms are never written — the

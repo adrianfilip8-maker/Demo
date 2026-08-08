@@ -146,6 +146,22 @@ export class PoseBuffer {
     this.w[name] = acc + w;
   }
 
+  /**
+   * `cur === undefined` is not defensive padding — it is what lets ONE clip library drive several
+   * rigs, and it is also completely silent, which is the trade being made. A scale track naming a
+   * bone this rig does not hold writes nothing and reports nothing.
+   *
+   * It cost the project a feature exactly that way. `hurt` and `ko` scale `pupilL`/`pupilR`; the
+   * legacy model mints those bones (`SlyModel.js:1005`) and constricts on cue, and `RIG3` — the
+   * skeleton the shipped character binds to — has never had them, so the startle died the day the
+   * default model changed and nothing noticed for months. Resolved in the retire direction, with
+   * the measurement of why the shipped mesh cannot carry pupil bones in `tests/eyes.test.mjs` and
+   * the decision recorded at `RETIRED_PUPIL_TRACKS` in `tests/rig.test.mjs`.
+   *
+   * The early return stays. The lesson is not "throw here" — a rig-conditional track is a real and
+   * wanted thing — it is that nothing downstream of this line can tell you a track is inert, so
+   * that has to be asserted offline against the bone table, which `tests/rig.test.mjs` now does.
+   */
   addScale(name, sx, sy, sz, w) {
     if (w <= 0) return;
     const cur = this.s[name];

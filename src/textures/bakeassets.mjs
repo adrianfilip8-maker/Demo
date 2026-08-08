@@ -67,9 +67,25 @@ const MB = (b) => (b / 1048576).toFixed(2);
 
 /* ─────────────────────────── bake, in a browser ─────────────────────────── */
 
+/* Buffers come back over HTTP POST, not through `page.evaluate`'s return value.
+ * `[...uint8Array]` on 93 MB of texture is ~93 million boxed numbers serialised as JSON, which
+ * OOMs a default Node heap after eight minutes of mark-compact. The bridge is for control flow;
+ * bulk bytes go over the socket as bytes. */
+const inbox = new Map();          // `${name}.${slot}` -> Buffer
 const MIME = { '.js': 'text/javascript', '.mjs': 'text/javascript', '.html': 'text/html', '.json': 'application/json' };
 const server = http.createServer((req, res) => {
-  const u = decodeURIComponent(req.url.split('?')[0]);
+  const [pathname, query] = req.url.split('?');
+  const u = decodeURIComponent(pathname);
+  if (req.method === 'POST' && u === '/put') {
+    const q = new URLSearchParams(query || '');
+    const parts = [];
+    req.on('data', (c) => parts.push(c));
+    req.on('end', () => {
+      inbox.set(`${q.get('name')}.${q.get('slot')}`, Buffer.concat(parts));
+      res.writeHead(204); res.end();
+    });
+    return;
+  }
   if (u === '/bake.html') { res.writeHead(200, { 'Content-Type': 'text/html' }); res.end('<!doctype html><meta charset=utf8><body>'); return; }
   const f = path.join(ROOT, u);
   if (!f.startsWith(ROOT) || !fs.existsSync(f) || fs.statSync(f).isDirectory()) { res.writeHead(404); res.end(); return; }
@@ -111,6 +127,11 @@ const baked = await page.evaluate(async ({ texSize, guardSize }) => {
     if (!MATERIALS[name]) continue;
     const p = bake(name, texSize, 'high');
     const g = bake(name, guardSize, 'high');
+    const slots = { albedo: p.albedo, normal: p.normal, orm: p.orm.data };
+    if (p.emissive) slots.emissive = p.emissive;
+    for (const [slot, buf] of Object.entries(slots)) {
+      await fetch(`/put?name=${encodeURIComponent(name)}&slot=${slot}`, { method: 'POST', body: buf });
+    }
     out.push({
       name,
       size: p.size,
@@ -118,11 +139,11 @@ const baked = await page.evaluate(async ({ texSize, guardSize }) => {
       hasAlpha: p.hasAlpha,
       normalStrength: p.normalStrength,
       joint: p.joint,
-      slots: {
-        albedo: [...p.albedo], normal: [...p.normal], orm: [...p.orm.data],
-        ...(p.emissive ? { emissive: [...p.emissive] } : {}),
-      },
+      slotNames: Object.keys(slots),
       guard: [H(g.albedo), H(g.normal), H(g.orm.data), g.emissive ? H(g.emissive) : '-'].join('/'),
+      // Digest computed here, on the buffers as they existed in the page — so a byte lost on the
+      // way to Node is caught by the encode step rather than baked into the manifest.
+      digests: Object.fromEntries(Object.entries(slots).map(([k, v]) => [k, H(v)])),
     });
   }
   return out;

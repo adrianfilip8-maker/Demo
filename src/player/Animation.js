@@ -166,18 +166,29 @@ function spliceClip(name, mixRaw, donor, fill) {
  * token rather than an action.** Both regimes live in one build so an A/B is a runtime choice with
  * no `src/` edit and no arm to install.
  */
+/**
+ * The fall-through, in ONE place. It has to be here rather than at the URL read, because every
+ * caller has to get the same answer: a test, a capture runner and the browser must not disagree
+ * about what `'mixmao'` means. Returning the raw token to one caller and the resolved one to
+ * another is how an arm gets mislabelled while behaving correctly, which is the worst combination.
+ */
+function normaliseRegime(raw) {
+  const t = String(raw ?? '').trim().toLowerCase();
+  return t === 'mixamo' || t === 'mixamo-pure' ? t : 'proc';
+}
+
 function animRegime() {
   let raw = '';
   try {
     if (typeof location !== 'undefined' && location.search) raw = new URLSearchParams(location.search).get('anim') || '';
     if (!raw && typeof globalThis !== 'undefined' && globalThis.__ANIM_AB != null) raw = String(globalThis.__ANIM_AB);
   } catch { /* plain-module hosts have no location; that is the test path */ }
-  const t = String(raw).trim().toLowerCase();
-  return t === 'mixamo' || t === 'mixamo-pure' ? t : 'proc';
+  return normaliseRegime(raw);
 }
 
 /** Build the table this module samples. Exported so tests can build any regime without a URL. */
-export function buildClipSet(regime) {
+export function buildClipSet(raw) {
+  const regime = normaliseRegime(raw);
   const table = Object.create(null);
   const origin = Object.create(null);
   for (const n in CLIPS) { table[n] = CLIPS[n]; origin[n] = 'proc'; }
@@ -324,7 +335,13 @@ export class Animation {
     this.lookOn = false;
     this._warned = Object.create(null);
     this._ikW = 1;
+
+    /** Which clip data is driving the rig this boot. `'proc'` unless `?anim=` said otherwise. */
+    this.clipRegime = CLIP_REGIME;
   }
+
+  /** `'proc'` or `'mixamo:<source clip>'` — which data a given name resolves to. */
+  clipOrigin(name) { return CLIP_ORIGIN[name] || null; }
 
   /* ====================================================================== */
   /*  init                                                                  */
@@ -333,6 +350,15 @@ export class Animation {
   async init() {
     if (MISSING.length) {
       this.engine.warn(`ANIMATION: clips missing from Clips.js: ${MISSING.join(', ')}`);
+    }
+    /* Only in a non-default regime, and deliberately through the warning channel: §4.5 routes
+       `engine.warnings` into report.json, so a capture of an A/B arm carries proof of WHICH arm it
+       was inside its own artefact. §186's contamination hazard is exactly the case where a frame
+       and its label are recorded in two different places. */
+    if (CLIP_REGIME !== 'proc') {
+      const n = Object.values(CLIP_ORIGIN).filter((o) => o !== 'proc').length;
+      this.engine.warn(`ANIMATION: clip regime "${CLIP_REGIME}" — ${n}/${CLIP_NAMES.length} clips `
+        + `from MixamoClips.js, the rest hand-authored. Default is "proc"; ?anim= selects.`);
     }
     this._bind();
     // CHARACTER may still be building (or may have failed); pick it up when it lands.
@@ -376,7 +402,7 @@ export class Animation {
 
   play(clip, opts) {
     const name = typeof clip === 'string' ? clip : clip?.name;
-    const c = CLIPS[name];
+    const c = ACTIVE[name];
     if (!c) {
       if (!this._warned[`c:${name}`]) {
         this._warned[`c:${name}`] = 1;
@@ -496,7 +522,7 @@ export class Animation {
 
   /** Screenshot harness: hold one frame. `phase` (0..1) is a debug extra for filmstrips. */
   freezePose(name, phase) {
-    const c = CLIPS[name];
+    const c = ACTIVE[name];
     if (!c) {
       this.engine.warn(`ANIMATION: freezePose("${name}") — no such clip.`);
       return false;
@@ -683,7 +709,7 @@ export class Animation {
     this._treeWeights();
     let s = 0, w = 0;
     for (let i = 0; i < TREE.length; i++) {
-      const c = CLIPS[TREE[i].clip];
+      const c = ACTIVE[TREE[i].clip];
       if (!c?.stride || _w[i] <= 0) continue;
       s += c.stride * _w[i]; w += _w[i];
     }
@@ -734,7 +760,7 @@ export class Animation {
     for (let i = 0; i < TREE.length; i++) {
       const nw = _w[i];
       if (nw <= 0.002) continue;
-      const c = CLIPS[TREE[i].clip];
+      const c = ACTIVE[TREE[i].clip];
       if (!c) continue;
       const time = c.stride > 0 ? this.phase * c.dur : this.treeTime;
       sampleInto(c, time, this.pose, nw * this.treeW);
@@ -744,7 +770,7 @@ export class Animation {
 
     // Turn-in-place rides on top of the idle: it is a whole-body wind, not a leg cycle.
     if (this.turnW > 0.01) {
-      const c = CLIPS[this.loco.turnRate > 0 ? 'turn_l' : 'turn_r'];
+      const c = ACTIVE[this.loco.turnRate > 0 ? 'turn_l' : 'turn_r'];
       if (c) sampleInto(c, this.turnPhase * c.dur, this.pose, this.turnW * this.treeW * 0.85);
     }
 

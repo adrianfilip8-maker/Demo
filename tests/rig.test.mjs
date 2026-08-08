@@ -119,24 +119,51 @@ test('clips: the set is non-empty and every clip has a positive duration', () =>
 });
 
 /**
- * Orphaned tracks that are KNOWN and FILED, not tolerated. `Rig.js`'s `addScale` returns early on
- * a name it does not hold (`if (cur === undefined) return`), so these four tracks are silent no-ops.
+ * §211.3 IS RESOLVED, IN THE RETIRE DIRECTION. These four tracks are scheduled for deletion from
+ * `Clips.js`; this list empties when that diff lands, and this comment is the reason it should.
  *
- * `pupilL` / `pupilR` are real bones on the LEGACY model: `SlyModel.js` mints them dynamically for
- * SPEC-startle-pupils, deliberately outside its static table because "their bind position IS the
- * eye's pupil centre". `RIG3` — the skeleton the SHIPPED character binds to, whatever mesh is on
- * it: `SlyModelDLRig.js:39` imports RIG3 from `SlyModel3.js` and builds its bones from
- * `RIG3.SKELETON` (see §216 — `SlyModel3`'s *mesh* is not what ships, but its *skeleton* is) — has
- * 31 bones and none of them is a pupil. So the pupil
- * dilation authored into the two damage reactions stopped working the day the rebuild became the
- * default character, and nothing noticed, because it is two frames of two clips.
+ * What they are. `Rig.js`'s `addScale` returns early on a name it does not hold
+ * (`if (cur === undefined) return`), so all four are silent no-ops. `pupilL`/`pupilR` are real
+ * bones on the LEGACY model — `SlyModel.js:1005` mints them dynamically for SPEC-startle-pupils,
+ * outside its static table because "their bind position IS the eye's pupil centre" — and `RIG3`,
+ * the skeleton the SHIPPED character binds to whatever mesh rides on it (§216:
+ * `SlyModelDLRig.js:39` imports RIG3 and builds its bones from `RIG3.SKELETON`), has 31 bones and
+ * no pupil among them.
  *
- * Left unfixed here on purpose: giving RIG3 pupil bones is a change to the shipped character's
- * skinning, and `hurt`/`ko` are combat-recipient clips, which are on the backburner. Recorded in
- * KNOWN_ISSUES §211. The assertion is exact, so fixing RIG3 turns this test RED with "expected
- * these to still be broken" — which is the direction a tracked exception should fail in.
+ * Why RETIRE and not "give RIG3 the two bones". `tests/eyes.test.mjs` measures the shipped mesh
+ * and finds nothing a pupil bone could hold:
+ *
+ *   · the eyeball submesh is two 242-vertex artist domes, 100.00 % of both weighted to `head`
+ *     (the asset's own `LF_eyeball`/`RT_eyeball` are absent from BONE_MAP and fold into it);
+ *   · the pupil is PAINT — 64² `sly_eyeball.png`, an amber iris ringed and cored in black — on a
+ *     dome whose vertices are spread evenly over the whole UV square. 46 of 242 land anywhere on
+ *     the painted eye, about seven across its diameter, and the painted pupil's boundary runs
+ *     302 texels against 9 vertices: the geometry is **33× coarser than the paint** it would have
+ *     to move, so no vertex deformation can follow the painted edge;
+ *   · the one handle the asset does offer — mapping `LF_eyeball`/`RT_eyeball` onto pupil bones,
+ *     one line each — drives the WHOLE eyeball, and the head mesh does not close behind it
+ *     (0 head vertices within 40° of the eye's outward axis, against 21 eyeball vertices). At the
+ *     authored 0.35 that does not constrict a pupil, it opens an 82 × 125 mm socket.
+ *
+ * So adding the bones to RIG3 could not revive the feature on the path that ships — and it would
+ * make `addScale` find the names, turning these four from LOUD and dead into SILENT and dead
+ * while this very assertion went green. That is §213's failure exactly: a guard converting a
+ * defect into a permanent silent pass. `tests/eyes.test.mjs` now asserts that RIG3 does not grow
+ * pupil bones, so that route fails loudly with its reasons attached.
+ *
+ * What retiring costs, stated rather than glossed. The feature is real: sealed at ΔdarkFrac
+ * +0.726 / +0.731 against a ≥0.12 band (§27.2), and `Shots.js` carries `sly-startle` — a shot
+ * whose camera was re-authored specifically so both eyes present equally while it is judged, so
+ * §211.3's "no screenshot in the suite freezes either" is wrong. `?char=legacy` still has the
+ * bones and the geometry, so deletion costs that path a working effect. It is deleted anyway
+ * because a live `sc:` key and a source comment claiming "any frozen capture of `hurt` shows the
+ * startle" are false on the character that ships, and only deletion makes them stop saying it.
+ *
+ * HOW TO LAND THE DELETION: remove the `pupilL`/`pupilR` entries from `hurt`'s three `sc:` keys
+ * and `ko`'s two in `Clips.js`, then set this list to `[]`. Nothing else moves — `hurt`'s
+ * `t: 0.42` key becomes empty and should go with them.
  */
-const KNOWN_ORPHAN_TRACKS = [
+const RETIRED_PUPIL_TRACKS = [
   'hurt scale -> "pupilL"',
   'hurt scale -> "pupilR"',
   'ko scale -> "pupilL"',
@@ -159,8 +186,8 @@ test('clips: every animated bone exists in the skeleton', () => {
     }
   }
   assert.ok(tracks > 100, `only ${tracks} tracks inspected — the clip data did not load`);
-  assert.deepEqual(bad.sort(), KNOWN_ORPHAN_TRACKS,
-    `clips animate bones that do not exist (see KNOWN_ORPHAN_TRACKS above):\n  ${bad.join('\n  ')}`);
+  assert.deepEqual(bad.sort(), RETIRED_PUPIL_TRACKS,
+    `clips animate bones that do not exist (see RETIRED_PUPIL_TRACKS above):\n  ${bad.join('\n  ')}`);
 });
 
 test('clips: track times ascend and stay inside the duration', () => {
