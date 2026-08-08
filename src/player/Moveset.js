@@ -588,7 +588,11 @@ class HookSwing extends State {
     c.attached = a ? a.rec : null;
     // Rope goes taut: place Sly on the sphere, keep only the tangential part of his velocity.
     _a.subVectors(c.position, c.anchor);
-    if (_a.lengthSq() < 1e-4) _a.set(0, -1, 0);
+    /* A dead-centre arrival leaves no radial direction — magnetism's `magSnapRadius` puts Sly AT the
+       ring, and a dead-on auto-grab does the same. Straight down then teleports him the full
+       `hookL` 2.2 m in one frame, which reads as a cut rather than a rope going taut. Hang him below
+       and BEHIND, along his own facing, so the swing starts where the approach was heading. */
+    if (_a.lengthSq() < 1e-4) _a.set(-c.faceDir.x * 0.5, -1, -c.faceDir.z * 0.5);
     _a.normalize();
     c.position.copy(c.anchor).addScaledVector(_a, TUNE.hookL);
     const vr = c.velocity.dot(_a);
@@ -950,7 +954,18 @@ class ToTarget extends State {
       const next = t.arrive;
       if (next && c.sm.has(next)) {
         let ok = false;
-        try { ok = c.sm.get(next).canEnter(c); } catch { ok = false; }
+        /* `ToTarget` is itself registered `group: 'attach'`, and every move an `arrive` can name —
+           HookSwing, SpireLand, PoleClimb, RailSlide — opens `canEnter` with
+           `if (c.sm.group === 'attach') return false`. Probing from inside ToTarget therefore fires
+           that guard ON OURSELVES, so the handoff could never succeed and the arrival instead sat
+           out `magHold` 0.25 s until the opportunistic grab took over — a visible 7-frame stall at
+           30 fps. Hide ourselves for the length of the probe; `sm.group` falls back to 'ground'.
+           The alternative, giving ToTarget its own group, also works but lets spireLand/ledgeClimb/
+           ledgeHang preempt an authored lock and changes what `TargetField.acquire`'s attach guard
+           means. */
+        const cur = c.sm.current;
+        c.sm.current = null;
+        try { ok = c.sm.get(next).canEnter(c); } catch { ok = false; } finally { c.sm.current = cur; }
         if (ok) { f.release('handoff'); return next; }
       }
       this._held += dt;

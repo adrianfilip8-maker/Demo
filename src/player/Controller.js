@@ -376,6 +376,13 @@ export class Controller {
     // Level content authors traversal points without importing anything of ours.
     this._offTarget = this.engine.on('registerTarget', (spec) => this.addTarget(spec));
     this._offUntarget = this.engine.on('unregisterTarget', (spec) => this.removeTarget(spec));
+
+    /* Drain what the level already authored. MANIFEST loads `architecture` at main.js:91 and
+       `movement` at :100, so every `registerTarget` the level build emits arrives BEFORE the
+       listener two lines above exists, and `Engine.emit` drops it into an empty listener set.
+       Fourteen authored traversal targets registered nothing. Same shape and same reason as
+       `Engine._colliderQueue`, which already exists for exactly this ordering. */
+    for (const spec of this.engine.get('architecture')?.api?.targets || []) this.addTarget(spec);
   }
 
   /** TUNE, reachable from Targets.js without a module-scope import cycle. */

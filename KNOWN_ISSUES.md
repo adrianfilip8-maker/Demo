@@ -17180,3 +17180,85 @@ the authoring→runtime interchange being reasoned about as if it were the real 
 (`proc` default / `mixamo` / `mixamo-pure`) resolve through one normaliser so a test, a runner and the
 browser cannot disagree, and a non-default regime pushes its name into `engine.warnings` so a captured
 frame carries proof of its own arm — §186's hazard is exactly frame and label recorded separately.
+
+## §223 — 14 magnetism targets authored, and three structural bugs that would have made them invisible
+
+From the level sub-agent, with all three defects verified here before its diffs were applied.
+
+### The targets
+
+Seven main hook rings (13–15 m over paving, 7.14–9.71 m apart), four on the return chain, and three
+spire tips. The authoring rule it wrote to: a point earns magnetism only if it is **reached only in
+flight and is a point not a surface**, **a miss is expensive**, and **the error is timing, not aim**.
+
+Excluded with the number, which is the part worth keeping: the two pylon-stage spires stand on
+`stageTop = 26.0`, which the `groundProxy` two lines above makes walkable — the tips are **1.0 m above
+ground you are standing on**. Miss and you are still on the stage. Decoration, not a beat.
+
+**The one widened `catch`, derived rather than felt.** Default is `runSpeed × jumpBuffer = 1.008 m` —
+how far the body travels during the window the input layer already forgives. Widening means keeping
+that sentence and changing the *speed* in it: a chain's error is release timing on a pendulum, and in
+the same 140 ms a body on our 2.2 m rope at `√(2·24·2.2) = 10.2762 m/s` travels **1.4387 m**. And the
+discipline of deriving it is load-bearing — the obelisk's bare hop misses by 1.090 m and the
+pinnacles' by 0.853 m, so **a `catch` fitted to make the obelisk work would have made the pinnacles an
+aimbot.**
+
+### §223.1 — a named route beat is not reachable by the move that leads to it
+
+`PoleClimb`'s top hop is the only upward exit from a pole. At 6.05 m/s with apex hang it **peaks at
+y 21.07 against the obelisk tip at 22.00 — 0.93 m short.** The two rooftop pinnacles miss by 0.83 m.
+`EgyptLevel.js`'s own route comment names the Ninja Spire Landing as a beat, and the move that leads
+to it cannot make the distance. Found by arithmetic, offline, in seconds.
+
+### §223.2 — `arrive` was structurally dead
+
+`ToTarget` is registered `group: 'attach'` (`Moveset.js:1117`), and every move an `arrive` can name —
+`HookSwing`, `SpireLand`, `PoleClimb`, `RailSlide` — opens `canEnter` with
+`if (c.sm.group === 'attach') return false` (lines 576, 731, 760, 795). Probing from inside `ToTarget`
+fires that guard **on itself**, so no handoff could ever succeed: the arrival instead sat out
+`magHold` 0.25 s until the opportunistic grab took over — **a visible 7-frame stall at 30 fps.**
+Fixed by hiding `sm.current` for the length of the probe.
+
+### §223.3 — every level-authored target was being dropped
+
+`main.js` MANIFEST loads `architecture` at line 91 and `movement` at line 100, and the
+`registerTarget` listener is installed in `Controller.init()` at line 377. **Every `registerTarget`
+the level build emits arrives before the listener exists and lands in an empty listener set.** All
+fourteen authored targets registered nothing. `Controller.init()` now drains
+`architecture.api.targets`, the same shape and the same reason as the `_colliderQueue` that already
+exists for this exact ordering.
+
+Also fixed: `HookSwing.enter`'s degenerate-radius fallback. A dead-centre arrival — which is precisely
+what `magSnapRadius` produces — left no radial direction, and `set(0,-1,0)` then teleported Sly the
+full 2.2 m rope in one frame. It now hangs him below and behind along his own facing.
+
+### The live arm, which is what distinguishes an assist from an aimbot
+
+Real `Controller` at 60 Hz, 30 release-angle × air-jump-time cells, single lever `targets.enabled`:
+
+```
+OFF caught 0/30 · ON caught 13/30
+caught outside 1.35x catch (aimbot):      none
+missed inside 0.65x catch (unreliable):   none
+genuine near misses (>snapRadius, <=catch): 10, rescued 10
+```
+
+And on the obelisk: 6 of 9 double-jump timings reach the tip with magnetism, **1 would have landed
+without it** — and the bare hop, at 1.090 m against a 1.008 m catch, is **not rescued**. Asserted.
+The assist forgives the move's timing; it does not replace the move.
+
+Its reachability instrument was rebuilt once for cause: a first draft used the drag-free parabola and
+disagreed with the shipped integrator by up to **1.061 m**, which would have certified a spire the
+game cannot reach. Mirroring `AirState.air` brings the worst disagreement to 0.249 m, and the
+calibration arm asserts the textbook parabola is ≥1.5× worse.
+
+### §223.4 — the incumbent idle sparkle has no screen-space ceiling
+
+`SparkleField` is a bespoke `ShaderMaterial`, not a `Batch`, so `TUNE.flashMaxH` does not apply to it.
+By its own arithmetic a hook marker at 3 m is **0.963 of frame height — 693 px of 720**. That is
+`cane_flash` territory (§215.1) on an effect that has been shipping all along, and it sits on every
+hook, spire, rail and pole.
+
+**Measured and deliberately not changed**, which is the right call: it alters a shipped look with no
+capture to verify, and moving it after seeing what it judges is the §141.1 hazard. The fix mirrors the
+Batch shader's `uMaxSize` and wants a bracketed A/B on `traversal`, the shot full of hooks.

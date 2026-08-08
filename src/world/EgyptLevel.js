@@ -235,7 +235,7 @@ function hookPoint(A, x, y, z) {
  * `runSpeed`. The error on a chain is **release timing on a pendulum**, and during those same
  * 140 ms a body on our L = 2.2 m rope at its characteristic speed √(2·|g|·L) = √105.6 =
  * 10.2762 m/s travels **1.4387 m** along the arc. So the chain rings carry `catch` 1.4387 —
- * 1.43× the default, from our own gravity and our own rope, not from a feel.
+ * 1.427× the default, from our own gravity and our own rope, not from a feel.
  *
  * It goes on **every** ring, not just the interior ones. The first draft gave a chain's end
  * rings the run-speed default on the theory that a chain is *entered* by a jump and only
