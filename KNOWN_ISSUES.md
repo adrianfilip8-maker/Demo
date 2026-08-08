@@ -18042,3 +18042,241 @@ Kept because the difference between the two things one can do to a failing calib
 whole discipline: interrogating it found an error in my arithmetic that was always there, where
 adjusting it until it passed would have buried a real defect under a fitted threshold. After the
 correction: expected 1.5500, measured 1.5500.
+
+## §234 — the Godot character is on RIG3 as `?char=godot`, and the height it *lands* at is not the height it was scaled to
+
+The mesh from <https://github.com/NoahChase/Sly-Cooper--A-Thief-in-Godot> now binds to RIG3 and plays
+this engine's clips. `src/player/SlyModelGodot.js`, reachable as **`?char=godot`**, following
+`SlyModelDLRig`'s pattern: keep the artist's geometry and skin weights, re-express those weights over
+our bones, carry the mesh from the source bind pose into ours.
+
+**The default is unchanged and stays `dlrig`.** Changing the shipped character needs a blind A/B
+round; importing a model is not that round. A test asserts both halves — that `godot` is wired, and
+that `''` still resolves to `SlyModelDLRig` — because §216 is exactly the failure of remembering
+which model ships instead of reading it.
+
+### The bone map was read, not guessed, and the guess would have been wrong
+
+The source project ships `Assets/Bone Maps/sly_bone_map.tres` — Godot's own humanoid retarget table,
+in a text format. Its verdict on the torso is not the one a name search gives:
+
+```
+bone_map/Hips = "spine.001"        ← not "Hips_Center", which is what the rig calls a bone
+bone_map/Spine = "spine.002"   Chest = "spine.003"   UpperChest = "spine.004"
+bone_map/Neck = "spine.005"    Head  = "face"
+```
+
+`Hips_Center` exists, sits at the right height, and carries **no skin weight at all**; it is not in
+the deforming hierarchy. Hanging the character off it would have produced a model that loads,
+renders, and never moves below the waist.
+
+All thirty finger entries in that file are deliberately empty, and it says nothing about the tail —
+so those two are derived here (arc position along the chain), and the file is credited only for what
+it actually decides.
+
+### `mixamo2clips`'s trap fired again, on the first run
+
+`GLTFLoader` rewrites node names through `PropertyBinding.sanitizeNodeName`; in r185 it **strips the
+dot**, so `spine.001` arrives as `spine001` and `shoulder.L` as `shoulderL` — which collides with
+RIG3's own `shoulderL`. The first census reported **1 of 25 source bones matched and 32.81 % of skin
+weight reaching a mapped bone, all of it on `head`** (`face` is the one name with no dot in it).
+
+That is the same failure mixamo2clips hit and the same reason it was caught: the count was printed.
+The map is now written in canonical dotted form and resolved through a tolerant matcher, and the
+count is **asserted at load** — under 100 of 174 joints throws rather than rendering a plausible
+wrong character.
+
+### Coverage, and why the joint count is the wrong number to quote
+
+| | |
+|---|---|
+| source joints resolving to a RIG3 bone | **119 / 174** |
+| **skin weight reaching a bone the map names** | **99.70 %** |
+| falling through to the `hips` fallback | 0.30 % |
+
+The 55 that do not resolve are `Hand.IK.*`, `Pole_*`, `*_CTL`, `Heel_IK_*`, `RibbonCTL_*` — animator
+controls, carrying no weight. A rig whose controls outnumber its deform bones can post a poor joint
+count and a perfect weight count, so the weight figure is the one the test asserts on.
+
+### The retarget is measurably no worse than the one that ships
+
+Every retarget of a foreign rig onto RIG3 distorts, because RIG3's joints are somewhere else. The
+only useful question is *how much, compared to the model we already ship*, so the same instrument was
+pointed at `SlyModelDLRig` first. **That is the calibration arm and it fires loudly** — the incumbent
+posts a 38.7 % mean joint shear, so an instrument reading near zero would have been broken.
+
+| | **godot** | dlrig (calibration) |
+|---|---|---|
+| mean \|ln conform\| over 16 segments | **0.177** | 0.175 |
+| worst segment conform | **1.49×** | 1.80× |
+| mean bone displacement after global scale | **0.127 m** | 0.131 m |
+| max bone displacement | 0.421 m (`tailD`) | 0.392 m (`tailD`) |
+| mean joint shear \|Δd\| / segment | **31.7 %** | 38.7 % |
+| worst joint shear | **72.1 %** (`hips→upperLegR`) | 84.7 % (`lowerArmL→handL`) |
+
+Better on four of six, level on one, worse on one. The arms are where it wins outright: this rig's
+A-pose sits 17.5° and 5.6° off RIG3's arm line where the DL FBX's T-pose sits **45.0° and 54.1°** off.
+
+### The height: it was scaled to 1.80 m and it is 1.7506 m
+
+The asset measures 1.6607 m against a 1.80 m capsule. It is scaled **uniformly by 1.0839**, which is
+the house convention (`SlyModelDLRig` does the same to its 185-unit FBX) and costs nothing in
+proportion. Moving `Controller.TUNE.height` was the alternative and is refused: that number is the
+collision capsule, the camera framing and every guard sightline for all six characters.
+
+**What that framing hides is that `height / bbox` sizes the mesh *before* the retarget, and the
+retarget then moves the crown.** This character's hips sit at 56.2 % of his height; RIG3's sit at
+49.2 %. `head` is deliberately not a conforming bone, so the skull lands where RIG3 puts it, and the
+finished figure is **1.7506 m** — 4.9 cm short of the capsule it was scaled to fit. Nothing reports
+that unless you measure the output instead of the input, and I did not until the CPU-skinned bbox
+came back at 1.75.
+
+The incumbent, measured the same way, lands at **1.7984 m**. So this is a property of *this asset's*
+proportions, not of the method.
+
+**It is deliberately not corrected, and the correction was implemented before it was rejected.** The
+baked height is affine in `S` (a conforming limb's scale is `l_ours / (S · l_raw)`, so `S` cancels
+there and survives only in the torso), so solving for 1.80 m is exact rather than iterative — and it
+wants **S = 1.2731**. That lands the height and inflates the skull by 17 %, taking the character from
+6.18 heads to about 5.0, because the conforming limbs stay pinned to RIG3's lengths while everything
+else grows. Trading a 2.7 % height shortfall for a 20 % proportion change is a bad trade. The figure
+is measured into `info.bakedHeight` and asserted in a test instead of being absorbed.
+
+Head count after retarget: **5.69**, against the source's 6.18.
+
+### The tail — §226's open fork, closed on the model that can ship
+
+§226 recorded that the tail rebuild went into `SlyModel3`, which is not what ships. This character
+carries the source's real ringed tail geometry on the rig that does.
+
+Godot itself deletes this tail on import (`"PATH:metarig/Skeleton3D/Tail_LowPoly":
+{"import/skip_import": true}`) and plays a physics chain instead. The eight source joints run
+`Tail.001 → Tail.008 → Tail.007 → … → Tail.002` — the numbering descends, which had to be read out of
+the hierarchy — and `Tail.001` sits *inside* the pelvis at z = +0.026, so it is the chain's root
+control and `tailA` anchors on `Tail.008` instead, the first joint the geometry is built around.
+
+Weight is spread by **normalised arc position with a linear blend at the boundaries** rather than
+assigned hard, which is the difference between a smooth falloff and four rigid blocks:
+
+```
+tailA 48.0 %   tailB 21.3 %   tailC 17.4 %   tailD 13.2 %
+628 tail vertices, 425 of them (68 %) blending across two or more of our four joints
+cross-section min/max ratio at root / mid / tip:  0.92 / 0.97 / 1.00   (a fan would collapse one axis)
+4 × 20° of yaw on the chain moves the tip 845 mm
+```
+
+The cost is honest: our tail chain is 23 % longer than the source's, so the tail is stretched
+1.12–1.28× along its length, and `tailC→tailD` disagrees with our bind direction by 38.3° — the worst
+number in the whole retarget, and it is the S-curve RIG3's bind tail carries that the source's
+straight one does not.
+
+### The five authored clips are NOT wired, and the reason is not the one I expected
+
+Judged on §222's criteria — the ones the Mixamo import was judged on, adopted rather than re-derived
+after seeing these numbers: coverage of the 52, per-clip articulation, and whether the clip drives
+anything ours cannot.
+
+| clip | Godot Σ° | hand-authored Σ° | Godot tail | ours tail |
+|---|---|---|---|---|
+| `Walk` → `walk` | **716** | 580 | **0 / 0 / 0 / 0** | 18 / 26 / 16 / 12 |
+| `Run` → `run` | **1172** | 1008 | **0 / 0 / 0 / 0** | 56 / 68 / 38 / 46 |
+| `Jump` → `jump_rise` | 629 | **866** | **0 / 0 / 0 / 0** | 22 / 20 / 10 / 8 |
+| `CrouchingStand` → `crouch_idle` | 49 | 47 | **0 / 0 / 0 / 0** | 9 / 13 / 0 / 8 |
+| `UprightStand` → `idle_confident` | 66 | **94** | **0 / 0 / 0 / 0** | 19 / 27 / 0 / 7 |
+
+Coverage is **5 of 52** and silent on every clip that makes this game Sly Cooper. They win two of five
+head-to-head and lose three.
+
+**The decisive number is the tail column.** `godot2rig.mjs`'s own header says Mixamo's fatal gap was
+that it "does not have a tail" and that this rig does — so the expected win was tail motion. The
+tracks are there: all four tail bones are keyed in all five clips. **Every one of them is constant.**
+Godot deletes the tail and runs physics, so its animator never had a tail to key. The one advantage
+this import was supposed to hold over the last one does not exist, and it took measuring to find out
+— the same shape of finding as §222, arrived at from the opposite direction.
+
+The calibration is inside the table: the identical metric reads Σ1172° across `Run`'s body and 0° on
+its tail, so a zero there is the data, not a dead instrument.
+
+### The hands close; the cane is not gripped, and that is stated rather than implied
+
+Every digit on this rig is straight in bind — straightness 0.977 (index) to 0.998 (thumb) — i.e.
+four rigid prongs and a thumb, which is §202's "splayed rake fingers" complaint appearing in the
+source art this time. RIG3 has no finger bones, so the twenty joints per hand collapse into
+`handR`/`handL` and can never curl at runtime; the curl therefore runs once at load, on the artist's
+own finger bones, in the last moment it is possible. The flex axis is derived
+(`cross(fingerDir, palmWard)`, `palmWard` from the thumb) so one sign works for both hands.
+
+`?godot=open` is the null arm and it separates cleanly:
+
+| | curl | `?godot=open` |
+|---|---|---|
+| digit vertices moved | 1056, mean **57.8 mm**, max 153 mm | mean 8.8 × 10⁻⁹ mm |
+| right glove bbox | 0.162 × 0.179 × 0.255 | 0.208 × 0.227 × 0.247 |
+| glove bbox diagonal | **0.3514 m** | 0.3948 m |
+
+The two cross-axes close 21–22 %; the finger axis barely moves. That is a fist.
+
+**It is not a fist on the cane.** The source's own `Cane_LowPoly` is not used — it is a 1.31 m staff
+standing on the ground 0.65 m to his right in bind, held there by `CaneBone.001`, a bone RIG3 does
+not have and no clip here drives; its nearest vertex is 514–614 mm from his fingertips. `Cane.js` is
+socketed to `handR` in its place, on `SlyModel3`'s frame — legitimate rather than borrowed, because
+this retarget puts the palm centroid on RIG3's `handR` to within 1 mm.
+
+The measured result is a cane **near** the hand, not in it: right-glove vertices sit a median 102.5 mm
+and a 10th-percentile 63.1 mm from the shaft axis, against a 29.5 mm grip radius. The curl moves the
+median 10 mm closer and the p10 4 mm further away — `SlyModelDLRig`'s trap in miniature, where
+curling harder does not close a gap that is a placement fault. **A solved grip (`_solveGrip`) is not
+ported and this stays open.**
+
+One thing was tried and thrown away rather than shipped: fitting the grip circle through the twelve
+curled finger joints to size and place the socket. It returns an **rms of 17.0 mm on a 47.7 mm
+radius** — the joints do not lie on that circle — and a centre 13.5 cm from the wrist. That is not a
+measurement, and sizing a prop to it would have been fitting noise. The socket keeps the authored
+`CANE_TUNE.gripR`. Deriving the shaft *direction* from the hand was rejected for a stated reason too:
+the hand's own grip axis comes out **57° off vertical** (in bind this arm hangs at his side, and a
+relaxed fist there grips a horizontal bar), and `CANE_TUNE.dropBelowGrip` is 0.796 m derived so the
+tip plants at 8.5° off vertical — every planted-cane pose would spear the floor sideways.
+
+### He blinks
+
+Five facial blendshapes survive as live morph targets on a separate 5,092-vertex face mesh: **Angry,
+Smarmy, Purse, Blink, Gasp**. The other four morph carriers are baked at their authored weights —
+two ship at a full 1.0 and are the character's rest shape, not an expression — and the face keeps
+`Gasp` at its authored 0.0194.
+
+`Blink` survives the retarget at a 41.4 mm peak delta and is driven on a 2.6–5.8 s cycle with a
+second shorter close 200 ms after the first. No other character here has eyelids: RIG3 has no eyelid
+bone, so nothing in `Rig`/`Animation` can reach this and it lives in the model's own `update`.
+`?godot=noblink` freezes them open as the null arm.
+
+### Structure, and two things the build had to be told
+
+- **Only 7 of the 21 meshes are skinned.** Teeth, eyes, hat, belt and cane are plain meshes parented
+  to bone *nodes*; they follow the skeleton by hierarchy, not by weights. Each is given a rigid
+  weight to whichever RIG3 bone its parent joint resolves to. Without that they stay at the origin —
+  a failure that looks like missing geometry rather than like a rigging bug.
+- **Merged by material, not by source mesh.** `mergeGeometries(geos, true)` emits one draw group per
+  *input*, so the naive merge cost **19 groups** for 3 distinct materials. The character now draws in
+  **5 calls** (body 3, face 1, cane 1) against a 12-call budget.
+
+Indices are kept rather than flattened: the face's five morph deltas are per-vertex, and expanding
+5,092 vertices to 25,944 would have taken the morph payload from 305 KB to 1.6 MB for nothing.
+
+Bind order is load-bearing and is commented at the site: `new Skeleton(bones)` computes its inverses
+from `bone.matrixWorld`, which is still identity on freshly created bones, so those inverses are
+garbage. `bind(skeleton)` with no matrix recomputes them — but two meshes share this skeleton and only
+one may own that call, so the update and the recompute are done explicitly and both bind against the
+same identity frame.
+
+### Unresolved
+
+- **The cane is not gripped** (above). It needs `_solveGrip` ported, or the hand posed against the
+  prop rather than the prop placed against the hand.
+- **1.7506 m against a 1.80 m capsule.** Recorded, not fixed; the only fixes available are worse than
+  the defect.
+- **`Assets/Textures/Sly Body Normal.png`, `Sly Body AO.png`, the head pair and `Sly Cane Metalic.png`
+  are still unexamined** (`PROVENANCE.md` flags them). A cel target may not want a normal map at all,
+  but the AO could plausibly feed the ramp.
+- **No blind round has been run on this character** and none should be inferred from the numbers
+  above. They say the retarget is not worse than the incumbent's *as a retarget*. They say nothing
+  about which model reads better in a frame.
