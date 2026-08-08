@@ -40,8 +40,16 @@ async function decodeJob(job) {
     normalStrength: job.normalStrength, orm: null, emissive: null };
   for (const [slot, bytes] of Object.entries(job.slots)) {
     const { data, size } = await decodePng(new Uint8Array(bytes), inflateNative);
-    if (slot === 'orm') out.orm = { data, size };
-    else out[slot] = data;
+    if (slot === 'orm') out.orm = { data, size };            // ORM carries its own (half) size
+    else {
+      /* `_finish` builds the albedo/normal/emissive DataTextures at `job.size`, taken from the
+       * manifest — so a PNG that decodes to a different edge length would produce a texture whose
+       * declared dimensions do not match its buffer. Three.js does not check that; the GPU reads
+       * whatever is there and the surface comes out sheared. Throwing instead hands the recipe to
+       * the procedural fallback, which is slow and correct. */
+      if (size !== job.size) throw new Error(`${slot} decoded ${size}px, manifest says ${job.size}px`);
+      out[slot] = data;
+    }
   }
   if (!out.albedo || !out.normal || !out.orm) throw new Error('baked entry is missing a map');
   return out;

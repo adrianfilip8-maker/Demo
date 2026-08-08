@@ -17262,3 +17262,87 @@ hook, spire, rail and pole.
 **Measured and deliberately not changed**, which is the right call: it alters a shipped look with no
 capture to verify, and moving it after seeing what it judges is the §141.1 hazard. The fix mirrors the
 Batch shader's `uMaxSize` and wants a bracketed A/B on `traversal`, the shot full of hooks.
+
+## §224 — texture load 29.45 s → 1.71 s, and the colour round-trip that killed the obvious implementation
+
+I took the bake-to-assets decision and told the agent the PNG round trip was the one thing that could
+kill it and to report that first. **It drifted, and the finding is better than the feature.**
+
+### The canvas destroys colour under alpha, and the obvious fix does nothing
+
+Measured before a single asset was written, against digests of the exact bytes encoded:
+
+| map | via canvas | direct |
+|---|---|---|
+| sandstone_block, gold_leaf, palm_frond normal/orm | exact | exact |
+| **palm_frond albedo** | **820 of 262,144 bytes wrong**, max ±7 | exact |
+| **torch_flame albedo** | **150,607 of 262,144 wrong (57%)**, max **±184 on red** | exact |
+
+**Every map carrying alpha comes back wrong, and only in RGB.** A 2D canvas stores *premultiplied*
+colour, so a texel at low alpha keeps a few bits of chroma and un-premultiplying on readback cannot
+invent them back. `torch_flame` is a bright flame under a soft alpha ramp — the worst case there is,
+and **184/255 is a different colour, not a rounding artefact.** This would have shipped as a look
+regression on the brazier flames.
+
+`premultiplyAlpha: 'none'` — the obvious fix — is **byte-for-byte identical to the default**. Those
+hints govern how the bitmap is handed over, not how the canvas stores what was drawn into it.
+
+**The task survives only by never touching a canvas.** `src/textures/PngCodec.js` uses
+`DecompressionStream('deflate')` plus spec unfiltering — byte-exact by construction, verified on all
+70 committed buffers.
+
+### The result
+
+**23.51 MB** in one blob (70 PNG-framed maps) plus a 14 KB manifest that the bundler inlines, so boot
+costs one fetch rather than seventy.
+
+| arm | wall |
+|---|---|
+| pre-everything, serial, procedural | **29.45 s** |
+| kernels + workers, procedural | 9.08 s |
+| kernels + workers + baked cache | **1.71 s** |
+
+**×17.2 overall**, with **23/23 bundles byte-identical** to the pre-change procedural arm across four
+map digests plus size, repeat, slopeScale, rough, group, colorSpace, wrapS, format, normalScale and
+joint deltas.
+
+### The staleness guard, which is why the bake was takeable at all
+
+Two layers answering different questions. Layer 1: is the committed blob intact (digest over 23.5 MB,
+57 ms, plus five maps decoded through the runtime's own codec — chosen for *filter-type coverage*,
+which is asserted rather than assumed). Layer 2: do the recipes still produce those bytes, re-derived
+at 256² against a digest the baker recorded **in the same run** that produced the 1024² asset, so they
+cannot disagree unless the generator changed.
+
+Both arms were run live and both fire:
+
+```
+one byte of textures.bin +1  ->  "does not match the manifest digest — re-run bakeassets"
+generator changed, no re-bake ->  "sandstone_block: the recipe no longer produces the committed cache"
+```
+
+Marginal cost is **~0.8 s** — the staleness layer replaced an older golden-hash test that already
+re-baked the same recipes.
+
+**The hole is stated as a number rather than left implicit:** layer 2 reaches 12 of 23 recipes; the
+other 11 rasterise vector art and cannot build in plain Node. A test asserts *exactly* 12 and 11 and
+checks every canvas-only recipe genuinely throws, so the hole can be argued about but cannot quietly
+grow. It is closed at bake time instead — the baker re-derives all 23 in a browser, cross-checks the
+12 against Node so the guard's oracle is proven to agree with the machine that asserts on it, decodes
+all 70 back through the runtime decoder, and **aborts without writing** on any mismatch.
+
+### Two of the agent's own errors, reported rather than buried
+
+- It wrote **"about 15%"** for the filter-type trade-off before measuring. Measured: adaptive
+  23.51 MB against filter-None 55.78 MB, **+137%**. Procedural textures are exactly what prediction
+  filters are for. `--filters` now re-prints the comparison so the next person re-decides from
+  numbers rather than from an estimate.
+- Its first runtime used `subarray` views onto the 23.5 MB blob, which would have structured-cloned
+  the whole blob **70 times — 1.6 GB of copying to avoid 23.5 MB**. It now slices and transfers.
+
+Three switches force the procedural path (`__TEX_BAKED`, `VITE_TEX_BAKED=off`, `?tex=proc`), all
+verified to report `0 baked / 23 generated` and produce identical bundles. The cache self-disables on
+a non-1024 `texSize`, a missing `DecompressionStream`, a truncated blob, or an absent manifest entry —
+and failure is **per recipe**, re-queued as a procedural bake, so one bad map costs seconds rather
+than a wall. The boot warning carries `23 baked / 0 generated` into every `report.json`, so which path
+a capture took is never a guess.

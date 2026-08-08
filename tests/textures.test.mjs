@@ -15,9 +15,23 @@
  *      surfacing months later as an unexplained diff in a capture.
  *
  *   2. **Building moved off the main thread** into `TextureWorker.js`, which calls `Bake.bake()` —
- *      the same function `Textures._buildLocal()` calls. The golden-hash table pins what `bake()`
- *      produces for every recipe that can run without a canvas, so "the load-time fix silently
- *      altered the look" is a red test and not a judgement call.
+ *      the same function `Textures._buildLocal()` calls, so a prewarmed texture and a lazily
+ *      requested one are the same function of the same seed.
+ *
+ *   3. **The result is now committed as a cache** — `public/assets/tex/textures.bin`, 23.5 MB of
+ *      PNG-framed maps, described by `src/textures/baked.json`. This is the change with a way of
+ *      going wrong that no amount of care prevents and only a test can catch: **the cache silently
+ *      drifting from the code that is supposed to have produced it.** Somebody edits a recipe,
+ *      does not re-run `node src/textures/bakeassets.mjs`, and from then on the repo's source of
+ *      truth and its shipped pixels are two different things — with nothing on screen to say so,
+ *      because the stale cache still renders perfectly well. The guard below is the entire reason
+ *      the cache was allowed to exist. It has two layers and they answer different questions:
+ *
+ *        `the committed cache is exactly what the baker wrote`   — are the bytes on disk intact?
+ *        `the committed cache is not stale`                      — do the recipes still produce them?
+ *
+ *      The second is the one that matters and the one that is hard: it re-derives every recipe it
+ *      can reach and compares digests. See its own comment for what it can and cannot see.
  *
  * **On why the assertions are shaped the way they are** (KNOWN_ISSUES §211.1: nine assertions in
  * this project read a property the data does not have, reported green, and inspected nothing).
@@ -25,20 +39,46 @@
  * 16-character hex string before it is compared, and the golden table is asserted non-empty. A
  * test that iterates zero recipes must fail, not pass.
  *
- * **What this file cannot cover.** Eleven of the twenty-three prewarmed recipes rasterise vector
- * art through `Canvas2D.rasterMask`, which needs a 2D canvas; plain Node has neither
- * `OffscreenCanvas` nor `document`, so they throw on import of the first glyph. They are covered
- * instead by the browser-side hash comparison recorded in the task report (23/23 byte-identical,
- * main thread vs worker). This is the same gap `tests/geometry.test.mjs` records for the shipped
- * character: the offline harness cannot reach every path, and saying so is part of the guard.
+ * **What this file cannot cover, stated rather than papered over.** Eleven of the twenty-three
+ * prewarmed recipes rasterise vector art through `Canvas2D.rasterMask`, which needs a 2D canvas;
+ * plain Node has neither `OffscreenCanvas` nor `document`, so they throw on the first glyph. Those
+ * eleven get layer 1 (their committed bytes are verified) but not layer 2 (nobody offline can ask
+ * the recipe what it would produce today). `bakeassets.mjs` closes it at bake time — it runs in a
+ * browser, so it re-derives all twenty-three and cross-checks the twelve against Node before it
+ * writes anything. The residual hole is therefore exactly: *a canvas-using recipe edited without
+ * re-baking*. `the offline guard's coverage is exactly what it claims` asserts the split as a
+ * number, so the hole can be argued about but cannot quietly grow.
+ *
+ * This is the same shape of gap `tests/geometry.test.mjs` records for the shipped character: the
+ * offline harness cannot reach every path, and saying which is part of the guard.
  */
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import zlib from 'node:zlib';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { blurWrap, upsample, streakDown } from '../src/textures/Canvas2D.js';
 import { MATERIALS, MATERIAL_NAMES, PREWARM } from '../src/textures/Materials.js';
 import { bake, bakeSize, hashName } from '../src/textures/Bake.js';
+import { parsePng, unfilter } from '../src/textures/PngCodec.js';
+
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const MANIFEST = JSON.parse(fs.readFileSync(path.join(ROOT, 'src/textures/baked.json'), 'utf8'));
+const BLOB = fs.readFileSync(path.join(ROOT, 'public/assets/tex/textures.bin'));
+const blobBytes = new Uint8Array(BLOB.buffer, BLOB.byteOffset, BLOB.length);
+
+/** Decode one manifest slot straight out of the committed blob, through the runtime's own code. */
+function decodeSlot(s) {
+  const png = blobBytes.subarray(s.off, s.off + s.len);
+  const { width, height, zlib: z } = parsePng(png);
+  const raw = new Uint8Array(zlib.inflateSync(Buffer.from(z)));
+  const filters = new Set();
+  for (let y = 0; y < height; y++) filters.add(raw[y * (width * 4 + 1)]);
+  return { data: unfilter(raw, width, height), width, filters };
+}
 
 /* ───────────────────────────── helpers ───────────────────────────── */
 
@@ -215,89 +255,198 @@ test('the kernel oracles can actually fail — a 1/255 perturbation is detected'
   // …and it must not cry wolf on an identical buffer.
   assert.equal(bitsEqual(ref, Float32Array.from(ref)), null);
 });
+/* ───────────────────── layer 1: the committed cache is intact ───────────────────── */
 
-/* ───────────────────────── the catalogue's pixels ───────────────────────── */
+test('the manifest describes exactly the prewarm set, at the shipped resolution', () => {
+  assert.equal(MANIFEST.version, 1);
+  assert.equal(MANIFEST.texSize, 1024, 'the cache is built for the `med`/`high` tier');
+  assert.ok(MANIFEST.guardSize >= 128 && MANIFEST.guardSize <= MANIFEST.texSize);
+  const named = Object.keys(MANIFEST.recipes);
+  // Both directions. A recipe added to PREWARM without re-baking is the common mistake; a stale
+  // manifest entry for a recipe that has been removed is the rarer one, and costs 23 MB of repo.
+  for (const n of PREWARM) assert.ok(MANIFEST.recipes[n], `PREWARM has "${n}" but the cache does not — re-run \`node src/textures/bakeassets.mjs\``);
+  for (const n of named) assert.ok(PREWARM.includes(n), `the cache carries "${n}", which is no longer prewarmed — re-run the baker`);
+  assert.equal(named.length, PREWARM.length);
+});
 
-/**
- * Golden digests of `bake()` output at size 256, for every PREWARM recipe that builds without a
- * canvas. Recorded from the tree at the time the parallel prewarm landed and verified against the
- * pre-change tree: **the load-time work must not move a texel.**
- *
- * If one of these fails you changed a recipe or a kernel. That is allowed — but re-record the row
- * *deliberately*, with the A/B that justifies the new look, never as a step in making a test pass.
- * Columns: name, size, albedo, normal, orm, emissive, jointDeltaY, jointDeltaH, slopeScale.
- */
-const GOLDEN = [
-  ['sandstone_block', 256, '6ecc65358761a8e7', 'e057d8e61f976787', 'd9173bc6a0d3aa91', null, -0.1683, -0.3199, 2.258824],
-  ['paving_courtyard', 256, '9b6bd13c54f05702', '2a6f12889110c5cb', '1b783f8635b709db', null, -0.1716, -0.3883, 1.396364],
-  ['sand_ripples', 256, 'd05a6ced70981a81', '255d738343b7358b', '0c65eb0f67548376', null, null, null, 0.48],
-  ['limestone_polished', 256, '1389ab6d6a402310', '830e8eca1671de33', 'f83d60adc52590c2', null, -0.1641, -0.204, 1.212632],
-  ['gold_leaf', 256, 'ab6f9214f8f0ddba', '9b95df9035ac5e2c', 'def2f04be497dd71', null, null, null, 4.266667],
-  ['sandstone_worn', 256, '0a3ad830ef92c1b0', '4ba77f39fb3f7551', '17fc3feca2d3f24b', null, -0.1218, -0.3424, 3.555556],
-  ['granite_pink', 256, 'ec3224c0a9e10fd0', 'b0d0c2420a63512f', '383f8f62cca3f405', null, null, null, 1.28],
-  ['palm_frond', 256, '03b20276e2d737a8', 'c94d63319c7a7419', '202e62359bfdf011', null, null, null, 7.68],
-  ['bronze_aged', 256, '7f0b7a2a6a04974f', 'a14a960760cccd90', 'c68cd41bbb9ea2aa', null, null, null, 6.656],
-  ['torch_flame', 256, '1ccb4ac5e2789cfb', 'fe4cb75662da6d6f', 'c1b72ff33fd8ece4', '1d0c5f2037ade26a', null, null, 1.024],
-  ['sand_fine', 256, '16160405dbc698ce', '3cd1025440a67d2c', 'b5b831e9cb801922', null, null, null, 0.448],
-  ['wood_old', 256, '0eedfca462a6abd3', 'f78d2affa60438ef', '13e3fc70d509c0fe', null, null, null, 3.584],
-];
+test('the committed cache is exactly what the baker wrote', () => {
+  /* Layer 1. `blobDigest` over all 23.5 MB is the load-bearing assertion here and it is 57 ms:
+   * any change to any byte of the committed asset — a corrupted checkout, a hand-edit, a partial
+   * write, a re-bake that was not accompanied by its manifest — moves it.
+   *
+   * The per-slot decode below is deliberately a *subset*, and the reasoning is worth stating
+   * because "verify everything" was the first instinct. Decoding all 70 maps costs 2.4 s and adds
+   * nothing that `blobDigest` has not already established: the baker verified all 70 round trips
+   * before writing, the decoder is deterministic, and the bytes are proven unchanged. What the
+   * subset is really testing is **the decoder**, which is code that can change under a blob that
+   * cannot — so it is chosen for decoder coverage, not for sampling:
+   *
+   *   hieroglyph_wall.albedo  1024², and by itself exercises filter types 1, 2, 3 and 4
+   *   torch_flame.albedo      the map the canvas decode path destroyed — 150,607 of 262,144 bytes
+   *                           wrong, peak 184/255 on red. If a canvas ever creeps back in, this
+   *                           is the assertion that catches it.
+   *   torch_flame.emissive    the only emissive map in the catalogue
+   *   palm_frond.albedo       the other alpha-carrying albedo
+   *   sandstone_block.orm     a half-resolution map, so the ORM size contract is decoded too
+   *
+   * Filter coverage is asserted rather than assumed — see the `filters` set. */
+  const digestOK = digest(blobBytes) === MANIFEST.blobDigest;
+  assert.equal(BLOB.length, MANIFEST.bytes, 'the committed blob is not the size the manifest records');
+  assert.ok(digestOK, 'public/assets/tex/textures.bin does not match the manifest digest — re-run `node src/textures/bakeassets.mjs`');
 
-test('bake() reproduces the recorded pixels for every canvas-free prewarm recipe', () => {
-  assert.ok(GOLDEN.length >= 12, `golden table is empty or truncated (${GOLDEN.length} rows)`);
+  const SUBSET = [
+    ['hieroglyph_wall', 'albedo'], ['torch_flame', 'albedo'], ['torch_flame', 'emissive'],
+    ['palm_frond', 'albedo'], ['sandstone_block', 'orm'],
+  ];
+  const filters = new Set();
   let checked = 0;
-  for (const [name, size, gA, gN, gO, gE, gdY, gdH, gSlope] of GOLDEN) {
-    assert.ok(MATERIALS[name], `golden row names a recipe that no longer exists: ${name}`);
-    const p = bake(name, size, 'high');
-
-    // Assert the payload has the shape before trusting a comparison against it (§211.1).
-    assert.ok(p.albedo instanceof Uint8Array, `${name}: albedo is not a Uint8Array`);
-    assert.ok(p.normal instanceof Uint8Array, `${name}: normal is not a Uint8Array`);
-    assert.ok(p.orm?.data instanceof Uint8Array, `${name}: orm.data is not a Uint8Array`);
-    assert.equal(p.albedo.length, size * size * 4, `${name}: albedo is the wrong length`);
-    assert.equal(p.size, size);
-
-    const dA = digest(p.albedo), dN = digest(p.normal), dO = digest(p.orm.data);
-    for (const [what, d] of [['albedo', dA], ['normal', dN], ['orm', dO]]) {
-      assert.match(d, /^[0-9a-f]{16}$/, `${name}: ${what} digest is not a 16-hex digest`);
-    }
-    assert.equal(dA, gA, `${name}: ALBEDO changed`);
-    assert.equal(dN, gN, `${name}: NORMAL changed`);
-    assert.equal(dO, gO, `${name}: ORM changed`);
-    assert.equal(p.emissive ? digest(p.emissive) : null, gE, `${name}: EMISSIVE changed`);
-
-    // The two scalars `Textures._finish` forwards but no byte buffer carries.
-    assert.equal(p.joint ? p.joint.dY : null, gdY, `${name}: joint luma delta changed`);
-    assert.equal(p.joint ? p.joint.dH : null, gdH, `${name}: joint height delta changed`);
-    assert.equal(+p.normalStrength.toFixed(6), gSlope, `${name}: slopeScale changed`);
+  for (const [name, slot] of SUBSET) {
+    const s = MANIFEST.recipes[name]?.slots?.[slot];
+    assert.ok(s, `${name}.${slot} is not in the cache`);
+    const got = decodeSlot(s);
+    assert.equal(got.width, s.size, `${name}.${slot}: decoded ${got.width}px, manifest says ${s.size}`);
+    assert.equal(got.data.length, s.size * s.size * 4);
+    assert.match(s.digest, /^[0-9a-f]{16}$/, `${name}.${slot}: manifest digest is malformed`);
+    assert.equal(digest(got.data), s.digest, `${name}.${slot}: does not decode to the bytes the baker recorded`);
+    for (const f of got.filters) filters.add(f);
     checked++;
   }
-  assert.equal(checked, GOLDEN.length, 'golden loop inspected fewer recipes than it lists');
+  assert.equal(checked, SUBSET.length);
+  // The claim "this subset exercises the decoder" is measured, not asserted by feel.
+  for (const f of [1, 2, 3, 4]) assert.ok(filters.has(f), `no scanline in the subset uses PNG filter ${f}`);
 });
 
-test('the golden digest can actually fail — it separates two different recipes', () => {
-  /* Calibration for the table above. If `digest` collided or `bake` ignored its name, every row
-   * would pass for the wrong reason; two recipes that differ must digest differently. */
-  const a = bake('sandstone_block', 256, 'high');
-  const b = bake('limestone_polished', 256, 'high');
+test('unfilter handles all five PNG filter types, including the one the blob never uses', () => {
+  /* pngjs's adaptive heuristic never picks filter 0 on this content — measured across all 70
+   * committed maps: 193 rows of Sub, 3805 of Up, 1359 of Average, 32275 of Paeth, and **zero** of
+   * None. So `unfilter`'s filter-0 fast path is entirely uncovered by the cache, and a test that
+   * only decoded committed assets would report green over dead code. Hand-built rows instead, with
+   * expectations computed from the spec rather than from the implementation. */
+  const W = 2, H = 5, stride = W * 4;
+  const raw = new Uint8Array(H * (stride + 1));
+  const row = (y, ft, bytes) => { raw[y * (stride + 1)] = ft; raw.set(bytes, y * (stride + 1) + 1); };
+  row(0, 0, [10, 20, 30, 40, 50, 60, 70, 80]);                 // None  -> verbatim
+  row(1, 1, [1, 1, 1, 1, 2, 2, 2, 2]);                         // Sub   -> +Left
+  row(2, 2, [5, 5, 5, 5, 5, 5, 5, 5]);                         // Up    -> +Above
+  row(3, 3, [0, 0, 0, 0, 0, 0, 0, 0]);                         // Avg   -> (Left+Above)>>1
+  row(4, 4, [0, 0, 0, 0, 0, 0, 0, 0]);                         // Paeth -> predictor
+  const out = unfilter(raw, W, H);
+  const px = (y, x) => [...out.subarray((y * W + x) * 4, (y * W + x) * 4 + 4)];
+  assert.deepEqual(px(0, 0), [10, 20, 30, 40]);
+  assert.deepEqual(px(0, 1), [50, 60, 70, 80]);
+  assert.deepEqual(px(1, 0), [1, 1, 1, 1], 'Sub with no left neighbour is the raw byte');
+  assert.deepEqual(px(1, 1), [3, 3, 3, 3], 'Sub adds the pixel to its left');
+  assert.deepEqual(px(2, 0), [6, 6, 6, 6], 'Up adds the pixel above');
+  assert.deepEqual(px(2, 1), [8, 8, 8, 8]);
+  assert.deepEqual(px(3, 0), [3, 3, 3, 3], 'Average of left(0) and above(6), floored');
+  assert.deepEqual(px(3, 1), [5, 5, 5, 5], 'Average of left(3) and above(8), floored');
+  assert.deepEqual(px(4, 0), [3, 3, 3, 3], 'Paeth with no left/up-left picks Above');
+  assert.deepEqual(px(4, 1), [5, 5, 5, 5]);
+  // 8-bit wraparound is part of the format, not an accident.
+  const w = new Uint8Array(1 + 4); w[0] = 1; w.set([200, 200, 200, 200], 1);
+  assert.deepEqual([...unfilter(w, 1, 1)], [200, 200, 200, 200]);
+
+  assert.throws(() => unfilter(new Uint8Array([9, 0, 0, 0, 0]), 1, 1), /filter type 9/);
+  assert.throws(() => unfilter(new Uint8Array(3), 4, 4), /short/);
+});
+
+test('parsePng rejects anything the baker does not write', () => {
+  /* The decoder's format contract. A decoder that coped with 16-bit or palettised input would be
+   * a decoder that can return wrong pixels for a file this project did not produce. */
+  const good = blobBytes.subarray(
+    MANIFEST.recipes.gold_leaf.slots.albedo.off,
+    MANIFEST.recipes.gold_leaf.slots.albedo.off + MANIFEST.recipes.gold_leaf.slots.albedo.len);
+  assert.equal(parsePng(good).width, MANIFEST.recipes.gold_leaf.slots.albedo.size);
+
+  const bend = (i, v) => { const c = good.slice(); c[i] = v; return c; };
+  assert.throws(() => parsePng(bend(1, 0)), /signature/);
+  assert.throws(() => parsePng(bend(24, 16)), /bit depth 16/);       // IHDR byte 8  = depth
+  assert.throws(() => parsePng(bend(25, 3)), /colour type 3/);       // IHDR byte 9  = colour type
+  assert.throws(() => parsePng(bend(28, 1)), /interlaced/);          // IHDR byte 12 = interlace
+});
+
+/* ───────────────── layer 2: the committed cache is not stale ───────────────── */
+
+test('the committed cache is not stale — every reachable recipe still produces it', () => {
+  /* **This is the test that made the cache acceptable to ship.** Everything else here guards
+   * bytes; this one guards the relationship between the bytes and the code, which is the only
+   * thing a committed cache can silently lose.
+   *
+   * It works by re-deriving each recipe at `guardSize` (256) and comparing against the digest the
+   * baker recorded *in the same run* that produced the 1024² asset. Co-produced, so they cannot
+   * disagree unless the generator has changed since. 256 rather than 1024 is what makes it cost
+   * ~2.3 s instead of ~24 s, and it is a real (small) weakening: a change that alters 1024² output
+   * while leaving 256² untouched would slip through. That would take a branch on `size`, which no
+   * recipe currently has.
+   *
+   * If this goes red: **run `node src/textures/bakeassets.mjs`.** Do not edit the manifest. */
+  const names = Object.keys(MANIFEST.recipes);
+  assert.ok(names.length >= 20, `manifest is empty or truncated (${names.length} recipes)`);
+  let checked = 0, skipped = 0;
+  for (const name of names) {
+    const rec = MANIFEST.recipes[name];
+    if (!rec.nodeBakeable) { skipped++; continue; }
+    const p = bake(name, MANIFEST.guardSize, 'high');
+    assert.ok(p.albedo instanceof Uint8Array, `${name}: bake() did not return an albedo buffer`);
+    const got = [digest(p.albedo), digest(p.normal), digest(p.orm.data), p.emissive ? digest(p.emissive) : '-'].join('/');
+    assert.match(rec.guard, /^[0-9a-f]{16}\/[0-9a-f]{16}\/[0-9a-f]{16}\/([0-9a-f]{16}|-)$/, `${name}: manifest guard is malformed`);
+    assert.equal(got, rec.guard,
+      `${name}: the recipe no longer produces the committed cache. Re-run \`node src/textures/bakeassets.mjs\`.`);
+    // The scalars that ride alongside the pixels and would otherwise drift unnoticed.
+    assert.equal(p.hasAlpha, rec.hasAlpha, `${name}: hasAlpha changed`);
+    assert.equal(+p.normalStrength.toFixed(6), +(rec.normalStrength * (MANIFEST.guardSize / rec.size)).toFixed(6),
+      `${name}: slope scale is no longer linear in size — the guard resolution no longer predicts the shipped one`);
+    checked++;
+  }
+  assert.ok(checked >= 12, `staleness guard re-derived only ${checked} recipes`);
+  assert.equal(checked + skipped, names.length);
+});
+
+test("the offline guard's coverage is exactly what it claims", () => {
+  /* The honest accounting. Layer 2 cannot reach the canvas-using recipes, and the number of them
+   * is asserted so the hole can be argued about but cannot quietly grow: if someone adds a
+   * canvas-using recipe to PREWARM, this goes red and they have to say so out loud. */
+  const recs = Object.entries(MANIFEST.recipes);
+  const reachable = recs.filter(([, r]) => r.nodeBakeable).map(([n]) => n);
+  const blind = recs.filter(([, r]) => !r.nodeBakeable).map(([n]) => n);
+  assert.equal(reachable.length + blind.length, recs.length);
+  assert.equal(reachable.length, 12, `staleness guard reaches ${reachable.length} recipes, expected 12`);
+  assert.equal(blind.length, 11, `${blind.length} recipes need a canvas, expected 11 — see the file header`);
+  /* The claim is checked, not trusted — but only in the direction that is cheap and that nothing
+   * else covers. That a `nodeBakeable` recipe really bakes is already proven by the staleness test
+   * above, which bakes all twelve; re-baking them here cost 1.4 s to re-establish it. The other
+   * direction is not covered anywhere else and is nearly free, because a canvas-only recipe throws
+   * on its first `rasterMask` before doing any real work. */
+  for (const n of blind) assert.throws(() => bake(n, 64, 'high'), `${n} is marked canvas-only but builds fine in Node`);
+});
+
+test('the staleness guard can actually fail — its digest separates two recipes', () => {
+  /* Calibration. If `digest` collided or `bake` ignored its name, every row above would pass for
+   * the wrong reason. Two different recipes must digest differently; one recipe twice must not. */
+  const a = bake('sandstone_block', 128, 'high');
+  const b = bake('limestone_polished', 128, 'high');
   assert.notEqual(digest(a.albedo), digest(b.albedo));
   assert.notEqual(digest(a.normal), digest(b.normal));
-  // …and the same recipe twice must digest the same, or the table is measuring nondeterminism.
-  assert.equal(digest(bake('gold_leaf', 256, 'high').albedo), digest(bake('gold_leaf', 256, 'high').albedo));
+  assert.equal(digest(bake('gold_leaf', 128, 'high').albedo), digest(bake('gold_leaf', 128, 'high').albedo));
+  // …and it must see a single 8-bit step, which is the smallest change that can reach a texel.
+  const nudged = a.albedo.slice(); nudged[0] = (nudged[0] + 1) & 255;
+  assert.notEqual(digest(nudged), digest(a.albedo));
 });
 
-test('the joint-sign invariant holds for every masonry recipe the harness can build', () => {
+test('the joint-sign invariant holds for every masonry recipe in the cache', () => {
   /* Mortar is darker and lower than the faces either side of it — light collects on proud
    * surfaces and dirt collects in gaps. `paving_courtyard` once shipped with a positive luma
    * delta and the floor read as "cracked ice". `Bake.jointSign` measures it; nothing asserted it. */
   let checked = 0;
-  for (const [name, , , , , , dY, dH] of GOLDEN) {
-    if (dY === null) continue;
-    assert.ok(dY < 0, `${name}: joint luma delta ${dY} — mortar is brighter than the block faces`);
-    assert.ok(dH < 0, `${name}: joint height delta ${dH} — mortar stands proud of the block faces`);
+  for (const [name, rec] of Object.entries(MANIFEST.recipes)) {
+    if (!rec.joint) continue;
+    assert.ok(rec.joint.dY < 0, `${name}: joint luma delta ${rec.joint.dY} — mortar is brighter than the block faces`);
+    assert.ok(rec.joint.dH < 0, `${name}: joint height delta ${rec.joint.dH} — mortar stands proud of the block faces`);
     checked++;
   }
-  assert.ok(checked >= 4, `expected at least 4 masonry recipes in the table, inspected ${checked}`);
+  assert.ok(checked >= 4, `expected at least 4 masonry recipes in the cache, inspected ${checked}`);
 });
+
 
 /* ─────────────────── the prewarm list and the bake contract ─────────────────── */
 
