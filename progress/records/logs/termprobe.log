@@ -1,0 +1,15 @@
+[81s] boot ok — warnings 3
+[81s]    ! textures: prewarm took 29.0s at size 1024
+[81s]    ! KayKit (props): 36 placed from 11 models, 0 failed, 31064 tris, 29 colliders
+[81s]    ! SlyModelDLRig: relaxed 6070 glove vertices, max move 12.0 (asset units)
+[82s] patchWarned (splice missed at least once): false
+[82s] shared uDebugTerm after debugTerm(4): 4   (object present: true)
+[82s] value after 1 render: 4   after 10 more: 4
+[82s] materials walked: 6
+[82s]   (unnamed)                      ShaderMaterial         compiled false  programHasUDebugTerm null  outlineShell false
+[82s]   (unnamed)                      ShaderMaterial         compiled false  programHasUDebugTerm null  outlineShell false
+[82s]   toon_sand                      MeshStandardMaterial   compiled false  programHasUDebugTerm null  outlineShell false
+[82s]   (unnamed)                      MeshBasicMaterial      compiled false  programHasUDebugTerm null  outlineShell false
+[82s]   toon_limestone                 MeshStandardMaterial   compiled false  programHasUDebugTerm null  outlineShell false
+[82s]   (unnamed)                      ShaderMaterial         compiled false  programHasUDebugTerm null  outlineShell false
+[86s] DONE

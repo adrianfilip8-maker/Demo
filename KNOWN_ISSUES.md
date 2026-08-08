@@ -16163,3 +16163,78 @@ authoritative record is the committed files and `KNOWN_ISSUES.md`, not the task 
 store is not worth reconciling when it disagrees — but it is worth knowing that *both* pieces of
 local state moved together, which suggests the rollback was environmental rather than something git
 did.
+
+## §210 — the upper terminator coincides with the sun elevation, and the debug channel that would have shown it is broken
+
+Two findings from one investigation into critic pass 7's defect 1. The second cost three
+diagnostics; the first cost one command and is the useful one.
+
+### §210.1 — `termHi` sits on top of `sin(sun elevation)` on `temple`
+
+`slyRamp`'s terminators are absolute `N·L` thresholds: with `bands 3` they land at `uTermLo` 0.14
+and `uTermHi` 0.52, half-width `uTermSoft` 0.024. So the bands are:
+
+```
+shadow  N·L < 0.116        mid  0.164 … 0.496        lit  N·L > 0.544
+```
+
+A flat floor's `N·L` is exactly `sin(sun elevation)`. Against Atmosphere's own elevation table:
+
+| shot | tod | sun el | floor `N·L` | band | margin |
+|---|---|---|---|---|---|
+| `sly-startle` | 0.80 | 22.0° | 0.3746 | mid | 0.145 |
+| **`temple`** | **0.72** | **33.0°** | **0.5446** | lit | **0.0246** |
+| `courtyard` | 0.76 | 26.0° | 0.4384 | mid | 0.082 |
+| `interior` | 0.50 | 76.0° | 0.9703 | lit | 0.450 |
+| `hero` | 0.79 | 22.0° | 0.3746 | mid | 0.145 |
+
+**On `temple` the floor sits 0.0006 above the top of the smoothstep window.** The material carries a
+sandstone detail normal map; a perturbation of two or three degrees moves `N·L` by ±0.03, which is
+more than an order of magnitude larger than that margin. So every pixel on the dominant surface of
+that shot flips between the mid and lit bands according to its detail normal.
+
+**That does not read as cel banding. It reads as speckle** — and `temple` is precisely where the flat
+fraction measured worst (critic 12.4 %, my own base 21.6 %, and the weakest of the three surfaces
+that improved when the grain came off). The critic independently described `temple`'s columns as
+"milk-white pale blue with a mottled smear texture".
+
+The interaction is structural, not a bad constant: `uTermHi` 0.52 is coincidentally ≈ sin(31°), and
+the shipped tods put dominant surfaces at 0.375, 0.438, 0.545 and 0.970. Moving `termHi` into
+0.62–0.66 clears all four by ≥ 0.075; moving it *down* to 0.45 would collide with `courtyard`'s
+0.438 instead. **Any candidate must be checked against every shipped tod, not tuned on one shot** —
+that is the whole content of this finding and it is why the number cannot be picked by eye.
+
+Not shipped here. It wants a seal, and the seal wants a working ramp channel — see §210.2.
+
+### §210.2 — `debugTerm` does not reach the shader, and its own calibration caught that
+
+`toon.glsl.js` documents mode 4 as a calibration: it writes the constants (0.25, 0.50, 0.75) which
+must arrive as (64, 128, 191) ±1, *"if it does not, the bypass is not a bypass and no other mode's
+numbers mean anything"*. Run for what appears to be the first time, **it fails: zero pixels carry the
+constants.** The frame is an ordinary raw scene — no ink, no grade, no bloom — so `debugRaw`'s bypass
+half works and `debugTerm` does not.
+
+Ruled out, each by measurement rather than reading:
+
+- the setter writes and the value persists — `uniforms.uDebugTerm.value` reads 4 after 11 renders;
+- the splice did not miss — `_patchWarned` is false, and the needle
+  `vec3 outgoingLight = totalDiffuse + …` is present in three r185's `meshphysical.glsl.js`;
+- the shared block reaches materials by identity — `Object.assign(shader.uniforms, self.uniforms, own)`,
+  and `own` does not contain `uDebugTerm`;
+- the block is not conditional — `TOON_SHADE`'s body opens with a bare `{`.
+
+**And my own probe's key measurement was invalid**: it read `material.program` to ask whether the
+compiled program declares `uDebugTerm`, and `material.program` does not exist in modern three, so
+`programHasUDebugTerm: null` on all six materials is the probe failing, not evidence. That is the
+third instrument in a row on this defect to return a confident null — after the flat-area metric
+blinded by grain, and `bootId` comparing `null` to `null`.
+
+**Left broken and filed rather than chased further.** Four channels exist, all four report the rim,
+and the one that reports the term the cel look rests on has evidently never worked. Whoever fixes it
+should start by dumping the compiled fragment source (`renderer.properties.get(material).currentProgram`
+or a `WebGLRenderer.debug.onShaderError` hook) and confirming the debug block is in the program text
+at all — the one hypothesis I could not test without it.
+
+**What this costs:** critic pass 7's headline defect is still unmeasured. Three instruments have now
+failed on it. §210.1 is the first substantive lead, and it came from arithmetic that needed no
+instrument at all.

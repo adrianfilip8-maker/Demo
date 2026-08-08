@@ -1,0 +1,64 @@
+{
+  "patchWarned": false,
+  "shared": 4,
+  "mats": [
+    {
+      "name": "(unnamed)",
+      "type": "ShaderMaterial",
+      "hasOnBeforeCompile": true,
+      "compiled": false,
+      "programHasUDebugTerm": null,
+      "sameObjectAsShared": null,
+      "slyOutline": false
+    },
+    {
+      "name": "(unnamed)",
+      "type": "ShaderMaterial",
+      "hasOnBeforeCompile": true,
+      "compiled": false,
+      "programHasUDebugTerm": null,
+      "sameObjectAsShared": null,
+      "slyOutline": false
+    },
+    {
+      "name": "toon_sand",
+      "type": "MeshStandardMaterial",
+      "hasOnBeforeCompile": true,
+      "compiled": false,
+      "programHasUDebugTerm": null,
+      "sameObjectAsShared": null,
+      "slyOutline": false
+    },
+    {
+      "name": "(unnamed)",
+      "type": "MeshBasicMaterial",
+      "hasOnBeforeCompile": true,
+      "compiled": false,
+      "programHasUDebugTerm": null,
+      "sameObjectAsShared": null,
+      "slyOutline": false
+    },
+    {
+      "name": "toon_limestone",
+      "type": "MeshStandardMaterial",
+      "hasOnBeforeCompile": true,
+      "compiled": false,
+      "programHasUDebugTerm": null,
+      "sameObjectAsShared": null,
+      "slyOutline": false
+    },
+    {
+      "name": "(unnamed)",
+      "type": "ShaderMaterial",
+      "hasOnBeforeCompile": true,
+      "compiled": false,
+      "programHasUDebugTerm": null,
+      "sameObjectAsShared": null,
+      "slyOutline": false
+    }
+  ],
+  "sharedIsObj": true,
+  "afterRender": 4,
+  "after10": 4,
+  "materialCount": 6
+}
