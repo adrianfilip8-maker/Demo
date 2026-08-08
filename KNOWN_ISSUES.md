@@ -17535,3 +17535,60 @@ what the subject scored. The re-derivation was handed to a fresh agent with the 
 results and *without* the subject numbers, with instructions to derive the criterion from the
 controls alone — which is what a control is for — register it, commit the instrument, and only then
 run the subject. Recorded here so the provenance of that threshold is legible later.
+
+## §229 — the depth-push does not scale the ink, it displaces it; and it cannot explain the 29 px
+
+The research agent found a real bug in the outline vertex shader and I reproduced it independently.
+`src/render/shaders/toon.glsl.js:1098`:
+
+```glsl
+mvPosition.z *= 1.0 + uDepthPush;
+gl_Position  = projectionMatrix * mvPosition;
+```
+
+three's perspective matrix sets `w_clip = -z_view`, so scaling `mvPosition.z` scales **w** while
+`gl_Position.xy` are untouched, and the hull's screen position shrinks toward the frame centre by
+1/k after the divide. `Outline.js:317` ships `depthPush = 0.0022`, so this is **live**, not latent.
+
+**But the mechanism is not the one it appears to be, and the difference decides the fix.** The
+extrusion two lines later is
+
+```glsl
+gl_Position.xy += dir * ( w * 2.0 / uRes ) * gl_Position.w;
+```
+
+and dividing by `gl_Position.w` afterwards cancels that multiply *exactly*, whatever `k` is.
+Measured on a 2.5 px target: **2.500000 px at z = −2, −10 and −60, with and without the push.**
+The push does not scale the ink width at all.
+
+What it does is **displace the hull relative to the base mesh**, radially, by (1 − 1/k) × NDC
+radius. The ink then reads thin on the side facing away from centre and thick on the side facing
+it, with the mean exactly preserved:
+
+```
+centre      displacement 0.00 px  ->  2.50 / 2.50   (mean 2.50)
+ndc 0.42    displacement 0.74 px  ->  1.76 / 3.24   (mean 2.50)
+ndc 1.0     displacement 1.76 px  ->  0.74 / 4.26   (mean 2.50)
+corner      displacement ~2.0 px  ->  0.48 / 4.52   (mean 2.50)
+```
+
+The agent reported 0.38 / 4.62 and described it as a width change. Those two numbers average to
+**2.50** — its own figures carry the displacement signature. The finding is right in kind and the
+mechanism needed correcting.
+
+**The caveat is the important part.** This is a ~2 px effect at the extreme frame corner and
+**exactly zero at frame centre**, which in a third-person game is where the protagonist lives. It
+plausibly explains a **1 px** reading on an object at the frame edge. It comes nowhere near
+explaining the critic's **29 px**, and closing that defect with this fix would be wrong. The 29 px
+is still unexplained. The better lead is the agent's second, structural finding: this project ships
+**two ink systems with opposite width policies** — the hull aims to be screen-constant while the
+PostFX crease pass deliberately varies its sample offset 1.8× near → 0.70× far — and they **sum**.
+`PostFX.js:46` already records "6 px of black on Sly's arm". 6 is not 29 either, so something
+further is contributing and should be found before anything is changed. Handed to the INK agent
+with the instruction not to close the 29 px on this.
+
+Recorded also because of the shape of the near-miss: a correct observation (`z *= k` is wrong), a
+correct measurement (asymmetric ink at the edges), and an incorrect mechanism (width scaling rather
+than hull displacement) — all three consistent with each other, which is what makes the wrong
+mechanism survive scrutiny. The tell was arithmetic that nobody had to run: the two reported widths
+averaged to the target.
