@@ -16000,3 +16000,68 @@ box at −21 has no lit counterpart to establish it, so it reads as grey rather 
 
 That is a perceptual claim, not a measured one, and it is the reason this decision goes to the owner
 with the table rather than being settled from the table.
+
+## §207 — the gloves: flexion ships, the "rake" is the asset, and I misread my own frame
+
+§202's blind round called the hands "splayed rake fingers". Three measurements, and only the first
+led anywhere.
+
+**The complaint is real, the word is wrong.** Index-to-pinky spread is 6.0°, so the fingers are not
+fanned by angle. They are DEAD STRAIGHT — base-to-tip straightness 0.990–0.995 — parallel, and held
+42.7° off the forearm. Four rigid prongs, because our rig has no finger bones and all twenty per
+hand fold into the wrist: 19.56 % of the body mesh's weight, 6,070 of its 25,353 vertices, moving as
+one block that can never bend. Zero finger weight on the eye, head and tail meshes, so a fix cannot
+disturb the face.
+
+**Flexion shipped**, baked once at load into bind-space geometry using the artist's own finger
+weights, at the last moment they exist. The flex axis is derived from the thumb rather than typed
+in: `palmWard` is the component of the thumb direction perpendicular to the fingers, so
+`cross(fingerDir, palmWard)` curls inward on both hands with no mirrored special case. Runtime
+readback matched the offline prediction exactly — 6,070 vertices, max move 12.0 asset units.
+
+### §207.1 — I called it half-broken from a 100-pixel squint, and it was not
+
+Looking at `sly-closeup`, the cane hand read as a clean grip and the open hand still read as straight
+prongs, so I concluded the bake had worked on one side and failed on the other, and said so twice.
+The difference against the pre-curl frame of the same shot and model, with controls:
+
+```
+  upper hand (reads curled)     23.6 % of pixels changed
+  lower hand (reads straight)   32.1 %
+  torso / leg  CONTROL           0.0 %
+  head         CONTROL           0.2 %
+```
+
+The hand I called unchanged moved MORE than the one I called fixed. Every upstream check already
+agreed and I overrode all of them: the bake is symmetric offline (LF 3010 verts mean 3.50 max 11.96;
+RT 3060 mean 3.24 max 11.57), the artist weights are symmetric (LF 2498 / RT 2460, every bone pair
+within 5 %), all 38 finger bones resolve to their own hand, and the downstream transform is rigid so
+it *cannot* unbend anything. A rendered close-up is evidence about how something reads, not about
+whether a transform ran — and I used it for the second question when I already had four answers to it.
+
+### §207.2 — adduction was the obvious next fix and the measurement killed it
+
+Flexion bends a finger along its length and cannot close a gap *between* fingers, so the open hand
+still reads as a rake from angles where the bend is foreshortened. The missing axis is adduction
+about the palm normal, and its sign follows one rule for both hands (angle ∝ the digit's offset along
+the knuckle line): +8° closes the left index, −8° the right, both "angle ∝ +offset".
+
+Before writing it, the sweep — tip spread along the knuckle line, in asset units:
+
+| K (°/unit) | span | |
+|---|---|---|
+| raw, no curl | 13.27 | |
+| 0.0 | **13.27** | flexion only — what ships |
+| 1.2 | 11.87 | pinky −9.8° |
+| 2.0 | 10.94 | pinky −16.4°, already implausible |
+
+Two findings. Flexion leaves the span **exactly** where it started, confirming it never addressed
+this. And adduction barely moves it either: 18 % at a rotation no relaxed hand makes.
+
+The reason is that **the fan is base spacing, not angle**. The knuckles sit 12.4 units apart and no
+rotation about any joint moves them; only translating the digits toward each other would, which
+means distorting the palm. So the rake is a property of the authored mesh, and the honest outcome is
+that flexion ships as a real improvement while the fan stays as the asset's own styling.
+
+Recorded because the sweep cost one command and saved a capture plus a change that would have done
+almost nothing — the same trade as §205, arriving from a direction I did not anticipate again.
