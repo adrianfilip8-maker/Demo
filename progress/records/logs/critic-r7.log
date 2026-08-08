@@ -11,3 +11,15 @@
   ✓ interior      draws  145  tris 828k
   ✓ night         draws  263  tris 1946k
   ✓ traversal     draws  231  tris 1855k
+  ✓ combat        draws  204  tris 1661k
+  ✓ guard         draws  182  tris 1523k
+  ✓ sly-profile   draws  221  tris 1731k
+  ✓ sly-key       draws  235  tris 1755k
+· 3 runtime warning(s):
+    ! textures: prewarm took 18.0s at size 1024
+    ! KayKit (props): 36 placed from 11 models, 0 failed, 31064 tris, 29 colliders
+    ! SlyModelDLRig: relaxed 6070 glove vertices, max move 12.0 (asset units)
+· 1 console error(s):
+    ! Failed to load resource: the server responded with a status of 404 (Not Found)
+
+→ shots/r7/  (16 frames)

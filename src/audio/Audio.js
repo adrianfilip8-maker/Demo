@@ -2,6 +2,29 @@ import * as THREE from 'three';
 import { rng, WORLD_SEED } from '../core/Rand.js';
 import { SFX, SFX_NAMES, stepFor } from './Sfx.js';
 import { Music, SECTION_NAMES } from './Music.js';
+
+/**
+ * How each of Music.js's sections reads on a FIXED recording, which has no sections of its own.
+ * Level is a multiplier on `TUNE.trackLevel`; cutoff is the shared `musicFilter`, so this is the
+ * same lowpass the synthesised path already used for the same purpose.
+ *
+ * The shape follows what the procedural sections were doing with their layer mixes: `sneak` drops
+ * the kit and lead almost to nothing, so here it drops level and closes the filter; `alert` pushes
+ * bass and kit up, so here it opens both fully.
+ */
+const TRACK_SECTION = {
+  menu:     { level: 0.90, cutoff: 20000 },
+  explore:  { level: 1.00, cutoff: 20000 },
+  sneak:    { level: 0.55, cutoff: 1800 },
+  alert:    { level: 1.00, cutoff: 20000 },
+  chase:    { level: 1.00, cutoff: 20000 },
+  treasure: { level: 0.95, cutoff: 20000 },
+};
+/* All six of Music.js's sections are covered deliberately. An earlier version of this table had
+   four and relied on the `|| TRACK_SECTION.explore` fallback for `chase` and `treasure` — which
+   works, and would have silently made the two most dramatic beats in the game indistinguishable
+   from ordinary walking. A fallback that never fires is a safety net; one that quietly carries two
+   real cases is a missing feature wearing a safety net's clothes. */
 import { ReverbRack, SPACES } from './Reverb.js';
 
 /**
@@ -42,6 +65,10 @@ const TUNE = {
   duckAttack: 0.04,
   duckRelease: 0.5,
   thiefMusic: 0.34,       // music level while Thief-o-Vision is up
+  /* Recorded score, below the 0.85 musicBus so the mix still has headroom for sfx. Set from the
+     track's own loudness rather than to taste: the supplied file is a 64 kbps master that already
+     sits hot, and matching the synthesised score's perceived level put it over the limiter. */
+  trackLevel: 0.62,
   thiefFilter: 620,       // ...and the lowpass that puts it behind glass
   coinStreakWindow: 1.9,
   coinStreakMax: 11,
@@ -166,7 +193,73 @@ export class Audio {
     } catch (err) {
       this._warn(`audio start failed: ${err?.message || err}`);
     }
+
+    /* Fire-and-forget, and NOT under the offline harness.
+     *
+     * `existing` is the analysis harness's OfflineAudioContext, and every headless capture in this
+     * project boots through it. Fetching and decoding a 6.9 MB file on that path would add seconds
+     * to each of the sixteen shots in a critic set for a signal no frame can show. It is also
+     * deliberately not awaited on the live path: `unlock()` is documented as returning fast enough
+     * to sit inside a click handler, and that contract is worth more than the track starting a
+     * few hundred milliseconds sooner. */
+    if (!existing) this._loadTrack().catch(() => {});
+
     return this.ready;
+  }
+
+  /**
+   * Owner-supplied score: "The Museum of Natural History", Peter McConnell, Sly 2 (2004).
+   * Provenance in `public/assets/audio/PROVENANCE.md`.
+   *
+   * This does NOT delete the procedural score in Music.js. That system writes five sections across
+   * seven layers and switches them on game state, which a fixed recording cannot do — so the score
+   * is cross-faded down rather than removed, and it comes straight back if the file is missing or
+   * fails to decode. `music(section)` keeps working either way; see the note there.
+   */
+  async _loadTrack(url = 'assets/audio/museum-of-natural-history.mp3') {
+    if (!this.ready || !this.ctx || this._trackState !== 'idle') return false;
+    this._trackState = 'loading';
+    let buf;
+    try {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      buf = await this.ctx.decodeAudioData(await res.arrayBuffer());
+    } catch (err) {
+      this._trackState = 'failed';
+      this._warn(`music track unavailable (${err?.message || err}) — procedural score continues`);
+      return false;
+    }
+    if (!this.ready || !this.ctx) { this._trackState = 'idle'; return false; }
+
+    try {
+      const src = this.ctx.createBufferSource();
+      src.buffer = buf;
+      src.loop = true;
+      src.connect(this.trackGain);
+      const t = this.ctx.currentTime;
+      src.start(t);
+      this.track = src;
+      this._trackState = 'playing';
+
+      /* Equal-length cross-fade: the recording up, the synthesised score down. Four seconds
+         because both are music and a fast swap between two pieces of music reads as a glitch. */
+      const FADE = 4.0;
+      this.trackGain.gain.cancelScheduledValues(t);
+      this.trackGain.gain.setValueAtTime(0, t);
+      this.trackGain.gain.linearRampToValueAtTime(TUNE.trackLevel, t + FADE);
+      const so = this.score?.output?.gain;
+      if (so) {
+        so.cancelScheduledValues(t);
+        so.setValueAtTime(so.value, t);
+        so.linearRampToValueAtTime(0, t + FADE);
+      }
+      this._warn(`music: "${url.split('/').pop()}" ${buf.duration.toFixed(0)}s, looping`);
+      return true;
+    } catch (err) {
+      this._trackState = 'failed';
+      this._warn(`music track start failed: ${err?.message || err}`);
+      return false;
+    }
   }
 
   _buildGraph() {
@@ -229,6 +322,15 @@ export class Audio {
 
     this._musicBase = 1;
     this.score = new Music(ctx, this.musicDuck, { seed: WORLD_SEED });
+
+    /* The recorded track feeds the SAME node the score does, so it inherits the duck, the colour
+       filter, the bus and the reverb send without any of that being re-implemented for it. Silent
+       until the file actually decodes — if the fetch fails the score simply keeps playing. */
+    this.trackGain = ctx.createGain();
+    this.trackGain.gain.value = 0;
+    this.trackGain.connect(this.musicDuck);
+    this.track = null;
+    this._trackState = 'idle';
   }
 
   _buildPool() {
@@ -391,11 +493,33 @@ export class Audio {
     try { handle.set(key, value, this.ctx.currentTime); } catch {}
   }
 
-  /** Request a music section. Also disables the automatic section chooser briefly. */
+  /**
+   * Request a music section. Also disables the automatic section chooser briefly.
+   *
+   * The section machinery survives the recorded track rather than being bypassed by it. It can no
+   * longer change WHAT is playing — a fixed recording has no `sneak` variant — but the thing the
+   * sections were really expressing is *how present the music should be*, and that still applies:
+   * `sneak` pulls the level down and closes the filter so footsteps and guard chatter sit on top,
+   * `alert` opens both. Without this, switching to Thief-o-Vision or being spotted would leave the
+   * music completely unmoved, which is a worse result than the synthesised score gave.
+   */
   music(section) {
     if (!SECTION_NAMES.includes(section)) return;
     this._section = section;
     if (!this.ready) { this._pendingMusic = section; return; }
+
+    if (this._trackState === 'playing') {
+      const t = this.ctx.currentTime, s = TRACK_SECTION[section] || TRACK_SECTION.explore;
+      const g = this.trackGain.gain;
+      g.cancelScheduledValues(t);
+      g.setValueAtTime(g.value, t);
+      g.linearRampToValueAtTime(TUNE.trackLevel * s.level, t + 1.2);
+      const f = this.musicFilter.frequency;
+      f.cancelScheduledValues(t);
+      f.setValueAtTime(f.value, t);
+      f.linearRampToValueAtTime(s.cutoff, t + 1.2);
+      return;
+    }
     if (!this.score._started) this.score.start(this.ctx.currentTime, section);
     else this.score.setSection(section);
   }
@@ -901,6 +1025,11 @@ export class Audio {
     this._unsub.length = 0;
     if (!this.ctx) return;
     try { this.score?.dispose(); } catch {}
+    /* A looping BufferSource outlives its graph unless stopped: nothing else here holds a
+       reference to it, so without this the track keeps running after dispose(). */
+    try { this.track?.stop(); this.track?.disconnect(); } catch {}
+    this.track = null;
+    this._trackState = 'idle';
     for (let i = 0; i < this._voices.length; i++) {
       const v = this._voices[i];
       this._release(v);
