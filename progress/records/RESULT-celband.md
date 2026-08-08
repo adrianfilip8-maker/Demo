@@ -237,9 +237,12 @@ the shade side multiplies almost every pixel, downward. `bandprobe` sizes that e
 the highest-risk shot for this change by a wide margin, and it is the one that has not been seen.
 
 > **Status: NOT RUN.** `celband.mjs` was launched and sat in the capture lock's FIFO behind other
-> agents' captures for **17 minutes without ever being granted it** (`waiting for capture lock
-> (1010s, held by pid 6204)`), which is the documented cost of a full ten-shot set ahead of you in
-> the queue. Zero frames were written.
+> agents' captures for the **whole remainder of the session without ever being granted it** — still
+> queued at hand-off, `waiting for capture lock (1915s, held by pid 6204)`, i.e. one other agent
+> held the lock continuously for 32 minutes. That is the documented cost of a full ten-shot set
+> ahead of you in the queue (`tools/shot.mjs`: 40–60 minutes of exclusive hold). **Zero frames were
+> written.** The process was left alive, so the frames may appear later; if they do,
+> `celband-score.mjs` applies the registered rule to them without any further derivation.
 >
 > **`TUNE.shadeBand` therefore ships at 0**, which is bit-identical to the pre-change build on any
 > driver. Nothing has been shipped on a forecast, and no frame of the fix has been seen by anyone.

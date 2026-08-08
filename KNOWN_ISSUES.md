@@ -17788,9 +17788,12 @@ anything cel.
 ### §231.5 — the sweep never got the lock, and the fix ships inert
 
 `progress/records/celband.mjs` was launched and sat in the capture lock's FIFO behind other agents'
-captures for **17 minutes without ever being granted it** — `waiting for capture lock (1010s, held
-by pid 6204)`. Zero frames were written. `tools/shot.mjs`'s own header documents why: a full
-ten-shot set is 40–60 minutes of exclusive hold, and anything queued behind one waits that long.
+captures for the **whole remainder of the session without ever being granted it** — still queued at
+hand-off, `waiting for capture lock (1915s, held by pid 6204)`, i.e. one other agent held the lock
+continuously for 32 minutes. Zero frames were written. `tools/shot.mjs`'s own header documents why:
+a full ten-shot set is 40–60 minutes of exclusive hold, and anything queued behind one waits that
+long. The process was left alive, so the frames may still appear; `celband-score.mjs` applies the
+registered rule to them without further derivation if they do.
 
 So **`TUNE.shadeBand` ships at 0**, bit-identical to the pre-change build on any driver. Nothing is
 shipped on the forecast, and no frame of the fix has been seen. A run that produced no frames is
