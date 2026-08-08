@@ -37,10 +37,19 @@ await withGame({
   });
   log(`kaykit: ${JSON.stringify(stats)}`);
 
-  /* `hero` is the nearest thing to a control: 20 of the placements are in its frustum, but all at
-     33-49 m and occluded, and its first capture showed none of them. The character close-ups are
-     covered by `glovecheck.mjs` instead — no prop is now nearer than 25 m in any of them, which is
-     background, and the prop that had been at 6.9 m was dropped rather than shipped. */
+  /* `hero` IS NOT A CONTROL, and calling it one was my error — twice, in this comment and in a
+     commit message. It was true of the original thirty placements, which were all 33-49 m out and
+     occluded, and it stopped being true in the same change that quoted it: that change added
+     `crates_stacked` at (−11.5, 9.5) with the comment `// hero 23.8 m`, i.e. a prop placed FOR this
+     shot. The re-render duly shows a barrel at a column base right of frame, and the difference
+     against the previous run localises it — 1064 changed pixels in one cell there, separate from
+     the 385 at Sly from the glove curl.
+
+     So `hero` is a JUDGED shot like the others now. What it actually checks is that nothing landed
+     where it was not designed to: the barrel is at 24-27 m, small, at a column base, and does not
+     compete with the figure. The character close-ups are covered by `glovecheck.mjs`; no prop is
+     nearer than 25 m in any of them, and the one that had been at 6.9 m was dropped rather than
+     shipped. */
   for (const shot of ['courtyard', 'temple', 'interior', 'hero']) {
     const png = await page.evaluate(async (s) => {
       const G = window.__GAME;
