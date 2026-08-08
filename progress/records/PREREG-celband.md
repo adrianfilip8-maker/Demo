@@ -317,3 +317,30 @@ the same instrument on a fresh capture, plus a **two-boot null arm** (§220): th
 quoted here is intra-frame and does not bound capture-to-capture drift. Any shader edit is
 verified to have reached the compiled GLSL via `progress/records/glslink.mjs` (§219), because
 §210.2 has already burned one run on a lever that never reached the shader.
+
+## 12. The designed successor, registered now so a night failure is not a re-derivation
+
+`shadeForm = 1 − b·(1 − ramp)` only ever darkens. That is deliberate — it cannot blow out a shade
+tone and it moves critic pass 3's "unlit ≤ 45% of lit" the helpful way — but it has a known
+exposure cost, and `bandprobe` sizes it exactly: `interior` is **0.00%** key-lit and `night`
+**1.34%**, so on those two shots essentially *every* architecture pixel takes the multiply, and
+away-facing surfaces drop by the full `b`.
+
+If arm (D) shows `night` crushed, the failure is of this *form* of the term, not of the finding.
+The successor is registered here rather than derived after the fact:
+
+**Mean-preserving variant:** `shadeForm = 1 + b·(ramp − 0.5)`, giving levels
+`{1 − b/2, 1, 1 + b/2}` instead of `{1 − b, 1 − b/2, 1}`. The band *swing* is identical — `b`
+either way, so the banding it buys is the same — but the shade mean is unchanged, so it costs
+`night` and `interior` no exposure. Its own risk is the mirror image: it *brightens* key-facing
+shade, which is the direction pass 3's "unlit out-brightens lit" complains about, so it needs that
+ledger line re-measured where this one does not.
+
+The two are not tunings of each other and picking between them by eye after seeing both frames
+would be exactly the selection §141.1 forbids. The rule: **arm (D) decides.** Darken-only ships if
+`night` survives it; the mean-preserving variant is tried only if `night` fails, and then it faces
+pass 3's ledger line as its own registered acceptance.
+
+A third option exists and is NOT this agent's to take: leave the term darken-only and have LIGHTING
+raise the ambient to compensate. That is a cross-agent change to `Lighting.js`, which is out of
+scope here, and it is recorded so it is not mistaken for an unconsidered path.
