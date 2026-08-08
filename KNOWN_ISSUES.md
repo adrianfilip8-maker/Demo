@@ -19380,3 +19380,156 @@ close it, and it does not stop the hole from being walked into by someone who ne
 docstring — including its author. The fix for a known limitation is a refusal, not a comment.
 
 Suite 361/362 after the change; the one red remains the deliberately-held texture staleness guard.
+
+## §246 — the collect loop exists now; and the reason it was missing is not the one §239 recorded
+
+§239 handed this over as "three systems listen for `coin`, nothing emits it, because coins are
+scenery". The first half is exactly right and was re-verified here before anything was built:
+three subscribers (`src/ui/HUD.js:391`, `src/audio/Audio.js:1251`, `src/fx/Particles.js:2221`),
+zero emitters, and `on('coins', …)` at `HUD.js:390` was a **fourth** dead listener nobody had
+noticed — the absolute-set channel had no publisher either.
+
+The second half undersells the defect, and the correction is the useful part.
+
+### It was never true that "coins are only set dressing"
+
+`src/world/Props.js:530 _collectibles()` places **44 coin instances** at authored spots — 34
+scattered plus a deliberate ten-coin trail along the architrave ledge, whose comment says it
+rewards the rooftop route. The mesh is named `coins`. `Props.update()` bobs and spins every one
+of them, every frame, under the comment *"Collectibles bob and spin so they read as pickups
+rather than scenery."*
+
+They were authored as collectibles, named as collectibles, animated as collectibles, and
+documented as collectibles. What was missing was not the concept and not the art — it was the
+four lines that let the player touch one. §239 looked for coins and found props; the actual
+situation is worse and more interesting, because somebody *had* built the pickup layer's
+placement and presentation and stopped one function short of the mechanic.
+
+### §246.1 — the pickpocket payout is fake, and it mints money for pressing a key
+
+This was not in the brief and is the most serious thing found. `pickpocket` does work end to end
+on the guard's side: `Moveset.js:1091` emits it, `Guard.js:1419` finds the nearest pickpocketable
+guard, `Guard.pickpocket()` latches `looted`, bumps suspicion, plays the reaction, and returns a
+rolled `{coins, item}` — 45-90 for a temple guard, 80-150 for a heavy, 10-25 for a scarab, with
+an item drawn from a per-type table. It then emits all of that as **`guardPickpocket`**.
+
+Three things are wrong with what happens next.
+
+1. **`guardPickpocket` has zero listeners.** Every rolled number and every item name is computed,
+   emitted and discarded. The loot table in `Guard.js` — the one piece of authored economy this
+   game has — has never once reached the player.
+2. **The HUD pays a flat 25 on the raw intent event.** `HUD.js:392` is
+   `on('pickpocket', () => { this.addCoins(25); … })`. That fires on the *player pressing E*, not
+   on a successful steal.
+3. **`Moveset.Pickpocket.canEnter` does not require a guard.** It requires grounded, `interact`
+   pressed, and that nothing else is grabbable. So **standing in an empty courtyard and mashing E
+   pays 25 coins per press**, with a "Pickpocketed" toast, a coin burst and the SFX, while
+   `Guard.js` correctly finds nobody and steals nothing.
+
+The economy is therefore both unbounded and disconnected from the only place it was authored.
+The fix is one line in a file this agent does not own and is **routed, not applied**: `HUD.js:392`
+should subscribe to `guardPickpocket` and credit `p.coins`, rather than subscribe to `pickpocket`
+and credit a constant. `Pickups.js` deliberately does **not** bank `guardPickpocket` itself,
+because doing so while that HUD line stands would double-pay; it only records it for the debug
+overlay. Once HUD moves, that recording should become the credit.
+
+### What shipped
+
+`src/world/Pickups.js`, registered in the MANIFEST after `movement` (update order: it reads the
+position MOVEMENT already advanced this frame; init order: `architecture.api.route` and PROPS'
+spots both exist by then).
+
+**Coins.** A trail derived from `architecture.api.route` — the level's own published waypoint
+list, so the layout follows the temple instead of thirty hand-typed constants — plus the 44 spots
+`Props.js` already authored, adopted rather than duplicated, with its decorative twin hidden.
+123 coins of world income against a heavy's 80-150 pocket.
+
+**The one payload shape.** The three subscribers do not agree on key names and the intersection
+is one key wide: HUD reads `amount ?? value ?? n`, Audio reads `amount ?? count`, FX reads `pos`.
+So the shape is `{ amount, pos }`. The genuine disagreement underneath it is left standing
+because it turns out to be a feature: HUD reads `amount` as *value*, Audio reads it as *how many
+chimes to play, capped at 6*. The denominations are chosen to make both readings true at once — a
+single coin is worth 1 and chimes once, a stack 3, a pile 5, and a treasure chimes the full six.
+Audio's cap stops being a clamp and becomes a flourish.
+
+**`pos` is freshly allocated per event, on purpose.** `Audio._onCoins` forwards it into
+`play(…, { delay: i * 0.065 })` — a *scheduled* read. A shared scratch vector would be overwritten
+before the sound that references it is built. This is §237's `_emit`/`_v1` aliasing trap one file
+over, and one Vector3 per collection buys immunity to the whole class.
+
+**Magnetism**, all constants derived from `Controller.TUNE` rather than chosen: collect radius
+= capsule + coin = 0.50 m (a contact test), magnet radius = `pickRange` 2.40 m (a coin magnet and
+a pocket reach are the same gesture at different scale), rim speed = `walkSpeed`, peak = 2×
+`runSpeed`. Measured against the capsule's *centre*, not `movement.position`'s base.
+
+**Treasure is carried, not banked.** Three hand-placed pieces on three different routes. Picking
+one up credits nothing; it must be carried to a fence beside spawn, and only arriving there fires
+the `coin` event — the payoff beat lands where the loot actually becomes yours. Being driven to
+CHASE while carrying drops it back into the world where you were caught. This level has no safe
+house, but the series' real tension was always that the return leg is harder than the approach,
+and the way in is a fence that costs no new geometry. The ingot is 104 m from it.
+
+### §246.2 — two defects the gates caught in this agent's own work
+
+Recorded because both are the kind that ship silently.
+
+**The magnet was not frame-rate independent.** Registered gate P5 (< 0.02 m of divergence over
+0.30 s between dt = 1/30 and dt = 1/240) measured **0.0291 m** and failed. The pull speed varies
+steeply with distance, so `pos += v(d) · dt` at the caller's frame rate has a 30 Hz frame
+overshooting the curve a 240 Hz frame follows. The gate was right and the integrator was wrong;
+sub-stepping on a fixed 1/240 grid takes the divergence to **exactly 0.000 m at 20, 30, 60 and
+240 Hz**. The threshold was not touched.
+
+**The purse sync reproduced §223.3 and was caught by knowing about §223.3.** The initial
+`coins` emit sat in `init()`. MANIFEST registers `pickups` before `hud`, `initModules` inits in
+registration order, and HUD installs its listeners inside its own `init()` — so the event would
+have landed in an empty listener set and vanished. It is invisible today only because the purse
+starts at 0 and so does the HUD counter. Deferred to the first `update()`, and pinned by a test
+whose listener deliberately subscribes *after* init.
+
+### What was proved offline, and how the instruments were checked
+
+`tests/pickups.test.mjs`, 32 tests, no renderer and no lock. Thresholds registered before the
+implementation existed; two hand-integrated predictions (settle 0.45 s, capture speed 9.99 m/s)
+came out at 0.4542 s and 9.9955 m/s.
+
+The load-bearing test is not about magnetism. It **extracts the three subscribers' reader
+expressions from their own source files at test time** and evaluates them against a real emitted
+event. Nothing hard-codes `amount` or `pos`; if HUD renames a key, the extracted expression
+changes with it and the test fails. That is the alarm §239 never had — and the same scrape,
+generalised to "every event name subscribed to in `src/` is emitted somewhere in `src/`", would
+have caught the original defect on the day the first listener was written.
+
+**The calibration arm** feeds those same extracted expressions a plausible-but-wrong payload
+(`{ coins: 7, position: v }`) and requires every one of them to *reject* it. If the decoy passes,
+the extractor is reading nothing and the positive result proves nothing.
+
+**And the arm found a real hole in its own suite.** The live end-to-end test originally collected
+`coins[0]` — worth 1. Audio's fallback when it recognises no key is *also* 1. So a payload that
+had lost `amount` entirely read as correct, and a mutation renaming the emitted key sailed
+through. It now collects a stack worth 3. **An assertion whose expected value equals the failure
+mode's default value is not an assertion**, and only mutation-testing surfaced it: five further
+mutations (drop `pos`, remove the one-shot latch, credit treasure on pickup, widen the magnet to
+6 m, disable sub-stepping) are each caught by exactly the gate that should catch them.
+
+### Unresolved
+
+- **§246.1 needs the one-line HUD change**, and until it lands the loot table stays disconnected
+  and the E-mash exploit stays open. Routed to the UI owner.
+- **`Props.js` should drop `_collectibles()`** and let this module own placement. Adoption
+  currently reads `props._collect[0].spots`, a private field, and hides a mesh by name — pinned
+  by a test so it fails loudly rather than silently dropping 44 coins, but it is a reach across an
+  ownership line and wants deleting from the other side. Routed to the PROPS owner.
+- **`prompt` is a trap for anyone driving the HUD from a world module.** `HUD.js:383` sets
+  `_sawPrompt` on the first `prompt` event and *permanently* retires its own affordance-detection
+  fallback. A module that emits one `prompt` to say "press E to fence this" would silently kill
+  every contextual verb in the game. This module uses `toast` only. Worth a comment at the HUD
+  call site.
+- **World coins are worth 123 against a single treasure's 180-320 and a heavy's 80-150 pocket.**
+  That ratio is deliberate and Sly-accurate — pickpocketing is the income, coins are the
+  breadcrumb and the juice — but nobody has played it, and the guard loot table is not this
+  agent's to rebalance.
+- Nothing here has been seen in a frame. The capture lock was contended and none was taken;
+  every claim above is arithmetic or a plain-Node assertion, and the visual questions — whether a
+  0.16 m coin reads at courtyard distance, whether the treasure silhouettes carry across a room —
+  are open.

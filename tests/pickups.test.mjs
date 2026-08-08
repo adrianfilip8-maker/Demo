@@ -668,6 +668,36 @@ test('being driven to CHASE while carrying drops the treasure back into the worl
     'the treasure did not land where the player was caught');
 });
 
+test('§223.3 — the purse sync reaches a listener that registers AFTER this module', async () => {
+  /* MANIFEST puts `pickups` before `hud`, and HUD installs its listeners inside its own init().
+     An emit from init() would land in an empty set and vanish — §223.3's exact failure. So the
+     sync must arrive on the first frame, by which time every module has initialised. */
+  const { engine, pk } = await bootPickups();
+  assert.equal(engine.log.filter((e) => e.evt === 'coins').length, 0,
+    'the purse sync fired during init(), before a later-registered HUD could hear it');
+
+  const heard = [];
+  engine.on('coins', (n) => heard.push(n));      // a listener that subscribed after init
+  engine.get = () => null;
+  pk.update(1 / 60, 0);
+  assert.deepEqual(heard, [0], 'the deferred purse sync never arrived');
+
+  pk.update(1 / 60, 1 / 60);
+  assert.equal(heard.length, 1, 'the purse sync repeats every frame');
+});
+
+test('the MANIFEST registers pickups after movement and before hud', () => {
+  const src = SRC('src/main.js');
+  const order = [...src.matchAll(/\['(\w+)',\s+[.'\w/]+,/g)].map((m) => m[1]);
+  const at = (k) => order.indexOf(k);
+  assert.ok(at('pickups') > 0, 'pickups is not in the MANIFEST — the module would never load');
+  assert.ok(at('pickups') > at('movement'),
+    'pickups must update after movement or it reads last frame\'s player position');
+  assert.ok(at('pickups') > at('architecture'),
+    'pickups must init after architecture or api.route is empty');
+  assert.ok(at('pickups') > at('props'), 'pickups must init after props or there is nothing to adopt');
+});
+
 test('the guard STATE string this keys off is the one src/ai actually ships', () => {
   const src = SRC('src/ai/Patrol.js');
   const m = src.match(/CHASE:\s*'([a-z]+)'/);

@@ -321,10 +321,8 @@ export class Pickups {
     this._author();
     this._build();
     this._wire();
-    /* Sync the HUD to the starting purse through the absolute channel it already owns. It had
-       no emitter either — `HUD.js:390 on('coins', ...)` was the second dead listener in the
-       same file. */
-    this._emit('coins', this.wallet.coins);
+    /* The purse sync is DEFERRED to the first update() on purpose — see `_synced` below. */
+    this._synced = false;
   }
 
   /** Decide where everything is. Kept separate from `_build` so placement is testable. */
@@ -483,6 +481,19 @@ export class Pickups {
   /* --------------------------------------------------------------------- */
 
   update(dt, t) {
+    /**
+     * Sync the HUD to the starting purse, on the first frame rather than in init().
+     *
+     * `HUD.js:390 on('coins', ...)` is the absolute-set channel, and it was the SECOND dead
+     * listener in that file — nothing emitted `coins` either. But emitting it from init() would
+     * have reproduced §223.3 exactly: MANIFEST registers `pickups` before `hud`, `initModules`
+     * inits in registration order, and HUD installs its listeners in its own `init()` — so the
+     * event would have landed in an empty listener set and vanished. It is invisible today only
+     * because the purse starts at 0 and so does the HUD. By the first update() every module has
+     * initialised, which is the same reasoning `Engine._flushColliders` already uses.
+     */
+    if (!this._synced) { this._synced = true; this._emit('coins', this.wallet.coins); }
+
     if (!(dt > 0)) { this._writeCoinMatrices(t || 0); return; }
     const mv = this.engine.get?.('movement');
     if (mv?.position) this._playerPos.copy(mv.position);
