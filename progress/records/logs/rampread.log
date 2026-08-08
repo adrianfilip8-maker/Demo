@@ -1,4 +1,4 @@
-[67s] boot ok — warnings 2
-[67s] api: debugTerm true  debugRaw true
-[68s]   preroll1
-[88s]   preroll2
+[74s] boot ok — warnings 3
+[74s] api: debugTerm true  debugRaw true
+[75s]   preroll1
+[104s]   preroll2
