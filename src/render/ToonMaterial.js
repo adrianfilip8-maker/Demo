@@ -526,6 +526,33 @@ export const TUNE = {
      whole frame's midtones, not one material's mask. */
   aoKey: 0.0,
 
+  /* How much of the three-band ramp the SHADE side carries. See slyShadeForm in toon.glsl.js
+     for the derivation; the short version is that `key = ramp * sh`, so on a cast-shadowed
+     surface the cel quantiser is multiplied by zero and every term left standing is constant in
+     the normal's azimuth. Measured, offline, on the shipped captures:
+
+       temple      1.57% of architecture px are key-lit (roofed hall)  -> no ramp anywhere
+       courtyard  31.8% lit;  terminator step +21.8 / +24.8 luma, 12.3x / 25.1x its own control
+       hero       18.4% lit;  terminator step +23.1 luma, 10.1x control
+
+     i.e. the ramp was never soft — it was absent over the shots the critic scores worst. The
+     nave column in `temple` sweeps N.L -0.367..0.865 through BOTH terminators and renders
+     17.7 luma of purely continuous range (gapFrac 0.0795 against an ideal-Lambert control of
+     0.0784 — progress/records/celcyl.mjs).
+
+     0 = bit-identical legacy, exactly (the shader spells it `1 - uShadeBand*(1-ramp)`, never
+     mix(), so the default multiplies out to a literal 1.0 on any driver). Nothing republishes
+     the uniform per frame, so `shading.uniforms.uShadeBand.value` is a sticky one-boot A/B —
+     unlike uRimGain, whose trap is documented at TUNE.rimGain.
+
+     SHIPS AT 0 UNTIL THE SWEEP LANDS. The ship rule is registered in
+     progress/records/PREREG-celband.md §9 and is not a number chosen here: it is the SMALLEST
+     value on the pre-registered sweep {0.15, 0.30, 0.45, 0.60} that carries `temple`'s nave
+     column across the criterion, with the verdict holding on all nine null rows and the
+     `courtyard` guard not regressing beyond its own null. Landing it here before the capture
+     would be authoring the answer, which is what §141.1 exists to stop. */
+  shadeBand: 0.0,
+
   /* Shadow-side rim floor for NON-skinned geometry. The shader's `mix( 0.55, 1.0, sh )` keeps
      55% of the rim where the key is fully shadowed; that floor is what carries `night`'s
      silhouette rims, and it is also the one term behind the bright-cool band still standing on
@@ -774,6 +801,10 @@ export class Shading {
       uRimMagExempt: { value: TUNE.rimMagExempt },
       uRimShadowFloorArch: { value: TUNE.rimShadowFloorArch },
       uAoKey:        { value: TUNE.aoKey },
+      /* Shared by identity, and never republished per frame — so a poke of
+         `shading.uniforms.uShadeBand.value` reaches the whole scene and STICKS across
+         `__GAME.step()`. See TUNE.shadeBand and slyShadeForm in toon.glsl.js. */
+      uShadeBand:    { value: TUNE.shadeBand },
       /* Shared, not per-material: it is one global ratio and it has to be pokeable from
          `shading.uniforms` for the A/B. Merged into every material by identity in
          onBeforeCompile, alongside the per-material uDetailScale it multiplies. */

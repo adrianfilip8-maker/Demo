@@ -146,7 +146,113 @@ Two things worth reading off this table before any subject number exists:
   control harder to beat, which is the direction that costs the fix, not the direction that
   flatters it.
 
-## 8. If the verdict is "DOES NOT BAND"
+## 8. VERDICT OF THE SUBJECT RUN (recorded here because §9 depends on it)
+
+All three MUST-FIRE assertions passed. `min(λ=0) 0.1513 > max(λ=1) 0.1346`; `G(0) 0.2263 >
+G(0.5) 0.1382 > G(1) 0.0784`; all nine rows agree.
+
+```
+noise/range ratio       0.0671   (envelope breaks down at 0.08 — inside the envelope, narrowly)
+decision point G(0.5)   0.1382
+subject gapFrac         0.0795   lambda_hat 0.851
+VERDICT                 DOES NOT BAND        (all nine rows, lambda_hat 0.579 .. 1.000)
+```
+
+The subject sits on top of the NEGATIVE control's median (0.0784). On the surface with the most
+terminator crossings in the frame, the shading is indistinguishable from ideal smooth Lambert.
+
+### Why — and this is not what the defect statement assumed
+
+`tools/bandprobe.mjs`, an independent offline instrument that rasterises the real architecture and
+its own ortho shadow map, was run on three shipped captures:
+
+| shot | architecture px | key-lit | step at T=0.14 | its own control | ratio |
+|---|---|---|---|---|---|
+| temple | 905878 | **14230 (1.57%)** | +6.8 | −7.9 | 0.86× |
+| hero | 836843 | 153879 (18.4%) | +23.1 | −2.3 | **10.11×** |
+| courtyard | 632704 | 201291 (31.8%) | +21.8 | −1.8 | **12.25×** |
+| courtyard T=0.52 | | | +24.8 | −1.0 | **25.07×** |
+
+**Where the key reaches, the ramp bands hard, and always did.** `slyRamp` is not soft. What fails
+is everything the key does *not* reach: `key = ramp * sh`, so on a cast-shadowed surface the cel
+quantiser is multiplied by zero. `temple` is a roofed hypostyle hall and 97.5% of its architecture
+is in exactly that state.
+
+And on such a surface nothing else varies with the normal either. Reading the shader: `fill`
+depends only on `hemi = smoothstep(-0.72, 0.55, Nw.y)`; `albAmb`, the shadow multiply and the wash
+all depend only on `shadowMix = 1 − key`, which is the constant 1 when key = 0; `spec` is gated by
+`sh` and by `step(0.02, ndl)`; `sss` is gated by `sh`. A shadowed vertical column is ONE FLAT TONE
+and the only thing moving across it is the fresnel rim — which is the ~50 px ripple visible in the
+subject profile, at the ribs' own half-period.
+
+So the correct reading of the critic's complaint is **not** "the ramp is too soft". It is: *the
+shade side of the model has no normal-dependent structure at all.*
+
+## 9. THE FIX AND ITS SHIP RULE — registered before the capture
+
+`uShadeBand` / `TUNE.shadeBand`, `src/render/shaders/toon.glsl.js` + `src/render/ToonMaterial.js`:
+
+```glsl
+float shadeForm = 1.0 - uShadeBand * ( 1.0 - ramp );
+diff = alb*keyRad*key*mix(1,ao,uAoKey)
+     + ( albAmb*slyFillX*ao
+       + albShadow*slyShadX*shadowMix*mix(0.55,1,ao)
+       + slyShadX*uShadowWash*shadowMix*ao ) * shadeForm;
+```
+
+`ramp` is the *already computed* `slyRamp(ndl, uBands)`. Reusing it rather than authoring a second
+set of thresholds is deliberate: the shade-side bands then line up **across** a cast-shadow
+boundary instead of fighting it. The term only ever darkens (≤ 1, floor `1 − uShadeBand`), so it
+cannot blow out a shade tone, and it is one scalar on all three shade-side terms alike — it moves
+shade **luminance** and cannot move shade **hue**, so the violet/teal balance of §115/§16/§19 is
+arithmetically untouched. `uShadeBand = 0` is bit-identical, exactly and driver-independently,
+because `1.0 − 0.0·x` is `1.0`; it is spelled that way rather than as `mix()` for that reason.
+
+### Sweep and arms — one boot, `progress/records/celband.mjs`
+
+Capture order per shot: `base-a` (0) → `sb15` → `sb30` → `sb45` → `sb60` → `base-b` (0).
+The two base arms bracket the whole sweep, so their difference is the drift floor for the run.
+Shots: **temple** (subject) and **courtyard** (guard — the shot where the ramp already works).
+
+### SHIP RULE
+
+Ship the **smallest** `v ∈ {0.15, 0.30, 0.45, 0.60}` satisfying **all** of:
+
+* **(A)** `celcyl` on `shots/celband/temple-sb<v>.png` returns **BANDS** at dy = 0 *and* on all
+  nine null rows, with MUST-FIRE 1 and 2 passing.
+* **(B)** the move clears the drift floor:
+  `gapFrac(sb<v>) − gapFrac(base-a) > |gapFrac(base-b) − gapFrac(base-a)|`.
+* **(C)** guard: on `courtyard`, `bandprobe`'s pooled lit-architecture step/control ratio at
+  T = 0.14 for `sb<v>` is not below `base-a`'s by more than the `base-a`↔`base-b` null difference
+  of that same statistic.
+
+If **no** swept value satisfies all three, **nothing ships**. The run is reported as a failure to
+reach the criterion — not re-swept with new values, and not re-scored against a moved threshold.
+
+### VOID CONDITIONS
+
+* **V1 — NULL.** If `base-a` vs `base-b` differ by as much as the candidates do, the instrument
+  cannot see the change through the drift. VOID.
+* **V2 — LEVER.** If `sb60` does not differ from `base-a` by more than the null on the celcyl
+  statistic, the knob is dead and this is §210.2 repeating. VOID. (The harness additionally reads
+  `uShadeBand` back *after* the step and the render, and throws if the poke did not survive —
+  the `uRimGain` trap.)
+* **V3.** Any arm on which celcyl's MUST-FIRE 1 or 2 fails is VOID for that arm.
+
+### Frames get looked at
+
+§3's lesson — "the number was right and the frame was wrong" — applies. The shipped arm's frames
+are opened, not just measured.
+
+### Known contamination, stated up front
+
+The working tree carries another agent's uncommitted texture work (`src/textures/Canvas2D.js`,
+`Materials.js`), and `tests/textures.test.mjs`'s cache-staleness guard is red because of it —
+verified by stashing only my two files and re-running, where it fails identically. Every arm here
+is captured in ONE boot off that same tree, so the **within-boot A/B is sound**; what is not
+claimed is that `base-a` reproduces `shots/r8/temple.png` byte-for-byte.
+
+## 10. If the verdict is "DOES NOT BAND"
 
 The fix is made in `src/render/ToonMaterial.js` / `src/render/shaders/*` only, and is proved with
 the same instrument on a fresh capture, plus a **two-boot null arm** (§220): the drift floor

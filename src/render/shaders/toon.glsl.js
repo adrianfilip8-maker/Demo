@@ -221,6 +221,10 @@ uniform float uRimSkinExempt; // 1 = skinned geometry skips the convexity half o
 uniform float uRimMagExempt;  // 1 = skinned geometry skips the MAGNITUDE half — see rimSil
 uniform float uRimShadowFloorArch; // shadow-side rim floor for NON-skinned geometry; 0.55 = no-op
 uniform float uAoKey;         // 0 = key light ignores AO (shipping); 1 = key is multiplied by it
+uniform float uShadeBand;     // banded form on the SHADE side — see slyShadeForm in TOON_SHADE.
+                              // 0 = bit-identical legacy, and exactly so: the term is spelled
+                              // 1 - uShadeBand*(1-ramp), never mix(), so 0 multiplies out to a
+                              // literal 1.0 without depending on how a driver spells mix().
 varying float vSlySkin;       // 1.0 on a SkinnedMesh, 0.0 otherwise — see the note at slyConvex
 uniform float uSpec;
 uniform vec3  uSpecColor;
@@ -541,10 +545,58 @@ export const TOON_SHADE = /* glsl */ `
 		slyFillX = mix( slyFillX, slyWarmT * slyLum( slyFillX ), slySubjT );
 		slyShadX = mix( slyShadX, slyWarmT * slyLum( slyShadX ), slySubjT );
 
+		/* ── slyShadeForm — the shade side gets the SAME three bands as the key. ───────────
+		 *
+		 * The note at slyShadowBand above says the diffuse ramp "is not the reason" §7.3 fails
+		 * and blames flat geometry. Half right, and the half it got wrong is the expensive half.
+		 * Measured on the shipped temple capture with tools/bandprobe.mjs, which rasterises
+		 * the real architecture and its own ortho shadow map offline:
+		 *
+		 *     temple     architecture px 905878   lit 14230 (1.57%)   shadow 883435 (97.5%)
+		 *     courtyard  lit 201291 (31.8%)   step at T=0.14 +21.8 luma, control -1.8  -> 12.3x
+		 *                                     step at T=0.52 +24.8 luma, control -1.0  -> 25.1x
+		 *     hero       lit 153879 (18.4%)   step at T=0.14 +23.1 luma, control -2.3  -> 10.1x
+		 *
+		 * So where the key reaches, the ramp bands hard and always did. What fails is everything
+		 * the key does NOT reach — and key = ramp * sh, so on a cast-shadowed surface the ramp
+		 * is multiplied by zero and the quantiser never runs. temple is a roofed hypostyle
+		 * hall: 97.5% of its architecture is in that state, which is why it is the shot the
+		 * critic keeps scoring as unbanded.
+		 *
+		 * Now look at what is left on such a surface. Every remaining diffuse term is a function
+		 * of hemi = smoothstep(-0.72, 0.55, Nw.y) and of shadowMix = 1 - key, and with key 0
+		 * BOTH are constant in the normal's azimuth. spec is gated by sh and by
+		 * step(0.02, ndl); sss is gated by sh. A shadowed vertical column therefore renders
+		 * as ONE FLAT TONE, and the only thing that varies across it is the fresnel rim. That is
+		 * measured too, on the real nave column at 11.3 m through the shipped camera
+		 * (progress/records/celcyl.mjs): its lit face spans N.L -0.367..0.865 — the full sweep,
+		 * both terminators, four crossings — and delivers 17.7 luma of range, all of it
+		 * continuous, at gapFrac 0.0795 against an ideal-smooth-Lambert control of 0.0784.
+		 * Indistinguishable from Lambert, on the surface with the most terminator crossings in
+		 * the frame.
+		 *
+		 * This term is the missing half. ramp already carries the three-band quantisation of
+		 * N.L; the shade-side lights simply never consulted it. Multiplying them by it puts the
+		 * same plateaus, at the same terminators, on surfaces the sun does not reach — which is
+		 * also why it uses ramp rather than a second set of thresholds: the bands then line up
+		 * ACROSS a cast-shadow boundary instead of fighting it.
+		 *
+		 * It only ever DARKENS (shadeForm <= 1, minimum 1 - uShadeBand at ramp 0), so it cannot
+		 * blow out a shade tone and it moves critic pass 3's "unlit <= 45% of lit" the helpful
+		 * way rather than the other one. It is a single scalar applied to all three shade-side
+		 * terms EQUALLY, so it changes shade luminance and cannot change shade hue — the
+		 * violet/teal balance LIGHTING and TEXTURES spent §115/§16/§19 on is arithmetically
+		 * untouched.
+		 *
+		 * uShadeBand 0 is bit-identical: 1.0 - 0.0 * x is 1.0 exactly, for any finite x, on any
+		 * driver. Nothing republishes this uniform per frame, so unlike uRimGain a poke of
+		 * shading.uniforms.uShadeBand.value sticks and the A/B is one boot. */
+		float shadeForm = 1.0 - uShadeBand * ( 1.0 - ramp );
+
 		vec3 diff = alb * keyRad * key * mix( 1.0, ao, uAoKey )
-		          + albAmb * slyFillX * ao
-		          + albShadow * slyShadX * shadowMix * mix( 0.55, 1.0, ao )
-		          + slyShadX * uShadowWash * shadowMix * ao;
+		          + ( albAmb * slyFillX * ao
+		            + albShadow * slyShadX * shadowMix * mix( 0.55, 1.0, ao )
+		            + slyShadX * uShadowWash * shadowMix * ao ) * shadeForm;
 
 		/* uMetal is the art-directed metal *amount*; the ORM texture's blue channel is the
 		   mask that says where on the surface it applies — the gilding on a hieroglyph, the
