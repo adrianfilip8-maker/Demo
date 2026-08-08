@@ -417,9 +417,13 @@ async function main() {
     for (const res of RES) for (const shot of SHOTS) {
       const files = {};
       let ok = true;
-      for (const a of ARMS) {
+      /* `fxaa` and the two legacy arms are optional so the analyser can read BOTH runs: the first
+         baseline predates the legacy arms and the candidate dropped `fxaa`. Everything the
+         calibrations need is required. */
+      const OPTIONAL = new Set(['fxaa', 'legacy', 'legacy_nohull']);
+      for (const a of [...ARMS, 'fxaa']) {
         const f = path.join(dir, `${res.w}x${res.h}-${shot}-${a}.png`);
-        if (!existsSync(f)) { ok = false; break; }
+        if (!existsSync(f)) { if (!OPTIONAL.has(a)) { ok = false; break; } continue; }
         files[a] = f;
       }
       if (ok) out.push({ res, shot, files, calibMats: null });
