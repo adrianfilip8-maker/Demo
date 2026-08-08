@@ -1,1 +1,5 @@
 · review set "r7" at 1280x720 q=high
+  ✓ hero          draws  238  tris 1844k
+  ✓ kaykit        draws  218  tris 1817k
+  ✓ temple        draws  217  tris 1816k
+  ✓ sly-closeup   draws  241  tris 1769k
