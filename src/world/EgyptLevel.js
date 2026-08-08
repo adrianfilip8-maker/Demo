@@ -530,12 +530,14 @@ function courtyard(A) {
   ledgeProxy(A, -2.5, 2.5, t2.y + 1.1, ob.z - 2.5, ob.z + 2.5);
   spirePoint(A, ob.x, ob.h, ob.z);       // pyramidion tip: a Ninja Spire Landing target
   /* The clearest case in the level, and the numbers are not close. `PoleClimb`'s top hop is
-     the only way off this shaft that goes upward: it fires at `jumpV0 × 0.55` = 6.05 m/s, a
-     rise of 0.763 m from the pole top at 20.4 — which **peaks 0.82 m under the 22 m tip**.
-     The Ninja Spire Landing this file names in its own route comment is not reachable by the
-     move that leads to it. Scanned over the whole top-hop envelope with no double jump, the
-     best line misses by **0.830 m**, and the derived default catch is 1.008: magnetism closes
-     exactly this gap and nothing wider. Spend the double jump and it lands outright. */
+     the only way off this shaft that goes upward: it fires at `jumpV0 × 0.55` = 6.05 m/s from
+     the pole top at 20.4, and apex hang trims that to a 0.67 m rise — it **peaks at y 21.07,
+     0.93 m under the 22 m tip**. The Ninja Spire Landing this file names in its own route
+     comment is not reachable by the move that leads to it; the beat is hop + double jump, and
+     the error is the double jump's timing. Measured through the shipped controller
+     (`tests/level.test.mjs` §5): 6 of 9 timings land the tip with magnetism, 1 without it, and
+     the bare hop — which misses by 1.090 m against a catch of 1.008 — is deliberately NOT
+     rescued. The assist forgives the timing of the move; it does not replace the move. */
   spireTarget(A, 'spire-obelisk', ob.x, ob.h, ob.z);
 
   /* ---- Barque kiosk around the obelisk. Its lintel ring at y 9.0 is the `hero` perch. ---- */
@@ -1476,10 +1478,13 @@ function hypostyleHall(A) {
     A.add('hall', 'granite_pink', K.place(K.obelisk({ h: 7.5, base: 1.5, rng: R }), { x: sx * 16, y: DECK, z: -50, ry: D(R.jitter(1.5)) }));
     poleProxy(A, sx * 16, -50, DECK, DECK + 6.0, 0.85);
     spirePoint(A, sx * 16, 21, -50);
-    /* Same geometry as the obelisk and the same argument: the pole ends at 19.5, the top hop
-       peaks 0.72 m under the 21 m tip (best line 0.730 m, catch 1.008), and the surface that
-       catches a miss is the aisle roof 7.5 m below. This is the rooftop run's own beat (§8.1:
-       "SPIRE LAND the east pinnacle tip (16, 21, −50)"). */
+    /* Same geometry as the obelisk and the same argument: the pole ends at 19.5 and the top hop
+       peaks 0.83 m under the 21 m tip. These two are the narrower shaft (r 0.85 against the
+       obelisk's 1.5), so the bare hop lands 0.853 m out — just *inside* catch 1.008, where the
+       obelisk's 1.090 m is just outside. That 0.24 m of pole radius is the whole difference,
+       and it is why the catch is derived rather than fitted: a number chosen to make the
+       obelisk work would have made these two an aimbot. The surface that catches a miss here
+       is the aisle roof 7.5 m below. §8.1: "SPIRE LAND the east pinnacle tip (16, 21, −50)". */
     spireTarget(A, `spire-pinnacle-${sx > 0 ? 'e' : 'w'}`, sx * 16, 21, -50);
   }
 }
