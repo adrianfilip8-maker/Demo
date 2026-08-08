@@ -14,7 +14,7 @@
  * before a single pixel is read.
  *
  * ═════════════════════════════════════════════════════════════════════════════════════════
- * §227 — WHY THE FIRST RUN OF THIS FILE WAS VOID, AND WHAT REPLACED ITS CRITERION
+ * §228 — WHY THE FIRST RUN OF THIS FILE WAS VOID, AND WHAT REPLACED ITS CRITERION
  * ═════════════════════════════════════════════════════════════════════════════════════════
  * The first criterion was `plateaus >= 2 && maxStep > 20` for the positive control. It FAILED:
  *
@@ -398,13 +398,33 @@ function ndlAt(fg, spinPhase) {
   return fg.samples.map((s) => shaftNormal(s.theta, s.yLocal, spinPhase).dot(L));
 }
 
+/**
+ * `--predict=b` — a FORECAST, not a measurement, and it is labelled as one everywhere it prints.
+ *
+ * Multiplies the captured profile by the shade-side band term `1 - b*(1 - slyRamp(N.L))` that
+ * `TUNE.shadeBand` introduces, so the criterion can be scored against a *simulated* fix before a
+ * capture exists. Its two known biases both point the same way and are stated so the forecast is
+ * falsifiable rather than elastic:
+ *
+ *   - it applies the multiply in DISPLAY luma, where the shader applies it in scene-linear
+ *     before a compressive tone curve, so the real change will be SMALLER;
+ *   - it multiplies the WHOLE pixel, where the shader multiplies only the three shade-side
+ *     terms, so on any pixel carrying rim or spec the real change is again SMALLER.
+ *
+ * So this is an UPPER BOUND on what `shadeBand = b` can buy. A value that fails here cannot
+ * succeed in frame.
+ */
+const PREDICT = Number(argv.predict || 0);
+
 function readProfile(png, fg, dy = 0) {
   const prof = [];
   const row = fg.row + dy;
   const dx = Math.round((fg.shear || 0) * dy);
-  for (let x = fg.x0; x <= fg.x1; x++) {
+  for (let i = 0, x = fg.x0; x <= fg.x1; x++, i++) {
     const o = (row * png.width + (x + dx)) * 4;
-    prof.push(LUMA(png.data[o], png.data[o + 1], png.data[o + 2]));
+    let v = LUMA(png.data[o], png.data[o + 1], png.data[o + 2]);
+    if (PREDICT) v *= 1 - PREDICT * (1 - slyRamp(fg.samples[i].ndl));
+    prof.push(v);
   }
   return prof;
 }
@@ -488,7 +508,7 @@ function describeFace(fg) {
   const soft = nl.filter((v) => Math.abs(v - TUNE.termLo) < TUNE.termSoft || Math.abs(v - TUNE.termHi) < TUNE.termSoft).length;
   console.log(`  px inside a +-termSoft window: ${soft} of ${nl.length} (${(100 * soft / nl.length).toFixed(1)}%)`
     + `  -> a perfectly banded face still spends that many px in transition, which is why maxStep`
-    + ` cannot be the statistic (§227)`);
+    + ` cannot be the statistic (§228)`);
   return { cross };
 }
 
@@ -563,6 +583,12 @@ if (ARM === 'envelope') { console.log(''); process.exit(failed ? 2 : 0); }
 
 const { png } = loadPNG(PNGPATH);
 if (png.width !== W || png.height !== H) console.log(`\n  !! png is ${png.width}x${png.height}, camera built for ${W}x${H}`);
+if (PREDICT) {
+  console.log(`\n  !! FORECAST MODE --predict=${PREDICT}: the profile below is the CAPTURED frame multiplied by`);
+  console.log(`     the shade-side band term 1 - ${PREDICT}*(1 - slyRamp(N.L)). It is a simulation, and an UPPER`);
+  console.log(`     BOUND — display-space instead of scene-linear-before-tonemap, and whole-pixel instead of`);
+  console.log(`     shade-terms-only. Nothing here is a measurement of a rendered frame.`);
+}
 
 /* ── The two nuisance scales, taken from the capture and applied to BOTH arms alike. ────── */
 banner('NUISANCE SCALES — measured from the capture, fed identically to both control arms');
@@ -630,7 +656,7 @@ if (ARM === 'all' || ARM === 'subject') {
   verdict = gf.frac > AH.med;
   console.log(`\n  VERDICT (dy=0): gapFrac ${gf.frac.toFixed(4)} vs decision point ${AH.med.toFixed(4)}  ->  `
     + `${verdict ? 'BANDS' : 'DOES NOT BAND'}`);
-  console.log(`\n  descriptive only, never a criterion (§227): mean ${m.mean.toFixed(1)}  sd ${m.sd.toFixed(2)}  `
+  console.log(`\n  descriptive only, never a criterion (§228): mean ${m.mean.toFixed(1)}  sd ${m.sd.toFixed(2)}  `
     + `maxStep ${m.maxStep.toFixed(2)}  plateaus(eps=2.0) ${m.plateaus.length}`);
   for (const p of m.plateaus.slice(0, 8)) {
     console.log(`      plateau px ${fg.x0 + p.i0}..${fg.x0 + p.i1}  len ${p.len}  level ${p.level.toFixed(1)}`);

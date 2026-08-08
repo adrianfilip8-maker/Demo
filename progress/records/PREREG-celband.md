@@ -252,7 +252,39 @@ verified by stashing only my two files and re-running, where it fails identicall
 is captured in ONE boot off that same tree, so the **within-boot A/B is sound**; what is not
 claimed is that `base-a` reproduces `shots/r8/temple.png` byte-for-byte.
 
-## 10. If the verdict is "DOES NOT BAND"
+## 10. FORECAST — registered while the capture was still queued behind another agent's lock
+
+`celcyl --predict=b` multiplies the *existing* `shots/r8/temple.png` profile by the shade-side
+term `1 − b·(1 − slyRamp(N·L))` and scores the criterion against that simulation. It is an
+**upper bound** on what `shadeBand = b` can buy, and both of its biases point the same way:
+
+* it multiplies in **display** luma, where the shader multiplies in scene-linear *before* a
+  compressive tone curve → the real change is smaller;
+* it multiplies the **whole pixel**, where the shader multiplies only the three shade-side terms
+  → on any pixel carrying rim or spec the real change is smaller again.
+
+| b | predicted gapFrac | decision point | λ̂ | forecast verdict | margin |
+|---|---|---|---|---|---|
+| 0.15 | 0.1496 | 0.2172 | 0.706 | DOES NOT BAND | −0.0676 |
+| 0.30 | 0.1287 | 0.2506 | 0.892 | DOES NOT BAND | −0.1219 |
+| 0.45 | 0.2689 | 0.2619 | 0.483 | BANDS | **+0.0070** |
+| 0.60 | 0.3503 | 0.2687 | 0.307 | BANDS | +0.0816 |
+
+**The stated prediction, so it can be wrong: `sb45` fails in frame and `sb60` is the ship — or
+nothing ships.** 0.45 clears its decision point by 0.0070 on a bound that is known to be
+optimistic, and 0.0070 is a fifth of the nine-row noise spread already measured on the base
+(0.0527). A value that only just clears an upper bound is a value that does not clear the real
+thing.
+
+Note the **non-monotonicity**: b = 0.30 scores *below* b = 0.15. That is not noise, it is the
+mechanism. The band step has to beat the continuous ripple it is competing with before the sorted
+profile's gaps consolidate — the fresnel rim puts ~17.7 luma of continuous range across this face,
+and the band step is roughly `83·b/2` luma, so the two cross at b ≈ 0.4. **This fix is a
+threshold, not a dial**, and any value below that crossover buys nothing at all. If the frames
+show a smooth improvement with b instead, this paragraph is wrong and the mechanism needs
+rethinking.
+
+## 11. If the verdict is "DOES NOT BAND"
 
 The fix is made in `src/render/ToonMaterial.js` / `src/render/shaders/*` only, and is proved with
 the same instrument on a fresh capture, plus a **two-boot null arm** (§220): the drift floor
