@@ -103,6 +103,11 @@ const MANIFEST = [
   ['character',    CHARACTER[0],                  CHARACTER[1]],
   ['animation',    './player/Animation.js',       'Animation'],
   ['movement',     './player/Controller.js',      'Controller'],
+  /* Coins, treasure and the fence. AFTER `movement` on purpose, twice over: update order means
+     it reads the player position MOVEMENT has already advanced this frame, and init order means
+     `architecture.api.route` and PROPS' authored spots both exist by the time it authors its
+     placements. Registering it earlier would give it an empty route and no coins. */
+  ['pickups',      './world/Pickups.js',          'Pickups'],
   ['camera',       './player/CameraRig.js',       'CameraRig'],
   ['guards',       './ai/Guard.js',               'Guards'],
   ['fx',           './fx/Particles.js',           'Particles'],
@@ -200,6 +205,7 @@ async function boot() {
     lighting: 'Lighting braziers', terrain: 'Pouring sand', architecture: 'Building the temple',
     props: 'Placing treasures', collision: 'Testing every ledge', character: 'Tailoring a thief',
     animation: 'Teaching Sly to move', movement: 'Calibrating the cane', camera: 'Framing the shot',
+    pickups: 'Scattering the loot',
     guards: 'Posting the guard', fx: 'Stirring dust', audio: 'Tuning the score',
     hud: 'Printing the Binocucom', postfx: 'Grading the film',
   };

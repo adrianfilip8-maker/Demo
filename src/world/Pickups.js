@@ -104,6 +104,19 @@ export const TUNE = {
   /* ---- economy ---- */
   milestone:     100,    // coins between purse toasts — "something reacts when it changes"
   respawnDrop:   0.0,    // a dropped treasure does not decay; it waits where you lost it
+
+  /**
+   * Fixed integration step for the magnet, in seconds.
+   *
+   * The pull speed varies steeply with distance, so a plain `pos += v(d) * dt` at the caller's
+   * frame rate is NOT frame-rate independent: a 30 Hz frame overshoots the curve a 240 Hz frame
+   * follows. Registered gate P5 (< 0.02 m of divergence over 0.30 s) caught it at 0.0291 m —
+   * the gate was right and the integrator was wrong. Sub-stepping on a fixed grid makes the
+   * result depend only on elapsed time, which is what the gate was asserting all along.
+   * 1/240 divides every frame rate the engine can produce (dt is clamped to 1/20 upstream), so
+   * the worst case is 12 sub-steps of arithmetic on a handful of magnetised coins.
+   */
+  subStep:       1 / 240,
 };
 
 /** Denominations. `amount` doubles as Audio's chime count, so these stay small and legible. */
@@ -155,25 +168,35 @@ const _d = new THREE.Vector3();
  */
 export function stepPickup(p, playerPos, dt, tune = TUNE) {
   if (!p || p.taken || !playerPos) return false;
-  /* Against the capsule's CENTRE, not its base — see TUNE.grabHeight. */
-  _d.subVectors(playerPos, p.pos);
-  _d.y += tune.grabHeight;
-  const d = _d.length();
+  let remaining = dt;
+  /* Fixed sub-steps, so the outcome depends on elapsed time and not on the caller's frame rate
+     (P5). The player is treated as stationary within one frame — he already is, from the
+     module's point of view: `movement.position` is sampled once per update(). */
+  let guard = 0;
+  while (remaining > 1e-9 && guard++ < 4096) {
+    const h = Math.min(tune.subStep, remaining);
+    remaining -= h;
 
-  if (d <= tune.collect) { p.taken = true; return true; }
+    /* Against the capsule's CENTRE, not its base — see TUNE.grabHeight. */
+    _d.subVectors(playerPos, p.pos);
+    _d.y += tune.grabHeight;
+    const d = _d.length();
 
-  const v = magnetSpeedAt(d, tune);
-  if (v <= 0) return false;
+    if (d <= tune.collect) { p.taken = true; return true; }
 
-  p.magnet = true;
-  const stepLen = v * dt;
-  if (stepLen >= d - tune.collect) {
-    /* Snap to the grab point so the FX burst goes off at his chest rather than at his ankles. */
-    p.pos.set(playerPos.x, playerPos.y + tune.grabHeight, playerPos.z);
-    p.taken = true;
-    return true;
+    const v = magnetSpeedAt(d, tune);
+    if (v <= 0) return false;      // outside the radius; no later sub-step can change that
+
+    p.magnet = true;
+    const stepLen = v * h;
+    if (stepLen >= d - tune.collect) {
+      /* Snap to the grab point so the FX burst goes off at his chest, not at his ankles. */
+      p.pos.set(playerPos.x, playerPos.y + tune.grabHeight, playerPos.z);
+      p.taken = true;
+      return true;
+    }
+    p.pos.addScaledVector(_d.divideScalar(d), stepLen);
   }
-  p.pos.addScaledVector(_d.divideScalar(d), stepLen);
   return false;
 }
 
@@ -247,9 +270,11 @@ export function authorRouteCoins(route, opts = {}) {
     const n = Math.floor(len / spacing);
     for (let k = 1; k < n; k++) {
       const t = k / n;
-      /* Every fifth coin on a leg is a stack — a small rhythm, so a long leg is not thirty
-         identical beats. The chime count changes with it, which is the point. */
-      const kind = k % 5 === 0 ? 'stack' : 'single';
+      /* A rhythm, so a long leg is not thirty identical beats — and the rhythm is audible,
+         because `amount` is also Audio's chime count. Every fifth coin is a stack, and the last
+         coin before the next waypoint is a pile: you get the bigger chime for ARRIVING, which
+         is the beat the route is trying to teach. */
+      const kind = k === n - 1 ? 'pile' : (k % 5 === 0 ? 'stack' : 'single');
       out.push({
         kind,
         value: COIN_VALUE[kind],

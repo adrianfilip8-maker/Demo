@@ -351,10 +351,45 @@ function fakeEngine(modules = {}) {
   };
 }
 
-const ROUTE = [
-  ['spawn', 0, 0, 30], ['terrace-1', 0, 2, 19], ['terrace-2', 0, 5.2, 14],
-  ['kiosk-lintel', 2.2, 9, 8.4],
-];
+/**
+ * The REAL route, scraped from `EgyptLevel.js`'s own `api.route` literal.
+ *
+ * Not a hand-written fixture: the trail is derived from this data in the shipping game, so a
+ * test that invented its own four waypoints would be measuring a layout nobody plays. Scraping
+ * also means the assertions below run against the level as it actually is, and re-run against it
+ * when the level moves.
+ */
+const ROUTE = (() => {
+  const src = SRC('src/world/EgyptLevel.js');
+  const m = src.match(/api\.route\s*=\s*\[([\s\S]*?)\n\s*\];/);
+  if (!m) throw new Error('could not scrape api.route from EgyptLevel.js');
+  // eslint-disable-next-line no-new-func
+  return new Function(`return [${m[1]}];`)();
+})();
+
+test('the scraped route is the real one (§211.1: non-zero, and shaped like waypoints)', () => {
+  assert.ok(ROUTE.length >= 8, `scraped only ${ROUTE.length} waypoints`);
+  let inspected = 0;
+  for (const w of ROUTE) {
+    assert.equal(typeof w[0], 'string', 'waypoint has no name');
+    for (let i = 1; i <= 3; i++) assert.ok(Number.isFinite(w[i]), `waypoint ${w[0]} has a bad coordinate`);
+    inspected++;
+  }
+  assert.equal(inspected, ROUTE.length);
+  assert.equal(ROUTE[0][0], 'spawn');
+});
+
+/** The exact number of coins `authorRouteCoins` must produce for a route — derived, not observed. */
+function expectedTrailCount(route, spacing = 2.6) {
+  let total = 0;
+  for (let i = 0; i < route.length - 1; i++) {
+    const a = route[i], b = route[i + 1];
+    const len = Math.hypot(b[1] - a[1], b[2] - a[2], b[3] - a[3]);
+    if (!(len > spacing)) continue;
+    total += Math.max(0, Math.floor(len / spacing) - 1);
+  }
+  return total;
+}
 
 async function bootPickups(extra = {}) {
   const engine = fakeEngine({ architecture: { api: { route: ROUTE } }, ...extra });
@@ -365,27 +400,110 @@ async function bootPickups(extra = {}) {
 
 test('the module places coins along the level\'s own authored route', async () => {
   const { pk } = await bootPickups();
-  assert.ok(pk.coins.length > 10, `only ${pk.coins.length} coins placed`);
+  const expected = expectedTrailCount(ROUTE);
+  assert.ok(expected > 20, `the real route only supports ${expected} coins; the trail would be sparse`);
+  assert.equal(pk.coins.length, expected,
+    `placed ${pk.coins.length} coins, derivation says ${expected}`);
   assert.equal(pk.treasures.length, TREASURES.length);
-  // Every coin should sit near the polyline it was derived from, not in space.
+
   let inspected = 0;
   for (const c of pk.coins) {
     assert.ok(Number.isFinite(c.pos.x) && Number.isFinite(c.pos.y) && Number.isFinite(c.pos.z));
     assert.ok(c.value > 0, 'a coin with no value');
+    // No coin may sit further from the route polyline than the jitter allows.
+    assert.ok(distToRoute(c.pos) < 1.0,
+      `a coin landed ${distToRoute(c.pos).toFixed(2)} m off the route it was derived from`);
     inspected++;
   }
-  assert.ok(inspected > 10, `§211.1: inspected ${inspected} coins`);
+  assert.equal(inspected, pk.coins.length);
+  assert.ok(inspected > 20, `§211.1: inspected ${inspected} coins`);
 });
+
+/** Shortest distance from a point to the route polyline (ignoring the authored lift). */
+function distToRoute(p) {
+  let best = Infinity;
+  const a = new THREE.Vector3(), b = new THREE.Vector3(), ab = new THREE.Vector3(), ap = new THREE.Vector3();
+  for (let i = 0; i < ROUTE.length - 1; i++) {
+    a.set(ROUTE[i][1], ROUTE[i][2], ROUTE[i][3]);
+    b.set(ROUTE[i + 1][1], ROUTE[i + 1][2], ROUTE[i + 1][3]);
+    ab.subVectors(b, a); ap.subVectors(p, a);
+    const t = Math.max(0, Math.min(1, ap.dot(ab) / Math.max(1e-9, ab.lengthSq())));
+    best = Math.min(best, ap.addScaledVector(ab, -t).length());
+  }
+  return best - 0.85;   // subtract the authored chest-height lift
+}
 
 test('authorRouteCoins is pure, deterministic and degrades safely', () => {
   assert.deepEqual(authorRouteCoins(null), []);
   assert.deepEqual(authorRouteCoins([]), []);
   assert.deepEqual(authorRouteCoins([['only', 0, 0, 0]]), []);
+  assert.deepEqual(authorRouteCoins([['a', 0, 0, 0], ['b', 0, 0, 1]]), [],
+    'a leg shorter than the spacing must place nothing, not divide by zero');
+
   const a = authorRouteCoins(ROUTE, { rng: mulberryish(1) });
   const b = authorRouteCoins(ROUTE, { rng: mulberryish(1) });
-  assert.ok(a.length > 5, `§211.1: authored ${a.length}`);
+  assert.equal(a.length, expectedTrailCount(ROUTE), 'count does not match the derivation');
+  assert.ok(a.length > 20, `§211.1: authored ${a.length}`);
   assert.deepEqual(a, b, 'same seed produced a different layout');
-  assert.ok(a.some((s) => s.kind === 'stack'), 'no stacks in the trail — every beat is identical');
+  for (const kind of ['single', 'stack', 'pile']) {
+    assert.ok(a.some((s) => s.kind === kind), `no ${kind} in the trail — the rhythm is flat`);
+  }
+  // Every authored kind must be a real denomination, or Audio chimes a fractional number of times.
+  let inspected = 0;
+  for (const s of a) {
+    assert.equal(s.value, COIN_VALUE[s.kind], `${s.kind} carries ${s.value}, not ${COIN_VALUE[s.kind]}`);
+    inspected++;
+  }
+  assert.ok(inspected > 20, `§211.1: inspected ${inspected}`);
+});
+
+/* =============================================================================================
+   5b. the Props adoption path — a cross-module contract, so it gets a test
+============================================================================================= */
+
+/**
+ * `Props.js:530 _collectibles()` already authors 44 coin spots, animates them as pickups, and
+ * has no collection code. Rather than invent a second overlapping layout, this module adopts
+ * those spots and hides the decorative twin. That reaches into a private field of a module this
+ * agent does not own, so the reach is pinned here: if the shape changes, this fails loudly
+ * instead of silently dropping 44 coins out of the level.
+ */
+function fakeProps(spots) {
+  const deco = new THREE.Object3D();
+  deco.name = 'coins';
+  const group = new THREE.Group();
+  group.add(deco);
+  return { _collect: [{ spots }], group, deco };
+}
+
+test('adoption: the 44 spots Props already authored become real, and its decoy is hidden', async () => {
+  const spots = [];
+  for (let i = 0; i < 44; i++) spots.push([i * 0.5 - 11, 0.9, i * 0.3]);
+  const props = fakeProps(spots);
+  const { pk } = await bootPickups({ props });
+
+  assert.equal(pk.coins.length, expectedTrailCount(ROUTE) + spots.length,
+    'the adopted spots did not all become pickups');
+  assert.equal(props.deco.visible, false, 'the decorative coin mesh is still drawn — two sets in frame');
+
+  // And every adopted spot is present at its authored position.
+  let matched = 0;
+  for (const s of spots) {
+    if (pk.coins.some((c) => Math.abs(c.pos.x - s[0]) < 1e-9 && Math.abs(c.pos.z - s[2]) < 1e-9)) matched++;
+  }
+  assert.equal(matched, spots.length, `only ${matched}/${spots.length} adopted spots survived`);
+
+  pk.dispose();
+  assert.equal(props.deco.visible, true, 'dispose left the decorative mesh hidden');
+});
+
+test('adoption degrades safely when PROPS is absent or has changed shape', async () => {
+  const base = expectedTrailCount(ROUTE);
+  assert.equal((await bootPickups()).pk.coins.length, base, 'no props module: route trail only');
+  assert.equal((await bootPickups({ props: {} })).pk.coins.length, base, 'props with no _collect');
+  assert.equal((await bootPickups({ props: { _collect: [] } })).pk.coins.length, base, 'empty _collect');
+  assert.equal((await bootPickups({ props: fakeProps([[1, 2]]) })).pk.coins.length, base,
+    'a malformed spot was adopted anyway');
 });
 
 function mulberryish(seed) {
@@ -412,7 +530,15 @@ test('P11 collecting a coin emits exactly one `coin` event, however long you sta
 
 test('P8-live the event the REAL module emits satisfies the REAL subscribers', async () => {
   const { engine, pk } = await bootPickups();
-  const c = pk.coins[0];
+  /* A STACK, not a single.
+     This test originally collected `coins[0]`, which is worth 1 — and Audio's own fallback when
+     it cannot find a key it recognises is also 1. A payload that had lost `amount` entirely
+     would therefore have read as correct. Mutation-checked: renaming the emitted key slips
+     straight through a value-1 pickup and is caught immediately by a value-3 one. An assertion
+     whose expected value equals the failure mode's default value is not an assertion. */
+  const c = pk.coins.find((x) => x.value > 1);
+  assert.ok(c, 'no multi-value pickup exists; this test cannot discriminate');
+  assert.notEqual(c.value, 1);
   const player = new THREE.Vector3(c.pos.x, c.pos.y - TUNE.grabHeight, c.pos.z);
   engine.get = (k) => (k === 'movement' ? { position: player } : null);
   pk.update(1 / 60, 0);
@@ -523,8 +649,12 @@ test('being driven to CHASE while carrying drops the treasure back into the worl
   pk.update(1 / 60, 0);
   assert.ok(pk.wallet.carrying, 'setup failed: not carrying');
 
-  // A suspicious guard is not enough — only a real chase costs you the loot.
+  /* Walk somewhere else and let a frame sample it — `_playerPos` is read once per update(),
+     exactly as `Guard.js` reads it, so the drop lands where the player was on the last frame. */
   player.set(40, 0, 40);
+  pk.update(1 / 60, 0.5);
+
+  // A suspicious guard is not enough — only a real chase costs you the loot.
   engine.emit('guardAlert', { id: 3, state: 'suspicious', level: 0.5 });
   assert.ok(pk.wallet.carrying, 'a merely suspicious guard cost the player his treasure');
 
