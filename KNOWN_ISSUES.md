@@ -18971,3 +18971,145 @@ the wrong instinct. Two things that are actually true here:
 
 Practice from here: pathspec-limited commits only, never a whole directory another agent owns, and
 when an agent's file is mid-edit, leave it and say so.
+
+## §241 — the HUD was already built; what was broken was the one seam nobody owned
+
+The brief for this run said `src/ui/` had "had no attention at all", asked whether anything
+implemented the Binocucom, and asked me to report back if the answer was "it already works".
+
+It already works. The premise was false, and saying so is most of this entry.
+
+### What was actually there
+
+`src/ui/HUD.js` (905 lines), `Icons.js` and `hud.css.js` already shipped a complete interface:
+health pips as cut carnelian gems, a struck-coin counter that ticks digit-by-digit with a punch
+on change, a two-cel halftone objective card that collapses to a tab, toasts, a contextual verb
+prompt with drawn keycaps, a Thief-o-Vision compositor wash with projected lock-ons, a pause menu
+that doubles as the game's only tutorial for all 25 moves, and — the thing the brief doubted
+existed — a full Binocucom: phosphor scanlines, a finer aperture grille, CRT barrel falloff, a
+chromatic fringe pooling cyan on one edge and carnelian on the other, corner brackets, a blinking
+REC counter, a breathing crosshair, a ranging ruler, live camera telemetry, and Bentley's portrait
+with its own scanline sweep and a line of dialogue. It is good work. I have attached renders.
+
+So the useful question was not "does it exist" but "is it wired to anything true". One seam was
+not, and it was the seam the brief was right to care about.
+
+### The defect: five guard states arrived, two were shown
+
+GUARDS ships a five-state machine and emits `guardAlert` on every transition
+(`Guard.js:647`, from `Patrol._setState`). The payload carries **both** `state` (the string) and
+`level` (the number). `HUD._onGuardAlert` opened with:
+
+```js
+let level = p.level ?? p.suspicion ?? p.alert ?? p.value;
+if (typeof level !== 'number') { /* a ladder keyed on p.state */ }
+```
+
+`level` is always a number, so the `??` chain always short-circuited and **the `p.state` branch
+below it was unreachable code**. The ladder it contained did not even list the real state names
+(`searching`, `lost`); it was written against a guess. Presentation was therefore entirely the
+arc: a gold `?` badge, flipping to a carnelian `!` only once fill passed 0.985.
+
+Measured over the five live states, that maps **6 of 10 state pairs to indistinguishable badges**
+— `patrol`, `suspicious`, `searching` and `lost` were one gold `?` at four fill fractions.
+
+Two further consequences of the same misreading:
+
+- **The badge expired while the guard was still hunting.** `guardAlert` is edge-triggered, but the
+  HUD gave each badge a 2.2 s TTL and drained it. `DETECT.searchTime` is 9.0 s, so a real search
+  outlived its own badge by roughly 4×, after which the player's only cue was a cone that may be
+  behind them — precisely the state-you-miss failure the brief described.
+- **The badge did not follow the guard.** `p.pos` is the guard's own `THREE.Vector3`, assigned once
+  at `Guard.js:421` and mutated in place, so keeping the reference tracks him for free. The HUD
+  copied out of it on receipt only, so a guard who spotted you and gave chase left his marker
+  nailed to the spot where he first saw you — worse than no marker, because it points nowhere.
+
+### The fix
+
+`src/ui/Alert.js` (new) holds the state→presentation mapping as pure data, with no DOM and no
+THREE import, so the HUD renders *from* the table the tests assert against and the two cannot
+drift. Badge colours are pinned to the vision cone's own three stops (`colPatrol` / `colWarn` /
+`colAlert`), so the badge and the cone are one language rather than two; a test reads those hex
+values straight out of `Guard.js` and fails if they diverge.
+
+Division of labour, now explicit: the cone carries the *continuous* signal (how full the meter is),
+the badge carries the *discrete* one (which state he is in). Making the badge a second meter is
+what produced five identical-looking rungs.
+
+`state` now wins over `level`; live states never expire and are retired only by an explicit
+transition; the badge re-reads the guard's live position every frame.
+
+Also added, because the brief asked for "hidden or exposed" and no such event exists anywhere in
+the build: an exposure chip derived from the guard states the HUD already receives — worst-of
+across every tracked guard, with a count at the top rank (`HUNTED ×2`). It needs no new hook from
+another agent's module. It is the only element in the HUD whose colour changes with game state.
+
+### What the instruments found that I did not go looking for
+
+Thresholds were registered in `progress/records/PREREG-hud1.md` before the candidate existed.
+Two defects fell out that were nobody's stated brief:
+
+- **A contrast failure that predates this run.** The objective card's `OBJECTIVE` kicker set pale
+  gold on `--lapis`: **3.44:1**, under the 4.5:1 bar. Moved to `--lapis-d` → 6.68:1. Found by
+  arithmetic, not by eye.
+- **Text too small to read.** Rendering the real markup over `shots/courtyard.png` at 1280×720
+  showed the alert labels at `.58u` — **6.4 px** at the `--u` clamp floor. The most urgent
+  information in the game was set smaller than a pause-menu footnote. Registered as a *relative*
+  criterion in `ADDENDUM-hud1-legibility.md` (no gameplay-critical text may be smaller than the
+  smallest pause-only text) so it needs no arbitrary pixel number, then fixed.
+- The Binocucom's corner readouts ran straight through its own corner brackets. Pure layout
+  arithmetic: the bracket reaches 3.15u in from each corner, the readouts started at 1.15u.
+
+And one self-inflicted near-miss worth recording: a comment I added inside `HUD_CSS` used
+backticks, which closed the template literal early and made `hud.css.js` a **syntax error** —
+`HUD.js` imports it, so the whole HUD would have failed to parse at boot. The suite caught it
+within a minute. A stylesheet that lives inside a template literal cannot contain a backtick, and
+nothing but a parse check will tell you.
+
+### Measurement
+
+`tests/hud.test.mjs` — 22 tests, no browser, no capture lock. `tests/_hudshim.mjs` is a DOM shim
+(tree, classList, dataset, style, a real tag parser, `querySelector`) rich enough to boot the
+actual `HUD` class in plain Node; `tools/_domshim.mjs` exists for three's loaders and is far too
+small for this. Every measurement carries a positive calibration arm that must fire:
+
+| | measures | calibration arm (fires) |
+|---|---|---|
+| M1 | every live state distinct in ≥2 of 4 channels | old mapping → **6 of 10 pairs collide** |
+| M2 | WCAG contrast ≥ 4.5:1, 25 pairs | gold-on-pale-gold reported; white/black = 21.00 |
+| M3 | live badge survives 30 s of silence | a retired badge *is* observed disappearing |
+| M4 | badge tracks a moving guard | a by-value payload does **not** move |
+| M6 | no gameplay text below the reference floor | pre-fix values → exactly the 2 known labels |
+
+M1/M2/M6 assert an exactly-pinned non-zero inspected count (§211.1): 10 pairs, 25 colour pairs,
+≥12 text runs. M3 and M4 were additionally **mutation-tested** — reverting each fix in the source
+turns the corresponding test red, and restoring it turns it green, so neither is passing by
+construction.
+
+Suite: 316/317, the one failure being the deliberately-held textures staleness guard.
+
+### The HUD is invisible to captures — verified, not assumed
+
+`window.__GAME.capture()` is `engine.canvas.toDataURL()` (`src/core/Debug.js:192`) — a WebGL
+drawing-buffer readback that no DOM node composites into. No tool anywhere uses
+`page.screenshot()`; every capture path goes through that one function. So **no change in
+`src/ui/*` can move a pixel in any frame a critic has ever scored**, which is why this entire run
+took no slot on the capture lock while three runs were queued behind it. It also means the HUD has
+never once been looked at, which is the actual reason the guard seam could stay broken.
+
+That claim is now a test rather than a comment, so if `capture()` ever starts compositing the DOM,
+the argument that licensed this whole run breaks loudly.
+
+### Unresolved / for routing
+
+- **No concealment signal exists.** The exposure chip infers exposure from guard belief, which is
+  the honest derivation available today, but it cannot know the player is in shadow or inside a
+  vent while unobserved. A `playerHidden`-style event from MOVEMENT or COLLISION would let the
+  chip distinguish "nobody has noticed me" from "I am genuinely concealed". Reporting, not editing.
+- `guardAlert` is edge-triggered only. That is now handled correctly, but it means the HUD cannot
+  show a *partially* filling meter for a guard mid-suspicion — only the state he last entered. A
+  low-rate `guardSuspicion` heartbeat would enable it. Not required; the cone already carries it.
+- `_tickAffordancePrompt` still drives prompts from a COLLISION query because MOVEMENT emits no
+  `prompt` event. It retires itself permanently the first time a real one arrives.
+- Commit `8fcce32` (another agent's sweep) picked up `Alert.js`, `Icons.js` and `_hudshim.mjs`
+  mid-run — the §240 pattern, observed again from the other side. No content was lost this time.
