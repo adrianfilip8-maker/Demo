@@ -391,6 +391,180 @@ async function doMeasure() {
   console.log(`  ${meshes} meshes, ${tris} tris`);
 }
 
+/* ─────────────────────────── the retarget audit ───────────────────────────────────────────── */
+
+/**
+ * `node tools/godot2rig.mjs --retarget` — every number §234 quotes, reproduced.
+ *
+ * It exists because §234 makes two comparative claims that are worth nothing on assertion alone:
+ * that this retarget is no worse than the one that SHIPS, and that the five authored clips do not
+ * move the tail. Both are comparisons, so both need the other side measured by the same code.
+ *
+ * THE CALIBRATION ARM IS BUILT IN AND CANNOT BE SKIPPED. The distortion table is printed for
+ * `SlyModelDLRig`'s FBX as well as for this asset, and the run FAILS if the incumbent's mean joint
+ * shear comes out near zero — because an instrument that reports "no distortion" for a rig we know
+ * has to be conformed onto RIG3 is measuring nothing, and its verdict on the new model would be
+ * equally empty. §222's third validation arm failed for want of exactly this.
+ */
+async function doRetarget() {
+  const [{ RIG3 }, { SlyModel }] = await Promise.all([
+    import('../src/player/SlyModel3.js'),
+    import('../src/player/SlyModelGodot.js'),
+  ]);
+  const abs = {};
+  for (const [n, , p] of RIG3.SKELETON) abs[n] = p;
+  const V = (n) => new THREE.Vector3(...abs[n]);
+  const CHAIN = [
+    ['hips', 'spine'], ['spine', 'chest'], ['chest', 'neck'], ['neck', 'head'],
+    ['chest', 'shoulderL'], ['shoulderL', 'upperArmL'], ['upperArmL', 'lowerArmL'], ['lowerArmL', 'handL'],
+    ['hips', 'upperLegL'], ['upperLegL', 'lowerLegL'], ['lowerLegL', 'footL'], ['footL', 'toeL'],
+    ['hips', 'tailA'], ['tailA', 'tailB'], ['tailB', 'tailC'], ['tailC', 'tailD'],
+  ];
+  /** conform / displacement / shear, from a map of RIG3 bone -> source joint position in our units */
+  const distortion = (srcP) => {
+    let lnSum = 0, lnWorst = 0, n = 0;
+    let dSum = 0, dMax = 0, dN = 0;
+    let shSum = 0, shMax = 0, shN = 0, shWhere = '';
+    for (const [a, b] of CHAIN) {
+      if (!srcP[a] || !srcP[b]) continue;
+      const c = V(b).clone().sub(V(a)).length() / srcP[b].clone().sub(srcP[a]).length();
+      lnSum += Math.abs(Math.log(c)); n++;
+      lnWorst = Math.max(lnWorst, Math.abs(Math.log(c)));
+      const da = srcP[a].clone().sub(V(a)), db = srcP[b].clone().sub(V(b));
+      const sh = db.clone().sub(da).length() / V(b).clone().sub(V(a)).length();
+      shSum += sh; shN++;
+      if (sh > shMax) { shMax = sh; shWhere = `${a}->${b}`; }
+    }
+    for (const nm of RIG3.BONE_ORDER) {
+      if (!srcP[nm]) continue;
+      const d = srcP[nm].clone().sub(V(nm)).length();
+      dSum += d; dN++; dMax = Math.max(dMax, d);
+    }
+    return {
+      lnMean: lnSum / n, lnWorst, dMean: dSum / dN, dMax, bones: dN,
+      shMean: shSum / shN, shMax, shWhere,
+    };
+  };
+  const show = (label, r) => console.log(
+    `  ${label.padEnd(8)} mean|ln conform| ${r.lnMean.toFixed(3)}  worst ${Math.exp(r.lnWorst).toFixed(2)}x`
+    + `   displacement mean ${r.dMean.toFixed(4)} max ${r.dMax.toFixed(4)} over ${r.bones}`
+    + `   shear mean ${(100 * r.shMean).toFixed(1)}% worst ${(100 * r.shMax).toFixed(1)}% (${r.shWhere})`);
+
+  /* ---- the subject: build the real model through its own init() ---- */
+  const raw = readFileSync(path.join(OUT_DIR, PRODUCTS.mesh));
+  const { json, bin } = fromGLB(raw);
+  for (const m of json.materials || []) delete m.pbrMetallicRoughness?.baseColorTexture;
+  delete json.textures; delete json.images; delete json.samplers;
+  const packed = toGLB(json, bin);
+  const gltf = await new GLTFLoader().parseAsync(
+    packed.buffer.slice(packed.byteOffset, packed.byteOffset + packed.byteLength), '');
+  const warnings = [];
+  const model = new SlyModel({ scene: new THREE.Group(), warn: (m) => warnings.push(m), get: () => null, emit: () => {} });
+  await model.init({ gltf, noTextures: true });
+  console.log('SlyModelGodot:');
+  for (const w of warnings) console.log(`  ${w}`);
+  console.log(`  joints resolved ${model.info.mapped}/${model.info.joints}`
+    + `   skin weight on a named bone ${(100 * model.info.weightMapped).toFixed(2)} %`);
+  console.log(`  scale ${model.info.scale.toFixed(4)} (raw ${model.info.rawHeight.toFixed(4)} m)`
+    + `   POST-RETARGET HEIGHT ${model.info.bakedHeight.toFixed(4)} m against ${RIG3.TUNE.height} m`);
+  console.log(`  curl: ${model.info.curl.verts} digit verts, mean ${(1000 * model.info.curl.mean).toFixed(1)} mm`
+    + `   grip: p10 ${(1000 * model.info.grip.p10).toFixed(1)} mm median ${(1000 * model.info.grip.median).toFixed(1)} mm`
+    + ` against a ${(1000 * model.info.grip.gripR).toFixed(1)} mm grip radius`);
+
+  /* The joint frame the model ITSELF used. Read from the model rather than rebuilt here — a tool
+     that reconstructs `BONE_MAP` and the arc-matched tail anchors for itself is a second account of
+     the thing it is auditing, which is §212's failure exactly. */
+  const godotSrcP = (model.retargetFrame?.() || {}).srcP || null;
+
+  /* ---- the calibration arm: the SHIPPED model's own retarget, same instrument ---- */
+  const { FBXLoader } = await import('three/examples/jsm/loaders/FBXLoader.js');
+  const DL_MAP = {
+    a_body: 'hips', lower_back: 'spine', chest: 'chest', base_neck: 'neck', base_head: 'head',
+    L_clavicle: 'shoulderL', LF_shoulder: 'upperArmL', LF_elbow: 'lowerArmL', LF_wrist: 'handL',
+    RT_clavicle: 'shoulderR', RT_shoulder: 'upperArmR', RT_elbow: 'lowerArmR', RT_wrist: 'handR',
+    LF_hip: 'upperLegL', LF_knee: 'lowerLegL', LF_ankle: 'footL', LF_ball: 'toeL',
+    RT_hip: 'upperLegR', RT_knee: 'lowerLegR', RT_ankle: 'footR', RT_ball: 'toeR',
+    tail_base: 'tailA', tail4: 'tailB', tail7: 'tailC', tail11: 'tailD',
+  };
+  const fbxPath = path.join(ROOT, 'src/assets/sly-dl/sly.fbx');
+  let dl = null;
+  if (existsSync(fbxPath)) {
+    const buf = readFileSync(fbxPath);
+    const fbx = new FBXLoader().parse(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength), '');
+    fbx.updateMatrixWorld(true);
+    const skinned = [];
+    fbx.traverse((o) => { if (o.isSkinnedMesh && o.geometry?.attributes?.skinWeight) skinned.push(o); });
+    const sk = skinned[0].skeleton;
+    const box = new THREE.Box3(), v = new THREE.Vector3();
+    for (const sm of skinned) {
+      const g = sm.geometry.clone();
+      g.applyMatrix4(sm.matrixWorld);
+      const p = g.attributes.position;
+      for (let i = 0; i < p.count; i++) { v.fromBufferAttribute(p, i); if (Number.isFinite(v.x + v.y + v.z)) box.expandByPoint(v); }
+    }
+    const S = RIG3.TUNE.height / (box.max.y - box.min.y), yOff = -box.min.y;
+    const srcP = {}, m4 = new THREE.Matrix4();
+    sk.bones.forEach((b, i) => {
+      const nm = DL_MAP[b.name];
+      if (!nm || srcP[nm]) return;
+      m4.copy(sk.boneInverses[i]).invert();
+      srcP[nm] = new THREE.Vector3().setFromMatrixPosition(m4).setY(new THREE.Vector3().setFromMatrixPosition(m4).y + yOff).multiplyScalar(S);
+    });
+    dl = distortion(srcP);
+    const headOff = RIG3.TUNE.height - srcP.head.y;
+    const conf = V('toeL').clone().sub(V('footL')).length() / srcP.toeL.clone().sub(srcP.footL).length();
+    const soleOff = (0 - srcP.footL.y) * conf;
+    dl.height = (abs.head[1] + headOff) - (abs.footL[1] + soleOff);
+  }
+
+  console.log('\ndistortion, same instrument on both:');
+  if (godotSrcP) show('godot', distortion(godotSrcP));
+  else {
+    console.log('  !! SlyModelGodot exposes no `retargetFrame()` — the SUBJECT row is missing and this run');
+    console.log('     compares nothing. Rebuilding the map here instead would make this tool a second');
+    console.log('     account of the thing it audits (§212), so it declines rather than guesses.');
+  }
+  if (dl) {
+    show('dlrig', dl);
+    console.log(`  dlrig post-retarget height ${dl.height.toFixed(4)} m`);
+    /* THE ARM THAT MUST FIRE. */
+    if (!(dl.shMean > 0.15)) {
+      throw new Error(`godot2rig --retarget: the calibration arm did not fire — the SHIPPED model reports `
+        + `${(100 * dl.shMean).toFixed(1)} % mean joint shear, which is not credible for a foreign rig `
+        + `conformed onto RIG3. The instrument is blind and no figure above means anything.`);
+    }
+    console.log(`  calibration arm FIRED: the incumbent posts ${(100 * dl.shMean).toFixed(1)} % mean shear, so the instrument is alive.`);
+  } else {
+    console.log('  !! src/assets/sly-dl/sly.fbx is absent, so the calibration arm could not run —');
+    console.log('     every figure above is UNCALIBRATED and must not be quoted comparatively.');
+  }
+
+  /* ---- the clips, and the tail tracks the whole verdict turns on ---- */
+  const af = path.join(OUT_DIR, PRODUCTS.anims);
+  if (existsSync(af)) {
+    const b = readFileSync(af);
+    const ag = await new GLTFLoader().parseAsync(b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength), '');
+    console.log('\nthe five authored clips — do they move the tail?');
+    for (const a of ag.animations) {
+      const row = [];
+      for (const nm of ['Tail008', 'Tail006', 'Tail004', 'Tail002', 'thighL']) {
+        const t = a.tracks.find((x) => x.name === `${nm}.quaternion`);
+        if (!t) { row.push(`${nm}=absent`); continue; }
+        const n = t.values.length / 4;
+        let span = 0;
+        for (let c = 0; c < 4; c++) {
+          let lo = Infinity, hi = -Infinity;
+          for (let i = 0; i < n; i++) { const v = t.values[i * 4 + c]; if (v < lo) lo = v; if (v > hi) hi = v; }
+          span = Math.max(span, hi - lo);
+        }
+        row.push(`${nm} ${String(n).padStart(3)}k/${span.toExponential(1)}`);
+      }
+      console.log(`  ${a.name.padEnd(15)} ${a.duration.toFixed(2)}s   ${row.join('   ')}`);
+    }
+    console.log('  (`thighL` is the positive control: a clip whose tail spans 0 while thighL does not is data, not a dead metric.)');
+  }
+}
+
 /* ─────────────────────────── entry ───────────────────────────────────────────────────────── */
 
 if (import.meta.url === `file://${process.argv[1]}`) {
@@ -399,6 +573,8 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     const i = argv.indexOf('--src');
     if (i < 0 || !argv[i + 1]) throw new Error('godot2rig --import needs --src <dir>');
     doImport(path.resolve(argv[i + 1]));
+  } else if (argv.includes('--retarget')) {
+    await doRetarget();
   } else {
     await doMeasure();
   }
