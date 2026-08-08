@@ -189,6 +189,10 @@ diff = alb*keyRad*key*mix(1,ao,uAoKey)
   pass 3's "unlit ≤ 45% of lit" the helpful way;
 * **one scalar on all three shade-side terms alike** — it moves shade *luminance* and cannot move
   shade *hue*, so the violet/teal balance of §115/§16/§19 is arithmetically untouched;
+* **exactly inert on the fully-lit band.** At `ramp = 1`, `shadeForm = 1 − b·0 = 1`, so any pixel
+  the key fully reaches is bit-identical whatever `b` is. The term can therefore only touch
+  shade-side pixels — which is a structural reason the `courtyard`/`hero` guard should hold, not
+  merely a hope, since those shots' banding lives in the *lit* population the term cannot reach.
 * `uShadeBand = 0` is bit-identical, exactly and driver-independently, because `1.0 − 0.0·x` is
   `1.0`. Spelled that way rather than as `mix()` precisely so it does not depend on how a driver
   folds `mix(x,x,a)`.
