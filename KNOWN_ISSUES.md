@@ -18280,3 +18280,199 @@ same identity frame.
 - **No blind round has been run on this character** and none should be inferred from the numbers
   above. They say the retarget is not worse than the incumbent's *as a retarget*. They say nothing
   about which model reads better in a frame.
+
+## §235 — the guards were never broken; their patrols were, and nothing had ever checked them against the level
+
+§203 put "guard placement, patrol routing, vision/detection tuning, and the combat-recipient
+re-seal" on the backburner by owner instruction. Picking the work back up, the first job was to
+find out what the deferral had actually left behind. It is not what the note implies.
+
+### §235.1 — the true state: the code works, the data does not, and the suite could not tell
+
+`src/ai/Guard.test.mjs` has 44 tests and **all 44 passed** before anything below was touched.
+`Patrol.js` already had a graded suspicion meter with hearing, line of sight, light and stealth
+terms; a five-state alert machine with a reaction delay; Catmull-Rom routes with dwells and
+actions; and `Guard.js` already drew the cone as instanced geometry with a ground pool. None of
+that is a stub. The follower code is genuinely good.
+
+**And the routes were fiction.** `src/ai/Guard.test.mjs` runs the shipped `Guards` module against
+a stub world of five hand-placed boxes and four rectangles, one of which is a flat plane at
+y = 0 covering the entire map. That suite can prove the spline maths, the LOS raycast, the wall
+refusal and the cone transforms. It is structurally incapable of noticing that the waypoints are
+in the wrong place, because in its world there is nothing to be in the wrong place *of*.
+
+`PREREG-routeaudit.md` sealed the thresholds, then the shipped level was built headless
+(`buildEgyptLevel`, 1.3 s, plain Node), every registered collision proxy harvested into a
+world-space AABB, and every route walked through it:
+
+| route | verdict | what was wrong |
+|---|---|---|
+| `south_gate` | **BROKEN** | climbed the 2 m terrace; 22 samples inside a propylon pier |
+| `courtyard_ring` | **BROKEN** | 2 cliff steps onto the east ramp landing at y = 1.47 |
+| `obelisk_watch` | SUSPECT | 400/400 samples on the terrace at y = 2.0 with `baseY: 0` |
+| `sphinx_avenue` | SUSPECT | 400/400 samples with no collision under them at all |
+| `hall_weave` | **BROKEN** | **117 samples inside the hall's columns** |
+| `rooftop_run` | **BROKEN** | straddled the clerestory wall: 6 steps of 3.1 m per lap |
+| `tomb_vault` | **BROKEN** | 64 samples inside the crypt's gate wall |
+| `architrave_ledge` | CLEAN | — the only one |
+| `tomb_scarab` | **BROKEN** | 52 samples inside the crypt pillars |
+
+**6 of 9 routes broken, 8 of 11 guards on one.** Every calibration arm fired (a control route
+through the inner pylon reported walls, one in open desert reported 100 % unsupported, one over
+the terrace edge reported the cliff), so the instrument was demonstrably not blind.
+
+The audit's ground probe was then corrected from a point sample to the guard's own radius probe
+— `Guard._step` calls `groundCheck(pos, radius * 0.7, …)`, and a point sample fell through a
+2 cm seam between two roof-deck proxies. **The pre-change verdict is byte-identical under both
+samplers**, 6 BROKEN and 8 of 11 guards either way, so nothing in the table above rests on that
+correction.
+
+### §235.2 — what a route has to satisfy in a colonnade building
+
+`PREREG-patrolgap.md` sealed the acceptance before a replacement waypoint existed: clearance for
+the widest body that walks the route (C1), the geometry thresholds verbatim (C2), no stall over
+180 s of real patrol (C3), a learnable timing gap at ten named chokepoints (C4), determinism
+(C5). All ten routes now pass. Three rules came out of doing it:
+
+1. **Corridors, not diagonals.** Everything walkable in this temple is a straight band between
+   two rows of stone. Any waypoint pair that cuts a corner crosses a column line somewhere, and
+   Catmull-Rom rounding puts it there even when the straight segment would have missed.
+2. **Turn only on the clear rows.** The hall's columns sit at z = −22, −30, −38, −46 and the
+   crypt's at z = −62, −68, −74. Cross-legs go between them and nowhere else.
+3. **The centre-line is not the guard.** A Heavy is 0.56 m in radius and `_step` stops him with
+   forward rays at exactly that. `hall_weave`'s first replacement passed the geometry check with
+   0.34 m of shoulder room and would have pinned him against a column for the rest of the level.
+   That is what killed the closed rectangle: the only gap between the hall front wall and the
+   first column row is 2.3 m, and a curve that bulges 0.7 m at the corners does not fit a Heavy
+   through it. It is an open U now, and the about-face reads better than the corner did.
+
+`sphinx_avenue` is gone. It patrolled z 43–77 on the approach — outside the collision mesh, and
+10–45 m *behind* the player's spawn, guarding nothing he has to cross. `pylon_gate` replaces it
+at the entry gateway, which is the level's front door.
+
+### §235.3 — two behaviour bugs that only a real level could surface
+
+**The end-of-route dwell has never fired on any open route.** Four of the ten routes ping-pong,
+and on every one of them the guard swept straight through his own about-face without pausing —
+the single most readable beat a patrol has. Two faults, both reachable only at an end:
+`nextStop` reports stops strictly *ahead*, so on the frame the guard reflects there is nothing
+to land on and the whole landing block is skipped; and `u` can land on the end *exactly*
+(`0.99814 + 0.00186` is 1.0), making `crossed >= gap` a comparison between two float expressions
+that ought to be equal and differ in the last bit. Both fixed. The trace that caught it is
+worth keeping: the guard reached u = 1.0000, `nextStop` returned `null`, and he turned around
+and walked away.
+
+**`stateForSuspicion` was a bare threshold with no hysteresis.** A meter resting on a boundary —
+which is exactly what a player at the edge of a cone, or behind a column edge the LOS ray clips
+in and out of, produces — flipped the state on alternate frames, and every flip re-emitted
+`guardAlert` and restarted the reaction animation. `DETECT.hysteresis` closes it.
+
+### §235.4 — legibility: a meter the player cannot read is a switch with extra steps
+
+Detection was already graded. It was not legible. The cone colour was a single
+`lerp(cream, red, smoothstep(suspicion))` — a continuous slide, and no frame of a continuous
+slide tells the player which of the four bands the guard is in. `TUNE.colWarn` had been declared
+in `Guard.js` since the cone was written and was **never once used**.
+
+Three changes, all pinned to the state machine's own thresholds so they cannot drift from it:
+
+- `coneColourStop` is a three-stop ramp: cream while he has noticed nothing, amber the instant
+  he turns suspicious and held amber through the whole search, red only once he commits;
+- hysteresis, so the colour, the animation and the event cannot chatter;
+- **a suspicious guard walks over to look.** He plants for `peerTime` (the pause is the tell),
+  then closes at `peerSpeed` — slower than his own patrol — and stops `peerStandoff` short. A
+  guard who notices something and stands still has told a player behind a pillar nothing at all,
+  because from behind a pillar there is no cone to see.
+
+### §235.5 — the timing gap, and three chokepoints the garrison does not watch
+
+C4 measures, over a 240 s window at 0.1 s, what fraction of the time each named chokepoint is
+inside some guard's core cone with line of sight, and the longest contiguous window that is not.
+
+    spawn            35.8 %   gap 10.6 s     hall-nave-mid    41.3 %   gap 15.6 s
+    court-west       21.0 %   gap 66.5 s     inner-gate       29.7 %   gap 34.7 s
+    court-east       23.0 %   gap 42.5 s     crypt-nave       28.8 %   gap 11.6 s
+    hall-door        41.3 %   gap 33.4 s
+
+The first run of this measurement said `hall-nave-mid` and `inner-gate` were watched **0 % of
+240 s** — the main route through the largest room in the level, and the only way to the tomb,
+and a player could walk both without ever entering a cone. The cause was two guards assigned to
+the *same* loop at different phase, which doubles the pressure on one line and leaves everything
+else untouched. `hall_nave` is the second body's own beat, crossing the ring's at right angles.
+
+**Three chokepoints remain unguarded and are recorded as such, not fixed by widening a cone:**
+
+- `hall-west-aisle` (−20, 0, −34) — 0 %. This one is *correct*: the outer aisle is the covert
+  lane through the hall, and a stealth level needs a route that is safe if you find it.
+- `terrace-foot` (0, 0, 20) — 0 %. A genuine gap. The terrace stair head is on the traversal
+  line and nobody looks at it. Left open for whoever tunes placement next.
+- `obelisk-base` (0, 2, 11) — 0.9 %, and **the named probe point is invalid**: it is inside the
+  terrace mass, not a place a player stands. The error is in the seal's own point list. It is
+  recorded rather than swapped, because quietly replacing a probe after seeing its number is
+  how a measurement stops meaning anything.
+
+### §235.6 — a criterion this work registered and then had to void (§141.1)
+
+`tests/patrol.test.mjs` first asserted that full detection at the reference condition takes
+between 1.0 s and 3.0 s. It failed at 0.53 s, and **both halves of the criterion were wrong,
+neither failure the game's:**
+
+- the stimulus was labelled "walking" and fed `moving: 1`, which is *sprinting* — `moving` is
+  normalised against `runSpeed` — so the number under test was never the walk case;
+- the 1.0 s floor was derived from a sentence in `Patrol.js`'s own docstring claiming the
+  reference condition "fills the meter in roughly 1.4 s". **That sentence had never been
+  measured.** Deriving a threshold from an unverified comment is deriving it from nothing.
+
+**The bound is VOID and was not re-derived to fit the number that came back.** What replaced it
+is the weakest criterion that still catches the failure the test exists for — detection must
+take longer than the guard's own `reactDelay`, so the player always has at least that window —
+and the *relative* assertions, which are the ones that encode the design, all passed unchanged
+on the first run. The docstring now carries the measured table instead of the hoped-for number:
+walking 0.88 s (+0.35 s react = 1.23 s to chase), sneaking 2.25 s, a full meter draining to zero
+5.1 s after line of sight breaks. **Nothing in `DETECT` was retuned.** Retuning a feel number to
+make a test pass, in a game nobody in this session can play, is the trade this project has lost
+days to before.
+
+Two calibration arms also failed to fire and are recorded rather than quietly reshaped. CAL-2a
+ran its control line down x = 0 through the inner pylon — which at chest height is the *gateway*,
+and open; it now runs through the west tower. CAL-2c fenced only the hall's west aisle and
+reported an identical distance with and without, because the guard it was meant to pin starts
+mid-route and was walking the other way; it fences both aisles now, and the pinned guard covers
+24.2 m against the control's 56.9 m.
+
+### §235.7 — what is proved, what is not, and what is still open
+
+**Proved, in plain Node, no browser and no capture lock** — `tests/patrol.test.mjs`, 18 tests,
+in the `npm test` glob:
+
+- all 10 routes lie on floors the level has, with no step outside the guard's own
+  `[−stepDown, +stepUp]`, and clear the widest body that walks them by more than radius + 20 cm;
+- 180 s of the real garrison in the real temple leaves every guard covering ground and visiting
+  at least three dwell stops;
+- seven of ten named chokepoints are watched, and every watched one has a window ≥ 6.0 s (the
+  floor derived in the seal from the 5.5 m hall aisle ÷ `sneakSpeed` × 1.5);
+- the meter is monotonic, never instant, drains to zero, and hearing alone cannot reach chase;
+- the four alert bands are ordered, separated and cannot chatter;
+- the colour ramp is three-stop and the amber band is actually reached;
+- two `Guards` built from the same seed agree to 1e-9 after 60 s.
+
+Every data-driven test asserts a non-zero inspected count (§211.1), and six calibration arms
+must fire or the run is declared void in the assertion message.
+
+**Not proved: anything about how any of this looks.** No frame was rendered anywhere in this
+work. The three-stop cone ramp is correct arithmetic feeding a shader nobody has photographed
+since it changed; whether amber reads as distinct from cream in a moonlit frame is a capture
+question and is untouched by every number above. `PREREG-cone1` still stands unwithdrawn per
+§203 and the heading A/B still has not re-run.
+
+**Still open:**
+
+- **`src/ai/Guard.test.mjs` is not run by `npm test`.** The script is `node --test
+  "tests/*.test.mjs"`; that file is neither in `tests/` nor written against `node:test`. It had
+  two stale expectations when the routes moved and nothing noticed. 45 pass by hand today.
+- `terrace-foot` is unguarded, and the `obelisk-base` probe point is invalid.
+- The combat-recipient re-seal (§211.3's orphaned `pupilL`/`pupilR` on RIG3) is **untouched** —
+  it is a change to the shipped character's skinning and belongs to whoever owns that model.
+- `npm test` currently reports one failure, `textures.test.mjs` "the committed cache is not
+  stale" on `sandstone_block`. It fails identically before any change here and comes from
+  another agent's in-flight edits to `src/textures/`. Not mine, not touched.
