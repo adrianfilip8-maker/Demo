@@ -1170,8 +1170,16 @@ def('roll', {
  * anticipation has to live in the first 70 ms of the clip: he is still compressed from the
  * crouch, then the whole body extends through it and overshoots into a long arch.
  */
+/* `loop: false` because a rise is not a cycle. `compile()` defaults loop to true (`d.loop !==
+   false`), and `baseClip()` holds a track whose time grows without bound, so while the state
+   persists `sampleInto` was wrapping t and snapping the body back to key 0 — the launch arm
+   (-30/14/-78) resetting to the coiled crouch (10/12/-22), 75° in one frame. Reachable: the
+   default jump rises for jumpV0/g = 11.0/24 = 0.458 s, inside the clip, but a spire jump launches
+   at spireJump × jumpV0 = 13.75 and rises for 0.573 s. With loop false, `sampleInto` clamps and
+   holds the final extended pose, which is what an over-long rise should look like. The clip has
+   no events, and `_trackEvents` reads `tr.loop` not `clip.loop`, so nothing else changes. */
 def('jump_rise', {
-  dur: 0.55, loop: true, hold: 0.24,
+  dur: 0.55, loop: false, hold: 0.24,
   keys: [
     // still coiled — the pose the launch is escaping from
     { t: 0, e: 'in', P: P({
@@ -1266,8 +1274,11 @@ def('jump_fall', {
  * and the spin drags his body round with it. The cane channel does the 360; the body only
  * needs to sell that the twirl is what lifted him.
  */
+/* `loop: false` — see jump_rise. Not reachable at the current tuning (doubleJumpV0/g = 9.90/24 =
+   0.4125 s against a 0.62 s clip, 0.21 s of headroom) but discontinuous by 42° at the seam, so it
+   is one tuning nudge from the same snap. */
 def('double_jump', {
-  dur: 0.62, loop: true, hold: 0.2,
+  dur: 0.62, loop: false, hold: 0.2,
   keys: [
     { t: 0, e: 'in', P: P({
       hips: [30, -14, 4], spine: [-6, 6, 2], chest: [-12, 16, -3], neck: [-18, -8, 2], head: [-16, -12, 4],
@@ -1482,8 +1493,10 @@ def('wall_cling', {
 });
 
 /* Wall jump: coil into the stone, then fire off it with a twist. */
+/* `loop: false` — see jump_rise. 39° at the seam, and only 0.07 s of headroom: the kick-off rises
+   for jumpV0 × wallJumpUp / g = 11.0 × 0.94 / 24 = 0.431 s against a 0.5 s clip. */
 def('wall_jump', {
-  dur: 0.5, loop: true, hold: 0.16,
+  dur: 0.5, loop: false, hold: 0.16,
   keys: [
     { t: 0, e: 'in', P: P({
       hips: [-6, -10, -14], spine: [4, 4, -4], chest: [8, 10, -6], neck: [-22, -6, 4], head: [-24, -8, 8],
@@ -2106,8 +2119,12 @@ def('cane_combo_3', {
 });
 
 /* Dive attack (Cane Slam): he flips upside-down over the target and comes down cane-first. */
+/* `loop: false` — see jump_rise, and the worst of the four at 88° (upperArmR). `DiveAttack` holds
+   this clip until it grounds, so the reachable case is not marginal: at diveSpeed the fall covers
+   0.5 s of clip in the first 9 m, and this level's rooftops and the temple deck are all above that.
+   `dive_impact`, its own sibling, already declares loop false. */
 def('dive_attack', {
-  dur: 0.5, loop: true, hold: 0.3,
+  dur: 0.5, loop: false, hold: 0.3,
   keys: [
     { t: 0, e: 'in', P: P({
       hips: [-30, -6, 3], spine: [10, 3, 1], chest: [16, 8, -2], neck: [-30, -4, 2], head: [-34, -6, 4],

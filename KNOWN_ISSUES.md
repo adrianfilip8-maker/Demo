@@ -16238,3 +16238,89 @@ at all — the one hypothesis I could not test without it.
 **What this costs:** critic pass 7's headline defect is still unmeasured. Three instruments have now
 failed on it. §210.1 is the first substantive lead, and it came from arithmetic that needed no
 instrument at all.
+
+## §211 — the project's first test suite, and the three things it found
+
+`tests/rig.test.mjs` — 15 structural tests over `RIG3` (31 bones) and `CLIPS` (52 clips), run by
+`npm test`, no dependency beyond `node --test`. The pattern is borrowed from
+`PauliusOS/pallet-town-3d` (MIT), whose `sculpt.test.mjs` argues that the failure worth automating
+against is the one that renders *plausibly*: its own example is inverted winding, where "the whole
+model lights against the inside of its own skin — which reads as flat, washed-out shading rather
+than as an obvious error."
+
+Until now every claim in this project was checked by a ~5-minute headless capture holding a global
+lock. That is the right instrument for *does this look better* and useless for *does this data
+contradict itself* — and `Clips.js` is 2,500 lines of hand-authored keyframes that name bones as
+strings, where a typo is silent.
+
+### §211.1 — the first draft of the suite was vacuous, and reported green
+
+Nine clip tests asserted over `CLIPS[name].keys`. `CLIPS` holds the **compiled** clip —
+`{ bones, scales, pos, cane, events }`, flat typed-array tracks — and has no `keys` property at
+all. `(c.keys || [])` iterated nothing, `bad` stayed `[]`, and `assert.deepEqual([], [])` passed.
+Three tests were reported `ok` having inspected zero bones.
+
+That is the same shape as every instrument that has cost this project a day: the flat-area metric
+blinded by grain, `bootId` comparing `null` to `null`, `material.program` reading a field three
+removed years ago (§210.2). A green result that never touched its subject. **The two tests that
+"failed" in that first run were the only two doing any work** — and both failed on *my* wrong model
+of the data, not on the data: `hold` is a time in seconds (`freezePose` shows exactly `c.hold`), not
+a key index; and `stride: 0` is a deliberate sentinel for "not a locomotion clip" that 40 of the 52
+clips carry, which Animation.js reads as `c.stride > 0`.
+
+Both fixes are in: the suite now reads the compiled data — which is what the game actually samples,
+and which loses nothing, since `quatTrack` carries the authored bone name through as `tr.name` and
+`eulerDeg` propagates a NaN degree into a NaN quaternion — and **every data-driven test counts what
+it inspected and asserts the count is non-zero.** A passing test has to prove it looked.
+
+### §211.2 — four action clips were looping, and two of them visibly snapped
+
+`compile()` defaults loop to true: `loop: d.loop !== false`. A clip that never mentions `loop`
+becomes a cycle. `sampleInto` then wraps `t` by `dur`, and `baseClip()` holds a track whose time
+grows without bound, so **any state that outlasts its clip snaps the body back to key 0 mid-move.**
+
+31 of 35 looping clips close their seam to within 0.04° — float32 rounding on a genuine cycle. Four
+did not: `dive_attack` 88°, `jump_rise` 75°, `double_jump` 42°, `wall_jump` 39°. All four are played
+as `baseClip`, none is a cycle, none has events, and `dive_impact` — `dive_attack`'s own sibling —
+already declared `loop: false`.
+
+Reachable, not theoretical:
+
+- **`jump_rise`** (0.55 s): the default jump rises for `jumpV0/g` = 11.0/24 = 0.458 s, inside the
+  clip — but a spire jump launches at `spireJump × jumpV0` = 13.75 and rises for **0.573 s**. Past
+  that the shoulder resets from the launch pose (−30/14/−78) to the coiled crouch (10/12/−22), 75°
+  in one frame.
+- **`dive_attack`** (0.5 s): `DiveAttack` holds the clip until it grounds. At `diveSpeed` the fall
+  covers 0.5 s in the first 9 m, and this level's rooftops and temple deck are all above that.
+- **`wall_jump`** (0.431 s rise vs 0.5 s clip) and **`double_jump`** (0.413 s vs 0.62 s) are not
+  reachable at the current tuning, but are discontinuous by the same slip and are one nudge away.
+
+All four now declare `loop: false`, which makes `sampleInto` clamp and hold the final extended pose
+— the intent for a rise, a twirl, a kick-off and a dive. Nothing else moves: `_trackEvents` reads
+`tr.loop` (the playback flag `baseClip` passes) and not `clip.loop`, and these four clips carry no
+events anyway.
+
+### §211.3 — the startle-pupil dilation has been dead since the rebuild shipped
+
+`hurt` and `ko` both scale `pupilL` and `pupilR`. Neither bone exists in `RIG3`.
+
+They are real bones on the **legacy** model: `SlyModel.js:1005` mints them dynamically for
+SPEC-startle-pupils, deliberately outside its static table because *"their bind position IS the
+eye's pupil centre"*. `RIG3` — the Sly 3 rebuild that became the default character in §196/task #18
+— has 31 bones and no pupil among them. `Rig.js`'s `addScale` returns early on a name it does not
+hold (`if (cur === undefined) return`), so the two tracks are silent no-ops.
+
+A specced, implemented, verified feature stopped working the day the default model changed, and
+nothing noticed for the obvious reason: it is two frames of two damage-reaction clips, and no
+screenshot in the suite freezes either.
+
+**Left unfixed, tracked exactly.** Giving RIG3 pupil bones is a change to the shipped character's
+skinning, and `hurt`/`ko` are combat-recipient clips, which are on the backburner by the owner's
+instruction (§203). The test asserts the orphan set *exactly*, so fixing RIG3 turns it red with
+"expected these to still be broken" — the direction a tracked exception should fail in.
+
+**Not covered by this suite:** anything importing `import.meta.glob` (`SlyModelDL*`, which resolve
+assets through Vite) cannot load in plain Node and still needs the browser harness. `Animation.js`
+imports fine but keeps `TREE` / `TREE_CLIPS` module-private, so the locomotion tree's clip names are
+unreachable from a test; `Clips.js`'s own `REQUIRED`/`MISSING` covers part of that ground, and the
+suite now asserts `MISSING` is empty, which nothing did before.

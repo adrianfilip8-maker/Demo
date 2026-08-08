@@ -449,10 +449,18 @@ Esc            release pointer lock
 ### 7.1 How to iterate
 
 1. Implement / improve your module.
-2. `npm run shot` — renders the canonical shots to `shots/<name>.png`.
-3. **Look at the PNG.** Read it with the Read tool. Actually look at it.
-4. Compare against the bar in §2 and §7.3. Be brutal.
-5. Fix the worst thing. Repeat. Do not stop at "fine".
+2. `npm test` — structural guards on data that renders plausibly when it is wrong (§211). Seconds,
+   no capture lock. Run it before spending five minutes on a frame; it has already caught an action
+   clip looping back to its first pose mid-jump and a bone track naming a bone that does not exist.
+3. `npm run shot` — renders the canonical shots to `shots/<name>.png`.
+4. **Look at the PNG.** Read it with the Read tool. Actually look at it.
+5. Compare against the bar in §2 and §7.3. Be brutal.
+6. Fix the worst thing. Repeat. Do not stop at "fine".
+
+A test you have not seen fail is not evidence. Nine of this suite's first-draft assertions read a
+property the shipped data does not have, reported `ok`, and inspected nothing (§211.1) — so every
+data-driven test here counts what it touched and asserts the count is non-zero. Add new tests the
+same way, and watch a new one go red before you trust it green.
 
 ### 7.2 Canonical shots
 
