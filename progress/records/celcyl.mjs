@@ -440,6 +440,12 @@ function readProfile(png, fg, dy = 0) {
    not; the only inputs from the subject are `amp` and `σ`, which are applied identically to
    both and therefore cannot favour either.
 --------------------------------------------------------------------------- */
+/* `--quant=0` restores the float controls the criterion was originally registered with, so both
+   readings stay reproducible from one file. Default 1 = the faithful, harder one. Declared ahead
+   of `synth` rather than after it: it worked either way (nothing calls `synth` before the module
+   body reaches this line) but a const in the TDZ of its only consumer is a footgun, not a design. */
+const QUANT = argv.quant === undefined ? 1 : Number(argv.quant);
+
 function mulberry32(a) {
   return function () {
     a |= 0; a = (a + 0x6D2B79F5) | 0;
@@ -479,9 +485,6 @@ function synth(nl, lambda, amp, base, sigma, seed) {
   }
   return out;
 }
-/* `--quant=0` restores the float controls the criterion was originally registered with, so both
-   readings stay reproducible from one file. Default 1 = the faithful, harder one. */
-const QUANT = argv.quant === undefined ? 1 : Number(argv.quant);
 
 const SPINS = 6, SEEDS = 6;
 /** Ensemble of gapFrac over the two genuinely unknown inputs: rib sampling phase and noise. */
