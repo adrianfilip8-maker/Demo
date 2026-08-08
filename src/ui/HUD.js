@@ -538,6 +538,10 @@ export class HUD {
     if (v === this.binocOn || !this._built) { this.binocOn = v; return; }
     this.binocOn = v;
     this.el.binoc.classList.toggle('on', v);
+    // The Binocucom is a screen, not an overlay: it carries its own readouts, so the gameplay
+    // cluster stands down rather than showing through the lens and colliding with them. The
+    // world marks stay — reading guard states through the optics is what it is for.
+    this.root.dataset.binoc = v ? '1' : '0';
     if (v) this._flash(0.32, 130);
     this.engine.emit('binocucomState', v);
   }

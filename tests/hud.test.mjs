@@ -405,6 +405,101 @@ test('M5: two guards at the same rank report a count the player can act on', asy
   hud.dispose();
 });
 
+/* ====================================================================== M6 */
+/* Legibility floor — ADDENDUM-hud1-legibility.md.                          */
+
+/**
+ * Selectors whose text is read while play continues. Everything under `.sly-pause` is reference
+ * text, read only with the game stopped.
+ */
+const GAMEPLAY = [
+  '.sly-coin-num', '.sly-coin-plus', '.sly-threat-lbl', '.sly-threat-num',
+  '.sly-obj-kick', '.sly-obj-title', '.sly-obj-sub', '.sly-toast', '.sly-prompt-verb',
+  '.sly-tov-tag', '.sly-mark .lbl', '.sly-alert-glyph', '.sly-alert-lbl',
+  '.bx-mono', '.bx-rec', '.bx-caller-name', '.bx-caller-line',
+];
+const REFERENCE = [
+  '.sly-grp > h4', '.sly-row .dsc', '.sly-row .dsc small', '.sly-row .ks .plus',
+  '.sly-btn', '.sly-pause-tip', '.sly-pause-title em',
+];
+
+/** Pull every `<selector> { … font-size: calc(var(--u) * N) … }` out of the stylesheet. */
+function fontScale() {
+  const css = read('ui/hud.css.js');
+  const out = new Map();
+  for (const m of css.matchAll(/([^{}]+)\{([^}]*)\}/g)) {
+    const fs = /font-size:\s*calc\(var\(--u\)\s*\*\s*([\d.]+)\)/.exec(m[2]);
+    if (!fs) continue;
+    for (const sel of m[1].split(',')) {
+      const s = sel.trim().replace(/\s+/g, ' ');
+      if (s) out.set(s, parseFloat(fs[1]));
+    }
+  }
+  return out;
+}
+
+function legibilityFailures(scale) {
+  const ref = REFERENCE.map((s) => scale.get(s)).filter((v) => typeof v === 'number');
+  assert.ok(ref.length >= 5, `only ${ref.length} reference text runs parsed — regex has rotted`);
+  const floor = Math.min(...ref);
+  const failures = [];
+  let inspected = 0;
+  for (const sel of GAMEPLAY) {
+    const v = scale.get(sel);
+    if (typeof v !== 'number') continue;
+    inspected++;
+    if (v < floor) failures.push(`${sel}: ${v}u < reference floor ${floor}u`);
+  }
+  return { failures, inspected, floor };
+}
+
+test('M6 CALIBRATION (must fire): the pre-fix sizes fail the legibility floor', () => {
+  const scale = fontScale();
+  // The two values as they shipped before this run.
+  scale.set('.sly-alert-lbl', 0.58);
+  scale.set('.sly-mark .lbl', 0.62);
+  const { failures, inspected } = legibilityFailures(scale);
+  assert.ok(inspected >= 12, `only ${inspected} gameplay runs inspected`);      // §211.1
+  assert.equal(failures.length, 2,
+    `CALIBRATION FAILED — expected exactly the two undersized labels to be caught, got:\n  ${failures.join('\n  ')}`);
+  assert.ok(failures.some((f) => f.startsWith('.sly-alert-lbl')));
+  assert.ok(failures.some((f) => f.startsWith('.sly-mark .lbl')));
+});
+
+test('M6: no gameplay text is smaller than the smallest pause-menu text', () => {
+  const scale = fontScale();
+  const { failures, inspected, floor } = legibilityFailures(scale);
+  assert.ok(inspected >= 12, `only ${inspected} gameplay runs inspected`);      // §211.1
+  assert.equal(floor, 0.68, 'reference floor moved — re-read the addendum before touching this');
+  assert.deepEqual(failures, [], `text too small to read at 1280x720:\n  ${failures.join('\n  ')}`);
+});
+
+test('M6: the Binocucom readouts clear their own corner brackets', () => {
+  const css = read('ui/hud.css.js');
+  const u = (re, what) => {
+    const m = re.exec(css);
+    assert.ok(m, `could not read ${what}`);
+    return parseFloat(m[1]);
+  };
+  // Bracket box: the size is on `.bx-corner`, the inset on the per-corner rules.
+  const size = u(/\.bx-corner\s*\{[^}]*?width:\s*calc\(var\(--u\)\s*\*\s*([\d.]+)\)/, '.bx-corner size');
+  const inset = u(/\.bx-corner\.tl\s*\{[^}]*?left:\s*calc\(var\(--u\)\s*\*\s*([\d.]+)\)/, '.bx-corner.tl inset');
+  const reach = inset + size;    // how far in from the corner the bracket actually reaches
+
+  let checked = 0;
+  for (const [sel, re] of [
+    ['.bx-tl', /\.bx-tl\s*\{[^}]*?top:\s*calc\(var\(--u\)\s*\*\s*([\d.]+)\)/],
+    ['.bx-bl', /\.bx-bl\s*\{[^}]*?bottom:\s*calc\(var\(--u\)\s*\*\s*([\d.]+)\)/],
+    ['.bx-br', /\.bx-br\s*\{[^}]*?bottom:\s*calc\(var\(--u\)\s*\*\s*([\d.]+)\)/],
+    ['.bx-rec', /\.bx-rec\s*\{[^}]*?top:\s*calc\(var\(--u\)\s*\*\s*([\d.]+)\)/],
+  ]) {
+    const v = u(re, sel);
+    assert.ok(v >= reach, `${sel} starts at ${v}u but the corner bracket reaches ${reach}u`);
+    checked++;
+  }
+  assert.equal(checked, 4);                                                    // §211.1
+});
+
 /* ============================================================ capture seam */
 
 test('the HUD cannot appear in any capture: DOM overlay vs canvas readback', () => {

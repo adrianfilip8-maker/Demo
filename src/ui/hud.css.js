@@ -421,7 +421,7 @@ export const HUD_CSS = /* css */ `
 .sly-mark svg { width: 100%; height: 100%; animation: sly-spin 7s linear infinite; }
 .sly-mark .lbl {
   position: absolute; left: 50%; top: 104%; transform: translateX(-50%);
-  font-size: calc(var(--u) * .62); letter-spacing: .2em; white-space: nowrap; color: inherit;
+  font-size: calc(var(--u) * .72); letter-spacing: .2em; white-space: nowrap; color: inherit;
 }
 @keyframes sly-spin { to { transform: rotate(360deg) } }
 
@@ -453,7 +453,9 @@ export const HUD_CSS = /* css */ `
 .sly-alert-lbl {
   position: absolute; left: 50%; top: 101%;
   transform: translateX(-50%) skewX(-5deg);
-  font-size: calc(var(--u) * .58);
+  /* At the --u floor (11px, i.e. 1280x720) .58 rendered at 6.4px — smaller than the pause
+     menu's own footnotes, for the single most urgent read in the game. See M6. */
+  font-size: calc(var(--u) * .86);
   letter-spacing: .16em;
   white-space: nowrap;
   color: var(--alert-col, var(--gold-l));
@@ -476,6 +478,10 @@ export const HUD_CSS = /* css */ `
   transition: opacity .2s ease, visibility 0s .2s;
 }
 .sly-binoc.on { opacity: 1; visibility: visible; transition: opacity .13s ease, visibility 0s; }
+
+/* The gameplay cluster stands down while the optics are up — see HUD.binocucom(). */
+#sly-hud[data-binoc='1'] .sly-shake { opacity: 0; transition: opacity .16s ease; }
+#sly-hud .sly-shake { transition: opacity .2s ease; }
 
 /* The lens. Its own box-shadow paints the entire surround, so the "looking through
    optics" mask needs no SVG and can't stretch with the viewport aspect. */
@@ -555,15 +561,18 @@ export const HUD_CSS = /* css */ `
   line-height: 1.72;
   white-space: pre;
 }
-.bx-tl { left: calc(var(--u) * 1.4); top: calc(var(--u) * 1.15); }
-.bx-bl { left: calc(var(--u) * 1.4); bottom: calc(var(--u) * 1.15); }
-.bx-br { right: calc(var(--u) * 1.4); bottom: calc(var(--u) * 1.15); text-align: right; }
+/* Clear of the corner brackets. Each bracket is 2.6u square inset .55u, so it occupies
+   .55u to 3.15u from its corner; a readout starting at 1.15u ran straight through the
+   bracket's arm. 3.35u puts the text past it on the axis it would otherwise collide on. */
+.bx-tl { left: calc(var(--u) * 1.4); top: calc(var(--u) * 3.35); }
+.bx-bl { left: calc(var(--u) * 1.4); bottom: calc(var(--u) * 3.35); }
+.bx-br { right: calc(var(--u) * 1.4); bottom: calc(var(--u) * 3.35); text-align: right; }
 .bx-mono b { color: var(--gold-l); font-weight: 700; }
 .bx-mono .sig { display: inline-block; height: calc(var(--u) * .82); vertical-align: -.14em; }
 .bx-mono .sig svg { height: 100%; width: auto; }
 
 .bx-rec {
-  position: absolute; right: calc(var(--u) * 1.4); top: calc(var(--u) * 1.1);
+  position: absolute; right: calc(var(--u) * 1.4); top: calc(var(--u) * 3.35);
   display: flex; align-items: center; gap: calc(var(--u) * .42);
   font-family: 'DejaVu Sans Mono', ui-monospace, monospace;
   font-size: calc(var(--u) * .8); letter-spacing: .3em; color: #ffd9d0;
