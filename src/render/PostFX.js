@@ -294,6 +294,31 @@ const TUNE = {
          PREREG-contact.md's counter-risk 1, which is a different §7.3 failure and not the one
          being fixed. */
   contactRise: [0.006, 0.20],
+  /* --- the contact term's CEL quantisation (critic7 defect 7 + its "reads as dirt" neighbour) ---
+     `slyContact` produces a continuous occlusion that falls off smoothly over the sample radius.
+     Multiplied into a 3-band image that is a smooth multiplicative gradient, i.e. exactly the
+     airbrushed-AO look §2.1 forbids and the thing that makes screen-space occlusion read as
+     *dirt* on cel art rather than as *shadow*. It is also the mechanism by which a full-screen
+     term destroys flat area: a gradient turns one flat region into N distinct luma values, which
+     is what RESULT-grain1 measured when the grain came off (flat area 24.9% -> 54.4%).
+
+     So the occlusion is snapped onto flat steps with a soft boundary before it is applied. A
+     piecewise-constant multiplier maps a flat region onto a flat region — it can only add the
+     step edges themselves, a fixed handful of pixels, instead of a whole gradient's worth of
+     unique values. That is the argument that this term does not repeat the grain's mistake, and
+     it is stated as a prediction to be measured, not as a defence.
+
+     Both numbers are DERIVED from the ramp rather than chosen:
+     [0] steps  2 -> the output takes exactly 3 levels {0, 0.5, 1}, matching TUNE.bands = 3. The
+         contact shadow gets the same number of tones as everything else in the frame.
+     [1] mix    0 = the continuous term, bit-identical (mix at 0 is exact). 1 = fully quantised.
+         Ships at 0 per §17: the look change is held as its own pre-registered A/B arm, and this
+         is the lever that produces the continuous-vs-quantised comparison in ONE boot.
+     [2] soft   half-width of the smoothstep across each step boundary, in fractions of a step.
+         TUNE.termSoft 0.024 over the ramp's band spacing (termHi - termLo = 0.38) is 0.063, so
+         the contact steps get antialiased to the same relative hardness as the ramp's own
+         terminators — no softer (would be a gradient again) and no harder (would alias). */
+  contactQuant: [2, 0.0, 0.063],
 
   /* --- bloom ---
      §7.3 wants "a tight coloured halo on bright things", not a wash. At threshold 1.02 with
@@ -940,12 +965,37 @@ uniform vec3  uLift, uGain, uSplitShadow, uSplitHighlight, uInkWarm, uInkCool;
 uniform vec3  uAOTint, uRimLit, uRimShade;
 uniform vec4  uContact;      // radiusWorld(m), strength, minPx, maxPx
 uniform vec2  uContactRise;  // rise window in metres: noise floor, contact ceiling
+uniform vec3  uContactQuant;  // steps, mix (0 = continuous, exact), soft half-width
 ${GLSL_VIEW}
 ${GLSL_NOISE}
 ${GLSL_AGX}
 ${GLSL_SRGB}
 
 const float SLY_PIVOT = 0.18;   // scene-linear middle grey; the contrast pivot
+
+/**
+ * Snap a 0..1 occlusion onto n flat steps, antialiased across each boundary. See
+ * TUNE.contactQuant for why this exists and where n and soft come from.
+ *
+ * Levels are {0, 1/n, ... 1} — n+1 of them, so n = 2 gives the ramp's own three tones. Within a
+ * level the value is EXACTLY constant, which is the property that matters: a constant multiplier
+ * preserves a flat region, a gradient does not.
+ *
+ * Two properties this relies on, both worth stating because the fix rests on them:
+ *  - MONOTONE. floor() and smoothstep() are both non-decreasing, so slyBandStep is non-decreasing
+ *    in v. The raw occlusion falls off monotonically with distance from the contact, therefore so
+ *    does the quantised one, therefore the luma under the feet rises monotonically outward — which
+ *    is precisely the measurement critic7 defect 7 says is currently non-monotonic. Quantising can
+ *    flatten the profile into ties, but it cannot introduce a reversal.
+ *  - EXACT AT THE ENDS. v = 0 gives 0, so the term stays exactly zero on open floor. The whole
+ *    planarity design in slyContact exists to make it zero there; a quantiser that lifted 0 off
+ *    zero would throw that away and put a step edge across every flat surface in the frame.
+ */
+float slyBandStep( float v, float n, float soft ) {
+  float s = v * n;
+  float f = floor( s );
+  return ( f + smoothstep( 0.5 - soft, 0.5 + soft, s - f ) ) / n;
+}
 
 /**
  * Contact occlusion, full resolution, from depth alone. See TUNE.contact.
@@ -1021,7 +1071,12 @@ float slyContact( vec2 uv, float z0 ) {
          * ( 1.0 - smoothstep( uContactRise.y, uContactRise.y * 2.5, riseM ) );
   }
 
-  return clamp( occ * 0.25 * uContact.y, 0.0, 1.0 );
+  /* Quantise the NORMALISED occlusion, before strength scales it, so contactQuant means the
+     same thing at every strength and the step levels stay tied to TUNE.bands rather than
+     drifting with a knob. mix at 0 is exact, so contactQuant[1] = 0 is bit-identical legacy. */
+  float occN = clamp( occ * 0.25, 0.0, 1.0 );
+  occN = mix( occN, slyBandStep( occN, uContactQuant.x, uContactQuant.z ), uContactQuant.y );
+  return clamp( occN * uContact.y, 0.0, 1.0 );
 }
 
 void main() {
@@ -1360,6 +1415,7 @@ export class PostFX {
         uAOTint: { value: tintColor(new THREE.Color(this.tune.aoTint)) },
         uContact: { value: new THREE.Vector4(...this.tune.contact) },
         uContactRise: { value: new THREE.Vector2(...this.tune.contactRise) },
+        uContactQuant: { value: new THREE.Vector3(...this.tune.contactQuant) },
         // The rim lands after slyLinearToSrgb, alongside the ink, so it is display-space.
         uRimLit: { value: displayColor(this.tune.rimLit) },
         uRimShade: { value: displayColor(this.tune.rimShade) },
@@ -1505,7 +1561,7 @@ export class PostFX {
   contactState(refZ = 6.0) {
     const cu = this.compositeMat?.uniforms;
     if (!cu?.uContact) return { available: false };
-    const c = cu.uContact.value, rise = cu.uContactRise.value;
+    const c = cu.uContact.value, rise = cu.uContactRise.value, q = cu.uContactQuant.value;
     const pi = cu.uProjInv.value.elements;
     const h = this.sceneRT?.height ?? this.engine.height;
     const w = this.sceneRT?.width ?? this.engine.width;
@@ -1514,10 +1570,26 @@ export class PostFX {
     const rUvX = c.x * (1 / pi[0]) * 0.5 / Math.max(refZ, 1e-3);
     const rawPx = { x: rUvX * w, y: rUvY * h };
     const appPx = { x: Math.min(Math.max(rawPx.x, c.z), c.w), y: Math.min(Math.max(rawPx.y, c.z), c.w) };
-    return {
+    /* The PLATEAU values slyContact settles on at this quantisation, so an arm prints the tones it
+       actually paints rather than a knob that implies them. Not the complete output set: the
+       smoothstep across each boundary passes through intermediate values by design, and that is
+       the antialiasing — measured on the GPU, a 101-sample sweep at steps 2 returns 14 distinct
+       values, 3 plateaus plus the two 1-2 px transitions between them, against 101 for the
+       continuous term. Quoting these three as "the only values in the frame" would be the
+       overclaim. At mix 0 the term is continuous and there is no plateau set to print. */
+    const levels = q.y > 0
+      ? Array.from({ length: Math.round(q.x) + 1 }, (_, i) => +((i / q.x) * c.y).toFixed(4))
+      : null;
+    const state = {
       available: true,
       radiusM: c.x, strength: c.y, minPx: c.z, maxPx: c.w,
       riseLoM: rise.x, riseHiM: rise.y,
+      // Requested vs applied. `debug.contactScale` sits between them; if these disagree the lever
+      // is live, and if two arms agree on `strength` they are COLLAPSED whatever `tune` says.
+      requestedStrength: this.tune.contact[1],
+      debugContactScale: this.engine?.debug?.contactScale ?? 1,
+      quantSteps: q.x, quantMix: q.y, quantSoft: q.z, quantLevels: levels,
+      debugContactQuant: this.engine?.debug?.contactQuant ?? null,
       refZ, rtW: w, rtH: h,
       rawPx: [+rawPx.x.toFixed(3), +rawPx.y.toFixed(3)],
       appliedPx: [+appPx.x.toFixed(3), +appPx.y.toFixed(3)],
@@ -1527,6 +1599,13 @@ export class PostFX {
       aoEnabled: cu.uAOEnabled.value > 0.5, aoStrength: cu.uAOStrength.value, aoDepth: cu.uAODepth.value,
       aoTint: [...cu.uAOTint.value.toArray()].map((v) => +v.toFixed(4)),
     };
+    /* One line an arm can print and a reader can diff. PREREG-contact.md §6.1 says two arms with
+       equal applied state are COLLAPSED and score nothing; making that a string comparison rather
+       than an eyeball over twenty fields is the difference between the rule being followed and
+       the rule being quoted. Every field in it is an APPLIED uniform value, never `tune`. */
+    state.fingerprint = `r${state.radiusM}|s${state.strength.toFixed(4)}|q${state.quantSteps}x${state.quantMix.toFixed(3)}x${state.quantSoft}` +
+      `|px${state.appliedPx[0]},${state.appliedPx[1]}|clamp${state.clamped ? 1 : 0}|rt${w}x${h}|ao${state.aoStrength}`;
+    return state;
   }
 
   /**
@@ -1815,9 +1894,22 @@ export class PostFX {
     cu.uInkStrength.value = this.tune.inkStrength;
     cu.uAOStrength.value = this.tune.aoStrength;
     cu.uAODepth.value = this.tune.aoDepth;
-    // Re-read every frame so a one-boot A/B can poke tune.contact between arms.
-    cu.uContact.value.set(this.tune.contact[0], this.tune.contact[1], this.tune.contact[2], this.tune.contact[3]);
+    /* Re-read every frame so a one-boot A/B can poke tune.contact between arms.
+       `debug.contactScale` / `debug.contactQuant` — in-page levers on the contact term, the same
+       shape as `debug.grainScale` below, so the term is defeatable without a rebuild and without
+       touching `tune` (an arm that edits `tune` cannot prove it did not edit anything else).
+       contactScale defaults to 1 and contactQuant to null = "use tune", both bit-identical to
+       shipping. contactScale = 0 drives uContact.y to 0, which skips the whole composite branch,
+       so it is the true OFF arm and not merely a small strength. */
+    const cScale = this.engine?.debug?.contactScale ?? 1;
+    const cQuant = this.engine?.debug?.contactQuant ?? null;
+    cu.uContact.value.set(this.tune.contact[0], this.tune.contact[1] * cScale, this.tune.contact[2], this.tune.contact[3]);
     cu.uContactRise.value.set(this.tune.contactRise[0], this.tune.contactRise[1]);
+    cu.uContactQuant.value.set(
+      this.tune.contactQuant[0],
+      cQuant == null ? this.tune.contactQuant[1] : cQuant,
+      this.tune.contactQuant[2],
+    );
     cu.uRimStrength.value = this.passes.edge.enabled ? this.tune.rimStrength : 0;
     cu.uRimShadowFloor.value = this.tune.rimShadowFloor;
     cu.uBloomIntensity.value = this.tune.bloomIntensity;

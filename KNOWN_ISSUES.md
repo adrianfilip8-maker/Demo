@@ -16508,3 +16508,72 @@ blinded the guard to a genuinely dead clip.
 
 **Still not done:** wiring these into `Animation.js` and blind-comparing them against the procedural
 clips. That is now ordinary work with no blocker in front of it.
+
+## §213 — the player character has never rendered on the cel material, because `Shading.make()` does not exist
+
+Found by the ink sub-agent while auditing outline width, and verified independently here. This is the
+largest single finding in the project's history and it is a spelling mistake.
+
+`Shading.prototype` has no method called `make`. Five call sites invoke one:
+
+| call site | what it is |
+|---|---|
+| **`src/player/SlyModel3.js:701`** | **the SHIPPED player character** (default since §196 / task #18) |
+| `src/world/KayKit.js:181` | every KayKit prop — all 36 of them |
+| `src/player/SlyModelDL.js:445` | the `?char=dl` import |
+| `src/player/SlyModelDLRig.js:352` | the `?char=dlrig` import |
+| `src/player/SlyModelDLRaw.js:160` | the `?char=dlraw` import |
+
+Every one is written in the same shape:
+
+```js
+const mat = shading?.make
+  ? shading.make({ name: 'sly3:body', vertexColors: true, bands: TUNE.bands, rim: …, sss: … })
+  : new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.85 });
+```
+
+`shading?.make` is `undefined`, so **every one takes the fallback**. The protagonist and all set
+dress render on a plain `MeshStandardMaterial` — smooth Lambert, no ramp, no bands, no rim, no SSS,
+no ink hook — while the world (`Architecture`, `Terrain`, `Props`, `Guard`, and the *legacy*
+`SlyModel`) calls the real method, `toon()`, and is fully cel-shaded.
+
+**Critic pass 7's #1 defect is "THERE IS NO TOON RAMP, ANYWHERE".** It is not a tuning problem. It is
+a method name.
+
+### Why nothing caught it for the whole life of the project
+
+The optional-call guard is normally good practice: it means "the shading module may not be registered
+yet, fall back". It *also* silently absorbs "that method name is wrong", and then the fallback is not
+a brief degradation during boot — it is what ships, forever, with no warning, on a material that
+renders perfectly plausibly. Every instrument this project owns looks at pixels, and
+`MeshStandardMaterial` produces pixels. A misspelled method costs nothing at parse time in a language
+without interfaces, and the guard converts the runtime error that would have caught it into a
+permanent silent downgrade.
+
+`tests/api.test.mjs` now scrapes every `shading.X(` / `shading?.X` / `get('shading')?.X` out of
+`src/` and requires X to exist on `Shading.prototype`. Static text analysis, milliseconds, and it
+generalises to any method added later. Calibrated: with `make` removed from the exception list it
+goes red and names all five call sites.
+
+### What this invalidates, including my own work this session
+
+- **§210.1 / §210.3 — the `termHi` analysis is about a ramp the character never receives.** The
+  ground-plane and column arithmetic still holds for the *world*, which is genuinely on `toon()`. But
+  the eye-hierarchy check I ran in §210.3 — "the pair straddles neither 0.52 nor 0.62 at any of 72
+  head yaws" — measured a terminator the shipped eyes are not subject to. The conclusion (the move
+  does not re-open #15) survives for a duller reason than the one I gave: the shipped character has
+  no terminator at all.
+- **The "style fracture by asset provenance" that the KayKit work chased** is this: KayKit props and
+  the character are on one material path, the world on another.
+- **Critic #3, "ink weight tracks asset provenance, not intent"** — same root. The ink sub-agent
+  measured 20.2× darkening spread and found it is not one system with a varying width but *two
+  systems*, split by which module built the mesh.
+
+### Not fixed in this commit, on purpose
+
+The fix is one line — `make(opts) { return this.toon(opts); }` — and `_normalise` already accepts
+everything `SlyModel3` passes (`name, color, vertexColors, bands, rim, rimColor, sss, outline`;
+only `outlineColor` is dropped). But it is the single largest visual change available here: it flips
+the protagonist and all set dress onto a different shader in one step. It gets a sealed A/B with a
+calibration arm, not a drive-by — and it cannot be captured while sub-agents are still editing
+`src/**` (§186). Registered as its own task.
