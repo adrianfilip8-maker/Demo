@@ -4,13 +4,43 @@ import { SFX, SFX_NAMES, stepFor } from './Sfx.js';
 import { Music, SECTION_NAMES } from './Music.js';
 
 /**
- * How each of Music.js's sections reads on a FIXED recording, which has no sections of its own.
- * Level is a multiplier on `TUNE.trackLevel`; cutoff is the shared `musicFilter`, so this is the
- * same lowpass the synthesised path already used for the same purpose.
+ * Three ADAPTIVE STEMS, from the same source project as the character animation. Provenance in
+ * `public/assets/audio/PROVENANCE.md`; encoded from 97 MB of 48 kHz WAV to 6.8 MB of MP3 by
+ * `tools/kaykit-retint.mjs`'s sibling procedure (see that commit).
  *
- * The shape follows what the procedural sections were doing with their layer mixes: `sneak` drops
- * the kit and lead almost to nothing, so here it drops level and closes the filter; `alert` pushes
- * bass and kit up, so here it opens both fully.
+ * These replace the single-recording-plus-lowpass approximation that shipped first. That version
+ * faked a section change by dropping level and closing a filter on one fixed track, which is the
+ * best a single recording can do and is audibly not a different arrangement. These three ARE
+ * different arrangements of one piece, which is what `Music.js`'s section model always wanted.
+ *
+ * LOADED LAZILY, ONE AT A TIME, and that is a memory decision rather than laziness. Decoded PCM is
+ * Float32 at the context rate: 168 s x 48 kHz x 2 ch x 4 B is **~64 MB per stem**, so holding all
+ * three from boot costs ~193 MB of AudioBuffer for audio nobody has asked for yet. Most sessions
+ * need `explore` plus at most one other. The cost of deferring is a decode gap on the first
+ * transition, which `_selectStem` covers by leaving the current stem up until the new one is ready.
+ */
+const STEM_FILES = {
+  explore: 'bc-explore.mp3',
+  sneak: 'bc-sneak.mp3',
+  chase: 'bc-chase.mp3',
+};
+/* Music.js's six sections onto the three arrangements that exist. `menu` and `treasure` borrow
+   `explore` rather than getting a stem of their own — TRACK_SECTION still moves their level and
+   filter, so they are distinguishable without pretending an arrangement exists that does not. */
+const SECTION_STEM = {
+  menu: 'explore', explore: 'explore', treasure: 'explore',
+  sneak: 'sneak', alert: 'chase', chase: 'chase',
+};
+
+/**
+ * Level and filter shape per section, applied ON TOP of whichever stem `SECTION_STEM` selected.
+ * Level multiplies `TUNE.trackLevel`; cutoff drives the shared `musicFilter`, the same lowpass the
+ * synthesised path used for the same purpose.
+ *
+ * Both layers still earn their place. The stems differ in ARRANGEMENT, this differs in PRESENCE,
+ * and `menu`/`treasure` have no stem of their own so the shape is the only thing distinguishing
+ * them. The shape follows what the procedural sections did with their layer mixes: `sneak` dropped
+ * the kit and lead almost to nothing, so here it drops level and closes the filter.
  */
 const TRACK_SECTION = {
   menu:     { level: 0.90, cutoff: 20000 },
@@ -30,9 +60,18 @@ import { ReverbRack, SPACES } from './Reverb.js';
 /**
  * Audio — the mixer, the spatialiser, and the glue to the rest of the game.
  *
- * Everything is synthesised (AGENTS.md §1): no files, no CDN, no decodeAudioData.
  * Sfx.js says what things sound like, Music.js writes the score, Reverb.js builds
  * the rooms; this file decides what gets heard, from where, and how loud.
+ *
+ * **THIS FILE USED TO SAY "everything is synthesised (AGENTS.md §1): no files, no CDN, no
+ * decodeAudioData", and that is no longer true.** The owner supplied recorded music, so the score
+ * is now three owner-supplied MP3 stems decoded through `decodeAudioData` (see `STEM_FILES`), and
+ * §1's constraint is superseded for music only. Everything else still holds and matters: SFX remain
+ * fully synthesised, nothing is fetched from a CDN, the assets are served from the app's own origin,
+ * and `Music.js`'s procedural score is retained as the fallback rather than deleted — a failed fetch
+ * or decode degrades to it instead of to silence. The stale sentence is quoted rather than merely
+ * removed, because a reader who knows the old constraint should be able to see that it was changed
+ * on purpose and not simply violated.
  *
  * Three constraints shape the design:
  *
@@ -202,7 +241,7 @@ export class Audio {
      * deliberately not awaited on the live path: `unlock()` is documented as returning fast enough
      * to sit inside a click handler, and that contract is worth more than the track starting a
      * few hundred milliseconds sooner. */
-    if (!existing) this._loadTrack().catch(() => {});
+    if (!existing) this._loadTrack(SECTION_STEM[this._section] || 'explore').catch(() => {});
 
     return this.ready;
   }
@@ -216,8 +255,10 @@ export class Audio {
    * is cross-faded down rather than removed, and it comes straight back if the file is missing or
    * fails to decode. `music(section)` keeps working either way; see the note there.
    */
-  async _loadTrack(url = 'assets/audio/museum-of-natural-history.mp3') {
-    if (!this.ready || !this.ctx || this._trackState !== 'idle') return false;
+  async _loadTrack(name = 'explore') {
+    if (!this.ready || !this.ctx || this._trackState === 'loading') return false;
+    const url = `assets/audio/${STEM_FILES[name] || STEM_FILES.explore}`;
+    if (this._stems.has(name)) return true;
     this._trackState = 'loading';
     let buf;
     try {
@@ -225,39 +266,54 @@ export class Audio {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       buf = await this.ctx.decodeAudioData(await res.arrayBuffer());
     } catch (err) {
-      this._trackState = 'failed';
-      this._warn(`music track unavailable (${err?.message || err}) — procedural score continues`);
+      this._trackState = this._stems.size ? 'playing' : 'failed';
+      this._warn(`music stem "${name}" unavailable (${err?.message || err})`
+        + (this._stems.size ? ' — other stems continue' : ' — procedural score continues'));
       return false;
     }
     if (!this.ready || !this.ctx) { this._trackState = 'idle'; return false; }
 
     try {
+      const t = this.ctx.currentTime;
+      const gain = this.ctx.createGain();
+      gain.gain.value = 0;
+      gain.connect(this.trackGain);
       const src = this.ctx.createBufferSource();
       src.buffer = buf;
       src.loop = true;
-      src.connect(this.trackGain);
-      const t = this.ctx.currentTime;
-      src.start(t);
-      this.track = src;
+      src.connect(gain);
+
+      /* PHASE-ALIGNED START. The three stems are three mixes of the same piece at the same tempo,
+         so a stem that starts at zero while another is 40 s in would cross-fade into a different
+         bar and read as a mistake rather than a transition. Starting at the shared playback
+         position keeps them musically locked without holding all three decoded from boot. */
+      const offset = this._stemEpoch === null ? 0 : (t - this._stemEpoch) % buf.duration;
+      if (this._stemEpoch === null) this._stemEpoch = t;
+      src.start(t, offset);
+
+      this._stems.set(name, { src, gain, duration: buf.duration });
       this._trackState = 'playing';
 
-      /* Equal-length cross-fade: the recording up, the synthesised score down. Four seconds
-         because both are music and a fast swap between two pieces of music reads as a glitch. */
-      const FADE = 4.0;
-      this.trackGain.gain.cancelScheduledValues(t);
-      this.trackGain.gain.setValueAtTime(0, t);
-      this.trackGain.gain.linearRampToValueAtTime(TUNE.trackLevel, t + FADE);
-      const so = this.score?.output?.gain;
-      if (so) {
-        so.cancelScheduledValues(t);
-        so.setValueAtTime(so.value, t);
-        so.linearRampToValueAtTime(0, t + FADE);
+      /* First stem in also retires the synthesised score. Four seconds, because both are music
+         and a fast swap between two pieces of music reads as a glitch. */
+      if (this._stems.size === 1) {
+        const FADE = 4.0;
+        this.trackGain.gain.cancelScheduledValues(t);
+        this.trackGain.gain.setValueAtTime(0, t);
+        this.trackGain.gain.linearRampToValueAtTime(TUNE.trackLevel, t + FADE);
+        const so = this.score?.output?.gain;
+        if (so) {
+          so.cancelScheduledValues(t);
+          so.setValueAtTime(so.value, t);
+          so.linearRampToValueAtTime(0, t + FADE);
+        }
       }
-      this._warn(`music: "${url.split('/').pop()}" ${buf.duration.toFixed(0)}s, looping`);
+      this._selectStem(this._section, t);
+      this._warn(`music stem "${name}" ${buf.duration.toFixed(0)}s, looping from ${offset.toFixed(1)}s`);
       return true;
     } catch (err) {
-      this._trackState = 'failed';
-      this._warn(`music track start failed: ${err?.message || err}`);
+      this._trackState = this._stems.size ? 'playing' : 'failed';
+      this._warn(`music stem "${name}" start failed: ${err?.message || err}`);
       return false;
     }
   }
@@ -331,6 +387,36 @@ export class Audio {
     this.trackGain.connect(this.musicDuck);
     this.track = null;
     this._trackState = 'idle';
+    /** name -> { src, gain, duration }. Lazily filled; see STEM_FILES for why. */
+    this._stems = new Map();
+    /** ctx time the first stem started, so later ones can start phase-aligned to it. */
+    this._stemEpoch = null;
+  }
+
+  /**
+   * Raise the stem this section wants and lower the others, requesting a decode if it is absent.
+   *
+   * The current stem is deliberately left audible while a missing one decodes: a gap would be a
+   * silence in the middle of a state change, which is worse than half a second of the previous
+   * arrangement. Cross-fades are 1.6 s — long enough not to click, short enough that being spotted
+   * still feels like a cue.
+   */
+  _selectStem(section, now = this.ctx?.currentTime ?? 0) {
+    if (!this._stems.size) return;
+    const want = SECTION_STEM[section] || 'explore';
+    if (!this._stems.has(want) && this._trackState !== 'loading') {
+      this._loadTrack(want).catch(() => {});
+    }
+    const active = this._stems.has(want) ? want : this._activeStem;
+    this._activeStem = active;
+    const FADE = 1.6;
+    for (const [name, s] of this._stems) {
+      const target = name === active ? 1 : 0;
+      const g = s.gain.gain;
+      g.cancelScheduledValues(now);
+      g.setValueAtTime(g.value, now);
+      g.linearRampToValueAtTime(target, now + FADE);
+    }
   }
 
   _buildPool() {
@@ -508,8 +594,12 @@ export class Audio {
     this._section = section;
     if (!this.ready) { this._pendingMusic = section; return; }
 
-    if (this._trackState === 'playing') {
+    if (this._trackState === 'playing' || this._trackState === 'loading') {
       const t = this.ctx.currentTime, s = TRACK_SECTION[section] || TRACK_SECTION.explore;
+      /* Pick the arrangement first, then apply the level/filter shape on top of it. Both still
+         matter: the stems differ in instrumentation, TRACK_SECTION differs in presence, and
+         `menu`/`treasure` have no stem of their own so the shape is all they get. */
+      this._selectStem(section, t);
       const g = this.trackGain.gain;
       g.cancelScheduledValues(t);
       g.setValueAtTime(g.value, t);
@@ -1029,6 +1119,14 @@ export class Audio {
        reference to it, so without this the track keeps running after dispose(). */
     try { this.track?.stop(); this.track?.disconnect(); } catch {}
     this.track = null;
+    /* Every lazily-decoded stem is its own looping source and needs the same treatment; a Map that
+       still holds three of them after teardown is three loops running against a dead graph. */
+    for (const s of this._stems.values()) {
+      try { s.src.stop(); s.src.disconnect(); s.gain.disconnect(); } catch {}
+    }
+    this._stems.clear();
+    this._stemEpoch = null;
+    this._activeStem = null;
     this._trackState = 'idle';
     for (let i = 0; i < this._voices.length; i++) {
       const v = this._voices[i];
