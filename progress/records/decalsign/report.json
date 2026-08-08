@@ -1,0 +1,1323 @@
+{
+ "shot": "courtyard",
+ "w": 1280,
+ "h": 720,
+ "quality": "high",
+ "at": "2026-08-08T22:17:03.930Z",
+ "fix": {
+  "changed": true,
+  "why": "premultipliedAlpha: true installed"
+ },
+ "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+ "bootConsoleErrors": [
+  "Failed to load resource: the server responded with a status of 404 (Not Found)"
+ ],
+ "bootWarningPresent": false,
+ "clean": {
+  "probe": {
+   "draws": 20,
+   "before": {
+    "srcRGB": "DST_COLOR",
+    "dstRGB": "ONE_MINUS_SRC_ALPHA",
+    "srcA": "ZERO",
+    "dstA": "ONE",
+    "enabled": true
+   },
+   "after": {
+    "srcRGB": "DST_COLOR",
+    "dstRGB": "ONE_MINUS_SRC_ALPHA",
+    "srcA": "ZERO",
+    "dstA": "ONE",
+    "enabled": true
+   }
+  },
+  "consoleErrors": [],
+  "warnSeen": false
+ },
+ "A1": {
+  "probe": {
+   "draws": 38,
+   "before": {
+    "srcRGB": "SRC_ALPHA",
+    "dstRGB": "ONE_MINUS_SRC_ALPHA",
+    "srcA": "ONE",
+    "dstA": "ONE_MINUS_SRC_ALPHA",
+    "enabled": true
+   },
+   "after": {
+    "srcRGB": "SRC_ALPHA",
+    "dstRGB": "ONE_MINUS_SRC_ALPHA",
+    "srcA": "ONE",
+    "dstA": "ONE_MINUS_SRC_ALPHA",
+    "enabled": true
+   }
+  },
+  "consoleErrors": [
+   "THREE.WebGLState: MultiplyBlending requires material.premultipliedAlpha = true",
+   "THREE.WebGLState: MultiplyBlending requires material.premultipliedAlpha = true",
+   "THREE.WebGLState: MultiplyBlending requires material.premultipliedAlpha = true",
+   "THREE.WebGLState: MultiplyBlending requires material.premultipliedAlpha = true",
+   "THREE.WebGLState: MultiplyBlending requires material.premultipliedAlpha = true",
+   "THREE.WebGLState: MultiplyBlending requires material.premultipliedAlpha = true",
+   "THREE.WebGLState: MultiplyBlending requires material.premultipliedAlpha = true",
+   "THREE.WebGLState: MultiplyBlending requires material.premultipliedAlpha = true",
+   "THREE.WebGLState: MultiplyBlending requires material.premultipliedAlpha = true",
+   "THREE.WebGLState: MultiplyBlending requires material.premultipliedAlpha = true",
+   "THREE.WebGLState: MultiplyBlending requires material.premultipliedAlpha = true",
+   "THREE.WebGLState: MultiplyBlending requires material.premultipliedAlpha = true",
+   "THREE.WebGLState: MultiplyBlending requires material.premultipliedAlpha = true",
+   "THREE.WebGLState: MultiplyBlending requires material.premultipliedAlpha = true",
+   "THREE.WebGLState: MultiplyBlending requires material.premultipliedAlpha = true",
+   "THREE.WebGLState: MultiplyBlending requires material.premultipliedAlpha = true",
+   "THREE.WebGLState: MultiplyBlending requires material.premultipliedAlpha = true",
+   "THREE.WebGLState: MultiplyBlending requires material.premultipliedAlpha = true",
+   "THREE.WebGLState: MultiplyBlending requires material.premultipliedAlpha = true",
+   "THREE.WebGLState: MultiplyBlending requires material.premultipliedAlpha = true"
+  ],
+  "warnSeen": true,
+  "warnings": 4
+ },
+ "A2": {
+  "probe": {
+   "draws": 36,
+   "before": {
+    "srcRGB": "DST_COLOR",
+    "dstRGB": "ONE_MINUS_SRC_ALPHA",
+    "srcA": "ZERO",
+    "dstA": "ONE",
+    "enabled": true
+   },
+   "after": {
+    "srcRGB": "DST_COLOR",
+    "dstRGB": "ONE_MINUS_SRC_ALPHA",
+    "srcA": "ZERO",
+    "dstA": "ONE",
+    "enabled": true
+   }
+  },
+  "consoleErrors": [],
+  "warnSeen": false,
+  "warnings": 4
+ },
+ "A3": {
+  "probe": {
+   "draws": 36,
+   "before": {
+    "srcRGB": "DST_COLOR",
+    "dstRGB": "ONE_MINUS_SRC_ALPHA",
+    "srcA": "ZERO",
+    "dstA": "ONE",
+    "enabled": true
+   },
+   "after": {
+    "srcRGB": "DST_COLOR",
+    "dstRGB": "ONE_MINUS_SRC_ALPHA",
+    "srcA": "ZERO",
+    "dstA": "ONE",
+    "enabled": true
+   }
+  },
+  "consoleErrors": [],
+  "warnSeen": false,
+  "warnings": 4
+ },
+ "projection": {
+  "canvas": [
+   1280,
+   720
+  ],
+  "count": 82,
+  "player": {
+   "world": [
+    -6.6,
+    5.12,
+    12.4
+   ],
+   "px": 428.8134015835589,
+   "py": 393.66926792581967
+  }
+ },
+ "polys": [
+  {
+   "key": "props",
+   "i": 0,
+   "cx": 210.3,
+   "cy": 504.1,
+   "world": [
+    -17.98,
+    0,
+    5.93
+   ],
+   "rWorld": 0.588,
+   "reach": 0.9
+  },
+  {
+   "key": "props",
+   "i": 1,
+   "cx": 921.9,
+   "cy": 501.5,
+   "world": [
+    18.02,
+    0,
+    5.93
+   ],
+   "rWorld": 0.584,
+   "reach": 0.9
+  },
+  {
+   "key": "props",
+   "i": 2,
+   "cx": -93.3,
+   "cy": 581.2,
+   "world": [
+    -17.98,
+    0,
+    21.93
+   ],
+   "rWorld": 0.585,
+   "reach": 0.9
+  },
+  {
+   "key": "props",
+   "i": 3,
+   "cx": 1200,
+   "cy": 557.4,
+   "world": [
+    18.02,
+    0,
+    21.93
+   ],
+   "rWorld": 0.585,
+   "reach": 0.9
+  },
+  {
+   "key": "props",
+   "i": 4,
+   "cx": 171,
+   "cy": 748.9,
+   "world": [
+    -7.48,
+    0,
+    31.93
+   ],
+   "rWorld": 0.587,
+   "reach": 0.9
+  },
+  {
+   "key": "props",
+   "i": 5,
+   "cx": 1230.3,
+   "cy": 692,
+   "world": [
+    7.52,
+    0,
+    31.93
+   ],
+   "rWorld": 0.586,
+   "reach": 0.9
+  },
+  {
+   "key": "props",
+   "i": 6,
+   "cx": 284.3,
+   "cy": 477.4,
+   "world": [
+    -19.98,
+    0,
+    -10.07
+   ],
+   "rWorld": 0.585,
+   "reach": 0.9
+  },
+  {
+   "key": "props",
+   "i": 7,
+   "cx": 831.4,
+   "cy": 478.4,
+   "world": [
+    20.03,
+    0,
+    -10.07
+   ],
+   "rWorld": 0.584,
+   "reach": 0.9
+  },
+  {
+   "key": "props",
+   "i": 8,
+   "cx": 199.5,
+   "cy": 477.8,
+   "world": [
+    -24.71,
+    0.01,
+    -9.54
+   ],
+   "rWorld": 0.441,
+   "reach": 0.411
+  },
+  {
+   "key": "props",
+   "i": 9,
+   "cx": 1057.8,
+   "cy": 512.2,
+   "world": [
+    22.89,
+    0.01,
+    10.79
+   ],
+   "rWorld": 0.545,
+   "reach": 0.205
+  },
+  {
+   "key": "props",
+   "i": 10,
+   "cx": 857.8,
+   "cy": 480.2,
+   "world": [
+    21.78,
+    0.01,
+    -8.29
+   ],
+   "rWorld": 0.433,
+   "reach": 0.397
+  },
+  {
+   "key": "props",
+   "i": 11,
+   "cx": 864.4,
+   "cy": 476.4,
+   "world": [
+    24.44,
+    0.01,
+    -12.14
+   ],
+   "rWorld": 0.551,
+   "reach": 0.205
+  },
+  {
+   "key": "props",
+   "i": 12,
+   "cx": -141.6,
+   "cy": 534.7,
+   "world": [
+    -24.66,
+    0.01,
+    14.48
+   ],
+   "rWorld": 0.441,
+   "reach": 0.391
+  },
+  {
+   "key": "props",
+   "i": 13,
+   "cx": 30.2,
+   "cy": 511.6,
+   "world": [
+    -23.46,
+    0.01,
+    8.5
+   ],
+   "rWorld": 0.434,
+   "reach": 0.462
+  },
+  {
+   "key": "props",
+   "i": 14,
+   "cx": 700.1,
+   "cy": 475.2,
+   "world": [
+    10.71,
+    0.01,
+    -13
+   ],
+   "rWorld": 0.432,
+   "reach": 0.371
+  },
+  {
+   "key": "props",
+   "i": 15,
+   "cx": 1056.1,
+   "cy": 515.6,
+   "world": [
+    21.8,
+    0.01,
+    11.99
+   ],
+   "rWorld": 0.542,
+   "reach": 0.205
+  },
+  {
+   "key": "props",
+   "i": 16,
+   "cx": 81.4,
+   "cy": 510.7,
+   "world": [
+    -21.45,
+    0.01,
+    8.24
+   ],
+   "rWorld": 0.546,
+   "reach": 0.205
+  },
+  {
+   "key": "props",
+   "i": 17,
+   "cx": 151.2,
+   "cy": 493.3,
+   "world": [
+    -22.59,
+    0.01,
+    0.9
+   ],
+   "rWorld": 0.436,
+   "reach": 0.476
+  },
+  {
+   "key": "props",
+   "i": 18,
+   "cx": 1379.7,
+   "cy": 660.7,
+   "world": [
+    12.31,
+    0.01,
+    31
+   ],
+   "rWorld": 0.545,
+   "reach": 0.205
+  },
+  {
+   "key": "props",
+   "i": 19,
+   "cx": 1587.4,
+   "cy": 650.7,
+   "world": [
+    16.95,
+    0.01,
+    31
+   ],
+   "rWorld": 0.493,
+   "reach": 0.326
+  },
+  {
+   "key": "props",
+   "i": 20,
+   "cx": -116.7,
+   "cy": 529,
+   "world": [
+    -24.81,
+    0.01,
+    13.22
+   ],
+   "rWorld": 0.528,
+   "reach": 0.237
+  },
+  {
+   "key": "props",
+   "i": 21,
+   "cx": 1342.6,
+   "cy": 565.3,
+   "world": [
+    21.7,
+    0.01,
+    23.51
+   ],
+   "rWorld": 0.435,
+   "reach": 0.475
+  },
+  {
+   "key": "props",
+   "i": 22,
+   "cx": -1063.6,
+   "cy": 702.5,
+   "world": [
+    -23.52,
+    0.01,
+    28.53
+   ],
+   "rWorld": 0.492,
+   "reach": 0.278
+  },
+  {
+   "key": "props",
+   "i": 23,
+   "cx": -349.9,
+   "cy": 742.6,
+   "world": [
+    -13.09,
+    0.01,
+    31
+   ],
+   "rWorld": 0.535,
+   "reach": 0.242
+  },
+  {
+   "key": "props",
+   "i": 24,
+   "cx": -572.4,
+   "cy": 753.1,
+   "world": [
+    -15.25,
+    0.01,
+    31
+   ],
+   "rWorld": 0.493,
+   "reach": 0.269
+  },
+  {
+   "key": "props",
+   "i": 25,
+   "cx": 206.3,
+   "cy": 482.1,
+   "world": [
+    -22.65,
+    0.01,
+    -6.12
+   ],
+   "rWorld": 0.534,
+   "reach": 0.205
+  },
+  {
+   "key": "props",
+   "i": 26,
+   "cx": -294.3,
+   "cy": 570.5,
+   "world": [
+    -23.26,
+    0.01,
+    20.24
+   ],
+   "rWorld": 0.435,
+   "reach": 0.432
+  },
+  {
+   "key": "props",
+   "i": 27,
+   "cx": 892.6,
+   "cy": 485.4,
+   "world": [
+    22.39,
+    0.01,
+    -3.94
+   ],
+   "rWorld": 0.552,
+   "reach": 0.205
+  },
+  {
+   "key": "props",
+   "i": 28,
+   "cx": -25.6,
+   "cy": 531.3,
+   "world": [
+    -21.5,
+    0.01,
+    13.95
+   ],
+   "rWorld": 0.521,
+   "reach": 0.226
+  },
+  {
+   "key": "props",
+   "i": 29,
+   "cx": 1009.5,
+   "cy": 678,
+   "world": [
+    4.85,
+    0.01,
+    31
+   ],
+   "rWorld": 0.432,
+   "reach": 0.447
+  },
+  {
+   "key": "props",
+   "i": 30,
+   "cx": 1571.2,
+   "cy": 604.8,
+   "world": [
+    21.96,
+    0.01,
+    28.18
+   ],
+   "rWorld": 0.493,
+   "reach": 0.29
+  },
+  {
+   "key": "props",
+   "i": 31,
+   "cx": 1531.1,
+   "cy": 600.1,
+   "world": [
+    21.7,
+    0.01,
+    27.69
+   ],
+   "rWorld": 0.543,
+   "reach": 0.205
+  },
+  {
+   "key": "props",
+   "i": 32,
+   "cx": 221.1,
+   "cy": 481.4,
+   "world": [
+    -22.03,
+    0.01,
+    -6.72
+   ],
+   "rWorld": 0.54,
+   "reach": 0.205
+  },
+  {
+   "key": "props",
+   "i": 33,
+   "cx": 901.7,
+   "cy": 487.2,
+   "world": [
+    22.08,
+    0.01,
+    -2.47
+   ],
+   "rWorld": 0.425,
+   "reach": 0.375
+  },
+  {
+   "key": "props",
+   "i": 34,
+   "cx": 300.1,
+   "cy": 465.9,
+   "world": [
+    -22.54,
+    0.01,
+    -22.78
+   ],
+   "rWorld": 0.354,
+   "reach": 0.541
+  },
+  {
+   "key": "props",
+   "i": 35,
+   "cx": 322.6,
+   "cy": 467.6,
+   "world": [
+    -19.91,
+    0.01,
+    -20.55
+   ],
+   "rWorld": 0.434,
+   "reach": 0.348
+  },
+  {
+   "key": "props",
+   "i": 36,
+   "cx": 361.1,
+   "cy": 456.3,
+   "world": [
+    -21.31,
+    0.01,
+    -40.21
+   ],
+   "rWorld": 0.506,
+   "reach": 0.322
+  },
+  {
+   "key": "props",
+   "i": 37,
+   "cx": 372.5,
+   "cy": 457.7,
+   "world": [
+    -19.7,
+    0.01,
+    -37.44
+   ],
+   "rWorld": 0.364,
+   "reach": 0.532
+  },
+  {
+   "key": "props",
+   "i": 38,
+   "cx": 349.3,
+   "cy": 462.5,
+   "world": [
+    -19.73,
+    0.01,
+    -28.08
+   ],
+   "rWorld": 0.436,
+   "reach": 0.478
+  },
+  {
+   "key": "props",
+   "i": 39,
+   "cx": 725.4,
+   "cy": 459.3,
+   "world": [
+    20.08,
+    0.01,
+    -38.48
+   ],
+   "rWorld": 0.432,
+   "reach": 0.412
+  },
+  {
+   "key": "props",
+   "i": 40,
+   "cx": 326,
+   "cy": 466.7,
+   "world": [
+    -20.04,
+    0.01,
+    -21.83
+   ],
+   "rWorld": 0.424,
+   "reach": 0.405
+  },
+  {
+   "key": "props",
+   "i": 41,
+   "cx": 365.1,
+   "cy": 454.3,
+   "world": [
+    -22,
+    0.01,
+    -45.11
+   ],
+   "rWorld": 0.494,
+   "reach": 0.34
+  },
+  {
+   "key": "props",
+   "i": 42,
+   "cx": 376.5,
+   "cy": 453.4,
+   "world": [
+    -21.4,
+    0.01,
+    -47.58
+   ],
+   "rWorld": 0.356,
+   "reach": 0.535
+  },
+  {
+   "key": "props",
+   "i": 43,
+   "cx": 792.4,
+   "cy": 468.7,
+   "world": [
+    21.87,
+    0.01,
+    -21.6
+   ],
+   "rWorld": 0.487,
+   "reach": 0.323
+  },
+  {
+   "key": "props",
+   "i": 44,
+   "cx": 375.3,
+   "cy": 456.3,
+   "world": [
+    -20.03,
+    0.01,
+    -40.39
+   ],
+   "rWorld": 0.368,
+   "reach": 0.537
+  },
+  {
+   "key": "props",
+   "i": 45,
+   "cx": 759.4,
+   "cy": 462.5,
+   "world": [
+    21.97,
+    0.01,
+    -32.08
+   ],
+   "rWorld": 0.363,
+   "reach": 0.549
+  },
+  {
+   "key": "kaykit",
+   "i": 0,
+   "cx": 252.7,
+   "cy": 482.3,
+   "world": [
+    -20.5,
+    0.01,
+    -6
+   ],
+   "rWorld": 1.473,
+   "reach": 0.9
+  },
+  {
+   "key": "kaykit",
+   "i": 1,
+   "cx": 259.1,
+   "cy": 486,
+   "world": [
+    -19.2,
+    0.01,
+    -3.4
+   ],
+   "rWorld": 0.871,
+   "reach": 0.9
+  },
+  {
+   "key": "kaykit",
+   "i": 2,
+   "cx": 208.6,
+   "cy": 488.2,
+   "world": [
+    -21,
+    0.01,
+    -2
+   ],
+   "rWorld": 0.672,
+   "reach": 0.459
+  },
+  {
+   "key": "kaykit",
+   "i": 3,
+   "cx": 188.6,
+   "cy": 496.6,
+   "world": [
+    -20.3,
+    0.01,
+    2.6
+   ],
+   "rWorld": 0.819,
+   "reach": 0.798
+  },
+  {
+   "key": "kaykit",
+   "i": 4,
+   "cx": 136.5,
+   "cy": 505.7,
+   "world": [
+    -20.8,
+    0.01,
+    6.5
+   ],
+   "rWorld": 1.473,
+   "reach": 0.9
+  },
+  {
+   "key": "kaykit",
+   "i": 5,
+   "cx": 123.6,
+   "cy": 516.3,
+   "world": [
+    -19.4,
+    0.01,
+    10.2
+   ],
+   "rWorld": 1.139,
+   "reach": 0.9
+  },
+  {
+   "key": "kaykit",
+   "i": 6,
+   "cx": 31.2,
+   "cy": 523.1,
+   "world": [
+    -21.2,
+    0.01,
+    12
+   ],
+   "rWorld": 0.672,
+   "reach": 0.459
+  },
+  {
+   "key": "kaykit",
+   "i": 7,
+   "cx": 944.4,
+   "cy": 497.5,
+   "world": [
+    20.6,
+    0.01,
+    4
+   ],
+   "rWorld": 0.871,
+   "reach": 0.9
+  },
+  {
+   "key": "kaykit",
+   "i": 8,
+   "cx": 985,
+   "cy": 506.1,
+   "world": [
+    20.2,
+    0.01,
+    8.2
+   ],
+   "rWorld": 1.473,
+   "reach": 0.9
+  },
+  {
+   "key": "kaykit",
+   "i": 9,
+   "cx": 1041.9,
+   "cy": 513.9,
+   "world": [
+    21,
+    0.01,
+    11.4
+   ],
+   "rWorld": 0.819,
+   "reach": 0.798
+  },
+  {
+   "key": "kaykit",
+   "i": 10,
+   "cx": 1069.5,
+   "cy": 525.6,
+   "world": [
+    19.6,
+    0.01,
+    15.1
+   ],
+   "rWorld": 0.672,
+   "reach": 0.459
+  },
+  {
+   "key": "kaykit",
+   "i": 11,
+   "cx": 335.8,
+   "cy": 466.9,
+   "world": [
+    -19.6,
+    0.01,
+    -21.5
+   ],
+   "rWorld": 0.871,
+   "reach": 0.9
+  },
+  {
+   "key": "kaykit",
+   "i": 12,
+   "cx": 350.5,
+   "cy": 464.7,
+   "world": [
+    -19.2,
+    0.01,
+    -24.8
+   ],
+   "rWorld": 1.473,
+   "reach": 0.9
+  },
+  {
+   "key": "kaykit",
+   "i": 13,
+   "cx": 340.1,
+   "cy": 462.9,
+   "world": [
+    -20.4,
+    0.01,
+    -27.5
+   ],
+   "rWorld": 0.672,
+   "reach": 0.459
+  },
+  {
+   "key": "kaykit",
+   "i": 14,
+   "cx": 364,
+   "cy": 459.8,
+   "world": [
+    -19.8,
+    0.01,
+    -33
+   ],
+   "rWorld": 0.819,
+   "reach": 0.798
+  },
+  {
+   "key": "kaykit",
+   "i": 15,
+   "cx": 767.7,
+   "cy": 467.7,
+   "world": [
+    19.4,
+    0.01,
+    -23
+   ],
+   "rWorld": 1.139,
+   "reach": 0.9
+  },
+  {
+   "key": "kaykit",
+   "i": 16,
+   "cx": 750.8,
+   "cy": 463.8,
+   "world": [
+    19.8,
+    0.01,
+    -29.4
+   ],
+   "rWorld": 1.473,
+   "reach": 0.9
+  },
+  {
+   "key": "kaykit",
+   "i": 17,
+   "cx": 737.4,
+   "cy": 460.9,
+   "world": [
+    20.5,
+    0.01,
+    -35.2
+   ],
+   "rWorld": 0.672,
+   "reach": 0.459
+  },
+  {
+   "key": "kaykit",
+   "i": 18,
+   "cx": 712,
+   "cy": 457.4,
+   "world": [
+    19.2,
+    0.01,
+    -43
+   ],
+   "rWorld": 2,
+   "reach": 0.9
+  },
+  {
+   "key": "kaykit",
+   "i": 19,
+   "cx": 391.2,
+   "cy": 454.3,
+   "world": [
+    -19.6,
+    0.01,
+    -45.5
+   ],
+   "rWorld": 2,
+   "reach": 0.9
+  },
+  {
+   "key": "kaykit",
+   "i": 20,
+   "cx": 519.7,
+   "cy": 525,
+   "world": [
+    -4.2,
+    -11.99,
+    -70.5
+   ],
+   "rWorld": 1.01,
+   "reach": 0.586
+  },
+  {
+   "key": "kaykit",
+   "i": 21,
+   "cx": 576.1,
+   "cy": 525,
+   "world": [
+    4.6,
+    -11.99,
+    -70
+   ],
+   "rWorld": 1.01,
+   "reach": 0.586
+  },
+  {
+   "key": "kaykit",
+   "i": 22,
+   "cx": 530.9,
+   "cy": 526.7,
+   "world": [
+    -2.4,
+    -11.99,
+    -68.6
+   ],
+   "rWorld": 1.099,
+   "reach": 0.522
+  },
+  {
+   "key": "kaykit",
+   "i": 23,
+   "cx": 563.5,
+   "cy": 526.8,
+   "world": [
+    2.8,
+    -11.99,
+    -68.2
+   ],
+   "rWorld": 0.716,
+   "reach": 0.289
+  },
+  {
+   "key": "kaykit",
+   "i": 24,
+   "cx": 507.8,
+   "cy": 528,
+   "world": [
+    -5.6,
+    -11.99,
+    -67.4
+   ],
+   "rWorld": 0.659,
+   "reach": 0.216
+  },
+  {
+   "key": "kaykit",
+   "i": 25,
+   "cx": 580.7,
+   "cy": 522,
+   "world": [
+    5.9,
+    -11.99,
+    -73.2
+   ],
+   "rWorld": 0.659,
+   "reach": 0.216
+  },
+  {
+   "key": "kaykit",
+   "i": 26,
+   "cx": 503.7,
+   "cy": 521.8,
+   "world": [
+    -6.8,
+    -11.99,
+    -74.2
+   ],
+   "rWorld": 1.01,
+   "reach": 0.586
+  },
+  {
+   "key": "kaykit",
+   "i": 27,
+   "cx": 587.3,
+   "cy": 527.7,
+   "world": [
+    6.4,
+    -11.99,
+    -67
+   ],
+   "rWorld": 0.716,
+   "reach": 0.289
+  },
+  {
+   "key": "kaykit",
+   "i": 28,
+   "cx": 488.9,
+   "cy": 530.6,
+   "world": [
+    -8.5,
+    -11.99,
+    -65
+   ],
+   "rWorld": 0.672,
+   "reach": 0.459
+  },
+  {
+   "key": "kaykit",
+   "i": 29,
+   "cx": 606.9,
+   "cy": 530.1,
+   "world": [
+    8.6,
+    -11.99,
+    -64.4
+   ],
+   "rWorld": 1.473,
+   "reach": 0.9
+  },
+  {
+   "key": "kaykit",
+   "i": 30,
+   "cx": 611,
+   "cy": 460.7,
+   "world": [
+    5.5,
+    0.01,
+    -34
+   ],
+   "rWorld": 1.473,
+   "reach": 0.9
+  },
+  {
+   "key": "kaykit",
+   "i": 31,
+   "cx": 498.6,
+   "cy": 460.1,
+   "world": [
+    -6.5,
+    0.01,
+    -34
+   ],
+   "rWorld": 0.871,
+   "reach": 0.9
+  },
+  {
+   "key": "kaykit",
+   "i": 32,
+   "cx": 438.8,
+   "cy": 460,
+   "world": [
+    -12.5,
+    0.01,
+    -33.5
+   ],
+   "rWorld": 0.819,
+   "reach": 0.798
+  },
+  {
+   "key": "kaykit",
+   "i": 33,
+   "cx": 366,
+   "cy": 697.4,
+   "world": [
+    -5.5,
+    0.01,
+    30.5
+   ],
+   "rWorld": 1.473,
+   "reach": 0.9
+  },
+  {
+   "key": "kaykit",
+   "i": 34,
+   "cx": 334.9,
+   "cy": 513,
+   "world": [
+    -11.5,
+    0.01,
+    9.5
+   ],
+   "rWorld": 1.473,
+   "reach": 0.9
+  },
+  {
+   "key": "kaykit",
+   "i": 35,
+   "cx": 371.8,
+   "cy": 496,
+   "world": [
+    -11.5,
+    0.01,
+    2.5
+   ],
+   "rWorld": 0.871,
+   "reach": 0.9
+  }
+ ],
+ "A4": {
+  "probe": {
+   "draws": 0,
+   "before": null,
+   "after": null
+  },
+  "consoleErrors": [],
+  "warnSeen": false,
+  "warnings": 4
+ },
+ "synth": {
+  "premulTrue": {
+   "left": 55,
+   "right": 24.080199999999977,
+   "blend": {
+    "srcRGB": "DST_COLOR",
+    "dstRGB": "ONE_MINUS_SRC_ALPHA",
+    "srcA": "ZERO",
+    "dstA": "ONE"
+   }
+  },
+  "premulFalse": {
+   "left": 55,
+   "right": 24.080199999999977,
+   "blend": {
+    "srcRGB": "DST_COLOR",
+    "dstRGB": "ONE_MINUS_SRC_ALPHA",
+    "srcA": "ZERO",
+    "dstA": "ONE"
+   }
+  }
+ },
+ "masks": {
+  "foot": 27981,
+  "rim": 6779,
+  "out": 109865,
+  "far": 855361
+ },
+ "primary": {
+  "MED_A1": {
+   "n": 27981,
+   "med": 11.279003143310547,
+   "p10": -0.32959747314453125,
+   "p90": 110.74380493164062,
+   "mean": 42.26361433148601
+  },
+  "MED_A2": {
+   "n": 27981,
+   "med": -3.0854034423828125,
+   "p10": -28.410396575927734,
+   "p90": 0,
+   "mean": -8.542976986820415
+  },
+  "MED_A3": {
+   "n": 27981,
+   "med": -4.562801361083984,
+   "p10": -28.410396575927734,
+   "p90": 0,
+   "mean": -9.105528894671677
+  },
+  "MED_NULL": {
+   "n": 27981,
+   "med": 0,
+   "p10": 0,
+   "p90": 1.64300537109375,
+   "mean": 0.5625519078512605
+  },
+  "RIM_A1": {
+   "n": 6779,
+   "med": 49.817596435546875,
+   "p10": -0.9318008422851562,
+   "p90": 114.44860076904297,
+   "mean": 51.616633165865665
+  },
+  "RIM_A2": {
+   "n": 6779,
+   "med": -3.7913970947265625,
+   "p10": -15.204597473144531,
+   "p90": 0,
+   "mean": -6.333559791710124
+  }
+ },
+ "cal2": {
+  "N_A2_vs_A4": 15594,
+  "N_A1_vs_A4": 17902
+ },
+ "drift": {
+  "PX_NULL": 144258,
+  "PX_FAR_NULL": 131485,
+  "PX_FAR_FIXvsBROKEN": 97371,
+  "PX_WHOLE_FIXvsBROKEN": 121677
+ },
+ "halo": {
+  "A1": {
+   "inside": 145.4681772962203,
+   "outside": 83.1778921580307,
+   "halo": 62.29028513818959,
+   "nIn": 15594,
+   "nOut": 109865
+  },
+  "A2": {
+   "inside": 56.83929355300144,
+   "outside": 83.68621955251453,
+   "halo": -26.84692599951309,
+   "nIn": 15594,
+   "nOut": 109865
+  },
+  "A4": {
+   "inside": 72.06740183914046,
+   "outside": 84.1876613552578,
+   "halo": -12.120259516117343,
+   "nIn": 15594,
+   "nOut": 109865
+  }
+ }
+}
