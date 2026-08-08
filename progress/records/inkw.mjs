@@ -164,6 +164,41 @@ function stats(chord, region) {
   };
 }
 
+/**
+ * Width against distance from the frame CENTRE.
+ *
+ * Added after an offline reproduction of `OUTLINE_VERT` in plain three arithmetic
+ * (`pushrepro.mjs`) showed that `mvPosition.z *= 1.0 + uDepthPush` scales `gl_Position.w` while
+ * leaving `gl_Position.xy` alone, so after the perspective divide the whole hull is displaced
+ * radially toward the frame centre by `(1 - 1/k)` of the vertex's NDC radius — 0.9 px at NDC
+ * 0.42 and 2.1 px at NDC 1.0 at 1920x1080. The ink offset itself is exactly preserved (2.500000
+ * px at z = -2, -10 and -60, with and without the push), so this is a DISPLACEMENT, not a width
+ * change: the line goes thin on the outward-facing side of a form and thick on the inward-facing
+ * side, and the mean is exactly conserved. A median or a mean therefore cannot see it at all, and
+ * that is precisely why this statistic exists — the defect lives in the SPREAD, and only in the
+ * outer frame.
+ *
+ * Ring boundaries are on NDC radius normalised so the frame corner is 1.0.
+ */
+function radial(chord, W, H, region) {
+  const inner = [], outer = [];
+  const norm = Math.hypot(1, 1);
+  for (let i = 0; i < chord.length; i++) {
+    if (!chord[i] || (region && !region[i])) continue;
+    const x = i % W, y = (i / W) | 0;
+    const r = Math.hypot(x / W * 2 - 1, y / H * 2 - 1) / norm;
+    (r < 0.40 ? inner : r > 0.70 ? outer : null)?.push(chord[i]);
+  }
+  const s = (v) => {
+    if (!v.length) return { n: 0 };
+    v.sort((a, b) => a - b);
+    const q = (p) => v[Math.min(v.length - 1, Math.floor(p * v.length))];
+    return { n: v.length, med: q(0.5), p05: q(0.05), p95: q(0.95),
+             spread: +(q(0.95) / Math.max(1, q(0.05))).toFixed(2) };
+  };
+  return { inner: s(inner), outer: s(outer) };
+}
+
 /* ------------------------------------------------------------ estimator test --- */
 
 /** The width estimator against lines of known width at 0, 45 and 90 degrees. */
@@ -284,6 +319,28 @@ async function main() {
   if (!stOK) { console.log('\n!! estimator self-test FAILED — nothing below means anything'); process.exit(2); }
   if (has('selfonly')) return;
 
+  /* Re-analyse frames already on disk, taking no lock and booting nothing. The analysis is the
+     part that gets extended as the investigation learns what to look at, and re-deriving a
+     statistic must never mean re-capturing: the before arm and the after arm have to go through
+     the SAME analyser, and this is what makes that possible after the before arm has been shot. */
+  if (has('analyse')) {
+    const dir = path.join(ROOT, 'progress/records', arg('analyse', ''));
+    const out = [];
+    for (const res of RES) for (const shot of SHOTS) {
+      const files = {};
+      let ok = true;
+      for (const a of ARMS) {
+        const f = path.join(dir, `${res.w}x${res.h}-${shot}-${a}.png`);
+        if (!existsSync(f)) { ok = false; break; }
+        files[a] = f;
+      }
+      if (ok) out.push({ res, shot, files, calibMats: null });
+    }
+    if (!out.length) { console.log(`no frames under ${dir}`); process.exit(2); }
+    report(dir, { out, renderer: '(offline re-analysis)', warnings: 0 }, st);
+    return;
+  }
+
   const results = await withGame({ width: W, height: H, quality: 'high', verbose: false }, async ({ page, info }) => {
     await page.evaluate(([pokes, restores, keepFxaa]) => {
       window.__INKW_POKE = Object.fromEntries(Object.entries(pokes).map(([k, v]) => [k, new Function(`return (${v})`)()]));
@@ -327,6 +384,10 @@ async function main() {
     return { out, renderer: info.renderer, warnings: info.warnings.length };
   });
 
+  report(OUT, results, st);
+}
+
+function report(OUT, results, st) {
   console.log(`\n\nrenderer: ${results.renderer}   boot warnings: ${results.warnings}`);
   const report = { tag: TAG, res: RES, fxaa: KEEP_FXAA, selfTest: st, shots: [] };
 
@@ -369,8 +430,21 @@ async function main() {
     for (const [label, armOff] of [['hull', 'nohull'], ['crease', 'noink'], ['ao', 'noao']]) {
       const { m, cnt } = bandOf(armOff);
       const ch = minChord(m, W, H);
-      rows[label] = { frame: { ...stats(ch, null), px: cnt }, subj: stats(ch, region) };
+      rows[label] = { frame: { ...stats(ch, null), px: cnt }, subj: stats(ch, region),
+                      ring: radial(ch, W, H, null) };
     }
+
+    /* The band a viewer actually sees as "the ink": everything the two ink systems together
+       took out of the image, measured as one shape. Measuring hull and crease separately
+       understates the line, because they overlap along the same silhouette. */
+    const inkM = new Uint8Array(n);
+    let inkCnt = 0;
+    for (let i = 0; i < n; i++) {
+      if (im.nohull[i] - im.base[i] >= T || im.noink[i] - im.base[i] >= T) { inkM[i] = 1; inkCnt++; }
+    }
+    const inkCh = minChord(inkM, W, H);
+    rows.ink = { frame: { ...stats(inkCh, null), px: inkCnt }, subj: stats(inkCh, region),
+                 ring: radial(inkCh, W, H, null) };
 
     // FXAA's own contribution to any measured width.
     let fxaaDiff = 0;
@@ -404,9 +478,12 @@ async function main() {
     console.log(`  CAL nochar : ${charN} px moved   box ${box ? `${box.x0},${box.y0}..${box.x1},${box.y1}  ${box.x1 - box.x0 + 1}x${box.y1 - box.y0 + 1}` : 'none'}   ${charN > 200 ? 'PASS' : 'FAIL — poke path dead'}`);
     console.log(`  CAL hull2x : ${rec.calibMats} materials doubled; band med ${rec.hull2x.frame.med} vs base ${rec.hullBase.frame.med}   ${rec.hull2x.frame.med >= rec.hullBase.frame.med * 1.6 ? 'PASS' : 'FAIL — width estimator blind'}`);
     console.log(`  fxaa cost  : ${fxaaDiff} px differ from base`);
-    for (const k of ['hull', 'crease', 'ao']) {
+    for (const k of ['hull', 'crease', 'ink', 'ao']) {
+      const g = rows[k].ring;
       console.log(`  ${k.padEnd(7)} frame: ${f(rows[k].frame)}`);
       console.log(`  ${''.padEnd(7)} subj : ${f(rows[k].subj)}`);
+      console.log(`  ${''.padEnd(7)} ring : inner med ${g.inner.med ?? '-'} p05 ${g.inner.p05 ?? '-'} p95 ${g.inner.p95 ?? '-'} spread ${g.inner.spread ?? '-'}`
+        + ` | outer med ${g.outer.med ?? '-'} p05 ${g.outer.p05 ?? '-'} p95 ${g.outer.p95 ?? '-'} spread ${g.outer.spread ?? '-'}`);
     }
   }
 
