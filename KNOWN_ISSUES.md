@@ -19633,3 +19633,65 @@ so no per-file exceptions exist and a new module writing its own forwarder needs
 A census that cries wolf is worse than no census, because someone will act on it.
 
 Suite 371/372; the one red remains the deliberately-held texture staleness guard.
+
+## §249 — the shade-side banding fix does NOT reach the criterion at any swept value; nothing ships
+
+The `celband` sweep finally got the lock after ~95 minutes queued, captured all 12 frames, and
+`celband-score.mjs` applied the ship rule that had been registered and committed **before the subject
+was ever read**. No derivation happened at scoring time; the script was run and its verdict taken.
+
+```
+        uShadeBand   gapFrac   lambda   decision   rows    verdict
+base-a     0         0.0892    0.815     0.1333    0/9     DOES NOT BAND
+sb15       0.15      0.0800    0.872     0.1515    0/9     DOES NOT BAND   MF1 FAIL -> VOID
+sb30       0.30      0.0813    1.000     0.1176    2/9     DOES NOT BAND   MF1 FAIL -> VOID
+sb45       0.45      0.1140    0.613     0.1500    0/9     DOES NOT BAND
+sb60       0.60      0.1192    0.623     0.1509    0/9     DOES NOT BAND
+base-b     0         0.0892    0.815     0.1333    0/9     DOES NOT BAND
+
+V1 NULL   |base-b - base-a| = 0.0000      the drift floor for this run
+V2 LEVER  sb60 - base-a     = 0.0300      exceeds the floor -> the knob is LIVE
+=> NOTHING SHIPS
+```
+
+**`TUNE.shadeBand` stays at 0**, which is where it already shipped, so the build does not move.
+
+Three things this result is not, and one thing it is.
+
+**It is not a dead lever.** V2 fires: the knob moves the measurement by 0.0300 against a null floor
+of exactly 0.0000, and `arms.json` records `readback === value` on all five settings, so the uniform
+reached the shader. §210.2's failure mode — a run built on a knob that was never connected — is
+excluded by measurement rather than by assumption.
+
+**It is not drift.** The null arm captured the base twice in one boot and the two agree to
+**0.0000**, consistent with §233/§243: a same-boot arm with a local lever is bit-deterministic.
+
+**It is not a threshold that was set too hard after the fact.** The criterion was `gapFrac` derived
+from the calibration arms alone, with λ = 0.5 as the only point equidistant from the two controls,
+registered and committed before the subject existed. sb60 reaches λ 0.623 — the right direction, and
+not far enough.
+
+**What it is: the approach does not work, and now we know with evidence rather than by giving up.**
+The shade-side form `1 − uShadeBand·(1 − ramp)` moves the statistic the right way from b ≈ 0.45
+onward and cannot carry it across the line at any strength swept. The ship rule's own instruction is
+explicit — *report as a failure to reach it; do not re-sweep* — and pushing b higher would be exactly
+the post-hoc chase §141.1 exists to forbid.
+
+**The agent's registered forecast called it.** It predicted *"sb45 fails in frame and sb60 ships, or
+nothing does"*, flagged that as an **upper bound**, and warned that a marginal sb45 must read as a
+failure. The outcome is the second branch. It also registered a falsifier for its own mechanism — *if
+the frames show smooth improvement with b rather than threshold behaviour near b ≈ 0.4, the mechanism
+paragraph is wrong* — and the data does **not** falsify it: gapFrac runs 0.0892 → 0.0800 → 0.0813 →
+**0.1140** → 0.1192, dipping and then stepping at sb45 rather than climbing smoothly. The mechanism
+survives; the remedy built on it does not.
+
+**What stands, undisturbed.** The root cause from §231 is untouched by this and was measured on
+offline instruments: `key = ramp · sh`, so in roofed shots the quantiser is multiplied by zero
+(`interior` 0.00% key-lit, `night` 1.34%, `temple` 1.57%) while open shots band at 10–25× their own
+controls, and `ramp` sweeps its full 0→1 across the test face while correlating **0.031** with luma.
+The critic's "not banded" is real, its cause is known, and the first remedy attempted has been
+falsified against a pre-registered rule. That is a closed door with a reason nailed to it, which is
+worth more than an open one.
+
+Outstanding: the ship rule's clause (C), the `courtyard` guard scored with `tools/bandprobe.mjs`,
+is reported separately and has not been run here.
