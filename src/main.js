@@ -53,6 +53,11 @@ const CHAR_MODELS = {
   dlraw: ['./player/SlyModelDLRaw.js', 'SlyModel'],   // the supplied model untouched; T-pose, static
   model3: ['./player/SlyModel3.js', 'SlyModel'],      // the Sly-3-reference procedural rebuild
   legacy: ['./player/SlyModel.js', 'SlyModel'],       // the pre-rebuild procedural model
+  /* The Godot fan project's mesh on RIG3 — imported at the owner's explicit instruction, and
+     ALONGSIDE the default rather than in place of it. Changing the shipped character needs a blind
+     A/B round; this arrives as a token so that round has something to run against. It is the only
+     model here with a real ringed tail on the rig that ships (§226) and the only one that blinks. */
+  godot: ['./player/SlyModelGodot.js', 'SlyModel'],
 };
 function characterModule() {
   let raw = '';

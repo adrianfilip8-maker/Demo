@@ -161,34 +161,6 @@ const FALLBACK = { BodyMat: 0x2f5fc4, HeadMat: 0xcfcdc4, EyeMat: 0xf2f0ea, CaneM
  */
 const CANE_SOCKET = { off: new THREE.Vector3(-0.014, -0.042, 0.014), top: new THREE.Vector3(-0.020, 0.550, 0.090) };
 
-/** Least-squares circle through 2-D points (Kåsa). Returns {cx, cy, r, rms}. */
-function circleFit(pts) {
-  const n = pts.length;
-  let sx = 0, sy = 0, sxx = 0, syy = 0, sxy = 0, sxz = 0, syz = 0, sz = 0;
-  for (const [x, y] of pts) {
-    const z = x * x + y * y;
-    sx += x; sy += y; sxx += x * x; syy += y * y; sxy += x * y; sxz += x * z; syz += y * z; sz += z;
-  }
-  const m = [[sxx, sxy, sx, sxz], [sxy, syy, sy, syz], [sx, sy, n, sz]];
-  for (let c = 0; c < 3; c++) {
-    let piv = c;
-    for (let r = c + 1; r < 3; r++) if (Math.abs(m[r][c]) > Math.abs(m[piv][c])) piv = r;
-    [m[c], m[piv]] = [m[piv], m[c]];
-    const d = m[c][c] || 1e-12;
-    for (let j = c; j < 4; j++) m[c][j] /= d;
-    for (let r = 0; r < 3; r++) {
-      if (r === c) continue;
-      const f = m[r][c];
-      for (let j = c; j < 4; j++) m[r][j] -= f * m[c][j];
-    }
-  }
-  const cx = m[0][3] / 2, cy = m[1][3] / 2;
-  const r = Math.sqrt(Math.max(1e-9, m[2][3] + cx * cx + cy * cy));
-  let s = 0;
-  for (const [x, y] of pts) s += (Math.hypot(x - cx, y - cy) - r) ** 2;
-  return { cx, cy, r, rms: Math.sqrt(s / n) };
-}
-
 export class SlyModel {
   constructor(engine) {
     this.engine = engine;
@@ -365,7 +337,14 @@ export class SlyModel {
          flags disagree, and the five morph carriers arrive with it true. */
       g.morphAttributes = {};
       g.morphTargetsRelative = false;
-      tris += g.attributes.position.count / 3;
+      tris += (g.index ? g.index.count : g.attributes.position.count) / 3;
+
+      /* Reuse the loader's OWN decoded albedo. `GLTFLoader` has already fetched and decoded both
+         2048² PNGs for the materials we are about to throw away; loading them again through
+         `TextureLoader` would decode 3.7 MB twice for an identical result, and would also have to
+         re-derive `flipY: false` and the colour space that the glTF path already sets correctly. */
+      const mn = o.material?.name;
+      if (mn && o.material?.map && !this._tex?.[mn]) (this._tex ||= {})[mn] = o.material.map;
 
       if (isFace) {
         /* The face keeps its five targets. Deltas are DIRECTIONS, so only the linear part of every
@@ -416,26 +395,30 @@ export class SlyModel {
     };
 
     /**
-     * THE SCALE IS SOLVED, NOT ASSUMED — and this is the whole of the height question.
+     * THE HEIGHT DECISION, and the measurement that changed what it should be.
      *
-     * The obvious normalisation is `S = height / bbox`, which is what every model here does, and
-     * for this asset it is 1.0839. It is also **wrong by 5 cm**, because it sizes the mesh BEFORE
-     * the retarget and the retarget then moves the crown: RIG3's `head` joint sits proportionally
-     * lower than this rig's, so the skull lands 5.5 cm below where the bbox said it would and the
-     * finished character measures **1.7506 m** against a 1.80 m collision capsule. Nothing in the
-     * naive version reports that; it is only visible if you measure the output instead of the input.
+     * The asset measures 1.6607 m against a 1.80 m collision capsule, so it is scaled UNIFORMLY by
+     * `height / bbox` = 1.0839 — the same normalisation `SlyModelDLRig` applies to its 185-unit FBX
+     * and the convention every character here follows. Moving `Controller.TUNE.height` instead was
+     * the alternative and is rejected on sight: that number is the capsule, the camera framing and
+     * every guard sightline for all six characters, and one imported model does not get to change
+     * it. A uniform scale costs nothing in proportion — 6.18 heads is 6.18 heads at any scale.
      *
-     * The fix is exact rather than iterative, because the baked height is AFFINE in `S`. A baked
-     * vertex is `Σ w·(abs + q·sc·S·(p_raw − src_raw))`, and for a conforming limb `sc = l_ours /
-     * (S · l_raw)`, so that term loses its `S` entirely while the non-conforming torso keeps it.
-     * Two evaluations therefore determine the line and one solve lands the target. The correction
-     * is clamped: a solve that wants to move the scale by more than a quarter means the model is
-     * not what this file thinks it is, and silently obeying it would be worse than being 5 cm short.
+     * WHAT THAT FRAMING MISSES, and it is the whole finding. `height / bbox` sizes the mesh BEFORE
+     * the retarget, and the retarget then moves the crown: RIG3's `head` joint sits proportionally
+     * lower than this rig's (this character's hips are at 56.2 % of his height, RIG3's at 49.2 %),
+     * `head` is deliberately not a conforming bone, and so the skull lands lower than the bounding
+     * box promised. The finished character is **1.7506 m**, not 1.80. Measured, not assumed — the
+     * incumbent lands at 1.7984 m under the identical construction, so this is a property of THIS
+     * asset's proportions and not of the method.
      *
-     * What this deliberately does NOT do is move `Controller.TUNE.height`. That number is the
-     * collision capsule, the camera framing and every guard sightline for all six characters; one
-     * imported model does not get to change it, and a uniform scale costs nothing in proportion —
-     * the asset's 6.18 heads are 6.18 heads at any scale.
+     * IT IS DELIBERATELY NOT CORRECTED. The baked height is affine in `S`, so solving for 1.80 is
+     * exact and was implemented and measured: it wants **S = 1.2731**. That lands the height and
+     * inflates the skull by 17 %, because the conforming limbs are pinned to RIG3's lengths while
+     * everything non-conforming grows — 6.18 heads becomes about 5.0. Trading a 2.7 % height
+     * shortfall for a 20 % proportion change is a bad trade, and the same reasoning `SlyModelDLRig`
+     * uses to refuse per-bone scale on the torso applies here. The number is measured and reported
+     * (`info.bakedHeight`) rather than silently absorbed.
      */
     const bakedHeightAt = (s) => {
       const P = srcPosFor(s);
@@ -457,17 +440,11 @@ export class SlyModel {
       }
       return hi - lo;
     };
-    const S0 = RIG3.TUNE.height / rawH;
-    const h0 = bakedHeightAt(S0), h1 = bakedHeightAt(S0 * 1.05);
-    const slope = (h1 - h0) / (S0 * 0.05);
-    let S = Number.isFinite(slope) && Math.abs(slope) > 1e-6 ? S0 + (RIG3.TUNE.height - h0) / slope : S0;
-    S = Math.min(S0 * 1.25, Math.max(S0 * 0.8, S));
+    const S = RIG3.TUNE.height / rawH;
     this.info.scale = S;
-    this.info.naiveScale = S0;
-    this.info.naiveHeight = h0;
-    /* the fist's measured inner radius, carried into project metres by the same uniform factor */
-    const gripR = Math.min(0.05, Math.max(0.012, gripSrc * S));
-    this.info.gripR = gripR;
+    this.info.rawHeight = rawH;
+    this.info.bakedHeight = bakedHeightAt(S);
+    const gripR = gripSrc;
     for (const g of all) { g.translate(0, yOff, 0); g.scale(S, S, S); }
     for (const a of faceGeo.morphs) {
       for (let i = 0; i < a.count; i++) a.setXYZ(i, a.getX(i) * S, a.getY(i) * S, a.getZ(i) * S);
@@ -476,6 +453,11 @@ export class SlyModel {
     this._srcP = srcP; this._yOff = yOff; this._S = S;
 
     /* ---- 7. re-express the artist's weights over RIG3's bones --------------------------- */
+    /* `weightMapped` is the honest coverage figure: the share of the artist's skin weight that
+       reaches a bone the map NAMES, as against the share swept into `hips` by the fallback. A
+       high joint count means nothing on a rig whose IK controls outnumber its deform bones. */
+    let wTot = 0, wMapped = 0;
+    const namedIdx = new Set(srcSkel.bones.map((b, i) => (resolve(b) ? i : -1)).filter((i) => i >= 0));
     for (const g of all) {
       const si = g.attributes.skinIndex, sw = g.attributes.skinWeight;
       const n = g.attributes.position.count;
@@ -486,7 +468,10 @@ export class SlyModel {
         for (let k = 0; k < 4; k++) {
           const w = sw.array[i * 4 + k];
           if (!(w > 0)) continue;
-          for (const [ours, f] of share[si.array[i * 4 + k]]) bucket.set(ours, (bucket.get(ours) || 0) + w * f);
+          const j = si.array[i * 4 + k];
+          wTot += w;
+          if (namedIdx.has(j)) wMapped += w;
+          for (const [ours, f] of share[j]) bucket.set(ours, (bucket.get(ours) || 0) + w * f);
         }
         const top = [...bucket.entries()].sort((a, b) => b[1] - a[1]).slice(0, 4);
         const sum = top.reduce((s, e) => s + e[1], 0) || 1;
@@ -498,6 +483,7 @@ export class SlyModel {
       g.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(bidx, 4));
       g.setAttribute('skinWeight', new THREE.Float32BufferAttribute(bwt, 4));
     }
+    this.info.weightMapped = wTot > 0 ? wMapped / wTot : 0;
 
     /* ---- 8. carry the mesh from the source bind pose into ours -------------------------- */
     const { M, Q, rot } = this._bakeMatrices(srcP, abs);
@@ -646,18 +632,20 @@ export class SlyModel {
     if (this._matCache.has(name)) return this._matCache.get(name);
     const T = RIG3.TUNE;
     const shading = this.engine?.get?.('shading');
-    let map = null;
+    /* The loader's own texture where there is one; a direct load only as a fallback. Every UV set
+       in this asset lies inside [0,1] — measured, all 21 of them — so three's default clamp is
+       correct. (`SlyModelDLRig` needs RepeatWrapping because its tail runs V to 1.504 and clamping
+       flattened the rings into a solid lobe. This tail does not, and setting repeat anyway would be
+       a silent no-op hiding the day the UVs change.) */
+    let map = this._tex?.[name] || null;
     const stem = PART_TEX[name];
-    if (stem && !this._noTex) {
+    if (!map && stem && !this._noTex) {
       map = new THREE.TextureLoader().load(`${BASE}sly-${stem}.png`);
       map.colorSpace = THREE.SRGBColorSpace;
-      map.anisotropy = 4;
       map.flipY = false;                 // glTF convention; the UVs were authored against it
-      /* Every UV set in this asset lies inside [0,1] — measured, all 21 of them — so clamping is
-         correct here. `SlyModelDLRig` needs RepeatWrapping because its tail runs V to 1.504; this
-         tail does not, and repeating would be a silent no-op that hid a future authoring change. */
       this._disposables.push(map);
     }
+    if (map) map.anisotropy = 4;
     const opts = {
       name: `slygodot:${name}`, color: map ? 0xffffff : FALLBACK[name], map,
       bands: T.bands, rim: T.rim, rimColor: T.rimColor, sss: T.furSSS,
@@ -677,9 +665,11 @@ export class SlyModel {
    * is on the palm side by anatomy, so `cross(fingerDir, palmWard)` gives an axis whose positive
    * rotation curls inward on left and right alike with no mirrored special case.
    *
-   * Returns the fitted internal radius of the right fist, which is what the cane's grip is sized
-   * to. Sizing the hand to the cane instead would be the wrong way round — the glove is authored
-   * art and the prop is ours.
+   * Returns the grip radius the cane is built at. It is `CANE_TUNE`'s authored value and not a
+   * solved one, deliberately: `SlyModelDLRig` needed a bisection and a circle fit to size a grip to
+   * its glove, and a version of that fitted here reported an rms of 17 mm on a 48 mm radius — a
+   * circle the twelve finger joints simply do not lie on. A number that bad is not a measurement,
+   * and shipping it would have sized the prop to noise.
    */
   _curlHands(geos, srcSkel, srcWorld, N) {
     let gripR = CANE_TUNE.gripR;
@@ -722,8 +712,8 @@ export class SlyModel {
       }
       T.delete(-1);
 
-      /* the vertices the curl will move, remembered so the fist can be measured afterwards */
-      const digitVerts = [];
+      /* how far each digit vertex travelled, so the fix can be measured against `?godot=open` */
+      const moved = [];
       const rot3 = new THREE.Matrix3();
       const v = new THREE.Vector3(), acc = new THREE.Vector3(), tmp = new THREE.Vector3();
       for (const g of geos) {
@@ -743,8 +733,8 @@ export class SlyModel {
             const m = T.get(si.array[i * 4 + k]);
             acc.addScaledVector(m ? tmp.copy(v).applyMatrix4(m) : tmp.copy(v), w);
           }
+          if (onDigit) moved.push(acc.distanceTo(v));      // v is still the pre-curl position
           pos.setXYZ(i, acc.x, acc.y, acc.z);
-          if (onDigit) digitVerts.push(acc.clone());
           /* normals follow the same blend, rotation only */
           v.fromBufferAttribute(nrm, i); acc.set(0, 0, 0);
           for (let k = 0; k < 4; k++) {
@@ -760,42 +750,16 @@ export class SlyModel {
       }
 
       if (side === 'R') {
-        /* THE TUNNEL, measured rather than assumed.
-         *
-         * Fit a circle through the twelve curled finger joints, projected onto the plane normal to
-         * the flexion axis — that circle is the bone line of the closed fist, not its inner
-         * surface. The flesh between the two is then measured directly: the 10th percentile of the
-         * digit vertices' distance from the fitted centre IS the inner wall of the fist, and that
-         * is what the cane's grip has to fit. Taking the joint circle alone would size the grip to
-         * the skeleton and put the shaft inside the fingers. */
-        const e1 = new THREE.Vector3(1, 0, 0);
-        if (Math.abs(e1.dot(axis)) > 0.9) e1.set(0, 1, 0);
-        const u = new THREE.Vector3().crossVectors(axis, e1).normalize();
-        const w2 = new THREE.Vector3().crossVectors(axis, u);
-        const pts = [];
-        for (const f of fingers) {
-          for (let k = 0; k < 3; k++) {
-            const p = srcWorld[joints[f][k]].clone();
-            const m = T.get(srcSkel.bones.findIndex((b) => b.name === joints[f][k]));
-            if (m) p.applyMatrix4(m);
-            pts.push([p.dot(u), p.dot(w2)]);
-          }
-        }
-        const fit = circleFit(pts);
-        const rr = digitVerts
-          .map((p) => Math.hypot(p.dot(u) - fit.cx, p.dot(w2) - fit.cy))
-          .sort((a, b) => a - b);
-        const inner = rr.length ? rr[Math.max(0, Math.floor(rr.length * 0.10))] : fit.r * 0.6;
-        this.info.grip = { joints: fit.r, rms: fit.rms, inner, verts: rr.length };
-        if (Number.isFinite(inner) && inner > 0) gripR = inner;
-        /* The tunnel's own frame, in source bind space. The cane goes HERE, not at a constant:
-           the fitted centre is where the closed fist actually has a hole, and `axis` is the axis
-           the fingers curled about, so it is by construction the axis of the cylinder they grip.
-           Sign chosen so the shaft rises — the character stands in bind pose, so +Y is up. */
-        const centre = new THREE.Vector3()
-          .addScaledVector(u, fit.cx).addScaledVector(w2, fit.cy)
-          .addScaledVector(axis, srcWorld[N('hand.R')] ? srcWorld[N('hand.R')].dot(axis) : 0);
-        this._grip = { centre, axis: axis.clone().multiplyScalar(axis.y >= 0 ? 1 : -1) };
+        /* How far the curl actually moved the fist. Reported rather than asserted: `?godot=open`
+           is the arm that has to separate from it, and a fix nobody can measure is a fix nobody
+           can check. Straightness is the input side of the same quantity — 0.977 to 0.998 here,
+           which is what "four rigid prongs" means as a number. */
+        moved.sort((a, b) => a - b);
+        this.info.curl = {
+          verts: moved.length,
+          mean: moved.length ? moved.reduce((s, d) => s + d, 0) / moved.length : 0,
+          max: moved.length ? moved[moved.length - 1] : 0,
+        };
       }
     }
     return gripR;
@@ -817,23 +781,25 @@ export class SlyModel {
   _buildCane(abs, gripR) {
     const socket = new THREE.Group();
     socket.name = 'caneSocket';
-    const hi = RIG3.BONE_ORDER.indexOf('handR');
-    const M = this._M[hi];
-    const q = (this._rot?.handR?.q) || new THREE.Quaternion();
-    /* the measured tunnel, carried through the same normalise + retarget the mesh took */
-    let off = CANE_SOCKET.off.clone(), up = CANE_SOCKET.top.clone().sub(CANE_SOCKET.off).normalize();
-    if (this._grip) {
-      off = this._grip.centre.clone().setY(this._grip.centre.y + this._yOff).multiplyScalar(this._S)
-        .applyMatrix4(M).sub(new THREE.Vector3(...abs.handR));
-      up = this._grip.axis.clone().applyQuaternion(q).normalize();
-      if (up.y < 0) up.negate();
-      this.info.socket = { off: off.toArray(), up: up.toArray() };
-    }
+    /**
+     * THE SHAFT DIRECTION IS THE ENGINE'S, NOT THE HAND'S, and that is a considered trade.
+     *
+     * The hand's own grip axis is derivable — the fingers curl about it, so it IS the axis of the
+     * cylinder they can hold — and it was derived: it comes out 57° off vertical, because in bind
+     * pose this arm hangs at his side and a relaxed fist there grips a horizontal bar. Socketing
+     * along it would be anatomically right and visually wrong, because `CANE_TUNE.dropBelowGrip`
+     * is 0.796 m derived so the tip PLANTS on `idle_confident` at 8.5° off vertical. Tilt the bind
+     * shaft 57° and every planted-cane pose in the game spears the floor sideways instead.
+     *
+     * So the socket keeps `SlyModel3`'s frame, which is legitimate rather than a borrowed constant:
+     * this retarget puts the model's palm centroid on RIG3's own `handR` joint (measured 1 mm
+     * apart in source bind space), which is exactly the joint that frame is authored against.
+     */
+    const off = CANE_SOCKET.off.clone();
+    const up = CANE_SOCKET.top.clone().sub(CANE_SOCKET.off).normalize();
     socket.position.copy(off);
     const fw = new THREE.Vector3(0, 0, 1);
-    fw.addScaledVector(up, -fw.dot(up));
-    if (fw.lengthSq() < 1e-6) fw.set(1, 0, 0).addScaledVector(up, -up.x);
-    fw.normalize();
+    fw.addScaledVector(up, -fw.dot(up)).normalize();
     const rt = new THREE.Vector3().crossVectors(up, fw).normalize();
 
     this.cane = new Cane(this.engine, { tune: { gripR } });
@@ -851,6 +817,26 @@ export class SlyModel {
     this.bones.handR.add(socket);
     this._caneSocket = socket;
     shading?.outline?.(this.cane.mesh, { thickness: 1.25 });
+
+    /* Is it held? Measured as the distance from every vertex the right glove owns outright to the
+       shaft's AXIS, in bind pose — the quantity `SlyModelDLRig` had to invent a whole grip solve
+       to move, reported here plainly so nobody has to take "held" on trust. */
+    const g = this.mesh.geometry, si = g.attributes.skinIndex.array, sw = g.attributes.skinWeight.array;
+    const HR = RIG3.BONE_ORDER.indexOf('handR');
+    const o = new THREE.Vector3(...abs.handR).add(off);
+    const p = new THREE.Vector3(), pos = g.attributes.position;
+    const rr = [];
+    for (let i = 0; i < pos.count; i++) {
+      let w = 0;
+      for (let k = 0; k < 4; k++) if (si[i * 4 + k] === HR) w += sw[i * 4 + k];
+      if (w < 0.9) continue;
+      p.fromBufferAttribute(pos, i).sub(o);
+      rr.push(p.addScaledVector(up, -p.dot(up)).length());
+    }
+    rr.sort((a, b) => a - b);
+    this.info.grip = rr.length
+      ? { verts: rr.length, p10: rr[Math.floor(rr.length * 0.1)], median: rr[rr.length >> 1], gripR }
+      : null;
   }
 
   bp(name) { return this._bindWorld[name]; }

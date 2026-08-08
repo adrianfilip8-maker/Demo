@@ -87,6 +87,15 @@ export const DETECT = {
   searching: 0.72,
   chase: 1.00,
   ceiling: 1.45,           // overfill headroom: he stays sure for a moment after losing you
+  /**
+   * Hysteresis on every band. Without it `stateForSuspicion` is a bare comparison, and a meter
+   * resting on a threshold — which is exactly what happens when the player stands at the edge
+   * of the cone, or behind a column edge the LOS ray clips in and out of — flips the state on
+   * alternate frames. Each flip re-emits `guardAlert` and restarts the reaction animation, so
+   * the guard twitches in place and the read the player is supposed to be learning is noise.
+   * He must fall this far below a band to leave it; going up still takes the full threshold.
+   */
+  hysteresis: 0.06,
 
   /* timings */
   reactDelay: 0.35,        // he is slow. This is the window the player is meant to exploit.
@@ -98,6 +107,17 @@ export const DETECT = {
   attackRange: 2.6,
   attackCooldown: 1.6,
   pickpocketSuspicion: 0.22,   // he half-notices, which is funnier than not noticing
+
+  /* --- suspicious: the beat that makes the ladder readable ---
+     A guard who notices something and does not move has told the player nothing he can act
+     on: the cone changes colour and that is all, and from behind a pillar the player cannot
+     see the cone. So he plants for `peerTime` — the pause is the tell — then walks over at
+     `peerSpeed`, slower than his own patrol, and stops `peerStandoff` short. That approach is
+     what turns "I might have been seen" into "I have to move now", and it is also the thing
+     that lets the player bait a guard off his beat, which is half of Sly's toolkit. */
+  peerTime: 0.60,
+  peerSpeed: 1.15,
+  peerStandoff: 2.20,
 
   /* speeds, m/s */
   patrolSpeed: 1.55,
@@ -128,105 +148,180 @@ export const STATE = {
  * may not cover yet (the rooftop deck and the tomb, mostly).
  *
  * action: 'look' (sweep the head), 'bored' (yawn / scratch / lean), null (just pause).
+ *
+ * ── Every waypoint here is measured against the shipped temple ─────────────────────────────
+ *
+ * The first version of this table was typed from the §8.1 coordinate summary and never
+ * checked against `EgyptLevel.js`. `tests/patrol.test.mjs` checks it now — it builds the real
+ * level, harvests every collision proxy, and walks each spline through it. On the first run
+ * **6 of these 9 routes were physically impossible and 8 of the 11 guards could not complete
+ * a lap**: `hall_weave` ran its north-south legs straight down the line of the aisle columns,
+ * `tomb_vault` and `tomb_scarab` cut through the crypt pillars, `rooftop_run` straddled the
+ * clerestory wall between two roof levels 3.5 m apart, `south_gate` climbed a 2 m terrace and
+ * clipped a propylon pier, and `sphinx_avenue` walked on nothing at all.
+ *
+ * So the numbers below are not decorative. Three rules they now obey, and the reason for each:
+ *
+ *   1. **Corridors, not diagonals.** The temple is a colonnade building: everything walkable
+ *      is a straight band between two rows of stone. A waypoint pair that cuts a corner
+ *      diagonally will cross a column line somewhere, and Catmull-Rom rounding puts it there
+ *      even when the straight segment would have missed.
+ *   2. **Turn on the clear rows.** The hall's column rows sit at z = −22, −30, −38, −46 and
+ *      the crypt's pillar rows at z = −62, −68, −74. Cross-legs are authored on the rows
+ *      *between* them and nowhere else.
+ *   3. **Clearance is measured for the widest body on the route.** The Heavy is 0.56 m in
+ *      radius and `Guard._step` stops him with forward rays at exactly that distance, so a
+ *      centre-line that clears a column by 0.4 m pins him against it for the rest of the run.
+ *      The test demands `radius + 0.20 m`.
  */
 export const ROUTES = {
-  /* The south gate of the Great Courtyard — the stretch of pavement the `guard` canonical
-     shot looks at. Deliberately the first route in the table so guard #0 walks it. */
+  /* The south forecourt, between the hall front and the terrace — the stretch of pavement the
+     `guard` canonical shot looks at. Deliberately the first route in the table so guard #0
+     walks it. Stays south of z = −1.5: the four propylon piers stand at x ±(11.2‥13.8) and
+     ±(19.7‥22.3) across z −0.5‥2.5, and the old route walked straight into the east one. */
   south_gate: {
     closed: true, baseY: 0, space: 'courtyard',
     points: [
-      [-1.0, 0.0, 2.6, 'look'],
-      [7.0, -4.5, 1.2, null],
-      [12.0, 1.5, 2.2, 'look'],
-      [6.5, 7.5, 1.0, null],
-      [-4.0, 6.0, 2.0, 'bored'],
-      [-9.5, 0.5, 1.4, 'look'],
-      [-5.5, -5.0, 1.0, null],
+      [0.0, -13.0, 2.6, 'look'],
+      [9.0, -12.0, 1.0, null],
+      [16.5, -7.5, 2.2, 'look'],
+      [16.0, -3.0, 1.2, null],
+      [6.0, -3.5, 1.4, null],
+      [-6.0, -3.5, 2.0, 'bored'],
+      [-16.0, -3.0, 1.2, null],
+      [-16.5, -7.5, 2.2, 'look'],
+      [-9.0, -12.0, 1.0, null],
     ],
   },
 
-  /* The big courtyard perimeter: past the colossi, down the west colonnade, across the
-     front of the hall and back up the east side. The long walk the player times. */
+  /* The big courtyard perimeter: down the west colonnade, across the front of the hall, up the
+     east side and back along the pylon face. The long walk the player times.
+
+     The east leg is the awkward one and it is deliberately kinked. At z ≈ 1 it must thread the
+     6 m gap between two propylon piers, so it runs at x = 16.8; north of z = 20 the ramp
+     landing occupies x 12.2‥19.0 at y = 1.47, a 1.5 m step the guard's `stepUp` refuses, so it
+     swings out to x = 20.0 between that landing and the peristyle columns at x = 22. */
   courtyard_ring: {
     closed: true, baseY: 0, space: 'courtyard',
     points: [
-      [-17.0, 28.0, 2.0, 'look'],
-      [-17.5, 14.0, 0, null],
-      [-17.0, 3.0, 1.6, null],
-      [-9.0, -8.0, 2.4, 'look'],
-      [4.0, -10.5, 1.2, null],
-      [16.0, -3.0, 1.8, null],
-      [17.5, 12.0, 0, null],
-      [17.0, 26.0, 2.6, 'bored'],
-      [6.0, 30.5, 1.2, 'look'],
-      [-6.0, 30.5, 1.4, null],
+      [-18.0, 28.5, 2.2, 'look'],
+      [-18.0, 16.0, 0, null],
+      [-18.0, 1.0, 1.6, null],
+      [-18.0, -10.0, 2.4, 'look'],
+      [-6.0, -13.0, 1.0, null],
+      [6.0, -13.0, 1.0, null],
+      [16.8, -10.0, 1.8, null],
+      [16.8, 1.0, 0, null],
+      [20.0, 15.0, 1.6, null],
+      [20.0, 27.5, 2.6, 'bored'],
+      [8.0, 29.8, 1.4, 'look'],
+      [-8.0, 29.8, 0, null],
     ],
   },
 
-  /* A tight ring around the obelisk. Whoever walks this is the reason you can't just climb
-     the pole from the south side. */
+  /* The obelisk terrace, one storey up. Whoever walks this is the reason you cannot simply
+     climb the pole from the south side.
+
+     Open, not closed, and that is forced by the architecture rather than chosen: terrace stage
+     1 (y = 2.0) is an annulus around stage 2, and its north side is cut in half by the upper
+     stair at |x| ≤ 2.6. There is no closed loop up here. A sentry pacing a U past the obelisk
+     and turning at each end of the north band is a stronger read anyway — the about-face is
+     the beat the player counts. */
   obelisk_watch: {
-    closed: true, baseY: 0, space: 'courtyard',
+    closed: false, baseY: 2.0, space: 'terrace',
     points: [
-      [0.0, 4.0, 1.8, 'look'],
-      [6.0, 11.0, 1.2, null],
-      [0.0, 18.0, 1.8, 'look'],
-      [-6.0, 11.0, 1.2, null],
+      [5.5, 18.0, 2.0, 'look'],
+      [7.6, 12.0, 0, null],
+      [7.6, 6.2, 1.2, null],
+      [0.0, 4.4, 1.8, 'look'],
+      [-7.6, 6.2, 1.2, null],
+      [-7.6, 12.0, 0, null],
+      [-5.5, 18.0, 2.0, 'look'],
     ],
   },
 
-  /* Sphinx avenue, up the middle between the two rows. Open route: he about-faces at each
-     end, which is a much stronger read than a loop out here in the open. */
-  sphinx_avenue: {
-    closed: false, baseY: null, space: 'approach',
+  /* The entry pylon gateway — the level's front door, and the first thing the player must get
+     past from spawn. Open: he about-faces under the lintel at each end.
+
+     This replaces `sphinx_avenue`, which patrolled z 43‥77 out on the approach. That is
+     outside the collision mesh entirely (the courtyard ground ends at z = 34), so its guard
+     was walking on the authored fallback height over sloping sand, and it is also 10‥45 m
+     behind the player's spawn, guarding nothing he has to cross. */
+  pylon_gate: {
+    closed: false, baseY: 0, space: 'courtyard',
     points: [
-      [0.0, 43.0, 2.4, 'look'],
-      [0.0, 55.0, 0, null],
-      [0.0, 66.0, 1.4, null],
-      [0.0, 77.0, 2.8, 'look'],
+      [-6.2, 31.2, 2.2, 'look'],
+      [0.0, 32.4, 1.2, null],
+      [6.2, 31.2, 2.2, 'look'],
     ],
   },
 
-  /* Weaving the aisles of the hypostyle hall. The columns break line of sight constantly,
-     which is exactly what makes this room playable. */
+  /* The hypostyle hall, as a rectangle in the two inner aisles. The columns break line of
+     sight constantly, which is exactly what makes this room playable.
+
+     x = ±12.5 is the centre of the corridor between the nave columns (outer face x = ±9.6)
+     and the aisle columns (inner face x = ±15.1) — 2.6 m of clearance on the tighter side, so
+     the Heavy walks it without ever touching stone. The cross-legs sit on z = −19.5 and
+     z = −42.5, the two rows in this hall with no column of any kind on them. */
   hall_weave: {
     closed: true, baseY: 0, space: 'hall',
     points: [
-      [-16.0, -20.0, 1.6, 'look'],
-      [-16.5, -34.0, 0, null],
-      [-16.0, -46.0, 1.8, null],
-      [-4.0, -50.0, 2.2, 'look'],
-      [10.0, -47.0, 1.2, null],
-      [16.0, -38.0, 0, null],
-      [16.0, -22.0, 2.0, 'bored'],
-      [2.0, -17.5, 1.4, 'look'],
+      [-12.5, -19.5, 1.6, 'look'],
+      [-12.5, -31.0, 0, null],
+      [-12.5, -42.5, 2.0, 'look'],
+      [0.0, -42.5, 0, null],
+      [12.5, -42.5, 1.4, null],
+      [12.5, -31.0, 0, null],
+      [12.5, -19.5, 2.0, 'bored'],
+      [0.0, -19.5, 1.2, 'look'],
     ],
   },
 
-  /* The rooftop run. Waypoints stay 7 m inside the deck edge — the walk must never put a
-     foot over the parapet, and the ground probe below refuses to step off anyway. */
+  /* The rooftop run, on the nave deck. The deck is y = 17.0 and only 22.8 m wide (x ±11.4,
+     rails on both edges); the aisle roofs either side are y = 13.5, and between them stands
+     the clerestory wall. The old route at x = ±16 had one foot on each — six 3.1 m steps per
+     lap, every one of them past `stepDown`, so the patrol stalled at the first.
+
+     x = ±8.5 keeps 2.9 m inside the rail. The cross-legs are the fussy part: four roof-light
+     slots open through the deck at |x| < 1.3, in the bands z ≈ −47, −39.7, −32.5 and −25.2, and
+     a guard crossing the deck at x = 0 walks over one. They sit on z = −21.9 and −43.6, each
+     the middle of a full-width window, and each long leg carries a midpoint — a four-point
+     Catmull-Rom rectangle bulges ~2.3 m at the corners, which was enough to reach a slot on
+     its own. */
   rooftop_run: {
     closed: true, baseY: 17.0, space: 'roof',
     points: [
-      [-16.0, -22.0, 2.2, 'look'],
-      [16.0, -22.0, 1.6, null],
-      [16.0, -45.0, 2.4, 'look'],
-      [-16.0, -45.0, 1.6, null],
+      [-8.5, -21.9, 2.2, 'look'],
+      [0.0, -21.9, 0, null],
+      [8.5, -21.9, 1.6, null],
+      [8.5, -32.7, 0, null],
+      [8.5, -43.6, 2.4, 'look'],
+      [0.0, -43.6, 0, null],
+      [-8.5, -43.6, 1.6, null],
+      [-8.5, -32.7, 0, null],
     ],
   },
 
-  /* Tomb vault, circling the sarcophagus. Torch-lit, so the cone reads warm against cold. */
+  /* The crypt's east aisle, paced end to end past the sarcophagus. Torch-lit, so the cone
+     reads warm against cold.
+
+     Open rather than a ring, and again the architecture forces it: the crypt's three pillar
+     rows leave a 0.9 m corridor at the south end and a 1.0 m one at the north, and a 0.56 m
+     Heavy does not turn a corner in either. The aisle itself (x 6.6‥12.1) is 5.5 m wide and
+     runs the length of the room, so he paces it, which is the right patrol for a tomb guard
+     anyway — he is standing over the thing you came for. */
   tomb_vault: {
-    closed: true, baseY: -12.0, space: 'tomb',
+    closed: false, baseY: -12.0, space: 'tomb',
     points: [
-      [-9.0, -60.0, 2.0, 'look'],
-      [9.0, -60.5, 1.4, null],
-      [9.5, -74.0, 2.2, 'bored'],
-      [-9.5, -74.0, 1.4, 'look'],
+      [9.2, -61.5, 2.4, 'look'],
+      [9.2, -67.0, 0, null],
+      [9.2, -72.0, 0, null],
+      [9.2, -74.5, 2.4, 'look'],
     ],
   },
 
-  /* Scarab on the courtyard architrave, 9 m up. Makes the ledge tiptoe circuit a decision. */
+  /* Scarab on the courtyard architrave, 9 m up. Makes the ledge tiptoe circuit a decision.
+     This is the one route the first audit passed unchanged. */
   architrave_ledge: {
     closed: false, baseY: 9.0, space: 'ledge',
     points: [
@@ -236,14 +331,17 @@ export const ROUTES = {
     ],
   },
 
-  /* Scarab skittering around the sarcophagus. */
+  /* Scarab skittering a tight ring around the sarcophagus, inside the pillar rows. It gets to
+     close the loop where the Heavy cannot: 0.26 m of radius fits the 1.0 m gaps between the
+     plinth and the pillars, and the two cross-legs at z = −68.0 and −74.6 pass north and south
+     of the plinth footprint (z −73.7‥−70.3) rather than over it. */
   tomb_scarab: {
     closed: true, baseY: -12.0, space: 'tomb',
     points: [
-      [-5.0, -65.0, 0.8, null],
-      [5.0, -65.0, 1.0, 'look'],
-      [5.5, -71.0, 0.8, null],
-      [-5.5, -71.0, 1.0, 'look'],
+      [3.4, -68.0, 0.8, null],
+      [3.4, -74.6, 1.0, 'look'],
+      [-3.4, -74.6, 0.8, null],
+      [-3.4, -68.0, 1.0, 'look'],
     ],
   },
 };
@@ -254,7 +352,7 @@ export const ROSTER = [
   { type: 'temple', route: 'courtyard_ring', u: 0.00, speed: 1.05 },
   { type: 'heavy', route: 'courtyard_ring', u: 0.52, speed: 0.92 },
   { type: 'temple', route: 'obelisk_watch', u: 0.30, speed: 0.94 },
-  { type: 'temple', route: 'sphinx_avenue', u: 0.10, speed: 1.08 },
+  { type: 'temple', route: 'pylon_gate', u: 0.10, speed: 1.08 },
   { type: 'temple', route: 'hall_weave', u: 0.00, speed: 1.00 },
   { type: 'heavy', route: 'hall_weave', u: 0.48, speed: 0.88 },
   { type: 'temple', route: 'rooftop_run', u: 0.15, speed: 1.12 },
@@ -525,12 +623,52 @@ const RAY_OPTS = { ignoreTags: ['hazard', 'water', 'rail', 'hook', 'spire', 'ven
 /*  Helpers shared with Guard.js                                               */
 /* ========================================================================== */
 
-/** Threshold → state, before any hysteresis or timers are applied. */
-export function stateForSuspicion(s) {
-  if (s >= DETECT.chase) return STATE.CHASE;
-  if (s >= DETECT.searching) return STATE.SEARCHING;
-  if (s >= DETECT.suspicious) return STATE.SUSPICIOUS;
+/** How far up the alert ladder a state sits. Used only to decide which way hysteresis leans. */
+const RUNG = {
+  [STATE.PATROL]: 0, [STATE.SUSPICIOUS]: 1, [STATE.SEARCHING]: 2, [STATE.CHASE]: 3,
+};
+
+/**
+ * Threshold → state.
+ *
+ * @param {number} s        the suspicion meter
+ * @param {string|null} cur the state he is in now. Pass it: with it, each band he already
+ *   occupies is `DETECT.hysteresis` lower on the way *down* and unchanged on the way up, so a
+ *   meter resting exactly on a threshold cannot chatter. Omit it and this is the bare
+ *   comparison it always was, which is what the pure-threshold tests want.
+ */
+export function stateForSuspicion(s, cur = null) {
+  const held = RUNG[cur] ?? 0;
+  const h = cur === null ? 0 : DETECT.hysteresis;
+  const at = (level, band) => (held >= level ? band - h : band);
+  if (s >= at(3, DETECT.chase)) return STATE.CHASE;
+  if (s >= at(2, DETECT.searching)) return STATE.SEARCHING;
+  if (s >= at(1, DETECT.suspicious)) return STATE.SUSPICIOUS;
   return STATE.PATROL;
+}
+
+/**
+ * Where the vision cone's colour sits on its three-stop ramp: 0 = patrol cream, 1 = warn
+ * amber, 2 = alert red. `Guard.js` mixes the two stops either side of the returned value.
+ *
+ * A single cream→red lerp across the whole meter — which is what shipped — is a continuous
+ * slide, and a player cannot read a state off a continuous slide: every frame is a slightly
+ * different orange and none of them means anything in particular. The ramp below is pinned to
+ * the *same thresholds the state machine uses*, so the colour of the cone **is** the state:
+ * cream while he has noticed nothing, amber the instant he becomes suspicious and held amber
+ * through the whole search, red only once he has committed. The two hard edges are at
+ * `DETECT.suspicious` and `DETECT.chase`, which are the two moments the player's decision
+ * actually changes.
+ */
+export function coneColourStop(s) {
+  if (s <= 0) return 0;
+  if (s < DETECT.suspicious) {
+    // Warming before the band, so "he is starting to notice" is visible a beat early.
+    return THREE.MathUtils.smoothstep(s / DETECT.suspicious, 0.30, 1.0);
+  }
+  if (s >= DETECT.chase) return 2;
+  const t = (s - DETECT.suspicious) / (DETECT.chase - DETECT.suspicious);
+  return 1 + THREE.MathUtils.smoothstep(t, 0.55, 1.0);
 }
 
 /** Base movement speed for a state and type, m/s. */
@@ -539,7 +677,7 @@ export function speedFor(state, type) {
   switch (state) {
     case STATE.CHASE: s = DETECT.chaseSpeed; break;
     case STATE.SEARCHING: s = DETECT.alertSpeed; break;
-    case STATE.SUSPICIOUS: s = 0; break;
+    case STATE.SUSPICIOUS: s = DETECT.peerSpeed; break;
     case STATE.LOST: s = DETECT.alertSpeed * 0.8; break;
     case STATE.STUNNED: case STATE.KO: s = 0; break;
     default: s = DETECT.patrolSpeed;

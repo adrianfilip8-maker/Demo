@@ -4,6 +4,7 @@ import { buildGuardAssets, instantiate, GROUPS } from './GuardModel.js';
 import { GuardAnim } from './GuardAnim.js';
 import {
   ROSTER, buildRoutes, Senses, VISION, DETECT, STATE, stateForSuspicion, speedFor,
+  coneColourStop,
 } from './Patrol.js';
 
 /**
@@ -367,6 +368,7 @@ const _mat = new THREE.Matrix4();
 const _col = new THREE.Color();
 const _colA = new THREE.Color();
 const _colB = new THREE.Color();
+const _colW = new THREE.Color();
 const _colN = new THREE.Color();
 const WORLD_UP = new THREE.Vector3(0, 1, 0);
 const RAY_OPTS = { ignoreTags: ['hazard', 'water', 'rail', 'hook', 'spire', 'vent'] };
@@ -576,7 +578,7 @@ class Guard {
     }
 
     const s = this.senses.suspicion;
-    const want = stateForSuspicion(s);
+    const want = stateForSuspicion(s, this.state);
 
     switch (this.state) {
       case STATE.PATROL:
@@ -661,9 +663,19 @@ class Guard {
         break;
 
       case STATE.SUSPICIOUS: {
-        // Planted, squinting at whatever moved. Zero speed comes out of speedFor().
+        /* Plant, squint, then go and look. The plant is `DETECT.peerTime` long and it is the
+           tell — a guard who turns his head and immediately walks is indistinguishable from a
+           guard on patrol. After it he closes at `peerSpeed` (slower than his own beat: this
+           is wariness, not pursuit) and stops `peerStandoff` short of the spot, so he ends up
+           looking at it rather than standing on it. */
         this.speed = 0;
-        if (this.senses.lastSeenValid) wantYaw = this._yawToward(this.senses.lastSeen);
+        if (this.senses.lastSeenValid) {
+          wantYaw = this._yawToward(this.senses.lastSeen);
+          _v1.subVectors(this.senses.lastSeen, this.position); _v1.y = 0;
+          if (this.stateTime > DETECT.peerTime && _v1.length() > DETECT.peerStandoff) {
+            moved = this._step(dt, this.senses.lastSeen.x, this.senses.lastSeen.z, maxSpeed);
+          }
+        }
         break;
       }
 
@@ -900,7 +912,13 @@ class Guard {
     switch (this.state) {
       case STATE.KO: clip = 'ko'; break;
       case STATE.STUNNED: clip = 'stunned'; break;
-      case STATE.SUSPICIOUS: clip = 'suspicious'; break;
+      case STATE.SUSPICIOUS:
+        // He plants first and only then walks over, so the clip has to follow the same beat.
+        if (this.speed > 0.12) {
+          clip = 'walk_alert';
+          speed = clamp(this.speed / DETECT.peerSpeed, 0.5, 1.4);
+        } else clip = 'suspicious';
+        break;
       case STATE.CHASE:
         clip = this.speed > 0.15 ? 'run_chase' : 'alert';
         speed = this.speed > 0.15 ? clamp(this.speed / DETECT.chaseSpeed, 0.55, 1.6) : 1;
@@ -1551,6 +1569,7 @@ export class Guards {
     const night = 1 - THREE.MathUtils.smoothstep(this._light, TUNE.nightLo, TUNE.nightHi);
 
     _colA.setHex(TUNE.colPatrol).lerp(_colN.setHex(TUNE.colNight), night);
+    _colW.setHex(TUNE.colWarn);
     _colB.setHex(TUNE.colAlert);
 
     for (let i = 0; i < this.guards.length; i++) {
@@ -1576,10 +1595,19 @@ export class Guards {
         this.collision && this.collision.ready !== false ? this.collision : null, _eye, _dir, dt));
       g.reach = reach;
 
-      /* --- colour + brightness --- */
+      /* --- colour + brightness ---
+         Three stops, not two. A single cream→red lerp across the meter is a continuous slide,
+         and a player cannot read a state off a slide — every frame is a slightly different
+         orange. `coneColourStop` pins the ramp to the state machine's own thresholds, so the
+         cone is cream while he has noticed nothing, amber from the instant he turns suspicious
+         and held amber through the search, and red only once he commits to the chase. The two
+         hard edges land exactly where the player's decision changes. `TUNE.colWarn` has been
+         declared in this file since the cone was written and was never once used. */
       const sus = clamp(g.senses.suspicion / DETECT.chase, 0, 1);
       const gain = clamp(g.senses.gain / DETECT.fillBase, 0, 1.6);
-      _col.copy(_colA).lerp(_colB, THREE.MathUtils.smoothstep(sus, 0.12, 0.95));
+      const stop = coneColourStop(g.senses.suspicion);
+      if (stop <= 1) _col.copy(_colA).lerp(_colW, stop);
+      else _col.copy(_colW).lerp(_colB, stop - 1);
       let bright = TUNE.beamBase + TUNE.beamGain * gain + sus * 0.35;
       if (g.state === STATE.CHASE) bright *= TUNE.beamAlert;
       /* The night dim applies to the resting patrol read only and yields to suspicion, so a
@@ -1879,3 +1907,7 @@ export class Guards {
 }
 
 export default Guards;
+
+/** The garrison's tuning block. Exported so `tests/patrol.test.mjs` can read the guard's own
+ *  step limits rather than keeping a second copy of them that can drift. */
+export { TUNE as GUARD_TUNE };
