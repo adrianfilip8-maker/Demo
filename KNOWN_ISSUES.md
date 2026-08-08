@@ -19695,3 +19695,59 @@ worth more than an open one.
 
 Outstanding: the ship rule's clause (C), the `courtyard` guard scored with `tools/bandprobe.mjs`,
 is reported separately and has not been run here.
+
+## §250 — a §186 exposure, disclosed rather than hoped away, and closed by a null arm that was not designed for it
+
+The INK agent saved `src/render/Outline.js` at 23:20:18 and `src/render/PostFX.js` at 23:24:11 —
+**inside `celband`'s lock hold** (acquired 23:02:02). It disclosed this unprompted, with timestamps,
+and stated the consequence plainly: what it changed is not cosmetic to a frame — the compiled
+outline vertex program, the hull's width (2.5 px → 1.67 px at 720 rows), and a crease-pass depth
+gate that removes a 46-luma fill from 27% of `courtyard`. Ink is in every frame `celband` captured.
+
+**The run is clean, and the null arm proves it.** `celband`'s registered V1 null captured the base
+twice, once at each *end* of the courtyard sweep:
+
+```
+23:17:12  courtyard-base-a   md5 7f98c5e1578f2ec81a0769ed6e14d622
+23:20:18  <- Outline.js saved
+23:20:32  courtyard-sb45
+23:21:42  courtyard-sb60
+23:22:53  courtyard-base-b   md5 7f98c5e1578f2ec81a0769ed6e14d622
+```
+
+**Byte-identical across the save**, with three arms captured after it. A hull-width change of that
+size cannot leave two frames bit-identical, so no boot between them compiled the new module.
+`celband` is single-boot and §249's `NOTHING SHIPS` verdict is uncontaminated.
+
+That is worth more than the reprieve. **The null arm was registered to measure the drift floor, and
+it happened to certify the run against a contamination hazard nobody had thought of when it was
+designed** — because it straddles the whole sweep instead of sitting at one end. A null taken twice
+back-to-back would have proved the floor equally well and answered nothing here.
+
+### I had the mechanism wrong, and the correction changes the rule
+
+I warned the agent that "the harness serves from a dev server, so a save lands mid-run". That is
+false. `vite.config.js` sets `hmr: false` and `watch: { ignored: ['**/*'] }` under `SANDS_NO_HMR=1`,
+and its own comment explains why: *"Agents edit `src/` while captures run, and an HMR reload
+mid-`page.evaluate` destroys the execution context — a capture wants a frozen build."*
+
+So **an already-booted page cannot pick up a save.** The watcher is off and nothing re-requests a
+module. The hazard is the **next boot**, which inverts the risk profile:
+
+- a **single-boot** runner is safe against saves made after it started;
+- a **multi-boot** runner — one that reboots per shot, per resolution, or per arm — is the dangerous
+  case, and its *later* arms silently compile a different build from its earlier ones.
+
+That is worse than the thing I was warning about, because a multi-boot sweep produces arms that are
+internally consistent, mutually incomparable, and carry no evidence of the split. `inkw` reboots per
+resolution and is exactly this shape.
+
+**§186 restated:** while any capture holds the lock, do not save under `src/**` — not because the
+running page will notice, but because you cannot know whether the runner reboots. The agent's own
+conclusion is the right one: *"whether the edit is temporary or permanent makes no difference to a
+run that boots against it mid-sweep."* Its earlier reading — that §186 governs temporary A/B arms
+rather than permanent committed fixes — was, in its words, too convenient, and it said so before
+anyone challenged it.
+
+`decalsign` is unaffected: the agent's last save was 74 s before that run acquired the lock, and it
+has saved nothing since.
