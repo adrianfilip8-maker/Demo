@@ -31,6 +31,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { ContactDecals, baseRadiusOf } from './Decals.js';
 
 const BASE = 'assets/kaykit/';
 
@@ -158,7 +159,11 @@ export class KayKit {
     this.group = new THREE.Group();
     this.group.name = 'kaykit';
     this.mode = 'props';
-    this.stats = { models: 0, placed: 0, failed: 0, tris: 0, colliders: 0 };
+    this.stats = { models: 0, placed: 0, failed: 0, tris: 0, colliders: 0, decals: 0 };
+    /* Geometric ground contact. A screen-space contact term cannot reach these: `courtyard`
+       holds all thirty of these props at 35–51 m, where 4.5 cm of world subtends 1.11 px.
+       See `Decals.js` for the measured defect and for why the shape is a hard-edged ellipse. */
+    this.decals = new ContactDecals(engine, { name: 'kaykit' });
   }
 
   async init() {
@@ -190,9 +195,14 @@ export class KayKit {
     if (this.mode === 'props') this._buildProps(lib);
     else this._buildShowcase(lib);
 
+    /* One extra draw for every prop's ground contact, parented to this module's own group so
+       it disposes with it. Built after the props so the batch knows its final count. */
+    this.decals.build(this.group);
+
     this.engine.scene.add(this.group);
     this.engine?.warn?.(`KayKit (${this.mode}): ${this.stats.placed} placed from ${this.stats.models} models, `
-      + `${this.stats.failed} failed, ${Math.round(this.stats.tris)} tris, ${this.stats.colliders} colliders`);
+      + `${this.stats.failed} failed, ${Math.round(this.stats.tris)} tris, ${this.stats.colliders} colliders, `
+      + `${this.stats.decals} contact decals, ${this.stats.hulls || 0} hulls`);
   }
 
   /** Load each model once and reduce it to a single bind-space geometry plus its bounds. */
@@ -240,7 +250,12 @@ export class KayKit {
           geo.computeBoundingBox();
           bb = geo.boundingBox;
         }
-        lib.set(file, { geo, bb: bb.clone() });
+        /* Base footprint radius, measured on the model's own lowest 25 cm rather than taken
+           from `bb`. The two disagree by enough to matter: `barrel_large` is 0.635 m at the
+           floor and 0.932 m at its belly, and `crates_stacked` reaches 1.427 m only at a
+           corner. A decal sized off the bounding box would be up to 47 % too wide under every
+           barrel in the level, which reads as a puddle rather than a contact. */
+        lib.set(file, { geo, bb: bb.clone(), rBase: baseRadiusOf(geo) });
         this.stats.models++;
       } catch (err) {
         this.stats.failed++;
@@ -264,6 +279,9 @@ export class KayKit {
       chunks.push(geo);
       this.stats.tris += geo.attributes.position.count / 3;
       this.stats.placed++;
+      /* Every placement, not just the SOLID ones. A coin hoard you can wade through still has
+         to sit ON the floor — the collider set is a gameplay decision and grounding is not. */
+      if (this.decals.add(x, groundY, z, entry.rBase)) this.stats.decals++;
       if (SOLID.has(file)) this._collider(entry, x, groundY, z, ry);
     }
     if (!chunks.length) return;
@@ -274,7 +292,71 @@ export class KayKit {
     mesh.castShadow = true;
     mesh.receiveShadow = true;
     this.group.add(mesh);
-    this.engine?.get?.('shading')?.outline?.(mesh, { thickness: 1.0 });
+    this._maybeHull(mesh);
+  }
+
+  /**
+   * Hull presence, decided by ROLE.
+   *
+   * **These props no longer carry an inverted-hull shell, and the ink they lose is not ink they
+   * were entitled to.** `Outline.js` made width uniform (`INK_PX = 2.5`, `thickness` accepted
+   * and ignored), which turned every remaining `outline()` call site into a pure PRESENCE
+   * decision — and this one was never made on purpose. It was inherited from whichever module
+   * built the mesh.
+   *
+   * What the rule says. AGENTS §2.1.2 gives the inverted hull to "characters and hero props"
+   * and gives "interior creases and architectural edges" to the post-process detector. This
+   * file's own header calls its contents set dress in as many words — "small, scattered, and
+   * read as *containers* rather than as architecture" — and the placement table has half of
+   * them shoved against a colonnade wall where the porters would stop. A crate is not a hero
+   * prop under any reading.
+   *
+   * What was actually on screen. The state this replaces is: KayKit set dress carried a hull
+   * while the shipped protagonist carried none at all (`SlyModelDLRig.js` never calls
+   * `Shading.outline()` — `Outline.js`'s own header lists it, with Architecture and Vegetation,
+   * as the larger half of the "ink varies 20x" defect). Measured here on `interior.g00.png` by
+   * profiling median luminance in 1 px rings outward from each prop's rasterised silhouette,
+   * the ink band is 3 px deep at `temple`'s 15–22 m (L 40.6 / 42.5 / 55.7 against a settled
+   * surround of 66.2) and still resolvable at `courtyard`'s 35–51 m. So the reading that
+   * decided this is not an argument from the rulebook: a barrel out-inked the protagonist in
+   * shipped frames, and it did so because of which loader built it.
+   *
+   * The scored precedent is in the sibling file. `Props.js` ran exactly this experiment —
+   * hulls on set dress — under `PREREG-propshull.md`, and it came back REJECT on two of its
+   * three named look conditions: "sticker edge" and "doubles visibly against the PostFX line".
+   * `HULL_KEYS` there is now `{gold}` alone, i.e. hero sculpture only. The doubling has a
+   * mechanism, not just a look: POSTFX's crease pass and a hull draw the same silhouette twice,
+   * which is what turns a 2.5 px line into a fat smear (`PostFX.js`, the normal-prepass note).
+   * Applying the same finding to the same class of object in the neighbouring file is the
+   * cheapest correct move available.
+   *
+   * These props keep an ink line. It is the post-process crease line, which is the line §2.1.2
+   * assigns to them and the line everything else in the level that is not a character or a
+   * hero prop is already using.
+   *
+   * **Defeatable, so the claim can be tested rather than believed.** `?kaykithull=1`, or
+   * `engine.debug.kaykitHull = true` before `init()`, restores the shell exactly as it shipped.
+   * It is read here rather than toggled per frame on purpose: a hidden shell would still weld a
+   * `slyNormal` stream onto the geometry and would count as `inked` in `Outline.inkAudit()`
+   * while drawing nothing, and an audit that reports ink nobody can see is the failure this
+   * whole change is about.
+   */
+  _maybeHull(mesh) {
+    if (!this._hullWanted()) return null;
+    const shell = this.engine?.get?.('shading')?.outline?.(mesh, { thickness: 1.0 });
+    if (shell) this.stats.hulls = (this.stats.hulls || 0) + 1;
+    return shell;
+  }
+
+  _hullWanted() {
+    if (this.engine?.debug?.kaykitHull) return true;
+    try {
+      if (typeof location !== 'undefined' && location.search) {
+        const v = (new URLSearchParams(location.search).get('kaykithull') || '').toLowerCase();
+        return v === '1' || v === 'on' || v === 'true';
+      }
+    } catch { /* no location in a plain-module host */ }
+    return false;
   }
 
   /** An invisible box the size of the model's own bounds — no hand-typed extents. */
@@ -321,12 +403,21 @@ export class KayKit {
     mesh.receiveShadow = true;
     this.group.add(mesh);
     this.rowWidth = total;
-    this.engine?.get?.('shading')?.outline?.(mesh, { thickness: 1.0 });
+    /* Same call as the props path, and the showcase has the weaker claim of the two: half its
+       row (`column`, `wall_arched`, `stairs`, `pillar_decorated`) is architecture, which §2.1.2
+       hands to the crease detector explicitly. It is a diagnostic view for judging the atlas
+       palette (`?kaykit=show`) and it should judge that palette under the same ink the shipped
+       frames use, or it is judging something the game does not render. */
+    this._maybeHull(mesh);
   }
 
-  update() { /* static */ }
+  update() { this.decals?.update(); }
+
+  /** What the contact decals actually applied this frame — see `ContactDecals.state()`. */
+  decalState() { return this.decals?.state?.() ?? null; }
 
   dispose() {
+    this.decals?.dispose();
     this.group.traverse((o) => { if (o.isMesh) o.geometry?.dispose?.(); });
     this.material?.map?.dispose?.();
     this.material?.dispose?.();

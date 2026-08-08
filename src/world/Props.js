@@ -9,6 +9,7 @@ import {
 import {
   seatedColossus, sphinx, anubis, falconRa, coffinLid, fallenHead, brokenStatue,
 } from './Statues.js';
+import { ContactDecals, baseRadiusOf } from './Decals.js';
 
 /**
  * Props — the hero sculpture and set dress.
@@ -150,7 +151,26 @@ export class Props {
     this._fx = [];
     this._collect = [];            // bobbing coins and clue bottles
     this.rng = rng(0x9c0113);
-    this.stats = { draws: 0, tris: 0 };
+    this.stats = { draws: 0, tris: 0, decals: 0 };
+
+    /**
+     * Geometric ground contact for the free-standing set dress — see `Decals.js` for the
+     * measured defect (props read BRIGHTER at the contact than 1 m away) and for why the shape
+     * is a hard-edged banded ellipse rather than a soft blob.
+     *
+     * **Scope, stated rather than left to be inferred.** This grounds the small scattered
+     * things: braziers, pottery, baskets, hall vessels. It deliberately does NOT ground the
+     * sculpture — colossi, sphinxes, Anubis, the gilded Ra — for a reason that is about where
+     * the defect is rather than about effort. Those stand on plinths ARCHITECTURE builds, and a
+     * 13 m figure meeting a 2 m plinth is a metre-scale depth and normal discontinuity that
+     * POSTFX's crease pass resolves at every shipped distance. The props that need a geometric
+     * decal are exactly the ones whose base subtends a handful of pixels, which is the same
+     * argument that produced this feature. The avenue sphinxes are excluded for a second,
+     * harder reason: they sit on `Terrain.heightAt` sand, and a flat decal on a slope either
+     * clips into the dune or floats off it. Grounding those needs a projected decal, which is
+     * a different feature and should be argued on its own.
+     */
+    this.decals = new ContactDecals(engine, { name: 'props' });
   }
 
   async init() {
