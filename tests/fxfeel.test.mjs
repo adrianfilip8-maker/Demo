@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { EMITTERS, ALERT_LADDER, CONTINUOUS, PAL } from '../src/fx/Emitters.js';
-import { TUNE, BATCH_CAPACITY, DENSITY_CLAMP } from '../src/fx/Particles.js';
+import { TUNE, BATCH_CAPACITY, DENSITY_CLAMP, emitTicks } from '../src/fx/Particles.js';
 
 /**
  * Offline guards on the traversal / stealth FX pass (PREREG-fxtraversal).
@@ -184,6 +184,110 @@ test('T2 CALIBRATION: an over-budget emitter is rejected by the same arithmetic'
     live > budget,
     `calibration failed: the synthetic over-budget emitter (${live.toFixed(0)} live) did NOT ` +
       `exceed the budget (${budget.toFixed(0)}), so T2 cannot detect an emitter that floods a batch`,
+  );
+});
+
+/* ══════════════════════════════════════════════════ T2b — the emission integrator ══ */
+
+/**
+ * Drive the SHIPPED `emitTicks` over a frame schedule and report what it emitted and the
+ * peak live population, given a lifetime. This is the integration half of the budget: T2
+ * bounds the steady state, this bounds the transient.
+ */
+function driveTicks(rate, density, dts, lifeSec, meanCount) {
+  let accum = 0;
+  const perFrame = [];
+  for (const dt of dts) {
+    const r = emitTicks(accum, dt, rate, density);
+    accum = r.accum;
+    perFrame.push(r.ticks);
+  }
+  const total = perFrame.reduce((s, n) => s + n, 0);
+  // Live population = everything born within one lifetime of now, at 60 fps sampling.
+  const window = Math.round(lifeSec * 60);
+  let peak = 0;
+  for (let i = 0; i < perFrame.length; i++) {
+    let live = 0;
+    for (let j = Math.max(0, i - window); j <= i; j++) live += perFrame[j];
+    peak = Math.max(peak, live);
+  }
+  return { total, peak: peak * meanCount, perFrame };
+}
+
+const RAIL = { rate: CONTINUOUS.railSlide.rate, def: EMITTERS.rail_spark };
+
+test('T2b: the integrator conserves the authored rate at normal frame times', () => {
+  const density = DENSITY_CLAMP[1];
+  const seconds = 4;
+  const dts = new Array(60 * seconds).fill(1 / 60);
+  const out = driveTicks(RAIL.rate, density, dts, maxOf(RAIL.def.life), meanOf(RAIL.def.count));
+  const intended = RAIL.rate * density * seconds;
+  assert.ok(out.perFrame.length > 0, 'drove zero frames');
+  console.log(`  T2b: 60fps x ${seconds}s -> ${out.total} ticks, intended ${intended.toFixed(0)}`);
+  /* Within one tick of carry — the accumulator holds a fraction, it does not drop or invent. */
+  assert.ok(
+    Math.abs(out.total - intended) <= 1,
+    `emitted ${out.total} ticks against an intended ${intended.toFixed(1)} — the integrator ` +
+      'is not conserving the authored rate',
+  );
+});
+
+test('T2b: a frame hitch does not flood the batch afterwards', () => {
+  const density = DENSITY_CLAMP[1];
+  /* One 1.0 s hitch, then a second and a half of normal frames. */
+  const dts = [1.0, ...new Array(90).fill(1 / 60)];
+  const out = driveTicks(RAIL.rate, density, dts, maxOf(RAIL.def.life), meanOf(RAIL.def.count));
+  const budget = T2_SHARE * BATCH_CAPACITY.spark;
+  const steady = steadyLive(RAIL.rate, RAIL.def, density);
+  console.log(
+    `  T2b hitch: peak live ${out.peak.toFixed(0)} (steady ${steady.toFixed(1)}, budget ${budget.toFixed(0)})`,
+  );
+  /* Registered bound: a hitch may cost at most one clamped frame on top of the steady state,
+     never a sustained burst. 3x the steady state is generous headroom for that one frame. */
+  assert.ok(
+    out.peak <= steady * 3,
+    `peak live ${out.peak.toFixed(0)} after a 1 s hitch is more than 3x the steady state ` +
+      `${steady.toFixed(1)} — the integrator is banking the backlog and paying it off at the ` +
+      'clamp, which floods the batch exactly when the machine is already struggling',
+  );
+  assert.ok(out.peak <= budget, `peak live ${out.peak.toFixed(0)} exceeds the batch budget ${budget.toFixed(0)}`);
+});
+
+test('T2b CALIBRATION: the banking form this replaced does flood, by the same measure', () => {
+  /* MUST FIRE. `emitTicks` differs from the obvious loop in one line — it clamps the
+     ACCUMULATOR, not just the tick count. If the banking form does not flood under this
+     measurement, then the test above is not measuring flooding and its pass means nothing.
+     This is the only place the old form is reproduced, and it is reproduced to be rejected. */
+  const density = DENSITY_CLAMP[1];
+  const banking = (accum, dt, rate, dens, maxTicks = 6) => {
+    let a = accum + dt * rate * dens;
+    let ticks = 0;
+    while (a >= 1 && ticks < maxTicks) { a -= 1; ticks++; }
+    return { ticks, accum: a };                       // arrears kept — the defect
+  };
+  const dts = [1.0, ...new Array(90).fill(1 / 60)];
+  let accum = 0;
+  const perFrame = [];
+  for (const dt of dts) {
+    const r = banking(accum, dt, RAIL.rate, density);
+    accum = r.accum;
+    perFrame.push(r.ticks);
+  }
+  const window = Math.round(maxOf(RAIL.def.life) * 60);
+  let peak = 0;
+  for (let i = 0; i < perFrame.length; i++) {
+    let live = 0;
+    for (let j = Math.max(0, i - window); j <= i; j++) live += perFrame[j];
+    peak = Math.max(peak, live);
+  }
+  peak *= meanOf(RAIL.def.count);
+  const steady = steadyLive(RAIL.rate, RAIL.def, density);
+  console.log(`  T2b calib: banking form peaks at ${peak.toFixed(0)} live vs steady ${steady.toFixed(1)}`);
+  assert.ok(
+    peak > steady * 3,
+    `calibration failed: the banking form peaked at only ${peak.toFixed(0)} against a steady ` +
+      `${steady.toFixed(1)}, so this measurement cannot tell a flooding integrator from a ` +
+      'well-behaved one',
   );
 });
 

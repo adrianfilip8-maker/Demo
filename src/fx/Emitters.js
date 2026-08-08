@@ -437,6 +437,44 @@ export const EMITTERS = {
     alpha: [0.5, 0.5], col0: PAL.sandLight, col1: PAL.haze,
   },
 
+  /* ── the hard turn ─────────────────────────────────────────────────────────
+     MOVEMENT has had a `skid` state since the moveset was written (priority 40, entered
+     when the stick opposes travel past `TUNE.skidDot` above `TUNE.skidSpeed`) and it
+     emitted `playerState` for it every time. FX subscribed to none of it, so the one
+     traversal beat that is *pure weight* — the moment Sly plants and reverses — threw no
+     dust at all. This is that dust.
+
+     Continuous rather than a burst because a skid has a duration (`sm.time > TUNE.skidMin`,
+     forced out by 0.42 s) and the scuff has to travel with the foot. Life is capped under a
+     second on purpose: dust that outlives the state hangs where the player has already
+     gone, which reads as lag rather than as weight. */
+  skid_scuff: {
+    batch: 'dust', tile: [TILE.DUST, TILE.DUST2, TILE.DUST3], count: [2, 3], life: [0.40, 0.70],
+    speed: [0.8, 2.2], spread: 'disc', cone: 0.28, gravity: 1.3, drag: 4.2, turb: 0.10, wind: 0.45,
+    size: [0.10, 0.52], sizeExp: 0.48, spin: [-2.4, 2.4], fadeIn: 0.06, fadeOut: 1.7,
+    alpha: [0.34, 0.52], col0: PAL.sandLight, col1: PAL.sandMid, jitter: 0.10,
+  },
+
+  /* ── the rail grind ────────────────────────────────────────────────────────
+     `railMount` fired one `footstep_metal` puff at the instant of mounting and then
+     nothing, so a four-second grind down a rail was silent after the first frame — the
+     signature Sly traversal, with no feedback while it was happening.
+
+     Metal-on-metal, so: short-lived (0.34 s max — a grind spark dies fast or it is a
+     firework), velocity-stretched, and thrown *down* under real gravity. Embers float; hot
+     metal falls. `PAL.metalSpark` is the one colour in the palette that says "steel", and
+     it cools to `emberCool` over a third of a second.
+
+     Sized against the additive batch ceiling like everything else in `spark`: 0.075 m is
+     frac 0.041 at the fov-40 / 5 m reference against a 0.3375 bound. The budget is in
+     CONTINUOUS below and is held by test, not by hope. */
+  rail_spark: {
+    batch: 'spark', tile: [TILE.SPARK, TILE.STREAK], count: [1, 2], life: [0.16, 0.34],
+    speed: [1.6, 4.2], spread: 'cone', cone: 0.75, gravity: 9.5, drag: 4.5, turb: 0, wind: 0,
+    size: [0.075, 0.015], sizeExp: 0.95, spin: [0, 0], fadeIn: 0.02, fadeOut: 1.3,
+    alpha: [1.3, 2.1], col0: PAL.metalSpark, col1: PAL.emberCool, stretch: 0.06, jitter: 0.05,
+  },
+
   /* ── cane combo impact ─────────────────────────────────────────────────────
      Whole event under 250 ms and front-loaded: the sparks leave at 14 m/s with a drag
      of 13, so 80% of the travel happens in the first 60 ms and then they hang and die.
@@ -558,7 +596,76 @@ export const EMITTERS = {
     alpha: [1.2, 1.8], col0: PAL.sparkCore, col1: PAL.rimCool, stretch: 0.05, jitter: 0.05,
   },
 
-  /* ── guards ────────────────────────────────────────────────────────────── */
+  /* ── guards: the alert ladder ─────────────────────────────────────────────
+     GUARDS grades detection across four rungs — `stateForSuspicion` splits the meter at
+     0.34 / 0.72 / 1.00 and `_setState` emits `guardAlert` with `state`, `prev` and `level`
+     on every transition. FX drew **one identical puff for all of them**, which is the
+     stealth equivalent of a health bar with no numbers: the information exists, is
+     computed every frame, and never reaches the player.
+
+     These four are that ladder. They are scored, not eyeballed: `tests/fxfeel.test.mjs`
+     holds `count x alpha x size0^2` strictly increasing with at least a 1.6x step between
+     adjacent rungs, so no future tweak can quietly flatten two rungs back into each other.
+
+     **The colours are the vision cone's, not a new set.** Patrol.js §detection: "cream
+     while he has noticed nothing, amber the instant he becomes suspicious and held amber
+     through the whole search", then red. Guard.js publishes those three as `colPatrol`
+     #fff0c2, `colWarn` #ffb14a, `colAlert` #ff3a22, and the puff has to agree with the cone
+     it is standing in — two languages for one state is worse than one. Warmth climbs
+     61 -> 181 -> 181 -> 221 (R minus B) and is never allowed to cool on the way up.
+
+     All four are `dust`, deliberately: non-additive, so a garrison going up cannot lift the
+     exposure. Only the top rung gets additive light, and it gets it as a handful of small
+     hard sparks rather than as a glow. */
+
+  /* Rung 0 — stood down. `_setState` only fires on a CHANGE, so reaching patrol is always a
+     de-escalation: this is the "you are clear" beat, and the player needs it as much as the
+     alarm. The quietest thing in the catalogue, and the only rung that cools rather than
+     warms as it dies. */
+  alert_clear: {
+    batch: 'dust', tile: [TILE.SMOKE, TILE.DUST2], count: [2, 3], life: [0.55, 0.85],
+    speed: [0.30, 0.75], spread: 'cone', cone: 0.8, gravity: -0.8, drag: 3.4, turb: 0.12, wind: 0.3,
+    size: [0.075, 0.34], sizeExp: 0.5, spin: [-1.4, 1.4], fadeIn: 0.12, fadeOut: 1.8,
+    alpha: [0.20, 0.32], col0: 0xfff0c2, col1: PAL.skyFill, jitter: 0.09,
+  },
+  /* Rung 1 — he half-noticed. Small, slow, and gone in under a second. This one must NOT
+     pull the eye: at 0.34 on the meter the player still has the room, and a loud tell here
+     would push them into moving when they did not need to. */
+  alert_notice: {
+    batch: 'dust', tile: [TILE.SMOKE, TILE.DUST2], count: [3, 5], life: [0.45, 0.75],
+    speed: [0.45, 1.10], spread: 'cone', cone: 0.85, gravity: -1.2, drag: 3.2, turb: 0.14, wind: 0.3,
+    size: [0.105, 0.44], sizeExp: 0.5, spin: [-1.8, 1.8], fadeIn: 0.09, fadeOut: 1.7,
+    alpha: [0.34, 0.50], col0: 0xffb14a, col1: PAL.sandMid, jitter: 0.10,
+  },
+  /* Rung 2 — actively looking, and the rung `lost` falls back to. Held amber, matching the
+     cone: the search is the same colour as the suspicion that started it, so what changes
+     between them is the amount, which is exactly what the ladder is for. */
+  alert_search: {
+    batch: 'dust', tile: [TILE.SMOKE, TILE.DUST2], count: [5, 7], life: [0.55, 0.90],
+    speed: [0.70, 1.60], spread: 'cone', cone: 0.95, gravity: -1.5, drag: 3.0, turb: 0.18, wind: 0.35,
+    size: [0.135, 0.58], sizeExp: 0.5, spin: [-2.2, 2.2], fadeIn: 0.08, fadeOut: 1.6,
+    alpha: [0.46, 0.64], col0: 0xffb14a, col1: PAL.sandDark, jitter: 0.12,
+  },
+  /* Rung 3 — spotted. The one rung allowed to be loud, and the only one that reddens. */
+  alert_spot: {
+    batch: 'dust', tile: [TILE.SMOKE, TILE.DUST2], count: [8, 11], life: [0.60, 1.00],
+    speed: [1.20, 2.60], spread: 'cone', cone: 1.05, gravity: -1.9, drag: 2.8, turb: 0.22, wind: 0.4,
+    size: [0.175, 0.72], sizeExp: 0.5, spin: [-2.8, 2.8], fadeIn: 0.05, fadeOut: 1.5,
+    alpha: [0.62, 0.86], col0: 0xff3a22, col1: 0xffb14a, jitter: 0.14,
+  },
+  /* The snap on the top rung only — a few hard sparks thrown up out of the puff. Additive,
+     so it is the single moment in the ladder that puts light into the frame, and sized
+     against the batch ceiling like everything else in `spark`: 0.09 m is frac 0.049 at the
+     fov-40 / 5 m reference, against a 0.3375 bound. Small, hard, and over in a fifth of a
+     second — the difference between "he is looking" and "he has you". */
+  alert_spot_spark: {
+    batch: 'spark', tile: [TILE.STAR, TILE.SPARK], count: [4, 6], life: [0.14, 0.24],
+    speed: [1.8, 3.8], spread: 'sphere', cone: 3.14, gravity: 3.0, drag: 7.5, turb: 0, wind: 0,
+    size: [0.09, 0.02], sizeExp: 1.1, spin: [0, 0], fadeIn: 0.02, fadeOut: 1.4,
+    alpha: [1.0, 1.5], col0: 0xff3a22, col1: 0xffb14a, stretch: 0.03, jitter: 0.06,
+  },
+  /* Kept as the fallback for any caller that still asks for the old flat name. Nothing in
+     FX routes here any more — `_onGuardAlert` goes through ALERT_LADDER. */
   guard_alert: {
     batch: 'dust', tile: [TILE.SMOKE, TILE.DUST2], count: [5, 7], life: [0.5, 0.8],
     speed: [0.5, 1.4], spread: 'cone', cone: 0.9, gravity: -1.4, drag: 3.0, turb: 0.16, wind: 0.3,
@@ -621,6 +728,62 @@ export const EMITTERS = {
        smudge; giving it its own internal value range is what makes it read as a streak. */
     alpha: [0.32, 0.54], col0: PAL.sandLight, col1: PAL.sandDark, jitter: 1.2,
   },
+};
+
+/* =========================================================================
+   2b. Routing tables
+   =========================================================================
+
+   Data rather than `switch` statements inside Particles.js, for one reason: a test can read
+   data. §211.1's failure mode — nine assertions passing while reading a field that does not
+   exist — is only avoidable if the thing under test is inspectable from Node, and a rate
+   buried in a method body is not. Both tables below are asserted against in
+   `tests/fxfeel.test.mjs`.
+   ========================================================================= */
+
+/**
+ * Guard state → the mark the player sees for it.
+ *
+ * GUARDS emits `guardAlert` on every `_setState` transition, carrying `state`, `prev`,
+ * `suspicion` and `level`. Every state that event can carry must appear here: an unmapped
+ * state falls through to silence, which is the defect this table exists to fix, and the test
+ * enumerates `STATE` independently so that a rung added by GUARDS turns this red rather than
+ * going quietly untold.
+ *
+ * `lost` deliberately shares rung 2 with `searching` — he has lost you but is still hunting,
+ * and inventing a fifth mark for it would dilute a ladder whose whole value is that four
+ * steps are distinguishable. `stunned` and `ko` fall to rung 0: he is out of the fight, which
+ * is the same information as "you are clear".
+ */
+export const ALERT_LADDER = {
+  patrol:     { rung: 0, emitter: 'alert_clear' },
+  suspicious: { rung: 1, emitter: 'alert_notice' },
+  searching:  { rung: 2, emitter: 'alert_search' },
+  chase:      { rung: 3, emitter: 'alert_spot', spark: 'alert_spot_spark' },
+  lost:       { rung: 2, emitter: 'alert_search' },
+  stunned:    { rung: 0, emitter: 'alert_clear' },
+  ko:         { rung: 0, emitter: 'alert_clear' },
+};
+
+/**
+ * Player-state-driven continuous emitters: `playerState` name → emitter and tick rate.
+ *
+ * These attach to the player and are therefore **never distance-culled** (`_updateEmitters`
+ * exempts object-tracked handles), so unlike a brazier they compete for batch slots for the
+ * whole session. `tests/fxfeel.test.mjs` holds the steady-state population
+ * `rate * meanCount * maxLife * densityMax` under a quarter of each batch's capacity —
+ * derived from the note in `_updateEmitters` recording that ~300 live smoke against a
+ * capacity of 220 wrapped the ring and evicted the puff *nearest* the camera.
+ *
+ * Rates as shipped, at the density ceiling of 1.6:
+ *   rail_spark  26/s x 1.5 x 0.34 s x 1.6 =  21.2 live of spark's 175 budget (700 capacity)
+ *   skid_scuff  20/s x 2.5 x 0.70 s x 1.6 =  56.0 live of dust's  225 budget (900 capacity)
+ */
+export const CONTINUOUS = {
+  /* Both rail states: `railSlide` is the grind, `railWalk` the balance walk. Sparks only
+     come off the slide — a balance walk is not scraping metal. */
+  railSlide: { emitter: 'rail_spark', rate: 26 },
+  skid:      { emitter: 'skid_scuff', rate: 20 },
 };
 
 /* =========================================================================

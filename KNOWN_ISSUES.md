@@ -18507,3 +18507,197 @@ worse than none.
 - `npm test` currently reports one failure, `textures.test.mjs` "the committed cache is not
   stale" on `sandstone_block`. It fails identically before any change here and comes from
   another agent's in-flight edits to `src/textures/`. Not mine, not touched.
+
+## §236 — nobody had ever listened to the audio, and the music system was built on a claim that is measurably false
+
+Sound had not been touched by any agent. It turned out not to be missing — `src/audio/` is 3,700
+lines of a genuinely good synthesis engine — but several of the things it says about itself are
+wrong, and the wrong ones were load-bearing. Audio is the most measurable thing in this project
+and none of it had ever been measured, so the first move was to build the instrument.
+
+### The instrument
+
+`tests/webaudio.mjs` is a Web Audio renderer for Node: the full `AudioParam` automation timeline
+(including a-rate summing of nodes connected *into* a param, without which `fmBell`'s modulator
+and every tremolo render silently wrong), the spec's own biquad coefficients, band-limited
+oscillators, buffer sources. `Synth.js`'s header had asked for this in so many words — *"Every
+function takes an explicit `BaseAudioContext` … that is what lets the exact same synthesis code
+render into an `OfflineAudioContext` for analysis"* — and nobody had taken it up. The shipping
+recipes now render and the samples get asserted on. No lock, no browser, ~6 s.
+
+It is calibrated before it is believed: `selfTest()` checks six closed-form answers, and the one
+that matters is that a lowpass at its own cutoff reads `Q` in **decibels**, per the spec. Getting
+that backwards moves every footstep's centroid, and my own first expectation for that check was
+wrong — the renderer was right and I corrected the test, not the code.
+
+`Audio.unlock(existing)` was already documented as taking an outside context so the *shipping*
+signal path could be driven offline. Nothing had used that door either. Nine tests now boot the
+real mixer through it.
+
+### T1 — REJECTED. The three music cues are not what the file says they are
+
+`Audio.js` stated as fact that the three stems were "three mixes of the same piece at the same
+tempo", and built two mechanisms on it. Decoded in a Chromium `OfflineAudioContext` at 8 kHz mono
+and cross-correlated on 50 ms energy envelopes over 120 s, lags searched ±5 s:
+
+| pair | zero-lag | best | at lag |
+|---|---|---|---|
+| explore ↔ sneak | **0.122** | 0.225 | −0.20 s |
+| explore ↔ chase | **0.013** | 0.091 | −1.55 s |
+
+Registered gate was ≥ 0.50 at zero lag with argmax within ±0.10 s. **Calibration arm fired**:
+`explore` against a time-reversed copy of itself scores 0.163, and against itself 1.000, so the
+instrument tells aligned from unrelated. 0.122 is in the unrelated half. Their lengths differ by
+up to **5.33 s** (168.046 / 172.591 / 167.262 s), which no encoder padding explains. Commit
+`6f03a03` settles it independently: it calls them *"the three Black Chateau loops"*. Three
+separate pieces from one episode's score.
+
+Two consequences, both fixed:
+
+1. **`_stemEpoch` started a newly-decoded cue at the elapsed position of a different cue**, on
+   the stated grounds that they were bar-locked. They are not, so it dropped the player into an
+   arbitrary interior point of a piece they had never heard the beginning of — and since each cue
+   looped on its own length, the offset was not even stable. Cues now start at zero.
+2. **The cross-fade used the wrong law.** Linear ramps sum flat for *correlated* signals. For
+   uncorrelated ones the powers add, and a linear pair bottoms out 3 dB down halfway across.
+
+### T2 — FAILED its gate, and no bar grid was invented
+
+Per-stem tempo autocorrelation peaks all cleared the registered 1.25× median gate (explore 120
+BPM, ratio 16.3; sneak 80, 8.9; chase 80, 5.4) but the registered rule also required the three to
+agree within ±1.5 %, and 120/80/80 does not. **So transitions are NOT quantised to a bar line.**
+120 against 80 is a 3:2 ratio and may well be metrical ambiguity rather than a real tempo
+difference, but the rule was registered in advance and guessing which is not a measurement. This
+is a genuine unmet part of the brief and it is recorded as unmet rather than approximated.
+
+### T3 — VOID. Declared, not re-derived
+
+T3 asserted a flat **amplitude** sum through a cross-fade. That is the correct criterion only for
+correlated signals — exactly the assumption T1 had just refuted. Rather than quietly reinterpret
+it after seeing the result, it is void, and **T3′ was registered before the fix was written**:
+with ρ the measured correlation, `L(x) = √(a² + b² + 2ρab)` must stay within ±0.5 dB of unity,
+using ρ = 0.122 (the larger of the two, i.e. the value most favourable to the incumbent).
+
+**Calibration arm fired**: the linear pair it replaces deviates **2.74 dB** at the midpoint,
+comfortably past the 2 dB the arm required. `equalPowerCurve` holds within **0.25 dB**, and does
+so from any interrupted starting point because both faders are parameterised by the same `x`.
+
+Also fixed: `music()` ramped level and filter over 1.2 s while `_selectStem` cross-faded the
+arrangement over 1.6 s, so the level finished moving 0.4 s before the arrangement did and put a
+step in the middle of every transition. One `TUNE.stemFade` now carries all three.
+
+### T7 — the stealth cue was 22 dB down, i.e. off
+
+Measured whole-file RMS: explore 0.2527, sneak **0.0357**, chase 0.1705. `sneak` is **17.0 dB**
+quieter than `explore` — and `TRACK_SECTION` then multiplied it by a further 0.55, landing it
+**22.2 dB** below. The one cue whose whole job is to sit under footsteps was inaudible.
+
+`STEM_MAKEUP` is derived, not dialled: `min(rms_ref/rms, 1/(peak · trackLevel · maxSectionLevel))`
+— match the reference loudness if you can, stop where the peak hits unity if you can't. `sneak`
+hits the peak arm (crest factor 27.7 dB) and lands 11.6 dB down instead of 22.2. **Calibration
+arm fired**: the pre-fix constants fail the same 12 dB gate.
+
+### The detection ladder had four rungs and audio recognised two of them
+
+`src/ai/Patrol.js` grades detection `patrol → suspicious → searching → chase`, plus `lost`,
+`stunned`, `ko`. `_onGuardAlert` parsed the state string with an inline conditional matching
+`'chase'`, `'alert'` and `'suspicious'`, and **sent everything else to calm**. So:
+
+- **`searching` → calm.** The rung where a guard has stopped asking and started hunting, and the
+  last one where the player can still choose to leave, relaxed the music.
+- **`lost` → calm**, and fired the stand-down grunt, while the guard was actively looking for you.
+- `'alert'` is not a state any guard can be in — a branch that could never fire.
+
+Now a table, `ALERT_FOR_STATE`, read against `Patrol.js` by a test that fails if the guards agent
+adds a state audio does not name, or if audio names one no guard has. `searching` got the cue it
+never had: `search_call`, a falling minor third on the muted trumpet over a frame-drum and an
+unresolved fifth — *hunting*, not the cluster stab that means *caught*. A test holds the two
+apart by spectral centroid.
+
+**And the alert level was clobbered by whichever guard spoke last.** `this._alert = level`, so a
+guard at the far end of the temple returning to patrol dropped the score out of chase while
+somebody else was still chasing you. It is now the max over a per-guard map.
+
+### The guards made no sound at all
+
+`guard_step`, `armour_clank`, `spear_scrape` and `guard_yawn` have been in the catalogue since it
+was written, and **nothing ever played any of them**: the `guardSound` event `Audio.js` subscribes
+to has no emitter anywhere in the project. The single most important cue in a stealth game —
+footsteps approaching from somewhere you are not looking — did not exist.
+
+`_trackGuards` polls the GUARDS module's public `list`/`guards` for `position` and `state`, the
+same kind of public read `_startBeds` already does against the scene graph, and needs no change to
+`src/ai/*`. Footfalls are driven by **distance travelled**, not a timer, so a guard who speeds up
+steps sooner and one who stops makes no noise; nearest four within 34 m only. Every field is
+optional and a missing one costs silence — that module is owned by another agent and is being
+edited right now. Seven tests cover it, including malformed shapes.
+
+### Footsteps: stone and wood were the same sound
+
+Rendered and measured, the shipped `stone` and `wood` came out at **329 Hz and 348 Hz** — 5.8 %
+apart in centroid, 13.3 % in RMS, both under the thresholds registered before the table was
+touched. The two surfaces a temple level is mostly made of were indistinguishable, because the
+`thump` body at 185/245 Hz carried a third of the energy in both and swamped the band that
+actually encodes material. Rebuilt physically — stone is dense and *clicks*, wood is hollow and
+*rings* — they now sit at **1116 Hz and 422 Hz**, and all 15 surface pairs clear the gate.
+
+`water` is a surface tag `src/world` actually emits, and `stepFor` sent it to `step_stone`. Every
+step taken in the Nile was a step on flagstone. There is now a real splash.
+
+**Gait is a timbre, not a fader.** Sneaking used to be a walking step at `volume: 0.34`. It now
+shapes the transient, the bright band and the heel tick separately — and the first version of
+that table was wrong in an instructive way: attenuating everything uniformly cut the low body
+too and rendered sneak **brighter** than walk (1653 vs 1116 Hz). The test asserts sneak is
+duller, not merely quieter, which is what caught it.
+
+### Two recipes were clipping, and had been all along
+
+The catalogue ceiling test found `ko` at **1.246** peak (+1.9 dB over full scale) and `dive_boom`
+at **1.021**, both overshooting the gain the mixer budgets for them. Neither was touched by any
+change here; the instrument simply had not existed before. Gains corrected to what they render.
+
+### What ships unused
+
+`museum-of-natural-history.mp3` (6.94 MB) and `footstep.mp3` (9 kB) are both copied into `dist/`
+and **neither is loaded by any code path** — `STEM_FILES` names only the three `bc-*.mp3` cues.
+That is 6.95 MB, over half the shipped audio payload, for audio nothing plays. Left in place: the
+owner's standing instruction was that the soundtrack file be used as background music, and
+reversing that is the owner's call. `PROVENANCE.md` now records it, along with the three cues and
+`footstep.mp3`, which had no provenance entries at all. Licences are recorded as **unstated**,
+because they are.
+
+### What I need from the GUARDS agent
+
+Nothing blocking — the polling above works today against `list`/`guards`, `position` and `state`.
+But polling infers what an event would state, so if these are cheap:
+
+- **`guardStep { id, pos, surface, gait }`** on the animation's own foot-plant. Stride is
+  currently inferred from distance travelled, which is right physically but cannot know which
+  foot or what the guard is standing on — the surface is guessed from the reverb space.
+- **`guardAlert` already carries everything needed** (`id`, `state`, `prev`, `pos`, `suspicion`,
+  `level`) and is the model for the above. One caveat: it emits a **reused object**
+  (`this._alertPayload`), so no listener may retain it. Audio reads it synchronously.
+- A stable `id` on every guard for the lifetime of the level. `id ?? name` is used today.
+
+### What is unresolved
+
+- **No bar-line quantisation** (T2 failed its registered gate). Transitions are seamless but land
+  where they land. Resolvable by measuring each cue's downbeat phase, which needs a decoder.
+- **`sneak` still sits 11.6 dB below `explore`.** That is the most its crest factor allows
+  without compression. A dedicated compressor on the music bus could close it further.
+- The procedural score in `Music.js` — five sections, seven layers, bar-aligned transitions, and
+  by some distance the most Sly-sounding thing in the repository — is **only ever heard if the
+  MP3s fail to load**. It is measurably better adaptive music than three unrelated loops. Whether
+  recordings or the generated score should lead is an owner-level call, not mine.
+- Nothing here has been heard by a human. Every claim is a number.
+
+### Test status
+
+`node --test "tests/*.test.mjs"`: **295 tests, 294 pass, 1 fail** at the moment of this commit —
+the total moves between runs because six other agents are committing tests concurrently, so treat
+the failure *name* as the invariant and not the count. The single failure is
+`textures.test.mjs` "the committed cache is not stale", the deliberate staleness guard belonging
+to another agent; it fails identically before any change here. The five `patrol.test.mjs` reds
+noted earlier have since been fixed by the GUARDS agent. 35 of the passing tests are new here,
+and **six of them are calibration arms that must fire** — a threshold nobody has proved can fail
+is not a threshold.

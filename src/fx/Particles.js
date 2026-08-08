@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import { rng, fbm2, valueNoise2 } from '../core/Rand.js';
-import { EMITTERS, AMBIENT, MOTES, TORCH_MOTES, TILE, PAL, buildAtlas } from './Emitters.js';
+import {
+  EMITTERS, AMBIENT, MOTES, TORCH_MOTES, TILE, PAL, buildAtlas, ALERT_LADDER, CONTINUOUS,
+} from './Emitters.js';
 import { Decals } from './Decals.js';
 import { Trails } from './Trails.js';
 
@@ -33,6 +35,52 @@ import { Trails } from './Trails.js';
  * from a texture, because the four-point silhouette has to stay razor sharp at 6 px and at
  * 200 px. It is Sly's UI grammar; a round blob would be a different game.
  */
+
+/**
+ * Ring-buffer size per batch, and the clamp on the user's particle-density setting.
+ *
+ * Exported because the emission budget is arithmetic — steady-state live count is
+ * `rate * count * life * density` — and arithmetic over committed data belongs in a test
+ * that runs in a second, not in a capture holding the global lock. `tests/fxfeel.test.mjs`
+ * holds the player-attached continuous emitters under a quarter of each capacity. They were
+ * literals inside `_buildBatches` and `_density`, where a test could not see them drift out
+ * from under the budget that assumed them.
+ */
+export const BATCH_CAPACITY = { dust: 900, smoke: 220, spark: 700, ring: 48 };
+export const DENSITY_CLAMP = [0.2, 1.6];
+
+/**
+ * How many ticks a continuous emitter owes this frame, and what carries into the next.
+ *
+ * **The debt is shed, not banked, and that is the whole point of this function.** The
+ * obvious form of this loop — the one `_updateEmitters` still uses for fires —
+ *
+ *     accum += dt * rate * density;
+ *     while (accum >= 1 && guard++ < 6) { accum -= 1; emit(); }
+ *
+ * clamps how many particles it emits *per frame* but keeps the arrears in `accum`, so after
+ * a long frame it runs flat-out at the clamp for as many frames as it takes to pay them off.
+ * Modelled on `rail_spark` (rate 26, density ceiling 1.6, life 0.34 s): one 1.0 s hitch
+ * banks 41.6 ticks, drains 6 a frame for seven frames, and takes the live population to
+ * **83 against a steady-state budget of 21.2 — 3.9x** — precisely when the machine has just
+ * proved it is struggling.
+ *
+ * Clamping the accumulator instead means a hitch costs one clamped frame and nothing after
+ * it. That is also the physically honest answer: particles that should have been born during
+ * a frame that took a second would already be dead, and emitting them late puts a burst on
+ * screen for an event that is over.
+ *
+ * Exported so `tests/fxfeel.test.mjs` can hold both properties — rate conservation at normal
+ * frame times, and no flood after a hitch — without a browser.
+ */
+export function emitTicks(accum, dt, rate, density, maxTicks = 6) {
+  let a = accum + dt * rate * density;
+  if (!(a > 0)) return { ticks: 0, accum: 0 };
+  if (a > maxTicks) a = maxTicks;
+  let ticks = 0;
+  while (a >= 1 && ticks < maxTicks) { a -= 1; ticks++; }
+  return { ticks, accum: a };
+}
 
 /* Exported so `tests/fx.test.mjs` can assert the screen-space ceilings against the shipped
    emitter table without a browser or a capture. Module-local otherwise. */
@@ -1398,6 +1446,9 @@ const _t1 = new THREE.Vector3();
 const _t2 = new THREE.Vector3();
 const _cam = new THREE.Vector3();
 const _fwd = new THREE.Vector3();
+/* Dedicated: `_emit` clobbers `_v1` building its tangent frame, and it reads `opts.inherit`
+   *after* it does so. Passing `_v1` as an inherited velocity would silently become (0,1,0). */
+const _inh = new THREE.Vector3();
 const _col = new THREE.Color();
 const _viewM = new THREE.Matrix4();
 const _ndc = new THREE.Vector3();
@@ -1911,6 +1962,12 @@ export class Particles {
     this._prevPlayer = new THREE.Vector3();
     this._havePrev = false;
 
+    /** MOVEMENT's current state name, and the tick accumulator for CONTINUOUS. */
+    this._playerState = 'idle';
+    this._contAccum = 0;
+    /** Latch so the one-shot beat at the start of a skid fires once, not every frame. */
+    this._skidMarked = false;
+
     this.stats = { spawned: 0, live: 0, batches: 0, flames: 0 };
     this.soft = { available: false, reason: 'not initialised' };
   }
@@ -2014,15 +2071,15 @@ export class Particles {
   _buildBatches() {
     const soft = ['SOFT'];
     this._batch('dust', {
-      capacity: 900, additive: false, renderOrder: 10,
+      capacity: BATCH_CAPACITY.dust, additive: false, renderOrder: 10,
       defines: [...soft, 'LIT'],
     });
     this._batch('smoke', {
-      capacity: 220, additive: false, renderOrder: 11, softness: 1.1,
+      capacity: BATCH_CAPACITY.smoke, additive: false, renderOrder: 11, softness: 1.1,
       defines: [...soft, 'LIT'], litMix: 0.5,
     });
     this._batch('spark', {
-      capacity: 700, additive: true, renderOrder: 14, softness: 0.25,
+      capacity: BATCH_CAPACITY.spark, additive: true, renderOrder: 14, softness: 0.25,
       defines: ['STRETCH'],
       /* The additive event sprites take the screen-size ceiling — see TUNE.flashMaxH.
          Sparks, embers and coin pops are 0.075-0.14 m and never approach it; this exists
@@ -2030,7 +2087,7 @@ export class Particles {
       maxSize: TUNE.flashMaxH,
     });
     this._batch('ring', {
-      capacity: 48, additive: true, renderOrder: 13, softness: 0.9,
+      capacity: BATCH_CAPACITY.ring, additive: true, renderOrder: 13, softness: 0.9,
       defines: ['PLANAR', 'SOFT'],
     });
   }
@@ -2160,8 +2217,22 @@ export class Particles {
        clears the arrival latch instead, so the next lock on the same point fires again. */
     on('targetReleased', () => { this._targetReached = false; });
     on('targetJump', (e) => this._burstAt('target_jump', e?.pos, UP));
-    on('guardAlert', (e) => this._burstAt('guard_alert', e?.pos, UP));
+    on('guardAlert', (e) => this._onGuardAlert(e));
     on('coin', (e) => this._burstAt('coin_pop', e?.pos, UP));
+
+    /* MOVEMENT publishes its state machine's current move by name on every transition.
+       Two of those states own a continuous effect (see CONTINUOUS): the rail grind and the
+       skid. Both existed in the moveset from the start and neither had ever produced a
+       particle. */
+    on('playerState', (name) => this._onPlayerState(name));
+
+    /* Traversal beats that were emitted and unheard. Each is a contact the player made and
+       got no confirmation of; `ledgeGrab` and `hookGrab` in particular are the two moments
+       Sly *catches* something, which is the verb the whole moveset is built around. */
+    on('ledgeGrab', (e) => this._burstAt('footstep_stone', e?.pos, UP, 0.55));
+    on('hookGrab', (e) => this._burstAt('target_catch', e?.pos, UP, 0.7));
+    on('hookRelease', (e) => this._burstAt('cane_arc', e?.pos, UP, 0.5));
+    on('enemyBounce', (e) => this._onEnemyBounce(e));
     on('thiefVision', (v) => { this._thiefTarget = v ? 1 : 0; });
     on('timeOfDay', () => { this._motesBuilt = -1; });
     on('shot', (e) => this._stageShot(e?.name));
@@ -2576,7 +2647,7 @@ export class Particles {
   }
 
   _density() {
-    return THREE.MathUtils.clamp(this.engine.settings?.particles ?? 1, 0.2, 1.6);
+    return THREE.MathUtils.clamp(this.engine.settings?.particles ?? 1, DENSITY_CLAMP[0], DENSITY_CLAMP[1]);
   }
 
   /* ================================================ gameplay feedback handlers */
@@ -2628,6 +2699,128 @@ export class Particles {
     this._emit('cane_ring', _v3, { dir: _dir, scale: heavy });
     this._emit('cane_spark', _v3, { dir: _dir, scale: heavy, count: heavy });
     this._emit('cane_debris', _v3, { dir: _dir, scale: heavy });
+  }
+
+  /**
+   * The graded stealth tell.
+   *
+   * GUARDS computes a four-rung detection ladder — `stateForSuspicion` splits the meter at
+   * 0.34 / 0.72 / 1.00 with hysteresis on every band — and publishes the rung it landed on
+   * with every `guardAlert`. FX used to throw **the same puff for all of them**, so the one
+   * piece of information a stealth game exists to communicate arrived at the player flat.
+   *
+   * `level` (0..1, suspicion over the chase threshold) scales the mark *within* its rung, so
+   * a guard who slams from patrol to chase reads harder than one who creeps over the line.
+   * The rung picks the vocabulary; the level inflects it.
+   */
+  _onGuardAlert(e) {
+    const p = e?.pos;
+    if (!p) return;
+    const entry = ALERT_LADDER[e?.state] || ALERT_LADDER.suspicious;
+    /* Rung 0 is a de-escalation and must stay quiet: it is the "you are clear" beat, not an
+       alarm. Everything above it opens up with the level. */
+    const lvl = THREE.MathUtils.clamp(e?.level ?? 0, 0, 1);
+    const scale = entry.rung === 0 ? 0.9 : 0.85 + lvl * 0.35;
+    _v3.copy(p);
+    /* Head height. The mark belongs where his attention is, not at his boots — and the cone
+       it has to agree with is drawn from his eyes. */
+    _v3.y += 1.55;
+    this._emit(entry.emitter, _v3, { dir: UP, scale });
+    if (entry.spark) this._emit(entry.spark, _v3, { dir: UP, scale });
+  }
+
+  /** Sly landing on a guard's head. The bounce is a traversal move, so it reads as one. */
+  _onEnemyBounce(e) {
+    const p = e?.pos;
+    if (!p) return;
+    _v3.copy(p);
+    _v3.y += 1.35;
+    this._emit('land_dust', _v3, { dir: UP, scale: 0.55, count: 0.7 });
+    this._emit('cane_spark', _v3, { dir: UP, scale: 0.5, count: 0.5 });
+    if (e?.stunned) this._emit('alert_clear', _v3, { dir: UP, scale: 1.1 });
+  }
+
+  /**
+   * MOVEMENT's state name, latched for `_updatePlayerFx`.
+   *
+   * Reset the accumulator on every transition rather than letting it carry: a fractional
+   * tick left over from a two-frame skid would otherwise fire into the next state and put a
+   * scuff under a jump.
+   */
+  _onPlayerState(name) {
+    const next = name || 'idle';
+    if (next === this._playerState) return;
+    this._playerState = next;
+    this._contAccum = 0;
+
+    /* The plant. A skid's *first* frame is the one that carries the weight — the foot goes
+       down and the ground marks — so it gets a one-shot on top of the continuous dust. The
+       scuff decal is the same one `_onLand` lays for a heavy landing, at half the life:
+       a turn scars the sand less than a drop does. */
+    if (next === 'skid') {
+      if (!this._skidMarked) {
+        const mv = this.engine.get('movement');
+        const p = mv?.position;
+        if (p) {
+          _v3.copy(p); _v3.y += 0.04;
+          this._emit('skid_scuff', _v3, { dir: UP, count: 2.0, speed: 1.3 });
+          this.decal('scuff', _v3, UP, { size: 1.1, life: 3, alpha: 0.34 });
+        }
+        this._skidMarked = true;
+      }
+    } else {
+      this._skidMarked = false;
+    }
+  }
+
+  /**
+   * The continuous, state-driven traversal effects: rail sparks and skid dust.
+   *
+   * Driven here rather than through an `attach()` handle because both need their spawn
+   * *direction* derived from the player's velocity every tick — sparks come off the contact
+   * patch and fly back and down, scuff dust carries along the slide — and `_updateEmitters`
+   * has no vocabulary for a per-tick direction. Accumulating locally also keeps the player's
+   * two effects out of the emitter list that the distance cull walks.
+   */
+  _updatePlayerFx(dt) {
+    const cfg = CONTINUOUS[this._playerState];
+    if (!cfg || !(dt > 0)) { if (!cfg) this._contAccum = 0; return; }
+    const mv = this.engine.get('movement');
+    const pos = mv?.position;
+    if (!pos) { this._contAccum = 0; return; }
+
+    /* `emitTicks` sheds the backlog after a long frame rather than banking it — see its
+       comment for the 3.9x-over-budget flood the banking form produces. */
+    const r = emitTicks(this._contAccum, dt, cfg.rate, this._density());
+    this._contAccum = r.accum;
+    for (let i = 0; i < r.ticks; i++) this._emitPlayerCont(cfg.emitter, mv);
+  }
+
+  _emitPlayerCont(name, mv) {
+    const v = mv.velocity;
+    const sp = v ? Math.hypot(v.x, v.z) : 0;
+    /* Both effects are contact effects: below a walking pace there is no scrape and no
+       skid, and emitting anyway puts sparks under a stationary player. */
+    if (sp < 1.2) return;
+
+    _v3.copy(mv.position);
+    _v3.y += 0.05;
+
+    // Travel direction, and its opposite: debris leaves the contact patch backwards.
+    _v2.set(v.x / sp, 0, v.z / sp);
+
+    if (name === 'rail_spark') {
+      /* Off the shoe, back along the rail and slightly up, so the arc falls away behind
+         him. Scatter along the rail line rather than in a disc — a grind throws a line of
+         sparks, not a puff. */
+      _dir.set(-_v2.x, 0.42, -_v2.z).normalize();
+      _v3.addScaledVector(_v2, this.rand.jitter(0.10));
+      this._emit(name, _v3, { dir: _dir, inherit: _inh.set(v.x * 0.18, 0, v.z * 0.18) });
+    } else {
+      /* Scuff dust: a radial ground puff that carries with the slide. `inherit` is what
+         makes it trail the foot instead of blooming symmetrically around a moving point. */
+      this._emit(name, _v3, { dir: UP, inherit: _inh.set(v.x * 0.34, 0, v.z * 0.34) });
+    }
   }
 
   _onDiveImpact(pos, radius) {
@@ -2729,6 +2922,7 @@ export class Particles {
     this._updateShafts();
     this._updateAmbientBoxes();
     this._updateEmitters(dt, t);
+    this._updatePlayerFx(dt);
     this._updateFlames();
     this._updateCrestWind(dt);
     this._deadReckonFootsteps(dt);
@@ -3214,10 +3408,15 @@ export class Particles {
         if (h._far) { h.accum = 0; continue; }
       }
 
-      h.accum += dt * h.rate * density;
-      let guard = 0;
-      while (h.accum >= 1 && guard++ < 6) {
-        h.accum -= 1;
+      /* Sheds the backlog after a long frame instead of banking it — see `emitTicks`. The
+         level registers ~40 fires and torches on this path, so the banking form meant a
+         single hitch put every one of them into a multi-frame catch-up burst at once. The
+         clamp binds only on a long frame; at any normal frame time this is the arithmetic
+         it always was, which is why it cannot move a staged capture (those render at dt 0,
+         where both forms emit nothing and the fires come from `_prerollFires`). */
+      const tick = emitTicks(h.accum, dt, h.rate, density);
+      h.accum = tick.accum;
+      for (let k = 0; k < tick.ticks; k++) {
         if (h.kind === 'fire') this._fireTick(h, 0);
         else this._emit(h.name, h.position, h.opts);
       }

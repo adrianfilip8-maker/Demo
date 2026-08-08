@@ -324,7 +324,10 @@ export const SFX = {
 
   /** Cane Slam. Low boom, dirt, and a shower of debris settling after it. */
   dive_boom: {
-    g: 1.0, dur: 1.2, gap: 0.15, max: 2, pri: 3, ref: 16, duck: 0.35, vary: 0.04,
+    /* g was 1.0 and the recipe rendered a peak of 1.021 — the sub-voices' transients land
+       together, so the sum overshot the gain the mixer had budgeted for it. Backed off to the
+       measured headroom rather than left for the limiter to clean up. */
+    g: 0.97, dur: 1.2, gap: 0.15, max: 2, pri: 3, ref: 16, duck: 0.35, vary: 0.04,
     build(ctx, out, t, o) {
       const bag = bagOf(t);
       add(bag, thump(ctx, out, t, { f0: 120 * o.rate, f1: 33, pitchDur: 0.11, dur: 0.5, gain: 0.95, attack: 0.001 }));
@@ -539,7 +542,10 @@ export const SFX = {
   },
 
   ko: {
-    g: 0.85, dur: 1.4, gap: 0.5, max: 1, pri: 3, ref: 8, flat: true, duck: 0.5, vary: 0.03,
+    /* g was 0.85 and the recipe rendered a peak of 1.246 (+1.9 dB over full scale): the body
+       thump at +0.30 s lands inside the tail of the voice. The KO is the one sound in the game
+       that must not distort, so the gain now matches what it actually renders. */
+    g: 0.68, dur: 1.4, gap: 0.5, max: 1, pri: 3, ref: 8, flat: true, duck: 0.5, vary: 0.03,
     build(ctx, out, t, o) {
       const bag = bagOf(t);
       add(bag, voiceSyllable(ctx, out, t, {
