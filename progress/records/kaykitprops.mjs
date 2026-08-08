@@ -37,6 +37,10 @@ await withGame({
   });
   log(`kaykit: ${JSON.stringify(stats)}`);
 
+  /* `hero` is the nearest thing to a control: 20 of the placements are in its frustum, but all at
+     33-49 m and occluded, and its first capture showed none of them. The character close-ups are
+     covered by `glovecheck.mjs` instead — no prop is now nearer than 25 m in any of them, which is
+     background, and the prop that had been at 6.9 m was dropped rather than shipped. */
   for (const shot of ['courtyard', 'temple', 'interior', 'hero']) {
     const png = await page.evaluate(async (s) => {
       const G = window.__GAME;

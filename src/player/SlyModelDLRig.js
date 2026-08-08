@@ -212,6 +212,8 @@ export class SlyModel {
     const merged = mergeGeometries(geos, true);
     if (!merged) throw new Error('SlyModelDLRig: merge failed — parts disagree on attributes');
 
+    this._relaxGloves(merged, srcSkel);
+
     /* ---- normalize: feet to the floor, uniform scale to our character height ---- */
     merged.computeBoundingBox();
     const bb = merged.boundingBox;
@@ -371,6 +373,121 @@ export class SlyModel {
     this.root.updateMatrixWorld(true);
     for (const nm of RIG3.BONE_ORDER) this._restQ[nm] = this.bones[nm].quaternion.clone();
     this.engine?.scene?.add(this.root);
+  }
+
+  /**
+   * Bake a relaxed curl into the gloves, in bind space, using the artist's own finger weights.
+   *
+   * §202's blind round called the hands "splayed rake fingers". The rig dump disagrees with the
+   * word *splayed* and confirms the complaint: index-to-pinky spread is 6.0°, so they are not
+   * fanned — they are DEAD STRAIGHT (base-to-tip straightness 0.990–0.995), parallel, and held
+   * 42.7° off the forearm. Four rigid prongs. That is the T-pose the asset was authored in, and it
+   * survives because our rig has no finger bones: all twenty per hand fold into `handL`/`handR`,
+   * which is 19.56 % of the body mesh's skin weight moving as one block that can never curl.
+   *
+   * THIS IS THE LAST MOMENT THE FIX IS POSSIBLE. The influences are still the FBX's 117 bones here;
+   * the block below collapses them onto ours and the per-finger detail is gone for good. So the
+   * curl is applied once, at load, to bind-space geometry, and costs nothing at runtime.
+   *
+   * The flex axis is DERIVED, not typed in. `palmWard` is the component of the thumb direction
+   * perpendicular to the fingers — the thumb is on the palm side by anatomy, so this points into
+   * the palm on both hands, and `cross(fingerDir, palmWard)` therefore gives an axis whose positive
+   * rotation curls inward for left and right alike with no mirrored special case. Verified before
+   * it was written: every finger on both hands moves palm-ward (index tip 0.00 → 8.38 cm along
+   * `palmWard`), tips bend 52–56°, and reach shortens only ~5 %.
+   *
+   * Only the body mesh carries finger weight — 6,070 of its 25,353 vertices — and the eye, head and
+   * tail meshes carry exactly 0.00 %, so this cannot disturb the face.
+   */
+  _relaxGloves(geo, srcSkel) {
+    const CURL = { finger: [22, 34, 30], thumb: [14, 20] };     // degrees, per joint down the chain
+    const DIGITS = {
+      index: ['index_base', 'index_midA', 'index_midB', 'index_tip'],
+      mid:   ['mid_base', 'mid_midA', 'mid_midB', 'mid_tip'],
+      ring:  ['ring_base', 'ring_midA', 'ring_midB', 'ring_tip'],
+      pinky: ['pinky_base', 'pinky_midA', 'pinky_midB', 'pinky_tip'],
+      thumb: ['thumb_base', 'thumb_mid', 'thumb_tip'],
+    };
+    const idx = new Map(srcSkel.bones.map((b, i) => [b.name, i]));
+    const bind = (nm) => (idx.has(nm)
+      ? new THREE.Vector3().setFromMatrixPosition(
+        new THREE.Matrix4().copy(srcSkel.boneInverses[idx.get(nm)]).invert())
+      : null);
+
+    /* FBX bone index -> the bind-space matrix that curls whatever is weighted to it */
+    const curl = new Map();
+    for (const side of ['LF', 'RT']) {
+      const ib = bind(`${side}_index_base`), it = bind(`${side}_index_tip`);
+      const tb = bind(`${side}_thumb_base`), tt = bind(`${side}_thumb_tip`);
+      if (!ib || !it || !tb || !tt) continue;                    // no fingers on this side
+      const fingerDir = it.clone().sub(ib).normalize();
+      const palmWard = tt.clone().sub(tb).normalize();
+      palmWard.addScaledVector(fingerDir, -palmWard.dot(fingerDir));
+      if (palmWard.lengthSq() < 1e-8) continue;                  // thumb parallel to the fingers
+      palmWard.normalize();
+      const axis = new THREE.Vector3().crossVectors(fingerDir, palmWard).normalize();
+
+      for (const [digit, chain] of Object.entries(DIGITS)) {
+        const ang = digit === 'thumb' ? CURL.thumb : CURL.finger;
+        let acc = new THREE.Matrix4();                           // identity: the wrist does not move
+        for (let j = 0; j < chain.length; j++) {
+          const nm = `${side}_${chain[j]}`;
+          const bi = idx.get(nm);
+          if (bi === undefined) continue;
+          const p = bind(nm);
+          if (j < ang.length && p) {
+            /* rotate about THIS joint, after everything its parents already did */
+            const q = new THREE.Quaternion().setFromAxisAngle(axis, THREE.MathUtils.degToRad(ang[j]));
+            acc = acc.clone().multiply(
+              new THREE.Matrix4().makeTranslation(p.x, p.y, p.z)
+                .multiply(new THREE.Matrix4().makeRotationFromQuaternion(q))
+                .multiply(new THREE.Matrix4().makeTranslation(-p.x, -p.y, -p.z)));
+          }
+          curl.set(bi, acc.clone());
+        }
+      }
+    }
+    if (!curl.size) { this.engine?.warn?.('SlyModelDLRig: no finger bones found — gloves left straight'); return; }
+
+    const nrmOf = new Map();
+    for (const [k, m] of curl) nrmOf.set(k, new THREE.Matrix3().setFromMatrix4(m));
+
+    const pos = geo.attributes.position, nrm = geo.attributes.normal;
+    const si = geo.attributes.skinIndex, sw = geo.attributes.skinWeight;
+    if (!si || !sw) { this.engine?.warn?.('SlyModelDLRig: no skin data at glove time — gloves left straight'); return; }
+    const src = new THREE.Vector3(), tmp = new THREE.Vector3(), acc = new THREE.Vector3();
+    const nsrc = new THREE.Vector3(), nacc = new THREE.Vector3();
+    let touched = 0, maxMove = 0;
+    for (let i = 0; i < pos.count; i++) {
+      let wSum = 0;
+      acc.set(0, 0, 0); nacc.set(0, 0, 0);
+      src.fromBufferAttribute(pos, i);
+      if (nrm) nsrc.fromBufferAttribute(nrm, i);
+      for (let k = 0; k < 4; k++) {
+        const w = sw.array[i * 4 + k];
+        if (!(w > 0)) continue;
+        const M = curl.get(si.array[i * 4 + k]);
+        if (!M) continue;
+        wSum += w;
+        acc.addScaledVector(tmp.copy(src).applyMatrix4(M), w);
+        if (nrm) nacc.addScaledVector(tmp.copy(nsrc).applyMatrix3(nrmOf.get(si.array[i * 4 + k])), w);
+      }
+      if (wSum <= 0) continue;
+      /* the rest of the vertex stays put, so the knuckle band eases in instead of tearing at the
+         weight boundary — this is ordinary linear blend skinning with identity on every other bone */
+      const rest = 1 - Math.min(wSum, 1);
+      acc.addScaledVector(src, rest);
+      maxMove = Math.max(maxMove, acc.distanceTo(src));
+      pos.setXYZ(i, acc.x, acc.y, acc.z);
+      if (nrm) {
+        nacc.addScaledVector(nsrc, rest);
+        if (nacc.lengthSq() > 1e-12) { nacc.normalize(); nrm.setXYZ(i, nacc.x, nacc.y, nacc.z); }
+      }
+      touched++;
+    }
+    pos.needsUpdate = true;
+    if (nrm) nrm.needsUpdate = true;
+    this.engine?.warn?.(`SlyModelDLRig: relaxed ${touched} glove vertices, max move ${maxMove.toFixed(1)} (asset units)`);
   }
 
   bp(name) { return this._bindWorld[name]; }

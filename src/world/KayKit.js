@@ -99,6 +99,51 @@ const PLACEMENTS = [
   ['coin_stack_medium',         6.4, -12, -67.0,  2.40],
   ['barrel_small',             -8.5, -12, -65.0,  0.70],
   ['crates_stacked',            8.6, -12, -64.4, -1.30],
+
+  /* ---- and eight placed FOR THE CAMERAS, because the thirty above were placed for the player ----
+   *
+   * The first capture of this set showed the tomb hoard reading beautifully and the courtyard and
+   * hall showing nothing at all. `tools/shotsee.mjs` says why: of the thirty above, `interior` is
+   * the only shot with a prop inside 25 m. `temple` has ONE in its cone, at 35 m, because it looks
+   * down the nave while the stores are against the aisle walls; `courtyard` has all thirty in its
+   * cone at 35-51 m, behind the colossi.
+   *
+   * Both aims are legitimate — a follow camera passes within a couple of metres of the colonnade
+   * stores — but only one of them had been considered. `Props.js` already settled the precedent in
+   * its header: a handful of its props are positioned by eye for the canonical cameras specifically.
+   *
+   * These eight are NOT positioned by eye. Each was grid-searched against three tests at once: on
+   * real paving, clear of every column and plinth footprint by 1.4 m, and inside its target shot's
+   * frame at 6-26 m. All three matter — five positions chosen by eye first sat inside the obelisk
+   * terrace or a colossus plinth, and two more inside nave columns (x +/-8, not the +/-11.4 I had
+   * assumed). Distances below are to the shot named. */
+  ['crates_stacked',            5.5, 0, -34.0,  0.30],   // temple    15.2 m
+  ['barrel_large',             -6.5, 0, -34.0, -0.60],   // temple    18.1 m
+  ['barrel_small_stack',      -12.5, 0, -33.5,  1.10],   // temple    21.7 m
+  ['crates_stacked',           -5.5, 0,  30.5, -0.40],   // courtyard 11.8 m, seen by NO character shot
+  /* THE COURTYARD GETS EXACTLY ONE NEAR PROP, and the reason is structural rather than taste.
+   *
+   * All six `sly-*` cameras sit 8.7-13.5 m from the courtyard camera and all aim at spawn, so
+   * `courtyard`'s near field IS the character close-ups' field. A grid search over the whole
+   * courtyard found ZERO cells that read at 8-20 m in `courtyard` while staying 14 m clear of
+   * every character shot — not a near miss, an empty set.
+   *
+   * Two candidates were dropped on that finding rather than shipped:
+   *   (4, 26.5)   16.7 m in `courtyard`, but 6.9 m in `sly-key` and 8.2-8.8 m in
+   *               `sly-startle`/`sly-closeup`/`sly-perch`.
+   *   (6.5, 32)   13.5 m in `courtyard`, but 8.9 degrees off-axis at 10.3 m in `sly-arm` — a 2.5 m
+   *               barrel directly behind Sly, subtending ~37 % of frame height, in the shot whose
+   *               job is reading the cane arc. Every east-side alternative tested lands in
+   *               `sly-arm` at 7-10 m too.
+   *
+   * The crates above are the one position that reads near in `courtyard` and appears in no
+   * character frustum at all. The resulting east/west asymmetry is not a defect — mirrored pairs
+   * are a complaint this level has already had.
+   *
+   * The general lesson, which cost two candidates: "in frame" and "in frame at 7 m" are different
+   * findings, and I checked the first while quoting the distance from a different shot. */
+  ['crates_stacked',          -11.5, 0,   9.5,  0.50],   // hero      23.8 m
+  ['barrel_large',            -11.5, 0,   2.5, -1.20],   // night     21.0 m
 ];
 
 /* Props Sly should bump into rather than walk through. Coins and rubble are deliberately absent:
