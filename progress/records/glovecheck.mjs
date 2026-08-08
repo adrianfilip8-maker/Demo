@@ -39,7 +39,14 @@ await withGame({ width: 1280, height: 720, quality: 'high', timeout: 40 * 60 * 1
   /* ---- measurement: the hand cloud, in the character's own local space ----
      Taken from the bound geometry rather than from bone transforms, because the curl is baked
      into vertices and the bones are unchanged by construction — reading bones would report a
-     confident null for a change that did land (§11's instrument family, exactly). */
+     confident null for a change that did land (§11's instrument family, exactly).
+
+     READ `L` ONLY. `handR` is not just the right glove: `BONE_MAP` sends the FBX's `staff` bone to
+     `handR`, so the whole cane is inside that vertex cloud, and the numbers say so plainly — R
+     reports a 1.98 m z-extent and reachMax 1.06 m against L's 0.25 m and 0.24 m. Nothing is wrong
+     with the model; the metric is measuring a hand plus a two-metre stick and calling it a hand.
+     Left alone deliberately rather than filtered, because the cane's presence in `handR` is a real
+     property of the rig that a future reader should see rather than have silently hidden. */
   const m = await page.evaluate(() => {
     const c = window.__ENGINE.get('character');
     const g = c?.mesh?.geometry;
