@@ -1238,9 +1238,14 @@ export class Lighting {
     const A = this.atmosphere;
     const sky = this._encloseFill(false);
     const gnd = this._encloseFill(true);
-    if (this._hemi) this._hemi.intensity = A.hemiIntensity * TUNE.hemiBoost * sky;
+    /* `debug.fillScale` — an IN-PAGE lever on the whole smooth fill (hemi + ambient), added so
+       critic pass 7's "there is no toon ramp" can be tested without a source edit per arm.
+       Default 1 is bit-identical to shipping. See PREREG-ramp1.md; it exists to be measured, not
+       to be tuned by hand. */
+    const fillScale = this.engine?.debug?.fillScale ?? 1;
+    if (this._hemi) this._hemi.intensity = A.hemiIntensity * TUNE.hemiBoost * sky * fillScale;
     if (this._bounce) this._bounce.intensity = A.bounceIntensity * TUNE.bounceBoost * gnd;
-    if (this._ambient) this._ambient.intensity = A.ambientIntensity * TUNE.ambientBoost * sky;
+    if (this._ambient) this._ambient.intensity = A.ambientIntensity * TUNE.ambientBoost * sky * fillScale;
     this._fillSky = sky;
     this._fillGround = gnd;
   }
@@ -1825,7 +1830,12 @@ export class Lighting {
     p.ambient.color.copy(A.ambientColor);
     // SHADING consumes this, not the scene lights, so the enclosure term has to reach it
     // through the payload or half the world would ignore it.
-    p.ambient.intensity = A.ambientIntensity * TUNE.ambientBoost * (this._fillSky ?? 1);
+    /* `debug.fillScale` has to reach HERE, not only the scene lights: SHADING reads this payload
+       rather than the lights, so scaling only `this._ambient` above would move a third of the
+       world and leave every toon material untouched — a lever that half-works is worse than none,
+       because the capture would look like a weak effect instead of a broken instrument. */
+    p.ambient.intensity = A.ambientIntensity * TUNE.ambientBoost * (this._fillSky ?? 1)
+      * (this.engine?.debug?.fillScale ?? 1);
     p.ambient.sky.copy(A.hemiSky);
     p.ambient.ground.copy(A.hemiGround);
     p.ambient.enclosure = this.enclosure;
