@@ -17438,3 +17438,100 @@ explicit instruction — and it is the same fork §216 recorded.
 Also observed in the boot log and worth chasing separately: `THREE.WebGLState: MultiplyBlending
 requires material.premultipliedAlpha = true`, new since the contact decals landed, which multiply
 toward the shadow hue.
+
+## §227 — the Godot character import shipped a file three cannot load, and the obvious fix was the wrong one
+
+The wave-4 character agent produced `tools/godot2rig.mjs` and four assets under
+`public/assets/sly-godot/`. The tool's own report read like success — `sly-godot.glb 1150 KB,
+95 accessors` — and the assets were never wired into `src/`, so nothing loaded them. Running the
+tool's own `--measure` mode is what surfaced it:
+
+```
+THREE.GLTFLoader: Missing min/max properties for accessor POSITION.   (x4)
+TypeError: Cannot read properties of undefined (reading 'min')
+    at computeBounds (GLTFLoader.js:4727)
+```
+
+**The mechanism.** `compact()` renumbers accessors — 4,830 in the source down to 95 — and every
+caller must remap *every* reference. The mesh block remapped `primitives[].attributes` and
+`primitives[].indices` and not `primitives[].targets`. The five meshes carrying morph targets
+therefore kept their **source** indices; `Cube.007`'s pointed at accessor 103, which no longer
+existed, and three dereferenced the hole and threw. A file that is 95% correct fails later and
+further from its cause than a file that is entirely wrong: twenty primitives load, then the loader
+dies inside a stack frame that names nothing in this project.
+
+**The tempting fix was wrong.** RIG3 drives the face with bones (`jaw`, `browL`, `browR`), so
+morph targets look like dead weight and `delete p.targets` is a one-line repair. But the targets
+are facial blendshapes — `RetopoFlow.007` carries **Angry, Smarmy, Purse, Blink, Gasp** — and
+three of the five meshes ship with a **non-zero authored weight**, `Cube.014` and `Cube.007` at a
+full 1.0. Stripping them renders those meshes in a base shape the source game never displays:
+silent, plausible, and undetectable without a side-by-side. The correct fix is to carry the target
+accessors through the keep set and the remap, which is what landed.
+
+**The calibration failed first, and that was the useful part.** To prove the new validator fires, I
+reproduced the shipped defect exactly — restore `Cube.007`'s target POSITION to its source index
+103 — and the validator **passed**. Not because it was broken: the corrected file contains **104**
+accessors, so 103 is a legal index in it. The reproduction was wrong, not the guard.
+
+That near-miss is the finding. A range check cannot catch a reference that is wrong *but in range*,
+and after compaction most wrong indices are in range. Such a reference loads clean and feeds some
+other attribute's bytes in as a morph delta. So `assertAccessorsResolved` now also asserts a
+semantic invariant no lucky index can satisfy: **a morph target's POSITION must have the same
+element count as its primitive's base POSITION**, deltas being per-vertex. Three arms, all
+behaving:
+
+```
+ARM1 out-of-range     FIRED   targets[0].POSITION -> accessor 9999 (of 104)
+ARM2 in-range-wrong   FIRED   targets[0].POSITION has 934 elements against a base of 114
+ARM3 unmodified       PASSED  (no false positive)
+```
+
+**Two other defects fixed in passing.** (a) The source omits min/max on all nine morph-target
+POSITIONs; three warns and then *skips the bounds expansion*, so a morphed mesh gets a bounding box
+that does not contain its own morphed extent and frustum-culls early once the shape is driven —
+which reads as a limb vanishing at certain camera angles, not as a malformed file. Now computed at
+emission. First attempt applied it to every float accessor and added **331 KB** of useless JSON to
+the clip file, since min/max is neither required nor read on animation samplers; now restricted to
+accessors actually used as POSITION. (b) `--measure` hung rather than crashed once the load got
+further, because `_domshim`'s `FakeImg.addEventListener` is a no-op, so three's ImageLoader promise
+never settles on the two external PNG URIs. Node reports this as "Detected unsettled top-level
+await", which is a hang wearing a warning's clothes. Measurement now strips the image graph.
+
+Measured, on the corrected asset: **1.6607 m tall, 6.18 heads, 174 joints, 21 meshes, 30,346 tris.**
+`Controller.TUNE.height` is 1.80, so it is 0.14 m short of the collision capsule — a ×1.084 scale,
+or a capsule revisit. Open.
+
+Provenance is recorded in `public/assets/sly-godot/PROVENANCE.md`, including the fact that the
+repository states **no licence at all**, and that the source carries **normal, AO and metalness
+maps that were not imported and remain unexamined**.
+
+## §228 — the cel-banding instrument voided itself on a guessed threshold, and the threshold was the only thing wrong
+
+`progress/records/celcyl.mjs` is the best cel-shading instrument this project has had: it rebuilds
+the temple's nave columns from `EgyptLevel`'s own constants, projects them through `Shots.applyShot`'s
+exact camera, ray-intersects the real tapered cylinder per pixel, and therefore predicts each
+pixel's N·L and its *required* cel band from geometry before reading a single pixel. It takes no
+lock and runs offline against a committed PNG.
+
+Its positive control failed its own must-change assertion, so by its own pre-registered rule the
+run is **VOID**:
+
+```
+[calib-banded] plateaus 3, maxStep 15.62   MUST: plateaus>=2 && maxStep>20  -> FAIL
+[calib-smooth] plateaus 1, maxStep  1.12   MUST: maxStep<20                 -> PASS
+```
+
+The positive control produced three clean plateaus separated by **85.0 luma** — that is
+unmistakable banding — and still missed a `maxStep` threshold of 20. So the instrument sees banding
+fine; `maxStep` is simply the wrong statistic for this geometry. Probable mechanism, stated as a
+hypothesis because it is untested: `TUNE.termSoft` (0.024) smooths each band boundary, and on a
+cylinder N·L changes slowly near the terminator, so a perfectly banded surface crosses its boundary
+over several pixels and never shows one large step. The plateau/gap structure is the discriminating
+metric; the per-pixel step is not.
+
+**I have seen the subject numbers, so I cannot be the one to fix this.** §141.1 forbids re-deriving
+a threshold after seeing the candidate, and any criterion I author now is contaminated by knowing
+what the subject scored. The re-derivation was handed to a fresh agent with the two control-arm
+results and *without* the subject numbers, with instructions to derive the criterion from the
+controls alone — which is what a control is for — register it, commit the instrument, and only then
+run the subject. Recorded here so the provenance of that threshold is legible later.
