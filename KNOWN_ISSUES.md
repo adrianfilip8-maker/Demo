@@ -16324,3 +16324,46 @@ assets through Vite) cannot load in plain Node and still needs the browser harne
 imports fine but keeps `TREE` / `TREE_CLIPS` module-private, so the locomotion tree's clip names are
 unreachable from a test; `Clips.js`'s own `REQUIRED`/`MISSING` covers part of that ground, and the
 suite now asserts `MISSING` is empty, which nothing did before.
+
+### §211.4 — the character's geometry is now testable at all, and it is clean
+
+`SlyModel3.js`'s `init()` touches no DOM and no renderer, so the entire shipped character builds in
+plain Node in milliseconds — 2,801 vertices, 4,782 triangles, normals and skin attributes included.
+That surface was previously reachable only through a browser boot holding the capture lock, which is
+why none of it had ever been checked. `tests/geometry.test.mjs` now covers it (7 tests).
+
+Everything it checks comes back clean: positions and normals all finite, every normal unit length,
+skin indices spanning exactly 0..30 of 31 bones, **every vertex's weights summing to 1.000000**,
+winding topologically consistent across 6,721 interior edges, mesh height 1.823 m against a spec'd
+1.80, bounds symmetric to x ±0.591.
+
+Both new guards were calibrated by injecting the defect they exist to catch: a `-1` skinIndex (what
+`bi()` returns on a bone-name typo — `BONE_ORDER.indexOf` does not throw, so a mistyped part binds
+silently to the hips and animates plausibly) fires the range test, and reversing one triangle's
+winding produces exactly 3 conflicting edges, which is what the topology predicts.
+
+**The metric that had to be thrown away.** The obvious winding test compares each triangle's
+geometric normal against the average of its three vertex normals. Run here it reports **123 of 4,754
+triangles inverted**, worst dot −0.9991 — and the flags are not scattered: 107 land on the four tail
+bones at 9–14% of each, the rest on `chest`. The tail is critic pass 7's outstanding "rebuild the
+tail" defect, so the number arrives already looking like the explanation for a known problem.
+
+It is wrong. `SlyModel3.js:554` calls `computeVertexNormals()` on the merged geometry, so every
+normal is area-weighted-smoothed across shared vertices; the tail deliberately jitters alternate
+bands outward 7% for a fur hint, and the torso deliberately doubles rings at every colour seam. A
+smoothed normal at a sharp step legitimately opposes the step face's own winding. The metric
+measures the shading model, not the winding.
+
+The replacement assumes nothing about normals, curvature or convexity: weld by position, then
+require every interior edge to be traversed once in each direction. Zero conflicts.
+
+This one was caught *before* it was reported as a finding — by asking how normals are assigned rather
+than trusting a number that agreed with something already on the books. That is the only difference
+between it and §210.2, and it is worth naming: **convincing, localized, and consistent with a known
+defect are the three properties that make a broken instrument expensive**, not the properties that
+make a result true.
+
+The 28 degenerate triangles are by design and bounded rather than banned: the torso builds its hard
+colour seams by doubling a ring at the same height and the same radius (the blue|gold collar), which
+duplicates vertices so the colour can jump without interpolating, and the connecting quads then have
+zero area by construction. They never rasterize. All 28 are on `chest`, 0.6% of the mesh.
