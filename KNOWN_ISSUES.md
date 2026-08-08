@@ -19751,3 +19751,59 @@ anyone challenged it.
 
 `decalsign` is unaffected: the agent's last save was 74 s before that run acquired the lock, and it
 has saved nothing since.
+
+## §251 — `setShot` advances the world clock unless told not to, and 32 of 59 runners never tell it
+
+The DECALS agent found why its null arm was not byte-identical while `celband`'s was, and the answer
+is in its own source: `decalsign.mjs:362` calls `await window.__GAME.setShot(n)` with **no
+`{ dt: 0 }`**. `Debug.js:88` reads
+
+```js
+const dt = Number.isFinite(opts.dt) ? opts.dt : 1 / 60;
+```
+
+and then runs 17 settle frames, so every arm advances `engine.time` by ~0.28 s. That clock is the
+only phase source in the build, so birds, particles, embers and water all move between arms. Cost,
+measured: **51.97% of pixels differ between A2 and A3 at mean 3.85 L**, against `celband`'s
+byte-identical null across a five-minute gap and three intervening arms (§250).
+
+**This is a known hazard that keeps happening.** `Debug.js:82` already says, in a comment,
+*"A/B runners pass `{ dt: 0 }`; everything else passes"* — and cites **two VOID runs** from §195,
+where staging2's P-F4 `[0,0]` band was unachievable by construction for exactly this reason. The
+guidance existed, in the right file, next to the right line, and was missed again.
+
+Which is §245's lesson a second time: **a documented hazard is worth nothing until it fails loudly.**
+A comment cannot stop the person who never reads it, including the person who wrote it.
+
+### The survey
+
+```
+59 runners call setShot;  32 never pass dt: 0
+```
+
+**A blanket "always freeze the clock" rule would be wrong** and would cry wolf in exactly the way
+§248 warns against — a one-shot render (`tools/shot.mjs`, `tools/budget.mjs`, `gildmetal`) has no
+second frame to be inconsistent with, and freezing it there buys nothing. The rule belongs to A/B
+runners specifically. Twelve of the 32 call `setShot` **two or more times** and are therefore the
+same shape as `decalsign`:
+
+```
+atmowire1  banda1  banda2  decalsign  goldlobe1  goldlobe2
+hgcframe   litwarm1  skynoise1  skyswirl1  staging1(4)  cryptgate
+```
+
+Those are candidates for the same defect, not confirmed instances — several may compare arms whose
+statistic is robust to a moving clock, as `decalsign`'s may yet prove to be. **Nothing here retracts
+any published result**; it says which results have an unmeasured floor under them.
+
+### The fix, and why it is not in this commit
+
+`Debug.setShot` should warn once when `opts.dt` is absent, naming the default it is about to apply
+and the A/B convention — making the implicit explicit at the point of use, the way §245 turned an
+admitted blind spot into a refusal. A runner that genuinely wants the clock passes `dt: 1/60` and
+the warning goes quiet. It breaks nothing and costs nothing.
+
+**It is not in this commit because a capture holds the lock right now**, and `src/core/Debug.js` is
+`src/`. That is precisely the §186 rule I enforced on the INK agent two hours ago, and §250 restated
+it: the hazard is not that the running page notices a save, it is that you cannot know whether the
+runner reboots. It applies to me. Queued until the queue is empty.
