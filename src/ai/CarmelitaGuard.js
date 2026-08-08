@@ -305,9 +305,20 @@ export function bindToRig3(scene) {
  * suites build `Guards` with no fetch at all and must keep working.
  */
 export async function loadCarmelitaGuard(url = ASSET) {
+  /* No DOM means no page to resolve `assets/…` against. `GLTFLoader.loadAsync` on a relative URL
+   * in Node does not reject — it never settles at all, and `node --test` reports every test in the
+   * file as "Promise resolution is still pending but the event loop has already resolved". That is
+   * a hang presenting as thirteen unrelated failures, which is exactly the kind of diagnosis this
+   * project loses hours to, so the environment is checked rather than the error caught. */
+  if (typeof document === 'undefined' || typeof window === 'undefined') return null;
   try {
     const loader = new GLTFLoader();
-    const gltf = await loader.loadAsync(url);
+    /* And a second belt: a fetch that stalls must not hold the whole boot behind it. The guards
+     * are one module of eighteen and the procedural body is a complete fallback. */
+    const gltf = await Promise.race([
+      loader.loadAsync(url),
+      new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 20000)),
+    ]);
     const asset = bindToRig3(gltf.scene);
     asset.source = url;
     return asset;
