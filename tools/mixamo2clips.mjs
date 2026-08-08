@@ -112,6 +112,69 @@ const missing = Object.keys(MAP).filter((m) => !resolve(m));
 console.log(`source nodes: ${nodes.size}   mapped: ${restWorld.size}/${Object.keys(MAP).length}`);
 if (missing.length) console.log(`  !! absent from the GLB: ${missing.join(', ')}`);
 
+/* ---- the hips channel: units and reference frame -------------------------------------------
+ * The old emitter wrote `hipsWorld(t) - hipsWorld(t=0)` straight into `pos`, and that is wrong
+ * twice over.
+ *
+ *   UNITS. The GLB's Armature carries scale 0.01, so the source's own hip height in world units
+ *   is 0.0569 against RIG3's 0.8856 — a factor of ~15.6. Every offset was that much too small,
+ *   which is why the emitted hips never bobbed: a 3 cm pelvis rise arrived as 2 mm.
+ *
+ *   REFERENCE FRAME, which is the expensive half. Referring to frame 0 discards the clip's
+ *   STANDING HEIGHT. The source walks with its pelvis 0.0093 below its own rest pose — a 14.5 cm
+ *   crouch at our scale — and its legs are folded to match. Zeroing at frame 0 pinned the pelvis
+ *   at RIG3's bind height while keeping the folded legs, so the character walked with its feet
+ *   24-43 cm in the air. `Rig.footIK` cannot rescue that and is not meant to: it computes
+ *   `clipLift = max(0, footY - (rootY + ikAnkle))` and then targets `groundY + ikAnkle + clipLift`
+ *   — it PRESERVES authored lift by design, so a swing foot is never dragged down, and neither is
+ *   a floating one. `footPlant` also fades to 0 above 0.10 m of lift, so those clips registered no
+ *   contact at any moment.
+ *
+ * K is derived from the two rigs' own hip heights rather than hard-coded, so a source swap or a
+ * change to RIG3.TUNE.height cannot silently reintroduce the scale error. */
+const HIPS_ABS_Y = (RIG3.SKELETON.find(([n]) => n === 'hips') || [, , [0, 1, 0]])[2][1];
+const restHips = new THREE.Vector3().setFromMatrixPosition(resolve('mixamorig:Hips').matrixWorld);
+const K = HIPS_ABS_Y / restHips.y;
+console.log(`hips scale K = ${HIPS_ABS_Y.toFixed(4)} / ${restHips.y.toFixed(4)} = ${K.toFixed(3)}×  `
+  + `(source rest hips world y ${restHips.y.toFixed(4)}; offsets are referenced to REST, not to frame 0)`);
+
+/* ---- RIG3 forward kinematics, for grounding + stride, on the data actually being emitted ----
+ * Rotations retarget cleanly; END-EFFECTOR POSITIONS DO NOT, because a delta retarget preserves
+ * joint angles and our limb proportions are not the source's — RIG3's foot is 0.180 m from ankle
+ * to toe against the source's 0.29 m at the same scale, and in a toe-pointed pose that whole
+ * difference shows up as height. So the emitted feet are measured here rather than assumed, and
+ * the residual is printed for every clip. */
+const RIG_ABS = Object.create(null);
+for (const [n, , p] of RIG3.SKELETON) RIG_ABS[n] = p;
+function makeRig() {
+  const rt = new THREE.Group(), bones = Object.create(null);
+  for (const [name, parent, p] of RIG3.SKELETON) {
+    const b = new THREE.Object3D();
+    const pa = parent === 'root' ? [0, 0, 0] : RIG_ABS[parent];
+    b.position.set(p[0] - pa[0], p[1] - pa[1], p[2] - pa[2]);
+    (parent === 'root' ? rt : bones[parent]).add(b);
+    bones[name] = b;
+  }
+  return { rt, bones, hipsBase: bones.hips.position.clone() };
+}
+const _e3 = new THREE.Euler(), _qk = new THREE.Quaternion(), _vk = new THREE.Vector3();
+/** World positions of `want` for every key of an emitted clip. */
+function fkTrack(keys, want) {
+  const r = makeRig();
+  const out = want.map(() => []);
+  for (const k of keys) {
+    for (const b of ORDER) {
+      const d = k.P[b];
+      if (d) { _e3.set(d[0] / DEG, d[1] / DEG, d[2] / DEG, 'XYZ'); r.bones[b].quaternion.setFromEuler(_e3); }
+      else r.bones[b].quaternion.identity();
+    }
+    r.bones.hips.position.set(r.hipsBase.x + k.pos[0], r.hipsBase.y + k.pos[1], r.hipsBase.z + k.pos[2]);
+    r.rt.updateMatrixWorld(true);
+    want.forEach((n, i) => { _vk.setFromMatrixPosition(r.bones[n].matrixWorld); out[i].push(_vk.clone()); });
+  }
+  return out;
+}
+
 const mixer = new THREE.AnimationMixer(root);
 const out = {};
 const report = [];
@@ -139,10 +202,16 @@ for (const clip of gltf.animations) {
   const gimbal = new Set();                          // bones whose Euler blows up near gimbal
   let hipsY0 = null, hipsTravel = new THREE.Vector3();
 
+  let srcMinToe = Infinity;
   for (let i = 0; i < n; i++) {
     const t = (i / (n - 1)) * clip.duration;
     mixer.setTime(t);
     root.updateMatrixWorld(true);
+    /* Where the SOURCE's own feet are, at our scale. Separates "the clip is airborne" from
+       "the retarget lost the floor" — without it every float looks like the tool's fault. */
+    for (const s of ['mixamorig:LeftToeBase', 'mixamorig:RightToeBase']) {
+      srcMinToe = Math.min(srcMinToe, new THREE.Vector3().setFromMatrixPosition(resolve(s).matrixWorld).y * K);
+    }
 
     /* world change per source joint -> our world target */
     const worldTarget = new Map();
@@ -182,12 +251,16 @@ for (const clip of gltf.animations) {
       /* Flag Euler components that are large while the true rotation is not: that is the artefact. */
       if (Math.max(...d.map(Math.abs)) > 100 && ang < 100) gimbal.add(b);
     }
-    /* hips translation, in metres, relative to the clip's first frame */
+    /* hips translation in METRES, referenced to the source's REST pose (see the K derivation) */
     const hp = new THREE.Vector3().setFromMatrixPosition(resolve('mixamorig:Hips').matrixWorld);
     if (hipsY0 === null) hipsY0 = hp.clone();
-    const off = hp.clone().sub(hipsY0);
+    const off = hp.clone().sub(restHips).multiplyScalar(K);
     hipsTravel.max(off.clone().set(Math.abs(off.x), Math.abs(off.y), Math.abs(off.z)));
-    keys.push({ t: +t.toFixed(3), e: 'smooth', P, pos: [+off.x.toFixed(3), +off.y.toFixed(3), +off.z.toFixed(3)] });
+    /* `lin`, NOT `smooth`. `EASES[1] = t²(3−2t)` has zero derivative at BOTH ends, which is the
+       point of it for a hand-authored key POSE and exactly wrong for a dense machine sample: at
+       20 keys/s it stops the motion dead 20 times a second. Linear between dense samples costs
+       O(dt²) in position and is what every dense sampler in the industry writes. */
+    keys.push({ t: +t.toFixed(3), e: 'lin', P, pos: [+off.x.toFixed(4), +off.y.toFixed(4), +off.z.toFixed(4)] });
   }
   act.stop();
 
@@ -229,7 +302,67 @@ for (const clip of gltf.animations) {
 
   report.gimbalAny = (report.gimbalAny || new Set());
   for (const b of gimbal) report.gimbalAny.add(b);
-  out[clip.name] = { dur: +clip.duration.toFixed(3), loop: /idle|walk|run|hang_loose/.test(clip.name), keys };
+
+  /* ---- grounding, stride and footsteps, measured on the emitted keys ------------------------
+   * A Mixamo clip carries NO stride, because the source is in-place — measured hips travel is
+   * ~0 on every clip. `Animation._strideLength()` reads `clip.stride > 0` as "rate-match this to
+   * real speed", and returns 0 when no node declares one, which freezes the stride phase and
+   * stops the legs dead. So a stride has to be derived, and the only honest source for it is the
+   * geometry: the distance the planted foot travels backwards under the body per cycle. Same
+   * quantity `Clips.js` documents `stride` to be, arrived at by measurement instead of by eye.
+   *
+   * Emitted only when the clip actually plants a foot. A clip whose feet never come within
+   * `plantLift` of the floor has no contact to fit, and a stride fitted to a phantom contact is
+   * a number with no referent — worse than absent, because absent is visible. */
+  const [tL, tR, aL, aR] = fkTrack(keys, ['toeL', 'toeR', 'footL', 'footR']);
+  const CONTACT_BAND = 0.030, IK_ANKLE = 0.086, PLANT_LIFT = 0.10;
+  const minY = (a) => a.reduce((m, v) => Math.min(m, v.y), Infinity);
+  const lift = Math.max(0, Math.min(minY(aL), minY(aR)) - IK_ANKLE);
+  const runsOf = (tr) => {
+    const lo = minY(tr), on = tr.map((v) => v.y <= lo + CONTACT_BAND);
+    const rr = []; let cur = null;
+    for (let i = 0; i < on.length; i++) { if (on[i]) { if (!cur) { cur = []; rr.push(cur); } cur.push(i); } else cur = null; }
+    return rr;
+  };
+  let num = [0, 0], den = 0;
+  const steps = [];
+  for (const [tr, side] of [[tL, 'L'], [tR, 'R']]) {
+    for (const R of runsOf(tr)) {
+      if (R.length >= 3) {
+        const ts = R.map((i) => keys[i].t);
+        const tb = ts.reduce((a, b) => a + b, 0) / R.length;
+        const pbx = R.reduce((s, i) => s + tr[i].x, 0) / R.length;
+        const pbz = R.reduce((s, i) => s + tr[i].z, 0) / R.length;
+        R.forEach((i, k2) => {
+          const tt = ts[k2] - tb;
+          num[0] += tt * (tr[i].x - pbx); num[1] += tt * (tr[i].z - pbz); den += tt * tt;
+        });
+      }
+      if (R.length >= 2) steps.push({ t: keys[R[0]].t, n: 'footstep', d: { foot: side } });
+    }
+  }
+  const vel = den > 0 ? [-num[0] / den, -num[1] / den] : [0, 0];
+  const speed = Math.hypot(vel[0], vel[1]);
+  const loop = /idle|walk|run|hang_loose/.test(clip.name);
+  /* CYCLES ONLY. `stride` is defined in Clips.js as "metres of ground travel per CYCLE", and
+     `Animation._strideLength()` divides real speed by it to drive the shared stride phase. A
+     one-shot has no cycle, so fitting one to it is a category error with teeth: `jump_from_ground`
+     plants a foot in its crouch, fitted 2.403 m, and would then have had its playback rate driven
+     by the character's ground speed — a jump that plays faster the faster you were running.
+     Likewise a footstep is a footfall of a locomotion cycle; `idle_side` has two contact runs
+     because a standing foot shifts, and firing footstep audio off a stationary idle is wrong. */
+  const isLoco = loop && lift < PLANT_LIFT && speed > 0.2;
+  const stride = isLoco ? +(speed * clip.duration).toFixed(3) : 0;
+  const rec = { dur: +clip.duration.toFixed(3), loop, keys };
+  if (stride > 0) rec.stride = stride;
+  if (isLoco && steps.length) rec.events = steps.sort((a, b) => a.t - b.t);
+  out[clip.name] = rec;
+  report.ground = report.ground || [];
+  report.ground.push({
+    name: clip.name, minToe: Math.min(minY(tL), minY(tR)), srcMinToe, lift, stride,
+    plants: lift < PLANT_LIFT, steps: (isLoco ? steps.length : 0),
+    hipsY: keys.reduce((m, k) => Math.min(m, k.pos[1]), Infinity),
+  });
   report.push({ name: clip.name, dur: clip.duration, keys: keys.length, range, travel: hipsTravel, gimbal: [...gimbal] });
 }
 
@@ -261,6 +394,21 @@ if (report.sparseAudit) {
   }
   const worst = rows[0];
   console.log(`\nworst across all clips: ${worst.worst.toFixed(2)}deg on ${worst.bone} in ${worst.name}`);
+}
+
+/* Grounding: the number that decides whether any of this is usable at runtime. RIG3's bind toe
+   sits at y = 0.0205 and its bind ankle at 0.0645; `Rig.footIK` stops calling a foot planted once
+   it is 0.10 m above `rootY + ikAnkle`. Printed per clip, unrounded, whatever it says. */
+if (report.ground) {
+  console.log('\ngrounding — where the retargeted feet actually land on RIG3 (bind toe y = 0.0205):');
+  console.log('clip                min toe y   SOURCE min toe   ankle lift   plants?   derived stride   footsteps   min hips offset');
+  for (const g of report.ground) {
+    console.log(`${g.name.padEnd(19)} ${g.minToe.toFixed(4).padStart(9)}   ${g.srcMinToe.toFixed(4).padStart(14)}   ${g.lift.toFixed(3).padStart(10)}   ${(g.plants ? 'yes' : ' NO').padStart(7)}   ${(g.stride ? g.stride.toFixed(3) : '—').padStart(14)}   ${String(g.steps).padStart(9)}   ${g.hipsY.toFixed(3).padStart(15)}`);
+  }
+  const n = report.ground.filter((g) => !g.plants).length;
+  console.log(`\n${n}/${report.ground.length} clips never bring a foot within ${0.10} m of the floor — those cannot plant at runtime`);
+  console.log('and therefore get no stride: a rotation-only retarget preserves joint ANGLES, not end-effector');
+  console.log('POSITIONS, and RIG3\'s foot is 0.180 m ankle-to-toe against the source\'s 0.29 m at the same scale.');
 }
 
 console.log('\nBONES WITH NO SOURCE, which stay procedural: tailA..tailD, and the cane.');

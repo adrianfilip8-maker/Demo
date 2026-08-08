@@ -4,7 +4,8 @@ import * as THREE from 'three';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import {
-  SLY_COMMON, TOON_PARS, TOON_DETAIL, TOON_SHADE, OUTLINE_VERT, OUTLINE_FRAG, DEBUG_CALIB,
+  SLY_COMMON, TOON_PARS, TOON_DETAIL, TOON_SHADE, TOON_DITHER, OUTLINE_VERT, OUTLINE_FRAG,
+  DEBUG_CALIB,
 } from '../src/render/shaders/toon.glsl.js';
 import { Shading } from '../src/render/ToonMaterial.js';
 
@@ -37,12 +38,13 @@ import { Shading } from '../src/render/ToonMaterial.js';
  * none in `node --test`. These are necessary conditions, not sufficient ones: they catch the
  * class of damage that is visible in the source text (comment state, stray quotes, brace
  * balance, missing splice needles, a debug channel with no calibration). For the sufficient
- * check, compile the patched source on the harness's own ANGLE/SwiftShader stack — see
- * `progress/records/dbgterm1.mjs`, which does it as its first arm and needs no lock.
+ * check, compile the patched source on the harness's own ANGLE/SwiftShader stack:
+ * `node progress/records/glslink.mjs` does exactly that in ~15 s and takes no capture lock.
+ * It is not part of `npm test` because it needs a browser; run it after any GLSL edit.
  */
 
 const SOURCES = {
-  SLY_COMMON, TOON_PARS, TOON_DETAIL, TOON_SHADE, OUTLINE_VERT, OUTLINE_FRAG,
+  SLY_COMMON, TOON_PARS, TOON_DETAIL, TOON_SHADE, TOON_DITHER, OUTLINE_VERT, OUTLINE_FRAG,
 };
 
 /**
@@ -158,10 +160,44 @@ test('every debug channel declares a calibration mode with known constants', () 
     for (let i = 0; i < 3; i++) {
       assert.equal(c.u8[i], Math.round(c.rgb[i] * 255),
         `${key}: u8[${i}] must be the 8-bit value rgb[${i}] rounds to — a probe compares against it`);
-      assert.ok(Math.abs(c.rgb[i] * 255 - Math.round(c.rgb[i] * 255)) > 0.2,
-        `${key}: rgb[${i}] sits on a rounding boundary; pick a value that survives a u8 trip unambiguously`);
+      /* Every constant must sit at the CENTRE of its 8-bit bucket, half an LSB from either
+         edge. The original triple used 0.50, and 0.50 * 255 = 127.5 is a rounding TIE whose
+         resolution is the driver's business — measured offline, mode 4 came back as three
+         different modal triples. A calibration constant may not be a coin flip. */
+      assert.ok(Math.abs(c.rgb[i] * 255 - c.u8[i]) < 0.01,
+        `${key}: rgb[${i}] = ${c.rgb[i]} quantises to ${c.rgb[i] * 255}, not to the bucket centre ${c.u8[i]}`);
     }
   }
+});
+
+test('the emitted GLSL literal round-trips to the documented u8 triple', () => {
+  /* The shader carries the constant as a decimal literal, not as the JS number, so the thing
+     a probe compares against is what `toFixed` produced — assert on that, not on the source. */
+  for (const [key, c] of Object.entries(DEBUG_CALIB)) {
+    const literal = `vec3( ${c.rgb.map((v) => v.toFixed(6)).join(', ')} )`;
+    assert.ok(TOON_SHADE.includes(literal), `${key}: the shader does not carry ${literal}`);
+    c.rgb.forEach((v, i) => {
+      const written = Number(v.toFixed(6));
+      assert.equal(Math.round(written * 255), c.u8[i],
+        `${key}: the literal ${written} quantises to ${Math.round(written * 255)}, not ${c.u8[i]}`);
+    });
+  }
+});
+
+test('the dither is suppressed for debug draws and only for them', () => {
+  /* three's dithering chunk adds up to half an LSB of hash noise AFTER this file has written
+     its calibration constant, which is enough to move it by one. Every cel material ships
+     dithering: true — a deliberate look decision for the haze gradient — so the fix is to
+     branch, not to turn it off. */
+  assert.ok(TOON_DITHER.includes('dithering( gl_FragColor.rgb )'),
+    'the guard must still call three\'s own dithering(), not reimplement it');
+  assert.ok(TOON_DITHER.includes('uDebugTerm < 0.5') && TOON_DITHER.includes('uDebugShadow < 0.5'),
+    'the guard must be conditioned on BOTH debug channels');
+
+  const stub = { _patchWarned: false, _warn: (m) => assert.fail(`splice missed: ${m}`) };
+  const patched = Shading.prototype._patch.call(stub, THREE.ShaderLib.physical.fragmentShader);
+  assert.ok(!patched.includes('#include <dithering_fragment>'), 'the stock dither include survived the splice');
+  assert.ok(patched.includes('dithering( gl_FragColor.rgb )'), 'the guarded dither did not land');
 });
 
 test('calibration triples are distinct between channels', () => {
@@ -178,14 +214,8 @@ test('calibration triples are distinct between channels', () => {
   }
 });
 
-test('the shader actually writes each calibration constant', () => {
-  const glsl = (c) => `vec3( ${c.rgb.map((v) => v.toFixed(2)).join(', ')} )`;
-  assert.ok(TOON_SHADE.includes(glsl(DEBUG_CALIB.term)),
-    'debugTerm mode 4 does not write DEBUG_CALIB.term');
-  assert.ok(TOON_SHADE.includes(glsl(DEBUG_CALIB.shadow)),
-    'debugShadow mode 9 does not write DEBUG_CALIB.shadow');
-
-  /* Each constant must be guarded by its own channel's mode window, not by the other's. */
+test('each calibration constant is gated on its own channel mode', () => {
+  /* The literal itself is asserted above; this is about the branch that selects it. */
   const { code } = stripComments(TOON_SHADE);
   const termGuard = code.indexOf(`uDebugTerm < ${DEBUG_CALIB.term.mode}.5`);
   assert.ok(termGuard > -1, 'debugTerm calibration is not gated on its documented mode number');

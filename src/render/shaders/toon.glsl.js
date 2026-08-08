@@ -35,21 +35,59 @@
    is dead", which is what it was actually saying.
 
    The triples are DISTINCT per channel on purpose: a probe that reads one and gets the
-   other's is reading a channel it did not select. Values are chosen to survive a u8 round
-   trip exactly — 0.25/0.50/0.75 -> 64/128/191 with no ambiguity in the rounding.
+   other's is reading a channel it did not select.
+
+   **The ARRIVAL contract is unchanged from §210.2: (64, 128, 191) for debugTerm.** What has
+   changed is the float the shader writes to produce it, and the reason is measured rather
+   than theoretical. Rendering mode 4 offline into a linear RGBA8 target and reading the
+   pixels back gave THREE modal triples, not one:
+
+       (64,127,192) x959    (64,127,191) x902    (64,128,191) x890
+
+   Two independent causes, both removed here:
+
+   1. **0.50 is a rounding TIE.** unorm8 quantisation is round(v * 255), and 0.50 * 255 =
+      127.5 exactly, so whether it lands on 127 or 128 is up to the driver. A calibration
+      constant may not be a coin flip. Every value is now the exact CENTRE of its 8-bit
+      bucket (u8 / 255), which is half an LSB from either edge, so the round trip is
+      unambiguous by construction and the documented u8 triple is bit-for-bit what it was.
+   2. **Every cel material ships `dithering: true`** (ToonMaterial.js — the haze gradient
+      banded visibly without it, and that is a shipped look decision worth keeping). three's
+      dithering chunk adds up to +/-0.5 LSB of hash noise to gl_FragColor AFTER everything in
+      this file has run, which is exactly enough to move a calibration constant by one. The
+      splice in `_patch` now suppresses the dither while either debug channel is on, and only
+      then: with both off the expression is three's own, unmodified.
 
    Both are only meaningful with `postfx.debugRaw('scene')`. Without that half the triple is
    carried through AgX, the grade and bloom, and what comes out describes the pipeline
    instead of the channel — KNOWN_ISSUES §1, which cost eight dead ends.
 --------------------------------------------------------------------------- */
+const bucket = ( u ) => u.map( ( v ) => v / 255 );
+
 export const DEBUG_CALIB = {
 	/** shading.debugTerm(4) — the rim/ramp visualiser's bypass check. */
-	term:   { channel: 'debugTerm',   mode: 4, rgb: [ 0.25, 0.50, 0.75 ], u8: [ 64, 128, 191 ] },
+	term:   { channel: 'debugTerm',   mode: 4, u8: [ 64, 128, 191 ], rgb: bucket( [ 64, 128, 191 ] ) },
 	/** shading.debugShadow(9) — the shadow visualiser's bypass check. */
-	shadow: { channel: 'debugShadow', mode: 9, rgb: [ 0.75, 0.25, 0.50 ], u8: [ 191, 64, 128 ] },
+	shadow: { channel: 'debugShadow', mode: 9, u8: [ 191, 64, 128 ], rgb: bucket( [ 191, 64, 128 ] ) },
 };
 
-const glslVec3 = ( c ) => `vec3( ${ c.rgb.map( ( v ) => v.toFixed( 2 ) ).join( ', ' ) } )`;
+const glslVec3 = ( c ) => `vec3( ${ c.rgb.map( ( v ) => v.toFixed( 6 ) ).join( ', ' ) } )`;
+
+/**
+ * Replaces three's `#include <dithering_fragment>`.
+ *
+ * Bit-identical to the stock chunk whenever both debug channels are off, which is every
+ * shipped draw: the guard is a pure branch, it changes no arithmetic, and `dithering()` is
+ * called with the same argument it always was. See the DEBUG_CALIB note for why it exists.
+ */
+export const TOON_DITHER = /* glsl */ `
+	#ifdef DITHERING
+		/* A dithered diagnostic is not a diagnostic: three's dither adds up to half a least
+		   significant bit of hash noise, and a calibration constant that moves by one is a
+		   calibration that cannot be scored exactly. Suppressed for debug draws only. */
+		if ( uDebugTerm < 0.5 && uDebugShadow < 0.5 ) gl_FragColor.rgb = dithering( gl_FragColor.rgb );
+	#endif
+`;
 
 /* ---------------------------------------------------------------------------
    Shared: space reconstruction + the atmosphere model.

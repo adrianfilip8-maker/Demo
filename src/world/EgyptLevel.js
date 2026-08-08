@@ -236,35 +236,56 @@ function hookPoint(A, x, y, z) {
  * 10.2762 m/s travels **1.4387 m** along the arc. So the chain rings carry `catch` 1.4387 —
  * 1.43× the default, from our own gravity and our own rope, not from a feel.
  *
- * The ring that *enters* each chain is approached by a jump off a ledge, not by a release, so
- * it keeps the run-speed default. Chain entry is a jump; chain continuation is a swing. The
- * spires are entered by a jump off a pole top, so they keep the default too. **Nothing in this
- * level carries a catch above 1.4387 m**, and nothing rescues a 3 m miss.
+ * It goes on **every** ring, not just the interior ones. The first draft gave a chain's end
+ * rings the run-speed default on the theory that a chain is *entered* by a jump and only
+ * *continued* by a release; the level's own topology refutes it — both chains are traversed in
+ * both directions, so every ring including both ends has a neighbour it is released from. The
+ * spires are entered by a jump off a pole top and keep the default. **Nothing in this level
+ * carries a catch above 1.4387 m**, and nothing rescues a 3 m miss.
  *
- * ── `point` — where Sly ends up, which for a hook is not the ring ─────────────────────────
- * `HookSwing.enter` puts Sly on the sphere of radius `hookL` = 2.2 m around the anchor, i.e.
- * hanging at the bottom of the cane. Authoring the ring centre as the target point would snap
- * him *inside* the ring and then teleport him 2.2 m straight down the instant the swing takes
- * over. So the point is the taut-rope position, `ring − (0, 2.2, 0)`, and the ring itself
- * travels in `userData.fx` for FX to put §2.1.6's sparkle on the affordance rather than on a
- * spot of empty air below it.
+ * ── `point` — the ring, and why it may not be the hang position ───────────────────────────
+ * `HookSwing.enter` puts Sly on the sphere of radius `hookL` = 2.2 m around the anchor, so the
+ * obvious authoring is `ring − (0, 2.2, 0)`: the taut-rope position, "where Sly ends up".
+ * **That version is a lock-up, and the headless run in `tests/level.test.mjs` found it.** At
+ * the moment you release a swing you are standing on that sphere — at the bottom of the arc,
+ * *on* the hang point — so the ring you just launched from re-acquires you on the release
+ * frame and flies you back to it. Forever.
+ *
+ * The constraint that falls out is worth stating as a rule: **the point must be at least
+ * `catch` from every position on its own release sphere**, i.e. `|hookL − drop| ≥ catch`. With
+ * hookL 2.2 and catch 1.4387 that allows a drop of at most 0.76 m — thin enough that the only
+ * honest place for the point is the ring itself, `drop = 0`, which sits a clear 2.2 m from
+ * every release position. `catch < hookL` is therefore a hard invariant of this level and the
+ * test asserts it.
+ *
+ * It has a second payoff: the point then coincides with the collider's own `userData.point`,
+ * so §2.1.6's sparkle (which FX draws from the COLLISION affordance query) and the magnet mark
+ * the same spot. A target that did not sit on its affordance would be a promise made in one
+ * place and kept in another. The test asserts that too, for all 14.
+ *
+ * The cost is real and belongs to MOVEMENT, not here: arriving at the ring centre and then
+ * handing off to `HookSwing` teleports Sly 2.2 m straight down as the rope goes taut. That is
+ * a `HookSwing.enter` problem (a degenerate `position − anchor`), it already happens on any
+ * dead-centre auto-grab, and it is written up as a diff request rather than papered over by
+ * authoring the point somewhere it cannot safely go.
  *
  * ── `volume` ──────────────────────────────────────────────────────────────────────────────
- * `magVolume` 3.30 m (half a full-speed jump's reach) everywhere except the lower chain,
- * whose last gap is 6.36 m between hang points — two 3.30 spheres would overlap by 0.24 m and
- * acquisition could flicker between them. 3.15 makes the lower chain's tightest pair exactly
- * disjoint. `tests/level.test.mjs` asserts the whole registry is pairwise disjoint.
+ * `magVolume` 3.30 m (half a full-speed jump's reach), except the lower chain: its tightest
+ * ring gap is 6.36 m and two 3.30 spheres would overlap there. The rule is that two trigger
+ * volumes must be separated by at least one `magSnapRadius` (0.20625 m — the smallest distance
+ * this system resolves) of clear air, which caps the lower chain at (6.36 − 0.20625)/2 = 3.077.
+ * `tests/level.test.mjs` asserts the whole registry against that rule pairwise.
  */
-const MAG = {
-  /** Controller.TUNE.magCatch: runSpeed 7.2 × jumpBufferMs 0.140. */
+export const MAG = {
+  /** Controller.TUNE.magCatch: runSpeed 7.2 × jumpBufferMs 0.140. Spires. */
   catchJump: 1.008,
-  /** √(2 · 24 · hookL 2.2) × jumpBufferMs 0.140 — the same sentence at pendulum speed. */
+  /** √(2 · 24 · hookL 2.2) × jumpBufferMs 0.140 — the same sentence at pendulum speed. Rings. */
   catchSwing: 1.4387,
   /** Controller.TUNE.magVolume. */
   volume: 3.30,
-  /** Lower chain only: its tightest hang-point gap is 6.36 m, so 2 × 3.15 is exactly disjoint. */
-  volumeLow: 3.15,
-  /** §6 hook pendulum length — where Sly ends up on a ring is this far under it. */
+  /** Lower chain: (tightest ring gap 6.36 − magSnapRadius 0.20625) / 2 = 3.0769. */
+  volumeLow: 3.07,
+  /** §6 hook pendulum length. `catchSwing < hookL` is the no-self-recapture invariant. */
   hookL: 2.2,
   /** §6: "spire land — jump from it gets ×1.25 height". A target standing in for a spire must
    *  carry the same multiplier or the assist would quietly nerf the move it exists to enable. */
@@ -288,19 +309,16 @@ function magnet(A, spec) {
   return spec;
 }
 
-/**
- * A hook ring's magnetism point. `first` is the ring a chain is *entered* on — a jump, so the
- * run-speed catch — versus one it is *continued* on, which is a swing release.
- */
-function swingTarget(A, id, x, y, z, { first = false, volume = MAG.volume } = {}) {
+/** A hook ring's magnetism point: the ring itself. See the `point` section above. */
+function swingTarget(A, id, x, y, z, volume = MAG.volume) {
   return magnet(A, {
     id,
-    point: new THREE.Vector3(x, y - MAG.hookL, z),
+    point: new THREE.Vector3(x, y, z),
     volume,
-    catch: first ? MAG.catchJump : MAG.catchSwing,
+    catch: MAG.catchSwing,
     group: 'swing',
     arrive: 'hookSwing',
-    userData: { fx: new THREE.Vector3(x, y, z), kind: 'hook' },
+    userData: { kind: 'hook' },
   });
 }
 
@@ -314,7 +332,7 @@ function spireTarget(A, id, x, y, z) {
     jumpMult: MAG.spireJumpMult,
     group: 'swing',
     arrive: 'spireLand',
-    userData: { fx: new THREE.Vector3(x, y, z), kind: 'spire' },
+    userData: { kind: 'spire' },
   });
 }
 
@@ -511,11 +529,13 @@ function courtyard(A) {
   poleProxy(A, ob.x, ob.z, t2.y + 1.1, ob.h - 1.6, 1.5);
   ledgeProxy(A, -2.5, 2.5, t2.y + 1.1, ob.z - 2.5, ob.z + 2.5);
   spirePoint(A, ob.x, ob.h, ob.z);       // pyramidion tip: a Ninja Spire Landing target
-  /* The pyramidion is the clearest case in the level for magnetism, and the reason is in
-     PoleClimb: the pole ends at 20.4, its top hop launches at `jumpV0 × 0.55` (rise 0.76 m)
-     with 1.6 m/s of *outward* drift, so the best line off the obelisk peaks 0.82 m under the
-     tip and 1.3 m to the side of it. The Ninja Spire Landing this level names in its own route
-     comment is a point you cross at speed inside a ~0.35 s window, 16.8 m above the terrace. */
+  /* The clearest case in the level, and the numbers are not close. `PoleClimb`'s top hop is
+     the only way off this shaft that goes upward: it fires at `jumpV0 × 0.55` = 6.05 m/s, a
+     rise of 0.763 m from the pole top at 20.4 — which **peaks 0.82 m under the 22 m tip**.
+     The Ninja Spire Landing this file names in its own route comment is not reachable by the
+     move that leads to it. Scanned over the whole top-hop envelope with no double jump, the
+     best line misses by **0.830 m**, and the derived default catch is 1.008: magnetism closes
+     exactly this gap and nothing wider. Spend the double jump and it lands outright. */
   spireTarget(A, 'spire-obelisk', ob.x, ob.h, ob.z);
 
   /* ---- Barque kiosk around the obelisk. Its lintel ring at y 9.0 is the `hero` perch. ---- */
@@ -1037,12 +1057,14 @@ function courtyardTraversal(A) {
     m.compose(new THREE.Vector3(x, y, z), new THREE.Quaternion().setFromEuler(new THREE.Euler(D(R.jitter(2.5)), D(R.jitter(30)), D(R.jitter(2.5)), 'YXZ')), new THREE.Vector3(1, 1, 1));
     mats.push(m);
     hookPoint(A, x, y, z);
-    /* The set piece magnetism exists for. Seven 0.62 m rings strung 7.1–9.7 m apart at
+    /* The set piece magnetism exists for. Seven 0.62 m rings strung 7.14–9.71 m apart at
        y 13.2–14.9 over paving at y 0: a missed catch is an 11–13 m fall and the whole ascent
-       again. Ring 0 is entered by a double jump off the peristyle architrave (the `pylon-drop`
-       rail's own terminus at 22.6, 9.25, 26) — a run-speed error, so the default catch. Rings
-       1..6 are entered by a swing release, which is where the pendulum catch applies. */
-    swingTarget(A, `hook-main-${i}`, x, y, z, { first: i === 0 });
+       again. §8.1's route enters this chain at ring 3 (the E-grab off the kiosk lintel, which
+       `hookGrab` 9.0 already covers) and swings north-west; ring 0's own entry is the east
+       mast (20.6, ·, 27.5), a `pole` from y 9.0 to 15.9 standing 0.78 m off the ring. Every
+       ring here is also arrived at by a release from a neighbour, which is the approach the
+       pendulum catch is derived for. */
+    swingTarget(A, `hook-main-${i}`, x, y, z);
     A.add('court', 'bronze_dark', K.place(K.chain({ len: 0.9, r: 0.06, links: 4 }), { x, y: y + 1.65, z }));
   }
 
@@ -1058,13 +1080,14 @@ function courtyardTraversal(A) {
     m.compose(new THREE.Vector3(x, y, z), new THREE.Quaternion().setFromEuler(new THREE.Euler(D(R.jitter(2)), D(R.jitter(25)), D(R.jitter(2)), 'YXZ')), new THREE.Vector3(0.94, 0.94, 0.94));
     mats.push(m);
     hookPoint(A, x, y, z);
-    /* The return chain. Rings 0–1 hang over bare paving (9.4 m fall); rings 2–3 hang over
-       terrace stage 2 at y 5.2, so a miss there costs only 4.4 m — by rule 2 alone they would
-       not qualify. They are authored anyway, and the reason is that the unit of this grammar
-       is the *chain*, not the ring: every ring wears the same §2.1.6 sparkle, and magnetism
-       that worked on two of four would make that sparkle a lie on the other two. Consistency
-       inside one set piece beats a per-ring audit. Volume 3.15, not 3.30 — see MAG. */
-    swingTarget(A, `hook-low-${i}`, x, y, z, { first: i === 0, volume: MAG.volumeLow });
+    /* The return chain. Rings 0–1 hang over bare paving (11.6 m fall); rings 2–3 hang over
+       terrace stage 2 at y 5.2, so a miss there costs 6.6 m — by rule 2 alone they are the
+       weakest two in the level. They are authored anyway, and the reason is that the unit of
+       this grammar is the *chain*, not the ring: every ring wears the same §2.1.6 sparkle, and
+       magnetism that worked on two of four would make that sparkle a lie on the other two.
+       Consistency inside one set piece beats a per-ring audit. Volume 3.07, not 3.30 — this
+       chain's tightest gap is 6.36 m, see MAG. */
+    swingTarget(A, `hook-low-${i}`, x, y, z, MAG.volumeLow);
     A.add('court', 'bronze_dark', K.place(K.chain({ len: 0.85, r: 0.055, links: 4 }), { x, y: y + 1.6, z }));
   }
   A.instance('gold_leaf', ringGeo, mats, 'hooks:rings');
@@ -1454,9 +1477,9 @@ function hypostyleHall(A) {
     poleProxy(A, sx * 16, -50, DECK, DECK + 6.0, 0.85);
     spirePoint(A, sx * 16, 21, -50);
     /* Same geometry as the obelisk and the same argument: the pole ends at 19.5, the top hop
-       peaks 0.72 m under the 21 m tip and drifts outward, and the surface that catches a miss
-       is the aisle roof 7.5 m below. This is the rooftop run's own beat (§8.1: "SPIRE LAND the
-       east pinnacle tip (16, 21, −50)"). */
+       peaks 0.72 m under the 21 m tip (best line 0.730 m, catch 1.008), and the surface that
+       catches a miss is the aisle roof 7.5 m below. This is the rooftop run's own beat (§8.1:
+       "SPIRE LAND the east pinnacle tip (16, 21, −50)"). */
     spireTarget(A, `spire-pinnacle-${sx > 0 ? 'e' : 'w'}`, sx * 16, 21, -50);
   }
 }

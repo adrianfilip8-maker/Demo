@@ -2170,12 +2170,11 @@ export class Particles {
   }
 
   /**
-   * The blue sparkle belongs on the *affordance*, not on the target point.
-   *
-   * A hook's authored point is the taut-rope position, `ring − (0, hookL, 0)` — 2.2 m of empty
-   * air under the ring, because that is where Sly ends up. The ring is what the player is
-   * looking at and what `SparkleField` already marks, so the level ships it in
-   * `userData.fx` and the event FX uses that when it is there.
+   * Where the sparkle goes. `point` is the authored target and EgyptLevel guarantees it sits
+   * on the affordance's own `userData.point` — the ring, the tip — precisely so that §2.1.6's
+   * idle diamond (drawn by `SparkleField` off COLLISION's affordance query) and the magnet's
+   * event burst mark the same spot. `userData.fx` is the override for a level that ever has to
+   * put the point somewhere the mark should not follow.
    */
   _targetFx(e) { return e?.target?.userData?.fx || e?.point || null; }
 

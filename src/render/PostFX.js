@@ -173,8 +173,39 @@ const TUNE = {
   // The shadow side keeps 45% of the lit side's strength — enough that a dark silhouette
   // always separates, little enough that the light still reads as coming from one direction.
   rimShadowFloor: 0.45,
-  rimLit: 0x7fd4ff,       // §2.2 RIM, the key's complement
+  rimLit: 0x7fd4ff,       // §2.2 RIM, the key's complement       — DAY leg (see rimClock)
   rimShade: 0x6fa8d8,     // §2.2 FILL sky bounce — the shadow side is lit by sky, not by sun
+  /* ── the time-of-day hook the block above says this pass does not have (§214.2, defect #12) ──
+     §214.2 asked for one diff: copy LIGHTING's published `rimColor` into `uRimLit`. Applied,
+     with two corrections found by reading the shader rather than the note.
+
+     1. **A straight `.copy()` would be wrong.** `L.rimColor` is a `THREE.Color` built from a hex,
+        which colour management stores as LINEAR; `uRimLit` is added AFTER `slyLinearToSrgb` and
+        is therefore DISPLAY-space (that is what `displayColor()` next to it exists for). Copying
+        linear into it delivers #7fd4ff as (0.212, 0.651, 1.000) instead of (0.498, 0.831, 1.000)
+        — a 57% cut in red on the rim of every shot in the game, in daylight too. It goes through
+        `copyLinearToSRGB`, which is the exact inverse of the constructor's decode, so the
+        DAYLIGHT value round-trips to the shipped constant (|Δ| < 1e-6 per channel, six orders
+        below one 8-bit code).
+
+     2. **`uRimLit` is not the uniform the night dashes are drawn in.** The composite picks
+        `mix(uRimShade, uRimLit, edge.b)` on edge.b = the lit-side mask, and §214.1's own finding
+        is that `night` is ~180° backlit — nothing the camera sees has positive N·L to the moon —
+        so edge.b ≈ 0 there and the night rim is drawn almost entirely in **uRimShade**. The
+        measured dash hue 199–205° straddles both constants (rimCool 200.2°, rimShade 207.4°) and
+        does not separate them; the shader does. Fixing only uRimLit would have moved the two
+        moon-keyed shots by approximately nothing and read as "the lever is dead".
+
+     So both legs take the clock. The lit leg follows LIGHTING's `rimColor` (rimCool → rimWarm by
+     nightAmount, §2.2's "warm variant for night"); the shadow leg follows the atmosphere's own
+     `hemiSky`, which is what "the shadow side is lit by sky" means when the sky is #2c4f8e
+     rather than #6fa8d8 — a 2.5× drop in display amplitude on exactly the edges defect #12 calls
+     "a full-strength fresnel drawing a cyan-white line on every polygon edge".
+
+     Inert in daylight BY CONSTRUCTION, not by tuning: the branch is gated on `nightAmount > 0`,
+     which is exactly 0 for all fourteen non-moon shots, so their uniforms are never written and
+     the day arm is bit-identical. 0 restores the constants for the A/B. */
+  rimClock: 1.0,
 
   /* --- normal-prepass membership (ledger #26) ---
      Who is allowed to write into the normal buffer that AO and the crease pass read.
@@ -513,6 +544,53 @@ const TUNE = {
      display-space add and is kept. */
   saturation: 1.30,
   lift: [0.006, 0.004, 0.010],     // open the toe just enough to keep shadow detail (§7.3)
+  /* ── critic pass 7 defect #8, the BLACK half: this lift IS the wall ─────────────────────
+     §214.1 established that the low end is a WALL, not a tail, and routed the fix away from
+     the lighting ratio: `SHADOW_FLOOR x key + fill` puts sandstone mid at display L~100 on its
+     own, so display black cannot come from a lighting knob. That is right, and it stops one
+     step short of the term that actually sets the floor, which is in THIS file.
+
+     `c = c + lift*(1-c)` runs in SCENE-LINEAR, before the pivot contrast and before AgX. At the
+     radiances the shadow band occupies it is not a toe, it is a black lift, and it is large
+     compared with the pixel it is lifting — the addend (mean 0.0067) is 168% of a scene 0.004
+     pixel and 67% of a scene 0.010 one. Transcribed through the validated chain
+     (scratchpad/liftcheck.mjs; k = 1 reproduces `progress/records/tonecurve.mjs` to 0.000 L and
+     the k = 0 arm moves the row by 11.7 L, both asserted before anything was read):
+
+       scene      0.002  0.004  0.006  0.010  0.018  0.030  0.060  0.105  0.18   0.5    1.0
+       L, k = 1     7.7   11.7   15.9   23.4   36.0   50.8   76.3  100.5  126.3  175.7  204.8
+       L, k = 0     0.6    2.0    4.5   12.3   27.3   44.3   72.5   98.2  125.0  175.4  204.8
+
+     Two things follow. (1) The composite has a BLACK FLOOR of its own at display **L 4.58** —
+     nothing in any frame can go below it, whatever the scene does, which is exactly the
+     "%V<0.05 is 0.00% everywhere" §214.1 measured. (2) Above scene ~0.006 the lift REMOVES
+     display contrast rather than adding it: 0.010→0.030 spans 27.4 L lifted and 32.0 L
+     unlifted. It buys separation only BELOW scene 0.006, and every canonical frame's p1 sits
+     at scene 0.010 or above, so it is buying separation where there is no content and paying
+     for it across the whole shadow band.
+
+     Value derived, not tuned: the largest scale whose own black floor stays under one 8-bit
+     code (1.0 L) is 0.42; 0.35 lands the floor at **0.66 L**, a third of a code, and keeps a
+     real (if small) toe rather than zeroing the term. The per-channel RATIO is untouched, so
+     the deliberate blue-heavy tint of the deepest blacks (§2.1.3, shadows are coloured) is
+     preserved exactly — only its amplitude moves.
+
+     **Faded in by `dayAmount`, so both moon-keyed shots are bit-identical.** Predicted on the
+     shipped frames by inverting each display luma through the same chain (identity at k = 1
+     exact inside the invertible domain L 4.58..254.65, asserted; the k = 0 arm live at 11.7 L):
+
+       shot        p1 22.8→15.8 (temple)  21.6→14.4 (courtyard)  19.9→12.5 (interior)
+                   20.8→13.5 (hero)       27.3→20.9 (dunes)      13.2→5.8 (combat)
+       minL        13.1→5.7  13.5→6.1  4.9→0.8  12.0→4.9  11.5→4.6  8.0→2.3
+       p50         −2.4 −2.5 −3.4 −3.6 −0.8 −2.8      p95 ≤ −0.4      p99 ≤ −0.1
+       guard, night                        EXACTLY UNCHANGED (dayAmount = 0)
+
+     What this does NOT do: the WHITE half of #8. §214.1's chain puts V > 0.90 at scene ≥ 1.95
+     and the brightest diffuse surface in the build reaches 2.89 only on limestone; %V>0.90
+     moves by ≤ 0.01 pt at every scale above. That half is albedo and spec, not this file.
+
+     `debug.liftScale` overrides live (null = use this; 1 = the shipped lift, bit-identical). */
+  liftDayScale: 0.35,
   // Warm the highlights — but the blue leg was pulled to 0.95, which is a 5% cut on every
   // blue in the frame including the sky. The warm/cool split is meant to come from the
   // palette, not from throwing blue away globally.
@@ -667,6 +745,28 @@ const TUNE = {
      a smooth gradient. That deficit is real and is a shading change, not a post knob. */
   grain: 0.0,
 };
+
+/** The defaults, exported so `tests/tone2.test.mjs` can assert them without a renderer. */
+export { TUNE };
+
+/**
+ * The scale actually applied to `TUNE.lift`, as a pure function of the two inputs — hoisted out
+ * of `render()` so the day/night gate is testable in plain Node (§211.1: an assertion that has to
+ * boot a renderer is an assertion nobody runs).
+ *
+ * `dayAmount` is 1 in daylight and 0 under the moon, so `liftScale(k, 0) === 1` EXACTLY for every
+ * k — that identity is what makes "the two moon-keyed shots are bit-identical" a property of the
+ * arithmetic rather than a claim about a capture.
+ */
+export function liftScale(dayScale, dayAmount) {
+  /* Written as `k*d + (1-d)` and NOT as the fused `1 + (k-1)*d`. The two are the same lerp in
+     real arithmetic and not in IEEE: the fused form returns 0.09999999999999998 for k = 0.1 at
+     d = 1, i.e. it is exact at only ONE end. `tests/tone2.test.mjs` caught that on its first run.
+     The error is ~1e-19 once multiplied into a 0.006 lift and could not reach a pixel — the
+     reason to fix it anyway is that BOTH endpoints being exact is what lets the inertness claim
+     be an assertion about arithmetic instead of a tolerance nobody re-checks. */
+  return dayScale * dayAmount + (1 - dayAmount);
+}
 
 /* ─────────────────────────────── shaders ─────────────────────────────── */
 
@@ -1302,6 +1402,17 @@ const _whiteTint = new THREE.Color(0xffffff);  // aoTintNeutral target — neutr
 const _splitScratch = new THREE.Color();
 const _aoScratch = new THREE.Color();
 
+/* TUNE.rimClock scratch. `_rimLitDay` / `_rimShadeDay` are rebuilt from `tune` every frame so the
+   two rim hexes stay live-pokeable like every other scalar in the block; `_rimScratch` receives
+   the linear->display conversion of whatever LIGHTING published. All display-space (§ displayColor). */
+const _rimLitDay = new THREE.Color();
+const _rimShadeDay = new THREE.Color();
+const _rimScratch = new THREE.Color();
+/** Fill `out` with a hex's raw sRGB components — allocation-free `displayColor()`. */
+function displayInto(out, hex) {
+  return out.setRGB(((hex >> 16) & 255) / 255, ((hex >> 8) & 255) / 255, (hex & 255) / 255);
+}
+
 export class PostFX {
   /** @param {import('../core/Engine.js').Engine} engine */
   constructor(engine) {
@@ -1912,6 +2023,39 @@ export class PostFX {
     );
     cu.uRimStrength.value = this.passes.edge.enabled ? this.tune.rimStrength : 0;
     cu.uRimShadowFloor.value = this.tune.rimShadowFloor;
+
+    /* ---- the two clock-driven terms (TUNE.liftDayScale, TUNE.rimClock) ----
+       LIGHTING publishes `atmosphere` and `rimColor` as public fields (Lighting.js:503/511), so
+       this is a read through the §4.3 interface, not a reach into another module's internals.
+       `dayAmount` is exactly 1 in all fourteen daylight shots and exactly 0 in `night`/`guard`,
+       which is what makes both gates provably inert on one side. */
+    this._lighting ??= this.engine.get('lighting');
+    const atm = this._lighting?.atmosphere;
+    const day = atm ? atm.dayAmount : 1;
+    const night = atm ? atm.nightAmount : 0;
+
+    /* Black lift. `debug.liftScale` is the in-page defeat lever (null = tune, 1 = shipped). */
+    const liftDbg = this.engine?.debug?.liftScale;
+    const liftK = 1 + ((liftDbg == null ? this.tune.liftDayScale : liftDbg) - 1) * day;
+    cu.uLift.value.set(this.tune.lift[0] * liftK, this.tune.lift[1] * liftK, this.tune.lift[2] * liftK);
+
+    /* Rim colour. Gated on nightAmount > 0 so the daylight uniforms are never written — the
+       "no daylight frame moves" claim is then a property of the branch, not of a tolerance. */
+    displayInto(_rimLitDay, this.tune.rimLit);
+    displayInto(_rimShadeDay, this.tune.rimShade);
+    const clock = this.engine?.debug?.rimClock ?? this.tune.rimClock;
+    if (night > 0 && clock > 0 && this._lighting) {
+      const w = night * clock;
+      if (this._lighting.rimColor) {
+        cu.uRimLit.value.copy(_rimLitDay).lerp(_rimScratch.copyLinearToSRGB(this._lighting.rimColor), w);
+      }
+      if (atm?.hemiSky) {
+        cu.uRimShade.value.copy(_rimShadeDay).lerp(_rimScratch.copyLinearToSRGB(atm.hemiSky), w);
+      }
+    } else {
+      cu.uRimLit.value.copy(_rimLitDay);
+      cu.uRimShade.value.copy(_rimShadeDay);
+    }
     cu.uBloomIntensity.value = this.tune.bloomIntensity;
     cu.uVignette.value = this.tune.vignette;
     cu.uChroma.value = this.tune.chroma;

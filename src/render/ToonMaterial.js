@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { TOON_PARS, TOON_DETAIL, TOON_SHADE, DEBUG_CALIB } from './shaders/toon.glsl.js';
+import { TOON_PARS, TOON_DETAIL, TOON_SHADE, TOON_DITHER, DEBUG_CALIB } from './shaders/toon.glsl.js';
 import {
   weldNormals, applyInkWeights, createOutlineMaterial, buildOutlineShell, removeOutlineShell,
 } from './Outline.js';
@@ -1137,6 +1137,12 @@ export class Shading {
     s = replaceOnce(s, '#include <opaque_fragment>',
       '#include <opaque_fragment>\n\t#ifdef SLY_METAL_TAG\n\t\tgl_FragColor.a = 1.0 - slyMetalOut;\n\t#endif',
       this, 'metal-tag');
+    /* The dither runs AFTER everything in toon.glsl.js and adds up to half an LSB of hash
+       noise, which is exactly enough to move a debug channel's calibration constant by one —
+       measured: mode 4 came back as three modal triples instead of one. TOON_DITHER is three's
+       own chunk behind a branch on the two debug uniforms, so a shipped draw (both 0) does the
+       identical arithmetic and every diagnostic draw is exact. */
+    s = replaceOnce(s, '#include <dithering_fragment>', TOON_DITHER, this, 'dither-guard');
     return s;
   }
 

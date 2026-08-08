@@ -225,7 +225,25 @@ const TUNE = {
      Not changed here. The two owners have to move together or the result is uninterpretable,
      and neither half is verifiable without a capture. */
   shaftMaxLength: 52,
-  shaftFlare: 0.28,          // cross-section growth over the beam's length; 0 = a parallel tube
+  /* 0.28 -> 0.12. **The half of §214.3's prescription that lives in this file.**
+     Flare is a pure WIDENING term: FX scales each ribbon's half-width by `1 + flare*(down/len)`
+     (`Particles.js` `_shaftRibbons`) with no compensating gain, so at 0.28 every blade is 28%
+     broader at its foot than at its aperture and the published intensity is spread across that
+     extra section. That is the arithmetic of a haze — the same radiance over more pixels and a
+     proportionally wider rim penumbra, since FX's `shaftEdge` is a fraction of the half-width and
+     therefore inherits the widening in absolute pixels.
+
+     Deliberately NOT paired with a rise in published intensity, and the reason is arithmetic
+     rather than caution: `power = dayAmount * (0.35 + shaftGrazeGain * grazing)` and `grazing`
+     is already clamped to 1 at `temple`'s 33° sun (sunDir.y 0.545 against a [0.05, 0.45] window),
+     so the only way to raise a `temple` blade from here is to raise the CONSTANT — which lifts
+     every blade in every daylight shot, haze included, i.e. exactly the wash §214.3 says is not
+     the problem. The hot core has to be bought by narrowing the cross-section, and the
+     cross-section knobs are FX's (`shaftWide` 1.85, `shaftCore` 0.55, `shaftEdge` 0.16). Those
+     are proposed as a diff in the report, not applied here.
+
+     `debug.shaftFlare` overrides live (null = use this) so the pair can be A/B'd in one boot. */
+  shaftFlare: 0.12,          // cross-section growth over the beam's length; 0 = a parallel tube
   shaftGrazeGain: 0.65,      // how much of the blade's power comes from a *low* sun
   /* A beam only exists where the opening faces the sun. cos of the widest angle that still
      counts as "the sun can see through this hole". */
@@ -1021,6 +1039,11 @@ export class Lighting {
 
       s.dir.copy(_lightDir);
       s.color.copy(A.sunColor);
+      /* `debug.shaftFlare` — in-page lever on the widening term, same shape as
+         `debug.grainScale` / `debug.contactScale`. Republished every frame (not only at build)
+         so an A/B needs no `_buildShafts()`; null = use TUNE, which is bit-identical. */
+      const flareDbg = this.engine?.debug?.shaftFlare;
+      s.flare = flareDbg == null ? TUNE.shaftFlare : flareDbg;
 
       /* Only a hole the sun can see through throws a beam. This is what keeps the east
          clerestory dark while the west one blazes at golden hour. */
