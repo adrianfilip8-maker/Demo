@@ -883,12 +883,26 @@ export const TOON_SHADE = /* glsl */ `
 		 * samples, and a resolve AVERAGES these values across a geometry edge — which is exactly
 		 * where the rim band lives. Read interiors of bands, not their outermost pixel, or
 		 * capture with msaa 0. */
+		 * Mode 5 is the RAMP channel, added for the defect critic pass 7 called "there is no toon
+		 * ramp anywhere". It writes vec3( ramp, ndl, key ) — the quantised diffuse ramp, the raw
+		 * N.L that feeds it, and their product with the shadow term. Every other channel here
+		 * reports the rim; nothing reported the one term the whole cel look rests on, which is why
+		 * two sealed experiments had to infer the ramp's behaviour from a graded, grain-covered,
+		 * albedo-textured composite instead of reading it.
+		 *
+		 * What it settles that a flat-area metric cannot: with bands 3 the terminators sit at
+		 * N.L 0.14 and 0.52 (uTermLo/uTermHi, +/- uTermSoft 0.024), so above 0.544 the ramp is a
+		 * flat 1.0 by construction. If G (ndl) shows these surfaces living entirely above 0.544
+		 * then the ramp is CORRECT and flat, and the residual variation the metric was scoring
+		 * belongs to albedo texture, the shadow penumbra or the rim — none of which is the ramp.
+		 * Read R against G, not R alone. */
 		if ( uDebugTerm > 0.5 ) {
 			vec3 dbgT;
 			if      ( uDebugTerm < 1.5 ) dbgT = vec3( vSlySkin, rimMag, slyConvex );
 			else if ( uDebugTerm < 2.5 ) dbgT = vec3( rimBand, rimSil, rimBand * rimSil );
 			else if ( uDebugTerm < 3.5 ) dbgT = vec3( clamp( slyTurn / 40.0, 0.0, 1.0 ), ndv, fres );
-			else                         dbgT = vec3( 0.25, 0.50, 0.75 );
+			else if ( uDebugTerm < 4.5 ) dbgT = vec3( 0.25, 0.50, 0.75 );
+			else                         dbgT = vec3( ramp, ndl, key );
 			outgoingLight = dbgT;
 		}
 	}
