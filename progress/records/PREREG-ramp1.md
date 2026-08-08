@@ -93,8 +93,17 @@ catching a rect that has slid onto another object. Tolerance: hue within ±12°,
   see the lever ⇒ **UNSCOREABLE**, no verdict either way.
 - **P-F3** `restore` vs `base`, frame-wide differing px > 0 ⇒ **VOID**.
 - **P-F4** any arm's `fillScale` not read back equal to its registered value ⇒ that arm VOID.
-- **P-F5** scored arms not from one `bootId`, or any `src/` edit while the capture holds the lock
+- **P-F5** scored arms not from one boot, or any `src/` edit while the capture holds the lock
   ⇒ **VOID**.
+
+  *Amended before any arm was scored, and the amendment is a correction rather than a loosening.*
+  The first runner read `window.__ENGINE.bootId`, **which does not exist** — no boot identity is
+  defined anywhere in `Engine.js` or `harness.mjs`. It therefore compared `null` to `null` and would
+  have reported "same boot" on every arm regardless of what happened, which is §11's confident-null
+  in a falsifier. Caught 74 seconds into an 80-minute run by *printing* the value instead of
+  trusting it, and the run was killed rather than allowed to finish under a vacuous gate. The runner
+  now mints its own token in the page; a reload drops the global, so a mismatch is a real reload
+  instead of an absent property reading as agreement.
 - **P-F6** Monotonicity: FLAT must not *decrease* from `base` → `f35` → `f10` → `f00` on the mean.
   A non-monotonic response to a monotonic lever means something else is moving ⇒ **UNSCOREABLE**.
 
