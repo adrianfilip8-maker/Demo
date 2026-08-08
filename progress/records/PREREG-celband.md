@@ -284,6 +284,32 @@ threshold, not a dial**, and any value below that crossover buys nothing at all.
 show a smooth improvement with b instead, this paragraph is wrong and the mechanism needs
 rethinking.
 
+## 10a. NIGHT IS A REQUIRED ARM, ADDED BEFORE ANY FRAME EXISTED
+
+Registered while the sweep was still queued, on noticing a gap in §9 rather than after seeing a
+result. `TUNE.fillSkyMix`'s own note in `ToonMaterial.js` states the rule this fleet keeps
+relearning:
+
+> The acceptance required night to be MEASURED, and night's only evidence was `pkg30`/`pkg50` —
+> strictly stronger variants, so night was bracketed rather than measured, and shipping on a
+> bracket is the four-of-ten move this fleet keeps refusing.
+
+`shadeBand` is more exposed to night than `fillSkyMix` was, and by construction. At `night`
+(tod 0.02) the key is the moon and almost the whole frame is shade, so a term that multiplies the
+shade side is a term that multiplies almost every pixel — and it multiplies them *down*. A value
+that is right on `temple` could plausibly crush `night` to mud.
+
+**The `celband.mjs` sweep as launched captures `temple` and `courtyard` only.** So, before
+anything ships:
+
+* **(D)** a second, separate boot captures `night` at `base-a` → the candidate → `base-b`, with
+  its own within-boot null; and the candidate's frames are **opened and looked at**.
+* Ship is blocked if `night`'s silhouette read or its overall exposure is visibly destroyed —
+  and that is a judgement made on the image, deliberately, because there is no registered numeric
+  acceptance for "night still looks like night" and inventing one after seeing the frame is
+  exactly the move §141.1 forbids. The honest form is: measure what is registered, LOOK at what
+  is not, and say which was which.
+
 ## 11. If the verdict is "DOES NOT BAND"
 
 The fix is made in `src/render/ToonMaterial.js` / `src/render/shaders/*` only, and is proved with
