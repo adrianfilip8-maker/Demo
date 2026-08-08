@@ -266,14 +266,34 @@ export const ROUTES = {
   hall_weave: {
     closed: true, baseY: 0, space: 'hall',
     points: [
-      [-12.5, -19.5, 1.6, 'look'],
+      [-12.5, -20.5, 1.6, 'look'],
       [-12.5, -31.0, 0, null],
       [-12.5, -42.5, 2.0, 'look'],
       [0.0, -42.5, 0, null],
       [12.5, -42.5, 1.4, null],
       [12.5, -31.0, 0, null],
-      [12.5, -19.5, 2.0, 'bored'],
-      [0.0, -19.5, 1.2, 'look'],
+      [12.5, -20.5, 2.0, 'bored'],
+      [0.0, -20.5, 1.2, 'look'],
+    ],
+  },
+
+  /* Straight up the nave and back, ending under the inner pylon gate.
+
+     Two guards on the *same* loop at different phase is the weakest way to spend a second
+     body: it doubles the pressure on one line and leaves everything else untouched. The first
+     coverage run measured exactly that — with both hall guards on `hall_weave`, the nave (the
+     main route through the largest room in the level) and the inner gate (the only way to the
+     tomb) were watched **0 % of a 240 s window**. A player could walk the length of the
+     temple's spine without ever entering a cone. This route is the second body's own beat, and
+     it crosses the ring's at right angles, which is what makes the hall a timing puzzle rather
+     than a corridor with two men in it. */
+  hall_nave: {
+    closed: false, baseY: 0, space: 'hall',
+    points: [
+      [0.0, -19.5, 1.8, 'look'],
+      [0.0, -31.0, 1.2, null],
+      [0.0, -42.5, 2.0, 'look'],
+      [0.0, -48.5, 2.4, 'look'],
     ],
   },
 
@@ -314,7 +334,7 @@ export const ROUTES = {
     closed: false, baseY: -12.0, space: 'tomb',
     points: [
       [9.2, -61.5, 2.4, 'look'],
-      [9.2, -67.0, 0, null],
+      [9.2, -67.0, 1.4, 'look'],
       [9.2, -72.0, 0, null],
       [9.2, -74.5, 2.4, 'look'],
     ],
@@ -325,9 +345,9 @@ export const ROUTES = {
   architrave_ledge: {
     closed: false, baseY: 9.0, space: 'ledge',
     points: [
-      [22.6, -8.0, 1.2, 'look'],
-      [22.6, 8.0, 0, null],
-      [22.6, 26.0, 1.6, 'look'],
+      [23.0, -8.0, 1.2, 'look'],
+      [23.0, 8.0, 1.0, null],
+      [23.0, 26.0, 1.6, 'look'],
     ],
   },
 
@@ -338,10 +358,10 @@ export const ROUTES = {
   tomb_scarab: {
     closed: true, baseY: -12.0, space: 'tomb',
     points: [
-      [3.4, -68.0, 0.8, null],
-      [3.4, -74.6, 1.0, 'look'],
-      [-3.4, -74.6, 0.8, null],
-      [-3.4, -68.0, 1.0, 'look'],
+      [3.0, -68.0, 0.8, null],
+      [3.0, -74.4, 1.0, 'look'],
+      [-3.0, -74.4, 0.8, null],
+      [-3.0, -68.0, 1.0, 'look'],
     ],
   },
 };
@@ -353,7 +373,7 @@ export const ROSTER = [
   { type: 'heavy', route: 'courtyard_ring', u: 0.52, speed: 0.92 },
   { type: 'temple', route: 'obelisk_watch', u: 0.30, speed: 0.94 },
   { type: 'temple', route: 'pylon_gate', u: 0.10, speed: 1.08 },
-  { type: 'temple', route: 'hall_weave', u: 0.00, speed: 1.00 },
+  { type: 'temple', route: 'hall_nave', u: 0.00, speed: 1.00 },
   { type: 'heavy', route: 'hall_weave', u: 0.48, speed: 0.88 },
   { type: 'temple', route: 'rooftop_run', u: 0.15, speed: 1.12 },
   { type: 'heavy', route: 'tomb_vault', u: 0.20, speed: 0.90 },

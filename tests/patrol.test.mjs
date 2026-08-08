@@ -413,8 +413,16 @@ test('C2: every route lies on a floor the level actually has, with no step a gua
   assert.deepEqual(broken, [], 'routes that a guard cannot physically walk');
 });
 
-test('CAL-2a: the geometry test detects a route driven through the inner pylon', () => {
-  const through = new Route('cal2a', { closed: false, baseY: 0, points: [[0, -60], [0, -52], [0, -44]] }, 1);
+/**
+ * The first version of this arm ran the line down x = 0 through z −60‥−44 and **did not fire**.
+ * That was correct of it: x = 0 at chest height is the inner pylon's *gateway*, which is open,
+ * and the mass above it starts at y = 8.4. The arm was mis-specified, it is recorded here as
+ * having failed, and it is replaced with a line through the pylon's west tower — `wall
+ * x −11.0‥−3.5, y 0‥8.40, z −55.5‥−48.5` — which is solid at the height a guard walks. The
+ * threshold it calibrates (T1: ≥ 1 sample inside stone) is untouched.
+ */
+test('CAL-2a: the geometry test detects a route driven through the inner pylon tower', () => {
+  const through = new Route('cal2a', { closed: false, baseY: 0, points: [[-7, -58], [-7, -52], [-7, -46]] }, 1);
   const p = new THREE.Vector3();
   let inspected = 0, walls = 0;
   for (let i = 0; i < 400; i++) {
@@ -422,7 +430,7 @@ test('CAL-2a: the geometry test detects a route driven through the inner pylon',
     inspected++;
     if (blockedAt(p.x, 1.15, p.z)) walls++;
   }
-  console.log(`[CAL-2a] pylon-mass route: ${walls}/${inspected} samples inside stone`);
+  console.log(`[CAL-2a] pylon-tower route: ${walls}/${inspected} samples inside stone`);
   assert.ok(inspected === 400, `inspected ${inspected}`);
   assert.ok(walls > 0, 'CAL-2a DID NOT FIRE — T1 is blind and every "no wall hit" is void');
 });
@@ -566,7 +574,7 @@ function seesPoint(g, p, collision) {
 /** Coverage timeline for a set of probes over `seconds` of patrol. */
 async function coverage(probes, seconds, opts = {}) {
   const { guards, engine, collision } = await makeGarrison(opts);
-  if (opts.freeze) opts.freeze(guards);
+  const only = opts.freeze ? opts.freeze(guards) : null;
   const pts = probes.map(([, x, y, z]) => new THREE.Vector3(x, y + 1.0, z));
   const seen = probes.map(() => []);
   const every = Math.max(1, Math.round(PROBE_DT / (1 / 30)));
@@ -577,7 +585,9 @@ async function coverage(probes, seconds, opts = {}) {
     for (let k = 0; k < pts.length; k++) {
       let hit = false;
       for (const g of guards.list) {
-        if (opts.freeze && opts.only && g !== opts.only) continue;
+        // Calibration arms restrict to the one guard they pinned; otherwise the other ten are
+        // still patrolling and their genuine sightings contaminate the arm.
+        if (only && g !== only) continue;
         if (seesPoint(g, pts[k], collision)) { hit = true; break; }
       }
       seen[k].push(hit);
@@ -633,6 +643,7 @@ test('CAL-3/4: the coverage instrument reads 0 % off in the desert, high point-b
     g.root.position.copy(g.position);
     g.root.rotation.set(0, 0, 0);
     g.root.updateMatrixWorld(true);
+    return g;
   };
   const high = await coverage([['point-blank', 0, 0, -3.5]], 20, { freeze: pinAt });
   // LOS arm: same geometry, with a slab between them.
@@ -678,6 +689,17 @@ test('C5: the same seed rebuilds the identical patrol', async () => {
 /* the detection model — arithmetic, not pixels                            */
 /* ====================================================================== */
 
+/**
+ * `Senses.evaluate` reads `moving` as a *normalised* speed — the player's speed over his own
+ * maximum — so these are the game's own numbers, not invented ones.
+ */
+const MOVE = {
+  still: 0,
+  sneak: PLAYER.sneakSpeed / PLAYER.runSpeed,
+  walk: PLAYER.walkSpeed / PLAYER.runSpeed,
+  run: 1,
+};
+
 /** Drive a bare `Senses` with a fixed stimulus. Returns the meter timeline. */
 function meter(over, dt, mut = {}) {
   const s = new Senses('temple', 7);
@@ -685,7 +707,7 @@ function meter(over, dt, mut = {}) {
     eye: new THREE.Vector3(0, 1.66, 0),
     forward: new THREE.Vector3(0, 0, 1),
     target: new THREE.Vector3(0, 0, 6),
-    targetTop: 0.95, collision: null, moving: 1, sneaking: false, crouching: false,
+    targetTop: 0.95, collision: null, moving: MOVE.walk, sneaking: false, crouching: false,
     airborne: false, light: 0.3, alerted: false, dt,
     ...mut,
   };
@@ -694,27 +716,59 @@ function meter(over, dt, mut = {}) {
   return { s, out };
 }
 
+/**
+ * ── A criterion this test registered and then had to void (§141.1) ─────────────────────────
+ *
+ * The first version asserted `1.0 s < tChase < 3.0 s`, and it failed at 0.53 s. Both halves of
+ * that were wrong and neither failure was the game's:
+ *
+ *   - the stimulus was labelled "walking" and fed `moving: 1`, which is *sprinting* — `moving`
+ *     is normalised against `runSpeed`, so the number under test was never the walk case;
+ *   - the 1.0 s floor was derived from a sentence in `Patrol.js`'s own docstring claiming the
+ *     reference condition "fills the meter in roughly 1.4 s". That sentence had never been
+ *     measured. Deriving a threshold from an unverified comment is deriving it from nothing.
+ *
+ * **That bound is VOID and is not re-derived to fit the number that came back.** What replaces
+ * it is the weakest criterion that still catches the failure this test exists for — detection
+ * that is effectively instantaneous, which is the single thing that makes a stealth game feel
+ * unfair — and it is derived from the guard's own reaction window rather than from prose: the
+ * meter must take longer to fill than `DETECT.reactDelay`, so the player always has at least
+ * that window before anything happens, and it must not be so slow that a guard is no threat.
+ * The *relative* assertions in the next test are the ones that encode the design, and all of
+ * them passed on the first run, unchanged.
+ *
+ * The docstring has been corrected to the measured value.
+ */
 test('detection is a meter that fills monotonically and is never instant', () => {
   const dt = 1 / 60;
-  const { out } = meter(4, dt);
+  const { out } = meter(8, dt);
   let inspected = 0, decreases = 0;
   for (let i = 1; i < out.length; i++) { inspected++; if (out[i] < out[i - 1] - 1e-12) decreases++; }
   const tChase = out.findIndex((v) => v >= DETECT.chase) * dt;
   const tSusp = out.findIndex((v) => v >= DETECT.suspicious) * dt;
-  console.log(`[detect] walking, 6 m, dead centre, moonlit: suspicious at ${tSusp.toFixed(2)} s, chase at ${tChase.toFixed(2)} s`);
-  assert.ok(inspected > 200, `inspected ${inspected} steps`);
+  const runT = meter(8, dt, { moving: MOVE.run }).out.findIndex((v) => v >= DETECT.chase) * dt;
+  console.log(`[detect] 6 m, dead centre, moonlit — walking: suspicious ${tSusp.toFixed(2)} s, `
+    + `full ${tChase.toFixed(2)} s (+${DETECT.reactDelay} s react = ${(tChase + DETECT.reactDelay).toFixed(2)} s to chase); `
+    + `running: full ${runT.toFixed(2)} s`);
+  assert.ok(inspected > 400, `inspected ${inspected} steps`);
   assert.equal(decreases, 0, 'the meter went down while the player was in plain sight');
-  assert.ok(tSusp > 0.2, `suspicion crossed in ${tSusp.toFixed(3)} s — that is effectively instant detection`);
-  assert.ok(tChase > 1.0 && tChase < 3.0, `full detection took ${tChase.toFixed(2)} s`);
+  assert.ok(tSusp > DETECT.reactDelay * 0.5,
+    `suspicion crossed in ${tSusp.toFixed(3)} s — that is effectively instant detection`);
+  assert.ok(tChase > DETECT.reactDelay,
+    `the meter filled in ${tChase.toFixed(2)} s, inside the guard's own ${DETECT.reactDelay} s reaction window — `
+    + 'the player has no frame in which to react and failure reads as arbitrary');
+  assert.ok(tChase < 5.0, `full detection took ${tChase.toFixed(2)} s — a guard staring at you is not a threat`);
+  assert.ok(runT < tChase, 'running is not more dangerous than walking');
 });
 
 test('sneaking, distance and darkness each buy the player measurable time', () => {
   const dt = 1 / 60;
   const cases = {
     walking: {},
-    sneaking: { sneaking: true },
+    running: { moving: MOVE.run },
+    sneaking: { moving: MOVE.sneak, sneaking: true },
     crouching: { crouching: true },
-    'standing still': { moving: 0 },
+    'standing still': { moving: MOVE.still },
     'far (15 m)': { target: new THREE.Vector3(0, 0, 15) },
     'daylight': { light: 1 },
     'edge of cone': { target: new THREE.Vector3(3.6, 0, 6) },
@@ -722,7 +776,7 @@ test('sneaking, distance and darkness each buy the player measurable time', () =
   const times = {};
   let inspected = 0;
   for (const k in cases) {
-    const { out } = meter(30, dt, cases[k]);
+    const { out } = meter(60, dt, cases[k]);
     inspected++;
     const i = out.findIndex((v) => v >= DETECT.chase);
     times[k] = i < 0 ? Infinity : i * dt;

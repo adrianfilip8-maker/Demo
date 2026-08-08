@@ -764,6 +764,7 @@ class Guard {
 
     const stop = honourDwell ? this.route.nextStop(this.u, this.dirSign) : null;
     const prevU = this.u;
+    const prevDir = this.dirSign;
     if (this._offRoute < TUNE.rejoinSnap) {
       this.route.advance(this.u, this.dirSign, maxSpeed * dt, this._advOut);
       this.u = this._advOut.u;
@@ -773,8 +774,20 @@ class Guard {
 
     if (stop) {
       // Did we step over a dwell stop this frame? Land exactly on it and stand there.
-      let gap = this.dirSign > 0 ? stop.u - prevU : prevU - stop.u;
-      let crossed = this.dirSign > 0 ? this.u - prevU : prevU - this.u;
+      let gap = prevDir > 0 ? stop.u - prevU : prevU - stop.u;
+      let crossed;
+      if (this.dirSign !== prevDir) {
+        /* He reflected off the end of an open route this frame, so `u` moved *backwards* in
+           the old direction's terms and the plain difference below goes negative — which is
+           why the end-of-route dwell never fired. Four of the nine routes are open, and on
+           every one of them the guard swept through his own turn-around without the pause
+           that makes an about-face readable. Measure what he actually travelled: out to the
+           end, and back. */
+        const end = prevDir > 0 ? 1 : 0;
+        crossed = Math.abs(end - prevU) + Math.abs(end - this.u);
+      } else {
+        crossed = prevDir > 0 ? this.u - prevU : prevU - this.u;
+      }
       if (this.route.closed) {
         gap = ((gap % 1) + 1) % 1;
         crossed = ((crossed % 1) + 1) % 1;
