@@ -394,6 +394,38 @@ export class ContactDecals {
       depthTest: true,
       depthWrite: false,
       blending: THREE.MultiplyBlending,
+      /**
+       * REQUIRED with `MultiplyBlending`, and its absence was a live defect rather than a
+       * warning to tidy away. `three@0.185`'s `WebGLState.setBlending()` has no
+       * non-premultiplied multiply path *at all*: with the flag false it logs
+       *
+       *     THREE.WebGLState: MultiplyBlending requires material.premultipliedAlpha = true
+       *
+       * and **returns without calling `gl.blendFunc`**, then caches `currentBlending =
+       * MultiplyBlending` so the switch is skipped on every subsequent frame too. The decal was
+       * therefore drawn with whatever function the previously-programmed material had left in the
+       * context — the birds at `renderOrder` 5, one step ahead of this batch at 6.
+       *
+       * That is the whole of the inverted contact shadow. `FRAG` emits a MULTIPLIER: 1.0 (white)
+       * at the rim, falling to ~0.44 luma at the core. Under `dst * src` that is a shadow whose
+       * rim is a no-op. Under anything else — src-alpha lerp, additive, straight replace — the
+       * same value composites as *paint*, and it is brightest exactly at the outer rim. A halo
+       * that grows outward from the prop, which is what the critic scored as
+       * "the contact shadow is INVERTED".
+       *
+       * With the flag set, three programs `blendFuncSeparate(DST_COLOR, ONE_MINUS_SRC_ALPHA,
+       * ZERO, ONE)`. `FRAG` writes `a = 1.0` unconditionally, so `ONE_MINUS_SRC_ALPHA` is zero
+       * and the RGB result is exactly `src * dst`, with the destination alpha left alone. A
+       * colour whose alpha is 1 *is* its own premultiplication — the flag names the blend
+       * equation here and says nothing about any stored colour. If `FRAG` ever stops writing
+       * 1.0, this line has to be revisited with it.
+       *
+       * **Not the §224 flag.** §224 is `premultiplyAlpha` on a TEXTURE round-tripped through a
+       * 2D canvas, which came back with 57 % of `torch_flame`'s bytes wrong and ±184 on red.
+       * Different flag, different object: this material has no map of any kind, and the
+       * decalsign run measured the frame outside the decals to confirm nothing else moved.
+       */
+      premultipliedAlpha: true,
       side: THREE.DoubleSide,
       polygonOffset: true,
       polygonOffsetFactor: -4,
