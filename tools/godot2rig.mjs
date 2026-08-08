@@ -212,6 +212,30 @@ export function assertAccessorsResolved(json, label) {
     chk(s.input, `anim[${ai}] "${a.name}".sampler[${si}].input`);
     chk(s.output, `anim[${ai}] "${a.name}".sampler[${si}].output`);
   }));
+  /**
+   * Sparse accessors, which this function CANNOT validate and must therefore refuse.
+   *
+   * The docstring above says a future extension it does not know about "will still not be
+   * *checked*". That happened, in person, on the Carmelita import. `compact()` remaps an accessor's
+   * own `bufferView` but not `sparse.indices.bufferView` / `sparse.values.bufferView`, so a kept
+   * sparse accessor emerges pointing its sparse arms into the OLD buffer. Every index this function
+   * examines is in range and correct, so it passed — correctly, and uselessly. The failure surfaced
+   * as `RangeError: Invalid typed array length: 1729` from inside `GLTFLoader`, which names nothing
+   * in this project.
+   *
+   * The source's 8 sparse accessors are all morph targets. Rather than teach the compactor to
+   * densify or remap them — real work, for a feature `GuardAnim` has no channel to drive — the
+   * invariant is inverted: **a sparse accessor that survives compaction is a defect until someone
+   * implements it.** An admitted blind spot in a validator is worth exactly as much as an
+   * unadmitted one until it is made to fail loudly.
+   */
+  const sparse = [];
+  (json.accessors || []).forEach((a, i) => { if (a && a.sparse) sparse.push(i); });
+  if (sparse.length) {
+    bad.push(`${sparse.length} accessor(s) are SPARSE and compaction does not remap `
+      + `sparse.indices/values.bufferView — ${sparse.slice(0, 8).join(', ')}`);
+  }
+
   if (bad.length) {
     throw new Error(`godot2rig: ${label} references ${bad.length} accessor(s) it does not contain — `
       + `the compaction remap missed a reference class:\n  ${bad.slice(0, 12).join('\n  ')}`);

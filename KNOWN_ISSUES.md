@@ -19343,3 +19343,40 @@ things nobody should read as settled:
 Also unresolved: her tail geometry folds onto `hips` (RIG3's `tailA`–`tailD` have no source, and
 the clip retarget already measured her tail at 0.00° local in all eleven clips), so the guard has
 a rigid tail where the procedural body had a spring chain.
+
+## §245 — the validator's admitted blind spot was hit in person, so it now refuses instead of passing
+
+§227 gave `assertAccessorsResolved` a docstring saying that a future extension it does not know
+about "will still not be *checked*". That sentence was written as a caveat. On the Carmelita import
+it became a defect.
+
+Keeping her five morph targets produced `RangeError: Invalid typed array length: 1729` from inside
+`GLTFLoader` — a message that names nothing in this project. The cause: **the morph targets are
+sparse accessors.** `compact()` remaps an accessor's own `bufferView` but not
+`sparse.indices.bufferView` / `sparse.values.bufferView`, so a surviving sparse accessor emerges
+with its sparse arms still pointing into the *old* buffer. Verified: the source carries **8 sparse
+accessors and all 8 are on morph targets**.
+
+`assertAccessorsResolved` **passed it — correctly, and uselessly.** Every index it examines was in
+range and correctly remapped. It was looking at the right things and there was nothing wrong with
+any of them.
+
+So the invariant is inverted rather than the compactor extended: **a sparse accessor that survives
+compaction is now a hard refusal.** Densifying or remapping them is real work for a feature
+`GuardAnim` has no channel to drive, and the honest position is not "we handle this" but "we do not
+handle this and will not pretend to". Calibrated four ways:
+
+```
+ARM1  the source, 8 sparse accessors        FIRED     refuses, naming the count and the reason
+ARM2  carmelita-guard.glb  (0 sparse)       PASSED    no false positive
+      sly-godot.glb        (0 sparse)       PASSED
+      sly-godot-anims.glb  (0 sparse)       PASSED
+```
+
+The general lesson, which is the reason this is its own section rather than a footnote to §227:
+**an admitted blind spot in a validator is worth exactly as much as an unadmitted one until it is
+made to fail loudly.** Writing "this cannot check X" in a docstring documents the hole; it does not
+close it, and it does not stop the hole from being walked into by someone who never read the
+docstring — including its author. The fix for a known limitation is a refusal, not a comment.
+
+Suite 361/362 after the change; the one red remains the deliberately-held texture staleness guard.
