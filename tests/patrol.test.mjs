@@ -288,7 +288,12 @@ function step(guards, engine, seconds, dt = 1 / 30, onFrame = null) {
   return n;
 }
 
-const RAD = { temple: 0.42, heavy: 0.56, scarab: 0.26 };
+/* Read off the guard's own tuning rather than restated here. The literal copy that used to sit
+   in this file is exactly the drift hazard §235 was written about: the C1 clearance floor is
+   `radius + 0.20`, so a body swap that changed a radius would have left this suite certifying a
+   clearance the guards no longer have. `tests/carmguard.test.mjs` separately asserts the shipped
+   radii still bound the mesh they wrap. */
+const RAD = GUARD_TUNE.radius;
 const widestOn = (routeName) => Math.max(0.26,
   ...ROSTER.filter((e) => e.route === routeName).map((e) => RAD[e.type] || 0.42));
 
