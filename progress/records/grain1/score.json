@@ -1,0 +1,183 @@
+{
+  "rois": {
+    "R1": {
+      "shot": "sly-startle",
+      "criticBaseline": 28.9,
+      "arms": {
+        "base": {
+          "mean": [
+            19.1,
+            76.5,
+            179.2
+          ],
+          "flat": 20.5,
+          "medDL": 1.79,
+          "surfaceOk": true,
+          "void": false
+        },
+        "g00": {
+          "mean": [
+            18.9,
+            76.4,
+            179.2
+          ],
+          "flat": 63.3,
+          "medDL": 0.72,
+          "surfaceOk": true,
+          "void": false
+        },
+        "restore": {
+          "mean": [
+            19.1,
+            76.5,
+            179.2
+          ],
+          "flat": 20.5,
+          "medDL": 1.79,
+          "surfaceOk": true,
+          "void": false
+        }
+      }
+    },
+    "R2": {
+      "shot": "temple",
+      "criticBaseline": 12.4,
+      "arms": {
+        "base": {
+          "mean": [
+            76,
+            82.4,
+            89
+          ],
+          "flat": 21.6,
+          "medDL": 1.86,
+          "surfaceOk": true,
+          "void": false
+        },
+        "g00": {
+          "mean": [
+            76.1,
+            82.5,
+            89.1
+          ],
+          "flat": 57.1,
+          "medDL": 0.92,
+          "surfaceOk": true,
+          "void": false
+        },
+        "restore": {
+          "mean": [
+            76,
+            82.4,
+            89
+          ],
+          "flat": 21.6,
+          "medDL": 1.86,
+          "surfaceOk": true,
+          "void": false
+        }
+      }
+    },
+    "R3": {
+      "shot": "interior",
+      "criticBaseline": 32.2,
+      "arms": {
+        "base": {
+          "mean": [
+            46.2,
+            55.5,
+            79.1
+          ],
+          "flat": 32,
+          "medDL": 1.64,
+          "surfaceOk": true,
+          "void": false
+        },
+        "g00": {
+          "mean": [
+            46.2,
+            55.5,
+            79.3
+          ],
+          "flat": 39.8,
+          "medDL": 1.36,
+          "surfaceOk": true,
+          "void": false
+        },
+        "restore": {
+          "mean": [
+            46.2,
+            55.5,
+            79.1
+          ],
+          "flat": 32,
+          "medDL": 1.64,
+          "surfaceOk": true,
+          "void": false
+        }
+      }
+    },
+    "R4": {
+      "shot": "courtyard",
+      "criticBaseline": 28,
+      "arms": {
+        "base": {
+          "mean": [
+            52.7,
+            65.1,
+            84.7
+          ],
+          "flat": 25.4,
+          "medDL": 1.72,
+          "surfaceOk": true,
+          "void": false
+        },
+        "g00": {
+          "mean": [
+            52.7,
+            65.1,
+            84.7
+          ],
+          "flat": 57.2,
+          "medDL": 0.72,
+          "surfaceOk": true,
+          "void": false
+        },
+        "restore": {
+          "mean": [
+            52.7,
+            65.1,
+            84.7
+          ],
+          "flat": 25.4,
+          "medDL": 1.72,
+          "surfaceOk": true,
+          "void": false
+        }
+      }
+    }
+  },
+  "flatArea": {
+    "base": 0.42,
+    "g00": 20.96,
+    "restore": 0.42
+  },
+  "p99": {
+    "base": 144.5,
+    "g00": 144.7,
+    "restore": 144.5
+  },
+  "verdict": {
+    "G1_meanRawFlat_g00": 54.35,
+    "band": ">= 60 confirms; < 40 fires P-F1",
+    "G2_medianDL_g00": 0.93,
+    "G2_band": "<= 0.8",
+    "G2_base": 1.75,
+    "G3_flatArea_g00": 20.96,
+    "G4_R4_g00": 57.2,
+    "baseline_meanRawFlat": 24.88,
+    "PF1_grainNotPrimary": false,
+    "PF6_noiseFloorFell": true,
+    "PF2_leverReached": true
+  }
+}

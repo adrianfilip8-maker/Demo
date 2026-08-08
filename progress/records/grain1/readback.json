@@ -1,0 +1,52 @@
+{
+  "arms": [
+    {
+      "arm": "preroll1",
+      "scale": 1,
+      "took": 1,
+      "bootToken": "bsk6e9vl4j6e1786165078477",
+      "sameBoot": true,
+      "at": 434436
+    },
+    {
+      "arm": "preroll2",
+      "scale": 1,
+      "took": 1,
+      "bootToken": "bsk6e9vl4j6e1786165078477",
+      "sameBoot": true,
+      "at": 731332
+    },
+    {
+      "arm": "preroll3",
+      "scale": 1,
+      "took": 1,
+      "bootToken": "bsk6e9vl4j6e1786165078477",
+      "sameBoot": true,
+      "at": 1028470
+    },
+    {
+      "arm": "base",
+      "scale": 1,
+      "took": 1,
+      "bootToken": "bsk6e9vl4j6e1786165078477",
+      "sameBoot": true,
+      "at": 2165164
+    },
+    {
+      "arm": "g00",
+      "scale": 0,
+      "took": 0,
+      "bootToken": "bsk6e9vl4j6e1786165078477",
+      "sameBoot": true,
+      "at": 3306253
+    },
+    {
+      "arm": "restore",
+      "scale": 1,
+      "took": 1,
+      "bootToken": "bsk6e9vl4j6e1786165078477",
+      "sameBoot": true,
+      "at": 4443487
+    }
+  ]
+}

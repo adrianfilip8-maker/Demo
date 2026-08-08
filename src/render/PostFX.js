@@ -619,7 +619,28 @@ const TUNE = {
   // lens. In a game whose edges are supposed to read as *drawn*, a channel split on those
   // edges is the exact "this is a post-processed render" tell the critic called out.
   chroma: 0.0,
-  grain: 0.016,           // static dither; the only thing keeping the sky gradient off bands
+  /* 0.016 -> 0. **This was the single largest thing standing between the frames and a cel look**,
+     and its stated defence did not survive being measured (RESULT-grain1).
+
+     What it actually did: supplied a per-pixel noise floor of **1.75 luma median** across four
+     surfaces on four different shots. Any flat-area metric thresholds at 1.0, so more than half of
+     every sample was disqualified before shading was considered — which is why critic pass 7
+     measured "0.0-1.4 % flat colour" and concluded there was no toon ramp, and why PREREG-ramp1
+     then spent 112 minutes bracketing the wrong term through the same blind instrument. On Sly's
+     muzzle it read as acne; the critic's amplitude there (7.28) was higher than the wall behind him.
+     With it off: noise floor 0.93, mean raw flatness 24.9 -> 54.4, and the critic's own frame-wide
+     flat-colour area 1.2 % -> 20.96 %, a 17-fold move.
+
+     Its defence -- "the only thing keeping the sky gradient off bands" -- is true but small, and it
+     was buying the wrong thing at far too high a price. Removing it takes `courtyard`'s sky from 3
+     to 30 zero-delta rows in 250, while pass 7 measured `night`'s sky at 77/249 **with the grain
+     on**: the worst-banded sky in the game was never being helped. A sky that needs dithering should
+     be dithered where it is, not by stippling every character face in the project.
+
+     This does NOT close the critic's "no toon ramp" defect. At 54 % the underlying shading is still
+     short of the >85 % a quantised ramp gives, and with the grain off the muzzle is clean but still
+     a smooth gradient. That deficit is real and is a shading change, not a post knob. */
+  grain: 0.0,
 };
 
 /* ─────────────────────────────── shaders ─────────────────────────────── */
