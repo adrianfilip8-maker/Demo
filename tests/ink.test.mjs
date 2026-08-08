@@ -2,7 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
 import {
-  INK_PX, INK_NO_FALLOFF,
+  INK_PX, INK_NO_FALLOFF, INK_REF_ROWS, INK_PX_MIN, INK_PX_MAX,
+  inkPixels, inkResScale, syncInkResolution, OUTLINE_VERT_PATCHED,
   createOutlineMaterial, applyInkWeights, buildOutlineShell, weldNormals, inkAudit,
 } from '../src/render/Outline.js';
 import { Shading, TUNE } from '../src/render/ToonMaterial.js';
@@ -199,4 +200,122 @@ test('ink: inkAudit names meshes that ask for ink and have none', () => {
   const b = inkAudit(root);
   assert.equal(b.missing, 0);
   assert.equal(b.inked, 2);
+});
+
+/* ──────────────────────────────────────────────────────────────────────────────────────────
+   ONE WIDTH, AND NOW ALSO ONE *SCALE* — critic pass 8's ranked ink complaint.
+   "Ink width varies 1 px -> 29 px on a single character in one frame ... at 76 px tall in
+   `courtyard`, median ink is 5 px = 6.6% of his height."
+
+   The half of that this file owns is the denominator. `INK_PX` was a constant number of DEVICE
+   pixels, so the line's share of the frame doubled every time the frame height halved: 2.5 px is
+   0.23% of a 1080-row frame and 0.69% of a 360-row one. The tests below lock the fraction, not
+   the pixel count, and each carries an arm on the SHIPPED model that must fail the same test.
+   ────────────────────────────────────────────────────────────────────────────────────── */
+
+test('ink: width is a constant FRACTION of the frame, not a constant pixel count', () => {
+  const rows = [540, 720, 900, 1080, 1440, 2160];
+  const frac = rows.map((r) => inkPixels(r) / r);
+  const spread = Math.max(...frac) / Math.min(...frac);
+  assert.ok(spread < 1.001,
+    `ink is ${spread.toFixed(3)}x heavier at one resolution than another`);
+  assert.equal(inkPixels(INK_REF_ROWS), INK_PX, 'the reference height must return the authored width');
+  assert.equal(inkResScale(INK_REF_ROWS), 1, 'the crease pass must be unscaled at the reference');
+
+  /* CALIBRATION: the shipped model — a constant INK_PX at every resolution — MUST fail this, or
+     the assertion above is a property the defect also had. */
+  const old = rows.map((r) => INK_PX / r);
+  const oldSpread = Math.max(...old) / Math.min(...old);
+  assert.ok(oldSpread > 3.9,
+    `calibration arm is dead: the constant-px model spanned only ${oldSpread.toFixed(2)}x`);
+});
+
+test('ink: the clamps bind where they are documented to and nowhere else', () => {
+  assert.equal(inkPixels(360), INK_PX_MIN, '360 rows is below the floor and must clamp');
+  assert.equal(inkPixels(2160), INK_PX_MAX, '4K sits exactly at the ceiling');
+  assert.ok(inkPixels(1439) < INK_PX_MAX, 'the ceiling must not bind below 4K');
+  assert.ok(inkPixels(541) > INK_PX_MIN, 'the floor must not bind at 540 rows');
+  /* A missing or nonsense row count falls back to the authored width, never to 0 — a zero width is
+     every ink line in the game gone, silently. */
+  for (const bad of [undefined, null, NaN, 0, -720, Infinity]) assert.equal(inkPixels(bad), INK_PX);
+});
+
+test('ink: one resolution sync retunes every live material, including ones made after it', () => {
+  const sh = new Shading(fakeEngine());
+  const a = sh.outline(boxMesh(), { thickness: 1 }).material;
+  const b = sh.outline(boxMesh({ weights: [0.85] }), { thickness: 1.05 }).material;
+  try {
+    assert.notEqual(inkPixels(720), INK_PX, 'the arm is inert if 720 rows is the reference');
+    assert.equal(syncInkResolution(720), 720);
+    assert.equal(a.uniforms.uThickness.value, inkPixels(720));
+    assert.equal(b.uniforms.uThickness.value, inkPixels(720));
+
+    /* A material created AFTER a sync must be born at the current width: the sync early-outs on an
+       unchanged row count, so nothing would ever correct it. */
+    const c = sh.outline(boxMesh({ weights: [0.6] }), { thickness: 1.25 }).material;
+    assert.equal(c.uniforms.uThickness.value, inkPixels(720));
+
+    /* The instrument seam: a per-material scale that SURVIVES the per-frame sync, so a one-boot A/B
+       can double the line without the next frame overwriting its poke. The first inkw run lost its
+       whole hull arm to a lever that was overwritten exactly like that. */
+    a.userData.slyInkScale = 2;
+    syncInkResolution(1080);
+    assert.equal(a.uniforms.uThickness.value, inkPixels(1080) * 2);
+    assert.equal(b.uniforms.uThickness.value, inkPixels(1080));
+  } finally {
+    syncInkResolution(INK_REF_ROWS);
+  }
+});
+
+test('ink: the depth push cannot move the hull in x or y', () => {
+  assert.ok(!OUTLINE_VERT_PATCHED.includes('mvPosition.z *= 1.0 + uDepthPush'),
+    'the view-space depth push is still in the program the shells compile');
+  assert.ok(OUTLINE_VERT_PATCHED.includes('gl_Position.z = slyPushed.z'),
+    'the clip-space replacement is not in the program the shells compile');
+  assert.equal(createOutlineMaterial({}).vertexShader, OUTLINE_VERT_PATCHED,
+    'the material compiles a different source than the one this test just checked');
+
+  /* Reproduce both forms in float arithmetic. The shipped one scales gl_Position.w while leaving
+     gl_Position.xy alone, so the whole shell is pulled toward the frame centre; the replacement
+     copies only ndc.z across. CALIBRATION is the first assertion: the shipped form MUST displace,
+     or this test would pass on a build that never had the defect. */
+  const cam = new THREE.PerspectiveCamera(46, 16 / 9, 0.1, 4000);
+  cam.updateProjectionMatrix();
+  const P = cam.projectionMatrix, k = 1.0022, W = 1920;
+  const ndc = (v) => new THREE.Vector3(v.x / v.w, v.y / v.w, v.z / v.w);
+  const z = -10, tan = Math.tan(THREE.MathUtils.degToRad(46) / 2);
+  const p = new THREE.Vector4(1.0 * tan * (16 / 9) * -z, 0, z, 1);      // NDC x = 1, the frame edge
+
+  const plain = ndc(p.clone().applyMatrix4(P));
+  const shipped = ndc(new THREE.Vector4(p.x, p.y, p.z * k, 1).applyMatrix4(P));
+  const pushed = new THREE.Vector4(p.x, p.y, p.z * k, 1).applyMatrix4(P);
+  const g = p.clone().applyMatrix4(P);
+  g.z = pushed.z * (g.w / pushed.w);
+  const fixed = ndc(g);
+
+  const dxShipped = Math.abs(shipped.x - plain.x) * W / 2;
+  assert.ok(dxShipped > 1.5,
+    `calibration arm is dead: the shipped push displaced only ${dxShipped.toFixed(2)} px`);
+  assert.ok(Math.abs(fixed.x - plain.x) * W / 2 < 1e-6, 'the replacement still displaces the hull');
+  assert.ok(Math.abs(fixed.z - shipped.z) < 1e-6, 'the replacement changed the depth bias it exists for');
+});
+
+test('ink: the clip-space push is exact under an orthographic projection too', () => {
+  /* The shells never reach the shadow map today, but the replacement must not be silently
+     perspective-only: the w-ratio is what makes it general, and a future ortho path would
+     otherwise get a bias that is wrong in a way nothing would report. */
+  const cam = new THREE.OrthographicCamera(-10, 10, 6, -6, 0.1, 200);
+  cam.updateProjectionMatrix();
+  const P = cam.projectionMatrix, k = 1.0022;
+  const ndc = (v) => new THREE.Vector3(v.x / v.w, v.y / v.w, v.z / v.w);
+  for (const z of [-1, -20, -150]) {
+    const p = new THREE.Vector4(3, 2, z, 1);
+    const shipped = ndc(new THREE.Vector4(p.x, p.y, p.z * k, 1).applyMatrix4(P));
+    const pushed = new THREE.Vector4(p.x, p.y, p.z * k, 1).applyMatrix4(P);
+    const g = p.clone().applyMatrix4(P);
+    g.z = pushed.z * (g.w / pushed.w);
+    const fixed = ndc(g);
+    assert.ok(Math.abs(fixed.z - shipped.z) < 1e-9, `ortho depth bias differs at z = ${z}`);
+    assert.ok(Math.abs(fixed.x - shipped.x) < 1e-12, `ortho x differs at z = ${z}`);
+  }
 });

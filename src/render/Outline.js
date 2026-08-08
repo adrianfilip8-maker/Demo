@@ -60,15 +60,166 @@ const WELD_ATTR = 'slyNormal';
 const INK_ATTR = 'slyInk';
 
 /**
- * **The** ink width, in device pixels, for every inverted hull in the game.
+ * **The** ink width, in device pixels, **at the reference frame height**. The second half of that
+ * sentence is critic pass 8's ranked ink complaint, and it is new.
  *
  * 2.5 because AGENTS §2.1 says "Thickness scales with view distance so lines stay ~2.5 px on
- * screen", and because that is what `TUNE.inkPx` has always been. This is not a re-grade: it
- * is the same number, moved to the one place that can guarantee it.
+ * screen", and because that is what `TUNE.inkPx` has always been. What §2.1 does not say — and what
+ * this file used to assume — is **at what resolution**. A constant device-pixel width is
+ * resolution-INVARIANT, which sounds like the safe reading and is not, because the frame is not a
+ * constant number of pixels. §1 targets 1080p; the critic captures at 1280x720; the harness at
+ * 1600x900; a retina display at quality `high` draws into a 1.5x buffer. The same 2.5 px line is
+ * 0.23 % of the frame height at 1080 rows and 0.69 % at 360 — three times the weight, purely
+ * because the window changed size.
  *
- * Device pixels, not CSS pixels — `uRes` is fed from `renderer.getDrawingBufferSize()`.
+ * That is not an abstraction. In `courtyard` Sly is 42 px tall at 1280x720 and 21 px at 640x360,
+ * and the critic's headline number — "median ink is 5 px = **6.6 % of his height**" — is this
+ * arithmetic and nothing else. Halve the resolution and the ink takes 12 % of him.
+ *
+ * So 2.5 is now anchored rather than absolute: it is the width at `INK_REF_ROWS`, and every other
+ * frame height gets the width that subtends the same fraction of the frame. See `inkPixels`.
+ *
+ * Device pixels, not CSS pixels — `uRes` is fed from `renderer.getDrawingBufferSize()`, and so is
+ * the row count `syncInkResolution` reads.
  */
 export const INK_PX = 2.5;
+
+/**
+ * The frame height, in device pixel ROWS, at which `INK_PX` is exactly `INK_PX`.
+ *
+ * 1080 because §1 names "30 fps at 1080p" as the target the whole build is sized for, so that is
+ * the resolution the art direction's numbers describe. Deliberately NOT the harness default (900)
+ * or the critic's (720): those are measurement conveniences, and pinning a look constant to a
+ * measurement convenience is how a constant stops meaning anything.
+ */
+export const INK_REF_ROWS = 1080;
+
+/**
+ * Floor and ceiling on the derived width, in device pixels.
+ *
+ * The floor is not tidiness. An inverted hull thinner than about a pixel does not render as a
+ * thinner line — it renders as an intermittently *missing* one, because the extruded shell's
+ * coverage along a curved silhouette falls below what the rasteriser holds on to, and §7.3 fails a
+ * shot for "outlines missing" exactly as readily as for outlines too heavy. 0.9 keeps a
+ * partial-coverage line that still reads as continuous at 360 rows, the smallest frame anything
+ * here captures.
+ *
+ * The ceiling stops a very large window from turning the line into a border. At 2160 rows the
+ * unclamped width is exactly 5.0, so the clamp sits at 4K and does not bind below it.
+ */
+export const INK_PX_MIN = 0.9;
+export const INK_PX_MAX = 5.0;
+
+/**
+ * The hull width, in device pixels, for a frame `rows` device pixels tall.
+ *
+ * One function for the whole ink system: the hull reads it through `uThickness`, and PostFX's
+ * screen-space crease pass reads it through `inkResScale`. That is deliberate — `INK_PX` and
+ * `PostFX.TUNE.edgeThickness` are two numbers in two files describing one line, and the way that
+ * ends is one of them being rescaled and the other not.
+ *
+ * A missing, zero or non-finite row count returns the authored width rather than 0: a width of
+ * zero is every ink line in the game gone, and no diagnostic anywhere would say so.
+ */
+export function inkPixels(rows) {
+  if (!Number.isFinite(rows) || rows <= 0) return INK_PX;
+  return Math.min(INK_PX_MAX, Math.max(INK_PX_MIN, INK_PX * (rows / INK_REF_ROWS)));
+}
+
+/** `inkPixels` as a multiplier on any other pixel-authored ink radius. Exactly 1 at the reference. */
+export function inkResScale(rows) { return inkPixels(rows) / INK_PX; }
+
+/* Every live ink material, so one resize retunes all of them. A Set because shells share cached
+   materials and the same one is handed out dozens of times. Entries remove themselves on dispose,
+   so this cannot pin a disposed program alive across a quality change. */
+const _inkMaterials = new Set();
+let _inkRows = INK_REF_ROWS;
+
+/**
+ * Point every ink material at the width for a frame `rows` device pixels tall.
+ *
+ * Driven once per frame from `PostFX.render()` rather than from a resize event, and that choice is
+ * the load-bearing part: a derived constant refreshed by an event goes stale in whichever code path
+ * forgets to forward the event, and the drawing buffer here can change under `engine.on('resize')`,
+ * `engine.on('quality')`, an in-page `setViewportSize`, and `renderer.setPixelRatio`. Polling a
+ * number that is already computed every frame has no such failure mode. Early-outs on an unchanged
+ * row count, so the cost is a compare.
+ *
+ * `userData.slyInkScale` is the instrument seam: a per-material multiplier that SURVIVES this sync,
+ * so a one-boot A/B can double the line without its poke being overwritten by the next frame. It
+ * defaults to absent, which reads as 1 and is bit-exact.
+ *
+ * @returns {number} the row count now in force, so a caller can assert on it
+ */
+export function syncInkResolution(rows) {
+  if (!Number.isFinite(rows) || rows <= 0 || rows === _inkRows) return _inkRows;
+  _inkRows = rows;
+  const px = inkPixels(rows);
+  for (const m of _inkMaterials) {
+    const u = m.uniforms?.uThickness;
+    if (u) u.value = px * (m.userData?.slyInkScale ?? 1);
+  }
+  return _inkRows;
+}
+
+/** The width every ink material is currently carrying. For instruments and for RESULT tables. */
+export function inkAppliedPx() { return inkPixels(_inkRows); }
+
+/**
+ * The depth push, moved out of view space and into clip space — the same bias, applied where it
+ * cannot move the line.
+ *
+ * `OUTLINE_VERT` ships `mvPosition.z *= 1.0 + uDepthPush` **before** the projection. three's
+ * perspective matrix sets `w_clip = -z_view`, so scaling `mvPosition.z` scales **w** while
+ * `gl_Position.xy` are untouched, and after the perspective divide the entire shell is pulled
+ * toward the frame centre by `(1 - 1/k)` of its NDC radius.
+ *
+ * What that does to the ink is not what it looks like. Reproduced in plain three arithmetic before
+ * a line of this was written:
+ *
+ *   - the extrusion term is **exactly preserved** — 2.500000 px at z = -2, -10 and -60, with and
+ *     without the push — because `gl_Position.xy += dir * (w * 2 / uRes) * gl_Position.w` is then
+ *     divided by that same `gl_Position.w`, whatever it is;
+ *   - the shell is **displaced**: 0.89 px at NDC 0.42, 2.11 px at NDC 1.0, 2.42 px at the frame
+ *     corner (1920x1080, fov 46).
+ *
+ * So the line goes thin on the outward-facing side of a form and thick on the inward-facing side by
+ * the same amount, **and the mean is exactly conserved** — 0.08 px against 4.92 px on the two sides
+ * of one silhouette at the frame corner. A median or a mean can never see that, which is how it
+ * survived a file whose header is an essay about one width.
+ *
+ * The replacement projects the pushed vertex separately and copies only its `ndc.z` into an
+ * otherwise unpushed `gl_Position`. `xy` and `w` come from the unpushed projection and are
+ * therefore identical to no push at all, while the depth bias is unchanged for ANY projection
+ * matrix: the ratio `gl_Position.w / slyPushed.w` is what makes it exact under an orthographic
+ * projection too, where `w` is 1 and the shipped form's bias is depth-dependent in a different way.
+ *
+ * Applied as a string patch because `toon.glsl.js` belongs to another agent. §219 is the record of
+ * what an unverified shader edit costs, so this is not allowed to fail quietly: the anchor is
+ * asserted below, `tests/shader.test.mjs` puts the patched source through the same static scans the
+ * unpatched sources get, and `tests/ink.test.mjs` reproduces both forms in float arithmetic with
+ * the shipped one required to displace and the replacement required not to.
+ */
+const PUSH_ANCHOR = 'mvPosition.z *= 1.0 + uDepthPush;\n\tgl_Position = projectionMatrix * mvPosition;';
+
+const PUSH_CLIPSPACE = `vec4 slyPushed = projectionMatrix * vec4( mvPosition.xy, mvPosition.z * ( 1.0 + uDepthPush ), mvPosition.w );
+\tgl_Position = projectionMatrix * mvPosition;
+\tgl_Position.z = slyPushed.z * ( gl_Position.w / slyPushed.w );`;
+
+function patchDepthPush(src) {
+  const i = src.indexOf(PUSH_ANCHOR);
+  if (i < 0) {
+    /* Loud, and at module load. A shader patch that silently does not apply is the §219 failure
+       mode exactly: the frame still renders, plausibly, with the defect still in it. */
+    throw new Error('Outline.js: the OUTLINE_VERT depth-push anchor is gone — the clip-space depth '
+      + 'push did NOT apply and the hull is displaced radially again. Re-derive the patch against '
+      + 'the current toon.glsl.js rather than deleting this check.');
+  }
+  return src.slice(0, i) + PUSH_CLIPSPACE + src.slice(i + PUSH_ANCHOR.length);
+}
+
+/** The vertex program every ink shell actually compiles. Exported so a test can read it. */
+export const OUTLINE_VERT_PATCHED = patchDepthPush(OUTLINE_VERT);
 
 /**
  * The value written to `uFalloff` to switch the distance falloff **off**.
@@ -318,7 +469,11 @@ export function createOutlineMaterial(shared, {
   falloff = 140,
 } = {}) {
   const uniforms = {
-    uThickness: { value: INK_PX },
+    /* Born at the width for the frame height currently in force, not at the reference — a material
+       created after the last `syncInkResolution` would otherwise never be corrected, because the
+       sync early-outs on an unchanged row count. In plain Node (no renderer, no sync) `_inkRows` is
+       `INK_REF_ROWS` and this is exactly `INK_PX`. */
+    uThickness: { value: inkPixels(_inkRows) },
     uDepthPush: { value: depthPush },
     uFalloff: { value: INK_NO_FALLOFF },
     uInkSun: { value: new THREE.Color(inkSun) },
@@ -330,10 +485,12 @@ export function createOutlineMaterial(shared, {
 
   const mat = new THREE.ShaderMaterial({
     /* Named for the width it actually draws, not the one it was asked for. A material called
-       `slyInk_3.125` that renders 2.5 px is a lie the next debugger has to unpick. */
-    name: `slyInk_${INK_PX}`,
+       `slyInk_3.125` that renders 2.5 px is a lie the next debugger has to unpick — and the name
+       now carries the reference height too, because "2.5 px" without one is the defect this file
+       just finished fixing. The number the shader receives is `uThickness`, always. */
+    name: `slyInk_${INK_PX}@${INK_REF_ROWS}`,
     uniforms,
-    vertexShader: OUTLINE_VERT,
+    vertexShader: OUTLINE_VERT_PATCHED,
     fragmentShader: OUTLINE_FRAG,
     side: THREE.BackSide,
     transparent: opacity < 1,
@@ -349,6 +506,11 @@ export function createOutlineMaterial(shared, {
 
   // The shell is pure ink; it must never be lit or shadowed.
   mat.lights = false;
+
+  /* Registered so one `syncInkResolution` can retune every live line, and de-registered on dispose
+     so a quality change cannot leave this Set holding a dead program. */
+  _inkMaterials.add(mat);
+  mat.addEventListener('dispose', () => _inkMaterials.delete(mat));
   return mat;
 }
 

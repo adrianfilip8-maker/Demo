@@ -8,6 +8,7 @@ import {
   DEBUG_CALIB,
 } from '../src/render/shaders/toon.glsl.js';
 import { Shading } from '../src/render/ToonMaterial.js';
+import { OUTLINE_VERT_PATCHED } from '../src/render/Outline.js';
 
 /**
  * Static integrity of the GLSL, and of the debug channels' self-calibration.
@@ -43,8 +44,13 @@ import { Shading } from '../src/render/ToonMaterial.js';
  * It is not part of `npm test` because it needs a browser; run it after any GLSL edit.
  */
 
+/* OUTLINE_VERT_PATCHED, not just OUTLINE_VERT: `Outline.js` rewrites the depth push into clip
+   space by string patch before handing the source to `ShaderMaterial`, so the patched text is the
+   text that compiles — and §219's damage was damage to source text. Scanning only the unpatched
+   form would check a program nothing renders. */
 const SOURCES = {
   SLY_COMMON, TOON_PARS, TOON_DETAIL, TOON_SHADE, TOON_DITHER, OUTLINE_VERT, OUTLINE_FRAG,
+  OUTLINE_VERT_PATCHED,
 };
 
 /**

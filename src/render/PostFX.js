@@ -1,6 +1,10 @@
 import * as THREE from 'three';
 import { Blit, makeRT, sizeRT, killRT, passMaterial, GLSL_VIEW, GLSL_NOISE, GLSL_AGX, GLSL_SRGB } from './passes/Common.js';
 import { AOPass } from './passes/AO.js';
+/* The two ink systems share one width model. `inkResScale` is 1.0 at Outline.INK_REF_ROWS and
+   scales every pixel-authored ink radius with the frame height from there; `syncInkResolution` is
+   what puts the hull's own width in step, driven from `render()` below. */
+import { inkResScale, syncInkResolution } from './Outline.js';
 
 /**
  * PostFX — owns the final image.
@@ -20,7 +24,12 @@ const TUNE = {
   /* --- ink lines (AGENTS.md §2.1: the interior creases the hull shells can't give us) --- */
   edgeDepth: 1.05,        // depth discontinuity sensitivity, view-distance normalised
   edgeNormal: 0.62,       // normal discontinuity sensitivity (cos threshold)
-  edgeThickness: 1.5,     // px, before the depth weighting below
+  /* px **at `Outline.INK_REF_ROWS`**, before the depth weighting below, and multiplied by
+     `inkResScale(frame rows)` where it is used. It used to be px at every resolution, which is the
+     same defect the hull carried: a 1.5 px sampling radius is 0.14 % of a 1080-row frame and
+     0.42 % of a 360-row one, so the crease line took three times the weight on a small window while
+     the art direction's number never changed. */
+  edgeThickness: 1.5,
   // §2.1.2 + §7.3: line weight must vary with depth. Near geometry inks at 1.8x the base
   // width, the far field at 0.7x, so a foreground corner reads heavier than a distant wall
   // instead of every edge in frame carrying the same hairline.
@@ -107,6 +116,39 @@ const TUNE = {
      currently landing warm — flagged with numbers rather than changed, because it moves the
      look of a shot rather than fixing a defect. */
   rimPlanar: [0.04, 0.20, 1.0],
+
+  /* --- the same planarity gate, on the INK pass's depth term (critic pass 8, defect #4) ---
+     [0] lo  [1] hi  [2] strength; **0 restores the ungated behaviour bit-exactly**.
+
+     Measured, not suspected. `postfx.tune.inkStrength = 0` against base, one boot, dt = 0, null arm
+     0 px in all four shots (`progress/records/inkw-before/`):
+
+       shot          darkened      mean drop   >=15 L    largest single connected component
+       courtyard     26.7 % of frame   45.9 L   21.0 %   155,228 px = 80 % of the mask
+       hero          15.6 %            52.3 L   12.2 %    45,803 px = 41 %
+       combat        —                   —      12.6 %    71,871 px = 62 %
+       sly-closeup   23.4 %            32.4 L   14.4 %    30,338 px = 23 %
+
+     Minimum-chord width of that mask, whole frame: median 10 px, p99 123, max 148 (`courtyard`);
+     median 42, p99 133 (`sly-closeup`). **This pass was not drawing lines.** A single connected
+     region covering 17 % of `courtyard`, darkened by a mean of 46 luma, is a shading pass.
+
+     The mechanism is the one `slyBackStep` documents twenty lines above for the RIM: a ground plane
+     running away from the camera has an enormous depth gradient, so `|dA - dB| / z0` clears any
+     threshold set for silhouettes and the pass fills the floor. The rim got the fix and the ink
+     never did — and the ink's threshold is FINER (0.030-0.075 relative against the rim's 0.05-0.16),
+     so it fires on grazing ground more readily than the term the gate was written for.
+
+     Same test, one deliberate difference. Under a perspective projection inverse depth is affine
+     across any plane, so `2/z0 - 1/a - 1/b` is identically zero on a plane at any grazing angle
+     whatever. The rim keeps only the POSITIVE lobe, because it wants background falling away behind
+     a silhouette. Ink must keep BOTH: a concave interior fold is an ink line and a convex silhouette
+     is an ink line, and only a plane is neither. So the ink gate takes the absolute value.
+
+     The thresholds are not newly invented — they are `rimPlanar`'s pair, measured on six shots in
+     this file, applied to the same buffer at radii of the same order. Inventing a second pair here
+     would be a number with no evidence behind it sitting next to one that has some. */
+  edgePlanar: [0.04, 0.20, 1.0],
 
   /* --- ledger #31: exempt the SUBJECT from the planar gate above ---
      Fraction of the planar gate waived on pixels the normal prepass marks as a skinned
@@ -781,6 +823,7 @@ uniform vec2  uFade;       // fadeStart, fadeEnd (metres)
 uniform vec4  uWeight;     // nearMul, farMul, nearZ(m), farZ(m)
 uniform vec4  uRimRadius;  // inner, mid, outer band radius in px; w = tail weight
 uniform vec3  uRimPlanar;  // planarity gate: lo, hi, strength (0 = off, legacy behaviour)
+uniform vec3  uEdgePlanar; // the same gate on the ink pass's depth term; z = 0 restores it exactly
 uniform float uRimSubjExempt; // ledger #31: waive the planar gate on the skinned subject
 uniform vec3  uKeyDirView; // unit vector toward the key light, view space
 ${GLSL_VIEW}
@@ -883,6 +926,24 @@ void main() {
   // every course of masonry got inked and the architecture read as a circuit board. Creases
   // worth drawing are real steps in the form, not block joints the texture already shows.
   float depthLine = smoothstep( 0.030 * uParams.x, 0.075 * uParams.x, dEdge );
+
+  /* A PLANE IS NOT AN EDGE. See uEdgePlanar in the module below for the measurement: without this,
+     the four taps above fill 26.7% of the courtyard frame with a mean 46 luma of ink, 80% of it in
+     one connected blob, because a floor running away from the camera has a depth gradient larger
+     than any silhouette threshold.
+     (No backticks anywhere in this comment: the GLSL lives in a template literal and one stray
+     backtick ends it, which is a boot-time SyntaxError and not a shader warning. This comment cost
+     one red test to learn, which is one more than toon.glsl.js's header asked for.)
+     Inverse depth is affine across any plane under a perspective projection, so this second
+     difference is identically zero on a plane at any grazing angle and departs from zero only where
+     the neighbourhood stops being one surface. abs(), not max(): unlike the rim, ink wants the
+     concave lobe (an interior fold) as much as the convex one (a silhouette). Depth is stored as a
+     function of 1/z, so this costs no precision. uEdgePlanar.z = 0 is the ungated A/B arm. */
+  float wE = 1.0 / max( z0, 1e-4 );
+  float bendE = max(
+    abs( 2.0 * wE - 1.0 / max( dA, 1e-4 ) - 1.0 / max( dB, 1e-4 ) ) / wE,
+    abs( 2.0 * wE - 1.0 / max( dC, 1e-4 ) - 1.0 / max( dD, 1e-4 ) ) / wE );
+  depthLine *= mix( 1.0, smoothstep( uEdgePlanar.x, uEdgePlanar.y, bendE ), uEdgePlanar.z );
 
   // Normal discontinuity catches creases between coplanar-depth faces — a wall meeting a
   // wall at 90 degrees has almost no depth step at the corner but a hard normal step.
@@ -1480,6 +1541,7 @@ export class PostFX {
         uWeight: { value: new THREE.Vector4() },
         uRimRadius: { value: new THREE.Vector4(this.tune.rimInner, this.tune.rimMid, this.tune.rimOuter, this.tune.rimTail) },
         uRimPlanar: { value: new THREE.Vector3(...this.tune.rimPlanar) },
+        uEdgePlanar: { value: new THREE.Vector3(...this.tune.edgePlanar) },
         uRimSubjExempt: { value: this.tune.rimSubjExempt },
         uKeyDirView: { value: new THREE.Vector3(0, 0, 1) },
       }, EDGE_FRAG));
@@ -1759,6 +1821,17 @@ export class PostFX {
 
   render() {
     const { renderer, engine } = this;
+
+    /* The inverted-hull shells' width, kept in step with the drawing buffer. Driven from here, once
+       a frame, rather than from a resize event: the buffer changes under `engine.on('resize')`,
+       `engine.on('quality')`, an in-page `setViewportSize` and `renderer.setPixelRatio`, and a
+       derived constant refreshed by events goes stale in whichever path forgets to forward one.
+       `syncInkResolution` early-outs on an unchanged row count, so this costs a compare.
+
+       Before the `ok` bail on purpose: when this pass has fallen back to direct rendering the shells
+       are still drawn by the renderer, and their width still has to be right. */
+    syncInkResolution(this.size.h > 1 ? this.size.h : this._pixelSize().height);
+
     if (!this.ok) { renderer.setRenderTarget(null); renderer.render(engine.scene, engine.camera); return; }
 
     try {
@@ -1941,12 +2014,17 @@ export class PostFX {
     /* ---- 4. ink creases ---- */
     if (this.passes.edge.enabled && needNormals) {
       const u = this.edgeMat.uniforms;
-      u.uParams.value.set(this.tune.edgeDepth, this.tune.edgeNormal, this.tune.edgeThickness, 0);
+      /* The sampling radius travels with the frame height, exactly as the hull's width does — one
+         function for both, so the screen-space line and the hull line cannot drift apart by one of
+         them being rescaled and the other not. */
+      u.uParams.value.set(this.tune.edgeDepth, this.tune.edgeNormal,
+        this.tune.edgeThickness * inkResScale(this.size.h), 0);
       u.uFade.value.set(this.tune.edgeFadeStart, this.tune.edgeFadeEnd);
       u.uWeight.value.set(this.tune.edgeNearMul, this.tune.edgeFarMul,
         this.tune.edgeNearZ, this.tune.edgeFarZ);
       u.uRimRadius.value.set(this.tune.rimInner, this.tune.rimMid, this.tune.rimOuter, this.tune.rimTail);
       u.uRimPlanar.value.set(this.tune.rimPlanar[0], this.tune.rimPlanar[1], this.tune.rimPlanar[2]);
+      u.uEdgePlanar.value.set(this.tune.edgePlanar[0], this.tune.edgePlanar[1], this.tune.edgePlanar[2]);
       u.uRimSubjExempt.value = this.tune.rimSubjExempt;
 
       /* The rim wraps from the lit side, so this pass needs to know where the key is. SHADING
