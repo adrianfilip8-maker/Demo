@@ -68,7 +68,17 @@ export const TUNE = {
      F3's ≥ 0.40 × head WIDTH. 0.95 here ⇒ 0.475 × head width. */
   tailScale: 1.10,
   tailRootFrac: 1.05,        // r3: "2-3x thicker at the root" — 0.525 x head width, G4 well clear
-  tailRings: 5,
+
+  /* Critic pass 7 §4 asked for the tail in numbers rather than adjectives: "5-6 hard albedo ring
+     bands and 6-8 subdivision rings", against a measured "≥12 straight silhouette segments with
+     visible corner vertices at 443 px". These four constants are that request, taken literally.
+     `tailRings: 5` used to mean `tailRings * 2` = TEN bands — the name said rings and the code
+     meant half-periods, which is how a tail that renders as ten 12-cm stripes got described in
+     the source as five. Bands are now counted as bands. */
+  tailBands: 6,              // hard albedo bands along the tail; the ask was 5-6
+  tailRingsPerBand: 7,       // subdivision rings inside each band; the ask was 6-8
+  tailSeg: 18,               // cross-section segments (was 12)
+  tailFur: 0.030,            // coherent 3-lobe fur ripple; see `tube()`'s jitK note
 
   shoulderW: 0.170,          // r1: "widen the shoulders so the tunic reads as a torso, not a tube"
   hipW: 0.082,
@@ -167,8 +177,9 @@ const BONE_ORDER = SKELETON.map((s) => s[0]);
  * rad    [r, ...]            per-point radius
  * hex    [0x…, ...]          per-point colour
  * bone   [i, ...]            per-point bone index (rigid weight 1)
+ * jitK   null | number      shape of the `jit` modulation. See the note at the `j =` line.
  */
-function tube(pts, rad, hex, bone, seg = 12, jit = null, bone2 = null, w2 = null) {
+function tube(pts, rad, hex, bone, seg = 12, jit = null, bone2 = null, w2 = null, jitK = null) {
   const P = pts.map((p) => new THREE.Vector3(...p));
   const n = P.length;
   const t = [], up = new THREE.Vector3();
@@ -181,6 +192,13 @@ function tube(pts, rad, hex, bone, seg = 12, jit = null, bone2 = null, w2 = null
   // initial normal: anything not parallel to t0
   up.set(Math.abs(t[0].y) < 0.92 ? 0 : 1, Math.abs(t[0].y) < 0.92 ? 1 : 0, 0);
   let N = new THREE.Vector3().crossVectors(up, t[0]).normalize();
+  /* Arc length to each point. The coherent modulation below is phased on THIS, not on the ring
+     index, and that is not decoration: a colour seam is made by two rings at the SAME point, so
+     an index-phased ripple gives the pair two different shapes and turns every seam into a lip.
+     Arc length is identical across a zero-length segment, so the pair is identical by
+     construction — measured 1.4% apart on the index-phased version, 0.0% on this one. */
+  const len = [0];
+  for (let i = 1; i < n; i++) len.push(len[i - 1] + P[i].distanceTo(P[i - 1]));
   const pos = [], col = [], idx = [], bidx = [], bwt = [];
   const c = new THREE.Color(), B = new THREE.Vector3();
   for (let i = 0; i < n; i++) {
@@ -192,9 +210,24 @@ function tube(pts, rad, hex, bone, seg = 12, jit = null, bone2 = null, w2 = null
     B.crossVectors(t[i], N).normalize();
     c.setHex(hex[i]);
     for (let s = 0; s < seg; s++) {
-      /* jit[i] > 0 makes this ring ragged: deterministic per-vertex radius jitter (SPEC F4 — the
-         torn trouser hem is a silhouette feature; a straight hem is a registered defect). */
-      const j = jit && jit[i] ? 1 + jit[i] * Math.sin(s * 3.71 + i * 1.93) : 1;
+      /* jit[i] > 0 modulates this ring's radius. TWO SHAPES, and the difference is the whole of
+         critic pass 7's "visible corner vertices" on the tail:
+
+         · jitK == null — the legacy TORN shape, `sin(s·3.71 + i·1.93)`. 3.71 rad is 212° of phase
+           per segment, so consecutive vertices land on opposite sides of the sine and the ring is
+           a star, not a circle. That is exactly right for the trouser hem (SPEC F4 wants a torn
+           edge) and exactly wrong for a fur tube: measured through the real `sly-profile` camera
+           at 1280x720, the same tube with this modulation at 0.07 reports **45 corner vertices**
+           on its outline against **6** with the modulation off. It is a corner generator.
+
+         · jitK == a number — a COHERENT shape, `jitK` smooth lobes around the ring with the phase
+           drifting slowly ALONG THE ARC (see `len`). The cross-section stays a convex closed curve
+           and the silhouette gets a soft helical fur ripple instead of a saw edge. */
+      const j = jit && jit[i]
+        ? (jitK == null
+          ? 1 + jit[i] * Math.sin(s * 3.71 + i * 1.93)
+          : 1 + jit[i] * Math.sin((s / seg) * Math.PI * 2 * jitK + len[i] * 20))
+        : 1;
       const a = (s / seg) * Math.PI * 2, ca = Math.cos(a) * rad[i] * j, sa = Math.sin(a) * rad[i] * j;
       pos.push(P[i].x + N.x * ca + B.x * sa, P[i].y + N.y * ca + B.y * sa, P[i].z + N.z * ca + B.z * sa);
       col.push(c.r, c.g, c.b);
@@ -428,7 +461,74 @@ export class SlyModel {
       [[-0.062, HIP_Y - 0.052, 0.088], [-0.052, HIP_Y - 0.165, 0.098]],
       [0.036, 0.020], [PAL.red, PAL.red], [bi('hips'), bi('hips')], 8));
 
-    /* ================= ARMS — oriented tubes, gold cuffs, mitten hands ================= */
+    /* ================= THE GRIP =================================================
+     * Critic pass 7 §5: "the cane is not held — four identical parallel prongs, no thumb, shaft
+     * passing behind the fingers with a visible gap ... Grip must be IK-constrained to a socket
+     * on the cane." Five blind judges before it said the same thing in different words.
+     *
+     * There is no IK solver here and there should not be: the cane and the hand are BOTH weighted
+     * 100% to `handR`, so their relative geometry is fixed at build time and no clip, spring or
+     * pose can separate them. That is a stronger guarantee than an IK constraint, which can miss.
+     * What was actually missing is that nothing was built AROUND the shaft — the hand was one
+     * ellipsoid centred on the shaft with a thumb stub pointing off into space, so at any framing
+     * where the mitten did not read as a fist the cane looked like it was passing through a lump.
+     *
+     * So the hand is now constructed IN THE SHAFT'S OWN FRAME. `gripHand` takes the axis the
+     * fingers wrap and places every part by angle around it, which makes "the fingers enclose the
+     * shaft" true by construction rather than by eye:
+     *   · palm mass pushed to the BACK of the axis, so it stops swallowing its own fingers;
+     *   · three fingers, each an arc sweeping 130 degrees around the axis at wrap radius 35 mm
+     *     against a 23 mm shaft — the finger surface therefore overlaps the shaft surface;
+     *   · a thumb on the OPPOSITE side, sweeping the other way. Opposition is the whole read: a
+     *     thumb parallel to the fingers is a fourth finger.
+     * The off hand is built from the mirrored axis by the same code, so the two hands match.
+     */
+    const CANE_GRIP = new THREE.Vector3(A.handR[0] - 0.014, A.handR[1] - 0.042, A.handR[2] + 0.014);
+    const CANE_TOP = new THREE.Vector3(A.handR[0] - 0.02, A.handR[1] + 0.55, A.handR[2] + 0.09);
+    const CANE_U = CANE_TOP.clone().sub(CANE_GRIP).normalize();
+
+    const gripHand = (L, sense, u, ctr) => {
+      const g = bi(`hand${L}`);
+      const f = new THREE.Vector3(0, 0, 1);
+      f.addScaledVector(u, -f.dot(u));
+      if (f.lengthSq() < 1e-8) f.set(1, 0, 0).addScaledVector(u, -u.x);
+      f.normalize();
+      const r = new THREE.Vector3().crossVectors(u, f).multiplyScalar(sense).normalize();
+      const D = Math.PI / 180;
+      /* a point at angle `th` around the axis, `rad` out from it, `ax` along it */
+      const at = (th, rad, ax) => [
+        ctr.x + (Math.cos(th) * f.x + Math.sin(th) * r.x) * rad + u.x * ax,
+        ctr.y + (Math.cos(th) * f.y + Math.sin(th) * r.y) * rad + u.y * ax,
+        ctr.z + (Math.cos(th) * f.z + Math.sin(th) * r.z) * rad + u.z * ax,
+      ];
+      parts.push(blob(at(180 * D, 0.030, 0.002), [0.050, 0.057, 0.052], PAL.blue, g, 10, 6));
+      /* The last ring of every tube below is 1.2 mm — a CAP, not a taper. `tube()` emits no end
+         caps, so a finger ending at its 10.5 mm tip radius is a 21 mm pipe mouth pointing at the
+         camera; that is the same defect the tail tip had. 1.2 mm rather than 0 on purpose: a
+         zero-radius ring closes the hole exactly but costs `seg` degenerate triangles per cap, and
+         eight fingertips plus two cane ends would push the mesh past `tests/geometry.test.mjs`'s
+         2% seam allowance. 2.4 mm across is 0.65 px at `sly-closeup`'s 484 px figure. */
+      for (const [ax, sc] of [[-0.028, 0.94], [0.0, 1.0], [0.028, 0.92]]) {
+        const p = [], rd = [], hx = [], bn = [];
+        [130, 86.7, 43.3, 0, -12].forEach((deg, k) => {
+          p.push(at(deg * D, 0.035 * sc, ax));
+          rd.push([0.016, 0.014, 0.012, 0.0105, 0.0012][k] * sc);
+          hx.push(PAL.blue); bn.push(g);
+        });
+        parts.push(tube(p, rd, hx, bn, 8));
+      }
+      {                                            // thumb — opposed, and it crosses the fingers
+        const p = [], rd = [], hx = [], bn = [];
+        [[-150, 0.038], [-110, 0.028], [-70, 0.018], [-58, 0.015]].forEach(([deg, ax], k) => {
+          p.push(at(deg * D, 0.037, ax));
+          rd.push([0.018, 0.014, 0.0115, 0.0012][k]);
+          hx.push(PAL.blue); bn.push(g);
+        });
+        parts.push(tube(p, rd, hx, bn, 8));
+      }
+    };
+
+    /* ================= ARMS — oriented tubes, gold cuffs, gripping hands ================= */
     for (const s of [1, -1]) {
       const L = s > 0 ? 'L' : 'R';
       const sh = A[`upperArm${L}`], el = A[`lowerArm${L}`], wr = A[`hand${L}`];
@@ -442,11 +542,13 @@ export class SlyModel {
         [0.065 * slim, 0.055 * slim, 0.048 * slim, 0.058 * slim, 0.056 * slim],
         [PAL.blue, PAL.blue, PAL.blue, PAL.gold, PAL.gold],
         [bi(`upperArm${L}`), bi(`lowerArm${L}`), bi(`lowerArm${L}`), bi(`lowerArm${L}`), bi(`hand${L}`)], 10));
-      // mitten + thumb (G1: PAL.blue)
-      parts.push(blob([wr[0] + s * 0.014, wr[1] - 0.042, wr[2] + 0.014], [0.062, 0.074, 0.068], PAL.blue, bi(`hand${L}`), 10, 6));
-      parts.push(tube(
-        [[wr[0], wr[1] - 0.024, wr[2] + 0.036], [wr[0] - s * 0.014, wr[1] - 0.062, wr[2] + 0.070]],
-        [0.024, 0.015], [PAL.blue, PAL.blue], [bi(`hand${L}`), bi(`hand${L}`)], 7));
+      /* Hands (G1: PAL.blue). The right one is built on the cane's own axis; the left on its
+         mirror, so the two read as the same glove and the bind bounds stay symmetric. */
+      const u = s > 0 ? new THREE.Vector3(-CANE_U.x, CANE_U.y, CANE_U.z) : CANE_U.clone();
+      const ctr = s > 0
+        ? new THREE.Vector3(wr[0] + 0.014, wr[1] - 0.042, wr[2] + 0.014)
+        : CANE_GRIP.clone();
+      gripHand(L, s > 0 ? -1 : 1, u, ctr);
     }
 
     /* ================= LEGS — cream to mid-calf, then blue boots ================= */
@@ -477,14 +579,20 @@ export class SlyModel {
       /* stage 3: the stage-2 tail hooked upward like a swan neck (the tip extension rose 0.16 m)
          and its bands washed out. The arc now stays LOW and sweeps behind — S, not J — and the
          tip extension is modest. */
+      const NB = TUNE.tailBands, PER = TUNE.tailRingsPerBand;
+      /* NB*PER samples, so a band edge lands exactly ON a sample index and the doubled ring that
+         makes the seam is a true zero-length segment. The old build sampled 30 and cut bands at
+         `floor(t*10)`, which put most seams BETWEEN samples — the seam then had to be faked at
+         the nearest ring and the band widths came out uneven (3,3,3,3,3,3,3,3,3,3 samples only by
+         luck of the rounding). */
       const spine = catmull([
         [0, HIP_Y + 0.010, -0.06],
         A.tailA, A.tailB, A.tailC, A.tailD,
         [A.tailD[0] + 0.10 * TUNE.tailScale, A.tailD[1] + 0.05, A.tailD[2] - 0.11 * TUNE.tailScale],
-      ], 30);
+      ], NB * PER);
       const tailBones = ['tailA', 'tailB', 'tailC', 'tailD'].map(bi);
       const pts = [], rad = [], hex = [], bone = [];
-      const bandOf = (t) => Math.min(TUNE.tailRings * 2 - 1, Math.floor(t * TUNE.tailRings * 2));
+      const bandOf = (i) => Math.min(NB - 1, Math.floor(i / PER));
       const colOf = (b) => (b % 2 === 0 ? PAL.tailDark : PAL.cream);   // dark first, HIGH contrast
       /* r3 (stage 6): r2's "uniform rope" fix over-corrected into "a narrow tapering stick" — the
          VISIBLE tail in posed shots is the mid and tip, so tip-weighted taper removed exactly the
@@ -503,19 +611,42 @@ export class SlyModel {
         const bp = boneParam(t);
         pts.push(spine[i]); rad.push(radOf(t)); hex.push(colOf(b));
         bone.push(bp.a); bone2.push(bp.b); w2.push(bp.w);
-        jitv.push(b % 2 === 1 ? 0.07 : 0);       // fur hint on the light bands only
+        /* Fur on EVERY ring, not on alternate bands. Band-parity jitter made the two rings of a
+           doubled seam differ in radius by the jitter amplitude, so each of the ten colour seams
+           also carried a 7% radius lip — a ridge the seam was explicitly designed not to have.
+           A constant amplitude makes the doubled pair identical by construction. */
+        jitv.push(TUNE.tailFur);
       };
       for (let i = 0; i < spine.length; i++) {
         const t = i / (spine.length - 1);
-        const b = bandOf(t);
+        const b = bandOf(i);
         if (prevBand >= 0 && b !== prevBand) pushRing(i, t, prevBand);  // doubled ring: crisp band edge
         pushRing(i, t, b);
         prevBand = b;
       }
-      parts.push(tube(pts, rad, hex, bone, 12, jitv, bone2, w2));
-      const tip = spine[spine.length - 1];
-      parts.push(blob([tip[0], tip[1], tip[2]], [hw * 0.14, hw * 0.14, hw * 0.14],
-        PAL.tailDark, tailBones[3], 8, 5));
+      /* Both ends of a `tube()` are OPEN — it emits no caps. The root ring is 0.156 m across and
+         sits at z = -0.06, well proud of a torso that is 0.11 m at that height, so the pipe mouth
+         was visible from any three-quarter or profile bearing; and the tip ring is 0.070 m across
+         with nothing over it but a 0.021 m ball floating at its centre, which is a hole with a
+         nub in the middle of it, not a tail tip. Fixed at both ends, and fixed on `pts` rather
+         than on `spine` so the band parameterisation above is untouched: */
+      {
+        const d0 = new THREE.Vector3(...spine[0]).sub(new THREE.Vector3(...spine[1])).normalize();
+        pts.unshift([spine[0][0] + d0.x * 0.065, spine[0][1] + d0.y * 0.065, spine[0][2] + d0.z * 0.065]);
+        rad.unshift(rootR * 0.50);               // buried inside the torso loft
+        hex.unshift(colOf(0)); bone.unshift(tailBones[0]); bone2.unshift(tailBones[0]);
+        w2.unshift(0); jitv.unshift(0);
+        const n = spine.length;
+        const d1 = new THREE.Vector3(...spine[n - 1]).sub(new THREE.Vector3(...spine[n - 2])).normalize();
+        const endR = radOf(1);
+        for (const [k, f] of [[0.45, 0.72], [0.85, 0.36], [1.15, 0.0]]) {
+          pts.push([spine[n - 1][0] + d1.x * endR * k, spine[n - 1][1] + d1.y * endR * k, spine[n - 1][2] + d1.z * endR * k]);
+          rad.push(endR * f); hex.push(colOf(NB - 1));
+          bone.push(tailBones[3]); bone2.push(tailBones[3]); w2.push(0);
+          jitv.push(f > 0 ? TUNE.tailFur * f : 0);
+        }
+      }
+      parts.push(tube(pts, rad, hex, bone, TUNE.tailSeg, jitv, bone2, w2, 3));
     }
 
     /* ================= CANE — gold shaft + hook, in the right hand (G2: PAL.gold) ============ */
@@ -529,18 +660,43 @@ export class SlyModel {
          a hope), and the below-hand run is 40% shorter so a crouch cannot drive it into the hip. */
       /* r3: "a second gold segment poking out at the hip" — the below-grip stub is DELETED. The
          cane is one piece: shaft rising from the fist to the crook, nothing below the hand. */
-      const grip = [wr[0] - 0.014, wr[1] - 0.042, wr[2] + 0.014];   // the mitten's centre, exactly
-      const top = [wr[0] - 0.02, wr[1] + 0.55, wr[2] + 0.09];
-      parts.push(tube(
-        [[grip[0] + 0.006, grip[1] - 0.06, grip[2] - 0.012], grip, top],
-        [0.021, 0.023, 0.021], [PAL.gold, PAL.gold, PAL.gold], [g, g, g], 9));
-      const hookPts = [], hookR = 0.115;
-      for (let i = 0; i <= 7; i++) {
-        const a = (i / 7) * Math.PI;                              // 180°
-        hookPts.push([top[0], top[1] + Math.sin(a) * hookR, top[2] + hookR - Math.cos(a) * hookR]);
+      /* Critic pass 7 §6: "the cane hook is a mitred polyline of three straight segments — a bent
+         coat hanger, not a crook." Three things made it read that way and all three are fixed
+         here, none of them by moving the hook radius:
+
+         1. SAMPLING. The arc carried 8 points over 180°, i.e. **25.7° of turn at every joint**.
+            A tube bent 25.7° at a joint shows that joint as a mitre; it is the same arithmetic
+            that makes a 12-gon look like a 12-gon. 16 points over 210° is 14.0° per joint.
+         2. THE JUNCTION. Shaft and hook were two separate `tube()` calls meeting at `top`, each
+            with its own parallel-transport frame, and the arc's start tangent was world +Y while
+            the shaft's was 7.4° off it — a fourth mitre, right where the eye goes. They are ONE
+            tube now, and the arc is built in the SHAFT'S frame (`u` = the shaft direction), so
+            its start tangent IS the shaft direction and the junction is C1 by construction.
+         3. SWEEP. 180° is a half-round, which reads as a hoop bent onto a stick. A shepherd's
+            crook has to pass its own widest point and come back — 210° does, and `Cane.js`'s
+            own note (the legacy prop) records the same finding from the other direction: 255°
+            closed up into "a bangle", and it settled at 192°.
+         Sampling is stated as turn-per-joint rather than as a point count because that is the
+         quantity the mitre is made of, and it is the one an instrument can check. */
+      const grip = CANE_GRIP, top = CANE_TOP, u = CANE_U;
+      const fw = new THREE.Vector3(0, 0, 1);
+      fw.addScaledVector(u, -fw.dot(u)).normalize();
+      const hookR = 0.115, SWEEP = 210 * Math.PI / 180, NH = 15;
+      const pts = [
+        [grip.x + 0.007, grip.y - 0.072, grip.z - 0.014],      // ferrule cap (see the 1.2 mm note)
+        [grip.x + 0.006, grip.y - 0.06, grip.z - 0.012],
+        [grip.x, grip.y, grip.z],
+        [grip.x + (top.x - grip.x) * 0.55, grip.y + (top.y - grip.y) * 0.55, grip.z + (top.z - grip.z) * 0.55],
+        [top.x, top.y, top.z],
+      ];
+      const rad = [0.0012, 0.021, 0.023, 0.021, 0.021];
+      for (let i = 1; i <= NH + 1; i++) {
+        const a = (Math.min(i, NH) / NH) * SWEEP + (i > NH ? 0.14 : 0);
+        const sa = Math.sin(a) * hookR, ca = (1 - Math.cos(a)) * hookR;
+        pts.push([top.x + u.x * sa + fw.x * ca, top.y + u.y * sa + fw.y * ca, top.z + u.z * sa + fw.z * ca]);
+        rad.push(i > NH ? 0.0012 : 0.022);  // the crook is the heavy end — it is his logo
       }
-      parts.push(tube(hookPts, hookPts.map(() => 0.019), hookPts.map(() => PAL.gold),
-        hookPts.map(() => g), 9));
+      parts.push(tube(pts, rad, pts.map(() => PAL.gold), pts.map(() => g), 12));
     }
 
     /* ---- assemble ---- */

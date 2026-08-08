@@ -127,6 +127,47 @@ const TUNE = {
   cloudRimPower: 3.2,
   cloudHazeBlend: 0.42,     // how far a receding deck dissolves into the horizon haze
 
+  /* ── §212.5: the dome's own 8-bit dither, because the one that was doing this job is gone ──
+     Critic pass 7 §2 measured `night`'s sky at "18 distinct luma levels over 250 rows, 77 of
+     249 adjacent-row deltas exactly zero". Reproduced here on `night.base.png` with an
+     independently calibrated counter: **19 distinct levels over 250 rows, span 25.7 L**. The
+     critic's number is right.
+
+     Why it is newly urgent. `PostFX.tune.grain` shipped to **0.0** in commit bf321f3, AFTER
+     the r7 capture the critic scored, and PostFX's own note for that knob called it "the only
+     thing keeping the sky gradient off bands". So the dither this gradient was relying on was
+     removed after the measurement was taken.
+
+     That defence turns out to be false for the DAY sky and true for the night one — measured
+     on `grain1/`, which is the exact A/B (`.base` = grain 0.016, `.g00` = grain 0):
+
+       courtyard sky, grain 0.016 -> 0 :  103 -> 100 distinct levels   (moved 3 %)
+       night sky (no grain arm on disk):   19 distinct levels, 25.7 L span
+
+     The day sky never needed it — it spans 141 L over the same 250 rows, ~0.57 L per row, and
+     bands on its own detail. The night sky spans 25.7 L, i.e. **~1.35 L per quantisation
+     step**, which is squarely in the range where 8-bit output banding is visible and where a
+     sub-LSB dither removes it completely.
+
+     Sizing, so this is not a guessed amplitude. The dither is VALUE-PROPORTIONAL (a relative
+     perturbation), because the composite's transfer curve is roughly log in this region, so a
+     fixed relative jitter gives a near-constant DISPLAY jitter across the whole gradient.
+     Differentiating the calibrated chain (scratchpad/tonechain.mjs):
+
+       night sky band, display L 20–40 : dL/d(ln scene) ≈ 21 L per e-fold
+       day sky band,   display L 140–180: dL/d(ln scene) ≈ 48 L per e-fold
+
+     `col *= 1 + (hash - 0.5) * uDomeDither` perturbs by ±uDomeDither/2 in relative terms, so
+     0.05 gives ±2.5 % → **±0.52 L at night and ±1.2 L in daylight**. Night's step is 1.35 L,
+     so the dither covers 77 % of one step — enough to break the ladder — while staying at or
+     about one display level everywhere, which is the definition of sub-visible.
+
+     Deliberately NOT the deleted screen grain: it is confined to the sky dome, so it cannot
+     land on the hero's face, which is exactly what critic defect 2 asked for ("exclude
+     character materials entirely"). Static in screen space (keyed on gl_FragCoord, no uTime),
+     so it cannot crawl. 0.0 is bit-exact inert and is the A/B arm. */
+  domeDither: 0.05,
+
   sunCore: 26.0,            // HDR multiplier on the disc — bloom needs headroom, not white
   sunHaloWidth: 15.0,       // in multiples of the disc radius
   sunHaloStrength: 0.85,
@@ -220,6 +261,7 @@ const SKY_FRAG = /* glsl */`
   uniform float uSunSize, uMoonSize;
   uniform float uDay, uNight, uStars;
   uniform float uMie, uMieG, uViolet1, uHorizonPow, uGain, uExposure;
+  uniform float uDomeDither;
   uniform float uCloudBright, uCloudFade;
   uniform float uTime;
   uniform sampler2D uNoise;
@@ -420,6 +462,12 @@ const SKY_FRAG = /* glsl */`
 
     col *= uGain * uExposure;
 
+    /* 8-bit dither — see TUNE.domeDither for the measurement and the sizing arithmetic.
+       Relative, not additive, so one amplitude serves the night gradient (25.7 L over 250
+       rows) and the daylight one (141 L) at about the same sub-LSB display cost. Keyed on
+       gl_FragCoord only, so it is static in screen space and cannot crawl between frames. */
+    col *= 1.0 + (hash13(vec3(gl_FragCoord.xy, 7.3)) - 0.5) * uDomeDither;
+
     gl_FragColor = vec4(max(col, 0.0), 1.0);
     #include <tonemapping_fragment>
     #include <colorspace_fragment>
@@ -493,6 +541,13 @@ export class Sky {
     this.atmosphere = createAtmosphereState();
     this.timeOfDay = engine.debug.timeOfDay ?? 0.79;
 
+    /* Exposed so a capture can bracket a value without a source edit per arm, the same way
+       LIGHTING exposes its own. NOTE for harness authors: `uDomeDither` is written ONCE at
+       construction and is never re-asserted per frame, so unlike `uRimGain` (ToonMaterial's
+       long note on that trap) poking `sky._u.uDomeDither.value` directly DOES stick. That is
+       the intended A/B lever; 0.0 is bit-exact inert. */
+    this.TUNE = TUNE;
+
     /** Published for SHADING and POSTFX (AGENTS.md §4.3 → engine.get('sky')). */
     this.fogParams = this.atmosphere.fog;
     this.sunDirection = this.atmosphere.sunDir;
@@ -545,6 +600,7 @@ export class Sky {
       uHorizonPow:  { value: A.horizonPower },
       uGain:        { value: A.skyGain },
       uExposure:    { value: A.exposure },
+      uDomeDither:  { value: TUNE.domeDither },
       uCloudBright: { value: A.cloudBright },
       uCloudFade:   { value: 1.0 },
       uTime:        { value: 0 },

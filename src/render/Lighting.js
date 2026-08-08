@@ -189,6 +189,41 @@ const TUNE = {
      also seeding dust inside solid stone). The list is now built from
      `architecture.api.roofSlots` / `.clerestory` and only falls back to these constants
      when ARCHITECTURE is absent. */
+  /* ── §212.6: critic pass 7 defect 9 re-measured, and BOTH its numbers are wrong ──────────
+     The defect reads: "God-rays are a Gaussian screen overlay — 18 px 10–90 % edge transition,
+     washing ~40 % of `temple` toward white and taking the columns' albedo with it."
+
+     Re-measured on the shipped frame (`grain1/temple.g00.png`, 1280×720), with an edge finder
+     calibrated against planted 4/18/40 px ramps and a median-9 prefilter — the first pass
+     without that prefilter locked onto 1–2 px INK LINES, which are the strongest transitions
+     in the frame (amp 143–168 L) and answered a question nobody asked:
+
+       shaft boundary 10–90 % width, 19 scans:  21…61 px, **median 42 px**   (claim: 18 px)
+       share of frame at L ≥ 170 : 2.5 %    L ≥ 180 : 0.6 %    L ≥ 200 : 0.0 %
+       brightest pixel in the whole frame: L 232;  0.00 % of it reaches V > 0.90
+       mean HSV saturation, L ≥ 150 band 0.255 vs L 60–110 band 0.249 — the wash costs
+       **-2 %** of the surrounding saturation, i.e. nothing measurable
+
+     So the edge is **2.3× softer** than reported, "~40 % toward white" does not reproduce at
+     any threshold (the maximum share above any of them is 17.2 % at L ≥ 100), and "taking the
+     columns' albedo with it" is not visible in saturation at all.
+
+     What IS true, and it is worse in a way the defect did not name: these blades never become
+     light. The calibrated display chain (scratchpad/tonechain.mjs) puts V > 0.90 at
+     scene-linear 1.95, and the brightest shaft pixel in `temple` sits at L 177 ≈ scene 0.52 —
+     **a quarter of the radiance a white needs.** A 42 px soft edge that peaks in the pale
+     grey band is haze, not a god-ray. That also makes this the same defect as pass 7's #8
+     ("nothing is white") seen from the other side, not an independent finding.
+
+     The prescription therefore INVERTS the critic's. Do not dim these to stop a wash that is
+     not happening; **narrow them and make the core hot**, so a blade reaches display white in
+     a tight centre and falls off fast. The cross-section knobs are FX's (`Particles.js`
+     TUNE.shaftEdge 0.16, shaftWide 1.85, shaftCore 0.55, shaftGain 0.52), not LIGHTING's —
+     what is owned here is the published intensity and `shaftFlare` below, which widens every
+     beam along its length and so contributes directly to that 42 px figure.
+
+     Not changed here. The two owners have to move together or the result is uninterpretable,
+     and neither half is verifiable without a capture. */
   shaftMaxLength: 52,
   shaftFlare: 0.28,          // cross-section growth over the beam's length; 0 = a parallel tube
   shaftGrazeGain: 0.65,      // how much of the blade's power comes from a *low* sun

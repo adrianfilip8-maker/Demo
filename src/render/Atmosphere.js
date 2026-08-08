@@ -34,8 +34,26 @@ export const PALETTE = {
   sandMid:    0xc9915a,
 };
 
-/** Shadows may never fall below this fraction of key luminance (§2.2 "never below"). */
+/** Shadows may never fall below this fraction of key luminance (§2.2 "never below").
+ *
+ *  ── §212.3: this export is NOT the operative floor, and raising it does nothing ──────────
+ *  `ToonMaterial.setKeyLight()` takes it as `ambient.floor` and applies
+ *  `this._shadowFloor = Math.min(TUNE.shadowFloor, ambient.floor)` against its own
+ *  `TUNE.shadowFloor = 0.125`. The min() means the shipped effective floor is **0.125**, this
+ *  0.14 never binds, and moving this number UP is a silent no-op while moving it DOWN is live.
+ *  Recorded here because the asymmetry is invisible from this file and §2.2 quotes 14 %.
+ *
+ *  Left at 0.14 deliberately. See §212.4 for why lowering it is not the fix for "nothing is
+ *  black": on §2.2 SANDSTONE mid the floor term ALONE — with every fill light switched off —
+ *  already lands at display L ≈ 100 through the shipped tone chain, so the display black has
+ *  to come from low-albedo materials (PAINT black #241a16 → L 13, CREVICE #4a2f22 → L 28) and
+ *  from AO, not from this constant. */
 export const SHADOW_FLOOR = 0.14;
+
+/* §212.2. Both legs are 0.50: the night boost is withdrawn, daylight is untouched. Named
+   rather than inlined so the next sweep moves a constant instead of editing an expression. */
+const RIM_STRENGTH_DAY = 0.50;
+const RIM_STRENGTH_NIGHT = 0.50;
 
 /* ── Sun / moon track ───────────────────────────────────────────────────────────
    Art-directed rather than astronomical. A real 24 h sinusoid puts sunset at tod 0.75,
@@ -56,7 +74,66 @@ const SUN_AZIMUTH = [
 ];
 
 /* The moon rides its own track so the `night` and `guard` shots get a big low moon
-   parked where the camera is already looking, from an azimuth far off the sun's. */
+   parked where the camera is already looking, from an azimuth far off the sun's.
+
+   ── §212.1: "parked where the camera is already looking" is exactly the defect ──────────
+   Critic pass 7 defect 12 says `night` has "a moon that lights nothing". That is literally
+   true, it is caused here, and it needs no capture to establish — it is two dot products
+   against `Shots.js`.
+
+   The `night` camera runs (-13.4, 8.4, 22.0) -> (2.0, 6.0, 2.0), i.e. a forward azimuth of
+   **307.6°**. The moon at tod 0.02 sits at azimuth **293.3°** — only **14.3° off the camera's
+   own forward axis**. So the shot is very nearly a direct backlight, and every surface facing
+   the lens carries a normal at azimuth 127.6°, which is 165.7° from the moon.
+
+   **The two moon-keyed shots fail differently, and an earlier draft of this note got `guard`
+   wrong by assuming they were the same.** It quoted guard's wall N·L as -0.8802, which was
+   `night`'s camera azimuth applied to guard's moon. `tests/tone.test.mjs` caught it on its
+   first run. Measured per shot, from each shot's own camera:
+
+     shot    moon el/az       cam fwd az   wall normal az   wall N·L   flat deck N·L
+     night   12.0° / 293.3°     307.6°         127.6°       -0.9476       0.2079
+     guard   28.3° / 305.3°     204.4°          24.4°       **+0.1652**   0.4733
+
+   · `night` IS backlit. Nothing the camera can see is moonlit except near-horizontal
+     surfaces, and in a rooftop framing those are the thin top arrises of each masonry course
+     — which is exactly the "cyan-white line on every polygon edge" the same defect reports.
+     One cause, two symptoms.
+   · `guard` is NOT backlit; it is side-lit, and it fails for the OTHER reason. Its
+     camera-facing walls land at N·L 0.1652 against the low terminator's upper edge at
+     `termLo + termSoft` = **0.164** — a margin of **0.0012**, tighter than the 0.0006 that
+     made `temple` famous in §210.1, and on the surface that actually fills the frame. Those
+     walls sit inside the detail normal's own swing of the band edge, so they flip between the
+     shadow and mid bands per-texel: speckle, not a cel band.
+
+   `tests/shading.test.mjs` cannot see the guard case, by construction — it evaluates
+   `keyDir.y`, which is the GROUND plane, and §210.3 says as much. A wall's N·L is
+   `cos(el)·cos(Δaz)`. The wall table above is the missing half and is now guarded in
+   `tests/tone.test.mjs`.
+
+   Confirmed against the frame rather than only derived: inverting `night.base.png`'s measured
+   pixels through the calibrated display chain puts the visible wall at scene-linear ~0.0335,
+   i.e. illumination ~0.0985 on sandstone albedo — which is the SHADOW-band radiance (0.0987),
+   not the lit one (0.3865). The camera is looking at unlit stone.
+
+   **What NOT to do about it.** Swinging the moon azimuth round to light those walls takes the
+   disc out of frame, and the disc at upper-left is the shot's one compositional anchor. A
+   single light cannot be both the backlight in frame and the key on the camera-facing walls;
+   that is true of any light, not a bug in this table.
+
+   **Where the fix lives for `night`, and it is already aimed correctly.** `bounceDir` is built
+   as the anti-key direction dropped to -0.42 in y, which at tod 0.02 resolves to azimuth
+   113.3°, elevation -23.3°. Against a camera-facing wall normal at azimuth 127.6° that is
+   **N·L = 0.890** — very nearly head-on. The one light in the rig that already points at the
+   surfaces this shot is made of is the sand bounce, and the night anchor runs it at
+   `bounceIntensity` 0.10 against daylight's 0.36. So the lever is night fill amplitude, not
+   moon placement — see `nightFillScale` on the state object, which exists to sweep exactly
+   that and ships inert at 1.0.
+
+   That corollary is `night`-only too: on `guard` the same bounce lands at **-0.169** on the
+   camera-facing walls (it is behind them), so fill will not reach that shot the same way and
+   its 0.0012 terminator margin is a SHADING fix, not a LIGHTING one. Both figures are
+   asserted in `tests/tone.test.mjs` so the split cannot quietly re-merge. */
 const MOON_ELEVATION = [
   [0.00, 9], [0.02, 12], [0.06, 20], [0.12, 31], [0.18, 24], [0.24, 4],
   [0.30, -26], [0.70, -34], [0.86, -6], [0.92, 2], [0.96, 6], [1.00, 9],
@@ -257,6 +334,23 @@ export function createAtmosphereState() {
 
     skyGain: 1, mieStrength: 1, mieG: 0.76, violetAmount: 0.22, horizonPower: 0.44,
     starAmount: 0, exposure: 1,
+
+    /* ── Night fill lever (§212.1) — SHIPS INERT AT 1.0, bit-identical ──────────────────
+       Multiplies hemi + bounce + ambient, faded in by `nightAmount`, so it can only ever
+       touch the two moon-keyed shots and is the exact identity at every daylight tod.
+
+       It exists because §212.1 locates critic defect 12's mechanism (both moon-keyed cameras
+       are ~180° backlit, so the sand bounce at N·L 0.890 is the only light aimed at what they
+       see) but CANNOT size the correction from arithmetic alone. Modelling the shipped night
+       radiances through the calibrated display chain predicts every §2.2 stone albedo lands
+       ABOVE V = 0.20 in both bands, while the frame measures 62.9 % of pixels below it — a
+       factor this module cannot account for and which is not in this file. Shipping a blind
+       brightness multiplier against an unlocated factor is how this project has lost days
+       (KNOWN_ISSUES §210.2, §211.1), so the amplitude is deliberately NOT chosen here.
+
+       Set `lighting.atmosphere.nightFillScale = k` live to sweep it in one boot, the same way
+       `debug.fillScale` and `debug.grainScale` already work. */
+    nightFillScale: 1,
     sunAngularRadius: 0.020,     // radians — stylised, ~2.3× the real sun
     moonAngularRadius: 0.038,
   };
@@ -380,12 +474,49 @@ export function evalAtmosphere(tod, s) {
   const keyLum = s.keyIntensity * (0.2126 * s.keyColor.r + 0.7152 * s.keyColor.g + 0.0722 * s.keyColor.b);
   s.ambientIntensity = Math.max(0.10, SHADOW_FLOOR * keyLum * 1.15);
 
+  /* §212.1's lever. Applied AFTER the max() above, because at night that clamp is what is
+     actually binding (0.14 × 0.3346 × 1.15 = 0.0539, below the 0.10 floor), so scaling the
+     formula instead of the result would leave ambient untouched and the lever would only
+     half-work — the failure mode §210.2 names, where a knob reaches some consumers and not
+     others and the capture reads as a weak effect rather than as a broken instrument. */
+  const nightFill = lerp(1, s.nightFillScale ?? 1, s.nightAmount);
+  if (nightFill !== 1) {
+    s.hemiIntensity *= nightFill;
+    s.bounceIntensity *= nightFill;
+    s.ambientIntensity *= nightFill;
+  }
+
   /* --- rim light: one deliberate, consistent wrap angle (§2.1.5) --- */
   s.rimColor.set(PALETTE.rimCool).lerp(_rimWarm, s.nightAmount);
   // Anti-key azimuth, lifted 42°: the rim then comes out of the brightest cool sky and
   // reads as sky-wrap rather than as a second, unmotivated sun.
   dirFrom(42, (s.keyIsMoon ? s.moonAzimuth : s.sunAzimuth) + 180, s.rimDir).normalize();
-  s.rimStrength = lerp(0.5, 0.72, s.nightAmount);
+  /* ── §212.2: the night rim BOOST is withdrawn; day is unchanged ────────────────────────
+     Was `lerp(0.5, 0.72, nightAmount)` — a 44 % amplification applied to exactly the two
+     shots where critic pass 7 defect 12 reports "a full-strength fresnel drawing a
+     cyan-white line on every polygon edge in the scene".
+
+     The premise of the boost was that night values sit close together and need extra
+     silhouette separation. Measured, that premise is false here: `night` and `guard` carry
+     the HIGHEST key:fill ratio in the build — 6.45:1 against daylight's 4.06–5.18:1 — so the
+     two moon-keyed shots are the *most* contrasty in the game, not the least, and they were
+     the ones being handed the extra rim.
+
+     Two things this does NOT claim, because they were checked and are someone else's:
+
+     · It does not claim to remove the cyan lines. Measured on `night.base.png`, the bright
+       dashes run hue 199–205°, which is `rimCool` #7fd4ff (200.2°) — NOT what this module
+       publishes at night, since `rimColor` above resolves to `rimWarm` #ff9a5c (~22°) at
+       nightAmount 1. PostFX.js's own TUNE note says why: its screen-space rim's `uRimLit` is
+       a constant #7fd4ff with "no time-of-day hook of any kind". That colour is POSTFX's to
+       fix; this line only stops LIGHTING amplifying the surface term alongside it.
+     · It does not lower the rim below daylight. 0.50 is what every daylight shot already
+       ships, so this changes no daylight frame by any amount — the lerp is the identity
+       everywhere `nightAmount` is 0, which is all fourteen non-moon shots.
+
+     Going BELOW 0.50 at night is a further, separate art call and is a registered arm of the
+     next capture rather than something taken blind here. */
+  s.rimStrength = lerp(RIM_STRENGTH_DAY, RIM_STRENGTH_NIGHT, s.nightAmount);
 
   s.sunAngularRadius = lerp(0.020, 0.027, smoothstep(30, 2, el)); // swells as it sets
   s.moonAngularRadius = 0.038;

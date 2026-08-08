@@ -34,7 +34,9 @@ import { Trails } from './Trails.js';
  * 200 px. It is Sly's UI grammar; a round blob would be a different game.
  */
 
-const TUNE = {
+/* Exported so `tests/fx.test.mjs` can assert the screen-space ceilings against the shipped
+   emitter table without a browser or a capture. Module-local otherwise. */
+export const TUNE = {
   /* wind — a gust envelope from fBm, never a sine: a sine reads as a machine */
   windBase: 2.3,            // m/s at gust = 1
   windDirDeg: 62,           // travel direction, degrees CW from +Z. West→east, with the sun.
@@ -104,6 +106,34 @@ const TUNE = {
      20 m, median depth 8 m** — which is exactly why the world-space sizes that are right at
      30 m turn into saucers there. */
   moteMaxH: 0.028,          // max sprite diameter as a fraction of frame height
+
+  /* Screen-space ceiling for the ADDITIVE event sprites (the `spark` batch).
+     ------------------------------------------------------------------------------------
+     Same mechanism and same derivation as `moteMaxH` (see the shader comment at
+     `uMaxSize`): a sprite's on-screen diameter as a fraction of frame height is exactly
+     `sz * P11 / d`, so a world-space size that is right at 20 m is a veil at 5 m.
+
+     `cane_flash` is the emitter this exists for, and the arithmetic is not marginal.
+     `combat` frames the third combo hit at fov 40 (P11 2.7475) with the impact anchor at
+     **d 4.906 m** (anchor and depth re-derived from source in PREREG-combatrecipient §0.2,
+     which puts it 0.89 m NEARER the lens than Sly's chest — the flash is drawn *in front of*
+     the hero). `_onCaneHit` scales the emitter by `heavy` 1.35 on hit 3, so size0 is 2.025 m:
+
+         diameter / frame height = 2.025 * 2.7475 / 4.906 = 1.134
+
+     — **113% of frame height, 817 px on a 720 px frame**, additive at alpha 1.3, centred on
+     a character who is himself only ~290 px (0.40 of frame height) tall. It cannot not veil
+     him, and measurement agrees: the halo on `goldlobe1/combat.base.png` is ~660 px across
+     (frac 0.917), which is this sprite at u≈0.47 of its 0.11 s life.
+
+     0.45 is set from the subject, not by eye: it puts the flash's full diameter at 324 px
+     against the hero's 290 px, i.e. at most ~1.1x the thing it is attached to, down from
+     2.8x. Within the `spark` batch the next-largest emitter is `fire_body` at 0.550 m
+     (frac 0.302 at 5 m), so this clamps `cane_flash` and nothing else beyond d 3.4 m.
+     PLANAR rings are exempt by construction in the shader — `cane_ring` reaches frac 1.89
+     and is the standing second suspect, deliberately NOT changed here so that one lever
+     moves at a time. */
+  flashMaxH: 0.45,
 
   /* light shafts (rendered from lighting.shafts) --------------------------------------
      `shaftGain` is the one number that decides whether these read as light or as a wash.
@@ -1991,6 +2021,10 @@ export class Particles {
     this._batch('spark', {
       capacity: 700, additive: true, renderOrder: 14, softness: 0.25,
       defines: ['STRETCH'],
+      /* The additive event sprites take the screen-size ceiling — see TUNE.flashMaxH.
+         Sparks, embers and coin pops are 0.075-0.14 m and never approach it; this exists
+         for `cane_flash`, which reaches 113% of frame height at the `combat` framing. */
+      maxSize: TUNE.flashMaxH,
     });
     this._batch('ring', {
       capacity: 48, additive: true, renderOrder: 13, softness: 0.9,
