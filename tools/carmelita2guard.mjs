@@ -142,12 +142,42 @@ for (const mi of keepMesh) {
   for (const p of src.meshes[mi].primitives) {
     for (const [k, v] of Object.entries(p.attributes || {})) { add(v); if (k === 'POSITION') needBounds.add(v); }
     add(p.indices);
-    for (const t of p.targets || []) {
-      for (const [k, v] of Object.entries(t)) { add(v); if (k === 'POSITION') needBounds.add(v); }
-    }
+    /* Morph targets are NOT collected — see the drop below. */
   }
 }
 for (const s of src.skins || []) add(s.inverseBindMatrices);
+
+/**
+ * ── The morph targets are dropped, and the reason is §227 arriving in person ────────────────
+ *
+ * `Head_LP` carries four blendshapes and `TeethUpper_LowPoly` one. Keeping them produced a file
+ * that `GLTFLoader` threw on:
+ *
+ *     RangeError: Invalid typed array length: 1729
+ *       at GLTFLoader.js:3170  (accessorDef.sparse.indices)
+ *
+ * Those five targets are **sparse accessors**, and `compact()` copies an accessor's own
+ * `bufferView` but knows nothing about `sparse.indices.bufferView` / `sparse.values.bufferView`.
+ * So the emitted accessor pointed its sparse substitution at bufferViews that had been renumbered
+ * out from under it. This is precisely the failure `assertAccessorsResolved`'s own docstring
+ * predicts it cannot catch — "a future extension (sparse accessors, a new attribute set) that this
+ * function does not know about will still not be *checked*" — and it presented, exactly as §227
+ * describes, as a file that validates and then throws from inside the loader.
+ *
+ * They are dropped rather than densified because **nothing can ever drive them**. `GuardAnim` has
+ * no morph channel; `CarmelitaGuard.bindToRig3` clears `morphAttributes` on every mesh it merges.
+ * A guard does not pull faces. Densifying would be more code carrying data with no consumer.
+ *
+ * The `sparseKept` check below is the general guard: if any accessor this tool decides to keep is
+ * ever sparse, it refuses to write rather than emitting the same broken file a different way.
+ */
+let morphsDropped = 0;
+const sparseKept = [...new Set(keepAcc)].filter((ai) => src.accessors[ai].sparse);
+if (sparseKept.length) {
+  console.error(`\nREFUSING TO WRITE: ${sparseKept.length} kept accessor(s) are SPARSE, and compact() `
+    + `does not remap sparse.indices/sparse.values bufferViews (§227). Accessors: ${sparseKept.join(', ')}`);
+  process.exit(1);
+}
 
 console.log(`  accessors: ${keepAcc.length} referenced of ${src.accessors.length} `
   + `(${src.accessors.length - new Set(keepAcc).size} dropped, mostly animation samplers)`);
@@ -164,8 +194,10 @@ for (const mi of [...keepMesh].sort((a, b) => a - b)) {
   for (const p of m.primitives) {
     for (const k of Object.keys(p.attributes || {})) p.attributes[k] = remap(p.attributes[k]);
     if (p.indices != null) p.indices = remap(p.indices);
-    for (const t of p.targets || []) for (const k of Object.keys(t)) t[k] = remap(t[k]);
+    if (p.targets) { morphsDropped += p.targets.length; delete p.targets; }
   }
+  delete m.weights;
+  if (m.extras) delete m.extras.targetNames;
   meshIndexMap.set(mi, out.meshes.length);
   out.meshes.push(m);
 }
@@ -192,6 +224,8 @@ delete out.animations;
    that does not show up in a 1 MB file. */
 console.log(`  nodes: ${strippedNodes} stripped of their mesh, ${out.nodes.length} kept (armature intact)`);
 console.log(`  animations: ${src.animations?.length || 0} dropped (already in src/ai/GuardClips.js)`);
+console.log(`  morph targets: ${morphsDropped} dropped (sparse accessors; nothing drives them — see header)`);
+for (const n of out.nodes) if (n.weights) delete n.weights;
 
 assertAccessorsResolved(out, 'carmelita-guard');
 console.log('  assertAccessorsResolved: OK');

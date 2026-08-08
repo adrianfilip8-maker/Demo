@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { rng } from '../core/Rand.js';
 import { buildGuardAssets, instantiate, GROUPS } from './GuardModel.js';
+import { loadCarmelitaGuard } from './CarmelitaGuard.js';
 import { GuardAnim } from './GuardAnim.js';
 import {
   ROSTER, buildRoutes, Senses, VISION, DETECT, STATE, stateForSuspicion, speedFor,
@@ -1049,6 +1050,29 @@ export class Guards {
       if (assets[k].missing?.size) {
         this.engine.warn(`guards: ${k} rig references unknown bones: ${[...assets[k].missing].join(', ')}`);
       }
+    }
+
+    /* ---- Carmelita replaces the procedural body for the two humanoid types ----
+     *
+     * Owner instruction: "replace the created guard with the downloaded Carmelita model along with
+     * relevant files and animations". The animations were already hers — `GUARD_CLIPS` has carried
+     * her eleven retargeted clips since `tools/carmelita2clips.mjs` ran — so this is the mesh.
+     *
+     * `loadCarmelitaGuard` resolves to `null` rather than throwing when the asset is missing or the
+     * environment has no fetch, and the procedural `blob()` body stays as the fallback. That is not
+     * defensive padding: ten headless suites stand `Guards` up in plain Node with no network, and
+     * the whole §235 patrol audit runs through this path. A character import must not be able to
+     * take the garrison down with it.
+     *
+     * The scarab keeps its procedural body — it is a beetle sentinel, and Carmelita is not one. */
+    let carmelita = null;
+    try { carmelita = await loadCarmelitaGuard(); } catch { carmelita = null; }
+    if (carmelita) {
+      for (const t of ['temple', 'heavy']) {
+        assets[t] = { ...assets[t], ...carmelita };
+        this.stats.tris += carmelita.tris | 0;
+      }
+      this.carmelita = carmelita;
     }
 
     const materials = this._buildMaterials();
