@@ -19142,3 +19142,65 @@ Thief-o-Vision and the pause menu — the last of which is the game's only tutor
 are untouched by this and remain in scope. So do §241's two open readability defects, the objective
 kicker at **3.44:1** contrast against a 4.5 bar and alert labels at **6.4 px**, which are ordinary
 HUD legibility problems and have nothing to do with the Binocucom.
+
+## §243 — on the close framing the boots DARKEN the floor by 1.26 L; and §233's "no drift floor" needs a qualifier
+
+§233 refuted the character as the cause of critic pass 8's **+5.5 L under the boots**, but left an
+honest caveat: it was measured on `courtyard`, where he is only **44×42 px**, and the critic's
+reading was plausibly taken on a tighter shot. `inkw`'s sweep has since written the `sly-closeup`
+`base`/`nochar` pair — the tight framing, **922×536 px**, 11.46% of the frame — so the caveat is now
+closable at no capture cost. Both calibration arms fire.
+
+```
+                     RINGS around him              FOOT BAND (bottom 20% of bbox)
+  4-8 px      +0.3083  BRIGHTENS   5.61%      -1.2611  DARKENS  -22.93%
+  8-16 px     +0.2885  BRIGHTENS   5.24%      -0.8926  DARKENS  -16.23%
+  16-32 px    +0.2165              3.94%      -0.3853  DARKENS   -7.01%
+  32-64 px    +0.0521              0.95%      -0.0637            -1.16%
+  64-128 px   -0.0035             -0.06%      -0.0278            -0.51%
+```
+
+**Under the boots the character DARKENS the floor by 1.26 L.** Not +5.5, and not the same sign. The
+contact term is working, and it decays with distance exactly as a contact term should. The critic's
++5.5 L is not the character's effect on the ground on either framing, near or far.
+
+There *is* a real brightening around his silhouette generally — **+0.31 L** at 4–8 px, decaying to
+nothing by 128 px — which is consistent with bloom bleeding off a lit character. It is 5.6% of the
+claimed figure and it is **not under the boots**; the foot band is negative at every radius. Worth
+knowing, not worth chasing.
+
+### The qualifier §233 needs
+
+§233 reported the far-field control as **exactly 0.0000 ± 0.0000 over 779,836 px** and concluded that
+same-boot single-lever arms are bit-deterministic with no drift floor at all. On this pair the same
+control reads **−0.0034 ± 0.0483**. Not zero.
+
+The difference is what the lever *reaches*. On `courtyard` the character is 0.12% of the frame and
+removing him changes nothing outside his own neighbourhood. On `sly-closeup` he is **11.46%** of it,
+and removing that much of a frame moves screen-space passes — bloom certainly, and anything with a
+global reduction — so far-field pixels that share no geometry with him still move.
+
+So the rule is narrower than §233 stated: **a same-boot arm is bit-deterministic where its lever is
+local. A lever with global reach through a screen-space pass is not free, and its far field must
+still be measured rather than assumed.** The practice §233 recommended is unchanged and still much
+better than cross-boot comparison — but the floor must be read off each pair, not inherited from
+another one.
+
+### The calibration arm caught two of my own bugs, not the instrument's
+
+1. **It injected 0 px of 14705.** The disc was centred at `y1 + 10`, ten pixels below the bounding
+   box — fine on `courtyard`, useless on a tight framing where the silhouette's lowest point and the
+   bbox bottom are far apart. The arm could not fire and correctly voided the run. Fixed by taking
+   the centre from the **centroid of the ring pixels themselves** rather than from a guessed offset.
+2. **Then it reported "2119 px of 703" injected into a 703-pixel ring**, which is impossible, with
+   the measured mean unmoved. The centroid is a float, so the loop iterated `y` over fractional
+   values, `k = y*W + x` was fractional, and `Lb2[k] += 5.5` **silently wrote nowhere** — a
+   TypedArray drops a non-integer index — while the counter kept incrementing. A counter that counts
+   intentions rather than effects is the §211.1 failure in miniature.
+
+Both were errors in *my* arm, found because it refused to certify itself, and in both cases the
+subject numbers were already visible when I fixed it. Recorded explicitly for that reason: the fixes
+change **where the calibration injects and whether the write lands**, not the ring definition, not
+the subject metric, and not the arm's requirement, which remains that the measured mean match the
+predicted arithmetic to under 0.02 L. After both fixes: courtyard 1.8004 against 1.8004, closeup
+0.4265 against 0.4265.

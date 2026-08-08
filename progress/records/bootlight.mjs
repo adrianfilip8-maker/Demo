@@ -45,8 +45,13 @@ import { PNG } from 'pngjs';
 
 const ROOT = path.resolve(import.meta.dirname, '../..');
 const DIR = path.join(ROOT, 'progress/records/inkw-before');
-const A = path.join(DIR, '1280x720-courtyard-base.png');
-const B = path.join(DIR, '1280x720-courtyard-nochar.png');
+/* `--shot` so the same instrument can be pointed at a closer framing. §233 measured `courtyard`,
+   where the character is only 44x42 px, and left that as an explicit caveat: the critic's boot
+   reading was plausibly taken on a tighter shot. `sly-closeup` is that shot. */
+const SHOT = (process.argv.find((a) => a.startsWith('--shot=')) || '--shot=courtyard').slice(7);
+const RES = (process.argv.find((a) => a.startsWith('--res=')) || '--res=1280x720').slice(6);
+const A = path.join(DIR, `${RES}-${SHOT}-base.png`);
+const B = path.join(DIR, `${RES}-${SHOT}-nochar.png`);
 
 for (const f of [A, B]) {
   if (!fs.existsSync(f)) { console.error(`bootlight: missing ${f}`); process.exit(2); }
@@ -197,7 +202,30 @@ for (const [a, b] of RINGS) {
    the 4-8 px ring. If this does not report BRIGHTENS, the extractor is blind and every "at floor"
    above is void — the §211.1 / calibration-arm rule this project voids runs over. */
 {
-  const cx = (x0 + x1) / 2, cy = y1 + 10, R = 26;
+  /* The centre is taken from the ring ITSELF — the centroid of the foot-band ring pixels — not
+     from a guessed offset below the bounding box.
+     The first version used `cy = y1 + 10`, which works on `courtyard` and injects **0 px of 14705**
+     on `sly-closeup`: on a tight framing the silhouette's lowest point and the bbox bottom are far
+     apart, so the disc landed nowhere near the ring and the arm could not fire. That correctly
+     VOIDED the run under this file's own rule.
+     Stated plainly because I had already seen the subject numbers when I fixed this: the change is
+     to WHERE the calibration injects, so that it injects at all. It does not touch the subject
+     metric, the ring definition, or the arm's requirement — which is still that the measured mean
+     match the predicted arithmetic to <0.02 L. An arm that injects nothing is a broken arm, not a
+     failed threshold. */
+  let sx = 0, sy = 0, sn = 0;
+  for (let k = 0; k < W * H; k++) {
+    if (dist[k] > 4 && dist[k] <= 8 && Math.floor(k / W) > footTop) { sx += k % W; sy += Math.floor(k / W); sn++; }
+  }
+  /* ROUNDED. The centroid is a float, and an un-rounded centre makes the loop below iterate `y`
+     over fractional values, so `k = y*W + x` is fractional, `Lb2[k] += 5.5` writes NOWHERE (a
+     TypedArray silently drops a non-integer index) while `injected++` still counts. The arm caught
+     that too: it reported "2119 px of 703" injected into a 703-px ring, which is impossible, and
+     the measured mean had not moved at all. A counter that counts intentions rather than effects is
+     the same §211.1 failure as a test that inspects nothing. */
+  const cx = Math.round(sn ? sx / sn : (x0 + x1) / 2);
+  const cy = Math.round(sn ? sy / sn : y1 + 10);
+  const R = 26;
   const Lb2 = Float32Array.from(Lb);
   let injected = 0;
   for (let y = Math.max(0, cy - R); y < Math.min(H, cy + R); y++) {
