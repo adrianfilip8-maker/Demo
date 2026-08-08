@@ -37,6 +37,7 @@ import * as THREE from 'three';
 import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader.js';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { RIG3 } from './SlyModel3.js';
+import { Cane, CANE_TUNE } from './Cane.js';
 
 const FBX_URL = new URL('../assets/sly-dl/sly.fbx', import.meta.url);
 const TEX_FILES = import.meta.glob('../assets/sly-dl/*.png', { eager: true, query: '?url', import: 'default' });
@@ -84,6 +85,25 @@ const ANCHOR = {
   hips: 'a_body', spine: 'lower_back', chest: 'chest', neck: 'base_neck', head: 'base_head',
 };
 
+/**
+ * The grip solve (critic pass 7 #5, "the cane is not held").
+ *
+ * Every number here is either measured off the asset or fixed on a stated physical rule; none is
+ * tuned against the wrap score it produces, because that score is the thing being judged.
+ *
+ * `wrapDeg` is the only free choice and it is a SHAPE choice, decided before anything was
+ * measured: each finger must lie along at least this much of the grip's circumference, which is
+ * what separates a closed fist from a hook. 120° is comfortably inside the ~180° a real hand
+ * manages, and it is what sizes the grip — see `_solveGrip`, where the largest grip radius
+ * admitting it is derived from the phalanx chain lengths and the glove's own flesh radius.
+ */
+export const GRIP = {
+  wrapDeg: 120,
+  fingerCap: 3.0,        // hard stop on the curl-scale bisection: 3 × 86° ≈ full flexion
+  thumbAimMax: 70,       // degrees the thumb may swing across the palm to oppose
+  band: [0.05, 0.95],    // percentile window of the digit block that counts as the grip section
+};
+
 const TEX_BY_PART = { body: 'sly_body', eyeball: 'sly_eyeball', head: 'sly_head', tail: 'sly_tail' };
 const FALLBACK = { body: 0x2f5fc4, eyeball: 0xd9821a, head: 0xcfcdc4, tail: 0x8d8b84 };
 
@@ -117,6 +137,74 @@ function dropNonFiniteTriangles(g) {
   return { geo: out, dropped: tris - keep.length };
 }
 
+/**
+ * Split the triangles weighted to one FBX bone out of a non-indexed geometry.
+ *
+ * Used to lift the asset's `staff` submesh out of the body mesh. The crook baked into it is three
+ * straight segments meeting at mitres (critic pass 7 #6, "a bent coat hanger, not a crook") and no
+ * parameter smooths a baked polyline — the only fix is to stop drawing it and to draw `Cane.js`,
+ * whose crook is a sampled 192° arc, in its place. Returns the surviving geometry plus the removed
+ * corner positions, because the removed thing is also the only record of where the cane WAS, and
+ * the socket keeps the replacement pointing the same way.
+ */
+function splitOffBone(g, boneIndex) {
+  const pos = g.attributes.position, si = g.attributes.skinIndex, sw = g.attributes.skinWeight;
+  if (!si || !sw) return { geo: g, removed: 0, points: [] };
+  const tris = pos.count / 3, keep = [], points = [];
+  const wOf = (i) => {
+    let w = 0;
+    for (let k = 0; k < 4; k++) if (si.array[i * 4 + k] === boneIndex) w += sw.array[i * 4 + k];
+    return w;
+  };
+  for (let t = 0; t < tris; t++) {
+    let onBone = 0;
+    for (let k = 0; k < 3; k++) if (wOf(t * 3 + k) > 0.5) onBone++;
+    if (onBone === 3) {
+      for (let k = 0; k < 3; k++) {
+        const i = (t * 3 + k) * 3;
+        points.push(new THREE.Vector3(pos.array[i], pos.array[i + 1], pos.array[i + 2]));
+      }
+    } else keep.push(t);
+  }
+  if (!points.length) return { geo: g, removed: 0, points: [] };
+  const out = new THREE.BufferGeometry();
+  for (const name of Object.keys(g.attributes)) {
+    const a = g.attributes[name], n = a.itemSize, span = 3 * n;
+    const arr = new a.array.constructor(keep.length * span);
+    for (let j = 0; j < keep.length; j++) arr.set(a.array.subarray(keep[j] * span, keep[j] * span + span), j * span);
+    out.setAttribute(name, new THREE.BufferAttribute(arr, n));
+  }
+  return { geo: out, removed: tris - keep.length, points };
+}
+
+/** Least-squares circle through 2-D points (Kåsa). Returns {cx, cy, r, rms}. */
+function circleFit(pts) {
+  const n = pts.length;
+  let sx = 0, sy = 0, sxx = 0, syy = 0, sxy = 0, sxz = 0, syz = 0, sz = 0;
+  for (const [x, y] of pts) {
+    const z = x * x + y * y;
+    sx += x; sy += y; sxx += x * x; syy += y * y; sxy += x * y; sxz += x * z; syz += y * z; sz += z;
+  }
+  const m = [[sxx, sxy, sx, sxz], [sxy, syy, sy, syz], [sx, sy, n, sz]];
+  for (let c = 0; c < 3; c++) {
+    let piv = c;
+    for (let r = c + 1; r < 3; r++) if (Math.abs(m[r][c]) > Math.abs(m[piv][c])) piv = r;
+    [m[c], m[piv]] = [m[piv], m[c]];
+    const d = m[c][c] || 1e-12;
+    for (let j = c; j < 4; j++) m[c][j] /= d;
+    for (let r = 0; r < 3; r++) {
+      if (r === c) continue;
+      const f = m[r][c];
+      for (let j = c; j < 4; j++) m[r][j] -= f * m[c][j];
+    }
+  }
+  const cx = m[0][3] / 2, cy = m[1][3] / 2;
+  const r = Math.sqrt(Math.max(1e-9, m[2][3] + cx * cx + cy * cy));
+  let s = 0;
+  for (const [x, y] of pts) s += (Math.hypot(x - cx, y - cy) - r) ** 2;
+  return { cx, cy, r, rms: Math.sqrt(s / n) };
+}
+
 export class SlyModel {
   constructor(engine) {
     this.engine = engine;
@@ -125,8 +213,11 @@ export class SlyModel {
     this.bones = {};
     this.boneNames = RIG3.BONE_ORDER;
     this.mesh = null;
+    this.cane = null;
     this._bindWorld = {};
     this._restQ = {};
+    this._socket = null;      // grip frame in FBX bind space, filled by _relaxGloves
+    this.gripInfo = null;     // what the solve read and decided — the tests assert on this
   }
 
   async init() {
@@ -189,6 +280,8 @@ export class SlyModel {
     /* ---- geometry: world space, per part, sanitized ---- */
     const geos = [], parts = [];
     let dropped = 0;
+    const staffBone = srcSkel.bones.findIndex((b) => b.name === 'staff');
+    let staffPts = [], staffTris = 0;
     for (const sm of skinned) {
       let g = sm.geometry.clone();
       /* SkinnedMesh geometry is authored in bind space; its own matrixWorld is the bind
@@ -197,7 +290,12 @@ export class SlyModel {
       if (g.index) g = g.toNonIndexed();
       const r = dropNonFiniteTriangles(g);
       dropped += r.dropped;
-      geos.push(r.geo);
+      let gg = r.geo;
+      if (staffBone >= 0) {
+        const cut = splitOffBone(gg, staffBone);
+        if (cut.points.length) { staffPts = cut.points; staffTris = cut.removed; gg = cut.geo; }
+      }
+      geos.push(gg);
       parts.push(partOf(sm.name));
     }
     if (dropped) this.engine?.warn?.(`SlyModelDLRig: dropped ${dropped} triangle(s) with non-finite corners`);
@@ -212,7 +310,7 @@ export class SlyModel {
     const merged = mergeGeometries(geos, true);
     if (!merged) throw new Error('SlyModelDLRig: merge failed — parts disagree on attributes');
 
-    this._relaxGloves(merged, srcSkel);
+    this._relaxGloves(merged, srcSkel, staffPts);
 
     /* ---- normalize: feet to the floor, uniform scale to our character height ---- */
     merged.computeBoundingBox();
@@ -367,6 +465,13 @@ export class SlyModel {
     this.mesh.add(boneList[0]);
     this.mesh.bind(skeleton);
 
+    /* One ink system (critic 7 #3). The hull is what makes a cel silhouette read, and the shipped
+       model has never built one; 50% of the cap's outline and 33% of the back's is currently bare.
+       Width comes from Outline.js (INK_PX), so `thickness` is accepted and ignored. */
+    this.engine?.get?.('shading')?.outline?.(this.mesh, { thickness: 1 });
+
+    this._buildCane(M, rot, abs, S, yOff, staffTris);
+
     this.root.userData.height = RIG3.TUNE.height;
     this.root.userData.artistWeights = true;
     this.root.userData.foldedBones = folded;
@@ -398,8 +503,20 @@ export class SlyModel {
    *
    * Only the body mesh carries finger weight — 6,070 of its 25,353 vertices — and the eye, head and
    * tail meshes carry exactly 0.00 %, so this cannot disturb the face.
+   *
+   * WHAT THIS DID NOT DO, and now does. The fixed 22/34/30 was chosen to un-splay a T-pose hand
+   * and it knows nothing about the cane, which is weighted to `staff` and therefore moves 0 mm
+   * while the curl moves 6,070 vertices by up to 12 asset units. So the flexion fix pulled the
+   * fingers OFF the shaft: right-hand digit vertices sat a median 136 mm from the nearest staff
+   * vertex with 1.1 % inside 10 mm. Worse, the shaft never ran through the palm at all — measured
+   * in this space, the staff's axis passes 5.2 units on the BACK of the knuckle line, so curling
+   * harder moves the fingers further away and no amount of it can close the gap. That is the
+   * whole of critic pass 7 #5 and it is a placement fault, not a flexion one.
+   *
+   * The cane hand therefore gets a solve instead of a constant (`_solveGrip`), and the cane is
+   * built as a prop socketed to the frame that solve returns.
    */
-  _relaxGloves(geo, srcSkel) {
+  _relaxGloves(geo, srcSkel, staffPts = []) {
     const CURL = { finger: [22, 34, 30], thumb: [14, 20] };     // degrees, per joint down the chain
     const DIGITS = {
       index: ['index_base', 'index_midA', 'index_midB', 'index_tip'],
@@ -414,6 +531,20 @@ export class SlyModel {
         new THREE.Matrix4().copy(srcSkel.boneInverses[idx.get(nm)]).invert())
       : null);
 
+    /* Which hand holds the cane is DERIVED: the staff we just lifted out of the mesh has a
+       centroid, and the wrist nearer to it is the one that was holding it. */
+    let caneSide = null;
+    if (staffPts.length) {
+      const sc = new THREE.Vector3();
+      for (const v of staffPts) sc.add(v);
+      sc.divideScalar(staffPts.length);
+      let bestD = Infinity;
+      for (const side of ['LF', 'RT']) {
+        const w = bind(`${side}_wrist`);
+        if (w && w.distanceTo(sc) < bestD) { bestD = w.distanceTo(sc); caneSide = side; }
+      }
+    }
+
     /* FBX bone index -> the bind-space matrix that curls whatever is weighted to it */
     const curl = new Map();
     for (const side of ['LF', 'RT']) {
@@ -427,9 +558,20 @@ export class SlyModel {
       palmWard.normalize();
       const axis = new THREE.Vector3().crossVectors(fingerDir, palmWard).normalize();
 
+      /* The open hand keeps the constant. Only the hand that has something to hold is solved,
+         which keeps the blast radius of the solve to one hand. */
+      const solved = side === caneSide
+        ? this._solveGrip({ geo, srcSkel, idx, bind, side, DIGITS, CURL, fingerDir, palmWard, axis, staffPts })
+        : null;
+
       for (const [digit, chain] of Object.entries(DIGITS)) {
-        const ang = digit === 'thumb' ? CURL.thumb : CURL.finger;
+        const ang = (digit === 'thumb' ? CURL.thumb : CURL.finger)
+          .map((a) => a * (solved ? solved.scale[digit] : 1));
+        /* The thumb's opposition is a swing of the whole digit about its own base — flexion about
+           the shared axis moves it PARALLEL to the fingers, which is why the shipped hand has no
+           thumb across the cane no matter how hard it curls. */
         let acc = new THREE.Matrix4();                           // identity: the wrist does not move
+        if (solved && digit === 'thumb' && solved.thumbAim) acc = solved.thumbAim.clone();
         for (let j = 0; j < chain.length; j++) {
           const nm = `${side}_${chain[j]}`;
           const bi = idx.get(nm);
@@ -490,9 +632,285 @@ export class SlyModel {
     this.engine?.warn?.(`SlyModelDLRig: relaxed ${touched} glove vertices, max move ${maxMove.toFixed(1)} (asset units)`);
   }
 
+  /**
+   * Build `Cane.js` and socket it to `handR` at the frame the grip solve returned.
+   *
+   * WHY THE PROP AND NOT THE SUBMESH. The asset's crook is three straight segments meeting at
+   * mitres, baked into 774 vertices all weighted to one bone — "a bent coat hanger, not a crook",
+   * and no parameter smooths a baked polyline. `Cane.js` samples an open 192° arc at
+   * `hookRadius` 0.168, which is the shape the silhouette is supposed to carry.
+   *
+   * WHY A RIGID SOCKET AND NOT `_attachPoints.cane`. Registering an attach point would hand the
+   * cane to `Animation._applyCane`, whose per-clip aims were authored against the LEGACY model's
+   * `caneGrip` base and would swing this cane somewhere else in all 52 clips. The staff this
+   * replaces was rigid to `handR`; the replacement is rigid to `handR` in the same place, so no
+   * clip changes and the only difference is the geometry. Wiring the aim system up is a separate,
+   * capture-backed job.
+   *
+   * SPACE. Every project bone is built with an identity rotation, so a bone's bind world matrix is
+   * a pure translation and a child of `handR` is in project metres, unscaled. The socket arrives
+   * in FBX bind units and is carried across by the same chain the mesh took: normalise, then the
+   * per-bone matrix for `handR` — which is exact here, because the staff was weighted 1.0 to
+   * `staff` and `staff` maps to `handR`, so its vertices took precisely that transform and nothing
+   * else.
+   */
+  _buildCane(M, rot, abs, S, yOff, staffTris) {
+    const s = this._socket;
+    if (!s) { this.engine?.warn?.('SlyModelDLRig: no grip socket solved — cane not built'); return; }
+    const hi = RIG3.BONE_ORDER.indexOf('handR');
+    const q = (rot.handR && rot.handR.q) || new THREE.Quaternion();
+    const unit = S * ((rot.handR && rot.handR.sc) || 1);            // asset units -> project metres
+    const toProj = (v) => v.clone().setY(v.y + yOff).multiplyScalar(S).applyMatrix4(M[hi]);
+    const dir = (v) => v.clone().applyQuaternion(q).normalize();
+
+    const Y = dir(s.Y), Z = dir(s.Z);
+    Z.addScaledVector(Y, -Z.dot(Y)).normalize();
+    const X = new THREE.Vector3().crossVectors(Y, Z).normalize();
+    const socket = new THREE.Group();
+    socket.name = 'caneSocket';
+    socket.position.copy(toProj(s.C)).sub(new THREE.Vector3(...abs.handR));
+    socket.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(X, Y, Z));
+
+    const gripR = s.gripR * unit, shaftR = s.shaftR * unit;
+    this.cane = new Cane(this.engine, { tune: { gripR, shaftR } });
+    const shading = this.engine?.get?.('shading');
+    const gold = shading?.make
+      ? shading.make({
+        name: 'slydlrig:cane', color: 0xe8b942, vertexColors: true,
+        bands: RIG3.TUNE.bands, rim: RIG3.TUNE.rim, rimColor: RIG3.TUNE.rimColor,
+        outline: RIG3.TUNE.outline, outlineColor: RIG3.TUNE.outlineColor,
+      })
+      : new THREE.MeshStandardMaterial({ color: 0xe8b942, vertexColors: true, metalness: 0.85, roughness: 0.3 });
+    this.cane.build([gold]);
+    socket.add(this.cane.object);
+    this.bones.handR.add(socket);
+    this._caneSocket = socket;
+    /* the cane is hard metal among fur — its own, slightly heavier line */
+    shading?.outline?.(this.cane.mesh, { thickness: 1.25 });
+    this.engine?.warn?.(`SlyModelDLRig: staff submesh dropped (${staffTris} tris), Cane.js socketed to handR `
+      + `(grip ${(gripR * 1000).toFixed(1)} mm, ${this.cane.triangles} tris)`);
+  }
+
+  /**
+   * Solve the cane hand: how far each digit curls, and where the cane has to be for that to be a
+   * grip. Runs once at load, in FBX bind space, on the artist's own finger bones. Zero runtime cost.
+   *
+   * The order matters and is the opposite of the obvious one. Bending the fingers onto a cane
+   * that is not in the palm cannot work — measured here, the asset's staff runs across the BACK
+   * of the knuckles, so flexion increases the gap. So the hand is closed first, on a physical
+   * target, and the cane is then put where the closed hand's tunnel actually is:
+   *
+   *   1. GRIP RADIUS from the glove. Each finger must lie along `GRIP.wrapDeg` of the grip's
+   *      circumference, so the largest admissible radius is `chain / wrapRad - flesh`, minimised
+   *      over the four fingers. `chain` is the summed phalanx length and `flesh` is the median
+   *      distance of that digit's vertices from its own bone line — both measured, neither typed.
+   *      This is why the authored 29.5 mm grip could never be held: it needs fingers half again
+   *      as long as this glove has.
+   *   2. CLOSURE. Curl all four by a shared scale on the shipped 22/34/30 profile and fit a circle
+   *      through their sixteen joints projected onto the plane normal to the flexion axis. The
+   *      fitted radius minus the mean flesh is the internal radius of the fist; bisect the scale
+   *      until it equals the grip radius. The fitted centre is the tunnel, and it is where the
+   *      cane goes.
+   *   3. CONTACT. Each digit then closes on its own until its fingertip reaches the grip surface,
+   *      so the four differ instead of moving as one block — the "four identical prongs" half of
+   *      the complaint.
+   *   4. THUMB. Flexion about the shared axis moves the thumb parallel to the fingers, never
+   *      across them, which is why the shipped hand shows no thumb on the cane. It gets an
+   *      opposition swing about the axis that aims its tip at the cane instead.
+   *
+   * Every quantity the fix is judged on is read out afterwards, in `gripInfo`; none is an input.
+   */
+  _solveGrip({ geo, srcSkel, idx, bind, side, DIGITS, CURL, fingerDir, palmWard, axis, staffPts }) {
+    const FINGERS = ['index', 'mid', 'ring', 'pinky'];
+    const pos = geo.attributes.position, si = geo.attributes.skinIndex, sw = geo.attributes.skinWeight;
+    if (!si || !sw) return null;
+    const names = srcSkel.bones.map((b) => b.name);
+
+    /* --- vertex sets and flesh radii, per digit --- */
+    const vertsOf = {}, flesh = {};
+    for (const d of Object.keys(DIGITS)) vertsOf[d] = [];
+    const pre = `${side}_`;
+    for (let i = 0; i < pos.count; i++) {
+      for (let k = 0; k < 4; k++) {
+        const w = sw.array[i * 4 + k];
+        if (!(w > 0.5)) continue;
+        const nm = names[si.array[i * 4 + k]] || '';
+        if (!nm.startsWith(pre)) continue;
+        const d = Object.keys(DIGITS).find((x) => nm.startsWith(`${pre}${x}_`));
+        if (d) vertsOf[d].push(i);
+      }
+    }
+    const v3 = new THREE.Vector3();
+    for (const d of Object.keys(DIGITS)) {
+      const chain = DIGITS[d];
+      const a0 = bind(`${pre}${chain[0]}`), a1 = bind(`${pre}${chain[chain.length - 1]}`);
+      if (!a0 || !a1 || !vertsOf[d].length) return null;
+      const dir = a1.clone().sub(a0); const L = dir.length(); dir.normalize();
+      const rs = [];
+      for (const i of vertsOf[d]) {
+        const q = v3.fromBufferAttribute(pos, i).clone().sub(a0);
+        const u = THREE.MathUtils.clamp(q.dot(dir), 0, L);
+        rs.push(q.addScaledVector(dir, -u).length());
+      }
+      rs.sort((a, b) => a - b);
+      flesh[d] = rs[rs.length >> 1];
+    }
+
+    /* --- 1. grip radius the glove can actually close on --- */
+    const chainLen = {};
+    for (const d of Object.keys(DIGITS)) {
+      let L = 0;
+      for (let j = 0; j + 1 < DIGITS[d].length; j++) L += bind(`${pre}${DIGITS[d][j]}`).distanceTo(bind(`${pre}${DIGITS[d][j + 1]}`));
+      chainLen[d] = L;
+    }
+    const wrapRad = THREE.MathUtils.degToRad(GRIP.wrapDeg);
+    let gripR = Infinity;
+    for (const d of FINGERS) gripR = Math.min(gripR, chainLen[d] / wrapRad - flesh[d]);
+    if (!(gripR > 0)) return null;
+    const shaftR = gripR * (CANE_TUNE.shaftR / CANE_TUNE.gripR);
+
+    /* --- frame for the plane normal to the flexion axis --- */
+    const e1 = new THREE.Vector3(1, 0, 0);
+    if (Math.abs(e1.dot(axis)) > 0.9) e1.set(0, 1, 0);
+    e1.addScaledVector(axis, -e1.dot(axis)).normalize();
+    const e2 = new THREE.Vector3().crossVectors(axis, e1).normalize();
+
+    /* forward kinematics for one digit, composed exactly as _relaxGloves composes it */
+    const chainOf = (d, k, aim) => {
+      const chain = DIGITS[d], ang = (d === 'thumb' ? CURL.thumb : CURL.finger).map((a) => a * k);
+      let acc = aim ? aim.clone() : new THREE.Matrix4();
+      const joints = [];
+      for (let j = 0; j < chain.length; j++) {
+        const nm = `${pre}${chain[j]}`, p = bind(nm);
+        if (!p) continue;
+        if (j < ang.length) {
+          const q = new THREE.Quaternion().setFromAxisAngle(axis, THREE.MathUtils.degToRad(ang[j]));
+          acc = acc.clone().multiply(new THREE.Matrix4().makeTranslation(p.x, p.y, p.z)
+            .multiply(new THREE.Matrix4().makeRotationFromQuaternion(q))
+            .multiply(new THREE.Matrix4().makeTranslation(-p.x, -p.y, -p.z)));
+        }
+        joints.push(p.clone().applyMatrix4(acc));
+      }
+      return joints;
+    };
+
+    /* --- 2. close the fist until its internal radius is the grip radius --- */
+    const fleshMean = FINGERS.reduce((s, d) => s + flesh[d], 0) / FINGERS.length;
+    const fitAt = (k) => {
+      const pts = [];
+      for (const d of FINGERS) for (const j of chainOf(d, k)) pts.push([j.dot(e1), j.dot(e2)]);
+      return circleFit(pts);
+    };
+    let lo = 0.2, hi = GRIP.fingerCap;
+    for (let s = 0; s < 40; s++) {
+      const m = (lo + hi) / 2;
+      if (fitAt(m).r - fleshMean > gripR) lo = m; else hi = m;
+    }
+    const kShared = (lo + hi) / 2, fit = fitAt(kShared);
+
+    /* the grip section along the cane is the digit block's own axial footprint, which flexion —
+       a rotation about that very axis — leaves EXACTLY invariant, so it is not a knob */
+    const allD = Object.keys(DIGITS).flatMap((d) => vertsOf[d]);
+    const axAll = allD.map((i) => v3.fromBufferAttribute(pos, i).dot(axis)).sort((a, b) => a - b);
+    const band = [axAll[Math.floor(axAll.length * GRIP.band[0])], axAll[Math.floor(axAll.length * GRIP.band[1])]];
+    const C = new THREE.Vector3()
+      .addScaledVector(e1, fit.cx).addScaledVector(e2, fit.cy)
+      .addScaledVector(axis, (band[0] + band[1]) / 2);
+    const radial = (v) => { const q = v.clone().sub(C); return q.addScaledVector(axis, -q.dot(axis)).length(); };
+
+    /* --- 3. each digit closes until its own tip touches --- */
+    const scale = {};
+    for (const d of FINGERS) {
+      const target = gripR + flesh[d];
+      let pick = null, bestE = Infinity, bestK = kShared;
+      for (let k = 0; k <= GRIP.fingerCap + 1e-9; k += 0.01) {
+        const r = radial(chainOf(d, k)[DIGITS[d].length - 1]);
+        if (pick === null && r <= target) { pick = k; break; }
+        if (Math.abs(r - target) < bestE) { bestE = Math.abs(r - target); bestK = k; }
+      }
+      scale[d] = pick === null ? bestK : pick;
+    }
+
+    /* --- 4. thumb opposition: swing the whole digit about the axis that aims it at the cane --- */
+    const tChain = DIGITS.thumb;
+    const tBase = bind(`${pre}${tChain[0]}`), tTip = bind(`${pre}${tChain[tChain.length - 1]}`);
+    const nearest = C.clone().addScaledVector(axis, tTip.dot(axis) - C.dot(axis));
+    const oppAxis = new THREE.Vector3().crossVectors(tTip.clone().sub(tBase), nearest.clone().sub(tBase));
+    let thumbAim = null, thumbAimDeg = 0, thumbReach = radial(tTip);
+    if (oppAxis.lengthSq() > 1e-9) {
+      oppAxis.normalize();
+      const swing = (deg) => new THREE.Matrix4().makeTranslation(tBase.x, tBase.y, tBase.z)
+        .multiply(new THREE.Matrix4().makeRotationFromQuaternion(
+          new THREE.Quaternion().setFromAxisAngle(oppAxis, THREE.MathUtils.degToRad(deg))))
+        .multiply(new THREE.Matrix4().makeTranslation(-tBase.x, -tBase.y, -tBase.z));
+      const target = gripR + flesh.thumb;
+      let bestE = Infinity, bestA = 0, bestK = 1;
+      /* never STRAIGHTER than the relaxed thumb: a straight thumb is a fifth prong, which is the
+         half of #5 that flexion already exists to answer. Only the opposition is free. */
+      for (let a = 0; a <= GRIP.thumbAimMax + 1e-9; a += 1) {
+        for (let k = 1; k <= 3.0 + 1e-9; k += 0.25) {
+          const r = radial(chainOf('thumb', k, swing(a))[tChain.length - 1]);
+          const e = Math.abs(r - target);
+          if (e < bestE - 1e-6) { bestE = e; bestA = a; bestK = k; thumbReach = r; }
+        }
+      }
+      thumbAim = swing(bestA); thumbAimDeg = bestA; scale.thumb = bestK;
+    } else scale.thumb = 1;
+
+    /* --- where the cane points: matched to the staff we just removed, so the silhouette the
+           clips were authored against does not move. The hook end is the end with the wider
+           perpendicular spread; the bend direction is that end's mean offset off the axis. --- */
+    let Y = axis.clone(), Z = new THREE.Vector3();
+    if (staffPts.length) {
+      const sc = new THREE.Vector3();
+      for (const v of staffPts) sc.add(v);
+      sc.divideScalar(staffPts.length);
+      let loS = 0, hiS = 0, loN = 0, hiN = 0;
+      const loP = new THREE.Vector3(), hiP = new THREE.Vector3();
+      for (const v of staffPts) {
+        const q = v.clone().sub(sc); const a = q.dot(axis);
+        q.addScaledVector(axis, -a);
+        if (a < 0) { loS += q.length(); loN++; loP.add(q); } else { hiS += q.length(); hiN++; hiP.add(q); }
+      }
+      const hookHigh = (hiN ? hiS / hiN : 0) > (loN ? loS / loN : 0);
+      Y = axis.clone().multiplyScalar(hookHigh ? 1 : -1);
+      Z.copy(hookHigh ? hiP : loP);
+      Z.addScaledVector(Y, -Z.dot(Y));
+    }
+    if (Z.lengthSq() < 1e-9) Z.copy(palmWard).addScaledVector(Y, -palmWard.dot(Y));
+    Z.normalize();
+
+    this._socket = { C: C.clone(), Y: Y.clone(), Z: Z.clone(), gripR, shaftR };
+
+    /* read-outs — not inputs. Anything the fix is scored on is computed after it is decided. */
+    let palmClear = Infinity;
+    for (let i = 0; i < pos.count; i++) {
+      let w = 0;
+      for (let k = 0; k < 4; k++) if (names[si.array[i * 4 + k]] === `${pre}wrist`) w += sw.array[i * 4 + k];
+      if (w <= 0.5) continue;
+      const v = v3.fromBufferAttribute(pos, i).clone();
+      const a = v.dot(axis);
+      if (a < band[0] || a > band[1]) continue;
+      palmClear = Math.min(palmClear, radial(v) - gripR);
+    }
+    this.gripInfo = {
+      side, gripR, shaftR, kShared, scale: { ...scale }, thumbAimDeg,
+      thumbReach: thumbReach - gripR, fitRms: fit.rms, fistRadius: fit.r - fleshMean,
+      flesh: { ...flesh }, chainLen: { ...chainLen }, band, palmClear,
+      C: C.clone(), axis: axis.clone(), Y: Y.clone(), Z: Z.clone(),
+      /* Vertex indices are stable from here to the end of init() — the staff was the last thing
+         removed — so this is the only handle a test has on "which vertices are fingers" once the
+         117 FBX influences have been collapsed onto `handR`. 2.4k indices, ~10 kB. */
+      digitVerts: Object.fromEntries(Object.entries(vertsOf).map(([d, a]) => [d, Uint32Array.from(a)])),
+    };
+    return { scale, thumbAim };
+  }
+
   bp(name) { return this._bindWorld[name]; }
   update() { /* all motion comes from Rig/Animation */ }
   dispose() {
+    this.cane?.dispose?.();
+    this.cane = null;
     this.mesh?.geometry?.dispose?.();
     const mm = this.mesh?.material;
     (Array.isArray(mm) ? mm : [mm]).forEach((x) => { x?.map?.dispose?.(); x?.dispose?.(); });

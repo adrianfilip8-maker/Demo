@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { StateMachine } from './States.js';
 import { buildMoveset } from './Moveset.js';
+import { TargetField } from './Targets.js';
 
 /**
  * Controller — Sly's character controller. Hand-rolled kinematic capsule, swept against the
@@ -143,6 +144,44 @@ export const TUNE = {
   visionScale: 0.35,
   visionRange: 26,
 
+  /* ---- target magnetism (Targets.js).  ---------------------------------------------------
+     The structure is imported from the two Godot Sly repos (progress/records/
+     IMPORT-slyrepos-movement.md §2); NONE of their constants are. They run SPEED 4.0 /
+     JUMP_VELOCITY 8.0 → 2 m apex → g 16, air time 1.00 s. We run 7.2 / 11.0 / −24 → apex 2.52 m,
+     air time 0.917 s. So every imported number is scaled by the factor matching its *dimension*:
+
+        kH  1.800  horizontal speed   7.2 / 4.0
+        kV  1.375  vertical speed    11.0 / 8.0
+        kT  0.917  time               0.917 s / 1.000 s
+        kLh 1.650  horizontal length  kH·kT   (= jump reach  6.60 / 4.00)
+        kLv 1.260  vertical length    kV·kT   (= jump apex   2.52 / 2.00)
+
+     `Targets.DERIVATION` carries the same table as data and tests/targets.test.mjs asserts these
+     numbers against it, so none of them can drift back into being a copy of theirs. ---- */
+  magPullSpeed:   7.2,       // theirs 4.0 (=SPEED) ×kH — pull at our own top run speed
+  magPullTau:     0.068466,  // theirs lerp 0.2/frame@60Hz = τ 74.69 ms, ×kT
+  magUpDrift:     2.75,      // theirs 0.5×SPEED = 2.0 ×kV  (= 0.25 × jumpV0)
+  magUpDirGain:   1.375,     // theirs' bare dir.y term, ×kV
+  magUpFalloff:   0.0825,    // theirs 0.05 ×kLh — assist = k/(horiz+k), WEAKENS with distance
+  magYankGain:    11.0,      // theirs dir.y×8 (=JUMP_VELOCITY) ×kV  (= our jumpV0)
+  magYankTau:     0.042834,  // theirs lerp 0.3/frame@60Hz = τ 46.7 ms, ×kT
+  magFallClamp:  -8.9375,    // theirs −6.5 ×kV — cannot fall past a target you are locked to
+  magSnapRadius:  0.20625,   // theirs 0.125 ×kLh
+  magSnapLerp:    0.33,      // theirs 0.2 ×kLh — positional close-out, alpha = k/(d+k)
+  magNoClip:      2.475,     // theirs 1.5 ×kLh — capsule bypassed inside this, non-notch only
+  magRelease:     2.52083,   // theirs 2.0 ×kLv — and 2.52 m is exactly our own jump apex
+  magCurveDomain: 11.0,      // theirs clamp(vy, ±8) ×kV
+  /* ---- no counterpart in theirs; derived from our numbers alone ---- */
+  magCatch:       1.008,     // runSpeed × jumpBufferMs. Magnetism forgives the same timing error
+                             // the input layer already forgives — 140 ms — and nothing wider.
+  magVolume:      3.30,      // half a full-speed jump's reach (7.2 × 0.917 / 2)
+  magMaxTime:     1.375,     // 1.5 air times; no lock can outlive the arc that started it
+  magCooldown:    0.9167,    // one air time before a released target may re-assign
+  magYankCap:     1.15,      // yank ≤ 1.15 × the velocity that just reaches the point's height
+  magBreakTime:   0.140,     // = jumpBufferMs of sustained opposite input breaks the lock
+  magBreakDot:   -0.5,
+  magHold:        0.25,      // = coyote + jump buffer: how long Sly holds a reached point
+
   /* ---- safety ---- */
   voidY:       -220,     // absolute last resort; the level's lowest legal floor is -12
   landHard:     9.0,     // |vy| above this is a hard landing
@@ -261,6 +300,14 @@ export class Controller {
     this.anchor = new THREE.Vector3();  // hook anchor while swinging
     this.attached = null;      // rec of whatever Sly is holding onto
 
+    /* ---- authored traversal magnetism. Level content authors points into this (see
+       addTarget / the 'registerTarget' event); the `toTarget` state consumes them. ---- */
+    this.targets = new TargetField(this);
+    /* Spline-follow scratch for the rail moves. RailBase.mount() writes straight into it. */
+    this.rail = { spline: null, rec: null, u: 0, len: 1, speed: 0 };
+    this.hangLock = 0;         // brief lockout after dropping off a ledge, so it can't re-grab
+    this.pendingLaunch = 0;    // launch velocity handed to Jump by rail/pole/spire exits
+
     /* ---- intent ---- */
     this.wishDir = new THREE.Vector3();
     this.wishMag = 0;
@@ -326,7 +373,13 @@ export class Controller {
     this._offBounce = this.engine.on('enemyBounce', (p) => this.bounce(p?.strength));
     this._offHurt = this.engine.on('hurt', (p) => this.hurt(p?.dir, p?.force));
     this._offShot = this.engine.on('shot', () => { this._resetVision(); });
+    // Level content authors traversal points without importing anything of ours.
+    this._offTarget = this.engine.on('registerTarget', (spec) => this.addTarget(spec));
+    this._offUntarget = this.engine.on('unregisterTarget', (spec) => this.removeTarget(spec));
   }
+
+  /** TUNE, reachable from Targets.js without a module-scope import cycle. */
+  tune() { return TUNE; }
 
   /* ==================================================================== */
   /* frame                                                                */
@@ -353,6 +406,7 @@ export class Controller {
       this._readInput();
       this._preTimers(dt);
       this._probeEnvironment();
+      this.targets.update(dt);
       this.sm.update(dt);
       this._postTimers(dt);
       this._hazards(dt);
@@ -477,6 +531,7 @@ export class Controller {
     if (this.comboTimer > 0) this.comboTimer -= dt;
     else this.comboIndex = 0;
     if (this.hurtCooldown > 0) this.hurtCooldown -= dt;
+    if (this.hangLock > 0) this.hangLock -= dt;
   }
 
   _postTimers(dt) {
@@ -728,9 +783,20 @@ export class Controller {
   gravity(dt, scale = 1) {
     const v = this.velocity;
     v.y += TUNE.gravity * scale * dt;
-    // Apex hang (§6): trimming vy near zero shortens the rise and stretches the float. Raised
-    // to a per-second exponent so the feel is identical at 30 and 144 fps.
-    if (Math.abs(v.y) < TUNE.apexWindow) v.y *= Math.pow(TUNE.apexHang, dt * 60);
+    /* Apex hang (§6): trimming vy near zero shortens the rise and stretches the float. Raised
+       to a per-second exponent so the feel is identical at 30 and 144 fps.
+
+       **Only while rising.** §6 states the rule as "vy scaled ×0.72 while |vy| < 2.2", and applied
+       on the way down as well that is not a hang, it is a parachute: v ← (v − g·dt)·0.72 has a
+       stable fixed point at −0.4·0.72/(1−0.72) = **−1.03 m/s**, which the descent converges to and
+       can never leave, because it never reaches the 2.2 m/s that would switch the trim off. Sly
+       fell at 1 m/s from any height — a 2.4 m jump took 2.4 s to come down, `landImpact` never
+       passed the 3.2 threshold so `land` and `land_hard` were unreachable, and `maxFall` was dead
+       code. Measured, not reasoned: see tests/targets.test.mjs, which asserts a ballistic descent
+       because every number it reports depends on one.
+       The rise is deliberately untouched, so both jump heights stay exactly as calibrated (the
+       `doubleJumpV0 = 9.90` note above is a measurement of this trim on the way up). */
+    if (v.y > 0 && v.y < TUNE.apexWindow) v.y *= Math.pow(TUNE.apexHang, dt * 60);
     if (v.y < TUNE.maxFall) v.y = TUNE.maxFall;
   }
 
@@ -746,6 +812,21 @@ export class Controller {
     this._moveHorizontal(dt);
     this._moveVertical(dt);
     this._probeGround(this.grounded ? TUNE.groundSnap : 0.06);
+  }
+
+  /**
+   * Integrate with the capsule switched off — no sweep, no ground probe.
+   *
+   * This is target magnetism's "collider bypass" (IMPORT §2): inside `magNoClip` of a target the
+   * geometry around the point must not be able to wedge the assist, because the lip of geometry
+   * you are being helped over is usually the very thing you would catch on. Nothing else may use
+   * this; it is bounded by the 2.475 m radius and by `magMaxTime`.
+   */
+  moveNoClip(dt) {
+    this.hitWall = false;
+    this.hitCeiling = false;
+    this.position.addScaledVector(this.velocity, dt);
+    this.grounded = false;
   }
 
   /** Horizontal only — used by states that manage their own vertical motion. */
@@ -1016,6 +1097,8 @@ export class Controller {
     this.attached = null;
     this.balance = 0;
     this.comboIndex = 0;
+    this.hangLock = 0;
+    this.targets.release('teleport');
     this._assistUsed = false;
     this.height = TUNE.height;
     this.sm.set('fall');
@@ -1023,6 +1106,27 @@ export class Controller {
     this.stateName = this.sm.name;
     this._pushCharacter();
   }
+
+  /**
+   * Author a traversal magnetism point (Targets.js). The only required field is `point`.
+   *
+   *   movement.addTarget({
+   *     point: new THREE.Vector3(x, y, z),  // where Sly ends up
+   *     volume: 3.3,        // trigger sphere radius; default magVolume
+   *     catch: 1.008,       // widest ballistic miss this point rescues; default magCatch
+   *     magnet: 1.0,        // their magnet_force — multiplies the horizontal pull
+   *     jumpMult: 1.0,      // their jump_mult — multiplies a jump taken from the point
+   *     group: 'swing',     // 'swing' | 'pole' | 'notch'  (a notch keeps its collider)
+   *     arrive: 'hookSwing' // optional state to hand off to on arrival
+   *   });
+   *
+   * Level modules that would rather not hold a reference can emit `registerTarget` with the same
+   * spec on the engine bus. FX/HUD can subscribe to 'targetLocked' / 'targetReached' /
+   * 'targetReleased' to put §2.1's blue sparkle on them.
+   */
+  addTarget(spec) { return spec ? this.targets.add(spec) : null; }
+  removeTarget(t) { return this.targets.remove(t); }
+  clearTargets() { this.targets.clear(); }
 
   /** Knockback, bounce pads, anything external that wants to move Sly. */
   addImpulse(vec3) {
@@ -1056,6 +1160,8 @@ export class Controller {
     this._resetVision();
     this.engine.timeScale = 1;
     this._offBounce?.(); this._offHurt?.(); this._offShot?.();
+    this._offTarget?.(); this._offUntarget?.();
+    this.targets.clear();
     if (this._placeholder) {
       this._placeholder.geometry.dispose();
       this._placeholder.material.dispose();

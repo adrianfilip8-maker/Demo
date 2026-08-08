@@ -1,7 +1,7 @@
 import * as THREE from 'three';
-import { Surface, mkCanvas, css, TEX_AB } from './Canvas2D.js';
-import { derive } from './NormalMap.js';
+import { mkCanvas, css, TEX_AB } from './Canvas2D.js';
 import { MATERIALS, MATERIAL_NAMES, MATERIAL_GROUPS, PREWARM } from './Materials.js';
+import { bake, bakeSize } from './Bake.js';
 
 /**
  * Textures — the module wrapper over the procedural material catalogue.
@@ -93,6 +93,7 @@ export class Textures {
     this._textures = [];           // everything we own, for dispose()
     this._bytes = 0;
     this._swatch = null;
+    this._poolSize = 0;            // texture workers used by the last prewarm; 0 = main thread
     this.stats = { built: 0, ms: 0, bytes: 0 };
 
     // A hard ceiling so a pathological run can't exhaust GPU memory (AGENTS.md §1: 350 MB).
@@ -121,10 +122,15 @@ export class Textures {
     const ab = TEX_AB();
     if (ab.length) this.engine.warn(`textures: A/B CONTROL BUILD — treatments disabled: ${ab.join(',')}`);
 
-    // Build only what the canonical shots actually put on screen; everything else is built
-    // lazily on first get(). Yielding between recipes keeps the loading bar painting.
-    for (const name of PREWARM) {
-      if (!MATERIALS[name]) continue;
+    // Build only what the shipped level actually puts on screen; everything else is built
+    // lazily on first get().
+    const jobs = PREWARM.filter((n) => MATERIALS[n] && !this._cache.has(n));
+    const built = await this._prewarmParallel(jobs);
+    /* Serial fallback: no workers on this host, the pool died, or a job came back broken.
+     * Identical code either way — `get()` calls `bake()` through `_buildLocal`, which is the
+     * same function the worker calls. Yielding between recipes keeps the loading bar painting. */
+    for (const name of jobs) {
+      if (built.has(name)) continue;
       this.get(name);
       await new Promise((r) => setTimeout(r, 0));
     }
@@ -134,6 +140,116 @@ export class Textures {
     if (this.stats.ms > 6000) {
       this.engine.warn(`textures: prewarm took ${(this.stats.ms / 1000).toFixed(1)}s at size ${this.size}`);
     }
+    this.engine.warn(`textures: prewarm ${this.stats.built} recipes in ${(this.stats.ms / 1000).toFixed(2)}s `
+      + `at size ${this.size} on ${this._poolSize} worker${this._poolSize === 1 ? '' : 's'} `
+      + `(${(this._bytes / 1048576).toFixed(0)} MB)`);
+  }
+
+  /* ───────────────────────────── parallel prewarm ───────────────────────────── */
+
+  /**
+   * Build `names` across a pool of workers and return the set that succeeded.
+   *
+   * **Why this is worth a worker pool at all.** Measured offline against the shipped catalogue at
+   * `texSize 1024`, the prewarm list is ~20 s of pure single-threaded arithmetic, and it used to
+   * run on the main thread inside `init()` — which is where `textures: prewarm took 29.6s` and
+   * first-frame times of 12.7 / 17.5 / 29.0 s came from. That is three orders of magnitude larger
+   * than any frame-time number in the ledger and it was the one real performance problem in the
+   * dataset (KNOWN_ISSUES §215.2). Every recipe is a pure function of `(name, seed, size)`,
+   * shares no state, and touches no GPU object, so the only reason it was serial is that nobody
+   * had moved it.
+   *
+   * **Longest-processing-time-first.** Jobs are dispatched biggest-first (`bakeSize` descending),
+   * which is the standard LPT bound for makespan: with the shipped list the six 1024² recipes are
+   * ~3.3 s each and the rest ~0.65 s, so dispatching in catalogue order would leave one worker
+   * starting a 3.3 s job after the others had run dry. Workers pull the next job on completion
+   * rather than being handed a fixed share, so a slow recipe cannot strand a queue behind it.
+   *
+   * **The main thread is deliberately left idle.** It has one job during boot — painting the
+   * loading bar — and it could not do it before, because a 3.3 s recipe blocks rAF for 3.3 s and
+   * the `setTimeout(0)` between recipes only yielded *between* them. `hardwareConcurrency - 1`
+   * keeps a core for that, capped at 4 because each in-flight 1024² build holds ~120 MB of
+   * Float32 working set and four of them at once is already 480 MB of transient heap.
+   */
+  async _prewarmParallel(names) {
+    const done = new Set();
+    if (!names.length) return done;
+
+    const hw = (typeof navigator !== 'undefined' && navigator.hardwareConcurrency) || 0;
+    const want = Math.max(1, Math.min(4, (hw || 2) - 1, names.length));
+    const workers = this._spawnPool(want);
+    this._poolSize = workers.length;
+    if (!workers.length) return done;
+
+    // Biggest first — see LPT note above.
+    const queue = names.slice().sort((a, b) => bakeSize(MATERIALS[b], this.size) - bakeSize(MATERIALS[a], this.size));
+    const texSize = this.size, quality = this.engine.quality;
+    /* The A/B arm as a raw string, shipped with every job. A worker has its own global scope, so
+     * `globalThis.__TEX_AB` set by a CPU-side lab on the main thread does not reach it — see the
+     * header of `TextureWorker.js`. `TEX_AB()` is the parsed form; re-joining it hands the worker
+     * exactly what this thread read, whichever source it came from. */
+    const ab = TEX_AB().join(',');
+
+    let next = 0, id = 0;
+    const pending = new Map();
+    await new Promise((resolve) => {
+      let live = workers.length;
+      const retire = (w) => { try { w.terminate(); } catch { /* already gone */ } if (--live === 0) resolve(); };
+      const pump = (w) => {
+        if (next >= queue.length) { retire(w); return; }
+        const name = queue[next++];
+        const jid = id++;
+        pending.set(jid, { w, name });
+        w.postMessage({ id: jid, name, texSize, quality, ab });
+      };
+      for (const w of workers) {
+        w.onmessage = (e) => {
+          const msg = e.data || {};
+          const job = pending.get(msg.id);
+          pending.delete(msg.id);
+          if (msg.ok && msg.payload) {
+            try {
+              this._cache.set(msg.payload.name, this._finish(msg.payload.name, MATERIALS[msg.payload.name], msg.payload));
+              done.add(msg.payload.name);
+            } catch (err) {
+              this.engine.warn(`textures: "${msg.payload.name}" failed to upload — ${err?.message || err}`);
+            }
+          } else if (job) {
+            // Leave it out of `done` and the serial pass in init() rebuilds it here.
+            this.engine.warn(`textures: worker build of "${msg.name || job.name}" failed — ${msg.error}`);
+          }
+          pump(w);
+        };
+        const die = (why) => {
+          w.onmessage = null;
+          this.engine.warn(`textures: texture worker died (${why}); remaining recipes build on the main thread`);
+          next = queue.length;                       // stop handing out work
+          retire(w);
+        };
+        w.onerror = (err) => die(err?.message || 'error');
+        w.onmessageerror = () => die('messageerror');
+        pump(w);
+      }
+    });
+    return done;
+  }
+
+  /** Spawn up to `n` module workers. Returns [] on any host that cannot make one. */
+  _spawnPool(n) {
+    const out = [];
+    if (typeof Worker === 'undefined') return out;
+    for (let i = 0; i < n; i++) {
+      try {
+        /* `new URL(..., import.meta.url)` is the form the bundler recognises: Vite emits the
+         * worker as its own chunk and rewrites this to a same-bundle URL, so the build stays
+         * self-contained (AGENTS §1) — nothing is fetched from outside the build output. */
+        out.push(new Worker(new URL('./TextureWorker.js', import.meta.url), { type: 'module' }));
+      } catch (err) {
+        if (!i) this.engine.warn(`textures: no worker pool (${err?.message || err}); building on the main thread`);
+        break;
+      }
+    }
+    return out;
   }
 
   update() {}
@@ -170,7 +286,7 @@ export class Textures {
 
     let set = null;
     try {
-      set = this._build(name, recipe);
+      set = this._buildLocal(name, recipe);
     } catch (err) {
       // A broken recipe must not take the frame down — the caller falls back to flat colour.
       this.engine.warn(`textures: "${name}" failed to build — ${err?.message || err}`);
@@ -183,55 +299,30 @@ export class Textures {
 
   /* ───────────────────────────── building ───────────────────────────── */
 
-  _build(name, recipe) {
-    /* Tier is the resolution contract (Materials.js header): 0 = detail-critical, gets the full
-     * budget resolution; 1 = standard, half; 2 = sprite/decal, half. Tier 1 was silently being
-     * built at full size, which is where the 350 MB budget went — the catalogue totalled ~500 MB
-     * and `fur_tail_rings` was being refused outright. Half resolution on a tier-1 map is also
-     * a free readability win: it pre-averages exactly the sub-3-texel detail that can only
-     * alias, and it quarters prewarm cost for two thirds of the catalogue. */
-    const size = recipe.size
-      ? Math.min(recipe.size, this.size)
-      : (recipe.tier >= 1 ? Math.max(256, this.size >> 1) : this.size);
+  /**
+   * Build on this thread. The recipe arithmetic itself lives in `Bake.js`, which is the *same*
+   * module `TextureWorker.js` calls — so a lazily-requested texture and a prewarmed one are the
+   * same function of the same seed, not two implementations that happen to agree.
+   */
+  _buildLocal(name, recipe) {
+    return this._finish(name, recipe, bake(name, this.size, this.engine.quality));
+  }
 
-    const surface = new Surface(size, (recipe.seed ?? hashName(name)) >>> 0);
-    recipe.build(surface, { seed: surface.seed, size, name, quality: this.engine.quality });
+  /**
+   * Turn baked byte buffers into the texture bundle consumers hold. GPU-side only; runs on the
+   * main thread whether the bytes came from here or from a worker.
+   */
+  _finish(name, recipe, out) {
+    const size = out.size;
 
-    /* Joint sign, measured here because it needs the masonry masks, which live only as long as
-     * the Surface does. Two scalars kept, not the masks — a size² Float32Array per material
-     * would cost more than the whole texture budget. Both must come out negative: see
-     * `report()` for why a positive luma delta renders as bright grout. */
-    const joint = (() => {
-      const m = surface.masonry;
-      if (!m) return null;
-      let jy = 0, jh = 0, jn = 0, fy = 0, fh = 0, fn = 0;
-      for (let i = 0; i < surface.n; i++) {
-        const y = surface.r[i] * 0.2126 + surface.g[i] * 0.7152 + surface.b[i] * 0.0722;
-        if (m.joint[i] > 0.6) { jy += y; jh += surface.h[i]; jn++; }
-        else if (m.joint[i] < 0.05) { fy += y; fh += surface.h[i]; fn++; }
-      }
-      if (!jn || !fn) return null;
-      const dY = +((jy / jn) - (fy / fn)).toFixed(4);
-      const dH = +((jh / jn) - (fh / fn)).toFixed(4);
-      if (dY > 0 || dH > 0) {
-        this.engine.warn(`textures: "${name}" has an inverted joint (dLuma ${dY}, dHeight ${dH}) — mortar must be darker and lower than the block faces`);
-      }
-      return { dY, dH };
-    })();
-
-    const out = derive(surface, {
-      bump: recipe.bump ?? 0.03,
-      tile: recipe.tile ?? 2.0,
-      normalScale: recipe.normalScale ?? 1.0,
-      aoStrength: recipe.aoStrength ?? 1.0,
-      aoFloor: recipe.aoFloor ?? 0.16,
-      micro: recipe.micro ?? 0.10,
-      ormDiv: recipe.ormDiv ?? 2,
-      smoothH: recipe.smoothH ?? 0,
-      // Default fractional low-pass on the normal's last octave. Detail below ~3 texels cannot
-      // survive a mip chain; leaving it in only buys shimmer. Recipes may override.
-      microSoft: recipe.microSoft ?? 0.35,
-    });
+    /* Joint sign, measured in `Bake.js` while the masonry masks were still alive — they die with
+     * the Surface, and once a build happens in a worker the Surface never crosses the thread
+     * boundary at all. Both deltas must come out negative: see `report()` for why a positive luma
+     * delta renders as bright grout. */
+    const joint = out.joint;
+    if (joint && (joint.dY > 0 || joint.dH > 0)) {
+      this.engine.warn(`textures: "${name}" has an inverted joint (dLuma ${joint.dY}, dHeight ${joint.dH}) — mortar must be darker and lower than the block faces`);
+    }
 
     // Anisotropy is what stops a grazing wall smearing its mip chain into mush; a driver that
     // reports 0 would otherwise disable minification filtering quality entirely.
@@ -241,7 +332,7 @@ export class Textures {
     const map = this._tex(out.albedo, size, {
       colorSpace: THREE.SRGBColorSpace, wrap, aniso,
       // Sprites carry alpha; everything else is opaque and shouldn't pay for blending.
-      alpha: !!surface.a,
+      alpha: out.hasAlpha,
     });
 
     const normalMap = this._tex(out.normal, size, { colorSpace: THREE.NoColorSpace, wrap, aniso });
@@ -522,14 +613,4 @@ export class Textures {
   }
 
   dispose() { this._flush(); }
-}
-
-/** Stable per-name seed, so a material looks the same on every run and across commits. */
-function hashName(s) {
-  let h = 0x811c9dc5;
-  for (let i = 0; i < s.length; i++) {
-    h ^= s.charCodeAt(i);
-    h = Math.imul(h, 0x01000193);
-  }
-  return h >>> 0;
 }

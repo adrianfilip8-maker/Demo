@@ -305,30 +305,89 @@ export function f32(n, v = 0) {
   return a;
 }
 
+/* ── Why the three buffer kernels below look hand-unrolled ────────────────────────────────────
+ *
+ * `blurWrap`, `upsample` and `streakDown` were, between them, **35 % of the whole texture
+ * prewarm** (CPU profile of a 16-recipe prewarm at texSize 1024: blurWrap 6.87 s / 20.7 %,
+ * upsample 3.78 s / 11.4 %, streakDown 1.04 s / 3.1 %, of 33.2 s sampled). None of them was
+ * algorithmically wrong — `blurWrap` is already a running-sum box, i.e. O(n) in the radius. What
+ * cost the time was two things the profiler makes obvious and reading does not:
+ *
+ *   1. **`%` per texel.** Each of these ran two or three integer modulos in the innermost loop
+ *      purely to wrap an index. The wrap only depends on `(size, radius)`, so it is a table.
+ *   2. **Column-major traversal.** The vertical pass of a separable blur, and `streakDown`'s
+ *      gravity recurrence, both walk *down* a column: consecutive reads are `size` floats apart,
+ *      which at size 1024 is 4 KB — one cache line fetched and 63/64 of it thrown away, three
+ *      times per texel. Processing a **strip of 16 adjacent columns at once** makes every touch a
+ *      single 64-byte line while leaving each column's arithmetic sequence exactly as it was.
+ *
+ * **The rewrites are bit-identical, not approximately identical, and that is the whole point.**
+ * Every one of them performs the same floating-point operations on the same operands in the same
+ * order — the running sums accumulate down each column in the original order, only the
+ * interleaving between columns changed, and float addition is deterministic. Verified two ways:
+ * per-kernel against the previous implementations over seven parameter combinations
+ * (`tests/textures.test.mjs`, which carries the old code as its oracle), and end-to-end by
+ * FNV-hashing the packed albedo/normal/ORM bytes of all 25 recipes the game builds, before and
+ * after. **50 of 50 hashes unchanged.** A load-time fix that moves a pixel is a regression; this
+ * one cannot move a pixel without the tests going red.
+ *
+ * Measured on the same profile after the change: blurWrap ×1.8–2.6, upsample ×1.8, streakDown
+ * ×3.6–5.1. Do not "simplify" the strip loops back into the obvious column walk.
+ */
+
+/** Wrap table for a periodic index in `[-r-1, size+r]`. `W[i + r + 1]` is `i` wrapped into
+ *  `[0, size)`. Cached because a recipe calls `blurWrap` many times at the same (size, radius). */
+const _wrapTables = new Map();
+function wrapTable(size, r) {
+  const key = size * 65536 + r;
+  let t = _wrapTables.get(key);
+  if (t) return t;
+  t = new Int32Array(size + 2 * r + 2);
+  for (let i = 0; i < t.length; i++) t[i] = (((i - r - 1) % size) + size) % size;
+  if (_wrapTables.size > 64) _wrapTables.clear();
+  _wrapTables.set(key, t);
+  return t;
+}
+
+/** Columns processed together in the cache-blocked passes. 16 floats = one 64-byte cache line. */
+const STRIP = 16;
+
 /** Wrap-aware separable box blur. 2–3 iterations ≈ Gaussian, at a fraction of the cost. */
 export function blurWrap(src, size, radius, iter = 2) {
   const r = Math.max(1, Math.round(radius));
   const n = size * size;
-  let a = Float32Array.from(src), b = new Float32Array(n);
+  const a = new Float32Array(n); a.set(src);
+  const b = new Float32Array(n);
   const w = 2 * r + 1;
+  const W = wrapTable(size, r), O = r + 1;
+  const acc = new Float64Array(STRIP);
   for (let it = 0; it < iter; it++) {
-    // horizontal
+    // horizontal — already row-major; the table removes the two modulos per texel
     for (let y = 0; y < size; y++) {
       const row = y * size;
       let sum = 0;
-      for (let k = -r; k <= r; k++) sum += a[row + (((k % size) + size) % size)];
+      for (let k = -r; k <= r; k++) sum += a[row + W[k + O]];
       for (let x = 0; x < size; x++) {
         b[row + x] = sum / w;
-        sum += a[row + ((x + r + 1) % size)] - a[row + (((x - r) % size) + size) % size];
+        sum += a[row + W[x + r + 1 + O]] - a[row + W[x - r + O]];
       }
     }
-    // vertical
-    for (let x = 0; x < size; x++) {
-      let sum = 0;
-      for (let k = -r; k <= r; k++) sum += b[(((k % size) + size) % size) * size + x];
+    // vertical — same per-column running sum, 16 columns interleaved so the reads are sequential
+    for (let x0 = 0; x0 < size; x0 += STRIP) {
+      const cols = Math.min(STRIP, size - x0);
+      for (let c = 0; c < cols; c++) acc[c] = 0;
+      for (let k = -r; k <= r; k++) {
+        const row = W[k + O] * size + x0;
+        for (let c = 0; c < cols; c++) acc[c] += b[row + c];
+      }
       for (let y = 0; y < size; y++) {
-        a[y * size + x] = sum / w;
-        sum += b[((y + r + 1) % size) * size + x] - b[((((y - r) % size) + size) % size) * size + x];
+        const dst = y * size + x0;
+        const addR = W[y + r + 1 + O] * size + x0;
+        const subR = W[y - r + O] * size + x0;
+        for (let c = 0; c < cols; c++) {
+          a[dst + c] = acc[c] / w;
+          acc[c] += b[addR + c] - b[subR + c];
+        }
       }
     }
   }
@@ -339,21 +398,26 @@ export function blurWrap(src, size, radius, iter = 2) {
 export function upsample(coarse, cs, size) {
   const out = new Float32Array(size * size);
   const sc = cs / size;
+  // The u-axis lattice is the same for every row: hoist the floor and the three modulos out.
+  const X0 = new Int32Array(size), X1 = new Int32Array(size), TX = new Float64Array(size);
+  for (let x = 0; x < size; x++) {
+    const fx = (x + 0.5) * sc - 0.5;
+    const xi = Math.floor(fx);
+    TX[x] = fx - xi;
+    const x0 = ((xi % cs) + cs) % cs;
+    X0[x] = x0; X1[x] = (x0 + 1) % cs;
+  }
   for (let y = 0; y < size; y++) {
     const fy = (y + 0.5) * sc - 0.5;
-    let y0 = Math.floor(fy);
-    const ty = fy - y0;
-    y0 = ((y0 % cs) + cs) % cs;
+    const yi = Math.floor(fy);
+    const ty = fy - yi;
+    const y0 = ((yi % cs) + cs) % cs;
     const y1 = (y0 + 1) % cs;
-    const r0 = y0 * cs, r1 = y1 * cs, dst = y * size;
+    const r0 = y0 * cs, r1 = y1 * cs, dst = y * size, ity = 1 - ty;
     for (let x = 0; x < size; x++) {
-      const fx = (x + 0.5) * sc - 0.5;
-      let x0 = Math.floor(fx);
-      const tx = fx - x0;
-      x0 = ((x0 % cs) + cs) % cs;
-      const x1 = (x0 + 1) % cs;
-      const a = coarse[r0 + x0], b = coarse[r0 + x1], c = coarse[r1 + x0], d = coarse[r1 + x1];
-      out[dst + x] = (a + (b - a) * tx) * (1 - ty) + (c + (d - c) * tx) * ty;
+      const xa = X0[x], xb = X1[x], tx = TX[x];
+      const a = coarse[r0 + xa], b = coarse[r0 + xb], c = coarse[r1 + xa], d = coarse[r1 + xb];
+      out[dst + x] = (a + (b - a) * tx) * ity + (c + (d - c) * tx) * ty;
     }
   }
   return out;
@@ -396,16 +460,30 @@ export function concavity(h, size, radius = 6, iter = 2) {
  */
 export function streakDown(src, size, decay = 0.985, wobbleSeed = 7) {
   const out = new Float32Array(size * size);
-  for (let x = 0; x < size; x++) {
-    // Per-column decay jitter: uniform-length streaks look printed.
-    const d = decay - 0.012 * (ihash(x, 3, wobbleSeed) / 4294967296);
-    let acc = 0;
+  // Strip-blocked for the same reason as blurWrap's vertical pass — see the note above it. Each
+  // column's `acc` recurrence is untouched; only the order columns are visited in changed.
+  const D = new Float64Array(STRIP), A = new Float64Array(STRIP);
+  for (let x0 = 0; x0 < size; x0 += STRIP) {
+    const cols = Math.min(STRIP, size - x0);
+    for (let c = 0; c < cols; c++) {
+      // Per-column decay jitter: uniform-length streaks look printed.
+      D[c] = decay - 0.012 * (ihash(x0 + c, 3, wobbleSeed) / 4294967296);
+      A[c] = 0;
+    }
     for (let k = 0; k < size * 2; k++) {
-      const y = ((size - 1 - k) % size + size) % size;
-      const i = y * size + x;
-      const s = src[i];
-      acc = s > acc * d ? s : acc * d;
-      if (k >= size) out[i] = acc;
+      const row = ((size - 1 - k) % size + size) % size * size + x0;
+      if (k >= size) {
+        for (let c = 0; c < cols; c++) {
+          const s = src[row + c], av = A[c] * D[c];
+          const acc = s > av ? s : av;
+          A[c] = acc; out[row + c] = acc;
+        }
+      } else {
+        for (let c = 0; c < cols; c++) {
+          const s = src[row + c], av = A[c] * D[c];
+          A[c] = s > av ? s : av;
+        }
+      }
     }
   }
   return out;

@@ -902,6 +902,74 @@ class PoleSwing extends State {
 }
 
 /* ====================================================================== */
+/* target magnetism — the authored assist                                  */
+/* ====================================================================== */
+
+/**
+ * TO_TARGET. Sly has been assigned an authored traversal point (Targets.js) and is being flown
+ * onto it. The law lives in `TargetField.step`; this class is only the state around it — when it
+ * ends, and what an arrival hands off to.
+ *
+ * It sits in the `attach` group on purpose. Every opportunistic grab in this file refuses to fire
+ * while `sm.group === 'attach'`, so once a designer-placed target has taken the arc, a hook that
+ * happens to be nearby cannot steal it mid-flight. Only `hurt` (priority 100, onRequest) outranks
+ * it — being shot off a magnet line is allowed, being distracted off one is not.
+ */
+class ToTarget extends State {
+  canEnter(c) {
+    const f = c.targets;
+    return !!f && !!f.target && !f.locked && c.sm.group !== 'attach';
+  }
+  enter(c) {
+    c.targets.lock();
+    this._held = 0;
+  }
+  update(c, dt) {
+    const f = c.targets;
+    const t = f.target;
+    if (!t) return c.grounded ? 'idle' : 'fall';
+
+    const st = f.step(dt);
+    if (st === 'released') return c.grounded ? (c.wishMag > 0.12 ? 'move' : 'idle') : 'fall';
+
+    // Face the point while homing, so the silhouette shows the intent rather than the physics.
+    _a.set(t.point.x - c.position.x, 0, t.point.z - c.position.z);
+    if (_a.lengthSq() > 1e-4) c.turnToward(_a, TUNE.turnAir * 1.5, dt);
+
+    if (st === 'onTarget') {
+      // A jump taken off a point uses the arrival curve, not a constant (IMPORT §2).
+      if (c.pressed('jump') || c.jumpBuffered()) {
+        c.takeJump();
+        f.takeJump();
+        c.airJumps = 1;
+        c.oneShot('jump_rise');
+        c.engine.emit('targetJump', { pos: c.position, vy: c.velocity.y });
+        return 'fall';
+      }
+      // Hand off to whatever move the point exists to start, if that move will actually take it.
+      const next = t.arrive;
+      if (next && c.sm.has(next)) {
+        let ok = false;
+        try { ok = c.sm.get(next).canEnter(c); } catch { ok = false; }
+        if (ok) { f.release('handoff'); return next; }
+      }
+      this._held += dt;
+      if (this._held > TUNE.magHold) { f.release('held'); return c.grounded ? 'idle' : 'fall'; }
+      c.baseClip(t.group === 'pole' ? 'pole_climb' : t.group === 'notch' ? 'wall_cling' : 'ledge_hang', 0.14);
+      return null;
+    }
+
+    this._held = 0;
+    c.baseClip(c.velocity.y > 0.2 ? 'jump_rise' : 'jump_fall', 0.14);
+    return null;
+  }
+  exit(c) {
+    if (c.targets?.locked) c.targets.release('preempted');
+    this._held = 0;
+  }
+}
+
+/* ====================================================================== */
 /* Ninja Spire Landing                                                     */
 /* ====================================================================== */
 
@@ -1044,6 +1112,9 @@ export function buildMoveset() {
     new SpireLand('spireLand', { priority: 90, group: 'attach' }),
     new LedgeClimb('ledgeClimb', { priority: 89, group: 'attach', onRequest: true }),
     new LedgeHang('ledgeHang', { priority: 88, group: 'attach' }),
+    // Above the opportunistic hook grab: an authored target is a level-design instruction and
+    // beats a hook that merely happens to be in range. Below ledge/spire, which are contact.
+    new ToTarget('toTarget', { priority: 87, group: 'attach' }),
     new HookSwing('hookSwing', { priority: 86, group: 'attach' }),
     new RailSlide('railSlide', { priority: 84, group: 'attach' }),
     new RailWalk('railWalk', { priority: 83, group: 'attach' }),

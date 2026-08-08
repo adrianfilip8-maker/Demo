@@ -4885,10 +4885,42 @@ export const MATERIAL_GROUPS = (() => {
  * Removing a name here does **not** remove the recipe: `Textures.get()` still builds any
  * catalogue entry on first request. So if FX or CHARACTER ever wires one of these up it will
  * simply build lazily, and can be re-added here once it is actually on screen.
+ *
+ * ── The seven added below, and why "lazy" was costing more than it saved ─────────────────────
+ *
+ * The pruning above was right about which recipes reach no pixel and it stopped one step short:
+ * it left seven recipes that **do** reach a pixel building *lazily*, which since `Textures.init()`
+ * became a parallel prewarm means building them **serially on the main thread** in the middle of
+ * world construction. Measured at `texSize 1024`:
+ *
+ *   sand_fine 604 ms · carnelian_inlay 555 · wood_old 491 · papyrus_reed 436 · lapis_inlay 435 ·
+ *   rope 340 · linen_cloth 252   →  **3.11 s of main-thread stall**
+ *
+ * moved into the worker pool, where it is absorbed by whichever thread frees up first. They are
+ * here on named call sites, not on a grep for the string:
+ *
+ *   sand_fine        `Terrain.js:736`    `this.tex('sand_fine')`
+ *   linen_cloth      `Guard.js:1049`     `this._tex('linen_cloth')`
+ *   papyrus_reed     `Vegetation.js:341` `t.tex('papyrus_reed')`
+ *   rope             `EgyptLevel.js:895/912/1299` rails, via the `rope_fibre` alias
+ *   wood_old         `Props.MATERIALS.wood/cork`, filled by `PropKit.js:909+`
+ *   lapis_inlay      `Props.MATERIALS.lapis`,     filled by `Statues.js:94/111/189/…`
+ *   carnelian_inlay  `Props.MATERIALS.carnelian`, filled by `Statues.js:67/349/420/435`
+ *
+ * **Two candidates were rejected by the same test, and they are the reason it is worth stating.**
+ * `spark_diamond` and `water_nile` both look consumed to a grep — `'sparkle'` and `'water'` are
+ * live strings outside `src/textures`. They are not textures at either site: `HUD.js:417` is an
+ * *icon glyph name* (`Ico.glyph('sparkle')`) and every `'water'` hit is a collision tag or a
+ * `BVH.MAT_NAMES` entry. `Water.js` never calls TEXTURES at all. Prewarming those two would have
+ * cost 1.87 s and 12 MB for material that reaches no pixel — which is precisely the mistake the
+ * paragraphs above this one were written to record. A string match is not a consumer.
  */
 export const PREWARM = [
   'sandstone_block', 'hieroglyph_wall', 'paving_courtyard', 'sand_ripples',
   'limestone_polished', 'column_papyrus', 'gold_leaf', 'hieroglyph_gilded',
   'sandstone_worn', 'granite_pink', 'mudbrick', 'ceiling_stars',
   'palm_bark', 'palm_frond', 'bronze_aged', 'torch_flame',
+  // Consumed during world construction; see the note above for each one's call site.
+  'sand_fine', 'carnelian_inlay', 'wood_old', 'papyrus_reed', 'lapis_inlay',
+  'rope', 'linen_cloth',
 ];

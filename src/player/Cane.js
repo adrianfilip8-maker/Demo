@@ -83,8 +83,16 @@ export class Cane {
     this.triangles = 0;
   }
 
+  /**
+   * Per-instance overrides of `CANE_TUNE`, via `new Cane(engine, { tune: {...} })`.
+   *
+   * They exist because the grip is the one dimension that is not a free style choice: it has to
+   * fit the hand that closes on it, and the two characters that build this prop have different
+   * hands. `SlyModelDLRig` measures its own glove and passes a solved `gripR`/`shaftR`; the
+   * legacy model passes nothing and keeps the authored numbers, so nothing about it moves.
+   */
   build(materials) {
-    const T = CANE_TUNE;
+    const T = { ...CANE_TUNE, ...(this.opts.tune || {}) };
     const mb = new MeshBuilder({ root: 0 });
 
     /* ---- shaft path: straight, then the crook --------------------------- */
@@ -210,6 +218,12 @@ export class Cane {
     // Hook contact point: the inside of the C, where a ring would rest.
     this.hookPoint.set(0, cy, cz);
     this.tipPoint.set(0, butt, 0);
+    /* The authored centreline and the tune actually used. Both are read by tests: the crook is a
+       sampled arc here and a mitred polyline in the FBX `staff` it replaces, and the only way to
+       say that with a number is to compare centrelines. */
+    this.tune = T;
+    this.centerline = centers.map((c) => c.clone());
+    this.gripSpan = [T.gripLo, T.gripHi];
     this.object.userData.hookPoint = this.hookPoint;
 
     return this;
