@@ -73,3 +73,39 @@ Ancient Egypt temple, and Haussmann rooftops read as a different game no matter 
 retinted. The sibling repo's animation libraries (`Library Sly *.res`) are also skipped — they are
 Godot's own resource format, not usable outside Godot, and `sly-anims.glb` already carries the
 motion in a portable one.
+
+---
+
+## Second import — 2026-08-08: Carmelita, and why the first pass missed her
+
+Same two repositories, same licence status (**none stated in either**; see above). Taken at the
+owner's instruction to import "character models, rigs, animations, movements, controls, and anything
+else that may be usable".
+
+| file | what it is |
+|---|---|
+| `carmelita-anims.glb` | **a second character — 199 bones, 11 clips**, 3.86 MB |
+| `carmelita-body.png` | 1.30 MB albedo |
+| `carmelita-head.png` | 0.71 MB albedo |
+
+Source path: `Sly-Cooper--A-Thief-in-Godot/Assets/Temp Imports/tempcarmelita/`.
+
+Clips, read off the keyframe buffers rather than trusted from their names:
+
+```
+Air 0.50s · CasualWalking 0.83s · HitTaken 0.58s · Idle 1.00s · Jump 0.58s
+Lookaround 2.00s · PatrolWalk 1.00s · Run 0.50s · Run.001 0.50s
+Shoot(BodyMovement) 0.58s · Shoot(GunMovement) 0.33s
+```
+
+**This is a guard set, not a hero set.** `PatrolWalk` and `Lookaround` are the two clips a stealth
+guard cannot do without and we have neither. Not retargeted yet — guards are deferred (§203), and
+199 joints need a second bone map, not Mixamo's naming.
+
+The first pass missed this because it searched for *models* and stopped once it found Sly's. It never
+read the 66 GDScript files, which is where the movement and control systems live — see
+`progress/records/IMPORT-slyrepos-movement.md` for that half, including the target-magnetism system
+this project has no equivalent of.
+
+Nothing Paris-themed was taken. Both repos are largely Parisian rooftops, awnings, lamp posts and an
+Eiffel Tower; an Ancient Egypt level has no use for any of it.

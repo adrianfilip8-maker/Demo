@@ -23,17 +23,18 @@ await mkdir(OUT, { recursive: true });
 
 const shoot = async (page, arm, shots) => {
   for (const shot of shots) {
+    /* `G.capture()` RETURNS the data URL; it does not stash it on the game object. The first
+       version of this runner read a `G.lastCapture` that does not exist and wrote nothing for
+       every shot — caught by printing the miss rather than assuming the write. The double call
+       mirrors grain1: the first capture flushes the frame, the second returns the settled one. */
     const png = await page.evaluate(async (s) => {
       const G = window.__GAME;
       await G.setShot(s, { dt: 0 });
-      await G.step(12, 0);
-      G.capture('image/png');
-      await G.step(1, 0);
-      return G.lastCapture;
+      await G.step(12, 0); G.capture('image/png'); await G.step(1, 0);
+      return G.capture('image/png');
     }, shot);
     if (!png) { log(`  !! ${arm}/${shot} produced no capture`); continue; }
-    const b64 = png.startsWith('data:') ? png.slice(png.indexOf(',') + 1) : png;
-    await writeFile(`${OUT}/${shot}.${arm}.png`, Buffer.from(b64, 'base64'));
+    await writeFile(`${OUT}/${shot}.${arm}.png`, Buffer.from(png.split(',')[1], 'base64'));
   }
   const stats = await page.evaluate(() => ({ ...window.__GAME.stats || window.__ENGINE.stats }));
   log(`  ${arm}: draws ${stats.drawCalls} tris ${stats.triangles} programs ${stats.programs}`);
