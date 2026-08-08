@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { TOON_PARS, TOON_DETAIL, TOON_SHADE } from './shaders/toon.glsl.js';
+import { TOON_PARS, TOON_DETAIL, TOON_SHADE, DEBUG_CALIB } from './shaders/toon.glsl.js';
 import {
   weldNormals, applyInkWeights, createOutlineMaterial, buildOutlineShell, removeOutlineShell,
 } from './Outline.js';
@@ -695,6 +695,10 @@ export class Shading {
     this._shells = [];
 
     this._patchWarned = false;
+    /* Per-channel calibration state: null = never proven, true/false = the last result a
+       probe reported through confirmDebugCalibration(). Selecting a READING mode on a channel
+       that is not `true` warns at the call site — see _debugGuard. */
+    this._debugProven = { debugTerm: null, debugShadow: null };
     this._autoKey = true;          // until LIGHTING calls setKeyLight()
     this._autoLight = null;
     this._autoScan = 0;
@@ -780,11 +784,12 @@ export class Shading {
       uGlintPow:     { value: TUNE.glintPow },
       uGlintSharp:   { value: TUNE.glintSharp },
       /* Diagnostic channel. window.__ENGINE.get('shading').debugShadow(true) paints
-         red=getShadowMask, green=receiveShadow, blue=N.L across the scene. */
+         red=getShadowMask, green=receiveShadow, blue=N.L across the scene. Mode 9 is its
+         self-calibration; it writes DEBUG_CALIB.shadow and nothing else. */
       uDebugShadow:  { value: 0 },
-      /* Rim-gate term visualiser — see the block at the end of TOON_SHADE. Only meaningful
-         with PostFX.debugRaw(true); on its own it is another `debugShadow`, i.e. a value
-         reported through the chain that is supposed to be bypassed. */
+      /* Rim/ramp term visualiser — see the block at the end of TOON_SHADE. Only meaningful
+         with PostFX.debugRaw('scene'); on its own it is a value reported through the chain
+         that is supposed to be bypassed. Mode 4 is its self-calibration. */
       uDebugTerm:    { value: 0 },
     };
 
@@ -1493,7 +1498,10 @@ export class Shading {
    *   4        cascade blend weights
    */
   debugShadow(mode = true) {
-    this.uniforms.uDebugShadow.value = mode === true ? 1 : (mode === false ? 0 : (+mode || 0));
+    const v = mode === true ? 1 : (mode === false ? 0 : (+mode || 0));
+    this.uniforms.uDebugShadow.value = v;
+    if (v > 0) this._debugGuard('debugShadow', v, DEBUG_CALIB.shadow);
+    return v;
   }
 
   /**
@@ -1511,9 +1519,120 @@ export class Shading {
    *   4  constants (0.25, 0.50, 0.75) — the calibration. Run this FIRST: it must arrive at the
    *      PNG as (64, 128, 191). It is also the toon-population map, since nothing else in a
    *      frame writes that triple.
+   *   5  R = ramp (the quantised diffuse), G = N.L, B = ramp * shadow. Read R against G.
+   *
+   * A mode-4 failure does NOT mean "this channel is broken". It means "no pixel carrying this
+   * constant reached the PNG", and a cel program that failed to LINK produces exactly that,
+   * indistinguishably. §210.2 made that call the wrong way and it cost a day. `programHealth()`
+   * separates the two by asking the driver, and this setter calls it for you.
    */
   debugTerm(mode = 1) {
-    this.uniforms.uDebugTerm.value = mode === true ? 1 : (mode === false ? 0 : (+mode || 0));
+    const v = mode === true ? 1 : (mode === false ? 0 : (+mode || 0));
+    this.uniforms.uDebugTerm.value = v;
+    if (v > 0) this._debugGuard('debugTerm', v, DEBUG_CALIB.term);
+    return v;
+  }
+
+  /**
+   * The calibration constants every debug channel proves itself with, re-exported so a probe
+   * never has to hard-code them. `{ term: {mode, rgb, u8}, shadow: {...} }`.
+   */
+  get debugCalib() { return DEBUG_CALIB; }
+
+  /**
+   * Select a channel's SELF-CALIBRATION mode by name — `calibrate('term')` /
+   * `calibrate('shadow')` — and return what the PNG must then read.
+   *
+   * Only meaningful with `postfx.debugRaw('scene')`; without that half the constants are
+   * carried through AgX and the grade and mean nothing (KNOWN_ISSUES §1).
+   */
+  calibrate(channel) {
+    const c = DEBUG_CALIB[channel];
+    if (!c) { this._warn(`calibrate("${channel}") — no such channel; try ${Object.keys(DEBUG_CALIB).join(' / ')}`); return null; }
+    if (channel === 'term') this.debugTerm(c.mode); else this.debugShadow(c.mode);
+    return { ...c };
+  }
+
+  /**
+   * Record what a calibration capture actually read, so later reading-mode calls stop warning
+   * (or start warning louder). Probes should call this immediately after scoring mode 4 / 9.
+   */
+  confirmDebugCalibration(channel, ok, detail = '') {
+    const name = channel === 'term' ? 'debugTerm' : channel === 'shadow' ? 'debugShadow' : channel;
+    if (!(name in this._debugProven)) { this._warn(`confirmDebugCalibration("${channel}") — unknown channel`); return; }
+    this._debugProven[name] = !!ok;
+    if (!ok) this._warn(`${name} FAILED its own calibration${detail ? `: ${detail}` : ''} — nothing read through this channel is quotable.`);
+  }
+
+  /**
+   * **Ask the GL driver whether the cel programs actually linked.**
+   *
+   * This is the check whose absence cost §210.2 a day and §217 a full retraction. Between
+   * 6e0cc8f and its fix, `TOON_SHADE` carried thirteen lines of prose outside a comment, so
+   * every cel fragment program failed to link — `ERROR: 0:2502: '*' : syntax error`, zero
+   * active uniforms — and every toon-shaded pixel stopped drawing. What a capture showed was
+   * still a plausible frame (sky, ink and post all have their own programs), so three
+   * successive probes read the image, concluded "the uniform does not reach the shader", and
+   * chased a uniform-plumbing bug that did not exist.
+   *
+   * Two tells, both here, neither visible in a PNG:
+   *   · `LINK_STATUS` false — the direct answer;
+   *   · `ACTIVE_UNIFORMS` 0 — §217 reported exactly this on four programs and dismissed it as
+   *     an impossible reading from a wrong accessor. It was not wrong. A program that never
+   *     linked reports zero active uniforms, which is what "impossible" was pointing at.
+   *
+   * @param {THREE.WebGLRenderer} [renderer] defaults to `engine.renderer`.
+   * @returns {{ok:boolean, checked:number, linked:number, failed:number, unbuilt:number,
+   *            reason:string, failures:Array<{material:string, uniforms:number, log:string}>}}
+   */
+  programHealth(renderer = this.engine?.renderer) {
+    const out = { ok: false, checked: 0, linked: 0, failed: 0, unbuilt: 0, reason: '', failures: [] };
+    if (!renderer || typeof renderer.getContext !== 'function' || !renderer.properties) {
+      out.reason = 'no renderer available — pass one explicitly, or call after boot';
+      return out;
+    }
+    const gl = renderer.getContext();
+    const mats = [...this._cache.values(), ...this._inkCache.values()];
+    for (const m of mats) {
+      out.checked++;
+      const prog = renderer.properties.get(m)?.currentProgram;
+      const p = prog?.program;
+      if (!p) { out.unbuilt++; continue; }
+      const linked = gl.getProgramParameter(p, gl.LINK_STATUS);
+      const nUni = gl.getProgramParameter(p, gl.ACTIVE_UNIFORMS);
+      if (linked && nUni > 0) { out.linked++; continue; }
+      out.failed++;
+      let log = (gl.getProgramInfoLog(p) || '').trim();
+      for (const s of (gl.getAttachedShaders(p) || [])) {
+        const l = (gl.getShaderInfoLog(s) || '').trim();
+        if (l) log += (log ? '\n' : '') + l;
+      }
+      out.failures.push({ material: m.name || m.type || '?', uniforms: nUni, log: log.slice(0, 400) });
+    }
+    out.ok = out.checked > 0 && out.failed === 0 && out.linked > 0;
+    if (out.checked === 0) out.reason = 'no cel materials built yet';
+    else if (out.failed > 0) out.reason = `${out.failed}/${out.checked} cel programs FAILED TO LINK`;
+    else if (out.linked === 0) out.reason = `${out.unbuilt} cel materials exist but none has been compiled yet — render a frame first`;
+    else out.reason = `${out.linked}/${out.checked} cel programs linked`;
+    return out;
+  }
+
+  /**
+   * Loud at the call site, which is the whole point: a debug channel that cannot prove itself
+   * must say so rather than return a plausible picture.
+   */
+  _debugGuard(name, mode, calib) {
+    const health = this.programHealth();
+    if (health.failed > 0) {
+      this._warn(`${name}(${mode}): ${health.reason}. Nothing this channel paints will reach the frame. First failure: ${health.failures[0]?.log?.split('\n')[0] || '(no log)'}`);
+      return;
+    }
+    if (mode === calib.mode) return;                       // selecting the calibration itself
+    if (this._debugProven[name] === true) return;           // already proven this session
+    const how = `${name}(${calib.mode}) with postfx.debugRaw('scene') must read (${calib.u8.join(', ')})`;
+    this._warn(this._debugProven[name] === false
+      ? `${name}(${mode}) is a READING mode and this channel FAILED its calibration — its numbers are not quotable. Re-prove it: ${how}.`
+      : `${name}(${mode}) is a READING mode on an UNPROVEN channel. Prove it first: ${how}, then call confirmDebugCalibration('${name === 'debugTerm' ? 'term' : 'shadow'}', ok).`);
   }
 
   /**

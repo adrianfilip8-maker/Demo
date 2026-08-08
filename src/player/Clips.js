@@ -2441,7 +2441,18 @@ function vecTrack(keys, pick, n) {
   return { times: t.times, ease: t.ease, v };
 }
 
-function compile(name, d) {
+/**
+ * Authored shape → the runtime shape `sampleInto` consumes. **Exported**, and that is a
+ * deliberate choice over the alternative (a second compiler living wherever a clip set is
+ * registered): the authoring format is `{ t, e, P, pos, sc, cane }` and the runtime format is
+ * flat `Float32Array` quaternion tracks, and *this function is the only account of how one
+ * becomes the other*. `MixamoClips.js` is emitted in the authoring format precisely so it can
+ * come through here, keep the same eases, the same `eulerDeg` conversion and the same sparse-key
+ * convention, and be sampled by the same `slerp`. §212 is the case for one copy: the expensive
+ * failure there was a *second, subtly different* account of the interchange being reasoned about
+ * as if it were this one.
+ */
+export function compile(name, d) {
   const keys = d.keys.slice().sort((a, b) => a.t - b.t);
   const dur = Math.max(1e-3, d.dur ?? (keys[keys.length - 1]?.t || 1));
 

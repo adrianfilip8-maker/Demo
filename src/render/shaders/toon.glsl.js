@@ -17,6 +17,41 @@
  */
 
 /* ---------------------------------------------------------------------------
+   Debug-channel self-calibration constants — the single source of truth.
+
+   Every diagnostic channel in this file carries a mode that writes a fixed triple and
+   nothing else. Run that mode FIRST: if the PNG does not carry the triple, the channel is
+   not reporting the shader and no other mode's numbers from it mean anything.
+
+   This is not belt-and-braces. It is the one procedure that would have caught the defect
+   this table was added for: between 6e0cc8f and its fix, `TOON_SHADE` carried thirteen lines
+   of prose OUTSIDE a comment (a stray close-comment marker ended the block one paragraph
+   early — see tests/shader.test.mjs, which now scans for exactly that), so the whole
+   cel fragment program failed to LINK — `ERROR: 0:2502: '*' : syntax error`, zero active
+   uniforms — and every toon-shaded pixel in the game silently stopped drawing. Read through
+   a graded composite that still had sky, ink and post in it, that looked like an ordinary
+   frame. `debugTerm(4)`'s calibration DID catch it (KNOWN_ISSUES §210.2: "zero pixels carry
+   the constants") and was read as "the debug channel is broken" rather than as "the program
+   is dead", which is what it was actually saying.
+
+   The triples are DISTINCT per channel on purpose: a probe that reads one and gets the
+   other's is reading a channel it did not select. Values are chosen to survive a u8 round
+   trip exactly — 0.25/0.50/0.75 -> 64/128/191 with no ambiguity in the rounding.
+
+   Both are only meaningful with `postfx.debugRaw('scene')`. Without that half the triple is
+   carried through AgX, the grade and bloom, and what comes out describes the pipeline
+   instead of the channel — KNOWN_ISSUES §1, which cost eight dead ends.
+--------------------------------------------------------------------------- */
+export const DEBUG_CALIB = {
+	/** shading.debugTerm(4) — the rim/ramp visualiser's bypass check. */
+	term:   { channel: 'debugTerm',   mode: 4, rgb: [ 0.25, 0.50, 0.75 ], u8: [ 64, 128, 191 ] },
+	/** shading.debugShadow(9) — the shadow visualiser's bypass check. */
+	shadow: { channel: 'debugShadow', mode: 9, rgb: [ 0.75, 0.25, 0.50 ], u8: [ 191, 64, 128 ] },
+};
+
+const glslVec3 = ( c ) => `vec3( ${ c.rgb.map( ( v ) => v.toFixed( 2 ) ).join( ', ' ) } )`;
+
+/* ---------------------------------------------------------------------------
    Shared: space reconstruction + the atmosphere model.
    Included by both the surface shader and the outline shell shader so a line
    and the surface it wraps agree on distance haze to the last decimal.
@@ -132,9 +167,12 @@ uniform float uTermHi;
 uniform float uTermSoft;
 uniform vec3  uShadowBands;   // cast-shadow penumbra quantiser: steps, softness, amount (0 = off)
 uniform float uShadowSat;
-uniform float uDebugShadow;   // >0.5 → output shadow diagnostics instead of shading
-uniform float uDebugTerm;     // >0.5 → output a rim-gate term instead of shading — see the
-                              // block at the end of TOON_SHADE, and read it before using this
+/* The two diagnostic channels. BOTH are written after the haze mix, and BOTH carry a
+   self-calibration mode (DEBUG_CALIB above) that must be run and scored before any other
+   mode of that channel is quoted. Neither is meaningful without postfx.debugRaw('scene'). */
+uniform float uDebugShadow;   // >0.5 → shadow diagnostics instead of shading; 9 = calibration
+uniform float uDebugTerm;     // >0.5 → a rim/ramp term instead of shading; 4 = calibration —
+                              // see the block at the end of TOON_SHADE, and read it first
 uniform float uRim;
 uniform vec3  uRimColor;
 uniform float uRimPower;
@@ -790,6 +828,12 @@ export const TOON_SHADE = /* glsl */ `
 
 		outgoingLight = diff + sss + spec + metalEnv + rim + emissiveTerm;
 
+		/* Deferred debug write. Both visualisers land AFTER the haze mix (see the note on the
+		   debugShadow block); these two carry the value across. 0.0 = no channel selected, and
+		   that is the shipping state on every draw. */
+		vec3  slyDbg   = vec3( 0.0 );
+		float slyDbgOn = 0.0;
+
 		/* Shadow diagnostics. shading.debugShadow(mode) selects a channel set — each one
 		   isolates a different link in the chain, so a bad frame names its own culprit:
 
@@ -800,7 +844,16 @@ export const TOON_SHADE = /* glsl */ `
 		        G = the fragment's own projected depth, B = inside the map's [0,1] square.
 		        R > G is lit, R < G is occluded; R flat at 0 or 1 means the map is empty
 		        or the sampler is reading garbage rather than depth.
-		     4  R/G = the cascade blend weights, i.e. which cascade this fragment resolved to. */
+		     4  R/G = the cascade blend weights, i.e. which cascade this fragment resolved to.
+		     9  SELF-CALIBRATION — the constants in DEBUG_CALIB.shadow. Run it first.
+
+		   The value is COMPUTED here and APPLIED after the haze mix, next to debugTerm's.
+		   It used to be applied here, which put every reading through mix( dbg, hazeColour,
+		   haze ) on its way out: a channel that is 0.31 at 40 m because the term is 0.31, and
+		   0.31 at 40 m because the term is 1.0 and the haze is thick, are the same pixel. That
+		   is KNOWN_ISSUES §1's eight dead ends, and it was a four-line fix. Nothing shipped
+		   moves: uDebugShadow defaults to 0, the block is not entered, and the write below is
+		   gated on a flag that stays 0. */
 		if ( uDebugShadow > 0.5 ) {
 			float dbgRecv = 0.0;
 			#if defined( USE_SHADOWMAP ) && NUM_DIR_LIGHT_SHADOWS > 0
@@ -840,7 +893,13 @@ export const TOON_SHADE = /* glsl */ `
 				}
 			#endif
 
-			outgoingLight = dbg;
+			/* Mode 9 — SELF-CALIBRATION. Overrides every branch above deliberately: it must
+			   be reachable whatever the #ifdef soup did or did not compile in, because its
+			   whole job is to answer "does this channel reach the PNG at all". */
+			if ( uDebugShadow > 8.5 ) dbg = ${ glslVec3( DEBUG_CALIB.shadow ) };
+
+			slyDbg = dbg;
+			slyDbgOn = 1.0;
 		}
 
 		/* Aerial perspective, in linear radiance, before tone mapping. Doing this with
@@ -863,17 +922,28 @@ export const TOON_SHADE = /* glsl */ `
 		 * Two things make this one a measurement instead of a repeat of that:
 		 *
 		 *   1. It is written HERE — after the haze mix, which is the last statement in this
-		 *      shader — so nothing downstream *in this file* can touch it. debugShadow writes
-		 *      ~50 lines earlier and is hazed on its way out.
+		 *      shader — so nothing downstream *in this file* can touch it. debugShadow now
+		 *      lands here too, through slyDbg; it used to write ~50 lines earlier and be hazed
+		 *      on its way out.
 		 *   2. PostFX.debugRaw(true) blits the scene target straight to the canvas, skipping
 		 *      AO, the ink pass, bloom, the composite (exposure/lift/gain/split/saturation/
 		 *      contrast/AgX/sRGB) and FXAA. Without that half, everything below is a lie.
 		 *
-		 * Mode 4 is the calibration: it writes the constants (0.25, 0.50, 0.75), which must
-		 * arrive at the PNG as (64, 128, 191) ±1 on every toon-shaded pixel. If it does not, the
+		 * Mode 4 is the calibration: it writes DEBUG_CALIB.term's constants, which must arrive
+		 * at the PNG as (64, 128, 191) ±1 on every toon-shaded pixel. If it does not, the
 		 * bypass is not a bypass and no other mode's numbers mean anything. Prove it first —
-		 * that is the §1 lesson stated as a procedure. scratchpad/termproof.mjs does it offline
-		 * in about a second, without the capture lock.
+		 * that is the §1 lesson stated as a procedure.
+		 *
+		 * **What a mode-4 failure means, stated precisely, because it has already been misread
+		 * once at a cost of a day.** The calibration does not distinguish "the bypass leaks"
+		 * from "this program never ran". §210.2 read zero calibration pixels and concluded
+		 * debugTerm does not reach the shader; the true cause was that the whole cel fragment
+		 * program had stopped LINKING nineteen minutes earlier (a stray close-comment marker,
+		 * commit 6e0cc8f), so there were no toon pixels of any kind to carry the constants.
+		 * A dead program and a leaky bypass look identical from the PNG. Ask the driver, not
+		 * the image: shading.programHealth() reads LINK_STATUS and the info log off every
+		 * program this module built, and debugTerm() / debugShadow() now call it for you and
+		 * warn. Order of interrogation is programHealth -> mode 4 -> anything else.
 		 *
 		 * Mode 4 doubles as the population map: every pixel that reaches this shader is stamped
 		 * with a colour nothing else in the frame produces, so "is this pixel toon-shaded" stops
@@ -882,7 +952,8 @@ export const TOON_SHADE = /* glsl */ `
 		 * Caveat that travels with the numbers: sceneRT is allocated with engine.settings.msaa
 		 * samples, and a resolve AVERAGES these values across a geometry edge — which is exactly
 		 * where the rim band lives. Read interiors of bands, not their outermost pixel, or
-		 * capture with msaa 0. */
+		 * capture with msaa 0.
+		 *
 		 * Mode 5 is the RAMP channel, added for the defect critic pass 7 called "there is no toon
 		 * ramp anywhere". It writes vec3( ramp, ndl, key ) — the quantised diffuse ramp, the raw
 		 * N.L that feeds it, and their product with the shadow term. Every other channel here
@@ -896,12 +967,14 @@ export const TOON_SHADE = /* glsl */ `
 		 * then the ramp is CORRECT and flat, and the residual variation the metric was scoring
 		 * belongs to albedo texture, the shadow penumbra or the rim — none of which is the ramp.
 		 * Read R against G, not R alone. */
+		if ( uDebugShadow > 0.5 && slyDbgOn > 0.5 ) outgoingLight = slyDbg;
+
 		if ( uDebugTerm > 0.5 ) {
 			vec3 dbgT;
 			if      ( uDebugTerm < 1.5 ) dbgT = vec3( vSlySkin, rimMag, slyConvex );
 			else if ( uDebugTerm < 2.5 ) dbgT = vec3( rimBand, rimSil, rimBand * rimSil );
 			else if ( uDebugTerm < 3.5 ) dbgT = vec3( clamp( slyTurn / 40.0, 0.0, 1.0 ), ndv, fres );
-			else if ( uDebugTerm < 4.5 ) dbgT = vec3( 0.25, 0.50, 0.75 );
+			else if ( uDebugTerm < 4.5 ) dbgT = ${ glslVec3( DEBUG_CALIB.term ) };
 			else                         dbgT = vec3( ramp, ndl, key );
 			outgoingLight = dbgT;
 		}

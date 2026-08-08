@@ -516,6 +516,48 @@ export const EMITTERS = {
     alpha: [2.0, 3.0], col0: PAL.goldSpec, col1: PAL.goldLight, stretch: 0.03, jitter: 0.05,
   },
 
+  /* ── traversal magnetism (§2.1.6) ──────────────────────────────────────────
+     Sly's blue-white diamond is already the *idle* mark on every hook, spire, rail and pole —
+     `SparkleField` in Particles.js draws it from COLLISION's affordance query. What it has no
+     vocabulary for is the *event*: the frame an authored target takes the arc, and the frame
+     the arc arrives. These three are that vocabulary, and they are deliberately the smallest
+     things in the `spark` batch that can still read.
+
+     Sized against the batch ceiling rather than by eye. `TUNE.flashMaxH` clamps this batch at
+     0.45 of frame height, and `tests/fx.test.mjs` additionally holds every NON-`cane_flash`
+     spark emitter under 0.75 of that (frac 0.3375 at fov 40, d 5 m — i.e. under 0.614 m of
+     world-space size). The largest of the three is 0.17 m, frac 0.093, **74 px on a 720 px
+     frame against a 290 px hero** — a fifth of him, and it is a scatter of hard four-point
+     stars, not a GLOW disc. `cane_flash` is the cautionary tale (113% of frame height before
+     the ceiling landed); nothing here uses TILE.GLOW and nothing here is a ring.
+
+     Colours are §2.1.6 verbatim: `#8fd8ff` core, `#2a7fd4` glow. No other hue is allowed on
+     a traversal affordance — that pair *is* the UI language. */
+  /* Lock-on. Fires mid-air, some metres from the point, and must not draw the eye off the
+     jump it is announcing: 5-7 stars, a hair of upward float, gone in a third of a second. */
+  target_lock: {
+    batch: 'spark', tile: [TILE.STAR, TILE.SPARK], count: [5, 7], life: [0.24, 0.40],
+    speed: [1.1, 2.4], spread: 'sphere', cone: 3.14, gravity: -1.2, drag: 5.5, turb: 0.04, wind: 0.05,
+    size: [0.13, 0.02], sizeExp: 1.25, spin: [0, 0], fadeIn: 0.03, fadeOut: 1.5,
+    alpha: [1.0, 1.5], col0: PAL.sparkCore, col1: PAL.sparkGlow, jitter: 0.10,
+  },
+  /* Arrival. The pay-off beat, so roughly double the lock — but still under a fifth of the
+     hero's height, and it throws *outward* from the point rather than sitting on top of it. */
+  target_catch: {
+    batch: 'spark', tile: [TILE.STAR, TILE.SPARK], count: [12, 16], life: [0.28, 0.50],
+    speed: [2.4, 5.2], spread: 'sphere', cone: 3.14, gravity: 3.0, drag: 7.0, turb: 0.05, wind: 0.1,
+    size: [0.17, 0.02], sizeExp: 1.1, spin: [0, 0], fadeIn: 0.02, fadeOut: 1.35,
+    alpha: [1.3, 1.9], col0: PAL.sparkCore, col1: PAL.sparkGlow, stretch: 0.03, jitter: 0.07,
+  },
+  /* Launch off a held point. Streaks, cast up the way the jump goes, so the FX reads as
+     direction rather than as another burst. */
+  target_jump: {
+    batch: 'spark', tile: [TILE.STREAK, TILE.STAR], count: [8, 11], life: [0.18, 0.32],
+    speed: [3.0, 6.5], spread: 'cone', cone: 0.85, gravity: 6, drag: 8, turb: 0, wind: 0,
+    size: [0.15, 0.02], sizeExp: 1.0, spin: [0, 0], fadeIn: 0.02, fadeOut: 1.4,
+    alpha: [1.2, 1.8], col0: PAL.sparkCore, col1: PAL.rimCool, stretch: 0.05, jitter: 0.05,
+  },
+
   /* ── guards ────────────────────────────────────────────────────────────── */
   guard_alert: {
     batch: 'dust', tile: [TILE.SMOKE, TILE.DUST2], count: [5, 7], life: [0.5, 0.8],

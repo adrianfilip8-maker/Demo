@@ -2147,6 +2147,16 @@ export class Particles {
     on('railMount', (e) => this._burstAt('footstep_metal', e?.pos, UP));
     on('poleMount', (e) => this._burstAt('footstep_stone', e?.pos, UP));
     on('pickpocket', (e) => this._burstAt('coin_pop', e?.pos, UP, 0.7));
+
+    /* Target magnetism (src/player/Targets.js). §2.1.6's blue sparkle is the series' UI
+       language for exactly these points and the field already emits the four beats. */
+    on('targetLocked', (e) => this._onTargetLocked(e));
+    on('targetReached', (e) => this._onTargetReached(e));
+    /* No burst on release — deliberately. A release is the assist *giving up*, and §2.1.6's
+       grammar has no failure mark; a sparkle there would read as a reward for missing. It
+       clears the arrival latch instead, so the next lock on the same point fires again. */
+    on('targetReleased', () => { this._targetReached = false; });
+    on('targetJump', (e) => this._burstAt('target_jump', e?.pos, UP));
     on('guardAlert', (e) => this._burstAt('guard_alert', e?.pos, UP));
     on('coin', (e) => this._burstAt('coin_pop', e?.pos, UP));
     on('thiefVision', (v) => { this._thiefTarget = v ? 1 : 0; });

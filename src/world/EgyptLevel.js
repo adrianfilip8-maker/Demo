@@ -189,6 +189,135 @@ function hookPoint(A, x, y, z) {
   return m;
 }
 
+/* ===================== authored traversal magnetism ====================== */
+
+/**
+ * Target magnetism (src/player/Targets.js) is a **level-authoring** system with no content.
+ * With an empty registry `acquire()` returns null and `toTarget.canEnter` is false: zero
+ * behavioural delta until a level says which points deserve it. This is that decision, and it
+ * is level design, not plumbing.
+ *
+ * ── The rule I authored to ────────────────────────────────────────────────────────────────
+ * A traversal point earns magnetism when all three hold. Points that fail any one are left
+ * alone, and the ones this level has are named below with the measurement that excluded them.
+ *
+ *   1. **It is only ever reached in flight, and it is a point, not a surface.** A ledge, a
+ *      deck, a stair or a roof is metres wide and already has §6's own 0.45 m `ledgeSnap`;
+ *      a 0.62 m ring or a pyramidion tip is not.
+ *   2. **A miss is expensive.** The fall costs the route, not a step. Measured as the drop
+ *      from the point to whatever catches you.
+ *   3. **The error is timing, not aim.** Chain beats are metronomic — release, fly, catch —
+ *      which is exactly the 140 ms the input layer already forgives with `jumpBufferMs`.
+ *
+ * ── What that admits, and what it excludes ────────────────────────────────────────────────
+ * ADMITTED — 11 hook rings (both courtyard chains) and 3 of the 5 spire tips.
+ *
+ * EXCLUDED, with the number that excluded it:
+ *   · **The two pylon-stage spires (±6, 27, −50).** They stand on `stageTop = 26.0`, which
+ *     carries a `groundProxy` over x −8…8, z −51.1…−47.8 — the tips are **1.0 m above ground
+ *     you are standing on**. Miss and you are still on the stage. That is decoration, not a
+ *     traversal beat, and rule 2 fails outright. The other three spires stand on *poles*
+ *     (obelisk 20.4, aisle pinnacles 19.5), with nothing under them but the drop.
+ *   · **Every pole.** `poleMount` is 1.9 m and a column is r 1.4–1.9; you cannot miss it.
+ *   · **Every rail.** A rail is a line, not a point: `railMount` 1.35 auto-engages on contact
+ *     from above along its whole length, which is a bigger assist than any of these.
+ *   · **Every ledge, deck, cornice and roof** — rule 1.
+ *
+ * ── `catch` — the specificity gate, and the only number here that is widened ──────────────
+ * `catch` is the widest ballistic miss a point will rescue. Its shipped default is
+ * `Controller.TUNE.magCatch` = `runSpeed × jumpBufferMs` = 7.2 × 0.140 = **1.008 m**: the
+ * distance the player's own body travels during the window the input layer already forgives.
+ * That sentence is the whole justification, and widening it means keeping the sentence and
+ * changing the speed in it — never loosening the sentence.
+ *
+ * A hook chain is the one place in this level where the speed in that sentence is not
+ * `runSpeed`. The error on a chain is **release timing on a pendulum**, and during those same
+ * 140 ms a body on our L = 2.2 m rope at its characteristic speed √(2·|g|·L) = √105.6 =
+ * 10.2762 m/s travels **1.4387 m** along the arc. So the chain rings carry `catch` 1.4387 —
+ * 1.43× the default, from our own gravity and our own rope, not from a feel.
+ *
+ * The ring that *enters* each chain is approached by a jump off a ledge, not by a release, so
+ * it keeps the run-speed default. Chain entry is a jump; chain continuation is a swing. The
+ * spires are entered by a jump off a pole top, so they keep the default too. **Nothing in this
+ * level carries a catch above 1.4387 m**, and nothing rescues a 3 m miss.
+ *
+ * ── `point` — where Sly ends up, which for a hook is not the ring ─────────────────────────
+ * `HookSwing.enter` puts Sly on the sphere of radius `hookL` = 2.2 m around the anchor, i.e.
+ * hanging at the bottom of the cane. Authoring the ring centre as the target point would snap
+ * him *inside* the ring and then teleport him 2.2 m straight down the instant the swing takes
+ * over. So the point is the taut-rope position, `ring − (0, 2.2, 0)`, and the ring itself
+ * travels in `userData.fx` for FX to put §2.1.6's sparkle on the affordance rather than on a
+ * spot of empty air below it.
+ *
+ * ── `volume` ──────────────────────────────────────────────────────────────────────────────
+ * `magVolume` 3.30 m (half a full-speed jump's reach) everywhere except the lower chain,
+ * whose last gap is 6.36 m between hang points — two 3.30 spheres would overlap by 0.24 m and
+ * acquisition could flicker between them. 3.15 makes the lower chain's tightest pair exactly
+ * disjoint. `tests/level.test.mjs` asserts the whole registry is pairwise disjoint.
+ */
+const MAG = {
+  /** Controller.TUNE.magCatch: runSpeed 7.2 × jumpBufferMs 0.140. */
+  catchJump: 1.008,
+  /** √(2 · 24 · hookL 2.2) × jumpBufferMs 0.140 — the same sentence at pendulum speed. */
+  catchSwing: 1.4387,
+  /** Controller.TUNE.magVolume. */
+  volume: 3.30,
+  /** Lower chain only: its tightest hang-point gap is 6.36 m, so 2 × 3.15 is exactly disjoint. */
+  volumeLow: 3.15,
+  /** §6 hook pendulum length — where Sly ends up on a ring is this far under it. */
+  hookL: 2.2,
+  /** §6: "spire land — jump from it gets ×1.25 height". A target standing in for a spire must
+   *  carry the same multiplier or the assist would quietly nerf the move it exists to enable. */
+  spireJumpMult: 1.25,
+};
+
+/**
+ * Register one authored point. The spec goes on `A.api.targets` **and** onto the bus.
+ *
+ * Both, because of a boot-order fact worth writing down: `main.js` MANIFEST puts
+ * `architecture` 6th and `movement` 11th, and `Controller.init()` is where the
+ * `registerTarget` listener is installed — so an emit from the level build has no listener yet
+ * and `Engine.emit` drops it silently. The emit is kept because it is the documented authoring
+ * path and it is correct the moment anything is listening; `api.targets` is what actually
+ * survives the gap, and FX (15th, after MOVEMENT) flushes it. See the report's diff request
+ * for the proper fix — a queue in Controller mirroring `Engine._colliderQueue`.
+ */
+function magnet(A, spec) {
+  (A.api.targets || (A.api.targets = [])).push(spec);
+  A.engine?.emit?.('registerTarget', spec);
+  return spec;
+}
+
+/**
+ * A hook ring's magnetism point. `first` is the ring a chain is *entered* on — a jump, so the
+ * run-speed catch — versus one it is *continued* on, which is a swing release.
+ */
+function swingTarget(A, id, x, y, z, { first = false, volume = MAG.volume } = {}) {
+  return magnet(A, {
+    id,
+    point: new THREE.Vector3(x, y - MAG.hookL, z),
+    volume,
+    catch: first ? MAG.catchJump : MAG.catchSwing,
+    group: 'swing',
+    arrive: 'hookSwing',
+    userData: { fx: new THREE.Vector3(x, y, z), kind: 'hook' },
+  });
+}
+
+/** A spire tip that stands on a pole rather than on a deck. */
+function spireTarget(A, id, x, y, z) {
+  return magnet(A, {
+    id,
+    point: new THREE.Vector3(x, y, z),
+    volume: MAG.volume,
+    catch: MAG.catchJump,
+    jumpMult: MAG.spireJumpMult,
+    group: 'swing',
+    arrive: 'spireLand',
+    userData: { fx: new THREE.Vector3(x, y, z), kind: 'spire' },
+  });
+}
+
 /**
  * The Egyptian torus door-frame: a roll moulding up both jambs and across the head.
  *
@@ -382,6 +511,12 @@ function courtyard(A) {
   poleProxy(A, ob.x, ob.z, t2.y + 1.1, ob.h - 1.6, 1.5);
   ledgeProxy(A, -2.5, 2.5, t2.y + 1.1, ob.z - 2.5, ob.z + 2.5);
   spirePoint(A, ob.x, ob.h, ob.z);       // pyramidion tip: a Ninja Spire Landing target
+  /* The pyramidion is the clearest case in the level for magnetism, and the reason is in
+     PoleClimb: the pole ends at 20.4, its top hop launches at `jumpV0 × 0.55` (rise 0.76 m)
+     with 1.6 m/s of *outward* drift, so the best line off the obelisk peaks 0.82 m under the
+     tip and 1.3 m to the side of it. The Ninja Spire Landing this level names in its own route
+     comment is a point you cross at speed inside a ~0.35 s window, 16.8 m above the terrace. */
+  spireTarget(A, 'spire-obelisk', ob.x, ob.h, ob.z);
 
   /* ---- Barque kiosk around the obelisk. Its lintel ring at y 9.0 is the `hero` perch. ---- */
   const ki = L.kiosk;
@@ -896,11 +1031,18 @@ function courtyardTraversal(A) {
 
   const ringGeo = K.hookRing({ r: 0.62, tube: 0.115, rng: R });
   const mats = [];
-  for (const [x, y, z] of hookLine) {
+  for (let i = 0; i < hookLine.length; i++) {
+    const [x, y, z] = hookLine[i];
     const m = new THREE.Matrix4();
     m.compose(new THREE.Vector3(x, y, z), new THREE.Quaternion().setFromEuler(new THREE.Euler(D(R.jitter(2.5)), D(R.jitter(30)), D(R.jitter(2.5)), 'YXZ')), new THREE.Vector3(1, 1, 1));
     mats.push(m);
     hookPoint(A, x, y, z);
+    /* The set piece magnetism exists for. Seven 0.62 m rings strung 7.1–9.7 m apart at
+       y 13.2–14.9 over paving at y 0: a missed catch is an 11–13 m fall and the whole ascent
+       again. Ring 0 is entered by a double jump off the peristyle architrave (the `pylon-drop`
+       rail's own terminus at 22.6, 9.25, 26) — a run-speed error, so the default catch. Rings
+       1..6 are entered by a swing release, which is where the pendulum catch applies. */
+    swingTarget(A, `hook-main-${i}`, x, y, z, { first: i === 0 });
     A.add('court', 'bronze_dark', K.place(K.chain({ len: 0.9, r: 0.06, links: 4 }), { x, y: y + 1.65, z }));
   }
 
@@ -910,11 +1052,19 @@ function courtyardTraversal(A) {
     [[-21.0, 12.9, 26.0], ...low.map(([x, y, z]) => [x, y + 0.85, z]), [2.2, 11.6, 7.0]]
       .map((p) => new THREE.Vector3(...p)), false, 'catmullrom', 0.4);
   A.add('court', 'rope_fibre', K.railGeo(cable2, { r: 0.07, seg: 44, rad: 4 }));
-  for (const [x, y, z] of low) {
+  for (let i = 0; i < low.length; i++) {
+    const [x, y, z] = low[i];
     const m = new THREE.Matrix4();
     m.compose(new THREE.Vector3(x, y, z), new THREE.Quaternion().setFromEuler(new THREE.Euler(D(R.jitter(2)), D(R.jitter(25)), D(R.jitter(2)), 'YXZ')), new THREE.Vector3(0.94, 0.94, 0.94));
     mats.push(m);
     hookPoint(A, x, y, z);
+    /* The return chain. Rings 0–1 hang over bare paving (9.4 m fall); rings 2–3 hang over
+       terrace stage 2 at y 5.2, so a miss there costs only 4.4 m — by rule 2 alone they would
+       not qualify. They are authored anyway, and the reason is that the unit of this grammar
+       is the *chain*, not the ring: every ring wears the same §2.1.6 sparkle, and magnetism
+       that worked on two of four would make that sparkle a lie on the other two. Consistency
+       inside one set piece beats a per-ring audit. Volume 3.15, not 3.30 — see MAG. */
+    swingTarget(A, `hook-low-${i}`, x, y, z, { first: i === 0, volume: MAG.volumeLow });
     A.add('court', 'bronze_dark', K.place(K.chain({ len: 0.85, r: 0.055, links: 4 }), { x, y: y + 1.6, z }));
   }
   A.instance('gold_leaf', ringGeo, mats, 'hooks:rings');
@@ -1303,6 +1453,11 @@ function hypostyleHall(A) {
     A.add('hall', 'granite_pink', K.place(K.obelisk({ h: 7.5, base: 1.5, rng: R }), { x: sx * 16, y: DECK, z: -50, ry: D(R.jitter(1.5)) }));
     poleProxy(A, sx * 16, -50, DECK, DECK + 6.0, 0.85);
     spirePoint(A, sx * 16, 21, -50);
+    /* Same geometry as the obelisk and the same argument: the pole ends at 19.5, the top hop
+       peaks 0.72 m under the 21 m tip and drifts outward, and the surface that catches a miss
+       is the aisle roof 7.5 m below. This is the rooftop run's own beat (§8.1: "SPIRE LAND the
+       east pinnacle tip (16, 21, −50)"). */
+    spireTarget(A, `spire-pinnacle-${sx > 0 ? 'e' : 'w'}`, sx * 16, 21, -50);
   }
 }
 
@@ -1396,6 +1551,11 @@ function innerPylon(A) {
   for (const sx of [-1, 1]) {
     A.add('pylon', 'gold_leaf', K.place(K.spire({ r: 0.52, h: 1.0, rng: R }), { x: sx * 6, y: stageTop, z: -50 }));
     spirePoint(A, sx * 6, 27, -50);
+    /* DELIBERATELY NOT a magnetism target — see the rule at `MAG`. These two stand on
+       `stageTop` 26.0, which the groundProxy two lines above makes walkable over x −8…8,
+       z −51.1…−47.8. The tip is 1.0 m above ground you are already standing on and a miss
+       lands you back on it, so rule 2 ("a miss is expensive") fails by 1.0 m. The three
+       spires that DO carry targets stand on poles with the drop underneath. */
   }
   /* Sand banked on the leeward north face. */
   A.add('pylon', 'sandstone_worn', K.place(K.sandDrift({ len: 20, h: 2.0, depth: 5.0, seg: 18, rng: R }), { x: 0, z: p.z - p.d / 2, ry: Math.PI }));
@@ -1642,6 +1802,10 @@ function foreground(A) {
 }
 
 export function buildEgyptLevel(A) {
+  /* Authored magnetism points collect here as well as going onto the bus — see `magnet()` for
+     why both. FX flushes whatever MOVEMENT was not yet listening to hear. */
+  A.api.targets = [];
+
   courtyard(A);
   entryPylons(A);
   courtyardTraversal(A);
