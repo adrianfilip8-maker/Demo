@@ -462,10 +462,26 @@ function synth(nl, lambda, amp, base, sigma, seed) {
     /* Box-Muller, two uniforms per sample — deterministic for a given seed. */
     const u1 = Math.max(rnd(), 1e-9), u2 = rnd();
     const g = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
-    out[i] = base + amp * ((1 - lambda) * b[i] + lambda * s[i]) + sigma * g;
+    const v = base + amp * ((1 - lambda) * b[i] + lambda * s[i]) + sigma * g;
+    /* 8-BIT, like the subject. Found by dry-running the scorer on a uniformly DARKENED copy of
+       the capture: gapFrac moved 0.0795 -> 0.0986 under a change the statistic is supposed to be
+       exactly invariant to. The cause was not the statistic — it was that rounding a compressed
+       range to 8 bits merges neighbouring values and manufactures gaps of 1/scale luma, and the
+       controls were float while the subject was quantised. Quantising the controls too closes
+       that asymmetry.
+
+       This was changed AFTER the base subject number was known, so it is worth being explicit
+       about the direction: it can only RAISE the controls' gapFrac (a continuous ramp gains
+       small quantisation gaps; an already-banded one does not), therefore only RAISE G(0.5),
+       therefore only make "BANDS" HARDER to reach. It cannot manufacture the verdict it is
+       being applied in service of, and the base arm's verdict is unchanged by it. */
+    out[i] = QUANT ? Math.min(255, Math.max(0, Math.round(v))) : v;
   }
   return out;
 }
+/* `--quant=0` restores the float controls the criterion was originally registered with, so both
+   readings stay reproducible from one file. Default 1 = the faithful, harder one. */
+const QUANT = argv.quant === undefined ? 1 : Number(argv.quant);
 
 const SPINS = 6, SEEDS = 6;
 /** Ensemble of gapFrac over the two genuinely unknown inputs: rib sampling phase and noise. */
