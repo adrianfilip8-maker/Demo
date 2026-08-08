@@ -19942,3 +19942,69 @@ double-multiply and no part of the sign defect; it is a wasted draw call and a p
 lookup. `Guard.js:1279` already carries `forceSinglePass: true` with the reasoning. Left alone
 because it is an unmeasured change, and bundling it into a measured one is how two results become
 one unfalsifiable story.
+
+## §252.1 — the replacement signature, and my averaging argument was right for the wrong reason
+
+Two things from the DECALS agent's closing report that deserve to outlive the fix itself.
+
+### How it proved "replace" rather than "brighten", without any new capture
+
+Its own first framing said the decal *adds light*. The per-decal split refuted that: the broken arm
+brightens on only **6 of 17** measurable footprints. If the decal were adding, it would add
+everywhere.
+
+The decisive move was to bin the effect **by the floor's own luma**:
+
+```
+floor  50  ->  +103.5
+floor  71  ->   +87.9
+floor  86  ->   +71.0
+floor 110  ->    -0.3
+```
+
+The brightening *falls* as the floor brightens and crosses zero near 110. **That is the signature of
+replacement.** An additive term is constant in the floor; a multiplicative one is proportional to it;
+only `result = src` produces an effect that decreases linearly with the floor and changes sign where
+the floor matches the source. `FRAG` writes alpha 1.0, and under the inherited Normal blend
+`SRC_ALPHA/ONE_MINUS_SRC_ALPHA` that reduces to exactly `result = src`.
+
+So the defect was **worse than inverted**. Inside every contact, the paving's texture was overwritten
+with a flat tone — the single thing §2.1.3 chose a multiply in order to preserve.
+
+Worth keeping as a technique: **binning an effect against the quantity it is supposed to modulate
+distinguishes add from multiply from replace using data already captured.** No extra arm, no lock.
+
+### My averaging argument was correct in its conclusion and false in its premise
+
+When the null arm came back differing on 51.97% of pixels, I argued the result would survive because
+per-pixel noise near 4 L with roughly zero mean averages down as 1/√N, giving an ROI standard error
+around 0.05–0.08 L. I asked the agent to verify rather than accept it.
+
+**It verified, and the premise is false.** Over the raw ROI the null is **not** zero-mean: **+0.568,
+which is 43.9 SEM from zero.** Braziers are decal'd and carry an `embers` emitter 1.05 m overhead, so
+the noise inside the ROI is a moving light source, not symmetric jitter — the exact hole the agent
+had predicted before measuring it.
+
+The conclusion survived on different ground: on a **stable mask derived from the null pair alone**
+(90.9% of the ROI), the residual bias is **+0.186 against an effect of −8.98 — 48× smaller and
+opposite in sign.** The fix stands, but not for the reason I gave.
+
+Recorded because the failure mode is subtle and mine: **a correct conclusion reached through a false
+premise is not a validated conclusion.** Had the effect been small instead of 48× the bias, my
+argument would have licensed it anyway. The agent's instinct to test the reasoning rather than adopt
+it is what made the difference, and it is the right default when a coordinator hands down an
+argument rather than a measurement.
+
+### The calibration arm that demonstrates the bug by doing nothing
+
+CAL-1 ran the fix's own flag both ways. `premulFalse` returned **byte-identical numbers and an
+identical blend readback** to `premulTrue` — predicted in the seal before the run. That is the
+mechanism on display rather than described: when no blend function was ever programmed, the flag
+that is supposed to select one cannot matter.
+
+### Deliberately not fixed, and correctly so
+
+The decal material is `DoubleSide` + `transparent` without `forceSinglePass`, so the batch draws
+twice per frame with one pass fully culled — a wasted draw, not a double-multiply. `Guard.js:1279`
+has the precedent for fixing it. The agent left it alone because it is **unmeasured**, and declined
+to bundle an unmeasured change into a run whose whole value is that everything in it was measured.
