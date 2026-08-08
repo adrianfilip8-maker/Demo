@@ -17592,3 +17592,50 @@ correct measurement (asymmetric ink at the edges), and an incorrect mechanism (w
 than hull displacement) — all three consistent with each other, which is what makes the wrong
 mechanism survive scrutiny. The tell was arithmetic that nobody had to run: the two reported widths
 averaged to the target.
+
+## §230 — the contact decals never had a blend function at all, and three told us so every boot
+
+The boot warning `THREE.WebGLState: MultiplyBlending requires material.premultipliedAlpha = true`
+has been in the log since the contact decals landed. It is not advisory. I verified the mechanism
+in `three@0.185.1`'s own source — `src/renderers/webgl/WebGLState.js`, no pixels required:
+
+```js
+} else {                                    // the NON-premultiplied branch
+  switch ( blending ) {
+    case MultiplyBlending:
+      error( 'WebGLState: MultiplyBlending requires material.premultipliedAlpha = true' );
+      break;                                // <- and NOTHING ELSE. No gl.blendFunc call.
+```
+
+The premultiplied branch twenty lines above does the right thing
+(`blendFuncSeparate( DST_COLOR, ONE_MINUS_SRC_ALPHA, ZERO, ONE )`). The non-premultiplied branch
+logs and returns **without ever setting a blend function**, so the decal composites under whatever
+function the previously drawn material happened to leave bound.
+
+**And it is permanent, not first-frame.** Immediately after the failed switch:
+
+```js
+currentBlending = blending;
+currentPremultipledAlpha = premultipliedAlpha;
+```
+
+while the guard at the top of `setBlending` is
+`if ( blending !== currentBlending || premultipliedAlpha !== currentPremultipledAlpha )`. So the
+state cache records the transition as *having happened*, the guard sees no change on every
+subsequent frame, and the switch never runs again. One silent failure at startup, then forever.
+
+This explains the sign inversion the critic reported. `FRAG` emits a multiplier that is **white at
+the rim**; under any non-multiply function a white rim paints the decal's *brightest* value at its
+outer edge, giving a halo that grows away from the prop and is dimmest where the prop occludes it.
+That is the profile §226 already recorded — floor peaking 5 px *outside* the silhouette — described
+there as a puzzle rather than as a symptom.
+
+`CustomBlending` was rejected in the seal on good grounds: it would fix the pixels while leaving the
+warning in place, and that warning is the one signal that pointed at the defect.
+
+**What this fix does NOT explain, recorded so it is not quietly absorbed.** The critic's **+5.5 L
+under the boots** is not a contact decal: the player is not a `ContactDecals` client at all, and the
+nearest decal to his feet in `sly-closeup` is **377 px** away. The agent that found this mechanism
+declined to credit its own fix with that number, which is the right call and the reason it is
+written here — the boot brightening is a separate, still-unexplained defect. The vase (+2.9 L) is
+in scope; the boots are not.
