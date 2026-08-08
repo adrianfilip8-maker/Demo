@@ -17111,3 +17111,72 @@ void**: per §219 the cel program stopped linking at 11:13, and every cel1 frame
 16:03–16:26, so those frames contain no toon-shaded pixels at all — their p50 is 168.7 against
 grain1's 76.7. Worth stating loudly: **every frame under `progress/records/cel1/` is unusable for any
 purpose**, and any future measurement that reaches for them will be measuring a dead shader.
+
+## §222 — the Mixamo clips are NOT better, and the one thing they win exposes a `Clips.js` defect
+
+Recommendation from the animation sub-agent: **ship `proc`, keep the default where it is.** Recorded
+here because the code landed under §220's commit message, which does not describe it.
+
+The imports cover **14 of 52** clips and are silent on every clip that makes this game Sly Cooper —
+the cane combos, the pickpocket, the hook swing, the rail slide, the spire balance.
+`idle_confident ← idle_side` carries **Σ20°** of articulation against the hand-authored **Σ93°**: the
+standing idle is nearly a still frame. `crouch_idle ← idle_01` puts the hips at 0.47 m against RIG3's
+0.886 m bind.
+
+### The finding worth having
+
+The one genuine Mixamo win is **plant slip 45.0 mm against the procedural 170.9 mm**. That looks like
+evidence about poses. It is not:
+
+| clip | declared `stride` ÷ geometric stride |
+|---|---|
+| `walk` | **2.14×** |
+| `run` | 1.68× |
+| `crouch_walk` | **25.17×** |
+| every locomotion clip | 1.31–25.17× |
+
+**Every hand-authored `stride` declares more ground than its feet actually contain, so the procedural
+feet skate roughly 2× by construction.** `Animation.js` divides real speed by `stride` to get playback
+rate, so an overstated stride under-plays the cycle and the foot slides. That is a `Clips.js` defect
+with a cheap fix, and fixing it captures Mixamo's entire advantage **without importing anything**.
+
+Deliberately not changed: those six numbers are `Animation`'s speed-matching contract, and moving them
+is a feel change that deserves its own A/B rather than arriving as a side effect.
+
+### Two emitter bugs fixed before any comparison was run
+
+- **Hips in source world units** — K = 0.8856/0.0569 = **15.577× too small**, and referenced to frame 0
+  rather than rest, discarding the clip's standing height. `walk_forward`'s lowest toe sat **24.2 cm**
+  above the floor, and `Rig.footIK` does not rescue that: `clipLift = max(0, footY − (rootY + ikAnkle))`
+  **preserves authored lift by design**, and `footPlant` fades to 0 above 0.10 m. Those clips
+  registered **no contact at any moment**. After: 10.4 cm, and it plants.
+- **`e: 'smooth'` on dense 20 Hz samples** — `EASES[1] = t²(3−2t)` has zero derivative at *both* ends,
+  stopping the body dead twenty times a second. Now `lin`.
+
+### Three validation arms failed and are reported as failed
+
+Two rev1 arms compared the instrument against the very `stride` it was auditing — which cannot
+separate "instrument wrong" from "data wrong" — and rev2's C-A failed at 3.29× against a ≥5× band:
+**the same defect a third time, a ratio whose denominator is the thing under test.** The threshold was
+not moved. It stands failed, and the instrument's licence rests instead on a constructed positive
+control (0.000 mm slip, velocity recovered to 0.00%).
+
+Two metrics are reported **UNSCOREABLE** rather than spun: contact flatness saturates against the
+30 mm band in both arms, and anticipation is unreadable on 4 of 5 imports because they return to their
+first pose within 0.04°, so the geodesic has no direction. **That must not be read as "the imports
+lack anticipation."**
+
+### What the art brief got right, and where it overstates
+
+`Clips.js`'s header claims *every* action clip anticipates and overshoots. Measured: **9/9 overshoot,
+7/9 anticipate** — `jump_rise` and `double_jump` anticipate on zero bones. Substantially borne out,
+not universal, and now testable.
+
+### What stays wired
+
+`compile()` is exported from `Clips.js` — one word, chosen over a second implementation in
+`Animation.js`, because §212's expensive failure was precisely a second, subtly different account of
+the authoring→runtime interchange being reasoned about as if it were the real one. Three regimes
+(`proc` default / `mixamo` / `mixamo-pure`) resolve through one normaliser so a test, a runner and the
+browser cannot disagree, and a non-default regime pushes its name into `engine.warnings` so a captured
+frame carries proof of its own arm — §186's hazard is exactly frame and label recorded separately.

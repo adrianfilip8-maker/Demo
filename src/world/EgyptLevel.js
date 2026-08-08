@@ -219,8 +219,9 @@ function hookPoint(A, x, y, z) {
  *     traversal beat, and rule 2 fails outright. The other three spires stand on *poles*
  *     (obelisk 20.4, aisle pinnacles 19.5), with nothing under them but the drop.
  *   · **Every pole.** `poleMount` is 1.9 m and a column is r 1.4–1.9; you cannot miss it.
- *   · **Every rail.** A rail is a line, not a point: `railMount` 1.35 auto-engages on contact
- *     from above along its whole length, which is a bigger assist than any of these.
+ *   · **Every rail.** A rail is a line, not a point: `railMount` 1.35 already auto-engages on
+ *     contact from above along its *whole length*, which is a comparable radius spread over
+ *     tens of metres instead of concentrated at one place. Rule 1.
  *   · **Every ledge, deck, cornice and roof** — rule 1.
  *
  * ── `catch` — the specificity gate, and the only number here that is widened ──────────────
