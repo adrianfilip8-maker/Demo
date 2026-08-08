@@ -16112,3 +16112,54 @@ already being printed and scrolled past.
 
 Filed as open. Not acted on during pass 7's capture window, because the tree is frozen until the
 set lands.
+
+## §209 — the tree you are editing may not be the tree you think it is
+
+A local rollback put the working tree and HEAD back to `7898485`, a commit from hours earlier, while
+`origin` correctly held `bf321f3`. I did not notice. In that state I edited `toon.glsl.js`, committed
+on the stale base, and **launched a capture** — against a build with `grain: 0.016`, no KayKit
+placements, no glove curl, no `fillScale` lever and no audio assets. Had it finished I would have
+reported numbers describing a build that had not existed for hours.
+
+**What caught it was `git push` refusing a non-fast-forward.** Nothing else would have, and that is
+the entry's point:
+
+- `git log` looked completely plausible. A rolled-back tree has a **coherent history** — it is simply
+  not the one you are in. There is no anomaly to spot.
+- `git status` was clean.
+- The build succeeded.
+- The files I opened contained exactly what a reader would expect a file of that name to contain.
+- The divergence was **1 local commit against 80 remote**.
+
+**Every seal in this project verifies the wrong end of this.** `P-F8`'s `srcTreeAtLock` vs
+`srcTreeAtRelease`, the boot tokens, `PROVENANCE-critic7`'s `git diff <launch> <manifest> -- src/` —
+all of them confirm the renderer **did not change during** a capture. None confirms the tree matched
+the remote **before the work started**. A capture launched from a rolled-back tree passes all of them
+cleanly, because internally it *is* consistent; it is consistent with the wrong thing.
+
+### The check that would have caught it, and it is one line
+
+```
+git fetch origin <branch> && git rev-list --left-right --count HEAD...origin/<branch>
+```
+
+`0 N` means behind; `N 0` means ahead; `N M` means diverged. I have been running
+`git merge-base --is-ancestor origin/<branch> HEAD` before commits all session, which answers *"is
+the remote an ancestor of me"* — and that returns **true** for a rolled-back tree whose one local
+commit sits on an old base, because the question it asks is not the question that matters. It was
+satisfied and useless.
+
+### Recovery, and why it was verified rather than trusted
+
+Killed the capture, saved the new work out of the stale commit with `format-patch`, `reset --hard` to
+origin, then checked **five independent markers** rather than assuming the reset worked: `grain: 0.0`,
+`PLACEMENTS` in `KayKit.js`, `_relaxGloves` in `SlyModelDLRig.js`, `fillScale` in `Lighting.js`, and
+six files in `public/assets/audio/`. All present. The patch was then confirmed safe by diffing
+`toon.glsl.js` between the two bases — byte-identical, so nothing was lost re-applying it.
+
+**Related, and recorded because it happened in the same ten minutes:** the task list also reverted to
+a much older state during this window (tasks closed hours earlier showed as pending again). The
+authoritative record is the committed files and `KNOWN_ISSUES.md`, not the task store, and the task
+store is not worth reconciling when it disagrees — but it is worth knowing that *both* pieces of
+local state moved together, which suggests the rollback was environmental rather than something git
+did.
