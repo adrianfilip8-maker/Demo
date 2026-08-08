@@ -26,17 +26,38 @@
  */
 
 import { bake, bakeTransfers } from './Bake.js';
+import { decodePng, inflateNative } from './PngCodec.js';
 
-self.onmessage = (e) => {
-  const { id, name, texSize, quality, ab } = e.data || {};
+/**
+ * Two job kinds, one pool. `decode` unpacks a slice of the committed cache; `bake` generates the
+ * recipe from scratch. They are dispatched over the same workers because they are the same shape
+ * of work — CPU-bound, per-recipe, output is transferable byte buffers — and because a `decode`
+ * that fails must be able to fall back to a `bake` of the same recipe without the host having to
+ * stand up a second pool mid-boot.
+ */
+async function decodeJob(job) {
+  const out = { name: job.name, size: job.size, hasAlpha: job.hasAlpha, joint: job.joint,
+    normalStrength: job.normalStrength, orm: null, emissive: null };
+  for (const [slot, bytes] of Object.entries(job.slots)) {
+    const { data, size } = await decodePng(new Uint8Array(bytes), inflateNative);
+    if (slot === 'orm') out.orm = { data, size };
+    else out[slot] = data;
+  }
+  if (!out.albedo || !out.normal || !out.orm) throw new Error('baked entry is missing a map');
+  return out;
+}
+
+self.onmessage = async (e) => {
+  const { id, op, name, texSize, quality, ab } = e.data || {};
   // Install the A/B arm before any recipe reads it. `''` is the shipped value and means
   // "every treatment on"; `null`/undefined means the host had nothing to say, so leave it alone.
   if (ab != null) globalThis.__TEX_AB = ab;
   try {
-    const payload = bake(name, texSize, quality);
-    self.postMessage({ id, ok: true, payload }, bakeTransfers(payload));
+    const payload = op === 'decode' ? await decodeJob(e.data) : bake(name, texSize, quality);
+    self.postMessage({ id, ok: true, op, payload }, bakeTransfers(payload));
   } catch (err) {
-    // Never leave the host waiting on a job that threw — it schedules by completion.
-    self.postMessage({ id, ok: false, name, error: String(err?.message || err) });
+    // Never leave the host waiting on a job that threw — it schedules by completion, and for a
+    // `decode` the host retries the same recipe procedurally.
+    self.postMessage({ id, ok: false, op, name, error: String(err?.message || err) });
   }
 };

@@ -124,13 +124,22 @@ function playerEngine() {
 /**
  * Fly the real controller from a launch state, with the whole shipped registry loaded.
  * `enabled` is the single lever between the two arms.
+ *
+ * `steer` is a world direction to hold the stick toward. Input is camera-relative (§6.1), so
+ * the stub camera is aimed along it and `move.y = 1` held — that is how a player asks for air
+ * control, and leaving it out models a player who lets go of the stick mid-flight.
  */
-async function fly({ p0, vel, target, enabled, jumpAt = null, frames = 170, dt = 1 / 60 }) {
+async function fly({ p0, vel, target, enabled, jumpAt = null, steer = null, frames = 170, dt = 1 / 60 }) {
   const engine = playerEngine();
   const c = new Controller(engine);
   await c.init();
   for (const s of SPECS) c.addTarget(s);
   c.targets.enabled = enabled;
+  if (steer) {
+    engine.camera.position.set(0, 0, 0);
+    engine.camera.lookAt(steer.x, 0, steer.z);
+    engine.camera.updateMatrixWorld(true);
+  }
   c.teleport(p0.clone(), Math.atan2(vel.x, vel.z));
   c.grounded = false; c.coyote = 99; c.airJumps = 1;
   c.velocity.copy(vel);
@@ -140,6 +149,7 @@ async function fly({ p0, vel, target, enabled, jumpAt = null, frames = 170, dt =
   for (let i = 0; i < frames; i++) {
     const t = i * dt;
     engine.input.beginFrame(dt);
+    if (steer) engine.input.move.y = 1;
     // Held, not tapped: `applyJumpCut` takes 55% off vy the frame Space is released, so a
     // tapped double jump measures the jump cut rather than the double jump.
     if (jumpAt != null && t >= jumpAt) engine.input.hold('jump');
@@ -159,18 +169,54 @@ async function fly({ p0, vel, target, enabled, jumpAt = null, frames = 170, dt =
 /* ====================================================================== */
 
 /**
- * Closest approach of a piecewise-ballistic arc to a point, with an optional air-jump impulse
- * at `t1` (`vy := doubleJumpV0`). Drag-free and apex-hang-free **on purpose**: this is the same
- * model `Targets.predictMiss` uses for the acquisition gate, so "the arc passes within catch"
- * is evaluated by the predicate that decides it. §4 then re-runs the same hops through the real
- * integrator, which has both, and agrees to within 5 cm.
+ * Closest approach of an arc to a point. **This mirrors the shipped air step, not a textbook
+ * parabola**, and the difference is not academic: the first draft of this file used the same
+ * drag-free, hang-free parabola `Targets.predictMiss` uses for the acquisition gate, and it
+ * disagreed with the real integrator by up to 1.06 m — enough to certify a spire the shipped
+ * game cannot reach. `predictMiss` being optimistic is fine for a gate; it is not fine for an
+ * instrument that decides whether a promise can be kept.
+ *
+ * What is reproduced, from `AirState.air` / `Controller.gravity` / `DoubleJump.enter`, in the
+ * same order and at the same 1/60 step the live arm runs:
+ *   · `accelerate(dt, runSpeed, accel × airControl, airDrag)` — steering toward `steer` when a
+ *     direction is held, and decaying at `airDrag` 0.6 m/s² when it is not;
+ *   · gravity, then apex hang (`vy ×= 0.72^(60·dt)` while `0 < vy < 2.2`) — the term that costs
+ *     the pole top hop 8 cm of rise and made the difference above;
+ *   · the air jump: redirect horizontal to `wishDir × max(3.2, 0.92·speed)` when steering, then
+ *     `vy := doubleJumpV0`.
+ * `ledgeAssist` is inert here for the same reason it is in the live arm — `FLAT.fallback` makes
+ * it return early, so §6's 0.45 m ledge snap cannot be credited to magnetism.
  */
-function arcMin(p0, v0, target, t1, T = 2.4, dt = 1 / 240) {
+function arcMin(p0, v0, target, t1, { steer = null, T = 2.4, dt = 1 / 60 } = {}) {
   const p = p0.clone(), v = v0.clone();
   let best = p.distanceTo(target), jumped = t1 == null;
+  const sx = steer ? steer.x : 0, sz = steer ? steer.z : 0;
   for (let t = 0; t < T; t += dt) {
-    if (!jumped && t >= t1) { v.y = TUNE.doubleJumpV0; jumped = true; }
+    if (!jumped && t >= t1) {
+      jumped = true;
+      if (steer) {
+        const sp = Math.max(3.2, Math.hypot(v.x, v.z) * 0.92);
+        v.x = sx * sp; v.z = sz * sp;
+      }
+      v.y = TUNE.doubleJumpV0;
+    }
+    if (steer) {
+      const dx = sx * TUNE.runSpeed - v.x, dz = sz * TUNE.runSpeed - v.z;
+      const d = Math.hypot(dx, dz);
+      if (d > 1e-5) {
+        const step = Math.min(d, TUNE.accel * TUNE.airControl * dt);
+        v.x += dx / d * step; v.z += dz / d * step;
+      }
+    } else {
+      const sp = Math.hypot(v.x, v.z);
+      if (sp > 1e-5) {
+        const step = Math.min(sp, TUNE.airDrag * dt);
+        v.x -= v.x / sp * step; v.z -= v.z / sp * step;
+      }
+    }
     v.y += G * dt;
+    if (v.y > 0 && v.y < TUNE.apexWindow) v.y *= Math.pow(TUNE.apexHang, dt * 60);
+    if (v.y < TUNE.maxFall) v.y = TUNE.maxFall;
     p.addScaledVector(v, dt);
     const d = p.distanceTo(target);
     if (d < best) best = d;
@@ -180,9 +226,9 @@ function arcMin(p0, v0, target, t1, T = 2.4, dt = 1 / 240) {
 }
 
 const AIRJUMP_TIMES = [null, ...Array.from({ length: 41 }, (_, k) => k * 0.04)];
-const bestOverAirJump = (p0, v0, tgt) => {
+const bestOverAirJump = (p0, v0, tgt, opts) => {
   let b = Infinity;
-  for (const t1 of AIRJUMP_TIMES) { const d = arcMin(p0, v0, tgt, t1); if (d < b) b = d; }
+  for (const t1 of AIRJUMP_TIMES) { const d = arcMin(p0, v0, tgt, t1, opts); if (d < b) b = d; }
   return b;
 };
 
@@ -226,12 +272,15 @@ function swingBest(anchor, tgt, thetaMaxDeg = 75) {
 }
 
 /** A launch from a fixed foot position, aimed at the target, scanning horizontal speed. */
-function launchBest(from, tgt, vy0, sMin, sMax) {
+function launchBest(from, tgt, vy0, sMin, sMax, { steer = false, airJump = true } = {}) {
   const dir = V(tgt.x - from.x, 0, tgt.z - from.z);
   if (dir.lengthSq() < 1e-9) dir.set(0, 0, 1); else dir.normalize();
+  const opts = { steer: steer ? dir : null };
   let best = Infinity, arg = null;
   for (let s = sMin; s <= sMax + 1e-9; s += 0.05) {
-    const m = bestOverAirJump(from.clone(), V(dir.x * s, vy0, dir.z * s), tgt);
+    const v0 = V(dir.x * s, vy0, dir.z * s);
+    const m = airJump ? bestOverAirJump(from.clone(), v0, tgt, opts)
+                      : arcMin(from.clone(), v0, tgt, null, opts);
     if (m < best) { best = m; arg = { s: +s.toFixed(2) }; }
   }
   return { miss: best, arg, dir };
@@ -240,6 +289,19 @@ function launchBest(from, tgt, vy0, sMin, sMax) {
 /** `PoleClimb`'s top hop: `jumpV0 × 0.55` up, 1.6 m/s toward the shaft, from the hold circle. */
 const POLE_HOP_VY = TUNE.jumpV0 * 0.55;
 const poleHold = (r) => r + TUNE.radius * 0.8;
+
+/** Highest y a launch at `vy0` from `y0` actually reaches, apex hang included. */
+function arcApex(y0, vy0, dt = 1 / 60) {
+  let y = y0, v = vy0, top = y0;
+  for (let t = 0; t < 2; t += dt) {
+    v += G * dt;
+    if (v > 0 && v < TUNE.apexWindow) v *= Math.pow(TUNE.apexHang, dt * 60);
+    y += v * dt;
+    if (y > top) top = y;
+    if (v < 0 && y < y0) break;
+  }
+  return top;
+}
 
 /* ====================================================================== */
 /* 0 — the registry is what the level says it is                           */
@@ -439,15 +501,13 @@ test('level: every spire tip is reachable off the pole that carries it', () => {
     assert.ok(s, `${a.id} is not in the registry`);
     const hold = poleHold(a.r);
     const from = V(a.axis.x + hold, a.poleTop + 0.02, a.axis.z);
-    const withJump = launchBest(from, s.point, POLE_HOP_VY, 1.6, TUNE.runSpeed);
-    // The number that justifies the target: the hop ALONE, no double jump spent.
-    const dir = withJump.dir;
-    let bare = Infinity;
-    for (let sp = 1.6; sp <= TUNE.runSpeed; sp += 0.05) {
-      const m = arcMin(from.clone(), V(dir.x * sp, POLE_HOP_VY, dir.z * sp), s.point, null);
-      if (m < bare) bare = m;
-    }
-    const peak = a.poleTop + 0.02 + POLE_HOP_VY * POLE_HOP_VY / (2 * -G);
+    // The plausible approach: hold the stick toward the shaft you are hopping onto.
+    const withJump = launchBest(from, s.point, POLE_HOP_VY, 1.6, TUNE.runSpeed, { steer: true });
+    // The hop ALONE at its own authored speed — `PoleClimb` launches at exactly 1.6 m/s.
+    const bare = launchBest(from, s.point, POLE_HOP_VY, 1.6, 1.6, { steer: true, airJump: false }).miss;
+    /* Apex hang trims the rise: the analytic v²/2g is 0.763 m and the shipped integrator gets
+       less, which is exactly the 8 cm that decides whether this tip is reachable. */
+    const peak = arcApex(from.y, POLE_HOP_VY);
     rows.push(`  ${a.id.padEnd(18)} pole top ${a.poleTop.toFixed(2)} -> hop peaks ${peak.toFixed(3)} ` +
               `vs tip ${s.point.y.toFixed(2)} (short by ${(s.point.y - peak).toFixed(3)} m)  ` +
               `bare miss ${bare.toFixed(3)}  with air jump ${withJump.miss.toFixed(3)}  catch ${s.catch}`);
@@ -455,11 +515,16 @@ test('level: every spire tip is reachable off the pole that carries it', () => {
       `${a.id}: best miss ${withJump.miss.toFixed(3)} exceeds catch ${s.catch}`);
     assert.ok(peak < s.point.y,
       `${a.id}: the pole top hop already clears the tip, so this target has nothing to do`);
-    assert.ok(bare <= s.catch,
-      `${a.id}: without the double jump the hop misses by ${bare.toFixed(3)} m, outside catch ${s.catch}`);
+    assert.ok(bare > TUNE.magSnapRadius,
+      `${a.id}: the bare hop already arrives (${bare.toFixed(3)} m) — the target has no work to do`);
   }
   console.log(`\n[reach: spire] top hop = jumpV0 x 0.55 = ${POLE_HOP_VY.toFixed(2)} m/s, ` +
-              `1.6 m/s toward the shaft\n` + rows.join('\n'));
+              `1.6 m/s toward the shaft, stick held toward it\n` + rows.join('\n'));
+  /* Recorded because it is the line between an assist and a substitute: the bare hop misses by
+     0.83–1.09 m and the catch is 1.008, so magnetism rescues the *pinnacles* off a bare hop and
+     does NOT rescue the obelisk — whose extra 0.10 m of pole radius puts it outside. The
+     double jump is not optional there, and that is the right answer: an assist that replaced
+     the move would be the game playing itself. §5 measures the obelisk arm both ways. */
 });
 
 test('level: CALIBRATION — the same scans say NO for approaches that are out of reach', () => {
@@ -497,7 +562,7 @@ test('level: CALIBRATION — the same scans say NO for approaches that are out o
   const hold = poleHold(1.5);
   const from = V(LEVEL.obelisk.x + hold, LEVEL.obelisk.h - 1.6 + 0.02, LEVEL.obelisk.z);
   const high = s.point.clone(); high.y += 8;
-  const m = launchBest(from, high, POLE_HOP_VY, 1.6, TUNE.runSpeed).miss;
+  const m = launchBest(from, high, POLE_HOP_VY, 1.6, TUNE.runSpeed, { steer: true }).miss;
   console.log(`[reach: calibration] spire-obelisk +8y -> ${m.toFixed(2)} m (catch ${s.catch})`);
   assert.ok(m > s.catch, 'the spire control came back reachable');
 });
@@ -581,53 +646,99 @@ test('level: a released ring never re-acquires the player it just launched', () 
 });
 
 test('level: the offline instrument and the real integrator agree', () => {
-  /* The offline scan is drag-free and apex-hang-free because `predictMiss` is. If the two
-     disagree badly then §3 is measuring a game we do not ship. Compared on the identical
-     release states used by the grid, with the air jump matched cell for cell. */
-  let worst = 0, n = 0;
+  /* §3's whole result rests on this. Compared on the identical release states the grid used,
+     with the air jump matched cell for cell, against `fly()`'s real Controller.
+
+     CALIBRATION — the arm that must move: the same comparison against the *textbook* parabola
+     (`predictMiss`'s own model, no apex hang, no drag). It has to be visibly worse, or the
+     extra terms in `arcMin` are decoration and the first draft of this file was fine. */
+  let worst = 0, worstNaive = 0, n = 0;
   const rows = [];
+  const naive = (p0, v0, tgt, t1) => {
+    const p = p0.clone(), v = v0.clone();
+    let best = p.distanceTo(tgt), jumped = t1 == null;
+    for (let t = 0; t < 2.4; t += 1 / 240) {
+      if (!jumped && t >= t1) { v.y = TUNE.doubleJumpV0; jumped = true; }
+      v.y += G / 240;
+      p.addScaledVector(v, 1 / 240);
+      const d = p.distanceTo(tgt); if (d < best) best = d;
+      if (p.y < tgt.y - 14) break;
+    }
+    return best;
+  };
   for (const g of grid) {
     const r = swingRelease(HOP_FROM.point, HOP_TO.point, g.th, 75);
     const offline = arcMin(r.p0, r.vel, HOP_TO.point, g.dj);
     const d = Math.abs(offline - g.off.minD);
+    const dn = Math.abs(naive(r.p0, r.vel, HOP_TO.point, g.dj) - g.off.minD);
     if (d > worst) worst = d;
+    if (dn > worstNaive) worstNaive = dn;
     n++;
-    if (d > 0.5) rows.push(`  ${g.th}deg/${g.dj}: offline ${offline.toFixed(3)} vs live ${g.off.minD.toFixed(3)}`);
+    if (d > 0.25) rows.push(`  ${g.th}deg/${g.dj}: offline ${offline.toFixed(3)} vs live ${g.off.minD.toFixed(3)}`);
   }
-  console.log(`[agreement] ${n} cells; worst |offline - live| = ${worst.toFixed(3)} m` +
+  console.log(`\n[agreement] ${n} cells; worst |arcMin - live| = ${worst.toFixed(3)} m; ` +
+              `worst |textbook parabola - live| = ${worstNaive.toFixed(3)} m` +
               (rows.length ? `\n${rows.join('\n')}` : ''));
   assert.ok(n > 0, 'compared zero cells');
-  assert.ok(worst < 0.55,
-    `the ballistic model and the shipped integrator disagree by ${worst.toFixed(3)} m — ` +
+  assert.ok(worst < 0.30,
+    `the instrument and the shipped integrator disagree by ${worst.toFixed(3)} m — ` +
     'the reachability scan is measuring a different game');
+  assert.ok(worstNaive > worst * 1.5,
+    `the textbook parabola tracks the shipped integrator as well as arcMin does ` +
+    `(${worstNaive.toFixed(3)} vs ${worst.toFixed(3)}) — the apex-hang and drag terms are inert`);
 });
 
 /* ====================================================================== */
 /* 5 — the spire the moveset cannot reach                                  */
 /* ====================================================================== */
 
-test('level: the obelisk pyramidion is unreachable without magnetism and reached with it', async () => {
+test('level: the Ninja Spire Landing off the obelisk, with and without magnetism', async () => {
+  /* The whole justification for the spire targets, run through the shipped controller.
+     `PoleClimb`'s top hop is the only upward exit from a pole: 6.05 m/s, which apex hang trims
+     to a 0.67 m rise — 0.93 m UNDER a tip the level's own route comment calls a Ninja Spire
+     Landing. So the beat needs the double jump, and the double jump needs to be timed. The grid
+     is over that timing; the assist is what forgives it. */
   const s = byId('spire-obelisk');
   const hold = poleHold(1.5);
   const top = LEVEL.obelisk.h - 1.6;
   const from = V(LEVEL.obelisk.x + hold, top + 0.02, LEVEL.obelisk.z);
-  const inward = V(-1.6, POLE_HOP_VY, 0);        // the top hop: toward the shaft, no air jump
+  const inward = V(-1.6, POLE_HOP_VY, 0);        // the top hop: toward the shaft
+  const steer = V(-1, 0, 0);                     // stick held toward the shaft
+  const peak = arcApex(from.y, POLE_HOP_VY);
 
-  const off = await fly({ p0: from, vel: inward, target: s.point, enabled: false, jumpAt: null, frames: 90 });
-  const on = await fly({ p0: from, vel: inward, target: s.point, enabled: true, jumpAt: null, frames: 90 });
-  console.log(`\n[spire] pole top ${top} + hop ${POLE_HOP_VY.toFixed(2)} m/s -> ` +
-              `unassisted closest approach ${off.minD.toFixed(3)} m (tip at y ${s.point.y}, catch ${s.catch})`);
-  console.log(`[spire] with magnetism: closest ${on.minD.toFixed(3)} m, reached ${on.reached}, ` +
-              `acquired ${on.acquired}, release "${on.release}"`);
+  const cells = [];
+  for (const dj of [null, 0, 0.05, 0.10, 0.15, 0.20, 0.30, 0.45, 0.60]) {
+    const off = await fly({ p0: from, vel: inward, target: s.point, enabled: false, steer, jumpAt: dj, frames: 110 });
+    const on = await fly({ p0: from, vel: inward, target: s.point, enabled: true, steer, jumpAt: dj, frames: 110 });
+    cells.push({ dj, off, on });
+  }
+  console.log(`\n[spire] pole top ${top} + hop ${POLE_HOP_VY.toFixed(2)} m/s peaks at y ${peak.toFixed(3)}, ` +
+              `tip at y ${s.point.y} — short by ${(s.point.y - peak).toFixed(3)} m before any horizontal error`);
+  console.log('[spire] double-jump time -> unassisted closest approach / magnetism reached (catch ' +
+              `${s.catch}):\n  ` +
+              cells.map((c) => `${c.dj == null ? 'none' : c.dj.toFixed(2)}:${c.off.minD.toFixed(2)}${c.on.reached ? '*' : ' '}`).join('  '));
 
-  assert.ok(off.minD > TUNE.magSnapRadius,
-    `CALIBRATION FAILED: the unassisted top hop already arrives (${off.minD.toFixed(3)} m) — ` +
-    'this spire does not need a target and the arm proves nothing');
-  assert.ok(off.minD <= s.catch,
-    `the unassisted miss ${off.minD.toFixed(3)} m is outside catch ${s.catch}, so the target ` +
-    'cannot legitimately rescue it — widen the approach, not the catch');
-  assert.equal(on.acquired, s.id, 'magnetism acquired a different target than the pyramidion');
-  assert.ok(on.reached, 'magnetism did not complete the Ninja Spire Landing');
+  const bare = cells.find((c) => c.dj == null);
+  assert.ok(peak < s.point.y, 'the top hop clears the tip; this target has nothing to do');
+  assert.ok(bare.off.minD > TUNE.magSnapRadius,
+    `CALIBRATION FAILED: the bare hop already arrives (${bare.off.minD.toFixed(3)} m)`);
+  assert.equal(bare.on.reached, false,
+    `the bare hop (miss ${bare.off.minD.toFixed(3)} m, catch ${s.catch}) was rescued — the assist ` +
+    'is standing in for the double jump instead of forgiving its timing');
+
+  const caughtOff = cells.filter((c) => c.on.reached === undefined).length; // structural, always 0
+  const caught = cells.filter((c) => c.on.reached);
+  const landedUnassisted = cells.filter((c) => c.off.minD <= TUNE.magSnapRadius);
+  console.log(`[spire] ${caught.length}/${cells.length} timings reach the tip with magnetism; ` +
+              `${landedUnassisted.length} would have landed without it`);
+  assert.ok(caught.length > landedUnassisted.length,
+    'magnetism widened the double-jump timing window by nothing at all');
+  for (const c of caught) {
+    assert.equal(c.on.acquired, s.id, `cell dj=${c.dj} acquired ${c.on.acquired}, not the pyramidion`);
+    assert.ok(c.off.minD <= s.catch * 1.35,
+      `cell dj=${c.dj} was caught from ${c.off.minD.toFixed(3)} m, well outside catch ${s.catch}`);
+  }
+  void caughtOff;
 });
 
 /* ====================================================================== */

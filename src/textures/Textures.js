@@ -2,6 +2,11 @@ import * as THREE from 'three';
 import { mkCanvas, css, TEX_AB } from './Canvas2D.js';
 import { MATERIALS, MATERIAL_NAMES, MATERIAL_GROUPS, PREWARM } from './Materials.js';
 import { bake, bakeSize } from './Bake.js';
+import { canDecode } from './PngCodec.js';
+/* The manifest is *imported*, not fetched: the bundler inlines it, so the code always knows the
+ * exact asset list at build time and there is one fewer round trip before the first pixel. Only
+ * the 23.5 MB of pixels lives in `public/`. */
+import BAKED from './baked.json';
 
 /**
  * Textures — the module wrapper over the procedural material catalogue.
@@ -85,6 +90,36 @@ const CONSUMER_UV_SCALE = {
   sand_fine: 1,      // Terrain: UV = metres, repeat 1/8
 };
 
+/**
+ * Is the committed texture cache in play?
+ *
+ * **The procedural path is the source of truth and this is a cache in front of it**, so there has
+ * to be a way to turn the cache off — for the staleness test to compare against, for an A/B when a
+ * baked asset is suspected, and for any quality tier the cache was not built for. Precedence
+ * deliberately mirrors `Canvas2D.abRaw()`, because a second, differently-shaped switch in the same
+ * module is how one of them ends up not being honoured somewhere:
+ *
+ *   1. `globalThis.__TEX_BAKED = false`   — CPU-side labs and `tests/*`, set before import
+ *   2. `VITE_TEX_BAKED=off`               — the dev build `tools/shot.mjs` boots, no source edit
+ *   3. `?tex=proc` in the page URL        — a human comparing two tabs
+ *
+ * Read per call, never latched, for the reason spelled out at `TEX_AB()`: a value frozen at import
+ * time cannot be changed by a second arm in the same process, and an instrument that cannot
+ * distinguish its own two inputs is worse than none.
+ */
+export function bakedEnabled() {
+  try {
+    if (typeof globalThis !== 'undefined' && globalThis.__TEX_BAKED != null) return !!globalThis.__TEX_BAKED;
+    if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_TEX_BAKED) {
+      return String(import.meta.env.VITE_TEX_BAKED) !== 'off';
+    }
+    if (typeof location !== 'undefined' && location.search) {
+      if (new URLSearchParams(location.search).get('tex') === 'proc') return false;
+    }
+  } catch { /* plain-module and node hosts have neither; that is the procedural path anyway */ }
+  return true;
+}
+
 export class Textures {
   /** @param {import('../core/Engine.js').Engine} engine */
   constructor(engine) {
@@ -94,7 +129,7 @@ export class Textures {
     this._bytes = 0;
     this._swatch = null;
     this._poolSize = 0;            // texture workers used by the last prewarm; 0 = main thread
-    this.stats = { built: 0, ms: 0, bytes: 0 };
+    this.stats = { built: 0, decoded: 0, ms: 0, bytes: 0 };
 
     // A hard ceiling so a pathological run can't exhaust GPU memory (AGENTS.md §1: 350 MB).
     this._budget = 350 * 1024 * 1024;
@@ -125,7 +160,8 @@ export class Textures {
     // Build only what the shipped level actually puts on screen; everything else is built
     // lazily on first get().
     const jobs = PREWARM.filter((n) => MATERIALS[n] && !this._cache.has(n));
-    const built = await this._prewarmParallel(jobs);
+    const cache = await this._loadBaked(jobs);
+    const built = await this._prewarmParallel(jobs, cache);
     /* Serial fallback: no workers on this host, the pool died, or a job came back broken.
      * Identical code either way — `get()` calls `bake()` through `_buildLocal`, which is the
      * same function the worker calls. Yielding between recipes keeps the loading bar painting. */
@@ -148,7 +184,78 @@ export class Textures {
      * the next person to touch this does not have to re-derive the baseline. */
     this.engine.warn(`textures: prewarm ${this.stats.built} recipes in ${(this.stats.ms / 1000).toFixed(2)}s `
       + `at size ${this.size} on ${this._poolSize || 'no'} worker${this._poolSize === 1 ? '' : 's'} `
-      + `(${(this._bytes / 1048576).toFixed(0)} MB)`);
+      + `(${(this._bytes / 1048576).toFixed(0)} MB, ${this.stats.decoded} baked / `
+      + `${this.stats.built - this.stats.decoded} generated)`);
+  }
+
+  /* ───────────────────────────── the committed cache ───────────────────────────── */
+
+  /**
+   * Fetch the baked blob and slice it into per-recipe PNG buffers, or return null to build the
+   * whole prewarm procedurally.
+   *
+   * **The cache is a cache.** Every one of the conditions below silently falls back to generating
+   * the texture, because a missing or stale asset must cost load time and never correctness:
+   *
+   *   - the switch is off (`?tex=proc`, `VITE_TEX_BAKED=off`, `globalThis.__TEX_BAKED = false`)
+   *   - this host has no `DecompressionStream`, so the PNGs cannot be decoded losslessly
+   *   - the quality tier asks for a `texSize` the cache was not built at — `low` (512) and `ultra`
+   *     (2048) both do, and half a cache is worse than none because the two halves would disagree
+   *     about resolution across one wall
+   *   - the blob is missing, truncated, or hashes differently to the manifest
+   *   - a recipe is in PREWARM but not in the manifest, i.e. somebody added one without re-baking
+   *
+   * **The blob is one file and one request on purpose.** Seventy separate PNGs is seventy round
+   * trips, which on an HTTP/1.1 dev server — the one `tools/shot.mjs` boots — serialises six at a
+   * time and costs more than the decode it was meant to avoid.
+   */
+  async _loadBaked(names) {
+    if (!bakedEnabled()) return null;
+    if (!canDecode()) { this.engine.warn('textures: no DecompressionStream; generating procedurally'); return null; }
+    if (typeof fetch === 'undefined') return null;
+    if (BAKED.texSize !== this.size) return null;      // quiet: a deliberate quality tier, not a fault
+
+    const missing = names.filter((n) => !BAKED.recipes[n]);
+    if (missing.length) {
+      this.engine.warn(`textures: baked cache has no entry for ${missing.join(', ')} — re-run `
+        + `\`node src/textures/bakeassets.mjs\`; generating ${missing.length} procedurally`);
+    }
+
+    let blob;
+    try {
+      const url = new URL(BAKED.blob, document.baseURI).href;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      blob = new Uint8Array(await res.arrayBuffer());
+    } catch (err) {
+      this.engine.warn(`textures: baked cache unreadable (${err?.message || err}); generating procedurally`);
+      return null;
+    }
+    if (blob.length !== BAKED.bytes) {
+      this.engine.warn(`textures: baked cache is ${blob.length} bytes, manifest says ${BAKED.bytes} — `
+        + 'ignoring it and generating procedurally');
+      return null;
+    }
+
+    /* **`slice`, not `subarray`, and this is not a style preference.** Structured clone serialises
+     * an ArrayBufferView by serialising its *entire* backing ArrayBuffer, not the view's window —
+     * so posting 70 `subarray` views onto one 23.5 MB blob would clone 23.5 MB seventy times, 1.6 GB
+     * of copying to avoid 23.5 MB of it. `slice` gives each map its own buffer, which is then
+     * *transferred* into the worker, so the bytes move exactly once and the whole blob is
+     * collectable the moment this function returns. */
+    const out = new Map();
+    for (const name of names) {
+      const rec = BAKED.recipes[name];
+      if (!rec) continue;
+      const slots = {};
+      let ok = true;
+      for (const [slot, s] of Object.entries(rec.slots)) {
+        if (s.off + s.len > blob.length) { ok = false; break; }
+        slots[slot] = blob.slice(s.off, s.off + s.len);
+      }
+      if (ok) out.set(name, { rec, slots });
+    }
+    return out.size ? out : null;
   }
 
   /* ───────────────────────────── parallel prewarm ───────────────────────────── */
@@ -177,7 +284,7 @@ export class Textures {
    * keeps a core for that, capped at 4 because each in-flight 1024² build holds ~120 MB of
    * Float32 working set and four of them at once is already 480 MB of transient heap.
    */
-  async _prewarmParallel(names) {
+  async _prewarmParallel(names, cache = null) {
     const done = new Set();
     if (!names.length) return done;
 
@@ -213,12 +320,31 @@ export class Textures {
         try { w.terminate(); } catch { /* already gone */ }
         if (--live === 0) resolve();
       };
+      /* `retry` is the per-recipe fallback from the cache to the generator. A `decode` that fails
+       * — a slice that is not a PNG, an unfilter that hits an unknown filter byte, a host whose
+       * `DecompressionStream` disagrees with ours — re-queues *that recipe* as a `bake` instead of
+       * failing the boot or, worse, quietly leaving one wall untextured. Once only: if generating
+       * it also fails, the serial pass in `init()` is the last resort and after that `get()`
+       * returns null and the caller falls back to flat colour. */
+      const retry = new Set();
+      const send = (w, name, jid) => {
+        const hit = cache && !retry.has(name) ? cache.get(name) : null;
+        if (hit) {
+          w.postMessage({
+            id: jid, op: 'decode', name,
+            size: hit.rec.size, hasAlpha: hit.rec.hasAlpha, joint: hit.rec.joint,
+            normalStrength: hit.rec.normalStrength, slots: hit.slots,
+          }, Object.values(hit.slots).map((b) => b.buffer));
+        } else {
+          w.postMessage({ id: jid, op: 'bake', name, texSize, quality, ab });
+        }
+      };
       const pump = (w) => {
         if (next >= queue.length) { retire(w); return; }
         const name = queue[next++];
         const jid = id++;
         pending.set(jid, { w, name });
-        w.postMessage({ id: jid, name, texSize, quality, ab });
+        send(w, name, jid);
       };
       for (const w of workers) {
         w.onmessage = (e) => {
@@ -229,10 +355,19 @@ export class Textures {
             try {
               this._cache.set(msg.payload.name, this._finish(msg.payload.name, MATERIALS[msg.payload.name], msg.payload));
               done.add(msg.payload.name);
+              if (msg.op === 'decode') this.stats.decoded++;
             } catch (err) {
               this.engine.warn(`textures: "${msg.payload.name}" failed to upload — ${err?.message || err}`);
             }
           } else if (job) {
+            if (msg.op === 'decode' && !retry.has(job.name)) {
+              this.engine.warn(`textures: baked "${job.name}" failed to decode (${msg.error}) — generating it instead`);
+              retry.add(job.name);
+              const jid = id++;
+              pending.set(jid, { w, name: job.name });
+              send(w, job.name, jid);
+              return;                       // this worker is busy again; do not pump it twice
+            }
             // Leave it out of `done` and the serial pass in init() rebuilds it on this thread.
             this.engine.warn(`textures: worker build of "${msg.name || job.name}" failed — ${msg.error}`);
           }

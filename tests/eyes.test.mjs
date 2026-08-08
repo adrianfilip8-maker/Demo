@@ -261,13 +261,17 @@ test('shipped eye: the pupil is PAINT on a uniformly unwrapped dome — there is
   const eyeL = weld(pos, gr.start, gr.count, (i) => pos.getX(i) > 0);
   const onInk = eyeL.filter((i) => isEyeInk(uv.getX(i), uv.getY(i))).length;
   assert.ok(onInk > 0, 'no vertex samples the painted eye — the UV probe is broken, not the asset');
-  /* 46 of 242. The painted iris is ~28 texels across of 64, so it covers ~19 % of the square and
-     collects ~19 % of a uniformly spread vertex set: about SEVEN vertices across its diameter,
-     none of them on its boundary. A bone scaling a UV-selected patch of that drags a ragged
-     polygon of surface, not a concentric disc, and creases the dome at an arbitrary edge. */
+  /* Pinned exactly, in the house style (`dlrig.test.mjs` pins 39189, 6070, 258): an upper bound
+     would quietly absorb an asset change, and this number is the asset. 46 of 242 — the painted
+     iris is ~28 texels across of 64, so it covers ~19 % of the square and collects ~19 % of a
+     vertex set spread evenly over all of it: about SEVEN vertices across its diameter, scattered,
+     with nine of them landing near the painted edge and none forming a ring on it. A bone scaling
+     a UV-selected patch of that drags a ragged polygon of surface rather than a concentric disc,
+     and creases the dome along an arbitrary edge. */
   const across = 2 * Math.sqrt(onInk / Math.PI);
-  assert.ok(onInk < 60, `${onInk} vertices on the painted eye — re-check whether a pupil loop now exists`);
-  assert.ok(across < 9, `~${across.toFixed(1)} vertices across the iris`);
+  assert.equal(onInk, 46,
+    `${onInk} vertices of ${eyeL.length} sample the painted eye (~${across.toFixed(1)} across), not 46 — `
+    + 'the eyeball asset or its UVs changed, so re-read §211.3 rather than editing this number');
 
   /* The decisive quantity, and the bar on it is a physical identity rather than a choice.
    *

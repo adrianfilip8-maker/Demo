@@ -32,10 +32,14 @@ import { CLIPS, MISSING } from '../src/player/Clips.js';
  * and `eulerDeg` propagates a NaN degree into a NaN quaternion component, so name typos and
  * non-finite authoring are both still visible here — and this is the data the game samples.
  *
- * Deliberately NOT tested here: anything importing `import.meta.glob` (SlyModelDL*, which resolve
- * assets through Vite) cannot be loaded by plain Node. Those need the browser harness. Animation.js
- * imports fine but keeps `TREE` / `TREE_CLIPS` module-private, so the locomotion tree's clip names
- * are not reachable from here; `Clips.js`'s own `REQUIRED`/`MISSING` covers part of that ground.
+ * Not tested here, and the reason has changed: this file used to say that anything importing
+ * `import.meta.glob` (SlyModelDL*) "cannot be loaded by plain Node" and needed the browser
+ * harness. That stopped being true — `tests/dlrig.test.mjs` and `tests/eyes.test.mjs` both load
+ * the real `SlyModelDLRig.js` offline through three mechanical source rewrites. What is still out
+ * of reach from *this* file is only the mesh: it guards the clip data and the bone table, and the
+ * shipped mesh is guarded next door. Animation.js imports fine but keeps `TREE` / `TREE_CLIPS`
+ * module-private, so the locomotion tree's clip names are not reachable from here; `Clips.js`'s
+ * own `REQUIRED`/`MISSING` covers part of that ground.
  */
 
 const BONES = new Set(RIG3.BONE_ORDER);

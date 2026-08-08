@@ -51,8 +51,8 @@ const PUBLIC_URL = '/assets/tex/textures.bin';
 const TEX_SIZE = 1024;
 /** Resolution the staleness guard re-derives at. Small enough to run in the normal test suite. */
 const GUARD_SIZE = 256;
-/** Filter 0 (None) — see the note by `encode()`. */
-const FILTER = 0;
+/** -1 = adaptive per-scanline filtering. See the note by `encode()` for why, with the numbers. */
+const FILTER = -1;
 
 const has = (n) => process.argv.includes(`--${n}`);
 const digest = (u8) => {
@@ -152,8 +152,23 @@ await browser.close();
 server.close();
 console.log(`  baked ${baked.length} recipes in ${((Date.now() - t0) / 1000).toFixed(1)}s`);
 
-// `[...u8]` crosses the bridge as a plain array; put it back in a typed array.
-for (const r of baked) for (const k of Object.keys(r.slots)) r.slots[k] = Uint8Array.from(r.slots[k]);
+/* Collect what arrived over the socket, and check it arrived intact. The digest in `r.digests`
+ * was taken in the page; re-taking it here proves the transfer, so a truncated POST cannot be
+ * silently encoded into the committed cache. */
+for (const r of baked) {
+  r.slots = {};
+  for (const slot of r.slotNames) {
+    const buf = inbox.get(`${r.name}.${slot}`);
+    if (!buf) { console.error(`FATAL: ${r.name}.${slot} never arrived from the page`); process.exit(1); }
+    const u8 = new Uint8Array(buf.buffer, buf.byteOffset, buf.length);
+    if (digest(u8) !== r.digests[slot]) {
+      console.error(`FATAL: ${r.name}.${slot} was corrupted in transit (${buf.length} bytes)`);
+      process.exit(1);
+    }
+    r.slots[slot] = u8;
+  }
+}
+console.log(`  transferred ${inbox.size} maps, all digests intact`);
 
 /* ───────────────────── cross-check the browser against Node ───────────────────── */
 
@@ -183,14 +198,21 @@ console.log(`  guard digests cross-checked browser vs Node: ${crossed}/${baked.l
 /* ───────────────────────────── encode ───────────────────────────── */
 
 /**
- * PNG, 8-bit RGBA, non-interlaced, **filter type 0 (None)**.
+ * PNG, 8-bit RGBA, non-interlaced, **adaptive per-scanline filtering**.
  *
- * Filtering is what makes a PNG small, and adaptive filtering would win here too — measured over
- * the whole catalogue, adaptive is about 15 % smaller than None. It is not taken, for one reason:
- * with filter 0 the unfilter step is `out.set(row)`, a memcpy, while Paeth is a four-way branch
- * and three subtractions **per byte** over 93 MB of output, on the boot path this whole exercise
- * exists to shorten. Trading ~3 MB of repo for that is the right way round. `--filters` prints the
- * comparison so the next person can re-decide with numbers rather than re-derive them.
+ * This was very nearly the wrong call, and the record is worth keeping. Filter type 0 (None) makes
+ * the decoder a memcpy per row instead of Paeth's four-way branch per *byte*, over 93 MB, on the
+ * boot path this whole exercise exists to shorten — so the plan was to spend "about 15 %" of extra
+ * repo size to buy it. **Then it was measured, over the real catalogue:**
+ *
+ *   adaptive  23.51 MB      none  55.78 MB   (+137.3 %)
+ *
+ * Not 15 %. Procedural textures are exactly the content prediction filters are built for — smooth
+ * gradients, tiled masonry, noise with local structure — and turning them off more than doubles
+ * the file. 32 MB of committed binary is not worth a few hundred milliseconds of unfiltering that
+ * runs on three background threads. Adaptive it is. `--filters` re-prints the comparison, so the
+ * next person to weigh this re-decides from numbers instead of from an estimate — which is how the
+ * estimate above came to be wrong in the first place.
  */
 function encode(buf, size, filterType = FILTER) {
   const im = new PNG({ width: size, height: size });

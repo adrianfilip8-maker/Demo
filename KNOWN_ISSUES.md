@@ -17001,3 +17001,113 @@ and I had just written down why that matters.
 - **§217's dismissal of `nUniforms: 0` is RETRACTED.** The reading was right.
 - §218 stands on its own evidence — `step(n, 0)` genuinely does not render — but it was not the cause
   of the nulls it was written to explain.
+
+## §220 — every diff-based arm in this project sits on an unmeasured drift floor, and mine did too
+
+The shader sub-agent proposed this control; the number is from `dbgterm1`'s A2 arm.
+
+```
+A2  DRIFT CONTROL  (no poke at all, same step count)
+    3087 / 57600 px move on their own between two captures 4 frames apart
+```
+
+**5.4% of a 320×180 `temple` frame changes by itself** — idle animation, particles, springs, anything
+the sim advances. Any A/B that counts "pixels differing between arm and base" is measuring that floor
+plus its lever, and none of this project's runners had ever measured it.
+
+### It withdraws my own §218 reasoning
+
+`rampwire4` reported ARM 1 (`uTermHi` 0.52 → 0.95) at **4893 px after exactly 4 frames**, against a
+measured self-drift of **3087 px over the same 4 frames**. The lever's share is at best a fraction of
+what I reported, and per §219 the cel program was not linking at the time, so its true share was
+**zero**. The agent spotted the shape before the number existed: the three arms read 4893 / 11645 /
+15364 against 4 / 12 / 20 frames elapsed, which is a straight line through the origin — the signature
+of a clock, not a lever.
+
+So the ledger's position on the ramp is: **§217 is retracted (§219 — the program was dead), and
+§218's stated reason for retracting it is withdrawn too.** Neither of my two attempts to show "the
+ramp lever works" showed anything. What settled it was a four-arm link check that never diffed a
+pixel.
+
+### What to do instead, and it costs nothing
+
+Every sealed run from here carries a **drift arm**: two captures, same step count, no poke, before any
+lever moves. Register the lever's band as *above the measured drift*, not above zero. The three arms
+that make a pixel-diff run interpretable are now:
+
+1. **drift** — how much moves on its own (the floor every other number sits on);
+2. **calibration** — something that MUST move (proves the harness renders at all, §218);
+3. **restore** — the lever back to base (proves the clock did not run away).
+
+`rampwire2` and `rampwire3` had none of the three. `matident` had the second only, and that is why it
+was the one that found the harness bug. cel1 had the second and third, and was correctly called
+UNSCOREABLE twice.
+
+A cheaper alternative where the shot allows it: capture with the sim genuinely frozen. `setShot(…, {
+dt: 0 })` positions the camera, but a subsequent `step(n, 0)` does not render (§218), so "frozen" and
+"rendered" have been mutually exclusive in this harness. Fixing that — a render path that redraws
+without advancing — would remove the floor rather than measure it, and is worth more than any single
+A/B it would unblock.
+
+## §221 — the cel shader replaces three's light loop, so a third of the published lighting payload reaches nothing
+
+Found by the tone sub-agent while chasing §214.6's "unexplained 2–3× gap between Atmosphere's
+radiances and the frame". The gap is not unexplained. Verified here:
+
+- `toon.glsl.js:392`, the patch's own comment: *"Replaces `vec3 outgoingLight = totalDiffuse +
+  totalSpecular + totalEmissiveRadiance;`"*
+- `toon.glsl.js:867`: `outgoingLight = diff + sss + spec + metalEnv + rim + emissiveTerm;` — a plain
+  **assignment**, not an addition to three's result
+- **zero** occurrences of `uHemiIntensity`, `uBounceIntensity` or `uBounceDir` anywhere in the shader
+
+`Lighting._hemi` and `Lighting._bounce` are where `A.hemiIntensity` (0.34 at night) and
+`A.bounceIntensity` (0.10) go, and they contribute **nothing to any cel-shaded surface**. The only
+fill a toon surface sees is `uAmbIntensity = max(0.10, SHADOW_FLOOR × keyLum × 1.15)`, and at night
+the `max()` binds at 0.10 because the formula yields 0.0541.
+
+**So a model summing hemi + bounce + ambient (0.54) against a shader using 0.10 overstates night fill
+by 5.4×** — which is the "2–3× gap", found and sized. `bounceDir` never reaches the shader either:
+the fill's only directionality is `smoothstep(-0.72, 0.55, Nw.y)`, world-up. §214.1's proposed route
+for #12 — "the bounce is aimed at night's walls at N·L 0.890, so the lever is fill amplitude" —
+describes a path the cel shader does not have.
+
+**Consequence for defect #12.** `nightFillScale` does reach the shader, but the shadow-band pixel has
+shadow light (0.021, 0.045, 0.120) against fill (0.0060, 0.0077, 0.0198): the floor is **3–6× the
+entire fill**, so ×3 moves a sandstone wall from V 0.17 to 0.20 and ×6 to 0.23. Night's flatness lives
+in the uncapped ambient floor, not in the fill, and no amount of `nightFillScale` can reach it. The
+agent correctly declined to ship an amplitude.
+
+**Either consume these or delete them from the published payload.** As it stands, anyone sizing a
+lighting change against Atmosphere's own numbers is out by a factor of five, and two sub-agents in a
+row have now done exactly that.
+
+### §221.1 — the §214 rim diff would have been wrong twice, and reads as a dead lever
+
+The diff §214 handed forward was `cu.uRimLit.value.copy(L.rimColor)`. Both halves are wrong:
+
+1. **Colour space.** `L.rimColor` is linear; `uRimLit` lands after `slyLinearToSrgb` and is
+   display-space. A raw copy delivers #7fd4ff as (0.212, 0.651, 1.000) instead of (0.498, 0.831,
+   1.000) — a **57% red cut on the rim of every shot, daylight included**. It needs
+   `copyLinearToSRGB`; measured round-trip |Δ| 6e-6.
+2. **Wrong uniform.** The composite picks `mix(uRimShade, uRimLit, edge.b)` on the lit-side mask, and
+   `night`'s wall sits at N·L −0.9476, so `edge.b ≈ 0` and the night rim is drawn almost entirely in
+   **`uRimShade`**. Fixing only `uRimLit` would have moved the moon shots by approximately nothing —
+   **a correct-looking change that reads as a dead lever**, which is the most expensive kind of result
+   this project produces.
+
+Both legs now take the clock, gated on `nightAmount > 0` — exactly 0 for all fourteen daylight shots,
+so the day arm is bit-identical **by branch, not by tolerance**. `uRimShade` display luma 0.634 →
+0.288 on the leg the night frame actually uses.
+
+### §221.2 — §214.3's "median 42 px" does not reproduce, and one of my frames was void
+
+An independently calibrated finder (median-9 prefilter, monotone runs ≥ 25 L; planted 4/18/42 px
+ramps recovered as 5/19/43) returns **813 transitions, median 3 px, max 38** on the same frame
+§214.3 named — while agreeing with it to 0.4 L on the brightest pixel (232.4 vs 232). The frame is
+not in dispute; **the selection rule is**, so 42 px is not a property of the image.
+
+The agent's own first attempt used `cel1/temple.restore.png` and returned 6 px. **That reading is
+void**: per §219 the cel program stopped linking at 11:13, and every cel1 frame was captured
+16:03–16:26, so those frames contain no toon-shaded pixels at all — their p50 is 168.7 against
+grain1's 76.7. Worth stating loudly: **every frame under `progress/records/cel1/` is unusable for any
+purpose**, and any future measurement that reaches for them will be measuring a dead shader.
