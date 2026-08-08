@@ -16,8 +16,20 @@ import { rng } from '../core/Rand.js';
  * **Detection is a meter, never a switch.** Instant detection is the single fastest way to
  * make a stealth game feel unfair: the player has no frame in which to react, so failure
  * feels arbitrary. Here the meter fills faster when you are close, moving, lit and centred
- * in the cone, and drains slowly after a grace period. The cone changes colour as it fills,
- * so the meter is legible in-world without a HUD element.
+ * in the cone, and drains slowly after a grace period.
+ *
+ * **A meter the player cannot read is a switch with extra steps.** The whole point of a
+ * gradient is that the player acts on it, and to act on it he has to see which of the four
+ * bands the guard is in — not a continuous orange. Three things carry that read, and all three
+ * are pinned to the same thresholds the state machine uses, so they cannot drift apart from it:
+ *
+ *   - the cone's **colour**, a three-stop ramp (`coneColourStop`): cream while he has noticed
+ *     nothing, amber the instant he turns suspicious and held amber through the whole search,
+ *     red only once he commits to the chase;
+ *   - **hysteresis** on every band, so a meter resting on a threshold cannot flicker the state
+ *     — and with it the colour, the animation and the `guardAlert` event — every frame;
+ *   - the guard **walking over to look** when he turns suspicious, after a beat of standing
+ *     still, so the read survives the player being behind a pillar where no cone is visible.
  *
  * All coordinates are §8.1 level space: +X east, +Y up, +Z south. Courtyard floor y = 0.
  */
@@ -56,9 +68,24 @@ export const VISION = {
  * The detection model. Every number here is a *feel* number — the critic loop should be
  * able to retune the whole stealth game from this block without reading a line of logic.
  *
- * Sanity check on the tuning: standing in the bright core at 6 m, walking, in moonlight,
- * fills the meter in roughly 1.4 s — long enough to break line of sight, short enough that
- * standing in front of a guard is never safe. Sneaking triples that.
+ * ── What the tuning actually does, measured ───────────────────────────────────────────────
+ * This block used to carry the line "standing in the bright core at 6 m, walking, in moonlight,
+ * fills the meter in roughly 1.4 s". **That number had never been measured, and it is wrong.**
+ * `tests/patrol.test.mjs` runs the model and prints the table; at the same reference condition
+ * — 6 m, dead centre, moonlit — it reads:
+ *
+ *     running   0.53 s      standing still  1.80 s
+ *     walking   0.88 s      far (15 m)      2.88 s
+ *     crouching 1.62 s      daylight        0.60 s
+ *     sneaking  2.25 s      edge of cone    1.23 s
+ *
+ * plus `reactDelay` before he actually moves: 1.23 s from unaware to chasing while walking in
+ * the open. Sneaking buys 2.6× (not the "triples" the old line claimed), crouching 1.8×, and
+ * a full meter drains back to zero 5.1 s after the player breaks line of sight.
+ *
+ * Nothing here was retuned to produce that table — it is what the shipped numbers have always
+ * done, and the comment is now what they do rather than what someone hoped they did. If these
+ * are the wrong feel, change the numbers and the test will print the new table.
  */
 export const DETECT = {
   fillBase: 0.92,          // meter units per second at the reference condition
@@ -261,19 +288,25 @@ export const ROUTES = {
 
      x = ±12.5 is the centre of the corridor between the nave columns (outer face x = ±9.6)
      and the aisle columns (inner face x = ±15.1) — 2.6 m of clearance on the tighter side, so
-     the Heavy walks it without ever touching stone. The cross-legs sit on z = −19.5 and
-     z = −42.5, the two rows in this hall with no column of any kind on them. */
+     the Heavy walks it without ever touching stone. The north cross-leg sits on z ≈ −43, the
+     middle of the 4.8 m window between the column rows at z = −38 and z = −46.
+
+     Open, not closed, and that is measured rather than chosen. A closed rectangle needs a
+     *south* cross-leg too, and there is nowhere to put one: the only gap between the hall front
+     wall (z = −18.1) and the first nave column row (z = −20.4) is 2.3 m wide, and a 0.56 m
+     Heavy on a Catmull-Rom that bulges 0.7 m at the corners does not fit through it — measured
+     at 0.34 m of clearance, against the 0.76 m he needs. Ping-ponging the U instead puts a
+     full about-face at each end of the aisle, which is a better read than a corner anyway. */
   hall_weave: {
-    closed: true, baseY: 0, space: 'hall',
+    closed: false, baseY: 0, space: 'hall',
     points: [
-      [-12.5, -20.5, 1.6, 'look'],
+      [-12.5, -20.0, 2.0, 'look'],
       [-12.5, -31.0, 0, null],
-      [-12.5, -42.5, 2.0, 'look'],
-      [0.0, -42.5, 0, null],
-      [12.5, -42.5, 1.4, null],
+      [-12.5, -42.5, 1.6, null],
+      [0.0, -43.5, 1.4, 'bored'],
+      [12.5, -42.5, 1.6, null],
       [12.5, -31.0, 0, null],
-      [12.5, -20.5, 2.0, 'bored'],
-      [0.0, -20.5, 1.2, 'look'],
+      [12.5, -20.0, 2.0, 'look'],
     ],
   },
 
@@ -461,6 +494,16 @@ export class Route {
     else if (nu < 0) { nu = -nu; nd = 1; }
     out.u = nu; out.dir = nd;
     return out;
+  }
+
+  /**
+   * The dwell stop sitting at `u`, if there is one. `nextStop` deliberately reports only stops
+   * strictly *ahead*, which leaves the ends of an open route unreachable on the frame the
+   * guard turns around — see `Guard._followRoute`.
+   */
+  stopAt(u, tol = 1e-3) {
+    for (const s of this.stops) if (Math.abs(s.u - u) <= tol) return s;
+    return null;
   }
 
   /** The next dwell stop strictly ahead of `u` in travel direction `dir`. */

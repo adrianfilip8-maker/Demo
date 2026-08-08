@@ -772,17 +772,27 @@ class Guard {
       if (this.route.closed && this.u < prevU - 0.5) this.laps++;
     }
 
-    if (stop) {
-      // Did we step over a dwell stop this frame? Land exactly on it and stand there.
-      let gap = prevDir > 0 ? stop.u - prevU : prevU - stop.u;
+    /* Did we step over a dwell stop this frame? Land exactly on it and stand there.
+       ── The turn-around dwell, which never once fired ──────────────────────────────────────
+       Four of the ten routes are open, and on every one of them the guard swept straight
+       through his own about-face without pausing — the single most readable beat a patrol has,
+       and the one the player counts. Two faults, both only reachable at an end:
+         1. `stop` is looked up *before* the advance, and `nextStop` reports only stops strictly
+            ahead. Once `u` is within 1e-4 of the end there is nothing ahead, so on the frame he
+            actually reflects `stop` is null and the block below never runs. Hence the second
+            lookup by position.
+         2. `u` can land on the end *exactly* — `0.99814 + 0.00186` is 1.0 — and then
+            `crossed >= gap` is a comparison between two float expressions that ought to be
+            equal and differ in the last bit. Hence the epsilon. */
+    let target = stop;
+    if (honourDwell && this.dirSign !== prevDir) {
+      target = this.route.stopAt(prevDir > 0 ? 1 : 0) || stop;
+    }
+    if (target) {
+      let gap = prevDir > 0 ? target.u - prevU : prevU - target.u;
       let crossed;
       if (this.dirSign !== prevDir) {
-        /* He reflected off the end of an open route this frame, so `u` moved *backwards* in
-           the old direction's terms and the plain difference below goes negative — which is
-           why the end-of-route dwell never fired. Four of the nine routes are open, and on
-           every one of them the guard swept through his own turn-around without the pause
-           that makes an about-face readable. Measure what he actually travelled: out to the
-           end, and back. */
+        // He reflected off the end this frame: he travelled out to the end, and back.
         const end = prevDir > 0 ? 1 : 0;
         crossed = Math.abs(end - prevU) + Math.abs(end - this.u);
       } else {
@@ -792,10 +802,10 @@ class Guard {
         gap = ((gap % 1) + 1) % 1;
         crossed = ((crossed % 1) + 1) % 1;
       }
-      if (crossed >= gap && gap >= 0) {
-        this.u = stop.u;
-        this.dwell = stop.dwell;
-        this.dwellAction = stop.action;
+      if (crossed >= gap - 1e-6 && gap >= -1e-6) {
+        this.u = target.u;
+        this.dwell = target.dwell;
+        this.dwellAction = target.action;
       }
     }
 

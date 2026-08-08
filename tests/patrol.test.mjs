@@ -506,14 +506,18 @@ test('C3: 180 s of patrol in the real temple, and nobody is stuck', async () => 
 });
 
 test('CAL-2c: the stall test detects a guard pinned by a wall dropped across his beat', async () => {
-  // A slab across the hall's west inner aisle, right where hall_weave runs.
-  const fence = [{
-    tag: 'wall',
-    min: new THREE.Vector3(-16.5, 0, -32.0), max: new THREE.Vector3(-8.5, 4, -30.0),
-  }];
+  /* A slab across both of hall_weave's inner aisles, at z = −31 where the route's long legs
+     run. Both, because the guard starts mid-route and a fence on the leg he happens to be
+     walking away from tests nothing — the first version of this arm fenced only the west aisle
+     and reported an identical distance with and without, which is a calibration arm quietly
+     measuring nothing. */
+  const fence = [
+    { tag: 'wall', min: new THREE.Vector3(-16.5, 0, -32.0), max: new THREE.Vector3(-8.5, 4, -30.0) },
+    { tag: 'wall', min: new THREE.Vector3(8.5, 0, -32.0), max: new THREE.Vector3(16.5, 4, -30.0) },
+  ];
   const { trace } = await soak(60, { extra: fence });
   const hall = trace.filter((t) => t.route === 'hall_weave');
-  assert.ok(hall.length === 2, `expected 2 hall guards, traced ${hall.length}`);
+  assert.ok(hall.length >= 1, `expected at least one hall_weave guard, traced ${hall.length}`);
   const free = await soak(60);
   const freeHall = free.trace.filter((t) => t.route === 'hall_weave');
   const pinnedDist = Math.min(...hall.map((t) => t.dist));

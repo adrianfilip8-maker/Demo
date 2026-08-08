@@ -3,6 +3,12 @@
  *
  *   node src/ai/Guard.test.mjs
  *
+ * **`npm test` does not run this file.** The script is `node --test "tests/*.test.mjs"`, and
+ * this suite is neither in `tests/` nor written against `node:test` — it carries its own
+ * three-function harness. It has to be run by hand, which means it can rot silently between
+ * runs; it had two stale expectations when the routes were re-authored. `tests/patrol.test.mjs`
+ * is in the glob and is the one CI-shaped guard suite.
+ *
  * Nothing here needs a GPU, a browser or a level: the tests stand a real `Guards` module up
  * against a stub Engine and a stub COLLISION built out of axis-aligned boxes, then run the
  * shipped update loop. That means they exercise `Guard.js` exactly as the game does — route
@@ -113,9 +119,19 @@ const inBox = (p, b, pad = 0) =>
   p.y > b.y0 + pad && p.y < b.y1 - pad &&
   p.z > b.z0 + pad && p.z < b.z1 - pad;
 
-/** The level's walkable surfaces, coarse but faithful to §8.1. */
+/**
+ * The level's walkable surfaces, coarse but faithful to §8.1.
+ *
+ * **These are five rectangles, not the temple.** Everything in this file runs against them, so
+ * nothing in this file can say whether a route lies anywhere a guard can actually stand — and
+ * for a long time it did not: `hall_weave` ran its legs down the line of the aisle columns and
+ * passed every test here. `tests/patrol.test.mjs` builds the shipped level and asks that
+ * question properly; this suite's job is the follower code, which these rectangles are enough
+ * for and much faster at.
+ */
 const FLOORS = [
   { x0: -30, x1: 30, z0: -60, z1: 100, y: 0 },      // courtyard + hall + approach
+  { x0: -9.4, x1: 9.4, z0: 2.6, z1: 19.4, y: 2 },    // obelisk terrace, stage 1
   { x0: -24, x1: 24, z0: -52, z1: -16, y: 17 },      // rooftop deck
   { x0: -14, x1: 14, z0: -78, z1: -56, y: -12 },     // tomb vault
   { x0: 20.5, x1: 25, z0: -14, z1: 32, y: 9 },       // courtyard architrave ledge
@@ -233,7 +249,29 @@ async function main() {
       assert(maxOff < 1.2, `strayed ${maxOff.toFixed(2)} m from the route`);
     });
     check('he actually pauses at the authored dwell stops', () => {
-      assert(g.route.stops.length === 7, `expected 7 dwell stops, got ${g.route.stops.length}`);
+      // Read the count off the route table rather than hardcoding it: the previous literal 7
+      // went stale the moment the routes were re-authored against the real level.
+      const authored = ROUTES.south_gate.points.filter((p) => (p[2] ?? 0) > 0).length;
+      assert(authored > 0, 'south_gate authors no dwell stops at all');
+      assert(g.route.stops.length === authored,
+        `expected ${authored} dwell stops, got ${g.route.stops.length}`);
+    });
+
+    check('an open route pauses at its own turn-around, not just in the middle', () => {
+      // Four of the ten routes ping-pong, and the about-face is the beat the player counts.
+      const open = ROSTER.map((e, i) => ({ e, i })).filter(({ e }) => !ROUTES[e.route].closed);
+      assert(open.length > 0, 'no open routes in the roster to check');
+      let checked = 0;
+      for (const { e } of open) {
+        const r = guards.routes[e.route];
+        const ends = r.stops.filter((s) => s.u < 1e-3 || s.u > 1 - 1e-3);
+        const authoredEnds = [ROUTES[e.route].points[0], ROUTES[e.route].points.at(-1)]
+          .filter((p) => (p[2] ?? 0) > 0).length;
+        checked++;
+        assert(ends.length === authoredEnds,
+          `${e.route}: ${authoredEnds} end dwells authored, ${ends.length} resolved onto the spline`);
+      }
+      assert(checked === open.length, `checked ${checked} of ${open.length} open routes`);
     });
   }
 
