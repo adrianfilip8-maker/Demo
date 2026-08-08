@@ -19575,3 +19575,61 @@ pickpocket animation at empty air. That is now cosmetic rather than an exploit �
 but the honest fix is an affordance (`c.afford('pocket')`) registered by `Guards` alongside the
 magnetism targets of §223, so Moveset can gate on a real guard without taking a dependency on the
 AI module. Left alone deliberately: it touches two other agents' files and is no longer urgent.
+
+## §248 — the event-bus census §239 proposed, and the three ways it lied before it was trustworthy
+
+Written because the same defect appeared **three times in one session** and was found by accident
+every time: `coin` had three subscribers and no publisher (§239); `guardPickpocket` had a publisher
+and no subscriber, which is why the flat-25 exploit hid behind it (§247); and `playerState`,
+`ledgeGrab`, `hookGrab`, `hookRelease` and `enemyBounce` were emitted into nothing until the FX
+agent subscribed them (§237).
+
+**An event bus cannot fail loudly.** A publisher with no subscriber and a subscriber with no
+publisher both compile, both run, both pass every existing test, and both warn nobody. No import
+breaks, no type mismatches. Only a census catches it, and a census costs milliseconds.
+
+`tests/eventbus.test.mjs` scrapes both sides of `src/` and pins the exact sets — the
+`tests/api.test.mjs` pattern, failing in both directions so that fixing one entry also turns it red
+and prompts deleting the line rather than leaving a stale exception.
+
+### What it found: 17 dead ends
+
+**11 subscribed, never published.** The largest is not a naming slip:
+
+- **`health` and `damage` — the player has no health system at all.** No `takeDamage`, no health
+  state anywhere in `src/player/` or `src/ai/`. The HUD renders health pips that nothing can ever
+  change; the guards can chase, catch and alert, and **none of it can hurt him**.
+- `guardLost`, `guardSound`, `guardSpotted` — Audio listens for three guard events that do not
+  exist. The guards publish `guardAlert`, and the audio agent rebuilt its ladder on that; these are
+  the legacy names left subscribed. Stale listeners, not missing publishers.
+- `prompt` — and this one is a trap. `HUD.js:383` sets `_sawPrompt` on the first prompt and
+  *permanently* retires its affordance-detection fallback, so **the first module to publish it
+  silently kills every contextual verb in the game.** Publishing it is not a one-line change.
+- `objective`, `clue`, `hurt`, `unregisterTarget`, `binocucom` — features with no source of truth.
+
+**6 published, never subscribed:** `treasureBanked`, `treasureDropped`, `treasurePickup` (the loot
+agent's new fence economy, correctly emitted and heard by nobody), `land`, `paused`, `binocucomState`.
+
+### The part worth keeping: it lied three times first
+
+Every draft produced a confident, plausible, wrong list, and every one would have sent someone to
+"fix" working code:
+
+1. `\bemit\(` — a word boundary will not cross an underscore, so `Pickups.js`'s `this._emit('coin')`
+   wrapper was invisible and `coin`, `coins`, `toast` were reported unpublished. **Three accusations
+   against correct code.**
+2. any `…emit(` — swung the other way and swallowed `Particles.js`'s `_emit(name, pos, opts)`, which
+   is a **particle spawner**, not a bus call. Thirty recipe names (`cane_arc`, `coin_sparkle`,
+   `dive_dust`) appeared as dead events.
+3. excluding `this.emit` — but **`Engine` IS the bus** (`core/Engine.js:180`) and publishes `resize`
+   and `quality` through exactly that form, so seven modules' subscriptions looked orphaned.
+
+The tempting repair each time was to add the offending names to an exception list until the output
+looked sensible. That fits the instrument to the answer and destroys the only thing it is for. Each
+was instead fixed by teaching the scrape what the code actually does — `wrapperIsBus` decides
+whether a `_emit` wrapper is a bus forwarder **by reading whether its body reaches `engine.emit`**,
+so no per-file exceptions exist and a new module writing its own forwarder needs no edit here.
+
+A census that cries wolf is worse than no census, because someone will act on it.
+
+Suite 371/372; the one red remains the deliberately-held texture staleness guard.
