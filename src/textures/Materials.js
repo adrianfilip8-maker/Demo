@@ -165,20 +165,20 @@ const HUE = {
   /* Recess 16°, mid 30°, crest ~48° and half the chroma. `lift` raises only the sun-struck tail:
      the four largest architectural surfaces ship albedo p99 0.596–0.639, and a 0.60 albedo cannot
      reach 230/255 in frame at unity gain however it is lit. */
-  sandstone: { lo: -9, mid: 2, hi: 18, satLo: 1.30, satMid: 1.06, satHi: 0.66, lift: 0.09, knee: 0.60 },
+  sandstone: { lo: -9, mid: 2, hi: 18, satLo: 1.78, satMid: 1.10, satHi: 0.66, lift: 0.09, knee: 0.60 },
   /* The floor is dustier and flatter than a wall — less bleach, less lift. */
-  paving: { lo: -7, mid: 0, hi: 14, satLo: 1.28, satMid: 1.05, satHi: 0.72, lift: 0.06, knee: 0.62 },
-  limestone: { lo: 2, mid: 7, hi: 14, satLo: 1.32, satMid: 1.12, satHi: 0.86, lift: 0.06, knee: 0.66 },
-  granite: { lo: -16, mid: -15, hi: -7, satLo: 1.10, satMid: 1.18, satHi: 1.02 },
-  gold: { lo: 4, mid: 10, hi: 14, satLo: 1.05, satMid: 1.06, satHi: 1.0, lift: 0.05, knee: 0.70 },
+  paving: { lo: -7, mid: 0, hi: 14, satLo: 1.74, satMid: 1.09, satHi: 0.72, lift: 0.06, knee: 0.62 },
+  limestone: { lo: 2, mid: 7, hi: 14, satLo: 1.72, satMid: 1.16, satHi: 0.86, lift: 0.06, knee: 0.66 },
+  granite: { lo: -16, mid: -15, hi: -7, satLo: 1.35, satMid: 1.20, satHi: 1.02 },
+  gold: { lo: 4, mid: 10, hi: 14, satLo: 1.28, satMid: 1.08, satHi: 1.0, lift: 0.05, knee: 0.70 },
   /* Aged bronze goes olive at the highlight where gold goes yellow — that separation is the
      whole reason two metals in one frame read as two metals. */
-  bronze: { lo: 0, mid: 8, hi: 24, satLo: 1.05, satMid: 0.98, satHi: 0.88 },
-  mudbrick: { lo: -13, mid: -8, hi: 0, satLo: 1.10, satMid: 1.05, satHi: 0.85 },
-  sand: { lo: -4, mid: 6, hi: 16, satLo: 1.10, satMid: 0.95, satHi: 0.78, lift: 0.05, knee: 0.66 },
-  bark: { lo: -6, mid: -4, hi: 2, satLo: 1.05, satMid: 0.92, satHi: 0.85 },
-  timber: { lo: -2, mid: 0, hi: 8, satLo: 1.05, satMid: 0.88, satHi: 0.82 },
-  fibre: { lo: 0, mid: 6, hi: 12, satLo: 1.05, satMid: 0.86, satHi: 0.80 },
+  bronze: { lo: 0, mid: 8, hi: 24, satLo: 1.28, satMid: 1.02, satHi: 0.88 },
+  mudbrick: { lo: -13, mid: -8, hi: 0, satLo: 1.36, satMid: 1.08, satHi: 0.85 },
+  sand: { lo: -4, mid: 6, hi: 16, satLo: 1.40, satMid: 0.99, satHi: 0.78, lift: 0.05, knee: 0.66 },
+  bark: { lo: -6, mid: -4, hi: 2, satLo: 1.28, satMid: 0.96, satHi: 0.85 },
+  timber: { lo: -2, mid: 0, hi: 8, satLo: 1.28, satMid: 0.92, satHi: 0.82 },
+  fibre: { lo: 0, mid: 6, hi: 12, satLo: 1.28, satMid: 0.90, satHi: 0.80 },
 };
 
 /* **There is no vegetation entry, and that is a result rather than an omission.**
@@ -802,7 +802,11 @@ function carve(s, cut, line, o = {}) {
   const {
     depth = 0.34, bevelPx = 3.0, lip = 0.10, bulge = 0.40, lineDepth = 0.55, chatter = 0.03, seed = 5,
     arris: arrisIn = 0, arrisHex = PAL.limeLight, arrisPolish = 0.05,
+    dcue: dcueIn = 0, dcueDust = 0xe8dcc0, dcueSoot = 0x6a5240,
   } = o;
+  /* A/B arm `hgcue`: the control build carves the identical height field and the identical arris
+   * with no gravity cue, which is the state PREREG-palwarm ADDENDUM 3 registered G3c against. */
+  const dcue = (abOff('hgrelief') || abOff('hgcue')) ? 0 : dcueIn;
   // A/B arm `hgrelief`: the control build carves the identical height field with no albedo lip,
   // which is the state PREREG-hgrelief was sealed against.
   const arris = (abOff('hgrelief') || abOff('hgarris')) ? 0 : arrisIn;
@@ -824,6 +828,12 @@ function carve(s, cut, line, o = {}) {
   // under a normal map, a 2-texel V does not.
   const ln = line ? blurWrap(line, size, Math.max(1, Math.round(rb * 0.5)), 1) : null;
   const ramp = new Float32Array(s.n);
+  /* Measurement hook, same contract and same justification as `Hieroglyphs.drawGlyph`'s
+   * `__GLYPHLOG`: nothing sets it at runtime, so this is inert in the game, and it is the only
+   * way an offline instrument can ask "is the cut in the albedo" about the *actual* cut rather
+   * than about a re-derivation of the layout in the instrument's own code. `tools/glyphrelief.mjs`
+   * reads it. Where a texture is assembled from parts, keep a way to inspect the parts. */
+  if (globalThis.__CARVELOG) globalThis.__CARVELOG.push({ size, cut: Float32Array.from(cut), cb: Float32Array.from(cb) });
   for (let i = 0; i < s.n; i++) {
     const r = smoothstep(0.10, 0.92, cb[i]);
     const bul = sat((cw[i] - 0.45) / 0.55);
@@ -894,6 +904,49 @@ function carve(s, cut, line, o = {}) {
         // A worn arris is burnished as well as clean; a touch of gloss gives the spec term an
         // edge to catch, which is the same read at grazing angles where albedo contrast fails.
         if (arrisPolish > 0) s.rough[i] = sat(s.rough[i] - ring * arrisPolish);
+      }
+    }
+    /* **The depth cue: a light edge and a dark edge on every stroke.**
+     *
+     * The arris above is deliberately *symmetric* about the cut — a function of distance from the
+     * edge alone — and that note gives the reason: a baked top-left key is directional, it
+     * contradicts the sun on half the building, and it is §7.3's "carvings look painted-on". That
+     * argument is correct and it is about a **sun** cue. It is not an argument against a
+     * **gravity** cue, and the difference is the whole of this term.
+     *
+     * A sunk relief has two horizontal walls and they are not the same surface. The wall under a
+     * cut's top rim is an **overhang**: it faces down, it sees no sky, and three thousand years of
+     * soot and wind-blown grime sit on it. The wall above a cut's bottom rim is a **ledge**: it
+     * faces up, it catches the sky, and it collects pale dust. That asymmetry is true on the lit
+     * face and the shaded face of the same pylon, at every hour of the day and at night — which is
+     * exactly the property the rejected sun cue lacked. It is the same physics `skyward()` and
+     * `weather({directional})` already encode at wall scale; this is it at chisel scale, where the
+     * measurement says most of the recipe's carved area actually is.
+     *
+     * Why it has to be in the albedo at all is `carve()`'s existing argument, unchanged: `aoKey`
+     * is 0 so the baked occlusion never multiplies the key, and the normal map goes flat in
+     * shadow, where most of this recipe's frame area sits. Albedo is the only channel that reaches
+     * every lighting state.
+     *
+     * Gated three ways so it lands on the cut wall and nowhere else: `onWall` restricts it to the
+     * bevel (peaks where `cb` is halfway), `horiz` drops it wherever the cut's wall runs vertically
+     * rather than horizontally — a vertical wall has no up-facing or down-facing side and giving it
+     * one would be the fake bevel again — and the gradient magnitude keeps it off the flat.
+     *
+     * Sign convention: `rasterMask` flips rows on readback, so +y in this buffer is the wall's up.
+     * `gy > 0` means the cut deepens upward, i.e. the texel is below the cut — the ledge. */
+    if (dcue > 0) {
+      const yy = (i / size) | 0, xx = i - yy * size;
+      const gy = cb[((yy + 1) % size) * size + xx] - cb[((yy - 1 + size) % size) * size + xx];
+      const gx = cb[yy * size + ((xx + 1) % size)] - cb[yy * size + ((xx - 1 + size) % size)];
+      const onWall = sat(cb[i] * (1 - cb[i]) * 4);
+      const horiz = sat((Math.abs(gy) - Math.abs(gx)) * 7);
+      const w = onWall * horiz * sat(Math.abs(gy) * 7);
+      if (w > 0.01) {
+        if (gy > 0) s.mixHex(i, dcueDust, w * dcue);
+        // Soot is a multiply, not a lerp: grime darkens a surface without flattening its hue
+        // toward a constant, which is the difference between a dirty stone and a grey one.
+        else s.stainHex(i, dcueSoot, w * dcue * 1.25);
       }
     }
   }
@@ -1971,7 +2024,7 @@ export const MATERIALS = {
        * is 29 % of frame**, 3.07 px on `temple` where `column_papyrus` is 54 %, and 20.9 px on
        * `guard`. Three of the four recipes carrying the arris were unmeasurable at the framings
        * the first seal chose, and the fourth was at the threshold. */
-      const ramp = carve(s, cut, lines, { depth: 0.46, bevelPx: 3.0, lip: 0.12, bulge: 0.42, lineDepth: 0.62, seed: cx.seed + 5, arris: 0.22 });
+      const ramp = carve(s, cut, lines, { depth: 0.46, bevelPx: 3.0, lip: 0.12, bulge: 0.42, lineDepth: 0.62, seed: cx.seed + 5, arris: 0.22, dcue: 0.40 });
       freshCutTint(s, ramp, { amount: 0.16 });
       /* `freq` derived from a metre figure, not written as a bare cycle count — see
        * `PAINT_WEAR_M`. At 10.4 m of world per repeat and a 2.08 m cell this is 5 cycles/tile,
@@ -2220,7 +2273,7 @@ export const MATERIALS = {
        * staged into the key light, `gloss 40` is the sized next step and this notch wants
        * re-deriving at that value first — not restoring at 0.08. */
       const arrisPolish = abOff('hgpolishx8') ? 0.60 : 0;
-      const ramp = carve(s, cut, lines, { depth: 0.42, bevelPx: 2.6, lip: 0.10, bulge: 0.5, lineDepth: 0.56, seed: cx.seed + 5, arris: 0.16, arrisHex: PAL.goldLight, arrisPolish });
+      const ramp = carve(s, cut, lines, { depth: 0.42, bevelPx: 2.6, lip: 0.10, bulge: 0.5, lineDepth: 0.56, seed: cx.seed + 5, arris: 0.16, arrisHex: PAL.goldLight, arrisPolish, dcue: 0.34, dcueDust: 0xf0e2b4, dcueSoot: 0x5c4622 });
       /* The signs, cut into the panel the line above sank. A second `carve` rather than a deeper
        * `lineDepth` because the two cuts want different profiles: the panel is a wide flat field
        * whose edge is the only thing that bevels, a sign is a small shape that is nearly all edge.
@@ -2368,7 +2421,7 @@ export const MATERIALS = {
        * **zero pixels in all fourteen framings**, which agrees with this file's own PREWARM note
        * that it has no consumer in `Architecture.RECIPES` or `Props.MATERIALS`. Nothing authored
        * here can appear in any frame until something wires it up. */
-      const ramp = carve(s, cut, lines, { depth: 0.50, bevelPx: 3.2, lip: 0.14, bulge: 0.52, lineDepth: 0.52, seed: cx.seed + 5, arris: 0.20 });
+      const ramp = carve(s, cut, lines, { depth: 0.50, bevelPx: 3.2, lip: 0.14, bulge: 0.52, lineDepth: 0.52, seed: cx.seed + 5, arris: 0.20, dcue: 0.36 });
       freshCutTint(s, ramp, { amount: 0.18 });
       paintRemnants(s, ramp, paint, { survival: 0.48, freq: 4, seed: cx.seed + 9, edgeLoss: 0.68, fade: 0.44 });
       chiselMarks(s, { amount: 0.014, angle: -0.30, freq: 44, seed: cx.seed + 1, mask: m.edge });
@@ -3000,7 +3053,7 @@ export const MATERIALS = {
        * true and was a fact about the shots: `column_papyrus` is **54.1 % of `temple`** — the
        * largest single-material share of any framing in the set — at 19.9 mm/px, so its 61 mm
        * ring is 3.07 px there. `temple` is now in the seal. */
-      const ramp = carve(s, textCut, textLine, { depth: 0.40, bevelPx: 2.4, lip: 0.09, bulge: 0.45, lineDepth: 0.60, seed: cx.seed + 5, arris: 0.18 });
+      const ramp = carve(s, textCut, textLine, { depth: 0.40, bevelPx: 2.4, lip: 0.09, bulge: 0.45, lineDepth: 0.60, seed: cx.seed + 5, arris: 0.18, dcue: 0.38 });
       freshCutTint(s, ramp, { amount: 0.14 });
       /* `survival` 0.34 → 0.46. With the registers above landing, the band interior measured
        * relative local contrast **0.0231 in frame against `hieroglyph_wall`'s 0.0305**, and its

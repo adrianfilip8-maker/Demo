@@ -17803,3 +17803,171 @@ short second boot rather than a re-queue of the whole sweep), `celband-score.mjs
 the registered ship rule rather than restating it for a human to apply by eye, and has been dry-run
 end to end), and `PREREG-celband.md` §9/§10a/§12 for the ship rule, the required night arm and the
 designed successor if night fails.
+
+## §232 — the brief said the palette was 78.8% cool. The source albedo is 94.9% **warm**, and the real defect was that all of it was one hue
+
+I was given a brief with a number in it: *"The palette is 78.8% cool — in a midday Ancient Egyptian
+desert… This single number probably explains more of the 'it doesn't look like Egypt' reaction than
+any geometry defect."* The instruction was to warm it. **The premise is false**, and the way it came
+to be believed is worth more than the fix underneath it.
+
+The 78.8% is real — critic pass 8 measured it on `sly-closeup`. It is a **frame** number: albedo ×
+light × ramp × grade, taken in a week when two other agents are actively moving the last three. The
+brief attributed it to the textures because the textures are where a palette *lives*, which is a
+reasonable-sounding inference and is not a measurement.
+
+`tools/palwarm.mjs` measures the albedo bytes the cache actually ships — decoded through the
+runtime's own `PngCodec` and `zlib`, **no 2D canvas anywhere on the path** (§224: a canvas round
+trip returned 57% of `torch_flame`'s bytes wrong, peak 184/255 on red) — and weights each recipe by
+the screen pixels it covers across `hero`/`temple`/`courtyard`/`sly-closeup`, rasterised from
+geometry with no lighting and no grade, so the weight cannot move when LIGHTING does.
+
+```
+CONTROL   warm 94.9%   cool 3.5%   neither 1.6%   warmth W +0.3200   chroma 0.3468
+```
+
+**94.9% warm.** P0 in `PREREG-palwarm.md` was written before the first run precisely so that "my
+files were already fine" was a permitted outcome and not something I could discover and then
+re-frame as a fix. It fired.
+
+### §232.1 — what was actually wrong, and the warm/cool split could not see it
+
+```
+HUE SEPARATION   h30 93.1% of chromatic texels inside ONE 30° bucket   hueN 2.44 families
+```
+
+Eight of the ten highest-coverage recipes reported **the identical median hue of 23°**:
+`paving_courtyard`, `column_papyrus`, `sandstone_worn`, `sandstone_block`, `hieroglyph_wall`,
+`granite_pink`, `mudbrick`, `palm_bark`. **Aswan granite measured the same hue as mudbrick. Papyrus
+measured the same hue as sandstone.** Gold, limestone, rope, bronze and carnelian were one shade of
+each other. The brief's own list — "sandstone, limestone, gold, ochre, sun-bleached plaster" — names
+five materials, and the texture set shipped **one**.
+
+A scene painted in a single hue at five brightnesses reads as a fill colour however warm it is, and
+it gives everything downstream exactly one thing to tint. That is a better explanation of "it
+doesn't look like Egypt" than a temperature shift, and it is the *opposite* correction.
+
+**It arrived through shared code, which is why it was so uniform.** `rampFloor` pulls every recipe's
+dark tail onto the same `SAND_CREV_FLOOR` (hue 19.6°); grime, dust, pitting and speckle all come
+from one sand-coloured constant set. Every one of those decisions is correct on its own. A defect
+this uniform is almost always a shared helper, not forty independent mistakes.
+
+Fixed with `hueGrade` — a hue ramp along each material's **own** value range (p02→p98; an absolute
+0..1 ramp was tried first and delivered 8° of a 30° author, because a stone's whole luma span is
+0.30–0.60) at **constant luminance**, so `rampFloor`'s crevice floor, `jointSign`'s dY and the
+height field are all untouched. Deltas, not targets, so each material keeps its internal hue
+variance. One curve per family, not one rotation for everything.
+
+```
+h30  93.1% -> 67.7%    hueN 2.44 -> 4.19    granite 23° -> 8°    gilding 38° -> 53°
+warm/cool unchanged at 94.9/3.5   luma +0.0145   chroma +0.0075   albedo p99 0.647 -> 0.718
+```
+
+### §232.2 — P4 fired, and an A/B probe said the guard's letter had fired while its purpose had not
+
+The first candidate lost chroma (0.3445 → 0.3336) and tripped P4, "warmth must not be bought by
+desaturating". Instead of arguing the guard away, a probe with every saturation multiplier
+neutralised returned chroma **−0.0000** while `h30` still went 93.1 → 67.7: **the hue separation
+costs nothing**, and the entire loss was the deliberate bleach at the sun-struck end. The bleach is
+now paid for at the other end — shadowed desert stone is deeply saturated because it is lit by
+bounce off orange sand — and chroma finishes **above** control. A guard that fires is worth a
+measurement, not a paragraph.
+
+### §232.3 — S5 was mis-derived and is VOID: it measured one factor of a two-factor product
+
+S5 required `papyrus_reed` and `palm_frond` to report a green median albedo hue. The control had
+`papyrus_reed` at **100% warm, hue 38°** — a reed bed apparently painted the colour of the wall.
+
+It is not. `papyrus_reed` does not paint a plant: it paints a **sheet of papyrus**, split pith beaten
+flat, correctly cream, and `Vegetation.js:357` multiplies it by material colour `0x6f8a3c` (hue 81°).
+`palm_frond`'s material is `color: 0xffffff, vertexColors: true` over per-vertex green ramps
+(`Vegetation.js:121, 173`). **Rotating those albedos green would have shipped green × green.**
+
+Per §141.1 the criterion is void and is reported as void; it is not re-derived into something
+passable, and both recipes are untouched. The general lesson: before asserting a defect in a
+texture, find out what its consumer multiplies it by. A texture is half of a colour.
+
+### §232.4 — the hieroglyphs: zero of 111 placed signs were a picture of anything
+
+Critic pass 8: *"rounded rectangles, ovals and pills, no bird, eye, ankh or cartouche — a circuit
+board."* `tools/census.mjs` on the shipped recipe, 111 placements per repeat: 13 `mouth` (a pill),
+12 `neb` (a basket), 10 `sky` (a bar), 10 `water` (a zigzag), 9 `stool`, 9 `pot`, 7 `arm` (a bar).
+**Not one falcon, owl, vulture, quail, jackal, scarab, cobra, bee, seated figure or wedjat** — every
+one of which is in the library, drawn from its real silhouette, and has been all along.
+
+The library was never the problem. Three things kept the creatures off the wall, and none of them
+was visible in any global statistic — only the per-instance census found them:
+
+1. `POOLS.offering` contained **no creature at all**, so every other text column could not draw one.
+2. `POOLS.divine`'s four creatures were four names in twenty, reachable only from the single layout
+   branch that asks for a full-height sign. Expected count ≈ 1 per tile; the tile that shipped got 0.
+3. 38% of quadrats were two- and three-deep stacks emitting two or three placements each, so *by
+   placement* the wall was three-quarters bars and pills.
+
+Also: the old wide branch capped height at 0.4 while `jackal` is 0.82 tall and `wedjat` is 0.78, so
+**the jackal and the eye of Horus were unreachable by construction** — two of the most recognisable
+signs in the set could never be drawn by any code path.
+
+```
+creature share   0.0% -> 13.2% (pools) -> 34.3% (pools + preference bias)
+figurative      20.7% -> 51.0%      distinct signs 23 -> 31      width sd/mean 0.326 -> 0.359
+```
+
+### §232.5 — the depth cue: the objection to a *sun* cue is not an objection to a *gravity* cue
+
+`carve()`'s arris is deliberately symmetric about the cut, and its note rejects a directional lip
+because "a baked top-left key… contradicts the sun on half the building" — §7.3's "carvings look
+painted-on". That is correct, and it is about a **sun** cue. It was being applied to a question it
+does not answer.
+
+A sunk relief's two horizontal walls are not the same surface. The wall under a cut's top rim is an
+**overhang**: faces down, sees no sky, holds soot. The wall above the bottom rim is a **ledge**:
+faces up, catches sky, collects pale dust. That holds on the lit face and the shaded face of the
+same pylon, at every hour, and at night — which is exactly what the rejected sun cue could not do.
+Authored in albedo because `aoKey` is 0 and the normal map goes flat in shadow, where most of this
+recipe's frame area is.
+
+```
+lower-lip minus overhang luma   cue off +0.0372   cue on +0.1895   delta +0.1523
+CAL-G (same texels, albedo shifted in y)  -0.0025   fires
+```
+
+### §232.6 — two of my own criteria were too weak to catch the defect they were written for
+
+Recorded because the pattern is the point, not the instance.
+
+- **G1** counted "or a named body part" as figurative. The control already scored 20.7%, because
+  `mouth` is a body part that renders as a pill — so a 35% bar could have been cleared by drawing
+  **more pills**. G1b (creature share; control **0.0%**) was registered before the candidate existed.
+- **G3b** asked for |cue| ≥ 0.020 and the control already reported **+0.0377**, from an existing
+  `weather({directional})` term. A threshold the control clears is not a threshold. G3c (an A/B
+  delta with its own lever) replaced it, also registered before the change.
+- **CAL-G's first form shifted the albedo horizontally** and failed to move: +0.0335 against a true
+  +0.0377. Every confound in this recipe is a function of *y* — register bands, the course ramp,
+  downward streaking — and the lip and overhang populations do not sit at the same y, so a
+  horizontal shift broke no association at all. Vertical now, and it fires.
+
+The common shape: **a criterion is only worth what its control scores.** Run the control first and
+check the criterion can still fail.
+
+### §232.7 — I baked while three captures were queued, and the instruction to hold arrived afterwards
+
+The coordinator asked for an urgent re-bake to clear the red staleness guard, then corrected it
+minutes later on discovering that **captures read the baked cache, not the recipes**
+(`Textures.js:110 bakedEnabled()` defaults true; neither `tools/shot.mjs` nor `tools/harness.mjs`
+sets `VITE_TEX_BAKED=off`, though `Textures.js:103` advertises the switch).
+
+The correction arrived after the bake had landed. Recorded here so nobody has to reconstruct it:
+**`public/assets/tex/textures.bin` was written at 21:24:23 UTC** (commit `94580b3`). The capture
+lock holder at the time of the correction took the lock at **21:30:05**, i.e. after the write, so
+that run is self-consistent. Any capture that booted before 21:24:23 and any that booted after are
+reading different textures, and **an A/B whose two arms straddle that instant is contaminated** —
+the texture change would be attributed to their lever.
+
+The glyph half is committed **unbaked** for that reason. `tests/textures.test.mjs`'s staleness guard
+is RED and that is the literally correct state: recipe and cache genuinely disagree. It must not be
+silenced, skipped or loosened — it needs one `npm run bake` once the capture queue drains.
+
+The generalisable point: "the guard is red and it is blocking people" is a reason to find out *what
+the guard protects*, not a reason to make it green. Here the stale cache was the thing keeping three
+other agents' measurements valid.

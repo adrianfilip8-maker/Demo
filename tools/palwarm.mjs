@@ -47,6 +47,8 @@ const opt = (n, d) => { const i = argv.indexOf(`--${n}`); return i >= 0 ? argv[i
 const has = (n) => argv.includes(`--${n}`);
 
 const LIVE = has('live') ? parseInt(opt('live', '256'), 10) : 0;
+/** A/B arm for the live path: `--ab huegrade` bakes with that treatment disabled (see `TEX_AB`). */
+const AB = opt('ab', '');
 const W = parseInt(opt('w', '1280'), 10), H = parseInt(opt('h', '720'), 10);
 /** The four framings critic pass 8 scored. Pooled by pixel count — see PREREG §3. */
 const SHOT_SET = (opt('shots', 'hero,temple,courtyard,sly-closeup')).split(',');
@@ -210,10 +212,10 @@ async function fromLive(size) {
   page.on('pageerror', (e) => console.error('  [pageerror]', e.message));
   page.on('console', (m) => { if (m.type() === 'error') console.error('  [page]', m.text()); });
   await page.goto(`http://127.0.0.1:${port}/lab.html`);
-  const names = await page.evaluate(async (sz) => {
+  const names = await page.evaluate(async ({ sz, ab }) => {
     const { PREWARM, MATERIALS } = await import('/src/textures/Materials.js');
     const { bake } = await import('/src/textures/Bake.js');
-    globalThis.__TEX_AB = '';
+    globalThis.__TEX_AB = ab;
     const got = [];
     for (const n of PREWARM) {
       if (!MATERIALS[n]) continue;
@@ -222,7 +224,7 @@ async function fromLive(size) {
       got.push([n, p.size]);
     }
     return got;
-  }, size);
+  }, { sz: size, ab: AB });
   await browser.close();
   server.close();
   const out = new Map();
@@ -231,7 +233,7 @@ async function fromLive(size) {
     if (!b) throw new Error(`${n} never arrived from the page`);
     out.set(n, { rgba: new Uint8Array(b.buffer, b.byteOffset, b.length), size: sz });
   }
-  return { maps: out, label: `live @ ${size}` };
+  return { maps: out, label: `live @ ${size}${AB ? ` AB-off:${AB}` : ''}` };
 }
 
 /* ══════════════════════════ 3. the weight ══════════════════════════ */
@@ -493,7 +495,7 @@ for (const r of rows) {
 
 /** Weighted aggregate. Shares are re-pooled from counts, not averaged from percentages. */
 function aggregate(list) {
-  let cw = 0, ww = 0, coolw = 0, nw = 0, aw = 0, warmth = 0, chroma = 0, luma = 0, tw = 0;
+  let cw = 0, ww = 0, coolw = 0, nw = 0, aw = 0, warmth = 0, chroma = 0, luma = 0, luma99 = 0, tw = 0;
   for (const r of list) {
     if (!r.w) continue;
     tw += r.w;
@@ -502,12 +504,12 @@ function aggregate(list) {
     coolw += r.w * (r.chromatic / (r.n || 1)) * r.coolPct / 100;
     nw += r.w * (r.chromatic / (r.n || 1)) * r.neitherPct / 100;
     aw += r.w * r.achroPct / 100;
-    warmth += r.w * r.warmth; chroma += r.w * r.chroma; luma += r.w * r.luma;
+    warmth += r.w * r.warmth; chroma += r.w * r.chroma; luma += r.w * r.luma; luma99 += r.w * r.luma99;
   }
   const k = tw || 1;
   return {
     warmPct: 100 * ww / (cw || 1), coolPct: 100 * coolw / (cw || 1), neitherPct: 100 * nw / (cw || 1),
-    achroPct: 100 * aw / k, warmth: warmth / k, chroma: chroma / k, luma: luma / k, weightSum: tw,
+    achroPct: 100 * aw / k, warmth: warmth / k, chroma: chroma / k, luma: luma / k, luma99: luma99 / k, weightSum: tw,
   };
 }
 /**
@@ -547,7 +549,7 @@ console.log(`\nCAL-4 weights sum ${AGG.weightSum.toFixed(4)} (want 1.0000); larg
 
 console.log(`\nCOVERAGE-WEIGHTED  warm ${AGG.warmPct.toFixed(1)}%   cool ${AGG.coolPct.toFixed(1)}%   neither ${AGG.neitherPct.toFixed(1)}%`
   + `   achromatic ${AGG.achroPct.toFixed(1)}% of texels`);
-console.log(`                   warmth W ${AGG.warmth >= 0 ? '+' : ''}${AGG.warmth.toFixed(4)}   chroma ${AGG.chroma.toFixed(4)}   luma ${AGG.luma.toFixed(4)}`);
+console.log(`                   warmth W ${AGG.warmth >= 0 ? '+' : ''}${AGG.warmth.toFixed(4)}   chroma ${AGG.chroma.toFixed(4)}   luma ${AGG.luma.toFixed(4)}   p99 ${AGG.luma99.toFixed(4)}`);
 console.log(`HUE SEPARATION     h30 ${SPREAD.h30.toFixed(1)}% in one 30° bucket   hueN ${SPREAD.hueN.toFixed(2)} effective 15° families`);
 {
   const mx = Math.max(...SPREAD.hist);
@@ -590,10 +592,26 @@ const P = [
   ['P1 warm >= 80%', AGG.warmPct >= 80, `${AGG.warmPct.toFixed(1)}%`],
   ['P2 W >= +0.085', AGG.warmth >= 0.085, AGG.warmth.toFixed(4)],
 ];
-const veg = ['palm_frond', 'papyrus_reed'].map((n) => rows.find((r) => r.name === n)).filter(Boolean);
-for (const v of veg) P.push([`P5 ${v.name} keeps >=50% non-warm`, (100 - v.warmPct) >= 50, `${(100 - v.warmPct).toFixed(1)}%`]);
+/* P5 is VOID as registered — see PREREG-palwarm.md ADDENDUM 1 and the note under `HUE` in
+   Materials.js. Both recipes' colour is a product of albedo and a green consumer term, and the
+   criterion asserted a property of one factor. Printed as VOID rather than quietly dropped. */
+P.push(['P5 vegetation must be green', null, 'VOID — criterion measured half a two-factor product']);
+
+/* Second criterion, registered in ADDENDUM 1 after the control came back P0. */
+const by = new Map(rows.map((r) => [r.name, r]));
+const gp = by.get('granite_pink'), sb = by.get('sandstone_block'), cs = by.get('ceiling_stars');
+const topBins = new Set(rows.slice(0, 8).map((r) => Math.floor(r.hueMed / 15)));
+P.push(['S1 h30 <= 78%', SPREAD.h30 <= 78, `${SPREAD.h30.toFixed(1)}%`]);
+P.push(['S2 hueN >= 3.00', SPREAD.hueN >= 3.0, SPREAD.hueN.toFixed(2)]);
+P.push(['S3 top-8 span >= 4 hue bins', topBins.size >= 4, `${topBins.size} bins`]);
+if (gp && sb) {
+  const sep = Math.abs(((gp.hueMed - sb.hueMed + 540) % 360) - 180);
+  P.push(['S4 granite <=15° and >=15° off sandstone', gp.hueMed <= 15 && sep >= 15, `${gp.hueMed.toFixed(0)}° vs ${sb.hueMed.toFixed(0)}°, sep ${sep.toFixed(0)}°`]);
+}
+P.push(['S6 weighted albedo p99 >= 0.70', AGG.luma99 >= 0.70, AGG.luma99.toFixed(4)]);
+if (cs) P.push(['S7 ceiling_stars stays >=80% cool', cs.coolPct >= 80, `${cs.coolPct.toFixed(1)}%`]);
 console.log('');
-for (const [label, ok, val] of P) console.log(`${ok ? 'PASS' : 'MISS'}  ${label.padEnd(34)} ${val}`);
+for (const [label, ok, val] of P) console.log(`${ok === null ? 'VOID' : ok ? 'PASS' : 'MISS'}  ${label.padEnd(40)} ${val}`);
 
 /* ---- optional comparison against an earlier run ---- */
 const out = { agg: AGG, spread: SPREAD, rows: rows.map(({ name, w, hueMed, luma99, warmPct, coolPct, neitherPct, achroPct, warmth, chroma, luma }) => ({ name, w, hueMed, luma99, warmPct, coolPct, neitherPct, achroPct, warmth, chroma, luma })) };

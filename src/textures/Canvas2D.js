@@ -1027,6 +1027,12 @@ export function rampFloor(s, o = {}) {
  *   `mask`              optional per-texel weight
  */
 export function hueGrade(s, o = {}) {
+  /* A/B lever, so the control arm is a *within-run* build at matched resolution rather than a
+   * measurement of a different blob at a different size. `palwarm --live --ab huegrade` bakes the
+   * ungraded catalogue in the same process; comparing that with the graded one is the only way to
+   * attribute a chroma or luma delta to this function rather than to the resolution it was
+   * measured at. Shipped state is always the empty string (see `TEX_AB`). */
+  if (abOff('huegrade')) return;
   const {
     lo = 0, mid = 0, hi = 0,
     satLo = 1, satMid = 1, satHi = 1,

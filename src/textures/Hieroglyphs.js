@@ -611,12 +611,46 @@ export const GLYPH_NAMES = Object.keys(GLYPHS);
  * every pool, which is the property `pick()`'s fallback note asks for; that is asserted by
  * `tools/census.mjs` rather than believed.
  */
+/**
+ * Signs that are a **picture of something** — bird, animal, human, or the eye. The critic's
+ * complaint is about this set being empty in the frame, so it is named here rather than left
+ * implicit, and `tools/glyphrelief.mjs` reports the share of placements that fall in it.
+ */
+export const CREATURE = new Set(['falcon', 'owl', 'vulture', 'quail', 'jackal', 'scarab', 'cobra', 'bee', 'seated', 'wedjat']);
+/** Creatures plus the named body parts. Wider, and weaker: `mouth` is a body part and a pill. */
+export const FIGURATIVE = new Set([...CREATURE, 'mouth', 'arm', 'hand', 'ka', 'eye']);
+
+/**
+ * ── The pools, rebuilt, and the census that says why ────────────────────────────────────────
+ *
+ * `tools/census.mjs hieroglyph_wall` on the shipped state: 111 placements per repeat, and **not
+ * one creature sign**. No falcon, no owl, no vulture, no quail, no jackal, no scarab, no cobra, no
+ * bee, no seated figure, no wedjat. 92 of the 111 were flat geometric signs — 13 `mouth` (a pill),
+ * 12 `neb` (a basket), 10 `sky` (a bar), 10 `water` (a zigzag), 9 `stool`, 9 `pot`, 7 `arm` (a
+ * bar), 7 `hills`, 6 `bread` (a half-dome). Critic pass 8 read that list back almost exactly:
+ * *"rounded rectangles, ovals and pills, no bird, eye, ankh or cartouche… a circuit board."*
+ *
+ * The library was never the problem — falcon, owl, vulture, quail, jackal, scarab, cobra, bee,
+ * seated and wedjat are all drawn from their real silhouettes and have been all along. **Two
+ * things kept them off the wall.** `offering` contained no creature at all, so every other text
+ * column could not draw one; and `divine`'s four creatures were four names in twenty, drawn only
+ * by the single layout branch that asks for a full-height sign — so their expected count over a
+ * tile was around one, and the tile that shipped got zero.
+ *
+ * A real inscription is not built this way. The commonest uniliterals in Egyptian are the owl (m),
+ * the quail chick (w), the reed (i) and the viper; birds and figures are the texture of the script,
+ * not its garnish. So each pool now carries creatures in proportion, and the layout below asks for
+ * one where a full-height sign fits.
+ */
 export const POOLS = {
   royal: ['sedge', 'bee', 'sun', 'ankh', 'was', 'djed', 'netjer', 'nefer', 'neb', 'falcon', 'cobra', 'star',
+    'owl', 'quail', 'vulture', 'seated', 'jackal', 'wedjat', 'scarab',
     'mouth', 'scroll', 'arm', 'water', 'sky', 'shen', 'hetep', 'land', 'stool'],
   offering: ['bread', 'water', 'mouth', 'hand', 'arm', 'cone', 'pool', 'ka', 'strokes',
+    'owl', 'quail', 'vulture', 'seated', 'falcon', 'cobra', 'bee', 'reed', 'basket', 'cloth', 'scroll',
     'hetep', 'pot', 'stool', 'land', 'hills'],
   divine: ['falcon', 'jackal', 'scarab', 'wedjat', 'feather', 'lotus', 'papyrus', 'ankh', 'was', 'djed', 'netjer', 'sun',
+    'owl', 'quail', 'vulture', 'seated', 'cobra', 'bee', 'eye', 'hand',
     'neb', 'mouth', 'water', 'sky', 'shen', 'hills', 'stool', 'pot'],
   common: GLYPH_NAMES,
 };
@@ -697,9 +731,28 @@ export function drawGlyph(ctx, name, x, y, bw, bh, mode) {
  * a wall of one sign. A silent fallback that returns something valid is worse than one that
  * returns something wrong, because only the second one gets found.
  */
-function pick(rand, pool, maxH, maxW = 2) {
+/*
+ * `prefer` — the bias that puts a picture in a slot that can hold one.
+ *
+ * Uniform choice from a pool is not what a scribe does and it is not what the frame needs. A
+ * full-height quadrat is the only place a falcon or a seated figure *fits*, and there are far more
+ * flat signs than tall ones in every pool, so uniform choice spends most tall slots on a stacked
+ * bar. `preferP` is the probability that a slot which *can* take a creature takes one; it is 0 by
+ * default, so every caller that does not ask for it is unaffected.
+ *
+ * Behind the `hgfig` A/B key, so the "circuit board" state can be rebuilt in-process for
+ * comparison rather than argued about from a screenshot.
+ */
+function pick(rand, pool, maxH, maxW = 2, o = {}) {
   const ok = pool.filter((n) => GLYPHS[n] && GLYPHS[n].h <= maxH + 0.02 && GLYPHS[n].w <= maxW);
-  if (ok.length) return ok[Math.floor(rand() * ok.length) % ok.length];
+  if (ok.length) {
+    const preferP = (abOff('hgfig') || abOff('hglayout')) ? 0 : (o.preferP || 0);
+    if (preferP > 0) {
+      const sub = ok.filter((n) => CREATURE.has(n));
+      if (sub.length && rand() < preferP) return sub[Math.floor(rand() * sub.length) % sub.length];
+    }
+    return ok[Math.floor(rand() * ok.length) % ok.length];
+  }
   const byH = pool.filter((n) => GLYPHS[n]).sort((a, b) => GLYPHS[a].h - GLYPHS[b].h);
   if (!byH.length) return pool[0];
   const k = Math.min(3, byH.length);
@@ -711,29 +764,52 @@ function pick(rand, pool, maxH, maxW = 2) {
  * alone; flat signs stack two or three deep; a tall sign can take the left half with two flats
  * beside it. This is the difference between "hieroglyphs" and "a row of icons".
  */
+/* **Rebalanced against the census, not against taste.** The shipped weights spent 38 % of quadrats
+ * on two- and three-deep stacks of flat signs and those stacks each emit two or three placements,
+ * so by *placement* the wall was about three-quarters bars and pills — which is the list the census
+ * printed and the thing the critic named. The stacks are real and they stay, because a quadrat that
+ * is always one big sign is a row of icons and not an inscription; there are simply fewer of them,
+ * the full-height slot that can hold a figure is commoner, and a new branch exists for the two
+ * widest and most recognisable signs in the set (`jackal`, `wedjat`) which no previous branch could
+ * ever admit: the old wide branch capped height at 0.4 and they are 0.82 and 0.78 tall, so the
+ * jackal and the eye of Horus were unreachable by construction. */
 export function quadrat(ctx, x, y, w, h, rand, pool, mode) {
   const r = rand();
   const pad = w * 0.05;
-  if (r < 0.34) {
-    drawGlyph(ctx, pick(rand, pool, 1.01, 1.0), x + pad, y + pad, w - 2 * pad, h - 2 * pad, mode);
-  } else if (r < 0.58) {
+  if (r < 0.44) {
+    /* A full-height sign — the only slot a bird or a standing figure fits in.
+     *
+     * **Height capped at 1.28x the cell's width, and the cap is §13's beacon metric.** A quadrat
+     * is a *square-ish* group; letting a tall sign fill a cell that is much taller than it is wide
+     * is not what a scribe does, and it is also how a rare sign becomes a landmark: `drawGlyph`
+     * fits by `min(bw/g.w, bh/g.h)`, so an unusually tall cell scales the whole sign up. Measured
+     * without the cap, `column_papyrus`'s rarest-and-largest ratio went 1.92 -> 3.86x — the exact
+     * figure §81.3 records as already measured and rejected. The extra height becomes spacing,
+     * which is what a real column has. */
+    const bh = Math.min(h - 2 * pad, (w - 2 * pad) * 1.28);
+    drawGlyph(ctx, pick(rand, pool, 1.01, 1.0, { preferP: 0.55 }), x + pad, y + pad + ((h - 2 * pad) - bh) * 0.5, w - 2 * pad, bh, mode);
+  } else if (r < 0.60) {
+    const lw = w * 0.52;
+    const bh2 = Math.min(h - 2 * pad, (lw - pad) * 1.9);
+    drawGlyph(ctx, pick(rand, pool, 1.01, 0.72, { preferP: 0.45 }), x + pad, y + pad + ((h - 2 * pad) - bh2) * 0.5, lw - pad, bh2, mode);
+    const hh = (h - 2 * pad) * 0.5;
+    drawGlyph(ctx, pick(rand, pool, 0.5), x + lw, y + pad, w - lw - pad, hh * 0.92, mode);
+    drawGlyph(ctx, pick(rand, pool, 0.5), x + lw, y + pad + hh, w - lw - pad, hh * 0.92, mode);
+  } else if (r < 0.74) {
     const gap = h * 0.06;
     const hh = (h - gap) * 0.5;
     drawGlyph(ctx, pick(rand, pool, 0.5), x + pad, y, w - 2 * pad, hh, mode);
     drawGlyph(ctx, pick(rand, pool, 0.5), x + pad, y + hh + gap, w - 2 * pad, hh, mode);
-  } else if (r < 0.72) {
+  } else if (r < 0.84) {
+    // Wide and mid-height: the recumbent jackal, the wedjat eye, the cobra, the bee, the sun disc.
+    drawGlyph(ctx, pick(rand, pool, 0.90, 1.35, { preferP: 0.70 }), x + pad, y + h * 0.06, w - 2 * pad, h * 0.88, mode);
+  } else if (r < 0.92) {
     const hh = h / 3;
     for (let i = 0; i < 3; i++) {
       drawGlyph(ctx, pick(rand, pool, 0.36), x + pad, y + i * hh, w - 2 * pad, hh * 0.9, mode);
     }
-  } else if (r < 0.88) {
-    const lw = w * 0.52;
-    drawGlyph(ctx, pick(rand, pool, 1.01, 0.7), x + pad, y + pad, lw - pad, h - 2 * pad, mode);
-    const hh = (h - 2 * pad) * 0.5;
-    drawGlyph(ctx, pick(rand, pool, 0.5), x + lw, y + pad, w - lw - pad, hh * 0.92, mode);
-    drawGlyph(ctx, pick(rand, pool, 0.5), x + lw, y + pad + hh, w - lw - pad, hh * 0.92, mode);
   } else {
-    // A single wide sign, floated — the breathing space a real column has.
+    // A single wide flat sign, floated — the breathing space a real column has.
     drawGlyph(ctx, pick(rand, pool, 0.4, 1.3), x + pad, y + h * 0.25, w - 2 * pad, h * 0.5, mode);
   }
 }

@@ -197,3 +197,97 @@ at unity gain. Raising the sun-struck tail is in scope here; the exposure that w
   (P1), by brightening it (P3), or by desaturating it (P4).
 
 Registered by EGYPT, control in hand, before the first recipe edit.
+
+---
+
+# ADDENDUM 2 — the glyph control, and a criterion G1 was too weak to catch
+
+Written after running `tools/census.mjs hieroglyph_wall` on the shipped recipe and **before any
+change to `Hieroglyphs.js`**.
+
+## The control census — 111 sign placements per repeat
+
+```
+ 13 mouth   12 neb    10 sky    10 water   9 pot    9 stool   7 arm    7 hills
+  6 bread    5 hetep   4 pool     3 shen    2 land   2 hand    2 djed   2 ankh   2 strokes
+  1 ka       1 papyrus 1 feather  1 was     1 cone   1 sedge
+```
+
+**Not one creature sign.** No falcon, no owl, no vulture, no quail, no jackal, no scarab, no
+cobra, no bee, no seated figure, no wedjat — every one of which is in the library and in the pools
+the wall draws from. 92 of the 111 placements are flat geometric signs: a pill, a bar, a zigzag, a
+basket, a half-dome. The critic's "rounded rectangles, ovals and pills, a circuit board" is a
+literal and accurate description of this list.
+
+## G1 as registered is too weak, and I am saying so rather than quietly leaning on it
+
+G1 counts "bird, animal, human, **or a named body part**" as figurative. Under that definition the
+control already scores **20.7 %** (`mouth` 13 + `arm` 7 + `hand` 2 + `ka` 1 = 23/111), and the bar
+of 35 % could be cleared by drawing *more pills*, because `mouth` is a body part that renders as a
+pill. That is a criterion that can be satisfied without fixing the defect it was written for.
+
+G1 stands as registered and will be reported. A second, stricter criterion is registered here,
+before the candidate exists:
+
+- **G1b — creature share.** Of signs actually placed, the share that are `falcon, owl, vulture,
+  quail, jackal, scarab, cobra, bee, seated, wedjat` — the signs a viewer would call *a picture of
+  something* — must be **≥ 20 %**. Control: **0.0 %** (0 of 111).
+
+## G3 — depth cueing, instrument and control registered before the change
+
+`tools/glyphrelief.mjs`, built for this and run on the control first. It bakes the recipe with the
+existing `__GLYPHLOG` census hook set, so sign boxes come from what was *drawn*, and measures the
+baked albedo inside them.
+
+- **G3a.** Mean p90−p10 luma spread inside a placed sign's box, minus the same statistic over an
+  equal number of same-sized boxes on plain wall. Must **rise**.
+- **G3b — the light-and-dark-edge claim, stated as a signed number.** For each sign box, the mean
+  albedo luma of the band just inside its **top** rim minus the band just inside its **bottom**
+  rim. A flat stamp gives ~0. A cut with a sky-facing lower lip and a shaded overhang above gives a
+  consistent sign. Required: **|mean| ≥ 0.020** with **≥ 70 %** of sign boxes sharing the sign —
+  a *consistent* asymmetry, not noise that happens to average.
+- **CAL-G (must fire).** The same instrument run on plain-wall boxes must report a G3b magnitude
+  **below 0.008**. If unbroken wall shows the same asymmetry as a carved glyph, the instrument is
+  measuring the masonry, not the carving, and the run is void.
+
+**On the direction of the cue, because there is a recorded failure to avoid.** `carve()`'s own note
+rejects `wallDark`/`skyward`'s baked top-left key: it is directional, it contradicts the sun on half
+the building, and it is §7.3's "carvings look painted-on". That objection is about a **sun** cue and
+it stands. What is authored here is a **gravity** cue: the lower lip of a sunk cut faces up, catches
+sky and collects dust, and is pale; the overhang above it faces down, holds soot and grime, and is
+dark. That is true on the lit and the shaded face of the same pylon, at every hour, which is exactly
+the property the sun cue lacked.
+
+Registered by EGYPT, control in hand, before the first glyph edit.
+
+---
+
+# ADDENDUM 3 — G3b is also too weak, and the criterion that replaces it
+
+Written after the control run of `tools/glyphrelief.mjs` and **before** any change to the carve or
+the layout.
+
+**G3b as registered does not discriminate.** It asked for |lower-lip minus overhang| ≥ 0.020 with
+≥70 % sign agreement. The control already reports **+0.0377** on `hieroglyph_wall` and **+0.0220**
+on `column_papyrus`, with the vertical-shift calibration arm at −0.0111 and −0.0044 — so the cue is
+real, it is tied to the cut, and it comes from `weather({directional})`'s existing sky term. A
+threshold the control clears is not a threshold. Reported as such; not retuned into a pass.
+
+**G3c — the criterion that replaces it, and it is a delta with its own control arm.** A new A/B
+lever `hgcue` turns the authored gravity cue off inside the same process, at the same size, with
+the same seed and the same mask. Required:
+
+- `cue(on) − cue(off)` ≥ **+0.030** on `hieroglyph_wall`. The off arm is the existing baseline and
+  is printed beside it, so nobody has to take the control's value on trust.
+- **CAL-G must keep firing** on the on-arm: the same texels sampled from a vertically shifted copy
+  of the albedo must come back below one third of the on-arm magnitude. Vertical, not horizontal —
+  the first version of this arm shifted horizontally, failed to move (+0.0335 against +0.0377) and
+  was rejected, because every confound in this recipe is a function of y and a horizontal shift
+  breaks no association at all.
+- **G3d.** The lower lip must be the **pale** side (positive cue). A sky-facing ledge collects dust
+  and light; the overhang above it collects soot. Getting that sign backwards is the inverted
+  contact shadow critic pass 8 found in the decals, in another place.
+
+**G1b (creature share ≥ 20 %, control 0.0 %) stands unchanged** — that one separates.
+
+Registered by EGYPT, controls printed, before the first glyph edit.
