@@ -30,7 +30,7 @@ const shoot = async (page, arm, shots) => {
     const png = await page.evaluate(async (s) => {
       const G = window.__GAME;
       await G.setShot(s, { dt: 0 });
-      await G.step(12, 0); G.capture('image/png'); await G.step(1, 0);
+      await G.step(12, 1/60); G.capture("image/png"); await G.step(1, 1/60);
       return G.capture('image/png');
     }, shot);
     if (!png) { log(`  !! ${arm}/${shot} produced no capture`); continue; }
@@ -88,13 +88,13 @@ await withGame({ width: 1280, height: 720, quality: 'high', timeout: 60 * 60 * 1
     /* KB — collapse the lit band. If the character does not move, it is not on the ramp. */
     await page.evaluate(async () => {
       window.__ENGINE.get('shading').setRampTuning({ hi: 0.95 });
-      await window.__GAME.step(2, 0);
+      await window.__GAME.step(4, 1/60);
     });
     readback.arms.KB = await shoot(page, 'KB', SHOTS);
 
     await page.evaluate(async () => {
       window.__ENGINE.get('shading').setRampTuning({ hi: 0.52 });
-      await window.__GAME.step(2, 0);
+      await window.__GAME.step(4, 1/60);
     });
     readback.arms.restore = await shoot(page, 'restore', SHOTS);
   });

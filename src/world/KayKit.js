@@ -280,8 +280,10 @@ export class KayKit {
       this.stats.tris += geo.attributes.position.count / 3;
       this.stats.placed++;
       /* Every placement, not just the SOLID ones. A coin hoard you can wade through still has
-         to sit ON the floor — the collider set is a gameplay decision and grounding is not. */
-      if (this.decals.add(x, groundY, z, entry.rBase)) this.stats.decals++;
+         to sit ON the floor — the collider set is a gameplay decision and grounding is not.
+         Height comes from the model's own bounds and sets the decal's downwind reach, so a
+         2.5 m barrel and a 0.5 m coin stack do not get the same shadow at a 26° sun. */
+      if (this.decals.add(x, groundY, z, entry.rBase, entry.bb.max.y - entry.bb.min.y)) this.stats.decals++;
       if (SOLID.has(file)) this._collider(entry, x, groundY, z, ry);
     }
     if (!chunks.length) return;

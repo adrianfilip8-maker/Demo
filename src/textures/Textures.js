@@ -193,8 +193,20 @@ export class Textures {
     let next = 0, id = 0;
     const pending = new Map();
     await new Promise((resolve) => {
+      /* `retire` has to be idempotent and the retired set is why. `onerror` can fire more than
+       * once for one worker, and it can fire for a worker that also has an in-flight job — a
+       * plain `--live` would then undershoot zero and this promise would never settle, hanging
+       * boot behind a black screen, which is the exact failure this whole change exists to
+       * remove. A worker that has been retired is out of the accounting for good. */
+      const retired = new Set();
       let live = workers.length;
-      const retire = (w) => { try { w.terminate(); } catch { /* already gone */ } if (--live === 0) resolve(); };
+      const retire = (w) => {
+        if (retired.has(w)) return;
+        retired.add(w);
+        w.onmessage = null; w.onerror = null; w.onmessageerror = null;
+        try { w.terminate(); } catch { /* already gone */ }
+        if (--live === 0) resolve();
+      };
       const pump = (w) => {
         if (next >= queue.length) { retire(w); return; }
         const name = queue[next++];
@@ -215,15 +227,20 @@ export class Textures {
               this.engine.warn(`textures: "${msg.payload.name}" failed to upload — ${err?.message || err}`);
             }
           } else if (job) {
-            // Leave it out of `done` and the serial pass in init() rebuilds it here.
+            // Leave it out of `done` and the serial pass in init() rebuilds it on this thread.
             this.engine.warn(`textures: worker build of "${msg.name || job.name}" failed — ${msg.error}`);
           }
           pump(w);
         };
+        /* One worker dying almost always means the worker *script* did not load, which is a
+         * whole-pool condition, so the queue is closed rather than redistributed. Everything not
+         * yet in `done` — including the jobs still in flight on the other workers when they
+         * finish — is rebuilt by the serial pass in `init()`. Slow, but it always produces a
+         * frame, and it produces the same pixels because it is the same `bake()`. */
         const die = (why) => {
-          w.onmessage = null;
+          if (retired.has(w)) return;
           this.engine.warn(`textures: texture worker died (${why}); remaining recipes build on the main thread`);
-          next = queue.length;                       // stop handing out work
+          next = queue.length;
           retire(w);
         };
         w.onerror = (err) => die(err?.message || 'error');

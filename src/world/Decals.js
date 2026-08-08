@@ -51,15 +51,16 @@ import * as THREE from 'three';
  *    and colour variation survive inside the contact — you can read detail in there, which is
  *    the other half of §2.1.3. Full black would erase the floor and read as a hole.
  *  - **It is oriented and stretched by the key.** The major axis lies along the direction the
- *    shadow travels on the ground, `-normalize(keyDir.xz)`, and the elongation comes from the
- *    real shadow length `|keyDir.xz| / keyDir.y` at that time of day — 0.25 at `interior`'s 76°
- *    sun (so the decal is nearly round, correctly), 2.05 at `courtyard`'s 26°, 4.70 at `night`.
- *    Both are UNIFORMS, so the decal follows time of day without a rebuild.
- *  - **It is capped well short of a cast shadow.** Shadow maps are enabled (`Engine.js`) and
- *    every prop already casts. This is the CONTACT — the darkening at the base that a 2048 map
- *    at 30 m cannot resolve. `TUNE.stretch` scales the elongation to a fraction of the shadow
- *    length precisely so the decal agrees with the cast shadow's direction instead of drawing
- *    a second, competing one.
+ *    shadow travels on the ground, `-normalize(keyDir.xz)`, and the downwind reach comes from
+ *    the real shadow length `|keyDir.xz| / keyDir.y` at that time of day — 0.25 at `interior`'s
+ *    76° sun (so the decal is nearly round, which is the correct answer for a sun overhead),
+ *    2.05 at `courtyard`'s 26°, 4.70 at `night`. Both are UNIFORMS, so a decal follows time of
+ *    day without a rebuild and without a per-shot table to fall out of date.
+ *  - **It is capped well short of a cast shadow.** Shadow maps are enabled (`Engine.js`,
+ *    PCF at 2048 on `med`) and every prop already casts. This is the CONTACT — the darkening at
+ *    the base that a shadow map at 30 m cannot resolve. `TUNE.reachCap` holds the decal to the
+ *    near end of the real shadow so it agrees with it instead of drawing a second, competing
+ *    one; see the note on `reachFrac` for the revision where that went wrong.
  *
  * ## Why not `src/fx/Decals.js`
  *
@@ -81,22 +82,66 @@ import * as THREE from 'three';
 
 /** Feel constants (§5). Every one of these is read by `state()` so an A/B reports what applied. */
 export const TUNE = {
-  /** Decal minor radius = the prop's own base footprint radius x this. */
-  spread: 1.34,
+  /**
+   * Decal minor radius = the prop's own base footprint radius x this.
+   *
+   * 1.42, and it has to be over 1 by a real margin for a reason that is easy to get wrong: a
+   * prop standing on the ground OCCLUDES its own footprint circle from any camera, so the only
+   * part of a contact shadow anyone ever sees is the part outside it. At 1.20 the visible ring
+   * on a 0.5 m barrel is 10 cm — about 10 px at `interior`'s distances and 2 px at
+   * `courtyard`'s far field, which is a shadow you can measure and cannot see.
+   */
+  spread: 1.42,
   /** Metres. Nothing gets a contact shadow wider than this, however big its footprint. */
-  maxRadius: 2.4,
-  /** Elongation = 1 + stretch * min(shadowLength, stretchCap). Fraction of a real cast shadow. */
-  stretch: 0.30,
-  stretchCap: 3.0,
-  /** How much of the extra length is pushed downwind, so the near edge keeps hugging the base. */
-  push: 0.55,
+  maxRadius: 2.0,
+  /**
+   * Downwind REACH, in metres: `min(reachCap, reachFrac * propHeight * shadowLength)`.
+   *
+   * Absolute, and derived from the prop's own height — not a multiplier on the radius, which
+   * is what the first version did and which was wrong in a way worth recording. Scaling the
+   * radius makes a big prop's decal grow in proportion to its width, and at `courtyard`'s
+   * 26 degree sun that put a 5.3 m ellipse under a 2.14 m crate whose REAL cast shadow is
+   * 4.4 m long. A contact decal that is longer than the shadow it is supposed to introduce is
+   * not a contact decal.
+   *
+   * At the shipped tods this gives: `interior` (76 degree sun, shadow length 0.25) a reach of
+   * 3.5 cm on a coin stack — round, which is the correct answer for a sun overhead; `courtyard`
+   * (26 degrees, 2.05) the 0.9 m cap on a crate, i.e. the near ~40 % of a 4.4 m cast shadow,
+   * with the shadow map keeping the rest.
+   */
+  reachFrac: 0.22,
+  reachCap: 0.9,
+  /**
+   * How far downwind the ellipse is pushed, in units of `reach`.
+   *
+   * 0.9, not 0.5: a symmetric stretch puts shadow on the SUNWARD side of the prop, which is
+   * lit ground. At 0.9 the upwind edge stays within 0.1 reach of the footprint (a hair of
+   * bleed, which is real ambient contact) and all the growth goes where the light is not.
+   */
+  push: 0.9,
   /** Core opacity of the darkening, 0..1. `debug.decalScale` multiplies this. */
-  strength: 0.72,
+  strength: 0.80,
   /** The skirt band's share of the core. Two flat tones is the whole point — see the header. */
-  skirt: 0.45,
-  /** Band radii as a fraction of the decal radius: core out to `core`, skirt out to `edge`. */
-  core: 0.44,
-  edge: 0.94,
+  skirt: 0.60,
+  /**
+   * Band radii as a fraction of the decal radius: core out to `core`, skirt out to `edge`.
+   *
+   * `core` sits just inside the footprint (0.66 x 1.42 = 0.94 of the footprint radius), which
+   * produces the right behaviour at both ends of the sun table without a special case, because
+   * the reach elongates the bands as well as the rim. At `interior`'s 76 degree sun the reach is
+   * ~4 cm, the core stays hidden under the prop, and what shows is one flat skirt tone hugging
+   * the base — which is what a contact shadow under a near-overhead light is. At `courtyard`'s
+   * 26 degrees the reach is the 0.9 m cap, the core lobe clears the footprint by well over a
+   * metre downwind, and the frame gets two flat tones: a solid core running away from the key
+   * with a skirt around it.
+   *
+   * The four numbers here were swept offline against the shipped `interior` frame BEFORE any
+   * acceptance band for the capture was written down. This is the lightest setting in that
+   * sweep that takes every scorable prop's measured HALO to <= 0; heavier settings work too and
+   * start to look like a puddle.
+   */
+  core: 0.66,
+  edge: 0.95,
   /** Half-width of each step, as a fraction of the radius. 0.03 ~ 2 px at `interior`. */
   soft: 0.03,
   /** How far the full-strength multiply travels toward the shadow hue, and how dark it goes. */
@@ -117,21 +162,25 @@ const VERT = /* glsl */`
 precision highp float;
 attribute vec3 iCentre;
 attribute float iRadius;
+attribute float iHeight;
 attribute float aAlpha;
 
 uniform vec2 uKey;        // unit ground direction the shadow travels (away from the key)
-uniform float uElong;     // >= 1, major/minor
-uniform float uPush;      // downwind offset, in units of (uElong - 1) * radius
+uniform float uShadowLen; // ground shadow length per unit height, clamped finite
+uniform vec2 uReach;      // x = reachFrac, y = reachCap (metres)
+uniform float uPush;      // downwind offset, in units of reach
 uniform float uRadius;    // global radius multiplier — debug.decalRadius
 
 varying float vA;
 
 void main() {
-  vec2 d = vec2( position.x, position.z );
+  vec2 d = vec2( position.x, position.z );      // unit disc, x is the key axis
   vec2 t = vec2( -uKey.y, uKey.x );
-  float along = d.x * uElong + ( uElong - 1.0 ) * uPush;
-  vec2 p = uKey * along + t * d.y;
-  vec3 w = iCentre + vec3( p.x, 0.0, p.y ) * ( iRadius * uRadius );
+  float r = iRadius * uRadius;
+  float reach = min( uReach.y, uReach.x * iHeight * uShadowLen ) * uRadius;
+  float along = d.x * ( r + reach ) + reach * uPush;
+  vec2 p = uKey * along + t * ( d.y * r );
+  vec3 w = iCentre + vec3( p.x, 0.0, p.y );
   vA = aAlpha;
   gl_Position = projectionMatrix * modelViewMatrix * vec4( w, 1.0 );
 }
@@ -220,16 +269,27 @@ export function tintMultiplier(hue, tune = TUNE, out = new THREE.Color()) {
   return out;
 }
 
-/** Elongation of the contact ellipse for a ground-shadow length (metres per metre of height). */
-export function elongationFor(shadowLen, tune = TUNE) {
-  return 1 + tune.stretch * Math.min(Math.max(shadowLen, 0), tune.stretchCap);
+/**
+ * Downwind reach of the contact ellipse, in metres. The JS mirror of the vertex shader's one
+ * line, so a Node test can check the arithmetic the frame will actually run.
+ */
+export function reachFor(height, shadowLen, tune = TUNE) {
+  return Math.min(tune.reachCap, tune.reachFrac * Math.max(height, 0) * Math.max(shadowLen, 0));
 }
 
-/** Ground shadow length per unit height for a key direction. Infinite below the horizon. */
+/**
+ * Ground shadow length per unit height for a key direction, clamped finite.
+ *
+ * A key on or below the horizon casts an infinitely long ground shadow, which is arithmetically
+ * true and useless: `night`'s moon sits at 12 degrees and `guard`'s at 28, so the clamp is what
+ * stops a NaN reaching a vertex buffer at the two tods this project actually ships below 15
+ * degrees. `reachCap` does the visual limiting; this only keeps the number finite.
+ */
+export const SHADOW_LEN_MAX = 8;
 export function shadowLengthOf(keyDir) {
   const y = keyDir.y;
-  if (!(y > 1e-3)) return Infinity;
-  return Math.hypot(keyDir.x, keyDir.z) / y;
+  if (!(y > 1e-3)) return SHADOW_LEN_MAX;
+  return Math.min(SHADOW_LEN_MAX, Math.hypot(keyDir.x, keyDir.z) / y);
 }
 
 const _c = new THREE.Color();
@@ -248,7 +308,12 @@ export class ContactDecals {
     this.material = null;
     this.geometry = null;
     this._pending = [];
-    this._applied = { strength: 0, elong: 1, keyAz: 0, shadowLen: 0, radius: 1, count: 0, visible: false };
+    /* Mutated in place by `refresh()`, never rebuilt — `refresh()` runs every frame from
+       `update()` and §5 allows it no allocations. `state()` copies it for callers. */
+    this._applied = {
+      strength: 0, shadowLen: 0, keyAz: 0, radius: 1, count: 0, visible: false,
+      reachFrac: 0, reachCap: 0, push: 0, tintR: 1, tintG: 1, tintB: 1,
+    };
   }
 
   /**
@@ -258,15 +323,16 @@ export class ContactDecals {
    * @param {number} y      the FLOOR the prop stands on — not the prop's origin
    * @param {number} z
    * @param {number} footprintRadius  the prop's own base radius, in metres
+   * @param {number} height           the prop's own height, metres — sets the downwind reach
    */
-  add(x, y, z, footprintRadius) {
+  add(x, y, z, footprintRadius, height = 0) {
     const r = Math.min(this.tune.maxRadius, footprintRadius * this.tune.spread);
-    if (!(r > 0.01) || !Number.isFinite(x + y + z + r)) return false;
-    this._pending.push(x, y + this.tune.lift, z, r);
+    if (!(r > 0.01) || !Number.isFinite(x + y + z + r + height)) return false;
+    this._pending.push(x, y + this.tune.lift, z, r, Math.max(0, height));
     return true;
   }
 
-  get count() { return this._pending.length / 4; }
+  get count() { return this._pending.length / 5; }
 
   /**
    * Build the single batched mesh and parent it to `parent`. Safe to call with nothing queued.
@@ -282,12 +348,14 @@ export class ContactDecals {
     geo.setAttribute('aAlpha', new THREE.BufferAttribute(disc.alpha, 1));
     geo.setIndex(new THREE.BufferAttribute(disc.index, 1));
 
-    const centre = new Float32Array(n * 3), radius = new Float32Array(n);
+    const centre = new Float32Array(n * 3), radius = new Float32Array(n), height = new Float32Array(n);
     let minX = Infinity, minY = Infinity, minZ = Infinity, maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity, maxR = 0;
     for (let i = 0; i < n; i++) {
-      const x = this._pending[i * 4], y = this._pending[i * 4 + 1], z = this._pending[i * 4 + 2], r = this._pending[i * 4 + 3];
+      const x = this._pending[i * 5], y = this._pending[i * 5 + 1], z = this._pending[i * 5 + 2];
+      const r = this._pending[i * 5 + 3];
       centre[i * 3] = x; centre[i * 3 + 1] = y; centre[i * 3 + 2] = z;
       radius[i] = r;
+      height[i] = this._pending[i * 5 + 4];
       minX = Math.min(minX, x); maxX = Math.max(maxX, x);
       minY = Math.min(minY, y); maxY = Math.max(maxY, y);
       minZ = Math.min(minZ, z); maxZ = Math.max(maxZ, z);
@@ -295,12 +363,14 @@ export class ContactDecals {
     }
     geo.setAttribute('iCentre', new THREE.InstancedBufferAttribute(centre, 3));
     geo.setAttribute('iRadius', new THREE.InstancedBufferAttribute(radius, 1));
+    geo.setAttribute('iHeight', new THREE.InstancedBufferAttribute(height, 1));
     geo.instanceCount = n;
     /* The instances are displaced in the vertex shader, so three's own bounds would be a point
-       cloud of centres. Padded by the largest decal's worst-case reach — radius x the elongation
-       cap x (1 + push) — because a wrong bounding sphere frustum-culls the whole batch at the
-       screen edge, which is the far side of exactly the shots this feature exists for. */
-    const pad = maxR * elongationFor(this.tune.stretchCap, this.tune) * (1 + this.tune.push);
+       cloud of centres. Padded by the worst case any uniform can produce — the widest decal
+       plus the reach cap pushed fully downwind — because a wrong bounding sphere frustum-culls
+       the whole batch at the screen edge, which is the far side of exactly the shots this
+       feature exists for. */
+    const pad = maxR + this.tune.reachCap * (1 + this.tune.push);
     geo.boundingBox = new THREE.Box3(
       new THREE.Vector3(minX - pad, minY - 0.1, minZ - pad),
       new THREE.Vector3(maxX + pad, maxY + 0.1, maxZ + pad),
@@ -311,7 +381,8 @@ export class ContactDecals {
       name: `world.decals.${this.name}`,
       uniforms: {
         uKey: { value: new THREE.Vector2(1, 0) },
-        uElong: { value: 1 },
+        uShadowLen: { value: 0 },
+        uReach: { value: new THREE.Vector2(this.tune.reachFrac, this.tune.reachCap) },
         uPush: { value: this.tune.push },
         uRadius: { value: 1 },
         uTint: { value: new THREE.Color(1, 1, 1) },
@@ -384,18 +455,15 @@ export class ContactDecals {
     const atmos = this.engine?.get?.('lighting')?.atmosphere;
     _key.copy(atmos?.keyDir || FALLBACK_KEY);
     if (_key.lengthSq() < 1e-8) _key.copy(FALLBACK_KEY);
-    /* Below the horizon the ground shadow length diverges; the moon key at `night` sits at
-       y = 0.208 and is fine, but a key at y <= 0 has no ground shadow at all and the cap is
-       what keeps the ellipse finite rather than a NaN. */
     const shadowLen = shadowLengthOf(_key);
-    const elong = elongationFor(shadowLen, this.tune);
 
     // The shadow travels AWAY from the key.
     let kx = -_key.x, kz = -_key.z;
     const kl = Math.hypot(kx, kz);
     if (kl > 1e-5) { kx /= kl; kz /= kl; } else { kx = 1; kz = 0; }
     u.uKey.value.set(kx, kz);
-    u.uElong.value = elong;
+    u.uShadowLen.value = shadowLen;
+    u.uReach.value.set(this.tune.reachFrac, this.tune.reachCap);
     u.uPush.value = this.tune.push;
 
     const scale = dbg.decalScale ?? 1;
@@ -407,12 +475,17 @@ export class ContactDecals {
     const on = u.uStrength.value > 1e-4 && radius > 1e-4;
     if (this.mesh) this.mesh.visible = on;
 
-    this._applied = {
-      strength: u.uStrength.value, elong, keyAz: Math.atan2(kx, kz),
-      shadowLen: Number.isFinite(shadowLen) ? shadowLen : null,
-      radius, count: this.count, visible: on,
-      tint: [u.uTint.value.r, u.uTint.value.g, u.uTint.value.b],
-    };
+    const a = this._applied;
+    a.strength = u.uStrength.value;
+    a.shadowLen = shadowLen;
+    a.keyAz = Math.atan2(kx, kz);
+    a.reachFrac = u.uReach.value.x;
+    a.reachCap = u.uReach.value.y;
+    a.push = u.uPush.value;
+    a.radius = u.uRadius.value;
+    a.count = this.count;
+    a.visible = on;
+    a.tintR = u.uTint.value.r; a.tintG = u.uTint.value.g; a.tintB = u.uTint.value.b;
   }
 
   /**
@@ -435,33 +508,76 @@ export class ContactDecals {
   }
 }
 
+const _bb = new THREE.Box3();
+
 /**
- * Base footprint radius of a geometry, measured over the lowest `slab` metres of it.
+ * Everything `ContactDecals.add()` needs, read off geometry.
  *
- * The bounding-box corner is the wrong number and by a lot: `crates_stacked` measures 1.427 m
- * to its base corner but `barrel_large` only 0.635 m at the floor against 0.932 m at its widest
- * belly, so a bbox-derived decal would be 47 % too wide under every barrel in the level. What
- * touches the floor is the widest ring in the bottom slab, and that is what this returns.
+ * The radius is the **mean of the half-extents of the bottom slab's own bounding box**. Three
+ * things had to go wrong before that phrasing was earned, and each shows up as a decal that
+ * reads as a puddle rather than as contact:
  *
- * @param {THREE.BufferGeometry} geo   geometry whose local origin is the prop's vertical axis
- * @param {number} slab                height of the band to measure, metres
+ * 1. **Lowest slab, not the whole prop.** `barrel_large` measures 0.613 m at the floor and
+ *    0.932 m at its widest belly. What touches the ground is the base, so a decal sized off the
+ *    whole silhouette is ~50 % too wide under every barrel in the level.
+ * 2. **Not the maximum radius.** The maximum is the CIRCUMSCRIBED radius — a box's half
+ *    diagonal. `crates_stacked` reads 1.427 m to a corner against ~1.09 m to its flat sides, so
+ *    a max-derived circle overshoots the crate by 31 % everywhere except four points.
+ * 3. **Not a mean over azimuth wedges either**, which is what replaced (2) and was worse: it is
+ *    tessellation-dependent. A box's bottom face has four vertices, and a ten-sided vessel's has
+ *    ten, so most wedges are empty and the mean collapses toward a third of the true radius —
+ *    measured on the shipped set dress, median radius fell 0.47 m to 0.16 m. A footprint that
+ *    depends on how finely a prop was modelled is not a footprint.
+ *
+ * The slab AABB has none of those failure modes: it is exact for a box, exact for a cylinder,
+ * and reads the same number whatever the vertex count.
+ *
+ * Takes one geometry or a list, because a prop is often several: a brazier is a bowl, a tripod
+ * and three feet, and its footprint is the tripod's, which no single part carries. The floor is
+ * the union's `min.y`, not a `y` a call site passed — `place()` applies a scale (the courtyard
+ * pottery runs 0.85–1.25) and the value that was passed in is the value before it.
+ *
+ * @param {THREE.BufferGeometry|THREE.BufferGeometry[]} src
+ * @param {number} slab  height of the band that counts as "touching the floor", metres
+ * @returns {{x:number,y:number,z:number,radius:number,height:number}|null}
+ */
+export function groundFootprint(src, slab = 0.25) {
+  const list = Array.isArray(src) ? src : [src];
+  _bb.makeEmpty();
+  for (const g of list) {
+    if (!g?.attributes?.position) continue;
+    g.computeBoundingBox();
+    if (g.boundingBox) _bb.union(g.boundingBox);
+  }
+  if (_bb.isEmpty() || !Number.isFinite(_bb.min.y)) return null;
+  const y = _bb.min.y;
+
+  let sx0 = Infinity, sx1 = -Infinity, sz0 = Infinity, sz1 = -Infinity;
+  for (const g of list) {
+    const pos = g?.attributes?.position;
+    if (!pos) continue;
+    for (let i = 0; i < pos.count; i++) {
+      if (pos.getY(i) > y + slab) continue;
+      const x = pos.getX(i), z = pos.getZ(i);
+      if (x < sx0) sx0 = x; if (x > sx1) sx1 = x;
+      if (z < sz0) sz0 = z; if (z > sz1) sz1 = z;
+    }
+  }
+  /* A prop whose lowest slab is a point — a tipped statue, a cone, a coin on its edge — falls
+     back to a third of the whole silhouette, which is a contact rather than a footprint. */
+  const whole = ((_bb.max.x - _bb.min.x) + (_bb.max.z - _bb.min.z)) / 4;
+  const radius = sx1 > sx0 || sz1 > sz0 ? ((sx1 - sx0) + (sz1 - sz0)) / 4 : whole / 3;
+  return {
+    x: sx1 > sx0 ? (sx0 + sx1) / 2 : (_bb.min.x + _bb.max.x) / 2,
+    z: sz1 > sz0 ? (sz0 + sz1) / 2 : (_bb.min.z + _bb.max.z) / 2,
+    y, radius, height: _bb.max.y - _bb.min.y,
+  };
+}
+
+/**
+ * Base footprint radius of one geometry. Thin wrapper over `groundFootprint` so a call site that
+ * only wants the number does not have to know the shape of the record.
  */
 export function baseRadiusOf(geo, slab = 0.25) {
-  const pos = geo?.attributes?.position;
-  if (!pos) return 0;
-  if (!geo.boundingBox) geo.computeBoundingBox();
-  const minY = geo.boundingBox.min.y;
-  const cx = (geo.boundingBox.min.x + geo.boundingBox.max.x) / 2;
-  const cz = (geo.boundingBox.min.z + geo.boundingBox.max.z) / 2;
-  let r = 0, rAny = 0;
-  for (let i = 0; i < pos.count; i++) {
-    const dx = pos.getX(i) - cx, dz = pos.getZ(i) - cz;
-    const d = Math.hypot(dx, dz);
-    if (d > rAny) rAny = d;
-    if (pos.getY(i) <= minY + slab && d > r) r = d;
-  }
-  /* A prop whose lowest slab is a point — a tipped statue, a cone — would otherwise get a decal
-     of nothing. Fall back to a third of the widest radius, which is a contact rather than a
-     silhouette. */
-  return r > 1e-3 ? r : rAny / 3;
+  return groundFootprint(geo, slab)?.radius ?? 0;
 }

@@ -16868,3 +16868,63 @@ problem than a uniform-sharing bug.
 Anything written through `Shading.uniforms` **after** material construction is suspect. Anything read
 at construction time — `own`, and `TUNE` values baked into the cache key — is not implicated, which
 is why `bands`, `termSoft` and the ramp itself visibly work in shipped frames.
+
+## §218 — §217 is RETRACTED. `G.step(n, 0)` does not render, and three of my own probes measured stale frames.
+
+The correction matters more than the thing it corrects.
+
+### The harness bug
+
+`dtzero.mjs` painted 90 scene materials red and captured under three step regimes:
+
+```
+step(4, 0)            :     0 / 57600 px
+step(4, 1/60)         :  4969 / 57600 px
+setShot + step(4, 0)  :  7631 / 57600 px
+```
+
+**`G.step(n, 0)` does not render.** `setShot` forces a render; a bare zero-dt step does not.
+
+### What that voids
+
+`rampwire2`, `rampwire3` and `matident` all used `step(n, 0)` between the poke and the capture, so
+every null they produced is an artefact of my own harness. That includes the byte-identical
+`0 / 230400` I described in §217 as "airtight", the three-arm result I used to escalate §210.2 into
+§217, and `matident`'s all-red repaint reading 0 — which was the first honest signal that something
+was wrong with the harness rather than with the renderer, and which I initially read as evidence for
+an even bigger rendering defect.
+
+Re-run with `dt = 1/60` and the red repaint carried as the calibration arm (`rampwire4`):
+
+```
+ARM 1  SHARED  uTermHi   0.52 -> 0.95   :  4893 / 57600 px
+ARM 2  PER-MAT uTermSoft 0.024 -> 0.30  : 11645 / 57600 px
+CALIB  all materials red                : 15364 / 57600 px
+```
+
+**The shared uniform block reaches the shader perfectly.** `setRampTuning` works. §217 is withdrawn
+in full, and with it the claim that this was "§210.2 arriving a second time".
+
+### What I actually did wrong, stated precisely
+
+I tested the hypothesis that would have made me wrong — that `setShot` republishes through LIGHTING
+and restores the uniform — and it came back negative, which felt like rigour. It was rigour aimed one
+level too high. I never asked the more basic question: **is the frame being redrawn at all?** The
+calibration arm I needed was not "does this lever move a pixel" but "does *anything* move a pixel",
+and an all-red repaint answers that in one arm at zero cost.
+
+Two of the three probes carried no calibration arm whatsoever. The one that did — `matident` —
+found the problem immediately. That is the entire argument for calibration arms, demonstrated on
+myself, twice in one session: `RESULT-cel1` voided a run by building an arm on a lever already known
+to be dead, and this voided three runs by building no arm at all.
+
+### Consequences
+
+- **Task #25 (the `termHi` 0.52 → 0.62 A/B) is UNBLOCKED.** Its lever works.
+- **cel1 is being re-run** with `dt = 1/60`. Its KB null is not explained by this bug — `shoot()`
+  calls `setShot`, which does render — so it remains open until that re-run reports.
+- **§210.2 (`debugTerm`) is now suspect as the same artefact** and must be re-tested with a
+  rendering dt before it is cited again. It may never have been broken either.
+- **Every runner under `progress/records/` that pokes a lever and then steps with `dt = 0` should be
+  re-read.** Those that call `setShot` per shot (grain1, ramp1, cel1) get a render from `setShot` and
+  are probably sound; those that poke and step without a shot change are not.

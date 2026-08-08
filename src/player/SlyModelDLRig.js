@@ -104,6 +104,31 @@ export const GRIP = {
   band: [0.05, 0.95],    // percentile window of the digit block that counts as the grip section
 };
 
+/**
+ * `?grip=open` — the calibration lever for this fix, at RUNTIME.
+ *
+ * It disables the solved curl and leaves the cane socketed, which is the defect the fix exists to
+ * remove: an open hand beside a cane. Offline it takes the wrap from 11/12 to 6/12 and the median
+ * digit-to-cane distance from 25 mm to 63 mm, so a capture that cannot separate this arm from the
+ * default has a dead pixel instrument and the run is void whatever else it shows.
+ *
+ * It is a URL token and not a source edit ON PURPOSE. `progress/records/PROVENANCE-critic7.md`
+ * establishes that a run straddling two builds is void and must be re-shot; editing a file between
+ * arms is exactly that. Read at module-load time for the same reason `?char=` is — the harness
+ * cannot poke it in-page after boot.
+ */
+function gripMode() {
+  try {
+    if (typeof location !== 'undefined' && location.search) {
+      const q = new URLSearchParams(location.search).get('grip');
+      if (q) return String(q);
+    }
+    if (typeof globalThis !== 'undefined' && globalThis.__GRIP_AB != null) return String(globalThis.__GRIP_AB);
+  } catch { /* plain-module hosts have no location; that is the offline path */ }
+  return 'solved';
+}
+const GRIP_MODE = gripMode();
+
 const TEX_BY_PART = { body: 'sly_body', eyeball: 'sly_eyeball', head: 'sly_head', tail: 'sly_tail' };
 const FALLBACK = { body: 0x2f5fc4, eyeball: 0xd9821a, head: 0xcfcdc4, tail: 0x8d8b84 };
 
@@ -507,8 +532,9 @@ export class SlyModel {
    * WHAT THIS DID NOT DO, and now does. The fixed 22/34/30 was chosen to un-splay a T-pose hand
    * and it knows nothing about the cane, which is weighted to `staff` and therefore moves 0 mm
    * while the curl moves 6,070 vertices by up to 12 asset units. So the flexion fix pulled the
-   * fingers OFF the shaft: right-hand digit vertices sat a median 136 mm from the nearest staff
-   * vertex with 1.1 % inside 10 mm. Worse, the shaft never ran through the palm at all — measured
+   * fingers OFF the shaft: right-hand digit vertices sat a median 132 mm from the nearest staff
+   * vertex with 0.9 % inside 10 mm, and 5 of 12 azimuth sectors around the shaft occupied.
+   * Worse, the shaft never ran through the palm at all — measured
    * in this space, the staff's axis passes 5.2 units on the BACK of the knuckle line, so curling
    * harder moves the fingers further away and no amount of it can close the gap. That is the
    * whole of critic pass 7 #5 and it is a placement fault, not a flexion one.
@@ -682,6 +708,7 @@ export class SlyModel {
       })
       : new THREE.MeshStandardMaterial({ color: 0xe8b942, vertexColors: true, metalness: 0.85, roughness: 0.3 });
     this.cane.build([gold]);
+    this._caneMaterial = gold;          // passed in, so Cane.dispose() does not own it
     socket.add(this.cane.object);
     this.bones.handR.add(socket);
     this._caneSocket = socket;
@@ -829,6 +856,7 @@ export class SlyModel {
         if (Math.abs(r - target) < bestE) { bestE = Math.abs(r - target); bestK = k; }
       }
       scale[d] = pick === null ? bestK : pick;
+      if (GRIP_MODE === 'open') scale[d] = 0;        // calibration arm — see gripMode()
     }
 
     /* --- 4. thumb opposition: swing the whole digit about the axis that aims it at the cane --- */
@@ -910,7 +938,9 @@ export class SlyModel {
   update() { /* all motion comes from Rig/Animation */ }
   dispose() {
     this.cane?.dispose?.();
-    this.cane = null;
+    this._caneMaterial?.dispose?.();
+    this._caneSocket?.removeFromParent?.();
+    this.cane = null; this._caneMaterial = null; this._caneSocket = null;
     this.mesh?.geometry?.dispose?.();
     const mm = this.mesh?.material;
     (Array.isArray(mm) ? mm : [mm]).forEach((x) => { x?.map?.dispose?.(); x?.dispose?.(); });

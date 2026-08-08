@@ -9,7 +9,7 @@ import {
 import {
   seatedColossus, sphinx, anubis, falconRa, coffinLid, fallenHead, brokenStatue,
 } from './Statues.js';
-import { ContactDecals, baseRadiusOf } from './Decals.js';
+import { ContactDecals, groundFootprint } from './Decals.js';
 
 /**
  * Props — the hero sculpture and set dress.
@@ -186,6 +186,32 @@ export class Props {
 
     this._flushBuckets();
     this._registerLightsAndFx();
+    /* One draw for every grounded prop in this module, built last so the batch knows its count
+       and so its bounds cover every placement. */
+    if (this.decals.build(this.group)) this.stats.draws++;
+  }
+
+  /**
+   * Ground a prop that has just been `place()`d, from the geometry itself.
+   *
+   * Taking the footprint off the placed geometry rather than off the placement arguments is
+   * the point: `place()` applies a scale (the courtyard pottery runs 0.85–1.25) and a rotation,
+   * so the radius a call site could hand over is the radius before those, and the floor the
+   * prop actually rests on is `bbox.min.y` rather than the `y` that was passed. Both have gone
+   * wrong in this file's history for the same reason — see the `Bag.transform` note in
+   * `PropKit.applyXf`, where thirteen call sites passed a value the callee never read.
+   *
+   * Accepts a placed geometry or a whole `Bag` (a brazier is six parts and its footprint is the
+   * tripod's, which no single part carries).
+   *
+   * @param {THREE.BufferGeometry|{parts:{geo:THREE.BufferGeometry}[]}} src  placed, world space
+   */
+  _ground(src) {
+    const fp = groundFootprint(src?.parts ? src.parts.map((p) => p.geo) : src);
+    if (!fp) return false;
+    const ok = this.decals.add(fp.x, fp.y, fp.z, fp.radius, fp.height);
+    if (ok) this.stats.decals++;
+    return ok;
   }
 
   /* ===================== hero sculpture ============================ */
@@ -424,6 +450,7 @@ export class Props {
       const z = againstWall ? R.range(-14, 32) : R.pick([-13, 31]);
       const g = R.chance(0.6) ? vessel({ rng: R, h: R.range(0.5, 1.1) }) : basket({ rng: R });
       place(g, { x, y: 0, z, ry: R.range(0, Math.PI * 2), s: R.range(0.85, 1.25) });
+      this._ground(g);
       this._push(R.chance(0.75) ? 'lime' : 'stone', g);
     }
 
@@ -464,6 +491,7 @@ export class Props {
     for (let i = 0; i < 12; i++) {
       const g = vessel({ rng: R, h: R.range(0.6, 1.3) });
       place(g, { x: R.sign() * R.range(19, 23), y: 0, z: R.range(-50, -18), ry: R.range(0, Math.PI * 2) });
+      this._ground(g);
       this._push('lime', g);
     }
     for (let i = 0; i < 5; i++) {
@@ -531,6 +559,9 @@ export class Props {
   _brazier(x, y, z) {
     const bag = brazier({ rng: this.rng });
     bag.transform(matrixOf({ x, y, z }));
+    /* Before `_absorb`, which drains the bag. A brazier's footprint is its tripod's, and no
+       single part of it carries that. */
+    this._ground(bag);
     this._absorb(bag);
     this._lights.push({ position: new THREE.Vector3(x, y + 1.15, z), color: 0xff9a4a, intensity: 5.5, radius: 13, flicker: 0.45 });
     this._fx.push({ name: 'embers', position: new THREE.Vector3(x, y + 1.05, z) });
@@ -734,7 +765,11 @@ export class Props {
 
   /* ===================== frame ===================================== */
 
+  /** What the contact decals actually applied this frame — see `ContactDecals.state()`. */
+  decalState() { return this.decals?.state?.() ?? null; }
+
   update(dt, t) {
+    this.decals.update();
     // Collectibles bob and spin so they read as pickups rather than scenery.
     for (const c of this._collect) {
       const { mesh, spots, phase } = c;
@@ -749,6 +784,7 @@ export class Props {
   }
 
   dispose() {
+    this.decals.dispose();
     for (const g of this._geoms) g.dispose();
     for (const m of this._materials) m.dispose?.();
     this._invis?.dispose();
