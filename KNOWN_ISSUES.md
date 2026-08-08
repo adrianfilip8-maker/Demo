@@ -19113,3 +19113,32 @@ the argument that licensed this whole run breaks loudly.
   `prompt` event. It retires itself permanently the first time a real one arrives.
 - Commit `8fcce32` (another agent's sweep) picked up `Alert.js`, `Icons.js` and `_hudshim.mjs`
   mid-run — the §240 pattern, observed again from the other side. No content was lost this time.
+
+## §242 — the Binocucom is abandoned as a goal, by owner instruction
+
+**Owner instruction, 2026-08-08: "Abandon the Binocucom goal for this project."** No further work on
+it, by any agent, from here.
+
+Recorded rather than silently dropped because §241 had just finished arguing the opposite. The UI
+agent reported the Binocucom as fully implemented and good — phosphor scanlines with a finer aperture
+grille beneath, CRT barrel falloff, chromatic fringe pooling cyan at one edge and carnelian at the
+other, corner brackets, a blinking REC counter, breathing crosshair, ranging ruler, live camera
+telemetry, and Bentley's portrait with its own scan sweep. It rendered it and looked at it. None of
+that is a reason to keep pursuing it once the owner has said stop; a goal being achievable is not an
+argument that it is wanted.
+
+**What this instruction is taken to mean, stated explicitly so the reading is on the record and can
+be corrected cheaply:** stop *pursuing* it. No new Binocucom features, no polish passes, no agent
+briefs mentioning it, and it is not a criterion in any future critic round.
+
+**What was NOT done:** the existing implementation has not been deleted. "Abandon the goal" is not
+the same instruction as "remove the code", deleting working code is the destructive reading of an
+ambiguous phrase, and it is trivially reversible to remove later while restoring it would mean
+rebuilding it. If removal is what was wanted, it is one instruction away and the owner has been told
+so directly.
+
+Practical consequence for the HUD: the health pips, coin counter, objective card, toasts, keycaps,
+Thief-o-Vision and the pause menu — the last of which is the game's only tutorial for all 25 moves —
+are untouched by this and remain in scope. So do §241's two open readability defects, the objective
+kicker at **3.44:1** contrast against a 4.5 bar and alert labels at **6.4 px**, which are ordinary
+HUD legibility problems and have nothing to do with the Binocucom.
