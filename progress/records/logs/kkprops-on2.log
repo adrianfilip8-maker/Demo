@@ -103,3 +103,8 @@
 · waiting for capture lock (1082s, held by pid 10080)
 · waiting for capture lock (1092s, held by pid 10080)
 · waiting for capture lock (1103s, held by pid 10080)
+[1174s] boot ok (on) — warnings 3
+[1174s]    ! textures: prewarm took 17.6s at size 1024
+[1174s]    ! KayKit (props): 36 placed from 11 models, 0 failed, 31064 tris, 29 colliders
+[1174s]    ! SlyModelDLRig: relaxed 6070 glove vertices, max move 12.0 (asset units)
+[1174s] kaykit: {"mode":"props","stats":{"models":11,"placed":36,"failed":0,"tris":31064,"colliders":29}}
