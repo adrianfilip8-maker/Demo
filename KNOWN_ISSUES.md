@@ -16928,3 +16928,76 @@ to be dead, and this voided three runs by building no arm at all.
 - **Every runner under `progress/records/` that pokes a lever and then steps with `dt = 0` should be
   re-read.** Those that call `setShot` per shot (grain1, ramp1, cel1) get a render from `setShot` and
   are probably sound; those that poke and step without a shot change are not.
+
+## §219 — I broke the cel fragment program with a comment, and then spent a day misreading its symptoms
+
+The shader sub-agent found this. It is the root cause of §210.2, of §217, and of both cel1 runs, and
+it is my commit.
+
+### What happened
+
+`6e0cc8f` (11:13) — *"add a RAMP debug channel, on the correct base after recovering from a local
+rollback"* — appended thirteen lines of mode-5 documentation **after the `*/` that closed the previous
+comment block**. So the prose became GLSL, and every line beginning `* Mode 5 is…` parsed as a
+multiply:
+
+```
+0:2502: '*' : syntax error
+```
+
+**The cel fragment program stopped linking. Every toon-shaded pixel in the game stopped drawing at
+11:13.** Verified offline on the harness's own ANGLE/SwiftShader stack with four arms, two that must
+pass and two that must fail:
+
+| arm | result |
+|---|---|
+| CONTROL — stock `MeshStandardMaterial` | LINK OK, 23 active uniforms |
+| PRE-REGRESSION — `6e0cc8f^`, `Shading.toon()` | LINK OK, **75 active uniforms** |
+| CURRENT — HEAD, `Shading.toon()` | **LINK FAIL, 0 active uniforms** |
+| POISON — patched + injected garbage | LINK FAIL, 0 active uniforms |
+
+### What it cost, and how I misread every symptom
+
+**§210.2 was written at 11:32 — nineteen minutes later.** Its mode-4 calibration writes the constants
+(0.25, 0.50, 0.75), which must arrive as (64, 128, 191); zero pixels carried them. **That reading was
+correct and I drew the wrong conclusion from it**: I recorded "the debug channel is broken" when the
+truth was "the program is dead". The channel was working perfectly — it was reporting a corpse.
+
+**`nUniforms: 0` was literally true.** In §217 I wrote: *"A compiled program cannot have zero
+uniforms, so that accessor is wrong."* A program that **fails to link** has exactly zero active
+uniforms. I explained away a correct reading because it contradicted an assumption I had not checked,
+and then cited my own dismissal as evidence that the subsystem produces "confident, plausible, wrong
+nulls". It had produced a confident, plausible, **right** null, three times, and I overrode it three
+times.
+
+**Both cel1 runs are explained.** The KB arm could never move a toon-shaded pixel because there were
+none. `P1`'s +30.61 / +28.98 pp on character ROIs and `C1`'s inversion (+70 L brighter in run 1,
+−83 L darker in run 2) are the character switching between `MeshStandardMaterial` and a *dead
+program*, which is not the comparison the seal was written for. **Both runs are void for a reason
+neither seal anticipated**, and the correct verdict — UNSCOREABLE — was reached both times by the
+calibration arm anyway. That is the argument for calibration arms stated as plainly as it can be: the
+arm did not know why, and did not need to.
+
+### The specific way I was careful and still wrong
+
+The session record for that change reads: *"added debug mode 5 … Scope verified by brace-depth
+analysis (ramp/key at depth 1, debug block at depth 2 inside it) **because a GLSL scope error fails
+at runtime not in the vite build**."*
+
+I identified the exact hazard class — GLSL errors do not surface in a JS build — reasoned carefully
+about the hazard I had anticipated, and was blind to its immediate neighbour. **Brace depth was
+checked; comment termination was not.** A `/* … */` is as invisible to `vite build` as a scope error,
+and I had just written down why that matters.
+
+### What now exists so it cannot recur
+
+`Shading.programHealth()` queries `LINK_STATUS` against the live renderer, and the audit run
+(`progress/records/dbgterm1.mjs`) links the real patched program offline before any frame is scored.
+**A shader that does not link is now a red test, not a day of misattributed measurements.**
+
+### Retractions
+
+- **§210.2 is RETRACTED.** `debugTerm` was never broken.
+- **§217's dismissal of `nUniforms: 0` is RETRACTED.** The reading was right.
+- §218 stands on its own evidence — `step(n, 0)` genuinely does not render — but it was not the cause
+  of the nulls it was written to explain.

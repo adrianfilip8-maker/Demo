@@ -36,6 +36,7 @@ import './_domshim.mjs';
 import { readFileSync, writeFileSync } from 'node:fs';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { RIG3 } from '../src/player/SlyModel3.js';
 
 const SRC = new URL('../public/assets/sly-anim/sly-anims.glb', import.meta.url);
 

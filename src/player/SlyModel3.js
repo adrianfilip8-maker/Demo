@@ -408,10 +408,24 @@ export class SlyModel {
 
     /* eyes — stage 3: ~30% bigger and pushed proud of a THINNER mask bridge. Stage 2's stack sat
        flush with the bridge and read as one black lump; the amber is an identity cue and has to
-       survive the profile view. */
+       survive the profile view.
+
+       The three blobs are TAGGED as they are pushed, and the tags become `this.eyeRanges` after
+       the merge. Metadata only — nothing reads it at runtime — and it exists for the same reason
+       the incumbent publishes `pupilRanges` and `tuftRanges`: the eye is the one feature on this
+       model whose defects are *pairwise* (KNOWN_ISSUES §2198's "one headlight and one socket"),
+       and a pair test needs to name the two halves. Selecting them by vertex COLOUR instead does
+       not work and the failure is silent: `PAL.black` is the pupil, the nose, both mask wings,
+       both mask spikes and the bridge, so a colour probe on this model reports a 166 x 94 x 370 mm
+       "pupil" and a mirror asymmetry of 30 deg. Measured, in the course of writing
+       `tests/eyes.test.mjs`; that number is the whole argument for these six ranges. */
+    const eyeTag = [];
     for (const s of [1, -1]) {
+      eyeTag.push({ side: s, part: 'sclera', i: parts.length });
       parts.push(blob([s * hw * 0.30, eyeY + hw * 0.02, hw * 1.00], [hw * 0.20, hw * 0.19, hw * 0.10], PAL.eyeWhite, headB, 10, 6));
+      eyeTag.push({ side: s, part: 'iris', i: parts.length });
       parts.push(blob([s * hw * 0.27, eyeY + hw * 0.02, hw * 1.09], [hw * 0.115, hw * 0.115, hw * 0.055], PAL.eyeIris, headB, 8, 5));
+      eyeTag.push({ side: s, part: 'pupil', i: parts.length });
       parts.push(blob([s * hw * 0.255, eyeY + hw * 0.02, hw * 1.135], [hw * 0.048, hw * 0.048, hw * 0.026], PAL.black, headB, 6, 4));
     }
 
@@ -700,6 +714,17 @@ export class SlyModel {
     }
 
     /* ---- assemble ---- */
+    /* Eye vertex ranges, resolved against the merge order. `merge` concatenates in order and
+       nothing after it reorders vertices (`setIndex` + `computeVertexNormals` only), so a part's
+       base offset is the running vertex count — computed here rather than tracked inline so it
+       cannot drift out of step with `parts`. */
+    {
+      let off = 0;
+      const base = parts.map((pp) => { const o = off; off += pp.pos.length / 3; return o; });
+      this.eyeRanges = eyeTag.map((e) => ({
+        side: e.side, part: e.part, v0: base[e.i], v1: base[e.i] + parts[e.i].pos.length / 3,
+      }));
+    }
     const m = merge(parts);
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.Float32BufferAttribute(m.pos, 3));
