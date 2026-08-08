@@ -119,6 +119,8 @@ three shipped captures:
 
 | shot | architecture px | key-lit | step at T=0.14 | its own control | ratio |
 |---|---|---|---|---|---|
+| **interior** | 921 600 | **0 (0.00%)** | — | — | no lit px at all |
+| **night** | 776 555 | **10 435 (1.34%)** | — | — | too few lit px |
 | **temple** | 905 878 | **14 230 (1.57%)** | +6.8 | −7.9 | 0.86× |
 | hero | 836 843 | 153 879 (18.4%) | +23.1 | −2.3 | **10.11×** |
 | courtyard | 632 704 | 201 291 (31.8%) | +21.8 | −1.8 | **12.25×** |
@@ -127,7 +129,13 @@ three shipped captures:
 **Where the key reaches, the ramp bands hard, and always did.** `slyRamp` is not soft. What fails
 is everything the key does *not* reach: `key = ramp * sh`, so on a cast-shadowed surface the cel
 quantiser is multiplied by zero. `temple` is a roofed hypostyle hall and **97.5% of its
-architecture is in that state**.
+architecture is in that state**; `interior` is the extreme — **not one architecture pixel in that
+frame is key-lit**, so the cel quantiser contributes nothing to it at all.
+
+The split is not shot-by-shot bad luck, it is roofed-versus-open: every enclosed shot measures at
+or under 1.6% lit, both open ones 18–32%. That is also why this defect reads as "the cel shading
+does not band" rather than as "some shots are dark" — the shots the critic scores worst are
+precisely the ones in which the feature under complaint is switched off.
 
 And nothing else on such a surface varies with the normal either. From the shader: `fill` depends
 only on `hemi = smoothstep(−0.72, 0.55, Nw.y)`; `albAmb`, the shadow multiply and the wash depend
@@ -200,7 +208,9 @@ the render, so the `uRimGain` revert trap throws instead of quietly producing a 
 
 `night` is a **required** arm (§10a, registered before any frame existed) and runs as a second short
 boot: at tod 0.02 the key is the moon and nearly the whole frame is shade, so a term that multiplies
-the shade side multiplies almost every pixel, downward.
+the shade side multiplies almost every pixel, downward. `bandprobe` sizes that exposure exactly —
+`night` is **1.34% key-lit**, so ~94% of its architecture takes the full `shadeForm` multiply. It is
+the highest-risk shot for this change by a wide margin, and it is the one that has not been seen.
 
 > **Status: the sweep has been queued behind other agents' captures for the whole session and had
 > not been granted the lock at the time of writing.** `TUNE.shadeBand` therefore ships at **0**,

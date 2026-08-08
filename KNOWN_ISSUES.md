@@ -17669,10 +17669,17 @@ own ortho shadow map offline — on three shipped captures:
 
 | shot | architecture px | key-lit | step at T=0.14 | control | ratio |
 |---|---|---|---|---|---|
+| **interior** | 921 600 | **0 (0.00%)** | — | — | no lit px at all |
+| **night** | 776 555 | **10 435 (1.34%)** | — | — | too few lit px |
 | **temple** | 905 878 | **14 230 (1.57%)** | +6.8 | −7.9 | 0.86× |
 | hero | 836 843 | 153 879 (18.4%) | +23.1 | −2.3 | 10.11× |
 | courtyard | 632 704 | 201 291 (31.8%) | +21.8 | −1.8 | 12.25× |
 | courtyard T=0.52 | | | +24.8 | −1.0 | 25.07× |
+
+`interior` is the extreme case and it is not a rounding artefact: **not one architecture pixel in
+that frame is key-lit**, so the cel quantiser contributes nothing to it whatsoever. The split is
+not shot-by-shot bad luck either — it is roofed-versus-open. Every enclosed shot is at or under
+1.6% lit; both open ones are 18–32%.
 
 **Where the key reaches, the ramp bands hard, and always did.** `slyRamp` is correct and is not
 soft. What fails is everything the key does *not* reach: `key = ramp * sh`, so on a cast-shadowed
