@@ -142,6 +142,57 @@ export const HUD_CSS = /* css */ `
   transform: translateY(0);
 }
 
+/* ------- threat / exposure chip ------- */
+
+/* The one-glance answer to "does anyone see me". It sits directly under the coins because that
+   corner is where the eye already goes, and it is deliberately the only element in the HUD whose
+   COLOUR changes with game state — so a change here is unmissable in peripheral vision. The three
+   colours are the vision cone's own stops (see Alert.js), so the chip and the cone agree. */
+.sly-threat {
+  --threat-col: #fff0c2;
+  display: flex;
+  align-items: center;
+  gap: calc(var(--u) * .38);
+  margin-top: calc(var(--u) * .12);
+  padding: calc(var(--u) * .22) calc(var(--u) * .62) calc(var(--u) * .26) calc(var(--u) * .34);
+  background: rgba(20, 14, 12, .82);
+  border: calc(var(--u) * .13) solid var(--ink);
+  border-radius: calc(var(--u) * .42);
+  box-shadow: inset 0 0 0 calc(var(--u) * .06) color-mix(in srgb, var(--threat-col) 55%, transparent),
+              0 calc(var(--u) * .22) 0 rgba(26,18,16,.6);
+  transform: rotate(-1.5deg);
+  transform-origin: left center;
+  transition: box-shadow .18s ease;
+}
+.sly-threat-eye { width: calc(var(--u) * 1.5); flex: none; color: var(--threat-col); }
+.sly-threat-eye svg { width: 100%; height: auto; }
+.sly-threat-lbl {
+  font-size: calc(var(--u) * .82);
+  letter-spacing: .17em;
+  color: var(--threat-col);
+  transform: skewX(-5deg);
+}
+.sly-threat-num {
+  font-size: calc(var(--u) * .72);
+  letter-spacing: .06em;
+  color: var(--threat-col);
+  opacity: .92;
+}
+
+/* Shut lid while unseen — shape carries the state even before colour does. */
+.sly-threat[data-state='hidden'] .sly-eye-iris,
+.sly-threat[data-state='hidden'] .sly-eye-open { opacity: 0; }
+.sly-threat:not([data-state='hidden']) .sly-eye-lid { opacity: 0; }
+
+/* Escalation reads as urgency, not decoration: only the top rung pulses. */
+.sly-threat[data-state='spotted'] { animation: sly-threat-pulse .58s ease-in-out infinite alternate; }
+@keyframes sly-threat-pulse {
+  from { box-shadow: inset 0 0 0 calc(var(--u) * .06) var(--threat-col), 0 calc(var(--u) * .22) 0 rgba(26,18,16,.6); }
+  to   { box-shadow: inset 0 0 0 calc(var(--u) * .09) var(--threat-col),
+                     0 0 calc(var(--u) * .9) color-mix(in srgb, var(--threat-col) 70%, transparent),
+                     0 calc(var(--u) * .22) 0 rgba(26,18,16,.6); }
+}
+
 /* ============================================================ OBJECTIVE CARD */
 
 .sly-obj {
@@ -389,12 +440,27 @@ export const HUD_CSS = /* css */ `
   position: absolute; inset: 0;
   display: grid; place-items: center;
   font-size: calc(var(--u) * 1.5);
-  color: var(--gold-l);
+  color: var(--alert-col, var(--gold-l));
   transform: skewX(-6deg);
 }
-.sly-alert.full .sly-alert-glyph { color: #fff; font-size: calc(var(--u) * 1.9); }
-.sly-alert.full .sly-alert-fill { stroke: var(--carn); }
+/* Two-character glyphs ('?!', '··') would overflow the badge at the single-char size. */
+.sly-alert-glyph[data-wide='1'] { font-size: calc(var(--u) * 1.08); letter-spacing: -.02em; }
+
+/* The words are what actually get read. Without them the ladder is five shapes the player has
+   to have learned; with them it is five states they can name on first sight. */
+.sly-alert-lbl {
+  position: absolute; left: 50%; top: 101%;
+  transform: translateX(-50%) skewX(-5deg);
+  font-size: calc(var(--u) * .58);
+  letter-spacing: .16em;
+  white-space: nowrap;
+  color: var(--alert-col, var(--gold-l));
+}
+.sly-alert.full .sly-alert-glyph { font-size: calc(var(--u) * 1.9); }
 .sly-alert.full .inner { animation: sly-alert-throb .42s ease-in-out infinite alternate; }
+/* A downed guard is information, not a threat — it recedes instead of competing. */
+.sly-alert.down { opacity: .62; }
+.sly-alert.down .inner { transform: scale(.8); }
 @keyframes sly-alert-throb { from { transform: scale(1) } to { transform: scale(1.14) } }
 /* Pinned to the frame edge: dimmed so an off-screen guard reads as a direction, not a target. */
 .sly-alert.edge { opacity: .8; }

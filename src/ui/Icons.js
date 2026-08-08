@@ -204,6 +204,29 @@ export function signal(level = 3, cls = '') {
   return wrap('0 0 30 20', bars, cls, 'width="30" height="20"');
 }
 
+/* ---------------------------------------------------------------- threat */
+
+/**
+ * The exposure eye — the "does anyone see me" readout beside the coins.
+ *
+ * Drawn in `currentColor` rather than a fixed fill, because the same element has to carry all
+ * four rungs of the threat ladder (cream → amber → red, pinned to the vision cone's own stops in
+ * `Alert.js`). A lid closes over it via `.sly-threat[data-state='hidden']`, so the shape reads at
+ * a glance even before the colour registers: shut eye = unseen, open eye = someone is looking.
+ */
+export function threatEye(cls = '') {
+  return wrap('0 0 64 44', `
+    <path d="M4 22C14 7 50 7 60 22 50 37 14 37 4 22z" fill="${C.ink}" fill-opacity=".72"
+          stroke="${C.ink}" stroke-width="5.5" stroke-linejoin="round"/>
+    <path class="sly-eye-open" d="M4 22C14 7 50 7 60 22 50 37 14 37 4 22z" fill="none"
+          stroke="currentColor" stroke-width="3.6" stroke-linejoin="round"/>
+    <circle class="sly-eye-iris" cx="32" cy="22" r="9.4" fill="currentColor"/>
+    <circle class="sly-eye-iris" cx="32" cy="22" r="4" fill="${C.ink}"/>
+    <path class="sly-eye-lid" d="M4 22C14 30 50 30 60 22" fill="none"
+          stroke="currentColor" stroke-width="4.4" stroke-linecap="round"/>
+  `, `sly-eye ${cls}`);
+}
+
 /* ----------------------------------------------------------- alert / world */
 
 /** Suspicion arc. The fill circle is driven by stroke-dashoffset from HUD.update(). */

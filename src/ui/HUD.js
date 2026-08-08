@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { HUD_CSS } from './hud.css.js';
 import * as Ico from './Icons.js';
+import { alertFor, threatFor, ALERT_STATES } from './Alert.js';
 
 /**
  * HUD — Sly's interface. Registered as module key 'hud' (AGENTS.md §4.3).
@@ -30,7 +31,16 @@ const TUNE = {
   toastMax: 3,
   promptSwapPunch: 1.12,
   objectiveHold: 5.0,     // s before the card collapses to its compact tab
-  alertTTL: 2.2,          // s a suspicion arc survives without a refresh
+  /**
+   * `guardAlert` is EDGE-triggered — `Patrol._setState()` emits once per transition and never
+   * again (`Guard.js:647`). So there is no such thing as an alert "going stale": the last state
+   * received is still true until the next one arrives. A live state therefore has no TTL at all.
+   *
+   * The old 2.2 s TTL assumed a heartbeat that is not emitted, and quietly erased guards who were
+   * still hunting: `DETECT.searchTime` is 9.0 s, so a real search outlived the badge by 4×.
+   * Only the non-live states (patrol / stunned / ko) linger and retire, and this is their fade.
+   */
+  alertFade: 1.2,         // s a *retired* badge lingers before removal
   alertLerp: 9,           // arc catch-up rate
   markMax: 16,
   shakeDecay: 9.5,
@@ -40,6 +50,9 @@ const TUNE = {
 };
 
 const CIRC = 2 * Math.PI * 36;   // matches Icons.alertArc()'s r=36
+
+/** Ladder order for the exposure chip — only used to decide whether a change is an escalation. */
+const THREAT_RANK = { hidden: 0, noticed: 1, hunted: 2, spotted: 3 };
 
 /* Hoisted scratch — update() allocates nothing (AGENTS.md §5). */
 const _v = new THREE.Vector3();
@@ -147,6 +160,8 @@ export class HUD {
     this._sawPrompt = false;    // a real `prompt` event retires the affordance fallback
     this._affDead = false;
     this._affCount = 0;
+    this._threatKey = '';
+    this._threatCount = 0;
 
     this.reduced = false;
     try { this.reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch {}
@@ -172,6 +187,7 @@ export class HUD {
     this.setHealth(this.healthMax, this.healthMax);
     this.setCoins(0, true);
     this.objective('Steal the Eye of Ra', 'Temple of Ra · Great Courtyard');
+    this._refreshThreat();
     this._applyVisibility();
   }
 
@@ -206,6 +222,11 @@ export class HUD {
             <span class="sly-coin-icon sly-drop">${Ico.coin()}</span>
             <span class="sly-coin-num sly-ink"></span>
             <span class="sly-coin-plus sly-ink sly-ink-s"></span>
+          </div>
+          <div class="sly-threat" data-state="hidden">
+            <span class="sly-threat-eye">${Ico.threatEye()}</span>
+            <span class="sly-threat-lbl sly-ink sly-ink-s">HIDDEN</span>
+            <span class="sly-threat-num sly-ink sly-ink-s"></span>
           </div>
         </div>
 
@@ -245,6 +266,9 @@ export class HUD {
       pips: q('.sly-pips'),
       coinNum: q('.sly-coin-num'),
       coinPlus: q('.sly-coin-plus'),
+      threat: q('.sly-threat'),
+      threatLbl: q('.sly-threat-lbl'),
+      threatNum: q('.sly-threat-num'),
       obj: q('.sly-obj'),
       objTitle: q('.sly-obj-title'),
       objSub: q('.sly-obj-sub'),
@@ -682,26 +706,29 @@ export class HUD {
       m.el.classList.add('on');
     }
 
-    /* ---- guard suspicion arcs ---- */
+    /* ---- guard alert badges ----
+       A LIVE state never expires: the emitter is edge-triggered, so the last state received is
+       still true until the next transition arrives. Only retired states (patrol / stunned / ko)
+       run a fade and get collected. */
+    const dt = this.engine.dt || 0.016;
+    let retired = false;
     for (const [id, a] of this._alerts) {
-      a.ttl -= this.engine.dt || 0.016;
-      if (a.ttl <= 0 && a.level <= 0.02) { a.el.remove(); this._alerts.delete(id); continue; }
-      if (a.ttl <= 0) a.level = Math.max(0, a.level - 0.9 * (this.engine.dt || 0.016));
-      a.shown += (a.level - a.shown) * Math.min(1, TUNE.alertLerp * (this.engine.dt || 0.016));
+      if (!a.live) {
+        a.fade -= dt;
+        if (a.fade <= 0) { a.el.remove(); this._alerts.delete(id); retired = true; continue; }
+      }
+      a.shown += (a.target - a.shown) * Math.min(1, TUNE.alertLerp * dt);
+
+      // Re-read the guard's live position every frame so the badge follows him.
+      if (a.src) a.pos.set(a.src.x, (a.src.y ?? 0) + 2.3, a.src.z);
 
       const p = this._project(a.pos, cam, W, H, true);
       a.el.style.transform = `translate(${p.x.toFixed(1)}px, ${p.y.toFixed(1)}px)`;
       a.el.classList.toggle('edge', !p.onScreen);
       a.fill.style.strokeDashoffset = String(CIRC * (1 - Math.max(0, Math.min(1, a.shown))));
-      const full = a.shown > 0.985;
-      if (full !== a.full) {
-        a.full = full;
-        a.el.classList.toggle('full', full);
-        a.glyph.textContent = full ? '!' : '?';
-        if (full) { this._punch(a.el.firstElementChild, 1.6, 300); this._shake = Math.min(1, this._shake + 0.25); }
-      }
       a.el.classList.add('on');
     }
+    if (retired) this._refreshThreat();
   }
 
   /** World → screen. Returns pooled-ish plain numbers; `clamp` pins off-screen to the edge. */
@@ -754,38 +781,87 @@ export class HUD {
     if (p == null) {           // a bare null clears the board
       for (const [, a] of this._alerts) a.el.remove();
       this._alerts.clear();
+      this._refreshThreat();
       return;
     }
     const id = String(p.id ?? p.guard?.id ?? p.name ?? p.guard?.name ?? 'guard');
-    let level = p.level ?? p.suspicion ?? p.alert ?? p.value;
-    if (typeof level !== 'number') {
-      const st = String(p.state ?? p.status ?? '').toLowerCase();
-      level = st === 'alert' || st === 'chase' || st === 'combat' ? 1
-            : st === 'suspicious' || st === 'investigate' ? 0.6
-            : st === 'calm' || st === 'patrol' ? 0 : 0.5;
-    }
-    level = Math.max(0, Math.min(1, level));
+    const pres = alertFor(p);
+    if (!pres) return;
 
+    /* `Guard._alertPayload.pos` is the guard's own THREE.Vector3, assigned once in his
+       constructor and mutated in place thereafter — so KEEPING the reference tracks him for
+       free. Copying it, as this used to, froze the badge wherever he happened to be standing
+       when he changed state: a guard who spotted you and gave chase left his marker behind at
+       the spot he first saw you, which is worse than no marker, because it points nowhere. */
     const src = p.position ?? p.pos ?? p.worldPos ?? p.guard?.position ?? p.point;
+
     let a = this._alerts.get(id);
     if (!a) {
       const el = document.createElement('div');
       el.className = 'sly-alert';
-      el.innerHTML = `<div class="inner">${Ico.alertArc()}<div class="sly-alert-glyph sly-ink sly-ink-s">?</div></div>`;
+      el.innerHTML = `<div class="inner">${Ico.alertArc()}` +
+                     `<div class="sly-alert-glyph sly-ink sly-ink-s"></div></div>` +
+                     `<span class="sly-alert-lbl sly-ink sly-ink-s"></span>`;
       this.el.marks.appendChild(el);
       a = {
-        el, fill: el.querySelector('.sly-alert-fill'), glyph: el.querySelector('.sly-alert-glyph'),
-        pos: new THREE.Vector3(), level: 0, shown: 0, ttl: TUNE.alertTTL, full: false,
+        el,
+        fill: el.querySelector('.sly-alert-fill'),
+        glyph: el.querySelector('.sly-alert-glyph'),
+        lbl: el.querySelector('.sly-alert-lbl'),
+        pos: new THREE.Vector3(),   // scratch: the projected point, rebuilt every frame
+        src: null,                  // live reference to the guard's own position vector
+        state: '', shown: 0, fade: 0,
       };
       this._alerts.set(id, a);
     }
+
     if (src) {
-      if (Array.isArray(src)) a.pos.fromArray(src);
-      else if (typeof src.x === 'number') a.pos.set(src.x, (src.y ?? 0) + 2.3, src.z);
+      if (Array.isArray(src)) { a.src = null; a.pos.fromArray(src); }
+      else if (typeof src.x === 'number') a.src = src;
     }
-    a.level = level;
-    a.ttl = TUNE.alertTTL;
-    if (level <= 0) a.ttl = 0;
+
+    if (pres.state !== a.state) this._applyAlertState(a, pres);
+  }
+
+  /** Paint one badge from its presentation entry. Called only when the state actually changes. */
+  _applyAlertState(a, pres) {
+    a.state = pres.state;
+    a.live = pres.live;
+    a.target = pres.ring;
+    a.fade = pres.live ? 0 : TUNE.alertFade;
+
+    a.glyph.textContent = pres.glyph;
+    a.glyph.dataset.wide = pres.glyph.length > 1 ? '1' : '0';
+    a.lbl.textContent = pres.label;
+    a.fill.style.stroke = pres.colour;
+    a.el.style.setProperty('--alert-col', pres.colour);
+    a.el.dataset.state = pres.state;
+    a.el.classList.toggle('full', pres.state === 'chase');
+    a.el.classList.toggle('down', !pres.live && pres.state !== 'patrol');
+
+    if (pres.state === 'chase') {
+      this._punch(a.el.firstElementChild, 1.6, 300);
+      this._shake = Math.min(1, this._shake + 0.25);
+    }
+    this._refreshThreat();
+  }
+
+  /** Aggregate every tracked guard into the one-glance exposure readout. */
+  _refreshThreat() {
+    if (!this.el?.threat) return;
+    const states = [];
+    for (const [, a] of this._alerts) if (a.state) states.push(a.state);
+    const t = threatFor(states);
+    if (t.key === this._threatKey && t.count === this._threatCount) return;
+    const rose = THREAT_RANK[t.key] > (THREAT_RANK[this._threatKey] ?? -1);
+    this._threatKey = t.key;
+    this._threatCount = t.count;
+
+    this.el.threat.dataset.state = t.key;
+    this.el.threat.style.setProperty('--threat-col', t.colour);
+    this.el.threatLbl.textContent = t.label;
+    this.el.threatNum.textContent = t.count > 1 ? `×${t.count}` : '';
+    if (rose) this._punch(this.el.threat, 1.22, 300);
   }
 
   /* --------------------------------------------------------------- fx */
