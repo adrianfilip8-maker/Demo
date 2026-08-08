@@ -148,7 +148,16 @@ for (const clip of gltf.animations) {
       const q = pw.clone().invert().multiply(w);
       const e = new THREE.Euler().setFromQuaternion(q, 'XYZ');
       const d = [e.x * DEG, e.y * DEG, e.z * DEG].map((v) => +v.toFixed(1));
-      if (d.some((v) => Math.abs(v) > 0.05)) P[b] = d;
+      /* Emit EVERY sampled bone at EVERY key. The old rule — `if (d.some(v => |v| > 0.05))` —
+         dropped a bone from a key whenever it happened to sit near identity there, and
+         `Clips.js`'s `trackFromKeys` *skips* absent keys rather than treating them as identity
+         (`if (v === undefined) continue`). So a limb passing through neutral lost precisely the key
+         at the crossing, and the track slerped straight across it. That convention is right for the
+         hand-authored clips, where "a bone a key does not mention holds its previous value" is how
+         a sparse pose is written; it is wrong for a dense machine sample, where an absent key means
+         "I measured identity here", not "carry on". Bones that never move in a clip are dropped
+         wholesale below instead, which is both correct and more compact than the old rule. */
+      P[b] = d;
       /* Report the QUATERNION angle, not the largest Euler component. Euler XYZ near gimbal
          produces huge individual components for a modest rotation — `idle_side` reported a 180 deg
          hips on a rotation that is nothing of the sort — so a max-component metric cannot tell a
@@ -166,6 +175,43 @@ for (const clip of gltf.animations) {
     keys.push({ t: +t.toFixed(3), e: 'smooth', P, pos: [+off.x.toFixed(3), +off.y.toFixed(3), +off.z.toFixed(3)] });
   }
   act.stop();
+
+  /* ---- drop bones that never move, and audit what the OLD sparse rule would have cost ----
+     The audit is the point: "always emit" is only worth the bytes if dropping near-identity keys
+     actually damaged the motion, and it is not obvious that it did. A bone crossing neutral
+     symmetrically loses nothing — slerp between +30 and -30 passes through identity at the
+     midpoint anyway — so the cost has to be measured, not assumed. For every key the old rule
+     would have dropped, this slerps that bone's surviving neighbours to the dropped key's time
+     and reports how far the result lands from what was actually measured there. */
+  const moves = new Set();
+  for (const b of ORDER) {
+    let mx = 0;
+    for (const k of keys) { const d = k.P[b]; if (d) mx = Math.max(mx, Math.abs(d[0]), Math.abs(d[1]), Math.abs(d[2])); }
+    if (mx > 0.05) moves.add(b);
+  }
+  const qOf = (d) => new THREE.Quaternion().setFromEuler(new THREE.Euler(d[0] / DEG, d[1] / DEG, d[2] / DEG, 'XYZ'));
+  let auditWorst = 0, auditBone = '', dropped = 0;
+  for (const b of moves) {
+    const kept = keys.filter((k) => k.P[b].some((v) => Math.abs(v) > 0.05));   // the OLD rule
+    for (let i = 0; i < keys.length; i++) {
+      const k = keys[i];
+      if (k.P[b].some((v) => Math.abs(v) > 0.05)) continue;                     // survived the old rule
+      dropped++;
+      /* neighbours that the old rule kept, straddling this time */
+      let lo = null, hi = null;
+      for (const c of kept) { if (c.t <= k.t) lo = c; else { hi = c; break; } }
+      if (!lo && !hi) continue;
+      const qa = qOf((lo || hi).P[b]), qb = qOf((hi || lo).P[b]);
+      const f = (lo && hi && hi.t > lo.t) ? (k.t - lo.t) / (hi.t - lo.t) : 0;
+      const got = qa.clone().slerp(qb, f);
+      const err = 2 * Math.acos(Math.min(1, Math.abs(got.dot(qOf(k.P[b]))))) * DEG;
+      if (err > auditWorst) { auditWorst = err; auditBone = b; }
+    }
+  }
+  for (const k of keys) for (const b of ORDER) if (!moves.has(b)) delete k.P[b];
+  report.sparseAudit = report.sparseAudit || [];
+  report.sparseAudit.push({ name: clip.name, dropped, worst: auditWorst, bone: auditBone, bones: moves.size });
+
   report.gimbalAny = (report.gimbalAny || new Set());
   for (const b of gimbal) report.gimbalAny.add(b);
   out[clip.name] = { dur: +clip.duration.toFixed(3), loop: /idle|walk|run|hang_loose/.test(clip.name), keys };
@@ -189,6 +235,19 @@ if (walk) {
   console.log(`gimbal-artefact bones (Euler >100deg while true rotation <100deg): ` +
     (allG.size ? [...allG].join(', ') : 'none'));
 }
+/* What the old near-identity drop rule cost, per clip. Reported rather than asserted: if these
+   numbers were all ~0 the rule was harmless and this change is only tidiness. */
+if (report.sparseAudit) {
+  const rows = report.sparseAudit.slice().sort((a, b) => b.worst - a.worst);
+  console.log('\nsparse-key audit — error the OLD "drop near-identity keys" rule introduced:');
+  console.log('clip                bones  dropped keys   worst deviation');
+  for (const r of rows) {
+    console.log(`${r.name.padEnd(19)} ${String(r.bones).padStart(3)}   ${String(r.dropped).padStart(8)}       ${r.worst.toFixed(2)}deg  ${r.bone}`);
+  }
+  const worst = rows[0];
+  console.log(`\nworst across all clips: ${worst.worst.toFixed(2)}deg on ${worst.bone} in ${worst.name}`);
+}
+
 console.log('\nBONES WITH NO SOURCE, which stay procedural: tailA..tailD, and the cane.');
 
 const wi = process.argv.indexOf('--write');

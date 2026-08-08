@@ -16437,3 +16437,74 @@ the shadow band that far is an art-direction change, not a free win, and is not 
 **Not captured.** The premise changed shape enough that spending the lock on `temple` would have been
 spending it on the wrong shot, and the guard test that replaces the hand-checking is free and
 permanent. The A/B is still worth running — on `combat`, with the calibration arm — and is task #25.
+
+## §212 — task #26's blocker did not exist: Euler XYZ is a fine interchange, and the runtime already slerps
+
+Task #23/#26 recorded the Mixamo retarget as "RETARGET DONE, WIRING BLOCKED — Euler XYZ is the wrong
+interchange; needs a quaternion track path." Both halves of that are wrong, and the second half was
+the expensive one because it made the work look large.
+
+**`sampleInto` already interpolates quaternions.** `Clips.js` compiles every authored Euler pose into
+a `Float32Array` of quaternions once, at module load, in `quatTrack`; the runtime path is
+`_qa.slerp(_qb, _s.f)` then `pose.addQuat()`. **Nothing in this engine has ever lerped Euler
+components.** Euler XYZ degrees is the *authoring* format and only that — chosen because a human
+writes `[-30, 14, -78]` and cannot write a quaternion. There was no quaternion track path to add
+because there was no Euler track path to replace.
+
+**And the Euler round trip is not lossy at the emitter's precision.** `mixamo2clips.mjs` writes
+`quaternion → Euler XYZ → toFixed(1) → quaternion`. Measured over 200,000 uniformly random rotations:
+
+| arm | mean error | worst |
+|---|---|---|
+| uniform random rotations | 0.0473° | **0.107°** (at pitch 84.3°) |
+| within 0.5° of gimbal lock | 0.0450° | **0.111°** |
+| CALIBRATION — wrong Euler order on purpose | — | **82.76°** |
+
+Gimbal proximity does not degrade it at all, which is the whole question, and the calibration arm
+confirms the metric could have detected a real failure. 0.1° of quantisation is two orders of
+magnitude below the ~10° features of any of these clips.
+
+**Where the false belief came from.** A *reporting* artefact, already diagnosed and already fixed, in
+the tool's own sanity output: a max-Euler-component metric called a modest rotation a "180° hips" on
+`idle_side`, because near gimbal a small rotation produces huge individual Euler components. The tool
+now reports quaternion angle and flags the artefact separately, and its own comment says so. I fixed
+the instrument, wrote down that the instrument had been broken — and then carried the instrument's
+conclusion forward anyway, into a task description, as a property of the data. **A retracted
+measurement's conclusion has to be retracted too, not just its method.**
+
+### §212.1 — the emitter really was dropping keys, and the damage was in two clips
+
+Not everything here was imaginary. `mixamo2clips.mjs` omitted a bone from a key whenever all three
+of its Euler components fell under 0.05°, and `Clips.js`'s `trackFromKeys` **skips** absent keys
+(`if (v === undefined) continue`) rather than reading them as identity. That convention is right for
+the hand-authored clips — "a bone a key does not mention holds its previous value" is how a sparse
+pose is written — and wrong for a dense machine sample, where an absent key means "I measured
+identity here". A limb passing through neutral lost exactly the key at the crossing.
+
+Measured before changing it, via a `sparse-key audit` the tool now prints on every run:
+
+| clip | keys dropped | worst deviation |
+|---|---|---|
+| `hang_crawl_left` | 24 | **11.59°** on `toeR` |
+| `hang_crawl_right` | 19 | 2.01° on `toeR` |
+| `airtime_01` | 29 | 0.10° |
+| the other 13 clips | 0 | 0.00° |
+
+**Thirteen of sixteen clips lost nothing**, because a symmetric crossing survives the drop — slerp
+between +30° and −30° passes through identity at the midpoint anyway. The mechanism sounded worse
+than it measured, and saying so is the point of measuring. But 11.59° on a toe in a crawl is real:
+the toe is the contact bone in that clip. The emitter now writes every sampled bone at every key and
+drops only bones that never move in the clip, which is both correct and more compact than the old
+rule.
+
+`src/player/MixamoClips.js` (395 KB, generated, do not hand-edit) now exists, and
+`tests/mixamo.test.mjs` applies the same structural guards to it that `tests/rig.test.mjs` applies to
+the 52 hand-authored clips — plus a density guard that is the regression test for the bug above, and
+a "no clip is a stack of identical poses" guard that would catch the retarget silently emitting bind
+pose, which is what both earlier failures of this tool looked like. `fall_pose_01`/`fall_pose_02` are
+named as legitimately static: they are Mixamo *pose* assets, 0.07 s and two keys from one source
+frame, so zero motion is what they are. Naming them beats loosening the threshold, which would have
+blinded the guard to a genuinely dead clip.
+
+**Still not done:** wiring these into `Animation.js` and blind-comparing them against the procedural
+clips. That is now ordinary work with no blocker in front of it.
