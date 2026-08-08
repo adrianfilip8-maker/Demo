@@ -4,9 +4,24 @@ import * as THREE from 'three';
 import { SlyModel, RIG3, TUNE } from '../src/player/SlyModel3.js';
 
 /**
- * Structural guards on the shipped character's geometry.
+ * Structural guards on `SlyModel3`'s geometry — which is NOT the mesh that ships.
  *
- * `SlyModel3.js` builds the whole character procedurally — lofts, tubes, blobs, a splined tail —
+ * Stated first because this file said "the shipped character" for a day and it was wrong (§216).
+ * `src/main.js:50` maps the default `?char=` token to **`SlyModelDLRig`** — the supplied FBX on its
+ * artist skin weights — flipped there on 2026-08-07 by direct owner instruction, *after* §196 had
+ * made `model3` the default. `SlyModel3` is reachable as `?char=model3`.
+ *
+ * What this file therefore does and does not cover:
+ *   · COVERED, and shipped: `RIG3` — the skeleton. `SlyModelDLRig.js:39` imports it from this same
+ *     module and binds to it, so the bone table, hierarchy and bind positions guarded here are the
+ *     ones the shipped character actually uses.
+ *   · COVERED, not shipped: `SlyModel3`'s mesh — a real code path, the Sly-3 reference rebuild, and
+ *     the thing every judgement in §196 was about.
+ *   · NOT COVERED: the shipped mesh. `SlyModelDLRig` resolves its FBX through `import.meta.glob`
+ *     and cannot be loaded by plain Node at all, which is exactly why it escaped every guard here.
+ *     It needs the browser harness.
+ *
+ * `SlyModel3.js` builds its character procedurally — lofts, tubes, blobs, a splined tail —
  * and `init()` touches no DOM and no renderer, so the entire mesh builds in plain Node in
  * milliseconds: 2,801 vertices, 4,782 triangles, with normals and skin attributes. That surface was
  * previously reachable only through a browser boot holding the capture lock, which is why none of

@@ -124,7 +124,10 @@ test('clips: the set is non-empty and every clip has a positive duration', () =>
  *
  * `pupilL` / `pupilR` are real bones on the LEGACY model: `SlyModel.js` mints them dynamically for
  * SPEC-startle-pupils, deliberately outside its static table because "their bind position IS the
- * eye's pupil centre". `RIG3` — the shipped rebuild — has 31 bones and none of them. So the pupil
+ * eye's pupil centre". `RIG3` — the skeleton the SHIPPED character binds to, whatever mesh is on
+ * it: `SlyModelDLRig.js:39` imports RIG3 from `SlyModel3.js` and builds its bones from
+ * `RIG3.SKELETON` (see §216 — `SlyModel3`'s *mesh* is not what ships, but its *skeleton* is) — has
+ * 31 bones and none of them is a pupil. So the pupil
  * dilation authored into the two damage reactions stopped working the day the rebuild became the
  * default character, and nothing noticed, because it is two frames of two clips.
  *

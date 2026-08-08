@@ -16518,10 +16518,10 @@ largest single finding in the project's history and it is a spelling mistake.
 
 | call site | what it is |
 |---|---|
-| **`src/player/SlyModel3.js:701`** | **the SHIPPED player character** (default since §196 / task #18) |
+| `src/player/SlyModel3.js:701` | the Sly-3 procedural rebuild (`?char=model3`) — **not** what ships; see §216 |
 | `src/world/KayKit.js:181` | every KayKit prop — all 36 of them |
 | `src/player/SlyModelDL.js:445` | the `?char=dl` import |
-| `src/player/SlyModelDLRig.js:352` | the `?char=dlrig` import |
+| **`src/player/SlyModelDLRig.js:352`** | **the SHIPPED player character** — the default `?char=` token (§216) |
 | `src/player/SlyModelDLRaw.js:160` | the `?char=dlraw` import |
 
 Every one is written in the same shape:
@@ -16738,3 +16738,72 @@ slightly worse") is moot.** The one genuine performance problem in the dataset i
 mentions: **load time** — `textures: prewarm took 18.0 s at size 1024`, and first-frame ms of 12,746
 / 17,549 / **29,035**. That is the largest number in the data by three orders of magnitude and is
 unaddressed. Recorded as its own task rather than fixed here.
+
+## §216 — `SlyModel3` is not the shipped character, and I corrected a sub-agent in the wrong direction
+
+Found by the character sub-agent, verified here, and it is my error to own.
+
+`src/main.js:50`:
+
+```js
+'': ['./player/SlyModelDLRig.js', 'SlyModel'],      // supplied model, artist weights — SHIPPED
+```
+
+The default `?char=` token maps to **`SlyModelDLRig`** — the supplied FBX on its artist skin weights.
+§196 (task #18) flipped the default to `model3`; a **second flip on 2026-08-07**, on direct owner
+instruction — *"use this new character model and proceed"* — moved it to `dlrig`, and
+`RESULT-charab-dlrig.md`, written this morning, records *"the default stays on `dlrig`."* Task #18's
+title has been stale since.
+
+**The ink sub-agent said "`SlyModelDLRig.js` — the shipped protagonist" and I overrode it**, writing
+`SlyModel3.js:701` into §213's table as "the SHIPPED player character (default since §196)". It was
+right and I was not. I checked which model §196 shipped and did not check whether anything had
+changed since — the ledger entry was true when written and had been superseded by an owner
+instruction the following day. **A record of a decision is not a reading of the current state.**
+
+### What survives unchanged
+
+**§213's substance is untouched.** `SlyModelDLRig.js:352` is *also* on the `shading?.make` list, so
+the shipped character still falls through to `MeshStandardMaterial` and has still never rendered on
+the cel material. All that changes is which file the fix must be verified against. Table corrected.
+
+**§211.3's pupil finding is untouched.** `SlyModelDLRig.js:39` imports `RIG3` from `SlyModel3.js` and
+builds its skeleton from `RIG3.SKELETON`, so **RIG3 is the shipped skeleton whatever mesh rides on
+it** — and it has no `pupilL`/`pupilR`. `SlyModelDLRig` itself contains zero references to either.
+The startle-pupil dilation is still dead on the shipped character.
+
+### What was overclaimed, and is now scoped
+
+`tests/geometry.test.mjs` opened "Structural guards on the shipped character's geometry." It guards
+`SlyModel3`'s mesh. Corrected in place, with the split stated explicitly: the **skeleton** it guards
+is shipped, the **mesh** is not, and the shipped mesh is not coverable here at all because
+`SlyModelDLRig` resolves its FBX through `import.meta.glob` and cannot load in plain Node. That is
+precisely why it escaped every guard: the one character path that ships is the one path the offline
+harness cannot reach.
+
+### Consequences for the three character defects
+
+Critic pass 7's #4 (tail), #5 (cane not held) and #6 (mitred hook) were measured against
+**`SlyModelDLRig` + the FBX's `staff` submesh**, not against `SlyModel3`. The sub-agent's rebuild of
+`SlyModel3` is real, measured and tested (6/6 tests that fail on the pre-change tree), but it is a
+rebuild of a model that is one token away from shipping rather than the one in the frames the critic
+scored. Its measurements on the *shipped* path, for whoever takes it:
+
+- **Grip:** `_relaxGloves` builds curl matrices for finger bones only, and the cane is weighted to
+  `staff`. So the curl moves 6,070 vertices by up to 116 mm and moves the staff **0 mm** — the
+  flexion fix *pulled the fingers off the shaft*. Right-hand finger vertices vs the nearest staff
+  vertex: median **136 mm**, only 1.1% within 10 mm, and angular coverage **5 of 12 sectors** (3/12
+  with the curl disabled — the asset's T-pose never gripped it either).
+- **Hook:** the mitres are baked into the FBX `staff` (774 vertices, all weighted to the `staff`
+  bone); no parameter smooths them. `src/player/Cane.js` already builds an open 192° crook and is
+  currently instantiated only by the legacy model.
+- **Tail bands:** the shipped tail's texture *does* carry ~6 bands over V 0.114–1.504 and routes
+  correctly (group 3 → `sly_tail.png`, `wrapT = Repeat`). So "zero ring banding" is **not** a mapping
+  fault — the albedo is there and the render loses it. §213 is the leading candidate.
+
+### The decision this forces
+
+Whether `model3` or `dlrig` ships is the owner's call, not mine: the current default was set by
+explicit instruction. `RESULT-charab-dlrig` scored it 8–6. The rebuild makes `model3` materially
+better on exactly the axes the critic named, and the `dlrig` fixes above are real work on a different
+file. **Not applied. Asked, not assumed.**
