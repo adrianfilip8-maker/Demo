@@ -66,3 +66,66 @@ root CC0 file, which is weak evidence for shipping.
 **Consequences for planning:** starfield and dunes should stay **procedural** — cheaper, tiles
 perfectly, and sidesteps the licensing gap that has no clean answer here. Character assets must be
 authored or supplied. Audio should not be planned around this catalogue.
+
+---
+
+## Sand and sandstone, re-probed 2026-08-08 — with sizes this time
+
+Asked specifically for sand/sandstone packs. The reachable surface is unchanged: every dedicated
+texture host still fails to connect (`3dtextures.me`, `texturecan.com`, `cc0-textures.com`,
+`ambientcg.com`, `polyhaven.com` all return **000**), so anything usable has to live in a GitHub
+repo or an npm package. A web search surfaces plenty of good CC0 sand and sandstone — *and every
+single hit is on a blocked host*, which is worth stating plainly rather than listing as if it were
+available.
+
+### What is actually reachable, measured rather than estimated
+
+**`Null-MC/Oversized`** — the derived-CC0 chain, each material a full PBR set (`color`, `normal`,
+`height`, `occlusion`, `smooth`, sometimes `porosity`), with `source.txt` naming its upstream:
+
+| material | total | upstream (all CC0-only platforms) |
+|---|---|---|
+| `chiseled_sandstone` | **3.9 MB** | 3dtextures.me *Wall Stone Hieroglyphs 001* |
+| `chiseled_red_sandstone` | 5.0 MB | — |
+| `smooth_sandstone` | 6.8 MB | texturehaven *medieval_blocks_05* |
+| `red_sand` | 42.3 MB | — |
+| `sand` | **46.3 MB** | cc0textures *Ground033* |
+| `sandstone` | **57.8 MB** | ambientCG *Rock029* |
+
+The three big ones are non-starters: 42–58 MB **per material** for a build that has to be
+self-contained. `sand`'s colour map alone is 22 MB. Only the two chiselled sets and
+`smooth_sandstone` are even in the conversation.
+
+**`BabylonJS/Assets`** — `sand.jpg` 894² (448 KB), `rockyGround_{basecolor,normal}` 1024²
+(1.8/2.4 MB). Repo README: **CC BY 4.0**, attribution required.
+
+### Recommendation: don't adopt any of it, and the reason is style rather than licensing
+
+`chiseled_sandstone` is the one genuinely tempting file — seamless carved hieroglyphs on warm
+sandstone, and exactly the subject this game needs. Two things sink it:
+
+1. **It is 1024² but not 1024² of content.** Its `mat.yml` declares `ctm: of-repeat, count-x: 2,
+   count-y: 2`, so the image is a 2×2 grid and the unique content is ~512². That is not a
+   resolution upgrade over what `Textures.js` already generates.
+2. **It is photoreal, and this game is not.** The renderer bands luminance into 3 hard steps and
+   draws ink outlines. Dropping a photographic carved-stone surface into that fights the shader —
+   and §7.3's whole direction has been *more* stylisation, not less.
+
+**And the procedural system it would replace is better, not merely cheaper.** `src/textures/
+Hieroglyphs.js` is 1,105 lines of actual Gardiner signs drawn from their real silhouettes, each
+carrying the conventional pigment Egyptian painters used (red men, yellow women, blue water, green
+plants), laid out in **quadrats** the way a scribe grouped them rather than evenly spaced like a
+font — and rendered in three passes (`cut` / `line` / `paint`) that feed sunk-relief depth and
+paint-remnant colour separately. A photograph of one wall cannot do any of that, and it cannot be
+re-laid-out per surface.
+
+The same argument retires the sand textures independently: TERRAIN drives sand with UV = metres at
+repeat 1/9.6, so a single 894² photo would tile visibly across open dunes. The original catalogue
+already concluded dunes should stay procedural; the sizes above are the quantitative version of
+that.
+
+**Footnote on the supplied font.** `NotoSansEgyptianHieroglyphs-Regular.ttf` (SIL OFL, 1,071 real
+glyphs) is installed and currently unused — no `.ttf` reference exists anywhere in `src/`. That is
+not an oversight to fix by wiring it up: `Hieroglyphs.js` already draws real signs as vectors *with
+scribal layout and conventional colour*, which a font's glyph outlines alone would not provide. The
+font remains the right fallback if a UI surface ever needs literal Unicode hieroglyph text.
