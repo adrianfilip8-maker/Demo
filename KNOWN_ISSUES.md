@@ -18190,12 +18190,23 @@ head-to-head and lose three.
 **The decisive number is the tail column.** `godot2rig.mjs`'s own header says Mixamo's fatal gap was
 that it "does not have a tail" and that this rig does — so the expected win was tail motion. The
 tracks are there: all four tail bones are keyed in all five clips. **Every one of them is constant.**
-Godot deletes the tail and runs physics, so its animator never had a tail to key. The one advantage
-this import was supposed to hold over the last one does not exist, and it took measuring to find out
-— the same shape of finding as §222, arrived at from the opposite direction.
+Read raw off the samplers rather than inferred from the metric, because this is the claim the whole
+verdict turns on:
 
-The calibration is inside the table: the identical metric reads Σ1172° across `Run`'s body and 0° on
-its tail, so a zero there is the data, not a dead instrument.
+```
+Run (0.63 s)          keys   max component span      Walk (2.50 s)        keys   span
+  Tail.008               2   0.00e+0                   Tail.008              2   0.00e+0
+  Tail.006               2   0.00e+0                   Tail.006              2   0.00e+0
+  Tail.004               2   0.00e+0                   Tail.004              2   0.00e+0
+  Tail.002               2   0.00e+0                   Tail.002              2   0.00e+0
+  thigh.L               16   1.97e+0   <- control       thigh.L             61   6.86e-1
+```
+
+Two keys and a span of exactly zero is not a subtle tail, it is a bind-pose hold. `thigh.L` in the
+same clip and the same units is the positive control, and it fires at 16 and 61 keys. Godot deletes
+the tail on import and runs physics, so its animator never had a tail to key. The one advantage this
+import was supposed to hold over the last one does not exist, and it took measuring to find out —
+the same shape of finding as §222, arrived at from the opposite direction.
 
 ### The hands close; the cane is not gripped, and that is stated rather than implied
 
@@ -18267,6 +18278,19 @@ from `bone.matrixWorld`, which is still identity on freshly created bones, so th
 garbage. `bind(skeleton)` with no matrix recomputes them — but two meshes share this skeleton and only
 one may own that call, so the update and the recompute are done explicitly and both bind against the
 same identity frame.
+
+### Reproducing all of it
+
+```
+node tools/godot2rig.mjs --retarget
+```
+
+Prints the coverage figures, the distortion table for **both** models, the post-retarget heights and
+the five clips' tail spans. The calibration arm is built in and **throws** if the incumbent's mean
+joint shear comes back under 15 % — an instrument that reports "no distortion" for a rig we know has
+to be conformed onto RIG3 is measuring nothing, and §222's third validation arm failed for exactly
+the want of that. It reads the joint frame off the model's own `retargetFrame()` rather than
+rebuilding `BONE_MAP`, so the tool cannot drift into a second account of what it audits (§212).
 
 ### Unresolved
 
@@ -18465,11 +18489,18 @@ since it changed; whether amber reads as distinct from cream in a moonlit frame 
 question and is untouched by every number above. `PREREG-cone1` still stands unwithdrawn per
 §203 and the heading A/B still has not re-run.
 
+**Also closed, and it is the reason any of the above was findable:** `src/ai/Guard.test.mjs` was
+never run by `npm test`. The script is `node --test "tests/*.test.mjs"`; that file is neither in
+`tests/` nor written against `node:test` — it predates the suite and carries its own harness. 45
+tests over the shipped module, unreachable, and two of their expectations had gone stale without
+anything noticing. `tests/guardsuite.test.mjs` now shells out to it: ~4 s, no `package.json`
+change, and the day it goes red `npm test` goes red. Its two arms were calibrated against
+synthetic children first — a child reporting `3 passed, 1 failed` fails the wrapper, and so does
+one reporting `0 passed, 0 failed`, because a wrapper that certifies 45 tests it never read is
+worse than none.
+
 **Still open:**
 
-- **`src/ai/Guard.test.mjs` is not run by `npm test`.** The script is `node --test
-  "tests/*.test.mjs"`; that file is neither in `tests/` nor written against `node:test`. It had
-  two stale expectations when the routes moved and nothing noticed. 45 pass by hand today.
 - `terrace-foot` is unguarded, and the `obelisk-base` probe point is invalid.
 - The combat-recipient re-seal (§211.3's orphaned `pupilL`/`pupilR` on RIG3) is **untouched** —
   it is a change to the shipped character's skinning and belongs to whoever owns that model.
