@@ -18857,3 +18857,57 @@ blocked; nothing in this pass needed a frame, so the budget of one run was spent
    velocity silently becomes (0,1,0). Hit while writing `_emitPlayerCont`; avoided with a
    dedicated `_inh` and commented at the declaration, but the sharp edge is still there for
    the next caller.
+
+## §234 — a capture that waits longer than its parent task's lifetime dies in the queue, and loses its place
+
+The DECALS agent's `decalsign.mjs` was killed at **3591 s (~60 min)** having produced **zero frames**.
+It did not crash and it did not fail: it was still *queued*, and the tool-managed background task it
+was launched from has a lifetime shorter than the wait. The instrument was never at fault.
+
+The cost is not the hour. It is that **a run which dies while waiting loses its FIFO ticket**, so the
+relaunch goes to the *back* of the queue. `tools/lock.mjs` was deliberately built as a FIFO precisely
+to stop patient waiters being starved by new arrivals — its own header says so — and this failure
+mode defeats that guarantee from underneath, by making the patient waiter into the new arrival. The
+decals agent went from 1st to 4th for waiting quietly and correctly.
+
+**The fix, verified working:** launch the capture re-parented to init, so no task lifetime can reap it.
+
+```
+setsid nohup node <script> … > <log> 2>&1 & disown
+ps -o ppid= -p <pid>      # must print 1
+```
+
+**Audit at the time of writing** — four of five queued or holding runs were already safe, one was not:
+
+```
+6204  inkw       ppid 1   holding, 1:07:56
+11265 celband    ppid 1   queued 54:04
+4560  hilite1    ppid 1   queued 46:20
+27553 godotshot  ppid 27551  queued 34:27   <- AT RISK, warned
+23877 decalsign  ppid 1   relaunched
+```
+
+`ppid` is the whole diagnostic and it costs one command. **Check it on any long-running background
+work before assuming a quiet process is a healthy one** — a queued run and a dead run look identical
+from outside, which is what made this cost an hour before anyone noticed.
+
+Two smaller corrections that came out of the same investigation:
+
+- **The capture cost is ~75 s per ARM, not per frame.** Reading `inkw`'s 21:38:08–21:46:50 window as
+  seven arms in 522 s gives 75 s each. Runs with short arm lists are far cheaper than the queue
+  suggests; it is the *waiting* that is expensive, not the capturing.
+- **`tail -F`, not `tail -f`**, on any log a relaunch may truncate.
+
+### The throughput problem this exposed, stated plainly
+
+Five capture runs contending, one holder at over an hour, and the queue will not drain for hours
+more. Rendering here is CPU-bound software rasterisation with no GPU, so parallelism is not
+available — the lock exists because concurrent captures thrash and finish *slower* in aggregate.
+That is the right design and it is not the problem.
+
+The problem is arm-count discipline. A four-shot, eight-arm sweep at 1280×720 is ~46 minutes of
+exclusive lock, and it blocks four other agents' decisions to buy one agent's result. §233 is the
+lever nobody has pulled: a same-boot single-lever pair is bit-deterministic — far field **0.0000 ±
+0.0000 over 779,836 px** — so an A/B needs *one* boot with a lever toggled, not two boots compared,
+and needs no drift allowance at all. Agents should be asked what their arm list buys before they
+queue it, not after.
