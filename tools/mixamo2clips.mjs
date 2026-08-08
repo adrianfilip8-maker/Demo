@@ -117,6 +117,20 @@ const report = [];
 
 for (const clip of gltf.animations) {
   const act = mixer.clipAction(clip);
+  /* `mixer.setTime(duration)` WRAPS to frame 0 under three's default LoopRepeat, so the last key
+     this sampler wrote was a byte-identical copy of the first. Verified on the emitted module:
+     16 of 16 clips, worst difference 0.00 deg. The irony is sharp — §211.2 added a loop-seam test
+     for the hand-authored clips, and these clips passed any such check *by construction*, because
+     their seam was closed by a bug rather than by the animation.
+     Measured impact is smaller than the mechanism sounds: 14 of 16 clips move <= 0.05 deg, because
+     their true final frame genuinely coincides with frame 0. The real one is `hang_crawl_left` at
+     11.91 deg on `toeR` — the same clip and the same contact bone the sparse-key bug hit (§212.1).
+     Trap worth naming: `clampWhenFinished` sets `paused = true` once a sample lands on
+     t == duration, and a paused action ignores every later `setTime`. Safe here because this is a
+     single ascending pass whose last sample IS t == duration; fatal if anything re-samples after. */
+  act.setLoop(THREE.LoopOnce, 1);
+  act.clampWhenFinished = true;
+  act.reset();
   act.play();
   const n = Math.max(2, Math.round(clip.duration * FPS) + 1);
   const keys = [];

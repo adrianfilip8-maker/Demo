@@ -1,0 +1,22 @@
+{
+  "dHi": {
+    "n": 0,
+    "pct": 0,
+    "mx": 0
+  },
+  "dSoft": {
+    "n": 0,
+    "pct": 0,
+    "mx": 0
+  },
+  "dInk": {
+    "n": 0,
+    "pct": 0,
+    "mx": 0
+  },
+  "softInfo": {
+    "cacheSize": 38,
+    "withSoft": 38,
+    "sample": 0.3
+  }
+}
