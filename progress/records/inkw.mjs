@@ -284,6 +284,33 @@ const POKES = {
     window.__INKW_CALIB = n;
   },
   fxaa: () => { window.__ENGINE.get('postfx').setEnabled('fxaa', !window.__INKW_FXAA0); },
+
+  /* THE BEFORE ARM, in the same boot as the after arm.
+   *
+   * Restores the pre-fix renderer exactly, from values READ BACK OFF THE LIVE UNIFORMS rather than
+   * from arithmetic re-implemented here — so this arm cannot disagree with the shipped code about
+   * what the shipped code does:
+   *
+   *   hull      uThickness := 2.5 at every resolution. That IS the old model: `INK_PX` was a
+   *             device-pixel constant and `tests/ink.test.mjs` locked every call site to it.
+   *   crease    the applied radius is `edgeThickness * inkResScale(rows)`, and `inkResScale(rows)`
+   *             is exactly `appliedHullPx / 2.5` — so dividing `tune.edgeThickness` by that ratio
+   *             returns the applied radius to its old 1.5 px without this file knowing the formula.
+   *   planarity `edgePlanar[2] = 0` collapses the gate's mix to 1.0, which PostFX documents as
+   *             bit-exactly the ungated behaviour.
+   *
+   * Why this beats a cross-commit before/after: same boot, same clock, same staging, same
+   * SwiftShader, and a null arm that proves the pair differ by zero when nothing is poked. §193's
+   * cross-boot floor does not apply to a difference taken inside one boot.
+   *
+   * The readback is recorded so an arm that silently collapsed is visible rather than inferred
+   * (§249's discipline: prove the lever reached the shader, never assume it).
+   */
+  legacy: () => { window.__INKW_LEGACY_ON(); },
+  legacy_nohull: () => {
+    window.__INKW_LEGACY_ON();
+    for (const m of window.__ENGINE.get('shading')._inkCache.values()) m.visible = false;
+  },
 };
 
 const RESTORE = {
@@ -299,6 +326,45 @@ const RESTORE = {
     }
   },
   fxaa: () => { window.__ENGINE.get('postfx').setEnabled('fxaa', window.__INKW_FXAA0); },
+  legacy: () => { window.__INKW_LEGACY_OFF(); },
+  legacy_nohull: () => {
+    window.__INKW_LEGACY_OFF();
+    for (const m of window.__ENGINE.get('shading')._inkCache.values()) m.visible = true;
+  },
+};
+
+/* Installed once per boot; the two legacy arms call it. Kept out of POKES so the save/restore
+   state lives in one place and cannot be half-applied by one arm and half-undone by another. */
+const LEGACY_SETUP = () => {
+  const sh = window.__ENGINE.get('shading');
+  const p = window.__ENGINE.get('postfx');
+  window.__INKW_LEGACY_ON = () => {
+    const saved = [];
+    let scale = 1;
+    for (const m of sh._inkCache.values()) {
+      const applied = m.uniforms.uThickness.value;
+      scale = applied / 2.5;                       // == inkResScale(rows), read back not recomputed
+      saved.push([m, applied]);
+      m.uniforms.uThickness.value = 2.5;           // the old model: INK_PX at every resolution
+    }
+    window.__INKW_SAVED = saved;
+    window.__INKW_ET = p.tune.edgeThickness;
+    window.__INKW_EP = p.tune.edgePlanar.slice();
+    p.tune.edgeThickness = window.__INKW_ET / (scale || 1);
+    p.tune.edgePlanar[2] = 0;
+    /* Readback, so a collapsed arm is visible. `applied` is what the shader will receive. */
+    window.__INKW_READBACK = {
+      resScale: +scale.toFixed(4),
+      hullPxNow: sh._inkCache.size ? [...sh._inkCache.values()][0].uniforms.uThickness.value : null,
+      creaseAppliedNow: +(p.tune.edgeThickness * scale).toFixed(4),
+      planarStrength: p.tune.edgePlanar[2],
+    };
+  };
+  window.__INKW_LEGACY_OFF = () => {
+    for (const [m, v] of (window.__INKW_SAVED || [])) m.uniforms.uThickness.value = v;
+    if (window.__INKW_ET != null) p.tune.edgeThickness = window.__INKW_ET;
+    if (window.__INKW_EP) p.tune.edgePlanar = window.__INKW_EP.slice();
+  };
 };
 
 async function armCapture(page, arm) {
@@ -325,7 +391,7 @@ async function armCapture(page, arm) {
 
 /* ---------------------------------------------------------------------- run --- */
 
-const ARMS = ['base', 'nohull', 'noink', 'noao', 'nochar', 'hull2x', 'fxaa', 'null'];
+const ARMS = ['base', 'nohull', 'noink', 'noao', 'nochar', 'hull2x', 'legacy', 'legacy_nohull', 'null'];
 
 async function main() {
   if (!existsSync(OUT)) mkdirSync(OUT, { recursive: true });
@@ -372,9 +438,10 @@ async function main() {
   let renderer = '?', warnings = 0;
   for (const res of RES) {
     const r = await withGame({ width: res.w, height: res.h, quality: 'high', verbose: false }, async ({ page, info }) => {
-      await page.evaluate(([pokes, restores, keepFxaa]) => {
+      await page.evaluate(([pokes, restores, setup, keepFxaa]) => {
         window.__INKW_POKE = Object.fromEntries(Object.entries(pokes).map(([k, v]) => [k, new Function(`return (${v})`)()]));
         window.__INKW_RESTORE = Object.fromEntries(Object.entries(restores).map(([k, v]) => [k, new Function(`return (${v})`)()]));
+        new Function(`return (${setup})`)()();
         const p = window.__ENGINE.get('postfx');
         window.__INKW_INK0 = p.tune.inkStrength;
         window.__INKW_FXAA0 = !!keepFxaa;
@@ -382,6 +449,7 @@ async function main() {
       }, [
         Object.fromEntries(Object.entries(POKES).map(([k, v]) => [k, v.toString()])),
         Object.fromEntries(Object.entries(RESTORE).map(([k, v]) => [k, v.toString()])),
+        LEGACY_SETUP.toString(),
         KEEP_FXAA,
       ]);
 
@@ -403,8 +471,9 @@ async function main() {
           writeFileSync(f, Buffer.from(url.split(',')[1], 'base64'));
           files[arm] = f;
         }
-        const calib = await page.evaluate(() => [window.__INKW_CALIB ?? 0, window.__INKW_HULLMATS ?? 0]);
-        rows.push({ res, buf: got, shot, files, subject: staged.subject, calibMats: calib[0], hullMats: calib[1] });
+        const calib = await page.evaluate(() => [window.__INKW_CALIB ?? 0, window.__INKW_HULLMATS ?? 0, window.__INKW_READBACK ?? null]);
+        rows.push({ res, buf: got, shot, files, subject: staged.subject,
+                    calibMats: calib[0], hullMats: calib[1], readback: calib[2] });
       }
       return { rows, renderer: info.renderer, warnings: info.warnings.length };
     });
@@ -423,7 +492,10 @@ function report(OUT, results, st) {
   for (const r of results.out) {
     const im = {};
     let W = 0, H = 0;
-    for (const a of ARMS) { const p = readPNG(r.files[a]); W = p.w; H = p.h; im[a] = toLuma(p); }
+    for (const a of ARMS) {
+      if (!r.files[a]) continue;
+      const p = readPNG(r.files[a]); W = p.w; H = p.h; im[a] = toLuma(p);
+    }
     const n = im.base.length;
 
     // --- calibration 1: null must be byte-exact against base
@@ -478,20 +550,51 @@ function report(OUT, results, st) {
                  ring: radial(inkCh, W, H, null) };
 
     /* P3c — is it a line or a fill? A line system's mask is thousands of short components; the
-       baseline's was ONE blob of 155,228 px covering 17 % of `courtyard`. Cut at 15 L rather than
-       the 4 L detection floor so the statistic describes the ink a viewer actually sees. */
-    const strong = new Uint8Array(n);
-    let strongN = 0;
-    for (let i = 0; i < n; i++) {
-      if (im.nohull[i] - im.base[i] >= 15 || im.noink[i] - im.base[i] >= 15) { strong[i] = 1; strongN++; }
-    }
-    const big = largestBox(strong, W, H);
-    rows.blob = { strongPx: strongN, largest: big ? big.n : 0,
-                  share: strongN ? +(big.n / strongN).toFixed(3) : 0 };
+       pre-fix pass produced ONE blob of 155,228 px covering 17 % of `courtyard`. Cut at 15 L rather
+       than the 4 L detection floor so the statistic describes the ink a viewer actually sees. */
+    const strongOf = (hullOff, inkOff, ref) => {
+      const m = new Uint8Array(n);
+      let cnt = 0;
+      for (let i = 0; i < n; i++) {
+        if ((hullOff ? im[hullOff][i] - im[ref][i] >= 15 : false)
+          || (inkOff ? im[inkOff][i] - im[ref][i] >= 15 : false)) { m[i] = 1; cnt++; }
+      }
+      const big = largestBox(m, W, H);
+      return { strongPx: cnt, largest: big ? big.n : 0, share: cnt ? +(big.n / cnt).toFixed(3) : 0 };
+    };
+    rows.blob = strongOf('nohull', 'noink', 'base');
 
-    // FXAA's own contribution to any measured width.
-    let fxaaDiff = 0;
-    for (let i = 0; i < n; i++) if (Math.abs(im.fxaa[i] - im.base[i]) >= T) fxaaDiff++;
+    /* THE BEFORE ARM, same boot. `legacy` restores the pre-fix widths and un-gates the crease pass
+       (see POKES.legacy); `legacy_nohull` is that with the ink materials hidden, so the pre-fix hull
+       band is `legacy_nohull` minus `legacy` — the number the first baseline run never produced,
+       because its hull lever was overwritten every frame. */
+    if (im.legacy && im.legacy_nohull) {
+      const lm = new Uint8Array(n);
+      let lc = 0;
+      for (let i = 0; i < n; i++) if (im.legacy_nohull[i] - im.legacy[i] >= T) { lm[i] = 1; lc++; }
+      const lch = minChord(lm, W, H);
+      let lSubj = 0;
+      for (let i = 0; i < n; i++) if (lm[i] && region[i]) lSubj++;
+      rows.hullLegacy = { frame: { ...stats(lch, null), px: lc },
+                          subj: { ...stats(lch, region), px: lSubj },
+                          ring: radial(lch, W, H, null) };
+
+      /* Whole-frame difference between the two renderers, which is what the fix actually changed. */
+      let moved = 0, lighter = 0, sum = 0;
+      for (let i = 0; i < n; i++) {
+        const d = im.base[i] - im.legacy[i];
+        if (Math.abs(d) >= T) { moved++; sum += d; if (d > 0) lighter++; }
+      }
+      rows.legacyDelta = { movedPx: moved, lighterPx: lighter,
+                           meanDelta: moved ? +(sum / moved).toFixed(2) : 0 };
+    }
+
+    // FXAA's own contribution to any measured width (only captured in the first baseline run).
+    let fxaaDiff = -1;
+    if (im.fxaa) {
+      fxaaDiff = 0;
+      for (let i = 0; i < n; i++) if (Math.abs(im.fxaa[i] - im.base[i]) >= T) fxaaDiff++;
+    }
 
     const rec = {
       shot: r.shot, w: W, h: H,
@@ -520,8 +623,17 @@ function report(OUT, results, st) {
     console.log(`  CAL null   : ${nullDiff} px differ (max ${nullMax.toFixed(2)} L)   ${nullDiff === 0 ? 'PASS' : 'FAIL — run is VOID'}`);
     console.log(`  CAL nochar : ${charN} px moved   box ${box ? `${box.x0},${box.y0}..${box.x1},${box.y1}  ${box.x1 - box.x0 + 1}x${box.y1 - box.y0 + 1}` : 'none'}   ${charN > 200 ? 'PASS' : 'FAIL — poke path dead'}`);
     console.log(`  CAL hull2x : ${rec.calibMats} materials doubled; band med ${rec.hull2x.frame.med} vs base ${rec.hullBase.frame.med}   ${rec.hull2x.frame.med >= rec.hullBase.frame.med * 1.6 ? 'PASS' : 'FAIL — width estimator blind'}`);
-    console.log(`  fxaa cost  : ${fxaaDiff} px differ from base`);
+    if (fxaaDiff >= 0) console.log(`  fxaa cost  : ${fxaaDiff} px differ from base`);
     console.log(`  ink blob   : strong(>=15L) ${rows.blob.strongPx} px, largest component ${rows.blob.largest} = ${(rows.blob.share * 100).toFixed(0)}% of the mask`);
+    if (r.readback) console.log(`  readback   : resScale ${r.readback.resScale}  legacy hull px ${r.readback.hullPxNow}  legacy crease px ${r.readback.creaseAppliedNow}  planar ${r.readback.planarStrength}`);
+    if (rows.legacyDelta) console.log(`  vs legacy  : ${rows.legacyDelta.movedPx} px moved, ${rows.legacyDelta.lighterPx} of them lighter, mean ${rows.legacyDelta.meanDelta} L`);
+    if (rows.hullLegacy) {
+      console.log(`  hull LEGACY frame: ${f(rows.hullLegacy.frame)}`);
+      console.log(`  ${''.padEnd(11)}subj : ${f(rows.hullLegacy.subj)}`);
+      const g = rows.hullLegacy.ring;
+      console.log(`  ${''.padEnd(11)}ring : inner med ${g.inner.med ?? '-'} p05 ${g.inner.p05 ?? '-'} p95 ${g.inner.p95 ?? '-'} spread ${g.inner.spread ?? '-'}`
+        + ` | outer med ${g.outer.med ?? '-'} p05 ${g.outer.p05 ?? '-'} p95 ${g.outer.p95 ?? '-'} spread ${g.outer.spread ?? '-'}`);
+    }
     for (const k of ['hull', 'crease', 'ink', 'ao']) {
       const g = rows[k].ring;
       console.log(`  ${k.padEnd(7)} frame: ${f(rows[k].frame)}`);
