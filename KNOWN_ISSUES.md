@@ -17396,3 +17396,45 @@ Every piece of work was committed and pushed within minutes of landing, by six s
 so `git reset --hard origin/<branch>` restored all 402 files exactly. The habit of committing in
 verified-green windows and pushing immediately is what turned a destroyed working tree into a
 30-second recovery — that is the argument for it, stated from the one occasion it was needed.
+
+## §226 — the tail rebuild went into the model that does not ship
+
+Frames from `shots/r8/` (four canonical shots, 1280×720, captured against the restored tree with
+every wave-2 and wave-3 change live).
+
+**What visibly landed on the shipped character**, confirmed by looking at `sly-closeup.png`:
+
+- **The cane hook is a proper crook** — a smooth continuous curve, no visible mitres. Critic pass 7
+  defect #6, fixed and legible at 484 px.
+- **The cane is held.** Fingers wrap the shaft with the thumb crossing under; the shaft does not pass
+  behind the hand. Defect #5, substantially fixed — the grip agent's WRAP 5/12 → 11/12 reads.
+- Ink is present and of uniform weight around the whole character silhouette.
+- Cel banding is visible as discrete steps on the blue cloth.
+
+**And the defect that did not move at all: the tail.** It is a single flat brown lobe with no ring
+bands, no taper and no cross-section — critic defect #4, unchanged.
+
+The reason is §216, and this is its consequence rather than a new fault. The character sub-agent
+rebuilt the tail in **`src/player/SlyModel3.js`** — 6 albedo bands, 18 cross-section segments, 51
+rings, silhouette corners 32 → 18, seam radius step 7% → 0%, all real and all measured. But
+`src/main.js:50` maps the default `?char=` token to **`SlyModelDLRig`**, whose tail is the supplied
+FBX's, and that is the lobe in the frame. The rebuild is reachable only at `?char=model3`.
+
+**This was foreseen and written down before the capture** — §216 records the agent stating plainly
+that "#4, #5 and #6 as the critic measured them are all against `SlyModelDLRig` + the FBX's `staff`,
+not against my file", and that it did the work on `SlyModel3` anyway because that was the file it was
+assigned. The brief was mine and it named the wrong file, because I had propagated a stale ledger
+entry (task #18, "the Sly 3 rebuild is the default model") that a second owner instruction had
+superseded the following day.
+
+The cane and grip landed precisely because they were done in `SlyModelDLRig.js`, on the shipped path,
+by the later agent whose brief §216 had already corrected.
+
+**What this costs:** the tail is now good on a model one query token away from shipping, and untouched
+on the one that ships. Either the shipped FBX tail is replaced with procedural geometry driven by the
+same builder, or the model decision is revisited. That is the owner's call — the default was set by
+explicit instruction — and it is the same fork §216 recorded.
+
+Also observed in the boot log and worth chasing separately: `THREE.WebGLState: MultiplyBlending
+requires material.premultipliedAlpha = true`, new since the contact decals landed, which multiply
+toward the shadow hue.
