@@ -1819,6 +1819,42 @@ export class Shading {
   }
 }
 
+/* ---------------------------------------------------------------------------
+   §213 — `make()`, the method five call sites have always called and that has
+   never existed.
+
+   `SlyModelDLRig.js:352` (the SHIPPED character, §216), `KayKit.js:181` (all 36
+   props), `SlyModel3.js:701`, `SlyModelDL.js:445` and `SlyModelDLRaw.js:160` are
+   all written as
+
+       const mat = shading?.make ? shading.make({ … })
+                                 : new THREE.MeshStandardMaterial({ … });
+
+   and `shading?.make` has always been `undefined`, so all five take the fallback.
+   The player character and every KayKit prop have therefore never rendered on the
+   cel material — smooth Lambert, no ramp, no rim, no SSS — while the world calls
+   the real method, `toon()`, and is fully cel-shaded. Critic pass 7's #1 defect,
+   "THERE IS NO TOON RAMP, ANYWHERE", is this.
+
+   `_normalise` already accepts everything those sites pass (`name`, `color`,
+   `map`, `vertexColors`, `bands`, `rim`, `rimColor`, `sss`, `outline`); only
+   `outlineColor` is dropped, and `Outline.js` owns that anyway.
+
+   INSTALLED CONDITIONALLY so `?cel=off` reproduces the pre-fix build EXACTLY.
+   With the property genuinely absent, each call site takes its own native
+   fallback branch — which is what ships today. A `make` that existed and returned
+   a stand-in could not make that guarantee, because all five fallbacks differ
+   (KayKit passes a `map`, SlyModel3 passes `vertexColors`, …). Absence is the
+   only faithful OFF arm, and PREREG-cel1 needs one.
+
+   In Node (tests, offline tools) there is no `location`, so the alias is present —
+   which is what `tests/api.test.mjs` reads.
+--------------------------------------------------------------------------- */
+if (typeof location === 'undefined'
+    || new URLSearchParams(location.search).get('cel') !== 'off') {
+  Shading.prototype.make = function make(opts) { return this.toon(opts); };
+}
+
 /* ===========================================================================
    Helpers
 =========================================================================== */

@@ -53,21 +53,18 @@ const proto = new Set(Object.getOwnPropertyNames(Shading.prototype));
 
 /**
  * Methods that are CALLED but DO NOT EXIST. Asserted exactly, so both directions fail loudly:
- * adding a new bad call turns this red, and fixing one of these turns it red too — telling whoever
- * fixed it to delete the entry rather than leaving a stale exception behind.
+ * adding a new bad call turns this red, and fixing one turns it red too — telling whoever fixed it
+ * to delete the entry rather than leave a stale exception behind.
  *
- * `make` — five call sites: `KayKit.js:181`, **`SlyModel3.js:701` (the SHIPPED character)**,
- * `SlyModelDL.js:445`, `SlyModelDLRig.js:352`, `SlyModelDLRaw.js:160`. Every one falls through to a
- * plain `MeshStandardMaterial`, so the player character and every KayKit prop have never once
- * rendered on the cel material, while the world (`Architecture`, `Terrain`, `Props`, `Guard`, and
- * the legacy `SlyModel`) calls `toon()` and does. That is critic pass 7's #1 defect — "THERE IS NO
- * TOON RAMP, ANYWHERE" — as a spelling mistake.
+ * **Now empty, and it did exactly that.** `make` sat here for one commit: five call sites
+ * (`SlyModelDLRig.js:352` — the shipped character per §216 — `KayKit.js:181`, `SlyModel3.js:701`,
+ * `SlyModelDL.js:445`, `SlyModelDLRaw.js:160`) all falling through to `MeshStandardMaterial`, so the
+ * player character and every KayKit prop had never once rendered on the cel material. §213 aliased
+ * it to `toon()` and this list emptied itself on the next run.
  *
- * NOT fixed in this commit on purpose. The fix is one line (`make(opts) { return this.toon(opts); }`)
- * and it is the single largest visual change available in this project: it flips the protagonist and
- * all set dress onto a different shader in one step. It gets a sealed A/B, not a drive-by.
+ * Keep it empty. An entry here is a defect with a note attached, not a permission.
  */
-const KNOWN_MISSING = ['make'];
+const KNOWN_MISSING = [];
 
 test('api: the shading module is scanned at all', () => {
   /* §211.1: a scan that finds nothing passes every assertion below while inspecting nothing. */
@@ -93,14 +90,23 @@ test('api: every method called on the shading module exists on it', () => {
     names.map((n) => `  ${n}() <- ${missing.get(n).join(', ')}`).join('\n'));
 });
 
-test('api: the character and the world are still on different material paths', () => {
-  /* The consequence, asserted directly rather than inferred, so it cannot quietly half-change.
-     When `make` is aliased this test goes red and should be deleted along with KNOWN_MISSING. */
+test('api: the character and the world now resolve to the same material factory', () => {
+  /* Replaces a test that asserted the opposite. The previous version pinned the DEFECT — that
+     SlyModel3/KayKit call a `make` that does not exist while the world calls `toon` — so that the
+     split could not quietly half-change. §213 closed the split, so the assertion inverts: both
+     groups must now reach a real factory, and `make` must resolve to `toon` rather than to some
+     second implementation that could drift away from it. */
   const src = (p) => readFileSync(join(SRC, p), 'utf8');
-  for (const p of ['player/SlyModel3.js', 'world/KayKit.js']) {
-    assert.ok(/shading\s*\??\.\s*make/.test(src(p)), `${p} no longer calls the missing make()`);
+  const callers = ['player/SlyModelDLRig.js', 'player/SlyModel3.js', 'world/KayKit.js'];
+  for (const p of callers) {
+    assert.ok(/shading\s*\??\.\s*make/.test(src(p)), `${p} no longer calls make()`);
   }
   for (const p of ['world/Architecture.js', 'world/Terrain.js', 'world/Props.js']) {
     assert.ok(/shading\s*\??\.\s*toon/.test(src(p)), `${p} no longer calls toon()`);
   }
+  assert.equal(typeof Shading.prototype.make, 'function', 'make() is missing again');
+  /* One factory, not two: `make` must BE `toon`'s caller, so a change to the cel material cannot
+     reach the world and miss the character. */
+  assert.match(Shading.prototype.make.toString(), /this\.toon\(/,
+    'make() no longer delegates to toon() — the character and the world can now diverge');
 });
