@@ -16065,3 +16065,50 @@ that flexion ships as a real improvement while the fan stays as the asset's own 
 
 Recorded because the sweep cost one command and saved a capture plus a change that would have done
 almost nothing — the same trade as §205, arriving from a direction I did not anticipate again.
+
+## §208 — the §1 performance budget is blown on almost every shot, and nobody was watching
+
+Critic pass 7's capture prints draws and triangles per shot, which is how this surfaced — not from
+any seal. §1's budget is **≤ 250 draw calls, ≤ 1.2 M triangles**. Measured across the roster:
+
+| shot | draws | tris | |
+|---|---|---|---|
+| `night` | **263** | **1946k** | both over |
+| `courtyard` | **259** | **1813k** | both over |
+| `dunes` | 249 | 1691k | draws at the line |
+| `traversal` | 231 | **1855k** | |
+| `hero` | 238 | **1844k** | |
+| `kaykit` | 218 | **1817k** | |
+| `temple` | 217 | **1816k** | |
+| `sly-closeup` / `sly-perch` | 241 | **1769k** | |
+| `sly-startle` | 166 | **1359k** | |
+| `sly-arm` | 158 | **1343k** | |
+| `interior` | 145 | 828k | the only shot inside both |
+
+**Ten of twelve exceed the triangle budget, by 12 % to 62 %.** Two exceed the draw budget. One shot
+passes.
+
+**How much of this is mine, stated without flattering myself.** The KayKit props report 31,064
+triangles and cost two draws (one merged mesh plus its ink shell). Against `night`'s 746 k of
+triangle overage that is **4 %**, so the triangle problem is emphatically not the props. On draws it
+is less comfortable: `courtyard` is 9 over and `night` 13 over, and the props account for 2 of each.
+The budget was already blown before today, and today made the draw side slightly worse.
+
+**What I cannot say yet, and will not guess.** I have no per-shot draw counts from before the props
+landed, so "already over without them" is arithmetic (259 − 2 = 257 > 250), not a measurement. The
+arithmetic is sound for the props specifically because the module reports its own cost, but the
+attribution stops there — it does not tell me what the other 250 draws are, and §203.1 is a standing
+reminder in this ledger about what happens when arithmetic gets promoted to a shipping argument
+without a capture behind it.
+
+**Why this went unnoticed is the more useful half.** The harness has printed these two numbers on
+every capture all along. No seal reads them, no gate fails on them, and no record in this file has
+quoted them until now — so a budget stated in §1 as a hard constraint has been silently violated
+across essentially the whole roster while a great deal of effort went into instrumenting chroma,
+rim gates and terminator bands. This is precisely BRIEF-critic7's standing requirement #7: *the
+frames' worst problems are, by construction, the ones nobody has built a number for yet.* It applies
+to performance as readily as to composition, and the number here was not merely available — it was
+already being printed and scrolled past.
+
+Filed as open. Not acted on during pass 7's capture window, because the tree is frozen until the
+set lands.
