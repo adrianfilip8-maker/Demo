@@ -36,21 +36,21 @@ export const PALETTE = {
 
 /** Shadows may never fall below this fraction of key luminance (§2.2 "never below").
  *
- *  ── §212.3: this export is NOT the operative floor, and raising it does nothing ──────────
+ *  ── §214.3: this export is NOT the operative floor, and raising it does nothing ──────────
  *  `ToonMaterial.setKeyLight()` takes it as `ambient.floor` and applies
  *  `this._shadowFloor = Math.min(TUNE.shadowFloor, ambient.floor)` against its own
  *  `TUNE.shadowFloor = 0.125`. The min() means the shipped effective floor is **0.125**, this
  *  0.14 never binds, and moving this number UP is a silent no-op while moving it DOWN is live.
  *  Recorded here because the asymmetry is invisible from this file and §2.2 quotes 14 %.
  *
- *  Left at 0.14 deliberately. See §212.4 for why lowering it is not the fix for "nothing is
+ *  Left at 0.14 deliberately. See §214.4 for why lowering it is not the fix for "nothing is
  *  black": on §2.2 SANDSTONE mid the floor term ALONE — with every fill light switched off —
  *  already lands at display L ≈ 100 through the shipped tone chain, so the display black has
  *  to come from low-albedo materials (PAINT black #241a16 → L 13, CREVICE #4a2f22 → L 28) and
  *  from AO, not from this constant. */
 export const SHADOW_FLOOR = 0.14;
 
-/* §212.2. Both legs are 0.50: the night boost is withdrawn, daylight is untouched. Named
+/* §214.2. Both legs are 0.50: the night boost is withdrawn, daylight is untouched. Named
    rather than inlined so the next sweep moves a constant instead of editing an expression. */
 const RIM_STRENGTH_DAY = 0.50;
 const RIM_STRENGTH_NIGHT = 0.50;
@@ -76,7 +76,7 @@ const SUN_AZIMUTH = [
 /* The moon rides its own track so the `night` and `guard` shots get a big low moon
    parked where the camera is already looking, from an azimuth far off the sun's.
 
-   ── §212.1: "parked where the camera is already looking" is exactly the defect ──────────
+   ── §214.1: "parked where the camera is already looking" is exactly the defect ──────────
    Critic pass 7 defect 12 says `night` has "a moon that lights nothing". That is literally
    true, it is caused here, and it needs no capture to establish — it is two dot products
    against `Shots.js`.
@@ -335,11 +335,11 @@ export function createAtmosphereState() {
     skyGain: 1, mieStrength: 1, mieG: 0.76, violetAmount: 0.22, horizonPower: 0.44,
     starAmount: 0, exposure: 1,
 
-    /* ── Night fill lever (§212.1) — SHIPS INERT AT 1.0, bit-identical ──────────────────
+    /* ── Night fill lever (§214.1) — SHIPS INERT AT 1.0, bit-identical ──────────────────
        Multiplies hemi + bounce + ambient, faded in by `nightAmount`, so it can only ever
        touch the two moon-keyed shots and is the exact identity at every daylight tod.
 
-       It exists because §212.1 locates critic defect 12's mechanism (both moon-keyed cameras
+       It exists because §214.1 locates critic defect 12's mechanism (both moon-keyed cameras
        are ~180° backlit, so the sand bounce at N·L 0.890 is the only light aimed at what they
        see) but CANNOT size the correction from arithmetic alone. Modelling the shipped night
        radiances through the calibrated display chain predicts every §2.2 stone albedo lands
@@ -474,7 +474,7 @@ export function evalAtmosphere(tod, s) {
   const keyLum = s.keyIntensity * (0.2126 * s.keyColor.r + 0.7152 * s.keyColor.g + 0.0722 * s.keyColor.b);
   s.ambientIntensity = Math.max(0.10, SHADOW_FLOOR * keyLum * 1.15);
 
-  /* §212.1's lever. Applied AFTER the max() above, because at night that clamp is what is
+  /* §214.1's lever. Applied AFTER the max() above, because at night that clamp is what is
      actually binding (0.14 × 0.3346 × 1.15 = 0.0539, below the 0.10 floor), so scaling the
      formula instead of the result would leave ambient untouched and the lever would only
      half-work — the failure mode §210.2 names, where a knob reaches some consumers and not
@@ -491,7 +491,7 @@ export function evalAtmosphere(tod, s) {
   // Anti-key azimuth, lifted 42°: the rim then comes out of the brightest cool sky and
   // reads as sky-wrap rather than as a second, unmotivated sun.
   dirFrom(42, (s.keyIsMoon ? s.moonAzimuth : s.sunAzimuth) + 180, s.rimDir).normalize();
-  /* ── §212.2: the night rim BOOST is withdrawn; day is unchanged ────────────────────────
+  /* ── §214.2: the night rim BOOST is withdrawn; day is unchanged ────────────────────────
      Was `lerp(0.5, 0.72, nightAmount)` — a 44 % amplification applied to exactly the two
      shots where critic pass 7 defect 12 reports "a full-strength fresnel drawing a
      cyan-white line on every polygon edge in the scene".

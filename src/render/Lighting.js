@@ -189,7 +189,7 @@ const TUNE = {
      also seeding dust inside solid stone). The list is now built from
      `architecture.api.roofSlots` / `.clerestory` and only falls back to these constants
      when ARCHITECTURE is absent. */
-  /* ── §212.6: critic pass 7 defect 9 re-measured, and BOTH its numbers are wrong ──────────
+  /* ── §214.6: critic pass 7 defect 9 re-measured, and BOTH its numbers are wrong ──────────
      The defect reads: "God-rays are a Gaussian screen overlay — 18 px 10–90 % edge transition,
      washing ~40 % of `temple` toward white and taking the columns' albedo with it."
 

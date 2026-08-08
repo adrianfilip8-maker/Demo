@@ -16577,3 +16577,164 @@ only `outlineColor` is dropped). But it is the single largest visual change avai
 the protagonist and all set dress onto a different shader in one step. It gets a sealed A/B with a
 calibration arm, not a drive-by — and it cannot be captured while sub-agents are still editing
 `src/**` (§186). Registered as its own task.
+
+## §214 — tone, god-rays and night: three critic defects, two of them not what the critic said
+
+From the light & tone sub-agent, with the load-bearing arithmetic re-verified here.
+
+### §214.1 — the low end is a WALL, so `termLo` cannot deliver defect #8
+
+The critic's histogram claims check out and are, if anything, understated: p1 19–26 ✓; "%V>0.90 =
+0.0–1.2%" ✓ (the shipped daylight shots are 0.00–0.26%); "nothing is black" ✓ — **%V<0.05 is 0.00%
+everywhere**. One correction: "p99 176–195 in all thirteen" is wrong. `interior` reads 125 and
+`sly-startle` 144; `combat` reads 227. The range is 125–227.
+
+Removing the grain moved p1/p99 by ≤1 luma, so **defect #8 was untouched by the grain fix.**
+
+The important structural result: the low end is a **wall, not a tail** (temple 7.4 against a
+calibrated smooth-tail value of 1.3), with 99.98% of `temple` above L16 and minL 13. Raising `termLo`
+therefore cannot move p1 — extra pixels land *on* the existing floor, which is set by
+`SHADOW_FLOOR × key + fill`, not by band population. **#8 and the terminator move are two fixes, not
+one**, and my brief to the agent suggested they might be one. They are not.
+
+Ported through the composite + AgX chain in Node: **V>0.90 requires scene-linear ≥ 1.95**, and §2.2's
+shadow floor *alone, with every fill light off*, puts sandstone mid at display L≈100. So display black
+cannot come from the lighting ratio at all — it has to come from low-albedo materials and AO, which
+ties #8 to defect #7.
+
+### §214.2 — `guard`'s WALL is tighter than `temple`'s ground, and `termLo` is structurally boxed in
+
+`tests/shading.test.mjs` evaluates `keyDir.y` — the **ground**. But `temple` is a hall and
+`night`/`guard` are masonry: their dominant surfaces are **vertical**, where N·L = cos(el)·cos(Δaz).
+Verified independently here, computing the camera-facing wall normal from each shot's own
+pos/target:
+
+| shot | ground N·L | ground margin | **wall N·L** | **wall margin** |
+|---|---|---|---|---|
+| `guard` | 0.4733 | 0.0227 | **0.1652** | **0.0012** |
+| `courtyard` | 0.4384 | 0.0576 | 0.1393 | 0.0247 |
+| `interior` | 0.9703 | 0.4263 | 0.2125 | 0.0485 |
+| `temple`, `night`, `dunes`, `hero` | — | — | backlit | n/a |
+
+**`guard`'s camera-facing wall sits 0.0012 from the low terminator's upper edge — tighter than
+`temple`'s celebrated 0.0006, on the surface that fills the frame.** The ground-only test cannot see
+it by construction, and **no candidate with `termLo` ≈ 0.14 fixes it.**
+
+**The agent refused the lead I handed it, correctly.** I passed on the critic's prescription of
+`termLo` 0.25 / `termHi` 0.62 as converging with my own sweep. The `termHi` half does converge. The
+`termLo` half is unsafe: 0.25 drags `dunes`' ground (0.2588) *inside* the low window — and `dunes` is
+the one shot whose entire §7.2 job is a big lit sand plane — while leaving `night` (0.2079) 0.018
+below it. Worse, it is **structurally impossible**: `night` and `dunes` are **0.0509** apart against a
+required clearance of 2×(soft + swing) = 0.108, so *no* value of `termLo` fits between them. Verified
+here. Shipped 0.14 is already near the top of the safe range (≈0.154).
+
+### §214.3 — defect #9's two numbers are both wrong, and the prescription inverts
+
+Measured on shipped `temple` with a calibrated edge-finder (the agent's first pass locked onto 1–2 px
+ink lines; a median-9 prefilter fixed it):
+
+- boundary 10–90% width **median 42 px** (range 21–61), not the critic's 18 — **2.3× softer**
+- "washing ~40% of `temple` toward white" does not reproduce at any threshold: L≥170 gives 2.5%,
+  L≥200 gives **0.0%**
+- saturation inside the wash 0.255 vs 0.249 outside — the wash costs **−2%**, i.e. nothing
+
+The brightest shaft pixel is L177 ≈ scene-linear 0.52, about a quarter of the 1.95 a display white
+needs. **These are haze, not god-rays** — #9 is #8 seen from the other side. So the fix inverts the
+critic's: **narrow the shafts and make the core hot**, rather than dim them.
+
+### §214.4 — the night rim boost amplified exactly the defect it was meant to help
+
+`Atmosphere.js` carried `rimStrength = lerp(0.5, 0.72, nightAmount)` — a 44% amplification landing on
+precisely the two shots defect #12 names ("a full-strength fresnel drawing a cyan-white line on every
+polygon edge"). Its premise is false: `night`/`guard` carry the **highest** key:fill ratio in the
+build (6.45:1 against daylight's 4.06–5.18). Withdrawn to 0.50 flat. **Zero daylight frames change.**
+
+### §214.5 — the sky dither, and a defence that stopped being true
+
+Night sky measures **19 distinct levels over 250 rows across a 25.7 L span** — the critic said 18,
+confirmed. `PostFX` justified the screen grain as "the only thing keeping the sky gradient off
+bands", and **grain shipped to 0.0 in `bf321f3`, after critic pass 7 measured it.** That defence is
+false for the day sky (0.016 → 0 moved `courtyard` 103 → 100 levels) and **true for night**, which is
+now unprotected. `Sky.js` gets `domeDither: 0.05`, sized from the calibrated chain at ±0.52 L at
+night against a 1.35 L step, sky-only so it cannot land on Sly's face — which was defect #2's actual
+complaint about the grain. 0.0 is bit-exact inert.
+
+### §214.6 — `nightFillScale`, shipped inert on purpose
+
+A lever, at 1.0, verified bit-identical in daylight and ×3 at night. The agent deliberately did not
+pick an amplitude, because there is an unexplained 2–3× gap between Atmosphere's published radiances
+and the frame, and that gap is in SHADING, not in its files. Registered as a falsifier rather than
+tuned around: if `night` %V<0.20 misses its band at scale 3.5, the lever reverts to inert and the gap
+gets chased where it lives.
+
+**Not applied yet:** the `termHi` 0.52 → 0.62 diff the agent asks for touches `ToonMaterial.js` and
+`tests/shading.test.mjs` **atomically** (that test asserts the constants exactly, on purpose). It is
+queued behind §213, because §213 changes which surfaces are subject to the ramp at all, and
+evaluating a terminator move before then would measure the wrong population.
+
+## §215 — the combat veil: `fx9` did not measure the character, and §208's budget breach is an artefact
+
+### §215.1 — defect #10 was never insufficient; the acceptance was aimed somewhere else
+
+Task #13 closed as "combat veil shipped (80554c5); fx9 verification MET" — and the critic then
+measured the defect anyway. The FX sub-agent settled which, geometrically rather than statistically.
+
+`fx9`'s two acceptance ROIs are `combat` left edge (0,28)-(150,355) and doorway (652,95)-(821,192).
+Against the veil blob (196,347)-(578,457) and the character (440,390)-(660,690):
+
+```
+fx9 left × veil blob : 0 px²      fx9 left × character : 0 px²
+fx9 door × veil blob : 0 px²      fx9 door × character : 0 px²
+```
+
+**Zero overlap on all four.** Those ROIs read mean luma 69.4 and 82.9 — `fx9` was measuring the
+*surround* while the band over the character sits at mean 180 / peak 249. The critic's own "surround
+of 70" is almost exactly `fx9`'s left-edge ROI. The shipped fix was `courtStackBudget`, the court
+light shafts — a real and different veil, which `fx9` genuinely fixed (+29.11 → +1.50). **It never
+touched defect #10, and the acceptance could not have detected it whatever the FX did.**
+
+The agent re-implemented CRITIC-sbs3's scorer from spec and validated it against the published
+figures — **seven of seven exact** — before quoting anything. Then, with `traversal` from the same
+boot as a calibration arm: the instrument finds **575 blue px** on Sly with no combat FX and **0** in
+`combat`, against a character whose vertex palette is **28.3% deep blue**. The guard's nemes 40 px
+away keeps its navy, so the grade renders blue fine. One honest disagreement with the critic: the
+figure is 98.3% hue 20–50°, a flat warm-tan cutout, **not literally pink**. Substance holds, colour
+word does not.
+
+Attributed by arithmetic, not by eye: `cane_flash` is an additive GLOW sprite, alpha 1.3, offset
+**0.95 m in front of** the hero, scaled ×1.35 on hit 3 → 2.025 m, which at `combat`'s fov works out
+to **113% of frame height (817 px)** over a hero who is ~290 px tall. Measured halo ≈660 px. Root
+cause is structural: `uMaxSize` exists, is derived in-comment, and is proven on `air_motes` — but
+**every batch except that one is created with `maxSize: 0`**, including the additive `spark` batch
+carrying the impact flash. Now `TUNE.flashMaxH = 0.45`, chosen from the census (within `spark`,
+`cane_flash` is 0.824 of frame height at 5 m and the next largest is `fire_body` at 0.302), so it
+clamps the flash and nothing else beyond 3.4 m. **Ships unverified**, with a sealed `flash1` prereg
+whose calibration arm voids the run if the uniform does not reach the shader.
+
+### §215.2 — §208 is WITHDRAWN: a submission counter compared against a main-view budget
+
+§208 said the §1 performance budget was blown on ten of twelve shots, by 12%–62% on triangles.
+**That is a denominator error**, and it is the §144 hazard that AGENTS §1.2 explicitly warns about,
+landing again.
+
+`Engine.js:272-274` calls `renderer.info.reset()`, runs the **whole PostFX chain**, then reads
+`info.render.triangles`. That counter accumulates every pass in the frame — `PostFX._renderChain`
+alone does two full-scene renders (beauty, then a second with `overrideMaterial = normalMat` for the
+edge detect), plus Lighting's shadow passes. §1 asks for triangles **visible**, and this project's own
+`tools/scenebudget.mjs` says so in its header: *"the quantity §1 is scored on is the MAIN-VIEW one
+(what survives frustum culling for a camera), not the all-passes submission counter."* §1.2 names
+that tool as the budget's denominator.
+
+Run here, offline: **worst main-view is 71 draws (28% of the 250 budget) and 0.572 M triangles (48%
+of 1.2 M)**. Adding what it excludes — Sly 4,782 tris, 11 guards 66,232, FX ~8.6 k — the worst shot
+lands near 0.65 M / 54%.
+
+Frame time, harvested from 229 steady-state stats blocks across `progress/` and `shots/`: median
+8.8 ms, p75 11.3 ms, and **1 of 229 frames below 30 fps**. The acceptance bar is met essentially
+everywhere.
+
+**§208's headline is withdrawn, and the KayKit self-criticism inside it ("today made the draw side
+slightly worse") is moot.** The one genuine performance problem in the dataset is the one §208 never
+mentions: **load time** — `textures: prewarm took 18.0 s at size 1024`, and first-frame ms of 12,746
+/ 17,549 / **29,035**. That is the largest number in the data by three orders of magnitude and is
+unaddressed. Recorded as its own task rather than fixed here.

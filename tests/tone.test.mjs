@@ -5,7 +5,7 @@ import { createAtmosphereState, evalAtmosphere, SHADOW_FLOOR } from '../src/rend
 import { TUNE as TOON_TUNE } from '../src/render/ToonMaterial.js';
 
 /**
- * Guards for the tonal-range and night findings (KNOWN_ISSUES §212), all of which are
+ * Guards for the tonal-range and night findings (KNOWN_ISSUES §214), all of which are
  * arithmetic over `Shots.js` + `Atmosphere.js` and therefore free and permanent.
  *
  * Every claim these lock in was established WITHOUT a capture, and each one is the kind that
@@ -23,9 +23,9 @@ import { TUNE as TOON_TUNE } from '../src/render/ToonMaterial.js';
 const DEG = Math.PI / 180;
 const state = createAtmosphereState();
 
-/* ── §212.2 — the night rim boost stays withdrawn ─────────────────────────────────────── */
+/* ── §214.2 — the night rim boost stays withdrawn ─────────────────────────────────────── */
 
-test('rim: strength is the same at night as in daylight (§212.2)', () => {
+test('rim: strength is the same at night as in daylight (§214.2)', () => {
   /* Was `lerp(0.5, 0.72, nightAmount)`: a 44 % amplification landing on exactly the two shots
      where critic pass 7 defect 12 reports a fresnel drawing a line on every polygon edge. The
      premise (night values sit close together) is false — `night`/`guard` carry the highest
@@ -38,13 +38,13 @@ test('rim: strength is the same at night as in daylight (§212.2)', () => {
     seen++;
     if (at.keyIsMoon) moonSeen++;
     assert.equal(at.rimStrength, 0.50,
-      `${name} publishes rimStrength ${at.rimStrength}, not 0.50 — §212.2 withdrew the night boost:\n  ${byShot.join('\n  ')}`);
+      `${name} publishes rimStrength ${at.rimStrength}, not 0.50 — §214.2 withdrew the night boost:\n  ${byShot.join('\n  ')}`);
   }
   assert.ok(seen >= 16, `only ${seen} shots inspected`);
   assert.ok(moonSeen === 2, `expected 2 moon-keyed shots to be covered, saw ${moonSeen}`);
 });
 
-/* ── §212.1 — both moon-keyed shots are ~180° backlit ─────────────────────────────────── */
+/* ── §214.1 — both moon-keyed shots are ~180° backlit ─────────────────────────────────── */
 
 /** Azimuth (Atmosphere convention: 0° = +X east, 90° = +Z south) the shot's camera faces. */
 function cameraForwardAzimuth(shot) {
@@ -61,8 +61,8 @@ function cameraFacingWallNL(name, at) {
   return Math.cos(el * DEG) * Math.cos((wallAz - az) * DEG);
 }
 
-test('night: the two moon-keyed shots fail by DIFFERENT mechanisms (§212.1)', () => {
-  /* This test's first run turned red and corrected the §212.1 write-up, which had assumed
+test('night: the two moon-keyed shots fail by DIFFERENT mechanisms (§214.1)', () => {
+  /* This test's first run turned red and corrected the §214.1 write-up, which had assumed
      `guard` behaved like `night`. It does not, and the two numbers are asserted separately so
      they cannot quietly re-merge:
 
@@ -80,25 +80,25 @@ test('night: the two moon-keyed shots fail by DIFFERENT mechanisms (§212.1)', (
   }
   const rows = [...seen].map(([k, v]) => `${k} wall N·L ${v.toFixed(4)}`).join('\n  ');
   assert.deepEqual([...seen.keys()].sort(), ['guard', 'night'],
-    `the moon-keyed set changed; §212.1's per-shot diagnosis is about these two:\n  ${rows}`);
+    `the moon-keyed set changed; §214.1's per-shot diagnosis is about these two:\n  ${rows}`);
 
   assert.ok(seen.get('night') < -0.5,
-    `night camera-facing wall N·L is ${seen.get('night').toFixed(4)}; §212.1 records it as strongly ` +
+    `night camera-facing wall N·L is ${seen.get('night').toFixed(4)}; §214.1 records it as strongly ` +
     `negative (backlit). If this is now positive, "a moon that lights nothing" no longer holds:\n  ${rows}`);
 
   const g = seen.get('guard');
   assert.ok(g > 0 && g < 0.30,
-    `guard camera-facing wall N·L is ${g.toFixed(4)}; §212.1 records it as small and POSITIVE ` +
+    `guard camera-facing wall N·L is ${g.toFixed(4)}; §214.1 records it as small and POSITIVE ` +
     `(side-lit, sitting on the low terminator), not backlit:\n  ${rows}`);
   assert.ok(Math.abs(g - (TOON_TUNE.termLo + TOON_TUNE.termSoft)) < 0.03,
     `guard's camera-facing wall (N·L ${g.toFixed(4)}) is no longer within the detail normal's ±0.03 ` +
     `swing of the low terminator's upper edge (${(TOON_TUNE.termLo + TOON_TUNE.termSoft).toFixed(4)}). ` +
-    `That collision is the §212.1 finding for this shot — if it is genuinely fixed, retire this ` +
+    `That collision is the §214.1 finding for this shot — if it is genuinely fixed, retire this ` +
     `assertion deliberately rather than widening it.`);
 });
 
-test('night: the sand bounce reaches night\'s walls and NOT guard\'s (§212.1)', () => {
-  /* Why §212.1 routes night's fix to fill amplitude and guard's to SHADING. `bounceDir`
+test('night: the sand bounce reaches night\'s walls and NOT guard\'s (§214.1)', () => {
+  /* Why §214.1 routes night's fix to fill amplitude and guard's to SHADING. `bounceDir`
      (anti-key, dropped to -0.42 in y) lands near head-on on night's camera-facing walls and
      BEHIND guard's. An earlier draft claimed both; this asserts the split. */
   const dots = new Map();
@@ -111,14 +111,14 @@ test('night: the sand bounce reaches night\'s walls and NOT guard\'s (§212.1)',
   const rows = [...dots].map(([k, v]) => `${k} bounce·wallNormal ${v.toFixed(4)}`).join('\n  ');
   assert.equal(dots.size, 2, `inspected ${dots.size} moon-keyed shots, expected 2:\n  ${rows}`);
   assert.ok(dots.get('night') > 0.7,
-    `night bounce·wallNormal is ${dots.get('night').toFixed(4)}; §212.1 records it near head-on (> 0.7), ` +
+    `night bounce·wallNormal is ${dots.get('night').toFixed(4)}; §214.1 records it near head-on (> 0.7), ` +
     `which is the whole basis for fixing that shot with fill:\n  ${rows}`);
   assert.ok(dots.get('guard') < 0,
-    `guard bounce·wallNormal is ${dots.get('guard').toFixed(4)}; §212.1 records it as NEGATIVE — the ` +
+    `guard bounce·wallNormal is ${dots.get('guard').toFixed(4)}; §214.1 records it as NEGATIVE — the ` +
     `bounce is behind those walls, so night's fill fix does not transfer to guard:\n  ${rows}`);
 });
 
-/* ── §212.1 — the night fill lever is inert by default and cannot leak into daylight ──── */
+/* ── §214.1 — the night fill lever is inert by default and cannot leak into daylight ──── */
 
 test('nightFillScale: default 1 is bit-identical, and 3 moves ONLY the moon-keyed shots', () => {
   /* This test carries its own CALIBRATION ARM. The claim "daylight does not move" is only
@@ -166,7 +166,7 @@ test('nightFillScale: default 1 is bit-identical, and 3 moves ONLY the moon-keye
   assert.equal(nightChecked, 2, `expected 2 full-night shots, inspected ${nightChecked}`);
 });
 
-/* ── §212.3 — SHADOW_FLOOR is dominated by ToonMaterial's own constant ────────────────── */
+/* ── §214.3 — SHADOW_FLOOR is dominated by ToonMaterial's own constant ────────────────── */
 
 test('shadow floor: raising Atmosphere.SHADOW_FLOOR is a no-op, and this records why', () => {
   /* `ToonMaterial.setKeyLight()` applies `min(TUNE.shadowFloor, ambient.floor)`. While
@@ -180,9 +180,9 @@ test('shadow floor: raising Atmosphere.SHADOW_FLOOR is a no-op, and this records
     `it now BINDS through the min(), which reverses the note at its declaration.`);
 });
 
-/* ── §212.5 — the dome dither ships live and stays sub-LSB ────────────────────────────── */
+/* ── §214.5 — the dome dither ships live and stays sub-LSB ────────────────────────────── */
 
-test('sky: the dome dither ships non-zero and inside the sub-display-level band (§212.5)', async () => {
+test('sky: the dome dither ships non-zero and inside the sub-display-level band (§214.5)', async () => {
   /* Sky.js is imported for its TUNE only; nothing here builds geometry or touches a renderer.
      The band: the dither is relative, and the composite's transfer runs ~21 L per e-fold in
      the night sky and ~48 in daylight, so ±d/2 relative costs ~10.5*d and ~24*d display luma.
@@ -194,7 +194,7 @@ test('sky: the dome dither ships non-zero and inside the sub-display-level band 
   const { TUNE } = await import('../src/render/Sky.js').then((m) => ({ TUNE: new Sky({ debug: {}, scene: {}, on: () => {} }).TUNE }));
   assert.equal(typeof TUNE.domeDither, 'number', 'TUNE.domeDither is missing — the dither is not wired');
   assert.ok(TUNE.domeDither > 0,
-    'TUNE.domeDither is 0, so the night sky is back to the 19-level ladder measured in §212.5');
+    'TUNE.domeDither is 0, so the night sky is back to the 19-level ladder measured in §214.5');
   assert.ok(TUNE.domeDither <= 0.09,
     `TUNE.domeDither ${TUNE.domeDither} exceeds the sub-LSB band; the daylight sky would carry visible noise`);
 });

@@ -127,7 +127,7 @@ const TUNE = {
   cloudRimPower: 3.2,
   cloudHazeBlend: 0.42,     // how far a receding deck dissolves into the horizon haze
 
-  /* ── §212.5: the dome's own 8-bit dither, because the one that was doing this job is gone ──
+  /* ── §214.5: the dome's own 8-bit dither, because the one that was doing this job is gone ──
      Critic pass 7 §2 measured `night`'s sky at "18 distinct luma levels over 250 rows, 77 of
      249 adjacent-row deltas exactly zero". Reproduced here on `night.base.png` with an
      independently calibrated counter: **19 distinct levels over 250 rows, span 25.7 L**. The
