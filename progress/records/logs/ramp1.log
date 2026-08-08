@@ -6,3 +6,9 @@
 [435s]   preroll1  fillScale 1     took 1  boot same
 [729s]   preroll2  fillScale 1     took 1  boot same
 [1029s]   preroll3  fillScale 1     took 1  boot same
+[2162s]   base      fillScale 1     took 1  boot same
+[3290s]   f35       fillScale 0.35  took 0.35  boot same
+[4422s]   f10       fillScale 0.1   took 0.1  boot same
+[5556s]   restore   fillScale 1     took 1  boot same
+[6694s]   f00       fillScale 0     took 0  boot same
+[6694s] DONE

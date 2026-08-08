@@ -1,0 +1,252 @@
+{
+  "rois": {
+    "R1": {
+      "shot": "sly-startle",
+      "criticBaseline": 28.9,
+      "arms": {
+        "base": {
+          "mean": [
+            19.1,
+            76.5,
+            179.2
+          ],
+          "flat": 20.5,
+          "surfaceOk": true,
+          "void": false
+        },
+        "f35": {
+          "mean": [
+            12.8,
+            58.7,
+            147.8
+          ],
+          "flat": 28.6,
+          "surfaceOk": true,
+          "void": false
+        },
+        "f10": {
+          "mean": [
+            10.9,
+            49,
+            128.1
+          ],
+          "flat": 35.1,
+          "surfaceOk": true,
+          "void": false
+        },
+        "restore": {
+          "mean": [
+            19.1,
+            76.5,
+            179.2
+          ],
+          "flat": 20.5,
+          "surfaceOk": true,
+          "void": false
+        },
+        "f00": {
+          "mean": [
+            11.3,
+            45.2,
+            114.5
+          ],
+          "flat": 33.6,
+          "surfaceOk": true,
+          "void": false
+        }
+      }
+    },
+    "R2": {
+      "shot": "temple",
+      "criticBaseline": 12.4,
+      "arms": {
+        "base": {
+          "mean": [
+            76,
+            82.4,
+            89
+          ],
+          "flat": 21.6,
+          "surfaceOk": true,
+          "void": false
+        },
+        "f35": {
+          "mean": [
+            67.2,
+            77.7,
+            87.3
+          ],
+          "flat": 22.8,
+          "surfaceOk": true,
+          "void": false
+        },
+        "f10": {
+          "mean": [
+            63.3,
+            75.7,
+            86.7
+          ],
+          "flat": 23.9,
+          "surfaceOk": true,
+          "void": false
+        },
+        "restore": {
+          "mean": [
+            76,
+            82.4,
+            89
+          ],
+          "flat": 21.6,
+          "surfaceOk": true,
+          "void": false
+        },
+        "f00": {
+          "mean": [
+            61.7,
+            74.9,
+            86.5
+          ],
+          "flat": 23.2,
+          "surfaceOk": true,
+          "void": false
+        }
+      }
+    },
+    "R3": {
+      "shot": "interior",
+      "criticBaseline": 32.2,
+      "arms": {
+        "base": {
+          "mean": [
+            46.2,
+            55.5,
+            79.1
+          ],
+          "flat": 32,
+          "surfaceOk": true,
+          "void": false
+        },
+        "f35": {
+          "mean": [
+            38.5,
+            52.3,
+            77.1
+          ],
+          "flat": 35.5,
+          "surfaceOk": true,
+          "void": false
+        },
+        "f10": {
+          "mean": [
+            35.2,
+            51,
+            76
+          ],
+          "flat": 37.8,
+          "surfaceOk": true,
+          "void": false
+        },
+        "restore": {
+          "mean": [
+            46.2,
+            55.5,
+            79.1
+          ],
+          "flat": 32,
+          "surfaceOk": true,
+          "void": false
+        },
+        "f00": {
+          "mean": [
+            33.7,
+            50.4,
+            75.7
+          ],
+          "flat": 38.2,
+          "surfaceOk": true,
+          "void": false
+        }
+      }
+    },
+    "R4": {
+      "shot": "courtyard",
+      "criticBaseline": 28,
+      "arms": {
+        "base": {
+          "mean": [
+            52.7,
+            65.1,
+            84.7
+          ],
+          "flat": 25.4,
+          "surfaceOk": true,
+          "void": false
+        },
+        "f35": {
+          "mean": [
+            44.7,
+            60.9,
+            82.4
+          ],
+          "flat": 27.7,
+          "surfaceOk": true,
+          "void": false
+        },
+        "f10": {
+          "mean": [
+            41.5,
+            59.2,
+            81.4
+          ],
+          "flat": 32.4,
+          "surfaceOk": true,
+          "void": false
+        },
+        "restore": {
+          "mean": [
+            52.7,
+            65.1,
+            84.7
+          ],
+          "flat": 25.4,
+          "surfaceOk": true,
+          "void": false
+        },
+        "f00": {
+          "mean": [
+            40,
+            58.4,
+            80.9
+          ],
+          "flat": 31.3,
+          "surfaceOk": true,
+          "void": false
+        }
+      }
+    }
+  },
+  "flatArea": {
+    "base": 0.42,
+    "f35": 1.05,
+    "f10": 1.22,
+    "restore": 0.42,
+    "f00": 1.42
+  },
+  "p99": {
+    "base": 144.5,
+    "f35": 142.1,
+    "f10": 141.1,
+    "restore": 144.5,
+    "f00": 140.7
+  },
+  "verdict": {
+    "A1_meanFlat_f10": 32.3,
+    "band": ">= 55 for PRIMARY CAUSE, < 25 fires P-F1",
+    "A2_R1_f10": 35.1,
+    "A3_flatArea_f10": 1.22,
+    "A4_p99_f10": 141.1,
+    "chain": "base=24.9  f35=28.7  f10=32.3  restore=24.9  f00=31.6",
+    "PF1_fillNotPrimary": false,
+    "PF6_monotonic": true
+  }
+}

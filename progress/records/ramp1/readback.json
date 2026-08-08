@@ -1,0 +1,68 @@
+{
+  "arms": [
+    {
+      "arm": "preroll1",
+      "scale": 1,
+      "took": 1,
+      "bootToken": "b89oe009j76u1786158131124",
+      "sameBoot": true,
+      "at": 435688
+    },
+    {
+      "arm": "preroll2",
+      "scale": 1,
+      "took": 1,
+      "bootToken": "b89oe009j76u1786158131124",
+      "sameBoot": true,
+      "at": 729312
+    },
+    {
+      "arm": "preroll3",
+      "scale": 1,
+      "took": 1,
+      "bootToken": "b89oe009j76u1786158131124",
+      "sameBoot": true,
+      "at": 1029465
+    },
+    {
+      "arm": "base",
+      "scale": 1,
+      "took": 1,
+      "bootToken": "b89oe009j76u1786158131124",
+      "sameBoot": true,
+      "at": 2162889
+    },
+    {
+      "arm": "f35",
+      "scale": 0.35,
+      "took": 0.35,
+      "bootToken": "b89oe009j76u1786158131124",
+      "sameBoot": true,
+      "at": 3290218
+    },
+    {
+      "arm": "f10",
+      "scale": 0.1,
+      "took": 0.1,
+      "bootToken": "b89oe009j76u1786158131124",
+      "sameBoot": true,
+      "at": 4422959
+    },
+    {
+      "arm": "restore",
+      "scale": 1,
+      "took": 1,
+      "bootToken": "b89oe009j76u1786158131124",
+      "sameBoot": true,
+      "at": 5556879
+    },
+    {
+      "arm": "f00",
+      "scale": 0,
+      "took": 0,
+      "bootToken": "b89oe009j76u1786158131124",
+      "sameBoot": true,
+      "at": 6694100
+    }
+  ]
+}

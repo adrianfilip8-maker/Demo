@@ -1802,7 +1802,11 @@ export class PostFX {
     cu.uBloomIntensity.value = this.tune.bloomIntensity;
     cu.uVignette.value = this.tune.vignette;
     cu.uChroma.value = this.tune.chroma;
-    cu.uGrain.value = this.tune.grain;
+    /* `debug.grainScale` — an in-page lever on the composite grain, added for PREREG-grain1.
+       RESULT-ramp1 measured the median adjacent-pixel |dL| on four surfaces at 1.4-1.9 luma, above
+       the 1.0 threshold any flat-area metric uses, so this term is what makes the toon ramp both
+       unmeasurable and invisible. Default 1 is bit-identical to shipping. */
+    cu.uGrain.value = this.tune.grain * (this.engine?.debug?.grainScale ?? 1);
 
     const last = this.passes.fxaa.enabled ? this.gradeRT : null;
     blit.render(renderer, this.compositeMat, last);
