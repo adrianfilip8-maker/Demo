@@ -16807,3 +16807,64 @@ Whether `model3` or `dlrig` ships is the owner's call, not mine: the current def
 explicit instruction. `RESULT-charab-dlrig` scored it 8–6. The rebuild makes `model3` materially
 better on exactly the axes the critic named, and the `dlrig` fixes above are real work on a different
 file. **Not applied. Asked, not assumed.**
+
+## §217 — the shared uniform block does not reach the shader. Confirmed, isolated, and not guessed at.
+
+Upgraded from §210.2 ("`debugTerm` does not reach the shader"), which had one broken channel and no
+mechanism. This has two channels, a byte-exact pixel measurement, and a falsification test that came
+back negative.
+
+### The measurement
+
+`rampwire2.mjs` removes every confound cel1's KB arm carried — no `setShot`, no shot change, no tod
+change, nothing between the poke and the capture:
+
+```
+uTermHi read:  0.52  ->  0.95 after set  ->  0.95 after a setShot
+A vs B:        0 / 230400 differing pixels,  max channel-sum delta 0
+```
+
+**The value persists and the frame is byte-identical.** I specifically tested the hypothesis that
+would have made me wrong — that `setShot`'s `timeOfDay` emit republishes through LIGHTING into
+SHADING and quietly restores the uniform — and it does not: the value survives a shot change intact.
+
+### What is ruled out, by reading rather than by assumption
+
+- `ToonMaterial.js:730` — `this.uniforms` **does** contain `uTermLo`/`uTermHi`, and is assigned
+  exactly once; nothing reassigns it and nothing clones it.
+- `:1089` — `onBeforeCompile` does `Object.assign(shader.uniforms, self.uniforms, own)`, which copies
+  the uniform **objects by reference**, so identity should hold.
+- `own` carries `uTermSoft`, not `uTermHi`, so there is no per-material shadowing.
+- **The patched shader source is correct.** `_patch` is a pure string transform and runs offline in
+  plain Node — patching three's `meshphysical` fragment source grows it 3,942 → 53,488 chars and the
+  result declares `uTermLo`/`uTermHi`/`uTermSoft`/`uBands`, uses each 2–4 times, and contains
+  `slyRamp` and the `TOON_SHADE` block. So the splice lands and the uniform is both declared and
+  read. §210.2's `_patchWarned: false` agreed.
+
+### What is NOT established, and I am not guessing
+
+`rampwire.mjs`'s per-material probe reported `uTermHi` absent from every material bag and
+**`nUniforms: 0` on four compiled programs**. A compiled program cannot have zero uniforms, so that
+accessor is wrong: `userData.slyUniforms` is the per-material `own` bag, and
+`currentProgram.getUniforms().seq` was not read correctly either. That is the **third** confident,
+plausible, wrong null this subsystem has produced (§210.2's `material.program`, §211.4's winding
+metric, this). The pixel facts above stand on their own; the mechanism does not yet.
+
+`rampwire3.mjs` is the discriminator, because `setRampTuning` writes through two different paths that
+the **same GLSL line** reads (`smoothstep( t - uTermSoft, t + uTermSoft, x )`): `lo`/`hi` go to the
+shared block, while `soft` walks `this._cache` and writes each material's own bag. If `soft` moves
+the frame and `hi` does not, the shader is certainly running and the fault is isolated to the shared
+block. If neither moves it, the patched program is not drawing these pixels at all — a much bigger
+problem than a uniform-sharing bug.
+
+### What it blocks
+
+- **Task #25**, the `termHi` 0.52 → 0.62 A/B — its entire lever is `setRampTuning`. Had cel1 not
+  carried a calibration arm, #25 would have run, moved nothing, and been written up as "the
+  terminator move does nothing", which is false.
+- **Task #29**, the §213 re-run, needs a calibration arm outside this block.
+- The light & tone sub-agent's whole Lever A (§214) uses `setRampTuning`.
+
+Anything written through `Shading.uniforms` **after** material construction is suspect. Anything read
+at construction time — `own`, and `TUNE` values baked into the cache key — is not implicated, which
+is why `bands`, `termSoft` and the ramp itself visibly work in shipped frames.
