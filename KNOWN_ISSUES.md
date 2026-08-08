@@ -18701,3 +18701,159 @@ to another agent; it fails identically before any change here. The five `patrol.
 noted earlier have since been fixed by the GUARDS agent. 35 of the passing tests are new here,
 and **six of them are calibration arms that must fire** — a threshold nobody has proved can fail
 is not a threshold.
+
+## §237 — the FX catalogue was almost complete; what was missing was that four events fired into nothing, and a graded ladder drew one flat puff
+
+The brief for this pass listed five things a Sly game needs from FX — landing dust, a cane
+trail, treasure sparkle, Egyptian ambience, stealth cues — and asked whether they existed.
+**Four of the five already ship, and one of those is among the best-tuned code in the repo.**
+Reporting that is worth more than inventing work on top of it, so the audit comes first.
+
+### What already worked, and should not be touched
+
+| Ask | State | Where |
+|---|---|---|
+| Landing dust | **Ships.** `land_dust` + `land_ring` + a `scuff` decal above force 1.1, all force-scaled | `_onLand` |
+| Footsteps | **Ships.** Four surfaces (sand/stone/wood/metal), foot-offset across the stride line, dead-reckoned when ANIMATION is absent | `_onFootstep`, `_deadReckonFootsteps` |
+| Cane motion trail | **Ships.** Tapered gold ribbon off the hook point, opacity gated on segment speed so a still cane draws nothing | `_attachCaneTrail`, `Trails.js` |
+| Treasure | **Ships.** `coin_sparkle`, `coin_pop`, plus `SparkleField`'s analytic §2.1.6 diamond on every affordance | `_wireEvents`, `SparkleField` |
+| Egypt ambience | **Ships, and is the most carefully measured subsystem here.** `air_motes`, `sand_drift`, `sand_haze`, shaft `MOTES`, `TORCH_MOTES`, `torch_smoke`, `shimmer` — with the density arithmetic, the sub-pixel-mote defect and the `col1` hue-separation analysis already written down | `AMBIENT`, `MOTES` |
+
+The one ask that was genuinely absent is the fifth, and two traversal beats were missing
+underneath the ones that work.
+
+### Defect 1 — the detection ladder was graded in the data and flat on screen
+
+GUARDS computes four rungs. `stateForSuspicion` splits the meter at 0.34 / 0.72 / 1.00 with
+per-band hysteresis, and `Guard._setState` emits `guardAlert` on **every** transition carrying
+`state`, `prev`, `suspicion` and `level`. FX read none of it:
+
+```js
+on('guardAlert', (e) => this._burstAt('guard_alert', e?.pos, UP));   // one puff, every rung
+```
+
+So the single piece of information a stealth game exists to communicate — *how much trouble
+am I in* — was computed every frame, published every transition, and arrived at the player as
+the same lime-and-blue puff whether the guard had half-heard something or was already running.
+
+Replaced with a scored ladder: `ALERT_LADDER` maps all seven guard states (including `lost`,
+`stunned`, `ko`) to one of four marks, and `_onGuardAlert` inflects the mark by `level` inside
+its rung. `tests/fxfeel.test.mjs` holds `count x alpha x size0^2` strictly increasing with a
+minimum 1.6x step between adjacent rungs:
+
+```
+patrol 0.00366  <  suspicious 0.01852  <  searching 0.06014  <  chase 0.21529
+                     (5.06x)              (3.25x)              (3.58x)
+```
+
+**The colours are the vision cone's, not a new set.** Patrol.js already specifies "cream while
+he has noticed nothing, amber the instant he becomes suspicious and held amber through the
+whole search", and Guard.js publishes those as `colPatrol` #fff0c2 / `colWarn` #ffb14a /
+`colAlert` #ff3a22. The puff has to agree with the cone it is standing in — two languages for
+one state is worse than one. Warmth (R−B) climbs 61 → 181 → 181 → 221 and is tested never to
+cool on the way up. All four rungs are `dust` (non-additive) so a garrison going up cannot
+lift the exposure; only the top rung adds additive light, and it adds it as 4–6 hard 0.09 m
+sparks (frac 0.049 against the 0.3375 bound), not as a glow.
+
+Rung 0 is a de-escalation — `_setState` only fires on a change, so reaching `patrol` always
+means *stood down* — and it is the quietest thing in the catalogue and the only rung that
+cools as it dies. The player needs "you are clear" as much as the alarm.
+
+### Defect 2 — two moveset states had existed from the start and never produced a particle
+
+`buildMoveset()` has registered `Skid` (priority 40) and `RailSlide` (priority 84) since it
+was written, and `Controller` has emitted `playerState` on every transition. **FX subscribed
+to `playerState` at all.** Consequences:
+
+- **The hard turn threw no dust.** The one traversal beat that is pure weight — Sly plants and
+  reverses — had no FX whatsoever.
+- **A rail grind was silent after its first frame.** `railMount` fired one `footstep_metal`
+  puff at the instant of mounting; a four-second slide down a rail then produced nothing.
+
+Both are now continuous, driven off `playerState` through the `CONTINUOUS` table, with the
+spawn direction derived from the player's velocity each tick (sparks leave the contact patch
+backwards and fall; scuff dust carries along the slide via `inherit`). `skid` additionally
+gets a one-shot plant — a scuff decal at half a landing's life, because a turn scars sand less
+than a drop does. Both gate on speed ≥ 1.2 m/s so neither can fire under a stationary player.
+
+Four further events were emitted and unheard, and are now wired: `ledgeGrab`, `hookGrab`,
+`hookRelease`, `enemyBounce`. `ledgeGrab` and `hookGrab` are the two moments Sly *catches*
+something, which is the verb the moveset is built around.
+
+### Defect 3 — the emission integrator banked its backlog, and flooded after a hitch
+
+Found while budgeting the two new continuous emitters, and the most consequential thing here
+because it was already shipping on ~40 fires and torches. The loop clamped how many particles
+it emitted **per frame** but kept the arrears:
+
+```js
+h.accum += dt * h.rate * density;
+while (h.accum >= 1 && guard++ < 6) { h.accum -= 1; emit(); }   // arrears kept
+```
+
+After a long frame it therefore runs flat-out at the clamp for as many frames as it takes to
+pay the debt off. Driven on `rail_spark` (rate 26, density ceiling 1.6, life 0.34 s), a single
+**1.0 s hitch banks 41.6 ticks, drains 6 a frame for seven frames, and takes the live
+population to 83 against a steady-state budget of 21.2 — 3.9x** — precisely when the machine
+has just proved it is struggling.
+
+`emitTicks()` clamps the accumulator instead, so a hitch costs one clamped frame and nothing
+after it: peak live 29 rather than 83. That is also the physically honest answer — particles
+that should have been born during a second-long frame would already be dead, and emitting them
+late puts a burst on screen for an event that is over. Applied to both the new player path and
+`_updateEmitters`. It cannot move a staged capture: the clamp binds only on a long frame, and
+staged stills render at `dt` 0 where both forms emit nothing and the fires come from
+`_prerollFires` instead.
+
+### Measurement — no capture was taken, and none was needed
+
+Pre-registered in full before any emitter value was authored (§141.1), and every criterion is
+arithmetic over committed data. `tests/fxfeel.test.mjs`, 22 assertions, runs in about a second:
+
+| | Registered bound | Measured |
+|---|---|---|
+| T1 additive screen size | `frac(size, fov 40, d 5 m) ≤ 0.75·flashMaxH = 0.3375` | `rail_spark` 0.0412, `alert_spot_spark` 0.0495 |
+| T2 steady-state budget | ≤ 0.25 of batch capacity | spark 21.2/175, dust 56.0/225 |
+| T2b rate conservation | within 1 tick of `rate·density·t` | 166 vs 166 over 4 s |
+| T2b hitch transient | ≤ 3x steady state | 29 vs 21.2 |
+| T3 ladder grading | strictly increasing, ≥ 1.6x per step | 5.06x / 3.25x / 3.58x |
+| T5 routing | every guard state resolves to a real emitter | 7 of 7 |
+
+T1's bound was **not mine to choose** — it is the one the already-shipped
+`tests/fx.test.mjs` enforces on every non-`cane_flash` spark emitter, so breaching it turns an
+existing test red as well as the new one.
+
+**Every threshold carries a positive calibration arm that must fire**, because a ceiling that
+clamps nothing, a budget that rejects nothing and a monotonicity check that accepts a flat
+ladder are each indistinguishable from having no check at all:
+
+- **T1**: shipped `cane_flash` at heavy scale measures frac 1.113 — it breaches, so the bound
+  can tell a veiling sprite from a speck.
+- **T2**: a synthetic rate-60 / life-3.0 emitter measures 288 live against a 175 budget — it is
+  rejected, so the budget can detect a flood.
+- **T2b**: the banking integrator this replaced is reproduced *in the test* and peaks at 83 —
+  it is rejected, so the transient measurement can tell a flooding integrator from a good one.
+- **T3**: two identical rungs are rejected, so the ladder check would have caught the shipped
+  defect it replaces.
+
+`BATCH_CAPACITY` and `DENSITY_CLAMP` are now exported rather than living as literals inside
+`_buildBatches` and `_density`, because a budget that reads different numbers from the ones the
+renderer allocates is not a budget. Emission rates live in `CONTINUOUS` rather than in a method
+body for the same reason: §211.1's failure mode is only avoidable if the thing under test is
+inspectable from Node.
+
+**The capture lock was not taken.** Three runs were queued behind it and two agents were fully
+blocked; nothing in this pass needed a frame, so the budget of one run was spent on nobody.
+
+### Still open — two things this pass found and did not fix
+
+1. **`coin` is emitted by nothing.** `src/fx/Particles.js`, `src/ui/HUD.js:367` and
+   `src/audio/Audio.js:997` all subscribe to a `coin` event that no module in `src/` ever
+   emits. The coin-pop burst, the HUD counter increment and the coin SFX therefore only ever
+   fire through `pickpocket`; picking a coin up off the floor triggers none of the three. The
+   fix is an emit in whichever module owns pickups, which is not `src/fx/`.
+2. **A latent aliasing trap in `_emit`.** It clobbers the module-local `_v1` building its
+   tangent frame and reads `opts.inherit` *afterwards*, so passing `_v1` as an inherited
+   velocity silently becomes (0,1,0). Hit while writing `_emitPlayerCont`; avoided with a
+   dedicated `_inh` and commented at the declaration, but the sharp edge is still there for
+   the next caller.
