@@ -238,10 +238,16 @@ the highest-risk shot for this change by a wide margin, and it is the one that h
 
 > **Status: NOT RUN.** `celband.mjs` was launched and sat in the capture lock's FIFO behind other
 > agents' captures for the **whole remainder of the session without ever being granted it** — still
-> queued at hand-off, `waiting for capture lock (1915s, held by pid 6204)`, i.e. one other agent
-> held the lock continuously for 32 minutes. That is the documented cost of a full ten-shot set
-> ahead of you in the queue (`tools/shot.mjs`: 40–60 minutes of exclusive hold). **Zero frames were
-> written.** The process was left alive, so the frames may appear later; if they do,
+> queued at hand-off. **Zero frames were written.**
+>
+> The holder was identified rather than assumed, because a lock held that long invites someone to
+> break it: `ps` shows pid 6204 alive the whole time as
+> `node progress/records/inkw.mjs --shots courtyard,hero,combat,sly-closeup --res 1280x720,640x360`
+> — the INK agent's 4-shot × 2-resolution run, i.e. **eight captures**, at 79 minutes and counting.
+> That is a legitimate hold, not a stale lock, and it is well inside `tools/shot.mjs`'s own cost
+> model (~14 s/frame, a `setShot` is 17 frames, 4–6 min per shot). **Nothing here should be read as
+> licence to break a long-held capture lock** — the correct response was to stay in the FIFO, which
+> is what happened. The process was left alive, so the frames may appear later; if they do,
 > `celband-score.mjs` applies the registered rule to them without any further derivation.
 >
 > **`TUNE.shadeBand` therefore ships at 0**, which is bit-identical to the pre-change build on any

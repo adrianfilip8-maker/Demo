@@ -17789,10 +17789,17 @@ anything cel.
 
 `progress/records/celband.mjs` was launched and sat in the capture lock's FIFO behind other agents'
 captures for the **whole remainder of the session without ever being granted it** — still queued at
-hand-off, `waiting for capture lock (1915s, held by pid 6204)`, i.e. one other agent held the lock
-continuously for 32 minutes. Zero frames were written. `tools/shot.mjs`'s own header documents why:
-a full ten-shot set is 40–60 minutes of exclusive hold, and anything queued behind one waits that
-long. The process was left alive, so the frames may still appear; `celband-score.mjs` applies the
+hand-off. Zero frames were written.
+
+The holder was checked rather than assumed, because a lock held that long invites someone to break
+it: pid 6204 was alive throughout as `node progress/records/inkw.mjs --shots
+courtyard,hero,combat,sly-closeup --res 1280x720,640x360` — the INK agent's **eight-capture** run,
+at 79 minutes and counting. A legitimate hold, not a stale lock, and inside `tools/shot.mjs`'s own
+cost model (~14 s/frame, a `setShot` is 17 frames, 4–6 min per shot). **This is not licence to break
+a long-held capture lock.** The correct response is to stay in the FIFO, which is what happened —
+and the standing lesson is the one `tools/shot.mjs` already states: ask for the fewest shots that
+answer your question, because a multi-shot run is a decision to block every other agent for an
+hour. The process was left alive, so the frames may still appear; `celband-score.mjs` applies the
 registered rule to them without further derivation if they do.
 
 So **`TUNE.shadeBand` ships at 0**, bit-identical to the pre-change build on any driver. Nothing is
