@@ -224,6 +224,8 @@ await withGame({ width: 320, height: 180, quality: 'high', timeout: 20 * 60 * 10
       ndlHist[Math.min(16, rampPng.data[p * 4 + 1] >> 4)]++;
     }
     log(`    population (from A3's mode-4 map): ${pop.length} px`);
+    log('    Caveat: the map is 8 sim frames older than the readback, so animated pixels can');
+    log('    be mislabelled. On a staged architectural shot that is a small edge population.');
     const show = (name, h) => log(`    ${name} 16ths: ${h.map((v, i) => (v ? `${i}:${v}` : '')).filter(Boolean).join(' ')}`);
     show('ramp R', rampHist);
     show('N.L  G', ndlHist);

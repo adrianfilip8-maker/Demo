@@ -1898,6 +1898,8 @@ export class Particles {
     this._frame = 0;
     this._thief = 0;
     this._thiefTarget = 0;
+    /** Arrival latch for target magnetism — one `target_catch` per lock. */
+    this._targetReached = false;
 
     this._crests = [];
     for (let i = 0; i < TUNE.crestRings.length * TUNE.crestPerRing; i++) {
@@ -1938,6 +1940,7 @@ export class Particles {
       engine.scene.add(this.root);
 
       this._wireEvents();
+      this._flushLevelTargets();
       this._seedOrphanTorches();
       this._attachCaneTrail();
     } catch (err) {
@@ -2164,6 +2167,58 @@ export class Particles {
     on('shot', (e) => this._stageShot(e?.name));
     on('resize', () => this._resizeDepth());
     on('quality', () => this._resizeDepth());
+  }
+
+  /**
+   * The blue sparkle belongs on the *affordance*, not on the target point.
+   *
+   * A hook's authored point is the taut-rope position, `ring − (0, hookL, 0)` — 2.2 m of empty
+   * air under the ring, because that is where Sly ends up. The ring is what the player is
+   * looking at and what `SparkleField` already marks, so the level ships it in
+   * `userData.fx` and the event FX uses that when it is there.
+   */
+  _targetFx(e) { return e?.target?.userData?.fx || e?.point || null; }
+
+  _onTargetLocked(e) {
+    this._targetReached = false;
+    const p = this._targetFx(e);
+    if (p) this._burstAt('target_lock', p, null, 0.9);
+  }
+
+  _onTargetReached(e) {
+    // `TargetField.step` can re-enter `onTarget` inside one lock if the snap test fails a
+    // frame; the arrival is one beat, so latch it and let the release clear it.
+    if (this._targetReached) return;
+    this._targetReached = true;
+    const p = this._targetFx(e);
+    if (p) this._burstAt('target_catch', p, UP);
+  }
+
+  /**
+   * Hand MOVEMENT the traversal magnetism points the level authored.
+   *
+   * This is here because of boot order, not because FX owns level content. `main.js` MANIFEST
+   * runs `architecture` 6th and `movement` 11th, and the `registerTarget` listener is
+   * installed in `Controller.init()` — so every emit from the level build lands on an empty
+   * listener set and `Engine.emit` drops it. `fx` is 15th, the first module after MOVEMENT
+   * that already reads `architecture.api` (for the sparkle markers), so it flushes the
+   * backlog through the same public event the level used. Idempotent: anything MOVEMENT
+   * already holds by id is skipped, so a future fix in Controller makes this a no-op rather
+   * than a double registration.
+   */
+  _flushLevelTargets() {
+    const engine = this.engine;
+    const specs = engine.get('architecture')?.api?.targets;
+    const mv = engine.get('movement');
+    if (!specs?.length || !mv?.targets) return 0;
+    const have = new Set(mv.targets.list.map((t) => t.id));
+    let n = 0;
+    for (const s of specs) {
+      if (s?.id != null && have.has(s.id)) continue;
+      engine.emit('registerTarget', s);
+      n++;
+    }
+    return n;
   }
 
   /**
