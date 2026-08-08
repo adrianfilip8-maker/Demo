@@ -17971,3 +17971,71 @@ silenced, skipped or loosened — it needs one `npm run bake` once the capture q
 The generalisable point: "the guard is red and it is blocking people" is a reason to find out *what
 the guard protects*, not a reason to make it green. Here the stale cache was the thing keeping three
 other agents' measurements valid.
+
+## §233 — the character does not brighten the ground, and same-boot arms have NO drift floor at all
+
+Two findings, the second worth more than the first.
+
+### The orphaned +5.5 L
+
+Critic pass 8 measured **+5.5 L** on the floor under Sly's boots. §230 established it is not a
+contact decal — the player is never a `ContactDecals` client, only `Props.js` and `KayKit.js`
+instantiate one — and the DECALS agent rightly refused to credit its own fix with the number,
+leaving the defect ownerless.
+
+Answered offline, **with no capture and no lock**, out of a pair of frames the INK agent had already
+written for an unrelated purpose: `1280x720-courtyard-base.png` and `…-nochar.png` — same boot, same
+camera, same textures, character present versus removed, one lever. That isolates the character's
+*entire* contribution to the frame rather than any single mechanism one might have guessed at, which
+makes it a better instrument for this question than anything I would have queued for.
+
+Luma delta in rings outward from his silhouette, starting at 4 px so the ink outline cannot
+contaminate the innermost band:
+
+```
+ring        mean ΔL     n        share of the +5.5 L claim
+4-8 px      -0.0538     703        -0.98%   darkens, negligibly
+8-16 px     +0.0003    1656         0.00%
+16-32 px     0.0000    4349         0.00%   identical
+32-64 px     0.0000   13071         0.00%   identical
+64-128 px    0.0000   43483         0.00%   identical
+        …restricted to the foot band (bottom 20% of his bbox):
+4-8 px      -0.1006     267        -1.83%   darkens, negligibly
+```
+
+**The character does not brighten the ground he stands on. He very slightly darkens it within 8 px
+— a contact term behaving correctly — and beyond 16 px his effect is bit-for-bit zero.** Whatever
+produces +5.5 L is not him. Standing caveat: this is `courtyard`, where he is only **44×42 px**; the
+critic's boot measurement was plausibly taken on a closer framing, so this refutes the character as
+the *cause* without yet locating the real one. The defect stays open, with two candidates now
+eliminated by evidence rather than by argument.
+
+### The finding that generalises: there is no drift floor within a boot
+
+The far-field control — everything beyond 200 px of the character — came back **mean 0.0000, sd
+0.0000, over 779,836 pixels**. Not "below the floor". *Identical.*
+
+§220 measured 3087 of 57600 px moving on their own between captures four frames apart and every arm
+in this project has carried a drift allowance since. **That figure is CROSS-BOOT.** Within a single
+boot, with one lever moved, this renderer is bit-deterministic, and the allowance is not merely
+unnecessary — carrying it makes an instrument thousands of times less sensitive than it could be.
+A same-boot single-lever A/B can legitimately quote a delta of 0.0003 L, which is far below anything
+§220 would have permitted.
+
+Practical consequence for every agent here: **prefer one boot with a lever to two boots compared.**
+It is not a convenience, it is the difference between an instrument that can see a hundredth of a
+luma and one that cannot see less than a whole one. §220 stands as written for cross-boot work; it
+should never have been applied to same-boot arms, and this is the measurement that separates them.
+
+### The calibration arm caught my own arithmetic
+
+CAL-1 injects a real +5.5 L disc into the 4–8 px ring and requires the ring mean to move by exactly
+the right amount. It reported **DID NOT FIRE**: predicted 1.6038, measured 1.5500. The instrument
+was correct and my expectation was wrong — I had written `5.5 × injected/n` for the *rise* and
+compared it against an *absolute* mean, omitting the ring's pre-existing −0.0538. The gap was
+0.0538 exactly.
+
+Kept because the difference between the two things one can do to a failing calibration arm is the
+whole discipline: interrogating it found an error in my arithmetic that was always there, where
+adjusting it until it passed would have buried a real defect under a fitted threshold. After the
+correction: expected 1.5500, measured 1.5500.
