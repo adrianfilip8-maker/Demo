@@ -2,31 +2,31 @@
   "arms": {
     "base": {
       "fps": 60,
-      "drawCalls": 259,
-      "triangles": 1812900,
-      "programs": 94,
-      "ms": 10
+      "drawCalls": 265,
+      "triangles": 1817917,
+      "programs": 101,
+      "ms": 9.399999998509884
     },
     "cand": {
       "fps": 60,
-      "drawCalls": 259,
-      "triangles": 1812900,
-      "programs": 94,
-      "ms": 8.400000000372529
+      "drawCalls": 265,
+      "triangles": 1817917,
+      "programs": 101,
+      "ms": 8.800000000745058
     },
     "KB": {
       "fps": 60,
-      "drawCalls": 259,
-      "triangles": 1812916,
-      "programs": 94,
-      "ms": 18.59999999962747
+      "drawCalls": 265,
+      "triangles": 1817933,
+      "programs": 101,
+      "ms": 8
     },
     "restore": {
       "fps": 60,
-      "drawCalls": 259,
-      "triangles": 1812916,
-      "programs": 94,
-      "ms": 6.799999998882413
+      "drawCalls": 265,
+      "triangles": 1817933,
+      "programs": 101,
+      "ms": 7.5
     }
   },
   "armA": {

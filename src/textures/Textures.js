@@ -137,11 +137,17 @@ export class Textures {
 
     this.stats.ms = performance.now() - t0;
     this.stats.bytes = this._bytes;
-    if (this.stats.ms > 6000) {
-      this.engine.warn(`textures: prewarm took ${(this.stats.ms / 1000).toFixed(1)}s at size ${this.size}`);
-    }
+    this.stats.workers = this._poolSize;
+
+    /* **Always stamped, not only past a threshold.** The old line fired at `> 6000` ms, so the
+     * one number that mattered — how long the player waits at a black screen — was recorded only
+     * when it was already bad, and a run that improved it left no trace to compare against. It is
+     * now unconditional and carries the three things that explain the figure: how many recipes,
+     * at what resolution, and across how many threads. `shot.mjs` copies `window.__GAME.warnings`
+     * into `report.json`, so every capture from here on carries its own load-time provenance and
+     * the next person to touch this does not have to re-derive the baseline. */
     this.engine.warn(`textures: prewarm ${this.stats.built} recipes in ${(this.stats.ms / 1000).toFixed(2)}s `
-      + `at size ${this.size} on ${this._poolSize} worker${this._poolSize === 1 ? '' : 's'} `
+      + `at size ${this.size} on ${this._poolSize || 'no'} worker${this._poolSize === 1 ? '' : 's'} `
       + `(${(this._bytes / 1048576).toFixed(0)} MB)`);
   }
 
