@@ -256,14 +256,31 @@ function largestBox(mask, w, h) {
 
 const POKES = {
   base: () => {},
-  nohull: () => { window.__ENGINE.get('shading').setOutlinesVisible(false); },
+  /* NOT `shading.setOutlinesVisible(false)`. `PostFX._renderChain` calls `beginNormalPass()` /
+     `endNormalPass()` every frame, and the second of those sets shell visibility back to TRUE — so
+     that poke is overwritten before the capture and the arm silently measures nothing. The first
+     baseline run lost its whole hull arm to exactly that. `material.visible` is checked in
+     `WebGLRenderer.projectObject` and nothing in the frame loop rewrites it. */
+  nohull: () => {
+    let n = 0;
+    for (const m of window.__ENGINE.get('shading')._inkCache.values()) { m.visible = false; n++; }
+    window.__INKW_HULLMATS = n;
+  },
   noink: () => { window.__ENGINE.get('postfx').tune.inkStrength = 0; },
   noao: () => { window.__ENGINE.get('postfx').setEnabled('ao', false); },
   nochar: () => { window.__ENGINE.get('character').root.visible = false; },
+  /* Both levers, so the arm means the same thing before and after the fix: before, nothing
+     rewrites `uThickness` and the uniform poke does the work; after, the per-frame resolution sync
+     overwrites the uniform and `userData.slyInkScale` does it instead. Either way the hull is
+     exactly 2x, which is what the calibration asserts. */
   hull2x: () => {
     const sh = window.__ENGINE.get('shading');
     let n = 0;
-    for (const m of sh._inkCache.values()) { m.uniforms.uThickness.value *= 2; n++; }
+    for (const m of sh._inkCache.values()) {
+      m.userData.slyInkScale = (m.userData.slyInkScale ?? 1) * 2;
+      m.uniforms.uThickness.value *= 2;
+      n++;
+    }
     window.__INKW_CALIB = n;
   },
   fxaa: () => { window.__ENGINE.get('postfx').setEnabled('fxaa', !window.__INKW_FXAA0); },
@@ -271,11 +288,16 @@ const POKES = {
 
 const RESTORE = {
   base: () => {},
-  nohull: () => { window.__ENGINE.get('shading').setOutlinesVisible(true); },
+  nohull: () => { for (const m of window.__ENGINE.get('shading')._inkCache.values()) m.visible = true; },
   noink: () => { window.__ENGINE.get('postfx').tune.inkStrength = window.__INKW_INK0; },
   noao: () => { window.__ENGINE.get('postfx').setEnabled('ao', true); },
   nochar: () => { window.__ENGINE.get('character').root.visible = true; },
-  hull2x: () => { for (const m of window.__ENGINE.get('shading')._inkCache.values()) m.uniforms.uThickness.value /= 2; },
+  hull2x: () => {
+    for (const m of window.__ENGINE.get('shading')._inkCache.values()) {
+      m.userData.slyInkScale = (m.userData.slyInkScale ?? 2) / 2;
+      m.uniforms.uThickness.value /= 2;
+    }
+  },
   fxaa: () => { window.__ENGINE.get('postfx').setEnabled('fxaa', window.__INKW_FXAA0); },
 };
 
@@ -341,31 +363,35 @@ async function main() {
     return;
   }
 
-  const results = await withGame({ width: W, height: H, quality: 'high', verbose: false }, async ({ page, info }) => {
-    await page.evaluate(([pokes, restores, keepFxaa]) => {
-      window.__INKW_POKE = Object.fromEntries(Object.entries(pokes).map(([k, v]) => [k, new Function(`return (${v})`)()]));
-      window.__INKW_RESTORE = Object.fromEntries(Object.entries(restores).map(([k, v]) => [k, new Function(`return (${v})`)()]));
-      const p = window.__ENGINE.get('postfx');
-      window.__INKW_INK0 = p.tune.inkStrength;
-      window.__INKW_FXAA0 = !!keepFxaa;
-      p.setEnabled('fxaa', !!keepFxaa);
-    }, [
-      Object.fromEntries(Object.entries(POKES).map(([k, v]) => [k, v.toString()])),
-      Object.fromEntries(Object.entries(RESTORE).map(([k, v]) => [k, v.toString()])),
-      KEEP_FXAA,
-    ]);
+  /* ONE BOOT PER RESOLUTION. Sweeping resolutions inside a live boot with `setViewportSize`
+     resized the canvas (the drawing buffer readback confirmed it) and then rendered nothing:
+     every frame of the first run's 640x360 block came back exactly 0 in all channels. Booting
+     at the target viewport is the harness's own path and is known to work. It costs a lock
+     acquisition per resolution, which is the price of the arm being real. */
+  const out = [];
+  let renderer = '?', warnings = 0;
+  for (const res of RES) {
+    const r = await withGame({ width: res.w, height: res.h, quality: 'high', verbose: false }, async ({ page, info }) => {
+      await page.evaluate(([pokes, restores, keepFxaa]) => {
+        window.__INKW_POKE = Object.fromEntries(Object.entries(pokes).map(([k, v]) => [k, new Function(`return (${v})`)()]));
+        window.__INKW_RESTORE = Object.fromEntries(Object.entries(restores).map(([k, v]) => [k, new Function(`return (${v})`)()]));
+        const p = window.__ENGINE.get('postfx');
+        window.__INKW_INK0 = p.tune.inkStrength;
+        window.__INKW_FXAA0 = !!keepFxaa;
+        p.setEnabled('fxaa', !!keepFxaa);
+      }, [
+        Object.fromEntries(Object.entries(POKES).map(([k, v]) => [k, v.toString()])),
+        Object.fromEntries(Object.entries(RESTORE).map(([k, v]) => [k, v.toString()])),
+        KEEP_FXAA,
+      ]);
 
-    const out = [];
-    for (const res of RES) {
-      if (res.w !== W || res.h !== H) {
-        await page.setViewportSize({ width: res.w, height: res.h });
-        await page.waitForTimeout(400);
-      }
       const got = await page.evaluate(() => {
         window.__ENGINE.renderFrame(0);
         return [window.__ENGINE.canvas.width, window.__ENGINE.canvas.height];
       });
       console.log(`\n== ${res.w}x${res.h} (drawing buffer ${got[0]}x${got[1]}) ==`);
+
+      const rows = [];
       for (const shot of SHOTS) {
         process.stdout.write(`\n[${shot}] `);
         const staged = await page.evaluate((n) => window.__GAME.setShot(n, { dt: 0 }), shot);
@@ -377,14 +403,17 @@ async function main() {
           writeFileSync(f, Buffer.from(url.split(',')[1], 'base64'));
           files[arm] = f;
         }
-        const calib = await page.evaluate(() => window.__INKW_CALIB ?? 0);
-        out.push({ res, buf: got, shot, files, subject: staged.subject, calibMats: calib });
+        const calib = await page.evaluate(() => [window.__INKW_CALIB ?? 0, window.__INKW_HULLMATS ?? 0]);
+        rows.push({ res, buf: got, shot, files, subject: staged.subject, calibMats: calib[0], hullMats: calib[1] });
       }
-    }
-    return { out, renderer: info.renderer, warnings: info.warnings.length };
-  });
+      return { rows, renderer: info.renderer, warnings: info.warnings.length };
+    });
+    out.push(...r.rows);
+    renderer = r.renderer;
+    warnings += r.warnings;
+  }
 
-  report(OUT, results, st);
+  report(OUT, { out, renderer, warnings }, st);
 }
 
 function report(OUT, results, st) {
@@ -443,8 +472,22 @@ function report(OUT, results, st) {
       if (im.nohull[i] - im.base[i] >= T || im.noink[i] - im.base[i] >= T) { inkM[i] = 1; inkCnt++; }
     }
     const inkCh = minChord(inkM, W, H);
-    rows.ink = { frame: { ...stats(inkCh, null), px: inkCnt }, subj: stats(inkCh, region),
+    let inkSubj = 0;
+    for (let i = 0; i < n; i++) if (inkM[i] && region[i]) inkSubj++;
+    rows.ink = { frame: { ...stats(inkCh, null), px: inkCnt }, subj: { ...stats(inkCh, region), px: inkSubj },
                  ring: radial(inkCh, W, H, null) };
+
+    /* P3c — is it a line or a fill? A line system's mask is thousands of short components; the
+       baseline's was ONE blob of 155,228 px covering 17 % of `courtyard`. Cut at 15 L rather than
+       the 4 L detection floor so the statistic describes the ink a viewer actually sees. */
+    const strong = new Uint8Array(n);
+    let strongN = 0;
+    for (let i = 0; i < n; i++) {
+      if (im.nohull[i] - im.base[i] >= 15 || im.noink[i] - im.base[i] >= 15) { strong[i] = 1; strongN++; }
+    }
+    const big = largestBox(strong, W, H);
+    rows.blob = { strongPx: strongN, largest: big ? big.n : 0,
+                  share: strongN ? +(big.n / strongN).toFixed(3) : 0 };
 
     // FXAA's own contribution to any measured width.
     let fxaaDiff = 0;
@@ -478,6 +521,7 @@ function report(OUT, results, st) {
     console.log(`  CAL nochar : ${charN} px moved   box ${box ? `${box.x0},${box.y0}..${box.x1},${box.y1}  ${box.x1 - box.x0 + 1}x${box.y1 - box.y0 + 1}` : 'none'}   ${charN > 200 ? 'PASS' : 'FAIL — poke path dead'}`);
     console.log(`  CAL hull2x : ${rec.calibMats} materials doubled; band med ${rec.hull2x.frame.med} vs base ${rec.hullBase.frame.med}   ${rec.hull2x.frame.med >= rec.hullBase.frame.med * 1.6 ? 'PASS' : 'FAIL — width estimator blind'}`);
     console.log(`  fxaa cost  : ${fxaaDiff} px differ from base`);
+    console.log(`  ink blob   : strong(>=15L) ${rows.blob.strongPx} px, largest component ${rows.blob.largest} = ${(rows.blob.share * 100).toFixed(0)}% of the mask`);
     for (const k of ['hull', 'crease', 'ink', 'ao']) {
       const g = rows[k].ring;
       console.log(`  ${k.padEnd(7)} frame: ${f(rows[k].frame)}`);

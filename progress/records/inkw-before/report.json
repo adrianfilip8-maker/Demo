@@ -1,13 +1,9 @@
 {
-  "tag": "1280x720_640x360",
+  "tag": "1280x720",
   "res": [
     {
       "w": 1280,
       "h": 720
-    },
-    {
-      "w": 640,
-      "h": 360
     }
   ],
   "fxaa": false,
@@ -135,7 +131,7 @@
       "charPx": 1173,
       "nullDiff": 0,
       "nullMax": 0,
-      "calibMats": 4,
+      "calibMats": null,
       "fxaaDiff": 160922,
       "bands": {
         "hull": {
@@ -145,6 +141,14 @@
           },
           "subj": {
             "n": 0
+          },
+          "ring": {
+            "inner": {
+              "n": 0
+            },
+            "outer": {
+              "n": 0
+            }
           }
         },
         "crease": {
@@ -166,6 +170,22 @@
             "p99": 4,
             "max": 6,
             "mean": 1.7
+          },
+          "ring": {
+            "inner": {
+              "n": 49115,
+              "med": 4,
+              "p05": 1,
+              "p95": 54,
+              "spread": 54
+            },
+            "outer": {
+              "n": 56592,
+              "med": 15,
+              "p05": 2,
+              "p95": 65,
+              "spread": 32.5
+            }
           }
         },
         "ao": {
@@ -187,7 +207,66 @@
             "p99": 21,
             "max": 21,
             "mean": 6.28
+          },
+          "ring": {
+            "inner": {
+              "n": 27390,
+              "med": 6,
+              "p05": 1,
+              "p95": 22,
+              "spread": 22
+            },
+            "outer": {
+              "n": 15187,
+              "med": 8,
+              "p05": 1,
+              "p95": 25,
+              "spread": 25
+            }
           }
+        },
+        "ink": {
+          "frame": {
+            "n": 246267,
+            "med": 10,
+            "p75": 58,
+            "p90": 112,
+            "p99": 123,
+            "max": 136,
+            "mean": 31.96,
+            "px": 246267
+          },
+          "subj": {
+            "n": 585,
+            "med": 1,
+            "p75": 2,
+            "p90": 3,
+            "p99": 4,
+            "max": 6,
+            "mean": 1.7,
+            "px": 585
+          },
+          "ring": {
+            "inner": {
+              "n": 49115,
+              "med": 4,
+              "p05": 1,
+              "p95": 54,
+              "spread": 54
+            },
+            "outer": {
+              "n": 56592,
+              "med": 15,
+              "p05": 2,
+              "p95": 65,
+              "spread": 32.5
+            }
+          }
+        },
+        "blob": {
+          "strongPx": 193986,
+          "largest": 155228,
+          "share": 0.8
         }
       },
       "hull2x": {
@@ -234,7 +313,7 @@
       "charPx": 8939,
       "nullDiff": 0,
       "nullMax": 0,
-      "calibMats": 4,
+      "calibMats": null,
       "fxaaDiff": 137557,
       "bands": {
         "hull": {
@@ -244,6 +323,14 @@
           },
           "subj": {
             "n": 0
+          },
+          "ring": {
+            "inner": {
+              "n": 0
+            },
+            "outer": {
+              "n": 0
+            }
           }
         },
         "crease": {
@@ -265,6 +352,22 @@
             "p99": 24,
             "max": 27,
             "mean": 7.48
+          },
+          "ring": {
+            "inner": {
+              "n": 46536,
+              "med": 6,
+              "p05": 1,
+              "p95": 22,
+              "spread": 22
+            },
+            "outer": {
+              "n": 25040,
+              "med": 4,
+              "p05": 1,
+              "p95": 18,
+              "spread": 18
+            }
           }
         },
         "ao": {
@@ -286,7 +389,66 @@
             "p99": 10,
             "max": 11,
             "mean": 3.3
+          },
+          "ring": {
+            "inner": {
+              "n": 13052,
+              "med": 6,
+              "p05": 1,
+              "p95": 39,
+              "spread": 39
+            },
+            "outer": {
+              "n": 5655,
+              "med": 12,
+              "p05": 1,
+              "p95": 34,
+              "spread": 34
+            }
           }
+        },
+        "ink": {
+          "frame": {
+            "n": 143312,
+            "med": 5,
+            "p75": 12,
+            "p90": 18,
+            "p99": 30,
+            "max": 45,
+            "mean": 7.82,
+            "px": 143312
+          },
+          "subj": {
+            "n": 6155,
+            "med": 5,
+            "p75": 12,
+            "p90": 17,
+            "p99": 24,
+            "max": 27,
+            "mean": 7.48,
+            "px": 6155
+          },
+          "ring": {
+            "inner": {
+              "n": 46536,
+              "med": 6,
+              "p05": 1,
+              "p95": 22,
+              "spread": 22
+            },
+            "outer": {
+              "n": 25040,
+              "med": 4,
+              "p05": 1,
+              "p95": 18,
+              "spread": 18
+            }
+          }
+        },
+        "blob": {
+          "strongPx": 112244,
+          "largest": 45803,
+          "share": 0.408
         }
       },
       "hull2x": {
@@ -333,7 +495,7 @@
       "charPx": 50721,
       "nullDiff": 0,
       "nullMax": 0,
-      "calibMats": 4,
+      "calibMats": null,
       "fxaaDiff": 92308,
       "bands": {
         "hull": {
@@ -343,6 +505,14 @@
           },
           "subj": {
             "n": 0
+          },
+          "ring": {
+            "inner": {
+              "n": 0
+            },
+            "outer": {
+              "n": 0
+            }
           }
         },
         "crease": {
@@ -364,6 +534,22 @@
             "p99": 75,
             "max": 88,
             "mean": 24.35
+          },
+          "ring": {
+            "inner": {
+              "n": 48554,
+              "med": 10,
+              "p05": 2,
+              "p95": 68,
+              "spread": 34
+            },
+            "outer": {
+              "n": 30182,
+              "med": 11,
+              "p05": 2,
+              "p95": 53,
+              "spread": 26.5
+            }
           }
         },
         "ao": {
@@ -385,7 +571,66 @@
             "p99": 42,
             "max": 55,
             "mean": 14.27
+          },
+          "ring": {
+            "inner": {
+              "n": 17942,
+              "med": 9,
+              "p05": 1,
+              "p95": 17,
+              "spread": 17
+            },
+            "outer": {
+              "n": 23885,
+              "med": 16,
+              "p05": 1,
+              "p95": 41,
+              "spread": 41
+            }
           }
+        },
+        "ink": {
+          "frame": {
+            "n": 169815,
+            "med": 10,
+            "p75": 30,
+            "p90": 70,
+            "p99": 119,
+            "max": 146,
+            "mean": 23.48,
+            "px": 169815
+          },
+          "subj": {
+            "n": 38784,
+            "med": 11,
+            "p75": 41,
+            "p90": 68,
+            "p99": 75,
+            "max": 88,
+            "mean": 24.35,
+            "px": 38784
+          },
+          "ring": {
+            "inner": {
+              "n": 48554,
+              "med": 10,
+              "p05": 2,
+              "p95": 68,
+              "spread": 34
+            },
+            "outer": {
+              "n": 30182,
+              "med": 11,
+              "p05": 2,
+              "p95": 53,
+              "spread": 26.5
+            }
+          }
+        },
+        "blob": {
+          "strongPx": 116126,
+          "largest": 71871,
+          "share": 0.619
         }
       },
       "hull2x": {
@@ -432,7 +677,7 @@
       "charPx": 117858,
       "nullDiff": 0,
       "nullMax": 0,
-      "calibMats": 4,
+      "calibMats": null,
       "fxaaDiff": 78876,
       "bands": {
         "hull": {
@@ -442,6 +687,14 @@
           },
           "subj": {
             "n": 0
+          },
+          "ring": {
+            "inner": {
+              "n": 0
+            },
+            "outer": {
+              "n": 0
+            }
           }
         },
         "crease": {
@@ -463,6 +716,22 @@
             "p99": 136,
             "max": 141,
             "mean": 43.01
+          },
+          "ring": {
+            "inner": {
+              "n": 79409,
+              "med": 45,
+              "p05": 2,
+              "p95": 132,
+              "spread": 66
+            },
+            "outer": {
+              "n": 27087,
+              "med": 15,
+              "p05": 3,
+              "p95": 85,
+              "spread": 28.33
+            }
           }
         },
         "ao": {
@@ -484,7 +753,66 @@
             "p99": 59,
             "max": 62,
             "mean": 16.48
+          },
+          "ring": {
+            "inner": {
+              "n": 24993,
+              "med": 13,
+              "p05": 1,
+              "p95": 49,
+              "spread": 49
+            },
+            "outer": {
+              "n": 14424,
+              "med": 14,
+              "p05": 3,
+              "p95": 23,
+              "spread": 7.67
+            }
           }
+        },
+        "ink": {
+          "frame": {
+            "n": 215326,
+            "med": 42,
+            "p75": 86,
+            "p90": 121,
+            "p99": 133,
+            "max": 148,
+            "mean": 49.66,
+            "px": 215326
+          },
+          "subj": {
+            "n": 72016,
+            "med": 11,
+            "p75": 86,
+            "p90": 129,
+            "p99": 136,
+            "max": 141,
+            "mean": 43.01,
+            "px": 72016
+          },
+          "ring": {
+            "inner": {
+              "n": 79409,
+              "med": 45,
+              "p05": 2,
+              "p95": 132,
+              "spread": 66
+            },
+            "outer": {
+              "n": 27087,
+              "med": 15,
+              "p05": 3,
+              "p95": 85,
+              "spread": 28.33
+            }
+          }
+        },
+        "blob": {
+          "strongPx": 132392,
+          "largest": 30338,
+          "share": 0.229
         }
       },
       "hull2x": {
@@ -506,226 +834,6 @@
           "p99": 7,
           "max": 14,
           "mean": 2.77
-        }
-      },
-      "hullBase": {
-        "frame": {
-          "n": 0,
-          "px": 0
-        }
-      }
-    },
-    {
-      "shot": "courtyard",
-      "w": 640,
-      "h": 360,
-      "subjectBox": null,
-      "charPx": 0,
-      "nullDiff": 0,
-      "nullMax": 0,
-      "calibMats": 4,
-      "fxaaDiff": 0,
-      "bands": {
-        "hull": {
-          "frame": {
-            "n": 0,
-            "px": 0
-          },
-          "subj": {
-            "n": 0
-          }
-        },
-        "crease": {
-          "frame": {
-            "n": 0,
-            "px": 0
-          },
-          "subj": {
-            "n": 0
-          }
-        },
-        "ao": {
-          "frame": {
-            "n": 0,
-            "px": 0
-          },
-          "subj": {
-            "n": 0
-          }
-        }
-      },
-      "hull2x": {
-        "frame": {
-          "n": 0,
-          "px": 0
-        },
-        "subj": {
-          "n": 0
-        }
-      },
-      "hullBase": {
-        "frame": {
-          "n": 0,
-          "px": 0
-        }
-      }
-    },
-    {
-      "shot": "hero",
-      "w": 640,
-      "h": 360,
-      "subjectBox": null,
-      "charPx": 0,
-      "nullDiff": 0,
-      "nullMax": 0,
-      "calibMats": 4,
-      "fxaaDiff": 0,
-      "bands": {
-        "hull": {
-          "frame": {
-            "n": 0,
-            "px": 0
-          },
-          "subj": {
-            "n": 0
-          }
-        },
-        "crease": {
-          "frame": {
-            "n": 0,
-            "px": 0
-          },
-          "subj": {
-            "n": 0
-          }
-        },
-        "ao": {
-          "frame": {
-            "n": 0,
-            "px": 0
-          },
-          "subj": {
-            "n": 0
-          }
-        }
-      },
-      "hull2x": {
-        "frame": {
-          "n": 0,
-          "px": 0
-        },
-        "subj": {
-          "n": 0
-        }
-      },
-      "hullBase": {
-        "frame": {
-          "n": 0,
-          "px": 0
-        }
-      }
-    },
-    {
-      "shot": "combat",
-      "w": 640,
-      "h": 360,
-      "subjectBox": null,
-      "charPx": 0,
-      "nullDiff": 0,
-      "nullMax": 0,
-      "calibMats": 4,
-      "fxaaDiff": 0,
-      "bands": {
-        "hull": {
-          "frame": {
-            "n": 0,
-            "px": 0
-          },
-          "subj": {
-            "n": 0
-          }
-        },
-        "crease": {
-          "frame": {
-            "n": 0,
-            "px": 0
-          },
-          "subj": {
-            "n": 0
-          }
-        },
-        "ao": {
-          "frame": {
-            "n": 0,
-            "px": 0
-          },
-          "subj": {
-            "n": 0
-          }
-        }
-      },
-      "hull2x": {
-        "frame": {
-          "n": 0,
-          "px": 0
-        },
-        "subj": {
-          "n": 0
-        }
-      },
-      "hullBase": {
-        "frame": {
-          "n": 0,
-          "px": 0
-        }
-      }
-    },
-    {
-      "shot": "sly-closeup",
-      "w": 640,
-      "h": 360,
-      "subjectBox": null,
-      "charPx": 0,
-      "nullDiff": 0,
-      "nullMax": 0,
-      "calibMats": 4,
-      "fxaaDiff": 0,
-      "bands": {
-        "hull": {
-          "frame": {
-            "n": 0,
-            "px": 0
-          },
-          "subj": {
-            "n": 0
-          }
-        },
-        "crease": {
-          "frame": {
-            "n": 0,
-            "px": 0
-          },
-          "subj": {
-            "n": 0
-          }
-        },
-        "ao": {
-          "frame": {
-            "n": 0,
-            "px": 0
-          },
-          "subj": {
-            "n": 0
-          }
-        }
-      },
-      "hull2x": {
-        "frame": {
-          "n": 0,
-          "px": 0
-        },
-        "subj": {
-          "n": 0
         }
       },
       "hullBase": {
