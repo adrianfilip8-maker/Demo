@@ -144,6 +144,26 @@ only on `shadowMix = 1 − key`, which is the constant 1 when key = 0; `spec` is
 only thing moving across it is the fresnel rim — visible in the subject profile as a ~50 px ripple,
 at the ribs' own half-period.
 
+### 4a. Measured, not read off the source
+
+§61.7: a comment asserting a runtime behaviour is not evidence of it. `celcyl --arm=attrib`
+correlates the captured profile against each candidate term computed from geometry — three
+predictions, no free parameters:
+
+| term | what it is | span across the face | corr with luma |
+|---|---|---|---|
+| `ramp` | `slyRamp(N·L)` at the shipped TUNE | **0.000 … 1.000** (full) | **0.031** |
+| `ndl` | raw Lambert | 0.000 … 0.865 | 0.094 |
+| `fres` | `(1 − N·V)^uRimPower` | 0.000 … 0.248 | **0.325** |
+
+The first row is the load-bearing one. `ramp` sweeps its *entire* output range across this face —
+both terminators, four crossings — and explains **0.1% of the variance**. A live three-band
+quantiser at full range would dominate every other term; one that correlates 0.031 is switched
+off. The rim, whose own span is a quarter of the ramp's, still beats it tenfold.
+
+The rim is not itself large (r² ≈ 0.11); the rest is texture and the detail normal map. That is
+exactly the shape you get when the term that should be drawing the form contributes nothing.
+
 So the correct reading of the critic's complaint is not "the ramp is too soft". It is:
 
 > **The shade side of the model has no normal-dependent structure at all.**

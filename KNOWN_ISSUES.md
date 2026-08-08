@@ -17761,3 +17761,26 @@ simulated fix arm passes both must-fires comfortably, because the fix is what su
 
 **Both readings are kept** (`--quant=0` restores the registered controls) so neither has to be taken
 on trust.
+
+### §231.4 — the attribution is measured now, not read off the source
+
+§61.7's lesson is that a comment asserting a runtime behaviour is not evidence of it. The claim
+"nothing but the fresnel rim can vary across a shadowed column" was, until this arm, a reading of
+`toon.glsl.js` rather than a measurement. `celcyl --arm=attrib` correlates the captured profile
+against each candidate term computed from geometry — three predictions, no free parameters:
+
+```
+corr(luma, ramp) = 0.031    slyRamp(N.L) at the shipped TUNE, spanning its FULL 0.000..1.000
+corr(luma, ndl ) = 0.094    raw Lambert,                      spanning 0.000..0.865
+corr(luma, fres) = 0.325    (1 - N.V)^uRimPower,              spanning 0.000..0.248
+```
+
+The load-bearing figure is the first one. `ramp` sweeps its entire output range across this face —
+both terminators, four crossings — and explains **0.1% of the variance**. A live three-band
+quantiser with full range would dominate every other term in the frame; one that correlates 0.031
+is switched off. The rim, whose own span is a quarter of the ramp's, still beats it tenfold.
+
+The rim is not itself a large effect (r² ≈ 0.11); the remainder is texture and the detail normal
+map. That is the expected shape when the term that *should* be drawing the form contributes
+nothing, and it is why the profile reads as a soft ripple at the ribs' half-period rather than as
+anything cel.

@@ -264,7 +264,11 @@ function hitColumn(col, rd, hShaft = HSHAFT, spinPhase = 0) {
   const theta = Math.atan2(hit.p.z - cz, hit.p.x - cx);
   const n = shaftNormal(theta, hit.yLocal, spinPhase, hShaft);
   const nCarrier = new THREE.Vector3(Math.cos(theta), 0, Math.sin(theta));
-  return { p: hit.p, n, nCarrier, ndl: n.dot(L), ndlCarrier: nCarrier.dot(L), theta, r };
+  const V = cam.position.clone().sub(hit.p).normalize();
+  return {
+    p: hit.p, n, nCarrier, ndl: n.dot(L), ndlCarrier: nCarrier.dot(L),
+    ndv: Math.max(0, Math.min(1, n.dot(V))), theta, r,
+  };
 }
 
 /* ---------------------------------------------------------------------------
@@ -386,7 +390,7 @@ function faceGeom(col, worldY, inset = Number(argv.inset || 0.10)) {
   const samples = [];
   for (let x = x0; x <= x1; x++) {
     const h = hitColumn(col, rayThrough(x, row));
-    samples.push(h ? { x, ndl: h.ndl, ndlCarrier: h.ndlCarrier, theta: h.theta, yLocal: h.p.y - PLACE_Y, dist: h.p.distanceTo(cam.position), r: h.r } : null);
+    samples.push(h ? { x, ndl: h.ndl, ndlCarrier: h.ndlCarrier, ndv: h.ndv, theta: h.theta, yLocal: h.p.y - PLACE_Y, dist: h.p.distanceTo(cam.position), r: h.r } : null);
   }
   if (samples.some((s) => !s)) return null;
   return { col, row, xl, xr, x0, x1, wpx, samples, axisPx: pa, shear };
@@ -684,6 +688,43 @@ if (ARM === 'all' || ARM === 'subject') {
   let line = '   ';
   prof0.forEach((v, i) => { if (i % 4 === 0) line += `${fg.x0 + i}:${v.toFixed(0)}  `; });
   console.log(line);
+}
+
+/* ── ARM: attrib — WHICH shader term draws the variation that IS there? ─────────────
+ *
+ * The claim this tests is a claim about the shader, and until now it was only READ off the
+ * source: on a cast-shadowed surface `key = ramp*sh` is 0, `fill` depends only on `hemi(Nw.y)`,
+ * the shadow multiply and the wash depend only on `shadowMix = 1-key` which is then the constant
+ * 1, `spec` is gated by `sh` and `step(0.02,ndl)`, and `sss` is gated by `sh` — so nothing but
+ * the fresnel rim can vary across the face. A source reading is not a measurement (§61.7), so
+ * this correlates the captured profile against each candidate term computed from the geometry.
+ *
+ * The three candidates are predictions, not fits: none has a free parameter.
+ *   ramp   slyRamp(N.L) at the shipped TUNE   — the cel quantiser. If it is live, this wins.
+ *   ndl    raw Lambert                        — if the diffuse term were smooth but present.
+ *   fres   (1 - N.V)^uRimPower                — the fresnel rim, the only ungated term left.
+ */
+if (ARM === 'all' || ARM === 'attrib') {
+  banner('ARM: attrib — which term draws the variation that IS on this face?');
+  const pearson = (a, b) => {
+    const n = a.length;
+    const ma = a.reduce((x, y) => x + y, 0) / n, mb = b.reduce((x, y) => x + y, 0) / n;
+    let sab = 0, saa = 0, sbb = 0;
+    for (let i = 0; i < n; i++) { const da = a[i] - ma, db = b[i] - mb; sab += da * db; saa += da * da; sbb += db * db; }
+    return sab / Math.sqrt(Math.max(saa * sbb, 1e-12));
+  };
+  const RP = TUNE.rimPower ?? 3.1;
+  const cand = {
+    ramp: fg.samples.map((q) => slyRamp(q.ndl)),
+    ndl: fg.samples.map((q) => Math.max(q.ndl, 0)),
+    fres: fg.samples.map((q) => Math.pow(1 - q.ndv, RP)),
+  };
+  for (const [k, v] of Object.entries(cand)) {
+    console.log(`   corr(luma, ${k.padEnd(4)}) = ${pearson(prof0, v).toFixed(3)}   `
+      + `(term spans ${Math.min(...v).toFixed(3)}..${Math.max(...v).toFixed(3)})`);
+  }
+  console.log('\n   A live cel quantiser makes `ramp` the winner. The rim winning IS the measurement of');
+  console.log('   "key = ramp * sh is zero here", as against the source reading of it.');
 }
 
 /* ── ARM: noise — §220's null. The verdict must survive the intra-frame floor. ──────────── */
