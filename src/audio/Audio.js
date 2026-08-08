@@ -4,14 +4,30 @@ import { SFX, SFX_NAMES, stepFor } from './Sfx.js';
 import { Music, SECTION_NAMES } from './Music.js';
 
 /**
- * Three ADAPTIVE STEMS, from the same source project as the character animation. Provenance in
- * `public/assets/audio/PROVENANCE.md`; encoded from 97 MB of 48 kHz WAV to 6.8 MB of MP3 by
- * `tools/kaykit-retint.mjs`'s sibling procedure (see that commit).
+ * Three ADAPTIVE CUES. Provenance in `public/assets/audio/PROVENANCE.md`.
  *
  * These replace the single-recording-plus-lowpass approximation that shipped first. That version
  * faked a section change by dropping level and closing a filter on one fixed track, which is the
- * best a single recording can do and is audibly not a different arrangement. These three ARE
- * different arrangements of one piece, which is what `Music.js`'s section model always wanted.
+ * best a single recording can do and is audibly not a different arrangement.
+ *
+ * **THIS FILE USED TO CALL THEM "three different arrangements of one piece" AND SAY THEY WERE AT
+ * "the same tempo". THEY ARE NOT, AND THAT WAS LOAD-BEARING.** Decoded in an `OfflineAudioContext`
+ * and cross-correlated on their short-time energy envelopes over the first 120 s (50 ms frames,
+ * lags searched +-5 s), `explore` against `sneak` scores **0.122** at zero lag and against `chase`
+ * **0.013**; the best lag anywhere in +-5 s is 0.225 and 0.091. The calibration arm — the same
+ * measure against a time-reversed copy of `explore` itself — scores 0.163, so the instrument can
+ * tell "unrelated" from "aligned", and 0.122 is squarely in the unrelated half. Autocorrelation
+ * puts `explore` at 120 BPM and the other two at 80. The commit that installed them
+ * (6f03a03) calls them "the three Black Chateau loops": three separate pieces from one episode's
+ * score, which is exactly what the numbers say.
+ *
+ * Two things followed from believing otherwise, and both are fixed below:
+ *
+ *  1. The old `_stemEpoch` started a newly-decoded cue at the *elapsed position of a different
+ *     cue*, on the reasoning that they were bar-locked. They are not, so that dropped the player
+ *     into an arbitrary interior point of an unrelated piece. Cues now start at their own zero.
+ *  2. `_selectStem` cross-faded with LINEAR ramps, which is the correct law for correlated
+ *     material and the wrong one for uncorrelated material. See `equalPowerCurve`.
  *
  * LOADED LAZILY, ONE AT A TIME, and that is a memory decision rather than laziness. Decoded PCM is
  * Float32 at the context rate: 168 s x 48 kHz x 2 ch x 4 B is **~64 MB per stem**, so holding all
@@ -19,15 +35,32 @@ import { Music, SECTION_NAMES } from './Music.js';
  * need `explore` plus at most one other. The cost of deferring is a decode gap on the first
  * transition, which `_selectStem` covers by leaving the current stem up until the new one is ready.
  */
-const STEM_FILES = {
+export const STEM_FILES = {
   explore: 'bc-explore.mp3',
   sneak: 'bc-sneak.mp3',
   chase: 'bc-chase.mp3',
 };
+
+/**
+ * Measured, not estimated. Decoded through Chromium's `decodeAudioData` into an
+ * `OfflineAudioContext` at 8 kHz mono; `duration` independently agrees with a pure-Node scan of
+ * the committed MPEG frame headers to under a millisecond, and `tests/audio.test.mjs` re-derives
+ * that scan on every run so these constants cannot drift away from the files they describe.
+ *
+ * `rms` is the whole-file RMS and it is the reason this table exists: **`sneak` is 17.0 dB
+ * quieter than `explore`**, and `TRACK_SECTION` then multiplied it by a further 0.55. The stealth
+ * cue — the one that has to sit under footsteps rather than vanish — was landing 22.2 dB below
+ * the exploration cue, which is not "quieter", it is "off".
+ */
+export const STEM_STATS = {
+  explore: { duration: 168.0456, peak: 1.011022, rms: 0.252636 },
+  sneak:   { duration: 172.5910, peak: 0.865267, rms: 0.035718 },
+  chase:   { duration: 167.2620, peak: 1.018388, rms: 0.170547 },
+};
 /* Music.js's six sections onto the three arrangements that exist. `menu` and `treasure` borrow
    `explore` rather than getting a stem of their own — TRACK_SECTION still moves their level and
    filter, so they are distinguishable without pretending an arrangement exists that does not. */
-const SECTION_STEM = {
+export const SECTION_STEM = {
   menu: 'explore', explore: 'explore', treasure: 'explore',
   sneak: 'sneak', alert: 'chase', chase: 'chase',
 };
@@ -42,19 +75,103 @@ const SECTION_STEM = {
  * them. The shape follows what the procedural sections did with their layer mixes: `sneak` dropped
  * the kit and lead almost to nothing, so here it drops level and closes the filter.
  */
-const TRACK_SECTION = {
+export const TRACK_SECTION = {
   menu:     { level: 0.90, cutoff: 20000 },
   explore:  { level: 1.00, cutoff: 20000 },
-  sneak:    { level: 0.55, cutoff: 1800 },
+  /* 0.55 -> 0.85. The old value was set as if `sneak` were the same recording heard more
+     quietly. It is a different, far quieter recording, and `STEM_MAKEUP` now carries the level
+     matching, so this number is free to mean what it says: a section that pulls back a little. */
+  sneak:    { level: 0.85, cutoff: 1800 },
   alert:    { level: 1.00, cutoff: 20000 },
   chase:    { level: 1.00, cutoff: 20000 },
   treasure: { level: 0.95, cutoff: 20000 },
 };
+
+/**
+ * Per-cue makeup gain, so three separately-mastered recordings arrive at the mixer at comparable
+ * level. Derived, not dialled: the rule is
+ *
+ *     makeup = min( rms(explore)/rms(stem),  1 / (peak(stem) * trackLevel * maxSectionLevel) )
+ *
+ * — match `explore`'s loudness if you can, and stop at whatever keeps the peak at unity if you
+ * can't. `sneak` hits the peak arm: its crest factor is 27.7 dB (a sparse, quiet piece with big
+ * transients), so no amount of makeup makes it as loud as `explore` without clipping its peaks
+ * or compressing them. It lands 11.6 dB down instead of 22.2 dB down, which is a stealth cue
+ * that pulls back rather than one that disappears.
+ *
+ * `maxSectionLevel` is the loudest `TRACK_SECTION` entry any section mapped to this stem uses,
+ * because the peak has to survive the loudest case, not the average one.
+ */
+export const STEM_MAKEUP = { explore: 1.0000, sneak: 2.1930, chase: 1.4813 };
 /* All six of Music.js's sections are covered deliberately. An earlier version of this table had
    four and relied on the `|| TRACK_SECTION.explore` fallback for `chase` and `treasure` — which
    works, and would have silently made the two most dramatic beats in the game indistinguishable
    from ordinary walking. A fallback that never fires is a safety net; one that quietly carries two
    real cases is a missing feature wearing a safety net's clothes. */
+/**
+ * Equal-power cross-fade shape, as an explicit curve rather than a ramp.
+ *
+ * When two signals are CORRELATED, their amplitudes add and a linear ramp pair sums to a
+ * constant — that is the right law for cross-fading two mixes of one performance, and it is the
+ * law this file used to use. When they are UNCORRELATED their POWERS add instead, and a linear
+ * pair sums to sqrt(a^2+b^2) which bottoms out at 0.707 halfway across: an audible level hole in
+ * the middle of every transition. Measurement says these three cues correlate at 0.012-0.122
+ * (see `STEM_STATS`), so equal-power is the correct law and linear was measurably wrong.
+ *
+ * With rho the measured correlation, the perceived level through the fade is
+ *     L(x) = sqrt(a(x)^2 + b(x)^2 + 2*rho*a(x)*b(x))
+ * At rho = 0.122 the linear pair dips to **-2.74 dB** at the midpoint and the equal-power pair
+ * rises to **+0.25 dB**. `tests/audio.test.mjs` holds both against a +-0.5 dB gate registered
+ * before this function was written, and uses the linear pair as the arm that must fail.
+ *
+ * `v0` is where the fader already is, so an interrupted transition resumes from the right point
+ * on the curve instead of jumping: the two faders are parameterised by the same `x`, so if they
+ * were power-complementary when the interruption arrived they stay power-complementary through
+ * the new fade.
+ */
+export function equalPowerCurve(v0, target, n = 129) {
+  const v = Math.max(0, Math.min(1, v0));
+  const up = target >= 0.5;
+  // Where on the quarter-cycle this fader already sits. Both directions solve for the same x.
+  const x0 = up ? (2 / Math.PI) * Math.asin(v) : (2 / Math.PI) * Math.acos(v);
+  const curve = new Float32Array(n);
+  for (let i = 0; i < n; i++) {
+    const x = x0 + (1 - x0) * (i / (n - 1));
+    curve[i] = up ? Math.sin((Math.PI / 2) * x) : Math.cos((Math.PI / 2) * x);
+  }
+  curve[n - 1] = up ? 1 : 0;      // land exactly, so a fade-out really is silence
+  return curve;
+}
+
+/**
+ * The detection ladder, and the reason it is a table.
+ *
+ * `src/ai/Patrol.js` (the GUARDS agent's file, not this one) grades detection across seven
+ * states. This file used to parse them with an inline conditional that recognised `'chase'`,
+ * `'alert'` and `'suspicious'` and sent **everything else to calm** — so `searching` and `lost`,
+ * the two states where a guard has lost sight of Sly but is actively hunting him, both read as
+ * "he gave up". The music relaxed and a stand-down grunt played while the guard was walking the
+ * route looking for you. It also recognised `'alert'`, which is not a state any guard can be in.
+ *
+ * A state the player can only see is a state they miss while looking somewhere else, and these
+ * were the two rungs where the player still has the option to leave.
+ *
+ * Keys are the exact `STATE` values from Patrol.js. `tests/audio.test.mjs` reads that file and
+ * fails if it ever grows a state this table does not name.
+ */
+export const ALERT_FOR_STATE = {
+  patrol: 0,
+  stunned: 0,
+  ko: 0,
+  suspicious: 1,
+  searching: 2,
+  lost: 2,          // he has lost sight of you and is still looking. That is not calm.
+  chase: 3,
+};
+
+/** Section per rung. `suspicious` thins the mix out rather than escalating — the classic tell. */
+export const SECTION_FOR_ALERT = ['explore', 'sneak', 'alert', 'chase'];
+
 import { ReverbRack, SPACES } from './Reverb.js';
 
 /**
@@ -90,7 +207,7 @@ import { ReverbRack, SPACES } from './Reverb.js';
  *  one per note — that is the only allocation, and it happens on events, not frames.
  */
 
-const TUNE = {
+export const TUNE = {
   master: 0.7,            // default master, before the limiter
   maxVoices: 32,          // hard concurrency cap
   poolSize: 44,           // slots > cap so a stolen voice can fade while a new one starts
@@ -115,6 +232,17 @@ const TUNE = {
   spaceFade: 1.5,
   alertHold: 7.0,         // seconds of calm before the score relaxes again
   sectionDebounce: 1.6,
+  /* One number for the whole music transition. It used to be two — 1.6 s for the arrangement
+     cross-fade and 1.2 s for the level/filter move — which meant the level finished shifting
+     0.4 s before the arrangement did, and put a level step in the middle of every cross-fade.
+     Long enough not to click, short enough that being spotted still reads as a cue. */
+  stemFade: 1.6,
+  /* ---- guards you can hear ---- */
+  guardEarshot: 34,       // metres past which a guard's footsteps are not worth a voice
+  guardVoices: 4,         // how many guards may be audible at once, nearest first
+  guardStride: 0.92,      // metres of travel per footfall
+  guardChatMin: 7.0,      // seconds between idle noises from any one guard
+  guardChatMax: 17.0,
 };
 
 /* ---- scratch: hoisted so update() never allocates ---- */
@@ -153,9 +281,15 @@ export class Audio {
     this._sectionTimer = 0;
     this._autoOverrideFor = 0;
 
-    this._alert = 0;          // 0 calm · 1 suspicious · 2 chasing
+    /** 0 calm · 1 suspicious · 2 searching · 3 chasing — the four rungs of ALERT_FOR_STATE. */
+    this._alert = 0;
     this._alertTimer = 0;
     this._thief = false;
+    /** guard id -> rung, so the score tracks the whole garrison rather than the last speaker. */
+    this._guardRung = new Map();
+    /** guard id -> { x, z, acc, chat, clank } stride bookkeeping for audible footsteps. */
+    this._guardStep = new Map();
+    this._nearGuards = [];
 
     this._playerState = 'idle';
     this._loops = Object.create(null);   // state-driven continuous voices, by key
@@ -277,21 +411,28 @@ export class Audio {
       const t = this.ctx.currentTime;
       const gain = this.ctx.createGain();
       gain.gain.value = 0;
-      gain.connect(this.trackGain);
+      /* Makeup sits on its own node between the cue and the cross-fade gain, so the fade curve
+         still runs cleanly 0..1 and the level matching cannot be confused with the transition. */
+      const makeup = this.ctx.createGain();
+      makeup.gain.value = STEM_MAKEUP[name] ?? 1;
+      gain.connect(makeup);
+      makeup.connect(this.trackGain);
       const src = this.ctx.createBufferSource();
       src.buffer = buf;
       src.loop = true;
       src.connect(gain);
 
-      /* PHASE-ALIGNED START. The three stems are three mixes of the same piece at the same tempo,
-         so a stem that starts at zero while another is 40 s in would cross-fade into a different
-         bar and read as a mistake rather than a transition. Starting at the shared playback
-         position keeps them musically locked without holding all three decoded from boot. */
-      const offset = this._stemEpoch === null ? 0 : (t - this._stemEpoch) % buf.duration;
-      if (this._stemEpoch === null) this._stemEpoch = t;
+      /* START AT ZERO. The previous version started a new cue at the elapsed position of
+         whichever cue was already playing, on the stated grounds that all three were bar-locked
+         mixes of one piece. Measurement says they are three unrelated pieces (see `STEM_STATS`),
+         so that rule dropped the player into an arbitrary interior point of a piece they had
+         never heard the start of — and, because each cue looped on its OWN length (168.05 /
+         172.59 / 167.26 s, up to 5.33 s apart), the offset was not even stable. A cue that is
+         its own piece should begin at its own beginning. */
+      const offset = 0;
       src.start(t, offset);
 
-      this._stems.set(name, { src, gain, duration: buf.duration });
+      this._stems.set(name, { src, gain, makeup, duration: buf.duration });
       this._trackState = 'playing';
 
       /* First stem in also retires the synthesised score. Four seconds, because both are music
@@ -387,10 +528,10 @@ export class Audio {
     this.trackGain.connect(this.musicDuck);
     this.track = null;
     this._trackState = 'idle';
-    /** name -> { src, gain, duration }. Lazily filled; see STEM_FILES for why. */
+    /** name -> { src, gain, makeup, duration }. Lazily filled; see STEM_FILES for why. */
     this._stems = new Map();
-    /** ctx time the first stem started, so later ones can start phase-aligned to it. */
-    this._stemEpoch = null;
+    /** ctx time the running cross-fade lands, so a re-request mid-fade doesn't restart it. */
+    this._stemFadeEnd = 0;
   }
 
   /**
@@ -408,15 +549,24 @@ export class Audio {
       this._loadTrack(want).catch(() => {});
     }
     const active = this._stems.has(want) ? want : this._activeStem;
+    if (active === this._activeStem && this._stemFadeEnd > now) return;   // already going there
     this._activeStem = active;
-    const FADE = 1.6;
     for (const [name, s] of this._stems) {
       const target = name === active ? 1 : 0;
       const g = s.gain.gain;
-      g.cancelScheduledValues(now);
-      g.setValueAtTime(g.value, now);
-      g.linearRampToValueAtTime(target, now + FADE);
+      try {
+        g.cancelScheduledValues(now);
+        // Equal-power, because these three recordings are measurably uncorrelated. A linear
+        // pair would put a 2.7 dB hole in the middle of every state change.
+        g.setValueCurveAtTime(equalPowerCurve(g.value, target), now, TUNE.stemFade);
+      } catch {
+        // setValueCurveAtTime throws if it overlaps live automation; a ramp still beats a cut.
+        g.cancelScheduledValues(now);
+        g.setValueAtTime(g.value, now);
+        g.linearRampToValueAtTime(target, now + TUNE.stemFade);
+      }
     }
+    this._stemFadeEnd = now + TUNE.stemFade;
   }
 
   _buildPool() {
@@ -533,6 +683,7 @@ export class Audio {
     o.streak = opts?.streak || 0;
     o.force = opts?.force || 1;
     o.surface = opts?.surface || 'stone';
+    o.gait = opts?.gait || 'walk';
 
     let built = null;
     try {
@@ -600,14 +751,16 @@ export class Audio {
          matter: the stems differ in instrumentation, TRACK_SECTION differs in presence, and
          `menu`/`treasure` have no stem of their own so the shape is all they get. */
       this._selectStem(section, t);
+      /* Same window as the arrangement cross-fade. Two different windows put a level step in
+         the middle of the fade, which is exactly the seam a cross-fade exists to avoid. */
       const g = this.trackGain.gain;
       g.cancelScheduledValues(t);
       g.setValueAtTime(g.value, t);
-      g.linearRampToValueAtTime(TUNE.trackLevel * s.level, t + 1.2);
+      g.linearRampToValueAtTime(TUNE.trackLevel * s.level, t + TUNE.stemFade);
       const f = this.musicFilter.frequency;
       f.cancelScheduledValues(t);
       f.setValueAtTime(f.value, t);
-      f.linearRampToValueAtTime(s.cutoff, t + 1.2);
+      f.linearRampToValueAtTime(s.cutoff, t + TUNE.stemFade);
       return;
     }
     if (!this.score._started) this.score.start(this.ctx.currentTime, section);
@@ -731,6 +884,7 @@ export class Audio {
 
     /* ---- state-driven loops ---- */
     this._trackStateLoops();
+    this._trackGuards(dt);
 
     /* ---- the score ---- */
     this.score.update(now);
@@ -880,9 +1034,13 @@ export class Audio {
     this._spaceVote = want;
   }
 
+  /**
+   * The score's four rungs. `suspicious` deliberately goes to `sneak` rather than to `alert`:
+   * thinning the mix out when a guard first twitches is the older and better stealth idiom, and
+   * it leaves `alert` free to mean the thing it should mean — he is up and hunting you.
+   */
   _wantSection() {
-    if (this._alert >= 2) return 'chase';
-    if (this._alert === 1) return 'alert';
+    if (this._alert > 0) return SECTION_FOR_ALERT[Math.min(3, this._alert)];
     const s = this._playerState;
     if (s === 'sneak' || s === 'crouch' || s === 'crawl' || s === 'tiptoe') return 'sneak';
     return 'explore';
@@ -931,6 +1089,102 @@ export class Audio {
           { position: this._playerPos(), volume: s === 'poleClimb' ? 0.8 : 0.6 });
       }
     } else this._scuffTimer = 0;
+  }
+
+  /**
+   * Guards you can hear before you can see them.
+   *
+   * The catalogue has had `guard_step`, `armour_clank`, `spear_scrape` and `guard_yawn` in it the
+   * whole time and **nothing ever played any of them**: the `guardSound` event this file listens
+   * for has no emitter anywhere in the project. So the one cue a stealth game cannot do without —
+   * footsteps approaching from somewhere you are not looking — did not exist.
+   *
+   * This reads the GUARDS module's public data rather than reaching into it or asking for new
+   * events: `list` (or `guards`) of objects with a `position` and a `state`, which is the same
+   * kind of public read as `_startBeds` traversing the scene graph for braziers. Every field is
+   * optional and a missing one costs silence, never a throw — the module is owned by another
+   * agent and is being changed while this runs.
+   *
+   * Footfalls are driven by DISTANCE TRAVELLED, not by a timer. That is both physically right —
+   * a guard who speeds up takes steps sooner, and one who stops takes none — and it is immune to
+   * the animation clip names, which are not ours to depend on.
+   */
+  _trackGuards(dt) {
+    const G = this.engine.get('guards');
+    const list = G && (Array.isArray(G.list) ? G.list : Array.isArray(G.guards) ? G.guards : null);
+    if (!list || !list.length) return;
+
+    // Nearest few only. A courtyard of guards is a wall of footsteps, not information.
+    const near = this._nearGuards;
+    near.length = 0;
+    const reach = TUNE.guardEarshot * TUNE.guardEarshot;
+    for (let i = 0; i < list.length; i++) {
+      const g = list[i];
+      const p = g?.position;
+      if (!p) continue;
+      const dx = p.x - this._lx, dy = p.y - this._ly, dz = p.z - this._lz;
+      const d2 = dx * dx + dy * dy + dz * dz;
+      if (d2 > reach) continue;
+      near.push(g);
+      g.__ad2 = d2;
+    }
+    if (!near.length) return;
+    near.sort((a, b) => a.__ad2 - b.__ad2);
+    const n = Math.min(TUNE.guardVoices, near.length);
+
+    for (let i = 0; i < n; i++) {
+      const g = near[i];
+      const id = g.id ?? g.name ?? i;
+      let st = this._guardStep.get(id);
+      if (!st) {
+        st = { x: g.position.x, z: g.position.z, acc: 0, chat: TUNE.guardChatMin * (0.3 + this.rand() * 0.7), clank: 0 };
+        this._guardStep.set(id, st);
+      }
+
+      const dx = g.position.x - st.x, dz = g.position.z - st.z;
+      st.x = g.position.x; st.z = g.position.z;
+      const moved = Math.sqrt(dx * dx + dz * dz);
+      st.acc += moved;
+
+      const state = typeof g.state === 'string' ? g.state : 'patrol';
+      const rung = ALERT_FOR_STATE[state] ?? 0;
+      // A guard on patrol walks; one who has seen you runs, and a run is a different sound.
+      const gait = rung >= 3 ? 'run' : rung >= 1 ? 'walk' : 'walk';
+      const stride = TUNE.guardStride * (rung >= 3 ? 1.22 : 1);
+
+      if (st.acc >= stride) {
+        st.acc = 0;
+        this.play('guard_step', {
+          position: g.position, surface: this._groundSurface(), gait,
+          volume: rung >= 3 ? 1.0 : 0.82,
+        });
+        // Armour answers the footfall, but not on every one — that reads as a machine.
+        if (++st.clank % (rung >= 3 ? 2 : 4) === 0) {
+          this.play('armour_clank', { position: g.position, volume: rung >= 3 ? 0.55 : 0.34 });
+        }
+      }
+
+      // Idle noises, unaware guards only: the "he hasn't seen me" signal, and free comedy.
+      st.chat -= dt;
+      if (st.chat <= 0) {
+        st.chat = TUNE.guardChatMin + this.rand() * (TUNE.guardChatMax - TUNE.guardChatMin);
+        if (rung === 0 && moved < 0.002) this.play('guard_yawn', { position: g.position, volume: 0.6 });
+        else if (rung === 0) this.play('spear_scrape', { position: g.position, volume: 0.45 });
+      }
+    }
+  }
+
+  /** Sly's gait, from the movement state first and his actual speed second. */
+  _gait() {
+    const s = this._playerState;
+    if (s === 'sneak' || s === 'crouch' || s === 'tiptoe' || s === 'crawl') return 'sneak';
+    const sp = Math.abs(this.engine.get('movement')?.speed ?? 0);
+    return sp > 4.6 ? 'run' : 'walk';       // §6: walk 2.6 m/s, run 7.2 m/s — split between them
+  }
+
+  /** What the floor is made of where the listener is standing, for guard footsteps. */
+  _groundSurface() {
+    return this._space === 'outdoor' || this._space === 'courtyard' ? 'sand' : 'stone';
   }
 
   _playerPos() {
@@ -1012,9 +1266,11 @@ export class Audio {
       anim.onEvent('footstep', (p) => {
         const pos = this._playerPos();
         const name = stepFor(p?.surface || 'stone');
-        const sneaking = this._playerState === 'sneak' || this._playerState === 'crouch'
-          || this._playerState === 'tiptoe' || this._playerState === 'crawl';
-        this.play(name, { position: pos, volume: sneaking ? 0.34 : 1 });
+        /* Gait, not volume. A sneaking step used to be a walking step at 0.34 — the same
+           spectrum, quieter — and a stealth game whose sneak is a fader move is telling the
+           player nothing they could not read off the HUD. `buildStep` shapes the transient and
+           the top end from this; see `GAIT` in Sfx.js. */
+        this.play(name, { position: pos, gait: this._gait() });
       });
       anim.onEvent('cane_hit', (p) => this.play('cane_hit', { position: this._playerPos(), index: p?.index || 1 }));
       anim.onEvent('land', (p) => {
@@ -1026,31 +1282,61 @@ export class Audio {
     }
   }
 
-  _onGuardAlert(p) {
-    let level = 1;
-    if (typeof p === 'number') level = p;
-    else if (typeof p === 'boolean') level = p ? 2 : 0;
-    else if (typeof p === 'string') level = p === 'chase' || p === 'alert' ? 2 : p === 'suspicious' ? 1 : 0;
-    else if (p && typeof p === 'object') {
+  /** A guard's alert payload -> a rung on the ladder. Legacy numeric/boolean forms still work. */
+  _rungOf(p) {
+    if (typeof p === 'number') return Math.max(0, Math.min(3, p | 0));
+    if (typeof p === 'boolean') return p ? 3 : 0;
+    if (typeof p === 'string') return ALERT_FOR_STATE[p] ?? 0;
+    if (p && typeof p === 'object') {
       const s = p.state ?? p.level ?? p.alert;
-      if (typeof s === 'number') level = s;
-      else if (typeof s === 'string') level = s === 'chase' || s === 'alert' ? 2 : s === 'suspicious' ? 1 : 0;
-      else if (typeof s === 'boolean') level = s ? 2 : 0;
+      if (typeof s === 'string') return ALERT_FOR_STATE[s] ?? 0;
+      if (typeof s === 'number') return Math.max(0, Math.min(3, s | 0));
+      if (typeof s === 'boolean') return s ? 3 : 0;
     }
-    level = Math.max(0, Math.min(2, level | 0));
-    const pos = (p && typeof p === 'object' && p.pos) || null;
+    return 0;
+  }
 
-    if (level > this._alert) {
-      if (level >= 2) {
-        this.play('alert_sting');
-        this.play('guard_shout', { position: pos, delay: 0.18 });
-      } else {
-        this.play('guard_confused', { position: pos });
-      }
-    } else if (level === 0 && this._alert > 0) {
-      this.play('guard_grunt', { position: pos, volume: 0.6 });
+  /**
+   * One guard changed state. Two separate things follow, and conflating them was the old bug.
+   *
+   *  **The MUSIC follows the whole garrison**, so it tracks the highest rung anyone is on. The
+   *  old code assigned `this._alert = level` from whichever guard spoke last, so a guard at the
+   *  far end of the temple returning to his patrol dropped the score out of `chase` while
+   *  somebody else was still chasing you. With the roster this level actually posts, that is not
+   *  an edge case, it is most alert transitions.
+   *
+   *  **The VOICE follows the one guard**, positionally, so you can hear *which* of them noticed
+   *  and from where. That has to fire per guard even when the global rung does not move.
+   */
+  _onGuardAlert(p) {
+    const rung = this._rungOf(p);
+    const pos = (p && typeof p === 'object' && p.pos) || null;
+    const id = (p && typeof p === 'object' && (p.id ?? p.name)) ?? '_';
+
+    const was = this._guardRung.get(id) ?? 0;
+    if (rung === was && this._guardRung.has(id)) return;
+    this._guardRung.set(id, rung);
+
+    // Per-guard voice: he says the thing, from where he is standing.
+    if (rung > was) {
+      if (rung >= 3) this.play('guard_shout', { position: pos, delay: 0.18 });
+      else if (rung === 2) this.play('guard_grunt', { position: pos, volume: 0.85, rate: 0.94 });
+      else this.play('guard_confused', { position: pos });
+    } else if (rung === 0 && was > 0) {
+      this.play('guard_grunt', { position: pos, volume: 0.55 });   // stand down
+    } else if (rung < was) {
+      this.play('guard_confused', { position: pos, volume: 0.7 }); // "...where'd he go"
     }
-    this._alert = level;
+
+    // Global rung: the max over everyone, so nobody's stand-down cancels somebody's chase.
+    let top = 0;
+    for (const v of this._guardRung.values()) if (v > top) top = v;
+
+    if (top > this._alert) {
+      if (top >= 3) this.play('alert_sting');
+      else if (top === 2) this.play('search_call');
+    }
+    this._alert = top;
     this._alertTimer = 0;
     this._sectionTimer = TUNE.sectionDebounce;    // let the score react immediately
   }
@@ -1091,7 +1377,7 @@ export class Audio {
   get _opts() {
     // One reused options object — play() is called from events, but a footstep every
     // 300 ms for an hour is still 12k allocations we don't need to make.
-    if (!this.__opts) this.__opts = { r: this.rand, rate: 1, variant: 0, index: 1, streak: 0, force: 1, surface: 'stone' };
+    if (!this.__opts) this.__opts = { r: this.rand, rate: 1, variant: 0, index: 1, streak: 0, force: 1, surface: 'stone', gait: 'walk' };
     return this.__opts;
   }
 
@@ -1122,10 +1408,10 @@ export class Audio {
     /* Every lazily-decoded stem is its own looping source and needs the same treatment; a Map that
        still holds three of them after teardown is three loops running against a dead graph. */
     for (const s of this._stems.values()) {
-      try { s.src.stop(); s.src.disconnect(); s.gain.disconnect(); } catch {}
+      try { s.src.stop(); s.src.disconnect(); s.gain.disconnect(); s.makeup?.disconnect(); } catch {}
     }
     this._stems.clear();
-    this._stemEpoch = null;
+    this._stemFadeEnd = 0;
     this._activeStem = null;
     this._trackState = 'idle';
     for (let i = 0; i < this._voices.length; i++) {

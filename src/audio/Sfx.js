@@ -50,12 +50,39 @@ function pick(o, arr) { return arr[(o.variant ?? 0) % arr.length]; }
    cheap, and footsteps repeat more than anything else in the game.
 --------------------------------------------------------------------------- */
 
+/**
+ * ── What separates one surface from another, and why the first version failed ──────────────
+ *
+ * These numbers were set by ear and then measured, and the measurement disagreed. Rendered
+ * through `tests/webaudio.mjs`, the shipped `stone` and `wood` came out **329 Hz and 348 Hz** —
+ * 5.8 % apart in spectral centroid and 13.3 % apart in RMS, which is to say indistinguishable.
+ * A temple level is mostly flagstone with wooden scaffolds over it, so the two surfaces the
+ * player walks on most were the two that sounded the same.
+ *
+ * The cause was the `thump` body: at 185/245 Hz carrying a third of the energy it dominated the
+ * spectrum of both, and the band that actually encodes the material (1750 vs 760 Hz) was a
+ * detail on top of a shared low thud. The fix is physical rather than cosmetic —
+ *
+ *   **stone is dense: it clicks.** Almost no body, a bright hard transient, over immediately.
+ *   **wood is hollow: it rings.** Real body, a pitched ~430 Hz resonance with a tail you can
+ *   hear, and much less top end.
+ *
+ * so `stone` loses most of its body and gains a heel tick, and `wood` keeps its body and gains
+ * a ring loud and long enough to be the thing you notice. `tests/audio.test.mjs` holds both
+ * apart against a threshold registered before this edit existed.
+ */
 const STEP = {
   sand:  { band: 900,  q: 0.8, dur: 0.105, atk: 0.006,  g: 0.60, hp: 260,  body: 0,   bodyG: 0,    type: 'white', tail: 0.09 },
-  stone: { band: 1750, q: 1.5, dur: 0.070, atk: 0.0015, g: 0.62, hp: 420,  body: 185, bodyG: 0.34, type: 'white', tail: 0 },
-  wood:  { band: 760,  q: 3.0, dur: 0.085, atk: 0.0018, g: 0.60, hp: 190,  body: 245, bodyG: 0.42, type: 'white', tail: 0, ring: 430 },
+  stone: { band: 2150, q: 1.4, dur: 0.062, atk: 0.0012, g: 0.70, hp: 620,  body: 185, bodyG: 0.16, type: 'white', tail: 0, tick: 3600 },
+  wood:  { band: 700,  q: 3.2, dur: 0.090, atk: 0.0018, g: 0.58, hp: 170,  body: 245, bodyG: 0.46, type: 'white', tail: 0, ring: 430 },
   metal: { band: 3050, q: 4.0, dur: 0.070, atk: 0.0010, g: 0.52, hp: 900,  body: 150, bodyG: 0.26, type: 'white', tail: 0, ring: 2650 },
   cloth: { band: 2100, q: 0.9, dur: 0.080, atk: 0.008,  g: 0.34, hp: 950,  body: 0,   bodyG: 0,    type: 'white', tail: 0.05 },
+  /**
+   * Water. Not a variant of anything else: a foot entering water displaces it, so the gesture is
+   * a low `whump` of displaced mass, a broadband burst as the surface breaks, and then droplets
+   * falling back over the next 200 ms. `drops` is what stops it reading as "noise with a lowpass".
+   */
+  water: { band: 620,  q: 0.7, dur: 0.140, atk: 0.004,  g: 0.66, hp: 150,  body: 120, bodyG: 0.30, type: 'white', tail: 0.16, drops: 6 },
 };
 
 const STEP_VARIANTS = [
@@ -65,23 +92,43 @@ const STEP_VARIANTS = [
   { f: 1.32, q: 0.80, d: 0.88, g: 0.90 },
 ];
 
+/**
+ * Gait. A sneaking step is not a walking step at lower volume — the foot is rolled down rather
+ * than dropped, so the transient is slower, the bright band is weaker and the ring never speaks.
+ * A run is the opposite: more weight through the heel and more top end off it. Level alone is
+ * what makes a stealth game's sneak sound like someone turned the mixer down.
+ */
+const GAIT = {
+  /* Sneak cuts the bright band and the heel tick far harder than it cuts the body, because that
+     is what rolling a foot down actually does — there is no heel strike to make the top end
+     with. Cutting everything by the same factor is just a volume change, and measurably RAISES
+     the centroid (the body is the low-frequency part, so attenuating it makes the step
+     brighter): the first version of this table did exactly that and rendered 1653 Hz against
+     walk's 1116 Hz, i.e. a sneak that sounded sharper than a walk. */
+  sneak: { g: 0.36, atk: 3.2, band: 0.42, tick: 0.12, body: 0.82, ring: 0.20, dur: 1.20 },
+  walk:  { g: 1.00, atk: 1.0, band: 1.00, tick: 1.00, body: 1.00, ring: 1.00, dur: 1.00 },
+  run:   { g: 1.18, atk: 0.7, band: 1.22, tick: 1.35, body: 1.28, ring: 1.15, dur: 0.92 },
+};
+
 function buildStep(ctx, out, t, o, surface, scale = 1) {
   const s = STEP[surface] || STEP.stone;
   const v = pick(o, STEP_VARIANTS);
+  const gait = GAIT[o.gait] || GAIT.walk;
   const R = o.rate;
+  const k = scale * gait.g;
   const bag = bagOf(t);
 
   add(bag, noiseGesture(ctx, out, t, {
-    dur: s.dur * v.d, type: s.type, filter: 'bandpass',
+    dur: s.dur * v.d * gait.dur, type: s.type, filter: 'bandpass',
     freq: s.band * v.f * R, q: s.q * v.q, hp: s.hp * R,
-    gain: s.g * v.g * scale, attack: s.atk, r: o.r, seed: 21 + (o.variant | 0),
+    gain: s.g * v.g * k * gait.band, attack: s.atk * gait.atk, r: o.r, seed: 21 + (o.variant | 0),
   }));
 
-  // The scuff after the impact — sand and cloth keep hissing briefly, stone doesn't.
+  // The scuff after the impact — sand, cloth and water keep hissing briefly, stone doesn't.
   if (s.tail > 0) {
     add(bag, noiseGesture(ctx, out, t + 0.012, {
       dur: s.tail * v.d, type: 'pink', filter: 'bandpass',
-      freq: s.band * 1.7 * v.f * R, q: 0.7, gain: s.g * 0.3 * scale,
+      freq: s.band * 1.7 * v.f * R, q: 0.7, gain: s.g * 0.3 * k,
       attack: 0.02, r: o.r, seed: 33,
     }));
   }
@@ -89,15 +136,32 @@ function buildStep(ctx, out, t, o, surface, scale = 1) {
   if (s.bodyG > 0) {
     add(bag, thump(ctx, out, t, {
       f0: s.body * R, f1: s.body * 0.55 * R, pitchDur: 0.03,
-      dur: 0.055, gain: s.bodyG * scale, attack: 0.0012,
+      dur: 0.055, gain: s.bodyG * k * gait.body, attack: 0.0012,
+    }));
+  }
+  // The heel tick that makes flagstone flagstone — 12 ms, nothing but top.
+  if (s.tick) {
+    add(bag, noiseGesture(ctx, out, t, {
+      dur: 0.012, filter: 'highpass', freq: s.tick * R, gain: 0.30 * k * gait.tick,
+      attack: 0.0004, r: o.r, seed: 25 + (o.variant | 0),
     }));
   }
   // Metal and wood ring; sand does not.
   if (s.ring) {
     add(bag, metal(ctx, out, t, {
-      base: s.ring * R * (0.9 + (o.variant | 0) * 0.06), dur: surface === 'metal' ? 0.30 : 0.10,
-      gain: (surface === 'metal' ? 0.16 : 0.10) * scale, hp: 1400, count: 4, spread: 0.8,
+      base: s.ring * R * (0.9 + (o.variant | 0) * 0.06), dur: surface === 'metal' ? 0.30 : 0.22,
+      gain: (surface === 'metal' ? 0.16 : 0.26) * k * gait.ring, hp: surface === 'metal' ? 1400 : 380,
+      count: 4, spread: 0.8,
     }));
+  }
+  // Droplets falling back into the water after the foot has gone through.
+  if (s.drops) {
+    for (let i = 0; i < s.drops; i++) {
+      add(bag, noiseGesture(ctx, out, t + 0.05 + i * 0.028 + o.r() * 0.04, {
+        dur: 0.022, filter: 'bandpass', freq: 1600 + o.r() * 2800, q: 8,
+        gain: 0.085 * (1 - i / (s.drops + 2)) * k, attack: 0.0008, r: o.r, seed: 27 + i,
+      }));
+    }
   }
   return bag;
 }
@@ -115,6 +179,8 @@ export const SFX = {
   step_wood:  { g: 0.55, dur: 0.22, gap: 0.075, max: 3, pri: 0, ref: 5, vary: 0.06, build: (c, o_, t, o) => buildStep(c, o_, t, o, 'wood') },
   step_metal: { g: 0.50, dur: 0.36, gap: 0.075, max: 3, pri: 0, ref: 7, vary: 0.06, build: (c, o_, t, o) => buildStep(c, o_, t, o, 'metal') },
   step_cloth: { g: 0.45, dur: 0.20, gap: 0.075, max: 3, pri: 0, ref: 4, vary: 0.06, build: (c, o_, t, o) => buildStep(c, o_, t, o, 'cloth') },
+  /** Wading the Nile. Carries further than a footstep because a splash is loud and wet. */
+  step_water: { g: 0.60, dur: 0.42, gap: 0.075, max: 3, pri: 1, ref: 8, vary: 0.06, build: (c, o_, t, o) => buildStep(c, o_, t, o, 'water') },
 
   /** Guards are armoured and twice Sly's weight: same surfaces, more body, plus jingle. */
   guard_step: {
@@ -843,6 +909,56 @@ export const SFX = {
   },
 
   /**
+   * The SEARCHING rung — the one the ladder was missing.
+   *
+   * `src/ai/Patrol.js` grades detection `patrol → suspicious → searching → chase`, and until now
+   * audio had a cue for the first, the second and the fourth. `searching` is the rung where the
+   * guard has stopped asking and started hunting, and it is the most important one for the
+   * player to hear, because it is the only one where he still has the option to leave.
+   *
+   * So it must not be `alert_sting` quieter. That sting is a cluster stab that says *caught*.
+   * This says *hunting*: a falling minor third on the muted trumpet (the classic "come out"
+   * two-note call), a frame-drum doum underneath, and a suspended fifth left hanging with no
+   * resolution. Nothing here is a semitone and nothing here is loud — the tension is that the
+   * phrase does not finish.
+   */
+  search_call: {
+    g: 0.7, dur: 1.5, gap: 0.5, max: 1, pri: 3, ref: 2, flat: true, duck: 0.30, vary: 0,
+    build(ctx, out, t, o) {
+      const bag = bagOf(t);
+      const wave = pulseWave(ctx, 0.14, 40);
+      // The two-note call: G5 down to E5, a minor third, the shape of a search whistle.
+      const CALL = [[783.99, 0.0, 0.26], [659.25, 0.30, 0.42]];
+      for (const [f, at, dur] of CALL) {
+        const s = osc(ctx, wave, f);
+        s.frequency.setValueAtTime(f * 0.985, t + at);
+        s.frequency.exponentialRampToValueAtTime(f, t + at + 0.04);
+        const bp = bq(ctx, 'bandpass', 1250, 2.4);
+        const g = gain(ctx, 0);
+        const end = perc(g.gain, t + at, dur, 0.30, 0.02);
+        chain(s, bp, g).connect(out);
+        s.start(t + at); s.stop(end);
+        bag.srcs.push(s); bag.end = Math.max(bag.end, end);
+      }
+      // Frame drum: two hits, the second late, so the pulse feels like footsteps closing.
+      add(bag, thump(ctx, out, t + 0.02, { f0: 98, f1: 60, pitchDur: 0.05, dur: 0.26, gain: 0.42, attack: 0.0018 }));
+      add(bag, thump(ctx, out, t + 0.56, { f0: 92, f1: 56, pitchDur: 0.05, dur: 0.30, gain: 0.34, attack: 0.0018 }));
+      // The unresolved fifth underneath — a pedal that never lands anywhere.
+      for (const f of [146.83, 220]) {
+        const s = osc(ctx, 'triangle', f);
+        const g = gain(ctx, 0);
+        const end = swell(g.gain, t, 0.18, 0.30, 0.55, 0.13);
+        chain(s, bq(ctx, 'lowpass', 900, 0.7), g).connect(out);
+        s.start(t); s.stop(end);
+        bag.srcs.push(s); bag.end = Math.max(bag.end, end);
+      }
+      // Finger cymbals — the Egyptian half of the palette, and a real instrument cue.
+      add(bag, metal(ctx, out, t + 0.30, { base: 2450, dur: 0.7, gain: 0.075, hp: 3800, count: 4, spread: 1.2, decayTilt: 0.15 }));
+      return bag;
+    },
+  },
+
+  /**
    * The alert sting. Cluster stab (minor 2nd — the most alarming interval there is),
    * a rising whole-tone run, timpani and a cymbal. Ducks the score hard so it lands.
    */
@@ -886,13 +1002,23 @@ export const SFX = {
 /** Names, for the analysis harness and for anyone enumerating the catalogue. */
 export const SFX_NAMES = Object.keys(SFX);
 
-/** Footstep name for a COLLISION surface tag (AGENTS.md §4.4 `material`). */
+/**
+ * Footstep name for a COLLISION surface tag (AGENTS.md §4.4 `material`).
+ *
+ * `water` is in here because the level authors one: `src/world` tags the Nile geometry `water`,
+ * and until this line existed every step taken in the river played `step_stone`. The default is
+ * still stone — that is the right guess for an unlabelled surface in a temple — but a tag the
+ * world actually emits should never reach the default.
+ */
+export const STEP_SURFACES = ['sand', 'stone', 'wood', 'metal', 'cloth', 'water'];
+
 export function stepFor(material) {
   switch (material) {
     case 'sand': return 'step_sand';
     case 'wood': return 'step_wood';
     case 'metal': return 'step_metal';
     case 'cloth': return 'step_cloth';
+    case 'water': return 'step_water';
     default: return 'step_stone';
   }
 }

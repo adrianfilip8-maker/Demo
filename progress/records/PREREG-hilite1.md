@@ -70,9 +70,22 @@ headroom. §2 is arithmetic and needed no capture.
 `Lighting.TUNE.keyBoost` multiplies `A.keyIntensity` in both `_applyAtmosphere()` (the
 DirectionalLight) and `_publishKeyLight()` (`p.intensity` → `uKeyIntensity`). It does **not**
 multiply `A.ambientIntensity` (computed inside `evalAtmosphere` from the un-boosted key), so
-the fill stays put while the key rises. SHADING's shadow light *does* scale with it
-(`_refreshShadowColor` reads `lum(uKeyColor) * uKeyIntensity`), so this is a partial, not a
-total, contrast lever — stated up front so the result is not oversold.
+the fill stays put while the key rises.
+
+> **CORRECTION, made before any candidate arm was rendered.** An earlier draft of this section
+> said "SHADING's shadow light *does* scale with it, so this is a partial contrast lever".
+> **That is wrong, and it is wrong in the direction that makes this lever cleaner than
+> registered.** `_refreshShadowColor()` asks for `k = shadowFloor·keyLum / tintLum` but then
+> applies `k = min(k, TUNE.shadowTintPeak / peak)` = **3.904**, and ToonMaterial's own table at
+> that site records every daylight shot asking for k 6.50–9.79 and receiving 3.904. So the
+> daylight shadow light is a **constant** `(0.123, 0.175, 0.423)`, already pinned at its cap,
+> and raising the key by any factor leaves it exactly there (6.50k is still ≫ 3.904).
+>
+> Net: in daylight this lever moves **only the direct key term**. Fill unchanged, shadow light
+> unchanged. It is a pure lit-side contrast lever. Recorded here rather than in the result
+> because a mechanism I described wrongly must be corrected before the numbers arrive, not
+> after them — and it makes gates T3 and T5 *easier*, which is stated plainly rather than
+> quietly banked.
 
 Raising the key rather than PostFX's exposure is deliberate and is the second half of the
 diagnosis: `courtyard`'s sky rows measure L 132–146 against ground rows L 68–73, i.e. the sky
@@ -177,6 +190,13 @@ three of the four shots, and less on `courtyard`.
 **Predicted winner: `k210` or `k260`.** If `k140` or `k170` wins, my model of where the top of
 the range comes from is wrong and I will say so. If nothing passes, the lever is insufficient
 and I will say that instead of moving a gate.
+
+**Second forecast, which follows from the correction above and is the sharper test of it:**
+because the daylight shadow light is pinned at its peak cap and the fill does not scale, a
+fully-shadowed surface should be **bit-unchanged** by k. So **luma p1 should move by ≤ 3 L
+across the whole bracket, k = 1.00 → 2.60**, on every shot. If p1 climbs with k, the shadow
+light is not capped the way ToonMaterial's own table says it is, and the correction above is
+itself wrong — which I would then have to report.
 
 ### Selection rule
 Ship the **smallest** k that passes T1 **and** T2 and fails none of T3–T5. If no arm passes both
