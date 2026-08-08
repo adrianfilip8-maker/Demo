@@ -31,7 +31,11 @@ import {
 /* ---------------------------------------------------------------------------
    TUNE — every feel/look constant the critic loop might want to move.
 --------------------------------------------------------------------------- */
-const TUNE = {
+/* Exported so `tests/shading.test.mjs` can read the terminators from the source of truth rather
+   than restating them. The ramp thresholds interact with every shipped shot's sun elevation
+   (KNOWN_ISSUES §210.1/§210.3), and that interaction is only checkable if the test and the shader
+   read the same numbers. */
+export const TUNE = {
   /* --- ramp --- */
   bands: 3,
   termLo: 0.14,          // first terminator, in N.L. Pushed off zero so the shadow side reads chunky.

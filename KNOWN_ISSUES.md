@@ -16367,3 +16367,73 @@ The 28 degenerate triangles are by design and bounded rather than banned: the to
 colour seams by doubling a ring at the same height and the same radius (the blue|gold collar), which
 duplicates vertices so the colour can jump without interpolating, and the connecting quads then have
 zero area by construction. They never rasterize. All 28 are on `chest`, 0.6% of the mesh.
+
+### §210.3 — §210.1 is right about the arithmetic and wrong about the surface
+
+Correcting my own finding before it was spent on a capture.
+
+§210.1 computed that a flat floor's `N·L` is `sin(sun elevation)`, that `temple`'s is 0.5446, and
+that `termHi`'s smoothstep window closes at 0.544 — a margin of **0.0006** against a detail normal
+that swings `N·L` by ±0.03. That arithmetic is correct and still stands. What it then claimed does
+not: *"every pixel on the dominant surface of that shot flips between the mid and lit bands."*
+
+**`temple`'s dominant surfaces are not floors.** It is an interior hypostyle hall. Looking at the
+shipped frame, the floor is a narrow band across the bottom of frame, mostly in cast shadow — where
+the band is set by the shadow term, not by this threshold — and the columns, which dominate the
+image, are vertical. A vertical surface's `N·L` is `cos(el)·cos(Δazimuth)`, not `sin(el)`, so the
+margin computed for the floor says nothing about them.
+
+**And the ROI the claim was hung on is a column.** R2 — `temple`, y 430, x 120…380, the rect §210.1
+cited when it noted `temple` "measured worst" on flatness — sits on a large pale blue-grey column and
+a hieroglyph wall. Cropping it out of the frame settles it in one look. R3 `interior`, the worst
+flatness in the build at 39.8 %, is a wall of framed relief panels with ink outlines and a lit
+brazier in the rect; its number is geometric detail, not shading.
+
+I also ran a cross-check that appeared to *refute* §210.1 — margins against the four ROIs' measured
+flatness, which correlate backwards (`interior`, farthest from any terminator at 0.4263, is the least
+flat at 39.8 %). **That test was invalid for the same reason** and is retracted: it compared margins
+computed for floors against ROIs that are walls and columns. Two wrong instruments pointing opposite
+directions are still two wrong instruments.
+
+**What survives, and is now enforced.** The generalisable half of §210.1 — *"any candidate must be
+checked against every shipped tod, not tuned on one shot"* — is arithmetic over `Shots.js`,
+`Atmosphere.js` and `ToonMaterial.js`, all three of which import in plain Node. `tests/shading.test.mjs`
+now computes the ground-plane margin for **all sixteen** shots in milliseconds and asserts the
+near-terminator set exactly. §210.1 checked five shots by hand and found one; sixteen finds three:
+
+| shot | ground `N·L` | margin | in §210.1's table? |
+|---|---|---|---|
+| `temple` | 0.5446 | **0.0006** | yes |
+| `combat` | 0.4924 | **0.0036** | **no** |
+| `guard` | 0.4733 | 0.0227 | no (moon-keyed) |
+
+`combat` is the interesting one: it was never checked, its margin is nearly as bad as `temple`'s, and
+unlike `temple` it *does* have a large lit ground plane filling the lower half of frame. If the
+mechanism bites anywhere, it bites there — so an A/B on this should be aimed at `combat`, not at the
+shot the finding was named for.
+
+**The candidate, re-derived over all sixteen.** Sweeping `termHi` with `termLo` shipped: the minimum
+margin across all shots rises from 0.0006 to a **plateau of 0.0439 at `termHi` ≥ 0.615**, where the
+binding constraint switches to `night`'s distance from the *low* terminator — which `termHi` cannot
+improve. That independently reproduces §210.1's eyeballed 0.62–0.66 band and explains why it is a
+band: everything in it is equivalent. **0.62 is therefore the disciplined pick — the smallest move
+that reaches the plateau.** A joint move (`termLo` 0.05, `termHi` 0.705) reaches 0.1339, but widening
+the shadow band that far is an art-direction change, not a free win, and is not what §210.1 proposed.
+
+**Two cross-dependencies cleared before any capture:**
+
+- `setRampTuning({lo, hi, soft})` writes one shared uniform, so a global move is effective and needs
+  no source change to A/B. But `uTermHi` reaches materials by the same path `uDebugTerm` does, and
+  §210.2 proved that path can fail silently — so any seal here **must** carry an extreme-value
+  calibration arm, and read UNSCOREABLE if the extreme does not visibly change the frame.
+- The eye-hierarchy fix (#15) is pinned to `termHi` by `SlyModel.js`'s own comment: the two lenses
+  sit at `N·L` 0.8349 and 0.3463, "one either side of `termHi`". That comment names a constant
+  `EYE_SHADE_N` which exists in code as `shadeN = (0, 0.15, 1)` at SlyModel.js:2236 — no X component,
+  as documented — but it is in the **legacy** model, and `SlyModel3.js`, the shipped one, has zero
+  `biasNormals` calls and builds its eyes as mirrored blobs. Measured on the shipped mesh at 21°
+  elevation, swept over all 72 head yaws: worst L/R mean `N·L` split 0.0767, and the pair straddles
+  **neither** 0.52 nor 0.62 at any yaw. The move does not re-open #15.
+
+**Not captured.** The premise changed shape enough that spending the lock on `temple` would have been
+spending it on the wrong shot, and the guard test that replaces the hand-checking is free and
+permanent. The A/B is still worth running — on `combat`, with the calibration arm — and is task #25.
