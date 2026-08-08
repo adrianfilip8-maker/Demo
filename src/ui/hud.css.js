@@ -240,7 +240,9 @@ export const HUD_CSS = /* css */ `
 }
 .sly-obj-kick {
   display: inline-block;
-  background: var(--lapis);
+  /* --lapis-d, not --lapis: pale gold on #2a7fd4 measures 3.44:1 and fails the 4.5:1 bar this
+     HUD is held to (tests/hud.test.mjs M2). On #1f4f96 the same text clears at 6.68:1. */
+  background: var(--lapis-d);
   color: var(--gold-l);
   font-size: calc(var(--u) * .74);
   letter-spacing: .22em;

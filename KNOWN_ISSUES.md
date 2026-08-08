@@ -18858,7 +18858,11 @@ blocked; nothing in this pass needed a frame, so the budget of one run was spent
    dedicated `_inh` and commented at the declaration, but the sharp edge is still there for
    the next caller.
 
-## §234 — a capture that waits longer than its parent task's lifetime dies in the queue, and loses its place
+## §238 — a capture that waits longer than its parent task's lifetime dies in the queue, and loses its place
+
+*(Renumbered from §234, which collided with the CHARACTER agent's section written concurrently.
+Nine agents appending to one file will do this; check the tail immediately before writing, not
+before starting. Anything citing "§234" for the ppid hazard means this section.)*
 
 The DECALS agent's `decalsign.mjs` was killed at **3591 s (~60 min)** having produced **zero frames**.
 It did not crash and it did not fail: it was still *queued*, and the tool-managed background task it
@@ -18911,3 +18915,52 @@ lever nobody has pulled: a same-boot single-lever pair is bit-deterministic — 
 0.0000 over 779,836 px** — so an A/B needs *one* boot with a lever toggled, not two boots compared,
 and needs no drift allowance at all. Agents should be asked what their arm list buys before they
 queue it, not after.
+
+## §239 — three systems listen for `coin`, nothing emits it, and the reason is that coins are scenery
+
+`src/fx/Particles.js:2221`, `src/ui/HUD.js:391` and `src/audio/Audio.js:1251` each subscribe to a
+**`coin`** event. **No file in `src/` emits one.** The coin burst, the HUD counter and the coin SFX
+with its streak logic are three dead listeners, reachable only through `pickpocket`.
+
+Found by the FX agent while budgeting emitters — not while looking for it, which is the usual way
+this class of defect surfaces. Verified independently here: three subscribers, zero emitters.
+
+The cause is not a missing line. **There are no collectible coins in this game.** Coins exist only
+as set dressing — `coin_stack_large/medium/small` placements in `src/world/KayKit.js` and a `coin()`
+mesh at `src/world/PropKit.js:1012`. Nothing can be picked up.
+
+So three teams each built their half of a reward loop against an event contract, and the contract
+was never fulfilled by anyone, because the entity it describes does not exist. Each half is correct
+in isolation and the whole is inert. **A subscriber is not evidence that a publisher exists**, and
+in a codebase where modules are deliberately decoupled through an event bus, nothing will ever tell
+you otherwise — no import breaks, no test fails, no warning fires. A test that asserted "every event
+name subscribed to in `src/` is emitted somewhere in `src/`" would have caught this on the day the
+first listener was written, and is cheap: it is the same static scrape `tests/api.test.mjs` already
+does for method names on the shading module (§213), pointed at the event bus instead.
+
+Handed to a new LOOT agent with the pickup system in scope. Recorded here rather than fixed inline
+because the one-line emit is the least of it.
+
+## §240 — my own sweep commits have been picking up other agents' half-written files
+
+Flagged by the FX agent, and it is right. Commit `cf83fdb` ("carry AUDIO and FX in-flight work")
+swept its in-progress `src/fx/*` and `tests/fxfeel.test.mjs` mid-edit; a second agent also had files
+staged in the index at the time. It defended itself correctly — a pathspec-limited
+`git commit -- <paths>` so it could not sweep staged work it did not own, then verifying HEAD
+carried its *final* state rather than an intermediate one — and it noted, accurately, that it got
+lucky on timing and that §225's history suggests luck will not hold.
+
+The pressure producing this is real: a stop-hook requires a clean tree, nine agents are writing
+continuously, and the tree is therefore never clean. Committing everything satisfies the hook and is
+the wrong instinct. Two things that are actually true here:
+
+1. **`tests/fxfeel.test.mjs` was committed while it could not even import** — it expected an
+   `ALERT_LADDER` export that did not exist yet. That is strictly worse than committing a red test
+   that runs: a test that fails at import pins nothing and informs nobody. It should have been left
+   alone, and the hook answered by explaining why rather than by obeying it.
+2. The distinction that matters is not "source vs record" but **whose file it is and whether it is
+   at rest**. `tests/patrol.test.mjs` was right to commit red — it ran, and it pinned five real
+   defects that are now fixed. `tests/fxfeel.test.mjs` was not.
+
+Practice from here: pathspec-limited commits only, never a whole directory another agent owns, and
+when an agent's file is mid-edit, leave it and say so.
