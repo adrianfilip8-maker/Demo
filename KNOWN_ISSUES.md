@@ -19204,3 +19204,142 @@ change **where the calibration injects and whether the write lands**, not the ri
 the subject metric, and not the arm's requirement, which remains that the measured mean match the
 predicted arithmetic to under 0.02 L. After both fixes: courtyard 1.8004 against 1.8004, closeup
 0.4265 against 0.4265.
+
+## §244 — Carmelita replaces the metaball guard; the animations were already hers, and the file that was "animations only" was a whole Blender scene
+
+Owner instruction: *"Replace the created guard with the downloaded Carmelita model along with
+relevant files and animations."*
+
+### §244.1 — half the job was already done, and the brief's filename was the misleading part
+
+`public/assets/sly-anim/carmelita-anims.glb` is not animations. It is a complete Blender scene:
+**34 meshes, 199 joints, 11 clips, 4,457 accessors, 3.86 MB.** Verified by reading it, not by
+trusting the name.
+
+And the animations had already shipped. `tools/carmelita2clips.mjs` retargeted all eleven of her
+clips onto RIG3's bone names and `src/ai/GuardClips.js` has carried the output since; `GUARD_CLIPS`
+has been Carmelita's motion — `PatrolWalk` and `Lookaround` included — for longer than this task
+existed. What was still procedural was only the **mesh**: `GuardModel.js`'s metaball `blob()`
+construction. So this section is the second half, her geometry over bones her own animation
+already drives, and the bone correspondence did not have to be invented: `CarmelitaGuard.BONE_MAP`
+is the table the clip retarget validated, and `tests/carmguard.test.mjs` parses the tool's own
+literal and asserts the two are equal so they cannot drift apart.
+
+### §244.2 — what was culled, and the one that would have deleted body parts
+
+**13 meshes dropped.** The brief flagged `Text`, `Text.001`, `Text.002`, `Text.009` and
+`BézierCircle.005` as scene junk and was right, but the name is not the discriminator. All thirteen
+share three properties no character mesh has: **no skin, no material, and parented to the scene
+root rather than the armature**. They are `Arrow`, `Circle`, `Cube`, `IKPolehandle`, `singlecircle`,
+`Starcircle`, `Handrot`, `HandCurlCTL`, `BézierCircle` and four `Text*` — the *custom bone shapes*
+a Blender animator sees in the viewport, plus its annotations. 7,260 triangles of rig UI. The tool
+asserts the rule rather than the list, and refuses to write if "is skinned" and "has a material"
+ever disagree.
+
+**Two meshes very nearly dropped for a bad reason.** `OutlineMat.001` and `OH_Outline_Material` are
+exactly what a baked inverted-hull outline looks like, and this project has its own ink pass, so
+shipping a second would fight it. Reading the *node* names instead of the material names: they are
+on **`Stomach_LP`** and **`TeethUpper_LowPoly`**. They are the character's stomach and upper teeth
+wearing misnamed materials. Culling on the material name would have deleted body parts and left a
+hole that reads as a rigging bug rather than as a bad cull.
+
+**11 animations and 4,305 of 4,457 accessors dropped** — they are already in `GuardClips.js`, and
+shipping them again would ship the same keyframes twice in two formats. 3.86 MB → **1.58 MB**.
+
+### §244.3 — §227 arrived in person, in the class its own docstring predicts
+
+Keeping the five morph targets produced a file that `GLTFLoader` threw on:
+
+    RangeError: Invalid typed array length: 1729
+      at GLTFLoader.js:3170  (accessorDef.sparse.indices)
+
+Those five are **sparse accessors**. `compact()` copies an accessor's own `bufferView` and knows
+nothing about `sparse.indices.bufferView` / `sparse.values.bufferView`, so the emitted accessor
+pointed its substitution at bufferViews renumbered out from under it. `assertAccessorsResolved`
+passed — correctly, because it checks the reference classes it knows, and its own docstring says
+"a future extension (sparse accessors, a new attribute set) that this function does not know about
+will still not be *checked*". The failure presented exactly as §227 describes: a file that
+validates, loads twenty primitives, and throws on the twenty-first.
+
+They are **dropped rather than densified**, because nothing can ever drive them — `GuardAnim` has
+no morph channel and `bindToRig3` clears `morphAttributes` on every mesh it merges. A guard does
+not pull faces. `tools/carmelita2guard.mjs` now refuses to write if any accessor it keeps is
+sparse, which is the general guard rather than the specific fix.
+
+### §244.4 — the bind, and what it measured
+
+`SlyModelGodot`'s pattern: keep the artist's geometry and weights, re-express the weights over our
+bones, carry the mesh from her bind into ours —
+`v' = Σ w · ourBindWorld[target(j)] · srcInverseBind[j] · v`. RIG3's bind is the right target
+because `GUARD_CLIPS` is authored as Euler deltas *on top of RIG3's bind*.
+
+**199 source joints onto 24 RIG3 bones, with all 175 unmapped joints folded into their nearest
+mapped ancestor** — the face rig, the fingers, the coat helpers and all 35 IK/pole controls. A
+dropped joint strands the geometry it weighted at the origin, which reads as missing geometry
+rather than as a rigging bug, so "folded == unmapped" is asserted rather than assumed.
+
+Measured on the bound result, all offline, no lock:
+
+    21 meshes, 20,950 vertices, 29,791 tris, 2 groups
+    height 1.683 m  (RIG3 head bone 1.473, foot 0.064) — no rescale needed
+    0 non-finite vertices · 0 unnormalised weights · 0 out-of-range skin indices · 0 unweighted
+    RIG3 bones with no source: capBrim, browL, browR, tailA–tailD  (exactly the declared set)
+
+**Cost, measured rather than assumed.** 29,791 tris per guard against the metaball body's 7,016;
+the garrison goes 66,232 → **270,607 triangles**. Draw calls do **not** move: her 21 meshes merge
+into the same two groups `GuardModel.GROUPS` already declares, so it stays **22 skinned draws** for
+eleven guards, and the geometry is shared across all of them — one upload, per-instance `Skeleton`
+only, which is what `instantiate()` already did. A 4× triangle cost is a real number and is
+recorded as one; it is not defended here, and nobody has photographed a frame to say whether it
+buys anything.
+
+The scarab keeps its procedural body. It is a beetle sentinel and Carmelita is not one.
+
+### §244.5 — a hang that presented as thirteen unrelated test failures
+
+`GLTFLoader.loadAsync` on a relative URL in Node **does not reject — it never settles**, and
+`node --test` then reports every test in the file as "Promise resolution is still pending but the
+event loop has already resolved". One hang, thirteen red tests, none of them about loading. The
+load path now checks for a DOM rather than catching an error that never arrives, and races the
+load against a 20 s timeout so a stalled fetch cannot hold the boot either. `loadCarmelitaGuard`
+returns `null` on any failure and the procedural body stays as the fallback — ten headless suites
+stand `Guards` up with no network, including the whole §235 patrol audit.
+
+### §244.6 — the §235 work is intact, and one duplicated constant is gone
+
+The vision cone, the three-stop colour ramp, the five-state ladder with hysteresis, the ten
+re-authored routes and `guardAlert` are all unchanged and still green: `tests/patrol.test.mjs`
+18/18, `src/ai/Guard.test.mjs` 45/45.
+
+The clearance question the brief raised is answered by measurement. Carmelita's **torso radius is
+0.238 m** — vertices less than half-weighted to arm bones, so the bind-pose arms do not set a
+walking collision radius. The shipped radii (temple 0.42, heavy 0.56) are *larger* than the body
+they now wrap, so every C1 clearance guarantee from §235 remains valid and conservative. **They
+were deliberately not shrunk**: a smaller radius would only loosen the floor the routes were
+validated against, for no gameplay gain. `tests/carmguard.test.mjs` asserts that direction, so a
+future body that outgrows the radius fails loudly.
+
+`tests/patrol.test.mjs` had its own literal copy of the radius table. That is exactly the drift
+hazard §235 was written about — the C1 floor is `radius + 0.20`, so a body swap that changed a
+radius would have left the suite certifying a clearance the guards no longer have. It now reads
+`GUARD_TUNE.radius`.
+
+### §244.7 — what is NOT verified, and it matters
+
+**No frame of Carmelita has ever been rendered.** Every claim above is structural. Two specific
+things nobody should read as settled:
+
+- **The head/body texture split is a guess.** Her two 2048² albedos are assigned across the two
+  merged groups **by node name** (`Head_LP`, `Hair_LP`, `Irises`, `Scrunchy2`, `TeethUpper…`,
+  `Tongue…`, `Eyeshine…`, `BustRetopo` → head). The source materials carry **no
+  `baseColorTexture`** — the Godot project assigned the atlases outside the glTF and the file does
+  not record which mesh used which. Nothing offline can recover it. The split is pinned by a test
+  so it cannot drift silently before a capture settles it, and it is labelled UNVERIFIED in the
+  source, in the test and here.
+- **Whether she reads as an Egyptian temple guard at all.** She is Interpol in a blue coat. The
+  three-stop cone ramp, the alert ladder and the patrol routes do not care, but the art direction
+  question is wide open and no measurement in this section touches it.
+
+Also unresolved: her tail geometry folds onto `hips` (RIG3's `tailA`–`tailD` have no source, and
+the clip retarget already measured her tail at 0.00° local in all eleven clips), so the guard has
+a rigid tail where the procedural body had a spring chain.
