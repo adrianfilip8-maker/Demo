@@ -6,11 +6,24 @@ inferred from a repository badge. This is the cleanest licence status of any thi
 this project, and unlike `assets/sly-anim/` and `assets/sly-godot/` (fan works with **no stated
 licence at all**) it carries no encumbrance whatsoever.
 
-**Source URL: not yet recorded.** These files were staged by the research agent, which was still
-running when this note was written. A GitHub repository search for `tombchaser` and for the pack's
-distinctive filenames returned nothing, so the upstream location is *unknown to me* rather than
-assumed — deliberately left blank instead of guessed, since a fabricated provenance URL is worse
-than an admitted gap. **To be filled in from the research agent's report.**
+## Source — the gap below is now filled
+
+The previous revision of this file recorded *"Source URL: not yet recorded … deliberately left blank
+instead of guessed … To be filled in from the research agent's report."* That was the right call, and
+here is the answer. (The reason a search for `tombchaser` found nothing: the pack is published under
+the project name **"Tomb Chaser 1"** inside a multi-pack repository, so the string never appears in a
+repository name.)
+
+- **Pack:** *Tomb Chaser 1*, from the **Polygonal Mind Open Source Initiative**.
+- **Fetched from:** <https://github.com/ToxSam/cc0-models-Polygonal-Mind>, path
+  `projects/tomb-chaser-1` — a GLB conversion of the original FBX/Unity release.
+- **Indexed by:** <https://github.com/ToxSam/open-source-3D-assets> (138★), whose registry entry
+  reads `"creator_id": "Polygonal Mind"`, `"license": "CC0"`, and describes the pack as *"Egyptian
+  pyramid platformer assets with sand, rocks, brick textures, and ancient gods"*.
+- **Retrieved:** 2026-08-08, by `git clone --filter=blob:none --sparse` limited to that one
+  directory. `LICENSE.txt` here is the upstream `License.md`, copied verbatim.
+
+Full research context: `progress/records/RESEARCH-github-2026-08-08.md`.
 
 ## What was verified here, independently of the agent that staged it
 
@@ -38,6 +51,35 @@ three wall variants, two floor variants, embellishers, a door, podium, platform 
 jars, a lance, gems, coins, two fire torches and a standing torch, a palm tree, a trap, and a
 spiderweb. The `textures/` directory carries albedo/metallic/normal triples per material.
 
+**This is 32 of the pack's 55 models.** Not taken: `Oasis_Art` and `SandMount_Art` (~10 MB each,
+terrain-scale meshes this project generates procedurally), `Layout_Floor01`–`05` (2 MB apiece level
+blockouts), the `_Cut` floor duplicates, `PolygonalMindLogo_Art` and `Leaderboard_Art`, and the
+per-model `*_thumbnail.png` previews. All remain available upstream if wanted.
+
+## The textures, examined individually
+
+Checked by opening the images, not by trusting filenames — and relevant to the palette question
+raised in point 2 below, since **nine of the ten albedos measure warm** (mean R > B + 12):
+
+- **`Bricks_Albedo.png`** — a tiling warm-orange **sandstone brick** course, mean RGB (235, 157, 82).
+  The most directly reusable file in the pack for a sandstone/limestone material.
+- **`Wall_Albedo.png`** — carved stone panels bearing **hieroglyph cartouches**, plus a teal
+  decorative column band. A wall atlas with glyph panels, *not* a general glyph atlas — the
+  project's glyph authority remains the Noto Egyptian Hieroglyphs font in `src/assets/fonts/`.
+- **`Door_Albedo.png`** — winged sun-disc/scarab, red rosettes, teal feathering. Set-dressing motifs.
+- **`Gods_Albedo.png`** — **flat colour bands, not detailed imagery**: the three statues are shaded
+  from a palette strip. That is unusually good news for the cel path — there is no baked shading in
+  the albedo to fight the ramp.
+- `Obelisk_Albedo.png` — a UV atlas of obelisk parts, not a tiling surface.
+- `Gems_Albedo.png` — the one cool-measuring albedo, which is correct for crystal.
+
+All are 512×512 except `Flame&Spiderweb_Albedo.png` at 256².
+
+**Duplication cost.** The pack embeds the *same* atlas into every GLB that uses it, so 17 MB of
+models carry only 5.1 MB of distinct imagery. The `textures/` directory is that set, de-duplicated
+by content hash — which is also why a material can sample these directly without loading a model.
+If size becomes a problem, strip the embedded copies and repoint the materials.
+
 ## Status: staged, NOT wired in
 
 Nothing loads these yet. Before any of it ships, three things need deciding, and none is automatic:
@@ -48,6 +90,8 @@ Nothing loads these yet. Before any of it ships, three things need deciding, and
 2. **Palette.** The EGYPT agent is concurrently re-warming the project's own texture set, which
    measured 78.8% cool. Dropping in an unexamined third-party palette mid-flight would confound
    that measurement — these must be assessed against the corrected palette, not the current one.
+   (The measurements in the texture section above are offered as input to that assessment, not as a
+   verdict on it.)
 3. **Overlap with `assets/kaykit/` and the procedural `Kit.js`/`PropKit.js` props.** The temple's
    nave columns are procedural and are the subject geometry of the cel-banding instrument
    (`progress/records/celcyl.mjs`, §228). Replacing them with imported meshes would invalidate
