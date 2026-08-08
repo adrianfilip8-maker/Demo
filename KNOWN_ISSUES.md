@@ -17639,3 +17639,118 @@ nearest decal to his feet in `sly-closeup` is **377 px** away. The agent that fo
 declined to credit its own fix with that number, which is the right call and the reason it is
 written here — the boot brightening is a separate, still-unexplained defect. The vase (+2.9 L) is
 in scope; the boots are not.
+
+## §231 — the cel ramp was never soft. `key = ramp * sh` multiplies it by zero over 97.5% of `temple`
+
+The blind critic's top-ranked complaint is that the cel shading does not band, and the standing
+number is a max luma step of 3.79 across a 420 px sweep. Both are true. The cause is not the one
+everybody including me assumed, and the two instruments that found it disagree about nothing.
+
+### The subject verdict
+
+`progress/records/celcyl.mjs`, criterion registered and committed (`43036e4`) before the subject
+was read. Nave column (x 8, z −30) at 11.3 m, 193 px of lit face, N·L −0.367…0.865 — both
+terminators, four crossings, the strongest test face in the frame and chosen by crossing count
+rather than by eye:
+
+```
+MUST-FIRE 1  min(λ=0) 0.1513 > max(λ=1) 0.1346          PASS
+MUST-FIRE 2  G(0) 0.2263 > G(0.5) 0.1382 > G(1) 0.0784  PASS
+decision point 0.1382   subject gapFrac 0.0795   λ̂ 0.851
+VERDICT  DOES NOT BAND — all nine sheared rows agree
+```
+
+The subject sits **on top of the ideal-smooth-Lambert control's median (0.0784)**.
+
+### The cause
+
+`tools/bandprobe.mjs` — not mine, not written for this, rasterises the real architecture and its
+own ortho shadow map offline — on three shipped captures:
+
+| shot | architecture px | key-lit | step at T=0.14 | control | ratio |
+|---|---|---|---|---|---|
+| **temple** | 905 878 | **14 230 (1.57%)** | +6.8 | −7.9 | 0.86× |
+| hero | 836 843 | 153 879 (18.4%) | +23.1 | −2.3 | 10.11× |
+| courtyard | 632 704 | 201 291 (31.8%) | +21.8 | −1.8 | 12.25× |
+| courtyard T=0.52 | | | +24.8 | −1.0 | 25.07× |
+
+**Where the key reaches, the ramp bands hard, and always did.** `slyRamp` is correct and is not
+soft. What fails is everything the key does *not* reach: `key = ramp * sh`, so on a cast-shadowed
+surface the cel quantiser is multiplied by zero. `temple` is a roofed hypostyle hall with 97.5% of
+its architecture in exactly that state — which is why it is the shot the critic keeps scoring worst.
+
+And on such a surface nothing else varies with the normal either. `fill` depends only on
+`hemi = smoothstep(-0.72, 0.55, Nw.y)`; `albAmb`, the shadow multiply and the wash depend only on
+`shadowMix = 1 - key`, which is the constant 1 when key = 0; `spec` is gated by `sh` *and*
+`step(0.02, ndl)`; `sss` is gated by `sh`. A shadowed vertical column renders as **one flat tone**,
+and the only thing moving across it is the fresnel rim — the ~50 px ripple in the measured profile,
+at the ribs' own half-period.
+
+So the defect is not "the ramp is too soft". It is that **the shade side of the model has no
+normal-dependent structure at all**. The note at `slyShadowBand` blamed flat geometry for §7.3's
+failures and was half right; the half it missed is that the quantiser is switched off wherever the
+sun is. Fix registered as `TUNE.shadeBand` / `uShadeBand`, inert at 0.
+
+### §231.1 — `maxStep` was unfixable, not mis-thresholded, and three geometry facts say so
+
+§228 handed this over with the right diagnosis of the symptom (a guessed threshold of 20) and an
+untested hypothesis about the mechanism. The hypothesis is confirmed and it generalises further
+than it was stated: `termSoft` is a ±0.024 smoothstep and N·L turns slowly on a cylinder, so a
+*perfectly* banded face spends **12 of 193 px (6.2%)** inside a ±termSoft window and can never show
+one large per-pixel step. No threshold on `maxStep` can be right here.
+
+Three further facts kill any criterion built on *where* a band lands — and the old ray-caster,
+which hit a smooth plumb cylinder, modelled none of them:
+
+* **Ribs.** `Kit.papyrusColumn` lathes `r(θ) = R(1 + 0.075·cos 8θ)` at ribScale 1, and
+  `computeVertexNormals()` overwrites the pushed cylinder normals with the lobed ones. Normal
+  azimuth swings ±31° on a 45° period; N·L swings ±0.45 and crosses the terminators four times.
+* **Lean.** `dx = lean·y`, −1.205° on this column (deterministic), plus a `leanZ` jitter from the
+  level rng: ~13 cm, ~11 px of registration error.
+* **Taper.** `dr/dy ≈ −0.049` at mid-shaft puts `n.y ≈ +0.049` on every normal and offsets N·L by
+  +0.027 — **larger than `termSoft` itself**.
+
+The design rule that follows, and the whole repair: *the statistic may use the SET of luma values
+on the face; it may not use WHERE they fall.* Hence `gapFrac` — the fraction of the occupied tonal
+range that is empty — which is invariant to sort order and to any affine change of luma.
+
+The threshold is computed from the arms rather than authored. Both controls run on this face's own
+N·L at the subject's own range and noise, as two ends of one continuum, and the decision point is
+their **midpoint** (λ = 0.5) — the only value equidistant from both, and a restatement of the
+critic's charge, since "soft Lambert with a slight posterize" *is* the claim λ > 0.5.
+
+### §231.2 — `Kit.papyrusColumn`'s `spin` does not rotate the flutes
+
+The comment at `Kit.js:1352` says `spin` "turns the rib phase, NOT the column", and it was added to
+stop callers spinning the square abacus through the clerestory wall. It does fix that. But it does
+**not** vary the flutes: `a = j/seg·2π + spin` feeds the vertex azimuth *and* `cos(a·lobes)`, so the
+polar curve `r(θ) = R(1 + rib·cos 8θ)` is identical for every value of `spin`. The crests are welded
+to world azimuth 0/45/90…° on every column in the level; only which 48-gon vertex lands where inside
+a lobe changes. Cosmetically minor — it is why "one part copied twelve times" is still slightly
+truer than intended — and analytically useful, since it is what made the rib phase *known* and
+therefore modellable.
+
+### §231.3 — the frame is under-resolved, and the instrument had to be made able to say so
+
+Dry-running the scorer on a uniformly *darkened* copy of the capture moved `gapFrac` 0.0795 → 0.0986
+under a change the statistic is exactly invariant to. The statistic was not at fault: rounding a
+compressed range to 8 bits merges neighbouring values and manufactures gaps, and the control arms
+were float while the subject was quantised. Quantising the controls closes it.
+
+That change was made after the base number was known, so the direction is stated rather than
+assumed: quantising can only raise the controls' `gapFrac`, therefore only raise `G(0.5)`, therefore
+only make "BANDS" **harder**. It cannot manufacture the verdict it serves — and it did not help:
+
+```
+base arm --quant=0 (as registered)   MF1 0.1513 > 0.1346  PASS   DOES NOT BAND
+base arm --quant=1 (faithful)        MF1 0.1364 > 0.1500  FAIL   not interpretable
+```
+
+At a tonal range of **17.7 luma** one 8-bit code is 5.6% of the whole signal, and the ideal 3-band
+and ideal-Lambert endpoints overlap. The honest statement is therefore stronger than "it does not
+band": **hard bands are not representable at 8 bits on that surface**, and a correct instrument
+refuses to answer rather than returning a number. The blindness belongs to the unfixed frame — every
+simulated fix arm passes both must-fires comfortably, because the fix is what supplies the range.
+
+**Both readings are kept** (`--quant=0` restores the registered controls) so neither has to be taken
+on trust.

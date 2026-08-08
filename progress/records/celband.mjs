@@ -35,9 +35,16 @@
 import { withGame } from '../../tools/harness.mjs';
 import { writeFileSync, mkdirSync } from 'node:fs';
 
-const OUT = process.env.SANDS_OUT || 'shots/celband';
-const SWEEP = [0.15, 0.30, 0.45, 0.60];
-const SHOTS = ['temple', 'courtyard'];
+/* `--shots` and `--values` exist so the REQUIRED night arm (PREREG §10a) can run as a second,
+   short boot with its own within-boot null, instead of re-queueing the whole twelve-frame sweep
+   behind everyone else's captures. Defaults reproduce the run that produced shots/celband/. */
+const argv = Object.fromEntries(process.argv.slice(2).map((a) => {
+  const m = /^--([^=]+)(?:=(.*))?$/.exec(a);
+  return m ? [m[1], m[2] ?? '1'] : [a, '1'];
+}));
+const OUT = argv.out || process.env.SANDS_OUT || 'shots/celband';
+const SWEEP = (argv.values ? argv.values.split(',').map(Number) : [0.15, 0.30, 0.45, 0.60]);
+const SHOTS = (argv.shots ? argv.shots.split(',') : ['temple', 'courtyard']);
 
 mkdirSync(OUT, { recursive: true });
 
