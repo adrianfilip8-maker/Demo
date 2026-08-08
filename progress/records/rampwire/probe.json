@@ -1,0 +1,62 @@
+{
+  "hasShading": true,
+  "hasSetter": "function",
+  "mats": [
+    {
+      "name": "toon_sand",
+      "compiled": true,
+      "sameObjectAsShared": false,
+      "matHasTermHi": false,
+      "matTermHiValue": null,
+      "progUploadsTermHi": false,
+      "progDeclaresTermHi": false,
+      "uniformCount": 0
+    },
+    {
+      "name": "toon_limestone",
+      "compiled": true,
+      "sameObjectAsShared": false,
+      "matHasTermHi": false,
+      "matTermHiValue": null,
+      "progUploadsTermHi": false,
+      "progDeclaresTermHi": false,
+      "uniformCount": 0
+    },
+    {
+      "name": "toon_palm_bark",
+      "compiled": true,
+      "sameObjectAsShared": false,
+      "matHasTermHi": false,
+      "matTermHiValue": null,
+      "progUploadsTermHi": false,
+      "progDeclaresTermHi": false,
+      "uniformCount": 0
+    },
+    {
+      "name": "toon",
+      "compiled": true,
+      "sameObjectAsShared": false,
+      "matHasTermHi": false,
+      "matTermHiValue": null,
+      "progUploadsTermHi": false,
+      "progDeclaresTermHi": false,
+      "uniformCount": 0
+    }
+  ],
+  "sharedBefore": 0.52,
+  "sharedIsObject": true,
+  "sharedAfter": 0.95,
+  "matsAfter": [
+    null,
+    null,
+    null,
+    null
+  ],
+  "sharedAfterRender": 0.95,
+  "matsAfterRender": [
+    null,
+    null,
+    null,
+    null
+  ]
+}

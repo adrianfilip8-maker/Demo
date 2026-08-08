@@ -1,0 +1,48 @@
+{
+  "arms": {
+    "base": {
+      "fps": 60,
+      "drawCalls": 259,
+      "triangles": 1812900,
+      "programs": 94,
+      "ms": 10
+    },
+    "cand": {
+      "fps": 60,
+      "drawCalls": 259,
+      "triangles": 1812900,
+      "programs": 94,
+      "ms": 8.400000000372529
+    },
+    "KB": {
+      "fps": 60,
+      "drawCalls": 259,
+      "triangles": 1812916,
+      "programs": 94,
+      "ms": 18.59999999962747
+    },
+    "restore": {
+      "fps": 60,
+      "drawCalls": 259,
+      "triangles": 1812916,
+      "programs": 94,
+      "ms": 6.799999998882413
+    }
+  },
+  "armA": {
+    "hasMake": "undefined",
+    "charMat": {
+      "mesh": "slydlrig:mesh",
+      "type": "MeshStandardMaterial",
+      "isToon": false
+    }
+  },
+  "armB": {
+    "hasMake": "function",
+    "charMat": {
+      "mesh": "slydlrig:mesh",
+      "type": "MeshStandardMaterial",
+      "isToon": true
+    }
+  }
+}
