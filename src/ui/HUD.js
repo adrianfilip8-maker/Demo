@@ -389,7 +389,28 @@ export class HUD {
 
     on('coins', (n) => this.setCoins(num(n, this.coins)));
     on('coin', (p) => this.addCoins(typeof p === 'number' ? p : num(p?.amount ?? p?.value ?? p?.n, 1)));
-    on('pickpocket', () => { this.addCoins(25); this.toast('Pickpocketed', { icon: 'coin' }); });
+    /**
+     * Pay on the STEAL, not on the reach.
+     *
+     * `pickpocket` is Moveset's *intent* event — Sly put his hand out. It fires whenever the player
+     * is grounded, presses `interact`, and nothing else is grabbable; `Moveset.Pickpocket.canEnter`
+     * does not check that a guard is anywhere near. Crediting a flat 25 on it meant **mashing E in
+     * an empty courtyard minted 25 coins a press**, roughly 45 per second at `pickTime` 0.55, with
+     * toast and SFX, while `Guards` correctly stole nothing at all.
+     *
+     * `guardPickpocket` is the outcome. `Guard.pickpocket()` returns null unless
+     * `canBePickpocketed`, latches `looted` so a guard cannot be robbed twice, and only then emits
+     * `{ guard, id, pos, coins, item }` — with `coins` rolled from that guard's own table (temple
+     * 45–90, heavy 80–150, scarab 10–25). That authored economy had **zero listeners** and had never
+     * once reached the player.
+     *
+     * So the flat 25 is gone in both directions: the exploit closes, and a real steal now pays what
+     * it was written to pay.
+     */
+    on('guardPickpocket', (p) => {
+      this.addCoins(num(p?.coins, 0));
+      this.toast(p?.item ? `Pickpocketed — ${p.item}` : 'Pickpocketed', { icon: 'coin' });
+    });
 
     on('health', (p) => {
       if (typeof p === 'number') this.setHealth(p, this.healthMax);

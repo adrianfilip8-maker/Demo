@@ -19533,3 +19533,45 @@ mutations (drop `pos`, remove the one-shot latch, credit treasure on pickup, wid
   every claim above is arithmetic or a plain-Node assertion, and the visual questions — whether a
   0.16 m coin reads at courtyard distance, whether the treasure silhouettes carry across a room —
   are open.
+
+## §247 — mashing E in an empty courtyard minted 25 coins a press, and the real loot table had no listener
+
+Two halves of one defect, found by the LOOT agent and routed here because the fix crosses a file
+boundary it correctly refused to cross.
+
+**The exploit.** `HUD.js` carried `on('pickpocket', () => { this.addCoins(25); … })`. `pickpocket`
+is Moveset's **intent** event — Sly put a hand out — and `Moveset.Pickpocket.canEnter` checks only
+that the player is grounded, pressed `interact`, and has no hook, rail or pole to grab. It never
+checks that a guard is anywhere near. So holding E in an empty courtyard paid **25 coins a press,
+about 45 per second** at `pickTime` 0.55, with toast, coin burst and SFX, while `Guards` correctly
+stole nothing at all.
+
+**The other half.** `Guard.pickpocket()` is completely built: it refuses unless `canBePickpocketed`,
+latches `looted` so no guard is robbed twice, rolls coins from that guard's own table (temple 45–90,
+heavy 80–150, scarab 10–25) plus an item, and emits `guardPickpocket`. **That event had zero
+listeners.** The game's only authored economy had never once reached the player.
+
+So the flat 25 was simultaneously paying for nothing and hiding the fact that the real payout was
+disconnected — and the two had to be fixed together, because crediting `guardPickpocket` while the
+flat 25 stood would simply double-pay. That is why the loot agent declined to bank the event from
+its own module and reported it instead; it was right to.
+
+This is §239's shape for the third time in one session: **a publisher and a subscriber, each
+individually reasonable, never introduced to one another.** `coin` had three listeners and no
+emitter. `guardPickpocket` had an emitter and no listener. `playerState`, `ledgeGrab`, `hookGrab`,
+`hookRelease` and `enemyBounce` were all emitted into nothing until the FX agent subscribed them.
+On an event bus none of these breaks anything visible: no import fails, no test goes red, nothing
+warns. The static scrape proposed in §239 — every event name subscribed to in `src/` must be emitted
+somewhere in `src/`, and vice versa — would have caught all seven, and remains unwritten.
+
+`tests/pickpocket.test.mjs` pins both directions, boots the real HUD against the DOM shim rather
+than scraping source, and is **mutation-tested**: restoring the flat-25 line turns exactly two tests
+red — the behavioural one and the source-intent one — and removing it turns them green again. It
+also pins the guard side, because the HUD fix is only sound while `Guard.pickpocket()` keeps
+refusing a repeat; if that latch is ever removed, one guard becomes an infinite coin fountain.
+
+**Still open, and NOT fixed here.** `Moveset.Pickpocket.canEnter` still lets the player play the
+pickpocket animation at empty air. That is now cosmetic rather than an exploit — it mints nothing —
+but the honest fix is an affordance (`c.afford('pocket')`) registered by `Guards` alongside the
+magnetism targets of §223, so Moveset can gate on a real guard without taking a dependency on the
+AI module. Left alone deliberately: it touches two other agents' files and is no longer urgent.
