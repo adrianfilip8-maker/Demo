@@ -109,9 +109,45 @@ test('contact decal: darkening goes toward the SHADOW HUE and stays transparent'
   assert.ok(Math.max(t.r, t.g, t.b) < 1, 'multiplier does not darken');
 
   /* The fragment shader is a MULTIPLY, so the floor's own texture is preserved by construction.
-     Asserted on the source because "it is a multiply" is the load-bearing half of §2.1.3. */
+     Asserted on the source because "it is a multiply" is the load-bearing half of §2.1.3.
+
+     THIS PAIR OF LINES PASSED THROUGHOUT THE DEFECT IN §252 AND PROVED NOTHING. See the test
+     below: declaring `MultiplyBlending` is not the same as three programming one. */
   assert.match(DECALS_SRC, /blending:\s*THREE\.MultiplyBlending/);
   assert.match(DECALS_SRC, /gl_FragColor = vec4\( mix\( vec3\( 1\.0 \), uTint, a \), 1\.0 \);/);
+});
+
+test('contact decal: MultiplyBlending alone is not a multiply — premultipliedAlpha must be set', () => {
+  const st = createAtmosphereState();
+  evalAtmosphere(0.76, st);
+  const d = new ContactDecals(stubEngine(st), { name: 'test' });
+  d.add(0, 0, 0, 0.5, 1.0);
+  d.build(new THREE.Group());
+
+  /* KNOWN_ISSUES §252. `three@0.185`'s `WebGLState.setBlending()` has NO non-premultiplied
+     multiply path: with the flag false it hits
+
+         case MultiplyBlending:
+             error( 'WebGLState: MultiplyBlending requires material.premultipliedAlpha = true' );
+             break;
+
+     which returns WITHOUT calling `gl.blendFunc`, then caches `currentBlending` so the switch is
+     skipped on every later frame. The decal is then drawn under whatever function the previously
+     programmed material left behind — measured in a real `courtyard` frame as the birds'
+     `SRC_ALPHA / ONE_MINUS_SRC_ALPHA`. With `FRAG` writing alpha 1.0 that is a straight REPLACE,
+     so the decal overwrote the floor with its own multiplier instead of multiplying by it:
+     +103 luma on floor at 50, and the paving's texture destroyed inside the contact, which is the
+     one thing §2.1.3 asks a multiply to preserve. */
+  assert.equal(d.material.blending, THREE.MultiplyBlending);
+  assert.equal(d.material.premultipliedAlpha, true,
+    'MultiplyBlending with premultipliedAlpha=false programs no blend function at all — §252');
+
+  /* The flag is only correct because the fragment writes alpha 1.0 unconditionally: three's
+     premultiplied multiply is blendFuncSeparate(DST_COLOR, ONE_MINUS_SRC_ALPHA, ZERO, ONE), so a
+     src alpha below 1 would blend the destination back in on top of the product. The two lines
+     have to move together, so the dependency is asserted rather than left in a comment. */
+  assert.match(d.material.fragmentShader, /gl_FragColor = vec4\([^;]*,\s*1\.0\s*\);/);
+  d.dispose();
 });
 
 // ---------------------------------------------------------------------------------------------

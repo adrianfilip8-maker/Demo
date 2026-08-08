@@ -19807,3 +19807,138 @@ the warning goes quiet. It breaks nothing and costs nothing.
 `src/`. That is precisely the §186 rule I enforced on the INK agent two hours ago, and §250 restated
 it: the hazard is not that the running page notices a save, it is that you cannot know whether the
 runner reboots. It applies to me. Queued until the queue is empty.
+
+## §252 — the contact decals never multiplied. `MultiplyBlending` without `premultipliedAlpha` programs no blend function at all, and the decal *replaced* the floor instead of shading it
+
+The pass-8 critic scored "the contact shadow is INVERTED: floor under his boots is +5.5 luma
+brighter than floor 250 px away, and the vase decal is +2.9 brighter". §226 had separately noted,
+and parked, the boot line `THREE.WebGLState: MultiplyBlending requires material.premultipliedAlpha
+= true`. Same defect — and it is not a sign error. **No multiply was ever programmed.**
+
+### The branch
+
+`three@0.185.1`, `build/three.module.js:10251`, `setBlending()`, `premultipliedAlpha === false`:
+
+```js
+case MultiplyBlending:
+    error( 'WebGLState: MultiplyBlending requires material.premultipliedAlpha = true' );
+    break;
+```
+
+three has no non-premultiplied multiply path. The branch logs and **returns without calling
+`gl.blendFunc`**, then sets `currentBlending = MultiplyBlending`, `currentPremultipledAlpha = false`
+and nulls the cached factors — so on every later frame the guard
+`blending !== currentBlending || premultipliedAlpha !== currentPremultipledAlpha` is false and the
+switch never runs again. Opaque materials do not reset it either: `setBlending(NoBlending)` returns
+early after `disable(gl.BLEND)` without touching `currentBlending`.
+
+Probed in a real `courtyard` frame, inside the decal mesh's own `onAfterRender`:
+
+```
+A1 (shipped)   SRC_ALPHA / ONE_MINUS_SRC_ALPHA | ONE / ONE_MINUS_SRC_ALPHA   + the warning, every frame
+A2 (fixed)     DST_COLOR / ONE_MINUS_SRC_ALPHA | ZERO / ONE                  + zero console errors
+```
+
+The decal was inheriting the birds' Normal blend from `Sky.js:732` (`renderOrder 5`, one step ahead
+of the decal batch at 6).
+
+### It was REPLACING the floor, not brightening it — and the distinction is the whole defect
+
+`FRAG` writes `gl_FragColor.a = 1.0` unconditionally. Under `SRC_ALPHA / ONE_MINUS_SRC_ALPHA` that
+makes `result = src`. `FRAG` emits a MULTIPLIER — 1.0 (white) at the rim, 0.665 at the skirt, 0.442
+at the core — so the decal **overwrote** the floor with a flat value.
+
+Binning every touched footprint pixel by the floor's own luma with no decal present:
+
+| floor luma | n | broken Δ | fixed Δ |
+|---|---|---|---|
+| 50 | 2 744 | **+103.5** | −12.1 |
+| 71 | 10 083 | **+87.9** | −15.0 |
+| 86 | 2 493 | **+71.0** | −11.8 |
+| 110 | 1 123 | **−0.3** | −3.7 |
+
+The brightening **falls as the floor brightens and crosses zero near luma 110** — the signature of
+replacement, not of addition (constant offset) or multiplication (scales with the floor). So the
+critic's "+2.9 brighter" was a by-product of most of that floor being darker than the replacement
+value; on brighter paving the same bug reads *darker*. Worse than either: inside every contact the
+paving's texture, grout and colour variation were destroyed and replaced by a flat tone — the exact
+property §2.1.3 chose a multiply to preserve. The rim is the visible tell, `a = 0` → white:
+**+49.82 L at the rim** on the broken arm.
+
+**I stated this wrongly first.** I wrote that the decal "adds light", which fits the halo but not
+the data — the broken arm's median is positive on only 6 of 17 measurable footprints. The per-decal
+split is what caught it.
+
+### The fix
+
+`premultipliedAlpha: true` on the contact material (`src/world/Decals.js`). three then programs
+`blendFuncSeparate(DST_COLOR, ONE_MINUS_SRC_ALPHA, ZERO, ONE)`; `FRAG`'s alpha of 1.0 makes
+`ONE_MINUS_SRC_ALPHA` zero, so the result is exactly `src × dst` with destination alpha untouched.
+A colour whose alpha is 1 is its own premultiplication — the flag names the blend equation, not a
+stored colour. `tests/props.test.mjs` now asserts the flag *and* the alpha-1.0 fragment line,
+because the two must move together.
+
+`CustomBlending` with `ZeroFactor / SrcColorFactor` computes the same product and was rejected **in
+the seal, before measurement**: it would fix the pixels while leaving the warning standing, and that
+warning was the only thing in the build pointing at the defect.
+
+**Not §224's flag.** §224 is `premultiplyAlpha` on a TEXTURE through a 2D canvas — 57 % of
+`torch_flame`'s bytes wrong, ±184 on red. Different flag, different object; this material has no map.
+The project already had both halves right elsewhere: `Textures.js:593` sets `t.premultiplyAlpha =
+false` on textures, `Guard.js:1212` sets `premultipliedAlpha: true` on a material. Measured rather
+than argued: far-field pixels moved by the fix (97 371) are **fewer** than the null arm's own
+far-field churn (131 485), so no colour shifted outside the decals.
+
+### Result (`RESULT-decalsign.md`, seal `PREREG-decalsign.md` committed unmodified at `81d1540`)
+
+```
+median (arm - OFF) over 27,979 footprint px, courtyard 1280x720
+  A1 BROKEN  median +11.28   mean +42.29 (SEM 0.279)      RIM +49.82
+  A2 FIXED   median  -3.09   mean  -8.55 (SEM 0.063)      RIM  -3.79
+  NULL       median   0.00   mean  +0.57 (SEM 0.013)
+halo (inside - just outside):  broken +62.29  ->  fixed -26.85
+boot warning: gone (bootWarningPresent false, with a positive control proving the check can see it)
+```
+
+### The part worth keeping
+
+`tests/props.test.mjs` already asserted, off the source text:
+
+```js
+assert.match(DECALS_SRC, /blending:\s*THREE\.MultiplyBlending/);
+```
+
+and it **passed every run for the entire life of the defect**. The declaration was never what was
+wrong. A source-text assertion about what a material *says* cannot see that the renderer declined to
+program it; only reading `gl.BLEND_SRC_RGB` at the decal's own draw could. That readback is now a
+calibration arm, and the test asserts the flag rather than the word.
+
+Second lesson, on the null arm: **"identical" needs a named quantity.** I wrote "A3 matches A2
+exactly" meaning the GL readback and draw count; at frame level the two identical arms differ on
+**51.97 %** of pixels (mean |Δ| 3.85, max 193), because `decalsign.mjs:362` called `setShot(n)`
+without `{ dt: 0 }` and each arm advanced the world clock ~0.28 s (§251). The ROI statistic still
+survives, but only after checking the assumption instead of asserting it: the null's ROI mean is
+**43.9 SEM from zero**, so it is *not* zero-mean and plain 1/√N averaging is invalid. Restricted to
+pixels the null pair itself calls stable (90.9 % of the ROI, a mask from a control), the residual
+bias is +0.186 L against an effect of −8.98 L. **48× and opposite in sign** is why the result stands;
+"it averaged out" would not have been.
+
+### Out of scope, stated so it is not miscredited
+
+**The critic's +5.5 L under Sly's boots is not this decal and this fix does not touch it.** The
+player is not a `ContactDecals` client — `Props.js:212` and `KayKit.js:286` are the only `add()` call
+sites and both are props; only `_courtyardDress`, `_hallDress` and `_brazier` are grounded, all on
+fixed-height paving. Through the shipped `sly-closeup` camera his feet land at (640, 610) px and the
+nearest contact decal is **377 px away**. Logged separately as an orphaned defect; it belongs to the
+screen-space contact term, which §226 already measured misbehaving in the same direction.
+
+### Adjacent, observed, deliberately NOT fixed here
+
+The contact material is `transparent: true` + `side: DoubleSide` with `forceSinglePass` at its
+default `false`, so `WebGLRenderer.renderObject` (`three.module.js:18127`) draws the batch **twice
+per frame**, setting `material.needsUpdate = true` on each pass. The two passes cannot both
+rasterise — the disc is coplanar and single-winding, so one is fully culled — so this is **not** a
+double-multiply and no part of the sign defect; it is a wasted draw call and a per-frame program
+lookup. `Guard.js:1279` already carries `forceSinglePass: true` with the reasoning. Left alone
+because it is an unmeasured change, and bundling it into a measured one is how two results become
+one unfalsifiable story.
