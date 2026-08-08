@@ -87,13 +87,21 @@ export function classify(rgba) {
   let n = 0, chromatic = 0, warm = 0, cool = 0, neither = 0, achro = 0;
   let sumW = 0, sumC = 0, sumY = 0;
   const hist = new Float64Array(HUE_BINS);
+  /* Albedo value histogram, 256 bins. Present because critic pass 8's other headline — "no
+     highlight range at all: p99 172.2, 0.000% above luma 230" — has a texture-side ceiling in it:
+     a surface whose own albedo tops out at 0.62 cannot reach 230/255 in frame at any exposure
+     below 1.45x. Whether that ceiling is the binding one is LIGHTING's question, but whether it
+     exists is measurable here and belongs in this table rather than in an argument. */
+  const vhist = new Float64Array(256);
   for (let p = 0; p < rgba.length; p += 4) {
     if (rgba[p + 3] < 128) continue;              // alpha gate — not a visible surface
     const r = rgba[p] / 255, g = rgba[p + 1] / 255, b = rgba[p + 2] / 255;
     const mx = Math.max(r, g, b), mn = Math.min(r, g, b), c = mx - mn;
     n++;
     sumC += c;
-    sumY += r * 0.2126 + g * 0.7152 + b * 0.0722;
+    const yv = r * 0.2126 + g * 0.7152 + b * 0.0722;
+    sumY += yv;
+    vhist[Math.min(255, Math.round(yv * 255))]++;
     if (c < CHROMA_GATE) { achro++; continue; }
     const h = hueOf(r, g, b);
     sumW += c * Math.cos((h - 30) * Math.PI / 180);
@@ -107,8 +115,18 @@ export function classify(rgba) {
    * the note above. `warmPct`/`coolPct` use the chromatic denominator, which is the critic's. */
   const denom = chromatic || 1;
   for (let i = 0; i < HUE_BINS; i++) hist[i] /= denom;
+  /* Median hue from the histogram's cumulative, taken on the warm-centred axis (bins re-based at
+     -180° relative to 30°) so a hue family straddling 0° does not report as 180°. */
+  let cum = 0, hueMed = NaN;
+  for (let k = 0; k < HUE_BINS; k++) {
+    const i = (k + 22) % HUE_BINS;                     // start at 330°, i.e. the warm wedge's foot
+    cum += hist[i];
+    if (cum >= 0.5) { hueMed = (i * 15 + 7.5) % 360; break; }
+  }
+  const vq = (q) => { let c = 0; for (let i = 0; i < 256; i++) { c += vhist[i]; if (c >= q * n) return i / 255; } return 1; };
   return {
-    n, chromatic, achro, hist: Array.from(hist),
+    n, chromatic, achro, hist: Array.from(hist), hueMed,
+    luma50: vq(0.50), luma99: vq(0.99),
     warmPct: 100 * warm / denom,
     coolPct: 100 * cool / denom,
     neitherPct: 100 * neither / denom,
@@ -466,11 +484,11 @@ for (const [name, m] of src.maps) {
   rows.push({ name, size: m.size, w: (weights.get(name) || 0) / (covered || 1), ...c });
 }
 rows.sort((a, b) => b.w - a.w);
-console.log('\nrecipe                 weight%   warm%   cool%  neith%  achro%   warmth   chroma    luma');
+console.log('\nrecipe                 weight%  hue50   warm%   cool%  neith%  achro%   warmth   chroma    luma   luma99');
 for (const r of rows) {
-  console.log(`${r.name.padEnd(20)} ${(100 * r.w).toFixed(2).padStart(7)} ${r.warmPct.toFixed(1).padStart(7)} `
+  console.log(`${r.name.padEnd(20)} ${(100 * r.w).toFixed(2).padStart(7)} ${r.hueMed.toFixed(0).padStart(5)}° ${r.warmPct.toFixed(1).padStart(7)} `
     + `${r.coolPct.toFixed(1).padStart(7)} ${r.neitherPct.toFixed(1).padStart(7)} ${r.achroPct.toFixed(1).padStart(7)} `
-    + `${r.warmth >= 0 ? '+' : ''}${r.warmth.toFixed(4).padStart(7)} ${r.chroma.toFixed(4).padStart(8)} ${r.luma.toFixed(4).padStart(7)}`);
+    + `${r.warmth >= 0 ? '+' : ''}${r.warmth.toFixed(4).padStart(7)} ${r.chroma.toFixed(4).padStart(8)} ${r.luma.toFixed(4).padStart(7)} ${r.luma99.toFixed(4).padStart(7)}`);
 }
 
 /** Weighted aggregate. Shares are re-pooled from counts, not averaged from percentages. */
@@ -492,7 +510,37 @@ function aggregate(list) {
     achroPct: 100 * aw / k, warmth: warmth / k, chroma: chroma / k, luma: luma / k, weightSum: tw,
   };
 }
+/**
+ * Hue separation — the statistic the warm/cool split cannot see.
+ *
+ * A scene can be 95 % warm and still be wrong, because "warm" is a 120° wedge and a palette that
+ * puts every surface in the same 15° of it has no colour design in it at all: sandstone, granite,
+ * gilding, plaster and vegetation are then the same hue at different brightnesses. `h30` is the
+ * share of chromatic texels inside the single most populated 30° bucket (the statistic
+ * `hieroglyph_wall`'s own note already quotes as "100 % inside one 30 deg bucket"); `hueN` is the
+ * effective number of 15° hue families, exp(Shannon entropy). Lower `h30` and higher `hueN` mean
+ * more separation. Both are coverage-weighted.
+ */
+function hueSpread(list) {
+  const hist = new Float64Array(HUE_BINS);
+  let tw = 0;
+  for (const r of list) {
+    if (!r.w) continue;
+    const chromShare = r.chromatic / (r.n || 1);
+    const wt = r.w * chromShare;
+    tw += wt;
+    for (let i = 0; i < HUE_BINS; i++) hist[i] += wt * r.hist[i];
+  }
+  for (let i = 0; i < HUE_BINS; i++) hist[i] /= (tw || 1);
+  let h30 = 0;
+  for (let i = 0; i < HUE_BINS; i++) h30 = Math.max(h30, hist[i] + hist[(i + 1) % HUE_BINS]);
+  let ent = 0;
+  for (let i = 0; i < HUE_BINS; i++) if (hist[i] > 1e-12) ent -= hist[i] * Math.log(hist[i]);
+  return { hist: Array.from(hist), h30: 100 * h30, hueN: Math.exp(ent) };
+}
+
 const AGG = aggregate(rows);
+const SPREAD = hueSpread(rows);
 const topW = rows[0] ? rows[0].w : 0;
 console.log(`\nCAL-4 weights sum ${AGG.weightSum.toFixed(4)} (want 1.0000); largest single recipe ${(100 * topW).toFixed(1)}%`
   + (topW > 0.60 ? '  ** >60%: the aggregate is one recipe wearing a hat **' : '  OK'));
@@ -500,6 +548,17 @@ console.log(`\nCAL-4 weights sum ${AGG.weightSum.toFixed(4)} (want 1.0000); larg
 console.log(`\nCOVERAGE-WEIGHTED  warm ${AGG.warmPct.toFixed(1)}%   cool ${AGG.coolPct.toFixed(1)}%   neither ${AGG.neitherPct.toFixed(1)}%`
   + `   achromatic ${AGG.achroPct.toFixed(1)}% of texels`);
 console.log(`                   warmth W ${AGG.warmth >= 0 ? '+' : ''}${AGG.warmth.toFixed(4)}   chroma ${AGG.chroma.toFixed(4)}   luma ${AGG.luma.toFixed(4)}`);
+console.log(`HUE SEPARATION     h30 ${SPREAD.h30.toFixed(1)}% in one 30° bucket   hueN ${SPREAD.hueN.toFixed(2)} effective 15° families`);
+{
+  const mx = Math.max(...SPREAD.hist);
+  let s = '';
+  for (let i = 0; i < HUE_BINS; i++) {
+    const pctv = 100 * SPREAD.hist[i];
+    if (pctv < 0.05) continue;
+    s += `  ${String(i * 15).padStart(3)}°-${String(i * 15 + 15).padStart(3)}° ${pctv.toFixed(1).padStart(5)}%  ${'#'.repeat(Math.round(40 * SPREAD.hist[i] / mx))}\n`;
+  }
+  console.log('coverage-weighted hue histogram (chromatic texels, 15° bins):\n' + s);
+}
 
 /* ---- CAL-2: rotate the REAL data 180° and require the shares to swap ---- */
 {
@@ -537,7 +596,7 @@ console.log('');
 for (const [label, ok, val] of P) console.log(`${ok ? 'PASS' : 'MISS'}  ${label.padEnd(34)} ${val}`);
 
 /* ---- optional comparison against an earlier run ---- */
-const out = { agg: AGG, rows: rows.map(({ name, w, warmPct, coolPct, neitherPct, achroPct, warmth, chroma, luma }) => ({ name, w, warmPct, coolPct, neitherPct, achroPct, warmth, chroma, luma })) };
+const out = { agg: AGG, spread: SPREAD, rows: rows.map(({ name, w, hueMed, luma99, warmPct, coolPct, neitherPct, achroPct, warmth, chroma, luma }) => ({ name, w, hueMed, luma99, warmPct, coolPct, neitherPct, achroPct, warmth, chroma, luma })) };
 const cmp = opt('cmp', null);
 if (cmp) {
   const B = JSON.parse(fs.readFileSync(cmp, 'utf8'));
@@ -557,6 +616,10 @@ if (cmp) {
     + `   chroma ${a.chroma.toFixed(4)} -> ${AGG.chroma.toFixed(4)}`);
   console.log(`P3 luma within +-0.02: ${Math.abs(AGG.luma - a.luma) <= 0.02 ? 'PASS' : 'FIRED — the palette moved by brightness'}  (delta ${(AGG.luma - a.luma).toFixed(4)})`);
   console.log(`P4 chroma not below control: ${AGG.chroma >= a.chroma ? 'PASS' : 'FIRED — warmth bought by desaturating'}  (delta ${(AGG.chroma - a.chroma).toFixed(4)})`);
+  if (B.spread) {
+    console.log(`   h30 ${B.spread.h30.toFixed(1)}% -> ${SPREAD.h30.toFixed(1)}% (${(SPREAD.h30 - B.spread.h30 >= 0 ? '+' : '')}${(SPREAD.h30 - B.spread.h30).toFixed(1)})`
+      + `   hueN ${B.spread.hueN.toFixed(2)} -> ${SPREAD.hueN.toFixed(2)} (${(SPREAD.hueN - B.spread.hueN >= 0 ? '+' : '')}${(SPREAD.hueN - B.spread.hueN).toFixed(2)})`);
+  }
 }
 
 const jsonOut = opt('json', null);

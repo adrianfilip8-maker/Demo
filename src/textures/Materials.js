@@ -24,7 +24,7 @@ import * as HG from './Hieroglyphs.js';
 const {
   PAL, sat, lerp, clamp, smoothstep, tri, mixHex, hexRGB, css, freqVec,
   masonry, weather, chiselMarks, pitting, speckle, brushwork, paintRemnants, grain, flowStreaks,
-  blurWrap, concavity, skyward, streakDown, rasterMask, rasterRGBA, rampFloor,
+  blurWrap, concavity, skyward, streakDown, rasterMask, rasterRGBA, rampFloor, hueGrade,
   nz, nzA, vz, fbmN, fbmA, ridgeN, warpN, worleyN, rng, warpedFbm2,
   abOff,
 } = C;
@@ -115,6 +115,90 @@ const VARIATION = 0.62;
  * So: deep grooves, real AO, and only a light touch of mortar colour on top.
  */
 const JOINT = 0.24;
+
+/* ── The palette's hue policy, in one table ───────────────────────────────────────────────────
+ *
+ * **The measurement that produced this table.** `tools/palwarm.mjs` weights every recipe by the
+ * screen area it actually covers across `hero`/`temple`/`courtyard`/`sly-closeup` (geometry only —
+ * no lighting, no grade, so it does not move when LIGHTING does) and reports the hue distribution
+ * of the shipped albedo bytes. The control:
+ *
+ *   COVERAGE-WEIGHTED  warm 94.9%   cool 3.5%   W +0.3200
+ *   HUE SEPARATION     h30 93.1% inside one 30° bucket   hueN 2.44 effective families
+ *
+ * So the scene is **not** cool at the source — critic pass 8's 78.8 %-cool is a frame number and
+ * enters downstream of these files. What it is, is **one colour**: 93 % of every chromatic texel
+ * in the level inside a single 30° bucket, with eight of the ten largest surfaces reporting *the
+ * identical* median hue of 23°. Aswan granite measured the same hue as mudbrick. Papyrus measured
+ * the same hue as sandstone. That is the defect this table fixes, and it is a different defect
+ * from the one the brief expected — recorded that way on purpose.
+ *
+ * It happened through shared code, which is why it was so uniform: `rampFloor` pulls every dark
+ * tail onto the same sand crevice, and grime, dust, pitting and speckle all come from the same
+ * sand-coloured constants. Each of those is right on its own.
+ *
+ * **These are deltas in degrees, at the material's own p02 / mid / p98 luma** (see `hueGrade`) —
+ * not target hues and not a global rotation. Every family gets its own curve because every family
+ * is a different mineral:
+ *
+ *   sandstone   opens up. Recess deep red-brown, mid ochre, sun-struck crest pale yellow and
+ *               desaturated. This is what strong overhead sun does to a porous stone and it is
+ *               most of the difference between "painted rock" and "a fill colour".
+ *   limestone   Tura casing: paler, creamier, cooler in chroma than sandstone, never yellower
+ *               than gold.
+ *   granite     Aswan granite is **pink**. It measured at sandstone's hue, which is the single
+ *               most obviously wrong number in the control table.
+ *   gold        gilding is yellow, not tan. It shared a bin with limestone and rope.
+ *   mudbrick    Nile silt: browner and redder than quarried stone, and it had been identical.
+ *   sand        pale and only lightly coloured. It shipped at chroma 0.419, more saturated than
+ *               the gilded architrave, which is not what sand looks like at noon.
+ *   vegetation  **not graded** — see the note under the table. The instrument said it was wrong
+ *               and the instrument was measuring half the chain.
+ *
+ * Pigment is deliberately NOT in this table. Egyptian blue, malachite and carnelian are
+ * manufactured mineral colours, not weathered stone, and they do not take the stone's solar ramp
+ * — so the two recipes that carry paint mask it out of the grade rather than rotating it. The
+ * lapis ceiling stays exactly where it is: it is the level's one deliberate cool mass and the
+ * point of fixing a palette is not to flatten it.
+ */
+const HUE = {
+  /* Recess 16°, mid 30°, crest ~48° and half the chroma. `lift` raises only the sun-struck tail:
+     the four largest architectural surfaces ship albedo p99 0.596–0.639, and a 0.60 albedo cannot
+     reach 230/255 in frame at unity gain however it is lit. */
+  sandstone: { lo: -9, mid: 2, hi: 18, satLo: 1.30, satMid: 1.06, satHi: 0.66, lift: 0.09, knee: 0.60 },
+  /* The floor is dustier and flatter than a wall — less bleach, less lift. */
+  paving: { lo: -7, mid: 0, hi: 14, satLo: 1.28, satMid: 1.05, satHi: 0.72, lift: 0.06, knee: 0.62 },
+  limestone: { lo: 2, mid: 7, hi: 14, satLo: 1.32, satMid: 1.12, satHi: 0.86, lift: 0.06, knee: 0.66 },
+  granite: { lo: -16, mid: -15, hi: -7, satLo: 1.10, satMid: 1.18, satHi: 1.02 },
+  gold: { lo: 4, mid: 10, hi: 14, satLo: 1.05, satMid: 1.06, satHi: 1.0, lift: 0.05, knee: 0.70 },
+  /* Aged bronze goes olive at the highlight where gold goes yellow — that separation is the
+     whole reason two metals in one frame read as two metals. */
+  bronze: { lo: 0, mid: 8, hi: 24, satLo: 1.05, satMid: 0.98, satHi: 0.88 },
+  mudbrick: { lo: -13, mid: -8, hi: 0, satLo: 1.10, satMid: 1.05, satHi: 0.85 },
+  sand: { lo: -4, mid: 6, hi: 16, satLo: 1.10, satMid: 0.95, satHi: 0.78, lift: 0.05, knee: 0.66 },
+  bark: { lo: -6, mid: -4, hi: 2, satLo: 1.05, satMid: 0.92, satHi: 0.85 },
+  timber: { lo: -2, mid: 0, hi: 8, satLo: 1.05, satMid: 0.88, satHi: 0.82 },
+  fibre: { lo: 0, mid: 6, hi: 12, satLo: 1.05, satMid: 0.86, satHi: 0.80 },
+};
+
+/* **There is no vegetation entry, and that is a result rather than an omission.**
+ *
+ * The criterion registered in `PREREG-palwarm.md` §S5 said `papyrus_reed` and `palm_frond` must
+ * each report a median albedo hue in [75°, 150°) — green — because the control had `papyrus_reed`
+ * at **100 % warm, hue 38°**, which looks exactly like a reed bed painted the colour of the wall
+ * behind it. **That criterion is VOID and is reported as void, not re-derived** (§141.1):
+ *
+ *   - `papyrus_reed` does not paint a plant. It paints a sheet of *papyrus* — split pith laid at
+ *     right angles and beaten flat — which is correctly cream, and `Vegetation.js:357` multiplies
+ *     it by a material colour of `PAL.papyrusStalk 0x6f8a3c`, hue 81°. Cream x green is the
+ *     authored design.
+ *   - `palm_frond`'s material is `color: 0xffffff, vertexColors: true`, and the geometry carries
+ *     per-vertex colour ramping `frondMid 0x5f7a33` to `frondLight 0x8fa348` (Vegetation.js:121,
+ *     173) — both green.
+ *
+ * So S5 measured half of a two-factor product and called the half a defect. Rotating these two
+ * albedos green would have shipped green x green. Left exactly where they are.
+ */
 
 /* ── Cel-shaded metal: the value policy ───────────────────────────────────────────────────────
  *
@@ -1007,6 +1091,8 @@ export const MATERIALS = {
       weather(s, { source: m.joint, seed: cx.seed + 6, creviceAmt: 0.44, streakAmt: 0.26, dustAmt: 0.18, directional: 0.7 });
       grain(s, { amount: 0.020, freq: 120, seed: cx.seed + 8, heightAmt: 0.006 });
       rampFloor(s, { crevice: PAL.sandCrev });
+      // Last, so the grime and the crevice floor are graded with the stone rather than around it.
+      hueGrade(s, HUE.sandstone);
     },
   },
 
@@ -1068,6 +1154,7 @@ export const MATERIALS = {
       weather(s, { source: m.joint, seed: cx.seed + 6, creviceAmt: 0.50, streakAmt: 0.30, dustAmt: 0.24, streakDecay: 0.982, directional: 0.7 });
       grain(s, { amount: 0.026, freq: 120, seed: cx.seed + 9, heightAmt: 0.008 });
       rampFloor(s, { crevice: PAL.sandCrev });
+      hueGrade(s, HUE.sandstone);
     },
   },
 
@@ -1117,6 +1204,7 @@ export const MATERIALS = {
       });
       grain(s, { amount: 0.016, freq: 130, seed: cx.seed + 8, heightAmt: 0.004 });
       rampFloor(s, { crevice: 0x54432c });
+      hueGrade(s, HUE.limestone);
     },
   },
 
@@ -1390,6 +1478,7 @@ export const MATERIALS = {
       });
       grain(s, { amount: 0.014, freq: 130, seed: cx.seed + 23, heightAmt: 0.003 });
       rampFloor(s, { crevice: MX(PAL.sandCrev, PAL.carnelian, 0.25) });
+      hueGrade(s, HUE.granite);
     },
   },
 
@@ -1455,6 +1544,7 @@ export const MATERIALS = {
        * the source fix above is what did the work (0.0076 → 0.0003) and this only removes the
        * last ~79 texels of 262 144, which are the ones no source hex can reach. */
       rampFloor(s, { crevice: 0x503322, lift: 0.06 });
+      hueGrade(s, HUE.mudbrick);
     },
   },
 
@@ -1517,6 +1607,7 @@ export const MATERIALS = {
       weather(s, { source: crack, seed: cx.seed + 9, crevice: 0x4a3a26, creviceAmt: 0.42, streakAmt: 0.28, dustAmt: 0.14, directional: 0.6 });
       grain(s, { amount: 0.018, freq: 120, seed: cx.seed + 11, heightAmt: 0.005 });
       rampFloor(s, { crevice: 0x53412c });
+      hueGrade(s, HUE.limestone);
     },
   },
 
@@ -1553,6 +1644,7 @@ export const MATERIALS = {
       weather(s, { seed: cx.seed + 6, creviceAmt: 0.58, streakAmt: 0.10, dustAmt: 0.24, dust: PAL.sandLight, streakDecay: 0.95, directional: 0.7 });
       grain(s, { amount: 0.030, freq: 130, seed: cx.seed + 8, heightAmt: 0.010 });
       rampFloor(s, { crevice: PAL.sandCrev });
+      hueGrade(s, HUE.sandstone);
     },
   },
 
@@ -1692,6 +1784,7 @@ export const MATERIALS = {
       weather(s, { source: m.joint, seed: cx.seed + 6, creviceAmt: 0.50, streakAmt: 0.12, dustAmt: 0.16, streakDecay: 0.94, directional: 0.55 });
       grain(s, { amount: 0.020, freq: 120, seed: cx.seed + 8, heightAmt: 0.006 });
       rampFloor(s, { crevice: PAL.sandCrev });
+      hueGrade(s, HUE.paving);
     },
   },
 
@@ -1969,6 +2062,17 @@ export const MATERIALS = {
        * cannot fix it (it lands short by construction); `lift` can, and it costs contrast that
        * was rendering as violet rather than as dark. */
       rampFloor(s, { crevice: SAND_CREV_FLOOR, lift: 0.5 });
+      /* The solar hue ramp, **masked off the paint**. Egyptian blue, malachite and red ochre are
+       * ground minerals in a binder — a manufactured colour sitting on the stone, not a weathered
+       * face of it — so they do not take the stone's bleach-toward-yellow curve. Grading them
+       * with the wall would rotate the one part of this recipe that is deliberately not sand:
+       * `hieroglyph_wall` is 3.0 % cool and 8.1 % green in the control table, and all of that is
+       * the register bands and the surviving pigment in the cuts. The mask is the paint coverage
+       * the recipe already computed, so it tracks the wear field exactly — a flake that has lost
+       * its pigment is stone again and is graded as stone. */
+      const stoneOnly = new Float32Array(s.n);
+      for (let i = 0; i < s.n; i++) stoneOnly[i] = 1 - sat(paint.a[i] * 0.85 + bandPaint.a[i]);
+      hueGrade(s, { ...HUE.sandstone, mask: stoneOnly });
     },
   },
 
@@ -2241,6 +2345,7 @@ export const MATERIALS = {
        * §2.2's `crevice` value, where the shader's additive violet wash starts to out-weigh the
        * albedo. This recipe reported `darkTail 0.0000` before and has to keep doing so. */
       rampFloor(s, { crevice: GOLD_DEEP });
+      hueGrade(s, HUE.gold);
     },
   },
 
@@ -2273,6 +2378,7 @@ export const MATERIALS = {
       weather(s, { source: src, seed: cx.seed + 6, creviceAmt: 0.46, streakAmt: 0.28, dustAmt: 0.22, directional: 0.35 });
       grain(s, { amount: 0.020, freq: 120, seed: cx.seed + 8, heightAmt: 0.006 });
       rampFloor(s, { crevice: PAL.sandCrev });
+      hueGrade(s, HUE.sandstone);
     },
   },
 
@@ -2972,6 +3078,12 @@ export const MATERIALS = {
          0.00010 and is 0.00027 with a floor sitting exactly *on* the line, and `hieroglyph_wall`
          — carved, same family, same frame — is 0.00125. A floor on the line cannot defend it. */
       rampFloor(s, { crevice: SAND_CREV_FLOOR, lift: 0.5 });
+      /* Masked off the painted registers for the same reason as `hieroglyph_wall` — see there.
+       * This recipe is 15.3 % of the four canonical framings, second only to the courtyard floor,
+       * so it is the largest single place the shaft's hue is decided. */
+      const shaftOnly = new Float32Array(s.n);
+      for (let i = 0; i < s.n; i++) shaftOnly[i] = 1 - sat(bandsMask[i] * paint.a[i]);
+      hueGrade(s, { ...HUE.sandstone, mask: shaftOnly });
     },
   },
 
@@ -3092,6 +3204,7 @@ export const MATERIALS = {
        * the point of this recipe, so it needs the floor more than the stone does — the crevice
        * hex here is a *gold* one, so a shadowed seam bottoms out as dark gilding. */
       rampFloor(s, { crevice: GOLD_DEEP });
+      hueGrade(s, HUE.gold);
     },
   },
 
@@ -3128,6 +3241,7 @@ export const MATERIALS = {
       weather(s, { seed: cx.seed + 6, crevice: 0x4e3a14, creviceAmt: 0.50, streakAmt: 0.14, dustAmt: 0.12, dust: PAL.limeMid, roughGrime: 0.18, downDark: 0.12, patina: 0.05 });
       grain(s, { amount: 0.014, freq: 280, seed: cx.seed + 8, heightAmt: 0.004 });
       rampFloor(s, { crevice: GOLD_DEEP });
+      hueGrade(s, HUE.gold);
     },
   },
 
@@ -3281,6 +3395,7 @@ export const MATERIALS = {
        * out narrower than the flat sheet this recipe was rewritten to replace. The measurement
        * caught it; reasoning about it would not have. */
       rampFloor(s, { crevice: MX(PAL.malachite, PAL.black, 0.70) });
+      hueGrade(s, HUE.bronze);
     },
   },
 
@@ -3439,6 +3554,7 @@ export const MATERIALS = {
        * 0.0367 at shipping resolution *with this floor already applied*, because the lerp on its
        * own leaves mid-dark texels short of the line (see `rampFloor`). */
       rampFloor(s, { crevice: BARK_CREV, lift: 0.14 });
+      hueGrade(s, HUE.bark);
     },
   },
 
@@ -3643,6 +3759,9 @@ export const MATERIALS = {
       for (let i = 0; i < s.n; i++) if (fuzz[i] > 0.02) { s.mixHex(i, PAL.sandLight, fuzz[i] * 0.45); s.h[i] += fuzz[i] * 0.06; }
       weather(s, { seed: cx.seed + 6, crevice: 0x4a3520, creviceAmt: 0.55, streakAmt: 0.10, dustAmt: 0.16, roughGrime: 0.05 });
       grain(s, { amount: 0.035, freq: 340, seed: cx.seed + 8, heightAmt: 0.008 });
+      // Ropes are built out of the sand ramp, so they shipped at chroma 0.398 — a hawser more
+      // saturated than the wall it is tied to. Fibre is a dull material; this makes it one.
+      hueGrade(s, HUE.fibre);
     },
   },
 
@@ -3708,6 +3827,7 @@ export const MATERIALS = {
       grain(s, { amount: 0.03, freq: 330, seed: cx.seed + 8, heightAmt: 0.006 });
       // The floor this recipe never had. `lift` 0.24 puts the hard minimum at 0.2096.
       rampFloor(s, { crevice: TIMBER_CREV, lift: 0.24 });
+      hueGrade(s, HUE.timber);
     },
   },
 
@@ -4288,6 +4408,13 @@ function sand(s, cx, o = {}) {
     // Sand has no skin to grow a patina on — it is replaced by the wind every season.
     patina: 0,
   });
+  /* Dune sand shipped at **chroma 0.419** — more saturated than the gilded architrave and the
+   * most saturated surface in the catalogue after solid gold leaf — at hue 23°, i.e. the same
+   * bin as the masonry. Sand at noon is pale and only lightly coloured; the saturation was doing
+   * the work the *value range* should be doing, and it put the largest surface in the game
+   * squarely on top of the wall's hue. `HUE.sand` takes the chroma out of the lit end, leaves it
+   * in the shadowed troughs where it belongs, and yellows the crests. */
+  hueGrade(s, HUE.sand);
 }
 
 /** Semi-precious stone set in gold cloisonné cells. */

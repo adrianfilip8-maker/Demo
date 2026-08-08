@@ -118,3 +118,82 @@ board."* Registered before the rebuild:
 ---
 
 Registered by EGYPT, before the first run.
+
+---
+
+# ADDENDUM 1 — the control came back P0, and here is the second criterion
+
+Written **after** the control run and **before any recipe was edited**. Nothing below was measured
+on a changed texture; the candidate does not exist yet. Stated plainly because a threshold set with
+a control in hand is only honest if the order is on the record.
+
+## The control, in full
+
+Coverage-weighted over `hero, temple, courtyard, sly-closeup` (90.3 % of frame pixels attributed;
+`props_*`, `sand_ring*` now mapped, pyramids and `props_dark/glass` carry no texture map at all and
+stay unattributed):
+
+```
+COVERAGE-WEIGHTED  warm 94.9%   cool 3.5%   neither 1.6%   achromatic 0.1%
+                   warmth W +0.3200   chroma 0.3468   luma 0.5098
+HUE SEPARATION     h30 93.1% in one 30° bucket   hueN 2.44 effective 15° families
+```
+
+**P0 FIRES.** P1 (cool ≤ 8 %, warm ≥ 80 %) and P2 (W ≥ +0.085) are all satisfied *by the control*.
+The shipped albedo is 94.9 % warm. Whatever makes `sly-closeup` measure 78.8 % cool in frame is
+**not in `src/textures/`** — it enters downstream of the albedo. Per P0 that is the finding, and I
+do not get to re-frame it into a fix I made.
+
+## The defect that IS in these files
+
+The same table says something the warm/cool split cannot:
+
+| recipe | coverage | **median hue** |
+|---|---|---|
+| paving_courtyard | 21.2 % | **23°** |
+| column_papyrus | 15.3 % | **23°** |
+| sandstone_worn | 12.5 % | **23°** |
+| hieroglyph_gilded | 12.1 % | 38° |
+| sandstone_block | 11.2 % | **23°** |
+| hieroglyph_wall | 9.7 % | **23°** |
+| granite_pink | 8.3 % | **23°** |
+| limestone_polished | 2.4 % | 38° |
+| gold_leaf | 1.2 % | 38° |
+| papyrus_reed | — | 38° |
+
+**93.1 % of every chromatic texel in the scene is inside one 30° hue bucket**, and eight of the ten
+highest-coverage recipes report *the identical* median hue. Aswan **granite is the same colour as
+mudbrick**; **papyrus is the same colour as sandstone**; gold, limestone, rope, bronze and
+carnelian are one shade of each other. The brief's "sandstone, limestone, gold, ochre, sun-bleached
+plaster" is a list of five materials, and the texture set ships **one**. A scene painted in a single
+hue at five brightnesses has no colour design in it, and it is the reason the whole frame moves
+together when anything downstream tints it: there is no second hue for the eye to hold on to.
+
+Two mechanisms produce it and both are shared code, which is why it is uniform: every recipe's dark
+tail is pulled to the same `SAND_CREV_FLOOR` (`0x553627`, hue 19.6°) by `rampFloor`, and every
+recipe's grime, dust and pitting come from the same sand-coloured constants.
+
+Also recorded, because it is measured here and belongs to someone else's headline: the four largest
+architectural surfaces have **albedo p99 of 0.596 / 0.616 / 0.639 / 0.765**. Critic pass 8's "0.000 %
+of pixels above luma 230" has a texture-side ceiling under it — a 0.60 albedo cannot reach 230/255
+at unity gain. Raising the sun-struck tail is in scope here; the exposure that would use it is not.
+
+## Second criterion — registered now
+
+- **S1.** `h30` ≤ **78 %** (control 93.1 %).
+- **S2.** `hueN` ≥ **3.00** effective 15° families (control 2.44).
+- **S3.** The eight highest-coverage recipes must span ≥ **4** distinct 15° median-hue bins
+  (control: **2**).
+- **S4.** `granite_pink` median hue ≤ **15°** and at least **15°** away from `sandstone_block`'s.
+  Aswan granite is pink; this one is not.
+- **S5** (supersedes P5, which the control already misses). `papyrus_reed` and `palm_frond` must
+  each report a median hue in **[75°, 150°)**. Control: 38° and 83°, with `papyrus_reed`
+  **100 % warm**.
+- **S6.** Coverage-weighted albedo **p99 luma ≥ 0.70** (control 0.647), without breaching P3.
+- **S7 (guard — must NOT fire).** `ceiling_stars` must stay ≥ 80 % cool. It is the night-sky
+  ceiling and it is correct; "fixing the palette" must not mean deleting the one deliberate cool
+  mass in the level.
+- **P1, P2, P3, P4 continue to apply.** Separation must not be bought by turning the scene cool
+  (P1), by brightening it (P3), or by desaturating it (P4).
+
+Registered by EGYPT, control in hand, before the first recipe edit.

@@ -962,6 +962,145 @@ export function rampFloor(s, o = {}) {
 }
 
 /**
+ * **hueGrade — a hue ramp along the material's own value axis, at constant luminance.**
+ *
+ * The defect this exists for is measured, not asserted. `tools/palwarm.mjs` weights every recipe
+ * by the screen area it actually covers across the canonical framings and reports the hue
+ * distribution of the shipped albedo: **93.1 % of every chromatic texel in the level sat inside
+ * one 30° bucket**, and eight of the ten highest-coverage recipes reported *the identical* median
+ * hue of 23°. Aswan granite was the same colour as mudbrick. Papyrus was the same colour as
+ * sandstone. Gold, limestone, rope and bronze were one shade of each other.
+ *
+ * The cause is shared code, which is why the result was so uniform: every recipe's dark tail is
+ * pulled to the same `SAND_CREV_FLOOR` by `rampFloor`, and every recipe's grime, dust, pitting and
+ * speckle come from the same sand-coloured constants. Each of those decisions is right on its own
+ * and the sum of them is a scene painted in one hue at five brightnesses.
+ *
+ * ── Why a *ramp along value* rather than a per-recipe hue offset ────────────────────────────
+ *
+ * A flat offset per recipe would separate the materials from each other and leave each one
+ * internally monochrome, which is the same defect one level down. Stone in strong sun does not
+ * work that way: the sun-struck crest of a sandstone block is bleached pale yellow and nearly
+ * desaturated, the mid face is ochre, and the recess where dust and organic grime collect is a
+ * deep red-brown. That is a **hue gradient along value**, and it is most of what separates painted
+ * stone from a flat fill. So the control is three deltas — at black, at mid grey, at white — and
+ * the recipe says how far apart they are.
+ *
+ * Deltas, not targets. A target hue would collapse the material's *internal* hue variance, which
+ * is the thing `granite_pink` was rebuilt twice to get (pink feldspar against grey quartz differ
+ * in hue at constant value, and that difference is the material). A delta moves the whole
+ * distribution and keeps its width.
+ *
+ * ── Constant luminance, and why that is not a detail ─────────────────────────────────────────
+ *
+ * Rebuilding a texel at a new hue changes its luma, because the three channels are not weighted
+ * equally. Every texel is therefore rescaled back onto its **original** luma before it is written.
+ * That keeps three separate invariants that other code owns intact for free:
+ *   - `rampFloor`'s crevice-luminance floor (§2.2) — no texel can be pushed back under it;
+ *   - `jointSign`'s dY — the joint stays darker than the faces either side of it;
+ *   - `heightAO` and the normal map, which read `s.h` and are not touched here at all.
+ * `lift` is the one deliberate exception and it only ever raises the top end (see below).
+ *
+ * Chroma is scaled per end as well, because bleaching is a loss of chroma and shadow is a gain of
+ * it. If the rebuilt colour would clip above 1.0 the chroma is reduced until it fits rather than
+ * the value being clamped — clamping a channel is a hue shift by another name.
+ *
+ * ── The ramp is relative to the material's own value range, not to 0..1 ─────────────────────
+ *
+ * Written first against absolute luma and it barely moved anything, for a reason worth keeping:
+ * a stone texture's *entire* luma range is about 0.30–0.60. Three control points at 0, 0.5 and 1
+ * put every texel in the material inside the middle sixth of the ramp, so a 30° spread authored
+ * across black-to-white delivered about 8° across the stone. The ends are therefore the surface's
+ * own p02 and p98 — "the darkest of this stone" and "the sun-struck crest of this stone" — which
+ * is also how the numbers read as art direction rather than as arithmetic. `absolute: true`
+ * restores the 0..1 behaviour for the rare material that really does span the range.
+ *
+ * @param {object} o
+ *   `lo`/`mid`/`hi`     hue delta in degrees at the surface's p02 / midpoint / p98 luma
+ *   `satLo`/`satMid`/`satHi`  chroma multiplier at the same three points
+ *   `lift`              value added at the very top end, faded in over `[knee, 1]` of the same
+ *                       normalised range. The four largest architectural surfaces ship albedo p99
+ *                       of 0.60–0.64, and a 0.60 albedo cannot reach 230/255 in frame at unity
+ *                       gain however it is lit — so the sun-struck tail of the stone is raised
+ *                       here rather than by asking exposure for a stop the whole frame would get.
+ *   `knee`              where `lift` starts, in normalised range (default 0.62)
+ *   `mask`              optional per-texel weight
+ */
+export function hueGrade(s, o = {}) {
+  const {
+    lo = 0, mid = 0, hi = 0,
+    satLo = 1, satMid = 1, satHi = 1,
+    lift = 0, knee = 0.62, mask = null, amount = 1, absolute = false,
+  } = o;
+  let y0 = 0, y1 = 1;
+  if (!absolute) {
+    /* p02/p98 over a 512-bin histogram of the *masked* population. Percentiles rather than
+     * min/max: one stray near-black texel from a pit or a joint would otherwise define the whole
+     * ramp's bottom end and flatten everything above it. */
+    const H = new Int32Array(512);
+    let tot = 0;
+    for (let i = 0; i < s.n; i++) {
+      if (mask && mask[i] <= 1e-4) continue;
+      const y = s.r[i] * 0.2126 + s.g[i] * 0.7152 + s.b[i] * 0.0722;
+      H[Math.max(0, Math.min(511, Math.round(y * 511)))]++;
+      tot++;
+    }
+    if (tot > 0) {
+      let c = 0;
+      for (let i = 0; i < 512; i++) { c += H[i]; if (c >= tot * 0.02) { y0 = i / 511; break; } }
+      c = 0;
+      for (let i = 511; i >= 0; i--) { c += H[i]; if (c >= tot * 0.02) { y1 = i / 511; break; } }
+    }
+    if (y1 - y0 < 1e-3) { y0 = 0; y1 = 1; }
+  }
+  const span = 1 / (y1 - y0);
+  for (let i = 0; i < s.n; i++) {
+    const w = (mask ? mask[i] : 1) * amount;
+    if (w <= 1e-4) continue;
+    const r = s.r[i], g = s.g[i], b = s.b[i];
+    const y = r * 0.2126 + g * 0.7152 + b * 0.0722;
+    const mx = Math.max(r, g, b), mn = Math.min(r, g, b), c = mx - mn;
+    // Piecewise-linear through the three control points, in the texel's own normalised value.
+    const yn = sat((y - y0) * span);
+    const t = yn < 0.5 ? yn * 2 : (yn - 0.5) * 2;
+    const dh = (yn < 0.5 ? lo + (mid - lo) * t : mid + (hi - mid) * t) * w;
+    const ks = 1 + ((yn < 0.5 ? satLo + (satMid - satLo) * t : satMid + (satHi - satMid) * t) - 1) * w;
+    const yT = lift > 0 ? y + lift * smoothstep(knee, 1, yn) * w : y;
+    if (c < 1e-6) {                              // achromatic: only `lift` can touch it
+      if (yT !== y) { const k = y > 1e-5 ? yT / y : 1; s.r[i] = sat(r * k); s.g[i] = sat(g * k); s.b[i] = sat(b * k); }
+      continue;
+    }
+    let h = 0;
+    if (mx === r) h = ((g - b) / c) % 6;
+    else if (mx === g) h = (b - r) / c + 2;
+    else h = (r - g) / c + 4;
+    h = (((h * 60 + dh) % 360) + 360) % 360;
+    /* Rebuild at the new hue, then fit: first scale the chroma so the brightest channel lands at
+     * most at 1 after the luma rescale, then rescale onto `yT` exactly. Reducing chroma to fit is
+     * a saturation loss the eye barely reads; clamping a channel would rotate the hue instead,
+     * which is the one thing this function must not do by accident. */
+    let cc = c * ks;
+    for (let pass = 0; pass < 2; pass++) {
+      const hp = h / 60, x = cc * (1 - Math.abs((hp % 2) - 1));
+      let rr = 0, gg = 0, bb = 0;
+      if (hp < 1) { rr = cc; gg = x; } else if (hp < 2) { rr = x; gg = cc; }
+      else if (hp < 3) { gg = cc; bb = x; } else if (hp < 4) { gg = x; bb = cc; }
+      else if (hp < 5) { rr = x; bb = cc; } else { rr = cc; bb = x; }
+      const yc = rr * 0.2126 + gg * 0.7152 + bb * 0.0722;
+      const m0 = yT - yc;                        // the achromatic offset that lands luma on yT
+      const top = m0 + cc;
+      if (top <= 1.0 || pass === 1) {
+        s.r[i] = sat(rr + m0); s.g[i] = sat(gg + m0); s.b[i] = sat(bb + m0);
+        break;
+      }
+      /* Would clip. `top = yT - yc + cc` and `yc` is linear in `cc`, so the chroma that just
+       * fits is `cc * (1 - yT) / (top - yT)` — solved rather than iterated toward. */
+      cc = Math.max(0, cc * (1 - yT) / Math.max(1e-6, top - yT));
+    }
+  }
+}
+
+/**
  * Chisel marks — the short parallel gouges a copper adze leaves on dressed sandstone. Reads as
  * hand-worked stone rather than extruded geometry, and it is the closest thing this library has
  * to a signature.
