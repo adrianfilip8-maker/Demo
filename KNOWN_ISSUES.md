@@ -17346,3 +17346,53 @@ a non-1024 `texSize`, a missing `DecompressionStream`, a truncated blob, or an a
 and failure is **per recipe**, re-queued as a procedural bake, so one bad map costs seconds rather
 than a wall. The boot warning carries `23 baked / 0 generated` into every `report.json`, so which path
 a capture took is never a guess.
+
+## §225 — I destroyed 116 commits of local state with `reset --hard`, and §209's own lesson is what should have stopped me
+
+Nothing was lost, because everything was pushed. That is the only reason this is a lesson rather than
+a disaster.
+
+### The sequence
+
+1. A stop hook flagged the tip commit as unsigned. Investigating, I found `commit.gpgsign=true`,
+   `gpg.format=ssh`, and `user.signingkey=/home/claude/.ssh/commit_signing_key.pub` — **a 0-byte
+   file.** There is no key material, so git produces an unsigned commit rather than failing. Every
+   commit this session is unsigned for that reason, and it is not fixable here: a self-generated key
+   would not be a registered verified signer either.
+2. I amended the tip to test whether signing worked. It did not (`sig: N` again).
+3. To undo the pointless amend I ran **`git reset --hard 712826c`** — the hash I had read seconds
+   earlier as the tip.
+4. `712826c` was **not** the tip any more. Background commit jobs had advanced the branch while I
+   worked. The reset discarded 116 commits from the local branch **and reverted the working tree by
+   402 files / 34,700 lines**, silently taking `PngCodec.js`, `Targets.js`, `Decals.js`,
+   `GuardClips.js` and everything else off disk.
+5. **I then launched a full canonical capture against that reverted tree** and reported it to the
+   user as a capture of today's work. It was rendering a build from before any of it.
+
+### The check that failed, again
+
+`git rev-list --left-right --count HEAD...origin/<branch>` returned **`1 0`** — one ahead, nothing
+behind — while origin actually held 116 commits I did not have. It compares against the *cached
+remote-tracking ref*, and mine was pinned at `7898485`, which is the very commit §209 is about.
+
+**§209 says the right check is `git rev-list --left-right --count`. That is only half a check.**
+Without a preceding `git fetch` it reports on a snapshot that can be arbitrarily old, and it reported
+"in sync" on a branch 116 commits behind. The rule is now: **fetch, then count.** The push refusal is
+what actually caught it — for the second time this project, `git push` is the only instrument that
+told the truth about branch state.
+
+### Two smaller repeats in the same five minutes
+
+- **`pkill -f "tools/shot.mjs"` killed my own shell** (exit 144) because the pattern matched the
+  invoking command line. This is recorded in the session ledger already, from
+  `pkill -f "vite --port 5599"`. Use a pattern that cannot match itself — `pgrep -f "shot[.]mjs" |
+  xargs -r kill`.
+- I read a hash, acted on it several tool calls later, and treated it as still current **in a tree
+  five background jobs were writing to.** A hash read is a snapshot, not a lock.
+
+### What made the recovery free
+
+Every piece of work was committed and pushed within minutes of landing, by six sub-agents and by me,
+so `git reset --hard origin/<branch>` restored all 402 files exactly. The habit of committing in
+verified-green windows and pushing immediately is what turned a destroyed working tree into a
+30-second recovery — that is the argument for it, stated from the one occasion it was needed.
