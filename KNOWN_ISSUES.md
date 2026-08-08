@@ -17784,3 +17784,22 @@ The rim is not itself a large effect (r² ≈ 0.11); the remainder is texture an
 map. That is the expected shape when the term that *should* be drawing the form contributes
 nothing, and it is why the profile reads as a soft ripple at the ribs' half-period rather than as
 anything cel.
+
+### §231.5 — the sweep never got the lock, and the fix ships inert
+
+`progress/records/celband.mjs` was launched and sat in the capture lock's FIFO behind other agents'
+captures for **17 minutes without ever being granted it** — `waiting for capture lock (1010s, held
+by pid 6204)`. Zero frames were written. `tools/shot.mjs`'s own header documents why: a full
+ten-shot set is 40–60 minutes of exclusive hold, and anything queued behind one waits that long.
+
+So **`TUNE.shadeBand` ships at 0**, bit-identical to the pre-change build on any driver. Nothing is
+shipped on the forecast, and no frame of the fix has been seen. A run that produced no frames is
+reported as producing no frames, not as a partial result.
+
+The finding above does not depend on it. §231, §231.1 and §231.4 are all measured on committed
+captures with offline instruments that take no lock; only the *fix* is unproven. What is left ready
+for whoever picks it up: `celband.mjs` (with `--shots`/`--values`, so the required night arm is a
+short second boot rather than a re-queue of the whole sweep), `celband-score.mjs` (which *executes*
+the registered ship rule rather than restating it for a human to apply by eye, and has been dry-run
+end to end), and `PREREG-celband.md` §9/§10a/§12 for the ship rule, the required night arm and the
+designed successor if night fails.

@@ -236,10 +236,24 @@ the shade side multiplies almost every pixel, downward. `bandprobe` sizes that e
 `night` is **1.34% key-lit**, so ~94% of its architecture takes the full `shadeForm` multiply. It is
 the highest-risk shot for this change by a wide margin, and it is the one that has not been seen.
 
-> **Status: the sweep has been queued behind other agents' captures for the whole session and had
-> not been granted the lock at the time of writing.** `TUNE.shadeBand` therefore ships at **0**,
-> which is bit-identical to the pre-change build. The mechanism, the instrument, the ship rule and
-> the forecast are all on the record; the frames are not. Nothing has been shipped on a forecast.
+> **Status: NOT RUN.** `celband.mjs` was launched and sat in the capture lock's FIFO behind other
+> agents' captures for **17 minutes without ever being granted it** (`waiting for capture lock
+> (1010s, held by pid 6204)`), which is the documented cost of a full ten-shot set ahead of you in
+> the queue. Zero frames were written.
+>
+> **`TUNE.shadeBand` therefore ships at 0**, which is bit-identical to the pre-change build on any
+> driver. Nothing has been shipped on a forecast, and no frame of the fix has been seen by anyone.
+>
+> What is on disk and ready, so this does not have to be re-derived:
+> * `progress/records/celband.mjs` — the sweep, with `--shots` / `--values` so the night arm is a
+>   second short boot rather than a re-queue of the whole thing;
+> * `progress/records/celband-score.mjs` — **executes** the ship rule (V1 null, V2 dead-lever, and
+>   both ship conditions) rather than restating it for a human to apply by eye, and it has been
+>   dry-run end to end against synthetic arms;
+> * `PREREG-celband.md` §9/§10a/§12 — ship rule, the required night arm, and the designed successor
+>   if night fails.
+>
+> A run that produced no frames is reported as producing no frames. It is not a partial result.
 
 ## 7. Honest limits
 
