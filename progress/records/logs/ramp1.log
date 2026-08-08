@@ -1,5 +1,0 @@
-[74s] boot ok — warnings 3
-[74s]    ! textures: prewarm took 21.0s at size 1024
-[74s]    ! KayKit (props): 36 placed from 11 models, 0 failed, 31064 tris, 29 colliders
-[74s]    ! SlyModelDLRig: relaxed 6070 glove vertices, max move 12.0 (asset units)
-[74s] bootId null
