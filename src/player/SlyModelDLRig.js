@@ -132,6 +132,38 @@ const GRIP_MODE = gripMode();
 const TEX_BY_PART = { body: 'sly_body', eyeball: 'sly_eyeball', head: 'sly_head', tail: 'sly_tail' };
 const FALLBACK = { body: 0x2f5fc4, eyeball: 0xd9821a, head: 0xcfcdc4, tail: 0x8d8b84 };
 
+/**
+ * How each part of him SHADES, as distinct from what colour it is.
+ *
+ * Until this table existed every part of the character reached the shader at an identical
+ * `spec 0.25 / gloss 32 / metal 0`, inherited from `TUNE`, because this constructor passed
+ * colour, bands, rim and outline and nothing else. Five materials wearing one shading response
+ * is what KNOWN_ISSUES §262's census saw when it reported the character has "no metal on him in
+ * any of these frames" — see §265 for what that census got right and wrong.
+ *
+ * **Nothing here is invented.** Every row is `SlyModel.js:_matSpec` — the pre-rebuild procedural
+ * model's art direction for THIS character, which carries its evidence inline ("fur scatters; it
+ * has no highlight to speak of, and a wide soft one is exactly the cue that reads as moulded
+ * vinyl"). The rebuild onto a skinned FBX dropped the table, not the decision, and dropped it in
+ * `SlyModelDL`, `SlyModelDLRaw`, `SlyModelGodot` and `SlyModel3` as well.
+ *
+ * `body` is a COMPROMISE row and worth naming as one: the FBX carries coat, gloves, boots and
+ * trousers in a single submesh, so unlike the procedural model there is no seam at which leather
+ * could get its own answer. `cloth` wins because the coat is most of those pixels.
+ *
+ * Measured on `sly-closeup` against PREREG-charmat's registered guards (§265): on the character's
+ * own footprint (70 657 px, isolated by albedo tag) this moves mean L 111.6 → 109.5 and p99
+ * 199.5 → 197.3 — duller, never brighter, which is G5′, and measurably non-zero, which is G6.
+ *
+ * `eyeball` is deliberately ABSENT and must stay absent: it keeps the `TUNE` defaults it has
+ * always had (§15's eye hierarchy). Do not "complete" this table.
+ */
+const SURFACE = {
+  body: { spec: 0.085, gloss: 20, sss: 0.14 },   // _matSpec `cloth`
+  head: { spec: 0.025, gloss: 8 },               // _matSpec `fur` — sss stays TUNE.furSSS
+  tail: { spec: 0.03, gloss: 9, sss: 0.228 },    // _matSpec `furDark` — TUNE.furSSS * 0.6
+};
+
 const partOf = (name = '') => (/tail/i.test(name) ? 'tail' : /eyeball/i.test(name) ? 'eyeball'
   : /head/i.test(name) ? 'head' : 'body');
 
@@ -472,11 +504,15 @@ export class SlyModel {
         map.wrapS = THREE.RepeatWrapping;
         map.wrapT = THREE.RepeatWrapping;
       }
+      /* `eyeball` has no SURFACE row, so it spreads nothing and keeps the TUNE defaults
+         byte-for-byte. Spread LAST so a row's own `sss` wins over `T.furSSS` above it. */
+      const surf = SURFACE[part] || {};
       return shading?.make
         ? shading.make({
           name: `slydlrig:${part}`, color: map ? 0xffffff : FALLBACK[part], map,
           bands: T.bands, rim: T.rim, rimColor: T.rimColor, sss: T.furSSS,
           outline: T.outline, outlineColor: T.outlineColor,
+          ...surf,
         })
         : new THREE.MeshStandardMaterial({ color: map ? 0xffffff : FALLBACK[part], map, roughness: 0.85 });
     });
@@ -700,6 +736,37 @@ export class SlyModel {
     const gripR = s.gripR * unit, shaftR = s.shaftR * unit;
     this.cane = new Cane(this.engine, { tune: { gripR, shaftR } });
     const shading = this.engine?.get?.('shading');
+    /* THE CANE IS GOLD IN ALBEDO AND IN NOTHING ELSE, AND THAT IS NOT AN OVERSIGHT ANY MORE —
+     * it is a measured refusal. Read KNOWN_ISSUES §265 before "fixing" this.
+     *
+     * The obvious change is to add the house gold here: `spec 0.9, gloss 96, metal 0.85` from
+     * `Props.js MATERIALS.gold`, which `Pickups.js` already copies and which the owner-supplied
+     * cane independently corroborates at metal 0.80 / rough 0.25
+     * (`public/assets/sly-cane/PROVENANCE.md`). It was captured against guards registered before
+     * the candidate existed (`progress/records/PREREG-charmat.md`) and it **FAILED**, in the
+     * opposite direction to the forecast. On `sly-closeup` the cane's own pixels went
+     * **DARKER**: p99 −37.5 L at the asset's values, −41.0 L at Props gold's, against a
+     * registered bar of **+10 L or better**.
+     *
+     * The mechanism is in the shader and it is not a tuning problem:
+     *   · `diff *= mix( 1.0, 0.20, slyMetal )` removes 68 % of the diffuse at metal 0.85, and
+     *     the cane is UNMAPPED, so unlike every gold in the world it has no `metalnessMap` to
+     *     mask that kill down to a gild fraction.
+     *   · `specStep` is a shape function capped at 1.35 for every `glossP`, and the shipped
+     *     `uSpecNormPow` is **0**, so there is no energy normalisation. Raising `uGloss` 32 → 96
+     *     therefore makes the highlight *smaller and no brighter* (§263), and it cannot pay back
+     *     what the diffuse kill costs.
+     *
+     * So the cane cannot be made to read as metal by material values alone while
+     * `uSpecNormPow` is 0. It is blocked on the same missing normalisation that blocks the
+     * world's highlight — PREREG-specnorm2's `p ∈ (0.70, 0.90]`. When that ships, re-run
+     * `node tools/canegold.mjs`; the gloss-96 lobe gains roughly ×10 amplitude at p 0.9, which
+     * is precisely the factor missing here.
+     *
+     * Also NOT to be added: `detail: 'metal'`. The triplanar detail is sampled at
+     * `slyWorldPos()` — WORLD space — so on a prop that moves with the hand the grain swims
+     * across the surface. That is very likely why no character material carries one.
+     */
     const gold = shading?.make
       ? shading.make({
         name: 'slydlrig:cane', color: 0xe8b942, vertexColors: true,

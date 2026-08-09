@@ -351,7 +351,16 @@ for (const a of ['assetgold', 'gold85']) {
     + `  halo ${String(closeup[a].outside.halo).padStart(6)}  G4(orig) ${String(closeup[a].outside.n).padStart(6)}`);
 }
 
-const vSplit = shipVerdict({ ...guards, ...splitGuards });
+/* PREREG §4: "The two ship INDEPENDENTLY: a failed split does not block the cane" -- and by
+   symmetry a failed cane must not block the split. The first scorer folded every cane guard
+   into the split verdict, which contradicts the registered rule. The split's population is the
+   BODY mask, whose control is I6; I3/G1/G2/G3/G4' are cane-mask guards and do not touch it. */
+const SPLIT_INSTRUMENT = {
+  I2_null_closeup: guards.I2_null_closeup,
+  I4_restore_closeup: guards.I4_restore_closeup,
+  I5_eye_untouched: guards.I5_eye_untouched,
+};
+const vSplit = shipVerdict({ ...SPLIT_INSTRUMENT, ...splitGuards });
 for (const [k, s] of Object.entries(splitGuards).map(([k]) => [k, vSplit.states[k]])) console.log(`  ${k.padEnd(30)} ${s}`);
 console.log(`SPLIT ${verdictLine(vSplit, 'head/tail/body -> SlyModel.js _matSpec fur/cloth rows')}`);
 for (const sh of SHOTS) {

@@ -1,0 +1,50 @@
+shipped material state, read from the live build (this is what "base" means):
+  slydlrig:cane      {"spec":0.25,"gloss":32,"metal":0,"sss":0.2,"rim":0.62,"rough":0.62}
+  slydlrig:head      {"spec":0.25,"gloss":32,"metal":0,"sss":0.38,"rim":0.62,"rough":0.62}
+  slydlrig:tail      {"spec":0.25,"gloss":32,"metal":0,"sss":0.38,"rim":0.62,"rough":0.62}
+  slydlrig:body      {"spec":0.25,"gloss":32,"metal":0,"sss":0.38,"rim":0.62,"rough":0.62}
+
+==============================================================================
+### sly-closeup
+  cane mask |M| = 47483 px  box {"x0":285,"y0":143,"x1":666,"y1":627}   (I2 null 0, I4 restore 0, reshow 0)
+  body mask |B| = 70657 px  (raw 71258, cane overlap removed 601; bodyReshow 0 px)
+  split ON THE BODY MASK: base mean 111.6 p50 107.8 p99 199.5  ->  split mean 109.5 p50 106.1 p99 197.3
+  cane readback @gold85: [{"spec":0.9,"gloss":96,"metal":0.85,"sss":0,"rough":0.28}]
+  arm          mean    p50    p90    p99    max   outside-diff px
+  base        95.8  93.6 120.9 222.3 239.4   0 / 0
+  assetgold   90.5  91.5 102.6 184.8 242.5   1074 out (halo 1074, FAR 0)
+  gold85      90.1  91.4 102.5 181.3 242.6   1076 out (halo 1076, FAR 0)
+  split       90.1  91.4 102.5 181.3 242.6   35649 out (halo 29921, FAR 5728)
+    Δassetgold mean    -5.4  p50    -2.1  p99   -37.5  (p99-p50)   -35.3
+    Δgold85    mean    -5.7  p50    -2.3  p99   -41.0  (p99-p50)   -38.7
+    Δsplit     mean    -5.7  p50    -2.3  p99   -41.0  (p99-p50)   -38.7
+
+==============================================================================
+### PREREG-charmat §4 — scored
+
+  I2_null_closeup          PASS
+  I3_control_closeup       FAIL
+  I4_restore_closeup       PASS
+  I5_eye_untouched         PASS
+  G1_p99_rise              FAIL
+  G2_concentrated          FAIL
+  G3_p50_closeup           PASS
+  G4prime_far_closeup      PASS
+
+CANE arm=assetgold  ==> DO NOT SHIP — I3_control_closeup FAIL, G1_p99_rise FAIL, G2_concentrated FAIL
+
+per-arm, sly-closeup:  G1 dp99>=10   G2 (dp99-dp50)>=6   G3 dp50>=-25   G4prime far==0
+  assetgold  dp99   -37.5  dp50    -2.1  conc   -35.3  far      0  halo   1074  G4(orig)   1074
+  gold85     dp99   -41.0  dp50    -2.3  conc   -38.7  far      0  halo   1076  G4(orig)   1076
+  I6_bodyctl_closeup             PASS
+  I6_bodyrestore_closeup         PASS
+  G5_split_no_washout_closeup    PASS
+  G6_split_moves_the_body        PASS
+SPLIT ==> DO NOT SHIP — I3_control_closeup FAIL, G1_p99_rise FAIL, G2_concentrated FAIL
+  sly-closeup  |B|   70657  body mean 111.6 -> 109.5   p50 107.8 -> 106.1   p99 199.5 -> 197.3
+
+fork (sly-closeup dp50):  asset .80/.25 -> -2.1   props .85/.28 -> -2.3
+{
+ "sly-closeup": {
+  "I2": 0,
+  "I3": 4 …(full record in stdout above)
