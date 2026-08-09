@@ -334,3 +334,8 @@ dunes        A3-global   hold=1    he=-1    encl=0.00 open=null  ns=0 nf=0  sha=
 dunes        A4-scoped   hold=1    he=0.9   encl=0.00 open=1     ns=0 nf=0  sha=0d8d9957939d56e8
 dunes        A5-restore  hold=0    he=-1    encl=0.00 open=null  ns=0 nf=0  sha=77d7db65603b177b
 hero         A0-base     hold=0    he=-1    encl=0.00 open=null  ns=0 nf=0  sha=e3044d8afbc94aef
+hero         A1-null     hold=0    he=0.9   encl=0.00 open=1     ns=0 nf=0  sha=e3044d8afbc94aef
+hero         A2-ctlgrey  hold=0    he=-1    encl=0.00 open=null  ns=1 nf=0  sha=4966b092d3e10866
+hero         A3-global   hold=1    he=-1    encl=0.00 open=null  ns=0 nf=0  sha=8cce84d395a7f79e
+hero         A4-scoped   hold=1    he=0.9   encl=0.00 open=1     ns=0 nf=0  sha=8cce84d395a7f79e
+hero         A5-restore  hold=0    he=-1    encl=0.00 open=null  ns=0 nf=0  sha=e3044d8afbc94aef
