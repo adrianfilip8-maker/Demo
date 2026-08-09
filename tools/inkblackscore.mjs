@@ -79,11 +79,11 @@ for (const r of arms) {
    comparison here reads: CAL-1, CAL-2, CAL-4 and P1's per-shot delta are all within-shot. One
    boot per shot makes it true by construction; this verifies it instead of trusting it.
 
-   Cross-shot drift is REPORTED, not gated, and the reason is stated rather than assumed: no
-   registered statistic compares one shot with another. P1 takes a worst case over per-shot
-   deltas, so drift can change WHICH shot is worst without making any individual delta wrong.
-   Reported loudly, because "the worst shot" from a heterogeneous population is a weaker claim
-   than "the worst shot" from a homogeneous one, and the reader is owed that. */
+   G-TREE-ACROSS (also a hard gate) — every SHOT must share one tree with every other. This was
+   a printed warning until the lead pointed out that reporting is not gating. The argument for
+   leaving it as a report — "no registered statistic compares one shot with another" — is true of
+   each NUMBER and false of the TABLE: P1 takes a worst case, and a worst case is a claim about a
+   POPULATION. See its definition below for the concrete instance that motivated the upgrade. */
 const treeOf = (r) => (r?.tree?.src ?? null);
 const shotTrees = new Map();
 const gTree = [];
@@ -189,12 +189,34 @@ for (const [shot, t] of shotTrees) {
     + (t.unrecorded ? `   ${t.unrecorded}/4 arms unrecorded` : '')
     + (t.trees.length > 1 ? '   ARMS SPAN MORE THAN ONE TREE' : ''));
 }
+/* G-TREE-ACROSS — a HARD gate, upgraded from a printed warning after the lead pointed out that
+   reporting is not gating (§273 rule 3).
+ *
+ * The argument for leaving it as a report was that no registered statistic compares one shot with
+ * another. That is true of each NUMBER and false of the TABLE. P1 takes a worst case over the ten
+ * per-shot deltas, and a worst case is a claim about a POPULATION: "the hull owns the darkest
+ * decile on every one of the ten registered frames" is not established by ten measurements of
+ * ten different builds. The concrete instance the lead names is not hypothetical either — the
+ * hero lane moved the STAGED PLAYER in `hero` and `courtyard` (hero by 4.8 m, courtyard by 14 m),
+ * and Sly is the single largest carrier of hull ink in the frame, so those two shots would carry
+ * a materially different hull population from the other eight.
+ *
+ * So: all shots must share one src digest, or the run VOIDs and names the minority to re-shoot.
+ * `tools/inkblack.mjs` re-captures a shot whose recorded digest no longer matches, so a rerun
+ * during a quiet window converges on a homogeneous set by itself. */
+const gTreeAcross = distinct.size === 0 ? null : distinct.size === 1;
 if (distinct.size > 1) {
-  console.log(`  -> the ten frames span ${distinct.size} different source trees. Every registered`);
-  console.log('     statistic here is WITHIN a shot (CAL-1/2/4 and P1\'s delta are all one-boot),');
-  console.log('     so no individual number is invalidated — but P1 takes a worst case across a');
-  console.log('     population that is not homogeneous, so WHICH shot is worst is not a claim this');
-  console.log('     run can make. Reported, not gated: nothing registered compares shot to shot.');
+  const counts = new Map();
+  for (const [, t] of shotTrees) for (const x of t.trees) counts.set(x, (counts.get(x) || 0) + 1);
+  const majority = [...counts.entries()].sort((a, b) => b[1] - a[1])[0][0];
+  const minority = [...shotTrees.entries()].filter(([, t]) => !t.trees.includes(majority)).map(([s]) => s);
+  console.log(`  -> the frames span ${distinct.size} different source trees. This VOIDS the run:`);
+  console.log('     each per-shot delta is still internally valid (one boot per shot), but P1 takes');
+  console.log('     a worst case, and a worst case over ten measurements of several builds is not a');
+  console.log('     statement about the ten registered frames.');
+  console.log(`     majority tree ${majority} (${counts.get(majority)} shots).`);
+  console.log(`     re-shoot: rm shots/inkblack/{${minority.join(',')}}-*.png && node tools/inkblack.mjs`);
+  console.log('     (or just rerun the capture — it re-captures any shot whose digest has drifted)');
 }
 
 const all = (xs) => (xs.length ? xs.every(Boolean) : null);
@@ -212,6 +234,7 @@ const allTri = (xs) => {
 };
 const guards = {
   'G-TREE arms of a shot share one tree': allTri(gTree),
+  'G-TREE-ACROSS all shots one tree':      gTreeAcross,
   'CAL-1 crease lever live': all(cal1),
   'CAL-2 hull lever live':   all(cal2),
   'CAL-3 mask is ink':       all(cal3),
@@ -244,8 +267,8 @@ console.log('\n' + verdictLine(v));
 /* The registered outcome names, mapped explicitly so the run cannot be reported as something
    the pre-registration does not define. VOID beats FAIL: an unevaluable run says nothing about
    the candidate. */
-const calStates = ['G-TREE arms of a shot share one tree', 'CAL-1 crease lever live',
-  'CAL-2 hull lever live', 'CAL-3 mask is ink', 'CAL-4 lever sensitivity']
+const calStates = ['G-TREE arms of a shot share one tree', 'G-TREE-ACROSS all shots one tree',
+  'CAL-1 crease lever live', 'CAL-2 hull lever live', 'CAL-3 mask is ink', 'CAL-4 lever sensitivity']
   .map((k) => guardState(guards[k]));
 let outcome;
 if (calStates.some((s) => s === VOID) || guardState(p1) === VOID) outcome = 'VOID';

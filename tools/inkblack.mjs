@@ -73,13 +73,17 @@ const ARMS = [
  * disk is not re-rendered, and `arms.json` is rebuilt from the files at the end with every sha
  * recomputed from the bytes rather than remembered.
  *
- * **Why resuming does not corrupt anything, stated rather than assumed.** Other agents edit `src/`
- * continuously, so shot 5 is not rendered against the same tree as shot 1. That would be fatal to
- * a cross-shot comparison and is harmless here: every arm of a shot is captured **inside one
- * boot**, and every gate in `inkblackscore.mjs` — CAL-1, CAL-2, CAL-3, CAL-4, P1 — is computed
- * **within a shot** before P1 takes a worst case across them. A source change between shots can
- * therefore move a whole shot, but it cannot move one arm relative to its own siblings, which is
- * the only comparison any threshold reads.
+ * **Resuming is only safe on a MATCHING tree, and that is now enforced rather than argued.** An
+ * earlier version of this comment claimed cross-shot drift was harmless because every gate is
+ * computed within a shot. That is true of each number and false of the table: P1 takes a worst
+ * case, and a worst case is a claim about a population, so ten measurements of several builds do
+ * not establish anything about "the ten registered frames". The lead's concrete instance is not
+ * hypothetical — the hero lane moved the STAGED PLAYER in `hero` (4.8 m) and `courtyard` (14 m),
+ * and Sly is the largest single carrier of hull ink in the frame.
+ *
+ * So a shot on disk is reused **only if its recorded src digest equals this invocation's**, and
+ * re-captured otherwise; `G-TREE-ACROSS` in the scorer VOIDs any set that still spans two trees.
+ * A shot with no recorded digest is re-captured too — unverifiable is not reusable.
  *
  * The one thing lost on a resumed shot is the in-page `applied` block (the shell count), because
  * that was only ever in the killed process's memory. It is marked `reconstructed: true` and no
@@ -88,20 +92,53 @@ const ARMS = [
 const armTags = ARMS.map((a) => a.tag);
 const havePngs = (shot) => armTags.every((t) => existsSync(`${OUT}/${shot}-${t}.png`));
 const RESUME = process.env.SANDS_NORESUME !== '1';
+
+/* The tree this invocation intends to produce a homogeneous set on, and the trees already on
+   disk. A shot is only reusable if it was captured from THIS tree: `G-TREE-ACROSS` in the scorer
+   VOIDs a run whose shots span more than one, so silently reusing a drifted shot would guarantee
+   an unscoreable run. Re-capturing it instead means a rerun during a quiet window converges on a
+   homogeneous set without anyone deleting files by hand.
+   The honest cost, named rather than hidden: on a branch four agents commit to, a ten-shot run at
+   ~12 min/shot on a contended FIFO is not atomic with respect to the tree, so a run may need more
+   than one pass. That is visible in this log — every re-captured shot says why. */
+const NOW = treeState();
+const priorTree = new Map();
+if (existsSync(`${OUT}/arms.json`)) {
+  try {
+    for (const r of JSON.parse(readFileSync(`${OUT}/arms.json`, 'utf8'))) {
+      if (r.tree?.src) priorTree.set(r.shot, r.tree.src);
+    }
+  } catch { /* an unreadable index just means nothing is reusable */ }
+}
+console.log(`target src tree ${NOW.src} (HEAD ${NOW.head})`);
+
 const results = [];
 const todo = [];
 for (const shot of SHOTS) {
+  const had = priorTree.get(shot);
+  if (RESUME && havePngs(shot) && had && had !== NOW.src) {
+    console.log(`${shot.padEnd(12)} on disk but captured from tree ${had} != ${NOW.src} — RE-CAPTURING`);
+    todo.push(shot);
+    continue;
+  }
+  if (RESUME && havePngs(shot) && !had) {
+    console.log(`${shot.padEnd(12)} on disk with NO recorded tree — RE-CAPTURING (unverifiable is not reusable)`);
+    todo.push(shot);
+    continue;
+  }
   if (RESUME && havePngs(shot)) {
     for (const t of armTags) {
       const file = `${OUT}/${shot}-${t}.png`;
       const sha = createHash('sha256').update(readFileSync(file)).digest('hex').slice(0, 16);
-      /* `tree: null`, deliberately, and never the CURRENT tree: these frames were rendered by a
-         run that died before provenance recording existed, and stamping today's hash on them
-         would be inventing a fact. The scorer treats an unrecorded tree as unverified rather than
-         as matching. */
-      results.push({ shot, arm: t, file, sha, applied: { reconstructed: true }, resumed: true, tree: null });
+      /* Carry the digest these frames were ACTUALLY captured from, never today's — stamping the
+         current hash on an old frame would be inventing the very fact the guard exists to check.
+         Reaching here means `had === NOW.src` already, so the carried value is the true one. */
+      results.push({
+        shot, arm: t, file, sha, applied: { reconstructed: true }, resumed: true,
+        tree: { src: had, head: 'carried', at: 'carried' },
+      });
     }
-    console.log(`${shot.padEnd(12)} already on disk — reusing 4 arms (shas recomputed from bytes, tree UNRECORDED)`);
+    console.log(`${shot.padEnd(12)} already on disk from tree ${had} — reusing 4 arms (shas recomputed from bytes)`);
   } else {
     todo.push(shot);
   }

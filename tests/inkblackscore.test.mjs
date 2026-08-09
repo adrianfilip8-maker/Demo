@@ -113,6 +113,48 @@ test('inkblackscore: G-TREE — UNRECORDED provenance is VOID, not PASS', () => 
   assert.match(out, /OUTCOME: VOID/);
 });
 
+test('inkblackscore: G-TREE-ACROSS — two SHOTS from different trees void the run', () => {
+  /* The lead's instance: the hero lane moved the staged player in `hero` and `courtyard` while a
+     ten-shot run was in flight. Each shot's four arms are still internally consistent, so G-TREE
+     passes -- and the run must STILL void, because P1 takes a worst case and a worst case over
+     several builds is not a statement about the registered ten frames. This is the arm that
+     distinguishes "reported" from "gated"; without it the upgrade is untested prose. */
+  const dir = mkdtempSync(join(tmpdir(), 'inkblackscore-'));
+  try {
+    const inHull = (x) => x >= 40 && x < 44;
+    const inCrease = (x) => x >= 100 && x < 104;
+    const bufs = {
+      'A-ship': png((x) => (inHull(x) ? HULL : inCrease(x) ? 90 : BG)),
+      'B-nocrease': png((x) => (inHull(x) ? HULL : BG)),
+      'C-noink': png(() => BG),
+    };
+    bufs['C0-visible'] = bufs['B-nocrease'];
+    const rows = [];
+    for (const [shot, tree] of [['alpha', TREE], ['beta', { ...TREE, src: 'deadbeefcafe0009' }]]) {
+      for (const [arm, buf] of Object.entries(bufs)) {
+        const file = join(dir, `${shot}-${arm}.png`);
+        writeFileSync(file, buf);
+        rows.push({
+          shot, arm, file,
+          sha: createHash('sha256').update(buf).digest('hex').slice(0, 16),
+          applied: { hulls: 7 }, tree,
+        });
+      }
+    }
+    writeFileSync(join(dir, 'arms.json'), JSON.stringify(rows));
+    const out = execFileSync('node', ['tools/inkblackscore.mjs'],
+      { env: { ...process.env, SANDS_OUT: dir }, encoding: 'utf8' });
+    assert.match(out, /PASS\s+G-TREE arms of a shot share one tree/,
+      'within-shot uniformity still holds and must still PASS');
+    assert.match(out, /FAIL\s+G-TREE-ACROSS/);
+    assert.match(out, /OUTCOME: VOID/);
+    assert.doesNotMatch(out, /==> SHIP/);
+    assert.match(out, /re-shoot:/, 'the scorer must name the remedy, not just refuse');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test('inkblackscore: VOID is not PASS — a missing arm cannot ship', () => {
   const dir = mkdtempSync(join(tmpdir(), 'inkblackscore-'));
   try {
