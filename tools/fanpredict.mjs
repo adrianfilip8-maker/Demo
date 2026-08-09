@@ -64,3 +64,46 @@ for (const name of WANT) {
               `${which.join(' ') || '(none — open sky in all five directions)'}`);
 }
 console.log(`\n${JSON.stringify(out)}`);
+
+/* ------------------------------------------------------------------ robustness --- *
+ * `SANDS_ROBUST=1` adds the two sweeps that say how much a threshold placed on this signal is
+ * worth: how far a camera has to move to change its reading, and how much the reading depends on
+ * the fan's own constants. A separating threshold on ten fixed cameras is not the same claim as a
+ * term that behaves in play, and the difference is measurable for free.
+ */
+if (process.env.SANDS_ROBUST) {
+  function fanAt(ox, oy, oz, probe, deg) {
+    const tt = Math.tan(deg * Math.PI / 180);
+    const dirs = [[0, 1, 0], [tt, 1, 0], [-tt, 1, 0], [0, 1, tt], [0, 1, -tt]]
+      .map(([x, y, z]) => { const l = Math.hypot(x, y, z); return [x / l, y / l, z / l]; });
+    const box = new THREE.Box3(new THREE.Vector3(ox - probe, oy - 1, oz - probe),
+                               new THREE.Vector3(ox + probe, oy + probe + 1, oz + probe));
+    const tris = trisIn(scene, box);
+    let hits = 0;
+    for (const [dx, dy, dz] of dirs) {
+      let best = Infinity;
+      for (const tr of tris) { const d = rayTri(ox, oy, oz, dx, dy, dz, tr.t); if (d > 1e-4 && d < best) best = d; }
+      if (best <= probe) hits++;
+    }
+    return hits / dirs.length;
+  }
+  const TT = Number(process.env.SANDS_ROBUST_T || 0.9);
+  console.log(`\n--- camera perturbation, +/-1 m on each axis and face diagonal (13 samples), class at T=${TT} ---`);
+  console.log('shot          base   min   max   class');
+  for (const name of WANT) {
+    const [x, y, z] = SHOTS[name].pos;
+    const offs = [[0, 0, 0]];
+    for (const d of [-1, 1]) for (const ax of [0, 1, 2]) { const o = [0, 0, 0]; o[ax] = d; offs.push(o); }
+    for (const d of [-1, 1]) for (const [a, b] of [[0, 2], [0, 1], [1, 2]]) { const o = [0, 0, 0]; o[a] = d; o[b] = d; offs.push(o); }
+    const vals = offs.map(([dx, dy, dz]) => fanAt(x + dx, y + dy, z + dz, PROBE, DEG));
+    const cls = [...new Set(vals.map((v) => (v <= TT ? 'OPEN' : 'ROOFED')))].join('+');
+    console.log(`${name.padEnd(13)} ${vals[0].toFixed(2)}  ${Math.min(...vals).toFixed(2)}  ${Math.max(...vals).toFixed(2)}  ${cls}`);
+  }
+  console.log('\n--- the fan\'s own constants: probe distance / cone angle ---');
+  console.log('shot          30m/34d  15m/34d  60m/34d  30m/20d  30m/50d');
+  for (const name of WANT) {
+    const [x, y, z] = SHOTS[name].pos;
+    const r = [[30, 34], [15, 34], [60, 34], [30, 20], [30, 50]].map(([p, d]) => fanAt(x, y, z, p, d).toFixed(2));
+    console.log(`${name.padEnd(13)} ${r.join('     ')}`);
+  }
+}
