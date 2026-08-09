@@ -20258,3 +20258,56 @@ measured and definitely bad and the revert is one number, `TUNE.edgePlanar[2] = 
 the mix to 1.0 and restores the old behaviour bit-exactly. Read §253's remedy sceptically until
 those blocks land; `inkw.mjs --analyse` will score every registered criterion over frames on disk
 without taking the lock again.
+
+## §255 — every 640×360 frame was black, and the null arm PASSED, because black equals black
+
+The INK agent's two calibration failures are worth more than its result, and the second is the
+sharpest statement of a principle this session has circled all day.
+
+### A null arm can only say "nothing moved"
+
+Its entire 640×360 block rendered **black**. Every frame. And the **null arm passed** — because two
+black frames are identical, and identity is the only thing a null is capable of asserting. The run
+would have reported a clean, self-consistent, byte-stable comparison of nothing at all.
+
+**Only the `nochar` positive control caught it**: remove the character and the frame must change, and
+it did not, because there was nothing there to remove.
+
+This project has leaned hard on null arms all session, and correctly — §250's byte-identical null
+certified `celband` against a contamination hazard nobody had designed it for, and §249's null proved
+the drift floor was exactly 0.0000. But a null is a **stability** check and cannot be a **sensitivity**
+check, and the two failure modes it cannot distinguish are "nothing changed because the lever does
+nothing" and "nothing changed because nothing is there". A positive control that MUST fire is the
+only arm that separates them, which is why every seal in this project is required to carry one, and
+why five runs have been voided when one did not fire.
+
+Stated as a rule: **a null arm passing is not evidence that the instrument works. It is evidence that
+the instrument is repeatable, which a broken instrument also is.**
+
+### An arm that the renderer silently rewrote every frame
+
+`nohull` — the arm that removes the inverted hull — was **overwritten by `endNormalPass()` on every
+frame**. The lever was set, the renderer reset it, and the arm captured the shipped configuration
+under a different name. The tell was that the hull band read **EMPTY** while `hull2x` reported a band:
+the pair had in fact measured 2× against 1×, not 1× against 0×, so the one number the file existed to
+produce was a comparison between two things that were both the hull. Now fixed by hiding the ink
+*materials* rather than toggling a flag the render loop owns.
+
+Both of these were caught by the agent's own arms, before either reached a conclusion.
+
+### What is measured, and what is not
+
+Stated plainly because the agent stated it plainly. **Mechanism 1's remedy is untested.** The
+planarity gate removes a 46-luma darkening from 27% of `courtyard`, and its registered failure mode
+P3b — that it also deletes the architecture's legitimate ink, §7.3's "outlines missing" — has no
+measurement, because both candidate blocks are still queued behind a run that has held the lock for
+over two hours.
+
+It ships **enabled** anyway, and that is the right call for a stated reason: what it replaces is
+measured and definitely bad, and the revert is a single number (`edgePlanar[2] = 0`) that restores
+the previous behaviour bit-exactly. `inkw.mjs --analyse inkw-after` scores every registered criterion
+when the frames land, without retaking the lock.
+
+Mechanism 2 is closed analytically and unit-tested. Mechanism 3 — that "~2.5 px" never said at what
+resolution, so a 2.50 px hull is 6% of a 42 px character at 720p and 12% of a 21 px one at 360p — is
+closed in code and unrendered. The critic's "5 px = 6.6% of his height" was that arithmetic all along.
