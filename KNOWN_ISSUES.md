@@ -22570,15 +22570,57 @@ tree, one FIFO wait instead of two — and add a `sameTree` guard that hashes th
 each arm and returns VOID rather than a score when they differ. It is deliberately NOT being
 edited while its own run is in flight.
 
-### 7. Results
+### 6.4 Where capture frames live, because this set nearly established the opposite precedent
 
-Pending — `tools/heroread.mjs` is in the FIFO (boot A done, boot B queued behind other lanes).
-Its artefacts land in `progress/records/heroread/` and are scored in `RESULT-heroread.md`. Read
-that file with §6.3: **the D11 gates in run 1 are VOID whatever they print**, and only the D4
-gates are scoreable. This section was written before the verdict so the number could be claimed
-before it was cited in source — the lead's rule, learnt the expensive way: §271 was taken by the
-textures lane while two `Shots.js` comments already pointed at it, and those two citations were
-repointed at `593def6`.
+Run 1's artefacts were carried into git by the lead as 12 MB of full-size PNGs under
+`progress/records/heroread/`, explicitly flagged as my call to override. **Overridden.** `shots/`
+is gitignored so raw capture output never enters history, and a record does not stop being a
+record for being small: what ships is a **downscaled side-by-side composite** —
+`progress/records/AB-heroread-run1.png` and `AB-courtyardread-run1.png`, 411 KB and 572 KB against
+12 MB — plus `heroread.json` and `srctree-run1.txt`, which are the numbers and the provenance.
+`progress/records/heroread/*.png` is now in `.gitignore`.
+
+The composites carry more than the originals did, because they are the comparison rather than its
+inputs: `hero` old-vs-new side by side shows the 3.80 m float and the size change in one glance,
+and `courtyard` shows the hero moving out from beside the near-black guard onto open paving.
+**Precedent, stated because the next agent will copy it: commit the comparison, not the capture.**
+
+### 7. Results — run 1 is VOID, on two instrument defects, both caught by the arms
+
+`RESULT-heroread.md`. Verdict `DO NOT SHIP`; **C1 FAIL, C2 FAIL, H1 FAIL, everything else VOID.**
+Nothing about the candidate is established in either direction.
+
+1. **The face arms were two trees** — §6.3, declared before the run rendered. `C2` measured 2.42
+   against ≤ 1.5, i.e. the null arm found the drift on a patch of wall that has nothing to do with
+   the character, which is exactly its job.
+2. **The character mask was the sky.** The registered population, `debugTerm(8)` B > 127, is
+   `vSlySkin` — but that channel only means anything on TOON pixels, and the sky is not one and is
+   comfortably over 127. The largest connected component came back as the sky wedge and was
+   **bit-identical in both staging arms**: `hero` x 0..216 y 41..205, 24 588 px, both. `H1`, the
+   must-fire arm, FAILED and was right to.
+
+   **The lever was never in doubt and the same run says so**: `skinTotal` moved 44 845 → 54 991 on
+   `hero`. Not scored — an unregistered population is not a gate — but it locates the defect in the
+   instrument rather than in the change.
+
+Run 2 fixes both without moving a single threshold (`ADDENDUM-heroread-run2.md`): mask predicate
+`B >= 254`, which is the quantisation the channel already has rather than a tuned number; both
+face arms in ONE `withGame` via `page.goto`, so the run takes the FIFO once; and **`G-TREE`**, a
+must-fire gate that hashes the working tree at every arm and VOIDs rather than scores when they
+differ.
+
+Unscored observation, labelled as such in the RESULT and decisive of nothing: ruler-read off the
+saved frames, `hero` goes **114 px (15.8 %) → 203 px (28.2 %)** against the projection's predicted
+202 px, and `hero-old.png` shows the boot tip ending in air. The old read agrees with r9's 113 px
+across ~120 commits of other lanes' work.
+
+One hazard inherited and worth recording: `dt = 0`, which §251 requires for reproducible captures,
+removes every event-driven FX from the frame. Both face arms use it, so the A/B is internally
+consistent — but no gate here may ever depend on an FX-lit face, and none does.
+
+This section was written before the verdict so the number could be claimed before it was cited in
+source — the lead's rule, learnt the expensive way: §271 was taken by the textures lane while two
+`Shots.js` comments already pointed at it, and those two citations were repointed at `593def6`.
 
 ---
 

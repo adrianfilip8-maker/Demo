@@ -3,25 +3,33 @@
  * heroread — the scorer for `PREREG-heroread.md`. Critic 9's D4 (the hero reads as a background
  * element) and D11 (the face is off-model).
  *
- * Two boots, because `?face=` is read at module-load time and cannot be poked in-page:
+ * ONE lock, ONE vite server, ONE tree, four arms. `?face=` is read at module-load time so the two
+ * face arms need two page loads — but a `page.goto` is a module load inside the SAME browser and
+ * the SAME server, which is all they ever needed. The staging arms are poked into `SHOTS` in-page
+ * and rendered seconds apart.
  *
- *   boot A   `?face=raw`   the supplied head albedo.  Renders `sly-closeup`.
- *   boot B   default       the derived one.           Renders `sly-closeup`, then `hero` and
- *                          `courtyard` twice each with `SHOTS[name].player` poked in-page to
- *                          the OLD staging and then the NEW one.
+ *   arm A     `?face=raw`   supplied head albedo.  `sly-closeup`.
+ *   arm B     default       derived albedo.        `sly-closeup`, then `hero` and `courtyard`
+ *                                                  twice each, old staging then new.
  *
- * The staging A/B is INSIDE one boot on purpose; the face A/B cannot be, so `C2` tests the two
- * boots against each other on a background ROI and voids the run if they disagree. Cross-boot
- * determinism is not assumed here (§263.3 measured it as large); it is checked.
+ * **Run 1 took the lock twice and paid for it.** Its two face arms sat on opposite sides of a
+ * FIFO wait; four commits from other lanes landed in `src/` in the ninety seconds between them,
+ * and its D11 half was VOID on provenance — declared before it rendered (KNOWN_ISSUES §272.3).
+ * `G-TREE` is that failure turned into a gate: the working tree is hashed at every arm and the
+ * run VOIDs rather than scores when they differ. It hashes the TREE, not `HEAD`, because vite
+ * compiles files and an agent's uncommitted edit is in the render and not in a commit.
  *
- * Character pixels are `debugTerm(8)`'s B channel — `vSlySkin`, 1.0 on a SkinnedMesh and 0.0
- * otherwise, so it quantises to 255/0 and no threshold choice can move the population. The cane
- * is a plain `THREE.Mesh` and is out, which matches the ruler baseline in the seal. Guards are
- * skinned, so the figure is the largest 4-connected component.
+ * **Run 1's other defect was its population, and `H1` caught it.** Character pixels are
+ * `debugTerm(8)`'s B channel — `vSlySkin` — but that channel is only meaningful on TOON pixels,
+ * and the sky is not one. At `B > 127` the largest connected component came back as the sky and
+ * was bit-identical in both staging arms. See `figure()`. The cane is a plain `THREE.Mesh` and
+ * stays out, which matches the ruler baseline in the seal; guards are skinned, so the figure is
+ * the largest component of the corrected mask.
  *
  *   node tools/heroread.mjs [--out progress/records/heroread]
  */
-import { writeFileSync, mkdirSync, rmSync } from 'node:fs';
+import { writeFileSync, mkdirSync, rmSync, readdirSync, readFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import path from 'node:path';
 import { withGame, ROOT } from './harness.mjs';
 import { shipVerdict, verdictLine } from './gate.mjs';
@@ -113,12 +121,27 @@ function roiDelta(a, b, box) {
   return s / n;
 }
 
-/** Largest 4-connected component of {B channel > 127}: the character, not the garrison. */
+/**
+ * Largest 4-connected component of the character mask.
+ *
+ * **RUN 1's PREDICATE WAS `B > 127` AND IT SELECTED THE SKY.** `debugTerm(8)` writes
+ * `vec3(classMap.r, classMap.g, vSlySkin)` on TOON materials only; the sky is not a toon
+ * material and keeps its own colour, whose blue channel is comfortably over 127. So the largest
+ * component came back as the sky wedge — `hero` x 0..216 y 41..205, **identical in both staging
+ * arms**, which is exactly what `H1`'s must-fire calibration is for and exactly what it caught.
+ * The lever was never in doubt: the same run's `skinTotal` moved 44 845 -> 54 991 on `hero`.
+ *
+ * The fix is not a tuned threshold. `vSlySkin` is 0.0 or 1.0 and the debug path writes it
+ * unmodified, so on a toon pixel it quantises to **exactly 0 or 255** — `B >= 254` admits the
+ * character and excludes anything merely blue. `locate` then requires the component to sit where
+ * the shot's own camera projects the staged root, which the sky fails by hundreds of pixels.
+ */
+const MASK_B = 254;
 function figure(img) {
   const { w, h, d } = img;
   const on = new Uint8Array(w * h);
   let total = 0;
-  for (let i = 0, p = 0; p < w * h; p++, i += 4) if (d[i + 2] > 127) { on[p] = 1; total++; }
+  for (let i = 0, p = 0; p < w * h; p++, i += 4) if (d[i + 2] >= MASK_B) { on[p] = 1; total++; }
   const seen = new Uint8Array(w * h);
   const stack = new Int32Array(w * h);
   let best = null;
@@ -155,20 +178,56 @@ const gate = (id, pass, note, voidIf = false) => {
   return v === true;
 };
 
-console.log('BOOT A — ?face=raw');
-const A = await withGame({ width: 1280, height: 720, quality: 'high', query: 'face=raw' },
-  async ({ page, info }) => {
-    await install(page);
-    await page.evaluate(() => window.__GAME.setShot('sly-closeup', { dt: 0 }));
-    await page.evaluate(() => window.__grab('closeup'));
-    return { closeup: await pull(page, 'closeup'), warnings: info.warnings, errors: info.consoleErrors };
-  });
-console.log(`  boot A warnings: ${A.warnings.length}`);
+/**
+ * Digest of the WORKING TREE's `src/`, which is what vite compiles — not `git rev-parse HEAD:src`,
+ * because an agent's uncommitted edit is in the render and not in HEAD. Sampled at every arm.
+ */
+function srcDigest() {
+  const files = [];
+  (function walk(dir) {
+    for (const e of readdirSync(dir, { withFileTypes: true }).sort((a, b) => (a.name < b.name ? -1 : 1))) {
+      const p = path.join(dir, e.name);
+      if (e.isDirectory()) walk(p); else files.push(p);
+    }
+  })(path.join(ROOT, 'src'));
+  const h = createHash('md5');
+  for (const f of files) { h.update(f); h.update(readFileSync(f)); }
+  return h.digest('hex');
+}
 
-console.log('BOOT B — default (sly_head_fix)');
-const B = await withGame({ width: 1280, height: 720, quality: 'high' }, async ({ page, info }) => {
+/**
+ * ONE lock, ONE vite server, ONE tree, both face arms.
+ *
+ * Run 1 took the lock twice — `withGame` acquires per call — so the `?face=raw` arm and the
+ * default arm sat on opposite sides of a FIFO wait, and four commits from other lanes landed in
+ * `src/` in the ninety seconds between them. That run's D11 half was VOID on provenance and was
+ * declared so before it rendered (KNOWN_ISSUES §272.3). `?face=` is read at module-load time, so
+ * the arms genuinely need two page loads — but a `page.goto` is a second module load inside the
+ * SAME browser, the SAME server and the SAME tree, which is all the arms ever needed.
+ */
+const rec0 = { srcAtStart: srcDigest() };
+console.log(`src working-tree digest at start: ${rec0.srcAtStart}`);
+const R = await withGame({ width: 1280, height: 720, quality: 'high' }, async ({ page, info }) => {
+  const out = { warnings: info.warnings, errors: info.consoleErrors, staged: {}, src: {} };
+  const port = page.url().match(/:(\d+)\//)[1];
+
+  /* ---- arm A: the supplied head albedo, by re-navigating this same page ---- */
+  out.src.A = srcDigest();
+  await page.goto(`http://127.0.0.1:${port}/?shot=1&q=high&face=raw`,
+    { waitUntil: 'domcontentloaded', timeout: 90000 });
+  await page.waitForFunction('window.__GAME && window.__GAME.ready === true', null, { timeout: 300000, polling: 500 });
   await install(page);
-  const out = { warnings: info.warnings, errors: info.consoleErrors, staged: {} };
+  await page.evaluate(() => window.__GAME.setShot('sly-closeup', { dt: 0 }));
+  await page.evaluate(() => window.__grab('closeupA'));
+  const closeupA = await pull(page, 'closeupA');
+
+  /* ---- arm B: the derived one, same page again ---- */
+  out.src.B = srcDigest();
+  await page.goto(`http://127.0.0.1:${port}/?shot=1&q=high`,
+    { waitUntil: 'domcontentloaded', timeout: 90000 });
+  await page.waitForFunction('window.__GAME && window.__GAME.ready === true', null, { timeout: 300000, polling: 500 });
+  await install(page);
+  out.closeupA = closeupA;
 
   await page.evaluate(() => window.__GAME.setShot('sly-closeup', { dt: 0 }));
   await page.evaluate(() => window.__grab('closeup'));
@@ -190,9 +249,12 @@ const B = await withGame({ width: 1280, height: 720, quality: 'high' }, async ({
       out[`${shot}_${arm}_beauty`] = await pull(page, `${shot}_${arm}_beauty`);
     }
   }
+  out.src.end = srcDigest();
   return out;
 });
-console.log(`  boot B warnings: ${B.warnings.length}`);
+const B = R, A = { closeup: R.closeupA };
+console.log(`  warnings: ${R.warnings.length}`);
+console.log(`  src digest  armA ${R.src.A}  armB ${R.src.B}  end ${R.src.end}`);
 
 /* the live table must have carried the NEW staging before anything was poked */
 for (const shot of ['hero', 'courtyard']) {
@@ -204,11 +266,17 @@ for (const shot of ['hero', 'courtyard']) {
 
 /* ------------------------------------------------------------------------------ calibration -- */
 console.log('\nCALIBRATION');
+/* G-TREE: every arm must have been rendered from one tree. Run 1's two arms straddled four
+   commits from other lanes and its D11 half was VOID for it (KNOWN_ISSUES 272.3). This is that
+   failure turned into a gate instead of a hand check. */
+const treeSame = R.src.A === R.src.B && R.src.B === R.src.end;
+const GTREE = gate('G-TREE one tree for every arm', treeSame,
+  `armA ${R.src.A.slice(0, 8)} armB ${R.src.B.slice(0, 8)} end ${R.src.end.slice(0, 8)}`);
 const c1 = roiDelta(A.closeup, B.closeup, ROI.HEAD);
 const c2 = roiDelta(A.closeup, B.closeup, ROI.BG);
 const C1 = gate('C1 head differs between arms', c1 >= 4.0, `mean |dRGB| over HEAD = ${c1.toFixed(2)} (bar >= 4.0)`);
 const C2 = gate('C2 background does not', c2 <= 1.5, `mean |dRGB| over BG = ${c2.toFixed(2)} (bar <= 1.5)`);
-const faceVoid = !(C1 && C2);
+const faceVoid = !(C1 && C2 && GTREE);
 
 /* ------------------------------------------------------------------------------------- D11 -- */
 console.log('\nD11 — face');
@@ -237,7 +305,7 @@ const h1 = ['hero', 'courtyard'].every((s) => Math.abs(fig[s].nw.height - fig[s]
   && Math.abs(fig[s].nw.cx - fig[s].old.cx) >= 30);
 const H1 = gate('H1 the staging poke took', h1,
   ['hero', 'courtyard'].map((s) => `${s} dh ${Math.abs(fig[s].nw.height - fig[s].old.height)} dcx ${Math.abs(fig[s].nw.cx - fig[s].old.cx).toFixed(0)}`).join('; '));
-const d4Void = !H1 || !!rec.mismatch;
+const d4Void = !H1 || !!rec.mismatch || !GTREE;
 gate('H2 hero >= 25% of frame', fig.hero.nw.height >= 180,
   `${fig.hero.nw.height} px = ${(fig.hero.nw.height / 720 * 100).toFixed(1)}% (bar >= 180 px; predicted 202)`, d4Void);
 gate('H3 hero is inside the frame', fig.hero.nw.y0 >= 8 && fig.hero.nw.y1 <= 712,
@@ -257,7 +325,9 @@ rec.staged = B.staged;
 rec.warnings = { A: A.warnings, B: B.warnings };
 writeFileSync(path.join(OUT, 'heroread.json'), JSON.stringify(rec, null, 2));
 
-/* PNGs for the record. `crop.mjs`'s writer is RGB, so drop alpha. */
+/* PNGs for the record. `crop.mjs`'s writer is RGB, so drop alpha. The MASKS are saved too: run 1
+   could not be re-diagnosed from its own artefacts because they were not, and the population
+   defect had to be inferred from a bounding box in the JSON. */
 const { writePNG } = await import('./crop.mjs');
 const save = (img, name) => {
   const rgb = Buffer.alloc(img.w * img.h * 3);
