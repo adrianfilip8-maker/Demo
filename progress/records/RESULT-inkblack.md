@@ -69,3 +69,24 @@ computed. The shas above are calibration, not a result about the ink.
   because **every arm of a shot is captured inside one boot and every gate is computed within a
   shot** — other agents editing `src/` between shots can move a whole shot but cannot move one
   arm relative to its own siblings, which is the only comparison any threshold reads.
+- Run-3: after the lead's cross-lane provenance warning, `G-TREE` was added to the scorer and a
+  per-shot **content hash of `src/`** to the capture. Run-2's sixteen frames predate it, so their
+  tree is unrecorded, and an unverifiable guard is VOID rather than PASS. They were **moved to
+  `shots/inkblack-run2a/` and the whole run restarted with provenance** rather than exempted on
+  the argument that one boot per shot makes the property true by construction. The CAL-4 table in
+  §1 stands as the observation it was — those four shots each rendered their four arms in one
+  boot, which is what CAL-4 reads — and run-3 re-tests it under the guard.
+
+**Why a content hash and not a commit sha.** Vite bundles the working tree. At the time of writing
+`src/world/Props.js` and `src/world/Statues.js` are modified and uncommitted by other agents, so
+two captures at the identical commit can render different pictures; a sha would call them the same
+provenance and be wrong.
+
+## 4. Staleness, recorded
+
+`shots/r9` is ~120 commits old. Nothing in this pre-registration gates on an r9 absolute — P1 and
+F1 are a delta between two arms of one boot, and CAL-3 is a property of the frame being scored.
+The r9 numbers in `KNOWN_ISSUES` §270.1 (`p10 0.0955`, `p90/p10 4.06`, "floor lifted 2.01x")
+describe a 120-commit-old build, motivate the work, and gate nothing. What *would* be exposed is a
+future claim of the form "the ink now matches the reference's 0.0474": that needs a same-run
+shipped control, and none is registered.
