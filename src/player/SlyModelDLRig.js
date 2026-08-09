@@ -167,8 +167,40 @@ const SURFACE = {
 const partOf = (name = '') => (/tail/i.test(name) ? 'tail' : /eyeball/i.test(name) ? 'eyeball'
   : /head/i.test(name) ? 'head' : 'body');
 
+/**
+ * `?face=raw` — the calibration lever for the head-albedo correction (critic 9 D11).
+ *
+ * The head ships on `sly_head_fix.png`, derived from the supplied `sly_head.png` by
+ * `tools/slyface.mjs`: the muzzle-tip blob is painted black (the asset has nose GEOMETRY and
+ * never painted it — 146 triangles sampling a mean (89, 81, 74) of plain fur), and the fur is
+ * white-balanced off the Godot project's independent Sly head, taking HSV saturation 0.182 to
+ * 0.031 and R/B 1.215 to 0.981 at unchanged median luma. The drawn black — mask, mouth, ear
+ * line — is not touched at any point.
+ *
+ * `?face=raw` restores the supplied texture. Read at module-load time for the same reason
+ * `?char=` and `?grip=` are: a harness cannot poke a URL param in-page after this evaluates,
+ * and an A/B that needs a source edit between arms is void by `PROVENANCE-critic7.md`.
+ */
+function faceMode() {
+  try {
+    if (typeof location !== 'undefined' && location.search) {
+      const q = new URLSearchParams(location.search).get('face');
+      if (q) return String(q);
+    }
+    if (typeof globalThis !== 'undefined' && globalThis.__FACE_AB != null) return String(globalThis.__FACE_AB);
+  } catch { /* plain-module hosts have no location; that is the offline path */ }
+  return 'fix';
+}
+const FACE_MODE = faceMode();
+
 function textureUrl(part) {
   const stem = TEX_BY_PART[part];
+  /* Degrade to the supplied texture if the derived one is absent from the glob — a missing
+     product must never stop the character loading (same rule as `?char=`'s MODULE_FILES check). */
+  if (part === 'head' && FACE_MODE !== 'raw') {
+    const fix = Object.keys(TEX_FILES).find((k) => k.endsWith('/sly_head_fix.png'));
+    if (fix) return TEX_FILES[fix];
+  }
   const key = Object.keys(TEX_FILES).find((k) => k.endsWith(`/${stem}.png`));
   return key ? TEX_FILES[key] : null;
 }

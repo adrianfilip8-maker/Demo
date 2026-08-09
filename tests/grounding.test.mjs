@@ -152,7 +152,13 @@ const shotRadii = SHOT_NAMES.filter((n) => SHOTS[n].player).map((name) => {
    a different reason and it is the interesting one: its player sits BEHIND the camera (z < 0), so
    the shot carries no character contact at all and is a free null for any character-side claim —
    PREREG-contact.md section 8 asserted exactly that, and this is it as arithmetic. */
-const KNOWN_CLAMPED = ['courtyard', 'guard', 'sly-startle'];
+/* `courtyard` LEFT this set on 2026-08-09 and the removal is declared here rather than absorbed.
+   PREREG-heroread moved that shot's STAGED PLAYER (not its camera) from (-6.6, 5.12, 12.4) to
+   (2.4, 0.02, 26.4), taking him from 29.4 m to 16.4 m from the lens, so the 4.5 cm contact radius
+   now projects inside [minPx, maxPx] and the shot samples the world radius the knob names for the
+   first time. That is a shot GAINING a measurement, which is why the list shrinks; the assertion
+   below still fails loudly if one ever gains a clamp. */
+const KNOWN_CLAMPED = ['guard', 'sly-startle'];
 
 test('contact radius: the set of shots running the term at a clamp has not drifted', () => {
   const clamped = shotRadii.filter((s) => s.rawPx < contact[2] || s.rawPx > contact[3]).map((s) => s.name);

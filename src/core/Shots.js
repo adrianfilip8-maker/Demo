@@ -65,10 +65,36 @@ export const SHOTS = {
      Dollying along the view axis rather than shortening the lens is deliberate: FOV and aim
      are unchanged, so the angular field is identical and the hazed pyramid — which is
      effectively at infinity — keeps its size. Only the near and mid ground grow. The vista
-     survives; that was the thing worth protecting. */
+     survives; that was the thing worth protecting.
+
+     **THE STAGED PLAYER MOVED, 2026-08-09 (PREREG-heroread, KNOWN_ISSUES §271). The camera did
+     not.** `pos`, `target`, `fov`, `tod` and `roll` above are byte-identical to what they were;
+     anyone holding a before/after on this frame has a moved subject and an unmoved set.
+
+     Two reasons, and the second is the one nobody had recorded. Critic 9's D4 measures the
+     character at 15.7% of frame height here against a reference band of 30-34% (`sly3-venice`,
+     cap-ear tips to boot = 30.8%, to the tail tip = 34.3%), on the frame this file's own header
+     calls the one that has to sell the game. And **he was standing on nothing**: a downward ray
+     at (2.2, 8.4) finds `arch:court:paving_courtyard` at y 5.20, because the gilded architrave
+     at y 9.0 spans only x 2.75-4.25 there and he stood at x 2.2 — **3.80 m of air**, visible at
+     7x in `shots/r9/hero.png` as a boot tip ending over a cornice with no contact and no
+     contact shadow. Every projection check passed, exactly as §7's own correction warns.
+
+     (4.0, 8.99, 13.2) is ON the architrave — 8.99 is the measured deck height at that exact xz,
+     not the nominal 9.0, for the reason §7's `courtyard` note gives — 6.5 m from the lens
+     instead of 11.1, and 100% visible on 66 rays. Projected through this camera it takes him
+     from 113 px to 202 px, i.e. 15.7% to 28.1%, and his ground contact from NDC y 0.14 to -0.09
+     with his feet near the left-third line rather than dead centre.
+
+     Yaw 5.72 -> 5.889, and it is a compromise that is worth stating rather than hiding. View and
+     sun angles cannot both be solved here: `view - sun` is fixed by the stand, and moving toward
+     this camera swings the bearing away from the key, taking that separation from 133 deg to
+     147. 5.889 splits the excess evenly — view 73, sun -73, each 3.4 deg outside the 20-70 band
+     this file's header asks for, which is the best any yaw can do at this position. The
+     alternative was keeping sun at -64 and letting view reach 87, i.e. dead profile. */
   hero: {
     pos: [8.9, 10.28, 17.2], target: [-1.0, 7.4, 4.0], fov: 46, tod: 0.79, roll: -1.5,
-    player: { pos: [2.2, 9.0, 8.4], yaw: 5.72, pose: 'perch_idle' },
+    player: { pos: [4.0, 8.99, 13.2], yaw: 5.889, pose: 'perch_idle' },
   },
 
   /* Frames the KayKit showcase row on the courtyard paving (KayKit.js, ?kaykit=1). Data only —
@@ -291,10 +317,32 @@ export const SHOTS = {
      outside the courtyard on the approach. And the staged player falls to ~41 px at 720 rows. He
      is the scale figure here rather than the subject (see below), but if he needs to be larger,
      `(-3.5, 0, 27)` computes to ~83 px on open paving between the statues — that is arithmetic
-     and wants `charvis` before it is trusted, so it is not applied here. */
+     and wants `charvis` before it is trusted, so it is not applied here.
+
+     **THE STAGED PLAYER MOVED, 2026-08-09 (PREREG-heroread, KNOWN_ISSUES §271). The camera did
+     not** — `pos`, `target`, `fov`, `tod` and `roll` are byte-identical. Anyone holding a
+     before/after on this frame has a moved subject and an unmoved set.
+
+     This is the deliberate decision the entry above asks for. Critic 9's D4 leads with this
+     frame at **5.7% of frame height** against a 30-34% reference band, and adds the read that
+     makes it worse than a size complaint: *"there are two raccoon-silhouetted figures in frame …
+     and a viewer cannot tell which is the protagonist"* — the other is a near-black guard at
+     px (372, 460-540), which at 41 px was the same size as the hero.
+
+     The suggestion recorded above was measured and **not** taken: (-3.5, 0, 27) scores 91%
+     visible and floats 4 cm, and it lands the figure 50 px from that guard. (2.4, 0.02, 26.4) is
+     on `paving:court` at the measured height (float 0.00), **100% visible on 66 rays**, on the
+     approach paving between the two colossi and clear to the right of the guard. 41 px -> 77 px,
+     5.7% -> 10.7%, ground contact at NDC y -0.69 with 94 px of paving under his boots for the
+     cast shadow the shot has never had.
+
+     It is still the smallest figure in the set, and that is correct: this shot is named for the
+     obelisk, the colossi and the avenue, and a scale figure that doubles is a scale figure, not
+     a subject. Yaw 5.08 -> 5.341 is a straight gain here rather than a compromise — view 77/sun
+     -21 becomes **view 36 / sun -36**, both inside the band for the first time. */
   courtyard: {
     pos: [-2.5, 4.0, 41.5], target: [1.5, 6.4, 16.0], fov: 55, tod: 0.76, roll: 0.8,
-    player: { pos: [-6.6, 5.12, 12.4], yaw: 5.08, pose: 'run' },
+    player: { pos: [2.4, 0.02, 26.4], yaw: 5.341, pose: 'run' },
   },
 
   /* Terrain + sky + aerial perspective. The approach ridge looking back at the complex. */
