@@ -329,3 +329,4 @@ courtyard    A0-base     hold=0    he=-1    encl=0.00 open=null  ns=0 nf=0  sha=
 courtyard    A4-scoped   hold=1    he=0.9   encl=0.20 open=1     ns=0 nf=0  sha=9075ae33042be99d
 dunes        A0-base     hold=0    he=-1    encl=0.00 open=null  ns=0 nf=0  sha=77d7db65603b177b
 dunes        A1-null     hold=0    he=0.9   encl=0.00 open=1     ns=0 nf=0  sha=77d7db65603b177b
+dunes        A2-ctlgrey  hold=0    he=-1    encl=0.00 open=null  ns=1 nf=0  sha=870264064317ca4e
