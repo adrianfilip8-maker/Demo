@@ -594,6 +594,24 @@ export const TUNE = {
      `specGain 0` is how a capture measures what spec is worth in a frame, per pixel, without
      having to reach into every material's own uSpec. Leave it at 1. */
   specGain: 1.0,
+  /* PREREG-specnorm §2 — exponent on the Blinn energy normalisation `(glossP + 8)/8`.
+
+     `specStep` is a shape function capped at 1.35 whatever `uGloss` is, while the stepped
+     lobe's support shrinks as `1/glossP`. So today a tighter highlight carries strictly LESS
+     energy, which is backwards, and it is the arithmetic behind §256's "no highlight range".
+
+     0 = shipped, and exact: the shader takes a literal-`1.0` branch and evaluates no arithmetic
+     at all, so the no-op does not depend on how a driver spells `pow( x, 0 )`.
+     1 = textbook energy conservation. Intermediate values are a partial normalisation with
+     amplitude ∝ glossP^p.
+
+     This is the one lever in the specular that is NOT scene-wide: it scales with each
+     material's own gloss, so it re-orders the material set. In display space the movers are the
+     dark-and-glossy classes (`ceiling_stars`, `bronze_dark`, `granite_pink`, and Sly's own mesh
+     at the TUNE default `uSpec` 0.25) — NOT `gold_leaf`, which is already on the flat of the
+     AgX curve and gains 13 L for a x12.94. Do not raise this from a number in a table; raise it
+     from a capture that scores PREREG-specnorm's G4. */
+  specNormPow: 0.0,
   gloss: 32,
   rough: 0.62,
   metalGain: 0.62,
@@ -841,6 +859,7 @@ export class Shading {
          republished per frame, so a poke sticks across `__GAME.step()`. See TUNE.specKey. */
       uSpecKey:      { value: TUNE.specKey },
       uSpecGain:     { value: TUNE.specGain },
+      uSpecNormPow:  { value: TUNE.specNormPow },
       uMetalGain:    { value: TUNE.metalGain },
       uGoldGlint:    { value: TUNE.goldGlint },
       uGlintPow:     { value: TUNE.glintPow },

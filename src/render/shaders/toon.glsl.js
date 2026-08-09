@@ -235,6 +235,10 @@ uniform float uSpecKey;       // PREREG-hilite2 §2 - how much of keyRad the spe
 uniform float uSpecGain;      // attribution lever. 1 = shipped (x*1.0 == x exactly); 0 removes
                               // the whole specular term, which is how base-minus-off measures
                               // what spec is worth in a frame today.
+uniform float uSpecNormPow;   // PREREG-specnorm §2 - exponent on the Blinn energy normalisation
+                              // (glossP+8)/8. 0 takes a literal-1.0 BRANCH, so the shipped
+                              // default is bit-identical without depending on how a driver
+                              // spells pow(). 1 = textbook energy conservation.
 uniform float uGloss;
 uniform float uMetal;
 uniform float uMetalGain;
@@ -676,6 +680,43 @@ export const TOON_SHADE = /* glsl */ `
 		float glossP = max( uGloss * ( 1.0 - 0.6 * rgh ), 4.0 );
 		float lobe = pow( ndh, glossP );
 		float specStep = smoothstep( 0.30, 0.52, lobe ) + 0.35 * smoothstep( 0.02, 0.30, lobe );
+
+		/* **specStep is a SHAPE function capped at 1.35 for every glossP, and that is a physical
+		   error: it makes a tighter highlight strictly DIMMER in total energy.**
+
+		   The stepped lobe's support is the spherical cap ndh >= 0.30^(1/glossP). To first order
+		   1 - ndh ~ 1.204/glossP, and a cap's solid angle goes as (1 - ndh), so the support
+		   shrinks as 1/glossP while the peak stays pinned at 1.35. Amplitude constant x support
+		   1/glossP = total reflected energy falling as 1/glossP. Raising uGloss narrows the
+		   highlight and makes it no brighter, which is backwards — concentrating the same energy
+		   into fewer pixels is exactly what a highlight IS. That is what KNOWN_ISSUES §256's "no
+		   highlight range" bottoms out in once §262 ruled out the incidence explanations.
+
+		   The missing factor is the normalised Blinn-Phong term (glossP + 8)/8 — the usual
+		   1/(8pi) convention minus the pi, which this shader drops everywhere else too.
+
+		   uSpecNormPow is the exponent, not a gain: amplitude ∝ glossP^p keeps the ordering by
+		   gloss a clean power law at partial strength, where an ad-hoc blend to 1.0 would not.
+		   An ANCHORED spelling (glossP+8)/(ref+8) is deliberately NOT offered — it is exactly
+		   this expression divided by the constant (ref+8)/8, and a scene-wide divisor is what
+		   uSpecGain already is (PREREG-specnorm §2, verified numerically in normmodel.mjs).
+		   The family has two degrees of freedom, slope and level, and it already had the level.
+
+		   **The branch is why 0 is exact.** uSpecNormPow > 0.0 ? pow(...) : 1.0 evaluates no
+		   arithmetic at all at the shipped default, so the no-op does not depend on a driver
+		   spelling pow(x, 0) as exp2(0 * log2(x)). Same standard as uShadeBand three lines up
+		   in this file. The test is on the uniform, so control flow stays quad-uniform and the
+		   derivatives taken earlier in this function keep their meaning.
+
+		   What it does NOT do: it leaves glossP alone, so it cannot widen the lobe or put one
+		   where the geometry makes none. The affected pixel set is bounded above by today's
+		   specStep > 0 population. It raises amplitude only.
+
+		   What it DOES do that the per-pixel arithmetic here cannot show: it feeds bloom
+		   (PostFX.js bloomThreshold 2.20; §25 measured gold_leaf already crossing it at 4.025
+		   scene). Bloom is a spatial gather, so this term can raise pixels that never ran it. */
+		float specNorm = uSpecNormPow > 0.0 ? pow( ( glossP + 8.0 ) * 0.125, uSpecNormPow ) : 1.0;
+
 		float specAmt = uSpec * ( 1.0 - 0.75 * rgh ) * mix( 1.0, 3.4, slyMetal );
 		vec3 specTint = mix( uSpecColor, alb * 2.0 + uSpecColor * 0.25, slyMetal );
 
@@ -712,7 +753,7 @@ export const TOON_SHADE = /* glsl */ `
 		   fourteen shots have their camera-facing walls at ramp 0 or 0.5. Coupling raises the
 		   ceiling; it cannot put a lobe where the geometry does not make one. */
 		vec3 spec = specTint * mix( vec3( 1.0 ), keyRad, uSpecKey )
-		          * ( specAmt * specStep * sh * step( 0.02, ndl ) * uSpecGain );
+		          * ( specAmt * specStep * specNorm * sh * step( 0.02, ndl ) * uSpecGain );
 
 		/* Cheap stylised environment for metal: a banded sky/sand gradient off the reflection
 		   vector. Without a reflected term gold is just a yellow ball with a dot on it. */
@@ -1118,7 +1159,16 @@ export const TOON_SHADE = /* glsl */ `
 			else if ( uDebugTerm < 3.5 ) dbgT = vec3( clamp( slyTurn / 40.0, 0.0, 1.0 ), ndv, fres );
 			else if ( uDebugTerm < 4.5 ) dbgT = ${ glslVec3( DEBUG_CALIB.term ) };
 			else if ( uDebugTerm < 5.5 ) dbgT = vec3( ramp, ndl, key );
-			else                         dbgT = vec3( specStep / 1.35, lobe, sh * step( 0.02, ndl ) );
+			else if ( uDebugTerm < 6.5 ) dbgT = vec3( specStep / 1.35, lobe, sh * step( 0.02, ndl ) );
+			/* 7 — the per-material CLASS MAP (PREREG-specnorm §7). §262's per-class table was
+			   MODELLED, and its fallback — classifying a delta by whether its tint is warm —
+			   is a two-class split that cannot tell sandstone from limestone.
+			   R = uSpec identifies the class (23 distinct values in the live census).
+			   B = slyMetal separates metal from dielectric.
+			   G = glossP/128 carries the PER-PIXEL gloss exponent, which varies inside a single
+			   material with ormG, and therefore names the exact normalisation factor applied at
+			   that pixel. Read it against the mode-4 mask like every other reading mode. */
+			else                         dbgT = vec3( uSpec, glossP / 128.0, slyMetal );
 			outgoingLight = dbgT;
 		}
 	}
