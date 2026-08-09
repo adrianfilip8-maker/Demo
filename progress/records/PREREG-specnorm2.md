@@ -1,7 +1,7 @@
 # PREREG-specnorm2 — sweeping 0.5 → 1.0, with a class-attribution guard that can actually return VOID
 
 Registered **before** any candidate arm exists (§141.1). Successor to PREREG-specnorm / §263.
-**Status: REGISTERED, NOT YET RUN.** The scaffolding it needs (`debugTerm(8)`) is landed and
+**Status: REGISTERED, AMENDED PRE-CAPTURE (see §4's strike), THEN RUN.** The scaffolding it needs (`debugTerm(8)`) is landed and
 inert; the capture has not been taken. Nothing in this file may be re-derived after a frame
 exists.
 
@@ -110,10 +110,51 @@ G3 (p1 ≤ 45 and |Δ| ≤ 2), G5 (`interior` byte-identical).
 
 **G4, re-derived because §263's version was not scoreable — the bar is unchanged at 20 L:**
 
-> **G4′** — on `sly-closeup`, over pixels that are *all three* of: `debugTerm(8)` **B ≥ 128**
-> (SkinnedMesh — **not** the mode-4 mask, per §263.2), `debugTerm(8)` **R within ±1 of byte 64**,
-> and `debugTerm(6)` **R ≥ 252 ∧ B ≥ 250** (lobe-saturated) — the **median** display-L rise over
-> `base` is **≤ 20 L**. If that population is **< 70 px**, G4′ is **VOID** and nothing ships.
+> **G4′** — on `sly-closeup`, over pixels that are *both* of: `debugTerm(8)` **B ≥ 128**
+> (SkinnedMesh — **not** the mode-4 mask, per §263.2) and `debugTerm(6)` **R ≥ 252 ∧ B ≥ 250**
+> (lobe-saturated) — the **median** display-L rise over `base` is **≤ 20 L**. If that population
+> is **< 70 px**, G4′ is **VOID** and nothing ships.
+
+#### AMENDED before the capture — the third condition was infeasible and would have self-VOIDed
+
+**This clause originally also required `debugTerm(8)` R within ±1 of byte 64.** It is struck, and
+the strike is recorded here rather than made silently, with the measurement that forced it and
+the reason it is legitimate.
+
+**The measurement.** The §263.2 offset does not only move the mode-4 triple — it moves *every*
+channel of every debug mode over the character. On the existing, already-published
+`sly-closeup.dbg7.png`, over Sly's own pixels, the R byte reads
+
+```
+R=74 ×5292   R=75 ×4616   R=76 ×4185   R=77 ×3675   R=80 ×3668   R=79 ×3278   R=82 ×2872
+```
+
+against a census byte of **64** for `uSpec 0.25`. A ±1 key cannot match any of it. Had this run
+as registered, G4′ would have returned an **empty population → VOID** on every arm, and a 55
+minute capture would have re-derived §263's own failure with a new instrument.
+
+**Why the strike is legitimate and not a moved threshold.** §141.1 forbids re-deriving a
+threshold once the data that scores it exists. **The 20 L bar is untouched.** What changed is the
+*population definition*, corrected for a physical property of the instrument, measured on frames
+that were published in §263 **before this seal was written** and before any specnorm2 frame
+exists. This is a feasibility fix to an instrument, made pre-capture, in public. Changing it
+after seeing a specnorm2 frame would not be, and is not permitted.
+
+**Why the remaining two conditions are sufficient and robust.** `vSlySkin` is 0.0 or 1.0, so the
+offset — which is at most ≈ +18/255 on the measured evidence — leaves a non-skinned pixel at
+≲ 18 and a skinned pixel at ≥ 237 even under the most pessimistic reading (a `mix` toward a dark
+colour rather than an add). The 128 threshold has ~110 bytes of margin on both sides, where the
+R key had **none**. The character does not need the `uSpec` byte to be identified: the skin bit
+identifies it, and that is the whole reason mode 8 exists.
+
+**Architecture is unaffected.** On non-character draws mode 4 arrives *exactly* — which is why
+its mask works there at all — so §2.2's ±1 key is sound for every architecture class. The offset
+is character-scoped, and so is the fix.
+
+**New check, registered with the amendment: I7 — the skin bit is bimodal.** On `sly-closeup`,
+fewer than **1 %** of pixels with `debugTerm(8)` B > 0 may fall in the dead zone **[64, 192]**.
+That turns the robustness argument above into a falsifiable number instead of an assumption. If
+I7 does not fire, G4′ is **VOID**.
 
 The 20 L bar is unchanged from PREREG-specnorm §8 and is not re-derived: it was set from the
 model's +38.9 L at `p=1` and +18.3 L at `p=0.5`, before any frame existed.
@@ -162,7 +203,8 @@ and **this seal does not compensate for it** — G4′ measures the consequence 
    work" — §263 already showed it does — but a *quantified* statement that **energy conservation
    and Sly's un-art-directed `uSpec 0.25` are in direct conflict, with the conflict located
    between `p = 0.84` and `p = 0.95`.** That is the number to hand CHARACTER.
-7. Falsifier for (6), stated so it can happen: if `sly-closeup`'s H1 population turns out to be
+7. **I7 fires** — the skin bit is cleanly bimodal, < 1 % in the dead zone.
+8. Falsifier for (6), stated so it can happen: if `sly-closeup`'s H1 population turns out to be
    architecture rather than the character — plausible, since §263.2 found the character was not
    even in the old denominator — then H1 could cross earlier than `p = 0.95` while G4′ still
    holds, and a value near 0.80–0.85 ships.
