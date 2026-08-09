@@ -21768,3 +21768,76 @@ running it did the same command report the real `126  0`.
 Everything else held: fast-forward recovered cleanly, nothing local existed to lose, the three
 untracked files were again the stale session-start copies, and the suite came back **394/395**,
 identical across all three incidents.
+
+## §270 — critic 9's D5 is two defects, the ink half has TWO ink systems on opposite sides of the tonemap, and my first mechanism story was refuted by its own test
+
+D5 reads as one complaint ("there is no black in the picture, and the ink line is grey") and is
+two independent defects with different owners, different costs and different fixes:
+
+- **D5a, the ink line's black point.** Ours 0.087–0.106 darkest-decile against the reference's
+  0.031. Authored in the render path, cheap, and nobody was working on it.
+- **D5b, the frame has no dark mass.** Ours 1.27–3.64% below L=0.15 against the reference's
+  18.95%. This is §214.1's wall — `SHADOW_FLOOR x key + fill` puts sandstone at display L~100 on
+  its own — and it is entangled with the live §269 shadow band work.
+
+Treating them as one is what makes D5 look expensive. Only D5b is.
+
+### The critic named a mechanism, and it is right about the system that matters
+
+*"Cause is almost certainly ordering — the ink is being fogged/graded rather than composited
+last."* I read `Outline.js:499` (`fog: false, toneMapped: false`) and `PostFX.js:1373` (composited
+in display space after `slyAgX` and `slyLinearToSrgb`, clamped `min(ink, c)`), and told the owner
+the critic was wrong on both counts.
+
+That was wrong, because **there are two ink systems**:
+
+| | where | tonemap | authored |
+|---|---|---|---|
+| **HULL** `Outline.js:486` | BackSide geometry, into the SCENE buffer | **graded** — PostFX processes the whole buffer; `toneMapped:false` only stops *three's* chunk | `0x1a1210` / `0x161022` → scene-linear (0.0103, 0.0061, 0.0052) |
+| **CREASE** `PostFX.js:1373` | display space, last | not graded | same hex, kept display-referred by `displayColor()` |
+
+`toneMapped: false` on a ShaderMaterial stops three from injecting its tonemapping chunk. It does
+not exempt those pixels from a full-screen pass that runs afterwards. PostFX's own validated chain
+table puts scene-linear 0.010 at display **L 23.4** lifted / **12.3** unlifted, which brackets the
+measured 0.088–0.116 by exactly the route the critic described. **The critic was right about the
+hull, which is the system that draws almost all the ink.**
+
+Three terms compound on the crease side and none of them is the tonemap: the authored colour is
+not black (display L 0.0767 / 0.0728), `inkStrength 0.95` leaks 5% of the background into every
+line, and `line *= smoothstep(0.05, 0.20, lum)` fades the ink out exactly where the surface is
+dark — which is where the reference's true-black pixels live. Two further terms act *after* the
+ink and were missed on the first reading: the `vignette 0.16` multiply and FXAA.
+
+### The instrument was worse than the story
+
+I tested "the black point is the authored endpoint" by solving `p = (1-t)*bg + t*ink` per channel
+on ridge-detected pixels and requiring the three channels to agree. It came back **VOID and
+refuted, both**:
+
+- **Calibration fired.** On `night.png` the detected "ink" median was **0.117** against a frame
+  median of **0.076**. In a dark frame a "dark valley with lighter shoulders" is just texture, so
+  the detector was measuring noise. The calibration was written to catch exactly this.
+- **Primary refuted.** Cross-channel spread in `t` was **0.118** against a registered `<= 0.10`,
+  and `t` at p99 ran **1.01–1.34** on eight of ten frames — pixels darker than the authored
+  endpoint can produce. Explicable after the fact by the vignette and FXAA; that is not the test
+  that was registered.
+
+The nine frames that *passed* calibration are discarded too. The detector never established that
+what it found was ink, so a frame passing the median check is unsupported by the same argument
+that sank `night`. Keeping the nine and dropping the one would have been a §141.1 violation with
+the excluded frame chosen by looking at which one failed.
+
+`PREREG-inkblack.md` replaces the detector rather than rescoping it: define the ink as the pixels
+the ink passes actually change (`inkStrength = 0` for the crease, a hull defeat lever for the
+hull), which needs no threshold at all, and register the attribution split and both falsifiers
+before the capture exists.
+
+### The repeat
+
+This is the fourth time today I have quoted or transcribed where I should have derived — after
+the x12.9/x1.86 scale, the truncated `ps` that made two capture runs look like duplicates, and
+the cane's 1.30 m. The shape is constant: a reading of the source produces a clean story, the
+story is stated with more confidence than a reading can carry, and the measurement then disagrees.
+The lift is the counter-example worth keeping — `liftDayScale 0.35` landed the composite's black
+floor at 0.66 L on 08-08, before the r9 frames, so it is provably not the wall here. That one
+holds because it was measured and dated, not because it read well.
