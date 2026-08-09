@@ -228,6 +228,13 @@ uniform float uShadeBand;     // banded form on the SHADE side — see slyShadeF
 varying float vSlySkin;       // 1.0 on a SkinnedMesh, 0.0 otherwise — see the note at slyConvex
 uniform float uSpec;
 uniform vec3  uSpecColor;
+uniform float uSpecKey;       // PREREG-hilite2 §2 - how much of keyRad the specular carries.
+                              // 0 = the legacy uncoupled term, BIT-IDENTICALLY: the factor is
+                              // spelled mix( vec3( 1.0 ), keyRad, uSpecKey ), and at 0 that is
+                              // x*(1-0) + y*0 = x + 0 = x exactly for every finite keyRad.
+uniform float uSpecGain;      // attribution lever. 1 = shipped (x*1.0 == x exactly); 0 removes
+                              // the whole specular term, which is how base-minus-off measures
+                              // what spec is worth in a frame today.
 uniform float uGloss;
 uniform float uMetal;
 uniform float uMetalGain;
@@ -671,7 +678,41 @@ export const TOON_SHADE = /* glsl */ `
 		float specStep = smoothstep( 0.30, 0.52, lobe ) + 0.35 * smoothstep( 0.02, 0.30, lobe );
 		float specAmt = uSpec * ( 1.0 - 0.75 * rgh ) * mix( 1.0, 3.4, slyMetal );
 		vec3 specTint = mix( uSpecColor, alb * 2.0 + uSpecColor * 0.25, slyMetal );
-		vec3 spec = specTint * ( specAmt * specStep * sh * step( 0.02, ndl ) );
+
+		/* **The specular is a reflection of the LIGHT, and until uSpecKey it was not multiplied
+		   by the light.** diff (line 596) and sss (line 622) both scale with
+		   keyRad = uKeyColor * uKeyIntensity; this term did not, so it was a fixed fraction of
+		   *unit* radiance under a sun of luma 2.423 — the one lit term decoupled from the sun,
+		   and the one term physically entitled to exceed the albedo.
+
+		   That is what KNOWN_ISSUES §256's "no highlight range" bottoms out in. The diffuse is
+		   albedo-bounded (slyRamp clamps at 1, so a lit surface tops out at alb * keyRad) and
+		   the sandstone palette caps that at display L 197. The only additive terms that can go
+		   past it are the rim — a silhouette band, already indicted for the courtyard plinth
+		   lip — and this one.
+
+		   uSpecKey is a scene-wide constant, so the coupling multiplies **every** material's
+		   specular by the same number. The art-directed ordering across materials is therefore
+		   preserved exactly: mudbrick (uSpec 0.05) and gold_leaf (0.95) keep their 19:1 ratio,
+		   dull stone stays dull, and only the materials already authored to be shiny gain the
+		   headroom to blow out. Modelled ceilings at a saturated lobe (PREREG-hilite2 §3):
+
+		     material              spec NOW -> x keyRad     lit surface total, display L
+		     sandstone_block         0.109  ->  0.266        201.5 -> 207.1
+		     limestone_polished      0.284  ->  0.694        223.5 -> 228.6
+		     granite_pink            0.479  ->  1.171        204.4 -> 221.0
+		     hieroglyph_gilded       1.729  ->  4.414        225.0 -> 242.4
+		     gold_leaf               4.372  -> 11.218        242.6 -> 252.2
+		     mudbrick                0.035  ->  0.086        172.1 -> 176.7
+
+		   What the coupling does NOT fix, stated here because it is the larger term: this lobe
+		   is gated by step( 0.02, ndl ) and by sh, so it is exactly zero on every surface the
+		   sun does not reach — which §256 measured as 32-85% of every daylight frame. A
+		   highlight also needs ndh near 1, i.e. the normal near the L/V bisector, and twelve of
+		   fourteen shots have their camera-facing walls at ramp 0 or 0.5. Coupling raises the
+		   ceiling; it cannot put a lobe where the geometry does not make one. */
+		vec3 spec = specTint * mix( vec3( 1.0 ), keyRad, uSpecKey )
+		          * ( specAmt * specStep * sh * step( 0.02, ndl ) * uSpecGain );
 
 		/* Cheap stylised environment for metal: a banded sky/sand gradient off the reflection
 		   vector. Without a reflected term gold is just a yellow ball with a dot on it. */
@@ -1056,7 +1097,18 @@ export const TOON_SHADE = /* glsl */ `
 		 * flat 1.0 by construction. If G (ndl) shows these surfaces living entirely above 0.544
 		 * then the ramp is CORRECT and flat, and the residual variation the metric was scoring
 		 * belongs to albedo texture, the shadow penumbra or the rim — none of which is the ramp.
-		 * Read R against G, not R alone. */
+		 * Read R against G, not R alone.
+		 *
+		 * Mode 6 is the SPECULAR INCIDENCE channel (PREREG-hilite2 §5). It writes
+		 * vec3( specStep / 1.35, lobe, sh * step( 0.02, ndl ) ) — the quantiser normalised to its
+		 * own ceiling, the raw Blinn lobe under it, and the pair of gates that decide whether the
+		 * term runs at all. It exists because "the highlight is too dim" and "the highlight never
+		 * lands" are indistinguishable in a composite, and they have opposite fixes: the first is
+		 * amplitude (uSpec, uSpecKey) and the second is geometry, which no amount of gain can
+		 * reach. B is 0 on every surface the sun does not touch, and R is the fraction of the
+		 * quantiser's ceiling actually reached — R = 1 is a saturated highlight core, and the
+		 * share of the frame at R = 1 with B = 1 is the population any amplitude lever can move.
+		 * Read B first: where B is 0, R and G are meaningless because spec is multiplied out. */
 		if ( uDebugShadow > 0.5 && slyDbgOn > 0.5 ) outgoingLight = slyDbg;
 
 		if ( uDebugTerm > 0.5 ) {
@@ -1065,7 +1117,8 @@ export const TOON_SHADE = /* glsl */ `
 			else if ( uDebugTerm < 2.5 ) dbgT = vec3( rimBand, rimSil, rimBand * rimSil );
 			else if ( uDebugTerm < 3.5 ) dbgT = vec3( clamp( slyTurn / 40.0, 0.0, 1.0 ), ndv, fres );
 			else if ( uDebugTerm < 4.5 ) dbgT = ${ glslVec3( DEBUG_CALIB.term ) };
-			else                         dbgT = vec3( ramp, ndl, key );
+			else if ( uDebugTerm < 5.5 ) dbgT = vec3( ramp, ndl, key );
+			else                         dbgT = vec3( specStep / 1.35, lobe, sh * step( 0.02, ndl ) );
 			outgoingLight = dbgT;
 		}
 	}

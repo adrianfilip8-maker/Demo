@@ -577,6 +577,23 @@ export const TUNE = {
 
   /* --- spec --- */
   spec: 0.25,
+  /* PREREG-hilite2 §2 — how much of `keyRad` the specular lobe carries.
+     0 = the legacy uncoupled term, bit-identically (the shader spells it
+     `mix( vec3( 1.0 ), keyRad, uSpecKey )`, and mix at 0 is `x*(1-0) + y*0 = x`).
+     1 = the physically-correct form: a highlight is a reflection of the light source, so it
+     scales with the sun exactly the way `diff` and `sss` already do.
+
+     Shared by identity like uShadeBand, and nothing republishes it per frame, so
+     `shading.uniforms.uSpecKey.value` is a sticky one-boot A/B that reaches the whole scene.
+     It is a SCENE-WIDE constant: it multiplies every material's specular by the same number,
+     so it cannot re-order materials against each other — see the block at `vec3 spec` in
+     toon.glsl.js for the per-material ceilings. */
+  specKey: 0.0,
+  /* Attribution lever, not art direction. 1 = shipped, and `x * 1.0 == x` exactly, so the
+     shipped value is a no-op in IEEE. 0 removes the specular term outright; `base` minus
+     `specGain 0` is how a capture measures what spec is worth in a frame, per pixel, without
+     having to reach into every material's own uSpec. Leave it at 1. */
+  specGain: 1.0,
   gloss: 32,
   rough: 0.62,
   metalGain: 0.62,
@@ -818,6 +835,12 @@ export class Shading {
          onBeforeCompile, alongside the per-material uDetailScale it multiplies. */
       uDetail2Scale: { value: TUNE.detail2Scale },
       uShadowSat:    { value: TUNE.shadowSat },
+      /* Shared, not per-material: the key radiance is one scene-wide quantity and the coupling
+         has to be pokeable from `shading.uniforms` for the A/B. Merged into every material by
+         identity in onBeforeCompile, alongside the per-material uSpec it multiplies. Neither is
+         republished per frame, so a poke sticks across `__GAME.step()`. See TUNE.specKey. */
+      uSpecKey:      { value: TUNE.specKey },
+      uSpecGain:     { value: TUNE.specGain },
       uMetalGain:    { value: TUNE.metalGain },
       uGoldGlint:    { value: TUNE.goldGlint },
       uGlintPow:     { value: TUNE.glintPow },
@@ -1565,6 +1588,9 @@ export class Shading {
    *      PNG as (64, 128, 191). It is also the toon-population map, since nothing else in a
    *      frame writes that triple.
    *   5  R = ramp (the quantised diffuse), G = N.L, B = ramp * shadow. Read R against G.
+   *   6  R = specStep/1.35 (the specular quantiser as a fraction of its own ceiling),
+   *      G = lobe (the raw Blinn lobe), B = sh * step(0.02, N.L) (the two gates).
+   *      Read B FIRST: where B = 0 the specular is multiplied out and R/G mean nothing.
    *
    * A mode-4 failure does NOT mean "this channel is broken". It means "no pixel carrying this
    * constant reached the PNG", and a cel program that failed to LINK produces exactly that,
