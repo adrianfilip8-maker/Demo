@@ -22,7 +22,8 @@
 import { readPNG } from '../../tools/png.mjs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const DIR = path.join(HERE, '../../shots/fxshape');
@@ -35,6 +36,31 @@ function load(n) {
   const f = path.join(DIR, `${n}.png`);
   if (!existsSync(f)) return null;
   return readPNG(f);
+}
+
+/* ---- provenance, fail-closed -------------------------------------------------------------
+   Four agents commit to this branch continuously and every arm waits on a FIFO, so arms
+   captured in separate invocations are arms captured against DIFFERENT TREES — the materials
+   lane VOIDed a run today over exactly that, across a `src/core/Shots.js` re-framing. This
+   refuses to issue a ship verdict when it cannot establish the tree, rather than printing a
+   number: anything that is not provably same-tree is VOID, never PASS (§263.1's shape). The
+   attribution table still prints, because all of fxshape's arms share ONE boot and vite is
+   frozen for its duration (SANDS_NO_HMR + a single page.goto), so they are same-tree by
+   construction whatever the manifest says — but that argument covers attribution only. */
+const git = (...a) => { try { return execFileSync('git', a, { encoding: 'utf8' }).trim(); } catch { return null; } };
+let PROV = null;
+try { PROV = JSON.parse(readFileSync(path.join(DIR, 'manifest.json'), 'utf8')).provenance ?? null; } catch { PROV = null; }
+const headNow = git('rev-parse', 'HEAD');
+const dirtyNow = git('status', '--porcelain', 'src/') || '';
+const provState = !PROV ? 'VOID: manifest carries no provenance'
+  : PROV.srcDirty ? `VOID: src/ was dirty at capture (${PROV.srcDirty.split('\n').length} file(s))`
+  : PROV.sha !== headNow ? `VOID: captured at ${PROV.sha?.slice(0, 8)}, scored against ${headNow?.slice(0, 8)}`
+  : dirtyNow ? 'VOID: src/ is dirty now'
+  : `OK ${PROV.sha.slice(0, 8)}`;
+console.log(`PROVENANCE ${provState}`);
+if (!provState.startsWith('OK')) {
+  console.log('  -> no SHIP verdict may be issued from this run. The attribution below is still');
+  console.log('     readable because every arm shares one boot and one frozen tree by construction.');
 }
 
 const base = load('base');

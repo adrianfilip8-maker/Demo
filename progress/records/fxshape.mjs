@@ -40,7 +40,16 @@
  */
 import { withGame, ROOT } from '../../tools/harness.mjs';
 import { mkdir, writeFile } from 'node:fs/promises';
+import { execFileSync } from 'node:child_process';
 import path from 'node:path';
+
+/* Provenance, recorded at boot and enforced by the scorer. Four agents commit to this branch
+   continuously and every arm waits on a FIFO, so a comparison spanning two invocations spans
+   two TREES by default — the materials lane VOIDed a run today whose arms were twenty commits
+   apart across a `src/core/Shots.js` re-framing. Every arm here shares one boot, and this pins
+   the tree they shared so the scorer can refuse rather than guess. */
+const git = (...a) => { try { return execFileSync('git', a, { cwd: ROOT, encoding: 'utf8' }).trim(); } catch { return null; } };
+const PROVENANCE = { sha: git('rev-parse', 'HEAD'), srcDirty: git('status', '--porcelain', 'src/') || '', at: new Date().toISOString() };
 
 const OUT = path.join(ROOT, 'shots', 'fxshape');
 const SUPPRESS = {
@@ -77,6 +86,7 @@ const res = await withGame({ width: 1280, height: 720, quality: 'high', verbose:
     };
   });
   if (!inv.ok) throw new Error(`lever inventory failed: ${inv.why}`);
+  console.log(`tree ${PROVENANCE.sha} · src dirty: ${PROVENANCE.srcDirty ? PROVENANCE.srcDirty.split('\n').length + ' file(s)' : 'no'}`);
   console.log(`fx levers: batches [${inv.batches.join(',')}] · trails ${inv.trailCount}`);
 
   const out = {};
@@ -111,5 +121,5 @@ const res = await withGame({ width: 1280, height: 720, quality: 'high', verbose:
   return { out, info };
 });
 
-await writeFile(path.join(OUT, 'manifest.json'), JSON.stringify(res.out, null, 2));
+await writeFile(path.join(OUT, 'manifest.json'), JSON.stringify({ provenance: PROVENANCE, arms: res.out }, null, 2));
 console.log(`\nwrote ${ARMS.length} frames to ${OUT}`);
