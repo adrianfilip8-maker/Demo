@@ -1,0 +1,3824 @@
+{
+  "prereg": "PREREG-specnorm2.md",
+  "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+  "res": [
+    1280,
+    720
+  ],
+  "satFloor": 70,
+  "shots": [
+    {
+      "shot": "hero",
+      "applied": {
+        "base": {
+          "pow": 0,
+          "gain": 1,
+          "key": 0
+        },
+        "off": {
+          "pow": 0,
+          "gain": 0,
+          "key": 0
+        },
+        "p060": {
+          "pow": 0.6,
+          "gain": 1,
+          "key": 0
+        },
+        "p070": {
+          "pow": 0.7,
+          "gain": 1,
+          "key": 0
+        },
+        "p080": {
+          "pow": 0.8,
+          "gain": 1,
+          "key": 0
+        },
+        "p090": {
+          "pow": 0.9,
+          "gain": 1,
+          "key": 0
+        },
+        "p100": {
+          "pow": 1,
+          "gain": 1,
+          "key": 0
+        },
+        "base2": {
+          "pow": 0,
+          "gain": 1,
+          "key": 0
+        }
+      },
+      "census": {
+        "materials": 102,
+        "classes": [
+          {
+            "spec": 0.95,
+            "gloss": 110,
+            "metal": 0.85,
+            "roughness": 1,
+            "count": 14,
+            "names": [
+              "hooks:rings",
+              "arch:pylon:gold_leaf",
+              "arch:tomb:gold_leaf",
+              "guard_body"
+            ]
+          },
+          {
+            "spec": 0.9,
+            "gloss": 96,
+            "metal": 0.85,
+            "roughness": 1,
+            "count": 6,
+            "names": [
+              "coins",
+              "props_gold",
+              "pickup_coins",
+              "treasure_scarab"
+            ]
+          },
+          {
+            "spec": 0.62,
+            "gloss": 72,
+            "metal": 0.85,
+            "roughness": 1,
+            "count": 3,
+            "names": [
+              "arch:court:bronze_dark",
+              "arch:hall:bronze_dark",
+              "arch:pylon:bronze_dark"
+            ]
+          },
+          {
+            "spec": 0.6,
+            "gloss": 48,
+            "metal": 0.85,
+            "roughness": 1,
+            "count": 1,
+            "names": [
+              "props_bronze"
+            ]
+          },
+          {
+            "spec": 0.55,
+            "gloss": 64,
+            "metal": 0.85,
+            "roughness": 1,
+            "count": 4,
+            "names": [
+              "arch:court:hieroglyph_gilded",
+              "arch:hall:hieroglyph_gilded",
+              "arch:pylon:hieroglyph_gilded",
+              "arch:tomb:hieroglyph_gilded"
+            ]
+          },
+          {
+            "spec": 0.42,
+            "gloss": 62,
+            "metal": 0,
+            "roughness": 1,
+            "count": 3,
+            "names": [
+              "arch:court:granite_pink",
+              "arch:hall:granite_pink",
+              "arch:tomb:granite_pink"
+            ]
+          },
+          {
+            "spec": 0.32,
+            "gloss": 46,
+            "metal": 0,
+            "roughness": 1,
+            "count": 2,
+            "names": [
+              "arch:court:limestone_polished",
+              "arch:hall:limestone_polished"
+            ]
+          },
+          {
+            "spec": 0.25,
+            "gloss": 32,
+            "metal": 0,
+            "roughness": 0.62,
+            "count": 7,
+            "names": [
+              "kaykit:props",
+              "slydlrig:mesh",
+              "slydlrig:mesh",
+              "slydlrig:mesh"
+            ]
+          },
+          {
+            "spec": 0.2,
+            "gloss": 30,
+            "metal": 0.85,
+            "roughness": 1,
+            "count": 4,
+            "names": [
+              "arch:court:ceiling_stars",
+              "arch:hall:ceiling_stars",
+              "arch:pylon:ceiling_stars",
+              "arch:tomb:ceiling_stars"
+            ]
+          },
+          {
+            "spec": 0.2,
+            "gloss": 28,
+            "metal": 0,
+            "roughness": 1,
+            "count": 8,
+            "names": [
+              "props_stone",
+              "props_lapis",
+              "props_carnelian",
+              "props_lime"
+            ]
+          },
+          {
+            "spec": 0.2,
+            "gloss": 28,
+            "metal": 0,
+            "roughness": 0.62,
+            "count": 2,
+            "names": [
+              "props_dark",
+              "props_ember"
+            ]
+          },
+          {
+            "spec": 0.16,
+            "gloss": 24,
+            "metal": 0,
+            "roughness": 1,
+            "count": 4,
+            "names": [
+              "arch:court:hieroglyph_wall",
+              "arch:hall:hieroglyph_wall",
+              "arch:pylon:hieroglyph_wall",
+              "arch:tomb:hieroglyph_wall"
+            ]
+          },
+          {
+            "spec": 0.15,
+            "gloss": 22,
+            "metal": 0,
+            "roughness": 1,
+            "count": 2,
+            "names": [
+              "ruin:drums",
+              "arch:hall:column_papyrus"
+            ]
+          },
+          {
+            "spec": 0.14,
+            "gloss": 20,
+            "metal": 0,
+            "roughness": 0.62,
+            "count": 3,
+            "names": []
+          },
+          {
+            "spec": 0.14,
+            "gloss": 20,
+            "metal": 0,
+            "roughness": 1,
+            "count": 3,
+            "names": [
+              "arch:court:sandstone_block",
+              "arch:hall:sandstone_block",
+              "arch:tomb:sandstone_block"
+            ]
+          },
+          {
+            "spec": 0.1,
+            "gloss": 32,
+            "metal": 0,
+            "roughness": 0.62,
+            "count": 1,
+            "names": []
+          },
+          {
+            "spec": 0.1,
+            "gloss": 16,
+            "metal": 0,
+            "roughness": 1,
+            "count": 16,
+            "names": [
+              "paving:court",
+              "paving:hall",
+              "paving:tomb",
+              "arch:court:paving_courtyard"
+            ]
+          },
+          {
+            "spec": 0.08,
+            "gloss": 12,
+            "metal": 0,
+            "roughness": 0.62,
+            "count": 3,
+            "names": []
+          },
+          {
+            "spec": 0.08,
+            "gloss": 14,
+            "metal": 0,
+            "roughness": 1,
+            "count": 5,
+            "names": [
+              "arch:court:sandstone_worn",
+              "arch:hall:sandstone_worn",
+              "arch:pylon:sandstone_worn",
+              "arch:tomb:sandstone_worn"
+            ]
+          },
+          {
+            "spec": 0.06,
+            "gloss": 12,
+            "metal": 0,
+            "roughness": 0.62,
+            "count": 4,
+            "names": [
+              "sand_ring0",
+              "sand_ring1",
+              "sand_ring2",
+              "sand_ring3"
+            ]
+          },
+          {
+            "spec": 0.06,
+            "gloss": 8,
+            "metal": 0,
+            "roughness": 1,
+            "count": 2,
+            "names": [
+              "arch:court:rope_fibre",
+              "arch:hall:rope_fibre"
+            ]
+          },
+          {
+            "spec": 0.05,
+            "gloss": 10,
+            "metal": 0,
+            "roughness": 1,
+            "count": 3,
+            "names": [
+              "arch:court:mudbrick",
+              "arch:tomb:mudbrick",
+              "arch:hall:mudbrick"
+            ]
+          },
+          {
+            "spec": 0.04,
+            "gloss": 8,
+            "metal": 0,
+            "roughness": 0.62,
+            "count": 2,
+            "names": [
+              "pyramid_105",
+              "pyramid_72"
+            ]
+          }
+        ]
+      },
+      "stats": {
+        "base": {
+          "n": 921600,
+          "mean": 79.94894267362064,
+          "p1": 15,
+          "p50": 71,
+          "p90": 155,
+          "p99": 183,
+          "p999": 195,
+          "max": 232.1812,
+          "over200": 0.06586371527777778,
+          "over230": 0.00043402777777777775,
+          "over250": 0,
+          "over230px": 4,
+          "over250px": 0
+        },
+        "off": {
+          "n": 921600,
+          "mean": 79.61472845595682,
+          "p1": 15,
+          "p50": 71,
+          "p90": 154,
+          "p99": 183,
+          "p999": 193,
+          "max": 232.1812,
+          "over200": 0.058159722222222224,
+          "over230": 0.00043402777777777775,
+          "over250": 0,
+          "over230px": 4,
+          "over250px": 0
+        },
+        "p060": {
+          "n": 921600,
+          "mean": 80.53264396202495,
+          "p1": 16,
+          "p50": 72,
+          "p90": 156,
+          "p99": 184,
+          "p999": 205,
+          "max": 237.1152,
+          "over200": 0.1558159722222222,
+          "over230": 0.0068359375,
+          "over250": 0,
+          "over230px": 63,
+          "over250px": 0
+        },
+        "p070": {
+          "n": 921600,
+          "mean": 80.8478466284735,
+          "p1": 16,
+          "p50": 72,
+          "p90": 156,
+          "p99": 184,
+          "p999": 209,
+          "max": 240.8344,
+          "over200": 0.1875,
+          "over230": 0.013671875,
+          "over250": 0,
+          "over230px": 126,
+          "over250px": 0
+        },
+        "p080": {
+          "n": 921600,
+          "mean": 81.20837012803416,
+          "p1": 16,
+          "p50": 72,
+          "p90": 156,
+          "p99": 185,
+          "p999": 213,
+          "max": 243.7662,
+          "over200": 0.2177734375,
+          "over230": 0.020399305555555556,
+          "over250": 0,
+          "over230px": 188,
+          "over250px": 0
+        },
+        "p090": {
+          "n": 921600,
+          "mean": 81.58527673566532,
+          "p1": 16,
+          "p50": 73,
+          "p90": 156,
+          "p99": 185,
+          "p999": 217,
+          "max": 245.69799999999998,
+          "over200": 0.2509765625,
+          "over230": 0.028103298611111112,
+          "over250": 0,
+          "over230px": 259,
+          "over250px": 0
+        },
+        "p100": {
+          "n": 921600,
+          "mean": 81.9549090182131,
+          "p1": 16,
+          "p50": 73,
+          "p90": 156,
+          "p99": 186,
+          "p999": 221,
+          "max": 247.7702,
+          "over200": 0.2873263888888889,
+          "over230": 0.04014756944444445,
+          "over250": 0,
+          "over230px": 370,
+          "over250px": 0
+        },
+        "base2": {
+          "n": 921600,
+          "mean": 79.94894267362064,
+          "p1": 15,
+          "p50": 71,
+          "p90": 155,
+          "p99": 183,
+          "p999": 195,
+          "max": 232.1812,
+          "over200": 0.06586371527777778,
+          "over230": 0.00043402777777777775,
+          "over250": 0,
+          "over230px": 4,
+          "over250px": 0
+        }
+      },
+      "diffs": {
+        "null": {
+          "px": 0,
+          "pct": 0,
+          "maxAbsL": 0
+        },
+        "off": {
+          "px": 36630,
+          "pct": 3.974609375,
+          "maxAbsL": 135.253
+        },
+        "p060": {
+          "px": 83717,
+          "pct": 9.083875868055555,
+          "maxAbsL": 95.70499999999998
+        },
+        "p070": {
+          "px": 98194,
+          "pct": 10.654730902777779,
+          "maxAbsL": 103.6602
+        },
+        "p080": {
+          "px": 111770,
+          "pct": 12.127821180555555,
+          "maxAbsL": 116.0052
+        },
+        "p090": {
+          "px": 126501,
+          "pct": 13.726236979166666,
+          "maxAbsL": 127.72039999999998
+        },
+        "p100": {
+          "px": 137712,
+          "pct": 14.942708333333334,
+          "maxAbsL": 132.0906
+        }
+      },
+      "calibShare": 75.67447916666667,
+      "incidence": {
+        "toonPct": 75.67447916666667,
+        "toonPx": 697416,
+        "gatesAnyPct": 11.077032932998383,
+        "gatesOpenPct": 9.217740917902658,
+        "jointSatPct": 0.35531160741938816,
+        "jointSatPx": 2478
+      },
+      "classes": [
+        {
+          "uSpec": 0.55,
+          "meshes": 4,
+          "name": "arch:court:hieroglyph_gilded",
+          "px": 254173,
+          "satPx": 1473,
+          "glossP": 38.47365605470352,
+          "scoreable": true,
+          "rise": {
+            "p060": {
+              "p50": 28.030399999999986,
+              "p90": 42.52899999999997,
+              "n": 1473
+            },
+            "p070": {
+              "p50": 33.52780000000001,
+              "p90": 50.24819999999997,
+              "n": 1473
+            },
+            "p080": {
+              "p50": 37.821799999999996,
+              "p90": 57.04759999999999,
+              "n": 1473
+            },
+            "p090": {
+              "p50": 42.11979999999997,
+              "p90": 61.84299999999996,
+              "n": 1473
+            },
+            "p100": {
+              "p50": 45.748400000000004,
+              "p90": 67.00060000000002,
+              "n": 1473
+            }
+          }
+        },
+        {
+          "uSpec": 0.14,
+          "meshes": 3,
+          "name": "arch:court:sandstone_block",
+          "px": 54637,
+          "satPx": 481,
+          "glossP": 9.098281527959758,
+          "scoreable": true,
+          "rise": {
+            "p060": {
+              "p50": 4.5026000000000295,
+              "p90": 11.136399999999995,
+              "n": 481
+            },
+            "p070": {
+              "p50": 5.502600000000001,
+              "p90": 13.136399999999995,
+              "n": 481
+            },
+            "p080": {
+              "p50": 6.502600000000001,
+              "p90": 15.276800000000023,
+              "n": 481
+            },
+            "p090": {
+              "p50": 7.493399999999994,
+              "p90": 17.349000000000004,
+              "n": 481
+            },
+            "p100": {
+              "p50": 8.493399999999994,
+              "p90": 19.701999999999998,
+              "n": 481
+            }
+          }
+        },
+        {
+          "uSpec": 0.25,
+          "meshes": 7,
+          "name": "kaykit:props",
+          "px": 4482,
+          "satPx": 208,
+          "glossP": 20.046960828061703,
+          "scoreable": true,
+          "rise": {
+            "p060": {
+              "p50": 13.196600000000004,
+              "p90": 21.894600000000025,
+              "n": 208
+            },
+            "p070": {
+              "p50": 15.872800000000012,
+              "p90": 26.094599999999986,
+              "n": 208
+            },
+            "p080": {
+              "p50": 18.684800000000024,
+              "p90": 29.954199999999986,
+              "n": 208
+            },
+            "p090": {
+              "p50": 22.120400000000032,
+              "p90": 34.022999999999996,
+              "n": 208
+            },
+            "p100": {
+              "p50": 24.451600000000013,
+              "p90": 38.03040000000004,
+              "n": 208
+            }
+          }
+        },
+        {
+          "uSpec": 0.16,
+          "meshes": 4,
+          "name": "arch:court:hieroglyph_wall",
+          "px": 55451,
+          "satPx": 125,
+          "glossP": 10.975579711605477,
+          "scoreable": true,
+          "rise": {
+            "p060": {
+              "p50": 5.14439999999999,
+              "p90": 8.931799999999981,
+              "n": 125
+            },
+            "p070": {
+              "p50": 6,
+              "p90": 10.434399999999997,
+              "n": 125
+            },
+            "p080": {
+              "p50": 7.085400000000007,
+              "p90": 12.366199999999992,
+              "n": 125
+            },
+            "p090": {
+              "p50": 8.153599999999983,
+              "p90": 14.647000000000006,
+              "n": 125
+            },
+            "p100": {
+              "p50": 9.628600000000006,
+              "p90": 16.009200000000007,
+              "n": 125
+            }
+          }
+        },
+        {
+          "uSpec": 0.06,
+          "meshes": 4,
+          "name": "sand_ring0",
+          "px": 16868,
+          "satPx": 123,
+          "glossP": 6.487102158862122,
+          "scoreable": true,
+          "rise": {
+            "p060": {
+              "p50": 0,
+              "p90": 0.9999999999999929,
+              "n": 123
+            },
+            "p070": {
+              "p50": 0,
+              "p90": 1.0722000000000094,
+              "n": 123
+            },
+            "p080": {
+              "p50": 0.07219999999998095,
+              "p90": 1.7151999999999958,
+              "n": 123
+            },
+            "p090": {
+              "p50": 0.14039999999999253,
+              "p90": 1.8596000000000146,
+              "n": 123
+            },
+            "p100": {
+              "p50": 0.28480000000000416,
+              "p90": 2.362199999999987,
+              "n": 123
+            }
+          }
+        },
+        {
+          "uSpec": 0.1,
+          "meshes": 16,
+          "name": "paving:court",
+          "px": 70278,
+          "satPx": 35,
+          "glossP": 7.104904276517517,
+          "scoreable": false,
+          "rise": {
+            "p060": {
+              "p50": 0.9999999999999929,
+              "p90": 1.7874000000000052,
+              "n": 35
+            },
+            "p070": {
+              "p50": 1.000000000000007,
+              "p90": 1.8596000000000004,
+              "n": 35
+            },
+            "p080": {
+              "p50": 1.212600000000002,
+              "p90": 2.6469999999999985,
+              "n": 35
+            },
+            "p090": {
+              "p50": 1.5065999999999988,
+              "p90": 2.6469999999999985,
+              "n": 35
+            },
+            "p100": {
+              "p50": 1.787399999999991,
+              "p90": 3.6469999999999914,
+              "n": 35
+            }
+          }
+        },
+        {
+          "uSpec": 0.08,
+          "meshes": 5,
+          "name": "arch:court:sandstone_worn",
+          "px": 26433,
+          "satPx": 17,
+          "glossP": 5.904158720197495,
+          "scoreable": false,
+          "rise": {
+            "p060": {
+              "p50": 0.7151999999999958,
+              "p90": 2,
+              "n": 17
+            },
+            "p070": {
+              "p50": 0.07220000000000937,
+              "p90": 2,
+              "n": 17
+            },
+            "p080": {
+              "p50": 0.7874000000000052,
+              "p90": 2.0722000000000094,
+              "n": 17
+            },
+            "p090": {
+              "p50": 0.7874000000000052,
+              "p90": 2.859599999999986,
+              "n": 17
+            },
+            "p100": {
+              "p50": 0.7874000000000194,
+              "p90": 3.072199999999995,
+              "n": 17
+            }
+          }
+        },
+        {
+          "uSpec": 0.62,
+          "meshes": 3,
+          "name": "arch:court:bronze_dark",
+          "px": 116,
+          "satPx": 11,
+          "glossP": 44.01244083840432,
+          "scoreable": false,
+          "rise": {
+            "p060": {
+              "p50": 25.868799999999993,
+              "p90": 36.70599999999999,
+              "n": 11
+            },
+            "p070": {
+              "p50": 27.941000000000003,
+              "p90": 42.58279999999999,
+              "n": 11
+            },
+            "p080": {
+              "p50": 25.45040000000003,
+              "p90": 47.37020000000001,
+              "n": 11
+            },
+            "p090": {
+              "p50": 31.728399999999993,
+              "p90": 52.22979999999998,
+              "n": 11
+            },
+            "p100": {
+              "p50": 34.1696,
+              "p90": 56.3742,
+              "n": 11
+            }
+          }
+        },
+        {
+          "uSpec": 0.95,
+          "meshes": 14,
+          "name": "hooks:rings",
+          "px": 762,
+          "satPx": 4,
+          "glossP": 67.78973804744994,
+          "scoreable": false,
+          "rise": {
+            "p060": {
+              "p50": 17.57480000000001,
+              "p90": 18.013199999999998,
+              "n": 4
+            },
+            "p070": {
+              "p50": 18.081400000000002,
+              "p90": 22.157600000000016,
+              "n": 4
+            },
+            "p080": {
+              "p50": 25.872799999999998,
+              "p90": 27.941000000000003,
+              "n": 4
+            },
+            "p090": {
+              "p50": 27.800600000000003,
+              "p90": 28.23499999999997,
+              "n": 4
+            },
+            "p100": {
+              "p50": 28.80060000000003,
+              "p90": 30.3112,
+              "n": 4
+            }
+          }
+        },
+        {
+          "uSpec": 0.9,
+          "meshes": 6,
+          "name": "coins",
+          "px": 453,
+          "satPx": 1,
+          "glossP": 59.93057178721378,
+          "scoreable": false,
+          "rise": {
+            "p060": {
+              "p50": -0.35300000000000153,
+              "p90": -0.35300000000000153,
+              "n": 1
+            },
+            "p070": {
+              "p50": 0.8595999999999933,
+              "p90": 0.8595999999999933,
+              "n": 1
+            },
+            "p080": {
+              "p50": 1.8595999999999933,
+              "p90": 1.8595999999999933,
+              "n": 1
+            },
+            "p090": {
+              "p50": 2.787399999999998,
+              "p90": 2.787399999999998,
+              "n": 1
+            },
+            "p100": {
+              "p50": 2.8596000000000075,
+              "p90": 2.8596000000000075,
+              "n": 1
+            }
+          }
+        },
+        {
+          "uSpec": 0.42,
+          "meshes": 3,
+          "name": "arch:court:granite_pink",
+          "px": 115902,
+          "satPx": 0,
+          "glossP": 45.1460113192315,
+          "scoreable": false,
+          "rise": {}
+        },
+        {
+          "uSpec": 0.04,
+          "meshes": 2,
+          "name": "pyramid_105",
+          "px": 28986,
+          "satPx": 0,
+          "glossP": 5.017720251696897,
+          "scoreable": false,
+          "rise": {}
+        },
+        {
+          "uSpec": 0.15,
+          "meshes": 2,
+          "name": "ruin:drums",
+          "px": 2112,
+          "satPx": 0,
+          "glossP": 10.574212715389185,
+          "scoreable": false,
+          "rise": {}
+        },
+        {
+          "uSpec": 0.2,
+          "meshes": 8,
+          "name": "arch:court:ceiling_stars",
+          "px": 7065,
+          "satPx": 0,
+          "glossP": 17.39036565227648,
+          "scoreable": false,
+          "rise": {}
+        },
+        {
+          "uSpec": 0.32,
+          "meshes": 2,
+          "name": "arch:court:limestone_polished",
+          "px": 48705,
+          "satPx": 0,
+          "glossP": 25.95323280816279,
+          "scoreable": false,
+          "rise": {}
+        },
+        {
+          "uSpec": 0.05,
+          "meshes": 3,
+          "name": "arch:court:mudbrick",
+          "px": 4758,
+          "satPx": 0,
+          "glossP": 4.3887281688631745,
+          "scoreable": false,
+          "rise": {}
+        }
+      ],
+      "skin": {
+        "skinPx": 38386,
+        "skinPctFrame": 4.165147569444445,
+        "skinMasked": 4151,
+        "deadZonePct": 14.636094659007899,
+        "bAny": 190283
+      },
+      "g4": {
+        "n": 216,
+        "scoreable": true,
+        "med": {
+          "p060": 12.834400000000016,
+          "p070": 15.523800000000023,
+          "p080": 18.052200000000013,
+          "p090": 21.682000000000002,
+          "p100": 23.822400000000002
+        }
+      },
+      "resolvedPct": 99.10598552370465
+    },
+    {
+      "shot": "temple",
+      "applied": {
+        "base": {
+          "pow": 0,
+          "gain": 1,
+          "key": 0
+        },
+        "off": {
+          "pow": 0,
+          "gain": 0,
+          "key": 0
+        },
+        "p060": {
+          "pow": 0.6,
+          "gain": 1,
+          "key": 0
+        },
+        "p070": {
+          "pow": 0.7,
+          "gain": 1,
+          "key": 0
+        },
+        "p080": {
+          "pow": 0.8,
+          "gain": 1,
+          "key": 0
+        },
+        "p090": {
+          "pow": 0.9,
+          "gain": 1,
+          "key": 0
+        },
+        "p100": {
+          "pow": 1,
+          "gain": 1,
+          "key": 0
+        },
+        "base2": {
+          "pow": 0,
+          "gain": 1,
+          "key": 0
+        }
+      },
+      "census": {
+        "materials": 102,
+        "classes": [
+          {
+            "spec": 0.95,
+            "gloss": 110,
+            "metal": 0.85,
+            "roughness": 1,
+            "count": 14,
+            "names": [
+              "hooks:rings",
+              "arch:pylon:gold_leaf",
+              "arch:tomb:gold_leaf",
+              "guard_body"
+            ]
+          },
+          {
+            "spec": 0.9,
+            "gloss": 96,
+            "metal": 0.85,
+            "roughness": 1,
+            "count": 6,
+            "names": [
+              "coins",
+              "props_gold",
+              "pickup_coins",
+              "treasure_scarab"
+            ]
+          },
+          {
+            "spec": 0.62,
+            "gloss": 72,
+            "metal": 0.85,
+            "roughness": 1,
+            "count": 3,
+            "names": [
+              "arch:court:bronze_dark",
+              "arch:hall:bronze_dark",
+              "arch:pylon:bronze_dark"
+            ]
+          },
+          {
+            "spec": 0.6,
+            "gloss": 48,
+            "metal": 0.85,
+            "roughness": 1,
+            "count": 1,
+            "names": [
+              "props_bronze"
+            ]
+          },
+          {
+            "spec": 0.55,
+            "gloss": 64,
+            "metal": 0.85,
+            "roughness": 1,
+            "count": 4,
+            "names": [
+              "arch:court:hieroglyph_gilded",
+              "arch:hall:hieroglyph_gilded",
+              "arch:pylon:hieroglyph_gilded",
+              "arch:tomb:hieroglyph_gilded"
+            ]
+          },
+          {
+            "spec": 0.42,
+            "gloss": 62,
+            "metal": 0,
+            "roughness": 1,
+            "count": 3,
+            "names": [
+              "arch:court:granite_pink",
+              "arch:hall:granite_pink",
+              "arch:tomb:granite_pink"
+            ]
+          },
+          {
+            "spec": 0.32,
+            "gloss": 46,
+            "metal": 0,
+            "roughness": 1,
+            "count": 2,
+            "names": [
+              "arch:court:limestone_polished",
+              "arch:hall:limestone_polished"
+            ]
+          },
+          {
+            "spec": 0.25,
+            "gloss": 32,
+            "metal": 0,
+            "roughness": 0.62,
+            "count": 7,
+            "names": [
+              "kaykit:props",
+              "slydlrig:mesh",
+              "slydlrig:mesh",
+              "slydlrig:mesh"
+            ]
+          },
+          {
+            "spec": 0.2,
+            "gloss": 30,
+            "metal": 0.85,
+            "roughness": 1,
+            "count": 4,
+            "names": [
+              "arch:court:ceiling_stars",
+              "arch:hall:ceiling_stars",
+              "arch:pylon:ceiling_stars",
+              "arch:tomb:ceiling_stars"
+            ]
+          },
+          {
+            "spec": 0.2,
+            "gloss": 28,
+            "metal": 0,
+            "roughness": 1,
+            "count": 8,
+            "names": [
+              "props_stone",
+              "props_lapis",
+              "props_carnelian",
+              "props_lime"
+            ]
+          },
+          {
+            "spec": 0.2,
+            "gloss": 28,
+            "metal": 0,
+            "roughness": 0.62,
+            "count": 2,
+            "names": [
+              "props_dark",
+              "props_ember"
+            ]
+          },
+          {
+            "spec": 0.16,
+            "gloss": 24,
+            "metal": 0,
+            "roughness": 1,
+            "count": 4,
+            "names": [
+              "arch:court:hieroglyph_wall",
+              "arch:hall:hieroglyph_wall",
+              "arch:pylon:hieroglyph_wall",
+              "arch:tomb:hieroglyph_wall"
+            ]
+          },
+          {
+            "spec": 0.15,
+            "gloss": 22,
+            "metal": 0,
+            "roughness": 1,
+            "count": 2,
+            "names": [
+              "ruin:drums",
+              "arch:hall:column_papyrus"
+            ]
+          },
+          {
+            "spec": 0.14,
+            "gloss": 20,
+            "metal": 0,
+            "roughness": 0.62,
+            "count": 3,
+            "names": []
+          },
+          {
+            "spec": 0.14,
+            "gloss": 20,
+            "metal": 0,
+            "roughness": 1,
+            "count": 3,
+            "names": [
+              "arch:court:sandstone_block",
+              "arch:hall:sandstone_block",
+              "arch:tomb:sandstone_block"
+            ]
+          },
+          {
+            "spec": 0.1,
+            "gloss": 32,
+            "metal": 0,
+            "roughness": 0.62,
+            "count": 1,
+            "names": []
+          },
+          {
+            "spec": 0.1,
+            "gloss": 16,
+            "metal": 0,
+            "roughness": 1,
+            "count": 16,
+            "names": [
+              "paving:court",
+              "paving:hall",
+              "paving:tomb",
+              "arch:court:paving_courtyard"
+            ]
+          },
+          {
+            "spec": 0.08,
+            "gloss": 12,
+            "metal": 0,
+            "roughness": 0.62,
+            "count": 3,
+            "names": []
+          },
+          {
+            "spec": 0.08,
+            "gloss": 14,
+            "metal": 0,
+            "roughness": 1,
+            "count": 5,
+            "names": [
+              "arch:court:sandstone_worn",
+              "arch:hall:sandstone_worn",
+              "arch:pylon:sandstone_worn",
+              "arch:tomb:sandstone_worn"
+            ]
+          },
+          {
+            "spec": 0.06,
+            "gloss": 12,
+            "metal": 0,
+            "roughness": 0.62,
+            "count": 4,
+            "names": [
+              "sand_ring0",
+              "sand_ring1",
+              "sand_ring2",
+              "sand_ring3"
+            ]
+          },
+          {
+            "spec": 0.06,
+            "gloss": 8,
+            "metal": 0,
+            "roughness": 1,
+            "count": 2,
+            "names": [
+              "arch:court:rope_fibre",
+              "arch:hall:rope_fibre"
+            ]
+          },
+          {
+            "spec": 0.05,
+            "gloss": 10,
+            "metal": 0,
+            "roughness": 1,
+            "count": 3,
+            "names": [
+              "arch:court:mudbrick",
+              "arch:tomb:mudbrick",
+              "arch:hall:mudbrick"
+            ]
+          },
+          {
+            "spec": 0.04,
+            "gloss": 8,
+            "metal": 0,
+            "roughness": 0.62,
+            "count": 2,
+            "names": [
+              "pyramid_105",
+              "pyramid_72"
+            ]
+          }
+        ]
+      },
+      "stats": {
+        "base": {
+          "n": 921600,
+          "mean": 95.29266378468688,
+          "p1": 31,
+          "p50": 89,
+          "p90": 145,
+          "p99": 181,
+          "p999": 195,
+          "max": 230.2074,
+          "over200": 0.06987847222222222,
+          "over230": 0.00010850694444444444,
+          "over250": 0,
+          "over230px": 1,
+          "over250px": 0
+        },
+        "off": {
+          "n": 921600,
+          "mean": 95.27556133459981,
+          "p1": 31,
+          "p50": 89,
+          "p90": 145,
+          "p99": 181,
+          "p999": 195,
+          "max": 230.2074,
+          "over200": 0.0656467013888889,
+          "over230": 0.00010850694444444444,
+          "over250": 0,
+          "over230px": 1,
+          "over250px": 0
+        },
+        "p060": {
+          "n": 921600,
+          "mean": 95.30460803143113,
+          "p1": 31,
+          "p50": 89,
+          "p90": 145,
+          "p99": 181,
+          "p999": 196,
+          "max": 230.2074,
+          "over200": 0.0769314236111111,
+          "over230": 0.00010850694444444444,
+          "over250": 0,
+          "over230px": 1,
+          "over250px": 0
+        },
+        "p070": {
+          "n": 921600,
+          "mean": 95.30729740621409,
+          "p1": 31,
+          "p50": 89,
+          "p90": 145,
+          "p99": 181,
+          "p999": 197,
+          "max": 230.2074,
+          "over200": 0.07877604166666667,
+          "over230": 0.00010850694444444444,
+          "over250": 0,
+          "over230px": 1,
+          "over250px": 0
+        },
+        "p080": {
+          "n": 921600,
+          "mean": 95.31037454249868,
+          "p1": 31,
+          "p50": 89,
+          "p90": 145,
+          "p99": 181,
+          "p999": 197,
+          "max": 230.2074,
+          "over200": 0.08072916666666667,
+          "over230": 0.00010850694444444444,
+          "over250": 0,
+          "over230px": 1,
+          "over250px": 0
+        },
+        "p090": {
+          "n": 921600,
+          "mean": 95.31358914731642,
+          "p1": 31,
+          "p50": 89,
+          "p90": 145,
+          "p99": 181,
+          "p999": 197,
+          "max": 230.2074,
+          "over200": 0.08257378472222222,
+          "over230": 0.00010850694444444444,
+          "over250": 0,
+          "over230px": 1,
+          "over250px": 0
+        },
+        "p100": {
+          "n": 921600,
+          "mean": 95.31701680508554,
+          "p1": 31,
+          "p50": 89,
+          "p90": 145,
+          "p99": 181,
+          "p999": 197,
+          "max": 230.2074,
+          "over200": 0.0849609375,
+          "over230": 0.00010850694444444444,
+          "over250": 0,
+          "over230px": 1,
+          "over250px": 0
+        },
+        "base2": {
+          "n": 921600,
+          "mean": 95.29266378468688,
+          "p1": 31,
+          "p50": 89,
+          "p90": 145,
+          "p99": 181,
+          "p999": 195,
+          "max": 230.2074,
+          "over200": 0.06987847222222222,
+          "over230": 0.00010850694444444444,
+          "over250": 0,
+          "over230px": 1,
+          "over250px": 0
+        }
+      },
+      "diffs": {
+        "null": {
+          "px": 0,
+          "pct": 0,
+          "maxAbsL": 0
+        },
+        "off": {
+          "px": 8125,
+          "pct": 0.8816189236111112,
+          "maxAbsL": 45.61759999999998
+        },
+        "p060": {
+          "px": 7251,
+          "pct": 0.7867838541666666,
+          "maxAbsL": 31.0916
+        },
+        "p070": {
+          "px": 7597,
+          "pct": 0.8243272569444444,
+          "maxAbsL": 28.620599999999982
+        },
+        "p080": {
+          "px": 7952,
+          "pct": 0.8628472222222222,
+          "maxAbsL": 35.89220000000002
+        },
+        "p090": {
+          "px": 8200,
+          "pct": 0.8897569444444444,
+          "maxAbsL": 46.36319999999999
+        },
+        "p100": {
+          "px": 8409,
+          "pct": 0.9124348958333334,
+          "maxAbsL": 42.86980000000001
+        }
+      },
+      "calibShare": 27.238932291666668,
+      "incidence": {
+        "toonPct": 27.238932291666668,
+        "toonPx": 251034,
+        "gatesAnyPct": 0.9488754511341093,
+        "gatesOpenPct": 0.6477210258371376,
+        "jointSatPct": 0.36170399228789724,
+        "jointSatPx": 908
+      },
+      "classes": [
+        {
+          "uSpec": 0.04,
+          "meshes": 2,
+          "name": "pyramid_105",
+          "px": 822,
+          "satPx": 822,
+          "glossP": 5.019607843137255,
+          "scoreable": true,
+          "rise": {
+            "p060": {
+              "p50": 0.212600000000009,
+              "p90": 0.7874000000000194,
+              "n": 822
+            },
+            "p070": {
+              "p50": 0.28479999999998995,
+              "p90": 0.9277999999999906,
+              "n": 822
+            },
+            "p080": {
+              "p50": 0.7151999999999816,
+              "p90": 0.9999999999999716,
+              "n": 822
+            },
+            "p090": {
+              "p50": 0.7873999999999626,
+              "p90": 0.9999999999999716,
+              "n": 822
+            },
+            "p100": {
+              "p50": 0.787399999999991,
+              "p90": 1,
+              "n": 822
+            }
+          }
+        },
+        {
+          "uSpec": 0.16,
+          "meshes": 4,
+          "name": "arch:court:hieroglyph_wall",
+          "px": 51776,
+          "satPx": 72,
+          "glossP": 11.042303497418745,
+          "scoreable": true,
+          "rise": {
+            "p060": {
+              "p50": 5.855600000000003,
+              "p90": 10.858400000000017,
+              "n": 72
+            },
+            "p070": {
+              "p50": 6.944999999999993,
+              "p90": 13.143200000000007,
+              "n": 72
+            },
+            "p080": {
+              "p50": 8.2808,
+              "p90": 14.857200000000006,
+              "n": 72
+            },
+            "p090": {
+              "p50": 9.519800000000004,
+              "p90": 16.929400000000015,
+              "n": 72
+            },
+            "p100": {
+              "p50": 10.7834,
+              "p90": 19.716800000000006,
+              "n": 72
+            }
+          }
+        },
+        {
+          "uSpec": 0.15,
+          "meshes": 2,
+          "name": "ruin:drums",
+          "px": 159586,
+          "satPx": 7,
+          "glossP": 10.744117266171317,
+          "scoreable": false,
+          "rise": {
+            "p060": {
+              "p50": 2.7874000000000194,
+              "p90": 5.366199999999978,
+              "n": 7
+            },
+            "p070": {
+              "p50": 3.71520000000001,
+              "p90": 6.225800000000007,
+              "n": 7
+            },
+            "p080": {
+              "p50": 4.5026000000000295,
+              "p90": 7.013199999999969,
+              "n": 7
+            },
+            "p090": {
+              "p50": 5.2900000000000205,
+              "p90": 8.15759999999996,
+              "n": 7
+            },
+            "p100": {
+              "p50": 6.2900000000000205,
+              "p90": 8.944999999999979,
+              "n": 7
+            }
+          }
+        },
+        {
+          "uSpec": 0.32,
+          "meshes": 2,
+          "name": "arch:court:limestone_polished",
+          "px": 8451,
+          "satPx": 0,
+          "glossP": 25.61716562142547,
+          "scoreable": false,
+          "rise": {}
+        },
+        {
+          "uSpec": 0.2,
+          "meshes": 8,
+          "name": "arch:court:ceiling_stars",
+          "px": 2978,
+          "satPx": 0,
+          "glossP": 17.30315121347397,
+          "scoreable": false,
+          "rise": {}
+        },
+        {
+          "uSpec": 0.14,
+          "meshes": 3,
+          "name": "arch:court:sandstone_block",
+          "px": 25307,
+          "satPx": 0,
+          "glossP": 8.987849134200644,
+          "scoreable": false,
+          "rise": {}
+        },
+        {
+          "uSpec": 0.06,
+          "meshes": 4,
+          "name": "sand_ring0",
+          "px": 1083,
+          "satPx": 0,
+          "glossP": 4.022175148914598,
+          "scoreable": false,
+          "rise": {}
+        },
+        {
+          "uSpec": 0.1,
+          "meshes": 16,
+          "name": "paving:court",
+          "px": 23,
+          "satPx": 0,
+          "glossP": 7.594884910485933,
+          "scoreable": false,
+          "rise": {}
+        },
+        {
+          "uSpec": 0.08,
+          "meshes": 5,
+          "name": "arch:court:sandstone_worn",
+          "px": 17,
+          "satPx": 0,
+          "glossP": 5.787312572087658,
+          "scoreable": false,
+          "rise": {}
+        },
+        {
+          "uSpec": 0.25,
+          "meshes": 7,
+          "name": "kaykit:props",
+          "px": 13,
+          "satPx": 0,
+          "glossP": 20.889291101055807,
+          "scoreable": false,
+          "rise": {}
+        }
+      ],
+      "skin": {
+        "skinPx": 12685,
+        "skinPctFrame": 1.3764105902777777,
+        "skinMasked": 0,
+        "deadZonePct": 3.7088133360340545,
+        "bAny": 626993
+      },
+      "g4": {
+        "n": 0,
+        "scoreable": false,
+        "med": {
+          "p060": null,
+          "p070": null,
+          "p080": null,
+          "p090": null,
+          "p100": null
+        }
+      },
+      "resolvedPct": 99.61041133870313
+    },
+    {
+      "shot": "courtyard",
+      "applied": {
+        "base": {
+          "pow": 0,
+          "gain": 1,
+          "key": 0
+        },
+        "off": {
+          "pow": 0,
+          "gain": 0,
+          "key": 0
+        },
+        "p060": {
+          "pow": 0.6,
+          "gain": 1,
+          "key": 0
+        },
+        "p070": {
+          "pow": 0.7,
+          "gain": 1,
+          "key": 0
+        },
+        "p080": {
+          "pow": 0.8,
+          "gain": 1,
+          "key": 0
+        },
+        "p090": {
+          "pow": 0.9,
+          "gain": 1,
+          "key": 0
+        },
+        "p100": {
+          "pow": 1,
+          "gain": 1,
+          "key": 0
+        },
+        "base2": {
+          "pow": 0,
+          "gain": 1,
+          "key": 0
+        }
+      },
+      "census": {
+        "materials": 102,
+        "classes": [
+          {
+            "spec": 0.95,
+            "gloss": 110,
+            "metal": 0.85,
+            "roughness": 1,
+            "count": 14,
+            "names": [
+              "hooks:rings",
+              "arch:pylon:gold_leaf",
+              "arch:tomb:gold_leaf",
+              "guard_body"
+            ]
+          },
+          {
+            "spec": 0.9,
+            "gloss": 96,
+            "metal": 0.85,
+            "roughness": 1,
+            "count": 6,
+            "names": [
+              "coins",
+              "props_gold",
+              "pickup_coins",
+              "treasure_scarab"
+            ]
+          },
+          {
+            "spec": 0.62,
+            "gloss": 72,
+            "metal": 0.85,
+            "roughness": 1,
+            "count": 3,
+            "names": [
+              "arch:court:bronze_dark",
+              "arch:hall:bronze_dark",
+              "arch:pylon:bronze_dark"
+            ]
+          },
+          {
+            "spec": 0.6,
+            "gloss": 48,
+            "metal": 0.85,
+            "roughness": 1,
+            "count": 1,
+            "names": [
+              "props_bronze"
+            ]
+          },
+          {
+            "spec": 0.55,
+            "gloss": 64,
+            "metal": 0.85,
+            "roughness": 1,
+            "count": 4,
+            "names": [
+              "arch:court:hieroglyph_gilded",
+              "arch:hall:hieroglyph_gilded",
+              "arch:pylon:hieroglyph_gilded",
+              "arch:tomb:hieroglyph_gilded"
+            ]
+          },
+          {
+            "spec": 0.42,
+            "gloss": 62,
+            "metal": 0,
+            "roughness": 1,
+            "count": 3,
+            "names": [
+              "arch:court:granite_pink",
+              "arch:hall:granite_pink",
+              "arch:tomb:granite_pink"
+            ]
+          },
+          {
+            "spec": 0.32,
+            "gloss": 46,
+            "metal": 0,
+            "roughness": 1,
+            "count": 2,
+            "names": [
+              "arch:court:limestone_polished",
+              "arch:hall:limestone_polished"
+            ]
+          },
+          {
+            "spec": 0.25,
+            "gloss": 32,
+            "metal": 0,
+            "roughness": 0.62,
+            "count": 7,
+            "names": [
+              "kaykit:props",
+              "slydlrig:mesh",
+              "slydlrig:mesh",
+              "slydlrig:mesh"
+            ]
+          },
+          {
+            "spec": 0.2,
+            "gloss": 30,
+            "metal": 0.85,
+            "roughness": 1,
+            "count": 4,
+            "names": [
+              "arch:court:ceiling_stars",
+              "arch:hall:ceiling_stars",
+              "arch:pylon:ceiling_stars",
+              "arch:tomb:ceiling_stars"
+            ]
+          },
+          {
+            "spec": 0.2,
+            "gloss": 28,
+            "metal": 0,
+            "roughness": 1,
+            "count": 8,
+            "names": [
+              "props_stone",
+              "props_lapis",
+              "props_carnelian",
+              "props_lime"
+            ]
+          },
+          {
+            "spec": 0.2,
+            "gloss": 28,
+            "metal": 0,
+            "roughness": 0.62,
+            "count": 2,
+            "names": [
+              "props_dark",
+              "props_ember"
+            ]
+          },
+          {
+            "spec": 0.16,
+            "gloss": 24,
+            "metal": 0,
+            "roughness": 1,
+            "count": 4,
+            "names": [
+              "arch:court:hieroglyph_wall",
+              "arch:hall:hieroglyph_wall",
+              "arch:pylon:hieroglyph_wall",
+              "arch:tomb:hieroglyph_wall"
+            ]
+          },
+          {
+            "spec": 0.15,
+            "gloss": 22,
+            "metal": 0,
+            "roughness": 1,
+            "count": 2,
+            "names": [
+              "ruin:drums",
+              "arch:hall:column_papyrus"
+            ]
+          },
+          {
+            "spec": 0.14,
+            "gloss": 20,
+            "metal": 0,
+            "roughness": 0.62,
+            "count": 3,
+            "names": []
+          },
+          {
+            "spec": 0.14,
+            "gloss": 20,
+            "metal": 0,
+            "roughness": 1,
+            "count": 3,
+            "names": [
+              "arch:court:sandstone_block",
+              "arch:hall:sandstone_block",
+              "arch:tomb:sandstone_block"
+            ]
+          },
+          {
+            "spec": 0.1,
+            "gloss": 32,
+            "metal": 0,
+            "roughness": 0.62,
+            "count": 1,
+            "names": []
+          },
+          {
+            "spec": 0.1,
+            "gloss": 16,
+            "metal": 0,
+            "roughness": 1,
+            "count": 16,
+            "names": [
+              "paving:court",
+              "paving:hall",
+              "paving:tomb",
+              "arch:court:paving_courtyard"
+            ]
+          },
+          {
+            "spec": 0.08,
+            "gloss": 12,
+            "metal": 0,
+            "roughness": 0.62,
+            "count": 3,
+            "names": []
+          },
+          {
+            "spec": 0.08,
+            "gloss": 14,
+            "metal": 0,
+            "roughness": 1,
+            "count": 5,
+            "names": [
+              "arch:court:sandstone_worn",
+              "arch:hall:sandstone_worn",
+              "arch:pylon:sandstone_worn",
+              "arch:tomb:sandstone_worn"
+            ]
+          },
+          {
+            "spec": 0.06,
+            "gloss": 12,
+            "metal": 0,
+            "roughness": 0.62,
+            "count": 4,
+            "names": [
+              "sand_ring0",
+              "sand_ring1",
+              "sand_ring2",
+              "sand_ring3"
+            ]
+          },
+          {
+            "spec": 0.06,
+            "gloss": 8,
+            "metal": 0,
+            "roughness": 1,
+            "count": 2,
+            "names": [
+              "arch:court:rope_fibre",
+              "arch:hall:rope_fibre"
+            ]
+          },
+          {
+            "spec": 0.05,
+            "gloss": 10,
+            "metal": 0,
+            "roughness": 1,
+            "count": 3,
+            "names": [
+              "arch:court:mudbrick",
+              "arch:tomb:mudbrick",
+              "arch:hall:mudbrick"
+            ]
+          },
+          {
+            "spec": 0.04,
+            "gloss": 8,
+            "metal": 0,
+            "roughness": 0.62,
+            "count": 2,
+            "names": [
+              "pyramid_105",
+              "pyramid_72"
+            ]
+          }
+        ]
+      },
+      "stats": {
+        "base": {
+          "n": 921600,
+          "mean": 104.29640496956986,
+          "p1": 23,
+          "p50": 104,
+          "p90": 160,
+          "p99": 181,
+          "p999": 210,
+          "max": 237.172,
+          "over200": 0.22059461805555555,
+          "over230": 0.003146701388888889,
+          "over250": 0,
+          "over230px": 29,
+          "over250px": 0
+        },
+        "off": {
+          "n": 921600,
+          "mean": 103.73130838470856,
+          "p1": 23,
+          "p50": 103,
+          "p90": 159,
+          "p99": 179,
+          "p999": 206,
+          "max": 237.172,
+          "over200": 0.16764322916666666,
+          "over230": 0.003146701388888889,
+          "over250": 0,
+          "over230px": 29,
+          "over250px": 0
+        },
+        "p060": {
+          "n": 921600,
+          "mean": 104.82603936042223,
+          "p1": 23,
+          "p50": 104,
+          "p90": 160,
+          "p99": 188,
+          "p999": 219,
+          "max": 249.40919999999997,
+          "over200": 0.6678602430555556,
+          "over230": 0.039605034722222224,
+          "over250": 0,
+          "over230px": 365,
+          "over250px": 0
+        },
+        "p070": {
+          "n": 921600,
+          "mean": 105.07219812040447,
+          "p1": 24,
+          "p50": 104,
+          "p90": 160,
+          "p99": 189,
+          "p999": 225,
+          "max": 251.0562,
+          "over200": 0.7027994791666666,
+          "over230": 0.05067274305555555,
+          "over250": 0.00010850694444444444,
+          "over230px": 467,
+          "over250px": 1
+        },
+        "p080": {
+          "n": 921600,
+          "mean": 105.4399936073841,
+          "p1": 24,
+          "p50": 104,
+          "p90": 160,
+          "p99": 190,
+          "p999": 231,
+          "max": 253.4184,
+          "over200": 0.7428385416666666,
+          "over230": 0.14973958333333334,
+          "over250": 0.00021701388888888888,
+          "over230px": 1380,
+          "over250px": 2
+        },
+        "p090": {
+          "n": 921600,
+          "mean": 105.87639730247908,
+          "p1": 24,
+          "p50": 105,
+          "p90": 161,
+          "p99": 192,
+          "p999": 236,
+          "max": 254.35019999999997,
+          "over200": 0.7866753472222222,
+          "over230": 0.4038628472222222,
+          "over250": 0.00043402777777777775,
+          "over230px": 3722,
+          "over250px": 4
+        },
+        "p100": {
+          "n": 921600,
+          "mean": 106.26979330746727,
+          "p1": 24,
+          "p50": 105,
+          "p90": 161,
+          "p99": 194,
+          "p999": 239,
+          "max": 254.56679999999997,
+          "over200": 0.8257378472222222,
+          "over230": 0.4826388888888889,
+          "over250": 0.0008680555555555555,
+          "over230px": 4448,
+          "over250px": 8
+        },
+        "base2": {
+          "n": 921600,
+          "mean": 104.29640496956986,
+          "p1": 23,
+          "p50": 104,
+          "p90": 160,
+          "p99": 181,
+          "p999": 210,
+          "max": 237.172,
+          "over200": 0.22059461805555555,
+          "over230": 0.003146701388888889,
+          "over250": 0,
+          "over230px": 29,
+          "over250px": 0
+        }
+      },
+      "diffs": {
+        "null": {
+          "px": 0,
+          "pct": 0,
+          "maxAbsL": 0
+        },
+        "off": {
+          "px": 73681,
+          "pct": 7.994900173611111,
+          "maxAbsL": 114.5526
+        },
+        "p060": {
+          "px": 112550,
+          "pct": 12.212456597222221,
+          "maxAbsL": 92.04960000000001
+        },
+        "p070": {
+          "px": 147750,
+          "pct": 16.031901041666668,
+          "maxAbsL": 103.64820000000002
+        },
+        "p080": {
+          "px": 173024,
+          "pct": 18.774305555555557,
+          "maxAbsL": 111.35820000000001
+        },
+        "p090": {
+          "px": 193714,
+          "pct": 21.01931423611111,
+          "maxAbsL": 121.86139999999999
+        },
+        "p100": {
+          "px": 211784,
+          "pct": 22.98003472222222,
+          "maxAbsL": 136.66599999999997
+        }
+      },
+      "calibShare": 15.005208333333334,
+      "incidence": {
+        "toonPct": 15.005208333333334,
+        "toonPx": 138288,
+        "gatesAnyPct": 23.804668517875736,
+        "gatesOpenPct": 18.566325349994216,
+        "jointSatPct": 3.873799606618072,
+        "jointSatPx": 5357
+      },
+      "classes": [
+        {
+          "uSpec": 0.42,
+          "meshes": 3,
+          "name": "arch:court:granite_pink",
+          "px": 14060,
+          "satPx": 4489,
+          "glossP": 45.018028059018775,
+          "scoreable": true,
+          "rise": {
+            "p060": {
+              "p50": 36.059199999999976,
+              "p90": 38.339999999999975,
+              "n": 4489
+            },
+            "p070": {
+              "p50": 42.571,
+              "p90": 44.99619999999999,
+              "n": 4489
+            },
+            "p080": {
+              "p50": 50.00540000000004,
+              "p90": 52.78879999999998,
+              "n": 4489
+            },
+            "p090": {
+              "p50": 55.86900000000003,
+              "p90": 60.29539999999997,
+              "n": 4489
+            },
+            "p100": {
+              "p50": 59.09599999999995,
+              "p90": 64.72460000000001,
+              "n": 4489
+            }
+          }
+        },
+        {
+          "uSpec": 0.06,
+          "meshes": 4,
+          "name": "sand_ring0",
+          "px": 2530,
+          "satPx": 572,
+          "glossP": 4.50475083313958,
+          "scoreable": true,
+          "rise": {
+            "p060": {
+              "p50": 0.7151999999999958,
+              "p90": 2.4343999999999966,
+              "n": 572
+            },
+            "p070": {
+              "p50": 0.787399999999991,
+              "p90": 3.072199999999995,
+              "n": 572
+            },
+            "p080": {
+              "p50": 0.8596000000000004,
+              "p90": 4.57480000000001,
+              "n": 572
+            },
+            "p090": {
+              "p50": 0.9999999999999858,
+              "p90": 5.859600000000015,
+              "n": 572
+            },
+            "p100": {
+              "p50": 1.0721999999999952,
+              "p90": 6.863600000000005,
+              "n": 572
+            }
+          }
+        },
+        {
+          "uSpec": 0.2,
+          "meshes": 8,
+          "name": "arch:court:ceiling_stars",
+          "px": 42675,
+          "satPx": 115,
+          "glossP": 20.075243759835512,
+          "scoreable": true,
+          "rise": {
+            "p060": {
+              "p50": 22.75200000000001,
+              "p90": 24.75199999999998,
+              "n": 115
+            },
+            "p070": {
+              "p50": 27.045999999999992,
+              "p90": 28.901600000000002,
+              "n": 115
+            },
+            "p080": {
+              "p50": 31.195600000000013,
+              "p90": 33.33600000000001,
+              "n": 115
+            },
+            "p090": {
+              "p50": 34.914800000000014,
+              "p90": 37.983000000000004,
+              "n": 115
+            },
+            "p100": {
+              "p50": 39.204800000000006,
+              "p90": 42.204800000000006,
+              "n": 115
+            }
+          }
+        },
+        {
+          "uSpec": 0.9,
+          "meshes": 6,
+          "name": "coins",
+          "px": 18593,
+          "satPx": 71,
+          "glossP": 59.58576609582143,
+          "scoreable": true,
+          "rise": {
+            "p060": {
+              "p50": 27.370199999999997,
+              "p90": 45.41379999999998,
+              "n": 71
+            },
+            "p070": {
+              "p50": 35.605199999999996,
+              "p90": 51.6396,
+              "n": 71
+            },
+            "p080": {
+              "p50": 42.69859999999997,
+              "p90": 55.43099999999998,
+              "n": 71
+            },
+            "p090": {
+              "p50": 45.77879999999999,
+              "p90": 63.15879999999997,
+              "n": 71
+            },
+            "p100": {
+              "p50": 48.06880000000001,
+              "p90": 70.9032,
+              "n": 71
+            }
+          }
+        },
+        {
+          "uSpec": 0.32,
+          "meshes": 2,
+          "name": "arch:court:limestone_polished",
+          "px": 2099,
+          "satPx": 47,
+          "glossP": 26.30427561210287,
+          "scoreable": false,
+          "rise": {
+            "p060": {
+              "p50": 2.1443999999999903,
+              "p90": 4.787400000000005,
+              "n": 47
+            },
+            "p070": {
+              "p50": 2.7191999999999723,
+              "p90": 6,
+              "n": 47
+            },
+            "p080": {
+              "p50": 2.9318000000000097,
+              "p90": 6.787400000000005,
+              "n": 47
+            },
+            "p090": {
+              "p50": 3.787399999999991,
+              "p90": 6.003999999999991,
+              "n": 47
+            },
+            "p100": {
+              "p50": 4.791399999999982,
+              "p90": 7.8636000000000195,
+              "n": 47
+            }
+          }
+        },
+        {
+          "uSpec": 0.08,
+          "meshes": 5,
+          "name": "arch:court:sandstone_worn",
+          "px": 10609,
+          "satPx": 32,
+          "glossP": 6.088066550967639,
+          "scoreable": false,
+          "rise": {
+            "p060": {
+              "p50": 0.07220000000000937,
+              "p90": 0.9277999999999906,
+              "n": 32
+            },
+            "p070": {
+              "p50": 0.71520000000001,
+              "p90": 0.8596000000000288,
+              "n": 32
+            },
+            "p080": {
+              "p50": 0.787399999999991,
+              "p90": 1.0000000000000284,
+              "n": 32
+            },
+            "p090": {
+              "p50": 0.8595999999999862,
+              "p90": 1.787399999999991,
+              "n": 32
+            },
+            "p100": {
+              "p50": 1.0722000000000094,
+              "p90": 1.9317999999999813,
+              "n": 32
+            }
+          }
+        },
+        {
+          "uSpec": 0.95,
+          "meshes": 14,
+          "name": "hooks:rings",
+          "px": 895,
+          "satPx": 16,
+          "glossP": 66.70413845985321,
+          "scoreable": false,
+          "rise": {
+            "p060": {
+              "p50": 9.140399999999971,
+              "p90": 14.64700000000002,
+              "n": 16
+            },
+            "p070": {
+              "p50": 10.2808,
+              "p90": 18,
+              "n": 16
+            },
+            "p080": {
+              "p50": 11.99600000000001,
+              "p90": 23.36220000000003,
+              "n": 16
+            },
+            "p090": {
+              "p50": 13.06819999999999,
+              "p90": 25.22180000000003,
+              "n": 16
+            },
+            "p100": {
+              "p50": 13.1404,
+              "p90": 26.08140000000003,
+              "n": 16
+            }
+          }
+        },
+        {
+          "uSpec": 0.55,
+          "meshes": 4,
+          "name": "arch:court:hieroglyph_gilded",
+          "px": 14081,
+          "satPx": 11,
+          "glossP": 38.55326897181712,
+          "scoreable": false,
+          "rise": {
+            "p060": {
+              "p50": 23.311199999999985,
+              "p90": 27.745599999999996,
+              "n": 11
+            },
+            "p070": {
+              "p50": 26.242999999999967,
+              "p90": 31.677400000000006,
+              "n": 11
+            },
+            "p080": {
+              "p50": 29.817800000000034,
+              "p90": 32.53299999999999,
+              "n": 11
+            },
+            "p090": {
+              "p50": 34.3244,
+              "p90": 41.67739999999998,
+              "n": 11
+            },
+            "p100": {
+              "p50": 41.39659999999998,
+              "p90": 49.03959999999998,
+              "n": 11
+            }
+          }
+        },
+        {
+          "uSpec": 0.25,
+          "meshes": 7,
+          "name": "kaykit:props",
+          "px": 245,
+          "satPx": 3,
+          "glossP": 20.264873949579833,
+          "scoreable": false,
+          "rise": {
+            "p060": {
+              "p50": 12.544399999999996,
+              "p90": 17.5146,
+              "n": 3
+            },
+            "p070": {
+              "p50": 14.825199999999995,
+              "p90": 21.093399999999974,
+              "n": 3
+            },
+            "p080": {
+              "p50": 17.105999999999995,
+              "p90": 23.744399999999985,
+              "n": 3
+            },
+            "p090": {
+              "p50": 20.101999999999975,
+              "p90": 25.323199999999957,
+              "n": 3
+            },
+            "p100": {
+              "p50": 22.595399999999984,
+              "p90": 27.90199999999996,
+              "n": 3
+            }
+          }
+        },
+        {
+          "uSpec": 0.62,
+          "meshes": 3,
+          "name": "arch:court:bronze_dark",
+          "px": 211,
+          "satPx": 1,
+          "glossP": 46.18515007898894,
+          "scoreable": false,
+          "rise": {
+            "p060": {
+              "p50": -4.353000000000009,
+              "p90": -4.353000000000009,
+              "n": 1
+            },
+            "p070": {
+              "p50": -9.64179999999999,
+              "p90": -9.64179999999999,
+              "n": 1
+            },
+            "p080": {
+              "p50": -15.14840000000001,
+              "p90": -15.14840000000001,
+              "n": 1
+            },
+            "p090": {
+              "p50": -13.501400000000018,
+              "p90": -13.501400000000018,
+              "n": 1
+            },
+            "p100": {
+              "p50": -7.778199999999998,
+              "p90": -7.778199999999998,
+              "n": 1
+            }
+          }
+        },
+        {
+          "uSpec": 0.04,
+          "meshes": 2,
+          "name": "pyramid_105",
+          "px": 6428,
+          "satPx": 0,
+          "glossP": 5.017343240967825,
+          "scoreable": false,
+          "rise": {}
+        },
+        {
+          "uSpec": 0.16,
+          "meshes": 4,
+          "name": "arch:court:hieroglyph_wall",
+          "px": 8423,
+          "satPx": 0,
+          "glossP": 11.049394631413055,
+          "scoreable": false,
+          "rise": {}
+        },
+        {
+          "uSpec": 0.05,
+          "meshes": 3,
+          "name": "arch:court:mudbrick",
+          "px": 24,
+          "satPx": 0,
+          "glossP": 5.249673202614379,
+          "scoreable": false,
+          "rise": {}
+        },
+        {
+          "uSpec": 0.1,
+          "meshes": 16,
+          "name": "paving:court",
+          "px": 5718,
+          "satPx": 0,
+          "glossP": 7.408618123709785,
+          "scoreable": false,
+          "rise": {}
+        },
+        {
+          "uSpec": 0.14,
+          "meshes": 3,
+          "name": "arch:court:sandstone_block",
+          "px": 8368,
+          "satPx": 0,
+          "glossP": 9.011899673827466,
+          "scoreable": false,
+          "rise": {}
+        },
+        {
+          "uSpec": 0.6,
+          "meshes": 1,
+          "name": "props_bronze",
+          "px": 8,
+          "satPx": 0,
+          "glossP": 46.05490196078431,
+          "scoreable": false,
+          "rise": {}
+        },
+        {
+          "uSpec": 0.15,
+          "meshes": 2,
+          "name": "ruin:drums",
+          "px": 41,
+          "satPx": 0,
+          "glossP": 10.455475848876135,
+          "scoreable": false,
+          "rise": {}
+        }
+      ],
+      "skin": {
+        "skinPx": 199104,
+        "skinPctFrame": 21.604166666666668,
+        "skinMasked": 1140,
+        "deadZonePct": 26.89714393898415,
+        "bAny": 739480
+      },
+      "g4": {
+        "n": 185,
+        "scoreable": true,
+        "med": {
+          "p060": 0,
+          "p070": 0,
+          "p080": 0,
+          "p090": 0,
+          "p100": 0
+        }
+      },
+      "resolvedPct": 97.62813837787805
+    },
+    {
+      "shot": "sly-closeup",
+      "applied": {
+        "base": {
+          "pow": 0,
+          "gain": 1,
+          "key": 0
+        },
+        "off": {
+          "pow": 0,
+          "gain": 0,
+          "key": 0
+        },
+        "p060": {
+          "pow": 0.6,
+          "gain": 1,
+          "key": 0
+        },
+        "p070": {
+          "pow": 0.7,
+          "gain": 1,
+          "key": 0
+        },
+        "p080": {
+          "pow": 0.8,
+          "gain": 1,
+          "key": 0
+        },
+        "p090": {
+          "pow": 0.9,
+          "gain": 1,
+          "key": 0
+        },
+        "p100": {
+          "pow": 1,
+          "gain": 1,
+          "key": 0
+        },
+        "base2": {
+          "pow": 0,
+          "gain": 1,
+          "key": 0
+        }
+      },
+      "census": {
+        "materials": 102,
+        "classes": [
+          {
+            "spec": 0.95,
+            "gloss": 110,
+            "metal": 0.85,
+            "roughness": 1,
+            "count": 14,
+            "names": [
+              "hooks:rings",
+              "arch:pylon:gold_leaf",
+              "arch:tomb:gold_leaf",
+              "guard_body"
+            ]
+          },
+          {
+            "spec": 0.9,
+            "gloss": 96,
+            "metal": 0.85,
+            "roughness": 1,
+            "count": 6,
+            "names": [
+              "coins",
+              "props_gold",
+              "pickup_coins",
+              "treasure_scarab"
+            ]
+          },
+          {
+            "spec": 0.62,
+            "gloss": 72,
+            "metal": 0.85,
+            "roughness": 1,
+            "count": 3,
+            "names": [
+              "arch:court:bronze_dark",
+              "arch:hall:bronze_dark",
+              "arch:pylon:bronze_dark"
+            ]
+          },
+          {
+            "spec": 0.6,
+            "gloss": 48,
+            "metal": 0.85,
+            "roughness": 1,
+            "count": 1,
+            "names": [
+              "props_bronze"
+            ]
+          },
+          {
+            "spec": 0.55,
+            "gloss": 64,
+            "metal": 0.85,
+            "roughness": 1,
+            "count": 4,
+            "names": [
+              "arch:court:hieroglyph_gilded",
+              "arch:hall:hieroglyph_gilded",
+              "arch:pylon:hieroglyph_gilded",
+              "arch:tomb:hieroglyph_gilded"
+            ]
+          },
+          {
+            "spec": 0.42,
+            "gloss": 62,
+            "metal": 0,
+            "roughness": 1,
+            "count": 3,
+            "names": [
+              "arch:court:granite_pink",
+              "arch:hall:granite_pink",
+              "arch:tomb:granite_pink"
+            ]
+          },
+          {
+            "spec": 0.32,
+            "gloss": 46,
+            "metal": 0,
+            "roughness": 1,
+            "count": 2,
+            "names": [
+              "arch:court:limestone_polished",
+              "arch:hall:limestone_polished"
+            ]
+          },
+          {
+            "spec": 0.25,
+            "gloss": 32,
+            "metal": 0,
+            "roughness": 0.62,
+            "count": 7,
+            "names": [
+              "kaykit:props",
+              "slydlrig:mesh",
+              "slydlrig:mesh",
+              "slydlrig:mesh"
+            ]
+          },
+          {
+            "spec": 0.2,
+            "gloss": 30,
+            "metal": 0.85,
+            "roughness": 1,
+            "count": 4,
+            "names": [
+              "arch:court:ceiling_stars",
+              "arch:hall:ceiling_stars",
+              "arch:pylon:ceiling_stars",
+              "arch:tomb:ceiling_stars"
+            ]
+          },
+          {
+            "spec": 0.2,
+            "gloss": 28,
+            "metal": 0,
+            "roughness": 1,
+            "count": 8,
+            "names": [
+              "props_stone",
+              "props_lapis",
+              "props_carnelian",
+              "props_lime"
+            ]
+          },
+          {
+            "spec": 0.2,
+            "gloss": 28,
+            "metal": 0,
+            "roughness": 0.62,
+            "count": 2,
+            "names": [
+              "props_dark",
+              "props_ember"
+            ]
+          },
+          {
+            "spec": 0.16,
+            "gloss": 24,
+            "metal": 0,
+            "roughness": 1,
+            "count": 4,
+            "names": [
+              "arch:court:hieroglyph_wall",
+              "arch:hall:hieroglyph_wall",
+              "arch:pylon:hieroglyph_wall",
+              "arch:tomb:hieroglyph_wall"
+            ]
+          },
+          {
+            "spec": 0.15,
+            "gloss": 22,
+            "metal": 0,
+            "roughness": 1,
+            "count": 2,
+            "names": [
+              "ruin:drums",
+              "arch:hall:column_papyrus"
+            ]
+          },
+          {
+            "spec": 0.14,
+            "gloss": 20,
+            "metal": 0,
+            "roughness": 0.62,
+            "count": 3,
+            "names": []
+          },
+          {
+            "spec": 0.14,
+            "gloss": 20,
+            "metal": 0,
+            "roughness": 1,
+            "count": 3,
+            "names": [
+              "arch:court:sandstone_block",
+              "arch:hall:sandstone_block",
+              "arch:tomb:sandstone_block"
+            ]
+          },
+          {
+            "spec": 0.1,
+            "gloss": 32,
+            "metal": 0,
+            "roughness": 0.62,
+            "count": 1,
+            "names": []
+          },
+          {
+            "spec": 0.1,
+            "gloss": 16,
+            "metal": 0,
+            "roughness": 1,
+            "count": 16,
+            "names": [
+              "paving:court",
+              "paving:hall",
+              "paving:tomb",
+              "arch:court:paving_courtyard"
+            ]
+          },
+          {
+            "spec": 0.08,
+            "gloss": 12,
+            "metal": 0,
+            "roughness": 0.62,
+            "count": 3,
+            "names": []
+          },
+          {
+            "spec": 0.08,
+            "gloss": 14,
+            "metal": 0,
+            "roughness": 1,
+            "count": 5,
+            "names": [
+              "arch:court:sandstone_worn",
+              "arch:hall:sandstone_worn",
+              "arch:pylon:sandstone_worn",
+              "arch:tomb:sandstone_worn"
+            ]
+          },
+          {
+            "spec": 0.06,
+            "gloss": 12,
+            "metal": 0,
+            "roughness": 0.62,
+            "count": 4,
+            "names": [
+              "sand_ring0",
+              "sand_ring1",
+              "sand_ring2",
+              "sand_ring3"
+            ]
+          },
+          {
+            "spec": 0.06,
+            "gloss": 8,
+            "metal": 0,
+            "roughness": 1,
+            "count": 2,
+            "names": [
+              "arch:court:rope_fibre",
+              "arch:hall:rope_fibre"
+            ]
+          },
+          {
+            "spec": 0.05,
+            "gloss": 10,
+            "metal": 0,
+            "roughness": 1,
+            "count": 3,
+            "names": [
+              "arch:court:mudbrick",
+              "arch:tomb:mudbrick",
+              "arch:hall:mudbrick"
+            ]
+          },
+          {
+            "spec": 0.04,
+            "gloss": 8,
+            "metal": 0,
+            "roughness": 0.62,
+            "count": 2,
+            "names": [
+              "pyramid_105",
+              "pyramid_72"
+            ]
+          }
+        ]
+      },
+      "stats": {
+        "base": {
+          "n": 921600,
+          "mean": 86.11637631232249,
+          "p1": 25,
+          "p50": 81,
+          "p90": 123,
+          "p99": 179,
+          "p999": 214,
+          "max": 239.39479999999998,
+          "over200": 0.2103949652777778,
+          "over230": 0.004557291666666667,
+          "over250": 0,
+          "over230px": 42,
+          "over250px": 0
+        },
+        "off": {
+          "n": 921600,
+          "mean": 85.8860421721337,
+          "p1": 25,
+          "p50": 81,
+          "p90": 123,
+          "p99": 178,
+          "p999": 214,
+          "max": 239.39479999999998,
+          "over200": 0.20301649305555555,
+          "over230": 0.004123263888888889,
+          "over250": 0,
+          "over230px": 38,
+          "over250px": 0
+        },
+        "p060": {
+          "n": 921600,
+          "mean": 86.3142667773899,
+          "p1": 25,
+          "p50": 81,
+          "p90": 124,
+          "p99": 184,
+          "p999": 214,
+          "max": 239.39479999999998,
+          "over200": 0.3230251736111111,
+          "over230": 0.005642361111111111,
+          "over250": 0,
+          "over230px": 52,
+          "over250px": 0
+        },
+        "p070": {
+          "n": 921600,
+          "mean": 86.37028925872869,
+          "p1": 25,
+          "p50": 81,
+          "p90": 124,
+          "p99": 185,
+          "p999": 214,
+          "max": 239.39479999999998,
+          "over200": 0.33984375,
+          "over230": 0.006401909722222222,
+          "over250": 0,
+          "over230px": 59,
+          "over250px": 0
+        },
+        "p080": {
+          "n": 921600,
+          "mean": 86.43270870425965,
+          "p1": 25,
+          "p50": 81,
+          "p90": 124,
+          "p99": 186,
+          "p999": 215,
+          "max": 239.39479999999998,
+          "over200": 0.3586154513888889,
+          "over230": 0.015190972222222222,
+          "over250": 0,
+          "over230px": 140,
+          "over250px": 0
+        },
+        "p090": {
+          "n": 921600,
+          "mean": 86.5073878132001,
+          "p1": 25,
+          "p50": 81,
+          "p90": 124,
+          "p99": 187,
+          "p999": 215,
+          "max": 239.39479999999998,
+          "over200": 0.3824869791666667,
+          "over230": 0.022243923611111112,
+          "over250": 0,
+          "over230px": 205,
+          "over250px": 0
+        },
+        "p100": {
+          "n": 921600,
+          "mean": 86.58649649787924,
+          "p1": 25,
+          "p50": 81,
+          "p90": 124,
+          "p99": 189,
+          "p999": 216,
+          "max": 239.39479999999998,
+          "over200": 0.4969618055555556,
+          "over230": 0.023654513888888888,
+          "over250": 0,
+          "over230px": 218,
+          "over250px": 0
+        },
+        "base2": {
+          "n": 921600,
+          "mean": 86.11637631232249,
+          "p1": 25,
+          "p50": 81,
+          "p90": 123,
+          "p99": 179,
+          "p999": 214,
+          "max": 239.39479999999998,
+          "over200": 0.2103949652777778,
+          "over230": 0.004557291666666667,
+          "over250": 0,
+          "over230px": 42,
+          "over250px": 0
+        }
+      },
+      "diffs": {
+        "null": {
+          "px": 0,
+          "pct": 0,
+          "maxAbsL": 0
+        },
+        "off": {
+          "px": 60047,
+          "pct": 6.515516493055555,
+          "maxAbsL": 81.2018
+        },
+        "p060": {
+          "px": 70787,
+          "pct": 7.680881076388889,
+          "maxAbsL": 44.4516
+        },
+        "p070": {
+          "px": 76297,
+          "pct": 8.278754340277779,
+          "maxAbsL": 51.34840000000001
+        },
+        "p080": {
+          "px": 83354,
+          "pct": 9.044487847222221,
+          "maxAbsL": 64.5662
+        },
+        "p090": {
+          "px": 90849,
+          "pct": 9.857747395833334,
+          "maxAbsL": 73.435
+        },
+        "p100": {
+          "px": 95601,
+          "pct": 10.373372395833334,
+          "maxAbsL": 84.44299999999998
+        }
+      },
+      "calibShare": 18.78786892361111,
+      "incidence": {
+        "toonPct": 18.78786892361111,
+        "toonPx": 173149,
+        "gatesAnyPct": 25.233758208248386,
+        "gatesOpenPct": 23.07030361134052,
+        "jointSatPct": 1.2700044470369451,
+        "jointSatPx": 2199
+      },
+      "classes": [
+        {
+          "uSpec": 0.1,
+          "meshes": 16,
+          "name": "paving:court",
+          "px": 139462,
+          "satPx": 2088,
+          "glossP": 7.229229411286679,
+          "scoreable": true,
+          "rise": {
+            "p060": {
+              "p50": 2.43040000000002,
+              "p90": 3.145600000000016,
+              "n": 2088
+            },
+            "p070": {
+              "p50": 3.005200000000002,
+              "p90": 3.860800000000012,
+              "n": 2088
+            },
+            "p080": {
+              "p50": 3.720399999999998,
+              "p90": 4.435600000000008,
+              "n": 2088
+            },
+            "p090": {
+              "p50": 4.435599999999994,
+              "p90": 4.792599999999979,
+              "n": 2088
+            },
+            "p100": {
+              "p50": 4.720400000000012,
+              "p90": 5.579999999999984,
+              "n": 2088
+            }
+          }
+        },
+        {
+          "uSpec": 0.55,
+          "meshes": 4,
+          "name": "arch:court:hieroglyph_gilded",
+          "px": 15063,
+          "satPx": 111,
+          "glossP": 38.852357874704026,
+          "scoreable": true,
+          "rise": {
+            "p060": {
+              "p50": 13.892800000000022,
+              "p90": 17.89519999999999,
+              "n": 111
+            },
+            "p070": {
+              "p50": 17.331199999999995,
+              "p90": 21.40180000000001,
+              "n": 111
+            },
+            "p080": {
+              "p50": 20.050399999999996,
+              "p90": 23.76400000000001,
+              "n": 111
+            },
+            "p090": {
+              "p50": 22.841800000000006,
+              "p90": 25.56099999999998,
+              "n": 111
+            },
+            "p100": {
+              "p50": 25.35239999999999,
+              "p90": 30.704999999999984,
+              "n": 111
+            }
+          }
+        },
+        {
+          "uSpec": 0.2,
+          "meshes": 8,
+          "name": "arch:court:ceiling_stars",
+          "px": 566,
+          "satPx": 0,
+          "glossP": 20.391491720363057,
+          "scoreable": false,
+          "rise": {}
+        },
+        {
+          "uSpec": 0.08,
+          "meshes": 5,
+          "name": "arch:court:sandstone_worn",
+          "px": 2896,
+          "satPx": 0,
+          "glossP": 6.4610118080381325,
+          "scoreable": false,
+          "rise": {}
+        },
+        {
+          "uSpec": 0.14,
+          "meshes": 3,
+          "name": "arch:court:sandstone_block",
+          "px": 9108,
+          "satPx": 0,
+          "glossP": 9.316641263444332,
+          "scoreable": false,
+          "rise": {}
+        },
+        {
+          "uSpec": 0.06,
+          "meshes": 4,
+          "name": "sand_ring0",
+          "px": 5580,
+          "satPx": 0,
+          "glossP": 7.529411764705882,
+          "scoreable": false,
+          "rise": {}
+        }
+      ],
+      "skin": {
+        "skinPx": 65632,
+        "skinPctFrame": 7.121527777777778,
+        "skinMasked": 0,
+        "deadZonePct": 0.35168107970505874,
+        "bAny": 679593
+      },
+      "g4": {
+        "n": 2760,
+        "scoreable": true,
+        "med": {
+          "p060": 15.468199999999996,
+          "p070": 18.471199999999982,
+          "p080": 21.715199999999996,
+          "p090": 25.171400000000034,
+          "p100": 28.380000000000024
+        }
+      },
+      "resolvedPct": 99.72624733610937
+    },
+    {
+      "shot": "interior",
+      "applied": {
+        "base": {
+          "pow": 0,
+          "gain": 1,
+          "key": 0
+        },
+        "off": {
+          "pow": 0,
+          "gain": 0,
+          "key": 0
+        },
+        "p060": {
+          "pow": 0.6,
+          "gain": 1,
+          "key": 0
+        },
+        "p070": {
+          "pow": 0.7,
+          "gain": 1,
+          "key": 0
+        },
+        "p080": {
+          "pow": 0.8,
+          "gain": 1,
+          "key": 0
+        },
+        "p090": {
+          "pow": 0.9,
+          "gain": 1,
+          "key": 0
+        },
+        "p100": {
+          "pow": 1,
+          "gain": 1,
+          "key": 0
+        },
+        "base2": {
+          "pow": 0,
+          "gain": 1,
+          "key": 0
+        }
+      },
+      "census": {
+        "materials": 102,
+        "classes": [
+          {
+            "spec": 0.95,
+            "gloss": 110,
+            "metal": 0.85,
+            "roughness": 1,
+            "count": 14,
+            "names": [
+              "hooks:rings",
+              "arch:pylon:gold_leaf",
+              "arch:tomb:gold_leaf",
+              "guard_body"
+            ]
+          },
+          {
+            "spec": 0.9,
+            "gloss": 96,
+            "metal": 0.85,
+            "roughness": 1,
+            "count": 6,
+            "names": [
+              "coins",
+              "props_gold",
+              "pickup_coins",
+              "treasure_scarab"
+            ]
+          },
+          {
+            "spec": 0.62,
+            "gloss": 72,
+            "metal": 0.85,
+            "roughness": 1,
+            "count": 3,
+            "names": [
+              "arch:court:bronze_dark",
+              "arch:hall:bronze_dark",
+              "arch:pylon:bronze_dark"
+            ]
+          },
+          {
+            "spec": 0.6,
+            "gloss": 48,
+            "metal": 0.85,
+            "roughness": 1,
+            "count": 1,
+            "names": [
+              "props_bronze"
+            ]
+          },
+          {
+            "spec": 0.55,
+            "gloss": 64,
+            "metal": 0.85,
+            "roughness": 1,
+            "count": 4,
+            "names": [
+              "arch:court:hieroglyph_gilded",
+              "arch:hall:hieroglyph_gilded",
+              "arch:pylon:hieroglyph_gilded",
+              "arch:tomb:hieroglyph_gilded"
+            ]
+          },
+          {
+            "spec": 0.42,
+            "gloss": 62,
+            "metal": 0,
+            "roughness": 1,
+            "count": 3,
+            "names": [
+              "arch:court:granite_pink",
+              "arch:hall:granite_pink",
+              "arch:tomb:granite_pink"
+            ]
+          },
+          {
+            "spec": 0.32,
+            "gloss": 46,
+            "metal": 0,
+            "roughness": 1,
+            "count": 2,
+            "names": [
+              "arch:court:limestone_polished",
+              "arch:hall:limestone_polished"
+            ]
+          },
+          {
+            "spec": 0.25,
+            "gloss": 32,
+            "metal": 0,
+            "roughness": 0.62,
+            "count": 7,
+            "names": [
+              "kaykit:props",
+              "slydlrig:mesh",
+              "slydlrig:mesh",
+              "slydlrig:mesh"
+            ]
+          },
+          {
+            "spec": 0.2,
+            "gloss": 30,
+            "metal": 0.85,
+            "roughness": 1,
+            "count": 4,
+            "names": [
+              "arch:court:ceiling_stars",
+              "arch:hall:ceiling_stars",
+              "arch:pylon:ceiling_stars",
+              "arch:tomb:ceiling_stars"
+            ]
+          },
+          {
+            "spec": 0.2,
+            "gloss": 28,
+            "metal": 0,
+            "roughness": 1,
+            "count": 8,
+            "names": [
+              "props_stone",
+              "props_lapis",
+              "props_carnelian",
+              "props_lime"
+            ]
+          },
+          {
+            "spec": 0.2,
+            "gloss": 28,
+            "metal": 0,
+            "roughness": 0.62,
+            "count": 2,
+            "names": [
+              "props_dark",
+              "props_ember"
+            ]
+          },
+          {
+            "spec": 0.16,
+            "gloss": 24,
+            "metal": 0,
+            "roughness": 1,
+            "count": 4,
+            "names": [
+              "arch:court:hieroglyph_wall",
+              "arch:hall:hieroglyph_wall",
+              "arch:pylon:hieroglyph_wall",
+              "arch:tomb:hieroglyph_wall"
+            ]
+          },
+          {
+            "spec": 0.15,
+            "gloss": 22,
+            "metal": 0,
+            "roughness": 1,
+            "count": 2,
+            "names": [
+              "ruin:drums",
+              "arch:hall:column_papyrus"
+            ]
+          },
+          {
+            "spec": 0.14,
+            "gloss": 20,
+            "metal": 0,
+            "roughness": 0.62,
+            "count": 3,
+            "names": []
+          },
+          {
+            "spec": 0.14,
+            "gloss": 20,
+            "metal": 0,
+            "roughness": 1,
+            "count": 3,
+            "names": [
+              "arch:court:sandstone_block",
+              "arch:hall:sandstone_block",
+              "arch:tomb:sandstone_block"
+            ]
+          },
+          {
+            "spec": 0.1,
+            "gloss": 32,
+            "metal": 0,
+            "roughness": 0.62,
+            "count": 1,
+            "names": []
+          },
+          {
+            "spec": 0.1,
+            "gloss": 16,
+            "metal": 0,
+            "roughness": 1,
+            "count": 16,
+            "names": [
+              "paving:court",
+              "paving:hall",
+              "paving:tomb",
+              "arch:court:paving_courtyard"
+            ]
+          },
+          {
+            "spec": 0.08,
+            "gloss": 12,
+            "metal": 0,
+            "roughness": 0.62,
+            "count": 3,
+            "names": []
+          },
+          {
+            "spec": 0.08,
+            "gloss": 14,
+            "metal": 0,
+            "roughness": 1,
+            "count": 5,
+            "names": [
+              "arch:court:sandstone_worn",
+              "arch:hall:sandstone_worn",
+              "arch:pylon:sandstone_worn",
+              "arch:tomb:sandstone_worn"
+            ]
+          },
+          {
+            "spec": 0.06,
+            "gloss": 12,
+            "metal": 0,
+            "roughness": 0.62,
+            "count": 4,
+            "names": [
+              "sand_ring0",
+              "sand_ring1",
+              "sand_ring2",
+              "sand_ring3"
+            ]
+          },
+          {
+            "spec": 0.06,
+            "gloss": 8,
+            "metal": 0,
+            "roughness": 1,
+            "count": 2,
+            "names": [
+              "arch:court:rope_fibre",
+              "arch:hall:rope_fibre"
+            ]
+          },
+          {
+            "spec": 0.05,
+            "gloss": 10,
+            "metal": 0,
+            "roughness": 1,
+            "count": 3,
+            "names": [
+              "arch:court:mudbrick",
+              "arch:tomb:mudbrick",
+              "arch:hall:mudbrick"
+            ]
+          },
+          {
+            "spec": 0.04,
+            "gloss": 8,
+            "metal": 0,
+            "roughness": 0.62,
+            "count": 2,
+            "names": [
+              "pyramid_105",
+              "pyramid_72"
+            ]
+          }
+        ]
+      },
+      "stats": {
+        "base": {
+          "n": 921600,
+          "mean": 68.50139893814568,
+          "p1": 14,
+          "p50": 66,
+          "p90": 97,
+          "p99": 143,
+          "p999": 229,
+          "max": 247.68999999999997,
+          "over200": 0.21516927083333334,
+          "over230": 0.09429253472222222,
+          "over250": 0,
+          "over230px": 869,
+          "over250px": 0
+        },
+        "off": {
+          "n": 921600,
+          "mean": 68.50139893814568,
+          "p1": 14,
+          "p50": 66,
+          "p90": 97,
+          "p99": 143,
+          "p999": 229,
+          "max": 247.68999999999997,
+          "over200": 0.21516927083333334,
+          "over230": 0.09429253472222222,
+          "over250": 0,
+          "over230px": 869,
+          "over250px": 0
+        },
+        "p060": {
+          "n": 921600,
+          "mean": 68.50139893814568,
+          "p1": 14,
+          "p50": 66,
+          "p90": 97,
+          "p99": 143,
+          "p999": 229,
+          "max": 247.68999999999997,
+          "over200": 0.21516927083333334,
+          "over230": 0.09429253472222222,
+          "over250": 0,
+          "over230px": 869,
+          "over250px": 0
+        },
+        "p070": {
+          "n": 921600,
+          "mean": 68.50139893814568,
+          "p1": 14,
+          "p50": 66,
+          "p90": 97,
+          "p99": 143,
+          "p999": 229,
+          "max": 247.68999999999997,
+          "over200": 0.21516927083333334,
+          "over230": 0.09429253472222222,
+          "over250": 0,
+          "over230px": 869,
+          "over250px": 0
+        },
+        "p080": {
+          "n": 921600,
+          "mean": 68.50139893814568,
+          "p1": 14,
+          "p50": 66,
+          "p90": 97,
+          "p99": 143,
+          "p999": 229,
+          "max": 247.68999999999997,
+          "over200": 0.21516927083333334,
+          "over230": 0.09429253472222222,
+          "over250": 0,
+          "over230px": 869,
+          "over250px": 0
+        },
+        "p090": {
+          "n": 921600,
+          "mean": 68.50139893814568,
+          "p1": 14,
+          "p50": 66,
+          "p90": 97,
+          "p99": 143,
+          "p999": 229,
+          "max": 247.68999999999997,
+          "over200": 0.21516927083333334,
+          "over230": 0.09429253472222222,
+          "over250": 0,
+          "over230px": 869,
+          "over250px": 0
+        },
+        "p100": {
+          "n": 921600,
+          "mean": 68.50139893814568,
+          "p1": 14,
+          "p50": 66,
+          "p90": 97,
+          "p99": 143,
+          "p999": 229,
+          "max": 247.68999999999997,
+          "over200": 0.21516927083333334,
+          "over230": 0.09429253472222222,
+          "over250": 0,
+          "over230px": 869,
+          "over250px": 0
+        },
+        "base2": {
+          "n": 921600,
+          "mean": 68.50139893814568,
+          "p1": 14,
+          "p50": 66,
+          "p90": 97,
+          "p99": 143,
+          "p999": 229,
+          "max": 247.68999999999997,
+          "over200": 0.21516927083333334,
+          "over230": 0.09429253472222222,
+          "over250": 0,
+          "over230px": 869,
+          "over250px": 0
+        }
+      },
+      "diffs": {
+        "null": {
+          "px": 0,
+          "pct": 0,
+          "maxAbsL": 0
+        },
+        "off": {
+          "px": 0,
+          "pct": 0,
+          "maxAbsL": 0
+        },
+        "p060": {
+          "px": 0,
+          "pct": 0,
+          "maxAbsL": 0
+        },
+        "p070": {
+          "px": 0,
+          "pct": 0,
+          "maxAbsL": 0
+        },
+        "p080": {
+          "px": 0,
+          "pct": 0,
+          "maxAbsL": 0
+        },
+        "p090": {
+          "px": 0,
+          "pct": 0,
+          "maxAbsL": 0
+        },
+        "p100": {
+          "px": 0,
+          "pct": 0,
+          "maxAbsL": 0
+        }
+      },
+      "calibShare": 73.76095920138889,
+      "incidence": {
+        "toonPct": 73.76095920138889,
+        "toonPx": 679781,
+        "gatesAnyPct": 0.0002942124007584796,
+        "gatesOpenPct": 0,
+        "jointSatPct": 0,
+        "jointSatPx": 0
+      },
+      "classes": [
+        {
+          "uSpec": 0.16,
+          "meshes": 4,
+          "name": "arch:court:hieroglyph_wall",
+          "px": 76572,
+          "satPx": 0,
+          "glossP": 11.004283345266227,
+          "scoreable": false,
+          "rise": {}
+        },
+        {
+          "uSpec": 0.42,
+          "meshes": 3,
+          "name": "arch:court:granite_pink",
+          "px": 228873,
+          "satPx": 0,
+          "glossP": 44.94929612047027,
+          "scoreable": false,
+          "rise": {}
+        },
+        {
+          "uSpec": 0.25,
+          "meshes": 7,
+          "name": "kaykit:props",
+          "px": 21017,
+          "satPx": 0,
+          "glossP": 20.099019001424615,
+          "scoreable": false,
+          "rise": {}
+        },
+        {
+          "uSpec": 0.2,
+          "meshes": 8,
+          "name": "arch:court:ceiling_stars",
+          "px": 9980,
+          "satPx": 0,
+          "glossP": 18.15775236748006,
+          "scoreable": false,
+          "rise": {}
+        },
+        {
+          "uSpec": 0.6,
+          "meshes": 1,
+          "name": "props_bronze",
+          "px": 26253,
+          "satPx": 0,
+          "glossP": 29.168638504805802,
+          "scoreable": false,
+          "rise": {}
+        },
+        {
+          "uSpec": 0.55,
+          "meshes": 4,
+          "name": "arch:court:hieroglyph_gilded",
+          "px": 29205,
+          "satPx": 0,
+          "glossP": 39.65622539788043,
+          "scoreable": false,
+          "rise": {}
+        },
+        {
+          "uSpec": 0.14,
+          "meshes": 3,
+          "name": "arch:court:sandstone_block",
+          "px": 5276,
+          "satPx": 0,
+          "glossP": 8.78412344467734,
+          "scoreable": false,
+          "rise": {}
+        },
+        {
+          "uSpec": 0.15,
+          "meshes": 2,
+          "name": "ruin:drums",
+          "px": 121,
+          "satPx": 0,
+          "glossP": 10.814973262032087,
+          "scoreable": false,
+          "rise": {}
+        },
+        {
+          "uSpec": 0.9,
+          "meshes": 6,
+          "name": "coins",
+          "px": 10842,
+          "satPx": 0,
+          "glossP": 59.22942804127739,
+          "scoreable": false,
+          "rise": {}
+        },
+        {
+          "uSpec": 0.95,
+          "meshes": 14,
+          "name": "hooks:rings",
+          "px": 7928,
+          "satPx": 0,
+          "glossP": 68.75184899388614,
+          "scoreable": false,
+          "rise": {}
+        },
+        {
+          "uSpec": 0.1,
+          "meshes": 16,
+          "name": "paving:court",
+          "px": 259794,
+          "satPx": 0,
+          "glossP": 7.125917170874601,
+          "scoreable": false,
+          "rise": {}
+        },
+        {
+          "uSpec": 0.32,
+          "meshes": 2,
+          "name": "arch:court:limestone_polished",
+          "px": 6,
+          "satPx": 0,
+          "glossP": 23.00653594771242,
+          "scoreable": false,
+          "rise": {}
+        }
+      ],
+      "skin": {
+        "skinPx": 11725,
+        "skinPctFrame": 1.2722439236111112,
+        "skinMasked": 9595,
+        "deadZonePct": 1.3801543792743074,
+        "bAny": 218164
+      },
+      "g4": {
+        "n": 636,
+        "scoreable": true,
+        "med": {
+          "p060": 0,
+          "p070": 0,
+          "p080": 0,
+          "p090": 0,
+          "p100": 0
+        }
+      },
+      "resolvedPct": 99.42422633171566
+    }
+  ],
+  "censusBytes": [
+    10,
+    13,
+    15,
+    20,
+    26,
+    36,
+    38,
+    41,
+    51,
+    64,
+    82,
+    107,
+    140,
+    153,
+    158,
+    230,
+    242
+  ],
+  "ambiguousBytes": [
+    14,
+    37
+  ]
+}

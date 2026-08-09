@@ -1,0 +1,204 @@
+renderer: ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)   drawing buffer 1280x720   boot warnings 4
+
+[hero] staging base(0/1) off(0/0) p060(0.6/1) p070(0.7/1) p080(0.8/1) p090(0.9/1) p100(1/1) base2(0/1) dbg4(75.7%) dbg6 dbg8  (960s)
+[temple] staging base(0/1) off(0/0) p060(0.6/1) p070(0.7/1) p080(0.8/1) p090(0.9/1) p100(1/1) base2(0/1) dbg4(27.2%) dbg6 dbg8  (1650s)
+[courtyard] staging base(0/1) off(0/0) p060(0.6/1) p070(0.7/1) p080(0.8/1) p090(0.9/1) p100(1/1) base2(0/1) dbg4(15.0%) dbg6 dbg8  (2483s)
+[sly-closeup] staging base(0/1) off(0/0) p060(0.6/1) p070(0.7/1) p080(0.8/1) p090(0.9/1) p100(1/1) base2(0/1) dbg4(18.8%) dbg6 dbg8  (3355s)
+[interior] staging base(0/1) off(0/0) p060(0.6/1) p070(0.7/1) p080(0.8/1) p090(0.9/1) p100(1/1) base2(0/1) dbg4(73.8%) dbg6 dbg8  (3681s)
+
+captured in 3687s
+
+================= PREREG-specnorm2 REGISTERED CRITERIA =================
+
+per-shot luma (display bytes, Rec.709):
+shot          arm      p1   p50   p99  p99.9    max    >230%  >230px   >250px
+hero          base     15    71   183    195  232.2   0.0004       4        0
+hero          off      15    71   183    193  232.2   0.0004       4        0
+hero          p060     16    72   184    205  237.1   0.0068      63        0
+hero          p070     16    72   184    209  240.8   0.0137     126        0
+hero          p080     16    72   185    213  243.8   0.0204     188        0
+hero          p090     16    73   185    217  245.7   0.0281     259        0
+hero          p100     16    73   186    221  247.8   0.0401     370        0
+hero          base2    15    71   183    195  232.2   0.0004       4        0
+
+temple        base     31    89   181    195  230.2   0.0001       1        0
+temple        off      31    89   181    195  230.2   0.0001       1        0
+temple        p060     31    89   181    196  230.2   0.0001       1        0
+temple        p070     31    89   181    197  230.2   0.0001       1        0
+temple        p080     31    89   181    197  230.2   0.0001       1        0
+temple        p090     31    89   181    197  230.2   0.0001       1        0
+temple        p100     31    89   181    197  230.2   0.0001       1        0
+temple        base2    31    89   181    195  230.2   0.0001       1        0
+
+courtyard     base     23   104   181    210  237.2   0.0031      29        0
+courtyard     off      23   103   179    206  237.2   0.0031      29        0
+courtyard     p060     23   104   188    219  249.4   0.0396     365        0
+courtyard     p070     24   104   189    225  251.1   0.0507     467        1
+courtyard     p080     24   104   190    231  253.4   0.1497    1380        2
+courtyard     p090     24   105   192    236  254.4   0.4039    3722        4
+courtyard     p100     24   105   194    239  254.6   0.4826    4448        8
+courtyard     base2    23   104   181    210  237.2   0.0031      29        0
+
+sly-closeup   base     25    81   179    214  239.4   0.0046      42        0
+sly-closeup   off      25    81   178    214  239.4   0.0041      38        0
+sly-closeup   p060     25    81   184    214  239.4   0.0056      52        0
+sly-closeup   p070     25    81   185    214  239.4   0.0064      59        0
+sly-closeup   p080     25    81   186    215  239.4   0.0152     140        0
+sly-closeup   p090     25    81   187    215  239.4   0.0222     205        0
+sly-closeup   p100     25    81   189    216  239.4   0.0237     218        0
+sly-closeup   base2    25    81   179    214  239.4   0.0046      42        0
+
+interior      base     14    66   143    229  247.7   0.0943     869        0
+interior      off      14    66   143    229  247.7   0.0943     869        0
+interior      p060     14    66   143    229  247.7   0.0943     869        0
+interior      p070     14    66   143    229  247.7   0.0943     869        0
+interior      p080     14    66   143    229  247.7   0.0943     869        0
+interior      p090     14    66   143    229  247.7   0.0943     869        0
+interior      p100     14    66   143    229  247.7   0.0943     869        0
+interior      base2    14    66   143    229  247.7   0.0943     869        0
+
+I1 NULL ARM (0 px on every shot):
+   hero          0 px
+   temple        0 px
+   courtyard     0 px
+   sly-closeup   0 px
+   interior      0 px
+   I1 FIRED
+
+I2 POSITIVE CONTROL (off vs base > 0 px on all four outdoor):
+   hero          36630 px
+   temple        8125 px
+   courtyard     73681 px
+   sly-closeup   60047 px
+   interior      0 px   (exempt)
+   I2 FIRED
+
+I3 APPLIED STATE:
+   hero          base=0/1 off=0/0 p060=0.6/1 p070=0.7/1 p080=0.8/1 p090=0.9/1 p100=1/1 base2=0/1
+   temple        base=0/1 off=0/0 p060=0.6/1 p070=0.7/1 p080=0.8/1 p090=0.9/1 p100=1/1 base2=0/1
+   courtyard     base=0/1 off=0/0 p060=0.6/1 p070=0.7/1 p080=0.8/1 p090=0.9/1 p100=1/1 base2=0/1
+   sly-closeup   base=0/1 off=0/0 p060=0.6/1 p070=0.7/1 p080=0.8/1 p090=0.9/1 p100=1/1 base2=0/1
+   interior      base=0/1 off=0/0 p060=0.6/1 p070=0.7/1 p080=0.8/1 p090=0.9/1 p100=1/1 base2=0/1
+
+I4 MODE-4 CALIBRATION (> 5 % of frame):
+   hero          75.67%
+   temple        27.24%
+   courtyard     15.01%
+   sly-closeup   18.79%
+   interior      73.76%
+   I4 FIRED
+
+I5′ CLASS-MAP SHARE (mode-8 R resolves on >= 98 % of the mode-4 toon population):
+   hero          99.11%
+   temple        99.61%
+   courtyard     97.63%
+   sly-closeup   99.73%
+   interior      99.42%   (not scored)
+   I5′ BLIND — per-class attribution VOID
+
+I6 THE SKIN BIT SEES WHAT THE MASK CANNOT (sly-closeup):
+   skin px 65632 = 7.12% of frame (bar > 5%);  also inside mode-4 mask: 0;  ratio ∞x (bar > 10x)
+   I6 FIRED
+
+I7 SKIN BIT IS BIMODAL (< 1 % of B>0 pixels in the dead zone [64,192]):
+   0.35% of 679593 px with B>0
+   I7 FIRED
+
+candidate vs base:
+   hero
+      p060    83717 px  p50 71->72  p99 183->184  >230 4->63 px (0.0068%)  >250 0 px
+      p070    98194 px  p50 71->72  p99 183->184  >230 4->126 px (0.0137%)  >250 0 px
+      p080   111770 px  p50 71->72  p99 183->185  >230 4->188 px (0.0204%)  >250 0 px
+      p090   126501 px  p50 71->73  p99 183->185  >230 4->259 px (0.0281%)  >250 0 px
+      p100   137712 px  p50 71->73  p99 183->186  >230 4->370 px (0.0401%)  >250 0 px
+   temple
+      p060     7251 px  p50 89->89  p99 181->181  >230 1->1 px (0.0001%)  >250 0 px
+      p070     7597 px  p50 89->89  p99 181->181  >230 1->1 px (0.0001%)  >250 0 px
+      p080     7952 px  p50 89->89  p99 181->181  >230 1->1 px (0.0001%)  >250 0 px
+      p090     8200 px  p50 89->89  p99 181->181  >230 1->1 px (0.0001%)  >250 0 px
+      p100     8409 px  p50 89->89  p99 181->181  >230 1->1 px (0.0001%)  >250 0 px
+   courtyard
+      p060   112550 px  p50 104->104  p99 181->188  >230 29->365 px (0.0396%)  >250 0 px
+      p070   147750 px  p50 104->104  p99 181->189  >230 29->467 px (0.0507%)  >250 1 px
+      p080   173024 px  p50 104->104  p99 181->190  >230 29->1380 px (0.1497%)  >250 2 px
+      p090   193714 px  p50 104->105  p99 181->192  >230 29->3722 px (0.4039%)  >250 4 px
+      p100   211784 px  p50 104->105  p99 181->194  >230 29->4448 px (0.4826%)  >250 8 px
+   sly-closeup
+      p060    70787 px  p50 81->81  p99 179->184  >230 42->52 px (0.0056%)  >250 0 px
+      p070    76297 px  p50 81->81  p99 179->185  >230 42->59 px (0.0064%)  >250 0 px
+      p080    83354 px  p50 81->81  p99 179->186  >230 42->140 px (0.0152%)  >250 0 px
+      p090    90849 px  p50 81->81  p99 179->187  >230 42->205 px (0.0222%)  >250 0 px
+      p100    95601 px  p50 81->81  p99 179->189  >230 42->218 px (0.0237%)  >250 0 px
+   interior
+      p060        0 px  p50 66->66  p99 143->143  >230 869->869 px (0.0943%)  >250 0 px
+      p070        0 px  p50 66->66  p99 143->143  >230 869->869 px (0.0943%)  >250 0 px
+      p080        0 px  p50 66->66  p99 143->143  >230 869->869 px (0.0943%)  >250 0 px
+      p090        0 px  p50 66->66  p99 143->143  >230 869->869 px (0.0943%)  >250 0 px
+      p100        0 px  p50 66->66  p99 143->143  >230 869->869 px (0.0943%)  >250 0 px
+
+G4′ — median rise on the character's lobe-saturated pixels (bar <= 20 L):
+   population 2760 px  (floor 70) -> scoreable
+   p060  median 15.47 L   PASS
+   p070  median 18.47 L   PASS
+   p080  median 21.72 L   FAIL
+   p090  median 25.17 L   FAIL
+   p100  median 28.38 L   FAIL
+
+================= REGISTERED GATES =================
+cand   T1     T2      H1   | G1    G2    G3    G4′    G5   | SHIP
+p060  0/4    0/4    1/4  | PASS  PASS  PASS  VOID  PASS  | no
+p070  0/4    0/4    1/4  | PASS  PASS  PASS  VOID  PASS  | no
+p080  0/4    0/4    2/4  | PASS  PASS  PASS  VOID  PASS  | no
+p090  0/4    1/4    3/4  | PASS  PASS  PASS  VOID  PASS  | no
+p100  0/4    1/4    3/4  | PASS  PASS  PASS  VOID  PASS  | no
+
+SHIP RULE: largest pow with every one of G1,G2,G3,G4′,G5 = PASS, I1-I4/I5′/I6/I7 fired, and H1 >= 3/4.
+   ==> DO NOT SHIP — candidate FAIL
+   TUNE.specNormPow stays 0; the shipped build is bit-identical.
+
+THE INTERVAL (the product of this run, ship or no ship):
+   G4′ last PASS at p = 0.7, first FAIL at p = 0.8
+   H1 first reaches 3/4 at p = 0.9
+   ==> energy conservation and the character conflict across p in (0.7, 0.9]
+
+PER-CLASS (mode-4 masked architecture; a class under the floor is VOID, not a number):
+
+  hero   resolved 99.11% of toon
+  uSpec  glossP   satPx  state    p060   p070   p080   p090   p100   material
+  0.550    38.5    1473  ok      +28.0  +33.5  +37.8  +42.1  +45.7   arch:court:hieroglyph_gilded
+  0.140     9.1     481  ok       +4.5   +5.5   +6.5   +7.5   +8.5   arch:court:sandstone_block
+  0.250    20.0     208  ok      +13.2  +15.9  +18.7  +22.1  +24.5   kaykit:props
+  0.160    11.0     125  ok       +5.1   +6.0   +7.1   +8.2   +9.6   arch:court:hieroglyph_wall
+  0.060     6.5     123  ok       +0.0   +0.0   +0.1   +0.1   +0.3   sand_ring0
+  0.100     7.1      35  VOID     VOID   VOID   VOID   VOID   VOID   paving:court
+  0.080     5.9      17  VOID     VOID   VOID   VOID   VOID   VOID   arch:court:sandstone_worn
+  0.620    44.0      11  VOID     VOID   VOID   VOID   VOID   VOID   arch:court:bronze_dark
+  0.950    67.8       4  VOID     VOID   VOID   VOID   VOID   VOID   hooks:rings
+  0.900    59.9       1  VOID     VOID   VOID   VOID   VOID   VOID   coins
+
+  temple   resolved 99.61% of toon
+  uSpec  glossP   satPx  state    p060   p070   p080   p090   p100   material
+  0.040     5.0     822  ok       +0.2   +0.3   +0.7   +0.8   +0.8   pyramid_105
+  0.160    11.0      72  ok       +5.9   +6.9   +8.3   +9.5  +10.8   arch:court:hieroglyph_wall
+  0.150    10.7       7  VOID     VOID   VOID   VOID   VOID   VOID   ruin:drums
+
+  courtyard   resolved 97.63% of toon
+  uSpec  glossP   satPx  state    p060   p070   p080   p090   p100   material
+  0.420    45.0    4489  ok      +36.1  +42.6  +50.0  +55.9  +59.1   arch:court:granite_pink
+  0.060     4.5     572  ok       +0.7   +0.8   +0.9   +1.0   +1.1   sand_ring0
+  0.200    20.1     115  ok      +22.8  +27.0  +31.2  +34.9  +39.2   arch:court:ceiling_stars
+  0.900    59.6      71  ok      +27.4  +35.6  +42.7  +45.8  +48.1   coins
+  0.320    26.3      47  VOID     VOID   VOID   VOID   VOID   VOID   arch:court:limestone_polished
+  0.080     6.1      32  VOID     VOID   VOID   VOID   VOID   VOID   arch:court:sandstone_worn
+  0.950    66.7      16  VOID     VOID   VOID   VOID   VOID   VOID   hooks:rings
+  0.550    38.6      11  VOID     VOID   VOID   VOID   VOID   VOID   arch:court:hieroglyph_gilded
+  0.250    20.3       3  VOID     VOID   VOID   VOID   VOID   VOID   kaykit:props
+  0.620    46.2       1  VOID     VOID   VOID   VOID   VOID   VOID   arch:court:bronze_dark
+
+  sly-closeup   resolved 99.73% of toon
+  uSpec  glossP   satPx  state    p060   p070   p080   p090   p100   material
+  0.100     7.2    2088  ok       +2.4   +3.0   +3.7   +4.4   +4.7   paving:court
+  0.550    38.9     111  ok      +13.9  +17.3  +20.1  +22.8  +25.4   arch:court:hieroglyph_gilded
+
+  interior   resolved 99.42% of toon
+  uSpec  glossP   satPx  state    p060   p070   p080   p090   p100   material
