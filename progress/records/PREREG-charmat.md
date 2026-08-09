@@ -399,6 +399,66 @@ Written before any capture. I expect to be wrong somewhere and the interesting p
    the cane mask's *mean* L moves by **less than 8 L** even when p99 moves by more than 10.
    If mean and p99 move together by similar amounts, my model of this shader is wrong. (0.6)
 
+## §7 — PREREG-charspec: what art-directing him COSTS and BUYS against the blocked interval
+
+Registered before `tools/charspec.mjs` is run. SPECNORM's result landed while `canegold.mjs` was
+executing, and it turns §6's "I make no claim" into a measurable question:
+
+```
+G4'  Sly's lobe-saturated px, isolated by vSlySkin (n 2 760)   bar <= 20 L
+     p0.60 +15.5   p0.70 +18.5 PASS | p0.80 +21.7 FAIL   p0.90 +25.2   p1.00 +28.4
+H1   >230 on >= 3 of 4 outdoor shots:  p0.90 3/4 PASS
+=>   p in (0.70, 0.90]. World needs 0.90; Sly tolerates 0.70. Gap 0.20, no overlap.
+```
+
+### Why the split should move this, derived from the shader rather than hoped
+
+```
+glossP   = max( uGloss * (1 - 0.6*rgh), 4 )          toon.glsl.js:680
+specNorm = pow( (glossP + 8) * 0.125, p )            toon.glsl.js:718
+```
+
+The rise is the spec term times `specNorm(p) − 1`, and the split moves **both** factors down at
+once — `uSpec` directly, and `glossP` through `uGloss`. At `rgh` 0.62:
+
+| part | uSpec | uGloss | glossP | specNorm(0.9) − 1 | rise scaling vs base |
+|---|---|---|---|---|---|
+| base (all parts) | 0.25 | 32 | 20.10 | 2.098 | 1.000 |
+| body → `cloth` | 0.085 | 20 | 12.56 | 1.339 | **0.217** |
+| tail → `furDark` | 0.03 | 9 | 5.65 | 0.617 | **0.035** |
+| head → `fur` | 0.025 | 8 | 5.02 | 0.550 | **0.026** |
+
+**The cane cannot flatter this number.** `vSlySkin` is 1.0 on a SkinnedMesh and 0.0 otherwise
+(`toon.glsl.js:228`); the cane is a plain `THREE.Mesh` socketed to a bone, so it is outside G4′'s
+population by construction. Making it hot and the body dull are independent in this statistic.
+
+### Guards, registered now
+
+- **S0 (instrument, must fire)** — at BASE materials the rise at p = 0.90 must reproduce
+  SPECNORM's **+25.2 L within ±4 L** on *some* statistic (mean/p50/p90/p99). Which statistic they
+  used was not stated, so it is identified **by reproduction, not assumption**, and the same one
+  is then used for the split. If nothing reproduces it, my instrument is not theirs and every
+  comparison below is **VOID**.
+- **S1** — both masks non-empty on every shot.
+- **S2** — restoring `uSpecNormPow` to 0 returns the frame to `n0` at **0 px** differing.
+- **S3** — the split **reduces** the worst-shot rise.
+- **S4** — the split's worst-shot rise is **≤ 20 L**, SPECNORM's own bar.
+
+### Forecast
+
+1. **S0 reproduces, on `p50` or `mean`.** (0.6 — their statistic is unstated and my mask is
+   rebuilt from scratch, so this is the guard I most expect to void the run.)
+2. **S3 passes** — the split reduces the rise. (0.9)
+3. **S4 passes**, and not marginally: I forecast the split's worst-shot rise lands in
+   **+1 to +8 L**, against the 20 L bar and the +25.2 L base. (0.7)
+4. **The split's saturated population GROWS** even as the rise shrinks, because a lower `glossP`
+   widens the lobe: `specStep` saturates at `ndh ≥ 0.52^(1/glossP)`, which is 0.968 at glossP
+   20.1 and 0.876 at glossP 5.02. So `split n > base n` on at least three shots — and if the
+   population *shrank* instead, my model of the shader is wrong. (0.65)
+5. **I do NOT forecast the 0.20 gap closing outright**, because H1 is the world's side and I do
+   not touch a single world material. What I expect to show is that **G4′ stops being the binding
+   constraint at p = 0.90** — which would mean the interval was never a lighting problem.
+
 ## §6 — relation to PREREG-specnorm2, which is NOT mine to resolve
 
 SPECNORM's seal predicts DO NOT SHIP at every swept `uSpecNormPow`, with the conflict located in
