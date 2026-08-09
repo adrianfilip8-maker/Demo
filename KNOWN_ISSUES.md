@@ -22942,3 +22942,76 @@ a same-run control, not absolutes against `shots/r9`. §275 applies if any arm t
 event-driven effect. And the character texture is owner-supplied, so any albedo edit must be a
 derived file with provenance recorded, exactly as D11's `sly_head_fix.png` was derived from
 `sly_head.png` rather than edited in place.
+
+## §277 — D2 is two defects with different owners: the shirt's SATURATION is authored correctly and destroyed by the render, and about three quarters of the VIOLET BIAS is already in the supplied albedo
+
+Coordinator note, lock-free, measured while four captures were queued. **Nothing sealed, no
+candidate, no thresholds invented.** D2 is unowned; this is so the next lane does not start by
+re-measuring what is already measurable offline.
+
+### The defect as filed
+
+Critic 9 D2, mean colour of a torso patch, in the FRAME:
+
+| | RGB | hue | sat |
+|---|---|---|---|
+| REF-venice | (11, 60, 122) | **213.5°** | **0.909** |
+| our ten frames | — | 224.3–326.1° (mean 234.6° excl. two magenta outliers) | **0.064 – 0.659** |
+
+The critic's reading: *"not one frame reaches even 73% of the reference saturation, and six of ten
+are below half"*, plus *"a systematic violet bias ... ~21° violet of the reference"*. Filed as one
+defect. It is two, and they do not share a cause.
+
+### Measured: the albedo, `src/assets/sly-dl/sly_body.png`
+
+40 209 shirt-blue texels on the torso islands (hue 190–270°, sat > 0.15, opaque):
+
+| | p05 | p50 | p95 | area-weighted mean patch |
+|---|---|---|---|---|
+| **saturation** | 0.894 | **0.937** | 0.974 | **0.927** |
+| **hue** | 224.7° | **228.6°** | 233.8° | **229.0°** |
+| value | 0.620 | 0.980 | 0.996 | — |
+
+### Finding 1 — the saturation collapse is entirely in the render, and this is the strong half
+
+The albedo's shirt sits at **sat 0.927**, against the reference frame's **0.909**. It is authored
+*correctly* — marginally more saturated than the target — and it is authored *consistently*: the
+p05–p95 spread is only **0.080**.
+
+Every frame nevertheless renders somewhere between **0.064 and 0.659**. `combat` reaches a neutral
+pinkish grey at 0.064 from an albedo at 0.93.
+
+**Minification cannot explain it.** Averaging texels only depresses saturation when the hues being
+averaged differ, and this hue spread is 9° wide; the area-weighted mean (0.927) is within 0.010 of
+the median (0.937), so the collapse is not a sampling artefact. Whatever destroys the saturation is
+downstream of the texture: candidates are the shadow tint (D1, and §269's band ships INERT so it is
+not currently helping), `PostFX.tune.saturation 1.30` applied BEFORE the tonemap, and AgX, which
+the same file already records as desaturating hard. None of these is an arm yet.
+
+**Therefore D2's saturation half is not an authoring defect and must not be fixed in the texture.**
+Raising an already-correct albedo to compensate for a render that eats saturation would be tuning
+the wrong end and would break the moment the render is fixed.
+
+### Finding 2 — most of the violet bias IS authored, and this half is cheap
+
+Our albedo is at hue **229.0°**. Our frames average **234.6°**. So the render contributes only
+about **5.6°** of the ~21° bias the critic measured; the remaining **~15.5°** — roughly **three
+quarters of it** — is already in the supplied texture before a light touches it.
+
+**Stated as the inference it is, not as a measurement:** this compares OUR albedo against THEIR
+rendered frame, and the reference's own albedo was never available. It assumes the reference's
+render does not itself rotate hue much. The safe form of the claim is the one that does not need
+that assumption — *our own render moves the shirt only ~5.6°, so the bias is dominated by
+something upstream of it* — and that form is enough to route the work.
+
+### What follows
+
+- Saturation → the RENDER. Do not touch the texture.
+- Violet bias → mostly the ALBEDO. A hue rotation of about −15° on the shirt is a small, targeted
+  change that leaves saturation (already correct) alone.
+- It must be a DERIVED file with provenance recorded, never an edit in place: the character texture
+  is owner-supplied, and D11 set the precedent with `sly_head_fix.png` derived from `sly_head.png`
+  behind a `?face=raw` lever. Any shirt fix needs the same shape so the A/B stays runnable.
+- §276 measured the same texture's *gradient* and found it airbrushed (L span 199–210/255 within
+  one material). That is D3 and is a separate question from either half of D2 — the albedo can be
+  simultaneously right about chroma and wrong about value structure, and it is.
