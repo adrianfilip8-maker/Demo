@@ -313,6 +313,34 @@ for (const [s, r] of Object.entries(run.shots)) {
               `${r.litFrac >= BAR.litBar ? 'OPEN' : 'ROOFED'}`);
 }
 if (cBlind.length) console.log(`  criterion C is BLIND on: ${cBlind.join(', ')} — no pixel carried the calibration constant`);
+
+/* ── criterion C read the way the channel documents, POST HOC and reported only ──────────────
+ * `toon.glsl.js` mode 8 says of mode 4: "Read it against the mode-4 mask like every other
+ * reading mode." The seal did not: it registered criterion C over the WHOLE FRAME. That is an
+ * error in the pre-registration, and the calibration channel it also registered is what exposed
+ * it. The masked reading is printed here because it is the correct one and the difference is
+ * decisive; it is NOT substituted into any guard, because a criterion swapped in after seeing
+ * the frames is not a pre-registration. G0 stands or falls on what was sealed. */
+console.log('\n── criterion C over the mode-4 mask (POST HOC, reported, not gated) ───────────');
+console.log('  shot          mask%    litFrac frame   litFrac masked   sealed says   masked says');
+for (const s of Object.keys(run.shots)) {
+  const cf = `${DIR}/${s}-calib4.png`, kf = `${DIR}/${s}-key5.png`;
+  if (!existsSync(cf) || !existsSync(kf)) continue;
+  const ci = readPNG(cf), ki = readPNG(kf);
+  let mask = 0, lit = 0, n = 0;
+  for (let i = 0; i < ci.data.length; i += ci.ch) {
+    n++;
+    if (ci.data[i] === BAR.calib[0] && ci.data[i + 1] === BAR.calib[1] && ci.data[i + 2] === BAR.calib[2]) {
+      mask++; if (ki.data[i + 2] >= BAR.keyBar) lit++;
+    }
+  }
+  const frameFrac = run.shots[s].litFrac;
+  const maskFrac = mask ? lit / mask : null;
+  console.log(`  ${s.padEnd(13)} ${f2(100 * mask / n).padStart(6)}%  ${f2(100 * frameFrac, 3).padStart(12)}%  ` +
+              `${(maskFrac === null ? '(empty)' : f2(100 * maskFrac, 3) + '%').padStart(14)}   ` +
+              `${(frameFrac >= BAR.litBar ? 'OPEN' : 'ROOFED').padEnd(12)}  ` +
+              `${maskFrac === null ? 'unreadable' : (maskFrac >= BAR.litBar ? 'OPEN' : 'ROOFED')}`);
+}
 console.log(`\n  threshold rule: eO ${f2(run.partition?.eO)} / eR ${f2(run.partition?.eR)} -> ` +
             (run.partition?.refuted ? `REFUTED (${run.partition.why})` : `T = ${T}, margin ${run.partition?.marginRays} of 5 rays`));
 
