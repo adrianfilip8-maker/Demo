@@ -136,6 +136,47 @@ changes is *how the hull is switched off*:
 Run-2 must additionally assert PRED-1's inverse as its own capture-time guard: **arm B and arm C
 must differ in sha on every shot**, printed by the capture before the scorer is allowed to run.
 
+### Amendment, same hour, still pre-capture: PRED-1 becomes an ARM, not a separate run
+
+Run-1 was **killed after acquiring the lock and before writing a single frame** (`shots/inkblack`
+empty, `arms.json` never written). Nothing was measured, so nothing is being discarded and no
+number anywhere in this document comes from it. Two reasons, both stated before any data exists:
+
+1. Spending ten FIFO lock slots — the scarcest resource in this repo — on a run I had just
+   finished registering as predicted-VOID is a cost paid by every other agent, not just by me.
+2. A separate run is the *weaker* test anyway. Comparing a void run-1 against a live run-2 is a
+   cross-boot comparison of two different scripts. Carrying the broken lever as a **fourth arm in
+   the same boot** tests the identical claim on the identical frames at the cost of one extra
+   render per shot.
+
+So the arms become four, and the prediction is scored inside the run:
+
+| arm | crease | hull defeat | registered expectation |
+|---|---|---|---|
+| `A-ship` | 0.95 | none | both systems live |
+| `B-nocrease` | 0 | none | hull ink only |
+| `C0-visible` | 0 | `.visible = false` (**the broken lever**) | **PRED-1: bit-identical to B** |
+| `C-noink` | 0 | `.layers.disable(0)` | **must differ from B** |
+
+`layers.disable(0)` rather than `disableAll()`: `Lighting.js:1550-1571` partitions shadow casters
+across layers 28/29/30/31 and re-runs that census on a beat, so `disableAll()` would collide with
+a system that writes those bits every few frames. Its own comment states the invariant this lever
+needs — *"Layer 0 membership is never touched, so the main camera and c0's stock shadow pass are
+blind to all of this"* — and the only `camera.layers` writes in `src/` are `Lighting.js:1633` and
+`:1679`, both on shadow cameras. The main camera therefore tests layer 0 alone, and clearing
+exactly that bit removes the shell from the scene pass and nothing else.
+
+**CAL-4 (MUST FIRE, and it is a sensitivity test, not a null test).** On every shot:
+`sha(C0) == sha(B)` **and** `sha(C) != sha(B)`. One lever must be shown dead and the other alive
+*in the same boot on the same frame*. If both levers move the frame, PRED-1 is refuted and my
+reading of the render order was wrong. If neither moves it, the hull draws no ink at all in that
+shot and the attribution question is answered differently than either arm intends. Either way the
+run is VOID and says so.
+
+**Nothing else moves.** CAL-1, CAL-2, CAL-3, P1, F1, P2 and F2 are unchanged in wording and in
+number. `inkMask`, `creaseMask` and `hullMask` keep their definitions, with arm `C` (the layers
+lever) as the un-inked reference; `C0` is scored only by CAL-4 and never enters a mask.
+
 ---
 
 ## 4. Arms, calibration and falsifiers

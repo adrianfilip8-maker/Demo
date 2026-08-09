@@ -7,8 +7,16 @@
  *   CAL-1  |A - B| non-empty on every daylight frame     (the crease lever is live)
  *   CAL-2  |B - C| non-empty on every frame              (the hull lever is live)
  *   CAL-3  inkMask covers 0.5%..15% of each frame        (else the mask is not ink)
+ *   CAL-4  sha(C0) == sha(B) AND sha(C) != sha(B)        (broken lever dead, working lever live)
  *   P1     |darkestDecile(hullMask, B) - darkestDecile(inkMask, A)| <= 0.010
  *   F1     > 0.010 refutes "the hull dominates the ink black point"
+ *
+ * CAL-4 is the sensitivity half of the calibration and it is deliberately two-sided. `C0` runs
+ * the hull-defeat lever that the pre-registration predicts does NOT survive to the captured frame
+ * (`.visible = false`, reverted by `endNormalPass` -> `setOutlinesVisible(true)` on every frame
+ * after the first); `C` runs the one that does (`.layers.disable(0)`). Requiring one dead and one
+ * live, in the same boot on the same frame, proves the instrument responds to the hull rather
+ * than merely repeating itself. `C0` enters no mask and contributes to no attribution.
  *
  * P2 (re-authoring the hull colour to black moves the decile >= 0.030 L) needs a src edit and a
  * second capture. It is deliberately NOT scored here, so that P1's numbers cannot be used to
@@ -56,11 +64,21 @@ for (const r of arms) {
 }
 
 const rows = [];
-const cal1 = [], cal2 = [], cal3 = [];
+const cal1 = [], cal2 = [], cal3 = [], cal4 = [];
 
 for (const [shot, a] of byShot) {
-  const A = a['A-ship'], B = a['B-nocrease'], C = a['C-noink'];
-  if (!A || !B || !C) { rows.push({ shot, note: 'missing arm' }); cal1.push(false); cal2.push(false); cal3.push(false); continue; }
+  const A = a['A-ship'], B = a['B-nocrease'], C = a['C-noink'], C0 = a['C0-visible'];
+  if (!A || !B || !C || !C0) {
+    rows.push({ shot, note: 'missing arm' });
+    cal1.push(false); cal2.push(false); cal3.push(false); cal4.push(false);
+    continue;
+  }
+
+  /* CAL-4, from the recorded shas rather than from the pixels: cheap, and it is a statement
+     about the LEVERS, not about the image. Both halves required. */
+  const c0Dead = C0.sha === B.sha;
+  const cLive = C.sha !== B.sha;
+  cal4.push(c0Dead && cLive);
 
   const imA = readPNG(A.file), imB = readPNG(B.file), imC = readPNG(C.file);
   const inkMask = diffMask(imA, imC);
@@ -94,6 +112,7 @@ for (const [shot, a] of byShot) {
     dHullB: darkestDecile(imB, hullMask),
     dCreaseA: darkestDecile(imA, creaseMask),
     shells: C.applied?.hulls ?? 0,
+    c0Dead, cLive,
   });
 }
 
@@ -104,6 +123,16 @@ for (const r of rows) {
   console.log(`  ${r.shot.padEnd(12)} ${String(r.nInk).padStart(7)} ${String(r.nCrease).padStart(10)} `
     + `${String(r.nHull).padStart(9)}  ${(100 * r.cov).toFixed(2).padStart(5)}     ${f(r.dInkA)}      `
     + `${f(r.dHullB)}       ${f(r.dCreaseA)}     ${String(r.shells).padStart(4)}`);
+}
+
+/* CAL-4, printed per shot. The interesting column is `C0==B`: a `yes` there is the registered
+   PRED-1 firing — the `.visible` hull lever is reverted by `endNormalPass` before the captured
+   frame — and a `no` refutes the render-order reading outright. */
+console.log('\nCAL-4  lever sensitivity      C0==B (broken lever dead)   C!=B (layers lever live)');
+for (const r of rows) {
+  if (r.note) continue;
+  console.log(`  ${r.shot.padEnd(12)}              ${r.c0Dead ? 'yes' : 'NO '}                        `
+    + `${r.cLive ? 'yes' : 'NO '}`);
 }
 
 /* P1 — attribution. Scored over the shots where BOTH deciles exist; a shot missing either is
@@ -118,6 +147,7 @@ const guards = {
   'CAL-1 crease lever live': all(cal1),
   'CAL-2 hull lever live':   all(cal2),
   'CAL-3 mask is ink':       all(cal3),
+  'CAL-4 lever sensitivity':  all(cal4),
   'P1 hull dominates':       p1,
 };
 
@@ -146,8 +176,8 @@ console.log('\n' + verdictLine(v));
 /* The registered outcome names, mapped explicitly so the run cannot be reported as something
    the pre-registration does not define. VOID beats FAIL: an unevaluable run says nothing about
    the candidate. */
-const calStates = ['CAL-1 crease lever live', 'CAL-2 hull lever live', 'CAL-3 mask is ink']
-  .map((k) => guardState(guards[k]));
+const calStates = ['CAL-1 crease lever live', 'CAL-2 hull lever live', 'CAL-3 mask is ink',
+  'CAL-4 lever sensitivity'].map((k) => guardState(guards[k]));
 let outcome;
 if (calStates.some((s) => s === VOID) || guardState(p1) === VOID) outcome = 'VOID';
 else if (calStates.some((s) => s !== PASS)) outcome = 'VOID';         // a failed calibration voids
