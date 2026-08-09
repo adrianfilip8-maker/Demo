@@ -151,13 +151,19 @@ const unreferenced = assets.filter((a) => !namedInSrc(a.base) && !sidecars.has(a
 /**
  * The two art packs, listed by rule rather than by name.
  *
- * `tombchaser/` is staged in its entirety and wired to nothing — 22 MB, deliberately deferred
- * because its normal and metallic maps may fight the cel ramp. Enumerating 59 filenames here would
- * be noise; what matters is that the whole directory ships and none of it is fetched.
+ * `tombchaser/` **has left `public/`** — 21.1 MB of CC0 Egyptian art staged in its entirety and
+ * wired to nothing, now under `staging/assets/tombchaser/` where git keeps it and Vite does not
+ * copy it. `packFiles` returns nothing for it and the register shrank accordingly, which is the
+ * behaviour the guard below was written for.
  *
- * `kaykit/` is the opposite and more interesting: it is a pack the game DOES use, of which roughly
+ * `kaykit/` is the opposite and is still here: it is a pack the game DOES use, of which roughly
  * half is dead weight. `KayKit.js` names the props it places; the rest — candles, most stairs, most
- * wall variants, floor tiles — ship because they arrived in the same download.
+ * wall variants, floor tiles — ship because they arrived in the same download. They stay listed
+ * rather than moved because they are interleaved file-for-file with the 18 that ARE placed, in one
+ * directory, sharing `dungeon_texture.png`; splitting them is a separate operation from moving a
+ * directory nothing touches, and doing it blind while `KayKit.js` is live is how a placed prop
+ * turns into a 404 at boot. §265.2's point stands: they were never decided about, and the register
+ * is what keeps that visible until someone decides.
  */
 /**
  * Walk a pack directory, tolerating its absence.
@@ -183,34 +189,62 @@ const KAYKIT_UNUSED = packFiles('kaykit')
 /**
  * Shipped, never fetched. Each entry is megabytes of download bought for nothing.
  *
- *   tombchaser/*             a CC0 Egyptian art pack, staged and deliberately never wired — its
- *                            normal and metallic maps may fight the cel ramp, which was the right
- *                            call to defer and the wrong thing to ship while deferring.
- *   sly-rig.glb              11 MB, zero references anywhere.
- *   sly-anims.glb            BUILD-TIME input to `mixamo2clips`; the runtime loads MixamoClips.js.
- *   carmelita-anims.glb      BUILD-TIME input to `carmelita2clips`; runtime loads GuardClips.js.
- *   sly-godot-anims.glb      split out to keep 2,620 channels OFF the boot path, then shipped.
- *   museum-…mp3, footstep    not in `STEM_FILES`; nothing can name them.
- *   sly-cane.glb             owner-supplied, staged 2026-08-09, correctly not yet wired.
+ * **Ten of the twelve entries this list used to carry are gone, because the files moved rather
+ * than because the scan stopped seeing them.** `MOVED_OUT_OF_PUBLIC` below pins where each one
+ * went and is asserted separately, so "shrank because it was fixed" cannot be confused with
+ * "shrank because it went blind" — which is the only way a register like this dies quietly.
  *
- * The fix is to move these out of Vite's copy path while keeping them in git — not to delete them.
- * Queued behind the capture lock (§186), as the texture bake is (§232.7).
+ * What is left, and why each one is still here:
+ *
+ *   sly-anims.glb            BUILD-TIME input to `mixamo2clips`; the runtime loads MixamoClips.js.
+ *   carmelita-anims.glb      BUILD-TIME input to `carmelita2clips` AND `carmelita2guard`, and
+ *                            `tests/carmguard.test.mjs:278` asserts it exists at this exact path
+ *                            so the tool can be re-run. Moving it is a four-file change across two
+ *                            other agents' live work; it is a decision with an owner, not a sweep.
+ *   sly-godot-anims.glb      split out to keep 2,620 channels OFF the boot path, then shipped.
+ *                            `tools/godot2rig.mjs` writes it to this path.
+ *   kaykit/*                 40 models nobody chose to include (§265.2) — see `packFiles` above.
+ *   museum-…mp3              6.94 MB, the largest single unreferenced file left, and it stays on
+ *                            purpose. The **owner instructed that it be used** as the game's
+ *                            background music and nothing has wired it yet. Moving it out of the
+ *                            copy path would not honour that instruction — it would put another
+ *                            step between the file and somebody honouring it, and an agent wiring
+ *                            the music would find it missing from the directory its own provenance
+ *                            names. The outstanding work is to wire it, not to hide it.
+ *
+ * The rule the move followed: an asset may leave `public/` when **no code path and no tool names
+ * it**, so that no boot and no build can notice. That is a strictly stronger condition than the
+ * one this register measures, which is why the three build-time inputs above did not qualify. The
+ * music is the one entry held back on a judgement rather than on that rule, and it is written down
+ * here so it reads as a decision instead of an oversight.
  */
 const KNOWN_UNSHIPPED_PAYLOAD = [
-  'audio/footstep.mp3',
   'audio/museum-of-natural-history.mp3',
   'sly-anim/carmelita-anims.glb',
-  'sly-anim/carmelita-body.png',
-  'sly-anim/carmelita-head.png',
   'sly-anim/sly-anims.glb',
-  'sly-anim/sly-body.png',
-  'sly-anim/sly-cane.glb',
-  'sly-anim/sly-head.png',
-  'sly-anim/sly-rig.glb',
-  'sly-cane/sly-cane.glb',
   'sly-godot/sly-godot-anims.glb',
   ...KAYKIT_UNUSED,
   ...TOMBCHASER_ALL,
+];
+
+/**
+ * Where each moved asset went. **Kept in git, out of Vite's copy path** — the whole point is that
+ * nothing was deleted.
+ *
+ * Asserted in both directions below: still present at the new path, and absent from the old one.
+ * Without the first half, deleting an asset outright would look identical to moving it and the
+ * register would applaud. Without the second, moving it back would go unnoticed.
+ */
+const MOVED_OUT_OF_PUBLIC = [
+  ['audio/footstep.mp3', 'staging/assets/audio/footstep.mp3'],
+  ['sly-anim/carmelita-body.png', 'staging/assets/sly-anim/carmelita-body.png'],
+  ['sly-anim/carmelita-head.png', 'staging/assets/sly-anim/carmelita-head.png'],
+  ['sly-anim/sly-body.png', 'staging/assets/sly-anim/sly-body.png'],
+  ['sly-anim/sly-cane.glb', 'staging/assets/sly-anim/sly-cane.glb'],
+  ['sly-anim/sly-head.png', 'staging/assets/sly-anim/sly-head.png'],
+  ['sly-anim/sly-rig.glb', 'staging/assets/sly-anim/sly-rig.glb'],
+  ['sly-cane/sly-cane.glb', 'staging/assets/sly-cane/sly-cane.glb'],
+  ['tombchaser/PalmTree_Art.glb', 'staging/assets/tombchaser/PalmTree_Art.glb'],
 ];
 
 test('bundle: the scan sees a real asset tree and real source', () => {
@@ -240,6 +274,74 @@ test('bundle: no NEWLY staged asset silently joins the download', () => {
     + '\n\nEverything in public/ is copied into dist/ verbatim, referenced or not (§265).\n'
     + 'If you STAGED one deliberately, add it here and accept that it ships until moved.\n'
     + 'If you WIRED or MOVED one, delete its line — a stale exception is worse than none.');
+});
+
+test('bundle: what left public/ is still in the repo, and still out of the copy path', () => {
+  /* Moving beats deleting and looks nothing like it from inside a test that only counts what is
+     in `public/`. Both halves are asserted so the two cannot be confused: gone from the old path,
+     present at the new one. 43.3 MB — 89 MB of `public/` down to 46 MB. */
+  assert.ok(MOVED_OUT_OF_PUBLIC.length > 0, 'the moved-asset ledger has been emptied');
+  for (const [was, now] of MOVED_OUT_OF_PUBLIC) {
+    assert.ok(!existsSync(join(PUBLIC, was)),
+      `${was} is back in public/assets — it ships again. If that was deliberate, move its line into `
+      + 'KNOWN_UNSHIPPED_PAYLOAD; if it was a stray copy, delete it.');
+    const abs = join(ROOT, now);
+    assert.ok(existsSync(abs),
+      `${was} left public/ and is not at ${now} either — it was DELETED, not moved. These are `
+      + 'staged imports and build inputs; they are meant to stay in git.');
+    assert.ok(statSync(abs).size > 1024, `${now} is ${statSync(abs).size} bytes — a stub, not the asset`);
+  }
+  /* And the tree as a whole, derived rather than quoted, because the ledger above names one
+     representative of `tombchaser/` rather than all 59 of its files. An emptied `staging/` scores
+     zero here even while every ledger line still passes. */
+  const staged = walk(join(ROOT, 'staging')).reduce((a, f) => a + statSync(f).size, 0);
+  assert.ok(staged > 30 * 1024 * 1024,
+    `staging/ holds only ${(staged / 1048576).toFixed(1)} MB — the bulk of what left public/ is gone`);
+
+  /* And the destination must genuinely be outside what Vite copies. `publicDir` defaults to
+     `public/`; an override pointing anywhere near `staging/` would silently undo all of this. */
+  const vite = readFileSync(join(ROOT, 'vite.config.js'), 'utf8');
+  assert.ok(!/publicDir/.test(vite),
+    'vite.config.js now sets publicDir — check it does not point at staging/, which would ship it all again');
+});
+
+test('bundle: the provenance record follows the asset', () => {
+  /* An imported asset's licence status is only useful if you can find it from the file. Three of
+     the moved directories carry their PROVENANCE.md with them; `sly-anim/` and `audio/` were split
+     — some files moved, some stayed — so their records have to name the new location or the trail
+     ends at a path that no longer exists. `sly-cane/`'s licence is recorded UNKNOWN, which is
+     exactly the case where a broken trail costs the most. */
+  const provFor = (rel) => {
+    const dir = join(ROOT, rel.slice(0, rel.lastIndexOf('/')));
+    for (let d = dir; d.startsWith(join(ROOT, 'staging')) || d.startsWith(join(ROOT, 'public')); d = d.slice(0, d.lastIndexOf('/'))) {
+      const p = join(d, 'PROVENANCE.md');
+      if (existsSync(p)) return { path: p, text: readFileSync(p, 'utf8') };
+    }
+    return null;
+  };
+  let checked = 0;
+  for (const [was, now] of MOVED_OUT_OF_PUBLIC) {
+    const base = now.slice(now.lastIndexOf('/') + 1);
+    const rec = provFor(now);
+    const pack = now.split('/')[2];          // the directory under staging/assets/
+    assert.ok(rec, `${now} has no PROVENANCE.md anywhere above it — its licence status is now unfindable`);
+    /* Named individually, or as the pack it belongs to — enumerating 59 tombchaser filenames in a
+       licence record would be noise, but a record that identifies neither the file nor its pack is
+       not a record of anything. */
+    assert.ok(rec.text.includes(base) || rec.text.includes(pack),
+      `${rec.path} names neither ${base} nor ${pack}; the record and the file have parted company`);
+    checked++;
+    /* The record left behind in public/ must say where the file went, not silently describe a
+       path that is empty. Only for the split directories — a whole directory that moved took its
+       record with it and has nothing left behind to be stale. */
+    const oldDir = join(PUBLIC, was.slice(0, was.lastIndexOf('/')));
+    if (!existsSync(join(oldDir, 'PROVENANCE.md'))) continue;
+    const old = readFileSync(join(oldDir, 'PROVENANCE.md'), 'utf8');
+    assert.ok(!old.includes(base) || /staging\/assets/.test(old),
+      `${oldDir}/PROVENANCE.md still describes ${base} as if it were there, and never mentions `
+      + 'staging/ — the next person to look for it follows the record to an empty path');
+  }
+  assert.equal(checked, MOVED_OUT_OF_PUBLIC.length);
 });
 
 test('bundle: comment-only mentions do not count as references', () => {

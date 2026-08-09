@@ -33,15 +33,19 @@ short-time energy envelopes, `explore` scores **0.122** against `sneak` and **0.
 measure against a time-reversed copy of `explore`, scores 0.163. Tempo autocorrelation puts
 `explore` at 120 BPM and the other two at 80. See `KNOWN_ISSUES.md` §233.
 
-## `footstep.mp3`
+## `footstep.mp3` — MOVED to `staging/assets/audio/footstep.mp3`
 
 0.576 s, MPEG-1 Layer III, 48 kHz stereo, 9 kB, carrying a Xing/LAME tag (encoder delay 576,
 padding 1522). **Nothing in the project references it.** Every footstep in the game is
-synthesised by `buildStep` in `src/audio/Sfx.js`; this file is not loaded by any code path and
-ships in `dist/` unused.
+synthesised by `buildStep` in `src/audio/Sfx.js`; no code path loads this file.
+
+It no longer ships. `public/` is copied into `dist/` verbatim (§265), so an unwired file staged
+here was buying download for nothing; it now lives in `staging/assets/audio/`, which git keeps and
+Vite does not copy. It was **moved, not deleted** — `tests/bundle.test.mjs` asserts it is absent
+from here and present there, so the two cannot be confused.
 
 **Origin: unstated. Licence: unstated.** It arrived alongside the supplied soundtrack in commit
-`9a8a06e` with no note of its own.
+`9a8a06e` with no note of its own, which is precisely why it is kept rather than discarded.
 
 ## `museum-of-natural-history.mp3`
 
@@ -50,6 +54,14 @@ this 6.94 MB file is copied verbatim into `dist/` and never fetched — over hal
 audio payload, for audio nothing plays. It is left in place rather than deleted because the
 owner's standing instruction (below) was that it be used as the game's background music, and
 reversing that is the owner's call, not an agent's. Recorded here so the choice is visible.
+
+**It also stayed here when the rest of the unwired assets moved to `staging/` (§265).** That was
+deliberate. Moving it out of the copy path would save the 6.94 MB and would not honour the
+instruction any better — it would put one more step between this file and somebody wiring it, and
+an agent looking for the music would find it missing from the directory this record names. The
+outstanding work is to wire it. Until then it is the one entry in
+`KNOWN_UNSHIPPED_PAYLOAD` held back on a judgement rather than on the rule the other moves
+followed, and that is written down in `tests/bundle.test.mjs` so it reads as a decision.
 
 
 **"The Museum of Natural History"**, composed by **Peter McConnell**, from *Sly 2: Band of Thieves —

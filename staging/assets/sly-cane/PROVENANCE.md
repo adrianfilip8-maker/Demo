@@ -12,6 +12,16 @@ position than `assets/sly-anim/` (checked, none stated) and much weaker than `as
 instruction is that copyright is not an obstacle for this project for undisclosed reasons; that is
 their call and it does not license me to invent a licence here.
 
+## Where it lives: `staging/assets/sly-cane/sly-cane.glb`
+
+Staged, deliberately unwired, and **no longer inside Vite's copy path**. It used to sit in
+`public/assets/sly-cane/`, which is copied into `dist/` verbatim whether anything fetches it or
+not (§265) — so an asset held back pending a decision was shipping anyway. It was **moved, not
+deleted**; `tests/bundle.test.mjs` asserts it is absent from `public/` and present here.
+
+Moving it changes nothing about the record above. **The licence is still unknown**, and an asset
+with an unknown licence is the one you least want in a shipped bundle by accident.
+
 ## THE CONSTRAINT
 **Do not alter the shape of the model.** Uniform scale, rotation and translation are rigid or
 similarity transforms and preserve shape — they are permitted and are required for the frame to

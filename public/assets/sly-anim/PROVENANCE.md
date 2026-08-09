@@ -13,12 +13,32 @@ this repository has to infer the status of these files. **This is not equivalent
 
 ## What was taken, and why
 
-| file | what it is | why |
-|---|---|---|
-| `sly-anims.glb` | **16 authored animation clips**, 1.0 MB | the reason this import happened |
-| `sly-rig.glb` | rigged Sly mesh, 144 joints, 21 meshes, 31,494 tris, 10.6 MB | an alternative to the supplied FBX |
-| `sly-cane.glb` | the cane, 1,792 tris | ours is procedural |
-| `sly-body.png`, `sly-head.png` | 2048² albedo | the rig's textures |
+| file | what it is | why | where it is now |
+|---|---|---|---|
+| `sly-anims.glb` | **16 authored animation clips**, 1.0 MB | the reason this import happened | here — build-time input to `tools/mixamo2clips.mjs` |
+| `sly-rig.glb` | rigged Sly mesh, 144 joints, 21 meshes, 31,494 tris, 10.6 MB | an alternative to the supplied FBX | **`staging/assets/sly-anim/`** |
+| `sly-cane.glb` | the cane, 1,792 tris | ours is procedural | **`staging/assets/sly-anim/`** |
+| `sly-body.png`, `sly-head.png` | 2048² albedo | the rig's textures | **`staging/assets/sly-anim/`** |
+
+### Where these files live, and why some of them left
+
+`public/` is copied into `dist/` verbatim, referenced or not, so an asset staged here without being
+wired was buying download for nothing — 52% of the shipped bundle, measured (§265). Everything in
+this import that **no code path and no tool names** has moved to `staging/assets/sly-anim/`, which
+git keeps and Vite does not copy. Nothing was deleted, and `tests/bundle.test.mjs` asserts each
+moved file is absent here and present there so the two cannot be confused.
+
+What stayed, and why:
+
+- `carmelita-guard.glb` — fetched at runtime by `src/ai/CarmelitaGuard.js`.
+- `sly-anims.glb`, `carmelita-anims.glb` — **build-time inputs**, read at these exact paths by
+  `tools/mixamo2clips.mjs`, `tools/carmelita2clips.mjs` and `tools/carmelita2guard.mjs`, with
+  `tests/carmguard.test.mjs` asserting one of them is present so the tool can be re-run. They ship
+  today and should not; moving them is a four-file change across other people's live work, which
+  is a decision with an owner rather than part of a sweep. They stay on the register meanwhile.
+
+The staged copies carry their own `staging/assets/sly-anim/PROVENANCE.md`, which points back here
+for the full record. **The licence position is unchanged by the move: none stated.**
 
 ### The clips are the find
 
@@ -82,11 +102,11 @@ Same two repositories, same licence status (**none stated in either**; see above
 owner's instruction to import "character models, rigs, animations, movements, controls, and anything
 else that may be usable".
 
-| file | what it is |
-|---|---|
-| `carmelita-anims.glb` | **a second character — 199 bones, 11 clips**, 3.86 MB |
-| `carmelita-body.png` | 1.30 MB albedo |
-| `carmelita-head.png` | 0.71 MB albedo |
+| file | what it is | where it is now |
+|---|---|---|
+| `carmelita-anims.glb` | **a second character — 199 bones, 11 clips**, 3.86 MB | here — build-time input to `carmelita2clips` / `carmelita2guard` |
+| `carmelita-body.png` | 1.30 MB albedo | **`staging/assets/sly-anim/`** — `carmelita-guard.glb` embeds its own images, so these loose copies are fetched by nothing |
+| `carmelita-head.png` | 0.71 MB albedo | **`staging/assets/sly-anim/`** |
 
 Source path: `Sly-Cooper--A-Thief-in-Godot/Assets/Temp Imports/tempcarmelita/`.
 

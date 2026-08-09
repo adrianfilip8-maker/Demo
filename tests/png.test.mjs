@@ -272,7 +272,7 @@ test('png: the file that used to decode to garbage — every PNG in the tree, ch
      compared to `pngjs` pixel for pixel.
      Deliberately a WALK, not a list of paths: assets move between directories in this repo, and a
      census pinned to paths stops being a census the first time one does. */
-  const roots = ['public', 'src', 'tests'].map((d) => new URL(`../${d}/`, import.meta.url).pathname);
+  const roots = ['public', 'src', 'tests', 'staging'].map((d) => new URL(`../${d}/`, import.meta.url).pathname);
   const found = [];
   const walk = (dir) => {
     let entries; try { entries = readdirSync(dir); } catch { return; }
