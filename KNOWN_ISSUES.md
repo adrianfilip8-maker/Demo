@@ -21981,8 +21981,47 @@ most**, for a reason I could have derived from a comment already in my own file:
   surface, i.e. the saturation half of critic pass 2's defect re-entered from the other side. A lerp
   toward grey holds hue exactly and scales saturation (0.825 → 0.631 on sandstone mid), which is
   "hold hue, drop value and saturation" literally, and it keeps `uShadowSat` load-bearing.
-- Nothing is enabled. `shots/r9/` is unchanged by this commit; every frame in the game is
-  bit-identical to before it.
+- Nothing is enabled.
+
+**Run 2 — the shipped `albShadow` held branch, measured rather than only modelled** (`shots/shold2/`,
+`dunes` + `interior`, arms A0/A1/A3; `hero` deliberately not re-shot, so its guards come back VOID
+and the scorer prints `DO NOT SHIP … VOID is not PASS`, which is the fail-closed behaviour working):
+
+| shot | arm | Δh | lit s → shade s | V ratio | warm % | cool % | dark % |
+|---|---|---|---|---|---|---|---|
+| `dunes` | A0 | 173.8 | 0.664 → 0.419 | 0.367 | 64.62 | 18.82 | 1.27 |
+| `dunes` | A3 hold 1 | **12.4** | 0.665 → **0.463** | 0.325 | 81.18 | 2.82 | 3.94 |
+| `interior` | A0 | 59.2 | 0.219 → 0.278 | 0.548 | 7.96 | 75.29 | 9.50 |
+| `interior` | A3 hold 1 | 36.1 | 0.382 → 0.446 | 0.489 | 89.84 | **2.85** | 37.01 |
+
+`albShadow` is better than raw `alb` on every axis that matters: `dunes` Δh **12.4°** lands inside
+the reference's own 11.9–30.5° band rather than beating it at 2.3°, and shade saturation is now
+**0.463 against a lit 0.665** — the shade *less* saturated than the sunlit surface, so critic pass
+2's defect is avoided on the saturation axis as well as the R/G one. **And `interior` still refuses:
+cool % 2.85 against a bar of 56.44.** The refusal is a property of the frame, not of the
+formulation.
+
+**Correction to an over-strong claim I nearly shipped in this section.** I first wrote "every frame
+in the game is bit-identical". Within a boot that is exact — all five null arms across both runs are
+byte-identical to their base. **Across boots it is not**, and I checked instead of asserting:
+`dunes` A0 from run 1 versus run 2 differs on **2.69 % of pixels, max channel delta 201**. Mapping
+it shows the difference is confined to 1-px alpha-tested vegetation edges, the blue sparkle FX and
+thin wires; every flat mass is identical, and `interior` A0 *is* byte-identical across the two boots
+(`da44202e312eeefc` both times) because it has no vegetation or dust. So the shading is unchanged at
+`hold` 0 and the across-boot jitter is FX/alpha-edge, not shader math.
+
+**The ink line's median weight — on the do-not-break list — is measured, not assumed.** `dunes` ink
+pixel counts, run 1 A0 vs run 2 A0: L < 40 **12 800 vs 12 808**, L < 60 **86 985 vs 86 968**,
+L < 80 **173 533 vs 173 566**. Agreement to 0.06 %, and the jitter flips pixels in both directions,
+so the edge noise is symmetric and the ink is untouched.
+
+**Run-2 forecast scoring** (registered in the draft before it ran): `dunes` Δh ≤ 5° → **12.4, wrong**
+— I predicted the held band's exact hue hold would carry to the pixel, but desaturating the band
+hands the cool fill *more* relative influence on the final hue, which is the mechanism I had already
+mis-weighted in run 1. Shade saturation 0.50–0.62 → **0.463, just under**. V ratio 0.35–0.40 →
+**0.325, under**. warm/cool 76–82 / 2–5 → **81.18 / 2.82, correct**. Null bit-identical → **correct**.
+Two of five. The standing pattern across both runs: **directions right, magnitudes consistently
+wrong, and wrong in whichever direction flatters my hypothesis least only by luck.**
 
 **Not shipped, and why:** `shadowHold 1` globally, because G5b refuses it on `interior`. Not
 because it is close — cool % 2.27 against a bar of 56.44.
