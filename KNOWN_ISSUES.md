@@ -21688,3 +21688,57 @@ channels survive the chain.** A continuous channel does not.
 from `SlyModel.js:_matSpec`, `eyeball` untouched to protect §15. Character footprint mean
 111.6 → 109.5, p99 199.5 → 197.3, controls fired. **Not shipped:** the cane's metal, refused with the
 reason written at the call site.
+
+## §268 — the rollback happened a SECOND time, and pushing is the only reason it cost nothing
+
+The working tree reverted to `da890a3` — this session's **first** commit — for the second time today
+(§260 was the first). `git rev-list --left-right --count` read **126 remote-only, 0 local-only**:
+every commit of the session existed on `origin` and none of it existed locally.
+
+The tell was three untracked files — `celcyl.mjs`, `public/assets/sly-godot/`, `tools/godot2rig.mjs`
+— which are *exactly* what `git status` showed at session start. A tree that looks like the
+beginning of the day is not a tidy tree.
+
+### The recovery, and why it was not `reset --hard`
+
+§225 records `reset --hard` destroying 116 commits of local state. The temptation here is that the
+situation is inverted — the remote is ahead, so a hard reset would be *recovery* rather than
+destruction. That reasoning is correct and it is still the wrong command, because it is correct only
+if `0 local-only` is true, and `reset --hard` does not check.
+
+```
+git merge --ff-only origin/claude/sly-cooper-ancient-egypt-0koo0u
+```
+
+A fast-forward **cannot** discard a local commit: if one existed the merge refuses. So the safety is
+in the command rather than in my having checked first — which matters, because the check and the
+action would otherwise be two steps with a gap between them, and §232.7 and §251 both happened in
+exactly such a gap.
+
+The three untracked paths were copied aside first, since a checkout would overwrite them.
+
+### The backups were stale, and that is the point
+
+All three "differed" from what was restored — and the restored versions are the **newer** ones:
+
+```
+tools/godot2rig.mjs   restored has the sparse-accessor refusal (§245); the backup does not
+celcyl.mjs            restored 752 lines; the backup 429
+sly-godot.glb         restored 104 accessors; the backup 95 — the pre-§227 broken file
+PROVENANCE.md         exists only in the restored copy
+```
+
+So the untracked files were **the session-start versions still sitting on disk**, and the rollback
+had reverted around them. Had I "preserved" them by copying them back over the restored tree, I
+would have re-introduced the exact `.glb` that crashes three's GLTFLoader. **A file surviving a
+rollback is not evidence that it is the good copy.**
+
+### What this costs, twice
+
+Nothing, both times — and only because every piece of work was pushed within minutes of being
+finished. 126 commits, ~70 ledger sections, five new test files and a validated gate were all
+recoverable because they were not sitting locally. **"I'll push when this is tidy" would have lost a
+day's work twice over.**
+
+Suite 394/395 after recovery, identical to before it; the one red is the deliberately-held texture
+staleness guard (§232.7).
