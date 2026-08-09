@@ -160,10 +160,33 @@ let I1 = null; const i1rows = [];
 }
 
 /* ═══════════════════════════════════ I2/I3/I4 — validity ════════════════════════════════ */
-const calRows = Object.entries(run.shots).map(([s, r]) => [s, r.calib]);
-const I2 = calRows.length === 0 ? null : calRows.every(([, c]) =>
-  c && c.ok && c.rgb[0] === BAR.calib[0] && c.rgb[1] === BAR.calib[1] && c.rgb[2] === BAR.calib[2])
-  && (num(run.shots.hero?.calib?.share) === null ? null : run.shots.hero.calib.share >= BAR.calibShare);
+/* PREREG I2 is written about `hero`: "the debugTerm(4) render's modal RGB is exactly
+   (64,128,191) and covers >= 20% of the `hero` frame". The first draft of this scorer required
+   the modal to be the constant on ALL TEN shots, which is stricter than what was registered and
+   wrong on its own terms — in a frame the sky dominates, the most common pixel is legitimately
+   not a toon surface, and that says nothing about whether the channel can be read. Corrected to
+   the registered form BEFORE any candidate frame was scored, with the per-shot diagnostic that
+   actually answers the question kept as a separate, reported quantity: the share of pixels
+   carrying the constant EXACTLY. A shot whose calibration frame contains none of it has no
+   readable toon surface, and its criterion-C reading is VOID rather than PASS. */
+const exactShare = (shot) => {
+  const f = `${DIR}/${shot}-calib4.png`;
+  if (!existsSync(f)) return null;
+  const im = readPNG(f);
+  let n = 0, tot = 0;
+  for (let i = 0; i < im.data.length; i += im.ch) {
+    tot++;
+    if (im.data[i] === BAR.calib[0] && im.data[i + 1] === BAR.calib[1] && im.data[i + 2] === BAR.calib[2]) n++;
+  }
+  return n / tot;
+};
+const calRows = Object.entries(run.shots).map(([s, r]) => ({ shot: s, calib: r.calib, exact: exactShare(s) }));
+const heroCal = run.shots.hero?.calib;
+const I2 = !heroCal ? null
+  : (heroCal.rgb[0] === BAR.calib[0] && heroCal.rgb[1] === BAR.calib[1] && heroCal.rgb[2] === BAR.calib[2]
+     && num(heroCal.share) !== null && heroCal.share >= BAR.calibShare);
+/** Shots whose criterion-C reading cannot be trusted because no pixel carried the constant. */
+const cBlind = calRows.filter((r) => r.exact === null || r.exact <= 0).map((r) => r.shot);
 
 const I3 = (run.provStart?.src?.digest && run.provEnd?.src?.digest)
   ? run.provStart.src.digest === run.provEnd.src.digest : null;
@@ -224,7 +247,9 @@ const partitionAgrees = (() => {
   }
   return true;
 })();
-const G0 = run.partition?.refuted ? false : (I4 === null ? null : (partitionAgrees && I4));
+const G0 = cBlind.length ? null                       // criterion C unreadable somewhere -> VOID
+  : run.partition?.refuted ? false
+  : (I4 === null ? null : (partitionAgrees && I4));
 
 /* ═════════════════════════════ G1..G7 — the candidate, A4 ═══════════════════════════════ */
 const capturedShots = [...new Set(run.arms.map((a) => a.shot))];
@@ -269,12 +294,16 @@ console.log(`  src   ${run.provStart?.src?.digest} -> ${run.provEnd?.src?.digest
 console.log(`  arms  ${run.arms.length} in one invocation, all files present: ${oneRun}`);
 
 console.log('\n── phase 1: the fan and criterion C ───────────────────────────────────────────');
-console.log('  shot          enclosure  target  |e-t|    litFrac    calib   C says');
+console.log('  shot          enclosure  target  |e-t|    litFrac    modal rgb        share   exact%   C says');
 for (const [s, r] of Object.entries(run.shots)) {
   const conv = Math.abs(r.enclosure - (r.target ?? NaN));
+  const ex = calRows.find((c) => c.shot === s)?.exact;
   console.log(`  ${s.padEnd(13)} ${f2(r.enclosure).padStart(6)}  ${f2(r.target).padStart(6)}  ${f2(conv, 4).padStart(7)}  ` +
-              `${f2(100 * r.litFrac, 3).padStart(8)}%  ${r.calib?.ok ? ' ok ' : 'FAIL'}   ${r.litFrac >= BAR.litBar ? 'OPEN' : 'ROOFED'}`);
+              `${f2(100 * r.litFrac, 3).padStart(8)}%  ${JSON.stringify(r.calib?.rgb).padEnd(16)} ` +
+              `${f2(100 * r.calib?.share, 1).padStart(5)}%  ${f2(100 * ex, 2).padStart(6)}%   ` +
+              `${r.litFrac >= BAR.litBar ? 'OPEN' : 'ROOFED'}`);
 }
+if (cBlind.length) console.log(`  criterion C is BLIND on: ${cBlind.join(', ')} — no pixel carried the calibration constant`);
 console.log(`\n  threshold rule: eO ${f2(run.partition?.eO)} / eR ${f2(run.partition?.eR)} -> ` +
             (run.partition?.refuted ? `REFUTED (${run.partition.why})` : `T = ${T}, margin ${run.partition?.marginRays} of 5 rays`));
 
