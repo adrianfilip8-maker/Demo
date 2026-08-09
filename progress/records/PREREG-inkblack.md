@@ -177,6 +177,40 @@ run is VOID and says so.
 number. `inkMask`, `creaseMask` and `hullMask` keep their definitions, with arm `C` (the layers
 lever) as the un-inked reference; `C0` is scored only by CAL-4 and never enters a mask.
 
+### P2's remaining under-specifications, closed before P2's capture exists
+
+P2 and F2 fix the *numbers* (>= 0.030 L meets, < 0.010 L refutes) and nothing else. Three things
+they leave open, each of which could be settled after the fact in whichever direction suited the
+candidate. Closing all three now, with `shots/inkhullcol` not yet created and
+`tools/inkhullcol.mjs` holding no data:
+
+1. **Which mask.** The decile is read over the **shipped** hull's mask, `hullMask = { p : B != C }`,
+   and *both* arms are measured over that same fixed pixel set. Letting the black-hull arm define
+   its own mask would let the candidate choose its own population — the §141.1 failure in spatial
+   form, since a hull pixel that stopped differing from the background would silently leave the
+   sample and improve the number by shrinking it. `hullMask_D` is computed and printed as a
+   diagnostic; it is not what the gate reads.
+2. **Which shot.** P2 is scored on the **worst** shot — `min` over the per-shot move, not the
+   mean. Critic 9 measured the defect on all ten frames; a candidate that reaches black on eight
+   of them has not fixed what was measured.
+3. **The gap between the thresholds.** A move of 0.010..0.030 L is registered as **INCONCLUSIVE**
+   and is neither P2 nor F2. This is filling a hole the original left open, not moving a
+   threshold: 0.030 and 0.010 keep the values they were committed with, and the middle simply
+   stops being available to round in whichever direction the result invites.
+
+**Lever change, same class as arm C's.** P2 was registered as needing "a src edit". It does not,
+and doing it page-side is strictly safer: `uInkSun` / `uInkShade` are plain uniforms, and the only
+thing that rewrites them is `_applyInkNight`, reached through `setInkNight`, which early-outs on an
+unchanged amount (`ToonMaterial.js:1620`) — and at `dt = 0` the clock cannot move. So the run
+writes the uniforms from the page and changes no shipped byte while measuring (§186). Assumed
+levers are what produced the last VOID, so this one is **read back after the render** and
+**CAL-P2b** fails the run unless arm D really rendered with `uInkSun == uInkShade == 0` and arm B
+did not.
+
+Full P2 calibration, all MUST FIRE: **CAL-P2a** the shipped hullMask is non-empty on every frame ·
+**CAL-P2b** the colour override is confirmed applied by read-back · **CAL-P2c** `sha(D) != sha(B)`
+on every frame, so the lever is shown to have moved the picture.
+
 ---
 
 ## 4. Arms, calibration and falsifiers
