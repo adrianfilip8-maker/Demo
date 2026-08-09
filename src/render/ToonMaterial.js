@@ -235,13 +235,21 @@ export const TUNE = {
      on the `courtyard` obelisk. The GTAO pass owns contact scale; this is the leftover. */
   bakedAO: 0.55,
 
-  /* Ceiling on the shadow light's brightest channel after the floor rescale — the single
-     constant that sets daylight shadow magnitude, because `k` is clamped by it in every
-     daylight shot (see _refreshShadowColor). It lived in `PAL` until now, which made the one
-     lever KNOWN_ISSUES §3 names unreachable from `shading.tune` and therefore untestable
-     without an edit-and-reboot. Same value, same behaviour; it is in TUNE because §5 says
-     tunables live in TUNE and because a knob you cannot A/B is a knob that costs capture
-     cycles. */
+  /* Ceiling on the shadow light's brightest channel after the floor rescale.
+     ~~the single constant that sets daylight shadow magnitude, because `k` is clamped by it in
+     every daylight shot~~ — **RETRACTED, and this is the trap: the cap is INERT outdoors.**
+
+     It binds on `interior` and on nothing else. On all six outdoor daylight shots `k` is
+     floor-bound, so raising this value is bit-identical and lowering it is the only direction
+     that does anything. Measured, one boot, live readback: KNOWN_ISSUES §261, the retraction
+     block in `_refreshShadowColor()`, and `progress/records/clamp2.mjs`.
+
+     **Do not tune this against a daylight frame expecting it to behave like the §3 lever.**
+     §3's "the daylight shadow magnitude is set by `shadowTintPeak` and by nothing else" is a
+     statement about a build with `shadowTeal: 0` and `shadowTintPeak: 0.52`, and both of those
+     have since moved. The live lever outdoors is `TUNE.shadowFloor` (and LIGHTING's
+     `ambient.floor`, which mins with it) — those were the dead knobs and now they are the
+     live ones. The release point is 0.562; this ships at 0.62. */
   shadowTintPeak: 0.62,
 
   /* How much warm sand bounce is mixed into the shadow light — a desert shadow is lit by sky
@@ -1732,30 +1740,49 @@ export class Shading {
      * the shadow light brighter than the material it falls on. Capping the peak channel keeps
      * the hue intact and keeps shadow reading as shadow.
      *
-     * **Read this before tuning `shadowFloor` or `ambient.floor`: in daylight the cap is not an
-     * edge case, it is the operating point, and both of those knobs are dead above it.**
-     * `#2a3f66` has a linear peak of 0.1332, so `maxK` is `0.52 / 0.1332` = **3.904**, and every
-     * daylight shot asks for far more than that:
+     * ~~**Read this before tuning `shadowFloor` or `ambient.floor`: in daylight the cap is not an
+     * edge case, it is the operating point, and both of those knobs are dead above it.**~~
      *
-     *     shot        keyLum   k asked   k used
-     *     hero         2.424     6.50     3.904   floor must fall below 0.075 to matter
-     *     temple       2.544     6.82     3.904                          0.072
-     *     courtyard    2.433     6.52     3.904                          0.075
-     *     combat       2.474     6.63     3.904                          0.074
-     *     interior     3.652     9.79     3.904                          0.050
-     *     night        0.336     0.90     0.900   uncapped — the floor IS live here
-     *     guard        0.336     0.90     0.900   uncapped
+     * **RETRACTED — the cap released itself two constants ago and is now INERT outdoors.
+     * KNOWN_ISSUES §261, measured.** The table that stood here (hero asks 6.50, `maxK` 3.904,
+     * "every daylight shot receives the identical shadow light `(0.123, 0.175, 0.423)`") was
+     * true when it was written and is false now. Two constants moved underneath it:
      *
-     * So every daylight shot in the game receives the *identical* shadow light,
-     * `(0.123, 0.175, 0.423)`, and `TUNE.shadowFloor` cannot change it at any value above 0.075.
-     * KNOWN_ISSUES §3 records five capture cycles spent on that parameter; it was clamped out of
-     * the arithmetic for all of them. The same is now true of the `ambient.floor` this file
-     * accepts from LIGHTING — an enclosure term has to cut it by 40-60% before it does anything.
+     *   - `TUNE.shadowTeal` 0.15 was introduced, and the teal blend feeds BOTH `tintLum` and
+     *     `peak`. It raises `tintLum` 0.05007 -> 0.08928, which DIVIDES `k asked` by 1.783.
+     *   - this constant was raised 0.52 -> 0.62, which MULTIPLIES `maxK` by 1.192.
      *
-     * The magnitude of a daylight shadow is therefore set by `PAL.shadowTintPeak` and by nothing
-     * else. If the frame is too bright or too blue in shadow — and measured on `courtyard` the
-     * obelisk runs L 144.8 lit against L 82.3 shadowed, only 1.76:1 at golden hour — that
-     * constant is the lever, not the floor and not the wash. */
+     * Net `kAsked / maxK` moved by 2.13x and crossed 1. Live readback, one boot, `dt = 0`
+     * (`progress/records/clamp2.mjs`, model bit-exact against the live uniform at 3.4e-12 on
+     * 8/8 shots):
+     *
+     *     shot        keyLum   k asked   maxK    k used   capped?
+     *     hero         2.423     3.392   3.742    3.392   no
+     *     temple       2.542     3.560   3.742    3.560   no
+     *     courtyard    2.440     3.417   3.742    3.417   no
+     *     combat       2.481     3.474   3.742    3.474   no
+     *     dunes        1.884     2.639   3.742    2.639   no
+     *     traversal    2.433     3.406   3.742    3.406   no
+     *     interior     3.642     5.100   3.742    3.742   YES — the only one left
+     *     night        0.335     0.468   3.742    0.468   no
+     *
+     * Consequences, all measured rather than argued:
+     *
+     *   - Raising this constant is a **no-op outdoors**: 0.62 -> 4.00 leaves `uShadowColor`
+     *     BIT-IDENTICAL on all six outdoor daylight shots, while the same poke moves `interior`
+     *     36.3% and 0.62 -> 0.30 moves every shot >= 31.4% (both controls fired).
+     *   - `shadowFloor` is **live again outdoors** — it is what sets `k` now, not this cap.
+     *     The old "floor must fall below 0.075 to matter" no longer holds.
+     *   - The daylight shadow light is **no longer identical across shots**; it tracks `keyLum`
+     *     (hero luma 0.30287 vs temple 0.31778, ratio 1.04923 against keyLum ratio 1.04924).
+     *   - The margin is thin and it re-binds under a key boost. Measured on `hero`: the light
+     *     tracks the key exactly to x1.10, then goes flat — across §256's own keyBoost bracket
+     *     the sun rises 160% and the shadow light rises **10.31%**. That is the mechanism
+     *     behind §256's "p1 moves <= 1.5 L across the whole bracket".
+     *
+     * The release point is `kAsked * peak` = **0.562** and this constant ships at 0.62, i.e.
+     * 10.3% of headroom. Anything that raises `keyLum` or `shadowFloor` past that re-engages
+     * the cap silently, which is exactly how it got missed on the way out. */
     const peak = Math.max(_tintBlend.r, _tintBlend.g, _tintBlend.b);
     const maxK = TUNE.shadowTintPeak / Math.max(peak, 1e-4);
     k = Math.min(k, maxK);

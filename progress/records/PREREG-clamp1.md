@@ -145,3 +145,33 @@ measurement and I am not scoring it as one.
 - **C8 — POSITIVE CONTROL, must fire.** Within the C6 sweep, the factor-2.60 arm must change
   `uKeyIntensity`'s readback by ≥ 100 %. If the key poke does not take, C6's flatness is an
   artefact of a dead lever and the run is VOID.
+
+## Outcome of run 2 (`clamp2.mjs`, `clamp2.json`)
+
+- **C5 VOID — mis-derived criterion, not a build failure.** I registered the plateau as starting
+  at `shadowTintPeak ≥ 0.5620`, having computed the release point to four decimal places. The
+  true release is **0.56203**, so the 0.5620 arm sits 3e-5 *below* the knee and measured
+  0.302858 against the plateau's 0.302873. §141.1: a mis-derived criterion is VOID and is not
+  re-derived after the fact. Recorded as VOID.
+  What the sweep shows regardless: strictly increasing below the knee (0.30 → 0.161668,
+  0.50 → 0.269446, 0.54 → 0.291002, 0.56 → 0.301780), flat from 0.58 through 4.00 at 0.302873,
+  knee in (0.5620, 0.5800].
+- **C6 CONFIRMED.** Light tracks `keyLum` exactly to ×1.10 (+5.00 %, +10.00 %) and is flat from
+  ×1.15 through ×2.60 at +10.31 %. Total rise 10.31 % against a ≤ 12 % bar, under a 160 % sun.
+- **C7 PASS.** With the live `uBounceColor` recorded, the model matches the live uniform to
+  **3.37e-12 worst case on 8 of 8 shots** (hero 3.21e-12, temple 3.37e-12, courtyard 3.24e-12,
+  combat 3.29e-12, dunes 2.50e-12, traversal 3.23e-12, interior 2.20e-12, night 4.44e-13).
+  This both certifies the transcription and confirms run 1's C1 diagnosis by measurement:
+  `night`'s live bounce is `(0.0437, 0.0356, 0.0844)`, nothing like the daylight `#e8a852` the
+  model had hard-coded.
+- **C8 POSITIVE CONTROL FIRED** — `uKeyIntensity` moved 160 % (3.30 → 8.58).
+
+## Verdict
+
+The route in the assignment does not exist. `shadowTintPeak` is inert upward on all six outdoor
+daylight shots (C2, bit-identical, with C3 and C4 firing as controls), and even if it were live
+it could not reach display 230 — the shadow terms are gated by `shadowMix = 1 - key`, which is
+exactly 0 where the bright pixels are, and the knob's own ceiling is 19× short regardless.
+
+**Nothing shipped.** The deliverable is the retraction: `ToonMaterial.js:238` and `:1735`, and
+KNOWN_ISSUES §3's stale block and new §261.

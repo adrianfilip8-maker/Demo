@@ -116,6 +116,16 @@ of them receive the **identical** shadow light `(0.123, 0.175, 0.423)` no matter
 is doing, and **`shadowFloor` is a dead knob in daylight**: it changes nothing until it drops
 below 0.075 (0.050 for `interior`).
 
+> **STALE AS OF §261 — this paragraph and the three bullets under it describe a build that no
+> longer exists, and reading them as current costs a cycle. Measured:** the cap now binds on
+> `interior` only. `shadowTeal: 0.15` was introduced (raising `tintLum` 0.05007 → 0.08928, which
+> divides `k asked` by 1.783) and `shadowTintPeak` was raised 0.52 → 0.62 (multiplying `maxK` by
+> 1.192); together `kAsked / maxK` moved 2.13× and crossed 1. Outdoors `k` is now **floor-bound**,
+> so `shadowFloor` is **live** and `shadowTintPeak` is **inert upward** — the exact reverse of
+> both claims below. The shadow light is also no longer identical across shots, and the value
+> quoted here is not the one the shader receives: `hero` measures `(0.104, 0.338, 0.537)`. See
+> §261.
+
 Three consequences worth carrying:
 
 - The daylight shadow magnitude is set by `shadowTintPeak` **and by nothing else**. Tuning
@@ -20561,3 +20571,181 @@ copy is authoritative, and it is answerable in three commands.**
 Nothing local is durable. The remote is the only state that survives, so an agent that finishes work
 and does not push has not finished it. That was already the rule; it is now the rule with a
 demonstration attached.
+
+---
+
+## §261 — the `shadowTintPeak` clamp released itself two constants ago; it is inert on every outdoor daylight shot, and it could not have made a highlight in any case
+
+I was handed a route: lift the clamp, because it pins 32–85 % of every daylight frame and
+"every daylight shot asks for 6.50–9.79 and gets 3.904". The route does not exist. **The cap
+stopped binding outdoors some time before I arrived, and nobody noticed because a released clamp
+and a clamped one look identical from every direction except the one nobody checked.**
+
+Records: `progress/records/PREREG-clamp1.md` (criteria registered before each run),
+`clamp1.mjs` / `clamp1.json`, `clamp2.mjs` / `clamp2.json`.
+
+### The first thing I was asked to check, and its answer
+
+The brief's premise was that the wash — not the clamp — made the daylight frames lavender, that
+the wash has since been cut 0.15 → 0.05, and that lifting the clamp is therefore a different
+proposition than it was five capture cycles ago. **The wash attribution holds. The inference
+drawn from it does not, for two independent reasons.**
+
+1. **The wash and the clamp are multiplicatively coupled, not independent.** The wash is
+   `uShadowColor * uShadowWash * shadowMix * ao`, and `uShadowColor` *is* `_col * k`. So the wash
+   term scales linearly with `k`. Cutting `shadowWash` 0.15 → 0.05 bought exactly **3.00×** of
+   headroom in `k`; a full un-clamp of `hero` would have spent **1.665×** of it, and `interior`
+   **2.51×**. "The wash is fixed, so the clamp is free" does not follow — lifting the clamp
+   partially re-creates the very term whose removal is being cited as the licence.
+2. **It is moot anyway**, because there is no `k` left to recover. See below.
+
+### What actually changed, and when
+
+Two constants moved under §3's finding and neither retraction reached it:
+
+- `TUNE.shadowTeal: 0.15` was introduced. The teal blend happens *before* the floor and the cap
+  and feeds **both** `tintLum` and `peak`. It raises `tintLum` 0.05007 → 0.08928, which
+  **divides `k asked` by 1.783**.
+- `shadowTintPeak` was raised 0.52 → 0.62, which **multiplies `maxK` by 1.192**.
+
+Together `kAsked / maxK` moved by **2.13×** and crossed 1. The comment at `ToonMaterial.js:1716`
+records the halfway state in its own words — "daylight shadow light rises from 8.1 % to 11.6 % of
+key luminance" — and those two figures are computable only at `shadowTintPeak 0.52`. The knob was
+raised to 0.62 afterwards, which pushed `maxK` from 3.139 to 3.742, past a demand of 3.392. **The
+clamp was released as a side effect of a change made for a different reason.**
+
+### Measured, live readback, one boot, `dt = 0`
+
+Uniform readback only — no render, no framebuffer, no tonemap, so no drift floor to sit on.
+
+```
+shot        keyLum   k asked   maxK    k used   capped?   light luma
+hero         2.423     3.392   3.742    3.392     no        0.30287
+temple       2.542     3.560   3.742    3.560     no        0.31778
+courtyard    2.440     3.417   3.742    3.417     no        0.30502
+combat       2.481     3.474   3.742    3.474     no        0.31011
+dunes        1.884     2.639   3.742    2.639     no        0.23556
+traversal    2.433     3.406   3.742    3.406     no        0.30410
+interior     3.642     5.100   3.742    3.742    YES        0.33411
+night        0.335     0.468   3.742    0.468     no        0.04183
+```
+
+- **C2 PASS** — `shadowTintPeak` 0.62 → 4.00 leaves `uShadowColor` **bit-identical** (Δ exactly 0)
+  on all six outdoor daylight shots.
+- **C3 POSITIVE CONTROL FIRED** — 0.62 → 0.30 moves every one of them by ≥ **31.4 %** luma. The
+  poke path is alive; C2's zero is a property of the build, not of a dead lever (§255).
+- **C4 DISCRIMINATOR FIRED** — the *same* 0.62 → 4.00 poke that moved six shots by exactly zero
+  moves `interior` by **36.3 %**, which is where the arithmetic said the cap still binds.
+
+Two further signatures fall out of the data and are worth keeping, because each one falsifies a
+sentence in §3 on its own:
+
+- §3 says every daylight shot receives the **identical** shadow light. They no longer do — the
+  lights track `keyLum` (hero 0.30287 vs temple 0.31778, ratio 1.04923, against a `keyLum` ratio
+  of 1.04924). At `shadowTintPeak 0.30`, where all of them *are* clamped, they collapse to the
+  same 0.16167 on every shot. **Identical-across-shots is the clamped signature, and the build no
+  longer shows it.**
+- §3 says `shadowFloor` is a dead knob in daylight. It is now the **live** one — it is what sets
+  `k` outdoors — and `shadowTintPeak` is the dead one. The two knobs swapped roles and the
+  documentation did not.
+
+### The margin is thin, and it explains §256's p1
+
+The release point is `kAsked * peak` = **0.562**; the shipped value is 0.62, i.e. **10.3 %** of
+headroom. Sweeping `uKeyIntensity` on `hero` with the cap at its shipped value:
+
+```
+keyFactor   1.00    1.05    1.10    1.15    1.40    1.70    2.10    2.60
+light luma  .3029   .3180   .3332   .3341   .3341   .3341   .3341   .3341
+vs f=1.00   0.00%  +5.00% +10.00% +10.31% +10.31% +10.31% +10.31% +10.31%
+```
+
+The light tracks the key **exactly** to ×1.10 and is flat from ×1.15 up. So across §256's own
+`keyBoost` bracket the sun rises **160 %** and the shadow light rises **10.31 %**. §256 predicted
+"p1 moves ≤ 1.5 L across the whole bracket" and attributed it to the cap; **the prediction and the
+attribution are both right, and this is the mechanism** — the cap is not binding at the shipped
+operating point, but any key boost above ×1.10 drives it straight into the cap, where it stays.
+A knob that is inert today and pinned at ×1.15 is not a knob anyone should be reasoning about
+from memory.
+
+### The cap could not have produced a highlight even if it had been binding
+
+Registered before any of the above ran, so it is not a consolation derived after a negative:
+
+1. **It has no authority over the bright end, by construction.** Both shadow-light terms in
+   `toon.glsl.js:596-599` are multiplied by `shadowMix = 1.0 - key` (line 499). At full key
+   `shadowMix` is **exactly 0**, so the shadow light contributes exactly nothing to the brightest
+   pixels in the frame. The cap can only raise the floor — and raising the floor with the ceiling
+   pinned *reduces* range, which is the opposite of the deliverable.
+2. **The knob has its own ceiling.** `k = min(shadowFloor * keyLum / tintLum, shadowTintPeak / peak)`.
+   Raising `shadowTintPeak` can at most restore the first expression, so the shadow light's luma
+   saturates at `shadowFloor × keyLum` = 0.125 × 2.423 = **0.3029** — which is the value it
+   already has.
+3. **The gap is 19×.** Display L 230 needs scene radiance **2.236** (validated chain,
+   `progress/records/tonecurve.mjs`). Through shaded sandstone (post-`shadowSat` albedo luma
+   0.334) plus the wash, that needs a shadow light of luma **5.82**, against a hard ceiling of
+   0.3029.
+
+### Where a highlight would actually have to come from
+
+Ceilings of every additive term in `outgoingLight` (`toon.glsl.js:919`), every factor set to its
+most favourable value, against the 2.236 that display 230 requires. The chain reproduces §256's
+independently-derived numbers exactly (sandMid **197.1**, white albedo **230.8**), which is what
+licenses quoting it:
+
+```
+term                                          scene luma   display L   reaches 230?
+diff, full key, sandstone mid #c9915a            0.882       197.1        no
+diff, full key, sandLight (§2.2)                 1.552       217.3        no
+diff, full key, pure white albedo                2.423       230.8        YES
+spec CEILING (non-metal, uSpec 0.25, rgh 0.03)   0.317       153.5        no
+spec CEILING (metal 1.0, gold albedo)            1.277       210.6        no
+rim CEILING (rim 0.55 x rimGain 4.10)            1.326       214.4        no
+```
+
+The diffuse term is albedo-bounded and the sandstone palette caps it at L 197. **The one term
+that is physically supposed to exceed albedo — the specular — is not multiplied by `keyRad` at
+all** (`spec = specTint * (specAmt * specStep * sh * step(0.02, ndl))`), so it is a fixed ~0.2 of
+scene radiance under a 2.42-luma sun and contributes **+7.8 L** on top of a lit sandstone wall.
+Coupling it to `keyRad` — the counterfactual, not shipped, not registered — would take a lit
+sandstone pixel from L 197.1 to **L 219.4** at `rgh 0.03`. Still not 230, and it would touch every
+material in the game, so it belongs to its own prereg and its own frame verdict rather than to
+this section. The only term that currently reaches 230 is the **rim**, at 1.326 — and it is a
+silhouette band that `TUNE.rim`'s own comment already indicts for the `courtyard` plinth-lip
+artefact.
+
+**Nothing shipped from this investigation.** There was no knob to move: the one I was sent to lift
+is already above the demand, and lowering it would darken 32–85 % of every daylight frame with no
+frame verdict behind it.
+
+### What I got wrong, kept because the shape of it recurs
+
+- **C1 FAILED as registered.** I set "model matches the live uniform to `max |Δ| < 0.002` on every
+  shot" and `night` came in at **3.93e-3**. The cause was an input I hard-coded: the model used
+  the daylight palette bounce `#e8a852` while `_refreshShadowColor()` reads the **live**
+  `uBounceColor`, which LIGHTING repaints by time of day — `night`'s is `(0.044, 0.036, 0.084)`,
+  a cool moonlit bounce, nothing like the warm sand. I did not record `uBounceColor` in run 1, so
+  I could only offer that as a hypothesis. Recording it in run 2 (**C7**) took the model to
+  **3.4e-12 on 8 of 8 shots** — floating-point identical — which both proves the transcription and
+  proves the diagnosis. C1 stays FAILED on the record; C7 is a new criterion, not a restatement.
+- **C5 is VOID by mis-derivation, not falsified by the build.** I registered "light luma is
+  constant for every `shadowTintPeak` ≥ 0.5620", having computed the release point as 0.5620 to
+  four decimal places. The true release is **0.56203**, so my own arm sat 3e-5 *below* the knee
+  and the plateau did not include it. §141.1's rule is that a mis-derived criterion is VOID and
+  does not get re-derived after the fact, so that is how it is recorded. What the sweep does show,
+  independently of the broken criterion: strictly increasing below the knee, flat from 0.58 up,
+  knee in (0.5620, 0.5800].
+- **The premise I was given was stale, and I nearly took it on trust.** Every document in the
+  repo agreed with it — §3, `ToonMaterial.js:55`, `:238`, `:1735`, §256, and the project task
+  list — and they agreed because they were all copied from one measurement that had since expired.
+  Unanimity across documents is not corroboration when the documents share a source. What broke it
+  was transcribing the function and finding the self-check would not close.
+
+### Standing consequence
+
+A clamp that is not binding is indistinguishable from a clamp that is, unless you compare `k asked`
+against `maxK` **or** poke the knob upward and check for a bit-identical result. Every A/B on this
+constant for the last several cycles moved it *downward*, where it always does something. **When a
+knob is a `min()`, the null direction is the informative one** — and it costs one uniform readback,
+not a capture. The retraction blocks now standing at `ToonMaterial.js:238` and `:1735` name the
+release point (0.562) and the re-bind factor (×1.10) so the next person can check both in one line.
