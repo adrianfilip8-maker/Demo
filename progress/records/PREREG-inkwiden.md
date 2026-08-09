@@ -83,7 +83,15 @@ the complaint, and moving it is how "reach black" turns into "flatten to grey".
 > hue error: hue **260.00° exactly**, display luma **0.0381**. HSV saturation rises **0.529 →
 > 0.600**, which quantisation makes unavoidable at these magnitudes if hue is held — reported
 > rather than hidden. Hue is the property §2.2 names ("a dark violet in shadow"), and the warm leg
-> stays at 12.00°, so the two legs remain 248° apart.
+> stays at 12.00°.
+>
+> **A second correction, in the same paragraph, caught by a test written after it.** The sentence
+> above originally ended "so the two legs remain 248° apart". 260 − 12 = 248 is the long way round
+> the wheel; the hue **separation** is the shortest arc, which is **112°**. The guard in
+> `tests/inkcolour.test.mjs` was written with a 120° bar taken straight from that wrong number and
+> failed on the shipped pair immediately. The bar is now 60°, derived — a named hue sector is 60°
+> wide, so two hues further apart than that cannot be called the same colour — and the test
+> asserts both that the shipped pair clears it and that a near-grey does not.
 
 Restated from the model with the corrected value: on a background of display luma 0.15 the fully
 inked pixel goes 0.0957 → 0.0442 with both terms, and 0.0927 → 0.0412 at 0.10.

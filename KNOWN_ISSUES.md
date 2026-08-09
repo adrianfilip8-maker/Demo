@@ -22127,8 +22127,10 @@ Derived (`progress/records/inkpredict.mjs`, `progress/records/inkspread.mjs`), n
 | HULL, scene-linear luma | 0.006566 | 0.006896 | **4.8 %** |
 | CREASE, display luma | 0.0728 | 0.0767 | **5.0 %** |
 
-`inkWarm #1a1210` is hue 12° and `inkCool #161022` is hue 260° (§105.2), so the two endpoints are
-a real warm/violet split — **at the same value**. The ink changes hue across the frame and never
+`inkWarm #1a1210` is hue 12° and `inkCool #161022` is hue 260° (§105.2) — a real warm/violet
+split, **112° apart by the shortest arc** (not 248°; that is the long way round the wheel, and
+writing it the wrong way round is a mistake `tests/inkcolour.test.mjs` caught in this section's
+own first draft) — **at the same value**. The ink changes hue across the frame and never
 changes darkness. That is the whole of "ours is nearly constant", written as the two constants
 that cause it.
 
