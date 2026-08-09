@@ -112,9 +112,24 @@ resolve skirt, not a different value. The instrument is not blind, so the radian
 
 ### 1.7 (added after the capture) — the scene buffer says the same thing the arithmetic did
 
-Read straight out of PostFX's linear HDR `sceneRT`, before AO, bloom and the grade:
+Read straight out of PostFX's linear HDR `sceneRT`, before AO, bloom and the grade. **§1.1 says
+display L 230 needs scene ≈ 2.3.** So the last column is the whole defect, measured at source:
 
-*(filled from `shots/hilite1/report.json`)*
+| shot | scene lum p50 | p99 | p99.9 | max channel | share > 0.73 | > 1.5 | **> 2.3** |
+|---|---|---|---|---|---|---|---|
+| hero | 0.0660 | 0.780 | 1.033 | 3.81 | 1.68 % | 0.019 % | **0.000 %** |
+| temple | 0.0953 | 0.601 | 0.869 | 2.46 | 0.27 % | 0.003 % | **0.000 %** |
+| courtyard | 0.1470 | 0.730 | 1.430 | 8.23 | 1.07 % | 0.089 % | **0.018 %** |
+| sly-closeup | 0.0856 | 0.780 | 1.461 | 4.04 | 1.13 % | 0.060 % | **0.004 %** |
+
+The 99th-percentile *scene radiance* of a golden-hour desert frame is **0.60–0.78**, and the
+share of the frame that reaches the radiance display white requires is **0.000–0.018 %**. The
+frames are not missing highlights because the curve is closed; there is nothing to tonemap.
+(The stray high `maxch` values — courtyard 8.23, sly-closeup 4.04 — are single specular or
+emissive pixels, which is why they move `>1.5` by hundredths of a percent and `p99` not at all.)
+
+`dayAmount` read back as **exactly 1** on all four shots and `uKeyIntensity` as exactly
+`atmoSunIntensity` on the base arm, which is the identity PREREG §3 depends on.
 
 ## 3. The bracket
 
