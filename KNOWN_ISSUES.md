@@ -22537,13 +22537,48 @@ Audited against `heroread`'s own gates, because the same trap applies here:
   again; it is not being edited mid-flight, because a tool that changes under its own run is the
   provenance failure it would be trying to prevent.
 
+### 6.3 The guard fired. D11's half of run 1 is VOID on provenance, called before any number existed
+
+`progress/records/heroread/srctree.log`, the watcher §6.2 armed:
+
+```
+19:54:25 … 19:57:55   5576b417…   (boot A's tree; git src tree 0aefc47e, unchanged since 4997f88)
+19:58:25              7655b1d7…
+19:58:55              dec6cbc2…
+19:59:25              5df19aa4…
+19:59:55 … onward     84a05968…
+```
+
+Four edits to `src/` in ninety seconds, from other lanes, while boot B sat in the FIFO. **Boot B
+will boot from `84a05968…` and boot A booted from `5576b417…`, so the two face arms are two trees
+and `?face=raw` vs default is not a controlled comparison.** By §6.2's own words, written before
+this happened: *"If that digest moves before boot B boots, the D11 half is VOID on provenance and
+will be reported as VOID."* It moved. **VOID.** Declared here at 20:05, with the run still queued
+and not one pixel of it rendered — so this cannot be read as a threshold moved after seeing a
+candidate.
+
+**D4's half survives, and survives by design rather than by luck.** Both stagings are poked
+in-page inside boot B, seconds apart, from whatever single tree that boot compiles; `H1`, `H4` and
+`H6` are deltas against a control captured in that same boot, and `H2`/`H3`/`H5` are absolutes
+against the frame and the reference image. Nothing in the D4 half compares across boots. This is
+the concrete payoff of putting the A/B inside one invocation, and the concrete cost of the one
+arm that could not be.
+
+**The fix is in the runner, not in the seal.** Before `heroread.mjs` runs again: navigate the same
+page to the second `?face=` URL inside ONE `withGame` call — same lock, same vite server, same
+tree, one FIFO wait instead of two — and add a `sameTree` guard that hashes the working tree at
+each arm and returns VOID rather than a score when they differ. It is deliberately NOT being
+edited while its own run is in flight.
+
 ### 7. Results
 
 Pending — `tools/heroread.mjs` is in the FIFO (boot A done, boot B queued behind other lanes).
-Its artefacts land in `progress/records/heroread/` and are scored in `RESULT-heroread.md`. This
-section was written before the verdict so the number could be claimed before it was cited in
-source — the lead's rule, learnt the expensive way: §271 was taken by the textures lane while two
-`Shots.js` comments already pointed at it, and those two citations were repointed at `593def6`.
+Its artefacts land in `progress/records/heroread/` and are scored in `RESULT-heroread.md`. Read
+that file with §6.3: **the D11 gates in run 1 are VOID whatever they print**, and only the D4
+gates are scoreable. This section was written before the verdict so the number could be claimed
+before it was cited in source — the lead's rule, learnt the expensive way: §271 was taken by the
+textures lane while two `Shots.js` comments already pointed at it, and those two citations were
+repointed at `593def6`.
 
 ---
 
@@ -22688,3 +22723,58 @@ numbers, `celtex.mjs` derived the parameters and checked the two blocking invari
 recipes), and §271.2's refutation of D7 as an authoring defect is an albedo measurement with no
 frame in it. `celband` is committed, inert, and bit-identical on the default path — which
 `tests/textures.test.mjs` checks rather than this file asserting it.
+
+## §275 — `dt: 0` is right for everything static and it DELETES every event-driven effect from the frame. A `combat` A/B run that way returns seven byte-identical arms and reads as "your change did nothing"
+
+Found by spending a capture window on it, which is the only reason it is a section and not a
+paragraph. D12's attribution boot (`progress/records/fxshape.mjs`) staged `combat` seven times
+in one boot — `base`, one arm per cane emitter suppressed, `nocane` with all of them suppressed,
+and a duplicate `base2` — and every single arm came back **0 changed pixels** at `fx5an`'s
+`|dR|+|dG|+|dB| >= 4`. Including `nocane`, which suppresses everything the impact draws.
+
+**The levers were fine.** The run's own log records `cane_ring`, `cane_flash`, `cane_spark` and
+`cane_debris` each entering the wrapped `_emit` twice per arm (twice because `Debug.setShot`
+applies the shot twice) and being blocked. The suppression worked perfectly on an effect that
+was not being drawn.
+
+### Mechanism, and it applies to every event-driven emitter in the build
+
+Particle age in `PARTICLE_VERT` is `uTime - aTime.x`, `_stageShot` emits at the current
+`uTime`, and every emitter's alpha opens with
+
+```glsl
+alpha = aDyn.w * smoothstep( 0.0, max( aShape.y, 1e-3 ), u ) * …
+```
+
+which is **exactly 0 at u = 0**. Freeze the clock and you freeze the particles at birth, where
+they are transparent by construction. So `combat` staged at `{ dt: 0 }` contains no impact
+effect at all — no flash, no ring, no sparks, no debris — and neither does any other staging of
+an event beat: landing dust, the guard alert ladder, coin pops, `target_catch`. The ambient
+fields are unaffected because `WRAP`/`LOOP` batches derive their phase from `uTime` directly,
+which is why this has never shown up before: **the things dt-0 A/Bs have been used to measure
+are the things dt-0 does not break.** `fx9` measured `combat` at dt 0 and was right to, because
+its subject was the court light shafts, which are static.
+
+### Why this is worse than an ordinary staging bug
+
+The failure is **silent and it inverts**. A suppression arm that removes nothing and an arm
+whose subject was never drawn produce the identical artefact — a zero — and the natural reading
+of a zero is "the lever did nothing" or "the change is a no-op". Two of this project's standing
+practices point straight at it: §28/§195 tell A/B runners to pass `dt: 0`, and §251 warns that
+32 of 59 runners *forget* to. Both are correct advice for static subjects and both are a trap
+for anything that fires on an event.
+
+### The rule
+
+**Determinism comes from `dt` being FIXED, not from it being zero.** `Debug.setShot` runs
+`SETTLE_FRAMES = 14` frames, re-bases, then `SETTLE_FRAMES_2 = 3` more; a fixed non-zero dt puts
+every arm at the same age. At `1/60` that is 3/60 = **0.05 s** after the emitting stage, which
+against `cane_flash`'s 0.11 s life and `cane_ring`'s 0.21 s is u = 0.45 and u = 0.24 — both
+past `fadeIn` and both identical across arms. `fxshape.mjs` now passes `{ dt: 1/60 }` and says
+why at the call site.
+
+**A cheap guard nobody has, and this run should have had**: an arm whose subject is event-driven
+should assert the subject is ON SCREEN before differencing anything. The check is one line — the
+`nocane` arm must differ from `base` by more than zero — and it converts an unfalsifiable zero
+into a loud one. `fxshapean.mjs` treats a zero-footprint suppression arm as VOID for exactly
+this reason: a denominator of zero is not a measurement.
