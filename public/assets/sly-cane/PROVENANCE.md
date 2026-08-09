@@ -57,8 +57,12 @@ dropped rather than shipped.
 Three of these are shape-preserving transforms and are simply the frame not matching. The fourth is
 the real work.
 
-1. **Scale.** 1.5904 units long against `CANE_TUNE`'s ~1.30 m cane ⇒ uniform **×0.817**. Uniform,
-   so shape is preserved. Derive the exact factor from `CANE_TUNE` rather than from this note.
+1. **Scale.** 1.5904 units long against `Cane.js`'s **measured 1.5150 m** ⇒ uniform **×0.9526**.
+   Uniform, so shape is preserved.
+   **CORRECTED.** This file first said "~1.30 m ⇒ ×0.817", which would have shipped a cane **16%
+   too short**. 1.30 was inferred from arithmetic inside a comment (`length * 0.455 = 0.5915`)
+   rather than measured from the built cane. The CHARMAT agent measured it. Derive it yourself
+   from `Cane.js` rather than trusting either number here.
 2. **Origin.** The model is centred (y ±0.795). `Cane.js`'s frame is **grip at the origin**, so it
    needs a translation along the shaft.
 3. **Orientation.** The hook curls in **±X** (lateral spread 0.28–0.35 in x against 0.04–0.10 in z

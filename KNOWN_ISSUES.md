@@ -21621,3 +21621,70 @@ prereg. **The next version of this tool needs `n9 ≠ n0` as a guard before anyt
 So the §266 §10 claim stands exactly where it was: the rise scalings **0.217 / 0.035 / 0.026** are
 **arithmetic off the shader**, not a measurement, and whether the split closes §264's interval is
 **still open and still unmeasured**.
+
+## §267 — the cane WAS gold and I said twice that it was not; and its metal is blocked on §264's missing normalisation
+
+Two corrections to claims I relayed, and one convergence that matters more than either.
+
+### The claim I repeated twice was a name mismatch
+
+§262 and §263 both reported that **"`sly cane gold` is not a material in this build"**, and I passed
+that on as established fact — to the owner, and into two agent briefs. It is false.
+`SlyModelDLRig.js:772` carries `name: 'slydlrig:cane', color: 0xe8b942, vertexColors: true`, on its
+own mesh. **The cane is a material and it is gold.** `sly cane gold` is the *legacy* `SlyModel.js`
+name; the census searched for it, missed, and reported absence.
+
+Two independent agents finding the same thing made it feel corroborated. It was not — they shared a
+census, and a shared instrument is a single point of failure however many people read its output.
+**Agreement between two consumers of one measurement is not replication.**
+
+The substance underneath survived intact, which is why it took a third agent to catch: `metal 0` is
+real, and **all five character materials share one shading response** — body, head, tail, eyeball
+and cane at identical `spec 0.25 / gloss 32 / metal 0 / rim 0.62`. It is systemic:
+`SlyModelDL`, `DLRaw`, `Godot` and `SlyModel3` all dropped `_matSpec` in the FBX rebuild. And in
+**both** cane call sites the *non-shipping* fallback carries `metalness: 0.85` — the branch that
+never runs was right all along.
+
+### My scale figure was wrong by 16%
+
+`public/assets/sly-cane/PROVENANCE.md` said the supplied cane needed **×0.817** to match ours,
+against "~1.30 m". `Cane.js` measures **1.5150 m**; the factor is **×0.9526**. I inferred 1.30 from
+arithmetic inside a comment (`length * 0.455 = 0.5915`) instead of measuring the built cane. Acting
+on it would have shipped a cane 16% too short. Corrected in the file.
+
+**That is the third time today I have quoted where I should have derived** — ×12.9 for a normalisation
+factor that is ×1.86 on the frame's real material; two capture runs called duplicates from output I
+had truncated myself (§254); and now this. The common shape: a number that is *true somewhere* —
+for one material, in one comment, in the visible half of a line — restated as if it were true here.
+
+### The convergence: the cane's gold is blocked on the world's highlight
+
+Making the cane actually metallic **failed in the opposite direction from every expectation**:
+**p99 −37.5 L** at the supplied asset's values, **−41.0 L** at the project's own Props gold, against
+a registered bar of **+10 L**. Metal makes the cane *darker*.
+
+The mechanism is exact. `diff *= mix(1.0, 0.20, slyMetal)` removes **68% of diffuse**, and the cane
+is unmapped — there is no `metalnessMap` to confine that to the metal parts. What should replace it
+is specular, and specular cannot: `specStep` is capped at 1.35 and **`uSpecNormPow` ships 0**, so
+raising gloss 32 → 96 makes the highlight *smaller and no brighter* (§263).
+
+**So the cane and the entire world's missing highlight are the same defect.** §264 measured that
+conflict as `p ∈ (0.70, 0.90]`; the cane sits inside it. Two lines of work started for unrelated
+reasons — "why is nothing bright" and "why is the protagonist's cane not gold" — arrived at one
+missing energy normalisation. Neither shipped, and both were right not to.
+
+### The agent reproduced §255 while quoting it
+
+Its S2 arm proved the `uSpecNormPow` poke **reversible** and never proved it *did* anything — the
+§255 failure exactly: a null that certifies repeatability while the instrument sees nothing. In its
+own words, *"with a non-empty mask and an inert poke I'd have measured zero rise and called it a
+win."* It cited the lesson and committed it in the same run, and then said so.
+
+Worth taking forward: `vSlySkin` arrived clean at **62,138 px** in the same frame where `debugTerm(6)`
+arrived **empty**. The rule is sharper than §263.2's "not the mode-4 mask" — **only binary debug
+channels survive the chain.** A continuous channel does not.
+
+**Shipped:** the surface split — `fur` on head, `furDark` on tail, `cloth` on body, every row lifted
+from `SlyModel.js:_matSpec`, `eyeball` untouched to protect §15. Character footprint mean
+111.6 → 109.5, p99 199.5 → 197.3, controls fired. **Not shipped:** the cane's metal, refused with the
+reason written at the call site.
