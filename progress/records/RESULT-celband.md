@@ -1,282 +1,125 @@
-# RESULT-celband — the cel ramp was never soft. It is multiplied by zero.
+# RESULT-celband run 1 — **VOID on provenance**, and the void is the finding
 
-Criterion registered in `PREREG-celband.md` and committed (`43036e4`) **before** the subject was
-read. Instrument: `progress/records/celcyl.mjs`. Cross-check: `tools/bandprobe.mjs` (not mine,
-not written for this, and it agrees).
+Run against `PREREG-celband.md` and its two pre-capture amendments. Arms: `shots/celband/{a0,a1}`,
+log `logs/celband.log`, scorer `tools/celbandscore.mjs` on `gate.mjs`, fail-closed.
+
+```
+==> DO NOT SHIP — A0b sameTree FAIL; armTook, C1, C2, P1, P2, P4, S2, S3 all VOID
+```
+
+**Nothing ships. `celband` remains inert** (`celbandArm()` returns null on the default path, the
+committed blob is unchanged, and `tests/textures.test.mjs` is the check on that, not this file).
 
 ---
 
-## 1. What was inherited, and what was actually wrong with it
+## 1. Why it is void: the arms are three commits, not three arms
 
-The previous run of `celcyl.mjs` was VOID (§228): its POSITIVE control drew three plateaus 85.0
-luma apart and was scored "cannot see banding" because its `maxStep` came in at 15.62 against an
-authored threshold of 20.
+`shot.mjs` takes the FIFO lock once per invocation, so three environment-variable arms are three
+separate runs that queue independently. With four agents committing every few minutes, the tree
+moves between them. It did:
 
-The threshold was not merely mis-derived. **`maxStep` is the wrong statistic for this geometry and
-no threshold on it can be right.** `TUNE.termSoft` is a ±0.024 smoothstep and N·L turns slowly on
-a cylinder, so a *perfectly* banded face spends pixels in transition and never shows one large
-per-pixel step. The instrument now prints that figure directly: **12 of 193 measured pixels (6.2%)
-lie inside a ±termSoft window**.
-
-Three further facts, all geometry rather than opinion, kill any criterion built on *where* a band
-lands — and the old ray-caster modelled none of them:
-
-| | fact | size |
-|---|---|---|
-| **Ribs** | `Kit.papyrusColumn` lathes `r(θ) = R(1 + 0.075·cos 8θ)` at ribScale 1, and `computeVertexNormals()` overwrites the pushed cylinder normals with the lobed ones | normal azimuth ±31°, N·L ±0.45, **four** terminator crossings on the measured face |
-| **Lean** | `dx = lean·y`; deterministic for the nave (−1.205° on this column) plus a `leanZ` jitter from the level rng | ~13 cm ≈ 11 px of registration error |
-| **Taper** | `dr/dy ≈ −0.049` at mid-shaft, so `n.y ≈ +0.049` | N·L offset +0.027 — **larger than `termSoft` itself** |
-
-*Incidental finding:* `Kit.papyrusColumn`'s `spin` does **not** rotate the flutes in world space.
-The same `a = j/seg·2π + spin` feeds both the vertex azimuth and `cos(a·lobes)`, so the polar curve
-is identical for every `spin` and the crests are welded to world azimuth 0/45/90…° on every column
-in the level. Only the 48-gon sampling phase moves. That makes the rib phase *known*, which is why
-it could be modelled at all.
-
-## 2. The re-derived criterion, and why it is sound
-
-**Design rule forced by the table above:** the statistic may use the SET of luma values on the
-face; it may not use WHERE they fall.
-
-**`gapFrac`** — sort the face's luma profile, trim 2% per tail, sum the `bands−1` largest gaps
-between consecutive sorted values, divide by the trimmed range. *How much of the occupied tonal
-range is empty.* Sort-order invariant (lean, rib phase, silhouette registration cannot enter) and
-affine invariant (exposure, albedo, tone-curve gain cannot enter).
-
-**The threshold is computed from the arms, not authored.** Both controls run on this face's own
-N·L — lathed ribs, taper and lean included — at the subject's own tonal range and measured noise,
-as the two ends of one continuum:
-
-```
-profile(λ) = base + amp·[ (1−λ)·norm(slyRamp(N·L)) + λ·norm(clamp(N·L)) ] + N(0,σ),  quantised to 8 bits
-```
-
-λ = 0 is the positive control, λ = 1 the negative, and λ is literally *what fraction of the shading
-response is continuous*. The decision point is **λ = 0.5**: the only value equidistant from the two
-arms, and a restatement of the critic's own charge, since "soft Lambert with a slight posterize"
-**is** the claim λ > 0.5.
-
-This is the specific repair to the void run. The old assertion compared an arm to a number someone
-had guessed. Every assertion here compares an arm to the other arm:
-
-1. `min(gapFrac | λ=0) > max(gapFrac | λ=1)` — the arms must separate at all.
-2. `G(0) > G(0.5) > G(1)` — or λ̂ cannot be inverted.
-3. All nine sheared rows must return the same verdict (§220) — else INDETERMINATE, never "banded".
-
-**Operating envelope, measured with no PNG open** (`--arm=envelope`): the ideal endpoints separate
-up to a noise/range ratio of 0.05 and break down at 0.08.
-
-Two numbers in that envelope are worth reading before any subject exists. The ideal *banded*
-endpoint scores ~0.50, not ~1.0 — that is `termSoft` populating the ends of each gap. The ideal
-*smooth* endpoint scores ~0.06, not ~0.01 — that is the ribs making N·L revisit values, which
-concentrates a continuous profile. **Modelling the ribs made the negative control harder to beat**,
-i.e. it moved the threshold in the direction that costs the fix, not the one that flatters it.
-
-## 3. Subject verdict — DOES NOT BAND
-
-Nave column (x 8, z −30), row 289, 193 px of lit face at 11.3 m, N·L −0.367 … 0.865, both
-terminators, four crossings. The strongest test face in the frame, chosen by crossing count.
-
-```
-noise/range ratio       0.0671        (envelope breaks at 0.08 — inside it, narrowly)
-MUST-FIRE 1  min(λ=0) 0.1513 > max(λ=1) 0.1346   PASS
-MUST-FIRE 2  G(0) 0.2263 > G(0.5) 0.1382 > G(1) 0.0784   PASS
-decision point          0.1382
-subject gapFrac         0.0795        λ̂ 0.851
-VERDICT                 DOES NOT BAND — all nine rows, λ̂ 0.579 … 1.000   (ROW AGREEMENT PASS)
-```
-
-The subject sits **on top of the negative control's median (0.0784)**. On the surface with the most
-terminator crossings in the frame, the shading is indistinguishable from ideal smooth Lambert.
-
-### 3a. And it is worse than that: the frame is under-resolved
-
-Dry-running the scorer on a uniformly *darkened* copy of the capture moved gapFrac 0.0795 → 0.0986
-under a change the statistic is exactly invariant to. The statistic was fine; the controls were
-float while the subject was 8-bit, and rounding a compressed range manufactures gaps. Quantising
-the controls closes that (`--quant=0` restores the original, both reproducible from one file).
-
-That change was made **after** the base number was known, so its direction is stated: quantising
-can only raise the controls' gapFrac, therefore only raise `G(0.5)`, therefore only make "BANDS"
-**harder**. It cannot manufacture the verdict it serves — and it did not help:
-
-| instrument | MUST-FIRE 1 | verdict |
-|---|---|---|
-| `--quant=0`, as registered | 0.1513 > 0.1346 **PASS** | DOES NOT BAND |
-| `--quant=1`, faithful | 0.1364 > 0.1500 **FAIL** | not interpretable |
-
-At a tonal range of **17.7 luma**, one 8-bit code is 5.6% of the entire signal, and the ideal
-3-band and ideal-Lambert endpoints overlap. So the honest statement is stronger than "it does not
-band": **the shading on that column has so little contrast that hard bands are not representable
-at 8 bits**, and the corrected instrument refuses to answer rather than returning a number. The
-blindness is specific to the *unfixed* frame — every forecast arm passes both must-fires
-comfortably, because the fix is what supplies the tonal range.
-
-## 4. Why — and it is not what the defect statement assumed
-
-`tools/bandprobe.mjs` rasterises the real architecture and its own ortho shadow map offline. Run on
-three shipped captures:
-
-| shot | architecture px | key-lit | step at T=0.14 | its own control | ratio |
-|---|---|---|---|---|---|
-| **interior** | 921 600 | **0 (0.00%)** | — | — | no lit px at all |
-| **night** | 776 555 | **10 435 (1.34%)** | — | — | too few lit px |
-| **temple** | 905 878 | **14 230 (1.57%)** | +6.8 | −7.9 | 0.86× |
-| hero | 836 843 | 153 879 (18.4%) | +23.1 | −2.3 | **10.11×** |
-| courtyard | 632 704 | 201 291 (31.8%) | +21.8 | −1.8 | **12.25×** |
-| courtyard, T=0.52 | | | +24.8 | −1.0 | **25.07×** |
-
-**Where the key reaches, the ramp bands hard, and always did.** `slyRamp` is not soft. What fails
-is everything the key does *not* reach: `key = ramp * sh`, so on a cast-shadowed surface the cel
-quantiser is multiplied by zero. `temple` is a roofed hypostyle hall and **97.5% of its
-architecture is in that state**; `interior` is the extreme — **not one architecture pixel in that
-frame is key-lit**, so the cel quantiser contributes nothing to it at all.
-
-The split is not shot-by-shot bad luck, it is roofed-versus-open: every enclosed shot measures at
-or under 1.6% lit, both open ones 18–32%. That is also why this defect reads as "the cel shading
-does not band" rather than as "some shots are dark" — the shots the critic scores worst are
-precisely the ones in which the feature under complaint is switched off.
-
-And nothing else on such a surface varies with the normal either. From the shader: `fill` depends
-only on `hemi = smoothstep(−0.72, 0.55, Nw.y)`; `albAmb`, the shadow multiply and the wash depend
-only on `shadowMix = 1 − key`, which is the constant 1 when key = 0; `spec` is gated by `sh` *and*
-`step(0.02, ndl)`; `sss` is gated by `sh`. **A shadowed vertical column is one flat tone**, and the
-only thing moving across it is the fresnel rim — visible in the subject profile as a ~50 px ripple,
-at the ribs' own half-period.
-
-### 4a. Measured, not read off the source
-
-§61.7: a comment asserting a runtime behaviour is not evidence of it. `celcyl --arm=attrib`
-correlates the captured profile against each candidate term computed from geometry — three
-predictions, no free parameters:
-
-| term | what it is | span across the face | corr with luma |
+| arm | captured | commit | `hero` windows |
 |---|---|---|---|
-| `ramp` | `slyRamp(N·L)` at the shipped TUNE | **0.000 … 1.000** (full) | **0.031** |
-| `ndl` | raw Lambert | 0.000 … 0.865 | 0.094 |
-| `fres` | `(1 − N·V)^uRimPower` | 0.000 … 0.248 | **0.325** |
+| A0 control | 18:48 → 19:05 | **212b454** | 207 |
+| A1 treatment | 19:05 → 19:41 | **9bd617d** | 195 |
+| A2 calibration | never ran — stopped, see §4 | — | — |
 
-The first row is the load-bearing one. `ramp` sweeps its *entire* output range across this face —
-both terminators, four crossings — and explains **0.1% of the variance**. A live three-band
-quantiser at full range would dominate every other term; one that correlates 0.031 is switched
-off. The rim, whose own span is a quarter of the ramp's, still beats it tenfold.
+Twenty commits separate them, and they include **`src/core/Shots.js`** — the D4 hero re-framing,
+whose own commit message says *"the hero is grounded and 1.8× larger"* — and **`src/world/Statues.js`**
+(+218 lines, the D9 rework). A camera change alters which pixels are in frame, which is the input
+to every statistic in this seal. The changed window count is the visible trace of it.
 
-The rim is not itself large (r² ≈ 0.11); the rest is texture and the detail normal map. That is
-exactly the shape you get when the term that should be drawing the form contributes nothing.
+So the A1 − A0 difference is a mixture of this texture stage and twenty commits of four other
+agents' work, and **no split of it is available from these files.** That is a defect in the run,
+not a result about the candidate. VOID is not FAIL and it is certainly not PASS.
 
-So the correct reading of the critic's complaint is not "the ramp is too soft". It is:
+§28 recorded the within-boot version of this — *"every within-boot A/B in this project was captured
+at a different world clock"*. This is the across-boot version and it is strictly worse, because a
+commit between arms can move the camera. `celbandscore.mjs` now carries **`sameTree`** as a guard
+ahead of the calibration: every arm must report one `report.json` commit sha or the run is void
+before a statistic is read. It is the guard this run needed and did not have.
 
-> **The shade side of the model has no normal-dependent structure at all.**
+## 2. The one guard that could be evaluated failed, and it is the same lesson one level up
 
-The note at `slyShadowBand` blamed flat geometry for §7.3's failures and was half right. The half
-it missed is that the quantiser is switched off wherever the sun is.
+**C2 — the control must reproduce the baseline the seal registered — FAILS, and would have failed
+even with perfect arm hygiene.**
 
-## 5. The fix
-
-`src/render/shaders/toon.glsl.js` + `src/render/ToonMaterial.js`, one term:
-
-```glsl
-float shadeForm = 1.0 - uShadeBand * ( 1.0 - ramp );
-diff = alb*keyRad*key*mix(1,ao,uAoKey)
-     + ( albAmb*slyFillX*ao
-       + albShadow*slyShadX*shadowMix*mix(0.55,1,ao)
-       + slyShadX*uShadowWash*shadowMix*ao ) * shadeForm;
+```
+hero, frame-wide flat share:   shots/r9  0.1549      A0 control  0.1914      |Δ| 0.0365
+                               registered bar: |Δ| <= 0.010
+interior:                      shots/r9  0.1377      A0 control  0.1838
 ```
 
-* reuses the **already computed** `ramp`, so the shade-side bands line up **across** a cast-shadow
-  boundary instead of fighting it — and no second set of thresholds enters the project;
-* **only darkens** (floor `1 − uShadeBand`), so it cannot blow out a shade tone, and it moves critic
-  pass 3's "unlit ≤ 45% of lit" the helpful way;
-* **one scalar on all three shade-side terms alike** — it moves shade *luminance* and cannot move
-  shade *hue*, so the violet/teal balance of §115/§16/§19 is arithmetically untouched;
-* **exactly inert on the fully-lit band.** At `ramp = 1`, `shadeForm = 1 − b·0 = 1`, so any pixel
-  the key fully reaches is bit-identical whatever `b` is. The term can therefore only touch
-  shade-side pixels — which is a structural reason the `courtyard`/`hero` guard should hold, not
-  merely a hope, since those shots' banding lives in the *lit* population the term cannot reach.
-* `uShadeBand = 0` is bit-identical, exactly and driver-independently, because `1.0 − 0.0·x` is
-  `1.0`. Spelled that way rather than as `mix()` precisely so it does not depend on how a driver
-  folds `mix(x,x,a)`.
+`shots/r9/` is 2½ hours and ~120 commits old. **Every absolute threshold in §5 of the seal was
+derived from it, and by the time the control was captured none of those baselines existed any
+more.** P1's bar of 0.2016 was "closes ⅓ of the gap from 0.1549"; the frame had already travelled
+half that distance on its own.
 
-`glslink` (§219): **LINK OK**, 76 active uniforms; the POISON arm still fails, so the instrument is
-not blind.
+This is not a near miss to be waved through — it is the same failure as §1 at the scale of a whole
+seal. **In a repo with four concurrent agents, a pre-registration that pins absolute bars to a
+stored capture is stale before it is scored.** The bars have to be registered as *deltas against a
+control captured in the same run*, and the control has to be captured first.
 
-### Registered forecast, written while the capture was queued
+The thresholds are **not** being restated against the new baseline. §141.1: never move a threshold
+after seeing the candidate. Run 2 gets a new seal.
 
-`celcyl --predict=b` multiplies the *existing* capture by the shade term and scores the criterion —
-an **upper bound**, because it applies the multiply in display luma rather than scene-linear before
-a compressive tone curve, and to the whole pixel rather than only the shade-side terms.
+## 3. What the numbers say descriptively — reported, licensed as nothing
 
-| b | predicted gapFrac | decision point | λ̂ | forecast | margin |
-|---|---|---|---|---|---|
-| 0.15 | 0.1496 | 0.2000 | — | DOES NOT BAND | −0.0504 |
-| 0.30 | 0.1287 | 0.2500 | — | DOES NOT BAND | −0.1213 |
-| 0.45 | 0.2689 | 0.2653 | — | BANDS | **+0.0036** |
-| 0.60 | 0.3503 | 0.2623 | — | BANDS | +0.0880 |
+Stated only because refusing to report measurements you dislike is its own failure mode. Every
+number here is contaminated per §1 and none of it licenses a change.
 
-**Stated so it can be wrong: `sb45` fails in frame and `sb60` ships — or nothing ships.** 0.45
-clears an optimistic bound by 0.0036, a fourteenth of the nine-row noise spread (0.0527).
+| | A0 control | A1 treatment | Δ | reference |
+|---|---|---|---|---|
+| `hero` flat | 0.1914 | **0.2653** | +0.0739 | 0.2950 |
+| `hero` grad p50 | 1.22 | **1.27** | **+0.05** | 0.30 |
+| `hero` top3 p50 | 0.281 | 0.309 | +0.028 | 0.337 |
+| `interior` flat | 0.1838 | **0.2737** | +0.0899 | 0.2950 |
+| `interior` grad p50 | 1.33 | **1.24** | −0.09 | 0.30 |
+| `interior` top3 p50 | 0.271 | 0.335 | +0.064 | 0.337 |
 
-The **non-monotonicity** is mechanism, not noise: b = 0.30 scores *below* b = 0.15. The band step
-must beat the continuous ripple it competes with before the sorted profile's gaps consolidate — the
-rim lays 17.7 luma of continuous range across this face and the band step is roughly `83·b/2`, so
-they cross at b ≈ 0.4. **This fix is a threshold, not a dial.**
+Two things are worth carrying into run 2 as *hypotheses*, not results:
 
-## 6. Sweep — PENDING
+- **The registered forecast was right in direction.** §7a predicted `interior` would move more than
+  `hero` in flat share, on the grounds that `RESULT-grain1` measured it as the one surface where the
+  composite grain was **not** the dominant noise source. It moved more: +0.0899 against +0.0739.
+- **Falsifier 2 may have fired on `hero`.** The seal registered *"A1 raises `G` → the lattice is
+  converting noise into step-flicker at frame scale, and the operator is wrong even if `F`
+  improves."* `hero`'s gradient went **up** (1.22 → 1.27) while `interior`'s went down. If that
+  survives a clean run it is a real refutation of half the mechanism, and it is the same shape as
+  the offline finding already recorded in `Canvas2D.celband`'s header — quantising raw luma took the
+  albedo's gradient 5.02 → 5.22. Note that P2's registered bar (≤ 1.2713) would have scored **PASS**
+  on 1.27 while the treatment was *worse than its own control*. A stale absolute bar can pass a
+  candidate that a same-run delta would fail. That is the third face of §1 and §2.
 
-`progress/records/celband.mjs`, one boot, capture order `base-a → sb15 → sb30 → sb45 → sb60 →
-base-b` per shot, on **temple** (subject) and **courtyard** (guard — the shot where the ramp already
-works at 12–25× its control). The two base arms bracket the sweep, so their difference is the drift
-floor (§220). `sb60` vs `base-a` is the LEVER arm that must fire — the §210.2 dead-knob check made
-*before* a verdict rather than after — and the harness reads `uShadeBand` back **after** the step and
-the render, so the `uRimGain` revert trap throws instead of quietly producing a baseline.
+## 4. A2 was stopped deliberately
 
-`night` is a **required** arm (§10a, registered before any frame existed) and runs as a second short
-boot: at tod 0.02 the key is the moon and nearly the whole frame is shade, so a term that multiplies
-the shade side multiplies almost every pixel, downward. `bandprobe` sizes that exposure exactly —
-`night` is **1.34% key-lit**, so ~94% of its architecture takes the full `shadeForm` multiply. It is
-the highest-risk shot for this change by a wide margin, and it is the one that has not been seen.
+The calibration arm was queued behind three other agents' tickets and would have been captured at a
+fourth commit. Running it would have bought an hour of exclusive FIFO hold and a number that was
+already void. It was killed rather than run, and the seal's C1 is recorded VOID — which forces
+every downstream guard to VOID in the scorer, exactly as registered.
 
-> **Status: NOT RUN.** `celband.mjs` was launched and sat in the capture lock's FIFO behind other
-> agents' captures for the **whole remainder of the session without ever being granted it** — still
-> queued at hand-off. **Zero frames were written.**
->
-> The holder was identified rather than assumed, because a lock held that long invites someone to
-> break it: `ps` shows pid 6204 alive the whole time as
-> `node progress/records/inkw.mjs --shots courtyard,hero,combat,sly-closeup --res 1280x720,640x360`
-> — the INK agent's 4-shot × 2-resolution run, i.e. **eight captures**, at 79 minutes and counting.
-> That is a legitimate hold, not a stale lock, and it is well inside `tools/shot.mjs`'s own cost
-> model (~14 s/frame, a `setShot` is 17 frames, 4–6 min per shot). **Nothing here should be read as
-> licence to break a long-held capture lock** — the correct response was to stay in the FIFO, which
-> is what happened. The process was left alive, so the frames may appear later; if they do,
-> `celband-score.mjs` applies the registered rule to them without any further derivation.
->
-> **`TUNE.shadeBand` therefore ships at 0**, which is bit-identical to the pre-change build on any
-> driver. Nothing has been shipped on a forecast, and no frame of the fix has been seen by anyone.
->
-> What is on disk and ready, so this does not have to be re-derived:
-> * `progress/records/celband.mjs` — the sweep, with `--shots` / `--values` so the night arm is a
->   second short boot rather than a re-queue of the whole thing;
-> * `progress/records/celband-score.mjs` — **executes** the ship rule (V1 null, V2 dead-lever, and
->   both ship conditions) rather than restating it for a human to apply by eye, and it has been
->   dry-run end to end against synthetic arms;
-> * `PREREG-celband.md` §9/§10a/§12 — ship rule, the required night arm, and the designed successor
->   if night fails.
->
-> A run that produced no frames is reported as producing no frames. It is not a partial result.
+## 5. What run 2 must do differently
 
-## 7. Honest limits
+1. **One boot, all arms.** The machinery exists and needs no new switch: `Canvas2D.abRaw()` reads
+   `globalThis.__TEX_AB` **per call, never latched** — its header says so and says why — and
+   `Textures._prewarmParallel` ships the arm string with every worker job, so a runner can set the
+   arm, flush the texture cache, re-prewarm and shoot again inside one page. That is
+   `tools/shadowhold.mjs`'s shape applied to textures, and it removes the commit gap by
+   construction.
+2. **Register deltas, not absolutes.** Every bar as `A1 − A0` measured in the same run. A stored
+   capture may be quoted for context and must not be a threshold's denominator.
+3. **Capture the control first and check it before proceeding**, so a stale seal is caught for the
+   price of one shot rather than three.
 
-* **On a flat face the fix is a uniform darkening, not a band.** `shadeForm` is constant wherever
-  the normal is, so a wall gets one tone keyed to its orientation — real form, but not plateaus.
-  Bands still require a normal that turns. That is the same limit `slyShadowBand`'s note describes,
-  and it is not repaired here.
-* The subject is one column in one shot. `hero` and `courtyard` were measured only through
-  `bandprobe`, and only for the *lit* population.
-* `σ` is estimated from row-to-row scatter, and the flutes run vertically, so it is a mild
-  **under**-estimate — which raises `G(0.5)` and is therefore conservative.
-* The base frame's noise/range ratio (0.0671) is close to the instrument's 0.08 breakdown, and
-  under the faithful controls it is past it. Any future comparison at that contrast is not
-  measurable with this instrument; the fix is what moves it back into the envelope.
-* `npm test` is 215/216. The one red is `tests/textures.test.mjs`'s cache-staleness guard, which is
-  another agent's in-flight work in `src/textures/` — verified by stashing only my two files, where
-  it fails identically.
+## 6. What survived, and it is most of the work
+
+The seal, the two instruments and their calibration are unaffected by the void — none of them
+depends on these frames:
+
+- `celsurf.mjs` reproduces critic 9's frame-wide flat statistic on five of its published numbers.
+- `celtex.mjs` measures the albedo, offline and lock-free, and it is where the parameters were
+  derived, the invariants checked (`darkTail` unchanged on eight of nine recipes; `jointSign.dY`
+  negative on all six masonry recipes), and D7 refuted as an authoring defect (§271.2).
+- `Canvas2D.celband` is committed, inert, and verified bit-identical on the default path.
+
+The offline half of this work stands. Only the frame half is void.

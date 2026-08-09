@@ -65,6 +65,29 @@ function armWarnings(arm) {
     return [].concat(j.warnings || [], j.bootWarnings || []).join(' | ');
   } catch { return null; }
 }
+/** The commit each arm was captured at. Arms at different commits are not arms — see below. */
+function armSha(arm) {
+  const f = path.join(dir, arm, 'report.json');
+  if (!fs.existsSync(f)) return null;
+  try { return JSON.parse(fs.readFileSync(f, 'utf8')).commit?.sha ?? null; } catch { return null; }
+}
+
+/* ---- sameTree: the guard this run needed and did not have ---------------------------------
+ * `shot.mjs` is one lock acquisition per invocation, so three env-var arms are three runs that
+ * queue separately. With four agents committing, the tree moves BETWEEN them. It did: run 1 of
+ * this seal captured A0 at 212b454 and A1 at 9bd617d, twenty commits later, and those twenty
+ * include `src/core/Shots.js` (the D4 camera re-framing — the hero is 1.8x larger) and
+ * `src/world/Statues.js` (+218 lines). A frame difference across that gap is not attributable to
+ * a texture stage.
+ *
+ * §28 recorded the within-boot version of this ("every within-boot A/B was captured at a
+ * different world clock"). This is the across-boot version and it is worse, because a commit can
+ * change the camera. So: every arm must report the same sha, or the run is VOID on provenance
+ * before any statistic is read. */
+const S = { a0: armSha('a0'), a1: armSha('a1'), a2: armSha('a2') };
+const present = Object.values(S).filter(Boolean);
+const sameTree = present.length < 2 ? null : present.every((v) => v === present[0]);
+
 const W = { a0: armWarnings('a0'), a1: armWarnings('a1'), a2: armWarnings('a2') };
 const armTook = (() => {
   if (!W.a0 || !W.a1 || !W.a2) return null;
@@ -79,12 +102,16 @@ for (const [k, w] of Object.entries(W)) {
     + (/celband\w+/.exec(w) ? `  arm=${/celband\w+/.exec(w)[0]}` : '  arm=(none)')}`);
 }
 console.log(`  => ${guardState(armTook)}`);
+console.log('\nsameTree (provenance)');
+for (const [k, v] of Object.entries(S)) console.log(`  ${k}: ${v || 'NO report.json'}`);
+console.log(`  => ${guardState(sameTree)}`);
 
 /* Every guard is `null` unless its inputs are all present. `null` is VOID by gate.mjs. */
 const num = (v) => (typeof v === 'number' && Number.isFinite(v) ? v : null);
 const C1v = A.a2h && A.a0h ? num(A.a2h.F - A.a0h.F) : null;
 /* armTook gates the calibration, which gates everything else — registered in that order. */
-const C1 = armTook !== true ? null : (C1v === null ? null : C1v >= 0.04);
+const C1 = (armTook !== true || sameTree !== true) ? null
+  : (C1v === null ? null : C1v >= 0.04);
 
 /* C1 is the sensitivity arm. If it did not fire, nothing downstream is interpretable — a null
  * arm proves repeatability, not sensitivity — so every other guard is forced to VOID rather
@@ -95,6 +122,7 @@ const g = (v) => (live ? v : null);
 const C2v = A.a0h && r9h ? num(Math.abs(A.a0h.F - r9h.flat)) : null;
 const guards = {
   'A0 armTook: three arms distinguishable in report.json': armTook,
+  'A0b sameTree: every arm captured at one commit': sameTree,
   'C1 calibration A2-A0 flat >= 0.04': C1,
   'C2 control reproduces r9 (|dF| <= 0.010)': g(C2v === null ? null : C2v <= 0.010),
   'P1 A1 hero flat >= 0.2016': g(A.a1h ? A.a1h.F >= 0.2016 : null),
@@ -106,6 +134,11 @@ const guards = {
 
 console.log('\nregistered guards');
 for (const [k, v] of Object.entries(guards)) console.log(`  ${guardState(v).padEnd(5)} ${k}`);
+if (sameTree === false) {
+  console.log('\n  The arms are at different commits. Every frame statistic below is a mixture of');
+  console.log('  this texture stage and whatever else landed in between, and no split of it is');
+  console.log('  available from these files. Reported as descriptive, licensed as nothing.');
+}
 if (C1 !== true) {
   console.log('\n  C1 did not fire, so C2/P1/P2/P4 are forced VOID: the run has not shown that a');
   console.log('  texture change of ANY size reaches this instrument, and a verdict on a blind');
