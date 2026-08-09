@@ -484,6 +484,13 @@ const RAY_GROUND = Object.freeze({ onlyTags: ['ground'] });
 /** Camera displacement, in metres, that counts as a cut rather than a walk. See _updateEnclosure. */
 const ENCLOSE_JUMP = 2.0;
 
+/** Reusable raycast result for the enclosure fan — shape from Collision's `makeRayResult`. Owning
+ *  one keeps five rays a frame out of Collision's 8-deep shared result ring. See _updateEnclosure. */
+const _encloseHit = {
+  hit: false, point: new THREE.Vector3(), normal: new THREE.Vector3(0, 1, 0),
+  distance: Infinity, tag: '', material: '', rec: null,
+};
+
 const ENCLOSE_FAN = (() => {
   const t = Math.tan(THREE.MathUtils.degToRad(34));
   return [
@@ -1334,7 +1341,14 @@ export class Lighting {
           _v3.copy(ENCLOSE_FAN[i]);
           cast++;
           try {
-            const hit = col.raycast(_camPos, _v3, TUNE.encloseProbe);
+            /* `_encloseHit` is passed as the OUT parameter on purpose. Collision hands results
+               out of an 8-deep ring (`_pools.ray`), and this fan casts five rays in one frame —
+               enough to rotate five eighths of that ring under any other system that is holding a
+               ray result while it casts again. Before this term had a consumer the fan never ran,
+               so the pressure was hypothetical; it is not any more. `raycast(o, d, m, opts, out)`
+               writes into `out` and skips the pool entirely, which removes the interaction rather
+               than testing for it. */
+            const hit = col.raycast(_camPos, _v3, TUNE.encloseProbe, null, _encloseHit);
             if (hit?.hit) hits++;
           } catch { /* BVH not built yet — treat this ray as open sky */ }
         }

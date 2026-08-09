@@ -200,3 +200,30 @@ test('enclosure: toggling the term off and on re-probes, so an A/B arm cannot sc
       `re-probe, so a dt = 0 capture would score a value on its way up from 0`);
   } finally { L.TUNE.holdEnclose = -1; L.dispose?.(); }
 });
+
+test('enclosure: the fan owns its raycast result and never takes one from the shared ring', () => {
+  /* Collision hands ray results out of an 8-deep ring pool, and this fan casts five rays in one
+     frame — enough to rotate five eighths of it under any other system holding a result while it
+     casts again. `raycast(o, d, maxDist, opts, out)` writes into `out` and skips the pool. The
+     hazard was hypothetical while the term had no consumer; it is not any more, so the out
+     parameter is asserted rather than left as a comment somebody can delete. */
+  const camera = new THREE.PerspectiveCamera();
+  const outs = [];
+  const eng = {
+    camera, debug: {}, scene: { add() {}, remove() {} }, on() {}, warn() {},
+    quality: 'high', settings: {},
+    get: (k) => (k === 'collision' ? {
+      raycast: (o, d, m, opts, out) => { outs.push(out); return { hit: true }; },
+    } : null),
+  };
+  const L = new Lighting(eng);
+  L.TUNE.holdEnclose = 0.9;
+  try {
+    camera.position.set(0, 0, 0);
+    tick(L, 1);
+    assert.equal(outs.length, 5, `the fan cast ${outs.length} rays, expected 5`);
+    assert.ok(outs.every((o) => o && o.point && o.normal),
+      'at least one fan ray was cast with no out object, so it took a slot from the shared ring');
+    assert.equal(new Set(outs).size, 1, 'the fan should reuse ONE result object, not allocate per ray');
+  } finally { L.TUNE.holdEnclose = -1; L.dispose?.(); }
+});
