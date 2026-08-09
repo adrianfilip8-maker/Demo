@@ -64,7 +64,14 @@ import path from 'node:path';
    apart across a `src/core/Shots.js` re-framing. Every arm here shares one boot, and this pins
    the tree they shared so the scorer can refuse rather than guess. */
 const git = (...a) => { try { return execFileSync('git', a, { cwd: ROOT, encoding: 'utf8' }).trim(); } catch { return null; } };
-const PROVENANCE = { sha: git('rev-parse', 'HEAD'), srcDirty: git('status', '--porcelain', 'src/') || '', at: new Date().toISOString() };
+/* KNOWN DEFECT IN THIS FIELD, kept honest rather than quietly fixed mid-flight: the sha is
+   sampled at PROCESS START, and `withGame` then waits on the FIFO — measured at 20-60 minutes
+   here — before vite compiles anything. Four agents commit continuously, so this can name a
+   tree the boot did not compile, and a provenance record that is confidently wrong is worse
+   than an absent one. `fxdraw.mjs` samples inside `onLocked` instead, which is the correct
+   seam. Treat this field as ADVISORY: what actually makes this run's arms same-tree is that
+   they share one boot, and vite is frozen for its duration (SANDS_NO_HMR + one page.goto). */
+const PROVENANCE = { sha: git('rev-parse', 'HEAD'), shaWhen: 'process-start (ADVISORY, see comment)', srcDirty: git('status', '--porcelain', 'src/') || '', at: new Date().toISOString() };
 
 const OUT = path.join(ROOT, 'shots', 'fxshape');
 const SUPPRESS = {
