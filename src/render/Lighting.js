@@ -174,6 +174,41 @@ const TUNE = {
   encloseLerp: 4.0,          // per-second approach, so walking under a roof is not a switch
   encloseBounce: 0.5,        // the sand bounce dies more slowly than the sky does
 
+  /* ── holdEnclose / holdEncloseHyst — the SECOND consumer of the fan, and the only live one ──
+   *
+   * KNOWN_ISSUES §269/§271, `progress/records/PREREG-holdscope.md`. Read §271.3 before touching
+   * this: per-material scoping of the shade band is refuted, not untried.
+   *
+   * §269 built a shade band derived per pixel from the material's own albedo (`shadowHold` in
+   * ToonMaterial) that fixes critic 9's ranked D1 on daylight and destroys `interior`, because a
+   * tomb is at `shadowMix` 1 everywhere and the band therefore *is* its lighting rather than a
+   * shadow lying on top of one. §271.3 established that the two cases cannot be told apart per
+   * material (8 of 12 architectural materials appear in the tomb AND in daylight, over one
+   * shared-by-identity uniform) and cannot be told apart by key radiance either (`interior` runs
+   * the brightest key in the game, x4.05 — the sun is there, it just never arrives).
+   *
+   * What does tell them apart is **how much sky the camera can see**, which is what the fan
+   * above has measured for nothing since it was written. `holdEnclose` is the enclosure at or
+   * below which the camera counts as under open sky:
+   *
+   *     -1   scoping OFF. The fan does not run, `ambient.skyOpen` is not published, and
+   *          ToonMaterial never writes `uShadowHold` — byte-identical to the pre-holdscope build.
+   *     >=0  the fan runs and LIGHTING publishes a DECISION, `skyOpen` 0 or 1.
+   *
+   * **It is a threshold with a decision and never a ramp, and that is a measurement, not a
+   * preference.** §269 bracketed the band at 0.6 and got `dunes` hue 355 / sat 0.274 — muddier
+   * than either endpoint, because the blend passes through neutral. `hold = 1 - enclosure` would
+   * put every partially-roofed camera in that mud.
+   *
+   * `holdEncloseHyst` is the full width of the dead band around the threshold, so a camera
+   * parked on it does not chatter between two states that are deliberately far apart.
+   *
+   * This term does NOT touch the sky fill. `_encloseFill()` keeps its own `encloseStrength <= 0`
+   * early-out, so raising this off -1 changes no fill, no hemi and no ambient — only which
+   * cameras get the held shade band. The fill half stays 0 for the reason bracketed above. */
+  holdEnclose: -1,
+  holdEncloseHyst: 0.10,
+
   /* Local lights */
   localCap: { low: 2, med: 4, high: 6, ultra: 8 },
   localCullDistance: 68,
@@ -446,6 +481,9 @@ const RAY_GROUND = Object.freeze({ onlyTags: ['ground'] });
  * 34° because it is wide enough to find a clerestory band from the floor of the nave and
  * narrow enough that standing in an open courtyard beside a pylon still reads as open sky.
  */
+/** Camera displacement, in metres, that counts as a cut rather than a walk. See _updateEnclosure. */
+const ENCLOSE_JUMP = 2.0;
+
 const ENCLOSE_FAN = (() => {
   const t = Math.tan(THREE.MathUtils.degToRad(34));
   return [
@@ -521,6 +559,9 @@ export class Lighting {
     this.atmosphere = createAtmosphereState();
     this.timeOfDay = engine.debug.timeOfDay ?? 0.79;
     this.enclosure = 0;                 // 0 = open sky overhead, 1 = fully roofed
+    this._encloseTarget = 0;            // the raw fan reading the smoothed value is chasing
+    this._encloseAt = null;             // camera position the last fan was cast from
+    this._skyOpen = null;               // scope decision; null = scoping off, publish nothing
 
     /* ---- published interface (AGENTS.md §4.3 → engine.get('lighting')) ---- */
     this.keyLight = null;              // THREE.DirectionalLight — cascade 0, the lit one
@@ -1249,22 +1290,37 @@ export class Lighting {
    * **Measured for `interior` only: it returns 1.0 there** — all five rays blocked, which is
    * right for a sealed vault. The hall is expected to come out part-way (`temple`'s +z ray
    * leaves the roof past z −16 into open sky) but that has not been captured, so do not trust
-   * the separation until someone reads `_encloseTarget` from `temple`'s camera. Note this all
-   * currently runs for nothing: `encloseStrength` is 0 and stays 0 for the reason recorded in
-   * TUNE. The fan is kept because it is the correct shape for the term if the shadow-floor
-   * handoff below ever lands, and because it costs five rays every six frames.
+   * the separation until someone reads `_encloseTarget` from `temple`'s camera.
    *
    * The offsets are a fixed set, not sampled, so the term is deterministic frame for frame —
    * the screenshot critic depends on that (§1).
+   *
+   * **Two consumers, two gates, and they are deliberately separate.** `encloseStrength` gates
+   * the sky-FILL half and is still 0 (bracketed and refused, see TUNE). `holdEnclose` gates the
+   * SHADE-BAND SCOPE half (§269/§271, PREREG-holdscope). Either one wanting the fan is enough to
+   * run it; neither implies the other. That is why this is `||` and not a single flag: taking
+   * the scope term must not silently buy a 10% darkening of every roofed frame in the game.
+   *
+   * **Why a teleport snaps instead of lerping, and why that is not a shortcut.** The damping
+   * exists so that *walking* under an architrave is a dissolve. A camera cut is not a walk, and
+   * every capture in this project steps with `dt = 0` (§251), which pins `k` to `1/60` — a
+   * smoothed value would still be 5% of the way to its target at the captured frame, and the
+   * scope decision would read as a tuning failure when it is a settle-time artefact. So a jump
+   * of more than `ENCLOSE_JUMP` metres re-probes immediately and snaps. `setShot` teleports the
+   * camera tens of metres, so every canonical frame is captured at a converged value, and
+   * PREREG-holdscope I4 asserts `|enclosure - _encloseTarget| <= 0.01` rather than trusting it.
    */
   _updateEnclosure(dt) {
-    if (TUNE.encloseStrength <= 0) { this.enclosure = 0; return; }
+    const wantFill = TUNE.encloseStrength > 0;
+    const wantScope = TUNE.holdEnclose >= 0;
+    if (!wantFill && !wantScope) { this.enclosure = 0; this._encloseTarget = 0; return; }
     const engine = this.engine;
-    if ((this._enclosePoll = (this._enclosePoll | 0) + 1) % TUNE.encloseEvery === 0) {
+    engine.camera.getWorldPosition(_camPos);
+    const jumped = !this._encloseAt || _camPos.distanceToSquared(this._encloseAt) > ENCLOSE_JUMP * ENCLOSE_JUMP;
+    if (jumped || (this._enclosePoll = (this._enclosePoll | 0) + 1) % TUNE.encloseEvery === 0) {
       const col = engine.get('collision');
       let hits = 0, cast = 0;
       if (col?.raycast) {
-        engine.camera.getWorldPosition(_camPos);
         for (let i = 0; i < ENCLOSE_FAN.length; i++) {
           _v3.copy(ENCLOSE_FAN[i]);
           cast++;
@@ -1274,10 +1330,44 @@ export class Lighting {
           } catch { /* BVH not built yet — treat this ray as open sky */ }
         }
       }
-      this._encloseTarget = cast > 0 ? hits / cast : 0;
+      /* A fan that cast nothing (no collision module, BVH not built) is NOT "open sky" for the
+         scope decision — it is no information. Hold the previous reading instead of publishing a
+         0 that would switch the held band on inside a tomb for one frame. */
+      if (cast > 0) {
+        this._encloseTarget = hits / cast;
+        (this._encloseAt ||= new THREE.Vector3()).copy(_camPos);
+        if (jumped) this.enclosure = this._encloseTarget;
+      }
     }
     const k = Math.min(1, TUNE.encloseLerp * Math.max(dt || 0, 1 / 240));
     this.enclosure += ((this._encloseTarget || 0) - this.enclosure) * k;
+  }
+
+  /**
+   * The scope decision the shade band consumes: 1 = this camera is under open sky.
+   *
+   * Hysteresis, not a bare compare. The two states are deliberately far apart (§269: the band is
+   * effectively binary, and the midpoint is mud), so a camera loitering on the threshold would
+   * otherwise flip a large visual change every few frames. `holdEncloseHyst` is the full width
+   * of the dead band; inside it the previous decision stands.
+   *
+   * Returns `null` when scoping is off, which is what stops ToonMaterial writing the uniform at
+   * all — the pre-holdscope build published nothing here and a harness poke of `uShadowHold` has
+   * to keep sticking (ToonMaterial's uniform block says so in as many words).
+   */
+  _skyOpenDecision() {
+    if (TUNE.holdEnclose < 0) { this._skyOpen = null; return null; }
+    const h = Math.max(0, TUNE.holdEncloseHyst) * 0.5;
+    const e = this.enclosure;
+    if (e <= TUNE.holdEnclose - h) this._skyOpen = 1;
+    else if (e >= TUNE.holdEnclose + h) this._skyOpen = 0;
+    else if (this._skyOpen === null || this._skyOpen === undefined) {
+      /* First evaluation inside the dead band has no previous decision to keep. Fail to the
+         PROTECTED side: an unnecessary teal shadow is a defect, a held band in a tomb is the
+         frame §269 measured being destroyed. */
+      this._skyOpen = 0;
+    }
+    return this._skyOpen;
   }
 
   /** Sky-fill multiplier for the current enclosure. 1 = open sky. */
@@ -1897,6 +1987,12 @@ export class Lighting {
     p.ambient.sky.copy(A.hemiSky);
     p.ambient.ground.copy(A.hemiGround);
     p.ambient.enclosure = this.enclosure;
+    /* The scope decision for §269's held shade band (PREREG-holdscope §2). `undefined` — not 0 —
+       when scoping is off, because 0 is a legitimate decision ("this camera is roofed") and the
+       payload object is reused every frame: leaving a stale 0 behind would silently pin the whole
+       world to the protected branch the moment anyone turned the term off. SHADING writes
+       `uShadowHold` only when this is a number. */
+    p.ambient.skyOpen = this._skyOpenDecision() ?? undefined;
     p.ambient.skyFill = this._fillSky ?? 1;
     p.ambient.groundFill = this._fillGround ?? 1;
     p.ambient.floor = A.shadowFloor;

@@ -819,6 +819,11 @@ export class Shading {
     this._shells = [];
 
     this._patchWarned = false;
+    /* Exposed the way LIGHTING exposes its own, so a capture harness can bracket a value that is
+       READ PER FRAME rather than latched into a uniform at construction. `shadowHold` became one
+       of those the moment `setKeyLight` started scoping it (PREREG-holdscope), so poking the
+       uniform is no longer equivalent to poking the knob and the harness needs the knob. */
+    this.TUNE = TUNE;
     /* Per-channel calibration state: null = never proven, true/false = the last result a
        probe reported through confirmDebugCalibration(). Selecting a READING mode on a channel
        that is not `true` warns at the call site — see _debugGuard. */
@@ -1502,6 +1507,27 @@ export class Shading {
          * lavender. This wiring is the enabler for the fix, not the fix. */
         if (typeof ambient.floor === 'number' && ambient.floor >= 0) {
           this._shadowFloor = Math.min(TUNE.shadowFloor, ambient.floor);
+        }
+
+        /* `skyOpen` — the scope for §269's held shade band. KNOWN_ISSUES §271.4,
+         * `progress/records/PREREG-holdscope.md`.
+         *
+         * §269 measured that the held band fixes critic 9's D1 on every daylight frame and
+         * destroys `interior`, and §271.3 showed the two cases cannot be separated from inside
+         * this file: `uShadowHold` is one object shared by identity across the whole scene, 8 of
+         * 12 architectural materials are in the tomb AND in daylight, and the tomb runs the
+         * brightest key in the game so key radiance cannot arbitrate either. The one thing that
+         * does separate them is a CAMERA property, which is why the decision arrives here in the
+         * payload instead of being derived here: LIGHTING casts a five-ray fan at the sky and
+         * sends 1 for open, 0 for roofed.
+         *
+         * Written only when the publisher sends a number. That is not defensiveness — the
+         * uniform block above documents that nothing republishes `uShadowHold` per frame, so a
+         * one-boot A/B pokes it and the poke sticks, and several runs depend on that. With
+         * scoping off (`Lighting.TUNE.holdEnclose` -1) this key is absent and the contract is
+         * unchanged. */
+        if (typeof ambient.skyOpen === 'number') {
+          u.uShadowHold.value = TUNE.shadowHold * (ambient.skyOpen > 0.5 ? 1 : 0);
         }
         if (ambient.tint !== undefined && ambient.tint !== null) {
           setCol(this._shadowTint, ambient.tint);

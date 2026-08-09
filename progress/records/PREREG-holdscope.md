@@ -240,7 +240,14 @@ onward. It is **not** a reason to move the bar.
   §269's G5a/G5b/G6 with a stronger and unambiguous test; those bars stay in
   `tools/shadowholdscore.mjs` for the global arm A3 and are reported for it.
 - **G6 / G7** as registered in §7, on every OPEN shot captured.
-- **G8** `node --test "tests/*.test.mjs"` = **445/445**.
+- **G8** `node --test "tests/*.test.mjs"` reports **0 failures**, and the pass count is not lower
+  than the base tree's.
+  *Amended before the mechanism was written and before any candidate frame existed.* The brief
+  named 445/445; the tree was at **447/447** by the time I ran it, because two other lanes added
+  tests in the meantime, and it is **452/452** after the five this lane adds
+  (`tests/holdscope.test.mjs`). A fixed count on a tree three other agents are committing to is a
+  bar that measures who committed last, not whether anything regressed, so the substance — zero
+  failures, nothing lost — is what is registered.
 
 **Ship rule.** Ship `holdEnclose = T` and `shadowHold = 1` only if every guard above is PASS.
 Anything else: the mechanism stays in the tree inert at `holdEnclose = -1` and the result says
