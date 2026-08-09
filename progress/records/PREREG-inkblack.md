@@ -323,6 +323,26 @@ reasoning this apparatus exists to distrust — those sixteen frames are **moved
 `shots/inkblack-run2a/` and re-captured with provenance**. The CAL-4 shas already recorded in
 `RESULT-inkblack.md` stand as the observation they were; the re-capture re-tests them.
 
+### `dt = 0` removes event-driven FX — a scope limit, recorded
+
+The FX lane proved (at the cost of a boot) that `dt = 0` deletes every event-driven effect from
+the frame. All four arms here are captured at `dt = 0`, which is what makes a duplicate arm differ
+by exactly zero pixels (§28), so the removal is **identical across arms** and cannot bias any
+comparison. What it does is bound the claim:
+
+- The `inkMask` contains no FX pixels, because no FX are drawn. So this run says nothing about how
+  the ink composites over torch flame, dust, shafts, sparkle or birds — surfaces where the crease
+  pass's `min(ink, c)` and its `smoothstep(0.05, 0.20, lum)` gate could behave differently from
+  anywhere else in the frame.
+- The frames most affected are the ones whose darks are partly FX-lit. `night` and `interior` are
+  lamp-and-torch scenes, so their dark population at `dt = 0` is not the dark population a player
+  sees. `PREREG-inkwiden.md`'s W3 mush falsifier inherits this exactly: it bounds the mush risk on
+  a frame with the flames removed, which is the quieter case.
+
+Neither is a reason to move to `dt > 0` — that would reintroduce the phase drift that voided a
+whole A/B (§28) and buy an unstable instrument for a population this lane is not measuring. It is
+a reason not to claim the result covers effects.
+
 ### Staleness of every absolute taken from `shots/r9`
 
 Also flagged by the lead: `shots/r9` is now roughly 120 commits old, and another lane found a

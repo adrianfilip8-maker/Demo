@@ -199,6 +199,35 @@ refuted — T2 is too wide; T1 may still be reportable on its own arm) · `FAIL`
 The per-term arms exist so that a partial result is still actionable: if `T1-colour` meets W1 and
 W3 by itself, it ships alone and T2 is dropped.
 
+### §273 compliance, stated at seal time rather than assumed
+
+§273 is a standing rule as of today: an absolute bar taken from a stored capture expires before it
+is scored, because on this branch the gap between sealing and scoring is dozens of commits. Checked
+against it point by point, because "my thresholds are probably fine" is how the other lane's P2
+scored PASS on 1.27 while its own control measured 1.22.
+
+- **Rule 1, deltas against a same-run control.** W1 and W2 are both differences between `W-both`
+  and `S-ship` **in the same boot on the same frame**. No number from `shots/r9` enters either.
+  W3's bounds (2 % of frame, 4 px chord) are geometric properties of a mask, not stored
+  measurements — 4 px is derived from `inkPixels(720) = 1.67 px`, the line this build actually
+  draws at this capture height.
+- **Rule 2, shoot the control first.** `S-ship` is arm 1 of 5 and `Z-noink` — which defines the
+  mask every other arm is measured over — is captured in the same boot as the arms it scopes.
+- **Rule 3, gate tree uniformity on content.** `tools/treestate.mjs` is wired into this capture,
+  and `G-TREE` / `G-TREE-ACROSS` are the gates.
+- **Rule 4, r9 may describe but not gate.** The r9 figures (`p10 0.0955`, `p90/p10 4.06`) appear in
+  §1 as a statement of the defect and gate nothing here.
+- **Rule 5, no "true by construction" exemptions.** Already paid once in this lane: run-2's
+  sixteen provenance-less frames were re-shot rather than excused.
+
+**One claim this run may NOT make, registered now so it cannot be made later.** "The ink now
+matches the reference's 0.0474" is inadmissible from these arms. That figure was derived with a
+ridge detector on the reference and on a 120-commit-old build, and comparing a new capture against
+it is precisely the stale-absolute trap. What the arms CAN support is the registered form: the
+floor moved by at least 0.030 L **relative to `S-ship` captured beside it**, and the range widened
+**relative to `S-ship` captured beside it**. If anyone later wants the absolute claim, it needs the
+reference re-measured against a same-run shipped control, and this document does not register one.
+
 ### Not being tested here
 
 The hull. Whatever `PREREG-inkblack.md`'s P2 returns about the hull's authored colour is a
