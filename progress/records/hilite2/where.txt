@@ -1,0 +1,35 @@
+frames: /home/user/Demo/shots/hilite2
+
+WHERE the >L230 population is, and how it is shaped
+shot           arm     >230 px   components (>=8px)   largest  box (x0,y0,x1,y1)
+hero          base          4                  0         0  -
+hero          key          20                  1         8  214,462,219,463
+temple        base          1                  0         0  -
+temple        key           1                  0         0  -
+courtyard     base         29                  1         9  777,186,782,187
+courtyard     key         272                 12        41  570,122,573,152
+sly-closeup   base         42                  0         0  -
+sly-closeup   key          60                  2        11  391,255,396,260
+
+WHAT the coupling landed on — changed pixels classified by the delta's own tint
+(metal specTint is albedo-derived and strongly warm; dielectric specTint is #fffbe8, near-neutral)
+shot           changed px    warm dR-dB>12    neutral    cool   |  max dL   at (x,y)  base->key L
+hero               87355          17972      69058     325  |    86.8  (170,156)   89.2 -> 176.0
+temple              8443            525       7882      36  |    38.6  (144,229)   55.9 -> 94.4
+courtyard         118200           7436     110396     368  |    80.6  (928,185)   39.3 -> 119.9
+sly-closeup        84610           5895      78499     216  |    49.0  (624,155)   112.4 -> 161.4
+
+WHAT SPEC IS WORTH TODAY — base minus off (the specular term's whole footprint)
+shot           spec-lit px    % frame    mean dL    p99 dL    max dL
+hero                36624     3.974%       8.41     88.60    135.25
+temple               8133     0.882%       1.94     15.30     45.62
+courtyard           74429     8.076%       7.02     64.61    112.20
+sly-closeup         59586     6.465%       3.54     27.04     81.13
+
+WHERE THE LOBE ACTUALLY LANDS  (dbg6: R >= 252 = quantiser saturated, B >= 250 = full sun)
+shot           saturated+lit px   % frame  |  rise under coupling, over those px
+                                            <2L      2-10L    10-20L   >20L    max
+hero                      2838   0.3079% |   14.3%    22.4%    25.8%   37.5%   86.8
+temple                    1167   0.1266% |   84.5%    11.4%     3.5%    0.6%   27.3
+courtyard                15139   1.6427% |    6.7%    57.5%     7.4%   28.4%   68.7
+sly-closeup              10960   1.1892% |    2.5%    68.1%    24.3%    5.1%   49.0

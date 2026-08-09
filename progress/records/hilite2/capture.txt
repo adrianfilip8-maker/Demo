@@ -1,0 +1,99 @@
+renderer: ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)   drawing buffer 1280x720   boot warnings 4
+
+[hero] staging base(0/1) off(0/0) key(1/1) base2(0/1) dbg4(75.7%) dbg6  (668s)
+[temple] staging base(0/1) off(0/0) key(1/1) base2(0/1) dbg4(27.2%) dbg6  (1145s)
+[courtyard] staging base(0/1) off(0/0) key(1/1) base2(0/1) dbg4(15.6%) dbg6  (1719s)
+[sly-closeup] staging base(0/1) off(0/0) key(1/1) base2(0/1) dbg4(17.5%) dbg6  (2260s)
+
+captured in 2272s
+
+================= PREREG-hilite2 REGISTERED CRITERIA =================
+
+per-shot luma (display bytes, Rec.709):
+shot          arm      p1    p50    p90    p99   p99.9   max    >200%    >230%    >250%
+hero          base     15     71    155    183    195  232.18    0.066    0.000    0.000
+hero          off      15     71    154    183    193  232.18    0.058    0.000    0.000
+hero          key      16     72    155    184    204  232.79    0.134    0.002    0.000
+hero          base2    15     71    155    183    195  232.18    0.066    0.000    0.000
+temple        base     31     89    145    181    195  230.21    0.069    0.000    0.000
+temple        off      31     89    145    181    194  230.21    0.065    0.000    0.000
+temple        key      31     89    145    181    196  230.21    0.077    0.000    0.000
+temple        base2    31     89    145    181    195  230.21    0.069    0.000    0.000
+courtyard     base     23    104    160    180    210  237.17    0.222    0.003    0.000
+courtyard     off      23    103    159    179    206  237.17    0.168    0.003    0.000
+courtyard     key      23    104    160    187    215  245.47    0.596    0.030    0.000
+courtyard     base2    23    104    160    180    210  237.17    0.222    0.003    0.000
+sly-closeup   base     25     82    124    179    214  239.39    0.212    0.005    0.000
+sly-closeup   off      25     82    123    178    214  239.39    0.204    0.004    0.000
+sly-closeup   key      25     82    124    184    215  239.39    0.328    0.007    0.000
+sly-closeup   base2    25     82    124    179    214  239.39    0.212    0.005    0.000
+
+I1 NULL ARM  (base2 vs base, must be exactly 0 px):
+   hero          0 px   PASS
+   temple        0 px   PASS
+   courtyard     0 px   PASS
+   sly-closeup   0 px   PASS
+   I1 FIRED
+
+I2 POSITIVE CONTROL  (off vs base, must be > 0 px on all four):
+   hero          36624 px (3.974%)  max |dL| 135.25  mean dL on changed px -10.25   FIRED
+   temple        8133 px (0.882%)  max |dL| 45.62  mean dL on changed px -2.37   FIRED
+   courtyard     74429 px (8.076%)  max |dL| 112.20  mean dL on changed px -7.94   FIRED
+   sly-closeup   59586 px (6.465%)  max |dL| 81.13  mean dL on changed px -3.79   FIRED
+   I2 FIRED
+
+I3 APPLIED STATE  (distinct per arm):
+   hero          base=0/1  off=0/0  key=1/1  base2=0/1
+   temple        base=0/1  off=0/0  key=1/1  base2=0/1
+   courtyard     base=0/1  off=0/0  key=1/1  base2=0/1
+   sly-closeup   base=0/1  off=0/0  key=1/1  base2=0/1
+
+I4 READBACK CALIBRATION  (debugTerm(4) triple, bar > 5% of frame):
+   hero          75.66%   FIRED
+   temple        27.16%   FIRED
+   courtyard     15.61%   FIRED
+   sly-closeup   17.47%   FIRED
+   I4 FIRED
+
+key vs base  (the candidate):
+   hero          87355 px changed (9.479%)  max +dL 86.78   p99 183 -> 184   >230 0.000% -> 0.002%   >250 0.000% -> 0.000%
+   temple        8443 px changed (0.916%)  max +dL 38.59   p99 181 -> 181   >230 0.000% -> 0.000%   >250 0.000% -> 0.000%
+   courtyard     118200 px changed (12.826%)  max +dL 80.59   p99 180 -> 187   >230 0.003% -> 0.030%   >250 0.000% -> 0.000%
+   sly-closeup   84610 px changed (9.181%)  max +dL 48.98   p99 179 -> 184   >230 0.005% -> 0.007%   >250 0.000% -> 0.000%
+
+T1  p99 >= 200 on >= 3 of 4:  0/4   FAIL
+T2  >230 share >= 0.20% on >= 3 of 4:  0/4   FAIL
+T3  p50 <= 130 everywhere:  PASS
+T4  >250 <= 1.0% everywhere:  PASS
+T5  p1 <= 45 everywhere:  PASS
+
+H6  a highlight exists  (key >= 0.02% above L230 where base <= 0.005%; bar 2 of 4):
+   hero          base 0.000%  ->  key 0.002%   no
+   temple        base 0.000%  ->  key 0.000%   no
+   courtyard     base 0.003%  ->  key 0.030%   PASS
+   sly-closeup   base 0.005%  ->  key 0.007%   no
+   H6 1/4   FAIL
+
+H7  no material inversion:
+   hero          102 sly materials, 23 distinct spec classes, keyRad luma 2.423, shared uSpecKey yes
+   temple        102 sly materials, 23 distinct spec classes, keyRad luma 2.542, shared uSpecKey yes
+   courtyard     102 sly materials, 23 distinct spec classes, keyRad luma 2.440, shared uSpecKey yes
+   sly-closeup   102 sly materials, 23 distinct spec classes, keyRad luma 2.408, shared uSpecKey yes
+
+H8  no blowout  (>250 rises < 0.5pp and stays <= 1.0%):
+   hero          0.000% -> 0.000%  (+0.000pp)
+   temple        0.000% -> 0.000%  (+0.000pp)
+   courtyard     0.000% -> 0.000%  (+0.000pp)
+   sly-closeup   0.000% -> 0.000%  (+0.000pp)
+   H8 PASS
+
+debugTerm(6) SPECULAR INCIDENCE  (share of frame; forecast: joint-saturated < 0.5%):
+shot           gates > 0   gates FULL   lobe > 0   quant >= 50%   quant SAT (joint)
+hero            29.338%      8.798%     4.142%        0.606%            0.308%
+temple          68.413%      0.760%     0.751%        0.213%            0.127%
+courtyard       83.955%     14.942%    12.464%        2.021%            1.643%
+sly-closeup     80.210%     11.506%     6.414%        1.804%            1.189%
+
+SHIP RULE: uSpecKey 1.0 ships iff I1-I3 fire, T3/T4/T5 pass, H8 passes, and H6 passes.
+   I1 ok · I2 ok · T3 ok · T4 ok · T5 ok · H8 ok · H6 FAIL
+   ==> DO NOT SHIP

@@ -111,3 +111,32 @@ for (const shot of SHOTS) {
   const p99 = ds.length ? ds[Math.min(ds.length - 1, Math.floor(0.99 * ds.length))] : 0;
   console.log(`${shot.padEnd(13)} ${String(ds.length).padStart(11)} ${(100 * ds.length / n).toFixed(3).padStart(9)}% ${(ds.length ? sum / ds.length : 0).toFixed(2).padStart(10)} ${p99.toFixed(2).padStart(9)} ${mx.toFixed(2).padStart(9)}`);
 }
+
+/* ---------------------------------------------------------------------------------------
+ * THE LOBE LANDS — ON WHAT?
+ *
+ * debugTerm(6) gives, per pixel, whether the two gates are open (B) and how much of the
+ * quantiser's ceiling the lobe reached (R). Intersect that with the key-minus-base rise and
+ * the question "is this amplitude or incidence" answers itself: a pixel where the lobe is
+ * SATURATED and the sun is FULL is a pixel where every geometric precondition for a highlight
+ * is met, so whatever rise it shows is set by the material's own uSpec alone.
+ * ------------------------------------------------------------------------------------- */
+console.log('\nWHERE THE LOBE ACTUALLY LANDS  (dbg6: R >= 252 = quantiser saturated, B >= 250 = full sun)');
+console.log('shot           saturated+lit px   % frame  |  rise under coupling, over those px');
+console.log('                                            <2L      2-10L    10-20L   >20L    max');
+for (const shot of SHOTS) {
+  const fg = path.join(DIR, `${shot}.dbg6.png`), fb = path.join(DIR, `${shot}.base.png`), fk = path.join(DIR, `${shot}.key.png`);
+  if (!existsSync(fg) || !existsSync(fb) || !existsSync(fk)) continue;
+  const g = readPNG(fg), a = readPNG(fb), b = readPNG(fk), n = g.w * g.h;
+  let cnt = 0, b0 = 0, b1 = 0, b2 = 0, b3 = 0, mx = 0;
+  for (let i = 0, p = 0; i < n; i++, p += g.ch) {
+    if (g.data[p] < 252 || g.data[p + 2] < 250) continue;
+    cnt++;
+    const q = i * a.ch;
+    const dl = lum(b.data[q], b.data[q + 1], b.data[q + 2]) - lum(a.data[q], a.data[q + 1], a.data[q + 2]);
+    if (dl > mx) mx = dl;
+    if (dl < 2) b0++; else if (dl < 10) b1++; else if (dl < 20) b2++; else b3++;
+  }
+  const pc = (v) => cnt ? `${((100 * v) / cnt).toFixed(1)}%` : '-';
+  console.log(`${shot.padEnd(13)} ${String(cnt).padStart(16)} ${(100 * cnt / n).toFixed(4).padStart(8)}% | ${pc(b0).padStart(7)} ${pc(b1).padStart(8)} ${pc(b2).padStart(8)} ${pc(b3).padStart(7)} ${mx.toFixed(1).padStart(6)}`);
+}

@@ -1,0 +1,1686 @@
+{
+  "prereg": "PREREG-hilite2.md",
+  "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+  "res": [
+    1280,
+    720
+  ],
+  "shots": [
+    {
+      "shot": "hero",
+      "applied": {
+        "base": {
+          "specKey": 0,
+          "specGain": 1
+        },
+        "off": {
+          "specKey": 0,
+          "specGain": 0
+        },
+        "key": {
+          "specKey": 1,
+          "specGain": 1
+        },
+        "base2": {
+          "specKey": 0,
+          "specGain": 1
+        }
+      },
+      "census": {
+        "materials": 102,
+        "keyRadLum": 2.4229845332704842,
+        "keyIntensity": 3.3,
+        "keyColor": [
+          1,
+          0.6938717612856897,
+          0.3515325994898463
+        ],
+        "shared": {
+          "keyIdentity": 1,
+          "specKeyIdentity": 1
+        },
+        "classes": [
+          {
+            "spec": 0.95,
+            "gloss": 110,
+            "metal": 0.85,
+            "roughness": 1,
+            "hasRoughMap": true,
+            "count": 14,
+            "names": [
+              "hooks:rings",
+              "arch:pylon:gold_leaf",
+              "arch:tomb:gold_leaf",
+              "guard_body"
+            ]
+          },
+          {
+            "spec": 0.9,
+            "gloss": 96,
+            "metal": 0.85,
+            "roughness": 1,
+            "hasRoughMap": true,
+            "count": 6,
+            "names": [
+              "coins",
+              "props_gold",
+              "pickup_coins",
+              "treasure_scarab"
+            ]
+          },
+          {
+            "spec": 0.62,
+            "gloss": 72,
+            "metal": 0.85,
+            "roughness": 1,
+            "hasRoughMap": true,
+            "count": 3,
+            "names": [
+              "arch:court:bronze_dark",
+              "arch:hall:bronze_dark",
+              "arch:pylon:bronze_dark"
+            ]
+          },
+          {
+            "spec": 0.6,
+            "gloss": 48,
+            "metal": 0.85,
+            "roughness": 1,
+            "hasRoughMap": true,
+            "count": 1,
+            "names": [
+              "props_bronze"
+            ]
+          },
+          {
+            "spec": 0.55,
+            "gloss": 64,
+            "metal": 0.85,
+            "roughness": 1,
+            "hasRoughMap": true,
+            "count": 4,
+            "names": [
+              "arch:court:hieroglyph_gilded",
+              "arch:hall:hieroglyph_gilded",
+              "arch:pylon:hieroglyph_gilded",
+              "arch:tomb:hieroglyph_gilded"
+            ]
+          },
+          {
+            "spec": 0.42,
+            "gloss": 62,
+            "metal": 0,
+            "roughness": 1,
+            "hasRoughMap": true,
+            "count": 3,
+            "names": [
+              "arch:court:granite_pink",
+              "arch:hall:granite_pink",
+              "arch:tomb:granite_pink"
+            ]
+          },
+          {
+            "spec": 0.32,
+            "gloss": 46,
+            "metal": 0,
+            "roughness": 1,
+            "hasRoughMap": true,
+            "count": 2,
+            "names": [
+              "arch:court:limestone_polished",
+              "arch:hall:limestone_polished"
+            ]
+          },
+          {
+            "spec": 0.25,
+            "gloss": 32,
+            "metal": 0,
+            "roughness": 0.62,
+            "hasRoughMap": false,
+            "count": 7,
+            "names": [
+              "kaykit:props",
+              "slydlrig:mesh",
+              "slydlrig:mesh",
+              "slydlrig:mesh"
+            ]
+          },
+          {
+            "spec": 0.2,
+            "gloss": 30,
+            "metal": 0.85,
+            "roughness": 1,
+            "hasRoughMap": true,
+            "count": 4,
+            "names": [
+              "arch:court:ceiling_stars",
+              "arch:hall:ceiling_stars",
+              "arch:pylon:ceiling_stars",
+              "arch:tomb:ceiling_stars"
+            ]
+          },
+          {
+            "spec": 0.2,
+            "gloss": 28,
+            "metal": 0,
+            "roughness": 1,
+            "hasRoughMap": true,
+            "count": 8,
+            "names": [
+              "props_stone",
+              "props_lapis",
+              "props_carnelian",
+              "props_lime"
+            ]
+          },
+          {
+            "spec": 0.2,
+            "gloss": 28,
+            "metal": 0,
+            "roughness": 0.62,
+            "hasRoughMap": false,
+            "count": 2,
+            "names": [
+              "props_dark",
+              "props_ember"
+            ]
+          },
+          {
+            "spec": 0.16,
+            "gloss": 24,
+            "metal": 0,
+            "roughness": 1,
+            "hasRoughMap": true,
+            "count": 4,
+            "names": [
+              "arch:court:hieroglyph_wall",
+              "arch:hall:hieroglyph_wall",
+              "arch:pylon:hieroglyph_wall",
+              "arch:tomb:hieroglyph_wall"
+            ]
+          },
+          {
+            "spec": 0.15,
+            "gloss": 22,
+            "metal": 0,
+            "roughness": 1,
+            "hasRoughMap": true,
+            "count": 2,
+            "names": [
+              "ruin:drums",
+              "arch:hall:column_papyrus"
+            ]
+          },
+          {
+            "spec": 0.14,
+            "gloss": 20,
+            "metal": 0,
+            "roughness": 0.62,
+            "hasRoughMap": false,
+            "count": 3,
+            "names": []
+          },
+          {
+            "spec": 0.14,
+            "gloss": 20,
+            "metal": 0,
+            "roughness": 1,
+            "hasRoughMap": true,
+            "count": 3,
+            "names": [
+              "arch:court:sandstone_block",
+              "arch:hall:sandstone_block",
+              "arch:tomb:sandstone_block"
+            ]
+          },
+          {
+            "spec": 0.1,
+            "gloss": 32,
+            "metal": 0,
+            "roughness": 0.62,
+            "hasRoughMap": false,
+            "count": 1,
+            "names": []
+          },
+          {
+            "spec": 0.1,
+            "gloss": 16,
+            "metal": 0,
+            "roughness": 1,
+            "hasRoughMap": true,
+            "count": 16,
+            "names": [
+              "paving:court",
+              "paving:hall",
+              "paving:tomb",
+              "arch:court:paving_courtyard"
+            ]
+          },
+          {
+            "spec": 0.08,
+            "gloss": 12,
+            "metal": 0,
+            "roughness": 0.62,
+            "hasRoughMap": false,
+            "count": 3,
+            "names": []
+          },
+          {
+            "spec": 0.08,
+            "gloss": 14,
+            "metal": 0,
+            "roughness": 1,
+            "hasRoughMap": true,
+            "count": 5,
+            "names": [
+              "arch:court:sandstone_worn",
+              "arch:hall:sandstone_worn",
+              "arch:pylon:sandstone_worn",
+              "arch:tomb:sandstone_worn"
+            ]
+          },
+          {
+            "spec": 0.06,
+            "gloss": 12,
+            "metal": 0,
+            "roughness": 0.62,
+            "hasRoughMap": false,
+            "count": 4,
+            "names": [
+              "sand_ring0",
+              "sand_ring1",
+              "sand_ring2",
+              "sand_ring3"
+            ]
+          },
+          {
+            "spec": 0.06,
+            "gloss": 8,
+            "metal": 0,
+            "roughness": 1,
+            "hasRoughMap": true,
+            "count": 2,
+            "names": [
+              "arch:court:rope_fibre",
+              "arch:hall:rope_fibre"
+            ]
+          },
+          {
+            "spec": 0.05,
+            "gloss": 10,
+            "metal": 0,
+            "roughness": 1,
+            "hasRoughMap": true,
+            "count": 3,
+            "names": [
+              "arch:court:mudbrick",
+              "arch:tomb:mudbrick",
+              "arch:hall:mudbrick"
+            ]
+          },
+          {
+            "spec": 0.04,
+            "gloss": 8,
+            "metal": 0,
+            "roughness": 0.62,
+            "hasRoughMap": false,
+            "count": 2,
+            "names": [
+              "pyramid_105",
+              "pyramid_72"
+            ]
+          }
+        ]
+      },
+      "stats": {
+        "base": {
+          "n": 921600,
+          "mean": 79.96173027663595,
+          "p1": 15,
+          "p50": 71,
+          "p90": 155,
+          "p99": 183,
+          "p999": 195,
+          "max": 232.1811981201172,
+          "over200": 0.06586371527777778,
+          "over230": 0.00043402777777777775,
+          "over250": 0
+        },
+        "off": {
+          "n": 921600,
+          "mean": 79.627423165171,
+          "p1": 15,
+          "p50": 71,
+          "p90": 154,
+          "p99": 183,
+          "p999": 193,
+          "max": 232.1811981201172,
+          "over200": 0.058159722222222224,
+          "over230": 0.00043402777777777775,
+          "over250": 0
+        },
+        "key": {
+          "n": 921600,
+          "mean": 80.51895188980943,
+          "p1": 16,
+          "p50": 72,
+          "p90": 155,
+          "p99": 184,
+          "p999": 204,
+          "max": 232.79319763183594,
+          "over200": 0.13444010416666666,
+          "over230": 0.002170138888888889,
+          "over250": 0
+        },
+        "base2": {
+          "n": 921600,
+          "mean": 79.96173027663595,
+          "p1": 15,
+          "p50": 71,
+          "p90": 155,
+          "p99": 183,
+          "p999": 195,
+          "max": 232.1811981201172,
+          "over200": 0.06586371527777778,
+          "over230": 0.00043402777777777775,
+          "over250": 0
+        }
+      },
+      "diffs": {
+        "null": {
+          "px": 0,
+          "pct": 0,
+          "maxAbsL": 0,
+          "upPx": 0,
+          "dnPx": 0,
+          "meanUpL": 0,
+          "meanDnL": 0
+        },
+        "off": {
+          "px": 36624,
+          "pct": 3.9739583333333335,
+          "maxAbsL": 135.253,
+          "upPx": 5044,
+          "dnPx": 31580,
+          "meanUpL": 3.114718913560691,
+          "meanDnL": -10.253580658644156
+        },
+        "key": {
+          "px": 87355,
+          "pct": 9.478624131944445,
+          "maxAbsL": 86.77539999999998,
+          "upPx": 81180,
+          "dnPx": 6175,
+          "meanUpL": 6.523074740083896,
+          "meanDnL": -2.592351319838135
+        }
+      },
+      "incidence": {
+        "gatesAnyPct": 29.33810763888889,
+        "gatesOpenPct": 8.798285590277779,
+        "quantSatPct": 2.014865451388889,
+        "jointSatPct": 0.3079427083333333,
+        "jointHalfPct": 0.6063368055555556,
+        "lobeAnyPct": 4.141710069444445
+      },
+      "calibShare": 75.6552734375
+    },
+    {
+      "shot": "temple",
+      "applied": {
+        "base": {
+          "specKey": 0,
+          "specGain": 1
+        },
+        "off": {
+          "specKey": 0,
+          "specGain": 0
+        },
+        "key": {
+          "specKey": 1,
+          "specGain": 1
+        },
+        "base2": {
+          "specKey": 0,
+          "specGain": 1
+        }
+      },
+      "census": {
+        "materials": 102,
+        "keyRadLum": 2.5422645423477173,
+        "keyIntensity": 3.38068510897729,
+        "keyColor": [
+          1,
+          0.714747834424304,
+          0.390709082134271
+        ],
+        "shared": {
+          "keyIdentity": 1,
+          "specKeyIdentity": 1
+        },
+        "classes": [
+          {
+            "spec": 0.95,
+            "gloss": 110,
+            "metal": 0.85,
+            "roughness": 1,
+            "hasRoughMap": true,
+            "count": 14,
+            "names": [
+              "hooks:rings",
+              "arch:pylon:gold_leaf",
+              "arch:tomb:gold_leaf",
+              "guard_body"
+            ]
+          },
+          {
+            "spec": 0.9,
+            "gloss": 96,
+            "metal": 0.85,
+            "roughness": 1,
+            "hasRoughMap": true,
+            "count": 6,
+            "names": [
+              "coins",
+              "props_gold",
+              "pickup_coins",
+              "treasure_scarab"
+            ]
+          },
+          {
+            "spec": 0.62,
+            "gloss": 72,
+            "metal": 0.85,
+            "roughness": 1,
+            "hasRoughMap": true,
+            "count": 3,
+            "names": [
+              "arch:court:bronze_dark",
+              "arch:hall:bronze_dark",
+              "arch:pylon:bronze_dark"
+            ]
+          },
+          {
+            "spec": 0.6,
+            "gloss": 48,
+            "metal": 0.85,
+            "roughness": 1,
+            "hasRoughMap": true,
+            "count": 1,
+            "names": [
+              "props_bronze"
+            ]
+          },
+          {
+            "spec": 0.55,
+            "gloss": 64,
+            "metal": 0.85,
+            "roughness": 1,
+            "hasRoughMap": true,
+            "count": 4,
+            "names": [
+              "arch:court:hieroglyph_gilded",
+              "arch:hall:hieroglyph_gilded",
+              "arch:pylon:hieroglyph_gilded",
+              "arch:tomb:hieroglyph_gilded"
+            ]
+          },
+          {
+            "spec": 0.42,
+            "gloss": 62,
+            "metal": 0,
+            "roughness": 1,
+            "hasRoughMap": true,
+            "count": 3,
+            "names": [
+              "arch:court:granite_pink",
+              "arch:hall:granite_pink",
+              "arch:tomb:granite_pink"
+            ]
+          },
+          {
+            "spec": 0.32,
+            "gloss": 46,
+            "metal": 0,
+            "roughness": 1,
+            "hasRoughMap": true,
+            "count": 2,
+            "names": [
+              "arch:court:limestone_polished",
+              "arch:hall:limestone_polished"
+            ]
+          },
+          {
+            "spec": 0.25,
+            "gloss": 32,
+            "metal": 0,
+            "roughness": 0.62,
+            "hasRoughMap": false,
+            "count": 7,
+            "names": [
+              "kaykit:props",
+              "slydlrig:mesh",
+              "slydlrig:mesh",
+              "slydlrig:mesh"
+            ]
+          },
+          {
+            "spec": 0.2,
+            "gloss": 30,
+            "metal": 0.85,
+            "roughness": 1,
+            "hasRoughMap": true,
+            "count": 4,
+            "names": [
+              "arch:court:ceiling_stars",
+              "arch:hall:ceiling_stars",
+              "arch:pylon:ceiling_stars",
+              "arch:tomb:ceiling_stars"
+            ]
+          },
+          {
+            "spec": 0.2,
+            "gloss": 28,
+            "metal": 0,
+            "roughness": 1,
+            "hasRoughMap": true,
+            "count": 8,
+            "names": [
+              "props_stone",
+              "props_lapis",
+              "props_carnelian",
+              "props_lime"
+            ]
+          },
+          {
+            "spec": 0.2,
+            "gloss": 28,
+            "metal": 0,
+            "roughness": 0.62,
+            "hasRoughMap": false,
+            "count": 2,
+            "names": [
+              "props_dark",
+              "props_ember"
+            ]
+          },
+          {
+            "spec": 0.16,
+            "gloss": 24,
+            "metal": 0,
+            "roughness": 1,
+            "hasRoughMap": true,
+            "count": 4,
+            "names": [
+              "arch:court:hieroglyph_wall",
+              "arch:hall:hieroglyph_wall",
+              "arch:pylon:hieroglyph_wall",
+              "arch:tomb:hieroglyph_wall"
+            ]
+          },
+          {
+            "spec": 0.15,
+            "gloss": 22,
+            "metal": 0,
+            "roughness": 1,
+            "hasRoughMap": true,
+            "count": 2,
+            "names": [
+              "ruin:drums",
+              "arch:hall:column_papyrus"
+            ]
+          },
+          {
+            "spec": 0.14,
+            "gloss": 20,
+            "metal": 0,
+            "roughness": 0.62,
+            "hasRoughMap": false,
+            "count": 3,
+            "names": []
+          },
+          {
+            "spec": 0.14,
+            "gloss": 20,
+            "metal": 0,
+            "roughness": 1,
+            "hasRoughMap": true,
+            "count": 3,
+            "names": [
+              "arch:court:sandstone_block",
+              "arch:hall:sandstone_block",
+              "arch:tomb:sandstone_block"
+            ]
+          },
+          {
+            "spec": 0.1,
+            "gloss": 32,
+            "metal": 0,
+            "roughness": 0.62,
+            "hasRoughMap": false,
+            "count": 1,
+            "names": []
+          },
+          {
+            "spec": 0.1,
+            "gloss": 16,
+            "metal": 0,
+            "roughness": 1,
+            "hasRoughMap": true,
+            "count": 16,
+            "names": [
+              "paving:court",
+              "paving:hall",
+              "paving:tomb",
+              "arch:court:paving_courtyard"
+            ]
+          },
+          {
+            "spec": 0.08,
+            "gloss": 12,
+            "metal": 0,
+            "roughness": 0.62,
+            "hasRoughMap": false,
+            "count": 3,
+            "names": []
+          },
+          {
+            "spec": 0.08,
+            "gloss": 14,
+            "metal": 0,
+            "roughness": 1,
+            "hasRoughMap": true,
+            "count": 5,
+            "names": [
+              "arch:court:sandstone_worn",
+              "arch:hall:sandstone_worn",
+              "arch:pylon:sandstone_worn",
+              "arch:tomb:sandstone_worn"
+            ]
+          },
+          {
+            "spec": 0.06,
+            "gloss": 12,
+            "metal": 0,
+            "roughness": 0.62,
+            "hasRoughMap": false,
+            "count": 4,
+            "names": [
+              "sand_ring0",
+              "sand_ring1",
+              "sand_ring2",
+              "sand_ring3"
+            ]
+          },
+          {
+            "spec": 0.06,
+            "gloss": 8,
+            "metal": 0,
+            "roughness": 1,
+            "hasRoughMap": true,
+            "count": 2,
+            "names": [
+              "arch:court:rope_fibre",
+              "arch:hall:rope_fibre"
+            ]
+          },
+          {
+            "spec": 0.05,
+            "gloss": 10,
+            "metal": 0,
+            "roughness": 1,
+            "hasRoughMap": true,
+            "count": 3,
+            "names": [
+              "arch:court:mudbrick",
+              "arch:tomb:mudbrick",
+              "arch:hall:mudbrick"
+            ]
+          },
+          {
+            "spec": 0.04,
+            "gloss": 8,
+            "metal": 0,
+            "roughness": 0.62,
+            "hasRoughMap": false,
+            "count": 2,
+            "names": [
+              "pyramid_105",
+              "pyramid_72"
+            ]
+          }
+        ]
+      },
+      "stats": {
+        "base": {
+          "n": 921600,
+          "mean": 95.2000673451492,
+          "p1": 31,
+          "p50": 89,
+          "p90": 145,
+          "p99": 181,
+          "p999": 195,
+          "max": 230.2073974609375,
+          "over200": 0.0691189236111111,
+          "over230": 0.00010850694444444444,
+          "over250": 0
+        },
+        "off": {
+          "n": 921600,
+          "mean": 95.18296114127358,
+          "p1": 31,
+          "p50": 89,
+          "p90": 145,
+          "p99": 181,
+          "p999": 194,
+          "max": 230.2073974609375,
+          "over200": 0.06488715277777778,
+          "over230": 0.00010850694444444444,
+          "over250": 0
+        },
+        "key": {
+          "n": 921600,
+          "mean": 95.22070789224675,
+          "p1": 31,
+          "p50": 89,
+          "p90": 145,
+          "p99": 181,
+          "p999": 196,
+          "max": 230.2073974609375,
+          "over200": 0.07660590277777778,
+          "over230": 0.00010850694444444444,
+          "over250": 0
+        },
+        "base2": {
+          "n": 921600,
+          "mean": 95.2000673451492,
+          "p1": 31,
+          "p50": 89,
+          "p90": 145,
+          "p99": 181,
+          "p999": 195,
+          "max": 230.2073974609375,
+          "over200": 0.0691189236111111,
+          "over230": 0.00010850694444444444,
+          "over250": 0
+        }
+      },
+      "diffs": {
+        "null": {
+          "px": 0,
+          "pct": 0,
+          "maxAbsL": 0,
+          "upPx": 0,
+          "dnPx": 0,
+          "meanUpL": 0,
+          "meanDnL": 0
+        },
+        "off": {
+          "px": 8133,
+          "pct": 0.8824869791666666,
+          "maxAbsL": 45.61759999999998,
+          "upPx": 841,
+          "dnPx": 7292,
+          "meanUpL": 1.7657783590963145,
+          "meanDnL": -2.3656196379594023
+        },
+        "key": {
+          "px": 8443,
+          "pct": 0.9161241319444444,
+          "maxAbsL": 38.588,
+          "upPx": 7538,
+          "dnPx": 905,
+          "meanUpL": 2.764496020164547,
+          "meanDnL": -2.0071180110497293
+        }
+      },
+      "incidence": {
+        "gatesAnyPct": 68.41297743055556,
+        "gatesOpenPct": 0.7604166666666666,
+        "quantSatPct": 9.682725694444445,
+        "jointSatPct": 0.12662760416666666,
+        "jointHalfPct": 0.21256510416666666,
+        "lobeAnyPct": 0.7514105902777778
+      },
+      "calibShare": 27.163736979166668
+    },
+    {
+      "shot": "courtyard",
+      "applied": {
+        "base": {
+          "specKey": 0,
+          "specGain": 1
+        },
+        "off": {
+          "specKey": 0,
+          "specGain": 0
+        },
+        "key": {
+          "specKey": 1,
+          "specGain": 1
+        },
+        "base2": {
+          "specKey": 0,
+          "specGain": 1
+        }
+      },
+      "census": {
+        "materials": 102,
+        "keyRadLum": 2.440156247391014,
+        "keyIntensity": 3.3117360158512423,
+        "keyColor": [
+          1,
+          0.6969082810149427,
+          0.35723099696539895
+        ],
+        "shared": {
+          "keyIdentity": 1,
+          "specKeyIdentity": 1
+        },
+        "classes": [
+          {
+            "spec": 0.95,
+            "gloss": 110,
+            "metal": 0.85,
+            "roughness": 1,
+            "hasRoughMap": true,
+            "count": 14,
+            "names": [
+              "hooks:rings",
+              "arch:pylon:gold_leaf",
+              "arch:tomb:gold_leaf",
+              "guard_body"
+            ]
+          },
+          {
+            "spec": 0.9,
+            "gloss": 96,
+            "metal": 0.85,
+            "roughness": 1,
+            "hasRoughMap": true,
+            "count": 6,
+            "names": [
+              "coins",
+              "props_gold",
+              "pickup_coins",
+              "treasure_scarab"
+            ]
+          },
+          {
+            "spec": 0.62,
+            "gloss": 72,
+            "metal": 0.85,
+            "roughness": 1,
+            "hasRoughMap": true,
+            "count": 3,
+            "names": [
+              "arch:court:bronze_dark",
+              "arch:hall:bronze_dark",
+              "arch:pylon:bronze_dark"
+            ]
+          },
+          {
+            "spec": 0.6,
+            "gloss": 48,
+            "metal": 0.85,
+            "roughness": 1,
+            "hasRoughMap": true,
+            "count": 1,
+            "names": [
+              "props_bronze"
+            ]
+          },
+          {
+            "spec": 0.55,
+            "gloss": 64,
+            "metal": 0.85,
+            "roughness": 1,
+            "hasRoughMap": true,
+            "count": 4,
+            "names": [
+              "arch:court:hieroglyph_gilded",
+              "arch:hall:hieroglyph_gilded",
+              "arch:pylon:hieroglyph_gilded",
+              "arch:tomb:hieroglyph_gilded"
+            ]
+          },
+          {
+            "spec": 0.42,
+            "gloss": 62,
+            "metal": 0,
+            "roughness": 1,
+            "hasRoughMap": true,
+            "count": 3,
+            "names": [
+              "arch:court:granite_pink",
+              "arch:hall:granite_pink",
+              "arch:tomb:granite_pink"
+            ]
+          },
+          {
+            "spec": 0.32,
+            "gloss": 46,
+            "metal": 0,
+            "roughness": 1,
+            "hasRoughMap": true,
+            "count": 2,
+            "names": [
+              "arch:court:limestone_polished",
+              "arch:hall:limestone_polished"
+            ]
+          },
+          {
+            "spec": 0.25,
+            "gloss": 32,
+            "metal": 0,
+            "roughness": 0.62,
+            "hasRoughMap": false,
+            "count": 7,
+            "names": [
+              "kaykit:props",
+              "slydlrig:mesh",
+              "slydlrig:mesh",
+              "slydlrig:mesh"
+            ]
+          },
+          {
+            "spec": 0.2,
+            "gloss": 30,
+            "metal": 0.85,
+            "roughness": 1,
+            "hasRoughMap": true,
+            "count": 4,
+            "names": [
+              "arch:court:ceiling_stars",
+              "arch:hall:ceiling_stars",
+              "arch:pylon:ceiling_stars",
+              "arch:tomb:ceiling_stars"
+            ]
+          },
+          {
+            "spec": 0.2,
+            "gloss": 28,
+            "metal": 0,
+            "roughness": 1,
+            "hasRoughMap": true,
+            "count": 8,
+            "names": [
+              "props_stone",
+              "props_lapis",
+              "props_carnelian",
+              "props_lime"
+            ]
+          },
+          {
+            "spec": 0.2,
+            "gloss": 28,
+            "metal": 0,
+            "roughness": 0.62,
+            "hasRoughMap": false,
+            "count": 2,
+            "names": [
+              "props_dark",
+              "props_ember"
+            ]
+          },
+          {
+            "spec": 0.16,
+            "gloss": 24,
+            "metal": 0,
+            "roughness": 1,
+            "hasRoughMap": true,
+            "count": 4,
+            "names": [
+              "arch:court:hieroglyph_wall",
+              "arch:hall:hieroglyph_wall",
+              "arch:pylon:hieroglyph_wall",
+              "arch:tomb:hieroglyph_wall"
+            ]
+          },
+          {
+            "spec": 0.15,
+            "gloss": 22,
+            "metal": 0,
+            "roughness": 1,
+            "hasRoughMap": true,
+            "count": 2,
+            "names": [
+              "ruin:drums",
+              "arch:hall:column_papyrus"
+            ]
+          },
+          {
+            "spec": 0.14,
+            "gloss": 20,
+            "metal": 0,
+            "roughness": 0.62,
+            "hasRoughMap": false,
+            "count": 3,
+            "names": []
+          },
+          {
+            "spec": 0.14,
+            "gloss": 20,
+            "metal": 0,
+            "roughness": 1,
+            "hasRoughMap": true,
+            "count": 3,
+            "names": [
+              "arch:court:sandstone_block",
+              "arch:hall:sandstone_block",
+              "arch:tomb:sandstone_block"
+            ]
+          },
+          {
+            "spec": 0.1,
+            "gloss": 32,
+            "metal": 0,
+            "roughness": 0.62,
+            "hasRoughMap": false,
+            "count": 1,
+            "names": []
+          },
+          {
+            "spec": 0.1,
+            "gloss": 16,
+            "metal": 0,
+            "roughness": 1,
+            "hasRoughMap": true,
+            "count": 16,
+            "names": [
+              "paving:court",
+              "paving:hall",
+              "paving:tomb",
+              "arch:court:paving_courtyard"
+            ]
+          },
+          {
+            "spec": 0.08,
+            "gloss": 12,
+            "metal": 0,
+            "roughness": 0.62,
+            "hasRoughMap": false,
+            "count": 3,
+            "names": []
+          },
+          {
+            "spec": 0.08,
+            "gloss": 14,
+            "metal": 0,
+            "roughness": 1,
+            "hasRoughMap": true,
+            "count": 5,
+            "names": [
+              "arch:court:sandstone_worn",
+              "arch:hall:sandstone_worn",
+              "arch:pylon:sandstone_worn",
+              "arch:tomb:sandstone_worn"
+            ]
+          },
+          {
+            "spec": 0.06,
+            "gloss": 12,
+            "metal": 0,
+            "roughness": 0.62,
+            "hasRoughMap": false,
+            "count": 4,
+            "names": [
+              "sand_ring0",
+              "sand_ring1",
+              "sand_ring2",
+              "sand_ring3"
+            ]
+          },
+          {
+            "spec": 0.06,
+            "gloss": 8,
+            "metal": 0,
+            "roughness": 1,
+            "hasRoughMap": true,
+            "count": 2,
+            "names": [
+              "arch:court:rope_fibre",
+              "arch:hall:rope_fibre"
+            ]
+          },
+          {
+            "spec": 0.05,
+            "gloss": 10,
+            "metal": 0,
+            "roughness": 1,
+            "hasRoughMap": true,
+            "count": 3,
+            "names": [
+              "arch:court:mudbrick",
+              "arch:tomb:mudbrick",
+              "arch:hall:mudbrick"
+            ]
+          },
+          {
+            "spec": 0.04,
+            "gloss": 8,
+            "metal": 0,
+            "roughness": 0.62,
+            "hasRoughMap": false,
+            "count": 2,
+            "names": [
+              "pyramid_105",
+              "pyramid_72"
+            ]
+          }
+        ]
+      },
+      "stats": {
+        "base": {
+          "n": 921600,
+          "mean": 104.20351460917543,
+          "p1": 23,
+          "p50": 104,
+          "p90": 160,
+          "p99": 180,
+          "p999": 210,
+          "max": 237.1719970703125,
+          "over200": 0.22157118055555555,
+          "over230": 0.003146701388888889,
+          "over250": 0
+        },
+        "off": {
+          "n": 921600,
+          "mean": 103.6365468038453,
+          "p1": 23,
+          "p50": 103,
+          "p90": 159,
+          "p99": 179,
+          "p999": 206,
+          "max": 237.1719970703125,
+          "over200": 0.1684027777777778,
+          "over230": 0.003146701388888889,
+          "over250": 0
+        },
+        "key": {
+          "n": 921600,
+          "mean": 104.73193712392097,
+          "p1": 23,
+          "p50": 104,
+          "p90": 160,
+          "p99": 187,
+          "p999": 215,
+          "max": 245.46539306640625,
+          "over200": 0.595703125,
+          "over230": 0.029513888888888888,
+          "over250": 0
+        },
+        "base2": {
+          "n": 921600,
+          "mean": 104.20351460917543,
+          "p1": 23,
+          "p50": 104,
+          "p90": 160,
+          "p99": 180,
+          "p999": 210,
+          "max": 237.1719970703125,
+          "over200": 0.22157118055555555,
+          "over230": 0.003146701388888889,
+          "over250": 0
+        }
+      },
+      "diffs": {
+        "null": {
+          "px": 0,
+          "pct": 0,
+          "maxAbsL": 0,
+          "upPx": 0,
+          "dnPx": 0,
+          "meanUpL": 0,
+          "meanDnL": 0
+        },
+        "off": {
+          "px": 74429,
+          "pct": 8.076063368055555,
+          "maxAbsL": 112.19959999999998,
+          "upPx": 6912,
+          "dnPx": 67517,
+          "meanUpL": 2.0113694155093254,
+          "meanDnL": -7.94496368321915
+        },
+        "key": {
+          "px": 118200,
+          "pct": 12.825520833333334,
+          "maxAbsL": 80.58740000000002,
+          "upPx": 108465,
+          "dnPx": 9735,
+          "meanUpL": 4.6315768681135046,
+          "meanDnL": -1.5788176476631162
+        }
+      },
+      "incidence": {
+        "gatesAnyPct": 83.95464409722223,
+        "gatesOpenPct": 14.942057291666666,
+        "quantSatPct": 3.9825303819444446,
+        "jointSatPct": 1.6426866319444444,
+        "jointHalfPct": 2.0210503472222223,
+        "lobeAnyPct": 12.46408420138889
+      },
+      "calibShare": 15.61447482638889
+    },
+    {
+      "shot": "sly-closeup",
+      "applied": {
+        "base": {
+          "specKey": 0,
+          "specGain": 1
+        },
+        "off": {
+          "specKey": 0,
+          "specGain": 0
+        },
+        "key": {
+          "specKey": 1,
+          "specGain": 1
+        },
+        "base2": {
+          "specKey": 0,
+          "specGain": 1
+        }
+      },
+      "census": {
+        "materials": 102,
+        "keyRadLum": 2.407667215358012,
+        "keyIntensity": 3.2859172324293913,
+        "keyColor": [
+          1,
+          0.6918947072370671,
+          0.3501375437924764
+        ],
+        "shared": {
+          "keyIdentity": 1,
+          "specKeyIdentity": 1
+        },
+        "classes": [
+          {
+            "spec": 0.95,
+            "gloss": 110,
+            "metal": 0.85,
+            "roughness": 1,
+            "hasRoughMap": true,
+            "count": 14,
+            "names": [
+              "hooks:rings",
+              "arch:pylon:gold_leaf",
+              "arch:tomb:gold_leaf",
+              "guard_body"
+            ]
+          },
+          {
+            "spec": 0.9,
+            "gloss": 96,
+            "metal": 0.85,
+            "roughness": 1,
+            "hasRoughMap": true,
+            "count": 6,
+            "names": [
+              "coins",
+              "props_gold",
+              "pickup_coins",
+              "treasure_scarab"
+            ]
+          },
+          {
+            "spec": 0.62,
+            "gloss": 72,
+            "metal": 0.85,
+            "roughness": 1,
+            "hasRoughMap": true,
+            "count": 3,
+            "names": [
+              "arch:court:bronze_dark",
+              "arch:hall:bronze_dark",
+              "arch:pylon:bronze_dark"
+            ]
+          },
+          {
+            "spec": 0.6,
+            "gloss": 48,
+            "metal": 0.85,
+            "roughness": 1,
+            "hasRoughMap": true,
+            "count": 1,
+            "names": [
+              "props_bronze"
+            ]
+          },
+          {
+            "spec": 0.55,
+            "gloss": 64,
+            "metal": 0.85,
+            "roughness": 1,
+            "hasRoughMap": true,
+            "count": 4,
+            "names": [
+              "arch:court:hieroglyph_gilded",
+              "arch:hall:hieroglyph_gilded",
+              "arch:pylon:hieroglyph_gilded",
+              "arch:tomb:hieroglyph_gilded"
+            ]
+          },
+          {
+            "spec": 0.42,
+            "gloss": 62,
+            "metal": 0,
+            "roughness": 1,
+            "hasRoughMap": true,
+            "count": 3,
+            "names": [
+              "arch:court:granite_pink",
+              "arch:hall:granite_pink",
+              "arch:tomb:granite_pink"
+            ]
+          },
+          {
+            "spec": 0.32,
+            "gloss": 46,
+            "metal": 0,
+            "roughness": 1,
+            "hasRoughMap": true,
+            "count": 2,
+            "names": [
+              "arch:court:limestone_polished",
+              "arch:hall:limestone_polished"
+            ]
+          },
+          {
+            "spec": 0.25,
+            "gloss": 32,
+            "metal": 0,
+            "roughness": 0.62,
+            "hasRoughMap": false,
+            "count": 7,
+            "names": [
+              "kaykit:props",
+              "slydlrig:mesh",
+              "slydlrig:mesh",
+              "slydlrig:mesh"
+            ]
+          },
+          {
+            "spec": 0.2,
+            "gloss": 30,
+            "metal": 0.85,
+            "roughness": 1,
+            "hasRoughMap": true,
+            "count": 4,
+            "names": [
+              "arch:court:ceiling_stars",
+              "arch:hall:ceiling_stars",
+              "arch:pylon:ceiling_stars",
+              "arch:tomb:ceiling_stars"
+            ]
+          },
+          {
+            "spec": 0.2,
+            "gloss": 28,
+            "metal": 0,
+            "roughness": 1,
+            "hasRoughMap": true,
+            "count": 8,
+            "names": [
+              "props_stone",
+              "props_lapis",
+              "props_carnelian",
+              "props_lime"
+            ]
+          },
+          {
+            "spec": 0.2,
+            "gloss": 28,
+            "metal": 0,
+            "roughness": 0.62,
+            "hasRoughMap": false,
+            "count": 2,
+            "names": [
+              "props_dark",
+              "props_ember"
+            ]
+          },
+          {
+            "spec": 0.16,
+            "gloss": 24,
+            "metal": 0,
+            "roughness": 1,
+            "hasRoughMap": true,
+            "count": 4,
+            "names": [
+              "arch:court:hieroglyph_wall",
+              "arch:hall:hieroglyph_wall",
+              "arch:pylon:hieroglyph_wall",
+              "arch:tomb:hieroglyph_wall"
+            ]
+          },
+          {
+            "spec": 0.15,
+            "gloss": 22,
+            "metal": 0,
+            "roughness": 1,
+            "hasRoughMap": true,
+            "count": 2,
+            "names": [
+              "ruin:drums",
+              "arch:hall:column_papyrus"
+            ]
+          },
+          {
+            "spec": 0.14,
+            "gloss": 20,
+            "metal": 0,
+            "roughness": 0.62,
+            "hasRoughMap": false,
+            "count": 3,
+            "names": []
+          },
+          {
+            "spec": 0.14,
+            "gloss": 20,
+            "metal": 0,
+            "roughness": 1,
+            "hasRoughMap": true,
+            "count": 3,
+            "names": [
+              "arch:court:sandstone_block",
+              "arch:hall:sandstone_block",
+              "arch:tomb:sandstone_block"
+            ]
+          },
+          {
+            "spec": 0.1,
+            "gloss": 32,
+            "metal": 0,
+            "roughness": 0.62,
+            "hasRoughMap": false,
+            "count": 1,
+            "names": []
+          },
+          {
+            "spec": 0.1,
+            "gloss": 16,
+            "metal": 0,
+            "roughness": 1,
+            "hasRoughMap": true,
+            "count": 16,
+            "names": [
+              "paving:court",
+              "paving:hall",
+              "paving:tomb",
+              "arch:court:paving_courtyard"
+            ]
+          },
+          {
+            "spec": 0.08,
+            "gloss": 12,
+            "metal": 0,
+            "roughness": 0.62,
+            "hasRoughMap": false,
+            "count": 3,
+            "names": []
+          },
+          {
+            "spec": 0.08,
+            "gloss": 14,
+            "metal": 0,
+            "roughness": 1,
+            "hasRoughMap": true,
+            "count": 5,
+            "names": [
+              "arch:court:sandstone_worn",
+              "arch:hall:sandstone_worn",
+              "arch:pylon:sandstone_worn",
+              "arch:tomb:sandstone_worn"
+            ]
+          },
+          {
+            "spec": 0.06,
+            "gloss": 12,
+            "metal": 0,
+            "roughness": 0.62,
+            "hasRoughMap": false,
+            "count": 4,
+            "names": [
+              "sand_ring0",
+              "sand_ring1",
+              "sand_ring2",
+              "sand_ring3"
+            ]
+          },
+          {
+            "spec": 0.06,
+            "gloss": 8,
+            "metal": 0,
+            "roughness": 1,
+            "hasRoughMap": true,
+            "count": 2,
+            "names": [
+              "arch:court:rope_fibre",
+              "arch:hall:rope_fibre"
+            ]
+          },
+          {
+            "spec": 0.05,
+            "gloss": 10,
+            "metal": 0,
+            "roughness": 1,
+            "hasRoughMap": true,
+            "count": 3,
+            "names": [
+              "arch:court:mudbrick",
+              "arch:tomb:mudbrick",
+              "arch:hall:mudbrick"
+            ]
+          },
+          {
+            "spec": 0.04,
+            "gloss": 8,
+            "metal": 0,
+            "roughness": 0.62,
+            "hasRoughMap": false,
+            "count": 2,
+            "names": [
+              "pyramid_105",
+              "pyramid_72"
+            ]
+          }
+        ]
+      },
+      "stats": {
+        "base": {
+          "n": 921600,
+          "mean": 86.6228166127267,
+          "p1": 25,
+          "p50": 82,
+          "p90": 124,
+          "p99": 179,
+          "p999": 214,
+          "max": 239.39480590820312,
+          "over200": 0.21180555555555555,
+          "over230": 0.004557291666666667,
+          "over250": 0
+        },
+        "off": {
+          "n": 921600,
+          "mean": 86.39389628978446,
+          "p1": 25,
+          "p50": 82,
+          "p90": 123,
+          "p99": 178,
+          "p999": 214,
+          "max": 239.39480590820312,
+          "over200": 0.2036675347222222,
+          "over230": 0.004123263888888889,
+          "over250": 0
+        },
+        "key": {
+          "n": 921600,
+          "mean": 86.91712519219041,
+          "p1": 25,
+          "p50": 82,
+          "p90": 124,
+          "p99": 184,
+          "p999": 215,
+          "max": 239.39480590820312,
+          "over200": 0.3283420138888889,
+          "over230": 0.006510416666666667,
+          "over250": 0
+        },
+        "base2": {
+          "n": 921600,
+          "mean": 86.6228166127267,
+          "p1": 25,
+          "p50": 82,
+          "p90": 124,
+          "p99": 179,
+          "p999": 214,
+          "max": 239.39480590820312,
+          "over200": 0.21180555555555555,
+          "over230": 0.004557291666666667,
+          "over250": 0
+        }
+      },
+      "diffs": {
+        "null": {
+          "px": 0,
+          "pct": 0,
+          "maxAbsL": 0,
+          "upPx": 0,
+          "dnPx": 0,
+          "meanUpL": 0,
+          "meanDnL": 0
+        },
+        "off": {
+          "px": 59586,
+          "pct": 6.465494791666667,
+          "maxAbsL": 81.12959999999998,
+          "upPx": 2769,
+          "dnPx": 56817,
+          "meanUpL": 1.632704225352117,
+          "meanDnL": -3.7927719203766133
+        },
+        "key": {
+          "px": 84610,
+          "pct": 9.180772569444445,
+          "maxAbsL": 48.975999999999985,
+          "upPx": 80447,
+          "dnPx": 4163,
+          "meanUpL": 3.4419692368892565,
+          "meanDnL": -1.3599115541676485
+        }
+      },
+      "incidence": {
+        "gatesAnyPct": 80.20985243055556,
+        "gatesOpenPct": 11.50564236111111,
+        "quantSatPct": 6.580946180555555,
+        "jointSatPct": 1.1892361111111112,
+        "jointHalfPct": 1.8040364583333333,
+        "lobeAnyPct": 6.413519965277778
+      },
+      "calibShare": 17.47016059027778
+    }
+  ]
+}
