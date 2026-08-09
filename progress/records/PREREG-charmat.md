@@ -190,9 +190,43 @@ Let `M` = the cane mask; `L` = display luminance (Rec.709 on the 8-bit PNG).
   *rise*: `Δp99 ≤ +1 L`. Every part except the cane gets *less* specular, so the body must get
   duller or stay put. A rise means I have poked something I did not intend.
 
-**Ship rule.** The cane row ships iff `I2 ∧ I3 ∧ I4` PASS and `G1 ∧ G2 ∧ G3 ∧ G4` PASS for the
+**Ship rule.** The cane row ships iff `I2 ∧ I3 ∧ I4` PASS and `G1 ∧ G2 ∧ G3 ∧ G4′` PASS for the
 chosen `metal`. The split ships iff additionally `I5 ∧ G5` PASS. The two ship **independently**:
 a failed split does not block the cane, which is the point of measuring them apart.
+
+### §4.1 — AMENDMENT to G4, registered before the run booted and before any candidate number existed
+
+Timestamped by its own commit, which lands while `tools/canegold.mjs` is still printing
+`waiting for capture lock (168s, held by pid 6594)` — SPECNORM holds the lock, my run has not
+booted, and no arm has been rendered. Nothing below is informed by a result.
+
+**G4 as written above is mis-derived, and I found it by auditing my own guard rather than by
+seeing it fail.** "Pixels differing outside the cane mask == 0" assumes a material poke can only
+change the pixels the material paints. That is false in the presence of a **spatial**
+postprocess: bloom is applied after compositing, so if the gold lobe crosses the bloom threshold
+its light spreads into neighbouring pixels *outside* the mask. A cane that blooms is the correct
+behaviour for polished gold, and the guard as registered would have called it a failure.
+
+Two things were checked before amending, and one of them removed a different worry entirely:
+
+- **The metal *tag* cannot leak.** `PostFX.js` ships `bloomMetalGain: 0` and `bloomMetalCut: 0`,
+  both documented as exact no-ops, and "nothing else reads scene alpha — bright/down/up/
+  composite/raw all sample `.rgb` only". So raising `uMetal` does **not** by itself reach any
+  scene-wide term. This was the risk I went looking for and it does not exist.
+- **Ordinary luminance bloom can still spread**, and that is what G4 fails to allow for.
+
+So G4 is superseded by **G4′**, which keeps the intent ("the poke changed nothing far from the
+cane") while allowing a local halo:
+
+> **G4′** — let `B` be the mask's bounding box dilated by **16 px** on each side. Pixels
+> differing from `base` **outside `B`** must be **0**. The count of differing pixels that fall
+> outside the mask but inside `B` is **reported, not gated** — it is the bloom halo, and its size
+> is evidence about the lobe rather than a verdict on it.
+
+**G4 is still computed and still reported.** If G4 fails while G4′ passes, that is the bloom
+halo and it is stated as such; G4 is then recorded as **mis-derived ⇒ VOID**, per §141.1, and is
+not re-derived a second time. The ship rule above names G4′ because G4′ is the guard that
+survives its own audit.
 
 ---
 
