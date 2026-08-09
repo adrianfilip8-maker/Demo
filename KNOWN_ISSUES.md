@@ -22509,3 +22509,94 @@ Its artefacts land in `progress/records/heroread/` and are scored in `RESULT-her
 section was written before the verdict so the number could be claimed before it was cited in
 source — the lead's rule, learnt the expensive way: §271 was taken by the textures lane while two
 `Shots.js` comments already pointed at it, and those two citations were repointed at `593def6`.
+
+---
+
+## §274 — three environment-variable arms are three commits, not three arms: the celband run is VOID on provenance, and every absolute bar in its seal was stale before it was scored
+
+`progress/records/RESULT-celband.md`, scorer `tools/celbandscore.mjs` on `gate.mjs`. Nothing
+ships; `Canvas2D.celband` stays inert and the committed blob is unchanged.
+
+### 274.1 The arms
+
+`shot.mjs` takes the FIFO lock **once per invocation**, so an A/B driven by `VITE_TEX_AB` is not
+one run with three arms — it is three runs that queue independently. With four agents committing
+every few minutes, the tree moves between them:
+
+| arm | commit | `hero` single-material windows |
+|---|---|---|
+| A0 control | `212b454` | 207 |
+| A1 treatment | `9bd617d` (twenty commits later) | 195 |
+
+Those twenty commits include **`src/core/Shots.js`** — the D4 re-framing, whose own message reads
+*"the hero is grounded and 1.8× larger"* — and **`src/world/Statues.js`** (+218 lines). A camera
+change moves the pixels that every statistic in the seal is computed over. The window count is the
+visible trace. So the A1 − A0 difference is a mixture of a texture stage and twenty commits of four
+other agents' work, and **no split of it is recoverable from the captured files.**
+
+§28 is the within-boot version of this ("every within-boot A/B was captured at a different world
+clock"). **The across-boot version is worse, because a commit between arms can move the camera.**
+`celbandscore.mjs` now carries `sameTree` — every arm must report one `report.json` commit sha —
+placed *ahead* of the calibration, because arms that cannot be told apart afterwards are not arms.
+
+### 274.2 The seal's own baselines had expired, and one of them would have passed the candidate
+
+C2 (*"the control must reproduce the baseline the seal registered"*) failed, and would have failed
+with perfect arm hygiene:
+
+```
+hero, frame-wide flat share    shots/r9  0.1549     A0 control  0.1914    |Δ| 0.0365  (bar 0.010)
+interior                       shots/r9  0.1377     A0 control  0.1838
+```
+
+`shots/r9/` was ~120 commits old by the time the control was shot. **Every absolute threshold in
+the seal was derived from it and none of those baselines existed any more.** P1's bar of 0.2016 was
+"closes ⅓ of the gap from 0.1549"; the frame had already travelled half that distance without help.
+
+The sharp end of it: P2's bar was `A1 hero grad p50 ≤ 1.2713`. A1 measured **1.27** — a **PASS** —
+while A1's own control measured **1.22**, i.e. the treatment was *worse than the thing it was being
+compared against*. **A stale absolute bar can pass a candidate that a same-run delta would fail.**
+
+**The rule this earns: in a repo with concurrent agents, a pre-registration must state its bars as
+deltas against a control captured in the same run, and must capture the control first.** A stored
+capture may be quoted for context; it may not be a threshold's denominator. Thresholds were **not**
+restated against the new baseline — §141.1 — so run 2 needs a new seal, not an amendment.
+
+### 274.3 What the arms said anyway, and the awkward half of it
+
+Reported because declining to report a measurement you dislike is its own failure mode. All of it
+is contaminated per §274.1 and none of it licenses anything.
+
+| | A0 | A1 | Δ | reference |
+|---|---|---|---|---|
+| `hero` flat | 0.1914 | 0.2653 | **+0.0739** | 0.2950 |
+| `hero` grad p50 | 1.22 | 1.27 | **+0.05** | 0.30 |
+| `interior` flat | 0.1838 | 0.2737 | **+0.0899** | 0.2950 |
+| `interior` grad p50 | 1.33 | 1.24 | −0.09 | 0.30 |
+
+The seal's registered forecast — that `interior` would move *more* than `hero`, because
+`RESULT-grain1` measured it as the one surface where the composite grain was **not** the dominant
+noise source — is right in direction (+0.0899 vs +0.0739). And falsifier 2 may have fired: `hero`'s
+gradient went **up**. That is the same shape as the offline finding already recorded in
+`celband`'s header (quantising raw luma took the albedo's gradient 5.02 → 5.22), and if it survives
+a clean run it refutes half the mechanism. **Flat area and gradient are not the same axis, and this
+operator has so far only been shown to buy the first.**
+
+### 274.4 The runner run 2 needs already has its machinery
+
+No new switch is required. `Canvas2D.abRaw()` reads `globalThis.__TEX_AB` **per call, never
+latched** — its header states this and states why — and `Textures._prewarmParallel` ships the arm
+string with every worker job, because a worker has its own global scope. So a runner can set the
+arm, flush the texture cache, re-prewarm and shoot again **inside one page**: `tools/shadowhold.mjs`'s
+shape applied to textures. That removes the commit gap by construction and turns three lock
+acquisitions into one.
+
+### 274.5 What is unaffected
+
+The void is confined to the frame half. The seal, both instruments and their calibration do not
+depend on these frames: `celsurf.mjs` reproduces critic 9's flat statistic on five of its published
+numbers, `celtex.mjs` derived the parameters and checked the two blocking invariants offline
+(`darkTail` unchanged on eight of nine recipes, `jointSign.dY` negative on all six masonry
+recipes), and §271.2's refutation of D7 as an authoring defect is an albedo measurement with no
+frame in it. `celband` is committed, inert, and bit-identical on the default path — which
+`tests/textures.test.mjs` checks rather than this file asserting it.
