@@ -230,6 +230,45 @@ survives its own audit.
 
 ---
 
+## §4.2 — the two numbers I "reused" are not the numbers the shipped gold runs at
+
+Also registered while the runner still prints `waiting for capture lock` and nothing has
+rendered. Found by reading `src/textures/Materials.js`, not by seeing a result.
+
+`Props.js MATERIALS.gold` — the row §2 copies — reaches the shader **through two maps the cane
+does not have**, and both of them change the number that actually arrives:
+
+- **`rough: 0.28` in that table is dead code.** `ToonMaterial.js` sets
+  `roughness: o.roughnessMap ? 1.0 : o.rough`, and Props' gold passes a `roughnessMap`. So its
+  `rough` field is never read; `rgh` comes from the map, whose **median is 0.638**
+  (`Materials.js`, the `specAmt` derivation that computes `0.95 · (1 − 0.75·0.638) · 3.04 =
+  1.506`). §262 recorded this same trap for `sandstone_block`. Copying `0.28` onto an unmapped
+  tube does not reproduce Props gold — it makes the cane **less rough than any gold in the
+  game**, and `specAmt ∝ (1 − 0.75·rgh)` turns that into ×1.51 more specular than the gilded Ra.
+- **`metal: 0.85` is masked there and unmasked here.** The shader does
+  `slyMetal *= texture2D( metalnessMap, … ).b`, and `Materials.js` percentiles gold "over the
+  gild mask, `metal > 0.5`" — so only part of that surface is metal at all. The cane has no
+  `metalnessMap`, so `uMetal` applies to **every texel**. `tools/gildmetal.mjs` warns about
+  exactly this shape ("no metalnessMap — slyMetal is UNMASKED").
+
+So "reuse rather than invent" has a trap in it: the *written* row and the *effective* row are
+different, and §2 copied the written one. A third arm is registered to measure the difference
+rather than argue it:
+
+| arm | spec | gloss | metal | rough | what it reproduces |
+|---|---|---|---|---|---|
+| C1 `gold85` | 0.9 | 96 | 0.85 | **0.28** | Props gold as *written* |
+| C2 `gold100` | 0.9 | 96 | **1.00** | 0.28 | `SlyModel.js` gold as written |
+| **C4 `gold85r64`** | 0.9 | 96 | 0.85 | **0.638** | Props gold as it *effectively runs* |
+
+**Ship preference among arms that pass, registered now:** **C4 → C1 → C2**, ordered by how
+closely each reproduces the specular coefficient the shipped gold actually operates at
+(`specAmt` 1.43 for C4 against 2.16 for C1). If C4 passes, C4 ships. This ordering is fixed
+before any arm has rendered; it is not to be re-ordered afterwards.
+
+G1/G2/G3/G4′ are evaluated on **C4** as well as C1, and the §4 ship rule reads "for the chosen
+`metal`/`rough`" accordingly.
+
 ## §5 — FORECAST, to be scored against the result
 
 Written before any capture. I expect to be wrong somewhere and the interesting part is where.
