@@ -15,7 +15,12 @@
 import { withGame } from './harness.mjs';
 import { shipVerdict, verdictLine } from './gate.mjs';
 
-const SHOTS = ['sly-closeup', 'hero'];
+/* ONE shot for the corrected run. Run 1 spent 57 minutes of software rendering on
+   `sly-closeup` alone and its mask turned out contaminated, so a two-shot repeat does not fit.
+   `sly-closeup` is kept because G1/G2 were ALWAYS registered on it alone (PREREG §4); `hero`
+   only ever carried G3_hero and G4'_hero, so dropping it narrows the evidence without
+   selecting the shot that flatters the candidate. Registered before the corrected run. */
+const SHOTS = ['sly-closeup'];
 
 /* PREREG-charmat §2 — every number here is quoted from an existing shipped site. */
 const GOLD85 = { spec: 0.9, gloss: 96, metal: 0.85, rough: 0.28, sss: 0.0 };  // Props.js MATERIALS.gold
@@ -59,6 +64,15 @@ const out = await withGame({ width: 1280, height: 720, quality: 'high' }, async 
     };
     W.__caneMesh = () => { let f = null; W.__ENGINE.scene.traverse((o) => { if (o.name === 'cane') f = o; }); return f; };
     W.__bodyMesh = () => { let f = null; W.__ENGINE.scene.traverse((o) => { if (o.name === 'slydlrig:mesh') f = o; }); return f; };
+    /* Mask by ALBEDO TAG, not by hiding.
+       Hiding a mesh changes the shadow map and anything that depends on the object being in
+       the scene, so `base` vs `hidden` marks far more than the object paints -- measured:
+       66 941 px for a 1356-triangle cane, 99.8 % of it inside the body's own footprint.
+       Recolouring a material leaves geometry, shadows and pose bit-identical, so the pixels
+       that move are exactly the pixels that material paints. */
+    W.__tagColor = (name, hex) => { const out = [];
+      for (const m of W.__mats(name)) { out.push(m.color.getHex()); m.color.setHex(hex); } return out; };
+    W.__restoreColor = (name, hexes) => { let i = 0; for (const m of W.__mats(name)) m.color.setHex(hexes[i++]); };
     /* Poke, then READ BACK. A poke that silently no-ops is the failure mode this whole
        measurement is worthless under, so the readback is returned and asserted by the caller. */
     W.__poke = (name, v) => {
@@ -169,11 +183,11 @@ const out = await withGame({ width: 1280, height: 720, quality: 'high' }, async 
     await page.evaluate(([s]) => window.__snap('base2', s), [shot]);
     rec.I2 = (await page.evaluate(() => window.__diff('base', 'base2'))).n;
 
-    /* --- I3 hide: defines the mask AND is the control that must fire --------- */
+    /* --- I3 tag: defines the mask AND is the control that must fire ---------- */
     const vis = await page.evaluate(([s]) => {
       const c = window.__caneMesh();
       if (!c) return { err: 'no mesh named "cane"' };
-      c.visible = false;
+      window.__CANEHEX = window.__tagColor('slydlrig:cane', 0xff00ff);
       return window.__snap('hide', s).then(() => ({ ok: true }));
     }, [shot]);
     if (vis.err) throw new Error(vis.err);
@@ -184,7 +198,7 @@ const out = await withGame({ width: 1280, height: 720, quality: 'high' }, async 
       window.__BOX = d.idx.length ? window.__maskBox(d.idx, A.w, A.h, 16) : null;
       return { n: d.n, box: window.__BOX };
     });
-    await page.evaluate(([s]) => { window.__caneMesh().visible = true; return window.__snap('reshow', s); }, [shot]);
+    await page.evaluate(([s]) => { window.__restoreColor('slydlrig:cane', window.__CANEHEX); return window.__snap('reshow', s); }, [shot]);
     rec.I3 = mask.n;
     rec.reshow = (await page.evaluate(() => window.__diff('base', 'reshow'))).n;
 
@@ -192,7 +206,12 @@ const out = await withGame({ width: 1280, height: 720, quality: 'high' }, async 
        G5 as first registered used whole-frame p99 outside the cane mask, which is dominated
        by sky and architecture and is nearly blind to the body -- §255's exact failure mode
        (a statistic that cannot see its own subject). Registered as §4.3 before booting. */
-    await page.evaluate(([s]) => { window.__bodyMesh().visible = false; return window.__snap('bodyhide', s); }, [shot]);
+    await page.evaluate(([s]) => {
+      window.__BODYHEX = {};
+      for (const n of ['slydlrig:body', 'slydlrig:head', 'slydlrig:tail', 'slydlrig:eyeball'])
+        window.__BODYHEX[n] = window.__tagColor(n, 0x00ff00);
+      return window.__snap('bodyhide', s);
+    }, [shot]);
     const bmask = await page.evaluate(() => {
       const d = window.__diff('base', 'bodyhide', true);
       /* The cane is socketed to `handR`, which lives INSIDE the slydlrig:mesh subtree, so
@@ -204,7 +223,10 @@ const out = await withGame({ width: 1280, height: 720, quality: 'high' }, async 
       window.__BODYMASK = d.idx.filter((i) => !inCane.has(i));
       return { n: d.n, nBody: window.__BODYMASK.length, overlap: d.n - window.__BODYMASK.length };
     });
-    await page.evaluate(([s]) => { window.__bodyMesh().visible = true; return window.__snap('bodyreshow', s); }, [shot]);
+    await page.evaluate(([s]) => {
+      for (const [n, h] of Object.entries(window.__BODYHEX)) window.__restoreColor(n, h);
+      return window.__snap('bodyreshow', s);
+    }, [shot]);
     rec.I6 = bmask.nBody; rec.I6raw = bmask.n; rec.I6overlap = bmask.overlap;
     rec.bodyReshow = (await page.evaluate(() => window.__diff('base', 'bodyreshow'))).n;
     rec.baseBody = await page.evaluate(() => window.__stats('base', window.__BODYMASK));
@@ -212,7 +234,7 @@ const out = await withGame({ width: 1280, height: 720, quality: 'high' }, async 
     rec.baseStats = await page.evaluate(() => window.__stats('base', window.__MASK));
 
     /* --- C1 gold85 / C2 gold100 --------------------------------------------- */
-    for (const [arm, v] of [['gold85', GOLD85], ['gold100', GOLD100], ['gold85r64', GOLD85R64], ['assetgold', ASSETGOLD]]) {
+    for (const [arm, v] of [['assetgold', ASSETGOLD], ['gold85', GOLD85]]) {
       const back = await page.evaluate(([n, val]) => window.__poke(n, val), ['slydlrig:cane', v]);
       await page.evaluate(([s, a]) => window.__snap(a, s), [shot, arm]);
       rec[arm] = {
@@ -261,10 +283,10 @@ const out = await withGame({ width: 1280, height: 720, quality: 'high' }, async 
     console.log(`  ${'arm'.padEnd(10)}${'mean'.padStart(7)}${'p50'.padStart(7)}${'p90'.padStart(7)}${'p99'.padStart(7)}${'max'.padStart(7)}   outside-diff px`);
     const row = (nm, st, o) => console.log(`  ${nm.padEnd(10)}${f(st.mean)}${f(st.p50)}${f(st.p90)}${f(st.p99)}${f(st.max)}   ${o ?? '-'}`);
     row('base', rec.baseStats, '0 / 0');
-    for (const a of ['gold85', 'gold100', 'gold85r64', 'assetgold']) row(a, rec[a].stats, `${rec[a].outside.n} out (halo ${rec[a].outside.halo}, FAR ${rec[a].outside.far})`);
+    for (const a of ['assetgold', 'gold85']) row(a, rec[a].stats, `${rec[a].outside.n} out (halo ${rec[a].outside.halo}, FAR ${rec[a].outside.far})`);
     row('split', rec.split.stats, `${rec.split.outside.n} out (halo ${rec.split.outside.halo}, FAR ${rec.split.outside.far})`);
     const d = (a, b) => a - b;
-    for (const arm of ['gold85', 'gold100', 'gold85r64', 'assetgold', 'split']) {
+    for (const arm of ['assetgold', 'gold85', 'split']) {
       const s = arm === 'split' ? rec.split.stats : rec[arm].stats;
       console.log(`    Δ${arm.padEnd(9)} mean ${d(s.mean, rec.baseStats.mean).toFixed(1).padStart(7)}`
         + `  p50 ${d(s.p50, rec.baseStats.p50).toFixed(1).padStart(7)}`
@@ -277,7 +299,7 @@ const out = await withGame({ width: 1280, height: 720, quality: 'high' }, async 
 
 /* ================= score PREREG-charmat §4 with the tri-state gate ================= */
 console.log(`\n${'='.repeat(78)}\n### PREREG-charmat §4 — scored\n`);
-const closeup = out['sly-closeup'], hero = out['hero'];
+const closeup = out['sly-closeup'];
 const num = (x) => (typeof x === 'number' && Number.isFinite(x) ? x : null);
 const ARM = process.env.CHARMAT_ARM || 'assetgold';  // §4.4 ship preference: C5 -> C1 -> C4 -> C2
 const d99 = (r, a = ARM) => (num(r[a].stats.p99) != null && num(r.baseStats.p99) != null ? r[a].stats.p99 - r.baseStats.p99 : null);
@@ -294,30 +316,25 @@ const eyeOK = (r) => (Array.isArray(r.I5) && r.I5.length > 0
 
 const guards = {
   I2_null_closeup: closeup.I2 === 0,
-  I2_null_hero: hero.I2 === 0,
-  I3_control_closeup: closeup.I3 > 200,
-  I3_control_hero: hero.I3 > 0,
+  /* Two-sided. Run 1's lower-bound-only control PASSED on a mask 20x too large; a bound that
+     can only detect "too small" cannot detect contamination. 1356 tris at this framing cannot
+     paint a fifth of the frame. */
+  I3_control_closeup: closeup.I3 > 200 && closeup.I3 < 40000,
   I4_restore_closeup: closeup.I4 === 0,
-  I4_restore_hero: hero.I4 === 0,
-  I5_eye_untouched: eyeOK(closeup) === true && eyeOK(hero) === true,
+  I5_eye_untouched: eyeOK(closeup) === true,
   G1_p99_rise: num(d99(closeup)) == null ? null : d99(closeup) >= 10,
   G2_concentrated: (num(d99(closeup)) == null || num(d50(closeup)) == null)
     ? null : (d99(closeup) - d50(closeup)) >= 6,
   G3_p50_closeup: num(d50(closeup)) == null ? null : d50(closeup) >= -25,
-  G3_p50_hero: num(d50(hero)) == null ? null : d50(hero) >= -25,
   G4prime_far_closeup: closeup[ARM].outside.far === 0,
-  G4prime_far_hero: hero[ARM].outside.far === 0,
 };
 /* §4.3: G5 is evaluated on the BODY mask -- the population the split changes.
    I6 is its positive control and must fire, exactly as I3 is the cane's. */
 const splitGuards = {
   I6_bodyctl_closeup: closeup.I6 > 2000,
-  I6_bodyctl_hero: hero.I6 > 0,
   I6_bodyrestore_closeup: closeup.bodyReshow === 0,
   G5_split_no_washout_closeup: num(closeup.split.body.p99) == null || num(closeup.baseBody.p99) == null
     ? null : (closeup.split.body.p99 - closeup.baseBody.p99) <= 1,
-  G5_split_no_washout_hero: num(hero.split.body.p99) == null || num(hero.baseBody.p99) == null
-    ? null : (hero.split.body.p99 - hero.baseBody.p99) <= 1,
   G6_split_moves_the_body: num(closeup.split.body.mean) == null || num(closeup.baseBody.mean) == null
     ? null : Math.abs(closeup.split.body.mean - closeup.baseBody.mean) >= 0.5,
 };
@@ -327,7 +344,7 @@ for (const [k, s] of Object.entries(vCane.states)) console.log(`  ${k.padEnd(24)
 console.log(`\nCANE arm=${ARM}  ${verdictLine(vCane, `slydlrig:cane -> ${JSON.stringify(ARM === 'assetgold' ? ASSETGOLD : ARM === 'gold85r64' ? GOLD85R64 : ARM === 'gold100' ? GOLD100 : GOLD85)}`)}`);
 /* every arm scored against the same registered bars, so the fork is visible not asserted */
 console.log('\nper-arm, sly-closeup:  G1 dp99>=10   G2 (dp99-dp50)>=6   G3 dp50>=-25   G4prime far==0');
-for (const a of ['assetgold', 'gold85', 'gold85r64', 'gold100']) {
+for (const a of ['assetgold', 'gold85']) {
   const q9 = d99(closeup, a), q5 = d50(closeup, a);
   console.log(`  ${a.padEnd(10)} dp99 ${q9?.toFixed(1).padStart(7)}  dp50 ${q5?.toFixed(1).padStart(7)}`
     + `  conc ${(q9 - q5).toFixed(1).padStart(7)}  far ${String(closeup[a].outside.far).padStart(6)}`
@@ -337,7 +354,7 @@ for (const a of ['assetgold', 'gold85', 'gold85r64', 'gold100']) {
 const vSplit = shipVerdict({ ...guards, ...splitGuards });
 for (const [k, s] of Object.entries(splitGuards).map(([k]) => [k, vSplit.states[k]])) console.log(`  ${k.padEnd(30)} ${s}`);
 console.log(`SPLIT ${verdictLine(vSplit, 'head/tail/body -> SlyModel.js _matSpec fur/cloth rows')}`);
-for (const sh of ['sly-closeup', 'hero']) {
+for (const sh of SHOTS) {
   const r = out[sh];
   console.log(`  ${sh.padEnd(12)} |B| ${String(r.I6).padStart(7)}  body mean ${r.baseBody.mean?.toFixed(1)} -> ${r.split.body.mean?.toFixed(1)}`
     + `   p50 ${r.baseBody.p50?.toFixed(1)} -> ${r.split.body.p50?.toFixed(1)}`
@@ -345,5 +362,5 @@ for (const sh of ['sly-closeup', 'hero']) {
 }
 
 /* metal fork, reported not gated — §2.1 */
-console.log(`\nfork (sly-closeup dp50):  asset .80/.25 -> ${d50(closeup, 'assetgold')?.toFixed(1)}   props .85/.28 -> ${d50(closeup, 'gold85')?.toFixed(1)}   .85/.638 -> ${d50(closeup, 'gold85r64')?.toFixed(1)}   1.00/.28 -> ${d50(closeup, 'gold100')?.toFixed(1)}`);
+console.log(`\nfork (sly-closeup dp50):  asset .80/.25 -> ${d50(closeup, 'assetgold')?.toFixed(1)}   props .85/.28 -> ${d50(closeup, 'gold85')?.toFixed(1)}`);
 console.log(JSON.stringify(out, null, 1).slice(0, 40) + ' …(full record in stdout above)');

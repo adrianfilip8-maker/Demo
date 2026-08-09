@@ -399,6 +399,57 @@ Written before any capture. I expect to be wrong somewhere and the interesting p
    the cane mask's *mean* L moves by **less than 8 L** even when p99 moves by more than 10.
    If mean and p99 move together by similar amounts, my model of this shader is wrong. (0.6)
 
+## §4.5 — RUN 1 IS VOID: the cane mask was contaminated, and my own control could not see it
+
+Run 1 completed `sly-closeup` and was stopped in `hero`. **Its cane-mask statistics (G1, G2, G3)
+are VOID and are not re-derived** (§141.1). The record is kept at
+`scratchpad/canegold-VOID-run1.txt` and the numbers are quoted below only as evidence *about the
+instrument*, never as evidence about the candidate.
+
+```
+cane mask |M| = 66941 px   box {x0:148, y0:97, x1:1033, y1:719}
+body mask |B| = 114235 px  (raw 181024, cane overlap removed 66789)
+```
+
+**66 941 px is not a cane.** It is a fifth of a 1280×720 frame, from a 1356-triangle prop, inside
+a bounding box spanning most of the image — and **66 789 of those pixels, 99.8 %, lie inside the
+character's own footprint**. Hiding a mesh does not only remove what it paints: it removes it
+from the shadow map and from everything else that depends on the object being in the scene, so
+`base` vs `hidden` marks a great deal that the object never painted.
+
+**My I3 control passed anyway, and that is the real lesson.** I registered it as `> 200 px` — a
+*lower* bound. A lower bound can detect a mask that is too small and is structurally blind to one
+that is too large. It is §255's shape again, one level up: I built a control that could only fail
+in the direction I had already thought of.
+
+Two things are salvaged from run 1 because they do not depend on the mask being tight:
+
+- **G4′ held with room to spare** — poking the cane material changed **12 px** outside a mask
+  that contains the cane, and **0 px** outside the dilated box. The cane material's influence is
+  local, exactly as §4.1 argued once bloom was allowed for.
+- **The split moved 32 866 px** outside the cane mask, against the cane arms' 12 — so the body
+  pokes reach the body, which is a live-fire check that the split is not a no-op.
+
+### The corrected instrument, registered before the corrected run
+
+**Mask by ALBEDO TAG, not by hiding.** Recolouring a material to magenta leaves geometry, shadow
+map, pose and every other object bit-identical, so the pixels that move are exactly the pixels
+that material paints. Same for the body mask, tagged green across `body`/`head`/`tail`/`eyeball`.
+
+**I3 becomes two-sided:** `200 < |M| < 40 000`. Registered as an interval precisely because the
+defect I just hit is invisible to a one-sided bound.
+
+**Narrowed to `sly-closeup` only, and to arms C5 and C1.** Run 1 spent 57 minutes of software
+rendering on one shot; a two-shot repeat does not fit the remaining budget. `sly-closeup` is kept
+because **G1 and G2 were always registered on it alone**; `hero` only ever carried `G3_hero` and
+`G4′_hero`. So this narrows the evidence without choosing the shot that flatters the candidate.
+`gold100` (C2) and `gold85r64` (C4) are dropped as §4.4's 4th and 3rd preferences — if C5 passes,
+C5 ships and they are moot; C1 is kept as the immediate runner-up.
+
+**Thresholds are untouched.** G1 ≥ +10 L, G2 ≥ +6 L, G3 ≥ −25 L, G4′ far == 0, G5′ ≤ +1 L,
+G6 ≥ 0.5 L — all exactly as first registered. Only the population definition and the shot list
+change, and both changed for stated instrument reasons before the corrected run produced a number.
+
 ## §7 — PREREG-charspec: what art-directing him COSTS and BUYS against the blocked interval
 
 Registered before `tools/charspec.mjs` is run. SPECNORM's result landed while `canegold.mjs` was

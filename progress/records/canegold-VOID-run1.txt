@@ -1,0 +1,97 @@
+· waiting for capture lock (10s, held by pid 6594)
+· waiting for capture lock (21s, held by pid 6594)
+· waiting for capture lock (31s, held by pid 6594)
+· waiting for capture lock (42s, held by pid 6594)
+· waiting for capture lock (53s, held by pid 6594)
+· waiting for capture lock (63s, held by pid 6594)
+· waiting for capture lock (73s, held by pid 6594)
+· waiting for capture lock (83s, held by pid 6594)
+· waiting for capture lock (94s, held by pid 6594)
+· waiting for capture lock (104s, held by pid 6594)
+· waiting for capture lock (114s, held by pid 6594)
+· waiting for capture lock (125s, held by pid 6594)
+· waiting for capture lock (136s, held by pid 6594)
+· waiting for capture lock (147s, held by pid 6594)
+· waiting for capture lock (157s, held by pid 6594)
+· waiting for capture lock (168s, held by pid 6594)
+· waiting for capture lock (179s, held by pid 6594)
+· waiting for capture lock (189s, held by pid 6594)
+· waiting for capture lock (200s, held by pid 6594)
+· waiting for capture lock (211s, held by pid 6594)
+· waiting for capture lock (222s, held by pid 6594)
+· waiting for capture lock (233s, held by pid 6594)
+· waiting for capture lock (243s, held by pid 6594)
+· waiting for capture lock (254s, held by pid 6594)
+· waiting for capture lock (265s, held by pid 6594)
+· waiting for capture lock (275s, held by pid 6594)
+· waiting for capture lock (285s, held by pid 6594)
+· waiting for capture lock (296s, held by pid 6594)
+· waiting for capture lock (307s, held by pid 6594)
+· waiting for capture lock (318s, held by pid 6594)
+· waiting for capture lock (328s, held by pid 6594)
+· waiting for capture lock (338s, held by pid 6594)
+· waiting for capture lock (349s, held by pid 6594)
+· waiting for capture lock (359s, held by pid 6594)
+· waiting for capture lock (369s, held by pid 6594)
+· waiting for capture lock (380s, held by pid 6594)
+· waiting for capture lock (391s, held by pid 6594)
+· waiting for capture lock (401s, held by pid 6594)
+· waiting for capture lock (412s, held by pid 6594)
+· waiting for capture lock (422s, held by pid 6594)
+· waiting for capture lock (433s, held by pid 6594)
+· waiting for capture lock (443s, held by pid 6594)
+· waiting for capture lock (453s, held by pid 6594)
+· waiting for capture lock (463s, held by pid 6594)
+· waiting for capture lock (474s, held by pid 6594)
+· waiting for capture lock (484s, held by pid 6594)
+· waiting for capture lock (494s, held by pid 6594)
+· waiting for capture lock (505s, held by pid 6594)
+· waiting for capture lock (515s, held by pid 6594)
+· waiting for capture lock (526s, held by pid 6594)
+· waiting for capture lock (536s, held by pid 6594)
+· waiting for capture lock (547s, held by pid 6594)
+· waiting for capture lock (558s, held by pid 6594)
+· waiting for capture lock (568s, held by pid 6594)
+· waiting for capture lock (579s, held by pid 6594)
+· waiting for capture lock (589s, held by pid 6594)
+· waiting for capture lock (600s, held by pid 6594)
+· waiting for capture lock (611s, held by pid 6594)
+· waiting for capture lock (621s, held by pid 6594)
+· waiting for capture lock (632s, held by pid 6594)
+· waiting for capture lock (643s, held by pid 6594)
+· waiting for capture lock (653s, held by pid 6594)
+· waiting for capture lock (663s, held by pid 6594)
+· waiting for capture lock (674s, held by pid 6594)
+· waiting for capture lock (685s, held by pid 6594)
+· waiting for capture lock (695s, held by pid 6594)
+· waiting for capture lock (706s, held by pid 6594)
+· waiting for capture lock (716s, held by pid 6594)
+· waiting for capture lock (726s, held by pid 6594)
+· waiting for capture lock (736s, held by pid 6594)
+shipped material state, read from the live build (this is what "base" means):
+  slydlrig:cane      {"spec":0.25,"gloss":32,"metal":0,"sss":0.2,"rim":0.62,"rough":0.62}
+  slydlrig:head      {"spec":0.25,"gloss":32,"metal":0,"sss":0.38,"rim":0.62,"rough":0.62}
+  slydlrig:tail      {"spec":0.25,"gloss":32,"metal":0,"sss":0.38,"rim":0.62,"rough":0.62}
+  slydlrig:body      {"spec":0.25,"gloss":32,"metal":0,"sss":0.38,"rim":0.62,"rough":0.62}
+
+==============================================================================
+### sly-closeup
+  cane mask |M| = 66941 px  box {"x0":148,"y0":97,"x1":1033,"y1":719}   (I2 null 0, I4 restore 0, reshow 0)
+  body mask |B| = 114235 px  (raw 181024, cane overlap removed 66789; bodyReshow 0 px)
+  split ON THE BODY MASK: base mean 99.6 p50 93.6 p99 196.8  ->  split mean 98.3 p50 93.2 p99 192.1
+  cane readback @gold85: [{"spec":0.9,"gloss":96,"metal":0.85,"sss":0,"rough":0.28}]
+  arm          mean    p50    p90    p99    max   outside-diff px
+  base        88.3  85.7 117.2 217.2 239.4   0 / 0
+  gold85      84.3  84.1 102.3 184.3 242.6   12 out (halo 12, FAR 0)
+  gold100     83.5  83.7 101.5 177.9 244.2   12 out (halo 12, FAR 0)
+  gold85r64   84.3  84.1 102.3 185.2 237.3   12 out (halo 12, FAR 0)
+  assetgold   84.5  84.2 102.5 187.1 242.5   12 out (halo 12, FAR 0)
+  split       84.2  84.1 102.2 183.2 242.6   32866 out (halo 32866, FAR 0)
+    Δgold85    mean    -4.1  p50    -1.6  p99   -32.9  (p99-p50)   -31.3
+    Δgold100   mean    -4.9  p50    -2.0  p99   -39.3  (p99-p50)   -37.2
+    Δgold85r64 mean    -4.0  p50    -1.6  p99   -32.0  (p99-p50)   -30.4
+    Δassetgold mean    -3.8  p50    -1.6  p99   -30.1  (p99-p50)   -28.6
+    Δsplit     mean    -4.2  p50    -1.6  p99   -33.9  (p99-p50)   -32.3
+
+==============================================================================
+### hero
