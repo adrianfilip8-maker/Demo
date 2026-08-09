@@ -207,15 +207,13 @@ function srcDigest() {
  */
 const rec0 = { srcAtStart: srcDigest() };
 console.log(`src working-tree digest at start: ${rec0.srcAtStart}`);
-const R = await withGame({ width: 1280, height: 720, quality: 'high' }, async ({ page, info }) => {
+const R = await withGame({ width: 1280, height: 720, quality: 'high', query: 'face=raw' }, async ({ page, info }) => {
   const out = { warnings: info.warnings, errors: info.consoleErrors, staged: {}, src: {} };
   const port = page.url().match(/:(\d+)\//)[1];
 
-  /* ---- arm A: the supplied head albedo, by re-navigating this same page ---- */
+  /* ---- arm A: the supplied head albedo. `withGame`'s own load IS this arm — the query is passed
+     in rather than navigated to, so the boot is not paid for twice. ---- */
   out.src.A = srcDigest();
-  await page.goto(`http://127.0.0.1:${port}/?shot=1&q=high&face=raw`,
-    { waitUntil: 'domcontentloaded', timeout: 90000 });
-  await page.waitForFunction('window.__GAME && window.__GAME.ready === true', null, { timeout: 300000, polling: 500 });
   await install(page);
   await page.evaluate(() => window.__GAME.setShot('sly-closeup', { dt: 0 }));
   await page.evaluate(() => window.__grab('closeupA'));
