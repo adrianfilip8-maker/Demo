@@ -21362,3 +21362,223 @@ finds it is a census.
 
 Suite 394/395 with the register in it; the one red remains the deliberately-held texture staleness
 guard (§232.7).
+
+## §266 — `sly cane gold` IS a material; the census was wrong about that and right about everything that mattered. The split ships; **the gold does not, and the refusal is measured**: metal makes the cane DARKER by 37–41 L, because the lobe that should pay for it is the one §264 cannot ship
+
+Registered in `progress/records/PREREG-charmat.md` before the candidate existed, amended four
+times pre-capture, **run 1 voided on my own contaminated mask**, re-run corrected. Records:
+`progress/records/canegold-VOID-run1.txt` (void, quoted only about the instrument) and
+`progress/records/canegold-run2.txt`. Suite **394/395**; the red is the textures staleness guard
+and predates this.
+
+### 1. The claim I was sent to act on, corrected
+
+§262 recorded, and my brief repeated:
+
+> `sly cane gold` is not a material in this build. The character is a single `slydlrig:mesh` at
+> `TUNE` defaults, with `metal` 0.
+
+`node tools/charmat.mjs` walks the player root of the shipped build (`?char=dlrig`). **Two thirds
+of that is wrong, and the third that survives is the whole finding.**
+
+```
+--- meshes ---
+  slydlrig:mesh       SkinnedMesh  tris 13063  groups 4  mats [body, eyeball, head, tail]
+  cane                Mesh         tris  1356  groups 1  mats [slydlrig:cane]
+  cane_ink            Mesh         tris  1356  groups 1  mats [slyInk_2.5@1080]
+  slydlrig:mesh_ink   SkinnedMesh  tris 13063  groups 4  mats [slyInk_2.5@1080]
+
+--- materials (6) ---            spec  gloss  metal  rim   sss   map
+  slydlrig:body     #ffffff      0.25   32     0     0.62  0.38  sly_body.png
+  slydlrig:eyeball  #ffffff      0.25   32     0     0.62  0.38  sly_eyeball.png
+  slydlrig:head     #ffffff      0.25   32     0     0.62  0.38  sly_head.png
+  slydlrig:tail     #ffffff      0.25   32     0     0.62  0.38  sly_tail.png
+  slydlrig:cane     #e8b942      0.25   32     0     0.62  0.20  (vertexColors)
+  slyInk_2.5@1080   (not toon)
+```
+
+- **There IS a cane material.** `slydlrig:cane`, on its own `Mesh`, at `#e8b942` — the same hex as
+  `Props.js MATERIALS.gold` and `Architecture.js gold_leaf`. The name the census searched for,
+  `sly cane gold`, belongs to `SlyModel.js`: the **legacy** model, which is not what ships. It
+  looked for the legacy name, did not find it, and reported absence.
+- **The character is not one mesh.** Four meshes, six materials, four geometry groups.
+- **`metal` 0 and one spec class — true, and it is the bug.** Five materials, one shading
+  response. So this was never a *missing* material; it is an **un-art-directed** one. Smaller to
+  describe, identical to fix.
+
+### 2. It is systemic, and the branch that never runs was right all along
+
+`SlyModelDL`, `SlyModelDLRaw`, `SlyModelGodot` and `SlyModel3` all pass only
+`bands/rim/rimColor/sss/outline`. Only `SlyModel.js` carries a per-part table (`_matSpec`), fully
+art-directed with its evidence inline. **The FBX rebuild dropped the art direction, not the
+decision.** `slygodot:cane` is the same three lines with the same defect.
+
+And in both cane call sites the **non-shipping fallback is the more correct path**:
+`new THREE.MeshStandardMaterial({ …, metalness: 0.85, roughness: 0.3 })`. The branch that only
+runs when the toon factory is absent has always known the cane is metal.
+
+### 3. "Reuse rather than invent" had two traps in it, and I fell in one
+
+`Props.js MATERIALS.gold` reaches the shader through two maps the cane does not have:
+
+- **`rough: 0.28` in that row is dead code.** `ToonMaterial` sets
+  `roughness: o.roughnessMap ? 1.0 : o.rough`, and Props gold passes a `roughnessMap`, so `rgh`
+  comes from the map — median **0.638**, the value `Materials.js` uses to derive `specAmt`
+  1.506. §262 recorded the same trap for `sandstone_block`. Copying `0.28` onto an unmapped tube
+  makes the cane *less rough than any gold in the game*.
+- **`metal: 0.85` is masked there and unmasked here.** `slyMetal *= texture2D(metalnessMap,…).b`,
+  and `Materials.js` takes its gold percentiles "over the gild mask, `metal > 0.5`". The cane has
+  no such map, so `uMetal` applies to every texel. `gildmetal.mjs` warns about exactly this shape.
+
+My §4.2 amendment then over-corrected: it preferred `rough 0.638` because that is what gold
+*effectively* runs at — but `gold_leaf` is gilding over aged stone and a cane is a polished solid
+prop. **A correct measurement applied to the wrong object.** §4.4 reverted it when the owner's
+asset arrived.
+
+### 4. The owner-supplied cane: the values come in, the geometry does not
+
+`public/assets/sly-cane/sly-cane.glb`, verified with `tools/glbpeek.mjs` (parses the GLB JSON
+chunk and decodes the embedded PNGs — no three, no DOM, no capture lock) rather than taken from
+its note.
+
+**Confirmed:** 494 tris / 576 verts / 2 materials, no skins, no animations, TANGENT present.
+`Cane.metalRough` measures **roughness (G) 0.250, metalness (B) 0.801** — the headline number
+exactly. Hook curls in ±X (x spread 0.300–0.369 across the top three height slabs against z
+0.042–0.059); the shaft sits at x ≈ −0.108 and the hook opens toward **+X**, so the rotation is
+**−90° about Y**, sign read off the geometry.
+
+**Corrected, and it matters.** `PROVENANCE.md` says "1.5904 against `CANE_TUNE`'s ~1.30 m ⇒
+×0.817". `tools/canesize.mjs` builds the real `Cane.js` in plain node:
+
+```
+Cane.js   tris 1356   bbox y [-0.8140 .. 0.7010]   extent y 1.5150 m
+          hookPoint [0, 0.4956, 0.1445]   tipPoint [0, -0.796, 0]
+scale = 1.5150 / 1.5904 = x0.9526          NOT x0.817
+```
+
+The quoted factor would have shipped the cane **16 % too short**.
+
+**The geometry does not come in.** §221 alone decides it: the cel shader replaces three's light
+loop, so the `metalRough` and `normal` maps cannot be wired and the geometry would arrive with
+its materials unusable. Beyond that it re-derives `hookPoint`/`tipPoint` — what MOVEMENT catches
+rings with and what §10 tip-verified — and discards `hookRadius`/`hookSweep` tuning that has
+recorded critic evidence behind it ("a bangle", "a detached orange hook"). Licence is **UNKNOWN**,
+weaker than `kaykit`/`tombchaser` CC0. `shader.normal` is a 257 KB identity map and should be
+dropped whatever else happens.
+
+**The values do come in**, and they are the asset's real contribution: an external artist,
+working independently, chose **metal 0.80 / rough 0.25** against Props gold's written 0.85/0.28.
+Two independent sources agreeing on what polished gold is.
+
+### 5. Five instrument defects, every one caught before it produced a number
+
+| # | defect | how it would have lied |
+|---|---|---|
+| 1 | restore table hard-coded the cane's `sss` at 0.38 | the cane passes no `sss` and inherits `TUNE.sss` **0.20**; I4 would have FAILED on my table, not the candidate. Base state now read live |
+| 2 | G4 assumed a material poke moves only its own pixels | bloom is a spatial postprocess; a gold lobe crossing threshold spreads. G4′ gates outside a 16 px-dilated box, halo reported |
+| 3 | copied `rough 0.28` from a row where it is dead | §3 above |
+| 4 | G5 read p99 over 99.8 % of the frame | sky and architecture drown a few thousand character pixels — §255's shape. Body mask + I6 control + G6 added |
+| 5 | body mask contained the cane | the cane is socketed to `handR`, inside the `slydlrig:mesh` subtree; the split arm's gold cane would have failed G5′ on the cane's success |
+
+### 6. RUN 1 IS VOID, and my own control was structurally blind to why
+
+```
+cane mask |M| = 66941 px   box {148,97}-{1033,719}
+body mask |B| raw 181024, cane overlap 66789
+```
+
+**66 941 px is not a cane** — a fifth of the frame from a 1356-triangle prop, and **99.8 % of it
+inside the character's own footprint**. Hiding a mesh removes it from the shadow map too, so
+`base` vs `hidden` marks far more than the object paints.
+
+**I3 passed anyway. That is the lesson.** I registered it as `> 200 px` — a *lower* bound, which
+can only detect a mask that is too small. It is §255's shape one level up: a control that could
+only fail in the direction I had already thought of. **G1/G2/G3 from run 1 are VOID and are not
+re-derived.**
+
+Corrected: mask by **albedo tag** (recolour, don't hide — geometry, shadows and pose stay
+bit-identical, so the pixels that move are the pixels that material paints), and **I3 becomes
+two-sided**, `200 < |M| < 40 000`.
+
+### 7. The result: the gold makes the cane DARKER
+
+`sly-closeup`, albedo-tag mask, thresholds exactly as first registered:
+
+```
+cane mask |M| = 47483 px  box {285,143}-{666,627}   I2 null 0 px, I4 restore 0 px
+body mask |B| = 70657 px  (cane overlap now 601 px, was 66789)
+
+arm          mean    p50    p90    p99    max   outside (halo / FAR)
+base         95.8   93.6  120.9  222.3  239.4      0 /   0
+assetgold    90.5   91.5  102.6  184.8  242.5   1074 /   0
+gold85       90.1   91.4  102.5  181.3  242.6   1076 /   0
+
+  Δassetgold  mean -5.4  p50 -2.1  p99 -37.5   (p99-p50) -35.3
+  Δgold85     mean -5.7  p50 -2.3  p99 -41.0   (p99-p50) -38.7
+```
+
+**G1 required p99 to RISE by ≥ 10 L. It FELL by 37.5 L at the asset's values and 41.0 L at Props
+gold's.** G2 fails with it. G3 passes (p50 −2.1, bar −25) and G4′ passes (FAR 0). I3 **fails** on
+its new upper bound — 47 483 px is still too large, because a saturated magenta tag blooms — so
+G1/G2 are strictly **VOID rather than FAIL**. Either way nothing passes, and the direction is
+reproduced under **two independent mask definitions and four material variants**.
+
+**The mechanism is in the shader and it is not a tuning problem:**
+
+- `diff *= mix( 1.0, 0.20, slyMetal )` removes **68 %** of the diffuse at metal 0.85, and the cane
+  is **unmapped** — unlike every gold in the world it has no `metalnessMap` to mask that kill down
+  to a gild fraction.
+- `specStep` is a shape function **capped at 1.35 for every `glossP`**, and shipped
+  `uSpecNormPow` is **0**. So `uGloss` 32 → 96 makes the highlight *smaller and no brighter*
+  (§263) and cannot pay back what the diffuse kill costs.
+
+**So the cane cannot be made to read as metal by material values alone while `uSpecNormPow` is 0.
+It is blocked on the same missing energy normalisation that blocks the world's highlight** —
+§264's `p ∈ (0.70, 0.90]`. Character and lighting are one problem, not two. At p 0.9 a gloss-96
+lobe gains ≈ ×10 amplitude, which is precisely the factor missing here. The refusal is now a
+comment at the call site so the next agent does not re-run it blind.
+
+### 8. What shipped: the split
+
+`SURFACE` in `SlyModelDLRig.js` lands the per-part response `_matSpec` has always carried — `fur`
+on head, `furDark` on tail, `cloth` on body. `eyeball` has **no row** and keeps its `TUNE`
+defaults byte-for-byte (§15); I5 read its uniforms back identical after the split arm.
+
+On the character's own footprint (70 657 px): **mean L 111.6 → 109.5, p50 107.8 → 106.1,
+p99 199.5 → 197.3.** Duller, never brighter — **G5′ PASS** — and measurably non-zero —
+**G6 PASS**, with I6's positive control firing (|B| 70 657 > 2 000) and the body restoring to base
+at 0 px.
+
+### 9. The forecast, scored — wrong on the thing I was most confident about
+
+| # | forecast | conf | outcome |
+|---|---|---|---|
+| 1 | `\|M\|` between 1 000 and 6 000 px | 0.7 | **WRONG**, by an order of magnitude, twice, for two different reasons |
+| 2 | G1 passes — `specAmt` goes ×16, "if any of the mask is lit the top percentile has to move" | 0.85 | **WRONG, and backwards.** It moved −37.5 L. I computed the specular gain and never computed the diffuse loss beside it |
+| 3 | G2 passes | 0.75 | **WRONG** (follows 2) |
+| 4 | G3 close, p50 falls 5–20 L, possibly failing at metal 1.0 | 0.55 | **WRONG in magnitude** — p50 fell only 2.1 L. I put the risk on the median; it landed on the bright tail |
+| 5 | G4′ passes | 0.9 | **RIGHT** (FAR 0) |
+| 6 | G5 passes | 0.8 | **RIGHT** (as G5′) |
+| 7 | contrast up, not brightness: mean moves < 8 L while p99 moves > 10 | 0.6 | **HALF RIGHT** — mean did move less (−5.4 vs −37.5), but both fell. The *ratio* was right and the *sign* was wrong |
+
+**The forecast I was most confident about (0.85) was the one that was backwards**, and the reason
+is a specific analytical failure worth naming: I derived the specular multiplier (×16) carefully
+from the shader and never put the diffuse multiplier (×0.32) next to it. One term computed, the
+other assumed. The guard caught what my arithmetic did not.
+
+### 10. Open, and explicitly not mine
+
+- **`tools/charspec.mjs` is written, registered (PREREG-charmat §7) and NOT RUN.** It measures
+  whether the split brings §264's +25.2 L character cost under its 20 L bar at p 0.90. The
+  derivation predicts the rise scales by **0.217** (body), **0.035** (tail), **0.026** (head) —
+  so ≈ **+5 L**, comfortably under. **That is arithmetic, not a measurement**, and it is exactly
+  the kind of claim this section exists to distrust. One command runs it.
+  `vSlySkin` is 1.0 only on a SkinnedMesh, so the cane is outside that population by construction
+  and cannot flatter it.
+- **`slygodot:cane` carries the identical defect** and was left alone: unmeasured, and not the
+  shipped token.
+- **I3 still fails its upper bound.** A saturated magenta tag blooms; a low-contrast tag would
+  tighten the mask further. The cane verdict does not depend on it — the direction reproduces
+  under both masks — but a future cane run should fix it first.
+- The cane's **pose** defect (12.3° elevation, 19 vertices inside the body in `walk`) is
+  untouched: a socket problem, not a material one.

@@ -139,7 +139,7 @@ const FALLBACK = { body: 0x2f5fc4, eyeball: 0xd9821a, head: 0xcfcdc4, tail: 0x8d
  * `spec 0.25 / gloss 32 / metal 0`, inherited from `TUNE`, because this constructor passed
  * colour, bands, rim and outline and nothing else. Five materials wearing one shading response
  * is what KNOWN_ISSUES §262's census saw when it reported the character has "no metal on him in
- * any of these frames" — see §265 for what that census got right and wrong.
+ * any of these frames" — see §266 for what that census got right and wrong.
  *
  * **Nothing here is invented.** Every row is `SlyModel.js:_matSpec` — the pre-rebuild procedural
  * model's art direction for THIS character, which carries its evidence inline ("fur scatters; it
@@ -151,7 +151,7 @@ const FALLBACK = { body: 0x2f5fc4, eyeball: 0xd9821a, head: 0xcfcdc4, tail: 0x8d
  * trousers in a single submesh, so unlike the procedural model there is no seam at which leather
  * could get its own answer. `cloth` wins because the coat is most of those pixels.
  *
- * Measured on `sly-closeup` against PREREG-charmat's registered guards (§265): on the character's
+ * Measured on `sly-closeup` against PREREG-charmat's registered guards (§266): on the character's
  * own footprint (70 657 px, isolated by albedo tag) this moves mean L 111.6 → 109.5 and p99
  * 199.5 → 197.3 — duller, never brighter, which is G5′, and measurably non-zero, which is G6.
  *
@@ -737,7 +737,7 @@ export class SlyModel {
     this.cane = new Cane(this.engine, { tune: { gripR, shaftR } });
     const shading = this.engine?.get?.('shading');
     /* THE CANE IS GOLD IN ALBEDO AND IN NOTHING ELSE, AND THAT IS NOT AN OVERSIGHT ANY MORE —
-     * it is a measured refusal. Read KNOWN_ISSUES §265 before "fixing" this.
+     * it is a measured refusal. Read KNOWN_ISSUES §266 before "fixing" this.
      *
      * The obvious change is to add the house gold here: `spec 0.9, gloss 96, metal 0.85` from
      * `Props.js MATERIALS.gold`, which `Pickups.js` already copies and which the owner-supplied
