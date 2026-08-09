@@ -75,10 +75,24 @@ Then `inkMask = { p : A(p) != C(p) }` exactly, and `creaseMask = { p : A(p) != B
 `hullMask = { p : B(p) != C(p) }`. Frames: all ten of `shots/r9`, same seed, `dt = 0`, one boot,
 same resolution. `grain` is already 0.0 so the composite is deterministic per pixel.
 
-**Hull defeat lever — MUST BE VERIFIED BEFORE THE RUN COUNTS.** `inkStrength` is a known-good
-lever (used in PostFX.js:123). There is no confirmed in-page lever for the hull. If none exists,
-one is added *before* the candidate and its inertness on arm A is proven, or arm C is dropped and
-this pre-registration is amended and re-committed before capture — not after.
+**Defeat levers — RESOLVED before any candidate exists (amended 2026-08-09, pre-capture).**
+
+- *Crease.* `postfx.tune.inkStrength = 0`. Live: `PostFX.js:2083` copies `this.tune.inkStrength`
+  into the uniform every frame, so the field is read per-frame and needs no rebuild.
+- *Hull.* `src/core/Debug.js` carries thirteen levers (`contactQuant`, `contactScale`,
+  `fillScale`, `freeCam`, `grainScale`, `hideHud`, `liftScale`, `paused`, `rimClock`,
+  `shaftFlare`, `showColliders`, `timeOfDay`, `wireframe`) and **none of them touches the ink**.
+  No new lever is added, because none is needed: `buildOutlineShell` (`Outline.js:544`) attaches
+  the hull as a **separate `THREE.Mesh`**, named `<mesh>_ink`, held at `mesh.userData.slyShell`,
+  carrying a material named `slyInk_<px>@<rows>`. Arm C is therefore a page-side traversal in the
+  capture script —
+  `scene.traverse(o => { if (o.isMesh && o.material?.name?.startsWith('slyInk_')) o.visible = false; })`
+  — which changes no shipped code and so cannot itself perturb arm A.
+
+  **This substitution is only sound if the traversal actually hits every hull.** `_inkMaterials`
+  is the authoritative set, so the run must assert `hidden === _inkMaterials.size` worth of
+  distinct materials before arm C counts. A traversal that silently matches nothing would make
+  arm C identical to arm B, and CAL-2 below is what catches that.
 
 ---
 
