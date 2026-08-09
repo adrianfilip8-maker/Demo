@@ -39,6 +39,7 @@
  * with black ink. A lever assumed to have applied is how this lane produced a VOID already.
  */
 import { withGame } from './harness.mjs';
+import { treeState } from './treestate.mjs';
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 
@@ -56,7 +57,15 @@ const ARMS = [
 
 const results = [];
 for (const shot of SHOTS) {
-  const got = await withGame({ width: 1280, height: 720, quality: 'high', timeout: 900000 },
+  /* Provenance per shot — see tools/treestate.mjs. Four agents edit this branch continuously and
+     a run was VOIDed today for capturing two arms of one comparison from trees that had moved
+     underneath them. Read inside `onLocked`, i.e. after the FIFO grants the lock and before vite
+     bundles, so it describes the tree actually rendered rather than the tree at queue time. */
+  let tree = null;
+  const got = await withGame({
+    width: 1280, height: 720, quality: 'high', timeout: 900000,
+    onLocked: () => { tree = treeState(); },
+  },
     async ({ page }) => {
       await page.evaluate(async (s) => { await window.__GAME.setShot(s, { dt: 0 }); }, shot);
       const out = [];
@@ -137,7 +146,7 @@ for (const shot of SHOTS) {
     const file = `${OUT}/${shot}-${r.tag}.png`;
     writeFileSync(file, buf);
     const sha = createHash('sha256').update(buf).digest('hex').slice(0, 16);
-    results.push({ shot, arm: r.tag, file, sha, applied: r.applied });
+    results.push({ shot, arm: r.tag, file, sha, applied: r.applied, tree });
     const ap = r.applied;
     console.log(`${shot.padEnd(12)} ${r.tag.padEnd(12)} hull=${ap.hullDefeat.padEnd(6)} `
       + `black=${ap.black ? 'yes' : 'no '} mats=${String(ap.mats).padStart(3)} `
