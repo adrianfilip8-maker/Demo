@@ -1352,3 +1352,145 @@ export function grain(s, o = {}) {
     }
   }
 }
+
+/**
+ * **celband — put the surface's *value* on a short ladder of discrete steps.**
+ *
+ * Critic 9's D6: *"environment surfaces carry painterly/photographic noise where cel wants flat"*,
+ * at 7–12× the reference's surface gradient and a third of its flat-area share. Registered in
+ * `progress/records/PREREG-celband.md`; the numbers below are that document's, derived offline
+ * with `tools/celtex.mjs` before this function existed.
+ *
+ * ── Why this and not less amplitude ─────────────────────────────────────────────────────────
+ *
+ * "Turn the noise down" is already recorded as known-bad twice. §69/§70 measured the blotching
+ * regression that came from moving albedo variance, and `sandstone_worn`'s header (Materials.js)
+ * measures that recipe as **3.2× quieter than the control** at the frequency that competes with a
+ * terminator — so cutting amplitude there would push the quietest stone toward the *flatness*
+ * failure for no separation gain. AGENTS §2.1.7 also requires visible brush/chisel character. The
+ * target is not flat. It is **few, discrete, hard-edged value steps**, which is a different
+ * operator on the same data.
+ *
+ * ── The thing that was wrong in the first draft, kept because it is the whole lesson ────────
+ *
+ * Snapping the **raw** luma onto a lattice made D6's headline metric *worse*: nine high-coverage
+ * recipes went mean |dL/dx| **5.02 → 5.22**. Noise whose amplitude is comparable to the step maps
+ * neighbouring texels onto *different* lattice levels, so total variation rises even as the
+ * histogram collapses. A quantiser is not automatically a cel look. So the lattice is applied to
+ * the **smoothed** luma and a fraction of the material's own detail is added back on top:
+ *
+ *   5 steps, radius = size/256, keep 0.25:   grad 5.02 -> 3.41   top3 0.069 -> 0.380
+ *                                            levels 37.4 -> 16.3  flat 0.0318 -> 0.3228
+ *
+ * against the reference frame's 0.337 / 19 / 0.295. `keep > 0` is a constraint, not a tuning
+ * choice: `keep 0` scores better on gradient (3.19) and is refused, because a dead-flat albedo at
+ * this scale is the "untextured plastic" §7.3 keeps finding.
+ *
+ * ── Three invariants held by construction, and measured ─────────────────────────────────────
+ *
+ * - **`rampFloor`'s crevice floor / `darkTail`.** The lattice is *not* clamped into [p02, p98] —
+ *   clamping would pile every crevice texel onto one value and lift the dark end. It is extended
+ *   beyond both ends at the same spacing, and the result is then clamped into the surface's
+ *   **own** existing [min, max], so no texel can leave the range the recipe authored. Measured:
+ *   `darkTail` unchanged on eight of nine recipes and `hieroglyph_wall` 0.0017 → 0.
+ * - **`hueGrade`.** Every texel is a pure luma *scale* of itself, so hue and the chroma ratios
+ *   the grade authored are untouched. This is `tintAtValue`'s trick used in reverse.
+ * - **height, AO, normal, roughness.** `s.h`, `s.occ` and `s.rough` are neither read nor written.
+ *   All relief survives at full detail — the surface is not flat, only its colour is, which is
+ *   what stops this reading as plastic. `jointSign.dY` stays negative on all six masonry recipes
+ *   (weakest `column_papyrus` −0.0774 → −0.0433).
+ *
+ * The blur wraps, because every consumer tiles the result and a clamped blur would author a seam
+ * the recipe does not have.
+ *
+ * @param {Surface} s
+ * @param {{steps:number, radius:number, keep:number}} o
+ *   `steps`   lattice points across the surface's own p02..p98. < 2 is a no-op.
+ *   `radius`  box-blur half-width in texels — the plateau scale. Detail finer than this is the
+ *             sub-step wiggle being removed; detail coarser is the structure being stepped.
+ *   `keep`    fraction of the material's own fine detail restored on top of the plateau.
+ */
+export function celband(s, o = {}) {
+  const { steps = 0, radius = 0, keep = 1, mask = null } = o;
+  if (!(steps >= 2)) return;
+  const size = s.size, n = s.n;
+  const y = new Float64Array(n);
+  for (let i = 0; i < n; i++) y[i] = s.r[i] * 0.2126 + s.g[i] * 0.7152 + s.b[i] * 0.0722;
+
+  let sm = y;
+  const rad = Math.max(0, Math.min(radius | 0, (size >> 1) - 1));
+  if (rad > 0) {
+    // Separable running-sum box blur, wrapping in both axes. Two passes, O(n).
+    const w = rad * 2 + 1, t = new Float64Array(n), out = new Float64Array(n);
+    const wrap = (v) => ((v % size) + size) % size;
+    for (let r = 0; r < size; r++) {
+      const row = r * size;
+      let acc = 0;
+      for (let k = -rad; k <= rad; k++) acc += y[row + wrap(k)];
+      for (let c = 0; c < size; c++) {
+        t[row + c] = acc / w;
+        acc -= y[row + wrap(c - rad)];
+        acc += y[row + wrap(c + rad + 1)];
+      }
+    }
+    for (let c = 0; c < size; c++) {
+      let acc = 0;
+      for (let k = -rad; k <= rad; k++) acc += t[wrap(k) * size + c];
+      for (let r = 0; r < size; r++) {
+        out[r * size + c] = acc / w;
+        acc -= t[wrap(r - rad) * size + c];
+        acc += t[wrap(r + rad + 1) * size + c];
+      }
+    }
+    sm = out;
+  }
+
+  const ys = Float64Array.from(y).sort();
+  const q = (p) => ys[Math.min(n - 1, Math.max(0, Math.round(p * (n - 1))))];
+  const a = q(0.02), b = q(0.98), lo = ys[0], hi = ys[n - 1];
+  const step = (b - a) / Math.max(1, steps - 1);
+  if (!(step > 1e-6)) return;   // a surface with no value range has nothing to band
+
+  for (let i = 0; i < n; i++) {
+    if (y[i] < 1e-4) continue;                       // pure black has no hue to preserve
+    const m = mask ? mask[i] : 1;
+    if (m <= 0) continue;
+    let yn = a + Math.round((sm[i] - a) / step) * step + (y[i] - sm[i]) * keep;
+    if (yn < lo) yn = lo;
+    if (yn > hi) yn = hi;
+    if (m < 1) yn = y[i] + (yn - y[i]) * m;
+    let k = yn / y[i];
+    // Rescaling a hue is only hue-preserving while nothing clips; back off rather than clamp.
+    const mx = s.r[i] > s.g[i] ? (s.r[i] > s.b[i] ? s.r[i] : s.b[i]) : (s.g[i] > s.b[i] ? s.g[i] : s.b[i]);
+    if (mx * k > 1) k = mx > 1e-6 ? 1 / mx : 1;
+    s.r[i] *= k; s.g[i] *= k; s.b[i] *= k;
+  }
+}
+
+/**
+ * Which `celband` arm this build runs. **Ships inert — `null` is the shipped value.**
+ *
+ * This reads `TEX_AB()`'s list directly instead of going through `abOff()`, and the difference is
+ * deliberate rather than a second switch. `abOff(key)` means *"this treatment is disabled"*, and
+ * there is nothing to disable here: the stage is off until `PREREG-celband.md`'s gate is scored on
+ * captured frames, so the A/B keys select an arm rather than suppress one. Same single channel
+ * (`VITE_TEX_AB` / `globalThis.__TEX_AB`), one extra reader, named for what it does — the thing
+ * `Textures.bakedEnabled()`'s header warns against is a second channel, not a second reader.
+ *
+ *   VITE_TEX_AB=celbandon     A1 treatment   — the derived arm
+ *   VITE_TEX_AB=celbandflat   A2 calibration — keep 0, i.e. dead-flat plateaus. MUST move the
+ *                             frame statistic; if it does not, the texture layer is not reaching
+ *                             the frame and every other verdict in the run is void.
+ *   (anything else)           A0 control     — what ships, bit-identical to before this function
+ *                             existed, which is why the committed blob does not change.
+ *
+ * `radius` is quoted per 1024 texels and scaled by the caller, so a tier-1 recipe at 512 gets the
+ * same *world* plateau scale rather than the same texel count.
+ */
+export function celbandArm() {
+  const l = TEX_AB();
+  if (!l.length) return null;
+  if (l.includes('celbandflat')) return { steps: 5, radius1024: 4, keep: 0 };
+  if (l.includes('celbandon')) return { steps: 5, radius1024: 4, keep: 0.25 };
+  return null;
+}

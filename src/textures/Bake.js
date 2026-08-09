@@ -13,9 +13,20 @@
  * cost of the whole engine per worker, and none of it is reachable from a Float32Array.
  */
 
-import { Surface } from './Canvas2D.js';
+import { Surface, celband, celbandArm } from './Canvas2D.js';
 import { MATERIALS } from './Materials.js';
 import { derive } from './NormalMap.js';
+
+/**
+ * Which groups `celband` is allowed to touch (`PREREG-celband.md` §3).
+ *
+ * `fx` is excluded because those recipes are alpha-tested or emissive sprites and decals — a
+ * value lattice on a soft-edged flame or a crack decal bands its falloff, which is a different
+ * artefact, not a cel look. `sly` is excluded because D3 is CHARACTER's defect and §267 shipped a
+ * per-part surface split there this week; two agents quantising the same fur is how a result
+ * stops being attributable.
+ */
+const CELBAND_GROUPS = new Set(['stone', 'carved', 'metal', 'organic']);
 
 /** Stable per-name seed, so a material looks the same on every run and across commits. */
 export function hashName(s) {
@@ -85,6 +96,28 @@ export function bake(name, texSize, quality) {
 
   const surface = new Surface(size, (recipe.seed ?? hashName(name)) >>> 0);
   recipe.build(surface, { seed: surface.seed, size, name, quality });
+
+  /* PREREG-celband: the value lattice, between `build()` and everything that reads the Surface.
+   *
+   * Placed here rather than at 44 call sites for the reason `Bake.js` exists at all — one
+   * function applied to every recipe cannot drift from itself. Placed BEFORE `jointSign()`
+   * deliberately: that assertion exists to check what shipped, and an invariant measured on a
+   * surface the consumer never sees is not an invariant. `radius` is quoted per 1024 texels and
+   * scaled here, so a tier-1 recipe at 512 gets the same world plateau size and not the same
+   * texel count.
+   *
+   * `celbandArm()` returns null on the shipped path, so this is a no-op and the committed blob is
+   * unchanged — which is checkable rather than asserted: `tests/textures.test.mjs` verifies every
+   * digest in `baked.json` against a fresh procedural build, so if this changed a single texel on
+   * the default arm that suite would go red. */
+  const arm = celbandArm();
+  if (arm && CELBAND_GROUPS.has(recipe.group)) {
+    celband(surface, {
+      steps: arm.steps,
+      radius: Math.max(1, Math.round((arm.radius1024 * size) / 1024)),
+      keep: arm.keep,
+    });
+  }
 
   const joint = jointSign(surface);
 
