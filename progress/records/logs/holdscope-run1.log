@@ -301,3 +301,9 @@ provenance @boot   HEAD ca40e59d  HEAD:src b089a536  src digest 3c11ca3e5f0b2068
 
 shot         encl  target  conv    litFrac   calib rgb        share   note
 combat       0.40  0.4     0.0000   14.207%  [77,139,198]      20.7%  CALIB FAIL
+courtyard    0.20  0.2     0.0000   45.749%  [64,128,191]      21.4%  
+dunes        0.00  0       0.0000   42.396%  [64,128,191]      77.4%  
+hero         0.00  0       0.0000   15.067%  [64,128,191]      74.8%  
+interior     1.00  1       0.0000    0.773%  [64,128,191]      73.6%  
+night        0.20  0.2     0.0000   16.463%  [64,128,191]      74.2%  
+sly-closeup  0.60  0.6     0.0000   14.335%  [64,128,191]      19.1%  
