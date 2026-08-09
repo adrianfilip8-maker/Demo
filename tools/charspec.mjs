@@ -29,11 +29,11 @@
 import { withGame } from './harness.mjs';
 import { shipVerdict, verdictLine } from './gate.mjs';
 
-/* Three, not four. `temple` is dropped before running: §262 measured it incidence-bound
-   (0.65 % of its toon population in full sun), so it contributes little lobe-saturated
-   character area for the cost of ~10 more software renders. Trimmed while the tool had not
-   yet been run, and recorded rather than quietly narrowed. */
-const SHOTS = ['sly-closeup', 'hero', 'courtyard'];
+/* ONE shot. `temple` was dropped as incidence-bound (§262, 0.65 % of its toon population in
+   full sun); `hero` and `courtyard` are dropped for budget after §266 run 2 cost 45 min of
+   software rendering. `sly-closeup` carries the most character area, which is the population
+   G4prime is defined over. Narrowed before the tool was ever run. */
+const SHOTS = ['sly-closeup'];
 const P = 0.90;                       // the exponent the world needs (H1 passes 3/4 here)
 const BAR = 20;                       // SPECNORM's registered G4' bar, in display L
 const SPECNORM_BASE = 25.2;           // what they measured at base materials, p 0.90
@@ -44,6 +44,17 @@ const SPLIT = {                       // PREREG-charmat §2, from SlyModel.js:_m
   'slydlrig:body': { spec: 0.085, gloss: 20, sss: 0.14 },
 };
 const PARTS = Object.keys(SPLIT);
+
+/* §266 SHIPPED the split, so the live material state is now the SPLIT, not the base. Reading
+   base off the build -- correct while the tree was unsplit -- would now make both arms
+   identical and the comparison vacuous. The pre-split values are therefore stated explicitly,
+   and the live readback is asserted to equal SPLIT, which doubles as proof that the source
+   change reached the build. */
+const PRESPLIT = {
+  'slydlrig:head': { spec: 0.25, gloss: 32, sss: 0.38 },
+  'slydlrig:tail': { spec: 0.25, gloss: 32, sss: 0.38 },
+  'slydlrig:body': { spec: 0.25, gloss: 32, sss: 0.38 },
+};
 
 const out = await withGame({ width: 1280, height: 720, quality: 'high' }, async ({ page }) => {
   await page.evaluate(() => {
@@ -99,9 +110,14 @@ const out = await withGame({ width: 1280, height: 720, quality: 'high' }, async 
       return n; };
   });
 
-  const BASE_STATE = await page.evaluate(([ps]) => Object.fromEntries(ps.map((p) => [p, window.__read(p)])), [PARTS]);
-  console.log('shipped body materials (base):');
-  for (const [k, v] of Object.entries(BASE_STATE)) console.log(`  ${k.padEnd(18)} ${JSON.stringify(v)}`);
+  const LIVE = await page.evaluate(([ps]) => Object.fromEntries(ps.map((p) => [p, window.__read(p)])), [PARTS]);
+  console.log('live body materials, read off the build:');
+  for (const [k, v] of Object.entries(LIVE)) console.log(`  ${k.padEnd(18)} ${JSON.stringify(v)}`);
+  const shipsSplit = PARTS.every((p) => Math.abs(LIVE[p].spec - SPLIT[p].spec) < 1e-9
+    && Math.abs(LIVE[p].gloss - SPLIT[p].gloss) < 1e-9);
+  console.log(`live state == §266 SPLIT ? ${shipsSplit}   (if false the source change did not reach the build)`);
+  if (!shipsSplit) throw new Error('live materials are not the shipped split — every arm below would be mislabelled');
+  const BASE_STATE = PRESPLIT;
 
   const R = {};
   for (const shot of SHOTS) {
