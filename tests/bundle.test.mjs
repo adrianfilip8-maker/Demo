@@ -159,14 +159,26 @@ const unreferenced = assets.filter((a) => !namedInSrc(a.base) && !sidecars.has(a
  * half is dead weight. `KayKit.js` names the props it places; the rest — candles, most stairs, most
  * wall variants, floor tiles — ship because they arrived in the same download.
  */
-const TOMBCHASER_ALL = haveAssets
-  ? walk(join(PUBLIC, 'tombchaser')).filter((f) => !NOT_PAYLOAD.test(f)).map((f) => f.slice(PUBLIC.length + 1))
-  : [];
-const KAYKIT_UNUSED = haveAssets
-  ? walk(join(PUBLIC, 'kaykit')).filter((f) => !NOT_PAYLOAD.test(f))
-    .map((f) => f.slice(PUBLIC.length + 1))
-    .filter((rel) => !namedInSrc(rel.slice(rel.lastIndexOf('/') + 1)) && !sidecars.has(rel))
-  : [];
+/**
+ * Walk a pack directory, tolerating its absence.
+ *
+ * **This guard must survive being obeyed.** The first version called `walk()` directly and threw
+ * `ENOENT` the moment `tombchaser/` was moved out of the copy path — which is precisely the fix
+ * this file exists to recommend. A register that goes red when you act on it teaches people to
+ * stop acting on it, and it would have read as "the move broke the tests" rather than "the move
+ * worked". Verified by doing it: moved the directory, watched the suite fail 0/1 on ENOENT, moved
+ * it back.
+ *
+ * Absent now means an empty contribution, so the day these packs leave `public/` the register
+ * simply shrinks and stays green.
+ */
+const packFiles = (name) => (haveAssets && existsSync(join(PUBLIC, name))
+  ? walk(join(PUBLIC, name)).filter((f) => !NOT_PAYLOAD.test(f)).map((f) => f.slice(PUBLIC.length + 1))
+  : []);
+
+const TOMBCHASER_ALL = packFiles('tombchaser');
+const KAYKIT_UNUSED = packFiles('kaykit')
+  .filter((rel) => !namedInSrc(rel.slice(rel.lastIndexOf('/') + 1)) && !sidecars.has(rel));
 
 /**
  * Shipped, never fetched. Each entry is megabytes of download bought for nothing.
@@ -207,6 +219,10 @@ test('bundle: the scan sees a real asset tree and real source', () => {
      states before trusting either. */
   assert.ok(haveAssets, 'public/assets is missing');
   assert.ok(assets.length > 20, `only ${assets.length} shipped assets found`);
+  /* The register is allowed to shrink to nothing — that is the goal — but it must never be
+     silently empty because the scan stopped finding anything. */
+  assert.ok(KNOWN_UNSHIPPED_PAYLOAD.length === 0 || unreferenced.length > 0,
+    'the register lists entries but the scan found none — it has gone blind rather than clean');
   assert.ok(srcCode.length > 200000, `only ${srcCode.length} chars of source scanned`);
   assert.ok(assets.some((a) => namedInSrc(a.base)), 'no asset resolves as referenced — the scan is blind');
   assert.ok(sidecars.size > 10, `only ${sidecars.size} glTF sidecars resolved — .bin/.png siblings will look dead`);
