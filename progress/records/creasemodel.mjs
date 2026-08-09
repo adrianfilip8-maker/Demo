@@ -50,9 +50,13 @@ const targetCool = 0.80 * REF_P10;   // the floor must sit BELOW p10, since p10 
 const kCool = targetCool / luma(rgb(COOL));
 console.log(`\ncool leg: display luma ${luma(rgb(COOL)).toFixed(4)} -> target ${targetCool.toFixed(4)}  `
   + `scale ${kCool.toFixed(4)}`);
-const coolHex = rgb(COOL).map((x) => Math.round(x * kCool * 255));
+/* NOT the naive rounding of the exact scale: at these magnitudes 8-bit quantisation moves hue,
+   and hue is the property 2.2 names. 0x0b0812 (the rounding) lands 2.00 deg off 260; 0x0c0814 is
+   hue-exact at 260.00 and within 0.0002 L of the sized target. Saturation rises 0.529 -> 0.600,
+   which quantisation makes unavoidable if hue is held, and is reported rather than hidden. */
+const coolHex = [0x0c, 0x08, 0x14];
 console.log(`cool candidate 0x${coolHex.map((v) => v.toString(16).padStart(2, '0')).join('')}  `
-  + `luma ${luma(coolHex.map((v) => v / 255)).toFixed(4)}  (hue preserved: uniform scale)`);
+  + `luma ${luma(coolHex.map((v) => v / 255)).toFixed(4)}  (hue 260.00 exact; sat 0.529 -> 0.600)`);
 
 const CAND = {
   warm: rgb(WARM), cool: coolHex.map((v) => v / 255), strength: STRENGTH,

@@ -67,24 +67,40 @@ Two terms, and the model says both are needed:
 
 **T1 — the cool leg gets a value.** Scale `inkCool` uniformly so its display luma lands at
 `0.80 x 0.0474 = 0.0379` — below the reference p10, because p10 has a tenth of the population
-under it. That is a scale of **0.5206**, giving **`0x161022` → `0x0b0812`** (luma 0.0367). A
-uniform scale of a display-referred hex scales luma by exactly that factor and moves hue by
-**exactly zero**, so 260° survives intact. `inkWarm` is **not touched** — the lit-side line is not
+under it. That is a scale of **0.5206**. `inkWarm` is **not touched**: the lit-side line is not
 the complaint, and moving it is how "reach black" turns into "flatten to grey".
+
+> **Corrected before the capture existed, and worth recording as a correction.** The first draft
+> of this section said a uniform scale "moves hue by **exactly zero**, so 260° survives intact",
+> and gave the candidate as `0x0b0812`. That is true of the scale and **false after 8-bit
+> quantisation**: `0x161022 x 0.5206` is (11.45, 8.33, 17.70), and rounding it to `0x0b0812` lands
+> at hue **258.00°** — a 2.00° shift — with saturation 0.529 → 0.556. Exactly the overclaim this
+> lane keeps making, caught this time by checking instead of asserting
+> (`scratchpad/huecheck.mjs`).
+>
+> The candidate is therefore **`0x161022` → `0x0c0814`**, chosen by exhaustive search over the
+> 8-bit triples within ±3 of the exact scale and within 0.004 L of the sized target, minimising
+> hue error: hue **260.00° exactly**, display luma **0.0381**. HSV saturation rises **0.529 →
+> 0.600**, which quantisation makes unavoidable at these magnitudes if hue is held — reported
+> rather than hidden. Hue is the property §2.2 names ("a dark violet in shadow"), and the warm leg
+> stays at 12.00°, so the two legs remain 248° apart.
+
+Restated from the model with the corrected value: on a background of display luma 0.15 the fully
+inked pixel goes 0.0957 → 0.0442 with both terms, and 0.0927 → 0.0412 at 0.10.
 
 **T2 — the dark gate stops erasing the ink where the reference's black lives.**
 `smoothstep(0.05, 0.20, lum)` → `smoothstep(0.02, 0.10, lum)`. T1 alone is not enough and the
 model says by how much: on a background of display luma 0.15 the fully-inked pixel goes
-0.0957 → 0.0702 with T1 alone, and → 0.0429 with both. At 0.10 it is 0.0927 → 0.0844 → 0.0399.
+0.0957 → 0.0702 with T1 alone, and → 0.0442 with both. At 0.10 it is 0.0927 → 0.0844 → 0.0412.
 
 Predicted, for a fully-inked pixel by the background it sits on:
 
 | bg | shipped | candidate | Δ |
 |---|---|---|---|
-| 0.05 | 0.0500 | 0.0456 | −0.0044 |
-| 0.10 | 0.0927 | 0.0399 | **−0.0528** |
-| 0.15 | 0.0957 | 0.0429 | **−0.0528** |
-| 0.30 | 0.0856 | 0.0643 | −0.0213 |
+| 0.05 | 0.0500 | 0.0458 | −0.0042 |
+| 0.10 | 0.0927 | 0.0412 | **−0.0515** |
+| 0.15 | 0.0957 | 0.0442 | **−0.0515** |
+| 0.30 | 0.0856 | 0.0651 | −0.0205 |
 | 0.60 | 0.1029 | 0.1029 | **0.0000** |
 | 0.80 | 0.1129 | 0.1129 | **0.0000** |
 
@@ -110,9 +126,9 @@ One boot per shot, `dt = 0`, 1280x720, all levers page-side.
 | arm | `inkCool` | gate | purpose |
 |---|---|---|---|
 | `S-ship` | 0x161022 | 0.05, 0.20 | shipped |
-| `T1-colour` | 0x0b0812 | 0.05, 0.20 | the colour alone |
+| `T1-colour` | 0x0c0814 | 0.05, 0.20 | the colour alone |
 | `T2-gate` | 0x161022 | 0.02, 0.10 | the gate alone |
-| `W-both` | 0x0b0812 | 0.02, 0.10 | the candidate |
+| `W-both` | 0x0c0814 | 0.02, 0.10 | the candidate |
 | `Z-noink` | — | `inkStrength = 0` | defines the mask |
 
 `inkMask = { p : S != Z }` — the **shipped** crease pass's own pixels. Every statistic below is

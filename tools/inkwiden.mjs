@@ -10,7 +10,7 @@
  * Five arms, one boot per shot, `dt = 0`, every lever page-side:
  *
  *   S-ship     shipped
- *   T1-colour  inkCool scaled to display luma 0.0367   (hue moves by exactly zero)
+ *   T1-colour  inkCool sized to display luma 0.0381, hue held at 260.00
  *   T2-gate    the dark gate relaxed to (0.02, 0.10)
  *   W-both     the candidate
  *   Z-noink    inkStrength = 0                          -> defines the mask
@@ -38,7 +38,7 @@ const SHOTS = (process.argv[2] || 'interior,night,temple,sly-closeup,dunes').spl
 mkdirSync(OUT, { recursive: true });
 
 const SHIP_COOL = 0x161022;
-const CAND_COOL = 0x0b0812;      // uniform scale 0.5206 of SHIP_COOL: display luma 0.0728 -> 0.0367
+const CAND_COOL = 0x0c0814;      // sized to display luma 0.0381; hue held at 260.00 exactly
 const SHIP_GATE = [0.05, 0.20];
 const CAND_GATE = [0.02, 0.10];
 
