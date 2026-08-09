@@ -20689,9 +20689,9 @@ Registered before any of the above ran, so it is not a consolation derived after
 ### Where a highlight would actually have to come from
 
 Ceilings of every additive term in `outgoingLight` (`toon.glsl.js:919`), every factor set to its
-most favourable value, against the 2.236 that display 230 requires. The chain reproduces §256's
-independently-derived numbers exactly (sandMid **197.1**, white albedo **230.8**), which is what
-licenses quoting it:
+most favourable value, against the 2.236 that display 230 requires — `progress/records/supply.mjs`.
+The chain reproduces §256's independently-derived numbers exactly (sandMid **197.1**, white albedo
+**230.8**), which is what licenses quoting it:
 
 ```
 term                                          scene luma   display L   reaches 230?
