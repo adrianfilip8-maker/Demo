@@ -133,6 +133,16 @@ export const DETECT = {
   koTime: 12.0,
   attackRange: 2.6,
   attackCooldown: 1.6,
+  /* The swing lands `attackWindup` after it starts, not on the frame the player enters range.
+     An instantaneous hit is not a Sly guard, it is a damage aura: with one hit costing the
+     player a lucky charm — or the run — the telegraph IS the mechanic, and it has to be long
+     enough to leave. At `chaseSpeed` 4.60 m/s the player covers 1.6 m inside it, which is more
+     than the `attackReach` slack below, so backing off during the wind-up works. */
+  attackWindup: 0.34,
+  /* He leans in as he swings, so the hit connects slightly past the range that started it.
+     Without the slack a player who drifts 5 cm during the wind-up is never hit at all. */
+  attackReach: 1.15,
+  attackKnock: 9.5,        // knockback impulse handed to `hurt`
   pickpocketSuspicion: 0.22,   // he half-notices, which is funnier than not noticing
 
   /* --- suspicious: the beat that makes the ladder readable ---

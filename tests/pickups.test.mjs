@@ -246,7 +246,13 @@ function evalReader(r, payload) {
   return new Function('num', r.arg, `return (${r.expr});`)(num, payload);
 }
 
-test('P10 §211.1 — exactly three modules subscribe to `coin`, and nothing else in src/ does', () => {
+test('P10 §211.1 — exactly four modules subscribe to `coin`, and nothing else in src/ does', () => {
+  /* Four since §248. `src/player/Health.js` banks coins toward a lucky charm — Sly's horseshoe at
+     the series' own price of 100 — so it reads `p.amount` from the same payload the other three
+     do, and is covered by the payload-shape agreement below like any other reader.
+     It subscribes to `guardPickpocket` as well, deliberately: the HUD credits found coins through
+     `coin` and stolen ones through `guardPickpocket`, and a charm price that counted only half the
+     coins would present as "the price feels wrong" and be very hard to see from outside. */
   const files = [];
   const walk = (dir) => {
     for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -263,9 +269,9 @@ test('P10 §211.1 — exactly three modules subscribe to `coin`, and nothing els
     const src = fs.readFileSync(f, 'utf8');
     for (const m of src.matchAll(/on\('coin',/g)) subs.push(path.relative(path.join(HERE, '..'), f));
   }
-  assert.equal(subs.length, 3, `expected 3 \`coin\` subscribers, found ${subs.length}: ${subs.join(', ')}`);
+  assert.equal(subs.length, 4, `expected 4 \`coin\` subscribers, found ${subs.length}: ${subs.join(', ')}`);
   assert.deepEqual([...new Set(subs)].sort(),
-    ['src/audio/Audio.js', 'src/fx/Particles.js', 'src/ui/HUD.js']);
+    ['src/audio/Audio.js', 'src/fx/Particles.js', 'src/player/Health.js', 'src/ui/HUD.js']);
 });
 
 test('P10 the reader extraction actually found all four reads', () => {

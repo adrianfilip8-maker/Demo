@@ -9,6 +9,13 @@ import { SHOTS, SHOT_NAMES, applyShot } from './Shots.js';
  */
 const _p = new THREE.Vector3();
 
+/* The settle steps `setShot` runs, named so the clock advance it costs can be DERIVED in the
+   warning below rather than quoted at it. They were two bare literals and the "~0.28 s" figure
+   in §251 was worked out by hand from them; a hand-worked number goes stale the first time
+   somebody changes a 14 to a 16 and says nothing. */
+const SETTLE_FRAMES = 14;
+const SETTLE_FRAMES_2 = 3;
+
 /**
  * What the frame actually contains of the character, as opposed to what the shot asked for.
  *
@@ -86,6 +93,38 @@ export class Debug {
         const shot = SHOTS[name];
         if (!shot) throw new Error(`unknown shot "${name}" (have: ${SHOT_NAMES.join(', ')})`);
         const dt = Number.isFinite(opts.dt) ? opts.dt : 1 / 60;
+        /* §251. The comment above has said "A/B runners pass { dt: 0 }" since §195, and it was
+           missed again: 32 of 59 runners never pass it, and `decalsign`'s null arm differed from
+           itself on 51.97% of pixels at mean 3.85 L because its two arms were 0.28 s apart on the
+           only clock anything in this build reads. A documented hazard is worth nothing until it
+           fails loudly (§245).
+
+           So the default is announced rather than changed. Changing it would silently alter what
+           every historical capture in this project meant, and it is the RIGHT default for the
+           one-shot renders that are most of the 32 — `shot.mjs` has no second frame to be
+           inconsistent with. What was missing was that the choice was invisible at the point of
+           use. `engine.warn` reaches `engine.warnings` and therefore `report.json`, so a run that
+           staged with a live clock now says so in its own manifest.
+
+           Once per boot, not per call: twelve runners call `setShot` two or more times and a
+           per-call warning would be the census-that-cries-wolf §248 warns about. A runner that
+           genuinely wants the clock passes `{ dt: 1/60 }` and hears nothing.
+
+           `tests/clockfreeze.test.mjs` reads the line above by regex to check the default is still
+           non-zero, so it stays one expression rather than being split into a named boolean —
+           the duplicated `Number.isFinite` is the cheaper half of that trade. */
+        if (!Number.isFinite(opts.dt) && !this._warnedShotDt) {
+          this._warnedShotDt = true;
+          const advance = (SETTLE_FRAMES + SETTLE_FRAMES_2) * dt;
+          engine.warn?.(`setShot("${name}") was called without opts.dt, so the world clock is LIVE: `
+            + `each call advances engine.time by ${advance.toFixed(3)} s over its `
+            + `${SETTLE_FRAMES + SETTLE_FRAMES_2} settle frames. That clock is this build's only `
+            + 'phase source — birds, particles, embers, shafts and water all ride it — so two arms '
+            + 'captured in one boot render at DIFFERENT animation phases and a duplicate arm will '
+            + 'not reproduce itself (§251: 51.97% of pixels differed at mean 3.85 L). If this run '
+            + 'compares arms, pass { dt: 0 } to setShot AND to every step() in the path. If it '
+            + 'genuinely wants the clock to run, pass { dt: 1/60 } and this goes quiet.');
+        }
 
         // Take the camera away from the gameplay rig, and take frames away from rAF so the
         // capture is reproducible frame-for-frame.
@@ -146,9 +185,9 @@ export class Debug {
 
         // Let particles seed, shadows settle, and any lazily-compiled program warm up.
         // (At opts.dt = 0 the frames still render and flush — only the world clock stands still.)
-        await api.step(14, dt);
+        await api.step(SETTLE_FRAMES, dt);
         applyShot(engine, name);
-        await api.step(3, dt);
+        await api.step(SETTLE_FRAMES_2, dt);
 
         return {
           name, shot,

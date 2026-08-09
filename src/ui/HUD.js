@@ -416,8 +416,20 @@ export class HUD {
       if (typeof p === 'number') this.setHealth(p, this.healthMax);
       else if (p) this.setHealth(num(p.hp ?? p.current ?? p.value, this.health), num(p.max, this.healthMax));
     });
-    on('damage', (p) => this.damage(typeof p === 'number' ? p : num(p?.amount, 1)));
-    on('hurt', () => this.damage(1));
+    /* `health` is the ONLY thing that moves the pips, and that is a correctness requirement
+       rather than tidiness. This used to be three subscriptions — `health`, `damage` and
+       `hurt` — each of which deducted a pip, which was harmless only while nothing published
+       any of them (§248). Under a real publisher one hit would have cost three pips.
+
+       Worse than the triple-count: `damage` is a *request* to hurt the player, and
+       `PlayerHealth` is the only thing entitled to decide whether it lands — invulnerability
+       frames, being already down, and whether a lucky charm eats it. A view that deducts on
+       the request cannot know the hit was refused, so the row would drift away from the truth
+       on the first i-framed hit and never come back. That is §247's defect pointed the other
+       way: a subscriber holding a different opinion about what an event name means.
+
+       The flash, the vignette punch and the shake are not lost — `setHealth` fires them when a
+       pip is actually lost, so they follow the hit that really landed. */
 
     on('thiefVision', (v) => this.thiefVision(!!v));
     on('thiefTargets', (list) => this._onTargets(list));

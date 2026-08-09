@@ -113,6 +113,12 @@ const MANIFEST = [
   ['fx',           './fx/Particles.js',           'Particles'],
   ['audio',        './audio/Audio.js',            'Audio'],
   ['hud',          './ui/HUD.js',                 'HUD'],
+  /* AFTER `hud` on purpose. `HUD.init()` paints a placeholder pip row of its own, so a health
+     module initialised first would publish its opening state into a bus the HUD has not
+     subscribed to yet and then be overwritten by that placeholder. `Health.update` re-announces
+     on its first frame as well, so this ordering is belt and braces rather than load-bearing —
+     which is the point: module order should not decide whether the HUD tells the truth. */
+  ['health',       './player/Health.js',          'Health'],
   ['postfx',       './render/PostFX.js',          'PostFX'],
 ];
 
@@ -207,7 +213,8 @@ async function boot() {
     animation: 'Teaching Sly to move', movement: 'Calibrating the cane', camera: 'Framing the shot',
     pickups: 'Scattering the loot',
     guards: 'Posting the guard', fx: 'Stirring dust', audio: 'Tuning the score',
-    hud: 'Printing the Binocucom', postfx: 'Grading the film',
+    hud: 'Printing the Binocucom', health: 'Pocketing a lucky charm',
+    postfx: 'Grading the film',
   };
   await engine.initModules((p, key) => setProgress(0.05 + p * 0.9, LABEL[key] || key));
 

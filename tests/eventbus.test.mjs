@@ -127,35 +127,70 @@ for (const f of files) {
 const where = (m, k) => [...(m.get(k) || [])].join(', ');
 
 /**
- * Subscribed, never published. **Every line here is a feature that cannot fire.**
+ * ── Two buckets, because "no publisher" means two completely different things ───────────────────
  *
- *   binocucom         the Binocucom is abandoned as a goal by owner instruction (§242), so this
- *                     pair is expected to stay dead. Listed, not excused.
- *   clue              Audio has a sting for finding a clue. Nothing in the game is a clue.
- *   damage, health    THE PLAYER HAS NO HEALTH SYSTEM. There is no `takeDamage`, no health state
- *                     anywhere in `src/player/` or `src/ai/`, so the HUD's health pips display a
- *                     number nothing can ever change. The guards can chase, catch and alert, and
- *                     none of it can hurt him. This is the largest single gap the census found.
- *   hurt              `Controller.js:374` subscribes and `Controller.js:561` calls `this.hurt()`
- *                     directly, so the *mechanic* works internally — the event is a hook offered to
- *                     the rest of the game that nothing ever uses.
- *   guardLost         Audio listens for three guard events that do not exist. The guards publish
- *   guardSound        `guardAlert` (plus `guardPickpocket`, `enemyBounce`, `shake`), and the audio
- *   guardSpotted      agent rebuilt its ladder on `guardAlert` — these three are the legacy names,
- *                     left subscribed. Stale listeners, not missing publishers.
- *   objective         the HUD renders an objective card; nothing ever sets an objective.
- *   prompt            contextual "press E to …" prompts. NOTE `HUD.js:383` sets `_sawPrompt` on the
- *                     first one and *permanently* retires its affordance-detection fallback, so the
- *                     first module to publish this silently kills every contextual verb in the game.
- *                     Publishing it is not a one-line change.
- *   unregisterTarget  `Controller.js` can drop a magnetism target; nothing ever asks it to. The
- *                     `registerTarget` counterpart IS published (§223), so this is half a pair.
+ * The first version of this file had one list, and a single list of subscriptions-without-a-
+ * publisher reads as a **to-do list**. It is not one. Four of its eight entries are dead because
+ * somebody decided they should be, and "close the gap" is the wrong action on every one of them:
+ * the Binocucom was abandoned by owner instruction, and three of the guard events are legacy names
+ * that were *replaced*. A census that demands a publisher for every subscriber is an instruction to
+ * implement cancelled features, which is §248's own cries-wolf failure wearing a new hat — and the
+ * agent who wrote the health system was pointed at this list and had to be told, out of band, not
+ * to wire the Binocucom while it was there.
+ *
+ * So `DEAD_BY_DECISION` is not merely tolerated, it is **enforced in the other direction**: if
+ * something ever starts publishing one of these, the census goes RED and names the decision. That
+ * is the part a prose comment cannot do. `DEAD_UNBUILT` is the real to-do list, and it is short.
  */
-const DEAD_SUBSCRIPTIONS = [
-  'binocucom', 'clue', 'damage', 'guardLost', 'guardSound', 'guardSpotted',
-  'health', 'hurt', 'objective', 'prompt', 'unregisterTarget',
-];
-if (DEAD_SUBSCRIPTIONS.length !== 11) throw new Error('DEAD_SUBSCRIPTIONS miscounted');
+
+/**
+ * Dead on purpose. Each line carries the decision and where it is recorded. **Do not publish
+ * these.** A publisher appearing for one of them fails `no ABANDONED event is quietly revived`.
+ *
+ *   binocucom      **Owner instruction, 2026-08-08: "Abandon the Binocucom goal for this project"**
+ *                  (§242). The existing implementation was deliberately NOT deleted — §242 reasons
+ *                  that "abandon the goal" is not "remove the code", and that deleting working code
+ *                  is the destructive reading of an ambiguous phrase. So the subscription staying
+ *                  here is the correct end state, not a loose end. `binocucomState`, its mirror
+ *                  image, sits in `DEAD_PUBLICATIONS` for the same reason.
+ *   guardLost      Superseded, not missing. The guards publish `guardAlert` with a `state`, and the
+ *   guardSound     audio agent rebuilt its whole ladder on it (§219). These three are the names it
+ *   guardSpotted   used before that, still subscribed in `Audio.js:1240-1242`. Publishing them would
+ *                  give the audio ladder two disagreeing sources of truth. The right fix is to
+ *                  delete the three listeners, which is an `Audio.js` change with an owner.
+ */
+const DEAD_BY_DECISION = ['binocucom', 'guardLost', 'guardSound', 'guardSpotted'];
+
+/**
+ * Dead because nobody has built the other half yet. **This** is the to-do list.
+ *
+ *   clue              `Audio.js:1252` has a sting for finding a clue. Nothing in the game is a clue.
+ *   objective         the HUD renders an objective card and `HUD.init` sets the only one that ever
+ *                     appears, by direct call. The event is the hook a mission script would use.
+ *   prompt            contextual "press E to …" prompts, and a trap. `HUD.js:383` sets `_sawPrompt`
+ *                     on the first one and *permanently* retires its affordance-detection fallback,
+ *                     so **the first module to publish this silently kills every contextual verb in
+ *                     the game**. Publishing it is not a one-line change.
+ *   unregisterTarget  `Controller.js:378` can drop a magnetism target; nothing ever asks it to. The
+ *                     `registerTarget` counterpart IS published (§223), so this is half a pair.
+ *
+ * ── Three lines were deleted from here, which is what fixing one looks like ─────────────────────
+ * `damage`, `health` and `hurt` were the largest entry the census ever produced: **the player had
+ * no health system at all**, so the HUD's pip row, hit flash, vignette punch and shake were wired
+ * to a number nothing could move, and the guards' whole alert ladder ended in an animation. That is
+ * closed — `src/player/Health.js` owns the state, guards and hazards publish `damage`, the
+ * Controller still takes `hurt`, and the HUD renders `health`. See `tests/health.test.mjs`.
+ *
+ * They are **deleted, not commented out and not moved to a "fixed" list**, because this file fails
+ * in both directions: a live event left in either list turns the census red just as a new dead end
+ * does. That is the property that makes the register worth trusting, and the only way to keep it is
+ * to actually delete lines when they stop being true.
+ */
+const DEAD_UNBUILT = ['clue', 'objective', 'prompt', 'unregisterTarget'];
+
+const DEAD_SUBSCRIPTIONS = [...DEAD_BY_DECISION, ...DEAD_UNBUILT];
+if (DEAD_SUBSCRIPTIONS.length !== 8) throw new Error('DEAD_SUBSCRIPTIONS miscounted');
+if (DEAD_BY_DECISION.some((k) => DEAD_UNBUILT.includes(k))) throw new Error('an event is in both buckets');
 
 /**
  * Published, never subscribed. Each is a fact the game states that nothing listens to.
@@ -197,7 +232,37 @@ test('eventbus: no NEW subscription without a publisher', () => {
   assert.deepEqual(dead, [...DEAD_SUBSCRIPTIONS].sort(),
     'events subscribed in src/ that nothing in src/ ever emits:\n'
     + dead.map((k) => `  ${k} <- ${where(subscribed, k)}`).join('\n')
-    + '\n\nIf you FIXED one, delete it from DEAD_SUBSCRIPTIONS — a stale exception is worse than none.');
+    + '\n\nA new line here is NOT automatically a gap to close. Decide which it is and put it in the\n'
+    + 'matching list:\n'
+    + '  DEAD_UNBUILT      the other half has not been written yet. This is the to-do list.\n'
+    + '  DEAD_BY_DECISION  it is dead because somebody decided so — abandoned, or superseded by a\n'
+    + '                    newer event. Record the decision and where it is written down. Publishing\n'
+    + '                    one of these is a FAILURE, not a fix.\n'
+    + 'If you FIXED one, delete it — a stale exception is worse than none.');
+});
+
+test('eventbus: no ABANDONED event is quietly revived', () => {
+  /* The half a single flat list cannot express. Everything above says "these have no publisher and
+     that is expected"; this says "and giving them one is wrong". Without it the census reads as a
+     backlog, and the next agent handed the failure output closes the Binocucom's `binocucom` /
+     `binocucomState` pair in good faith against an explicit owner instruction to stop (§242) — or
+     revives `guardSpotted` alongside `guardAlert` and gives the audio ladder two disagreeing
+     sources of truth. Both are one small, reasonable-looking commit away.
+
+     §211.1: assert the events are really in the corpus first, or this passes by inspecting nothing
+     the day one of them is renamed. */
+  for (const evt of DEAD_BY_DECISION) {
+    assert.ok(subscribed.has(evt),
+      `'${evt}' is no longer subscribed anywhere in src/. If the listener was deleted — which for `
+      + 'the guard trio is the right fix — delete it from DEAD_BY_DECISION too.');
+    assert.ok(!published.has(evt),
+      `'${evt}' now has a publisher in ${where(published, evt)}, and it is dead ON PURPOSE.\n`
+      + '  binocucom / binocucomState — abandoned by owner instruction, 2026-08-08 (§242).\n'
+      + '  guardLost / guardSound / guardSpotted — legacy names; the guards publish `guardAlert`\n'
+      + '  and Audio\'s ladder is built on it. A second source of truth is not an improvement.\n'
+      + 'If the decision has genuinely been reversed, move the line out of DEAD_BY_DECISION and say '
+      + 'so in the commit; do not delete this assertion.');
+  }
 });
 
 test('eventbus: no NEW publication without a subscriber', () => {
@@ -212,7 +277,12 @@ test('eventbus: the three events this census exists because of are all live', ()
   /* The regression guard proper. Each of these was a silent dead end found by accident, and each
      cost real work to trace back from a symptom. They must never go dead again quietly. */
   for (const evt of ['coin', 'guardPickpocket', 'guardAlert', 'playerState',
-    'ledgeGrab', 'hookGrab', 'hookRelease', 'enemyBounce']) {
+    'ledgeGrab', 'hookGrab', 'hookRelease', 'enemyBounce',
+    /* And the three that were the largest dead end this census ever found. They are here rather
+       than merely absent from `DEAD_SUBSCRIPTIONS` because absence is a weak claim: deleting a
+       whole health system would empty both sides at once and the set comparison above would go
+       green on it. This says they must be live, in both directions, by name. */
+    'damage', 'health', 'hurt']) {
     assert.ok(published.has(evt), `'${evt}' has no publisher — it went dead again (${where(subscribed, evt)} still listens)`);
     assert.ok(subscribed.has(evt), `'${evt}' has no subscriber — it fires into nothing again (${where(published, evt)} still emits)`);
   }

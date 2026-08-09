@@ -558,7 +558,16 @@ export class Controller {
     _v1.subVectors(this.position, hits[0].mesh ? hits[0].mesh.position : this.position);
     _v1.y = 0;
     if (_v1.lengthSq() < 1e-4) _v1.copy(this.faceDir).negate();
-    this.hurt(_v1.normalize(), 8.5);
+    _v1.normalize();
+    /* Through the bus, so a spike costs a lucky charm exactly as a guard's swing does and the
+       health module remains the single place that decides what a hit costs. The direct call is
+       kept as the fallback for a build without PLAYERHEALTH: a hazard that shoves is a
+       degraded hazard, a hazard that does nothing at all is a missing one. */
+    if (this.engine.has?.('health')) {
+      this.engine.emit('damage', { amount: 1, source: 'hazard', dir: { x: _v1.x, y: 0, z: _v1.z }, force: 8.5 });
+    } else {
+      this.hurt(_v1, 8.5);
+    }
   }
 
   _safetyNet() {

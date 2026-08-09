@@ -435,6 +435,8 @@ class Guard {
     this._lostTimer = 0;
     this._stunTimer = 0;
     this._attackCd = 0;
+    /** Seconds left on a swing already started. > 0 means a hit is in flight. */
+    this._swing = 0;
     this.hits = 0;
 
     /* --- pickpocket --- */
@@ -537,6 +539,7 @@ class Guard {
   update(dt, sense) {
     this.stateTime += dt;
     if (this._attackCd > 0) this._attackCd -= dt;
+    if (this._swing > 0) { this._swing -= dt; if (this._swing <= 0) this._resolveSwing(); }
 
     /* --- senses. The LOS raycast lives in Patrol.Senses; it is handed the COLLISION
            module and guards it internally, so pillars genuinely hide the player. --- */
@@ -648,6 +651,35 @@ class Guard {
     try { this.engine.emit('guardAlert', p); } catch { /* never let a listener stop a guard */ }
   }
 
+  /**
+   * Resolve a swing started `DETECT.attackWindup` ago.
+   *
+   * This is the guards' half of §248: they could chase, reach and play an attack animation, and
+   * **none of it could hurt the player**, because nothing in `src/` published `damage`. The
+   * event is a REQUEST — `src/player/Health.js` owns whether it lands, so nothing here needs to
+   * know about invulnerability, lucky charms or death, and two guards swinging together cannot
+   * double-count.
+   *
+   * Three ways the swing misses, all of them things the player can do: leave the reach, knock
+   * him out, or stun him. A guard bounced off mid-swing must not still connect.
+   */
+  _resolveSwing() {
+    this._swing = 0;
+    if (this.state === STATE.KO || this.state === STATE.STUNNED) return false;
+    const target = this.owner?.playerPos;
+    if (!target) return false;
+    _v3.subVectors(target, this.position); _v3.y = 0;
+    if (_v3.length() > DETECT.attackRange * DETECT.attackReach) return false;
+    _v3.normalize();
+    try {
+      this.engine.emit('damage', {
+        amount: 1, source: 'guard', id: this.id, type: this.type,
+        dir: { x: _v3.x, y: 0, z: _v3.z }, force: DETECT.attackKnock,
+      });
+    } catch { /* a listener must never cost a guard his swing */ }
+    return true;
+  }
+
   /* --- locomotion ------------------------------------------------------- */
 
   _locomote(dt) {
@@ -689,7 +721,14 @@ class Guard {
           const d = _v1.length();
           if (d <= DETECT.attackRange) {
             this.speed = 0;
-            if (this._attackCd <= 0) { this._attackCd = DETECT.attackCooldown; this._playOneShot('attack'); }
+            if (this._attackCd <= 0) {
+              this._attackCd = DETECT.attackCooldown;
+              this._playOneShot('attack');
+              /* Start the swing; `_resolveSwing` decides `attackWindup` later whether it lands.
+                 Nothing is emitted here — a hit that fires on the frame the animation starts is
+                 a hit the player was never given a chance to avoid. */
+              this._swing = DETECT.attackWindup;
+            }
           } else {
             moved = this._step(dt, aim.x, aim.z, maxSpeed);
           }
