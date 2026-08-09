@@ -21582,3 +21582,42 @@ other assumed. The guard caught what my arithmetic did not.
   under both masks — but a future cane run should fix it first.
 - The cane's **pose** defect (12.3° elevation, 19 vertices inside the body in `walk`) is
   untouched: a socket problem, not a material one.
+
+### §266.1 — the follow-up is VOID, and it repeated §255's lesson in a place I had not thought to look
+
+`tools/charspec.mjs` asked whether the split brings §264's **+25.2 L** character cost under its
+**20 L** bar at `p 0.90`. It returned **DO NOT SHIP — S0 FAIL, S1 FAIL, S3 VOID, S4 VOID**.
+Record: `progress/records/charspec-VOID.txt`.
+
+```
+base   vSlySkin 62138 px, lobe-sat     0 px, BOTH 0 px   restore 0 px
+split  vSlySkin 62360 px, lobe-sat     0 px, BOTH 0 px   restore 0 px
+closest reproduction of SPECNORM's +25.2 L:  NONE — instrument does not match theirs
+```
+
+**The population is empty, so nothing downstream exists.** `debugTerm(6)`'s R channel
+(`specStep / 1.35`) never reached my registered saturation floor of 250 on any character pixel.
+The threshold is **not** re-derived (§141.1); the run stands VOID.
+
+**Two things are worth carrying out of it.**
+
+**1. `vSlySkin` works, and the same capture proves why the other channel did not.** It arrived at
+**62 138 px** on the character — clean, and independent confirmation of the correction handed to
+me (`debugTerm(4)`'s exact triple contains *zero* character pixels; `vSlySkin` is binary, so it
+quantises to 0/255 and no additive offset can push it across 0.5). My run extends that: in the
+*same* frame, the binary channel survived and the **continuous** one (mode 6) did not. The
+guidance was "don't build a denominator on the mode-4 mask"; the sharper rule is **don't build one
+on any continuously-valued debug channel** — only the binary ones survive the chain.
+
+**2. I rebuilt §255's trap in a new place and my own guard did not cover it.** S2 —
+"restoring `uSpecNormPow` to 0 returns the frame at 0 px" — **PASSED**. It proves the poke is
+*reversible*. **It does not prove the poke ever did anything**, and I never registered an arm that
+required `p = 0.9` to differ from `p = 0`. Had the mask been non-empty and the uniform poke inert,
+I would have measured a rise of exactly zero, called it "art direction removes the cost entirely",
+and been completely wrong with a passing null arm underneath me. That is §255 — *a null arm proves
+repeatability, not sensitivity* — and I reproduced it while explicitly quoting it in my own
+prereg. **The next version of this tool needs `n9 ≠ n0` as a guard before anything else is read.**
+
+So the §266 §10 claim stands exactly where it was: the rise scalings **0.217 / 0.035 / 0.026** are
+**arithmetic off the shader**, not a measurement, and whether the split closes §264's interval is
+**still open and still unmeasured**.

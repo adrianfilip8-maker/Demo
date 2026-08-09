@@ -1,0 +1,30 @@
+live body materials, read off the build:
+  slydlrig:head      {"spec":0.025,"gloss":8,"sss":0.38}
+  slydlrig:tail      {"spec":0.03,"gloss":9,"sss":0.228}
+  slydlrig:body      {"spec":0.085,"gloss":20,"sss":0.14}
+live state == §266 SPLIT ? true   (if false the source change did not reach the build)
+
+==============================================================================
+### sly-closeup
+  base   vSlySkin   62138 px, lobe-sat       0 px, BOTH      0 px   restore 0 px
+         rise at p=0.9:  mean undefined  p50 undefined  p90 undefined  p99 undefined  max undefined
+  split  vSlySkin   62360 px, lobe-sat       0 px, BOTH      0 px   restore 0 px
+         rise at p=0.9:  mean undefined  p50 undefined  p90 undefined  p99 undefined  max undefined
+
+==============================================================================
+### what art-direction costs and buys — scored
+
+closest reproduction of SPECNORM's +25.2 L at base materials:
+  NONE — instrument does not match theirs
+
+per shot, statistic "undefined" (the one that reproduces), rise at p=0.9:
+  shot               base    split   change   base n / split n
+  sly-closeup           —        —        —   0 / 0
+  S0_instrument_reproduces   FAIL
+  S1_masks_nonempty          FAIL
+  S2_normpow_restores        PASS
+  S3_split_reduces           VOID
+  S4_split_under_bar         VOID
+
+worst-shot rise at p=0.9:  base -Infinity L   split -Infinity L   (bar 20 L)
+==> DO NOT SHIP — S0_instrument_reproduces FAIL, S1_masks_nonempty FAIL, S3_split_reduces VOID, S4_split_under_bar VOID  (VOID is not PASS — S3_split_reduces, S4_split_under_bar could not be evaluated)
