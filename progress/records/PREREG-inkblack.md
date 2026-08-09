@@ -94,6 +94,48 @@ same resolution. `grain` is already 0.0 so the composite is deterministic per pi
   distinct materials before arm C counts. A traversal that silently matches nothing would make
   arm C identical to arm B, and CAL-2 below is what catches that.
 
+### PREDICTION registered 2026-08-09, from source, BEFORE run-1's numbers exist
+
+The paragraph above worried about the wrong failure. The traversal does hit every hull; what it
+cannot do is make the hide **survive to the scene render**, and I found that by reading
+`PostFX._renderChain` while run-1 was still queued on the capture lock. Registered here, before
+any pixel of run-1 has been scored, so it can fire or fail on the record:
+
+- `_renderChain` renders the **scene first** (step 1, `PostFX.js:1864`) and the **normal prepass
+  second** (step 2, `PostFX.js:1888`). The prepass hides the shells for its own duration and its
+  `finally` calls `shading.endNormalPass()` (`PostFX.js:1987`) → `setOutlinesVisible(true)`
+  (`ToonMaterial.js:1389`), which walks `this._shells` and writes `visible = true` on every one.
+- `passes.edge.enabled` and `passes.ao.enabled` are both `true` at construction
+  (`PostFX.js:1490`), so `needNormals` is true and that `finally` runs on **every** frame.
+- The capture renders **four** frames per arm — `__GAME.step(3, 0)` calls `engine.renderFrame`
+  three times (`Debug.js:181`) and then `eng.renderFrame(0)` once more.
+
+**Therefore: the arm-C hide is honoured by the first frame's scene render and reverted before the
+second. The captured frame is the fourth. Arm C will be arm B.**
+
+Falsifiable, three ways, and all three are read off run-1's own output:
+
+- **PRED-1** `arm B` and `arm C` are **bit-identical** (equal sha) on all ten shots.
+- **PRED-2** consequently `nHull = |B - C| = 0` everywhere and **CAL-2 fails**, so run-1 is
+  **VOID** — not FAIL, and P1 says nothing.
+- **PRED-3** `nCrease = |A - B|` is **non-zero** on the daylight shots: the crease lever is
+  per-frame (`PostFX.js:2083`) and is untouched by this bug, so CAL-1 still passes. A run where
+  CAL-1 *also* fails means the harness is broken in some further way and this diagnosis is
+  incomplete.
+
+If PRED-1..3 all fire, the mechanism is confirmed by measurement rather than by reading — which
+is the distinction §270 says I keep getting wrong — and run-2 may replace the hull lever. **No
+threshold moves. CAL-1/2/3, P1, F1, P2 and F2 stand exactly as written.** The only thing run-2
+changes is *how the hull is switched off*:
+
+> `o.layers.disableAll()` on each `slyInk_*` mesh, restored with `o.layers.enable(0)`.
+> `setOutlinesVisible` writes `.visible` and never touches `.layers`, and three tests
+> `camera.layers.test(object.layers)` per object per render, so a layer-hidden shell cannot be
+> resurrected by `endNormalPass`. Still page-side; still no shipped-code change.
+
+Run-2 must additionally assert PRED-1's inverse as its own capture-time guard: **arm B and arm C
+must differ in sha on every shot**, printed by the capture before the scorer is allowed to run.
+
 ---
 
 ## 4. Arms, calibration and falsifiers
