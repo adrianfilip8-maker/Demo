@@ -230,23 +230,36 @@ for (const r of rows) {
 
   s.calibShare = r.calibShare ?? 0;
 
-  /* debugTerm(6): R = specStep/1.35, G = lobe, B = sh*step(0.02,ndl). Read B first. */
-  if (im.incid) {
-    const g = im.incid, n = g.w * g.h;
-    let gatesAny = 0, gates = 0, sat = 0, joint = 0, half = 0, lobeAny = 0;
-    for (let i = 0, p = 0; i < n; i++, p += g.ch) {
-      const R8 = g.data[p], G8 = g.data[p + 1], B8 = g.data[p + 2];
+  /* debugTerm(6): R = specStep/1.35, G = lobe, B = sh*step(0.02,ndl). Read B first.
+   *
+   * MASKED to the mode-4 toon population, and it must be. mode 6 only writes on draws that run
+   * the cel program; sky, particles and every other non-toon draw render NORMALLY into the same
+   * buffer and their ordinary colours then read as R/G/B channel values. `debugTerm(4)` is the
+   * toon-population map (nothing else in a frame writes that triple — toon.glsl.js, DEBUG_CALIB),
+   * so it is the mask. Every share below is over mode-4 pixels; `toonPct` says how much of the
+   * frame that is. The first version of this runner had no mask and it over-stated `courtyard`
+   * by 2.8x and reported 22.7% of `interior` gated on a shot whose true answer is exactly 0. */
+  if (im.incid && im.calib) {
+    const g = im.incid, c = im.calib, n = g.w * g.h;
+    let toon = 0, gatesAny = 0, gates = 0, sat = 0, half = 0, lobeAny = 0;
+    for (let i = 0; i < n; i++) {
+      const ci = i * c.ch;
+      if (!(c.data[ci] === 64 && c.data[ci + 1] === 128 && c.data[ci + 2] === 191)) continue;
+      toon++;
+      const p = i * g.ch, R8 = g.data[p], G8 = g.data[p + 1], B8 = g.data[p + 2];
       if (B8 >= 1) gatesAny++;
-      const gate = B8 >= 250;
-      if (gate) gates++;
-      if (R8 >= 252) { sat++; if (gate) joint++; }
-      if (R8 >= 128 && gate) half++;
-      if (G8 >= 6 && gate) lobeAny++;
+      if (B8 < 250) continue;
+      gates++;
+      if (R8 >= 252) sat++;
+      if (R8 >= 128) half++;
+      if (G8 >= 6) lobeAny++;
     }
+    const q = (v) => (toon ? (100 * v) / toon : 0);
     s.incidence = {
-      gatesAnyPct: (100 * gatesAny) / n, gatesOpenPct: (100 * gates) / n,
-      quantSatPct: (100 * sat) / n, jointSatPct: (100 * joint) / n,
-      jointHalfPct: (100 * half) / n, lobeAnyPct: (100 * lobeAny) / n,
+      toonPct: (100 * toon) / n, ofToon: true,
+      gatesAnyPct: q(gatesAny), gatesOpenPct: q(gates),
+      jointSatPct: q(sat), jointHalfPct: q(half), lobeAnyPct: q(lobeAny),
+      jointSatFramePct: (100 * sat) / n, jointSatPx: sat,
     };
   }
   R.shots.push(s);
@@ -316,9 +329,10 @@ for (const s of R.shots) console.log(`   ${s.shot.padEnd(13)} ${f3(s.stats.base.
 console.log(`   H8 ${H8 ? 'PASS' : 'FAIL'}`);
 
 console.log('\ndebugTerm(6) SPECULAR INCIDENCE  (share of frame; forecast: joint-saturated < 0.5%):');
-console.log('shot           gates > 0   gates FULL   lobe > 0   quant >= 50%   quant SAT (joint)');
+console.log('shares are OF THE TOON POPULATION (mode-4 mask), not of the frame');
+console.log('shot           toon%    gates > 0   gates FULL   lobe > 0   quant >= 50%   quant SAT   (px of frame)');
 for (const s of R.shots) { const i = s.incidence; if (!i) { console.log(`   ${s.shot} — missing`); continue; }
-  console.log(`${s.shot.padEnd(13)} ${f3(i.gatesAnyPct).padStart(8)}%  ${f3(i.gatesOpenPct).padStart(9)}%  ${f3(i.lobeAnyPct).padStart(8)}%  ${f3(i.jointHalfPct).padStart(11)}%  ${f3(i.jointSatPct).padStart(15)}%`); }
+  console.log(`${s.shot.padEnd(13)} ${f2(i.toonPct).padStart(5)}%  ${f3(i.gatesAnyPct).padStart(9)}%  ${f3(i.gatesOpenPct).padStart(10)}%  ${f3(i.lobeAnyPct).padStart(8)}%  ${f3(i.jointHalfPct).padStart(11)}%  ${f3(i.jointSatPct).padStart(10)}%   ${i.jointSatPx} px = ${f3(i.jointSatFramePct)}%`); }
 
 console.log('\nSHIP RULE: uSpecKey 1.0 ships iff I1-I3 fire, T3/T4/T5 pass, H8 passes, and H6 passes.');
 console.log(`   I1 ${i1 ? 'ok' : 'VOID'} · I2 ${i2 ? 'ok' : 'VOID'} · T3 ${T3 ? 'ok' : 'FAIL'} · T4 ${T4 ? 'ok' : 'FAIL'} · T5 ${T5 ? 'ok' : 'FAIL'} · H8 ${H8 ? 'ok' : 'FAIL'} · H6 ${H6n >= 2 ? 'PASS' : 'FAIL'}`);

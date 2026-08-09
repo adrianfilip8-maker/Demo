@@ -20749,3 +20749,165 @@ constant for the last several cycles moved it *downward*, where it always does s
 knob is a `min()`, the null direction is the informative one** — and it costs one uniform readback,
 not a capture. The retraction blocks now standing at `ToonMaterial.js:238` and `:1735` name the
 release point (0.562) and the re-bind factor (×1.10) so the next person can check both in one line.
+
+---
+
+## §262 — the specular is now coupled to the key radiance, and it is *still* not the highlight: the lobe lands on 908–5 442 px per shot, and the materials under it are authored `uSpec` 0.08–0.16
+
+Registered in `progress/records/PREREG-hilite2.md` before any candidate arm existed; scored in
+`RESULT-hilite2.md`. Record `progress/records/hilite2/`. **Nothing ships. `TUNE.specKey` stays 0
+and the shipped build is bit-identical to what it was before this section.**
+
+### The finding, confirmed
+
+`spec` was the only lit term not multiplied by `keyRad = uKeyColor * uKeyIntensity` (luma 2.423).
+`diff` (`toon.glsl.js:596`) and `sss` (`:622`) both are. A specular highlight is a reflection *of
+the light source*, and it is the one term physically entitled to exceed the albedo, so the
+decoupling was real and it was a bug. The shader now reads
+
+```glsl
+vec3 spec = specTint * mix( vec3( 1.0 ), keyRad, uSpecKey )
+          * ( specAmt * specStep * sh * step( 0.02, ndl ) * uSpecGain );
+```
+
+with both levers at their exact-no-op defaults (`mix(x,y,0) = x`; `s*1.0 = s`).
+
+### It works, it is not inert, and it does not close the defect
+
+One boot per set, `dt = 0`, four arms (`base` / `off` = `uSpecGain 0` / `key` = `uSpecKey 1` /
+`base2`), 1280×720, on §256's own four shots. **I1 null arm 0 px on all four. I2 positive control
+fired on all four** (0.88–8.08 % of frame). I4 readback calibration 15.6–75.7 % against a 5 % bar.
+
+```
+shot          changed px   % frame   p99        >230           frame max
+hero              87 355    9.48 %   183 -> 184   4 px ->  20 px   232.2 -> 232.8
+temple             8 443    0.92 %   181 -> 181   1 px ->   1 px   230.2 -> 230.2
+courtyard        118 200   12.83 %   180 -> 187  29 px -> 272 px   237.2 -> 245.5
+sly-closeup       84 610    9.18 %   179 -> 184  42 px ->  60 px   239.4 -> 239.4
+```
+
+Gates T1 (p99 ≥ 200 on ≥ 3 of 4) and T2 (>230 ≥ 0.20 % on ≥ 3 of 4), inherited verbatim from
+PREREG-hilite1 so they could not be moved: **0/4 and 0/4.** T3/T4/T5 pass; H8 (no gold blowout)
+passes with >250 at 0.000 % on every arm of every shot. H6 — the weaker "a highlight exists at
+all" bar registered here, 0.02 % above L 230 on ≥ 2 of 4 — passes on **`courtyard` only, 1 of 4**.
+By the registered ship rule that is DO NOT SHIP, and the threshold is not moved afterwards.
+
+### Where the highlight actually is, from a channel built to answer exactly this
+
+`debugTerm(6)` (new) writes `vec3( specStep/1.35, lobe, sh * step(0.02, ndl) )` — the quantiser
+as a fraction of its own ceiling, the raw Blinn lobe, and the two gates. **Masked to the mode-4
+toon population** (§8.1 below):
+
+```
+shot          toon%  | of TOON px: gates>0  gatesFULL  quant SAT | rise on quantSAT px   px of frame
+hero           75.7% |    11.065%     9.205%    0.355% | p50 +17.6  p90 +33.9  max +86.8    2 478
+temple         27.2% |     0.954%     0.650%    0.363% | p50  +1.9  p90  +2.1  max +27.3      908
+courtyard      15.6% |    24.022%    18.807%    3.782% | p50 +26.7  p90 +29.2  max +68.7    5 442
+sly-closeup    17.5% |    26.890%    24.576%    1.352% | p50  +8.4  p90  +9.9  max +28.1    2 176
+interior       73.7% |     0.000%     0.000%    0.000% |                                        0
+```
+
+**The lobe lands.** 908–5 442 px per outdoor shot have a *fully saturated* quantiser under a
+*fully unobstructed* sun; `courtyard`'s 5 442 is three times T2's own 1 843 px bar. On that
+population the coupling moves the median by **+26.7 L on `courtyard`** (base p50 175 → 203) and
+**+17.6 L on `hero`** (159 → 180).
+
+**And it still does not reach 230, because of what is under it.** The census (102 sly materials,
+23 spec classes, identical in all five shots) against the corrected model (`specmodel.mjs`),
+fully lit and lobe saturated:
+
+```
+material            meshes   uSpec   spec NOW -> x keyRad    lit total, display L
+paving                 16     0.10     0.037  ->  0.091       204.3 -> 206.1   (+1.8)
+sandstone_block         3     0.14     0.055  ->  0.134       199.4 -> 202.6   (+3.2)
+limestone_polished      2     0.32     0.222  ->  0.543       222.5 -> 226.8   (+4.3)
+hieroglyph_gilded       4     0.55     1.506  ->  3.845       221.6 -> 240.4  (+18.8)
+gold_leaf              14     0.95     4.025  -> 10.328       241.4 -> 251.4  (+10.0)
+```
+
+Coupling a `uSpec` 0.10 paving stone to the sun buys **1.8 L**, and it cannot be otherwise: the
+coupling is one scene-wide multiply, so it preserves the authored 19:1 `mudbrick`:`gold_leaf`
+ratio exactly (H7 verified on the live uniforms) and a material authored dull stays dull *on
+purpose*. `hero`'s twenty >230 pixels are the gilded row arriving on the sixteen pixels available
+to it, at **+25 to +33 L each** — which is §34's 1.4 %, restated by a different instrument.
+
+### `interior` returned an exact zero, and it corrects a reading of §34
+
+Registered as an addendum before its capture, because §34's census says `interior`'s `gold_leaf`
+is **53.7 % above the terminator** against `hero`'s 1.4 % — so a key-side lever should have ~38×
+more lit gold to act on. **All four `interior` arms are byte-identical PNGs.** The specular term
+changes nothing there, and the mechanism is exact: **0.000 % of `interior`'s toon population has
+`sh * step(0.02, ndl) > 0`.** Not a small number — zero pixels.
+
+**The misreading is mine and it is worth carrying.** "53.7 % above the terminator" is a statement
+about **N·L**, the diffuse ramp's terminator. It says nothing about **`sh`**, the cast-shadow
+term, and `interior` is a roofed tomb where `sh` is 0 everywhere. `spec` is gated by *both*. I
+picked the shot with the most gold *facing* the sun and it is the shot where none of it is
+*reached* by the sun. `interior` already carries the largest >230 population of any shot measured
+(**0.094 %**) and none of it is specular — it is emissive.
+
+So "amplitude or incidence" is **both, and which one depends on the shot**: `hero` / `courtyard` /
+`sly-closeup` are amplitude-bound (the lobe lands on 0.24–0.59 % of frame and the `uSpec` under it
+is 0.08–0.16); `temple` (0.65 % of toon in full sun) and `interior` (0.000 %) are incidence-bound.
+
+### §8.1 — I contaminated my own incidence numbers, and only the zero caught it
+
+The first pass at the table above was computed over **every pixel in the frame**. Mode 6 only
+writes on draws that run the cel program; every non-toon draw renders *normally* into the same
+buffer and its ordinary colours then read as channel values, so `B >= 1` counts most of a sky.
+`debugTerm(4)` is the mask — `toon.glsl.js`'s `DEBUG_CALIB` says nothing else in a frame writes
+that triple, and §256's T7 already called it "the toon-population map". **I had captured it, on
+the same frame, and did not use it.** Unmasked it over-stated `courtyard`'s saturated share by
+**2.8×**, `sly-closeup`'s by **5.0×**, and reported 22.7 % of `interior` gated on a shot whose
+true answer is zero. What forced the check was an unreconcilable pair: a map claiming 637
+saturated pixels next to four byte-identical arms. **A run without a zero in it would have
+shipped the contaminated table.**
+
+### The forecast, scored — wrong on more of it than right
+
+T1/T2 predicted to fail: right. **H6 predicted to pass on `sly-closeup` and `temple` and fail on
+`hero`/`courtyard`: wrong on 3 of the 4 shots, and optimistic on the count (2 of 4 predicted, 1
+observed).** "The `off` arm shows spec worth < 3 L at p99": **wrong by more than an order of
+magnitude** — it is 88.6 L on `hero`, so the specular is already a *large* term where it lands.
+"Joint saturated population < 0.5 % of frame": **missed on `courtyard`**. The last two together
+overturn the prereg's own §3.3, which said "the whole question is incidence, not amplitude".
+
+Two model inputs were also wrong, both found by the live census and both recorded rather than
+quietly fixed: `ToonMaterial.js:1082` sets `roughness: o.roughnessMap ? 1.0 : o.rough`, so `rgh`
+is `ormG` and not `TUNE.rough × ormG` (the prereg table over-states every mapped material —
+`sandstone_block` by ×2.0); and **`sly cane gold` is not a material in this build at all** — the
+character traverses as one `slydlrig:mesh` at the TUNE defaults (`uSpec` 0.25, metal **0**), so
+`SlyModel.js`'s per-part table is not what the scene holds and the character has no metal on him
+in any of these frames. That is CHARACTER's to look at, not mine.
+
+### What is left, ranked by measured headroom
+
+1. **`specStep` has no energy normalisation, and that is where a blow-out would come from.**
+   `smoothstep(0.30, 0.52, lobe) + 0.35*smoothstep(0.02, 0.30, lobe)` is a *shape* function
+   capped at **1.35** regardless of `glossP`, so raising `uGloss` makes a highlight smaller and
+   **no brighter**. In a microfacet model the normalisation is exactly what concentrates the same
+   energy into fewer pixels; a Blinn normalisation at `glossP` 95 is ≈ ×12 against this run's
+   ×2.423. It is the biggest remaining multiplier in the term by a factor of five — and unlike
+   `uSpecKey` it scales *with gloss*, so it **would** re-order materials and needs its own prereg
+   plus a `uSpec` re-tune.
+2. **The `uSpec` values under the population that catches the lobe.** `paving` 0.10 (16 meshes)
+   and the sandstones 0.08–0.14 are most of every daylight frame. That is ARCHITECTURE's
+   `RECIPES`, it *is* the "limestone turns to plastic" risk, and `uSpecGain`/`uSpecKey` make it a
+   one-boot A/B.
+3. **Put lit gold in frame.** `gold_leaf` at 4.025 scene clears display 230 *and*
+   `bloomThreshold` 2.20 **with no change at all** (§25 measured it reaching bloom on the hook
+   rings and the gilded Ra). §34: `interior` 53.7 % of gold above the terminator but 0 % out of
+   cast shadow; `courtyard` 10.0 %; `hero` 1.4 %. Composition, which the owner has ruled out.
+4. **Independent corroboration that the size is right and still short.** §25 /
+   `RESULT-goldmip.md` back-solved that L 235 on `hieroglyph_gilded` needs **≈ ×2.7 the scene
+   spec of the `uSpec` 0.95 arm**, with every texture-side lever stacked topping out **< ×1.9**.
+   The `keyRad` coupling is **×2.423** — larger than the whole texture-side stack, and at the
+   shipped `uSpec` 0.55 still ≈ ×1.4 in those units against a requirement of ×2.7. That was
+   written into the prereg **before** the frames existed and the frames agree.
+
+### Standing consequence
+
+**A term that is inert in a frame and a term that is absent from a frame look identical in a
+composite, and they have opposite fixes.** `debugTerm(6)` separates them for the specular in one
+capture — but only against the mode-4 mask. Any future incidence claim off this channel that does
+not name its denominator should be assumed to be counting the sky.

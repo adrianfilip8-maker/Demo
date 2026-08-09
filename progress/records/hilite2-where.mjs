@@ -19,18 +19,32 @@
  *     neutral-tinted), NOT a per-recipe segmentation. It cannot tell sandstone from limestone,
  *     and it cannot tell gold_leaf from bronze_dark.
  *
+ *  3. HOW OFTEN THE LOBE LANDS, masked to the toon population.
+ *
+ *     **This mask is not optional and the first version of this file did not have one.**
+ *     `debugTerm(6)` only writes on draws that run the cel program; sky, particles and every
+ *     other non-toon draw render NORMALLY into the same buffer, and their ordinary colours then
+ *     read as R/G/B channel values. Unmasked, `B >= 1` counts any pixel with a little blue in
+ *     it — which is most of a sky. `debugTerm(4)` is the toon-population map (nothing else in a
+ *     frame writes (64, 128, 191); toon.glsl.js says so at DEBUG_CALIB), so every incidence
+ *     share below is over mode-4 pixels only. The unmasked version of this table over-stated
+ *     `courtyard` by 2.8x and, on `interior`, reported 22.7% of the frame gated on a shot where
+ *     the true answer is EXACTLY ZERO toon pixels.
+ *
  *   node progress/records/hilite2-where.mjs [dir]
  */
 import { readPNG } from '../../tools/png.mjs';
-import { readFileSync, existsSync } from 'node:fs';
+import { existsSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 
 const DIR = path.resolve(process.argv[2] || path.join(import.meta.dirname, '../../shots/hilite2'));
 const lum = (r, g, b) => 0.2126 * r + 0.7152 * g + 0.0722 * b;
 
-const score = existsSync(path.join(DIR, 'score.json'))
-  ? JSON.parse(readFileSync(path.join(DIR, 'score.json'), 'utf8')) : null;
-const SHOTS = score ? score.shots.map((s) => s.shot) : ['hero', 'temple', 'courtyard', 'sly-closeup'];
+/* Discovered from the frames on disk, not from score.json: the addendum's `interior` was a
+   second boot with its own score file, and both belong in one table. */
+const ORDER = ['hero', 'temple', 'courtyard', 'sly-closeup', 'interior'];
+const SHOTS = readdirSync(DIR).filter((f) => f.endsWith('.base.png')).map((f) => f.slice(0, -'.base.png'.length))
+  .sort((a, b) => (ORDER.indexOf(a) + 1 || 99) - (ORDER.indexOf(b) + 1 || 99));
 
 /** 4-connected components over a boolean mask; returns them sorted by size. */
 function components(mask, w, h, minSize = 1) {
@@ -121,22 +135,37 @@ for (const shot of SHOTS) {
  * SATURATED and the sun is FULL is a pixel where every geometric precondition for a highlight
  * is met, so whatever rise it shows is set by the material's own uSpec alone.
  * ------------------------------------------------------------------------------------- */
-console.log('\nWHERE THE LOBE ACTUALLY LANDS  (dbg6: R >= 252 = quantiser saturated, B >= 250 = full sun)');
-console.log('shot           saturated+lit px   % frame  |  rise under coupling, over those px');
-console.log('                                            <2L      2-10L    10-20L   >20L    max');
+console.log('\nWHERE THE LOBE ACTUALLY LANDS');
+console.log('MASKED to the mode-4 toon population — see the note above. Unmasked shares are meaningless.');
+console.log('shot          toon%  | of TOON px: gates>0  gatesFULL  lobe>0  quant>=50%  quantSAT | rise on quantSAT px');
+console.log('                                                                                     p50     p90     max');
 for (const shot of SHOTS) {
-  const fg = path.join(DIR, `${shot}.dbg6.png`), fb = path.join(DIR, `${shot}.base.png`), fk = path.join(DIR, `${shot}.key.png`);
-  if (!existsSync(fg) || !existsSync(fb) || !existsSync(fk)) continue;
-  const g = readPNG(fg), a = readPNG(fb), b = readPNG(fk), n = g.w * g.h;
-  let cnt = 0, b0 = 0, b1 = 0, b2 = 0, b3 = 0, mx = 0;
-  for (let i = 0, p = 0; i < n; i++, p += g.ch) {
-    if (g.data[p] < 252 || g.data[p + 2] < 250) continue;
-    cnt++;
-    const q = i * a.ch;
-    const dl = lum(b.data[q], b.data[q + 1], b.data[q + 2]) - lum(a.data[q], a.data[q + 1], a.data[q + 2]);
-    if (dl > mx) mx = dl;
-    if (dl < 2) b0++; else if (dl < 10) b1++; else if (dl < 20) b2++; else b3++;
+  const fg = path.join(DIR, `${shot}.dbg6.png`), fc = path.join(DIR, `${shot}.dbg4.png`);
+  const fb = path.join(DIR, `${shot}.base.png`), fk = path.join(DIR, `${shot}.key.png`);
+  if (![fg, fc, fb, fk].every(existsSync)) continue;
+  const g = readPNG(fg), c = readPNG(fc), a = readPNG(fb), b = readPNG(fk), n = g.w * g.h;
+  let toon = 0, gA = 0, gF = 0, lo = 0, q5 = 0, qS = 0;
+  const rises = [];
+  for (let i = 0; i < n; i++) {
+    const ci = i * c.ch;
+    if (!(c.data[ci] === 64 && c.data[ci + 1] === 128 && c.data[ci + 2] === 191)) continue;
+    toon++;
+    const p = i * g.ch, R = g.data[p], G = g.data[p + 1], B = g.data[p + 2];
+    if (B >= 1) gA++;
+    if (B >= 250) {
+      gF++;
+      if (G >= 6) lo++;
+      if (R >= 128) q5++;
+      if (R >= 252) {
+        qS++;
+        const q = i * a.ch;
+        rises.push(lum(b.data[q], b.data[q + 1], b.data[q + 2]) - lum(a.data[q], a.data[q + 1], a.data[q + 2]));
+      }
+    }
   }
-  const pc = (v) => cnt ? `${((100 * v) / cnt).toFixed(1)}%` : '-';
-  console.log(`${shot.padEnd(13)} ${String(cnt).padStart(16)} ${(100 * cnt / n).toFixed(4).padStart(8)}% | ${pc(b0).padStart(7)} ${pc(b1).padStart(8)} ${pc(b2).padStart(8)} ${pc(b3).padStart(7)} ${mx.toFixed(1).padStart(6)}`);
+  const pc = (v) => (toon ? `${((100 * v) / toon).toFixed(3)}%` : '-');
+  rises.sort((x, y) => x - y);
+  const Q = (t) => (rises.length ? rises[Math.min(rises.length - 1, (t * rises.length) | 0)] : 0);
+  console.log(`${shot.padEnd(13)} ${(100 * toon / n).toFixed(1).padStart(5)}% |${pc(gA).padStart(11)}${pc(gF).padStart(11)}${pc(lo).padStart(9)}${pc(q5).padStart(12)}${pc(qS).padStart(11)} | ${Q(0.5).toFixed(1).padStart(6)} ${Q(0.9).toFixed(1).padStart(7)} ${(rises.length ? rises[rises.length - 1] : 0).toFixed(1).padStart(7)}`);
+  console.log(`${''.padEnd(13)}   quantSAT = ${qS} px = ${(100 * qS / n).toFixed(4)}% of the whole frame`);
 }
