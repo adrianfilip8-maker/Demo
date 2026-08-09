@@ -101,6 +101,19 @@ the un-boosted key, so the fill does not scale either. In daylight, a key gain t
 
 ## 2. Instrument arms
 
+### T7 — scene-readback calibration: **FIRED**
+
+`shading.debugTerm(4)` writes `(64, 128, 191)/255` into the linear scene RT. The HalfFloat
+readback used for every scene-radiance number below — the *identical* code path — found that
+triple on **75.99 % of the frame** (700 325 px), against a 5 % bar. The next four modal triples
+are its immediate neighbours (`64,127,190` ×12 458, `66,130,192` ×9 574, …), i.e. the dither and
+resolve skirt, not a different value. The instrument is not blind, so the radiance numbers in
+§1.7 are quotable.
+
+### 1.7 (added after the capture) — the scene buffer says the same thing the arithmetic did
+
+Read straight out of PostFX's linear HDR `sceneRT`, before AO, bloom and the grade:
+
 *(filled from `shots/hilite1/report.json`)*
 
 ## 3. The bracket

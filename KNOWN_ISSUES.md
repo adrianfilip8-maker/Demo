@@ -20058,3 +20058,75 @@ The decal material is `DoubleSide` + `transparent` without `forceSinglePass`, so
 twice per frame with one pass fully culled — a wasted draw, not a double-multiply. `Guard.js:1279`
 has the precedent for fixing it. The agent left it alone because it is **unmeasured**, and declined
 to bundle an unmeasured change into a run whose whole value is that everything in it was measured.
+
+## §253 — the "29 px ink line" was never a line: the crease pass was inking the floor
+
+Critic pass 8's ranked ink defect — *"width varies 1 px → 29 px on a single character in one frame,
+and tracks depth-discontinuity magnitude"* — is resolved, and **none of the three mechanisms is
+"the hull is too wide"**. The largest is not a width at all.
+
+### It is an area fill, and its extent is set by how steeply a plane recedes
+
+With `inkStrength = 0` against base, whole frame, null arm 0 px:
+
+```
+courtyard    26.7% of the frame darkened, mean drop 45.9 L
+             largest single connected component 155,228 px = 80% of the mask
+             minimum-chord width  median 10 px   p99 123   max 148
+sly-closeup  23.4%, mean 32.4 L, median chord 42 px, p99 133
+```
+
+A single connected region covering 17% of `courtyard`, darkened by a mean of 46 luma, is not a line
+system. **That is the critic's 29 px.** A minimum-chord metric is what made it legible: a line has a
+small minimum chord *everywhere along it*, and a smear does not — so the same number that reads 2.5
+for an outline reads 123 for a fill, where a median or a dark-pixel count cannot tell them apart.
+
+### The fix was already in the same file, written for a different pass
+
+`slyBackStep`'s `rimPlanar` gate exists because an earlier critic pass measured **this exact
+artefact on the rim**, and the reasoning was written out at the time:
+
+> *"A ground plane running away from a standing camera has an enormous depth gradient: the last few
+> pixels before it meets a wall cover tens of metres, so `zMax - z0` clears any threshold set for
+> silhouettes … The distinction the pass actually wants is **discontinuity**, not steepness, and
+> there is an exact test for it."*
+
+**The ink pass never got that gate**, and its threshold is *finer* than the rim's — 0.030–0.075
+relative against 0.05–0.16 — so it fires on grazing ground more readily than the term the gate was
+written to protect. A diagnosis, a proof and a working remedy sat in the same file for weeks, and
+the defect survived because nobody asked whether the neighbouring pass had the same disease.
+
+The fix is that same second difference of inverse depth, identically zero across any plane at any
+grazing angle under a perspective projection, with **one deliberate difference**: the rim keeps only
+the positive lobe (background falling away behind a silhouette), while ink takes `abs()` — because a
+concave interior fold is an ink line and a convex silhouette is an ink line, and only a *plane* is
+neither. Thresholds are `rimPlanar`'s own measured pair, not new ones, and `edgePlanar[2] = 0`
+restores the old behaviour bit-exactly.
+
+### The depth push, reproduced independently and bounded
+
+§229's finding was re-derived from scratch in plain three arithmetic before anything changed, and
+sharpened (1920×1080, fov 46, `depthPush = 0.0022`):
+
+```
+frame centre   displacement 0.000 px   ink 2.50 / 2.50   mean 2.50
+NDC 0.42                    0.885 px       1.61 / 3.39        2.50
+NDC 1.00                    2.107 px       0.39 / 4.61        2.50
+frame corner                2.418 px       0.08 / 4.92        2.50
+```
+
+**The mean is exactly conserved**, which is why a file whose header is an essay about one width
+never noticed: only the two sides of a single edge, measured separately, show 0.08 against 4.92. And
+the analytic displacement at the staged character is **0.06 px (`sly-closeup`) to 0.64 px
+(`temple`)** — so it is a credible source of the critic's **1 px** end and cannot be the 29 px,
+exactly as §229 insisted when it would have been convenient to close the defect on it.
+
+Its fix is better than the one I proposed: project the pushed vertex separately and copy only its
+`ndc.z` into an otherwise unpushed `gl_Position`, so `xy` and `w` are identical to no push and the
+depth bias is unchanged **for any projection matrix** — including orthographic, where the shipped
+form is depth-dependent in a different way again.
+
+Applied as a string patch in `Outline.js` rather than by editing `toon.glsl.js`, **because that file
+belongs to another agent**, with the patch throwing at module load if its anchor disappears. That is
+the right way to cross an ownership boundary under concurrency: change nothing you do not own, and
+fail loudly rather than silently if the thing you are patching moves.
