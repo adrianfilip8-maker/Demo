@@ -193,7 +193,24 @@ function nemes(bag, { w, browY, topY, faceZ, backZ, rng, lappetDrop, crownKey = 
        Sampling the placed geometry costs one pass over 48 vertices and is exact by
        construction. */
     const env = edgeEnvelope(g, sx);
-    const bandN = Math.max(4, Math.round(drop / (w * 0.095)));
+    /* Pitch is proportional to the headdress — which is right, a nemes's stripes scale with the
+       garment — with an ABSOLUTE FLOOR, because proportional pitch has a latent scale bug and
+       this project has shipped that bug twice already (`MOTES.size`, `sand_ripples`: the same
+       authored number correct at one distance and wrong at another). Screen period is what
+       aliases, and it is set by the piece's distance, not by its proportions.
+
+       Derived at each nemes wearer's own canonical camera. `dunes` is fov 42 at 720p, so
+       px/m = 360 / (d * tan 21 deg) = 937.7 / d, and the avenue sphinxes stand 19-45 m out:
+         sphinx w 1.02, drop 1.30, proportional pitch 0.097 m -> 4.6 px at 20 m, 2.1 px at 45 m
+       Two pixels is below the size at which a band pattern can resolve, so the far half of the
+       avenue would band into shimmer — which is D6's complaint, arriving from the fix for D9's.
+       The floor of 0.19 m puts the same sphinx at 8.7 px near and 3.9 px far.
+
+       It does NOT touch the colossus, deliberately and checkably: its proportional pitch is
+       2.4 * 0.095 = 0.228 m, already above the floor, so PREREG-smiley's G3 is scored on
+       exactly the geometry it was scored on. The floor binds only on pieces smaller than about
+       w 2.0 — the sphinxes, the coffin lid and the fallen head. */
+    const bandN = Math.max(4, Math.round(drop / Math.max(w * 0.095, 0.19)));
     /* A plain hemmed border down the outer edge of each lappet, and it is load-bearing rather
        than decorative: at this camera the cloth's outer arris is close to grazing, so a band
        placed a few centimetres inside it still projects OUTSIDE its silhouette — measured, at
