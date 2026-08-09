@@ -667,8 +667,22 @@ export const TOON_SHADE = /* glsl */ `
 		float hold      = clamp( uShadowHold, 0.0, 1.0 )
 		                * smoothstep( 0.0, max( uShadowHoldKnee, 1e-4 ), albChroma );
 
+		/* The held branch multiplies albShadow, NOT the raw alb, and that is deliberate.
+		 *
+		 * Measured, run 1 (shots/shold, arm A3, which used raw alb): dunes shade saturation went
+		 * 0.419 -> 0.734 against a LIT saturation of 0.665 — i.e. the shade came out MORE
+		 * saturated than the sunlit surface, which is the saturation half of critic pass 2's
+		 * ranked defect ("a redder, more saturated version of the sunlit hue") re-entered from
+		 * the other side. The reference does the opposite: its walkway boards drop 0.466 ->
+		 * 0.142 and Sly's shirt 0.824 -> 0.399.
+		 *
+		 * albShadow is mix(vec3(lumA), alb, 1 + uShadowSat) — a lerp toward a grey. A lerp toward
+		 * ANY grey scales (max-min) and the mid-channel offset by the same factor, so it holds
+		 * hue EXACTLY and scales saturation: 0.825 -> 0.631 on sandstone mid, 0.927 -> 0.649 on
+		 * turquoise. That is "hold hue, drop value and saturation" literally, and it keeps critic
+		 * pass 2's uShadowSat load-bearing instead of bypassing it. */
 		vec3  shadTint  = albShadow * slyShadX;
-		vec3  shadHeld  = alb * slyLum( slyShadX );
+		vec3  shadHeld  = albShadow * slyLum( slyShadX );
 		shadHeld       *= slyLum( shadTint ) / max( slyLum( shadHeld ), 1e-5 );
 		vec3  shadBand  = mix( shadTint, shadHeld, hold );
 
