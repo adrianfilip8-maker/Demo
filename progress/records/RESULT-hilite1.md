@@ -131,12 +131,93 @@ emissive pixels, which is why they move `>1.5` by hundredths of a percent and `p
 `dayAmount` read back as **exactly 1** on all four shots and `uKeyIntensity` as exactly
 `atmoSunIntensity` on the base arm, which is the identity PREREG §3 depends on.
 
-## 3. The bracket
+## 3. The cause the bracket exposed — the daylight cameras are shot INTO the sun
 
-## 4. Verdict against the registered gates
+This was not in the prereg. It is what the failing bracket forced me to go and measure, and it
+is the real finding of this run.
 
-## 5. Forecast vs measurement
+### 3.1 Every canonical daylight camera faces surfaces the key does not reach
 
-## 6. What shipped
+Camera-facing wall N·L (`cameraFacingWallNL`, the same helper `tests/tone.test.mjs` already
+uses for the §214.1 moon table), against the ramp's terminators `termLo 0.14 / termHi 0.52`:
 
-## 7. What did NOT get resolved, and who owns it
+```
+shot         sunEl  sunAz  camFwdAz  wall N·L    ramp level
+hero          22.0  186.0    233.1   -0.6308     0     backlit
+temple        33.0  170.0    256.6   -0.0496     0     backlit
+courtyard     26.0  180.0    278.9   +0.1393     0     below termLo
+sly-closeup   21.0  186.7    296.6   +0.3168     0.5
+dunes         15.0  191.0    247.0   -0.5400     0     backlit
+traversal     25.0  181.5    243.4   -0.4264     0     backlit
+combat        29.5  175.0    220.2   -0.6129     0     backlit
+```
+
+**Not one daylight shot has a camera-facing vertical surface at full key.** §214.1 measured
+exactly this for the two moon-keyed shots and concluded it explained `night`; nobody had run it
+on the daylight ones.
+
+### 3.2 Confirmed against the real geometry, not just the wall model
+
+`scratchpad/ndlmap.mjs` raycasts each shot camera through ARCHITECTURE + PROPS on a pixel grid,
+takes each hit's world normal and evaluates **ToonMaterial's own `slyRamp`**. Calibration arm
+(must fire): the same `slyRamp` must return exactly 1 at N·L = 1, exactly 0 at N·L = −1 and
+0.500 at N·L = 0.33 — **it did**, so the histogram is reading N·L and not a constant.
+
+Share of *visible geometry*, by ramp level:
+
+| shot | ramp = 0 (no key at all) | ramp ≈ 0.5 | ramp = 1 | mean ramp |
+|---|---|---|---|---|
+| hero | **72.3 %** | 27.3 % | **0.4 %** | 0.140 |
+| temple | 54.8 % | 23.8 % | 21.4 % | 0.311 |
+| courtyard | 60.1 % | 23.8 % | 16.1 % | 0.279 |
+| sly-closeup | 32.3 % | 45.0 % | 22.7 % | 0.452 |
+| dunes | **85.2 %** | 13.1 % | **1.7 %** | 0.080 |
+| traversal | **79.6 %** | 19.6 % | **0.8 %** | 0.106 |
+| combat | 66.7 % | 33.3 % | **0.1 %** | 0.166 |
+
+**In `hero`, 0.4 % of what the camera can see is at full key and 72.3 % receives no key light
+at all. In `dunes` — the shot whose §7.2 job is terrain and atmosphere — it is 1.7 % and 85.2 %.**
+
+That is the whole answer. The key term is multiplied by a mean of 0.08–0.45 before it reaches
+the frame, and the two terms that *do* light these surfaces — the daylight shadow light (§1.6,
+a constant pinned at its cap) and the fill (`uAmbIntensity`, computed from the un-boosted key) —
+are both independent of sun intensity. **These frames are not made of sunlight.**
+
+### 3.3 There IS an azimuth that fixes it, and it is 240° round
+
+Same instrument, sweeping an offset onto the shipped sun azimuth (mean visible ramp, and the
+share at full key):
+
+| shot | shipped | +200° | **+240°** | +280° |
+|---|---|---|---|---|
+| hero | 0.138 / 0.5 % | 0.673 / 40.5 % | **0.720 / 44.7 %** | 0.532 / 32.3 % |
+| courtyard | 0.260 / 15.1 % | 0.454 / 13.1 % | **0.704 / 56.9 %** | 0.722 / 56.3 % |
+| temple | 0.308 / 20.8 % | 0.383 / 27.3 % | **0.611 / 52.4 %** | 0.613 / 55.2 % |
+| sly-closeup | 0.443 / 21.7 % | 0.377 / 1.2 % | **0.538 / 31.5 %** | 0.644 / 32.2 % |
+| dunes | 0.080 / 1.7 % | 0.635 / 29.3 % | **0.837 / 68.7 %** | 0.748 / 64.1 % |
+| traversal | 0.106 / 0.8 % | 0.520 / 15.4 % | **0.791 / 62.7 %** | 0.732 / 61.3 % |
+| combat | 0.166 / 0.1 % | 0.626 / 27.7 % | **0.713 / 45.6 %** | 0.563 / 39.4 % |
+
+**+240° is a simultaneous optimum or near-optimum for all seven.** It takes the share of
+visible surface at full key from 0.1–21.7 % to 31.5–68.7 %. Smaller offsets do not work — the
++40/+80/+120 arms are at or *below* the shipped value on `courtyard` and `temple`, which is why
+"nudge the sun" is not a fix and the whole sweep had to be run.
+
+**This is NOT shipped, and shipping it blind would be the mistake this project keeps paying
+for.** `SUN_AZIMUTH` is in my file, but +240° turns the golden-hour track from a western sunset
+into an eastern sunrise: every cast shadow in the game reverses, `Sky.js`'s warm horizon band
+and Mie lobe move to the other side of the dome, `Lighting`'s shaft geometry re-derives, and the
+§8.1 pyramid-shadow and peristyle-blade analyses in `Lighting.TUNE` are all written against a
+westering sun. It is a lead-level art decision with a whole-game blast radius and it needs a
+frame verdict, not a ramp histogram. What is established here is the *arithmetic*: the
+composition is the cause, and this is the size of the prize.
+
+## 4. The bracket
+
+## 5. Verdict against the registered gates
+
+## 6. Forecast vs measurement
+
+## 7. What shipped
+
+## 8. What did NOT get resolved, and who owns it
