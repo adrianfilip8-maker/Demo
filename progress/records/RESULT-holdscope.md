@@ -43,6 +43,34 @@ instrument until it reproduces the original, so I1 re-scores two frames the orig
 scored. Measured before any candidate frame existed, across fourteen statistics on two frames:
 worst disagreement **0.0023** (`interior` warm %), eleven of fourteen exactly 0.
 
+### 1.1 The moved staged player (§272), and why it cannot reach any number in this run
+
+The hero lane moved the staged character in `hero` and `courtyard` with no camera moving, and that
+has already VOIDed one lane today. Three separate reasons it cannot reach a guard here, each
+checked rather than assumed:
+
+- **Every arm is one boot from one tree.** A0, A1, A2, A3, A4 and A5 on a shot are consecutive
+  renders in the same process, so the subject is in the same place in all of them. The provenance
+  digest is over `src/` at boot and again at release, so a `Shots.js` commit landing mid-run VOIDs
+  the run instead of biasing it.
+- **Nothing here is gated against `shots/r9`.** Every delta bar in the seal is against the same-run
+  A0. The stale r9 numbers appear in this file only as context, and once — to establish that
+  `combat`'s absolute cool bar was unreachable at base — which is a statement about the *base*, not
+  about a candidate.
+- **The fan cannot see him.** The enclosure probe casts five rays UP from the camera; the character
+  is below it and is not in the collision set the probe walks. The offline cross-instrument
+  (`fanpredict`) builds Architecture + Props with no character at all and reproduces the same
+  question, so a moved figure has no path into an enclosure reading.
+
+The one thing his move *can* touch is a frame-wide population denominator on `hero` — and since
+both sides of every comparison are the same boot, it cancels.
+
+**`dt = 0` and event-driven FX.** §251's freeze also removes event-driven effects from the frame.
+Stated as a scope limit rather than discovered later: nothing measured here is event-driven. The
+shade band is a per-pixel function of albedo and the shadow term on static surfaces, and the
+statistics are frame-wide populations and one ROI on masonry and sand. An FX-dependent claim would
+need `dt > 0` and a different seal.
+
 ## 2. What the fan reads, derived offline while the capture was fourth in the queue
 
 `tools/fanpredict.mjs` casts the same five directions at Architecture + Props triangles instead of
