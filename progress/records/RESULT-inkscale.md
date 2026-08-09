@@ -160,122 +160,106 @@ floor is not present in this instrument.
 
 ---
 
-## 6. Before/after — measured at 640×360, all three calibrations firing
+## 6. Before/after — measured, and scored against every registered threshold
 
-The candidate sweep did land, after a 2 h 30 m queue. This block is `inkw-after/`, 640×360, four
-shots, nine arms each, one boot. **`legacy` and `legacy_nohull` restore the pre-fix renderer inside
-the same boot** — `uThickness := 2.5` at every resolution, the crease radius divided by the
-resolution scale recovered as `appliedHullPx / 2.5`, and `edgePlanar[2] := 0` — all read back off
-the live uniforms rather than recomputed in the runner. So every row below is a same-boot A/B, not a
-cross-commit pair, and §193's cross-boot floor does not apply to it.
+Both candidate blocks landed after a 2 h 30 m queue: `inkw-after/`, 640×360 (four shots) and
+1280×720 (`courtyard`, `sly-closeup`), nine arms each, one boot per resolution.
 
-### Calibration — all three fire, in all four shots
+**`legacy` and `legacy_nohull` restore the pre-fix renderer inside the same boot** — `uThickness :=
+2.5` at every resolution, the crease radius divided by the resolution scale recovered as
+`appliedHullPx / 2.5`, and `edgePlanar[2] := 0` — all read back off the live uniforms rather than
+recomputed in the runner. Every before/after pair below is therefore a same-boot A/B with a null
+arm, not a cross-commit comparison, and §193's cross-boot floor does not apply.
 
-| shot | `null` | `nochar` | `hull2x` (band median, 2× vs 1×) |
-|---|---|---|---|
-| courtyard | **0 px**, max 0.00 L | 274 px, box 23×22 | 2 vs 1 — PASS |
-| hero | **0 px**, max 0.00 L | 2 219 px, box 61×67 | 3 vs 1 — PASS |
-| combat | **0 px**, max 0.00 L | 11 888 px, box 199×160 | 3 vs 1 — PASS |
-| sly-closeup | **0 px**, max 0.00 L | 28 000 px, box 256×270 | 3 vs 1 — PASS |
+### The scorecard, including three failures
 
-### The hull halved, which is mechanism 3 rendered
-
-Hull band minimum chord, whole frame, pre-fix arm against candidate in the same boot. The model says
-2.50 px → 0.90 px at 360 rows (the clamp floor binds); the estimator's integer floor compresses that:
-
-| shot | hull LEGACY med / p99 / n | hull CANDIDATE med / p99 / n |
+| | criterion | result |
 |---|---|---|
-| courtyard | **2** / 6 / 3 981 | **1** / 4 / 2 511 |
-| hero | **3** / 7 / 1 762 | **1** / 5 / 1 189 |
-| combat | **3** / 6 / 3 585 | **1** / 7 / 2 466 |
-| sly-closeup | **3** / 7 / 6 970 | **1** / 4 / 4 641 |
+| **P1** | hull `Wmean(720)/Wmean(360)` ≥ 1.25, baseline ≈ 1.00 | **PASS** — legacy **1.061**, candidate **1.606** |
+| **P2** | ink `p99/med` on subject falls ≥ 20 % | **PASS** — 4.0 → 2.0 (`courtyard`), 12.4 → 3.5 (`sly-closeup`) |
+| **P3a** | ink is a LINE: median ≤ 4 px, p99 ≤ 14 | **PASS** — all six shot/resolution pairs |
+| **P3b** | ink not deleted | **PASS** — 32–41 % of the pre-fix mask survives frame-wide |
+| **P3c** | largest component ≤ 25 % of the ≥ 15 L mask | **FAIL in `sly-closeup`** — 39 % at 360, **56 %** at 720 |
+| **P4** | hull outer-ring `p95/p05` falls **and** `p05` rises | **FAIL as registered** — spread falls 4 → 3, `p05` stays 1 |
+| **P5** | `nochar` moves > 200 px | **PASS** — 274 to 110 764 px, every shot |
+| **P6** | `hull2x` widens the hull median ≥ 1.6× | **PASS at 640×360** (2.0–3.0×), **FAIL at 1280×720** (1.50×, both shots) |
+| **P8** | tests green | 381 / 382; the one failure is §232's deliberately stale texture cache |
 
-### What the planarity gate removed was a fill; what it left is a line
+### P1 — the headline, and the before arm behaving exactly as predicted
 
-"Removed" is pixels the candidate made ≥ 15 L *lighter* than the pre-fix renderer — the ink the gate
-withdrew. Its minimum chord is the whole argument: withdrawing a line would leave thousands of short
-components with small chords.
+Hull band, mean minimum chord, whole frame:
 
-| shot | removed px | removed chord med / p99 / max | **remaining ink** med / p99 / max | remaining blob share |
+| shot | LEGACY 360 → 720 | ratio | CANDIDATE 360 → 720 | ratio |
 |---|---|---|---|---|
-| courtyard | 63 288 | **4 / 40 / 51** | **2 / 6 / 13** | 19 % |
-| hero | 58 177 | **4 / 39 / 51** | **1 / 5 / 10** | 10 % |
-| combat | 85 836 | **19 / 78 / 93** | **2 / 6 / 11** | 22 % |
-| sly-closeup | 101 744 | **31 / 103 / 111** | **2 / 6 / 10** | **39 %** |
+| courtyard | 2.34 → 2.55 | **1.090** | 1.39 → 2.01 | **1.446** |
+| sly-closeup | 2.79 → 2.92 | **1.047** | 1.42 → 2.39 | **1.683** |
+| **pooled** | | **1.061** | | **1.606** |
 
-Whole-frame: 86 404 / 85 635 / 101 339 / 121 310 px moved, of which 74 857 / 80 810 / 94 340 /
-114 624 got **lighter**, mean +39.8 / +34.6 / +43.3 / +38.0 L.
+The pre-fix arm reads **1.06** — a device-pixel constant, exactly as the source says and inside the
+0.85–1.20 band I registered as the condition for trusting the instrument at all. The candidate reads
+**1.61** against a nominal 1.85 (1.667 px / 0.9 px), the shortfall being antialiasing and the
+estimator's integer floor. Ink width now scales with screen size; before, it did not.
 
-### Against the registered thresholds
+### P6 — the calibration that failed, and what it costs
 
-- **P3a — the ink is a LINE** (median ≤ 4 px, p99 ≤ 14). Median 1–2, p99 5–6, max 10–13.
-  **PASS in all four shots**, against a pre-fix 720p control of median 10 / p99 123 / max 148.
-- **P3b — the ink still exists** (not deleted). 28 069 / 17 418 / 19 919 / 19 362 px of ink remain.
-  **PASS.** The registered ratio form is not computable — the pre-fix 640×360 control is the block
-  that came back black — so this is the weaker "non-empty and line-shaped" reading, and it is
-  labelled as such rather than quoted as the ratio I registered.
-- **P3c — no blob** (largest component ≤ 25 % of the ≥ 15 L mask). 19 % / 10 % / 22 % / **39 %**.
-  **FAILS in `sly-closeup`.** Stated rather than explained away: at 640×360 he is 256×270 px of a
-  640×360 frame and his silhouette ink is one connected loop, which is a legitimate large component
-  — but that is a reading I formed *after* seeing the number, so it is a hypothesis for the 1280×720
-  block to test, not a pass. Three of four shots pass; one does not.
-- **P1 — width scales with screen size.** Needs the 1280×720 block, which acquired the lock at
-  02:47 and is running as this is written. Not yet computable.
-- **P2, P4.** Same: they compare against the 1280×720 candidate arms.
+`hull2x` doubles a known input and requires the output to follow:
 
----
+| resolution | shot | median | mean | band pixels |
+|---|---|---|---|---|
+| 640×360 | courtyard | 1 → 2 (**2.00×**) | 1.39 → 2.06 | 2 511 → 4 058 |
+| 640×360 | hero | 1 → 3 (**3.00×**) | 1.59 → 2.72 | 1 189 → 1 871 |
+| 640×360 | combat | 1 → 3 (**3.00×**) | 1.59 → 4.43 | 2 466 → 4 776 |
+| 640×360 | sly-closeup | 1 → 3 (**3.00×**) | 1.42 → 2.83 | 4 641 → 7 886 |
+| 1280×720 | courtyard | 2 → 3 (**1.50×**) | 2.01 → 3.19 | 7 818 → 12 063 |
+| 1280×720 | sly-closeup | 2 → 3 (**1.50×**) | 2.39 → 4.12 | 15 707 → 24 294 |
 
-## 6b. What was NOT measured, at the time of writing
+**By the rule I registered — median, ≥ 1.6× — this FAILS at 1280×720 in both shots, so P1's 720-row
+half rests on an instrument that failed its own width calibration at that resolution.** The arm is
+plainly not dead (the band's pixel count grows by 55 % and 55 %, the mean by 1.59× and 1.72×), and
+an integer-valued median cannot express a 1.667 → 3.33 px change as anything but 2 → 3. But that is
+a reading I formed **after** seeing the number, and §141.1 is explicit that re-deriving a criterion
+afterwards does not repair it. It is a failure. What I would register next time is the mean.
 
-The 640×360 block is in §6. The **1280×720** block (`--shots courtyard,sly-closeup`, pid 13669)
-acquired the lock at 02:47 after a 2 h 30 m wait and is still running, so P1, P2 and P4 — every
-criterion that needs the critic's own resolution — are **not yet computable**.
+One thing does argue the absolute scale is sound, and it was in the design rather than invented now:
+the `legacy` arm feeds the instrument a **known 2.5 px** hull and it measures **2.34 / 2.79 at 360
+rows and 2.55 / 2.92 at 720 rows**. The instrument reads absolute width correctly at both
+resolutions; what it cannot resolve is a *ratio* between two widths that both quantise to small
+integers.
 
-So of the three mechanisms:
+### P4 — below the instrument's resolution, and said so rather than spun
 
-| mechanism | before | after | status |
-|---|---|---|---|
-| 1. crease pass fills grazing planes | **measured** (§2, null arm 0 px) | **measured at 640×360** (§6) | **P3a/P3b pass, P3c fails in 1 of 4** |
-| 2. depth push displaces the hull | **measured analytically, exactly** (§3) | **measured analytically, exactly** | **closed** |
-| 3. ink width is resolution-invariant | **measured** (§4, and the hull LEGACY arm in §6) | **measured at 640×360**; the 720 : 360 ratio still pending | **half closed** |
+The depth-push displacement at `courtyard`'s staged character is **0.46 px** analytically. The chord
+estimator is integer-valued, so `p05` is 1 in both arms and cannot fall further. The outer-ring
+spread does fall (4 → 3), but the registered conjunction requires `p05` to rise and it does not.
+**P4 does not pass.** Mechanism 2's evidence is the arithmetic and the unit test, not this.
 
-**Mechanism 2 is closed without a capture and needs none.** It is exact arithmetic on a projection
-matrix, reproduced twice independently, and it is now a unit test that fails if either half stops
-being true: the shipped form is *required* to displace 2.107 px at NDC 1.0 and the replacement is
-*required* to displace < 1e-6 px while leaving `ndc.z` equal to within 1e-6, under perspective and
-orthographic projections alike. A rendered frame would add nothing an assertion does not already
-carry.
+### Mechanism 1 — what came out was a fill, what stayed is a line
 
-**Mechanism 3 is closed in code and unrendered.** `inkPixels` is locked to a constant fraction of
-frame height across 540–2160 rows, with the shipped constant-px model required to fail the same test
-at a 4.00× spread. What is *not* measured is P1 — that the rendered hull band's mean minimum chord
-actually follows that ratio between 720 and 360 rows. The two queued blocks exist to answer exactly
-that and nothing else.
+"Removed" is pixels the candidate made ≥ 15 L *lighter* than the pre-fix renderer in the same boot —
+the ink the planarity gate withdrew. The minimum chord of what left, against the minimum chord of
+what stayed, is the whole argument:
 
-**Mechanism 1's remedy is now measured at one resolution and it holds, with one registered failure.**
-P3b — the fear that the gate takes the architecture's ink with the floor fill — did not happen:
-17 000–28 000 px of ink survive in every shot and what was withdrawn has a p99 chord of 39–103 px
-against a survivor p99 of 5–6 px. P3c fails in `sly-closeup` at 39 % against a registered 25 %, and
-that is recorded as a failure, not as a footnote.
+| shot | res | removed px | removed chord med / p99 / max | **remaining ink** med / p99 / max | blob share |
+|---|---|---|---|---|---|
+| courtyard | 360 | 63 288 | **4 / 40 / 51** | **2 / 6 / 13** | 19 % |
+| hero | 360 | 58 177 | **4 / 39 / 51** | **1 / 5 / 10** | 10 % |
+| combat | 360 | 85 836 | **19 / 78 / 93** | **2 / 6 / 11** | 22 % |
+| sly-closeup | 360 | 101 744 | **31 / 103 / 111** | **2 / 6 / 10** | **39 %** |
+| courtyard | 720 | 130 816 | **5 / 43 / 61** | **3 / 8 / 19** | 23 % |
+| sly-closeup | 720 | 116 166 | **13 / 55 / 94** | **4 / 13 / 20** | **56 %** |
 
-It ships enabled, and the reasoning is stated so it can be overruled cheaply:
+Against the pre-fix control at 1280×720 — median 10 / p99 123 / max 148 (`courtyard`), median 42 /
+p99 133 (`sly-closeup`) — the ink has gone from a shape with 123 px chords to one with 8 px chords,
+and P3b's registered fear did not materialise: 101 039 and 69 966 px of ink survive, 41 % and 32 %
+of the pre-fix masks.
 
-- the state it replaces is **measured and definitely bad** — a 46-luma darkening over 26.7 % of
-  `courtyard`, 80 % of it one connected blob;
-- the remedy is not a new idea with a new number: it is the same test, on the same buffer, at radii
-  of the same order, with `rimPlanar`'s own six-shot-measured thresholds, applied to a pass whose
-  threshold is *finer* than the one those thresholds were measured for;
-- **the revert is one number.** `TUNE.edgePlanar[2] = 0` collapses the gate's `mix` to 1.0 and
-  restores the previous behaviour bit-exactly. No code change, no rebuild of reasoning.
-
-If the queued blocks land for whoever reads this next: `node progress/records/inkw.mjs --analyse
-inkw-after --shots courtyard,sly-closeup --res 1280x720` prints every registered criterion, and the
-same analyser over `inkw-before` prints the control, so the two cannot go through different code.
-The candidate boots carry `legacy`/`legacy_nohull` arms that restore the pre-fix renderer *inside the
-same boot* — read back off the live uniforms, not recomputed — so the comparison is a same-boot A/B
-with a null arm rather than a cross-commit pair.
-
----
+**P3c fails in `sly-closeup`, and it got worse, not better: 23 % → 56 %.** Recorded as a failure.
+The two metrics disagree on that frame — the chord says line (median 4, p99 13, max 20) and the
+connectivity says one component of 32 242 px — and the reading that a character filling the frame
+has a silhouette that is legitimately one connected thin network is a hypothesis I formed after
+seeing the number, not a defence. If the two are ever going to disagree it is on the frame where the
+subject covers 514×538 of 1280×720, and P3c was the weaker proxy of the two; but I registered it,
+and it failed.
 
 ## 7. What was deliberately not changed
 

@@ -20248,16 +20248,53 @@ uniforms** rather than arithmetic re-implemented in the runner — so the before
 A/B with a null, and the runner cannot disagree with the shipped code about what the shipped code
 does.
 
-### What is still unmeasured, said plainly
+### Measured: ink width now scales with the frame, and the fill is gone
 
-The candidate sweep never got the capture lock — two blocks queued behind a run holding it for over
-two hours. So mechanism 3's *rendered* proof (P1: the hull band's mean chord follows the 720:360
-ratio) and mechanism 1's remedy (P3a/P3b/P3c: that the planarity gate leaves a line rather than
-deleting the ink) are **both untested**. The gate ships enabled because the state it replaces is
-measured and definitely bad and the revert is one number, `TUNE.edgePlanar[2] = 0`, which collapses
-the mix to 1.0 and restores the old behaviour bit-exactly. Read §253's remedy sceptically until
-those blocks land; `inkw.mjs --analyse` will score every registered criterion over frames on disk
-without taking the lock again.
+Both candidate blocks landed after a 2 h 30 m queue. The `legacy`/`legacy_nohull` arms put the
+pre-fix renderer in the **same boot** as the candidate, so these are same-boot A/Bs with a null arm
+at 0 px, not cross-commit pairs.
+
+Hull band, mean minimum chord, whole frame:
+
+```
+                LEGACY 360 -> 720   ratio      CANDIDATE 360 -> 720   ratio
+courtyard          2.34    2.55     1.090          1.39    2.01      1.446
+sly-closeup        2.79    2.92     1.047          1.42    2.39      1.683
+pooled                              1.061                            1.606
+```
+
+The pre-fix arm reads **1.06** — a device-pixel constant, exactly as the source says — and the
+candidate **1.61** against a nominal 1.85. The defect is real, the fix moves the number, and the
+before arm proves the instrument was not simply reporting whatever it was shown.
+
+The planarity gate's effect, measured as what it *withdrew* against what it *left*, by minimum
+chord: removed med 4-31 / p99 39-103 / max 51-111; remaining med 1-4 / p99 5-13 / max 10-20. A fill
+came out and a line stayed in, and 32-41 % of the pre-fix ink mask survives — the registered fear
+that the gate would take the architecture's ink with the floor did not happen.
+
+### Three registered criteria failed, and two of them are about this instrument
+
+**P6 — the `hull2x` width calibration FAILS at 1280x720** (median 2 -> 3 = 1.50x against a
+registered 1.60x), while passing at 640x360 in all four shots (2.0-3.0x). So P1's 720-row half sits
+on an instrument that failed its own width calibration at that resolution. The arm is not dead — the
+band's pixel count grows 55 % and its mean 1.59-1.72x — and an integer-valued median cannot express
+1.667 -> 3.33 px as anything but 2 -> 3. **That reading came after the number, so it repairs
+nothing.** The lesson is narrower and more useful than "the arm was fine": *a ratio threshold on an
+integer-valued statistic is untestable once the quantity is a few pixels wide.* Register the mean.
+
+**P4 fails for the same reason.** The depth-push displacement at `courtyard`'s character is 0.46 px
+analytically; the estimator is integer-valued, so `p05` is 1 in both arms and the registered
+conjunction ("spread falls AND p05 rises") cannot be satisfied at that magnitude.
+
+**P3c fails in `sly-closeup` and got worse — 23 % -> 56 %.** The chord metric says line (median 4,
+p99 13, max 20) and the connectivity metric says one component of 32,242 px. On the one frame where
+the subject covers 514x538 of 1280x720 they disagree, and the proxy I registered is the weaker of
+the two — but it failed, and it is recorded as failed.
+
+One control does argue the absolute scale is sound, and it was in the design rather than invented
+afterwards: `legacy` feeds the instrument a **known 2.5 px** hull and it measures 2.34/2.79 at 360
+rows and 2.55/2.92 at 720. It reads absolute width correctly; what it cannot resolve is a ratio
+between two widths that both quantise to small integers.
 
 ## §255 — every 640×360 frame was black, and the null arm PASSED, because black equals black
 
