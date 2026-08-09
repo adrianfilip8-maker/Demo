@@ -22258,3 +22258,131 @@ recipes (weakest `column_papyrus` −0.0774 → −0.0433).
 **A quantiser is not automatically a cel look.** That is the whole content of this subsection, and
 it is the kind of thing an offline sweep catches for the price of eight builds and a capture run
 would have charged an hour of FIFO for.
+
+
+---
+
+## §272 — critic 9's D4 is two defects and one of them is worse than framing: `hero` was staging the character **3.80 m above the surface under his own xz**. And D11's "the reference mask is pale" is refuted by a second Sly head already in this repo
+
+Seal: `progress/records/PREREG-heroread.md`, committed at `310bef2` before any candidate frame
+existed. Scorer: `tools/heroread.mjs`. Results: `progress/records/RESULT-heroread.md`.
+
+### 1. LOUD: two canonical shots changed their STAGED PLAYER. No camera moved.
+
+`hero` and `courtyard` carry new `player.pos` and `player.yaw` as of `e2991b2`. On all twelve
+shots `pos`, `target`, `fov`, `tod` and `roll` are byte-identical to what they were.
+
+| | `hero` | `courtyard` |
+|---|---|---|
+| player.pos | `[2.2, 9.0, 8.4]` → `[4.0, 8.99, 13.2]` | `[-6.6, 5.12, 12.4]` → `[2.4, 0.02, 26.4]` |
+| player.yaw | 5.72 → 5.889 | 5.08 → 5.341 |
+
+**If you hold a before/after on either frame, your base arm is stale.** The subject moved inside
+an unmoved set, so architecture and terrain pixels are unchanged except where he now covers them
+— but his silhouette and his cast shadow are somewhere else. `PREREG-shadowhold`'s `hero` ROI
+`(930, 500, 1275, 715)` does not contain the new figure (he occupies roughly x 380–500,
+y 190–395); the shadow was not checked against it and that is stated rather than assumed.
+
+One consequence outside this lane, declared rather than absorbed: `courtyard` **left**
+`KNOWN_CLAMPED` in `tests/grounding.test.mjs`. At 29.4 m its 4.5 cm contact radius projected
+outside `[minPx, maxPx]`; at 16.4 m it resolves, so that shot samples the world radius the knob
+names for the first time.
+
+### 2. The measurement, and the reference band derived rather than quoted
+
+Ten canonical frames from `shots/r9`, 1280×720, 10 px ruler overlay, crown row to lowest boot
+row, ink hull in, cane out; ±4 px by eye. The six rows critic 9 also measured agree with his to
+within 6 px, which is this instrument's calibration:
+
+`courtyard` **5.7 %** · `night` 12.5 % · `temple` 12.4 % · `hero` **15.7 %** · `interior` 20.8 % ·
+`dunes` 21.8 % · `traversal` 21.8 % · `combat` **34.0 %** · `sly-perch` ~69 % · `sly-closeup` 72.1 %.
+
+Same ruler on the reference (`sly3-venice.jpg`, 647 rows): cap-ear tips y 333 to the extended
+boot y 532 = **30.8 %**; to the tail tip at y 555 = **34.3 %**. Critic 9's 34.0 % is the
+tail-inclusive figure, so the band is **30–34 %** — and `combat` is already in it, which is worth
+saying because "the character is too small" is not true of the whole set.
+
+**No figure height is assumed anywhere in this work.** Each shot's is *derived* as
+`r9_px ÷ (one metre projected through that shot's own camera at the shipped stand)`: 1.466 m for
+`perch_idle`, 1.671 m for `run`. Every predicted pixel figure is that number carried through the
+same two-point projection at the candidate stand.
+
+### 3. The finding nobody had: the hero of the money shot is standing on nothing
+
+A downward ray at `hero`'s staged xz (2.2, 8.4) against Architecture + Props finds
+`arch:court:paving_courtyard` at **y 5.20**. The gilded architrave at y 9.0 spans only
+**x 2.75–4.25** at that z, and he stood at x 2.2. He was **3.80 m in the air**, and
+`shots/r9/hero.png` at 7× shows it: the boot tip ends over a cornice that recedes behind it, no
+contact, no contact shadow.
+
+Every projection check in this repo passed on that staging, which is §7's own correction
+happening again in a place it had not been looked for — `charview` says "inside the frustum",
+`charvis` says "not behind a wall", and **neither of them asks what is underneath him**. The
+probe that found it is eleven lines of downward `rayTri` and it should have existed years of
+commits ago.
+
+### 4. The lever is the subject, not the lens, and that was a deliberate choice
+
+Moving a camera moves every other agent's baseline for the whole frame. Moving the staged player
+moves his own footprint and his shadow and nothing else. So both fixes are player-only:
+
+- `hero` → (4.0, **8.99**, 13.2): on the architrave at the *measured* deck height rather than
+  the nominal 9.0 (§7's `courtyard` lesson), 6.5 m from the lens instead of 11.1, **100 % of 498
+  `charvis` samples visible**, predicted 113 px → 202 px = 15.7 % → **28.1 %**.
+  Yaw 5.72 → 5.889 is a compromise and is stated as one: `view − sun` is fixed by the stand, and
+  moving toward this camera takes that separation from 133° to 147°, so **no yaw puts both inside
+  the 20–70° band**. 5.889 splits the excess — view 73, sun −73, each 3.4° out. The alternative
+  was keeping sun at −64 and letting view reach 87°, i.e. dead profile.
+- `courtyard` → (2.4, 0.02, 26.4): on `paving:court` at the measured height, **100 % of 498
+  samples**, predicted 41 px → 77 px = 5.7 % → **10.7 %**, and yaw 5.08 → 5.341 takes view/sun
+  from 77 / −21 to **36 / −36**, inside the band for the first time. The position recorded in
+  `Shots.js` as the ready-made answer, `(-3.5, 0, 27)`, was measured and **rejected**: 91 %
+  visible, floats 4 cm, and it lands the figure 50 px from the near-black guard that critic 9
+  says a viewer confuses with the protagonist.
+
+`night` and `temple` are also under the band and are deliberately not touched: `night`'s defect is
+D8's duotone rather than scale, and `temple`'s camera pitches *up*, so moving the subject toward
+it pushes his feet off the bottom edge. Neither is fixable with this lever.
+
+### 5. D11: the nose is real, and the pale mask is not
+
+- **"There is no black nose" — CONFIRMED.** 146 head triangles form the muzzle-tip blob; their UV
+  footprint is 5 098 texels and the artist's mean colour there is **(89, 81, 74)**, plain fur. The
+  nose *geometry* exists and was never painted.
+- **"The reference mask is a broad pale bandit band across the eyes" — REFUTED, and acting on it
+  would have inverted the character.** The pale band critic 9 measured in `sly3-venice.jpg`
+  (L 85–145 against L 45–70 around it) is Sly's **head fur**, seen from behind. The decisive
+  evidence is already in this repo and nobody had opened it: `public/assets/sly-godot/sly-head.png`,
+  a different artist's Sly imported at owner instruction, paints a **near-neutral pale head**
+  (mean (117.9, 117.5, 120.2), HSV sat 0.043, R/B 0.981) carrying a **solid black** bandit mask
+  joined across the bridge, a small **black nose dot**, and a thin dark mouth line.
+  `src/player/SlyModel.js` reached the same conclusion from the same reference and authored "the
+  black domino mask". I built the pale-mask version first, rendered it, and threw it away.
+- **The mask cannot be darkened, so the "spectacles" read is not the mask's defect.** Its albedo is
+  already `0x000000`; it renders at L 55–70 because the frame's black point is lifted, which is
+  critic 9's own D5 and §270's lane. What IS wrong is the head **fur**: mean (135.2, 123.2, 111.3),
+  HSV sat **0.182**, R/B **1.215** over the 99 762 texels the mesh samples — a warm brown at a
+  median luma within 3 L of the neutral reference. A black mask on a pale neutral head is a
+  graphic shape; on a warm mid-brown head it has little separation from its own sockets and
+  collapses into two rings. **The defect is a chroma error on the fur, not a value error on the
+  mask**, and the two have opposite fixes.
+
+`tools/slyface.mjs` derives `sly_head_fix.png`: nose blob → ink, fur white-balanced with the tilt
+solved off the Godot head. Albedo result: sat 0.182 → **0.031**, R/B 1.215 → **0.981**, median
+luma drift **0.0**. Drawn black untouched. `?face=raw` restores the supplied texture and is the
+calibration lever.
+
+### 6. Two things this work is careful NOT to claim
+
+- **No ink claim, in either direction.** Ink width is specified in device pixels at a reference
+  frame height (§255), so making the figure larger *lowers* the ink-to-figure ratio. A framing
+  change and an ink change are not distinguishable by eye and this one is not offered as either.
+- **The hands are not a glove defect.** At 6× on `sly-perch` they ARE blue gloves with gold cuffs;
+  they render violet because of D2's costume-hue swing, and the "starfish with four to five long
+  tapered claws" read is splayed fingers with per-finger ink — a hand POSE. Reported, not fixed.
+
+### 7. Results
+
+Pending — `tools/heroread.mjs` is in the FIFO. This section is written before its verdict so the
+number is claimed before it is cited in source (the lead's rule, learnt the expensive way: §271
+was taken by the textures lane while two `Shots.js` comments already pointed at it).
