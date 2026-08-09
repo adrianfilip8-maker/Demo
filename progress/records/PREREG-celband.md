@@ -245,6 +245,23 @@ Forecast, recorded now so it can be scored: `interior` improves *more* than `her
 noise source (R3 moved 32.0 → 39.8 against 20.5 → 63.3 elsewhere), which is what "the remaining
 noise is in the textures" predicts.
 
+## 7b. AMENDMENT 2 — the armTook predicate, registered before capture
+
+§46 and §255 are both the same failure: an instrument that cannot distinguish its own two inputs.
+The arms here are environment variables, which are invisible in a PNG and identical in the SHA, so
+each arm must carry a signature into `report.json`. Two already exist and neither needs new code:
+
+1. `Textures.init()` warns `textures: A/B CONTROL BUILD — treatments disabled: <list>` whenever
+   `TEX_AB()` is non-empty. So **A1 must carry `celbandon` in `warnings`, A2 must carry
+   `celbandflat`, and A0 must carry no such line at all.**
+2. The prewarm warning reports `N baked / M generated`. All three arms run
+   `VITE_TEX_BAKED=off`, so **all three must read `0 baked / 23 generated`.** An arm that reports
+   `23 baked` read the committed blob and did not run the recipe at all — its texture arm never
+   happened, whatever its environment said.
+
+**Both must hold on all three arms or the run is VOID**, ahead of C1. A capture whose arms cannot
+be told apart afterwards is not three arms.
+
 ## 8. Records
 
 `progress/records/RESULT-celband.md`, `shots/celband/{a0,a1,a2}/`, `logs/celband.log`.
