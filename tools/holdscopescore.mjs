@@ -318,14 +318,19 @@ for (const [k, a, b, d] of i1rows) console.log(`  ${String(k).padEnd(20)} py ${f
 if (!i1rows.length) console.log('  shots/shold/ not on this machine — I1 is VOID');
 
 console.log('\n── frame statistics, A0 -> A4 (and A3 global, where captured) ─────────────────');
-console.log('  shot          arm         dh      Vr     litS   shaS   warm%   cool%   dark%   sha');
+/* `neut%` is reported because it is the axis nobody has looked at and it is large: the reference
+   frame is 49.83% neutral (sat <= 0.15) against our daylight frames' ~17%, so "warm vs cool" is a
+   split of half the reference's pixels and five sixths of ours. Not gated — no bar for it was
+   registered and one invented here would be the mis-derivation §141.1 forbids. */
+console.log('  shot          arm         dh      Vr     litS   shaS   warm%   cool%   neut%   dark%   sha');
 for (const s of capturedShots) {
   for (const tag of ['A0-base', 'A3-global', 'A4-scoped']) {
     const f = fileOf(s, tag); if (!f || !existsSync(f)) continue;
     const fr = score(f).frame, r = roiOf(f, s);
     console.log(`  ${s.padEnd(13)} ${tag.padEnd(11)} ${f2(r?.dh, 1).padStart(6)} ${f2(r?.vratio, 3).padStart(6)} ` +
                 `${f2(r?.lit?.s, 3).padStart(6)} ${f2(r?.sha?.s, 3).padStart(6)} ${f2(fr.warm_pct).padStart(6)} ` +
-                `${f2(fr.cool_pct).padStart(7)} ${f2(fr.dark_pct).padStart(7)}   ${sha16(f)}`);
+                `${f2(fr.cool_pct).padStart(7)} ${f2(100 - fr.warm_pct - fr.cool_pct).padStart(7)} ` +
+                `${f2(fr.dark_pct).padStart(7)}   ${sha16(f)}`);
   }
 }
 
