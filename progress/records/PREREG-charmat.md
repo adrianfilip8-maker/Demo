@@ -269,6 +269,34 @@ before any arm has rendered; it is not to be re-ordered afterwards.
 G1/G2/G3/G4′ are evaluated on **C4** as well as C1, and the §4 ship rule reads "for the chosen
 `metal`/`rough`" accordingly.
 
+## §4.3 — G5 could not see its own subject; the split gets a character mask and a control
+
+Third and last amendment, again registered while the runner prints `waiting for capture lock`
+and nothing has rendered.
+
+**G5 as registered in §4 is nearly blind.** It reads `p99` of everything *outside the cane mask*
+— which at 1280×720 is 99.8 % of the frame, dominated by sky, sand and architecture. The split
+changes four thousand-odd character pixels. A statistic computed over the whole frame cannot
+resolve that, and would have returned "no change" whatever the split did. **This is §255's
+failure exactly** — a whole block rendered black and its null passed, because black equals black
+— and I would have shipped a guard that could only ever say PASS.
+
+Fixed the same way the cane was: **by differencing.** Hide `slydlrig:mesh`, diff, and the
+character's own screen footprint `B` falls out. The split is then measured on `B`.
+
+- **I6 (positive control, must fire)** — `|B| > 2000 px` on `sly-closeup`, `> 0` on `hero`, and
+  re-showing the body must return to `base` at **0 px**. If hiding the character changes nothing,
+  every split number is VOID.
+- **G5′** — on `B`: `p99` must not rise by more than **1 L**. Every part except the cane gets
+  *less* specular, so the body must get duller or stay put.
+- **G6 (the split is not a no-op)** — on `B`: `|Δmean| ≥ 0.5 L`. A split that changes nothing
+  measurable is not worth the risk of shipping, and this is the arm that would catch me poking
+  materials that were not the ones on screen.
+
+G6 is deliberately a *two-sided* requirement paired with G5′: G6 says something happened, G5′
+says it happened in the right direction. Neither alone is sufficient and I registered both
+before seeing either.
+
 ## §5 — FORECAST, to be scored against the result
 
 Written before any capture. I expect to be wrong somewhere and the interesting part is where.

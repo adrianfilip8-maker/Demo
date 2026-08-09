@@ -53,6 +53,7 @@ const out = await withGame({ width: 1280, height: 720, quality: 'high' }, async 
       return out;
     };
     W.__caneMesh = () => { let f = null; W.__ENGINE.scene.traverse((o) => { if (o.name === 'cane') f = o; }); return f; };
+    W.__bodyMesh = () => { let f = null; W.__ENGINE.scene.traverse((o) => { if (o.name === 'slydlrig:mesh') f = o; }); return f; };
     /* Poke, then READ BACK. A poke that silently no-ops is the failure mode this whole
        measurement is worthless under, so the readback is returned and asserted by the caller. */
     W.__poke = (name, v) => {
@@ -182,6 +183,21 @@ const out = await withGame({ width: 1280, height: 720, quality: 'high' }, async 
     rec.I3 = mask.n;
     rec.reshow = (await page.evaluate(() => window.__diff('base', 'reshow'))).n;
 
+    /* --- I6 bodyhide: the CHARACTER mask, the population the split actually changes ------
+       G5 as first registered used whole-frame p99 outside the cane mask, which is dominated
+       by sky and architecture and is nearly blind to the body -- §255's exact failure mode
+       (a statistic that cannot see its own subject). Registered as §4.3 before booting. */
+    await page.evaluate(([s]) => { window.__bodyMesh().visible = false; return window.__snap('bodyhide', s); }, [shot]);
+    const bmask = await page.evaluate(() => {
+      const d = window.__diff('base', 'bodyhide', true);
+      window.__BODYMASK = d.idx;
+      return { n: d.n };
+    });
+    await page.evaluate(([s]) => { window.__bodyMesh().visible = true; return window.__snap('bodyreshow', s); }, [shot]);
+    rec.I6 = bmask.n;
+    rec.bodyReshow = (await page.evaluate(() => window.__diff('base', 'bodyreshow'))).n;
+    rec.baseBody = await page.evaluate(() => window.__stats('base', window.__BODYMASK));
+
     rec.baseStats = await page.evaluate(() => window.__stats('base', window.__MASK));
 
     /* --- C1 gold85 / C2 gold100 --------------------------------------------- */
@@ -213,6 +229,7 @@ const out = await withGame({ width: 1280, height: 720, quality: 'high' }, async 
     })));
     await page.evaluate(([s]) => window.__snap('split', s), [shot]);
     rec.split = {
+      body: await page.evaluate(() => window.__stats('split', window.__BODYMASK)),
       stats: await page.evaluate(() => window.__stats('split', window.__MASK)),
       outside: await page.evaluate(() => window.__diffOutside('base', 'split', window.__MASK, window.__BOX)),
       outsideBase: await page.evaluate(() => window.__diffOutside('base', 'base', window.__MASK, window.__BOX)),
@@ -225,7 +242,10 @@ const out = await withGame({ width: 1280, height: 720, quality: 'high' }, async 
 
     /* ---- report ------------------------------------------------------------- */
     const f = (x) => (x == null ? '  —  ' : x.toFixed(1).padStart(6));
-    console.log(`  mask |M| = ${rec.I3} px  box ${JSON.stringify(mask.box)}   (I2 null ${rec.I2} px, I4 restore ${rec.I4} px, reshow ${rec.reshow} px)`);
+    console.log(`  cane mask |M| = ${rec.I3} px  box ${JSON.stringify(mask.box)}   (I2 null ${rec.I2}, I4 restore ${rec.I4}, reshow ${rec.reshow})`);
+    console.log(`  body mask |B| = ${rec.I6} px   (bodyReshow ${rec.bodyReshow} px)`);
+    console.log(`  split ON THE BODY MASK: base mean ${rec.baseBody.mean?.toFixed(1)} p50 ${rec.baseBody.p50?.toFixed(1)} p99 ${rec.baseBody.p99?.toFixed(1)}`
+      + `  ->  split mean ${rec.split.body.mean?.toFixed(1)} p50 ${rec.split.body.p50?.toFixed(1)} p99 ${rec.split.body.p99?.toFixed(1)}`);
     console.log(`  cane readback @gold85: ${JSON.stringify(rec.gold85.readback)}`);
     console.log(`  ${'arm'.padEnd(10)}${'mean'.padStart(7)}${'p50'.padStart(7)}${'p90'.padStart(7)}${'p99'.padStart(7)}${'max'.padStart(7)}   outside-diff px`);
     const row = (nm, st, o) => console.log(`  ${nm.padEnd(10)}${f(st.mean)}${f(st.p50)}${f(st.p90)}${f(st.p99)}${f(st.max)}   ${o ?? '-'}`);
@@ -277,11 +297,18 @@ const guards = {
   G4prime_far_closeup: closeup[ARM].outside.far === 0,
   G4prime_far_hero: hero[ARM].outside.far === 0,
 };
+/* §4.3: G5 is evaluated on the BODY mask -- the population the split changes.
+   I6 is its positive control and must fire, exactly as I3 is the cane's. */
 const splitGuards = {
-  G5_split_no_washout_closeup: num(closeup.split.outside.p99) == null || num(closeup.split.outsideBase.p99) == null
-    ? null : (closeup.split.outside.p99 - closeup.split.outsideBase.p99) <= 1,
-  G5_split_no_washout_hero: num(hero.split.outside.p99) == null || num(hero.split.outsideBase.p99) == null
-    ? null : (hero.split.outside.p99 - hero.split.outsideBase.p99) <= 1,
+  I6_bodyctl_closeup: closeup.I6 > 2000,
+  I6_bodyctl_hero: hero.I6 > 0,
+  I6_bodyrestore_closeup: closeup.bodyReshow === 0,
+  G5_split_no_washout_closeup: num(closeup.split.body.p99) == null || num(closeup.baseBody.p99) == null
+    ? null : (closeup.split.body.p99 - closeup.baseBody.p99) <= 1,
+  G5_split_no_washout_hero: num(hero.split.body.p99) == null || num(hero.baseBody.p99) == null
+    ? null : (hero.split.body.p99 - hero.baseBody.p99) <= 1,
+  G6_split_moves_the_body: num(closeup.split.body.mean) == null || num(closeup.baseBody.mean) == null
+    ? null : Math.abs(closeup.split.body.mean - closeup.baseBody.mean) >= 0.5,
 };
 
 const vCane = shipVerdict(guards);
@@ -299,6 +326,12 @@ for (const a of ['gold85', 'gold100', 'gold85r64']) {
 const vSplit = shipVerdict({ ...guards, ...splitGuards });
 for (const [k, s] of Object.entries(splitGuards).map(([k]) => [k, vSplit.states[k]])) console.log(`  ${k.padEnd(30)} ${s}`);
 console.log(`SPLIT ${verdictLine(vSplit, 'head/tail/body -> SlyModel.js _matSpec fur/cloth rows')}`);
+for (const sh of ['sly-closeup', 'hero']) {
+  const r = out[sh];
+  console.log(`  ${sh.padEnd(12)} |B| ${String(r.I6).padStart(7)}  body mean ${r.baseBody.mean?.toFixed(1)} -> ${r.split.body.mean?.toFixed(1)}`
+    + `   p50 ${r.baseBody.p50?.toFixed(1)} -> ${r.split.body.p50?.toFixed(1)}`
+    + `   p99 ${r.baseBody.p99?.toFixed(1)} -> ${r.split.body.p99?.toFixed(1)}`);
+}
 
 /* metal fork, reported not gated — §2.1 */
 console.log(`\nmetal fork (sly-closeup dp50):  0.85 -> ${d50(closeup, 'gold85')?.toFixed(1)}   1.00 -> ${d50(closeup, 'gold100')?.toFixed(1)}   0.85@rough.638 -> ${d50(closeup, 'gold85r64')?.toFixed(1)}`);
