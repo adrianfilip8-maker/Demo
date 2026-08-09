@@ -21110,3 +21110,41 @@ because the model ranked amplitude and the frames are decided by incidence.
    is what would let energy conservation ship at `p = 1`.
 4. **0.5 → 1.0 was not swept and the registered set cannot be widened afterwards.** `courtyard`
    goes 291 px → 4 456 px across that gap, so all the interesting ground is inside it.
+
+### §263.4 — VOID-is-not-PASS is now asserted, and the sweep is re-sealed
+
+**The §263.1 defect is the most dangerous kind this project can have**, because it does not
+produce a wrong number — it produces a wrong *verdict* on a correctly detected defect. Five runs
+were voided in one week on calibration arms that failed; every one of those voids is worth
+nothing if the scorer then reads VOID as PASS. `specnorm.mjs` printed `==> SHIP` four lines below
+its own `I5 BLIND … VOID`.
+
+So it is a test now, not a comment (§245, for the fourth time):
+
+- **`tools/gate.mjs`** — tri-state, fail-closed by construction. The **only** input that yields
+  PASS is the boolean `true`; the only input that yields FAIL is the boolean `false`; `null`,
+  `undefined`, `NaN`, `0`, `''` and `'n/a'` are all **VOID**. `shipVerdict()` ships only when
+  every guard is PASS and keeps `failed` and `voided` apart, because a FAIL is a result about the
+  candidate and a VOID is a defect in the run. `verdictLine()` begins `==> SHIP ` only when it
+  actually ships — note that matching the substring `SHIP` is **not** a test, since "DO NOT SHIP"
+  contains it.
+- **`tests/voidgate.test.mjs`** — pins the semantics behaviourally, including §263.1's input
+  verbatim (G1/G2/G3/G5 pass, G4 `null`): must not ship, must name `G4 VOID`, must not print
+  SHIP, and must **disagree with the old expression on that exact input**. Plus a source lock on
+  `specnorm.mjs` so the line cannot come back.
+
+**Deliberately NOT a repo-wide lint on `!== false`.** Eight files match and nearly all are
+ordinary null-guards — `grain1-score.mjs` uses `G1 !== null && G1 < 40`, which is the *correct*
+fail-closed shape. Flagging those would be §248's census-that-cries-wolf, ignored within a day.
+
+**`PREREG-specnorm2.md` re-seals the 0.5 → 1.0 gap** — registered, `debugTerm(8)` landed inert,
+**not yet run, runner not written**. Its three instrument fixes are each derived from a
+measurement in §263 rather than chosen: class key is the R byte alone with ±1 (`paving`'s 0.10 is
+byte 26 in JS and arrives as 25); the scoreable floor is **70 lobe-saturated px**, from
+`SE(median) = 1.253 σ/√n ≤ 2.0 L` at the worst spread measured here (σ 13.0), a floor that
+reproduces every noise call §263 had to make by eye; and the character denominator is
+`debugTerm(8)`'s `vSlySkin` rather than the mode-4 mask, because §263.2 measured that mask
+dropping the subject. Its registered forecast is sharp and falsifiable: **H1 needs `p ≳ 0.95`
+while G4′ fails above `p ≈ 0.84`, so nothing ships at any swept value** — which would locate the
+conflict between energy conservation and Sly's un-art-directed `uSpec 0.25` inside
+**[0.84, 0.95]**, and that interval is the number to hand CHARACTER.
