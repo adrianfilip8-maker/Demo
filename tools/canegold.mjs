@@ -190,11 +190,17 @@ const out = await withGame({ width: 1280, height: 720, quality: 'high' }, async 
     await page.evaluate(([s]) => { window.__bodyMesh().visible = false; return window.__snap('bodyhide', s); }, [shot]);
     const bmask = await page.evaluate(() => {
       const d = window.__diff('base', 'bodyhide', true);
-      window.__BODYMASK = d.idx;
-      return { n: d.n };
+      /* The cane is socketed to `handR`, which lives INSIDE the slydlrig:mesh subtree, so
+         hiding the body hides the cane too and `d.idx` covers character + cane. Subtract the
+         cane mask: B must be the character's NON-cane pixels, or the cane's new highlight
+         lands inside the population G5' says must not brighten and fails it for a reason that
+         has nothing to do with the split. */
+      const inCane = new Set(window.__MASK);
+      window.__BODYMASK = d.idx.filter((i) => !inCane.has(i));
+      return { n: d.n, nBody: window.__BODYMASK.length, overlap: d.n - window.__BODYMASK.length };
     });
     await page.evaluate(([s]) => { window.__bodyMesh().visible = true; return window.__snap('bodyreshow', s); }, [shot]);
-    rec.I6 = bmask.n;
+    rec.I6 = bmask.nBody; rec.I6raw = bmask.n; rec.I6overlap = bmask.overlap;
     rec.bodyReshow = (await page.evaluate(() => window.__diff('base', 'bodyreshow'))).n;
     rec.baseBody = await page.evaluate(() => window.__stats('base', window.__BODYMASK));
 
@@ -243,7 +249,7 @@ const out = await withGame({ width: 1280, height: 720, quality: 'high' }, async 
     /* ---- report ------------------------------------------------------------- */
     const f = (x) => (x == null ? '  —  ' : x.toFixed(1).padStart(6));
     console.log(`  cane mask |M| = ${rec.I3} px  box ${JSON.stringify(mask.box)}   (I2 null ${rec.I2}, I4 restore ${rec.I4}, reshow ${rec.reshow})`);
-    console.log(`  body mask |B| = ${rec.I6} px   (bodyReshow ${rec.bodyReshow} px)`);
+    console.log(`  body mask |B| = ${rec.I6} px  (raw ${rec.I6raw}, cane overlap removed ${rec.I6overlap}; bodyReshow ${rec.bodyReshow} px)`);
     console.log(`  split ON THE BODY MASK: base mean ${rec.baseBody.mean?.toFixed(1)} p50 ${rec.baseBody.p50?.toFixed(1)} p99 ${rec.baseBody.p99?.toFixed(1)}`
       + `  ->  split mean ${rec.split.body.mean?.toFixed(1)} p50 ${rec.split.body.p50?.toFixed(1)} p99 ${rec.split.body.p99?.toFixed(1)}`);
     console.log(`  cane readback @gold85: ${JSON.stringify(rec.gold85.readback)}`);
