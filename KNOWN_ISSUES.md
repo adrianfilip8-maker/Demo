@@ -21315,3 +21315,50 @@ Not done now because **a capture holds the lock** (§186) and moving asset paths
 boot is exactly the class of change that invalidates a run mid-sweep. Queued behind the same gate as
 the texture bake (§232.7) and the `setShot` warning (§251). Also worth deciding rather than assuming:
 whether source maps should ship at all in a build whose whole point is to be handed to a critic.
+
+### §265.1 — the register, built properly, and the four ways the scan lied first
+
+`tests/bundle.test.mjs` turns §265's one-off measurement into a standing register. Getting it to
+tell the truth took four corrections, each found by reading how the code *constructs* a path rather
+than by adding an exception — which is the §248 discipline, and the reason the list can be trusted.
+
+1. **Comments counted as references.** `sly-anims.glb` and `carmelita-anims.glb` are compiler
+   inputs, named in `src/` only in prose. Stripping comments demoted them from "referenced once" to
+   "documented once".
+2. **The extension is appended in code.** `KayKit.js` builds `` `${BASE}${file}.gltf` `` from a table
+   of bare quoted names, so `barrel_large.gltf` appears nowhere as a literal. Without stem matching
+   the scan declared **the entire KayKit pack dead**.
+3. **glTF sidecars are named by the glTF.** `barrel_large.gltf` declares its own `.bin` and its
+   images through `uri`; `src/` never mentions them. And **`.glb` carries the same references in its
+   JSON chunk** — parsing only `.gltf` reported `sly-godot`'s two 2 MB albedos as dead, on files the
+   runtime certainly fetches.
+4. **A stem is only a filename where the code makes it one.** Allowing stem matching for every
+   extension produced the opposite error: `'footstep'` is quoted throughout `Audio.js`,
+   `Particles.js` and `Clips.js` — as an **animation event name** — so `footstep.mp3` read as live
+   while nothing loads it. Stem matching is now restricted to `.gltf`, the one extension this
+   codebase appends in code.
+
+Corrections 2 and 4 are the same mistake in opposite directions, which is the shape to watch for:
+loosening a matcher to catch a real reference will catch unreal ones too, and both readings look
+equally confident from outside.
+
+### §265.2 — KayKit is half dead weight, and that is the more interesting half
+
+The register's biggest surprise is not the staged art pack. It is the one the game **does** use:
+
+```
+kaykit:  58 models shipped   18 placed by the level   40 dead
+```
+
+`tombchaser/` shipping unused is at least a *decision* — it was staged deliberately, with a written
+reason, pending a judgement about its normal maps. **KayKit's 40 unused models were never decided
+about at all.** They ship because they arrived in the same download as the 18 that are placed:
+candles, most stairs, most wall variants, floor tiles. Nobody chose to include them and nobody chose
+not to.
+
+That is the difference worth recording. A staged asset is a deferred decision and shows up in a
+provenance file. An *incidentally* shipped asset is not a decision at all, and the only thing that
+finds it is a census.
+
+Suite 394/395 with the register in it; the one red remains the deliberately-held texture staleness
+guard (§232.7).
