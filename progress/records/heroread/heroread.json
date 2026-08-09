@@ -1,0 +1,201 @@
+{
+  "at": "2026-08-09T19:03:25.257Z",
+  "gates": {
+    "C1 head differs between arms": "FAIL",
+    "C2 background does not": "FAIL",
+    "F1 a black nose arrives": "VOID",
+    "F2 head fur neutralises": "VOID",
+    "F3 value is held": "VOID",
+    "H1 the staging poke took": "FAIL",
+    "H2 hero >= 25% of frame": "VOID",
+    "H3 hero is inside the frame": "VOID",
+    "H4 hero area >= 2.2x": "VOID",
+    "H5 courtyard >= 65 px": "VOID",
+    "H6 courtyard area >= 2.2x": "VOID"
+  },
+  "notes": {
+    "C1 head differs between arms": "mean |dRGB| over HEAD = 3.22 (bar >= 4.0)",
+    "C2 background does not": "mean |dRGB| over BG = 2.42 (bar <= 1.5)",
+    "F1 a black nose arrives": "dark(L<60) in NOSE 153 -> 153, delta 0 (bar >= +100)",
+    "F2 head fur neutralises": "CHEEK R/B 1.685 -> 1.532 (bar <= 1.517; premise A >= 1.40)",
+    "F3 value is held": "CHEEK L 133.2 -> 132.2, delta -1.0 (bar |d| <= 12)",
+    "H1 the staging poke took": "hero dh 0 dcx 0; courtyard dh 0 dcx 0",
+    "H2 hero >= 25% of frame": "165 px = 22.9% (bar >= 180 px; predicted 202)",
+    "H3 hero is inside the frame": "rows 41..205 (bars >= 8, <= 712)",
+    "H4 hero area >= 2.2x": "24588 -> 24588 = 1.00x (bar >= 2.2)",
+    "H5 courtyard >= 65 px": "236 px = 32.8% (bar >= 65 px; predicted 77)",
+    "H6 courtyard area >= 2.2x": "139902 -> 139899 = 1.00x (bar >= 2.2)"
+  },
+  "rois": {
+    "NOSE": [
+      582,
+      165,
+      622,
+      205
+    ],
+    "CHEEK": [
+      600,
+      188,
+      660,
+      212
+    ],
+    "HEAD": [
+      588,
+      118,
+      710,
+      216
+    ],
+    "BG": [
+      40,
+      40,
+      240,
+      240
+    ]
+  },
+  "face": {
+    "c1": 3.2213393554143197,
+    "c2": 2.42375833333333,
+    "nose": {
+      "A": 153,
+      "B": 153
+    },
+    "cheek": {
+      "A": {
+        "rb": 1.6853151291617008,
+        "L": 133.23361875000074
+      },
+      "B": {
+        "rb": 1.5323841466673793,
+        "L": 132.2446818055556
+      }
+    }
+  },
+  "figure": {
+    "hero": {
+      "old": {
+        "area": 24588,
+        "x0": 0,
+        "x1": 216,
+        "y0": 41,
+        "y1": 205,
+        "cx": 81.78326826094029,
+        "cy": 121.93862859931674,
+        "height": 165,
+        "width": 217,
+        "skinTotal": 44845
+      },
+      "nw": {
+        "area": 24588,
+        "x0": 0,
+        "x1": 216,
+        "y0": 41,
+        "y1": 205,
+        "cx": 81.78326826094029,
+        "cy": 121.93862859931674,
+        "height": 165,
+        "width": 217,
+        "skinTotal": 54991
+      }
+    },
+    "courtyard": {
+      "old": {
+        "area": 139902,
+        "x0": 0,
+        "x1": 1254,
+        "y0": 0,
+        "y1": 235,
+        "cx": 631.3885005217938,
+        "cy": 73.46041514774628,
+        "height": 236,
+        "width": 1255,
+        "skinTotal": 204482
+      },
+      "nw": {
+        "area": 139899,
+        "x0": 0,
+        "x1": 1254,
+        "y0": 0,
+        "y1": 235,
+        "cx": 631.3861928963038,
+        "cy": 73.4588881979142,
+        "height": 236,
+        "width": 1255,
+        "skinTotal": 205412
+      }
+    }
+  },
+  "staged": {
+    "hero": {
+      "live": {
+        "pos": [
+          4,
+          8.99,
+          13.2
+        ],
+        "yaw": 5.889,
+        "pose": "perch_idle"
+      },
+      "old": {
+        "pos": [
+          2.2,
+          9,
+          8.4
+        ],
+        "yaw": 5.72,
+        "pose": "perch_idle"
+      },
+      "nw": {
+        "pos": [
+          4,
+          8.99,
+          13.2
+        ],
+        "yaw": 5.889,
+        "pose": "perch_idle"
+      }
+    },
+    "courtyard": {
+      "live": {
+        "pos": [
+          2.4,
+          0.02,
+          26.4
+        ],
+        "yaw": 5.341,
+        "pose": "run"
+      },
+      "old": {
+        "pos": [
+          -6.6,
+          5.12,
+          12.4
+        ],
+        "yaw": 5.08,
+        "pose": "run"
+      },
+      "nw": {
+        "pos": [
+          2.4,
+          0.02,
+          26.4
+        ],
+        "yaw": 5.341,
+        "pose": "run"
+      }
+    }
+  },
+  "warnings": {
+    "A": [
+      "textures: prewarm 23 recipes in 1.24s at size 1024 on 3 workers (125 MB, 23 baked / 0 generated)",
+      "KayKit (props): 36 placed from 11 models, 0 failed, 31064 tris, 29 colliders, 36 contact decals, 0 hulls",
+      "SlyModelDLRig: relaxed 6070 glove vertices, max move 17.8 (asset units)",
+      "SlyModelDLRig: staff submesh dropped (258 tris), Cane.js socketed to handR (grip 22.2 mm, 1356 tris)"
+    ],
+    "B": [
+      "textures: prewarm 23 recipes in 1.57s at size 1024 on 3 workers (125 MB, 23 baked / 0 generated)",
+      "KayKit (props): 36 placed from 11 models, 0 failed, 31064 tris, 29 colliders, 36 contact decals, 0 hulls",
+      "SlyModelDLRig: relaxed 6070 glove vertices, max move 17.8 (asset units)",
+      "SlyModelDLRig: staff submesh dropped (258 tris), Cane.js socketed to handR (grip 22.2 mm, 1356 tris)"
+    ]
+  }
+}
