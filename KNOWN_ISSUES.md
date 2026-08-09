@@ -20911,3 +20911,202 @@ in any of these frames. That is CHARACTER's to look at, not mine.
 composite, and they have opposite fixes.** `debugTerm(6)` separates them for the specular in one
 capture — but only against the mode-4 mask. Any future incidence claim off this channel that does
 not name its denominator should be assumed to be counting the sky.
+
+## §263 — the stepped lobe conserved no energy, and normalising it DOES make a highlight: `courtyard` goes 29 px → 4 456 px above L 230 and clears T2's 0.20 % bar. Nothing ships, because the guard that would have cleared it was voided by an instrument check I mis-specified
+
+Registered in `progress/records/PREREG-specnorm.md` before any candidate arm existed (commit
+`5ff63aa`, with the derivation model, ahead of the scaffolding `d841058` and the runner
+`db0b23e`). Scored in `RESULT-specnorm.md`. Record `progress/records/specnorm/`.
+**Nothing ships. `TUNE.specNormPow` stays 0 and the shipped build is bit-identical.**
+
+### The finding, confirmed
+
+`toon.glsl.js`'s `specStep` is `smoothstep( 0.30, 0.52, lobe ) + 0.35 * smoothstep( 0.02, 0.30,
+lobe )` — a **shape** function capped at **1.35 for every `glossP`**. The stepped lobe's support
+is the cap `ndh >= 0.30^(1/glossP)`; to first order `1 - ndh ~ 1.204/glossP`, and a cap's solid
+angle goes as `(1 - ndh)`. **Amplitude constant × support `1/glossP` means total reflected
+energy falls as `1/glossP`:** raising gloss made a highlight smaller and *no brighter*, which is
+backwards. The missing factor is the normalised Blinn term `(glossP + 8)/8`.
+
+```glsl
+float specNorm = uSpecNormPow > 0.0 ? pow( ( glossP + 8.0 ) * 0.125, uSpecNormPow ) : 1.0;
+```
+
+The **branch** is why 0 is exact — it evaluates no arithmetic at all, so the shipped default
+cannot depend on how a driver spells `pow( x, 0 )`. Four functional lines including the new
+`debugTerm(7)`.
+
+### It works. This is the first candidate in this line of work to clear an inherited bar
+
+One boot, seven arms, `dt: 0`, five shots, 1280×720. **I1 null arm 0 px on all five. I2 positive
+control fired on all four outdoor shots** (3.97–8.08 %). I4 15.61–75.63 % against a 5 % bar,
+reproducing §262's 15.6–75.7 to two figures.
+
+```
+shot          arm     p1  p50  p99  p99.9    max   >230 px    >230%   >250 px
+hero          base    15   71  183    195   232.2        4   0.0004        0
+hero          n100    16   73  186    221   247.8      370   0.0401        0
+courtyard     base    23  104  180    210   237.2       29   0.0031        0
+courtyard     n100    24  105  194    239   254.6     4456   0.4835        8
+sly-closeup   base    25   82  179    214   239.4       42   0.0046        0
+sly-closeup   n100    25   82  189    216   239.4      217   0.0235        0
+temple        n100    31   89  181    197   230.2        1   0.0001        0
+interior      n100    14   66  143    229   247.7      869   0.0943        0
+```
+
+**`courtyard` at `uSpecNormPow 1` reaches 0.4835 % above L 230 against T2's 0.20 % bar** —
+inherited verbatim from PREREG-hilite1 so it could not be moved, and failed 0/4 by hilite1 and
+0/4 by hilite2. T1 (p99 ≥ 200) still fails 0/4; T2 passes on 1 of 4; **H1 — "a highlight exists
+at all", 0.02 % of frame — passes 3 of 4** (`hero`, `courtyard`, `sly-closeup`; `temple` is
+incidence-bound at 0.65 % of toon in full sun and moves by nothing, exactly as §262 said).
+
+Guards that do not depend on the class map all pass at `n100`: **G2** p50 rises at most **+2 L**,
+**G3** p1 at most **+1 L**, **G5** `interior` is **byte-identical on every arm** — 0 px, the
+predicted exact zero, because 0.000 % of its 679 176 toon pixels pass `sh * step( 0.02, ndl )`.
+
+### It does not blow out, and the eight pixels that exceed 250 never ran the term
+
+`spec` is multiplied by `sh * step( 0.02, ndl )`, so a pixel whose `debugTerm(6)` B is below 250
+**cannot** have run the specular. Across every arm of every shot exactly **8 pixels** anywhere
+exceed L 250 — `courtyard` at `n100` — and **0 of the 8 are gated**. The lobe never blows out;
+the only super-250 pixels in the run are bloom spill (`bloomThreshold` 2.20), which is the one
+mechanism the prereg named as absent from its model and made separable in advance.
+
+### What it did to each material class — and the risk was not the one anyone predicted
+
+Median display-L rise on lobe-saturated pixels, masked to the mode-4 toon population.
+**Post-hoc and unregistered — see the I5 failure below.**
+
+```
+                        hero                    courtyard
+material          glossP  satPx   n100 |  glossP  satPx   n100
+granite_pink        45.1      0      — |    45.0   4489  +59.1
+hieroglyph_gilded   40.2   1473  +53.6 |    38.5     11  +41.4
+props gold (coins)  60.0      1   +5.7 |    59.5     89  +47.1
+ceiling_stars       17.4      0      — |    20.1    117  +39.1
+gold_leaf           67.8      4  +28.8 |    66.7     16  +13.1
+slydlrig / kaykit   20.1    208  +24.5 |    20.3      3  +22.6
+sandstone_block      9.1    481   +8.5 |     9.0      0      —
+limestone_polished  26.0      0      — |    26.3     47   +4.8
+paving:court         7.1     35   +1.8 |     7.4      0      —
+sandstone_worn       5.9     17   +0.8 |     6.1     32   +1.1
+mudbrick / pyramid 4.4–5.2     0      — |     5.2      0      —
+```
+
+**"Gold sings, limestone turns to plastic" did not happen, in either half.** `paving` — 17
+meshes, most of the ground — moves **+1.8 L**; `limestone_polished` **+4.8**; the sandstones and
+sand +0.3 to +8.5; `mudbrick` and the pyramids never catch the lobe on any shot. And
+**`gold_leaf` is not the winner** — it is +28.8 / +13.1, because at `uSpec` 0.95 it is already on
+the flat of the AgX curve and a ×12.94 in scene radiance buys 13 display levels. The ordering is
+preserved and *sharpened*, which is what energy conservation is for.
+
+**The handoff's "≈ ×12.9" is `gold_leaf` alone, and the prereg said so before the capture.** The
+frame is `paving` at `glossP` **6.9** and the sandstones at 5.9–8.8, where `(glossP+8)/8` is
+**×1.7–2.1** — the same order as `uSpecKey`'s ×2.423, not five times it. `paving` moved +1.8 L.
+
+**The biggest mover is `granite_pink` at +59.1 L, which the prereg's model ranked sixth.** The
+model ranked by amplitude; the frames are decided by incidence. `granite_pink` has **0**
+lobe-saturated pixels on `hero` and **4 489** on `courtyard`, and it is the entire highlight
+there. §262's "amplitude or incidence is both, and which depends on the shot" is now true **per
+material** as well as per shot. `debugTerm(7)` — `vec3( uSpec, glossP/128, slyMetal )` — is what
+made that visible; its `glossP` reproduces `normmodel.mjs`, committed before the capture, to
+within 1–3 on every class (`granite_pink` 44.1 modelled / 45.0 measured, `paving` 6.9 / 7.4,
+`slydlrig` 20.1 / 20.1, `sandstone_worn` 5.9 / 5.9).
+
+### §263.1 — I5 is mis-specified, it fails, and it takes the ship path with it
+
+I registered: "`debugTerm(7)` must resolve ≥ 6 distinct **(uSpec, metal)** buckets … and **every**
+bucket's `uSpec` must match a row of the live census to within 1/255. If it does not, **all
+per-class attribution in this run is VOID**." It returned **2 350 buckets, 802 matching**.
+
+Two errors, both in that one sentence:
+
+1. **`metal` is not a class key.** Mode 7's B channel is `slyMetal = uMetal * texture2D(
+   metalnessMap, … ).b` — a **per-pixel texture read**. I wrote the channel and then registered a
+   check against what I assumed it held. Keying on it shatters one material into a bucket per
+   mask level: `hieroglyph_gilded` alone gives B = 217, 216, 215, …, 32, 0.
+2. **"every bucket" is unmeetable by any frame.** ~1 % of the toon population is anti-aliased
+   edge, where two materials' `uSpec` blend to a byte no material owns.
+
+**§141.1: VOID, stated, not re-derived.** G4 — "Sly's fur must not acquire a wet sheen" — is
+defined over mode-7 class membership, so **G4 is void**, the ship rule requires G1–G5, and a
+guard that could not be evaluated did not pass. **DO NOT SHIP.** The blocker is my instrument,
+not the candidate.
+
+Substantively it points the same way, which is worth stating so the outcome is not read as a
+technicality: on `hero`, the one shot where the class is measurable at all, the `uSpec 0.25`
+bucket rises **+24.5 L** at `n100` against G4's 20 L bar.
+
+**The runner printed `==> SHIP uSpecNormPow 1`.** That output is wrong and is kept verbatim in
+`specnorm/capture.txt`. My gate expression read `G4 !== false`, so a guard returning **null —
+unscoreable** — counted as satisfied. **A permissive default in a scorer converts "I could not
+measure this" into "this passed".** The scorer now fails closed; the printed line stays in the
+record as what that costs.
+
+### §263.2 — the mode-4 mask does not contain the character, and §262's `sly-closeup` row is about the pavement
+
+On `sly-closeup` the `uSpec 0.25` bucket holds **23 px**. On `hero` it holds **4 706**. Sly is
+not absent from the frame — he fills the middle of it. He is absent from **`debugTerm(4)`'s
+exact-triple mask**, which §262 §8.1 established as *the* denominator for every incidence claim.
+Measured over his own pixels, mode 4 writes
+
+```
+(81,143,200) ×4206   (79,141,199) ×4179   (80,142,200) ×3758   (77,139,198) ×3277
+(74,137,196) ×2986   (82,144,201) ×2902   (70,133,194) ×2858   (68,131,193) ×2764
+```
+
+— the calibration triple **(64,128,191) plus a positive offset**, never the triple. He *is*
+running the cel program; the exact-match mask drops him anyway.
+
+**Both directions of the denominator error are now measured.** §262 §8.1: an *unmasked* share
+counts the sky and over-states. This: a *masked* share can silently drop the subject and
+under-state. So §262's `sly-closeup` row — "toon 17.5 %, gates FULL 24.576 %" — describes the
+pavement and the gilding, not Sly. This run reproduces it (18.38 %, 23.14 %) and names the
+population: `paving:court`, 137 367 px, 2 044 lobe-saturated. **The cause of the offset is not
+separated here and is not claimed** — candidates are a blended draw compositing the debug
+constant against what is behind it, or something adding to `outgoingLight` after TOON_SHADE's
+override. Whoever owns it should also decide whether that mask is exact-match by necessity: an
+exact-match mask that silently omits the subject is a worse instrument than a tolerant one.
+
+### §263.3 — `§233`'s bit-determinism is a WITHIN-boot claim, and the cross-boot number is large
+
+The inertness test I designed compared `base` against §262's pre-edit `base` and fired:
+**5.6 / 15.3 / 15.7 %** of the frame differing, max |dL| **146.5**. Read alone it says the
+scaffolding is live. It is not — and the control was already on disk. **`off` sets `uSpecGain 0`,
+which multiplies the whole specular by zero in *both* runs**, and its rows differ by the *same*
+amount (52 092 px vs 52 043 on `hero`). The specular cannot be what differs. The unconfounded
+measure, `base − off` inside one boot, reproduces across the edit at **0.00–0.27 %** in area and
+to the second decimal in peak (135.25 → 135.25, 45.62 → 45.62, 112.20 → 112.20).
+
+**Cross-boot, this project's frames differ on 5–16 % of pixels on static shots and 50.8 % on
+`sly-closeup`.** Any cross-boot frame comparison needs a zero-signal control or it is measuring
+the boot, not the change. This is also why every A/B here stays inside one boot.
+
+### The forecast, scored
+
+Right: T1/T2 both fail (0/4 and 1/4, as predicted); G1 holds everywhere **and for the predicted
+reason** — the only super-250 pixels are ungated, i.e. bloom, the mechanism flagged in advance as
+missing from the model; `interior` byte-identical, exact zero; `gold_leaf` is not the biggest
+mover, because it is already on the flat of the curve.
+
+Wrong: **H1 predicted 2 of 4, observed 3 of 4** (`sly-closeup` also passed). **The predicted ship
+value was 0.50 and it is not deliverable** — `n050` reaches H1 on 1 of 4 and would have failed
+its own bar. G2 predicted to fail on `courtyard` at `p=1`: it did not (p50 104 → 105). And the
+per-class ranking was wrong at the top: **`granite_pink` +59.1 was ranked sixth by the model**,
+because the model ranked amplitude and the frames are decided by incidence.
+
+### What is left
+
+1. **Re-register I5 correctly and re-score.** Key on the R byte alone with ±1 tolerance against
+   `round( census.uSpec × 255 )`, and bar it on a *share* (≥ 98 % of toon pixels resolved), not on
+   every bucket. `specnorm-class.mjs` already implements it and reports 0.57–2.34 % unresolved.
+   **The frames are on disk; no re-capture is needed.**
+2. **Give G4 a population it can name.** Sly's mesh and `kaykit:props` share `uSpec 0.25 / gloss
+   32 / metal 0` because both sit at the TUNE defaults; `debugTerm(1)`'s `vSlySkin` separates them
+   and was not captured. And §263.2 must be fixed first, or the character is not in the mask at all.
+3. **The binding art constraint is that Sly's material is un-art-directed.** §262 found the same
+   material is `metal 0` when the cane is meant to be gold. A character at the TUNE default
+   `uSpec` is what makes a physically-correct lobe read wrong on him. That is CHARACTER's, and it
+   is what would let energy conservation ship at `p = 1`.
+4. **0.5 → 1.0 was not swept and the registered set cannot be widened afterwards.** `courtyard`
+   goes 291 px → 4 456 px across that gap, so all the interesting ground is inside it.

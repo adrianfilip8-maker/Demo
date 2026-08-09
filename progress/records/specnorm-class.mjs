@@ -62,7 +62,11 @@ for (const af of armsFiles) {
     for (const c of row.census.classes) {
       const b = Math.round(c.spec * 255);
       const e = census.get(b) || { byte: b, spec: c.spec, gloss: new Set(), metal: new Set(), names: new Set(), meshes: 0 };
-      e.gloss.add(c.gloss); e.metal.add(c.metal); e.meshes += c.count;
+      e.gloss.add(c.gloss); e.metal.add(c.metal);
+      /* max, NOT +=. The census is re-read per shot and is identical in all five (§262), so
+         accumulating multiplied every mesh count by the number of shots — `paving` printed 85
+         for 17 meshes. Caught by disbelief at a 5x round number, same as the paving byte. */
+      e.meshes = Math.max(e.meshes, c.count);
       for (const nm of c.names) e.names.add(nm);
       census.set(b, e);
     }
