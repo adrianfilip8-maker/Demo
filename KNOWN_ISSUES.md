@@ -20130,3 +20130,54 @@ Applied as a string patch in `Outline.js` rather than by editing `toon.glsl.js`,
 belongs to another agent**, with the patch throwing at module load if its anchor disappears. That is
 the right way to cross an ownership boundary under concurrency: change nothing you do not own, and
 fail loudly rather than silently if the thing you are patching moves.
+
+## §254 — I called two runs duplicates from output I had truncated myself
+
+I told the INK agent it had two identical `inkw.mjs` runs queued and asked it to kill one. They were
+not identical. They differed by `--res`:
+
+```
+29784   --shots courtyard,hero,combat,sly-closeup  --res 1280x720
+30517   --shots courtyard,hero,combat,sly-closeup  --res  640x360
+```
+
+**The flag that distinguished them sat past the cut in my own command.** I ran
+`ps -o args= | cut -c1-64`, saw two command lines that matched over the visible 64 characters, and
+asserted they were the same run. They are the two halves of its pre-registered P1 — *"ink width
+scales with screen size"* is a **ratio between the two resolutions**, and either one alone measures
+nothing. Had it complied without checking, the arm testing its assigned defect would have been
+deleted on my say-so.
+
+The failure is not the truncation, it is asserting from it. `cut` was mine, the ellipsis was visible
+in my own output, and I read past it anyway because two lines that agree for 64 characters *look*
+like the same command. **Truncated output is evidence of what it shows, not of what it omits** — and
+the omitted part is exactly where a `--res`, a `--shot`, a `--seed` or an `--out` lives, because
+those are the tail of every invocation in this project.
+
+It also did the more useful thing than either complying or refusing: it took the cost point and cut
+the sweep from four shots to two — `courtyard` and `sly-closeup`, which bracket the range at 42 px
+against 484 px subject and 80% against 23% blob share — bringing the lock cost from ~90 minutes to
+~45–50 while keeping every registered criterion computable.
+
+### Its argument for keeping the after-sweep, which I accept
+
+I suggested the second sweep might be unnecessary since §253's diagnosis is already established.
+That was wrong too, for a reason worth recording:
+
+**The fix is subtractive.** The planarity gate removes a 46-luma darkening from **27% of
+`courtyard`**, and the pre-registered failure mode P3b is that it removes too much and takes the
+architecture's ink with it — §7.3's "outlines missing", a different failure of the same checklist
+item. There is no measurement of what the gate *leaves behind*. Shipping a subtractive change to a
+quarter of the frame without looking at the result is, in its words, exactly the shape of thing this
+ledger is full of.
+
+Two further reasons stand on their own: the hull has **never** had a rendered measurement, because
+the first run's hull arm was void (`endNormalPass()` rewrote the lever every frame), and the new
+`legacy`/`legacy_nohull` arms give a before and an after **in one boot with a null**, which is
+stronger than the cross-commit pair it would otherwise quote. And the resolution scale is the
+assigned defect, with "prove it with a measured before/after plus a null arm" as the instruction.
+
+Only the depth-push correction genuinely needs no frames: it is analytic, exact, and unit-tested
+with the shipped form *required* to displace 2.107 px and the replacement *required* not to. Its
+stated fallback if the queue worsens — report that one alone and say the other two are untested
+rather than quote them — is the right triage.
