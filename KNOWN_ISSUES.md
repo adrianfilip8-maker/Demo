@@ -21148,3 +21148,124 @@ dropping the subject. Its registered forecast is sharp and falsifiable: **H1 nee
 while G4′ fails above `p ≈ 0.84`, so nothing ships at any swept value** — which would locate the
 conflict between energy conservation and Sly's un-art-directed `uSpec 0.25` inside
 **[0.84, 0.95]**, and that interval is the number to hand CHARACTER.
+
+## §264 — the conflict between a physical specular lobe and Sly's un-art-directed material is measured: **`p ∈ (0.70, 0.90]`**. Energy conservation needs 0.90 to make a highlight; the character tolerates 0.70
+
+Registered in `progress/records/PREREG-specnorm2.md` before any arm existed, **amended
+pre-capture** (§4's strike, on already-published §263 frames), then run. Scored in
+`RESULT-specnorm2.md`; record `progress/records/specnorm2/`. **Nothing ships.
+`TUNE.specNormPow` stays 0 and the shipped build is bit-identical.**
+
+### The product of the run is the interval, not a ship decision
+
+```
+G4′  median rise on the CHARACTER's lobe-saturated pixels (bar <= 20 L), n = 2 760 px
+     p060 +15.47  p070 +18.47 PASS  |  p080 +21.72 FAIL  p090 +25.17  p100 +28.38
+
+H1   >230 >= 0.02 % of frame on >= 3 of 4 outdoor shots
+     p060 1/4   p070 1/4   p080 2/4  |  p090 3/4 PASS   p100 3/4
+```
+
+**The highlight needs `p ≥ 0.90`. The character tolerates `p ≤ 0.70`. The gap is 0.20 wide and
+there is no value that does both.** T1 is 0/4 at every value; T2 reaches 1/4 (`courtyard`, from
+`p090`); G1/G2/G3/G5 pass everywhere — worst >250 is **8 px = 0.00087 %**, worst p50 rise **+1**,
+worst p1 rise **+1**, `interior` byte-identical on every arm.
+
+Per-shot H1 crossings: `hero` **0.80**, `courtyard` **≤ 0.60**, `sly-closeup` **0.90**, `temple`
+never — it is incidence-bound and moves at no value, which §262 and §263 both also found.
+
+**Cross-boot reproduction of a statistic, not of pixels.** `p100` gives `hero` 370 px and
+`courtyard` 4 448 px against §263's 370 and 4 456, while §263.3 measured the *frames* differing on
+5–16 % of pixels between boots. Aggregates are stable across boots; pixels are not.
+
+### §264.1 — §263.2 quantified: the mode-4 mask contains **zero** of the character
+
+I6, registered to measure exactly this:
+
+> `sly-closeup`: **65 632** px carry `vSlySkin` (7.12 % of frame). The number of those inside
+> `debugTerm(4)`'s exact-triple mask is **0**.
+
+Not "few" — **zero**. The denominator §262 §8.1 established for every incidence claim in this
+line of work contains none of the character on the character's own close-up, so every "of the
+toon population" figure in §262 and §263 on a character shot is a statement about architecture.
+I7 confirms the replacement is sound: `vSlySkin` is bimodal, **0.35 %** of B>0 pixels in the dead
+zone against a 1 % bar.
+
+The same offset forced a **pre-capture** amendment to G4′: over Sly, mode 7's R reads **74–82**
+against a census byte of **64**, so the `uSpec` key could not have found him either, and the
+guard as first registered would have returned an empty population → VOID on every arm. Caught by
+a pre-flight check on §263's already-published frames, before the 61-minute capture started. The
+20 L bar was untouched; only the population definition changed, and the strike is recorded in the
+prereg. **The cause of the offset is still unidentified and remains open.**
+
+### §264.2 — I5′ went BLIND because I mis-derived its bar out of data I had already published
+
+`courtyard` resolves **97.63 %** against a **98 %** bar, missing by 0.37 pp. The bar was
+**unmeetable before the run started**. I wrote *"derived from §263's measured unresolved shares of
+0.57–2.34 %; the bar is the round number just above the worst"* — but §263's worst was
+`courtyard` at 2.34 % unresolved, i.e. **97.66 % resolved**, so "≥ 98 % resolved" sits *above* the
+best that shot had ever achieved. **I reasoned in unresolved-space and wrote the number in
+resolved-space, and the rounding went the wrong way.**
+
+§141.1: not re-derived. I5′ is BLIND and the per-class architecture table is VOID.
+
+**This is §263.1's error one level up.** There I fixed the *shape* of a check; here I set its
+*level* without testing it against the number I had measured and published two commits earlier.
+**A threshold derived from data must be checked against that data before it is registered**, and
+"just above the worst" is a phrase that needs its units written beside it.
+
+**Whether I5′ voids G4′ — both readings, and why it does not matter.** The prereg text makes G4′
+depend on the 70-px floor, I6 and I7, all of which fired; G4′ reads only mode 8's **B** channel
+and mode 6 and never touches the R byte I5′ measures. The *runner* additionally conjoined I5′,
+which is stricter than the text, and prints `G4′ VOID` on every row. The discrepancy is flagged
+rather than silently resolved in the convenient direction — and **the ship decision is identical
+either way**: under the text G4′ FAILs from `p080` while H1 needs `p090`, so no value passes both;
+under the runner G4′ is VOID, so nothing ships. Consistent with §263.1, where the text was
+*stricter* than the code and the text won, the rule is **"the text governs"**, not "whichever is
+stricter today".
+
+### §264.3 — the 70-px floor works, and it corrects a §263 number
+
+Derived pre-capture as `SE(median) = 1.253 σ/√n ≤ 2.0 L` at §263's worst measured σ (13.0 L).
+In the run it VOIDed `paving` (35 px), `limestone_polished` (47), `sandstone_worn` (17),
+`bronze_dark` (11), `gold_leaf` (4) and `coins` on `hero` (1) rather than printing numbers for
+them. §263 had to hand-flag `bronze_dark`'s spurious **−7.8 L**; here it never reaches the page.
+
+It also corrected a §263 attribution. On `hero` the `uSpec 0.25` bucket is now correctly labelled
+**`kaykit:props`** and reads **+24.5 L** at `p100` — *exactly* the figure §263 reported for what
+it called the character. The real character, isolated by `vSlySkin` on `sly-closeup`, reads
+**+28.4 L**. **§263's merged bucket understated the character by ~4 L and was measuring props, on
+the wrong shot.**
+
+Which material carries the highlight still depends on the shot: `hero` is `hieroglyph_gilded`
+(+28.0 → +45.7 across the sweep, 1 473 saturated px); `courtyard` is `granite_pink` (+36.1 →
++59.1 on 4 489 px) plus `ceiling_stars` and `coins`, none of which land on `hero` at all.
+
+### The forecast, scored
+
+**Right:** T1 fails at every value; T2 reaches 1/4 on `courtyard` at `p ≥ 0.9`, exactly as
+predicted; G1/G2/G3/G5 pass everywhere; I7 fires; and **the central prediction — that H1 and G4′
+have no common solution, so nothing ships at any swept value — holds.**
+
+**Wrong, and both misses in the same direction:** H1 3/4 predicted at `p ≳ 0.95`, actual **0.90**;
+G4′ predicted to fail above `p ≈ 0.84`, actual **above 0.70**. Predicted interval `(0.84, 0.95]`,
+width 0.11; measured `(0.70, 0.90]`, width **0.20** — **I under-estimated the conflict by nearly
+half.** The cause is common to both: I interpolated from **two** points, `p = 0.5` and `p = 1.0`,
+and assumed the curve between them behaved; it grows fast at low `p` and flattens at high `p`, so
+every crossing landed earlier than predicted. The G4′ miss has a second cause — I extrapolated
+from §263's *merged* `Sly + kaykit` bucket on a different shot, which §264.3 has now shown was
+measuring props.
+
+### What is left
+
+1. **`p ∈ (0.70, 0.90]` is CHARACTER's number.** At `p = 0.90` — the exponent the world needs —
+   Sly's lobe-saturated pixels rise **+25.2 L**. His mesh is at the TUNE defaults (`uSpec 0.25`,
+   `gloss 32`, **metal 0**) and was never art-directed; §262 found the same material has no metal
+   where the cane should be gold. This seal measures the consequence and deliberately does not
+   compensate for it.
+2. **The mode-4 mask must be fixed or retired as a denominator**, and the offset's cause found.
+   `vSlySkin` works and is the pattern to copy.
+3. **Re-derive I5′ in resolved-space against §263's own 97.66 %.** It is the only check that
+   failed, and it failed on arithmetic, not on anything about the build.
+4. **The sweep is 0.1-resolution.** Both crossings are bracketed, neither is resolved finer; the
+   frames and the runner exist if anyone wants 0.05.
