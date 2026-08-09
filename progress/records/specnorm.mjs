@@ -17,6 +17,7 @@
 import { withGame } from '../../tools/harness.mjs';
 import { readPNG } from '../../tools/png.mjs';
 import { mkdirSync, writeFileSync } from 'node:fs';
+import { shipVerdict, verdictLine } from '../../tools/gate.mjs';
 import path from 'node:path';
 
 const OUT = path.resolve(import.meta.dirname, '../../shots/specnorm');
@@ -346,20 +347,20 @@ for (const a of CAND) {
      guard (null) as a satisfied one. On the registered run G4 came back null — I5 went BLIND
      and, independently, `sly-closeup`'s uSpec-0.25 population is 23 px because the mode-4 mask
      does not contain the character — and the runner therefore printed **"==> SHIP
-     uSpecNormPow 1"**. That output is in `specnorm/capture.txt` and it is WRONG.
+     uSpecNormPow 1"**, four lines below its own "I5 BLIND ... VOID". That output is in
+     `specnorm/capture.txt` and it is WRONG.
 
      The registered ship rule says "satisfies G1-G5". A guard that could not be evaluated is
      not a guard that passed, and PREREG-specnorm's I5 says in terms that a BLIND class map
      makes all per-class attribution VOID. G4 is per-class attribution. So the correct reading
      is DO NOT SHIP, and `null` must fail closed.
 
-     Left as a comment rather than an edit-in-silence because a permissive default in a scorer
-     is exactly the failure mode this project's whole method exists to catch, and because the
-     printed verdict is part of the record. */
-  const passed = (v) => v === true;
+     The tri-state now comes from `tools/gate.mjs`, which is pinned by `tests/voidgate.test.mjs`
+     — including a case built from exactly this input. Left as a comment rather than an
+     edit-in-silence because the printed verdict is part of the record. */
+  const v = shipVerdict({ G1, G2, G3, G4, G5 });
   gate[a] = { T1, T2, H1, G1, G2, G3, G4, g4v, G5,
-    guards: passed(G1) && passed(G2) && passed(G3) && passed(G4) && passed(G5), ship: false };
-  gate[a].ship = gate[a].guards && H1 >= 3;
+    guards: v.ship, verdict: v, ship: v.ship && H1 >= 3 };
 }
 
 console.log('\n================= REGISTERED GATES (outdoor shots only for T1/T2/H1) =================');
@@ -371,7 +372,11 @@ for (const a of CAND) if (gate[a].g4v !== null) console.log(`   G4 detail  ${a}:
 const winner = [...CAND].reverse().find((a) => gate[a].ship);
 console.log(`\nSHIP RULE: the largest pow in {${CAND.join(', ')}} that satisfies G1-G5 with I1-I4 fired, provided H1 >= 3/4.`);
 console.log(`   I1 ${i1 ? 'ok' : 'VOID'} · I2 ${i2 ? 'ok' : 'VOID'} · I4 ${i4 ? 'ok' : 'BLIND'} · I5 ${i5 ? 'ok' : 'BLIND'}`);
-console.log(`   ==> ${i1 && i2 && winner ? `SHIP uSpecNormPow ${ARMS.find(([n]) => n === winner)[1].pow}` : 'DO NOT SHIP — TUNE.specNormPow stays 0'}`);
+/* The instrument checks are guards too: a run whose null arm or positive control did not fire
+   cannot ship whatever the candidate did. They go through the same tri-state (§263.1). */
+const runVerdict = shipVerdict({ I1: i1, I2: i2, candidate: winner ? true : false });
+console.log(`   ${verdictLine(runVerdict, winner ? `uSpecNormPow ${ARMS.find(([n]) => n === winner)[1].pow}` : '')}`);
+if (!runVerdict.ship) console.log('   TUNE.specNormPow stays 0; the shipped build is bit-identical.');
 const guardOnly = [...CAND].reverse().find((a) => gate[a].guards);
 if (!winner && guardOnly) console.log(`   (largest value that clears the GUARDS but misses H1: ${guardOnly})`);
 
