@@ -67,7 +67,7 @@ export const SHOTS = {
      effectively at infinity — keeps its size. Only the near and mid ground grow. The vista
      survives; that was the thing worth protecting.
 
-     **THE STAGED PLAYER MOVED, 2026-08-09 (PREREG-heroread, KNOWN_ISSUES §271). The camera did
+     **THE STAGED PLAYER MOVED, 2026-08-09 (PREREG-heroread, KNOWN_ISSUES §272). The camera did
      not.** `pos`, `target`, `fov`, `tod` and `roll` above are byte-identical to what they were;
      anyone holding a before/after on this frame has a moved subject and an unmoved set.
 
@@ -319,7 +319,7 @@ export const SHOTS = {
      `(-3.5, 0, 27)` computes to ~83 px on open paving between the statues — that is arithmetic
      and wants `charvis` before it is trusted, so it is not applied here.
 
-     **THE STAGED PLAYER MOVED, 2026-08-09 (PREREG-heroread, KNOWN_ISSUES §271). The camera did
+     **THE STAGED PLAYER MOVED, 2026-08-09 (PREREG-heroread, KNOWN_ISSUES §272). The camera did
      not** — `pos`, `target`, `fov`, `tod` and `roll` are byte-identical. Anyone holding a
      before/after on this frame has a moved subject and an unmoved set.
 
