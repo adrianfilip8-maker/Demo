@@ -152,6 +152,47 @@ export const TUNE = {
   shadowWash: 0.05,
   shadowSat: -0.35,
 
+  /* ── shadowHold / shadowHoldKnee — the shade band derived from each material's own albedo ──
+   *
+   * KNOWN_ISSUES §269, `progress/records/PREREG-shadowhold.md`. **Read §269 before moving these;
+   * they sit on top of a resolved disagreement between two critics and the reference frames, and
+   * the resolution is what makes both survivable.**
+   *
+   * The defect they answer (critic pass 9, D1): the same dune renders as hot orange in sun and
+   * teal-grey in shade with a hard boundary and no shared identity — measured `Δh` 173.8° on
+   * `dunes`, 165.6° on `hero`, against 12.6–24.8° on three verified single-material regions of
+   * `sly3-venice.jpg`.
+   *
+   * The mechanism, and it is not the one the critic named. Every shadow term here is already
+   * albedo-*multiplied*; nothing substitutes a tint for the material. What happens instead is
+   * that sandstone's linear B/R is **0.175** and the shadow light's R/B is **0.174** — the
+   * product sits within 1% of the channel-order flip and leaves the surface at ~4% chroma. At 4%
+   * chroma the additive `shadowWash` term, which IS albedo-independent, decides the hue outright
+   * even at 0.05. So the fix is not to remove the tint; it is to stop the multiply from
+   * neutralising, and to withdraw the additive term once it is no longer needed.
+   *
+   * Why this is a new gate and not a move of `shadowSat` / `shadowWash` / `shadowTeal`. Critic
+   * pass 2 ranked "the shadow is a redder, more saturated version of the sunlit hue" as its top
+   * defect, and those constants are its fix — the one that cost five capture cycles (§3). Moving
+   * them back reverses a ranked fix on the say-so of a later critic, which is how a project ends
+   * up with no memory. `shadowHold` is gated on **albedo chroma**, a per-pixel quantity the old
+   * model never consulted, so critic 2's constants ship unchanged and both findings hold in the
+   * same build: the shade is still cooler and less red than the lit side (critic 2), and it is
+   * still the same material (critic 9).
+   *
+   * `shadowHoldKnee` is the albedo chroma at which the hold reaches full strength, and it is the
+   * whole of the achromatic answer. Hue is ill-defined on limestone and granite, so there is
+   * nothing there to hold; below the knee the material keeps the shipped violet-teal shadow and
+   * §2.1.3's "shadows are never grey" is preserved exactly where it is load-bearing. sRGB albedo
+   * chroma at the palette stops: SANDSTONE mid 0.552, LIMESTONE mid 0.274, LIMESTONE light 0.167,
+   * PAINT white 0.124, a true grey ~0.03. At 0.25 the sandstone family holds fully, limestone
+   * holds most of the way, and neutral plaster does not move.
+   *
+   * **0 is bit-identical** — `mix(x, y, 0.0) == x` and `(1.0 - 0.0) == 1.0` on any driver — so
+   * the A/B's null arm is exact rather than approximate. */
+  shadowHold: 0.0,
+  shadowHoldKnee: 0.25,
+
   /* The sand bounce is *bounced* light — sunlight already absorbed once by sand — but it
      arrives as the palette colour at full radiance, brighter in red than the sun. Attenuating
      it here is the second half of the shadow-hue fix; see the fill term in toon.glsl.js. */
@@ -819,6 +860,11 @@ export class Shading {
       uShadowColorLit: { value: new THREE.Color(0x000000) },
       uShadowDepth:  { value: new THREE.Vector2(TUNE.shadowDepth[0], TUNE.shadowDepth[1]) },
       uShadowWash:   { value: TUNE.shadowWash },
+      /* §269. Shared by identity like the grade levers above, so a one-boot A/B is
+         `shading.uniforms.uShadowHold.value = 1` and the whole scene follows. Nothing
+         republishes either per frame, so the poke sticks across `__GAME.step()`. */
+      uShadowHold:     { value: TUNE.shadowHold },
+      uShadowHoldKnee: { value: TUNE.shadowHoldKnee },
       uShadowSharp:  { value: new THREE.Vector2(TUNE.shadowSharp[0], TUNE.shadowSharp[1]) },
       uShadowBands:  { value: new THREE.Vector3(...TUNE.shadowBands) },
       uHaze:         { value: new THREE.Color(PAL.haze) },

@@ -118,6 +118,12 @@ uniform vec3  uShadowColor;   // pre-scaled: shadow hue at uShadowFloor x key lu
 uniform vec3  uShadowColorLit;
 uniform vec2  uShadowDepth;
 uniform float uShadowWash;
+/* uShadowHold / uShadowHoldKnee — the shade band derived from the surface's OWN albedo.
+   KNOWN_ISSUES §269, PREREG-shadowhold.md. Everything above this line describes the shadow
+   *light*; these two are the only terms that let the *material* decide its own shade hue.
+   0 is bit-identical to the pre-§269 build (mix(x,y,0.0) == x, (1.0-0.0) == 1.0). */
+uniform float uShadowHold;
+uniform float uShadowHoldKnee;
 uniform vec2  uShadowSharp;
 uniform vec3  uHaze;          // horizon haze colour
 uniform vec3  uHazeSun;       // forward-scatter colour looking into the sun
@@ -604,10 +610,54 @@ export const TOON_SHADE = /* glsl */ `
 		 * shading.uniforms.uShadeBand.value sticks and the A/B is one boot. */
 		float shadeForm = 1.0 - uShadeBand * ( 1.0 - ramp );
 
+		/* ── the shade band, derived from this surface's own albedo (KNOWN_ISSUES §269) ────
+		 *
+		 * Everything above builds a shadow LIGHT and multiplies it into the albedo. That is
+		 * already a per-material derivation on paper, and on warm stone it is not one in
+		 * practice, for a reason that is arithmetic rather than aesthetic: sandstone's linear
+		 * B/R is 0.175 and the shadow light's own R/B is 0.174, so the product lands within
+		 * 1% of the channel-order flip and comes out at ~4% chroma — grey. Whatever small
+		 * albedo-INDEPENDENT term is added next then owns the hue outright, and
+		 * slyShadX * uShadowWash is exactly such a term. That is the whole of critic 9's
+		 * "shadow ramps rotate hue by 176-187 degrees": not a tint substituted for a multiply,
+		 * but a multiply that neutralises and an additive wash that repaints.
+		 *
+		 * hold is the fix and it is gated on a quantity the old model never consulted — the
+		 * albedo's OWN chroma, per pixel:
+		 *
+		 *   - Chromatic material (sandstone, Sly's blue, lapis): hold -> 1. The band becomes
+		 *     the albedo scaled by the shadow light's LUMINANCE, i.e. the material's own hue
+		 *     at a lower value, and the albedo-independent wash is withdrawn in step.
+		 *   - Near-achromatic material (limestone, granite, plaster): hold -> 0 and NOTHING
+		 *     changes. This is the case the mechanism has to be safe for, because hue is
+		 *     ill-defined there: an achromatic surface has no hue of its own to hold, so it
+		 *     keeps taking the light's, and §2.1.3's "shadows are never grey" survives on
+		 *     exactly the materials where it would otherwise be violated.
+		 *
+		 * held is renormalised to lum(tint), so the mix is a pure HUE lever: it cannot
+		 * buy a hue result with brightness, and the guard that checks the shadow still reads
+		 * as shadow (PREREG G3) is protected by construction. The only luminance this block
+		 * moves is the wash it withdraws.
+		 *
+		 * Note what this does NOT touch: the hemispheric fill. slyFillX is a real ambient
+		 * with a directional colour story §2.2 names separately (FILL sky bounce / BOUNCE sand
+		 * GI), and it is what makes interior's sconce relationship work — the one frame
+		 * critic 9 rated as having a working colour relationship. Its residual share is
+		 * measured by the A5 arm rather than assumed away. */
+		float albMax    = max( alb.r, max( alb.g, alb.b ) );
+		float albChroma = ( albMax - min( alb.r, min( alb.g, alb.b ) ) ) / max( albMax, 1e-4 );
+		float hold      = clamp( uShadowHold, 0.0, 1.0 )
+		                * smoothstep( 0.0, max( uShadowHoldKnee, 1e-4 ), albChroma );
+
+		vec3  shadTint  = albShadow * slyShadX;
+		vec3  shadHeld  = alb * slyLum( slyShadX );
+		shadHeld       *= slyLum( shadTint ) / max( slyLum( shadHeld ), 1e-5 );
+		vec3  shadBand  = mix( shadTint, shadHeld, hold );
+
 		vec3 diff = alb * keyRad * key * mix( 1.0, ao, uAoKey )
 		          + ( albAmb * slyFillX * ao
-		            + albShadow * slyShadX * shadowMix * mix( 0.55, 1.0, ao )
-		            + slyShadX * uShadowWash * shadowMix * ao ) * shadeForm;
+		            + shadBand * shadowMix * mix( 0.55, 1.0, ao )
+		            + slyShadX * uShadowWash * ( 1.0 - hold ) * shadowMix * ao ) * shadeForm;
 
 		/* uMetal is the art-directed metal *amount*; the ORM texture's blue channel is the
 		   mask that says where on the surface it applies — the gilding on a hieroglyph, the
