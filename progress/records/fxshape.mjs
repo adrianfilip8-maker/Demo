@@ -36,6 +36,20 @@
  * phase, not attribution (§28 — a gold-bloom sweep was once voided because its DUPLICATE arm
  * moved more pixels than its strongest real arm).
  *
+ * **The clock is REWOUND to zero before every arm and then run forward at a fixed 1/60.**
+ * Neither of the two obvious settings works here and both were tried:
+ *   · `dt: 0` — the repo's standing A/B advice (§28/§195) — freezes particle age at 0, where
+ *     every emitter's `smoothstep(0, fadeIn, u)` is exactly 0, so `combat` contains no impact
+ *     at all and all seven arms came back byte-identical (KNOWN_ISSUES §275).
+ *   · `dt: 1/60` alone — each `setShot` advances `engine.time` by 17/60 = 0.283 s and never
+ *     rewinds it, so arm N renders 0.283 s later than arm N-1. Every ambient term rides that
+ *     clock and the duplicate arm differed from base on **751,902 px (58% of the frame)**.
+ * `engine.time` is a plain writable field (`Engine.js:87`, `:254`), so setting it to 0 before
+ * each arm puts every arm on the SAME absolute timeline: 14 settle frames, the shot applied
+ * (which fires the hit), 3 more frames — the impact is 0.05 s old in every arm and every
+ * ambient phase is identical. Particles left over from the previous arm carry a t0 from the
+ * old timeline, so their age goes negative and the vertex shader clips them.
+ *
  * **dt is 1/60, NOT 0, and that is the opposite of §28/§195's standing advice for within-boot
  * A/Bs — for a reason this run discovered the expensive way.** The first attribution boot
  * passed `{ dt: 0 }` and came back with all seven arms byte-identical: 0 changed pixels on
@@ -131,6 +145,7 @@ const res = await withGame({ width: 1280, height: 720, quality: 'high', verbose:
     void seen;
 
     const r = await page.evaluate(async (shot) => {
+      window.__ENGINE.time = 0;                 // rewind: every arm shares one absolute timeline
       const res2 = await window.__GAME.setShot(shot, { dt: 1 / 60 });
       return { stats: res2.stats, seen: window.__fxSeen.slice(), t: window.__ENGINE?.time ?? null,
         dataUrl: window.__GAME.capture('image/png', 0.92, 0) };
@@ -146,6 +161,7 @@ const res = await withGame({ width: 1280, height: 720, quality: 'high', verbose:
      instrument was wrong"). It is not an arm of anything and nothing is scored from it. */
   await page.evaluate(() => { window.__fxBlock = new Set(); });
   const ct = await page.evaluate(async () => {
+    window.__ENGINE.time = 0;
     const r2 = await window.__GAME.setShot('courtyard', { dt: 1 / 60 });
     return { stats: r2.stats, dataUrl: window.__GAME.capture('image/png', 0.92, 0) };
   });

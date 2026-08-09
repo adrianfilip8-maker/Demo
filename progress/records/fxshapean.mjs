@@ -109,6 +109,19 @@ for (const arm of ['noring', 'noflash', 'nospark', 'notrail', 'nocane']) {
     (n ? `(${x0},${y0})-(${x1},${y1})` : '-'));
 }
 
+/* ---- §275.1 rule 3: a zero-footprint suppression arm VOIDs the run ---------------------- */
+/* The first attribution boot returned zero on every arm and the zero was unfalsifiable: "the
+   lever removed nothing" and "the subject was never drawn" produce the identical artefact.
+   `nocane` suppresses everything the hit draws, so its footprint being zero can only mean the
+   impact was not in the frame. This refuses rather than reports. */
+{
+  const nc = results.nocane;
+  const state = !nc ? 'VOID: nocane arm missing' : nc.n === 0
+    ? 'VOID: nocane removed 0 px — the impact was never drawn, so nothing above is attributable'
+    : `OK — nocane removes ${nc.n} px, so the subject is in the frame`;
+  console.log(`\nSUBJECT PRESENT  ${state}`);
+}
+
 /* ---- edge hardness of the dominant contributor -------------------------------------------- */
 /* A "drawn" effect has a boundary; a smear has a shoulder. Measured as the 10-90 rise of the
    effect's own contribution (base minus arm) across its mask boundary, sampled on horizontal
