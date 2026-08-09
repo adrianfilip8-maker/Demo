@@ -72,61 +72,52 @@ const cfg = {
  * surface's own extremes then guarantees no texel leaves the range the recipe authored — a
  * quantiser cannot create a new darkTail.
  */
-export function celbandRGB(rgb, size, steps, radius = 0, keep = 1) {
-  const n = size * size;
+export const CELBAND_SRC = String(function celband(s, o) {
+  const size = s.size, n = s.n;
+  const steps = o.steps, radius = o.radius | 0, keep = o.keep == null ? 1 : o.keep;
+  if (!(steps >= 2)) return;
   const y = new Float64Array(n);
-  for (let i = 0; i < n; i++) y[i] = 0.2126 * rgb[i * 3] + 0.7152 * rgb[i * 3 + 1] + 0.0722 * rgb[i * 3 + 2];
-
-  /* Separable wrapping box blur. The tile is a torus (every consumer tiles it), so a clamped
-   * blur would author a seam the recipe does not have. `radius` is the plateau scale: detail
-   * finer than it is the sub-step wiggle this operator is trying to remove, detail coarser than
-   * it is the structure it is trying to KEEP and put onto steps. */
+  for (let i = 0; i < n; i++) y[i] = s.r[i] * 0.2126 + s.g[i] * 0.7152 + s.b[i] * 0.0722;
   let sm = y;
   if (radius > 0) {
-    const w = radius * 2 + 1, t = new Float64Array(n), o = new Float64Array(n);
+    const w = radius * 2 + 1, t = new Float64Array(n), out = new Float64Array(n);
     for (let r = 0; r < size; r++) {
       let acc = 0;
       for (let k = -radius; k <= radius; k++) acc += y[r * size + ((k % size) + size) % size];
       for (let c = 0; c < size; c++) {
         t[r * size + c] = acc / w;
-        acc -= y[r * size + ((c - radius) % size + size) % size];
-        acc += y[r * size + ((c + radius + 1) % size + size) % size];
+        acc -= y[r * size + (((c - radius) % size) + size) % size];
+        acc += y[r * size + (((c + radius + 1) % size) + size) % size];
       }
     }
     for (let c = 0; c < size; c++) {
       let acc = 0;
-      for (let k = -radius; k <= radius; k++) acc += t[(((k % size) + size) % size) * size + c];
+      for (let k = -radius; k <= radius; k++) acc += t[((((k % size) + size) % size)) * size + c];
       for (let r = 0; r < size; r++) {
-        o[r * size + c] = acc / w;
+        out[r * size + c] = acc / w;
         acc -= t[((((r - radius) % size) + size) % size) * size + c];
         acc += t[((((r + radius + 1) % size) + size) % size) * size + c];
       }
     }
-    sm = o;
+    sm = out;
   }
-
   const ys = Float64Array.from(y).sort();
   const q = (p) => ys[Math.min(n - 1, Math.max(0, Math.round(p * (n - 1))))];
   const a = q(0.02), b = q(0.98), lo = ys[0], hi = ys[n - 1];
   const step = (b - a) / Math.max(1, steps - 1);
-  if (!(step > 1e-6)) return rgb;
+  if (!(step > 1e-6)) return;
   for (let i = 0; i < n; i++) {
-    /* Snap the SMOOTHED value — quantising the raw value maps high-frequency noise onto random
-     * lattice levels and puts the total variation UP, which is the opposite of what D6 asks for.
-     * `keep` then restores a fraction of the material's own fine detail on top of the plateau,
-     * so the surface is banded without being the untextured plastic that dead-flat gives. */
-    let yn = a + Math.round((sm[i] - a) / step) * step + (y[i] - sm[i]) * keep;
-    if (yn < lo) yn = lo; if (yn > hi) yn = hi;
     if (y[i] < 1e-4) continue;
+    let yn = a + Math.round((sm[i] - a) / step) * step + (y[i] - sm[i]) * keep;
+    if (yn < lo) yn = lo;
+    if (yn > hi) yn = hi;
     let k = yn / y[i];
-    const mx = Math.max(rgb[i * 3], rgb[i * 3 + 1], rgb[i * 3 + 2]);
-    if (mx * k > 255) k = 255 / mx;
-    rgb[i * 3] = Math.round(rgb[i * 3] * k);
-    rgb[i * 3 + 1] = Math.round(rgb[i * 3 + 1] * k);
-    rgb[i * 3 + 2] = Math.round(rgb[i * 3 + 2] * k);
+    const mx = Math.max(s.r[i], s.g[i], s.b[i]);
+    if (mx * k > 1) k = mx > 1e-6 ? 1 / mx : 1;
+    s.r[i] *= k; s.g[i] *= k; s.b[i] *= k;
   }
-  return rgb;
-}
+});
+
 
 const server = http.createServer((req, res) => {
   const u = decodeURIComponent(req.url.split('?')[0]);
@@ -147,11 +138,14 @@ const page = await browser.newPage();
 page.on('pageerror', (e) => console.error('  [pageerror]', e.message));
 await page.goto(`http://127.0.0.1:${port}/lab.html`);
 
-const built = await page.evaluate(async (cfg) => {
+const built = await page.evaluate(async ({ cfg, celbandSrc }) => {
   const M = await import('/src/textures/Materials.js');
   const C = await import('/src/textures/Canvas2D.js');
   const hashName = (s) => { let h = 0x811c9dc5; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 0x01000193); } return h >>> 0; };
   const list = cfg.names.length ? cfg.names : M.MATERIAL_NAMES;
+  /* Prefer the SHIPPED function once it exists, so this tool measures the thing that renders
+   * rather than a second implementation of it. The inlined copy is only the pre-ship arm. */
+  const labCelband = C.celband || (0, eval)(`(${celbandSrc})`);
   const out = [];
   for (const name of list) {
     const recipe = M.MATERIALS[name];
@@ -160,6 +154,10 @@ const built = await page.evaluate(async (cfg) => {
     const sz = recipe.size ? Math.min(recipe.size, cfg.size) : (recipe.tier >= 1 ? Math.max(256, cfg.size >> 1) : cfg.size);
     const s = new C.Surface(sz, (recipe.seed ?? hashName(name)) >>> 0);
     recipe.build(s, { seed: s.seed, size: sz, name, quality: 'high' });
+    if (cfg.post !== '0') {
+      const [st, rad, kp] = cfg.post.split(':').map(Number);
+      labCelband(s, { steps: st, radius: rad || 0, keep: Number.isFinite(kp) ? kp : 1 });
+    }
     const rgb = new Uint8Array(sz * sz * 3);
     for (let i = 0; i < sz * sz; i++) {
       rgb[i * 3] = Math.max(0, Math.min(255, Math.round(s.r[i] * 255)));
@@ -170,10 +168,26 @@ const built = await page.evaluate(async (cfg) => {
      * array of numbers as JSON text. Measured at minutes per tile; base64 is milliseconds. */
     let bin = ''; const CH = 0x8000;
     for (let i = 0; i < rgb.length; i += CH) bin += String.fromCharCode.apply(null, rgb.subarray(i, i + CH));
-    out.push({ name, group: recipe.group ?? '?', tier: recipe.tier ?? 0, size: sz, tile: recipe.tile, b64: btoa(bin) });
+    /* The two BLOCKING invariants of PREREG-celband S2/S3, measured on the same Surface the
+     * pixels came from — `masonry` only exists while the Surface does, so this cannot be
+     * recomputed later from the tile. `jointSign` is `Bake.js`'s function, not a paraphrase of
+     * it; `darkTail` is `texlab.mjs`'s (share of texels under the §2.2 crevice luminance). */
+    let joint = null;
+    const CREV = (0x4a * 0.2126 + 0x2f * 0.7152 + 0x22 * 0.0722) / 255;
+    let dark = 0;
+    for (let i = 0; i < sz * sz; i++) if (s.r[i] * 0.2126 + s.g[i] * 0.7152 + s.b[i] * 0.0722 < CREV) dark++;
+    if (s.masonry) {
+      const m = s.masonry; let jy = 0, jh = 0, jn = 0, fy = 0, fh = 0, fn = 0;
+      for (let i = 0; i < sz * sz; i++) {
+        const yy = s.r[i] * 0.2126 + s.g[i] * 0.7152 + s.b[i] * 0.0722;
+        if (m.joint[i] > 0.6) { jy += yy; jh += s.h[i]; jn++; } else if (m.joint[i] < 0.05) { fy += yy; fh += s.h[i]; fn++; }
+      }
+      if (jn && fn) joint = { dY: +((jy / jn) - (fy / fn)).toFixed(4), dH: +((jh / jn) - (fh / fn)).toFixed(4) };
+    }
+    out.push({ name, group: recipe.group ?? '?', tier: recipe.tier ?? 0, size: sz, tile: recipe.tile, joint, darkTail: +(dark / (sz * sz)).toFixed(4), b64: btoa(bin) });
   }
   return out;
-}, cfg);
+}, { cfg, celbandSrc: CELBAND_SRC });
 await browser.close();
 server.close();
 
@@ -196,12 +210,6 @@ const rows = [];
 const dists = [];
 for (const t of built) {
   const src = new Uint8Array(Buffer.from(t.b64, 'base64'));
-  /* The quantiser runs at AUTHORING resolution, before the mip — that is where it will run in
-   * the shipped build, and quantising after a downsample would measure a different function. */
-  if (cfg.post !== '0') {
-    const [st, rad, kp] = cfg.post.split(':').map(Number);
-    celbandRGB(src, t.size, st, rad || 0, Number.isFinite(kp) ? kp : 1);
-  }
   const { rgb, sz } = down(src, t.size, cfg.mip);
   const n = sz * sz;
   const a = new Float64Array(n);
@@ -227,6 +235,7 @@ for (const t of built) {
 
   rows.push({
     name: t.name, group: t.group, tier: t.tier, size: t.size, mipSize: sz,
+    darkTail: t.darkTail, joint: t.joint,
     grad: +st.grad.toFixed(2), top3: +st.top3.toFixed(3), levels: st.levels, flat: +flat.toFixed(4),
     lab: m.map((v) => +v.toFixed(2)),
     sd: [0, 1, 2].map((p) => +Math.sqrt(cov[p][p]).toFixed(2)),
