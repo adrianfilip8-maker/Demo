@@ -220,3 +220,48 @@ prominently as a miss.
   it, since `gold_leaf`'s ceiling already does and nothing in `hero`/`temple` reaches scene 2.3.
 * **Composition** — camera azimuth against sun azimuth. §256 measured it as the dominant cause
   and the owner has ruled out moving the sun or re-aiming the cameras.
+
+---
+
+## 9. ADDENDUM — `interior` added as a fifth, exploratory shot
+
+**Written while `hero` was still staging: `shots/hilite2/` was empty, no arm at `uSpecKey > 0`
+had been rendered, and nothing in §6 or §7 is changed by this.** Registered here rather than
+folded into §4 so the record shows it arrived late and why.
+
+Reading back through KNOWN_ISSUES for corroboration I found the incidence question already
+answered from the other side, and it names a shot my four do not include:
+
+* §34: **`hero`'s gilded mass is 98.6% shadowed**, and `spec` is `sh`-gated, so *"every
+  key-side lever this project has tried on gold — spec (§25), bloom gain, bloom onset (§28),
+  AO-on-key — operates on the same 1.4% of pixels."* `uSpecKey` is a key-side lever. It inherits
+  that ceiling on `hero` exactly.
+* The same census: **`interior`'s `gold_leaf` is 53.7% above the terminator**, `courtyard`'s
+  gilded 10.0%, against `hero`'s 1.4%.
+
+So `interior` is where a key-side specular lever has roughly **38× more lit gold to act on** than
+the shot §7.3's gold line keeps being judged on.
+
+**Registered now:**
+
+* `interior` is captured in a **second boot** with the identical arms, script and thresholds.
+  Every A/B stays within that boot; **no number is compared across the two runs**, so the §220
+  drift floor never enters a verdict.
+* `interior` **does not enter H6's 2-of-4 bar.** That bar stays on the four shots the critic
+  scored and §256 bracketed. `interior` is reported separately.
+* **E1, registered before its capture:** if the coupling produces a highlight anywhere in this
+  game, it produces one here. `interior`'s rise in >L230 share must be **at least 4× the largest
+  rise among the four registered shots**. If `interior` shows a rise smaller than that, my
+  reading of §34's census is wrong and I will say so.
+* **E2, the sharper one:** if `interior` *also* shows no meaningful >230 population, then the
+  binding constraint is **incidence, not amplitude** — the lobe does not land even where the gold
+  is lit — and no amplitude lever (`uSpecKey`, `uSpec`, bloom gain, bloom onset) closes this
+  defect. I will report that instead of reaching for a bigger multiplier.
+
+**Third-party arithmetic this run can be checked against, quoted before the capture** (§25 /
+`RESULT-goldmip.md`, an independent pre-registered measurement by TEXTURES): on
+`hieroglyph_gilded`'s spec-responsive cohort, display **L 235 needs ≈ 2.7× the scene spec of the
+`uSpec` 0.95 arm**, and every texture-side lever stacked tops out **< ×1.9**. The `keyRad`
+coupling is **×2.423** — larger than the entire texture-side stack, and, at the shipped `uSpec`
+0.55, still ≈ ×1.4 in units of that 0.95 arm against a requirement of ×2.7. That prediction is on
+the record before the frames are.
