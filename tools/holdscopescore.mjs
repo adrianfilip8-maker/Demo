@@ -18,6 +18,7 @@ import { readFileSync, existsSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { readPNG } from './png.mjs';
 import { shipVerdict, verdictLine } from './gate.mjs';
+import { SHOTS } from '../src/core/Shots.js';
 
 const DIR = process.argv[2] || 'shots/holdscope';
 const run = JSON.parse(readFileSync(`${DIR}/run.json`, 'utf8'));
@@ -122,8 +123,10 @@ const BAR = {
   keyBar: 13,               // mode-5 blue channel: "the sun reaches this pixel"
 };
 /* The daylight scope for the absolute cool bar. `night` is a palette flip and the reference is a
-   daylight frame; the PREREG scopes G6 by tod >= 0.2 and lists the shots. */
-const NIGHT_SHOTS = new Set(['night']);
+   daylight frame; the PREREG scopes G6 by `tod >= 0.2`. Read out of `Shots.js` rather than
+   transcribed as a list of names — the same rule that caught three other things in this lane. */
+const NIGHT_SHOTS = new Set(Object.entries(SHOTS)
+  .filter(([, s]) => (s.tod ?? 1) < 0.2).map(([k]) => k));
 
 const num = (v) => (typeof v === 'number' && Number.isFinite(v) ? v : null);
 const cmp = (v, f) => (v === null ? null : f(v));
