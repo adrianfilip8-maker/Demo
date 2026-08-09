@@ -236,3 +236,82 @@ console.log(`  luma drift      medL ${f(after.med - A.med)}   (target 0.0 +- 1)`
 if (DRY) { console.log('  --dry: nothing written'); process.exit(0); }
 writePNG(OUT_TEX, W, H, rgb);
 console.log(`  wrote ${path.relative(ROOT, OUT_TEX)}`);
+
+/* ---- --sheet: the A/B nobody should have to take the capture lock to see ------------------- */
+/**
+ * Flat-shade the head with each albedo and put them side by side. No lighting, no ramp, no ink,
+ * no tonemap — the albedo AS SAMPLED BY THE MESH and nothing else, which is the point: it shows
+ * what the texture does to the face without the shading chain that D5 and D1 are arguing about.
+ *
+ * WHAT THIS IS, AS THE GAP: it is not a frame and must not be read as one. Every judgement about
+ * how the face looks in the game belongs to a real capture; this answers only "did the paint land
+ * where the tool says it did".
+ */
+if (process.argv.includes('--sheet')) {
+  const SW = 560, SH = 560, S = 0.30;                   // half-extent of the view box, metres
+  const CX = 0, CY = -0.07, CZ = 1.62;                  // head centre in asset space
+  const parts = [];
+  scene.traverse((o) => { if (o.isMesh && /head|eyeball/.test(o.name)) parts.push(o); });
+  const eyeTex = readPNG(path.join(ROOT, 'src/assets/sly-dl/sly_eyeball.png'));
+  const srcRgb = Buffer.alloc(W * H * 3);
+  for (let i = 0; i < W * H; i++) {
+    srcRgb[i * 3] = src.data[i * CH]; srcRgb[i * 3 + 1] = src.data[i * CH + 1]; srcRgb[i * 3 + 2] = src.data[i * CH + 2];
+  }
+  const sample = (buf, bw, bh, bch, u, v) => {
+    const x = Math.min(bw - 1, Math.max(0, Math.round(u * bw - 0.5)));
+    const y = Math.min(bh - 1, Math.max(0, Math.round((1 - v) * bh - 0.5)));
+    const k = (y * bw + x) * bch;
+    return [buf[k], buf[k + 1], buf[k + 2]];
+  };
+  const view = (headBuf, angDeg) => {
+    const a = angDeg * Math.PI / 180, ca = Math.cos(a), sa = Math.sin(a);
+    const img = new Uint8Array(SW * SH * 3).fill(238);
+    const zb = new Float32Array(SW * SH).fill(-1e9);
+    for (const m of parts) {
+      const isHead = /head/.test(m.name);
+      const g = m.geometry, pos = g.attributes.position, uv = g.attributes.uv;
+      for (let t = 0; t < pos.count / 3; t++) {
+        const P = [], C = [];
+        for (let k = 0; k < 3; k++) {
+          const i = t * 3 + k;
+          const x = pos.getX(i) - CX, y = pos.getY(i) - CY, z = pos.getZ(i) - CZ;
+          P.push([((x * ca - y * sa) / S * 0.5 + 0.5) * SW, (0.5 - z / S * 0.5) * SH, -(x * sa + y * ca)]);
+          C.push(isHead ? sample(headBuf, W, H, 3, uv.getX(i), uv.getY(i))
+            : sample(eyeTex.data, eyeTex.w, eyeTex.h, eyeTex.ch, uv.getX(i), uv.getY(i)));
+        }
+        const det = (P[1][0] - P[0][0]) * (P[2][1] - P[0][1]) - (P[2][0] - P[0][0]) * (P[1][1] - P[0][1]);
+        if (Math.abs(det) < 1e-9) continue;
+        const x0 = Math.max(0, Math.floor(Math.min(P[0][0], P[1][0], P[2][0])));
+        const x1 = Math.min(SW - 1, Math.ceil(Math.max(P[0][0], P[1][0], P[2][0])));
+        const y0 = Math.max(0, Math.floor(Math.min(P[0][1], P[1][1], P[2][1])));
+        const y1 = Math.min(SH - 1, Math.ceil(Math.max(P[0][1], P[1][1], P[2][1])));
+        for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
+          const px = x + 0.5, py = y + 0.5;
+          const w1 = ((px - P[0][0]) * (P[2][1] - P[0][1]) - (P[2][0] - P[0][0]) * (py - P[0][1])) / det;
+          const w2 = ((P[1][0] - P[0][0]) * (py - P[0][1]) - (px - P[0][0]) * (P[1][1] - P[0][1])) / det;
+          const w0 = 1 - w1 - w2;
+          if (w0 < 0 || w1 < 0 || w2 < 0) continue;
+          const zz = w0 * P[0][2] + w1 * P[1][2] + w2 * P[2][2];
+          const o = y * SW + x;
+          if (zz <= zb[o]) continue;
+          zb[o] = zz;
+          for (let c = 0; c < 3; c++) img[o * 3 + c] = Math.round(w0 * C[0][c] + w1 * C[1][c] + w2 * C[2][c]);
+        }
+      }
+    }
+    return img;
+  };
+  const views = [0, 35];
+  const cols = views.length * 2, GW = SW * cols, GH = SH;
+  const sheet = Buffer.alloc(GW * GH * 3, 238);
+  const blit = (img, col) => {
+    for (let y = 0; y < SH; y++) for (let x = 0; x < SW; x++) {
+      const s2 = (y * SW + x) * 3, d2 = (y * GW + (col * SW + x)) * 3;
+      sheet[d2] = img[s2]; sheet[d2 + 1] = img[s2 + 1]; sheet[d2 + 2] = img[s2 + 2];
+    }
+  };
+  views.forEach((v, i) => { blit(view(srcRgb, v), i * 2); blit(view(rgb, v), i * 2 + 1); });
+  const sheetPath = path.join(ROOT, 'progress/records/AB-slyface.png');
+  writePNG(sheetPath, GW, GH, sheet);
+  console.log(`  wrote ${path.relative(ROOT, sheetPath)}  (supplied | derived, at 0 and 35 degrees; flat albedo, no shading)`);
+}
