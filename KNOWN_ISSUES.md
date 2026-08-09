@@ -22853,3 +22853,92 @@ The general form, which is worth more than the particular: **a discipline that m
 measurement comparable can also remove the thing being measured, and when it does, the
 instrument reports a clean, confident, reproducible null.** That is the most dangerous shape a
 result can take in this repo, because it looks exactly like a well-run negative.
+
+## §276 — D3 (the character shades smooth, not cel) is UNOWNED and partly diagnosed offline: the SSS hypothesis is refuted by arithmetic, the supplied albedo carries painted soft shading, and neither accounts for the frame number
+
+Coordinator note, written lock-free while four captures were queued on one renderer. **Nothing here
+is a candidate and nothing here is sealed.** It exists so the next lane starts from measurements
+rather than from the two stories I generated and had to discard.
+
+### The defect
+
+Critic 9 D3, mean horizontal luminance gradient on Sly's shirt, measured in the FRAME:
+
+| patch | mean \|dL/dx\| x255 |
+|---|---|
+| REF Sly shirt (4x crop) | **1.52** |
+| `combat.png` Sly shirt | **9.56** |
+| `sly-closeup.png` | 6.47 |
+| `sly-perch.png` | 5.18 |
+
+6.3x the reference on the same body part; the critic reports no cel step anywhere on the character.
+
+### Refuted #1: `slyRamp` is not misconfigured, and the architecture note does not transfer
+
+`toon.glsl.js` already carries a note that §7.3's "reads smooth instead of banded-cel" is not
+`slyRamp`'s fault, because *"this level is boxes and faceted cylinders, so a flat face has one
+normal, lands wholly inside one band, and gives the quantiser no gradient to band."* That argument
+is about ARCHITECTURE and **does not apply to the character**, who is curved and does turn his
+normal through the terminator. The character is on `bands: 3`, i.e. a genuine 0 / 0.5 / 1 step
+function. So the quantiser is present and should band him.
+
+### Refuted #2: the fur subsurface term is NOT the smoother, by arithmetic
+
+The attractive story: `diff` uses the banded `slyRamp(ndl)`, but `sss` (toon.glsl.js:713-715) is
+computed from **raw `ndl`**, is added straight into `outgoingLight`, and its own comment says it
+*"peaks exactly at the terminator"* — i.e. a smooth term maximised precisely where the cel step
+should be sharpest. That would be a clean mechanism, and it is wrong for the shirt.
+
+The shirt is not fur. `SlyModelDLRig.SURFACE.body` is `{ spec: 0.085, gloss: 20, sss: 0.14 }` —
+0.14, not the `TUNE.furSSS` 0.38 the head keeps. Working the shader through at `uSss = 0.14`:
+
+```
+wrapv   = (ndl + 0.14) / 1.14
+sssAmt  = wrapv - ndl  = 0.1228 * (1 - ndl)      peak 0.1228 at ndl = 0
+sss     = alb * uSssColor * keyRad * (sssAmt * uSss * 2.4)
+        -> peak coefficient 0.1228 * 0.14 * 2.4 = 0.0413
+```
+
+against a `bands: 3` step of **0.5** of the same `alb * keyRad`. The SSS peak is **8.3% of one
+band step** and decays linearly to zero at `ndl = 1`. It cannot erase a terminator. Had I sent a
+lane after this it would have spent a capture window on an 8% term.
+
+### Measured: the supplied albedo has soft shading painted into it
+
+`src/assets/sly-dl/sly_body.png`, 512x512, is a fan-authored atlas and is visibly airbrushed —
+graded highlights across the shoulders and chest, soft folds, shaded gloves and shorts.
+
+Restricted to shirt-blue texels only (an atlas-wide figure is meaningless: hard UV-island edges
+and the black background dominate `|dL/dx|`; that naive number was 2.966 and is discarded):
+
+| region | mean \|dL/dx\| x255 | L range within one "flat" material |
+|---|---|---|
+| torso upper | **1.638** | 0.026 -> 0.851 (span 210/255) |
+| torso mid | **1.538** | 0.026 -> 0.806 (span 199/255) |
+| left sleeve | **2.723** | 0.108 -> 0.846 (span 188/255) |
+
+**The albedo alone carries about as much gradient per texel as the entire reference FRAME does per
+pixel (1.52).** A cel shirt's albedo should be near-flat; this one spans three quarters of the
+value range inside a single material.
+
+### What this does NOT establish, stated because the numbers invite the overclaim
+
+1. **Texel-space is not pixel-space.** 1.64 per texel is not comparable to 9.56 per pixel without
+   the magnification ratio at which the shirt is actually seen; minification averages texels and
+   *lowers* frame gradient. TEXTURES solved this for D6 with `celtex.mjs` "at the texel:pixel ratio
+   the architecture is actually seen at" — the same treatment is needed here and I have not done it.
+2. **The albedo does not account for 9.56.** Even taken at face value it is ~1.6, so something in
+   the render is contributing the remaining factor of roughly six. Candidates not yet separated:
+   the spec lobe (`spec 0.085, gloss 20` on the body), the rim term, D1's shadow tint, vertex
+   colours, and the grade. None of these is an arm yet.
+3. Therefore **D3 is not diagnosed.** What exists is one refuted hypothesis, one measured
+   contributor, and a named remainder.
+
+### For whoever takes it
+
+Do not open with a shader change. The first question is the split between albedo and render, and
+it is answerable with a defeat lever per suspect in ONE boot. §273 applies: register deltas against
+a same-run control, not absolutes against `shots/r9`. §275 applies if any arm touches an
+event-driven effect. And the character texture is owner-supplied, so any albedo edit must be a
+derived file with provenance recorded, exactly as D11's `sly_head_fix.png` was derived from
+`sly_head.png` rather than edited in place.
