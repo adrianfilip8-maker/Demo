@@ -60,7 +60,59 @@ const RIM_STRENGTH_NIGHT = 0.50;
    but Shots.js asks for 22° of elevation at tod 0.79, so the track is a keyed table:
    the canonical shots then land on exact, repeatable sun angles.
    Azimuth: 0° = +X east, 90° = +Z south, 180° = −X west. Summer-Egypt track, so the
-   sun sets a touch north of west — that is what rakes the north–south temple axis. */
+   sun sets a touch north of west — that is what rakes the north–south temple axis.
+
+   ── §256: this azimuth is why the frames have no highlight range, and it is not a small effect
+   ────────────────────────────────────────────────────────────────────────────────────────────
+   §214.1 measured that both MOON-keyed shots are ~180° backlit and stopped there. The same
+   arithmetic on daylight says **twelve of the fourteen daylight shots, including all seven
+   environment shots, have every camera-facing vertical surface at ramp 0 or 0.5** — the
+   canonical cameras are pointed into the sun. Camera-facing wall N·L against `termLo` 0.14 /
+   `termHi` 0.52:
+
+     ramp 0    hero -0.6308 · kaykit -0.3152 · temple -0.0496 · courtyard +0.1393
+               dunes -0.5400 · traversal -0.4264 · combat -0.6129 · sly-profile -0.6243
+     ramp 0.5  sly-closeup +0.3168 · sly-perch +0.3168 · sly-key +0.3168 · interior +0.2125
+     ramp 1    sly-startle +0.6470 · sly-arm +0.8578      <- character turnarounds only
+
+   Confirmed against the real geometry, not just that model: raycasting each camera through
+   ARCHITECTURE + PROPS and evaluating ToonMaterial's own `slyRamp` on each hit's world normal
+   (scratchpad/ndlmap.mjs; its calibration arm — slyRamp returning exactly 1 at N·L 1 and 0 at
+   −1 — fired) gives the share of VISIBLE surface by ramp level:
+
+     shot          ramp=0 (no key)   ramp~0.5   ramp=1    mean ramp
+     hero              72.3 %          27.3 %     0.4 %     0.140
+     temple            54.8 %          23.8 %    21.4 %     0.311
+     courtyard         60.1 %          23.8 %    16.1 %     0.279
+     sly-closeup       32.3 %          45.0 %    22.7 %     0.452
+     dunes             85.2 %          13.1 %     1.7 %     0.080
+     traversal         79.6 %          19.6 %     0.8 %     0.106
+     combat            66.7 %          33.3 %     0.1 %     0.166
+
+   Sweeping an OFFSET onto this table (same instrument), mean visible ramp / share at full key:
+
+     shot          shipped        +200°          +240°          +280°
+     hero        0.138 / 0.5%   0.673 / 40.5%  0.720 / 44.7%  0.532 / 32.3%
+     courtyard   0.260 / 15.1%  0.454 / 13.1%  0.704 / 56.9%  0.722 / 56.3%
+     temple      0.308 / 20.8%  0.383 / 27.3%  0.611 / 52.4%  0.613 / 55.2%
+     sly-closeup 0.443 / 21.7%  0.377 /  1.2%  0.538 / 31.5%  0.644 / 32.2%
+     dunes       0.080 /  1.7%  0.635 / 29.3%  0.837 / 68.7%  0.748 / 64.1%
+     traversal   0.106 /  0.8%  0.520 / 15.4%  0.791 / 62.7%  0.732 / 61.3%
+     combat      0.166 /  0.1%  0.626 / 27.7%  0.713 / 45.6%  0.563 / 39.4%
+
+   **+240° is a simultaneous optimum or near-optimum for all seven**, taking the share of visible
+   surface at full key from 0.1–21.7 % to 31.5–68.7 %. Small offsets are NOT a partial win: +40 /
+   +80 / +120 sit at or below the shipped value on `courtyard` and `temple`, so "nudge the sun"
+   is not the fix and the whole sweep had to be run to know that.
+
+   **DELIBERATELY NOT APPLIED.** +240° turns golden hour from a western sunset into an eastern
+   sunrise: every cast shadow in the game reverses, `Sky.js`'s warm horizon band and Mie lobe move
+   to the other side of the dome, `Lighting._buildShafts`/`_updateShafts` re-derive every blade,
+   and the §8.1 pyramid-shadow and peristyle-blade analyses in `Lighting.TUNE` are all written
+   against a westering sun. Whole-game blast radius, no frame verdict taken. It is the lead's call
+   with SHOTS — the alternative fix is re-framing the cameras, and the arithmetic above is
+   agnostic between them. `tests/tone.test.mjs` guards the premise: if any environment shot ever
+   becomes front-lit, that test goes red and this note expires. */
 const SUN_ELEVATION = [
   [0.00, -62], [0.06, -52], [0.12, -38], [0.18, -14], [0.215, 0],
   [0.26,  12], [0.30,  22], [0.38,  48], [0.44,   66], [0.50, 76],
@@ -200,6 +252,46 @@ function anchor(elevation, o) {
   };
 }
 
+/* ── §256: `sunIntensity` is a MEASURED-DEAD lever for the highlight range. Read before raising it.
+   ────────────────────────────────────────────────────────────────────────────────────────────
+   Critic pass 8's top lighting defect is that the frames have no highlight range — luma p99
+   172–181, 0.000–0.004 % of pixels above 230. The obvious reading is "the sun is too dim". It
+   was bracketed properly and it is wrong.
+
+   What IS true is the ceiling. `slyRamp` clamps the key term at 1, so a diffuse surface tops out
+   at `albedo × keyRad`, and at the golden anchor `keyRad = #ffd9a0 × 3.30` has luma 2.425.
+   Through the shipped grade (transcribed and calibrated against PostFX.js's own validated
+   grey-axis row to 0.0 L on 11 of 11 entries), fully sunlit: §2.2 `sandMid` renders at L 197.1,
+   `sandLight` at L 213.2, and **a perfectly white albedo at L 230.8** — the exact threshold the
+   critic says nothing reaches. The grade itself is not the wall: grey scene 2.5 → L 232.7 and
+   ≥ 20 → L 254.7, so L 230 needs scene ≈ 2.3 and the chain hands it over.
+
+   But raising this does not deliver it, because the cameras cannot see the key (see the §256
+   block over SUN_AZIMUTH: 32–85 % of visible geometry is at ramp 0). Bracketed live via
+   `Lighting.TUNE.keyBoost` {1.00, 1.40, 1.70, 2.10, 2.60}, one boot, dt = 0, thresholds
+   registered first (PREREG-hilite1.md), applied `uKeyIntensity` read back per arm:
+
+     base -> k260, i.e. this number 3.30 -> 8.58
+       hero        p99 182.6 -> 186.4  (+3.8)    >230  0.000 % -> 0.003 %
+       temple      p99 180.2 -> 181.8  (+1.6)    >230  0.000 % -> 0.019 %
+       courtyard   p99 180.4 -> 201.6 (+21.2)    >230  0.003 % -> 0.066 %
+       sly-closeup p99 179.4 -> 211.3 (+31.9)    >230  0.005 % -> 0.280 %
+
+   Gate "p99 ≥ 200 on ≥ 3 of 4" scored 2/4 at best; "> 230 on ≥ 0.20 % of the frame, ≥ 3 of 4"
+   scored 1/4. **Both failed and nothing shipped.** Note the response tracks the ramp histogram
+   exactly — `sly-closeup` (mean visible ramp 0.452) moves 32 L, `hero` (0.140) moves 3.8 — which
+   is the mechanism confirming itself rather than a separate claim.
+
+   Also measured, and it is why this is a contrast lever and not an exposure one: the daylight
+   shadow light does NOT follow the key up. `ToonMaterial._refreshShadowColor()` clamps its scale
+   at `shadowTintPeak / peak` = 3.904 while every daylight shot asks for 6.50–9.79, so it is one
+   constant `(0.123, 0.175, 0.423)` game-wide; and `ambientIntensity` below is computed from the
+   un-boosted key. Predicted from that before capturing, and confirmed: p1 moved ≤ 1.5 L across
+   the whole bracket.
+
+   So: raising these numbers brightens the sunlit minority of the frame and nothing else, at
+   about 1.5 L of p99 per 1.0 of sun on the two most backlit shots. If you are here because the
+   frames read flat, the lever is the azimuth or the cameras, not this. */
 const ANCHORS = [
   /* Deep night: moonlit, everything cool, stars and the Milky Way carry the sky. */
   anchor(-16, {

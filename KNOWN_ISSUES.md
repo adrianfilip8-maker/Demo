@@ -20311,3 +20311,169 @@ when the frames land, without retaking the lock.
 Mechanism 2 is closed analytically and unit-tested. Mechanism 3 — that "~2.5 px" never said at what
 resolution, so a 2.50 px hull is 6% of a 42 px character at 720p and 12% of a 21 px one at 360p — is
 closed in code and unrendered. The critic's "5 px = 6.6% of his height" was that arithmetic all along.
+
+## §256 — "no highlight range" is not a tonemap problem: the daylight cameras are shot into the sun, and 32–85% of what they see gets no key light at all
+
+Critic pass 8's top-ranked lighting defect: luma p99 172–181 across the shipped frames and
+0.000–0.004 % of pixels above 230, in a game set at Egyptian golden hour. `sly-closeup`
+reproduces its quoted figures exactly (p50 64.5, p99 172.2, 0.000 % > 230), so the complaint and
+the instrument are measuring the same statistic.
+
+Full record: `progress/records/PREREG-hilite1.md` and `RESULT-hilite1.md`. Frames `shots/hilite1/`.
+
+### The three obvious causes, all ruled out by arithmetic before any capture
+
+**Not the tonemap.** The composite grade was transcribed exactly (`scratchpad/chain.mjs`:
+exposure → lift → gain → split-tone → saturation → pivot contrast → AgX → sRGB, plus Common.js's
+gamut map), calibrated against **this repo's own validated grey-axis rows** in `PostFX.js` — it
+reproduces the eleven-entry row to **0.0 L on 11 of 11** and the nine-entry row to ≤ 0.4 L. With
+it: grey scene 2.0 → L 227.2, 2.5 → 232.7, 4 → 241.7, ≥ 20 → 254.7. **Display L 230 needs scene
+≈ 2.3 and the chain hands it over.** Nothing at the top is being eaten.
+
+**Not a missing HDR emitter.** `Sky.js`'s `sunCore: 26.0` is a genuine one. Projected through
+each canonical camera's real frustum it is **outside the frame in seven of seven** daylight
+shots (hero NDC (−1.65, 1.94), temple (−4.72, 5.14), courtyard (9.71, −9.04), sly-closeup
+(3.95, −2.48), dunes (−2.36, 1.75), traversal (−3.19, 3.02), combat (−1.75, 2.83)).
+
+**Not the ramp's shape.** `slyRamp` clamps at 1, so a diffuse surface tops out at
+`albedo × keyRad`; that cap is real but it is not what makes the frames dim.
+
+### What the supply actually is
+
+`keyRad = #ffd9a0 × 3.30 = (3.30, 2.29, 1.18)`, luma 2.425. Fully sunlit through the calibrated
+chain: §2.2 `sandMid` → L **197.1**, `sandLight` → **213.2**, and a **perfectly white albedo →
+230.8** — the exact threshold the critic says nothing reaches. Corroborated from two other
+directions: `shots/bloom1/sly-closeup-bloomoff.png` (bloom off, the whitest material in the
+game) measures **max 230.7 and 0.000 % above 230**, and `src/textures/Materials.js`'s HUE table
+now says the same thing from the albedo side — "a 0.60 albedo cannot reach 230/255 in frame at
+unity gain however it is lit".
+
+Read out of PostFX's linear scene RT (calibration arm — `debugTerm(4)`'s control triple found on
+**75.99 %** of the frame through the identical readback — so these are quotable):
+
+```
+shot          scene lum p50   p99     p99.9   >0.73    >1.5     >2.3
+hero              0.0660    0.780    1.033   1.68 %   0.019 %  0.000 %
+temple            0.0953    0.601    0.869   0.27 %   0.003 %  0.000 %
+courtyard         0.1470    0.730    1.430   1.07 %   0.089 %  0.018 %
+sly-closeup       0.0856    0.780    1.461   1.13 %   0.060 %  0.004 %
+```
+
+The 99th percentile of *scene radiance* in a golden-hour desert frame is 0.60–0.78, and the share
+of frame at the radiance display white requires is 0.000–0.018 %. **There is nothing to tonemap.**
+
+### And raising the sun does not fix it — bracketed, and it FAILED its own gates
+
+Arms `keyBoost` {1.00, 1.40, 1.70, 2.10, 2.60} plus a duplicate baseline, one boot, `dt = 0`,
+thresholds registered before the capture. Applied `uKeyIntensity` read back per arm; five
+distinct fingerprints, no collapse.
+
+```
+                base -> k260 (sunIntensity 3.30 -> 8.58)
+hero        p99 182.6 -> 186.4   (+3.8)   >230  0.000 % -> 0.003 %
+temple      p99 180.2 -> 181.8   (+1.6)   >230  0.000 % -> 0.019 %
+courtyard   p99 180.4 -> 201.6  (+21.2)   >230  0.003 % -> 0.066 %
+sly-closeup p99 179.4 -> 211.3  (+31.9)   >230  0.005 % -> 0.280 %
+```
+
+Gate T1 (p99 ≥ 200 on ≥ 3 of 4) best 2/4; gate T2 (> 230 ≥ 0.20 % on ≥ 3 of 4) best 1/4.
+**Both fail. Nothing shipped.**
+
+### The cause, which is composition and which nobody had measured
+
+§214.1 established that both MOON-keyed shots are ~180° backlit and stopped there. Run the same
+arithmetic across daylight and **twelve of the fourteen daylight shots — including all seven
+environment shots — sit at or below the ramp's middle band on every camera-facing wall**:
+
+```
+ramp 0    hero -0.6308 · kaykit -0.3152 · temple -0.0496 · courtyard +0.1393
+          dunes -0.5400 · traversal -0.4264 · combat -0.6129 · sly-profile -0.6243
+ramp 0.5  sly-closeup +0.3168 · sly-perch +0.3168 · sly-key +0.3168 · interior +0.2125
+ramp 1    sly-startle +0.6470 · sly-arm +0.8578        <- character turnarounds only
+```
+
+The first draft of this section read "not one daylight shot has a camera-facing wall at full
+key", which is false — `sly-startle` and `sly-arm` clear `termHi` comfortably. I had measured the
+seven environment shots and written the sentence as if it covered all fourteen. The assertion I
+added to `tests/tone.test.mjs` to lock the finding in went red on exactly those two before any of
+this was committed, which is what it was for; they are now that test's calibration arm, since a
+build containing front-lit framings proves the reading can come out the other way.
+
+Confirmed against the real geometry, not just the wall model: `scratchpad/ndlmap.mjs` raycasts
+each camera through ARCHITECTURE + PROPS and evaluates **ToonMaterial's own `slyRamp`** on each
+hit's world normal (calibration arm: the same `slyRamp` returns exactly 1 at N·L 1, exactly 0 at
+−1, 0.500 at 0.33 — it fired). Share of **visible** geometry:
+
+```
+shot          ramp=0 (no key)   ramp~0.5   ramp=1    mean ramp
+hero              72.3 %          27.3 %     0.4 %     0.140
+temple            54.8 %          23.8 %    21.4 %     0.311
+courtyard         60.1 %          23.8 %    16.1 %     0.279
+sly-closeup       32.3 %          45.0 %    22.7 %     0.452
+dunes             85.2 %          13.1 %     1.7 %     0.080
+traversal         79.6 %          19.6 %     0.8 %     0.106
+combat            66.7 %          33.3 %     0.1 %     0.166
+```
+
+**In `hero`, 0.4 % of what the camera sees is at full key and 72.3 % receives none. In `dunes` —
+the shot whose §7.2 job is terrain and atmosphere — it is 1.7 % and 85.2 %.** And the bracket's
+response tracks that column: the two shots with the most key-lit surface (`sly-closeup` 0.452,
+`courtyard` 0.279) are the two that moved (+31.9 L, +21.2 L); `hero` at 0.140 moved 3.8 L under a
+sun nearly three times brighter. The mechanism confirms itself.
+
+The other two terms lighting these surfaces are both **independent of sun intensity**: the
+daylight shadow light is pinned at `TUNE.shadowTintPeak / peak` = 3.904 (every daylight shot asks
+6.50–9.79 and gets 3.904, so it is one constant `(0.123, 0.175, 0.423)` game-wide), and
+`A.ambientIntensity` is computed from the un-boosted key. Predicted from that before the capture
+and confirmed: p1 moves ≤ 1.5 L across the whole bracket.
+
+### There is an azimuth that fixes it, and it is 240° round — not shipped
+
+Same instrument, sweeping an offset onto the shipped sun azimuth (mean visible ramp / share at
+full key):
+
+```
+shot          shipped        +200°          +240°          +280°
+hero        0.138 / 0.5%   0.673 / 40.5%  0.720 / 44.7%  0.532 / 32.3%
+courtyard   0.260 / 15.1%  0.454 / 13.1%  0.704 / 56.9%  0.722 / 56.3%
+temple      0.308 / 20.8%  0.383 / 27.3%  0.611 / 52.4%  0.613 / 55.2%
+sly-closeup 0.443 / 21.7%  0.377 /  1.2%  0.538 / 31.5%  0.644 / 32.2%
+dunes       0.080 /  1.7%  0.635 / 29.3%  0.837 / 68.7%  0.748 / 64.1%
+traversal   0.106 /  0.8%  0.520 / 15.4%  0.791 / 62.7%  0.732 / 61.3%
+combat      0.166 /  0.1%  0.626 / 27.7%  0.713 / 45.6%  0.563 / 39.4%
+```
+
++240° is a simultaneous optimum or near-optimum for all seven, taking the share of visible
+surface at full key from 0.1–21.7 % to 31.5–68.7 %. **Small offsets do not work** — +40/+80/+120
+sit at or *below* the shipped value on `courtyard` and `temple`, so "nudge the sun" is not the
+fix and the whole sweep had to be run to know that.
+
+**Deliberately not shipped.** +240° turns golden hour from a western sunset into an eastern
+sunrise: every cast shadow reverses, `Sky.js`'s warm horizon band and Mie lobe move to the other
+side of the dome, `Lighting`'s shaft geometry re-derives, and the §8.1 pyramid-shadow and
+peristyle-blade analyses in `Lighting.TUNE` are all written against a westering sun. Whole-game
+blast radius, no frame verdict. It is the lead's call; the arithmetic above is the size of the prize.
+
+### 256.1 The run is VOID by its own null arm, and I am not reinterpreting the threshold
+
+T6a registered: `base2` minus `base`, same setting, same boot, `dt = 0`, **must differ on 0
+pixels**. Measured: `hero` 0, `temple` 0, `sly-closeup` 0, **`courtyard` 11 px of 921 600, max
+Δ 3 codes**. Eleven is not zero, so by the rule I wrote before capturing, the run is VOID and its
+numbers are not quotable as a verdict. What that failure can and cannot explain is a separate
+sentence, kept separate on purpose: a ≤ 3-code wobble on 0.0012 % of one frame cannot turn a real
++20 L effect into a measured +1.6 L one, and the run's conclusion is a **negative**. The
+composition finding above comes from a different, capture-free instrument and is untouched by it.
+
+T6b (provenance) also missed — `base` vs `shots/r8` p99 differs by 1.22–7.24 L against a 2.0 L
+bar, because another owner's uncommitted `Materials.js` saturation edits were in the tree. That
+was anticipated in the prereg, and the registered consequence was honoured: **no cross-boot
+comparison to r8 is used anywhere**; every A/B figure is `base` versus an arm from the same boot.
+
+### 256.2 My forecast was wrong, and the reason is a bad proxy worth naming
+
+I forecast `k210`/`k260` would pass, because the top 1 % of each frame is 81–95 % "warm" by an
+`R − B > 18` test and should therefore scale with the key. **`R − B > 18` cannot tell sunlit
+stone from warm haze (`fogColor` #e8b878) or from warm shadow-side stone lit by the sand bounce.**
+All three are warm; only one scales with the sun. The miss is what sent me to measure the ramp
+histogram, so it earned its keep — but a hue test is not a lighting test, and I will not use one
+as a stand-in for N·L again.

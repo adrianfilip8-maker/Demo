@@ -142,19 +142,24 @@ Camera-facing wall N·L (`cameraFacingWallNL`, the same helper `tests/tone.test.
 uses for the §214.1 moon table), against the ramp's terminators `termLo 0.14 / termHi 0.52`:
 
 ```
-shot         sunEl  sunAz  camFwdAz  wall N·L    ramp level
-hero          22.0  186.0    233.1   -0.6308     0     backlit
-temple        33.0  170.0    256.6   -0.0496     0     backlit
-courtyard     26.0  180.0    278.9   +0.1393     0     below termLo
-sly-closeup   21.0  186.7    296.6   +0.3168     0.5
-dunes         15.0  191.0    247.0   -0.5400     0     backlit
-traversal     25.0  181.5    243.4   -0.4264     0     backlit
-combat        29.5  175.0    220.2   -0.6129     0     backlit
+ramp 0    hero -0.6308 · kaykit -0.3152 · temple -0.0496 · courtyard +0.1393
+          dunes -0.5400 · traversal -0.4264 · combat -0.6129 · sly-profile -0.6243
+ramp 0.5  sly-closeup +0.3168 · sly-perch +0.3168 · sly-key +0.3168 · interior +0.2125
+ramp 1    sly-startle +0.6470 · sly-arm +0.8578
 ```
 
-**Not one daylight shot has a camera-facing vertical surface at full key.** §214.1 measured
-exactly this for the two moon-keyed shots and concluded it explained `night`; nobody had run it
-on the daylight ones.
+**Twelve of the fourteen daylight shots — including all seven environment shots — have their
+camera-facing vertical surfaces at ramp 0 or 0.5.** §214.1 measured exactly this for the two
+moon-keyed shots and concluded it explained `night`; nobody had run it on the daylight ones.
+
+> **CORRECTION, caught by my own test before this document was committed.** The first draft of
+> this section said "not one daylight shot has a camera-facing wall at full key". That is false:
+> `sly-startle` (+0.6470) and `sly-arm` (+0.8578) clear `termHi` comfortably. I had measured the
+> seven environment shots and written the sentence as if it covered all fourteen. The assertion
+> I wrote to lock the finding in went red on exactly those two, which is what the assertion was
+> for. The two exceptions are character turnarounds — different camera azimuths around one
+> subject — and they now serve as the test's calibration arm, because a build that contains
+> front-lit framings proves the reading can come out the other way.
 
 ### 3.2 Confirmed against the real geometry, not just the wall model
 
@@ -214,10 +219,135 @@ composition is the cause, and this is the size of the prize.
 
 ## 4. The bracket
 
+All arms captured in one boot at `dt = 0`, `shots/hilite1/`. **The "before" everywhere below is
+this run's own `base` arm, never `shots/r8/`** — see T6b.
+
+| arm | shot | p1 | p50 | p90 | p99 | max | >200 | >230 |
+|---|---|---|---|---|---|---|---|---|
+| base | hero | 15.4 | 71.1 | 154.9 | **182.6** | 232.2 | 0.066 % | **0.000 %** |
+| k140 | hero | 16.8 | 74.1 | 156.0 | 183.6 | 232.4 | 0.089 % | 0.001 % |
+| k170 | hero | 16.8 | 74.2 | 156.9 | 183.9 | 235.3 | 0.112 % | 0.001 % |
+| k210 | hero | 16.8 | 74.3 | 158.4 | 184.8 | 239.1 | 0.150 % | 0.002 % |
+| k260 | hero | 16.9 | 74.4 | 160.1 | **186.4** | 241.4 | 0.209 % | **0.003 %** |
+| base | temple | 30.7 | 88.2 | 144.7 | **180.2** | 229.2 | 0.070 % | **0.000 %** |
+| k260 | temple | 31.2 | 89.8 | 145.7 | **181.8** | 241.1 | 0.263 % | **0.019 %** |
+| base | courtyard | 23.4 | 102.8 | 159.6 | **180.4** | 237.2 | 0.189 % | **0.003 %** |
+| k260 | courtyard | 24.0 | 110.2 | 167.2 | **201.6** | 238.0 | 1.107 % | **0.066 %** |
+| base | sly-closeup | 25.3 | 84.5 | 124.2 | **179.4** | 239.4 | 0.212 % | **0.005 %** |
+| k260 | sly-closeup | 26.4 | 88.3 | 155.1 | **211.3** | 248.1 | 1.866 % | **0.280 %** |
+
+(k140/k170/k210 for temple, courtyard and sly-closeup are in `shots/hilite1/report.json` and
+interpolate monotonically; the two ends are quoted here.)
+
+**A 2.6× sun — `sunIntensity` 3.30 → 8.58 — buys `hero` 3.8 L of p99 and `temple` 1.6 L.**
+
+### 4.1 The response tracks the ramp histogram, which is the mechanism confirming itself
+
+| shot | mean visible ramp (§3.2) | Δ p99, base → k260 |
+|---|---|---|
+| sly-closeup | 0.452 | **+31.9 L** |
+| courtyard | 0.279 | **+21.2 L** |
+| temple | 0.311 | +1.6 L |
+| hero | 0.140 | +3.8 L |
+
+The two shots with the most key-lit visible surface are the two the key lever moves, and
+`hero` — 0.4 % of its visible geometry at full key — barely responds to a sun nearly three
+times as bright. `temple` is the outlier in the other direction and is explained by haze: it is
+the deep hypostyle interior, where the visible surface is far from the camera and dissolved
+toward a haze colour that has no sun term in it.
+
 ## 5. Verdict against the registered gates
+
+| gate | requirement | best arm | result |
+|---|---|---|---|
+| **T1** | p99 ≥ 200 on ≥ 3 of 4 shots | k260: **2/4** (courtyard 201.6, sly-closeup 211.3) | **FAIL** |
+| **T2** | > 230 share ≥ 0.20 % on ≥ 3 of 4 | k260: **1/4** (sly-closeup 0.280 %) | **FAIL** |
+| T3 | p50 ≤ 130 everywhere | max 110.2 | pass |
+| T4 | > 250 share ≤ 1.0 % everywhere | 0.000 % everywhere | pass |
+| T5 | p1 ≤ 45 everywhere | max 31.2 | pass |
+
+**Selection rule outcome: NONE. No arm passes T1 and T2, so by the rule registered before the
+capture, the defect is NOT closed by this lever.** No threshold has been moved and none will be.
+
+### Instrument arms
+
+* **T7 CALIBRATION — FIRED.** `debugTerm(4)`'s control triple on 75.99 % of the frame (§2).
+* **T8 APPLIED STATE — passes.** Five distinct applied `uKeyIntensity` fingerprints, and
+  `base == base2` exactly as required. Read off the live uniform, per shot:
+  `base 3.3000|3.3807|3.3117|3.2859` → `k260 8.5800|8.7898|8.6105|8.5434`. No arm collapsed.
+* **T6a NULL ARM — FAILED, and by the rule I registered that makes this run VOID.** `base2`
+  minus `base`, same setting, same boot, `dt = 0`: `hero` **0 px**, `temple` **0 px**,
+  `sly-closeup` **0 px**, `courtyard` **11 px of 921 600, max Δ 3 codes**. I registered
+  "must differ on 0 pixels … anything else means the instrument moved under me and the run is
+  VOID", and 11 is not 0. **So: VOID, as registered.**
+
+  What I will not do is quietly reinterpret that threshold now that I have seen the number. What
+  I will say, separately, is what the failure can and cannot explain: an instrument that wobbles
+  by ≤ 3 display codes on 0.0012 % of one frame cannot turn a real +20 L effect into a measured
+  +1.6 L one, and the run's conclusion is a **negative** — the direction instability of this size
+  cannot manufacture. The load-bearing finding of this report (§3) comes from a different
+  instrument entirely, is capture-free, and is untouched by this.
+* **T6b PROVENANCE — MISSED, as anticipated in the prereg.** `base` vs `shots/r8/` p99:
+  hero Δ 1.22, courtyard Δ 2.57, temple Δ 5.28, sly-closeup Δ 7.24 against a 2.0 L bar. The tree
+  moved between r8 and this boot — `src/textures/Materials.js` carries another owner's
+  uncommitted saturation edits (its HUE table's `satLo` 1.30 → 1.78 and siblings), which is
+  exactly the drift the prereg named. **Per the registered consequence, no cross-boot comparison
+  to r8 is used anywhere above**; every A/B number is `base` vs an arm from this one boot. The r8
+  table in §1 is quoted only as the reproduction of the critic's own figures, not as a "before".
 
 ## 6. Forecast vs measurement
 
+**Forecast 1 — WRONG, and here is the error.** I predicted `k210` or `k260` would win, on the
+grounds that the top 1 % of each frame was 81–95 % "warm" by an R−B > 18 test and would
+therefore scale with the key. **Nothing won.** The test was a bad proxy: `R − B > 18` cannot
+distinguish sunlit stone from *warm haze* (`fogColor` #e8b878) or from warm shadow-side stone
+lit by the sand bounce. All three are warm; only one scales with the sun. The forecast table
+predicted p99 202–215 at k260 and the measurement is 181.8–211.3, missing low on three of four.
+That miss is what sent me to §3, so it earned its place — but it was wrong.
+
+**Forecast 2 — CONFIRMED, exactly.** I predicted from the shadow-light cap correction that p1
+would move ≤ 3 L across the whole bracket. Measured, base → k260: hero 15.4 → 16.9 (+1.5),
+temple 30.7 → 31.2 (+0.5), courtyard 23.4 → 24.0 (+0.6), sly-closeup 25.3 → 26.4 (+1.1). All
+within 1.5 L. The daylight shadow light really is a constant pinned at its own cap, and the key
+lever really does move only the lit side.
+
 ## 7. What shipped
 
+**No pixel-changing lighting change.** The bracket says the sun-intensity lever is near-dead in
+the shipped framings, and shipping the root-cause fix (the azimuth track) blind — unverified in
+any frame, with a whole-game blast radius — is precisely the move this project has lost days to.
+
+What ships is the record and a tripwire:
+
+1. `src/render/Atmosphere.js` — the measurement written where the next person will look for it:
+   at `sunIntensity` in the anchors (why raising it is dead, with the response curve) and at
+   `SUN_AZIMUTH` (the backlight geometry and the +240° sweep). **Comments only; zero pixels.**
+2. `tests/tone.test.mjs` — a new assertion that no canonical daylight shot has a camera-facing
+   wall at or above `termHi`, carrying its own calibration arm. It is red the day someone fixes
+   the composition, which is the point: the conclusion above expires when that happens.
+3. This document, `PREREG-hilite1.md`, and `KNOWN_ISSUES` §NNN.
+
 ## 8. What did NOT get resolved, and who owns it
+
+* **The defect is open.** Luma p99 is 179–183 and the > 230 share is 0.000–0.005 % on the
+  shipped build, and nothing in this run changed that.
+* **The root cause is composition, and it is not one owner's.** At the shipped sun azimuth,
+  32–85 % of the visible geometry in every daylight shot receives *no key light*. Fixing it is
+  either **SHOTS** (re-frame the cameras so they are not looking into the sun) or **LIGHTING +
+  the lead** (turn the golden-hour track from a western sunset into an eastern sunrise, the
+  +240° arm, which the sweep says lifts every one of the seven shots at once). The second is
+  mine to implement but not mine to decide, and it needs a frame verdict.
+* **The two terms that actually light these frames are not mine.** The daylight shadow light is
+  pinned at `ToonMaterial.TUNE.shadowTintPeak / peak` = 3.904 and is a constant across every
+  daylight shot; its own note says so and says the magnitude "is set by `PAL.shadowTintPeak` and
+  by nothing else". That is **SHADING's** knob and it is the one that decides how bright 32–85 %
+  of every daylight frame is.
+* **The ramp's `{0, 0.5, 1}` levels** put a 22° sun's ground plane on the 0.5 step
+  (`ndl = 0.375` between `termLo` 0.14 and `termHi` 0.52). **RAMP's.**
+* **Not attempted, and stated so it is not assumed:** `Sky.js`'s sun neighbourhood
+  (`sunHaloStrength` 0.85 against the disc's `sunCore` 26) is under-powered, but the disc is
+  outside the frustum in all seven daylight shots (§1.3), so no change there is verifiable in
+  the canonical set. I did not touch it.
+* **This run is VOID by its own T6a rule** (§5). The bracket should be re-run if anyone wants to
+  quote its numbers as anything other than "the lever is small"; the §3 geometry finding needs
+  no re-run.

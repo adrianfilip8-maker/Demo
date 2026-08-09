@@ -198,3 +198,56 @@ test('sky: the dome dither ships non-zero and inside the sub-display-level band 
   assert.ok(TUNE.domeDither <= 0.09,
     `TUNE.domeDither ${TUNE.domeDither} exceeds the sub-LSB band; the daylight sky would carry visible noise`);
 });
+
+
+/* ── §256 — the daylight ENVIRONMENT shots are shot into the sun, which is why the key is a
+      dead lever, and the two shots that are NOT are the two that prove the mechanism ──────── */
+
+/** The seven environment shots §256 measured. Character-turnaround framings are excluded here
+ *  deliberately and asserted separately below — they are lit differently and that is the point. */
+const DAYLIGHT_ENV_SHOTS = ['hero', 'temple', 'courtyard', 'dunes', 'traversal', 'combat', 'sly-closeup'];
+
+test('daylight: every environment shot faces surfaces below full key (§256)', () => {
+  /* §214.1 measured the backlight geometry for the two MOON-keyed shots and stopped there. Run
+     the same arithmetic across daylight and 12 of the 14 daylight shots sit at or below the
+     ramp's MIDDLE band on every camera-facing vertical surface:
+
+       ramp 0    hero -0.6308 · kaykit -0.3152 · temple -0.0496 · courtyard +0.1393
+                 dunes -0.5400 · traversal -0.4264 · combat -0.6129 · sly-profile -0.6243
+       ramp 0.5  sly-closeup +0.3168 · sly-perch +0.3168 · sly-key +0.3168 · interior +0.2125
+       ramp 1    sly-startle +0.6470 · sly-arm +0.8578        <- character turnarounds only
+
+     Confirmed against real geometry rather than only against this model: raycasting each camera
+     through ARCHITECTURE + PROPS and evaluating ToonMaterial's own slyRamp puts the share of
+     VISIBLE surface at full key at hero 0.4 %, courtyard 16.1 %, temple 21.4 %, sly-closeup
+     22.7 %, dunes 1.7 %, traversal 0.8 %, combat 0.1 % — with 32-85 % of it receiving NO key
+     light at all (KNOWN_ISSUES §256, RESULT-hilite1.md §3).
+
+     That is why a 2.6x sun measured as +1.6 to +3.8 L of p99 on temple and hero. This assertion
+     is the expiry date on that conclusion: if a camera or the azimuth table ever moves so that
+     an environment shot is genuinely front-lit, this goes red, and that is good news to be read
+     rather than an assertion to be deleted. */
+  const rows = [];
+  let seen = 0;
+  for (const name of DAYLIGHT_ENV_SHOTS) {
+    assert.ok(SHOTS[name], `${name} is no longer a shot; §256's table is stale`);
+    const at = evalAtmosphere(SHOTS[name].tod, state);
+    assert.equal(at.keyIsMoon, false, `${name} is now moon-keyed — §256 measured it as a daylight shot`);
+    const ndl = cameraFacingWallNL(name, at);
+    rows.push(`${name} el ${at.sunElevation.toFixed(1)} az ${at.sunAzimuth.toFixed(1)} wall N·L ${ndl.toFixed(4)}`);
+    seen++;
+    assert.ok(ndl < TOON_TUNE.termHi,
+      `${name} now has a camera-facing wall at N·L ${ndl.toFixed(4)}, at or above termHi ${TOON_TUNE.termHi}. ` +
+      'That is a COMPOSITION CHANGE and it invalidates §256\'s conclusion that sun intensity is a ' +
+      `dead lever — re-read RESULT-hilite1.md rather than deleting this:\n  ${rows.join('\n  ')}`);
+  }
+  assert.equal(seen, 7, `expected §256's seven environment shots, inspected ${seen}`);
+
+  /* CALIBRATION ARM. "All seven are below termHi" is only evidence if the reading could have
+     come out above it. Two shots in the very same table DO, through this same helper — so the
+     control is not a synthetic one, it is the build's own counter-example. */
+  const front = ['sly-startle', 'sly-arm'].map((n) => cameraFacingWallNL(n, evalAtmosphere(SHOTS[n].tod, state)));
+  assert.ok(front.every((v) => v >= TOON_TUNE.termHi),
+    `calibration failed: the character turnarounds sly-startle/sly-arm read ${front.map((v) => v.toFixed(4)).join(', ')}, ` +
+    `not above termHi ${TOON_TUNE.termHi} — this test cannot detect a front-lit shot and its result means nothing`);
+});
