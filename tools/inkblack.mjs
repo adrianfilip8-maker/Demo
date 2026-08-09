@@ -47,7 +47,7 @@
  * whose thresholds are the ones in the pre-registration and are not re-derived here.
  */
 import { withGame } from './harness.mjs';
-import { writeFileSync, mkdirSync } from 'node:fs';
+import { writeFileSync, readFileSync, mkdirSync, existsSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 
 const OUT = process.env.SANDS_OUT || 'shots/inkblack';
@@ -66,8 +66,44 @@ const ARMS = [
   { tag: 'C-noink',    crease: 0,    hull: 'layers'  },
 ];
 
+/**
+ * RESUME. A ten-shot run is ~2 hours of a FIFO-serialised resource and this one has already been
+ * killed once at shot 5, throwing away four completed shots. So a shot whose four PNGs are all on
+ * disk is not re-rendered, and `arms.json` is rebuilt from the files at the end with every sha
+ * recomputed from the bytes rather than remembered.
+ *
+ * **Why resuming does not corrupt anything, stated rather than assumed.** Other agents edit `src/`
+ * continuously, so shot 5 is not rendered against the same tree as shot 1. That would be fatal to
+ * a cross-shot comparison and is harmless here: every arm of a shot is captured **inside one
+ * boot**, and every gate in `inkblackscore.mjs` — CAL-1, CAL-2, CAL-3, CAL-4, P1 — is computed
+ * **within a shot** before P1 takes a worst case across them. A source change between shots can
+ * therefore move a whole shot, but it cannot move one arm relative to its own siblings, which is
+ * the only comparison any threshold reads.
+ *
+ * The one thing lost on a resumed shot is the in-page `applied` block (the shell count), because
+ * that was only ever in the killed process's memory. It is marked `reconstructed: true` and no
+ * gate reads it — CAL-2 and CAL-4 are computed from image differences and shas, not from it.
+ */
+const armTags = ARMS.map((a) => a.tag);
+const havePngs = (shot) => armTags.every((t) => existsSync(`${OUT}/${shot}-${t}.png`));
+const RESUME = process.env.SANDS_NORESUME !== '1';
 const results = [];
+const todo = [];
 for (const shot of SHOTS) {
+  if (RESUME && havePngs(shot)) {
+    for (const t of armTags) {
+      const file = `${OUT}/${shot}-${t}.png`;
+      const sha = createHash('sha256').update(readFileSync(file)).digest('hex').slice(0, 16);
+      results.push({ shot, arm: t, file, sha, applied: { reconstructed: true }, resumed: true });
+    }
+    console.log(`${shot.padEnd(12)} already on disk — reusing 4 arms (shas recomputed from bytes)`);
+  } else {
+    todo.push(shot);
+  }
+}
+if (!todo.length) console.log('\nnothing left to capture; rebuilding arms.json from disk');
+
+for (const shot of todo) {
   const got = await withGame({ width: 1280, height: 720, quality: 'high', timeout: 900000 },
     async ({ page }) => {
       await page.evaluate(async (s) => { await window.__GAME.setShot(s, { dt: 0 }); }, shot);
@@ -120,6 +156,10 @@ for (const shot of SHOTS) {
     console.log(`${shot.padEnd(12)} ${r.tag.padEnd(11)} ink=${r.applied.inkStrength} `
       + `hull=${String(r.applied.hullDefeat).padEnd(7)} shells=${String(r.applied.hulls).padStart(4)} sha=${sha}`);
   }
+  /* Written after EVERY shot, not once at the end. The first attempt at this run was killed at
+     shot 5 and lost the metadata for four completed shots purely because arms.json had not been
+     written yet — the PNGs survived and the record of them did not. */
+  writeFileSync(`${OUT}/arms.json`, JSON.stringify(results, null, 1));
 }
 
 writeFileSync(`${OUT}/arms.json`, JSON.stringify(results, null, 1));
@@ -134,8 +174,13 @@ for (const r of results) {
 let bad = 0;
 console.log('\nCAL-4 (registered): sha(C0)==sha(B) — the .visible lever is dead — AND sha(C)!=sha(B)');
 for (const [shot, arms] of byShot) {
-  const shells = arms['C-noink']?.applied.hulls ?? 0;
-  if (!shells) { console.log(`  ${shot}: NO slyInk_* MESHES FOUND — arm C is arm B, VOID`); bad++; }
+  /* A resumed shot has no in-page shell count — it was only ever in the killed run's memory. Say
+     so instead of reporting it as zero hulls, which would read as a VOID this run did not find.
+     CAL-2 and CAL-4 below are computed from images and shas and are unaffected. */
+  const resumed = arms['C-noink']?.applied?.reconstructed === true;
+  const shells = arms['C-noink']?.applied?.hulls ?? 0;
+  if (resumed) console.log(`  ${shot}: resumed from disk — shell count not available, CAL-2/CAL-4 still apply`);
+  else if (!shells) { console.log(`  ${shot}: NO slyInk_* MESHES FOUND — arm C is arm B, VOID`); bad++; }
   if (arms['A-ship'] && arms['C-noink'] && arms['A-ship'].sha === arms['C-noink'].sha) {
     console.log(`  ${shot}: arm A and arm C are BIT-IDENTICAL — no ink in this frame at all, VOID`);
     bad++;
