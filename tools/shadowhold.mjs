@@ -28,7 +28,7 @@ const SHOTS = (process.argv[2] || 'dunes,hero,interior').split(',');
 mkdirSync(OUT, { recursive: true });
 
 /** Every arm as {hold, neutralShadow, neutralFill} plus an optional pre-poke, applied fresh. */
-const ARMS = [
+const ALL = [
   { tag: 'A0-base',    pre: null, hold: null, ns: 0, nf: 0 },
   { tag: 'A1-null',    pre: 1,    hold: 0,    ns: 0, nf: 0 },
   { tag: 'A2-ctlgrey', pre: null, hold: 0,    ns: 1, nf: 0 },
@@ -36,6 +36,12 @@ const ARMS = [
   { tag: 'A4-hold06',  pre: null, hold: 0.6,  ns: 0, nf: 0 },
   { tag: 'A5-nofill',  pre: null, hold: 1,    ns: 0, nf: 1 },
 ];
+/* SANDS_ARMS selects a subset by tag prefix, so run 2 (the revised held branch, §269.4) can
+   re-measure base + null + hold1 under the new code without re-paying for A2/A4/A5, whose
+   questions run 1 already answered. The arm DEFINITIONS are untouched. */
+const WANT = (process.env.SANDS_ARMS || '').split(',').filter(Boolean);
+const ARMS = WANT.length ? ALL.filter((a) => WANT.some((w) => a.tag.startsWith(w))) : ALL;
+if (WANT.length && ARMS.length !== WANT.length) throw new Error(`SANDS_ARMS matched ${ARMS.length} of ${WANT.length}`);
 
 const results = [];
 for (const shot of SHOTS) {
