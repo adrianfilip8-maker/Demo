@@ -1168,7 +1168,23 @@ export const TOON_SHADE = /* glsl */ `
 			   G = glossP/128 carries the PER-PIXEL gloss exponent, which varies inside a single
 			   material with ormG, and therefore names the exact normalisation factor applied at
 			   that pixel. Read it against the mode-4 mask like every other reading mode. */
-			else                         dbgT = vec3( uSpec, glossP / 128.0, slyMetal );
+			else if ( uDebugTerm < 7.5 ) dbgT = vec3( uSpec, glossP / 128.0, slyMetal );
+			/* 8 — the class map again, with the B channel replaced by vSlySkin
+			   (PREREG-specnorm2 §2). Mode 7's B is slyMetal, i.e. uMetal TIMES the metalness
+			   map — a per-pixel TEXTURE read. That is a useful picture of where the gilding is
+			   and it is a terrible class key: it shatters one material into a bucket per mask
+			   level, which is how PREREG-specnorm's I5 went BLIND (§263.1).
+
+			   vSlySkin is 1.0 on a SkinnedMesh and 0.0 otherwise, so it quantises to 255 or 0
+			   and a small additive offset cannot move it across a 0.5 threshold. That matters
+			   for a second reason (§263.2): the mode-4 mask requires the calibration triple
+			   EXACTLY, and over the character mode 4 arrives as the triple PLUS an offset, so
+			   an exact-match mask silently drops the subject. A guard scoped to the character
+			   must take its denominator from THIS channel, not from mode 4.
+
+			   Mode 7 is left exactly as it was — it is already published in §263 and
+			   re-defining a documented channel would make old frames unreadable. */
+			else                         dbgT = vec3( uSpec, glossP / 128.0, vSlySkin );
 			outgoingLight = dbgT;
 		}
 	}
