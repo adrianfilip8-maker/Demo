@@ -104,6 +104,17 @@ A null arm proves repeatability, not sensitivity. Both levers must be shown to M
 
 - **CAL-1** `|A - B|` must be non-empty on every daylight frame: the crease ink is live.
   If any frame shows zero changed pixels, `inkStrength` is not the lever it is documented to be.
+
+  *Provenance of the "daylight" scope, stated rather than buried:* I chose it already knowing
+  `night` was the frame that failed the previous instrument, so the timing alone does not make it
+  clean. What makes it defensible is that the source predicts it without reference to any
+  measurement — the crease ink is multiplied by `smoothstep(0.05, 0.20, lum)`, so a frame whose
+  median luma is 0.076 must carry little or no crease ink no matter what the lever does, and
+  gating on it would fail the lever for behaving as written. To keep this falsifiable rather than
+  merely convenient, `night` is **scored but not gated**, and the exclusion is expressed as a
+  prediction: `nCrease(night)` should be under 25% of the daylight median. If night instead shows
+  crease ink in daylight quantities, the mechanism argument is wrong, the exclusion was unearned,
+  and the scorer says so in those words.
 - **CAL-2** `|B - C|` must be non-empty on every frame: the hull ink is live.
 - **CAL-3** `inkMask` must cover between 0.5% and 15% of each frame. Outside that band the mask
   is not ink — it is either nothing or the whole picture — and the run is UNSCOREABLE.

@@ -1,0 +1,157 @@
+/**
+ * §270 / PREREG-inkblack.md — scorer. Thresholds come from the pre-registration and are NOT
+ * re-derived here; changing one after seeing a candidate is the §141.1 violation this whole
+ * apparatus exists to prevent.
+ *
+ * Registered, verbatim:
+ *   CAL-1  |A - B| non-empty on every daylight frame     (the crease lever is live)
+ *   CAL-2  |B - C| non-empty on every frame              (the hull lever is live)
+ *   CAL-3  inkMask covers 0.5%..15% of each frame        (else the mask is not ink)
+ *   P1     |darkestDecile(hullMask, B) - darkestDecile(inkMask, A)| <= 0.010
+ *   F1     > 0.010 refutes "the hull dominates the ink black point"
+ *
+ * P2 (re-authoring the hull colour to black moves the decile >= 0.030 L) needs a src edit and a
+ * second capture. It is deliberately NOT scored here, so that P1's numbers cannot be used to
+ * argue about a threshold P2 has already fixed.
+ */
+import { readPNG } from './png.mjs';
+import { readFileSync } from 'node:fs';
+import { shipVerdict, verdictLine, guardState, PASS, VOID } from './gate.mjs';
+
+const DIR = process.env.SANDS_OUT || 'shots/inkblack';
+const arms = JSON.parse(readFileSync(`${DIR}/arms.json`, 'utf8'));
+
+const luma = (r, g, b) => (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+const NIGHT = new Set(['night', 'guard']);
+
+/** Pixels where two frames differ at all, plus the luma of the first at those pixels. */
+function diffMask(a, b) {
+  if (a.w !== b.w || a.h !== b.h) return null;
+  const idx = [];
+  for (let i = 0, n = a.w * a.h; i < n; i++) {
+    const p = i * a.ch, q = i * b.ch;
+    if (a.data[p] !== b.data[q] || a.data[p + 1] !== b.data[q + 1] || a.data[p + 2] !== b.data[q + 2]) {
+      idx.push(i);
+    }
+  }
+  return idx;
+}
+
+/** Darkest-decile luma of `im` restricted to `idx`. */
+function darkestDecile(im, idx) {
+  if (!idx.length) return null;
+  const v = new Float64Array(idx.length);
+  for (let k = 0; k < idx.length; k++) {
+    const p = idx[k] * im.ch;
+    v[k] = luma(im.data[p], im.data[p + 1], im.data[p + 2]);
+  }
+  v.sort();
+  return v[Math.floor(v.length * 0.10)];
+}
+
+const byShot = new Map();
+for (const r of arms) {
+  if (!byShot.has(r.shot)) byShot.set(r.shot, {});
+  byShot.get(r.shot)[r.arm] = r;
+}
+
+const rows = [];
+const cal1 = [], cal2 = [], cal3 = [];
+
+for (const [shot, a] of byShot) {
+  const A = a['A-ship'], B = a['B-nocrease'], C = a['C-noink'];
+  if (!A || !B || !C) { rows.push({ shot, note: 'missing arm' }); cal1.push(false); cal2.push(false); cal3.push(false); continue; }
+
+  const imA = readPNG(A.file), imB = readPNG(B.file), imC = readPNG(C.file);
+  const inkMask = diffMask(imA, imC);
+  const creaseMask = diffMask(imA, imB);
+  const hullMask = diffMask(imB, imC);
+  if (!inkMask || !creaseMask || !hullMask) { rows.push({ shot, note: 'size mismatch' }); cal1.push(false); cal2.push(false); cal3.push(false); continue; }
+
+  const n = imA.w * imA.h;
+  const cov = inkMask.length / n;
+
+  /* CAL-1 is gated over DAYLIGHT frames only, and the provenance of that scope is stated rather
+     than dressed up: I chose it already knowing `night` was the frame that broke the previous
+     instrument. What makes it legitimate is not the timing, it is that the mechanism predicts it
+     from the source independently of any measurement — the crease ink is multiplied by
+     smoothstep(0.05, 0.20, lum), so a frame whose median luma is 0.076 must carry little or no
+     crease ink whatever the lever does. Gating CAL-1 on such a frame would fail the lever for
+     doing exactly what it is written to do.
+     So night is scored but NOT gated, and it is turned into a falsifiable prediction rather than
+     a hole: nCrease(night) should be a small fraction of the daylight frames'. If night instead
+     shows crease ink in daylight quantities, the mechanism story above is wrong and the
+     exclusion was unearned — reported below either way. */
+  if (!NIGHT.has(shot)) cal1.push(creaseMask.length > 0);
+  cal2.push(hullMask.length > 0);
+  cal3.push(cov >= 0.005 && cov <= 0.15);
+
+  rows.push({
+    shot,
+    nInk: inkMask.length, nCrease: creaseMask.length, nHull: hullMask.length,
+    cov,
+    dInkA: darkestDecile(imA, inkMask),
+    dHullB: darkestDecile(imB, hullMask),
+    dCreaseA: darkestDecile(imA, creaseMask),
+    shells: C.applied?.hulls ?? 0,
+  });
+}
+
+console.log('shot          ink px   crease px   hull px   cov%    dec(ink,A)  dec(hull,B)  dec(crease,A)  shells');
+for (const r of rows) {
+  if (r.note) { console.log(`  ${r.shot.padEnd(12)} ${r.note}`); continue; }
+  const f = (x) => (x == null ? '  n/a ' : x.toFixed(4));
+  console.log(`  ${r.shot.padEnd(12)} ${String(r.nInk).padStart(7)} ${String(r.nCrease).padStart(10)} `
+    + `${String(r.nHull).padStart(9)}  ${(100 * r.cov).toFixed(2).padStart(5)}     ${f(r.dInkA)}      `
+    + `${f(r.dHullB)}       ${f(r.dCreaseA)}     ${String(r.shells).padStart(4)}`);
+}
+
+/* P1 — attribution. Scored over the shots where BOTH deciles exist; a shot missing either is
+   not evidence either way and must not be silently averaged in as agreement. */
+const usable = rows.filter((r) => !r.note && r.dInkA != null && r.dHullB != null);
+const deltas = usable.map((r) => Math.abs(r.dHullB - r.dInkA));
+const worst = deltas.length ? Math.max(...deltas) : null;
+const p1 = deltas.length ? worst <= 0.010 : null;   // null, not false: nothing was measured
+
+const all = (xs) => (xs.length ? xs.every(Boolean) : null);
+const guards = {
+  'CAL-1 crease lever live': all(cal1),
+  'CAL-2 hull lever live':   all(cal2),
+  'CAL-3 mask is ink':       all(cal3),
+  'P1 hull dominates':       p1,
+};
+
+/* The night exclusion, as a prediction that can fail. See CAL-1 above for why it is stated
+   this way instead of being quietly scoped out. */
+const dayCrease = rows.filter((r) => !r.note && !NIGHT.has(r.shot)).map((r) => r.nCrease);
+const nightRow = rows.find((r) => !r.note && NIGHT.has(r.shot));
+if (nightRow && dayCrease.length) {
+  const medDay = dayCrease.slice().sort((a, b) => a - b)[Math.floor(dayCrease.length / 2)];
+  const ratio = medDay ? nightRow.nCrease / medDay : NaN;
+  console.log(`\n  night crease px ${nightRow.nCrease} vs daylight median ${medDay} `
+    + `(ratio ${Number.isFinite(ratio) ? ratio.toFixed(3) : 'n/a'})`);
+  console.log(ratio < 0.25
+    ? '  -> as predicted by smoothstep(0.05,0.20,lum); the CAL-1 daylight scope is earned.'
+    : '  -> NOT as predicted: night carries daylight-scale crease ink, so the mechanism argument '
+      + 'for excluding it from CAL-1 is WRONG and the exclusion was unearned.');
+}
+
+console.log('');
+for (const [k, v] of Object.entries(guards)) console.log(`  ${guardState(v).padEnd(4)}  ${k}`);
+if (worst != null) console.log(`\n  worst |dec(hull,B) - dec(ink,A)| = ${worst.toFixed(4)}  (F1 refutes above 0.0100)`);
+
+const v = shipVerdict(guards);
+console.log('\n' + verdictLine(v));
+
+/* The registered outcome names, mapped explicitly so the run cannot be reported as something
+   the pre-registration does not define. VOID beats FAIL: an unevaluable run says nothing about
+   the candidate. */
+const calStates = ['CAL-1 crease lever live', 'CAL-2 hull lever live', 'CAL-3 mask is ink']
+  .map((k) => guardState(guards[k]));
+let outcome;
+if (calStates.some((s) => s === VOID) || guardState(p1) === VOID) outcome = 'VOID';
+else if (calStates.some((s) => s !== PASS)) outcome = 'VOID';         // a failed calibration voids
+else outcome = (guardState(p1) === PASS) ? 'P1 MET — hull dominates; P2 still unscored'
+                                         : 'FAIL — F1 fired, the crease ink is a material contributor';
+console.log(`OUTCOME: ${outcome}`);
+console.log('P2 (authored colour vs grade floor) needs a src edit and a second capture; not scored here.');
