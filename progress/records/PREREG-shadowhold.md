@@ -165,3 +165,53 @@ So §2.2 and the reference do **not** conflict. What conflicts with the referenc
 `DERIV-shadowhue-target.md` §3's reading of §2.1.3 — "gold sandstone against deep teal shadow" taken
 as a per-surface requirement that the shaded half of a material sit at its own complement. §5 of
 this file picks against that reading, with reasons stated there and in KNOWN_ISSUES.
+
+---
+
+## 10. CORRECTION to §9's mechanism — made before any candidate frame was scored
+
+§9 says the multiply "neutralises" sandstone to ~4 % chroma and that the additive wash then owns
+the hue. **That is wrong and is withdrawn.** It was computed by treating `#2a3f66` as an sRGB
+multiplier; the shader multiplies by the *live* shadow light, in linear, after the turquoise blend
+and the bounce mix. Recomputed by `scratchpad/hue/model.mjs`, which reads the constants out of
+`ToonMaterial.js` by regex rather than transcribing them, and which reproduces the `G/R 3.258`
+that `ADDENDUM-shadowhue-restate.md` §1 derived independently:
+
+```
+shadow light, linear   (0.1039, 0.3384, 0.5367)    G/R 3.258
+break-even             an albedo flips R>G to G>R when its linear G/R exceeds 0.307
+
+material          lit h    shipped shade h     Δh      held shade h    Δh
+SANDSTONE mid      22.5              175.9   153.4            22.5    0.0
+SANDSTONE light    29.0              177.8   148.8            29.0    0.0
+LIMESTONE mid      37.6              193.2   155.6            37.6    0.0
+LIMESTONE light    38.9              199.9   161.0            38.9    0.0
+LAPIS             226.7              228.3     1.6           226.7    0.0
+grey granite      240.0              208.3    31.7           208.3   31.7   (hold 0.04 — untouched)
+```
+
+**The multiply itself carries ~153° of the measured ~174°.** The wash compounds it; it is not the
+cause. Nothing about the candidate changes — `hold` was already designed to bound the multiply's
+rotation, not the wash's — but the *reason* stated in §9 was wrong, and a fix that ships with a
+wrong reason attached is how the next pass mis-tunes it.
+
+Two consequences worth recording:
+
+1. **This exact table is already in the repo, as a PASS.** `ADDENDUM-shadowhue-restate.md` §2
+   computes the same products ("shaded sandstone multiplies to ~176–181°… the entire stone family
+   passes") and records them as confirmation, because it scored them against
+   `DERIV-shadowhue-target.md`'s Δh ≈ 180° band. Same arithmetic, opposite verdict. **The
+   disagreement between critic 2 and critic 9 was never about the mechanism — both descriptions of
+   it are correct — it is entirely about which acceptance governs.**
+2. **`shadowHoldKnee` is in linear chroma, not sRGB.** Linear `(max−min)/max` runs about double the
+   sRGB figure, so at knee 0.25 every palette material except a true neutral holds fully. The last
+   row above is the achromatic guard doing its job: grey granite gets `hold` 0.04 and keeps its
+   violet-teal shadow.
+
+**Unregistered risk, stated now rather than discovered later.** G5/G6 protect `interior`'s
+warm/cool balance; there is **no** registered warm/cool guard on `dunes` or `hero`. Critic pass 2's
+recorded failure mode is the frame going monochrome-warm (`ToonMaterial.js`: "Zero measured best on
+every palette metric but took `hero` to cool % 9.8"). Frame warm %/cool % are reported for all
+three shots in the result, but they are **not** gated, and a threshold invented after seeing them
+would be exactly the mis-derivation §141.1 forbids. If the balance moves, the finding is recorded
+and the guard is registered for the *next* pass — the knee is the lever, not `shadowHold`.

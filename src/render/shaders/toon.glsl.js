@@ -614,13 +614,31 @@ export const TOON_SHADE = /* glsl */ `
 		 *
 		 * Everything above builds a shadow LIGHT and multiplies it into the albedo. That is
 		 * already a per-material derivation on paper, and on warm stone it is not one in
-		 * practice, for a reason that is arithmetic rather than aesthetic: sandstone's linear
-		 * B/R is 0.175 and the shadow light's own R/B is 0.174, so the product lands within
-		 * 1% of the channel-order flip and comes out at ~4% chroma — grey. Whatever small
-		 * albedo-INDEPENDENT term is added next then owns the hue outright, and
-		 * slyShadX * uShadowWash is exactly such a term. That is the whole of critic 9's
-		 * "shadow ramps rotate hue by 176-187 degrees": not a tint substituted for a multiply,
-		 * but a multiply that neutralises and an additive wash that repaints.
+		 * practice, for a reason that is arithmetic rather than aesthetic. Measured offline
+		 * from the shipped constants (scratchpad/hue/model.mjs, which reads them out of
+		 * ToonMaterial.js by regex rather than transcribing, and reproduces the G/R 3.258 that
+		 * ADDENDUM-shadowhue-restate.md §1 computed independently):
+		 *
+		 *     shadow light, linear      (0.1039, 0.3384, 0.5367)     G/R 3.258
+		 *     break-even                an albedo flips R>G to G>R when its linear G/R > 0.307
+		 *
+		 *     material          lit h    shipped shade h    dh
+		 *     SANDSTONE mid      22.5              175.9   153.4
+		 *     SANDSTONE light    29.0              177.8   148.8
+		 *     LIMESTONE mid      37.6              193.2   155.6
+		 *
+		 * Sandstone's linear G/R is 0.485 against a break-even of 0.307, so the MULTIPLY ITSELF
+		 * inverts the channel order and carries ~153 of critic 9's measured ~174 degrees. The
+		 * additive uShadowWash makes it worse but is not the cause, and an earlier draft of this
+		 * comment that blamed it ("the multiply neutralises, the wash repaints") was WRONG and is
+		 * withdrawn — the multiply does not neutralise, it substitutes.
+		 *
+		 * The same arithmetic is already in the repo, in ADDENDUM-shadowhue-restate.md §2, where
+		 * it is recorded as a PASS ("shaded sandstone multiplies to ~176-181 degrees ... the
+		 * entire stone family passes"). It passed because it was scored against
+		 * DERIV-shadowhue-target.md's dh ~ 180 band. Same numbers, opposite verdict; the
+		 * disagreement is entirely in the acceptance, never in the mechanism. §269 settles which
+		 * acceptance governs.
 		 *
 		 * hold is the fix and it is gated on a quantity the old model never consulted — the
 		 * albedo's OWN chroma, per pixel:

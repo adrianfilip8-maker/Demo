@@ -163,13 +163,20 @@ export const TUNE = {
    * `dunes`, 165.6° on `hero`, against 12.6–24.8° on three verified single-material regions of
    * `sly3-venice.jpg`.
    *
-   * The mechanism, and it is not the one the critic named. Every shadow term here is already
-   * albedo-*multiplied*; nothing substitutes a tint for the material. What happens instead is
-   * that sandstone's linear B/R is **0.175** and the shadow light's R/B is **0.174** — the
-   * product sits within 1% of the channel-order flip and leaves the surface at ~4% chroma. At 4%
-   * chroma the additive `shadowWash` term, which IS albedo-independent, decides the hue outright
-   * even at 0.05. So the fix is not to remove the tint; it is to stop the multiply from
-   * neutralising, and to withdraw the additive term once it is no longer needed.
+   * The mechanism, measured offline from these very constants by `scratchpad/hue/model.mjs`
+   * (regex-read, not transcribed; it reproduces the `G/R 3.258` that
+   * `ADDENDUM-shadowhue-restate.md` §1 derived independently):
+   *
+   *     shadow light, linear   (0.1039, 0.3384, 0.5367)   G/R **3.258**
+   *     break-even             an albedo flips R>G to G>R when its linear G/R exceeds **0.307**
+   *     SANDSTONE mid          G/R 0.485 -> shade hue **175.9°** against a lit **22.5°**
+   *
+   * So the critic's phrase "global tint substitution" names the right defect and the wrong
+   * mechanism, and so did my own first draft of this note. Nothing here substitutes a tint for a
+   * multiply: the shadow light is simply saturated enough (G/R 3.258 against sandstone's 0.485)
+   * that **the multiply itself inverts the channel order**, and it carries ~153° of the measured
+   * ~174°. `shadowWash` compounds it and is not the cause. The fix is therefore not to remove
+   * the tint — it is to stop the light's chroma from overwriting the material's.
    *
    * Why this is a new gate and not a move of `shadowSat` / `shadowWash` / `shadowTeal`. Critic
    * pass 2 ranked "the shadow is a redder, more saturated version of the sunlit hue" as its top
@@ -183,10 +190,16 @@ export const TUNE = {
    * `shadowHoldKnee` is the albedo chroma at which the hold reaches full strength, and it is the
    * whole of the achromatic answer. Hue is ill-defined on limestone and granite, so there is
    * nothing there to hold; below the knee the material keeps the shipped violet-teal shadow and
-   * §2.1.3's "shadows are never grey" is preserved exactly where it is load-bearing. sRGB albedo
-   * chroma at the palette stops: SANDSTONE mid 0.552, LIMESTONE mid 0.274, LIMESTONE light 0.167,
-   * PAINT white 0.124, a true grey ~0.03. At 0.25 the sandstone family holds fully, limestone
-   * holds most of the way, and neutral plaster does not move.
+   * §2.1.3's "shadows are never grey" is preserved exactly where it is load-bearing.
+   *
+   * **The knee is in LINEAR chroma, not sRGB** — the shader's `alb` is `diffuseColor.rgb`, which
+   * three delivers linear, and an earlier draft of this note quoted sRGB numbers, which are
+   * roughly half. Linear `(max-min)/max` at the palette stops: SANDSTONE mid 0.825, SANDSTONE
+   * light 0.763, LIMESTONE mid 0.509, LIMESTONE light 0.337, PAINT white 0.259, LAPIS 0.955,
+   * a true grey 0.031. At a knee of 0.25 everything but a true neutral holds fully; the knee is
+   * the lever for handing more of the frame back to the shadow light, and raising it is the
+   * first thing to try if a future pass measures the warm/cool balance going monochrome-warm
+   * (the failure critic pass 2 recorded, and the reason `shadowWash` is 0.05 and not 0).
    *
    * **0 is bit-identical** — `mix(x, y, 0.0) == x` and `(1.0 - 0.0) == 1.0` on any driver — so
    * the A/B's null arm is exact rather than approximate. */
