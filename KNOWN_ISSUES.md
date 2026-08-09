@@ -21742,3 +21742,29 @@ day's work twice over.**
 
 Suite 394/395 after recovery, identical to before it; the one red is the deliberately-held texture
 staleness guard (§232.7).
+
+### §268.1 — the third occurrence, and `rev-list` said "in sync" while 126 commits behind
+
+It happened again, and this time the check I had been relying on **lied**.
+
+`git rev-list --left-right --count origin/<branch>...HEAD` reported **`0 0`** — perfectly in sync —
+while `HEAD` sat at `da890a3` and the true remote was 126 commits ahead. The reason is that the
+rollback reverts **`.git` itself**, including the remote-tracking ref. `origin/<branch>` is a
+*cached memory* of the remote, and both sides of the comparison had been rolled back to the same
+old commit, so they agreed.
+
+**`0 0` is the most reassuring output git gives, and it was false.** A comparison against a
+remote-tracking ref is only as fresh as the last fetch:
+
+```
+git fetch origin <branch>          # ALWAYS first — the ref is a cache, not the remote
+git rev-list --left-right --count origin/<branch>...HEAD
+git merge --ff-only origin/<branch>
+```
+
+The fetch is not a courtesy step. It is the step that makes the comparison mean anything. Only after
+running it did the same command report the real `126  0`.
+
+Everything else held: fast-forward recovered cleanly, nothing local existed to lose, the three
+untracked files were again the stale session-start copies, and the suite came back **394/395**,
+identical across all three incidents.
