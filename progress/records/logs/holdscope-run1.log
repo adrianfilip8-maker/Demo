@@ -308,3 +308,20 @@ interior     1.00  1       0.0000    0.773%  [64,128,191]      73.6%
 night        0.20  0.2     0.0000   16.463%  [64,128,191]      74.2%  
 sly-closeup  0.60  0.6     0.0000   14.335%  [64,128,191]      19.1%  
 sly-perch    0.60  0.6     0.0000    9.623%  [64,128,191]      48.0%  
+temple       0.80  0.8     0.0000   33.462%  [64,128,191]      26.8%  
+traversal    0.00  0       0.0000   16.168%  [64,128,191]      58.4%  
+
+==============================================================================
+### phase 2 — the registered threshold rule (PREREG §5)
+
+OPEN   (litFrac >= 0.05): combat, courtyard, dunes, hero, night, sly-closeup, sly-perch, temple, traversal
+ROOFED (litFrac <  0.05): interior
+max enclosure over OPEN   eO = 0.8
+min enclosure over ROOFED eR = 1
+==> T = 0.9   (margin 1 ray of 5)
+
+==============================================================================
+### phase 3 — arms
+
+combat       A0-base     hold=0    he=-1    encl=0.00 open=null  ns=0 nf=0  sha=4f30f06a5c33e1dd
+combat       A4-scoped   hold=1    he=0.9   encl=0.40 open=1     ns=0 nf=0  sha=99e4a48435dbb720
