@@ -25,6 +25,9 @@ mkdirSync(OUT, { recursive: true });
 
 const SHOTS = process.argv.slice(2).filter((a) => !a.startsWith('--'));
 const SHOT_LIST = SHOTS.length ? SHOTS : ['hero', 'temple', 'courtyard', 'sly-closeup'];
+/* A second boot for the addendum's `interior` must not overwrite the registered run's JSON —
+   every A/B stays inside its own boot and the two records stay separable. */
+const TAG = SHOTS.length ? `-${SHOT_LIST.join('_')}` : '';
 
 /* PREREG-hilite2 §4. Order matters: `base2` is captured LAST, after `key`, so I1 proves that
    returning uSpecKey to 0 reproduces base exactly rather than merely that base repeats. */
@@ -205,7 +208,7 @@ const info = await withGame({ width: W, height: H, quality: 'high', timeout: 600
     await applyArm(page, { specKey: 0, specGain: 1 });
 
     rows.push(row);
-    writeFileSync(path.join(OUT, 'arms.json'), JSON.stringify(rows, null, 2));
+    writeFileSync(path.join(OUT, `arms${TAG}.json`), JSON.stringify(rows, null, 2));
     process.stdout.write(`  (${((Date.now() - t0) / 1000) | 0}s)`);
   }
   return { renderer: info.renderer, warnings: info.warnings };
@@ -249,7 +252,7 @@ for (const r of rows) {
   R.shots.push(s);
 }
 
-writeFileSync(path.join(OUT, 'score.json'), JSON.stringify(R, null, 2));
+writeFileSync(path.join(OUT, `score${TAG}.json`), JSON.stringify(R, null, 2));
 
 /* ------------------------------- the verdict --------------------------------- */
 const f2 = (v) => v.toFixed(2), f3 = (v) => v.toFixed(3);
