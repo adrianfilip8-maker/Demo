@@ -50,10 +50,41 @@ for (const [k, v] of Object.entries(A)) {
 }
 if (r9h) console.log(`${'r9'.padEnd(6)} ${'hero'.padEnd(10)} ${r9h.flat.toFixed(4).padStart(7)} ${r9h.gradP[1].toFixed(2).padStart(10)}`);
 
+/* ---- armTook (PREREG-celband amendment 2) ------------------------------------------------
+ * The arms are environment variables: invisible in a PNG, identical in the SHA. Two signatures
+ * were registered before capture and both are checked here rather than by eye.
+ *   - A1's warnings must name `celbandon`, A2's `celbandflat`, A0's must name neither.
+ *   - all three run VITE_TEX_BAKED=off, so all three must report `0 baked`; an arm that reports
+ *     `N baked` read the committed blob and never ran a recipe.
+ * Anything unreadable is `null` -> VOID, never a pass. */
+function armWarnings(arm) {
+  const f = path.join(dir, arm, 'report.json');
+  if (!fs.existsSync(f)) return null;
+  try {
+    const j = JSON.parse(fs.readFileSync(f, 'utf8'));
+    return [].concat(j.warnings || [], j.bootWarnings || []).join(' | ');
+  } catch { return null; }
+}
+const W = { a0: armWarnings('a0'), a1: armWarnings('a1'), a2: armWarnings('a2') };
+const armTook = (() => {
+  if (!W.a0 || !W.a1 || !W.a2) return null;
+  const proc = Object.values(W).every((w) => /0 baked/.test(w));
+  const tagged = W.a1.includes('celbandon') && W.a2.includes('celbandflat')
+    && !W.a0.includes('celbandon') && !W.a0.includes('celbandflat');
+  return proc && tagged;
+})();
+console.log('\narmTook (amendment 2)');
+for (const [k, w] of Object.entries(W)) {
+  console.log(`  ${k}: ${w === null ? 'NO report.json' : (/(\d+) baked \/ (\d+) generated/.exec(w) || [, '?', '?']).slice(1).join(' baked / ') + ' generated'
+    + (/celband\w+/.exec(w) ? `  arm=${/celband\w+/.exec(w)[0]}` : '  arm=(none)')}`);
+}
+console.log(`  => ${guardState(armTook)}`);
+
 /* Every guard is `null` unless its inputs are all present. `null` is VOID by gate.mjs. */
 const num = (v) => (typeof v === 'number' && Number.isFinite(v) ? v : null);
 const C1v = A.a2h && A.a0h ? num(A.a2h.F - A.a0h.F) : null;
-const C1 = C1v === null ? null : C1v >= 0.04;
+/* armTook gates the calibration, which gates everything else — registered in that order. */
+const C1 = armTook !== true ? null : (C1v === null ? null : C1v >= 0.04);
 
 /* C1 is the sensitivity arm. If it did not fire, nothing downstream is interpretable — a null
  * arm proves repeatability, not sensitivity — so every other guard is forced to VOID rather
@@ -63,6 +94,7 @@ const g = (v) => (live ? v : null);
 
 const C2v = A.a0h && r9h ? num(Math.abs(A.a0h.F - r9h.flat)) : null;
 const guards = {
+  'A0 armTook: three arms distinguishable in report.json': armTook,
   'C1 calibration A2-A0 flat >= 0.04': C1,
   'C2 control reproduces r9 (|dF| <= 0.010)': g(C2v === null ? null : C2v <= 0.010),
   'P1 A1 hero flat >= 0.2016': g(A.a1h ? A.a1h.F >= 0.2016 : null),
