@@ -149,3 +149,32 @@ working tree, not this change: two in `tests/eventbus.test.mjs` (edited in-tree)
 in `src/core/Shots.js` — also an in-tree edit), and `tests/health.test.mjs` aggregating them.
 `tests/geometry.test.mjs`, `tests/level.test.mjs` and `tests/props.test.mjs` — the three that
 touch this lane — are 47/47 green.
+
+---
+
+## 8. Addendum — the frame, which §3's last falsifier demanded
+
+`PREREG-smiley` closed with: *"the gates are necessary conditions I can measure, not a proof of
+the percept. If a gate passes and the rendered frame still reads as a face, the instrument was
+wrong and says so."* A `courtyard` frame rode along on the D12 attribution boot at no extra lock
+cost — `shots/fxshape/courtyard.png`, not committed (`shots/*/` is ignored), not scored, and not
+an arm of anything.
+
+Read at 1x and at 2x on the east figure against `shots/r9/courtyard.png`:
+
+- **The grin is gone.** There is no upturned gold arc anywhere on either figure. The collar is a
+  wide banded bib across the chest with a lapis course through it, and it reads as jewellery.
+- **The horizontal bars are gone.** The nemes now reads as a striped headcloth — fine lapis
+  banding held inside the gold lappets, nothing projecting past the outline. The critic's
+  "hi-fi amplifier" comparison no longer has anything to attach to.
+- **The uraeus no longer reads as a cyclops eye**, because it is now a small ornament on a
+  crown that is wide enough to carry it, rather than the topmost isolated mark on a narrow box.
+- **The three-mark face arrangement is not there to be found.** I looked for it specifically.
+
+What is still weak, stated because it is the honest half: **the carved face still does not
+read.** The nose wedge and one horizontal line are visible at 2x; the eyes are not. The face is
+in shade and every material in it converges there — which is precisely what §6 scoped out of
+this run as D1/D7's grading problem and predicted would survive it. It did.
+
+This confirms the gates were measuring the defect and not a proxy for it, on the one frame the
+critic scored. It does not make the figures good; it makes them not-a-smiley.
