@@ -1,346 +1,210 @@
-# PREREG-celband — does the cel shading band?
+# PREREG-celband — the albedo carries continuous noise where cel wants discrete steps
 
-Registered **before** the subject arm was run. `progress/records/celcyl.mjs` is committed in the
-same change so the criterion is on the record ahead of the number. The subject numbers of the
-prior (VOID) run were deliberately not read by the author of this document.
+Sealed before `src/textures/Canvas2D.js` or `src/textures/Bake.js` contain any part of the
+candidate. Everything below is written against measurements of the **shipped** build only.
 
-## 1. The defect
+Owner: TEXTURES. Target: critic 9 **D6** ("environment surfaces carry painterly/photographic noise
+where cel wants flat"). D7 is measured in the same run and **is not claimed** — see §7, which
+records a refutation of my own starting premise.
 
-A blind critic scored the build 3/10 and ranked "the cel shading does not band" first. The
-standing measurement is a max luma step of 3.79 across a 420 px sweep: the shading reads as soft
-Lambert with a slight posterize rather than as a hard-edged toon ramp.
+---
 
-## 2. Why the previous criterion was VOID, and what is wrong with it
+## 1. The instrument, and the calibration that says it is the critic's instrument
 
-The first run of `celcyl.mjs` asserted `plateaus >= 2 && maxStep > 20` on its POSITIVE control.
-It failed:
+`tools/celsurf.mjs`. D6 quotes one statistic that is recoverable exactly from the review —
+*"the fraction of pixels in a truly flat 3×3 neighbourhood is 0.15–0.18 in
+`hero`/`courtyard`/`temple`/`traversal` versus 0.296 in the reference"* — and "truly flat" is not a
+definition. Nine candidate definitions were run against those five published numbers **before the
+candidate existed**:
 
-```
-[calib-banded] plateaus 3, maxStep 15.62   MUST-CHANGE: plateaus>=2 && maxStep>20 -> FAIL
-[calib-smooth] plateaus 1, maxStep  1.12   MUST-CHANGE: maxStep<20               -> PASS
-```
+| definition | hero | courtyard | temple | traversal | ref-venice |
+|---|---|---|---|---|---|
+| rec709, rounded, span 0 | 0.0216 | 0.0106 | 0.0075 | 0.0399 | 0.0956 |
+| rec709, raw, span ≤ 1 | 0.0508 | 0.0367 | 0.0348 | 0.0862 | 0.1742 |
+| **rec709, raw, span ≤ 2** | **0.1549** | **0.1506** | **0.1770** | **0.1833** | **0.2950** |
+| rec601, rounded, span ≤ 2 | 0.2172 | 0.2147 | 0.2529 | 0.2355 | 0.3491 |
+| mean-RGB, rounded, span ≤ 2 | 0.1796 | 0.2181 | 0.2344 | 0.2271 | 0.3387 |
+| RGB all-equal | 0.0029 | 0.0006 | 0.0002 | 0.0053 | 0.0779 |
 
-The positive control drew three clean plateaus 85.0 luma apart — unmistakable banding — and was
-scored blind, because `20` was authored rather than derived. By §141.1 the run is VOID and its
-subject numbers are discarded rather than re-scored.
+Exactly one puts all four of ours inside "0.15–0.18" **and** the reference on 0.296:
+`L = 0.2126R + 0.7152G + 0.0722B` on 0..255 floats, unrounded, flat ⇔ 3×3 span ≤ 2.0. That is the
+definition `celsurf.mjs` implements. The reference is `sly3-venice.jpg` decoded once to PNG (the
+decode is in the scratchpad and is not committed).
 
-`maxStep` is not merely mis-thresholded, it is the wrong statistic for this geometry and **no**
-threshold on it can be right:
+**Registered as the instrument's own falsifier:** if a later reader re-runs the sweep and a second
+definition also reproduces all five numbers, the calibration is ambiguous and every threshold below
+is void.
 
-* `TUNE.termSoft` is a ±0.024 smoothstep, so every band boundary is deliberately soft.
-* On a cylinder N·L changes slowly, so that soft window is several pixels wide. The instrument
-  now prints the figure: **12 of 193 measured pixels (6.2%) sit inside a ±termSoft window**, so
-  a *perfectly* banded face spends 6% of its width in transition and never shows one large
-  per-pixel step.
+D6's per-surface table (`hero` temple wall 3.66, `dunes` pylon 5.97, …) is **hand-placed and not
+recoverable**, and guessing those ROIs after seeing which frames failed is the re-scoping §141.1
+forbids. It is reproduced instead as a *distribution*: every 64×64 window on a 32-px grid whose
+CIELAB (a\*,b\*) standard deviation is ≤ 4.0 (one material) and whose mean L\* ≥ 20 (not
+near-black), summarised by percentiles. Baseline, shipped `shots/r9/`:
 
-A statistic whose value depends on how many pixels a terminator happens to be wide cannot answer
-"how many tones does this surface take".
+| frame | flat | grad p10/p50/p90 | top3 p50 | levels p50 | n windows |
+|---|---|---|---|---|---|
+| `hero` | 0.1549 | 0.65 / **1.41** / 4.03 | 0.281 | 19 | 82 |
+| `traversal` | 0.1833 | 0.22 / **1.12** / 4.63 | 0.334 | 18 | 116 |
+| `courtyard` | 0.1506 | 0.78 / **1.02** / 3.08 | 0.337 | 15 | 57 |
+| `temple` | 0.1770 | 0.67 / **1.07** / 2.50 | 0.236 | 25 | 86 |
+| `dunes` | 0.3616 | 0.16 / **0.54** / 0.80 | 0.356 | 13 | 228 |
+| `interior` | 0.1377 | 0.82 / **1.52** / 3.42 | 0.252 | 20 | 195 |
+| **REF-venice** | **0.2950** | 0.18 / **0.30** / 0.52 | 0.337 | 19 | 135 |
 
-## 3. Three facts that kill any criterion built on *where* a band lands
+The four D6 frames sit at **3.4–5.1× the reference's median window gradient** and at
+**0.51–0.62× its flat share**. `dunes` does not: at the window level it is already close to the
+reference, which disagrees with D6's hand-placed "pylon 5.97" row. That disagreement is recorded
+now, before any candidate, and `dunes` is carried as a **do-no-harm** frame rather than as a target.
 
-Established from `Kit.papyrusColumn` and `EgyptLevel.hypostyleHall`, not from the frame:
+## 2. Where the noise is — measured on the layer TEXTURES owns
 
-1. **Ribs.** The shaft is lathed as `r(θ) = R·(1 + 0.075·cos 8θ)` with ribScale 1 on every shaft
-   row, and `computeVertexNormals()` overwrites the pushed cylinder normals with the lobed ones.
-   Normal azimuth swings ±atan(8·0.075) = **±31°** with a 45° period (~98 px here); N·L swings
-   ±0.45 with it and crosses the terminators four times on the measured face.
-   *Incidental finding:* `spin` does **not** rotate the flutes in world space. `Kit` uses the same
-   `a = j/seg·2π + spin` for the vertex azimuth *and* for `cos(a·lobes)`, so the polar curve is
-   identical for every value of `spin`; the crests are welded to world azimuth 0/45/90…° on every
-   column in the level. `spin` only re-phases which 48-gon vertex lands where inside a lobe. That
-   makes the rib phase *known*, and leaves only the sub-facet sampling phase unknown.
-2. **Lean.** `dx = lean·y`, deterministic for the nave (`-sx·(0.4 + NAVE_LEAN_IN[cz]·0.7)` deg =
-   −1.205° for the measured column), plus a `leanZ` jitter drawn from the level rng. The x half is
-   modelled; the z half is not, and is worth several terminator widths of registration error.
-3. **Taper.** `dr/dy ≈ −0.049` at mid-shaft, so the true normal carries `n.y ≈ +0.049` and every
-   N·L is offset by ~+0.027 — larger than `termSoft` itself.
-
-**Design rule that follows:** the statistic may use the SET of luma values on the face; it may
-not use WHERE they fall.
-
-## 4. The statistic — `gapFrac`
-
-Sort the face's luma profile, trim 2% off each tail, and report the sum of the `bands − 1` (= 2)
-largest gaps between consecutive sorted values, as a fraction of the trimmed range.
-
-> **How much of the tonal range this surface occupies is EMPTY.**
-
-* A surface that takes `k` discrete tones puts its whole range into `k−1` gaps → `gapFrac → 1`.
-* A continuously shaded surface spreads `n` samples over the range → `gapFrac → ~(k−1)/n`.
-* Invariant to sort order, so lean, rib phase and silhouette registration cannot enter.
-* Invariant to any affine change of luma, so exposure, albedo and tone-curve gain cannot enter.
-
-## 5. The threshold — computed from the arms, not authored
-
-Both controls are built on **this face's own N·L sequence** (lathed ribs, taper and lean
-included), at **the subject's own tonal range and its own measured noise**, and they are the two
-ends of one continuum:
+`tools/celtex.mjs` runs the same statistics on the built **albedo**, offline, at mip 2 (one sample
+per two texels — a 3.4 m tile at 1024 is 6.6 mm/texel against the ~8 mm/px the architecture is seen
+at in `hero`). Eighteen recipes, shipped constants:
 
 ```
-profile(λ) = base + amp · [ (1−λ)·norm(slyRamp(N·L)) + λ·norm(clamp(N·L,0,1)) ] + N(0, σ)
+mean over 18 recipes:  grad 6.03   top3 0.100   levels>1% 32.2   flat 0.0717
+worst: gold_hammered 26.4 · wood_old 14.1 · gold_leaf 10.9 · plaster_painted 9.7
+best:  bronze_aged 1.15 · limestone_polished 2.22 · sandstone_block 2.54
 ```
 
-`λ = 0` is the POSITIVE control (an ideal three-band cel ramp at the shipped `TUNE`), `λ = 1` is
-the NEGATIVE control (ideal smooth Lambert). Each endpoint is affine-normalised to the same
-`[0,1]` before mixing, so `λ` is a pure shape parameter and neither endpoint has a knob the other
-lacks. `λ` is literally *what fraction of the shading response is continuous*.
+Against the reference **frame**'s 0.337 / 19 / 0.295. The albedo is 3–5× less concentrated in its
+top three levels than the frame we are trying to match, and lighting can only spread a distribution
+further, never concentrate it. **The albedo is therefore a sufficient cause of D6 on its own**, and
+that is the claim this run tests.
 
-**DECISION POINT: λ = 0.5**, i.e. the subject bands iff `gapFrac(subject) > G(0.5)`, where `G` is
-the ensemble-median `gapFrac` of the mixture. This is the only threshold equidistant from the two
-arms — the midpoint of the sole two references that exist — and it restates the critic's charge
-exactly: "soft Lambert with a slight posterize" *is* the claim λ > 0.5.
+## 3. The candidate: a value lattice, not less amplitude
 
-Nothing in the decision is authored. `G(0.5)` is computed at run time from the arms.
+The obvious lever — turn the noise amplitude down — is **declined**, and the ledger says why: the
+`sandstone_worn` header records that this recipe is already 3.2× quieter than the control at the
+frequency that competes with a terminator, and §69/§70 record the blotching regression that more
+albedo variance produced. AGENTS §2.1.7 requires visible brush/chisel character. Flat is not the
+goal; **few, discrete, hard-edged value steps** are.
 
-### Nuisance scales taken from the capture
+`celband(surface, { steps, radius, keep })`, run once per recipe after `build()` and before
+`derive()`:
 
-* `amp` = p98 − p2 of the dy = 0 profile.
-* `σ` = median over x of the sd across the nine sheared rows.
+1. `y` = luma. `sm` = `y` box-blurred at `radius`, wrapping (the tile is a torus).
+2. snap `sm` onto a lattice of `steps` values spanning the surface's own p02..p98, extended at the
+   same spacing beyond both ends (**not clamped** — clamping would pile every crevice onto one
+   value and lift the dark tail).
+3. `y' = lattice(sm) + (y − sm) · keep`, then clamped into the surface's **own** existing
+   [min, max].
+4. RGB scaled by `y'/y`, so hue and chroma are untouched; scale reduced if a channel would clip.
 
-Both are fed **identically to both arms**, so neither can favour an endpoint. `σ` is
-verdict-neutral by construction: it measures variation *along* the column while the statistic
-reads *across* it. It is expected to be a mild **under**-estimate (the flutes run vertically), so
-the control arms get slightly less noise than the subject carries, which pushes `G(0.5)` **up** —
-conservative against declaring "it bands".
+Three invariants are preserved **by construction**, not by hope:
+- **`rampFloor`'s crevice floor / `darkTail`** — step 3 cannot put a texel below the surface's own
+  minimum, so no recipe can acquire a dark tail it did not already have.
+- **`hueGrade`** — the operator is a per-texel luma scale, so every hue and every chroma ratio the
+  grade authored is unchanged.
+- **height, normal, AO, roughness** — `s.h`, `s.occ` and `s.rough` are not read or written. All
+  relief survives at full detail; only the *painted value* is banded. That is the answer to "dead
+  flat looks like plastic": the surface is not flat, its colour is.
 
-### Ensemble
+**Scope:** groups `stone`, `carved`, `metal`, `organic`. **Not** `fx` (alpha/emissive sprites and
+decals) and **not** `sly` (D3 is CHARACTER's, and §267 shipped a surface split there this week).
 
-`6 rib sampling phases × 6 noise seeds = 36` deterministic realisations per λ; λ on a 21-point
-grid from 0 to 1.
+### Parameter derivation
 
-## 6. MUST-FIRE assertions (registered; failure ⇒ the run is VOID/blind, not "smooth")
+Offline sweep, nine high-coverage recipes, mip 2, means:
 
-| # | Arm | Assertion |
-|---|-----|-----------|
-| 1 | calib-banded vs calib-smooth | `min(gapFrac \| λ=0) > max(gapFrac \| λ=1)`. If the two ideal endpoints overlap, no threshold between them exists and every subject number is meaningless. |
-| 2 | well-posedness | `G(0) > G(0.5) > G(1)` on ensemble medians, or λ̂ cannot be inverted and the verdict is undefined. |
-| 3 | noise / §220 null | The verdict must be identical on all nine rows y−4…y+4, sheared along the column's own screen axis. Rows disagreeing ⇒ **INDETERMINATE**, never "banded". |
+| arm (steps:radius:keep) | grad | top3 | levels | flat |
+|---|---|---|---|---|
+| shipped | 5.02 | 0.069 | 37.4 | 0.0318 |
+| 6:0:1 (snap raw luma) | **5.22** | 0.476 | 18.6 | 0.2802 |
+| 6:2:0.25 | 4.14 | 0.403 | 15.9 | 0.3140 |
+| 6:3:0.25 | 3.70 | 0.362 | 17.4 | 0.3045 |
+| 8:3:0.25 | 3.60 | 0.289 | 19.6 | 0.2443 |
+| 6:3:0.0 | 3.19 | 0.552 | 15.0 | 0.3855 |
+| 8:2:0.4 | 4.30 | 0.286 | 18.9 | 0.2248 |
+| **5:4:0.25** | **3.41** | **0.380** | **16.3** | **0.3228** |
 
-Note assertion 1 is a statement about *arms*, with no authored constant anywhere in it. That is
-the specific repair to the void run: the previous assertion compared an arm to a number someone
-had guessed; this one compares an arm to the other arm.
+**Snapping the raw luma makes the gradient WORSE** (5.02 → 5.22): noise of amplitude comparable to
+the step maps adjacent texels onto different lattice levels, so total variation goes up. That is why
+the operator snaps the *smoothed* value. It is the one thing in this design that was wrong in the
+first draft and is recorded here rather than quietly fixed.
 
-## 7. Operating envelope, measured before the capture was read
+Selection rule, fixed before the sweep was read:
+- the albedo's `top3` must be **≥ 0.337** and its `levels>1%` **≤ 19** — the reference frame's own
+  values, because lighting can only spread a distribution;
+- `keep > 0` — a constraint given to this work before it started ("dead-flat surfaces at this scale
+  look like untextured plastic") and independently supported by §69/§70;
+- among survivors, **lowest mean gradient**.
 
-`--arm=envelope` reads no PNG. Ideal-endpoint separation vs the noise/range ratio:
+Winner: **`steps 5, radius 4 at size 1024 (= size/256), keep 0.25`**. `6:3:0.0` scores lower on
+gradient and is excluded by the `keep > 0` constraint, not by its score.
 
-| noise/range | λ=0 (min..max) | λ=1 (min..max) | separated |
+## 4. Arms
+
+All three are procedural (`VITE_TEX_BAKED=off`) so no arm depends on the committed blob, and all
+three are the same tree. Shots: `hero, traversal, courtyard, temple, dunes, interior`.
+
+| arm | build | role |
+|---|---|---|
+| **A0** | `VITE_TEX_AB=celband` | CONTROL — stage off. Must reproduce the r9 baseline for the four D6 frames within the boot-to-boot floor. |
+| **A1** | (default) | TREATMENT — `5 / size÷256 / 0.25`. |
+| **A2** | `VITE_TEX_AB=celbandsoft` | **CALIBRATION, MUST FIRE** — same stage at `keep = 0`, i.e. dead-flat plateaus. |
+
+**A2 is the sensitivity arm and it is not a candidate.** If A2's frame flat share does not exceed
+A0's by ≥ 0.04 on the mean of the four D6 frames, then the texture layer is not reaching the frame
+in a quantity this instrument can see, and **every other verdict in this run is VOID** — including a
+null. A null arm proves repeatability, not sensitivity.
+
+## 5. Registered outcomes (`tools/gate.mjs`, tri-state)
+
+`F` = mean over `hero, traversal, courtyard, temple` of the frame-wide flat share.
+`G` = mean over the same four of the window-gradient p50.
+Baselines from §1: `F₀ = 0.1665`, `G₀ = 1.155`. Reference: `F_ref = 0.2950`, `G_ref = 0.30`.
+
+| id | quantity | bar | basis |
 |---|---|---|---|
-| 0.000 | 0.473..0.538 | 0.057..0.063 | YES |
-| 0.010 | 0.427..0.559 | 0.075..0.131 | YES |
-| 0.020 | 0.361..0.573 | 0.078..0.131 | YES |
-| 0.030 | 0.297..0.538 | 0.069..0.139 | YES |
-| 0.050 | 0.229..0.452 | 0.052..0.124 | YES |
-| 0.080 | 0.094..0.285 | 0.049..0.114 | **no** |
-| 0.120 | 0.062..0.119 | 0.047..0.094 | no |
+| **C1** | A2 `F` − A0 `F` | **≥ 0.04** | calibration, MUST FIRE, else all VOID |
+| **C2** | A0 vs `shots/r9/` on the four frames | \|Δ`F`\| ≤ 0.010 | the control is the shipped build |
+| **P1** | A1 `F` | **≥ 0.2093** | closes ≥ ⅓ of the measured gap `F₀ → F_ref`. A change that closes less than a third of a gap this large does not earn a 25 MB blob rewrite. |
+| **P2** | A1 `G` | **≤ 1.048** | closes ≥ ⅛ of the gap `G₀ → G_ref`. Deliberately weaker than P1: §3's own sweep shows a lattice can *raise* total variation, so this is the axis the mechanism is least sure of. |
+| **P3** | A1 `dunes` `F` | **≥ 0.3436** | do no harm — within 0.018 (5 %) of its 0.3616 baseline. |
+| **P4** | A1 `interior` `F` | **≥ 0.1377** | do no harm on the one frame critic 9 rated as working. |
+| **S1** | A1 cross-class albedo confusion (`celtex`) | ≤ A0 + 0.01 | D7 must not be paid for. Reported, not gating. |
+| **S2** | every recipe's `jointSign.dY` | < 0 | build-time invariant. A positive dY is `paving_courtyard`'s pale-grid bug. **Blocking.** |
+| **S3** | every recipe's `darkTail` (`texlab`) | = its A0 value | §3's construction claim, measured. **Blocking.** |
 
-**Breakdown at noise/range ≈ 0.08.** The subject is measurable only below that; the measured
-ratio is reported in the subject arm and assertion 1 enforces it.
+**Ship iff C1 fires, C2 holds, P1 and P2 and P3 and P4 all pass, and S2/S3 hold.** P1 or P2 failing
+alone is DO NOT SHIP: a change that flattens the histogram while raising the gradient is the
+"Okami-via-Borderlands" failure with a different texture on it.
 
-Two things worth reading off this table before any subject number exists:
+## 6. Falsifiers, stated as things that would make me withdraw the claim
 
-* the ideal *banded* endpoint scores ~0.50, not ~1.0 — that is `termSoft` populating the ends of
-  each gap, and it is why an "ideal" reference had to be computed rather than assumed;
-* the ideal *smooth* endpoint scores ~0.06, not ~0.01 — that is the ribs making N·L revisit the
-  same values, which concentrates a continuous profile. Modelling the ribs made the NEGATIVE
-  control harder to beat, which is the direction that costs the fix, not the direction that
-  flatters it.
+1. **A2 does not fire** → the mechanism claim ("the albedo is a sufficient cause of D6") is
+   untestable in this build and the run is VOID. Not a pass.
+2. **A1 raises `G`** → the lattice is converting noise into step-flicker at frame scale, exactly the
+   `6:0:1` failure, and the operator is wrong even if `F` improves.
+3. **A0 does not reproduce r9** → another agent's work landed inside my window; nothing is
+   attributable and the run is VOID.
+4. **`interior` or `dunes` drops** → the change is not free, and §269 has already shown what it
+   costs to break the one frame that works.
 
-## 8. VERDICT OF THE SUBJECT RUN (recorded here because §9 depends on it)
+## 7. D7 is measured here and **the premise I was given is refuted**
 
-All three MUST-FIRE assertions passed. `min(λ=0) 0.1513 > max(λ=1) 0.1346`; `G(0) 0.2263 >
-G(0.5) 0.1382 > G(1) 0.0784`; all nine rows agree.
+My brief asked me to make sandstone / granite / gold / plaster / painted separable. `celtex.mjs`
+says they already are, **in the albedo**, before any light:
 
 ```
-noise/range ratio       0.0671   (envelope breaks down at 0.08 — inside the envelope, narrowly)
-decision point G(0.5)   0.1382
-subject gapFrac         0.0795   lambda_hat 0.851
-VERDICT                 DOES NOT BAND        (all nine rows, lambda_hat 0.579 .. 1.000)
+cross-class pairs (18 recipes, 8 classes):  mean confusion 0.103   mean separation 3.25
+                                            only 3 of 126 pairs at confusion ≥ 0.30
+gold_leaf  vs sandstone_block   dE 26.0    granite_pink vs sandstone_block  dE 28.9
+plaster    vs sandstone_block   dE 27.0    granite_pink vs limestone        dE 43.7
+gold_leaf  vs granite_pink      dE 52.6    bronze_aged  vs sandstone_block  dE 18.1
 ```
 
-The subject sits on top of the NEGATIVE control's median (0.0784). On the surface with the most
-terminator crossings in the frame, the shading is indistinguishable from ideal smooth Lambert.
+Critic 9 measures the same materials **in frame** at ΔE 2.1–6.2. The albedo separates them at
+18–53. **D7 is not an authoring defect; it is destroyed between the albedo and the frame**, which is
+what the review's own §4 says and what §269 then measured directly. And it cannot be bought back
+from this file: the entire AGENTS §2.2 palette spans ΔE 116 end to end and only ΔE 31 from sandstone
+mid to gold mid, so recovering a factor of five in frame ΔE would need albedo separations the
+palette does not contain.
 
-### Why — and this is not what the defect statement assumed
+**So no D7 change is proposed, and S1 exists only to prove this run does not make D7 worse.**
 
-`tools/bandprobe.mjs`, an independent offline instrument that rasterises the real architecture and
-its own ortho shadow map, was run on three shipped captures:
+## 8. Records
 
-| shot | architecture px | key-lit | step at T=0.14 | its own control | ratio |
-|---|---|---|---|---|---|
-| temple | 905878 | **14230 (1.57%)** | +6.8 | −7.9 | 0.86× |
-| hero | 836843 | 153879 (18.4%) | +23.1 | −2.3 | **10.11×** |
-| courtyard | 632704 | 201291 (31.8%) | +21.8 | −1.8 | **12.25×** |
-| courtyard T=0.52 | | | +24.8 | −1.0 | **25.07×** |
-
-**Where the key reaches, the ramp bands hard, and always did.** `slyRamp` is not soft. What fails
-is everything the key does *not* reach: `key = ramp * sh`, so on a cast-shadowed surface the cel
-quantiser is multiplied by zero. `temple` is a roofed hypostyle hall and 97.5% of its architecture
-is in exactly that state.
-
-And on such a surface nothing else varies with the normal either. Reading the shader: `fill`
-depends only on `hemi = smoothstep(-0.72, 0.55, Nw.y)`; `albAmb`, the shadow multiply and the wash
-all depend only on `shadowMix = 1 − key`, which is the constant 1 when key = 0; `spec` is gated by
-`sh` and by `step(0.02, ndl)`; `sss` is gated by `sh`. A shadowed vertical column is ONE FLAT TONE
-and the only thing moving across it is the fresnel rim — which is the ~50 px ripple visible in the
-subject profile, at the ribs' own half-period.
-
-So the correct reading of the critic's complaint is **not** "the ramp is too soft". It is: *the
-shade side of the model has no normal-dependent structure at all.*
-
-## 9. THE FIX AND ITS SHIP RULE — registered before the capture
-
-`uShadeBand` / `TUNE.shadeBand`, `src/render/shaders/toon.glsl.js` + `src/render/ToonMaterial.js`:
-
-```glsl
-float shadeForm = 1.0 - uShadeBand * ( 1.0 - ramp );
-diff = alb*keyRad*key*mix(1,ao,uAoKey)
-     + ( albAmb*slyFillX*ao
-       + albShadow*slyShadX*shadowMix*mix(0.55,1,ao)
-       + slyShadX*uShadowWash*shadowMix*ao ) * shadeForm;
-```
-
-`ramp` is the *already computed* `slyRamp(ndl, uBands)`. Reusing it rather than authoring a second
-set of thresholds is deliberate: the shade-side bands then line up **across** a cast-shadow
-boundary instead of fighting it. The term only ever darkens (≤ 1, floor `1 − uShadeBand`), so it
-cannot blow out a shade tone, and it is one scalar on all three shade-side terms alike — it moves
-shade **luminance** and cannot move shade **hue**, so the violet/teal balance of §115/§16/§19 is
-arithmetically untouched. `uShadeBand = 0` is bit-identical, exactly and driver-independently,
-because `1.0 − 0.0·x` is `1.0`; it is spelled that way rather than as `mix()` for that reason.
-
-### Sweep and arms — one boot, `progress/records/celband.mjs`
-
-Capture order per shot: `base-a` (0) → `sb15` → `sb30` → `sb45` → `sb60` → `base-b` (0).
-The two base arms bracket the whole sweep, so their difference is the drift floor for the run.
-Shots: **temple** (subject) and **courtyard** (guard — the shot where the ramp already works).
-
-### SHIP RULE
-
-Ship the **smallest** `v ∈ {0.15, 0.30, 0.45, 0.60}` satisfying **all** of:
-
-* **(A)** `celcyl` on `shots/celband/temple-sb<v>.png` returns **BANDS** at dy = 0 *and* on all
-  nine null rows, with MUST-FIRE 1 and 2 passing.
-* **(B)** the move clears the drift floor:
-  `gapFrac(sb<v>) − gapFrac(base-a) > |gapFrac(base-b) − gapFrac(base-a)|`.
-* **(C)** guard: on `courtyard`, `bandprobe`'s pooled lit-architecture step/control ratio at
-  T = 0.14 for `sb<v>` is not below `base-a`'s by more than the `base-a`↔`base-b` null difference
-  of that same statistic.
-
-If **no** swept value satisfies all three, **nothing ships**. The run is reported as a failure to
-reach the criterion — not re-swept with new values, and not re-scored against a moved threshold.
-
-### VOID CONDITIONS
-
-* **V1 — NULL.** If `base-a` vs `base-b` differ by as much as the candidates do, the instrument
-  cannot see the change through the drift. VOID.
-* **V2 — LEVER.** If `sb60` does not differ from `base-a` by more than the null on the celcyl
-  statistic, the knob is dead and this is §210.2 repeating. VOID. (The harness additionally reads
-  `uShadeBand` back *after* the step and the render, and throws if the poke did not survive —
-  the `uRimGain` trap.)
-* **V3.** Any arm on which celcyl's MUST-FIRE 1 or 2 fails is VOID for that arm.
-
-### Frames get looked at
-
-§3's lesson — "the number was right and the frame was wrong" — applies. The shipped arm's frames
-are opened, not just measured.
-
-### Known contamination, stated up front
-
-The working tree carries another agent's uncommitted texture work (`src/textures/Canvas2D.js`,
-`Materials.js`), and `tests/textures.test.mjs`'s cache-staleness guard is red because of it —
-verified by stashing only my two files and re-running, where it fails identically. Every arm here
-is captured in ONE boot off that same tree, so the **within-boot A/B is sound**; what is not
-claimed is that `base-a` reproduces `shots/r8/temple.png` byte-for-byte.
-
-## 10. FORECAST — registered while the capture was still queued behind another agent's lock
-
-`celcyl --predict=b` multiplies the *existing* `shots/r8/temple.png` profile by the shade-side
-term `1 − b·(1 − slyRamp(N·L))` and scores the criterion against that simulation. It is an
-**upper bound** on what `shadeBand = b` can buy, and both of its biases point the same way:
-
-* it multiplies in **display** luma, where the shader multiplies in scene-linear *before* a
-  compressive tone curve → the real change is smaller;
-* it multiplies the **whole pixel**, where the shader multiplies only the three shade-side terms
-  → on any pixel carrying rim or spec the real change is smaller again.
-
-| b | predicted gapFrac | decision point | λ̂ | forecast verdict | margin |
-|---|---|---|---|---|---|
-| 0.15 | 0.1496 | 0.2172 | 0.706 | DOES NOT BAND | −0.0676 |
-| 0.30 | 0.1287 | 0.2506 | 0.892 | DOES NOT BAND | −0.1219 |
-| 0.45 | 0.2689 | 0.2619 | 0.483 | BANDS | **+0.0070** |
-| 0.60 | 0.3503 | 0.2687 | 0.307 | BANDS | +0.0816 |
-
-**The stated prediction, so it can be wrong: `sb45` fails in frame and `sb60` is the ship — or
-nothing ships.** 0.45 clears its decision point by 0.0070 on a bound that is known to be
-optimistic, and 0.0070 is a fifth of the nine-row noise spread already measured on the base
-(0.0527). A value that only just clears an upper bound is a value that does not clear the real
-thing.
-
-Note the **non-monotonicity**: b = 0.30 scores *below* b = 0.15. That is not noise, it is the
-mechanism. The band step has to beat the continuous ripple it is competing with before the sorted
-profile's gaps consolidate — the fresnel rim puts ~17.7 luma of continuous range across this face,
-and the band step is roughly `83·b/2` luma, so the two cross at b ≈ 0.4. **This fix is a
-threshold, not a dial**, and any value below that crossover buys nothing at all. If the frames
-show a smooth improvement with b instead, this paragraph is wrong and the mechanism needs
-rethinking.
-
-## 10a. NIGHT IS A REQUIRED ARM, ADDED BEFORE ANY FRAME EXISTED
-
-Registered while the sweep was still queued, on noticing a gap in §9 rather than after seeing a
-result. `TUNE.fillSkyMix`'s own note in `ToonMaterial.js` states the rule this fleet keeps
-relearning:
-
-> The acceptance required night to be MEASURED, and night's only evidence was `pkg30`/`pkg50` —
-> strictly stronger variants, so night was bracketed rather than measured, and shipping on a
-> bracket is the four-of-ten move this fleet keeps refusing.
-
-`shadeBand` is more exposed to night than `fillSkyMix` was, and by construction. At `night`
-(tod 0.02) the key is the moon and almost the whole frame is shade, so a term that multiplies the
-shade side is a term that multiplies almost every pixel — and it multiplies them *down*. A value
-that is right on `temple` could plausibly crush `night` to mud.
-
-**The `celband.mjs` sweep as launched captures `temple` and `courtyard` only.** So, before
-anything ships:
-
-* **(D)** a second, separate boot captures `night` at `base-a` → the candidate → `base-b`, with
-  its own within-boot null; and the candidate's frames are **opened and looked at**.
-* Ship is blocked if `night`'s silhouette read or its overall exposure is visibly destroyed —
-  and that is a judgement made on the image, deliberately, because there is no registered numeric
-  acceptance for "night still looks like night" and inventing one after seeing the frame is
-  exactly the move §141.1 forbids. The honest form is: measure what is registered, LOOK at what
-  is not, and say which was which.
-
-## 11. If the verdict is "DOES NOT BAND"
-
-The fix is made in `src/render/ToonMaterial.js` / `src/render/shaders/*` only, and is proved with
-the same instrument on a fresh capture, plus a **two-boot null arm** (§220): the drift floor
-quoted here is intra-frame and does not bound capture-to-capture drift. Any shader edit is
-verified to have reached the compiled GLSL via `progress/records/glslink.mjs` (§219), because
-§210.2 has already burned one run on a lever that never reached the shader.
-
-## 12. The designed successor, registered now so a night failure is not a re-derivation
-
-`shadeForm = 1 − b·(1 − ramp)` only ever darkens. That is deliberate — it cannot blow out a shade
-tone and it moves critic pass 3's "unlit ≤ 45% of lit" the helpful way — but it has a known
-exposure cost, and `bandprobe` sizes it exactly: `interior` is **0.00%** key-lit and `night`
-**1.34%**, so on those two shots essentially *every* architecture pixel takes the multiply, and
-away-facing surfaces drop by the full `b`.
-
-If arm (D) shows `night` crushed, the failure is of this *form* of the term, not of the finding.
-The successor is registered here rather than derived after the fact:
-
-**Mean-preserving variant:** `shadeForm = 1 + b·(ramp − 0.5)`, giving levels
-`{1 − b/2, 1, 1 + b/2}` instead of `{1 − b, 1 − b/2, 1}`. The band *swing* is identical — `b`
-either way, so the banding it buys is the same — but the shade mean is unchanged, so it costs
-`night` and `interior` no exposure. Its own risk is the mirror image: it *brightens* key-facing
-shade, which is the direction pass 3's "unlit out-brightens lit" complains about, so it needs that
-ledger line re-measured where this one does not.
-
-The two are not tunings of each other and picking between them by eye after seeing both frames
-would be exactly the selection §141.1 forbids. The rule: **arm (D) decides.** Darken-only ships if
-`night` survives it; the mean-preserving variant is tried only if `night` fails, and then it faces
-pass 3's ledger line as its own registered acceptance.
-
-A third option exists and is NOT this agent's to take: leave the term darken-only and have LIGHTING
-raise the ambient to compensate. That is a cross-agent change to `Lighting.js`, which is out of
-scope here, and it is recorded so it is not mistaken for an unconsidered path.
+`progress/records/RESULT-celband.md`, `shots/celband/{a0,a1,a2}/`, `logs/celband.log`.
