@@ -591,6 +591,23 @@ function report(OUT, results, st) {
       }
       rows.legacyDelta = { movedPx: moved, lighterPx: lighter,
                            meanDelta: moved ? +(sum / moved).toFixed(2) : 0 };
+
+      /* THE FILL, MEASURED AS THE THING THAT WAS REMOVED. Pixels the candidate made materially
+         lighter than the pre-fix renderer are exactly the ink the planarity gate withdrew. Its
+         connected structure is the point: withdrawing a LINE would leave thousands of short
+         components, withdrawing a FILL leaves one blob. This needs no extra arm and no
+         cross-resolution comparison — both images are the same boot, same clock, same staging. */
+      const rm = new Uint8Array(n);
+      let rmN = 0;
+      for (let i = 0; i < n; i++) if (im.base[i] - im.legacy[i] >= 15) { rm[i] = 1; rmN++; }
+      const rmBig = largestBox(rm, W, H);
+      const rmCh = minChord(rm, W, H);
+      rows.removedFill = {
+        px: rmN,
+        largest: rmBig ? rmBig.n : 0,
+        share: rmN ? +(rmBig.n / rmN).toFixed(3) : 0,
+        chord: stats(rmCh, null),
+      };
     }
 
     // FXAA's own contribution to any measured width (only captured in the first baseline run).
@@ -631,6 +648,7 @@ function report(OUT, results, st) {
     console.log(`  ink blob   : strong(>=15L) ${rows.blob.strongPx} px, largest component ${rows.blob.largest} = ${(rows.blob.share * 100).toFixed(0)}% of the mask`);
     if (r.readback) console.log(`  readback   : resScale ${r.readback.resScale}  legacy hull px ${r.readback.hullPxNow}  legacy crease px ${r.readback.creaseAppliedNow}  planar ${r.readback.planarStrength}`);
     if (rows.legacyDelta) console.log(`  vs legacy  : ${rows.legacyDelta.movedPx} px moved, ${rows.legacyDelta.lighterPx} of them lighter, mean ${rows.legacyDelta.meanDelta} L`);
+    if (rows.removedFill) console.log(`  removed    : ${rows.removedFill.px} px lightened >=15L, largest component ${rows.removedFill.largest} = ${(rows.removedFill.share * 100).toFixed(0)}% of it, chord ${f(rows.removedFill.chord)}`);
     if (rows.hullLegacy) {
       console.log(`  hull LEGACY frame: ${f(rows.hullLegacy.frame)}`);
       console.log(`  ${''.padEnd(11)}subj : ${f(rows.hullLegacy.subj)}`);
