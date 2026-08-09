@@ -21269,3 +21269,49 @@ measuring props.
    failed, and it failed on arithmetic, not on anything about the build.
 4. **The sweep is 0.1-resolution.** Both crossings are bracketed, neither is resolved finer; the
    frames and the runner exist if anyone wants 0.05.
+
+## §265 — 52% of the shipped bundle is never fetched: `public/` is a staging area and Vite copies it verbatim
+
+`npm run build` produces **104 MB** of `dist/`. **54 MB of it — 52% — no code path ever requests.**
+
+```
+22 M   tombchaser/                        staged, deliberately never wired
+11 M   sly-anim/sly-rig.glb               zero references anywhere
+6.7M   audio/museum-of-natural-history.mp3  not in STEM_FILES; nothing loads it
+3.9M   sly-anim/carmelita-anims.glb       BUILD-TIME input to carmelita2clips
+1.0M   sly-anim/sly-anims.glb             BUILD-TIME input to mixamo2clips
+932K   sly-godot/sly-godot-anims.glb      zero references
+760K   sly-cane/                          staged today, correctly unwired
+ 12K   audio/footstep.mp3                 zero references
+ 10 M   source maps
+```
+
+**The mechanism is that `public/` means two different things to two audiences.** To this project it has been a *staging area* — where an imported asset lands with its `PROVENANCE.md` while somebody decides whether to use it. To Vite it is the **verbatim-copy directory**: everything in it ships, referenced or not. Every deliberate, well-reasoned decision to stage an asset without wiring it — `tombchaser`'s normal maps that might fight the ramp, the Godot clip file split out expressly to keep 2,620 animation channels *off the boot path* — quietly put megabytes into the download anyway.
+
+The retargeting inputs are the sharpest case. `sly-anims.glb` and `carmelita-anims.glb` are *compiler inputs*: `mixamo2clips` and `carmelita2clips` read them offline and emit `MixamoClips.js` and `GuardClips.js`. The runtime loads the generated JS. Both `.glb` files are referenced in `src/` **only inside comments**, and both ship. `sly-godot-anims.glb` is worse: its own provenance says it was split from the mesh specifically so its channels would stay out of the boot path, and it ships at 932 KB while being loaded by nothing.
+
+### How the claim was checked, because "unreferenced" is easy to get wrong
+
+A per-file grep is not sufficient here — `public/assets/` paths are built as string *prefixes* with variable filenames (`` `assets/audio/${STEM_FILES[name]}` ``), and this codebase also resolves `src/assets/` through `import.meta.glob` and `new URL(…, import.meta.url)`. So:
+
+1. Every construction site was read, not just matched. `STEM_FILES` is exactly
+   `{explore, sneak, chase}` — `museum-of-natural-history.mp3` cannot be named by it.
+2. `CarmelitaGuard.js` builds `assets/sly-anim/carmelita-guard.glb` from a literal, so the
+   directory-prefix hazard does not apply to it.
+3. Comment-only matches were separated from code matches. That is what demoted `sly-anims.glb`
+   and `carmelita-anims.glb` from "referenced once" to "documented once".
+
+§254 is why: earlier today I called two capture runs duplicates from output I had truncated myself,
+and the flag that distinguished them sat past my own `cut`. **"I grepped and found nothing" is a
+statement about the grep.**
+
+### The fix, and why it is not in this commit
+
+`public/` should contain only what the runtime fetches. Build-time inputs and staged-but-unwired
+imports belong somewhere git keeps and Vite does not copy — they are not being *deleted*, they are
+being moved out of the shipping path, which loses nothing and is reversible.
+
+Not done now because **a capture holds the lock** (§186) and moving asset paths under a running
+boot is exactly the class of change that invalidates a run mid-sweep. Queued behind the same gate as
+the texture bake (§232.7) and the `setShot` warning (§251). Also worth deciding rather than assuming:
+whether source maps should ship at all in a build whose whole point is to be handed to a critic.
