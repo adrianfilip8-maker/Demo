@@ -18246,6 +18246,41 @@ median 10 mm closer and the p10 4 mm further away — `SlyModelDLRig`'s trap in 
 curling harder does not close a gap that is a placement fault. **A solved grip (`_solveGrip`) is not
 ported and this stays open.**
 
+#### And the frame is worse than that number, but not in the way it looks
+
+`shots/godot-profile.png` reads as **the cane passing through his hip**. I nearly wrote that down.
+Measured — CPU-skin the body in the shot's own pose and count torso vertices within `shaftR + 20 mm`
+of the shaft segment — **it does not**: 0 vertices inside, nearest 130 mm. The crossing is a
+projection artefact of a side-on camera, and the instrument that says so separates its own controls
+(0 with the cane displaced 0.9 m outboard, 96 with the grip put on the torso centroid). *The first
+version of that control displaced along −x on a character whose right hand is already at x < 0, so
+it moved the cane further outboard, scored 0, and **failed**. That run is void and is not quoted.*
+
+What IS wrong is the angle. In `idle_confident` the shaft sits at **12.3° of elevation with its tip
+at 0.679 m**, where `CANE_TUNE.dropBelowGrip` = 0.796 m is derived in `Cane.js` so the tip *plants
+on the floor* at 8.5° off vertical — about 81° of elevation. The cane is carried almost horizontally
+across the body instead of standing in it, and in `walk` it does intersect: **19 torso vertices
+inside, nearest 6 mm.**
+
+The obvious fix was tried and **rejected on a criterion registered before it was scored** (PASS =
+`idle_confident` tip below 0.15 m AND zero vertices inside):
+
+| socket | idle tip | idle elev | walk in-body | |
+|---|---|---|---|---|
+| **A** `SlyModel3`'s constant (shipped) | 0.679 m | 12.3° | 19 | FAIL |
+| **B** the hand's own derived grip axis | 0.933 m | −6.1° | 36 | FAIL |
+
+B is **worse on both counts**, which also retires the reasoning by which B was rejected the first
+time — I had argued the derived axis fails because it is 57° off vertical *at bind*, and the honest
+statement is that bind orientation was never the relevant frame; the posed one is, and in the posed
+frame B is simply worse. Registering the threshold first is the only reason a plausible-sounding
+"correction" did not ship.
+
+Two implementations of the socket transform disagree by 8 cm on arm A's tip height (0.763 m reading
+the built socket object, 0.679 m re-deriving it). The figure quoted above is the **re-derived** one
+because both arms of the comparison share that construction; the built-socket reading is the
+authoritative one for arm A alone, and the discrepancy is itself unresolved.
+
 One thing was tried and thrown away rather than shipped: fitting the grip circle through the twelve
 curled finger joints to size and place the socket. It returns an **rms of 17.0 mm on a 47.7 mm
 radius** — the joints do not lie on that circle — and a centre 13.5 cm from the wrist. That is not a
@@ -18286,6 +18321,18 @@ garbage. `bind(skeleton)` with no matrix recomputes them — but two meshes shar
 one may own that call, so the update and the recompute are done explicitly and both bind against the
 same identity frame.
 
+### The frames
+
+`shots/godot-closeup.png` and `shots/godot-profile.png`, 1280×720, `?char=godot&shot=1&q=high`,
+`idle_confident`. Both boot clean — the only console error in the run is `/favicon.ico` 404, checked
+against the dev server rather than assumed (`sly-godot.glb`, `sly-body.png` and `sly-head.png` all
+serve 200). `animation.ready` is true, 31 bones, 3 body groups + face + cane, and the in-page skinned
+bbox reads 0.0059 → 1.7555 m, matching the offline figure to 1 mm.
+
+The profile frame is the one that earns the import: the ringed tail reads at gameplay distance, with
+distinct bands, volume through its length and a clean ink contour — on the rig that ships, which is
+what §226 left open.
+
 ### Reproducing all of it
 
 ```
@@ -18301,8 +18348,11 @@ rebuilding `BONE_MAP`, so the tool cannot drift into a second account of what it
 
 ### Unresolved
 
-- **The cane is not gripped** (above). It needs `_solveGrip` ported, or the hand posed against the
-  prop rather than the prop placed against the hand.
+- **The cane is not gripped, and it is carried at the wrong angle** (above): 12.3° of elevation in
+  `idle_confident` against the ~81° `CANE_TUNE.dropBelowGrip` is derived for, and 19 torso vertices
+  inside the shaft in `walk`. One candidate socket is already eliminated. It needs `_solveGrip`
+  ported, or the shaft aimed against the POSED frame rather than the bind frame.
+- **Two socket implementations disagree by 8 cm** on the same arm's tip height. Unresolved.
 - **1.7506 m against a 1.80 m capsule.** Recorded, not fixed; the only fixes available are worse than
   the defect.
 - **`Assets/Textures/Sly Body Normal.png`, `Sly Body AO.png`, the head pair and `Sly Cane Metalic.png`
