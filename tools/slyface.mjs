@@ -88,6 +88,21 @@ const NOSE = { yMax: -0.235, xMax: 0.045, zMin: 1.49, zMax: 1.60 };
    can be re-run and disagreed with rather than taken on trust. */
 const REF_ROI = { x0: 720, y0: 1150, x1: 1500, y1: 1900 };
 
+/* **`REF_TEX` IS ADAM7-INTERLACED** — IHDR interlace byte 1, colortype 6, 2048². Until `84252e3`
+   (2026-08-09 18:23:14) `tools/png.mjs` did not implement interlacing and did not say so: it
+   returned a plausible buffer with 66.6 % of sampled channels wrong. Anything read through that
+   path before then is worthless, so this tool's reference numbers are corroborated rather than
+   trusted:
+
+     png.mjs (post-fix)  rgb 117.8, 117.5, 120.1   sat 0.043   R/B 0.981
+     PIL (never had it)  rgb 117.9, 117.5, 120.2   sat 0.043   R/B 0.981
+
+   The published figures came from the PIL read in the first place, which is why the derivation
+   never depended on the broken decoder; the agreement above is the check, not the source. Both
+   readings are of `REF_ROI` with the sheet's black backing and the mask excluded at L < 60.
+   If you add a reference texture here, print its IHDR interlace byte before you believe a number
+   off it. */
+
 /* ---- load ------------------------------------------------------------------------------ */
 const fbxBuf = readFileSync(SRC_FBX);
 const scene = new FBXLoader().parse(

@@ -22481,8 +22481,31 @@ calibration lever.
   they render violet because of D2's costume-hue swing, and the "starfish with four to five long
   tapered claws" read is splayed fingers with per-finger ink — a hand POSE. Reported, not fixed.
 
+### 6.1 The reference texture is Adam7-interlaced, and the decoder under it was broken until 18:23 today
+
+`tools/slyface.mjs` reads its reference off `public/assets/sly-godot/sly-head.png`, whose IHDR
+carries **interlace byte 1** — and `tools/png.mjs` did not implement interlacing until `84252e3`
+(2026-08-09 18:23:14), returning a plausible buffer with 66.6 % of sampled channels wrong instead
+of throwing. Flagged by the lead as a live hazard to this lane's numbers. Checked rather than
+assumed, three ways:
+
+- The published reference figures were taken with **PIL**, which never had the defect. Post-fix
+  `png.mjs` reproduces them to 0.1 on every statistic (rgb 117.8/117.5/120.1 vs 117.9/117.5/120.2,
+  sat 0.043 both, R/B 0.981 both), so the derivation never rested on the broken path and now has
+  a two-decoder cross-check.
+- `sly_head_fix.png` re-runs **byte-identical** under the fixed decoder — md5
+  `1f0839f527b6e5ee6ef65f275469166d`, matching the committed blob — so the shipped asset was
+  produced after the fix.
+- The tool's own header now prints the hazard and both readings, with the rule: **print a
+  reference texture's IHDR interlace byte before believing a number off it.**
+
+Same family as this session's recurring failure — an instrument that reported success after it had
+stopped looking — and the reason a second, independent decoder is worth the thirty seconds.
+
 ### 7. Results
 
-Pending — `tools/heroread.mjs` is in the FIFO. This section is written before its verdict so the
-number is claimed before it is cited in source (the lead's rule, learnt the expensive way: §271
-was taken by the textures lane while two `Shots.js` comments already pointed at it).
+Pending — `tools/heroread.mjs` is in the FIFO (boot A done, boot B queued behind other lanes).
+Its artefacts land in `progress/records/heroread/` and are scored in `RESULT-heroread.md`. This
+section was written before the verdict so the number could be claimed before it was cited in
+source — the lead's rule, learnt the expensive way: §271 was taken by the textures lane while two
+`Shots.js` comments already pointed at it, and those two citations were repointed at `593def6`.
