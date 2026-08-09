@@ -160,9 +160,54 @@ floor is not present in this instrument.
 
 ---
 
-## 6. Before/after
+## 6. Before/after — **NOT MEASURED. The candidate sweep never got the lock.**
 
-<!-- FILLED FROM inkw-after -->
+This is the honest state of the run and it is not dressed up. Two blocks are queued and detached
+(`--res 1280x720 --shots courtyard,sly-closeup`, pid 13669; `--res 640x360`, pid 30517), both behind
+a run that has now held the capture lock for **2 h 21 m**. Neither produced a frame.
+
+So of the three mechanisms:
+
+| mechanism | before | after | status |
+|---|---|---|---|
+| 1. crease pass fills grazing planes | **measured** (§2, null arm 0 px) | — | **remedy UNMEASURED** |
+| 2. depth push displaces the hull | **measured analytically, exactly** (§3) | **measured analytically, exactly** | **closed** |
+| 3. ink width is resolution-invariant | **measured analytically + locked by the old test** | unit-tested, not rendered | **closed in code, unrendered** |
+
+**Mechanism 2 is closed without a capture and needs none.** It is exact arithmetic on a projection
+matrix, reproduced twice independently, and it is now a unit test that fails if either half stops
+being true: the shipped form is *required* to displace 2.107 px at NDC 1.0 and the replacement is
+*required* to displace < 1e-6 px while leaving `ndc.z` equal to within 1e-6, under perspective and
+orthographic projections alike. A rendered frame would add nothing an assertion does not already
+carry.
+
+**Mechanism 3 is closed in code and unrendered.** `inkPixels` is locked to a constant fraction of
+frame height across 540–2160 rows, with the shipped constant-px model required to fail the same test
+at a 4.00× spread. What is *not* measured is P1 — that the rendered hull band's mean minimum chord
+actually follows that ratio between 720 and 360 rows. The two queued blocks exist to answer exactly
+that and nothing else.
+
+**Mechanism 1's remedy is the real gap, and it is the one to read sceptically.** P3a/P3b/P3c are all
+unmeasured on the candidate. In particular **P3b — that the planarity gate takes the architecture's
+ink with the floor fill — is a registered, plausible failure and I have not tested it.** Trading
+§7.3's "outlines too heavy" for §7.3's "outlines missing" would be a bad trade made confidently.
+
+It ships enabled anyway, and the reasoning is stated so it can be overruled cheaply:
+
+- the state it replaces is **measured and definitely bad** — a 46-luma darkening over 26.7 % of
+  `courtyard`, 80 % of it one connected blob;
+- the remedy is not a new idea with a new number: it is the same test, on the same buffer, at radii
+  of the same order, with `rimPlanar`'s own six-shot-measured thresholds, applied to a pass whose
+  threshold is *finer* than the one those thresholds were measured for;
+- **the revert is one number.** `TUNE.edgePlanar[2] = 0` collapses the gate's `mix` to 1.0 and
+  restores the previous behaviour bit-exactly. No code change, no rebuild of reasoning.
+
+If the queued blocks land for whoever reads this next: `node progress/records/inkw.mjs --analyse
+inkw-after --shots courtyard,sly-closeup --res 1280x720` prints every registered criterion, and the
+same analyser over `inkw-before` prints the control, so the two cannot go through different code.
+The candidate boots carry `legacy`/`legacy_nohull` arms that restore the pre-fix renderer *inside the
+same boot* — read back off the live uniforms, not recomputed — so the comparison is a same-boot A/B
+with a null arm rather than a cross-commit pair.
 
 ---
 

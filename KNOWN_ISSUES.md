@@ -20181,3 +20181,80 @@ Only the depth-push correction genuinely needs no frames: it is analytic, exact,
 with the shipped form *required* to displace 2.107 px and the replacement *required* not to. Its
 stated fallback if the queue worsens — report that one alone and say the other two are untested
 rather than quote them — is the right triage.
+
+## §255 — the other half of the ink defect: "2.5 px" never said at what resolution, and two calibration arms that caught my own instrument
+
+§253 records two of the three mechanisms behind critic pass 8's ink complaint — the crease pass
+filling grazing planes, and the depth push displacing the hull. This is the third, plus the two ways
+the instrument that found them lied first.
+
+### "Lines stay ~2.5 px on screen" is not a specification until you say which screen
+
+`INK_PX = 2.5` was **device pixels at every resolution**, and `tests/ink.test.mjs` locked it there.
+That reads like the careful choice. It is the wrong invariance, because the frame is not a constant
+number of pixels: §1 targets 1080p, the critic captures at 1280×720, the harness at 1600×900, and a
+retina display at quality `high` draws into a 1.5× buffer. One line, three different weights:
+
+```
+             hull px   share of frame height
+1080 rows      2.50           0.23 %
+ 720 rows      2.50           0.35 %
+ 360 rows      2.50           0.69 %
+```
+
+In `courtyard` Sly is **42 px tall at 1280×720 and 21 px at 640×360**, and the hull is 2.50 px in
+both — 6 % of him, then 12 %. The critic's headline arithmetic, *"median ink is 5 px = **6.6 % of
+his height**"*, is this and nothing else. Halve the window and the ink takes twice as much of the
+character, with no code change and nothing anywhere reporting it.
+
+2.5 px is now the width **at `INK_REF_ROWS = 1080`** — `clamp(2.5 × rows/1080, 0.9, 5.0)` — and
+PostFX's crease radius reads the *same function*, because `INK_PX` and `TUNE.edgeThickness` were two
+constants in two files describing one line and the way that ends is one of them being rescaled and
+the other not. The floor is not tidiness: a hull thinner than about a pixel renders as an
+intermittently *missing* line rather than a thin one, and §7.3 fails a shot for "outlines missing"
+as readily as for outlines too heavy.
+
+Driven from `PostFX.render()` once a frame rather than from a resize event. The drawing buffer here
+changes under `engine.on('resize')`, `engine.on('quality')`, an in-page `setViewportSize` and
+`renderer.setPixelRatio`; a derived constant refreshed by events goes stale in whichever path
+forgets to forward one, and polling a number that is already computed every frame cannot.
+
+### Two calibration arms caught my own instrument, and one of them caught a trap worth naming
+
+The first control run failed two of its three calibrations, and both failures produced *plausible*
+output:
+
+**The hull lever was overwritten every frame.** `shading.setOutlinesVisible(false)` is undone by
+`PostFX._renderChain`'s `endNormalPass()` on the very next render, so `nohull` and `base` were the
+same image. The hull band came back EMPTY in all four shots — while `hull2x` reported a band with a
+median chord of 3 px. Those two are only consistent one way: the arm had measured 2× against 1×, not
+1× against 0×. Without the second arm, "the hull contributes nothing measurable" was a completely
+believable read of an empty mask. It now hides the ink **materials**, which `projectObject` honours
+and nothing in the frame loop rewrites.
+
+**Every 640×360 frame was black — and the null arm PASSED.** `setViewportSize` inside a live boot
+resizes the canvas (the drawing-buffer readback confirmed 640×360) and then nothing renders into it.
+All 32 frames read exactly 0 in every channel, so every arm equalled every other arm, so the null
+reported 0 px different and declared itself clean.
+
+> **A null arm can only ever say "nothing moved". It takes a positive control to say "something
+> *can* move".** Here the `nochar` arm — which must move pixels or the run is void — reported 0 and
+> caught it. This is §218's lesson arriving from the other direction: §218 lost three runs to
+> stepping without rendering, and the calibration it prescribed is the one that saved this run.
+
+Each resolution now gets its own boot. And the candidate sweeps carry `legacy`/`legacy_nohull` arms
+that restore the pre-fix renderer *inside the same boot*, from values **read back off the live
+uniforms** rather than arithmetic re-implemented in the runner — so the before/after is a same-boot
+A/B with a null, and the runner cannot disagree with the shipped code about what the shipped code
+does.
+
+### What is still unmeasured, said plainly
+
+The candidate sweep never got the capture lock — two blocks queued behind a run holding it for over
+two hours. So mechanism 3's *rendered* proof (P1: the hull band's mean chord follows the 720:360
+ratio) and mechanism 1's remedy (P3a/P3b/P3c: that the planarity gate leaves a line rather than
+deleting the ink) are **both untested**. The gate ships enabled because the state it replaces is
+measured and definitely bad and the revert is one number, `TUNE.edgePlanar[2] = 0`, which collapses
+the mix to 1.0 and restores the old behaviour bit-exactly. Read §253's remedy sceptically until
+those blocks land; `inkw.mjs --analyse` will score every registered criterion over frames on disk
+without taking the lock again.
