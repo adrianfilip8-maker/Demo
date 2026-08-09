@@ -65,13 +65,35 @@ const provenance = () => ({
   src: srcDigest(), at: new Date().toISOString(),
 });
 
-const PROV_START = provenance();
-console.log(`provenance @start  HEAD ${PROV_START.head?.slice(0, 8)}  HEAD:src ${PROV_START.headSrc?.slice(0, 8)}  ` +
-            `src digest ${PROV_START.src.digest} (${PROV_START.src.files} files)`);
+/**
+ * The provenance snapshot is taken AT BOOT, not at process start, and that distinction is the
+ * whole point of the guard rather than a detail of it.
+ *
+ * The FIFO queue is routinely an hour deep, and three other agents commit to `src/` while a
+ * capture waits in it. A digest taken at process start would therefore compare "the tree an hour
+ * before the browser existed" with "the tree after the last arm", and would VOID on somebody
+ * else's commit that the frozen bundle never saw. What the guard is actually about is the tree
+ * that reached the RENDER, so it is taken inside `onLocked` — after the lock is granted and
+ * before vite spawns, which is the harness seam that exists for exactly this (§186/§194) — and
+ * again in `onReleasing`, before the lock is handed on.
+ */
+let PROV_START = null, PROV_END = null;
 
 /* ------------------------------------------------------------------ the run --- */
 
-const run = await withGame({ width: 1280, height: 720, quality: 'high', timeout: 900000 }, async ({ page }) => {
+const run = await withGame({
+  width: 1280, height: 720, quality: 'high', timeout: 900000,
+  onLocked: () => {
+    PROV_START = provenance();
+    console.log(`provenance @boot   HEAD ${PROV_START.head?.slice(0, 8)}  HEAD:src ${PROV_START.headSrc?.slice(0, 8)}  ` +
+                `src digest ${PROV_START.src.digest} (${PROV_START.src.files} files)`);
+  },
+  onReleasing: () => {
+    PROV_END = provenance();
+    console.log(`provenance @end    HEAD ${PROV_END.head?.slice(0, 8)}  HEAD:src ${PROV_END.headSrc?.slice(0, 8)}  ` +
+                `src digest ${PROV_END.src.digest} (${PROV_END.src.files} files)`);
+  },
+}, async ({ page }) => {
   /* Everything the page needs, installed once. Kept small: the analysis that has to be pixel
      exact (byte identity, the frozen hue instrument) happens in the scorer, on the PNGs. */
   await page.evaluate(() => {
@@ -269,13 +291,11 @@ const run = await withGame({ width: 1280, height: 720, quality: 'high', timeout:
 
 /* ------------------------------------------------------------------- record --- */
 
-const PROV_END = provenance();
+PROV_END ||= provenance();      // onReleasing runs in the harness's finally; belt and braces
 const out = { prereg: 'progress/records/PREREG-holdscope.md', out: OUT,
               provStart: PROV_START, provEnd: PROV_END, ...run };
 writeFileSync(`${OUT}/run.json`, JSON.stringify(out, null, 1));
 
-console.log(`\nprovenance @end    HEAD ${PROV_END.head?.slice(0, 8)}  HEAD:src ${PROV_END.headSrc?.slice(0, 8)}  ` +
-            `src digest ${PROV_END.src.digest} (${PROV_END.src.files} files)`);
-console.log(`src digest unchanged across the run: ${PROV_START.src.digest === PROV_END.src.digest}` +
-            `${PROV_START.head === PROV_END.head ? '' : '   (HEAD moved — another lane committed; see PREREG I3)'}`);
+console.log(`\nsrc digest unchanged across the run: ${PROV_START?.src.digest === PROV_END.src.digest}` +
+            `${PROV_START?.head === PROV_END.head ? '' : '   (HEAD moved — another lane committed; see PREREG I3)'}`);
 console.log(`\nwrote ${OUT}/run.json`);
