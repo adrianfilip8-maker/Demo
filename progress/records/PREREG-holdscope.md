@@ -168,7 +168,20 @@ reference   warm 32.8446 %   cool 17.3236 %   dark 18.9493 %
             warm hue 46.41 (R 0.987)   cool hue 190.31 (R 0.973)
 ```
 
-- **G6 (absolute).** `cool_pct(A4) >= 12.993` on every OPEN shot with `tod >= 0.2`.
+- **G6 (absolute).** `cool_pct(A4) >= 12.993` on every OPEN shot with `tod >= 0.2` **whose own
+  same-run A0 already clears 12.993**.
+  *Amendment, made before any candidate frame existed and from BASE frames only.* Scored on the
+  stale `shots/r9` set purely to see which shots the bar is even meaningful for, the shipped
+  build already sits at `combat` **cool 10.32 %** — below the bar, at base, with nothing this lane
+  does. A guard no candidate could pass is not a guard on the candidate; it is a guard on a
+  pre-existing condition belonging to another lane. So on a shot whose A0 is already under the
+  bar, G6 is reported N/A with both numbers printed, and G7 — which is relative and cannot have
+  this failure mode — still applies. The r9 numbers this was decided from, all A0-side:
+  `combat` 10.32, `sly-perch` 30.39, `sly-closeup` 36.50, `courtyard` 31.33, `traversal` 46.29,
+  `temple` 45.85, `dunes` 18.82, `hero` 53.31. **The amendment excuses `combat` and nothing else**
+  — every shot this run turns on clears the bar at base by 1.4× to 4×, so it does not touch the
+  outcome, which is why it is safe to make and why it is recorded here in full rather than
+  applied quietly.
   `12.993 = 0.75 × 17.3236`. The 0.75 is not chosen here: it is the factor §269 used to build its
   own protection guard (G5, `0.75 × baseline`), applied to the reference instead of to us.
   **Scoped to daylight deliberately:** the reference is a daylight frame, and applying a daylight

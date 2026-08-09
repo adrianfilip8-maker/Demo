@@ -278,10 +278,16 @@ const satGuard = (shot) => {
   return p.a4.roi.sha.s >= p.a0.roi.sha.s - BAR.satDrop;
 };
 const G5 = roofedShots.length ? tri(roofedShots.map((s) => identical(s, 'A4-scoped'))) : null;
+/* PREREG §7 as amended before any candidate existed: a shot whose OWN A0 is already under the
+   reference-derived bar cannot be brought over it by this lane, and a guard no candidate could
+   pass is a guard on a pre-existing condition. Those shots report N/A (excluded from G6) with
+   both numbers printed; G7, which is relative, still covers them. */
+const coolAbsApplies = (s) => { const p = P[s]; return !!p && p.a0.frame.cool_pct >= BAR.coolAbs; };
 const coolAbs = (s) => { const p = P[s]; return p ? p.a4.frame.cool_pct >= BAR.coolAbs : null; };
 const coolRel = (s) => { const p = P[s]; return p ? p.a4.frame.cool_pct >= BAR.coolRel * p.a0.frame.cool_pct : null; };
 const dayOpen = openShots.filter((s) => !NIGHT_SHOTS.has(s));
-const G6 = dayOpen.length ? tri(dayOpen.map(coolAbs)) : null;
+const g6Shots = dayOpen.filter(coolAbsApplies);
+const G6 = g6Shots.length ? tri(g6Shots.map(coolAbs)) : null;
 const G7 = openShots.length ? tri(openShots.map(coolRel)) : null;
 
 /* ═════════════════════════════════════════ report ═══════════════════════════════════════ */
@@ -329,8 +335,11 @@ for (const r of I5rows) console.log(`  ${r.shot.padEnd(13)} lit ${f2(100 * r.lit
 console.log('\n── the warm/cool guard registered before the run (PREREG §7) ──────────────────');
 for (const s of openShots) {
   const p = P[s]; if (!p) continue;
+  const absVerdict = NIGHT_SHOTS.has(s) ? 'n/a night'
+    : !coolAbsApplies(s) ? 'n/a A0 already under the bar'
+    : (coolAbs(s) ? 'PASS' : 'FAIL');
   console.log(`  ${s.padEnd(13)} cool% ${f2(p.a0.frame.cool_pct).padStart(6)} -> ${f2(p.a4.frame.cool_pct).padStart(6)}` +
-              `   abs bar ${BAR.coolAbs} ${NIGHT_SHOTS.has(s) ? '(n/a, night)' : (coolAbs(s) ? 'PASS' : 'FAIL')}` +
+              `   abs bar ${BAR.coolAbs} ${absVerdict.padEnd(29)}` +
               `   rel bar ${f2(BAR.coolRel * p.a0.frame.cool_pct)} ${coolRel(s) ? 'PASS' : 'FAIL'}`);
 }
 
