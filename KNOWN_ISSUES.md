@@ -21769,6 +21769,243 @@ Everything else held: fast-forward recovered cleanly, nothing local existed to l
 untracked files were again the stale session-start copies, and the suite came back **394/395**,
 identical across all three incidents.
 
+## §269 — the shadow band can hold each material's own hue, and the gate says do not turn it on: `interior`'s working colour relationship **is** the global tint. The two critics never disagreed about the mechanism, only about an acceptance that was never checked against the reference
+
+Pre-registration: `progress/records/PREREG-shadowhold.md` (instrument, ROIs, arms and thresholds
+frozen before the candidate existed; §10 of it withdraws my own first mechanism story before any
+candidate frame was scored). Arms: `shots/shold/`, `tools/shadowhold.mjs`. Scorer:
+`tools/shadowholdscore.mjs` on `gate.mjs`, fail-closed.
+
+### 1. What the reference actually measures — every ROI I tried, not the ones that agreed with me
+
+Ten ROIs on `sly3-venice.jpg`, one instrument (top/bottom 20 % of a rect by HSV value, HSV of each
+group's mean RGB). Two purity tests: my eye on the crop, and a mechanical one — the mean resultant
+length `R` of the hue distribution *within* the lit group and *within* the shade group separately.
+The mechanical test is non-circular by construction: a material that merely rotates hue between lit
+and shade stays unimodal in both groups, so it cannot reject the phenomenon under study.
+
+| reference ROI | Δh | R_lit | R_sha | eye | mechanical (R ≥ 0.90) |
+|---|---|---|---|---|---|
+| walkway boards | **15.0** | 0.979 | 0.988 | single material | KEEP |
+| right wall stone | **24.8** | 0.896 | 0.970 | single material | reject (marginal) |
+| statue plinth | **12.6** | 0.878 | 0.985 | single material | reject (marginal) |
+| planter wood | 27.3 | 0.919 | 0.906 | cabbages + wood | KEEP |
+| arcade wall | 30.5 | 0.867 | 0.835 | wall + window holes | reject |
+| rail wood | 11.9 | 0.887 | 0.500 | post + rail + Sly | reject |
+| midroof | 110.5 | 0.956 | 0.762 | tiles + wall + bird | reject |
+| rbuild | 112.2 | 0.970 | 0.846 | flag + wall | reject |
+| dome bldg | 117.9 | 0.984 | 0.861 | sky + dome | reject |
+| pale wall R | 139.5 | 0.483 | 0.836 | flag + wall | reject |
+
+**The two tests disagree on three rows and both are reported.** The conclusion survives either:
+every ROI above 100° fails at least one purity test, and every ROI that passes at least one sits
+between **11.9° and 30.5°**. On the reference you cannot get a large Δh out of one material — only
+by straddling two. The character says the same on `sly3-crop-4x.png`: shirt **Δh 4.7°**
+(sat 0.824 → 0.399, V 0.251), tail **Δh 14.9°** (sat 0.312 → 0.144, V 0.139).
+
+**What the reference holds is hue. What it always drops is value. Saturation drops on warm albedos
+and RISES on cool ones** (boards 0.466 → 0.142, shirt 0.824 → 0.399, but the two teal stones
+0.407 → 0.809 and 0.518 → 0.716). "Drop saturation" is a consequence of a warm albedo under a cool
+ambient, not a universal rule — worth knowing before anyone writes it into a guard.
+
+Instrument calibration, four independent agreements established before any of it was used:
+`dunes` lit `(203.3, 112.7, 68.2)` h 19.8 / shade h 205.9 against critic 9's independently chosen
+`(201, 108, 65)` h 19.1 / h 206.0; `dunes` dark % **1.27** vs their 1.27; reference dark % **18.95**
+vs their 18.95; reference shirt saturation **0.879** vs their 0.909.
+
+### 2. §2.2 does not conflict with the reference. `DERIV-shadowhue-target.md` does
+
+§2.2 reads `SHADOW HUE #2a3f66 (violet-teal, ~14% of key luminance, never below)`. "% of key
+**luminance**" is a light quantity, and the entry sits in the same list as KEY LIGHT / FILL /
+BOUNCE / RIM. **§2.2 specifies the shadow's illuminant and a floor under it. It says nothing about
+what hue a surface must render at once that illuminant multiplies it.**
+
+Back-derive the reference's own shadow illuminant from the walkway boards (linear, shade ÷ lit,
+normalised to the max channel):
+
+```
+reference implied illuminant   (0.353, 0.402, 1.000)   hue 235.5°   sat 0.647
+§2.2 SHADOW HUE  #2a3f66       (0.174, 0.374, 1.000)   hue 225.5°   sat 0.826
+what we actually ship          (0.194, 0.631, 1.000)   G/R 3.258
+```
+
+**The reference confirms §2.2's shadow hue to within 10°.** It is the shipped *light* that has
+drifted off §2.2 — after `shadowTeal 0.15` it is teal (G/R 3.258), not the violet-teal the palette
+names — not §2.2 that is off the reference.
+
+What conflicts with the reference is `DERIV-shadowhue-target.md` §3, which reads §2.1.3's
+"Saturated complementary palette. Every shot holds a warm/cool tension: gold sandstone against deep
+teal shadow, orange sun against violet sky" as a requirement on the lit and shaded halves of **one
+surface**, and derives `|180 − Δh| ≤ 30°`. `ADDENDUM-shadowhue-restate.md` §5 then measured the
+build **passing** it on four shots — 160.7 / 162.4 / 178.3 / 157.7.
+
+**I pick against that reading**, and against the acceptance built on it. Four reasons, strongest
+first:
+
+1. **The reference measures 11.9–30.5° on single materials and never 180°.** It is the only ground
+   truth either reading has.
+2. **DERIV was never checked against it.** It derived a target from a clause and then measured that
+   the build met the target. No step in `DERIV`, and none of the ADDENDUM's four PASS rows,
+   consults `sly3-venice.jpg`. That closed loop is how a build passes its own acceptance and scores
+   4/10.
+3. **The parallel clause refutes the reading.** "orange sun against violet sky" is a tension between
+   two *different objects*. Read in parallel, "gold sandstone against deep teal shadow" is a
+   composition-level warm/cool block — the sunlit mass against the shadow mass — not a per-material
+   rule that each surface's shade must be its own complement. DERIV quotes the sentence and
+   addresses only its first half.
+4. **The same paragraph carries a clause the 180° reading violates.** §2.1.3 also requires shadows
+   to be "*transparent* (you can read detail inside them)". A shadow that inverts a material's
+   channel order is not transparent in the way that matters: you cannot read *which material it
+   is*. Critic 9's "reads as two unrelated materials … lava and a green lake, not one dune with a
+   shadow on it" is a report of exactly that.
+
+`DERIV-shadowhue-target.md` §4's acceptance is **superseded for surfaces**. It is not deleted and it
+was not wrong given its premise; its premise is a reading of §2.1.3 the reference frames do not
+support. Its ink caveat still stands — §2.1.2's 260° governs *lines*, and this section does not
+touch them.
+
+### 3. Both critics were right about the mechanism, and nothing critic pass 2 set is reversed
+
+`ADDENDUM-shadowhue-restate.md` §2 already computed that shaded sandstone multiplies to 176–181°,
+and recorded it as a **PASS**. `scratchpad/hue/model.mjs` recomputes the same table today from the
+same constants and reproduces its `G/R 3.258` independently. **Same arithmetic, opposite verdict:
+the disagreement was never about the mechanism, only about which acceptance governs.**
+
+The mechanism, stated correctly (my own first draft of it in `PREREG` §9 blamed the additive wash
+and is withdrawn in `PREREG` §10, before scoring):
+
+```
+shadow light, linear   (0.1039, 0.3384, 0.5367)    G/R 3.258
+break-even             an albedo flips R>G to G>R when its linear G/R exceeds 0.307
+SANDSTONE mid          G/R 0.485  ->  shade hue 175.9° against a lit 22.5°   (Δ153.4°)
+```
+
+The **multiply itself** carries ~153° of the measured ~174°. `shadowWash` compounds it and is not
+the cause. So "global tint substitution" names the right defect and the wrong mechanism.
+
+`shadowSat −0.35`, `shadowWash 0.05`, `shadowTeal 0.15`, `shadowBounceMix 0.05` and
+`shadowTintPeak 0.62` **all ship unchanged.** The new term, `TUNE.shadowHold`, is gated on albedo
+chroma — a per-pixel quantity the old model never consulted — so critic pass 2's fix is not
+reversed on the say-so of a later critic.
+
+Critic pass 2's ranked defect was shade R/G **above** lit R/G (1.63 vs 1.29). Under the held band
+that is a **structural guarantee, not a measurement**: the band is the albedo times a scalar, so its
+R/G is exactly the albedo's, while the lit side is the albedo times the key, whose linear R/G is
+**1.441**. Shade R/G is therefore exactly `0.694 ×` lit R/G for **every** material at **every**
+tuning — 2.063 vs 2.973 on sandstone mid, 1.651 vs 2.379 on sandstone light, 1.235 vs 1.779 on
+limestone mid.
+
+### 4. Result — it fixes the ranked #1 defect on daylight, and the protection guard refuses it
+
+One boot per shot, six arms, `dt = 0`, `shots/shold/`. **All three nulls bit-identical to base**
+(`09fa15ab5b049706`, `2715fa964a72cb8c`, `da44202e312eeefc`), and A0 reproduces the r9 baseline
+exactly, so the guards calibrated on r9 transfer. **The positive control fired**: greying the shadow
+light alone (A2) takes `dunes` Δh 173.8 → 12.4, far past its registered 20° bar.
+
+| shot | arm | Δh | lit s → shade s | V ratio | warm % | cool % | dark % |
+|---|---|---|---|---|---|---|---|
+| `dunes` | A0 base | **173.8** | 0.664 → 0.419 | 0.367 | 64.62 | 18.82 | 1.27 |
+| `dunes` | A3 hold 1 | **2.3** | 0.665 → 0.734 | 0.370 | 82.29 | **2.60** | 5.20 |
+| `hero` | A0 base | **164.8** | 0.560 → 0.329 | 0.340 | 25.89 | 53.00 | 14.27 |
+| `hero` | A3 hold 1 | **16.4** | 0.595 → 0.669 | 0.318 | 90.75 | **2.54** | 35.07 |
+| `interior` | A0 base | 59.2 | 0.219 → 0.278 | 0.548 | 7.96 | 75.29 | 9.50 |
+| `interior` | A3 hold 1 | 25.1 | 0.552 → 0.601 | 0.505 | 92.46 | **2.27** | 40.21 |
+| reference | — | 11.9–30.5 | — | 0.51–0.68 | 32.84 | 17.32 | 18.95 |
+
+Gate verdicts, `tools/shadowholdscore.mjs`:
+
+```
+A0 base    ==> DO NOT SHIP — G1 dunes dh<=45 FAIL, G2 hero dh<=45 FAIL
+A3 hold 1  ==> DO NOT SHIP — G5b interior cool% FAIL
+A4 hold 0.6==> DO NOT SHIP — G2 FAIL, G4a dunes shade sat FAIL, G5b FAIL
+```
+
+**The shipped build fails the hue guard. The fix passes it and fails the protection guard.** That is
+the honest shape of this problem and neither half of it should be quoted without the other.
+
+### 5. Why `interior` refuses, and it is structural rather than a tuning miss
+
+`interior` is a tomb: `ToonMaterial.js` already records that "every surface in the tomb is at
+`shadowMix` 1.0". So there is no lit reference in the frame at all — **the shade band IS the
+scene's lighting.** Deriving it from the albedo therefore does not adjust the shadows, it deletes
+the lighting's colour: warm % 7.96 → 92.46, cool % 75.29 → 2.27, and the frame renders as an
+all-crimson room in which the sconces no longer read as light sources because everything around
+them is already warm.
+
+The A2 control proves this is not about `shadowHold` specifically: merely greying the shadow light
+does the same thing to `interior` (warm 89.28 / cool 2.44). **`interior`'s working colour
+relationship — the one thing critic 9 rated as working — IS the global tint critic 9 asked to have
+removed.** Those are the same object.
+
+The corollary generalises: hue-holding is only meaningful where a material appears **both lit and
+shaded in the same frame**, because the defect it fixes is a discontinuity between those two states.
+`interior` has no such discontinuity, is not broken, and does not need the fix. There is no
+per-pixel signal in this shader that distinguishes "cast shadow beside sunlight" from "ambient-only
+interior" — both are `shadowMix` 1 — so **no single global value of `shadowHold` can serve both**,
+and a bracket is not what is missing. Scoping has to be per material or per shot.
+
+### 6. An instrument lesson worth more than the result
+
+`interior`'s **hue** guards (G6) *passed* on the arm that destroyed the frame: warm-population mean
+hue 8.4° → 8.8° and cool 215.4° → 220.7°, both inside a 15° tolerance. What collapsed was the
+**populations** — 75.29 % of the frame down to 2.27 %. A guard on the mean hue of a population is
+blind to that population ceasing to exist. G5 caught it only because populations and hues were
+registered as separate guards. **Register both, or measure nothing.**
+
+### 7. Forecast scoring
+
+| # | forecast | actual | verdict |
+|---|---|---|---|
+| 1 | `dunes` Δh → 20–60°, "passes but not comfortably" | **2.3°** | wrong — far too pessimistic |
+| 2 | `hero` Δh → 25–70°, "the one I expect to be marginal" | **16.4°** | wrong in the same direction |
+| 3 | the fill is a large residual; A5 moves shade hue ≥ 30° | **0.4°** | **FALSIFIED** |
+| 4 | `dunes` shade saturation rises to 0.45–0.60 | **0.734** | direction right, magnitude under |
+| 5 | `dunes` V ratio 0.30–0.40 | **0.370** | correct |
+| 6 | `interior` moves least of the three; G5/G6 pass | moved **most**; G5b FAILED | **wrong, and it is the finding** |
+| 7 | `dunes` dark % rises to 1.5–3.0 | **5.20** | direction right, magnitude under |
+
+Two systematic errors. **I under-weighted how completely the shadow light owns the shade hue and
+over-weighted the hemispheric fill** — A2 settles it, the light is ~161° of the 174° and the fill is
+essentially none of it (the fill is doing *saturation* work: greying it takes the held shade
+saturation 0.734 → 0.918). And **I predicted the protected frame would move least when it moves
+most**, for a reason I could have derived from a comment already in my own file: a frame at
+`shadowMix` 1 everywhere has maximal exposure to any change in the shade band, not minimal.
+
+### 8. What ships
+
+- `TUNE.shadowHold` (0, **inert**) and `TUNE.shadowHoldKnee` (0.25), with the shader term. Inertness
+  is exact, not approximate — `mix(x, y, 0.0) == x` and `(1.0 − 0.0) == 1.0` — and all three null
+  arms are bit-identical to base, which is the check rather than the claim.
+- The held branch multiplies `albShadow`, not raw `alb`. Run 1 used raw `alb` and produced `dunes`
+  shade saturation **0.734 against a lit 0.665** — the shade *more* saturated than the sunlit
+  surface, i.e. the saturation half of critic pass 2's defect re-entered from the other side. A lerp
+  toward grey holds hue exactly and scales saturation (0.825 → 0.631 on sandstone mid), which is
+  "hold hue, drop value and saturation" literally, and it keeps `uShadowSat` load-bearing.
+- Nothing is enabled. `shots/r9/` is unchanged by this commit; every frame in the game is
+  bit-identical to before it.
+
+**Not shipped, and why:** `shadowHold 1` globally, because G5b refuses it on `interior`. Not
+because it is close — cool % 2.27 against a bar of 56.44.
+
+**Routed, with the measurement that justifies it:** per-material or per-shot scoping. Sand and
+outdoor sandstone want the hold; the tomb's interior does not, and cannot be distinguished from
+them per-pixel. That needs `Materials.js` (TEXTURES) or a per-shot publisher (LIGHTING), neither of
+which is this file. The lever is in the tree, measured, inert, with a bit-identical null.
+
+**Unregistered risk, stated in `PREREG` §10 before it was seen and confirmed by the result:** there
+is no warm/cool guard on `dunes` or `hero`, and both go monochrome-warm at hold 1 (`dunes`
+64.62/18.82 → 82.29/2.60; `hero` 25.89/53.00 → 90.75/2.54, against a reference of 32.84/17.32). A
+threshold invented now would be the mis-derivation §141.1 forbids. **Register a warm/cool population
+guard on the daylight shots before the next attempt at this**, and note that `hold` is effectively
+*binary* — A4 at 0.6 puts `dunes` shade at hue 355° / sat 0.274, a mud that is worse than either
+endpoint, because the blend passes through neutral.
+
+**The black end, reported not bundled (per brief):** hold 1 moves dark % `dunes` 1.27 → 5.20 (toward
+the reference's 18.95), `hero` 14.27 → 35.07 and `interior` 9.50 → 40.21 (both past it). So the
+change does touch the dark end and it does not touch it uniformly. §270 owns the black point.
+
+---
+
 ## §270 — critic 9's D5 is two defects, the ink half has TWO ink systems on opposite sides of the tonemap, and my first mechanism story was refuted by its own test
 
 D5 reads as one complaint ("there is no black in the picture, and the ink line is grey") and is
