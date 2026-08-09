@@ -22512,6 +22512,59 @@ source — the lead's rule, learnt the expensive way: §271 was taken by the tex
 
 ---
 
+## §273 — a pre-registration that pins ABSOLUTE thresholds to a stored capture expires before it is scored, and two lanes proved it independently on the same afternoon
+
+Standing rule, written by the coordinator because it is nobody's lane and it has now cost two runs.
+
+### What happened, twice, from different directions
+
+**TEXTURES.** Its seal registered absolute bars taken from `shots/r9`. By the time the candidate
+was captured, `shots/r9` was roughly **120 commits old**. A0's `hero` flat measured **0.1914**
+against the registered **0.1549** — the control alone had already moved further than the effect
+being tested. The sharp end: **P2's bar scored PASS on 1.27 while A1's own control measured 1.22.**
+A stale absolute threshold passed a candidate that was *worse than its own control*, and the gate
+reported success. Nothing was wrong with the arithmetic; the number it was compared against had
+simply stopped describing the build.
+
+**TEXTURES again, same run, different mechanism.** A0 and A1 were captured **twenty commits
+apart**, and those commits included `src/core/Shots.js` — another lane's re-framing ("hero 1.8x
+larger"). `shot.mjs` takes the capture lock once per invocation, so env-var-selected arms queue as
+separate invocations and the working tree moves between them. VOID on provenance.
+
+### Why this is structural and not carelessness
+
+With five agents committing continuously and one FIFO capture lock, **the interval between sealing
+a pre-registration and scoring it is measured in dozens of commits.** An absolute bar is a claim
+about a build that no longer exists by the time it is evaluated. This is not a discipline failure
+that more care fixes — it is a consequence of the parallel topology, and it will recur on every
+seal that does not design against it.
+
+### The rule
+
+1. **Register DELTAS against a control captured in the SAME run, not absolutes against a stored
+   capture.** The control is what carries the baseline forward; a number on disk does not.
+2. **Shoot the control first**, in the same invocation, in the same boot where the arms permit it.
+3. **Gate tree uniformity, and gate it on CONTENT.** INK's `G-TREE` gets this right in a way the
+   coordinator's own advice did not: it hashes the contents of `src/`, **not the commit sha**,
+   because vite bundles the working tree — with `Props.js` and `Statues.js` uncommitted, two
+   captures at the same commit can render different pictures. A sha-based guard would have passed
+   both and been wrong.
+4. **r9 numbers may describe a defect; they may not gate a candidate.** Critic 9's published
+   figures remain the best statement of what is wrong, and reproducing them is still the right way
+   to calibrate an instrument. They are not admissible as a PASS bar.
+5. When a run predates a guard you have just added, **do not exempt it as "true by construction"**.
+   INK moved run-2's sixteen frames to `shots/inkblack-run2a/` and re-shot rather than grant
+   itself the exemption — which is the correct instinct, because "it must have been fine" is
+   exactly the claim the guard exists to stop anyone making.
+
+### The corollary nobody likes
+
+A seal whose thresholds have gone stale **cannot be repaired by restating them** (§141.1) — the
+candidate has been seen. It must be re-sealed with same-run deltas and re-run. TEXTURES paid that
+price rather than adjusting a bar, and stopped its A2 arm rather than spend an hour of exclusive
+FIFO on a number already known to be void. That is the expensive, correct move, and it is the one
+to copy.
+
 ## §274 — three environment-variable arms are three commits, not three arms: the celband run is VOID on provenance, and every absolute bar in its seal was stale before it was scored
 
 `progress/records/RESULT-celband.md`, scorer `tools/celbandscore.mjs` on `gate.mjs`. Nothing
