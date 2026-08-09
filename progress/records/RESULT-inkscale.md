@@ -160,19 +160,84 @@ floor is not present in this instrument.
 
 ---
 
-## 6. Before/after — **NOT MEASURED. The candidate sweep never got the lock.**
+## 6. Before/after — measured at 640×360, all three calibrations firing
 
-This is the honest state of the run and it is not dressed up. Two blocks are queued and detached
-(`--res 1280x720 --shots courtyard,sly-closeup`, pid 13669; `--res 640x360`, pid 30517), both behind
-a run that has now held the capture lock for **2 h 21 m**. Neither produced a frame.
+The candidate sweep did land, after a 2 h 30 m queue. This block is `inkw-after/`, 640×360, four
+shots, nine arms each, one boot. **`legacy` and `legacy_nohull` restore the pre-fix renderer inside
+the same boot** — `uThickness := 2.5` at every resolution, the crease radius divided by the
+resolution scale recovered as `appliedHullPx / 2.5`, and `edgePlanar[2] := 0` — all read back off
+the live uniforms rather than recomputed in the runner. So every row below is a same-boot A/B, not a
+cross-commit pair, and §193's cross-boot floor does not apply to it.
+
+### Calibration — all three fire, in all four shots
+
+| shot | `null` | `nochar` | `hull2x` (band median, 2× vs 1×) |
+|---|---|---|---|
+| courtyard | **0 px**, max 0.00 L | 274 px, box 23×22 | 2 vs 1 — PASS |
+| hero | **0 px**, max 0.00 L | 2 219 px, box 61×67 | 3 vs 1 — PASS |
+| combat | **0 px**, max 0.00 L | 11 888 px, box 199×160 | 3 vs 1 — PASS |
+| sly-closeup | **0 px**, max 0.00 L | 28 000 px, box 256×270 | 3 vs 1 — PASS |
+
+### The hull halved, which is mechanism 3 rendered
+
+Hull band minimum chord, whole frame, pre-fix arm against candidate in the same boot. The model says
+2.50 px → 0.90 px at 360 rows (the clamp floor binds); the estimator's integer floor compresses that:
+
+| shot | hull LEGACY med / p99 / n | hull CANDIDATE med / p99 / n |
+|---|---|---|
+| courtyard | **2** / 6 / 3 981 | **1** / 4 / 2 511 |
+| hero | **3** / 7 / 1 762 | **1** / 5 / 1 189 |
+| combat | **3** / 6 / 3 585 | **1** / 7 / 2 466 |
+| sly-closeup | **3** / 7 / 6 970 | **1** / 4 / 4 641 |
+
+### What the planarity gate removed was a fill; what it left is a line
+
+"Removed" is pixels the candidate made ≥ 15 L *lighter* than the pre-fix renderer — the ink the gate
+withdrew. Its minimum chord is the whole argument: withdrawing a line would leave thousands of short
+components with small chords.
+
+| shot | removed px | removed chord med / p99 / max | **remaining ink** med / p99 / max | remaining blob share |
+|---|---|---|---|---|
+| courtyard | 63 288 | **4 / 40 / 51** | **2 / 6 / 13** | 19 % |
+| hero | 58 177 | **4 / 39 / 51** | **1 / 5 / 10** | 10 % |
+| combat | 85 836 | **19 / 78 / 93** | **2 / 6 / 11** | 22 % |
+| sly-closeup | 101 744 | **31 / 103 / 111** | **2 / 6 / 10** | **39 %** |
+
+Whole-frame: 86 404 / 85 635 / 101 339 / 121 310 px moved, of which 74 857 / 80 810 / 94 340 /
+114 624 got **lighter**, mean +39.8 / +34.6 / +43.3 / +38.0 L.
+
+### Against the registered thresholds
+
+- **P3a — the ink is a LINE** (median ≤ 4 px, p99 ≤ 14). Median 1–2, p99 5–6, max 10–13.
+  **PASS in all four shots**, against a pre-fix 720p control of median 10 / p99 123 / max 148.
+- **P3b — the ink still exists** (not deleted). 28 069 / 17 418 / 19 919 / 19 362 px of ink remain.
+  **PASS.** The registered ratio form is not computable — the pre-fix 640×360 control is the block
+  that came back black — so this is the weaker "non-empty and line-shaped" reading, and it is
+  labelled as such rather than quoted as the ratio I registered.
+- **P3c — no blob** (largest component ≤ 25 % of the ≥ 15 L mask). 19 % / 10 % / 22 % / **39 %**.
+  **FAILS in `sly-closeup`.** Stated rather than explained away: at 640×360 he is 256×270 px of a
+  640×360 frame and his silhouette ink is one connected loop, which is a legitimate large component
+  — but that is a reading I formed *after* seeing the number, so it is a hypothesis for the 1280×720
+  block to test, not a pass. Three of four shots pass; one does not.
+- **P1 — width scales with screen size.** Needs the 1280×720 block, which acquired the lock at
+  02:47 and is running as this is written. Not yet computable.
+- **P2, P4.** Same: they compare against the 1280×720 candidate arms.
+
+---
+
+## 6b. What was NOT measured, at the time of writing
+
+The 640×360 block is in §6. The **1280×720** block (`--shots courtyard,sly-closeup`, pid 13669)
+acquired the lock at 02:47 after a 2 h 30 m wait and is still running, so P1, P2 and P4 — every
+criterion that needs the critic's own resolution — are **not yet computable**.
 
 So of the three mechanisms:
 
 | mechanism | before | after | status |
 |---|---|---|---|
-| 1. crease pass fills grazing planes | **measured** (§2, null arm 0 px) | — | **remedy UNMEASURED** |
+| 1. crease pass fills grazing planes | **measured** (§2, null arm 0 px) | **measured at 640×360** (§6) | **P3a/P3b pass, P3c fails in 1 of 4** |
 | 2. depth push displaces the hull | **measured analytically, exactly** (§3) | **measured analytically, exactly** | **closed** |
-| 3. ink width is resolution-invariant | **measured analytically + locked by the old test** | unit-tested, not rendered | **closed in code, unrendered** |
+| 3. ink width is resolution-invariant | **measured** (§4, and the hull LEGACY arm in §6) | **measured at 640×360**; the 720 : 360 ratio still pending | **half closed** |
 
 **Mechanism 2 is closed without a capture and needs none.** It is exact arithmetic on a projection
 matrix, reproduced twice independently, and it is now a unit test that fails if either half stops
@@ -187,12 +252,13 @@ at a 4.00× spread. What is *not* measured is P1 — that the rendered hull band
 actually follows that ratio between 720 and 360 rows. The two queued blocks exist to answer exactly
 that and nothing else.
 
-**Mechanism 1's remedy is the real gap, and it is the one to read sceptically.** P3a/P3b/P3c are all
-unmeasured on the candidate. In particular **P3b — that the planarity gate takes the architecture's
-ink with the floor fill — is a registered, plausible failure and I have not tested it.** Trading
-§7.3's "outlines too heavy" for §7.3's "outlines missing" would be a bad trade made confidently.
+**Mechanism 1's remedy is now measured at one resolution and it holds, with one registered failure.**
+P3b — the fear that the gate takes the architecture's ink with the floor fill — did not happen:
+17 000–28 000 px of ink survive in every shot and what was withdrawn has a p99 chord of 39–103 px
+against a survivor p99 of 5–6 px. P3c fails in `sly-closeup` at 39 % against a registered 25 %, and
+that is recorded as a failure, not as a footnote.
 
-It ships enabled anyway, and the reasoning is stated so it can be overruled cheaply:
+It ships enabled, and the reasoning is stated so it can be overruled cheaply:
 
 - the state it replaces is **measured and definitely bad** — a 46-luma darkening over 26.7 % of
   `courtyard`, 80 % of it one connected blob;
