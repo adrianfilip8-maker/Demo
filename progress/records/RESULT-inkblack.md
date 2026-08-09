@@ -82,6 +82,28 @@ computed. The shas above are calibration, not a result about the ink.
 two captures at the identical commit can render different pictures; a sha would call them the same
 provenance and be wrong.
 
+### The staged-player move, checked against run-3 rather than assumed
+
+The lead flagged that the hero lane moved the staged character in two of these ten frames — `hero`
+`[2.2, 9.0, 8.4]` → `[4.0, 8.99, 13.2]` and `courtyard` `[-6.6, 5.12, 12.4]` → `[2.4, 0.02, 26.4]`
+— with no camera change, because `hero` had been staging him **3.80 m above the surface** under his
+own xz. That matters here more than it might elsewhere: **Sly is the largest single carrier of hull
+ink in the frame**, so moving him changes the hull mask's size and content, which are P1's inputs.
+
+Checked, not assumed:
+
+- `src/core/Shots.js` in run-3's target tree already carries the **post-change** values
+  (`hero` `[4.0, 8.99, 13.2]` yaw 5.889; `courtyard` `[2.4, 0.02, 26.4]` yaw 5.341).
+- Run-3's only completed shot, `dunes`, records src digest `dab8c4d3cd36ee59`, which **equals the
+  current tree digest**. So the change landed before run-3's first frame and every remaining shot
+  will be captured on the same side of it.
+
+Run-3 is therefore homogeneous so far, and if the tree moves again mid-run `G-TREE-ACROSS` VOIDs
+rather than scores and the resume re-captures the drifted shots. What the move **does** invalidate
+is any comparison against the two sets that predate it: `shots/inkblack-run2a/` (already excluded)
+and `shots/r9` — which §273 rule 4 already forbids as a gate and which this lane uses only to
+describe the defect.
+
 ## 4. Staleness, recorded
 
 `shots/r9` is ~120 commits old. Nothing in this pre-registration gates on an r9 absolute — P1 and
