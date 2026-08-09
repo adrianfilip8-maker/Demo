@@ -219,18 +219,23 @@ export class Props {
   _colossi() {
     for (const p of L.colossus) {
       /* The pair was built from identical parameters, so the two broad collars were the same
-         arc at the same height — and in `courtyard` those two crescents are the loudest
-         "mirrored buildings" tell in the frame (raycast: `props_stone` at 16–20 m, i.e. these
-         figures, not the masonry behind them). The east figure now carries a shorter, 3-row
+         shape at the same height — and in `courtyard` those two were the loudest "mirrored
+         buildings" tell in the frame (raycast: `props_stone` at 16–20 m, i.e. these figures,
+         not the masonry behind them). The east figure carries a narrower, one-row-shorter
          collar and heavier wear, which reads as the inlay having been robbed out of the outer
-         row — consistent with the lost head and 1.5 m back-pillar difference already in the
-         tree, rather than a second unrelated kind of damage. */
+         course — consistent with the lost head and 1.5 m back-pillar difference already in the
+         tree, rather than a second unrelated kind of damage.
+
+         `collarArc` became `collarSpan` when the collar stopped being a torus sweep and became
+         a bib (Statues.js `wesekh`, D9). The differentiation is the point and it survives the
+         change; only the axis it varies along moved. */
       const west = p.x < 0;
       const bag = seatedColossus({
         rng: this.rng,
         worn: west ? 0.44 : 0.68,
-        collarArc: west ? Math.PI * 1.25 : Math.PI * 0.86,
-        collarRows: west ? 4 : 3,
+        collarSpan: 1.0,
+        collarRows: west ? 5 : 4,
+        collarDrop: west ? 1.46 : 1.14,
       });
       // Both face down the axis toward the approach, mirrored about x.
       bag.transform(matrixOf({ x: p.x, y: L.colossusY, z: p.z, ry: p.x < 0 ? 0.06 : -0.06 }));

@@ -41,6 +41,7 @@ const flag = (n) => args.includes(n);
 const opt = (n, d) => { const i = args.indexOf(n); return i >= 0 ? args[i + 1] : d; };
 const SHOT = opt('--shot', 'courtyard');
 const PNG = opt('--png', null);
+const PNGBUF = opt('--pngbuf', 'full');
 const OCC = !flag('--noocc');
 const SEED = opt('--seed', null);
 const SCATTER = flag('--scatter');
@@ -122,15 +123,15 @@ const FEATURES = [
   ['BROAD COLLAR',   'PropKit.js', K('export function collar'), K('export function hoardMound')],
   ['FACE features',  'Statues.js', A('function carveFace'), A('The cobra at the brow')],
   ['uraeus',         'Statues.js', A('function uraeus'), A('A nemes headdress')],
-  ['NEMES crown',    'Statues.js', A('function nemes('), A('// Lappets:')],
-  ['NEMES lappets',  'Statues.js', A('// Lappets:'), A('for (let i = 0; i < stripes')],
-  ['LAPPET stripes', 'Statues.js', A('for (let i = 0; i < stripes'), A('/* ===================== colossal seated pharaoh')],
+  ['NEMES crown',    'Statues.js', A('function nemes('), A('Lappets: the two')],
+  ['NEMES lappets',  'Statues.js', A('Lappets: the two'), A('Stripes are INLAY')],
+  ['LAPPET stripes', 'Statues.js', A('Stripes are INLAY'), A('function wesekh(')],
+  ['COLLAR bib',     'Statues.js', A('function wesekh('), A('/* ===================== colossal seated pharaoh')],
   ['legs+feet',      'Statues.js', A('/* ---- legs in relief'), A('Pleated kilt apron')],
   ['kilt apron',     'Statues.js', A('Pleated kilt apron'), A('/* ---- hands flat on the lap')],
   ['hands',          'Statues.js', A('/* ---- hands flat on the lap'), A('/* ---- torso ----')],
   ['torso',          'Statues.js', A('/* ---- torso ----'), A('/* ---- belt and cartouche')],
   ['belt+cartouche', 'Statues.js', A('/* ---- belt and cartouche'), A('/* ---- broad collar')],
-  ['COLLAR bib',     'Statues.js', A('/* ---- broad collar'), A('/* ---- neck and head')],
   ['neck+headblock', 'Statues.js', A('/* ---- neck and head'), A('/* ---- false beard')],
   ['false beard',    'Statues.js', A('/* ---- false beard'), A('/* ---- nemes + uraeus')],
   ['nemes call',     'Statues.js', A('/* ---- nemes + uraeus'), A('/* ---- back pillar')],
@@ -281,12 +282,105 @@ const R = {};
 const mid = (a) => { const s = a.slice().sort((p, q) => p - q); return s.length ? s[s.length >> 1] : 0; };
 
 /* --- I1 PROUD: applied ornament outside the massing silhouette ----------------------------- */
+if (process.env.DBG8) {
+  const proj = (x, y, z) => { const p = new THREE.Vector4(x, y, z, 1).applyMatrix4(VP);
+    return [((p.x / p.w) * 0.5 + 0.5) * W, (1 - ((p.y / p.w) * 0.5 + 0.5)) * H]; };
+  for (const r of groups.west) {
+    const f = featureOf(r.site);
+    if (f !== 'NEMES lappets' && f !== 'LAPPET stripes') continue;
+    const p = r.geo.attributes.position;
+    let best = 1e9, bx = 0, by = 0, bw = 0;
+    for (let i = 0; i < p.count; i++) { const s2 = proj(p.getX(i), p.getY(i), p.getZ(i));
+      if (s2[0] < best) { best = s2[0]; bx = p.getX(i); by = p.getY(i); bw = p.getZ(i); void by; } }
+    const b = new THREE.Box3().setFromBufferAttribute(p);
+    console.log(`DBG8 ${f.padEnd(15)} worldbbox x ${b.min.x.toFixed(2)}..${b.max.x.toFixed(2)} y ${b.min.y.toFixed(2)}..${b.max.y.toFixed(2)} · leftmost vertex screenX ${best.toFixed(1)} at world (${bx.toFixed(2)},${bw.toFixed(2)})`);
+  }
+}
+if (process.env.DBG7) {
+  /* Project two specific statue-local points with the tool's own VP: the lappet's front-outer
+     arris and the band's front-outer corner at the same height. */
+  const a = 0.06;
+  const toWorld = (lx, ly, lz) => new THREE.Vector3(
+    -9.5 + lx * Math.cos(a) + lz * Math.sin(a), 2 + ly, 25 - lx * Math.sin(a) + lz * Math.cos(a));
+  const proj = (v) => { const p = new THREE.Vector4(v.x, v.y, v.z, 1).applyMatrix4(VP);
+    return [((p.x / p.w) * 0.5 + 0.5) * W, (1 - ((p.y / p.w) * 0.5 + 0.5)) * H, p.w]; };
+  for (const [nm, lx, ly, lz] of [
+    ['lappet arris FRONT', -1.628, 8.27, 1.43], ['lappet arris BACK', -1.628, 8.27, 0.46],
+    ['band outer FRONT', -1.526, 8.27, 1.504], ['band outer BACK', -1.526, 8.27, 1.384]]) {
+    const s2 = proj(toWorld(lx, ly, lz));
+    console.log(`DBG7 ${nm.padEnd(20)} screen ${s2[0].toFixed(1)},${s2[1].toFixed(1)} w ${s2[2].toFixed(2)}`);
+  }
+}
+if (process.env.DBG6) {
+  /* Rasterise each west stripe band with its OWN tag, so the leftmost pixel names its band. */
+  const only = newBuf();
+  const bands = groups.west.filter((r) => featureOf(r.site) === 'LAPPET stripes');
+  const bbs = bands.map((r) => { const b = new THREE.Box3().setFromBufferAttribute(r.geo.attributes.position); return b; });
+  bands.forEach((r, i) => rasterGeo(only, r.geo, i));
+  for (let y = 96; y <= 200; y += 8) {
+    let a = -1, t = -1; for (let x = 0; x < 500; x++) { const v = only.id[y*W+x]; if (v >= 0) { a = x; t = v; break; } }
+    if (a < 0) { console.log(`DBG6 row ${y} none`); continue; }
+    const b = bbs[t];
+    console.log(`DBG6 row ${y} minX ${a} band#${t} localbbox x ${b.min.x.toFixed(3)}..${b.max.x.toFixed(3)} y ${b.min.y.toFixed(2)}..${b.max.y.toFixed(2)} z ${b.min.z.toFixed(2)}..${b.max.z.toFixed(2)}`);
+  }
+}
+if (process.env.DBG5) {
+  const only = newBuf();
+  let cnt = 0;
+  for (const r of groups.west) { if (featureOf(r.site) !== 'NEMES lappets') continue; rasterGeo(only, r.geo, 0); cnt++; }
+  console.log(`DBG5 lappet parts rasterised: ${cnt}`);
+  for (let y = 96; y <= 200; y += 8) {
+    let a = -1; for (let x = 0; x < 500; x++) if (only.id[y*W+x] === 0) { a = x; break; }
+    let b = -1; for (let x = 0; x < 500; x++) if (mass.id[y*W+x] === 0) { b = x; break; }
+    console.log(`DBG5 row ${y} lappetOnlyMinX ${a}  massMinX ${b}`);
+  }
+}
+if (process.env.DBG2) {
+  const tL = tags.indexOf('west/NEMES lappets'), tC = tags.indexOf('west/NEMES crown'), tS = tags.indexOf('west/LAPPET stripes');
+  for (let y = 88; y <= 120; y += 2) {
+    let mMin = -1, lMin = -1, cMin = -1, sMin = -1;
+    for (let x = 0; x < 500; x++) { const o = y*W+x;
+      if (mMin < 0 && mass.id[o] === 0) mMin = x;
+      if (lMin < 0 && full.id[o] === tL) lMin = x;
+      if (cMin < 0 && full.id[o] === tC) cMin = x;
+      if (sMin < 0 && full.id[o] === tS) sMin = x; }
+    console.log(`row ${y}  massMinX ${mMin}  lappetMinX ${lMin}  crownMinX ${cMin}  stripeMinX ${sMin}`);
+  }
+}
+if (process.env.DBG3) {
+  /* Unproject a few offending pixels back to world space so the culprit geometry is named
+     rather than guessed at. */
+  const t = tags.indexOf('west/LAPPET stripes');
+  const inv = new THREE.Matrix4().copy(VP).invert();
+  let shown = 0;
+  for (let y = 100; y < 200 && shown < 10; y += 3) for (let x = 60; x < 140 && shown < 10; x++) {
+    const o = y*W+x; if (full.id[o] !== t || mass.id[o] >= 0) continue;
+    const wdep = full.depth[o];
+    const ndcx = (x + 0.5) / W * 2 - 1, ndcy = 1 - (y + 0.5) / H * 2;
+    const v = new THREE.Vector4(ndcx * wdep, ndcy * wdep, 0, wdep).applyMatrix4(inv);
+    const lx = v.x + 9.5, ly = v.y - 2, lz = v.z - 25;
+    const a = 0.06, ux = lx * Math.cos(a) - lz * Math.sin(a), uz = lx * Math.sin(a) + lz * Math.cos(a);
+    console.log(`DBG3 (${x},${y}) w ${wdep.toFixed(2)} statue-local x ${ux.toFixed(3)} y ${ly.toFixed(2)} z ${uz.toFixed(3)}`);
+    shown++;
+  }
+}
+if (process.env.DBG) {
+  const t = tags.indexOf('west/LAPPET stripes');
+  let shown = 0;
+  for (let y = 90; y < 220 && shown < 8; y++) for (let x = 60; x < 140 && shown < 8; x++) {
+    const o = y*W+x;
+    if (full.id[o] !== t) continue;
+    if (mass.id[o] >= 0) continue;
+    console.log(`DBG outside px (${x},${y}) fullDepth ${full.depth[o].toFixed(3)} massId ${mass.id[o]} massDepth ${mass.depth[o]}`);
+    shown++;
+  }
+}
 console.log(`\nI1 PROUD — inlay pixels outside the figure's massing silhouette`);
 for (const side of ['west', 'east']) {
   for (const f of ['LAPPET stripes', 'BROAD COLLAR', 'COLLAR bib', 'uraeus', 'belt+cartouche']) {
     const t = idxOf(`${side}/${f}`); if (t < 0) continue;
     let n = 0, out = 0, maxdx = 0;
-    let mx0 = 1e9, mx1 = -1e9;
+    let mx0 = 1e9, mx1 = -1e9, my0 = 1e9, my1 = -1e9;
     for (let y = 0; y < H; y++) {
       let rowMin = 1e9, rowMax = -1e9;
       for (let x = 0; x < W; x++) if (mass.id[y * W + x] >= 0) { if (x < rowMin) rowMin = x; if (x > rowMax) rowMax = x; }
@@ -298,6 +392,7 @@ for (const side of ['west', 'east']) {
           const d = x < rowMin ? rowMin - x : (x > rowMax ? x - rowMax : 0);
           if (d > maxdx) maxdx = d;
           if (x < mx0) mx0 = x; if (x > mx1) mx1 = x;
+          if (y < my0) my0 = y; if (y > my1) my1 = y;
         }
       }
     }
@@ -305,7 +400,8 @@ for (const side of ['west', 'east']) {
     const key = `I1.${side}.${f}`;
     R[key] = { px: n, out, pct: 100 * out / n, maxdx };
     console.log(`  ${side.padEnd(5)} ${f.padEnd(15)} ${String(n).padStart(6)} px · outside ${String(out).padStart(5)} ` +
-      `(${(100 * out / n).toFixed(1)}%) · max protrusion ${maxdx} px`);
+      `(${(100 * out / n).toFixed(1)}%) · max protrusion ${maxdx} px` +
+      (out ? ` · outside bbox (${mx0},${my0})-(${mx1},${my1})` : ''));
   }
 }
 
@@ -488,8 +584,9 @@ console.log(`\nJSON ${JSON.stringify(R)}`);
 if (PNG) {
   const rgb = Buffer.alloc(W * H * 3, 24);
   const col = (i) => { const h = (i * 0.61803398875) % 1; const f = (k) => { const q = (h * 6 + k) % 6; return Math.round(255 * Math.max(0, Math.min(1, Math.min(q, 4 - q, 1)))); }; return [f(0), f(4), f(2)]; };
+  const SRCBUF = PNGBUF === 'mass' ? mass : (PNGBUF === 'head' ? head : full);
   for (let i = 0; i < W * H; i++) {
-    const t = full.id[i];
+    const t = SRCBUF.id[i];
     if (t < 0) { if (t === -2) { rgb[i * 3] = 60; rgb[i * 3 + 1] = 60; rgb[i * 3 + 2] = 60; } continue; }
     const [r, g, b] = col(t); rgb[i * 3] = r; rgb[i * 3 + 1] = g; rgb[i * 3 + 2] = b;
   }
