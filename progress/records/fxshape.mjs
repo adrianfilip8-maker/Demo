@@ -30,11 +30,26 @@
  *   nocane    all of the above at once        (the ceiling: everything the hit draws)
  *   base2     repeat of base                  VALIDITY — must be pixel-identical to base
  *
- * `base2` is the arm that decides whether anything else can be believed: every arm is captured
- * at dt 0 so the world clock does not advance between them (§28/§195 — a gold-bloom sweep was
- * once voided because its DUPLICATE arm moved more pixels than its strongest real arm). If
- * base2 differs from base by more than a handful of pixels, this boot is VOID and the deltas
- * below are animation phase, not attribution.
+ * `base2` is the arm that decides whether anything else can be believed: every arm is staged
+ * with the SAME fixed dt so each one renders the impact at the same age. If base2 differs from
+ * base by more than a handful of pixels, this boot is VOID and the deltas below are animation
+ * phase, not attribution (§28 — a gold-bloom sweep was once voided because its DUPLICATE arm
+ * moved more pixels than its strongest real arm).
+ *
+ * **dt is 1/60, NOT 0, and that is the opposite of §28/§195's standing advice for within-boot
+ * A/Bs — for a reason this run discovered the expensive way.** The first attribution boot
+ * passed `{ dt: 0 }` and came back with all seven arms byte-identical: 0 changed pixels on
+ * every suppression arm, including `nocane`, which suppresses everything the hit draws.
+ * The levers were fine — the log shows `cane_ring`/`cane_flash`/`cane_spark`/`cane_debris`
+ * each called twice per arm and blocked. The cause is that a frozen clock freezes the
+ * PARTICLES: age is `uTime - t0`, `_stageShot` emits at the current `uTime`, and every
+ * emitter's alpha begins with `smoothstep(0, fadeIn, u)`, which is exactly 0 at u = 0. So
+ * `combat` staged at dt 0 contains **no impact effect at all**, and an A/B run that way
+ * reports "your change did nothing" when the truth is "the thing under test was never drawn".
+ * Any event-driven FX — impact, landing, alert, pickup — is invisible under the repo's own
+ * recommended A/B staging. Determinism comes from dt being FIXED, not from it being zero:
+ * `Debug.setShot` applies the shot twice and runs SETTLE_FRAMES_2 = 3 frames after the second,
+ * so at 1/60 every arm renders the hit at the same 0.05 s of age.
  *
  *   node progress/records/fxshape.mjs
  */
@@ -108,16 +123,29 @@ const res = await withGame({ width: 1280, height: 720, quality: 'high', verbose:
     }, [SUPPRESS[arm] ?? [], TRAIL_OFF.has(arm)]);
     void seen;
 
-    const r = await page.evaluate(async () => {
-      const res2 = await window.__GAME.setShot('combat', { dt: 0 });
+    const r = await page.evaluate(async (shot) => {
+      const res2 = await window.__GAME.setShot(shot, { dt: 1 / 60 });
       return { stats: res2.stats, seen: window.__fxSeen.slice(), t: window.__ENGINE?.time ?? null,
         dataUrl: window.__GAME.capture('image/png', 0.92, 0) };
-    });
+    }, 'combat');
     const b64 = r.dataUrl.slice(r.dataUrl.indexOf(',') + 1);
     await writeFile(path.join(OUT, `${arm}.png`), Buffer.from(b64, 'base64'));
     out[arm] = { seen: r.seen, t: r.t, tris: r.stats?.triangles, draws: r.stats?.drawCalls };
     console.log(`  ${arm.padEnd(8)} t ${String(r.t).padStart(8)} · emitters fired [${r.seen.join(',')}]`);
   }
+  /* Ride-along, costing no extra lock acquisition: one `courtyard` frame on the shipped tree.
+     PREREG-smiley's gates are geometric and passed headless; this is the look at the frame that
+     its own falsifier asks for ("if a gate passes and the frame still reads as a face, the
+     instrument was wrong"). It is not an arm of anything and nothing is scored from it. */
+  await page.evaluate(() => { window.__fxBlock = new Set(); });
+  const ct = await page.evaluate(async () => {
+    const r2 = await window.__GAME.setShot('courtyard', { dt: 1 / 60 });
+    return { stats: r2.stats, dataUrl: window.__GAME.capture('image/png', 0.92, 0) };
+  });
+  await writeFile(path.join(OUT, 'courtyard.png'),
+    Buffer.from(ct.dataUrl.slice(ct.dataUrl.indexOf(',') + 1), 'base64'));
+  console.log('  courtyard ride-along written (not an arm, nothing scored from it)');
+
   return { out, info };
 });
 
