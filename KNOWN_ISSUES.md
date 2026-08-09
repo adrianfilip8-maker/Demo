@@ -22820,3 +22820,36 @@ should assert the subject is ON SCREEN before differencing anything. The check i
 `nocane` arm must differ from `base` by more than zero — and it converts an unfalsifiable zero
 into a loud one. `fxshapean.mjs` treats a zero-footprint suppression arm as VOID for exactly
 this reason: a denominator of zero is not a measurement.
+
+### §275.1 — the resolution, because §251 and §275 pull in opposite directions and both are right
+
+§251 requires the clock frozen so a capture is reproducible. §275 shows the freeze deletes the
+phenomenon whenever the subject is event-driven. Both are correct and they are not actually in
+conflict, because §251's requirement is **reproducibility**, and freezing is only one way to get
+it — the cheapest one for a static subject and the wrong one for a transient.
+
+**The rule, stated so it can be applied without re-deriving it:**
+
+1. **Determinism comes from `dt` being FIXED and IDENTICAL across arms, not from being zero.**
+   `Debug.setShot` runs `SETTLE_FRAMES` frames, re-bases, runs `SETTLE_FRAMES_2` more. Any fixed
+   dt puts every arm at the same age; only `dt = 0` puts them all at age zero, where every
+   emitter is transparent by construction.
+2. **`dt: 0` for a static subject; `dt: 1/60` when anything under test fires on an event.**
+   Static = architecture, materials, shading, ink, light shafts, ambient WRAP/LOOP particle
+   fields (their phase comes from `uTime` directly and survives the freeze). Event-driven =
+   anything routed through `Particles._emit`: impact, landing, alert, coin, target catch, and
+   every `_burstAt` caller.
+3. **Every arm set whose subject is transient must carry a NON-ZERO-FOOTPRINT check, and it
+   must VOID rather than pass.** The failure §275 records is not that the number was wrong; it
+   is that the number was **zero**, and a zero from "the lever removed nothing" is
+   indistinguishable from a zero from "the subject was never drawn". One line converts an
+   unfalsifiable zero into a loud one: the arm that suppresses EVERYTHING must differ from base
+   by more than zero, or the run is void before any attribution is read.
+4. **Say which one you used, in the manifest.** §251 already made the live-clock default
+   announce itself through `engine.warn`; the same applies in reverse. A run that froze the
+   clock over a transient subject should be able to be caught by reading its own record.
+
+The general form, which is worth more than the particular: **a discipline that makes a
+measurement comparable can also remove the thing being measured, and when it does, the
+instrument reports a clean, confident, reproducible null.** That is the most dangerous shape a
+result can take in this repo, because it looks exactly like a well-run negative.
