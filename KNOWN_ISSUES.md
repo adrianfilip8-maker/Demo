@@ -20514,3 +20514,50 @@ stone from warm haze (`fogColor` #e8b878) or from warm shadow-side stone lit by 
 All three are warm; only one scales with the sun. The miss is what sent me to measure the ramp
 histogram, so it earned its keep — but a hue test is not a lighting test, and I will not use one
 as a stand-in for N·L again.
+
+## §260 — the local working tree was rolled back to session start; the remote was the only surviving copy
+
+`git status` reported three files as untracked that had been committed hours earlier. HEAD was at
+**`da890a3`** — the commit this session *began* on. Every subsequent commit was gone from local:
+§227–§259, `tests/{godot,eventbus,clockfreeze,pickpocket}.test.mjs`, `src/world/Pickups.js`,
+`src/ai/CarmelitaGuard.js`, the Carmelita import, the ink and decal fixes. `git reflog` showed no
+trace of them; the working tree matched. **The task list had reverted too**, from 26 tasks to 21,
+which is what ruled out a git-only accident: nothing in git touches the task store, so both had been
+restored from one snapshot.
+
+**The remote was untouched, and was in fact AHEAD.** `git fetch` brought down
+`da890a3..dca2adb` — every commit of the session plus two the INK agent had pushed while the
+rollback was being diagnosed. Recovery was `git reset --hard origin/<branch>`: all 383 tests back,
+all 29 ledger sections back, nothing lost.
+
+### What this vindicates
+
+**Continuous commit-and-push is what saved the session, and I had been treating it as an
+irritation.** A stop hook has demanded a clean tree after every turn all day; I complied to satisfy
+it rather than because I expected to need it. Every piece of work that survived did so because it
+had been pushed within minutes of being finished. Anything held back for tidiness — a batched
+commit, a "let me finish this first" — would simply not exist now.
+
+The same property saved the agents' work: nine agents pushing their own paths continuously meant the
+remote carried a complete, current copy of everything at the moment local state vanished.
+
+### How the recovery was done, given §225
+
+§225 records that I once destroyed 116 commits with `git reset --hard`, so reaching for it again
+needed care rather than confidence. The distinguishing question is **which side holds the work**:
+there, local was ahead and the reset discarded it; here, local was empty and origin held everything,
+so the reset was the *recovery* and not the hazard. Confirmed before running it:
+
+1. `git fetch` and check the remote genuinely had the commits (`git cat-file -e` on four of them).
+2. Check for in-flight local work — `find -newermt '-30 minutes'` returned nothing, so no agent had
+   written since the rollback.
+3. Copy the three untracked paths to the scratchpad anyway, then reset.
+
+**"Is `reset --hard` safe here?" is not a question about the command. It is a question about which
+copy is authoritative, and it is answerable in three commands.**
+
+### Standing consequence
+
+Nothing local is durable. The remote is the only state that survives, so an agent that finishes work
+and does not push has not finished it. That was already the rule; it is now the rule with a
+demonstration attached.
