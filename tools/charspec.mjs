@@ -29,7 +29,11 @@
 import { withGame } from './harness.mjs';
 import { shipVerdict, verdictLine } from './gate.mjs';
 
-const SHOTS = ['sly-closeup', 'hero', 'courtyard', 'temple'];
+/* Three, not four. `temple` is dropped before running: §262 measured it incidence-bound
+   (0.65 % of its toon population in full sun), so it contributes little lobe-saturated
+   character area for the cost of ~10 more software renders. Trimmed while the tool had not
+   yet been run, and recorded rather than quietly narrowed. */
+const SHOTS = ['sly-closeup', 'hero', 'courtyard'];
 const P = 0.90;                       // the exponent the world needs (H1 passes 3/4 here)
 const BAR = 20;                       // SPECNORM's registered G4' bar, in display L
 const SPECNORM_BASE = 25.2;           // what they measured at base materials, p 0.90
