@@ -297,7 +297,88 @@ G6 is deliberately a *two-sided* requirement paired with G5′: G6 says somethin
 says it happened in the right direction. Neither alone is sufficient and I registered both
 before seeing either.
 
-## §5 — FORECAST, to be scored against the result
+## §4.4 — an external gold arrives mid-run, and it overturns §4.2's ship preference
+
+The owner supplied `public/assets/sly-cane/sly-cane.glb` while this run was still queued
+(`waiting for capture lock (1463s, held by pid 6594)`). **No arm had rendered.** Amending on new
+external evidence, before data, is the same standing as §4.1–§4.3.
+
+### What I verified myself rather than taking from PROVENANCE.md
+
+`tools/glbpeek.mjs` parses the GLB's JSON chunk and decodes the embedded PNGs — no three, no DOM,
+no capture lock. `tools/canesize.mjs` builds the real `Cane.js` geometry in plain node.
+
+**Confirmed:** 494 tris / 576 verts / 2 prims / 2 materials, no skins, no animations, no
+extensions, TANGENT present. `Cane.metalRough` measures **roughness (G) 0.250, metalness (B)
+0.801** — the provenance's headline number, exactly. `Cane.normal` carries real detail
+(R 7–249, G 14–245). The hook curls in **±X** (x spread 0.300–0.369 across the top three height
+slabs against z 0.042–0.059), against `Cane.js`'s +Z, so a 90° Y rotation is needed; the shaft
+sits at x ≈ −0.108 and the hook opens toward **+X**, which makes the sign **−90° about Y**.
+
+**Corrected — and it matters.** PROVENANCE.md says "1.5904 units against `CANE_TUNE`'s ~1.30 m
+cane ⇒ uniform ×0.817". `Cane.js`'s built geometry measures **y-extent 1.5150 m**, not ~1.30:
+
+```
+Cane.js         tris 1356   bbox y [-0.8140 .. 0.7010]   extent y 1.5150
+                hookPoint [0, 0.4956, 0.1445]   tipPoint [0, -0.796, 0]
+glb raw         extent y 2.0000        node scale 0.7952   ->  post-node 1.5904
+uniform scale needed = 1.5150 / 1.5904 = x0.9526      (NOT x0.817)
+```
+
+The quoted factor would have shipped the cane **16 % too short**. This is exactly why the
+instruction was to derive it rather than take the figure.
+
+### The geometry does NOT come in. The values do.
+
+Recorded plainly, as the coordinator asked, because "only the two material numbers" is a real
+outcome and not a failure:
+
+1. **§221 is decisive on its own.** The cel shader replaces three's light loop, so the
+   `metalRough` and `normal` maps cannot be wired at all. The geometry would arrive with its
+   authored materials unusable and I would *still* be hand-authoring `uMetal`/`uSpec`/`uGloss`.
+   The asset's contribution is the numbers either way.
+2. **It would put a verified behaviour at risk for an unmeasured gain.** `hookPoint`
+   `[0, 0.4956, 0.1445]` and `tipPoint` `[0, −0.796, 0]` are what MOVEMENT catches rings with and
+   what §10 tip-verified in GPU geometry. Foreign geometry re-derives both.
+3. **It discards tuning that has recorded evidence behind it.** `hookRadius` 0.168 and
+   `hookSweep` 3.35 rad (192°, "an open C, not a closed ring") were set against critic reports of
+   "a bangle" and "a detached orange hook". Swapping the mesh throws that away unmeasured.
+4. **494 tris with an empty mid-shaft** (y −0.75…0.00 carries no vertices) against 1356, and the
+   inverted-hull ink quality on that tube is unmeasured.
+5. **The normal map would likely fight the ramp** — the `assets/tombchaser/` precedent, where
+   normal and metallic maps were staged and deliberately left unwired for this reason. And
+   `shader.normal` is a 257 KB identity map that should be dropped whatever else happens.
+6. **Licence is UNKNOWN**, which is weaker than `kaykit`/`tombchaser` (explicit CC0). Not a veto,
+   but it is a reason not to prefer this geometry over geometry the project already owns.
+
+### The revised ship preference, and why §4.2 was reasoning from the wrong referent
+
+§4.2 preferred **C4 (`rough` 0.638)** because that is `gold_leaf`'s effective roughness once its
+`roughnessMap` is accounted for. That observation is still true and still worth having. **But
+`gold_leaf` is gold leaf over aged stone — an architectural gilding — and a cane is a polished
+solid prop.** I applied a correct measurement to the wrong object.
+
+Two independent sources now agree on what polished gold is:
+
+| source | metal | rough |
+|---|---|---|
+| `Props.js MATERIALS.gold`, as written | 0.85 | 0.28 |
+| this asset, authored by an external artist in a PBR tool | **0.80** | **0.25** |
+
+That agreement is much stronger evidence for a cane than `gold_leaf`'s 0.638. So a fifth arm is
+registered at the asset's authored pair, and the preference is re-ordered:
+
+| arm | spec | gloss | metal | rough | source |
+|---|---|---|---|---|---|
+| **C5 `assetgold`** | 0.9 | 96 | **0.80** | **0.25** | the supplied asset's authored PBR |
+| C1 `gold85` | 0.9 | 96 | 0.85 | 0.28 | Props gold as written |
+| C4 `gold85r64` | 0.9 | 96 | 0.85 | 0.638 | Props gold as it effectively runs |
+| C2 `gold100` | 0.9 | 96 | 1.00 | 0.28 | `SlyModel.js` gold |
+
+**Ship preference among arms that PASS: C5 → C1 → C4 → C2.** `spec` and `gloss` are *not* taken
+from the asset — a PBR file has no opinion about a cel shader's stepped lobe — so they stay at
+the house `Props.js` values and only `metal`/`rough` come from the asset. Registered before any
+arm has rendered; not to be re-ordered afterwards.
 
 Written before any capture. I expect to be wrong somewhere and the interesting part is where.
 

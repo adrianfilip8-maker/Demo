@@ -24,6 +24,11 @@ const GOLD100 = { ...GOLD85, metal: 1.0 };                                    //
    ToonMaterial sets `roughness: o.roughnessMap ? 1.0 : o.rough`), so the value that gold
    actually runs at is the map's median 0.638. This arm reproduces the effective gold. */
 const GOLD85R64 = { ...GOLD85, rough: 0.638 };
+/* PREREG-charmat §4.4 — the owner's supplied cane (public/assets/sly-cane/sly-cane.glb).
+   Its `Cane.metalRough` image measures roughness(G) 0.250 / metalness(B) 0.801, verified by
+   tools/glbpeek.mjs. Only metal+rough come from the asset: a PBR file has no opinion about a
+   cel shader's stepped lobe, so spec/gloss stay at the house Props.js values. */
+const ASSETGOLD = { spec: 0.9, gloss: 96, metal: 0.80, rough: 0.25, sss: 0.0 };
 const SPLIT = {                                                               // SlyModel.js _matSpec
   'slydlrig:head': { spec: 0.025, gloss: 8 },
   'slydlrig:tail': { spec: 0.03, gloss: 9, sss: 0.228 },
@@ -207,7 +212,7 @@ const out = await withGame({ width: 1280, height: 720, quality: 'high' }, async 
     rec.baseStats = await page.evaluate(() => window.__stats('base', window.__MASK));
 
     /* --- C1 gold85 / C2 gold100 --------------------------------------------- */
-    for (const [arm, v] of [['gold85', GOLD85], ['gold100', GOLD100], ['gold85r64', GOLD85R64]]) {
+    for (const [arm, v] of [['gold85', GOLD85], ['gold100', GOLD100], ['gold85r64', GOLD85R64], ['assetgold', ASSETGOLD]]) {
       const back = await page.evaluate(([n, val]) => window.__poke(n, val), ['slydlrig:cane', v]);
       await page.evaluate(([s, a]) => window.__snap(a, s), [shot, arm]);
       rec[arm] = {
@@ -256,10 +261,10 @@ const out = await withGame({ width: 1280, height: 720, quality: 'high' }, async 
     console.log(`  ${'arm'.padEnd(10)}${'mean'.padStart(7)}${'p50'.padStart(7)}${'p90'.padStart(7)}${'p99'.padStart(7)}${'max'.padStart(7)}   outside-diff px`);
     const row = (nm, st, o) => console.log(`  ${nm.padEnd(10)}${f(st.mean)}${f(st.p50)}${f(st.p90)}${f(st.p99)}${f(st.max)}   ${o ?? '-'}`);
     row('base', rec.baseStats, '0 / 0');
-    for (const a of ['gold85', 'gold100', 'gold85r64']) row(a, rec[a].stats, `${rec[a].outside.n} out (halo ${rec[a].outside.halo}, FAR ${rec[a].outside.far})`);
+    for (const a of ['gold85', 'gold100', 'gold85r64', 'assetgold']) row(a, rec[a].stats, `${rec[a].outside.n} out (halo ${rec[a].outside.halo}, FAR ${rec[a].outside.far})`);
     row('split', rec.split.stats, `${rec.split.outside.n} out (halo ${rec.split.outside.halo}, FAR ${rec.split.outside.far})`);
     const d = (a, b) => a - b;
-    for (const arm of ['gold85', 'gold100', 'gold85r64', 'split']) {
+    for (const arm of ['gold85', 'gold100', 'gold85r64', 'assetgold', 'split']) {
       const s = arm === 'split' ? rec.split.stats : rec[arm].stats;
       console.log(`    Δ${arm.padEnd(9)} mean ${d(s.mean, rec.baseStats.mean).toFixed(1).padStart(7)}`
         + `  p50 ${d(s.p50, rec.baseStats.p50).toFixed(1).padStart(7)}`
@@ -274,7 +279,7 @@ const out = await withGame({ width: 1280, height: 720, quality: 'high' }, async 
 console.log(`\n${'='.repeat(78)}\n### PREREG-charmat §4 — scored\n`);
 const closeup = out['sly-closeup'], hero = out['hero'];
 const num = (x) => (typeof x === 'number' && Number.isFinite(x) ? x : null);
-const ARM = process.env.CHARMAT_ARM || 'gold85r64';   // §4.2 ship preference: C4 -> C1 -> C2
+const ARM = process.env.CHARMAT_ARM || 'assetgold';  // §4.4 ship preference: C5 -> C1 -> C4 -> C2
 const d99 = (r, a = ARM) => (num(r[a].stats.p99) != null && num(r.baseStats.p99) != null ? r[a].stats.p99 - r.baseStats.p99 : null);
 const d50 = (r, arm = ARM) => {
   const s = arm === 'split' ? r.split.stats : r[arm].stats;
@@ -319,10 +324,10 @@ const splitGuards = {
 
 const vCane = shipVerdict(guards);
 for (const [k, s] of Object.entries(vCane.states)) console.log(`  ${k.padEnd(24)} ${s}`);
-console.log(`\nCANE arm=${ARM}  ${verdictLine(vCane, `slydlrig:cane -> ${JSON.stringify(ARM === 'gold85r64' ? GOLD85R64 : ARM === 'gold100' ? GOLD100 : GOLD85)}`)}`);
+console.log(`\nCANE arm=${ARM}  ${verdictLine(vCane, `slydlrig:cane -> ${JSON.stringify(ARM === 'assetgold' ? ASSETGOLD : ARM === 'gold85r64' ? GOLD85R64 : ARM === 'gold100' ? GOLD100 : GOLD85)}`)}`);
 /* every arm scored against the same registered bars, so the fork is visible not asserted */
 console.log('\nper-arm, sly-closeup:  G1 dp99>=10   G2 (dp99-dp50)>=6   G3 dp50>=-25   G4prime far==0');
-for (const a of ['gold85', 'gold100', 'gold85r64']) {
+for (const a of ['assetgold', 'gold85', 'gold85r64', 'gold100']) {
   const q9 = d99(closeup, a), q5 = d50(closeup, a);
   console.log(`  ${a.padEnd(10)} dp99 ${q9?.toFixed(1).padStart(7)}  dp50 ${q5?.toFixed(1).padStart(7)}`
     + `  conc ${(q9 - q5).toFixed(1).padStart(7)}  far ${String(closeup[a].outside.far).padStart(6)}`
@@ -340,5 +345,5 @@ for (const sh of ['sly-closeup', 'hero']) {
 }
 
 /* metal fork, reported not gated — §2.1 */
-console.log(`\nmetal fork (sly-closeup dp50):  0.85 -> ${d50(closeup, 'gold85')?.toFixed(1)}   1.00 -> ${d50(closeup, 'gold100')?.toFixed(1)}   0.85@rough.638 -> ${d50(closeup, 'gold85r64')?.toFixed(1)}`);
+console.log(`\nfork (sly-closeup dp50):  asset .80/.25 -> ${d50(closeup, 'assetgold')?.toFixed(1)}   props .85/.28 -> ${d50(closeup, 'gold85')?.toFixed(1)}   .85/.638 -> ${d50(closeup, 'gold85r64')?.toFixed(1)}   1.00/.28 -> ${d50(closeup, 'gold100')?.toFixed(1)}`);
 console.log(JSON.stringify(out, null, 1).slice(0, 40) + ' …(full record in stdout above)');
