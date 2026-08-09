@@ -22118,6 +22118,104 @@ The lift is the counter-example worth keeping — `liftDayScale 0.35` landed the
 floor at 0.66 L on 08-08, before the r9 frames, so it is provably not the wall here. That one
 holds because it was measured and dated, not because it read well.
 
+### 270.1 The ink is authored as a hue ramp with no value ramp, and that is the whole of "nearly constant"
+
+Derived (`progress/records/inkpredict.mjs`, `progress/records/inkspread.mjs`), not transcribed:
+
+| | shade leg | sun leg | ramp span |
+|---|---|---|---|
+| HULL, scene-linear luma | 0.006566 | 0.006896 | **4.8 %** |
+| CREASE, display luma | 0.0728 | 0.0767 | **5.0 %** |
+
+`inkWarm #1a1210` is hue 12° and `inkCool #161022` is hue 260° (§105.2), so the two endpoints are
+a real warm/violet split — **at the same value**. The ink changes hue across the frame and never
+changes darkness. That is the whole of "ours is nearly constant", written as the two constants
+that cause it.
+
+The reference does the opposite. One ridge detector, same radius and same 0.04 margin, over the
+reference and all ten r9 frames, so neither side inherits the other's calibration:
+
+| | ink p10 | ink median | ink p90 | p90/p10 | frame min |
+|---|---|---|---|---|---|
+| REF-venice | **0.0474** | 0.1556 | 0.3588 | **7.57** | 0.0000 |
+| ours (median of the 9 frames passing the detector's own sanity check) | **0.0955** | 0.129–0.279 | — | **4.06** | 0.0146–0.0714 |
+
+Three corrections to how D5a has been stated, all from running one instrument on both sides
+instead of comparing two:
+
+- The floor is lifted **2.01x**, not ~3x. The 3x compares critic 9's detector on the reference
+  against critic 9's detector on ours — fair, but it carries one calibration onto both ends.
+- The median really is fine: ours brackets the reference's 0.156.
+- **The missing quantity is RANGE.** We carry 54 % of the reference's ink dynamic range.
+  A fix that darkens the constant would move the floor and leave the range at 4.06, which is
+  exactly the outcome §2.1's coloured-ink decision must not be traded for.
+
+`night` fails the detector's own sanity check — the "ink" it finds is *brighter* than the frame —
+independently reproducing the failure mode that voided this lane's first instrument.
+
+### 270.2 Where the grade puts the hull, predicted before any arm ran
+
+`progress/records/inkpredict.mjs` pushes the authored endpoints through the project's validated
+grade model with the shipped daylight lift emulated by pre-inverting the model's own lift term.
+The emulation reproduces **both** floors the `PostFX.js` lift comment derived independently —
+0.66 L at k = 0.35 and 4.58 L at k = 1 — to 0.01 L, which is what makes it usable at all:
+
+| | display L |
+|---|---|
+| hull `inkSun` after the grade | 0.0375 |
+| hull `inkShade` after the grade | 0.0445 |
+| pure black after the grade | 0.0026 |
+
+Two things follow, both registered in `PREREG-inkblack.md` before any frame existed:
+
+- **The graded hull already sits at or below the reference's floor** (0.037–0.045 against 0.047
+  re-derived here). The hull is not obviously what holds the ink up.
+- **The crease's endpoints are display-referred at 0.0767 / 0.0728**, `inkStrength 0.95` can only
+  raise a crease pixel off them, and the measured ink p10 is **0.0955**. The number critic 9
+  measured matches the CREASE, not the graded hull.
+
+So "the hull owns the darkest decile of the union mask" and "the crease owns the line a detector
+actually samples" can both be true at once. P1 tests the first and must not be reported as the
+second — registered as PRED-5, before the numbers, precisely so that cannot happen later.
+
+### 270.3 D10's named suspect is already off, and a calibrated test says so
+
+The lane brief points at `Outline.js`'s `uFalloff` / `falloff = 140`. It cannot be the cause:
+`createOutlineMaterial` writes `INK_NO_FALLOFF = 1e9` unconditionally (`Outline.js:478`), nothing
+in `src/` overwrites it, and **`tests/ink.test.mjs:105` already asserts** the width is bit-exactly
+`INK_PX` at 0/5/18/30/60/150/400/1000/5000 m *with a calibration arm that fails if the check is
+inert* — it verifies the old falloff arithmetic still thins to ~0.62x at 400 m. That is a
+refutation with a live known-bad behind it, not a reading.
+
+`PREREG-inkfar.md` therefore arms the two mechanisms that are actually available: the crease
+pass's own `edgeFadeStart 45 / edgeFadeEnd 190` (`PostFX.js:987`, copied per frame at `:2022`),
+which reaches exactly zero, and `outline: 0` on the pyramid material (`Terrain.js:1085`) combined
+with `applyOutlines()` having **no call site anywhere in `src/`**.
+
+It also splits D10 the way D5 had to be split. D10b — "hard ~10 px jumps ... no antialiasing
+whatsoever" — is largely **not aliasing**: `Terrain.js:277-297` authors 11 and 9 courses and
+derives that count from this very camera, explicitly so the silhouette reads as "deliberate
+massing at ~27 px instead of as a jagged edge at 12.6 px". A critic measuring an 11 px median jump
+width is measuring the masonry. Whether the 1 px transition at each course should be filtered is a
+real and separate question, and it is not this lane's.
+
+### 270.4 The instrument bug that became an arm
+
+`PREREG-inkblack.md`'s arm C hid the hull with `.visible = false` on every `slyInk_*` mesh. That
+lever does not survive to the captured frame: `PostFX._renderChain` renders the **scene at step 1**
+and the **normal prepass at step 2**, and the prepass's `finally` calls `endNormalPass()` ->
+`setOutlinesVisible(true)` on every frame, so the hide is honoured by frame 1 of the four the
+capture renders and gone by frame 2.
+
+Found by reading, while run-1 was still queued on the lock — and then **not asserted**. Run-1 was
+killed before writing a single frame, and the broken lever was kept as a fourth arm (`C0-visible`)
+alongside the working one (`C-noink`, `layers.disable(0)`, which `setOutlinesVisible` cannot
+undo). **CAL-4 requires one lever provably dead and the other provably alive, in the same boot on
+the same frame.** That is a sensitivity test rather than a null arm, it costs one render per shot
+instead of a whole second run, and it makes the render-order story falsifiable instead of
+plausible. `layers.disable(0)` and not `disableAll()` because `Lighting.js` rewrites bits 28–31 on
+a beat and documents that layer 0 membership is never touched.
+
 ---
 
 ## §271 — D7 is not authored into the textures: the albedo separates the five named materials at ΔE 18–53 and the frame shows 2.1–6.2. And `shadowHold` cannot be scoped per material, because 8 of 12 architectural materials are in the tomb *and* in daylight
