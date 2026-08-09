@@ -205,6 +205,46 @@ palette does not contain.
 
 **So no D7 change is proposed, and S1 exists only to prove this run does not make D7 worse.**
 
+## 7a. AMENDMENT 1 — the frame set is cut from six to two, before any candidate frame exists
+
+Written and committed **before the first capture**, for a cost reason stated in `shot.mjs`'s own
+header: *"~14 s per frame at 1280×720/high, a `setShot` is 17 frames, so one shot is 4–6 minutes
+and a full ten-shot set is 40–60 minutes of exclusive hold"*, and *"a 10-shot run is a decision to
+block everyone else for an hour"*. Three arms × six shots is ~90 minutes of exclusive hold with
+three other agents queued behind it. That is not a defensible use of a shared FIFO.
+
+**Shots: `hero` and `interior` only.**
+
+- `hero` is the D6 target: the worst window gradient in the set (p50 **1.41**, p90 **4.03**) and
+  the frame D6 names first. `F` and `G` are redefined on it alone.
+- `interior` is the do-no-harm watchdog **and** a second target. `RESULT-grain1.md` closes with
+  *"there is a second, texture-level noise source in the interior materials, and it is not this
+  pass's lever. Filed for follow-up."* This is that follow-up, and `interior` is the frame §269
+  named as the one working relationship in the game — so it is exactly the frame a texture change
+  must not break.
+
+Revised table. Baselines from §1 (`shots/r9/`): `F₀ = 0.1549`, `G₀ = 1.41`, `interior F = 0.1377`.
+
+| id | quantity | bar | basis |
+|---|---|---|---|
+| **C1** | A2 `F` − A0 `F` on `hero` | **≥ 0.04** | calibration, MUST FIRE, else all VOID |
+| **C2** | A0 `F` vs `shots/r9/hero.png` | \|Δ\| ≤ 0.010 | the control is the shipped build |
+| **P1** | A1 `F` on `hero` | **≥ 0.2016** | closes ≥ ⅓ of `F₀ → F_ref` (0.1549 → 0.2950) |
+| **P2** | A1 `G` on `hero` | **≤ 1.2713** | closes ≥ ⅛ of `G₀ → G_ref` (1.41 → 0.30) |
+| **P4** | A1 `F` on `interior` | **≥ 0.1377** | do no harm on the frame that works |
+| **S1/S2/S3** | unchanged | | |
+
+**P3 (`dunes`) is withdrawn, not left to VOID.** `dunes` is not captured, so its guard cannot be
+evaluated, and §263.1's lesson is that an unevaluable guard must never be allowed to read as a
+pass. It is removed from the ship rule here, in writing, rather than scored as VOID later.
+
+**Ship iff C1 fires, C2 holds, and P1, P2, P4, S2, S3 all pass.**
+
+Forecast, recorded now so it can be scored: `interior` improves *more* than `hero` in `F`, because
+`RESULT-grain1` measured it as the one surface where the composite grain was **not** the dominant
+noise source (R3 moved 32.0 → 39.8 against 20.5 → 63.3 elsewhere), which is what "the remaining
+noise is in the textures" predicts.
+
 ## 8. Records
 
 `progress/records/RESULT-celband.md`, `shots/celband/{a0,a1,a2}/`, `logs/celband.log`.
