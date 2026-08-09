@@ -173,3 +173,30 @@ test('shade band: shadowHold ships inert, so scoping it changes nothing until bo
     'shadowHoldKnee at 0 removes the achromatic guard that keeps limestone and granite on the ' +
     'violet-teal shadow §2.1.3 requires');
 });
+
+test('enclosure: toggling the term off and on re-probes, so an A/B arm cannot score a stale value', () => {
+  /* The failure this catches is silent and would have looked like a tuning result: with the term
+     toggled between arms, the second enable found `_encloseAt` still holding the old camera
+     position, read "no jump", waited for the 6-frame beat, and left the smoothed value crawling
+     up from 0 at 1/60 per dt = 0 frame. Every arm after the first would have been scored at an
+     enclosure it had not reached. */
+  const { eng } = fakeEngine(5);
+  const L = new Lighting(eng);
+  eng.camera.position.set(0, 0, 0);
+  try {
+    L.TUNE.holdEnclose = 0.9;
+    tick(L, 2);
+    assert.equal(L.enclosure, 1, 'precondition: the first enable snaps');
+
+    L.TUNE.holdEnclose = -1;            // an intervening arm with scoping off
+    tick(L, 2);
+    assert.equal(L.enclosure, 0);
+    assert.equal(L._encloseAt, null, 'the recorded probe position must be cleared while the fan is not casting');
+
+    L.TUNE.holdEnclose = 0.9;           // and back on, camera unmoved
+    tick(L, 1);
+    assert.equal(L.enclosure, 1,
+      `enclosure is ${L.enclosure} one frame after re-enabling at the same camera position; it did not ` +
+      `re-probe, so a dt = 0 capture would score a value on its way up from 0`);
+  } finally { L.TUNE.holdEnclose = -1; L.dispose?.(); }
+});

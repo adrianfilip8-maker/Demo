@@ -1313,7 +1313,16 @@ export class Lighting {
   _updateEnclosure(dt) {
     const wantFill = TUNE.encloseStrength > 0;
     const wantScope = TUNE.holdEnclose >= 0;
-    if (!wantFill && !wantScope) { this.enclosure = 0; this._encloseTarget = 0; return; }
+    if (!wantFill && !wantScope) {
+      /* `_encloseAt` is cleared too, not just the value. It records where the last fan was cast
+         from, and while the term is off no fan is being cast — leaving the old position behind
+         would make the next frame after a re-enable look like "no jump", so the fan would wait
+         for its 6-frame beat and the smoothed value would crawl from 0 at 1/60 per frame under a
+         dt = 0 capture. An A/B that toggles this knob between arms would then score an
+         unconverged value on every arm after the first. */
+      this.enclosure = 0; this._encloseTarget = 0; this._encloseAt = null;
+      return;
+    }
     const engine = this.engine;
     engine.camera.getWorldPosition(_camPos);
     const jumped = !this._encloseAt || _camPos.distanceToSquared(this._encloseAt) > ENCLOSE_JUMP * ENCLOSE_JUMP;
