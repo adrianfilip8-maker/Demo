@@ -1,0 +1,49 @@
+frames: /home/user/Demo/shots/specnorm
+
+1. WHERE the >L230 population is, and whether it is a glint or a wash
+shot          arm      >230 px   comps(>=8px)   largest   median comp   box of largest
+hero          base           4            0         0             0   -
+hero          n035           4            0         0             0   -
+hero          n050          18            0         0             0   -
+hero          n100         370           11        58            13   202,457,223,464
+hero          n050k        364           12        58            13   202,457,223,464
+
+temple        base           1            0         0             0   -
+temple        n035           1            0         0             0   -
+temple        n050           1            0         0             0   -
+temple        n100           1            0         0             0   -
+temple        n050k          1            0         0             0   -
+
+courtyard     base          29            1         9             9   777,186,782,187
+courtyard     n035         124            4        11            10   564,204,565,213
+courtyard     n050         291            8        67            15   569,111,574,162
+courtyard     n100        4456            8      3390            24   562,90,595,267
+courtyard     n050k       4333            8      3315            22   562,85,595,267
+
+sly-closeup   base          42            0         0             0   -
+sly-closeup   n035          44            0         0             0   -
+sly-closeup   n050          47            1         8             8   392,255,396,258
+sly-closeup   n100         217            3       143            13   397,254,427,263
+sly-closeup   n050k        246            3       157            17   396,254,428,264
+
+interior      base         869            9       301            33   286,193,299,218
+interior      n035         869            9       301            33   286,193,299,218
+interior      n050         869            9       301            33   286,193,299,218
+interior      n100         869            9       301            33   286,193,299,218
+interior      n050k        869            9       301            33   286,193,299,218
+
+2. IS A BLOWN PIXEL THE TERM, OR IS IT BLOOM?  (PREREG-specnorm §4.2)
+   gated = debugTerm(6) B >= 250 (full sun, N.L > 0.02); satLobe = also R >= 252.
+   A >250 pixel that is NOT gated cannot have run the specular term.
+shot          arm     >250 px   of which gated   satLobe   NOT gated (= bloom/other)
+courtyard     n100          8                0         0           8
+courtyard     n050k         4                0         0           4
+   (shots/arms with zero >250 pixels are omitted — that is the pass condition)
+
+3. WHAT SPEC IS WORTH TODAY — base minus off, the specular term's whole footprint
+shot           spec-lit px    % frame    mean dL    p99 dL    max dL
+hero                36589     3.970%       8.42     88.65    135.25
+temple               8155     0.885%       1.93     15.30     45.62
+courtyard           74428     8.076%       7.03     64.62    112.20
+sly-closeup         59963     6.506%       3.53     27.04     82.13
+interior                0     0.000%       0.00      0.00      0.00

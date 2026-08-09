@@ -1,0 +1,40 @@
+CROSS-COMMIT, CROSS-BOOT INERTNESS of the uSpecNormPow scaffolding
+  pre-edit  /home/user/Demo/shots/hilite2/<shot>.base.png   (§262, commit 4791376)
+  post-edit /home/user/Demo/shots/specnorm/<shot>.base.png   (this run, TUNE.specNormPow 0)
+
+A. THE CONFOUNDED TEST — same arm, different commit AND different boot
+shot          arm     differing px   % frame   max |dL|   mean |dL|
+hero          base          52043     5.647%     146.50       1.424
+hero          off           52092     5.652%     146.50       1.424
+temple        base         141106    15.311%     113.40       0.923
+temple        off          141117    15.312%     113.40       0.923
+courtyard     base         145093    15.744%      97.26       0.898
+courtyard     off          145186    15.754%      97.26       0.897
+sly-closeup   base         468233    50.807%     131.07       0.746
+sly-closeup   off          469063    50.897%     132.43       0.745
+interior      base          28782     3.123%      72.13       1.226
+interior      off           28782     3.123%      72.13       1.226
+   `off` has the specular multiplied by ZERO in both runs. If its row matches `base`'s,
+   the specular is not what differs — the two BOOTS differ.
+
+B. THE CONTROLLED TEST — the specular's own footprint, base minus off, inside each boot
+shot          run        spec-lit px   % frame   max |dL|   mean |dL|
+hero          hilite2 (pre)       36624     3.974%     135.25       9.270
+hero          specnorm (post)     36589     3.970%     135.25       9.279
+temple        hilite2 (pre)        8133     0.882%      45.62       2.304
+temple        specnorm (post)      8155     0.885%      45.62       2.301
+courtyard     hilite2 (pre)       74429     8.076%     112.20       7.394
+courtyard     specnorm (post)     74428     8.076%     112.20       7.398
+sly-closeup   hilite2 (pre)       59586     6.465%      81.13       3.692
+sly-closeup   specnorm (post)     59963     6.506%      82.13       3.680
+interior      hilite2 (pre)           0     0.000%       0.00       0.000
+interior      specnorm (post)         0     0.000%       0.00       0.000
+
+VERDICT
+   hero          footprint 36624 -> 36589 px (0.10% apart), peak 135.25 -> 135.25   UNCHANGED
+   temple        footprint 8133 -> 8155 px (0.27% apart), peak 45.62 -> 45.62   UNCHANGED
+   courtyard     footprint 74429 -> 74428 px (0.00% apart), peak 112.20 -> 112.20   UNCHANGED
+   sly-closeup   footprint 59586 -> 59963 px (0.63% apart), peak 81.13 -> 82.13   CHANGED
+   interior      footprint 0 -> 0 px (0.00% apart), peak 0.00 -> 0.00   UNCHANGED
+
+==> the specular footprint MOVED — the scaffolding is not inert, investigate before quoting anything

@@ -341,8 +341,24 @@ for (const a of CAND) {
   const G4 = g4v === null ? null : g4v <= 20;
   const inte = R.shots.find((s) => s.shot === 'interior');
   const G5 = inte ? inte.diffs[a].px === 0 : null;
+  /* ── SCORING BUG, FOUND AFTER THE RUN AND FIXED HERE RATHER THAN QUIETLY ──────────────
+     This line originally read `G4 !== false && G5 !== false`, which treats an UNSCOREABLE
+     guard (null) as a satisfied one. On the registered run G4 came back null — I5 went BLIND
+     and, independently, `sly-closeup`'s uSpec-0.25 population is 23 px because the mode-4 mask
+     does not contain the character — and the runner therefore printed **"==> SHIP
+     uSpecNormPow 1"**. That output is in `specnorm/capture.txt` and it is WRONG.
+
+     The registered ship rule says "satisfies G1-G5". A guard that could not be evaluated is
+     not a guard that passed, and PREREG-specnorm's I5 says in terms that a BLIND class map
+     makes all per-class attribution VOID. G4 is per-class attribution. So the correct reading
+     is DO NOT SHIP, and `null` must fail closed.
+
+     Left as a comment rather than an edit-in-silence because a permissive default in a scorer
+     is exactly the failure mode this project's whole method exists to catch, and because the
+     printed verdict is part of the record. */
+  const passed = (v) => v === true;
   gate[a] = { T1, T2, H1, G1, G2, G3, G4, g4v, G5,
-    guards: G1 && G2 && G3 && G4 !== false && G5 !== false, ship: false };
+    guards: passed(G1) && passed(G2) && passed(G3) && passed(G4) && passed(G5), ship: false };
   gate[a].ship = gate[a].guards && H1 >= 3;
 }
 
