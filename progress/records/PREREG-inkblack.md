@@ -211,6 +211,42 @@ Full P2 calibration, all MUST FIRE: **CAL-P2a** the shipped hullMask is non-empt
 **CAL-P2b** the colour override is confirmed applied by read-back · **CAL-P2c** `sha(D) != sha(B)`
 on every frame, so the lever is shown to have moved the picture.
 
+### Two numeric predictions, derived and registered before either run has produced a frame
+
+Derived by pushing the authored ink through the project's own validated grade model
+(`progress/records/tonecurve.mjs`, whose self-check reproduces the shipped grey-axis row to
+0.35 L). That model applies `TUNE.lift` at full strength and exposes no scale, while the shipped
+daylight composite runs `lift * liftScale(0.35, dayAmount)` — so the lift is emulated by
+pre-inverting the model's own lift term, and the emulation is **validated against both floors the
+shipped comment derived by a different route on a different day: 0.66 L at k = 0.35 and 4.58 L at
+k = 1, reproduced to 0.01 L**. What the model deliberately excludes: AO, both rims, the crease
+pass, bloom, vignette, grain and FXAA. So these are predictions about the GRADE, and the arms are
+what settle the rest.
+
+| scene-linear | display L (daylight) |
+|---|---|
+| hull `inkSun` 0x1a1210 | **0.0375** |
+| hull `inkShade` 0x161022 | **0.0445** |
+| pure black | **0.0026** |
+
+- **PRED-4 (P2).** The move is predicted at **0.035 – 0.042 L**, i.e. P2 met but inside a factor
+  of 1.4 of its own threshold. A result under 0.030 would put the registered threshold on the
+  wrong side of a number I derived before running, and INCONCLUSIVE is a live outcome here rather
+  than a formality.
+- **PRED-5, and it is a warning about how P1 may be read.** The graded hull lands at 0.037–0.045,
+  while the crease ink's *display-referred* endpoints are L 0.0767 / 0.0728 and `inkStrength 0.95`
+  can only raise a crease pixel off them. Critic 9 measured 0.087–0.106. **The critic's number
+  matches the CREASE, not the graded hull** — so the population a ridge detector samples on the
+  visible line is probably crease-owned, while the darkest decile of the *union* mask is probably
+  hull-owned, because the hull is the darker of the two wherever it exists.
+
+  Both can be true at once, and if they are then **"P1 MET" must not be reported as "the hull owns
+  the ink"**. P1 as written is an attribution over the darkest decile of the union mask and
+  nothing more. Registered now so it cannot look like an excuse later: whatever P1 returns, the
+  result must be reported **alongside `nHull` vs `nCrease` and the crease's own decile**, all
+  three of which the scorer already prints, and the hull may be called dominant only if it wins
+  on coverage as well as on depth.
+
 ---
 
 ## 4. Arms, calibration and falsifiers
