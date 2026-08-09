@@ -47,6 +47,7 @@
  * whose thresholds are the ones in the pre-registration and are not re-derived here.
  */
 import { withGame } from './harness.mjs';
+import { treeState } from './treestate.mjs';
 import { writeFileSync, readFileSync, mkdirSync, existsSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 
@@ -94,9 +95,13 @@ for (const shot of SHOTS) {
     for (const t of armTags) {
       const file = `${OUT}/${shot}-${t}.png`;
       const sha = createHash('sha256').update(readFileSync(file)).digest('hex').slice(0, 16);
-      results.push({ shot, arm: t, file, sha, applied: { reconstructed: true }, resumed: true });
+      /* `tree: null`, deliberately, and never the CURRENT tree: these frames were rendered by a
+         run that died before provenance recording existed, and stamping today's hash on them
+         would be inventing a fact. The scorer treats an unrecorded tree as unverified rather than
+         as matching. */
+      results.push({ shot, arm: t, file, sha, applied: { reconstructed: true }, resumed: true, tree: null });
     }
-    console.log(`${shot.padEnd(12)} already on disk — reusing 4 arms (shas recomputed from bytes)`);
+    console.log(`${shot.padEnd(12)} already on disk — reusing 4 arms (shas recomputed from bytes, tree UNRECORDED)`);
   } else {
     todo.push(shot);
   }
@@ -104,7 +109,18 @@ for (const shot of SHOTS) {
 if (!todo.length) console.log('\nnothing left to capture; rebuilding arms.json from disk');
 
 for (const shot of todo) {
-  const got = await withGame({ width: 1280, height: 720, quality: 'high', timeout: 900000 },
+  /* Provenance, stamped per shot. Four agents edit this branch continuously and a run was VOIDed
+     today for capturing two arms of one comparison twenty commits apart. All four arms of a shot
+     here share one boot and therefore one tree by construction — this records WHICH tree, so the
+     scorer can verify that instead of taking the construction on trust, and so a reader can see
+     how far the ten shots drifted apart. Read AFTER the lock is granted (inside `onLocked`) so it
+     describes the tree vite is about to bundle, not the tree at queue time, which on this FIFO can
+     be an hour earlier. */
+  let tree = null;
+  const got = await withGame({
+    width: 1280, height: 720, quality: 'high', timeout: 900000,
+    onLocked: () => { tree = treeState(); },
+  },
     async ({ page }) => {
       await page.evaluate(async (s) => { await window.__GAME.setShot(s, { dt: 0 }); }, shot);
       const out = [];
@@ -152,9 +168,10 @@ for (const shot of todo) {
     const file = `${OUT}/${shot}-${r.tag}.png`;
     writeFileSync(file, buf);
     const sha = createHash('sha256').update(buf).digest('hex').slice(0, 16);
-    results.push({ shot, arm: r.tag, file, sha, applied: r.applied });
+    results.push({ shot, arm: r.tag, file, sha, applied: r.applied, tree });
     console.log(`${shot.padEnd(12)} ${r.tag.padEnd(11)} ink=${r.applied.inkStrength} `
-      + `hull=${String(r.applied.hullDefeat).padEnd(7)} shells=${String(r.applied.hulls).padStart(4)} sha=${sha}`);
+      + `hull=${String(r.applied.hullDefeat).padEnd(7)} shells=${String(r.applied.hulls).padStart(4)} sha=${sha} `
+      + `src=${tree?.src ?? '?'}`);
   }
   /* Written after EVERY shot, not once at the end. The first attempt at this run was killed at
      shot 5 and lost the metadata for four completed shots purely because arms.json had not been

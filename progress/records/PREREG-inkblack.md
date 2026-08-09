@@ -293,6 +293,55 @@ rather than by the grade's floor.
 `PASS` (both P1 and P2 met) · `SPLIT` (P1 met, P2 refuted — locus is the grade) ·
 `FAIL` (P1 refuted) · `VOID` (any calibration arm null) · `UNSCOREABLE` (CAL-3 out of band).
 
+### G-TREE, added 2026-08-09 after another lane was VOIDed on provenance — a NEW gate, not a moved one
+
+The lead voided the materials lane's run today because its two arms were captured twenty commits
+apart and the intervening commits touched `src/core/Shots.js`, so the arms were framed differently
+and the scorer said nothing. Four agents commit to this branch continuously.
+
+**G-TREE: every arm of a shot must be rendered from one source tree, verified rather than
+assumed.** This can only make the run harder to pass and moves no registered number, which is why
+it may be added after the pre-registration and before the score.
+
+The identity is a **content hash of `src/`** (`tools/treestate.mjs`), not a commit sha, and the
+distinction is load-bearing here rather than pedantic: vite bundles the **working tree**, and at
+the time of writing `src/world/Props.js` and `src/world/Statues.js` are both modified and
+uncommitted by other agents. Two captures at the identical commit can therefore render different
+pictures, and a sha would report them as the same provenance and be wrong.
+
+**Cross-shot drift is reported, not gated, and the reason is stated rather than assumed.** Every
+registered statistic here is computed WITHIN a shot — CAL-1, CAL-2, CAL-4 and P1's per-shot delta
+are all one-boot quantities — so drift between shots cannot make any individual number wrong. What
+it can do is change *which* shot is worst, so "the worst shot" from a population spanning several
+trees is a weaker claim than it looks, and the scorer prints the span.
+
+**Consequence, paid rather than argued around.** Run-2's first four shots (dunes, hero, interior,
+courtyard) were captured before provenance recording existed. Their tree is unrecorded, and an
+unverifiable guard is VOID, not PASS. Rather than exempt them on the argument that one boot per
+shot makes the property true by construction — which is exactly the kind of "true by design"
+reasoning this apparatus exists to distrust — those sixteen frames are **moved to
+`shots/inkblack-run2a/` and re-captured with provenance**. The CAL-4 shas already recorded in
+`RESULT-inkblack.md` stand as the observation they were; the re-capture re-tests them.
+
+### Staleness of every absolute taken from `shots/r9`
+
+Also flagged by the lead: `shots/r9` is now roughly 120 commits old, and another lane found a
+registered bar scoring PASS on 1.27 while its own same-run control measured 1.22. Recorded here
+without restating anything (§141.1):
+
+- **P1 and F1 are safe.** `|dec(hullMask, B) − dec(inkMask, A)| <= 0.010` is a delta between two
+  arms of the same boot. No r9 number enters it.
+- **CAL-3's 0.5 %..15 %** is a property of a mask in the frame being scored, not an r9 bar.
+- **The r9-derived descriptions are stale and are not thresholds.** "ours 0.087–0.106",
+  "p10 median 0.0955", "p90/p10 4.06", "floor lifted 2.01x" all describe a 120-commit-old build.
+  They motivate the work; nothing gates on them.
+- **`PREREG-inkwiden.md`'s W1/W2 are deltas** between arms of one boot (`S-ship` vs `W-both`), and
+  its candidate was sized from the **reference frame** and from constants **parsed out of the
+  current source**, neither of which goes stale with r9. Its W3 bounds are geometric.
+- **What IS exposed:** any future claim of the form "the ink now matches the reference's 0.0474".
+  That compares a new capture against a reference measured with a detector on an old build's
+  scale. Such a claim needs a same-run shipped control, and none is registered here.
+
 ### Not being tested here
 
 The **frame-wide** dark mass — critic 9's "share of frame below L=0.15, ours 1.27–3.64% vs

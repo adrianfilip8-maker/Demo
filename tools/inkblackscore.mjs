@@ -63,6 +63,43 @@ for (const r of arms) {
   byShot.get(r.shot)[r.arm] = r;
 }
 
+/* ── PROVENANCE ────────────────────────────────────────────────────────────────────────────
+   Added after the lead VOIDed another lane's run for capturing two arms of one comparison
+   twenty commits apart, on a branch four agents commit to continuously. This is a NEW GATE, not
+   a moved threshold: it can only make the run harder to pass, never easier, and no registered
+   number changes.
+
+   The identity compared is a CONTENT HASH of `src/` (tools/treestate.mjs), not a commit sha.
+   Vite bundles the working tree, so two captures at the same commit can render different
+   pictures while uncommitted edits are in flight — and they are, continuously.
+
+   Two different questions, and they deserve different answers:
+
+   G-TREE (a hard gate) — every arm of a SHOT must share one tree. That is what every registered
+   comparison here reads: CAL-1, CAL-2, CAL-4 and P1's per-shot delta are all within-shot. One
+   boot per shot makes it true by construction; this verifies it instead of trusting it.
+
+   Cross-shot drift is REPORTED, not gated, and the reason is stated rather than assumed: no
+   registered statistic compares one shot with another. P1 takes a worst case over per-shot
+   deltas, so drift can change WHICH shot is worst without making any individual delta wrong.
+   Reported loudly, because "the worst shot" from a heterogeneous population is a weaker claim
+   than "the worst shot" from a homogeneous one, and the reader is owed that. */
+const treeOf = (r) => (r?.tree?.src ?? null);
+const shotTrees = new Map();
+const gTree = [];
+for (const [shot, a] of byShot) {
+  const seen = new Set();
+  let unrecorded = 0;
+  for (const arm of ['A-ship', 'B-nocrease', 'C0-visible', 'C-noink']) {
+    const t = treeOf(a[arm]);
+    if (t === null) unrecorded++; else seen.add(t);
+  }
+  shotTrees.set(shot, { trees: [...seen], unrecorded });
+  /* Mixed trees inside one shot is a hard failure. All-unrecorded is VOID (null), not PASS —
+     an unverifiable guard did not produce a verdict (tools/gate.mjs). */
+  gTree.push(seen.size > 1 ? false : (seen.size === 1 && unrecorded === 0) ? true : null);
+}
+
 const rows = [];
 const cal1 = [], cal2 = [], cal3 = [], cal4 = [];
 
@@ -142,8 +179,39 @@ const deltas = usable.map((r) => Math.abs(r.dHullB - r.dInkA));
 const worst = deltas.length ? Math.max(...deltas) : null;
 const p1 = deltas.length ? worst <= 0.010 : null;   // null, not false: nothing was measured
 
+/* Provenance report. Printed before the guards so the reader sees the population before the
+   verdict, and the cross-shot span is spelled out rather than left implicit. */
+console.log('\nprovenance: src content hash per shot (tools/treestate.mjs)');
+const distinct = new Set();
+for (const [shot, t] of shotTrees) {
+  for (const x of t.trees) distinct.add(x);
+  console.log(`  ${shot.padEnd(12)} ${t.trees.length ? t.trees.join(' + ') : '(unrecorded)'}`
+    + (t.unrecorded ? `   ${t.unrecorded}/4 arms unrecorded` : '')
+    + (t.trees.length > 1 ? '   ARMS SPAN MORE THAN ONE TREE' : ''));
+}
+if (distinct.size > 1) {
+  console.log(`  -> the ten frames span ${distinct.size} different source trees. Every registered`);
+  console.log('     statistic here is WITHIN a shot (CAL-1/2/4 and P1\'s delta are all one-boot),');
+  console.log('     so no individual number is invalidated — but P1 takes a worst case across a');
+  console.log('     population that is not homogeneous, so WHICH shot is worst is not a claim this');
+  console.log('     run can make. Reported, not gated: nothing registered compares shot to shot.');
+}
+
 const all = (xs) => (xs.length ? xs.every(Boolean) : null);
+/**
+ * Tri-state AND. `all()` above uses `every(Boolean)`, which maps `null` to `false` — fine for the
+ * CAL arrays, which only ever hold booleans, and WRONG for a guard that can be unevaluable: it
+ * turns "could not be checked" into "was checked and failed". Those are different outcomes and
+ * the whole point of tools/gate.mjs is that they stay different. A single `false` still wins,
+ * because a definite failure is more informative than an absence.
+ */
+const allTri = (xs) => {
+  if (!xs.length) return null;
+  if (xs.some((x) => x === false)) return false;
+  return xs.every((x) => x === true) ? true : null;
+};
 const guards = {
+  'G-TREE arms of a shot share one tree': allTri(gTree),
   'CAL-1 crease lever live': all(cal1),
   'CAL-2 hull lever live':   all(cal2),
   'CAL-3 mask is ink':       all(cal3),
@@ -176,8 +244,9 @@ console.log('\n' + verdictLine(v));
 /* The registered outcome names, mapped explicitly so the run cannot be reported as something
    the pre-registration does not define. VOID beats FAIL: an unevaluable run says nothing about
    the candidate. */
-const calStates = ['CAL-1 crease lever live', 'CAL-2 hull lever live', 'CAL-3 mask is ink',
-  'CAL-4 lever sensitivity'].map((k) => guardState(guards[k]));
+const calStates = ['G-TREE arms of a shot share one tree', 'CAL-1 crease lever live',
+  'CAL-2 hull lever live', 'CAL-3 mask is ink', 'CAL-4 lever sensitivity']
+  .map((k) => guardState(guards[k]));
 let outcome;
 if (calStates.some((s) => s === VOID) || guardState(p1) === VOID) outcome = 'VOID';
 else if (calStates.some((s) => s !== PASS)) outcome = 'VOID';         // a failed calibration voids

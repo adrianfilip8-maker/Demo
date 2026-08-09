@@ -33,8 +33,11 @@ function png(fn) {
   return PNG.sync.write(p);
 }
 
-/** Build a four-arm synthetic shot where the crease ink has luminance `creaseVal`, and score it. */
-function scoreWith(creaseVal) {
+const TREE = { src: 'deadbeefcafe0001', head: 'abc123abc123', at: '2026-08-09T00:00:00Z' };
+
+/** Build a four-arm synthetic shot where the crease ink has luminance `creaseVal`, and score it.
+ *  `trees` optionally overrides the per-arm provenance stamp, for the G-TREE calibration. */
+function scoreWith(creaseVal, trees = null) {
   const dir = mkdtempSync(join(tmpdir(), 'inkblackscore-'));
   try {
     const inHull = (x) => x >= 40 && x < 44;
@@ -48,7 +51,12 @@ function scoreWith(creaseVal) {
     const arms = Object.entries(bufs).map(([arm, buf]) => {
       const file = join(dir, `synth-${arm}.png`);
       writeFileSync(file, buf);
-      return { shot: 'synth', arm, file, sha: createHash('sha256').update(buf).digest('hex').slice(0, 16), applied: { hulls: 7 } };
+      return {
+        shot: 'synth', arm, file,
+        sha: createHash('sha256').update(buf).digest('hex').slice(0, 16),
+        applied: { hulls: 7 },
+        tree: trees ? trees[arm] : TREE,
+      };
     });
     writeFileSync(join(dir, 'arms.json'), JSON.stringify(arms));
     return execFileSync('node', ['tools/inkblackscore.mjs'],
@@ -81,6 +89,28 @@ test('inkblackscore: CALIBRATION — a crease DARKER than the hull must refute P
   assert.match(out, /FAIL\s+P1 hull dominates/);
   assert.match(out, /OUTCOME: FAIL/);
   assert.doesNotMatch(out, /OUTCOME: P1 MET/);
+});
+
+test('inkblackscore: G-TREE — arms rendered from DIFFERENT source trees void the run', () => {
+  /* The hazard the lead voided another lane for: two arms of one comparison captured from trees
+     that had moved underneath them. Here arm C claims a different src content hash, and the run
+     must VOID rather than score -- a comparison across tree states is not a comparison. */
+  const out = scoreWith(90, {
+    'A-ship': TREE, 'B-nocrease': TREE, 'C0-visible': TREE,
+    'C-noink': { src: 'deadbeefcafe0002', head: 'def456def456', at: '2026-08-09T01:00:00Z' },
+  });
+  assert.match(out, /FAIL\s+G-TREE/);
+  assert.match(out, /OUTCOME: VOID/);
+  assert.doesNotMatch(out, /==> SHIP/);
+});
+
+test('inkblackscore: G-TREE — UNRECORDED provenance is VOID, not PASS', () => {
+  /* A resumed shot from a run that predates provenance recording has tree: null. An unverifiable
+     guard did not produce a verdict, and VOID is not PASS (tools/gate.mjs). */
+  const nul = { 'A-ship': null, 'B-nocrease': null, 'C0-visible': null, 'C-noink': null };
+  const out = scoreWith(90, nul);
+  assert.match(out, /VOID\s+G-TREE/);
+  assert.match(out, /OUTCOME: VOID/);
 });
 
 test('inkblackscore: VOID is not PASS — a missing arm cannot ship', () => {
