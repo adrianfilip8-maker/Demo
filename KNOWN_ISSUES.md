@@ -22117,3 +22117,144 @@ story is stated with more confidence than a reading can carry, and the measureme
 The lift is the counter-example worth keeping — `liftDayScale 0.35` landed the composite's black
 floor at 0.66 L on 08-08, before the r9 frames, so it is provably not the wall here. That one
 holds because it was measured and dated, not because it read well.
+
+---
+
+## §271 — D7 is not authored into the textures: the albedo separates the five named materials at ΔE 18–53 and the frame shows 2.1–6.2. And `shadowHold` cannot be scoped per material, because 8 of 12 architectural materials are in the tomb *and* in daylight
+
+Owner: TEXTURES, against critic 9's **D6** and **D7** and the §269 handoff. Instruments:
+`tools/celsurf.mjs` (frames) and `tools/celtex.mjs` (albedo). Pre-registration:
+`progress/records/PREREG-celband.md`, sealed before any candidate existed.
+
+### 271.1 The D6 instrument is calibrated against the critic's own numbers, and only one definition fits
+
+D6 quotes one statistic that is recoverable exactly: *"the fraction of pixels in a truly flat 3×3
+neighbourhood is 0.15–0.18 in `hero`/`courtyard`/`temple`/`traversal` versus 0.296 in the
+reference."* "Truly flat" is not a definition, so nine were run against those five published
+numbers **before the candidate existed**:
+
+| definition | hero | courtyard | temple | traversal | ref |
+|---|---|---|---|---|---|
+| rec709, rounded, span 0 | 0.0216 | 0.0106 | 0.0075 | 0.0399 | 0.0956 |
+| rec709, raw, span ≤ 1 | 0.0508 | 0.0367 | 0.0348 | 0.0862 | 0.1742 |
+| **rec709, raw, span ≤ 2** | **0.1549** | **0.1506** | **0.1770** | **0.1833** | **0.2950** |
+| rec601, rounded, span ≤ 2 | 0.2172 | 0.2147 | 0.2529 | 0.2355 | 0.3491 |
+| mean-RGB, rounded, span ≤ 2 | 0.1796 | 0.2181 | 0.2344 | 0.2271 | 0.3387 |
+
+Four of the five would have put at least one of our frames inside "0.15–0.18". **Exactly one lands
+all four of ours in the range and the reference on 0.296.** Reproducing a critic's number is the
+cheapest way to find out whether you are looking at the same thing, and it is worth doing on the
+statistic they published in full rather than the one they hand-placed.
+
+The per-surface half of D6 is **not** recoverable — "`dunes` pylon 5.97" names an ROI the review
+does not give — so it is reproduced as a distribution instead: every 64×64 window on a 32-px grid
+whose CIELAB (a\*,b\*) sd ≤ 4 and mean L\* ≥ 20. That is not the critic's population, and it
+disagrees with them in one place, recorded before any candidate: **`dunes` is already close to the
+reference at the window level** (grad p50 0.54 / p90 0.80 against the reference's 0.30 / 0.52),
+against D6's hand-placed 5.97. `hero`, `traversal`, `courtyard`, `temple` and `interior` sit at
+3.4–5.1× the reference's median.
+
+### 271.2 The premise I was given for D7 is refuted by the layer I own
+
+The brief was *"sandstone, granite, gold, plaster and painted surfaces should read as different
+materials at a glance"*, routed to texture authoring. **They already do, in the albedo.** Eighteen
+recipes, Lab centroid + covariance per recipe, measured at mip 2 with no lighting:
+
+```
+cross-class pairs (8 classes, 126 pairs):  mean confusion 0.103   mean separation 3.25
+                                            3 of 126 pairs at confusion >= 0.30
+gold_leaf vs sandstone_block  dE 26.0    granite_pink vs sandstone_block  dE 28.9
+plaster   vs sandstone_block  dE 27.0    granite_pink vs limestone        dE 43.7
+gold_leaf vs granite_pink     dE 52.6    bronze_aged  vs sandstone_block  dE 18.1
+```
+
+Critic 9 measures the same materials **in frame** at ΔE 2.1–6.2. So the separation exists and is
+destroyed between the albedo and the frame — which is what the review's own §4 concluded and what
+§269 then measured directly. **D7 is not an authoring defect and no amount of authoring can pay for
+it**: the whole AGENTS §2.2 palette spans ΔE 116 end to end and only **ΔE 31** from sandstone mid to
+gold mid, so recovering a 5× factor in frame ΔE would need albedo separations the palette does not
+contain. TEXTURES declines D7 and the numbers are the reason.
+
+This is independent corroboration for turning §269's held band on, arriving from the other side:
+§269 showed the shade band *can* hold hue; this shows there is something worth holding.
+
+### 271.3 `shadowHold` cannot be scoped per material. Two independent reasons, both structural
+
+§269 routed *"scoping has to be per material or per shot"* to TEXTURES/LIGHTING. The per-material
+half is not available, and neither obstacle is a tuning question:
+
+1. **The uniform is shared by identity.** `ToonMaterial.js:854` — *"Every material created by
+   toon() references these by identity, so writing a value once in update() reaches the whole
+   scene — and costs no allocation."* `uShadowHold` is in that block. There is one
+   `uShadowHold` object in the process.
+2. **The materials themselves are shared across the boundary that matters.** `Architecture.mat()`
+   caches one THREE material per `matKey` (`this._materials.set(key, m)`), and `_flushBuckets`
+   builds one *mesh* per `(zone, matKey)` over that shared material. Counting zone usage in
+   `EgyptLevel.js`: **8 of the 12 architectural materials appear in the `tomb` zone AND in an
+   open-air zone** — `sandstone_block`, `sandstone_worn`, `hieroglyph_wall`, `hieroglyph_gilded`,
+   `granite_pink`, `mudbrick`, `gold_leaf`, `ceiling_stars`. Even after unsharing the uniform, a
+   per-material value could not tell `arch:tomb:hieroglyph_wall` from `arch:court:hieroglyph_wall`,
+   because they are the same material.
+
+**And the obvious per-frame substitute does not work either.** Gating the hold on key radiance is
+refuted by a comment already in the file (`ToonMaterial.js:1499`): *"`interior` runs at tod 0.5, the
+brightest key in the game (×4.05), and every surface in the tomb is at shadowMix 1.0."* The tomb is
+lit by the strongest sun in the game; it just never arrives. `uKeyIntensity` is therefore **higher**
+in the frame that must be protected than in the frames to be fixed.
+
+### 271.4 What the scope variable actually is, and it is already built and unconsumed
+
+§269's own corollary is the specification: *"hue-holding is only meaningful where a material appears
+both lit and shaded in the same frame."* That is a statement about **sky exposure**, and this
+project already measures sky exposure per camera:
+
+```
+Lighting.js:171-175   encloseStrength 0.0   encloseProbe 30 m   encloseEvery 6   encloseLerp 4.0
+Lighting.js:1261      if (TUNE.encloseStrength <= 0) { this.enclosure = 0; return; }
+Lighting.js:1277      this._encloseTarget = cast > 0 ? hits / cast : 0;
+Lighting.js:1253      "this all currently runs for nothing: encloseStrength is 0 and stays 0"
+```
+
+`Lighting.enclosure` is a smoothed 0..1 raycast fan straight up from the camera — 0 in open desert,
+→1 under a sealed vault. It is exactly the signal that distinguishes "cast shadow beside sunlight"
+from "ambient-only interior", it is per-camera rather than per-pixel (which is all `uShadowHold`
+needs, being one shared uniform), and `ToonMaterial.js:1490` already accepts an enclosure-derived
+`ambient.floor` payload while saying of it: *"This wiring is the enabler for the fix, not the fix."*
+
+**Routed to LIGHTING, with one constraint that must be registered before it is tried.** §269
+measured that `hold` is effectively binary — 0.6 put `dunes` at hue 355°/sat 0.274, muddier than
+either endpoint. So `hold = 1 − enclosure` is the wrong map: it drives every partially-roofed camera
+through the bad middle. It has to be a hard-ish threshold on enclosure, and `temple` (a hypostyle
+hall: roofed, open-sided, never captured in the §269 run) is the frame that decides where the
+threshold goes and the frame most likely to sit on it.
+
+TEXTURES scopes **nothing** here and is not being coy about it: the scope variable is a camera
+property, it lives in LIGHTING, and it is already written.
+
+### 271.5 The D6 lever, and the one thing about it that was wrong in the first draft
+
+The albedo is measurably a sufficient cause of D6 on its own. Eighteen recipes at mip 2 (the
+texel:pixel ratio the architecture is seen at in `hero`): mean grad **6.03**, top-3-bin **0.100**,
+levels>1% **32.2**, flat **0.0717** — against the reference *frame*'s 0.337 / 19 / 0.295. Lighting
+can only spread a distribution, never concentrate it, so an albedo three to five times less
+concentrated than the target cannot produce the target.
+
+The fix is **not** less amplitude. That lever is already recorded as known-bad — §69/§70's blotching
+regression, and `sandstone_worn`'s own header showing it is already 3.2× quieter than the control at
+the frequency competing with a terminator. The candidate is a **value lattice**: snap the albedo's
+luma onto a few discrete steps spanning the material's own p02–p98, hue- and chroma-preserving, with
+`s.h`/`s.occ`/`s.rough` untouched so every bit of relief survives. The surface is not flat; its
+colour is.
+
+**The draft that quantised the raw luma made the headline metric worse** — mean grad 5.02 → **5.22**
+— because noise of amplitude comparable to the step maps neighbouring texels onto *different*
+lattice levels, so total variation goes up. Snapping the *smoothed* luma and adding a fraction of
+the detail back is what actually moves it: at 5 steps / radius size÷256 / keep 0.25 the same nine
+recipes go grad 5.02 → **3.41**, top3 0.069 → **0.380**, levels 37.4 → **16.3**, flat 0.0318 →
+**0.3228**. Both blocking invariants hold and were measured, not argued: `darkTail` unchanged on
+eight of nine and `hieroglyph_wall` 0.0017 → 0; `jointSign.dY` stays negative on all six masonry
+recipes (weakest `column_papyrus` −0.0774 → −0.0433).
+
+**A quantiser is not automatically a cel look.** That is the whole content of this subsection, and
+it is the kind of thing an offline sweep catches for the price of eight builds and a capture run
+would have charged an hour of FIFO for.
