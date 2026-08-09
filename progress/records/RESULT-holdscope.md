@@ -6,7 +6,9 @@ scorer `tools/holdscopescore.mjs` on `gate.mjs` (fail-closed), offline cross-ins
 `tools/fanpredict.mjs`. Frames: `shots/holdscope/` (working output, gitignored). Log:
 `progress/records/logs/holdscope.log`.
 
-*(results below)*
+**Verdict in one line: the scope variable is correct and cross-validated 10/10, and the criterion I
+fitted it to was wrong in two independent ways — both of them exposed by a calibration this seal
+registered. Nothing ships. `holdEnclose` stays at −1.**
 
 ## 0. What was asked and what this answers
 
