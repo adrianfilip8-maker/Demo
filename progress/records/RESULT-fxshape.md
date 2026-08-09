@@ -121,6 +121,33 @@ vertex shader.
 - `progress/records/fxdraw.mjs` — the candidate run, written and syntax-checked, taking the
   emitter and a JSON patch as arguments so it does not presuppose the attribution.
 
+## 5.1 Run 3 is in flight — how to finish this without re-deriving it
+
+The boot is queued (it has been waiting ~40 min behind one long-held lock). When it lands:
+
+```
+node progress/records/fxshapean.mjs          # attribution, with all three VOID guards armed
+```
+
+Read the guards first, in this order, and stop at the first that trips:
+1. `SUBJECT PRESENT` — `nocane` must remove more than 0 px, or the impact was never drawn.
+2. `VALIDITY` — `base` vs `base2` under 200 px, or the arms are at different phases.
+3. `PROVENANCE` — advisory on this runner (its sha is sampled at process start; see §4), so
+   lean on the one-boot argument, not on the field.
+
+Then the dominant arm names the emitter, and `fxdraw.mjs` takes it plus a JSON patch:
+
+```
+node progress/records/fxdraw.mjs <emitter> '{"size":[...],"col0":<int>}'
+```
+
+scored against `PREREG-fxdraw` D1–D4 and its addendum's D2b. My own prior — recorded here so it
+is falsifiable rather than quietly confirmed — is `cane_ring`, with the fix being a size cut and
+a move of `col0` off `PAL.goldSpec` onto the gold→carnelian axis the rest of the cane family
+already uses. **The atlas `ringPainter` must not be touched**: `land_ring`, `dive_ring` and
+`dust_ring` share that tile and they are ground shockwaves, which is the case the shader's
+size-clamp exemption was written for.
+
 ## 6. What I am NOT claiming
 
 - **Which emitter draws the smear.** Three pointers converge on `cane_ring` and none of them is
