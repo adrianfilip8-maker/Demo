@@ -22502,6 +22502,41 @@ assumed, three ways:
 Same family as this session's recurring failure — an instrument that reported success after it had
 stopped looking — and the reason a second, independent decoder is worth the thirty seconds.
 
+### 6.2 This change VOIDed another lane's run, and the same trap was audited against my own gates
+
+The materials lane captured its A0 and A1 arms twenty commits apart — `shot.mjs` takes the lock
+once per invocation, so env-var-selected arms are separate invocations and the tree moves between
+them while they sit in the FIFO. §1's staging move was among those commits, and that lane
+correctly scored its run VOID on provenance (§274). **The hazard in this section's own brief was
+real and it cost an hour of somebody else's capture time.** The change still had to land; what was
+wrong was a runner that lets its arms straddle two trees.
+
+Audited against `heroread`'s own gates, because the same trap applies here:
+
+- **The D4 arms are same-run and same-tree by construction.** Both stagings are poked into
+  `SHOTS[name].player` in-page inside ONE `withGame` invocation, so old and new are rendered
+  seconds apart from one boot. `H1` (Δheight ≥ 20 px, Δcentroid ≥ 30 px) and `H4`/`H6`
+  (area ratio ≥ 2.2×) are **deltas against a control captured in that same boot**, not against
+  anything stored.
+- **`H2`/`H3`/`H5` are absolutes, and they are absolutes against things that cannot go stale**:
+  the frame itself (`H3`, bbox inside 8…712 of 720 rows) and the reference image
+  (`H2` 180 px = 25 % of 720, `H5` 65 px = 9 %, both derived from `sly3-venice.jpg`'s own 30–34 %
+  band). **No gate in this seal is an absolute taken off `shots/r9`.** The only place r9 enters is
+  a line the seal already marks *"reported, not gated… a disagreement is information about the
+  instruments, not a failure"* — which is exactly §273's lesson, written into the seal before
+  §273 existed rather than after.
+- **The face A/B is the exposed half, because `?face=` is read at module-load time and needs two
+  invocations.** `C2` (background ROI must differ by ≤ 1.5) catches a tree move that changes the
+  picture, but it cannot catch one that changes only the character. So the tree is checked by hand
+  and recorded: `progress/records/heroread/srctree.log` samples the **working-tree** digest of
+  `src/` every 30 s for the life of the run — vite reads the tree, not HEAD, which is why this
+  hashes the files rather than `git rev-parse HEAD:src`. Boot A took the lock at 19:17:29 with
+  `src` tree `0aefc47e…`, unchanged from `4997f88` (19:17:15) through HEAD. **If that digest moves
+  before boot B boots, the D11 half is VOID on provenance and will be reported as VOID** — the
+  guard belongs in the runner, and `heroread.mjs` gains a `sameTree` arm before it is ever run
+  again; it is not being edited mid-flight, because a tool that changes under its own run is the
+  provenance failure it would be trying to prevent.
+
 ### 7. Results
 
 Pending — `tools/heroread.mjs` is in the FIFO (boot A done, boot B queued behind other lanes).
