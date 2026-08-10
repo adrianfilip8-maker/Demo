@@ -593,6 +593,51 @@ export class SlyModel {
 
     this.mesh = new THREE.SkinnedMesh(merged, materials.length === 1 ? materials[0] : materials);
     this.mesh.name = 'slydlrig:mesh';
+
+    /* ---- the D2 A/B swap (PREREG-bodyhue2) -------------------------------------------------
+       Run 1 of the costume-hue A/B was VOID because `?body=` is read at module load, so its two
+       arms needed two page loads — and two page loads are not bit-identical. `sly-perch`'s
+       difference mask came back 24.69% of the frame with 85.6% of it differing by <= 2 levels,
+       i.e. boot noise rather than costume (ADDENDUM-bodyhue-run1.md, and §269 had already
+       measured 2.69% cross-boot drift on `dunes`).
+
+       This lets both arms be two renders of ONE boot, which restores the definitional mask: with
+       the clock frozen and nothing else touched, the ONLY difference between the two frames is
+       the body albedo.
+
+       Deliberately LAZY and traversal-reachable:
+         · lazy, so the shipped build loads exactly the textures it loaded before — an A/B fixture
+           must not cost the player a second 228 KB texture it never samples;
+         · on `userData` rather than a `Debug.js` lever, because nothing needs to read this every
+           frame and the ink lane's `slyInk_*` traversal already set the precedent for a page-side
+           handle that changes no shipped behaviour.
+       Returns a promise so a capture can await the decode before rendering the arm. */
+    {
+      const bodyIdx = parts.indexOf('body');
+      const bodyMat = bodyIdx >= 0 ? (materials.length === 1 ? materials[0] : materials[bodyIdx]) : null;
+      if (bodyMat) {
+        const original = bodyMat.map;
+        const cache = new Map();
+        this.mesh.userData.slySwapBodyTex = (mode) => new Promise((resolve, reject) => {
+          if (mode !== 'fix') { bodyMat.map = original; bodyMat.needsUpdate = true; resolve('raw'); return; }
+          if (cache.has('fix')) { bodyMat.map = cache.get('fix'); bodyMat.needsUpdate = true; resolve('fix'); return; }
+          const key = Object.keys(TEX_FILES).find((k) => k.endsWith('/sly_body_fix.png'));
+          if (!key) { reject(new Error('sly_body_fix.png is not in the texture glob')); return; }
+          loader.load(TEX_FILES[key], (t) => {
+            /* Match the original's sampler exactly, or the arms differ by filtering as well as
+               by hue and the mask stops being definitional. */
+            t.colorSpace = THREE.SRGBColorSpace;
+            t.anisotropy = original ? original.anisotropy : 4;
+            t.wrapS = original ? original.wrapS : THREE.RepeatWrapping;
+            t.wrapT = original ? original.wrapT : THREE.RepeatWrapping;
+            t.flipY = original ? original.flipY : t.flipY;
+            cache.set('fix', t);
+            bodyMat.map = t; bodyMat.needsUpdate = true;
+            resolve('fix');
+          }, undefined, reject);
+        });
+      }
+    }
     this.mesh.castShadow = true;
     this.mesh.receiveShadow = true;
     this.mesh.frustumCulled = false;
