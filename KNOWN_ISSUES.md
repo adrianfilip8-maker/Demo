@@ -23007,8 +23007,15 @@ something upstream of it* — and that form is enough to route the work.
 ### What follows
 
 - Saturation → the RENDER. Do not touch the texture.
-- Violet bias → mostly the ALBEDO. A hue rotation of about −15° on the shirt is a small, targeted
-  change that leaves saturation (already correct) alone.
+- Violet bias → mostly the ALBEDO. A hue rotation on the shirt is a small, targeted change that
+  leaves saturation (already correct) alone.
+  **CORRECTION, 2026-08-10: the figure first written here, "about −15°", was wrong and would
+  under-correct.** −15.5° puts the ALBEDO on the reference's 213.5°, but the reference figure is
+  a FRAME hue and our render adds +5.6° of its own, so the frame would still land at 219.1°. The
+  albedo must be pre-compensated: target 213.5 − 5.6 = **207.9°**, i.e. a rotation of **−21.1°**.
+  Corroborated non-circularly — the original hand-authored `SlyModel.js` shirt `0x2f7fc4` sits at
+  **207.8°**, 0.1° from the independently derived target, so the original blue was pre-compensated
+  and the compensation was lost with the asset swap (§278). `tools/slybody.mjs` implements it.
 - It must be a DERIVED file with provenance recorded, never an edit in place: the character texture
   is owner-supplied, and D11 set the precedent with `sly_head_fix.png` derived from `sly_head.png`
   behind a `?face=raw` lever. Any shirt fix needs the same shape so the A/B stays runnable.
