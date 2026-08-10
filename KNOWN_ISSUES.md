@@ -23015,3 +23015,67 @@ something upstream of it* — and that form is enough to route the work.
 - §276 measured the same texture's *gradient* and found it airbrushed (L span 199–210/255 within
   one material). That is D3 and is a separate question from either half of D2 — the albedo can be
   simultaneously right about chroma and wrong about value structure, and it is.
+
+## §278 — D2's violet bias is a REGRESSION, and it arrived with the character asset: the shirt hue went 207.8° → 220.7° → 229.0° across two model swaps, and the original was compensated for the render
+
+Answering the owner's question "this colouring issue did not always exist — what changed?".
+Source-measured archaeology. **The fix is offered and not yet decided; nothing here is built.**
+
+### The progression
+
+| when | model | shirt blue | hue | sat |
+|---|---|---|---|---|
+| original | `SlyModel.js` | `0x2f7fc4`, hand-authored | **207.8°** | 0.760 |
+| Sly 3 rebuild | `SlyModel3.js` | `0x2f5fc4` | **220.7°** | 0.760 |
+| 2026-08-07 → now | `SlyModelDLRig` | supplied `sly_body.png` (measured, §277) | **229.0°** | 0.927 |
+
+Reference: **213.5°**. The original hand-authored blue sat 5.7° on the **cyan** side of it; the
+rebuild moved +12.9°, and the supplied fan asset a further +8.3°. `SlyModelDLRig` entered in
+`8c5ecb3` (2026-08-07, "now default"), was reverted the same day for a broken weight remap, and was
+later re-set as the default by explicit owner instruction.
+
+### The part that is a real prediction, and the part that is circular
+
+§277 derived the render's own violet contribution as ~5.6°, from `frame 234.6° − albedo 229.0°`.
+Re-adding it to the current albedo is therefore an identity and proves nothing.
+
+Applying that same shift to the ORIGINAL model is not circular, and it lands:
+
+```
+SlyModel.js albedo 207.8°  +  render 5.6°  =  213.4°        reference 213.5°
+```
+
+**The original blue appears to have been chosen so that it arrived on the reference AFTER the
+render's violet shift.** The supplied texture was never compensated, and nothing re-derived the
+compensation when the asset changed. Caveat: this assumes the render's shift is model-independent,
+which is untested — the 5.6° was measured on the current asset only.
+
+### What did NOT change: the saturation
+
+The old albedo was sat **0.760**, the current one **0.927** — the supplied texture is *more*
+saturated. So the collapse to a rendered 0.064–0.659 is not a consequence of the swap and would
+have hit the old model too. This corroborates §277 from a second direction: **saturation is a
+render defect, hue is an asset defect**, and they must not be fixed in the same place.
+
+### On dating it from the critic passes — do not over-read this
+
+critic8 (2026-08-08, after the swap) mentions costume colour **zero** times; critic9 (08-09)
+mentions it 21 and ranks it D2. That is not evidence of a render change between them. `shots/r8`
+holds **four** frames (`courtyard`, `hero`, `sly-closeup`, `temple`); `shots/r9` holds ten. D2's
+core claim is that his colour *varies frame to frame* — which four frames cannot show.
+
+### An instrument of mine that failed, recorded so nobody repeats it
+
+I first tried to date the regression by measuring "the shirt" in r8 vs r9 frames with a hue/sat
+predicate (hue 190–280°, sat > 0.20, 0.10 < v < 0.85) and no spatial mask. It returned **250 000 –
+700 000 px per frame, i.e. 27–76% of a 1280×720 frame**. Sly is 15.7% of frame *height* in `hero`
+and a few percent of its *area*, so the predicate was measuring sky, shadowed stone and haze. All
+four of its r8/r9 rows are **VOID** and are not quoted anywhere. Dating this in frames needs the
+character mask the hero lane already built (`charvis`/`heropos`), not a colour predicate.
+
+### If the fix is wanted
+
+A derived shirt albedo rotated about −15° in hue, leaving saturation alone (it is already correct
+at 0.927 against 0.909). It must be a DERIVED file with provenance recorded and a lever, exactly as
+D11 shipped `sly_head_fix.png` from `sly_head.png` behind `?face=raw` — the character texture is
+owner-supplied and must not be edited in place.
