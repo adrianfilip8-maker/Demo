@@ -345,3 +345,4 @@ interior     A2-ctlgrey  hold=0    he=-1    encl=0.00 open=null  ns=1 nf=0  sha=
 interior     A3-global   hold=1    he=-1    encl=0.00 open=null  ns=0 nf=0  sha=36e30ea3f71a31d0
 interior     A4-scoped   hold=0    he=0.9   encl=1.00 open=0     ns=0 nf=0  sha=481c7555b76a91c9
 interior     A5-restore  hold=0    he=-1    encl=0.00 open=null  ns=0 nf=0  sha=481c7555b76a91c9
+night        A0-base     hold=0    he=-1    encl=0.00 open=null  ns=0 nf=0  sha=9f8d2d2f0de325f7
