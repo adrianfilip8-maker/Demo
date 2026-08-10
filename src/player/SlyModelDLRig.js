@@ -193,12 +193,54 @@ function faceMode() {
 }
 const FACE_MODE = faceMode();
 
+/**
+ * `?body=fix` — the calibration lever for the costume-hue correction (critic 9 D2, §277/§278).
+ *
+ * **Default is `raw`, i.e. OFF and pixel-identical to before.** The correction is derived and
+ * measured on the texture, but its effect on a FRAME has never been captured, and a lane does not
+ * get to ship a pixel change on an offline argument.
+ *
+ * `sly_body_fix.png` is derived from the supplied `sly_body.png` by `tools/slybody.mjs`: a pure
+ * HSV hue rotation of −21.1° over the costume-blue window (hue 190–270°, sat > 0.15), leaving
+ * saturation and value byte-identical — §277 measured the supplied saturation at 0.927 against the
+ * reference's 0.909, i.e. already correct, so a fix that moves it is fixing the wrong thing. The
+ * shorts, sash, belt, mask and white are untouched; cap, gloves and boots ARE rotated, because
+ * §196's "ONE blue" rule covers the costume rather than just the torso.
+ *
+ * Why −21.1° and not the −15.5° that lands the albedo on the reference's 213.5°: that reference
+ * number is a hue measured in a FRAME, and our own render adds +5.6° of violet on top of the
+ * albedo (§277), so an albedo at 213.5° still renders at 219.1°. Pre-compensating gives a target
+ * albedo of 207.9°. The non-circular check on that: the original hand-authored `SlyModel.js` shirt
+ * `0x2f7fc4` sits at **207.8°** — 0.1° from the derived target — so the original blue was chosen to
+ * land on the reference AFTER the render's shift, and §278 records that the compensation was lost
+ * when the supplied asset replaced it. This restores it; it is not a taste preference.
+ *
+ * Read at module-load time for the same reason `?char=`, `?grip=` and `?face=` are.
+ */
+function bodyMode() {
+  try {
+    if (typeof location !== 'undefined' && location.search) {
+      const q = new URLSearchParams(location.search).get('body');
+      if (q) return String(q);
+    }
+    if (typeof globalThis !== 'undefined' && globalThis.__BODY_AB != null) return String(globalThis.__BODY_AB);
+  } catch { /* plain-module hosts have no location; that is the offline path */ }
+  return 'raw';
+}
+const BODY_MODE = bodyMode();
+
 function textureUrl(part) {
   const stem = TEX_BY_PART[part];
   /* Degrade to the supplied texture if the derived one is absent from the glob — a missing
      product must never stop the character loading (same rule as `?char=`'s MODULE_FILES check). */
   if (part === 'head' && FACE_MODE !== 'raw') {
     const fix = Object.keys(TEX_FILES).find((k) => k.endsWith('/sly_head_fix.png'));
+    if (fix) return TEX_FILES[fix];
+  }
+  /* Opt-IN, unlike the head: `?body=fix` selects the hue-corrected costume. Same degrade rule —
+     a missing derived file falls through to the supplied one rather than failing the load. */
+  if (part === 'body' && BODY_MODE === 'fix') {
+    const fix = Object.keys(TEX_FILES).find((k) => k.endsWith('/sly_body_fix.png'));
     if (fix) return TEX_FILES[fix];
   }
   const key = Object.keys(TEX_FILES).find((k) => k.endsWith(`/${stem}.png`));
