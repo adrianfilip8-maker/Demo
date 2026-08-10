@@ -23079,3 +23079,72 @@ A derived shirt albedo rotated about −15° in hue, leaving saturation alone (i
 at 0.927 against 0.909). It must be a DERIVED file with provenance recorded and a lever, exactly as
 D11 shipped `sly_head_fix.png` from `sly_head.png` behind `?face=raw` — the character texture is
 owner-supplied and must not be edited in place.
+
+## §279 — the capture lock's 3-hour give-up path FIRED, on all three waiters at once, and the build spent the night with four SwiftShader renderers racing
+
+Found from an anomaly that looked like a reporting bug and was not: `/tmp/sands-of-ra/capture.lock`
+named pid 13212 with an mtime of 21:06:23 and had never been rewritten — yet two *other* processes
+wrote frames at 00:23 and 00:26.
+
+### Not a lock bug. It is the documented escape hatch, taken.
+
+`tryTake()` is sound: it takes the lock only when the file is absent, or when the recorded holder
+fails `alive()` (`process.kill(pid, 0)`). Holder 13212 was alive throughout, so nobody could have
+taken it from underneath. But `acquire()` does not wait forever:
+
+```js
+if (waited > timeoutMs) {          // timeoutMs = 3 * 60 * 60 * 1000
+  dropTicket();
+  onWait?.(waited, readLock()?.pid ?? 0);
+  return () => {};                 // a NO-OP release: the caller renders UNLOCKED
+}
+```
+
+The comment above it already records this failing once: *"seven concurrent SwiftShader renderers
+were observed after several waiters timed out at the old 45 minutes."* The remedy then was to raise
+the timeout to three hours, reasoning that *"under FIFO your wait is bounded by the runs ahead of
+you"*.
+
+**That assumption fails for a single holder that outlives the timeout**, which is what happened.
+`holdscope` took the lock at 21:06 and still held it at 4 h 16 m. Every waiter hit its three-hour
+mark and started rendering unlocked — confirmed three times independently:
+
+| run | ticket | ticket + 3 h | first unlocked artefact |
+|---|---|---|---|
+| `inkblack` | 20:35:56 | 23:35:56 | `hero-*.png` at **00:23:30** |
+| `fxshape` | 21:03:11 | 00:03:11 | `base.png` at **00:26:51** |
+| `heroread` | 20:36:33 | 23:36:33 | its vite spawned ~**23:37** |
+
+Three tickets, three timeouts, three unlocked renderers against one holder.
+
+### Scoped honestly — what this does and does not invalidate
+
+- **Tree provenance is INTACT.** Every agent had closed, so nothing was editing `src/` during these
+  captures. `G-TREE` / `G-TREE-ACROSS` compare content digests; a frame rendered unlocked is not a
+  frame rendered against a different tree.
+- **Within-boot arm comparisons are UNAFFECTED.** Arms inside one `withGame` share a process, a
+  clock and a tree. Contention moves wall-clock, not pixels.
+- **The §186 guarantee is VOID** for anything captured after the timeouts. "No `src` edit while a
+  capture holds the lock" means nothing when three runs hold no lock, and the next lane to edit
+  `src/` in this window contaminates three runs rather than one.
+- **The throughput estimate is WRONG, badly.** `withGame` acquires per invocation — per shot. A
+  timed-out waiter therefore pays three hours *per shot*. `inkblack` re-queued at 00:23:31 for its
+  third shot; at that rate its sealed ten-frame scope is about a day of wall-clock, not the "slow
+  but progressing" previously reported to the owner. Correcting that estimate is the practical
+  consequence of this section.
+
+### Candidate rules, recorded and deliberately NOT applied
+
+Raising the timeout again is the fix that already failed once; 45 minutes became three hours and
+the same failure recurred at a longer scale. The load-bearing assumption is the FIFO bound, and it
+is false for an unbounded holder.
+
+1. **Bound the HOLDER, not the waiter.** A long multi-pass run should re-acquire between units of
+   work so it yields rather than monopolises. This is entirely a caller property today:
+   `holdscope` holds across a whole two-pass sweep, while `inkblack` re-queues per shot.
+2. **Make the give-up loud.** `acquire()` returns its no-op release silently through `onWait`, and
+   nothing in the resulting artefact records "this frame was rendered unlocked". A flag in the run
+   manifest would have surfaced this hours earlier instead of leaving it to look like a stale lock.
+
+Three runs are in flight as this is written, and changing the lock underneath them is precisely the
+destructive move this section is about. Recorded, not fixed.
