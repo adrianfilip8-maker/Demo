@@ -23148,3 +23148,74 @@ is false for an unbounded holder.
 
 Three runs are in flight as this is written, and changing the lock underneath them is precisely the
 destructive move this section is about. Recorded, not fixed.
+
+## §280 — D8 is an AUTHORING defect and the cleanest of the four: every one of the night key's eleven colours is inside the 60° window the frame is accused of, and the whole warm budget is 0.58% of the pixels
+
+D8 was the last unowned critic-9 defect, and the one I wrongly told the owner was "least amenable
+to offline work since it is about a rendered distribution". The rendered frame is on disk. The
+diagnosis was available the whole time; only the fix needs a capture.
+
+### Instrument calibrated against the critic, to the decimal
+
+Measured on `shots/r9/night.png`, no ROI, whole frame:
+
+| statistic | measured | critic 9 D8 |
+|---|---|---|
+| share below L 0.10 | **61.4 %** | 61.4 % |
+| share below L 0.15 | **74.8 %** | 74.8 % |
+| IQR | **0.094** | 0.094 |
+| chromatic pixels | 99.6 % | 99.2 % |
+| densest 60° hue window | **98.5 %** (194°–254°) | 98.4 % |
+
+Four figures reproduced exactly and a fifth within 0.4 pp. Whatever else follows, the instrument
+and the critic are looking at the same thing.
+
+### The new number: the warm budget is 0.58 % of the frame
+
+Pixels with `sat > 0.10` and hue outside 70°–330°: **5 316 of 921 600 = 0.58 %**, of which only
+2 821 exceed `v 0.35`. The critic's "two orange window slabs are the entire warm budget" is
+literally true, and now quantified.
+
+### Mechanism: the duotone is not emergent, it is specified
+
+`Atmosphere.js`, the deep-night key `anchor(-16)`. Every authored colour in it:
+
+| term | hex | hue |
+|---|---|---|
+| zenith | `#0e1c3c` | 221.7° |
+| horizon | `#233a5e` | 216.6° |
+| haze | `#263a5c` | 217.8° |
+| violet | `#2a2450` | 248.2° |
+| groundHaze | `#1a2440` | 224.2° |
+| cloudLit | `#7e97c4` | 218.6° |
+| cloudShadow | `#141b34` | 226.9° |
+| cloudRim | `#9cc0ff` | 218.2° |
+| fogColor | `#1c2b48` | 219.5° |
+| fogTint | `#33507f` | 217.1° |
+| sunColor (moon) | `#9ec4ff` | 216.5° |
+
+**All eleven lie between 216.5° and 248.2° — every one inside the 194°–254° window the frame is
+accused of occupying.** There is no warm term anywhere in the key. The frame is monochromatic
+because the palette is; the render is faithfully reproducing what it was given.
+
+This makes D8 unlike its neighbours, and the contrast is the useful part: **§277** found the
+shirt's saturation authored *correctly* and destroyed by the render; **§271** found material
+separation authored *correctly* (ΔE 18–53) and destroyed by the render; D8 is the one where the
+authoring is the defect.
+
+### Two prior constraints that bound the fix, found before proposing anything
+
+1. **§76 (critic pass 6) rejected "a warm brown rim that has no source at night".** So the answer
+   is not a global warm tint added to the key. Warmth at night has to be *sourced* — lamp pools,
+   torch spill, warm bounce off a lit interior — which is also what the critic asks for in the same
+   breath ("warm lamp pools, warm interior spill, a readable hero against the cool").
+2. **§141 registers a night gate**: `night` passes iff the composite's `archShade` hue shift is
+   ≤ S/5, warm-ward. Any candidate has to clear a bar that already exists rather than inventing one.
+
+### What this does NOT establish
+
+No fix is proposed, tested or sealed. In particular the *crush* half of D8 — 61.4 % below L 0.10 —
+is a separate question from the *hue* half, and nothing here separates them: a frame can be
+monochrome and well-exposed, or varied and crushed. The measurements above address the hue half
+only. Whoever takes this seals before capturing, registers deltas against a same-run control
+(§273), and must not treat the r9 numbers as a PASS bar.
