@@ -225,7 +225,10 @@ function bodyMode() {
     }
     if (typeof globalThis !== 'undefined' && globalThis.__BODY_AB != null) return String(globalThis.__BODY_AB);
   } catch { /* plain-module hosts have no location; that is the offline path */ }
-  return 'raw';
+  /* Default flipped 'raw' → 'fix' by PREREG-bodyhue6's PASS (RESULT-bodyhue6.md): the -11.3°
+     costume rotation landed 213.5 ± 6.0 on both close-ups, all gates green. `?body=raw` is the
+     escape. Scope: close range only — §281's mid-distance attractor is a separate, open defect. */
+  return 'fix';
 }
 const BODY_MODE = bodyMode();
 
@@ -237,8 +240,9 @@ function textureUrl(part) {
     const fix = Object.keys(TEX_FILES).find((k) => k.endsWith('/sly_head_fix.png'));
     if (fix) return TEX_FILES[fix];
   }
-  /* Opt-IN, unlike the head: `?body=fix` selects the hue-corrected costume. Same degrade rule —
-     a missing derived file falls through to the supplied one rather than failing the load. */
+  /* Default-ON like the head since PREREG-bodyhue6's PASS; `?body=raw` opts back out. Same
+     degrade rule — a missing derived file falls through to the supplied one rather than failing
+     the load. */
   if (part === 'body' && BODY_MODE === 'fix') {
     const fix = Object.keys(TEX_FILES).find((k) => k.endsWith('/sly_body_fix.png'));
     if (fix) return TEX_FILES[fix];

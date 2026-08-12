@@ -105,13 +105,18 @@ test('non-costume colours are byte-identical: shorts, sash, belt, mask and white
   assert.equal(differing, 0, `${differing} out-of-window texels changed — the rotation leaked`);
 });
 
-test('the lever is opt-IN and defaults to raw, so the shipped build is unchanged', () => {
+test("the corrected costume is the default and '?body=raw' remains the escape", () => {
   const src = readFileSync(RIG, 'utf8');
   const fn = /function bodyMode\(\)\s*\{([\s\S]*?)\n\}/.exec(src);
   assert.ok(fn, 'bodyMode() not found — has the lever been renamed?');
-  assert.match(fn[1], /return 'raw'/,
-    "bodyMode() no longer defaults to 'raw'. Flipping this default ships a pixel change that has "
-    + 'never been measured in a frame; it needs a sealed capture first (§141.1).');
+  /* Flipped from 'raw' by PREREG-bodyhue6's PASS (RESULT-bodyhue6.md): -11.3° rotation, both
+     close-ups inside 213.5 ± 6.0°, all gates green on fresh frames. Un-flipping it — or flipping
+     it further — needs a sealed capture of its own (§141.1). */
+  assert.match(fn[1], /return 'fix'/,
+    "bodyMode() no longer defaults to 'fix'. The default was set by a sealed PASS "
+    + '(PREREG-bodyhue6); changing it back is a pixel change that needs its own sealed capture.');
+  assert.match(fn[1], /get\('body'\)/,
+    "the '?body=' escape lever has been removed from bodyMode()");
   assert.match(src, /part === 'body' && BODY_MODE === 'fix'/,
     'the body texture no longer switches on BODY_MODE');
 });

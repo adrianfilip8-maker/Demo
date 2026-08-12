@@ -23290,3 +23290,16 @@ The rule for any future same-boot swap A/B, of any asset:
 
 Run 5's scored MECHANISM-ONLY stands in the record but carries no evidential weight; the
 candidate is re-scored on fresh frames under PREREG-bodyhue6.md.
+
+## §283 — D2's close-range half is RESOLVED: the corrected costume ships as the default, and what remains of D2 is §281's mid-range attractor
+
+`RESULT-bodyhue6.md`: the −11.3° costume rotation (target albedo 218.0°, derived from the
+render's measured per-shot offsets, PREREG-bodyhue5 §2) passed its sealed A/B on fresh frames
+— both canonical close-ups inside the reference band 213.5 ± 6.0° (landed 218.9° and 211.1°,
+from the supplied asset's 227.9° and 221.7°). `bodyMode()` now defaults to `'fix'`;
+`?body=raw` is the escape; the lever test pins the new default.
+
+Status of the D2 chain: §277's saturation half stays with the render (unaddressed). §278's
+regression is compensated — by a smaller rotation than the original 207.8° implied, because
+the +5.6° render shift that justified −21.1° was refuted (RESULT-bodyhue.md). The violet that
+remains in mid-distance shots is §281's ≈ 222° attractor and no texture change can touch it.
