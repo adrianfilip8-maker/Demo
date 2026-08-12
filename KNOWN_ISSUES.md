@@ -23433,3 +23433,25 @@ GUARDS, highest-certainty fix; (4) floating rings/discs in 7+ shots — fresh D1
 (5) hard constraints: 15/16 shots over the 1.2M triangle budget, 6 over 250 draws, runtime
 fetch 404 (Audio.js:394 / Textures.js:227) against the self-containment mandate; (6) §7.3's
 head-ratio line is stale (critic measured 5.03, passing — update the fail-list).
+
+## §291 — FIXED: the black-mannequin guard was an unbound vertex-colour attribute at the Carmelita merge seam
+
+RESULT-guardfix. The garrison wears the Carmelita import's geometry; its sanitizer strips
+`color` (right for a textured body) while the garrison materials are vertexColors:true — and
+an unbound colour attribute reads (0,0,0), multiplying linen and bronze to black on all nine
+roster guards. The two procedurally-coloured scarabs were the healthy split that exposed it.
+Fix (964ded9): the merge synthesizes the identity attribute when absent; probe shows 11/11
+meshes coloured, imports at [1,1,1], scarabs byte-unchanged; the fresh frame renders two lit,
+clothed patrol guards. Contract rule extracted: a geometry source and a material set have a
+CHANNEL CONTRACT — whoever splices one onto the other owns reconciling vertexColors, and a
+sanitizer's keep-list is part of that contract.
+
+Round-11 material deliberately not claimed here: guard head sculpt/ink density, the sourceless
+white cone, the missing flashlight, pose. Floaters (D12 family) persist and stay routed.
+
+## §292 — the runtime-fetch 404 is the AUDIO path, not textures
+
+Critic 10's console error routed to both suspects; the r10 manifest exonerates textures
+("prewarm 23 recipes… 23 baked / 0 generated", textures.bin present, 25 MB). The remaining
+fetcher is Audio.js:394's hardcoded relative `assets/audio/<stem>` — one stem 404s at boot.
+Self-containment mandate item; owner AUDIO; small, unstarted.
