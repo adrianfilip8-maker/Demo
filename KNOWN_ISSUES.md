@@ -23303,3 +23303,22 @@ Status of the D2 chain: §277's saturation half stays with the render (unaddress
 regression is compensated — by a smaller rotation than the original 207.8° implied, because
 the +5.6° render shift that justified −21.1° was refuted (RESULT-bodyhue.md). The violet that
 remains in mid-distance shots is §281's ≈ 222° attractor and no texture change can touch it.
+
+## §284 — §281's mid-distance mixer is NOT the rims and NOT the mips; the raw arm never moves, and that asymmetry is the fingerprint
+
+RESULT-attractor (toggle lattice, both boots gate-clean): turning off the screen rim, the
+surface rim, or both moves the mid-range costume swing by ≤ 0.2° on `hero` and `interior`.
+R(base) ≈ 0.33–0.37, so the §281 attenuation reproduces on the −11.3° pair and is real.
+
+progress/records/miphue.mjs (prediction registered in its header before first run): the mip
+chain preserves the authored −11.3° swing at every simulated level L0–L5 with coverage
+RISING — the costume is UV-contiguous, so minification never dilutes it. Mips exonerated.
+
+The redirecting fact: at 6–10 m, arm A (raw) reads 227.6–228.3° — exactly its close-range
+value — while arm B (fix) reads 223.9–224.8° instead of 218.9°. The mixer leaves the raw hue
+in place and drags the corrected hue UP toward it, so it is asymmetric by texture content
+with a partner hue ≥ ~229°. Geometry-driven passes acting on both arms alike remain suspects
+only if their own colour sits above the costume's: the ink does — `inkShade`/`inkCool`
+0x161022 is 260° violet by the source's own comment, at INK_PX = 2.5 fixed SCREEN pixels at
+every distance. PREREG-attractor2 runs the ink lattice (crease / hull / both), with the
+eroded-mask split mandatory if that also returns NEITHER.
