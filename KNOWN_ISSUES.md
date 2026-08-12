@@ -23413,3 +23413,23 @@ D2 status: close range fixed at the texture (§283, bodyhue6), mid range fixed a
 mechanism (this ship). Open on the chain: §277's saturation half, D1 (architecture shade hue
 — the global hold stays 0.0 and holdscope's scoping question stands), D3, and the blind-critic
 verification round that is the bar for "done". Forecast ledger: 3/13.
+
+## §290 — critic round 10: REJECT at avg ≈4.9 with D2 SILENT for the first time in ten rounds; the new top defects are the head sculpt, the unclamped lighting/post family, and a guard that does not render
+
+RESULT-critic10.md. Blind round on shots/r10 (58e3f49): zero shots at the 8-floor (best
+temple 7.5, night 7; worst guard 2). Costume hue — D1..D12's most-litigated defect — is
+absent from every ranked list; the only blue complaints are the red-flood key washing it
+out, which the critic itself routes to LIGHTING. The day's two ships survived the blind
+referee.
+
+New/re-ranked, with owners: (1) dlrig head sculpt (no muzzle projection, human smile,
+low ears) + splay-hand idles — CHARACTER/ANIMATION, OWNER-SENSITIVE (dlrig is the owner's
+explicit default; resculpting their asset needs sign-off or an additive treatment);
+(2) lighting/post clamp family — red-flood key, torches that bloom without lighting, bloom
+blowing subjects to white, lens-ghost floaters, crush below the §2.2 floor — LIGHTING/POSTFX;
+(3) guard material/texture binding failure (black-gloss mannequin, cube head, glowing arms) —
+GUARDS, highest-certainty fix; (4) floating rings/discs in 7+ shots — fresh D12 evidence
+(cane_ring family; ringPainter still do-not-touch per RESULT-fxshape §5.1) — PROPS/FX;
+(5) hard constraints: 15/16 shots over the 1.2M triangle budget, 6 over 250 draws, runtime
+fetch 404 (Audio.js:394 / Textures.js:227) against the self-containment mandate; (6) §7.3's
+head-ratio line is stale (critic measured 5.03, passing — update the fail-list).
