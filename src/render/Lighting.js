@@ -214,6 +214,32 @@ const TUNE = {
   localCullDistance: 68,
   flickerRate: 5.7,
   flickerPos: 0.055,        // metres of positional wobble — a still flame reads as a lamp
+  /* ── localToon — how much of the promoted pool the TOON pipeline consumes ────────────────
+     (PREREG-torchlight, critic r10 `interior` 4.5: "torches are bloomy orbs that cast
+     nothing"). Everything above this line was always correct and always ignored:
+     NOTE-torchpool traced the pool's light to `ToonMaterial._patch`, which deletes three's
+     punctual accumulation, so the slots this module drives lit only the few unpatched
+     built-in materials. The consumer now exists in TOON_SHADE — three's own
+     getPointLightInfo x lambert x albedo — and this is its gain, published per frame through
+     `setKeyLight` (payload key `local`; ToonMaterial ships the uniform at 0, so a build
+     whose LIGHTING never publishes is bit-identical to the pre-seal one).
+
+     Scope lives in the shader, per light, on the mount's WORLD HEIGHT: only underground
+     emitters (y < −0.5 — the six tomb sconces) contribute; every above-ground fire
+     multiplies by exactly 0.0. Radius geometry backs that twice over (a y −9.05 light with
+     cutoff 9 cannot reach y ≥ −0.05), and the tomb is portal-gated out of every above-ground
+     camera, so daylight/night canonicals are arithmetically unchanged — verified as
+     registered [0,0] frame bars, not assumed (torchlight-score.mjs B1–B15). Night braziers
+     are deliberately not enrolled; widening the gate is a follow-up seal.
+
+     2.5 is the sealed candidate: at the registered torch constants (I 3.4, cutoff 9, mount
+     2.95 m over the floor) it puts ≈ +15–25 display L of warm pool directly under a sconce,
+     fading to nothing by 9 m; the shader caps the summed term at 1.6 scene-linear so the
+     near field (torch head, soot wall) cannot re-feed §25's bloom. `debug.localToon`
+     overrides live (null = use this), the `fillScale` lever pattern, so A/B arms are pokes
+     in one boot. Ships at 2.5 only on PREREG-torchlight's PASS; 0.0 is the registered
+     fallback (mechanism stays, term off). */
+  localToon: 2.5,
 
   /* ── Shafts ──────────────────────────────────────────────────────────────────
      These were five imaginary blades 42 m wide lying along y = 15.5 at z = −18…−50,
@@ -637,6 +663,7 @@ export class Lighting {
       fog: null,
       timeOfDay: 0,
       nightAmount: 0,
+      local: 0,                              // TUNE.localToon, republished each frame
     };
   }
 
@@ -2022,6 +2049,10 @@ export class Lighting {
     p.rim.strength = A.rimStrength;
     p.timeOfDay = this.timeOfDay;
     p.nightAmount = A.nightAmount;
+    /* The toon local-light gain (TUNE.localToon — the note there is the contract). Like
+       `debug.fillScale` above, the debug override must reach the payload, not a scene light:
+       SHADING is the only consumer of this number. */
+    p.local = this.engine?.debug?.localToon ?? TUNE.localToon;
 
     const sky = this.engine.get('sky');
     p.fog = sky?.fogParams ?? A.fog;

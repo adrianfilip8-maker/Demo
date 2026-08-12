@@ -262,6 +262,16 @@ uniform float uAoStrength;
 uniform float uHazeAmount;
 uniform float uBounceGain;    // attenuation on the sand-bounce half of the hemispheric fill
 uniform float uFillSkyMix;    // hue blend of that half toward the sky, luma-matched. 0 = legacy
+/* uLocalToon — gain on the local torch term in TOON_SHADE (PREREG-torchlight). 0 = the branch
+   is untaken and the build is the pre-seal one; LIGHTING publishes TUNE.localToon per frame
+   through setKeyLight (payload key: local), with debug.localToon as the in-page A/B override.
+   The cap bounds what any pixel can receive from the whole pool BEFORE the albedo multiply:
+   1/d2 reaches ~28 scene-linear within half a metre of a sconce (its own head and soot wall),
+   and 1.6 stays under PostFX bloomThreshold 2.20 even at albedo 1 - so this term alone can
+   never push a pixel into bloom, which is the exact defect (bloomy orbs that light nothing)
+   it exists to fix the other half of. */
+uniform float uLocalToon;
+const float SLY_LOCAL_CAP = 1.6;
 /* Grade-lever scaffolding (ToonMaterial TUNE.neutralShadow/neutralFill/subjWarmShade — the
    comment block there is the why). All three are luma-matched chroma blends on the two
    shade-side lights; every default 0 is bit-identical legacy (mix at 0 is exact). */
@@ -695,6 +705,56 @@ export const TOON_SHADE = /* glsl */ `
 		          + ( albAmb * slyFillX * ao
 		            + shadBand * shadowMix * mix( 0.55, 1.0, ao )
 		            + slyShadX * uShadowWash * ( 1.0 - hold ) * shadowMix * ao ) * shadeForm;
+
+		/* ── local torch light: the pool finally gets a consumer (PREREG-torchlight) ─────────
+		 *
+		 * NOTE-torchpool traced the whole chain: PROPS registers real point lights, LIGHTING
+		 * promotes, flickers and uploads them every frame, and _patch deletes the three.js
+		 * accumulation that would have consumed them - so every THREE.PointLight contributed
+		 * exactly zero to every toon surface, and a tomb sconce was a flame sprite over cool
+		 * ambient. This is that missing term, minimal: three r185 punctual helpers (still
+		 * declared - only the lights_fragment_* USES were cut) x lambert x albedo, added to
+		 * diff BEFORE the metal reduction below so gilding keeps its 0.20 diffuse discipline.
+		 *
+		 * Scope, spelled exactly:
+		 * - uLocalToon <= 0.0: branch untaken, no arithmetic evaluated (the uSpecNormPow
+		 *   standard). ToonMaterial ships the uniform at 0; LIGHTING publishes its TUNE value.
+		 * - per light, gated UNDERGROUND (world y < -0.5): only the six tomb sconces live
+		 *   there. Every above-ground fire multiplies by exactly 0.0 and x + 0.0 == x for the
+		 *   non-negative diff, so daylight and night frames are arithmetically unchanged -
+		 *   and radius geometry backs the gate twice over: a y -9.05 light with cutoff 9
+		 *   cannot reach y >= -0.05 at any gain. y < 0 is the underground convention the
+		 *   Lighting cones already use. Night braziers are deliberately NOT enrolled; widening
+		 *   the gate is a follow-up seal with its own night non-regression.
+		 * - capped at SLY_LOCAL_CAP scene-linear across the whole pool sum, per channel,
+		 *   before the albedo multiply - see the uniform block. The per-channel min whitens a
+		 *   clipped core the way an ember core whitens; deliberate, not a hue bug.
+		 * - lambert only. No wrap (wrap widens the no-shadow leak through pier volumes), no
+		 *   ramp quantise (1/d2 falloff IS the pool shape; banding it is a look decision for
+		 *   a later seal), no AO (house rule: AO is ambient-only, this is a direct light).
+		 *
+		 * pointLights[i].position is view space; slyWorldPos reconstructs the world-space
+		 * mount height for the gate. slyViewPos is the same geometryPosition three's own
+		 * lights_fragment_begin would have passed. Point lights cast no shadows here
+		 * (Lighting: VSM/point note), so inside the vault this leaks through piers within
+		 * its 9 m radius - accepted and declared in the seal. */
+		#if NUM_POINT_LIGHTS > 0
+			if ( uLocalToon > 0.0 ) {
+				vec3 slyLocalAcc = vec3( 0.0 );
+				IncidentLight slyLocalL;
+				float slyLocalY;
+				#pragma unroll_loop_start
+				for ( int i = 0; i < NUM_POINT_LIGHTS; i ++ ) {
+					getPointLightInfo( pointLights[ i ], slyViewPos, slyLocalL );
+					slyLocalY = slyWorldPos( pointLights[ i ].position ).y;
+					slyLocalAcc += slyLocalL.color
+						* ( clamp( dot( N, slyLocalL.direction ), 0.0, 1.0 )
+						  * ( slyLocalY < -0.5 ? 1.0 : 0.0 ) );
+				}
+				#pragma unroll_loop_end
+				diff += alb * min( slyLocalAcc * uLocalToon, vec3( SLY_LOCAL_CAP ) );
+			}
+		#endif
 
 		/* uMetal is the art-directed metal *amount*; the ORM texture's blue channel is the
 		   mask that says where on the surface it applies — the gilding on a hieroglyph, the

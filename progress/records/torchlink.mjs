@@ -81,7 +81,7 @@ const out = await page.evaluate(async () => {
     scene.add(mesh);
     try { renderer.compile(scene, cam); renderer.render(scene, cam); } catch { /* read below */ }
     const prog = (renderer.properties.get(material) || {}).currentProgram;
-    let linked = null, nUni = null, log = '', hasTerm = null, hasPLI = null;
+    let linked = null, nUni = null, log = '', hasTerm = null, unrolled = null;
     if (prog && prog.program) {
       linked = gl.getProgramParameter(prog.program, gl.LINK_STATUS);
       nUni = gl.getProgramParameter(prog.program, gl.ACTIVE_UNIFORMS);
@@ -89,14 +89,20 @@ const out = await page.evaluate(async () => {
         const src = gl.getShaderSource(s) || '';
         if (src.includes('slyRamp') || src.includes('pc_fragColor')) {
           hasTerm = src.includes('uLocalToon');
-          hasPLI = src.includes('getPointLightInfo');
+          /* getShaderSource returns the SOURCE, preprocessor directives intact, so text
+             inside a dead "#if 0 > 0" is still present — and the pointLights DECLARATION
+             becomes literally "pointLights[ 0 ]" at count 0, so neither the helper's name
+             nor that index proves anything. The one string that exists only when the loop
+             produced iterations is an unrolled CALL: loopReplacer at end = 0 replaces the
+             whole pragma block with nothing, so no call site survives. */
+          unrolled = src.includes('getPointLightInfo( pointLights[');
         }
         const l = (gl.getShaderInfoLog(s) || '').trim();
         if (l) log += (log ? '\n' : '') + l;
       }
     }
     renderer.dispose();
-    results.push({ name, must, linked: !!linked, nUni, hasTerm, hasPLI, log: log.slice(0, 240) });
+    results.push({ name, must, linked: !!linked, nUni, hasTerm, unrolled, log: log.slice(0, 240) });
   }
 
   arm('CONTROL  stock standard + PL', 'link', true, () => new THREE.MeshStandardMaterial({ color: 0x888888 }));
@@ -123,14 +129,14 @@ const out = await page.evaluate(async () => {
 
 let instrumentOk = true, subjectOk = false;
 for (const r of out) {
-  console.log(`${r.linked ? 'LINK OK  ' : 'LINK FAIL'} uniforms=${String(r.nUni).padEnd(4)} term=${r.hasTerm} pli=${r.hasPLI} ${r.name}`);
+  console.log(`${r.linked ? 'LINK OK  ' : 'LINK FAIL'} uniforms=${String(r.nUni).padEnd(4)} term=${r.hasTerm} unrolled=${r.unrolled} ${r.name}`);
   if (r.log) console.log(`             ${r.log.split('\n')[0]}`);
   if (r.must === 'link' && !r.linked) instrumentOk = false;
   if (r.must === 'fail' && r.linked) instrumentOk = false;
-  if (r.must === 'subject') subjectOk = r.linked && r.nUni > 0 && r.hasTerm === true && r.hasPLI === true;
-  if (r.name.startsWith('NOPL') && r.hasPLI !== false) {
+  if (r.must === 'subject') subjectOk = r.linked && r.nUni > 0 && r.hasTerm === true && r.unrolled === true;
+  if (r.name.startsWith('NOPL') && r.unrolled !== false) {
     instrumentOk = false;
-    console.log('             !! NOPL arm still contains getPointLightInfo — the NUM_POINT_LIGHTS guard is not guarding');
+    console.log('             !! NOPL arm unrolled a point-light index at NUM_POINT_LIGHTS 0 — the guard is not guarding');
   }
 }
 console.log('');

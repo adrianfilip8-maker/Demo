@@ -881,6 +881,11 @@ export class Shading {
       uBounceColor:  { value: new THREE.Color(PAL.bounce) },
       uBounceGain:   { value: TUNE.bounceGain },
       uFillSkyMix:   { value: TUNE.fillSkyMix },
+      /* Local torch term gain (PREREG-torchlight). 0 = branch untaken, the pre-seal build.
+         LIGHTING owns the shipped value (its TUNE.localToon) and publishes it per frame
+         through setKeyLight's `local` key; written only when the payload carries a number,
+         so a harness poke sticks whenever the publisher omits it — the uShadowHold contract. */
+      uLocalToon:    { value: 0.0 },
       /* Grade-lever scaffolding — shared by identity like uDetail2Scale, so a one-boot A/B
          pokes `shading.uniforms.uX.value` and the whole scene follows. Defaults 0 = legacy. */
       uNeutralShadow: { value: TUNE.neutralShadow },
@@ -1460,9 +1465,15 @@ export class Shading {
    * @param {THREE.Matrix4} [p.shadowMatrix] accepted and stored; unused, because the shell of
    *        three's own shadow varyings is what getShadowMask() reads.
    */
-  setKeyLight({ direction, color, intensity, ambient, rim, shadowMatrix, nightAmount } = {}) {
+  setKeyLight({ direction, color, intensity, ambient, rim, shadowMatrix, nightAmount, local } = {}) {
     this._autoKey = false;
     const u = this.uniforms;
+
+    /* Local torch term gain (PREREG-torchlight) — LIGHTING's TUNE.localToon arrives here.
+       Written only when the publisher sends a number, exactly like `skyOpen` below: nothing
+       else republishes this uniform, so a one-boot A/B that pokes `uLocalToon` directly keeps
+       sticking if a publisher ever stops sending the key. */
+    if (typeof local === 'number') u.uLocalToon.value = local;
 
     /* `nightAmount` has been in LIGHTING's payload (`Lighting.js:1837`) with no consumer here,
        the same way `rim.strength` was. Consumed only by the ink lever, which is a no-op at
