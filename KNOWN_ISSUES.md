@@ -23713,3 +23713,11 @@ enclosure/zone gate (§138.5) the surviving ranked candidate — next design nee
   reconstructed from the runner's own stdout, disclosed in the RESULT). **Rule: a world-clock
   advance inside a lock window uses few large-dt frames (`step(15, 0.334)` ≈ same +5 s at
   1/20th the wall time), and any registered retry states its wall-clock price.**
+
+## §298 — OWNER DECISION (2026-08-12): cool the twilight shadows (DESIGN-twilight Option B)
+
+After reviewing the side-by-side mockup (current tod-0.80 monochrome vs violet-cooled shade),
+the owner chose "Cool it." The fix: cool the ≤2° sun-elevation anchors' fill/shadow leg so
+shaded surfaces diverge from key-lit ones at twilight. Ships only through a sealed A/B with
+hue-DISPERSION bars (mean saturation is the proven-wrong lens, §293) over redflood's WALL
+ROIs, daylight-protection diffs on ≥3 golden-anchor shots, and a binding LOOK gate.
