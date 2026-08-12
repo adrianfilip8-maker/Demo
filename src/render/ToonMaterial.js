@@ -282,6 +282,14 @@ export const TUNE = {
   subjWarmShade: 0.65,
   subjWarmShadeNightPin: 0.50,  // night keeps the pre-banda2 look; published per frame at setKeyLight
 
+  /* subjShadowHold — §269's hold band, vSlySkin-scoped (PREREG-subjhold.md, §287): in shade
+     the SUBJECT's band carries its own albedo hue instead of the shade light's, which is the
+     measured mechanism crushing the costume's authored hue at mid-range. 0.0 is bit-identical
+     by arithmetic (max(uShadowHold, 0·vSlySkin) = uShadowHold). Only PREREG-subjhold's SHIP
+     verdict may move this default. Published per frame at setKeyLight, flat across the clock —
+     night behaviour is gated by that seal's PROT-NIGHT, not by a pin. */
+  subjShadowHold: 0.0,
+
   /* Baked aoMap strength, globally. The maps were authored while cast shadows were suppressed
      engine-wide (KNOWN_ISSUES §1), so the baked term was carrying the low frequencies as well
      as the contact scale. Shadows work now and the critic caught the consequence: occlusion
@@ -873,6 +881,7 @@ export class Shading {
       uNeutralShadow: { value: TUNE.neutralShadow },
       uNeutralFill:  { value: TUNE.neutralFill },
       uSubjWarmShade: { value: TUNE.subjWarmShade },
+      uSubjShadowHold: { value: TUNE.subjShadowHold },
       uAmbIntensity: { value: TUNE.ambIntensity },
       uShadowColor:  { value: new THREE.Color(0x000000) },
       uShadowColorLit: { value: new THREE.Color(0x000000) },
@@ -1459,6 +1468,7 @@ export class Shading {
          at nightAmount 1 the shade-warm returns to its pre-banda2 value (RESULT-banda2). */
       u.uSubjWarmShade.value = TUNE.subjWarmShade +
         (TUNE.subjWarmShadeNightPin - TUNE.subjWarmShade) * Math.min(1, Math.max(0, nightAmount));
+      u.uSubjShadowHold.value = TUNE.subjShadowHold;
     }
 
     if (direction) {

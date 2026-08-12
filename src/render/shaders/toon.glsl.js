@@ -124,6 +124,11 @@ uniform float uShadowWash;
    0 is bit-identical to the pre-§269 build (mix(x,y,0.0) == x, (1.0-0.0) == 1.0). */
 uniform float uShadowHold;
 uniform float uShadowHoldKnee;
+/* uSubjShadowHold — the hold, vSlySkin-scoped (PREREG-subjhold.md, §287). §269 built the
+   band for architecture and holdscope's enclosure scoping refused it; §287 measured the
+   SUBJECT's costume hue being crushed by the saturated blue shade lights, which is exactly
+   what the band prevents. max() with the global knob: 0.0 is bit-identical by arithmetic. */
+uniform float uSubjShadowHold;
 uniform vec2  uShadowSharp;
 uniform vec3  uHaze;          // horizon haze colour
 uniform vec3  uHazeSun;       // forward-scatter colour looking into the sun
@@ -664,7 +669,7 @@ export const TOON_SHADE = /* glsl */ `
 		 * measured by the A5 arm rather than assumed away. */
 		float albMax    = max( alb.r, max( alb.g, alb.b ) );
 		float albChroma = ( albMax - min( alb.r, min( alb.g, alb.b ) ) ) / max( albMax, 1e-4 );
-		float hold      = clamp( uShadowHold, 0.0, 1.0 )
+		float hold      = clamp( max( uShadowHold, uSubjShadowHold * vSlySkin ), 0.0, 1.0 )
 		                * smoothstep( 0.0, max( uShadowHoldKnee, 1e-4 ), albChroma );
 
 		/* The held branch multiplies albShadow, NOT the raw alb, and that is deliberate.
