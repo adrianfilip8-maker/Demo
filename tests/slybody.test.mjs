@@ -76,15 +76,17 @@ test('value is untouched, so the airbrushed-gradient defect (D3) is neither fixe
   assert.ok(dV <= 0.01, `mean value moved by ${dV.toFixed(4)} — this fix must not touch D3's axis`);
 });
 
-test('hue moves onto the pre-compensated target, not onto the reference frame hue', () => {
+test('hue moves onto the offset-compensated target, not onto the reference frame hue', () => {
   const a = med(costume(readPNG(SRC)).map((c) => c[0]));
   const b = med(costume(readPNG(FIX)).map((c) => c[0]));
   assert.ok(a > 225 && a < 233, `supplied median hue ${a.toFixed(1)}° is not the measured 229°`);
-  /* 207.9° = 213.5 (reference FRAME hue) − 5.6 (our render's own violet shift, §277). Landing on
-     213.5 here would be the naive target and would still render at 219.1°. */
-  assert.ok(Math.abs(b - 207.9) < 2.0,
-    `derived median hue ${b.toFixed(1)}° should sit near the pre-compensated 207.9°, not on the `
-    + 'reference frame hue 213.5° — the render adds +5.6° after the albedo');
+  /* 218.0° = 213.5 (reference FRAME hue) − (−4.5) (midrange of the render's measured per-shot
+     offsets on the two albedo-governed shots, RESULT-bodyshift.md / PREREG-bodyhue5 §2). Landing
+     on 213.5 itself would miss both close-ups toward cyan; the earlier 207.9° pin encoded §277's
+     +5.6° render shift, which RESULT-bodyhue.md refuted (wrong sign, contaminated average). */
+  assert.ok(Math.abs(b - 218.0) < 0.5,
+    `derived median hue ${b.toFixed(1)}° should sit on the offset-compensated 218.0° `
+    + '(PREREG-bodyhue5 §2), not on the reference frame hue 213.5°');
 });
 
 test('non-costume colours are byte-identical: shorts, sash, belt, mask and white are not recoloured', () => {

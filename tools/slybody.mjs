@@ -2,29 +2,32 @@
  * slybody.mjs — derive `sly_body_fix.png` from the supplied `sly_body.png` by rotating the
  * costume blue back onto the hue the render was built to receive. Critic 9 D2, §277/§278.
  *
- * ## Why a rotation, and why exactly -21.1°
+ * ## Why a rotation, and why exactly -11.3°
  *
  * §277 measured the supplied albedo over 40 209 shirt-blue texels and found two different things:
  *
  *   saturation  0.927  against the reference's 0.909 — CORRECT, and consistent (p05-p95 = 0.080)
- *   hue         229.0° against the reference's 213.5° — violet
+ *   hue         229.3° against the reference's 213.5° — violet (circular median, run-4 scorer)
  *
  * So this tool must move hue and must not touch saturation or value. An HSV hue rotation does
  * exactly that and is exactly invertible, which also makes the A/B honest: `?body=raw` is not an
  * approximation of the original, it IS the original file.
  *
- * The rotation is NOT `213.5 - 229.0 = -15.5`. That is the naive target and it under-corrects,
- * because the render itself adds violet. §277 measured that shift as `frame 234.6 - albedo 229.0
- * = +5.6°`, so an albedo sitting at 213.5° would still render at 219.1°. Pre-compensating:
+ * The rotation is NOT `213.5 - 229.3 = -15.8`. That naive target ignores the render's own
+ * per-shot hue offset, measured per shot by the same-boot swap instrument (RESULT-bodyshift.md,
+ * arm-mean, fresh boots reproduced to 0.4°) on the only two canonical shots where the albedo
+ * governs screen hue at all (§281):
  *
- *     target albedo = 213.5 - 5.6 = 207.9°      rotation = 207.9 - 229.0 = -21.1°
+ *     dS(sly-closeup) = -0.9°     dS(sly-perch) = -8.2°     midrange -4.5°
+ *     target albedo   = 213.5 - (-4.5) = 218.0°     rotation = 218.0 - 229.3 = -11.3°
  *
- * **The check that this is right, and it is not circular.** The +5.6° was derived from today's
- * asset, so using it to predict today's frame proves nothing. Applying it to the ORIGINAL model is
- * a real prediction: `SlyModel.js` shipped a hand-authored shirt at `0x2f7fc4` = **207.8°**, and
- * the independently derived target is **207.9°** — 0.1° apart. The original blue was chosen so it
- * landed on the reference AFTER the render's violet shift, and that compensation was lost when the
- * supplied asset replaced it (§278). This tool restores the compensation, not a taste preference.
+ * That centres both close-ups in the reference band 213.5 ± 6.0° (predicted landings 217.1° and
+ * 209.8°). **The earlier -21.1° is refuted history**: it pre-compensated for §277's +5.6° render
+ * shift, which RESULT-bodyhue.md showed was an average over shadow-dominated outliers with the
+ * wrong sign per shot — measured, the render shifts the costume toward CYAN, per shot, not
+ * violet. (The 207.8° hand-authored original that corroborated -21.1° descended from the same
+ * frame population as the +5.6°, so its agreement was not independent.) Sealed:
+ * PREREG-bodyhue5.md.
  *
  * ## What is touched
  *
@@ -33,7 +36,7 @@
  * asserts that. Cap, gloves and boots ARE rotated: they are the same brand blue as the shirt and
  * §196's "ONE blue" rule applies to the whole costume, not just the torso.
  *
- * Usage:  node tools/slybody.mjs [outPath] [--deg=-21.1]
+ * Usage:  node tools/slybody.mjs [outPath] [--deg=-11.3]
  * Prints before/after hue and saturation so the claim is checkable from the run, not from here.
  */
 import { readPNG } from './png.mjs';
@@ -43,7 +46,7 @@ import zlib from 'node:zlib';
 const SRC = new URL('../src/assets/sly-dl/sly_body.png', import.meta.url).pathname;
 const argv = process.argv.slice(2);
 const OUT = argv.find((a) => !a.startsWith('--')) || '/tmp/sly_body_fix.png';
-const DEG = Number((argv.find((a) => a.startsWith('--deg=')) || '--deg=-21.1').split('=')[1]);
+const DEG = Number((argv.find((a) => a.startsWith('--deg=')) || '--deg=-11.3').split('=')[1]);
 
 /* The costume-blue window. Deliberately wide enough to include cap/gloves/boots and narrow
    enough to exclude the tan shorts and the red sash, both of which are far outside it. */
