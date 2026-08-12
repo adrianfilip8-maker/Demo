@@ -23584,3 +23584,64 @@ pre-registration's own clause, and **nothing shipped** — `TUNE`, `EMITTERS`, `
 the PLANAR clamp exemption are all bit-identical to before this task. The next candidate must
 treat the impact family (ring size/colour + flash + spark gains) as one composition, under
 gates that can actually validate, which needs this section's finding 3 solved first.
+
+## §297 — §294(2) EXECUTED AND PIXEL-VERIFIED: the owner-supplied cane ships as Sly's cane — sly-cane.glb adopted into Cane.js's frame, shape untouched
+
+Records: `PREREG-caneswap.md` (sealed b795b40) → `RESULT-caneswap.md` (NOT-VERIFIED, one
+borrowed constant) → `PREREG-caneswap2.md` (sealed a1ca254, the constant derived) →
+`RESULT-caneswap2.md` (**VERIFIED**). Integration commit 5ecc80b. Frames under
+`shots/caneswap/` and `shots/caneswap2/`.
+
+**What ships.** The glb's `Cane` primitive (306 verts / 258 tris) renders as the shipped
+character's cane, socketed to `handR` on the solved grip exactly where the procedural prop
+sat. `src/player/CaneAsset.js` parses the file off its own bytes — no GLTFLoader, so the
+offline guards (`tests/dlrig.test.mjs`) measure the same cane that renders and nothing hangs
+on the embedded images — and `Cane.adoptAsset` conforms it with **similarity transforms
+only** (owner constraint: *do not alter the shape of the model*): uniform ×0.7636 measured
+bbox-to-bbox onto the procedural cane's 1.5150 m (butt −0.8140 / crook top +0.7010 reproduced
+exactly, so the `dropBelowGrip` tip-plant and every `caneall.mjs` figure carry over), one
+rotation about Y from the measured hook bend (+X in the file → this frame's +Z forward), one
+translation of the shaft axis onto local Y. The authored albedo (64 KB jpg, decoded in-browser
+to 1024²) is the cel `map` on `slydlrig:cane` at colour 0xffffff, TUNE response. Procedural
+`Cane.js` remains the FRAME — `hookPoint`/`tipPoint`/`centerline` keep the aim+contact
+contract all 52 clips were authored against — and the fallback if the parse ever fails.
+
+**What deliberately does NOT ship.** (1) The glb's second primitive, `shader`: measured on
+the bytes it is a baked **inverted-hull outline shell** (normals inward 170/270, encloses the
+surface by millimetres, UVs on one small patch) — a render device, not cane shape; this build
+inks through ONE system (critic 7 #3), so the house `Shading.outline` wraps the adopted
+geometry instead. (2) The metalRough/normal maps AND their values — §266's measured refusal
+stands (metal on the unmapped cane costs −37..−41 L at p99 while `uSpecNormPow` is 0; re-run
+`tools/canegold.mjs` when specnorm ships). (3) `vertexColors` on the asset material: the glb
+has no COLOR_0, and an unbound colour attribute multiplies albedo to black (§291's defect
+class).
+
+**Register moves.** The asset left `staging/` for `src/assets/sly-cane/` — bundled and hashed
+by Vite via `new URL(..., import.meta.url)` (dist emit verified byte-identical); nothing in
+`public/`, nothing fetched outside the build. PROVENANCE.md follows the asset; **licence
+still UNKNOWN**, recorded not laundered — §294 is the owner's standing call applied to a file
+that now ships. `tests/bundle.test.mjs`'s moved-asset ledger and provenance walk accept
+`src/assets`; `tests/dlrig.test.mjs` pins the conform (306/774, bbox ±2 mm, hook to +Z,
+`tipPoint` on contract) and now measures digit-to-cane to the **surface** (exact
+point-to-triangle) — the nearest-vertex proxy read a held hand at 68 mm on a shaft whose
+rings live only at its ends; registered thresholds unchanged, held 31.8 / open 66.9 mm still
+separate at the 60 mm bar.
+
+**The verification, and its one lesson.** Run 1: every substance bar PASSED (geometry counts
+on the GPU, warn line, decoded albedo, restore-0 masks, zero console errors — incidentally
+the first boot confirming §295's zero-error manifest) but the sly-closeup mask measured
+40982 px against a 40000 ceiling **borrowed from canegold** — calibrated on the procedural
+cane this swap retired. Scored NOT-VERIFIED as registered, no post-hoc reclassification;
+the ceiling was re-derived in the open (55000, between the measured true-footprint and
+contamination regimes) under a fresh seal and the re-run PASSED at 41084 px — 0.25% from
+run 1, an order of magnitude inside §269's cross-boot drift. Lesson, again: **an instrument
+constant you did not derive for THIS subject is a forecast you have not made** (canegold run 1
+learned it for masks-too-large; this pair learned it for ceilings-too-tight). Both runs
+tree-stamped per §296's "one locked boot is NOT one tree"; cane-side files stable across both.
+
+**Residuals, honest.** The asset shaft is thin and dark against dark floor tiles (authored
+proportions; the ink line keeps it legible) and the hook's lit edge carries a warm bloom
+fringe at closeup — aesthetic ranking is the critic's, not this seal's. The solved grip
+(22.2 mm) closes on a shaft whose surface sits ~2 mm inside it at the fingers — measured,
+visible in no frame so far. The asset hook's arc is coarser than the procedural 192° sample
+(it is a 258-tri model); the owner chose it looking at it.
