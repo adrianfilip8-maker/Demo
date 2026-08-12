@@ -23357,3 +23357,24 @@ Exoneration chain to date, every step sealed with a registered forecast: rims §
 (RESULT-litshade UNIFORM), all-tonemap (this run). Forecast record 2/10. Next: sealed
 debugTerm bisection of the toon shading terms (attractor4), bars derived from THIS texture
 pair's record only.
+
+## §287 — the §281 mixer has no owner term: saturated blue shade light crushes the costume's hue multiplicatively, and the codebase's own inert uShadowHold is the designed remedy
+
+RESULT-attractor4 (scene-side lattice on the built-in attribution arms, rawscene channel,
+all gates green): neutralFill/neutralShadow/subjWarmShade all score NULL as owners — but the
+`nowarmshade` arm is diagnostically decisive by going NEGATIVE: removing the subject's
+warm-shade lerp (shipped 0.65 by creamfix) drops swing survival by 0.17–0.34 at every range,
+while greying the shadow colour recovers +0.17 on hero. Mechanism, intervention-proven from
+both directions: a saturated coloured shade light multiplying the albedo pulls output hue
+toward the light's hue, crushing authored hue differences — `fillSky` #6fa8d8 and
+`shadowHue` #2a3f66 are strongly blue, mid-range framings are ~60–70% shade-lit, close-ups
+are key-lit and escape. Every prior exoneration (§284 rims, miphue mips, §285 ink, erosion
+edges, litshade shade-band, attractor3b all-tonemap) is consistent: none of those live in
+the multiplication.
+
+Consequences: (1) D2's mid-range residue is not a defective term but shading arithmetic;
+(2) the remedy already designed for it is §269's uShadowHold — the material holding its own
+hue in shade — shipped inert at 0.0 and parked as D1's lever, so D1 and D2-residue converge
+on one knob; (3) subjWarmShade is creamfix-certified and protected — raising it for the
+costume without re-running creamfix's V-gates is forbidden. Forecast ledger for the hunt:
+2/11.
