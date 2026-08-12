@@ -23226,3 +23226,39 @@ is a separate question from the *hue* half, and nothing here separates them: a f
 monochrome and well-exposed, or varied and crushed. The measurements above address the hue half
 only. Whoever takes this seals before capturing, registers deltas against a same-run control
 (§273), and must not treat the r9 numbers as a PASS bar.
+
+## §281 — the costume's albedo governs its screen hue only at close range: at 6–10 m half of it is a blue ≈222° attractor, and past ~10 m the albedo signal is gone entirely
+
+Established by `RESULT-bodyshift.md` (sealed `PREREG-bodyshift.md`), which ran run 4's A/B
+instrument across the full canonical set. Eleven shots, all captured, run valid (P-S 2/2 —
+`sly-closeup` reproduced run 4 to 0.1°, `sly-perch` to 0.4°, across fresh boots).
+
+### The distance ladder
+
+| range | shots | what the swap shows |
+|---|---|---|
+| ≤ 4 m | `sly-closeup`, `sly-perch` | authored 21.1° swing survives in full (arm gaps 0.2° / 1.2°) |
+| 6–10 m | `hero`, `combat`, `dunes`, `interior` | swing compressed to 9.6–14.5°; both arms pulled toward ≈222° |
+| ≥ 10 m | `traversal`, `night`, `temple`, `courtyard` | ≥18-level mask dies — pure filtered blend |
+
+The mid-range attractor is blue (arm midpoints 221.7–227.7°), acts on the BULK of costume
+pixels (a 1-px edge on a ~65-px character is ~6% of its pixels and cannot halve a median),
+and is present INDOORS (`interior`, 6.9 m, compresses like the open-desert wides) — so pure
+distance haze does not explain it, and mip blending inside the body texture is refuted by
+sign (its non-costume texels are fur-brown and would pull toward red). Surviving candidates:
+a whole-surface additive blue light term (rim / ambient), or haze applied without an indoor
+exemption. An eroded-mask A/B (interior-only pixels) plus a rim/ambient toggle separates
+them; that measurement needs its own seal.
+
+### What this bounds
+
+- §277/§278's texture account of D2 is now scoped: the supplied albedo's violet drift is
+  real, but it can only be *seen* in close-ups. The canonical set's violet costume reads are
+  majority carried by pixels the albedo does not govern.
+- Run 4's P1 ("rotation survives the render") is true at ≤ 4 m and measurably false past
+  ~6 m. Any future costume-hue A/B that scores a mid-distance shot against an albedo-derived
+  target is scoring noise — CAL-R (arm agreement ≤ 2.0°) is the guard that catches it, and it
+  belongs in every such seal from now on.
+- The bodyshift decision itself returned UNDERPOWERED (|D| = 2 of the required 4): the
+  TEXTURE-VIABLE vs RENDER-DEFECT question as posed is unanswerable on the canonical set,
+  because the set contains only two shots where the question's quantity exists.
