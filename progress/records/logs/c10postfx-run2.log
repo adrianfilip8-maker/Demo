@@ -1,0 +1,315 @@
+orig  /home/user/Demo/src/render/PostFX.js  sha256 c37d5c2df2733ca2202f65d35fdf82bb44d58f48da9b5b8b460294b0f1f36388
+cand  /home/user/Demo/progress/records/critic10postfx/PostFX.cand.js sha256 cd8ff982463c0ed0b901198f245011598e1a89a886e65b8883d9cb3b5a2e55c5
+· waiting for capture lock (10s, held by pid 17412)
+· waiting for capture lock (21s, held by pid 17412)
+· waiting for capture lock (31s, held by pid 17412)
+· waiting for capture lock (41s, held by pid 17412)
+· waiting for capture lock (52s, held by pid 17412)
+· waiting for capture lock (63s, held by pid 17412)
+· waiting for capture lock (74s, held by pid 17412)
+· waiting for capture lock (85s, held by pid 17412)
+· waiting for capture lock (95s, held by pid 16261)
+· waiting for capture lock (105s, held by pid 16261)
+· waiting for capture lock (116s, held by pid 16261)
+· waiting for capture lock (126s, held by pid 16261)
+· waiting for capture lock (136s, held by pid 16261)
+· waiting for capture lock (147s, held by pid 16261)
+· waiting for capture lock (158s, held by pid 25087)
+· waiting for capture lock (168s, held by pid 25087)
+· waiting for capture lock (179s, held by pid 25087)
+· waiting for capture lock (189s, held by pid 25087)
+· waiting for capture lock (200s, held by pid 25087)
+· waiting for capture lock (210s, held by pid 25087)
+· waiting for capture lock (221s, held by pid 25087)
+· waiting for capture lock (232s, held by pid 25087)
+· waiting for capture lock (242s, held by pid 25087)
+· waiting for capture lock (253s, held by pid 25087)
+· waiting for capture lock (264s, held by pid 25087)
+· waiting for capture lock (275s, held by pid 25087)
+· waiting for capture lock (285s, held by pid 25087)
+· waiting for capture lock (295s, held by pid 25087)
+· waiting for capture lock (306s, held by pid 25087)
+· waiting for capture lock (317s, held by pid 25087)
+· waiting for capture lock (327s, held by pid 25087)
+· waiting for capture lock (338s, held by pid 25087)
+· waiting for capture lock (349s, held by pid 25087)
+· waiting for capture lock (360s, held by pid 25087)
+· waiting for capture lock (370s, held by pid 25087)
+· waiting for capture lock (381s, held by pid 25087)
+· waiting for capture lock (391s, held by pid 25087)
+· waiting for capture lock (402s, held by pid 25087)
+· waiting for capture lock (412s, held by pid 25087)
+· waiting for capture lock (422s, held by pid 25087)
+· waiting for capture lock (433s, held by pid 25087)
+· waiting for capture lock (443s, held by pid 25087)
+· waiting for capture lock (453s, held by pid 25087)
+· waiting for capture lock (464s, held by pid 25087)
+· waiting for capture lock (474s, held by pid 25087)
+· waiting for capture lock (485s, held by pid 25087)
+· waiting for capture lock (496s, held by pid 25087)
+· waiting for capture lock (507s, held by pid 25087)
+· waiting for capture lock (517s, held by pid 25087)
+· waiting for capture lock (527s, held by pid 25087)
+· waiting for capture lock (538s, held by pid 25087)
+· waiting for capture lock (549s, held by pid 25087)
+· waiting for capture lock (560s, held by pid 25087)
+· waiting for capture lock (570s, held by pid 25087)
+· waiting for capture lock (581s, held by pid 25087)
+· waiting for capture lock (592s, held by pid 25087)
+· waiting for capture lock (602s, held by pid 25087)
+· waiting for capture lock (612s, held by pid 25087)
+· waiting for capture lock (623s, held by pid 25087)
+· waiting for capture lock (634s, held by pid 25087)
+· waiting for capture lock (645s, held by pid 25087)
+· waiting for capture lock (655s, held by pid 25087)
+· waiting for capture lock (666s, held by pid 25087)
+· waiting for capture lock (677s, held by pid 25087)
+· waiting for capture lock (687s, held by pid 25087)
+· waiting for capture lock (698s, held by pid 25087)
+· waiting for capture lock (708s, held by pid 25087)
+· waiting for capture lock (719s, held by pid 25087)
+· waiting for capture lock (730s, held by pid 25087)
+· waiting for capture lock (740s, held by pid 25087)
+· waiting for capture lock (750s, held by pid 25087)
+· waiting for capture lock (761s, held by pid 25087)
+· waiting for capture lock (772s, held by pid 25087)
+· waiting for capture lock (783s, held by pid 25087)
+· waiting for capture lock (794s, held by pid 25087)
+· waiting for capture lock (805s, held by pid 25087)
+· waiting for capture lock (816s, held by pid 25087)
+· waiting for capture lock (826s, held by pid 25087)
+· waiting for capture lock (836s, held by pid 25087)
+· waiting for capture lock (846s, held by pid 25087)
+· waiting for capture lock (857s, held by pid 25087)
+· waiting for capture lock (867s, held by pid 25087)
+· waiting for capture lock (878s, held by pid 25087)
+· waiting for capture lock (888s, held by pid 25087)
+· waiting for capture lock (898s, held by pid 25087)
+· waiting for capture lock (908s, held by pid 25087)
+· waiting for capture lock (918s, held by pid 25087)
+· waiting for capture lock (929s, held by pid 25087)
+· waiting for capture lock (940s, held by pid 25087)
+· waiting for capture lock (950s, held by pid 25087)
+· waiting for capture lock (960s, held by pid 25087)
+· waiting for capture lock (971s, held by pid 25087)
+· waiting for capture lock (981s, held by pid 25087)
+· waiting for capture lock (992s, held by pid 25087)
+· waiting for capture lock (1003s, held by pid 25087)
+· waiting for capture lock (1014s, held by pid 25087)
+· waiting for capture lock (1025s, held by pid 25087)
+· waiting for capture lock (1036s, held by pid 25087)
+· waiting for capture lock (1046s, held by pid 25087)
+· waiting for capture lock (1056s, held by pid 25087)
+· waiting for capture lock (1067s, held by pid 25087)
+· waiting for capture lock (1077s, held by pid 25087)
+· waiting for capture lock (1087s, held by pid 25087)
+· waiting for capture lock (1097s, held by pid 25087)
+· waiting for capture lock (1108s, held by pid 25087)
+· waiting for capture lock (1118s, held by pid 25087)
+· waiting for capture lock (1128s, held by pid 25087)
+· waiting for capture lock (1138s, held by pid 25087)
+· waiting for capture lock (1149s, held by pid 25087)
+· waiting for capture lock (1160s, held by pid 25087)
+· waiting for capture lock (1170s, held by pid 25087)
+· waiting for capture lock (1181s, held by pid 25087)
+· waiting for capture lock (1191s, held by pid 25087)
+· waiting for capture lock (1201s, held by pid 25087)
+· waiting for capture lock (1212s, held by pid 25087)
+· waiting for capture lock (1223s, held by pid 25087)
+· waiting for capture lock (1233s, held by pid 25087)
+· waiting for capture lock (1244s, held by pid 25087)
+· waiting for capture lock (1254s, held by pid 25087)
+· waiting for capture lock (1265s, held by pid 25087)
+· waiting for capture lock (1275s, held by pid 25087)
+· waiting for capture lock (1286s, held by pid 25087)
+· waiting for capture lock (1297s, held by pid 25087)
+· waiting for capture lock (1307s, held by pid 25087)
+· waiting for capture lock (1317s, held by pid 25087)
+· waiting for capture lock (1328s, held by pid 25087)
+· waiting for capture lock (1339s, held by pid 25087)
+· waiting for capture lock (1349s, held by pid 25087)
+· waiting for capture lock (1359s, held by pid 25087)
+· waiting for capture lock (1370s, held by pid 25087)
+· waiting for capture lock (1380s, held by pid 25087)
+· waiting for capture lock (1391s, held by pid 25087)
+· waiting for capture lock (1401s, held by pid 25087)
+· waiting for capture lock (1412s, held by pid 25087)
+· waiting for capture lock (1423s, held by pid 25087)
+· waiting for capture lock (1434s, held by pid 25087)
+· waiting for capture lock (1445s, held by pid 25087)
+· waiting for capture lock (1456s, held by pid 25087)
+· waiting for capture lock (1466s, held by pid 25087)
+· waiting for capture lock (1477s, held by pid 25087)
+· waiting for capture lock (1487s, held by pid 25087)
+· waiting for capture lock (1498s, held by pid 25087)
+· waiting for capture lock (1509s, held by pid 25087)
+· waiting for capture lock (1519s, held by pid 25087)
+· waiting for capture lock (1529s, held by pid 25087)
+· waiting for capture lock (1540s, held by pid 25087)
+· waiting for capture lock (1551s, held by pid 25087)
+· waiting for capture lock (1562s, held by pid 25087)
+· waiting for capture lock (1572s, held by pid 25087)
+· waiting for capture lock (1583s, held by pid 25087)
+· waiting for capture lock (1593s, held by pid 25087)
+· waiting for capture lock (1603s, held by pid 25087)
+· waiting for capture lock (1614s, held by pid 30311)
+· waiting for capture lock (1625s, held by pid 30311)
+· waiting for capture lock (1636s, held by pid 30311)
+· waiting for capture lock (1647s, held by pid 30311)
+· waiting for capture lock (1657s, held by pid 30311)
+· waiting for capture lock (1668s, held by pid 30311)
+· waiting for capture lock (1678s, held by pid 30311)
+· waiting for capture lock (1689s, held by pid 30311)
+· waiting for capture lock (1700s, held by pid 30311)
+· waiting for capture lock (1710s, held by pid 30311)
+· waiting for capture lock (1721s, held by pid 30311)
+· waiting for capture lock (1731s, held by pid 30311)
+· waiting for capture lock (1741s, held by pid 30311)
+· waiting for capture lock (1752s, held by pid 30311)
+· waiting for capture lock (1763s, held by pid 30311)
+· waiting for capture lock (1773s, held by pid 30311)
+· waiting for capture lock (1784s, held by pid 30311)
+· waiting for capture lock (1795s, held by pid 30311)
+· waiting for capture lock (1805s, held by pid 30311)
+· waiting for capture lock (1816s, held by pid 30311)
+· waiting for capture lock (1827s, held by pid 30311)
+· waiting for capture lock (1837s, held by pid 30311)
+· waiting for capture lock (1848s, held by pid 30311)
+· waiting for capture lock (1859s, held by pid 30311)
+· waiting for capture lock (1869s, held by pid 30311)
+· waiting for capture lock (1880s, held by pid 30311)
+· waiting for capture lock (1890s, held by pid 30311)
+· waiting for capture lock (1901s, held by pid 30311)
+· waiting for capture lock (1912s, held by pid 30311)
+· waiting for capture lock (1923s, held by pid 30311)
+· waiting for capture lock (1933s, held by pid 30311)
+· waiting for capture lock (1943s, held by pid 30311)
+· waiting for capture lock (1954s, held by pid 30311)
+· waiting for capture lock (1964s, held by pid 30311)
+· waiting for capture lock (1975s, held by pid 30311)
+· waiting for capture lock (1985s, held by pid 30311)
+· waiting for capture lock (1996s, held by pid 30311)
+· waiting for capture lock (2006s, held by pid 30311)
+· waiting for capture lock (2017s, held by pid 30311)
+· waiting for capture lock (2027s, held by pid 30311)
+· waiting for capture lock (2038s, held by pid 30311)
+· waiting for capture lock (2048s, held by pid 30311)
+· waiting for capture lock (2059s, held by pid 30311)
+· waiting for capture lock (2069s, held by pid 30311)
+· waiting for capture lock (2080s, held by pid 30311)
+· waiting for capture lock (2090s, held by pid 30311)
+· waiting for capture lock (2101s, held by pid 30311)
+· waiting for capture lock (2112s, held by pid 30311)
+· waiting for capture lock (2123s, held by pid 30311)
+· waiting for capture lock (2133s, held by pid 30311)
+· waiting for capture lock (2143s, held by pid 30311)
+· waiting for capture lock (2154s, held by pid 30311)
+· waiting for capture lock (2164s, held by pid 30311)
+· waiting for capture lock (2174s, held by pid 30311)
+· waiting for capture lock (2185s, held by pid 30311)
+· waiting for capture lock (2195s, held by pid 30311)
+· waiting for capture lock (2205s, held by pid 30311)
+· waiting for capture lock (2216s, held by pid 30311)
+· waiting for capture lock (2226s, held by pid 30311)
+· waiting for capture lock (2237s, held by pid 30311)
+· waiting for capture lock (2248s, held by pid 30311)
+· waiting for capture lock (2258s, held by pid 30311)
+· waiting for capture lock (2268s, held by pid 30311)
+· waiting for capture lock (2279s, held by pid 30311)
+· waiting for capture lock (2290s, held by pid 30311)
+· waiting for capture lock (2301s, held by pid 30311)
+· waiting for capture lock (2311s, held by pid 30311)
+· waiting for capture lock (2321s, held by pid 30311)
+· waiting for capture lock (2331s, held by pid 30311)
+· waiting for capture lock (2342s, held by pid 30311)
+· waiting for capture lock (2353s, held by pid 30311)
+· waiting for capture lock (2364s, held by pid 30311)
+· waiting for capture lock (2374s, held by pid 30311)
+· waiting for capture lock (2385s, held by pid 30311)
+· waiting for capture lock (2396s, held by pid 30311)
+· waiting for capture lock (2407s, held by pid 30311)
+· waiting for capture lock (2418s, held by pid 30311)
+· waiting for capture lock (2428s, held by pid 30311)
+· waiting for capture lock (2439s, held by pid 30311)
+· waiting for capture lock (2450s, held by pid 30311)
+· waiting for capture lock (2461s, held by pid 30311)
+· waiting for capture lock (2471s, held by pid 30311)
+· waiting for capture lock (2482s, held by pid 30311)
+· waiting for capture lock (2492s, held by pid 30311)
+· waiting for capture lock (2502s, held by pid 30311)
+· waiting for capture lock (2513s, held by pid 30311)
+treestamp: head 04d7b7682c35ff671356f0afc61a8b33c6b0ccb2 dirty src: (none)
+installed candidate -> /home/user/Demo/src/render/PostFX.js (sha cd8ff982463c0ed0b901198f245011598e1a89a886e65b8883d9cb3b5a2e55c5)
+renderer: ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)
+   ! textures: prewarm 23 recipes in 1.17s at size 1024 on 3 workers (125 MB, 23 baked / 0 generated)
+   ! KayKit (props): 36 placed from 11 models, 0 failed, 31064 tris, 29 colliders, 36 contact decals, 0 hulls
+   ! SlyModelDLRig: relaxed 6070 glove vertices, max move 17.8 (asset units)
+   ! SlyModelDLRig: staff submesh dropped (258 tris), sly-cane.glb (§294) socketed to handR (grip 22.2 mm, 258 tris)
+--- traversal.base  294s  t=0.25 tod=0.77  bloom=true T=[2.2,0.3] subjCut=0  subjBBox=[441,195,735,390]
+    applied: baseline
+--- traversal.subj1  46s  t=0.25 tod=0.77  bloom=true T=[2.2,0.3] subjCut=1  subjBBox=[441,195,735,390]
+    applied: bloomSubjectCut=1
+--- traversal.T260  45s  t=0.25 tod=0.77  bloom=true T=[2.6,0.3] subjCut=0  subjBBox=[441,195,735,390]
+    applied: bloomThreshold=2.6 bloomKnee=0.3
+--- traversal.T290  46s  t=0.25 tod=0.77  bloom=true T=[2.9,0.2] subjCut=0  subjBBox=[441,195,735,390]
+    applied: bloomThreshold=2.9 bloomKnee=0.2
+--- traversal.bloomoff  52s  t=0.25 tod=0.77  bloom=false T=[2.9,0.2] subjCut=0  subjBBox=[441,195,735,390]
+    applied: bloom OFF
+--- traversal.sparkoff  47s  t=0.25 tod=0.77  bloom=true T=[2.2,0.3] subjCut=0  subjBBox=[441,195,735,390]
+    applied: OFF system sparkles
+--- traversal.back  48s  t=0.25 tod=0.77  bloom=true T=[2.2,0.3] subjCut=0  subjBBox=[441,195,735,390]
+    applied: baseline
+--- night.base  285s  t=0.25 tod=0.02  bloom=true T=[2.2,0.3] subjCut=0  subjBBox=[638,354,846,503]
+    applied: baseline
+--- night.subj1  51s  t=0.25 tod=0.02  bloom=true T=[2.2,0.3] subjCut=1  subjBBox=[638,354,846,503]
+    applied: bloomSubjectCut=1
+--- night.bloomoff  52s  t=0.25 tod=0.02  bloom=false T=[2.2,0.3] subjCut=1  subjBBox=[638,354,846,503]
+    applied: bloom OFF
+--- night.nosandhigh  52s  t=0.25 tod=0.02  bloom=true T=[2.2,0.3] subjCut=0  subjBBox=[638,354,846,503]
+    applied: OFF batch sandHigh
+--- night.back  52s  t=0.25 tod=0.02  bloom=true T=[2.2,0.3] subjCut=0  subjBBox=[638,354,846,503]
+    applied: baseline
+    [night] largest base/nosandhigh component: 1616px
+--- interior.base  117s  t=0.25 tod=0.5  bloom=true T=[2.2,0.3] subjCut=0  subjBBox=[466,331,820,654]
+    applied: baseline
+--- interior.subj1  21s  t=0.25 tod=0.5  bloom=true T=[2.2,0.3] subjCut=1  subjBBox=[466,331,820,654]
+    applied: bloomSubjectCut=1
+--- interior.bloomoff  20s  t=0.25 tod=0.5  bloom=false T=[2.2,0.3] subjCut=1  subjBBox=[466,331,820,654]
+    applied: bloom OFF
+--- interior.back  21s  t=0.25 tod=0.5  bloom=true T=[2.2,0.3] subjCut=0  subjBBox=[466,331,820,654]
+    applied: baseline
+--- sly-closeup.base  359s  t=0.25 tod=0.8  bloom=true T=[2.2,0.3] subjCut=0  subjBBox=[220,-38,1211,926]
+    applied: baseline
+--- sly-closeup.subj1  50s  t=0.25 tod=0.8  bloom=true T=[2.2,0.3] subjCut=1  subjBBox=[220,-38,1211,926]
+    applied: bloomSubjectCut=1
+--- sly-closeup.back  49s  t=0.25 tod=0.8  bloom=true T=[2.2,0.3] subjCut=0  subjBBox=[220,-38,1211,926]
+    applied: baseline
+--- hero.base  294s  t=0.25 tod=0.79  bloom=true T=[2.2,0.3] subjCut=0  subjBBox=[158,96,661,459]
+    applied: baseline
+--- hero.subj1  53s  t=0.25 tod=0.79  bloom=true T=[2.2,0.3] subjCut=1  subjBBox=[158,96,661,459]
+    applied: bloomSubjectCut=1
+--- hero.back  51s  t=0.25 tod=0.79  bloom=true T=[2.2,0.3] subjCut=0  subjBBox=[158,96,661,459]
+    applied: baseline
+--- temple.base  215s  t=0.25 tod=0.72  bloom=true T=[2.2,0.3] subjCut=0  subjBBox=[596,584,750,716]
+    applied: baseline
+--- temple.nosandhigh  39s  t=0.25 tod=0.72  bloom=true T=[2.2,0.3] subjCut=0  subjBBox=[596,584,750,716]
+    applied: OFF batch sandHigh
+--- temple.nosandlow  39s  t=0.25 tod=0.72  bloom=true T=[2.2,0.3] subjCut=0  subjBBox=[596,584,750,716]
+    applied: OFF batch sandLow
+--- temple.noshimmer  39s  t=0.25 tod=0.72  bloom=true T=[2.2,0.3] subjCut=0  subjBBox=[596,584,750,716]
+    applied: OFF batch shimmer
+--- temple.back  39s  t=0.25 tod=0.72  bloom=true T=[2.2,0.3] subjCut=0  subjBBox=[596,584,750,716]
+    applied: baseline
+    [temple] largest base/nosandhigh component: 2492px
+--- sly-profile.base  211s  t=0.25 tod=0.8  bloom=true T=[2.2,0.3] subjCut=0  subjBBox=[129,33,1079,873]
+    applied: baseline
+--- sly-profile.nosandhigh  41s  t=0.25 tod=0.8  bloom=true T=[2.2,0.3] subjCut=0  subjBBox=[129,33,1079,873]
+    applied: OFF batch sandHigh
+--- sly-profile.nosandlow  40s  t=0.25 tod=0.8  bloom=true T=[2.2,0.3] subjCut=0  subjBBox=[129,33,1079,873]
+    applied: OFF batch sandLow
+--- sly-profile.noshimmer  39s  t=0.25 tod=0.8  bloom=true T=[2.2,0.3] subjCut=0  subjBBox=[129,33,1079,873]
+    applied: OFF batch shimmer
+--- sly-profile.back  38s  t=0.25 tod=0.8  bloom=true T=[2.2,0.3] subjCut=0  subjBBox=[129,33,1079,873]
+    applied: baseline
+    [sly-profile] largest base/nosandhigh component: 0px
+    [sly-profile] < 800 px -> RETRY: step(300, 1/60), full second generation

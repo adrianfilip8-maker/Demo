@@ -1,0 +1,39 @@
+=== validity: back == base, strict ===
+traversal: 0 px OK
+night: 0 px OK
+interior: 0 px OK
+sly-closeup: 0 px OK
+hero: 0 px OK
+temple: 0 px OK
+sly-profile: 0 px OK
+kaykit: MISSING FRAMES
+
+=== item 1: bloomSubjectCut ===
+B1 traversal diff(base,subj1) |dL|>=2: 318 px (>=300: true); bloomoff: 28269 px
+B2 traversal: 318 changed, 0.00% in bbox+128 [441,195,735,390], outside max 46 codes -> FAIL
+B3 traversal: 24 px brightened >2 L -> FAIL
+B2 sly-closeup: 2555 changed, 100.00% in bbox+128 [220,-38,1211,926], outside max 0 codes -> OK
+B3 sly-closeup: 59 px brightened >2 L -> FAIL
+B2 hero: 2 changed, 0.00% in bbox+128 [158,96,661,459], outside max 3 codes -> FAIL
+B3 hero: 1 px brightened >2 L -> FAIL
+B4 LAMPS: subj1 dMean 0.000 (|.|<=1: true); bloomoff dMean -33.508
+B4 MOON: subj1 dMean 0.000 (|.|<=1: true); bloomoff dMean -33.203
+B4 TORCH_A: subj1 dMean 0.000 (|.|<=1: true); bloomoff dMean -10.939
+B4 TORCH_B: subj1 dMean 0.000 (|.|<=1: true); bloomoff dMean -14.824
+B4 vacuity: 4/4 ROIs drop >=2 L with bloom off (need >=2 or the bar is vacuous)
+B5 SUBJ mean 78.87 -> 78.87  p99 154.2 -> 154.2  BALL mean 73.54 -> 73.54 -> FAIL
+report: BALL base 73.5 / bloomoff 68.2 / sparkoff 66.7 (quad vs bloom split)
+report: T260  SUBJ mean 77.82  BALL mean 72.73
+report: T290  SUBJ mean 76.60  BALL mean 71.71
+
+item 1 verdict (pre-looking): NO-SHIP
+
+=== item 2: ghost attribution (sandHigh) ===
+temple: G2 eHigh 19.90 eLow 0.00 eShim 0.00 -> OK
+temple: component 2492px bbox [602,138,656,194] meanDL 19.90 backdrop {"rgb":[9,51,96],"luma":45.5}
+sly-profile: no >=800px component
+night: component 1616px bbox [150,23,199,70] meanDL 12.80 backdrop {"rgb":[8,18,40],"luma":17.5}
+
+item 2 verdict (pre-looking): ATTRIB-PASS (pending the looking) (2/4 fired)
+
+wrote /home/user/Demo/shots/c10postfx/verdict.json — this file evaluates; the RESULT decides, after the crops have been looked at.

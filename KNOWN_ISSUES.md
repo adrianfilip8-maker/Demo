@@ -23645,3 +23645,71 @@ fringe at closeup — aesthetic ranking is the critic's, not this seal's. The so
 (22.2 mm) closes on a shaft whose surface sits ~2 mm inside it at the fingers — measured,
 visible in no frame so far. The asset hook's arc is coarser than the procedural 192° sample
 (it is a 258-tri model); the owner chose it looking at it.
+
+## §298 — critic 10's POSTFX pair: the "clamp the bloom so the character never blooms" knob cannot say "never" (mask candidate sealed, NO-SHIP on three mis-aimed bars, resealed); the "lens ghosts" are §135's sandHigh discs wearing their third name (routed to FX)
+
+Both items sealed in `PREREG-critic10-postfx.md` (070ecdd, before any frame), scored in
+`RESULT-critic10-postfx.md`, frames `shots/c10postfx/` (one boot, dt 0, seven of eight shots'
+`back == base` at strict 0 px; `kaykit` VOID — see the incidents).
+
+### 298.1 The knob the critic named was measured and cannot deliver the ask
+
+The character's bright class (chest/muzzle fur, sclera: albedo·keyRad at tod 0.77–0.80) spans
+scene 2.4–2.8; the torch flame body is 3.0 — 0.4 apart — and a character-worn gold glint
+reaches ~6.7 (bloomcalc.mjs, validated chain). Onset 2.70 zeroes the sclera AND takes the
+flame's feed 0.267 → 0.038; no (T,k) both clears the character and keeps the torch halo, and
+none reaches the glint. Measured live (arms T260/T290): the threshold dims traversal's subject
+region by cutting the SPARKLES' bloom — unselective — while the character class straddles it.
+
+The candidate that does deliver it: `TUNE.bloomSubjectCut` — the bright pass multiplies its
+feed weight by `1 − cut·subject`, subject = the ledger #31 normal-prepass alpha the rim gate
+already consumes (USE_SKINNING draws: Sly, guards, Carmelita; the cane is NOT masked, same
+boundary as `rimSkinExempt`). Fail-closed on every unwritten path; 0 = IEEE-exact no-op.
+Measured at cut 1: **the four wanted-halo ROIs (night lamps, moon, two tomb torches) move
+0.000 while bloom-off moves them −11…−34 L; `night` is 0 changed px whole-frame; sly-closeup
+loses 2,555 px of self-glow at mean 5.2 L, 97.6% darker-side, 100% inside the subject bbox.**
+NO-SHIP anyway: B2's containment tracked only the PLAYER's bbox and the gate (correctly)
+also de-bloomed the traversal roof guard's glowing arms; B3's zero-brighten letter is
+unmeetable under FXAA re-resolve (2.4% of changed px flip brighter at edges); B5 anchored on
+r10's "white ghost + flare ball", which is a sparkle-PULSE-phase phenomenon absent at the
+boot's frozen t=0.25. §26.5: the letter binds; `PREREG-critic10-postfx2.md` reseals with the
+bars aimed at the mask population, an FXAA count allowance, and a changed-population effect
+statistic (§135.1's dilution lesson).
+
+**Traversal's "flare ball at his hip", decomposed for FX's routing pile:** BALL ROI 73.5 base
+/ 68.2 bloom-off / 66.7 sparkles-off at the dim phase (r10's phase reached L≥238 clusters at
+the same static marker positions) — the ball is `SparkleField`'s near-player-boosted marker
+(gain ×1.6 within 12 m, core ≈ scene 6.2 in B), i.e. the same FX item as r10's "sparkles ship
+white". His fur reads pale with bloom off entirely — the AgX shoulder, the standing shading
+item, not bloom.
+
+### 298.2 The r10 "lens ghosts" bind to the §135 mechanism — third naming, zero new owners
+
+temple "pink-purple blobs in the shafts" / kaykit "soft circular ghost mid-floor" /
+sly-profile "huge orange cluster beside his head" / night's mauve circles: the r10 crops
+(`progress/records/crops/c10postfx-r10-*.png`) all carry the `dustPainter` tile signature
+(overlapping hard-edged discs, two-band cel terminator). In-run: diff(base, no-sandHigh)
+produced **temple 2,492 px at +19.90 over the blue star ceiling (backdrop luma 45.5, R/B
+0.09) — reproducing fx20's +17.28 over 44.6/0.13 across boots and trees a third time — and
+night 1,616 px at +12.80**, both gone to clean backdrop in the crops; `sandLow` and `shimmer`
+own 0.00 of the temple component (G2). ATTRIB-PASS as sealed. **POSTFX has no surface for
+this** (the chain has no flare/ghost pass — read end-to-end before the seal); the fix owner
+remains FX: pool `sand_haze`, mechanism = sprite/backdrop PAIRING (§138.3), size/near-fade
+already measured wrong (§138.1–.2), backdrop-gate candidate REJECTED at fx22 r4 D1,
+enclosure/zone gate (§138.5) the surviving ranked candidate — next design needs its own seal.
+
+### 298.3 Two incidents this lane caused, both §186-family, both now runner rules
+
+- Run 1 was launched through a tool-call wrapper; another lane's `launch.sh` hygiene swept it
+  (§78.4's fourth recurrence catching a NEW victim), the kill bypassed `onReleasing`, and the
+  stranded candidate **poisoned the torch lane's boot at the lock handoff** (their run 1
+  aborted unscored, 30a02bd — their hardening caught it, not mine). Recovery: verify the
+  stranded bytes equal the candidate, `git checkout` the file, relaunch DETACHED via
+  `tools/launch.sh`. **Rule: a runner that installs under §186 is launched detached, or its
+  wrapper's death is a tree contamination event.**
+- Run 2's registered ghost-retry (`step(300, 1/60)`) is 300 full SwiftShader renders — the
+  FIFO lock held ~an hour with no frame output; two waiting lanes hit 3-hour give-ups and the
+  coordinator killed the run (sly-profile gen-2 and kaykit lost; the end-of-run manifest
+  reconstructed from the runner's own stdout, disclosed in the RESULT). **Rule: a world-clock
+  advance inside a lock window uses few large-dt frames (`step(15, 0.334)` ≈ same +5 s at
+  1/20th the wall time), and any registered retry states its wall-clock price.**

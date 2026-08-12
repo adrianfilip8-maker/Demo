@@ -1,0 +1,127 @@
+{
+ "void": [
+  "kaykit"
+ ],
+ "bars": {
+  "B1": {
+   "changed": 318,
+   "bloomoffChanged": 28269,
+   "pass": true,
+   "premise": true
+  },
+  "B2_traversal": {
+   "changed": 318,
+   "contained": 0,
+   "outMax": 46,
+   "pass": false
+  },
+  "B3_traversal": {
+   "brightenOver2": 24,
+   "pass": false
+  },
+  "B2_sly-closeup": {
+   "changed": 2555,
+   "contained": 1,
+   "outMax": 0,
+   "pass": true
+  },
+  "B3_sly-closeup": {
+   "brightenOver2": 59,
+   "pass": false
+  },
+  "B2_hero": {
+   "changed": 2,
+   "contained": 0,
+   "outMax": 3,
+   "pass": false
+  },
+  "B3_hero": {
+   "brightenOver2": 1,
+   "pass": false
+  },
+  "B4_LAMPS": {
+   "dSubj": 0,
+   "dBloomoff": -33.508,
+   "pass": true
+  },
+  "B4_MOON": {
+   "dSubj": 0,
+   "dBloomoff": -33.203,
+   "pass": true
+  },
+  "B4_TORCH_A": {
+   "dSubj": 0,
+   "dBloomoff": -10.939,
+   "pass": true
+  },
+  "B4_TORCH_B": {
+   "dSubj": 0,
+   "dBloomoff": -14.824,
+   "pass": true
+  },
+  "B4_vacuity": {
+   "roisBloomCarried": 4,
+   "pass": true
+  },
+  "B5": {
+   "subjMeanD": 0,
+   "subjP99D": 0,
+   "ballMeanD": 0,
+   "pass": false
+  }
+ },
+ "ghosts": {
+  "temple": {
+   "fired": true,
+   "n": 2492,
+   "bbox": [
+    602,
+    138,
+    656,
+    194
+   ],
+   "meanDL": 19.9,
+   "gen": "1",
+   "backdrop": {
+    "rgb": [
+     9,
+     51,
+     96
+    ],
+    "luma": 45.5
+   },
+   "G2": {
+    "eHigh": 19.9,
+    "eLow": 0,
+    "eShim": 0,
+    "pass": true
+   }
+  },
+  "sly-profile": {
+   "fired": false
+  },
+  "night": {
+   "fired": true,
+   "n": 1616,
+   "bbox": [
+    150,
+    23,
+    199,
+    70
+   ],
+   "meanDL": 12.8,
+   "gen": "1",
+   "backdrop": {
+    "rgb": [
+     8,
+     18,
+     40
+    ],
+    "luma": 17.5
+   }
+  }
+ },
+ "notes": [],
+ "item1": "NO-SHIP",
+ "item2": "ATTRIB-PASS (pending the looking)"
+}
