@@ -23506,3 +23506,81 @@ now DERIVED from `STEM_FILES` and each value asserted to exist under `public/ass
 suppression is pinned. Suite 468/468. Residual: a zero-error manifest is unproven until the
 next boot someone else takes; if r11 still logs a 404, this attribution is wrong and the icon
 line is trivially revertible — the derived-stem guard stands either way.
+
+## §296 — D12's "floating rings/discs" are the PICKUPS reading as black hardware, not the FX; one locked boot is NOT one tree; and the combat duplicate-arm bar has now been missed by ~4,000x on three runs under three clock disciplines
+
+Three findings from finishing D12's attribution (PREREG-fxshape2 / RESULT-fxshape2 /
+ADDENDUM2-fxdraw), one per clause of the title.
+
+### 1. The floaters are Pickups' coins and treasures, not `cane_ring`
+
+Critic 10's routing guess ("likely D12's `cane_ring` family") pointed at the wrong module for
+every floater the round named. Three independent lock-free instruments agree (RESULT-fxshape2
+§1, registered as the falsifiable prior in PREREG-fxshape2 before any boot): the courtyard
+"black hook-rings in the sky" and the guard "dark discs" raycast to the coin instances
+(architrave-ledge trail at z 30 seen against sky; scattered coins at y 0.66–0.84); the
+traversal "ring-chain as disconnected ellipses" is the `hook-chain → hall-front-cornice` leg
+of `authorRouteCoins`' trail (a four-point projection match); the interior "black ball above
+Sly's head" is the `vault-floor → sarcophagus` leg's coin #4; the hero "ring above the ledge"
+is `treasure_scarab` inside its bob envelope. Mechanism: `Pickups._mat('gold')` toon metal
+0.85 with §264's specular normalisation still missing (§267's cane family), a tiny silhouette
+wrapped in ink outline, backlit at twilight or at night → black annulus. Owners: PICKUPS
+(coin/treasure read) + SHADING (§264); the sealed suppression run (fxshape2, six arms × five
+shots, `noringfx` carrying the prior) is queued and scores it gate-grade when the FIFO clears.
+
+Do-not-repeat notes for the next "mystery object in frame":
+- **`tools/pixat.mjs` raycasts Architecture + Props ONLY.** Pickups, birds, guards, water,
+  player and every fx mesh are invisible to it. "Raycasts to nothing" means "runtime-only
+  object", never "must be FX".
+- **Projection arithmetic is the free instrument.** Coin trails (`authorRouteCoins` over
+  `A.api.route`), treasures (`TREASURES`), bird orbits (`_buildBirds`) are deterministic from
+  committed constants; projecting them through `SHOTS` cameras named every floater before any
+  capture was spent. The temple/night "lens-ghost" dark specks land where the sky-bird
+  arithmetic puts birds — recorded for the LIGHTING/POSTFX ghost item.
+- One defect name (D12) had quietly become two defects in two modules: the pickups floaters
+  AND the combat donut. The donut half really is `cane_ring`-shaped — but see finding 3.
+
+### 2. One locked boot is not one tree (and the onLocked provenance snapshot goes stale before vite spawns)
+
+fxshape run 3 passed SUBJECT PRESENT (nocane removes 817,704 px) then VOIDed on VALIDITY.
+Measured cause: the FIFO capture lock serialises CAPTURES, not COMMITS — `f4056f4`
+(torchlight, 18:59:16) landed in the shared working tree between the `noring` (18:57) and
+`noflash` (19:00) arms, and the later arms rendered the new tree: `noflash` came back +0.097
+mean L BRIGHTER than base over the brazier pools, which removing an ADDITIVE sprite cannot
+produce; the right third of the frame is bit-stable, so the delta is the arriving local-light
+term. `SANDS_NO_HMR` (hmr:false + watch ignored) did not keep it out. The torchlight lane hit
+the same class the same evening from the other side (30a02bd: "foreign PostFX arm raced the
+lock handoff") and independently hardened its runner.
+
+Standing rule, extending §273/§275.1: **a multi-arm capture run must stamp the tree PER
+CAPTURE — `{sha, srcTree(HEAD:src), dirty}` — and its scorer must VOID attribution across any
+stamp change or missing stamps.** `fxshape.mjs`, `fxshape2.mjs`, `fxdraw.mjs` and all three
+scorers now do (`eeccb0a`, `49064da`); the "same-tree by construction because one boot" rider
+is withdrawn everywhere it was printed. The stamps also caught the inverse defect in their
+first outing: fxdraw's onLocked sha (a1ca254) was already stale by first capture — the arms
+all stamped 30a02bd — so the onLocked snapshot is a queue-time record, not same-tree evidence;
+only per-capture stamps are. Pre-stamp runs re-run rather than self-exempt (§273 rule 5).
+
+### 3. The combat duplicate-arm bar (<200 px) is unachievable on this box, and §275.1's diagnosis of run 2 was incomplete
+
+Three same-boot `base` vs `base2` pairs on `combat`, three clock disciplines, one number:
+run 2 (dt 1/60, no rewind) 751,902 px; run 3 (rewind) 780,628 px; fxdraw (rewind, six stamps
+identical, same tree BY MEASUREMENT) 793,969 px. Signature each time: mean |d| ≈ 11–12
+RGB-sum, only ~4% of changed pixels at |d| ≥ 30, flats included (92.9% of flat pixels moved in
+run 3), global mean L sagging ~−0.006 over ~17 minutes of captures. So the rewind (§275.1) is
+necessary but NOT sufficient on `combat`: something integrates REAL time or CAPTURE COUNT —
+the world clock was rewound and identical (t = 0.2833 in every arm) — and run 2's 751,902 px
+should no longer be cited as proof the missing rewind was the cause. Until the sag's mechanism
+is found, no combat A/B on this box can pass a frame-wide duplicate check, and any that
+appears to should be distrusted. Arm-to-arm deltas in run 3 ran 79k–190k versus ~780k
+end-to-end, so it accumulates roughly monotonically — bracket with duplicates AND stamps, and
+prefer per-ROI validity fallbacks registered in advance (PREREG-fxshape2 §4.2's shape).
+
+Consequence already taken: the `cane_ring` candidate run (fxdraw, six arms, ADDENDUM2) is
+**VOID** — validity 793,969 px, stale onLocked provenance, and its own falsifier-1 arm put the
+ring at **36.5% of everything the impact draws** (F0 191,278 vs nocane 523,975), under
+PREREG-fxdraw §5's 50% bar: the one-dominant-emitter claim is WITHDRAWN by the
+pre-registration's own clause, and **nothing shipped** — `TUNE`, `EMITTERS`, `ringPainter` and
+the PLANAR clamp exemption are all bit-identical to before this task. The next candidate must
+treat the impact family (ring size/colour + flash + spark gains) as one composition, under
+gates that can actually validate, which needs this section's finding 3 solved first.
