@@ -23399,3 +23399,17 @@ face deltas: 1 count on each ROI (quarantined, reported).
 PREREG-subjhold2 re-seals with PROT-FACE = |Δ| ≤ 7 per ROI (a quarter of banda's corridor
 width, derived from the sealed constant) + population-aliveness CAL; fresh five-boot capture;
 expected outcome SHIP (ledger 2/12).
+
+## §289 — SHIPPED: subjShadowHold 1.0 — the subject holds its own hue in shade, closing D2's mid-range half at the mechanism
+
+RESULT-subjhold2, full green (22/22 numeric bars + the binding LOOK gate): hero 223.9°→216.2°
+and interior 224.2°→217.4° against the reference 213.5±6.0 — the §281/§287 compression
+recovered INTO the band; close-up held (217.0°); the creamfix face moved ≤1 count per ROI
+(delta gate, §288's rule); architecture changed only the subject's own 139 pixels; night went
+cooler with the moonlit read intact. Run 2 reproduced run 1 to the decimal — the only thing
+run 1 lacked was a correctly-derived face gate.
+
+D2 status: close range fixed at the texture (§283, bodyhue6), mid range fixed at the
+mechanism (this ship). Open on the chain: §277's saturation half, D1 (architecture shade hue
+— the global hold stays 0.0 and holdscope's scoping question stands), D3, and the blind-critic
+verification round that is the bar for "done". Forecast ledger: 3/13.

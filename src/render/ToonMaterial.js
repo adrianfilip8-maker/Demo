@@ -284,11 +284,16 @@ export const TUNE = {
 
   /* subjShadowHold — §269's hold band, vSlySkin-scoped (PREREG-subjhold.md, §287): in shade
      the SUBJECT's band carries its own albedo hue instead of the shade light's, which is the
-     measured mechanism crushing the costume's authored hue at mid-range. 0.0 is bit-identical
-     by arithmetic (max(uShadowHold, 0·vSlySkin) = uShadowHold). Only PREREG-subjhold's SHIP
-     verdict may move this default. Published per frame at setKeyLight, flat across the clock —
-     night behaviour is gated by that seal's PROT-NIGHT, not by a pin. */
-  subjShadowHold: 0.0,
+     measured mechanism crushing the costume's authored hue at mid-range.
+
+     SHIPPED at 1.0 by PREREG-subjhold2's full-green run (RESULT-subjhold2.md, §289): both
+     mid shots recovered into the reference band (hero 223.9°→216.2°, interior 224.2°→217.4°
+     vs 213.5±6.0), close-up held, face moved ≤1 count on both creamfix ROIs, architecture
+     saw only the subject's own pixels (139, corners 0), and night went COOLER with the
+     moonlit read intact (LOOK gate). 0.0 restores the pre-hold build bit-identically
+     (max(uShadowHold, 0·vSlySkin) = uShadowHold). Published per frame at setKeyLight, flat
+     across the clock — night behaviour is certified by that seal's PROT-NIGHT, not a pin. */
+  subjShadowHold: 1.0,
 
   /* Baked aoMap strength, globally. The maps were authored while cast shadows were suppressed
      engine-wide (KNOWN_ISSUES §1), so the baked term was carrying the low frequencies as well

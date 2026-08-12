@@ -14,12 +14,15 @@ import { readFileSync } from 'node:fs';
 const TM = new URL('../src/render/ToonMaterial.js', import.meta.url).pathname;
 const GLSL = new URL('../src/render/shaders/toon.glsl.js', import.meta.url).pathname;
 
-test('subjShadowHold defaults to 0.0 — the shipped build is unchanged until PREREG-subjhold SHIPs', () => {
+test('subjShadowHold ships at 1.0 — PREREG-subjhold2\'s full-green SHIP verdict set it', () => {
   const src = readFileSync(TM, 'utf8');
-  assert.match(src, /subjShadowHold: 0\.0,/,
-    'TUNE.subjShadowHold no longer defaults to 0.0. Moving this default is a pixel change '
-    + 'across every skinned draw in every shot; only PREREG-subjhold.md\'s SHIP verdict '
-    + '(or a successor seal) may do it.');
+  /* RESULT-subjhold2.md: P2-MID in band on both mids, close-up held, face Δ ≤ 1 count,
+     architecture corners 0, night cooler with the moonlit LOOK intact. Moving this default
+     in EITHER direction is a pixel change across every skinned draw in every shot and needs
+     its own sealed capture (§141.1). */
+  assert.match(src, /subjShadowHold: 1\.0,/,
+    'TUNE.subjShadowHold no longer defaults to 1.0. This default was set by a sealed SHIP '
+    + '(PREREG-subjhold2); changing it needs a successor seal, not an edit.');
 });
 
 test('subjShadowHold is published per frame, so harness pokes stick and readbacks are live', () => {

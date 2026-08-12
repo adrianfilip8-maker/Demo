@@ -39,8 +39,18 @@ gate('CAL-C closeup', cb && ch ? cb.cov >= 0.015 && ch.cov >= 0.015 : null,
 
 const faceBand = (v, lo, hi) => v != null && v >= lo && v <= hi;
 const fb = cb?.face, fh = ch?.face;
-gate('CAL-FACE-BASE', fb ? (faceBand(fb.cream.br, -58, -30) && faceBand(fb.rings.br, 5, 45)) : null,
-  fb ? `base cream ${fb.cream.br} vs [-58,-30], rings ${fb.rings.br} vs [+5,+45]` : 'missing');
+/* SANDS_SEAL=2 scores PREREG-subjhold2's face gates (CAL-FACE-N aliveness + PROT-FACE in
+   delta form); default scores PREREG-subjhold's original absolute bands, kept for the
+   run-1 record. */
+const SEAL2 = process.env.SANDS_SEAL === '2';
+if (SEAL2) {
+  gate('CAL-FACE-N', fb && fh
+    ? [fb.cream.n, fh.cream.n, fb.rings.n, fh.rings.n].every((n) => n >= 200) : null,
+    fb && fh ? `n cream ${fb.cream.n}/${fh.cream.n}, rings ${fb.rings.n}/${fh.rings.n} (≥200)` : 'missing');
+} else {
+  gate('CAL-FACE-BASE', fb ? (faceBand(fb.cream.br, -58, -30) && faceBand(fb.rings.br, 5, 45)) : null,
+    fb ? `base cream ${fb.cream.br} vs [-58,-30], rings ${fb.rings.br} vs [+5,+45]` : 'missing');
+}
 
 const hh = R('hero', 'hold'), ih = R('interior', 'hold');
 const hb = R('hero', 'base'), ib = R('interior', 'base');
@@ -49,9 +59,16 @@ gate('CAL-C mids', [hb, hh, ib, ih].every((r) => r && r.cov >= 0.002) ? true : n
 gate('P2-MID hero', hh ? inBand(hh.hueB) : null, hh ? `hueB ${hh.hueB.toFixed(1)} (|Δref| ${Math.abs(circdiff(hh.hueB, REF)).toFixed(1)})` : 'missing');
 gate('P2-MID interior', ih ? inBand(ih.hueB) : null, ih ? `hueB ${ih.hueB.toFixed(1)} (|Δref| ${Math.abs(circdiff(ih.hueB, REF)).toFixed(1)})` : 'missing');
 gate('PROT-CLOSE', ch ? inBand(ch.hueB) : null, ch ? `hueB ${ch.hueB.toFixed(1)}` : 'missing');
-gate('PROT-FACE', fb && faceBand(fb.cream.br, -58, -30) && faceBand(fb.rings.br, 5, 45)
-  ? (faceBand(fh?.cream.br, -58, -30) && faceBand(fh?.rings.br, 5, 45)) : null,
-  fh ? `hold cream ${fh.cream.br}, rings ${fh.rings.br} (VOID-INSTRUMENT if CAL-FACE-BASE failed)` : 'missing');
+if (SEAL2) {
+  const alive = fb && fh && [fb.cream.n, fh.cream.n, fb.rings.n, fh.rings.n].every((n) => n >= 200);
+  gate('PROT-FACE(Δ)', alive
+    ? (Math.abs(fh.cream.br - fb.cream.br) <= 7 && Math.abs(fh.rings.br - fb.rings.br) <= 7) : null,
+    fb && fh ? `Δcream ${fh.cream.br - fb.cream.br}, Δrings ${fh.rings.br - fb.rings.br} (|Δ| ≤ 7)` : 'missing');
+} else {
+  gate('PROT-FACE', fb && faceBand(fb.cream.br, -58, -30) && faceBand(fb.rings.br, 5, 45)
+    ? (faceBand(fh?.cream.br, -58, -30) && faceBand(fh?.rings.br, 5, 45)) : null,
+    fh ? `hold cream ${fh.cream.br}, rings ${fh.rings.br} (VOID-INSTRUMENT if CAL-FACE-BASE failed)` : 'missing');
+}
 
 const td = rows.find((r) => r.shot === 'temple' && r.cond === 'HOLDDIFF');
 gate('PROT-ARCH', td ? td.total <= 2000 && td.corner === 0 : null,
