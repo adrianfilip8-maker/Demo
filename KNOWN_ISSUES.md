@@ -23378,3 +23378,24 @@ hue in shade — shipped inert at 0.0 and parked as D1's lever, so D1 and D2-res
 on one knob; (3) subjWarmShade is creamfix-certified and protected — raising it for the
 costume without re-running creamfix's V-gates is forbidden. Forecast ledger for the hunt:
 2/11.
+
+## §288 — the subject hold beat its own seal on every readable bar and could not ship, because the face gate was sealed against the wrong arc's corridor
+
+RESULT-subjhold (five boots, all C-DRIFT clean): the vSlySkin-scoped hold at 1.0 recovered
+the costume's mid-range hue INTO the reference band — hero 223.9°→216.2° (|Δref| 2.7),
+interior 224.2°→217.4° (3.9) — held the close-up in band, changed 133 architecture-frame
+pixels all inside Sly's bbox, and at night went COOLER (brMed +47, LOOK crop: the subject
+reads moonlit, blue deepened). The hero joint arm closed attractor4's epistasis question:
+with the hold in, greying the fill adds 0.2° — the shadow leg was the whole §287 story.
+
+NO-SHIP anyway: CAL-FACE-BASE was sealed against banda's ARM-A corridor [−58,−30] when the
+certified baseline is banda2's BaseGate [−28,−12] — and the ROI's absolute value has drifted
+across three arcs (−44 → −20 → −8; NOTE-readers-frozen §44). §282's error class, third
+appearance (wrong-arc, after wrong-pair twice). Rule extracted: **cross-arc face/subject
+protections are sealed in DELTA form** (the lever must not move the ROI), never as absolute
+corridors — absolute corridors belong only to the arc that certifies them. The hold's actual
+face deltas: 1 count on each ROI (quarantined, reported).
+
+PREREG-subjhold2 re-seals with PROT-FACE = |Δ| ≤ 7 per ROI (a quarter of banda's corridor
+width, derived from the sealed constant) + population-aliveness CAL; fresh five-boot capture;
+expected outcome SHIP (ledger 2/12).
