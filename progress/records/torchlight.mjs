@@ -24,9 +24,9 @@
  * src/render/shaders/toon.glsl.js` and discard that boot's frames.
  */
 import { withGame } from '../../tools/harness.mjs';
-import { treeState } from '../../tools/treestate.mjs';
+import { treeState, srcHash } from '../../tools/treestate.mjs';
 import { execFileSync } from 'node:child_process';
-import { writeFileSync, mkdirSync, readFileSync, existsSync } from 'node:fs';
+import { writeFileSync, mkdirSync, readFileSync, existsSync, cpSync, rmSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import path from 'node:path';
 
@@ -47,6 +47,10 @@ const BASE = process.argv[2];
 if (!BASE) { console.error('usage: node torchlight.mjs <BASE_SHA>'); process.exit(2); }
 
 const git = (...a) => execFileSync('git', a, { cwd: ROOT, encoding: 'utf8' }).trim();
+/* Raw bytes, NO trim: run 1 was aborted on exactly this — .trim() ate each installed file's
+   trailing newline, so the base boot's tree hash matched nothing reconstructible and the
+   provenance check could not tell that drift from a real foreign edit. */
+const gitRaw = (...a) => execFileSync('git', a, { cwd: ROOT, encoding: 'utf8' });
 
 /* PF6 — the seal's tree-stability precondition. */
 const touched = git('diff', '--name-only', `${BASE}..HEAD`, '--', 'src/').split('\n').filter(Boolean).sort();
@@ -55,10 +59,32 @@ if (JSON.stringify(touched) !== JSON.stringify(expected)) {
   console.error(`PF6 VOID: BASE..HEAD touches under src/:\n  ${touched.join('\n  ')}\nexpected exactly:\n  ${expected.join('\n  ')}`);
   process.exit(2);
 }
-const baseContent = new Map(FILES.map((f) => [f, git('show', `${BASE}:${f}`)]));
+const baseContent = new Map(FILES.map((f) => [f, gitRaw('show', `${BASE}:${f}`)]));
 console.log(`BASE ${BASE} verified: src delta is exactly the three registered files.`);
 
+/* ── Expected tree hashes, computed up front from a tree that must be CLEAN ──────────────
+   Run 1's §186 lesson, learned the hard way: my boot A acquired the lock in the same second
+   another lane's capture released it, and their candidate PostFX.js was still on disk — the
+   bundle rendered THEIR arm into MY base frames. An install that stamps the tree but does not
+   VERIFY it records the poisoning instead of preventing it. So: require a clean src/ now,
+   precompute the exact hash each boot must see, and make onLocked abort (after restoring)
+   rather than let vite spawn over a tree that is not the registered arm. */
+const dirt = git('status', '--porcelain', '--', 'src/');
+if (dirt) {
+  console.error(`src/ is dirty at runner start — another lane's residue?\n${dirt}\nRefusing to derive expected trees.`);
+  process.exit(2);
+}
+const EXPECT_CAND = srcHash(path.join(ROOT, 'src'));
+/* The reference copy lives OUTSIDE the repo so a crash between cp and rm cannot leave a
+   src mirror inside a directory that gets committed. */
+const _tmp = path.join(process.env.TMPDIR || '/tmp', `torchlight-expected-base-${process.pid}`);
+rmSync(_tmp, { recursive: true, force: true });
+cpSync(path.join(ROOT, 'src'), _tmp, { recursive: true });
+for (const f of FILES) writeFileSync(path.join(_tmp, path.relative('src', f)), baseContent.get(f));
+const EXPECT_BASE = srcHash(_tmp);
+rmSync(_tmp, { recursive: true, force: true });
 mkdirSync(OUT, { recursive: true });
+console.log(`expected src hashes: base ${EXPECT_BASE}  cand ${EXPECT_CAND}`);
 
 /* ---- page-side functions -------------------------------------------------------------- */
 
@@ -142,11 +168,25 @@ async function boot(label, { install, shots, arm, interiorArms }) {
   if (!need) { console.log(`${label}: all frames present, skipping boot`); return; }
 
   let tree = null;
-  const onLocked = install ? async () => {
-    for (const f of FILES) writeFileSync(path.join(ROOT, f), baseContent.get(f));
+  /* onLocked VERIFIES the tree it just built and aborts BEFORE vite spawns on any mismatch.
+     It restores the checkout itself on that failure path, because in withGame the onLocked
+     call sits outside the try/finally — a throw here never reaches onReleasing. */
+  const onLocked = async () => {
+    const dirtNow = git('status', '--porcelain', '--', 'src/');
+    if (dirtNow) {
+      console.log(`${label}: ABORT — src/ dirty at lock grant (foreign residue):\n${dirtNow}`);
+      throw new Error('src dirty at lock grant');
+    }
+    if (install) for (const f of FILES) writeFileSync(path.join(ROOT, f), baseContent.get(f));
     tree = treeState();
-    console.log(`${label}: BASE arm installed under the lock — src ${tree.src}`);
-  } : async () => { tree = treeState(); };
+    const want = install ? EXPECT_BASE : EXPECT_CAND;
+    if (tree.src !== want) {
+      if (install) execFileSync('git', ['checkout', 'HEAD', '--', ...FILES], { cwd: ROOT });
+      console.log(`${label}: ABORT — src hash ${tree.src} != expected ${want} after ${install ? 'install' : 'no-install'}`);
+      throw new Error('tree verification failed at lock grant');
+    }
+    console.log(`${label}: ${install ? 'BASE arm installed' : 'candidate tree'} verified under the lock — src ${tree.src}`);
+  };
   const onReleasing = install ? async () => {
     execFileSync('git', ['checkout', 'HEAD', '--', ...FILES], { cwd: ROOT });
     console.log(`${label}: HEAD restored before lock release — src ${treeState().src}`);

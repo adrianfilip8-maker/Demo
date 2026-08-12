@@ -156,6 +156,24 @@ there), `debug.localToon`, and the visible local-light slots as `{worldY, intens
 `interior` must show exactly 6, all y < −0.5 (V1); daylight cand arms must show gain 2.5 live
 (V2) so B1–B15 are measured against the *shipped* configuration, not an accidentally-off one.
 
+> **AMENDED 2026-08-12, at this site, BEFORE any scored frame existed (§154.5 — both changes
+> STRENGTHENING, with the incident that forced them).** Run 1 was aborted at boot A with
+> **zero frames written**: the boot acquired the FIFO lock in the same moment another lane's
+> capture released it, and that lane's candidate `PostFX.js` was still on disk — the stamped
+> src hash `677f577dff2a772a` reconstructs **exactly** as (this seal's base tree + their
+> `PostFX.cand.js`), proven offline before anything was scored. A second, self-inflicted
+> defect surfaced in the same post-mortem: the runner's `git show` helper `.trim()`ed the
+> installed files' trailing newlines, so even a clean base boot could not have matched a
+> reconstructible tree. Both fixed in `torchlight.mjs` before run 2:
+> 1. base bytes are installed exactly (`gitRaw`, no trim);
+> 2. the runner requires `src/` CLEAN at start and at every lock grant, precomputes the exact
+>    expected hash for each boot (base = current tree + the three files at BASE; cand = the
+>    current tree), and `onLocked` now **verifies and aborts before vite spawns** on any
+>    mismatch — restoring the checkout itself on that path, since `withGame` runs `onLocked`
+>    outside its try/finally. A poisoned tree is now an abort, never a captured arm.
+> V4's scoring meaning is unchanged (one hash per arm side, differing); the scorer
+> additionally checks the manifest hashes against the runner-printed expectations.
+
 ## 5. Registered bars (scored by `torchlight-score.mjs`, tri-state via `tools/gate.mjs` —
 VOID is not PASS; ship = every row PASS)
 
