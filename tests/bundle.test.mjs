@@ -367,3 +367,42 @@ test('bundle: the assets the runtime really does fetch are still present', () =>
       `${rel} is no longer referenced — has it become staged?`);
   }
 });
+
+test('bundle: every stem Audio.js fetches resolves under public/assets/audio (§292)', () => {
+  /* §292's fear, made standing. `Audio.js` builds `` `assets/audio/${STEM_FILES[name]}` `` at
+     runtime (its line ~394), so a stem missing from `public/` is a 404 at unlock time with
+     nothing failing beforehand. The pinned list in the test above quotes today's three names;
+     this one DERIVES the set from the export itself, so a fourth stem added without its file —
+     or a rename that misses `public/` — goes red here instead of in a capture manifest.
+
+     For the record (§295 / RESULT-audio404.md): when §292 was finally run down, all three stems
+     resolved and always had — `footstep.mp3`'s move in §265 was never a break because nothing
+     fetches it (it is an animation EVENT name in src/, not a filename; see correction 4 at the
+     top of this file). The boot 404 was the favicon request, suppressed in index.html and pinned
+     by the next test. */
+  const audio = stripComments(readFileSync(join(SRC, 'audio/Audio.js'), 'utf8'));
+  const block = audio.match(/STEM_FILES\s*=\s*\{([^}]*)\}/);
+  assert.ok(block, 'STEM_FILES is no longer in src/audio/Audio.js — the fetch table moved; update this test');
+  const stems = [...block[1].matchAll(/['"`]([^'"`]+\.(?:mp3|ogg|wav|m4a|opus))['"`]/g)].map((m) => m[1]);
+  assert.ok(stems.length >= 3, `only ${stems.length} stem file(s) parsed out of STEM_FILES — the parse has gone blind`);
+  for (const f of stems) {
+    assert.ok(existsSync(join(PUBLIC, 'audio', f)),
+      `Audio.js fetches assets/audio/${f} at runtime and it is not in public/assets/audio — that is a 404 at boot (§292)`);
+  }
+});
+
+test('bundle: index.html answers the favicon request inline, so no boot fetch leaves the page (§295)', () => {
+  /* The one URL a boot requests that NO code in this repo names: Chromium's full build fetches
+     /favicon.ico on every navigation — headless included; only the separate headless *shell*
+     skips it, and `tools/harness.mjs` launches the full build (`/opt/pw-browsers/chromium`).
+     `public/` has never carried a favicon, so every capture manifest since the first critic run
+     (2026-07-31, a week before any audio fetch existed) logged exactly one
+     "Failed to load resource … 404". §292 routed that error to the audio path; the enumeration
+     in RESULT-audio404.md exonerated it. A `data:` icon is answered from the page itself —
+     no request leaves, nothing unwired ships, and the copy-path rule ("nothing fetched at
+     runtime that isn't in the build") holds for the one fetch the app does not author. */
+  const html = readFileSync(join(ROOT, 'index.html'), 'utf8');
+  assert.ok(/<link\s+rel=["']icon["']\s+href=["']data:/.test(html),
+    'index.html no longer declares its inline <link rel="icon" href="data:…"> — the browser will '
+    + 'request /favicon.ico, nothing in public/ answers it, and the §292 boot 404 is back');
+});

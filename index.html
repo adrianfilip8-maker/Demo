@@ -4,6 +4,15 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Sly Cooper: Sands of Ra</title>
+  <!-- Inline (data:) on purpose, not a public/ file: with no icon declared, Chromium requests
+       /favicon.ico on every navigation — the FULL build does this headless too (only the separate
+       headless *shell* skips it), and tools/harness.mjs launches the full build. public/ has never
+       carried a favicon, so that request was the single 404 in every capture manifest since the
+       first critic run (§292/§295 — it was misread as an asset fetch for two rounds). A data: URI
+       is answered from the page itself: no request leaves, nothing unwired ships, and the
+       self-containment rule holds for the one fetch the app does not author. Palette is the title
+       card's: night #0a0710, sand #f4e2b8, dune #c8913e. -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' rx='3' fill='%230a0710'/><circle cx='8' cy='6.2' r='3.1' fill='%23f4e2b8'/><path d='M0 16V12.6Q4.5 9.8 8 12T16 11.8V16Z' fill='%23c8913e'/></svg>">
   <style>
     :root { color-scheme: dark; }
     * { margin: 0; padding: 0; box-sizing: border-box; }

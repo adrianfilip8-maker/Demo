@@ -23476,3 +23476,33 @@ half of critic10 #1 (ANIMATION) is NOT waived.
 (2) The most recently downloaded cane asset is to be integrated as Sly's cane, by owner
 instruction ("Use the cane that was last downloaded"), replacing the procedural build where
 they conflict. Licence/provenance recorded per the asset register on integration.
+
+## §295 — §292 CLOSED: no stem 404s — the boot 404 was the favicon request, not the audio path (or any fetch this repo authors); suppressed inline, register hardened
+
+Full enumeration and timeline in `progress/records/RESULT-audio404.md`. The short form:
+
+**§292's routing is refuted three ways, all grep-level.** (1) `STEM_FILES` is exactly
+{`bc-explore.mp3`, `bc-sneak.mp3`, `bc-chase.mp3`} and all three are in `public/assets/audio/`
+— requested ⊆ present, on HEAD and at r10's own commit (58e3f49). `footstep.mp3`'s §265 move
+was never the break: nothing fetches it — `'footstep'` in src is an animation EVENT name
+(§265.1 correction 4), and both PROVENANCE records say "no code path loads this file".
+(2) In `?shot=1` boots `unlock()` is never called (main.js binds it to pointer/key events in
+the non-headless branch only; no tool calls it), so `Audio.js:399` cannot execute during the
+captures that logged the error. (3) The identical single 404 is in **every** capture manifest
+back to 2026-07-31 — eight days before any audio fetch code existed (bb97a61, 08-08) — and
+unchanged across the §265 move; a boot-invariant, exactly-once error is not a content fetch.
+
+**What it is:** `/favicon.ico`. `index.html` declared no icon, `public/` never carried one, and
+the harness launches the FULL Chromium build (`/opt/pw-browsers/chromium`), whose headless mode
+fetches favicons like a headed browser (only the unused headless *shell* skips them). Vite dev
+answers 404: one request, one error, every boot, no game-side symptom.
+
+**Fix (self-containment-shaped):** an inline `<link rel="icon" href="data:image/svg+xml,…">` in
+`index.html` — the request is never made, nothing unregistered ships, `Audio.js` and both audio
+directories untouched (`footstep.mp3` stays retired in `staging/`, the museum track stays put
+per the owner exception). `tests/bundle.test.mjs` hardened in the same commit: the stem set is
+now DERIVED from `STEM_FILES` and each value asserted to exist under `public/assets/audio/`
+(a stem added without its file goes red in the suite, not in a capture), and the favicon
+suppression is pinned. Suite 468/468. Residual: a zero-error manifest is unproven until the
+next boot someone else takes; if r11 still logs a 404, this attribution is wrong and the icon
+line is trivially revertible — the derived-stem guard stands either way.
