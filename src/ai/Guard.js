@@ -1111,6 +1111,16 @@ export class Guards {
         assets[t] = { ...assets[t], ...carmelita };
         this.stats.tris += carmelita.tris | 0;
       }
+      /* PREREG-guardfix: the import's sanitizer strips `color` (right for a textured body),
+         but the garrison materials are vertexColors:true — and an UNBOUND colour attribute
+         multiplies the albedo by (0,0,0), which rendered every roster guard as the §290
+         black-gloss mannequin. Synthesize the identity so map × vColor = map. The procedural
+         scarab keeps its real colours; only geometry that lost the attribute gets ones. */
+      const g = carmelita.geometry;
+      if (g && !g.getAttribute('color')) {
+        const n = g.getAttribute('position').count;
+        g.setAttribute('color', new THREE.BufferAttribute(new Float32Array(n * 3).fill(1), 3));
+      }
       this.carmelita = carmelita;
     }
 

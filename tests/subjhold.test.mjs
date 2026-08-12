@@ -41,3 +41,14 @@ test('the shader scopes the subject hold by vSlySkin and keeps the global knob i
     + 'architecture scoping (vSlySkin = 0) is what makes PROT-ARCH hold by construction');
   assert.match(src, /uniform float uSubjShadowHold;/, 'uSubjShadowHold not declared in the shader');
 });
+
+test('guardfix: the Carmelita merge synthesizes the colour attribute its materials expect', () => {
+  /* PREREG-guardfix: sanitized import geometry (no `color`) under vertexColors:true materials
+     multiplies albedo by an unbound attribute = (0,0,0) — the §290 black-mannequin guard.
+     The merge site must hand the identity attribute to any geometry that lacks it. */
+  const src = readFileSync(new URL('../src/ai/Guard.js', import.meta.url).pathname, 'utf8');
+  assert.match(src, /!g\.getAttribute\('color'\)/,
+    "the Carmelita merge no longer checks for a missing colour attribute");
+  assert.match(src, /new Float32Array\(n \* 3\)\.fill\(1\)/,
+    "the merge no longer synthesizes the identity colour attribute (§290 regresses)");
+});
