@@ -623,10 +623,19 @@ export class SlyModel {
         const original = bodyMat.map;
         const cache = new Map();
         this.mesh.userData.slySwapBodyTex = (mode) => new Promise((resolve, reject) => {
-          if (mode !== 'fix') { bodyMat.map = original; bodyMat.needsUpdate = true; resolve('raw'); return; }
-          if (cache.has('fix')) { bodyMat.map = cache.get('fix'); bodyMat.needsUpdate = true; resolve('fix'); return; }
-          const key = Object.keys(TEX_FILES).find((k) => k.endsWith('/sly_body_fix.png'));
-          if (!key) { reject(new Error('sly_body_fix.png is not in the texture glob')); return; }
+          /* Mode-faithful, whatever the boot policy: `original` is whichever file
+             `textureUrl('body')` picked at load — since PREREG-bodyhue6's PASS flipped
+             `bodyMode()` to 'fix', that is the FIX texture, and an earlier version of this
+             swap that treated `original` as 'raw' silently rendered both arms identical
+             (attractor run 1, every pair mask 0; CAL-2 caught it). The boot map is reused
+             only when it IS the wanted mode; the other file loads on demand. */
+          const want = mode === 'fix' ? 'fix' : 'raw';
+          const boot = BODY_MODE === 'fix' ? 'fix' : 'raw';
+          if (want === boot) { bodyMat.map = original; bodyMat.needsUpdate = true; resolve(want); return; }
+          if (cache.has(want)) { bodyMat.map = cache.get(want); bodyMat.needsUpdate = true; resolve(want); return; }
+          const stem = want === 'fix' ? '/sly_body_fix.png' : '/sly_body.png';
+          const key = Object.keys(TEX_FILES).find((k) => k.endsWith(stem));
+          if (!key) { reject(new Error(`${stem.slice(1)} is not in the texture glob`)); return; }
           loader.load(TEX_FILES[key], (t) => {
             /* Match the original's sampler exactly, or the arms differ by filtering as well as
                by hue and the mask stops being definitional. */
@@ -635,9 +644,9 @@ export class SlyModel {
             t.wrapS = original ? original.wrapS : THREE.RepeatWrapping;
             t.wrapT = original ? original.wrapT : THREE.RepeatWrapping;
             t.flipY = original ? original.flipY : t.flipY;
-            cache.set('fix', t);
+            cache.set(want, t);
             bodyMat.map = t; bodyMat.needsUpdate = true;
-            resolve('fix');
+            resolve(want);
           }, undefined, reject);
         });
       }

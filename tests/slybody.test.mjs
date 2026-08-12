@@ -89,6 +89,22 @@ test('hue moves onto the offset-compensated target, not onto the reference frame
     + '(PREREG-bodyhue5 §2), not on the reference frame hue 213.5°');
 });
 
+test('the A/B swap is mode-faithful under ANY boot default: both texture files are reachable', () => {
+  /* Attractor run 1's lesson: the swap resolved 'raw' by restoring the BOOT texture, which
+     became the fix texture the day bodyMode() flipped — so raw/fix arms rendered identical
+     and every pair voided on CAL-2. The swap must key its cache on the wanted MODE and be
+     able to load either file on demand, reusing the boot map only when it matches. */
+  const src = readFileSync(RIG, 'utf8');
+  const fn = /slySwapBodyTex = \(mode\) => new Promise\(([\s\S]*?)\n {8}\}\);/.exec(src);
+  assert.ok(fn, 'slySwapBodyTex not found — has the swap been renamed?');
+  assert.match(fn[1], /\/sly_body_fix\.png/, 'the swap can no longer load the fix texture');
+  assert.match(fn[1], /'\/sly_body\.png'/, 'the swap can no longer load the RAW texture — '
+    + "with the boot default at 'fix', restoring the boot map is not 'raw'");
+  assert.match(fn[1], /BODY_MODE === 'fix' \? 'fix' : 'raw'/,
+    'the swap no longer derives the boot mode; reusing the boot map unconditionally repeats '
+    + 'attractor run 1');
+});
+
 test('non-costume colours are byte-identical: shorts, sash, belt, mask and white are not recoloured', () => {
   const a = readPNG(SRC), b = readPNG(FIX);
   assert.equal(a.w, b.w); assert.equal(a.h, b.h);
