@@ -38,6 +38,7 @@ import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader.js';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { RIG3 } from './SlyModel3.js';
 import { Cane, CANE_TUNE } from './Cane.js';
+import { loadCaneAsset } from './CaneAsset.js';
 
 const FBX_URL = new URL('../assets/sly-dl/sly.fbx', import.meta.url);
 const TEX_FILES = import.meta.glob('../assets/sly-dl/*.png', { eager: true, query: '?url', import: 'default' });
@@ -663,7 +664,7 @@ export class SlyModel {
        Width comes from Outline.js (INK_PX), so `thickness` is accepted and ignored. */
     this.engine?.get?.('shading')?.outline?.(this.mesh, { thickness: 1 });
 
-    this._buildCane(M, rot, abs, S, yOff, staffTris);
+    await this._buildCane(M, rot, abs, S, yOff, staffTris);
 
     this.root.userData.height = RIG3.TUNE.height;
     this.root.userData.artistWeights = true;
@@ -827,12 +828,19 @@ export class SlyModel {
   }
 
   /**
-   * Build `Cane.js` and socket it to `handR` at the frame the grip solve returned.
+   * Build the cane and socket it to `handR` at the frame the grip solve returned.
    *
    * WHY THE PROP AND NOT THE SUBMESH. The asset's crook is three straight segments meeting at
    * mitres, baked into 774 vertices all weighted to one bone — "a bent coat hanger, not a crook",
    * and no parameter smooths a baked polyline. `Cane.js` samples an open 192° arc at
    * `hookRadius` 0.168, which is the shape the silhouette is supposed to carry.
+   *
+   * WHICH TRIANGLES THE SOCKET CARRIES (§294). Since the owner's instruction, the prop's
+   * rendered geometry is the downloaded `sly-cane.glb`, adopted into `Cane.js`'s local frame —
+   * grip at the origin, shaft +Y, hook to +Z, bbox conformed to the procedural extents — so
+   * every word of this comment about the SOCKET remains true and only the drawn shape changed.
+   * `Cane.js` still builds first (it is the frame and the measured conform target) and still
+   * ships whole if the asset fails to parse.
    *
    * WHY A RIGID SOCKET AND NOT `_attachPoints.cane`. Registering an attach point would hand the
    * cane to `Animation._applyCane`, whose per-clip aims were authored against the LEGACY model's
@@ -848,7 +856,7 @@ export class SlyModel {
    * `staff` and `staff` maps to `handR`, so its vertices took precisely that transform and nothing
    * else.
    */
-  _buildCane(M, rot, abs, S, yOff, staffTris) {
+  async _buildCane(M, rot, abs, S, yOff, staffTris) {
     const s = this._socket;
     if (!s) { this.engine?.warn?.('SlyModelDLRig: no grip socket solved — cane not built'); return; }
     const hi = RIG3.BONE_ORDER.indexOf('handR');
@@ -868,13 +876,20 @@ export class SlyModel {
     const gripR = s.gripR * unit, shaftR = s.shaftR * unit;
     this.cane = new Cane(this.engine, { tune: { gripR, shaftR } });
     const shading = this.engine?.get?.('shading');
+    /* §294, owner instruction: the downloaded cane replaces the procedural build where they
+       conflict — which is here, the shipped character's hand. The procedural cane is still
+       built first because it is the FRAME (its measured extent is the conform target and the
+       grip/tip/hook contract lives on it); `adoptAsset` then swaps the rendered triangles for
+       the asset's, shape untouched. `loadCaneAsset` resolves null on any failure and the
+       procedural cane ships exactly as before — the game never loses the prop to a bad byte. */
+    const asset = await loadCaneAsset((m) => this.engine?.warn?.(m));
     /* THE CANE IS GOLD IN ALBEDO AND IN NOTHING ELSE, AND THAT IS NOT AN OVERSIGHT ANY MORE —
      * it is a measured refusal. Read KNOWN_ISSUES §266 before "fixing" this.
      *
      * The obvious change is to add the house gold here: `spec 0.9, gloss 96, metal 0.85` from
      * `Props.js MATERIALS.gold`, which `Pickups.js` already copies and which the owner-supplied
      * cane independently corroborates at metal 0.80 / rough 0.25
-     * (`public/assets/sly-cane/PROVENANCE.md`). It was captured against guards registered before
+     * (`src/assets/sly-cane/PROVENANCE.md`). It was captured against guards registered before
      * the candidate existed (`progress/records/PREREG-charmat.md`) and it **FAILED**, in the
      * opposite direction to the forecast. On `sly-closeup` the cane's own pixels went
      * **DARKER**: p99 −37.5 L at the asset's values, −41.0 L at Props gold's, against a
@@ -899,21 +914,37 @@ export class SlyModel {
      * `slyWorldPos()` — WORLD space — so on a prop that moves with the hand the grain swims
      * across the surface. That is very likely why no character material carries one.
      */
+    /* The material follows the same fork as the geometry. With the asset: its authored albedo
+       as `map` (colour 0xffffff so the texture is the albedo, exactly the body-material
+       pattern) and NO vertexColors — the glb carries no COLOR_0 attribute, and a vertex-colour
+       material over an unbound attribute multiplies to black (the PREREG-guardfix defect).
+       Everything else stays at the house TUNE response per the refusal above; the asset's
+       metal/rough VALUES are what §266 measured and declined. Without: today's gold,
+       byte-for-byte, vertex colours darkening the procedural grip. */
     const gold = shading?.make
       ? shading.make({
-        name: 'slydlrig:cane', color: 0xe8b942, vertexColors: true,
+        name: 'slydlrig:cane',
+        ...(asset ? { color: asset.texture ? 0xffffff : 0xe8b942, map: asset.texture || null }
+          : { color: 0xe8b942, vertexColors: true }),
         bands: RIG3.TUNE.bands, rim: RIG3.TUNE.rim, rimColor: RIG3.TUNE.rimColor,
         outline: RIG3.TUNE.outline, outlineColor: RIG3.TUNE.outlineColor,
       })
-      : new THREE.MeshStandardMaterial({ color: 0xe8b942, vertexColors: true, metalness: 0.85, roughness: 0.3 });
+      : new THREE.MeshStandardMaterial(asset
+        ? { color: asset.texture ? 0xffffff : 0xe8b942, map: asset.texture || null, metalness: 0.85, roughness: 0.3 }
+        : { color: 0xe8b942, vertexColors: true, metalness: 0.85, roughness: 0.3 });
     this.cane.build([gold]);
+    const adopted = asset ? this.cane.adoptAsset(asset) : false;
     this._caneMaterial = gold;          // passed in, so Cane.dispose() does not own it
     socket.add(this.cane.object);
     this.bones.handR.add(socket);
     this._caneSocket = socket;
-    /* the cane is hard metal among fur — its own, slightly heavier line */
+    /* the cane is hard metal among fur — its own, slightly heavier line. The hull is built
+       AFTER the adopt so the ink wraps the triangles that render, not the ones they replaced;
+       the asset's own baked outline shell (`shader` prim) is deliberately not drawn — one ink
+       system, critic 7 #3, see CaneAsset.js. */
     shading?.outline?.(this.cane.mesh, { thickness: 1.25 });
-    this.engine?.warn?.(`SlyModelDLRig: staff submesh dropped (${staffTris} tris), Cane.js socketed to handR `
+    this.engine?.warn?.(`SlyModelDLRig: staff submesh dropped (${staffTris} tris), `
+      + `${adopted ? `${this.cane.assetCane} (§294)` : 'Cane.js'} socketed to handR `
       + `(grip ${(gripR * 1000).toFixed(1)} mm, ${this.cane.triangles} tris)`);
   }
 

@@ -12,15 +12,50 @@ position than `assets/sly-anim/` (checked, none stated) and much weaker than `as
 instruction is that copyright is not an obstacle for this project for undisclosed reasons; that is
 their call and it does not license me to invent a licence here.
 
-## Where it lives: `staging/assets/sly-cane/sly-cane.glb`
+## Where it lives: `src/assets/sly-cane/sly-cane.glb` — WIRED since 2026-08-12 (§294)
 
-Staged, deliberately unwired, and **no longer inside Vite's copy path**. It used to sit in
-`public/assets/sly-cane/`, which is copied into `dist/` verbatim whether anything fetches it or
-not (§265) — so an asset held back pending a decision was shipping anyway. It was **moved, not
-deleted**; `tests/bundle.test.mjs` asserts it is absent from `public/` and present here.
+The decision this file was staged pending **has been made**: the owner instructed that this cane
+be integrated as Sly's cane ("Use the cane that was last downloaded", KNOWN_ISSUES §294),
+replacing the procedural build where they conflict. It now ships **deliberately**, bundled and
+hashed by Vite through `new URL('../assets/sly-cane/sly-cane.glb', import.meta.url)` in
+`src/player/CaneAsset.js` — the same mechanism as `sly-dl/sly.fbx`, nothing in `public/`,
+nothing fetched from outside the build.
 
-Moving it changes nothing about the record above. **The licence is still unknown**, and an asset
-with an unknown licence is the one you least want in a shipped bundle by accident.
+The path history, so the trail never breaks: `public/assets/sly-cane/` (shipped by accident,
+§265) → `staging/assets/sly-cane/` (held back, unwired) → here (wired on instruction).
+`tests/bundle.test.mjs` asserts it is absent from `public/` and present here.
+
+**The licence is still unknown.** Wiring it does not change that record — it changes who decided
+the risk was acceptable: the owner's standing instruction is that copyright is not an obstacle
+for this project, and §294 is that instruction applied to this file specifically. Recorded, not
+laundered.
+
+## What ships of it, exactly (integration record, 2026-08-12)
+
+- **The `Cane` primitive ships**: 306 vertices / 258 triangles / the full 0..1 UV atlas, vertex
+  for vertex as authored. `Cane.adoptAsset` conforms it to the procedural cane's frame with a
+  **similarity transform only** — uniform scale ×0.7636 (bbox y-extent onto `Cane.js`'s measured
+  1.5150 m, butt on the procedural butt at −0.8140, crook top at +0.7010), one rotation about Y
+  (the measured hook bend, ≈ +X in the file, turned onto this frame's +Z "forward"), one
+  translation (shaft axis onto the local Y axis). Derived from the geometry at load, not quoted
+  from here. THE CONSTRAINT below is honoured: shape untouched.
+- **The `shader` primitive does NOT render.** Measured on the bytes: its vertex normals point
+  INWARD (170/270 with dot(n, radial) < −0.2, mean −0.36 against the cane surface's +0.31), it
+  encloses the `Cane` primitive by a few millimetres on every side, and its UVs sample one small
+  patch of its texture. That is a baked **inverted-hull outline shell** — a render device, not
+  cane shape. This build draws its ink through one system (`Shading.outline`, critic 7 #3) with
+  view-scaled thickness; drawing the baked hull beside it would double the cane's line. The
+  bytes still ship inside the .glb (a glb is one file); only the draw skips it.
+- **`Cane.baseColor` (image 3, the 64 KB jpg) ships** as the albedo `map` on the house cel
+  material `slydlrig:cane` (colour 0xffffff, TUNE bands/rim/outline — the body-texture pattern).
+- **The metalRough and normal images stay unwired**, and not as an oversight: the cel shader
+  replaces three's light loop (§221) so the maps have no input to bind to, and their VALUES
+  (metal 0.80 / rough 0.25) were captured against pre-registered bars and **FAILED** — the cane's
+  own pixels went darker, −37.5 L at p99 (§266, PREREG-charmat, `tools/canegold.mjs`). Blocked on
+  `uSpecNormPow` like every gold in the build; re-run canegold when that ships. `shader.normal`
+  is a no-op map besides (mean (127.5, 127.5, 255)).
+- **Fallback**: if the parse ever fails, `loadCaneAsset` resolves null and the procedural
+  `Cane.js` ships exactly as before — the character never loses the prop to a bad byte.
 
 ## THE CONSTRAINT
 **Do not alter the shape of the model.** Uniform scale, rotation and translation are rigid or
@@ -88,8 +123,13 @@ Also worth weighing before shipping the maps: a normal map on a flat-banded toon
 fights the ramp rather than helping it — the same caution recorded for `assets/tombchaser/`'s
 normal and metallic maps, which were staged and deliberately not wired for that reason.
 
-## Status: STAGED, NOT WIRED
+## Status: WIRED (2026-08-12, §294) — see "What ships of it" above
 
-Nothing loads this. `assertAccessorsResolved` passes — no dangling references and no sparse
-accessors (§227, §245) — and the geometry parses in three with the image graph stripped. It has not
-been rendered.
+`src/player/CaneAsset.js` parses it (hand parser — accessors read directly, so the offline
+guards in `tests/dlrig.test.mjs` measure the same cane that renders), `src/player/Cane.js
+adoptAsset` conforms it, `SlyModelDLRig._buildCane` sockets it to `handR` on the solved grip.
+The drop-in scale that section 4 above asked to be derived rather than trusted came out
+**×0.7636 from raw** (bbox extent 1.9841 of the `Cane` primitive alone onto the measured
+1.5150 m — the earlier ×0.7575 figure used the whole-model extent 2.0, hull included).
+`assertAccessorsResolved` passes — no dangling references and no sparse accessors (§227, §245).
+Verification capture: `progress/records/PREREG-caneswap.md` / `RESULT-caneswap.md`.

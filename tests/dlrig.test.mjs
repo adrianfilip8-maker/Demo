@@ -139,7 +139,7 @@ test('§213: the character asks shading for the cel material and for an ink hull
 
 /* ---------------------------------------------------------------- #6: the crook is not a polyline */
 
-test('critic 7 #6: the mitred `staff` submesh is gone and Cane.js is in its place', async () => {
+test('critic 7 #6: the mitred `staff` submesh is gone and the cane prop is in its place', async () => {
   const { model, engine } = await build();
   const drop = engine.warns.find((w) => w.includes('staff submesh dropped'));
   assert.ok(drop, `staff not dropped: ${JSON.stringify(engine.warns)}`);
@@ -151,7 +151,39 @@ test('critic 7 #6: the mitred `staff` submesh is gone and Cane.js is in its plac
   assert.ok(model.bones.handR.getObjectByName('caneSocket'), 'cane not socketed to handR');
 });
 
-test('critic 7 #6: the crook is a sampled arc, not three straight segments', async () => {
+test('§294: the owner-supplied sly-cane.glb is what renders, adopted into the procedural frame', async () => {
+  /* The swap this pins: `Cane.js` still builds (it is the FRAME — aim, hookPoint, tip plant,
+     grip conventions), and `adoptAsset` replaces the rendered triangles with the downloaded
+     model's `Cane` primitive, conformed by similarity transform only. Every number here is
+     measured off the shipped bytes: 306 vertices / 774 indices is that primitive exactly, and
+     the bbox must land on the procedural cane's own extents (tools/canesize.mjs: y
+     [-0.8140, +0.7010]) with the hook curling to +Z — the frame the socket and all 52 clips
+     were authored against. If the file, the parse, or the conform drifts, this fails BEFORE a
+     capture has to discover it. */
+  const { model, engine } = await build();
+  assert.equal(model.cane.assetCane, 'sly-cane.glb', 'the asset cane was not adopted');
+  const drop = engine.warns.find((w) => w.includes('staff submesh dropped'));
+  assert.match(drop, /sly-cane\.glb \(§294\) socketed to handR/);
+  const g = model.cane.mesh.geometry;
+  assert.equal(g.attributes.position.count, 306, 'not the glb Cane primitive (vertex count)');
+  assert.equal(g.index?.count, 774, 'not the glb Cane primitive (index count)');
+  assert.ok(g.attributes.uv, 'the authored UVs were dropped — the albedo map has nothing to sample');
+  g.computeBoundingBox();
+  const b = g.boundingBox;
+  assert.ok(Math.abs(b.min.y - -0.8140) < 0.002, `butt at ${b.min.y.toFixed(4)}, expected -0.8140 — the tip plant drifts`);
+  assert.ok(Math.abs(b.max.y - 0.7010) < 0.002, `crook top at ${b.max.y.toFixed(4)}, expected +0.7010`);
+  assert.ok(b.max.z > 0.20, `hook reaches z ${b.max.z.toFixed(4)} — it should curl forward (+Z) past 0.20`);
+  assert.ok(Math.max(Math.abs(b.min.x), Math.abs(b.max.x)) < 0.06,
+    `cane spans x ±${Math.max(Math.abs(b.min.x), Math.abs(b.max.x)).toFixed(4)} — the hook is bending sideways, not forward`);
+  /* the contact contract is the frame's, not the asset's — a ring still rests where MOVEMENT
+     expects it, and the tip the plant pose was solved for has not moved */
+  assert.ok(Math.abs(model.cane.tipPoint.y - -0.796) < 1e-9, 'tipPoint moved off the CANE_TUNE contract');
+});
+
+test('critic 7 #6: the crook FRAME is a sampled arc, not three straight segments', async () => {
+  /* Since §294 the RENDERED crook is the owner's asset (pinned above); this centerline is the
+     frame the aim system and hookPoint contract still run on, and it must stay an open arc —
+     a regression here bends every cane pose even with the asset drawn over it. */
   const { model } = await build();
   const cl = model.cane.centerline;
   const turns = [];
@@ -188,9 +220,28 @@ function gripMetrics(model) {
   hand.divideScalar(all.length);
 
   const cg = model.cane.mesh.geometry.attributes.position;
+  const cidx = model.cane.mesh.geometry.index;
   const mw = model.cane.mesh.matrixWorld;
   const cane = [];
   for (let i = 0; i < cg.count; i++) cane.push(new THREE.Vector3(cg.getX(i), cg.getY(i), cg.getZ(i)).applyMatrix4(mw));
+
+  /* Digit-to-cane distance is measured to the cane's SURFACE (exact point-to-triangle), not to
+     its nearest vertex. The vertex proxy was honest against the procedural cane's 1356 dense
+     triangles, but the §294 asset's shaft is a low-poly tube with rings only at its ends — its
+     mid-shaft has metres of surface and no vertices, so "nearest vertex" inflated a held hand
+     from ~32 mm to 68 mm and the guard failed on the instrument rather than the grip. The
+     REGISTERED thresholds below are unchanged; measured on the asset cane they read
+     held 31.8 / open 66.9 mm median, so the 60 mm separator still separates the two arms. */
+  const tris = [];
+  const worldV = (i) => new THREE.Vector3(cg.getX(i), cg.getY(i), cg.getZ(i)).applyMatrix4(mw);
+  if (cidx) for (let t = 0; t < cidx.count; t += 3) tris.push(new THREE.Triangle(worldV(cidx.getX(t)), worldV(cidx.getX(t + 1)), worldV(cidx.getX(t + 2))));
+  else for (let t = 0; t < cg.count; t += 3) tris.push(new THREE.Triangle(cane[t].clone(), cane[t + 1].clone(), cane[t + 2].clone()));
+  const closest = new THREE.Vector3();
+  const surfD = (v) => {
+    let d = Infinity;
+    for (const tr of tris) { tr.closestPointToPoint(v, closest); const s = v.distanceToSquared(closest); if (s < d) d = s; }
+    return Math.sqrt(d);
+  };
 
   /* the shaft frame comes from the CANE's own vertices, not from the solve, so this measures the
      thing that renders rather than the thing that was decided */
@@ -224,11 +275,7 @@ function gripMetrics(model) {
     if (th < 0) th += Math.PI * 2;
     bins[Math.floor(th / (Math.PI * 2 / 12)) % 12]++;
   }
-  const nn = all.map((v) => {
-    let d = Infinity;
-    for (const q of cane) { const s = v.distanceToSquared(q); if (s < d) d = s; }
-    return Math.sqrt(d);
-  }).sort((a, b) => a - b);
+  const nn = all.map(surfD).sort((a, b) => a - b);
   return {
     wrap: bins.filter((b) => b > 0).length, bins, shaftR: R,
     medianNN: nn[nn.length >> 1], minNN: nn[0],

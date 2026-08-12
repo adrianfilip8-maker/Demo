@@ -234,6 +234,13 @@ const KNOWN_UNSHIPPED_PAYLOAD = [
  * Asserted in both directions below: still present at the new path, and absent from the old one.
  * Without the first half, deleting an asset outright would look identical to moving it and the
  * register would applaud. Without the second, moving it back would go unnoticed.
+ *
+ * One entry has since moved AGAIN, in the opposite direction: `sly-cane/sly-cane.glb` now lives
+ * under `src/assets/` because it is **wired** (§294 — the owner-supplied cane is the shipped
+ * character's cane, bundled and hashed by Vite through `new URL(..., import.meta.url)` in
+ * `src/player/CaneAsset.js`). It ships on purpose now; what this register still guards is that
+ * it never reappears in `public/` (where it would ship a second, unhashed, unwired copy) and
+ * that the bytes and their PROVENANCE stay in the repo.
  */
 const MOVED_OUT_OF_PUBLIC = [
   ['audio/footstep.mp3', 'staging/assets/audio/footstep.mp3'],
@@ -243,7 +250,7 @@ const MOVED_OUT_OF_PUBLIC = [
   ['sly-anim/sly-cane.glb', 'staging/assets/sly-anim/sly-cane.glb'],
   ['sly-anim/sly-head.png', 'staging/assets/sly-anim/sly-head.png'],
   ['sly-anim/sly-rig.glb', 'staging/assets/sly-anim/sly-rig.glb'],
-  ['sly-cane/sly-cane.glb', 'staging/assets/sly-cane/sly-cane.glb'],
+  ['sly-cane/sly-cane.glb', 'src/assets/sly-cane/sly-cane.glb'],      // wired, §294
   ['tombchaser/PalmTree_Art.glb', 'staging/assets/tombchaser/PalmTree_Art.glb'],
 ];
 
@@ -310,10 +317,13 @@ test('bundle: the provenance record follows the asset', () => {
      the moved directories carry their PROVENANCE.md with them; `sly-anim/` and `audio/` were split
      — some files moved, some stayed — so their records have to name the new location or the trail
      ends at a path that no longer exists. `sly-cane/`'s licence is recorded UNKNOWN, which is
-     exactly the case where a broken trail costs the most. */
+     exactly the case where a broken trail costs the most — and since §294 that file SHIPS, so its
+     record now lives beside it under `src/assets/`, the third root this walk accepts. */
   const provFor = (rel) => {
     const dir = join(ROOT, rel.slice(0, rel.lastIndexOf('/')));
-    for (let d = dir; d.startsWith(join(ROOT, 'staging')) || d.startsWith(join(ROOT, 'public')); d = d.slice(0, d.lastIndexOf('/'))) {
+    for (let d = dir;
+      d.startsWith(join(ROOT, 'staging')) || d.startsWith(join(ROOT, 'public')) || d.startsWith(join(ROOT, 'src/assets'));
+      d = d.slice(0, d.lastIndexOf('/'))) {
       const p = join(d, 'PROVENANCE.md');
       if (existsSync(p)) return { path: p, text: readFileSync(p, 'utf8') };
     }

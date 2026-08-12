@@ -15,6 +15,11 @@ import { MeshBuilder, addTube, addEllipsoid, addHardBox, superEllipse } from './
  *
  * Local frame: **grip at the origin, shaft along +Y, hook curling toward +Z (forward).**
  * `hookPoint` is where a ring sits when the cane catches it.
+ *
+ * Since §294 the SHIPPED character draws the owner-supplied model instead of these triangles —
+ * `adoptAsset` below swaps the rendered geometry after this build, inside the same local frame,
+ * so everything in this header stays true of what renders. The procedural build remains the
+ * frame's source of truth (and what the legacy models and `tools/canesize.mjs` still draw).
  */
 
 /**
@@ -227,6 +232,72 @@ export class Cane {
     this.object.userData.hookPoint = this.hookPoint;
 
     return this;
+  }
+
+  /**
+   * Swap the RENDERED geometry for the owner-supplied cane (`src/assets/sly-cane/sly-cane.glb`,
+   * §294) — the procedural build above is still run first, because it is the FRAME: its measured
+   * y-extent is the conform target, and `hookPoint` / `tipPoint` / `centerline` / `gripSpan`
+   * keep the contact and aim contract every clip, swing and test was authored against. Only the
+   * drawn triangles change.
+   *
+   * THE OWNER'S CONSTRAINT — "do not alter the shape of the model" — is why everything below is
+   * a similarity transform: one uniform scale, one rotation about Y, one translation. No
+   * non-uniform scale, no welding, no re-meshing. The three numbers are DERIVED FROM THE
+   * GEOMETRY at adopt time rather than quoted from PROVENANCE.md, whose own history shows why
+   * (its first drop-in scale was 16% short, inferred from a comment instead of measured):
+   *
+   *   · scale   = this build's bbox y-extent ÷ the asset's. Matching bbox to bbox reproduces
+   *     BOTH extremes of the prop it replaces: the butt lands at the procedural ferrule's
+   *     lowest point, so `CANE_TUNE.dropBelowGrip`'s planted tip (and every `caneall.mjs`
+   *     tip-height figure) carries over bit-for-bit, and the crook tops out at the same height.
+   *   · rotation = the hook's mean lateral offset off the shaft axis (tip-ring centroid),
+   *     turned onto +Z — this frame's "hook curls forward". Measured sign, not assumed
+   *     (the asset curls in +X; a wrong sign here is a backwards cane in his hand).
+   *   · translation = shaft axis onto the Y axis, butt onto the procedural butt.
+   */
+  adoptAsset(asset) {
+    if (!asset?.geometry || !this.mesh) return false;
+    const old = this.mesh.geometry;
+    old.computeBoundingBox();
+    const targetLen = old.boundingBox.max.y - old.boundingBox.min.y;
+
+    /* the parse is cached module-wide and immutable; the frame is baked into a private clone */
+    const geo = asset.geometry.clone();
+    const pos = geo.attributes.position;
+    let y0 = Infinity, y1 = -Infinity;
+    for (let i = 0; i < pos.count; i++) { const y = pos.getY(i); if (y < y0) y0 = y; if (y > y1) y1 = y; }
+    const len = y1 - y0;
+    let cx = 0, cz = 0, cn = 0, ox = 0, oz = 0, on = 0;
+    for (let i = 0; i < pos.count; i++) {
+      const y = pos.getY(i);
+      if (y < y0 + len * 0.05) { cx += pos.getX(i); cz += pos.getZ(i); cn++; }
+      if (y > y0 + len * 0.65) { ox += pos.getX(i); oz += pos.getZ(i); on++; }
+    }
+    if (!cn || !on || !(len > 0)) return false;
+    cx /= cn; cz /= cn;
+    ox = ox / on - cx; oz = oz / on - cz;
+    if (Math.hypot(ox, oz) < len * 0.02) return false;   // no hook bend — do not guess
+
+    const s = targetLen / len;                            // uniform: shape preserved
+    const theta = -Math.atan2(ox, oz);                    // hook bend -> +Z (forward)
+    geo.applyMatrix4(new THREE.Matrix4()
+      .makeTranslation(0, old.boundingBox.min.y - y0 * s, 0)
+      .multiply(new THREE.Matrix4().makeScale(s, s, s))
+      .multiply(new THREE.Matrix4().makeRotationY(theta))
+      .multiply(new THREE.Matrix4().makeTranslation(-cx, 0, -cz)));
+    /* one group over everything, so the mesh's material ARRAY keeps working */
+    geo.clearGroups();
+    geo.addGroup(0, geo.index ? geo.index.count : pos.count, 0);
+
+    const i = this._disposables.indexOf(old);
+    if (i >= 0) this._disposables.splice(i, 1);
+    old.dispose();
+    this._disposables.push(geo);
+    this.mesh.geometry = geo;
+    this.triangles = asset.triangles;
+    this.assetCane = asset.source || true;
+    return true;
   }
 
   _fallbackMaterials() {
