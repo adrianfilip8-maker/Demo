@@ -23262,3 +23262,31 @@ them; that measurement needs its own seal.
 - The bodyshift decision itself returned UNDERPOWERED (|D| = 2 of the required 4): the
   TEXTURE-VIABLE vs RENDER-DEFECT question as posed is unanswerable on the canonical set,
   because the set contains only two shots where the question's quantity exists.
+
+## §282 — the swap-mask floor is a property of the texture PAIR, and carrying the number across pairs silently re-selects the pixels being measured
+
+Found by run 5 of the D2 costume A/B (`RESULT-bodyhue5.md` ADDENDUM). PREREG-bodyhue3 §2
+derived "mask ≥ 18" as the 5th percentile of rotated-texel max-channel deltas — of the
+−21.1° texture pair specifically (96.5% of its texels ≥ 18, p50 78). Run 5 swapped in a
+−11.3° candidate and kept the 18: on that pair only 88.5% of texels clear it (p05 = 9,
+p50 = 42), and in frame space — where every pixel is a partial blend — the mask halved
+(2.17% → 0.88%) and kept only the most hue-sensitive pixels.
+
+The tell was in the arm that contains no candidate at all: raw-texture `sly-closeup` had
+measured 228.4° in three independent valid runs and read 221.1° under the biased mask.
+Re-masking run 5's own frames at the rule-derived floor 9 restored coverage AND medians to
+within 0.5° of every prior run — same frames, different floor, 7° different answer.
+
+The rule for any future same-boot swap A/B, of any asset:
+
+- The floor is **derived per texture pair** (p05 of rotated-texel deltas, textures alone),
+  never inherited from an earlier pair.
+- A **coverage band** is registered alongside it (bodyhue6 uses [1.5%, 3.0%] on these shots,
+  lower edge from the valid-mask history 1.92–2.17%) — the guard that catches a wrong floor
+  at scoring time instead of in a post-mortem.
+- CAL-R's arm-gap cap scales with rotation size (quantisation noise ∝ 1/rotation): 2.0° was
+  right for −21.1°, 3.0° is registered for −11.3°, and the NONLINEAR signal it guards
+  against has never measured below 6.6°.
+
+Run 5's scored MECHANISM-ONLY stands in the record but carries no evidential weight; the
+candidate is re-scored on fresh frames under PREREG-bodyhue6.md.

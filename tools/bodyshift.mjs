@@ -23,7 +23,10 @@ const SHOTS = (process.argv[2] || '').split(',').filter(Boolean);
 if (!SHOTS.length) { console.error('usage: node tools/bodyshift.mjs shot1,shot2'); process.exit(2); }
 mkdirSync(OUT, { recursive: true });
 
-const MASK_MIN = 18;   // PREREG-bodyhue3 §2, from the two textures alone
+/* §282: the floor is a property of the texture PAIR — p05 of its rotated-texel deltas, computed
+   from the textures alone. 18 was the −21.1° pair's value; the −11.3° pair's is 9. Carrying a
+   floor across pairs is the defect that confounded run 5 (RESULT-bodyhue5.md ADDENDUM). */
+const MASK_MIN = Number(process.env.SANDS_FLOOR || 18);
 
 const ARMS = `${OUT}/arms.json`;
 const results = existsSync(ARMS) ? JSON.parse(readFileSync(ARMS, 'utf8')) : [];
@@ -71,7 +74,7 @@ for (const shot of SHOTS) {
 
   if (got.error) { console.log(`${shot}: ${got.error}`); continue; }
 
-  const row = { shot, tree: NOW, modeA: got.modeA, modeB: got.modeB, camDist: got.camDist };
+  const row = { shot, tree: NOW, floor: MASK_MIN, modeA: got.modeA, modeB: got.modeB, camDist: got.camDist };
   for (const [tag, dataUrl] of [['A-raw', got.A], ['B-fix', got.B]]) {
     const buf = Buffer.from(dataUrl.split(',')[1], 'base64');
     const file = `${OUT}/${shot}-${tag}.png`;
