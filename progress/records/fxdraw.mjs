@@ -22,6 +22,14 @@
  * contains no impact effect at all and every arm comes back byte-identical. This run's
  * predecessor spent a capture window discovering that.
  *
+ * AMENDED before any candidate frames existed (same class as the ADDENDUM's provenance fix,
+ * and committed before the first fxdraw invocation): the arm loop now REWINDS `engine.time`
+ * to 0 before every `setShot`, per §275.1. As first committed it relied on `setShot` alone,
+ * which never rewinds — each call advances the clock 0.283 s, so `base2` would have differed
+ * from `base` on every ambient term and the run would have VOIDed on its own validity arm,
+ * exactly as fxshape run 2 did (751,902 px). The rewind is what §275.1 prescribes and what
+ * `fxshape.mjs` already does; the two runners now share one clock discipline.
+ *
  *   node progress/records/fxdraw.mjs <emitter> '<json patch>'
  *   node progress/records/fxdraw.mjs cane_ring '{"size":[0.22,0.95],"col0":15241002}'
  */
@@ -96,6 +104,7 @@ const res = await withGame({ width: 1280, height: 720, quality: 'high', verbose:
     }, [arm, EMITTER]);
 
     const r = await page.evaluate(async () => {
+      window.__ENGINE.time = 0;   // §275.1: every arm shares one absolute timeline
       const res2 = await window.__GAME.setShot('combat', { dt: 1 / 60 });
       return { stats: res2.stats, t: window.__ENGINE?.time ?? null,
         dataUrl: window.__GAME.capture('image/png', 0.92, 0) };
