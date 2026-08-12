@@ -125,6 +125,22 @@ const res = await withGame({ width: 1280, height: 720, quality: 'high', verbose:
   console.log(`tree ${PROVENANCE.sha} · src dirty: ${PROVENANCE.srcDirty ? PROVENANCE.srcDirty.split('\n').length + ' file(s)' : 'no'}`);
   console.log(`fx levers: batches [${inv.batches.join(',')}] · trails ${inv.trailCount}`);
 
+  /* PER-ARM tree stamps, added after run 3 VOIDed on a mid-boot tree change. The FIFO lock
+     serialises captures, not commits: run 3 measured another lane's commit (f4056f4,
+     18:59:16) landing between its `noring` (18:57) and `noflash` (19:00) arms — the later
+     arms rendered the new tree (`noflash` came back +0.097 mean L BRIGHTER than base, which
+     an additive sprite's removal cannot do; the delta is the new torchlight term's brazier
+     pool) and base2 diverged from base on 780,628 px. So "one boot" is NOT "one tree" on
+     this box, SANDS_NO_HMR notwithstanding, and the header's same-tree-by-construction
+     argument is WITHDRAWN — measured, not argued. The stamp makes the boundary attributable:
+     the scorer refuses attribution across any stamp change. Content tree hash, not just sha
+     (§273 rule 3), plus the dirty field for the §186-install case. */
+  const treeStamp = () => ({
+    sha: git('rev-parse', 'HEAD'),
+    srcTree: git('rev-parse', 'HEAD:src'),
+    dirty: git('status', '--porcelain', 'src/') || '',
+  });
+
   const out = {};
   for (const arm of ARMS) {
     const seen = await page.evaluate(([block, trailOff]) => {
@@ -152,7 +168,7 @@ const res = await withGame({ width: 1280, height: 720, quality: 'high', verbose:
     }, 'combat');
     const b64 = r.dataUrl.slice(r.dataUrl.indexOf(',') + 1);
     await writeFile(path.join(OUT, `${arm}.png`), Buffer.from(b64, 'base64'));
-    out[arm] = { seen: r.seen, t: r.t, tris: r.stats?.triangles, draws: r.stats?.drawCalls };
+    out[arm] = { seen: r.seen, t: r.t, tris: r.stats?.triangles, draws: r.stats?.drawCalls, tree: treeStamp() };
     console.log(`  ${arm.padEnd(8)} t ${String(r.t).padStart(8)} · emitters fired [${r.seen.join(',')}]`);
   }
   /* Ride-along, costing no extra lock acquisition: one `courtyard` frame on the shipped tree.

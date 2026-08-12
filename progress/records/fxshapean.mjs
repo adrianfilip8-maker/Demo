@@ -58,9 +58,38 @@ const provState = !PROV ? 'VOID: manifest carries no provenance'
   : dirtyNow ? 'VOID: src/ is dirty now'
   : `OK ${PROV.sha.slice(0, 8)}`;
 console.log(`PROVENANCE ${provState}`);
+
+/* Per-arm tree stamps — run 3's finding. One boot is NOT one tree: the FIFO serialises
+   captures, not commits, and run 3 measured f4056f4 landing between `noring` and `noflash`,
+   flipping the tree under the later arms (base2 diverged 780,628 px; `noflash` came back
+   +0.097 mean L brighter than base, which removing an additive sprite cannot produce — the
+   delta was the new torchlight term's brazier pool, not the flash). The one-boot rider this
+   block used to print is WITHDRAWN; attribution is readable only when every capture carries
+   the same stamp. Runs captured before the stamp amendment have no stamps and are VOID for
+   attribution — re-run rather than self-exempt (§273 rule 5). */
+let ARMS_SAME_TREE = false;
+{
+  let manifestArms = null;
+  try { manifestArms = JSON.parse(readFileSync(path.join(DIR, 'manifest.json'), 'utf8')).arms ?? null; } catch { manifestArms = null; }
+  const stamps = Object.entries(manifestArms ?? {}).filter(([, v]) => v?.tree).map(([k, v]) => [k, v.tree]);
+  if (!stamps.length) {
+    console.log('TREE      per-arm stamps MISSING — attribution VOID (pre-amendment capture; re-run)');
+  } else {
+    const first = stamps[0][1];
+    let split = null, dirt = null;
+    for (const [k, t] of stamps) {
+      if (t.dirty) dirt = `${k} captured with dirty src/`;
+      if (t.sha !== first.sha || t.srcTree !== first.srcTree) { split = `tree changed at arm '${k}'`; break; }
+    }
+    ARMS_SAME_TREE = !split && !dirt;
+    console.log(`TREE      ${stamps.length} stamps — ${ARMS_SAME_TREE
+      ? `all identical (${first.sha?.slice(0, 8)}, src ${first.srcTree?.slice(0, 8)}) — arms are same-tree BY MEASUREMENT`
+      : `VOID: ${split ?? dirt} — the table below is debugging output, not evidence`}`);
+  }
+}
 if (!provState.startsWith('OK')) {
-  console.log('  -> no SHIP verdict may be issued from this run. The attribution below is still');
-  console.log('     readable because every arm shares one boot and one frozen tree by construction.');
+  console.log('  -> no SHIP verdict may be issued from this run. Attribution is readable ONLY if');
+  console.log('     the per-arm tree stamps above are identical — never on the one-boot argument.');
 }
 
 const base = load('base');

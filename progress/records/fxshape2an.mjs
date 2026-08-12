@@ -138,9 +138,45 @@ const provState = !PROV?.sha ? 'VOID: manifest carries no provenance'
   : dirtyNow ? 'VOID: src/ is dirty now'
   : `OK ${PROV.sha.slice(0, 8)} (sampled inside onLocked)`;
 console.log(`  ${provState}`);
-if (!provState.startsWith('OK')) {
-  console.log('  -> nothing ship-shaped may be concluded from this run. The attribution below');
-  console.log('     is still readable: every arm shares one boot and one frozen tree (SANDS_NO_HMR).');
+
+/* Per-capture tree stamps — the guard fxshape run 3 did not have and died without. The FIFO
+   serialises captures, not commits: run 3 measured another lane's commit landing between two
+   arms of one locked boot (f4056f4 between noring and noflash), so "one boot" is NOT "one
+   tree" on this box and the old one-boot rider is withdrawn. Every capture must carry the
+   same {sha, srcTree} and an empty dirty field, or the arms straddle a tree change and the
+   attribution itself is VOID — not just the ship verdict. */
+let treeSplit = null, treeDirty = null;
+{
+  const stamps = [];
+  for (const [arm, shots] of Object.entries(manifest?.arms ?? {})) {
+    for (const [shot, v] of Object.entries(shots)) {
+      if (v?.tree) stamps.push([`${arm}.${shot}`, v.tree]);
+    }
+  }
+  if (!stamps.length) {
+    console.log('  per-arm tree stamps: MISSING from manifest — VOID for attribution (this scorer');
+    console.log('  requires them; a run captured before the stamp amendment must be re-run).');
+    treeSplit = 'stamps missing';
+  } else {
+    const first = stamps[0][1];
+    for (const [k, t] of stamps) {
+      if (t.dirty) treeDirty = `${k} captured with dirty src/ (${t.dirty.split('\n').length} file(s))`;
+      if (t.sha !== first.sha || t.srcTree !== first.srcTree) {
+        treeSplit = `tree changed at ${k}: ${first.sha?.slice(0, 8)}/${first.srcTree?.slice(0, 8)} -> ${t.sha?.slice(0, 8)}/${t.srcTree?.slice(0, 8)}`;
+        break;
+      }
+    }
+    console.log(`  per-arm tree stamps: ${stamps.length} captures, ` +
+      (treeSplit ? `VOID — ${treeSplit}` : treeDirty ? `VOID — ${treeDirty}` : `all identical (${first.sha?.slice(0, 8)}, src ${first.srcTree?.slice(0, 8)})`));
+  }
+}
+if (treeSplit || treeDirty) {
+  console.log('  -> the arms do not share one tree; the attribution table below is NOT readable');
+  console.log('     evidence, only debugging output. Re-run whole (§273 rule 5: no self-exemption).');
+  for (const s of roiState.values()) if (!s.void) s.void = 'tree-split';
+} else if (!provState.startsWith('OK')) {
+  console.log('  -> no ship-shaped conclusion from this run; the attribution stays readable on the');
+  console.log('     per-arm stamps above (same tree at every capture), not on the one-boot rider.');
 }
 
 /* ── attribution table ───────────────────────────────────────────────────────────────────── */

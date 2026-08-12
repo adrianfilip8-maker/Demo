@@ -98,6 +98,21 @@ const res = await withGame({ width: 1280, height: 720, quality: 'high', verbose:
 
   const manifest = { provenance: PROVENANCE, inventory: inv, arms: {}, raycast: {} };
 
+  /* PER-ARM tree stamps — added after fxshape run 3 VOIDed on exactly this. The FIFO lock
+     serialises CAPTURES, not COMMITS: the working tree is shared, and run 3 measured another
+     lane's commit (f4056f4, 18:59:16) landing between its `noring` and `noflash` arms — the
+     later arms rendered a different tree and base2 diverged from base on 780k px. SANDS_NO_HMR
+     ignores the watcher, but it does not make the boot immune (measured, not argued). A sha +
+     src-content stamp per arm makes a mid-boot commit attributable to the exact arm boundary
+     instead of poisoning the whole run silently; the scorer VOIDs across any stamp change.
+     Content hash, not just sha (§273 rule 3): vite serves the working tree, and a dirty tree
+     renders what is on disk whatever HEAD says. */
+  const treeStamp = () => ({
+    sha: git('rev-parse', 'HEAD'),
+    srcTree: git('rev-parse', 'HEAD:src'),   // committed src/ content; moves iff a commit lands
+    dirty: git('status', '--porcelain', 'src/') || '',   // the §186-install case
+  });
+
   for (const arm of ARMS) {
     await page.evaluate((a) => {
       const eng = window.__ENGINE;
@@ -122,7 +137,7 @@ const res = await withGame({ width: 1280, height: 720, quality: 'high', verbose:
       }, shot);
       const b64 = r.dataUrl.slice(r.dataUrl.indexOf(',') + 1);
       await writeFile(path.join(OUT, `${arm}.${shot}.png`), Buffer.from(b64, 'base64'));
-      manifest.arms[arm][shot] = { t: r.t, tris: r.tris };
+      manifest.arms[arm][shot] = { t: r.t, tris: r.tris, tree: treeStamp() };
 
       /* Ride-along ray-cast on the base arm, straight after this shot staged: what mesh is at
          each registered ROI centre, in the LIVE scene. */
