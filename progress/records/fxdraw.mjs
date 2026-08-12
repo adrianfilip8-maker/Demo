@@ -63,7 +63,15 @@ const stampProvenance = () => {
 const OUT = path.join(ROOT, 'shots', 'fxdraw');
 await mkdir(OUT, { recursive: true });
 
-const ARMS = ['base', 'suspect', 'cand', 'candoff', 'base2'];
+/* ADDENDUM2: `nocane` gives PREREG-fxdraw §5 falsifier 1 a same-boot denominator (fxshape
+   run 3's VOIDed on a mid-boot tree flip), and every capture carries a tree stamp. */
+const ARMS = ['base', 'suspect', 'nocane', 'cand', 'candoff', 'base2'];
+const NOCANE = ['cane_ring', 'cane_flash', 'cane_spark', 'cane_debris'];
+const treeStamp = () => ({
+  sha: git('rev-parse', 'HEAD'),
+  srcTree: git('rev-parse', 'HEAD:src'),
+  dirty: git('status', '--porcelain', 'src/') || '',
+});
 
 const res = await withGame({ width: 1280, height: 720, quality: 'high', verbose: false, onLocked: stampProvenance }, async ({ page, info }) => {
   /* Reach the live emitter definition object. `Particles._emit` reads `EMITTERS[name]` at emit
@@ -94,14 +102,14 @@ const res = await withGame({ width: 1280, height: 720, quality: 'high', verbose:
 
   const out = {};
   for (const arm of ARMS) {
-    const state = await page.evaluate(([a, name]) => {
+    const state = await page.evaluate(([a, name, allOff]) => {
       const on = a === 'cand' || a === 'candoff';
       const def = window.__fxDef;
       const src = on ? window.__fxPatch : window.__fxOrig;
       for (const k of Object.keys(window.__fxPatch)) def[k] = Array.isArray(src[k]) ? src[k].slice() : src[k];
-      window.__fxBlock = new Set(a === 'suspect' || a === 'candoff' ? [name] : []);
+      window.__fxBlock = new Set(a === 'suspect' || a === 'candoff' ? [name] : a === 'nocane' ? allOff : []);
       return JSON.parse(JSON.stringify(Object.fromEntries(Object.keys(window.__fxPatch).map((k) => [k, def[k]]))));
-    }, [arm, EMITTER]);
+    }, [arm, EMITTER, NOCANE]);
 
     const r = await page.evaluate(async () => {
       window.__ENGINE.time = 0;   // §275.1: every arm shares one absolute timeline
@@ -111,7 +119,7 @@ const res = await withGame({ width: 1280, height: 720, quality: 'high', verbose:
     });
     await writeFile(path.join(OUT, `${arm}.png`),
       Buffer.from(r.dataUrl.slice(r.dataUrl.indexOf(',') + 1), 'base64'));
-    out[arm] = { t: r.t, live: state, blocked: arm === 'suspect' || arm === 'candoff' };
+    out[arm] = { t: r.t, live: state, blocked: arm === 'suspect' || arm === 'candoff' || arm === 'nocane', tree: treeStamp() };
     console.log(`  ${arm.padEnd(8)} t ${String(r.t).padStart(8)} · ${EMITTER} = ${JSON.stringify(state)}` +
       `${out[arm].blocked ? ' · SUPPRESSED' : ''}`);
   }

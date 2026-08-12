@@ -45,8 +45,8 @@ function load(n) {
   if (!existsSync(f)) { console.error(`missing ${f}`); process.exit(1); }
   return readPNG(f);
 }
-const base = load('base'), suspect = load('suspect'), cand = load('cand'),
-  candoff = load('candoff'), base2 = load('base2');
+const base = load('base'), suspect = load('suspect'), nocane = load('nocane'),
+  cand = load('cand'), candoff = load('candoff'), base2 = load('base2');
 const { w, h, ch } = base;
 const at = (im, i) => [im.data[i * ch], im.data[i * ch + 1], im.data[i * ch + 2]];
 const diff = (a, b, i) => {
@@ -92,6 +92,29 @@ const provState = !PROV?.sha ? 'VOID: no provenance in manifest'
   : `OK ${PROV.sha.slice(0, 8)}`;
 console.log(`PROVENANCE ${provState}  (emitter ${PROV?.emitter}, patch ${JSON.stringify(PROV?.patch)})`);
 if (!provState.startsWith('OK')) VOID.push('provenance');
+
+/* ADDENDUM2 §1: per-capture tree stamps, whole-run fail-closed. One boot is not one tree
+   (fxshape run 3); the stamps are what make the arms comparable at all. */
+{
+  const stamps = Object.entries(manifest?.arms ?? {}).filter(([, v]) => v?.tree).map(([k, v]) => [k, v.tree]);
+  if (!stamps.length) { console.log('TREE      stamps MISSING — VOID'); VOID.push('tree stamps missing'); }
+  else {
+    const first = stamps[0][1];
+    let bad = null;
+    for (const [k, t] of stamps) {
+      if (t.dirty) { bad = `${k} captured with dirty src/`; break; }
+      if (t.sha !== first.sha || t.srcTree !== first.srcTree) { bad = `tree changed at arm '${k}'`; break; }
+    }
+    console.log(`TREE      ${stamps.length} stamps — ${bad ? `VOID: ${bad}` : `all identical (${first.sha?.slice(0, 8)}, src ${first.srcTree?.slice(0, 8)})`}`);
+    if (bad) VOID.push('tree split');
+  }
+}
+
+/* ADDENDUM2 §2: falsifier 1 gets its same-boot denominator. If the suspect is not one
+   dominant emitter — under half of everything the impact draws — the PREREG's own withdrawal
+   clause fires and nothing ships regardless of the gates. */
+let FN = 0;
+for (let i = 0; i < w * h; i++) if (diff(base, nocane, i) >= DTHR) FN++;
 
 /* ── D4 box, derived from Shots.js at score time ─────────────────────────────────────────── */
 const s = SHOTS.combat;
@@ -141,6 +164,13 @@ for (const [name, ok, detail] of gates) {
 }
 console.log(`\nsuspect contribution: ${F0} px at meanSat ${C0.meanSat.toFixed(3)} · hero-box lift ${lift0.toFixed(4)}`);
 console.log(`candidate contribution: ${F1} px at meanSat ${C1.meanSat.toFixed(3)} · hero-box lift ${lift1.toFixed(4)}`);
+
+const dominant = FN > 0 && F0 >= 0.50 * FN;
+console.log(`FALSIFIER-1  suspect F0 ${F0} vs nocane ${FN}: ${FN ? (100 * F0 / FN).toFixed(1) + '%' : 'n/a'} — ` +
+  (FN === 0 ? 'VOID (nocane removed nothing)' : dominant ? 'one dominant emitter, claim stands'
+    : 'UNDER 50%: the one-dominant-emitter claim is WITHDRAWN (PREREG §5.1) — nothing ships'));
+if (FN === 0) VOID.push('nocane removed 0 px');
+else if (!dominant) VOID.push('falsifier 1: suspect under half of nocane');
 
 if (VOID.length) {
   console.log(`\nVERDICT: VOID (${VOID.join('; ')}) — nothing ships from this run, PASS or not.`);
