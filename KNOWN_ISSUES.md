@@ -23455,3 +23455,24 @@ Critic 10's console error routed to both suspects; the r10 manifest exonerates t
 ("prewarm 23 recipes… 23 baked / 0 generated", textures.bin present, 25 MB). The remaining
 fetcher is Audio.js:394's hardcoded relative `assets/audio/<stem>` — one stem 404s at boot.
 Self-containment mandate item; owner AUDIO; small, unstarted.
+
+## §293 — redflood: NONE-OF-THESE — the twilight monochrome is the light environment, not the grade; haze poke surface is SKY-side
+
+RESULT-redflood (sealed lattice, 2 boots, C-DRIFT clean): grade knobs together explain ~1/3
+of the wall's excess saturation (E(alloff) 0.074/0.094 vs floor 0.08, weaker-shot rule);
+no condition recovers texture (T ±0.3 L); base wall S is only 0.227 — "blown monochrome" is
+hue UNIFORMITY from the tod-0.80 anchor set (sun/hemiGround/fog/horizon all warm by authored
+design), upstream of grade/haze/saturation. haze0 VOID: shading.tune.hazeDensity is
+republished per frame by SKY — haze arms must poke SKY-side or the atmowire seam. Fix
+directions (design, unlicensed): re-stage tod 0.74–0.76, or cool the ≤2° anchors' fill leg;
+either protects daylight bit-identically and re-measures with hue-dispersion. Forecast 4/15.
+
+## §294 — OWNER DECISIONS (2026-08-12): head sculpt stays; the downloaded cane replaces the procedural one
+
+(1) The dlrig head sculpt is LEFT AS-IS by explicit owner instruction ("Leave it") after
+reviewing the r10 evidence (startle/profile/closeup delivered). Critic rounds should treat
+the head sculpt as owner-waived — report it, do not re-rank it as actionable. The idle-pose
+half of critic10 #1 (ANIMATION) is NOT waived.
+(2) The most recently downloaded cane asset is to be integrated as Sly's cane, by owner
+instruction ("Use the cane that was last downloaded"), replacing the procedural build where
+they conflict. Licence/provenance recorded per the asset register on integration.
