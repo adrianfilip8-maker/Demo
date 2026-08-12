@@ -51,6 +51,18 @@ const DIRS = ['progress/records', 'tools'];
 const CALL = /setShot\s*\(/g;
 /** `{ dt: 0 }` in any spacing, anywhere in the file: one frozen call is enough to show intent. */
 const FROZEN = /\bdt\s*:\s*0\b/;
+/**
+ * The SECOND legitimate phase-alignment mechanism (§275.1, first used by fxshape2.mjs):
+ * rewind `engine.time = 0` immediately before every `setShot(..., { dt: 1/60 })`, so every arm
+ * advances along the identical absolute timeline instead of not advancing at all. FX runners
+ * need this form — at `dt: 0` emitters hold at t = 0 and a combat-trail arm has no trail to
+ * measure. The requirement this file guards is phase ALIGNMENT, not the literal `dt: 0`; a
+ * runner using either spelling is not `decalsign`'s defect. (This regex is deliberately
+ * narrow: an assignment of exactly 0 to the engine clock. A runner that rewinds only SOME of
+ * its setShot calls would still pass it — as would a `dt: 0` in only some calls; both scans
+ * assert declared intent, and the arms' own recorded `t` is what a scorer checks.)
+ */
+const REWOUND = /(?:__ENGINE|engine)\.time\s*=\s*0\b/;
 
 function scan() {
   const out = [];
@@ -63,7 +75,7 @@ function scan() {
       const text = readFileSync(join(dir, name), 'utf8');
       const calls = [...text.matchAll(CALL)].length;
       if (!calls) continue;
-      out.push({ rel, calls, frozen: FROZEN.test(text) });
+      out.push({ rel, calls, frozen: FROZEN.test(text) || REWOUND.test(text) });
     }
   }
   return out;
