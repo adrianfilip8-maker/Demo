@@ -23322,3 +23322,19 @@ only if their own colour sits above the costume's: the ink does — `inkShade`/`
 0x161022 is 260° violet by the source's own comment, at INK_PX = 2.5 fixed SCREEN pixels at
 every distance. PREREG-attractor2 runs the ink lattice (crease / hull / both), with the
 eroded-mask split mandatory if that also returns NEITHER.
+
+## §285 — the ink is exonerated too: fourteen hull shells hidden and the crease pass zeroed move the mid-range swing by at most 0.1°
+
+RESULT-attractor2 (ink toggle lattice, both boots gate-clean): `nohull` is byte-equivalent
+to base inside the mask — identical counts, identical medians — and `nocrease` grows the
+mask ~15% (crease pixels start clearing the floor once the ink stops darkening both arms
+identically) while moving the swing ≤ 0.1°. With rims (§284, ≤ 0.2°), mips (miphue.mjs,
+none at any level), and ink (≤ 0.1°) all measured out, §281's mid-range mixer has survived
+every named-subsystem toggle. The attenuation itself reproduces bit-for-bit across
+independent boots (hero base 227.6°/223.9° in both runs).
+
+PREREG-erosion seals the mandatory boundary/interior split on the four existing base pairs:
+EDGE-MIX (interior pixels carry the full authored swing) would reclassify the mid-range
+residue as partial-coverage arithmetic — to be checked against the reference at matched
+character scale before being called a defect; BULK-MIX sends the hunt into the frame-wide
+passes. Forecast record entering: 2/7.
