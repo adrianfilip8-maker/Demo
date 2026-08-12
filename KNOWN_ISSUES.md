@@ -23338,3 +23338,22 @@ EDGE-MIX (interior pixels carry the full authored swing) would reclassify the mi
 residue as partial-coverage arithmetic — to be checked against the reference at matched
 character scale before being called a defect; BULK-MIX sends the hunt into the frame-wide
 passes. Forecast record entering: 2/7.
+
+## §286 — the §281 mixer is SHARED between shading and display transform, scene-side majority: ~43% of the costume's hue swing dies in the toon shader before PostFX takes another ~19–30%
+
+RESULT-attractor3b (debugRaw('scene') bisection, close-up-calibrated for the linear channel;
+attractor3's first seal VOIDed itself on a CAL-FULL carried from the −21.1° pair — §282's
+error class in a calibration bar — and was re-sealed with mid shots provably unseen,
+ADDENDUM-attractor3-calfull). Channel-relative survival S: hero 0.58, interior 0.56 —
+neither POSTFX-SIDE (≥0.85 both) nor SCENE-SIDE (hero missed its bar by 0.026) → SHARED,
+scene share larger on both shots.
+
+The asymmetric pull (arm B toward arm A) exists in the pre-tonemap buffer: between close-up
+and mid-range, raw-channel arm A moves +2.8° while arm B moves +7.3°. And PostFX is not
+hue-neutral anywhere: it eats 1.7° of the −11.3° swing even at close range (0.96 → 0.81).
+
+Exoneration chain to date, every step sealed with a registered forecast: rims §284, mips
+(miphue.mjs), ink §285, edges (RESULT-erosion BULK-MIX), shade concentration
+(RESULT-litshade UNIFORM), all-tonemap (this run). Forecast record 2/10. Next: sealed
+debugTerm bisection of the toon shading terms (attractor4), bars derived from THIS texture
+pair's record only.
