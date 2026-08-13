@@ -23721,3 +23721,19 @@ the owner chose "Cool it." The fix: cool the ≤2° sun-elevation anchors' fill/
 shaded surfaces diverge from key-lit ones at twilight. Ships only through a sealed A/B with
 hue-DISPERSION bars (mean saturation is the proven-wrong lens, §293) over redflood's WALL
 ROIs, daylight-protection diffs on ≥3 golden-anchor shots, and a binding LOOK gate.
+
+## §299 — the character-bloom gate: SHIP on the re-seal (all six re-aimed bars green); the write queued behind the lock
+
+PREREG-critic10-postfx2's run landed clean: V1 back==base strict 0 px ×5; V2 sly-closeup
+2,565 changed px / mean 5.10 / 97.3% darker (inside the seal's stated prediction); V3
+containment 100% on all five shots against the subject-mask instrument (the roof guard's
+92 traversal px — the parent's "failure" — score 92/92 once the reference is the population
+the gate is documented to act on); V4 brighter-side counts absorbed by the FXAA allowance;
+V5 halo ROIs at 0.000 with the vacuity control firing 4/4; V6 looking confirms the removal
+is the subject's own bloom re-feed and nothing else. RESULT-critic10-postfx2.md is the
+record. §298.1's aim-error diagnosis is thereby CONFIRMED mechanically: same candidate
+bytes, same shots, bars aimed at the mask population → clean pass.
+
+The ship write (`PostFX.cand.js` → src with `bloomSubjectCut: 1.0`) is DEFERRED to the
+post-queue lock window per §186/§296 — torchlight and twilight hold the FIFO at scoring
+time. The RESULT carries the exact pending-write recipe; the write commit cites it.
