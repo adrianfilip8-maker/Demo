@@ -1,0 +1,87 @@
+--- src/render/PostFX.js	2026-08-13 07:04:07.013344984 +0000
++++ progress/records/fxartifact/PostFX.cand.js	2026-08-13 14:01:01.312772848 +0000
+@@ -508,6 +508,34 @@
+      vacuity control firing 4/4, V6 looking clean. */
+   bloomSubjectCut: 1.0,
+ 
++  /* --- FX exclusion from the ink composite (critic 11 family 3: "ink on transparent FX" —
++     combat's porcelain-contoured swing band) ---
++     The crease/ink mask is derived from the OPAQUE scene's depth+normal buffers (transparent
++     FX opt out of the normal prepass and write no depth), and the composite stamps that mask
++     over the FINISHED frame — so an additive FX quad (cane ring, trail, flash, flame,
++     sparkle) drawn in front of inked geometry gets the geometry's lines laid across it at
++     full strength. Measured on shots/r11/combat.png: the block-edge ink crosses the pale
++     swing band uninterrupted — rectilinear wall lines, not a band contour — which is the
++     critic's "porcelain dark contour".
++
++     The signal that separates "bright FX in front" from "surface" is scene ALPHA. Opaque
++     toon draws tag alpha = 1 - slyMetal <= 1 (SLY_METAL_TAG), the sky dome writes exactly 1,
++     normal-blended transparency converges toward 1 — and ADDITIVE FX ACCUMULATE alpha upward
++     past 1 (three sets gl.blendFuncSeparate(SRC_ALPHA, ONE, ONE, ONE) for AdditiveBlending,
++     so dst.a grows by src.a per fragment; the scene RT is HalfFloat and does not clamp).
++     Nothing else in this scene can push a pixel's alpha above 1: the shafts blend
++     ONE/ONE_MINUS_SRC_ALPHA (bounded by 1), water/decals/birds are normal or multiply
++     blends. So max(alpha - 1, 0) is the additive-FX coverage of the pixel and exactly 0
++     everywhere else.
++
++     The gate multiplies the ink mask by 1 - clamp(cut * max(alpha - 1, 0), 0, 1): ink fades
++     in proportion to the FX's own accumulated coverage, and every non-FX pixel multiplies by
++     exactly 1.0. Metal pixels (alpha 1 - m < 1) under-gate by m — fail toward KEEPING ink,
++     never toward losing it. 0 = IEEE-exact no-op (clamp(0*x) = 0 and line *= 1.0 is exact).
++     Arms {0, 1} registered in PREREG-fxink.md; do not ship a nonzero value without that
++     seal's frame verdict. */
++  fxInkCut: 0,
++
+   /* --- grade --- */
+   // Was lifted to 1.45 to fight darkness that turned out to be the AO feedback bug below.
+   // With that fixed the lift became a double correction and blew the stone out to white,
+@@ -1160,6 +1188,7 @@
+ uniform float uBloomIntensity, uSplitStrength, uVignette, uChroma, uGrain;
+ uniform vec2  uSplitRange;
+ uniform float uAOEnabled, uEdgeEnabled, uBloomEnabled, uInkStrength;
++uniform float uFxInkCut;   // TUNE.fxInkCut — ink exclusion over additive FX; 0 = exact no-op
+ uniform float uAOStrength, uAODepth, uRimStrength, uRimShadowFloor;
+ uniform vec3  uLift, uGain, uSplitShadow, uSplitHighlight, uInkWarm, uInkCool;
+ uniform vec3  uAOTint, uRimLit, uRimShade;
+@@ -1288,7 +1317,10 @@
+   vec2 ca = fromCentre * uChroma * r2 * 4.0;
+   vec3 scene;
+   scene.r = texture2D( uScene, vUv + ca ).r;
+-  scene.g = texture2D( uScene, vUv ).g;
++  /* Centre tap fetched whole: .g feeds the green channel exactly as before, and .a carries
++     the accumulated additive-FX coverage the ink gate consumes (see TUNE.fxInkCut). */
++  vec4 slySceneC = texture2D( uScene, vUv );
++  scene.g = slySceneC.g;
+   scene.b = texture2D( uScene, vUv - ca ).b;
+ 
+   // AO — coloured, not grey, and gentle.
+@@ -1408,6 +1440,12 @@
+     // Don't ink what's already dark. A black line on a near-black surface adds nothing but
+     // noise, and it was a large part of why the shadowed half of the frame turned to mush.
+     line *= smoothstep( 0.05, 0.20, lum );
++    /* FX exclusion (TUNE.fxInkCut): ink is a mark on a SURFACE; a bright additive quad in
++       front of that surface must cover the mark, not wear it. alpha > 1 happens only by
++       additive accumulation (see the TUNE note), so this is proportional to the FX's own
++       coverage and is EXACTLY 1.0 wherever no additive FX is present — at uFxInkCut = 0 it
++       is exactly 1.0 everywhere (clamp(0*x) = 0; x*1.0 = x). */
++    line *= 1.0 - clamp( uFxInkCut * max( slySceneC.a - 1.0, 0.0 ), 0.0, 1.0 );
+     // Warm ink where the surface is lit, violet ink where it's in shadow (§2.1).
+     vec3 ink = min( mix( uInkCool, uInkWarm, smoothstep( 0.12, 0.55, lum ) ), c );
+     c = mix( c, ink, clamp( line, 0.0, 1.0 ) * uInkStrength );
+@@ -1622,6 +1660,7 @@
+         uGrain: { value: this.tune.grain },
+         uAOEnabled: { value: 1 }, uEdgeEnabled: { value: 1 }, uBloomEnabled: { value: 1 },
+         uInkStrength: { value: this.tune.inkStrength },
++        uFxInkCut: { value: this.tune.fxInkCut },
+         uAOStrength: { value: this.tune.aoStrength },
+         uAODepth: { value: this.tune.aoDepth },
+         uRimStrength: { value: this.tune.rimStrength },
+@@ -2132,6 +2171,8 @@
+     cu.uSplitShadow.value.copy(_splitScratch.setHex(this.tune.splitShadow).lerp(_turqTint, this.tune.splitShadowTeal));
+     cu.uAOTint.value.copy(tintColor(_aoScratch.setHex(this.tune.aoTint).lerp(_turqTint, this.tune.aoTintTeal).lerp(_whiteTint, this.tune.aoTintNeutral)));
+     cu.uInkStrength.value = this.tune.inkStrength;
++    // Re-read per frame like its siblings, so a one-boot A/B can poke tune.fxInkCut (§40).
++    cu.uFxInkCut.value = this.tune.fxInkCut;
+     cu.uAOStrength.value = this.tune.aoStrength;
+     cu.uAODepth.value = this.tune.aoDepth;
+     /* Re-read every frame so a one-boot A/B can poke tune.contact between arms.
