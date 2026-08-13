@@ -23795,3 +23795,18 @@ Critic r10's interior 4.5 ("torches are bloomy orbs that cast nothing") now has 
 mechanism live. Instrument arc (§301→§302→here): on this renderer a [0,0] pixel bar is
 legitimate ONLY same-boot; cross-boot claims need measured floors or a different form —
 generalised from §296.3 and now proven by a 3-run natural experiment. Forecast ledger 5/18.
+
+## §304 — critic round 11 (blind): REJECT, avg 4.44/16 — the round's cost is concentrated in three families; D2 stays closed a second blind time
+
+Scores: temple 7 · night 6 · traversal 6 · kaykit/closeup/courtyard/sly-key 5 · hero/
+startle/arm/dunes/interior/profile 4 · perch/combat 3 · guard 2 (RESULT-critic11.md, quotes
+verbatim). Families: (1) exposure/grade — red flood erasing albedo, lit-band desaturating
+Sly's blue (§277's half), hero's missing raking key, interior ambient swamping §303's
+shipped pool → LIGHTING; (2) character identity — mask/ears WAIVED at routing (§294(1)),
+cane shape LOCKED (§294(2)) but gold MATERIAL read queued, tail rings all-yaw → TEXTURES,
+ratio 5.72 noted, perch slump = #17; (3) postfx artifacts — sandHigh ghost discs (fix seal
+now due, attribution was §298-evidence-grade), edge-detect on FX quads and seams, guard cone
+rebuild, combat trail. Budget: 15/16 shots over 1.2M tris (night 2.57M), 7/16 over 250
+draws — arbitration with numbers. Positives on record: night "closest to the license",
+temple competitive, tail texture on-reference, no costume-hue ranking anywhere. r10 avg 4.9
+on a smaller set; new staging shots (guard 2, combat 3) are lows r10 never photographed.
