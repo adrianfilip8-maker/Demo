@@ -171,3 +171,13 @@ says the claim it implemented is too narrow; fail-closed means exactly this. Wha
 - The 2 pre-existing `bundle:` test failures (sly-cane staging, from `5ecc80b`'s cane swap)
   are the cane lane's and are not addressed here; the suite otherwise passes 466/468 exactly
   as inherited.
+
+## §2 ADDENDUM — suppression run scored (coordinator fold, per the lane's handoff)
+
+The queued suppression run completed after two container-restart requeues. The pixel-count
+gates VOIDed on most ROIs (subject-absent / tree-split / validity — the §296-f3 drift and
+restart-split trees reached this run too), so the attribution is NOT upgraded to gate-grade.
+It remains EVIDENCE-GRADE, and the ride-along raycasts again hit `pickup_coins`/`treasure_*`
+FIRST at every one of the twelve ROIs, unanimously. The cane_ring prior stays FALSIFIED for
+the floaters; the pickups fix seal (§296 queue item) is unaffected — its target was named by
+evidence, not by these gates.
