@@ -23770,3 +23770,16 @@ term itself performed on every same-boot instrument: pool +24.3 L / +92.4 R−B 
 dose ×1.64, restore exact, null0 exact-recompile. Disposition: localToon 2.5→0.0 (registered
 fallback, mechanism stays), PREREG-torchlight2 re-registers seven emitters with a re-derived
 F1 band, critic r11 holds behind it. Run-4 frames archived at torchlight1-void-run4/.
+
+## §302 — torchlight2: VOID again, dispositively — boot identity is the drift boundary; cross-boot [0,0] bars are unachievable here and the torch A/B moves into one boot
+
+All of §301's fixes ran and PASSED (guard slot tracked to 2 cm, derived F1/F1b bands held,
+F2 15.03 m, ref-pinned trees exact) and D1 still failed: 28k/51k px boot-A2-vs-A in ONE
+session with warm boots — vs run 4's 49k/80k across 3 hours. The session-gap attribution is
+dead; §296-f3's luma-sag samples at a different process age per boot, so within-boot
+comparisons are byte-exact (R1 0 px, all backs 0 px) while cross-boot ones never are. PF4
+fired both runs exactly as registered. Effect evidence is twice-replicated (+24.3 L pool,
++92.4 R−B, warm% 89.2, dose ×1.64). Disposition (RESULT-torchlight2.md): PREREG-torchlight3
+— one boot, CAND tree, per-shot poke arms 0.0/2.5/back (the c10postfx2/twilight pattern that
+held 0 px twelve-for-twelve today); the CAND@0≡BASE identity becomes an analytic premise
+(IEEE x·0=0 + N1 semantics), not a pixel bar. localToon stays 0.0 until that verdict.

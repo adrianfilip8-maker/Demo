@@ -1,0 +1,67 @@
+base POOL meanL 70.7 R-B -17.0 warm% 2.3
+base FAR  meanL 61.8 R-B -26.7 warm% 1.2
+D1 interior base2-vs-base 28123 px; hero 51286 px
+POOL dMeanL 24.3 dR-B 92.4 cand warm% 89.2
+F1  FAR   dMeanL 2.14 dR-B 11.96 (bands [-8,+5.0] / [-8,+22])
+F1b FAR-N dMeanL 0.16 dR-B 1.27 (bands [-8,+1.0] / [-8,+2.0])
+B hero         cand-vs-base 73472 px
+B kaykit       cand-vs-base 145287 px
+B temple       cand-vs-base 230631 px
+B sly-closeup  cand-vs-base 582454 px
+B sly-startle  cand-vs-base 86333 px
+B sly-perch    cand-vs-base 260076 px
+B sly-arm      cand-vs-base 317495 px
+B courtyard    cand-vs-base 315287 px
+B dunes        cand-vs-base 30161 px
+B night        cand-vs-base 76770 px
+B traversal    cand-vs-base 127724 px
+B combat       cand-vs-base 376525 px
+B guard        cand-vs-base 351164 px
+B sly-profile  cand-vs-base 428293 px
+B sly-key      cand-vs-base 399563 px
+N1 interior null0-vs-base 42870 px
+R1 interior restore-vs-cand 0 px
+KO POOL dMeanL @6.0 39.8 vs @2.5 24.3
+(guard slot) interior.base  (9.09, -8.78, -66.57) i 4.117
+(guard slot) interior.base2  (9.09, -8.78, -66.59) i 4.117
+(guard slot) interior.cand  (9.09, -8.78, -66.61) i 4.117
+(guard slot) interior.null0  (9.09, -8.78, -66.61) i 4.117
+(guard slot) interior.kbover  (9.09, -8.78, -66.61) i 4.117
+(guard slot) interior.restore  (9.09, -8.78, -66.61) i 4.117
+(guard slot) A2-vs-A stand delta 2.0 cm — D1 attribution aid
+F2 guard-torch min distance to FAR surface 15.03 m (>= 8.5)
+trees: base {ecac375018f22205} cand {80ca393a9b620830} expected base ecac375018f22205 cand 80ca393a9b620830
+(desc) SLY box dMeanL 8.3 dR-B 32.6
+(desc) R-pool dMeanL 20.9 dR-B 75.6
+
+  BG1            PASS
+  D1             FAIL
+  P1             PASS
+  P2             PASS
+  F1             PASS
+  F1b            PASS
+  B_hero         VOID
+  B_kaykit       VOID
+  B_temple       VOID
+  B_sly-closeup  VOID
+  B_sly-startle  VOID
+  B_sly-perch    VOID
+  B_sly-arm      VOID
+  B_courtyard    VOID
+  B_dunes        VOID
+  B_night        VOID
+  B_traversal    VOID
+  B_combat       VOID
+  B_guard        VOID
+  B_sly-profile  VOID
+  B_sly-key      VOID
+  N1             VOID
+  R1             PASS
+  KO1            PASS
+  V1             PASS
+  F2             PASS
+  V2             PASS
+  V3             PASS
+  V4             PASS
+
+==> DO NOT SHIP — D1 FAIL, B_hero VOID, B_kaykit VOID, B_temple VOID, B_sly-closeup VOID, B_sly-startle VOID, B_sly-perch VOID, B_sly-arm VOID, B_courtyard VOID, B_dunes VOID, B_night VOID, B_traversal VOID, B_combat VOID, B_guard VOID, B_sly-profile VOID, B_sly-key VOID, N1 VOID  (VOID is not PASS — B_hero, B_kaykit, B_temple, B_sly-closeup, B_sly-startle, B_sly-perch, B_sly-arm, B_courtyard, B_dunes, B_night, B_traversal, B_combat, B_guard, B_sly-profile, B_sly-key, N1 could not be evaluated)
