@@ -1,0 +1,57 @@
+base POOL meanL 70.7 R-B -17.0 warm% 2.3
+base FAR  meanL 61.8 R-B -26.7 warm% 1.2
+D1 interior base2-vs-base 49417 px; hero 80102 px
+POOL dMeanL 24.3 dR-B 92.4 cand warm% 89.2
+FAR  dMeanL 2.24 dR-B 12.06
+B hero         cand-vs-base 0 px
+B kaykit       cand-vs-base 0 px
+B temple       cand-vs-base 0 px
+B sly-closeup  cand-vs-base 0 px
+B sly-startle  cand-vs-base 0 px
+B sly-perch    cand-vs-base 0 px
+B sly-arm      cand-vs-base 0 px
+B courtyard    cand-vs-base 0 px
+B dunes        cand-vs-base 0 px
+B night        cand-vs-base 0 px
+B traversal    cand-vs-base 0 px
+B combat       cand-vs-base 0 px
+B guard        cand-vs-base 0 px
+B sly-profile  cand-vs-base 0 px
+B sly-key      cand-vs-base 0 px
+N1 interior null0-vs-base 0 px
+R1 interior restore-vs-cand 0 px
+KO POOL dMeanL @6.0 39.8 vs @2.5 24.3
+V1: interior.base slot (9.09,-8.78,-66.57) matches no sconce
+trees: base {18a2e1e292b8ac2b} cand {f9a77726b2a5ece0}
+(desc) SLY box dMeanL 8.3 dR-B 32.6
+(desc) R-pool dMeanL 20.9 dR-B 75.5
+
+  BG1            PASS
+  D1             FAIL
+  P1             PASS
+  P2             PASS
+  F1             FAIL
+  B_hero         VOID
+  B_kaykit       VOID
+  B_temple       VOID
+  B_sly-closeup  VOID
+  B_sly-startle  VOID
+  B_sly-perch    VOID
+  B_sly-arm      VOID
+  B_courtyard    VOID
+  B_dunes        VOID
+  B_night        VOID
+  B_traversal    VOID
+  B_combat       VOID
+  B_guard        VOID
+  B_sly-profile  VOID
+  B_sly-key      VOID
+  N1             VOID
+  R1             PASS
+  KO1            PASS
+  V1             FAIL
+  V2             PASS
+  V3             PASS
+  V4             PASS
+
+==> DO NOT SHIP — D1 FAIL, F1 FAIL, B_hero VOID, B_kaykit VOID, B_temple VOID, B_sly-closeup VOID, B_sly-startle VOID, B_sly-perch VOID, B_sly-arm VOID, B_courtyard VOID, B_dunes VOID, B_night VOID, B_traversal VOID, B_combat VOID, B_guard VOID, B_sly-profile VOID, B_sly-key VOID, N1 VOID, V1 FAIL  (VOID is not PASS — B_hero, B_kaykit, B_temple, B_sly-closeup, B_sly-startle, B_sly-perch, B_sly-arm, B_courtyard, B_dunes, B_night, B_traversal, B_combat, B_guard, B_sly-profile, B_sly-key, N1 could not be evaluated)

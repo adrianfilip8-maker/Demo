@@ -23754,3 +23754,19 @@ arithmetic does not bound display deltas through the grade (§296-family lesson,
 Owner decision §298 stands as intent; the r10 monochrome framings remain Option-A staging
 territory (el 21, late golden — provably out of any twilight device's reach). Constants
 untouched; Atmosphere.js verified restored.
+
+## §301 — torchlight run 4: VOID capture — the drift control caught the cross-session resume, and the "seventh sconce" is the guard's own carried torch
+
+Two findings, both instrument-vindicating (RESULT-torchlight.md): (1) **one run ≠ one
+session** — the container-restart relaunch resumed boot A's base frames from a 3-hour-older
+session via the manifest; D1 (boot A2 vs A) measured 49k/80k differing px and PF4 voided all
+fifteen cross-boot protection bars exactly as registered. The resume feature that saves an
+hour converts same-tree bars into cross-session bars; torchlight2 forbids it (fresh out-dir,
+resumed runs re-run their base boots). (2) Guard.js's nearest-guard carried torch stands
+underground in the interior staging, displacing a sconce from the six-slot pool (V1 FAIL,
+PF3 ⇒ VOID) AND passing the shader's y<−0.5 gate to be consumed at gain 2.5 — the F1
+far-field warm shift (+12 R−B) is an UNREGISTERED emitter's pool, not a sconce leak. The
+term itself performed on every same-boot instrument: pool +24.3 L / +92.4 R−B / 89% warm,
+dose ×1.64, restore exact, null0 exact-recompile. Disposition: localToon 2.5→0.0 (registered
+fallback, mechanism stays), PREREG-torchlight2 re-registers seven emitters with a re-derived
+F1 band, critic r11 holds behind it. Run-4 frames archived at torchlight1-void-run4/.
