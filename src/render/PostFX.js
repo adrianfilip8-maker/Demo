@@ -475,6 +475,38 @@ const TUNE = {
      (Tmetal {off, 1.50, 1.35, 1.20}) registered in scratchpad/PREREG-goldonset.md; do not
      ship a nonzero value without that A/B's verdict. */
   bloomMetalCut: 0,
+  /* Character bloom gate (critic 10, `traversal`: "Sly is blown to a white ghost… clamp the
+     bloom threshold/knee so the character never blooms"). The knob the critic names cannot
+     deliver "never", and the arithmetic is short: the character's bright class (chest/muzzle
+     fur, sclera — albedo·keyRad at tod 0.77–0.80) spans scene 2.4–2.8 while the torch flame
+     body sits at 3.0 — 0.4 apart — and a character-worn gold glint reaches ~6.7. Any onset
+     that clears the character kills the torch halo (bloomcalc.mjs: onset 2.70 takes flame w
+     0.267 → 0.038) and no threshold reaches the glint. Measured live in shots/c10postfx
+     (PREREG-critic10-postfx §5, arms T260/T290) before this shipped.
+
+     Mechanism instead: the bright pass multiplies its feed weight by 1 − cut·subject, where
+     subject is the ledger #31 mask the rim gate already consumes — the normal prepass writes
+     alpha = 1 − vSlySkin (USE_SKINNING draws only), cleared to 1, so sky / FX / transparent /
+     never-written pixels all decode subject 0 and keep their feed on every failure path. The
+     population is the skinned character family (Sly, guards, Carmelita); the cane is NOT
+     masked — the same documented boundary as rimSkinExempt (ToonMaterial.js: "vSlySkin comes
+     from USE_SKINNING; the cane is not a subject"). Half-res bright texels sample the
+     full-res mask bilinearly, so the cut feathers across the silhouette instead of aliasing.
+
+     What it does NOT do: it does not dim the sparkle markers or their halos (FX-owned quads,
+     not skinned — the traversal "flare ball" is one of them, routed to FX), and it does not
+     touch the AgX shoulder that keeps bright fur pale with bloom off entirely.
+
+     0 = exact no-op: w *= 1.0 − 0·s ≡ w in IEEE for finite s, and the mask fetch feeds
+     nothing else. Arms {0, 1} registered in PREREG-critic10-postfx.md; do not ship a nonzero
+     value without that seal's frame verdict. At 1.0 the character never feeds the pyramid;
+     every unskinned client keeps the exact shipped table above.
+
+     SHIPPED at 1.0 per RESULT-critic10-postfx2.md (reseal 0027611): V1 back==base 0 px x5,
+     V2 closeup 2565 px / 5.10 L / 97.3% darker, V3 containment 100% vs the dumped subject
+     masks on all five shots, V4 within the FXAA allowance, V5 halo ROIs 0.000 x4 with the
+     vacuity control firing 4/4, V6 looking clean. */
+  bloomSubjectCut: 1.0,
 
   /* --- grade --- */
   // Was lifted to 1.45 to fight darkness that turned out to be the AO feedback bug below.
@@ -1031,9 +1063,11 @@ const BRIGHT_FRAG = /* glsl */`
 precision highp float;
 varying vec2 vUv;
 uniform sampler2D uScene;
+uniform sampler2D uNormal; // normal prepass; alpha = 1 - subject (ledger #31, inverted)
 uniform vec2 uThreshold;   // threshold, knee
 uniform float uMetalBloom; // metal feed gain; 0 = exact no-op (see TUNE.bloomMetalGain)
 uniform float uMetalCut;   // metal onset cut; 0 = exact no-op (see TUNE.bloomMetalCut)
+uniform float uSubjCut;    // character feed cut; 0 = exact no-op (see TUNE.bloomSubjectCut)
 void main() {
   vec4 s = texture2D( uScene, vUv );
   vec3 c = s.rgb;
@@ -1052,6 +1086,11 @@ void main() {
   // Metal-aware gain. Multiplies w, never the onset: below-onset pixels stay at w = 0 at
   // any gain. (Measured inert at the shipped onset — RESULT-goldhalo; kept for the record.)
   w *= 1.0 + uMetalBloom * m;
+  // Character gate (TUNE.bloomSubjectCut): the prepass writes alpha = 1 - subject and clears
+  // to 1, so every way of NOT being the character — sky, FX, transparent, unwritten — decodes
+  // subj 0 and keeps its feed exactly. At uSubjCut = 0 this line is w *= 1.0, IEEE-exact.
+  float subj = 1.0 - texture2D( uNormal, vUv ).a;
+  w *= 1.0 - uSubjCut * clamp( subj, 0.0, 1.0 );
   gl_FragColor = vec4( c * w, 1.0 );
 }
 `;
@@ -1550,6 +1589,10 @@ export class PostFX {
         uScene: { value: null }, uThreshold: { value: new THREE.Vector2() },
         uMetalBloom: { value: this.tune.bloomMetalGain },
         uMetalCut: { value: this.tune.bloomMetalCut },
+        // The shared uniform object: the normal pass re-points .value at its RT each frame,
+        // and the bright pass sees it through the same reference the composite does.
+        uNormal: this.shared.uNormal,
+        uSubjCut: { value: this.tune.bloomSubjectCut },
       }, BRIGHT_FRAG));
 
       this.downMat = this._mat(passMaterial('postfx.down', {
@@ -1890,7 +1933,13 @@ export class PostFX {
        it is switched off, or `debugRaw('ao')` with the edge pass disabled would present a
        stale normal buffer and read as an AO change. */
     const debugNeedsNormals = this._debugRaw && (this._debugSrc === 'normal' || this._debugSrc === 'ao');
-    const needNormals = (this.passes.edge.enabled || (this.ao && this.passes.ao.enabled) || debugNeedsNormals);
+    /* The bloom subject gate consumes the prepass alpha, so it keeps the prepass alive even
+       with edge and AO both off — otherwise the bright pass would sample a stale (or never
+       written) buffer, whose cleared alpha of 0-on-init would decode to subject EVERYWHERE
+       and silently kill the whole bloom. Guarded on the cut being live, so the shipped-off
+       configuration costs nothing it didn't already pay. */
+    const bloomNeedsNormals = this.passes.bloom.enabled && this.bloomRTs.length > 0 && this.tune.bloomSubjectCut > 0;
+    const needNormals = (this.passes.edge.enabled || (this.ao && this.passes.ao.enabled) || debugNeedsNormals || bloomNeedsNormals);
     if (needNormals) {
       /* SHADING publishes beginNormalPass()/endNormalPass() precisely for this, and this
        * pass was reaching past them straight to `normalMaterial`.
@@ -2045,6 +2094,8 @@ export class PostFX {
       this.brightMat.uniforms.uThreshold.value.set(this.tune.bloomThreshold, this.tune.bloomKnee);
       this.brightMat.uniforms.uMetalBloom.value = this.tune.bloomMetalGain;
       this.brightMat.uniforms.uMetalCut.value = this.tune.bloomMetalCut;
+      // Re-read per frame like its siblings, so a one-boot A/B can poke tune.bloomSubjectCut.
+      this.brightMat.uniforms.uSubjCut.value = this.tune.bloomSubjectCut;
       blit.render(renderer, this.brightMat, this.bloomRTs[0]);
 
       for (let i = 1; i < this.bloomRTs.length; i++) {
