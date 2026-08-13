@@ -1,0 +1,196 @@
+--- a/src/render/ToonMaterial.js
++++ b/src/render/ToonMaterial.js
+@@ -63,6 +63,24 @@
+   ambIntensity: 0.52,
+   shadowFloor: 0.125,    // shadow illumination as a fraction of key luminance. AGENTS: never below ~14%
+                          // of the *tonemapped* result — 0.155 of a raw 3.3 key left the frame flat.
++  /* ── shadowFloorNight — the §2.2 night floor (PREREG-nightfloor; critic r11 family 1,
++     "crushed night blacks"). §2.2 reads "SHADOW HUE #2a3f66 (violet-teal, ~14% of key
++     luminance, never below)". At night the operative floor is THIS FILE's shadowFloor
++     (0.125 — the min() with ambient.floor picks it, and §261 measured night k 0.468,
++     uncapped), so the two moon-keyed shots ship BELOW the palette's own "never below"
++     line, while daylight keeps its bracketed 0.125 for §214.3's tonemapped-result
++     reasons. This key raises the floor to the §2.2 constant at night only:
++     effective = lerp(floor, shadowFloorNight, nightAmount), taken ONLY when
++     shadowFloorNight is strictly greater AND nightAmount > 0 — at the default
++     (== shadowFloor) the gate is UNTAKEN and the build is bit-identical, and at ANY
++     value the fourteen daylight canonicals are untouched BY BRANCH (their published
++     nightAmount is exactly 0.0 — the §221.1 day-arm pattern). The lift scales the whole
++     uShadowColor/uShadowColorLit vector through k, so the hue cannot rotate — the same
++     violet-teal, brighter. `debug.shadowFloorNight` overrides live per publish (null =
++     this); recomputed from the payload every frame, so poke and restore are exact.
++     Ships at 0.14 (Atmosphere.SHADOW_FLOOR — §2.2's number) only on PREREG-nightfloor's
++     PASS; 0.125 is the registered fallback (mechanism stays, lift off). */
++  shadowFloorNight: 0.125,
+   /* The daylight shadow hue. **Read the history before moving these.**
+    *
+    * Critic pass 2 measured one continuous surface at R/G 1.29 lit vs 1.63 shadowed — the
+@@ -321,6 +339,66 @@
+      fallback (mechanism stays, clamp off). */
+   keySatMax: 1.0,
+ 
++  /* ── tombAmb — the interior ambient hierarchy (PREREG-tombdim; critic r11 family 1,
++     interior re-read: "pools of warm torchlight falling into deep violet darkness" vs
++     the shipped "evenly lit lavender storeroom"). The tomb's light is NOT its sconces:
++     it is the sun-derived shadow floor (shadowFloor x keyLum — interior runs the game's
++     brightest key, x4.05, and is the ONLY shot the shadowTintPeak cap still binds, §261)
++     plus the sky fill (uAmbIntensity 0.586 midday) — twelve metres underground with the
++     sun sealed out. §303 shipped the torch pools (localToon 2.5) INTO that ambient and
++     r11 re-scored the room 4: the hierarchy swamps the pools. Lighting's encloseStrength
++     bracket proved the fill half alone cannot fix it (a 10x hemi cut moved the floor 14%
++     and the pool:floor ratio got WORSE) and named this file the owner of the missing
++     half; RESULT-twilight (§300) binds the fix to AMBIENT REDUCTION against the EXISTING
++     warm pools — never new coloured fills.
++     tombAmb multiplies the ambient family — the published ambient.intensity on arrival
++     AND the shadow floor feeding _refreshShadowColor's k — scoped by CAMERA HEIGHT:
++     weight = smoothstep(-0.5, -2.5, camera.y), exactly 0 for every camera at y >= -0.5
++     (all fifteen above-ground canonicals sit at y >= 1.15; the tomb camera at y -9.2 is
++     weight exactly 1; §8.1's only space below y -0.5 is the tomb). The torch pools
++     (uLocalToon term), emissive, rim and spec are untouched — the pools rise out of the
++     darkness instead of drowning in it, and the sarcophagus gold becomes the single
++     bright read under them.
++     Contract (the keySatMax standard): 1.0 = the gate `tombAmb < 1` is UNTAKEN, no
++     arithmetic touches uAmbIntensity or the floor — bit-identical build. Below 1, an
++     above-ground camera computes weight exactly 0 -> factor exactly 1 -> IEEE x*1 == x,
++     so daylight/night frames cannot move — verified as registered same-boot [0,0] frame
++     bars, not assumed. `debug.tombAmb` overrides live per publish (null = this); the
++     factor is recomputed from the live camera every publish, so poke and restore are
++     exact. Ships below 1.0 only on PREREG-tombdim's PASS; 1.0 is the registered
++     fallback (mechanism stays, dim off). */
++  tombAmb: 1.0,
++
++  /* ── rakeTrack / rakeGap — the golden-hour raking key (PREREG-goldenrake; critic r11
++     family 1, "hero's missing 22° raking sun"). §2.2 promises a key "22° elevation, low
++     and raking", and the ramp arithmetically forbids it on the surfaces a low sun rakes:
++     a horizontal deck at el 22 has N.L = sin 22° = 0.3746, INSIDE [termLo 0.14, termHi
++     0.52] — the mid band — so every floor the golden anchor rakes renders at half key +
++     half shade light, in every shot, at the palette's own flagship elevation (the top
++     band needs el >= 33.0°). kaykit is "the set's best lighting statement" because its
++     lit statement is VERTICALS (N.L up to ~0.93 at the same el 22); hero's composition
++     is backlit verticals (§256: 72.3% of its visible surface at ramp 0) + horizontals,
++     so its ENTIRE lit vocabulary is mid-band and the rake never arrives.
++     rakeTrack enables an elevation-tracking TOP terminator for near-horizontal,
++     non-subject surfaces (toon.glsl.js, directly after slyRamp): the last terminator
++     moves from termHi to rakeHi = clamp(uKeyDir.y - rakeGap, termLo + 2*termSoft,
++     termHi) — what a low sun rakes, it fully lights, and above el ~33 rakeHi clamps to
++     termHi so the delta is EXACTLY zero (midday/temple identity by arithmetic, not by
++     tolerance). Scope, each leg arithmetic: warm keys only (uKeyColor.r > uKeyColor.b —
++     the moon never enters; night/guard identical by branch); orientation
++     smoothstep(0.55, 0.80, Nw.y) — walls 0, floors 1 (§256's vertical-surface azimuth
++     question stays owner territory); subject exempt ((1.0 - vSlySkin) — the costume's
++     band layout, §277/§289's work, cannot move); 2-band materials exempt (step(1.5,
++     steps) — no termHi terminator exists to move). 0.0 = the shader branch
++     `uRakeTrack > 0.0` is untaken (the localToon/uSpecNormPow standard), bit-identical.
++     Neither uniform is republished per frame, so a poke of
++     shading.uniforms.uRakeTrack.value sticks across __GAME.step() (the uShadowHold
++     contract) — the sealed A/B's arms are uniform pokes. Ships at 1.0 only on
++     PREREG-goldenrake's PASS; 0.0 is the registered fallback (mechanism stays, term
++     off). */
++  rakeTrack: 0.0,
++  rakeGap: 0.05,
++
+   /* Baked aoMap strength, globally. The maps were authored while cast shadows were suppressed
+      engine-wide (KNOWN_ISSUES §1), so the baked term was carrying the low frequencies as well
+      as the contact scale. Shadows work now and the critic caught the consequence: occlusion
+@@ -887,6 +965,13 @@
+        teal-blended tint each call, so a cached unblended lum would be a field with setters and
+        no reader — the exact "looks live, is dead" shape KNOWN_ISSUES §3/§8 bills by the cycle. */
+     this._shadowFloor = TUNE.shadowFloor;
++    /* nightfloor (PREREG-nightfloor): the last published nightAmount — 0 until LIGHTING
++       publishes, which is also the daylight value, so the pre-publish state is the day
++       arm exactly. */
++    this._nightAmount = 0;
++    /* tombdim (PREREG-tombdim): the camera-height ambient factor — 1 above ground and at
++       the default, recomputed per publish in setKeyLight. */
++    this._tombF = 1;
+     /* Set only by an explicit setAtmosphere({ hazeSun }) — see _refreshHazeSun(). While false,
+        the forward-scatter colour tracks the live haze instead of holding a constant.
+ 
+@@ -928,6 +1013,13 @@
+          republishes either per frame, so the poke sticks across `__GAME.step()`. */
+       uShadowHold:     { value: TUNE.shadowHold },
+       uShadowHoldKnee: { value: TUNE.shadowHoldKnee },
++      /* goldenrake (PREREG-goldenrake — TUNE.rakeTrack carries the contract): the
++         elevation-tracking top terminator for near-horizontal non-subject surfaces.
++         0.0 = the shader branch is untaken, bit-identical. Shared by identity and NOT
++         republished per frame, so the sealed A/B pokes these values directly and they
++         stick (the uShadowHold contract). */
++      uRakeTrack:      { value: TUNE.rakeTrack },
++      uRakeGap:        { value: TUNE.rakeGap },
+       uShadowSharp:  { value: new THREE.Vector2(TUNE.shadowSharp[0], TUNE.shadowSharp[1]) },
+       uShadowBands:  { value: new THREE.Vector3(...TUNE.shadowBands) },
+       uHaze:         { value: new THREE.Color(PAL.haze) },
+@@ -1505,6 +1597,8 @@
+        the same way `rim.strength` was. Consumed only by the ink lever, which is a no-op at
+        `TUNE.inkNightMix = 0`, so reading it changes nothing until that ships. */
+     if (typeof nightAmount === 'number') {
++      /* nightfloor (PREREG-nightfloor): _refreshShadowColor's night gate reads this. */
++      this._nightAmount = Math.min(1, Math.max(0, nightAmount));
+       this.setInkNight(nightAmount);
+       /* banda2's night gate: warm-restoration levers are day-scoped arithmetically —
+          at nightAmount 1 the shade-warm returns to its pre-banda2 value (RESULT-banda2). */
+@@ -1550,6 +1644,28 @@
+     }
+     if (typeof intensity === 'number') u.uKeyIntensity.value = intensity;
+ 
++    /* tombdim (PREREG-tombdim — the TUNE.tombAmb contract note is the why). Recomputed
++       from the live camera on every publish so a debug poke and its restore are exact; at
++       the default 1.0 the gate is untaken and no arithmetic runs; above ground the
++       smoothstep's clamp makes the weight exactly 0 and the factor exactly 1. */
++    {
++      const tombAmb = this.engine?.debug?.tombAmb ?? TUNE.tombAmb;
++      let f = 1;
++      if (tombAmb < 1) {
++        const camY = this.engine?.camera?.position?.y;
++        if (typeof camY === 'number' && camY < -0.5) {
++          const t = Math.min(1, Math.max(0, (camY + 0.5) / -2.0));
++          const w = t * t * (3 - 2 * t);
++          /* Spelled `tombAmb + (1-tombAmb)*(1-w)` rather than `1 - (1-tombAmb)*w` so a
++             fully-underground camera (w == 1, the staged interior) lands on tombAmb
++             EXACTLY — x + 0 is exact — and the scorer's readback bar can assert
++             uAmbIntensity == published * tombAmb with equality, not tolerance. */
++          f = tombAmb + (1 - tombAmb) * (1 - w);
++        }
++      }
++      this._tombF = f;
++    }
++
+     if (ambient !== undefined && ambient !== null) {
+       if (typeof ambient === 'number') u.uAmbIntensity.value = ambient;
+       else if (ambient.isColor) u.uSkyColor.value.copy(ambient);
+@@ -1557,7 +1673,12 @@
+         if (ambient.sky !== undefined) setCol(u.uSkyColor.value, ambient.sky);
+         if (ambient.ground !== undefined) setCol(u.uBounceColor.value, ambient.ground);
+         if (ambient.bounce !== undefined) setCol(u.uBounceColor.value, ambient.bounce);
+-        if (typeof ambient.intensity === 'number') u.uAmbIntensity.value = ambient.intensity;
++        /* tombdim: the fill half. The false leg is the pre-seal assignment verbatim. */
++        if (typeof ambient.intensity === 'number') {
++          u.uAmbIntensity.value = this._tombF !== 1
++            ? ambient.intensity * this._tombF
++            : ambient.intensity;
++        }
+ 
+         /* `floor` and `tint` were being published and silently dropped. LIGHTING's
+          * `_publishKeyLight()` has always sent both; this function read `sky`, `ground`,
+@@ -1934,7 +2055,20 @@
+      * tune back out. */
+     _tintBlend.copy(this._shadowTint).lerp(_turq, TUNE.shadowTeal);
+     const tintLum = lum(_tintBlend);
+-    let k = (this._shadowFloor * keyLum) / Math.max(tintLum, 1e-4);
++    /* Effective floor: the published/clamped _shadowFloor, then the two scoped seals in a
++       fixed order — nightfloor's §2.2 lift first (PREREG-nightfloor; every daylight
++       publish carries nightAmount exactly 0.0, so the day arm is identical BY BRANCH),
++       then tombdim's underground dim (PREREG-tombdim; the factor is exactly 1 above
++       ground by construction) — so a night-time tomb stays dim rather than lifting back
++       to the open-sky night floor. Both gates are untaken at their shipped defaults and
++       the k line reduces to the pre-seal `this._shadowFloor * keyLum` exactly. */
++    let floorEff = this._shadowFloor;
++    const nf = this.engine?.debug?.shadowFloorNight ?? TUNE.shadowFloorNight;
++    if (this._nightAmount > 0 && nf > floorEff) {
++      floorEff += (nf - floorEff) * this._nightAmount;
++    }
++    if (this._tombF !== 1) floorEff *= this._tombF;
++    let k = (floorEff * keyLum) / Math.max(tintLum, 1e-4);
+ 
+     /* Cap how far the hue may be scaled.
+      *

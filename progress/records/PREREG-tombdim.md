@@ -9,8 +9,16 @@ arithmetic). **Date sealed:** 2026-08-13.
 the time of writing and no frame of any arm has been rendered.** Runner
 `progress/records/gradetrio/gradetrio.mjs` and scorer
 `progress/records/gradetrio/tombdim-score.mjs` are committed with this file, before the
-capture, together with the INERT mechanism (`TUNE.tombAmb: 1.0`, gate untaken) and its pin
-test (`tests/tombdim.test.mjs`). The runner is SHARED with PREREG-goldenrake and
+capture, together with the INERT mechanism SEALED AS A RECORDS-SIDE PATCH
+(`progress/records/gradetrio/ToonMaterial.cand.patch` — `TUNE.tombAmb: 1.0`, gate
+untaken) and its pin test held at
+`progress/records/gradetrio/tombdim.test.mjs.pending`. The patch lands on `src/` (and the
+pin test moves to `tests/tombdim.test.mjs`) in the immediately-following mechanism commit
+once the FIFO's in-flight capture releases — BEFORE any launch and any frame; the pending
+suffix exists only because the pin test asserts the patched TUNE and must not turn the
+suite red while the patch is unapplied (§296: the running capture's per-row tree stamps
+hash `src/`, so even an inert src commit would void it — the seal is therefore split
+records-first). The runner is SHARED with PREREG-goldenrake and
 PREREG-nightfloor (one boot, one lock window, per-shot poke arms — the
 fxghost/fxink/seamglint shape, 693681d); the three seals register, score and ship
 INDEPENDENTLY — this file's verdict consumes only the rows named here.
@@ -59,10 +67,13 @@ before any frame. **The capture installs nothing**: HEAD is the tree, and the ar
 (pinned). No live-value src commit while any capture runs or queues (§296); bars sealed
 and pushed before any candidate frame; no post-hoc threshold moves (§141.1); fail-closed
 tri-state via `tools/gate.mjs`; `ringPainter` untouched; runner launched detached via
-`tools/launch.sh` (§298.3). **Sequencing disclosure (§296):** at seal time the FIFO holds
-redkey then fxartifact, whose runners pin launch-time whole-src hashes — so this trio's
-single commit (three inert mechanisms + seals) lands only AFTER both runs release, and all
-three launches follow the commit; nothing renders before the seal is pushed.
+`tools/launch.sh` (§298.3). **Sequencing disclosure (§296):** at seal time fxartifact holds the lock with per-row
+whole-src tree stamps, so this trio lands in TWO commits: (1) this records-side seal
+(PREREGs + runner + scorers + the two cand patches + pending pin tests) pushed while the
+capture runs — records/tests-only, which its instruments do not hash; (2) the mechanism
+commit (patches applied to src/ + pin tests moved into tests/) after the lock releases,
+suite green, BEFORE any launch. All three launches follow commit (2); nothing renders
+before both halves are pushed.
 
 ## 2. The candidate
 

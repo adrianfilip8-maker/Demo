@@ -8,9 +8,13 @@ missing 22° raking sun"; parents in evidence: §256 the azimuth table and its o
 the time of writing and no frame of any arm has been rendered.** Shared runner
 `progress/records/gradetrio/gradetrio.mjs` and scorer
 `progress/records/gradetrio/goldenrake-score.mjs` are committed with this file, before the
-capture, together with the INERT mechanism (`TUNE.rakeTrack: 0.0`, shader branch untaken)
-and its pin test (`tests/goldenrake.test.mjs`). Sharing/independence as PREREG-tombdim's
-header states.
+capture, together with the INERT mechanism SEALED AS RECORDS-SIDE PATCHES
+(`gradetrio/ToonMaterial.cand.patch` + `gradetrio/toon.glsl.cand.patch` —
+`TUNE.rakeTrack: 0.0`, shader branch untaken) and its pin test held at
+`gradetrio/goldenrake.test.mjs.pending`; the patches land on `src/` (pin test →
+`tests/goldenrake.test.mjs`) in the immediately-following mechanism commit after the
+in-flight capture releases, before any launch (PREREG-tombdim's §296 sequencing
+disclosure, two-commit shape). Sharing/independence as PREREG-tombdim's header states.
 
 ## 0. The diagnosis — why the anchor's promise is absent from the frame
 

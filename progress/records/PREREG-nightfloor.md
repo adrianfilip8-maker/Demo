@@ -8,8 +8,12 @@ note, §221's fill-vs-floor sizing, §261's night k row, r10's "foreground crush
 the time of writing and no frame of any arm has been rendered.** Shared runner
 `progress/records/gradetrio/gradetrio.mjs` and scorer
 `progress/records/gradetrio/nightfloor-score.mjs` are committed with this file, before the
-capture, together with the INERT mechanism (`TUNE.shadowFloorNight: 0.125`, strict-greater
-gate untaken) and its pin test (`tests/nightfloor.test.mjs`). Sharing/independence as
+capture, together with the INERT mechanism SEALED AS A RECORDS-SIDE PATCH
+(`gradetrio/ToonMaterial.cand.patch` — `TUNE.shadowFloorNight: 0.125`, strict-greater
+gate untaken) and its pin test held at `gradetrio/nightfloor.test.mjs.pending`; the patch
+lands on `src/` (pin test → `tests/nightfloor.test.mjs`) in the immediately-following
+mechanism commit after the in-flight capture releases, before any launch
+(PREREG-tombdim's §296 sequencing disclosure, two-commit shape). Sharing/independence as
 PREREG-tombdim's header states.
 
 ## 0. What this seal is
