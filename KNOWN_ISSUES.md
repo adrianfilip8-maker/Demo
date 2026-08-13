@@ -23845,3 +23845,16 @@ Both pin/mechanism test files re-anchored to the shipped frame. tombdim: ambient
 achieves darkness and better pool RATIO (1.49→1.91) but drags absolute POOL −19.3 L / SARC
 −21.5 L through the ambient term — D2/D4 fail as registered, tombAmb stays 1.0; follow-up =
 paired dim+pool-gain seal or ratio bars with the mis-aim recorded. RESULT-gradetrio.md.
+
+## §308 — critic round 12 (blind): REJECT avg 3.97/16 — rater variance measured (night ±2.5 on a pure-lift frame), three families convergent across two blind raters, guards the measured floor
+
+RESULT-critic12.md. Average down 0.47 from r11 but night swung 6→3.5 while the only change
+was nightfloor's ×1.12 LIFT — inter-rater noise exceeds the round delta; the family list is
+the instrument, not the average. Convergent families: (1) grade/exposure (salmon flood =
+Option-A OWNER item §305; action-shot bleach = §277 lit-side, now top character-color item;
+inked FX = §306 fxink fix due); (2) Sly off-model (head sculpt owner-waived §294(1) but
+BOTH critics rank it top-3 — surfaced; cane gold material fair game; tail all-yaw; facets);
+(3) GUARDS raw mannequins in six frames, set floor 2.5 — never had an art pass, now
+highest-leverage open item. Ships credited in pixels: hero 4→5 (goldenrake), profile 4→5.
+Queue: guards lane, §277 lit-hold, §306 follow-ups, character-material, tombdim v2, props
+dedupe/unlit fixes, budgets, owner items (Option-A; head waiver reaffirm-or-lift).
