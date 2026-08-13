@@ -23834,3 +23834,14 @@ composite alpha. seamglint: arch-floor arms dead; s10 decomposition pins the SCR
 floor as the owner (dunes r 0.77 / night 0.90) — follow-up screen-floor seal with the
 vSlySkin 0.55 character contract protected. RESULT-fxartifact.md is the record; zero
 ship-writes; three routed follow-ups replace the three dead hypotheses.
+
+## §307 — gradetrio: goldenrake and nightfloor SHIP; tombdim honestly fails on absolute pool holds
+
+goldenrake (rakeTrack 1.0): the tracked terminator closes the §2.2 arithmetic hole (sin 22°
+< termHi+soft — the anchor could never fully light what it raked); hero's floor finally
+carries the warm key, LOOK clean, 8 protections green. nightfloor (shadowFloorNight 0.14):
+crushed night masses lift to legible violet-teal, mood held, exact x1.12 luminance-only.
+Both pin/mechanism test files re-anchored to the shipped frame. tombdim: ambient dim
+achieves darkness and better pool RATIO (1.49→1.91) but drags absolute POOL −19.3 L / SARC
+−21.5 L through the ambient term — D2/D4 fail as registered, tombAmb stays 1.0; follow-up =
+paired dim+pool-gain seal or ratio bars with the mis-aim recorded. RESULT-gradetrio.md.

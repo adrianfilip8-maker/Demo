@@ -1,0 +1,97 @@
+R hero         off-vs-back 0 px
+R kaykit       off-vs-back 0 px
+R temple       off-vs-back 0 px
+R sly-closeup  off-vs-back 0 px
+R sly-startle  off-vs-back 0 px
+R sly-perch    off-vs-back 0 px
+R sly-arm      off-vs-back 0 px
+R courtyard    off-vs-back 0 px
+R dunes        off-vs-back 0 px
+R interior     off-vs-back 0 px
+R night        off-vs-back 0 px
+R traversal    off-vs-back 0 px
+R combat       off-vs-back 0 px
+R guard        off-vs-back 0 px
+R sly-profile  off-vs-back 0 px
+R sly-key      off-vs-back 0 px
+B hero         off-vs-bon  0 px
+B kaykit       off-vs-bon  0 px
+B temple       off-vs-bon  0 px
+B sly-closeup  off-vs-bon  0 px
+B sly-startle  off-vs-bon  0 px
+B sly-perch    off-vs-bon  0 px
+B sly-arm      off-vs-bon  0 px
+B courtyard    off-vs-bon  0 px
+B dunes        off-vs-bon  0 px
+B night        off-vs-bon  0 px
+B traversal    off-vs-bon  0 px
+B combat       off-vs-bon  0 px
+B guard        off-vs-bon  0 px
+B sly-profile  off-vs-bon  0 px
+B sly-key      off-vs-bon  0 px
+off  FAR   L 63.9  R-B -14.7  hue 253.7  S 0.301
+off  VAULT L 74.1  R-B -14.9  hue 200.8  S 0.253
+off  POOL  L 95.0  R-B 75.4  hue 10.4  S 0.513
+off  CTRL  L 84.8  R-B 35.9  hue 5.7  S 0.341
+off  SARC  L 72.2  R-B 11.0  hue 13.5  S 0.317
+bon  FAR   L 39.7  R-B -5.6  hue 280.0  S 0.421
+bon  VAULT L 42.2  R-B -14.4  hue 222.7  S 0.438
+bon  POOL  L 75.7  R-B 97.8  hue 11.6  S 0.683
+bon  CTRL  L 58.4  R-B 50.7  hue 2.6  S 0.548
+bon  SARC  L 50.7  R-B 23.5  hue 8.5  S 0.490
+bko  FAR   L 28.5  R-B 3.3  hue 312.2  S 0.510
+bko  VAULT L 26.3  R-B -4.7  hue 261.7  S 0.555
+bko  POOL  L 67.6  R-B 107.9  hue 12.0  S 0.763
+bko  CTRL  L 45.6  R-B 64.9  hue 5.0  S 0.710
+bko  SARC  L 40.6  R-B 32.5  hue 9.3  S 0.598
+D1  FAR ratio 0.620 (want 0.42-0.82)  VAULT ratio 0.570 (want 0.42-0.85)
+D2  POOL-FAR off 31.1 -> bon 36.0 (want >= off+6 and >= 1.15x)
+D3  SARC retention 0.702 (want >= 0.55)  prominence off 8.2 -> bon 11.0 (reported)
+D4  FAR dR-B 9.0 (want -30..+2)  R-B(bon) -5.6 (want <= -10)
+D5  CTRL dL -26.5 (want -34..-3)
+KO_b  FAR ratio bon 0.620 vs bko 0.446 (want bko <= bon - 0.08)
+VB: interior uShadowColor lum ratio 0.4088 (cap-release predicts ~0.409)
+trees: {0ff46d1cb8457d8b} expected 0ff46d1cb8457d8b; rows 83 (want 83)
+
+  R_hero         PASS
+  R_kaykit       PASS
+  R_temple       PASS
+  R_sly-closeup  PASS
+  R_sly-startle  PASS
+  R_sly-perch    PASS
+  R_sly-arm      PASS
+  R_courtyard    PASS
+  R_dunes        PASS
+  R_interior     PASS
+  R_night        PASS
+  R_traversal    PASS
+  R_combat       PASS
+  R_guard        PASS
+  R_sly-profile  PASS
+  R_sly-key      PASS
+  B_hero         PASS
+  B_kaykit       PASS
+  B_temple       PASS
+  B_sly-closeup  PASS
+  B_sly-startle  PASS
+  B_sly-perch    PASS
+  B_sly-arm      PASS
+  B_courtyard    PASS
+  B_dunes        PASS
+  B_night        PASS
+  B_traversal    PASS
+  B_combat       PASS
+  B_guard        PASS
+  B_sly-profile  PASS
+  B_sly-key      PASS
+  BG_b           PASS
+  D1             PASS
+  D2             FAIL
+  D3             PASS
+  D4             FAIL
+  D5             PASS
+  KO_b           PASS
+  VB             PASS
+  V4             PASS
+
+==> DO NOT SHIP — D2 FAIL, D4 FAIL

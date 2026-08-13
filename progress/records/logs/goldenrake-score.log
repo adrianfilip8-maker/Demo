@@ -1,0 +1,84 @@
+R hero         off-vs-back 0 px
+R kaykit       off-vs-back 0 px
+R temple       off-vs-back 0 px
+R sly-closeup  off-vs-back 0 px
+R sly-startle  off-vs-back 0 px
+R sly-perch    off-vs-back 0 px
+R sly-arm      off-vs-back 0 px
+R courtyard    off-vs-back 0 px
+R dunes        off-vs-back 0 px
+R interior     off-vs-back 0 px
+R night        off-vs-back 0 px
+R traversal    off-vs-back 0 px
+R combat       off-vs-back 0 px
+R guard        off-vs-back 0 px
+R sly-profile  off-vs-back 0 px
+R sly-key      off-vs-back 0 px
+B night        off-vs-con  0 px
+B guard        off-vs-con  0 px
+B interior     off-vs-con  0 px
+hero.off  LITF L 116.3 R-B 85.0 hue 24.9   SHFLOOR L 70.6 R-B -20.7
+hero.con  LITF L 128.3 R-B 85.7 hue 23.1   SHFLOOR L 72.1 R-B -20.4
+hero.cko  LITF L 123.1 R-B 86.3 hue 23.8   SHFLOOR L 71.5 R-B -20.4
+E1  LITF dL 12.0 (want +8..+45)
+E2  LITF hue drift 1.8 (want <= 8)  dR-B 0.6 (want >= -15)
+E3  lit:shadow 1.65 -> 1.78 (want >= +0.06)  |dL(SHFLOOR)| 1.5 (want <= 5)
+KO_c  LITF dL cko 6.7 vs con 12.0 (want 0.35-0.85x)
+SUBJ  sly-closeup body rect |dL| 0.00 (want <= 1.0)
+P hero         FULL dL 0.92 (want -1..14)  dR-B 0.35 (want -15..12)
+P kaykit       FULL dL 2.65 (want -1..10)  dR-B 0.18 (want -15..12)
+P temple       FULL dL 0.00 (want -3..3)  dR-B 0.00 (want -6..6)
+P sly-closeup  FULL dL 1.12 (want -1..14)  dR-B 0.03 (want -15..12)
+P sly-startle  FULL dL 0.60 (want -1..14)  dR-B 0.15 (want -15..12)
+P sly-perch    FULL dL 0.79 (want -1..14)  dR-B 0.05 (want -15..12)
+P sly-arm      FULL dL 0.91 (want -1..14)  dR-B 1.05 (want -15..12)
+P courtyard    FULL dL 0.58 (want -1..14)  dR-B 0.25 (want -15..12)
+P dunes        FULL dL 5.24 (want -1..14)  dR-B -0.11 (want -15..12)
+P traversal    FULL dL 0.17 (want -1..14)  dR-B 0.14 (want -15..12)
+P combat       FULL dL 1.01 (want -1..14)  dR-B 0.45 (want -15..12)
+P sly-profile  FULL dL 0.41 (want -1..14)  dR-B 0.47 (want -15..12)
+P sly-key      FULL dL 2.35 (want -1..14)  dR-B 0.32 (want -15..12)
+trees: {0ff46d1cb8457d8b} expected 0ff46d1cb8457d8b; rows 83 (want 83)
+
+  R_hero         PASS
+  R_kaykit       PASS
+  R_temple       PASS
+  R_sly-closeup  PASS
+  R_sly-startle  PASS
+  R_sly-perch    PASS
+  R_sly-arm      PASS
+  R_courtyard    PASS
+  R_dunes        PASS
+  R_interior     PASS
+  R_night        PASS
+  R_traversal    PASS
+  R_combat       PASS
+  R_guard        PASS
+  R_sly-profile  PASS
+  R_sly-key      PASS
+  B_night        PASS
+  B_guard        PASS
+  B_interior     PASS
+  BG_c           PASS
+  E1             PASS
+  E2             PASS
+  E3             PASS
+  KO_c           PASS
+  SUBJ           PASS
+  P_hero         PASS
+  P_kaykit       PASS
+  P_temple       PASS
+  P_sly-closeup  PASS
+  P_sly-startle  PASS
+  P_sly-perch    PASS
+  P_sly-arm      PASS
+  P_courtyard    PASS
+  P_dunes        PASS
+  P_traversal    PASS
+  P_combat       PASS
+  P_sly-profile  PASS
+  P_sly-key      PASS
+  VC             PASS
+  V4             PASS
+
+==> SHIP TUNE.rakeTrack = 1 (goldenrake — shared gradetrio boot; LOOK gate §8 still binds before any write)
