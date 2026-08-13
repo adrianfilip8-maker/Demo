@@ -1,0 +1,34 @@
+R_dunes: diff(off,back) = 0 px
+R_night: diff(off,back) = 0 px
+R_guard: diff(off,back) = 0 px
+R_hero: diff(off,back) = 0 px
+R_courtyard: diff(off,back) = 0 px
+R_sly-closeup: diff(off,back) = 0 px
+BG: dunes 327 nightL 1954 nightR 1994 guard 2990 kerb 2597
+c20: dunes r0.44  night r0.74  guard r0.90  kerb drop 36.9L remain r0.32  | obelisk r1.00 d0.00  chest 0px  lamps 0.32 moon 0.02  nightFrac 7.5%
+c10: dunes r0.42  night r0.49  guard r0.87  kerb drop 57.3L remain r0.19  | obelisk r1.00 d0.00  chest 0px  lamps 0.42 moon 0.03  nightFrac 8.3%
+s10 (screen floor 0.10, arch floor at base): dunes r0.77  night r0.90  — the screen-rim share of the glint populations
+
+-- validity --
+  V1_stamps: PASS
+  V2_readbacks: PASS
+  BG_dunes: PASS
+  BG_night: PASS
+  BG_guard: PASS
+  BG_kerb: PASS
+  R_dunes: PASS
+  R_night: PASS
+  R_guard: PASS
+  R_hero: PASS
+  R_courtyard: PASS
+  R_sly-closeup: PASS
+
+arm c20: ==> DO NOT SHIP — E_dunes_c20 FAIL, E_night_c20 FAIL, E_guard_c20 FAIL
+
+arm c10: ==> DO NOT SHIP — E_dunes_c10 FAIL, E_night_c10 FAIL, E_guard_c10 FAIL
+
+s10 (screen-rim floor 0.10) is REPORT-ONLY decomposition: it gates nothing; if the
+c-arms fail while s10 owns the residual, the routing note in PREREG-seamglint §6 fires.
+crops -> /home/user/Demo/progress/records/fxartifact1/crops (seamglint-*). The RESULT adjudicates the LOOK gate off these.
+
+==> mechanical ship rule: NO floor passes — no ship; the s10 decomposition + PF branches (PREREG-seamglint §6) decide the routing.

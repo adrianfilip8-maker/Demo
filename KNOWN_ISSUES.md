@@ -23822,3 +23822,15 @@ lever — the environment is warm by authored design and surfaces converge on it
 keySatMax stays inert at 1.0 (branch-untaken, pin-tested). Routing: Option A (re-stage
 those shots to tod ≈ 0.74–0.76) or accept the hot-monochrome dusk as the look — OWNER
 decision, evidence complete (§293+§300+§305); no further seals warranted on this question.
+
+## §306 — fxartifact trio: three valid falsifications — every hypothesized artifact lever was wrong, and each run measured where the right one lives
+
+One shared one-boot run, instruments all valid (R 0 px everywhere, sha-verified install/
+restore). fxghost: litMix cut attenuates only G1 (r 0.72→0.56), G2–G5 ride the AMBIENT leg
+(r ≥ 0.95 at dose 0) — attribution stands, lever moves to the ambient leg/sprite intensity.
+fxink: the alpha-excess detector fires (donut premise valid, 95,910 px) but leaks — 13.8k px
+on hero at 36% containment — ink cut must be scoped at FX raster time (stencil/mask), not
+composite alpha. seamglint: arch-floor arms dead; s10 decomposition pins the SCREEN-rim
+floor as the owner (dunes r 0.77 / night 0.90) — follow-up screen-floor seal with the
+vSlySkin 0.55 character contract protected. RESULT-fxartifact.md is the record; zero
+ship-writes; three routed follow-ups replace the three dead hypotheses.

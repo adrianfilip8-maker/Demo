@@ -1,0 +1,46 @@
+R_temple: diff(off,back) = 0 px
+R_night: diff(off,back) = 0 px
+R_interior: diff(off,back) = 0 px
+R_sly-profile: diff(off,back) = 0 px
+R_dunes: diff(off,back) = 0 px
+R_hero: diff(off,back) = 0 px
+R_courtyard: diff(off,back) = 0 px
+amp_off(G1) = 15.92 L
+amp_off(G2) = 9.49 L
+amp_off(G3) = 8.18 L
+amp_off(G4) = 6.22 L
+amp_off(G5) = 4.62 L
+a26: G1 11.46L (r 0.72)  G2 9.20L (r 0.97)  G3 7.94L (r 0.97)  G4 6.06L (r 0.97)  G5 4.48L (r 0.97)
+a13: G1 8.84L (r 0.56)  G2 9.04L (r 0.95)  G3 7.80L (r 0.95)  G4 5.96L (r 0.96)  G5 4.41L (r 0.95)
+a00: G1 5.75L (r 0.36)  G2 8.90L (r 0.94)  G3 7.68L (r 0.94)  G4 5.91L (r 0.95)  G5 4.34L (r 0.94)
+field dunes: base sum 20634 n 5930  a26 x1.00 (n x0.96)  a13 x1.07 (n x1.02)  a00 x1.18 (n x1.11)
+field hero: base sum 20852 n 5116  a26 x0.64 (n x0.66)  a13 x0.51 (n x0.53)  a00 x0.44 (n x0.46)
+field courtyard: base sum 16656 n 4773  a26 x1.14 (n x1.16)  a13 x1.31 (n x1.30)  a00 x1.54 (n x1.46)
+halo LAMPS: a26 0.000  a13 0.000  a00 0.000
+halo MOON: a26 0.000  a13 0.000  a00 0.000
+halo TORCH-A: a26 0.000  a13 0.000  a00 0.000
+halo TORCH-B: a26 0.000  a13 0.000  a00 0.000
+
+-- validity --
+  V1_stamps: PASS
+  V2_readbacks: PASS
+  BG_G1: PASS
+  BG_G2: PASS
+  R_temple: PASS
+  R_night: PASS
+  R_interior: PASS
+  R_sly-profile: PASS
+  R_dunes: PASS
+  R_hero: PASS
+  R_courtyard: PASS
+
+arm a26: ==> DO NOT SHIP — GH_G1_a26 FAIL, GH_G2_a26 FAIL, GH_G3_a26 FAIL, GH_G4_a26 FAIL, GH_G5_a26 FAIL
+
+arm a13: ==> DO NOT SHIP — GH_G1_a13 FAIL, GH_G2_a13 FAIL, GH_G3_a13 FAIL, GH_G4_a13 FAIL, GH_G5_a13 FAIL
+
+arm a00: ==> DO NOT SHIP — GH_G1_a00 FAIL, GH_G2_a00 FAIL, GH_G3_a00 FAIL, GH_G4_a00 FAIL, GH_G5_a00 FAIL
+
+crops -> /home/user/Demo/progress/records/fxartifact1/crops (fxghost-*). The RESULT adjudicates the LOOK gate off these; a
+verdict line above without the looked-at crops is NOT a ship decision.
+
+==> mechanical ship rule: NO arm passes — no ship; record the decomposition (PF branches, PREREG-fxghost §6).

@@ -1,0 +1,57 @@
+R_hero: diff(off,back) = 0 px
+R_temple: diff(off,back) = 0 px
+R_sly-closeup: diff(off,back) = 0 px
+R_courtyard: diff(off,back) = 0 px
+R_dunes: diff(off,back) = 0 px
+R_interior: diff(off,back) = 0 px
+R_night: diff(off,back) = 0 px
+R_traversal: diff(off,back) = 0 px
+R_guard: diff(off,back) = 0 px
+R_sly-profile: diff(off,back) = 0 px
+R_combat: diff(off,back) = 0 px
+BG_donut: FX-covered (off-bfx0 >= 25 L) px in DONUT_ROI = 95910 (need >= 20000)
+E1: ink-removed px (FX-covered & bon-off >= +8) = 6248 (need >= 500)
+E2: mean off-L over that set = 123.5 (need <= 165)
+C_hero: changed 13834 px, contained 36.34%
+C_temple: changed 34901 px, contained 56.01%
+C_sly-closeup: changed 27928 px, contained 43.79%
+C_courtyard: changed 50505 px, contained 49.28%
+C_dunes: changed 3473 px, contained 51.97%
+C_interior: changed 4736 px, contained 80.79%
+C_night: changed 6656 px, contained 25.44%
+C_traversal: changed 10994 px, contained 41.56%
+C_guard: changed 50858 px, contained 59.33%
+C_sly-profile: changed 78231 px, contained 24.94%
+C_combat: changed 75045 px, contained 59.59%
+
+-- guards --
+  V1_stamps: PASS
+  V2_readbacks: PASS
+  R_hero: PASS
+  R_temple: PASS
+  R_sly-closeup: PASS
+  R_courtyard: PASS
+  R_dunes: PASS
+  R_interior: PASS
+  R_night: PASS
+  R_traversal: PASS
+  R_guard: PASS
+  R_sly-profile: PASS
+  R_combat: PASS
+  BG_donut: PASS
+  E1_inkRemoved: PASS
+  E2_onDarkLines: PASS
+  C_hero: FAIL
+  C_temple: FAIL
+  C_sly-closeup: FAIL
+  C_courtyard: FAIL
+  C_dunes: FAIL
+  C_interior: FAIL
+  C_night: FAIL
+  C_traversal: FAIL
+  C_guard: FAIL
+  C_sly-profile: FAIL
+  C_combat: FAIL
+
+==> DO NOT SHIP — C_hero FAIL, C_temple FAIL, C_sly-closeup FAIL, C_courtyard FAIL, C_dunes FAIL, C_interior FAIL, C_night FAIL, C_traversal FAIL, C_guard FAIL, C_sly-profile FAIL, C_combat FAIL
+crops -> /home/user/Demo/progress/records/fxartifact1/crops (fxink-*). The RESULT adjudicates the LOOK gate off these.
