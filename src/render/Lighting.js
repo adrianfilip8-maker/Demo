@@ -238,8 +238,13 @@ const TUNE = {
      near field (torch head, soot wall) cannot re-feed §25's bloom. `debug.localToon`
      overrides live (null = use this), the `fillScale` lever pattern, so A/B arms are pokes
      in one boot. Ships at 2.5 only on PREREG-torchlight's PASS; 0.0 is the registered
-     fallback (mechanism stays, term off). */
-  localToon: 2.5,
+     fallback (mechanism stays, term off).
+
+     AT THE FALLBACK per RESULT-torchlight.md: run 4 was a VOID capture (D1 caught the
+     cross-session manifest resume; the interior guard's carried torch is an unregistered
+     7th underground emitter feeding this term — V1/F1). No verdict on 2.5 exists yet;
+     PREREG-torchlight2 re-registers the slot table with seven emitters. */
+  localToon: 0.0,
 
   /* ── Shafts ──────────────────────────────────────────────────────────────────
      These were five imaginary blades 42 m wide lying along y = 15.5 at z = −18…−50,

@@ -108,11 +108,12 @@ function fakeEngine() {
 test('torchlight: LIGHTING publishes TUNE.localToon and debug.localToon overrides it', () => {
   const { eng, seen } = fakeEngine();
   const L = new Lighting(eng);
-  assert.equal(L.TUNE.localToon, 2.5,
-    'TUNE.localToon is not the sealed candidate 2.5 — if PREREG-torchlight FAILED its bars, this ' +
-    'test must be updated alongside the registered fallback (0.0), not silenced');
+  assert.equal(L.TUNE.localToon, 0.0,
+    'TUNE.localToon is not the registered fallback 0.0 — RESULT-torchlight.md: run 4 was a ' +
+    'VOID capture (no verdict on 2.5); this pin moves to a nonzero value only alongside a ' +
+    'PASS under PREREG-torchlight2');
   L._publishKeyLight();
-  assert.equal(seen.at(-1), 2.5, 'the payload does not carry TUNE.localToon');
+  assert.equal(seen.at(-1), 0.0, 'the payload does not carry TUNE.localToon');
   eng.debug.localToon = 0;
   L._publishKeyLight();
   assert.equal(seen.at(-1), 0, 'debug.localToon = 0 must reach the payload (the A/B null arm)');
@@ -121,5 +122,5 @@ test('torchlight: LIGHTING publishes TUNE.localToon and debug.localToon override
   assert.equal(seen.at(-1), 6.0, 'debug.localToon must override TUNE (the kbover arm)');
   eng.debug.localToon = null;
   L._publishKeyLight();
-  assert.equal(seen.at(-1), 2.5, 'clearing the override must fall back to TUNE');
+  assert.equal(seen.at(-1), 0.0, 'clearing the override must fall back to TUNE');
 });
