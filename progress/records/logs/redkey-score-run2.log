@@ -1,0 +1,71 @@
+R hero         off-vs-back 0 px
+R kaykit       off-vs-back 0 px
+R temple       off-vs-back 0 px
+R sly-closeup  off-vs-back 0 px
+R sly-startle  off-vs-back 0 px
+R sly-perch    off-vs-back 0 px
+R sly-arm      off-vs-back 0 px
+R courtyard    off-vs-back 0 px
+R dunes        off-vs-back 0 px
+R interior     off-vs-back 0 px
+R night        off-vs-back 0 px
+R traversal    off-vs-back 0 px
+R combat       off-vs-back 0 px
+R guard        off-vs-back 0 px
+R sly-profile  off-vs-back 0 px
+R sly-key      off-vs-back 0 px
+B night        off-vs-on   0 px
+B guard        off-vs-on   0 px
+B interior     off-vs-on   0 px
+SHIRT  off: L 135.3 R-B -75.0 S 0.519 hue 208.0 disp 44.0
+SHIRT  on : L 139.8 R-B -77.4 S 0.502 hue 211.0 disp 42.5
+WALL   off: L 82.4 R-B -11.7 S 0.228 hue 179.2 disp 59.4
+WALL   on : L 82.4 R-B -11.8 S 0.228 hue 178.8 disp 58.6
+COIL   off: L 69.9 R-B -28.2 S 0.508 hue 200.4 disp 60.3
+COIL   on : L 69.7 R-B -28.6 S 0.508 hue 199.7 disp 59.2
+GROUND off: L 99.9 R-B 45.4 S 0.286 hue 21.6 disp 22.9
+GROUND on : L 99.3 R-B 44.3 S 0.286 hue 22.5 disp 23.1
+COIL   ko : disp 58.6  (dose arm 0.35)
+E3     circDist(hue,220): off 12.0 -> on 9.0   dS -0.016
+P hero       FULL dMeanL -0.10  dR-B -0.25  (caps |L|<=4, dR-B>=-12)
+P kaykit     FULL dMeanL -0.41  dR-B -0.83  (caps |L|<=4, dR-B>=-12)
+P temple     FULL dMeanL -0.00  dR-B -0.02  (caps |L|<=4, dR-B>=-12)
+P courtyard  FULL dMeanL -0.17  dR-B -0.58  (caps |L|<=4, dR-B>=-12)
+P dunes      FULL dMeanL -0.64  dR-B -0.86  (caps |L|<=5, dR-B>=-14)
+trees: {2052d5642163f62e} expected 2052d5642163f62e; rows 49
+
+  R_hero         PASS
+  R_kaykit       PASS
+  R_temple       PASS
+  R_sly-closeup  PASS
+  R_sly-startle  PASS
+  R_sly-perch    PASS
+  R_sly-arm      PASS
+  R_courtyard    PASS
+  R_dunes        PASS
+  R_interior     PASS
+  R_night        PASS
+  R_traversal    PASS
+  R_combat       PASS
+  R_guard        PASS
+  R_sly-profile  PASS
+  R_sly-key      PASS
+  B_night        PASS
+  B_guard        PASS
+  B_interior     PASS
+  BG1            FAIL
+  E1             VOID
+  E2             FAIL
+  E3             FAIL
+  KO1            VOID
+  P_hero         PASS
+  P_kaykit       PASS
+  P_temple       PASS
+  P_courtyard    PASS
+  P_dunes        PASS
+  PW             FAIL
+  VK             PASS
+  V3             PASS
+  V4             PASS
+
+==> DO NOT SHIP — BG1 FAIL, E1 VOID, E2 FAIL, E3 FAIL, KO1 VOID, PW FAIL  (VOID is not PASS — E1, KO1 could not be evaluated)

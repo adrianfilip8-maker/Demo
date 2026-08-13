@@ -23810,3 +23810,15 @@ rebuild, combat trail. Budget: 15/16 shots over 1.2M tris (night 2.57M), 7/16 ov
 draws — arbitration with numbers. Positives on record: night "closest to the license",
 temple competitive, tail texture on-reference, no costume-hue ranking anywhere. r10 avg 4.9
 on a smaller set; new staging shots (guard 2, combat 3) are lows r10 never photographed.
+
+## §305 — redkey: DO NOT SHIP, and the perch/arm legibility question is now closed from both ends — only the Option-A staging decision remains
+
+The key-saturation clamp (PREREG-redkey, inert-in-HEAD poke A/B, instrument fully valid:
+0 px backs ×16, protections inside caps) moved the shirt +4.5 L / 3° hue at its strongest
+arm and left WALL/COIL/GROUND unmoved (dispersions flat-to-down). With RESULT-redflood's
+grade-side ceiling (all knobs ≲⅓, key-sat ~⅕) this closes the mechanism: at tod 0.80 the
+albedo illegibility on sly-perch/sly-arm/combat is unrecoverable by any lighting/grade
+lever — the environment is warm by authored design and surfaces converge on its hue.
+keySatMax stays inert at 1.0 (branch-untaken, pin-tested). Routing: Option A (re-stage
+those shots to tod ≈ 0.74–0.76) or accept the hot-monochrome dusk as the look — OWNER
+decision, evidence complete (§293+§300+§305); no further seals warranted on this question.
