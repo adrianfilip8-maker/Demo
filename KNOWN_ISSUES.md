@@ -23783,3 +23783,15 @@ fired both runs exactly as registered. Effect evidence is twice-replicated (+24.
 — one boot, CAND tree, per-shot poke arms 0.0/2.5/back (the c10postfx2/twilight pattern that
 held 0 px twelve-for-twelve today); the CAND@0≡BASE identity becomes an analytic premise
 (IEEE x·0=0 + N1 semantics), not a pixel bar. localToon stays 0.0 until that verdict.
+
+## §303 — TORCHLIGHT SHIPS: the one-boot poke A/B goes 42-for-42 and localToon 2.5 is live — the tomb sconces (and the guard's torch) finally light the toon set
+
+Third instrument design, first valid verdict (RESULT-torchlight3.md, seal a148e33): all 16
+same-boot off-vs-back validity blocks 0 px, all 15 daylight off-vs-on protections 0 px
+(sly-key's three arms byte-identical — the y-gate at IEEE exactness), POOL +24.3 L / +92.4
+R−B / 89% warm in its third decimal-exact replication, dose ×1.64, FAR inside the v2-derived
+bands, guard slot tracked, F2 15.02 m. Ship: localToon 0.0→2.5 + pin test in one commit.
+Critic r10's interior 4.5 ("torches are bloomy orbs that cast nothing") now has its
+mechanism live. Instrument arc (§301→§302→here): on this renderer a [0,0] pixel bar is
+legitimate ONLY same-boot; cross-boot claims need measured floors or a different form —
+generalised from §296.3 and now proven by a 3-run natural experiment. Forecast ledger 5/18.

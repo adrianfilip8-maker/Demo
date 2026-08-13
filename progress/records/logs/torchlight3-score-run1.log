@@ -1,0 +1,91 @@
+off  POOL meanL 70.7 R-B -17.0 warm% 2.3
+off  FAR  meanL 61.6 R-B -26.8 warm% 1.2
+R hero         off-vs-back 0 px
+R kaykit       off-vs-back 0 px
+R temple       off-vs-back 0 px
+R sly-closeup  off-vs-back 0 px
+R sly-startle  off-vs-back 0 px
+R sly-perch    off-vs-back 0 px
+R sly-arm      off-vs-back 0 px
+R courtyard    off-vs-back 0 px
+R dunes        off-vs-back 0 px
+R interior     off-vs-back 0 px
+R night        off-vs-back 0 px
+R traversal    off-vs-back 0 px
+R combat       off-vs-back 0 px
+R guard        off-vs-back 0 px
+R sly-profile  off-vs-back 0 px
+R sly-key      off-vs-back 0 px
+POOL dMeanL 24.3 dR-B 92.4 on warm% 89.2
+F1  FAR   dMeanL 2.24 dR-B 12.07 (bands [-8,+5.0] / [-8,+22])
+F1b FAR-N dMeanL 0.26 dR-B 1.39 (bands [-8,+1.0] / [-8,+2.0])
+B hero         off-vs-on   0 px
+B kaykit       off-vs-on   0 px
+B temple       off-vs-on   0 px
+B sly-closeup  off-vs-on   0 px
+B sly-startle  off-vs-on   0 px
+B sly-perch    off-vs-on   0 px
+B sly-arm      off-vs-on   0 px
+B courtyard    off-vs-on   0 px
+B dunes        off-vs-on   0 px
+B night        off-vs-on   0 px
+B traversal    off-vs-on   0 px
+B combat       off-vs-on   0 px
+B guard        off-vs-on   0 px
+B sly-profile  off-vs-on   0 px
+B sly-key      off-vs-on   0 px
+KO POOL dMeanL @6.0 39.8 vs @2.5 24.3
+(guard slot) interior.off  (9.09, -8.78, -66.62) i 4.117
+(guard slot) interior.on  (9.09, -8.78, -66.62) i 4.117
+(guard slot) interior.ko  (9.09, -8.78, -66.62) i 4.117
+(guard slot) interior.back  (9.09, -8.78, -66.62) i 4.117
+(guard slot) back-vs-off stand delta 0.0 cm — staging-stability aid (one staging, expect 0)
+F2 guard-torch min distance to FAR surface 15.02 m (>= 8.5)
+trees: {80ca393a9b620830} expected install 80ca393a9b620830 (restore 290a10079d192a5d)
+(desc) SLY box dMeanL 8.3 dR-B 32.6
+(desc) R-pool dMeanL 20.9 dR-B 75.6
+
+  BG1            PASS
+  R_hero         PASS
+  R_kaykit       PASS
+  R_temple       PASS
+  R_sly-closeup  PASS
+  R_sly-startle  PASS
+  R_sly-perch    PASS
+  R_sly-arm      PASS
+  R_courtyard    PASS
+  R_dunes        PASS
+  R_interior     PASS
+  R_night        PASS
+  R_traversal    PASS
+  R_combat       PASS
+  R_guard        PASS
+  R_sly-profile  PASS
+  R_sly-key      PASS
+  P1             PASS
+  P2             PASS
+  F1             PASS
+  F1b            PASS
+  B_hero         PASS
+  B_kaykit       PASS
+  B_temple       PASS
+  B_sly-closeup  PASS
+  B_sly-startle  PASS
+  B_sly-perch    PASS
+  B_sly-arm      PASS
+  B_courtyard    PASS
+  B_dunes        PASS
+  B_night        PASS
+  B_traversal    PASS
+  B_combat       PASS
+  B_guard        PASS
+  B_sly-profile  PASS
+  B_sly-key      PASS
+  KO1            PASS
+  V1             PASS
+  F2             PASS
+  V2             PASS
+  V3             PASS
+  V4             PASS
+
+==> SHIP TUNE.localToon = 2.5 (torchlight3 — one boot, poked arms)
