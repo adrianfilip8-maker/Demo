@@ -295,6 +295,32 @@ export const TUNE = {
      across the clock — night behaviour is certified by that seal's PROT-NIGHT, not a pin. */
   subjShadowHold: 1.0,
 
+  /* ── keySatMax — the red-key saturation clamp (PREREG-redkey; critic r11 family 1) ─────────
+     Ceiling on the KEY light's linear chroma as consumed by the toon set: (max−min)/max of
+     uKeyColor, clamped by a luma-matched blend toward grey at arrival in setKeyLight. Warm
+     keys only (r > b) — the moon never enters. The albedo keeps carrying the frame's hue;
+     the LIGHT stops over-tilting the channel ratios, which is what erased lit-albedo
+     separation in the tod-0.80 framings (r11: perch/arm/combat — the coil's two-tone
+     measured hue-dispersion 8.6° lit vs 92.2° for the same object shade-side; the model
+     puts the pairwise separation back ×1.5–2.4 at 0.50–0.40 while lit sandstone moves
+     ≤ 2 display L, because warm albedo × key barely sees the clamp).
+
+     Contract (the localToon/uSpecNormPow standard):
+     - 1.0 = the clamp branch is UNTAKEN and the build is bit-identical pre-seal — the
+       gate is spelled `satMax < 1`, so no arithmetic touches uKeyColor at the default.
+     - The clamp preserves the key's luminance exactly in reals (blend target is the key's
+       own luma grey), so _refreshShadowColor's `keyLum` and the shadow floor arithmetic
+       do not move with it.
+     - Scope guards, each arithmetic: r > b excludes the moon (night/guard untouched);
+       sat > satMax excludes the midday interior key (linear sat 0.284); the shipped warm
+       anchors sit at 0.61–0.70 linear, so a candidate below that binds on daylight only.
+     - `debug.keySatMax` overrides live per publish (null = use this) — the A/B lever;
+       setKeyLight recomputes from the incoming color every frame, so poke and restore are
+       exact by construction.
+     Ships at a value below 1.0 only on PREREG-redkey's PASS; 1.0 is the registered
+     fallback (mechanism stays, clamp off). */
+  keySatMax: 1.0,
+
   /* Baked aoMap strength, globally. The maps were authored while cast shadows were suppressed
      engine-wide (KNOWN_ISSUES §1), so the baked term was carrying the low frequencies as well
      as the contact scale. Shadows work now and the critic caught the consequence: occlusion
@@ -1495,7 +1521,33 @@ export class Shading {
         u.uKeyDir.value.copy(_v3);
       }
     }
-    if (color !== undefined && color !== null) setCol(u.uKeyColor.value, color);
+    if (color !== undefined && color !== null) {
+      setCol(u.uKeyColor.value, color);
+      /* Red-key saturation clamp (TUNE.keySatMax — the contract note there is the why).
+         Applied at arrival so every consumer of uKeyColor (diffuse key term, sss, the
+         spec's uSpecKey coupling) sees one key, and recomputed from the incoming colour
+         every publish so a debug.keySatMax poke and its restore are exact. At the default
+         1.0 the outer branch is untaken and this block touches nothing. */
+      const satMax = this.engine?.debug?.keySatMax ?? TUNE.keySatMax;
+      if (satMax < 1) {
+        const c = u.uKeyColor.value;
+        if (c.r > c.b) {                    // warm keys only — the moon never enters
+          const mx = Math.max(c.r, c.g, c.b), mn = Math.min(c.r, c.g, c.b);
+          const D = mx - mn;
+          if (mx > 1e-6 && D > satMax * mx) {
+            /* Exact solve for t in c' = mix(c, luma-grey, t) with sat(c') == satMax:
+               (1−t)·D = satMax·((1−t)·mx + t·L)  ⇒  t = (D − s·mx) / (D − s·mx + s·L).
+               Blending toward the key's own luma grey preserves luminance in reals, so
+               keyLum (and with it the shadow floor) does not move. */
+            const L = lum(c);
+            const t = (D - satMax * mx) / (D - satMax * mx + satMax * L);
+            c.r += (L - c.r) * t;
+            c.g += (L - c.g) * t;
+            c.b += (L - c.b) * t;
+          }
+        }
+      }
+    }
     if (typeof intensity === 'number') u.uKeyIntensity.value = intensity;
 
     if (ambient !== undefined && ambient !== null) {
