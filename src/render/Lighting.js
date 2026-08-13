@@ -240,11 +240,13 @@ const TUNE = {
      in one boot. Ships at 2.5 only on PREREG-torchlight's PASS; 0.0 is the registered
      fallback (mechanism stays, term off).
 
-     AT THE FALLBACK per RESULT-torchlight.md: run 4 was a VOID capture (D1 caught the
-     cross-session manifest resume; the interior guard's carried torch is an unregistered
-     7th underground emitter feeding this term — V1/F1). No verdict on 2.5 exists yet;
-     PREREG-torchlight2 re-registers the slot table with seven emitters. */
-  localToon: 0.0,
+     SHIPPED at 2.5 per RESULT-torchlight3.md (seal a148e33): the one-boot poke A/B went
+     42-for-42 — off-vs-back validity 0 px on all 16 shots, off-vs-on daylight protection
+     0 px on all 15 above-ground shots (sly-key byte-identical across arms), POOL +24.3 L /
+     +92.4 R−B / 89% warm (third replication), dose ×1.64, FAR inside the derived bands,
+     guard slot tracked with its torch at 15.02 m from the FAR surface. Runs 4 and v2
+     (§301/§302) were instrument VOIDs, not candidate failures. */
+  localToon: 2.5,
 
   /* ── Shafts ──────────────────────────────────────────────────────────────────
      These were five imaginary blades 42 m wide lying along y = 15.5 at z = −18…−50,
