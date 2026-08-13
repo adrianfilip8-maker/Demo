@@ -23737,3 +23737,20 @@ bytes, same shots, bars aimed at the mask population → clean pass.
 The ship write (`PostFX.cand.js` → src with `bloomSubjectCut: 1.0`) is DEFERRED to the
 post-queue lock window per §186/§296 — torchlight and twilight hold the FIFO at scoring
 time. The RESULT carries the exact pending-write recipe; the write commit cites it.
+
+## §300 — twilight Option B, first candidate: NO-SHIP on a fully valid instrument — hemisphere legs cannot make the Gerudo device, because they ARE the monochrome
+
+PREREG-twilight (51d185c) ran clean end-to-end (single tree, all readbacks, 0-px restores,
+golden protection 0 px ×4) and the candidate failed every effect bar it registered: hue
+dispersion DOWN on both WALL ROIs (26.1°→22.9°, 8.6°→8.5°), lit/shade separation flat
+(−0.2°), perch's wall degenerate exactly as the seal's named risk predicted. Mechanism
+(RESULT-twilight.md): the base fill was already hue-split (blue hemiSky vs warm hemiGround);
+the violet candidate REPLACED that split with one violet family — a hemisphere is ambient,
+it lights lit and shade alike, so at el ≤2° recoloring it tints the frame uniformly and
+dispersion falls. The shade-scoped surface this device actually needs is the toon shadow
+tint/hold path (routed as twilight candidate 2, new seal). Second finding: B5 measured a
+≤1-hex anchor delta producing 710/594 px of ≥2 display-L change at el 21 — resolved-state
+arithmetic does not bound display deltas through the grade (§296-family lesson, new organ).
+Owner decision §298 stands as intent; the r10 monochrome framings remain Option-A staging
+territory (el 21, late golden — provably out of any twilight device's reach). Constants
+untouched; Atmosphere.js verified restored.

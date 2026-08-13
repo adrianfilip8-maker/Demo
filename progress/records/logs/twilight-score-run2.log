@@ -1,0 +1,53 @@
+=== V0/V1 provenance ===
+captures missing 0; srcTree set {ea0fe49942e47ffb}; head set {8c6d68295519} vs lock 8c6d68295519
+V1 OK
+
+=== V2 readbacks ===
+all arms: anchors/state/propagation/el/moon/subject OK
+
+=== V3 back == base ===
+perch-80: 0 px OK
+perch-TWI1: 0 px OK
+arm-80: 0 px OK
+arm-TWI1: 0 px OK
+hero: 0 px OK
+temple: 0 px OK
+courtyard: 0 px OK
+interior: 0 px OK
+perch-TWI2: 0 px OK
+perch-TWI3: 0 px OK
+arm-TWI2: 0 px OK
+dunes: 0 px OK
+
+=== B4 golden protection (hero/temple/courtyard/interior) ===
+hero: 0 px OK
+temple: 0 px OK
+courtyard: 0 px OK
+interior: 0 px OK
+
+=== B5 scope at tod 0.80 ===
+perch-80: |d|>=2 710 px <<< FAIL   (|d|>=1 73583 px, report-only)
+arm-80: |d|>=2 594 px <<< FAIL   (|d|>=1 46657 px, report-only)
+
+=== B1/B2 at tod 0.8833 (el 2.01) ===
+perch-TWI1 DISP: base std 26.1° (mean 203.2°)  cand std 22.9° (mean 210.8°)  need >= 34.1 and >= 39.2 -> FAIL
+perch-TWI1 SEP: single population (p65-p35 = 6.7 L < 8) — VOID-degenerate
+arm-TWI1 DISP: base std 8.6° (mean 38.3°)  cand std 8.5° (mean 37.5°)  need >= 16.6 and >= 12.9 -> FAIL
+arm-TWI1 SEP: base 1.6° (lit 37.4° / shade 39°)  cand 1.4° (lit 36.6° / shade 38°)  dSEP -0.2°
+B1 -> FAIL   B2 -> FAIL
+
+=== B3 costume ===
+perch-TWI1: n 656283  hue 212.3°→221.3° [190,285]:OK  S 0.502→0.461 (>=70%):OK  L 40.6→41.2 (|d|<=12):OK
+arm-TWI1: n 692197  hue 43.1°→33.2° [190,285]:FAIL  S 0.443→0.418 (>=70%):OK  L 88.7→89.1 (|d|<=12):OK
+
+=== report-only rows ===
+perch-TWI2: DISP base 24.6° (mean 199.4°) -> cand 22° (mean 206.2°)
+arm-TWI2: DISP base 9.6° (mean 37.8°) -> cand 9.4° (mean 36.9°)
+perch-TWI3: DISP base 47.2° (mean 240.4°) -> cand 45.4° (mean 253.3°)
+dunes (el 15, W=0.282, disclosed spillover): |d|>=1 483829 px, |d|>=2 147445 px, mean|dL| 0.173
+
+=== B6 crops ===
+crops -> /home/user/Demo/shots/twilight1/crops/ (perch/arm TWI1 wall+subj base|cand 2x, dunes pair + diffmap, TWI3 pair)
+
+verdict (pre-looking): NO-SHIP
+wrote /home/user/Demo/shots/twilight1/verdict.json — this file evaluates; the RESULT decides, after the crops have been looked at.
