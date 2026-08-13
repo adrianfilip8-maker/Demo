@@ -271,6 +271,12 @@ uniform float uFillSkyMix;    // hue blend of that half toward the sky, luma-mat
    never push a pixel into bloom, which is the exact defect (bloomy orbs that light nothing)
    it exists to fix the other half of. */
 uniform float uLocalToon;
+
+/* uRakeTrack / uRakeGap — the golden-hour raking key (PREREG-goldenrake; TUNE.rakeTrack in
+   ToonMaterial.js carries the full contract). 0.0 = the branch directly after slyRamp in
+   TOON_SHADE is untaken and the ramp is bit-identical to the pre-seal build. */
+uniform float uRakeTrack;
+uniform float uRakeGap;
 const float SLY_LOCAL_CAP = 1.6;
 /* Grade-lever scaffolding (ToonMaterial TUNE.neutralShadow/neutralFill/subjWarmShade — the
    comment block there is the why). All three are luma-matched chroma blends on the two
@@ -473,6 +479,38 @@ export const TOON_SHADE = /* glsl */ `
 		sh = mix( sh, slyShadowBand( sh, uShadowBands.x, uShadowBands.y ), uShadowBands.z );
 
 		float ramp = slyRamp( ndl, uBands );
+
+		/* goldenrake (PREREG-goldenrake): what a low warm sun rakes, it fully lights. The
+		   LAST terminator (the one slyTerm places at uTermHi) moves down to track the key's
+		   own ground-plane N.L, so a 22 deg golden-hour sun puts floors and decks in the top
+		   band instead of arithmetically capping them at half key (sin 22 deg = 0.3746 <
+		   termHi 0.52; the top band otherwise needs el >= 33 deg — above the palette's own
+		   flagship elevation). Adding (S_new - S_old)/steps IS the terminator move: ramp was
+		   (S_lo + .. + S_old)/steps, and becomes (S_lo + .. + S_new)/steps exactly.
+		   Scope, each leg arithmetic, per the TUNE contract:
+		   - uRakeTrack 0.0: branch untaken (the localToon/uSpecNormPow standard);
+		   - warm keys only (uKeyColor.r > uKeyColor.b) — the moon never enters, so the two
+		     moon-keyed canonicals are bit-identical by branch;
+		   - rakeHi clamps to uTermHi above el ~33, where the delta is
+		     smoothstep(x)-smoothstep(x) == 0.0 exactly — midday and the interior key
+		     self-annul by arithmetic, not by tolerance;
+		   - near-horizontal surfaces only (smoothstep on Nw.y: walls 0, floors 1) — the
+		     vertical-surface azimuth question (§256) stays owner territory;
+		   - the subject is exempt ((1.0 - vSlySkin): for skinned draws the delta multiplies
+		     by exactly 0.0 — the costume's band layout, §277/§289's work, cannot move);
+		   - 2-band materials are exempt (step(1.5, rakeSteps): they place no terminator at
+		     uTermHi, so there is nothing to move). */
+		if ( uRakeTrack > 0.0 && uKeyColor.r > uKeyColor.b ) {
+			float rakeSteps = max( floor( uBands + 0.5 ) - 1.0, 1.0 );
+			float rakeHi = clamp( uKeyDir.y - uRakeGap, uTermLo + 2.0 * uTermSoft, uTermHi );
+			ramp += ( smoothstep( rakeHi - uTermSoft, rakeHi + uTermSoft, ndl )
+			        - smoothstep( uTermHi - uTermSoft, uTermHi + uTermSoft, ndl ) )
+			      * ( step( 1.5, rakeSteps ) * clamp( uRakeTrack, 0.0, 1.0 ) / rakeSteps )
+			      * smoothstep( 0.55, 0.80, Nw.y )
+			      * ( 1.0 - vSlySkin );
+			ramp = clamp( ramp, 0.0, 1.0 );
+		}
+
 		float key = ramp * sh;
 
 		/* AO is an *ambient* occlusion term. Letting it touch the key light is the classic
