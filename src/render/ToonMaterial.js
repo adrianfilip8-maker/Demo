@@ -79,8 +79,10 @@ export const TUNE = {
      violet-teal, brighter. `debug.shadowFloorNight` overrides live per publish (null =
      this); recomputed from the payload every frame, so poke and restore are exact.
      Ships at 0.14 (Atmosphere.SHADOW_FLOOR — §2.2's number) only on PREREG-nightfloor's
-     PASS; 0.125 is the registered fallback (mechanism stays, lift off). */
-  shadowFloorNight: 0.125,
+     PASS; 0.125 is the registered fallback (mechanism stays, lift off). SHIPPED at 0.14
+     per RESULT-gradetrio.md: N/G bars green, LOOK confirms the crushed night masses lift
+     to legible violet-teal with the night mood held. */
+  shadowFloorNight: 0.14,
   /* The daylight shadow hue. **Read the history before moving these.**
    *
    * Critic pass 2 measured one continuous surface at R/G 1.29 lit vs 1.63 shadowed — the
@@ -395,8 +397,9 @@ export const TUNE = {
      shading.uniforms.uRakeTrack.value sticks across __GAME.step() (the uShadowHold
      contract) — the sealed A/B's arms are uniform pokes. Ships at 1.0 only on
      PREREG-goldenrake's PASS; 0.0 is the registered fallback (mechanism stays, term
-     off). */
-  rakeTrack: 0.0,
+     off). SHIPPED at 1.0 per RESULT-gradetrio.md: all bars green (con arms, 8
+     protections, LOOK — the raked ground finally carries the warm key). */
+  rakeTrack: 1.0,
   rakeGap: 0.05,
 
   /* Baked aoMap strength, globally. The maps were authored while cast shadows were suppressed

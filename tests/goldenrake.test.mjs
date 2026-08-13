@@ -14,16 +14,16 @@ import { TOON_PARS, TOON_SHADE } from '../src/render/shaders/toon.glsl.js';
  * identity). A drift here fails a test, not a critic round.
  */
 
-test('goldenrake: TUNE ships inert — rakeTrack 0.0, rakeGap 0.05', () => {
-  assert.equal(TUNE.rakeTrack, 0.0,
-    'TUNE.rakeTrack is not the registered fallback 0.0 — it moves to 1.0 only alongside a ' +
-    'PASS under PREREG-goldenrake, with the RESULT cited here');
+test('goldenrake: TUNE ships at 1.0 per RESULT-gradetrio — rakeGap 0.05', () => {
+  assert.equal(TUNE.rakeTrack, 1.0,
+    'TUNE.rakeTrack is not the shipped 1.0 — RESULT-gradetrio.md: goldenrake passed all ' +
+    'bars + LOOK; a later move needs its own RESULT cited here, not silence');
   assert.equal(TUNE.rakeGap, 0.05, 'the registered gap constant');
 });
 
 test('goldenrake: the shared uniforms exist at the TUNE defaults', () => {
   const s = new Shading({});
-  assert.equal(s.uniforms.uRakeTrack?.value, 0.0, 'uRakeTrack missing or non-default');
+  assert.equal(s.uniforms.uRakeTrack?.value, 1.0, 'uRakeTrack missing or non-default (shipped 1.0, RESULT-gradetrio)');
   assert.equal(s.uniforms.uRakeGap?.value, 0.05, 'uRakeGap missing or non-default');
 });
 

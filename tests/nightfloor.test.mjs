@@ -20,18 +20,20 @@ const MID = new THREE.Color(1.0, 0.888, 0.716);
 const NIGHT = () => ({ color: MOON, intensity: 0.62, ambient: { intensity: 0.10, floor: 0.14 }, nightAmount: 1 });
 const DAY = () => ({ color: MID, intensity: 4.05, ambient: { intensity: 0.586, floor: 0.14 }, nightAmount: 0 });
 
-test('nightfloor: TUNE.shadowFloorNight ships at the inert 0.125 (== shadowFloor)', () => {
-  assert.equal(TUNE.shadowFloorNight, 0.125,
-    'TUNE.shadowFloorNight is not the registered fallback 0.125 — it moves to 0.14 (§2.2\'s ' +
-    'SHADOW_FLOOR) only alongside a PASS under PREREG-nightfloor, with the RESULT cited here');
-  assert.equal(TUNE.shadowFloorNight, TUNE.shadowFloor,
-    'the inert default IS the day floor: equal values make the strict > gate untaken');
+test('nightfloor: TUNE.shadowFloorNight ships at 0.14 per RESULT-gradetrio', () => {
+  assert.equal(TUNE.shadowFloorNight, 0.14,
+    'TUNE.shadowFloorNight is not the shipped 0.14 (§2.2\'s SHADOW_FLOOR) — ' +
+    'RESULT-gradetrio.md: nightfloor passed all bars + LOOK; a later move needs its own ' +
+    'RESULT cited here, not silence');
+  assert.ok(TUNE.shadowFloorNight > TUNE.shadowFloor,
+    'the shipped night floor must exceed the day floor, or the strict > gate is untaken ' +
+    'and the ship is a silent no-op');
 });
 
-test('nightfloor: at the default the night build is bit-identical', () => {
+test('nightfloor: the debug override at the shipped value is an exact no-op', () => {
   const a = new Shading({ debug: {} });
   a.setKeyLight(NIGHT());
-  const b = new Shading({ debug: { shadowFloorNight: 0.125 } });
+  const b = new Shading({ debug: { shadowFloorNight: 0.14 } });
   b.setKeyLight(NIGHT());
   for (const ch of ['r', 'g', 'b']) {
     assert.equal(a.uniforms.uShadowColor.value[ch], b.uniforms.uShadowColor.value[ch]);
@@ -40,7 +42,7 @@ test('nightfloor: at the default the night build is bit-identical', () => {
 });
 
 test('nightfloor: at night 0.14 lifts the shadow light by exactly x1.12 per channel', () => {
-  const off = new Shading({ debug: {} });
+  const off = new Shading({ debug: { shadowFloorNight: 0.125 } });
   off.setKeyLight(NIGHT());
   const on = new Shading({ debug: { shadowFloorNight: 0.14 } });
   on.setKeyLight(NIGHT());
@@ -62,7 +64,7 @@ test('nightfloor: daylight is identical BY BRANCH at any value', () => {
 });
 
 test('nightfloor: a partial nightAmount lerps the floor (twilight continuity)', () => {
-  const off = new Shading({ debug: {} });
+  const off = new Shading({ debug: { shadowFloorNight: 0.125 } });
   off.setKeyLight({ ...NIGHT(), nightAmount: 0.5 });
   const on = new Shading({ debug: { shadowFloorNight: 0.14 } });
   on.setKeyLight({ ...NIGHT(), nightAmount: 0.5 });
@@ -81,5 +83,6 @@ test('nightfloor: the dose value 0.18 lifts x1.44 and the override restores exac
   eng.debug.shadowFloorNight = 0.125; s.setKeyLight(NIGHT());
   assert.equal(s.uniforms.uShadowColor.value.b, base.b, 'restore is exact');
   eng.debug.shadowFloorNight = null; s.setKeyLight(NIGHT());
-  assert.equal(s.uniforms.uShadowColor.value.b, base.b, 'null falls back to TUNE');
+  assert.ok(Math.abs(s.uniforms.uShadowColor.value.b / base.b - 1.12) < 1e-9,
+    'null falls back to TUNE (shipped 0.14 = x1.12 over the 0.125 base leg)');
 });
