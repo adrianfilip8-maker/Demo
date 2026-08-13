@@ -1,0 +1,51 @@
+--- src/render/Atmosphere.js	2026-08-09 16:09:55.048241835 +0000
++++ progress/records/twilight/Atmosphere.cand.js	2026-08-13 02:26:37.871016398 +0000
+@@ -378,6 +378,48 @@
+   }),
+ ];
+ 
++/* ── §298 twilight-cool A/B lever (PREREG-twilight.md) ──────────────────────────
++   Owner decision §298 / DESIGN-twilight Option B: cool the el ≤ 2° twilight anchors'
++   fill/shadow leg toward violet — the BotW Gerudo-dusk device, violet shadow against a warm
++   key — leaving the sun/key leg (sunColor/sunDisc/sunGlow), the sky-dome legs (zenith/
++   horizon/haze/fog) and every intensity untouched, and the 22° GOLDEN anchor byte-identical.
++
++   `warm` is the shipped table verbatim (anchors [1] el −5 and [2] el 2 above). `cand` is the
++   Option-B candidate: hue moved to the blue-violet family, per-leg display luma matched to
++   within ±2% so twilight brightness does not shift, only chroma separation:
++
++     el  2  hemiSky    0x5a86bd (h 213°, luma 128.6) → 0x8578d2 (h 249°, luma 129.3)
++     el  2  hemiGround 0xd08a48 (h  29°, luma 148.1) → 0xa988c6 (h 272°, luma 147.5)
++     el −5  hemiSky    0x3f5f97 (h 218°, luma  92.2) → 0x5c54a8 (h 246°, luma  91.8)
++     el −5  hemiGround 0x8a5a52 (h  17°, luma  99.6) → 0x6d5a91 (h 261°, luma  98.0)
++
++   The RESTING state of this file is `warm` — the module evaluates byte-identically to the
++   shipped Atmosphere.js unless the lever is called, so a stranded install cannot poison any
++   other lane's boot (§298.3's hazard, closed by construction). The capture runner drives the
++   lever through `window.__setTwilightCool`; anchors are the SOURCE both consumers
++   (Lighting._applyAtmosphere, Sky._refresh) re-derive from, so a lever poke is exactly the
++   candidate file's arithmetic — poke the table, not the uniform (RESULT-redflood's
++   hazeDensity lesson). On PASS what ships is the four `cand` literals in the anchor table,
++   nothing else; this block does not ship. */
++export const TWILIGHT_COOL = {
++  warm: { m5sky: 0x3f5f97, m5ground: 0x8a5a52, p2sky: 0x5a86bd, p2ground: 0xd08a48 },
++  cand: { m5sky: 0x5c54a8, m5ground: 0x6d5a91, p2sky: 0x8578d2, p2ground: 0xa988c6 },
++};
++export function setTwilightCool(t) {
++  const a5 = ANCHORS[1], a2 = ANCHORS[2];
++  if (a5.el !== -5 || a2.el !== 2) throw new Error('twilightCool: anchor table reordered');
++  const on = t >= 0.5;                       // values, not a dial — binary by design
++  const V = on ? TWILIGHT_COOL.cand : TWILIGHT_COOL.warm;
++  a5.hemiSky.setHex(V.m5sky); a5.hemiGround.setHex(V.m5ground);
++  a2.hemiSky.setHex(V.p2sky); a2.hemiGround.setHex(V.p2ground);
++  return {
++    applied: on ? 'cand' : 'warm',
++    a5sky: a5.hemiSky.getHexString(), a5ground: a5.hemiGround.getHexString(),
++    a2sky: a2.hemiSky.getHexString(), a2ground: a2.hemiGround.getHexString(),
++  };
++}
++if (typeof window !== 'undefined') window.__setTwilightCool = setTwilightCool;
++
+ /* ── State ──────────────────────────────────────────────────────────────────── */
+ 
+ /** Allocate the mutable atmosphere state. One per consumer; `evalAtmosphere` fills it. */
