@@ -600,6 +600,14 @@ uniform vec4  uFade;      // farOut, farIn, nearOut, nearIn
 uniform vec3  uLightTint;
 uniform vec3  uAmbTint;
 uniform float uLitMix;
+/* PREREG-fxghost2: per-batch attenuation of the LIT colour's AMBIENT leg (uAmbGain) and of the
+   sprite's own opacity (uAlphaGain). Both default to 1.0, where both are IEEE-exact no-ops
+   (x * 1.0 == x), so a batch that never sets them renders byte-identically. Section 306 /
+   RESULT-fxartifact measured that the sandHigh ghost discs ride the ambient leg (litMix cuts
+   left G2-G5 at r >= 0.95), which is the leg uLitMix cannot reach; these are the two levers
+   the follow-up seal sweeps. Do not ship a value != 1 without that seal's frame verdict. */
+uniform float uAmbGain;
+uniform float uAlphaGain;
 uniform float uSizeScale;
 uniform float uMaxSize;   // max diameter as a fraction of frame height; 0 = no ceiling
 
@@ -662,13 +670,17 @@ void main() {
     alpha *= smoothstep( uFade.z, uFade.w, dcam );
   #endif
 
+  // Per-batch opacity gain — see uAlphaGain. 1.0 is exact.
+  alpha *= uAlphaGain;
+
   vec3 col = mix( aCol0, aCol1, u );
   #ifdef LIT
     float boost = 1.0;
     #ifdef SHAFTS
       boost += shaftBoost( p ) * ${TUNE.shaftBoost.toFixed(2)};
     #endif
-    col *= mix( uAmbTint, uLightTint * boost, uLitMix );
+    // uAmbGain scales the AMBIENT leg only; the key leg and uLitMix are untouched. 1.0 is exact.
+    col *= mix( uAmbTint * uAmbGain, uLightTint * boost, uLitMix );
   #endif
   vCol = vec4( col, alpha );
 
@@ -1523,6 +1535,11 @@ class Batch {
         uLightTint: { value: opts.shared.lightTint },
         uAmbTint: { value: opts.shared.ambTint },
         uLitMix: { value: opts.litMix ?? TUNE.ambientLitMix },
+        /* Both 1.0 unless a pool asks otherwise — see the shader note at uAmbGain. Per-BATCH
+           by construction (uAmbTint/uLightTint are shared objects; these two are not), which
+           is what keeps a sandHigh sweep off every other pool's sprites. */
+        uAmbGain: { value: opts.ambGain ?? 1 },
+        uAlphaGain: { value: opts.alphaGain ?? 1 },
         uSizeScale: { value: 1 },
         uMaxSize: { value: opts.maxSize ?? 0 },
         uAtlas: { value: opts.shared.atlas },
@@ -2115,6 +2132,11 @@ export class Particles {
            a sheet that has to cover the ground is *supposed* to be large in frame. Clamping
            those would delete the two fields that carry the ground haze. */
         maxSize: key === 'air_motes' ? TUNE.moteMaxH : 0,
+        /* PREREG-fxghost2's ship surface: a pool may attenuate its LIT colour's ambient leg
+           (`ambGain`) or its own opacity (`gain`). No AMBIENT def sets either today, so both
+           resolve to 1 and the sprites are byte-identical to before the knobs existed. */
+        ambGain: def.ambGain ?? 1,
+        alphaGain: def.gain ?? 1,
       });
       b.material.uniforms.uBox.value.set(def.box[0], def.box[1], def.box[2]);
       b.material.uniforms.uFade.value.set(def.fade[0], def.fade[1], def.fade[2], def.fade[3]);

@@ -215,6 +215,28 @@ const TUNE = {
   // The shadow side keeps 45% of the lit side's strength — enough that a dark silhouette
   // always separates, little enough that the light still reads as coming from one direction.
   rimShadowFloor: 0.45,
+
+  /* --- the shadow-side floor's OFF-SUBJECT half (critic 11 family 3: "edge-detect
+     christmas-lights on block seams", dunes/night/guard) ---
+     §306/RESULT-fxartifact's s10 decomposition pinned this floor — not ToonMaterial's
+     surface-rim `rimShadowFloorArch` — as the owner of the residual glint population
+     (arch floor 0.10 left dunes r0.42 / night r0.49; screen floor 0.10 removed a further
+     23%/10% on top). Lowering `rimShadowFloor` outright is not available: the population it
+     holds up includes the CHARACTER's shadow-side silhouette rim, which §2.1.5 calls the
+     single biggest AAA tell and which the 0.45 was chosen for.
+
+     So the cut is SCOPED, exactly as ToonMaterial scopes its surface twin by `vSlySkin`:
+     the composite already carries the ledger #31 subject mask (the normal prepass writes
+     alpha = 1 - subject), and this knob subtracts from the floor only where that mask says
+     "not the subject". The mask is dilated by one texel because the rim band straddles the
+     silhouette and is drawn partly on background pixels — an undilated tap would shave the
+     outer half of the character's own rim.
+
+     0 = shipped behaviour, and not approximately: the whole branch is skipped, so every
+     pixel takes `rimFloor = uRimShadowFloor` byte-for-byte. Arms {0.35, 0.45} (off-subject
+     floors 0.10 and 0.00) are registered in PREREG-rimfloor2.md; do not ship a nonzero value
+     without that seal's frame verdict. */
+  rimFloorOffCut: 0.0,
   rimLit: 0x7fd4ff,       // §2.2 RIM, the key's complement       — DAY leg (see rimClock)
   rimShade: 0x6fa8d8,     // §2.2 FILL sky bounce — the shadow side is lit by sky, not by sun
   /* ── the time-of-day hook the block above says this pass does not have (§214.2, defect #12) ──
@@ -1161,6 +1183,8 @@ uniform float uBloomIntensity, uSplitStrength, uVignette, uChroma, uGrain;
 uniform vec2  uSplitRange;
 uniform float uAOEnabled, uEdgeEnabled, uBloomEnabled, uInkStrength;
 uniform float uAOStrength, uAODepth, uRimStrength, uRimShadowFloor;
+uniform sampler2D uNormal;      // normal prepass; alpha = 1 - subject (ledger #31, inverted)
+uniform float uRimFloorOffCut;  // TUNE.rimFloorOffCut — off-subject rim-floor cut; 0 = exact no-op
 uniform vec3  uLift, uGain, uSplitShadow, uSplitHighlight, uInkWarm, uInkCool;
 uniform vec3  uAOTint, uRimLit, uRimShade;
 uniform vec4  uContact;      // radiusWorld(m), strength, minPx, maxPx
@@ -1381,7 +1405,23 @@ void main() {
   vec4 edge = texture2D( uEdge, vUv );
   if ( uEdgeEnabled > 0.5 && uRimStrength > 0.0 ) {
     vec3 rimCol = mix( uRimShade, uRimLit, edge.b );
-    float amt = edge.g * uRimStrength * mix( uRimShadowFloor, 1.0, edge.b );
+    /* The shadow-side floor, optionally cut OFF-SUBJECT only (TUNE.rimFloorOffCut). The
+       branch — not a mix collapsing to the identity — is what makes 0 exactly the shipped
+       image: at 0 nothing here is evaluated and rimFloor is the uniform itself. */
+    float rimFloor = uRimShadowFloor;
+    if ( uRimFloorOffCut > 0.0 ) {
+      /* Ledger #31's mask, dilated by one texel: the rim band is drawn across the silhouette,
+         so a bare centre tap would leave the outer half of the CHARACTER's rim unprotected.
+         max() over the cross means every way of being near the subject keeps the full floor —
+         the same fail-toward-shipped direction the bloom subject gate takes. */
+      float subj = 1.0 - texture2D( uNormal, vUv ).a;
+      subj = max( subj, 1.0 - texture2D( uNormal, vUv + vec2( uTexel.x, 0.0 ) ).a );
+      subj = max( subj, 1.0 - texture2D( uNormal, vUv - vec2( uTexel.x, 0.0 ) ).a );
+      subj = max( subj, 1.0 - texture2D( uNormal, vUv + vec2( 0.0, uTexel.y ) ).a );
+      subj = max( subj, 1.0 - texture2D( uNormal, vUv - vec2( 0.0, uTexel.y ) ).a );
+      rimFloor = max( uRimShadowFloor - uRimFloorOffCut * ( 1.0 - clamp( subj, 0.0, 1.0 ) ), 0.0 );
+    }
+    float amt = edge.g * uRimStrength * mix( rimFloor, 1.0, edge.b );
     c += rimCol * amt * ( 1.0 - c );
   }
 
@@ -1626,6 +1666,8 @@ export class PostFX {
         uAODepth: { value: this.tune.aoDepth },
         uRimStrength: { value: this.tune.rimStrength },
         uRimShadowFloor: { value: this.tune.rimShadowFloor },
+        uNormal: this.shared.uNormal,
+        uRimFloorOffCut: { value: this.tune.rimFloorOffCut },
         // Occlusion is applied while the image is still linear, so the tint stays linear —
         // normalised against its peak channel so it can only ever darken (see tintColor).
         uAOTint: { value: tintColor(new THREE.Color(this.tune.aoTint)) },
@@ -2152,6 +2194,8 @@ export class PostFX {
     );
     cu.uRimStrength.value = this.passes.edge.enabled ? this.tune.rimStrength : 0;
     cu.uRimShadowFloor.value = this.tune.rimShadowFloor;
+    // Re-read per frame like its siblings, so a one-boot A/B can poke tune.rimFloorOffCut (§40).
+    cu.uRimFloorOffCut.value = this.tune.rimFloorOffCut;
 
     /* ---- the two clock-driven terms (TUNE.liftDayScale, TUNE.rimClock) ----
        LIGHTING publishes `atmosphere` and `rimColor` as public fields (Lighting.js:503/511), so
