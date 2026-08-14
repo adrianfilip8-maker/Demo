@@ -235,6 +235,7 @@ function cascadeSets(shot) {
     const back = radius + pad;
 
     let draws = 0, tris = 0;
+    const byOwner = new Map();
     for (const it of items) {
       if (!it.caster) continue;
       let lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity];
@@ -250,8 +251,9 @@ function cascadeSets(shot) {
       if (hi[1] < -radius || lo[1] > radius) continue;
       if (hi[2] < -back || lo[2] > radius) continue;
       draws++; tris += it.tris;
+      const a = byOwner.get(it.owner) || [0, 0]; a[0]++; a[1] += it.tris; byOwner.set(it.owner, a);
     }
-    out.push({ i, radius, draws, tris });
+    out.push({ i, radius, draws, tris, byOwner });
   }
   return { cascades: out, sunDir: keyDir, pad, sinEl };
 }
@@ -343,6 +345,24 @@ for (const sn of DETAIL) {
       + ` (${(v[1] / r.tris * 100).toFixed(1)}%)  ${owner}`);
   }
   console.log(`  cascades: ` + r.cascades.map((c) => `c${c.i} r${c.radius.toFixed(0)}m ${c.draws}/${Math.round(c.tris / 1000)}k`).join('   '));
+
+  /* The frame-cost half: who is submitted into the shadow passes, which are NOT camera-culled.
+     `main.js:242` marks every opaque mesh a caster, so this bills geometry that is off-screen —
+     and, inside the sealed tomb, geometry that is not even in the same room. */
+  const shadowOwners = new Map();
+  for (const c of r.cascades) {
+    for (const [owner, v] of c.byOwner) {
+      const a = shadowOwners.get(owner) || [0, 0]; a[0] += v[0]; a[1] += v[1]; shadowOwners.set(owner, a);
+    }
+  }
+  console.log(`\n=== ${sn}: SHADOW submissions by owner, summed over the 3 cascades `
+    + `(${r.shadow.draws} draws / ${(r.shadow.tris / 1e6).toFixed(3)}M) ===`);
+  for (const [owner, v] of [...shadowOwners.entries()].sort((a, b) => b[1][1] - a[1][1]).slice(0, 12)) {
+    const seen = r.byOwner.get(owner);
+    console.log(`  ${String(v[0]).padStart(3)} draws  ${String(Math.round(v[1])).padStart(8)} tris`
+      + ` (${(v[1] / r.shadow.tris * 100).toFixed(1)}%)  ${owner}`
+      + (seen ? '' : `   [NOT VISIBLE in this frame]`));
+  }
 }
 
 if (JSONOUT) {

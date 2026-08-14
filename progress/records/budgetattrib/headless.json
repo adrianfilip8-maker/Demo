@@ -1,5 +1,5 @@
 {
-  "at": "2026-08-14T01:28:39.965Z",
+  "at": "2026-08-14T01:36:18.373Z",
   "width": 1280,
   "height": 720,
   "quality": "high",
@@ -363,19 +363,22 @@
           "i": 0,
           "radius": 11.75,
           "draws": 15,
-          "tris": 193878
+          "tris": 193878,
+          "byOwner": {}
         },
         {
           "i": 1,
           "radius": 32.75,
           "draws": 34,
-          "tris": 361386
+          "tris": 361386,
+          "byOwner": {}
         },
         {
           "i": 2,
           "radius": 125.5,
           "draws": 71,
-          "tris": 582426
+          "tris": 582426,
+          "byOwner": {}
         }
       ],
       "shadow": {
@@ -727,19 +730,22 @@
           "i": 0,
           "radius": 15.5,
           "draws": 33,
-          "tris": 350410
+          "tris": 350410,
+          "byOwner": {}
         },
         {
           "i": 1,
           "radius": 44.5,
           "draws": 50,
-          "tris": 526258
+          "tris": 526258,
+          "byOwner": {}
         },
         {
           "i": 2,
           "radius": 170,
           "draws": 71,
-          "tris": 582426
+          "tris": 582426,
+          "byOwner": {}
         }
       ],
       "shadow": {
@@ -1067,19 +1073,22 @@
           "i": 0,
           "radius": 13.25,
           "draws": 36,
-          "tris": 443066
+          "tris": 443066,
+          "byOwner": {}
         },
         {
           "i": 1,
           "radius": 38,
           "draws": 57,
-          "tris": 541266
+          "tris": 541266,
+          "byOwner": {}
         },
         {
           "i": 2,
           "radius": 145.5,
           "draws": 71,
-          "tris": 582426
+          "tris": 582426,
+          "byOwner": {}
         }
       ],
       "shadow": {
@@ -1407,19 +1416,22 @@
           "i": 0,
           "radius": 10.75,
           "draws": 32,
-          "tris": 349930
+          "tris": 349930,
+          "byOwner": {}
         },
         {
           "i": 1,
           "radius": 29.5,
           "draws": 45,
-          "tris": 503270
+          "tris": 503270,
+          "byOwner": {}
         },
         {
           "i": 2,
           "radius": 113,
           "draws": 63,
-          "tris": 564298
+          "tris": 564298,
+          "byOwner": {}
         }
       ],
       "shadow": {
@@ -1747,19 +1759,22 @@
           "i": 0,
           "radius": 10.75,
           "draws": 32,
-          "tris": 349930
+          "tris": 349930,
+          "byOwner": {}
         },
         {
           "i": 1,
           "radius": 29.5,
           "draws": 45,
-          "tris": 503270
+          "tris": 503270,
+          "byOwner": {}
         },
         {
           "i": 2,
           "radius": 113,
           "draws": 63,
-          "tris": 564298
+          "tris": 564298,
+          "byOwner": {}
         }
       ],
       "shadow": {
@@ -2079,19 +2094,22 @@
           "i": 0,
           "radius": 10.75,
           "draws": 32,
-          "tris": 349930
+          "tris": 349930,
+          "byOwner": {}
         },
         {
           "i": 1,
           "radius": 29.5,
           "draws": 45,
-          "tris": 503270
+          "tris": 503270,
+          "byOwner": {}
         },
         {
           "i": 2,
           "radius": 113,
           "draws": 63,
-          "tris": 564298
+          "tris": 564298,
+          "byOwner": {}
         }
       ],
       "shadow": {
@@ -2415,19 +2433,22 @@
           "i": 0,
           "radius": 12.75,
           "draws": 29,
-          "tris": 341448
+          "tris": 341448,
+          "byOwner": {}
         },
         {
           "i": 1,
           "radius": 36.25,
           "draws": 54,
-          "tris": 532306
+          "tris": 532306,
+          "byOwner": {}
         },
         {
           "i": 2,
           "radius": 138.75,
           "draws": 71,
-          "tris": 582426
+          "tris": 582426,
+          "byOwner": {}
         }
       ],
       "shadow": {
@@ -2719,19 +2740,22 @@
           "i": 0,
           "radius": 10,
           "draws": 28,
-          "tris": 341184
+          "tris": 341184,
+          "byOwner": {}
         },
         {
           "i": 1,
           "radius": 26.25,
           "draws": 48,
-          "tris": 520496
+          "tris": 520496,
+          "byOwner": {}
         },
         {
           "i": 2,
           "radius": 101.75,
           "draws": 62,
-          "tris": 557282
+          "tris": 557282,
+          "byOwner": {}
         }
       ],
       "shadow": {
@@ -3039,19 +3063,22 @@
           "i": 0,
           "radius": 12.25,
           "draws": 34,
-          "tris": 437974
+          "tris": 437974,
+          "byOwner": {}
         },
         {
           "i": 1,
           "radius": 34.5,
           "draws": 59,
-          "tris": 555776
+          "tris": 555776,
+          "byOwner": {}
         },
         {
           "i": 2,
           "radius": 132,
           "draws": 60,
-          "tris": 552666
+          "tris": 552666,
+          "byOwner": {}
         }
       ],
       "shadow": {
@@ -3339,19 +3366,22 @@
           "i": 0,
           "radius": 10.75,
           "draws": 30,
-          "tris": 349648
+          "tris": 349648,
+          "byOwner": {}
         },
         {
           "i": 1,
           "radius": 29.5,
           "draws": 45,
-          "tris": 503086
+          "tris": 503086,
+          "byOwner": {}
         },
         {
           "i": 2,
           "radius": 113,
           "draws": 71,
-          "tris": 582426
+          "tris": 582426,
+          "byOwner": {}
         }
       ],
       "shadow": {
@@ -3627,19 +3657,22 @@
           "i": 0,
           "radius": 15.5,
           "draws": 41,
-          "tris": 491546
+          "tris": 491546,
+          "byOwner": {}
         },
         {
           "i": 1,
           "radius": 44.5,
           "draws": 56,
-          "tris": 537016
+          "tris": 537016,
+          "byOwner": {}
         },
         {
           "i": 2,
           "radius": 170,
           "draws": 61,
-          "tris": 557106
+          "tris": 557106,
+          "byOwner": {}
         }
       ],
       "shadow": {
@@ -3867,19 +3900,22 @@
           "i": 0,
           "radius": 11.25,
           "draws": 32,
-          "tris": 349930
+          "tris": 349930,
+          "byOwner": {}
         },
         {
           "i": 1,
           "radius": 31,
           "draws": 45,
-          "tris": 503086
+          "tris": 503086,
+          "byOwner": {}
         },
         {
           "i": 2,
           "radius": 119,
           "draws": 71,
-          "tris": 582426
+          "tris": 582426,
+          "byOwner": {}
         }
       ],
       "shadow": {
@@ -4047,19 +4083,22 @@
           "i": 0,
           "radius": 10.75,
           "draws": 28,
-          "tris": 354312
+          "tris": 354312,
+          "byOwner": {}
         },
         {
           "i": 1,
           "radius": 29.5,
           "draws": 29,
-          "tris": 425392
+          "tris": 425392,
+          "byOwner": {}
         },
         {
           "i": 2,
           "radius": 113,
           "draws": 48,
-          "tris": 505440
+          "tris": 505440,
+          "byOwner": {}
         }
       ],
       "shadow": {
@@ -4227,19 +4266,22 @@
           "i": 0,
           "radius": 8.25,
           "draws": 29,
-          "tris": 348000
+          "tris": 348000,
+          "byOwner": {}
         },
         {
           "i": 1,
           "radius": 19,
           "draws": 32,
-          "tris": 351330
+          "tris": 351330,
+          "byOwner": {}
         },
         {
           "i": 2,
           "radius": 77,
           "draws": 65,
-          "tris": 566274
+          "tris": 566274,
+          "byOwner": {}
         }
       ],
       "shadow": {
@@ -4399,19 +4441,22 @@
           "i": 0,
           "radius": 10.75,
           "draws": 31,
-          "tris": 348524
+          "tris": 348524,
+          "byOwner": {}
         },
         {
           "i": 1,
           "radius": 29.5,
           "draws": 33,
-          "tris": 361148
+          "tris": 361148,
+          "byOwner": {}
         },
         {
           "i": 2,
           "radius": 113,
           "draws": 49,
-          "tris": 519042
+          "tris": 519042,
+          "byOwner": {}
         }
       ],
       "shadow": {
@@ -4587,19 +4632,22 @@
           "i": 0,
           "radius": 14.5,
           "draws": 36,
-          "tris": 332870
+          "tris": 332870,
+          "byOwner": {}
         },
         {
           "i": 1,
           "radius": 41.75,
           "draws": 43,
-          "tris": 376588
+          "tris": 376588,
+          "byOwner": {}
         },
         {
           "i": 2,
           "radius": 159.25,
           "draws": 48,
-          "tris": 395630
+          "tris": 395630,
+          "byOwner": {}
         }
       ],
       "shadow": {

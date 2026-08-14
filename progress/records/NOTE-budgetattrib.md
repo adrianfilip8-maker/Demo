@@ -126,6 +126,39 @@ geometry anywhere in the frame.
 
 ---
 
+## The frame-cost half, attributed for the first time: who is submitted into the shadow passes
+
+The counted column is not a §1 quantity, but it *is* real work, and it had never been broken down
+by owner either. The cascades are fitted around the camera slice, not the camera frustum, and
+`main.js:242` marks **every opaque mesh in the scene** a caster — so this pass bills geometry that
+is off-screen. Summed over the three cascades, `night` (in-page reading, 164 draws / 1.953 M
+submitted):
+
+| draws | tris | share | owner |
+|---|---|---|---|
+| 17 | 506,447 | 25.9% | guards / carmelita_body |
+| 3 | 224,628 | 11.5% | architecture / `arch:hall:hieroglyph_wall` |
+| 3 | 221,184 | 11.3% | terrain / `sand_ring0` |
+| 24 | 178,422 | 9.1% | terrain / vegetation |
+| 3 | 139,260 | 7.1% | architecture / `arch:court:mudbrick` |
+| 3 | 121,056 | 6.2% | architecture / `arch:court:hieroglyph_wall` |
+
+Every row is drawn **three times**, once per cascade. Under the in-page reading the guard bodies
+are the single largest shadow cost in the frame — a 30 k-triangle body redrawn per guard per
+cascade — which is the same owner F3 identifies from the other side, and the reason a guard LOD
+would pay in the counted column even where it is invisible in the scored one.
+
+`interior` shows the structural waste most clearly: 1.195 M triangles predicted into shadow maps
+from inside a sealed tomb, the top items being the hypostyle wall, the desert sand ring, the palms
+and the surface guards — none of which can cast into that room. Its *measured* counter is the
+lowest of the set (0.834 M), which is the model's own over-prediction telling us something useful:
+Architecture's zone-hiding does remove that geometry in-page, and the headless build does not
+reproduce zone visibility. Read the interior row as "what a cascade fit would bill without zone
+hiding", not as measured waste. **This is a FRAME-TIME item for RENDER/LIGHTING, not a §1 item,
+and no geometry cut changes it** — the multiplier is the pass structure.
+
+---
+
 ## Open leg — the guard mass, and the bands that settle it (pre-registered, §26.1)
 
 Model (B) is the one that matters, because it is the difference between a level at 54% of the

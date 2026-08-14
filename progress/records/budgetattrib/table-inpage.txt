@@ -2,9 +2,8 @@
 #
 # command: node tools/budgetattrib.mjs --inpage --json progress/records/budgetattrib/inpage.json night dunes interior
 # tree:    083c755, run from a CLEAN `git archive HEAD` export — the shared working tree carried
-#          two other lanes' in-flight edits (src/fx/Particles.js, src/render/PostFX.js) that do not
-#          parse; neither is in this probe's 21-module import graph, and the clean-export numbers
-#          are identical to the shared-tree ones for every row.
+#          other lanes' in-flight edits that do not parse; none is in this probe's 21-module import
+#          graph, and the clean-export numbers are identical to the shared-tree ones for every row.
 # offline: no boot, no capture lock, no GPU.
 # reading: world+guards WITH the measured Carmelita body / character / ink-shell substitution
 
@@ -108,6 +107,20 @@ WORST main-view: 113 draws (45% of 250), 1.149M tris (96% of 1.2M)
     1 draws        44 tris (0.0%)  architecture/arch:tomb:ceiling_stars
   cascades: c0 r13m 36/466k   c1 r38m 57/700k   c2 r146m 71/787k
 
+=== night: SHADOW submissions by owner, summed over the 3 cascades (164 draws / 1.953M) ===
+   17 draws    506447 tris (25.9%)  guards/carmelita_body
+    3 draws    224628 tris (11.5%)  architecture/arch:hall:hieroglyph_wall
+    3 draws    221184 tris (11.3%)  terrain/sand_ring0
+   24 draws    178422 tris (9.1%)  terrain/vegetation
+    3 draws    139260 tris (7.1%)  architecture/arch:court:mudbrick
+    3 draws    121056 tris (6.2%)  architecture/arch:court:hieroglyph_wall
+    3 draws     71904 tris (3.7%)  architecture/arch:court:sandstone_block
+    3 draws     71832 tris (3.7%)  props/props_lime
+    2 draws     58912 tris (3.0%)  architecture/arch:hall:column_papyrus
+    3 draws     41556 tris (2.1%)  props/props_stone
+    2 draws     37776 tris (1.9%)  architecture/arch:pylon:hieroglyph_wall
+    3 draws     34656 tris (1.8%)  props/props_gold
+
 === dunes: main-view owners (113 draws / 1.149M) ===
    18 draws    268119 tris (23.3%)  guards/carmelita_body
     9 draws    268119 tris (23.3%)  guards/carmelita_body [ink shell]
@@ -186,6 +199,20 @@ WORST main-view: 113 draws (45% of 250), 1.149M tris (96% of 1.2M)
     1 draws        44 tris (0.0%)  architecture/arch:tomb:ceiling_stars
   cascades: c0 r12m 15/194k   c1 r33m 34/407k   c2 r126m 71/787k
 
+=== dunes: SHADOW submissions by owner, summed over the 3 cascades (120 draws / 1.388M) ===
+   11 draws    327701 tris (23.6%)  guards/carmelita_body
+    3 draws    221184 tris (15.9%)  terrain/sand_ring0
+   23 draws    167446 tris (12.1%)  terrain/vegetation
+    2 draws     92840 tris (6.7%)  architecture/arch:court:mudbrick
+    2 draws     80704 tris (5.8%)  architecture/arch:court:hieroglyph_wall
+    1 draws     74876 tris (5.4%)  architecture/arch:hall:hieroglyph_wall
+    3 draws     71904 tris (5.2%)  architecture/arch:court:sandstone_block
+    2 draws     47888 tris (3.5%)  props/props_lime
+    3 draws     41556 tris (3.0%)  props/props_stone
+    3 draws     34656 tris (2.5%)  props/props_gold
+    3 draws     32256 tris (2.3%)  terrain/sand_ring1
+    1 draws     29456 tris (2.1%)  architecture/arch:hall:column_papyrus
+
 === interior: main-view owners (49 draws / 0.392M) ===
     1 draws     74876 tris (19.1%)  architecture/arch:hall:hieroglyph_wall
     1 draws     73728 tris (18.8%)  terrain/sand_ring0
@@ -224,5 +251,19 @@ WORST main-view: 113 draws (45% of 250), 1.149M tris (96% of 1.2M)
     1 draws        60 tris (0.0%)  architecture/arch:far:sandstone_worn
     1 draws        44 tris (0.0%)  architecture/arch:tomb:ceiling_stars
   cascades: c0 r15m 36/355k   c1 r42m 43/399k   c2 r159m 48/441k
+
+=== interior: SHADOW submissions by owner, summed over the 3 cascades (127 draws / 1.195M) ===
+    3 draws    224628 tris (18.8%)  architecture/arch:hall:hieroglyph_wall
+    3 draws    221184 tris (18.5%)  terrain/sand_ring0
+   22 draws    156470 tris (13.1%)  terrain/vegetation
+    4 draws    119164 tris (10.0%)  guards/carmelita_body   [NOT VISIBLE in this frame]
+    3 draws     71832 tris (6.0%)  props/props_lime
+    2 draws     58912 tris (4.9%)  architecture/arch:hall:column_papyrus   [NOT VISIBLE in this frame]
+    3 draws     56664 tris (4.7%)  architecture/arch:pylon:hieroglyph_wall   [NOT VISIBLE in this frame]
+    3 draws     53208 tris (4.5%)  architecture/arch:tomb:hieroglyph_wall
+    3 draws     41556 tris (3.5%)  props/props_stone
+    3 draws     34656 tris (2.9%)  props/props_gold
+    3 draws     32256 tris (2.7%)  terrain/sand_ring1
+    3 draws     18144 tris (1.5%)  terrain/sand_ring3
 
 → /home/user/Demo/progress/records/budgetattrib/inpage.json
