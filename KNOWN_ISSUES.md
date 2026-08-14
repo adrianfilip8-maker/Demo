@@ -24008,3 +24008,21 @@ on sly-key but 0.291 on sly-profile**, from a texture whose albedo carries rings
 at EVERY yaw — direct in-frame support for CHARMAT's routed render-side seal (`sss 0.228` +
 `rim 0.62` compress ring contrast at some yaws). The "no rings from behind" critique is a
 rendering compression, not a missing texture.
+
+## §318 — the capture lock is NOT mutually exclusive under load: waiters that hit the give-up proceed anyway, and three runs rendered concurrently
+
+Observed at 06:58: `capture.lock` named 6484 while `fxfix2` (22302) and `guardcone2` (29121)
+were both staging shots, with only two tickets in the queue. Their staging times had inflated to
+147 s and 170 s (vs ~30–60 s solo) — the signature of CPU contention on a software renderer.
+So the 3 h give-up (§279) does not uniformly abort; for some runners it releases the ticket and
+proceeds, which silently converts the FIFO into a free-for-all exactly when the queue is deepest.
+**This was survivable ONLY by luck of composition: every run in flight is a NO-INSTALL design
+(live `debug` pokes against inert-in-HEAD mechanisms), so no run could corrupt another's source
+tree.** One queued run — `props1` — DOES install a geometry patch under its lock; launching it
+into this state would have written `src/` underneath two live captures and silently poisoned
+both. It stays STAGED until the machine is provably idle.
+**Rules:** (1) treat the lock as advisory, not enforcing — a runner that installs anything must
+verify exclusivity itself (holder pid alive AND no other node runner alive) immediately before
+the install, not merely hold the lockfile. (2) Never launch an installing run while any other
+capture is alive. (3) Prefer no-install poke designs (the canegold3/fxfix/tombdim2 pattern) —
+they are the reason tonight's overlap cost throughput instead of correctness.
