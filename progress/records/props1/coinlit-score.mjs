@@ -41,28 +41,63 @@ for (const [s, n] of vrows) console.log(`   ${String(n).padStart(8)} px  ${s}`);
 if (!validity) { console.log('\nVOID — a back arm did not restore. Nothing is scored from this run.'); process.exit(1); }
 
 /* ---- ROI statistics ------------------------------------------------------------------------ */
-const statOf = (px, rois) => {
+/* ── THE DECODER CONTRACT, and the bug that made run 2 unscoreable ───────────────────────────
+   `tools/png.mjs` `readPNG` returns `{ w, h, ch, data, bd, ct, interlace }`. This scorer was
+   written against `{ width, height }`, which do not exist on it. Every index became
+   `(y * undefined + x) * 4` = NaN, every sample `data[NaN]` = undefined, and every mean NaN —
+   while `n` kept counting, because the loop bounds came from the ROI boxes and were real. That
+   is exactly the reported signature: `dL NaN (off NaN -> NaN, n=5026)`.
+
+   It is a READING bug and nothing else: no threshold, no ROI rule, no statistic definition in
+   PREREG-coinlit is touched by this fix, so re-scoring the SAME 30 frames is a repair of the
+   instrument and not a new seal under §141.1.
+
+   Two things are added so this class cannot return a number-shaped nothing again:
+   `dims()` refuses any decode that does not carry w/h/ch/data, and `finite()` VOIDs on any
+   non-finite statistic instead of letting it flow into a comparison (NaN >= 10 is false, so an
+   unfixed scorer would have silently reported FAIL on a candidate it never measured). */
+const dims = (px, file) => {
+  const w = px.w, h = px.h, ch = px.ch;
+  if (!Number.isFinite(w) || !Number.isFinite(h) || !Number.isFinite(ch))
+    { console.log(`VOID — ${file}: decoder returned no usable dimensions (w=${w} h=${h} ch=${ch})`); process.exit(1); }
+  if (px.data.length < w * h * ch)
+    { console.log(`VOID — ${file}: data ${px.data.length} shorter than w*h*ch ${w * h * ch}`); process.exit(1); }
+  return { w, h, ch };
+};
+const finite = (o, where) => {
+  if (!o) return o;
+  for (const [k, v] of Object.entries(o)) if (typeof v === 'number' && !Number.isFinite(v))
+    { console.log(`VOID — non-finite statistic ${k}=${v} at ${where}. Fail closed: a NaN is not a FAIL, it is an unmeasured bar.`); process.exit(1); }
+  return o;
+};
+
+const statOf = (px, rois, where = '?') => {
+  const { w, h, ch } = dims(px, where);
   let n = 0, sl = 0, ss = 0; const vals = [];
-  for (const [x0, y0, x1, y1] of rois) for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) {
-    const i = (y * px.width + x) * 4;
-    const l = L(px.data[i], px.data[i + 1], px.data[i + 2]);
-    sl += l; ss += S(px.data[i], px.data[i + 1], px.data[i + 2]); vals.push(l); n++;
-  }
+  for (const [x0, y0, x1, y1] of rois)
+    for (let y = Math.max(0, y0); y < Math.min(h, y1); y++)
+      for (let x = Math.max(0, x0); x < Math.min(w, x1); x++) {
+        const i = (y * w + x) * ch;
+        const l = L(px.data[i], px.data[i + 1], px.data[i + 2]);
+        sl += l; ss += S(px.data[i], px.data[i + 1], px.data[i + 2]); vals.push(l); n++;
+      }
   if (!n) return null;
   const mean = sl / n;
-  return { n, meanL: mean, meanS: ss / n, hiFrac: vals.filter((v) => v >= mean + 25).length / n };
+  return finite({ n, meanL: mean, meanS: ss / n, hiFrac: vals.filter((v) => v >= mean + 25).length / n }, `statOf ${where}`);
 };
-const outsideStat = (px, all) => {
-  const mask = new Uint8Array(px.width * px.height);
-  for (const [x0, y0, x1, y1] of all) for (let y = Math.max(0, y0 - 6); y < Math.min(px.height, y1 + 6); y++)
-    for (let x = Math.max(0, x0 - 6); x < Math.min(px.width, x1 + 6); x++) mask[y * px.width + x] = 1;
+const outsideStat = (px, all, where = '?') => {
+  const { w, h, ch } = dims(px, where);
+  const mask = new Uint8Array(w * h);
+  for (const [x0, y0, x1, y1] of all)
+    for (let y = Math.max(0, y0 - 6); y < Math.min(h, y1 + 6); y++)
+      for (let x = Math.max(0, x0 - 6); x < Math.min(w, x1 + 6); x++) mask[y * w + x] = 1;
   let n = 0, sl = 0, hi = 0;
   for (let p = 0; p < mask.length; p++) {
     if (mask[p]) continue;
-    const i = p * 4, l = L(px.data[i], px.data[i + 1], px.data[i + 2]);
+    const i = p * ch, l = L(px.data[i], px.data[i + 1], px.data[i + 2]);
     sl += l; if (l >= 250) hi++; n++;
   }
-  return { n, meanL: sl / n, hi };
+  return finite({ n, meanL: sl / n, hi, frame: w * h }, `outsideStat ${where}`);
 };
 
 const FAM = { coins: { dL: 10.0, name: 'COINS' }, rings: { dL: 10.0, name: 'RINGS' } };
@@ -74,23 +109,23 @@ for (const s of shots) {
   for (const fam of ['coins', 'rings']) {
     const rois = off.rois[fam];
     if (rois.length < 3) continue;                       // registered qualifying rule
-    const o = statOf(offPx, rois);
+    const o = statOf(offPx, rois, `${s}.off/${fam}`);
     for (const arm of arms) {
-      const a = statOf(img(arm.file), arm.rois[fam].length >= 3 ? arm.rois[fam] : rois);
+      const a = statOf(img(arm.file), arm.rois[fam].length >= 3 ? arm.rois[fam] : rois, `${s}.${arm.arm}/${fam}`);
       results[fam].push({ shot: s, arm: arm.arm, n: o.n, dL: a.meanL - o.meanL, dS: a.meanS - o.meanS, hiFrac: a.hiFrac, hiOff: o.hiFrac, offL: o.meanL, candL: a.meanL });
     }
   }
   /* P2/P3 use the `both` arm, or whichever arm ends up being the ship arm — reported for all. */
   for (const arm of arms) {
     const allRois = [...off.rois.coins, ...off.rois.rings, ...off.rois.treasures];
-    const tOff = off.rois.treasures.length ? statOf(offPx, off.rois.treasures) : null;
-    const tCand = off.rois.treasures.length ? statOf(img(arm.file), off.rois.treasures) : null;
-    const oOff = outsideStat(offPx, allRois), oCand = outsideStat(img(arm.file), allRois);
+    const tOff = off.rois.treasures.length ? statOf(offPx, off.rois.treasures, `${s}.off/treasure`) : null;
+    const tCand = off.rois.treasures.length ? statOf(img(arm.file), off.rois.treasures, `${s}.${arm.arm}/treasure`) : null;
+    const oOff = outsideStat(offPx, allRois, `${s}.off/outside`), oCand = outsideStat(img(arm.file), allRois, `${s}.${arm.arm}/outside`);
     protections.push({
       shot: s, arm: arm.arm,
       treasureDL: tOff ? tCand.meanL - tOff.meanL : null,
       outDL: oCand.meanL - oOff.meanL,
-      outHiFrac: (oCand.hi - oOff.hi) / (offPx.width * offPx.height),
+      outHiFrac: (oCand.hi - oOff.hi) / oOff.frame,
     });
   }
 }

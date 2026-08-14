@@ -24057,3 +24057,59 @@ EXACT on exit). Two outcomes, RESULT-props1.md:
    heights are necessary for a seated figure and not sufficient for one.** A re-seal should aim
    at missing MASSES (thigh/lap volume, an arm break in the silhouette), not more inflections.
 Coordinator adjudication — the lane had reported and ended; recorded as such.
+
+## §321 — PROPS closes both open seals with honest negatives: coinlit's NaN was a decoder-property bug (re-scored on the SAME frames, FAIL), and the colossus LOOK failure is a measured indictment of profile metrics
+
+Both items §320 handed back are discharged without a single new capture.
+
+**coinlit — VOID-INSTRUMENT discharged, verdict FAIL (RESULT-coinlit.md).** The NaN was
+`coinlit-score.mjs` reading `{width, height}` off `readPNG`, which returns `{w, h, ch, data, ...}`:
+every index went `(y * undefined + x) * 4` = NaN while `n` kept counting off the real ROI bounds.
+Reading code only — no threshold, ROI rule or statistic definition moved, so the re-score of the
+existing 30 frames is a repair and NOT a new seal under §141.1. Repaired, the instrument is
+valid: one tree stamp across all 30 captures, `diff(off, back)` **0 px on all six shots**
+(same-boot only), treasure hold **dL 0.000**, outside-ROI |dL| <= 0.053 with **zero** bloom
+re-feed. And the candidate fails: no arm reaches the registered +10 L at any qualifying staging
+(best `both`/traversal coins **+9.95**, recorded as the miss it is), and mean saturation moves by
+about zero and is NEGATIVE on five rows.
+
+Three transferable findings:
+1. **A NaN is not a FAIL, it is an unmeasured bar** — NaN compares false against every threshold,
+   so the unrepaired scorer would eventually have reported FAIL on a candidate it never measured.
+   Scorers now carry `dims()` (refuse a decode without w/h/ch) and `finite()` (exit VOID on any
+   non-finite statistic). Any scorer in this repo that indexes a decoded image should be checked
+   for the same property-name assumption.
+2. **§296's mechanism is right about the cause and wrong about the cure, measured.** Restoring
+   2.5x of the diffuse term (metal 0.85 -> 0.30) buys a hook ring **+0.5 to +1.7 L**, because
+   `diff` is multiplied by `key = ramp * sh` and on a backlit disc that product is ~0. Restoring
+   albedo times zero key is still zero. The pickup/ring read is NOT recoverable from the diffuse
+   leg: it belongs to §264's `uSpecNormPow` (SHADING), a pickup-scoped rim/emissive floor, or the
+   objects' orientation.
+3. **An ROI centred on an instance origin is centred on a torus's HOLE.** `off` means of 101.1 L
+   (rings) and 91.6 L (coins) against a subject the critic calls near-black show the registered
+   boxes are mostly background. Diagnosed for the successor — which should register a SUBJECT MASK
+   (pixels that change between subject-present and subject-absent arms, PREREG-fxshape2 §4.2's
+   shape) — and explicitly NOT used to reinterpret this verdict.
+
+**colossus — LOOK NOT MET, concurred by the lane after re-reading the frames (RESULT-colossus.md).**
+The improvement is real in the pixels (bases step forward, toe row reads, recesses separate the
+leg masses, a knee ledge with an undercut where r12 had one flat face) and the gestalt still does
+not arrive: no torso/arm assembly, no lap, crown still a slab. The reason 7/7 numeric bars passed
+is nameable and is the durable finding: **`infW` and `zfSd` are statistics of the OUTER EXTENT
+ENVELOPE, and the defect lives in the INTERIOR.** Worked example — `courtyard` is near-frontal and
+the upper arm sits at |x| 1.94-2.70 against a shoulder half-width 2.62, so it is *arithmetically
+incapable* of breaking the outer silhouette from that camera at any thickness; `infW` counted it
+as an inflection because it widens the envelope 0.08 m, and the eye never saw an arm. The lap is
+the same story occluded by its own overhanging knee. **Profile-inflection metrics are necessary
+and not sufficient for figurative sculpture, and must not be a re-seal's primary gate**; the
+successor's bar has to be a statistic of the RENDERED figure at a registered camera (ink-edge
+length / connected components strictly inside the silhouette, rasterised offline through
+`SHOTS.courtyard`), because only that can separate "I added a mass" from "the mass reads".
+
+Kept from the failed seal because they are independently right: the knee collider derived from
+`bag.knee` (the sculpt, not a number typed beside the call — the knee front moved 1.0 m and the
+old hand-typed box would have registered a landing over the hands), and the per-hero-prop forked
+rng that made the seal's own triangle bill measurable instead of a diff of the whole level.
+
+Ships from the PROPS lane this cycle: `basketvary` only (11b852c). Two candidates falsified, two
+instruments left better than they were found, zero capture time spent on either verdict.

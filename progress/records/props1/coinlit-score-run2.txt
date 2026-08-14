@@ -1,0 +1,86 @@
+tree: one stamp across all 30 captures (9531d2506746b62b|25f3868e29eb)
+
+P1 VALIDITY (same-boot off vs back, §302 — [0,0] claimed SAME-BOOT ONLY):
+          0 px  courtyard
+          0 px  hero
+          0 px  night
+          0 px  traversal
+          0 px  dunes
+          0 px  kaykit
+
+=== arm both ===
+FAIL  coins/courtyard        dL 0.31 (off 91.6 -> 91.9, n=3199) dS -0.016 hiFrac 0.377 (off 0.374)
+FAIL  coins/hero             dL 2.29 (off 67.2 -> 69.4, n=2697) dS 0.007 hiFrac 0.242 (off 0.257)
+FAIL  coins/night            dL 0.63 (off 19.6 -> 20.2, n=2395) dS -0.000 hiFrac 0.052 (off 0.043)
+FAIL  coins/traversal        dL 9.95 (off 76.2 -> 86.2, n=5026) dS 0.010 hiFrac 0.249 (off 0.238)
+FAIL  coins/kaykit           dL 4.42 (off 85.6 -> 90.0, n=3025) dS -0.016 hiFrac 0.284 (off 0.261)
+FAIL  rings/courtyard        dL 1.00 (off 101.1 -> 102.1, n=6860) dS -0.004 hiFrac 0.405 (off 0.402)
+FAIL  rings/hero             dL 0.56 (off 59.4 -> 59.9, n=10521) dS -0.002 hiFrac 0.172 (off 0.165)
+FAIL  rings/night            dL 0.71 (off 62.2 -> 63.0, n=9241) dS -0.000 hiFrac 0.211 (off 0.212)
+FAIL  rings/traversal        dL 1.69 (off 92.7 -> 94.4, n=21185) dS 0.003 hiFrac 0.187 (off 0.185)
+FAIL  rings/dunes            dL 0.13 (off 101.6 -> 101.8, n=3032) dS 0.000 hiFrac 0.130 (off 0.128)
+PASS  P2/courtyard           treasure dL 0.000
+PASS  P3/courtyard           outside dL 0.0003 d(px>=250) 0.0000%
+PASS  P2/hero                treasure dL 0.000
+PASS  P3/hero                outside dL 0.0149 d(px>=250) 0.0000%
+PASS  P2/night               treasure dL 0.000
+PASS  P3/night               outside dL 0.0076 d(px>=250) 0.0000%
+PASS  P2/traversal           treasure dL n/a
+PASS  P3/traversal           outside dL 0.0531 d(px>=250) 0.0000%
+PASS  P2/dunes               treasure dL n/a
+PASS  P3/dunes               outside dL -0.0005 d(px>=250) 0.0000%
+PASS  P2/kaykit              treasure dL n/a
+PASS  P3/kaykit              outside dL 0.0028 d(px>=250) 0.0000%
+arm both: FAIL
+
+=== arm mon ===
+FAIL  coins/courtyard        dL 3.42 (off 91.6 -> 95.0, n=3199) dS 0.001 hiFrac 0.369 (off 0.374)
+FAIL  coins/hero             dL 1.75 (off 67.2 -> 68.9, n=2697) dS 0.012 hiFrac 0.239 (off 0.257)
+FAIL  coins/night            dL 0.08 (off 19.6 -> 19.6, n=2395) dS -0.000 hiFrac 0.044 (off 0.043)
+FAIL  coins/traversal        dL 6.03 (off 76.2 -> 82.2, n=5026) dS 0.020 hiFrac 0.224 (off 0.238)
+FAIL  coins/kaykit           dL 1.42 (off 85.6 -> 87.0, n=3025) dS -0.013 hiFrac 0.259 (off 0.261)
+FAIL  rings/courtyard        dL 1.08 (off 101.1 -> 102.2, n=6860) dS -0.001 hiFrac 0.405 (off 0.402)
+FAIL  rings/hero             dL 0.56 (off 59.4 -> 59.9, n=10521) dS -0.002 hiFrac 0.172 (off 0.165)
+FAIL  rings/night            dL 0.71 (off 62.2 -> 63.0, n=9241) dS -0.000 hiFrac 0.211 (off 0.212)
+FAIL  rings/traversal        dL 1.69 (off 92.7 -> 94.4, n=21185) dS 0.003 hiFrac 0.187 (off 0.185)
+FAIL  rings/dunes            dL 0.13 (off 101.6 -> 101.8, n=3032) dS 0.000 hiFrac 0.130 (off 0.128)
+PASS  P2/courtyard           treasure dL 0.000
+PASS  P3/courtyard           outside dL 0.0009 d(px>=250) 0.0000%
+PASS  P2/hero                treasure dL 0.000
+PASS  P3/hero                outside dL 0.0148 d(px>=250) 0.0000%
+PASS  P2/night               treasure dL 0.000
+PASS  P3/night               outside dL 0.0035 d(px>=250) 0.0000%
+PASS  P2/traversal           treasure dL n/a
+PASS  P3/traversal           outside dL 0.0498 d(px>=250) 0.0000%
+PASS  P2/dunes               treasure dL n/a
+PASS  P3/dunes               outside dL 0.0001 d(px>=250) 0.0000%
+PASS  P2/kaykit              treasure dL n/a
+PASS  P3/kaykit              outside dL 0.0004 d(px>=250) 0.0000%
+arm mon: FAIL
+
+=== arm non ===
+FAIL  coins/courtyard        dL -2.48 (off 91.6 -> 89.1, n=3199) dS -0.016 hiFrac 0.384 (off 0.374)
+FAIL  coins/hero             dL 0.66 (off 67.2 -> 67.8, n=2697) dS -0.002 hiFrac 0.255 (off 0.257)
+FAIL  coins/night            dL 0.49 (off 19.6 -> 20.1, n=2395) dS 0.000 hiFrac 0.051 (off 0.043)
+FAIL  coins/traversal        dL 4.17 (off 76.2 -> 80.4, n=5026) dS -0.001 hiFrac 0.255 (off 0.238)
+FAIL  coins/kaykit           dL 2.76 (off 85.6 -> 88.3, n=3025) dS -0.007 hiFrac 0.278 (off 0.261)
+FAIL  rings/courtyard        dL 0.01 (off 101.1 -> 101.1, n=6860) dS -0.001 hiFrac 0.402 (off 0.402)
+FAIL  rings/hero             dL 0.00 (off 59.4 -> 59.4, n=10521) dS 0.000 hiFrac 0.165 (off 0.165)
+FAIL  rings/night            dL 0.00 (off 62.2 -> 62.2, n=9241) dS 0.000 hiFrac 0.212 (off 0.212)
+FAIL  rings/traversal        dL 0.00 (off 92.7 -> 92.7, n=21185) dS -0.000 hiFrac 0.185 (off 0.185)
+FAIL  rings/dunes            dL 0.00 (off 101.6 -> 101.6, n=3032) dS 0.000 hiFrac 0.128 (off 0.128)
+PASS  P2/courtyard           treasure dL 0.000
+PASS  P3/courtyard           outside dL -0.0005 d(px>=250) 0.0000%
+PASS  P2/hero                treasure dL 0.000
+PASS  P3/hero                outside dL -0.0001 d(px>=250) 0.0000%
+PASS  P2/night               treasure dL 0.000
+PASS  P3/night               outside dL 0.0031 d(px>=250) 0.0000%
+PASS  P2/traversal           treasure dL n/a
+PASS  P3/traversal           outside dL 0.0029 d(px>=250) 0.0000%
+PASS  P2/dunes               treasure dL n/a
+PASS  P3/dunes               outside dL -0.0006 d(px>=250) 0.0000%
+PASS  P2/kaykit              treasure dL n/a
+PASS  P3/kaykit              outside dL 0.0022 d(px>=250) 0.0000%
+arm non: FAIL
+
+VERDICT: FAIL — nothing ships, src/** unchanged (fail-closed)
