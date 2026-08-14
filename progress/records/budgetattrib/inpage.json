@@ -1,0 +1,4708 @@
+{
+  "at": "2026-08-14T01:28:49.471Z",
+  "width": 1280,
+  "height": 720,
+  "quality": "high",
+  "cascades": 3,
+  "budget": {
+    "draws": 250,
+    "tris": 1200000
+  },
+  "sceneTotal": {
+    "draws": 113,
+    "tris": 1149380
+  },
+  "modules": [
+    "architecture",
+    "props",
+    "terrain",
+    "guards",
+    "player"
+  ],
+  "shots": [
+    {
+      "shot": "dunes",
+      "tod": 0.83,
+      "mainView": {
+        "draws": 113,
+        "tris": 1149380
+      },
+      "byModule": {
+        "architecture": [
+          43,
+          323108
+        ],
+        "props": [
+          14,
+          78624
+        ],
+        "terrain": [
+          15,
+          172622
+        ],
+        "guards": [
+          33,
+          547396
+        ],
+        "player": [
+          8,
+          27630
+        ]
+      },
+      "byOwner": {
+        "architecture/paving:court": [
+          1,
+          10290
+        ],
+        "architecture/hooks:rings": [
+          1,
+          4400
+        ],
+        "architecture/paving:hall": [
+          1,
+          7080
+        ],
+        "architecture/paving:tomb": [
+          1,
+          2880
+        ],
+        "architecture/ruin:drums": [
+          1,
+          264
+        ],
+        "architecture/arch:court:sandstone_worn": [
+          1,
+          9836
+        ],
+        "architecture/arch:court:sandstone_block": [
+          1,
+          23968
+        ],
+        "architecture/arch:court:paving_courtyard": [
+          1,
+          176
+        ],
+        "architecture/arch:court:granite_pink": [
+          1,
+          238
+        ],
+        "architecture/arch:court:limestone_polished": [
+          1,
+          1648
+        ],
+        "architecture/arch:court:hieroglyph_gilded": [
+          1,
+          4440
+        ],
+        "architecture/arch:court:hieroglyph_wall": [
+          1,
+          40352
+        ],
+        "architecture/arch:court:mudbrick": [
+          1,
+          46420
+        ],
+        "architecture/arch:court:ceiling_stars": [
+          1,
+          44
+        ],
+        "architecture/arch:court:bronze_dark": [
+          1,
+          1672
+        ],
+        "architecture/arch:court:rope_fibre": [
+          1,
+          880
+        ],
+        "architecture/arch:hall:hieroglyph_wall": [
+          1,
+          74876
+        ],
+        "architecture/arch:hall:limestone_polished": [
+          1,
+          8044
+        ],
+        "architecture/arch:hall:sandstone_worn": [
+          1,
+          908
+        ],
+        "architecture/arch:hall:hieroglyph_gilded": [
+          1,
+          2200
+        ],
+        "architecture/arch:hall:sandstone_block": [
+          1,
+          3192
+        ],
+        "architecture/arch:hall:column_papyrus": [
+          1,
+          29456
+        ],
+        "architecture/arch:hall:ceiling_stars": [
+          1,
+          792
+        ],
+        "architecture/arch:hall:bronze_dark": [
+          1,
+          1120
+        ],
+        "architecture/arch:hall:rope_fibre": [
+          1,
+          544
+        ],
+        "architecture/arch:hall:granite_pink": [
+          1,
+          388
+        ],
+        "architecture/arch:pylon:hieroglyph_wall": [
+          1,
+          18888
+        ],
+        "architecture/arch:pylon:sandstone_worn": [
+          1,
+          556
+        ],
+        "architecture/arch:pylon:paving_courtyard": [
+          1,
+          132
+        ],
+        "architecture/arch:pylon:ceiling_stars": [
+          1,
+          44
+        ],
+        "architecture/arch:pylon:hieroglyph_gilded": [
+          1,
+          1492
+        ],
+        "architecture/arch:pylon:bronze_dark": [
+          1,
+          336
+        ],
+        "architecture/arch:pylon:gold_leaf": [
+          1,
+          188
+        ],
+        "architecture/arch:tomb:sandstone_block": [
+          1,
+          220
+        ],
+        "architecture/arch:tomb:sandstone_worn": [
+          1,
+          1136
+        ],
+        "architecture/arch:tomb:mudbrick": [
+          1,
+          88
+        ],
+        "architecture/arch:tomb:hieroglyph_wall": [
+          1,
+          17736
+        ],
+        "architecture/arch:tomb:granite_pink": [
+          1,
+          5216
+        ],
+        "architecture/arch:tomb:ceiling_stars": [
+          1,
+          44
+        ],
+        "architecture/arch:tomb:hieroglyph_gilded": [
+          1,
+          644
+        ],
+        "architecture/arch:tomb:gold_leaf": [
+          1,
+          88
+        ],
+        "architecture/arch:hall:mudbrick": [
+          1,
+          132
+        ],
+        "architecture/arch:far:sandstone_worn": [
+          1,
+          60
+        ],
+        "props/coins": [
+          1,
+          2112
+        ],
+        "props/props_stone": [
+          1,
+          13852
+        ],
+        "props/props_gold": [
+          1,
+          11552
+        ],
+        "props/props_lapis": [
+          1,
+          5374
+        ],
+        "props/props_carnelian": [
+          1,
+          880
+        ],
+        "props/props_dark": [
+          1,
+          2212
+        ],
+        "props/props_lime": [
+          1,
+          23944
+        ],
+        "props/props_bronze": [
+          1,
+          5744
+        ],
+        "props/props_ember": [
+          1,
+          924
+        ],
+        "props/props_flame": [
+          1,
+          1584
+        ],
+        "props/props_rope": [
+          1,
+          8320
+        ],
+        "props/props_wood": [
+          1,
+          1422
+        ],
+        "props/props_cloth": [
+          1,
+          480
+        ],
+        "props/world.decals.props": [
+          1,
+          224
+        ],
+        "terrain/sand_ring0": [
+          1,
+          73728
+        ],
+        "terrain/sand_ring1": [
+          1,
+          10752
+        ],
+        "terrain/sand_ring2": [
+          1,
+          3808
+        ],
+        "terrain/sand_ring3": [
+          1,
+          6048
+        ],
+        "terrain/pyramid_105": [
+          1,
+          206
+        ],
+        "terrain/pyramid_72": [
+          1,
+          174
+        ],
+        "terrain/water": [
+          1,
+          18432
+        ],
+        "terrain/vegetation": [
+          8,
+          59474
+        ],
+        "guards/carmelita_body": [
+          18,
+          268119
+        ],
+        "guards/guard9": [
+          1,
+          1244
+        ],
+        "guards/guard10": [
+          1,
+          1244
+        ],
+        "guards/guard_beams": [
+          1,
+          4026
+        ],
+        "guards/guard_pools": [
+          1,
+          2156
+        ],
+        "guards/carmelita_body [ink shell]": [
+          9,
+          268119
+        ],
+        "guards/guard9 [ink shell]": [
+          1,
+          1244
+        ],
+        "guards/guard10 [ink shell]": [
+          1,
+          1244
+        ],
+        "player/sly_root": [
+          4,
+          13815
+        ],
+        "player/sly_root [ink shell]": [
+          4,
+          13815
+        ]
+      },
+      "cascades": [
+        {
+          "i": 0,
+          "radius": 11.75,
+          "draws": 15,
+          "tris": 193878
+        },
+        {
+          "i": 1,
+          "radius": 32.75,
+          "draws": 34,
+          "tris": 406936
+        },
+        {
+          "i": 2,
+          "radius": 125.5,
+          "draws": 71,
+          "tris": 786801
+        }
+      ],
+      "shadow": {
+        "draws": 120,
+        "tris": 1387615
+      },
+      "predictedInfo": {
+        "draws": 357,
+        "tris": 3686397
+      }
+    },
+    {
+      "shot": "courtyard",
+      "tod": 0.76,
+      "mainView": {
+        "draws": 110,
+        "tris": 1089798
+      },
+      "byModule": {
+        "architecture": [
+          43,
+          323108
+        ],
+        "props": [
+          14,
+          78624
+        ],
+        "terrain": [
+          15,
+          172622
+        ],
+        "guards": [
+          30,
+          487814
+        ],
+        "player": [
+          8,
+          27630
+        ]
+      },
+      "byOwner": {
+        "architecture/paving:court": [
+          1,
+          10290
+        ],
+        "architecture/hooks:rings": [
+          1,
+          4400
+        ],
+        "architecture/paving:hall": [
+          1,
+          7080
+        ],
+        "architecture/paving:tomb": [
+          1,
+          2880
+        ],
+        "architecture/ruin:drums": [
+          1,
+          264
+        ],
+        "architecture/arch:court:sandstone_worn": [
+          1,
+          9836
+        ],
+        "architecture/arch:court:sandstone_block": [
+          1,
+          23968
+        ],
+        "architecture/arch:court:paving_courtyard": [
+          1,
+          176
+        ],
+        "architecture/arch:court:granite_pink": [
+          1,
+          238
+        ],
+        "architecture/arch:court:limestone_polished": [
+          1,
+          1648
+        ],
+        "architecture/arch:court:hieroglyph_gilded": [
+          1,
+          4440
+        ],
+        "architecture/arch:court:hieroglyph_wall": [
+          1,
+          40352
+        ],
+        "architecture/arch:court:mudbrick": [
+          1,
+          46420
+        ],
+        "architecture/arch:court:ceiling_stars": [
+          1,
+          44
+        ],
+        "architecture/arch:court:bronze_dark": [
+          1,
+          1672
+        ],
+        "architecture/arch:court:rope_fibre": [
+          1,
+          880
+        ],
+        "architecture/arch:hall:hieroglyph_wall": [
+          1,
+          74876
+        ],
+        "architecture/arch:hall:limestone_polished": [
+          1,
+          8044
+        ],
+        "architecture/arch:hall:sandstone_worn": [
+          1,
+          908
+        ],
+        "architecture/arch:hall:hieroglyph_gilded": [
+          1,
+          2200
+        ],
+        "architecture/arch:hall:sandstone_block": [
+          1,
+          3192
+        ],
+        "architecture/arch:hall:column_papyrus": [
+          1,
+          29456
+        ],
+        "architecture/arch:hall:ceiling_stars": [
+          1,
+          792
+        ],
+        "architecture/arch:hall:bronze_dark": [
+          1,
+          1120
+        ],
+        "architecture/arch:hall:rope_fibre": [
+          1,
+          544
+        ],
+        "architecture/arch:hall:granite_pink": [
+          1,
+          388
+        ],
+        "architecture/arch:pylon:hieroglyph_wall": [
+          1,
+          18888
+        ],
+        "architecture/arch:pylon:sandstone_worn": [
+          1,
+          556
+        ],
+        "architecture/arch:pylon:paving_courtyard": [
+          1,
+          132
+        ],
+        "architecture/arch:pylon:ceiling_stars": [
+          1,
+          44
+        ],
+        "architecture/arch:pylon:hieroglyph_gilded": [
+          1,
+          1492
+        ],
+        "architecture/arch:pylon:bronze_dark": [
+          1,
+          336
+        ],
+        "architecture/arch:pylon:gold_leaf": [
+          1,
+          188
+        ],
+        "architecture/arch:tomb:sandstone_block": [
+          1,
+          220
+        ],
+        "architecture/arch:tomb:sandstone_worn": [
+          1,
+          1136
+        ],
+        "architecture/arch:tomb:mudbrick": [
+          1,
+          88
+        ],
+        "architecture/arch:tomb:hieroglyph_wall": [
+          1,
+          17736
+        ],
+        "architecture/arch:tomb:granite_pink": [
+          1,
+          5216
+        ],
+        "architecture/arch:tomb:ceiling_stars": [
+          1,
+          44
+        ],
+        "architecture/arch:tomb:hieroglyph_gilded": [
+          1,
+          644
+        ],
+        "architecture/arch:tomb:gold_leaf": [
+          1,
+          88
+        ],
+        "architecture/arch:hall:mudbrick": [
+          1,
+          132
+        ],
+        "architecture/arch:far:sandstone_worn": [
+          1,
+          60
+        ],
+        "props/coins": [
+          1,
+          2112
+        ],
+        "props/props_stone": [
+          1,
+          13852
+        ],
+        "props/props_gold": [
+          1,
+          11552
+        ],
+        "props/props_lapis": [
+          1,
+          5374
+        ],
+        "props/props_carnelian": [
+          1,
+          880
+        ],
+        "props/props_dark": [
+          1,
+          2212
+        ],
+        "props/props_lime": [
+          1,
+          23944
+        ],
+        "props/props_bronze": [
+          1,
+          5744
+        ],
+        "props/props_ember": [
+          1,
+          924
+        ],
+        "props/props_flame": [
+          1,
+          1584
+        ],
+        "props/props_rope": [
+          1,
+          8320
+        ],
+        "props/props_wood": [
+          1,
+          1422
+        ],
+        "props/props_cloth": [
+          1,
+          480
+        ],
+        "props/world.decals.props": [
+          1,
+          224
+        ],
+        "terrain/sand_ring0": [
+          1,
+          73728
+        ],
+        "terrain/sand_ring1": [
+          1,
+          10752
+        ],
+        "terrain/sand_ring2": [
+          1,
+          3808
+        ],
+        "terrain/sand_ring3": [
+          1,
+          6048
+        ],
+        "terrain/pyramid_105": [
+          1,
+          206
+        ],
+        "terrain/pyramid_72": [
+          1,
+          174
+        ],
+        "terrain/water": [
+          1,
+          18432
+        ],
+        "terrain/vegetation": [
+          8,
+          59474
+        ],
+        "guards/carmelita_body": [
+          16,
+          238328
+        ],
+        "guards/guard9": [
+          1,
+          1244
+        ],
+        "guards/guard10": [
+          1,
+          1244
+        ],
+        "guards/guard_beams": [
+          1,
+          4026
+        ],
+        "guards/guard_pools": [
+          1,
+          2156
+        ],
+        "guards/carmelita_body [ink shell]": [
+          8,
+          238328
+        ],
+        "guards/guard9 [ink shell]": [
+          1,
+          1244
+        ],
+        "guards/guard10 [ink shell]": [
+          1,
+          1244
+        ],
+        "player/sly_root": [
+          4,
+          13815
+        ],
+        "player/sly_root [ink shell]": [
+          4,
+          13815
+        ]
+      },
+      "cascades": [
+        {
+          "i": 0,
+          "radius": 15.5,
+          "draws": 33,
+          "tris": 395960
+        },
+        {
+          "i": 1,
+          "radius": 44.5,
+          "draws": 50,
+          "tris": 708058
+        },
+        {
+          "i": 2,
+          "radius": 170,
+          "draws": 71,
+          "tris": 786801
+        }
+      ],
+      "shadow": {
+        "draws": 154,
+        "tris": 1890819
+      },
+      "predictedInfo": {
+        "draws": 385,
+        "tris": 4070437
+      }
+    },
+    {
+      "shot": "night",
+      "tod": 0.02,
+      "mainView": {
+        "draws": 102,
+        "tris": 1029294
+      },
+      "byModule": {
+        "architecture": [
+          40,
+          322872
+        ],
+        "props": [
+          13,
+          78144
+        ],
+        "terrain": [
+          14,
+          172416
+        ],
+        "guards": [
+          27,
+          428232
+        ],
+        "player": [
+          8,
+          27630
+        ]
+      },
+      "byOwner": {
+        "architecture/paving:court": [
+          1,
+          10290
+        ],
+        "architecture/hooks:rings": [
+          1,
+          4400
+        ],
+        "architecture/paving:hall": [
+          1,
+          7080
+        ],
+        "architecture/paving:tomb": [
+          1,
+          2880
+        ],
+        "architecture/ruin:drums": [
+          1,
+          264
+        ],
+        "architecture/arch:court:sandstone_worn": [
+          1,
+          9836
+        ],
+        "architecture/arch:court:sandstone_block": [
+          1,
+          23968
+        ],
+        "architecture/arch:court:paving_courtyard": [
+          1,
+          176
+        ],
+        "architecture/arch:court:granite_pink": [
+          1,
+          238
+        ],
+        "architecture/arch:court:limestone_polished": [
+          1,
+          1648
+        ],
+        "architecture/arch:court:hieroglyph_gilded": [
+          1,
+          4440
+        ],
+        "architecture/arch:court:hieroglyph_wall": [
+          1,
+          40352
+        ],
+        "architecture/arch:court:mudbrick": [
+          1,
+          46420
+        ],
+        "architecture/arch:court:bronze_dark": [
+          1,
+          1672
+        ],
+        "architecture/arch:court:rope_fibre": [
+          1,
+          880
+        ],
+        "architecture/arch:hall:hieroglyph_wall": [
+          1,
+          74876
+        ],
+        "architecture/arch:hall:limestone_polished": [
+          1,
+          8044
+        ],
+        "architecture/arch:hall:sandstone_worn": [
+          1,
+          908
+        ],
+        "architecture/arch:hall:hieroglyph_gilded": [
+          1,
+          2200
+        ],
+        "architecture/arch:hall:sandstone_block": [
+          1,
+          3192
+        ],
+        "architecture/arch:hall:column_papyrus": [
+          1,
+          29456
+        ],
+        "architecture/arch:hall:ceiling_stars": [
+          1,
+          792
+        ],
+        "architecture/arch:hall:bronze_dark": [
+          1,
+          1120
+        ],
+        "architecture/arch:hall:rope_fibre": [
+          1,
+          544
+        ],
+        "architecture/arch:hall:granite_pink": [
+          1,
+          388
+        ],
+        "architecture/arch:pylon:hieroglyph_wall": [
+          1,
+          18888
+        ],
+        "architecture/arch:pylon:sandstone_worn": [
+          1,
+          556
+        ],
+        "architecture/arch:pylon:paving_courtyard": [
+          1,
+          132
+        ],
+        "architecture/arch:pylon:ceiling_stars": [
+          1,
+          44
+        ],
+        "architecture/arch:pylon:hieroglyph_gilded": [
+          1,
+          1492
+        ],
+        "architecture/arch:pylon:bronze_dark": [
+          1,
+          336
+        ],
+        "architecture/arch:pylon:gold_leaf": [
+          1,
+          188
+        ],
+        "architecture/arch:tomb:sandstone_block": [
+          1,
+          220
+        ],
+        "architecture/arch:tomb:sandstone_worn": [
+          1,
+          1136
+        ],
+        "architecture/arch:tomb:mudbrick": [
+          1,
+          88
+        ],
+        "architecture/arch:tomb:hieroglyph_wall": [
+          1,
+          17736
+        ],
+        "architecture/arch:tomb:granite_pink": [
+          1,
+          5216
+        ],
+        "architecture/arch:tomb:ceiling_stars": [
+          1,
+          44
+        ],
+        "architecture/arch:tomb:hieroglyph_gilded": [
+          1,
+          644
+        ],
+        "architecture/arch:tomb:gold_leaf": [
+          1,
+          88
+        ],
+        "props/coins": [
+          1,
+          2112
+        ],
+        "props/props_stone": [
+          1,
+          13852
+        ],
+        "props/props_gold": [
+          1,
+          11552
+        ],
+        "props/props_lapis": [
+          1,
+          5374
+        ],
+        "props/props_carnelian": [
+          1,
+          880
+        ],
+        "props/props_dark": [
+          1,
+          2212
+        ],
+        "props/props_lime": [
+          1,
+          23944
+        ],
+        "props/props_bronze": [
+          1,
+          5744
+        ],
+        "props/props_ember": [
+          1,
+          924
+        ],
+        "props/props_flame": [
+          1,
+          1584
+        ],
+        "props/props_rope": [
+          1,
+          8320
+        ],
+        "props/props_wood": [
+          1,
+          1422
+        ],
+        "props/world.decals.props": [
+          1,
+          224
+        ],
+        "terrain/sand_ring0": [
+          1,
+          73728
+        ],
+        "terrain/sand_ring1": [
+          1,
+          10752
+        ],
+        "terrain/sand_ring2": [
+          1,
+          3808
+        ],
+        "terrain/sand_ring3": [
+          1,
+          6048
+        ],
+        "terrain/pyramid_72": [
+          1,
+          174
+        ],
+        "terrain/water": [
+          1,
+          18432
+        ],
+        "terrain/vegetation": [
+          8,
+          59474
+        ],
+        "guards/carmelita_body": [
+          14,
+          208537
+        ],
+        "guards/guard9": [
+          1,
+          1244
+        ],
+        "guards/guard10": [
+          1,
+          1244
+        ],
+        "guards/guard_beams": [
+          1,
+          4026
+        ],
+        "guards/guard_pools": [
+          1,
+          2156
+        ],
+        "guards/carmelita_body [ink shell]": [
+          7,
+          208537
+        ],
+        "guards/guard9 [ink shell]": [
+          1,
+          1244
+        ],
+        "guards/guard10 [ink shell]": [
+          1,
+          1244
+        ],
+        "player/sly_root": [
+          4,
+          13815
+        ],
+        "player/sly_root [ink shell]": [
+          4,
+          13815
+        ]
+      },
+      "cascades": [
+        {
+          "i": 0,
+          "radius": 13.25,
+          "draws": 36,
+          "tris": 465841
+        },
+        {
+          "i": 1,
+          "radius": 38,
+          "draws": 57,
+          "tris": 700291
+        },
+        {
+          "i": 2,
+          "radius": 145.5,
+          "draws": 71,
+          "tris": 786801
+        }
+      ],
+      "shadow": {
+        "draws": 164,
+        "tris": 1952933
+      },
+      "predictedInfo": {
+        "draws": 379,
+        "tris": 4011543
+      }
+    },
+    {
+      "shot": "sly-closeup",
+      "tod": 0.8,
+      "mainView": {
+        "draws": 100,
+        "tris": 969934
+      },
+      "byModule": {
+        "architecture": [
+          39,
+          322408
+        ],
+        "props": [
+          14,
+          78624
+        ],
+        "terrain": [
+          15,
+          172622
+        ],
+        "guards": [
+          24,
+          368650
+        ],
+        "player": [
+          8,
+          27630
+        ]
+      },
+      "byOwner": {
+        "architecture/paving:court": [
+          1,
+          10290
+        ],
+        "architecture/hooks:rings": [
+          1,
+          4400
+        ],
+        "architecture/paving:hall": [
+          1,
+          7080
+        ],
+        "architecture/paving:tomb": [
+          1,
+          2880
+        ],
+        "architecture/ruin:drums": [
+          1,
+          264
+        ],
+        "architecture/arch:court:sandstone_worn": [
+          1,
+          9836
+        ],
+        "architecture/arch:court:sandstone_block": [
+          1,
+          23968
+        ],
+        "architecture/arch:court:paving_courtyard": [
+          1,
+          176
+        ],
+        "architecture/arch:court:granite_pink": [
+          1,
+          238
+        ],
+        "architecture/arch:court:limestone_polished": [
+          1,
+          1648
+        ],
+        "architecture/arch:court:hieroglyph_gilded": [
+          1,
+          4440
+        ],
+        "architecture/arch:court:hieroglyph_wall": [
+          1,
+          40352
+        ],
+        "architecture/arch:court:mudbrick": [
+          1,
+          46420
+        ],
+        "architecture/arch:court:bronze_dark": [
+          1,
+          1672
+        ],
+        "architecture/arch:court:rope_fibre": [
+          1,
+          880
+        ],
+        "architecture/arch:hall:hieroglyph_wall": [
+          1,
+          74876
+        ],
+        "architecture/arch:hall:limestone_polished": [
+          1,
+          8044
+        ],
+        "architecture/arch:hall:sandstone_worn": [
+          1,
+          908
+        ],
+        "architecture/arch:hall:hieroglyph_gilded": [
+          1,
+          2200
+        ],
+        "architecture/arch:hall:sandstone_block": [
+          1,
+          3192
+        ],
+        "architecture/arch:hall:column_papyrus": [
+          1,
+          29456
+        ],
+        "architecture/arch:hall:ceiling_stars": [
+          1,
+          792
+        ],
+        "architecture/arch:hall:bronze_dark": [
+          1,
+          1120
+        ],
+        "architecture/arch:hall:rope_fibre": [
+          1,
+          544
+        ],
+        "architecture/arch:hall:granite_pink": [
+          1,
+          388
+        ],
+        "architecture/arch:pylon:hieroglyph_wall": [
+          1,
+          18888
+        ],
+        "architecture/arch:pylon:sandstone_worn": [
+          1,
+          556
+        ],
+        "architecture/arch:pylon:paving_courtyard": [
+          1,
+          132
+        ],
+        "architecture/arch:pylon:ceiling_stars": [
+          1,
+          44
+        ],
+        "architecture/arch:pylon:hieroglyph_gilded": [
+          1,
+          1492
+        ],
+        "architecture/arch:tomb:sandstone_block": [
+          1,
+          220
+        ],
+        "architecture/arch:tomb:sandstone_worn": [
+          1,
+          1136
+        ],
+        "architecture/arch:tomb:mudbrick": [
+          1,
+          88
+        ],
+        "architecture/arch:tomb:hieroglyph_wall": [
+          1,
+          17736
+        ],
+        "architecture/arch:tomb:granite_pink": [
+          1,
+          5216
+        ],
+        "architecture/arch:tomb:ceiling_stars": [
+          1,
+          44
+        ],
+        "architecture/arch:tomb:hieroglyph_gilded": [
+          1,
+          644
+        ],
+        "architecture/arch:tomb:gold_leaf": [
+          1,
+          88
+        ],
+        "architecture/arch:far:sandstone_worn": [
+          1,
+          60
+        ],
+        "props/coins": [
+          1,
+          2112
+        ],
+        "props/props_stone": [
+          1,
+          13852
+        ],
+        "props/props_gold": [
+          1,
+          11552
+        ],
+        "props/props_lapis": [
+          1,
+          5374
+        ],
+        "props/props_carnelian": [
+          1,
+          880
+        ],
+        "props/props_dark": [
+          1,
+          2212
+        ],
+        "props/props_lime": [
+          1,
+          23944
+        ],
+        "props/props_bronze": [
+          1,
+          5744
+        ],
+        "props/props_ember": [
+          1,
+          924
+        ],
+        "props/props_flame": [
+          1,
+          1584
+        ],
+        "props/props_rope": [
+          1,
+          8320
+        ],
+        "props/props_wood": [
+          1,
+          1422
+        ],
+        "props/props_cloth": [
+          1,
+          480
+        ],
+        "props/world.decals.props": [
+          1,
+          224
+        ],
+        "terrain/sand_ring0": [
+          1,
+          73728
+        ],
+        "terrain/sand_ring1": [
+          1,
+          10752
+        ],
+        "terrain/sand_ring2": [
+          1,
+          3808
+        ],
+        "terrain/sand_ring3": [
+          1,
+          6048
+        ],
+        "terrain/pyramid_105": [
+          1,
+          206
+        ],
+        "terrain/pyramid_72": [
+          1,
+          174
+        ],
+        "terrain/water": [
+          1,
+          18432
+        ],
+        "terrain/vegetation": [
+          8,
+          59474
+        ],
+        "guards/carmelita_body": [
+          12,
+          178746
+        ],
+        "guards/guard9": [
+          1,
+          1244
+        ],
+        "guards/guard10": [
+          1,
+          1244
+        ],
+        "guards/guard_beams": [
+          1,
+          4026
+        ],
+        "guards/guard_pools": [
+          1,
+          2156
+        ],
+        "guards/carmelita_body [ink shell]": [
+          6,
+          178746
+        ],
+        "guards/guard9 [ink shell]": [
+          1,
+          1244
+        ],
+        "guards/guard10 [ink shell]": [
+          1,
+          1244
+        ],
+        "player/sly_root": [
+          4,
+          13815
+        ],
+        "player/sly_root [ink shell]": [
+          4,
+          13815
+        ]
+      },
+      "cascades": [
+        {
+          "i": 0,
+          "radius": 10.75,
+          "draws": 32,
+          "tris": 395480
+        },
+        {
+          "i": 1,
+          "radius": 29.5,
+          "draws": 45,
+          "tris": 616945
+        },
+        {
+          "i": 2,
+          "radius": 113,
+          "draws": 63,
+          "tris": 723123
+        }
+      ],
+      "shadow": {
+        "draws": 140,
+        "tris": 1735548
+      },
+      "predictedInfo": {
+        "draws": 351,
+        "tris": 3675438
+      }
+    },
+    {
+      "shot": "sly-perch",
+      "tod": 0.8,
+      "mainView": {
+        "draws": 100,
+        "tris": 969934
+      },
+      "byModule": {
+        "architecture": [
+          39,
+          322408
+        ],
+        "props": [
+          14,
+          78624
+        ],
+        "terrain": [
+          15,
+          172622
+        ],
+        "guards": [
+          24,
+          368650
+        ],
+        "player": [
+          8,
+          27630
+        ]
+      },
+      "byOwner": {
+        "architecture/paving:court": [
+          1,
+          10290
+        ],
+        "architecture/hooks:rings": [
+          1,
+          4400
+        ],
+        "architecture/paving:hall": [
+          1,
+          7080
+        ],
+        "architecture/paving:tomb": [
+          1,
+          2880
+        ],
+        "architecture/ruin:drums": [
+          1,
+          264
+        ],
+        "architecture/arch:court:sandstone_worn": [
+          1,
+          9836
+        ],
+        "architecture/arch:court:sandstone_block": [
+          1,
+          23968
+        ],
+        "architecture/arch:court:paving_courtyard": [
+          1,
+          176
+        ],
+        "architecture/arch:court:granite_pink": [
+          1,
+          238
+        ],
+        "architecture/arch:court:limestone_polished": [
+          1,
+          1648
+        ],
+        "architecture/arch:court:hieroglyph_gilded": [
+          1,
+          4440
+        ],
+        "architecture/arch:court:hieroglyph_wall": [
+          1,
+          40352
+        ],
+        "architecture/arch:court:mudbrick": [
+          1,
+          46420
+        ],
+        "architecture/arch:court:bronze_dark": [
+          1,
+          1672
+        ],
+        "architecture/arch:court:rope_fibre": [
+          1,
+          880
+        ],
+        "architecture/arch:hall:hieroglyph_wall": [
+          1,
+          74876
+        ],
+        "architecture/arch:hall:limestone_polished": [
+          1,
+          8044
+        ],
+        "architecture/arch:hall:sandstone_worn": [
+          1,
+          908
+        ],
+        "architecture/arch:hall:hieroglyph_gilded": [
+          1,
+          2200
+        ],
+        "architecture/arch:hall:sandstone_block": [
+          1,
+          3192
+        ],
+        "architecture/arch:hall:column_papyrus": [
+          1,
+          29456
+        ],
+        "architecture/arch:hall:ceiling_stars": [
+          1,
+          792
+        ],
+        "architecture/arch:hall:bronze_dark": [
+          1,
+          1120
+        ],
+        "architecture/arch:hall:rope_fibre": [
+          1,
+          544
+        ],
+        "architecture/arch:hall:granite_pink": [
+          1,
+          388
+        ],
+        "architecture/arch:pylon:hieroglyph_wall": [
+          1,
+          18888
+        ],
+        "architecture/arch:pylon:sandstone_worn": [
+          1,
+          556
+        ],
+        "architecture/arch:pylon:paving_courtyard": [
+          1,
+          132
+        ],
+        "architecture/arch:pylon:ceiling_stars": [
+          1,
+          44
+        ],
+        "architecture/arch:pylon:hieroglyph_gilded": [
+          1,
+          1492
+        ],
+        "architecture/arch:tomb:sandstone_block": [
+          1,
+          220
+        ],
+        "architecture/arch:tomb:sandstone_worn": [
+          1,
+          1136
+        ],
+        "architecture/arch:tomb:mudbrick": [
+          1,
+          88
+        ],
+        "architecture/arch:tomb:hieroglyph_wall": [
+          1,
+          17736
+        ],
+        "architecture/arch:tomb:granite_pink": [
+          1,
+          5216
+        ],
+        "architecture/arch:tomb:ceiling_stars": [
+          1,
+          44
+        ],
+        "architecture/arch:tomb:hieroglyph_gilded": [
+          1,
+          644
+        ],
+        "architecture/arch:tomb:gold_leaf": [
+          1,
+          88
+        ],
+        "architecture/arch:far:sandstone_worn": [
+          1,
+          60
+        ],
+        "props/coins": [
+          1,
+          2112
+        ],
+        "props/props_stone": [
+          1,
+          13852
+        ],
+        "props/props_gold": [
+          1,
+          11552
+        ],
+        "props/props_lapis": [
+          1,
+          5374
+        ],
+        "props/props_carnelian": [
+          1,
+          880
+        ],
+        "props/props_dark": [
+          1,
+          2212
+        ],
+        "props/props_lime": [
+          1,
+          23944
+        ],
+        "props/props_bronze": [
+          1,
+          5744
+        ],
+        "props/props_ember": [
+          1,
+          924
+        ],
+        "props/props_flame": [
+          1,
+          1584
+        ],
+        "props/props_rope": [
+          1,
+          8320
+        ],
+        "props/props_wood": [
+          1,
+          1422
+        ],
+        "props/props_cloth": [
+          1,
+          480
+        ],
+        "props/world.decals.props": [
+          1,
+          224
+        ],
+        "terrain/sand_ring0": [
+          1,
+          73728
+        ],
+        "terrain/sand_ring1": [
+          1,
+          10752
+        ],
+        "terrain/sand_ring2": [
+          1,
+          3808
+        ],
+        "terrain/sand_ring3": [
+          1,
+          6048
+        ],
+        "terrain/pyramid_105": [
+          1,
+          206
+        ],
+        "terrain/pyramid_72": [
+          1,
+          174
+        ],
+        "terrain/water": [
+          1,
+          18432
+        ],
+        "terrain/vegetation": [
+          8,
+          59474
+        ],
+        "guards/carmelita_body": [
+          12,
+          178746
+        ],
+        "guards/guard9": [
+          1,
+          1244
+        ],
+        "guards/guard10": [
+          1,
+          1244
+        ],
+        "guards/guard_beams": [
+          1,
+          4026
+        ],
+        "guards/guard_pools": [
+          1,
+          2156
+        ],
+        "guards/carmelita_body [ink shell]": [
+          6,
+          178746
+        ],
+        "guards/guard9 [ink shell]": [
+          1,
+          1244
+        ],
+        "guards/guard10 [ink shell]": [
+          1,
+          1244
+        ],
+        "player/sly_root": [
+          4,
+          13815
+        ],
+        "player/sly_root [ink shell]": [
+          4,
+          13815
+        ]
+      },
+      "cascades": [
+        {
+          "i": 0,
+          "radius": 10.75,
+          "draws": 32,
+          "tris": 395480
+        },
+        {
+          "i": 1,
+          "radius": 29.5,
+          "draws": 45,
+          "tris": 616945
+        },
+        {
+          "i": 2,
+          "radius": 113,
+          "draws": 63,
+          "tris": 723123
+        }
+      ],
+      "shadow": {
+        "draws": 140,
+        "tris": 1735548
+      },
+      "predictedInfo": {
+        "draws": 351,
+        "tris": 3675438
+      }
+    },
+    {
+      "shot": "sly-key",
+      "tod": 0.8,
+      "mainView": {
+        "draws": 98,
+        "tris": 969668
+      },
+      "byModule": {
+        "architecture": [
+          38,
+          322348
+        ],
+        "props": [
+          14,
+          78624
+        ],
+        "terrain": [
+          14,
+          172416
+        ],
+        "guards": [
+          24,
+          368650
+        ],
+        "player": [
+          8,
+          27630
+        ]
+      },
+      "byOwner": {
+        "architecture/paving:court": [
+          1,
+          10290
+        ],
+        "architecture/hooks:rings": [
+          1,
+          4400
+        ],
+        "architecture/paving:hall": [
+          1,
+          7080
+        ],
+        "architecture/paving:tomb": [
+          1,
+          2880
+        ],
+        "architecture/ruin:drums": [
+          1,
+          264
+        ],
+        "architecture/arch:court:sandstone_worn": [
+          1,
+          9836
+        ],
+        "architecture/arch:court:sandstone_block": [
+          1,
+          23968
+        ],
+        "architecture/arch:court:paving_courtyard": [
+          1,
+          176
+        ],
+        "architecture/arch:court:granite_pink": [
+          1,
+          238
+        ],
+        "architecture/arch:court:limestone_polished": [
+          1,
+          1648
+        ],
+        "architecture/arch:court:hieroglyph_gilded": [
+          1,
+          4440
+        ],
+        "architecture/arch:court:hieroglyph_wall": [
+          1,
+          40352
+        ],
+        "architecture/arch:court:mudbrick": [
+          1,
+          46420
+        ],
+        "architecture/arch:court:bronze_dark": [
+          1,
+          1672
+        ],
+        "architecture/arch:court:rope_fibre": [
+          1,
+          880
+        ],
+        "architecture/arch:hall:hieroglyph_wall": [
+          1,
+          74876
+        ],
+        "architecture/arch:hall:limestone_polished": [
+          1,
+          8044
+        ],
+        "architecture/arch:hall:sandstone_worn": [
+          1,
+          908
+        ],
+        "architecture/arch:hall:hieroglyph_gilded": [
+          1,
+          2200
+        ],
+        "architecture/arch:hall:sandstone_block": [
+          1,
+          3192
+        ],
+        "architecture/arch:hall:column_papyrus": [
+          1,
+          29456
+        ],
+        "architecture/arch:hall:ceiling_stars": [
+          1,
+          792
+        ],
+        "architecture/arch:hall:bronze_dark": [
+          1,
+          1120
+        ],
+        "architecture/arch:hall:rope_fibre": [
+          1,
+          544
+        ],
+        "architecture/arch:hall:granite_pink": [
+          1,
+          388
+        ],
+        "architecture/arch:pylon:hieroglyph_wall": [
+          1,
+          18888
+        ],
+        "architecture/arch:pylon:sandstone_worn": [
+          1,
+          556
+        ],
+        "architecture/arch:pylon:paving_courtyard": [
+          1,
+          132
+        ],
+        "architecture/arch:pylon:ceiling_stars": [
+          1,
+          44
+        ],
+        "architecture/arch:pylon:hieroglyph_gilded": [
+          1,
+          1492
+        ],
+        "architecture/arch:tomb:sandstone_block": [
+          1,
+          220
+        ],
+        "architecture/arch:tomb:sandstone_worn": [
+          1,
+          1136
+        ],
+        "architecture/arch:tomb:mudbrick": [
+          1,
+          88
+        ],
+        "architecture/arch:tomb:hieroglyph_wall": [
+          1,
+          17736
+        ],
+        "architecture/arch:tomb:granite_pink": [
+          1,
+          5216
+        ],
+        "architecture/arch:tomb:ceiling_stars": [
+          1,
+          44
+        ],
+        "architecture/arch:tomb:hieroglyph_gilded": [
+          1,
+          644
+        ],
+        "architecture/arch:tomb:gold_leaf": [
+          1,
+          88
+        ],
+        "props/coins": [
+          1,
+          2112
+        ],
+        "props/props_stone": [
+          1,
+          13852
+        ],
+        "props/props_gold": [
+          1,
+          11552
+        ],
+        "props/props_lapis": [
+          1,
+          5374
+        ],
+        "props/props_carnelian": [
+          1,
+          880
+        ],
+        "props/props_dark": [
+          1,
+          2212
+        ],
+        "props/props_lime": [
+          1,
+          23944
+        ],
+        "props/props_bronze": [
+          1,
+          5744
+        ],
+        "props/props_ember": [
+          1,
+          924
+        ],
+        "props/props_flame": [
+          1,
+          1584
+        ],
+        "props/props_rope": [
+          1,
+          8320
+        ],
+        "props/props_wood": [
+          1,
+          1422
+        ],
+        "props/props_cloth": [
+          1,
+          480
+        ],
+        "props/world.decals.props": [
+          1,
+          224
+        ],
+        "terrain/sand_ring0": [
+          1,
+          73728
+        ],
+        "terrain/sand_ring1": [
+          1,
+          10752
+        ],
+        "terrain/sand_ring2": [
+          1,
+          3808
+        ],
+        "terrain/sand_ring3": [
+          1,
+          6048
+        ],
+        "terrain/pyramid_72": [
+          1,
+          174
+        ],
+        "terrain/water": [
+          1,
+          18432
+        ],
+        "terrain/vegetation": [
+          8,
+          59474
+        ],
+        "guards/carmelita_body": [
+          12,
+          178746
+        ],
+        "guards/guard9": [
+          1,
+          1244
+        ],
+        "guards/guard10": [
+          1,
+          1244
+        ],
+        "guards/guard_beams": [
+          1,
+          4026
+        ],
+        "guards/guard_pools": [
+          1,
+          2156
+        ],
+        "guards/carmelita_body [ink shell]": [
+          6,
+          178746
+        ],
+        "guards/guard9 [ink shell]": [
+          1,
+          1244
+        ],
+        "guards/guard10 [ink shell]": [
+          1,
+          1244
+        ],
+        "player/sly_root": [
+          4,
+          13815
+        ],
+        "player/sly_root [ink shell]": [
+          4,
+          13815
+        ]
+      },
+      "cascades": [
+        {
+          "i": 0,
+          "radius": 10.75,
+          "draws": 32,
+          "tris": 395480
+        },
+        {
+          "i": 1,
+          "radius": 29.5,
+          "draws": 45,
+          "tris": 616945
+        },
+        {
+          "i": 2,
+          "radius": 113,
+          "draws": 63,
+          "tris": 723123
+        }
+      ],
+      "shadow": {
+        "draws": 140,
+        "tris": 1735548
+      },
+      "predictedInfo": {
+        "draws": 347,
+        "tris": 3674906
+      }
+    },
+    {
+      "shot": "hero",
+      "tod": 0.79,
+      "mainView": {
+        "draws": 98,
+        "tris": 967022
+      },
+      "byModule": {
+        "architecture": [
+          40,
+          322464
+        ],
+        "props": [
+          13,
+          78144
+        ],
+        "terrain": [
+          15,
+          172622
+        ],
+        "guards": [
+          22,
+          366162
+        ],
+        "player": [
+          8,
+          27630
+        ]
+      },
+      "byOwner": {
+        "architecture/paving:court": [
+          1,
+          10290
+        ],
+        "architecture/hooks:rings": [
+          1,
+          4400
+        ],
+        "architecture/paving:hall": [
+          1,
+          7080
+        ],
+        "architecture/paving:tomb": [
+          1,
+          2880
+        ],
+        "architecture/arch:court:sandstone_worn": [
+          1,
+          9836
+        ],
+        "architecture/arch:court:sandstone_block": [
+          1,
+          23968
+        ],
+        "architecture/arch:court:paving_courtyard": [
+          1,
+          176
+        ],
+        "architecture/arch:court:granite_pink": [
+          1,
+          238
+        ],
+        "architecture/arch:court:limestone_polished": [
+          1,
+          1648
+        ],
+        "architecture/arch:court:hieroglyph_gilded": [
+          1,
+          4440
+        ],
+        "architecture/arch:court:hieroglyph_wall": [
+          1,
+          40352
+        ],
+        "architecture/arch:court:mudbrick": [
+          1,
+          46420
+        ],
+        "architecture/arch:court:bronze_dark": [
+          1,
+          1672
+        ],
+        "architecture/arch:court:rope_fibre": [
+          1,
+          880
+        ],
+        "architecture/arch:hall:hieroglyph_wall": [
+          1,
+          74876
+        ],
+        "architecture/arch:hall:limestone_polished": [
+          1,
+          8044
+        ],
+        "architecture/arch:hall:sandstone_worn": [
+          1,
+          908
+        ],
+        "architecture/arch:hall:hieroglyph_gilded": [
+          1,
+          2200
+        ],
+        "architecture/arch:hall:sandstone_block": [
+          1,
+          3192
+        ],
+        "architecture/arch:hall:column_papyrus": [
+          1,
+          29456
+        ],
+        "architecture/arch:hall:ceiling_stars": [
+          1,
+          792
+        ],
+        "architecture/arch:hall:bronze_dark": [
+          1,
+          1120
+        ],
+        "architecture/arch:hall:rope_fibre": [
+          1,
+          544
+        ],
+        "architecture/arch:hall:granite_pink": [
+          1,
+          388
+        ],
+        "architecture/arch:pylon:hieroglyph_wall": [
+          1,
+          18888
+        ],
+        "architecture/arch:pylon:sandstone_worn": [
+          1,
+          556
+        ],
+        "architecture/arch:pylon:paving_courtyard": [
+          1,
+          132
+        ],
+        "architecture/arch:pylon:ceiling_stars": [
+          1,
+          44
+        ],
+        "architecture/arch:pylon:hieroglyph_gilded": [
+          1,
+          1492
+        ],
+        "architecture/arch:pylon:gold_leaf": [
+          1,
+          188
+        ],
+        "architecture/arch:tomb:sandstone_block": [
+          1,
+          220
+        ],
+        "architecture/arch:tomb:sandstone_worn": [
+          1,
+          1136
+        ],
+        "architecture/arch:tomb:mudbrick": [
+          1,
+          88
+        ],
+        "architecture/arch:tomb:hieroglyph_wall": [
+          1,
+          17736
+        ],
+        "architecture/arch:tomb:granite_pink": [
+          1,
+          5216
+        ],
+        "architecture/arch:tomb:ceiling_stars": [
+          1,
+          44
+        ],
+        "architecture/arch:tomb:hieroglyph_gilded": [
+          1,
+          644
+        ],
+        "architecture/arch:tomb:gold_leaf": [
+          1,
+          88
+        ],
+        "architecture/arch:hall:mudbrick": [
+          1,
+          132
+        ],
+        "architecture/arch:far:sandstone_worn": [
+          1,
+          60
+        ],
+        "props/coins": [
+          1,
+          2112
+        ],
+        "props/props_stone": [
+          1,
+          13852
+        ],
+        "props/props_gold": [
+          1,
+          11552
+        ],
+        "props/props_lapis": [
+          1,
+          5374
+        ],
+        "props/props_carnelian": [
+          1,
+          880
+        ],
+        "props/props_dark": [
+          1,
+          2212
+        ],
+        "props/props_lime": [
+          1,
+          23944
+        ],
+        "props/props_bronze": [
+          1,
+          5744
+        ],
+        "props/props_ember": [
+          1,
+          924
+        ],
+        "props/props_flame": [
+          1,
+          1584
+        ],
+        "props/props_rope": [
+          1,
+          8320
+        ],
+        "props/props_wood": [
+          1,
+          1422
+        ],
+        "props/world.decals.props": [
+          1,
+          224
+        ],
+        "terrain/sand_ring0": [
+          1,
+          73728
+        ],
+        "terrain/sand_ring1": [
+          1,
+          10752
+        ],
+        "terrain/sand_ring2": [
+          1,
+          3808
+        ],
+        "terrain/sand_ring3": [
+          1,
+          6048
+        ],
+        "terrain/pyramid_105": [
+          1,
+          206
+        ],
+        "terrain/pyramid_72": [
+          1,
+          174
+        ],
+        "terrain/water": [
+          1,
+          18432
+        ],
+        "terrain/vegetation": [
+          8,
+          59474
+        ],
+        "guards/carmelita_body": [
+          12,
+          178746
+        ],
+        "guards/guard10": [
+          1,
+          1244
+        ],
+        "guards/guard_beams": [
+          1,
+          4026
+        ],
+        "guards/guard_pools": [
+          1,
+          2156
+        ],
+        "guards/carmelita_body [ink shell]": [
+          6,
+          178746
+        ],
+        "guards/guard10 [ink shell]": [
+          1,
+          1244
+        ],
+        "player/sly_root": [
+          4,
+          13815
+        ],
+        "player/sly_root [ink shell]": [
+          4,
+          13815
+        ]
+      },
+      "cascades": [
+        {
+          "i": 0,
+          "radius": 12.75,
+          "draws": 29,
+          "tris": 364223
+        },
+        {
+          "i": 1,
+          "radius": 36.25,
+          "draws": 54,
+          "tris": 668556
+        },
+        {
+          "i": 2,
+          "radius": 138.75,
+          "draws": 71,
+          "tris": 786801
+        }
+      ],
+      "shadow": {
+        "draws": 154,
+        "tris": 1819580
+      },
+      "predictedInfo": {
+        "draws": 361,
+        "tris": 3753646
+      }
+    },
+    {
+      "shot": "kaykit",
+      "tod": 0.3,
+      "mainView": {
+        "draws": 88,
+        "tris": 903896
+      },
+      "byModule": {
+        "architecture": [
+          35,
+          320548
+        ],
+        "props": [
+          12,
+          76722
+        ],
+        "terrain": [
+          14,
+          172416
+        ],
+        "guards": [
+          19,
+          306580
+        ],
+        "player": [
+          8,
+          27630
+        ]
+      },
+      "byOwner": {
+        "architecture/paving:court": [
+          1,
+          10290
+        ],
+        "architecture/hooks:rings": [
+          1,
+          4400
+        ],
+        "architecture/paving:hall": [
+          1,
+          7080
+        ],
+        "architecture/paving:tomb": [
+          1,
+          2880
+        ],
+        "architecture/arch:court:sandstone_worn": [
+          1,
+          9836
+        ],
+        "architecture/arch:court:sandstone_block": [
+          1,
+          23968
+        ],
+        "architecture/arch:court:paving_courtyard": [
+          1,
+          176
+        ],
+        "architecture/arch:court:granite_pink": [
+          1,
+          238
+        ],
+        "architecture/arch:court:limestone_polished": [
+          1,
+          1648
+        ],
+        "architecture/arch:court:hieroglyph_gilded": [
+          1,
+          4440
+        ],
+        "architecture/arch:court:hieroglyph_wall": [
+          1,
+          40352
+        ],
+        "architecture/arch:court:mudbrick": [
+          1,
+          46420
+        ],
+        "architecture/arch:court:bronze_dark": [
+          1,
+          1672
+        ],
+        "architecture/arch:court:rope_fibre": [
+          1,
+          880
+        ],
+        "architecture/arch:hall:hieroglyph_wall": [
+          1,
+          74876
+        ],
+        "architecture/arch:hall:limestone_polished": [
+          1,
+          8044
+        ],
+        "architecture/arch:hall:sandstone_worn": [
+          1,
+          908
+        ],
+        "architecture/arch:hall:hieroglyph_gilded": [
+          1,
+          2200
+        ],
+        "architecture/arch:hall:sandstone_block": [
+          1,
+          3192
+        ],
+        "architecture/arch:hall:column_papyrus": [
+          1,
+          29456
+        ],
+        "architecture/arch:hall:ceiling_stars": [
+          1,
+          792
+        ],
+        "architecture/arch:hall:bronze_dark": [
+          1,
+          1120
+        ],
+        "architecture/arch:hall:rope_fibre": [
+          1,
+          544
+        ],
+        "architecture/arch:hall:granite_pink": [
+          1,
+          388
+        ],
+        "architecture/arch:pylon:hieroglyph_wall": [
+          1,
+          18888
+        ],
+        "architecture/arch:pylon:sandstone_worn": [
+          1,
+          556
+        ],
+        "architecture/arch:pylon:paving_courtyard": [
+          1,
+          132
+        ],
+        "architecture/arch:tomb:sandstone_block": [
+          1,
+          220
+        ],
+        "architecture/arch:tomb:sandstone_worn": [
+          1,
+          1136
+        ],
+        "architecture/arch:tomb:mudbrick": [
+          1,
+          88
+        ],
+        "architecture/arch:tomb:hieroglyph_wall": [
+          1,
+          17736
+        ],
+        "architecture/arch:tomb:granite_pink": [
+          1,
+          5216
+        ],
+        "architecture/arch:tomb:ceiling_stars": [
+          1,
+          44
+        ],
+        "architecture/arch:tomb:hieroglyph_gilded": [
+          1,
+          644
+        ],
+        "architecture/arch:tomb:gold_leaf": [
+          1,
+          88
+        ],
+        "props/coins": [
+          1,
+          2112
+        ],
+        "props/props_stone": [
+          1,
+          13852
+        ],
+        "props/props_gold": [
+          1,
+          11552
+        ],
+        "props/props_lapis": [
+          1,
+          5374
+        ],
+        "props/props_carnelian": [
+          1,
+          880
+        ],
+        "props/props_dark": [
+          1,
+          2212
+        ],
+        "props/props_lime": [
+          1,
+          23944
+        ],
+        "props/props_bronze": [
+          1,
+          5744
+        ],
+        "props/props_ember": [
+          1,
+          924
+        ],
+        "props/props_flame": [
+          1,
+          1584
+        ],
+        "props/props_rope": [
+          1,
+          8320
+        ],
+        "props/world.decals.props": [
+          1,
+          224
+        ],
+        "terrain/sand_ring0": [
+          1,
+          73728
+        ],
+        "terrain/sand_ring1": [
+          1,
+          10752
+        ],
+        "terrain/sand_ring2": [
+          1,
+          3808
+        ],
+        "terrain/sand_ring3": [
+          1,
+          6048
+        ],
+        "terrain/pyramid_72": [
+          1,
+          174
+        ],
+        "terrain/water": [
+          1,
+          18432
+        ],
+        "terrain/vegetation": [
+          8,
+          59474
+        ],
+        "guards/carmelita_body": [
+          10,
+          148955
+        ],
+        "guards/guard10": [
+          1,
+          1244
+        ],
+        "guards/guard_beams": [
+          1,
+          4026
+        ],
+        "guards/guard_pools": [
+          1,
+          2156
+        ],
+        "guards/carmelita_body [ink shell]": [
+          5,
+          148955
+        ],
+        "guards/guard10 [ink shell]": [
+          1,
+          1244
+        ],
+        "player/sly_root": [
+          4,
+          13815
+        ],
+        "player/sly_root [ink shell]": [
+          4,
+          13815
+        ]
+      },
+      "cascades": [
+        {
+          "i": 0,
+          "radius": 10,
+          "draws": 28,
+          "tris": 363959
+        },
+        {
+          "i": 1,
+          "radius": 26.25,
+          "draws": 48,
+          "tris": 656746
+        },
+        {
+          "i": 2,
+          "radius": 101.75,
+          "draws": 62,
+          "tris": 693332
+        }
+      ],
+      "shadow": {
+        "draws": 138,
+        "tris": 1714037
+      },
+      "predictedInfo": {
+        "draws": 325,
+        "tris": 3521851
+      }
+    },
+    {
+      "shot": "traversal",
+      "tod": 0.77,
+      "mainView": {
+        "draws": 92,
+        "tris": 898524
+      },
+      "byModule": {
+        "architecture": [
+          40,
+          321152
+        ],
+        "props": [
+          12,
+          76722
+        ],
+        "terrain": [
+          15,
+          172622
+        ],
+        "guards": [
+          17,
+          300398
+        ],
+        "player": [
+          8,
+          27630
+        ]
+      },
+      "byOwner": {
+        "architecture/paving:court": [
+          1,
+          10290
+        ],
+        "architecture/hooks:rings": [
+          1,
+          4400
+        ],
+        "architecture/paving:hall": [
+          1,
+          7080
+        ],
+        "architecture/paving:tomb": [
+          1,
+          2880
+        ],
+        "architecture/arch:court:sandstone_worn": [
+          1,
+          9836
+        ],
+        "architecture/arch:court:sandstone_block": [
+          1,
+          23968
+        ],
+        "architecture/arch:court:paving_courtyard": [
+          1,
+          176
+        ],
+        "architecture/arch:court:granite_pink": [
+          1,
+          238
+        ],
+        "architecture/arch:court:hieroglyph_gilded": [
+          1,
+          4440
+        ],
+        "architecture/arch:court:hieroglyph_wall": [
+          1,
+          40352
+        ],
+        "architecture/arch:court:mudbrick": [
+          1,
+          46420
+        ],
+        "architecture/arch:court:bronze_dark": [
+          1,
+          1672
+        ],
+        "architecture/arch:court:rope_fibre": [
+          1,
+          880
+        ],
+        "architecture/arch:hall:hieroglyph_wall": [
+          1,
+          74876
+        ],
+        "architecture/arch:hall:limestone_polished": [
+          1,
+          8044
+        ],
+        "architecture/arch:hall:sandstone_worn": [
+          1,
+          908
+        ],
+        "architecture/arch:hall:hieroglyph_gilded": [
+          1,
+          2200
+        ],
+        "architecture/arch:hall:sandstone_block": [
+          1,
+          3192
+        ],
+        "architecture/arch:hall:column_papyrus": [
+          1,
+          29456
+        ],
+        "architecture/arch:hall:ceiling_stars": [
+          1,
+          792
+        ],
+        "architecture/arch:hall:bronze_dark": [
+          1,
+          1120
+        ],
+        "architecture/arch:hall:rope_fibre": [
+          1,
+          544
+        ],
+        "architecture/arch:hall:granite_pink": [
+          1,
+          388
+        ],
+        "architecture/arch:pylon:hieroglyph_wall": [
+          1,
+          18888
+        ],
+        "architecture/arch:pylon:sandstone_worn": [
+          1,
+          556
+        ],
+        "architecture/arch:pylon:paving_courtyard": [
+          1,
+          132
+        ],
+        "architecture/arch:pylon:ceiling_stars": [
+          1,
+          44
+        ],
+        "architecture/arch:pylon:hieroglyph_gilded": [
+          1,
+          1492
+        ],
+        "architecture/arch:pylon:bronze_dark": [
+          1,
+          336
+        ],
+        "architecture/arch:pylon:gold_leaf": [
+          1,
+          188
+        ],
+        "architecture/arch:tomb:sandstone_block": [
+          1,
+          220
+        ],
+        "architecture/arch:tomb:sandstone_worn": [
+          1,
+          1136
+        ],
+        "architecture/arch:tomb:mudbrick": [
+          1,
+          88
+        ],
+        "architecture/arch:tomb:hieroglyph_wall": [
+          1,
+          17736
+        ],
+        "architecture/arch:tomb:granite_pink": [
+          1,
+          5216
+        ],
+        "architecture/arch:tomb:ceiling_stars": [
+          1,
+          44
+        ],
+        "architecture/arch:tomb:hieroglyph_gilded": [
+          1,
+          644
+        ],
+        "architecture/arch:tomb:gold_leaf": [
+          1,
+          88
+        ],
+        "architecture/arch:hall:mudbrick": [
+          1,
+          132
+        ],
+        "architecture/arch:far:sandstone_worn": [
+          1,
+          60
+        ],
+        "props/coins": [
+          1,
+          2112
+        ],
+        "props/props_stone": [
+          1,
+          13852
+        ],
+        "props/props_gold": [
+          1,
+          11552
+        ],
+        "props/props_lapis": [
+          1,
+          5374
+        ],
+        "props/props_carnelian": [
+          1,
+          880
+        ],
+        "props/props_dark": [
+          1,
+          2212
+        ],
+        "props/props_lime": [
+          1,
+          23944
+        ],
+        "props/props_bronze": [
+          1,
+          5744
+        ],
+        "props/props_ember": [
+          1,
+          924
+        ],
+        "props/props_flame": [
+          1,
+          1584
+        ],
+        "props/props_rope": [
+          1,
+          8320
+        ],
+        "props/world.decals.props": [
+          1,
+          224
+        ],
+        "terrain/sand_ring0": [
+          1,
+          73728
+        ],
+        "terrain/sand_ring1": [
+          1,
+          10752
+        ],
+        "terrain/sand_ring2": [
+          1,
+          3808
+        ],
+        "terrain/sand_ring3": [
+          1,
+          6048
+        ],
+        "terrain/pyramid_105": [
+          1,
+          206
+        ],
+        "terrain/pyramid_72": [
+          1,
+          174
+        ],
+        "terrain/water": [
+          1,
+          18432
+        ],
+        "terrain/vegetation": [
+          8,
+          59474
+        ],
+        "guards/carmelita_body": [
+          10,
+          148955
+        ],
+        "guards/guard10": [
+          1,
+          1244
+        ],
+        "guards/carmelita_body [ink shell]": [
+          5,
+          148955
+        ],
+        "guards/guard10 [ink shell]": [
+          1,
+          1244
+        ],
+        "player/sly_root": [
+          4,
+          13815
+        ],
+        "player/sly_root [ink shell]": [
+          4,
+          13815
+        ]
+      },
+      "cascades": [
+        {
+          "i": 0,
+          "radius": 12.25,
+          "draws": 34,
+          "tris": 483524
+        },
+        {
+          "i": 1,
+          "radius": 34.5,
+          "draws": 59,
+          "tris": 691826
+        },
+        {
+          "i": 2,
+          "radius": 132,
+          "draws": 60,
+          "tris": 688716
+        }
+      ],
+      "shadow": {
+        "draws": 153,
+        "tris": 1864066
+      },
+      "predictedInfo": {
+        "draws": 348,
+        "tris": 3661136
+      }
+    },
+    {
+      "shot": "sly-profile",
+      "tod": 0.8,
+      "mainView": {
+        "draws": 80,
+        "tris": 725954
+      },
+      "byModule": {
+        "architecture": [
+          36,
+          321906
+        ],
+        "props": [
+          14,
+          78624
+        ],
+        "terrain": [
+          14,
+          172448
+        ],
+        "guards": [
+          8,
+          125346
+        ],
+        "player": [
+          8,
+          27630
+        ]
+      },
+      "byOwner": {
+        "architecture/paving:court": [
+          1,
+          10290
+        ],
+        "architecture/hooks:rings": [
+          1,
+          4400
+        ],
+        "architecture/paving:hall": [
+          1,
+          7080
+        ],
+        "architecture/paving:tomb": [
+          1,
+          2880
+        ],
+        "architecture/arch:court:sandstone_worn": [
+          1,
+          9836
+        ],
+        "architecture/arch:court:sandstone_block": [
+          1,
+          23968
+        ],
+        "architecture/arch:court:paving_courtyard": [
+          1,
+          176
+        ],
+        "architecture/arch:court:limestone_polished": [
+          1,
+          1648
+        ],
+        "architecture/arch:court:hieroglyph_gilded": [
+          1,
+          4440
+        ],
+        "architecture/arch:court:hieroglyph_wall": [
+          1,
+          40352
+        ],
+        "architecture/arch:court:mudbrick": [
+          1,
+          46420
+        ],
+        "architecture/arch:court:bronze_dark": [
+          1,
+          1672
+        ],
+        "architecture/arch:court:rope_fibre": [
+          1,
+          880
+        ],
+        "architecture/arch:hall:hieroglyph_wall": [
+          1,
+          74876
+        ],
+        "architecture/arch:hall:limestone_polished": [
+          1,
+          8044
+        ],
+        "architecture/arch:hall:sandstone_worn": [
+          1,
+          908
+        ],
+        "architecture/arch:hall:hieroglyph_gilded": [
+          1,
+          2200
+        ],
+        "architecture/arch:hall:sandstone_block": [
+          1,
+          3192
+        ],
+        "architecture/arch:hall:column_papyrus": [
+          1,
+          29456
+        ],
+        "architecture/arch:hall:ceiling_stars": [
+          1,
+          792
+        ],
+        "architecture/arch:hall:bronze_dark": [
+          1,
+          1120
+        ],
+        "architecture/arch:hall:rope_fibre": [
+          1,
+          544
+        ],
+        "architecture/arch:hall:granite_pink": [
+          1,
+          388
+        ],
+        "architecture/arch:pylon:hieroglyph_wall": [
+          1,
+          18888
+        ],
+        "architecture/arch:pylon:sandstone_worn": [
+          1,
+          556
+        ],
+        "architecture/arch:pylon:paving_courtyard": [
+          1,
+          132
+        ],
+        "architecture/arch:pylon:hieroglyph_gilded": [
+          1,
+          1492
+        ],
+        "architecture/arch:tomb:sandstone_block": [
+          1,
+          220
+        ],
+        "architecture/arch:tomb:sandstone_worn": [
+          1,
+          1136
+        ],
+        "architecture/arch:tomb:mudbrick": [
+          1,
+          88
+        ],
+        "architecture/arch:tomb:hieroglyph_wall": [
+          1,
+          17736
+        ],
+        "architecture/arch:tomb:granite_pink": [
+          1,
+          5216
+        ],
+        "architecture/arch:tomb:ceiling_stars": [
+          1,
+          44
+        ],
+        "architecture/arch:tomb:hieroglyph_gilded": [
+          1,
+          644
+        ],
+        "architecture/arch:hall:mudbrick": [
+          1,
+          132
+        ],
+        "architecture/arch:far:sandstone_worn": [
+          1,
+          60
+        ],
+        "props/coins": [
+          1,
+          2112
+        ],
+        "props/props_stone": [
+          1,
+          13852
+        ],
+        "props/props_gold": [
+          1,
+          11552
+        ],
+        "props/props_lapis": [
+          1,
+          5374
+        ],
+        "props/props_carnelian": [
+          1,
+          880
+        ],
+        "props/props_dark": [
+          1,
+          2212
+        ],
+        "props/props_lime": [
+          1,
+          23944
+        ],
+        "props/props_bronze": [
+          1,
+          5744
+        ],
+        "props/props_ember": [
+          1,
+          924
+        ],
+        "props/props_flame": [
+          1,
+          1584
+        ],
+        "props/props_rope": [
+          1,
+          8320
+        ],
+        "props/props_wood": [
+          1,
+          1422
+        ],
+        "props/props_cloth": [
+          1,
+          480
+        ],
+        "props/world.decals.props": [
+          1,
+          224
+        ],
+        "terrain/sand_ring0": [
+          1,
+          73728
+        ],
+        "terrain/sand_ring1": [
+          1,
+          10752
+        ],
+        "terrain/sand_ring2": [
+          1,
+          3808
+        ],
+        "terrain/sand_ring3": [
+          1,
+          6048
+        ],
+        "terrain/pyramid_105": [
+          1,
+          206
+        ],
+        "terrain/water": [
+          1,
+          18432
+        ],
+        "terrain/vegetation": [
+          8,
+          59474
+        ],
+        "guards/carmelita_body": [
+          4,
+          59582
+        ],
+        "guards/guard_beams": [
+          1,
+          4026
+        ],
+        "guards/guard_pools": [
+          1,
+          2156
+        ],
+        "guards/carmelita_body [ink shell]": [
+          2,
+          59582
+        ],
+        "player/sly_root": [
+          4,
+          13815
+        ],
+        "player/sly_root [ink shell]": [
+          4,
+          13815
+        ]
+      },
+      "cascades": [
+        {
+          "i": 0,
+          "radius": 10.75,
+          "draws": 30,
+          "tris": 395198
+        },
+        {
+          "i": 1,
+          "radius": 29.5,
+          "draws": 45,
+          "tris": 616961
+        },
+        {
+          "i": 2,
+          "radius": 113,
+          "draws": 71,
+          "tris": 786801
+        }
+      ],
+      "shadow": {
+        "draws": 146,
+        "tris": 1798960
+      },
+      "predictedInfo": {
+        "draws": 317,
+        "tris": 3250890
+      }
+    },
+    {
+      "shot": "combat",
+      "tod": 0.74,
+      "mainView": {
+        "draws": 65,
+        "tris": 670046
+      },
+      "byModule": {
+        "architecture": [
+          23,
+          272180
+        ],
+        "props": [
+          14,
+          78624
+        ],
+        "terrain": [
+          14,
+          172448
+        ],
+        "guards": [
+          6,
+          119164
+        ],
+        "player": [
+          8,
+          27630
+        ]
+      },
+      "byOwner": {
+        "architecture/paving:court": [
+          1,
+          10290
+        ],
+        "architecture/hooks:rings": [
+          1,
+          4400
+        ],
+        "architecture/paving:hall": [
+          1,
+          7080
+        ],
+        "architecture/arch:court:sandstone_worn": [
+          1,
+          9836
+        ],
+        "architecture/arch:court:sandstone_block": [
+          1,
+          23968
+        ],
+        "architecture/arch:court:paving_courtyard": [
+          1,
+          176
+        ],
+        "architecture/arch:court:granite_pink": [
+          1,
+          238
+        ],
+        "architecture/arch:court:limestone_polished": [
+          1,
+          1648
+        ],
+        "architecture/arch:court:hieroglyph_gilded": [
+          1,
+          4440
+        ],
+        "architecture/arch:court:hieroglyph_wall": [
+          1,
+          40352
+        ],
+        "architecture/arch:court:mudbrick": [
+          1,
+          46420
+        ],
+        "architecture/arch:court:bronze_dark": [
+          1,
+          1672
+        ],
+        "architecture/arch:court:rope_fibre": [
+          1,
+          880
+        ],
+        "architecture/arch:hall:hieroglyph_wall": [
+          1,
+          74876
+        ],
+        "architecture/arch:hall:limestone_polished": [
+          1,
+          8044
+        ],
+        "architecture/arch:hall:sandstone_worn": [
+          1,
+          908
+        ],
+        "architecture/arch:hall:hieroglyph_gilded": [
+          1,
+          2200
+        ],
+        "architecture/arch:hall:sandstone_block": [
+          1,
+          3192
+        ],
+        "architecture/arch:hall:column_papyrus": [
+          1,
+          29456
+        ],
+        "architecture/arch:hall:ceiling_stars": [
+          1,
+          792
+        ],
+        "architecture/arch:hall:bronze_dark": [
+          1,
+          1120
+        ],
+        "architecture/arch:hall:mudbrick": [
+          1,
+          132
+        ],
+        "architecture/arch:far:sandstone_worn": [
+          1,
+          60
+        ],
+        "props/coins": [
+          1,
+          2112
+        ],
+        "props/props_stone": [
+          1,
+          13852
+        ],
+        "props/props_gold": [
+          1,
+          11552
+        ],
+        "props/props_lapis": [
+          1,
+          5374
+        ],
+        "props/props_carnelian": [
+          1,
+          880
+        ],
+        "props/props_dark": [
+          1,
+          2212
+        ],
+        "props/props_lime": [
+          1,
+          23944
+        ],
+        "props/props_bronze": [
+          1,
+          5744
+        ],
+        "props/props_ember": [
+          1,
+          924
+        ],
+        "props/props_flame": [
+          1,
+          1584
+        ],
+        "props/props_rope": [
+          1,
+          8320
+        ],
+        "props/props_wood": [
+          1,
+          1422
+        ],
+        "props/props_cloth": [
+          1,
+          480
+        ],
+        "props/world.decals.props": [
+          1,
+          224
+        ],
+        "terrain/sand_ring0": [
+          1,
+          73728
+        ],
+        "terrain/sand_ring1": [
+          1,
+          10752
+        ],
+        "terrain/sand_ring2": [
+          1,
+          3808
+        ],
+        "terrain/sand_ring3": [
+          1,
+          6048
+        ],
+        "terrain/pyramid_105": [
+          1,
+          206
+        ],
+        "terrain/water": [
+          1,
+          18432
+        ],
+        "terrain/vegetation": [
+          8,
+          59474
+        ],
+        "guards/carmelita_body": [
+          4,
+          59582
+        ],
+        "guards/carmelita_body [ink shell]": [
+          2,
+          59582
+        ],
+        "player/sly_root": [
+          4,
+          13815
+        ],
+        "player/sly_root [ink shell]": [
+          4,
+          13815
+        ]
+      },
+      "cascades": [
+        {
+          "i": 0,
+          "radius": 11.25,
+          "draws": 32,
+          "tris": 395480
+        },
+        {
+          "i": 1,
+          "radius": 31,
+          "draws": 45,
+          "tris": 616961
+        },
+        {
+          "i": 2,
+          "radius": 119,
+          "draws": 71,
+          "tris": 786801
+        }
+      ],
+      "shadow": {
+        "draws": 148,
+        "tris": 1799242
+      },
+      "predictedInfo": {
+        "draws": 289,
+        "tris": 3139356
+      }
+    },
+    {
+      "shot": "temple",
+      "tod": 0.72,
+      "mainView": {
+        "draws": 75,
+        "tris": 652854
+      },
+      "byModule": {
+        "architecture": [
+          37,
+          316298
+        ],
+        "props": [
+          12,
+          76722
+        ],
+        "terrain": [
+          15,
+          172622
+        ],
+        "guards": [
+          3,
+          59582
+        ],
+        "player": [
+          8,
+          27630
+        ]
+      },
+      "byOwner": {
+        "architecture/paving:court": [
+          1,
+          10290
+        ],
+        "architecture/hooks:rings": [
+          1,
+          4400
+        ],
+        "architecture/paving:hall": [
+          1,
+          7080
+        ],
+        "architecture/paving:tomb": [
+          1,
+          2880
+        ],
+        "architecture/arch:court:sandstone_worn": [
+          1,
+          9836
+        ],
+        "architecture/arch:court:sandstone_block": [
+          1,
+          23968
+        ],
+        "architecture/arch:court:hieroglyph_wall": [
+          1,
+          40352
+        ],
+        "architecture/arch:court:mudbrick": [
+          1,
+          46420
+        ],
+        "architecture/arch:court:bronze_dark": [
+          1,
+          1672
+        ],
+        "architecture/arch:court:rope_fibre": [
+          1,
+          880
+        ],
+        "architecture/arch:hall:hieroglyph_wall": [
+          1,
+          74876
+        ],
+        "architecture/arch:hall:limestone_polished": [
+          1,
+          8044
+        ],
+        "architecture/arch:hall:sandstone_worn": [
+          1,
+          908
+        ],
+        "architecture/arch:hall:hieroglyph_gilded": [
+          1,
+          2200
+        ],
+        "architecture/arch:hall:sandstone_block": [
+          1,
+          3192
+        ],
+        "architecture/arch:hall:column_papyrus": [
+          1,
+          29456
+        ],
+        "architecture/arch:hall:ceiling_stars": [
+          1,
+          792
+        ],
+        "architecture/arch:hall:bronze_dark": [
+          1,
+          1120
+        ],
+        "architecture/arch:hall:rope_fibre": [
+          1,
+          544
+        ],
+        "architecture/arch:hall:granite_pink": [
+          1,
+          388
+        ],
+        "architecture/arch:pylon:hieroglyph_wall": [
+          1,
+          18888
+        ],
+        "architecture/arch:pylon:sandstone_worn": [
+          1,
+          556
+        ],
+        "architecture/arch:pylon:paving_courtyard": [
+          1,
+          132
+        ],
+        "architecture/arch:pylon:ceiling_stars": [
+          1,
+          44
+        ],
+        "architecture/arch:pylon:hieroglyph_gilded": [
+          1,
+          1492
+        ],
+        "architecture/arch:pylon:bronze_dark": [
+          1,
+          336
+        ],
+        "architecture/arch:pylon:gold_leaf": [
+          1,
+          188
+        ],
+        "architecture/arch:tomb:sandstone_block": [
+          1,
+          220
+        ],
+        "architecture/arch:tomb:sandstone_worn": [
+          1,
+          1136
+        ],
+        "architecture/arch:tomb:mudbrick": [
+          1,
+          88
+        ],
+        "architecture/arch:tomb:hieroglyph_wall": [
+          1,
+          17736
+        ],
+        "architecture/arch:tomb:granite_pink": [
+          1,
+          5216
+        ],
+        "architecture/arch:tomb:ceiling_stars": [
+          1,
+          44
+        ],
+        "architecture/arch:tomb:hieroglyph_gilded": [
+          1,
+          644
+        ],
+        "architecture/arch:tomb:gold_leaf": [
+          1,
+          88
+        ],
+        "architecture/arch:hall:mudbrick": [
+          1,
+          132
+        ],
+        "architecture/arch:far:sandstone_worn": [
+          1,
+          60
+        ],
+        "props/coins": [
+          1,
+          2112
+        ],
+        "props/props_stone": [
+          1,
+          13852
+        ],
+        "props/props_gold": [
+          1,
+          11552
+        ],
+        "props/props_lapis": [
+          1,
+          5374
+        ],
+        "props/props_carnelian": [
+          1,
+          880
+        ],
+        "props/props_dark": [
+          1,
+          2212
+        ],
+        "props/props_lime": [
+          1,
+          23944
+        ],
+        "props/props_bronze": [
+          1,
+          5744
+        ],
+        "props/props_ember": [
+          1,
+          924
+        ],
+        "props/props_flame": [
+          1,
+          1584
+        ],
+        "props/props_rope": [
+          1,
+          8320
+        ],
+        "props/world.decals.props": [
+          1,
+          224
+        ],
+        "terrain/sand_ring0": [
+          1,
+          73728
+        ],
+        "terrain/sand_ring1": [
+          1,
+          10752
+        ],
+        "terrain/sand_ring2": [
+          1,
+          3808
+        ],
+        "terrain/sand_ring3": [
+          1,
+          6048
+        ],
+        "terrain/pyramid_105": [
+          1,
+          206
+        ],
+        "terrain/pyramid_72": [
+          1,
+          174
+        ],
+        "terrain/water": [
+          1,
+          18432
+        ],
+        "terrain/vegetation": [
+          8,
+          59474
+        ],
+        "guards/carmelita_body": [
+          2,
+          29791
+        ],
+        "guards/carmelita_body [ink shell]": [
+          1,
+          29791
+        ],
+        "player/sly_root": [
+          4,
+          13815
+        ],
+        "player/sly_root [ink shell]": [
+          4,
+          13815
+        ]
+      },
+      "cascades": [
+        {
+          "i": 0,
+          "radius": 15.5,
+          "draws": 41,
+          "tris": 559671
+        },
+        {
+          "i": 1,
+          "radius": 44.5,
+          "draws": 56,
+          "tris": 627716
+        },
+        {
+          "i": 2,
+          "radius": 170,
+          "draws": 61,
+          "tris": 693156
+        }
+      ],
+      "shadow": {
+        "draws": 158,
+        "tris": 1880543
+      },
+      "predictedInfo": {
+        "draws": 319,
+        "tris": 3186273
+      }
+    },
+    {
+      "shot": "guard",
+      "tod": 0.1,
+      "mainView": {
+        "draws": 40,
+        "tris": 451246
+      },
+      "byModule": {
+        "architecture": [
+          11,
+          142494
+        ],
+        "props": [
+          12,
+          76722
+        ],
+        "terrain": [
+          14,
+          172448
+        ],
+        "guards": [
+          3,
+          59582
+        ]
+      },
+      "byOwner": {
+        "architecture/paving:court": [
+          1,
+          10290
+        ],
+        "architecture/hooks:rings": [
+          1,
+          4400
+        ],
+        "architecture/arch:court:sandstone_worn": [
+          1,
+          9836
+        ],
+        "architecture/arch:court:sandstone_block": [
+          1,
+          23968
+        ],
+        "architecture/arch:court:paving_courtyard": [
+          1,
+          176
+        ],
+        "architecture/arch:court:hieroglyph_gilded": [
+          1,
+          4440
+        ],
+        "architecture/arch:court:hieroglyph_wall": [
+          1,
+          40352
+        ],
+        "architecture/arch:court:mudbrick": [
+          1,
+          46420
+        ],
+        "architecture/arch:court:bronze_dark": [
+          1,
+          1672
+        ],
+        "architecture/arch:court:rope_fibre": [
+          1,
+          880
+        ],
+        "architecture/arch:far:sandstone_worn": [
+          1,
+          60
+        ],
+        "props/coins": [
+          1,
+          2112
+        ],
+        "props/props_stone": [
+          1,
+          13852
+        ],
+        "props/props_gold": [
+          1,
+          11552
+        ],
+        "props/props_lapis": [
+          1,
+          5374
+        ],
+        "props/props_carnelian": [
+          1,
+          880
+        ],
+        "props/props_dark": [
+          1,
+          2212
+        ],
+        "props/props_lime": [
+          1,
+          23944
+        ],
+        "props/props_bronze": [
+          1,
+          5744
+        ],
+        "props/props_ember": [
+          1,
+          924
+        ],
+        "props/props_flame": [
+          1,
+          1584
+        ],
+        "props/props_rope": [
+          1,
+          8320
+        ],
+        "props/world.decals.props": [
+          1,
+          224
+        ],
+        "terrain/sand_ring0": [
+          1,
+          73728
+        ],
+        "terrain/sand_ring1": [
+          1,
+          10752
+        ],
+        "terrain/sand_ring2": [
+          1,
+          3808
+        ],
+        "terrain/sand_ring3": [
+          1,
+          6048
+        ],
+        "terrain/pyramid_105": [
+          1,
+          206
+        ],
+        "terrain/water": [
+          1,
+          18432
+        ],
+        "terrain/vegetation": [
+          8,
+          59474
+        ],
+        "guards/carmelita_body": [
+          2,
+          29791
+        ],
+        "guards/carmelita_body [ink shell]": [
+          1,
+          29791
+        ]
+      },
+      "cascades": [
+        {
+          "i": 0,
+          "radius": 10.75,
+          "draws": 28,
+          "tris": 399862
+        },
+        {
+          "i": 1,
+          "radius": 29.5,
+          "draws": 29,
+          "tris": 448167
+        },
+        {
+          "i": 2,
+          "radius": 113,
+          "draws": 48,
+          "tris": 550990
+        }
+      ],
+      "shadow": {
+        "draws": 105,
+        "tris": 1399019
+      },
+      "predictedInfo": {
+        "draws": 196,
+        "tris": 2301533
+      }
+    },
+    {
+      "shot": "sly-startle",
+      "tod": 0.8,
+      "mainView": {
+        "draws": 47,
+        "tris": 421368
+      },
+      "byModule": {
+        "architecture": [
+          11,
+          142698
+        ],
+        "props": [
+          14,
+          78624
+        ],
+        "terrain": [
+          14,
+          172416
+        ],
+        "player": [
+          8,
+          27630
+        ]
+      },
+      "byOwner": {
+        "architecture/paving:court": [
+          1,
+          10290
+        ],
+        "architecture/hooks:rings": [
+          1,
+          4400
+        ],
+        "architecture/ruin:drums": [
+          1,
+          264
+        ],
+        "architecture/arch:court:sandstone_worn": [
+          1,
+          9836
+        ],
+        "architecture/arch:court:sandstone_block": [
+          1,
+          23968
+        ],
+        "architecture/arch:court:paving_courtyard": [
+          1,
+          176
+        ],
+        "architecture/arch:court:hieroglyph_gilded": [
+          1,
+          4440
+        ],
+        "architecture/arch:court:hieroglyph_wall": [
+          1,
+          40352
+        ],
+        "architecture/arch:court:mudbrick": [
+          1,
+          46420
+        ],
+        "architecture/arch:court:bronze_dark": [
+          1,
+          1672
+        ],
+        "architecture/arch:court:rope_fibre": [
+          1,
+          880
+        ],
+        "props/coins": [
+          1,
+          2112
+        ],
+        "props/props_stone": [
+          1,
+          13852
+        ],
+        "props/props_gold": [
+          1,
+          11552
+        ],
+        "props/props_lapis": [
+          1,
+          5374
+        ],
+        "props/props_carnelian": [
+          1,
+          880
+        ],
+        "props/props_dark": [
+          1,
+          2212
+        ],
+        "props/props_lime": [
+          1,
+          23944
+        ],
+        "props/props_bronze": [
+          1,
+          5744
+        ],
+        "props/props_ember": [
+          1,
+          924
+        ],
+        "props/props_flame": [
+          1,
+          1584
+        ],
+        "props/props_rope": [
+          1,
+          8320
+        ],
+        "props/props_wood": [
+          1,
+          1422
+        ],
+        "props/props_cloth": [
+          1,
+          480
+        ],
+        "props/world.decals.props": [
+          1,
+          224
+        ],
+        "terrain/sand_ring0": [
+          1,
+          73728
+        ],
+        "terrain/sand_ring1": [
+          1,
+          10752
+        ],
+        "terrain/sand_ring2": [
+          1,
+          3808
+        ],
+        "terrain/sand_ring3": [
+          1,
+          6048
+        ],
+        "terrain/pyramid_72": [
+          1,
+          174
+        ],
+        "terrain/water": [
+          1,
+          18432
+        ],
+        "terrain/vegetation": [
+          8,
+          59474
+        ],
+        "player/sly_root": [
+          4,
+          13815
+        ],
+        "player/sly_root [ink shell]": [
+          4,
+          13815
+        ]
+      },
+      "cascades": [
+        {
+          "i": 0,
+          "radius": 8.25,
+          "draws": 29,
+          "tris": 393550
+        },
+        {
+          "i": 1,
+          "radius": 19,
+          "draws": 32,
+          "tris": 396680
+        },
+        {
+          "i": 2,
+          "radius": 77,
+          "draws": 65,
+          "tris": 725099
+        }
+      ],
+      "shadow": {
+        "draws": 126,
+        "tris": 1515329
+      },
+      "predictedInfo": {
+        "draws": 231,
+        "tris": 2358087
+      }
+    },
+    {
+      "shot": "sly-arm",
+      "tod": 0.8,
+      "mainView": {
+        "draws": 45,
+        "tris": 420930
+      },
+      "byModule": {
+        "architecture": [
+          10,
+          142434
+        ],
+        "props": [
+          14,
+          78624
+        ],
+        "terrain": [
+          13,
+          172242
+        ],
+        "player": [
+          8,
+          27630
+        ]
+      },
+      "byOwner": {
+        "architecture/paving:court": [
+          1,
+          10290
+        ],
+        "architecture/hooks:rings": [
+          1,
+          4400
+        ],
+        "architecture/arch:court:sandstone_worn": [
+          1,
+          9836
+        ],
+        "architecture/arch:court:sandstone_block": [
+          1,
+          23968
+        ],
+        "architecture/arch:court:paving_courtyard": [
+          1,
+          176
+        ],
+        "architecture/arch:court:hieroglyph_gilded": [
+          1,
+          4440
+        ],
+        "architecture/arch:court:hieroglyph_wall": [
+          1,
+          40352
+        ],
+        "architecture/arch:court:mudbrick": [
+          1,
+          46420
+        ],
+        "architecture/arch:court:bronze_dark": [
+          1,
+          1672
+        ],
+        "architecture/arch:court:rope_fibre": [
+          1,
+          880
+        ],
+        "props/coins": [
+          1,
+          2112
+        ],
+        "props/props_stone": [
+          1,
+          13852
+        ],
+        "props/props_gold": [
+          1,
+          11552
+        ],
+        "props/props_lapis": [
+          1,
+          5374
+        ],
+        "props/props_carnelian": [
+          1,
+          880
+        ],
+        "props/props_dark": [
+          1,
+          2212
+        ],
+        "props/props_lime": [
+          1,
+          23944
+        ],
+        "props/props_bronze": [
+          1,
+          5744
+        ],
+        "props/props_ember": [
+          1,
+          924
+        ],
+        "props/props_flame": [
+          1,
+          1584
+        ],
+        "props/props_rope": [
+          1,
+          8320
+        ],
+        "props/props_wood": [
+          1,
+          1422
+        ],
+        "props/props_cloth": [
+          1,
+          480
+        ],
+        "props/world.decals.props": [
+          1,
+          224
+        ],
+        "terrain/sand_ring0": [
+          1,
+          73728
+        ],
+        "terrain/sand_ring1": [
+          1,
+          10752
+        ],
+        "terrain/sand_ring2": [
+          1,
+          3808
+        ],
+        "terrain/sand_ring3": [
+          1,
+          6048
+        ],
+        "terrain/water": [
+          1,
+          18432
+        ],
+        "terrain/vegetation": [
+          8,
+          59474
+        ],
+        "player/sly_root": [
+          4,
+          13815
+        ],
+        "player/sly_root [ink shell]": [
+          4,
+          13815
+        ]
+      },
+      "cascades": [
+        {
+          "i": 0,
+          "radius": 10.75,
+          "draws": 31,
+          "tris": 394074
+        },
+        {
+          "i": 1,
+          "radius": 29.5,
+          "draws": 33,
+          "tris": 406698
+        },
+        {
+          "i": 2,
+          "radius": 113,
+          "draws": 49,
+          "tris": 678267
+        }
+      ],
+      "shadow": {
+        "draws": 113,
+        "tris": 1479039
+      },
+      "predictedInfo": {
+        "draws": 214,
+        "tris": 2320921
+      }
+    },
+    {
+      "shot": "interior",
+      "tod": 0.5,
+      "mainView": {
+        "draws": 49,
+        "tris": 391634
+      },
+      "byModule": {
+        "architecture": [
+          16,
+          124412
+        ],
+        "props": [
+          8,
+          64482
+        ],
+        "terrain": [
+          15,
+          172622
+        ],
+        "guards": [
+          2,
+          2488
+        ],
+        "player": [
+          8,
+          27630
+        ]
+      },
+      "byOwner": {
+        "architecture/paving:hall": [
+          1,
+          7080
+        ],
+        "architecture/paving:tomb": [
+          1,
+          2880
+        ],
+        "architecture/arch:hall:hieroglyph_wall": [
+          1,
+          74876
+        ],
+        "architecture/arch:hall:limestone_polished": [
+          1,
+          8044
+        ],
+        "architecture/arch:hall:sandstone_worn": [
+          1,
+          908
+        ],
+        "architecture/arch:hall:hieroglyph_gilded": [
+          1,
+          2200
+        ],
+        "architecture/arch:hall:sandstone_block": [
+          1,
+          3192
+        ],
+        "architecture/arch:tomb:sandstone_block": [
+          1,
+          220
+        ],
+        "architecture/arch:tomb:sandstone_worn": [
+          1,
+          1136
+        ],
+        "architecture/arch:tomb:mudbrick": [
+          1,
+          88
+        ],
+        "architecture/arch:tomb:hieroglyph_wall": [
+          1,
+          17736
+        ],
+        "architecture/arch:tomb:granite_pink": [
+          1,
+          5216
+        ],
+        "architecture/arch:tomb:ceiling_stars": [
+          1,
+          44
+        ],
+        "architecture/arch:tomb:hieroglyph_gilded": [
+          1,
+          644
+        ],
+        "architecture/arch:tomb:gold_leaf": [
+          1,
+          88
+        ],
+        "architecture/arch:far:sandstone_worn": [
+          1,
+          60
+        ],
+        "props/props_stone": [
+          1,
+          13852
+        ],
+        "props/props_gold": [
+          1,
+          11552
+        ],
+        "props/props_lapis": [
+          1,
+          5374
+        ],
+        "props/props_carnelian": [
+          1,
+          880
+        ],
+        "props/props_dark": [
+          1,
+          2212
+        ],
+        "props/props_lime": [
+          1,
+          23944
+        ],
+        "props/props_bronze": [
+          1,
+          5744
+        ],
+        "props/props_ember": [
+          1,
+          924
+        ],
+        "terrain/sand_ring0": [
+          1,
+          73728
+        ],
+        "terrain/sand_ring1": [
+          1,
+          10752
+        ],
+        "terrain/sand_ring2": [
+          1,
+          3808
+        ],
+        "terrain/sand_ring3": [
+          1,
+          6048
+        ],
+        "terrain/pyramid_105": [
+          1,
+          206
+        ],
+        "terrain/pyramid_72": [
+          1,
+          174
+        ],
+        "terrain/water": [
+          1,
+          18432
+        ],
+        "terrain/vegetation": [
+          8,
+          59474
+        ],
+        "guards/guard10": [
+          1,
+          1244
+        ],
+        "guards/guard10 [ink shell]": [
+          1,
+          1244
+        ],
+        "player/sly_root": [
+          4,
+          13815
+        ],
+        "player/sly_root [ink shell]": [
+          4,
+          13815
+        ]
+      },
+      "cascades": [
+        {
+          "i": 0,
+          "radius": 14.5,
+          "draws": 36,
+          "tris": 355445
+        },
+        {
+          "i": 1,
+          "radius": 41.75,
+          "draws": 43,
+          "tris": 399163
+        },
+        {
+          "i": 2,
+          "radius": 159.25,
+          "draws": 48,
+          "tris": 440780
+        }
+      ],
+      "shadow": {
+        "draws": 127,
+        "tris": 1195388
+      },
+      "predictedInfo": {
+        "draws": 236,
+        "tris": 1978678
+      }
+    }
+  ]
+}

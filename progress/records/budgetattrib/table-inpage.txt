@@ -1,0 +1,228 @@
+# budgetattrib — inpage reading, durable copy of the console table
+#
+# command: node tools/budgetattrib.mjs --inpage --json progress/records/budgetattrib/inpage.json night dunes interior
+# tree:    083c755, run from a CLEAN `git archive HEAD` export — the shared working tree carried
+#          two other lanes' in-flight edits (src/fx/Particles.js, src/render/PostFX.js) that do not
+#          parse; neither is in this probe's 21-module import graph, and the clean-export numbers
+#          are identical to the shared-tree ones for every row.
+# offline: no boot, no capture lock, no GPU.
+# reading: world+guards WITH the measured Carmelita body / character / ink-shell substitution
+
+
+§1 ATTRIBUTION — offline, 1280x720, quality high (3 cascades), no boot
+modules built: architecture props terrain guards player   [--inpage: Carmelita bodies + ink shells + character substituted from measured asset mass]
+
+SCENE TOTAL, culling off: 113 meshes / 1.149M tris  = 96% of the 1.2M cap
+  (no camera can exceed this; it is the ceiling on every "visible" reading of §1)
+
+shot           draws     tris   %tri          archi        props        terra        guard        playe   shadow(3c)   predicted info
+dunes           113 1.149M    96%      43/323k       14/79k      15/173k      33/547k        8/28k   120/1.39M    357/3.69M
+courtyard       110 1.090M    91%      43/323k       14/79k      15/173k      30/488k        8/28k   154/1.89M    385/4.07M
+night           102 1.029M    86%      40/323k       13/78k      14/172k      27/428k        8/28k   164/1.95M    379/4.01M
+sly-closeup     100 0.970M    81%      39/322k       14/79k      15/173k      24/369k        8/28k   140/1.74M    351/3.68M
+sly-perch       100 0.970M    81%      39/322k       14/79k      15/173k      24/369k        8/28k   140/1.74M    351/3.68M
+sly-key          98 0.970M    81%      38/322k       14/79k      14/172k      24/369k        8/28k   140/1.74M    347/3.67M
+hero             98 0.967M    81%      40/322k       13/78k      15/173k      22/366k        8/28k   154/1.82M    361/3.75M
+kaykit           88 0.904M    75%      35/321k       12/77k      14/172k      19/307k        8/28k   138/1.71M    325/3.52M
+traversal        92 0.899M    75%      40/321k       12/77k      15/173k      17/300k        8/28k   153/1.86M    348/3.66M
+sly-profile      80 0.726M    60%      36/322k       14/79k      14/172k       8/125k        8/28k   146/1.80M    317/3.25M
+combat           65 0.670M    56%      23/272k       14/79k      14/172k       6/119k        8/28k   148/1.80M    289/3.14M
+temple           75 0.653M    54%      37/316k       12/77k      15/173k        3/60k        8/28k   158/1.88M    319/3.19M
+guard            40 0.451M    38%      11/142k       12/77k      14/172k        3/60k         0/0k   105/1.40M    196/2.30M
+sly-startle      47 0.421M    35%      11/143k       14/79k      14/172k         0/0k        8/28k   126/1.52M    231/2.36M
+sly-arm          45 0.421M    35%      10/142k       14/79k      13/172k         0/0k        8/28k   113/1.48M    214/2.32M
+interior         49 0.392M    33%      16/124k        8/64k      15/173k         2/2k        8/28k   127/1.20M    236/1.98M
+
+WORST main-view: 113 draws (45% of 250), 1.149M tris (96% of 1.2M)
+
+=== night: main-view owners (102 draws / 1.029M) ===
+   14 draws    208537 tris (20.3%)  guards/carmelita_body
+    7 draws    208537 tris (20.3%)  guards/carmelita_body [ink shell]
+    1 draws     74876 tris (7.3%)  architecture/arch:hall:hieroglyph_wall
+    1 draws     73728 tris (7.2%)  terrain/sand_ring0
+    8 draws     59474 tris (5.8%)  terrain/vegetation
+    1 draws     46420 tris (4.5%)  architecture/arch:court:mudbrick
+    1 draws     40352 tris (3.9%)  architecture/arch:court:hieroglyph_wall
+    1 draws     29456 tris (2.9%)  architecture/arch:hall:column_papyrus
+    1 draws     23968 tris (2.3%)  architecture/arch:court:sandstone_block
+    1 draws     23944 tris (2.3%)  props/props_lime
+    1 draws     18888 tris (1.8%)  architecture/arch:pylon:hieroglyph_wall
+    1 draws     18432 tris (1.8%)  terrain/water
+    1 draws     17736 tris (1.7%)  architecture/arch:tomb:hieroglyph_wall
+    1 draws     13852 tris (1.3%)  props/props_stone
+    4 draws     13815 tris (1.3%)  player/sly_root
+    4 draws     13815 tris (1.3%)  player/sly_root [ink shell]
+    1 draws     11552 tris (1.1%)  props/props_gold
+    1 draws     10752 tris (1.0%)  terrain/sand_ring1
+    1 draws     10290 tris (1.0%)  architecture/paving:court
+    1 draws      9836 tris (1.0%)  architecture/arch:court:sandstone_worn
+    1 draws      8320 tris (0.8%)  props/props_rope
+    1 draws      8044 tris (0.8%)  architecture/arch:hall:limestone_polished
+    1 draws      7080 tris (0.7%)  architecture/paving:hall
+    1 draws      6048 tris (0.6%)  terrain/sand_ring3
+    1 draws      5744 tris (0.6%)  props/props_bronze
+    1 draws      5374 tris (0.5%)  props/props_lapis
+    1 draws      5216 tris (0.5%)  architecture/arch:tomb:granite_pink
+    1 draws      4440 tris (0.4%)  architecture/arch:court:hieroglyph_gilded
+    1 draws      4400 tris (0.4%)  architecture/hooks:rings
+    1 draws      4026 tris (0.4%)  guards/guard_beams
+    1 draws      3808 tris (0.4%)  terrain/sand_ring2
+    1 draws      3192 tris (0.3%)  architecture/arch:hall:sandstone_block
+    1 draws      2880 tris (0.3%)  architecture/paving:tomb
+    1 draws      2212 tris (0.2%)  props/props_dark
+    1 draws      2200 tris (0.2%)  architecture/arch:hall:hieroglyph_gilded
+    1 draws      2156 tris (0.2%)  guards/guard_pools
+    1 draws      2112 tris (0.2%)  props/coins
+    1 draws      1672 tris (0.2%)  architecture/arch:court:bronze_dark
+    1 draws      1648 tris (0.2%)  architecture/arch:court:limestone_polished
+    1 draws      1584 tris (0.2%)  props/props_flame
+    1 draws      1492 tris (0.1%)  architecture/arch:pylon:hieroglyph_gilded
+    1 draws      1422 tris (0.1%)  props/props_wood
+    1 draws      1244 tris (0.1%)  guards/guard9
+    1 draws      1244 tris (0.1%)  guards/guard10
+    1 draws      1244 tris (0.1%)  guards/guard9 [ink shell]
+    1 draws      1244 tris (0.1%)  guards/guard10 [ink shell]
+    1 draws      1136 tris (0.1%)  architecture/arch:tomb:sandstone_worn
+    1 draws      1120 tris (0.1%)  architecture/arch:hall:bronze_dark
+    1 draws       924 tris (0.1%)  props/props_ember
+    1 draws       908 tris (0.1%)  architecture/arch:hall:sandstone_worn
+    1 draws       880 tris (0.1%)  architecture/arch:court:rope_fibre
+    1 draws       880 tris (0.1%)  props/props_carnelian
+    1 draws       792 tris (0.1%)  architecture/arch:hall:ceiling_stars
+    1 draws       644 tris (0.1%)  architecture/arch:tomb:hieroglyph_gilded
+    1 draws       556 tris (0.1%)  architecture/arch:pylon:sandstone_worn
+    1 draws       544 tris (0.1%)  architecture/arch:hall:rope_fibre
+    1 draws       388 tris (0.0%)  architecture/arch:hall:granite_pink
+    1 draws       336 tris (0.0%)  architecture/arch:pylon:bronze_dark
+    1 draws       264 tris (0.0%)  architecture/ruin:drums
+    1 draws       238 tris (0.0%)  architecture/arch:court:granite_pink
+    1 draws       224 tris (0.0%)  props/world.decals.props
+    1 draws       220 tris (0.0%)  architecture/arch:tomb:sandstone_block
+    1 draws       188 tris (0.0%)  architecture/arch:pylon:gold_leaf
+    1 draws       176 tris (0.0%)  architecture/arch:court:paving_courtyard
+    1 draws       174 tris (0.0%)  terrain/pyramid_72
+    1 draws       132 tris (0.0%)  architecture/arch:pylon:paving_courtyard
+    1 draws        88 tris (0.0%)  architecture/arch:tomb:mudbrick
+    1 draws        88 tris (0.0%)  architecture/arch:tomb:gold_leaf
+    1 draws        44 tris (0.0%)  architecture/arch:pylon:ceiling_stars
+    1 draws        44 tris (0.0%)  architecture/arch:tomb:ceiling_stars
+  cascades: c0 r13m 36/466k   c1 r38m 57/700k   c2 r146m 71/787k
+
+=== dunes: main-view owners (113 draws / 1.149M) ===
+   18 draws    268119 tris (23.3%)  guards/carmelita_body
+    9 draws    268119 tris (23.3%)  guards/carmelita_body [ink shell]
+    1 draws     74876 tris (6.5%)  architecture/arch:hall:hieroglyph_wall
+    1 draws     73728 tris (6.4%)  terrain/sand_ring0
+    8 draws     59474 tris (5.2%)  terrain/vegetation
+    1 draws     46420 tris (4.0%)  architecture/arch:court:mudbrick
+    1 draws     40352 tris (3.5%)  architecture/arch:court:hieroglyph_wall
+    1 draws     29456 tris (2.6%)  architecture/arch:hall:column_papyrus
+    1 draws     23968 tris (2.1%)  architecture/arch:court:sandstone_block
+    1 draws     23944 tris (2.1%)  props/props_lime
+    1 draws     18888 tris (1.6%)  architecture/arch:pylon:hieroglyph_wall
+    1 draws     18432 tris (1.6%)  terrain/water
+    1 draws     17736 tris (1.5%)  architecture/arch:tomb:hieroglyph_wall
+    1 draws     13852 tris (1.2%)  props/props_stone
+    4 draws     13815 tris (1.2%)  player/sly_root
+    4 draws     13815 tris (1.2%)  player/sly_root [ink shell]
+    1 draws     11552 tris (1.0%)  props/props_gold
+    1 draws     10752 tris (0.9%)  terrain/sand_ring1
+    1 draws     10290 tris (0.9%)  architecture/paving:court
+    1 draws      9836 tris (0.9%)  architecture/arch:court:sandstone_worn
+    1 draws      8320 tris (0.7%)  props/props_rope
+    1 draws      8044 tris (0.7%)  architecture/arch:hall:limestone_polished
+    1 draws      7080 tris (0.6%)  architecture/paving:hall
+    1 draws      6048 tris (0.5%)  terrain/sand_ring3
+    1 draws      5744 tris (0.5%)  props/props_bronze
+    1 draws      5374 tris (0.5%)  props/props_lapis
+    1 draws      5216 tris (0.5%)  architecture/arch:tomb:granite_pink
+    1 draws      4440 tris (0.4%)  architecture/arch:court:hieroglyph_gilded
+    1 draws      4400 tris (0.4%)  architecture/hooks:rings
+    1 draws      4026 tris (0.4%)  guards/guard_beams
+    1 draws      3808 tris (0.3%)  terrain/sand_ring2
+    1 draws      3192 tris (0.3%)  architecture/arch:hall:sandstone_block
+    1 draws      2880 tris (0.3%)  architecture/paving:tomb
+    1 draws      2212 tris (0.2%)  props/props_dark
+    1 draws      2200 tris (0.2%)  architecture/arch:hall:hieroglyph_gilded
+    1 draws      2156 tris (0.2%)  guards/guard_pools
+    1 draws      2112 tris (0.2%)  props/coins
+    1 draws      1672 tris (0.1%)  architecture/arch:court:bronze_dark
+    1 draws      1648 tris (0.1%)  architecture/arch:court:limestone_polished
+    1 draws      1584 tris (0.1%)  props/props_flame
+    1 draws      1492 tris (0.1%)  architecture/arch:pylon:hieroglyph_gilded
+    1 draws      1422 tris (0.1%)  props/props_wood
+    1 draws      1244 tris (0.1%)  guards/guard9
+    1 draws      1244 tris (0.1%)  guards/guard10
+    1 draws      1244 tris (0.1%)  guards/guard9 [ink shell]
+    1 draws      1244 tris (0.1%)  guards/guard10 [ink shell]
+    1 draws      1136 tris (0.1%)  architecture/arch:tomb:sandstone_worn
+    1 draws      1120 tris (0.1%)  architecture/arch:hall:bronze_dark
+    1 draws       924 tris (0.1%)  props/props_ember
+    1 draws       908 tris (0.1%)  architecture/arch:hall:sandstone_worn
+    1 draws       880 tris (0.1%)  architecture/arch:court:rope_fibre
+    1 draws       880 tris (0.1%)  props/props_carnelian
+    1 draws       792 tris (0.1%)  architecture/arch:hall:ceiling_stars
+    1 draws       644 tris (0.1%)  architecture/arch:tomb:hieroglyph_gilded
+    1 draws       556 tris (0.0%)  architecture/arch:pylon:sandstone_worn
+    1 draws       544 tris (0.0%)  architecture/arch:hall:rope_fibre
+    1 draws       480 tris (0.0%)  props/props_cloth
+    1 draws       388 tris (0.0%)  architecture/arch:hall:granite_pink
+    1 draws       336 tris (0.0%)  architecture/arch:pylon:bronze_dark
+    1 draws       264 tris (0.0%)  architecture/ruin:drums
+    1 draws       238 tris (0.0%)  architecture/arch:court:granite_pink
+    1 draws       224 tris (0.0%)  props/world.decals.props
+    1 draws       220 tris (0.0%)  architecture/arch:tomb:sandstone_block
+    1 draws       206 tris (0.0%)  terrain/pyramid_105
+    1 draws       188 tris (0.0%)  architecture/arch:pylon:gold_leaf
+    1 draws       176 tris (0.0%)  architecture/arch:court:paving_courtyard
+    1 draws       174 tris (0.0%)  terrain/pyramid_72
+    1 draws       132 tris (0.0%)  architecture/arch:pylon:paving_courtyard
+    1 draws       132 tris (0.0%)  architecture/arch:hall:mudbrick
+    1 draws        88 tris (0.0%)  architecture/arch:tomb:mudbrick
+    1 draws        88 tris (0.0%)  architecture/arch:tomb:gold_leaf
+    1 draws        60 tris (0.0%)  architecture/arch:far:sandstone_worn
+    1 draws        44 tris (0.0%)  architecture/arch:court:ceiling_stars
+    1 draws        44 tris (0.0%)  architecture/arch:pylon:ceiling_stars
+    1 draws        44 tris (0.0%)  architecture/arch:tomb:ceiling_stars
+  cascades: c0 r12m 15/194k   c1 r33m 34/407k   c2 r126m 71/787k
+
+=== interior: main-view owners (49 draws / 0.392M) ===
+    1 draws     74876 tris (19.1%)  architecture/arch:hall:hieroglyph_wall
+    1 draws     73728 tris (18.8%)  terrain/sand_ring0
+    8 draws     59474 tris (15.2%)  terrain/vegetation
+    1 draws     23944 tris (6.1%)  props/props_lime
+    1 draws     18432 tris (4.7%)  terrain/water
+    1 draws     17736 tris (4.5%)  architecture/arch:tomb:hieroglyph_wall
+    1 draws     13852 tris (3.5%)  props/props_stone
+    4 draws     13815 tris (3.5%)  player/sly_root
+    4 draws     13815 tris (3.5%)  player/sly_root [ink shell]
+    1 draws     11552 tris (2.9%)  props/props_gold
+    1 draws     10752 tris (2.7%)  terrain/sand_ring1
+    1 draws      8044 tris (2.1%)  architecture/arch:hall:limestone_polished
+    1 draws      7080 tris (1.8%)  architecture/paving:hall
+    1 draws      6048 tris (1.5%)  terrain/sand_ring3
+    1 draws      5744 tris (1.5%)  props/props_bronze
+    1 draws      5374 tris (1.4%)  props/props_lapis
+    1 draws      5216 tris (1.3%)  architecture/arch:tomb:granite_pink
+    1 draws      3808 tris (1.0%)  terrain/sand_ring2
+    1 draws      3192 tris (0.8%)  architecture/arch:hall:sandstone_block
+    1 draws      2880 tris (0.7%)  architecture/paving:tomb
+    1 draws      2212 tris (0.6%)  props/props_dark
+    1 draws      2200 tris (0.6%)  architecture/arch:hall:hieroglyph_gilded
+    1 draws      1244 tris (0.3%)  guards/guard10
+    1 draws      1244 tris (0.3%)  guards/guard10 [ink shell]
+    1 draws      1136 tris (0.3%)  architecture/arch:tomb:sandstone_worn
+    1 draws       924 tris (0.2%)  props/props_ember
+    1 draws       908 tris (0.2%)  architecture/arch:hall:sandstone_worn
+    1 draws       880 tris (0.2%)  props/props_carnelian
+    1 draws       644 tris (0.2%)  architecture/arch:tomb:hieroglyph_gilded
+    1 draws       220 tris (0.1%)  architecture/arch:tomb:sandstone_block
+    1 draws       206 tris (0.1%)  terrain/pyramid_105
+    1 draws       174 tris (0.0%)  terrain/pyramid_72
+    1 draws        88 tris (0.0%)  architecture/arch:tomb:mudbrick
+    1 draws        88 tris (0.0%)  architecture/arch:tomb:gold_leaf
+    1 draws        60 tris (0.0%)  architecture/arch:far:sandstone_worn
+    1 draws        44 tris (0.0%)  architecture/arch:tomb:ceiling_stars
+  cascades: c0 r15m 36/355k   c1 r42m 43/399k   c2 r159m 48/441k
+
+→ /home/user/Demo/progress/records/budgetattrib/inpage.json
