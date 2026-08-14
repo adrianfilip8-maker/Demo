@@ -23893,3 +23893,15 @@ impossible, and that ceiling check is what should have caught this two rounds ag
 at source (09808c1, quotes the scored column or none); RESULT-critic11/12 carry correction
 notes. Lesson (§282-adjacent, new organ): **a budget bar must name the counter it reads and be
 sanity-checked against a scene-total ceiling before anything is routed on it.**
+
+## §311 — coordination hazard: `git commit` takes the whole INDEX, so one lane's commit can sweep another lane's staged files
+
+With seven lanes sharing one working tree, the coordinator ran `git add <own paths>` then
+`git commit` and shipped the TOMBDIM2 lane's five staged-but-uncommitted seal files inside
+08a5440 (a commit about the §1 budget correction). No content was lost and the seal still
+landed before any candidate frame — the damage is provenance: "when was this sealed" traces
+to an unrelated message. §240 ("never `git add -A`") is necessary but NOT sufficient; explicit
+adds do not protect you from someone else's index.
+**Rule: in a shared tree, commit with a pathspec — `git commit -- <paths>` — so only your own
+files can enter, no matter what is staged. Lanes: commit promptly after staging, or stage
+only at commit time.**
