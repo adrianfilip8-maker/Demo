@@ -453,15 +453,50 @@ export class Props {
       const againstWall = R.chance(0.7);
       const x = againstWall ? R.sign() * R.range(21, 25) : R.range(-18, 18);
       const z = againstWall ? R.range(-14, 32) : R.pick([-13, 31]);
-      const g = R.chance(0.6) ? vessel({ rng: R, h: R.range(0.5, 1.1) }) : basket({ rng: R });
+      const g = R.chance(0.6)
+        ? vessel({ rng: R, h: R.range(0.5, 1.1) })
+        : basket({ rng: R, r: R.range(0.27, 0.42), h: R.range(0.32, 0.52), bands: 3 + (i % 3), belly: R.range(0.15, 0.85), oval: R.range(0.82, 1.20), lean: R.jitter(0.14) });
       place(g, { x, y: 0, z, ry: R.range(0, Math.PI * 2), s: R.range(0.85, 1.25) });
       this._ground(g);
       this._push(R.chance(0.75) ? 'lime' : 'stone', g);
     }
 
-    for (let i = 0; i < 8; i++) {
-      const g = ropeCoil({ rng: R });
-      place(g, { x: R.range(-22, 22), y: 0.02, z: R.range(-14, 32), ry: R.range(0, Math.PI * 2) });
+    /**
+     * Rope coils — AUTHORED, one shape each, not a scatter loop (PREREG-basketvary).
+     *
+     * The eight this replaces were `ropeCoil({ rng: R })` at random positions: **one silhouette
+     * placed eight times**, seven of them inside the `courtyard` frustum, which is precisely
+     * what critic r12 called *"the seventh appearance ... set-dressing autopilot"*. The header
+     * of this file already says "placement is not scatter"; the coils were the one loop that
+     * had never obeyed it.
+     *
+     * So each coil now has a spot with a reason and a shape that follows from the reason, and
+     * no two are the same object. Six replace eight — 2,940 triangles against 4,480, so this
+     * seal pays for the colossus sculpt's (§1 is breached on 15/16 shots and a separate lane
+     * owns the breach; this one may not make it worse).
+     *
+     * NOT a gameplay change, and checked before it was written: these placements call `_push`
+     * and nothing else — no `_ground` decal, no `_hazard`, no `_maybeLedge`/`_deck`/`_pole`,
+     * no `registerCollider`. A coil is set dress. `tests/basketvary.test.mjs` pins that, so
+     * "a basket carries a volume" cannot become true here by accident later.
+     */
+    const COILS = [
+      // at the scaffold foot, where the rope that raised the scaffold would be dropped
+      { x: 17.9, z: 31.6, ry: 0.7,  r: 0.62, tube: 0.085, coils: 4, oval: 0.78, taper: 0.30 },
+      // by the east brazier: a tight, tall drum, still wound
+      { x: 20.9, z: -12.4, ry: 2.1, r: 0.34, tube: 0.055, coils: 5, oval: 1.00, taper: 0.08 },
+      // spilled flat by the processional route, two turns and a loose end running out
+      { x: 2.9, z: 24.9, ry: -1.2,  r: 0.52, tube: 0.075, coils: 2, oval: 1.15, taper: 0.05, tail: 1.15 },
+      // against the west colonnade, leaning on the wall it was stacked against
+      { x: -20.4, z: 8.6, ry: 0.35, r: 0.44, tube: 0.065, coils: 4, oval: 0.86, taper: 0.34, slump: 0.30 },
+      // at the broken statue, a wide shallow cone left by whoever was moving the pieces
+      { x: -21.2, z: 2.2, ry: 1.9,  r: 0.58, tube: 0.060, coils: 3, oval: 0.94, taper: 0.45 },
+      // by the north kiosk steps, small and fat
+      { x: 4.4, z: 31.3, ry: -0.5,  r: 0.40, tube: 0.090, coils: 3, oval: 1.08, taper: 0.16, tail: 0.75 },
+    ];
+    for (const c of COILS) {
+      const g = ropeCoil({ rng: R, r: c.r, tube: c.tube, coils: c.coils, oval: c.oval, taper: c.taper, slump: c.slump || 0, tail: c.tail || 0 });
+      place(g, { x: c.x, y: 0.02, z: c.z, ry: c.ry });
       this._push('rope', g);
     }
 

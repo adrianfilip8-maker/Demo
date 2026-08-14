@@ -670,36 +670,83 @@ export function canopicJar(kind, opts = {}) {
   return mergeAll(out);
 }
 
-/** Woven basket: coiled bands, slightly oval, with a sagging rim. */
+/**
+ * Woven basket: coiled bands, slightly oval, with a sagging rim.
+ *
+ * `belly` and `oval` are the same argument as `ropeCoil`'s above: the caller decides the
+ * silhouette. `belly` moves the widest band up or down the profile (0 = a bucket that swells at
+ * the foot, 1 = a bowl that swells at the rim), `oval` is the plan aspect, `lean` tips the whole
+ * weave. The default (`belly 0.5`, `oval 1`, `lean 0`) reproduces the previous profile exactly
+ * for any caller that does not ask.
+ */
 export function basket(opts = {}) {
-  const { r = 0.34, h = 0.4, seg = 12, rng, bands = 5 } = opts;
+  const { r = 0.34, h = 0.4, seg = 12, rng, bands = 5, belly = 0.5, oval = 1.0, lean = 0 } = opts;
   const out = [];
   for (let i = 0; i < bands; i++) {
     const t = i / (bands - 1 || 1);
-    const rr = r * (0.72 + 0.28 * Math.sin(Math.PI * (0.25 + t * 0.6)));
+    const rr = r * (0.72 + 0.28 * Math.sin(Math.PI * (0.25 + t * 0.6 + (belly - 0.5) * 0.5)));
     const band = new THREE.TorusGeometry(rr, h / bands * 0.62, 4, seg);
     normaliseAttrs(band);
-    place(band, { y: h * t + h * 0.06, rx: Math.PI / 2, sz: 0.55, ry: rng ? rng.range(0, 1) : 0 });
+    const y = h * t + h * 0.06;
+    place(band, { x: lean * y, y, rx: Math.PI / 2, sx: oval, sz: 0.55, rz: lean * 0.4, ry: rng ? rng.range(0, 1) : 0 });
     out.push(boxProjectUVs(band));
   }
-  out.push(place(lathe([[r * 0.6, 0], [r * 0.62, 0.03]], { seg, rng, wobble: 0.04 }), { y: 0.02 }));
+  out.push(place(lathe([[r * 0.6, 0], [r * 0.62, 0.03]], { seg, rng, wobble: 0.04 }), { y: 0.02, sx: oval }));
   return mergeAll(out);
 }
 
-/** Coiled rope on the floor: stacked, squashed tori that drift off-centre as they rise. */
+/**
+ * Coiled rope on the floor: stacked, squashed tori that drift off-centre as they rise.
+ *
+ * ── Why this builder has a shape vocabulary and not just an `rng` (PREREG-basketvary) ──────
+ * Critic r12 named this prop twice — *"the same coil basket appears three times in one frame"*,
+ * *"the seventh appearance ... reads as set-dressing autopilot"* — and the measurement agreed
+ * exactly: eight placements, **one** silhouette. The old signature took `r`, `tube` and `coils`
+ * but every call site used the defaults, so the only per-instance variation was a 5 cm centre
+ * drift and a yaw per ring. Those move the bounding box by 1.3% and the HEIGHT by 0.000 m,
+ * which is nothing at the 13-18 m the courtyard camera reads a coil from. An `rng` that only
+ * perturbs a shape it cannot change is not variation; it is noise on a stamp.
+ *
+ * So the parameters that decide the SILHOUETTE are now the ones a caller is expected to set,
+ * and `Props._courtyardDress` authors them per spot the way it authors brazier positions:
+ *
+ *   oval   plan aspect — a rope coil dropped by hand is never round
+ *   taper  how fast the radius closes going up: 0.05 is a drum of rope, 0.45 a cone
+ *   slump  the stack leaning off its own base, as a coil left against a wall does
+ *   tail   metres of loose end lying away from the coil — the one addition that changes the
+ *          silhouette CLASS rather than its proportions, so no two spots need the same class
+ *
+ * Triangle-negative by construction at the shipped call sites: the old fixed `coils: 4` x8
+ * spent 4480 tris, the authored set spends fewer (see `_courtyardDress`). §1 is already
+ * breached on 15/16 shots and this lane may not make it worse.
+ */
 export function ropeCoil(opts = {}) {
-  const { r = 0.5, tube = 0.07, coils = 4, rng } = opts;
+  const { r = 0.5, tube = 0.07, coils = 4, rng, oval = 1.0, taper = 0.22, slump = 0, tail = 0 } = opts;
   const out = [];
+  let topR = r, topY = tube;
   for (let i = 0; i < coils; i++) {
     const t = i / coils;
-    const g = new THREE.TorusGeometry(r * (1 - t * 0.22), tube, 5, 14);
+    const rr = r * (1 - t * taper);
+    const g = new THREE.TorusGeometry(rr, tube, 5, 14);
     normaliseAttrs(g);
+    const y = tube * 1.55 * i + tube;
     place(g, {
-      x: rng ? rng.jitter(0.05) : 0, y: tube * 1.55 * i + tube,
-      z: rng ? rng.jitter(0.05) : 0, rx: Math.PI / 2, sz: 0.7,
+      x: (rng ? rng.jitter(0.05) : 0) + slump * y,
+      y, z: rng ? rng.jitter(0.05) : 0,
+      rx: Math.PI / 2, sx: oval, sz: 0.7,
+      rz: slump * 0.5,
       ry: rng ? rng.range(0, TAU) : 0,
     });
     out.push(boxProjectUVs(g));
+    topR = rr; topY = y;
+  }
+  /* The loose end. A catenary off the top of the stack, dropping to the floor and running out
+     — the same `ropeSpan` curve the hook cables use, so it sags like the rest of the rope in
+     the level instead of lying like a wire. */
+  if (tail > 0) {
+    const a = [topR * oval * 0.9, topY, 0];
+    const b = [topR * oval * 0.9 + tail, tube, tail * 0.35];
+    out.push(ropeSpan(a, b, { sag: Math.min(0.22, tail * 0.18), r: tube * 0.85, seg: 8, rad: 4 }));
   }
   return mergeAll(out);
 }
