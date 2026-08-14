@@ -33,11 +33,11 @@ that exists, twice over.
 
 **F3 — The one real mass story is new, and it is GUARDS, not the world.** `carmelita-guard.glb`
 landed 2026-08-08 (`f365058`), six days *after* the last in-page budget table, and
-`Guard.js:1290` swaps it onto the `temple` and `heavy` roster types — **9 of 11 guards**. Measured
+`Guard.js:1301` swaps it onto the `temple` and `heavy` roster types — **9 of 11 guards**. Measured
 off the asset: **29,791 triangles per guard body**, against ~1.2–5 k for the procedural body it
-replaces, and `Guard.js:1496` shells every guard (an ink shell is a second draw of the same
+replaces, and `Guard.js:1501` shells every guard (an ink shell is a second draw of the same
 triangles). Substituting the measured asset mass onto the headless roster puts the level at
-**1.149 M — 96% of the cap** and makes guards the largest triangle owner in nine of sixteen
+**1.149 M — 96% of the cap** and makes guards the largest triangle owner in seven of sixteen
 shots, ahead of architecture. That leg is a *model*, not an in-page measurement; it is
 pre-registered for settling below (§Open leg), and it is the only part of the §1 question that is
 still open.
@@ -195,8 +195,14 @@ pair for `night`, which re-measures the multiplier at HEAD.
 2. **The defect that keeps causing it is a labelling defect in the artefact the critic reads.**
    `tools/critic.mjs` writes `drawCalls`/`triangles` into `manifest.json` with no indication of
    what they are, and `CRITIC.md` hands the critic the §1 numbers to compare them against. Any
-   honest reader breaches. Routing that fix (a renamed/annotated field, or a scored main-view row
-   emitted alongside) to whoever owns `tools/critic.mjs` is worth more than a fifth re-derivation.
+   honest reader breaches. **The instruction half is fixed here** — `tools/CRITIC.md`'s "still fair
+   game against the §1 budget" line now says the opposite, with the reason and the pointer to the
+   scored tool. **The emitter half is routed, not done**, deliberately: `critic.mjs` is live
+   capture tooling and five lanes are queueing runs against it. The minimal recipe for its owner,
+   for whenever the queue is quiet: keep `drawCalls`/`triangles` byte-identical (renaming them is
+   the §144 hazard — every historical manifest becomes unreadable), and *add* one field per shot,
+   `submitted: true`, plus a top-level `budgetNote` string naming what the column is and where the
+   scored one comes from. Additive, no reader breaks, and the next critic cannot make the mistake.
 3. **The pass multiplication is real cost and stays open — as FRAME TIME, not as §1.** 3.55×
    mean submission multiplication over an in-budget scene is the cascades redrawing a level that
    `main.js:242` marked entirely as casters. Owner: RENDER/LIGHTING. Not settleable on this
