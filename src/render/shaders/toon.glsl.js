@@ -129,6 +129,11 @@ uniform float uShadowHoldKnee;
    SUBJECT's costume hue being crushed by the saturated blue shade lights, which is exactly
    what the band prevents. max() with the global knob: 0.0 is bit-identical by arithmetic. */
 uniform float uSubjShadowHold;
+/* uSubjLitHold — §289's mirror, taken on the ASSEMBLED surface colour rather than inside a
+   band, because the measured bleacher is the additive legs (spec/rim), not a multiply.
+   PREREG-lithold.md; the derivation is at the branch itself, in TOON_SHADE. 0.0 leaves the
+   branch untaken, so the build is bit-identical. */
+uniform float uSubjLitHold;
 uniform vec2  uShadowSharp;
 uniform vec3  uHaze;          // horizon haze colour
 uniform vec3  uHazeSun;       // forward-scatter colour looking into the sun
@@ -1209,6 +1214,84 @@ export const TOON_SHADE = /* glsl */ `
 		vec3 emissiveTerm = totalEmissiveRadiance;
 
 		outgoingLight = diff + sss + spec + metalEnv + rim + emissiveTerm;
+
+		/* ── uSubjLitHold — the subject keeps its own chroma against the ADDITIVE legs ──────
+		 *
+		 * PREREG-lithold.md. §289 shipped the mirror of this on the shade side: there the
+		 * costume's hue was crushed by a saturated shade light MULTIPLYING the albedo, and the
+		 * remedy was to hold the material's own hue inside that multiply. Critic r11/r12 then
+		 * ranked the other half — "the character is bleached to grey-white; the iconic blue is
+		 * gone" on traversal and combat — and §277 filed it as the LIT-side saturation half,
+		 * i.e. as the same multiply on the key's side of the ramp.
+		 *
+		 * **It is not that, and the arithmetic says so before any capture does.** Every
+		 * diffuse term above is multiplied by alb: alb * keyRad * key, albAmb * fill,
+		 * shadBand, the local pools. A product of the albedo with ANY light keeps the
+		 * albedo's channel ratios in the same order as long as the light does not invert them,
+		 * and a warm key over a blue costume does not invert them (the costume's blue is 100x
+		 * its red; §269's sandstone case inverted because sandstone's own G/R sat the wrong
+		 * side of a break-even, which a saturated blue cannot do under a warm light). Modelled
+		 * off the live modules on the r12 keys (progress/records/lithold-model.mjs): a fully
+		 * key-lit costume pixel renders at display saturation ~0.60, and mirroring §289's hold
+		 * into the key multiply moves it 0.603 -> 0.586 — a null, in the wrong direction.
+		 *
+		 * What is NOT multiplied by the albedo is everything on this line that is not diff:
+		 * spec (white, uSpecKey 0 so not even the key's colour), rim (uRimColor #7fd4ff at
+		 * rim 0.62 x rimGain 2.05 on the character), and PostFX's screen rim and bloom further
+		 * downstream. Those legs ADD an albedo-independent colour on top, and their share of a
+		 * costume pixel grows as the character shrinks on screen — which is exactly the shape
+		 * of the defect the critics ranked: close-ups keep the blue, action framings do not.
+		 * Fitted against the r12 frames themselves, the bright half of the costume reads as
+		 * diffuse + an achromatic additive of ~0.135 scene-linear on traversal and ~0.57 on
+		 * combat, against ~0.11 on sly-key. The blue is not being multiplied away; it is being
+		 * added over.
+		 *
+		 * So the hold is taken where those legs have already landed: on the assembled surface
+		 * colour, before the haze mix. Shape, term by term:
+		 *
+		 *   held  = alb * ( lum(outgoingLight) / lum(alb) )   — this surface's own albedo hue,
+		 *           carried to the luminance the shading actually produced. lum(held) ==
+		 *           lum(outgoingLight) identically, so BOTH mix endpoints share a luminance and
+		 *           the mix cannot move it: a pure chroma lever, never a brightness one, with
+		 *           no renormalisation needed (§269's held band needed one; this shape does not).
+		 *   vSlySkin — subject scope, §24.1's gate, the same one §289 shipped on. For a
+		 *           non-skinned draw the factor is exactly 0.0 and mix(x, y, 0.0) == x, so the
+		 *           environment is untouched by construction, not by tolerance.
+		 *   smoothstep(0, uShadowHoldKnee, albChroma) — §269's knee, reused rather than
+		 *           re-derived. An achromatic material has no hue of its own to hold, so the
+		 *           guards' identity-white mannequins (albedo chroma 0.03) and Sly's white
+		 *           trim sit at the bottom of the knee and do not move.
+		 *   loss   — the hold engages IN PROPORTION TO THE CHROMA THE RENDER DESTROYED:
+		 *           1 - outChroma/albChroma, clamped. A close-up whose costume still reads
+		 *           blue has little loss and takes little correction (modelled h 0.09 on
+		 *           sly-key at uSubjLitHold 0.70); a bleached action frame has a lot and takes
+		 *           a lot (h 0.35 on traversal). This is what makes the close-ups — the frames
+		 *           the critic praised — protections that the lever mostly declines to touch,
+		 *           instead of a trade against them.
+		 *
+		 * The endpoint is the albedo's OWN chroma, so the hold can never make a surface more
+		 * saturated than the material it is painting; it can only give back what the additive
+		 * legs took. It does not touch which legs those are — sizing or scoping spec/rim is a
+		 * different seal, and the diagnosis above routes it.
+		 *
+		 * uSubjLitHold 0.0: the branch is UNTAKEN and no arithmetic runs (the uLocalToon /
+		 * uSpecNormPow standard). Nothing republishes this uniform per frame, so a one-boot A/B
+		 * pokes shading.uniforms.uSubjLitHold.value and the poke sticks across __GAME.step()
+		 * — the uShadowHold contract. */
+		if ( uSubjLitHold > 0.0 ) {
+			float slyLitAlbMax = max( alb.r, max( alb.g, alb.b ) );
+			float slyLitAlbChroma = ( slyLitAlbMax - min( alb.r, min( alb.g, alb.b ) ) )
+			                      / max( slyLitAlbMax, 1e-4 );
+			float slyLitOutMax = max( outgoingLight.r, max( outgoingLight.g, outgoingLight.b ) );
+			float slyLitOutChroma = ( slyLitOutMax - min( outgoingLight.r, min( outgoingLight.g, outgoingLight.b ) ) )
+			                      / max( slyLitOutMax, 1e-4 );
+			float slyLitLoss = clamp( 1.0 - slyLitOutChroma / max( slyLitAlbChroma, 1e-4 ), 0.0, 1.0 );
+			float slyLitH = clamp( uSubjLitHold, 0.0, 1.0 ) * vSlySkin
+			              * smoothstep( 0.0, max( uShadowHoldKnee, 1e-4 ), slyLitAlbChroma )
+			              * slyLitLoss;
+			vec3 slyLitHeld = alb * ( slyLum( outgoingLight ) / max( slyLum( alb ), 1e-4 ) );
+			outgoingLight = mix( outgoingLight, slyLitHeld, slyLitH );
+		}
 
 		/* Deferred debug write. Both visualisers land AFTER the haze mix (see the note on the
 		   debugShadow block); these two carry the value across. 0.0 = no channel selected, and

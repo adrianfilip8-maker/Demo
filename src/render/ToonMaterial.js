@@ -315,6 +315,33 @@ export const TUNE = {
      across the clock — night behaviour is certified by that seal's PROT-NIGHT, not a pin. */
   subjShadowHold: 1.0,
 
+  /* ── subjLitHold — §289's mirror on the lit side (PREREG-lithold; critic r11/r12's
+     "the character is bleached to grey-white; the iconic blue is gone from the frame's own
+     hero", traversal + combat; §277's saturation half) ────────────────────────────────────
+
+     The SUBJECT holds its own chroma against the additive legs, on the assembled surface
+     colour and before the haze mix. The full derivation — including why this is NOT the
+     lit-band multiply §277 filed it as, and the r12-frame fit that puts an achromatic
+     additive of ~0.135 (traversal) / ~0.57 (combat) scene-linear over a costume pixel
+     against ~0.11 on sly-key — lives at the branch in toon.glsl.js's TOON_SHADE.
+
+     Contract (the localToon / uSpecNormPow standard):
+     - 0.0 = the branch is UNTAKEN and the build is bit-identical pre-seal. This is the
+       registered fallback: it ships above 0 only on PREREG-lithold's PASS, with the RESULT
+       cited in this comment.
+     - vSlySkin-scoped exactly as subjShadowHold above: for a non-skinned draw the mix factor
+       is exactly 0.0, so no architecture pixel can move (mix(x, y, 0.0) == x).
+     - luminance-exact: both mix endpoints carry lum(outgoingLight), so this is a chroma
+       lever that cannot buy saturation with brightness.
+     - the endpoint is the surface's OWN albedo hue, so the hold can never exceed the
+       material's authored chroma — it gives back, it does not invent.
+     - gated by §269's uShadowHoldKnee (0.25) on the albedo's chroma, so achromatic subject
+       materials (the guards' identity-white, Sly's white trim) do not move; and by the
+       measured chroma LOSS, so frames that still read blue take little correction.
+     - shared by identity and NOT republished per frame, so a one-boot A/B pokes
+       `shading.uniforms.uSubjLitHold.value` and the poke sticks (the uShadowHold contract). */
+  subjLitHold: 0.0,
+
   /* ── keySatMax — the red-key saturation clamp (PREREG-redkey; critic r11 family 1) ─────────
      Ceiling on the KEY light's linear chroma as consumed by the toon set: (max−min)/max of
      uKeyColor, clamped by a luma-matched blend toward grey at arrival in setKeyLight. Warm
@@ -1014,6 +1041,11 @@ export class Shading {
       uNeutralFill:  { value: TUNE.neutralFill },
       uSubjWarmShade: { value: TUNE.subjWarmShade },
       uSubjShadowHold: { value: TUNE.subjShadowHold },
+      /* PREREG-lithold — see TUNE.subjLitHold for the contract. Shared by identity and
+         deliberately NOT republished per frame (unlike uSubjShadowHold, which setKeyLight
+         rewrites on every nightAmount publish): the sealed A/B's arms are direct pokes of
+         this uniform and they must survive `__GAME.step()`. */
+      uSubjLitHold:  { value: TUNE.subjLitHold },
       uAmbIntensity: { value: TUNE.ambIntensity },
       uShadowColor:  { value: new THREE.Color(0x000000) },
       uShadowColorLit: { value: new THREE.Color(0x000000) },
