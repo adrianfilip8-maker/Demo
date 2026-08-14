@@ -151,6 +151,23 @@ are the single largest shadow cost in the frame — a 30 k-triangle body redrawn
 cascade — which is the same owner F3 identifies from the other side, and the reason a guard LOD
 would pay in the counted column even where it is invisible in the scored one.
 
+**A second, smaller waste, quantified while it was in view.** The 12 meshes carrying
+`frustumCulled = false` (vegetation's 8 instanced batches, `nile`, `coins`, `guard_beams`,
+`guard_pools` — 86,200 triangles in total) are submitted whether or not the camera can see them,
+in the beauty pass *and* the prepass. Per shot, the part that is off-screen and drawn anyway:
+
+| shots | off-screen but drawn |
+|---|---|
+| temple, interior, guard, sly-startle, sly-arm | 11 draws / 67,768 tris (×2 passes) |
+| traversal | 9 draws / 58,264 tris |
+| combat | 8 draws / 52,000 tris |
+| the other nine | 0 — they are all in frame |
+
+Not a §1 item (those are the *low* shots), and not a free fix — `GuardModel.js:1900` documents
+exactly why the flag gets turned off, and turning it back on needs a correct, generously inflated
+bounding volume per mesh, not just the flag. Routed to TERRAIN / VEGETATION / PROPS with the
+numbers rather than seized: those are their files, not this lane's (§1 module ownership).
+
 `interior` shows the structural waste most clearly: 1.195 M triangles predicted into shadow maps
 from inside a sealed tomb, the top items being the hypostyle wall, the desert sand ring, the palms
 and the surface guards — none of which can cast into that room. Its *measured* counter is the
