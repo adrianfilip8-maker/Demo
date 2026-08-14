@@ -24195,3 +24195,25 @@ been executed four times and will be needed again:
 (nothing durable has been lost precisely because of this), and prefer SHORT runs — a 4.5 h
 capture (§316) is a bet that no rollback lands inside it, and tonight that bet loses more often
 than it wins.
+
+## §326 — lithold VOIDs on its own staging gate, and the finding is that the action-shot bleach is GONE from this tree
+
+`BG` — the seal's registered "a staging that isn't the diagnosed one VOIDs" gate, measured on the
+**off** arms before any candidate acts — failed: traversal costume saturation **0.205 → 0.678**
+(bar ≤0.30), combat **0.080 → 0.486** (bar ≤0.18), while the control `sly-key` is **identical**
+at 0.516. E1/E2/E3/KO/PC all VOID by construction; the candidate was never measured and
+`subjLitHold` stays 0.0. **An unchanged control rules out a global grade shift**: the change is
+confined to exactly the two shots §312 called "barely key-lit (ramp 0.05/0.00)". On this tree,
+Sly's blue survives the action frames.
+**Cause NOT established and deliberately not asserted.** Candidates: (a) the goldenrake +
+nightfloor ships (0525d5e) landing between the r12 capture and this run — though goldenrake
+carries `*(1.0 - vSlySkin)` and excludes the subject, so any effect would be indirect; (b) the
+r12 frames were captured with a LIVE world clock (§304/§308), so the character sat at an
+uncontrolled phase while this run stages deterministically. r13's blind read settles it.
+**My error, recorded:** the seal calibrated BG on `shots/r12/` frames that predate two shipped
+lighting changes on the tree it captured against — the §282 class, caused by my sequencing.
+**Rule: re-derive frame-derived calibrations against the CURRENT tree whenever a ship has landed
+since those frames, and name the tree in the seal.** The BG gate catching this is the instrument
+working — it refused to measure a defect that is not there.
+Also unadjudicated inside the voided block: ENV_dunes/ENV_interior FAIL, ENV_combat VOID — a
+successor must read the vSlySkin debug-mask arms rather than inherit these.

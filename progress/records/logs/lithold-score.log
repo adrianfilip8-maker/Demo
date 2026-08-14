@@ -1,0 +1,124 @@
+R  hero         off-vs-back 0 px
+R  kaykit       off-vs-back 0 px
+R  temple       off-vs-back 0 px
+R  sly-closeup  off-vs-back 0 px
+R  sly-startle  off-vs-back 0 px
+R  sly-perch    off-vs-back 0 px
+R  sly-arm      off-vs-back 0 px
+R  courtyard    off-vs-back 0 px
+R  dunes        off-vs-back 0 px
+R  interior     off-vs-back 0 px
+R  night        off-vs-back 0 px
+R  traversal    off-vs-back 0 px
+R  combat       off-vs-back 0 px
+R  guard        off-vs-back 0 px
+R  sly-profile  off-vs-back 0 px
+R  sly-key      off-vs-back 0 px
+R2 traversal    off-vs-bk2  0 px
+R2 combat       off-vs-bk2  0 px
+R2 temple       off-vs-bk2  0 px
+R2 dunes        off-vs-bk2  0 px
+R2 night        off-vs-bk2  0 px
+R2 interior     off-vs-bk2  0 px
+CAL traversal   (64,128,191) over 61.5% of frame (want >= 5%)
+CAL combat      (64,128,191) over 0.0% of frame (want >= 5%)
+CAL temple      (64,128,191) over 30.5% of frame (want >= 5%)
+CAL dunes       (64,128,191) over 78.3% of frame (want >= 5%)
+CAL night       (64,128,191) over 76.0% of frame (want >= 5%)
+CAL interior    (64,128,191) over 77.3% of frame (want >= 5%)
+ROI traversal   .off  n   375  S 0.678  L 96.7  hue 214.5  |dref| 1.0
+ROI traversal   .on   n   375  S 0.694  L 96.7  hue 214.1  |dref| 0.6
+ROI traversal   .ko   n   375  S 0.687  L 96.7  hue 214.3  |dref| 0.8
+ROI combat      .off  n  1242  S 0.486  L 110.9  hue 218.8  |dref| 5.3
+ROI combat      .on   n  1242  S 0.503  L 111.0  hue 218.3  |dref| 4.8
+ROI combat      .ko   n  1242  S 0.496  L 111.0  hue 218.5  |dref| 5.0
+ROI sly-key     .off  n  2325  S 0.516  L 164.3  hue 205.4  |dref| 8.1
+ROI sly-key     .on   n  2325  S 0.516  L 164.6  hue 205.8  |dref| 7.7
+ROI sly-closeup .off  n  2560  S 0.453  L 172.7  hue 205.3  |dref| 8.2
+ROI sly-closeup .on   n  2560  S 0.455  L 172.9  hue 205.6  |dref| 7.9
+ROI night       .off  n   230  S 0.889  L 29.6  hue 220.0  |dref| 6.5
+ROI night       .on   n   230  S 0.896  L 29.8  hue 219.8  |dref| 6.3
+BG  off-arm separation: traversal 0.678 (<=0.30) · combat 0.486 (<=0.18) · sly-key 0.516 (>=0.42, and >= 2.0x traversal)
+PF  muzzle       b-r -46.8 -> -46.8  d -0.0 (want |d| <= 7, n 2100)
+PF  tailfur      b-r -15.4 -> -15.4  d -0.0 (want |d| <= 7, n 19500)
+PN  night subj  dS 0.007 (want >= -0.020)  dL 0.21 (want |dL| <= 4)  n 230
+PFR temple       FULL dL -0.000 (want |dL| <= 1.5)  d(b-r) 0.000 (want |d| <= 3.0)
+PFR dunes        FULL dL -0.001 (want |dL| <= 1.5)  d(b-r) 0.006 (want |d| <= 3.0)
+PFR interior     FULL dL 0.000 (want |dL| <= 1.5)  d(b-r) 0.013 (want |d| <= 3.0)
+PFR night        FULL dL -0.000 (want |dL| <= 1.5)  d(b-r) -0.001 (want |d| <= 3.0)
+ENV traversal    differing px: 3179 within mask+3px, 0 beyond (want 0)
+ENV temple       differing px: 934 within mask+3px, 0 beyond (want 0)
+ENV dunes        differing px: 4744 within mask+3px, 3 beyond (want 0)
+ENV night        differing px: 2277 within mask+3px, 0 beyond (want 0)
+ENV interior     differing px: 5570 within mask+3px, 1 beyond (want 0)
+VC  56 scored arms checked
+V4  trees {2b5c7c49ad9c4668} vs lock-grant 2b5c7c49ad9c4668 (HEAD src 2b5c7c49ad9c4668, exact); rows 68 (want 68)
+--  hero         whole-frame differing px off-vs-on 9072
+--  kaykit       whole-frame differing px off-vs-on 2433
+--  temple       whole-frame differing px off-vs-on 934
+--  sly-closeup  whole-frame differing px off-vs-on 29098
+--  sly-startle  whole-frame differing px off-vs-on 77297
+--  sly-perch    whole-frame differing px off-vs-on 26669
+--  sly-arm      whole-frame differing px off-vs-on 22747
+--  courtyard    whole-frame differing px off-vs-on 1176
+--  dunes        whole-frame differing px off-vs-on 4747
+--  interior     whole-frame differing px off-vs-on 5571
+--  night        whole-frame differing px off-vs-on 2277
+--  traversal    whole-frame differing px off-vs-on 3179
+--  combat       whole-frame differing px off-vs-on 11402
+--  guard        whole-frame differing px off-vs-on 7906
+--  sly-profile  whole-frame differing px off-vs-on 28475
+--  sly-key      whole-frame differing px off-vs-on 30424
+
+  R_hero             PASS
+  R_kaykit           PASS
+  R_temple           PASS
+  R_sly-closeup      PASS
+  R_sly-startle      PASS
+  R_sly-perch        PASS
+  R_sly-arm          PASS
+  R_courtyard        PASS
+  R_dunes            PASS
+  R_interior         PASS
+  R_night            PASS
+  R_traversal        PASS
+  R_combat           PASS
+  R_guard            PASS
+  R_sly-profile      PASS
+  R_sly-key          PASS
+  R2_traversal       PASS
+  R2_combat          PASS
+  R2_temple          PASS
+  R2_dunes           PASS
+  R2_night           PASS
+  R2_interior        PASS
+  CAL_traversal      PASS
+  CAL_combat         FAIL
+  CAL_temple         PASS
+  CAL_dunes          PASS
+  CAL_night          PASS
+  CAL_interior       PASS
+  BG                 FAIL
+  E1                 VOID
+  E2                 VOID
+  E3                 VOID
+  KO                 VOID
+  PC_sly-key         VOID
+  PC_sly-closeup     VOID
+  CAL-FACE-N         PASS
+  PROT-FACE          PASS
+  PROT_NIGHT         PASS
+  PFR_temple         PASS
+  PFR_dunes          PASS
+  PFR_interior       PASS
+  PFR_night          PASS
+  ENV_traversal      PASS
+  ENV_combat         VOID
+  ENV_temple         PASS
+  ENV_dunes          FAIL
+  ENV_night          PASS
+  ENV_interior       FAIL
+  VC                 PASS
+  V4                 PASS
+
+==> DO NOT SHIP — CAL_combat FAIL, BG FAIL, E1 VOID, E2 VOID, E3 VOID, KO VOID, PC_sly-key VOID, PC_sly-closeup VOID, ENV_combat VOID, ENV_dunes FAIL, ENV_interior FAIL  (VOID is not PASS — E1, E2, E3, KO, PC_sly-key, PC_sly-closeup, ENV_combat could not be evaluated)
