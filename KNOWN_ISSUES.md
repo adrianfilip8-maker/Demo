@@ -23975,3 +23975,18 @@ Two rules follow, and the second is the one that bites:
    capture runs; with N runs queued back-to-back the lock is never clear, so every PASS verdict
    must hold its ship-write until the whole queue drains, then land together with one suite run.
    Folding (offline scoring, RESULT, KI) is unaffected and proceeds per run.
+
+## §316 — a deep FIFO starves its own tail: waiters die at the 3-hour give-up before their turn
+
+Observed, not theorised: with seven runs queued behind a 3.2-hour holder, `tombdim2` and `props1`
+each waited the full **10,800 s give-up** and then aborted — and both aborted a second way too
+(tree drift, §315), so the wait bought nothing. Arithmetic: N runs x ~1 h each vs a 3 h ceiling
+means everything past position ~3 is dead on arrival, and a blind relaunch just re-enters the
+same doomed queue.
+**Rules:** (1) keep at most ~3 runs queued; hold the rest and launch as slots free — a run that
+cannot reach the lock inside 3 h should not be launched yet. (2) Prefer runners that need FEW
+arms; a 2-shot x 5-arm run at ~9 min/arm is 90 min of lock and starves everything behind it.
+(3) When a waiter dies, archive its out-dir immediately (PF7 forces this anyway) so the relaunch
+is one command at the right moment, not a scramble. (4) Runners that STAMP the tree rather than
+GATE on it (the canegold3 pattern) survive both hazards — same-boot poke arms make a foreign
+edit common-mode, and it is the only run of seven that kept its lock through the churn.
