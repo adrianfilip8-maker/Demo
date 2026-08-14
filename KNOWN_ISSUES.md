@@ -24039,3 +24039,21 @@ simply worth less *right now* than the interior hierarchy (r12's own stated thes
 fix (a named r12 family). Out-dir archived; relaunch is one command when the machine is idle.
 **Rule: when runs contend, rank by what the frame can actually become given standing owner
 decisions — a fix whose shot is capped by a parked item yields last.**
+
+## §320 — props1: coinlit VOID-INSTRUMENT (scorer NaN on valid frames); colossus LOOK NOT MET on 7/7 numeric bars
+
+Ran exclusively per §318 (only installing run of the wave; patch in under the lock, src restored
+EXACT on exit). Two outcomes, RESULT-props1.md:
+1. **coinlit VOID-INSTRUMENT** — every bar returns NaN with non-zero mask counts, i.e. `statOf`
+   accumulated undefined samples: a scorer read bug, not a capture fault. The 30 frames are valid
+   1280x720, so **a re-score costs zero lock time**. The candidate is unjudged in either
+   direction; handed back to PROPS.
+2. **colossus LOOK NOT MET → does not ship.** All seven numeric bars passed and the improvement
+   is real in the pixels (bases step forward, recesses separate the masses, the knee ledge reads
+   where r12 had flat slabs) — but against `shots/r12/courtyard.png` the masses still read as
+   stepped ARCHITECTURE, not a seated figure: no torso/arm assembly, no lap, crown still a slab.
+   The seal's own deliverable was "reads as a seated colossus, not a crate", so the honest call
+   is NOT MET. **This is the case the LOOK gate exists for: profile-inflection counts and knee
+   heights are necessary for a seated figure and not sufficient for one.** A re-seal should aim
+   at missing MASSES (thigh/lap volume, an arm break in the silhouette), not more inflections.
+Coordinator adjudication — the lane had reported and ended; recorded as such.
