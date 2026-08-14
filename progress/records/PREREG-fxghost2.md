@@ -13,15 +13,17 @@ of any arm has been rendered.** Runner `progress/records/fxfix/fxfix1.mjs` and s
 with PREREG-rimfloor2 (one boot, one lock window, per-shot poke arms); the two seals register,
 score and ship INDEPENDENTLY — this file's verdict consumes only the rows named here.
 
-**Seal provenance (recorded after the fact, before any capture).** The seal's files —
-this document, its sibling seal, the shared runner `progress/records/fxfix/fxfix1.mjs`,
-the two scorers, the two INERT mechanisms and their pin tests — landed in commit
-`6c269c1` on `claude/sly-cooper-ancient-egypt-0koo0u` and were pushed at `f6dea0d`. The
-tree is shared with five other lanes and that commit carries another lane's message
-because it swept a shared index; the CONTENT of this seal is complete in it and predates
-every frame of `progress/records/fxfix1/`, which did not exist at that sha. Recorded here
-rather than silently, because "sealed before any capture" is a claim about a sha and has
-to be checkable as one.
+**Seal provenance (recorded before any capture).** The seal's files — this document, its
+sibling seal, the shared runner `progress/records/fxfix/fxfix1.mjs`, the two scorers, the
+two INERT mechanisms and their pin tests — are commit **`273cca1`** on
+`claude/sly-cooper-ancient-egypt-0koo0u`, pushed to origin at that sha. They first landed
+in `6c269c1`, which a neighbouring lane then rewrote out of the branch (the tree and the
+git index are shared with five other lanes); `6c269c1` is no longer an ancestor of HEAD
+and `273cca1` is the sha to check. Either way the seal predates every frame of
+`progress/records/fxfix1/`, which did not exist at either sha. Recorded because "sealed
+before any capture" is a claim about a sha and has to be checkable as one — and because a
+sha quoted from a commit that was later rewritten is exactly the kind of provenance that
+looks checkable and is not.
 
 ## 1. Ownership and discipline
 
