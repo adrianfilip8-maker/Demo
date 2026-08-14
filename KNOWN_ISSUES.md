@@ -24026,3 +24026,16 @@ verify exclusivity itself (holder pid alive AND no other node runner alive) imme
 the install, not merely hold the lockfile. (2) Never launch an installing run while any other
 capture is alive. (3) Prefer no-install poke designs (the canegold3/fxfix/tombdim2 pattern) —
 they are the reason tonight's overlap cost throughput instead of correctness.
+
+## §319 — under contention, triage by MARGINAL VALUE, not by queue order — and the mannequin parking caps the guard frame's ceiling
+
+At 07:49 three concurrent runs (§318) had starved each other: `tombdim2b` had produced **zero
+frames in 43 min** after a 280 s staging (vs ~30-60 s solo), `guardcone2` 4 frames in 16 shots,
+only `fxfix2` was productive at 26. Killing one to unblock two is the correct trade, and the
+choice was made on marginal value rather than arrival order: **`guardcone2` was stopped** because
+§309 parks the guard MODEL, so the `guard` frame cannot reach a good score no matter how good the
+cone is — the mannequin dominates that composition. Fixing the cone is still worth doing; it is
+simply worth less *right now* than the interior hierarchy (r12's own stated thesis) and the ink
+fix (a named r12 family). Out-dir archived; relaunch is one command when the machine is idle.
+**Rule: when runs contend, rank by what the frame can actually become given standing owner
+decisions — a fix whose shot is capped by a parked item yields last.**
