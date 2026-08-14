@@ -24137,3 +24137,23 @@ were all decoded from real samples. Recorded so nobody re-audits it.
    widening as an inflection and the eye never saw an arm. Any "does the form read" seal needs a
    statistic of the RENDERED figure at a registered camera (ink-edge length / connected
    components strictly inside the silhouette), not of its profile.
+
+## §323 — tombdim2: DO NOT SHIP, but the paired thesis is PROVED and two arcs converge on the shadow-tint path
+
+The co-lever works: §307 failed because an ambient-only dim dragged the pools down (POOL hold
+0.797); at p30 (amb 0.30 x pool 6) the pool is **brighter than base** (1.032) while FAR/VAULT
+fall to 0.63–0.67, and the focal inversion is destroyed — GOLD−VAULT **−1.7 → +16.4 L**,
+SARC−VAULT **−2.0 → +14.5**. The sarcophagus stops being darker than the wall behind it. r12's
+own prescription is achievable.
+**What kills it: the pool term is WARM**, so raising it to pay for the dim necessarily warms the
+field. W2 measured VAULT R−B **−15.0 → +0.7** and the LOOK confirms it — not murky, RED: the
+whole tomb turns red-orange, trading r12's "lavender storeroom" for the salmon-monochrome that
+both blind critics rank as the #1 cost family. p45 keeps the violet but buys too little darkness
+and half the focal separation; the two arms BRACKET the answer, and W1 fails on both (p45 by 0.5
+of 120.3). Registered forecast was SHIP-at-p30 **with the warm takeover as the named risk — the
+named risk fired**, i.e. the seal predicted its own failure mode.
+**Convergence:** the dark field needs a cool source that is neither the ambient fill (§300 proved
+recolouring a fill leg REMOVES hue split) nor the pool (warm by construction). Both the twilight
+arc (§300) and this one now point at the **shade-scoped toon shadow-tint path**; one seal could
+serve both. Successor is a THREE-lever seal (ambient x pool x shade-cool) and, under §141.1, a
+new dose pair is a new seal, not a re-tune. Nothing shipped: tombAmb 1.0, localToon 2.5.

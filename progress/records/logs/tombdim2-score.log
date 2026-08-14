@@ -1,0 +1,172 @@
+R hero         off-vs-back 0 px
+R kaykit       off-vs-back 0 px
+R temple       off-vs-back 0 px
+R sly-closeup  off-vs-back 0 px
+R sly-startle  off-vs-back 0 px
+R sly-perch    off-vs-back 0 px
+R sly-arm      off-vs-back 0 px
+R courtyard    off-vs-back 0 px
+R dunes        off-vs-back 0 px
+R interior     off-vs-back 0 px
+R night        off-vs-back 0 px
+R traversal    off-vs-back 0 px
+R combat       off-vs-back 0 px
+R guard        off-vs-back 0 px
+R sly-profile  off-vs-back 0 px
+R sly-key      off-vs-back 0 px
+B hero         off-vs-xtr  0 px
+B kaykit       off-vs-xtr  0 px
+B temple       off-vs-xtr  0 px
+B sly-closeup  off-vs-xtr  0 px
+B sly-startle  off-vs-xtr  0 px
+B sly-perch    off-vs-xtr  0 px
+B sly-arm      off-vs-xtr  0 px
+B courtyard    off-vs-xtr  0 px
+B dunes        off-vs-xtr  0 px
+B night        off-vs-xtr  0 px
+B traversal    off-vs-xtr  0 px
+B combat       off-vs-xtr  0 px
+B guard        off-vs-xtr  0 px
+B sly-profile  off-vs-xtr  0 px
+B sly-key      off-vs-xtr  0 px
+
+-- off (tombAmb 1, localToon 2.5)
+   FAR    L   63.7  R-B  -14.8  hue 253  S 0.303  dark 0.005
+   VAULT  L   74.1  R-B  -15.0  hue 201  S 0.253  dark 0.004
+   POOL   L   95.0  R-B   75.4  hue  10  S 0.513  dark 0.017
+   CTRL   L   84.9  R-B   36.0  hue   6  S 0.340  dark 0.021
+   SARC   L   72.1  R-B   11.0  hue  13  S 0.317  dark 0.054
+   GOLD   L   72.4  R-B   11.6  hue  18  S 0.322  dark 0.055
+   JARS   L  124.0  R-B   28.5  hue  28  S 0.217  dark 0.006
+   JARSL  L  110.9  R-B   13.5  hue  33  S 0.176  dark 0.008
+   JARST  L  117.2  R-B   38.1  hue  18  S 0.282  dark 0.005
+   FRAME (reported, never barred): meanL 79.6 sd 30.1  cool(R-B<=-5) 24.0%  warm(R-B>=20) 50.4%  dark(L<40) 8.4%  bright(L>120) 7.3%
+-- amb (tombAmb 0.3, localToon 2.5)
+   FAR    L   39.3  R-B   -5.8  hue 280  S 0.426  dark 0.029
+   VAULT  L   42.2  R-B  -14.4  hue 223  S 0.438  dark 0.183
+   POOL   L   75.7  R-B   97.8  hue  12  S 0.683  dark 0.048
+   CTRL   L   58.5  R-B   50.8  hue   3  S 0.548  dark 0.053
+   SARC   L   50.6  R-B   23.5  hue   8  S 0.491  dark 0.257
+   GOLD   L   51.9  R-B   24.5  hue  11  S 0.494  dark 0.260
+   JARS   L   97.5  R-B   50.0  hue  21  S 0.382  dark 0.021
+   JARSL  L   83.5  R-B   28.0  hue  18  S 0.312  dark 0.026
+   JARST  L   96.2  R-B   63.1  hue  18  S 0.463  dark 0.010
+   FRAME (reported, never barred): meanL 57.3 sd 29.3  cool(R-B<=-5) 18.3%  warm(R-B>=20) 65.4%  dark(L<40) 35.1%  bright(L>120) 2.6%
+-- pool (tombAmb 1, localToon 6)
+   FAR    L   66.2  R-B   -1.6  hue 296  S 0.346  dark 0.005
+   VAULT  L   77.0  R-B   -3.2  hue 229  S 0.273  dark 0.003
+   POOL   L  110.5  R-B   99.0  hue  16  S 0.574  dark 0.009
+   CTRL   L   97.1  R-B   73.1  hue  12  S 0.498  dark 0.017
+   SARC   L   79.6  R-B   33.0  hue  16  S 0.408  dark 0.037
+   GOLD   L   80.3  R-B   33.8  hue  18  S 0.418  dark 0.038
+   JARS   L  133.2  R-B   48.1  hue  24  S 0.303  dark 0.004
+   JARSL  L  117.4  R-B   31.1  hue  23  S 0.255  dark 0.005
+   JARST  L  130.6  R-B   61.1  hue  23  S 0.371  dark 0.004
+   FRAME (reported, never barred): meanL 88.5 sd 34.1  cool(R-B<=-5) 15.8%  warm(R-B>=20) 71.4%  dark(L<40) 7.5%  bright(L>120) 20.2%
+-- p30 (tombAmb 0.3, localToon 6)
+   FAR    L   42.5  R-B    9.0  hue 322  S 0.501  dark 0.029
+   VAULT  L   46.5  R-B    0.7  hue 300  S 0.466  dark 0.137
+   POOL   L   98.0  R-B  115.4  hue  16  S 0.675  dark 0.036
+   CTRL   L   76.7  R-B   97.5  hue  12  S 0.690  dark 0.040
+   SARC   L   61.0  R-B   48.4  hue  15  S 0.564  dark 0.155
+   GOLD   L   62.9  R-B   49.4  hue  16  S 0.568  dark 0.146
+   JARS   L  113.2  R-B   73.9  hue  22  S 0.468  dark 0.013
+   JARSL  L   94.7  R-B   53.0  hue  19  S 0.423  dark 0.014
+   JARST  L  115.6  R-B   87.1  hue  24  S 0.532  dark 0.008
+   FRAME (reported, never barred): meanL 69.8 sd 35.2  cool(R-B<=-5) 14.3%  warm(R-B>=20) 77.0%  dark(L<40) 21.8%  bright(L>120) 9.0%
+-- p45 (tombAmb 0.45, localToon 4)
+   FAR    L   49.7  R-B   -5.1  hue 285  S 0.408  dark 0.010
+   VAULT  L   55.9  R-B  -11.8  hue 224  S 0.379  dark 0.051
+   POOL   L   94.8  R-B  108.0  hue  14  S 0.649  dark 0.019
+   CTRL   L   75.5  R-B   66.9  hue   8  S 0.550  dark 0.036
+   SARC   L   62.8  R-B   30.1  hue  13  S 0.462  dark 0.120
+   GOLD   L   64.0  R-B   31.3  hue  15  S 0.468  dark 0.116
+   JARS   L  113.9  R-B   53.9  hue  23  S 0.367  dark 0.011
+   JARSL  L   98.4  R-B   33.0  hue  21  S 0.308  dark 0.012
+   JARST  L  112.9  R-B   68.9  hue  20  S 0.445  dark 0.007
+   FRAME (reported, never barred): meanL 70.9 sd 31.8  cool(R-B<=-5) 17.4%  warm(R-B>=20) 69.7%  dark(L<40) 14.7%  bright(L>120) 6.1%
+-- p30hi (tombAmb 0.3, localToon 8)
+   FAR    L   44.1  R-B   15.5  hue 331  S 0.520  dark 0.029
+   VAULT  L   48.6  R-B    7.5  hue 337  S 0.483  dark 0.122
+   POOL   L  102.3  R-B  113.7  hue  19  S 0.670  dark 0.032
+   CTRL   L   85.2  R-B  110.6  hue  14  S 0.708  dark 0.035
+   SARC   L   65.5  R-B   56.5  hue  16  S 0.584  dark 0.124
+   GOLD   L   67.5  R-B   57.2  hue  18  S 0.587  dark 0.111
+   JARS   L  119.1  R-B   79.1  hue  23  S 0.480  dark 0.011
+   JARSL  L   99.3  R-B   60.5  hue  20  S 0.449  dark 0.011
+   JARST  L  121.6  R-B   89.8  hue  27  S 0.535  dark 0.007
+   FRAME (reported, never barred): meanL 74.6 sd 36.8  cool(R-B<=-5) 13.3%  warm(R-B>=20) 78.7%  dark(L<40) 18.4%  bright(L>120) 13.2%
+-- back (tombAmb 1, localToon 2.5)
+   FAR    L   63.7  R-B  -14.8  hue 253  S 0.303  dark 0.005
+   VAULT  L   74.1  R-B  -15.0  hue 201  S 0.253  dark 0.004
+   POOL   L   95.0  R-B   75.4  hue  10  S 0.513  dark 0.017
+   CTRL   L   84.9  R-B   36.0  hue   6  S 0.340  dark 0.021
+   SARC   L   72.1  R-B   11.0  hue  13  S 0.317  dark 0.054
+   GOLD   L   72.4  R-B   11.6  hue  18  S 0.322  dark 0.055
+   JARS   L  124.0  R-B   28.5  hue  28  S 0.217  dark 0.006
+   JARSL  L  110.9  R-B   13.5  hue  33  S 0.176  dark 0.008
+   JARST  L  117.2  R-B   38.1  hue  18  S 0.282  dark 0.005
+   FRAME (reported, never barred): meanL 79.6 sd 30.1  cool(R-B<=-5) 24.0%  warm(R-B>=20) 50.4%  dark(L<40) 8.4%  bright(L>120) 7.3%
+
+KO  POOL L: amb 75.7 -> p30 98.0 -> p30hi 102.3 (want +8 then +1.0); pool 110.5 vs off 95.0 (want >= off+5)
+VB: interior.p30 uShadowColor lum ratio 0.40879 (model 0.40879, §261 cap release)
+trees: {2b5c7c49ad9c4668} expected 2b5c7c49ad9c4668; rows 52 (want 52)
+
+== CONTROL amb (tombAmb 0.3 x localToon 2.5) — never shipped from this seal
+   D1  darkness: FAR ratio 0.617 (want 0.30-0.85)  VAULT ratio 0.569 (want 0.30-0.72)
+   D2  POOL absolute hold 0.797 (want >= 0.90; §307's ambient-only arm scored 0.797)  75.7 vs 95.0 L
+   D3  SARC absolute hold 0.701 (want >= 0.78; §307 scored 0.702)   GOLD hold 0.717 (reported)
+   H1  focal: GOLD-VAULT 9.7 L (want >= +12; off -1.7)   SARC-VAULT 8.4 (want >= +8; off -2.0)
+   H2  hierarchy non-regression: JARS/GOLD 1.877 vs off 1.711 (want <= 1.968)  [inversion is NOT claimed — seal §9]
+   W1  warm/cool separation 112.3 vs off 90.3 (want >= 120.3)
+   W2  the dark field stays violet: VAULT R-B -14.4 (want <= -8; off -15.0)   [FAR R-B -5.8 reported, not barred — seal §4]
+   CT  floor between pools dL -26.5 (want -34..-6)
+
+== CONTROL pool (tombAmb 1 x localToon 6) — never shipped from this seal
+   D1  darkness: FAR ratio 1.039 (want 0.30-0.85)  VAULT ratio 1.039 (want 0.30-0.72)
+   D2  POOL absolute hold 1.163 (want >= 0.90; §307's ambient-only arm scored 0.797)  110.5 vs 95.0 L
+   D3  SARC absolute hold 1.103 (want >= 0.78; §307 scored 0.702)   GOLD hold 1.108 (reported)
+   H1  focal: GOLD-VAULT 3.3 L (want >= +12; off -1.7)   SARC-VAULT 2.6 (want >= +8; off -2.0)
+   H2  hierarchy non-regression: JARS/GOLD 1.659 vs off 1.711 (want <= 1.968)  [inversion is NOT claimed — seal §9]
+   W1  warm/cool separation 102.2 vs off 90.3 (want >= 120.3)
+   W2  the dark field stays violet: VAULT R-B -3.2 (want <= -8; off -15.0)   [FAR R-B -1.6 reported, not barred — seal §4]
+   CT  floor between pools dL 12.2 (want -34..-6)
+
+== CONTROL p30hi (tombAmb 0.3 x localToon 8) — never shipped from this seal
+   D1  darkness: FAR ratio 0.692 (want 0.30-0.85)  VAULT ratio 0.655 (want 0.30-0.72)
+   D2  POOL absolute hold 1.077 (want >= 0.90; §307's ambient-only arm scored 0.797)  102.3 vs 95.0 L
+   D3  SARC absolute hold 0.908 (want >= 0.78; §307 scored 0.702)   GOLD hold 0.931 (reported)
+   H1  focal: GOLD-VAULT 18.9 L (want >= +12; off -1.7)   SARC-VAULT 16.9 (want >= +8; off -2.0)
+   H2  hierarchy non-regression: JARS/GOLD 1.765 vs off 1.711 (want <= 1.968)  [inversion is NOT claimed — seal §9]
+   W1  warm/cool separation 106.2 vs off 90.3 (want >= 120.3)
+   W2  the dark field stays violet: VAULT R-B 7.5 (want <= -8; off -15.0)   [FAR R-B 15.5 reported, not barred — seal §4]
+   CT  floor between pools dL 0.3 (want -34..-6)
+
+== CANDIDATE p30 (tombAmb 0.3 x localToon 6)
+   D1  darkness: FAR ratio 0.667 (want 0.30-0.85)  VAULT ratio 0.627 (want 0.30-0.72)
+   D2  POOL absolute hold 1.032 (want >= 0.90; §307's ambient-only arm scored 0.797)  98.0 vs 95.0 L
+   D3  SARC absolute hold 0.845 (want >= 0.78; §307 scored 0.702)   GOLD hold 0.868 (reported)
+   H1  focal: GOLD-VAULT 16.4 L (want >= +12; off -1.7)   SARC-VAULT 14.5 (want >= +8; off -2.0)
+   H2  hierarchy non-regression: JARS/GOLD 1.801 vs off 1.711 (want <= 1.968)  [inversion is NOT claimed — seal §9]
+   W1  warm/cool separation 114.6 vs off 90.3 (want >= 120.3)
+   W2  the dark field stays violet: VAULT R-B 0.7 (want <= -8; off -15.0)   [FAR R-B 9.0 reported, not barred — seal §4]
+   CT  floor between pools dL -8.3 (want -34..-6)
+   D1:PASS  D2:PASS  D3:PASS  H1:PASS  H2:PASS  W1:FAIL  W2:FAIL  CT:PASS  KO:PASS  BG:PASS  VB:PASS  V4:PASS
+   R/B bars: all 31 PASS
+   ==> DO NOT SHIP — W1 FAIL, W2 FAIL
+
+== CANDIDATE p45 (tombAmb 0.45 x localToon 4)
+   D1  darkness: FAR ratio 0.779 (want 0.30-0.85)  VAULT ratio 0.755 (want 0.30-0.72)
+   D2  POOL absolute hold 0.998 (want >= 0.90; §307's ambient-only arm scored 0.797)  94.8 vs 95.0 L
+   D3  SARC absolute hold 0.871 (want >= 0.78; §307 scored 0.702)   GOLD hold 0.883 (reported)
+   H1  focal: GOLD-VAULT 8.0 L (want >= +12; off -1.7)   SARC-VAULT 6.9 (want >= +8; off -2.0)
+   H2  hierarchy non-regression: JARS/GOLD 1.780 vs off 1.711 (want <= 1.968)  [inversion is NOT claimed — seal §9]
+   W1  warm/cool separation 119.8 vs off 90.3 (want >= 120.3)
+   W2  the dark field stays violet: VAULT R-B -11.8 (want <= -8; off -15.0)   [FAR R-B -5.1 reported, not barred — seal §4]
+   CT  floor between pools dL -9.5 (want -34..-6)
+   D1:FAIL  D2:PASS  D3:PASS  H1:FAIL  H2:PASS  W1:FAIL  W2:PASS  CT:PASS  KO:PASS  BG:PASS  VB:PASS  V4:PASS
+   R/B bars: all 31 PASS
+   ==> DO NOT SHIP — D1 FAIL, H1 FAIL, W1 FAIL
+
+==> DO NOT SHIP — no candidate arm passed every bar (PF1: tombAmb stays 1.0, localToon stays 2.5, finding recorded).
+frames: /home/user/Demo/progress/records/tombdim21  (manifest head 25f3868e29eb)
