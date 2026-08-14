@@ -75,3 +75,11 @@ and two shots (guard, combat) whose subjects are FX that have never had a dedica
    texture from all yaws, lit-band saturation hold (SHADING, §277).
 4. Budget arbitration with the critic's per-shot numbers. 5. #17 perch pose. 6. Option-A
    staging question to the owner (perch/arm framings cannot be fixed by any lighting seal).
+
+> **CORRECTION (2026-08-14, §310):** the §1 budget breach reported in this round is FALSE. The
+> manifest's `drawCalls`/`triangles` are `renderer.info.render` with `autoReset=false` — an
+> all-passes submission counter (3 shadow cascades + beauty + normal prepass + blits). §1 caps
+> VISIBLE geometry. Measured offline (`tools/budgetattrib.mjs`, reproduced by the coordinator):
+> worst shot 85 draws (34% of 250) and 0.647M tris (54% of 1.2M); the whole level is 0.647M with
+> culling off, so the reported 2.1x was arithmetically impossible. The critic brief that caused it
+> is fixed at source (09808c1). No mass arbitration is owed to ARCHITECTURE/PROPS/TERRAIN.

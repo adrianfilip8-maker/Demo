@@ -56,3 +56,11 @@ box-slab colossi (PROPS/Statues).
    thesis: "drop ambient ~70% and let the torch pools own the exposure").
 6. PROPS: basket dedupe, coin/lamp unlit-render fix, colossi sculpt. 7. Budgets. 8. OWNER:
    Option-A staging; head-sculpt waiver reaffirm-or-lift.
+
+> **CORRECTION (2026-08-14, §310):** the §1 budget breach reported in this round is FALSE. The
+> manifest's `drawCalls`/`triangles` are `renderer.info.render` with `autoReset=false` — an
+> all-passes submission counter (3 shadow cascades + beauty + normal prepass + blits). §1 caps
+> VISIBLE geometry. Measured offline (`tools/budgetattrib.mjs`, reproduced by the coordinator):
+> worst shot 85 draws (34% of 250) and 0.647M tris (54% of 1.2M); the whole level is 0.647M with
+> culling off, so the reported 2.1x was arithmetically impossible. The critic brief that caused it
+> is fixed at source (09808c1). No mass arbitration is owed to ARCHITECTURE/PROPS/TERRAIN.

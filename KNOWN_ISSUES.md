@@ -23877,3 +23877,19 @@ derivations.
 — the critic stays blind. Guard-MODEL complaints are marked owner-waived when ROUTING a
 report, exactly like the head sculpt. The guard CONE (lighting/FX, PREREG-guardcone) is NOT
 covered by this waiver and is re-sealed standalone.
+
+## §310 — the §1 budget breach was an INSTRUMENT ERROR: no shot is over either cap, and two critic rounds were routed on a counter that measures something else
+
+`tools/CRITIC.md` told every blind critic that manifest `drawCalls`/`triangles` were "fair game
+against the §1 budget". They are `renderer.info.render` with `autoReset=false` — a per-frame
+ALL-PASSES submission counter summing three shadow-cascade renders, the beauty pass, a
+full-scene normal prepass and the post blits. §1 caps VISIBLE geometry. r11 and r12 both duly
+reported "15 of 16 shots over, night 2.1x" and I routed mass arbitration to ARCHITECTURE/PROPS/
+TERRAIN twice. Offline attribution (`tools/budgetattrib.mjs`, run by the lane and REPRODUCED
+INDEPENDENTLY by the coordinator): worst main view **85 draws = 34% of the 250 cap** and
+**0.647M tris = 54% of the 1.2M cap**; every one of the 16 shots is legal on both. The whole
+level is 0.647M triangles with culling OFF — a 2.57M "visible" reading was arithmetically
+impossible, and that ceiling check is what should have caught this two rounds ago. Brief fixed
+at source (09808c1, quotes the scored column or none); RESULT-critic11/12 carry correction
+notes. Lesson (§282-adjacent, new organ): **a budget bar must name the counter it reads and be
+sanity-checked against a scene-total ceiling before anything is routed on it.**
