@@ -24113,3 +24113,27 @@ rng that made the seal's own triangle bill measurable instead of a diff of the w
 
 Ships from the PROPS lane this cycle: `basketvary` only (11b852c). Two candidates falsified, two
 instruments left better than they were found, zero capture time spent on either verdict.
+
+## §322 — coordinator audit after §321: the NaN-scorer class is ISOLATED, and two of §321's lessons generalise beyond PROPS
+
+**Audit (mine, in response to §321's warning that other scorers may share the decoder-property
+assumption): CLEAR.** No `*-score.mjs` in the repo reads `.width`/`.height` off the decoder —
+they all use the `{w,h,ch}` contract; the `.width` hits are in RUNNERS, where it means canvas
+size and is correct. So `coinlit-score.mjs` was the only instance, and **no other verdict of this
+wave is a NaN artifact**: canegold3's ping 0, guardcone's BS1 apex 0 and the gradetrio numbers
+were all decoded from real samples. Recorded so nobody re-audits it.
+
+**Two lessons that are not PROPS-specific:**
+1. **A NaN is an UNMEASURED bar, not a failed one.** NaN compares false against every threshold,
+   so a broken reader silently reports FAIL on a candidate it never measured — indistinguishable
+   from a real refutation in the verdict line. Every scorer should refuse a decode without
+   `w/h/ch` and exit VOID on any non-finite statistic (the `dims()`/`finite()` guards §321 added
+   are the reference). **Fail-closed is only honest if the failure is distinguishable from a
+   non-measurement.**
+2. **Outer-envelope statistics cannot see interior form.** The colossus bars (`infW`, `zfSd`)
+   measure the extent envelope while the defect lived inside it: at the registered camera the
+   upper arm sits at |x| 1.94–2.70 against a 2.62 shoulder half-width, so it is *arithmetically
+   incapable* of breaking the outer silhouette at any thickness — the metric scored a 0.08 m
+   widening as an inflection and the eye never saw an arm. Any "does the form read" seal needs a
+   statistic of the RENDERED figure at a registered camera (ink-edge length / connected
+   components strictly inside the silhouette), not of its profile.
