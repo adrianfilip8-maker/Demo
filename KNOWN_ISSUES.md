@@ -24217,3 +24217,24 @@ since those frames, and name the tree in the seal.** The BG gate catching this i
 working — it refused to measure a defect that is not there.
 Also unadjudicated inside the voided block: ENV_dunes/ENV_interior FAIL, ENV_combat VOID — a
 successor must read the vSlySkin debug-mask arms rather than inherit these.
+
+## §327 — fxghost2 + rimfloor2 both DO NOT SHIP; the ghost decomposition CORRECTS §306, and the screen-rim glint route is dead
+
+One shared run, both instruments valid throughout (restores 0 px every shot).
+**fxghost2:** the registered §138.4 conflict fired as disclosed (PF4). Opacity arms kill the
+discs (t18 takes all five components to ~20% and passes every GH bar) but take the sand with
+them — the dunes field drops to **x0.04** and F_dunes/F_hero/F_courtyard fail. Ambient arms keep
+the field perfectly (x0.99/x1.01) and **do not kill the discs**: at ambGain **0.00**, G1 still
+retains **83%** of its amplitude. Decomposition, the real deliverable: the ambient leg carries
+G1 **17.5%**, G2 45.0%, G3 44.4%, G4 58.6%, G5 52.1%. **This corrects §306**, which inferred
+"the discs ride the ambient leg" from a litMix sweep that only moved G1 — true for the small
+components, FALSE for the brightest one. Neither published leg owns G1 (the 15.9 L disc that IS
+the complaint); ~82% of it comes from the sprite's own emissive/base colour or the bloom path.
+Successor: attribute **G1 alone**, do not sweep five components.
+**rimfloor2:** all four arms fail. Wall arms lose E_dunes/E_night/E_guard/E_kerb; ball arms
+recover three but still lose E_guard; and **P_slyrim_CU + P_slyrim_PR fail on ALL FOUR**, with
+P_lamps alongside. The screen-rim floor cannot be cut off-subject without taking the character's
+rim and the night sparkles — and the seal's same-frame wall control was built so this could not
+be faked. **The route §306's s10 pointed at is dead at these doses**; revisit only with a
+subject-excluding formulation the P_slyrim control can certify. vSlySkin 0.55 intact, nothing
+shipped.

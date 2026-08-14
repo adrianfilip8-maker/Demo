@@ -1,0 +1,56 @@
+R_temple: diff(off,back) = 0 px
+R_night: diff(off,back) = 0 px
+R_interior: diff(off,back) = 0 px
+R_dunes: diff(off,back) = 0 px
+R_hero: diff(off,back) = 0 px
+R_courtyard: diff(off,back) = 0 px
+R_sly-profile: diff(off,back) = 0 px
+amp_off(G1) = 15.92 L
+amp_off(G2) = 9.24 L
+amp_off(G3) = 7.99 L
+amp_off(G4) = 6.23 L
+amp_off(G5) = 4.45 L
+g25 (ambGain 0.25): G1 13.84L (r 0.87)  G2 6.19L (r 0.67)  G3 5.37L (r 0.67)  G4 3.55L (r 0.57)  G5 2.74L (r 0.62)
+g00 (ambGain 0.0): G1 13.14L (r 0.83)  G2 5.08L (r 0.55)  G3 4.44L (r 0.56)  G4 2.58L (r 0.41)  G5 2.13L (r 0.48)
+t30 (gain 0.30): G1 5.91L (r 0.37)  G2 3.21L (r 0.35)  G3 2.59L (r 0.32)  G4 2.28L (r 0.37)  G5 1.44L (r 0.32)
+t18 (gain 0.18): G1 3.27L (r 0.21)  G2 2.00L (r 0.22)  G3 1.53L (r 0.19)  G4 1.42L (r 0.23)  G5 0.88L (r 0.20)
+  decomp G1: ambient leg carries 17.5% of amp_off (g25 13.84L, g00 13.14L)
+  decomp G2: ambient leg carries 45.0% of amp_off (g25 6.19L, g00 5.08L)
+  decomp G3: ambient leg carries 44.4% of amp_off (g25 5.37L, g00 4.44L)
+  decomp G4: ambient leg carries 58.6% of amp_off (g25 3.55L, g00 2.58L)
+  decomp G5: ambient leg carries 52.1% of amp_off (g25 2.74L, g00 2.13L)
+field dunes: base sum 20660 n 5934  g25 x0.99 (n x0.97)  g00 x1.01 (n x0.98)  t30 x0.07 (n x0.07)  t18 x0.04 (n x0.04)
+field hero: base sum 20643 n 5048  g25 x0.80 (n x0.81)  g00 x0.74 (n x0.76)  t30 x0.12 (n x0.14)  t18 x0.04 (n x0.05)
+field courtyard: base sum 17263 n 4812  g25 x1.02 (n x1.06)  g00 x1.05 (n x1.09)  t30 x0.09 (n x0.10)  t18 x0.03 (n x0.04)
+halo LAMPS: g25 0.003  g00 0.003  t30 0.003  t18 0.003
+halo MOON: g25 0.000  g00 0.000  t30 0.000  t18 0.000
+halo TORCH-A: g25 0.000  g00 0.000  t30 0.000  t18 0.000
+halo TORCH-B: g25 0.000  g00 0.000  t30 0.000  t18 0.000
+obelisk (off 7045 px): g25 r1.00 d0.03  g00 r1.00 d0.04  t30 r1.00 d0.14  t18 r1.00 d0.16
+
+-- validity --
+  V1_stamps: PASS
+  V2_readbacks: PASS
+  V3_pageclean: PASS
+  BG_G1: PASS
+  BG_G2: PASS
+  R_temple: PASS
+  R_night: PASS
+  R_interior: PASS
+  R_dunes: PASS
+  R_hero: PASS
+  R_courtyard: PASS
+  R_sly-profile: PASS
+
+arm g25: ==> DO NOT SHIP — GH_G1_g25 FAIL, GH_G2_g25 FAIL, GH_G3_g25 FAIL, GH_G4_g25 FAIL, GH_G5_g25 FAIL
+
+arm g00: ==> DO NOT SHIP — GH_G1_g00 FAIL, GH_G2_g00 FAIL, GH_G3_g00 FAIL
+
+arm t30: ==> DO NOT SHIP — GH_G1_t30 FAIL, F_dunes_t30 FAIL, F_hero_t30 FAIL, F_courtyard_t30 FAIL
+
+arm t18: ==> DO NOT SHIP — F_dunes_t18 FAIL, F_hero_t18 FAIL, F_courtyard_t18 FAIL
+
+crops -> /home/user/Demo/progress/records/fxfix1/crops (fxghost2-*). The RESULT adjudicates the LOOK gate (§5) off these;
+a verdict line above without the looked-at crops is NOT a ship decision.
+
+==> mechanical ship rule: NO arm passes — no ship; record the decomposition (PREREG-fxghost2 §6).

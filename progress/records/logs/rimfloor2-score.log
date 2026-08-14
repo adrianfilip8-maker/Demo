@@ -1,0 +1,62 @@
+R_dunes: diff(off,back) = 0 px
+R_night: diff(off,back) = 0 px
+R_guard: diff(off,back) = 0 px
+R_hero: diff(off,back) = 0 px
+R_courtyard: diff(off,back) = 0 px
+R_sly-closeup: diff(off,back) = 0 px
+R_sly-profile: diff(off,back) = 0 px
+BG: dunes 317 nightL 1914 nightR 1972 guard 2874 kerb 2584
+RIMSET sly-closeup: sly 1201 px, wall 88 px (frozen from off vs rimz)
+RIMSET sly-profile: sly 801 px, wall 48 px (frozen from off vs rimz)
+k10: dunes r0.42  night r0.47  guard r0.88  kerb drop 57.5L remain r0.19  | obelisk r1.00 d0.00  chest 0px  lamps 0.42 moon 0.02  nightFrac 8.2%
+    char sly-closeup: SLY drop 0.063L hit 1.1%  |  WALL(control) drop -0.36L hit 1.1%
+    char sly-profile: SLY drop 0.521L hit 5.4%  |  WALL(control) drop 0.91L hit 12.5%
+rimz: dunes r0.75  night r0.90  guard r1.00  kerb drop 0.3L remain r0.99  | obelisk r1.00 d1.46  chest 0px  lamps 1.42 moon 0.86  nightFrac 4.9%
+    char sly-closeup: SLY drop 11.421L hit 100.0%  |  WALL(control) drop 7.89L hit 100.0%
+    char sly-profile: SLY drop 7.580L hit 100.0%  |  WALL(control) drop 5.45L hit 100.0%
+w35: dunes r0.77  night r0.90  guard r1.00  kerb drop 0.2L remain r0.99  | obelisk r1.00 d1.11  chest 0px  lamps 1.09 moon 0.62  nightFrac 4.3%
+    char sly-closeup: SLY drop 1.269L hit 15.7%  |  WALL(control) drop 5.91L hit 90.9%
+    char sly-profile: SLY drop 1.082L hit 16.7%  |  WALL(control) drop 4.23L hit 87.5%
+w45: dunes r0.75  night r0.90  guard r1.00  kerb drop 0.3L remain r0.99  | obelisk r1.00 d1.46  chest 0px  lamps 1.42 moon 0.75  nightFrac 4.7%
+    char sly-closeup: SLY drop 1.638L hit 15.9%  |  WALL(control) drop 7.89L hit 100.0%
+    char sly-profile: SLY drop 1.422L hit 16.9%  |  WALL(control) drop 5.45L hit 100.0%
+b35: dunes r0.19  night r0.36  guard r0.88  kerb drop 57.8L remain r0.18  | obelisk r1.00 d1.11  chest 0px  lamps 1.50 moon 0.63  nightFrac 12.0%
+    char sly-closeup: SLY drop 1.324L hit 15.5%  |  WALL(control) drop 5.28L hit 89.8%
+    char sly-profile: SLY drop 1.515L hit 16.6%  |  WALL(control) drop 4.20L hit 87.5%
+b45: dunes r0.17  night r0.36  guard r0.88  kerb drop 57.8L remain r0.18  | obelisk r1.00 d1.46  chest 0px  lamps 1.83 moon 0.77  nightFrac 12.3%
+    char sly-closeup: SLY drop 1.698L hit 15.8%  |  WALL(control) drop 7.15L hit 98.9%
+    char sly-profile: SLY drop 1.838L hit 16.9%  |  WALL(control) drop 5.42L hit 100.0%
+
+k10 (arch floor 0.10) and rimz (screen floor 0.00) are REPORT-ONLY: they gate
+nothing. k10 reproduces the parent run's c10 arm in this boot; rimz is the
+screen-rim-floor-free reference that freezes the character populations above.
+
+-- validity --
+  V1_stamps: PASS
+  V2_readbacks: PASS
+  V3_pageclean: PASS
+  BG_dunes: PASS
+  BG_night: PASS
+  BG_guard: PASS
+  BG_kerb: PASS
+  BG_char: PASS
+  R_dunes: PASS
+  R_night: PASS
+  R_guard: PASS
+  R_hero: PASS
+  R_courtyard: PASS
+  R_sly-closeup: PASS
+  R_sly-profile: PASS
+
+arm w35: ==> DO NOT SHIP — E_dunes_w35 FAIL, E_night_w35 FAIL, E_guard_w35 FAIL, E_kerb_w35 FAIL, P_lamps_w35 FAIL, P_slyrim_CU_w35 FAIL, P_slyrim_PR_w35 FAIL
+
+arm w45: ==> DO NOT SHIP — E_dunes_w45 FAIL, E_night_w45 FAIL, E_guard_w45 FAIL, E_kerb_w45 FAIL, P_lamps_w45 FAIL, P_slyrim_CU_w45 FAIL, P_slyrim_PR_w45 FAIL
+
+arm b35: ==> DO NOT SHIP — E_guard_b35 FAIL, P_lamps_b35 FAIL, P_slyrim_CU_b35 FAIL, P_slyrim_PR_b35 FAIL
+
+arm b45: ==> DO NOT SHIP — E_guard_b45 FAIL, P_lamps_b45 FAIL, P_nightbudget_b45 FAIL, P_slyrim_CU_b45 FAIL, P_slyrim_PR_b45 FAIL
+
+crops -> /home/user/Demo/progress/records/fxfix1/crops (rimfloor2-*). The RESULT adjudicates the LOOK gate (§5) off
+these — item 6 (Sly's rim, off vs arm at 2x) is the one this seal exists to carry.
+
+==> mechanical ship rule: NO arm passes — no ship; the k10/rimz decomposition + PF branches (PREREG-rimfloor2 §6) decide the routing.
