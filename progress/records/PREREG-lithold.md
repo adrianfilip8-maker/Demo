@@ -124,10 +124,13 @@ Registered fallback: **0.0** (mechanism stays, hold off).
 
 ## 3. Tree — HEAD, no install
 
-- HEAD at seal time: the commit that lands this file and the inert mechanism together. The
-  runner records the new HEAD sha, HEAD's own `git archive` src hash, and the working-tree
-  hash at lock grant; V4 requires ONE tree hash across all 68 rows, equal to the lock-grant
-  hash, with this seal's two files clean at grant AND release.
+- HEAD at seal time: **`677b914`** — the commit that lands this file and the inert mechanism
+  together; HEAD's own `git archive` src hash at launch was **`1cdef539e7be727d`**, recorded
+  by the runner. Foreign uncommitted work present in `src/` at launch and recorded verbatim in
+  the manifest: `src/fx/Particles.js`, `src/render/PostFX.js` (neither this lane's; untouched).
+  The runner also records the working-tree hash at lock grant; V4 requires ONE tree hash across
+  all 68 rows, equal to the lock-grant hash, with this seal's two files clean at grant AND
+  release.
 - PF6 launch pins: `HEAD:src/render/ToonMaterial.js` carries `subjLitHold: 0.0`, the shared
   `uSubjLitHold` uniform, and **§289's `subjShadowHold: 1.0` still where it shipped**;
   `HEAD:src/render/shaders/toon.glsl.js` carries the declared uniform, the untaken branch, and
@@ -326,8 +329,12 @@ The runner is DETACHED (`tools/launch.sh`; §298.3). Do not wait on it interacti
 2. **If it aborted at lock grant** (`src/render or src/player carries uncommitted work`):
    nothing was installed and nothing was captured. Do NOT touch the other lane's files (§186).
    Wait for that work to land, verify with `git status --porcelain -- src/render src/player`,
-   then relaunch (step 3). No archiving needed — the out-dir is empty on that path only if the
-   abort happened before the first capture; if it is non-empty, archive it first (PF7).
+   then relaunch via step 3. **Archive first in every case** — the runner writes `manifest.json`
+   into the out-dir before it queues for the lock, so the directory is never empty and PF7 will
+   refuse a relaunch until it is moved. *(Amendment, 2026-08-14, after launch: this paragraph
+   originally said archiving might not be needed on the lock-grant-abort path, which is wrong
+   for the reason just given. Procedural correction only — no bar, band, ROI or statistic in
+   this file has been touched, and none may be, §141.1.)*
 3. **Relaunch (any PF5/PF6/PF7 path):**
    `mv /home/user/Demo/progress/records/lithold1 /home/user/Demo/progress/records/lithold1-void-runN`
    then
