@@ -23990,3 +23990,21 @@ arms; a 2-shot x 5-arm run at ~9 min/arm is 90 min of lock and starves everythin
 is one command at the right moment, not a scramble. (4) Runners that STAMP the tree rather than
 GATE on it (the canegold3 pattern) survive both hazards — same-boot poke arms make a foreign
 edit common-mode, and it is the only run of seven that kept its lock through the churn.
+
+## §317 — canegold3: DO NOT SHIP; the dielectric cell puts NO highlight on the cane, but two protections failed so the refutation is evidence-grade
+
+The seal's own re-score reproduced its logged verdict (the registered anti-drift condition).
+G1a's `count(L>=248) >= 200 px` reads **0 on every candidate arm of both gate shots** — the
+dielectric cell (metal 0, spec up, rough down), the one cell §266's metal-cell refusal never
+covered, produces no specular highlight at all; G2/G3/G4/R1 fail with it. BUT `P6_environment`
+and `P7_geometry` FAILED, so the measurement context was not the registered one (almost certainly
+§315's tree churn — this run booted while six lanes were still committing). **Outcome is the
+seal's registered DO-NOT-SHIP; nothing ships; the no-highlight finding is EVIDENCE-GRADE, and no
+claim is made about geometry in either direction because P7 is precisely the bar that would have
+proven it.** Not re-queued: 4.5 h of exclusive lock to re-confirm a no-ship is not worth it while
+seven runs wait (§316). Gold cane returns to the queue unsolved with both cells now measured
+against it. FREE FINDING (diagnostic, no bars): in-frame tail ring contrast is michelson **0.617
+on sly-key but 0.291 on sly-profile**, from a texture whose albedo carries rings at 0.415–0.495
+at EVERY yaw — direct in-frame support for CHARMAT's routed render-side seal (`sss 0.228` +
+`rim 0.62` compress ring contrast at some yaws). The "no rings from behind" critique is a
+rendering compression, not a missing texture.
