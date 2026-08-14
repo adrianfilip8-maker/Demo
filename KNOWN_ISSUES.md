@@ -23921,3 +23921,26 @@ wide action frame loses it. Correct lever sealed: `TUNE.subjLitHold` on assemble
 before the haze mix, luminance-exact by construction, vSlySkin-scoped, scaled by measured chroma
 LOSS. Registered risk on record: combat's wash is partly composited AFTER the shader and is out
 of any in-shader lever's reach. RESULT-critic12 carries the correction in place.
+
+## §313 — budget arc CLOSED with no cuts owed; the one real mass owner is the guard import (parked), plus two small leaks routed
+
+Full attribution now exists offline for the first time (`tools/budgetattrib.mjs`, ~40 s, no boot,
+no lock; NOTE-budgetattrib.md). Both readings printed: floor (what builds headlessly) worst shot
+0.647 M tris = 54% of cap / 85 draws = 34%; in-page substitution worst 1.149 M = 96% / 113 = 45%.
+**0 of 16 shots breach either cap under either reading** — and this is the FOURTH time the same
+instrument error has been re-derived (§51.3/§53.5/§215.2/budget34 before §310). Architecture is
+already merged by material (43 draws / 323 k for the whole temple): no mass win, no draw win.
+NO CUT IS WARRANTED and none was sealed — proposing an architecture decimation against an
+unbreached budget is exactly the error §215.2 withdrew §208 for.
+Three facts routed rather than acted on:
+1. **The mass owner is the guard import** — `carmelita-guard.glb` (2026-08-08) swapped onto 9 of
+   11 roster entries at **29,791 tris/body** (vs 1.2–5 k procedural), each shelled; guards are the
+   largest triangle owner in 7 of 16 shots and 26% of night's shadow submissions. This is guard
+   MODEL territory and therefore **inside §309's parking — no action while the mannequin is
+   parked**, and moot regardless since nothing is over cap. Recorded for whenever it reopens.
+2. **12 meshes carry `frustumCulled = false`**, costing 11 draws / 67,768 tris off-screen in five
+   shots — a real if small leak, routed to TERRAIN/VEGETATION/PROPS (their files, not seized).
+3. **Pass multiplication (3.55× mean)** is a FRAME-TIME question for RENDER/LIGHTING, not a
+   geometry one; no cut touches it. Open, unprioritised.
+The `critic.mjs` emitter annotation is routed with a recipe, deliberately not done: it is live
+capture tooling with five lanes queued and renaming its fields mid-flight is the §144 hazard.
