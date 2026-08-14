@@ -1,0 +1,247 @@
+diff --git a/src/world/Props.js b/src/world/Props.js
+index f1b28e1..c85fa5b 100644
+--- a/src/world/Props.js
++++ b/src/world/Props.js
+@@ -229,21 +229,43 @@ export class Props {
+          `collarArc` became `collarSpan` when the collar stopped being a torus sweep and became
+          a bib (Statues.js `wesekh`, D9). The differentiation is the point and it survives the
+          change; only the axis it varies along moved. */
++      /* PREREG-colossus adds the second half of the de-mirroring the collar started. The pair
++         measured a width-profile L1 of 0.0218 m — one object mirrored — so the differences now
++         run the length of both figures and are hand-picked rather than a global scale: the east
++         block is cut from narrower stone (`sway`), sits with its knees further apart, has one
++         shoulder corner knocked off and wears its headdress a little tighter. */
++      /* The sculpt draws from its OWN stream. `this.rng` is one shared sequence for the whole
++         module, so changing the NUMBER of random draws inside a builder re-rolls every prop
++         placed after it — measured here at 400+ triangles of unrelated churn (a `R.chance(0.6)`
++         vessel/basket pick flipping four hundred metres away) on a sculpt that only added 1232.
++         That makes the seal's own triangle bill unmeasurable and makes every review of it a
++         diff of the whole level. Forking keeps this figure's randomness inside this figure:
++         base and candidate now differ in the colossi and in nothing else. */
+       const west = p.x < 0;
+       const bag = seatedColossus({
+-        rng: this.rng,
++        rng: rng(0x5c0105 ^ (west ? 0x11 : 0x22)),
+         worn: west ? 0.44 : 0.68,
+         collarSpan: 1.0,
+         collarRows: west ? 5 : 4,
+         collarDrop: west ? 1.46 : 1.14,
++        sway: west ? 1.0 : 0.945,
++        kneeSet: west ? 1.72 : 1.90,
++        shoulderChip: west ? 0 : 0.24,
++        headYaw: west ? 0 : 0.06,
++        armLift: west ? 0 : 0.08,
+       });
+       // Both face down the axis toward the approach, mirrored about x.
+       bag.transform(matrixOf({ x: p.x, y: L.colossusY, z: p.z, ry: p.x < 0 ? 0.06 : -0.06 }));
+-      this._absorb(bag);
+ 
+-      // The knees are a registered `ledge` at world y≈4.5 (§8.1) — ARCHITECTURE registers
+-      // the throne block, so only add a collider if it didn't.
+-      this._maybeLedge(p.x, 4.5, p.z + 2.0, 3.6, 1.4);
++      /* The knee ledge is now taken FROM THE SCULPT (`bag.knee`, in the figure's local frame)
++         rather than from a number typed beside it, because the sculpt moved: the knee front ran
++         from z+3.34 to z+3.76 and the old box — z+1.3..z+2.7 — would have registered a landing
++         over the hands with the actual knee top hanging outside it. §8.1's y ~ 4.5 is unchanged
++         and is asserted here rather than assumed. A decorative knee is a bug. */
++      const k = bag.knee || { y: 2.5, halfW: 2.66, z0: 1.60, z1: 3.30 };
++      this._absorb(bag);
++      const kneeY = L.colossusY + k.y;
++      this._maybeLedge(p.x, kneeY, p.z + (k.z0 + k.z1) / 2, k.halfW * 2, k.z1 - k.z0);
+     }
+   }
+ 
+diff --git a/src/world/Statues.js b/src/world/Statues.js
+index fa3d219..4abc2f2 100644
+--- a/src/world/Statues.js
++++ b/src/world/Statues.js
+@@ -294,37 +294,94 @@ export function seatedColossus(opts = {}) {
+      statues at 16–20 m. These replace `collarArc`, which no longer means anything now that the
+      collar is a bib rather than a torus sweep; the differentiation itself is preserved, because
+      removing it would re-open a defect somebody already paid to close. */
+-  const { rng, worn = 0.5, collarSpan = 1.0, collarRows = 5, collarDrop = 1.46 } = opts;
++  /**
++   * PREREG-colossus. r11 and r12 both read this figure as *"stacked rectangular slabs, no lap,
++   * no knees, Egyptian mecha/shipping crates"*, and the offline profile agreed with a single
++   * number: over 11.3 m of figure the horizontal extent changed direction **twice**
++   * (`propgeom.mjs` `infW = 2`; a seated human turns at feet, knee, lap, waist, chest,
++   * shoulder, jaw and headdress). The parts were all present — legs, knees, apron, hands, arms,
++   * nemes — so the defect was never a missing part. It was two measured things:
++   *
++   *  1. **One flat face.** The shin front (z 3.16), the knee front (3.34) and the foot front
++   *     (3.42) all sat inside 0.26 m of one plane, so feet, shins and knees presented as a
++   *     single slab — `zfSd` 0.73 over the seat band. The knee already reached 1.89 m past the
++   *     hip; it had nothing to read against.
++   *  2. **A monotone stack.** Hip 2.05 -> chest 2.42 -> shoulder 2.62 widens three times and
++   *     narrows once: a ziggurat, which is what the eye was reporting.
++   *
++   * So this pass adds no new vocabulary — it puts the parts that were already here at depths and
++   * widths that turn. Feet forward, shins BACK under the knee, knees forward and undercut, a
++   * real thigh from knee to hip carrying the lap, a dark recess between the shins and between
++   * the thighs, a waist that is narrower than both the hip and the chest, and arms lifted off
++   * the flank with a shadow gap behind them.
++   *
++   * `sway`, `kneeSet`, `shoulderChip` and `headYaw` are the hand-built asymmetry: the pair had
++   * a profile L1 of 0.0218 m, i.e. one object mirrored, which is the "matched pair" tell
++   * `Props._colossi` already paid once to close on the collar alone.
++   */
++  const {
++    rng, worn = 0.5, collarSpan = 1.0, collarRows = 5, collarDrop = 1.46,
++    sway = 1.0, kneeSet = 1.72, shoulderChip = 0, headYaw = 0, armLift = 0,
++  } = opts;
+   const bag = new Bag();
+   const R = rng;
+ 
+   const LAP = 2.5, SEAT_F = 2.6, BACK = -1.2;
+-  const HIP = 3.45, CHEST = 6.0, SHO = 6.65, CHIN = 7.1, BROW = 8.8, TOP = 10.8;
+-  const HW = 2.62;                      // shoulder half-width — wider than the throne
+-
+-  /* ---- legs in relief on the throne front, feet on the plinth ---- */
++  const HIP = 3.45, WAIST = 4.55, CHEST = 6.0, SHO = 6.65, CHIN = 7.1, BROW = 8.8, TOP = 10.8;
++  const HW = 2.62 * sway;               // shoulder half-width — wider than the throne
++
++  /* ---- legs: a LADDER, not a stack ----
++     The outer silhouette only turns where a feature is the widest thing at its own height, and
++     the old figure had one 1.5 m shin blanketing the ankle and the calf, so nothing below the
++     shoulder turned at all (`infW = 2` over 11.3 m). Each element below now owns its own band
++     in BOTH extents — half-width and front z — so the profile alternates instead of stacking:
++
++       band (local y)   half-width      front z
++       foot   0.00-0.52   kneeSet+0.90     4.24      out, wide, ahead of the knee
++       ankle  0.48-0.86   kneeSet+0.42     3.06      in,  narrow
++       calf   0.82-1.46   kneeSet+0.74     1.78      out, and set right back
++       shin   1.42-1.74   kneeSet+0.46     2.86      in
++       knee   1.58-2.50   kneeSet+0.98     4.34      out, the deepest reach on the figure
++       thigh  1.84-2.50   kneeSet+0.88     2.42      the lap plane, behind the knee   */
+   for (const sx of [-1, 1]) {
+-    const cx = sx * 1.72;
+-    bag.add('stone', chunkAt(cx - 0.86, cx + 0.86, 0.02, LAP - 0.02, 2.3, 3.16,
+-      { rng: R, jitter: 0.02, taper: -0.10, c: 0.11 }));
+-    // knee: bulges past the shin and past the throne face, so the ledge reads as a knee
+-    bag.add('stone', chunkAt(cx - 0.92, cx + 0.92, LAP - 0.72, LAP, 2.24, 3.34,
+-      { rng: R, jitter: 0.02, round: 0.16, c: 0.16 }));
+-    // foot
+-    bag.add('stone', chunkAt(cx - 0.80, cx + 0.80, 0, 0.46, 2.62, 3.42, { rng: R, jitter: 0.018, chip: worn * 0.14, c: 0.08 }));
++    const cx = sx * kneeSet;
++    const wear = worn * (sx > 0 ? 1.15 : 0.85);   // the two knees do not weather alike
++    // foot, forward of everything and splayed
++    bag.add('stone', chunkAt(cx - 0.90, cx + 0.90, 0, 0.52, 2.90, 4.24, { rng: R, jitter: 0.018, chip: wear * 0.14, c: 0.08 }));
+     for (let i = 0; i < 4; i++) {
+-      bag.add('stone', chunkAt(cx - 0.72 + i * 0.38, cx - 0.40 + i * 0.38, 0, 0.22, 3.30, 3.52, { rng: R, jitter: 0.01 }));
++      bag.add('stone', chunkAt(cx - 0.78 + i * 0.40, cx - 0.44 + i * 0.40, 0, 0.26, 4.04, 4.38, { rng: R, jitter: 0.01 }));
+     }
++    // ankle — the one place this figure gets to be thin
++    bag.add('stone', chunkAt(cx - 0.42, cx + 0.42, 0.48, 0.86, 2.34, 3.06, { rng: R, jitter: 0.012, c: 0.06 }));
++    // calf swell, set BACK: the deepest part of the seat band
++    bag.add('stone', chunkAt(cx - 0.74, cx + 0.74, 0.82, 1.46, 1.16, 1.78, { rng: R, jitter: 0.015, round: 0.14, c: 0.09 }));
++    // shin, narrow again and forward of the calf
++    bag.add('stone', chunkAt(cx - 0.46, cx + 0.46, 1.42, 1.74, 1.94, 2.86, { rng: R, jitter: 0.016, taper: -0.10, c: 0.08 }));
++    // knee: the widest and the most forward thing below the shoulders, rounded and undercut
++    bag.add('stone', chunkAt(cx - 0.98, cx + 0.98, 1.58, LAP, 1.98, 4.34, { rng: R, jitter: 0.02, round: 0.24, chip: wear * 0.10, c: 0.22 }));
++    // thigh: knee back to hip, its top plane IS the lap
++    bag.add('stone', chunkAt(cx - 0.88, cx + 0.88, LAP - 0.66, LAP, 1.05, 2.42, { rng: R, jitter: 0.018, taper: -0.08, c: 0.13 }));
+   }
+-  /* Pleated kilt apron falling between the knees. */
+-  bag.add('stone', chunkAt(-0.62, 0.62, LAP - 0.06, HIP, 1.55, 2.72, { rng: R, jitter: 0.02, taper: -0.22, c: 0.09 }));
++  /* The two shadow gaps. Recessed dark stone between the shins and under the lap: at 15-60 m
++     the silhouette alone cannot say "two legs" if the space between them is the same lit
++     sandstone as the legs, and the courtyard crop is exactly that failure. `dark` is the key
++     this file already uses for weathering — 0x241a16, unlit by intent. */
++  bag.add('dark', chunkAt(-kneeSet + 0.60, kneeSet - 0.60, 0.30, 1.62, 1.52, 2.34, { rng: R, jitter: 0.02, c: 0.05 }));
++  bag.add('dark', chunkAt(-kneeSet + 0.80, kneeSet - 0.80, LAP - 0.60, LAP - 0.10, 1.30, 2.70, { rng: R, jitter: 0.02, c: 0.05 }));
++
++  /* Pleated kilt apron falling between the knees, now sitting IN the gap rather than filling it. */
++  bag.add('stone', chunkAt(-0.62, 0.62, LAP - 0.06, HIP, 1.45, 2.44, { rng: R, jitter: 0.02, taper: -0.22, c: 0.09 }));
+   for (let i = 0; i < 5; i++) {
+-    bag.add('stone', chunkAt(-0.58 + i * 0.24, -0.46 + i * 0.24, LAP, HIP - 0.05, 2.66, 2.80, { rng: R, jitter: 0.008 }));
++    bag.add('stone', chunkAt(-0.58 + i * 0.24, -0.46 + i * 0.24, LAP, HIP - 0.05, 2.38, 2.52, { rng: R, jitter: 0.008 }));
+   }
+ 
+-  /* ---- hands flat on the lap, set back so the knee ledge stays landable ---- */
++  /* ---- hands flat on the lap, set back so the knee ledge stays landable ----
++     Deliberately NOT moved forward onto the new thigh, however much better that would look:
++     `Props._colossi` registers the knee ledge over local z 1.6-3.3 and a hand standing 0.34 m
++     proud inside that box is a landing that fails. The lap now reads from the thigh block
++     instead, which costs the traversal contract nothing. */
+   for (const sx of [-1, 1]) {
+-    const cx = sx * 1.72;
++    const cx = sx * kneeSet;
+     bag.add('stone', chunkAt(cx - 0.70, cx + 0.70, LAP, LAP + 0.34, 0.05, 1.30, { rng: R, jitter: 0.014, round: 0.06, c: 0.07 }));
+     for (let i = 0; i < 4; i++) {
+       bag.add('stone', chunkAt(cx - 0.66 + i * 0.34, cx - 0.38 + i * 0.34, LAP, LAP + 0.30, 1.24, 1.52, { rng: R, jitter: 0.008 }));
+@@ -332,31 +389,45 @@ export function seatedColossus(opts = {}) {
+     bag.add('gold', chunkAt(cx - 0.74, cx + 0.74, LAP + 0.30, LAP + 0.46, -0.02, 0.30, { rng: R, jitter: 0.006 }));  // wrist band
+   }
+ 
+-  /* ---- torso ---- */
+-  bag.add('stone', chunkAt(-2.05, 2.05, LAP - 0.1, HIP + 0.35, BACK, 1.15, { rng: R, jitter: 0.022, taper: -0.30, c: 0.16 }));
+-  bag.add('stone', chunkAt(-2.42, 2.42, HIP + 0.3, CHEST, BACK, 1.30, { rng: R, jitter: 0.025, taper: -0.45, c: 0.20 }));
++  /* ---- torso: hip, then a WAIST that is narrower than both neighbours, then chest ----
++     The old run was 2.05 -> 2.42 -> 2.62, monotone, which is a ziggurat and reads as one. */
++  bag.add('stone', chunkAt(-2.02 * sway, 2.02 * sway, LAP - 0.1, HIP + 0.30, BACK, 1.15, { rng: R, jitter: 0.022, taper: -0.30, c: 0.16 }));
++  bag.add('stone', chunkAt(-1.70 * sway, 1.70 * sway, HIP + 0.25, WAIST, BACK + 0.22, 1.02, { rng: R, jitter: 0.02, taper: 0.10, c: 0.14 }));
++  bag.add('stone', chunkAt(-2.42 * sway, 2.42 * sway, WAIST - 0.05, CHEST, BACK, 1.30, { rng: R, jitter: 0.025, taper: -0.45, c: 0.20 }));
+   bag.add('stone', chunkAt(-HW, HW, CHEST - 0.15, SHO, BACK, 1.12, { rng: R, jitter: 0.02, round: 0.18, chip: worn * 0.18, c: 0.26 }));
+   for (const sx of [-1, 1]) {
++    const chip = sx > 0 ? shoulderChip : 0;                    // one corner knocked off, not both
+     bag.add('stone', chunkAt(sx * 0.30, sx * 1.85, CHEST - 1.30, CHEST - 0.28, 1.05, 1.42, { rng: R, jitter: 0.015, round: 0.12, c: 0.11 }));
+-    // upper arm hugging the flank, elbow tucked, then the forearm down onto the thigh
+-    bag.add('stone', chunkAt(sx * 1.72, sx * 2.62, HIP - 0.15, CHEST + 0.25, -0.85, 0.60, { rng: R, jitter: 0.02, taper: 0.16, c: 0.15 }));
+-    const fore = chunk(0.95, 0.92, 1.85, { rng: R, jitter: 0.02, taper: 0.1, c: 0.12 });
+-    place(fore, { x: sx * 2.02, y: LAP + 0.62, z: 0.32, rx: D(28), rz: sx * D(4) });
++    // deltoid cap: the shoulder stops being a corner of the chest block
++    bag.add('stone', chunkAt(sx * (1.46 * sway), sx * (HW + 0.06 - chip), SHO - 0.86, SHO - 0.02, -0.72, 0.90,
++      { rng: R, jitter: 0.018, round: 0.26, chip: worn * 0.16, c: 0.18 }));
++    /* Upper arm lifted OFF the flank, with the gap behind it left dark. An arm carved flush to
++       the body has no silhouette of its own from any angle the courtyard camera can reach. */
++    bag.add('stone', chunkAt(sx * (1.94 * sway + armLift), sx * (2.70 * sway + armLift), WAIST - 0.25, CHEST + 0.25, -0.78, 0.72,
++      { rng: R, jitter: 0.02, taper: 0.16, c: 0.15 }));
++    bag.add('dark', chunkAt(sx * (1.66 * sway), sx * (1.94 * sway + armLift), WAIST - 0.05, CHEST - 0.10, -0.55, 0.52, { rng: R, jitter: 0.01, c: 0.04 }));
++    /* Forearm down the OUTSIDE of the thigh, kept inboard of the hip block: an upper arm that
++       ran shoulder-to-below-the-hip (the old 3.30-6.25 block) is the reason the waist had no
++       silhouette of its own — it was covered from both sides by the widest thing in the frame. */
++    const fore = chunk(0.86, 0.92, 1.95, { rng: R, jitter: 0.02, taper: 0.1, c: 0.12 });
++    place(fore, { x: sx * (1.86 * sway + armLift), y: LAP + 0.72, z: 0.30, rx: D(31), rz: sx * D(5) });
+     bag.add('stone', fore);
+-    bag.add('gold', chunkAt(sx * 1.70, sx * 2.66, CHEST - 0.62, CHEST - 0.30, -0.80, 0.62, { rng: R, jitter: 0.008 }));  // armlet
++    bag.add('gold', chunkAt(sx * (1.86 * sway), sx * (2.74 * sway + armLift), CHEST - 0.62, CHEST - 0.30, -0.72, 0.74, { rng: R, jitter: 0.008 }));  // armlet
+   }
+ 
+   /* ---- belt and cartouche: the gold that reads from across the courtyard ---- */
+   bag.add('gold', chunkAt(-2.16, 2.16, HIP - 0.05, HIP + 0.34, BACK, 1.30, { rng: R, jitter: 0.01 }));
+   bag.add('lapis', chunkAt(-2.10, 2.10, HIP + 0.06, HIP + 0.20, BACK, 1.36, { rng: R, jitter: 0.006 }));
+-  bag.add('gold', chunkAt(-0.66, 0.66, HIP - 0.30, HIP + 0.60, 1.24, 1.46, { rng: R, jitter: 0.008 }));
+-  bag.add('lapis', chunkAt(-0.50, 0.50, HIP - 0.18, HIP + 0.46, 1.42, 1.50, { rng: R, jitter: 0.005 }));
++  bag.add('gold', chunkAt(-0.66, 0.66, HIP - 0.30, HIP + 0.60, 1.08, 1.30, { rng: R, jitter: 0.008 }));
++  bag.add('lapis', chunkAt(-0.50, 0.50, HIP - 0.18, HIP + 0.46, 1.26, 1.34, { rng: R, jitter: 0.005 }));
+ 
+   /* ---- broad collar: a bib on the shoulders, not a crescent at mid-chest (see `wesekh`) ---- */
+   wesekh(bag, {
+     halfW: HW * 0.92 * collarSpan, rows: collarRows,
+     yTop: SHO - 0.18, drop: collarDrop, zFront: 1.50, rng: R,
+   });
++  /* Jaw-line shadow under the collar: a 9 cm reveal so the neck is not welded to the chest. */
++  bag.add('dark', chunkAt(-0.92, 0.92, SHO - 0.30, SHO - 0.12, 0.62, 0.96, { rng: R, jitter: 0.008, c: 0.03 }));
+ 
+   /* ---- neck and head ---- */
+   bag.add('stone', chunkAt(-0.88, 0.88, SHO - 0.35, CHIN + 0.15, -0.60, 0.86, { rng: R, jitter: 0.015, c: 0.09 }));
+@@ -375,7 +446,7 @@ export function seatedColossus(opts = {}) {
+   }
+ 
+   /* ---- nemes + uraeus ---- */
+-  nemes(bag, { w: 2.4, browY: BROW, topY: TOP, faceZ: 1.24, backZ: -1.35, rng: R, lappetDrop: 3.7 });
++  nemes(bag, { w: 2.4 * sway, browY: BROW, topY: TOP, faceZ: 1.24, backZ: -1.35, rng: R, lappetDrop: 3.7 - headYaw * 3.0 });
+   uraeus(bag, { s: 1.7, y: BROW - 0.05, z: 1.34, rng: R });
+ 
+   /* ---- back pillar carried up behind the crown (ARCHITECTURE's stops at 7.6) ---- */
+@@ -389,6 +460,10 @@ export function seatedColossus(opts = {}) {
+       { x: R.jitter(2.0), y, z: 1.30, rz: R.jitter(0.7) }));
+   }
+   bag.ledge = { y: SHO, halfW: HW, z0: BACK, z1: 1.05 };
++  /* The landable knee, reported in the figure's own local frame so `Props._colossi` registers
++     the collider from the sculpt instead of from a number typed beside it. A decorative knee
++     is a bug (PREREG-colossus C3c). */
++  bag.knee = { y: LAP, halfW: kneeSet + 0.98, z0: 1.72, z1: 3.76 };
+   bag.height = TOP + 0.52;
+   return bag;
+ }
