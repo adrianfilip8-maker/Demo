@@ -24157,3 +24157,21 @@ recolouring a fill leg REMOVES hue split) nor the pool (warm by construction). B
 arc (§300) and this one now point at the **shade-scoped toon shadow-tint path**; one seal could
 serve both. Successor is a THREE-lever seal (ambient x pool x shade-cool) and, under §141.1, a
 new dose pair is a new seal, not a re-tune. Nothing shipped: tombAmb 1.0, localToon 2.5.
+
+## §324 — fxink2: V2 voids the block (fails on its own controls), but raster-scoping takes ink containment from 36% to 87–100%, combat exactly 100%
+
+`V2 readback bad` fires on all 55 rows including the inert `off`/`back` baselines, with every
+field correct for its arm and `maskFlag=0` constant while `V4_maskbound` PASSES — the runner
+never populates the field V2 asserts. **A bar that fails on its own controls measures the
+instrument** (§322), so the arm verdicts are not a refutation and the numbers are EVIDENCE.
+And the evidence is strong: the parent (§306, composite alpha-excess) leaked at **36% containment
+on hero / 60% on combat**; moving the cut to **FX raster time** measures
+combat/interior/dunes **100%**, night 99.90, closeup 99.88, profile 99.76, guard 99.18,
+courtyard 98.73, temple 98.69, traversal 97.45, hero 89.72 — seven of eleven clear the
+registered **≥99%** bar outright, and the shot the item exists for (combat's porcelain-rimmed
+shockwave) is exact. §306's routing was right.
+**The 99% bar stands** — the seal itself wrote that dropping it "would be §141.1's exact
+prohibition". Successor: (1) fix the V2 probe so the next run scores rather than evidences;
+(2) hero at 89.7% is an order-of-magnitude outlier over the other ten — crop ITS uncontained
+pixels rather than re-sweeping eleven shots, and note `decalVis=false` here, so the residue is
+NOT the parent's floor-decal story. Nothing ships; fxInkCut stays 0.

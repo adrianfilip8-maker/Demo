@@ -1,0 +1,117 @@
+  V2 readback bad: hero.off cut=0 fxVis=true ok=true maskFlag=0 decalVis=false
+  V2 readback bad: hero.bfx0 cut=0 fxVis=false ok=true maskFlag=0 decalVis=false
+  V2 readback bad: hero.bon cut=1 fxVis=true ok=true maskFlag=0 decalVis=false
+  V2 readback bad: hero.b50 cut=0.5 fxVis=true ok=true maskFlag=0 decalVis=false
+  V2 readback bad: hero.back cut=0 fxVis=true ok=true maskFlag=0 decalVis=false
+  V2 readback bad: temple.off cut=0 fxVis=true ok=true maskFlag=0 decalVis=false
+  V2 readback bad: temple.bfx0 cut=0 fxVis=false ok=true maskFlag=0 decalVis=false
+  V2 readback bad: temple.bon cut=1 fxVis=true ok=true maskFlag=0 decalVis=false
+  V2 readback bad: temple.b50 cut=0.5 fxVis=true ok=true maskFlag=0 decalVis=false
+  V2 readback bad: temple.back cut=0 fxVis=true ok=true maskFlag=0 decalVis=false
+  V2 readback bad: sly-closeup.off cut=0 fxVis=true ok=true maskFlag=0 decalVis=false
+  V2 readback bad: sly-closeup.bfx0 cut=0 fxVis=false ok=true maskFlag=0 decalVis=false
+  V2 readback bad: sly-closeup.bon cut=1 fxVis=true ok=true maskFlag=0 decalVis=false
+  V2 readback bad: sly-closeup.b50 cut=0.5 fxVis=true ok=true maskFlag=0 decalVis=false
+  V2 readback bad: sly-closeup.back cut=0 fxVis=true ok=true maskFlag=0 decalVis=false
+  V2 readback bad: courtyard.off cut=0 fxVis=true ok=true maskFlag=0 decalVis=false
+  V2 readback bad: courtyard.bfx0 cut=0 fxVis=false ok=true maskFlag=0 decalVis=false
+  V2 readback bad: courtyard.bon cut=1 fxVis=true ok=true maskFlag=0 decalVis=false
+  V2 readback bad: courtyard.b50 cut=0.5 fxVis=true ok=true maskFlag=0 decalVis=false
+  V2 readback bad: courtyard.back cut=0 fxVis=true ok=true maskFlag=0 decalVis=false
+  V2 readback bad: dunes.off cut=0 fxVis=true ok=true maskFlag=0 decalVis=false
+  V2 readback bad: dunes.bfx0 cut=0 fxVis=false ok=true maskFlag=0 decalVis=false
+  V2 readback bad: dunes.bon cut=1 fxVis=true ok=true maskFlag=0 decalVis=false
+  V2 readback bad: dunes.b50 cut=0.5 fxVis=true ok=true maskFlag=0 decalVis=false
+  V2 readback bad: dunes.back cut=0 fxVis=true ok=true maskFlag=0 decalVis=false
+  V2 readback bad: interior.off cut=0 fxVis=true ok=true maskFlag=0 decalVis=false
+  V2 readback bad: interior.bfx0 cut=0 fxVis=false ok=true maskFlag=0 decalVis=false
+  V2 readback bad: interior.bon cut=1 fxVis=true ok=true maskFlag=0 decalVis=false
+  V2 readback bad: interior.b50 cut=0.5 fxVis=true ok=true maskFlag=0 decalVis=false
+  V2 readback bad: interior.back cut=0 fxVis=true ok=true maskFlag=0 decalVis=false
+  V2 readback bad: night.off cut=0 fxVis=true ok=true maskFlag=0 decalVis=false
+  V2 readback bad: night.bfx0 cut=0 fxVis=false ok=true maskFlag=0 decalVis=false
+  V2 readback bad: night.bon cut=1 fxVis=true ok=true maskFlag=0 decalVis=false
+  V2 readback bad: night.b50 cut=0.5 fxVis=true ok=true maskFlag=0 decalVis=false
+  V2 readback bad: night.back cut=0 fxVis=true ok=true maskFlag=0 decalVis=false
+  V2 readback bad: traversal.off cut=0 fxVis=true ok=true maskFlag=0 decalVis=false
+  V2 readback bad: traversal.bfx0 cut=0 fxVis=false ok=true maskFlag=0 decalVis=false
+  V2 readback bad: traversal.bon cut=1 fxVis=true ok=true maskFlag=0 decalVis=false
+  V2 readback bad: traversal.b50 cut=0.5 fxVis=true ok=true maskFlag=0 decalVis=false
+  V2 readback bad: traversal.back cut=0 fxVis=true ok=true maskFlag=0 decalVis=false
+  V2 readback bad: guard.off cut=0 fxVis=true ok=true maskFlag=0 decalVis=false
+  V2 readback bad: guard.bfx0 cut=0 fxVis=false ok=true maskFlag=0 decalVis=false
+  V2 readback bad: guard.bon cut=1 fxVis=true ok=true maskFlag=0 decalVis=false
+  V2 readback bad: guard.b50 cut=0.5 fxVis=true ok=true maskFlag=0 decalVis=false
+  V2 readback bad: guard.back cut=0 fxVis=true ok=true maskFlag=0 decalVis=false
+  V2 readback bad: sly-profile.off cut=0 fxVis=true ok=true maskFlag=0 decalVis=false
+  V2 readback bad: sly-profile.bfx0 cut=0 fxVis=false ok=true maskFlag=0 decalVis=false
+  V2 readback bad: sly-profile.bon cut=1 fxVis=true ok=true maskFlag=0 decalVis=false
+  V2 readback bad: sly-profile.b50 cut=0.5 fxVis=true ok=true maskFlag=0 decalVis=false
+  V2 readback bad: sly-profile.back cut=0 fxVis=true ok=true maskFlag=0 decalVis=false
+R_hero: diff(off,back) = 0 px
+R_temple: diff(off,back) = 0 px
+R_sly-closeup: diff(off,back) = 0 px
+R_courtyard: diff(off,back) = 0 px
+R_dunes: diff(off,back) = 0 px
+R_interior: diff(off,back) = 0 px
+R_night: diff(off,back) = 0 px
+R_traversal: diff(off,back) = 0 px
+R_guard: diff(off,back) = 0 px
+R_sly-profile: diff(off,back) = 0 px
+R_combat: diff(off,back) = 0 px
+BG_donut: FX-covered px in combat DONUT = 95813 (need >= 20000)
+BG_shaft: FX-covered px in temple SHAFTBAND = 105655 (need >= 20000)
+
+bon (fxInkCut 1): E1 5956 px  E2 123.5 L  E3 1290 px
+  C_hero: changed 2879 px, contained 89.72%  |  darken/brighten energy 0.083
+  C_temple: changed 17587 px, contained 98.69%  |  darken/brighten energy 0.040
+  C_sly-closeup: changed 1609 px, contained 99.88%  |  darken/brighten energy 0.099
+  C_courtyard: changed 35302 px, contained 98.73%  |  darken/brighten energy 0.038
+  C_dunes: changed 2160 px, contained 100.00%  |  darken/brighten energy 0.154
+  C_interior: changed 9728 px, contained 100.00%  |  darken/brighten energy 0.023
+  C_night: changed 3058 px, contained 99.90%  |  darken/brighten energy 0.028
+  C_traversal: changed 7815 px, contained 97.45%  |  darken/brighten energy 0.047
+  C_guard: changed 15310 px, contained 99.18%  |  darken/brighten energy 0.027
+  C_sly-profile: changed 2063 px, contained 99.76%  |  darken/brighten energy 0.088
+  C_combat: changed 25418 px, contained 100.00%  |  darken/brighten energy 0.006
+
+b50 (fxInkCut 0.5): E1 4626 px  E2 116.4 L  E3 634 px
+  C_hero: changed 1927 px, contained 86.97%  |  darken/brighten energy 0.155
+  C_temple: changed 11560 px, contained 98.31%  |  darken/brighten energy 0.065
+  C_sly-closeup: changed 738 px, contained 99.86%  |  darken/brighten energy 0.215
+  C_courtyard: changed 25247 px, contained 98.67%  |  darken/brighten energy 0.056
+  C_dunes: changed 1348 px, contained 100.00%  |  darken/brighten energy 0.235
+  C_interior: changed 5729 px, contained 100.00%  |  darken/brighten energy 0.043
+  C_night: changed 2267 px, contained 100.00%  |  darken/brighten energy 0.051
+  C_traversal: changed 5799 px, contained 97.19%  |  darken/brighten energy 0.079
+  C_guard: changed 10123 px, contained 99.59%  |  darken/brighten energy 0.039
+  C_sly-profile: changed 807 px, contained 99.88%  |  darken/brighten energy 0.230
+  C_combat: changed 20337 px, contained 100.00%  |  darken/brighten energy 0.012
+
+-- validity --
+  V1_stamps: PASS
+  V2_readbacks: FAIL
+  V3_pageclean: PASS
+  V4_maskbound: PASS
+  BG_donut: PASS
+  BG_shaft: PASS
+  R_hero: PASS
+  R_temple: PASS
+  R_sly-closeup: PASS
+  R_courtyard: PASS
+  R_dunes: PASS
+  R_interior: PASS
+  R_night: PASS
+  R_traversal: PASS
+  R_guard: PASS
+  R_sly-profile: PASS
+  R_combat: PASS
+
+arm bon: ==> DO NOT SHIP — V2_readbacks FAIL, C_hero_bon FAIL, C_temple_bon FAIL, C_courtyard_bon FAIL, C_traversal_bon FAIL
+
+arm b50: ==> DO NOT SHIP — V2_readbacks FAIL, C_hero_b50 FAIL, C_temple_b50 FAIL, C_courtyard_b50 FAIL, C_traversal_b50 FAIL
+
+crops -> /home/user/Demo/progress/records/fxfix2/crops (fxink2-*). The RESULT adjudicates the LOOK gate (§5) off these;
+item 4 (hero/night floor-pool ink) is where the parent candidate died.
+
+==> mechanical ship rule: NO arm passes — no ship; record the per-shot containment table (PREREG-fxink2 §6).
