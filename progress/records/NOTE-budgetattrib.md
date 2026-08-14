@@ -201,6 +201,32 @@ Secondary readings the same run yields, recorded but not gating: whether guard i
 in-page (the r12 critic calls the guards "outline-less"), and the same-tree counted-vs-main-view
 pair for `night`, which re-measures the multiplier at HEAD.
 
+### The run, and why it is not in this note
+
+It was launched — `bash tools/launch.sh <export>/tools/budget.mjs
+/home/user/Demo/progress/records/logs/budgetattrib-run1.log /tmp/sands-of-ra/budgetattrib1.pid
+night dunes`, pid 723, detached and verified at ppid 1 — and it sat **11 minutes at the head of
+the FIFO** behind a 24-minute `guardcone.mjs` hold, with three more lanes queued behind it. It was
+**withdrawn rather than left running unattended**: an unattended run at the head of a four-deep
+queue takes the lock, boots for 90 s and prints into a log nobody is reading, while four lanes
+wait on it. Its log is lock-wait lines only, and no measurement was taken.
+
+**To settle it, in one command, whenever the queue is quiet:**
+
+```
+bash tools/launch.sh tools/budget.mjs \
+  /home/user/Demo/progress/records/logs/budgetattrib-run2.log \
+  /tmp/sands-of-ra/budgetattrib2.pid night dunes
+```
+
+Read the `guards` and `guards [ink shell]` rows of the `=== night` block against the two bands
+above. **The bands are registered here, before the run** — §141.1: whoever executes it inherits
+them and cannot move them afterwards. Two notes for whoever does: boot from a clean
+`git archive HEAD` export if the shared tree is mid-edit (it was here — two lanes' files did not
+parse, and the app would not have booted); and `budget.mjs` reads
+`frustumCulled === false` correctly, so its rows are strictly better than this note's on the
+12 always-drawn meshes.
+
 ---
 
 ## What this means for the standing §1 item
