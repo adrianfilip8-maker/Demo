@@ -19,7 +19,10 @@ PostFX chain. It is a **per-frame, all-passes submission counter** — three sha
 plus the beauty pass plus a full-scene normal prepass plus the blits, summed. §1 caps *visible*
 geometry, and this repo's own `tools/scenebudget.mjs` header, AGENTS §1.2, §51.3, §53.5, §215.2
 and `RESULT-budget34-verdict.md` all already say so. **On the scored column, 0 of 16 shots breach
-§1 — worst 54% of the triangle cap and 34% of the draw cap.**
+§1 on either cap, under either reading below** — worst 54% of the triangle cap and 34% of the draw
+cap on the headless floor, worst 96% and 45% on the in-page substitution (F3). The friendlier
+number is not the one this rests on: both readings are printed in every table here, and the
+verdict is the same under the harsher one.
 
 **F2 — The first per-shot, per-owner attribution exists now, for all 16 shots.** Table below.
 Nothing in `src/world/**` is a plausible cut target: the *entire* level — architecture, props,
@@ -226,5 +229,11 @@ Stated gaps — every one of them makes the floor reading a **floor**:
   FX and sky at 10–13 draws and ~3 k triangles combined; they do not move any conclusion here.
 - Guards stand at their roster patrol positions at t = 0; `SHOT_POSE` staging (which reposes one
   guard for the `guard` shot) is not reproduced.
+- **12 of 112 meshes carry `frustumCulled = false`** (vegetation's 8 instanced batches, `nile`,
+  `coins`, `guard_beams`, `guard_pools`) and are therefore drawn whether or not they are in
+  frame; this probe still frustum-tests them, so shots that do not see them are under-reported by
+  up to ~86 k triangles / 12 draws. It matters only where they are off-screen — `interior`, whose
+  0.363 M floor row should be read as ~0.45 M. No verdict in this note moves on it, and it is a
+  cheap real saving for whoever owns those flags (an off-screen palm batch costs a full draw).
 
 Reproduce: `node tools/budgetattrib.mjs [--inpage] [--json out.json] [shot ...]`. Runs in ~40 s.
