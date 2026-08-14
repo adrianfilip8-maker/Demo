@@ -272,6 +272,15 @@ uniform float uFillSkyMix;    // hue blend of that half toward the sky, luma-mat
    it exists to fix the other half of. */
 uniform float uLocalToon;
 
+/* uGuardLampPos/uGuardLampColor — the patrol guard's carried torch as a toon light
+   (PREREG-guardcone; the ToonMaterial uniform block and Guard.js:_publishLamp carry the
+   contract). xyz world, w = radius: w <= 0 ⇒ the branch after the localToon term is untaken
+   and the build is bit-identical (the uLocalToon standard). GUARDS publishes per frame; the
+   colour arrives pre-multiplied by intensity · gain · night-window, so daylight publishes
+   are exactly zero-w. */
+uniform vec4 uGuardLampPos;
+uniform vec3 uGuardLampColor;
+
 /* uRakeTrack / uRakeGap — the golden-hour raking key (PREREG-goldenrake; TUNE.rakeTrack in
    ToonMaterial.js carries the full contract). 0.0 = the branch directly after slyRamp in
    TOON_SHADE is untaken and the ramp is bit-identical to the pre-seal build. */
@@ -793,6 +802,22 @@ export const TOON_SHADE = /* glsl */ `
 				diff += alb * min( slyLocalAcc * uLocalToon, vec3( SLY_LOCAL_CAP ) );
 			}
 		#endif
+
+		/* ── the patrol guard's carried torch (PREREG-guardcone) ─────────────────────────
+		 * The localToon term above is gated UNDERGROUND on purpose (§303's seal), which
+		 * leaves the above-ground patrol lamp lighting nothing — including the guard
+		 * holding it. This is that one lamp, published by GUARDS per frame (world position;
+		 * w = radius, exactly 0 when off/day-gated/gained-out ⇒ branch untaken ⇒
+		 * bit-identical build). Lambert only, punctual window² / (1+d²) falloff, and the
+		 * same SLY_LOCAL_CAP before the albedo multiply, so like the sconce pool it can
+		 * never push a pixel into bloom. */
+		if ( uGuardLampPos.w > 0.0 ) {
+			vec3 slyGlv = ( viewMatrix * vec4( uGuardLampPos.xyz, 1.0 ) ).xyz - slyViewPos;
+			float slyGd = length( slyGlv );
+			float slyGw = clamp( 1.0 - ( slyGd * slyGd ) / ( uGuardLampPos.w * uGuardLampPos.w ), 0.0, 1.0 );
+			float slyGa = slyGw * slyGw / ( 1.0 + slyGd * slyGd );
+			diff += alb * min( uGuardLampColor * ( clamp( dot( N, slyGlv / max( slyGd, 1e-4 ) ), 0.0, 1.0 ) * slyGa ), vec3( SLY_LOCAL_CAP ) );
+		}
 
 		/* uMetal is the art-directed metal *amount*; the ORM texture's blue channel is the
 		   mask that says where on the surface it applies — the gilding on a hieroglyph, the

@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { rng } from '../core/Rand.js';
-import { buildGuardAssets, instantiate, GROUPS } from './GuardModel.js';
+import { buildGuardAssets, instantiate, GROUPS, GUARD_PALETTE } from './GuardModel.js';
+import { removeOutlineShell } from '../render/Outline.js';
 import { loadCarmelitaGuard } from './CarmelitaGuard.js';
 import { GuardAnim } from './GuardAnim.js';
 import {
@@ -118,6 +119,44 @@ const TUNE = {
 
   beamLit: 0.85,           // how lit a player standing in another guard's beam counts as
 
+  /* ── guardpass — critic family #3's two seals (PREREG-guardart / PREREG-guardcone;
+     DESIGN-guardpass.md). Every default below is the branch-untaken HEAD behaviour, pinned
+     by tests/guardart.test.mjs; candidate values land only on those seals' PASS. ── */
+
+  /* (A) the bodies. guardArt 1 = paint the §2.2 dress into the Carmelita geometry's
+     vertex-colour channel per region (the channel §291 proved live and left at identity)
+     and dress the head block in the body material instead of bronze lacquer.
+     guardSkin 1 = +1 skinIndex remap: `instantiate()` prepends `root` to the skeleton
+     while the import's boneIndex was built root-less, so every vertex reads one bone
+     early — crown from `neck`, hands from `lowerArm`, hips from `root` (measured,
+     DESIGN-guardpass §What-is-broken.3). Both are applied by `applyArt()`, exactly
+     reversible, and at 0 touch nothing. */
+  guardArt: 0,
+  guardSkin: 0,
+
+  /* (B) the cone. coneShape 1 takes the structured-beam branch in BEAM_FRAG (uConeShape);
+     0 = the legacy branch, spelled byte-identical to the pre-seal shader. The five
+     constants below feed ONLY the taken candidate branch (unread at 0). */
+  coneShape: 0,
+  coneAtten: 13.0,         // length falloff in the candidate branch (legacy hardcodes 7.0)
+  coneCap: 1.30,           // additive ceiling (legacy 4.0 — the white-wash clip)
+  coneEdge: 0.35,          // boundary-shell emphasis so the volume has a findable edge
+  coneDust: 0.65,          // structured mote depth (legacy: ±16% sine pair)
+  coneGrad: 0.85,          // saturation-deepening down the length (hue-family preserving)
+  /* Rendered beam-shell radius as a fraction of the sensed half-angle. The POOL always
+     keeps the true half-angle: the wedge on the pavement stays the honest gameplay
+     telegraph; this only narrows the airborne volume so it stops out-growing the frame.
+     1.0 = x·1, exact. */
+  beamCoreScale: 1.0,
+  /* Gain on the uGuardLampPos/uGuardLampColor publish (_updateSpill) — the carried torch
+     finally lighting TOON surfaces above ground, §303's localToon being underground-gated.
+     0.0 ⇒ w published as exactly 0 ⇒ the shader branch is untaken (the uLocalToon
+     standard). lampWindow is the _light window: full effect below [0], exactly 0 above
+     [1] — every daylight canonical (_light ≥ 0.72) and interior (0.90) publish 0 by
+     arithmetic; guard (0.263) ≈ 1.0, night (0.10) = 1.0. */
+  lampToon: 0.0,
+  lampWindow: [0.26, 0.56],
+
   /* --- local light spill. Only the two guards nearest the camera ever hold a slot. --- */
   lightRadius: 8.5,
   lightIntensity: 4.2,
@@ -174,6 +213,7 @@ varying vec3 vAxis;
 varying vec3 vTint;
 varying vec2 vQuad;
 varying float vSeed;
+varying float vAng;          // angle around the cone axis — the candidate dust bands need it
 
 void main() {
   #ifdef USE_INSTANCING
@@ -204,11 +244,13 @@ void main() {
     wpos = apex + camR * position.x * R + camU * position.y * R;
     vN = vec3( 0.0, 0.0, 1.0 );
     vQuad = position.xy;
+    vAng = 0.0;
 
   } else {
 
     wpos = ( m * vec4( position, 1.0 ) ).xyz;
     vQuad = vec2( 0.0 );
+    vAng = atan( position.y, position.x );
 
     /* The instance scale is anisotropic (radius, radius, length), so the baked cone normal is
        sheared into nonsense. Rebuild it from the world-space cone instead: the outward normal
@@ -235,6 +277,12 @@ void main() {
 const BEAM_FRAG = /* glsl */`
 uniform float uTime;
 uniform float uOpacity;
+uniform float uConeShape;    // 0 = the legacy branch below, byte-identical to the pre-seal beam
+uniform float uConeAtten;    // the five candidate constants are read ONLY inside the taken
+uniform float uConeCap;      //   branch — see TUNE.coneShape (PREREG-guardcone)
+uniform float uConeEdge;
+uniform float uConeDust;
+uniform float uConeGrad;
 varying float vT;
 varying vec3 vN;
 varying vec3 vV;
@@ -242,6 +290,7 @@ varying vec3 vAxis;
 varying vec3 vTint;
 varying vec2 vQuad;
 varying float vSeed;
+varying float vAng;
 
 /* No *_pars_fragment includes here: three already injects the tone-mapping and colour-space
    helper blocks into every non-raw ShaderMaterial's fragment prefix. Including them again
@@ -253,40 +302,87 @@ void main() {
   /* --- the lamp card --- */
   if ( vT < -0.5 ) {
     float d = length( vQuad );
-    float ga = pow( max( 0.0, 1.0 - d ), 3.0 ) * 1.7 * uOpacity;
-    ga *= smoothstep( 0.4, 1.6, length( vV ) );
-    gl_FragColor = vec4( vTint * ga, ga );
+    float ga;
+    vec3 gc;
+    if ( uConeShape > 0.5 ) {
+      /* A lamp, not a smudge: a hot near-white core inside a warm halo — the tight coloured
+         source §7.3 wants bloom to grab (and the "visible source" half of the cone rebuild). */
+      float core = pow( max( 0.0, 1.0 - d ), 7.0 ) * 3.4;
+      float halo = pow( max( 0.0, 1.0 - d ), 2.2 ) * 0.85;
+      ga = ( core + halo ) * uOpacity * smoothstep( 0.4, 1.6, length( vV ) );
+      float mx = max( vTint.r, max( vTint.g, vTint.b ) );
+      gc = mix( vTint, vec3( 1.0, 0.97, 0.88 ) * mx, 0.55 * pow( max( 0.0, 1.0 - d ), 5.0 ) );
+    } else {
+      ga = pow( max( 0.0, 1.0 - d ), 3.0 ) * 1.7 * uOpacity;
+      ga *= smoothstep( 0.4, 1.6, length( vV ) );
+      gc = vTint;
+    }
+    gl_FragColor = vec4( gc * ga, ga );
     #include <tonemapping_fragment>
     #include <colorspace_fragment>
     return;
   }
 
-  /* The whole illusion. A shell weighted by how squarely it faces the eye is bright through
-     the middle and vanishes at its own silhouette; front + back shell sum to a soft volume
-     with no visible geometry edge. Weight it the other way and you get a glowing tube. */
-  float body = pow( abs( dot( normalize( vN ), V ) ), 1.85 );
-
-  /* Staring down the beam should be blinding, not blank — the shell is edge-on from there. */
-  float glare = pow( max( 0.0, dot( -vAxis, V ) ), 6.0 ) * 0.55;
-
   float t = vT;
-  float atten = 1.0 / ( 1.0 + 7.0 * t * t );
-  // The throat of the cone stays faint. It overlaps the guard's own head and shoulders, and
-  // an additive white wash there erases the silhouette the shot exists to show.
-  float near = smoothstep( 0.0, 0.16, t );
-  float tip = 1.0 - smoothstep( 0.56, 1.0, t );
-
-  /* Dust in the air. Two incommensurable frequencies so it drifts instead of pulsing. */
-  float dust = 0.84 + 0.16 * sin( t * 21.0 - uTime * 1.55 + vSeed )
-                          * sin( t * 7.3 + uTime * 0.72 - vSeed * 0.5 );
-
   /* Never let the camera end up inside a solid wall of additive white. */
   float camFade = smoothstep( 0.4, 2.0, length( vV ) );
+  float a;
+  vec3 tint = vTint;
 
-  float a = ( body + glare ) * atten * near * tip * dust * camFade * uOpacity;
-  a = clamp( a, 0.0, 4.0 );
+  if ( uConeShape > 0.5 ) {
 
-  gl_FragColor = vec4( vTint * a, a );
+    /* ── the structured beam (PREREG-guardcone) ─────────────────────────────────────────
+       Same shell, different statement: a tighter core, an actual boundary, real length
+       falloff, motes instead of a flat sine — and a ceiling low enough that the volume can
+       never clip to the formless white wedge the r11/r12 critiques photographed. */
+    float ndv = abs( dot( normalize( vN ), V ) );
+    float body = pow( ndv, 2.6 );
+    float edge = pow( 1.0 - ndv, 3.0 ) * uConeEdge;
+    float glare = pow( max( 0.0, dot( -vAxis, V ) ), 6.0 ) * 0.55;
+    float atten = 1.0 / ( 1.0 + uConeAtten * t * t );
+    float near = smoothstep( 0.0, 0.16, t );
+    float tip = 1.0 - smoothstep( 0.56, 1.0, t );
+    /* Dust with structure: three incommensurable angle x length x time bands. The mean sits
+       at 0.62 + ~0 so the shaft keeps its budget; the local swing is what reads as motes. */
+    float m1 = sin( t * 46.0 - uTime * 2.1 + vSeed * 3.1 + vAng * 2.0 );
+    float m2 = sin( t * 23.0 + vAng * 5.0 - uTime * 1.3 - vSeed );
+    float m3 = sin( t * 71.0 - uTime * 3.7 + vAng * 3.0 + vSeed * 1.7 );
+    float motes = 0.62 + uConeDust * ( 0.22 * m1 * m2 + 0.16 * m3 * m1 );
+    a = ( body + edge + glare ) * atten * near * tip * motes * camFade * uOpacity;
+    a = clamp( a, 0.0, uConeCap );
+    /* Colored falloff: deepen the tint's own saturation down the length (tint²/max keeps the
+       hue family), so a warm patrol lamp cools toward the §2.2 sand-GI end of its own family
+       — and the night-graded cool lamp (task #14, shipped) deepens instead of re-warming. */
+    float mx = max( tint.r, max( tint.g, tint.b ) );
+    vec3 deep = mx > 1e-4 ? tint * tint / mx : tint;
+    tint = mix( tint, deep, clamp( t * uConeGrad, 0.0, 1.0 ) );
+
+  } else {
+
+    /* The whole illusion. A shell weighted by how squarely it faces the eye is bright through
+       the middle and vanishes at its own silhouette; front + back shell sum to a soft volume
+       with no visible geometry edge. Weight it the other way and you get a glowing tube. */
+    float body = pow( abs( dot( normalize( vN ), V ) ), 1.85 );
+
+    /* Staring down the beam should be blinding, not blank — the shell is edge-on from there. */
+    float glare = pow( max( 0.0, dot( -vAxis, V ) ), 6.0 ) * 0.55;
+
+    float atten = 1.0 / ( 1.0 + 7.0 * t * t );
+    // The throat of the cone stays faint. It overlaps the guard's own head and shoulders, and
+    // an additive white wash there erases the silhouette the shot exists to show.
+    float near = smoothstep( 0.0, 0.16, t );
+    float tip = 1.0 - smoothstep( 0.56, 1.0, t );
+
+    /* Dust in the air. Two incommensurable frequencies so it drifts instead of pulsing. */
+    float dust = 0.84 + 0.16 * sin( t * 21.0 - uTime * 1.55 + vSeed )
+                            * sin( t * 7.3 + uTime * 0.72 - vSeed * 0.5 );
+
+    a = ( body + glare ) * atten * near * tip * dust * camFade * uOpacity;
+    a = clamp( a, 0.0, 4.0 );
+
+  }
+
+  gl_FragColor = vec4( tint * a, a );
 
   #include <tonemapping_fragment>
   #include <colorspace_fragment>
@@ -353,6 +449,101 @@ void main() {
   #include <colorspace_fragment>
 }
 `;
+
+/* ========================= guard dress (PREREG-guardart) ================== */
+
+/**
+ * The §2.2 dress, per Carmelita source-mesh region (DESIGN-guardpass §A carries the
+ * derivation). Every entry is a GuardModel PAL colour — the same palette the procedural
+ * bodies were authored in — so the garrison re-enters the §2.2 family it was designed for:
+ * bronze/lapis accents on warm linen, desert-jackal fur on the limbs, the wesekh collar
+ * gold. Painted into the vertex-colour channel (map × vColor — §291's contract), which is
+ * exactly the channel the §291 fix left at identity.
+ */
+export const GUARD_DRESS = {
+  Coat: GUARD_PALETTE.linen,
+  MainBody: GUARD_PALETTE.linen,
+  Stomach_LP: GUARD_PALETTE.linenShade,
+  Legs: GUARD_PALETTE.furMid,
+  Hand: GUARD_PALETTE.furMid,
+  Shoes: GUARD_PALETTE.leather,
+  Tail: GUARD_PALETTE.furDark,
+  Collar: GUARD_PALETTE.gold,
+  Buckles002: GUARD_PALETTE.bronze,
+  Badge_Loop: GUARD_PALETTE.bronze,
+  Zip: GUARD_PALETTE.bronze,
+  Antennae003: GUARD_PALETTE.bronzeDark,
+  Barrel: GUARD_PALETTE.bronzeDark,
+  Head_LP: GUARD_PALETTE.furMid,
+  BustRetopo: GUARD_PALETTE.linen,
+  Hair_LP: GUARD_PALETTE.lapis,
+  Scrunchy2: GUARD_PALETTE.gold,
+  Tongue_LowPoly: GUARD_PALETTE.muzzle,
+  TeethUpper_LowPoly: 0xc5c2b8,       // eyeWhite ×0.8 — teeth never bloom (GuardModel scleraTint note)
+  Irises: GUARD_PALETTE.ink,
+  Eyeshine_001_L: GUARD_PALETTE.eyeWhite,
+};
+
+/** Deterministic per-vertex tone jitter — pure position hash, so repeated paints are
+ *  byte-identical (the poke/restore contract needs repaint(1)→repaint(0)→repaint(1) exact). */
+function dressJitter(x, y, z) {
+  let h = Math.sin(x * 127.1 + y * 311.7 + z * 74.7) * 43758.5453;
+  h -= Math.floor(h);
+  return 1 + (h - 0.5) * 0.11;                 // ±5.5%, GuardModel TUNE.colorJitter parity
+}
+
+/**
+ * Paint (or restore) the merged Carmelita geometry's vertex-colour channel.
+ * `table` null ⇒ restore identity [1,1,1] — but ONLY if a previous paint is flagged, so an
+ * untouched boot never writes the attribute at all (bit-identical HEAD at the default).
+ * Exported pure for tests/guardart.test.mjs's roundtrip pin.
+ */
+export function paintGuardRegions(geometry, regions, table) {
+  const attr = geometry?.getAttribute?.('color');
+  if (!attr) return false;
+  if (!table) {
+    if (!geometry.userData.slyGuardPainted) return false;
+    attr.array.fill(1);
+    geometry.userData.slyGuardPainted = false;
+    attr.needsUpdate = true;
+    return true;
+  }
+  if (!Array.isArray(regions) || !regions.length) return false;
+  const pos = geometry.getAttribute('position');
+  const c = new THREE.Color();
+  for (const r of regions) {
+    const hex = table[r.name];
+    c.set(hex === undefined ? 0xffffff : hex);
+    const end = Math.min(r.start + r.count, attr.count);
+    for (let v = r.start; v < end; v++) {
+      const k = dressJitter(pos.getX(v), pos.getY(v), pos.getZ(v));
+      attr.setXYZ(v, Math.min(c.r * k, 1), Math.min(c.g * k, 1), Math.min(c.b * k, 1));
+    }
+  }
+  geometry.userData.slyGuardPainted = true;
+  attr.needsUpdate = true;
+  return true;
+}
+
+/**
+ * The +1 skinIndex remap (PREREG-guardart; DESIGN-guardpass §What-is-broken.3).
+ * `instantiate()` prepends `root` to the skeleton; the import's boneIndex was built over a
+ * root-less order, so every vertex reads one bone early — measured: crown from `neck`,
+ * hands from `lowerArm`, hips from `root`. Integers ±1 in place: exactly reversible, and
+ * the flag makes repeated applies idempotent. Exported pure for the test roundtrip.
+ */
+export function shiftGuardSkin(geometry, on) {
+  const attr = geometry?.getAttribute?.('skinIndex');
+  if (!attr) return false;
+  const want = !!on;
+  if (!!geometry.userData.slyGuardSkinShift === want) return false;
+  const arr = attr.array;
+  const d = want ? 1 : -1;
+  for (let i = 0; i < arr.length; i++) arr[i] += d;
+  geometry.userData.slyGuardSkinShift = want;
+  attr.needsUpdate = true;
+  return true;
+}
 
 /* ============================== scratch =================================== */
 /* Hoisted so update() allocates nothing (AGENTS.md §5). */
@@ -1148,10 +1339,59 @@ export class Guards {
     }
 
     this._applyOutlines();
+    this.applyArt();
     this._buildCones();
     this._registerHazards();
     this._registerLights();
     this._hookEvents();
+  }
+
+  /**
+   * The (A) switch — PREREG-guardart. Reads `TUNE.guardArt` / `TUNE.guardSkin` LIVE (the
+   * harness brackets values by poking `guards.TUNE`, the Lighting.js precedent) and drives
+   * the Carmelita garrison in or out of the art pipeline:
+   *
+   *   guardSkin 1  +1 skinIndex remap on the shared merged geometry (see shiftGuardSkin)
+   *   guardArt 1   §2.2 dress into the vertex-colour channel (see GUARD_DRESS), the head
+   *                block out of bronze lacquer ([body, body] material array — the metal
+   *                material had no albedo map and metal 0.85, which is the dark glossy
+   *                mannequin torso in the r12 crops), and an ink shell ensured on every
+   *                humanoid (bookkept, so restore removes only what this added)
+   *
+   * At the defaults (0/0) on a fresh boot NOTHING is touched — no attribute write, no
+   * material swap — the §296-friendly bit-identical HEAD. Re-callable; each direction is
+   * exactly reversible, which is what makes the one-boot poke A/B possible (§302).
+   * Scarabs (procedural, real vertex colours) are never touched.
+   */
+  applyArt() {
+    const carm = this.carmelita;
+    if (!carm?.geometry) return { art: 0, skin: 0, applied: false };
+    const art = TUNE.guardArt > 0.5;
+    const skin = TUNE.guardSkin > 0.5;
+
+    shiftGuardSkin(carm.geometry, skin);
+    paintGuardRegions(carm.geometry, carm.regions, art ? GUARD_DRESS : null);
+
+    const shading = this.engine.get('shading');
+    for (const g of this.guards) {
+      if (g.type === 'scarab' || g.mesh.geometry !== carm.geometry) continue;
+      if (art) {
+        if (!g._baseMats) g._baseMats = g.mesh.material;
+        if (!g._artMats) g._artMats = [g._baseMats[0], g._baseMats[0]];
+        g.mesh.material = g._artMats;
+        if (!g.mesh.userData.slyShell && shading?.outline) {
+          try { if (shading.outline(g.mesh, { thickness: 1.05 })) g._artShell = true; }
+          catch { /* the paint must not die on an ink failure */ }
+        }
+      } else {
+        if (g._baseMats) g.mesh.material = g._baseMats;
+        if (g._artShell) {
+          try { removeOutlineShell(g.mesh); } catch { /* symmetric with the ensure */ }
+          g._artShell = false;
+        }
+      }
+    }
+    return { art: art ? 1 : 0, skin: skin ? 1 : 0, applied: true };
   }
 
   /**
@@ -1315,7 +1555,18 @@ export class Guards {
       name: 'guard_beam',
       vertexShader: BEAM_VERT,
       fragmentShader: BEAM_FRAG,
-      uniforms: { uTime: { value: 0 }, uOpacity: { value: 1 }, uGlow: { value: TUNE.glowSize } },
+      uniforms: {
+        uTime: { value: 0 }, uOpacity: { value: 1 }, uGlow: { value: TUNE.glowSize },
+        /* PREREG-guardcone: uConeShape 0 takes the legacy branch (byte-identical shader
+           text); the five constants are unread there. Nothing republishes these per frame,
+           so a capture poke of the material uniform sticks (the uShadowHold contract). */
+        uConeShape: { value: TUNE.coneShape },
+        uConeAtten: { value: TUNE.coneAtten },
+        uConeCap: { value: TUNE.coneCap },
+        uConeEdge: { value: TUNE.coneEdge },
+        uConeDust: { value: TUNE.coneDust },
+        uConeGrad: { value: TUNE.coneGrad },
+      },
       transparent: true,
       depthWrite: false,
       depthTest: true,
@@ -1715,11 +1966,15 @@ export class Guards {
 
       /* --- beam instance --- */
       const r = Math.tan(cfg.halfAngle) * reach;
+      /* PREREG-guardcone: the rendered shell may be narrower than the sensed cone (the POOL
+         below always keeps the true half-angle, so the pavement wedge stays the honest
+         telegraph). 1.0 is exact identity (x·1 == x). Read per frame so a TUNE poke sticks. */
+      const coreS = TUNE.beamCoreScale;
       _rgt.crossVectors(WORLD_UP, _dir);
       if (_rgt.lengthSq() < 1e-6) _rgt.set(1, 0, 0);
       _rgt.normalize();
       _up.crossVectors(_dir, _rgt).normalize();
-      _mat.makeBasis(_rgt.multiplyScalar(r), _up.multiplyScalar(r), _v1.copy(_dir).multiplyScalar(reach));
+      _mat.makeBasis(_rgt.multiplyScalar(r * coreS), _up.multiplyScalar(r * coreS), _v1.copy(_dir).multiplyScalar(reach));
       _mat.setPosition(_eye);
       this.beamMesh.setMatrixAt(i, _mat);
       this.beamMesh.setColorAt(i, _col);
@@ -1762,7 +2017,6 @@ export class Guards {
    * The cone itself is the effect; this is a garnish that must never cost anybody else a slot.
    */
   _updateSpill() {
-    if (!this._lights.length) return;
     const cam = this.engine.camera;
     if (cam) cam.getWorldPosition(_v1);
 
@@ -1785,6 +2039,46 @@ export class Guards {
       // calls this) — the spill must agree with the beam it pretends to be cast by.
       h.color.copy(_colA).lerp(_colB, THREE.MathUtils.smoothstep(sus, 0.12, 0.95));
       h.intensity = TUNE.lightIntensity * (1 + sus * 0.6);
+    }
+
+    this._publishLamp(a);
+  }
+
+  /**
+   * The carried torch as a TOON light (PREREG-guardcone; DESIGN-guardpass §B).
+   *
+   * §301 established the carried-torch handle above IS the cone's light, and §303's localToon
+   * term consumes point lights only UNDERGROUND (`slyLocalY < -0.5`) — so above ground the
+   * beam hangs over pavement it cannot illuminate, including the guard holding it. This
+   * publishes the one enabled handle into SHADING's `uGuardLampPos`/`uGuardLampColor`
+   * (world position; w = radius, with gain and the night window folded into the colour and
+   * the w gate), consumed by a branch-untaken term directly after the localToon block.
+   *
+   * Scope, each leg arithmetic: `TUNE.lampToon 0.0` ships ⇒ w is exactly 0 ⇒ the shader
+   * branch never runs (bit-identical build). At any gain, `lampWindow` makes every daylight
+   * canonical (_light ≥ 0.72) and `interior` (0.90) publish exactly 0 — §303's sealed tomb
+   * instruments never see this term — while `guard` (0.263) gets ~1.0 and `night` (0.10)
+   * exactly 1.0, where the lamp colour is the night-graded `_colA` (task #14's cool grade,
+   * d526dd8) so the light agrees with the beam it is cast by. Published EVERY frame
+   * (recompute-on-publish), so a capture poke of TUNE and its restore are exact.
+   */
+  _publishLamp(a) {
+    const sh = this._shading || (this._shading = this.engine.get('shading'));
+    const u = sh?.uniforms;
+    if (!u?.uGuardLampPos) return;
+    const gain = TUNE.lampToon;
+    const [wLo, wHi] = TUNE.lampWindow;
+    const win = 1 - THREE.MathUtils.smoothstep(this._light, wLo, wHi);
+    const g = a?.guard;
+    if (gain > 0 && win > 0 && g && g.state !== STATE.KO) {
+      g._eyePosition(_eye);
+      u.uGuardLampPos.value.set(_eye.x, _eye.y, _eye.z, TUNE.lightRadius);
+      const sus = clamp(g.senses.suspicion / DETECT.chase, 0, 1);
+      u.uGuardLampColor.value.copy(_colA).lerp(_colB, THREE.MathUtils.smoothstep(sus, 0.12, 0.95))
+        .multiplyScalar(TUNE.lightIntensity * (1 + sus * 0.6) * gain * win);
+    } else {
+      u.uGuardLampPos.value.set(0, 0, 0, 0);
+      u.uGuardLampColor.value.setRGB(0, 0, 0);
     }
   }
 

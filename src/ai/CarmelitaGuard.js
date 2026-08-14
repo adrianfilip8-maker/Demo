@@ -190,6 +190,12 @@ export function bindToRig3(scene) {
 
   /* ---- 5. per mesh: bake the world transform, remap weights, carry into our bind ---- */
   const groups = [[], []];                        // 0 = body, 1 = head
+  /* Region names per group, in the same push order as `groups` — after the merge these become
+     `regions` (name/group/start/count in merged-vertex space). Pure metadata: nothing in the
+     boot path reads it, but it makes the merged buffer self-describing, which is what lets
+     GUARDS paint the §2.2 dress into the vertex-colour channel per source mesh instead of
+     reverse-engineering offsets (PREREG-guardart; §291's channel contract, second clause). */
+  const regionNames = [[], []];
   let tris = 0;
   const p0 = new THREE.Vector3(), pa = new THREE.Vector3(), pt = new THREE.Vector3();
   const n0 = new THREE.Vector3(), na = new THREE.Vector3(), nt = new THREE.Vector3();
@@ -259,7 +265,9 @@ export function bindToRig3(scene) {
     g.morphTargetsRelative = false;
     if (g.index) tris += g.index.count / 3; else tris += nV / 3;
 
-    groups[HEAD_MESHES.has(mesh.name) ? 1 : 0].push(g);
+    const gi = HEAD_MESHES.has(mesh.name) ? 1 : 0;
+    groups[gi].push(g);
+    regionNames[gi].push({ name: mesh.name, count: nV });
   }
 
   /* ---- 6. one geometry, two groups, in GROUPS order ---- */
@@ -286,9 +294,23 @@ export function bindToRig3(scene) {
 
   const missing = new Set(NO_SOURCE.filter((b) => !used.has(b)));
 
+  /* Merged-vertex-space regions, in `flat` order (body meshes first, then head — the same
+     concatenation the merge consumed, so starts are exact by construction). */
+  const regions = [];
+  {
+    let off = 0;
+    for (let gi = 0; gi < 2; gi++) {
+      for (const r of regionNames[gi]) {
+        regions.push({ name: r.name, group: gi, start: off, count: r.count });
+        off += r.count;
+      }
+    }
+  }
+
   return {
     geometry: merged,
     skeleton,
+    regions,
     tris: Math.round(tris),
     missing,
     stats: {

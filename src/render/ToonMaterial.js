@@ -1000,6 +1000,14 @@ export class Shading {
          through setKeyLight's `local` key; written only when the payload carries a number,
          so a harness poke sticks whenever the publisher omits it — the uShadowHold contract. */
       uLocalToon:    { value: 0.0 },
+      /* The patrol-lamp toon term (PREREG-guardcone). GUARDS publishes per frame from
+         Guard.js:_publishLamp — position xyz world; w = radius, 0 when the lamp is off,
+         gained-out (GUARD_TUNE.lampToon 0.0 ships) or day-gated. w <= 0 ⇒ the TOON_SHADE
+         branch is untaken and the build is bit-identical (the uLocalToon standard). The
+         colour arrives pre-multiplied by intensity · gain · night-window, capped in-shader
+         at SLY_LOCAL_CAP like the sconce pool, so it can never feed §25's bloom. */
+      uGuardLampPos:   { value: new THREE.Vector4(0, 0, 0, 0) },
+      uGuardLampColor: { value: new THREE.Color(0, 0, 0) },
       /* Grade-lever scaffolding — shared by identity like uDetail2Scale, so a one-boot A/B
          pokes `shading.uniforms.uX.value` and the whole scene follows. Defaults 0 = legacy. */
       uNeutralShadow: { value: TUNE.neutralShadow },
