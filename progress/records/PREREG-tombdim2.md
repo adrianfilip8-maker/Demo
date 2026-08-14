@@ -6,7 +6,15 @@ KNOWN_ISSUES §307. Evidence in the record: §303 the SHIPPED torch pools — `T
 fills; §308 critic r12's interior critique). **Date sealed:** 2026-08-14.
 
 **Status: REGISTERED before any capture. `progress/records/tombdim21/` does not exist at the
-time of writing and no frame of any arm has been rendered.** The runner
+time of writing and no frame of any arm has been rendered.**
+**Provenance (§311):** this file and its four scripts were staged in the shared index when the
+coordinator ran a non-pathspec `git commit`, so the seal landed inside **08a5440** — a commit
+whose message is about the §1 budget correction and has nothing to do with this lane. The
+content is this lane's final intended state (verified by an empty `git diff HEAD` over the
+five paths immediately afterwards), and it was pushed BEFORE any frame of any arm, which is
+what the discipline requires; only the provenance is odd. A reader tracing "when was tombdim2
+sealed" should read **08a5440** (+ this note's own commit, which changes no band, arm,
+threshold or command). The runner
 (`progress/records/tombdim2/tombdim2.mjs`), the scorer (`tombdim2-score.mjs`), its lib
 (`tombdim2-lib.mjs`) and the band-derivation model (`t2model.mjs`) are committed with this
 file, before the capture. **This seal writes NO src/ byte before the capture and installs
