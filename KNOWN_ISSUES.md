@@ -24175,3 +24175,23 @@ prohibition". Successor: (1) fix the V2 probe so the next run scores rather than
 (2) hero at 89.7% is an order-of-magnitude outlier over the other ten — crop ITS uncontained
 pixels rather than re-sweeping eleven shots, and note `decalVis=false` here, so the residue is
 NOT the parent's floor-decal story. Nothing ships; fxInkCut stays 0.
+
+## §325 — the container rolls back roughly hourly and it is now the wave's dominant cost: four rollbacks, four killed captures
+
+Rollbacks at ~09:5x, ~16:5x, and ~20:4x (plus an earlier one) each reverted the working tree to
+an older commit and killed whatever capture was running. Every one was survivable — **all
+commits were reachable on origin every time, verified by explicit sha audit (§314)** — so
+nothing durable has ever been lost. What IS lost, every time, is the in-flight run: `tombdim2b`
++ `fxfix2` (mid-run), `fxfix2` again (0 frames), `lithold` at 39/68 frames. The lit-hold seal
+has now been launched **five times** and has never reached its scorer.
+Recovery is mechanical and takes ~2 minutes; it is recorded here as a runbook because it has
+been executed four times and will be needed again:
+1. `git checkout -- src/ tests/` (the rollback restores an old lane's uncommitted edits).
+2. `git fetch origin <branch>`; move untracked pre-rollback copies that block the merge to
+   `/tmp/prerollbackN/` (typically the guardpass records + `tests/guardart.test.mjs`).
+3. `git merge --ff-only FETCH_HEAD`; verify the suite (541).
+4. Archive the dead run's out-dir (PF7 forces this anyway) and relaunch it.
+**Operational consequences, both already in force:** push every fold the moment it exists
+(nothing durable has been lost precisely because of this), and prefer SHORT runs — a 4.5 h
+capture (§316) is a bet that no rollback lands inside it, and tonight that bet loses more often
+than it wins.
