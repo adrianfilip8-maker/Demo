@@ -23958,3 +23958,20 @@ amend can silently delete another lane's only copy of a seal, and a seal that va
 pre-registration date with it. Fix forward, always — a wrong commit gets a correcting commit, not
 a rewrite.** Corollary already in force: `git commit --only <paths>` (§311) so the mis-commit that
 started this chain cannot happen in the first place.
+
+## §315 — concurrent lanes editing `src/` VOID any capture that stamps its tree; ship-writes must batch until the FIFO drains
+
+The guardcone run captured 49/49 frames across **three distinct source trees** and VOIDed on its
+registered V-TREE bar (RESULT-guardcone.md). Cause: it launched while six sibling lanes were
+still authoring mechanisms into the shared working tree. Nothing was wrong with the runner, the
+seal, or the candidate — the environment moved under a correctly-instrumented run. Its per-shot
+`off`/`back` brackets held 0 px on all sixteen shots, so the churn did not visibly move the
+frames; the VOID is provenance, and the measurements are recorded EVIDENCE-GRADE only.
+Two rules follow, and the second is the one that bites:
+1. **A capture must boot from a tree nobody is editing.** Either wait for the sealing phase to
+   finish, or boot from a clean `git archive HEAD` export (the BUDGET lane already did exactly
+   this when two lanes' files would not parse — that pattern is now the reference).
+2. **With a deep FIFO, ship-writes have to BATCH.** §296 already forbids src writes while a
+   capture runs; with N runs queued back-to-back the lock is never clear, so every PASS verdict
+   must hold its ship-write until the whole queue drains, then land together with one suite run.
+   Folding (offline scoring, RESULT, KI) is unaffected and proceeds per run.

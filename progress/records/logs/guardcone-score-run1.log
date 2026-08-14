@@ -1,0 +1,88 @@
+── guardcone-score — PREREG-guardcone §3 + AMENDMENT A1 ──
+  trees: {906574ed7908f232,fa4b2c1a3a2091e6,2b5c7c49ad9c4668} expected ee5ad9d3a535b155; rows 49 (want 49)
+  PARK1 §309 guard-model levers inert in 49/49 rows
+  R hero         off-vs-back 0 px
+  R kaykit       off-vs-back 0 px
+  R temple       off-vs-back 0 px
+  R sly-closeup  off-vs-back 0 px
+  R sly-startle  off-vs-back 0 px
+  R sly-perch    off-vs-back 0 px
+  R sly-arm      off-vs-back 0 px
+  R courtyard    off-vs-back 0 px
+  R dunes        off-vs-back 0 px
+  R interior     off-vs-back 0 px
+  R night        off-vs-back 0 px
+  R traversal    off-vs-back 0 px
+  R combat       off-vs-back 0 px
+  R guard        off-vs-back 0 px
+  R sly-profile  off-vs-back 0 px
+  R sly-key      off-vs-back 0 px
+  BV1 guard.bon: shape=1 lampW=8.500 colPatrol=0xffd9a0 base=0.26 pool=0.3 core=0.62 glow=0.42; guard.off: shape=0 lampW=0.000; interior.bon lampW=0.0000 (want exactly 0 — the §303 window)
+  BS1 apex [770,335] hot-warm px=0 maxL=196 (want >= 1)
+  BH1 near hue=17.5 S=0.452 (516040px)  far hue=n/a S=n/a (0px)
+  BF1 blown share bon=0.0000 off=0.0000 (want <= 0.08 and <= 0.5×off)
+  BL1 bon-vs-blamp differing=586503 inside=100.0% ΔL=16.29 Δ(R−B)=39.93
+  PROT-MOON night [300,20,480,140] diff=4557px probe-touches=true (rule: disjoint→0, else <=400)
+  PROT-LAMPS night [640,0,1140,130] diff=8018px probe-touches=true (rule: disjoint→0, else <=400)
+  PROT-SPARK traversal [430,190,620,280] diff=0px probe-touches=false (rule: disjoint→0, else <=400)
+  PROT-B hero         AFFECT inside=167757 outside=0 (want outside <= 900)
+  PROT-B kaykit       AFFECT inside=413863 outside=0 (want outside <= 900)
+  PROT-B temple       AFFECT inside=329014 outside=0 (want outside <= 900)
+  PROT-B sly-closeup  AFFECT inside=844003 outside=0 (want outside <= 900)
+  PROT-B sly-startle  AFFECT inside=175006 outside=6108 (want outside <= 900)
+  PROT-B sly-perch    AFFECT inside=615522 outside=0 (want outside <= 900)
+  PROT-B sly-arm      AFFECT inside=689354 outside=0 (want outside <= 900)
+  PROT-B courtyard    AFFECT inside=401860 outside=0 (want outside <= 900)
+  PROT-B dunes        AFFECT inside=30567 outside=0 (want outside <= 900)
+  PROT-B interior     AFFECT inside=220213 outside=0 (want outside <= 900)
+  PROT-B night        AFFECT inside=143049 outside=5 (want outside <= 900)
+  PROT-B traversal    AFFECT inside=326110 outside=0 (want outside <= 900)
+  PROT-B combat       AFFECT inside=920064 outside=0 (want outside <= 900)
+  PROT-B sly-profile  AFFECT inside=921438 outside=0 (want outside <= 900)
+  PROT-B sly-key      AFFECT inside=841921 outside=0 (want outside <= 900)
+  (report) beam-ROI ΔL stddev=25.52 n=517896 — dust/structure texture for LOOK
+
+bars:
+  V-TREE               FAIL
+  PARK1                PASS
+  R_hero               PASS
+  R_kaykit             PASS
+  R_temple             PASS
+  R_sly-closeup        PASS
+  R_sly-startle        PASS
+  R_sly-perch          PASS
+  R_sly-arm            PASS
+  R_courtyard          PASS
+  R_dunes              PASS
+  R_interior           PASS
+  R_night              PASS
+  R_traversal          PASS
+  R_combat             PASS
+  R_guard              PASS
+  R_sly-profile        PASS
+  R_sly-key            PASS
+  BV1                  PASS
+  BS1                  FAIL
+  BH1                  VOID
+  BF1                  FAIL
+  BL1                  PASS
+  PROT-MOON            FAIL
+  PROT-LAMPS           FAIL
+  PROT-SPARK           PASS
+  PROT-B_hero          PASS
+  PROT-B_kaykit        PASS
+  PROT-B_temple        PASS
+  PROT-B_sly-closeup   PASS
+  PROT-B_sly-startle   FAIL
+  PROT-B_sly-perch     PASS
+  PROT-B_sly-arm       PASS
+  PROT-B_courtyard     PASS
+  PROT-B_dunes         PASS
+  PROT-B_interior      PASS
+  PROT-B_night         PASS
+  PROT-B_traversal     PASS
+  PROT-B_combat        PASS
+  PROT-B_sly-profile   PASS
+  PROT-B_sly-key       PASS
+
+==> DO NOT SHIP — V-TREE FAIL, BS1 FAIL, BH1 VOID, BF1 FAIL, PROT-MOON FAIL, PROT-LAMPS FAIL, PROT-B_sly-startle FAIL  (VOID is not PASS — BH1 could not be evaluated)
