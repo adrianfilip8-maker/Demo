@@ -530,6 +530,33 @@ const TUNE = {
      vacuity control firing 4/4, V6 looking clean. */
   bloomSubjectCut: 1.0,
 
+  /* --- FX exclusion from the ink composite, scoped at FX RASTER TIME (critic 11 family 3:
+     "ink on transparent FX" — combat's porcelain-contoured swing band, temple's shafts inked
+     like celluloid) ---
+     The ink mask is derived from the OPAQUE scene's depth+normal buffers (transparent FX opt
+     out of the normal prepass and write no depth), and this pass stamps that mask over the
+     FINISHED frame — so a bright FX volume drawn in front of inked geometry wears the
+     geometry's lines. A hand-inked cel paints the FX over the line art; this does the opposite.
+
+     PREREG-fxink's first answer derived the FX's presence from scene ALPHA (additive draws
+     accumulate past 1) and was FALSIFIED on a valid run (§306/RESULT-fxartifact §2): the
+     alpha-excess signal fired on 13,834 px of `hero` at 36% containment, and the frames say
+     where — the sunlit floor POOLS, i.e. world decals, whose ink lines were cut with no FX
+     quad anywhere near them. Composite arithmetic cannot tell "an FX is in front of this
+     pixel" from "something else also blended here".
+
+     So the signal is now the FX DRAW ITSELF: FX.beginMaskPass() puts the participating FX
+     materials into coverage mode, this pass renders `fx.root` into uFxMask, and the ink is
+     multiplied down by that coverage. Containment is by construction rather than by argument —
+     a pixel no FX quad covered has mask 0 and keeps every bit of its ink. World decals are
+     excluded at the FX side (a decal is a mark ON a surface, like the ink); `ringPainter` is
+     untouched (D12) and is covered as content, not edited.
+
+     0 = shipped behaviour, and by CONTROL FLOW: the mask pass does not run and the composite's
+     gate branch is not entered. Arms {0, 1} are registered in PREREG-fxink2.md; do not ship a
+     nonzero value without that seal's frame verdict. */
+  fxInkCut: 0.0,
+
   /* --- grade --- */
   // Was lifted to 1.45 to fight darkness that turned out to be the AO feedback bug below.
   // With that fixed the lift became a double correction and blew the stone out to white,
@@ -1185,6 +1212,8 @@ uniform float uAOEnabled, uEdgeEnabled, uBloomEnabled, uInkStrength;
 uniform float uAOStrength, uAODepth, uRimStrength, uRimShadowFloor;
 uniform sampler2D uNormal;      // normal prepass; alpha = 1 - subject (ledger #31, inverted)
 uniform float uRimFloorOffCut;  // TUNE.rimFloorOffCut — off-subject rim-floor cut; 0 = exact no-op
+uniform sampler2D uFxMask;      // FX coverage, written by the FX draw itself (TUNE.fxInkCut)
+uniform float uFxInkCut;        // TUNE.fxInkCut — ink exclusion over FX coverage; 0 = exact no-op
 uniform vec3  uLift, uGain, uSplitShadow, uSplitHighlight, uInkWarm, uInkCool;
 uniform vec3  uAOTint, uRimLit, uRimShade;
 uniform vec4  uContact;      // radiusWorld(m), strength, minPx, maxPx
@@ -1448,6 +1477,14 @@ void main() {
     // Don't ink what's already dark. A black line on a near-black surface adds nothing but
     // noise, and it was a large part of why the shadowed half of the frame turned to mush.
     line *= smoothstep( 0.05, 0.20, lum );
+    /* FX exclusion (TUNE.fxInkCut): ink is a mark on a SURFACE, and a bright FX volume in
+       front of that surface must COVER the mark, not wear it. uFxMask is the FX draw's own
+       coverage (see the TUNE note), so this is proportional to the FX's own opacity and is
+       exactly 0 wherever no FX quad drew. The branch — not a multiply by a zeroed uniform —
+       is what makes 0 the shipped image byte-for-byte and keeps the sampler unbound there. */
+    if ( uFxInkCut > 0.0 ) {
+      line *= 1.0 - clamp( uFxInkCut * texture2D( uFxMask, vUv ).r, 0.0, 1.0 );
+    }
     // Warm ink where the surface is lit, violet ink where it's in shadow (§2.1).
     vec3 ink = min( mix( uInkCool, uInkWarm, smoothstep( 0.12, 0.55, lum ) ), c );
     c = mix( c, ink, clamp( line, 0.0, 1.0 ) * uInkStrength );
@@ -1540,6 +1577,7 @@ function tintColor(col) {
 const _turqTint = new THREE.Color(0x2fa8a0);   // §2.2 TURQUOISE — same target 07fe98c used
 const _whiteTint = new THREE.Color(0xffffff);  // aoTintNeutral target — neutral-arm only
 const _splitScratch = new THREE.Color();
+const _fxMaskClear = new THREE.Color();   // clear-colour save/restore around the FX mask pass
 const _aoScratch = new THREE.Color();
 
 /* TUNE.rimClock scratch. `_rimLitDay` / `_rimShadeDay` are rebuilt from `tune` every frame so the
@@ -1668,6 +1706,8 @@ export class PostFX {
         uRimShadowFloor: { value: this.tune.rimShadowFloor },
         uNormal: this.shared.uNormal,
         uRimFloorOffCut: { value: this.tune.rimFloorOffCut },
+        uFxMask: { value: null },
+        uFxInkCut: { value: this.tune.fxInkCut },
         // Occlusion is applied while the image is still linear, so the tint stays linear —
         // normalised against its peak channel so it can only ever darken (see tintColor).
         uAOTint: { value: tintColor(new THREE.Color(this.tune.aoTint)) },
@@ -1958,6 +1998,39 @@ export class PostFX {
 
     this.shared.uDepth.value = this.sceneRT.depthTexture;
 
+    /* ---- 1c. FX coverage mask (TUNE.fxInkCut) ----
+       Rendered from the FX root itself, with the FX materials in coverage mode, so the ink
+       gate below is scoped by the FX DRAW rather than by arithmetic over the finished frame
+       (see TUNE.fxInkCut for the falsification that put it here). Costs one pass over the FX
+       quads and one 8-bit target, and only when the knob is on: at 0 none of this runs and
+       neither does the composite's gate branch. */
+    this.compositeMat.uniforms.uFxMask.value = null;
+    if (this.tune.fxInkCut > 0) {
+      const fx = engine.get('fx');
+      const fxRoot = fx?.beginMaskPass?.() ?? null;
+      if (fxRoot) {
+        try {
+          if (!this.fxMaskRT) {
+            this.fxMaskRT = this._rt(makeRT(this.size.w, this.size.h, { depth: false, name: 'postfx.fxmask' }));
+          } else if (this.fxMaskRT.width !== this.size.w || this.fxMaskRT.height !== this.size.h) {
+            sizeRT(this.fxMaskRT, this.size.w, this.size.h);
+          }
+          const prevClear = renderer.getClearColor(_fxMaskClear);
+          const prevAlpha = renderer.getClearAlpha();
+          renderer.setRenderTarget(this.fxMaskRT);
+          renderer.setClearColor(0x000000, 1);
+          renderer.clear(true, true, false);
+          renderer.render(fxRoot, cam);
+          renderer.setClearColor(prevClear, prevAlpha);
+          this.compositeMat.uniforms.uFxMask.value = this.fxMaskRT.texture;
+        } finally {
+          /* Paired in try/finally: a throw here must never leave every FX material stuck in
+             coverage mode, which would render the game as a white-on-black mask. */
+          fx.endMaskPass();
+        }
+      }
+    }
+
     /* ---- 1b. debugRaw: present the scene target and stop. See debugRaw() above. ----
        Placed immediately after the scene draw so that every later pass is skipped by control
        flow rather than by a uniform set to zero — a pass whose strength is 0 still runs, still
@@ -2196,6 +2269,8 @@ export class PostFX {
     cu.uRimShadowFloor.value = this.tune.rimShadowFloor;
     // Re-read per frame like its siblings, so a one-boot A/B can poke tune.rimFloorOffCut (§40).
     cu.uRimFloorOffCut.value = this.tune.rimFloorOffCut;
+    // Same, for tune.fxInkCut; uFxMask itself is bound by the mask pass in _renderChain.
+    cu.uFxInkCut.value = this.tune.fxInkCut;
 
     /* ---- the two clock-driven terms (TUNE.liftDayScale, TUNE.rimClock) ----
        LIGHTING publishes `atmosphere` and `rimColor` as public fields (Lighting.js:503/511), so

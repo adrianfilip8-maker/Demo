@@ -738,6 +738,7 @@ uniform vec2  uInvRes;
 uniform float uSoftness;
 uniform vec2  uNearFade;
 uniform float uOpacity;
+uniform float uFxMaskPass;   // PREREG-fxink2 coverage pass; 0 = shipped path, branch not entered
 
 varying vec2  vUv;
 varying vec4  vCol;
@@ -761,6 +762,17 @@ void main() {
 
   a *= smoothstep( uNearFade.x, uNearFade.y, vViewZ );
   if ( a < 0.004 ) discard;
+
+  /* PREREG-fxink2 coverage pass: write the sprite's OWN opacity, occlusion-tested against the
+     opaque scene depth by hand because the mask target carries no depth attachment. This is
+     the whole point of scoping the ink cut at FX RASTER time — the mask is the FX draw, so it
+     cannot fire on a surface no FX quad covered. */
+  if ( uFxMaskPass > 0.5 ) {
+    float mz = texture2D( uDepth, gl_FragCoord.xy * uInvRes ).r;
+    if ( mz > 0.001 && mz < 9000.0 && vViewZ > mz ) discard;
+    gl_FragColor = vec4( vec3( a ), 1.0 );
+    return;
+  }
 
   gl_FragColor = vec4( vCol.rgb * t.rgb, a );
 
@@ -838,6 +850,7 @@ const SPARKLE_FRAG = /* glsl */`
 precision highp float;
 uniform vec3 uCore;
 uniform vec3 uGlow;
+uniform float uFxMaskPass;   // PREREG-fxink2 coverage pass; 0 = shipped path
 varying vec2 vQ;
 varying float vGain;
 
@@ -861,6 +874,12 @@ void main() {
   if ( a < 0.005 ) discard;
 
   vec3 col = mix( uGlow, uCore, clamp( shape * 0.7 + core * 1.6, 0.0, 1.0 ) );
+  /* PREREG-fxink2 coverage pass. No uDepth/vViewZ in this shader, so no hand occlusion test:
+     an OCCLUDED sparkle marks the mask here, which over-cuts ink rather than under-cutting it.
+     Registered as a known limitation and measured by the seal's containment bars, not assumed
+     away — see PREREG-fxink2 §2. */
+  if ( uFxMaskPass > 0.5 ) { gl_FragColor = vec4( vec3( clamp( a, 0.0, 1.0 ) ), 1.0 ); return; }
+
   gl_FragColor = vec4( col * ( 0.9 + 0.9 * vGain ), a );
   #include <colorspace_fragment>
 }
@@ -951,6 +970,7 @@ precision highp float;
 uniform sampler2D uDepth;
 uniform vec2  uInvRes;
 uniform float uSoft;
+uniform float uFxMaskPass;   // PREREG-fxink2 coverage pass; 0 = shipped path
 uniform float uTime;
 uniform float uGain;
 uniform float uHalo;
@@ -1031,6 +1051,13 @@ void main() {
      over POSTFX's 1.55 bloom threshold rather than several stops over it — the ask is a tight
      coloured halo on a bright thing (§7.3), and an uncapped core would blow to a white disc
      and take the flame's own silhouette with it. */
+  if ( uFxMaskPass > 0.5 ) {   // PREREG-fxink2 coverage pass
+    float mz = texture2D( uDepth, gl_FragCoord.xy * uInvRes ).r;
+    if ( mz > 0.001 && mz < 9000.0 && vViewZ > mz ) discard;
+    gl_FragColor = vec4( vec3( clamp( a, 0.0, 1.0 ) ), 1.0 );
+    return;
+  }
+
   gl_FragColor = vec4( col * uGain, min( a, 1.6 ) );
   #include <colorspace_fragment>
 }
@@ -1162,6 +1189,7 @@ uniform sampler2D uDepth;
 uniform vec2  uInvRes;
 uniform float uSoft;
 uniform float uOpacity;
+uniform float uFxMaskPass;   // PREREG-fxink2 coverage pass; 0 = shipped path
 uniform vec2  uNearFade;
 uniform vec2  uSlabNearFade;
 uniform vec2  uFarFade;
@@ -1293,6 +1321,16 @@ void main() {
   dark = clamp( dark * occl, 0.0, 0.5 );
 
   if ( a < 0.004 && dark < 0.004 ) discard;
+
+  /* PREREG-fxink2 coverage pass — the shafts are the "inked like celluloid" half of the
+     defect, so the volumetric term is what the mask has to carry here (the shader's dark
+     term is the shaft's shadow contribution, not coverage). */
+  if ( uFxMaskPass > 0.5 ) {
+    float mz = texture2D( uDepth, gl_FragCoord.xy * uInvRes ).r;
+    if ( mz > 0.001 && mz < 9000.0 && vViewZ > mz ) discard;
+    gl_FragColor = vec4( vec3( clamp( a, 0.0, 1.0 ) ), 1.0 );
+    return;
+  }
   // Premultiplied: the material blends src * 1 + dst * (1 − srcAlpha). With dark = 0 that is
   // bit-for-bit the additive blade this shader used to be.
   gl_FragColor = vec4( vTint * a + uDarkTint * dark, dark );
@@ -1351,6 +1389,7 @@ class LightShafts {
         uTime: { value: 0 },
         uDepth: shared.depth,
         uInvRes: { value: shared.invRes },
+        uFxMaskPass: shared.maskPass,      // PREREG-fxink2 (0 = shipped path)
         uSoft: { value: tune.shaftSoft },
         uOpacity: { value: 1 },
         uNearFade: { value: new THREE.Vector2(tune.shaftNearFade[0], tune.shaftNearFade[1]) },
@@ -1544,6 +1583,7 @@ class Batch {
         uMaxSize: { value: opts.maxSize ?? 0 },
         uAtlas: { value: opts.shared.atlas },
         uDepth: opts.shared.depth,           // shared uniform object: one assignment re-points all
+        uFxMaskPass: opts.shared.maskPass, // PREREG-fxink2 (0 = shipped path)
         uInvRes: { value: opts.shared.invRes },
         uSoftness: { value: opts.softness ?? TUNE.softDepth },
         uNearFade: { value: new THREE.Vector2(TUNE.nearFade[0], TUNE.nearFade[1]) },
@@ -1671,7 +1711,9 @@ class Batch {
    ========================================================================================= */
 
 class SparkleField {
-  constructor(engine, capacity) {
+  /* `shared` carries the FX coverage-mask uniform (PREREG-fxink2); it is the only reason this
+     constructor takes the bag at all, so it is optional and falls back to the shipped 0. */
+  constructor(engine, capacity, shared = null) {
     this.engine = engine;
     this.capacity = capacity;
     this.count = 0;
@@ -1701,6 +1743,7 @@ class SparkleField {
         uNearBoost: { value: TUNE.sparkleNearBoost },
         uSizeScale: { value: TUNE.sparkleSize },
         uCore: { value: lin(0x8fd8ff, new THREE.Color()).multiplyScalar(2.4) },
+        uFxMaskPass: shared?.maskPass ?? { value: 0 },  // PREREG-fxink2 (0 = shipped path)
         uGlow: { value: lin(0x2a7fd4, new THREE.Color()).multiplyScalar(1.5) },
       },
       vertexShader: SPARKLE_VERT,
@@ -1837,6 +1880,7 @@ class FlameField {
         uTime: { value: 0 },
         uDepth: shared.depth,
         uInvRes: { value: shared.invRes },
+        uFxMaskPass: shared.maskPass,      // PREREG-fxink2 (0 = shipped path)
         uSoft: { value: TUNE.flameSoft },
         uSize: { value: new THREE.Vector2(TUNE.flameSize[0], TUNE.flameSize[1]) },
         uFade: { value: new THREE.Vector2(TUNE.flameFade[0], TUNE.flameFade[1]) },
@@ -1952,6 +1996,11 @@ export class Particles {
       ambTint: new THREE.Color(0.5, 0.55, 0.62),
       atlas: null,
       depth: { value: null },     // replaced by a real uniform object below
+      /* PREREG-fxink2: 1 during POSTFX's FX-coverage mask pass, 0 every other frame and every
+         other pass. ONE uniform object shared by every participating FX material, so the pass
+         is a single assignment rather than a walk (the `depth` object above is the precedent).
+         0 is the shipped path and the branch that reads it is never entered there. */
+      maskPass: { value: 0 },
       invRes: new THREE.Vector2(1 / 1280, 1 / 720),
       shaftA: [], shaftB: [], shaftC: [],
     };
@@ -2008,7 +2057,7 @@ export class Particles {
 
       this.decals = new Decals(engine, { atlas: this.shared.atlas });
       this.root.add(this.decals.mesh);
-      this.trails = new Trails(engine, { atlas: this.shared.atlas });
+      this.trails = new Trails(engine, { atlas: this.shared.atlas, maskPass: this.shared.maskPass });
       this.root.add(this.trails.root);
 
       engine.scene.add(this.root);
@@ -2196,7 +2245,7 @@ export class Particles {
   }
 
   _buildSparkles() {
-    this.sparkles = new SparkleField(this.engine, TUNE.sparkleMax);
+    this.sparkles = new SparkleField(this.engine, TUNE.sparkleMax, this.shared);
     this.root.add(this.sparkles.mesh);
     this._sparkleTimer = 0;
   }
@@ -2966,6 +3015,40 @@ export class Particles {
 
     this.decals?.update(dt, t);
     this.trails?.update(dt, t);
+  }
+
+  /* ------------------------------------------------- FX coverage mask (PREREG-fxink2) */
+
+  /**
+   * Put every participating FX material into coverage-mask mode and hand POSTFX the root to
+   * draw. POSTFX owns the render target and the camera; this owns WHICH FX are coverage.
+   *
+   * What participates: particle batches, light shafts, flames, sparkles and trails — every
+   * FX that draws a VOLUME in front of the scene, which is the thing a cel painter paints
+   * over the line art. What does NOT: world DECALS. A decal is a mark ON a surface, exactly
+   * like the ink itself, so cutting ink underneath one would erase the drawing rather than
+   * cover it — and the §306 measurement says decals are also where the composite's alpha
+   * detector leaked (the sunlit floor pools on `hero`/`temple` carry ink lines the alpha gate
+   * cut while no FX quad was within a hundred pixels).
+   *
+   * Returns the object to render, or null when FX has not initialised.
+   */
+  beginMaskPass() {
+    if (!this.root) return null;
+    this.shared.maskPass.value = 1;
+    this._maskDecalVis = this.decals?.mesh ? this.decals.mesh.visible : null;
+    if (this.decals?.mesh) this.decals.mesh.visible = false;
+    return this.root;
+  }
+
+  /** Counterpart to beginMaskPass. Idempotent, and safe to call after a throw. */
+  endMaskPass() {
+    if (!this.root) return;
+    this.shared.maskPass.value = 0;
+    if (this.decals?.mesh && this._maskDecalVis !== null && this._maskDecalVis !== undefined) {
+      this.decals.mesh.visible = this._maskDecalVis;
+    }
+    this._maskDecalVis = null;
   }
 
   /* ---------------------------------------------------------------- depth copy */

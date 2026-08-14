@@ -40,6 +40,7 @@ uniform vec3 uHead;
 uniform vec3 uTail;
 uniform float uOpacity;
 uniform float uTile;
+uniform float uFxMaskPass;   // PREREG-fxink2 coverage pass; 0 = shipped path
 varying vec2 vUv;
 varying float vFade;
 varying float vAlpha;
@@ -52,6 +53,11 @@ void main() {
   float a = t.a * across * vFade * vAlpha * uOpacity;
   if ( a < 0.004 ) discard;
   vec3 col = mix( uTail, uHead, vFade * vFade );
+  /* PREREG-fxink2 coverage pass — the swing band is the r11 defect this seal is named for.
+     Same limitation as SPARKLE_FRAG: no depth uniform here, so an occluded trail segment marks
+     the mask (over-cut, not under-cut) and the containment bars measure it. */
+  if ( uFxMaskPass > 0.5 ) { gl_FragColor = vec4( vec3( clamp( a, 0.0, 1.0 ) ), 1.0 ); return; }
+
   gl_FragColor = vec4( col, a );
   #include <colorspace_fragment>
 }
@@ -115,6 +121,7 @@ export class Trails {
         uTail: { value: new THREE.Color().setHex(opts.tailColor ?? PAL.goldMid, THREE.SRGBColorSpace).multiplyScalar(0.7) },
         uOpacity: { value: opts.opacity ?? 1 },
         uTile: { value: opts.tile ?? TILE.STREAK },
+        uFxMaskPass: opts.maskPass ?? { value: 0 },  // PREREG-fxink2 (0 = shipped path)
       },
       vertexShader: TRAIL_VERT,
       fragmentShader: TRAIL_FRAG,
