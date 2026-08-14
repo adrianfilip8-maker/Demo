@@ -130,3 +130,99 @@ tuple). A VOID re-runs; only PF1/PF2 on a valid capture are verdicts.
      different tuple is a NEW prereg).
    - **PF2/PF3/PF4:** as PREREG-guardart §9.5, same shapes.
 5. Frames/manifest in `progress/records/guardpass1/`; archive on VOID.
+
+---
+
+# AMENDMENT A1 — cone-only re-scope after §309 parks the guard mannequin
+
+**Written 2026-08-14, BEFORE any frame of this seal's capture exists.** The shared capture
+this seal was registered against (PREREG-guardart + PREREG-guardcone, one boot, one runner)
+was stopped minutes in by owner instruction: KNOWN_ISSUES §309 parks the guard MODEL and
+marks PREREG-guardart **WAIVED-UNSCORED**. §309's own text closes with *"The guard CONE
+(lighting/FX, PREREG-guardcone) is NOT covered by this waiver and is re-sealed standalone."*
+This amendment is that re-scope, and nothing more.
+
+**The discipline being observed.** An amendment written before any frame is legitimate; a
+threshold moved after frames is §141.1's forbidden move. Every band, ROI, hue window,
+pixel count and share in §3 above is **untouched** — not one number moves here. What changes
+is which ARMS are captured, and the two rows whose text pointed at arms or at a seal that no
+longer exists. Where a row's definition lived by citation in the now-waived guardart seal, it
+is **restated verbatim in place**, not re-derived. One row is ADDED, and it can only make the
+run harder to pass.
+
+## A1.1 Arms — the three guard-model arms are dropped
+
+| arm | §2/§3 status | A1 |
+|---|---|---|
+| `off` | cone defaults, art 0/0 | **kept, unchanged** |
+| `bon` | cone candidate, art 0/0 | **kept, unchanged** — the scored candidate |
+| `blamp` (`guard` only) | cone candidate, lampToon 0, art 0/0 | **kept, unchanged** — BL1's attribution pair |
+| `back` | cone defaults, art 0/0 | **kept, unchanged** — the §302 same-boot validity arm |
+| `askin` (`guard` only) | art 0/1 | **DROPPED** — a guard-model arm (§309) |
+| `aon` | art 1/1 | **DROPPED** — a guard-model arm (§309) |
+| `abon` | art 1/1 + cone candidate | **DROPPED** — a guard-model arm (§309) |
+
+Note the four kept arms were ALREADY art 0/0 in the sealed arms table: this seal's scored
+arms never moved a guard-model lever. Per shot: `off → bon → back`, plus `blamp` on `guard`.
+**49 frames** (15×3 + 4), down from 82.
+
+Additionally, and stricter than the seal: the re-scoped runner **never writes**
+`TUNE.guardArt` / `TUNE.guardSkin` and **never calls** `applyArt()`. In the sealed runner
+every arm assigned the full tuple including `art: 0, skin: 0` + `applyArt()` (a documented
+no-op on an unpainted boot). Under §309 the correct posture is not "assign zero" but "do not
+reach for the lever at all", so the assignment is removed and replaced by a measurement that
+the levers stayed inert on their own — see PARK1.
+
+## A1.2 Row changes (exactly four; no band moves)
+
+| row | sealed form | A1 form | why |
+|---|---|---|---|
+| **R_<shot>** ×16 | "(shared with PREREG-guardart by citation — same rows)", **[0,0]** each, fail-closed | **restated in place, definition unchanged:** strict differing-px count of diff(`off`, `back`) over the full frame, same boot, same shot; band **[0,0]** each; fail-closed; every dependent row is nulled when its shot's R is not exactly true | the cited seal is WAIVED-UNSCORED, so a citation has nothing to point at. The predicate, the band and the fail-closed wiring are copied, not re-derived. |
+| **V-TREE** | 82 rows, one src hash = expect | **49 rows**, one src hash = expect | a row **census**, not a threshold — it counts the frames the arm matrix produces, and the arm matrix shrank by A1.1. The one-hash and hash-equals-`git archive HEAD` halves are untouched. |
+| **LOOK-B** | `guard.bon`/`abon` vs `off`; `night.bon` vs `off`; report-only numbers | `guard.bon` vs `guard.off`; `night.bon` vs `night.off`; same report-only numbers (boundary-band mean \|∇L\| ratio, beam-core ΔL stddev) | `abon` was the composition frame — the cone candidate seen over the *dressed* garrison. With `guardArt` parked at 0 it is not merely unavailable, it would be **byte-identical to `bon`**, so it carries no information. LOOK stays **binding** on the two remaining comparisons; the deliverable sentence is unchanged. |
+| **PARK1** (NEW) | — | every captured row's readback shows `guardArt` = 0 ∧ `guardSkin` = 0 ∧ `painted` = false ∧ no geometry skin-shift flag; **all 49 rows** — else the run is **VOID** | registers the §309 parking as a measured fact rather than an assumption. Strictly additive and one-directional: it can only turn a PASS into a VOID, never a FAIL into a PASS. |
+
+Everything else in §3 stands verbatim: **BV1, BS1, BH1, BF1, BL1, PROT-MOON, PROT-LAMPS,
+PROT-SPARK, PROT-B_<shot> ×15** keep their exact predicates, ROIs and bands, and §4's
+classification rule, §5's falsifiers and §7's forecast are unchanged. **Every bar remains
+evaluable without a guard-model arm** — checked row by row: BV1 reads cone/lamp uniforms and
+the cone TUNE tuple only; BS1/BH1/BF1 read `guard.bon` (± `guard.off`) only; BL1 is
+`bon`-vs-`blamp`, both cone-only arms; every PROT row is `off`-vs-`bon`. No bar in this seal
+was ever defined over `askin`/`aon`/`abon`.
+
+## A1.3 Run identity (the §8 recipe, re-pointed)
+
+The sealed recipe's paths belong to the stopped shared run and its archived partial frames
+(`guardpass1-partial-waived/`). This run gets its own, so nothing is overwritten and PF7's
+"one run = one out-dir" stays honest:
+
+| | sealed | A1 |
+|---|---|---|
+| runner | `progress/records/guardpass/guardpass.mjs` | `progress/records/guardcone/guardcone.mjs` (fork, cone-only) |
+| scorer | `progress/records/guardpass/guardcone-score.mjs` | `progress/records/guardcone/guardcone-score.mjs` (fork; §3 bars verbatim + PARK1) |
+| lib | `progress/records/guardpass/guardpass-lib.mjs` | `progress/records/guardcone/guardcone-lib.mjs` (fork) |
+| frames | `progress/records/guardpass1/` | `progress/records/guardcone1/` |
+| log | `logs/guardpass-run1.log` | `logs/guardcone-run1.log` |
+| pidfile | `/tmp/sands-of-ra/guardpass1.pid` | `/tmp/sands-of-ra/guardcone1.pid` |
+
+The `guardpass/` originals are left byte-untouched as the killed run's record. The launch
+command is unchanged in form: `bash tools/launch.sh <runner> <absolute log> <pidfile>`,
+detached, "launch OK … ppid 1" the only success.
+
+## A1.4 What this amendment explicitly does NOT do
+
+- It does not move a band, a share, a pixel count, an ROI, a hue window or the forecast.
+- It does not touch `TUNE.guardArt`, `TUNE.guardSkin`, the skinIndex remap, `GUARD_DRESS`,
+  `paintGuardRegions`, `shiftGuardSkin`, `applyArt()`, or any guard-model material — in the
+  runner, in the scorer, or in `src/`. Their inert pins in `tests/guardart.test.mjs` stay
+  exactly as they are.
+- It does not re-open PREREG-guardart. That seal is WAIVED-UNSCORED and stays so.
+- It does not touch task #14's shipped night grade (`colNight` / `beamNight` / `nightLo` /
+  `nightHi`), which remains prior art this seal composes with and protection-bars, never
+  duplicates: `night.bon` vs `night.off` carries PROT-MOON, PROT-LAMPS and PROT-B_night, and
+  the falloff gradient is hue-family-preserving by construction so the cool night colour
+  deepens rather than re-warms.
+- **If a cone candidate could only score by moving a guard-model lever, that is a NO-SHIP
+  with the reason recorded — never a licence to unpark the model.** No bar in this seal has
+  that shape (A1.2), so the case does not arise; it is stated so that a future reader cannot
+  mistake the drop of three arms for permission.
