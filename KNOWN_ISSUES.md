@@ -23858,3 +23858,22 @@ BOTH critics rank it top-3 — surfaced; cane gold material fair game; tail all-
 highest-leverage open item. Ships credited in pixels: hero 4→5 (goldenrake), profile 4→5.
 Queue: guards lane, §277 lit-hold, §306 follow-ups, character-material, tombdim v2, props
 dedupe/unlit fixes, budgets, owner items (Option-A; head waiver reaffirm-or-lift).
+
+## §309 — OWNER DECISION (2026-08-14): leave the guard mannequin alone for the foreseeable future
+
+The guard MODEL art pass is parked by owner instruction, mid-run. PREREG-guardart is
+**WAIVED-UNSCORED**: its capture was stopped minutes in (partial frames archived at
+`guardpass1-partial-waived/`, no verdict claimed, no bars evaluated — this is a parking, not
+a result). `TUNE.guardArt` / `TUNE.guardSkin` stay at their inert 0 in HEAD (cef6a5b's
+mechanisms are branch-untaken and pin-tested, so HEAD renders exactly as before; nothing to
+revert). The lane's three measured diagnoses stand ON RECORD for whenever this reopens:
+identity-white vertex colours surviving §291's merge fix, the bronze-metal material on the
+head/chest block, and a real **skinIndex off-by-one** (instantiate() prepends `root`; crown
+drives from `neck`, hands from `lowerArm`) that is invisible at bind pose and wrong under
+every animated pose — the hunched stance in six frames. DESIGN-guardpass.md keeps the
+derivations.
+
+**Routing rule (§294-family):** blind critics still see the guards and will keep ranking them
+— the critic stays blind. Guard-MODEL complaints are marked owner-waived when ROUTING a
+report, exactly like the head sculpt. The guard CONE (lighting/FX, PREREG-guardcone) is NOT
+covered by this waiver and is re-sealed standalone.
