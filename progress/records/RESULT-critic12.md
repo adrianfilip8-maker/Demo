@@ -64,3 +64,14 @@ box-slab colossi (PROPS/Statues).
 > worst shot 85 draws (34% of 250) and 0.647M tris (54% of 1.2M); the whole level is 0.647M with
 > culling off, so the reported 2.1x was arithmetically impossible. The critic brief that caused it
 > is fixed at source (09808c1). No mass arbitration is owed to ARCHITECTURE/PROPS/TERRAIN.
+
+> **CORRECTION 2 (2026-08-14, §312):** this file's queue item 2 and family (1) file the
+> action-shot bleach as "§277 lit-side saturation". That filing names a mechanism the shader
+> cannot produce: every diffuse term multiplies albedo, and a warm key cannot desaturate a blue
+> whose blue channel is ~100x its red — a fully key-lit costume pixel models at display S 0.60
+> while the frames measure 0.08-0.21, and mirroring the shipped shadow-hold into the key multiply
+> moves it the WRONG way (0.603 -> 0.586). The real driver is ADDITIVE: traversal/combat are
+> barely key-lit (ramp 0.05/0.00) and carry achromatic adds of 0.135/0.570 scene-linear from the
+> legs that are not multiplied by albedo (spec, the cool rim, PostFX screen-rim and bloom), whose
+> share grows as the character shrinks on screen — which is exactly why the close-ups keep the
+> blue. Sealed correctly as PREREG-lithold (677b914) operating on assembled outgoingLight.

@@ -23905,3 +23905,19 @@ adds do not protect you from someone else's index.
 **Rule: in a shared tree, commit with a pathspec — `git commit -- <paths>` — so only your own
 files can enter, no matter what is staged. Lanes: commit promptly after staging, or stage
 only at commit time.**
+
+## §312 — "§277 lit-side saturation" is a MISFILING: the action-shot bleach is additive, not multiplicative, and it scales with how small Sly is on screen
+
+Carried by two blind rounds and two of my queue lists. Refuted offline before a boot was spent
+(PREREG-lithold, 677b914; model drives the real Atmosphere+Shading through the validated
+tonecurve): every diffuse term multiplies albedo, so a warm key cannot desaturate a blue whose
+blue is ~100x its red — a fully key-lit costume pixel models at display S 0.60 against 0.08-0.21
+measured, and mirroring §289's shadow-hold into the key multiply moves it 0.603 -> 0.586, the
+WRONG WAY. Fitted to the r12 frames: traversal/combat are barely key-lit (ramp 0.05 / 0.00) and
+carry achromatic ADDS of 0.135 / 0.570 scene-linear (sly-key 0.110) from the legs that never
+touch albedo — spec, the cool rim at 0.62x2.05, PostFX's screen rim and bloom. Their share grows
+as the character shrinks on screen, which is why every praised close-up keeps the blue and every
+wide action frame loses it. Correct lever sealed: `TUNE.subjLitHold` on assembled outgoingLight
+before the haze mix, luminance-exact by construction, vSlySkin-scoped, scaled by measured chroma
+LOSS. Registered risk on record: combat's wash is partly composited AFTER the shader and is out
+of any in-shader lever's reach. RESULT-critic12 carries the correction in place.
