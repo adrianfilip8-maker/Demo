@@ -73,5 +73,14 @@ ranked by how much they cost, and which module owns each one (see the ownership 
 - Do not invent problems that aren't in the pixels either — a false positive wastes an
   implementer's iteration. Every criticism must be something you can point at in a specific frame.
 - Note the software renderer: this container has no GPU, so frame times in the manifest are
-  meaningless. **Judge visuals, never performance.** Draw-call and triangle counts are still
-  fair game against the §1 budget.
+  meaningless. **Judge visuals, never performance.**
+- **Do not score `manifest.json`'s `drawCalls`/`triangles` against the §1 budget — they are not
+  the same quantity, and this instruction used to say they were.** Those fields are
+  `renderer.info.render` (`Engine.js:273-274`, `autoReset = false`): a **per-frame, all-passes
+  submission counter** that sums three shadow-cascade renders, the beauty pass, a full-scene
+  normal prepass and the post blits. §1 caps *visible* geometry, which is 2.3×–4.4× smaller. Two
+  blind rounds (r11, r12) reported a "15 of 16 shots over, night 2.1×" breach off this comparison
+  and routed mass arbitration to ARCHITECTURE/PROPS/TERRAIN; the whole level is 0.647 M triangles
+  with culling switched off, and **no shot is over either cap on the scored column** —
+  `progress/records/NOTE-budgetattrib.md`, and §51.3 / §53.5 / §215.2 before it. The scored
+  numbers come from `node tools/budgetattrib.mjs` (offline, no lock); quote those or none.
