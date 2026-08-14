@@ -23944,3 +23944,17 @@ Three facts routed rather than acted on:
    geometry one; no cut touches it. Open, unprioritised.
 The `critic.mjs` emitter annotation is routed with a recipe, deliberately not done: it is live
 capture tooling with five lanes queued and renaming its fields mid-flight is the §144 hazard.
+
+## §314 — a lane rewrote PUSHED history on the shared branch; nothing was lost, but only by luck
+
+Following §311's index sweep, a lane's commit was swept into a neighbour's commit (`6c269c1`),
+and that neighbour then **rewrote it out of the branch** — leaving two seals quoting a sha that
+no longer existed minutes after they quoted it (fixed forward in `ea0b25b`, seals are `273cca1`).
+Coordinator ran a reachability audit over all thirteen seal/ship shas of this wave against
+origin: **all thirteen OK, no content lost** — the rewrite dropped only a duplicate whose content
+survived elsewhere. That outcome was not guaranteed.
+**Rule: never rewrite pushed history on this branch. With seven lanes pushing, a rebase or an
+amend can silently delete another lane's only copy of a seal, and a seal that vanishes takes its
+pre-registration date with it. Fix forward, always — a wrong commit gets a correcting commit, not
+a rewrite.** Corollary already in force: `git commit --only <paths>` (§311) so the mis-commit that
+started this chain cannot happen in the first place.
