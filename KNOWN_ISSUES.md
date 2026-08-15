@@ -25913,3 +25913,40 @@ Provenance: nothing external — the diff introduces no URL of any kind, no depe
 image or fetch. Two new inline-SVG glyphs; all colours from §2.2 or a stated blend. Suite re-run
 independently at **549 pass / 0 fail**; no test file touched and `eventbus.test.mjs` needed no census
 correction.
+
+---
+
+## §354 — why guardcone attribution kept failing: `off` is not a null arm, and `blamp` peels ONE field, not six
+
+§349.2 and §352 both ended on the same sentence — *"the bundle cannot be split on this shot"* — so
+here is exactly what the arms are and exactly what another one would buy. Read from
+`progress/records/guardcone/guardcone.mjs:111-113`, verbatim:
+
+```
+CONE_OFF        { shape: 0, colPatrol: 0xfff0c2, beamBase: 0.30, glow: 0.34, poolMix: 0.24, coreScale: 1.00, lamp: 0.0 }
+CONE_ON         { shape: 1, colPatrol: 0xffd9a0, beamBase: 0.26, glow: 0.42, poolMix: 0.30, coreScale: 0.62, lamp: 1.0 }
+CONE_ON_NOLAMP  { ...CONE_ON, lamp: 0.0 }
+```
+
+**`off` is not "the feature turned off".** It carries its own non-zero `colPatrol`, `beamBase`,
+`glow`, `poolMix` and `coreScale` — all *different* from `bon`'s. So `off → bon` is not
+feature-off-vs-feature-on; it is **old tuning at `shape 0` versus new tuning at `shape 1`, seven
+fields moving at once.** Every guardcone bar that compares `off` to `bon` — which is every bar except
+`BL1` — is scoring a seven-way change. That is the structural reason attribution failed repeatedly in
+this lineage, and it is a property of the capture design rather than another theory about the cone.
+
+**`blamp` peels exactly one field.** `CONE_ON_NOLAMP` differs from `CONE_ON` in `lamp` alone, so
+`bon → blamp` isolates `lamp` and nothing else; `blamp → off` still moves six. An extra `blamp` row on
+`night` or `sly-startle` would therefore answer *"is this the lamp?"* and **would not split the
+bundle** — six fields stay welded together behind it. Recording this because "add a blamp arm" is the
+obvious next move and it is worth knowing in advance that it buys one bit.
+
+**The arm is not shot-specific in any deep way.** `armsFor(shot)` gates it by name —
+`(shot === 'guard' ? ['off','bon','blamp','back'] : ['off','bon','back'])`, `guardcone.mjs:104` — so
+extending it to two more shots is a one-line change and two more frames on a 49-frame capture. Cheap,
+and worth doing *only* with the paragraph above understood.
+
+**NOT CLAIMED:** that any particular one of the seven is responsible for §349.2's warm bleed or
+§352's darkening, or that a full seven-arm ladder is affordable. What is claimed is narrow and
+checkable: the comparison every failing bar rests on moves seven fields, and the one isolating arm
+that exists moves one of them.
