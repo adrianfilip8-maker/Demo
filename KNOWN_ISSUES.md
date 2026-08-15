@@ -24389,3 +24389,59 @@ a clear window. It is no longer the wave's priority.
 > only.**
 > Three mechanisms now protect evidence from these rollbacks: push every fold immediately (§325),
 > track run logs from boot (§329.3), and force-add completed chunk frames (here).
+
+## §330 — litbleach VOIDs on its brackets, but the STAGING FIX WORKED and chunking delivered a whole capture
+
+Scored against PREREG-litbleach (096d31e) + AMENDMENT A1 (c4461e7). 14 frames, 3 boots, all
+force-added. Full fold: `progress/records/RESULT-litbleach.md`.
+
+**VOID** — `R_combat` (2 px) and `R_sly-key` (1120 px) fail the sealed 0-px bracket, so every
+acceptance and protection row is VOID by construction. `subjLitHold` stays 0.0.
+
+**§328 IS VINDICATED BY MEASUREMENT, and this is the round's real result.** `PF_STAGE` PASSED:
+traversal **0.205**, combat **0.066**, control **0.516** — traversal reproducing the roster to
+three decimals on a fresh boot, against lithold's 0.678 on the same rect. One changed call
+(`setShot(name, {})` live-settle instead of `{dt: 0}`, then freeze) moved the statistic onto the
+roster's own value. The staging problem that killed lithold is solved, and `PF_MASK` (81.2% /
+99.6%) confirms the rects are on Sly.
+
+**Evidence-grade only, NOT a verdict:** at dose 0.70 the hold lifts traversal by **+0.010**
+(0.205→0.215, bar 0.42) and combat by **+0.000**, while being monotonic (KO strict) and
+luminance-exact (|dL| ≤ 0.09). §11's pre-seal dry run measured **+0.016** on lithold's
+*already-blue* frames. So the lever moves a saturated costume slightly and a bleached one
+slightly less — **its magnitude does not scale with the chroma loss it exists to repair**, which
+is the opposite of its contract. A successor should instrument the chroma-loss/knee gate that
+scales the hold, not raise the dose. Caveat: VOID run, and `E_H_combat` at 348.5° warns that
+combat's rect may be on skin/fur/trim rather than costume — 99.6% *subject* is not 99.6%
+*costume*.
+
+**The two bracket failures are different phenomena and must not be lumped together.** combat:
+2 px, max delta 1, on the subject, one 8×8 cell — 0.02% of its own 10,372 px candidate effect,
+i.e. float/rasterisation non-determinism in a skinned draw. **My published FX hypothesis (commit
+4b02250) is refuted by that measurement** and NOTE-litbleach-bracket.md records the correction.
+sly-key: **1120 px, max delta 21, a coherent 467×51 band at x0–466 y276–326**, only 48.6% within
+±2 — something really moved, and it merely happened to miss the control's rect (x600–675), which
+is luck rather than validity.
+
+**No bar moved.** §11 committed in writing before the capture that a ONE-pixel `PROT_ENV` failure
+would block the ship; `PROT_ENV` then did fail (1 px traversal, 7 px combat), so the discipline
+was applied to the bar it was written about and not only to the convenient one. §141.1 absolute.
+
+**§302 narrowed:** traversal returns exactly 0 px, so same-boot exact-zero IS achievable — but
+two of three shots drift, so it is the exception, not the rule. A whole-frame 0-px bracket is the
+wrong instrument on this renderer for most shots.
+
+**§10's forecast is UNRESOLVED** — both E1 and E2 VOIDed, so it is neither confirmed nor refuted
+and no credit is claimed.
+
+**AMENDMENT A1 DELIVERED and generalises.** A complete capture across three boots where five
+consecutive single-process runs died; `V_CHUNK_TREE` verified one src hash at three points in
+time (05:34 / 06:24 / 06:43). Two rules for every future seal here: chunk anything over ~15 min
+with the bar-by-bar argument written first, and **force-add completed chunk frames** (§329.1) or
+the next rollback destroys them.
+
+Successor is a NEW seal carrying over rects, doses, bands, both PF gates and the §9 LOOK, and
+changing three things: a bracket argued from these numbers (rect-scoped, or whole-frame with a
+tolerance admitting ±2 LSB while still catching a 467×51 band, justified against the 3,040 /
+10,372 px candidate effects); instrumenting the hold's scaling gate before touching the dose; and
+a costume-hue pre-flight so combat's rect is verified on the costume, not merely on the subject.
