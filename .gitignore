@@ -43,5 +43,8 @@ progress/records/heroread/*.png
 # the seal and are not read twice; shots/r13/ is already ignored under the same policy, and the
 # §326-refuting measurements in §328 live in the RESULT as numbers, not as PNGs.
 # KNOWN_ISSUES §272.4, §328.
-progress/records/*/*.png
+# The `*/**/` shape (not a bare `**/`) is deliberate: it requires at least one run directory,
+# so it catches both <run>/frame.png and <run>/crops/frame.png while leaving the CURATED
+# composites that live directly in progress/records/*.png tracked, which is the whole point.
+progress/records/*/**/*.png
 !progress/records/*/manifest.json
