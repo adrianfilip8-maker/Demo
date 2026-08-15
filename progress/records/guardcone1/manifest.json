@@ -1,0 +1,36 @@
+{
+ "seal": "PREREG-guardcone + AMENDMENT A1 (cone-only; PREREG-guardart WAIVED-UNSCORED per §309)",
+ "head": "b73a6f5d21b76612dc2b467946ac04d8068c8339",
+ "expect": {
+  "head": "2b5c7c49ad9c4668"
+ },
+ "values": {
+  "CONE_OFF": {
+   "shape": 0,
+   "colPatrol": 16773314,
+   "beamBase": 0.3,
+   "glow": 0.34,
+   "poolMix": 0.24,
+   "coreScale": 1,
+   "lamp": 0
+  },
+  "CONE_ON": {
+   "shape": 1,
+   "colPatrol": 16767392,
+   "beamBase": 0.26,
+   "glow": 0.42,
+   "poolMix": 0.3,
+   "coreScale": 0.62,
+   "lamp": 1
+  }
+ },
+ "arms": [
+  "off",
+  "bon",
+  "blamp (guard only)",
+  "back"
+ ],
+ "launchedAt": "2026-08-15T03:07:12.079Z",
+ "pid": 6597,
+ "rows": []
+}
