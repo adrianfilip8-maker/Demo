@@ -10,12 +10,23 @@
  *   - imports guardcone-lib.mjs (DIR guardcone1/, treeBar census 49) instead of guardpass-lib
  *   - PARK1 added (A1.2) + its fail-closed cascade
  *   - the `abon` LOOK pointer in the verdict line drops (A1.2 — the arm is not captured)
- * Every band, ROI, hue window, pixel count and share below is the sealed text. Nothing moved.
+ *   - AMENDMENT A2: the single-process **V-TREE is replaced by V_CHUNK_TREE + V_CHUNKS**
+ *     (A2.4), and the frames are merged from sixteen per-shot chunk manifests. Nothing else in
+ *     this file moves with it: every band, ROI, hue window, pixel count and share below is the
+ *     sealed text. A2.3's audit is why that is possible — TWELVE of the thirteen scored bar
+ *     families compare frames WITHIN one shot, therefore within one boot:
+ *       R_<shot> · BS1 · BH1 · BF1 · BL1 · PROT-MOON · PROT-LAMPS · PROT-SPARK ·
+ *       PROT-B_<shot> · LOOK-B · the report-only ΔL stddev
+ *     BV1 and PARK1 do cross boots, and survive because they compare MEASUREMENTS AGAINST
+ *     CONSTANTS sealed in §2/§3 — never one row against another row.
+ *
+ *   node progress/records/guardcone/guardcone-score.mjs [dir]
+ *   GUARDCONE_DIR=... node progress/records/guardcone/guardcone-score.mjs
  */
 import {
   ROSTER, manifest, row, img, stats, diffPx, diffSplit, lumaOf,
   dilate, intersect, discRect, probeOf, subjectBox, coneContainers,
-  rBars, treeBar, parkBar,
+  rBars, chunkTreeBar, chunksBar, parkBar,
 } from './guardcone-lib.mjs';
 import { shipVerdict, verdictLine } from '../../../tools/gate.mjs';
 
@@ -24,8 +35,9 @@ const guards = {};
 const num = (v, d = 2) => (v === null || v === undefined || Number.isNaN(v) ? 'n/a' : (+v).toFixed(d));
 const CAND = { colPatrol: 0xffd9a0, beamBase: 0.26, poolMix: 0.30, coreScale: 0.62, lamp: 1.0, glow: 0.42 };
 
-/* ── shared validity ────────────────────────────────────────────────────────────────────── */
-guards['V-TREE'] = treeBar(report);
+/* ── shared validity — A2.4: V_CHUNK_TREE + V_CHUNKS in place of the single-process V-TREE ── */
+guards.V_CHUNK_TREE = chunkTreeBar(report);
+guards.V_CHUNKS = chunksBar(report);
 guards.PARK1 = parkBar(report);
 Object.assign(guards, rBars(report));
 

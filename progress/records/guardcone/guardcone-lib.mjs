@@ -13,21 +13,72 @@
  *                    same [0,0] band, same fail-closed wiring; the seal it cited is waived)
  *   - parkBar        NEW (A1.2 PARK1) — the §309 parking measured, not assumed
  *   - guardart-only accessors (guardBoxes, anyGuardInFrame) dropped: no consumer.
+ *
+ * AMENDMENT A2 (per-shot chunking) changes exactly one more thing here, and A2.9 permits only
+ * this one: **`treeBar` is replaced by `chunkTreeBar` + `chunksBar`.** V-TREE as sealed is *49
+ * rows in ONE manifest, one distinct `tree.src` across them, equal to `manifest.expect.head`* —
+ * a predicate about a single process. Under chunking there is no single process, so the bar has
+ * no object to evaluate. A2.4 replaces it with a STRICTLY STRONGER pair, both fail-closed and
+ * neither able to turn a FAIL into a PASS:
+ *
+ *   V_CHUNK_TREE  every one of the 16 chunk manifests records the same `srcHash`, and that hash
+ *                 equals HEAD's `git archive HEAD src` hash — the tree verified at sixteen points
+ *                 in time instead of two
+ *   V_CHUNKS      all 16 chunks present, one per ROSTER entry, 49 rows total, `guard`
+ *                 contributing 4 and every other shot 3
+ *
+ * The 49-row census half of V-TREE survives verbatim inside `V_CHUNKS`. The count does not move.
+ *
+ * One further change that is ergonomics rather than a bar, stated so it is not mistaken for one:
+ * the loader now BAILS with a message instead of throwing when there is nothing to score, and
+ * `DIR` accepts an override (argv/`GUARDCONE_DIR`) so it can be pointed at an archived run. A
+ * scorer that crashes on the wrong input is a scorer nobody dares point at a real capture.
  */
 import { readPNG } from '../../../tools/png.mjs';
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 
 export const ROOT = path.resolve(import.meta.dirname, '../../..');
-export const DIR = path.join(ROOT, 'progress/records/guardcone1');
+export const DIR = path.resolve(ROOT, process.argv[2] || process.env.GUARDCONE_DIR
+  || 'progress/records/guardcone1');
 
 export const ROSTER = [
   'hero', 'kaykit', 'temple', 'sly-closeup', 'sly-startle', 'sly-perch', 'sly-arm',
   'courtyard', 'dunes', 'interior', 'night', 'traversal', 'combat', 'guard',
   'sly-profile', 'sly-key',
 ];
+/* A2.2's chunk shape: 15 x 3 + guard's 4 = 49. */
+export const armsFor = (shot) => (shot === 'guard' ? ['off', 'bon', 'blamp', 'back'] : ['off', 'bon', 'back']);
+export const EXPECT_ROWS = 49;
+export const EXPECT_CHUNKS = ROSTER.length;
 
-export const manifest = JSON.parse(readFileSync(path.join(DIR, 'manifest.json'), 'utf8'));
+/**
+ * Say plainly that there is nothing to score, and stop. This is NOT a VOID — a VOID needs a
+ * capture to void, and "no capture" must never be reported in the same shape as "a capture that
+ * failed its validity gates", or an absent run reads later as a refutation.
+ */
+function bail(msg, code = 3) {
+  console.log(`guardcone scorer — cannot score ${path.relative(ROOT, DIR) || DIR}`);
+  console.log(`  ${msg}`);
+  console.log('  Nothing is claimed. This is not a VOID (a VOID needs a capture to void).');
+  process.exit(code);
+}
+if (!existsSync(DIR)) bail('directory does not exist — no chunk of this seal has been captured yet.');
+const MF = path.join(DIR, 'manifest.json');
+if (!existsSync(MF)) {
+  const seen = readdirSync(DIR).slice(0, 12);
+  bail(`no manifest.json. Directory holds: ${seen.length ? seen.join(', ') : '(empty)'}`
+    + `${seen.length === 12 ? ' …' : ''}. Each chunk rebuilds manifest.json when it finishes (A2.4).`);
+}
+let _m;
+try { _m = JSON.parse(readFileSync(MF, 'utf8')); } catch (e) { bail(`manifest.json is not valid JSON — ${e.message}`); }
+if (!Array.isArray(_m.rows)) bail(`manifest.json has no \`rows\` array (keys: ${Object.keys(_m).join(', ')}).`);
+if (_m.rows.length === 0) {
+  bail('manifest.json carries 0 rows — this is a launched-but-frameless run (A2\'s census found '
+    + 'exactly this shape left by run 7). There is no capture here to score.');
+}
+
+export const manifest = _m;
 export const row = (shot, arm) => manifest.rows.find((r) => r.shot === shot && r.arm === arm) || null;
 
 const _imgCache = new Map();
@@ -159,12 +210,62 @@ export function rBars(report) {
   return guards;
 }
 
-/** V-TREE: expected row census + ONE src hash == expect. A1.2: 49 rows (was 82). */
-export function treeBar(report, expectedRows = 49) {
-  const hs = new Set();
-  for (const r of manifest.rows) hs.add(r.tree?.src || '?');
-  report.push(`trees: {${[...hs]}} expected ${manifest.expect?.head}; rows ${manifest.rows.length} (want ${expectedRows})`);
-  return manifest.rows.length === expectedRows && hs.size === 1 && [...hs][0] === manifest.expect?.head;
+/**
+ * V_CHUNK_TREE (AMENDMENT A2.4) — ONE src tree across all sixteen chunks, equal to HEAD's
+ * `git archive HEAD src` hash. Replaces the tree half of the sealed V-TREE, which could only be
+ * stated about a single process. Each chunk re-derives its expectation before it renders and
+ * re-checks it under the lock, so this verifies the tree at sixteen points in time instead of
+ * two — one differing hash VOIDs the whole run, which is A2.8's disclosed cost of a longer
+ * window in which `src/` must not move (§315 killed run 1 exactly this way).
+ *
+ * The per-ROW `tree.src` stamps are folded in as well as the per-chunk `srcHash`: a row whose
+ * tree moved mid-chunk is caught by the same predicate, so the sealed bar's reach is not lost.
+ */
+export function chunkTreeBar(report) {
+  const chunks = Array.isArray(manifest.chunks) ? manifest.chunks : [];
+  const chunkHashes = [...new Set(chunks.map((c) => c.srcHash || '?'))];
+  const rowHashes = [...new Set(manifest.rows.map((r) => r.tree?.src || '?'))];
+  const all = [...new Set([...chunkHashes, ...rowHashes])];
+  const expect = manifest.expect?.head ?? manifest.srcHash ?? null;
+  report.push(`V_CHUNK_TREE trees across ${chunks.length} chunk(s) + ${manifest.rows.length} row(s): `
+    + `{${all.join(', ')}} expected ${expect ?? '(none recorded)'}`);
+  /* A2.4 registers the failure classification for BOTH new gates as **VOID**, not FAIL, and the
+     distinction is the one tools/gate.mjs draws: a FAIL is a result about the candidate, a VOID
+     is a defect in the run. A tree that moved between chunks says nothing whatever about the
+     cone tuple. So the predicate returns `true` or nothing — never `false`. Fail-closed either
+     way; neither branch can turn a FAIL into a PASS. */
+  if (!chunks.length || !expect) return null;
+  return (all.length === 1 && all[0] === expect) ? true : null;
+}
+
+/**
+ * V_CHUNKS (AMENDMENT A2.4) — the census. All 16 `manifest.<shot>.json` present, one per ROSTER
+ * entry, 49 rows total, `guard` contributing 4 and every other shot 3. A1.2 already established
+ * that the row count is a CENSUS, not a threshold, and A2 does not move it: the roster stays at
+ * 16 and the frame count stays at 49.
+ */
+export function chunksBar(report) {
+  const chunks = Array.isArray(manifest.chunks) ? manifest.chunks : [];
+  const seen = chunks.map((c) => c.shot);
+  const missing = ROSTER.filter((s) => !seen.includes(s));
+  const extra = seen.filter((s) => !ROSTER.includes(s));
+  const wrong = [];
+  for (const shot of ROSTER) {
+    const want = armsFor(shot);
+    const got = manifest.rows.filter((r) => r.shot === shot).map((r) => r.arm);
+    if (!seen.includes(shot)) continue;
+    if (got.length !== want.length || want.some((a) => !got.includes(a))) {
+      wrong.push(`${shot}: [${got.join(',')}] want [${want.join(',')}]`);
+    }
+  }
+  report.push(`V_CHUNKS ${chunks.length}/${EXPECT_CHUNKS} chunks, ${manifest.rows.length}/${EXPECT_ROWS} rows`
+    + (missing.length ? `; MISSING ${missing.join(', ')}` : '')
+    + (extra.length ? `; UNEXPECTED ${extra.join(', ')}` : '')
+    + (wrong.length ? `; ARM MISMATCH ${wrong.slice(0, 4).join(' | ')}${wrong.length > 4 ? ` (+${wrong.length - 4})` : ''}` : ''));
+  /* VOID, not FAIL, on violation — see chunkTreeBar. An incomplete census is a defect in the
+     run, never a statement about the candidate. */
+  return (chunks.length === EXPECT_CHUNKS && missing.length === 0 && extra.length === 0
+    && wrong.length === 0 && manifest.rows.length === EXPECT_ROWS) ? true : null;
 }
 
 /**
