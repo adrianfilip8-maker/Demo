@@ -24492,3 +24492,50 @@ already settled. §302 said cross-boot exact-zero is unachievable; §330 narrowe
 "same-boot exact-zero is achievable but the exception"; this corrects §330 — **same-boot
 exact-zero is the RULE, once the first frame after staging is discarded.** Every seal in this
 repo that captures a frame immediately after `setShot` should be read with that in mind.
+
+## §332 — litbleach2: the first VALID verdict in this lineage. subjLitHold is REFUTED, and my gate hypothesis with it
+
+Scored against PREREG-litbleach2 (5a58b50). 9 frames, 2 chunks. **Every validity and pre-flight
+gate PASSED** — V_ROWS, V_CHUNKS, V_CHUNK_TREE, both brackets, PF_MASK, both PF_COSTUME, PF_STAGE
+— so unlike lithold (VOID) and litbleach (VOID) this adjudicates the candidate.
+**DO NOT SHIP:** `E_S_traversal` FAIL (0.215 vs 0.42) and `PROT_ENV_traversal` FAIL (1 px).
+Full fold: `progress/records/RESULT-litbleach2.md`.
+
+**§331 CONFIRMED END TO END.** `R_sly-key` was 1120 px at maxD 21 in litbleach; it is now **0 px**,
+and `sly-key.off`/`sly-key.back` are both sha **75991b4ed9a49ab3** — the identical sha convprobe
+measured for its converged state (r1..r7, six bit-exact pairs). An unsealed probe predicted the
+fix, a sealed capture reproduced it, and no bar was moved to accommodate the problem. **Same-boot
+0-px brackets are achievable here once the first frame after staging is discarded**; the two-render
+warm-up transfers to every seal in this repo, guardcone's AMENDMENT A2 included.
+
+**The lever is refuted quantitatively.** At dose 0.70 the hold lifts traversal 0.205 → 0.215:
+**+0.010 against a required +0.215, i.e. 4.7% of the distance.** It is not broken and not gated
+off — `KO` passes strictly (0.205 < 0.211 < 0.215, a working monotonic dial), `LUM` passes at
+|dL| 0.09 (luminance-exact as contracted), `E_H` passes at 223.0°. It simply lacks the authority.
+Linear extrapolation puts the needed dose near **15** against a uniform clamped to **1.0**:
+**no legal dose reaches its own acceptance bar.** Do not re-seal it higher.
+
+**My gate hypothesis is REFUTED, and the seal registered the refutation condition in advance.**
+NOTE-litbleach2-aim.md argued a low-albedo-chroma ROI drives smoothstep(0, uShadowHoldKnee,
+albChroma) to ~0. §10 sealed the test: traversal passes PF_COSTUME, so its gate should engage, and
+a ~+0.010 result there refutes the hypothesis. Traversal passed at **223.3°** and moved **+0.010**.
+Dead. §10's ~50/50 forecast on E_S_traversal FAILED; no credit claimed.
+
+**Where the defect probably lives — hypothesis, not finding.** With the gate ruled out, the
+remaining term is `loss = 1 − outChroma/albChroma` computed in **scene-linear**, while the defect
+is measured in **display space after AgX and a grade carrying saturation 1.30**. If the costume
+pixel is still chromatic in linear, `loss` is small, the hold correctly declines — and the
+desaturation is produced **downstream by the display transform**, not by additive legs in the
+shader. That explains a working, monotonic, correctly-gated lever with almost no effect. The
+successor's first test is a debugTerm arm reading pre-tonemap outgoingLight against display S:
+if linear chroma is intact, the §277/§312 item re-routes from SHADING to **POSTFX**, and three
+seals' worth of shader work on it stops.
+
+**PROT_ENV failed by 1 px and it counts.** PREREG-litbleach §11 disclosed this exact risk before
+any capture and committed in writing that one pixel would be a real failure — precisely so it
+could not later be waved through as "basically zero". Recorded as FAIL. It does not change the
+disposition (E_S already blocks) but the vSlySkin-scoped mix should be incapable of moving an
+off-subject pixel, so it is a genuine open item: mask edge feathering, or a leak to locate.
+
+Nothing ships. subjLitHold stays 0.0. Open: the linear-vs-display test; the 1-px leak; combat's
+costume-masked statistic (NOTE-litbleach2-aim.md addendum).
