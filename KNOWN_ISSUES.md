@@ -25683,10 +25683,11 @@ nothing. Harmless here, but a degenerate container is silently empty rather than
 
 ### §349.3 Successor state
 
-Step 1 (BS1) closed at §6 of `RESULT-guardcone.md`; steps 2 and 4 closed here. **Step 3 — keeping the
-cone off the moon and lamps (`PROT-MOON` 5723 px, `PROT-LAMPS` 8028 px) — remains open and is now the
-only unexplained guardcone failure.** Note that unlike sly-startle's, those two are *large*: they are
-not a quantisation-floor artefact and should not be approached as one.
+Step 1 (BS1) closed at §6 of `RESULT-guardcone.md`; steps 2 and 4 closed here. Step 3 — keeping the
+cone off the moon and lamps (`PROT-MOON` 5723 px, `PROT-LAMPS` 8028 px) — **closed at §352**, which
+also disposes of the guess written here first: those two are indeed *large*, but the size is in the
+ROI's overlap with the cone's own container, not in the named objects, and the sign turned out to be
+a darkening rather than spill.
 
 ---
 
@@ -25823,3 +25824,92 @@ geometry.
 the ink at 720 rows, 67 % at 900, 88 % at 1080** (AGENTS §1's ship target), i.e. **the defect is worse
 in the shipped frame than in the frame this whole lineage measured it in.** Not previously recorded.
 Named as the successor candidate with its dose derived (`× 1/inkResScale`), not proposed.
+
+---
+
+## §352 — guardcone step 3 CLOSED: the moon and lamps barely move, the sign is a DARKENING, and the ROIs were drawn across the cone
+
+Last unexplained guardcone failure, read offline on the committed `night.off` / `night.bon`. §141.1:
+both bars failed and stay failed. The rule was *disjoint → 0, else ≤ 400*; both scored in the ≤ 400
+branch and returned 5723 and 8028.
+
+**`PROT-LAMPS` — the lamps do not move.** All 8028 changed px are inside a cone container and **not
+one** of the 34 784 ROI px outside a container moved. The column profile runs 98 % at `x=640` down to
+0 % by `x=740` and stays there across the remaining 400 px of the ROI, which is where the lamps are.
+Of the 1222 lamp px (`off-L ≥ 150`, bbox `[685,7,1095,130]`) exactly **13 moved — and got brighter**.
+
+**`PROT-MOON` — the moon dims by a quarter of one code value.** On a disc centred on the ROI's
+brightest pixel `(444,98)` at `L 239.9`: `r=6` mean `L 221.87 → 221.63` (**Δ −0.247**), `r=16`
+`190.31 → 189.47` (Δ −0.846). The bright object changes at **26.99 %** against a background rate of
+**26.47 %** — no preference for the disc at all, which is a field-wide effect, not light landing on a
+moon. 5112 of 5723 are inside a container; 611 are not; 72 % of the ROI's change is exactly 1 LSB.
+
+**The sign is backwards, and this is measured.** Both bars read as protecting against the cone
+*adding* light. The change is a **darkening** — `meanΔL −1.171` on MOON (5200 of 5723 darker) and
+`−4.466` on LAMPS (7908 of 8028, with 2576 px in the 9–32 band, so real magnitude). On LAMPS the R
+channel falls in 7656 of the 7709 px it touches.
+
+**Global exposure is refutable here and is refuted.** Over `night`'s 283 516 px outside every cone
+container, only 664 move (0.23 %) at `meanΔL −0.0004`, against `−2.080` inside. A frame-wide tonemap
+or exposure response would appear in those 283 516 px. It does not; the darkening is local to the
+containers.
+
+**What actually failed is ROI placement against a flat allowance.**
+
+```
+PROT-MOON    ROI 21600 px,  overlap with a cone container 13212 px (61.2%)  — 400 is 3.0% of it
+PROT-LAMPS   ROI 65000 px,  overlap with a cone container 30216 px (46.5%)  — 400 is 1.3% of it
+```
+
+Both ROIs were drawn across roughly half of the cone's own declared territory, and the `else` branch
+grants a flat 400 px however large that overlap is, so any cone that changes its own container at all
+spends the allowance immediately. Whether 400 was the right number is a question for a **new** seal.
+
+**NOT CLAIMED: which uniform, or why the sign is negative.** `night` has **no `blamp` row**, so the
+seven-uniform bundle cannot be split here either — the same limitation as `sly-startle`. A mechanism
+named here would be the fourth post-hoc theory in this lineage and §347 records what happened to the
+first three.
+
+**Guardcone successor is now closed on all four steps** (§6/§7/§8 of `RESULT-guardcone.md`, §349,
+§352). None of it disturbs §348: the verdict remains **DO NOT SHIP**, and every bar that failed
+failed for a reason that is now written down rather than guessed at.
+
+---
+
+## §353 — HUD: the pickpocket prompt was reading a different range from the state machine, so the new approach was undiscoverable
+
+Shipping bug, found by the UI lane and verified here. `HUD._tickAffordancePrompt` called
+`Guards.nearestPickpocketTarget(pos, undefined, yaw)`, taking the default `TUNE.pocketRange = 2.4 m`
+(`Guard.js:168`, `:1793`), while `Pickpocket.canEnter` asks `Controller.pickMark()`, which passes
+`TUNE.pickApproach = 4.6 m` (`Controller.js:207`, `:1023`). **E would start a `creep → reach`
+approach from 4.6 m while the HUD only announced it from 2.4 m** — so the approach the movement lane
+had just built was invisible for the first 2.2 m of its own range.
+
+Fixed by identity rather than by matching numbers: `_resolvePocket()` now asks `MOVEMENT.pickMark()`
+first (memoised per frame), falling back to `GUARDS` only when `pickMark` is absent, and **neither
+range is restated in `src/ui/`**. The prompt and the mark therefore cannot name two different guards.
+
+Two marks shipped with it. The **pocket mark** sits on `Guard.pocketPosition` — the back of the belt,
+which is where the player has to stand — and drops the frame `canBePickpocketed` goes false;
+AGENTS.md §2.1.6 names pickpocket targets as carrying the blue-white sparkle and nothing in the build
+drew one on a guard. The **stealth mark** retires a reason that was false for half its set:
+`Tiptoe.canEnter` is `narrowGround()` and `Crawl.canEnter` is `inVent()`, neither taking any input,
+while `Guard._readPlayer:1875-6` maps `tiptoe → sneaking` and `crawl → crouching`, which
+`Patrol.js:645-6` multiplies by `DETECT.sneakGain 0.40` / `crouchGain 0.55` (`Patrol.js:100-1`). **A
+2.5× detection discount was being handed over silently.**
+
+Also corrected: three pause-reference rows wrong after the pole and rail work — pole swing is Left
+Mouse not Space, rail walk is not Shift (you balance by slowing down), and circle-strafe had no row
+at all despite the stick being rebound.
+
+**`Health.purse` is still not published and this is now blocking a second consumer.**
+`PlayerHealth._publish()` (`src/player/Health.js:275`) emits only `{hp, max, charms, down}`. Charm
+progress needs **both** `purse` **and** `charmCost`: `purse` alone is readable off
+`engine.get('health')`, but the price it counts against is a module-scope const
+(`CHARM.charmCoins = 100`, `Health.js:67`), reachable only by an import `src/ui/` should not make or
+by hardcoding 100. The lane showed nothing rather than guessing, which is right.
+
+Provenance: nothing external — the diff introduces no URL of any kind, no dependency, CDN, webfont,
+image or fetch. Two new inline-SVG glyphs; all colours from §2.2 or a stated blend. Suite re-run
+independently at **549 pass / 0 fail**; no test file touched and `eventbus.test.mjs` needed no census
+correction.
