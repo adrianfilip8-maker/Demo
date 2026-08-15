@@ -1,0 +1,51 @@
+{
+  "seal": "PREREG-linchroma",
+  "head": "e0f1f004aa513f3a6ae5a0c34af854d5f7a9bc5b",
+  "srcHash": "2b5c7c49ad9c4668",
+  "warmup": 2,
+  "shot": "traversal",
+  "expectRows": 4,
+  "capturedAt": "2026-08-15T09:50:18.116Z",
+  "rows": [
+    {
+      "shot": "traversal",
+      "arm": "off",
+      "file": "traversal.off.png",
+      "sha256": "a3226c9526f2d77ed863b6469f9cdca24ff895f2a6ebbb08e0fa92247ac735ec",
+      "readback": {
+        "term": 0,
+        "raw": null
+      }
+    },
+    {
+      "shot": "traversal",
+      "arm": "raw",
+      "file": "traversal.raw.png",
+      "sha256": "89c79284bf43cd771bcd196b14d474f441428b54faa122bf4e4d7f40aeeeca87",
+      "readback": {
+        "term": 0,
+        "raw": null
+      }
+    },
+    {
+      "shot": "traversal",
+      "arm": "cal",
+      "file": "traversal.cal.png",
+      "sha256": "c2539a6786e2c00744df8a70f276089c6dab4d2f8503657778b6d3603634305e",
+      "readback": {
+        "term": 4,
+        "raw": null
+      }
+    },
+    {
+      "shot": "traversal",
+      "arm": "back",
+      "file": "traversal.back.png",
+      "sha256": "a3226c9526f2d77ed863b6469f9cdca24ff895f2a6ebbb08e0fa92247ac735ec",
+      "readback": {
+        "term": 0,
+        "raw": null
+      }
+    }
+  ]
+}
