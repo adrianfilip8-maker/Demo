@@ -25089,3 +25089,67 @@ are order-of-magnitude statements, not precision ones. The fix is a **per-rect a
 same shape as the `key` readback §336 already asked for, and cheap on the same capture.
 
 Nothing ships. This kills a seal that would have failed, before it was written.
+
+### §342.2 — **CORRECTION to §342.1.** Wrong control; the reachability verdict is withdrawn
+
+Found ~20 min after §342.1 was pushed, by reading the shadowtint lane's working
+(`NOTE-shadowtint-space.md:236-262`) rather than only §336's summary of it. §342 is untouched; this
+corrects §342.1 only. Full working in `NOTE-granite-huegrade.md` ADDENDUM 2.
+
+**Error 1 — the courtyard ground is not a matched control.** Same frame is not the same state. It
+differs from the colossus face in **cast-shadow state**, **orientation**, and **bounce exposure**
+(`hemi`, `toon.glsl.js:577`, hands a vertical face ~40 % and a ground plane 0 % — the lane had
+already checked this). The matched control was in the record and I walked past it: the lane measured
+a three-rung ladder in one frame, one rig, one transform:
+
+```
+courtyard ground,     cast-shadowed, horizontal        R/G 0.52        PASS
+courtyard colossus-L, cast-shadowed TWIN, vertical     R/G 1.02-1.86
+courtyard colossus-R, shade side of a SUNLIT statue    R/G 3.00-4.26   FAIL
+```
+
+`colossus-L` is the twin — same recipe, tokens, tint and frame, differing only in `worn`/collar
+(`Props.js:_colossi`). With it:
+
+| surface | input | R/G | suppression |
+|---|---|---|---|
+| ground (cast-shadowed) | 3.390 | 0.52 | **0.153** |
+| colossus-L (cast-shadowed) | 6.344 | 1.02–1.86 | **0.161–0.293** |
+| colossus-R (still key-lit) | 6.344 | 3.00–4.26 | 0.473–0.672 |
+
+**The two cast-shadowed surfaces agree despite different materials and orientations — the wash is
+not material-dependent.** §342.1's "3.84× harder" is correct arithmetic and a misread cause: it was
+measuring **`sh`**, not the material. The lane had already said so — *"colossus-R is the only one of
+the three still receiving direct key."*
+
+**Error 2 — §341's bandgate2 does not rule out what I claimed.** It measured the **toon ramp's**
+band, an **N·L** quantity. The live hypothesis is **`sh`**, the shadow-map term. Different factors of
+one product, conflated because both are called "shadow". §336 §10 states the settling measurement
+exactly — a **`key` (= `ramp * sh`) readback** — and §342.1 quoted that line without applying it.
+
+**Consequence — the reachability verdict is WRONG.** §342.1 took suppression **0.589** off
+`colossus-R`, a surface still receiving direct key, and used it as the wash's full authority. Redone
+at full authority from the matched control:
+
+```
+shipped albedo  (6.344) -> 1.02-1.86   bar 0.90: miss by 1.13-2.07x
+hueGrade off    (4.006) -> 0.64-1.18   <- STRADDLES the bar
+```
+
+against §342.1's "2.362, over by 2.62×". **"Neither lever alone reaches the bar" is WITHDRAWN**, along
+with its §332-failure-shape framing and its "not distinguishable offline" — it was distinguishable,
+from material already in the repo. The narrower and more useful statement: the colossus's shade is red
+mostly because that face is **still being keyed**, and the albedo decides whether closing that gets it
+under the bar.
+
+**What survives.** §342 entirely — pure texture arithmetic against a double-digest-proven control,
+never touching a frame. And **"the bar must be relative"**, for a better reason than §342.1 gave:
+`colossus-L` takes the wash at *full* authority and still reads 1.02–1.86 where hero reads 0.72 from a
+much lower input.
+
+**The lesson.** §340 says *prove the CONTROL is in the state you assert it is in*. I proved the ground
+was in the courtyard — never in question — and never checked it was in the **lighting state** I was
+comparing against. I reached for the control in the same *frame* instead of the one in the same
+*state*. **The measurement that settles it is still the one §336 named and this item has now twice
+failed to substitute for: a `key` (= `ramp * sh`) readback over the colossus rect.** Until it exists,
+every suppression figure in §342.1/§342.2 is conditioned on an unmeasured `sh`.

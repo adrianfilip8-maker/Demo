@@ -264,3 +264,99 @@ overturn a 3.84× or a 2.62×, but these are order-of-magnitude statements and m
 precision ones. The one measurement that would replace the proxy with the real thing is a
 **per-rect albedo readback** — the same shape as the `key` readback §336 asked for, and cheap on
 the same capture.
+
+---
+
+# ADDENDUM 2 — **CORRECTION.** I used the wrong control, and the reachability verdict flips
+
+Found ~20 minutes after ADDENDUM 1 was committed, by reading the shadowtint lane's own working
+(`NOTE-shadowtint-space.md:236-262`) rather than only the §336 summary of it. Two errors, one
+consequence.
+
+## Error 1 — the courtyard ground is not a matched control for the colossus
+
+ADDENDUM 1 called it a "within-frame control". Same frame is not the same thing as same state, and
+the two surfaces differ in at least three ways that all bear on the statistic: **cast-shadow state**
+(the ground has `sh = 0`; the colossus face does not), **orientation** (horizontal vs vertical), and
+**bounce exposure** — `hemi = smoothstep(-0.72, 0.55, Nw.y)` (`toon.glsl.js:577`) hands a vertical
+face ~40 % bounce and a ground plane 0 %, a difference the lane had already checked and written down.
+
+**The matched control was already in the record and I walked past it.** The lane measured a
+three-rung ladder inside one frame, one light rig, one transform:
+
+```
+courtyard ground,    cast-shadowed, horizontal          R/G 0.52        display 209   PASS
+courtyard colossus-L, cast-shadowed TWIN, vertical      R/G 1.02-1.86   display 234..358
+courtyard colossus-R, shade side of a SUNLIT statue     R/G 3.00-4.26   display 333..351   FAIL
+```
+
+`colossus-L` is the west/east twin: **same recipe, same material tokens, same tint, same frame**,
+differing only in `worn` and collar parameters (`Props.js:_colossi`). It is the control ADDENDUM 1
+should have used.
+
+And with it the picture inverts:
+
+| surface | input | measured R/G | suppression |
+|---|---|---|---|
+| ground (cast-shadowed) | 3.390 | 0.52 | **0.153** |
+| colossus-L (cast-shadowed) | 6.344 | 1.02–1.86 | **0.161–0.293** |
+| colossus-R (still key-lit) | 6.344 | 3.00–4.26 | 0.473–0.672 |
+
+**The two cast-shadowed surfaces agree on suppression despite different materials and different
+orientations.** The wash is *not* material-dependent. ADDENDUM 1's headline — "the wash suppresses
+the ground's R/G 3.84× harder than the colossus's" — is arithmetically correct and causally
+misread: it was measuring **`sh`**, not the material. The lane had already named this: *"The
+colossus-R shade face is the only one of the three that is still receiving direct key."*
+
+## Error 2 — §341's bandgate2 does not rule out what I said it ruled out
+
+ADDENDUM 1 claimed bandgate2's **96.4 % shadow band** disposed of the mid-band explanation. It does
+not. bandgate2 measured the **toon ramp's** band, which is an **N·L** quantity. The live hypothesis
+is about **`sh`** — the shadow-map term — and they are different factors of the same product.
+§336 §10 says so precisely, and I quoted it in this very file without applying it: the settling
+measurement is a **`key` (= `ramp * sh`) readback**. Ramp-band membership establishes one factor and
+says nothing about the other. Two terms, conflated because both are called "shadow".
+
+## The consequence: ADDENDUM 1's reachability verdict is WRONG
+
+It derived a suppression of **0.589** from `colossus-R` — a surface still receiving direct key — and
+then used it as though it were the wash's full authority. Redone at full authority (`sh = 0`), from
+the matched control:
+
+```
+shipped albedo (input 6.344), full authority  ->  1.02 - 1.86    bar 0.90: miss by 1.13-2.07x
+hueGrade deleted (input 4.006), full authority ->  0.64 - 1.18    <- STRADDLES THE BAR
+```
+
+against ADDENDUM 1's "2.362, over by 2.62×". **So the texture lever combined with full shadow
+authority is plausibly sufficient, and "neither lever alone reaches the bar" is withdrawn.** What
+the numbers now say is narrower and more useful: the colossus's shade is red mostly because that
+face is *still being keyed*, and the albedo decides whether closing that gets it under the bar.
+
+## What survives, and what does not
+
+**Survives — §342 in full.** The attribution is pure texture arithmetic against a double-digest-proven
+control and never touched a frame: albedo 4.260, rank 1 of 23, the +1.570 hueGrade sign flip, the
+1-of-11 status of `HUE.granite`. None of it depends on anything corrected here.
+
+**Survives — "the bar must be relative."** For a different and better reason than ADDENDUM 1 gave:
+`colossus-L` is *fully cast-shadowed*, gets the wash at full authority, and still reads **1.02–1.86**
+where hero reads 0.72 from a much lower input. An absolute R/G bar still imports the albedo of
+whatever material calibrated it.
+
+**Withdrawn — "neither lever alone reaches the bar"** and the §332-failure-shape framing attached to
+it. Also withdrawn: ADDENDUM 1's "not distinguishable offline" about the suppression gap. It was
+distinguishable, from material already in the repo.
+
+## The lesson, stated so it is not repeated
+
+§340's rule is *prove the CONTROL is in the state you assert it is in*. I proved the ground was in
+the courtyard — which was never in question — and never checked it was in the **lighting state** I
+was comparing against. I reached for the control that was in the same *frame* instead of the one in
+the same *state*, and the ledger's own note for this item warned about precisely this class of
+mistake two entries earlier: *the defect attributed to the last stage that touched the pixel rather
+than the stage that originated the value.* Here it was the nearest control rather than the matched one.
+
+**The measurement that settles it remains the one §336 named and this file has now twice failed to
+substitute for: a `key` (= `ramp * sh`) readback over the colossus rect.** Until that exists, every
+suppression figure here is conditioned on an unmeasured `sh`.
