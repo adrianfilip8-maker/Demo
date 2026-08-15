@@ -4,3 +4,7 @@ HEAD tree verified under the lock — src 2b5c7c49ad9c4668 (no install; the cone
 renderer: ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)
 §309 parking verified at boot: guardArt 0, guardSkin 0, unpainted, unshifted
 -- staged hero (1/16, 56s)
+  # 1 hero.off             sha c0fad6bce218  cone=0 lampW=0.00 park=0/0/clean inframe=7
+  # 2 hero.bon             sha 4b6f6d090b68  cone=1 lampW=8.50 park=0/0/clean inframe=7
+  # 3 hero.back            sha c0fad6bce218  cone=0 lampW=0.00 park=0/0/clean inframe=7
+-- staged kaykit (2/16, 0s)
