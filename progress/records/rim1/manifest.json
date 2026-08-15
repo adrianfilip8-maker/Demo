@@ -1,7 +1,7 @@
 {
   "seal": "PREREG-rim",
   "warmup": 2,
-  "head": "7ebd5daf9826c1946da50159d372c39c1f1f8b37",
+  "head": "222cfdad8dce513d8dadcd9834517e3e1d5db670",
   "srcHash": "b3852e39472ed68f",
   "staging": "setShot(name, {}) — dt UNDEFINED, live settle, roster-faithful (§328)",
   "expectRows": 15,
@@ -17,9 +17,15 @@
       "srcHash": "b3852e39472ed68f",
       "head": "7ebd5daf9826c1946da50159d372c39c1f1f8b37",
       "capturedAt": "2026-08-15T15:10:48.734Z"
+    },
+    {
+      "shot": "hero",
+      "srcHash": "b3852e39472ed68f",
+      "head": "222cfdad8dce513d8dadcd9834517e3e1d5db670",
+      "capturedAt": "2026-08-15T15:25:35.302Z"
     }
   ],
-  "mergedAt": "2026-08-15T15:10:48.734Z",
+  "mergedAt": "2026-08-15T15:25:35.303Z",
   "rows": [
     {
       "shot": "night",
@@ -179,6 +185,86 @@
         "debugRaw": false,
         "debugSrc": "scene",
         "camY": 1.7
+      }
+    },
+    {
+      "shot": "hero",
+      "arm": "off",
+      "file": "hero.off.png",
+      "sha256": "1de25eded2aedb600785e63019701596b6ea18169303b5f95dd05215a2fabf2f",
+      "readback": {
+        "uRimStrength": 0.7,
+        "uEdgeEnabled": 1,
+        "tuneRimStrength": 0.7,
+        "edgeEnabled": true,
+        "uDebugTerm": 0,
+        "debugRaw": false,
+        "debugSrc": "scene",
+        "camY": 10.28
+      }
+    },
+    {
+      "shot": "hero",
+      "arm": "screenoff",
+      "file": "hero.screenoff.png",
+      "sha256": "488aeb2ee63ddc4b790aee27833e66192440afcfc07b22d0d1207694664434e2",
+      "readback": {
+        "uRimStrength": 0,
+        "uEdgeEnabled": 1,
+        "tuneRimStrength": 0,
+        "edgeEnabled": true,
+        "uDebugTerm": 0,
+        "debugRaw": false,
+        "debugSrc": "scene",
+        "camY": 10.28
+      }
+    },
+    {
+      "shot": "hero",
+      "arm": "raw",
+      "file": "hero.raw.png",
+      "sha256": "db008bbb46177fe03752a12c94b7d42aca7d9a60be12602eb9e222e7d4f8064b",
+      "readback": {
+        "uRimStrength": 0,
+        "uEdgeEnabled": 1,
+        "tuneRimStrength": 0.7,
+        "edgeEnabled": true,
+        "uDebugTerm": 0,
+        "debugRaw": true,
+        "debugSrc": "scene",
+        "camY": 10.28
+      }
+    },
+    {
+      "shot": "hero",
+      "arm": "cal",
+      "file": "hero.cal.png",
+      "sha256": "5e7628273e39884888404c40d702901e31d5e13eb6f3a49353b5e29cf18e8e8c",
+      "readback": {
+        "uRimStrength": 0,
+        "uEdgeEnabled": 1,
+        "tuneRimStrength": 0.7,
+        "edgeEnabled": true,
+        "uDebugTerm": 4,
+        "debugRaw": true,
+        "debugSrc": "scene",
+        "camY": 10.28
+      }
+    },
+    {
+      "shot": "hero",
+      "arm": "back",
+      "file": "hero.back.png",
+      "sha256": "1de25eded2aedb600785e63019701596b6ea18169303b5f95dd05215a2fabf2f",
+      "readback": {
+        "uRimStrength": 0.7,
+        "uEdgeEnabled": 1,
+        "tuneRimStrength": 0.7,
+        "edgeEnabled": true,
+        "uDebugTerm": 0,
+        "debugRaw": false,
+        "debugSrc": "scene",
+        "camY": 10.28
       }
     }
   ]
