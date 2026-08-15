@@ -1,0 +1,163 @@
+self-check 1  rec2020 round-trip max |err| 9.80e-5  OK
+self-check 2  0.02->38.7(39) 0.05->69.2(69) 0.08->88.4(88) 0.18->126.3(126) 0.35->158.9(159) 0.5->175.7(176) 0.72->191.7(192) 1->204.8(205) 2->227.1(227)
+self-check 2  max |err| vs shipped validated row: 0.35 L  OK
+
+rederive.mjs — §342.2 re-derived against measured `key`.  Offline: no capture, no boot, no src change.
+  keyprobe1 arms  1280x720   shots/r12/courtyard.png  1280x720
+========================================================================================================
+1. §344's rect table RE-COMPUTED from the committed term5 frame — a transcription check
+--------------------------------------------------------------------------------------------------------
+   rect      class               ramp     ndl     key   sh=key/ramp      committed in §344
+   SHADE_R   shade-terminator   0.1408  0.1013  0.1017      0.4908      0.1408 0.1013 0.1017  0.4908
+   CAST_L    shade-cast         0.0684  0.0300  0.0281      0.1768      0.0684 0.0300 0.0281  0.1768
+   LIT_R     lit                0.8532  0.7823  0.5382      0.6172      0.8532 0.7823 0.5382  0.6172
+   GROUND    both               0.7735  0.4183  0.3010      0.3608      0.7735 0.4183 0.3010  0.3608
+========================================================================================================
+2. WASH AUTHORITY = shadowMix = 1 - key    (toon.glsl.js:583 / :622 / :757-759 — read, not modelled)
+--------------------------------------------------------------------------------------------------------
+   rect       mean key   authority = 1-key    shortfall
+   CAST_L     0.0281     0.9719 (97.19%)      2.81%
+   SHADE_R    0.1017     0.8983 (89.83%)      10.17%
+   GROUND     0.3010     0.6990 (69.90%)      30.10%
+   LIT_R      0.5382     0.4618 (46.18%)      53.82%
+========================================================================================================
+3. CAST_L decomposed — what the rect mean of 0.0281 is a mean OF
+--------------------------------------------------------------------------------------------------------
+   pixels in rect                        84000
+   BACKGROUND (identical in all 3 arms)  997 = 1.19% — blue channel there is not `key`
+   mean key, WHOLE rect                  0.0281   <- the statistic §344 scored
+   mean key, SURFACE pixels only         0.0229   <- the statistic about the surface
+     background supplies 18.6% of the scored mean.
+   surface pixels at key == 0            46638 = 56.2% — these ARE at full authority
+   key percentiles, surface pixels       p50 0.0000  p75 0.0039  p90 0.0078  p95 0.0118  p99 0.6039
+     bimodal: a majority at exactly zero and a small hard-keyed tail. The mean sits where
+     almost none of the rect is, so no single `sh` describes this control.
+   GROUND, same statistic          surface pixels at key == 0: 40.1%
+========================================================================================================
+4. FRAME EQUIVALENCE — do the two captures describe one scene state? (§341: reproduce the statistic)
+--------------------------------------------------------------------------------------------------------
+   flat pixels (local 3x3 sd <= 3) over each region, inverted to scene-linear
+   colossus-L body box 1   r12         5463px  #543f4b h 325 L  68  lin  0.0723  0.0446  0.0430  R/G  1.62  B/G  0.96
+                           keyprobe1   5464px  #543f4b h 325 L  68  lin  0.0723  0.0446  0.0430  R/G  1.62  B/G  0.96   R/G ratio 1.00x
+   colossus-L body box 2   r12         2739px  #533e4a h 326 L  67  lin  0.0703  0.0434  0.0410  R/G  1.62  B/G  0.95
+                           keyprobe1   2744px  #533e4a h 326 L  67  lin  0.0705  0.0435  0.0412  R/G  1.62  B/G  0.95   R/G ratio 1.00x
+   colossus-L body box 3   r12         2735px  #593f48 h 339 L  69  lin  0.0795  0.0465  0.0419  R/G  1.71  B/G  0.90
+                           keyprobe1   2737px  #593f48 h 339 L  69  lin  0.0795  0.0465  0.0419  R/G  1.71  B/G  0.90   R/G ratio 1.00x
+   colossus-L right block  r12          680px  #2b3e50 h 210 L  59  lin  0.0278  0.0410  0.0419  R/G  0.68  B/G  1.02
+                           keyprobe1    676px  #2b3e50 h 209 L  59  lin  0.0279  0.0412  0.0422  R/G  0.68  B/G  1.02   R/G ratio 1.00x
+   CAST_L  (whole rect)    r12        36044px  #473d4b h 282 L  64  lin  0.0548  0.0416  0.0401  R/G  1.32  B/G  0.96
+                           keyprobe1  35996px  #473d4b h 283 L  64  lin  0.0551  0.0419  0.0403  R/G  1.32  B/G  0.96   R/G ratio 1.00x
+   SHADE_R (whole rect)    r12         5771px  #6a3a4b h 339 L  69  lin  0.1067  0.0387  0.0435  R/G  2.75  B/G  1.12
+                           keyprobe1   5561px  #5c5053 h 341 L  82  lin  0.0819  0.0679  0.0626  R/G  1.21  B/G  0.92   R/G ratio 0.44x
+   LIT_R   (whole rect)    r12         5009px  #b8594c h   8 L 108  lin  0.3735  0.0753  0.0628  R/G  4.96  B/G  0.83
+                           keyprobe1   4866px  #816958 h  26 L 109  lin  0.1610  0.1238  0.0903  R/G  1.30  B/G  0.73   R/G ratio 0.26x
+   colossus-R body-all     r12        46053px  #934b48 h   2 L  90  lin  0.2050  0.0592  0.0544  R/G  3.46  B/G  0.92
+                           keyprobe1  45730px  #6e5e55 h  22 L  97  lin  0.1136  0.0962  0.0771  R/G  1.18  B/G  0.80   R/G ratio 0.34x
+   GROUND  (whole rect)    r12        23332px  #615555 h 359 L  87  lin  0.0925  0.0791  0.0719  R/G  1.17  B/G  0.91
+                           keyprobe1  23961px  #625d58 h  32 L  94  lin  0.0943  0.0961  0.0828  R/G  0.98  B/G  0.86   R/G ratio 0.84x
+
+   Left of frame reproduces to 4 decimal places. The colossus-R rects do not.
+
+   The same test on §336's OWN statistic — darkest 12% of clean 10x10 patches, sd <= 3:
+     colossus-R body-all (§336's 3.74)  r12 R/G  3.74 (L71, h345)   keyprobe1 R/G  1.18 (L82, h342)
+     SHADE_R                            r12 R/G  3.11 (L67, h335)   keyprobe1 R/G  1.08 (L80, h279)
+     CAST_L (§342.2's 1.02)             r12 R/G  1.02 (L60, h234)   keyprobe1 R/G  1.02 (L60, h234)
+     GROUND (§336's 0.52)               r12 R/G  0.52 (L43, h209)   keyprobe1 R/G  0.54 (L45, h209)
+
+   WHERE the two frames differ — mean max-channel |r12 - keyprobe1|, 160x120 cells:
+     y   0:    5    4   11   11    6    4    3   12
+     y 120:    0    0    7    4    4    4   10   12
+     y 240:    0    0    1    9   22   23   26   16
+     y 360:    1    1   25   80   58   46   39   17
+     y 480:    5    4   12   54   55   41   38   17
+     y 600:   10    5    3   15   28   41   27   30
+   and the SKY, which fixes time of day and key elevation:
+     sky top-left   r12 #7e8ca3 h217 L139.0   keyprobe1 #7b8ba4 h216 L137.5
+     sky top-mid    r12 #91abc3 h209 L167.1   keyprobe1 #86a8c4 h207 L162.9
+     sky top-right  r12 #7a8ca4 h214 L137.7   keyprobe1 #7f8ea4 h216 L140.0
+   The sky is unchanged and the left third is unchanged; the difference is confined to the
+   centre-right. Whatever moved, it did not move the sun and it did not move the camera.
+========================================================================================================
+5. §342.2's OWN statistics, each with the co-registered `key` of the population it was measured over
+--------------------------------------------------------------------------------------------------------
+   DARK 12%  (§342.2's "1.02" end)      39pat  L  60 h 234  R/G  1.02  B/G  1.08   mean key 0.0016   authority 99.84%
+   display L 55 +/-2 bin                 1pat  L  55 h 230  R/G  0.97  B/G  1.31   mean key 0.0000   authority 100.00%
+   display L 65 +/-2 bin                42pat  L  65 h 311  R/G  1.53  B/G  0.98   mean key 0.0034   authority 99.66%
+   display L 75 +/-2 bin                48pat  L  74 h 356  R/G  1.85  B/G  0.83   mean key 0.0058   authority 99.42%
+   display L 85 +/-2 bin                11pat  L  84 h  15  R/G  1.76  B/G  0.69   mean key 0.0079   authority 99.21%
+
+   The rect mean key is 0.0281. The population §342.2 read "1.02" off carries key 0.0016 —
+   17x lower. R/G and key were never computed over the same pixels, in any record.
+
+   Same patches, binned by their OWN measured key:
+   key == 0 exactly                     23pat  L  63 h 209  R/G  0.67  B/G  1.03   mean key 0.0000   authority 100.00%
+   0 < key <= 0.01                     306pat  L  73 h 348  R/G  1.70  B/G  0.87   mean key 0.0049   authority 99.51%
+   0.01 < key <= 0.05                 (none)
+   0.05 < key <= 0.20                 (none)
+   key > 0.20                         (none)
+
+   EVERY one of the 329 clean patches in CAST_L carries key <= 0.0080 — authority >= 99.2%.
+   The sd<=3 patch filter that produces every published R/G on this item systematically
+   EXCLUDES the hard-keyed tail: keyed pixels sit on relief edges and inlay, which are not flat.
+   So §342.2's whole 1.02-1.86 range was already taken at 99.2-100% authority, and R/G varies
+   1.9x across it while authority varies by under 0.8 points. Within this object, authority is
+   not what moves R/G.
+
+   ...and the key==0 patches are NOT a matched sample of the keyed ones:
+   of the darkest-12% patches, 20/39 are entirely key==0, and
+   16/39 = 41% of them sit at x >= 290 — the separate block face at the right of the rect,
+   across an ink line and an edge highlight from the large mauve body. Different surface.
+
+   REDUCTIO, using only the two rows above. If key alone carried R/G from 0.67 (key 0) to
+   1.70 (key 0.0049), the slope would be (1.70-0.67)/0.0049 = 210 per unit key, and the
+   0.1017 §344 measured on SHADE_R would put it at R/G ~22. No pixel in this frame reads
+   anything of the sort. The two populations therefore differ in something other than key,
+   and the difference between them may not be attributed to shadow authority.
+========================================================================================================
+6. WITHIN colossus-L's OWN mauve face — flat pixels split by their measured key
+--------------------------------------------------------------------------------------------------------
+   body box 1 [120,255,120,60]  flat px 5464   key==0 share 1.4%
+     key == 0 (FULL AUTHORITY)      77px  #3f364c h 263 L  58  lin  0.0452  0.0343  0.0385  R/G  1.32  B/G  1.12
+     key >  0                     5387px  #553f4b h 326 L  68  lin  0.0727  0.0448  0.0431  R/G  1.62  B/G  0.96
+   body box 2 [150,330,100,50]  flat px 2744   key==0 share 14.1%
+     key == 0 (FULL AUTHORITY)     386px  #39354d h 250 L  56  lin  0.0391  0.0324  0.0386  R/G  1.21  B/G  1.19
+     key >  0                     2358px  #583f4a h 334 L  69  lin  0.0764  0.0455  0.0420  R/G  1.68  B/G  0.92
+   body box 3 [100,290,80,60]  flat px 2737   key==0 share 0.0%
+     key == 0 (FULL AUTHORITY)  (no sample)
+     key >  0                     2737px  #593f48 h 339 L  69  lin  0.0795  0.0465  0.0419  R/G  1.71  B/G  0.90
+
+   and the separate block face at the right of the same rect, for contrast:
+     right block, key == 0         676px  #2b3e50 h 209 L  59  lin  0.0279  0.0412  0.0422  R/G  0.68  B/G  1.02
+
+   Two candidate readings of "granite at full authority" — 1.2-1.3 on the body, 0.68 on the
+   right block — and nothing committed establishes which surface carries the albedo the
+   6.344 input refers to. The key==0 body pixels are also darker and a small minority share,
+   so they differ from the keyed pixels in more than key. This is a bound, not a value.
+========================================================================================================
+7. §342.2's two lines
+--------------------------------------------------------------------------------------------------------
+   As written:
+     shipped albedo (input 6.344) at full authority ->  1.02-1.86   bar 0.90: miss by 1.13-2.07x
+     hueGrade off   (input 4.006) at full authority ->  0.64-1.18   <- "STRADDLES the bar"
+
+   LINE 1 — re-based above. Its "1.02" end was in fact measured at authority 99.84%, not at
+   the rect mean's 97.19%, because R/G and key were computed over different populations. The
+   figure is not an extrapolated limit and never needed to be; but 41% of the patches under it
+   sit on a different block face, so it is not a reading of the material it is labelled with.
+
+   LINE 2 — not re-basable at any authority. It multiplies a measured R/G by the ratio of two
+   albedo ratios, which needs the rendered R/G to be homogeneous of degree 1 in the albedo.
+   The shipped diffuse sum is not (toon.glsl.js:756-759 with shipped TUNE — shadeForm == 1 at
+   shadeBand 0.0, hold == 0 at shadowHold 0.0, ao off the key at aoKey 0.0):
+     diff = alb*keyRad*key  +  albAmb*fill*ao  +  albShadow*slyShad*shadowMix*(..)
+                            +  slyShad*uShadowWash*shadowMix*ao
+     - the last term carries NO albedo factor at all (uShadowWash 0.05, ToonMaterial.js:172);
+     - albShadow / albAmb mix alb toward its own LUMA (uShadowSat -0.35, :173) — a channel-
+       MIXING map, not a per-channel scale.
+   So D = (linear non-diagonal map of alb) + (a constant independent of alb), and D_R/D_G is
+   not a function of alb_R/alb_G alone. The transfer is not an operation this shader supports.
+   That defect is independent of the `sh` premise and survives any re-basing of line 1.
+
+========================================================================================================
+Registered scorer, unchanged and still VOID:  node progress/records/keyprobe/keyprobe-score.mjs
+
