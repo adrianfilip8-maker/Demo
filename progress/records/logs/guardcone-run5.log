@@ -8,3 +8,15 @@ renderer: ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)
   # 2 hero.bon             sha 4b6f6d090b68  cone=1 lampW=8.50 park=0/0/clean inframe=7
   # 3 hero.back            sha c0fad6bce218  cone=0 lampW=0.00 park=0/0/clean inframe=7
 -- staged kaykit (2/16, 0s)
+  # 4 kaykit.off           sha b4ce845f19d0  cone=0 lampW=0.00 park=0/0/clean inframe=6
+  # 5 kaykit.bon           sha b72cf5455eb0  cone=1 lampW=0.00 park=0/0/clean inframe=6
+  # 6 kaykit.back          sha b4ce845f19d0  cone=0 lampW=0.00 park=0/0/clean inframe=6
+-- staged temple (3/16, 0s)
+  # 7 temple.off           sha 901f78b69d13  cone=0 lampW=0.00 park=0/0/clean inframe=2
+  # 8 temple.bon           sha 2cf33d432d70  cone=1 lampW=0.00 park=0/0/clean inframe=2
+  # 9 temple.back          sha 901f78b69d13  cone=0 lampW=0.00 park=0/0/clean inframe=2
+-- staged sly-closeup (4/16, 33s)
+  #10 sly-closeup.off      sha 3a33d7590845  cone=0 lampW=0.00 park=0/0/clean inframe=8
+  #11 sly-closeup.bon      sha 317835fd3858  cone=1 lampW=8.50 park=0/0/clean inframe=8
+  #12 sly-closeup.back     sha 3a33d7590845  cone=0 lampW=0.00 park=0/0/clean inframe=8
+-- staged sly-startle (5/16, 0s)
