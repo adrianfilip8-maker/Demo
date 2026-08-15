@@ -24445,3 +24445,50 @@ changing three things: a bracket argued from these numbers (rect-scoped, or whol
 tolerance admitting ±2 LSB while still catching a 467×51 band, justified against the 3,040 /
 10,372 px candidate effects); instrumenting the hold's scaling gate before touching the dose; and
 a costume-hue pre-flight so combat's rect is verified on the costume, not merely on the subject.
+
+## §331 — the first render after staging is NOT converged, and that alone caused litbleach's VOID
+
+`convprobe` (unsealed calibration, `progress/records/convprobe/`): stage `sly-key` on the roster's
+live-settle path, then render **8 times with the lever pinned at 0** and nothing else touched.
+
+```
+  i   vs r0 (px / maxD)    vs previous (px / maxD)
+  r1     1125 / 21             1125 / 21
+  r2     1125 / 21                0 /  0
+  r3..r7 1125 / 21                0 /  0      (r1..r7 all sha 75991b4ed9a49ab3)
+```
+
+**Exactly one render is unconverged.** r0 differs from r1 by 1125 px at max channel delta 21;
+every pair after that is **bit-exact**, six consecutive times. The renderer settles completely
+after a single frame and then never moves again.
+
+**This is the whole of litbleach's VOID.** Its arms run `off → on → ko → back`, so `off` is the
+FIRST render after staging — the one unconverged frame — while `back` is the fourth. The bracket
+was comparing a pre-convergence frame against a converged one and correctly reported a
+difference. The magnitudes match to within noise: the probe measures 1125 px / maxD 21 on
+sly-key, litbleach's bracket measured **1120 px / maxD 21** on the same shot. Same phenomenon,
+reproduced in isolation with **no candidate anywhere near it**.
+
+It also explains the uneven spread that made the failure look like three separate mysteries:
+traversal 0 px (nothing in that frame is affected by whatever settles), combat 2 px, sly-key
+1120 px. One cause, three magnitudes — not "float noise on combat and a moving band on sly-key".
+
+**Consequence, and it is cheap:** a runner must **discard one render after staging** before
+capturing its first arm. `PREREG-litbleach2` seals a warm-up of **2** — the measurement says 1
+suffices, and the second costs one render per shot and buys margin against a shot that settles
+more slowly. The 0-px bracket stays at 0: with the warm-up in place a bracket failure now means
+something real, which is exactly what a validity gate should mean.
+
+**Two corrections to my own published guesses**, both of which this refutes:
+- Commit 4b02250 blamed combat's 2 px on FX advancing per render call. Wrong — it is the same
+  first-render convergence, at a smaller magnitude.
+- `NOTE-litbleach-bracket.md` called combat's 2 px "float/rasterisation non-determinism in a
+  skinned draw" and treated sly-key's band as "a genuinely different thing". Both wrong, and
+  wrong in the same way: I read one cause as two phenomena because their magnitudes differed by
+  three orders of magnitude. The probe shows a single settling event explains both.
+
+**The general rule:** a same-boot pixel bracket is only valid over frames the renderer has
+already settled. §302 said cross-boot exact-zero is unachievable; §330 narrowed that to
+"same-boot exact-zero is achievable but the exception"; this corrects §330 — **same-boot
+exact-zero is the RULE, once the first frame after staging is discarded.** Every seal in this
+repo that captures a frame immediately after `setShot` should be read with that in mind.

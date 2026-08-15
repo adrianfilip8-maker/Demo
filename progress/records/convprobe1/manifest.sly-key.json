@@ -1,0 +1,47 @@
+{
+  "probe": "convprobe",
+  "shot": "sly-key",
+  "n": 8,
+  "rows": [
+    {
+      "i": 0,
+      "file": "sly-key.r0.png",
+      "sha256": "8a9d9fb36512c22c1b16c585e2745f0503e164a795146e6344dac5ba462672cd"
+    },
+    {
+      "i": 1,
+      "file": "sly-key.r1.png",
+      "sha256": "75991b4ed9a49ab3ced693a98f2bcbca296b657c0a04d09018cd193d735dd97b"
+    },
+    {
+      "i": 2,
+      "file": "sly-key.r2.png",
+      "sha256": "75991b4ed9a49ab3ced693a98f2bcbca296b657c0a04d09018cd193d735dd97b"
+    },
+    {
+      "i": 3,
+      "file": "sly-key.r3.png",
+      "sha256": "75991b4ed9a49ab3ced693a98f2bcbca296b657c0a04d09018cd193d735dd97b"
+    },
+    {
+      "i": 4,
+      "file": "sly-key.r4.png",
+      "sha256": "75991b4ed9a49ab3ced693a98f2bcbca296b657c0a04d09018cd193d735dd97b"
+    },
+    {
+      "i": 5,
+      "file": "sly-key.r5.png",
+      "sha256": "75991b4ed9a49ab3ced693a98f2bcbca296b657c0a04d09018cd193d735dd97b"
+    },
+    {
+      "i": 6,
+      "file": "sly-key.r6.png",
+      "sha256": "75991b4ed9a49ab3ced693a98f2bcbca296b657c0a04d09018cd193d735dd97b"
+    },
+    {
+      "i": 7,
+      "file": "sly-key.r7.png",
+      "sha256": "75991b4ed9a49ab3ced693a98f2bcbca296b657c0a04d09018cd193d735dd97b"
+    }
+  ]
+}
