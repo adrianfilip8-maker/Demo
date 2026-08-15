@@ -24324,3 +24324,51 @@ Waivers applied **AT ROUTING ONLY**, critic blind to both, scores unadjusted: §
 §309 guard **MODEL** — **the guard CONE is explicitly NOT covered, and it is why that shot scores 2.**
 
 Nothing ships from a critic round. Only tree change is the §7.3 declaration fix. Suite 541 green.
+
+## §329 — rollback six, and the arithmetic that says LONG CAPTURES ARE NO LONGER VIABLE in this environment
+
+Rollback six killed `guardcone` run 6. Recovery was the §325 runbook with §325.1's refinement
+(collision set computed exactly, 21 files, `/tmp/prerollback6/`, ff-merge to `07039cb`, suite
+541). Nothing durable lost — seventh time. That part is now routine and is not the finding.
+
+**The finding is the measurement.** Immediately after the rollback, `/proc/uptime` read **5.8
+minutes**, which dates the container restart directly rather than inferring it. Put beside the
+three guardcone attempts:
+
+```
+run 4   died  12/49 frames   (log 22 lines)
+run 5   died  23/49 frames   ~73 min survived   → measured rate 3.1 min/frame
+run 6   died   0/49 frames   ~36 min survived   (log 5 lines, still booting shot 1)
+```
+
+At the measured 3.1 min/frame a 49-frame capture needs **~152 minutes**. Three consecutive
+attempts died and **none reached half**. The sample is small and I am not fitting a distribution
+to it, but the conservative reading needs no distribution: *the capture is longer than any
+container life observed tonight.* Relaunching it unchanged is not a plan, it is a lottery ticket
+bought once an hour.
+
+**Consequence, and it is a scoping rule rather than a complaint:**
+
+1. **Short captures are the only viable kind while this persists.** A seal that needs 12-16 frames
+   (~40 min) fits inside an observed container life; one that needs 49+ does not. §325 already
+   said "prefer SHORT runs"; that was advice, and the measurement above promotes it to a
+   constraint. Scope the next wave's seals to fit, and say the frame count out loud in the PREREG.
+2. **This does not license re-tuning guardcone.** §141.1 stands: the 16-shot roster is what the
+   PROT-* bars measure, the runner has no subset lever (`ROSTER` is a hardcoded const, no env or
+   argv path), and shortening it by fiat would silently change what the seal proves. If guardcone
+   is to be made survivable it needs a written **AMENDMENT A2** landed before any capture — the
+   same discipline A1 got — arguing explicitly that per-shot chunking preserves every bar, since
+   all of them (off/bon/blamp/back brackets, PROT-*) compare arms *within* a shot and none
+   compares pixels across shots. That is a real option, not a hack, but it is a seal amendment and
+   it is written down first or not at all.
+3. **Offline authoring is rollback-immune and should absorb these windows.** Every fold, PREREG,
+   scorer and runner is pure authoring that survives via an immediate push; only captures die. The
+   right use of a rollback-hostile night is to write the next seals, not to watch a doomed run.
+   Note the one constraint: a PREREG's *document* + scorer + runner can land while a capture holds,
+   but its **inert mechanism must not**, because that touches `src/` and V-TREE hashes `src/`.
+4. **The r13 queue's #1 item is naturally short and should go first.** The §277/§312 successor
+   needs traversal + combat + a control (§328: 0.205 / 0.080 / 0.516, already calibrated) — three
+   or four shots, not sixteen. It is both the highest-value open item and the one that *fits*.
+
+`guardcone` relaunched as run 7 anyway (pid 5112): it costs two minutes to start and might land in
+a clear window. It is no longer the wave's priority.

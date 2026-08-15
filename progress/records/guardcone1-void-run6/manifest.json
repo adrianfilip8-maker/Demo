@@ -1,6 +1,6 @@
 {
  "seal": "PREREG-guardcone + AMENDMENT A1 (cone-only; PREREG-guardart WAIVED-UNSCORED per §309)",
- "head": "07039cb90fd5476bf6c9ab5c5ab4dac05ec6a07b",
+ "head": "b73a6f5d21b76612dc2b467946ac04d8068c8339",
  "expect": {
   "head": "2b5c7c49ad9c4668"
  },
@@ -30,7 +30,7 @@
   "blamp (guard only)",
   "back"
  ],
- "launchedAt": "2026-08-15T03:57:17.942Z",
- "pid": 5112,
+ "launchedAt": "2026-08-15T03:07:12.079Z",
+ "pid": 6597,
  "rows": []
 }
