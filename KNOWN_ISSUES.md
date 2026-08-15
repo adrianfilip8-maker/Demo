@@ -26124,3 +26124,78 @@ the file's own recorded reasons rather than on taste.
 13 m hall wall are no longer free, so `wall` is a rung and not a lift, and Zone 4 is a set piece
 again. **Restores what §8.1 did grant:** the five `spire` bodies (obelisk pyramidion, four pinnacles)
 can be stepped off. Authored poles, rails, hooks and magnetism verified identical.
+
+---
+
+## §358 — CORRECTION to §356: r12 is not a capture, it is an unreconstructible dirty-tree render, and the frames differ GLOBALLY
+
+§356 read the r12/keyprobe1 disagreement as *"localised to colossus-R"* on *"an unchanged sky and
+camera"*, and filed a fresh roster capture as the way to adjudicate it. **Both halves of that are
+wrong**, and the second one matters more: there is nothing a capture could adjudicate.
+
+### §358.1 r12 cannot be reproduced by anybody
+
+```
+shots/r12/manifest.json   commit { sha: 0525d5e, dirty: TRUE, capturedAt 2026-08-13T23:46:22.779Z }
+0525d5e                   "Ship goldenrake + nightfloor: rakeTrack 1.0, shadowFloorNight 0.14"
+                          committed 2026-08-13 22:51:01 — 55 minutes BEFORE the render
+shots/*/                  .gitignore:15 — the file is UNTRACKED and always was
+```
+
+`dirty: true` means uncommitted working-tree changes were live when the frame was rendered. **That
+tree state was never committed and cannot be checked out.** Checking out `0525d5e` does not give you
+r12; nothing gives you r12. The file survives only because untracked files survive rollbacks.
+
+By contrast `keyprobe1` records `head cfcdd941f8` (*"RESULT-rim + §343"*) and `srcHash
+b3852e39472ed68f`, and `cfcdd941f8` **is an ancestor of HEAD** — that capture is reproducible.
+
+So §336's headline **3.74** — the number this entire lineage has been reasoning about since — was
+measured on a frame with no reconstructible provenance. Not "a different state": an *unknown* state.
+
+**This is not unique to r12.** Surveying the roster manifests: `r10` `58e3f49` and `guardfix`
+`964ded9` are `dirty=false`; **`r12` and `r4` are `dirty=true`**; and `fxdraw`, `fxshape`, `fxshape2`,
+`pass1`, `pass2`, `r3` carry no `commit` field at all. The roster renderer records
+`commit{sha,dirty}` while the records runner records `head`+`srcHash` — two schemas, and only one of
+them refuses to certify a dirty tree.
+
+### §358.2 The frames differ over 70 % of their pixels, so "localised" is false
+
+```
+WHOLE FRAME differing px    651976 / 921600 = 70.74%
+  BODY_ALL (§336)  110799/111000 = 99.8%    R/G  1.869 -> 1.273
+  SHADE_R           11698/ 11700 =100.0%    R/G  1.817 -> 1.178
+  LIT_R             12596/ 12600 =100.0%    R/G  2.015 -> 1.461
+  GROUND            42446/ 57200 = 74.2%    R/G  1.341 -> 1.182
+  CAST_L            13454/ 84000 = 16.0%    R/G  1.075 -> 1.075
+```
+
+Every rect de-reddens except `CAST_L`, which is **exactly** unchanged. §356 inferred "not exposure,
+grade or framing — localised to colossus-R" from the fact that `CAST_L` and `GROUND` reproduced. But
+`GROUND` does **not** reproduce: 74.2 % of it differs and its R/G moves 11.9 %. What reproduced was
+`CAST_L`'s **flat-patch statistic** (`sd ≤ 3`), not the rect and not the frame. **One statistic
+holding still on one rect was read as evidence that the global factors had not moved.**
+
+The structure is visible on a 1:1 crop of `BODY_ALL`: the same mass under the same camera has
+**shaded, non-cast faces that are salmon in r12 and grey-green in keyprobe1**, while `CAST_L` — fully
+occluded, `sh = 0`, governed by the wash alone — is untouched in both. *Not claimed:* the mechanism,
+or which of the 147 in-window commits did it. The ordering (`CAST_L` 0 % < `GROUND` 11.9 % < `LIT_R`
+27.5 % < `SHADE_R` 35.2 %) does not cleanly separate lit from shade, so a terminator-path story is
+suggested by the image and **not established by the numbers**.
+
+### §358.3 Consequences
+
+1. **Retire r12 as evidence.** Every figure sourced from it — §336's 3.74, and §341/§342/§342.1/
+   §342.2's use of it — rests on an unreconstructible tree. This does not make those numbers *wrong*;
+   it makes them **unattributable**, which for a project that seals bars against shas is worse.
+2. **The "fresh roster capture to adjudicate r12 vs keyprobe1" task is mis-specified and is
+   withdrawn.** No capture can adjudicate against a state nobody can produce. What is *available* is
+   re-measuring on a committed tree and treating r12 as absent from the record.
+3. **The 0.90 bar's subject still has no co-measured `(R/G, authority)` pair** — §356's conclusion
+   survives its own premise being wrong, by a different route: not because two states disagree, but
+   because one of the two was never a state at all.
+4. **`dirty: true` should fail a render, not annotate it.** The manifest already computes the flag;
+   nothing reads it. That is §357.1's pattern — a guard that exists is not a guard that runs — now
+   found outside `src/player/`, in the evidence chain itself.
+
+*Not claimed:* that the redness is fixed. Nothing here was measured against any bar, and keyprobe1's
+1.18–1.27 is a reading, not a verdict.
