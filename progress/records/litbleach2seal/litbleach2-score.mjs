@@ -20,27 +20,26 @@ import path from 'node:path';
 
 const ROOT = path.resolve(import.meta.dirname, '../../..');
 const DIR = process.env.LITBLEACH2_DIR || path.join(ROOT, 'progress/records/litbleach2');
-const DOSE = ['traversal', 'combat'];
+const DOSE = ['traversal'];        // §3: combat routed out
 const CONTROL = 'sly-key';
 const ROSTER = [...DOSE, CONTROL];
-const EXPECT_ROWS = 14;
+const EXPECT_ROWS = 9;
 const REF_HUE = 213.5;                       // §3 — the authored costume hue
 const DILATE = 3;                            // px — PROT_ENV's registered halo exclusion
 
 /* ── registered rects (§3; carried over from lithold unchanged, validated against r13) ────── */
 const RECT = {
   traversal: [557, 261, 582, 291],
-  combat: [520, 468, 566, 522],
   'sly-key': [600, 228, 675, 290],
 };
 
 /* ── the sealed bands (§5, §7, §8) ────────────────────────────────────────────────────────── */
 const PF_MASK_MIN = 0.60;                    // §5 — fraction of the rect that must be subject
 const PF_HUE_TOL = 30;                       // §5 PF_COSTUME — off-arm hue must be within this of REF_HUE
-const PF_S_MAX = { traversal: 0.30, combat: 0.18 };
+const PF_S_MAX = { traversal: 0.30 };
 const PF_CTL_MIN = 0.42;
 const PF_CTL_RATIO = 2.0;
-const E_MIN = { traversal: 0.42, combat: 0.30 };   // §7 E1/E2
+const E_MIN = { traversal: 0.42 };                 // §7
 const E_HUE_TOL = 25;                              // §7 E3/E4, degrees
 const LUM_TOL = 3.0;                               // §7 LUM
 const CTL_MIN = 0.42, CTL_DRIFT = 0.06;            // §8 PROT_CTL
@@ -200,11 +199,11 @@ for (const shot of ROSTER) {
 
 /* ── PF_STAGE (§5) — does this staging CONTAIN the diagnosed defect? ──────────────────────── */
 {
-  const t = M.traversal?.off, c = M.combat?.off, k = M[CONTROL]?.off;
-  const ok = t && c && k
-    ? (t.S <= PF_S_MAX.traversal && c.S <= PF_S_MAX.combat && k.S >= PF_CTL_MIN && k.S >= PF_CTL_RATIO * t.S)
+  const t = M.traversal?.off, k = M[CONTROL]?.off;
+  const ok = t && k
+    ? (t.S <= PF_S_MAX.traversal && k.S >= PF_CTL_MIN && k.S >= PF_CTL_RATIO * t.S)
     : null;
-  report.push(`PF_STAGE  traversal ${t ? t.S.toFixed(3) : '—'} <= ${PF_S_MAX.traversal} · combat ${c ? c.S.toFixed(3) : '—'} <= ${PF_S_MAX.combat} · ctl ${k ? k.S.toFixed(3) : '—'} >= ${PF_CTL_MIN} and >= ${PF_CTL_RATIO}x traversal`);
+  report.push(`PF_STAGE  traversal ${t ? t.S.toFixed(3) : '—'} <= ${PF_S_MAX.traversal} · ctl ${k ? k.S.toFixed(3) : '—'} >= ${PF_CTL_MIN} and >= ${PF_CTL_RATIO}x traversal`);
   guards.PF_STAGE = ok;
 }
 

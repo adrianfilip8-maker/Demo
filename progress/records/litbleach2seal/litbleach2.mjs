@@ -37,7 +37,7 @@ import path from 'node:path';
 
 const ROOT = path.resolve(import.meta.dirname, '../../..');
 const OUT = path.join(ROOT, 'progress/records/litbleach2');
-const DOSE = ['traversal', 'combat'];
+const DOSE = ['traversal'];        // §3 of the seal: combat is routed out — the statistic cannot see its costume
 const CONTROL = 'sly-key';
 const ROSTER = [...DOSE, CONTROL];
 const ON = 0.70, KO = 0.40, OFF = 0.0;
@@ -199,7 +199,7 @@ await withGame(
     seal: 'PREREG-litbleach2', warmup: 2,
     shot: SHOT, head: HEAD, srcHash: EXPECT_SRC,
     staging: 'setShot(name, {}) — dt UNDEFINED, live settle, roster-faithful (§328)',
-    doses: { OFF, ON, KO }, expectRowsTotal: 14,
+    doses: { OFF, ON, KO }, expectRowsTotal: 9,
     capturedAt: new Date().toISOString(), rows,
   }, null, 2));
   }
