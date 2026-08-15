@@ -72,7 +72,23 @@ if (!SHOT || !SHOTS.includes(SHOT)) {
 }
 
 const git = (...a) => execFileSync('git', a, { cwd: ROOT, encoding: 'utf8' }).trim();
+/** Pre-lock aborts only. `process.exit` is correct here because nothing has been acquired yet. */
 const die = (msg) => { console.error(msg); process.exit(2); };
+/**
+ * Aborts from INSIDE the `withGame` callback, and the distinction is not cosmetic.
+ *
+ * `withGame` releases the capture lock, closes the browser and kills the vite server in a
+ * `finally` (harness.mjs:135-146). **`process.exit()` skips `finally` blocks**, so calling `die()`
+ * inside the callback would orphan a SwiftShader Chromium (measured at ~370 % CPU on this
+ * container) and a vite server for the life of the session. The lock itself self-heals — `lock.mjs`
+ * reclaims when the holder pid is dead (`alive()`, lock.mjs:128) and `process.exit` does kill the
+ * pid — but the two child processes do not.
+ *
+ * Throwing instead propagates through the `finally`, so teardown runs, and `withGame` rethrows to
+ * the top level where node exits non-zero. Found by the guardcone lane reading this file as its
+ * reference runner; it never fired here because all three chunks passed every check.
+ */
+const abort = (msg) => { throw new Error(msg); };
 
 /* ── PF6 / PF7 launch pins ────────────────────────────────────────────────────────────────── */
 {
@@ -191,7 +207,7 @@ await withGame(
     const SHIPPED = await page.evaluate(READ_SHIPPED);
     console.log(`shipped tune.rimStrength = ${SHIPPED} (captured at boot; \`back\` restores this value)`);
     if (!(SHIPPED > 0)) {
-      die(`ABORT: shipped rimStrength is ${SHIPPED} — \`off\` and \`screenoff\` would be the same arm `
+      abort(`ABORT: shipped rimStrength is ${SHIPPED} — \`off\` and \`screenoff\` would be the same arm `
         + 'and M1/M3 would be unattributable.');
     }
 
@@ -232,11 +248,11 @@ await withGame(
       return `${r.uRimStrength}/${r.uEdgeEnabled}/${r.uDebugTerm}/${r.debugRaw}`;
     };
     if (armState('off') === armState('screenoff')) {
-      die(`ABORT: \`off\` and \`screenoff\` were rendered in the SAME state (${armState('off')}) — `
+      abort(`ABORT: \`off\` and \`screenoff\` were rendered in the SAME state (${armState('off')}) — `
         + 'M1 and M3 would be measuring nothing. §40: an arm whose state collapses onto another scores nothing.');
     }
     if (armState('raw') === armState('cal')) {
-      die(`ABORT: \`raw\` and \`cal\` were rendered in the SAME state (${armState('raw')}) — `
+      abort(`ABORT: \`raw\` and \`cal\` were rendered in the SAME state (${armState('raw')}) — `
         + 'the calibration cannot prove a bypass it shares with the arm it certifies.');
     }
     if (armState('off') !== armState('back')) {
@@ -246,7 +262,7 @@ await withGame(
     console.log(`-- arm states distinct: off/screenoff and raw/cal differ, off == back`);
 
     const t1 = treeState();
-    if (t1.src !== EXPECT_SRC) die(`V-TREE: src moved DURING capture (${t1.src} != ${EXPECT_SRC})`);
+    if (t1.src !== EXPECT_SRC) abort(`V-TREE: src moved DURING capture (${t1.src} != ${EXPECT_SRC})`);
   },
 );
 

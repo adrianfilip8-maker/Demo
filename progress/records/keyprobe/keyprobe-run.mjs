@@ -50,7 +50,15 @@ const WARMUP = 2;
 const EXPECT_ROWS = 5;
 
 const git = (...a) => execFileSync('git', a, { cwd: ROOT, encoding: 'utf8' }).trim();
+/** Pre-lock aborts only — `process.exit` is correct before anything is acquired. */
 const die = (msg) => { console.error(msg); process.exit(2); };
+/**
+ * Aborts from INSIDE the `withGame` callback. `withGame` releases the lock, closes the browser and
+ * kills vite in a `finally` (harness.mjs:135-146), and `process.exit()` SKIPS `finally` blocks — so
+ * `die()` there would orphan a SwiftShader Chromium and a vite server. The lock self-heals
+ * (lock.mjs:128 reclaims on a dead holder pid); the child processes do not. Throwing runs teardown.
+ */
+const abort = (msg) => { throw new Error(msg); };
 
 {
   const dirt = git('status', '--porcelain', '--', 'src/');
@@ -159,7 +167,7 @@ await withGame(
     const state = (a) => { const r = rows.find((q) => q.arm === a).readback; return `${r.uDebugTerm}/${r.debugRaw}`; };
     for (const [a, b] of [['cal', 'term5'], ['cal', 'term6'], ['term5', 'term6']]) {
       if (state(a) === state(b)) {
-        die(`ABORT: \`${a}\` and \`${b}\` rendered in the SAME state (${state(a)}) — §40: an arm whose `
+        abort(`ABORT: \`${a}\` and \`${b}\` rendered in the SAME state (${state(a)}) — §40: an arm whose `
           + 'state collapses onto another scores nothing.');
       }
     }
@@ -169,7 +177,7 @@ await withGame(
     console.log('-- arm states distinct (cal/term5/term6 all differ), off == back');
 
     const t1 = treeState();
-    if (t1.src !== EXPECT_SRC) die(`V-TREE: src moved DURING capture (${t1.src} != ${EXPECT_SRC})`);
+    if (t1.src !== EXPECT_SRC) abort(`V-TREE: src moved DURING capture (${t1.src} != ${EXPECT_SRC})`);
   },
 );
 
