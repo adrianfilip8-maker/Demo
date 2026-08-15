@@ -5,3 +5,5 @@ renderer: ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)
 shipped tune.rimStrength = 0.7 (captured at boot; `back` restores this value)
 -- staged hero LIVE (dt undefined, roster path); 5 warning(s)
 -- warm-up 2 render(s) discarded (§331: first render after staging is unconverged)
+  # 1 hero.off               sha 1de25eded2aedb60  uRim=0.7 uEdge=1 dbgTerm=0 raw=false/scene
+  # 2 hero.screenoff         sha 488aeb2ee63ddc4b  uRim=0 uEdge=1 dbgTerm=0 raw=false/scene
