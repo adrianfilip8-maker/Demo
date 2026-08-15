@@ -1,0 +1,82 @@
+{
+  "seal": "PREREG-litbleach",
+  "amendment": "A1 (per-shot chunked capture)",
+  "shot": "traversal",
+  "head": "c4461e757519ab2979a9f9f60f7d674f7b77ad20",
+  "srcHash": "2b5c7c49ad9c4668",
+  "staging": "setShot(name, {}) — dt UNDEFINED, live settle, roster-faithful (§328)",
+  "doses": {
+    "OFF": 0,
+    "ON": 0.7,
+    "KO": 0.4
+  },
+  "expectRowsTotal": 14,
+  "capturedAt": "2026-08-15T05:34:14.602Z",
+  "rows": [
+    {
+      "shot": "traversal",
+      "arm": "off",
+      "file": "traversal.off.png",
+      "sha256": "a3226c9526f2d77ed863b6469f9cdca24ff895f2a6ebbb08e0fa92247ac735ec",
+      "readback": {
+        "uSubjLitHold": 0,
+        "uSubjShadowHold": 1,
+        "uDebugTerm": 0,
+        "debugRaw": null,
+        "camY": 14
+      }
+    },
+    {
+      "shot": "traversal",
+      "arm": "on",
+      "file": "traversal.on.png",
+      "sha256": "b2f2c5cb69220fd194891b273f7489f6ebc2c000ed2b47c0ee123cbe794fa42b",
+      "readback": {
+        "uSubjLitHold": 0.7,
+        "uSubjShadowHold": 1,
+        "uDebugTerm": 0,
+        "debugRaw": null,
+        "camY": 14
+      }
+    },
+    {
+      "shot": "traversal",
+      "arm": "ko",
+      "file": "traversal.ko.png",
+      "sha256": "a5f8e5a0b3bef3e1d2e244528e3ff4384d6fbbb9457749dd116b500a3013b6a2",
+      "readback": {
+        "uSubjLitHold": 0.4,
+        "uSubjShadowHold": 1,
+        "uDebugTerm": 0,
+        "debugRaw": null,
+        "camY": 14
+      }
+    },
+    {
+      "shot": "traversal",
+      "arm": "back",
+      "file": "traversal.back.png",
+      "sha256": "a3226c9526f2d77ed863b6469f9cdca24ff895f2a6ebbb08e0fa92247ac735ec",
+      "readback": {
+        "uSubjLitHold": 0,
+        "uSubjShadowHold": 1,
+        "uDebugTerm": 0,
+        "debugRaw": null,
+        "camY": 14
+      }
+    },
+    {
+      "shot": "traversal",
+      "arm": "msk",
+      "file": "traversal.msk.png",
+      "sha256": "e7f1a22115b55a032ebf25e556326ed57ddd0767d599b689fa4d5636b2f19be2",
+      "readback": {
+        "uSubjLitHold": 0,
+        "uSubjShadowHold": 1,
+        "uDebugTerm": 1,
+        "debugRaw": null,
+        "camY": 14
+      }
+    }
+  ]
+}
