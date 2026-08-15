@@ -1,0 +1,92 @@
+{
+  "seal": "PREREG-rim",
+  "warmup": 2,
+  "shot": "night",
+  "head": "6419039c12cfd55392d8cf8f50ccb6ede35194d7",
+  "srcHash": "b3852e39472ed68f",
+  "staging": "setShot(name, {}) — dt UNDEFINED, live settle, roster-faithful (§328)",
+  "shippedRimStrength": 0.7,
+  "capturedAt": "2026-08-15T14:58:35.844Z",
+  "rows": [
+    {
+      "shot": "night",
+      "arm": "off",
+      "file": "night.off.png",
+      "sha256": "4f27cbfed7a3f2e37ccb498d1b911d067457ea2790865e032199025f5b058b94",
+      "readback": {
+        "uRimStrength": 0.7,
+        "uEdgeEnabled": 1,
+        "tuneRimStrength": 0.7,
+        "edgeEnabled": true,
+        "uDebugTerm": 0,
+        "debugRaw": false,
+        "debugSrc": "scene",
+        "camY": 8.4
+      }
+    },
+    {
+      "shot": "night",
+      "arm": "screenoff",
+      "file": "night.screenoff.png",
+      "sha256": "f720bd36f14c366c9c7de5a78fe40252736c222d712bf23334e70629a3623443",
+      "readback": {
+        "uRimStrength": 0,
+        "uEdgeEnabled": 1,
+        "tuneRimStrength": 0,
+        "edgeEnabled": true,
+        "uDebugTerm": 0,
+        "debugRaw": false,
+        "debugSrc": "scene",
+        "camY": 8.4
+      }
+    },
+    {
+      "shot": "night",
+      "arm": "raw",
+      "file": "night.raw.png",
+      "sha256": "d45e14b57f4011cf03546fc306b34e1914a0f9f3d25995becf7cea2aff4de731",
+      "readback": {
+        "uRimStrength": 0,
+        "uEdgeEnabled": 1,
+        "tuneRimStrength": 0.7,
+        "edgeEnabled": true,
+        "uDebugTerm": 0,
+        "debugRaw": true,
+        "debugSrc": "scene",
+        "camY": 8.4
+      }
+    },
+    {
+      "shot": "night",
+      "arm": "cal",
+      "file": "night.cal.png",
+      "sha256": "6d132aee7c4576f539148829eb5114caf791060705cbc55540371c94de63d172",
+      "readback": {
+        "uRimStrength": 0,
+        "uEdgeEnabled": 1,
+        "tuneRimStrength": 0.7,
+        "edgeEnabled": true,
+        "uDebugTerm": 4,
+        "debugRaw": true,
+        "debugSrc": "scene",
+        "camY": 8.4
+      }
+    },
+    {
+      "shot": "night",
+      "arm": "back",
+      "file": "night.back.png",
+      "sha256": "4f27cbfed7a3f2e37ccb498d1b911d067457ea2790865e032199025f5b058b94",
+      "readback": {
+        "uRimStrength": 0.7,
+        "uEdgeEnabled": 1,
+        "tuneRimStrength": 0.7,
+        "edgeEnabled": true,
+        "uDebugTerm": 0,
+        "debugRaw": false,
+        "debugSrc": "scene",
+        "camY": 8.4
+      }
+    }
+  ]
+}
