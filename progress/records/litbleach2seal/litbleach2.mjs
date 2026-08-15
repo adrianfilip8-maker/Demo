@@ -205,5 +205,5 @@ await withGame(
   }
 );
 
-console.log(`\n${rows.length} frames -> ${OUT}  (expected 14)`);
-console.log('score with: node progress/records/litbleach/litbleach-score.mjs');
+console.log(`\n${rows.length} frames -> ${OUT}  (9 across both chunks)`);
+console.log('score with: node progress/records/litbleach2seal/litbleach2-score.mjs');
