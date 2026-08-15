@@ -24796,3 +24796,90 @@ which it does verify. It cannot verify that adding the branch left every other p
 no static test can. The honest reading is: the contract is about the branch not executing, not
 about the compiled shader being byte-stable, and the comment in `PostFX.js` should not be read as
 promising the latter.
+
+## §338 — dispchroma: DO NOT SHIP, but the target was hit for the first time, and two failed seals now SPECIFY the successor
+
+Scored against PREREG-dispchroma (93d9c99). 9 frames, every validity and pre-flight gate PASSED.
+Full fold: `progress/records/RESULT-dispchroma.md`.
+
+```
+E_S_traversal 0.435 >= 0.42   PASS      CLIP_traversal 4.8% <= 10%      PASS
+E_H 223.2 (dH 9.7)            PASS      KO 0.205 < 0.337 < 0.435        PASS
+LUM |dL| 0.40                 PASS
+PROT_CTL sly-key 0.992, drift 0.476 <= 0.06                             FAIL
+PROT_ENV 8 px beyond mask+3                                             FAIL
+```
+
+**My registered forecast was WRONG.** §10 predicted ~70/30 that `CLIP` would FAIL at ~13.6%; it
+**passed at 4.8%**, the offline model pessimistic by ~3×. The seal's own §2 caveat is why — the
+offline derivation acted on the FINAL frame while the shipped branch runs before rim/ink/vignette/
+dither, which absorb much of what the naive application drove to the wall. No credit claimed.
+
+**The target was hit for the first time in this arc.** After lithold (VOID), litbleach (VOID) and
+litbleach2 (+0.010 against a required +0.215), `E_S` reached 0.435. **§333's re-route is
+vindicated: the chroma is recoverable, and recoverable AFTER the tonemap.**
+
+**It dies on the control, decisively.** sly-key — a shot the critic measured as *correct* — went
+0.516 → **0.992**, drift 0.476 against 0.06. At ON=2.00 the mask puts `s = 3.0` on every character
+pixel in every shot, so the lever amplifies a right shot exactly as hard as a wrong one. It knows
+*who* a pixel is and nothing about *what happened to it*.
+
+**The synthesis, which is the deliverable:**
+
+| | gate | place | outcome |
+|---|---|---|---|
+| `subjLitHold` | **loss-aware** | linear, pre-tonemap | correctly declined, +0.010 |
+| `dispChromaHold` | **none** (fixed gain) | display, post-tonemap | hit target, destroyed control |
+
+Right gate/wrong place, and right place/no gate. **Successor: a loss-aware gate at the
+post-tonemap site**, using a display-space proxy since the albedo is unavailable there. First
+candidate in this arc specified by measurement rather than hypothesis. Do NOT re-seal
+`dispChromaHold` lower — the same `s` applies to both shots, so a dose sparing sly-key cannot lift
+traversal. `PROT_ENV`'s leak is **dose-dependent** (8 px vs litbleach2's 1 px), so it is silhouette
+mask feathering, not a stray unmasked draw.
+
+## §339 — the rim item is a SHADING defect too, the critic's mechanism claim is REFUTED, and src carries a false declaration
+
+Rim lane, `PREREG-rim.md` + `rim/rim-score.mjs` (ac9b3cd). 21 registered edges across hero,
+sly-profile and night, both sides of every body part, measured on `shots/r12` (r13 gone — a
+**third** independent lane hitting §335) with the substitution argued: `git diff 0525d5e de3080d`
+over the three rim-owning files contains exactly one deleted line, replaced behind
+`if (uRimFloorOffCut > 0.0)` with the TUNE at 0.0 — an exact no-op by control flow.
+
+**The critic's count reproduces and its mechanism does not.** 5 of 20 valid edges spike; the
+critic said 5 of 13, and the lane probed eight more edges without finding a single extra spike.
+The threshold is not invented — the population is **bimodal with a 13.3 L empty gap** (highest NO
++13.7, lowest YES +27.0). All 5 spikes are key-facing; **0 of 7 shadow-facing edges spike**, mean
+shadow-side +0.53 L against a key-side mean of 28.27 L.
+
+But the critic wrote *"what looks like rim is the key light's own highlight"*, and that is
+**false**. All five bands are **cool** (B exceeds R by 48–106) while the key `#ffd9a0` has
+**B−R = −95** — verified here. A rim-coloured term *is* firing; it only fires key-side.
+
+**The space verdict is the opposite of §333's, and it is model-free** — the same shape of argument
+as §336's: `sly-profile` carries four registered edges on the *same blue costume at the same
+level* (three within 3 bytes of RGB, a 0.57 L band) spiking **+30.0, +6.1, +1.1, −6.3**. The
+display transform has no spatial, normal or light-direction input, so a 36.3 L spread must have
+existed **before** it. The shadow-side rim is not crushed on the way to the screen — **it is not
+there to crush.** (The lane's gain table agrees: the transform's gain on a linear increment is
+3.1× *higher* on a dark base, i.e. it favours the defect.)
+
+**`toon.glsl.js:1210-1212` asserts in `src` that the PostFX screen rim "carries its own
+shadow-side floor. That is where the shadow-side rim lives now."** Verified present. The data says
+otherwise: Path B owes **12.7 L** on the shadow side by its own `rimShadowFloor 0.45` contract, and
+both paths together deliver **0.53 L**. That is a false declaration at the site, the same class as
+AGENTS.md §7.3's stale 5.72 head ratio (§328) — flagged, not yet corrected, because the seal that
+measures it has not run.
+
+Two more things the lane did right: it **could not** reproduce the critic's specific night
+`L 20 / L 29` under any L definition and recorded that as unreproduced rather than fitting a
+definition to it; and its own smoke test **caught a flaw in its own gate** — `PF_EDGE` was a
+luminance test that rejected the seal's strongest key-side edge (+30.0) because costume and wall
+sit 1.7 L apart while being 167.2 apart in RGB. A silhouette can be a pure chroma boundary at
+equal luminance, which is exactly what a rim exists to separate. Fixed to an RGB-distance gate
+before any frame existed.
+
+The seal proposes **no candidate** — three routing measurements (M1 19.8 L, M2 0.112/0.056 in
+linear from the shader's own arithmetic, M3 1.0/3.0 L) and a `PF_REPRO_KEY`/`PF_REPRO_SHADOW`
+pre-flight applying §328's rule: it refuses to adjudicate until its own off arm reproduces the
+defect.
