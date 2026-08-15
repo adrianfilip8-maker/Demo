@@ -33,8 +33,10 @@ settles it, and §11 names the one capture that would falsify the verdict itself
 ## 1. The frames: `shots/r13/` is gone; `shots/r12/` is the substitute, and it is checked
 
 `shots/r13/` does not exist on disk. It was never tracked — `.gitignore` ignores every `shots`
-subdirectory except `pass1`/`pass2` — it was captured 08-15 01:02, and the rollback §325/§329
-document wiped it. The newest roster capture on disk is `shots/r12/` (08-13 23:20–23:46).
+subdirectory except `pass1`/`pass2` — it was captured 08-15 01:02, and a rollback wiped it.
+**§335 records this independently and closes it** ("not on disk and was never committed", with
+the force-add rule that follows). The newest roster capture on disk is `shots/r12/`
+(08-13 23:20–23:46), and the g1 lane made the same substitution on the same justification.
 
 Substituting r12 for a **shading** reading is sound, and §328 is the authority for that, not me:
 it records that r13 "reproduces the r12 calibration to three decimals", and `git log -- src/`
