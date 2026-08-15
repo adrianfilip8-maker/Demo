@@ -24917,3 +24917,50 @@ than assuming 0 / 0.5 / 1.0, since `rakeTrack` demonstrably offsets them.
 
 Inherited working: the channel is readable and the arms are valid, so the re-seal needs only a
 correctly-aimed control.
+
+## §341 — bandgate2: SHADOW BAND at 96.4%. §336's three-arc item is ALIVE, and the target is the RED
+
+Scored against PREREG-bandgate2 (8a29576). 4 frames, no `src` change. **Every validity gate
+passed** — V_ROWS, CAL 23.9%, R 0 px, CLIP 0.0%, and **PF_ORDER 0.486 against 0.25** — so unlike
+§340's VOID this adjudicates. Fold: `progress/records/RESULT-bandgate2.md`.
+
+```
+TERMINATOR histogram over 1656 px:
+   SHADOW (<0.25)  96.4%   MID  3.6%   LIT (>=0.75)  0.0%
+==> SHADOW BAND
+```
+
+**96.4% against a sealed 80% bar, with zero pixels in the lit band.** The colossus terminator is
+not receiving direct key, so a shade-scoped lever can reach it and **§336's item is alive** —
+§300's twilight arc, §323's tomb arc and r13's courtyard critique converge on a target now known
+to be reachable in principle.
+
+**§340's fix worked.** `PF_ORDER` (median lit − median terminator ≥ 0.25) replaced the absolute
+`PF_LIT` that voided bandgate when I demanded ≥ 0.80 from a face that is in the mid band. The
+channel separates lit from shaded by nearly two full band steps. The histogram also replaced the
+mean, which mattered: a boundary-straddling rect cannot be scored by an average.
+
+**The reproduction is worth more than the verdict.** §8.1 disclosed that I had already seen
+96.4/3.6 and 0.486 on bandgate's VOIDED frames and committed that only fresh frames could decide.
+The fresh capture returns those numbers **exactly** — while the frames are **different bytes**
+(`courtyard.off` 724afdb8d0a9fa4c vs 7995e426203a5575 on the same tree, §337's cross-boot
+instability). A 1656-px histogram landing on the same tenth of a percent across two boots whose
+pixels differ shows **this instrument reads a property of the scene, not of render noise.** That
+generalises: §337's byte instability does not automatically invalidate a statistic computed over
+it, and the way to find out is to reproduce the statistic rather than the bytes.
+
+§8's ~70/30 SHADOW forecast was **correct**, with modest credit — it leaned on the voided run's
+mean, which I labelled weak at the time.
+
+**The successor aims at the RED, not the blue.** §336's linear decomposition: terminator R/G
+**3.74** against 0.72–0.78 on the passing shots, while **B/G 1.17 is already inside the passing
+band**. Target: **linear R/G → ≤ 0.90, holding B/G.** A seal that "adds blue" would push the half
+that is already correct.
+
+Two code facts the successor must resolve first, both from §336: `shadowBounceMix` and
+`shadowBounceMixLit` are **both 0.05**, so the shadow-depth blend is an **exact no-op today** — a
+free lever or a trap, and which one must be established before building on it; and `shadowHold` is
+**0.0 on all architecture** (`subjShadowHold` is `vSlySkin`-scoped), so the colossus has no hold at
+all and the chosen lever must be one that actually applies to architecture.
+
+Nothing ships; measurement seal, no candidate proposed.
