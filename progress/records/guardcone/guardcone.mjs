@@ -412,7 +412,15 @@ const ARM = async (cfg) => {
 
 /* ---- the one boot, one shot ----------------------------------------------------------------- */
 
+/* Rows accumulate in memory and the chunk manifest is written ONCE, after the chunk exits clean.
+   The sealed runner wrote its manifest at launch and re-saved it per frame; that is exactly how
+   run 7 left behind a 0-row `manifest.json` that A2's frame census then had to explain, and how
+   run 4's manifest could be archived while its twelve PNGs stayed on disk as unreferenced bytes.
+   Under chunking the right failure mode is cleaner: a chunk that dies mid-shot leaves PNGs and NO
+   manifest, so PF7 sees the orphans on relaunch and refuses until they are archived — "a
+   half-finished chunk is archived and re-run whole" (A2.2), enforced rather than requested. */
 const rows = [];
+let stagingWarnings = [];
 
 function saveFrame(shot, arm, got, ordinal) {
   const buf = Buffer.from(got.png.split(',')[1], 'base64');
@@ -512,9 +520,12 @@ await withGame(
     /* 1. stage ONCE. Not captured. */
     const t0 = Date.now();
     const st = await page.evaluate(STAGE, { name: SHOT, opts: STAGE_OPTS });
+    stagingWarnings = st.warnings;
     console.log(`-- staged ${SHOT} (${((Date.now() - t0) / 1000) | 0}s) — ${STAGE_DESC}`);
-    console.log(`   ${st.warnings} engine warning(s) at staging`
-      + (st.warnings ? ' — read them in report.json; a live-clock notice here is EXPECTED (Debug.js:116)' : ''));
+    console.log(`   ${stagingWarnings.length} engine warning(s) at staging, recorded verbatim in `
+      + `manifest.${SHOT}.json` + (stagingWarnings.length
+        ? ' — a live-clock notice here is EXPECTED and is the disclosure, not a defect (Debug.js:116)' : ''));
+    for (const w of stagingWarnings) console.log(`   ! ${w}`);
 
     /* 2. §331 warm-up, discarded, on the arm's own render path (A2.5). */
     for (let w = 0; w < WARMUP; w++) await page.evaluate(WARM, CONE_OFF);
@@ -532,20 +543,27 @@ await withGame(
     /* The arms must actually differ in the state they were POKED into. This is not a bar — the
        seal's bars are the scorer's — it is the §40 check that the A/B happened at all, and it is
        cheap enough to run before the frames leave the boot. §40's decisive arm never ran because
-       two arms were floored to the same value and nothing read the applied state back. */
+       two arms were floored to the same value and nothing read the applied state back.
+
+       THROW, never `process.exit`, from inside this callback. `withGame` releases the capture
+       lock, kills vite and runs `onReleasing` in a `finally` (harness.mjs:135-146); a
+       `process.exit` here skips all three and LEAKS THE LOCK, which would block every capture in
+       the queue behind a runner that aborted for a good reason. A throw aborts the chunk, hands
+       the tree back, and still exits non-zero. (`die` remains correct for the PF6/PF7/argv
+       checks — those all run before the lock is acquired.) */
     const armState = (a) => {
       const r = rows.find((q) => q.arm === a)?.readback;
       if (!r) return `<missing ${a}>`;
       return `${r.uConeShape}/${r.uGlow}/${r.colPatrol}/${r.beamBase}/${r.poolMix}/${r.beamCoreScale}/${r.lampToon}`;
     };
     if (armState('off') === armState('bon')) {
-      die(`ABORT: \`off\` and \`bon\` were rendered in the SAME state (${armState('off')}) — every `
-        + 'target bar and every PROT row would be measuring nothing. §40: an arm whose state '
+      throw new Error(`§40 ABORT: \`off\` and \`bon\` were rendered in the SAME state (${armState('off')}) — `
+        + 'every target bar and every PROT row would be measuring nothing. An arm whose state '
         + 'collapses onto another scores nothing.');
     }
     if (SHOT === 'guard' && armState('bon') === armState('blamp')) {
-      die(`ABORT: \`bon\` and \`blamp\` were rendered in the SAME state (${armState('bon')}) — BL1 `
-        + 'cannot attribute the lamp to a lever both arms share.');
+      throw new Error(`§40 ABORT: \`bon\` and \`blamp\` were rendered in the SAME state (${armState('bon')}) — `
+        + 'BL1 cannot attribute the lamp to a lever both arms share.');
     }
     if (armState('off') !== armState('back')) {
       console.log(`!! \`off\` and \`back\` differ in poked state (${armState('off')} vs ${armState('back')}) `
@@ -578,7 +596,11 @@ await withGame(
     }
 
     const t1 = treeState();
-    if (t1.src !== EXPECT_HEAD) die(`V_CHUNK_TREE: src moved DURING this chunk (${t1.src} != ${EXPECT_HEAD})`);
+    if (t1.src !== EXPECT_HEAD) {
+      throw new Error(`V_CHUNK_TREE ABORT: src moved DURING this chunk (${t1.src} != ${EXPECT_HEAD}). `
+        + 'The frames just written are orphans — archive them; PF7 will refuse this chunk until '
+        + 'they are gone (A2.8 risk 1: a chunk whose HEAD has moved should not be launched).');
+    }
 
     /* leave the page at the published defaults */
     await page.evaluate((off) => {
@@ -597,7 +619,7 @@ await withGame(
 writeFileSync(path.join(OUT, `manifest.${SHOT}.json`), JSON.stringify({
   seal: SEAL, warmup: WARMUP, shot: SHOT, head: HEAD, srcHash: EXPECT_HEAD,
   expect: { head: EXPECT_HEAD },
-  staging: STAGE_DESC,
+  staging: STAGE_DESC, stagingWarnings,
   values: { CONE_OFF, CONE_ON },
   arms: PLAN,
   capturedAt: new Date().toISOString(), pid: process.pid,

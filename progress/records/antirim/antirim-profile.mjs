@@ -353,3 +353,168 @@ for (const r of predRows) {
 }
 console.log('\n  (a > 1 or a < 0 means the ink model alone cannot produce the measured value — the');
 console.log('   residual there is not ink, or not only ink.)');
+
+/* ═══ §G — how WIDE is Path A's band, in px, on each side? ══════════════════════════════════ */
+console.log('\n\n§G  PATH A\'s BAND WIDTH, measured on the `raw` arm (linear, composite skipped).');
+console.log('    n_up = how many of the 5 px the RIM statistic maximises over sit ABOVE BODY(raw).');
+console.log('    run  = the contiguous run of those, counted outward from i0−1. The seal\'s statistic');
+console.log('    is a MAX over the window and is blind to width; this is the width.\n');
+console.log('  edge                         face   BODY raw   dL(−1)  dL(−2)  dL(−3)  dL(−4)  dL(−5)   n_up  run  peak dL  at');
+const widths = { KEY: [], SHADOW: [] };
+for (const k of [...SHAD, ...KEY5]) {
+  const e = EOF_[k], p = P.raw[k], rr = RAYS.raw[k];
+  const dl = [1, 2, 3, 4, 5].map((n) => (p.i0 - n >= 0 ? rr[p.i0 - n].L - p.BODY : null));
+  const nUp = dl.filter((v) => v !== null && v > 0).length;
+  let run = 0; for (const v of dl) { if (v !== null && v > 0) run++; else break; }
+  const peak = Math.max(...dl.filter((v) => v !== null));
+  const at = -(dl.indexOf(peak) + 1);
+  widths[e.face].push({ k, nUp, run, peak });
+  console.log(`  ${k.padEnd(28)}${e.face.padEnd(7)}${f(p.BODY, 9, 2)}   ${dl.map((v) => f(v, 8, 2)).join('')}`
+    + `${String(nUp).padStart(6)}${String(run).padStart(5)}${f(peak, 9, 2)}${String(at).padStart(4)}`);
+}
+for (const face of ['SHADOW', 'KEY']) {
+  const w = widths[face];
+  console.log(`  ${face.padEnd(7)} mean n_up ${f(mean(w.map((q) => q.nUp)), 5)}   mean run ${f(mean(w.map((q) => q.run)), 5)}   mean peak dL ${f(mean(w.map((q) => q.peak)), 6)}`);
+}
+
+/* ═══ §H — could AO alone do it? A forward fit, symmetric to §F's ═══════════════════════════ */
+console.log('\n\n§H  AO AS THE ALTERNATIVE, forward-fitted.  PostFX.js:1414-1417 — scene *= mix(1, uAOTint*uAODepth, occ),');
+console.log('    in LINEAR, BEFORE the grade. tintColor() normalises #2a3f66 to peak channel 1, so the');
+console.log('    multiplier at occ is (1−0.827occ, 1−0.741occ, 1−0.580occ): AO kills RED hardest and BLUE');
+console.log('    least, and can only ever move a pixel TOWARD blue. Both models are scanned over their one');
+console.log('    parameter and the best per-model max-channel error is reported. This is the test that');
+console.log('    separates them; the sign of the chromatic error is not a matter of taste.\n');
+const AOTINT = [42 / 102, 63 / 102, 102 / 102].map((q) => q * 0.42);   // tintColor + aoDepth 0.42
+function fitAO(rawRGB, meas, liftK, vig) {
+  let best = null;
+  for (let i = 0; i <= 200; i++) {
+    const occ = i / 200;
+    const lin = rawRGB.map((q, c) => (q / 255) * (1 + occ * (AOTINT[c] - 1)));
+    const p = displayRGB(lin, liftK).map((q) => toByte(q * vig));
+    const err = Math.max(...[0, 1, 2].map((c) => Math.abs(p[c] - meas[c])));
+    if (!best || err < best.err) best = { occ, p, err };
+  }
+  return best;
+}
+function fitInk(pre, meas, vig) {          // pre = predicted PRE-ink display bytes (chain+vignette)
+  const preNoVig = pre.map((q) => q / vig);
+  const lum = (0.2126 * preNoVig[0] + 0.7152 * preNoVig[1] + 0.0722 * preNoVig[2]) / 255;
+  const t = ss(0.12, 0.55, lum);
+  const ink = [0, 1, 2].map((c) => Math.min(INK_COOL[c] + (INK_WARM[c] - INK_COOL[c]) * t, preNoVig[c]));
+  let best = null;
+  for (let i = 0; i <= 200; i++) {
+    const a = i / 200;
+    const p = [0, 1, 2].map((c) => Math.round(vig * (preNoVig[c] + (ink[c] - preNoVig[c]) * a)));
+    const err = Math.max(...[0, 1, 2].map((c) => Math.abs(p[c] - meas[c])));
+    if (!best || err < best.err) best = { a, p, err };
+  }
+  return best;
+}
+console.log('  edge                        off  measured rgb     INK-ONLY fit          AO-ONLY fit');
+console.log('                                                    a     rgb        err   occ    rgb        err');
+for (const r of predRows) {
+  const rr = RAYS.raw[r.k], rs = RAYS.screenoff[r.k], i0 = P.off[r.k].i0;
+  const liftK = liftKOf(r.e.shot), im = IM[r.e.shot].off;
+  for (let i = Math.max(0, i0 - 3); i <= i0 - 1; i++) {
+    const vig = vigAt(rr[i].x, rr[i].y, im.w, im.h);
+    const meas = [rs[i].R, rs[i].G, rs[i].B];
+    const fi = fitInk(rr[i].pred, meas, vig), fa = fitAO([rr[i].R, rr[i].G, rr[i].B], meas, liftK, vig);
+    console.log(`  ${(i === i0 - 3 ? r.k : '').padEnd(28)}${String(i - i0).padStart(3)}  `
+      + `(${meas.join(',')})`.padEnd(16) + `${f(fi.a, 5, 2)} (${fi.p.join(',')})`.padEnd(20) + `${String(fi.err).padStart(4)}`
+      + `${f(fa.occ, 7, 2)} (${fa.p.join(',')})`.padEnd(20) + `${String(fa.err).padStart(4)}`);
+  }
+}
+
+/* ═══ §I — could FXAA alone do it?  Run the shipped FXAA on the INK-FREE prediction ═════════ */
+console.log('\n\n§I  FXAA AS THE ALTERNATIVE.  PostFX.js:1558-1592, transcribed and run on a 2D patch of the');
+console.log('    ink-free PREDICTION. FXAA is a convex blend of bilinear taps of its input, so it cannot');
+console.log('    put a pixel below the darkest thing within reach; the question is whether the ink-free');
+console.log('    image has anything dark enough within reach. (The patch omits AO and bloom, as §E does.)\n');
+const lumaF = (c) => 0.299 * c[0] + 0.587 * c[1] + 0.114 * c[2];
+function fxaaAt(sample, x, y) {   // sample(x,y) -> [r,g,b] in 0..1, bilinear
+  const bil = (u, v) => {
+    const x0 = Math.floor(u), y0 = Math.floor(v), fx = u - x0, fy = v - y0;
+    const g = (a, b) => sample(a, b);
+    const c00 = g(x0, y0), c10 = g(x0 + 1, y0), c01 = g(x0, y0 + 1), c11 = g(x0 + 1, y0 + 1);
+    return [0, 1, 2].map((c) => (c00[c] * (1 - fx) + c10[c] * fx) * (1 - fy) + (c01[c] * (1 - fx) + c11[c] * fx) * fy);
+  };
+  const NW = sample(x - 1, y - 1), NE = sample(x + 1, y - 1), SW = sample(x - 1, y + 1),
+    SE = sample(x + 1, y + 1), Mc = sample(x, y);
+  const lNW = lumaF(NW), lNE = lumaF(NE), lSW = lumaF(SW), lSE = lumaF(SE), lM = lumaF(Mc);
+  const lMin = Math.min(lM, lNW, lNE, lSW, lSE), lMax = Math.max(lM, lNW, lNE, lSW, lSE);
+  if (lMax - lMin < 0.06 * lMax) return Mc;
+  let dir = [-((lNW + lNE) - (lSW + lSE)), ((lNW + lSW) - (lNE + lSE))];
+  const dirReduce = Math.max((lNW + lNE + lSW + lSE) * 0.25 * 0.03125, 1 / 128);
+  const rcp = 1 / (Math.min(Math.abs(dir[0]), Math.abs(dir[1])) + dirReduce);
+  dir = dir.map((q) => Math.min(8, Math.max(-8, q * rcp)));
+  const A = [0, 1, 2].map((c) => 0.5 * (bil(x + dir[0] * (1 / 3 - 0.5), y + dir[1] * (1 / 3 - 0.5))[c]
+    + bil(x + dir[0] * (2 / 3 - 0.5), y + dir[1] * (2 / 3 - 0.5))[c]));
+  const B = [0, 1, 2].map((c) => A[c] * 0.5 + 0.25 * (bil(x - dir[0] * 0.5, y - dir[1] * 0.5)[c]
+    + bil(x + dir[0] * 0.5, y + dir[1] * 0.5)[c]));
+  const lB = lumaF(B);
+  return (lB < lMin || lB > lMax) ? A : B;
+}
+console.log('  edge                        off   meas L   pred L (no ink)  FXAA(pred) L   FXAA moved   min L in ±4 patch');
+for (const r of predRows) {
+  const e = r.e, im = IM[e.shot].off, raw = IM[e.shot].raw, liftK = liftKOf(e.shot);
+  const i0 = P.off[r.k].i0, rr = RAYS.raw[r.k], rs = RAYS.screenoff[r.k];
+  const cacheP = new Map();
+  const predAt = (x, y) => {                      // ink-free predicted display, 0..1, cached
+    const kk = `${x},${y}`;
+    if (cacheP.has(kk)) return cacheP.get(kk);
+    const cx = Math.min(im.w - 1, Math.max(0, x)), cy = Math.min(im.h - 1, Math.max(0, y));
+    const o = (cy * raw.w + cx) * raw.ch;
+    const v = predict([raw.data[o], raw.data[o + 1], raw.data[o + 2]], liftK, vigAt(cx, cy, im.w, im.h)).map((q) => q / 255);
+    cacheP.set(kk, v); return v;
+  };
+  for (let i = Math.max(0, i0 - 3); i <= i0 - 1; i++) {
+    const x = rr[i].x, y = rr[i].y;
+    const out = fxaaAt(predAt, x, y).map((q) => q * 255);
+    let mn = Infinity;
+    for (let dy = -4; dy <= 4; dy++) for (let dx = -4; dx <= 4; dx++) mn = Math.min(mn, L709(...predAt(x + dx, y + dy).map((q) => q * 255)));
+    console.log(`  ${(i === i0 - 3 ? r.k : '').padEnd(28)}${String(i - i0).padStart(3)}${f(rs[i].L, 9)}${f(L709(...rr[i].pred), 17)}`
+      + `${f(L709(...out), 15)}${f(L709(...out) - L709(...rr[i].pred), 13)}${f(mn, 20)}`);
+  }
+}
+
+/* ═══ §J — an INDEPENDENT, MEASURED check that the ink pass is capable of this ══════════════ */
+console.log('\n\n§J  INDEPENDENT CHECK — `progress/records/inkw-before/`, a one-boot dt=0 A/B from 2026-08-09');
+console.log('    with a PROVEN null arm (base vs null = 0 px) that carries REAL `noink` and `noao` arms.');
+console.log('    IT IS A DIFFERENT FRAME ON A DIFFERENT TREE — the registered edges do not land on the');
+console.log('    same features there (checked: 4 of 8 hero edges PIN), so it cannot attribute anything in');
+console.log('    rim1. What it CAN do is measure, on the character, how much each pass darkens, with no');
+console.log('    model in the way. Subject mask = pixels where `nochar` differs from `base`.\n');
+{
+  const dir = path.join(ROOT, 'progress/records/inkw-before');
+  const pct = (a, q) => { const s = [...a].sort((x, y) => x - y); return s.length ? s[Math.min(s.length - 1, Math.floor(q * s.length))] : null; };
+  console.log('  shot          pass    px darkened ≥1 L on subject   median ΔL   p90    p99    max');
+  for (const shot of ['hero', 'sly-closeup', 'combat']) {
+    let base, arms;
+    try {
+      base = readPNG(path.join(dir, `1280x720-${shot}-base.png`));
+      arms = { ink: readPNG(path.join(dir, `1280x720-${shot}-noink.png`)),
+        ao: readPNG(path.join(dir, `1280x720-${shot}-noao.png`)),
+        hull: readPNG(path.join(dir, `1280x720-${shot}-nohull.png`)),
+        nochar: readPNG(path.join(dir, `1280x720-${shot}-nochar.png`)) };
+    } catch { console.log(`  ${shot}: frames not present`); continue; }
+    const subj = new Uint8Array(base.w * base.h);
+    let nsub = 0;
+    for (let i = 0; i < base.w * base.h; i++) {
+      const p = i * base.ch, q = i * arms.nochar.ch;
+      if (base.data[p] !== arms.nochar.data[q] || base.data[p + 1] !== arms.nochar.data[q + 1]
+        || base.data[p + 2] !== arms.nochar.data[q + 2]) { subj[i] = 1; nsub++; }
+    }
+    for (const [name, im] of [['ink', arms.ink], ['ao', arms.ao], ['hull', arms.hull]]) {
+      const d = [];
+      for (let i = 0; i < base.w * base.h; i++) {
+        if (!subj[i]) continue;
+        const p = i * base.ch, q = i * im.ch;
+        const dl = L709(im.data[q], im.data[q + 1], im.data[q + 2]) - L709(base.data[p], base.data[p + 1], base.data[p + 2]);
+        if (dl >= 1) d.push(dl);
+      }
+      console.log(`  ${(name === 'ink' ? shot : '').padEnd(14)}${name.padEnd(8)}${String(d.length).padStart(10)} of ${nsub} subject px`
+        + `${f(pct(d, 0.5), 13)}${f(pct(d, 0.9), 7)}${f(pct(d, 0.99), 7)}${f(d.length ? Math.max(...d) : null, 7)}`);
+    }
+  }
+}
+

@@ -76,6 +76,7 @@ const ARGS = process.argv.slice(2);
 const ONLY_IDLES = ARGS.includes('--idles');
 const DO_PROJ = ARGS.includes('--proj');
 const DO_SENS = ARGS.includes('--sens');
+const DO_BREATH = ARGS.includes('--breath');
 
 const CHAIN = ['hips', 'spine', 'chest', 'neck', 'head'];
 const EXTRA = ['shoulderL', 'shoulderR', 'upperLegL', 'upperLegR', 'footL', 'footR', 'handL', 'handR'];
@@ -348,6 +349,24 @@ if (DO_PROJ) {
   if (!n) { console.error('FAIL: no shot freezes a pose'); process.exit(1); }
 }
 
+/* --------------------------------------------- breath check (--breath) --- */
+
+/* `hold` is one frame of a looping clip. Clips.js warns twice in `perch_idle`'s own comments
+   that in-between keys carry ABSOLUTE angles (§9's orphaned-key trap), so a property authored
+   into the base pose can be present at `hold` and absent for the rest of the cycle. If a lateral
+   line of action only exists on the frozen frame, it exists for stills and not for the game. */
+if (DO_BREATH) {
+  console.log('\n=== perch_idle through its 3.2 s loop (legacy rig) ===');
+  console.log('    t     latEx cm   span cm    tilt   bow cm   (hold = 0.0; keys at 0, 0.8, 1.7, 2.3, 3.2)');
+  let n = 0;
+  for (let t = 0; t <= 3.2001; t += 0.2) {
+    const m = metrics(poseAt(legacy, CLIPS.perch_idle, t), HEIGHT.legacy);
+    console.log(f(t, 6, 1), f(m.latEx * 100, 10, 2), f(m.span * 100, 9, 2), f(m.tilt, 7, 1), f(m.bow * 100, 8, 2));
+    n++;
+  }
+  if (!n) { console.error('FAIL: sampled 0 frames'); process.exit(1); }
+}
+
 /* ------------------------------------------------- lever gains (--sens) --- */
 
 if (DO_SENS) {
@@ -418,9 +437,12 @@ if (DO_SENS) {
   console.log('  (tracks verified restored to their shipped values after the sweep)');
 
   const need = (target, k) => target / (k.latShare * k.pxm);
-  console.log(`\n  To clear a ~2.5 px ink hull (§2.1) by 2x, i.e. 5 px of FRONTAL excursion:`);
-  console.log(`    at hero      needs latEx >= ${(need(5, HERO) * 100).toFixed(1)} cm `
-    + `(${(need(5, HERO) / base.latEx).toFixed(1)}x the shipped ${(base.latEx * 100).toFixed(2)} cm)`);
-  console.log(`    at sly-perch needs latEx >= ${(need(5, TWIN) * 100).toFixed(1)} cm `
-    + `(${(need(5, TWIN) / base.latEx).toFixed(1)}x the shipped ${(base.latEx * 100).toFixed(2)} cm) — already clears it`);
+  console.log(`\n  Shipped frontal span ${(base.span * 100).toFixed(2)} cm reads as `
+    + `${(base.span * HERO.latShare * HERO.pxm).toFixed(2)} px at hero and `
+    + `${(base.span * TWIN.latShare * TWIN.pxm).toFixed(2)} px at sly-perch.`);
+  console.log(`  To clear a ~2.5 px ink hull (§2.1) by 2x, i.e. 5 px of FRONTAL span:`);
+  console.log(`    at hero      needs span >= ${(need(5, HERO) * 100).toFixed(1)} cm `
+    + `(${(need(5, HERO) / base.span).toFixed(1)}x the shipped ${(base.span * 100).toFixed(2)} cm)`);
+  console.log(`    at sly-perch needs span >= ${(need(5, TWIN) * 100).toFixed(1)} cm `
+    + `(${(need(5, TWIN) / base.span).toFixed(1)}x the shipped ${(base.span * 100).toFixed(2)} cm) — already clears it`);
 }
