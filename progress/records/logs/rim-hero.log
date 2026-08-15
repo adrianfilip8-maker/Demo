@@ -1,3 +1,6 @@
 PREREG-rim chunk "hero" — HEAD 222cfdad8dce, expected src hash b3852e39472ed68f
 frames -> /home/user/Demo/progress/records/rim1
 HEAD tree verified under the lock — src b3852e39472ed68f (this runner installs nothing)
+renderer: ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)
+shipped tune.rimStrength = 0.7 (captured at boot; `back` restores this value)
+-- staged hero LIVE (dt undefined, roster path); 5 warning(s)
