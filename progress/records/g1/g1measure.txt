@@ -1,0 +1,40 @@
+# G1 attribution measurement — frames from /home/user/Demo/shots/r12/
+
+== sly-profile  1280x720
+   bbox   [776,126,910,274]  135x149 px  centre (843,200)  radius~71 px
+   disc   mean #d08a61 L 63.86   peak #e4b484 L 76.56 @(853,247)
+   surr   L #b0564b 47.53 | R #a5564d 45.93  -> 46.73
+   CONTRAST  peak-surr +29.83 L   mean-surr +17.13 L
+   SHAPE  10-90% rise: left rim (y=150) 4 px (base L 50.2 -> plateau L 74.7) | top rim (x=810) 3 px (base L 49.4 -> plateau L 74.6)
+   PROFILE x=760..810 step2 @y=150: 50.8 50.8 50.9 50.6 50.6 50.5 50.4 50.2 50.4 50.4 50.4 50.7 50.9 58.0 70.7 72.8 74.1 74.4 74.7 74.7 74.7 74.7 74.6 74.6 74.3 74.3
+   AXIS   src (824,704) L 68.9 -> centre: perp 254.5 px = 3.58 disc radii, t=1.12
+   AXIS   src (896,632) L 68.8 -> centre: perp 257.5 px = 3.63 disc radii, t=0.94
+   AXIS   src (1024,672) L 65.3 -> centre: perp 252.2 px = 3.55 disc radii, t=0.89
+   AXIS   src (1128,680) L 64.1 -> centre: perp 245.1 px = 3.45 disc radii, t=0.86
+   LOCUS  brightest 16px block ON the centre-disc line: L 65.5 @(618,377) t=-0.11   [disc peak L 76.56]
+
+== combat  1280x720
+   bbox   [806,199,852,237]  47x39 px  centre (829,218)  radius~22 px
+   disc   mean #a95941 L 47.00   peak #b06545 L 50.65 @(842,206)
+   surr   L #a34e42 43.77 | R #91574a 43.06  -> 43.42
+   CONTRAST  peak-surr +7.23 L   mean-surr +3.58 L
+   SHAPE  10-90% rise: left rim (y=212) 30 px (base L 42.5 -> plateau L 50.1) | top rim (x=826) 4 px (base L 34.8 -> plateau L 50.1)
+   PROFILE x=790..840 step2 @y=212: 41.4 44.1 44.4 44.4 44.4 44.0 43.8 43.6 44.9 49.1 49.1 49.6 49.8 49.4 49.1 48.9 48.9 49.0 49.2 49.0 49.4 49.6 48.8 48.4 48.2 48.0
+   AXIS   src (584,488) L 97.3 -> centre: perp 116.2 px = 5.41 disc radii, t=2.47
+   AXIS   src (432,416) L 85.0 -> centre: perp 88.0 px = 4.09 disc radii, t=2.02
+   AXIS   src (88,280) L 84.6 -> centre: perp 167.6 px = 7.80 disc radii, t=1.30
+   AXIS   src (456,512) L 81.0 -> centre: perp 10.9 px = 0.51 disc radii, t=1.99
+   LOCUS  brightest 16px block ON the centre-disc line: L 80.9 @(439,511) t=-1.07   [disc peak L 50.65]
+
+== interior  1280x720
+   bbox   [671,99,713,132]  43x34 px  centre (692,115.5)  radius~19 px
+   disc   mean #503928 L 26.13   peak #70522d L 37.24 @(685,105)
+   surr   L #212930 16.00 | R #22202b 13.04  -> 14.52
+   CONTRAST  peak-surr +22.72 L   mean-surr +11.61 L
+   SHAPE  10-90% rise: left rim (y=116) 18 px (base L 11.0 -> plateau L 36.7) | top rim (x=690) 9 px (base L 25.2 -> plateau L 47.7)
+   PROFILE x=655..705 step2 @y=116: 14.3 17.3 24.3 18.7 14.3 10.2 6.3 14.3 31.2 35.3 33.8 29.1 28.1 28.5 28.8 28.5 27.5 27.3 28.5 29.7 29.8 30.5 30.2 28.9 25.9 26.8
+   AXIS   src (296,208) L 90.7 -> centre: perp 244.7 px = 12.71 disc radii, t=0.86
+   AXIS   src (512,216) L 83.3 -> centre: perp 201.3 px = 10.46 disc radii, t=0.23
+   AXIS   src (960,216) L 80.8 -> centre: perp 201.6 px = 10.47 disc radii, t=0.58
+   AXIS   src (952,376) L 72.5 -> centre: perp 246.8 px = 12.82 disc radii, t=0.87
+   LOCUS  brightest 16px block ON the centre-disc line: L 47.2 @(583,626) t=-1.09   [disc peak L 37.24]
