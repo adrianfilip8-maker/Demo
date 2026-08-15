@@ -1,0 +1,69 @@
+{
+  "seal": "PREREG-litbleach",
+  "amendment": "A1 (per-shot chunked capture)",
+  "shot": "sly-key",
+  "head": "4b022506658c91363e33eb913f35e251ff3bc89e",
+  "srcHash": "2b5c7c49ad9c4668",
+  "staging": "setShot(name, {}) — dt UNDEFINED, live settle, roster-faithful (§328)",
+  "doses": {
+    "OFF": 0,
+    "ON": 0.7,
+    "KO": 0.4
+  },
+  "expectRowsTotal": 14,
+  "capturedAt": "2026-08-15T06:43:30.362Z",
+  "rows": [
+    {
+      "shot": "sly-key",
+      "arm": "off",
+      "file": "sly-key.off.png",
+      "sha256": "a59a0dee4ade3aac418cf6a22a24afc410ce0362e9b605e41b8d403fc6747756",
+      "readback": {
+        "uSubjLitHold": 0,
+        "uSubjShadowHold": 1,
+        "uDebugTerm": 0,
+        "debugRaw": null,
+        "camY": 1.45
+      }
+    },
+    {
+      "shot": "sly-key",
+      "arm": "on",
+      "file": "sly-key.on.png",
+      "sha256": "2e965af1a0ac0046defd317b20a873d52dd1bb7a5d959482871f1da6fe00de7c",
+      "readback": {
+        "uSubjLitHold": 0.7,
+        "uSubjShadowHold": 1,
+        "uDebugTerm": 0,
+        "debugRaw": null,
+        "camY": 1.45
+      }
+    },
+    {
+      "shot": "sly-key",
+      "arm": "ko",
+      "file": "sly-key.ko.png",
+      "sha256": "e50c35960386e630fe3ffea5a2fff932f7b2738e29897d2dc447ae3699d8b539",
+      "readback": {
+        "uSubjLitHold": 0.4,
+        "uSubjShadowHold": 1,
+        "uDebugTerm": 0,
+        "debugRaw": null,
+        "camY": 1.45
+      }
+    },
+    {
+      "shot": "sly-key",
+      "arm": "back",
+      "file": "sly-key.back.png",
+      "sha256": "326b04581edbf5a9ca36aa10a6b23e8c0a6e438329eb248b0323c0b0c854aabf",
+      "readback": {
+        "uSubjLitHold": 0,
+        "uSubjShadowHold": 1,
+        "uDebugTerm": 0,
+        "debugRaw": null,
+        "camY": 1.45
+      }
+    }
+  ]
+}
