@@ -24751,3 +24751,48 @@ This lane also found `shots/r13/` gone and substituted `shots/r12/` — **checki
 substitution rather than assuming it (its r12 reading of the critic's lit hex matches at 2.2/255
 RGB distance). Two lanes independently losing the same capture is the strongest possible argument
 for §335's rule: force-add the frames of any capture whose measurements will be cited later.
+
+## §337 — CORRECTION to my own §336-era claim: the inert branch is NOT provably bit-identical, and one shot proved nothing
+
+In the dispchroma chunk-1 commit (5dcc2a6) I wrote that `traversal.off` coming back byte-identical
+across a `src` change was *"empirical proof that TUNE.dispChromaHold 0.0 is the exact no-op its
+contract and its pin test claim."* **That was an overclaim from a single shot, and the very next
+chunk refuted it.**
+
+Measured, same shot's `off` arm, across the only `src` change between the two captures (the
+addition of the untaken `dispChromaHold` branch to `PostFX.js`):
+
+```
+traversal   differing      0 px (0.000%)   max channel delta  0
+sly-key     differing 108833 px (11.809%)  max channel delta 28   (105264 of them at delta 1)
+```
+
+`sly-key` was previously cross-boot stable at sha `75991b4ed9a49ab3` — convprobe measured it
+(r1..r7 bit-exact) and litbleach2's own chunk reproduced it in a different boot. It is now
+`5de78de5b687f87c`.
+
+**What is established:** the frame changed coincident with the `src` change, on one shot and not
+the other. **What is NOT established:** that the branch caused it. A plausible mechanism is that
+adding a branch changes shader compilation — register allocation, instruction ordering — and
+shifts floating-point results elsewhere in the composite even when the branch is never taken; the
+delta-1-dominated histogram fits that. But it does not explain why traversal is *perfectly*
+unaffected while sly-key moves 11.8%, and I am not going to assert a cause I have not tested.
+**The test that would settle it: `git stash` the PostFX change, re-capture sly-key's `off` arm,
+compare.** That is a 4-frame boot and it is not free, so it is recorded rather than run now.
+
+**This does NOT invalidate the dispchroma seal.** Every one of its bars is within-boot and
+within-tree, and `V_CHUNK_TREE` requires both chunks to carry the same `srcHash`
+(`b3852e39472ed68f`), which they do. The seal compares arms captured against one tree; nothing in
+it compares across the tree change.
+
+**It does narrow §334.** Live-settle staging reproduces frames across *boots* — that stands, on
+four independent captures. It does **not** follow that frames survive a *tree change*, even an
+inert one, and my chunk-1 commit conflated the two. Treat cross-tree frame identity as unproven
+unless measured for the specific shot.
+
+**And it weakens what a "0 = bit-identical" pin can promise.** `tests/dispchroma.test.mjs` asserts
+the lever is a *branch* rather than a collapsing mix, which is the right structural property and
+which it does verify. It cannot verify that adding the branch left every other pixel untouched —
+no static test can. The honest reading is: the contract is about the branch not executing, not
+about the compiled shader being byte-stable, and the comment in `PostFX.js` should not be read as
+promising the latter.
