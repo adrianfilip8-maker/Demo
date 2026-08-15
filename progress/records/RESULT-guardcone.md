@@ -118,3 +118,31 @@ night protection ROIs plus one shot's containment.
 Task #14's decision is now **unblocked and answered in the negative**: this candidate does not ship.
 A successor must address the apex classifier result and the two protection ROIs, and must first
 establish why `BH1`'s far band is empty — a bar that cannot be evaluated is not a bar that passed.
+
+---
+
+## 5. §8.3 LOOK — PERFORMED (diagnostic only; the verdict was already settled on the numbers)
+
+The LOOK cannot rescue a DO-NOT-SHIP, so this was done for the successor's benefit rather than as a
+gate. Both registered pairs were opened.
+
+**`guard.bon` vs `guard.off`.** The `off` frame is cool and neutral — muted tan floor, faint shafts,
+guards reading as dark silhouettes with blue-white highlights. The `bon` frame turns the **entire
+floor vivid orange** and introduces strong, hard-edged beam wedges from upper-left and upper-right.
+This is not a localised cone treatment; it is a wholesale recolouring of the ground plane, and it is
+what the 98.5% off-vs-bon figure and `PROT-B`'s large `inside` counts actually look like. A candidate
+whose visible signature is "the floor is now orange" is a bigger look change than the seal's name
+("guard cone night grade") suggests.
+
+**`night.bon` vs `night.off`.** The ROIs are correctly aimed, which is the useful finding: the moon
+sits plainly inside `PROT-MOON`'s `[300,20,480,140]`, and the row of hanging lamps runs straight
+through `PROT-LAMPS`'s `[640,0,1140,130]`. So the two failures are not mis-drawn rectangles catching
+unrelated pixels — the candidate is moving **5723 px on the moon** and **8028 px on the lamp row**,
+against a 400 px allowance. A guard-cone grade repainting the moon and the level's hanging lamps is
+a defect on its face, independent of the number.
+
+**What the LOOK adds beyond the table:** `BS1`'s failure is the surprising one in this light. The
+frame is conspicuously warm — the floor is orange, the beams are obvious — yet the registered apex
+reports **zero** hot-warm pixels at `maxL=196`. Plenty of warmth, none of it where the bar looks. That
+points at the apex probe's location or its classifier rather than at an absent beam, and it is the
+first thing a successor should check before touching the cone tuple.
