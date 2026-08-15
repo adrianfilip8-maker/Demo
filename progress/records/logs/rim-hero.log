@@ -8,3 +8,4 @@ shipped tune.rimStrength = 0.7 (captured at boot; `back` restores this value)
   # 1 hero.off               sha 1de25eded2aedb60  uRim=0.7 uEdge=1 dbgTerm=0 raw=false/scene
   # 2 hero.screenoff         sha 488aeb2ee63ddc4b  uRim=0 uEdge=1 dbgTerm=0 raw=false/scene
   # 3 hero.raw               sha db008bbb46177fe0  uRim=0 uEdge=1 dbgTerm=0 raw=true/scene
+  # 4 hero.cal               sha 5e7628273e398848  uRim=0 uEdge=1 dbgTerm=4 raw=true/scene
