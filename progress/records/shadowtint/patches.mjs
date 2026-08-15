@@ -36,7 +36,7 @@ export function summarise(label, im, list, take) {
   const v = sel.reduce((a, p) => a + vig(p.x, p.y, im.w, im.h), 0) / n;
   const r = unGrade(mean.map((x) => x / v));
   const hD = hsv(mean), hL = hsvLin(r.scene);
-  console.log(`${label.padEnd(24)} n${String(n).padStart(4)} px  disp #${mean.map((x) => Math.round(x).toString(16).padStart(2, '0')).join('')} ` +
+  console.log(`${label.padEnd(24)} n${String(n).padStart(4)} patches  disp #${mean.map((x) => Math.round(x).toString(16).padStart(2, '0')).join('')} ` +
     `h ${hD.h.toFixed(1).padStart(5)} s ${hD.s.toFixed(3)} L ${lum(mean).toFixed(1).padStart(5)}  vig ${v.toFixed(3)}` +
     `  ->  LINEAR ${r.scene.map((x) => x.toFixed(4).padStart(8)).join(' ')} h ${hL.h.toFixed(1).padStart(5)} s ${hL.s.toFixed(3)}` +
     `${r.flags.length ? '  FLAGS ' + r.flags.join(',') : ''}`);

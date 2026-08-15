@@ -30,7 +30,7 @@ function agg(im, sel) {
   const r = unGrade(mean.map((x) => x / v));
   return { n, mean, v, lin: r.scene, flags: r.flags, hD: hsv(mean), hL: hsvLin(r.scene), L: lum(mean) };
 }
-const row = (label, a) => `${label.padEnd(40)} ${String(a.n).padStart(4)}p  ` +
+const row = (label, a) => `${label.padEnd(40)} ${String(a.n).padStart(4)}pat ` +
   `#${a.mean.map((x) => Math.round(x).toString(16).padStart(2, '0')).join('')} ` +
   `h${a.hD.h.toFixed(0).padStart(4)} s${a.hD.s.toFixed(2)} L${a.L.toFixed(0).padStart(4)}  |  ` +
   `lin ${a.lin.map((x) => x.toFixed(4).padStart(7)).join(' ')} h${a.hL.h.toFixed(0).padStart(4)} s${a.hL.s.toFixed(2)}  ` +
@@ -38,7 +38,8 @@ const row = (label, a) => `${label.padEnd(40)} ${String(a.n).padStart(4)}p  ` +
   `${a.flags.length ? '  ' + a.flags.join(',') : ''}`;
 
 console.log(`frames from ${DIR}\n`);
-console.log(`${''.padEnd(40)}   px  display                |  scene-linear radiance`);
+console.log(`${''.padEnd(40)}  10x10 display                |  scene-linear radiance`);
+console.log(`${''.padEnd(40)}  patches`);
 console.log('-'.repeat(150));
 const all = [];
 for (const e of cfg.shots) {
