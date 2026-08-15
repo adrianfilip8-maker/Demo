@@ -25239,3 +25239,66 @@ written contract by 3.3×** — `uRimShadowFloor = 0.45` owes 12.72 L and pays 3
 should be **relative** (a fraction of the key-side band on the same edges), per §342.1/§342.2.
 
 Nothing ships. This seal proposes no candidate, no dose and no `TUNE` change; its product is the route.
+
+---
+
+## §344 — keyprobe: **VOID.** `PF_KEY_LO` failed, because the control bar encoded somebody else's unverified claim
+
+Full working in `RESULT-keyprobe.md`; scorer output in `logs/keyprobe-score.txt`; 5 frames committed
+in `keyprobe1/`.
+
+```
+V_ROWS PASS · R_bracket PASS (0 px) · CAL PASS (23.9%)
+PF_KEY_HI PASS  LIT_R  key 0.5382 (want >= 0.50)
+PF_KEY_LO FAIL  CAST_L key 0.0281 (want <= 0.02)
+=> VOID. K1 is NOT read.
+```
+
+**The capture is clean** — 0-px bracket, `CAL` proving the `debugRaw` bypass undecoded in-boot. The
+instrument worked. The seal VOIDs anyway because §5 requires both control rects to behave as claimed
+before the unknown one is read, and one did not.
+
+**Why it failed.** `PF_KEY_LO`'s 0.02 was never independently derived; §5 said so outright —
+*"`NOTE-shadowtint-space.md:258` states outright that this object has `sh = 0`, hence `key = 0`. This
+is the negative control and it is **somebody else's claim, not mine**."* Measured: **`key` 0.0281,
+`sh` 0.1768.** The record's claim is false as measured, and "by a little" is fatal precisely because
+the bar was set at 0.02 *on the strength of* the claimed zero.
+
+**§340 applied one level up, and I still only got half of it.** I proved the control's **identity**
+— the rect really is on colossus-L — and then took its **state** from a third-party note without
+measuring it. Identity is not state. The fail-closed two-sided control is what caught it.
+
+**An error of mine, recorded because it nearly cost a needless re-aim.** Diagnosing the failure I
+cropped each rect in isolation and concluded all three landed on architecture. **Wrong.** Against the
+whole frame the courtyard shows two seated colossi flanking the obelisk: `CAST_L` is the west
+colossus's shadowed body, `LIT_R` the east colossus's sunlit flank, `SHADE_R` its shadowed upper
+body. A 13 m colossus at this framing is mostly large inscribed stone faces, which cropped small read
+exactly like pylon walls. The measured values corroborate the placement (`LIT_R` 0.5382, `CAST_L`
+0.0281, `SHADE_R` between) — the channel spans the range and the rects are correct.
+
+**Cost to the item.** **§342 is untouched** — the albedo attribution is texture arithmetic against a
+double-digest-proven control and never depended on this. **§342.2's premise is undermined**: it used
+colossus-L as the matched control and computed *"at full shadow authority (`sh = 0`)"*, and
+colossus-L is at `sh` **0.1768**, not 0. Its *structural* point — that the ground was the wrong
+control because it differs in cast-shadow state, orientation and bounce — survives; its *arithmetic*
+must be re-derived against measured `sh`.
+
+**Three successive controls on one item, each wrong differently:** §342.1 used a rect in the wrong
+lighting state; §342.2 used the right object with an assumed state; keyprobe measured the state and
+found the assumption wrong. **The item has never yet had a control whose state was measured before it
+was used.**
+
+**Re-seal requirements (§141.1 — a NEW file, nothing here moves).** Do not re-use `PF_KEY_LO = 0.02`;
+it encodes a refuted claim. Either derive the negative-control bar from a *measured* `sh`
+distribution on a surface established to be fully cast-shadowed, or make the control **relative** —
+`key(CAST_L)` some factor below `key(SHADE_R)` — which tests the ordering the question depends on
+without asserting a zero. **Keep the rects** (correctly placed, now visually verified) and **keep the
+two-sided control** (it earned its place: `PF_KEY_HI` passed and would have let a one-sided seal
+proceed on a false premise). The committed frames are re-usable; no new capture is needed unless the
+re-seal registers new rects or arms.
+
+**NOT claimed:** whether the colossus's shade face is still receiving direct key. `K1` was not read.
+The registered decision — `KEYED >= 0.10` vs `DARK <= 0.02`, with `DARK` refuting §342.2 — is
+untouched and still open. The scorer's rect table is raw instrument output, not a verdict.
+
+Nothing ships.

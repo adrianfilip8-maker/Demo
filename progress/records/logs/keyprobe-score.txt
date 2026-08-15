@@ -1,0 +1,19 @@
+PREREG-keyprobe — progress/records/keyprobe1   head cfcdd941f8   srcHash b3852e39472ed68f   warmup 2
+
+V_ROWS       PASS   5 rows (want 5)
+R_bracket    PASS   off-vs-back 0 px (want 0; §331 warm-up 2)
+CAL          PASS   (64,128,191)±1 over 23.9% (want ≥ 5%)
+
+term5 = vec3( ramp, ndl, key ), undecoded byte/255   (frame 1280x720)
+rect     class                ramp    ndl    key  sh=key/ramp
+-------------------------------------------------------------
+SHADE_R  shade-terminator  0.1408 0.1013 0.1017       0.4908
+CAST_L   shade-cast        0.0684 0.0300 0.0281       0.1768
+LIT_R    lit               0.8532 0.7823 0.5382       0.6172
+GROUND   both              0.7735 0.4183 0.3010       0.3608
+
+PF_KEY_HI    PASS   LIT_R  key 0.5382 (want ≥ 0.5) — a lit face must carry direct key
+PF_KEY_LO    FAIL   CAST_L key 0.0281 (want ≤ 0.02) — the record states sh=0 here
+
+VERDICT: VOID — gate(s) not passed: PF_KEY_LO
+K1 is NOT read. Nothing is claimed about the shade face (§10: any gate FAIL ⇒ VOID).

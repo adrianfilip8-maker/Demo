@@ -1,0 +1,72 @@
+{
+  "seal": "PREREG-keyprobe",
+  "warmup": 2,
+  "shot": "courtyard",
+  "head": "cfcdd941f8c4cb732605981f41284ebcaf3b9b92",
+  "srcHash": "b3852e39472ed68f",
+  "staging": "setShot(name, {}) — dt UNDEFINED, live settle, roster-faithful (§328)",
+  "expectRows": 5,
+  "capturedAt": "2026-08-15T15:44:29.005Z",
+  "rows": [
+    {
+      "shot": "courtyard",
+      "arm": "off",
+      "file": "courtyard.off.png",
+      "sha256": "724afdb8d0a9fa4c17d7d5453ee392799086c6a372bc412327ac19aeb0a54890",
+      "readback": {
+        "uDebugTerm": 0,
+        "debugRaw": false,
+        "debugSrc": "scene",
+        "camY": 4
+      }
+    },
+    {
+      "shot": "courtyard",
+      "arm": "cal",
+      "file": "courtyard.cal.png",
+      "sha256": "55fbe449879fa1fa7fa54efcaf4e16c96d63c7e0da175c0ce6692d9cc090cde7",
+      "readback": {
+        "uDebugTerm": 4,
+        "debugRaw": true,
+        "debugSrc": "scene",
+        "camY": 4
+      }
+    },
+    {
+      "shot": "courtyard",
+      "arm": "term5",
+      "file": "courtyard.term5.png",
+      "sha256": "7d6125ed124e5577d5b0994eb7ce82d7a6389e023389830a7234380bef29d6ad",
+      "readback": {
+        "uDebugTerm": 5,
+        "debugRaw": true,
+        "debugSrc": "scene",
+        "camY": 4
+      }
+    },
+    {
+      "shot": "courtyard",
+      "arm": "term6",
+      "file": "courtyard.term6.png",
+      "sha256": "e9681f0e4f96e0d2bd6cfc14bf653489162a2635ce0b247e3c6d8c7924ad7d39",
+      "readback": {
+        "uDebugTerm": 6,
+        "debugRaw": true,
+        "debugSrc": "scene",
+        "camY": 4
+      }
+    },
+    {
+      "shot": "courtyard",
+      "arm": "back",
+      "file": "courtyard.back.png",
+      "sha256": "724afdb8d0a9fa4c17d7d5453ee392799086c6a372bc412327ac19aeb0a54890",
+      "readback": {
+        "uDebugTerm": 0,
+        "debugRaw": false,
+        "debugSrc": "scene",
+        "camY": 4
+      }
+    }
+  ]
+}
