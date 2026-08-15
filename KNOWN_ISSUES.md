@@ -24238,3 +24238,75 @@ rim and the night sparkles — and the seal's same-frame wall control was built 
 be faked. **The route §306's s10 pointed at is dead at these doses**; revisit only with a
 subject-excluding formulation the P_slyrim control can certify. vSlySkin 0.55 intact, nothing
 shipped.
+
+## §328 — critic r13: REJECT 3.94, but the round REFUTES §326 and corrects four standing declarations by measurement
+
+Blind r13 (`shots/r13`, sha `de3080d`, no changelog): temple 6 · courtyard 6 · sly-profile 6 ·
+hero 5 · night 5 · sly-startle 5 · sly-closeup 4 · traversal 4 · sly-key 4 · kaykit 3 · dunes 3 ·
+interior 3 · sly-perch 3 · combat 2 · guard 2 · sly-arm 2. Mean **3.94** (r12 3.97, Δ −0.03).
+`night` has now scored **6 → 3.5 → 5** across three blind raters on a mechanism history holding
+one pure shadow *lift*; §313's calibration finding gets its third data point. Full fold:
+`progress/records/RESULT-critic13.md`.
+
+**§326 IS REFUTED, and the error is mine.** §326 read lithold's `BG` VOID as *"the bleach is NOT
+PRESENT on this tree"* and led with *"the two lighting ships did it"*. Running lithold's **own
+statistic over its own registered rect** on both captures — so the comparison cannot be a
+sampling artifact — gives:
+
+```
+              lithold1 (14th 21:50)   shots/r13 (15th 01:02)   r12 calibration
+traversal     S 0.678 hue 214.5       S 0.205 hue 223.3         0.205
+combat        S 0.486 hue 218.8       S 0.080 hue 353.6         0.080
+sly-key ctl   S 0.516 hue 205.4       S 0.516 hue 205.4         0.516
+```
+
+1. **r13 reproduces the r12 calibration to three decimals** — the defect never moved and the
+   seal's bars were correctly aimed. 2. **Both captures carry the ships** (`0525d5e` 08-13 22:51;
+every `src` commit between the two captures is an *inert* mechanism plus a props dedupe), so if a
+ship had fixed the bleach r13 would be blue too — it is 0.205. 3. **The rect really is on Sly**:
+under the seal's own PROT-ENV contract the `ko` arm may only change vSlySkin pixels, and inside
+the registered rect **79.1%** (traversal) / **91.7%** (combat) of pixels change under `ko`.
+
+So `BG` did not catch a tree drift — **it caught the seal's own RUNNER staging the character out
+of the defect** (S 0.678 at L 97 vs r13's 0.205 at L 136: §312's additive wash raising L and
+killing S, exactly as modelled). §326's recorded lesson ("re-derive calibrations against the
+current tree") was therefore also wrong; the calibration was never the problem. **The rule that
+would actually have caught this: a seal's runner must be proven to REPRODUCE the defect before
+its bars are sealed — measure the defect statistic on the runner's own `off` arm as a pre-flight
+and register it beside the calibration.** A staging gate found post-hoc costs a run; the same
+gate as a pre-flight costs one boot. `BG` still earns its credit for refusing to adjudicate a
+candidate against a defect-free frame — right VOID, wrong stated reason, and I wrote the reason.
+**Consequence:** the §277/§312 item is live, reproducible and already calibrated; it needs a
+roster-faithful runner, not new frames, and it aims at the additive legs.
+
+**§310 confirmed closed.** The critic did not score the manifest counters, said why they are the
+all-passes submission counter, and independently ran `budgetattrib.mjs` to reproduce 85 draws /
+0.644 M tris. The brief fix (09808c1) took.
+
+**Four standing declarations corrected by the critic's measurements, three in the build's favour:**
+head:body is **5.03** and PASSES (I reproduced it: 1.8538 m ÷ 0.3688 m) — AGENTS.md §7.3 asserted
+**5.72 FAILING**, a legacy-rig number never re-run when the Sly 3 rebuild became default (§196),
+**fixed at the declaration site in this commit** after costing false failures for several rounds;
+outlines are warm-brown/violet and do scale (not a fail); shadows are correctly coloured on
+kaykit 211° / hero 203° / dunes 207° (not systemic); budget not breached.
+
+**Two convergences outrank their line items.** (a) `courtyard`'s colossus terminator is the set's
+**only** shadow-hue miss — lit h 7° s 0.63 → shadow **h 345° s 0.29** instead of ~218° — a third
+independent arrival at the **shade-scoped toon shadow-tint path** (§300 twilight, §323 tomb), now
+with a single measured acceptance target. Strongest open lead in the project. (b) The critic,
+blind, reports an **unmotivated warm disc** (80×60 px, `#d79764` vs `#655460`, ~+50 L, second
+brightest object in frame) recurring in `sly-profile`/`interior`/`combat` and routes it to an
+oversized near-camera FX sprite or a POSTFX flare ghost — **that is §327's G1**, whose ~82%
+unattributed share was the open question. The critic just named the two candidates.
+
+**Critic's ranked three:** (1) character albedo collapses into environment bounce — traversal
+29°/0.23, sly-perch 307°/0.24, sly-arm 276°/0.28 vs canonical 214°/0.54–0.79 → LIGHTING then
+SHADING (**not §294-waived**: attributed to colour, not sculpt); (2) **no fresnel rim** — 8 of 13
+measured silhouette edges show no spike and all 5 that do are key-facing, worst `night` at Sly
+L 20 vs background L 29 → SHADING (rim not view-dependent) + LIGHTING (azimuth); (3) three shots
+fail their own §7.2 purpose — `interior` proves volumetrics with zero cones under four sconces,
+`guard` proves a patrol cone and has none, `combat` is an impact frame with **no enemy in it**.
+Waivers applied **AT ROUTING ONLY**, critic blind to both, scores unadjusted: §294(1) head sculpt;
+§309 guard **MODEL** — **the guard CONE is explicitly NOT covered, and it is why that shot scores 2.**
+
+Nothing ships from a critic round. Only tree change is the §7.3 declaration fix. Suite 541 green.

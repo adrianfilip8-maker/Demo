@@ -511,8 +511,14 @@ same way, and watch a new one go red before you trust it green.
       Reproduce with `tools/headratio.mjs` (no arguments needed). The definition is here because without it the
       condition could not be scored: three numbers were in circulation for one figure — 4.44
       (chin to cap/ear tip), 6.73 (a profile-table skull span narrower than the rendered head)
-      and a quoted 5.29 — and they *bracket* "~1:5" rather than test it. Current rig **5.72**,
-      so this condition is FAILING by ~0.7 head. See KNOWN_ISSUES §58.3, §59.2, §65.
+      and a quoted 5.29 — and they *bracket* "~1:5" rather than test it. Current rig **5.03**
+      (total skinned height 1.8538 m ÷ head 0.3688 m; 3.90 if cap and ears are included), so
+      this condition **PASSES**. See KNOWN_ISSUES §58.3, §59.2, §65, §328.
+      *Was declared 5.72/FAILING until 2026-08-15: that figure came from the legacy rig and was
+      never re-run when the Sly 3 rebuild became the default (§196), so it survived as a stale
+      fact and cost false failures across several blind rounds. The blind r13 critic measured
+      5.03 with the tool named above and flagged the declaration; reproduced independently
+      before this edit. Re-run `tools/headratio.mjs` whenever the default rig changes.*
 - [ ] Silhouette not instantly readable as Sly (cap, mask, tail, cane)
 - [ ] Fur reads as smooth plastic
 - [ ] Pose is A-pose/T-pose/stiff instead of a confident line-of-action
