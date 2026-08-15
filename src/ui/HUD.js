@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { HUD_CSS } from './hud.css.js';
 import * as Ico from './Icons.js';
-import { alertFor, threatFor, ALERT_STATES } from './Alert.js';
+import { alertFor, threatFor, suspicionColour, ALERT_STATES } from './Alert.js';
 
 /**
  * HUD — Sly's interface. Registered as module key 'hud' (AGENTS.md §4.3).
@@ -42,6 +42,18 @@ const TUNE = {
    */
   alertFade: 1.2,         // s a *retired* badge lingers before removal
   alertLerp: 9,           // arc catch-up rate
+  /**
+   * The suspicion lash follows `Guards.alertLevel` almost rigidly. This is deliberately much
+   * faster than `alertLerp`: the badge arc is smoothing between two *canonical* fractions and
+   * the ease is presentation, whereas this meter IS the signal, and a warning that arrives
+   * eased is a warning that arrives late. Enough smoothing to kill the per-frame jitter of a
+   * line-of-sight ray clipping a column edge, and no more.
+   */
+  susLerp: 22,
+  /** Below this the arc is not drawn at all — a meter that never rests at zero is noise. */
+  susFloor: 0.04,
+  goalTick: 5,            // frames between objective-distance recomputes (~12 Hz)
+  bustHold: 1.6,          // s the CAUGHT stamp holds; PlayerHealth.CHARM.downTime is 1.15
   markMax: 16,
   shakeDecay: 9.5,
   shakeGain: 0.55,        // fraction of a world shake the UI inherits
@@ -107,15 +119,61 @@ const CONTROLS = [
   },
 ];
 
-/* Until MOVEMENT starts emitting prompts, the HUD finds affordances itself through the
-   documented COLLISION query API (§4.6 — "for lock-on UI and Thief-o-Vision"). The moment a
-   real `prompt` event arrives this shuts off permanently and MOVEMENT owns the channel. */
+/**
+ * Until MOVEMENT starts emitting prompts, the HUD finds affordances itself through the documented
+ * COLLISION query API (§4.6 — "for lock-on UI and Thief-o-Vision"). The moment a real `prompt`
+ * event arrives this shuts off permanently and MOVEMENT owns the channel.
+ *
+ * ── KNOWN HAZARD, deliberately NOT worked around here ─────────────────────────────────────────
+ * The retirement is WHOLESALE and this table has five entries MOVEMENT does not currently
+ * announce. `tests/eventbus.test.mjs` names the consequence in advance: *"the first module to
+ * publish this silently kills every contextual verb in the game"*. It is live as of this writing —
+ * `Controller._pushPrompt` publishes `prompt`, and its own comment says *"Only pickpocket marks
+ * are announced. A prompt for hook/rail/pole would be nice and is left out deliberately"* because
+ * `afford()` costs a BVH `nearest()` per tag.
+ *
+ * A per-channel handover (MOVEMENT owns the pocket, the HUD keeps traversal — one
+ * `collision.query` covers all five tags and is cheaper than the per-tag `nearest()` MOVEMENT
+ * declined) was written and then reverted on coordinator instruction: it spans two lanes' files
+ * and is being routed as one coordinated change rather than as two lanes editing around each
+ * other. It is filed as a RECOMMENDATION in `progress/records/ui/NOTE-ui-audit.md`. Do not
+ * re-apply half of it here.
+ */
 const AFF_VERB = {
   hook: 'Cane hook', rail: 'Mount rail', pole: 'Climb pole',
   spire: 'Spire land', vent: 'Crawl in',
 };
 const AFF_TAGS = Object.keys(AFF_VERB);
 const AFF_RANGE = 4.4;
+
+/**
+ * The pocket, when nobody else is announcing it. `Guards.nearestPickpocketTarget(pos, maxDist,
+ * facing)` is documented public API on the registered `guards` module — the same standing as
+ * `collision.query` above, and the sibling of `Guards.nearest`, whose own comment names the HUD
+ * as a consumer.
+ *
+ * This is the one affordance in the game with a CLOSING WINDOW: `canBePickpocketed` goes false the
+ * moment a guard is alerted or already looted, and the roster carries 45–150 coins a head. The
+ * whole authored economy was reachable only by a player who already knew to walk up behind a
+ * guard and press E. Range is left to the guards module's own `TUNE.pocketRange` rather than
+ * restated here, so the prompt cannot promise a reach Sly does not have.
+ *
+ * Retired with the rest of the fallback the first time an external `prompt` arrives, which is
+ * correct in both directions: if MOVEMENT owns the pocket, the HUD must not hold a second
+ * opinion about it — `Controller.pickMark` knows `pickApproach`, whether the state machine is
+ * busy and whether Sly is grounded, and this does not.
+ */
+const STEAL_VERB = 'Pickpocket';
+
+/**
+ * Verbs that get the closing-window treatment, WHOEVER announces them.
+ *
+ * A pocket is the only affordance in the game that expires on its own, so it is the only prompt
+ * that earns colour and motion. Classified by verb because MOVEMENT's payload has no `kind`
+ * field and demanding one would be a contract change to a file this lane does not own; an
+ * explicit `kind` on the payload wins if one ever appears.
+ */
+const PROMPT_KIND = { pickpocket: 'steal' };
 
 /* Prompt key strings arrive from MOVEMENT in whatever shape it likes; normalise here. */
 const KEY_ALIAS = {
@@ -150,7 +208,16 @@ export class HUD {
     this._targets = [];
     this._promptKey = '';
     this._promptText = '';
+    this._promptKind = '';
     this._objTimer = 0;
+    this._objBase = null;       // the standing objective, restored when a carry ends
+    this._carry = null;         // { name, value } — the treasure in hand
+    this._goal = null;          // { point, label } — what the world marker points at
+    this._goalCount = 0;
+    this._goalDist = -1;
+    this._sus = 0;              // smoothed Guards.alertLevel
+    this._susCol = '';
+    this._bustT = 0;
     this._shake = 0;
     this._vig = 0;
     this._vigPunch = 0;
@@ -158,7 +225,9 @@ export class HUD {
     this._recT = 0;
     this._wasLocked = false;
     this._sawPrompt = false;    // a real `prompt` event retires the affordance fallback
+    this._lock = null;          // MOVEMENT's current lock-on mark
     this._affDead = false;
+    this._pickDead = false;
     this._affCount = 0;
     this._threatKey = '';
     this._threatCount = 0;
@@ -213,7 +282,17 @@ export class HUD {
         <div class="sly-tov-tag sly-ink sly-ink-s">THIEF-O-VISION</div>
       </div>
 
-      <div class="sly-marks"></div>
+      <div class="sly-marks">
+        <div class="sly-lock">${Ico.lockOn()}</div>
+        <div class="sly-goal">
+          <div class="sly-goal-pin">${Ico.goalPin()}</div>
+          <div class="sly-goal-ring"><div class="sly-goal-arrow">${Ico.goalArrow()}</div></div>
+          <div class="sly-goal-txt">
+            <span class="sly-goal-lbl sly-ink sly-ink-s"></span>
+            <span class="sly-goal-dist sly-ink sly-ink-s"></span>
+          </div>
+        </div>
+      </div>
 
       <div class="sly-shake">
         <div class="sly-tl">
@@ -227,6 +306,11 @@ export class HUD {
             <span class="sly-threat-eye">${Ico.threatEye()}</span>
             <span class="sly-threat-lbl sly-ink sly-ink-s">HIDDEN</span>
             <span class="sly-threat-num sly-ink sly-ink-s"></span>
+          </div>
+          <div class="sly-carry">
+            <span class="sly-carry-ic sly-drop">${Ico.glyph('goal')}</span>
+            <span class="sly-carry-name sly-ink sly-ink-s"></span>
+            <span class="sly-carry-val sly-ink sly-ink-s"></span>
           </div>
         </div>
 
@@ -245,6 +329,7 @@ export class HUD {
           <span class="sly-prompt-key"></span>
           <span class="sly-prompt-dash"></span>
           <span class="sly-prompt-verb sly-ink sly-ink-s"></span>
+          <span class="sly-prompt-ic sly-drop">${Ico.coin()}</span>
         </div>
       </div>
 
@@ -253,9 +338,15 @@ export class HUD {
       <div class="sly-vig"></div>
       <div class="sly-flash"></div>
 
+      <div class="sly-busted">
+        <span class="mark">${Ico.cooperMark()}</span>
+        <div class="sly-busted-txt">BUSTED<span class="sly-busted-sub">BACK TO THE LAST QUIET SPOT</span></div>
+      </div>
+
       ${this._pauseHtml()}
     `;
     document.body.appendChild(root);
+    root.dataset.threat = 'hidden';
     this.root = root;
 
     const q = (s) => root.querySelector(s);
@@ -269,6 +360,17 @@ export class HUD {
       threat: q('.sly-threat'),
       threatLbl: q('.sly-threat-lbl'),
       threatNum: q('.sly-threat-num'),
+      threatFill: q('.sly-eye-fill'),
+      threatFillInk: q('.sly-eye-fill-ink'),
+      carry: q('.sly-carry'),
+      carryName: q('.sly-carry-name'),
+      carryVal: q('.sly-carry-val'),
+      lock: q('.sly-lock'),
+      goal: q('.sly-goal'),
+      goalRing: q('.sly-goal-ring'),
+      goalLbl: q('.sly-goal-lbl'),
+      goalDist: q('.sly-goal-dist'),
+      busted: q('.sly-busted'),
       obj: q('.sly-obj'),
       objTitle: q('.sly-obj-title'),
       objSub: q('.sly-obj-sub'),
@@ -381,6 +483,13 @@ export class HUD {
     on('hideHud', () => this._applyVisibility());
 
     on('prompt', (p) => { this._sawPrompt = true; this._onPrompt(p); });
+    /**
+     * Hook / guard lock-on. MOVEMENT's `CombatStrafe` publishes `{ pos, body }` on entry and
+     * `null` on exit and nothing was listening, so §6.1's "hold right mouse — hook lock-on"
+     * committed the player to an orbit with no on-screen confirmation of *what* he had locked.
+     * The reticle art already existed for Thief-o-Vision; this points it at the mark.
+     */
+    on('lockOn', (p) => this.setLockOn(p));
     on('toast', (p) => {
       if (!p) return;
       if (typeof p === 'string') this.toast(p);
@@ -413,9 +522,30 @@ export class HUD {
     });
 
     on('health', (p) => {
-      if (typeof p === 'number') this.setHealth(p, this.healthMax);
-      else if (p) this.setHealth(num(p.hp ?? p.current ?? p.value, this.health), num(p.max, this.healthMax));
+      if (typeof p === 'number') { this.setHealth(p, this.healthMax); return; }
+      if (!p) return;
+      this.setHealth(num(p.hp ?? p.current ?? p.value, this.health), num(p.max, this.healthMax));
+      /* `down` is the fatal hit, not a hit. `PlayerHealth` publishes it on the same payload the
+         pips already read, so telling "caught" apart from "hurt" costs no new interface — only
+         the decision to stop discarding a field that was always there. */
+      this._setBusted(!!p.down);
     });
+
+    /**
+     * The loot loop, which the HUD had no view of at all.
+     *
+     * `Pickups` emits all three of these already and the HUD subscribed to none of them, so the
+     * one mechanic in the game with a *carry risk* — pick a treasure up, walk it back through the
+     * guards you already woke, lose it if you are driven to CHASE — ran with a single toast at
+     * pickup and nothing afterwards. The player could not see what he was holding, what it was
+     * worth, where it had to go, or where it landed when it was knocked out of his hands.
+     *
+     * `treasureDropped` carries the spot it fell, so being caught leaves a mark instead of a
+     * mystery. That is the difference between a setback and a lost run.
+     */
+    on('treasurePickup', (p) => this._onCarry(p, 'pickup'));
+    on('treasureBanked', (p) => this._onCarry(p, 'banked'));
+    on('treasureDropped', (p) => this._onCarry(p, 'dropped'));
     /* `health` is the ONLY thing that moves the pips, and that is a correctness requirement
        rather than tidiness. This used to be three subscriptions — `health`, `damage` and
        `hurt` — each of which deducted a pip, which was harmless only while nothing published
@@ -484,17 +614,23 @@ export class HUD {
   /**
    * Contextual verb. `prompt(null)` clears. Fast in, slow out — the ease asymmetry is what
    * makes an affordance feel eager rather than laggy.
+   *
+   * `kind` is a presentation channel, not a second verb: `'steal'` marks the one affordance whose
+   * window closes on its own (see STEAL_VERB). Everything else is permanent geometry and shares
+   * the neutral treatment.
    */
-  prompt(text, key) {
+  prompt(text, key, kind = '') {
     if (!this._built) return;
     if (!text) {
       this.el.prompt.classList.remove('on');
       this._promptText = '';
       this._promptKey = '';
+      this._promptKind = '';
+      this.el.prompt.dataset.kind = '';
       return;
     }
     const k = normKey(key);
-    if (text === this._promptText && k === this._promptKey) {
+    if (text === this._promptText && k === this._promptKey && kind === this._promptKind) {
       this.el.prompt.classList.add('on');
       return;
     }
@@ -503,6 +639,10 @@ export class HUD {
       this.el.promptKey.innerHTML = k
         ? (k.mouse ? Ico.mouse(k.mouse) : Ico.keycap(k))
         : Ico.keycap('E');
+    }
+    if (kind !== this._promptKind) {
+      this._promptKind = kind;
+      this.el.prompt.dataset.kind = kind;
     }
     this.el.promptVerb.textContent = text;
     this._promptText = text;
@@ -540,7 +680,8 @@ export class HUD {
       this.el.pips.innerHTML = '';
       for (let i = 0; i < m; i++) {
         const s = document.createElement('span');
-        s.innerHTML = Ico.pip(i < v);
+        s.innerHTML = Ico.pip(i < v, pipKind(i));
+        if (i === 0) s.classList.add('sly-pip-life');
         this.el.pips.appendChild(s);
       }
     } else {
@@ -549,7 +690,7 @@ export class HUD {
         const filled = i < v;
         const wasFilled = !kids[i].classList.contains('sly-pip-lost');
         if (filled === wasFilled) continue;
-        kids[i].innerHTML = Ico.pip(filled);
+        kids[i].innerHTML = Ico.pip(filled, pipKind(i));
         kids[i].classList.toggle('sly-pip-lost', !filled);
         if (!filled) this._punch(kids[i], 1.75, 340);
         else this._punch(kids[i], 1.35, 280);
@@ -587,14 +728,108 @@ export class HUD {
     if (!v) for (const m of this._marks) m.el.classList.remove('on');
   }
 
-  /** Comic-cel objective card: slides in, holds, then collapses to a compact tab. */
-  objective(title, sub = '') {
+  /**
+   * Comic-cel objective card: slides in, holds, then collapses to a compact tab.
+   *
+   * `transient` marks a card the loot loop puts up for the duration of a carry. The standing
+   * objective is remembered rather than overwritten, so banking a treasure puts the level's own
+   * goal back instead of leaving the player staring at a step he has already finished.
+   */
+  objective(title, sub = '', transient = false) {
     if (!this._built || !title) return;
+    if (!transient) this._objBase = { title, sub };
     this.el.objTitle.textContent = title;
     this.el.objSub.textContent = sub;
     this.el.obj.classList.remove('mini');
     this.el.obj.classList.add('on');
     this._objTimer = TUNE.objectiveHold;
+  }
+
+  /* ------------------------------------------------------------- the loot loop */
+
+  /**
+   * One treasure event, in or out of Sly's hands.
+   *
+   * Everything here is read off the payload `Pickups` already publishes — `{ id, name, value,
+   * pos }` — plus the fence, which is a public field on the registered `pickups` module and so
+   * comes through `engine.get()` (AGENTS.md §4.2) rather than an import.
+   */
+  _onCarry(p, kind) {
+    if (!this._built) return;
+
+    if (kind === 'pickup') {
+      const name = String(p?.name ?? 'Treasure');
+      const value = Math.max(0, Math.round(num(p?.value, 0)));
+      this._carry = { name, value };
+      this.el.carryName.textContent = name;
+      this.el.carryVal.textContent = value ? String(value) : '';
+      this.el.carry.classList.add('on');
+      this.setGoal(this.engine.get?.('pickups')?.fence, 'FENCE');
+      this.objective(`Fence the ${name}`,
+        value ? `${value} coins · carry it back to the entrance` : 'Carry it back to the entrance',
+        true);
+      return;
+    }
+
+    this._carry = null;
+    this.el.carry.classList.remove('on');
+
+    if (kind === 'dropped') {
+      /* Caught while carrying. The treasure is still in the world, exactly where it fell, and
+         nothing else in the game will ever tell you where that was. */
+      this.setGoal(p?.pos, 'DROPPED');
+      this.objective('Recover the loot', `${p?.name ?? 'The treasure'} — where they caught you`, true);
+      return;
+    }
+
+    this.setGoal(null);
+    if (this._objBase) this.objective(this._objBase.title, this._objBase.sub);
+  }
+
+  /**
+   * Point the world marker at something, or `setGoal(null)` to retire it.
+   *
+   * The reference is held, not copied — the same reasoning as the guard badges: a marker that
+   * remembers where a thing *was* points at nothing, and is worse than no marker.
+   */
+  setGoal(point, label = '') {
+    if (!this._built) return;
+    if (!point || typeof point.x !== 'number') {
+      this._goal = null;
+      this._goalDist = -1;
+      this.el.goal.classList.remove('on');
+      this.el.goalDist.textContent = '';
+      return;
+    }
+    this._goal = { point, label: String(label).toUpperCase() };
+    this.el.goalLbl.textContent = this._goal.label;
+    this._goalDist = -1;      // force a distance recompute on the next tick
+    this._goalCount = 0;
+  }
+
+  /** The lock-on mark. `setLockOn(null)` clears it — MOVEMENT sends exactly that on exit. */
+  setLockOn(p) {
+    if (!this._built) return;
+    const point = p?.pos ?? p?.point ?? p?.position ?? (p?.isVector3 ? p : null);
+    if (!point || typeof point.x !== 'number') {
+      this._lock = null;
+      this.el.lock.classList.remove('on');
+      return;
+    }
+    this._lock = point;
+  }
+
+  /**
+   * The fatal hit. `PlayerHealth` holds the world for `CHARM.downTime` before respawning, and
+   * the stamp runs on its own timer rather than on the respawn so the beat cannot be cut short
+   * by a fast checkpoint.
+   */
+  _setBusted(down) {
+    if (!this._built || !down || this._bustT > 0) return;
+    this._bustT = TUNE.bustHold;
+    this.el.busted.classList.add('on');
+    this._shake = Math.min(1, this._shake + 0.5);
+    this.prompt(null);
   }
 
   setPaused(v) {
@@ -630,20 +865,82 @@ export class HUD {
     this._tickCoins(d);
     this._tickToasts(d);
     this._tickObjective(d);
+    this._tickSuspicion(d);
     this._tickWorldMarks();
     this._tickFx(d);
+    this._tickBusted(d);
     this._tickAffordancePrompt();
     if (this.binocOn) this._tickBinocu(d);
   }
 
+  /**
+   * The analog exposure meter — the one channel the HUD had none of.
+   *
+   * Every readout in this file was EDGE-TRIGGERED: `guardAlert` fires once per transition, so
+   * until some guard actually crossed `DETECT.suspicious` (0.34) nothing on screen moved at all,
+   * and nothing moved on the way back down out of a search either. A stealth player spends most
+   * of his time strictly between thresholds, which is precisely where the HUD was silent.
+   *
+   * `Guards.alertLevel` is the garrison maximum of `suspicion / DETECT.chase`, a public getter
+   * whose own comment records AUDIO as a consumer, so this needs no new interface from anybody.
+   * It is polled rather than pushed because it is a continuous quantity — there is no edge to
+   * subscribe to, and a per-frame max over a dozen guards is not a cost worth an event for.
+   *
+   * The badges stay discrete and untouched (see the ANALOG vs DISCRETE note in Alert.js): this
+   * is the aggregate instrument, and the garrison maximum is not something any single vision
+   * cone can show you, least of all the cone of a guard standing behind you.
+   */
+  _tickSuspicion(dt) {
+    const guards = this.engine.get?.('guards');
+    const raw = typeof guards?.alertLevel === 'number' ? guards.alertLevel : 0;
+    const want = Math.max(0, Math.min(1, raw));
+    this._sus += (want - this._sus) * Math.min(1, TUNE.susLerp * dt);
+
+    const f = this._sus < TUNE.susFloor ? 0 : Math.min(1, this._sus);
+    const off = (100 * (1 - f)).toFixed(1);
+    this.el.threatFill.style.strokeDashoffset = off;
+    this.el.threatFillInk.style.strokeDashoffset = off;
+
+    const col = suspicionColour(this._sus);
+    if (col !== this._susCol) {
+      this._susCol = col;
+      this.el.threat.style.setProperty('--sus-col', col);
+    }
+  }
+
+  _tickBusted(dt) {
+    if (this._bustT <= 0) return;
+    this._bustT -= dt;
+    if (this._bustT <= 0) this.el.busted.classList.remove('on');
+  }
+
   /** Cheap stand-in prompt driver — see AFF_VERB. Retires itself the moment MOVEMENT speaks. */
   _tickAffordancePrompt() {
-    if (this._sawPrompt || this._affDead || this.pauseOn) return;
+    if (this._sawPrompt || this._affDead || this.pauseOn || this._bustT > 0) return;
     if (--this._affCount > 0) return;
     this._affCount = 6;                     // ~10 Hz is plenty for a contextual verb
     const mv = this.engine.get('movement');
+    if (!mv?.position) return;
+
+    /* The pocket outranks every traversal affordance, and the ranking is not a preference: a rail
+       will still be a rail in ten seconds, and a guard's pocket closes the instant he turns round.
+       Its own failure is caught separately so a guards module that is not there yet cannot take
+       the traversal prompts down with it. */
+    const guards = this.engine.get('guards');
+    if (!this._pickDead && typeof guards?.nearestPickpocketTarget === 'function') {
+      try {
+        if (guards.nearestPickpocketTarget(mv.position, undefined, mv.yaw)) {
+          this.prompt(STEAL_VERB, 'E', 'steal');
+          return;
+        }
+      } catch (err) {
+        this._pickDead = true;
+        this.engine.warn?.(`hud: pickpocket prompt disabled — ${err?.message || err}`);
+      }
+    }
+
     const col = this.engine.get('collision');
-    if (!mv?.position || !col?.query) return;
+    if (!col?.query) { if (this._promptKind === 'steal') this.prompt(null); return; }
     try {
       const hits = col.query(mv.position, AFF_RANGE, AFF_TAGS);
       let best = null;
@@ -729,6 +1026,19 @@ export class HUD {
     // matrixWorldInverse is only refreshed at render time, one frame late.
     _mInv.copy(cam.matrixWorld).invert();
 
+    this._tickGoal(cam, W, H);
+
+    /* Lock-on. Not edge-clamped on purpose: a reticle pinned to the frame edge is pointing at
+       nothing, and MOVEMENT drops the lock at `lockDrop` anyway, so off-screen is momentary. */
+    if (this._lock) {
+      const p = this._project(this._lock, cam, W, H);
+      if (p.ok) {
+        this.el.lock.style.transform =
+          `translate(${p.x.toFixed(1)}px, ${p.y.toFixed(1)}px) scale(${p.s.toFixed(3)})`;
+        this.el.lock.classList.add('on');
+      } else this.el.lock.classList.remove('on');
+    }
+
     /* ---- Thief-o-Vision lock-ons ---- */
     const showMarks = this.tovOn && this._targets.length > 0;
     for (let i = 0; i < this._marks.length; i++) {
@@ -766,6 +1076,41 @@ export class HUD {
       a.el.classList.add('on');
     }
     if (retired) this._refreshThreat();
+  }
+
+  /**
+   * The objective marker.
+   *
+   * Two things make this readable during a fast pan rather than merely present:
+   *   · off-screen it is clamped to the frame edge (the same path the guard badges take) and a
+   *     chevron ORBITS the head to carry the bearing, so the shape the eye tracks never spins;
+   *   · the distance is in whole metres and recomputed at ~12 Hz, because a number that changes
+   *     every frame is a texture, not a readout.
+   */
+  _tickGoal(cam, W, H) {
+    const g = this._goal;
+    if (!g) return;
+    const p = this._project(g.point, cam, W, H, true);
+    this.el.goal.style.transform = `translate(${p.x.toFixed(1)}px, ${p.y.toFixed(1)}px)`;
+    this.el.goal.classList.toggle('edge', !p.onScreen);
+    if (!p.onScreen) {
+      // Screen-space bearing from the centre. The chevron art points up, hence the +90°.
+      const deg = Math.atan2(p.y - H * 0.5, p.x - W * 0.5) * 57.29577951308232 + 90;
+      this.el.goalRing.style.transform = `rotate(${deg.toFixed(1)}deg)`;
+    }
+    if (--this._goalCount <= 0) {
+      this._goalCount = TUNE.goalTick;
+      const mv = this.engine.get?.('movement');
+      if (mv?.position) {
+        const d = Math.round(Math.hypot(
+          mv.position.x - g.point.x, mv.position.y - g.point.y, mv.position.z - g.point.z));
+        if (d !== this._goalDist) {
+          this._goalDist = d;
+          this.el.goalDist.textContent = `${d} m`;
+        }
+      }
+    }
+    this.el.goal.classList.add('on');
   }
 
   /** World → screen. Returns pooled-ish plain numbers; `clamp` pins off-screen to the edge. */
@@ -895,6 +1240,9 @@ export class HUD {
     this._threatCount = t.count;
 
     this.el.threat.dataset.state = t.key;
+    /* Published on the root as well as the chip: the carried-loot chip has to know, because a
+       chase is what takes the treasure off you, and CSS can only reach sideways from an ancestor. */
+    if (this.root) this.root.dataset.threat = t.key;
     this.el.threat.style.setProperty('--threat-col', t.colour);
     this.el.threatLbl.textContent = t.label;
     this.el.threatNum.textContent = t.count > 1 ? `×${t.count}` : '';
@@ -974,13 +1322,13 @@ export class HUD {
     if (typeof p === 'string') {
       // Accept "E — Pickpocket" / "E: Pickpocket" as well as a bare verb.
       const m = p.match(/^\s*([\w ]{1,12}?)\s*[—–\-:|]\s*(.+)$/);
-      if (m) this.prompt(m[2].trim(), m[1].trim());
-      else this.prompt(p);
+      if (m) this.prompt(m[2].trim(), m[1].trim(), kindFor(m[2]));
+      else this.prompt(p, undefined, kindFor(p));
       return;
     }
     const text = p.text ?? p.verb ?? p.label ?? p.action ?? p.name ?? '';
     if (!text) { this.prompt(null); return; }
-    this.prompt(String(text), p.key ?? p.button ?? p.input ?? p.bind);
+    this.prompt(String(text), p.key ?? p.button ?? p.input ?? p.bind, p.kind ?? kindFor(text));
   }
 
   _applyVisibility() {
@@ -1007,6 +1355,9 @@ export class HUD {
     this._alerts.clear();
     this._marks.length = 0;
     this._digits.length = 0;
+    this._goal = null;
+    this._carry = null;
+    this._objBase = null;
     this.root?.remove();
     this.styleEl?.remove();
     this.root = null;
@@ -1020,6 +1371,23 @@ export class HUD {
 /* ------------------------------------------------------------- helpers */
 
 function num(v, dflt) { return typeof v === 'number' && Number.isFinite(v) ? v : dflt; }
+
+/**
+ * Which shape a pip index is drawn as.
+ *
+ * `PlayerHealth` publishes `hp = 1 + charms` and `max = 1 + maxCharms`, and says in as many words
+ * that *"Sly himself is the last pip"* — so index 0 is his life and everything above it is a
+ * lucky charm. The row empties right-to-left (`filled = i < hp`), which means the card is the
+ * last thing standing, which is exactly the fact it exists to communicate: with no charm left,
+ * the next hit ends the run.
+ *
+ * Derived from the index rather than from a new field on the payload, so nothing in `src/player`
+ * has to grow an interface for the HUD to stop drawing three identical gems.
+ */
+function pipKind(i) { return i === 0 ? 'life' : 'charm'; }
+
+/** Presentation class for a verb, whoever announced it. See PROMPT_KIND. */
+function kindFor(text) { return PROMPT_KIND[String(text).trim().toLowerCase()] ?? ''; }
 function fx(v) { return (v >= 0 ? '+' : '') + v.toFixed(1); }
 function esc(s) {
   return String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));

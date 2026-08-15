@@ -192,6 +192,7 @@ export const HUD_CSS = /* css */ `
    or during the drain back down out of a search. It is driven per frame, so no transition
    here: an eased meter lags the thing it is warning you about. */
 .sly-eye-fill, .sly-eye-fill-ink { transition: none; }
+.sly-eye-fill { stroke: var(--sus-col, var(--gold)); }
 /* Sub-threshold the arc is the only thing moving, so it gets its own presence; once the chip
    itself has gone loud the arc stops competing with it. */
 .sly-threat[data-state='hidden'] .sly-eye-fill { filter: drop-shadow(0 0 calc(var(--u) * .3) var(--sus-col)); }
@@ -421,6 +422,67 @@ export const HUD_CSS = /* css */ `
   white-space: nowrap;
 }
 
+/* A steal is not a traversal move and must not look like one. Every affordance in this game is
+   permanent — a rail is still a rail in ten seconds — but a pocket is open only while the guard
+   is unalerted and unlooted, so this prompt is the only one with a closing window. It gets the
+   loot channel (gold) against traversal's paint-white, and a heartbeat, so "act now" is carried
+   by colour and motion rather than by reading the verb. */
+.sly-prompt[data-kind='steal'] {
+  border-color: var(--gold-d);
+  box-shadow: inset 0 0 0 calc(var(--u) * .09) var(--gold),
+              0 calc(var(--u) * .32) 0 rgba(26,18,16,.65),
+              0 calc(var(--u) * .55) calc(var(--u) * 1.3) rgba(26,18,16,.55);
+  animation: sly-steal-beat .62s ease-in-out infinite alternate;
+}
+.sly-prompt[data-kind='steal'] .sly-prompt-verb { color: var(--gold-l); }
+.sly-prompt[data-kind='steal'] .sly-prompt-dash { background: var(--gold-l); }
+@keyframes sly-steal-beat {
+  from { border-color: var(--gold-d) }
+  to   { border-color: var(--gold-l) }
+}
+.sly-prompt-ic { width: calc(var(--u) * 1.35); height: calc(var(--u) * 1.35); flex: none; display: none; }
+.sly-prompt-ic svg { width: 100%; height: 100%; }
+.sly-prompt[data-kind='steal'] .sly-prompt-ic { display: block; }
+
+/* ================================================================ CAUGHT */
+
+/* PlayerHealth gives the fatal hit a 1.15 s beat before the world resets, and until now that
+   beat was rendered as an empty pip row and a red vignette — indistinguishable from a hit that
+   merely spent a charm. "Caught" and "hurt" are different outcomes in a game whose whole premise
+   is that being seen is the failure, so they get different reads. */
+.sly-busted {
+  position: absolute; left: 50%; top: 42%; z-index: 8;
+  transform: translate(-50%, -50%) rotate(-6deg) scale(.7);
+  display: flex; align-items: center; gap: calc(var(--u) * .8);
+  padding: calc(var(--u) * .5) calc(var(--u) * 1.4) calc(var(--u) * .6);
+  background: var(--ink);
+  border: calc(var(--u) * .2) solid var(--carn);
+  border-radius: calc(var(--u) * .22);
+  box-shadow: calc(var(--u) * .4) calc(var(--u) * .44) 0 rgba(26,18,16,.75);
+  opacity: 0; visibility: hidden;
+  transition: opacity .22s ease, transform .22s ease, visibility 0s .22s;
+}
+.sly-busted.on {
+  opacity: 1; visibility: visible;
+  transform: translate(-50%, -50%) rotate(-2.4deg) scale(1);
+  transition: opacity .1s ease, transform .34s var(--pop), visibility 0s;
+}
+.sly-busted .mark { width: calc(var(--u) * 2.8); flex: none; }
+.sly-busted .mark svg { width: 100%; height: auto; }
+/* Paint on ink, with the carnelian carried as an offset spot-colour plate — the same trick
+   .sly-obj-title uses with gold. It reads red at a glance and still measures 12.6:1, where
+   carnelian type on ink would have measured 3.45:1 and failed the bar the rest of this sheet
+   is held to (tests/hud.test.mjs M2). */
+.sly-busted-txt {
+  font-size: calc(var(--u) * 2.1); line-height: .96; color: var(--paint);
+  letter-spacing: .1em; transform: skewX(-7deg);
+  text-shadow: calc(var(--u) * .1) calc(var(--u) * .09) 0 var(--carn);
+}
+.sly-busted-sub {
+  display: block; font-size: calc(var(--u) * .78); letter-spacing: .26em;
+  color: var(--paint); text-shadow: none; margin-top: calc(var(--u) * .24);
+}
+
 /* ======================================================= DAMAGE / HIT FX */
 
 /* Driven per-frame from HUD._tickFx, so no transition here — it would smear the hit. */
@@ -492,6 +554,26 @@ export const HUD_CSS = /* css */ `
   font-size: calc(var(--u) * .72); letter-spacing: .2em; white-space: nowrap; color: inherit;
 }
 @keyframes sly-spin { to { transform: rotate(360deg) } }
+
+/* ---- lock-on ---- */
+
+/* §6.1 promises "hold right mouse — Thief-o-Vision + hook lock-on", and MOVEMENT's CombatStrafe
+   duly locks an orbit onto a mark — but nothing on screen said WHICH mark, so the player was
+   committed to a camera framing and a movement axis chosen by a target he could not identify.
+   Same reticle art as the Thief-o-Vision marks, held steady rather than spinning: this one is a
+   statement about the present, not an invitation to look. */
+.sly-lock {
+  position: absolute; left: 0; top: 0;
+  width: calc(var(--u) * 3.6); height: calc(var(--u) * 3.6);
+  margin: calc(var(--u) * -1.8) 0 0 calc(var(--u) * -1.8);
+  color: var(--gold);
+  opacity: 0; transition: opacity .12s ease;
+  will-change: transform;
+  filter: drop-shadow(0 0 calc(var(--u) * .4) rgba(232, 185, 66, .55));
+}
+.sly-lock.on { opacity: 1; }
+.sly-lock svg { width: 100%; height: 100%; animation: sly-lock-clamp .5s var(--pop) both; }
+@keyframes sly-lock-clamp { from { transform: scale(1.55) rotate(-14deg) } to { transform: scale(1) rotate(0) } }
 
 /* ---- objective marker ---- */
 

@@ -153,7 +153,7 @@ class Skid extends State {
 
 /** Landing beat. ANIMATION owns the squash (§6, 0.82 over 90 ms); MOVEMENT just says "land". */
 class Land extends State {
-  canEnter(c) { return c.grounded && c.landImpact > 3.2 && c._frame - c._landFrame <= 2; }
+  canEnter(c) { return c.grounded && c.landImpact > TUNE.landBeat && c._frame - c._landFrame <= 2; }
   enter(c) {
     const f = c.landImpact;
     c.landImpact = 0;
@@ -229,7 +229,7 @@ class AirState extends State {
   }
   landed(c) {
     if (!c.grounded) return null;
-    return c.landImpact > 3.2 ? 'land' : c.wishMag > 0.12 ? 'move' : 'idle';
+    return c.landImpact > TUNE.landBeat ? 'land' : c.wishMag > 0.12 ? 'move' : 'idle';
   }
 }
 
@@ -474,7 +474,7 @@ class WallJump extends State {
     c.accelerate(dt, TUNE.runSpeed, TUNE.accel * TUNE.airControl * 0.7, TUNE.airDrag);
     c.gravity(dt);
     c.move(dt);
-    if (c.grounded) return c.landImpact > 3.2 ? 'land' : 'idle';
+    if (c.grounded) return c.landImpact > TUNE.landBeat ? 'land' : 'idle';
     if (c.velocity.y <= 0) return 'fall';
     c.baseClip('wall_jump', 0.1);
     return null;
@@ -1076,6 +1076,118 @@ class Combo extends State {
   }
 }
 
+/**
+ * Circle-strafe around a mark — the one move in §6's vocabulary this file had no equivalent of.
+ *
+ * What it changes: with a guard locked, the stick stops meaning *north/east* and starts meaning
+ * *tangent/radius*. A/D swing Sly round the mark at a fixed distance, W/S tighten or open the
+ * orbit, and his facing is welded to the body the whole time. That is the difference between
+ * walking past a guard and casing him, and it is the read the whole stealth pillar is built on.
+ *
+ * Three deliberate choices worth their own sentence:
+ *
+ *   · **Raw axes, not `wishDir`.** `wishDir` is camera-relative (§6.1) and camera-relative input
+ *     is exactly what a lock-on suspends — the same idiom `PoleClimb` and `LedgeHang` already use
+ *     when the world, not the camera, defines the axes.
+ *   · **Shift and Ctrl outrank the lock.** Sneaking past a guard must never be overridden by
+ *     noticing him. If the player is holding a stealth modifier, that is the move they asked for.
+ *   · **Named `combatStrafe` so CAMERA resolves it for free.** `CameraRig.STATE_RULES` matches the
+ *     substring `combat` → the `combat` framing (pulled in 0.90 m, offset 0.30 m to the side,
+ *     lens tightened), which is precisely the framing an orbit wants. No edit to CAMERA's table,
+ *     which is not MOVEMENT's file to write.
+ *
+ * ANIMATION gets no strafe axis here, and that is a limitation stated rather than hidden: §4.7's
+ * `setLocomotion` has no lateral channel and extending that contract is ANIMATION's call, not
+ * ours. What it *does* get is the two channels that already carry an orbit honestly — `turnRate`,
+ * which for a circle of radius r at speed v is a constant signed v/r and drives the existing lean
+ * and turn-in-place blends, and `setLookAt`, which Controller now points at the mark's head.
+ */
+class CombatStrafe extends State {
+  canEnter(c) {
+    if (!c.grounded || !c.down('focus')) return false;
+    // The stealth modifiers win the button. See the note above.
+    if (c.down('sneak') || c.down('crouch')) return false;
+    const m = c.mark();
+    return !!m && m.distance <= TUNE.lockRange;
+  }
+  enter(c) {
+    const m = c.mark();
+    c.engine.emit('lockOn', m ? { pos: m.point, body: m.body } : null);
+  }
+  exit(c) {
+    // Invalidate rather than falsify: writing `ok = false` while the memo still carries this
+    // frame's number would answer "no mark" to anything else that asks before the frame ends.
+    c.lock.frame = -1;
+    c.lock.ok = false;
+    c.lock.body = null;
+    c.engine.emit('lockOn', null);
+  }
+  update(c, dt) {
+    if (!c.grounded) return 'fall';
+    if (!c.down('focus')) return c.wishMag > 0.12 ? 'move' : 'idle';
+    // `wide` keeps the mark out to `lockDrop`; only a guard who genuinely walks away breaks it.
+    const m = c.mark(true);
+    if (!m) return c.wishMag > 0.12 ? 'move' : 'idle';
+
+    /* Frame of the orbit: `_a` points from Sly to the mark (radial, inward), `_b` is its
+       left-hand tangent. Both are flattened — an orbit is a plan-view move; a guard standing on
+       a step above you must not tilt it. */
+    _a.set(m.point.x - c.position.x, 0, m.point.z - c.position.z);
+    const r = _a.length();
+    if (r < 1e-3) return 'idle';
+    _a.multiplyScalar(1 / r);
+    _b.set(-_a.z, 0, _a.x);
+
+    /* Radial term. Clamped by *rejecting the input*, not by clamping the position: pushing into
+       `strafeNear` and being teleported back out is the classic lock-on shove, and it reads as
+       the game fighting the player rather than as a wall. */
+    let radial = -c.wishRaw.z * TUNE.strafeClose;     // +z on the stick is "forward" = close in
+    if (radial > 0 && r > TUNE.strafeFar) radial = 0;
+    if (radial < 0 && r < TUNE.strafeNear) radial = 0;
+    const tangent = c.wishRaw.x * TUNE.strafeSpeed;
+
+    _c3.set(_b.x * tangent - _a.x * radial, 0, _b.z * tangent - _a.z * radial);
+    const v = c.velocity;
+    const dx = _c3.x - v.x, dz = _c3.z - v.z;
+    const step = Math.hypot(dx, dz);
+    if (step > 1e-5) {
+      const k = Math.min(1, TUNE.strafeAccel * dt / step);
+      v.x += dx * k; v.z += dz * k;
+    }
+
+    c.turnToYaw(Math.atan2(_a.x, _a.z), TUNE.strafeFace, dt);
+    c.gravity(dt);
+    c.move(dt);
+
+    const sp = c.speedXZ();
+    /* Only walk/run exist for grounded locomotion (§4.7's clip list), so a hard sideways orbit
+       plays a forward stride. The blend point is dropped to 3.0 — below the walk→run crossover
+       `Move` uses — because a strafe at 4.6 m/s is a *quick* move, not a jog, and the run clip's
+       longer stride is the closer lie of the two. */
+    c.baseClip(sp < 0.35 ? 'idle_confident' : sp < 3.0 ? 'walk' : 'run', 0.18);
+    return null;
+  }
+}
+
+/**
+ * Pickpocket (§6) — and specifically **the approach**, which is the whole move.
+ *
+ * What was here before put Sly's hand out whenever the player pressed E on flat ground with
+ * nothing grabbable nearby, whether or not a guard existed. `tests/pickpocket.test.mjs` says so
+ * in as many words — "it never checks that a guard is anywhere near" — and fixed the half of that
+ * defect it owned by making HUD pay on `guardPickpocket` (the steal) rather than on `pickpocket`
+ * (the reach). This is the other half: the reach itself should not happen with nobody to rob.
+ *
+ * Two phases, because the tension in a pickpocket is entirely in the first one:
+ *
+ *   `creep`  — a mark is `pickRange`…`pickApproach` away. Sly closes on it at `pickCreep`
+ *              (= `sneakSpeed`) with his facing on the body, re-reading the mark every frame so
+ *              a patrolling guard is followed rather than lunged at. It gives up on its own.
+ *   `reach`  — inside `pickRange`. The original 0.55 s beat, unchanged.
+ *
+ * `pickpocket` now fires at the *start of the reach* instead of on entry, so GUARDS resolves its
+ * own target with Sly's hand already at the pocket. FX's coin burst lands there too.
+ */
 class Pickpocket extends State {
   canEnter(c) {
     if (!c.grounded || !c.pressed('interact')) return false;
@@ -1083,19 +1195,71 @@ class Pickpocket extends State {
     if (c.afford('hook')) return false;
     if (c.afford('rail')) return false;
     if (c.afford('pole')) return false;
-    return true;
+    // …and only when there is actually a pocket. Without GUARDS this is simply always false,
+    // which is the correct behaviour for a build with nobody to steal from.
+    return !!c.pickMark();
   }
   enter(c) {
     c.velocity.x *= 0.2; c.velocity.z *= 0.2;
+    this._reaching = false;
+    this._creep = 0;
+    const m = c.pickMark();
+    if (m && m.distance <= TUNE.pickRange) this.reach(c);
+    else c.baseClip('sneak_walk', 0.14);
+  }
+  reach(c) {
+    this._reaching = true;
+    this._t = 0;
     c.oneShot('pickpocket');
     c.engine.emit('pickpocket', { pos: c.position, yaw: c.yaw, range: TUNE.pickRange });
   }
   update(c, dt) {
     if (!c.grounded) return 'fall';
-    c.accelerate(dt, 0, TUNE.accel, TUNE.decel * 2);
+
+    if (this._reaching) {
+      this._t += dt;
+      c.accelerate(dt, 0, TUNE.accel, TUNE.decel * 2);
+      c.gravity(dt);
+      c.move(dt);
+      if (this._t >= TUNE.pickTime) return 'idle';
+      return null;
+    }
+
+    /* ---- creep. Re-read the mark every frame: it is walking. ---- */
+    const m = c.pickMark();
+    if (!m) return c.wishMag > 0.12 ? 'move' : 'idle';
+    _a.set(m.point.x - c.position.x, 0, m.point.z - c.position.z);
+    const d = _a.length();
+    if (d > 1e-4) _a.multiplyScalar(1 / d);
+    else _a.copy(c.faceDir);
+
+    // Steering hard away cancels it, same threshold and same reason as magnetism's `magBreakDot`.
+    if (c.wishMag > 0.5 && dot2(c.wishDir.x, c.wishDir.z, _a.x, _a.z) < TUNE.pickBreakDot) {
+      return 'move';
+    }
+    this._creep += dt;
+    if (this._creep > TUNE.pickCreepMax) return c.wishMag > 0.12 ? 'move' : 'idle';
+
+    c.turnToward(_a, TUNE.turnGround * 0.9, dt);
+    // Steer with the *mark's* direction, not the stick's — this is the assist, and it is bounded
+    // by `pickCreepMax` above and refusable by the break test above that.
+    const v = c.velocity;
+    const tx = _a.x * TUNE.pickCreep, tz = _a.z * TUNE.pickCreep;
+    const ax = tx - v.x, az = tz - v.z;
+    const l = Math.hypot(ax, az);
+    if (l > 1e-5) {
+      const k = Math.min(1, TUNE.accel * 0.6 * dt / l);
+      v.x += ax * k; v.z += az * k;
+    }
     c.gravity(dt);
     c.move(dt);
-    if (c.sm.time >= TUNE.pickTime) return 'idle';
+
+    /* Re-measure against the point rather than re-asking `pickMark()`: the resolver is memoised
+       for the frame (it has to be — `canEnter` polls it), so it would answer with the distance
+       from before this step and cost the reach a frame. `m.point` is the slot's own vector and is
+       still live. 3D, because that is the metric GUARDS' own `nearestPickpocketTarget` applies. */
+    if (m.point.distanceTo(c.position) <= TUNE.pickRange) { this.reach(c); return null; }
+    c.baseClip('sneak_walk', 0.18);
     return null;
   }
 }
@@ -1147,6 +1311,10 @@ export function buildMoveset() {
     new Combo('combo', { priority: 55, group: 'action' }),
     new Pickpocket('pickpocket', { priority: 52, group: 'action' }),
     new Land('land', { priority: 50, group: 'ground' }),
+    /* Below `land`, `pickpocket` and `combo` on purpose: a lock is a *stance*, and every one of
+       those three is an action the player took while holding it. Above `skid` and everything
+       under it, so the orbit owns ordinary ground locomotion for as long as the button is held. */
+    new CombatStrafe('combatStrafe', { priority: 45, group: 'ground' }),
     new Skid('skid', { priority: 40, group: 'ground' }),
     new Fall('fall', { priority: 30, group: 'air' }),
     new Tiptoe('tiptoe', { priority: 20, group: 'ground' }),

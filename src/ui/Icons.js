@@ -279,7 +279,10 @@ export function threatEye(cls = '') {
           stroke="currentColor" stroke-width="4.4" stroke-linecap="round"/>
     <path d="${lash}" fill="none" stroke="${C.ink}" stroke-width="9.5" stroke-linecap="round"
           pathLength="100" stroke-dasharray="100" stroke-dashoffset="100" class="sly-eye-fill-ink"/>
-    <path class="sly-eye-fill" d="${lash}" fill="none" stroke="var(--sus-col, ${C.gold})"
+    <!-- The live colour arrives from CSS (\`.sly-eye-fill { stroke: var(--sus-col) }\`): a
+         presentation attribute cannot resolve a custom property, so this fill is only the
+         value the meter rests at if the stylesheet ever fails to load. -->
+    <path class="sly-eye-fill" d="${lash}" fill="none" stroke="${C.gold}"
           stroke-width="5.4" stroke-linecap="round"
           pathLength="100" stroke-dasharray="100" stroke-dashoffset="100"/>
   `, `sly-eye ${cls}`);

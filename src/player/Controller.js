@@ -106,6 +106,23 @@ export const TUNE = {
   poleSwingSpin: 5.2,
   poleSwingTime: 0.42,
   poleSwingLaunch: 1.22,
+  /* Re-grab lockout after leaving a pole under your own power — the exact counterpart of
+     `hangLock` on ledges, and needed for the same reason. `PoleClimb.canEnter` auto-grabs any
+     shaft within `poleMount` 1.9 m that you are heading toward, and the deliberate exits leave
+     you well inside that: the top hop rises only 0.7 m and lands you on the capital with the
+     shaft directly below. Without a lockout the hop is re-grabbed inside the same frame — the
+     state machine runs up to four passes — and the obelisk becomes the dead end its own code
+     comment says the hop exists to prevent. 0.40 s = the hop's rise to apex (6.05 m/s at our
+     gravity, 0.25 s) plus `jumpBufferMs` 0.14, so a held jump cannot fight the lockout either. */
+  poleLockout: 0.40,
+  /* Minimum wind-up before a pole swing may be released. `hookMinSwing` 0.18 exists for exactly
+     this on the rope and the pole had no equivalent: `PoleClimb.update` returns 'poleSwing' on
+     `pressed('attack')`, and the *same* still-true press then satisfied PoleSwing's own release
+     test on its first pass — which launched, which put Sly in `jump` (group 'air') with the press
+     STILL live, which `DiveAttack` (priority 95) took. One tap on a pole read as a cane slam.
+     0.14 s = `jumpBufferMs`: the window this game already treats as one press, so the press that
+     starts a swing can never be the press that ends it. */
+  poleSwingMin: 0.14,
 
   /* ---- hook (§6). The best-feeling move in the game. ---- */
   hookL:       2.2,      // pendulum length, anchor -> feet
@@ -131,8 +148,53 @@ export const TUNE = {
   diveRadius:  1.2,
   diveShake:   0.35,
   bounceUp:    0.86,     // × jumpV0
-  pickTime:    0.55,
-  pickRange:   2.4,
+
+  /* ---- lock-on + circle-strafe. -----------------------------------------------------------
+     The move this file had no equivalent of. Sly reads as a thief rather than a jogger because
+     when a guard matters he *orbits* him: the camera holds the mark, Sly holds the mark, and the
+     stick stops meaning north/east and starts meaning tangent/radius. RMB already is the lock
+     button in §6.1 ("hold = Thief-o-Vision + hook lock-on"), so this needs no new binding and
+     cannot fire by accident. ---- */
+  lockRange:   6.0,      // acquire distance. The combo lunges 2.4–3.8 m and `pickRange` is 2.4,
+                         // so 6 m is "one committed step and a swing away" — near enough that the
+                         // encounter is about this guard, far enough to circle before committing.
+  lockDrop:    8.4,      // 1.4 × lockRange. Pure hysteresis: without a wider break distance the
+                         // lock chatters at the boundary and the camera's `combat` framing pumps
+                         // in and out with it, which reads as a camera fault rather than a guard.
+  lockDot:    -0.15,     // the mark may sit up to ~99° off the camera's forward. Generous, because
+                         // the player has already declared intent by holding the button; the cone
+                         // only exists to pick *which* of two nearby guards is meant.
+  strafeSpeed: 4.6,      // tangential. Between walk 2.6 and run 7.2: at the 3 m mid-orbit radius
+                         // it is ω = 1.53 rad/s ≈ 88°/s — brisk enough to flank, slow enough that
+                         // the silhouette still reads against the background as it swings past.
+  strafeClose: 3.2,      // radial. Deliberately below `strafeSpeed`: closing is a commitment and
+                         // should feel heavier than side-stepping.
+  strafeNear:  1.9,      // inner orbit radius. Just outside the capsule-plus-guard overlap, so
+                         // circling never degenerates into shoving him.
+  strafeFar:   5.2,      // outer orbit radius, inside `lockRange` so orbiting cannot break its own
+                         // lock — you have to *walk away* to drop a mark, not merely circle wide.
+  strafeAccel: 30,       // snappier than the ground `accel` 38 would suggest at this speed: an
+                         // orbit is constant-radius, so the only accel the player ever feels is
+                         // the start and the reversal, and both want to be crisp.
+  strafeFace:  13,       // rad/s the facing tracks the mark. Just under `turnGround` 14 — the lock
+                         // must never turn Sly faster than his own steering can.
+
+  /* ---- pickpocket (§6). --------------------------------------------------------------------
+     The approach is the move; the grab is a formality. Every one of these is a distance or a
+     duration that keeps Sly *creeping* rather than lunging. ---- */
+  pickTime:     0.55,    // the reach itself
+  pickRange:    2.4,     // arm's length. GUARDS re-resolves the mark at this radius, so it is
+                         // also the contract width of `nearestPickpocketTarget`.
+  pickApproach: 4.6,     // how far out E will still start an approach. ~2 s of creeping: far
+                         // enough that the player commits from cover, near enough that it never
+                         // reads as an auto-walk across the courtyard.
+  pickCreep:    1.4,     // = `sneakSpeed`, and for the same reason. Nobody runs at a pocket, and
+                         // sharing the number means the approach inherits the sneak's feel exactly.
+  pickCreepMax: 2.2,     // abort the approach after this. A mark that walks away faster than Sly
+                         // creeps is a mark he missed, not one he chases — chasing is what would
+                         // turn the stealth move into a homing attack.
+  pickBreakDot: -0.5,    // steering this hard against the approach cancels it, same threshold and
+                         // same reason as `magBreakDot`: an assist you cannot refuse plays itself.
 
   /* ---- paraglide ---- */
   glideGravity: 0.17,
@@ -182,11 +244,31 @@ export const TUNE = {
   magBreakDot:   -0.5,
   magHold:        0.25,      // = coyote + jump buffer: how long Sly holds a reached point
 
-  /* ---- safety ---- */
-  voidY:       -220,     // absolute last resort; the level's lowest legal floor is -12
-  landHard:     9.0,     // |vy| above this is a hard landing
+  /* ---- landing. Both thresholds are *arrival speeds*, and both are derived from what this
+     moveset can do to itself rather than picked. Measured against the shipped `gravity()` at
+     60 Hz, not reasoned: a single jump (v0 11.0) peaks at 2.356 m and lands at **10.474 m/s**; a
+     bare double jump lands at 9.386; jump + double stacked peak at 4.262 m and land at **14.304**;
+     a spire jump (×1.25) lands at 13.293. ---- */
+  landBeat:    11.0,     // below this, landing costs nothing — the state machine does not even
+                         // enter `land`. The line is `jumpV0` itself, and that is the whole
+                         // sentence: **a landing interrupts you when you arrive faster than you
+                         // can launch yourself.** It clears the routine jump (10.474) and the
+                         // double jump (9.386) with margin, so ordinary platforming never pays a
+                         // beat, and it sits far above `stepHeight` 0.42 m (4.49 m/s) so a kerb
+                         // is a step and not an event.
+  landHard:    14.5,     // `land_hard` + camera shake + the root impulse. Just over the fastest
+                         // landing the moveset can reach under its own power (the 14.304 m/s
+                         // stack above) — i.e. the first arrival that was NOT a move you meant.
+                         // It is a 4.38 m free fall, a storey and a half, which is about when a
+                         // landing should hurt to watch. Was 9.0, which classified *every single
+                         // jump in the game* as a crash and shook the camera for it; that never
+                         // showed because `landImpact` was measured after it had been zeroed
+                         // (see `_noteImpact`), so the whole branch was unreachable.
   landSoftTime: 0.09,
   landHardTime: 0.19,
+
+  /* ---- safety ---- */
+  voidY:       -220,     // absolute last resort; the level's lowest legal floor is -12
 };
 
 const SPAWN = new THREE.Vector3(0, 0, 30);
@@ -305,7 +387,33 @@ export class Controller {
     this.targets = new TargetField(this);
     /* Spline-follow scratch for the rail moves. RailBase.mount() writes straight into it. */
     this.rail = { spline: null, rec: null, u: 0, len: 1, speed: 0 };
+    /**
+     * Shaft-follow scratch for the pole moves, the exact counterpart of `this.rail` above.
+     * `PoleClimb.mount`-equivalent (`PoleClimb.enter`) writes straight into it and `PoleSwing`
+     * reads it, so it must be a persistent slot rather than a per-entry literal (§5: `update()`
+     * allocates nothing).
+     *
+     * **This object was missing.** `Moveset.PoleClimb` and `PoleSwing` have always read `c.pole`,
+     * nothing ever created it, and `enter()`/`update()` are both wrapped in the state machine's
+     * `softFail` try/catch — so grabbing a pole did not error, it *silently half-ran*. Measured
+     * headlessly: `enter` threw at its first write and initialised nothing, then `update` threw
+     * only *after* `c.position.y += vy * dt`, so holding W climbed at `poleUp` 3 m/s **forever**,
+     * with no shaft, no top clamp, no `place()` and no collision — straight up into the sky, and
+     * `jump` could not release because it threw before it could return. Crouch was worse: −8 m/s
+     * through the floor until `voidY` −220 respawned him. The warning ring filled at its 190 cap.
+     * Every one of §8.1's 17 `pole`-tagged bodies — the 22 m obelisk, the twelve hypostyle
+     * columns, the two hook masts, the aisle pinnacle poles — was a soft-lock on contact.
+     *
+     *   rec              collision record we are attached to
+     *   x, z             shaft axis in world space (poles are vertical, §4.4)
+     *   r                shaft radius, read off the collider's cylinder parameters
+     *   bottom, top      climbable extent, from `mesh.userData.bottom/top` (poleProxy sets both)
+     *   hold             distance from the axis Sly's capsule sits at while gripping
+     *   angle            where round the shaft he is, radians; the spin axis of pole swing
+     */
+    this.pole = { rec: null, x: 0, z: 0, r: 0.5, bottom: 0, top: 0, hold: 0.77, angle: 0 };
     this.hangLock = 0;         // brief lockout after dropping off a ledge, so it can't re-grab
+    this.poleLock = 0;         // …and its counterpart for poles. See TUNE.poleLockout.
     this.pendingLaunch = 0;    // launch velocity handed to Jump by rail/pole/spire exits
 
     /* ---- intent ---- */
@@ -337,6 +445,14 @@ export class Controller {
     this.hitWall = false;
     this.hitCeiling = false;
     this.landImpact = 0;
+    /* The frame `landImpact` was written on. `Land.canEnter` gates on it so a stale impact from
+       two seconds ago cannot re-fire the landing beat; it read an undefined field, every
+       comparison was `NaN <= 2` = false, and the polled entry to `land` was therefore dead —
+       only the explicit `return 'land'` inside `AirState.landed()` ever reached it. Touching down
+       out of a wall run, a wall cling or a magnet arrival landed in total silence: no squash, no
+       `landed` event, so no FX dust and no footfall from AUDIO. −99 rather than 0 so frame 1 of a
+       session cannot look like a landing. */
+    this._landFrame = -99;
 
     /* ---- ledge probe result ---- */
     this.ledge = { ok: false, y: 0, x: 0, z: 0, nx: 0, nz: 1, rec: null };
@@ -344,6 +460,14 @@ export class Controller {
     this.wall = { ok: false, nx: 0, nz: 0, ny: 0, dist: 0, rec: null, tag: '' };
 
     this._aff = { hook: affSlot(), rail: affSlot(), pole: affSlot(), spire: affSlot(), ledge: affSlot() };
+    /* Persistent mark slots, memoised per frame exactly like `_aff` above and for the same
+       reason: `canEnter` runs for every candidate above the current priority, so a resolver it
+       calls must be free the second time. `body` is a GUARDS-owned object — held only for the
+       length of a lock and re-validated every frame, never retained across a release. */
+    this.lock = { frame: -1, wide: -1, ok: false, body: null, point: new THREE.Vector3(), distance: Infinity };
+    this.pick = { frame: -1, ok: false, body: null, point: new THREE.Vector3(), distance: Infinity };
+    this._guards = null;
+    this._lookAt = false;      // whether ANIMATION currently holds a look-at target
     this._frame = 0;
     this._prevYaw = SPAWN_YAW;
     this._baseClip = '';
@@ -403,6 +527,8 @@ export class Controller {
     // would drop him off the perch in `hero` and out of the swing in `traversal`.
     if (this.engine.debug.freeCam) {
       this._resetVision();
+      // A look-at left standing would cock Sly's head at a guard the harness has posed him away from.
+      if (this._lookAt) { this._lookAt = false; try { this.anim?.setLookAt?.(null); } catch { /* pose-only path */ } }
       this._pushCharacter();
       this._pushLocomotion(dt);
       return;
@@ -424,6 +550,8 @@ export class Controller {
     this.speed = Math.hypot(this.velocity.x, this.velocity.z);
     this._pushCharacter();
     this._pushLocomotion(dt);
+    // After the machine has run, so both read the state Sly is actually in this frame.
+    if (dt > 0) this._pushLookAt();
   }
 
   _bindCollision() {
@@ -627,7 +755,7 @@ export class Controller {
       this.groundSlope = _gndRes.slope;
       this.groundTag = _gndRes.tag;
       this.groundMaterial = _gndRes.material;
-      if (!wasGrounded) this.landImpact = -this.velocity.y;
+      if (!wasGrounded) this._noteImpact(-this.velocity.y);
       this.position.y = _gndRes.y;
       if (this.velocity.y < 0) this.velocity.y = 0;
     }
@@ -722,6 +850,154 @@ export class Controller {
     s.rec = r.rec || null;
     s.ok = true;
     return s;
+  }
+
+  /* ==================================================================== */
+  /* marks — who Sly is paying attention to                               */
+  /* ==================================================================== */
+
+  /**
+   * GUARDS, if the build has it. Resolved lazily and cached, like `anim` and `character`: the
+   * MANIFEST loads `movement` before `guards`, so a constructor-time lookup would pin null.
+   *
+   * Everything below goes through the two methods under GUARDS' own `/* public *\/` banner —
+   * `nearest()` ("HUD lock-on and FX use this") and `nearestPickpocketTarget()`. MOVEMENT never
+   * touches the roster, never imports `src/ai/**` (§1 forbids it), and a build without guards
+   * simply has no marks: `canEnter` goes false and the delta is exactly zero. Same discipline as
+   * `TargetField` against an empty registry.
+   */
+  _guardModule() {
+    if (!this._guards) this._guards = this.engine.get('guards');
+    return this._guards;
+  }
+
+  /**
+   * The lock-on mark: the body Sly is holding in focus. Memoised for the frame.
+   *
+   * `wide` means **"we already hold this mark"** — the circle-strafe passes it every frame it is
+   * running. Two things change, and both are hysteresis:
+   *
+   *   · the range opens from `lockRange` to `lockDrop`, so a guard drifting to the edge of the
+   *     orbit is kept rather than re-acquired and the camera does not pump at the boundary;
+   *   · **the facing cone stops applying.** It is an *acquisition* test — "which of these two did
+   *     you mean" — and applying it to retention is a bug I shipped into this file and measured
+   *     out of it: circling ~100° carries the mark behind the camera's forward, the cone rejected
+   *     it, and the lock dropped mid-orbit through no act of the player's. A lock is broken by
+   *     walking away or letting go, never by the move you are performing with it.
+   */
+  mark(wide = false) {
+    const s = this.lock;
+    const w = wide ? 1 : 0;
+    // Misses are memoised as well as hits: the machine runs up to four poll passes per frame and
+    // an unmemoised miss would re-walk the whole garrison on each of them.
+    if (s.frame === this._frame && s.wide === w) return s.ok ? s : null;
+    const range = wide ? TUNE.lockDrop : TUNE.lockRange;
+    s.frame = this._frame;
+    s.wide = w;
+    s.ok = false;
+    s.body = null;
+    s.distance = Infinity;
+    const G = this._guardModule();
+    if (typeof G?.nearest !== 'function') return null;
+    let g = null;
+    try { g = G.nearest(this.position, range); } catch (e) { this.softFail('nearest', 'guards', e); }
+    /* A body on the floor is scenery, not a mark. Compared against the literal rather than
+       importing `STATE` from `src/ai/Patrol.js`, because §1 forbids MOVEMENT importing another
+       agent's module — and a string on a public field is data, not an internal. */
+    if (!g || !g.position || g.state === 'ko') return null;
+    _v1.subVectors(g.position, this.position);
+    const d = _v1.length();
+    if (d > range) return null;
+    /* Which of two nearby guards did the player mean? The camera's forward is the only honest
+       answer — it is where they are looking, and `_readInput` has already computed it this frame.
+       The cone is wide (~99°) on purpose: holding the button is the intent, this only disambiguates.
+       Acquisition only — see the note above on why retention must not consult it. */
+    if (!wide && d > 1e-3) {
+      _v2.copy(_fwd).setY(0);
+      if (_v2.lengthSq() < 1e-6) _v2.copy(this.faceDir);
+      else _v2.normalize();
+      _v3.copy(_v1).setY(0);
+      if (_v3.lengthSq() > 1e-6 && _v3.normalize().dot(_v2) < TUNE.lockDot) return null;
+    }
+    s.ok = true;
+    s.body = g;
+    s.point.copy(g.position);
+    s.distance = d;
+    return s;
+  }
+
+  /**
+   * The pickpocket mark: the nearest guard whose pocket Sly can actually reach, in front of him.
+   * Memoised for the frame — the prompt asks every frame and `Pickpocket.canEnter` asks again.
+   *
+   * The range passed is `pickApproach`, not `pickRange`: MOVEMENT's job is to know a pocket is
+   * *approachable*, and GUARDS re-runs its own `pickRange` test when the reach actually fires, so
+   * the authority over "was he robbed" stays in one place.
+   */
+  pickMark() {
+    const s = this.pick;
+    if (s.frame === this._frame) return s.ok ? s : null;
+    s.frame = this._frame;
+    s.ok = false;
+    s.body = null;
+    s.distance = Infinity;
+    const G = this._guardModule();
+    if (typeof G?.nearestPickpocketTarget !== 'function') return null;
+    let g = null;
+    try { g = G.nearestPickpocketTarget(this.position, TUNE.pickApproach, this.faceDir); }
+    catch (e) { this.softFail('nearestPickpocketTarget', 'guards', e); }
+    if (!g?.pocketPosition) return null;
+    s.ok = true;
+    s.body = g;
+    s.point.copy(g.pocketPosition);
+    s.distance = this.position.distanceTo(g.pocketPosition);
+    return s;
+  }
+
+  /**
+   * ── `prompt` is deliberately NOT published from here. Do not add it back on its own. ──────────
+   *
+   * It is tempting: `HUD.js` subscribes to `prompt`, MOVEMENT is the module that knows what Sly
+   * can reach, and this file already resolves the pocket mark for `Pickpocket`. A draft of exactly
+   * that shipped from here and was reverted, for two reasons worth leaving behind.
+   *
+   * 1. **It is not a gap.** `HUD._tickAffordancePrompt` already drives contextual verbs — the
+   *    pocket via `Guards.nearestPickpocketTarget`, and hook/rail/pole/spire/vent via one
+   *    `collision.query`. Publishing the pocket alone adds a second source of truth for a verb
+   *    that already appears, which is the `guardAlert`/`guardSpotted` failure mode that
+   *    `tests/eventbus.test.mjs` keeps a whole list to prevent.
+   * 2. **The first publisher retires that fallback**, so a partial publication costs the four
+   *    traversal verbs and buys nothing. `tests/eventbus.test.mjs` names the trap in advance and
+   *    parks `prompt` in DEAD_UNBUILT for it.
+   *
+   * The correct version — MOVEMENT owns the pocket, HUD keeps traversal — spans `src/player/` and
+   * `src/ui/` and is routed as one coordinated change, recorded in `progress/records/ui/`. The
+   * cost argument the first draft gave for omitting hook/rail/pole was also simply wrong:
+   * `collision.query` takes a tag array and answers all five in a single BVH walk, which is
+   * cheaper than the per-tag `afford()` calls that draft was avoiding.
+   */
+
+  /**
+   * Hand ANIMATION the head/upper-body look-at (§4.7). MOVEMENT has never used this channel, and
+   * a lock-on that does not turn Sly's head is a lock-on the player has to take on trust.
+   */
+  _pushLookAt() {
+    const st = this.sm.current;
+    const want = st && (st.name === 'combatStrafe' || st.name === 'pickpocket')
+      ? (st.name === 'pickpocket' ? this.pick : this.lock) : null;
+    const on = !!(want && want.ok);
+    if (!on && !this._lookAt) return;
+    this._lookAt = on;
+    const a = this.anim;
+    if (!a?.setLookAt) return;
+    if (on) {
+      // Aim at the head, not the feet: `headY` is GUARDS' own public accessor for exactly this.
+      _v1.copy(want.point);
+      _v1.y = Number.isFinite(want.body?.headY) ? want.body.headY : _v1.y + 1.6;
+      try { a.setLookAt(_v1); } catch (e) { this.softFail('setLookAt', 'animation', e); }
+    } else {
+      try { a.setLookAt(null); } catch (e) { this.softFail('setLookAt', 'animation', e); }
+    }
   }
 
   /** True when the surface underfoot is too narrow to walk normally — tiptoe territory. */
@@ -890,9 +1166,33 @@ export class Controller {
     const r = this._sweep(this.position, _to);
     if (!r.hit) { this.position.copy(_to); return; }
     this.position.copy(r.position);
-    if (r.normal.y > 0.3 && v.y < 0) { v.y = 0; }
+    if (r.normal.y > 0.3 && v.y < 0) { this._noteImpact(-v.y); v.y = 0; }
     else if (r.normal.y < -0.3 && v.y > 0) { v.y = 0; this.hitCeiling = true; }
     else { v.y = 0; }
+  }
+
+  /**
+   * Record how hard Sly just arrived. `landImpact` is the only input to the whole landing branch —
+   * `land` / `land_soft` / `land_hard`, the camera shake, the root impulse and the `landed` event
+   * that FX and AUDIO subscribe to.
+   *
+   * **It has to be captured here, not in `_probeGround`.** `move()` runs `_moveVertical` first and
+   * `_probeGround` after, and the swept capsule is what actually stops a fall — it sets `v.y = 0`
+   * two lines above. `_probeGround` then read `-this.velocity.y` off a velocity that had already
+   * been zeroed and recorded **0**. The probe only ever won the race for descents slow enough to
+   * finish inside its 0.06 m snap band (under ~3.6 m/s), so `landImpact` could never exceed that,
+   * every threshold above it was dead code, and a 14 m drop landed in complete silence — measured
+   * headlessly: zero `landed` events, `land` never entered.
+   *
+   * `max` within a frame rather than last-write-wins, because both call sites can fire on the same
+   * frame and the sweep's number is the true one; and the frame stamp is what lets `Land.canEnter`
+   * refuse an impact that is already two frames stale.
+   */
+  _noteImpact(speed) {
+    if (!(speed > 0)) return;
+    if (this._landFrame === this._frame && this.landImpact >= speed) return;
+    this.landImpact = speed;
+    this._landFrame = this._frame;
   }
 
   /** Iterative sweep-and-slide. `killVel` projects velocity out of the contact plane. */
@@ -1116,6 +1416,10 @@ export class Controller {
     this.hangLock = 0;
     this.targets.release('teleport');
     this._assistUsed = false;
+    // Marks are positional; the body Sly was circling is metres away now. Frame −1 forces both
+    // resolvers to re-run rather than answer from a memo taken before the jump.
+    this.lock.frame = -1; this.lock.ok = false; this.lock.body = null;
+    this.pick.frame = -1; this.pick.ok = false; this.pick.body = null;
     this.height = TUNE.height;
     this.sm.set('fall');
     this.sm.set('idle');
@@ -1174,6 +1478,10 @@ export class Controller {
   dispose() {
     this._disposed = true;
     this._resetVision();
+    // Latched in ANIMATION's state; leaving it set survives our own teardown.
+    if (this._lookAt) { this._lookAt = false; try { this.anim?.setLookAt?.(null); } catch { /* animation already gone */ } }
+    this.lock.body = null;
+    this.pick.body = null;
     this.engine.timeScale = 1;
     this._offBounce?.(); this._offHurt?.(); this._offShot?.();
     this._offTarget?.(); this._offUntarget?.();
