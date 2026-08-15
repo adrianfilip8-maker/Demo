@@ -24196,6 +24196,20 @@ been executed four times and will be needed again:
 capture (§316) is a bet that no rollback lands inside it, and tonight that bet loses more often
 than it wins.
 
+> **§325.1 — ROLLBACK FIVE (2026-08-15 ~03:00), and it adds one new fact.** Killed `guardcone`
+> run 5 at 23/49 frames. Recovery was the runbook above, unmodified: 21 untracked files collided
+> with the merge (computed exactly by intersecting `git ls-tree -r --name-only FETCH_HEAD` with
+> the local untracked list, rather than guessing), moved to `/tmp/prerollback5/`, ff-merge to
+> `20596ce`, suite 541. **Nothing durable lost again** — the r13 fold, the AGENTS.md §7.3
+> correction and both in-flight snapshots all came back from origin.
+> **The new fact: the disk and the log disagreed after the rollback.** The working tree came back
+> holding **12** frames while the run-5 log — restored from git, because the in-flight snapshot
+> commits had captured it — recorded **23**. So the mid-run snapshot commits did more than tidy
+> the tree: they preserved the only record of the eleven frames the container threw away, and
+> they are what makes the archive honestly readable as partial. `guardcone1-void-run5/` therefore
+> holds 12 frames against a 23-frame log, and that mismatch is expected, not corruption.
+> Keep taking the in-flight snapshots.
+
 ## §326 — lithold VOIDs on its own staging gate, and the finding is that the action-shot bleach is GONE from this tree
 
 `BG` — the seal's registered "a staging that isn't the diagnosed one VOIDs" gate, measured on the
