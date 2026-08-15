@@ -24372,3 +24372,20 @@ bought once an hour.
 
 `guardcone` relaunched as run 7 anyway (pid 5112): it costs two minutes to start and might land in
 a clear window. It is no longer the wave's priority.
+
+> **§329.1 — CHUNKING IS VALIDATED UNDER FIRE, and the force-add is half of why.** Rollback nine
+> destroyed the working tree mid-capture and `progress/records/litbleach1/` vanished from disk
+> entirely. The ff-merge brought chunk 1 back from origin **byte-identical** — `traversal.off` and
+> `traversal.back` both still sha `a3226c9526f2d77e`, matching their pre-rollback values exactly.
+> **Nine rollbacks in, this is the first time captured frames have survived one**, and only chunk
+> 2 had to be relaunched. AMENDMENT-litbleach-A1's promise — a completed chunk persists while a
+> dead one is re-run alone — held in practice, not just on paper.
+> **It would NOT have held without force-adding the frames.** `progress/records/*/**/*.png` is
+> gitignored (§272.4), which is correct for routine capture bulk but silently fatal here: a
+> rollback wipes the working tree AND `/tmp`, so an ignored frame has no durable copy anywhere and
+> every completed chunk would be re-captured after every rollback — precisely the cost A1 exists to
+> avoid. `git add -f` on the chunk's PNGs plus its manifest, ~8.2 MB per chunk, is what makes the
+> amendment real. **A chunked seal that does not force-add its frames is a chunked seal in name
+> only.**
+> Three mechanisms now protect evidence from these rollbacks: push every fold immediately (§325),
+> track run logs from boot (§329.3), and force-add completed chunk frames (here).
