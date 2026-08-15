@@ -25302,3 +25302,151 @@ The registered decision — `KEYED >= 0.10` vs `DARK <= 0.02`, with `DARK` refut
 untouched and still open. The scorer's rect table is raw instrument output, not a verdict.
 
 Nothing ships.
+
+---
+
+## §345 — perch_idle: the premise is REFUTED for a third time, and the real residual is the CAMERA, not the keyframes
+
+Task #17 has carried *"`perch_idle` has zero lateral line of action — the one unfixed §7.3 pose
+item"* as open. **§204 already closed it** (*"the perch pose item was already fixed; closed on
+measurement, not on its own comment"*) and the original bullet at `KNOWN_ISSUES.md:797` has been
+struck through as **STALE — corrected 2026-08-02** since before this session. The work-order line is
+a stale artefact that has now propagated three times. Full working in
+`progress/records/perchidle/NOTE-perch-line.md`; instrument beside it.
+
+**Verified here, independently, by running the lane's metric:** `perch_idle` scores `latEx` **3.66 cm
+(2.0 %H)** on the legacy rig and 6.19 cm on the shipped `RIG3` — **2nd of 5 idles on legacy, 1st on
+the rig that ships**, and 11th–13th of all 52 clips, above the 75th percentile against a median of
+~1.7–2.6 cm. It holds across the whole 3.2 s loop (3.35–3.96 cm), so there is no orphaned-key
+collapse. The clips that genuinely read zero are `wall_cling` **0.00**, `crouch_walk` 0.05,
+`jump_rise` 0.07, `pole_climb` 0.17. **Not zero, not an outlier, top of its group.**
+
+**Why the original metric said otherwise, and a correction to §204.** `poseprobe`'s `S-curve` line —
+the instrument the item quotes — prints **absolute model-space x**, and a line of action is a shape,
+not a position: that triple slides rigidly with the clip's `pos.x`. Referred to the hips instead:
+
+```
+perch_idle      hips 0.045  chest 0.082  head 0.045   ->  chest +0.037  head +0.000
+idle_confident  hips -0.078 chest -0.047 head -0.110  ->  chest +0.031  head -0.032
+```
+
+So §204's *"+8.2 cm chest, a genuine lateral S"* is **4.5 cm of rigid translation plus 3.7 cm of
+shape**, and referred to the figure the shape is a **C** — out and back to the hip line — **not an
+S**. The S in the idle table belongs to **`idle_confident`**, which is the one that actually
+reverses. §204's conclusion (the line is present and landed) stands; its characterisation does not.
+
+**The one true residual is the camera bearing, and it is not fixable in the keyframes.** At `hero`
+the frontal plane is foreshortened to **0.29** (view 73.4°), so 3.66 cm of lateral excursion arrives
+as **1.81 px** against a **~2.5 px ink hull** — the line of action is *narrower than the ink line
+drawn over it*. The ~17.5 px of screen-lateral excursion `hero` does show is ~90 % **sagittal**.
+`sly-perch`, the verification twin, gets 0.84 of the frontal plane at 354 px/m → **10.84 px, 4.3× the
+hull**: that is the right instrument for this pose and it already exists.
+
+**Priced, not proposed.** Gain is **~0.37 cm of frontal span per degree of torso Z-roll**. Clearing
+the hull by 2× at `hero` needs span ≥ **10.1 cm** — 2.8× shipped, about **+17°**, 1.6× the span of
+`idle_confident`, and `latEx` flips sign before then. That is a figure falling over. **No keyframe
+change is warranted.**
+
+**Stale numbers flagged in passing, NOT edited** (`src/player/` is exclusively owned by another lane
+right now): `Shots.js:192` quotes `hero` at "87–97 px/m" where `charview` now says 295 px /
+173.5 px/m, and it omitted the foreshortening — two errors partly cancelling, so its conclusion is
+right and understated. `Clips.js` carries four different `hero` pixel heights (166/166/185/120 at
+lines 485/548/508/558), none current. Worth a cleanup pass once the movement lane releases the file.
+
+Task #17 CLOSED. Nothing ships; no keyframe, no `src` change.
+
+---
+
+## §346 — TWO CORRECTIONS to §343/RESULT-rim: the transform is innocent, and M2 compared a PEAK against an AREA bar
+
+Offline lane on the banked `rim1/` frames — per-pixel ray walks on `off`/`screenoff`/`raw` for all
+21 edges plus four falsification tests. No capture, no `src` change. Instrument and 809-line output
+in `progress/records/antirim/`. Its recomputation reproduces RESULT-rim exactly (SHADOW7 off +0.51,
+screenoff −3.36, PathB +3.87; KEY5 28.27 / 17.60 / 10.67), which is what makes the corrections
+trustworthy rather than a competing measurement.
+
+**No band moved and no verdict changes. M1 SHARED · M2 DOWNSTREAM · M3 SCREEN-RIM-LIVE all stand.**
+
+### Correction 1 — the sign does NOT invert across the display transform
+
+RESULT-rim §3 wrote that the same term reads +0.222 in linear and −0.19 in display, and marked
+PREREG-rim §3's gain argument **refuted**. That conflated *"display space"* with *"the display
+transform"*, and they are not the same thing.
+
+Pushing the `raw` arm through the validated chain predicts measured `screenoff` BODY to within
+**1.0 L** on all 7 shadow edges, and the measured value to within ±1 L at every offset −8…−4 and
++2…+4. The residual is confined to offsets **−1…−3**, where it is **−9 to −66 L**. **The transform
+alone carries the shadow band to a mean display spike of +14.17 L**; measured is −3.36 L. The
+composite subtracts 17.5 L of spike, all of it in 2–3 pixels.
+
+**PREREG §3's gain argument was right in direction.** What removes the rim is a **mark drawn on top
+of the pixel after the encode**, not a transform of it.
+
+**Attributed — the post-process ink pass** (`PostFX.js:1526-1542`), which runs after
+`slyLinearToSrgb` (:1453) and after Path B (:1487), and whose `vec3 ink = min( …, c )` makes it, in
+the file's own words, *"arithmetically impossible for this pass to add light to any pixel, in any
+channel, ever."* Forward-fitting its single parameter `a = line * inkStrength` against all three
+channels at the discriminating pixels gives `a` **0.88–0.97** with max-channel error **0–9 bytes on
+6 of 7 shadow edges**. One parameter reproducing three channels to a byte, exactly where the residual
+is large and ≈ 0 elsewhere.
+
+**Ruled out, each by measurement rather than by assertion.** AO: identical forward fit errs
+**63–146 bytes** — AO kills red hardest and blue least, and these pixels go blue → neutral (its best
+fit at `hero/torso-back` −2 is (0,84,156) against measured (29,26,29)). Bloom: additive-only, and
+`bloomSubjectCut` is 1.0. FXAA: transcribed and run, moves the band under 8 L on 6 of 7 shadow edges.
+CA/dither/dispChromaHold/rimFloorOffCut/fxInkCut/contact[1] all read 0.0 in shipped `TUNE`; vignette
+is 0.992–1.000 over every ray pixel.
+
+**Width is the other half, and `RIM` is blind to it.** Contiguous run above BODY inside `i0`: SHADOW
+mean **1.57 px**, KEY mean **4.60 px**. `spike` is a max over 5 px, so a fixed-width mark over the
+outer 2–3 px leaves the key-side band a bright pixel to be maxed over and leaves the shadow-side band
+nothing.
+
+### Correction 2 — M2's 0.222 was compared against the wrong one of two printed numbers
+
+`rim-offline.mjs` prints **peak 0.248** and **area 0.112** (PREREG §2's table). §7's bar took the
+**area** figure — the scorer's own comment says so: *"Path A's own **integrated** shadow/lit ratio"*.
+But `Rlin` is built from `spike = RIM − BODY`, and `RIM` is a **max over 5 px** — a **peak**.
+**A peak statistic was scored against an area bar.** Like for like on the same rays:
+
+```
+peak   measured 0.222   documented 0.248   ->  ~90% of its documented peak
+area   measured 0.148   documented 0.112
+```
+
+**RESULT-rim §3's "nearly DOUBLE … the shader over-delivers" is WITHDRAWN.** Path A delivers roughly
+what it documents. **DOWNSTREAM is unaffected** — 0.222 and 0.148 both clear 0.112 — so the verdict
+and the route stand; only the magnitude claim was wrong. Note also that 5 of 25 KEY5 raw band pixels
+clip at 255, understating the denominator and making both measured ratios read high.
+
+**This matters to the successor brief**, which §343 wrote as *"the lever is NOT `wrapRim` — Path A
+already over-delivers at 2× its documented band."* The conclusion survives, the reason does not: do
+not touch `wrapRim` because Path A is emitting **about what it was designed to**, and the loss is
+downstream in a mark drawn over it.
+
+### NOT claimed
+
+Individual shares for AO/bloom/FXAA. `edge.r` was never read — `debugRaw` supports only
+`scene`/`normal`/`ao`, so every `line` value is **inferred**, and the ink fit's leftover (0–9 bytes
+at the shadow discriminators, up to 17 at three KEY pixels) is unattributed. `night/glove-right`'s
+fit is unreliable (quantum ±2–3 L). The two `tail-right` edges have **no linear band at all** (raw
+peak −1.13, −0.84) — nothing was destroyed there, and their negative spike is already −2.6/−2.2
+before ink. `hero/tail-top`'s raw statistic sits 5 px from its `off` statistic; treat that raw row as
+suspect.
+
+### The one measurement that settles it — and it needs no `src` change
+
+**One arm, same boot: `postfx.tune.rimStrength = 0` AND `postfx.tune.inkStrength = 0`.** Both are
+re-read every render (`PostFX.js:2321`, `:2302` — verified), and `mix(c, ink, 0)` is exactly `c` in
+IEEE. Scored with the registered instrument on the registered edges,
+`spike(screenoff) − spike(screenoff+noink)` is the ink pass's contribution **with no model in the
+chain**. Registered prediction: SHADOW7 mean **≈ +14.2 L**. Landing there attributes the anti-rim
+outright; landing near −3.4 refutes it and hands the residual back to AO/bloom/FXAA. A second arm,
+`debugRaw('ao')`, would close AO by measurement rather than by fit and carries its own sky=255
+control.
+
+**For the successor:** Path B's isolated contribution peaks at offsets **−3…−5** on the shadow edges
+— just inside the ink, where the edge pass's own comment says it belongs — while the ink's residual
+peaks at **−1…−2**. At `night/glove-right` Path B contributes exactly 0.00 at every window pixel.
+
+Nothing ships.

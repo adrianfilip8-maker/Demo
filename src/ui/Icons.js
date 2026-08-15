@@ -70,29 +70,75 @@ export function coin(cls = '') {
 /* ---------------------------------------------------------------- health */
 
 /**
- * Health pip: a cut gem, not a bar segment. Carnelian reads as "life" instantly and stays
- * clear of the gold (loot) and cyan (traversal) channels of the palette.
+ * Health pip. Carnelian reads as "life" instantly and stays clear of the gold (loot) and cyan
+ * (traversal) channels of the palette.
+ *
+ * TWO SHAPES, because the row is not a bar. `PlayerHealth` defines `hp = 1 + charms` and says so
+ * in as many words: *"Sly himself is the last pip."* A charm is a horseshoe you spent 100 coins
+ * on and can lose; the last pip is the run. Drawing both as the same gem told the player he had
+ * three of something, when what he had was two consumables and his life — and "the next hit ends
+ * the run" is the single most consequential fact in a game whose health system exists to make
+ * *not being seen* the only real defence.
+ *
+ *   `kind: 'life'`  — the Cooper calling card. A card among horseshoes is a silhouette
+ *                     difference, so it survives the ~19 px this renders at on a 1280×720 frame
+ *                     without relying on colour.
+ *   `kind: 'charm'` — the horseshoe, the series' own lucky charm.
  */
-export function pip(filled = true, cls = '') {
+export function pip(filled = true, kind = 'charm', cls = '') {
+  return kind === 'life' ? lifePip(filled, cls) : charmPip(filled, cls);
+}
+
+/** The Cooper calling card: paint stock, ink mask, two spark eyes. */
+function lifePip(filled, cls) {
   if (filled) {
     return wrap('0 0 46 46', `
-      <g transform="rotate(45 23 23)">
-        <rect x="9.5" y="12" width="27" height="27" rx="7.5" fill="${C.ink}" opacity=".55"/>
-        <rect x="9.5" y="9.5" width="27" height="27" rx="7.5" fill="${C.carn}"
-              stroke="${C.ink}" stroke-width="3.6"/>
-        <path d="M13.5 20.5v-3.4a3.6 3.6 0 0 1 3.6-3.6h3.4" stroke="${C.goldL}"
-              stroke-width="3.2" stroke-linecap="round" opacity=".95"/>
+      <g transform="rotate(-5 23 23)">
+        <rect x="9" y="8.5" width="28" height="34" rx="3.6" fill="${C.ink}"/>
+        <rect x="9" y="5" width="28" height="34" rx="3.6" fill="${C.paint}"
+              stroke="${C.ink}" stroke-width="3.4"/>
+        <path d="M12.4 18.4c4.4-4.2 17.8-4.2 22.2 0-1 5.8-5.1 8.4-8.7 6.3-1.4-.9-2.3-2.3-2.5-3.2
+                 -.3.9-1.1 2.3-2.5 3.2-3.6 2.1-7.6-.5-8.5-6.3z" fill="${C.ink}"/>
+        <ellipse cx="17.6" cy="19.6" rx="2.5" ry="2" fill="${C.spark}"/>
+        <ellipse cx="28.4" cy="19.6" rx="2.5" ry="2" fill="${C.spark}"/>
+        <path d="M23 27.4q-3.4 0-3.4 2.8T23 33.6t3.4-3T23 27.4z" fill="${C.carn}"
+              stroke="${C.ink}" stroke-width="2.2"/>
       </g>
-      <circle cx="29.5" cy="29" r="1.9" fill="${C.goldL}" opacity=".7"/>
+    `, cls);
+  }
+  // Down. The card is spent, not merely dimmed — it keeps its outline so the row still counts.
+  return wrap('0 0 46 46', `
+    <g transform="rotate(-5 23 23)">
+      <rect x="9" y="5" width="28" height="34" rx="3.6" fill="${C.inkSoft}" fill-opacity=".62"
+            stroke="${C.ink}" stroke-width="3.4"/>
+      <path d="M14 12.5 32 31.5M32 12.5 14 31.5" stroke="${C.carn}" stroke-width="2.6"
+            stroke-linecap="round" opacity=".55"/>
+    </g>
+  `, cls);
+}
+
+/** A lucky charm. Stroked rather than filled so the opening reads at pip size. */
+function charmPip(filled, cls) {
+  const shoe = 'M13.2 35.6C9.4 19.4 16 8.8 23 8.8s13.6 10.6 9.8 26.8';
+  if (filled) {
+    return wrap('0 0 46 46', `
+      <path d="${shoe}" transform="translate(0 2.4)" stroke="${C.ink}" stroke-width="11"
+            stroke-linecap="round" fill="none" opacity=".55"/>
+      <path d="${shoe}" stroke="${C.ink}" stroke-width="11.6" stroke-linecap="round" fill="none"/>
+      <path d="${shoe}" stroke="${C.carn}" stroke-width="6.4" stroke-linecap="round" fill="none"/>
+      <g fill="${C.goldL}" opacity=".92">
+        <circle cx="15.4" cy="24.6" r="1.7"/><circle cx="23" cy="14.4" r="1.7"/>
+        <circle cx="30.6" cy="24.6" r="1.7"/>
+      </g>
+      <path d="M15.6 15.2a10 10 0 0 1 5-4.6" stroke="${C.goldL}" stroke-width="2.6"
+            stroke-linecap="round" opacity=".8" fill="none"/>
     `, cls);
   }
   return wrap('0 0 46 46', `
-    <g transform="rotate(45 23 23)">
-      <rect x="9.5" y="9.5" width="27" height="27" rx="7.5" fill="${C.inkSoft}" fill-opacity=".62"
-            stroke="${C.ink}" stroke-width="3.6"/>
-      <rect x="14" y="14" width="18" height="18" rx="4.5" fill="none" stroke="${C.carn}"
-            stroke-width="2" opacity=".45"/>
-    </g>
+    <path d="${shoe}" stroke="${C.ink}" stroke-width="11.6" stroke-linecap="round" fill="none"
+          opacity=".62"/>
+    <path d="${shoe}" stroke="${C.carn}" stroke-width="2.2" stroke-linecap="round" fill="none"
+          opacity=".45"/>
   `, cls);
 }
 
@@ -213,8 +259,15 @@ export function signal(level = 3, cls = '') {
  * four rungs of the threat ladder (cream → amber → red, pinned to the vision cone's own stops in
  * `Alert.js`). A lid closes over it via `.sly-threat[data-state='hidden']`, so the shape reads at
  * a glance even before the colour registers: shut eye = unseen, open eye = someone is looking.
+ *
+ * `.sly-eye-fill` is the ANALOG channel: the upper lash traced left→right by
+ * `Guards.alertLevel`. It carries its own `--sus-col` rather than `currentColor` on purpose —
+ * the whole point of the meter is that it warms and fills *before* the discrete state (and
+ * therefore the chip's own colour) has moved. `pathLength="100"` normalises the dash arithmetic
+ * so the driver never has to know the curve's real length.
  */
 export function threatEye(cls = '') {
+  const lash = 'M4 22C14 7 50 7 60 22';
   return wrap('0 0 64 44', `
     <path d="M4 22C14 7 50 7 60 22 50 37 14 37 4 22z" fill="${C.ink}" fill-opacity=".72"
           stroke="${C.ink}" stroke-width="5.5" stroke-linejoin="round"/>
@@ -224,7 +277,43 @@ export function threatEye(cls = '') {
     <circle class="sly-eye-iris" cx="32" cy="22" r="4" fill="${C.ink}"/>
     <path class="sly-eye-lid" d="M4 22C14 30 50 30 60 22" fill="none"
           stroke="currentColor" stroke-width="4.4" stroke-linecap="round"/>
+    <path d="${lash}" fill="none" stroke="${C.ink}" stroke-width="9.5" stroke-linecap="round"
+          pathLength="100" stroke-dasharray="100" stroke-dashoffset="100" class="sly-eye-fill-ink"/>
+    <path class="sly-eye-fill" d="${lash}" fill="none" stroke="var(--sus-col, ${C.gold})"
+          stroke-width="5.4" stroke-linecap="round"
+          pathLength="100" stroke-dasharray="100" stroke-dashoffset="100"/>
   `, `sly-eye ${cls}`);
+}
+
+/* ------------------------------------------------------------- objective */
+
+/**
+ * The objective marker head. A gold die on a lapis disc — gold is the loot channel and this
+ * marker only ever points at loot or at the fence that turns loot into money.
+ *
+ * Deliberately radially symmetric: it gets pinned to the frame edge when the target is behind
+ * the camera, and a pin with a tail would be pointing at the floor half the time. Direction is
+ * a separate rotating part (`goalArrow`) so the head never spins.
+ */
+export function goalPin(cls = '') {
+  return wrap('0 0 72 72', `
+    <circle cx="36" cy="40" r="25" fill="${C.ink}"/>
+    <circle cx="36" cy="36" r="25" fill="${C.lapisD}" stroke="${C.ink}" stroke-width="6"/>
+    <circle cx="36" cy="36" r="18" fill="none" stroke="${C.lapis}" stroke-width="2.6" opacity=".9"/>
+    <rect x="24" y="24" width="24" height="24" rx="3.4" transform="rotate(45 36 36)"
+          fill="${C.gold}" stroke="${C.ink}" stroke-width="4.4"/>
+    <path d="M29 33.5a9 9 0 0 1 5-5" stroke="${C.goldSpec}" stroke-width="3"
+          stroke-linecap="round" fill="none" opacity=".9"/>
+  `, cls);
+}
+
+/** Off-screen direction chevron. Points UP at 0° so the driver can rotate it by a bearing. */
+export function goalArrow(cls = '') {
+  const p = 'M20 5 34 26 20 19.4 6 26z';
+  return wrap('0 0 40 40', `
+    <path d="${p}" fill="${C.ink}" stroke="${C.ink}" stroke-width="7" stroke-linejoin="round"/>
+    <path d="${p}" fill="${C.gold}" stroke="${C.ink}" stroke-width="2.4" stroke-linejoin="round"/>
+  `, cls);
 }
 
 /* ----------------------------------------------------------- alert / world */
@@ -314,7 +403,8 @@ export function glyph(name, cls = '') {
         <rect x="17.6" y="13" width="4.8" height="11" rx="2.4" fill="${C.goldL}"/>
         <circle cx="20" cy="28.5" r="2.7" fill="${C.goldL}"/>
       `, cls);
-    case 'health': return pip(true, cls);
+    case 'health': return pip(true, 'charm', cls);
+    case 'goal': return goalPin(cls);
     default: return sparkle(cls);
   }
 }

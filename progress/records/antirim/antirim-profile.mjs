@@ -377,6 +377,42 @@ for (const face of ['SHADOW', 'KEY']) {
   console.log(`  ${face.padEnd(7)} mean n_up ${f(mean(w.map((q) => q.nUp)), 5)}   mean run ${f(mean(w.map((q) => q.run)), 5)}   mean peak dL ${f(mean(w.map((q) => q.peak)), 6)}`);
 }
 
+/* PEAK vs AREA. PREREG §7 M2's DOWNSTREAM band 0.112 is rim-offline §2's INTEGRATED shadow/lit
+   ratio over N·V ∈ [0,0.40]. The instrument's `spike` is `max over 5 px − median BODY`, which is
+   a PEAK, and rim-offline §2 prints a peak ratio too — 0.248. Both quantities are computed here,
+   per shot then averaged exactly as §4 prescribes for Rlin, so the like-for-like comparison is
+   visible. NO BAND IS MOVED: 0.112 is sealed and stays sealed (§141.1). This is the "a mis-aimed
+   bar is recorded as mis-aimed" note the seal itself asks for. */
+console.log('\n  PEAK vs AREA — the same rays, two statistics, per shot then averaged (§4\'s rule):');
+console.log('  shot          KEY peak  SHADOW peak  peak ratio |  KEY area  SHADOW area  area ratio   (area = Σ positive dL over the 5 px)');
+const ratios = { peak: [], area: [] };
+for (const shot of ['hero', 'sly-profile']) {
+  const agg = (face) => {
+    const set = (face === 'KEY' ? KEY5 : SHAD).filter((k) => EOF_[k].shot === shot);
+    const pk = [], ar = [];
+    for (const k of set) {
+      const p = P.raw[k], rr = RAYS.raw[k];
+      const dl = [1, 2, 3, 4, 5].map((n) => (p.i0 - n >= 0 ? rr[p.i0 - n].L - p.BODY : 0));
+      pk.push(Math.max(...dl));
+      ar.push(dl.reduce((s, v) => s + Math.max(0, v), 0));
+    }
+    return { pk: mean(pk), ar: mean(ar) };
+  };
+  const K = agg('KEY'), S = agg('SHADOW');
+  ratios.peak.push(S.pk / K.pk); ratios.area.push(S.ar / K.ar);
+  console.log(`  ${shot.padEnd(14)}${f(K.pk, 8)}${f(S.pk, 13)}${f(S.pk / K.pk, 12, 3)} |${f(K.ar, 10)}${f(S.ar, 13)}${f(S.ar / K.ar, 12, 3)}`);
+}
+console.log(`  MEAN                                  ${f(mean(ratios.peak), 12, 3)} |                        ${f(mean(ratios.area), 12, 3)}`);
+console.log(`  rim-offline §2 predicts               ${(0.2475).toFixed(3)} (peak) |                        ${(0.112).toFixed(3)} (area, = PREREG §7 M2's DOWNSTREAM band)`);
+{ /* does the KEY-side raw rim clip? a clipped key peak would UNDERSTATE the key denominator */
+  let clipped = 0, tot = 0;
+  for (const k of KEY5) {
+    const p = P.raw[k], rr = RAYS.raw[k];
+    for (let n = 1; n <= 5; n++) { const q = rr[p.i0 - n]; if (!q) continue; tot++; if (q.R >= 255 || q.G >= 255 || q.B >= 255) clipped++; }
+  }
+  console.log(`  KEY5 raw band pixels at 255 in any channel: ${clipped} of ${tot}  (a clipped key peak would make both ratios read HIGH)`);
+}
+
 /* ═══ §H — could AO alone do it? A forward fit, symmetric to §F's ═══════════════════════════ */
 console.log('\n\n§H  AO AS THE ALTERNATIVE, forward-fitted.  PostFX.js:1414-1417 — scene *= mix(1, uAOTint*uAODepth, occ),');
 console.log('    in LINEAR, BEFORE the grade. tintColor() normalises #2a3f66 to peak channel 1, so the');

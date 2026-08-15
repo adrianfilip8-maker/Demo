@@ -76,6 +76,27 @@ const NUMERIC_BANDS = [
 ];
 
 /**
+ * Colour for a CONTINUOUS suspicion reading, 0..1.
+ *
+ * The badge stays discrete (see the ANALOG vs DISCRETE note at the top of this file) and nothing
+ * about it changes. This is for the *aggregate* chip, which is a different instrument answering a
+ * different question: not "which state is that guard in" but "how close is anybody to committing".
+ * Alert.js's argument against a second meter was about duplicating the cone's per-guard analog
+ * signal in the per-guard badge; the garrison maximum is not a signal any cone carries, because
+ * reading it off the world would mean seeing every cone at once — including the ones behind you.
+ *
+ * It walks the same `NUMERIC_BANDS` the payload fallback does, so the meter's colour and the
+ * badge's colour cannot disagree about where a threshold is.
+ */
+export function suspicionColour(level) {
+  const v = typeof level === 'number' && Number.isFinite(level) ? level : 0;
+  for (const [floor, name] of NUMERIC_BANDS) {
+    if (v >= floor) return ALERT_STATES[name].colour;
+  }
+  return CONE.cream;
+}
+
+/**
  * Resolve one `guardAlert` payload to its presentation.
  *
  * ORDER MATTERS: `state` wins over `level`. The shipped emitter sets BOTH on every transition

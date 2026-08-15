@@ -184,6 +184,18 @@ export const HUD_CSS = /* css */ `
 .sly-threat[data-state='hidden'] .sly-eye-open { opacity: 0; }
 .sly-threat:not([data-state='hidden']) .sly-eye-lid { opacity: 0; }
 
+/* ------- the analog half: suspicion, before it becomes a state ------- */
+
+/* The chip's discrete rungs answer "who has seen me". The lash arc answers "how close is
+   anybody to deciding", which is the question a stealth player is actually asking between
+   thresholds — and the only channel that moves at all during the fill from 0 to SUSPICIOUS,
+   or during the drain back down out of a search. It is driven per frame, so no transition
+   here: an eased meter lags the thing it is warning you about. */
+.sly-eye-fill, .sly-eye-fill-ink { transition: none; }
+/* Sub-threshold the arc is the only thing moving, so it gets its own presence; once the chip
+   itself has gone loud the arc stops competing with it. */
+.sly-threat[data-state='hidden'] .sly-eye-fill { filter: drop-shadow(0 0 calc(var(--u) * .3) var(--sus-col)); }
+
 /* Escalation reads as urgency, not decoration: only the top rung pulses. */
 .sly-threat[data-state='spotted'] { animation: sly-threat-pulse .58s ease-in-out infinite alternate; }
 @keyframes sly-threat-pulse {
@@ -191,6 +203,62 @@ export const HUD_CSS = /* css */ `
   to   { box-shadow: inset 0 0 0 calc(var(--u) * .09) var(--threat-col),
                      0 0 calc(var(--u) * .9) color-mix(in srgb, var(--threat-col) 70%, transparent),
                      0 calc(var(--u) * .22) 0 rgba(26,18,16,.6); }
+}
+
+/* ------- carried loot ------- */
+
+/* Picking a treasure up credits nothing (Pickups.js): it only pays at the fence, and being
+   driven to CHASE while holding it drops it back into the world. So "I am carrying 320 coins
+   of risk" is a live game state with a real failure mode attached, and it had no readout at
+   all — one toast at pickup, then silence for the whole return leg. It sits under the threat
+   chip because those two facts are read together: the value of what you are holding only
+   matters next to how close you are to losing it. */
+.sly-carry {
+  display: none;
+  align-items: center;
+  gap: calc(var(--u) * .4);
+  margin-top: calc(var(--u) * .18);
+  padding: calc(var(--u) * .2) calc(var(--u) * .66) calc(var(--u) * .24) calc(var(--u) * .3);
+  background: rgba(20, 14, 12, .82);
+  border: calc(var(--u) * .13) solid var(--ink);
+  border-radius: calc(var(--u) * .42);
+  box-shadow: inset 0 0 0 calc(var(--u) * .06) rgba(232, 185, 66, .75),
+              0 calc(var(--u) * .22) 0 rgba(26,18,16,.6);
+  transform: rotate(-2.1deg);
+  transform-origin: left center;
+}
+.sly-carry.on { display: flex; animation: sly-carry-in .34s var(--pop) both; }
+@keyframes sly-carry-in {
+  from { opacity: 0; transform: translateX(calc(var(--u) * -1.2)) rotate(-7deg) }
+  to   { opacity: 1; transform: translateX(0) rotate(-2.1deg) }
+}
+.sly-carry-ic { width: calc(var(--u) * 1.5); height: calc(var(--u) * 1.5); flex: none; }
+.sly-carry-ic svg { width: 100%; height: 100%; }
+.sly-carry-name {
+  font-size: calc(var(--u) * .84);
+  letter-spacing: .1em;
+  color: var(--paint);
+  max-width: calc(var(--u) * 12);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  transform: skewX(-5deg);
+}
+.sly-carry-val {
+  font-size: calc(var(--u) * .84);
+  letter-spacing: .04em;
+  color: var(--gold-l);
+  transform: skewX(-5deg);
+}
+/* The risk half, made visible: the instant anybody is above PATROL, the thing you are holding
+   starts flashing, because that is the state in which a chase would take it off you. */
+#sly-hud:not([data-threat='hidden']) .sly-carry.on {
+  animation: sly-carry-risk .5s ease-in-out infinite alternate;
+}
+@keyframes sly-carry-risk {
+  from { box-shadow: inset 0 0 0 calc(var(--u) * .06) rgba(232,185,66,.75),
+                     0 calc(var(--u) * .22) 0 rgba(26,18,16,.6) }
+  to   { box-shadow: inset 0 0 0 calc(var(--u) * .1) var(--gold-l),
+                     0 0 calc(var(--u) * .8) rgba(232,185,66,.6),
+                     0 calc(var(--u) * .22) 0 rgba(26,18,16,.6) }
 }
 
 /* ============================================================ OBJECTIVE CARD */
@@ -424,6 +492,64 @@ export const HUD_CSS = /* css */ `
   font-size: calc(var(--u) * .72); letter-spacing: .2em; white-space: nowrap; color: inherit;
 }
 @keyframes sly-spin { to { transform: rotate(360deg) } }
+
+/* ---- objective marker ---- */
+
+/* "Where is my objective" answered in world space rather than as a line of prose. It only ever
+   points at something that exists right now — the fence while a treasure is in hand, or the spot
+   a chase knocked it out of your hands — so it is never ambient clutter, and it retires itself
+   the moment the loop closes.
+
+   The direction chevron orbits the head instead of replacing it, and the head does not spin:
+   during a fast pan the eye tracks a stable shape and reads the *bearing* off the part that
+   moves. A marker that rotates as a whole reads as a wobble. */
+.sly-goal {
+  position: absolute; left: 0; top: 0;
+  width: calc(var(--u) * 3.3); height: calc(var(--u) * 3.3);
+  margin: calc(var(--u) * -1.65) 0 0 calc(var(--u) * -1.65);
+  opacity: 0; transition: opacity .2s ease;
+  will-change: transform;
+}
+.sly-goal.on { opacity: 1; }
+.sly-goal-pin {
+  position: absolute; inset: 0;
+  animation: sly-goal-bob 1.9s ease-in-out infinite alternate;
+}
+.sly-goal-pin svg { width: 100%; height: 100%; }
+@keyframes sly-goal-bob {
+  from { transform: translateY(calc(var(--u) * -.16)) scale(1) }
+  to   { transform: translateY(calc(var(--u) * .16)) scale(1.04) }
+}
+/* Ring carries the bearing; the arrow rides at its top edge. */
+.sly-goal-ring { position: absolute; inset: 0; opacity: 0; transition: opacity .18s ease; }
+.sly-goal.edge .sly-goal-ring { opacity: 1; }
+.sly-goal-arrow {
+  position: absolute; left: 50%; top: calc(var(--u) * -1.15);
+  width: calc(var(--u) * 1.5); height: calc(var(--u) * 1.5);
+  margin-left: calc(var(--u) * -.75);
+}
+.sly-goal-arrow svg { width: 100%; height: 100%; }
+/* Off-screen, the head shrinks and the chevron takes over: it has become a direction, not a place. */
+.sly-goal.edge .sly-goal-pin { transform: scale(.8); animation: none; }
+.sly-goal-txt {
+  position: absolute; left: 50%; top: 100%;
+  transform: translateX(-50%);
+  display: flex; flex-direction: column; align-items: center;
+  gap: calc(var(--u) * .04);
+  white-space: nowrap;
+}
+.sly-goal-lbl {
+  font-size: calc(var(--u) * .78);
+  letter-spacing: .16em;
+  color: var(--gold-l);
+  transform: skewX(-5deg);
+}
+.sly-goal-dist {
+  font-size: calc(var(--u) * .74);
+  letter-spacing: .08em;
+  color: var(--paint);
+  font-variant-numeric: tabular-nums;
+}
 
 /* ---- guard suspicion / alert ---- */
 

@@ -26,28 +26,24 @@
  * The merged `manifest.json` this runner rebuilds after every chunk is what item 4 consumes:
  * `rows` (49 when complete) plus `chunks` (16, one `srcHash` across all of them).
  *
- * TWO DISCLOSED DEVIATIONS FROM A2, both deliberate, neither able to move a band. They are named
- * here rather than buried because A2.9 says nothing else may move, and these are "else":
+ * ONE DISCLOSED DEVIATION FROM A2, deliberate and unable to move a band. It is named here rather
+ * than buried because A2.9 says nothing else may move, and this is "else":
  *
- *   (a) STAGING IS LIVE-SETTLE, NOT `{ dt: 0 }`  — see `STAGE_OPTS` below. A2.8's risk-2
- *       mitigation reads "guardcone stages {dt:0} frozen — deterministic by construction".
- *       **KNOWN_ISSUES §334 refutes that clause by measurement, and names this seal doing it:**
- *       guardcone runs 4 and 5 staged the same four shots on the same src tree in two boots and
- *       0 of 12 frames matched byte for byte, while litbleach2/linchroma staged live and got
- *       `traversal.off` bit-identical in three boots hours apart. `dt: 0` leaves the character
- *       wherever the live world clock happened to be when that boot reached the call; live-settle
- *       advances to a convergent state. Under A2 every one of the sixteen stagings is a cold,
- *       first-of-boot staging, which is precisely the regime that measured 0/12. §334 permits a
- *       `dt:0` seal to chunk (no bar of this seal crosses a chunk — A2.3, re-audited below) but
- *       calls the constraint "real and not free". This is the not-free part.
- *       The mode is spelled ONCE, recorded into every chunk manifest, and the merge REFUSES to
- *       call a run complete if two chunks disagree — so a staging changed mid-capture is a
- *       detected fact rather than a silent one.
- *   (b) two additive readback fields, `coneShapeTune` / `glowTune`. `uConeShape` and `uGlow` are
- *       poked as UNIFORMS (they are built from TUNE once at `_buildCones`, Guard.js:1559-1568,
- *       and never republished), so the live uniform and the TUNE field legitimately disagree in
- *       every candidate arm. Recording both makes that divergence diagnosable instead of
- *       alarming. No bar reads either field; they can only add evidence.
+ *   - two additive readback fields, `coneShapeTune` / `glowTune`. `uConeShape` and `uGlow` are
+ *     poked as UNIFORMS (they are built from TUNE once at `_buildCones`, Guard.js:1559-1568, and
+ *     never republished), so the live uniform and the TUNE field legitimately disagree in every
+ *     candidate arm. Recording both makes that divergence diagnosable instead of alarming. No bar
+ *     reads either field; they can only add evidence.
+ *
+ * **Staging stays `{ dt: 0 }`, as A2 specifies.** It is worth saying why, because A2.8's stated
+ * REASON for it is refuted while the CHOICE stands: A2.8 risk-2 mitigation 1 calls `{dt:0}`
+ * "deterministic by construction", and KNOWN_ISSUES §334 measured the opposite on this seal's own
+ * runs 4 and 5 (same src tree, two boots, 0 of 12 frames byte-identical). A refuted justification
+ * is not authorisation to change a sealed method: §141.1 binds the method as well as the bars, no
+ * bar of this seal depends on cross-boot frame identity (the A2.3 audit re-checked against the
+ * scorer below), and changing what the frames SHOW belongs in an A3 with its own argument. The
+ * full reasoning, and what a future lane would have to argue to move it, is written down in
+ * `NOTE-a2-staging.md` beside this file rather than left in a comment.
  *
  * ── What this runner is obliged to get right, and where each obligation comes from ────────────
  *
@@ -117,16 +113,24 @@ const CONE_ON = { shape: 1, colPatrol: 0xffd9a0, beamBase: 0.26, glow: 0.42, poo
 const CONE_ON_NOLAMP = { ...CONE_ON, lamp: 0.0 };
 
 /* THE STAGING MODE — spelled once, recorded in every chunk manifest, cross-checked at merge.
-   `{}` leaves `opts.dt` UNDEFINED, which is byte-for-byte `harness.grab()`'s call and the path
-   the roster itself uses (Debug.js:95 — an undefined dt means the documented 1/60 live settle).
-   See deviation (a) in the header: §334 measured this to be the reproducible option and measured
-   THIS SEAL's `{dt:0}` chunks at 0/12 byte-match across boots. Everything AFTER staging is frozen
-   — `step(3, 0)`, the warm-ups and every arm run at dt 0 — so all arms of a chunk still share ONE
-   world state, which is what `R_<shot>` at [0,0] proves. Live-settle-THEN-freeze.
-   If this is ever changed back, it must be changed BEFORE the first chunk of a run, never after
-   (§141.1), and the merge below will catch it if it is not. */
-const STAGE_OPTS = {};
-const STAGE_DESC = 'setShot(name, {}) — dt UNDEFINED, live settle, roster-faithful (§328/§334); then step(3,0) + renderFrame(0) frozen, uncaptured';
+   `{ dt: 0 }` freezes the world clock THROUGH staging as well as after it (Debug.js:95: an
+   undefined dt would mean the documented 1/60 live settle instead). It is what AMENDMENT A2
+   specifies (A2.8) and what the sealed single-process runner did, so the frames a chunk produces
+   are the frames that runner would have produced. Every arm of the chunk then renders at the same
+   world time — `step(3, 0)`, the warm-ups and each arm are all dt 0 — so all arms share ONE world
+   state, which is what `R_<shot>` at [0,0] proves.
+
+   A2.8's *justification* for this mode ("deterministic by construction") is refuted by §334 and
+   the CHOICE still stands; that is not a contradiction and it is written out in full in
+   NOTE-a2-staging.md beside this file. Short version: no bar of this seal compares frames across
+   boots, so the instability §334 measured costs this seal nothing, and §141.1 binds the method as
+   well as the bands.
+
+   Changing this const changes what every frame SHOWS. It may only be changed by an amendment,
+   BEFORE the first chunk of a run — never after (§141.1) — and the merge below catches it if it
+   is not: two chunks staged differently are not one capture. */
+const STAGE_OPTS = { dt: 0 };
+const STAGE_DESC = 'setShot(name, { dt: 0 }) — clock frozen through staging (A2.8, sealed runner); then step(3,0) + renderFrame(0), uncaptured';
 
 /* ── the chunk ───────────────────────────────────────────────────────────────────────────────
    A2.2: the runner takes a shot name as process.argv[2] and captures only that shot's arms.
@@ -223,11 +227,13 @@ console.log(`frames -> ${OUT}`);
 
 /* ---- page-side functions ------------------------------------------------------------------ */
 
-/* THE STAGING CALL. See STAGE_OPTS. Live settle through setShot, then frozen: `step(3, 0)` and
-   the uncaptured render are dt 0, and every warm-up and arm after them is dt 0 too, so the whole
-   chunk shares ONE world state. Warnings are counted back because setShot announces a live clock
-   into engine.warnings (Debug.js:116) and a capture that staged live should say so in its own
-   manifest rather than in a comment. */
+/* THE STAGING CALL. See STAGE_OPTS: frozen through staging AND after it — `step(3, 0)` and the
+   uncaptured render are dt 0, and every warm-up and arm after them is dt 0 too, so the whole chunk
+   shares ONE world state. Warnings come back verbatim rather than as a count: `setShot` announces
+   a LIVE clock into engine.warnings when `opts.dt` is not finite (Debug.js:116), so at `{ dt: 0 }`
+   that particular notice must be ABSENT — its appearance would mean the staging mode did not take,
+   and a run that staged differently from what it claims should say so in its own manifest instead
+   of in a comment. */
 const STAGE = async ({ name, opts }) => {
   const eng = window.__ENGINE;
   const r = await window.__GAME.setShot(name, opts);
@@ -522,10 +528,16 @@ await withGame(
     const st = await page.evaluate(STAGE, { name: SHOT, opts: STAGE_OPTS });
     stagingWarnings = st.warnings;
     console.log(`-- staged ${SHOT} (${((Date.now() - t0) / 1000) | 0}s) — ${STAGE_DESC}`);
-    console.log(`   ${stagingWarnings.length} engine warning(s) at staging, recorded verbatim in `
-      + `manifest.${SHOT}.json` + (stagingWarnings.length
-        ? ' — a live-clock notice here is EXPECTED and is the disclosure, not a defect (Debug.js:116)' : ''));
+    console.log(`   ${stagingWarnings.length} engine warning(s) at staging, recorded verbatim in manifest.${SHOT}.json`);
     for (const w of stagingWarnings) console.log(`   ! ${w}`);
+    /* At `{ dt: 0 }` Debug.js:116's live-clock notice must NOT fire. If it does, `opts.dt` did not
+       arrive as a finite number and this chunk staged on a running clock — a method divergence, so
+       say it loudly and let the fold adjudicate rather than silently banking the frames. */
+    if (stagingWarnings.some((w) => /world clock is LIVE/.test(w))) {
+      console.log('!! STAGING MODE DID NOT TAKE — Debug.js:116 announced a LIVE world clock while '
+        + `STAGE_OPTS is ${JSON.stringify(STAGE_OPTS)}. This chunk is NOT staged the way the seal `
+        + 'specifies (A2.8). Recorded, not corrected — archive this chunk and diagnose.');
+    }
 
     /* 2. §331 warm-up, discarded, on the arm's own render path (A2.5). */
     for (let w = 0; w < WARMUP; w++) await page.evaluate(WARM, CONE_OFF);
