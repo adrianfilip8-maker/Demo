@@ -1,3 +1,13 @@
 HEAD f3d314dd5485 verified; expected src hash b3852e39472ed68f
 frames -> /home/user/Demo/progress/records/bandgate1
 tree verified under the lock — src b3852e39472ed68f
+renderer: ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)
+-- staged courtyard LIVE (dt undefined, roster path); 5 warning(s)
+-- warm-up 2 render(s) discarded (§331)
+  #1 courtyard.off      sha 7995e426203a5575  term=0 raw=null
+  #2 courtyard.ramp     sha 1de4f00760af51fb  term=5 raw=null
+  #3 courtyard.cal      sha b68d391ae67428b4  term=4 raw=null
+  #4 courtyard.back     sha 7995e426203a5575  term=0 raw=null
+
+4 frames -> /home/user/Demo/progress/records/bandgate1
+score with: node progress/records/bandgate/bandgate-score.mjs

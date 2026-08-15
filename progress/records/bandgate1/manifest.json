@@ -1,0 +1,51 @@
+{
+  "seal": "PREREG-bandgate",
+  "head": "f3d314dd5485abba67deb25b6526f30dcbbaf772",
+  "srcHash": "b3852e39472ed68f",
+  "warmup": 2,
+  "shot": "courtyard",
+  "expectRows": 4,
+  "capturedAt": "2026-08-15T12:26:16.419Z",
+  "rows": [
+    {
+      "shot": "courtyard",
+      "arm": "off",
+      "file": "courtyard.off.png",
+      "sha256": "7995e426203a55751a305d8d343e7b04404de4c9b9725ff96de09e3baab85a03",
+      "readback": {
+        "term": 0,
+        "raw": null
+      }
+    },
+    {
+      "shot": "courtyard",
+      "arm": "ramp",
+      "file": "courtyard.ramp.png",
+      "sha256": "1de4f00760af51fbfba830a6a9cd2d545cbaddb04d5ecc26214fbee45df1c178",
+      "readback": {
+        "term": 5,
+        "raw": null
+      }
+    },
+    {
+      "shot": "courtyard",
+      "arm": "cal",
+      "file": "courtyard.cal.png",
+      "sha256": "b68d391ae67428b4b616ba63af4d67cb95045282b7ca24e75a25fcd411e1834e",
+      "readback": {
+        "term": 4,
+        "raw": null
+      }
+    },
+    {
+      "shot": "courtyard",
+      "arm": "back",
+      "file": "courtyard.back.png",
+      "sha256": "7995e426203a55751a305d8d343e7b04404de4c9b9725ff96de09e3baab85a03",
+      "readback": {
+        "term": 0,
+        "raw": null
+      }
+    }
+  ]
+}
