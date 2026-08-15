@@ -74,3 +74,56 @@ numbers would likely have been measuring the wrong surface — and the seal woul
 confident DO-NOT-SHIP against a lever that was never engaged. §328 taught "prove the runner
 reproduces the defect". The rule this adds: **prove the ROI is on the material whose property you
 are measuring.** A stable number is not a correct one.
+
+---
+
+## ADDENDUM (measured after the above, before any litbleach2 capture): combat cannot be measured by this statistic at all
+
+The `PF_COSTUME` gate I added to the scorer was run against litbleach1's spent frames and settles
+the hypothesis above on real data:
+
+```
+PF_COSTUME traversal  off H 223.3  |dH|   9.8 <= 30   PASS
+PF_COSTUME combat     off H 355.2  |dH| 141.7 <= 30   FAIL
+PF_COSTUME sly-key    off H 205.4  |dH|   8.1 <= 30   PASS
+```
+
+**Combat's inherited rect is not on the blue costume.** So litbleach's headline combat result —
+"the lever moves it by +0.000" — was the hold *correctly declining* to act on a low-chroma,
+off-hue, non-costume surface. Not a refutation of the lever. Exactly what the NOTE predicted.
+
+Then I tried to re-derive the rect, and hit something worse. Searching combat.off for
+subject-masked pixels within 30° of 213.5° at chroma ≥ 0.25 finds the costume **is** in frame —
+1812 px, bbox x452–676 y411–676, centroid (582,608) — and the densest 40×40 window is
+`[516, 635, 556, 675]`, well below the inherited rect's y468–522. But scoring that window with
+the seal's own statistic gives:
+
+```
+combat.off  NEW rect  S 0.579  H 11.8    subject fraction 37.8%
+```
+
+Still orange. **The rect was never the whole problem: the STATISTIC is wrong for this shot.**
+`S` is defined over the *brightest half* of the rect (§3). In traversal and sly-key the costume
+is among the brightest things present, so the brightest half is costume. In combat the costume is
+**in shadow** and the bright pixels are warm ground, fur and impact FX — so brightest-half
+selects the environment wherever the rect is placed.
+
+### Consequences for litbleach2
+
+1. **Scope it to `traversal` + `sly-key`.** Both pass `PF_COSTUME`, both are calibrated
+   (0.205 / 0.516, reproduced across r12/r13/litbleach), and the statistic genuinely measures
+   costume there. A two-shot seal that measures the right pixels beats a three-shot seal that
+   does not.
+2. **Route combat out, do not bodge it in.** It needs a *costume-masked* statistic — mean S over
+   pixels selected by subject ∧ hue ∧ chroma, not by luminance — and that is a different
+   instrument whose bands must be derived and sealed separately. Inventing it under time
+   pressure, uncalibrated, is how a seal produces a confident wrong answer.
+3. **Keep `PF_COSTUME` as a hard gate anyway.** It is what caught this, and on a two-shot seal it
+   costs nothing.
+
+### The rule
+
+§328 gave "prove the runner reproduces the defect". The addendum to it is now two-part:
+**prove the ROI is on the material you are measuring, and prove the STATISTIC can see it there.**
+Combat satisfied neither, and litbleach spent a full chunked capture — and would have spent a
+confident DO-NOT-SHIP — on a number that was reading warm ground.
