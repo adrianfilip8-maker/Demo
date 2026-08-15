@@ -25950,3 +25950,107 @@ and worth doing *only* with the paragraph above understood.
 §352's darkening, or that a full seven-arm ladder is affordable. What is claimed is narrow and
 checkable: the comparison every failing bar rests on moves seven fields, and the one isolating arm
 that exists moves one of them.
+
+---
+
+## §355 — MOVEMENT: the moveset contained a free vertical climb, and the guard against it had been written but never read
+
+Shipping bug, from the movement lane, verified here (`node --check` on both files, suite 549/0 on my
+own run) before commit `a05413b`.
+
+`wallJump → doubleJump → wallCling → wallJump` on a **single flat face** is a lift with no ceiling:
+`WallJump.enter` re-grants `airJumps`, the double jump carries Sly back onto the face he just left,
+and `WallCling` accepted him every time. Measured against the shipped level it climbed **17.81 m of
+the hall's 13 m front wall** — about **+0.55 m every five frames** from a plain jump mash — and put
+Sly on top of the **26 m entry pylon**. §8.1's Pylon Ascent is precisely the thing that must not be
+reachable that way.
+
+**The guard already existed and was dead code.** `lastWallRec` has been written by `WallRun.enter`
+since the file was first drafted and is **read nowhere in the tree**. This is the second defect of
+this exact shape this week — after `c.pole`, which was never created at all — and both were invisible
+because nothing failed loudly.
+
+It now names a **face**, not a body: a collision rec plus its outward XZ normal, compared against
+`TUNE.wallFaceDot = 0.5`. The number is geometric rather than taste. 60° is the widest cone that
+still separates two faces of a rectangular mass (90° apart, dot 0 — so **a pylon corner stays a fresh
+face**, which is what §8.1 actually asks for) while still reading the 45°-apart facets of an
+8-segment cylinder proxy (dot 0.707) as **one** surface, so a column cannot be laddered facet by
+facet. The temple's batter (~5° along a single run) is swallowed without noticing.
+
+**Only polled entries consult it.** A forced handoff — `WallRun.update` returning `'wallCling'` when
+the run times out with Sly still pressed into the wall — goes through `sm.request()`, which never
+calls `canEnter`. The move the rule exists to preserve is untouched by it.
+
+**Touching anything that is not a wall gives the walls back**: ground contact, a bounce off a head,
+and every state in the `attach` group (hook, rail, pole, spire, ledge, magnet point) through
+`onStateChanged`, which the machine already funnels every transition through. That is what makes the
+ascent read as the authored chain — *the wall carries you to the next hold and the hold pays for the
+next wall* — rather than as a lift. `teleport()` frees it too, so the shot harness cannot arrive with
+a wall already spent.
+
+**Fails safe:** a null rec is never spent, so under `FLAT` or any COLLISION that answers without
+records the wall tech degrades to *free* rather than *absent* — the far less damaging failure.
+
+---
+
+## §356 — shadowtint re-derived: "full authority" is `key = 0`, and §336's headline 3.74 DOES NOT REPRODUCE
+
+Verified before folding in: both shader lines read at this sha, the authority arithmetic re-solved,
+and the lane's instrument re-run — it reproduces **byte-identically**.
+
+**The correction.** `toon.glsl.js:583` sets `shadowMix = 1.0 - key` and `:756-759` multiplies the
+shade-side terms by it. Since `key = ramp * sh`, a surface with `sh > 0` is still at **full
+authority** wherever `ramp = 0`. §344 refuted a claim about **`sh`**; §342.2 spent it as a claim about
+**`key`**. Authority is just `1 − key`: `CAST_L` 0.9719, `SHADE_R` 0.8983, `GROUND` 0.6990, `LIT_R`
+0.4618. Per *pixel* full authority is reached (56.2 % of `CAST_L`'s surface pixels sit at `key == 0`,
+40.1 % of `GROUND`); per *rect* it is not — and that does not rescue the seal, because the bar was on
+the rect mean and the rect mean failed.
+
+**§342.2's numbers barely move, and the reason is a defect nobody had recorded:** R/G and `key` were
+never computed over the same pixels. The `sd ≤ 3` flat-patch filter systematically **excludes** keyed
+pixels, which live on relief edges and inlay. Its 1.02–1.86 was already at 99.2–100 % authority.
+
+**Its line 2 is invalid at any authority.** Transferring a suppression to a smaller albedo requires
+the render to be homogeneous of degree 1 in albedo, and it is not — at `:756-759` the shade-side terms
+carry **no albedo factor at all** (`shadBand * shadowMix`, `slyShadX * uShadowWash * shadowMix * ao`)
+while `albAmb` mixes toward luma. This is the §348 shape, a dropped colour term, and it retroactively
+voids **§342.1's "over by 2.62×"**. §342.2's *structural* point survives untouched, and "the bar must
+be relative" is strengthened rather than weakened.
+
+**The 0.90 bar cannot be determined — and the blocker is new.** Not "still unreachable", not "now
+reachable". **The two captures disagree about colossus-R**, from the instrument's own output:
+
+```
+colossus-R body-all (§336's 3.74)   r12 R/G 3.74 (L71,h345)   keyprobe1 1.18 (L82,h342)
+SHADE_R                             r12 R/G 3.11 (L67,h335)   keyprobe1 1.08 (L80,h279)
+CAST_L  (§342.2's 1.02)             r12 R/G 1.02 (L60,h234)   keyprobe1 1.02 (L60,h234)
+GROUND  (§336's 0.52)               r12 R/G 0.52 (L43,h209)   keyprobe1 0.54 (L45,h209)
+```
+
+Two rects reproduce **to four decimal places** and two do not, on an unchanged sky and camera. So it
+is not exposure, grade or framing — it is **localised to colossus-R**. Therefore **3.74 and 0.1017 are
+measurements of two different states and may not be combined**, and the bar's subject has no
+co-measured `(R/G, authority)` pair anywhere in the record. *Not claimed:* why they differ, or that
+the defect is fixed. Directionally, on the only granite-plausible surface measured at true full
+authority — colossus-L's own body at `key == 0` — R/G reads 1.21–1.32, still 1.3–1.5× over the bar.
+
+**A fresh roster capture to resolve the r12/keyprobe1 disagreement is the cheapest and most
+consequential unmeasured thing in this lineage**, and it now gates the shadowtint item outright.
+Also unmeasured: a `uKeyIntensity = 0` arm (§336 §10 already named it), a material-identity mask (the
+rects are not one material), a per-rect albedo readback (§342.1's outstanding caveat), a per-channel
+key/shade split, and a rendered `hueGrade`-off arm.
+
+### §356.1 CONTAMINATION DISCLOSURE against §350 — read this before scoring `PREREG-keyprobe2`'s `MIX`
+
+The shadowtint lane ran **concurrently** with the keyprobe lane and disclosed, unprompted, that it
+**computed `SHADE_R`'s `key` distribution once in a scratch file outside the repo** before deciding
+on §141.1 grounds not to report it. That histogram **is** `PREREG-keyprobe2`'s un-read `MIX`
+quantity. It withheld it from its note, and it left `bandgate1/courtyard.ramp.png` untouched, which
+§350 reserves for `R_BOOT`.
+
+So `R_BOOT` is clean. **`MIX` is not obviously clean**, and whoever scores it must weigh this rather
+than assume it: the quantity has been observed by an agent in this session, though never published,
+never committed, and not carried into any bar. §350's own test — *"is there a quantity in this seal
+whose value the author cannot already derive?"* — is the one to apply, and the honest answer for
+`MIX` is now "an agent derived it once and did not write it down". Recorded here rather than left to
+be discovered, because a disclosure that only exists in a subagent transcript is not a disclosure.
