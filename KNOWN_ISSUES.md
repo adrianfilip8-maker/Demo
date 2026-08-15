@@ -25595,3 +25595,231 @@ from a `tee | head` pipeline, not the scorer's; the scorer exits **1** and print
 had captured 66, truncating the entire failing half of the bar list. Caught by noticing that `BS1`'s
 printed measurement (`px=0` against `want >= 1`) contradicted the all-PASS list I was looking at.
 **A pipeline's exit code is the last stage's, and `head` always succeeds.**
+
+---
+
+## §349 — guardcone successor, steps 2 and 4: BH1 is structurally unevaluable, and sly-startle's escape is a 1/42-LSB warm bleed
+
+Both are post-hoc reads of the committed 49-frame capture. Neither relitigates §348 — the bars were
+sealed before any frame and **DO NOT SHIP stands**. Every number below was re-derived independently
+before it was written here; the two that came from a sub-agent are marked and one of its citations is
+corrected.
+
+### §349.1 BH1's far band could not have been non-empty on any image
+
+`BH1` reported `near hue=17.8 S=0.453 (516057px)  far hue=n/a S=n/a (0px)`. The reason is not an
+absent signal. BH1 splits its ROI by projecting each pixel onto the screen axis `apexS → farS`,
+normalised by that axis's own squared length (`guardcone-score.mjs:92-99`). On `guard.bon`:
+
+```
+apexS [   770,   335, 1]
+farS  [-91461, 19759, 0]        axis length 94254.2 px   (frame diagonal 1468.6 px)
+```
+
+`farS` is neither missing nor null — it is a *correct* projection of a point the projection cannot
+represent. The cone's far tip lands just in front of the camera plane, so the divide by `w` throws
+the coordinate 91 461 px off a 1280-px frame. The tell is `ndcZ 0` against `apexS`'s `1`, and the
+scorer never reads it.
+
+The furthest any pixel on this frame can be from `apexS` is **860.4 px**, so `t ≤ 860.4 / 94254.2 =
+0.0091` **for every possible image**, against a far bucket that begins at `t ≥ 0.5`. The axis would
+have to be ≤ 1721 px for far to be reachable; it is **54.8× over**.
+
+The cause is deliberate staging: `SHOT_POSE.guard` carries `towardCamera: 0.35` (`Guard.js:199`),
+aiming the subject back at the lens so the beam rakes across the frame.
+
+**The scope is the bar, not the shot.** Across all 49 rows, 539 guard entries carry a `farS` and
+exactly **4** have `ndcZ ≠ 1` — all four are the `guard` shot's subject 0, one per arm. Off-frame
+`farS` is otherwise routine and harmless (`hero [1470,578,1]`, `traversal [1602,1013,1]`: in-frustum,
+axis a few hundred px). But BH1 hardwires `row('guard','bon')` with its subject pinned by
+`SHOT_POSE`, so **the only staging BH1 can ever see is the one that turns the cone at the lens.**
+
+As sealed, BH1 is structurally unable to evaluate the only shot it is pointed at. §348's
+VOID-not-FAIL was right and the reason is now on the record. `progress/records/bh1/`.
+
+### §349.2 sly-startle's containment escape: located, sized, two readings refuted
+
+`PROT-B` wanted `outside ≤ 900` and got **6087**. The container union covers 853 808 of 921 600 px;
+its complement is **exactly** `{x < 446 ∧ y ≥ 568}` — 67 792 px, verified by enumeration — and every
+escaped pixel lies in it. Both edges are container edges: `y=568` is the bottom of `g2`'s dilated
+`beamRect`, `x=446` the left edge of the spill rect.
+
+```
+max|Δch| histogram    =1: 6063     2-3: 24     4-8: 0     >8: 0
+outside   67792 px   flips 6087 (8.98%)     meanΔL over the mask =  0.0238 codes
+inside   853808 px   flips 170167 (19.93%)  meanΔL               = -2.7614 codes
+                     px with max|Δch| > 3 = 116602
+```
+
+**1/42 of one code value**, against a sanctioned change 116× larger and of opposite sign. It is still
+the cone's signal, not a neutral wobble: R moves up in 3535 of 3636 cases and B *down* in 986 of
+1214 — the `colPatrol 0xffd9a0` warm axis.
+
+**Refuted — it is not a universal bleed surfacing through a container hole.** `dunes` leaves 9.1×
+more of its frame uncovered (618 440 px) and leaks zero; `traversal` 314 543 and zero; eleven of
+fifteen shots are at exactly zero. `night`'s 664 is the only other non-zero and carries the opposite
+sign.
+
+**Refuted — it is not the beam rect under-covering the cone's falloff.** That predicts decay with
+distance below `y=568`. Binned by y-band × luminance bucket, so the floor's brightening toward camera
+cannot confound it, the flip rate **rises monotonically** across the full 152 px at three independent
+luminance levels (L 32-48: 3.0→14.0 %; L 48-64: 3.1→12.4 %; L 64-80: 2.7→10.0 %). Nor is it an edge
+halo: the median escaped pixel is **76 px** from the nearest container, and `pad=128` — 5.3× the
+sealed pad — still leaves **2623**, 2.9× over the bar.
+
+**What it does point at**, and it is not conclusive: a jump to **18.76 %** in the 62 px left of the
+spill rect's hard edge against 6.8–8.2 % elsewhere, consistent with the spill term's gradient
+continuing past an axis-aligned boundary the light does not share. But the profile dips to 6.77 % at
+`x 192-256` and rises again to 8.20 % at the frame edge, so a further contribution is unaccounted for.
+
+**NOT CLAIMED: which uniform.** `bon` moves seven at once and `sly-startle` has **no `blamp` row**, so
+the bundle cannot be split on this shot. Naming one would repeat §347's pattern exactly — three
+successive `lampW` theories, each written after a verdict, each wrong. Splitting it needs a capture,
+not a re-read.
+
+**Incidental instrument note.** This shot's `ahead` disc projects to `[-1223,76,-1129,170]`, entirely
+off-screen; `dilate()` clamps `x0` to 0 but leaves `x1 = -1105`, a degenerate rect that contains
+nothing. Harmless here, but a degenerate container is silently empty rather than loud.
+
+### §349.3 Successor state
+
+Step 1 (BS1) closed at §6 of `RESULT-guardcone.md`; steps 2 and 4 closed here. **Step 3 — keeping the
+cone off the moon and lamps (`PROT-MOON` 5723 px, `PROT-LAMPS` 8028 px) — remains open and is now the
+only unexplained guardcone failure.** Note that unlike sly-startle's, those two are *large*: they are
+not a quantisation-floor artefact and should not be approached as one.
+
+---
+
+## §350 — keyprobe re-seal REFUSED: K1 is already committed, so a re-run would ratify rather than measure
+
+Asked to separate what a re-seal could clean from what it could not, the lane found the split is
+**three ways, not two** — the third item being the decision to run at all. Verified against the
+record before it was accepted:
+
+**1. `K1` is already published.** `progress/records/logs/keyprobe-score.txt` is **tracked** and has
+carried `SHADE_R shade-terminator  ramp 0.1408  ndl 0.1013  key 0.1017  sh 0.4908` since `7468b1f`.
+`RESULT-keyprobe.md`'s *"K1 is NOT read"* means the seal declined to **act** on it, not that the
+number is unknown. So a re-run on those frames cannot be a measurement: every gate, rect mean and
+verdict is fixed by committed bytes. That is a **ratification instrument** and must be named as one.
+The test that separates a legitimate fourth attempt from gate-shopping is not *"is the bar
+principled"* but **"is there a quantity in this seal whose value the author cannot already derive?"**
+
+**2. The decision band carries the refuted claim.** `PREREG-keyprobe.md` §6 derives **both** bounds
+from `PF_KEY_LO`: `DARK = 0.02` (×1) and `KEYED = 0.10` — *"0.10 is 5× that floor"*, its own words.
+`PF_KEY_LO` was 0.02 because the record asserted `sh = 0` on colossus-L, which §344 measured false at
+**0.0281**. Applying the seal's own unchanged ×5 logic to the *measured* floor gives `5 × 0.0281 =
+0.1405`, under which **K1 = 0.1017 is INCONCLUSIVE, not KEYED**. The verdict a re-seal would ratify
+sits inside the width of the mistake that voided the run. The band was **not** moved (§141.1).
+
+**3. The margin is 0.43 of one byte.** `K1 − 0.10 = 0.0017 = 0.43/255`, never shown to survive a boot
+change.
+
+**4. Two of the three "replicates" are one observation.** At identical `srcHash b3852e39472ed68f`,
+`keyprobe1/courtyard.term5.png` and `bandgate2run/courtyard.ramp.png` are **byte-identical**
+(`7d6125ed124e5577`) — same instrument, `{raw:true, term:5}`. `bandgate1/courtyard.ramp.png` differs
+(`1de4f00760af51fb`) and is a genuinely independent boot, committed since 12:26 and never scored for
+`key`. **Correction to the lane's report:** it named this file `keyprobe1/courtyard.ramp.png`, which
+does not exist; the file is `courtyard.term5.png` and it does carry that digest.
+
+**5. The mean may be the wrong statistic.** Reconstructing a two-population mixture from the
+published means gives `p = 0.0923` (ramp), `0.0948` (ndl), **`0.1443`** (key) — re-solved here and
+exact. A clean mixture yields one `p`, so this reads as a **continuum**, the worst case, where K1 is a
+function of where the rect edge fell. The soft spot is the assumption that `LIT_R`/`CAST_L` proxy the
+two populations inside `SHADE_R`, not the linearity.
+
+`PREREG-bandgate2.md` §8.1 already rules on this situation and binds: *"only fresh frames decide."*
+
+**The replacement draft** (`progress/records/keyprobe2/PREREG-keyprobe2.md`) is built on two un-read
+quantities — `R_BOOT` (do boots agree on the already-registered band; **zero free parameters**) and
+`MIX` (is `SHADE_R` one population). Its §0 discloses that it was authored with the control values
+known and lists what it refused to compute; two of its four routes end in **RE-AIM** rather than an
+answer; it has exactly one registered-not-derived parameter, labelled per §141.4.
+
+Its new **`PF_PROD`** control is sound and **stronger than it argued**: `key = ramp * sh`
+(`toon.glsl.js:528`) with `sh ∈ [0,1]` makes `key ≤ ramp` a *shader identity*, and this holds for any
+`uShadowBands.z ∈ [0,1]` because `slyShadowBand` self-clamps (`:351`) — on the shipped path
+`z = 0.0`, so the band remap is inert entirely. Its `PF_SPAN` motivation also checks out: `LIT >
+SHADE > CAST` holds on **all three** channels (ramp 0.8532/0.1408/0.0684, ndl 0.7823/0.1013/0.0300,
+key 0.5382/0.1017/0.0281), so an ordering-only control is blind to the channel swap that is §342.2's
+Error 2 — the mistake this lineage has already made once.
+
+It is a **draft, not a seal**: it becomes a pre-registration only if committed before anyone scores
+`bandgate1/courtyard.ramp.png`. In the other order it is worthless and should be deleted.
+
+---
+
+## §351 — PREREG-rimfloor WITHDRAWN: its acceptance bar scores a PEAK against an AREA number
+
+The draft was never registered, so no seal moves; it is kept whole beneath a WITHDRAWN banner
+(202 insertions, **no deletions**) because the reasoning is the audit trail.
+
+**It did not die on the premise expected.** §347's denominator correction *is* this draft's §0.1 and
+§347's ink correction *is* its §0.2 — the draft is where both came from, and its §0.1 computes
+`0.45 × 0.80873 × 0.99451 × 10.67 = 3.862` against 3.870 measured, i.e. Path B on contract to 0.2 %.
+The "3.3× shortfall" motivation was excised before anyone re-read it.
+
+**It died on its acceptance number.** Verified independently:
+
+```
+rim-edges.mjs             "RIM  max L over the RIMW px immediately inside i0"
+                          "spike = RIM - BODY   <- THE statistic"
+draft §6.3                derives A1's 0.112 from the 4000-sample quadrature AREAS,
+                          and prints them: "areas 0.0276 / 0.2466"   (= 0.11193)
+antirim-profile.txt:698   "rim-offline §2 predicts  0.247 (peak) | 0.112 (area)"
+```
+
+So `A1` requires a **peak** to clear an **area** bar. The peak comparand is **0.247**. This is §346
+Correction 2 committed a second time, in the seal's headline bar.
+
+**At the like-for-like number the lever is out of range.** The draft's §1.2 named its own weak link —
+no per-shot split of `share_screen` — and that is no longer true: `antirim-profile.txt` §B carries a
+per-edge `PathB` column, and rebuilding from it closes the weak link **in the draft's favour** (both
+shots run above the pooled 8.600 slope). It dies anyway: `F` needed is **1.109 / 1.181** against a
+lever that stops at 1.00, and max reachable `ΔR` at `F=1.00` is 0.206 / 0.186 even assuming `b=0`.
+Only the 0.112 bar is reachable, and only because it is the wrong statistic's number.
+
+*Verified here:* the instrument definition, the committed peak/area pairing line, §6.3's own area
+arithmetic, and the pooled PathB figures (`SHADOW7 3.87 / KEY5 10.67`, `antirim-profile.txt:72-73`).
+*Not re-derived here:* the per-shot rebuild's aggregates, which are the lane's computation over the
+per-edge rows rather than literals in the file — they bear on the "dies anyway" half, not the killer.
+
+**A bar reachable only through a known measurement error is worse than no bar**, so withdrawal is the
+outcome rather than a repair. Two further arguments against the dosing route, both from committed
+material: §346 measures the ink removing **17.5 L** of shadow-side spike while Path B's entire
+delivery is 3.87 L and `F=1.00` buys 4.73 L more — **~27 %** of what the other, equally pokeable,
+same-file lever costs; and `antirim-profile.txt` §D quantifies §347's "negative by construction" — the
+RIM window is **46 % inside the ink dip on SHADOW edges vs 12 % on KEY**, and Path B at the shipped
+floor does not change it (`inside50` identical `off`→`screenoff`). Raising F brightens what is under
+the ink; it does not move it out.
+
+**Also struck in the draft:** §3.1 and §11.2's *"twice its own documented 0.112"* (it is ~90 % of its
+documented **peak**; the conclusion *"don't touch wrapRim"* survives, the reason changes), and
+§11.1's third bullet, which still read the src sentence as 0.45 of the whole band — the denominator
+error its own §0.1 refutes 400 lines earlier.
+
+**The replacement** `progress/records/rimsucc/PREREG-rimink.md` is a 2×2 factorial on (Path B,
+composite ink) — `off`, `screenoff`, `noink`, `bothoff`, `d100`, `back`; 18 frames, 3 chunks, ships
+nothing. It keeps the rimfloor option alive **by measurement rather than by arithmetic**: `X1` uses
+the peak comparand 0.247 with an **asymmetric disposition registered in advance** (a FAIL is
+NO-CLAIM, because `inkStrength=0` removes only the crease pass and leaves the inverted hull standing);
+`X3`'s bar of 1.00 is *where the two levers have equal reach in the same frame*, a crossing point
+rather than a chosen number, with the ink pedestal cancelling in both terms; `CAL_RIM` and `CAL_INK`
+are **deliberately identical** so no ordering of the two levers is smuggled in through the gates that
+adjudicate between them; and an **EXCL-9 sensitivity** is registered *before* the run because §D shows
+the ink dip reaching 12–13 px while `EXCL=6`, and a falling `BODY` inflates `spike` in the direction
+that flatters the lane's own claim. Two claims, two falsifiers, **neither compound** — the defect
+`RESULT-rim` §3 records.
+
+**The lever needs no `src` change** — verified at this sha, all inside `_renderChain`'s per-frame
+block: `PostFX.js:2302 uInkStrength`, `:2321 uRimStrength`, `:2322 uRimShadowFloor`,
+`:2324 uRimFloorOffCut`, and two the draft never checked, `:2242 uRimRadius` and `:2238
+edgeThickness * inkResScale()`. Not in `tune`: the inverted hull, which is `Outline.js`-owned scene
+geometry.
+
+**Flagged INFERRED, not verified:** within `PostFX.js` the ink's width is resolution-anchored
+(`inkPixels(rows) = clamp(2.5·rows/1080, 0.9, 5.0)`, and `:2238` multiplies the crease by
+`inkResScale`) while `TUNE.rimInner/rimMid/rimOuter = 1.2/2.6/4.4` reach `uRimRadius` **raw** —
+`Outline.js` calls this out itself. If the geometric consequence holds, the rim band is **46 % under
+the ink at 720 rows, 67 % at 900, 88 % at 1080** (AGENTS §1's ship target), i.e. **the defect is worse
+in the shipped frame than in the frame this whole lineage measured it in.** Not previously recorded.
+Named as the successor candidate with its dose derived (`× 1/inkResScale`), not proposed.
