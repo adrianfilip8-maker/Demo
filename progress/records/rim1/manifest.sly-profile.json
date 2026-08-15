@@ -1,0 +1,92 @@
+{
+  "seal": "PREREG-rim",
+  "warmup": 2,
+  "shot": "sly-profile",
+  "head": "7ebd5daf9826c1946da50159d372c39c1f1f8b37",
+  "srcHash": "b3852e39472ed68f",
+  "staging": "setShot(name, {}) — dt UNDEFINED, live settle, roster-faithful (§328)",
+  "shippedRimStrength": 0.7,
+  "capturedAt": "2026-08-15T15:10:48.734Z",
+  "rows": [
+    {
+      "shot": "sly-profile",
+      "arm": "off",
+      "file": "sly-profile.off.png",
+      "sha256": "1a9a8324c737de85c9599679c2a910a6882f41c9b85fdf817de28076a004131a",
+      "readback": {
+        "uRimStrength": 0.7,
+        "uEdgeEnabled": 1,
+        "tuneRimStrength": 0.7,
+        "edgeEnabled": true,
+        "uDebugTerm": 0,
+        "debugRaw": false,
+        "debugSrc": "scene",
+        "camY": 1.7
+      }
+    },
+    {
+      "shot": "sly-profile",
+      "arm": "screenoff",
+      "file": "sly-profile.screenoff.png",
+      "sha256": "cd9b727779bc9fe3c94cf5428228f20e2fce283b538232b5659702aa741ad176",
+      "readback": {
+        "uRimStrength": 0,
+        "uEdgeEnabled": 1,
+        "tuneRimStrength": 0,
+        "edgeEnabled": true,
+        "uDebugTerm": 0,
+        "debugRaw": false,
+        "debugSrc": "scene",
+        "camY": 1.7
+      }
+    },
+    {
+      "shot": "sly-profile",
+      "arm": "raw",
+      "file": "sly-profile.raw.png",
+      "sha256": "e06d11f1756ed690c7209f7884ebc5e210c916e756c0072212e01ddb1a0abe1c",
+      "readback": {
+        "uRimStrength": 0,
+        "uEdgeEnabled": 1,
+        "tuneRimStrength": 0.7,
+        "edgeEnabled": true,
+        "uDebugTerm": 0,
+        "debugRaw": true,
+        "debugSrc": "scene",
+        "camY": 1.7
+      }
+    },
+    {
+      "shot": "sly-profile",
+      "arm": "cal",
+      "file": "sly-profile.cal.png",
+      "sha256": "bfe888beddb9e03d04af28a5d39c6d0cbb45eb216d68682e74ddfadf99f044e4",
+      "readback": {
+        "uRimStrength": 0,
+        "uEdgeEnabled": 1,
+        "tuneRimStrength": 0.7,
+        "edgeEnabled": true,
+        "uDebugTerm": 4,
+        "debugRaw": true,
+        "debugSrc": "scene",
+        "camY": 1.7
+      }
+    },
+    {
+      "shot": "sly-profile",
+      "arm": "back",
+      "file": "sly-profile.back.png",
+      "sha256": "1a9a8324c737de85c9599679c2a910a6882f41c9b85fdf817de28076a004131a",
+      "readback": {
+        "uRimStrength": 0.7,
+        "uEdgeEnabled": 1,
+        "tuneRimStrength": 0.7,
+        "edgeEnabled": true,
+        "uDebugTerm": 0,
+        "debugRaw": false,
+        "debugSrc": "scene",
+        "camY": 1.7
+      }
+    }
+  ]
+}

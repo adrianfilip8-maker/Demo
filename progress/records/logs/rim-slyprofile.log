@@ -9,3 +9,10 @@ shipped tune.rimStrength = 0.7 (captured at boot; `back` restores this value)
   # 2 sly-profile.screenoff  sha cd9b727779bc9fe3  uRim=0 uEdge=1 dbgTerm=0 raw=false/scene
   # 3 sly-profile.raw        sha e06d11f1756ed690  uRim=0 uEdge=1 dbgTerm=0 raw=true/scene
   # 4 sly-profile.cal        sha bfe888beddb9e03d  uRim=0 uEdge=1 dbgTerm=4 raw=true/scene
+  # 5 sly-profile.back       sha 1a9a8324c737de85  uRim=0.7 uEdge=1 dbgTerm=0 raw=false/scene
+-- arm states distinct: off/screenoff and raw/cal differ, off == back
+
+5 frames -> /home/user/Demo/progress/records/rim1   (10/15 rows across 2/3 chunks)
+FORCE-ADD NOW (§329.1/§335, these PNGs are gitignored):
+  git add -f progress/records/rim1/sly-profile.*.png progress/records/rim1/manifest*.json
+remaining chunks: hero
