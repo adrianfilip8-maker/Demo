@@ -146,3 +146,46 @@ frame is conspicuously warm — the floor is orange, the beams are obvious — y
 reports **zero** hot-warm pixels at `maxL=196`. Plenty of warmth, none of it where the bar looks. That
 points at the apex probe's location or its classifier rather than at an absent beam, and it is the
 first thing a successor should check before touching the cone tuple.
+
+---
+
+## 6. ADDENDUM — BS1 diagnosed: it fails on LUMINANCE by 2.1%, not on warmth
+
+The successor's step 1 was "check the apex probe's location and classifier". Both checked, offline,
+on the committed `guard.bon`. **This explains the failure; it does not relitigate it** — the bar was
+sealed before any frame existed and DO NOT SHIP stands (§141.1).
+
+`BS1` counts pixels in a radius-16 disc at `apexS` satisfying **`L >= 200` AND `R−B >= 8`**
+(`guardcone-score.mjs:66-80`). Measured over all 797 disc pixels:
+
+```
+maxL                195.75      bar needs 200      SHORTFALL 4.25  (2.1%)
+px with L >= 200        0
+px with R-B >= 8      797       100% of the disc
+px with BOTH            0
+brightest px      (769,335) rgb(208,194,177)  R-B = 31
+R-B among the 106 px at L>=180:  min 31, median 38, max 42
+```
+
+**Two findings, and the second is the useful one.**
+
+**The probe location is correct.** The disc's brightest pixel sits at (769,335) against an `apexS` of
+(770,335) — one pixel off centre. The probe is aimed at the local maximum, so "the rect is in the
+wrong place" is ruled out.
+
+**The failure is entirely in the luminance half of the conjunction.** Every pixel in the disc — 797
+of 797 — clears the warmth condition, with a median `R−B` of 38 against a bar of 8, a 4.75× margin.
+Not one pixel reaches `L = 200`, and the brightest misses by 4.25. So the apex is unambiguously
+*warm* and marginally not *hot*.
+
+That inverts the natural reading of "hot-warm px=0". It does not mean the apex lacks the cone's
+colour; it means the apex is 2.1% short of a brightness threshold while carrying the colour in
+abundance. A successor that responds by pushing warmth into the cone would be treating the half of
+the bar that already passes overwhelmingly.
+
+**Not claimed:** that 200 is the wrong threshold, or that a 4.25 shortfall should be waived. A 2.1%
+miss is precisely the shape that invites "surely that is close enough", and §141.1 exists because
+that reasoning is only ever available after the number is known. The bar was fixed in advance; it
+was missed; the verdict is unchanged. What a successor may legitimately do is seal a NEW bar in a
+new file, with its threshold derived and registered before its own candidate renders — and it now
+knows the axis to derive it on is luminance at the apex, not chroma.
