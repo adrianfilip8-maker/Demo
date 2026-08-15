@@ -237,6 +237,42 @@ const TUNE = {
      floors 0.10 and 0.00) are registered in PREREG-rimfloor2.md; do not ship a nonzero value
      without that seal's frame verdict. */
   rimFloorOffCut: 0.0,
+  /* ── dispChromaHold — the subject holds chroma AFTER the tonemap (PREREG-dispchroma) ──────
+     §333 measured the costume leaving the shader at LINEAR chroma 0.873 against an albedo of
+     0.990 (ratio 0.882) and arriving on screen at display chroma 0.205: AgX removes 76.5% of
+     the chroma that reached it. Three sealed attempts — lithold VOID, litbleach VOID,
+     litbleach2 valid/DO-NOT-SHIP (§330/§332) — aimed in-shader levers at that, and could not
+     have worked: `subjLitHold` measures the loss in linear, finds almost none, and correctly
+     declines. It was right in FORM and wrong in PLACE.
+
+     So this sits after `slyLinearToSrgb`, in display space, downstream of the tonemap where
+     the loss actually happens and where AgX can no longer undo it. That placement is not
+     novel — the silhouette rim already lives there, and the plinth-band investigation
+     (see ~line 645) kept it there on measured evidence.
+
+     Shape, and why each part:
+     - `mix( vec3( l ), c, 1.0 + k )` with `l = slyLuma( c )` is **luminance-exact for any k**:
+       luma(mix) = (1-s)*l + s*l = l identically, so this is a pure chroma lever and cannot buy
+       saturation with brightness — the same property `subjLitHold` had, which was never the
+       part that failed.
+     - **It can only amplify the chroma that survived, not restore toward the albedo.** The
+       albedo is not available at composite time; nothing downstream of the tonemap knows what
+       the surface was painted. That is a real limitation of this placement and it is stated
+       here rather than discovered later: if AgX has driven a pixel to near-neutral, there is
+       no hue left here to amplify.
+     - Subject scope via ledger #31's mask (`uNormal.a = 1 - subject`), the same channel
+       `bloomSubjectCut` and `rimFloorOffCut` consume. The population is the skinned character
+       family; **the cane is NOT masked** — the documented `rimSkinExempt` boundary — and the
+       cane sits inside PREREG-dispchroma's traversal rect, so the seal scores that.
+     - The result is clamped to [0,1]. Extrapolation past the gamut would otherwise be clipped
+       by the framebuffer anyway; doing it here makes the arithmetic defined rather than
+       implicit. Clamping is per-channel and therefore does bend hue at the extremes, which is
+       why the seal carries a hue bar and a binding LOOK gate.
+
+     0.0 = the branch is UNTAKEN and the build is bit-identical (the `localToon` /
+     `uSpecNormPow` standard): at 0 nothing here is evaluated. Ships above 0 only on
+     PREREG-dispchroma's PASS, with the RESULT cited in this comment. */
+  dispChromaHold: 0.0,
   rimLit: 0x7fd4ff,       // §2.2 RIM, the key's complement       — DAY leg (see rimClock)
   rimShade: 0x6fa8d8,     // §2.2 FILL sky bounce — the shadow side is lit by sky, not by sun
   /* ── the time-of-day hook the block above says this pass does not have (§214.2, defect #12) ──
@@ -1212,6 +1248,7 @@ uniform float uAOEnabled, uEdgeEnabled, uBloomEnabled, uInkStrength;
 uniform float uAOStrength, uAODepth, uRimStrength, uRimShadowFloor;
 uniform sampler2D uNormal;      // normal prepass; alpha = 1 - subject (ledger #31, inverted)
 uniform float uRimFloorOffCut;  // TUNE.rimFloorOffCut — off-subject rim-floor cut; 0 = exact no-op
+uniform float uDispChromaHold;  // TUNE.dispChromaHold — subject chroma hold AFTER the tonemap; 0 = exact no-op
 uniform sampler2D uFxMask;      // FX coverage, written by the FX draw itself (TUNE.fxInkCut)
 uniform float uFxInkCut;        // TUNE.fxInkCut — ink exclusion over FX coverage; 0 = exact no-op
 uniform vec3  uLift, uGain, uSplitShadow, uSplitHighlight, uInkWarm, uInkCool;
@@ -1414,6 +1451,21 @@ void main() {
   // AgX returns linear sRGB. Nothing downstream encodes for us — a ShaderMaterial writing to
   // the canvas doesn't get three.js's output conversion — so do it here, once.
   c = slyLinearToSrgb( c );
+
+  /* ---- dispChromaHold: the subject holds its chroma AFTER the tonemap (PREREG-dispchroma) ----
+     See TUNE.dispChromaHold for the derivation. §333: the costume leaves the shader at linear
+     chroma 0.873 and lands at display 0.205, so the loss is HERE, downstream of AgX — which is
+     why the three in-shader attempts could not have worked. A branch, not a mix collapsing to
+     the identity: at 0 nothing below is evaluated and c is the shipped image byte-for-byte. */
+  if ( uDispChromaHold > 0.0 ) {
+    float dchSubj = 1.0 - texture2D( uNormal, vUv ).a;   // ledger #31; cane NOT masked
+    float dchL = slyLuma( c );
+    /* Luminance-exact for any k: luma(mix(vec3(l), c, s)) == l identically, so this is a pure
+       chroma lever. It can only amplify the chroma that SURVIVED — the albedo is not available
+       at composite time (see the TUNE comment). */
+    float dchS = 1.0 + uDispChromaHold * clamp( dchSubj, 0.0, 1.0 );
+    c = clamp( mix( vec3( dchL ), c, dchS ), 0.0, 1.0 );
+  }
 
   /* ---- silhouette rim, before the ink so a line still reads as a line -----------------
      §2.1.5 calls the rim "the single biggest AAA tell" and §7.3 fails a shot without one;
@@ -1706,6 +1758,7 @@ export class PostFX {
         uRimShadowFloor: { value: this.tune.rimShadowFloor },
         uNormal: this.shared.uNormal,
         uRimFloorOffCut: { value: this.tune.rimFloorOffCut },
+        uDispChromaHold: { value: this.tune.dispChromaHold },
         uFxMask: { value: null },
         uFxInkCut: { value: this.tune.fxInkCut },
         // Occlusion is applied while the image is still linear, so the tint stays linear —
