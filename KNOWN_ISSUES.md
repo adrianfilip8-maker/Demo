@@ -25153,3 +25153,89 @@ comparing against. I reached for the control in the same *frame* instead of the 
 *state*. **The measurement that settles it is still the one §336 named and this item has now twice
 failed to substitute for: a `key` (= `ramp * sh`) readback over the colossus rect.** Until it exists,
 every suppression figure in §342.1/§342.2 is conditioned on an unmeasured `sh`.
+
+---
+
+## §343 — rim: VALID. **M1 SHARED · M2 DOWNSTREAM · M3 SCREEN-RIM-LIVE**, and I got all three forecasts wrong
+
+PREREG-rim run to a verdict. 15 frames, 3 chunks, force-added at `a9b58ef`; scored by the registered
+instrument on the complete manifest. Full working in `RESULT-rim.md`, scorer output in
+`logs/rim-score.txt`.
+
+| row | forecast (§10) | measured |
+|---|---|---|
+| M1 | SURFACE-OWNED ~85/15 | **SHARED**, 62/38 |
+| M2 | UPSTREAM ~60/40 | **DOWNSTREAM** |
+| M3 | SCREEN-RIM-INERT ~80/20 | **SCREEN-RIM-LIVE** |
+
+**Every gate passed and the defect reproduced almost exactly.** Three chunks, **three exact 0-px
+brackets** — `back` byte-identical to `off` in every shot across five arms including two composite
+bypasses, so §328/§330 staging + §331's warm-up is reproducible across boots. CAL 74.1/14.3/80.2 %.
+CLIP 0.0/1.4/2.4 %. `PF_REPRO_KEY` **5/5**, `PF_REPRO_SHADOW` 0/7. **`KEY5` mean spike 28.27 L
+against the sealed r12 reference 28.27 L**; SHADOW7 mean 0.51 vs r12's 0.53; all 20 kept edges within
+**±0.05 L** of §1.2. The single drop is `night/torso-right`, PINNED exactly as §1(f) registered in
+advance.
+
+**M1 — SHARED.** `share_surf` 17.60 L, `share_screen` 10.67 L, bar 19.79. Path A 62.3 %, Path B
+37.7 %. My 85/15 leaned on `PostFX.js:101`'s 0.3 L — a figure measured **on architecture**, which the
+seal itself flagged in §2 and promised to re-measure on the character. I forecast with the number I
+had just finished explaining was measured in the wrong place. **Path B on the character is 36× its
+architecture figure.** The 0.70 band gave Path B a 28× margin and it flipped anyway, so SHARED is a
+result and not a threshold artefact.
+
+**M2 — DOWNSTREAM, and this is the decisive row.** `Rlin` **0.222** (hero 0.257, sly-profile 0.188)
+against Path A's own quadrature-derived attenuation of **0.112**. The shader emits **nearly double**
+the shadow-side band its own arithmetic predicts — and the same edges read 0.51 L against a key-side
+28.27 L in display. **§3's central argument is refuted**: it reasoned AgX's diverging `log2` slope
+makes the transform *"the one term in the chain that is biased in the defect's favour"*, and the band
+is emitted in linear and gone by the screen.
+
+**My registered refuting condition was mis-specified.** §10 named *"`M2 = DOWNSTREAM` with `M3 =
+SCREEN-RIM-INERT`"*. I got DOWNSTREAM with LIVE, so the literal compound never fired — **but M2 =
+DOWNSTREAM alone refutes §3, and M3 was never part of that test.** I bolted a second condition onto a
+falsifier that did not need it, making my own test harder to trigger than the claim deserved.
+Recorded as a defect in how the forecast was written, not as a reason the claim survives.
+
+**M3 — SCREEN-RIM-LIVE at 3.87 L, and it exposes arithmetic nothing in the seal anticipated.** Mean
+shadow `spike(off)` is 0.51 L of which Path B supplies 3.87 L, so **mean `spike(screenoff)` is
+−3.36 L**: with Path B off, the shadow-side band is 3.4 L **darker** than the body. Path A alone
+does not make a weak rim there — in display it makes an **anti-rim** — and Path B fills the hole back
+to roughly zero. That also reconciles M2 with M3: the same term reads **+0.222** of its key band in
+linear and **−0.19** in display. **The sign inverts across the transform.**
+
+`SCREEN-RIM-INERT` would have falsified `toon.glsl.js:1210-1212` (*"That is where the shadow-side rim
+lives now"*). **That sentence survives, and only just**: Path B pays 3.87 L of the 12.72 L its own
+`uRimShadowFloor = 0.45` contract owes — **30 %**. True in direction, short by 3.3× in magnitude. Not
+a false declaration; an under-delivering one, now quantified.
+
+**§9 LOOK — all three performed, all three pass.** (1) night `off` vs `screenoff` distinguishable on
+Sly — thin cyan outlines on body edge, glove and cap; **38.5 %** of pixels differ in a 45×60 box on
+him against 8.8 % whole-frame, so the change is on the character. (2) The shadow-side silhouette
+reads as **not** separated: in `sly-profile` the key-facing chest carries a bright edge (+30.03) while
+the back and right flank have only the ink outline, and the tail shows both in one object — pale on
+**top** (+28.71), nothing on the **right** (−3.41). (3) `hero.raw` is a recognisable scene.
+
+**One thing did not reproduce and it costs nothing.** Background luminance moved where character
+luminance did not: `sly-profile` BG +8–16 L on every edge, `night/cap-top` 13.5 → 7.12, while
+**`hero`'s BGs reproduced exactly**. So it is *shot-specific*, not systematic — an earlier note of
+mine said systematic and that was too broad. This is §0's substitution argument confirmed
+quantitatively: `Guard.js`/`Particles.js`/`Props.js`/`CarmelitaGuard.js` put guards and props behind
+Sly in some framings and not others. `spike = RIM − BODY` is immune (both terms on the character);
+`sep = RIM − BG` is not, and **no sealed bar uses `sep`** — `PF_EDGE`'s floor is an RGB distance
+(≥ 8.0 against measured 16.0–174.4) and `PF_NIGHT` absorbs cap-top's shift at 4.3 vs ≤ 8.0.
+
+**ROUTE: POSTFX / display space** — which §3 enumerated correctly even while arguing against it
+(*"the deficit is downstream and the lever is display-space / POSTFX — §333's route, for a different
+reason"*). **The seal worked; the forecast did not.** Its bands discriminated, its pre-flight proved
+reproduction before adjudication, and its own §3 listed the branch that fired. That is the case for
+registering forecasts separately from bars.
+
+**Successor inherits, and no candidate is proposed (§8):** the lever is **not** `wrapRim`
+(`toon.glsl.js:1031/1190`) — Path A already emits 2× its documented shadow-side band and turning it
+up attacks the working half. The deficit sits between the linear buffer and the screen, with a known
+shape: Path A's shadow-side contribution **inverts sign** across the transform. **Path B is the term
+already in the right space, already live on the character, and under-delivering against its own
+written contract by 3.3×** — `uRimShadowFloor = 0.45` owes 12.72 L and pays 3.87 L. Any successor bar
+should be **relative** (a fraction of the key-side band on the same edges), per §342.1/§342.2.
+
+Nothing ships. This seal proposes no candidate, no dose and no `TUNE` change; its product is the route.

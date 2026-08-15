@@ -1,0 +1,64 @@
+PREREG-rim — progress/records/rim1   head 222cfdad8d   srcHash b3852e39472ed68f   warmup 2
+
+V_ROWS         PASS   15 rows (want 15)
+V_CHUNKS       PASS   3 chunks (want 3)
+V_CHUNK_TREE   PASS   src hashes across chunks: b3852e39472ed68f
+R_night        PASS   off-vs-back 0 px (want 0; §331 warm-up 2)
+R_sly-profile  PASS   off-vs-back 0 px (want 0; §331 warm-up 2)
+R_hero         PASS   off-vs-back 0 px (want 0; §331 warm-up 2)
+CAL_night      PASS   (64,128,191)±1 over 74.1% (want ≥ 5%)
+CAL_sly-profile PASS   (64,128,191)±1 over 14.3% (want ≥ 5%)
+CAL_hero       PASS   (64,128,191)±1 over 80.2% (want ≥ 5%)
+CLIP_night     PASS   0.0% of measured px at 255 in raw (want < 5%)
+CLIP_sly-profile PASS   1.4% of measured px at 255 in raw (want < 5%)
+CLIP_hero      PASS   2.4% of measured px at 255 in raw (want < 5%)
+
+edge                          face    BODY     BG    RIM   spike  rgbDst     kept
+  hero/cap-top                KEY      14.63 22.13 41.67   27.04    41.7   yes
+  hero/muzzle-front           KEY      41.28 21.08 40.54   -0.74    98.4   yes
+  hero/chest-front            KEY      37.25 17.51 65.71   28.46   112.4   yes
+  hero/torso-back             SHADOW   30.48 20.63 31.79    1.31    85.3   yes
+  hero/tail-top               KEY      30.93 71.20 58.06   27.13   168.6   yes
+  hero/tail-right             SHADOW   35.45 57.33 34.84   -0.61   104.8   yes
+  hero/glove-left             KEY      33.53 18.56 39.76    6.23    95.9   yes
+  hero/glove-right            SHADOW   33.46 19.64 43.67   10.21    98.5   yes
+  sly-profile/cap-top         KEY      34.82 53.28 40.90    6.08   173.8   yes
+  sly-profile/cap-front       KEY      36.19 60.82 41.70    5.51   154.7   yes
+  sly-profile/cap-back        SHADOW   34.71 54.15 28.46   -6.25   169.5   yes
+  sly-profile/muzzle-front    KEY      48.38 52.76 43.36   -5.02    39.9   yes
+  sly-profile/torso-front     KEY      35.28 52.69 65.31   30.03   171.0   yes
+  sly-profile/torso-back      SHADOW   32.69 49.41 33.75    1.06   174.4   yes
+  sly-profile/tail-top        KEY      26.61 50.50 55.31   28.71   103.1   yes
+  sly-profile/tail-right      SHADOW   29.51 47.41 26.10   -3.41    83.0   yes
+  night/cap-top               KEY      11.38  7.12 14.76    3.38    25.1   yes
+  night/head-front            KEY      10.11  6.73 23.82   13.70    16.0   yes
+  night/glove-top             KEY       8.31  4.81  9.11    0.80    40.6   yes
+  night/glove-right           SHADOW    9.01 12.25 10.28    1.27    23.6   yes
+  night/torso-right           SHADOW   14.72  4.72  9.17   -5.55    60.9   DROP  PINNED (ink not found in ±6)
+
+PF_EDGE        PASS   1 dropped (allow ≤ 3), 20 kept
+PF_REPRO_KEY   PASS   5/5 SPIKE edges ≥ 20.0 L (want ≥ 4 of ≥ 4 kept) — §328: prove the runner reproduces the defect
+PF_REPRO_SHAD  PASS   0/7 SHADOW edges ≥ 20.0 L (want 0); mean shadow spike  0.51 L
+PF_NIGHT       PASS   night |BODY−BG| 4.3 / 3.4 / 3.5 / 3.2 L (want ≤ 8)
+
+── §7 MEASUREMENTS ────────────────────────────────────────────────────────────────────
+KEY5 mean spike(off)        28.27 L      (r12 reference 28.27 L)
+  share_surf   (screenoff)  17.60 L      bar for SURFACE-OWNED ≥ 19.79
+  share_screen (off−scr.)   10.67 L      bar for SCREEN-OWNED  ≥ 19.79
+M1  SHARED
+
+  raw linear spike  hero         KEY   34.01   SHADOW    8.73   ratio   0.257
+  raw linear spike  sly-profile  KEY   46.97   SHADOW    8.82   ratio   0.188
+Rlin (mean of per-shot ratios)    0.222      DOWNSTREAM ≥ 0.112  ·  UPSTREAM ≤ 0.056
+M2  DOWNSTREAM   (night carries no key-side reference and is excluded by §4)
+
+Sscreen  mean over SHADOW edges of spike(off) − spike(screenoff)     3.87 L
+         INERT ≤ 1.0  ·  LIVE ≥ 3.0   (Path B's own contract owes 0.45 × 28.27 = 12.72 L)
+M3  SCREEN-RIM-LIVE
+
+==> VALID.  M1 SHARED  ·  M2 DOWNSTREAM  ·  M3 SCREEN-RIM-LIVE
+    §9 BINDING LOOK is not scoreable here and is NOT satisfied by this exit code:
+      1. night.off vs night.screenoff at 1× and 6× — indistinguishable overrules SCREEN-RIM-LIVE
+      2. hero.off / sly-profile.off shadow-side silhouette against §7.3 by eye
+      3. hero.raw must be a recognisable scene, or M2 is VOID
+    This seal proposes no candidate and ships nothing (§8). Its product is the route.
