@@ -24883,3 +24883,37 @@ The seal proposes **no candidate** — three routing measurements (M1 19.8 L, M2
 linear from the shader's own arithmetic, M3 1.0/3.0 L) and a `PF_REPRO_KEY`/`PF_REPRO_SHADOW`
 pre-flight applying §328's rule: it refuses to adjudicate until its own off arm reproduces the
 defect.
+
+## §340 — bandgate VOID: the control gate caught my own mis-aimed control before it produced a verdict
+
+Scored against PREREG-bandgate (f3d314d). 4 frames, no `src` change.
+`V_ROWS`/`CAL` (23.5%)/`R` (0 px)/`CLIP` (0.0%) all PASS. **`PF_LIT` FAIL: the lit control reads
+`ramp` 0.561 against a sealed ≥ 0.80.** ⇒ **VOID**, nothing claimed. Fold:
+`progress/records/RESULT-bandgate.md`.
+
+**The terminator read 0.079** — inside the sealed `SHADOW ≤ 0.20` band, i.e. the answer I wanted,
+which would have declared the §336 three-arc item ALIVE. **It is not claimed.** A fail-closed
+control outranks the number it gates, and this is the case `PF_LIT` was written for.
+
+**The instrument is fine; my control was wrong.** `toon.glsl.js:495-502` explains 0.561: with
+`TUNE.bands: 3` the mid band is *"half key"* and the top band needs `ndl ≥ termHi` (0.52) — the
+goldenrake comment says so outright (*"a 22° sun puts floors and decks in the top band instead of
+arithmetically capping them at half key… the top band otherwise needs el ≥ 33°"*), and shipped
+`rakeTrack: 1.0` adds `(S_new − S_old)/steps` on top. **0.561 is the MID band plus goldenrake's
+increment: the colossus's brightest face is not in the ramp's top band at all.**
+
+**The error is mine and it is a new shape.** §3 of the seal verified the control rect against
+§336's *display* colour and matched it exactly — then I sealed a bar as though display brightness
+implied band membership. It does not. §332 taught *prove the ROI is on the material you are
+measuring*; this adds the level above it: **prove the CONTROL is in the state you are asserting
+it is in.** A control that is merely plausible is not a control.
+
+**Re-seal (a NEW file, §141.1):** replace the absolute `PF_LIT` with an **ordering** control —
+`ramp(lit) > ramp(terminator)` by a sealed margin — which tests that the channel discriminates
+without requiring me to know in advance which band either rect occupies, i.e. without assuming the
+thing the seal exists to find out. On this shot an absolute top-band control may not exist at all,
+since the brightest face is mid. Re-derive the band levels from `slyRamp`'s actual output rather
+than assuming 0 / 0.5 / 1.0, since `rakeTrack` demonstrably offsets them.
+
+Inherited working: the channel is readable and the arms are valid, so the re-seal needs only a
+correctly-aimed control.
