@@ -1,2 +1,4 @@
 renderer: ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)
 -- staged sly-key LIVE (dt undefined, roster path)
+  r0  sha 8a9d9fb36512c22c
+  r1  sha 75991b4ed9a49ab3
