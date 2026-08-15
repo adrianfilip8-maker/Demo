@@ -2,3 +2,13 @@ PREREG-guardcone + AMENDMENT A1 (cone-only; PREREG-guardart WAIVED-UNSCORED per 
 chunk "combat" (off -> bon -> back) — HEAD 51739ac5e804 verified (cone mechanism inert; §309 guard-model levers inert); expected src hash 317fd7305bab0f01
 frames -> /home/user/Demo/progress/records/guardcone1
 HEAD tree verified under the lock — src 317fd7305bab0f01 (no install; the cone mechanism is inert in HEAD)
+renderer: ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)
+§309 parking verified at boot: guardArt 0, guardSkin 0, unpainted, unshifted
+-- staged combat (42s) — setShot(name, { dt: 0 }) — clock frozen through staging (A2.8, sealed runner); then step(3,0) + renderFrame(0), uncaptured
+   4 engine warning(s) at staging, recorded verbatim in manifest.combat.json
+   ! textures: prewarm 23 recipes in 1.12s at size 1024 on 3 workers (125 MB, 23 baked / 0 generated)
+   ! KayKit (props): 36 placed from 11 models, 0 failed, 31064 tris, 29 colliders, 36 contact decals, 0 hulls
+   ! SlyModelDLRig: relaxed 6070 glove vertices, max move 17.8 (asset units)
+   ! SlyModelDLRig: staff submesh dropped (258 tris), sly-cane.glb (§294) socketed to handR (grip 22.2 mm, 258 tris)
+-- warm-up 2 render(s) discarded (§331: the first render after staging is unconverged; 1125 px at maxD 21, and every render after it bit-exact). `off` is render #4 after staging.
+  # 1 combat.off           sha 09abe952c98c  cone=0 glow=0.34 col=0xfff0c2 base=0.3 pool=0.24 core=1 lampToon=0 lampW=0.00 park=0/0/clean inframe=1
