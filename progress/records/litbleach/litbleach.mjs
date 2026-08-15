@@ -42,6 +42,20 @@ const CONTROL = 'sly-key';
 const ROSTER = [...DOSE, CONTROL];
 const ON = 0.70, KO = 0.40, OFF = 0.0;      // PREREG-litbleach §7 — sealed before any frame
 
+/* ── AMENDMENT A1: per-shot chunked capture ──────────────────────────────────────────────────
+   Five consecutive captures were destroyed by container rollbacks on a cadence that has
+   tightened to ~38 min, below even this seal's deliberately-short 45 min. One shot per boot is
+   ~5 frames / ~15 min and fits. NO bar changes: 13 of the 14 comparisons are within one shot and
+   therefore within one boot, and PF_STAGE compares measured saturations against fixed thresholds
+   rather than pixels against pixels. See AMENDMENT-litbleach-A1.md for the bar-by-bar argument
+   and for V_CHUNK_TREE, the gate that replaces single-process V-TREE with a stronger one. */
+const SHOT = process.argv[2];
+if (!SHOT || !ROSTER.includes(SHOT)) {
+  console.error(`usage: node litbleach.mjs <shot>   where <shot> is one of: ${ROSTER.join(', ')}`);
+  console.error('(AMENDMENT A1 — one shot per boot; run all three, then score.)');
+  process.exit(4);
+}
+
 const git = (...a) => execFileSync('git', a, { cwd: ROOT, encoding: 'utf8' }).trim();
 const die = (msg) => { console.error(msg); process.exit(2); };
 
@@ -50,11 +64,15 @@ const die = (msg) => { console.error(msg); process.exit(2); };
   const dirt = git('status', '--porcelain', '--', 'src/');
   if (dirt) die(`PF6: src/ is dirty at launch — a capture must run against a committed tree:\n${dirt}`);
 }
-/* PF7: one run, one out-dir. A resumed run mixes trees; the seal is re-run from empty. */
-if (existsSync(OUT) && readdirSync(OUT).length) {
-  die(`PF7: ${OUT} is non-empty — archive it before relaunching (no resume).`);
-}
+/* PF7, per AMENDMENT A1 now applied PER SHOT: a chunk aborts if its OWN frames already exist.
+   A half-finished chunk is archived and re-run whole — chunks are never resumed mid-shot. */
 mkdirSync(OUT, { recursive: true });
+{
+  const mine = readdirSync(OUT).filter((f) => f.startsWith(`${SHOT}.`) || f === `manifest.${SHOT}.json`);
+  if (mine.length) {
+    die(`PF7: ${OUT} already holds ${mine.length} file(s) for shot "${SHOT}" — archive them before relaunching this chunk (no resume):\n  ${mine.join('\n  ')}`);
+  }
+}
 
 const HEAD = git('rev-parse', 'HEAD');
 const EXPECT_SRC = srcHash();
@@ -124,7 +142,7 @@ await withGame(
   async ({ page, info }) => {
   console.log(`renderer: ${info.renderer}`);
 
-  for (const shot of ROSTER) {
+  for (const shot of [SHOT]) {
     /* 1. stage ONCE, LIVE. Not captured — this frame only exists to place the character. */
     const st = await page.evaluate(STAGE_LIVE, shot);
     console.log(`-- staged ${shot} LIVE (dt undefined, roster path); ${st.warnings} warning(s)`);
@@ -152,10 +170,14 @@ await withGame(
 
   const t1 = treeState();
   if (t1.src !== EXPECT_SRC) die(`V-TREE: src moved DURING capture (${t1.src} != ${EXPECT_SRC})`);
-  writeFileSync(path.join(OUT, 'manifest.json'), JSON.stringify({
-    seal: 'PREREG-litbleach', head: HEAD, srcHash: EXPECT_SRC,
+  /* Per-shot manifest (AMENDMENT A1). The scorer merges these and enforces V_CHUNK_TREE —
+     every chunk must carry the SAME srcHash, which checks the tree at three points in time
+     instead of the two a single process could check. */
+  writeFileSync(path.join(OUT, `manifest.${SHOT}.json`), JSON.stringify({
+    seal: 'PREREG-litbleach', amendment: 'A1 (per-shot chunked capture)',
+    shot: SHOT, head: HEAD, srcHash: EXPECT_SRC,
     staging: 'setShot(name, {}) — dt UNDEFINED, live settle, roster-faithful (§328)',
-    doses: { OFF, ON, KO }, expectRows: 14,
+    doses: { OFF, ON, KO }, expectRowsTotal: 14,
     capturedAt: new Date().toISOString(), rows,
   }, null, 2));
   }

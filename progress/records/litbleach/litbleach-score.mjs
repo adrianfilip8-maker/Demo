@@ -15,7 +15,7 @@
  */
 import { readPNG } from '../../../tools/png.mjs';
 import { shipVerdict, verdictLine } from '../../../tools/gate.mjs';
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 
 const ROOT = path.resolve(import.meta.dirname, '../../..');
@@ -44,11 +44,15 @@ const E_HUE_TOL = 25;                              // §7 E3/E4, degrees
 const LUM_TOL = 3.0;                               // §7 LUM
 const CTL_MIN = 0.42, CTL_DRIFT = 0.06;            // §8 PROT_CTL
 
-if (!existsSync(path.join(DIR, 'manifest.json'))) {
-  console.error(`no manifest at ${DIR} — capture first`);
+/* ── AMENDMENT A1: merge the per-shot chunk manifests ─────────────────────────────────────── */
+if (!existsSync(DIR)) { console.error(`no capture dir at ${DIR} — capture first`); process.exit(3); }
+const chunkFiles = readdirSync(DIR).filter((f) => /^manifest\.[a-z-]+\.json$/.test(f)).sort();
+if (!chunkFiles.length) {
+  console.error(`no chunk manifests at ${DIR} — expected manifest.<shot>.json (AMENDMENT A1); capture first`);
   process.exit(3);
 }
-const manifest = JSON.parse(readFileSync(path.join(DIR, 'manifest.json'), 'utf8'));
+const chunks = chunkFiles.map((f) => JSON.parse(readFileSync(path.join(DIR, f), 'utf8')));
+const manifest = { rows: chunks.flatMap((c) => c.rows) };
 const row = (shot, arm) => manifest.rows.find((r) => r.shot === shot && r.arm === arm) || null;
 const img = (r) => { try { return r ? readPNG(path.join(DIR, r.file)) : null; } catch { return null; } };
 
@@ -153,6 +157,19 @@ for (const shot of ROSTER) {
 guards.V_ROWS = manifest.rows.length === EXPECT_ROWS;
 report.push(`V_ROWS  ${manifest.rows.length} rows (want ${EXPECT_ROWS})`);
 
+/* ── V_CHUNKS / V_CHUNK_TREE — AMENDMENT A1's replacement for single-process V-TREE ────────── */
+{
+  const have = chunks.map((c) => c.shot).sort();
+  const wantChunks = [...ROSTER].sort();
+  guards.V_CHUNKS = JSON.stringify(have) === JSON.stringify(wantChunks);
+  report.push(`V_CHUNKS  chunks present [${have.join(', ')}] (want [${wantChunks.join(', ')}])`);
+
+  const hashes = [...new Set(chunks.map((c) => c.srcHash))];
+  guards.V_CHUNK_TREE = hashes.length === 1;
+  report.push(`V_CHUNK_TREE  ${hashes.length} distinct src hash(es) across ${chunks.length} chunk(s): ${hashes.join(', ')} (want exactly 1)`);
+  for (const c of chunks) report.push(`   chunk ${String(c.shot).padEnd(11)} head ${String(c.head).slice(0, 12)} src ${c.srcHash} at ${c.capturedAt}`);
+}
+
 /* ── R — same-boot bracket (§6) ───────────────────────────────────────────────────────────── */
 for (const shot of ROSTER) {
   const d = diffPx(img(row(shot, 'off')), img(row(shot, 'back')));
@@ -181,7 +198,9 @@ for (const shot of DOSE) {
 const PREFLIGHT_OK = guards.PF_STAGE === true
   && DOSE.every((s) => guards[`PF_MASK_${s}`] === true)
   && ROSTER.every((s) => guards[`R_${s}`] === true)
-  && guards.V_ROWS === true;
+  && guards.V_ROWS === true
+  && guards.V_CHUNKS === true
+  && guards.V_CHUNK_TREE === true;
 if (!PREFLIGHT_OK) {
   report.push('!! PRE-FLIGHT/VALIDITY not satisfied — every acceptance and protection row below is VOID by construction (§11).');
 }
