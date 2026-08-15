@@ -1,0 +1,4 @@
+PREREG-guardcone + AMENDMENT A1 (cone-only; PREREG-guardart WAIVED-UNSCORED per §309) + AMENDMENT A2 (chunked)
+chunk "courtyard" (off -> bon -> back) — HEAD 1b0f4e428516 verified (cone mechanism inert; §309 guard-model levers inert); expected src hash 317fd7305bab0f01
+frames -> /home/user/Demo/progress/records/guardcone1
+HEAD tree verified under the lock — src 317fd7305bab0f01 (no install; the cone mechanism is inert in HEAD)
