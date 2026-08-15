@@ -1,0 +1,13 @@
+{
+  "_": "ROIs are named from what is VISIBLE in the frame at 1x/2x (tools/crop.mjs), and every one of them is a rectangle of ONE surface class. The patch scanner then keeps only 10x10 patches whose per-channel sd <= 3, which is what excludes ink lines, the silhouette rim and FXAA edges — none of which the display inverse models.",
+  "shots": [
+    { "shot": "courtyard", "name": "colossus-R lit face",   "roi": [872, 300, 60, 210], "cls": "lit" },
+    { "shot": "courtyard", "name": "colossus-R shade face", "roi": [1020, 260, 90, 130], "cls": "shade-terminator" },
+    { "shot": "courtyard", "name": "colossus-R body all",   "roi": [870, 250, 300, 370], "cls": "both" },
+    { "shot": "courtyard", "name": "colossus-L (cast-shadowed twin)", "roi": [70, 150, 280, 300], "cls": "shade-cast" },
+    { "shot": "courtyard", "name": "ground plane",          "roi": [380, 600, 520, 110], "cls": "both" },
+    { "shot": "kaykit",    "name": "floor",                 "roi": [200, 340, 620, 300], "cls": "both" },
+    { "shot": "hero",      "name": "floor + ledge",         "roi": [380, 380, 620, 330], "cls": "both" },
+    { "shot": "dunes",     "name": "dune sand",             "roi": [40, 480, 700, 200], "cls": "both" }
+  ]
+}
