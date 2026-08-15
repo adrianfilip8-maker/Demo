@@ -1,0 +1,5 @@
+HEAD 07039cb90fd5 verified (cone mechanism inert; §309 guard-model levers inert); expected src hash 2b5c7c49ad9c4668
+frames -> /home/user/Demo/progress/records/guardcone1
+HEAD tree verified under the lock — src 2b5c7c49ad9c4668 (no install; the cone mechanism is inert in HEAD)
+renderer: ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)
+§309 parking verified at boot: guardArt 0, guardSkin 0, unpainted, unshifted
