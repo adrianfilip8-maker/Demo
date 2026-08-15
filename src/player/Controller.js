@@ -244,26 +244,35 @@ export const TUNE = {
   magBreakDot:   -0.5,
   magHold:        0.25,      // = coyote + jump buffer: how long Sly holds a reached point
 
-  /* ---- landing. Both thresholds are *arrival speeds*, and both are derived from what this
-     moveset can do to itself rather than picked. Measured against the shipped `gravity()` at
-     60 Hz, not reasoned: a single jump (v0 11.0) peaks at 2.356 m and lands at **10.474 m/s**; a
-     bare double jump lands at 9.386; jump + double stacked peak at 4.262 m and land at **14.304**;
-     a spire jump (×1.25) lands at 13.293. ---- */
-  landBeat:    11.0,     // below this, landing costs nothing — the state machine does not even
-                         // enter `land`. The line is `jumpV0` itself, and that is the whole
-                         // sentence: **a landing interrupts you when you arrive faster than you
-                         // can launch yourself.** It clears the routine jump (10.474) and the
-                         // double jump (9.386) with margin, so ordinary platforming never pays a
-                         // beat, and it sits far above `stepHeight` 0.42 m (4.49 m/s) so a kerb
-                         // is a step and not an event.
-  landHard:    14.5,     // `land_hard` + camera shake + the root impulse. Just over the fastest
-                         // landing the moveset can reach under its own power (the 14.304 m/s
-                         // stack above) — i.e. the first arrival that was NOT a move you meant.
-                         // It is a 4.38 m free fall, a storey and a half, which is about when a
-                         // landing should hurt to watch. Was 9.0, which classified *every single
-                         // jump in the game* as a crash and shook the camera for it; that never
-                         // showed because `landImpact` was measured after it had been zeroed
-                         // (see `_noteImpact`), so the whole branch was unreachable.
+  /* ---- landing. -----------------------------------------------------------------------------
+     Both numbers are *arrival speeds* in m/s. They are at their long-standing shipped values and
+     this block only names the first one, which was a bare `3.2` repeated in three places in
+     Moveset.js (§5 wants feel constants here, not inline).
+
+     ── KNOWN BUG, diagnosed and deliberately NOT fixed in this change ──────────────────────────
+     `landImpact` is read in `_probeGround` as `-velocity.y` on the frame Sly first grounds — but
+     `move()` runs `_moveVertical` FIRST, and the swept capsule is what actually stops a fall: it
+     sets `v.y = 0` before the probe ever looks. The probe only wins the race when the frame before
+     touchdown happens to leave Sly inside its 0.06 m snap band. Measured over the sub-frame phase
+     of a standard jump arc: **the probe wins 12 times in 40 and the sweep wins 28**, so whether a
+     landing registers at all is decided by arithmetic the player cannot see, and on a fast descent
+     (>3.6 m/s, i.e. any drop over ~0.27 m) it is decided against. A 14 m drop was measured landing
+     in total silence — `land` never entered, no `landed` event for FX or AUDIO, no shake.
+
+     The fix is one line (capture `-v.y` in `_moveVertical` before zeroing it) and it is not landed
+     here, because it is not one line in effect: with the measurement corrected, every ordinary
+     jump reliably arrives at **10.474 m/s** — measured against the shipped `gravity()` at 60 Hz,
+     apex 2.356 m — which is above `landHard` 9.0. So the correct measurement turns *every jump in
+     the game* into a hard landing with a 0.19 s control tax and a camera shake. Fixing the number
+     therefore forces re-deriving `landHard`, and that is a feel decision that wants a playtest.
+     The derivation I would propose, from this moveset's own arcs: `landBeat` = `jumpV0` 11.0
+     ("a landing interrupts you when you arrive faster than you can launch yourself" — it clears
+     the routine jump and the 9.386 double jump), and `landHard` = 14.5, just over the fastest
+     arrival the moveset can reach under its own power (jump + double jump stacked: apex 4.262 m,
+     landing 14.304 m/s), i.e. the first landing that was not a move you meant.
+     Written up in `progress/records/movement/NOTE-movement-audit.md` for arbitration. ---- */
+  landBeat:     3.2,     // enter `land` above this arrival speed. Shipped value, formerly inline.
+  landHard:     9.0,     // above this it is `land_hard` + shake + root impulse. Shipped value.
   landSoftTime: 0.09,
   landHardTime: 0.19,
 

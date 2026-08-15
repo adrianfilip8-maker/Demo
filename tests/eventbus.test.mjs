@@ -201,13 +201,21 @@ if (DEAD_BY_DECISION.some((k) => DEAD_UNBUILT.includes(k))) throw new Error('an 
  *   land            `Animation.js` announces a landing and nothing listens. FX drives its landing
  *                   dust off `playerState` instead, so this is a second, unused channel for the
  *                   same fact rather than a missing effect.
- *   treasureBanked  all three are `Pickups.js`'s brand-new fence economy (§246), emitted correctly
- *   treasureDropped and heard by nobody yet. The HUD should react to banking a treasure and to
- *   treasurePickup  dropping one under CHASE; that is the loot agent's own open item, and these
- *                   three lines are what will turn red when it is closed.
+ *
+ * ── Three lines deleted here, which is again what fixing one looks like ────────────────────────
+ * `treasureBanked` / `treasureDropped` / `treasurePickup` were `Pickups.js`'s fence economy (§246)
+ * emitted to nobody, and the entry above them said what closing it would look like: *"The HUD
+ * should react to banking a treasure and to dropping one under CHASE."* It now does — `HUD._onCarry`
+ * renders the carried treasure and its value, points a projected objective marker at the fence
+ * while it is in hand, and re-points it at the spot a chase knocked it out of his hands. So the
+ * three lines are gone rather than annotated, per this file's own rule.
+ *
+ * `lockOn` never reached this list: MOVEMENT's `CombatStrafe` started publishing it and the HUD
+ * subscribed it in the same round, so it was live before anyone had to register it as dead. It is
+ * noted here only so that nobody adds it — a live event in this list fails the census just as a
+ * dead one missing from it does.
  */
-const DEAD_PUBLICATIONS = ['binocucomState', 'land', 'paused',
-  'treasureBanked', 'treasureDropped', 'treasurePickup'];
+const DEAD_PUBLICATIONS = ['binocucomState', 'land', 'paused'];
 
 test('eventbus: the census inspected a real codebase', () => {
   /* §211.1 — every assertion below is a set comparison. If the scrape found nothing they would all
