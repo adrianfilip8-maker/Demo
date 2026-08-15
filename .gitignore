@@ -33,3 +33,15 @@ __pycache__/
 # downscaled composite (AB-heroread-run1.png, AB-courtyardread-run1.png) — a few hundred KB
 # instead of 12 MB, and legible without a checkout. KNOWN_ISSUES §272.4.
 progress/records/heroread/*.png
+
+# Every OTHER seal's raw capture frames, by the same rule — generalised from heroread/ because
+# naming one run at a time fails exactly the way the `shots/` prefix list failed: it already
+# missed fxartifact1/, fxfix1/, gradetrio1/, lithold1/, redkey/ and torchlight1/, which stood
+# at 748 MB of untracked frames between them. A seal's DURABLE evidence is its RESULT-*.md, its
+# scorer log under progress/records/logs/ and its manifest.json (tree stamp, readbacks, probe
+# data, console errors — tens of KB, re-included below). The frames are regenerable by re-running
+# the seal and are not read twice; shots/r13/ is already ignored under the same policy, and the
+# §326-refuting measurements in §328 live in the RESULT as numbers, not as PNGs.
+# KNOWN_ISSUES §272.4, §328.
+progress/records/*/*.png
+!progress/records/*/manifest.json

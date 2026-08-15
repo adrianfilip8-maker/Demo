@@ -1,0 +1,2365 @@
+{
+ "seal": "PREREG-lithold",
+ "head": "67426707456ba8c98d1c78aa8a4ef96c0f801fc3",
+ "expect": {
+  "head": "2b5c7c49ad9c4668",
+  "rows": 68
+ },
+ "headSrc": "2b5c7c49ad9c4668",
+ "foreignAtLaunch": "",
+ "values": {
+  "OFF": 0,
+  "ON": 0.7,
+  "KO": 0.4,
+  "DOSE": [
+   "traversal",
+   "combat"
+  ],
+  "MASKED": [
+   "traversal",
+   "combat",
+   "temple",
+   "dunes",
+   "night",
+   "interior"
+  ]
+ },
+ "launchedAt": "2026-08-14T20:42:52.185Z",
+ "pid": 3585,
+ "rows": [
+  {
+   "shot": "hero",
+   "arm": "off",
+   "file": "hero.off.png",
+   "sha256": "0851634e3553ae4ec75babf663b0c533c7c23e04553954ed58195a1633e94008",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "a81b98942232"
+   },
+   "readback": {
+    "uSubjLitHold": 0,
+    "uSubjShadowHold": 1,
+    "uShadowHold": 0,
+    "uShadowHoldKnee": 0.25,
+    "uDebugTerm": 0,
+    "debugRaw": false,
+    "debugSrc": "scene",
+    "calib": null,
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6938717612856897,
+     "b": 0.3515325994898463
+    },
+    "uKeyIntensity": 3.3,
+    "uRakeTrack": 1,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "camY": 10.28,
+    "timeOfDay": 0.79
+   },
+   "ordinal": 1,
+   "at": "2026-08-14T20:50:13.118Z"
+  },
+  {
+   "shot": "hero",
+   "arm": "on",
+   "file": "hero.on.png",
+   "sha256": "67f4eff1efaab71427421cfc156d903e833229f1b6254c47fc07b9ce00af5264",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "a81b98942232"
+   },
+   "readback": {
+    "uSubjLitHold": 0.7,
+    "uSubjShadowHold": 1,
+    "uShadowHold": 0,
+    "uShadowHoldKnee": 0.25,
+    "uDebugTerm": 0,
+    "debugRaw": false,
+    "debugSrc": "scene",
+    "calib": null,
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6938717612856897,
+     "b": 0.3515325994898463
+    },
+    "uKeyIntensity": 3.3,
+    "uRakeTrack": 1,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "camY": 10.28,
+    "timeOfDay": 0.79
+   },
+   "ordinal": 2,
+   "at": "2026-08-14T20:50:47.924Z"
+  },
+  {
+   "shot": "hero",
+   "arm": "back",
+   "file": "hero.back.png",
+   "sha256": "0851634e3553ae4ec75babf663b0c533c7c23e04553954ed58195a1633e94008",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "a81b98942232"
+   },
+   "readback": {
+    "uSubjLitHold": 0,
+    "uSubjShadowHold": 1,
+    "uShadowHold": 0,
+    "uShadowHoldKnee": 0.25,
+    "uDebugTerm": 0,
+    "debugRaw": false,
+    "debugSrc": "scene",
+    "calib": null,
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6938717612856897,
+     "b": 0.3515325994898463
+    },
+    "uKeyIntensity": 3.3,
+    "uRakeTrack": 1,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "camY": 10.28,
+    "timeOfDay": 0.79
+   },
+   "ordinal": 3,
+   "at": "2026-08-14T20:51:22.594Z"
+  },
+  {
+   "shot": "kaykit",
+   "arm": "off",
+   "file": "kaykit.off.png",
+   "sha256": "18aaf79050251fd7e7a7da5b4c4e74ab4f57de80c35ebba14e4fdc15ab32bedc",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "a81b98942232"
+   },
+   "readback": {
+    "uSubjLitHold": 0,
+    "uSubjShadowHold": 1,
+    "uShadowHold": 0,
+    "uShadowHoldKnee": 0.25,
+    "uDebugTerm": 0,
+    "debugRaw": false,
+    "debugSrc": "scene",
+    "calib": null,
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6938717612856897,
+     "b": 0.3515325994898463
+    },
+    "uKeyIntensity": 3.3,
+    "uRakeTrack": 1,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "camY": 14,
+    "timeOfDay": 0.3
+   },
+   "ordinal": 4,
+   "at": "2026-08-14T20:55:11.400Z"
+  },
+  {
+   "shot": "kaykit",
+   "arm": "on",
+   "file": "kaykit.on.png",
+   "sha256": "f92e032557631de1590f0cc8a2c609c31ca6e3feb37a573c3da767740f186ead",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "a81b98942232"
+   },
+   "readback": {
+    "uSubjLitHold": 0.7,
+    "uSubjShadowHold": 1,
+    "uShadowHold": 0,
+    "uShadowHoldKnee": 0.25,
+    "uDebugTerm": 0,
+    "debugRaw": false,
+    "debugSrc": "scene",
+    "calib": null,
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6938717612856897,
+     "b": 0.3515325994898463
+    },
+    "uKeyIntensity": 3.3,
+    "uRakeTrack": 1,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "camY": 14,
+    "timeOfDay": 0.3
+   },
+   "ordinal": 5,
+   "at": "2026-08-14T20:55:35.743Z"
+  },
+  {
+   "shot": "kaykit",
+   "arm": "back",
+   "file": "kaykit.back.png",
+   "sha256": "18aaf79050251fd7e7a7da5b4c4e74ab4f57de80c35ebba14e4fdc15ab32bedc",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "a81b98942232"
+   },
+   "readback": {
+    "uSubjLitHold": 0,
+    "uSubjShadowHold": 1,
+    "uShadowHold": 0,
+    "uShadowHoldKnee": 0.25,
+    "uDebugTerm": 0,
+    "debugRaw": false,
+    "debugSrc": "scene",
+    "calib": null,
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6938717612856897,
+     "b": 0.3515325994898463
+    },
+    "uKeyIntensity": 3.3,
+    "uRakeTrack": 1,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "camY": 14,
+    "timeOfDay": 0.3
+   },
+   "ordinal": 6,
+   "at": "2026-08-14T20:55:57.823Z"
+  },
+  {
+   "shot": "temple",
+   "arm": "off",
+   "file": "temple.off.png",
+   "sha256": "4afdd0e0977e245d8e80928e8b1275fedf900d440001b2f9fd61c3457570c9bf",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "a81b98942232"
+   },
+   "readback": {
+    "uSubjLitHold": 0,
+    "uSubjShadowHold": 1,
+    "uShadowHold": 0,
+    "uShadowHoldKnee": 0.25,
+    "uDebugTerm": 0,
+    "debugRaw": false,
+    "debugSrc": "scene",
+    "calib": null,
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.714747834424304,
+     "b": 0.390709082134271
+    },
+    "uKeyIntensity": 3.38068510897729,
+    "uRakeTrack": 1,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "camY": 2.6,
+    "timeOfDay": 0.72
+   },
+   "ordinal": 7,
+   "at": "2026-08-14T20:59:35.438Z"
+  },
+  {
+   "shot": "temple",
+   "arm": "on",
+   "file": "temple.on.png",
+   "sha256": "025fe96fe46904e1addbf84f914f2e75671741a1cea9f2793fcc1658ce701eb8",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "a81b98942232"
+   },
+   "readback": {
+    "uSubjLitHold": 0.7,
+    "uSubjShadowHold": 1,
+    "uShadowHold": 0,
+    "uShadowHoldKnee": 0.25,
+    "uDebugTerm": 0,
+    "debugRaw": false,
+    "debugSrc": "scene",
+    "calib": null,
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.714747834424304,
+     "b": 0.390709082134271
+    },
+    "uKeyIntensity": 3.38068510897729,
+    "uRakeTrack": 1,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "camY": 2.6,
+    "timeOfDay": 0.72
+   },
+   "ordinal": 8,
+   "at": "2026-08-14T21:00:02.003Z"
+  },
+  {
+   "shot": "temple",
+   "arm": "back",
+   "file": "temple.back.png",
+   "sha256": "4afdd0e0977e245d8e80928e8b1275fedf900d440001b2f9fd61c3457570c9bf",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "a81b98942232"
+   },
+   "readback": {
+    "uSubjLitHold": 0,
+    "uSubjShadowHold": 1,
+    "uShadowHold": 0,
+    "uShadowHoldKnee": 0.25,
+    "uDebugTerm": 0,
+    "debugRaw": false,
+    "debugSrc": "scene",
+    "calib": null,
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.714747834424304,
+     "b": 0.390709082134271
+    },
+    "uKeyIntensity": 3.38068510897729,
+    "uRakeTrack": 1,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "camY": 2.6,
+    "timeOfDay": 0.72
+   },
+   "ordinal": 9,
+   "at": "2026-08-14T21:00:28.767Z"
+  },
+  {
+   "shot": "temple",
+   "arm": "cal",
+   "file": "temple.cal.png",
+   "sha256": "adcbf75dcf883eeb39633b79f827b7ce3ccc3b6f40291186da51ef0a2d04e016",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "a81b98942232"
+   },
+   "readback": {
+    "uSubjLitHold": 0,
+    "uSubjShadowHold": 1,
+    "uShadowHold": 0,
+    "uShadowHoldKnee": 0.25,
+    "uDebugTerm": 4,
+    "debugRaw": true,
+    "debugSrc": "scene",
+    "calib": {
+     "channel": "debugTerm",
+     "mode": 4,
+     "u8": [
+      64,
+      128,
+      191
+     ],
+     "rgb": [
+      0.25098039215686274,
+      0.5019607843137255,
+      0.7490196078431373
+     ]
+    },
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.714747834424304,
+     "b": 0.390709082134271
+    },
+    "uKeyIntensity": 3.38068510897729,
+    "uRakeTrack": 1,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "camY": 2.6,
+    "timeOfDay": 0.72
+   },
+   "ordinal": 10,
+   "at": "2026-08-14T21:00:56.982Z"
+  },
+  {
+   "shot": "temple",
+   "arm": "msk",
+   "file": "temple.msk.png",
+   "sha256": "60cf489a3a45745b297623a04998929c4e26b1010edb86fb1b2e66d965348444",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "a81b98942232"
+   },
+   "readback": {
+    "uSubjLitHold": 0,
+    "uSubjShadowHold": 1,
+    "uShadowHold": 0,
+    "uShadowHoldKnee": 0.25,
+    "uDebugTerm": 1,
+    "debugRaw": true,
+    "debugSrc": "scene",
+    "calib": null,
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.714747834424304,
+     "b": 0.390709082134271
+    },
+    "uKeyIntensity": 3.38068510897729,
+    "uRakeTrack": 1,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "camY": 2.6,
+    "timeOfDay": 0.72
+   },
+   "ordinal": 11,
+   "at": "2026-08-14T21:01:22.748Z"
+  },
+  {
+   "shot": "temple",
+   "arm": "bk2",
+   "file": "temple.bk2.png",
+   "sha256": "4afdd0e0977e245d8e80928e8b1275fedf900d440001b2f9fd61c3457570c9bf",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "a81b98942232"
+   },
+   "readback": {
+    "uSubjLitHold": 0,
+    "uSubjShadowHold": 1,
+    "uShadowHold": 0,
+    "uShadowHoldKnee": 0.25,
+    "uDebugTerm": 0,
+    "debugRaw": false,
+    "debugSrc": "scene",
+    "calib": null,
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.714747834424304,
+     "b": 0.390709082134271
+    },
+    "uKeyIntensity": 3.38068510897729,
+    "uRakeTrack": 1,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "camY": 2.6,
+    "timeOfDay": 0.72
+   },
+   "ordinal": 12,
+   "at": "2026-08-14T21:01:48.991Z"
+  },
+  {
+   "shot": "sly-closeup",
+   "arm": "off",
+   "file": "sly-closeup.off.png",
+   "sha256": "0a2e76070a088da770c955822c298cf3d5e05ad0bf78e8216a21a1dd653a1709",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "a81b98942232"
+   },
+   "readback": {
+    "uSubjLitHold": 0,
+    "uSubjShadowHold": 1,
+    "uShadowHold": 0,
+    "uShadowHoldKnee": 0.25,
+    "uDebugTerm": 0,
+    "debugRaw": false,
+    "debugSrc": "scene",
+    "calib": null,
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6918947072370671,
+     "b": 0.3501375437924764
+    },
+    "uKeyIntensity": 3.2859172324293913,
+    "uRakeTrack": 1,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "camY": 1.45,
+    "timeOfDay": 0.8
+   },
+   "ordinal": 13,
+   "at": "2026-08-14T21:07:13.758Z"
+  },
+  {
+   "shot": "sly-closeup",
+   "arm": "on",
+   "file": "sly-closeup.on.png",
+   "sha256": "ac1cb484e789a4e43e4d27b4daddb7d4b8599852e955270da6a68ebdcb3c43ab",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "a81b98942232"
+   },
+   "readback": {
+    "uSubjLitHold": 0.7,
+    "uSubjShadowHold": 1,
+    "uShadowHold": 0,
+    "uShadowHoldKnee": 0.25,
+    "uDebugTerm": 0,
+    "debugRaw": false,
+    "debugSrc": "scene",
+    "calib": null,
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6918947072370671,
+     "b": 0.3501375437924764
+    },
+    "uKeyIntensity": 3.2859172324293913,
+    "uRakeTrack": 1,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "camY": 1.45,
+    "timeOfDay": 0.8
+   },
+   "ordinal": 14,
+   "at": "2026-08-14T21:07:46.005Z"
+  },
+  {
+   "shot": "sly-closeup",
+   "arm": "back",
+   "file": "sly-closeup.back.png",
+   "sha256": "0a2e76070a088da770c955822c298cf3d5e05ad0bf78e8216a21a1dd653a1709",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "a81b98942232"
+   },
+   "readback": {
+    "uSubjLitHold": 0,
+    "uSubjShadowHold": 1,
+    "uShadowHold": 0,
+    "uShadowHoldKnee": 0.25,
+    "uDebugTerm": 0,
+    "debugRaw": false,
+    "debugSrc": "scene",
+    "calib": null,
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6918947072370671,
+     "b": 0.3501375437924764
+    },
+    "uKeyIntensity": 3.2859172324293913,
+    "uRakeTrack": 1,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "camY": 1.45,
+    "timeOfDay": 0.8
+   },
+   "ordinal": 15,
+   "at": "2026-08-14T21:08:22.707Z"
+  },
+  {
+   "shot": "sly-startle",
+   "arm": "off",
+   "file": "sly-startle.off.png",
+   "sha256": "5df26b0254bb828f112fc4a609e4344f40cccd2165977b5426bd843df1c8d037",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "a81b98942232"
+   },
+   "readback": {
+    "uSubjLitHold": 0,
+    "uSubjShadowHold": 1,
+    "uShadowHold": 0,
+    "uShadowHoldKnee": 0.25,
+    "uDebugTerm": 0,
+    "debugRaw": false,
+    "debugSrc": "scene",
+    "calib": null,
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6918947072370671,
+     "b": 0.3501375437924764
+    },
+    "uKeyIntensity": 3.2859172324293913,
+    "uRakeTrack": 1,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "camY": 1.6,
+    "timeOfDay": 0.8
+   },
+   "ordinal": 16,
+   "at": "2026-08-14T21:11:25.066Z"
+  },
+  {
+   "shot": "sly-startle",
+   "arm": "on",
+   "file": "sly-startle.on.png",
+   "sha256": "54fc4f2681371ad4d38c4717ff8b099a1e27b31c4cada2fa1c153eb22dec0b00",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "a81b98942232"
+   },
+   "readback": {
+    "uSubjLitHold": 0.7,
+    "uSubjShadowHold": 1,
+    "uShadowHold": 0,
+    "uShadowHoldKnee": 0.25,
+    "uDebugTerm": 0,
+    "debugRaw": false,
+    "debugSrc": "scene",
+    "calib": null,
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6918947072370671,
+     "b": 0.3501375437924764
+    },
+    "uKeyIntensity": 3.2859172324293913,
+    "uRakeTrack": 1,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "camY": 1.6,
+    "timeOfDay": 0.8
+   },
+   "ordinal": 17,
+   "at": "2026-08-14T21:11:47.194Z"
+  },
+  {
+   "shot": "sly-startle",
+   "arm": "back",
+   "file": "sly-startle.back.png",
+   "sha256": "5df26b0254bb828f112fc4a609e4344f40cccd2165977b5426bd843df1c8d037",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "a81b98942232"
+   },
+   "readback": {
+    "uSubjLitHold": 0,
+    "uSubjShadowHold": 1,
+    "uShadowHold": 0,
+    "uShadowHoldKnee": 0.25,
+    "uDebugTerm": 0,
+    "debugRaw": false,
+    "debugSrc": "scene",
+    "calib": null,
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6918947072370671,
+     "b": 0.3501375437924764
+    },
+    "uKeyIntensity": 3.2859172324293913,
+    "uRakeTrack": 1,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "camY": 1.6,
+    "timeOfDay": 0.8
+   },
+   "ordinal": 18,
+   "at": "2026-08-14T21:12:09.333Z"
+  },
+  {
+   "shot": "sly-perch",
+   "arm": "off",
+   "file": "sly-perch.off.png",
+   "sha256": "50952d47672f6881b1193cf0ae2615b946ad1d07961722c52de49e12b12a738f",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "a81b98942232"
+   },
+   "readback": {
+    "uSubjLitHold": 0,
+    "uSubjShadowHold": 1,
+    "uShadowHold": 0,
+    "uShadowHoldKnee": 0.25,
+    "uDebugTerm": 0,
+    "debugRaw": false,
+    "debugSrc": "scene",
+    "calib": null,
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6918947072370671,
+     "b": 0.3501375437924764
+    },
+    "uKeyIntensity": 3.2859172324293913,
+    "uRakeTrack": 1,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "camY": 1.15,
+    "timeOfDay": 0.8
+   },
+   "ordinal": 19,
+   "at": "2026-08-14T21:17:31.440Z"
+  },
+  {
+   "shot": "sly-perch",
+   "arm": "on",
+   "file": "sly-perch.on.png",
+   "sha256": "246d9a325d77236c103e264521de63266739b461a3a018a1fe209c1ab859fea2",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "a81b98942232"
+   },
+   "readback": {
+    "uSubjLitHold": 0.7,
+    "uSubjShadowHold": 1,
+    "uShadowHold": 0,
+    "uShadowHoldKnee": 0.25,
+    "uDebugTerm": 0,
+    "debugRaw": false,
+    "debugSrc": "scene",
+    "calib": null,
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6918947072370671,
+     "b": 0.3501375437924764
+    },
+    "uKeyIntensity": 3.2859172324293913,
+    "uRakeTrack": 1,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "camY": 1.15,
+    "timeOfDay": 0.8
+   },
+   "ordinal": 20,
+   "at": "2026-08-14T21:18:03.501Z"
+  },
+  {
+   "shot": "sly-perch",
+   "arm": "back",
+   "file": "sly-perch.back.png",
+   "sha256": "50952d47672f6881b1193cf0ae2615b946ad1d07961722c52de49e12b12a738f",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "a81b98942232"
+   },
+   "readback": {
+    "uSubjLitHold": 0,
+    "uSubjShadowHold": 1,
+    "uShadowHold": 0,
+    "uShadowHoldKnee": 0.25,
+    "uDebugTerm": 0,
+    "debugRaw": false,
+    "debugSrc": "scene",
+    "calib": null,
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6918947072370671,
+     "b": 0.3501375437924764
+    },
+    "uKeyIntensity": 3.2859172324293913,
+    "uRakeTrack": 1,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "camY": 1.15,
+    "timeOfDay": 0.8
+   },
+   "ordinal": 21,
+   "at": "2026-08-14T21:18:35.481Z"
+  },
+  {
+   "shot": "sly-arm",
+   "arm": "off",
+   "file": "sly-arm.off.png",
+   "sha256": "ccac956f1a9bc5eae382ac9bfb22dfc4b5d91337a135bda4114eba3dcc31732c",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "a81b98942232"
+   },
+   "readback": {
+    "uSubjLitHold": 0,
+    "uSubjShadowHold": 1,
+    "uShadowHold": 0,
+    "uShadowHoldKnee": 0.25,
+    "uDebugTerm": 0,
+    "debugRaw": false,
+    "debugSrc": "scene",
+    "calib": null,
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6918947072370671,
+     "b": 0.3501375437924764
+    },
+    "uKeyIntensity": 3.2859172324293913,
+    "uRakeTrack": 1,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "camY": 1.45,
+    "timeOfDay": 0.8
+   },
+   "ordinal": 22,
+   "at": "2026-08-14T21:20:35.612Z"
+  },
+  {
+   "shot": "sly-arm",
+   "arm": "on",
+   "file": "sly-arm.on.png",
+   "sha256": "ede56ead14018635459d7034409980493ff5f3017ddf7f0443fee6bf16fd24f0",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "a81b98942232"
+   },
+   "readback": {
+    "uSubjLitHold": 0.7,
+    "uSubjShadowHold": 1,
+    "uShadowHold": 0,
+    "uShadowHoldKnee": 0.25,
+    "uDebugTerm": 0,
+    "debugRaw": false,
+    "debugSrc": "scene",
+    "calib": null,
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6918947072370671,
+     "b": 0.3501375437924764
+    },
+    "uKeyIntensity": 3.2859172324293913,
+    "uRakeTrack": 1,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "camY": 1.45,
+    "timeOfDay": 0.8
+   },
+   "ordinal": 23,
+   "at": "2026-08-14T21:20:50.383Z"
+  },
+  {
+   "shot": "sly-arm",
+   "arm": "back",
+   "file": "sly-arm.back.png",
+   "sha256": "ccac956f1a9bc5eae382ac9bfb22dfc4b5d91337a135bda4114eba3dcc31732c",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "a81b98942232"
+   },
+   "readback": {
+    "uSubjLitHold": 0,
+    "uSubjShadowHold": 1,
+    "uShadowHold": 0,
+    "uShadowHoldKnee": 0.25,
+    "uDebugTerm": 0,
+    "debugRaw": false,
+    "debugSrc": "scene",
+    "calib": null,
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6918947072370671,
+     "b": 0.3501375437924764
+    },
+    "uKeyIntensity": 3.2859172324293913,
+    "uRakeTrack": 1,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "camY": 1.45,
+    "timeOfDay": 0.8
+   },
+   "ordinal": 24,
+   "at": "2026-08-14T21:21:05.014Z"
+  },
+  {
+   "shot": "courtyard",
+   "arm": "off",
+   "file": "courtyard.off.png",
+   "sha256": "19b55ab4d5cf42bebdb291bdc2bedc7bd9ad6c3de1826237915b64f9874ec575",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "a81b98942232"
+   },
+   "readback": {
+    "uSubjLitHold": 0,
+    "uSubjShadowHold": 1,
+    "uShadowHold": 0,
+    "uShadowHoldKnee": 0.25,
+    "uDebugTerm": 0,
+    "debugRaw": false,
+    "debugSrc": "scene",
+    "calib": null,
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6969082810149427,
+     "b": 0.35723099696539895
+    },
+    "uKeyIntensity": 3.3117360158512423,
+    "uRakeTrack": 1,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "camY": 4,
+    "timeOfDay": 0.76
+   },
+   "ordinal": 25,
+   "at": "2026-08-14T21:26:26.093Z"
+  },
+  {
+   "shot": "courtyard",
+   "arm": "on",
+   "file": "courtyard.on.png",
+   "sha256": "cd76e80c2c5ef8315e1fa55ff22374e9d09a1515d84179199b7ce9202149aa24",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "a81b98942232"
+   },
+   "readback": {
+    "uSubjLitHold": 0.7,
+    "uSubjShadowHold": 1,
+    "uShadowHold": 0,
+    "uShadowHoldKnee": 0.25,
+    "uDebugTerm": 0,
+    "debugRaw": false,
+    "debugSrc": "scene",
+    "calib": null,
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6969082810149427,
+     "b": 0.35723099696539895
+    },
+    "uKeyIntensity": 3.3117360158512423,
+    "uRakeTrack": 1,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "camY": 4,
+    "timeOfDay": 0.76
+   },
+   "ordinal": 26,
+   "at": "2026-08-14T21:26:58.861Z"
+  },
+  {
+   "shot": "courtyard",
+   "arm": "back",
+   "file": "courtyard.back.png",
+   "sha256": "19b55ab4d5cf42bebdb291bdc2bedc7bd9ad6c3de1826237915b64f9874ec575",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "a81b98942232"
+   },
+   "readback": {
+    "uSubjLitHold": 0,
+    "uSubjShadowHold": 1,
+    "uShadowHold": 0,
+    "uShadowHoldKnee": 0.25,
+    "uDebugTerm": 0,
+    "debugRaw": false,
+    "debugSrc": "scene",
+    "calib": null,
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6969082810149427,
+     "b": 0.35723099696539895
+    },
+    "uKeyIntensity": 3.3117360158512423,
+    "uRakeTrack": 1,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "camY": 4,
+    "timeOfDay": 0.76
+   },
+   "ordinal": 27,
+   "at": "2026-08-14T21:27:32.007Z"
+  },
+  {
+   "shot": "dunes",
+   "arm": "off",
+   "file": "dunes.off.png",
+   "sha256": "222da9dddbc0e1251db71401d4c4599a1109a389042c8de0ed31ce4ed1080550",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "a81b98942232"
+   },
+   "readback": {
+    "uSubjLitHold": 0,
+    "uSubjShadowHold": 1,
+    "uShadowHold": 0,
+    "uShadowHoldKnee": 0.25,
+    "uDebugTerm": 0,
+    "debugRaw": false,
+    "debugSrc": "scene",
+    "calib": null,
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6206961795328749,
+     "b": 0.2998981930841452
+    },
+    "uKeyIntensity": 2.7787625,
+    "uRakeTrack": 1,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "camY": 19.5,
+    "timeOfDay": 0.83
+   },
+   "ordinal": 28,
+   "at": "2026-08-14T21:31:52.593Z"
+  },
+  {
+   "shot": "dunes",
+   "arm": "on",
+   "file": "dunes.on.png",
+   "sha256": "dd51d512fd345a3876bdbc6d2d7ea0cfe7184da97d04270c04d3f8563ebab0c4",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "a81b98942232"
+   },
+   "readback": {
+    "uSubjLitHold": 0.7,
+    "uSubjShadowHold": 1,
+    "uShadowHold": 0,
+    "uShadowHoldKnee": 0.25,
+    "uDebugTerm": 0,
+    "debugRaw": false,
+    "debugSrc": "scene",
+    "calib": null,
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6206961795328749,
+     "b": 0.2998981930841452
+    },
+    "uKeyIntensity": 2.7787625,
+    "uRakeTrack": 1,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "camY": 19.5,
+    "timeOfDay": 0.83
+   },
+   "ordinal": 29,
+   "at": "2026-08-14T21:32:18.702Z"
+  },
+  {
+   "shot": "dunes",
+   "arm": "back",
+   "file": "dunes.back.png",
+   "sha256": "222da9dddbc0e1251db71401d4c4599a1109a389042c8de0ed31ce4ed1080550",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "a81b98942232"
+   },
+   "readback": {
+    "uSubjLitHold": 0,
+    "uSubjShadowHold": 1,
+    "uShadowHold": 0,
+    "uShadowHoldKnee": 0.25,
+    "uDebugTerm": 0,
+    "debugRaw": false,
+    "debugSrc": "scene",
+    "calib": null,
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6206961795328749,
+     "b": 0.2998981930841452
+    },
+    "uKeyIntensity": 2.7787625,
+    "uRakeTrack": 1,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "camY": 19.5,
+    "timeOfDay": 0.83
+   },
+   "ordinal": 30,
+   "at": "2026-08-14T21:32:47.314Z"
+  },
+  {
+   "shot": "dunes",
+   "arm": "cal",
+   "file": "dunes.cal.png",
+   "sha256": "fe29b1134e32daf9eadef352f1fd7b6af40bad0a529094f1d2e8e0cda769cfb5",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "a81b98942232"
+   },
+   "readback": {
+    "uSubjLitHold": 0,
+    "uSubjShadowHold": 1,
+    "uShadowHold": 0,
+    "uShadowHoldKnee": 0.25,
+    "uDebugTerm": 4,
+    "debugRaw": true,
+    "debugSrc": "scene",
+    "calib": {
+     "channel": "debugTerm",
+     "mode": 4,
+     "u8": [
+      64,
+      128,
+      191
+     ],
+     "rgb": [
+      0.25098039215686274,
+      0.5019607843137255,
+      0.7490196078431373
+     ]
+    },
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6206961795328749,
+     "b": 0.2998981930841452
+    },
+    "uKeyIntensity": 2.7787625,
+    "uRakeTrack": 1,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "camY": 19.5,
+    "timeOfDay": 0.83
+   },
+   "ordinal": 31,
+   "at": "2026-08-14T21:33:15.061Z"
+  },
+  {
+   "shot": "dunes",
+   "arm": "msk",
+   "file": "dunes.msk.png",
+   "sha256": "ecdaeff4656775b2424e1aaa9af7d4ecc420e1d1830f754bfcb474795170b1ba",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "a81b98942232"
+   },
+   "readback": {
+    "uSubjLitHold": 0,
+    "uSubjShadowHold": 1,
+    "uShadowHold": 0,
+    "uShadowHoldKnee": 0.25,
+    "uDebugTerm": 1,
+    "debugRaw": true,
+    "debugSrc": "scene",
+    "calib": null,
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6206961795328749,
+     "b": 0.2998981930841452
+    },
+    "uKeyIntensity": 2.7787625,
+    "uRakeTrack": 1,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "camY": 19.5,
+    "timeOfDay": 0.83
+   },
+   "ordinal": 32,
+   "at": "2026-08-14T21:33:39.797Z"
+  },
+  {
+   "shot": "dunes",
+   "arm": "bk2",
+   "file": "dunes.bk2.png",
+   "sha256": "222da9dddbc0e1251db71401d4c4599a1109a389042c8de0ed31ce4ed1080550",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "a81b98942232"
+   },
+   "readback": {
+    "uSubjLitHold": 0,
+    "uSubjShadowHold": 1,
+    "uShadowHold": 0,
+    "uShadowHoldKnee": 0.25,
+    "uDebugTerm": 0,
+    "debugRaw": false,
+    "debugSrc": "scene",
+    "calib": null,
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6206961795328749,
+     "b": 0.2998981930841452
+    },
+    "uKeyIntensity": 2.7787625,
+    "uRakeTrack": 1,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "camY": 19.5,
+    "timeOfDay": 0.83
+   },
+   "ordinal": 33,
+   "at": "2026-08-14T21:34:05.697Z"
+  },
+  {
+   "shot": "interior",
+   "arm": "off",
+   "file": "interior.off.png",
+   "sha256": "feebc1a33a42161f95b7a11f70f513159cf473f3c91c844d6fa280e3e44c28f7",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "a81b98942232"
+   },
+   "readback": {
+    "uSubjLitHold": 0,
+    "uSubjShadowHold": 1,
+    "uShadowHold": 0,
+    "uShadowHoldKnee": 0.25,
+    "uDebugTerm": 0,
+    "debugRaw": false,
+    "debugSrc": "scene",
+    "calib": null,
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.8879231178794776,
+     "b": 0.7156935005005721
+    },
+    "uKeyIntensity": 4.05,
+    "uRakeTrack": 1,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "camY": -9.2,
+    "timeOfDay": 0.5
+   },
+   "ordinal": 34,
+   "at": "2026-08-14T21:35:58.820Z"
+  },
+  {
+   "shot": "interior",
+   "arm": "on",
+   "file": "interior.on.png",
+   "sha256": "106efedbf648f8c589a00c562ff3df101b5f8945fd7db312134680214d09c9a4",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "a81b98942232"
+   },
+   "readback": {
+    "uSubjLitHold": 0.7,
+    "uSubjShadowHold": 1,
+    "uShadowHold": 0,
+    "uShadowHoldKnee": 0.25,
+    "uDebugTerm": 0,
+    "debugRaw": false,
+    "debugSrc": "scene",
+    "calib": null,
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.8879231178794776,
+     "b": 0.7156935005005721
+    },
+    "uKeyIntensity": 4.05,
+    "uRakeTrack": 1,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "camY": -9.2,
+    "timeOfDay": 0.5
+   },
+   "ordinal": 35,
+   "at": "2026-08-14T21:36:12.618Z"
+  },
+  {
+   "shot": "interior",
+   "arm": "back",
+   "file": "interior.back.png",
+   "sha256": "feebc1a33a42161f95b7a11f70f513159cf473f3c91c844d6fa280e3e44c28f7",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "a81b98942232"
+   },
+   "readback": {
+    "uSubjLitHold": 0,
+    "uSubjShadowHold": 1,
+    "uShadowHold": 0,
+    "uShadowHoldKnee": 0.25,
+    "uDebugTerm": 0,
+    "debugRaw": false,
+    "debugSrc": "scene",
+    "calib": null,
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.8879231178794776,
+     "b": 0.7156935005005721
+    },
+    "uKeyIntensity": 4.05,
+    "uRakeTrack": 1,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "camY": -9.2,
+    "timeOfDay": 0.5
+   },
+   "ordinal": 36,
+   "at": "2026-08-14T21:36:27.919Z"
+  },
+  {
+   "shot": "interior",
+   "arm": "cal",
+   "file": "interior.cal.png",
+   "sha256": "e544cde6abeba47a748f6eb0a57f7fbab4e254f512f3c62aa8508c738400df3d",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "a81b98942232"
+   },
+   "readback": {
+    "uSubjLitHold": 0,
+    "uSubjShadowHold": 1,
+    "uShadowHold": 0,
+    "uShadowHoldKnee": 0.25,
+    "uDebugTerm": 4,
+    "debugRaw": true,
+    "debugSrc": "scene",
+    "calib": {
+     "channel": "debugTerm",
+     "mode": 4,
+     "u8": [
+      64,
+      128,
+      191
+     ],
+     "rgb": [
+      0.25098039215686274,
+      0.5019607843137255,
+      0.7490196078431373
+     ]
+    },
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.8879231178794776,
+     "b": 0.7156935005005721
+    },
+    "uKeyIntensity": 4.05,
+    "uRakeTrack": 1,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "camY": -9.2,
+    "timeOfDay": 0.5
+   },
+   "ordinal": 37,
+   "at": "2026-08-14T21:36:40.694Z"
+  },
+  {
+   "shot": "interior",
+   "arm": "msk",
+   "file": "interior.msk.png",
+   "sha256": "9eec868bcbc145fc668193ae2cd5457e106e7e0fddd94576da2f9b1e37f6f039",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "a81b98942232"
+   },
+   "readback": {
+    "uSubjLitHold": 0,
+    "uSubjShadowHold": 1,
+    "uShadowHold": 0,
+    "uShadowHoldKnee": 0.25,
+    "uDebugTerm": 1,
+    "debugRaw": true,
+    "debugSrc": "scene",
+    "calib": null,
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.8879231178794776,
+     "b": 0.7156935005005721
+    },
+    "uKeyIntensity": 4.05,
+    "uRakeTrack": 1,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "camY": -9.2,
+    "timeOfDay": 0.5
+   },
+   "ordinal": 38,
+   "at": "2026-08-14T21:36:53.492Z"
+  },
+  {
+   "shot": "interior",
+   "arm": "bk2",
+   "file": "interior.bk2.png",
+   "sha256": "feebc1a33a42161f95b7a11f70f513159cf473f3c91c844d6fa280e3e44c28f7",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "a81b98942232"
+   },
+   "readback": {
+    "uSubjLitHold": 0,
+    "uSubjShadowHold": 1,
+    "uShadowHold": 0,
+    "uShadowHoldKnee": 0.25,
+    "uDebugTerm": 0,
+    "debugRaw": false,
+    "debugSrc": "scene",
+    "calib": null,
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.8879231178794776,
+     "b": 0.7156935005005721
+    },
+    "uKeyIntensity": 4.05,
+    "uRakeTrack": 1,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "camY": -9.2,
+    "timeOfDay": 0.5
+   },
+   "ordinal": 39,
+   "at": "2026-08-14T21:37:07.115Z"
+  },
+  {
+   "shot": "night",
+   "arm": "off",
+   "file": "night.off.png",
+   "sha256": "2b139acdee5172c8ba4d14a3880189fd1b61c3c92a8c465484c78205934fa0d7",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "a81b98942232"
+   },
+   "readback": {
+    "uSubjLitHold": 0,
+    "uSubjShadowHold": 1,
+    "uShadowHold": 0,
+    "uShadowHoldKnee": 0.25,
+    "uDebugTerm": 0,
+    "debugRaw": false,
+    "debugSrc": "scene",
+    "calib": null,
+    "uKeyColor": {
+     "r": 0.34191442489801843,
+     "g": 0.55201140150344,
+     "b": 1
+    },
+    "uKeyIntensity": 0.62,
+    "uRakeTrack": 1,
+    "uLocalToon": 2.5,
+    "nightAmount": 1,
+    "camY": 8.4,
+    "timeOfDay": 0.02
+   },
+   "ordinal": 40,
+   "at": "2026-08-14T21:42:44.935Z"
+  },
+  {
+   "shot": "night",
+   "arm": "on",
+   "file": "night.on.png",
+   "sha256": "d54f78cda453615223be7c382a7f87ae889176294e0e6c8ae410d13b6b50bc19",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "a81b98942232"
+   },
+   "readback": {
+    "uSubjLitHold": 0.7,
+    "uSubjShadowHold": 1,
+    "uShadowHold": 0,
+    "uShadowHoldKnee": 0.25,
+    "uDebugTerm": 0,
+    "debugRaw": false,
+    "debugSrc": "scene",
+    "calib": null,
+    "uKeyColor": {
+     "r": 0.34191442489801843,
+     "g": 0.55201140150344,
+     "b": 1
+    },
+    "uKeyIntensity": 0.62,
+    "uRakeTrack": 1,
+    "uLocalToon": 2.5,
+    "nightAmount": 1,
+    "camY": 8.4,
+    "timeOfDay": 0.02
+   },
+   "ordinal": 41,
+   "at": "2026-08-14T21:43:18.861Z"
+  },
+  {
+   "shot": "night",
+   "arm": "back",
+   "file": "night.back.png",
+   "sha256": "2b139acdee5172c8ba4d14a3880189fd1b61c3c92a8c465484c78205934fa0d7",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "a81b98942232"
+   },
+   "readback": {
+    "uSubjLitHold": 0,
+    "uSubjShadowHold": 1,
+    "uShadowHold": 0,
+    "uShadowHoldKnee": 0.25,
+    "uDebugTerm": 0,
+    "debugRaw": false,
+    "debugSrc": "scene",
+    "calib": null,
+    "uKeyColor": {
+     "r": 0.34191442489801843,
+     "g": 0.55201140150344,
+     "b": 1
+    },
+    "uKeyIntensity": 0.62,
+    "uRakeTrack": 1,
+    "uLocalToon": 2.5,
+    "nightAmount": 1,
+    "camY": 8.4,
+    "timeOfDay": 0.02
+   },
+   "ordinal": 42,
+   "at": "2026-08-14T21:43:56.614Z"
+  },
+  {
+   "shot": "night",
+   "arm": "cal",
+   "file": "night.cal.png",
+   "sha256": "779dca99fb70d24e3a9065ad95ba20db1e7fd381fdfd43fdf13a6852cc383981",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "a81b98942232"
+   },
+   "readback": {
+    "uSubjLitHold": 0,
+    "uSubjShadowHold": 1,
+    "uShadowHold": 0,
+    "uShadowHoldKnee": 0.25,
+    "uDebugTerm": 4,
+    "debugRaw": true,
+    "debugSrc": "scene",
+    "calib": {
+     "channel": "debugTerm",
+     "mode": 4,
+     "u8": [
+      64,
+      128,
+      191
+     ],
+     "rgb": [
+      0.25098039215686274,
+      0.5019607843137255,
+      0.7490196078431373
+     ]
+    },
+    "uKeyColor": {
+     "r": 0.34191442489801843,
+     "g": 0.55201140150344,
+     "b": 1
+    },
+    "uKeyIntensity": 0.62,
+    "uRakeTrack": 1,
+    "uLocalToon": 2.5,
+    "nightAmount": 1,
+    "camY": 8.4,
+    "timeOfDay": 0.02
+   },
+   "ordinal": 43,
+   "at": "2026-08-14T21:44:29.485Z"
+  },
+  {
+   "shot": "night",
+   "arm": "msk",
+   "file": "night.msk.png",
+   "sha256": "bfac0c0ca48749169d0fa96a2e8f61c67e9703f0355b7f6823ef95a5f4ce677d",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "a81b98942232"
+   },
+   "readback": {
+    "uSubjLitHold": 0,
+    "uSubjShadowHold": 1,
+    "uShadowHold": 0,
+    "uShadowHoldKnee": 0.25,
+    "uDebugTerm": 1,
+    "debugRaw": true,
+    "debugSrc": "scene",
+    "calib": null,
+    "uKeyColor": {
+     "r": 0.34191442489801843,
+     "g": 0.55201140150344,
+     "b": 1
+    },
+    "uKeyIntensity": 0.62,
+    "uRakeTrack": 1,
+    "uLocalToon": 2.5,
+    "nightAmount": 1,
+    "camY": 8.4,
+    "timeOfDay": 0.02
+   },
+   "ordinal": 44,
+   "at": "2026-08-14T21:45:06.747Z"
+  },
+  {
+   "shot": "night",
+   "arm": "bk2",
+   "file": "night.bk2.png",
+   "sha256": "2b139acdee5172c8ba4d14a3880189fd1b61c3c92a8c465484c78205934fa0d7",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "a81b98942232"
+   },
+   "readback": {
+    "uSubjLitHold": 0,
+    "uSubjShadowHold": 1,
+    "uShadowHold": 0,
+    "uShadowHoldKnee": 0.25,
+    "uDebugTerm": 0,
+    "debugRaw": false,
+    "debugSrc": "scene",
+    "calib": null,
+    "uKeyColor": {
+     "r": 0.34191442489801843,
+     "g": 0.55201140150344,
+     "b": 1
+    },
+    "uKeyIntensity": 0.62,
+    "uRakeTrack": 1,
+    "uLocalToon": 2.5,
+    "nightAmount": 1,
+    "camY": 8.4,
+    "timeOfDay": 0.02
+   },
+   "ordinal": 45,
+   "at": "2026-08-14T21:45:40.685Z"
+  },
+  {
+   "shot": "traversal",
+   "arm": "off",
+   "file": "traversal.off.png",
+   "sha256": "88f260a2d4bbd8e09a6423c9236dc5f04120934e4302b736eb2a8fa8a322929f",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "a81b98942232"
+   },
+   "readback": {
+    "uSubjLitHold": 0,
+    "uSubjShadowHold": 1,
+    "uShadowHold": 0,
+    "uShadowHoldKnee": 0.25,
+    "uDebugTerm": 0,
+    "debugRaw": false,
+    "debugSrc": "scene",
+    "calib": null,
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6956019860015465,
+     "b": 0.35477957597348103
+    },
+    "uKeyIntensity": 3.3066872427983536,
+    "uRakeTrack": 1,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "camY": 14,
+    "timeOfDay": 0.77
+   },
+   "ordinal": 46,
+   "at": "2026-08-14T21:50:56.800Z"
+  },
+  {
+   "shot": "traversal",
+   "arm": "on",
+   "file": "traversal.on.png",
+   "sha256": "b02bd10c8cc4d2b73f19fe7c0ab7ce73681a0ac650554e216774fb2a8fde1594",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "a81b98942232"
+   },
+   "readback": {
+    "uSubjLitHold": 0.7,
+    "uSubjShadowHold": 1,
+    "uShadowHold": 0,
+    "uShadowHoldKnee": 0.25,
+    "uDebugTerm": 0,
+    "debugRaw": false,
+    "debugSrc": "scene",
+    "calib": null,
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6956019860015465,
+     "b": 0.35477957597348103
+    },
+    "uKeyIntensity": 3.3066872427983536,
+    "uRakeTrack": 1,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "camY": 14,
+    "timeOfDay": 0.77
+   },
+   "ordinal": 47,
+   "at": "2026-08-14T21:51:27.615Z"
+  },
+  {
+   "shot": "traversal",
+   "arm": "ko",
+   "file": "traversal.ko.png",
+   "sha256": "2ce989b188d28593576491b84a40308017060975cbbf9cc7bb005b07d3238cd8",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "a81b98942232"
+   },
+   "readback": {
+    "uSubjLitHold": 0.4,
+    "uSubjShadowHold": 1,
+    "uShadowHold": 0,
+    "uShadowHoldKnee": 0.25,
+    "uDebugTerm": 0,
+    "debugRaw": false,
+    "debugSrc": "scene",
+    "calib": null,
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6956019860015465,
+     "b": 0.35477957597348103
+    },
+    "uKeyIntensity": 3.3066872427983536,
+    "uRakeTrack": 1,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "camY": 14,
+    "timeOfDay": 0.77
+   },
+   "ordinal": 48,
+   "at": "2026-08-14T21:51:58.337Z"
+  },
+  {
+   "shot": "traversal",
+   "arm": "back",
+   "file": "traversal.back.png",
+   "sha256": "88f260a2d4bbd8e09a6423c9236dc5f04120934e4302b736eb2a8fa8a322929f",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "a81b98942232"
+   },
+   "readback": {
+    "uSubjLitHold": 0,
+    "uSubjShadowHold": 1,
+    "uShadowHold": 0,
+    "uShadowHoldKnee": 0.25,
+    "uDebugTerm": 0,
+    "debugRaw": false,
+    "debugSrc": "scene",
+    "calib": null,
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6956019860015465,
+     "b": 0.35477957597348103
+    },
+    "uKeyIntensity": 3.3066872427983536,
+    "uRakeTrack": 1,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "camY": 14,
+    "timeOfDay": 0.77
+   },
+   "ordinal": 49,
+   "at": "2026-08-14T21:52:28.910Z"
+  },
+  {
+   "shot": "traversal",
+   "arm": "cal",
+   "file": "traversal.cal.png",
+   "sha256": "f3be5f8555779a0a97cb00d2bcffb7e036e4e08e631e5966f38c781a6f9e2cf1",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "a81b98942232"
+   },
+   "readback": {
+    "uSubjLitHold": 0,
+    "uSubjShadowHold": 1,
+    "uShadowHold": 0,
+    "uShadowHoldKnee": 0.25,
+    "uDebugTerm": 4,
+    "debugRaw": true,
+    "debugSrc": "scene",
+    "calib": {
+     "channel": "debugTerm",
+     "mode": 4,
+     "u8": [
+      64,
+      128,
+      191
+     ],
+     "rgb": [
+      0.25098039215686274,
+      0.5019607843137255,
+      0.7490196078431373
+     ]
+    },
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6956019860015465,
+     "b": 0.35477957597348103
+    },
+    "uKeyIntensity": 3.3066872427983536,
+    "uRakeTrack": 1,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "camY": 14,
+    "timeOfDay": 0.77
+   },
+   "ordinal": 50,
+   "at": "2026-08-14T21:52:58.109Z"
+  },
+  {
+   "shot": "traversal",
+   "arm": "msk",
+   "file": "traversal.msk.png",
+   "sha256": "a66feea63efeea658e0aaf382ce909640dd4a3b9dc1c8d977900af3e1981801a",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "a81b98942232"
+   },
+   "readback": {
+    "uSubjLitHold": 0,
+    "uSubjShadowHold": 1,
+    "uShadowHold": 0,
+    "uShadowHoldKnee": 0.25,
+    "uDebugTerm": 1,
+    "debugRaw": true,
+    "debugSrc": "scene",
+    "calib": null,
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6956019860015465,
+     "b": 0.35477957597348103
+    },
+    "uKeyIntensity": 3.3066872427983536,
+    "uRakeTrack": 1,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "camY": 14,
+    "timeOfDay": 0.77
+   },
+   "ordinal": 51,
+   "at": "2026-08-14T21:53:27.448Z"
+  },
+  {
+   "shot": "traversal",
+   "arm": "bk2",
+   "file": "traversal.bk2.png",
+   "sha256": "88f260a2d4bbd8e09a6423c9236dc5f04120934e4302b736eb2a8fa8a322929f",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "a81b98942232"
+   },
+   "readback": {
+    "uSubjLitHold": 0,
+    "uSubjShadowHold": 1,
+    "uShadowHold": 0,
+    "uShadowHoldKnee": 0.25,
+    "uDebugTerm": 0,
+    "debugRaw": false,
+    "debugSrc": "scene",
+    "calib": null,
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6956019860015465,
+     "b": 0.35477957597348103
+    },
+    "uKeyIntensity": 3.3066872427983536,
+    "uRakeTrack": 1,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "camY": 14,
+    "timeOfDay": 0.77
+   },
+   "ordinal": 52,
+   "at": "2026-08-14T21:53:58.379Z"
+  },
+  {
+   "shot": "combat",
+   "arm": "off",
+   "file": "combat.off.png",
+   "sha256": "d5b95867c8160ff9c79a2af156d32f426a8effbf48a6d83ba0d0135c15e9aac3",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "a81b98942232"
+   },
+   "readback": {
+    "uSubjLitHold": 0,
+    "uSubjShadowHold": 1,
+    "uShadowHold": 0,
+    "uShadowHoldKnee": 0.25,
+    "uDebugTerm": 0,
+    "debugRaw": false,
+    "debugSrc": "scene",
+    "calib": null,
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.7040617866555196,
+     "b": 0.3706554177227912
+    },
+    "uKeyIntensity": 3.339384002057613,
+    "uRakeTrack": 1,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "camY": 2.35,
+    "timeOfDay": 0.74
+   },
+   "ordinal": 53,
+   "at": "2026-08-14T21:57:50.384Z"
+  },
+  {
+   "shot": "combat",
+   "arm": "on",
+   "file": "combat.on.png",
+   "sha256": "40b0809891c90dded20d1c02691ab33d6e011efb02894dbf62598decf7b9298d",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "a81b98942232"
+   },
+   "readback": {
+    "uSubjLitHold": 0.7,
+    "uSubjShadowHold": 1,
+    "uShadowHold": 0,
+    "uShadowHoldKnee": 0.25,
+    "uDebugTerm": 0,
+    "debugRaw": false,
+    "debugSrc": "scene",
+    "calib": null,
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.7040617866555196,
+     "b": 0.3706554177227912
+    },
+    "uKeyIntensity": 3.339384002057613,
+    "uRakeTrack": 1,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "camY": 2.35,
+    "timeOfDay": 0.74
+   },
+   "ordinal": 54,
+   "at": "2026-08-14T21:58:18.553Z"
+  },
+  {
+   "shot": "combat",
+   "arm": "ko",
+   "file": "combat.ko.png",
+   "sha256": "0aec9cc1aef26a81952efa8032fb072ae2e0dbce7c703436371b1853ea8293af",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "a81b98942232"
+   },
+   "readback": {
+    "uSubjLitHold": 0.4,
+    "uSubjShadowHold": 1,
+    "uShadowHold": 0,
+    "uShadowHoldKnee": 0.25,
+    "uDebugTerm": 0,
+    "debugRaw": false,
+    "debugSrc": "scene",
+    "calib": null,
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.7040617866555196,
+     "b": 0.3706554177227912
+    },
+    "uKeyIntensity": 3.339384002057613,
+    "uRakeTrack": 1,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "camY": 2.35,
+    "timeOfDay": 0.74
+   },
+   "ordinal": 55,
+   "at": "2026-08-14T21:58:47.095Z"
+  },
+  {
+   "shot": "combat",
+   "arm": "back",
+   "file": "combat.back.png",
+   "sha256": "d5b95867c8160ff9c79a2af156d32f426a8effbf48a6d83ba0d0135c15e9aac3",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "a81b98942232"
+   },
+   "readback": {
+    "uSubjLitHold": 0,
+    "uSubjShadowHold": 1,
+    "uShadowHold": 0,
+    "uShadowHoldKnee": 0.25,
+    "uDebugTerm": 0,
+    "debugRaw": false,
+    "debugSrc": "scene",
+    "calib": null,
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.7040617866555196,
+     "b": 0.3706554177227912
+    },
+    "uKeyIntensity": 3.339384002057613,
+    "uRakeTrack": 1,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "camY": 2.35,
+    "timeOfDay": 0.74
+   },
+   "ordinal": 56,
+   "at": "2026-08-14T21:59:15.400Z"
+  },
+  {
+   "shot": "combat",
+   "arm": "cal",
+   "file": "combat.cal.png",
+   "sha256": "4293a304d0b80c802aa94f1be6d2dd23ac035312a48f0cd875c66be31a8e7add",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "a81b98942232"
+   },
+   "readback": {
+    "uSubjLitHold": 0,
+    "uSubjShadowHold": 1,
+    "uShadowHold": 0,
+    "uShadowHoldKnee": 0.25,
+    "uDebugTerm": 4,
+    "debugRaw": true,
+    "debugSrc": "scene",
+    "calib": {
+     "channel": "debugTerm",
+     "mode": 4,
+     "u8": [
+      64,
+      128,
+      191
+     ],
+     "rgb": [
+      0.25098039215686274,
+      0.5019607843137255,
+      0.7490196078431373
+     ]
+    },
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.7040617866555196,
+     "b": 0.3706554177227912
+    },
+    "uKeyIntensity": 3.339384002057613,
+    "uRakeTrack": 1,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "camY": 2.35,
+    "timeOfDay": 0.74
+   },
+   "ordinal": 57,
+   "at": "2026-08-14T21:59:42.563Z"
+  },
+  {
+   "shot": "combat",
+   "arm": "msk",
+   "file": "combat.msk.png",
+   "sha256": "3b1d01047ba10ca86fcd55feed4104ab9ca9c47805c45542a27f98d6de6a59d2",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "a81b98942232"
+   },
+   "readback": {
+    "uSubjLitHold": 0,
+    "uSubjShadowHold": 1,
+    "uShadowHold": 0,
+    "uShadowHoldKnee": 0.25,
+    "uDebugTerm": 1,
+    "debugRaw": true,
+    "debugSrc": "scene",
+    "calib": null,
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.7040617866555196,
+     "b": 0.3706554177227912
+    },
+    "uKeyIntensity": 3.339384002057613,
+    "uRakeTrack": 1,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "camY": 2.35,
+    "timeOfDay": 0.74
+   },
+   "ordinal": 58,
+   "at": "2026-08-14T22:00:09.943Z"
+  },
+  {
+   "shot": "combat",
+   "arm": "bk2",
+   "file": "combat.bk2.png",
+   "sha256": "d5b95867c8160ff9c79a2af156d32f426a8effbf48a6d83ba0d0135c15e9aac3",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "a81b98942232"
+   },
+   "readback": {
+    "uSubjLitHold": 0,
+    "uSubjShadowHold": 1,
+    "uShadowHold": 0,
+    "uShadowHoldKnee": 0.25,
+    "uDebugTerm": 0,
+    "debugRaw": false,
+    "debugSrc": "scene",
+    "calib": null,
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.7040617866555196,
+     "b": 0.3706554177227912
+    },
+    "uKeyIntensity": 3.339384002057613,
+    "uRakeTrack": 1,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "camY": 2.35,
+    "timeOfDay": 0.74
+   },
+   "ordinal": 59,
+   "at": "2026-08-14T22:00:38.487Z"
+  },
+  {
+   "shot": "guard",
+   "arm": "off",
+   "file": "guard.off.png",
+   "sha256": "d004c12f88520dfa0e2da12fa347484b3854a9ee0db14542412218aabcd8d41b",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "a81b98942232"
+   },
+   "readback": {
+    "uSubjLitHold": 0,
+    "uSubjShadowHold": 1,
+    "uShadowHold": 0,
+    "uShadowHoldKnee": 0.25,
+    "uDebugTerm": 0,
+    "debugRaw": false,
+    "debugSrc": "scene",
+    "calib": null,
+    "uKeyColor": {
+     "r": 0.34191442489801843,
+     "g": 0.55201140150344,
+     "b": 1
+    },
+    "uKeyIntensity": 0.62,
+    "uRakeTrack": 1,
+    "uLocalToon": 2.5,
+    "nightAmount": 1,
+    "camY": 2.6,
+    "timeOfDay": 0.1
+   },
+   "ordinal": 60,
+   "at": "2026-08-14T22:03:10.746Z"
+  },
+  {
+   "shot": "guard",
+   "arm": "on",
+   "file": "guard.on.png",
+   "sha256": "7e28be08eafaedfbc09f08af5599cf574ccadb4d2f410bf1f4a3cf9fe548879b",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "a81b98942232"
+   },
+   "readback": {
+    "uSubjLitHold": 0.7,
+    "uSubjShadowHold": 1,
+    "uShadowHold": 0,
+    "uShadowHoldKnee": 0.25,
+    "uDebugTerm": 0,
+    "debugRaw": false,
+    "debugSrc": "scene",
+    "calib": null,
+    "uKeyColor": {
+     "r": 0.34191442489801843,
+     "g": 0.55201140150344,
+     "b": 1
+    },
+    "uKeyIntensity": 0.62,
+    "uRakeTrack": 1,
+    "uLocalToon": 2.5,
+    "nightAmount": 1,
+    "camY": 2.6,
+    "timeOfDay": 0.1
+   },
+   "ordinal": 61,
+   "at": "2026-08-14T22:03:29.548Z"
+  },
+  {
+   "shot": "guard",
+   "arm": "back",
+   "file": "guard.back.png",
+   "sha256": "d004c12f88520dfa0e2da12fa347484b3854a9ee0db14542412218aabcd8d41b",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "a81b98942232"
+   },
+   "readback": {
+    "uSubjLitHold": 0,
+    "uSubjShadowHold": 1,
+    "uShadowHold": 0,
+    "uShadowHoldKnee": 0.25,
+    "uDebugTerm": 0,
+    "debugRaw": false,
+    "debugSrc": "scene",
+    "calib": null,
+    "uKeyColor": {
+     "r": 0.34191442489801843,
+     "g": 0.55201140150344,
+     "b": 1
+    },
+    "uKeyIntensity": 0.62,
+    "uRakeTrack": 1,
+    "uLocalToon": 2.5,
+    "nightAmount": 1,
+    "camY": 2.6,
+    "timeOfDay": 0.1
+   },
+   "ordinal": 62,
+   "at": "2026-08-14T22:03:48.274Z"
+  },
+  {
+   "shot": "sly-profile",
+   "arm": "off",
+   "file": "sly-profile.off.png",
+   "sha256": "b729d9a033aab5def13c123c7cea27484420b1a785e5c8a40a45e0a46c1b4611",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "a81b98942232"
+   },
+   "readback": {
+    "uSubjLitHold": 0,
+    "uSubjShadowHold": 1,
+    "uShadowHold": 0,
+    "uShadowHoldKnee": 0.25,
+    "uDebugTerm": 0,
+    "debugRaw": false,
+    "debugSrc": "scene",
+    "calib": null,
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6918947072370671,
+     "b": 0.3501375437924764
+    },
+    "uKeyIntensity": 3.2859172324293913,
+    "uRakeTrack": 1,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "camY": 1.7,
+    "timeOfDay": 0.8
+   },
+   "ordinal": 63,
+   "at": "2026-08-14T22:07:26.239Z"
+  },
+  {
+   "shot": "sly-profile",
+   "arm": "on",
+   "file": "sly-profile.on.png",
+   "sha256": "27e8830b46fe040122dfff2843623af1171d97c925f015fb0efee1afad402ea6",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "a81b98942232"
+   },
+   "readback": {
+    "uSubjLitHold": 0.7,
+    "uSubjShadowHold": 1,
+    "uShadowHold": 0,
+    "uShadowHoldKnee": 0.25,
+    "uDebugTerm": 0,
+    "debugRaw": false,
+    "debugSrc": "scene",
+    "calib": null,
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6918947072370671,
+     "b": 0.3501375437924764
+    },
+    "uKeyIntensity": 3.2859172324293913,
+    "uRakeTrack": 1,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "camY": 1.7,
+    "timeOfDay": 0.8
+   },
+   "ordinal": 64,
+   "at": "2026-08-14T22:07:52.679Z"
+  },
+  {
+   "shot": "sly-profile",
+   "arm": "back",
+   "file": "sly-profile.back.png",
+   "sha256": "b729d9a033aab5def13c123c7cea27484420b1a785e5c8a40a45e0a46c1b4611",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "a81b98942232"
+   },
+   "readback": {
+    "uSubjLitHold": 0,
+    "uSubjShadowHold": 1,
+    "uShadowHold": 0,
+    "uShadowHoldKnee": 0.25,
+    "uDebugTerm": 0,
+    "debugRaw": false,
+    "debugSrc": "scene",
+    "calib": null,
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6918947072370671,
+     "b": 0.3501375437924764
+    },
+    "uKeyIntensity": 3.2859172324293913,
+    "uRakeTrack": 1,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "camY": 1.7,
+    "timeOfDay": 0.8
+   },
+   "ordinal": 65,
+   "at": "2026-08-14T22:08:19.020Z"
+  },
+  {
+   "shot": "sly-key",
+   "arm": "off",
+   "file": "sly-key.off.png",
+   "sha256": "310666560b7bcb2fff789a9cb36f9493e13f62868996ddb654308a6f1c2876f6",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "a81b98942232"
+   },
+   "readback": {
+    "uSubjLitHold": 0,
+    "uSubjShadowHold": 1,
+    "uShadowHold": 0,
+    "uShadowHoldKnee": 0.25,
+    "uDebugTerm": 0,
+    "debugRaw": false,
+    "debugSrc": "scene",
+    "calib": null,
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6918947072370671,
+     "b": 0.3501375437924764
+    },
+    "uKeyIntensity": 3.2859172324293913,
+    "uRakeTrack": 1,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "camY": 1.45,
+    "timeOfDay": 0.8
+   },
+   "ordinal": 66,
+   "at": "2026-08-14T22:13:51.511Z"
+  },
+  {
+   "shot": "sly-key",
+   "arm": "on",
+   "file": "sly-key.on.png",
+   "sha256": "542535ab3bb382153de386f8e71014b0be721a30a6e20b7f4a8fe08c1bbb4272",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "a81b98942232"
+   },
+   "readback": {
+    "uSubjLitHold": 0.7,
+    "uSubjShadowHold": 1,
+    "uShadowHold": 0,
+    "uShadowHoldKnee": 0.25,
+    "uDebugTerm": 0,
+    "debugRaw": false,
+    "debugSrc": "scene",
+    "calib": null,
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6918947072370671,
+     "b": 0.3501375437924764
+    },
+    "uKeyIntensity": 3.2859172324293913,
+    "uRakeTrack": 1,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "camY": 1.45,
+    "timeOfDay": 0.8
+   },
+   "ordinal": 67,
+   "at": "2026-08-14T22:14:23.190Z"
+  },
+  {
+   "shot": "sly-key",
+   "arm": "back",
+   "file": "sly-key.back.png",
+   "sha256": "310666560b7bcb2fff789a9cb36f9493e13f62868996ddb654308a6f1c2876f6",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "a81b98942232"
+   },
+   "readback": {
+    "uSubjLitHold": 0,
+    "uSubjShadowHold": 1,
+    "uShadowHold": 0,
+    "uShadowHoldKnee": 0.25,
+    "uDebugTerm": 0,
+    "debugRaw": false,
+    "debugSrc": "scene",
+    "calib": null,
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6918947072370671,
+     "b": 0.3501375437924764
+    },
+    "uKeyIntensity": 3.2859172324293913,
+    "uRakeTrack": 1,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "camY": 1.45,
+    "timeOfDay": 0.8
+   },
+   "ordinal": 68,
+   "at": "2026-08-14T22:14:54.995Z"
+  }
+ ],
+ "lockGrant": {
+  "src": "2b5c7c49ad9c4668",
+  "head": "67426707456b",
+  "foreign": "",
+  "at": "2026-08-14T20:42:52.470Z"
+ },
+ "release": {
+  "src": "2b5c7c49ad9c4668",
+  "critical": "",
+  "owned": "",
+  "at": "2026-08-14T22:14:55.188Z"
+ }
+}

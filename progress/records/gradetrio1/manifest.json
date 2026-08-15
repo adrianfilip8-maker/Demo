@@ -1,0 +1,3593 @@
+{
+ "seal": "PREREG-tombdim + PREREG-goldenrake + PREREG-nightfloor (shared runner)",
+ "head": "8562e87908ad5ce9ccf90a8b4ae554e9b22bedfd",
+ "expect": {
+  "head": "0ff46d1cb8457d8b"
+ },
+ "values": {
+  "B_ON": 0.3,
+  "B_KO": 0.15,
+  "C_ON": 1,
+  "C_KO": 0.5,
+  "D_ON": 0.14,
+  "D_KO": 0.18,
+  "DEF": {
+   "tomb": 1,
+   "rake": 0,
+   "nfloor": 0.125
+  }
+ },
+ "launchedAt": "2026-08-13T20:55:27.868Z",
+ "pid": 4183,
+ "rows": [
+  {
+   "shot": "hero",
+   "arm": "off",
+   "file": "hero.off.png",
+   "sha256": "44b8061ff64ca70eef09ad3143faeaa45d0ad371f8800bd5be7d61f0efb32921",
+   "tree": {
+    "src": "0ff46d1cb8457d8b",
+    "head": "8562e87908ad"
+   },
+   "readback": {
+    "tombAmb": 1,
+    "shadowFloorNight": 0.125,
+    "uRakeTrack": 0,
+    "uRakeGap": 0.05,
+    "tuneTomb": 1,
+    "tuneNfloor": 0.125,
+    "tuneRake": 0,
+    "uAmbIntensity": 0.39010050985654793,
+    "uShadowColor": {
+     "r": 0.10386835009286081,
+     "g": 0.3384222224511441,
+     "b": 0.5367185863159294
+    },
+    "uShadowColorLit": {
+     "r": 0.10386835009286081,
+     "g": 0.3384222224511441,
+     "b": 0.5367185863159294
+    },
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6938717612856897,
+     "b": 0.3515325994898463
+    },
+    "uKeyIntensity": 3.3,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "tombF": 1,
+    "camY": 10.28,
+    "timeOfDay": 0.79
+   },
+   "ordinal": 1,
+   "at": "2026-08-13T21:03:29.647Z"
+  },
+  {
+   "shot": "hero",
+   "arm": "bon",
+   "file": "hero.bon.png",
+   "sha256": "44b8061ff64ca70eef09ad3143faeaa45d0ad371f8800bd5be7d61f0efb32921",
+   "tree": {
+    "src": "0ff46d1cb8457d8b",
+    "head": "8562e87908ad"
+   },
+   "readback": {
+    "tombAmb": 0.3,
+    "shadowFloorNight": 0.125,
+    "uRakeTrack": 0,
+    "uRakeGap": 0.05,
+    "tuneTomb": 1,
+    "tuneNfloor": 0.125,
+    "tuneRake": 0,
+    "uAmbIntensity": 0.39010050985654793,
+    "uShadowColor": {
+     "r": 0.10386835009286081,
+     "g": 0.3384222224511441,
+     "b": 0.5367185863159294
+    },
+    "uShadowColorLit": {
+     "r": 0.10386835009286081,
+     "g": 0.3384222224511441,
+     "b": 0.5367185863159294
+    },
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6938717612856897,
+     "b": 0.3515325994898463
+    },
+    "uKeyIntensity": 3.3,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "tombF": 1,
+    "camY": 10.28,
+    "timeOfDay": 0.79
+   },
+   "ordinal": 2,
+   "at": "2026-08-13T21:04:08.762Z"
+  },
+  {
+   "shot": "hero",
+   "arm": "con",
+   "file": "hero.con.png",
+   "sha256": "16752d66b870b0be1e33537c3e28fc1b0637b736c42328a5a43e524e4a53d1a4",
+   "tree": {
+    "src": "0ff46d1cb8457d8b",
+    "head": "8562e87908ad"
+   },
+   "readback": {
+    "tombAmb": 1,
+    "shadowFloorNight": 0.125,
+    "uRakeTrack": 1,
+    "uRakeGap": 0.05,
+    "tuneTomb": 1,
+    "tuneNfloor": 0.125,
+    "tuneRake": 0,
+    "uAmbIntensity": 0.39010050985654793,
+    "uShadowColor": {
+     "r": 0.10386835009286081,
+     "g": 0.3384222224511441,
+     "b": 0.5367185863159294
+    },
+    "uShadowColorLit": {
+     "r": 0.10386835009286081,
+     "g": 0.3384222224511441,
+     "b": 0.5367185863159294
+    },
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6938717612856897,
+     "b": 0.3515325994898463
+    },
+    "uKeyIntensity": 3.3,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "tombF": 1,
+    "camY": 10.28,
+    "timeOfDay": 0.79
+   },
+   "ordinal": 3,
+   "at": "2026-08-13T21:04:47.891Z"
+  },
+  {
+   "shot": "hero",
+   "arm": "cko",
+   "file": "hero.cko.png",
+   "sha256": "b113855e7bb42591c17a821c332e1aa57444a51a7726cb21909fa7becab6cf03",
+   "tree": {
+    "src": "0ff46d1cb8457d8b",
+    "head": "8562e87908ad"
+   },
+   "readback": {
+    "tombAmb": 1,
+    "shadowFloorNight": 0.125,
+    "uRakeTrack": 0.5,
+    "uRakeGap": 0.05,
+    "tuneTomb": 1,
+    "tuneNfloor": 0.125,
+    "tuneRake": 0,
+    "uAmbIntensity": 0.39010050985654793,
+    "uShadowColor": {
+     "r": 0.10386835009286081,
+     "g": 0.3384222224511441,
+     "b": 0.5367185863159294
+    },
+    "uShadowColorLit": {
+     "r": 0.10386835009286081,
+     "g": 0.3384222224511441,
+     "b": 0.5367185863159294
+    },
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6938717612856897,
+     "b": 0.3515325994898463
+    },
+    "uKeyIntensity": 3.3,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "tombF": 1,
+    "camY": 10.28,
+    "timeOfDay": 0.79
+   },
+   "ordinal": 4,
+   "at": "2026-08-13T21:05:26.521Z"
+  },
+  {
+   "shot": "hero",
+   "arm": "don",
+   "file": "hero.don.png",
+   "sha256": "44b8061ff64ca70eef09ad3143faeaa45d0ad371f8800bd5be7d61f0efb32921",
+   "tree": {
+    "src": "0ff46d1cb8457d8b",
+    "head": "8562e87908ad"
+   },
+   "readback": {
+    "tombAmb": 1,
+    "shadowFloorNight": 0.14,
+    "uRakeTrack": 0,
+    "uRakeGap": 0.05,
+    "tuneTomb": 1,
+    "tuneNfloor": 0.125,
+    "tuneRake": 0,
+    "uAmbIntensity": 0.39010050985654793,
+    "uShadowColor": {
+     "r": 0.10386835009286081,
+     "g": 0.3384222224511441,
+     "b": 0.5367185863159294
+    },
+    "uShadowColorLit": {
+     "r": 0.10386835009286081,
+     "g": 0.3384222224511441,
+     "b": 0.5367185863159294
+    },
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6938717612856897,
+     "b": 0.3515325994898463
+    },
+    "uKeyIntensity": 3.3,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "tombF": 1,
+    "camY": 10.28,
+    "timeOfDay": 0.79
+   },
+   "ordinal": 5,
+   "at": "2026-08-13T21:06:04.996Z"
+  },
+  {
+   "shot": "hero",
+   "arm": "back",
+   "file": "hero.back.png",
+   "sha256": "44b8061ff64ca70eef09ad3143faeaa45d0ad371f8800bd5be7d61f0efb32921",
+   "tree": {
+    "src": "0ff46d1cb8457d8b",
+    "head": "8562e87908ad"
+   },
+   "readback": {
+    "tombAmb": 1,
+    "shadowFloorNight": 0.125,
+    "uRakeTrack": 0,
+    "uRakeGap": 0.05,
+    "tuneTomb": 1,
+    "tuneNfloor": 0.125,
+    "tuneRake": 0,
+    "uAmbIntensity": 0.39010050985654793,
+    "uShadowColor": {
+     "r": 0.10386835009286081,
+     "g": 0.3384222224511441,
+     "b": 0.5367185863159294
+    },
+    "uShadowColorLit": {
+     "r": 0.10386835009286081,
+     "g": 0.3384222224511441,
+     "b": 0.5367185863159294
+    },
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6938717612856897,
+     "b": 0.3515325994898463
+    },
+    "uKeyIntensity": 3.3,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "tombF": 1,
+    "camY": 10.28,
+    "timeOfDay": 0.79
+   },
+   "ordinal": 6,
+   "at": "2026-08-13T21:06:43.757Z"
+  },
+  {
+   "shot": "kaykit",
+   "arm": "off",
+   "file": "kaykit.off.png",
+   "sha256": "5359980866e4d39a8c57ed030dc88a5da087f7d4d9b2cdb6970ec69eca2aead9",
+   "tree": {
+    "src": "0ff46d1cb8457d8b",
+    "head": "8562e87908ad"
+   },
+   "readback": {
+    "tombAmb": 1,
+    "shadowFloorNight": 0.125,
+    "uRakeTrack": 0,
+    "uRakeGap": 0.05,
+    "tuneTomb": 1,
+    "tuneNfloor": 0.125,
+    "tuneRake": 0,
+    "uAmbIntensity": 0.39010050985654793,
+    "uShadowColor": {
+     "r": 0.10386835009286081,
+     "g": 0.3384222224511441,
+     "b": 0.5367185863159294
+    },
+    "uShadowColorLit": {
+     "r": 0.10386835009286081,
+     "g": 0.3384222224511441,
+     "b": 0.5367185863159294
+    },
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6938717612856897,
+     "b": 0.3515325994898463
+    },
+    "uKeyIntensity": 3.3,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "tombF": 1,
+    "camY": 14,
+    "timeOfDay": 0.3
+   },
+   "ordinal": 7,
+   "at": "2026-08-13T21:10:57.313Z"
+  },
+  {
+   "shot": "kaykit",
+   "arm": "bon",
+   "file": "kaykit.bon.png",
+   "sha256": "5359980866e4d39a8c57ed030dc88a5da087f7d4d9b2cdb6970ec69eca2aead9",
+   "tree": {
+    "src": "0ff46d1cb8457d8b",
+    "head": "8562e87908ad"
+   },
+   "readback": {
+    "tombAmb": 0.3,
+    "shadowFloorNight": 0.125,
+    "uRakeTrack": 0,
+    "uRakeGap": 0.05,
+    "tuneTomb": 1,
+    "tuneNfloor": 0.125,
+    "tuneRake": 0,
+    "uAmbIntensity": 0.39010050985654793,
+    "uShadowColor": {
+     "r": 0.10386835009286081,
+     "g": 0.3384222224511441,
+     "b": 0.5367185863159294
+    },
+    "uShadowColorLit": {
+     "r": 0.10386835009286081,
+     "g": 0.3384222224511441,
+     "b": 0.5367185863159294
+    },
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6938717612856897,
+     "b": 0.3515325994898463
+    },
+    "uKeyIntensity": 3.3,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "tombF": 1,
+    "camY": 14,
+    "timeOfDay": 0.3
+   },
+   "ordinal": 8,
+   "at": "2026-08-13T21:11:24.827Z"
+  },
+  {
+   "shot": "kaykit",
+   "arm": "con",
+   "file": "kaykit.con.png",
+   "sha256": "2e567ae69dc20556e41ad9483df0fbdb5c787c909a39892c7ae67fe53432743a",
+   "tree": {
+    "src": "0ff46d1cb8457d8b",
+    "head": "8562e87908ad"
+   },
+   "readback": {
+    "tombAmb": 1,
+    "shadowFloorNight": 0.125,
+    "uRakeTrack": 1,
+    "uRakeGap": 0.05,
+    "tuneTomb": 1,
+    "tuneNfloor": 0.125,
+    "tuneRake": 0,
+    "uAmbIntensity": 0.39010050985654793,
+    "uShadowColor": {
+     "r": 0.10386835009286081,
+     "g": 0.3384222224511441,
+     "b": 0.5367185863159294
+    },
+    "uShadowColorLit": {
+     "r": 0.10386835009286081,
+     "g": 0.3384222224511441,
+     "b": 0.5367185863159294
+    },
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6938717612856897,
+     "b": 0.3515325994898463
+    },
+    "uKeyIntensity": 3.3,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "tombF": 1,
+    "camY": 14,
+    "timeOfDay": 0.3
+   },
+   "ordinal": 9,
+   "at": "2026-08-13T21:11:49.534Z"
+  },
+  {
+   "shot": "kaykit",
+   "arm": "don",
+   "file": "kaykit.don.png",
+   "sha256": "5359980866e4d39a8c57ed030dc88a5da087f7d4d9b2cdb6970ec69eca2aead9",
+   "tree": {
+    "src": "0ff46d1cb8457d8b",
+    "head": "8562e87908ad"
+   },
+   "readback": {
+    "tombAmb": 1,
+    "shadowFloorNight": 0.14,
+    "uRakeTrack": 0,
+    "uRakeGap": 0.05,
+    "tuneTomb": 1,
+    "tuneNfloor": 0.125,
+    "tuneRake": 0,
+    "uAmbIntensity": 0.39010050985654793,
+    "uShadowColor": {
+     "r": 0.10386835009286081,
+     "g": 0.3384222224511441,
+     "b": 0.5367185863159294
+    },
+    "uShadowColorLit": {
+     "r": 0.10386835009286081,
+     "g": 0.3384222224511441,
+     "b": 0.5367185863159294
+    },
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6938717612856897,
+     "b": 0.3515325994898463
+    },
+    "uKeyIntensity": 3.3,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "tombF": 1,
+    "camY": 14,
+    "timeOfDay": 0.3
+   },
+   "ordinal": 10,
+   "at": "2026-08-13T21:12:14.320Z"
+  },
+  {
+   "shot": "kaykit",
+   "arm": "back",
+   "file": "kaykit.back.png",
+   "sha256": "5359980866e4d39a8c57ed030dc88a5da087f7d4d9b2cdb6970ec69eca2aead9",
+   "tree": {
+    "src": "0ff46d1cb8457d8b",
+    "head": "8562e87908ad"
+   },
+   "readback": {
+    "tombAmb": 1,
+    "shadowFloorNight": 0.125,
+    "uRakeTrack": 0,
+    "uRakeGap": 0.05,
+    "tuneTomb": 1,
+    "tuneNfloor": 0.125,
+    "tuneRake": 0,
+    "uAmbIntensity": 0.39010050985654793,
+    "uShadowColor": {
+     "r": 0.10386835009286081,
+     "g": 0.3384222224511441,
+     "b": 0.5367185863159294
+    },
+    "uShadowColorLit": {
+     "r": 0.10386835009286081,
+     "g": 0.3384222224511441,
+     "b": 0.5367185863159294
+    },
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6938717612856897,
+     "b": 0.3515325994898463
+    },
+    "uKeyIntensity": 3.3,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "tombF": 1,
+    "camY": 14,
+    "timeOfDay": 0.3
+   },
+   "ordinal": 11,
+   "at": "2026-08-13T21:12:42.098Z"
+  },
+  {
+   "shot": "temple",
+   "arm": "off",
+   "file": "temple.off.png",
+   "sha256": "9ddc8e93eb9c0bd810dd1084b9baf4adfba6c9379cdb063c425a244793383268",
+   "tree": {
+    "src": "0ff46d1cb8457d8b",
+    "head": "8562e87908ad"
+   },
+   "readback": {
+    "tombAmb": 1,
+    "shadowFloorNight": 0.125,
+    "uRakeTrack": 0,
+    "uRakeGap": 0.05,
+    "tuneTomb": 1,
+    "tuneNfloor": 0.125,
+    "tuneRake": 0,
+    "uAmbIntensity": 0.40930459131798247,
+    "uShadowColor": {
+     "r": 0.10880443000913055,
+     "g": 0.3551217502645965,
+     "b": 0.5632710551839905
+    },
+    "uShadowColorLit": {
+     "r": 0.10880443000913055,
+     "g": 0.3551217502645965,
+     "b": 0.5632710551839905
+    },
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.714747834424304,
+     "b": 0.390709082134271
+    },
+    "uKeyIntensity": 3.38068510897729,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "tombF": 1,
+    "camY": 2.6,
+    "timeOfDay": 0.72
+   },
+   "ordinal": 12,
+   "at": "2026-08-13T21:16:46.167Z"
+  },
+  {
+   "shot": "temple",
+   "arm": "bon",
+   "file": "temple.bon.png",
+   "sha256": "9ddc8e93eb9c0bd810dd1084b9baf4adfba6c9379cdb063c425a244793383268",
+   "tree": {
+    "src": "0ff46d1cb8457d8b",
+    "head": "8562e87908ad"
+   },
+   "readback": {
+    "tombAmb": 0.3,
+    "shadowFloorNight": 0.125,
+    "uRakeTrack": 0,
+    "uRakeGap": 0.05,
+    "tuneTomb": 1,
+    "tuneNfloor": 0.125,
+    "tuneRake": 0,
+    "uAmbIntensity": 0.40930459131798247,
+    "uShadowColor": {
+     "r": 0.10880443000913055,
+     "g": 0.3551217502645965,
+     "b": 0.5632710551839905
+    },
+    "uShadowColorLit": {
+     "r": 0.10880443000913055,
+     "g": 0.3551217502645965,
+     "b": 0.5632710551839905
+    },
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.714747834424304,
+     "b": 0.390709082134271
+    },
+    "uKeyIntensity": 3.38068510897729,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "tombF": 1,
+    "camY": 2.6,
+    "timeOfDay": 0.72
+   },
+   "ordinal": 13,
+   "at": "2026-08-13T21:17:15.773Z"
+  },
+  {
+   "shot": "temple",
+   "arm": "con",
+   "file": "temple.con.png",
+   "sha256": "b1e7365c6ae70c17aea25d53bff98b30b50cb66b6b4a04a19f9fab00d307a2a4",
+   "tree": {
+    "src": "0ff46d1cb8457d8b",
+    "head": "8562e87908ad"
+   },
+   "readback": {
+    "tombAmb": 1,
+    "shadowFloorNight": 0.125,
+    "uRakeTrack": 1,
+    "uRakeGap": 0.05,
+    "tuneTomb": 1,
+    "tuneNfloor": 0.125,
+    "tuneRake": 0,
+    "uAmbIntensity": 0.40930459131798247,
+    "uShadowColor": {
+     "r": 0.10880443000913055,
+     "g": 0.3551217502645965,
+     "b": 0.5632710551839905
+    },
+    "uShadowColorLit": {
+     "r": 0.10880443000913055,
+     "g": 0.3551217502645965,
+     "b": 0.5632710551839905
+    },
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.714747834424304,
+     "b": 0.390709082134271
+    },
+    "uKeyIntensity": 3.38068510897729,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "tombF": 1,
+    "camY": 2.6,
+    "timeOfDay": 0.72
+   },
+   "ordinal": 14,
+   "at": "2026-08-13T21:17:45.988Z"
+  },
+  {
+   "shot": "temple",
+   "arm": "don",
+   "file": "temple.don.png",
+   "sha256": "9ddc8e93eb9c0bd810dd1084b9baf4adfba6c9379cdb063c425a244793383268",
+   "tree": {
+    "src": "0ff46d1cb8457d8b",
+    "head": "8562e87908ad"
+   },
+   "readback": {
+    "tombAmb": 1,
+    "shadowFloorNight": 0.14,
+    "uRakeTrack": 0,
+    "uRakeGap": 0.05,
+    "tuneTomb": 1,
+    "tuneNfloor": 0.125,
+    "tuneRake": 0,
+    "uAmbIntensity": 0.40930459131798247,
+    "uShadowColor": {
+     "r": 0.10880443000913055,
+     "g": 0.3551217502645965,
+     "b": 0.5632710551839905
+    },
+    "uShadowColorLit": {
+     "r": 0.10880443000913055,
+     "g": 0.3551217502645965,
+     "b": 0.5632710551839905
+    },
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.714747834424304,
+     "b": 0.390709082134271
+    },
+    "uKeyIntensity": 3.38068510897729,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "tombF": 1,
+    "camY": 2.6,
+    "timeOfDay": 0.72
+   },
+   "ordinal": 15,
+   "at": "2026-08-13T21:18:16.027Z"
+  },
+  {
+   "shot": "temple",
+   "arm": "back",
+   "file": "temple.back.png",
+   "sha256": "9ddc8e93eb9c0bd810dd1084b9baf4adfba6c9379cdb063c425a244793383268",
+   "tree": {
+    "src": "0ff46d1cb8457d8b",
+    "head": "8562e87908ad"
+   },
+   "readback": {
+    "tombAmb": 1,
+    "shadowFloorNight": 0.125,
+    "uRakeTrack": 0,
+    "uRakeGap": 0.05,
+    "tuneTomb": 1,
+    "tuneNfloor": 0.125,
+    "tuneRake": 0,
+    "uAmbIntensity": 0.40930459131798247,
+    "uShadowColor": {
+     "r": 0.10880443000913055,
+     "g": 0.3551217502645965,
+     "b": 0.5632710551839905
+    },
+    "uShadowColorLit": {
+     "r": 0.10880443000913055,
+     "g": 0.3551217502645965,
+     "b": 0.5632710551839905
+    },
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.714747834424304,
+     "b": 0.390709082134271
+    },
+    "uKeyIntensity": 3.38068510897729,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "tombF": 1,
+    "camY": 2.6,
+    "timeOfDay": 0.72
+   },
+   "ordinal": 16,
+   "at": "2026-08-13T21:18:49.333Z"
+  },
+  {
+   "shot": "sly-closeup",
+   "arm": "off",
+   "file": "sly-closeup.off.png",
+   "sha256": "dedb0a8820aad113937760bcd2d4603dfadd8bc333ca5124fc68ce66a5e4a2f1",
+   "tree": {
+    "src": "0ff46d1cb8457d8b",
+    "head": "8562e87908ad"
+   },
+   "readback": {
+    "tombAmb": 1,
+    "shadowFloorNight": 0.125,
+    "uRakeTrack": 0,
+    "uRakeGap": 0.05,
+    "tuneTomb": 1,
+    "tuneNfloor": 0.125,
+    "tuneRake": 0,
+    "uAmbIntensity": 0.38763442167263995,
+    "uShadowColor": {
+     "r": 0.10322818765110171,
+     "g": 0.33627779020980797,
+     "b": 0.5333270591007294
+    },
+    "uShadowColorLit": {
+     "r": 0.10322818765110171,
+     "g": 0.33627779020980797,
+     "b": 0.5333270591007294
+    },
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6918947072370671,
+     "b": 0.3501375437924764
+    },
+    "uKeyIntensity": 3.2859172324293913,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "tombF": 1,
+    "camY": 1.45,
+    "timeOfDay": 0.8
+   },
+   "ordinal": 17,
+   "at": "2026-08-13T21:24:52.579Z"
+  },
+  {
+   "shot": "sly-closeup",
+   "arm": "bon",
+   "file": "sly-closeup.bon.png",
+   "sha256": "dedb0a8820aad113937760bcd2d4603dfadd8bc333ca5124fc68ce66a5e4a2f1",
+   "tree": {
+    "src": "0ff46d1cb8457d8b",
+    "head": "8562e87908ad"
+   },
+   "readback": {
+    "tombAmb": 0.3,
+    "shadowFloorNight": 0.125,
+    "uRakeTrack": 0,
+    "uRakeGap": 0.05,
+    "tuneTomb": 1,
+    "tuneNfloor": 0.125,
+    "tuneRake": 0,
+    "uAmbIntensity": 0.38763442167263995,
+    "uShadowColor": {
+     "r": 0.10322818765110171,
+     "g": 0.33627779020980797,
+     "b": 0.5333270591007294
+    },
+    "uShadowColorLit": {
+     "r": 0.10322818765110171,
+     "g": 0.33627779020980797,
+     "b": 0.5333270591007294
+    },
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6918947072370671,
+     "b": 0.3501375437924764
+    },
+    "uKeyIntensity": 3.2859172324293913,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "tombF": 1,
+    "camY": 1.45,
+    "timeOfDay": 0.8
+   },
+   "ordinal": 18,
+   "at": "2026-08-13T21:25:28.584Z"
+  },
+  {
+   "shot": "sly-closeup",
+   "arm": "con",
+   "file": "sly-closeup.con.png",
+   "sha256": "23bc34def8799b80129b367ad9ac2ad8849b4175aed5afd02b38c0e11e2d1c42",
+   "tree": {
+    "src": "0ff46d1cb8457d8b",
+    "head": "8562e87908ad"
+   },
+   "readback": {
+    "tombAmb": 1,
+    "shadowFloorNight": 0.125,
+    "uRakeTrack": 1,
+    "uRakeGap": 0.05,
+    "tuneTomb": 1,
+    "tuneNfloor": 0.125,
+    "tuneRake": 0,
+    "uAmbIntensity": 0.38763442167263995,
+    "uShadowColor": {
+     "r": 0.10322818765110171,
+     "g": 0.33627779020980797,
+     "b": 0.5333270591007294
+    },
+    "uShadowColorLit": {
+     "r": 0.10322818765110171,
+     "g": 0.33627779020980797,
+     "b": 0.5333270591007294
+    },
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6918947072370671,
+     "b": 0.3501375437924764
+    },
+    "uKeyIntensity": 3.2859172324293913,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "tombF": 1,
+    "camY": 1.45,
+    "timeOfDay": 0.8
+   },
+   "ordinal": 19,
+   "at": "2026-08-13T21:26:04.900Z"
+  },
+  {
+   "shot": "sly-closeup",
+   "arm": "don",
+   "file": "sly-closeup.don.png",
+   "sha256": "dedb0a8820aad113937760bcd2d4603dfadd8bc333ca5124fc68ce66a5e4a2f1",
+   "tree": {
+    "src": "0ff46d1cb8457d8b",
+    "head": "8562e87908ad"
+   },
+   "readback": {
+    "tombAmb": 1,
+    "shadowFloorNight": 0.14,
+    "uRakeTrack": 0,
+    "uRakeGap": 0.05,
+    "tuneTomb": 1,
+    "tuneNfloor": 0.125,
+    "tuneRake": 0,
+    "uAmbIntensity": 0.38763442167263995,
+    "uShadowColor": {
+     "r": 0.10322818765110171,
+     "g": 0.33627779020980797,
+     "b": 0.5333270591007294
+    },
+    "uShadowColorLit": {
+     "r": 0.10322818765110171,
+     "g": 0.33627779020980797,
+     "b": 0.5333270591007294
+    },
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6918947072370671,
+     "b": 0.3501375437924764
+    },
+    "uKeyIntensity": 3.2859172324293913,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "tombF": 1,
+    "camY": 1.45,
+    "timeOfDay": 0.8
+   },
+   "ordinal": 20,
+   "at": "2026-08-13T21:26:41.082Z"
+  },
+  {
+   "shot": "sly-closeup",
+   "arm": "back",
+   "file": "sly-closeup.back.png",
+   "sha256": "dedb0a8820aad113937760bcd2d4603dfadd8bc333ca5124fc68ce66a5e4a2f1",
+   "tree": {
+    "src": "0ff46d1cb8457d8b",
+    "head": "8562e87908ad"
+   },
+   "readback": {
+    "tombAmb": 1,
+    "shadowFloorNight": 0.125,
+    "uRakeTrack": 0,
+    "uRakeGap": 0.05,
+    "tuneTomb": 1,
+    "tuneNfloor": 0.125,
+    "tuneRake": 0,
+    "uAmbIntensity": 0.38763442167263995,
+    "uShadowColor": {
+     "r": 0.10322818765110171,
+     "g": 0.33627779020980797,
+     "b": 0.5333270591007294
+    },
+    "uShadowColorLit": {
+     "r": 0.10322818765110171,
+     "g": 0.33627779020980797,
+     "b": 0.5333270591007294
+    },
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6918947072370671,
+     "b": 0.3501375437924764
+    },
+    "uKeyIntensity": 3.2859172324293913,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "tombF": 1,
+    "camY": 1.45,
+    "timeOfDay": 0.8
+   },
+   "ordinal": 21,
+   "at": "2026-08-13T21:27:17.078Z"
+  },
+  {
+   "shot": "sly-startle",
+   "arm": "off",
+   "file": "sly-startle.off.png",
+   "sha256": "c95435efb43a169a2a6a436e99fa0ad4a8ed621454601f342ac64c6d4b1d0a34",
+   "tree": {
+    "src": "0ff46d1cb8457d8b",
+    "head": "8562e87908ad"
+   },
+   "readback": {
+    "tombAmb": 1,
+    "shadowFloorNight": 0.125,
+    "uRakeTrack": 0,
+    "uRakeGap": 0.05,
+    "tuneTomb": 1,
+    "tuneNfloor": 0.125,
+    "tuneRake": 0,
+    "uAmbIntensity": 0.38763442167263995,
+    "uShadowColor": {
+     "r": 0.10322818765110171,
+     "g": 0.33627779020980797,
+     "b": 0.5333270591007294
+    },
+    "uShadowColorLit": {
+     "r": 0.10322818765110171,
+     "g": 0.33627779020980797,
+     "b": 0.5333270591007294
+    },
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6918947072370671,
+     "b": 0.3501375437924764
+    },
+    "uKeyIntensity": 3.2859172324293913,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "tombF": 1,
+    "camY": 1.6,
+    "timeOfDay": 0.8
+   },
+   "ordinal": 22,
+   "at": "2026-08-13T21:30:45.631Z"
+  },
+  {
+   "shot": "sly-startle",
+   "arm": "bon",
+   "file": "sly-startle.bon.png",
+   "sha256": "c95435efb43a169a2a6a436e99fa0ad4a8ed621454601f342ac64c6d4b1d0a34",
+   "tree": {
+    "src": "0ff46d1cb8457d8b",
+    "head": "8562e87908ad"
+   },
+   "readback": {
+    "tombAmb": 0.3,
+    "shadowFloorNight": 0.125,
+    "uRakeTrack": 0,
+    "uRakeGap": 0.05,
+    "tuneTomb": 1,
+    "tuneNfloor": 0.125,
+    "tuneRake": 0,
+    "uAmbIntensity": 0.38763442167263995,
+    "uShadowColor": {
+     "r": 0.10322818765110171,
+     "g": 0.33627779020980797,
+     "b": 0.5333270591007294
+    },
+    "uShadowColorLit": {
+     "r": 0.10322818765110171,
+     "g": 0.33627779020980797,
+     "b": 0.5333270591007294
+    },
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6918947072370671,
+     "b": 0.3501375437924764
+    },
+    "uKeyIntensity": 3.2859172324293913,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "tombF": 1,
+    "camY": 1.6,
+    "timeOfDay": 0.8
+   },
+   "ordinal": 23,
+   "at": "2026-08-13T21:31:10.954Z"
+  },
+  {
+   "shot": "sly-startle",
+   "arm": "con",
+   "file": "sly-startle.con.png",
+   "sha256": "9a5fff076883e78dd13ecab3e4f3c21a18755f8f899ec652ff31e35bb2837013",
+   "tree": {
+    "src": "0ff46d1cb8457d8b",
+    "head": "8562e87908ad"
+   },
+   "readback": {
+    "tombAmb": 1,
+    "shadowFloorNight": 0.125,
+    "uRakeTrack": 1,
+    "uRakeGap": 0.05,
+    "tuneTomb": 1,
+    "tuneNfloor": 0.125,
+    "tuneRake": 0,
+    "uAmbIntensity": 0.38763442167263995,
+    "uShadowColor": {
+     "r": 0.10322818765110171,
+     "g": 0.33627779020980797,
+     "b": 0.5333270591007294
+    },
+    "uShadowColorLit": {
+     "r": 0.10322818765110171,
+     "g": 0.33627779020980797,
+     "b": 0.5333270591007294
+    },
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6918947072370671,
+     "b": 0.3501375437924764
+    },
+    "uKeyIntensity": 3.2859172324293913,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "tombF": 1,
+    "camY": 1.6,
+    "timeOfDay": 0.8
+   },
+   "ordinal": 24,
+   "at": "2026-08-13T21:31:38.873Z"
+  },
+  {
+   "shot": "sly-startle",
+   "arm": "don",
+   "file": "sly-startle.don.png",
+   "sha256": "c95435efb43a169a2a6a436e99fa0ad4a8ed621454601f342ac64c6d4b1d0a34",
+   "tree": {
+    "src": "0ff46d1cb8457d8b",
+    "head": "8562e87908ad"
+   },
+   "readback": {
+    "tombAmb": 1,
+    "shadowFloorNight": 0.14,
+    "uRakeTrack": 0,
+    "uRakeGap": 0.05,
+    "tuneTomb": 1,
+    "tuneNfloor": 0.125,
+    "tuneRake": 0,
+    "uAmbIntensity": 0.38763442167263995,
+    "uShadowColor": {
+     "r": 0.10322818765110171,
+     "g": 0.33627779020980797,
+     "b": 0.5333270591007294
+    },
+    "uShadowColorLit": {
+     "r": 0.10322818765110171,
+     "g": 0.33627779020980797,
+     "b": 0.5333270591007294
+    },
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6918947072370671,
+     "b": 0.3501375437924764
+    },
+    "uKeyIntensity": 3.2859172324293913,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "tombF": 1,
+    "camY": 1.6,
+    "timeOfDay": 0.8
+   },
+   "ordinal": 25,
+   "at": "2026-08-13T21:32:04.355Z"
+  },
+  {
+   "shot": "sly-startle",
+   "arm": "back",
+   "file": "sly-startle.back.png",
+   "sha256": "c95435efb43a169a2a6a436e99fa0ad4a8ed621454601f342ac64c6d4b1d0a34",
+   "tree": {
+    "src": "0ff46d1cb8457d8b",
+    "head": "8562e87908ad"
+   },
+   "readback": {
+    "tombAmb": 1,
+    "shadowFloorNight": 0.125,
+    "uRakeTrack": 0,
+    "uRakeGap": 0.05,
+    "tuneTomb": 1,
+    "tuneNfloor": 0.125,
+    "tuneRake": 0,
+    "uAmbIntensity": 0.38763442167263995,
+    "uShadowColor": {
+     "r": 0.10322818765110171,
+     "g": 0.33627779020980797,
+     "b": 0.5333270591007294
+    },
+    "uShadowColorLit": {
+     "r": 0.10322818765110171,
+     "g": 0.33627779020980797,
+     "b": 0.5333270591007294
+    },
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6918947072370671,
+     "b": 0.3501375437924764
+    },
+    "uKeyIntensity": 3.2859172324293913,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "tombF": 1,
+    "camY": 1.6,
+    "timeOfDay": 0.8
+   },
+   "ordinal": 26,
+   "at": "2026-08-13T21:32:29.770Z"
+  },
+  {
+   "shot": "sly-perch",
+   "arm": "off",
+   "file": "sly-perch.off.png",
+   "sha256": "74d3ca0b151dedbc4afa941f54e5cd7da4462b5b63598af669d1024e4117dc1b",
+   "tree": {
+    "src": "0ff46d1cb8457d8b",
+    "head": "8562e87908ad"
+   },
+   "readback": {
+    "tombAmb": 1,
+    "shadowFloorNight": 0.125,
+    "uRakeTrack": 0,
+    "uRakeGap": 0.05,
+    "tuneTomb": 1,
+    "tuneNfloor": 0.125,
+    "tuneRake": 0,
+    "uAmbIntensity": 0.38763442167263995,
+    "uShadowColor": {
+     "r": 0.10322818765110171,
+     "g": 0.33627779020980797,
+     "b": 0.5333270591007294
+    },
+    "uShadowColorLit": {
+     "r": 0.10322818765110171,
+     "g": 0.33627779020980797,
+     "b": 0.5333270591007294
+    },
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6918947072370671,
+     "b": 0.3501375437924764
+    },
+    "uKeyIntensity": 3.2859172324293913,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "tombF": 1,
+    "camY": 1.15,
+    "timeOfDay": 0.8
+   },
+   "ordinal": 27,
+   "at": "2026-08-13T21:38:47.353Z"
+  },
+  {
+   "shot": "sly-perch",
+   "arm": "bon",
+   "file": "sly-perch.bon.png",
+   "sha256": "74d3ca0b151dedbc4afa941f54e5cd7da4462b5b63598af669d1024e4117dc1b",
+   "tree": {
+    "src": "0ff46d1cb8457d8b",
+    "head": "8562e87908ad"
+   },
+   "readback": {
+    "tombAmb": 0.3,
+    "shadowFloorNight": 0.125,
+    "uRakeTrack": 0,
+    "uRakeGap": 0.05,
+    "tuneTomb": 1,
+    "tuneNfloor": 0.125,
+    "tuneRake": 0,
+    "uAmbIntensity": 0.38763442167263995,
+    "uShadowColor": {
+     "r": 0.10322818765110171,
+     "g": 0.33627779020980797,
+     "b": 0.5333270591007294
+    },
+    "uShadowColorLit": {
+     "r": 0.10322818765110171,
+     "g": 0.33627779020980797,
+     "b": 0.5333270591007294
+    },
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6918947072370671,
+     "b": 0.3501375437924764
+    },
+    "uKeyIntensity": 3.2859172324293913,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "tombF": 1,
+    "camY": 1.15,
+    "timeOfDay": 0.8
+   },
+   "ordinal": 28,
+   "at": "2026-08-13T21:39:23.424Z"
+  },
+  {
+   "shot": "sly-perch",
+   "arm": "con",
+   "file": "sly-perch.con.png",
+   "sha256": "d3f24b1bb7f094ab6270e0d7265d64a98778e393e9e8f62b3a93ae6bc6dd6b7b",
+   "tree": {
+    "src": "0ff46d1cb8457d8b",
+    "head": "8562e87908ad"
+   },
+   "readback": {
+    "tombAmb": 1,
+    "shadowFloorNight": 0.125,
+    "uRakeTrack": 1,
+    "uRakeGap": 0.05,
+    "tuneTomb": 1,
+    "tuneNfloor": 0.125,
+    "tuneRake": 0,
+    "uAmbIntensity": 0.38763442167263995,
+    "uShadowColor": {
+     "r": 0.10322818765110171,
+     "g": 0.33627779020980797,
+     "b": 0.5333270591007294
+    },
+    "uShadowColorLit": {
+     "r": 0.10322818765110171,
+     "g": 0.33627779020980797,
+     "b": 0.5333270591007294
+    },
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6918947072370671,
+     "b": 0.3501375437924764
+    },
+    "uKeyIntensity": 3.2859172324293913,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "tombF": 1,
+    "camY": 1.15,
+    "timeOfDay": 0.8
+   },
+   "ordinal": 29,
+   "at": "2026-08-13T21:39:59.211Z"
+  },
+  {
+   "shot": "sly-perch",
+   "arm": "don",
+   "file": "sly-perch.don.png",
+   "sha256": "74d3ca0b151dedbc4afa941f54e5cd7da4462b5b63598af669d1024e4117dc1b",
+   "tree": {
+    "src": "0ff46d1cb8457d8b",
+    "head": "8562e87908ad"
+   },
+   "readback": {
+    "tombAmb": 1,
+    "shadowFloorNight": 0.14,
+    "uRakeTrack": 0,
+    "uRakeGap": 0.05,
+    "tuneTomb": 1,
+    "tuneNfloor": 0.125,
+    "tuneRake": 0,
+    "uAmbIntensity": 0.38763442167263995,
+    "uShadowColor": {
+     "r": 0.10322818765110171,
+     "g": 0.33627779020980797,
+     "b": 0.5333270591007294
+    },
+    "uShadowColorLit": {
+     "r": 0.10322818765110171,
+     "g": 0.33627779020980797,
+     "b": 0.5333270591007294
+    },
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6918947072370671,
+     "b": 0.3501375437924764
+    },
+    "uKeyIntensity": 3.2859172324293913,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "tombF": 1,
+    "camY": 1.15,
+    "timeOfDay": 0.8
+   },
+   "ordinal": 30,
+   "at": "2026-08-13T21:40:35.056Z"
+  },
+  {
+   "shot": "sly-perch",
+   "arm": "back",
+   "file": "sly-perch.back.png",
+   "sha256": "74d3ca0b151dedbc4afa941f54e5cd7da4462b5b63598af669d1024e4117dc1b",
+   "tree": {
+    "src": "0ff46d1cb8457d8b",
+    "head": "8562e87908ad"
+   },
+   "readback": {
+    "tombAmb": 1,
+    "shadowFloorNight": 0.125,
+    "uRakeTrack": 0,
+    "uRakeGap": 0.05,
+    "tuneTomb": 1,
+    "tuneNfloor": 0.125,
+    "tuneRake": 0,
+    "uAmbIntensity": 0.38763442167263995,
+    "uShadowColor": {
+     "r": 0.10322818765110171,
+     "g": 0.33627779020980797,
+     "b": 0.5333270591007294
+    },
+    "uShadowColorLit": {
+     "r": 0.10322818765110171,
+     "g": 0.33627779020980797,
+     "b": 0.5333270591007294
+    },
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6918947072370671,
+     "b": 0.3501375437924764
+    },
+    "uKeyIntensity": 3.2859172324293913,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "tombF": 1,
+    "camY": 1.15,
+    "timeOfDay": 0.8
+   },
+   "ordinal": 31,
+   "at": "2026-08-13T21:41:10.791Z"
+  },
+  {
+   "shot": "sly-arm",
+   "arm": "off",
+   "file": "sly-arm.off.png",
+   "sha256": "881d37c61ca8261e9a109c4aedcb3508efd47a4795ec0530e235d435867eff4b",
+   "tree": {
+    "src": "0ff46d1cb8457d8b",
+    "head": "8562e87908ad"
+   },
+   "readback": {
+    "tombAmb": 1,
+    "shadowFloorNight": 0.125,
+    "uRakeTrack": 0,
+    "uRakeGap": 0.05,
+    "tuneTomb": 1,
+    "tuneNfloor": 0.125,
+    "tuneRake": 0,
+    "uAmbIntensity": 0.38763442167263995,
+    "uShadowColor": {
+     "r": 0.10322818765110171,
+     "g": 0.33627779020980797,
+     "b": 0.5333270591007294
+    },
+    "uShadowColorLit": {
+     "r": 0.10322818765110171,
+     "g": 0.33627779020980797,
+     "b": 0.5333270591007294
+    },
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6918947072370671,
+     "b": 0.3501375437924764
+    },
+    "uKeyIntensity": 3.2859172324293913,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "tombF": 1,
+    "camY": 1.45,
+    "timeOfDay": 0.8
+   },
+   "ordinal": 32,
+   "at": "2026-08-13T21:43:27.020Z"
+  },
+  {
+   "shot": "sly-arm",
+   "arm": "bon",
+   "file": "sly-arm.bon.png",
+   "sha256": "881d37c61ca8261e9a109c4aedcb3508efd47a4795ec0530e235d435867eff4b",
+   "tree": {
+    "src": "0ff46d1cb8457d8b",
+    "head": "8562e87908ad"
+   },
+   "readback": {
+    "tombAmb": 0.3,
+    "shadowFloorNight": 0.125,
+    "uRakeTrack": 0,
+    "uRakeGap": 0.05,
+    "tuneTomb": 1,
+    "tuneNfloor": 0.125,
+    "tuneRake": 0,
+    "uAmbIntensity": 0.38763442167263995,
+    "uShadowColor": {
+     "r": 0.10322818765110171,
+     "g": 0.33627779020980797,
+     "b": 0.5333270591007294
+    },
+    "uShadowColorLit": {
+     "r": 0.10322818765110171,
+     "g": 0.33627779020980797,
+     "b": 0.5333270591007294
+    },
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6918947072370671,
+     "b": 0.3501375437924764
+    },
+    "uKeyIntensity": 3.2859172324293913,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "tombF": 1,
+    "camY": 1.45,
+    "timeOfDay": 0.8
+   },
+   "ordinal": 33,
+   "at": "2026-08-13T21:43:44.025Z"
+  },
+  {
+   "shot": "sly-arm",
+   "arm": "con",
+   "file": "sly-arm.con.png",
+   "sha256": "55b59d806da5619856d95d26990e3b81d75a9b6ed1a1dde2e329d8837346ebdc",
+   "tree": {
+    "src": "0ff46d1cb8457d8b",
+    "head": "8562e87908ad"
+   },
+   "readback": {
+    "tombAmb": 1,
+    "shadowFloorNight": 0.125,
+    "uRakeTrack": 1,
+    "uRakeGap": 0.05,
+    "tuneTomb": 1,
+    "tuneNfloor": 0.125,
+    "tuneRake": 0,
+    "uAmbIntensity": 0.38763442167263995,
+    "uShadowColor": {
+     "r": 0.10322818765110171,
+     "g": 0.33627779020980797,
+     "b": 0.5333270591007294
+    },
+    "uShadowColorLit": {
+     "r": 0.10322818765110171,
+     "g": 0.33627779020980797,
+     "b": 0.5333270591007294
+    },
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6918947072370671,
+     "b": 0.3501375437924764
+    },
+    "uKeyIntensity": 3.2859172324293913,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "tombF": 1,
+    "camY": 1.45,
+    "timeOfDay": 0.8
+   },
+   "ordinal": 34,
+   "at": "2026-08-13T21:44:00.977Z"
+  },
+  {
+   "shot": "sly-arm",
+   "arm": "don",
+   "file": "sly-arm.don.png",
+   "sha256": "881d37c61ca8261e9a109c4aedcb3508efd47a4795ec0530e235d435867eff4b",
+   "tree": {
+    "src": "0ff46d1cb8457d8b",
+    "head": "8562e87908ad"
+   },
+   "readback": {
+    "tombAmb": 1,
+    "shadowFloorNight": 0.14,
+    "uRakeTrack": 0,
+    "uRakeGap": 0.05,
+    "tuneTomb": 1,
+    "tuneNfloor": 0.125,
+    "tuneRake": 0,
+    "uAmbIntensity": 0.38763442167263995,
+    "uShadowColor": {
+     "r": 0.10322818765110171,
+     "g": 0.33627779020980797,
+     "b": 0.5333270591007294
+    },
+    "uShadowColorLit": {
+     "r": 0.10322818765110171,
+     "g": 0.33627779020980797,
+     "b": 0.5333270591007294
+    },
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6918947072370671,
+     "b": 0.3501375437924764
+    },
+    "uKeyIntensity": 3.2859172324293913,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "tombF": 1,
+    "camY": 1.45,
+    "timeOfDay": 0.8
+   },
+   "ordinal": 35,
+   "at": "2026-08-13T21:44:17.694Z"
+  },
+  {
+   "shot": "sly-arm",
+   "arm": "back",
+   "file": "sly-arm.back.png",
+   "sha256": "881d37c61ca8261e9a109c4aedcb3508efd47a4795ec0530e235d435867eff4b",
+   "tree": {
+    "src": "0ff46d1cb8457d8b",
+    "head": "8562e87908ad"
+   },
+   "readback": {
+    "tombAmb": 1,
+    "shadowFloorNight": 0.125,
+    "uRakeTrack": 0,
+    "uRakeGap": 0.05,
+    "tuneTomb": 1,
+    "tuneNfloor": 0.125,
+    "tuneRake": 0,
+    "uAmbIntensity": 0.38763442167263995,
+    "uShadowColor": {
+     "r": 0.10322818765110171,
+     "g": 0.33627779020980797,
+     "b": 0.5333270591007294
+    },
+    "uShadowColorLit": {
+     "r": 0.10322818765110171,
+     "g": 0.33627779020980797,
+     "b": 0.5333270591007294
+    },
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6918947072370671,
+     "b": 0.3501375437924764
+    },
+    "uKeyIntensity": 3.2859172324293913,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "tombF": 1,
+    "camY": 1.45,
+    "timeOfDay": 0.8
+   },
+   "ordinal": 36,
+   "at": "2026-08-13T21:44:34.310Z"
+  },
+  {
+   "shot": "courtyard",
+   "arm": "off",
+   "file": "courtyard.off.png",
+   "sha256": "374ee24599a99b42bcacb7ce85453d7427494d451fa6469d313f4de718e2f4f6",
+   "tree": {
+    "src": "0ff46d1cb8457d8b",
+    "head": "8562e87908ad"
+   },
+   "readback": {
+    "tombAmb": 1,
+    "shadowFloorNight": 0.125,
+    "uRakeTrack": 0,
+    "uRakeGap": 0.05,
+    "tuneTomb": 1,
+    "tuneNfloor": 0.125,
+    "tuneRake": 0,
+    "uAmbIntensity": 0.39286515582995324,
+    "uShadowColor": {
+     "r": 0.10457978687882362,
+     "g": 0.3408261240290739,
+     "b": 0.5405405031557505
+    },
+    "uShadowColorLit": {
+     "r": 0.10457978687882362,
+     "g": 0.3408261240290739,
+     "b": 0.5405405031557505
+    },
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6969082810149427,
+     "b": 0.35723099696539895
+    },
+    "uKeyIntensity": 3.3117360158512423,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "tombF": 1,
+    "camY": 4,
+    "timeOfDay": 0.76
+   },
+   "ordinal": 37,
+   "at": "2026-08-13T21:50:35.783Z"
+  },
+  {
+   "shot": "courtyard",
+   "arm": "bon",
+   "file": "courtyard.bon.png",
+   "sha256": "374ee24599a99b42bcacb7ce85453d7427494d451fa6469d313f4de718e2f4f6",
+   "tree": {
+    "src": "0ff46d1cb8457d8b",
+    "head": "8562e87908ad"
+   },
+   "readback": {
+    "tombAmb": 0.3,
+    "shadowFloorNight": 0.125,
+    "uRakeTrack": 0,
+    "uRakeGap": 0.05,
+    "tuneTomb": 1,
+    "tuneNfloor": 0.125,
+    "tuneRake": 0,
+    "uAmbIntensity": 0.39286515582995324,
+    "uShadowColor": {
+     "r": 0.10457978687882362,
+     "g": 0.3408261240290739,
+     "b": 0.5405405031557505
+    },
+    "uShadowColorLit": {
+     "r": 0.10457978687882362,
+     "g": 0.3408261240290739,
+     "b": 0.5405405031557505
+    },
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6969082810149427,
+     "b": 0.35723099696539895
+    },
+    "uKeyIntensity": 3.3117360158512423,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "tombF": 1,
+    "camY": 4,
+    "timeOfDay": 0.76
+   },
+   "ordinal": 38,
+   "at": "2026-08-13T21:51:12.928Z"
+  },
+  {
+   "shot": "courtyard",
+   "arm": "con",
+   "file": "courtyard.con.png",
+   "sha256": "fc415ab47366b7d3b5da766a949eb65c0dfc8ea4c38ab43526a0d529d091071a",
+   "tree": {
+    "src": "0ff46d1cb8457d8b",
+    "head": "8562e87908ad"
+   },
+   "readback": {
+    "tombAmb": 1,
+    "shadowFloorNight": 0.125,
+    "uRakeTrack": 1,
+    "uRakeGap": 0.05,
+    "tuneTomb": 1,
+    "tuneNfloor": 0.125,
+    "tuneRake": 0,
+    "uAmbIntensity": 0.39286515582995324,
+    "uShadowColor": {
+     "r": 0.10457978687882362,
+     "g": 0.3408261240290739,
+     "b": 0.5405405031557505
+    },
+    "uShadowColorLit": {
+     "r": 0.10457978687882362,
+     "g": 0.3408261240290739,
+     "b": 0.5405405031557505
+    },
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6969082810149427,
+     "b": 0.35723099696539895
+    },
+    "uKeyIntensity": 3.3117360158512423,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "tombF": 1,
+    "camY": 4,
+    "timeOfDay": 0.76
+   },
+   "ordinal": 39,
+   "at": "2026-08-13T21:51:49.470Z"
+  },
+  {
+   "shot": "courtyard",
+   "arm": "don",
+   "file": "courtyard.don.png",
+   "sha256": "374ee24599a99b42bcacb7ce85453d7427494d451fa6469d313f4de718e2f4f6",
+   "tree": {
+    "src": "0ff46d1cb8457d8b",
+    "head": "8562e87908ad"
+   },
+   "readback": {
+    "tombAmb": 1,
+    "shadowFloorNight": 0.14,
+    "uRakeTrack": 0,
+    "uRakeGap": 0.05,
+    "tuneTomb": 1,
+    "tuneNfloor": 0.125,
+    "tuneRake": 0,
+    "uAmbIntensity": 0.39286515582995324,
+    "uShadowColor": {
+     "r": 0.10457978687882362,
+     "g": 0.3408261240290739,
+     "b": 0.5405405031557505
+    },
+    "uShadowColorLit": {
+     "r": 0.10457978687882362,
+     "g": 0.3408261240290739,
+     "b": 0.5405405031557505
+    },
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6969082810149427,
+     "b": 0.35723099696539895
+    },
+    "uKeyIntensity": 3.3117360158512423,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "tombF": 1,
+    "camY": 4,
+    "timeOfDay": 0.76
+   },
+   "ordinal": 40,
+   "at": "2026-08-13T21:52:25.866Z"
+  },
+  {
+   "shot": "courtyard",
+   "arm": "back",
+   "file": "courtyard.back.png",
+   "sha256": "374ee24599a99b42bcacb7ce85453d7427494d451fa6469d313f4de718e2f4f6",
+   "tree": {
+    "src": "0ff46d1cb8457d8b",
+    "head": "8562e87908ad"
+   },
+   "readback": {
+    "tombAmb": 1,
+    "shadowFloorNight": 0.125,
+    "uRakeTrack": 0,
+    "uRakeGap": 0.05,
+    "tuneTomb": 1,
+    "tuneNfloor": 0.125,
+    "tuneRake": 0,
+    "uAmbIntensity": 0.39286515582995324,
+    "uShadowColor": {
+     "r": 0.10457978687882362,
+     "g": 0.3408261240290739,
+     "b": 0.5405405031557505
+    },
+    "uShadowColorLit": {
+     "r": 0.10457978687882362,
+     "g": 0.3408261240290739,
+     "b": 0.5405405031557505
+    },
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6969082810149427,
+     "b": 0.35723099696539895
+    },
+    "uKeyIntensity": 3.3117360158512423,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "tombF": 1,
+    "camY": 4,
+    "timeOfDay": 0.76
+   },
+   "ordinal": 41,
+   "at": "2026-08-13T21:53:06.480Z"
+  },
+  {
+   "shot": "dunes",
+   "arm": "off",
+   "file": "dunes.off.png",
+   "sha256": "ad13b792a1919255ba6758b7f25d3bbd71185347205e711d90a45e21e5ff920d",
+   "tree": {
+    "src": "0ff46d1cb8457d8b",
+    "head": "8562e87908ad"
+   },
+   "readback": {
+    "tombAmb": 1,
+    "shadowFloorNight": 0.125,
+    "uRakeTrack": 0,
+    "uRakeGap": 0.05,
+    "tuneTomb": 1,
+    "tuneNfloor": 0.125,
+    "tuneRake": 0,
+    "uAmbIntensity": 0.3034022504825506,
+    "uShadowColor": {
+     "r": 0.0813036356378327,
+     "g": 0.2630502298250008,
+     "b": 0.4174802794016253
+    },
+    "uShadowColorLit": {
+     "r": 0.0813036356378327,
+     "g": 0.2630502298250008,
+     "b": 0.4174802794016253
+    },
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6206961795328749,
+     "b": 0.2998981930841452
+    },
+    "uKeyIntensity": 2.7787625,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "tombF": 1,
+    "camY": 19.5,
+    "timeOfDay": 0.83
+   },
+   "ordinal": 42,
+   "at": "2026-08-13T21:57:50.621Z"
+  },
+  {
+   "shot": "dunes",
+   "arm": "bon",
+   "file": "dunes.bon.png",
+   "sha256": "ad13b792a1919255ba6758b7f25d3bbd71185347205e711d90a45e21e5ff920d",
+   "tree": {
+    "src": "0ff46d1cb8457d8b",
+    "head": "8562e87908ad"
+   },
+   "readback": {
+    "tombAmb": 0.3,
+    "shadowFloorNight": 0.125,
+    "uRakeTrack": 0,
+    "uRakeGap": 0.05,
+    "tuneTomb": 1,
+    "tuneNfloor": 0.125,
+    "tuneRake": 0,
+    "uAmbIntensity": 0.3034022504825506,
+    "uShadowColor": {
+     "r": 0.0813036356378327,
+     "g": 0.2630502298250008,
+     "b": 0.4174802794016253
+    },
+    "uShadowColorLit": {
+     "r": 0.0813036356378327,
+     "g": 0.2630502298250008,
+     "b": 0.4174802794016253
+    },
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6206961795328749,
+     "b": 0.2998981930841452
+    },
+    "uKeyIntensity": 2.7787625,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "tombF": 1,
+    "camY": 19.5,
+    "timeOfDay": 0.83
+   },
+   "ordinal": 43,
+   "at": "2026-08-13T21:58:19.060Z"
+  },
+  {
+   "shot": "dunes",
+   "arm": "con",
+   "file": "dunes.con.png",
+   "sha256": "1e5e6e24b2a4056eba0f7f7137a5aa7a272cf626d5b675e659cd2c6104ae581a",
+   "tree": {
+    "src": "0ff46d1cb8457d8b",
+    "head": "8562e87908ad"
+   },
+   "readback": {
+    "tombAmb": 1,
+    "shadowFloorNight": 0.125,
+    "uRakeTrack": 1,
+    "uRakeGap": 0.05,
+    "tuneTomb": 1,
+    "tuneNfloor": 0.125,
+    "tuneRake": 0,
+    "uAmbIntensity": 0.3034022504825506,
+    "uShadowColor": {
+     "r": 0.0813036356378327,
+     "g": 0.2630502298250008,
+     "b": 0.4174802794016253
+    },
+    "uShadowColorLit": {
+     "r": 0.0813036356378327,
+     "g": 0.2630502298250008,
+     "b": 0.4174802794016253
+    },
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6206961795328749,
+     "b": 0.2998981930841452
+    },
+    "uKeyIntensity": 2.7787625,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "tombF": 1,
+    "camY": 19.5,
+    "timeOfDay": 0.83
+   },
+   "ordinal": 44,
+   "at": "2026-08-13T21:58:50.313Z"
+  },
+  {
+   "shot": "dunes",
+   "arm": "don",
+   "file": "dunes.don.png",
+   "sha256": "ad13b792a1919255ba6758b7f25d3bbd71185347205e711d90a45e21e5ff920d",
+   "tree": {
+    "src": "0ff46d1cb8457d8b",
+    "head": "8562e87908ad"
+   },
+   "readback": {
+    "tombAmb": 1,
+    "shadowFloorNight": 0.14,
+    "uRakeTrack": 0,
+    "uRakeGap": 0.05,
+    "tuneTomb": 1,
+    "tuneNfloor": 0.125,
+    "tuneRake": 0,
+    "uAmbIntensity": 0.3034022504825506,
+    "uShadowColor": {
+     "r": 0.0813036356378327,
+     "g": 0.2630502298250008,
+     "b": 0.4174802794016253
+    },
+    "uShadowColorLit": {
+     "r": 0.0813036356378327,
+     "g": 0.2630502298250008,
+     "b": 0.4174802794016253
+    },
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6206961795328749,
+     "b": 0.2998981930841452
+    },
+    "uKeyIntensity": 2.7787625,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "tombF": 1,
+    "camY": 19.5,
+    "timeOfDay": 0.83
+   },
+   "ordinal": 45,
+   "at": "2026-08-13T21:59:22.594Z"
+  },
+  {
+   "shot": "dunes",
+   "arm": "back",
+   "file": "dunes.back.png",
+   "sha256": "ad13b792a1919255ba6758b7f25d3bbd71185347205e711d90a45e21e5ff920d",
+   "tree": {
+    "src": "0ff46d1cb8457d8b",
+    "head": "8562e87908ad"
+   },
+   "readback": {
+    "tombAmb": 1,
+    "shadowFloorNight": 0.125,
+    "uRakeTrack": 0,
+    "uRakeGap": 0.05,
+    "tuneTomb": 1,
+    "tuneNfloor": 0.125,
+    "tuneRake": 0,
+    "uAmbIntensity": 0.3034022504825506,
+    "uShadowColor": {
+     "r": 0.0813036356378327,
+     "g": 0.2630502298250008,
+     "b": 0.4174802794016253
+    },
+    "uShadowColorLit": {
+     "r": 0.0813036356378327,
+     "g": 0.2630502298250008,
+     "b": 0.4174802794016253
+    },
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6206961795328749,
+     "b": 0.2998981930841452
+    },
+    "uKeyIntensity": 2.7787625,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "tombF": 1,
+    "camY": 19.5,
+    "timeOfDay": 0.83
+   },
+   "ordinal": 46,
+   "at": "2026-08-13T21:59:51.159Z"
+  },
+  {
+   "shot": "interior",
+   "arm": "off",
+   "file": "interior.off.png",
+   "sha256": "388ea93f4cde0ba609c7d9d23016619d1c6bffa58723b48f058ce8fef9017194",
+   "tree": {
+    "src": "0ff46d1cb8457d8b",
+    "head": "8562e87908ad"
+   },
+   "readback": {
+    "tombAmb": 1,
+    "shadowFloorNight": 0.125,
+    "uRakeTrack": 0,
+    "uRakeGap": 0.05,
+    "tuneTomb": 1,
+    "tuneNfloor": 0.125,
+    "tuneRake": 0,
+    "uAmbIntensity": 0.5863987921718226,
+    "uShadowColor": {
+     "r": 0.11280744900295804,
+     "g": 0.37372505605577927,
+     "b": 0.5933874550960468
+    },
+    "uShadowColorLit": {
+     "r": 0.11280744900295804,
+     "g": 0.37372505605577927,
+     "b": 0.5933874550960468
+    },
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.8879231178794776,
+     "b": 0.7156935005005721
+    },
+    "uKeyIntensity": 4.05,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "tombF": 1,
+    "camY": -9.2,
+    "timeOfDay": 0.5
+   },
+   "ordinal": 47,
+   "at": "2026-08-13T22:01:58.771Z"
+  },
+  {
+   "shot": "interior",
+   "arm": "bon",
+   "file": "interior.bon.png",
+   "sha256": "54c7090bf28873600308e9953896055a8bbdb5edfa95ad1eeafe7259978daa4c",
+   "tree": {
+    "src": "0ff46d1cb8457d8b",
+    "head": "8562e87908ad"
+   },
+   "readback": {
+    "tombAmb": 0.3,
+    "shadowFloorNight": 0.125,
+    "uRakeTrack": 0,
+    "uRakeGap": 0.05,
+    "tuneTomb": 1,
+    "tuneNfloor": 0.125,
+    "tuneRake": 0,
+    "uAmbIntensity": 0.17591963765154675,
+    "uShadowColor": {
+     "r": 0.04611498650395981,
+     "g": 0.15277648833058857,
+     "b": 0.24257311662686137
+    },
+    "uShadowColorLit": {
+     "r": 0.04611498650395981,
+     "g": 0.15277648833058857,
+     "b": 0.24257311662686137
+    },
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.8879231178794776,
+     "b": 0.7156935005005721
+    },
+    "uKeyIntensity": 4.05,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "tombF": 0.3,
+    "camY": -9.2,
+    "timeOfDay": 0.5
+   },
+   "ordinal": 48,
+   "at": "2026-08-13T22:02:14.350Z"
+  },
+  {
+   "shot": "interior",
+   "arm": "bko",
+   "file": "interior.bko.png",
+   "sha256": "68d154e2a6ce686366877df8d5f2be51e7bf15a7a0d748a2c5697cc045f6c510",
+   "tree": {
+    "src": "0ff46d1cb8457d8b",
+    "head": "8562e87908ad"
+   },
+   "readback": {
+    "tombAmb": 0.15,
+    "shadowFloorNight": 0.125,
+    "uRakeTrack": 0,
+    "uRakeGap": 0.05,
+    "tuneTomb": 1,
+    "tuneNfloor": 0.125,
+    "tuneRake": 0,
+    "uAmbIntensity": 0.08795981882577338,
+    "uShadowColor": {
+     "r": 0.023057493251979904,
+     "g": 0.07638824416529429,
+     "b": 0.12128655831343069
+    },
+    "uShadowColorLit": {
+     "r": 0.023057493251979904,
+     "g": 0.07638824416529429,
+     "b": 0.12128655831343069
+    },
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.8879231178794776,
+     "b": 0.7156935005005721
+    },
+    "uKeyIntensity": 4.05,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "tombF": 0.15,
+    "camY": -9.2,
+    "timeOfDay": 0.5
+   },
+   "ordinal": 49,
+   "at": "2026-08-13T22:02:29.952Z"
+  },
+  {
+   "shot": "interior",
+   "arm": "con",
+   "file": "interior.con.png",
+   "sha256": "388ea93f4cde0ba609c7d9d23016619d1c6bffa58723b48f058ce8fef9017194",
+   "tree": {
+    "src": "0ff46d1cb8457d8b",
+    "head": "8562e87908ad"
+   },
+   "readback": {
+    "tombAmb": 1,
+    "shadowFloorNight": 0.125,
+    "uRakeTrack": 1,
+    "uRakeGap": 0.05,
+    "tuneTomb": 1,
+    "tuneNfloor": 0.125,
+    "tuneRake": 0,
+    "uAmbIntensity": 0.5863987921718226,
+    "uShadowColor": {
+     "r": 0.11280744900295804,
+     "g": 0.37372505605577927,
+     "b": 0.5933874550960468
+    },
+    "uShadowColorLit": {
+     "r": 0.11280744900295804,
+     "g": 0.37372505605577927,
+     "b": 0.5933874550960468
+    },
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.8879231178794776,
+     "b": 0.7156935005005721
+    },
+    "uKeyIntensity": 4.05,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "tombF": 1,
+    "camY": -9.2,
+    "timeOfDay": 0.5
+   },
+   "ordinal": 50,
+   "at": "2026-08-13T22:02:45.494Z"
+  },
+  {
+   "shot": "interior",
+   "arm": "don",
+   "file": "interior.don.png",
+   "sha256": "388ea93f4cde0ba609c7d9d23016619d1c6bffa58723b48f058ce8fef9017194",
+   "tree": {
+    "src": "0ff46d1cb8457d8b",
+    "head": "8562e87908ad"
+   },
+   "readback": {
+    "tombAmb": 1,
+    "shadowFloorNight": 0.14,
+    "uRakeTrack": 0,
+    "uRakeGap": 0.05,
+    "tuneTomb": 1,
+    "tuneNfloor": 0.125,
+    "tuneRake": 0,
+    "uAmbIntensity": 0.5863987921718226,
+    "uShadowColor": {
+     "r": 0.11280744900295804,
+     "g": 0.37372505605577927,
+     "b": 0.5933874550960468
+    },
+    "uShadowColorLit": {
+     "r": 0.11280744900295804,
+     "g": 0.37372505605577927,
+     "b": 0.5933874550960468
+    },
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.8879231178794776,
+     "b": 0.7156935005005721
+    },
+    "uKeyIntensity": 4.05,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "tombF": 1,
+    "camY": -9.2,
+    "timeOfDay": 0.5
+   },
+   "ordinal": 51,
+   "at": "2026-08-13T22:03:00.936Z"
+  },
+  {
+   "shot": "interior",
+   "arm": "back",
+   "file": "interior.back.png",
+   "sha256": "388ea93f4cde0ba609c7d9d23016619d1c6bffa58723b48f058ce8fef9017194",
+   "tree": {
+    "src": "0ff46d1cb8457d8b",
+    "head": "8562e87908ad"
+   },
+   "readback": {
+    "tombAmb": 1,
+    "shadowFloorNight": 0.125,
+    "uRakeTrack": 0,
+    "uRakeGap": 0.05,
+    "tuneTomb": 1,
+    "tuneNfloor": 0.125,
+    "tuneRake": 0,
+    "uAmbIntensity": 0.5863987921718226,
+    "uShadowColor": {
+     "r": 0.11280744900295804,
+     "g": 0.37372505605577927,
+     "b": 0.5933874550960468
+    },
+    "uShadowColorLit": {
+     "r": 0.11280744900295804,
+     "g": 0.37372505605577927,
+     "b": 0.5933874550960468
+    },
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.8879231178794776,
+     "b": 0.7156935005005721
+    },
+    "uKeyIntensity": 4.05,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "tombF": 1,
+    "camY": -9.2,
+    "timeOfDay": 0.5
+   },
+   "ordinal": 52,
+   "at": "2026-08-13T22:03:16.426Z"
+  },
+  {
+   "shot": "night",
+   "arm": "off",
+   "file": "night.off.png",
+   "sha256": "934d47890d29b5babd95e81e00d6ee628bd9d172d4bc5fa80619f3e91123b8dd",
+   "tree": {
+    "src": "0ff46d1cb8457d8b",
+    "head": "8562e87908ad"
+   },
+   "readback": {
+    "tombAmb": 1,
+    "shadowFloorNight": 0.125,
+    "uRakeTrack": 0,
+    "uRakeGap": 0.05,
+    "tuneTomb": 1,
+    "tuneNfloor": 0.125,
+    "tuneRake": 0,
+    "uAmbIntensity": 0.1,
+    "uShadowColor": {
+     "r": 0.012895755468330918,
+     "g": 0.04676854125689067,
+     "b": 0.07805322250511793
+    },
+    "uShadowColorLit": {
+     "r": 0.012895755468330918,
+     "g": 0.04676854125689067,
+     "b": 0.07805322250511793
+    },
+    "uKeyColor": {
+     "r": 0.34191442489801843,
+     "g": 0.55201140150344,
+     "b": 1
+    },
+    "uKeyIntensity": 0.62,
+    "uLocalToon": 2.5,
+    "nightAmount": 1,
+    "tombF": 1,
+    "camY": 8.4,
+    "timeOfDay": 0.02
+   },
+   "ordinal": 53,
+   "at": "2026-08-13T22:09:37.783Z"
+  },
+  {
+   "shot": "night",
+   "arm": "bon",
+   "file": "night.bon.png",
+   "sha256": "934d47890d29b5babd95e81e00d6ee628bd9d172d4bc5fa80619f3e91123b8dd",
+   "tree": {
+    "src": "0ff46d1cb8457d8b",
+    "head": "8562e87908ad"
+   },
+   "readback": {
+    "tombAmb": 0.3,
+    "shadowFloorNight": 0.125,
+    "uRakeTrack": 0,
+    "uRakeGap": 0.05,
+    "tuneTomb": 1,
+    "tuneNfloor": 0.125,
+    "tuneRake": 0,
+    "uAmbIntensity": 0.1,
+    "uShadowColor": {
+     "r": 0.012895755468330918,
+     "g": 0.04676854125689067,
+     "b": 0.07805322250511793
+    },
+    "uShadowColorLit": {
+     "r": 0.012895755468330918,
+     "g": 0.04676854125689067,
+     "b": 0.07805322250511793
+    },
+    "uKeyColor": {
+     "r": 0.34191442489801843,
+     "g": 0.55201140150344,
+     "b": 1
+    },
+    "uKeyIntensity": 0.62,
+    "uLocalToon": 2.5,
+    "nightAmount": 1,
+    "tombF": 1,
+    "camY": 8.4,
+    "timeOfDay": 0.02
+   },
+   "ordinal": 54,
+   "at": "2026-08-13T22:10:15.706Z"
+  },
+  {
+   "shot": "night",
+   "arm": "con",
+   "file": "night.con.png",
+   "sha256": "934d47890d29b5babd95e81e00d6ee628bd9d172d4bc5fa80619f3e91123b8dd",
+   "tree": {
+    "src": "0ff46d1cb8457d8b",
+    "head": "8562e87908ad"
+   },
+   "readback": {
+    "tombAmb": 1,
+    "shadowFloorNight": 0.125,
+    "uRakeTrack": 1,
+    "uRakeGap": 0.05,
+    "tuneTomb": 1,
+    "tuneNfloor": 0.125,
+    "tuneRake": 0,
+    "uAmbIntensity": 0.1,
+    "uShadowColor": {
+     "r": 0.012895755468330918,
+     "g": 0.04676854125689067,
+     "b": 0.07805322250511793
+    },
+    "uShadowColorLit": {
+     "r": 0.012895755468330918,
+     "g": 0.04676854125689067,
+     "b": 0.07805322250511793
+    },
+    "uKeyColor": {
+     "r": 0.34191442489801843,
+     "g": 0.55201140150344,
+     "b": 1
+    },
+    "uKeyIntensity": 0.62,
+    "uLocalToon": 2.5,
+    "nightAmount": 1,
+    "tombF": 1,
+    "camY": 8.4,
+    "timeOfDay": 0.02
+   },
+   "ordinal": 55,
+   "at": "2026-08-13T22:10:53.489Z"
+  },
+  {
+   "shot": "night",
+   "arm": "don",
+   "file": "night.don.png",
+   "sha256": "65bee414e75f944d59266957d5cf1761fea684884d41bb9028d75bd48920b09b",
+   "tree": {
+    "src": "0ff46d1cb8457d8b",
+    "head": "8562e87908ad"
+   },
+   "readback": {
+    "tombAmb": 1,
+    "shadowFloorNight": 0.14,
+    "uRakeTrack": 0,
+    "uRakeGap": 0.05,
+    "tuneTomb": 1,
+    "tuneNfloor": 0.125,
+    "tuneRake": 0,
+    "uAmbIntensity": 0.1,
+    "uShadowColor": {
+     "r": 0.01444324612453063,
+     "g": 0.05238076620771756,
+     "b": 0.08741960920573208
+    },
+    "uShadowColorLit": {
+     "r": 0.01444324612453063,
+     "g": 0.05238076620771756,
+     "b": 0.08741960920573208
+    },
+    "uKeyColor": {
+     "r": 0.34191442489801843,
+     "g": 0.55201140150344,
+     "b": 1
+    },
+    "uKeyIntensity": 0.62,
+    "uLocalToon": 2.5,
+    "nightAmount": 1,
+    "tombF": 1,
+    "camY": 8.4,
+    "timeOfDay": 0.02
+   },
+   "ordinal": 56,
+   "at": "2026-08-13T22:11:31.456Z"
+  },
+  {
+   "shot": "night",
+   "arm": "dko",
+   "file": "night.dko.png",
+   "sha256": "062abd1412b770170bc50acd8a0fa115be630c75c4a4009bc25ca10bc18e635e",
+   "tree": {
+    "src": "0ff46d1cb8457d8b",
+    "head": "8562e87908ad"
+   },
+   "readback": {
+    "tombAmb": 1,
+    "shadowFloorNight": 0.18,
+    "uRakeTrack": 0,
+    "uRakeGap": 0.05,
+    "tuneTomb": 1,
+    "tuneNfloor": 0.125,
+    "tuneRake": 0,
+    "uAmbIntensity": 0.1,
+    "uShadowColor": {
+     "r": 0.01856988787439652,
+     "g": 0.06734669940992256,
+     "b": 0.1123966404073698
+    },
+    "uShadowColorLit": {
+     "r": 0.01856988787439652,
+     "g": 0.06734669940992256,
+     "b": 0.1123966404073698
+    },
+    "uKeyColor": {
+     "r": 0.34191442489801843,
+     "g": 0.55201140150344,
+     "b": 1
+    },
+    "uKeyIntensity": 0.62,
+    "uLocalToon": 2.5,
+    "nightAmount": 1,
+    "tombF": 1,
+    "camY": 8.4,
+    "timeOfDay": 0.02
+   },
+   "ordinal": 57,
+   "at": "2026-08-13T22:12:09.544Z"
+  },
+  {
+   "shot": "night",
+   "arm": "back",
+   "file": "night.back.png",
+   "sha256": "934d47890d29b5babd95e81e00d6ee628bd9d172d4bc5fa80619f3e91123b8dd",
+   "tree": {
+    "src": "0ff46d1cb8457d8b",
+    "head": "8562e87908ad"
+   },
+   "readback": {
+    "tombAmb": 1,
+    "shadowFloorNight": 0.125,
+    "uRakeTrack": 0,
+    "uRakeGap": 0.05,
+    "tuneTomb": 1,
+    "tuneNfloor": 0.125,
+    "tuneRake": 0,
+    "uAmbIntensity": 0.1,
+    "uShadowColor": {
+     "r": 0.012895755468330918,
+     "g": 0.04676854125689067,
+     "b": 0.07805322250511793
+    },
+    "uShadowColorLit": {
+     "r": 0.012895755468330918,
+     "g": 0.04676854125689067,
+     "b": 0.07805322250511793
+    },
+    "uKeyColor": {
+     "r": 0.34191442489801843,
+     "g": 0.55201140150344,
+     "b": 1
+    },
+    "uKeyIntensity": 0.62,
+    "uLocalToon": 2.5,
+    "nightAmount": 1,
+    "tombF": 1,
+    "camY": 8.4,
+    "timeOfDay": 0.02
+   },
+   "ordinal": 58,
+   "at": "2026-08-13T22:12:47.771Z"
+  },
+  {
+   "shot": "traversal",
+   "arm": "off",
+   "file": "traversal.off.png",
+   "sha256": "c7721b21a5c1984cb95b77352229f53e15f0eba3fb1592028107a0d757cebc32",
+   "tree": {
+    "src": "0ff46d1cb8457d8b",
+    "head": "8562e87908ad"
+   },
+   "readback": {
+    "tombAmb": 1,
+    "shadowFloorNight": 0.125,
+    "uRakeTrack": 0,
+    "uRakeGap": 0.05,
+    "tuneTomb": 1,
+    "tuneNfloor": 0.125,
+    "tuneRake": 0,
+    "uAmbIntensity": 0.39167462306586714,
+    "uShadowColor": {
+     "r": 0.1042734570639914,
+     "g": 0.33979093006216915,
+     "b": 0.5388946550057868
+    },
+    "uShadowColorLit": {
+     "r": 0.1042734570639914,
+     "g": 0.33979093006216915,
+     "b": 0.5388946550057868
+    },
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6956019860015465,
+     "b": 0.35477957597348103
+    },
+    "uKeyIntensity": 3.3066872427983536,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "tombF": 1,
+    "camY": 14,
+    "timeOfDay": 0.77
+   },
+   "ordinal": 59,
+   "at": "2026-08-13T22:18:44.384Z"
+  },
+  {
+   "shot": "traversal",
+   "arm": "bon",
+   "file": "traversal.bon.png",
+   "sha256": "c7721b21a5c1984cb95b77352229f53e15f0eba3fb1592028107a0d757cebc32",
+   "tree": {
+    "src": "0ff46d1cb8457d8b",
+    "head": "8562e87908ad"
+   },
+   "readback": {
+    "tombAmb": 0.3,
+    "shadowFloorNight": 0.125,
+    "uRakeTrack": 0,
+    "uRakeGap": 0.05,
+    "tuneTomb": 1,
+    "tuneNfloor": 0.125,
+    "tuneRake": 0,
+    "uAmbIntensity": 0.39167462306586714,
+    "uShadowColor": {
+     "r": 0.1042734570639914,
+     "g": 0.33979093006216915,
+     "b": 0.5388946550057868
+    },
+    "uShadowColorLit": {
+     "r": 0.1042734570639914,
+     "g": 0.33979093006216915,
+     "b": 0.5388946550057868
+    },
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6956019860015465,
+     "b": 0.35477957597348103
+    },
+    "uKeyIntensity": 3.3066872427983536,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "tombF": 1,
+    "camY": 14,
+    "timeOfDay": 0.77
+   },
+   "ordinal": 60,
+   "at": "2026-08-13T22:19:19.236Z"
+  },
+  {
+   "shot": "traversal",
+   "arm": "con",
+   "file": "traversal.con.png",
+   "sha256": "9582cefc3b6a1e706c138d27963a81f47a566df13371ae83373ff2aa17da5921",
+   "tree": {
+    "src": "0ff46d1cb8457d8b",
+    "head": "8562e87908ad"
+   },
+   "readback": {
+    "tombAmb": 1,
+    "shadowFloorNight": 0.125,
+    "uRakeTrack": 1,
+    "uRakeGap": 0.05,
+    "tuneTomb": 1,
+    "tuneNfloor": 0.125,
+    "tuneRake": 0,
+    "uAmbIntensity": 0.39167462306586714,
+    "uShadowColor": {
+     "r": 0.1042734570639914,
+     "g": 0.33979093006216915,
+     "b": 0.5388946550057868
+    },
+    "uShadowColorLit": {
+     "r": 0.1042734570639914,
+     "g": 0.33979093006216915,
+     "b": 0.5388946550057868
+    },
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6956019860015465,
+     "b": 0.35477957597348103
+    },
+    "uKeyIntensity": 3.3066872427983536,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "tombF": 1,
+    "camY": 14,
+    "timeOfDay": 0.77
+   },
+   "ordinal": 61,
+   "at": "2026-08-13T22:19:53.645Z"
+  },
+  {
+   "shot": "traversal",
+   "arm": "don",
+   "file": "traversal.don.png",
+   "sha256": "c7721b21a5c1984cb95b77352229f53e15f0eba3fb1592028107a0d757cebc32",
+   "tree": {
+    "src": "0ff46d1cb8457d8b",
+    "head": "8562e87908ad"
+   },
+   "readback": {
+    "tombAmb": 1,
+    "shadowFloorNight": 0.14,
+    "uRakeTrack": 0,
+    "uRakeGap": 0.05,
+    "tuneTomb": 1,
+    "tuneNfloor": 0.125,
+    "tuneRake": 0,
+    "uAmbIntensity": 0.39167462306586714,
+    "uShadowColor": {
+     "r": 0.1042734570639914,
+     "g": 0.33979093006216915,
+     "b": 0.5388946550057868
+    },
+    "uShadowColorLit": {
+     "r": 0.1042734570639914,
+     "g": 0.33979093006216915,
+     "b": 0.5388946550057868
+    },
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6956019860015465,
+     "b": 0.35477957597348103
+    },
+    "uKeyIntensity": 3.3066872427983536,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "tombF": 1,
+    "camY": 14,
+    "timeOfDay": 0.77
+   },
+   "ordinal": 62,
+   "at": "2026-08-13T22:20:28.103Z"
+  },
+  {
+   "shot": "traversal",
+   "arm": "back",
+   "file": "traversal.back.png",
+   "sha256": "c7721b21a5c1984cb95b77352229f53e15f0eba3fb1592028107a0d757cebc32",
+   "tree": {
+    "src": "0ff46d1cb8457d8b",
+    "head": "8562e87908ad"
+   },
+   "readback": {
+    "tombAmb": 1,
+    "shadowFloorNight": 0.125,
+    "uRakeTrack": 0,
+    "uRakeGap": 0.05,
+    "tuneTomb": 1,
+    "tuneNfloor": 0.125,
+    "tuneRake": 0,
+    "uAmbIntensity": 0.39167462306586714,
+    "uShadowColor": {
+     "r": 0.1042734570639914,
+     "g": 0.33979093006216915,
+     "b": 0.5388946550057868
+    },
+    "uShadowColorLit": {
+     "r": 0.1042734570639914,
+     "g": 0.33979093006216915,
+     "b": 0.5388946550057868
+    },
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6956019860015465,
+     "b": 0.35477957597348103
+    },
+    "uKeyIntensity": 3.3066872427983536,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "tombF": 1,
+    "camY": 14,
+    "timeOfDay": 0.77
+   },
+   "ordinal": 63,
+   "at": "2026-08-13T22:21:02.480Z"
+  },
+  {
+   "shot": "combat",
+   "arm": "off",
+   "file": "combat.off.png",
+   "sha256": "417125310db34d4132ff4000aac0a01ec1fea8997232b7d8ede35b85f9c4d890",
+   "tree": {
+    "src": "0ff46d1cb8457d8b",
+    "head": "8562e87908ad"
+   },
+   "readback": {
+    "tombAmb": 1,
+    "shadowFloorNight": 0.125,
+    "uRakeTrack": 0,
+    "uRakeGap": 0.05,
+    "tuneTomb": 1,
+    "tuneNfloor": 0.125,
+    "tuneRake": 0,
+    "uAmbIntensity": 0.3994167614338357,
+    "uShadowColor": {
+     "r": 0.1062646159052293,
+     "g": 0.34652309409758586,
+     "b": 0.5495984348671046
+    },
+    "uShadowColorLit": {
+     "r": 0.1062646159052293,
+     "g": 0.34652309409758586,
+     "b": 0.5495984348671046
+    },
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.7040617866555196,
+     "b": 0.3706554177227912
+    },
+    "uKeyIntensity": 3.339384002057613,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "tombF": 1,
+    "camY": 2.35,
+    "timeOfDay": 0.74
+   },
+   "ordinal": 64,
+   "at": "2026-08-13T22:25:18.962Z"
+  },
+  {
+   "shot": "combat",
+   "arm": "bon",
+   "file": "combat.bon.png",
+   "sha256": "417125310db34d4132ff4000aac0a01ec1fea8997232b7d8ede35b85f9c4d890",
+   "tree": {
+    "src": "0ff46d1cb8457d8b",
+    "head": "8562e87908ad"
+   },
+   "readback": {
+    "tombAmb": 0.3,
+    "shadowFloorNight": 0.125,
+    "uRakeTrack": 0,
+    "uRakeGap": 0.05,
+    "tuneTomb": 1,
+    "tuneNfloor": 0.125,
+    "tuneRake": 0,
+    "uAmbIntensity": 0.3994167614338357,
+    "uShadowColor": {
+     "r": 0.1062646159052293,
+     "g": 0.34652309409758586,
+     "b": 0.5495984348671046
+    },
+    "uShadowColorLit": {
+     "r": 0.1062646159052293,
+     "g": 0.34652309409758586,
+     "b": 0.5495984348671046
+    },
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.7040617866555196,
+     "b": 0.3706554177227912
+    },
+    "uKeyIntensity": 3.339384002057613,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "tombF": 1,
+    "camY": 2.35,
+    "timeOfDay": 0.74
+   },
+   "ordinal": 65,
+   "at": "2026-08-13T22:25:50.613Z"
+  },
+  {
+   "shot": "combat",
+   "arm": "con",
+   "file": "combat.con.png",
+   "sha256": "d565b945128845a76d2610e3526b156843afd72c28b226a7e14af0a3b5423d52",
+   "tree": {
+    "src": "0ff46d1cb8457d8b",
+    "head": "8562e87908ad"
+   },
+   "readback": {
+    "tombAmb": 1,
+    "shadowFloorNight": 0.125,
+    "uRakeTrack": 1,
+    "uRakeGap": 0.05,
+    "tuneTomb": 1,
+    "tuneNfloor": 0.125,
+    "tuneRake": 0,
+    "uAmbIntensity": 0.3994167614338357,
+    "uShadowColor": {
+     "r": 0.1062646159052293,
+     "g": 0.34652309409758586,
+     "b": 0.5495984348671046
+    },
+    "uShadowColorLit": {
+     "r": 0.1062646159052293,
+     "g": 0.34652309409758586,
+     "b": 0.5495984348671046
+    },
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.7040617866555196,
+     "b": 0.3706554177227912
+    },
+    "uKeyIntensity": 3.339384002057613,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "tombF": 1,
+    "camY": 2.35,
+    "timeOfDay": 0.74
+   },
+   "ordinal": 66,
+   "at": "2026-08-13T22:26:22.392Z"
+  },
+  {
+   "shot": "combat",
+   "arm": "don",
+   "file": "combat.don.png",
+   "sha256": "417125310db34d4132ff4000aac0a01ec1fea8997232b7d8ede35b85f9c4d890",
+   "tree": {
+    "src": "0ff46d1cb8457d8b",
+    "head": "8562e87908ad"
+   },
+   "readback": {
+    "tombAmb": 1,
+    "shadowFloorNight": 0.14,
+    "uRakeTrack": 0,
+    "uRakeGap": 0.05,
+    "tuneTomb": 1,
+    "tuneNfloor": 0.125,
+    "tuneRake": 0,
+    "uAmbIntensity": 0.3994167614338357,
+    "uShadowColor": {
+     "r": 0.1062646159052293,
+     "g": 0.34652309409758586,
+     "b": 0.5495984348671046
+    },
+    "uShadowColorLit": {
+     "r": 0.1062646159052293,
+     "g": 0.34652309409758586,
+     "b": 0.5495984348671046
+    },
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.7040617866555196,
+     "b": 0.3706554177227912
+    },
+    "uKeyIntensity": 3.339384002057613,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "tombF": 1,
+    "camY": 2.35,
+    "timeOfDay": 0.74
+   },
+   "ordinal": 67,
+   "at": "2026-08-13T22:26:57.993Z"
+  },
+  {
+   "shot": "combat",
+   "arm": "back",
+   "file": "combat.back.png",
+   "sha256": "417125310db34d4132ff4000aac0a01ec1fea8997232b7d8ede35b85f9c4d890",
+   "tree": {
+    "src": "0ff46d1cb8457d8b",
+    "head": "8562e87908ad"
+   },
+   "readback": {
+    "tombAmb": 1,
+    "shadowFloorNight": 0.125,
+    "uRakeTrack": 0,
+    "uRakeGap": 0.05,
+    "tuneTomb": 1,
+    "tuneNfloor": 0.125,
+    "tuneRake": 0,
+    "uAmbIntensity": 0.3994167614338357,
+    "uShadowColor": {
+     "r": 0.1062646159052293,
+     "g": 0.34652309409758586,
+     "b": 0.5495984348671046
+    },
+    "uShadowColorLit": {
+     "r": 0.1062646159052293,
+     "g": 0.34652309409758586,
+     "b": 0.5495984348671046
+    },
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.7040617866555196,
+     "b": 0.3706554177227912
+    },
+    "uKeyIntensity": 3.339384002057613,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "tombF": 1,
+    "camY": 2.35,
+    "timeOfDay": 0.74
+   },
+   "ordinal": 68,
+   "at": "2026-08-13T22:27:29.776Z"
+  },
+  {
+   "shot": "guard",
+   "arm": "off",
+   "file": "guard.off.png",
+   "sha256": "7b15b4d57182883f1f9d8aa48c83e656d75f0a729768854bc28bd7f9fde8fdb2",
+   "tree": {
+    "src": "0ff46d1cb8457d8b",
+    "head": "8562e87908ad"
+   },
+   "readback": {
+    "tombAmb": 1,
+    "shadowFloorNight": 0.125,
+    "uRakeTrack": 0,
+    "uRakeGap": 0.05,
+    "tuneTomb": 1,
+    "tuneNfloor": 0.125,
+    "tuneRake": 0,
+    "uAmbIntensity": 0.1,
+    "uShadowColor": {
+     "r": 0.012895755468330918,
+     "g": 0.04676854125689067,
+     "b": 0.07805322250511793
+    },
+    "uShadowColorLit": {
+     "r": 0.012895755468330918,
+     "g": 0.04676854125689067,
+     "b": 0.07805322250511793
+    },
+    "uKeyColor": {
+     "r": 0.34191442489801843,
+     "g": 0.55201140150344,
+     "b": 1
+    },
+    "uKeyIntensity": 0.62,
+    "uLocalToon": 2.5,
+    "nightAmount": 1,
+    "tombF": 1,
+    "camY": 2.6,
+    "timeOfDay": 0.1
+   },
+   "ordinal": 69,
+   "at": "2026-08-13T22:30:16.045Z"
+  },
+  {
+   "shot": "guard",
+   "arm": "bon",
+   "file": "guard.bon.png",
+   "sha256": "7b15b4d57182883f1f9d8aa48c83e656d75f0a729768854bc28bd7f9fde8fdb2",
+   "tree": {
+    "src": "0ff46d1cb8457d8b",
+    "head": "8562e87908ad"
+   },
+   "readback": {
+    "tombAmb": 0.3,
+    "shadowFloorNight": 0.125,
+    "uRakeTrack": 0,
+    "uRakeGap": 0.05,
+    "tuneTomb": 1,
+    "tuneNfloor": 0.125,
+    "tuneRake": 0,
+    "uAmbIntensity": 0.1,
+    "uShadowColor": {
+     "r": 0.012895755468330918,
+     "g": 0.04676854125689067,
+     "b": 0.07805322250511793
+    },
+    "uShadowColorLit": {
+     "r": 0.012895755468330918,
+     "g": 0.04676854125689067,
+     "b": 0.07805322250511793
+    },
+    "uKeyColor": {
+     "r": 0.34191442489801843,
+     "g": 0.55201140150344,
+     "b": 1
+    },
+    "uKeyIntensity": 0.62,
+    "uLocalToon": 2.5,
+    "nightAmount": 1,
+    "tombF": 1,
+    "camY": 2.6,
+    "timeOfDay": 0.1
+   },
+   "ordinal": 70,
+   "at": "2026-08-13T22:30:36.291Z"
+  },
+  {
+   "shot": "guard",
+   "arm": "con",
+   "file": "guard.con.png",
+   "sha256": "7b15b4d57182883f1f9d8aa48c83e656d75f0a729768854bc28bd7f9fde8fdb2",
+   "tree": {
+    "src": "0ff46d1cb8457d8b",
+    "head": "8562e87908ad"
+   },
+   "readback": {
+    "tombAmb": 1,
+    "shadowFloorNight": 0.125,
+    "uRakeTrack": 1,
+    "uRakeGap": 0.05,
+    "tuneTomb": 1,
+    "tuneNfloor": 0.125,
+    "tuneRake": 0,
+    "uAmbIntensity": 0.1,
+    "uShadowColor": {
+     "r": 0.012895755468330918,
+     "g": 0.04676854125689067,
+     "b": 0.07805322250511793
+    },
+    "uShadowColorLit": {
+     "r": 0.012895755468330918,
+     "g": 0.04676854125689067,
+     "b": 0.07805322250511793
+    },
+    "uKeyColor": {
+     "r": 0.34191442489801843,
+     "g": 0.55201140150344,
+     "b": 1
+    },
+    "uKeyIntensity": 0.62,
+    "uLocalToon": 2.5,
+    "nightAmount": 1,
+    "tombF": 1,
+    "camY": 2.6,
+    "timeOfDay": 0.1
+   },
+   "ordinal": 71,
+   "at": "2026-08-13T22:31:00.848Z"
+  },
+  {
+   "shot": "guard",
+   "arm": "don",
+   "file": "guard.don.png",
+   "sha256": "10f0c06a06d5d22fe8fd69c17fd335e541aabec9eb443a86bfb196e7df417cf7",
+   "tree": {
+    "src": "0ff46d1cb8457d8b",
+    "head": "8562e87908ad"
+   },
+   "readback": {
+    "tombAmb": 1,
+    "shadowFloorNight": 0.14,
+    "uRakeTrack": 0,
+    "uRakeGap": 0.05,
+    "tuneTomb": 1,
+    "tuneNfloor": 0.125,
+    "tuneRake": 0,
+    "uAmbIntensity": 0.1,
+    "uShadowColor": {
+     "r": 0.01444324612453063,
+     "g": 0.05238076620771756,
+     "b": 0.08741960920573208
+    },
+    "uShadowColorLit": {
+     "r": 0.01444324612453063,
+     "g": 0.05238076620771756,
+     "b": 0.08741960920573208
+    },
+    "uKeyColor": {
+     "r": 0.34191442489801843,
+     "g": 0.55201140150344,
+     "b": 1
+    },
+    "uKeyIntensity": 0.62,
+    "uLocalToon": 2.5,
+    "nightAmount": 1,
+    "tombF": 1,
+    "camY": 2.6,
+    "timeOfDay": 0.1
+   },
+   "ordinal": 72,
+   "at": "2026-08-13T22:31:21.052Z"
+  },
+  {
+   "shot": "guard",
+   "arm": "back",
+   "file": "guard.back.png",
+   "sha256": "7b15b4d57182883f1f9d8aa48c83e656d75f0a729768854bc28bd7f9fde8fdb2",
+   "tree": {
+    "src": "0ff46d1cb8457d8b",
+    "head": "8562e87908ad"
+   },
+   "readback": {
+    "tombAmb": 1,
+    "shadowFloorNight": 0.125,
+    "uRakeTrack": 0,
+    "uRakeGap": 0.05,
+    "tuneTomb": 1,
+    "tuneNfloor": 0.125,
+    "tuneRake": 0,
+    "uAmbIntensity": 0.1,
+    "uShadowColor": {
+     "r": 0.012895755468330918,
+     "g": 0.04676854125689067,
+     "b": 0.07805322250511793
+    },
+    "uShadowColorLit": {
+     "r": 0.012895755468330918,
+     "g": 0.04676854125689067,
+     "b": 0.07805322250511793
+    },
+    "uKeyColor": {
+     "r": 0.34191442489801843,
+     "g": 0.55201140150344,
+     "b": 1
+    },
+    "uKeyIntensity": 0.62,
+    "uLocalToon": 2.5,
+    "nightAmount": 1,
+    "tombF": 1,
+    "camY": 2.6,
+    "timeOfDay": 0.1
+   },
+   "ordinal": 73,
+   "at": "2026-08-13T22:31:41.235Z"
+  },
+  {
+   "shot": "sly-profile",
+   "arm": "off",
+   "file": "sly-profile.off.png",
+   "sha256": "5306ce00030a19d7b5170226907306acaf6f3b16fb31a0c0bd1336dd508be7c4",
+   "tree": {
+    "src": "0ff46d1cb8457d8b",
+    "head": "8562e87908ad"
+   },
+   "readback": {
+    "tombAmb": 1,
+    "shadowFloorNight": 0.125,
+    "uRakeTrack": 0,
+    "uRakeGap": 0.05,
+    "tuneTomb": 1,
+    "tuneNfloor": 0.125,
+    "tuneRake": 0,
+    "uAmbIntensity": 0.38763442167263995,
+    "uShadowColor": {
+     "r": 0.10322818765110171,
+     "g": 0.33627779020980797,
+     "b": 0.5333270591007294
+    },
+    "uShadowColorLit": {
+     "r": 0.10322818765110171,
+     "g": 0.33627779020980797,
+     "b": 0.5333270591007294
+    },
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6918947072370671,
+     "b": 0.3501375437924764
+    },
+    "uKeyIntensity": 3.2859172324293913,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "tombF": 1,
+    "camY": 1.7,
+    "timeOfDay": 0.8
+   },
+   "ordinal": 74,
+   "at": "2026-08-13T22:35:37.545Z"
+  },
+  {
+   "shot": "sly-profile",
+   "arm": "bon",
+   "file": "sly-profile.bon.png",
+   "sha256": "5306ce00030a19d7b5170226907306acaf6f3b16fb31a0c0bd1336dd508be7c4",
+   "tree": {
+    "src": "0ff46d1cb8457d8b",
+    "head": "8562e87908ad"
+   },
+   "readback": {
+    "tombAmb": 0.3,
+    "shadowFloorNight": 0.125,
+    "uRakeTrack": 0,
+    "uRakeGap": 0.05,
+    "tuneTomb": 1,
+    "tuneNfloor": 0.125,
+    "tuneRake": 0,
+    "uAmbIntensity": 0.38763442167263995,
+    "uShadowColor": {
+     "r": 0.10322818765110171,
+     "g": 0.33627779020980797,
+     "b": 0.5333270591007294
+    },
+    "uShadowColorLit": {
+     "r": 0.10322818765110171,
+     "g": 0.33627779020980797,
+     "b": 0.5333270591007294
+    },
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6918947072370671,
+     "b": 0.3501375437924764
+    },
+    "uKeyIntensity": 3.2859172324293913,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "tombF": 1,
+    "camY": 1.7,
+    "timeOfDay": 0.8
+   },
+   "ordinal": 75,
+   "at": "2026-08-13T22:36:06.451Z"
+  },
+  {
+   "shot": "sly-profile",
+   "arm": "con",
+   "file": "sly-profile.con.png",
+   "sha256": "5e8db78b931c2e401a020591dc2bbb9fdff550cbd7c2c582589d94736b967d35",
+   "tree": {
+    "src": "0ff46d1cb8457d8b",
+    "head": "8562e87908ad"
+   },
+   "readback": {
+    "tombAmb": 1,
+    "shadowFloorNight": 0.125,
+    "uRakeTrack": 1,
+    "uRakeGap": 0.05,
+    "tuneTomb": 1,
+    "tuneNfloor": 0.125,
+    "tuneRake": 0,
+    "uAmbIntensity": 0.38763442167263995,
+    "uShadowColor": {
+     "r": 0.10322818765110171,
+     "g": 0.33627779020980797,
+     "b": 0.5333270591007294
+    },
+    "uShadowColorLit": {
+     "r": 0.10322818765110171,
+     "g": 0.33627779020980797,
+     "b": 0.5333270591007294
+    },
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6918947072370671,
+     "b": 0.3501375437924764
+    },
+    "uKeyIntensity": 3.2859172324293913,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "tombF": 1,
+    "camY": 1.7,
+    "timeOfDay": 0.8
+   },
+   "ordinal": 76,
+   "at": "2026-08-13T22:36:35.300Z"
+  },
+  {
+   "shot": "sly-profile",
+   "arm": "don",
+   "file": "sly-profile.don.png",
+   "sha256": "5306ce00030a19d7b5170226907306acaf6f3b16fb31a0c0bd1336dd508be7c4",
+   "tree": {
+    "src": "0ff46d1cb8457d8b",
+    "head": "8562e87908ad"
+   },
+   "readback": {
+    "tombAmb": 1,
+    "shadowFloorNight": 0.14,
+    "uRakeTrack": 0,
+    "uRakeGap": 0.05,
+    "tuneTomb": 1,
+    "tuneNfloor": 0.125,
+    "tuneRake": 0,
+    "uAmbIntensity": 0.38763442167263995,
+    "uShadowColor": {
+     "r": 0.10322818765110171,
+     "g": 0.33627779020980797,
+     "b": 0.5333270591007294
+    },
+    "uShadowColorLit": {
+     "r": 0.10322818765110171,
+     "g": 0.33627779020980797,
+     "b": 0.5333270591007294
+    },
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6918947072370671,
+     "b": 0.3501375437924764
+    },
+    "uKeyIntensity": 3.2859172324293913,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "tombF": 1,
+    "camY": 1.7,
+    "timeOfDay": 0.8
+   },
+   "ordinal": 77,
+   "at": "2026-08-13T22:37:07.298Z"
+  },
+  {
+   "shot": "sly-profile",
+   "arm": "back",
+   "file": "sly-profile.back.png",
+   "sha256": "5306ce00030a19d7b5170226907306acaf6f3b16fb31a0c0bd1336dd508be7c4",
+   "tree": {
+    "src": "0ff46d1cb8457d8b",
+    "head": "8562e87908ad"
+   },
+   "readback": {
+    "tombAmb": 1,
+    "shadowFloorNight": 0.125,
+    "uRakeTrack": 0,
+    "uRakeGap": 0.05,
+    "tuneTomb": 1,
+    "tuneNfloor": 0.125,
+    "tuneRake": 0,
+    "uAmbIntensity": 0.38763442167263995,
+    "uShadowColor": {
+     "r": 0.10322818765110171,
+     "g": 0.33627779020980797,
+     "b": 0.5333270591007294
+    },
+    "uShadowColorLit": {
+     "r": 0.10322818765110171,
+     "g": 0.33627779020980797,
+     "b": 0.5333270591007294
+    },
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6918947072370671,
+     "b": 0.3501375437924764
+    },
+    "uKeyIntensity": 3.2859172324293913,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "tombF": 1,
+    "camY": 1.7,
+    "timeOfDay": 0.8
+   },
+   "ordinal": 78,
+   "at": "2026-08-13T22:37:36.145Z"
+  },
+  {
+   "shot": "sly-key",
+   "arm": "off",
+   "file": "sly-key.off.png",
+   "sha256": "fa120122c6638f76334da9f98d23e1dd07b76da71b21e8d8aaa28173293a9c0f",
+   "tree": {
+    "src": "0ff46d1cb8457d8b",
+    "head": "8562e87908ad"
+   },
+   "readback": {
+    "tombAmb": 1,
+    "shadowFloorNight": 0.125,
+    "uRakeTrack": 0,
+    "uRakeGap": 0.05,
+    "tuneTomb": 1,
+    "tuneNfloor": 0.125,
+    "tuneRake": 0,
+    "uAmbIntensity": 0.38763442167263995,
+    "uShadowColor": {
+     "r": 0.10322818765110171,
+     "g": 0.33627779020980797,
+     "b": 0.5333270591007294
+    },
+    "uShadowColorLit": {
+     "r": 0.10322818765110171,
+     "g": 0.33627779020980797,
+     "b": 0.5333270591007294
+    },
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6918947072370671,
+     "b": 0.3501375437924764
+    },
+    "uKeyIntensity": 3.2859172324293913,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "tombF": 1,
+    "camY": 1.45,
+    "timeOfDay": 0.8
+   },
+   "ordinal": 79,
+   "at": "2026-08-13T22:43:31.378Z"
+  },
+  {
+   "shot": "sly-key",
+   "arm": "bon",
+   "file": "sly-key.bon.png",
+   "sha256": "fa120122c6638f76334da9f98d23e1dd07b76da71b21e8d8aaa28173293a9c0f",
+   "tree": {
+    "src": "0ff46d1cb8457d8b",
+    "head": "8562e87908ad"
+   },
+   "readback": {
+    "tombAmb": 0.3,
+    "shadowFloorNight": 0.125,
+    "uRakeTrack": 0,
+    "uRakeGap": 0.05,
+    "tuneTomb": 1,
+    "tuneNfloor": 0.125,
+    "tuneRake": 0,
+    "uAmbIntensity": 0.38763442167263995,
+    "uShadowColor": {
+     "r": 0.10322818765110171,
+     "g": 0.33627779020980797,
+     "b": 0.5333270591007294
+    },
+    "uShadowColorLit": {
+     "r": 0.10322818765110171,
+     "g": 0.33627779020980797,
+     "b": 0.5333270591007294
+    },
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6918947072370671,
+     "b": 0.3501375437924764
+    },
+    "uKeyIntensity": 3.2859172324293913,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "tombF": 1,
+    "camY": 1.45,
+    "timeOfDay": 0.8
+   },
+   "ordinal": 80,
+   "at": "2026-08-13T22:44:06.342Z"
+  },
+  {
+   "shot": "sly-key",
+   "arm": "con",
+   "file": "sly-key.con.png",
+   "sha256": "ace234199b8d54d502da1cf73e78cfcda35ba7ebf3cbe5a9cfd05b7f373562a9",
+   "tree": {
+    "src": "0ff46d1cb8457d8b",
+    "head": "8562e87908ad"
+   },
+   "readback": {
+    "tombAmb": 1,
+    "shadowFloorNight": 0.125,
+    "uRakeTrack": 1,
+    "uRakeGap": 0.05,
+    "tuneTomb": 1,
+    "tuneNfloor": 0.125,
+    "tuneRake": 0,
+    "uAmbIntensity": 0.38763442167263995,
+    "uShadowColor": {
+     "r": 0.10322818765110171,
+     "g": 0.33627779020980797,
+     "b": 0.5333270591007294
+    },
+    "uShadowColorLit": {
+     "r": 0.10322818765110171,
+     "g": 0.33627779020980797,
+     "b": 0.5333270591007294
+    },
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6918947072370671,
+     "b": 0.3501375437924764
+    },
+    "uKeyIntensity": 3.2859172324293913,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "tombF": 1,
+    "camY": 1.45,
+    "timeOfDay": 0.8
+   },
+   "ordinal": 81,
+   "at": "2026-08-13T22:44:41.340Z"
+  },
+  {
+   "shot": "sly-key",
+   "arm": "don",
+   "file": "sly-key.don.png",
+   "sha256": "fa120122c6638f76334da9f98d23e1dd07b76da71b21e8d8aaa28173293a9c0f",
+   "tree": {
+    "src": "0ff46d1cb8457d8b",
+    "head": "8562e87908ad"
+   },
+   "readback": {
+    "tombAmb": 1,
+    "shadowFloorNight": 0.14,
+    "uRakeTrack": 0,
+    "uRakeGap": 0.05,
+    "tuneTomb": 1,
+    "tuneNfloor": 0.125,
+    "tuneRake": 0,
+    "uAmbIntensity": 0.38763442167263995,
+    "uShadowColor": {
+     "r": 0.10322818765110171,
+     "g": 0.33627779020980797,
+     "b": 0.5333270591007294
+    },
+    "uShadowColorLit": {
+     "r": 0.10322818765110171,
+     "g": 0.33627779020980797,
+     "b": 0.5333270591007294
+    },
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6918947072370671,
+     "b": 0.3501375437924764
+    },
+    "uKeyIntensity": 3.2859172324293913,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "tombF": 1,
+    "camY": 1.45,
+    "timeOfDay": 0.8
+   },
+   "ordinal": 82,
+   "at": "2026-08-13T22:45:16.175Z"
+  },
+  {
+   "shot": "sly-key",
+   "arm": "back",
+   "file": "sly-key.back.png",
+   "sha256": "fa120122c6638f76334da9f98d23e1dd07b76da71b21e8d8aaa28173293a9c0f",
+   "tree": {
+    "src": "0ff46d1cb8457d8b",
+    "head": "8562e87908ad"
+   },
+   "readback": {
+    "tombAmb": 1,
+    "shadowFloorNight": 0.125,
+    "uRakeTrack": 0,
+    "uRakeGap": 0.05,
+    "tuneTomb": 1,
+    "tuneNfloor": 0.125,
+    "tuneRake": 0,
+    "uAmbIntensity": 0.38763442167263995,
+    "uShadowColor": {
+     "r": 0.10322818765110171,
+     "g": 0.33627779020980797,
+     "b": 0.5333270591007294
+    },
+    "uShadowColorLit": {
+     "r": 0.10322818765110171,
+     "g": 0.33627779020980797,
+     "b": 0.5333270591007294
+    },
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6918947072370671,
+     "b": 0.3501375437924764
+    },
+    "uKeyIntensity": 3.2859172324293913,
+    "uLocalToon": 2.5,
+    "nightAmount": 0,
+    "tombF": 1,
+    "camY": 1.45,
+    "timeOfDay": 0.8
+   },
+   "ordinal": 83,
+   "at": "2026-08-13T22:45:50.710Z"
+  }
+ ]
+}

@@ -1,0 +1,91 @@
+HEAD 67426707456b verified (mechanism inert, §289 intact); HEAD src hash 2b5c7c49ad9c4668
+frames -> /home/user/Demo/progress/records/lithold1
+tree verified under the lock — src 2b5c7c49ad9c4668 (HEAD src 2b5c7c49ad9c4668, exact); no install
+renderer: ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)
+-- staged hero (1/16, 30s)
+  # 1 hero.off               sha 0851634e3553ae4e  hold=0 shadowHold=1 dbgTerm=0 raw=false camY=10.28 na=0
+  # 2 hero.on                sha 67f4eff1efaab714  hold=0.7 shadowHold=1 dbgTerm=0 raw=false camY=10.28 na=0
+  # 3 hero.back              sha 0851634e3553ae4e  hold=0 shadowHold=1 dbgTerm=0 raw=false camY=10.28 na=0
+-- staged kaykit (2/16, 0s)
+  # 4 kaykit.off             sha 18aaf79050251fd7  hold=0 shadowHold=1 dbgTerm=0 raw=false camY=14.00 na=0
+  # 5 kaykit.on              sha f92e032557631de1  hold=0.7 shadowHold=1 dbgTerm=0 raw=false camY=14.00 na=0
+  # 6 kaykit.back            sha 18aaf79050251fd7  hold=0 shadowHold=1 dbgTerm=0 raw=false camY=14.00 na=0
+-- staged temple (3/16, 0s)
+  # 7 temple.off             sha 4afdd0e0977e245d  hold=0 shadowHold=1 dbgTerm=0 raw=false camY=2.60 na=0
+  # 8 temple.on              sha 025fe96fe46904e1  hold=0.7 shadowHold=1 dbgTerm=0 raw=false camY=2.60 na=0
+  # 9 temple.back            sha 4afdd0e0977e245d  hold=0 shadowHold=1 dbgTerm=0 raw=false camY=2.60 na=0
+  #10 temple.cal             sha adcbf75dcf883eeb  hold=0 shadowHold=1 dbgTerm=4 raw=true camY=2.60 na=0
+  #11 temple.msk             sha 60cf489a3a45745b  hold=0 shadowHold=1 dbgTerm=1 raw=true camY=2.60 na=0
+  #12 temple.bk2             sha 4afdd0e0977e245d  hold=0 shadowHold=1 dbgTerm=0 raw=false camY=2.60 na=0
+-- staged sly-closeup (4/16, 28s)
+  #13 sly-closeup.off        sha 0a2e76070a088da7  hold=0 shadowHold=1 dbgTerm=0 raw=false camY=1.45 na=0
+  #14 sly-closeup.on         sha ac1cb484e789a4e4  hold=0.7 shadowHold=1 dbgTerm=0 raw=false camY=1.45 na=0
+  #15 sly-closeup.back       sha 0a2e76070a088da7  hold=0 shadowHold=1 dbgTerm=0 raw=false camY=1.45 na=0
+-- staged sly-startle (5/16, 0s)
+  #16 sly-startle.off        sha 5df26b0254bb828f  hold=0 shadowHold=1 dbgTerm=0 raw=false camY=1.60 na=0
+  #17 sly-startle.on         sha 54fc4f2681371ad4  hold=0.7 shadowHold=1 dbgTerm=0 raw=false camY=1.60 na=0
+  #18 sly-startle.back       sha 5df26b0254bb828f  hold=0 shadowHold=1 dbgTerm=0 raw=false camY=1.60 na=0
+-- staged sly-perch (6/16, 28s)
+  #19 sly-perch.off          sha 50952d47672f6881  hold=0 shadowHold=1 dbgTerm=0 raw=false camY=1.15 na=0
+  #20 sly-perch.on           sha 246d9a325d77236c  hold=0.7 shadowHold=1 dbgTerm=0 raw=false camY=1.15 na=0
+  #21 sly-perch.back         sha 50952d47672f6881  hold=0 shadowHold=1 dbgTerm=0 raw=false camY=1.15 na=0
+-- staged sly-arm (7/16, 0s)
+  #22 sly-arm.off            sha ccac956f1a9bc5ea  hold=0 shadowHold=1 dbgTerm=0 raw=false camY=1.45 na=0
+  #23 sly-arm.on             sha ede56ead14018635  hold=0.7 shadowHold=1 dbgTerm=0 raw=false camY=1.45 na=0
+  #24 sly-arm.back           sha ccac956f1a9bc5ea  hold=0 shadowHold=1 dbgTerm=0 raw=false camY=1.45 na=0
+-- staged courtyard (8/16, 15s)
+  #25 courtyard.off          sha 19b55ab4d5cf42be  hold=0 shadowHold=1 dbgTerm=0 raw=false camY=4.00 na=0
+  #26 courtyard.on           sha cd76e80c2c5ef831  hold=0.7 shadowHold=1 dbgTerm=0 raw=false camY=4.00 na=0
+  #27 courtyard.back         sha 19b55ab4d5cf42be  hold=0 shadowHold=1 dbgTerm=0 raw=false camY=4.00 na=0
+-- staged dunes (9/16, 16s)
+  #28 dunes.off              sha 222da9dddbc0e125  hold=0 shadowHold=1 dbgTerm=0 raw=false camY=19.50 na=0
+  #29 dunes.on               sha dd51d512fd345a38  hold=0.7 shadowHold=1 dbgTerm=0 raw=false camY=19.50 na=0
+  #30 dunes.back             sha 222da9dddbc0e125  hold=0 shadowHold=1 dbgTerm=0 raw=false camY=19.50 na=0
+  #31 dunes.cal              sha fe29b1134e32daf9  hold=0 shadowHold=1 dbgTerm=4 raw=true camY=19.50 na=0
+  #32 dunes.msk              sha ecdaeff4656775b2  hold=0 shadowHold=1 dbgTerm=1 raw=true camY=19.50 na=0
+  #33 dunes.bk2              sha 222da9dddbc0e125  hold=0 shadowHold=1 dbgTerm=0 raw=false camY=19.50 na=0
+-- staged interior (10/16, 0s)
+  #34 interior.off           sha feebc1a33a42161f  hold=0 shadowHold=1 dbgTerm=0 raw=false camY=-9.20 na=0
+  #35 interior.on            sha 106efedbf648f8c5  hold=0.7 shadowHold=1 dbgTerm=0 raw=false camY=-9.20 na=0
+  #36 interior.back          sha feebc1a33a42161f  hold=0 shadowHold=1 dbgTerm=0 raw=false camY=-9.20 na=0
+  #37 interior.cal           sha e544cde6abeba47a  hold=0 shadowHold=1 dbgTerm=4 raw=true camY=-9.20 na=0
+  #38 interior.msk           sha 9eec868bcbc145fc  hold=0 shadowHold=1 dbgTerm=1 raw=true camY=-9.20 na=0
+  #39 interior.bk2           sha feebc1a33a42161f  hold=0 shadowHold=1 dbgTerm=0 raw=false camY=-9.20 na=0
+-- staged night (11/16, 15s)
+  #40 night.off              sha 2b139acdee5172c8  hold=0 shadowHold=1 dbgTerm=0 raw=false camY=8.40 na=1
+  #41 night.on               sha d54f78cda4536152  hold=0.7 shadowHold=1 dbgTerm=0 raw=false camY=8.40 na=1
+  #42 night.back             sha 2b139acdee5172c8  hold=0 shadowHold=1 dbgTerm=0 raw=false camY=8.40 na=1
+  #43 night.cal              sha 779dca99fb70d24e  hold=0 shadowHold=1 dbgTerm=4 raw=true camY=8.40 na=1
+  #44 night.msk              sha bfac0c0ca4874916  hold=0 shadowHold=1 dbgTerm=1 raw=true camY=8.40 na=1
+  #45 night.bk2              sha 2b139acdee5172c8  hold=0 shadowHold=1 dbgTerm=0 raw=false camY=8.40 na=1
+-- staged traversal (12/16, 0s)
+  #46 traversal.off          sha 88f260a2d4bbd8e0  hold=0 shadowHold=1 dbgTerm=0 raw=false camY=14.00 na=0
+  #47 traversal.on           sha b02bd10c8cc4d2b7  hold=0.7 shadowHold=1 dbgTerm=0 raw=false camY=14.00 na=0
+  #48 traversal.ko           sha 2ce989b188d28593  hold=0.4 shadowHold=1 dbgTerm=0 raw=false camY=14.00 na=0
+  #49 traversal.back         sha 88f260a2d4bbd8e0  hold=0 shadowHold=1 dbgTerm=0 raw=false camY=14.00 na=0
+  #50 traversal.cal          sha f3be5f8555779a0a  hold=0 shadowHold=1 dbgTerm=4 raw=true camY=14.00 na=0
+  #51 traversal.msk          sha a66feea63efeea65  hold=0 shadowHold=1 dbgTerm=1 raw=true camY=14.00 na=0
+  #52 traversal.bk2          sha 88f260a2d4bbd8e0  hold=0 shadowHold=1 dbgTerm=0 raw=false camY=14.00 na=0
+-- staged combat (13/16, 0s)
+  #53 combat.off             sha d5b95867c8160ff9  hold=0 shadowHold=1 dbgTerm=0 raw=false camY=2.35 na=0
+  #54 combat.on              sha 40b0809891c90dde  hold=0.7 shadowHold=1 dbgTerm=0 raw=false camY=2.35 na=0
+  #55 combat.ko              sha 0aec9cc1aef26a81  hold=0.4 shadowHold=1 dbgTerm=0 raw=false camY=2.35 na=0
+  #56 combat.back            sha d5b95867c8160ff9  hold=0 shadowHold=1 dbgTerm=0 raw=false camY=2.35 na=0
+  #57 combat.cal             sha 4293a304d0b80c80  hold=0 shadowHold=1 dbgTerm=4 raw=true camY=2.35 na=0
+  #58 combat.msk             sha 3b1d01047ba10ca8  hold=0 shadowHold=1 dbgTerm=1 raw=true camY=2.35 na=0
+  #59 combat.bk2             sha d5b95867c8160ff9  hold=0 shadowHold=1 dbgTerm=0 raw=false camY=2.35 na=0
+-- staged guard (14/16, 0s)
+  #60 guard.off              sha d004c12f88520dfa  hold=0 shadowHold=1 dbgTerm=0 raw=false camY=2.60 na=1
+  #61 guard.on               sha 7e28be08eafaedfb  hold=0.7 shadowHold=1 dbgTerm=0 raw=false camY=2.60 na=1
+  #62 guard.back             sha d004c12f88520dfa  hold=0 shadowHold=1 dbgTerm=0 raw=false camY=2.60 na=1
+-- staged sly-profile (15/16, 0s)
+  #63 sly-profile.off        sha b729d9a033aab5de  hold=0 shadowHold=1 dbgTerm=0 raw=false camY=1.70 na=0
+  #64 sly-profile.on         sha 27e8830b46fe0401  hold=0.7 shadowHold=1 dbgTerm=0 raw=false camY=1.70 na=0
+  #65 sly-profile.back       sha b729d9a033aab5de  hold=0 shadowHold=1 dbgTerm=0 raw=false camY=1.70 na=0
+-- staged sly-key (16/16, 28s)
+  #66 sly-key.off            sha 310666560b7bcb2f  hold=0 shadowHold=1 dbgTerm=0 raw=false camY=1.45 na=0
+  #67 sly-key.on             sha 542535ab3bb38215  hold=0.7 shadowHold=1 dbgTerm=0 raw=false camY=1.45 na=0
+  #68 sly-key.back           sha 310666560b7bcb2f  hold=0 shadowHold=1 dbgTerm=0 raw=false camY=1.45 na=0
+src/render + src/player clean at release (nothing was installed).
+DONE. Score with:
+  node progress/records/lithold-score.mjs

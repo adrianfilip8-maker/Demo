@@ -1,0 +1,1192 @@
+{
+ "seal": "PREREG-redkey",
+ "head": "693681d2078350c80d4d4935c986d5ad4de09ede",
+ "expect": {
+  "head": "2052d5642163f62e"
+ },
+ "values": {
+  "off": 1,
+  "on": 0.45,
+  "ko": 0.35
+ },
+ "launchedAt": "2026-08-13T17:41:09.452Z",
+ "pid": 4615,
+ "rows": [
+  {
+   "shot": "hero",
+   "arm": "off",
+   "file": "hero.off.png",
+   "sha256": "4f928e617b3b3f51711569881fe45c73ed6065fbfa204c37e49de01c31866b55",
+   "tree": {
+    "src": "2052d5642163f62e",
+    "head": "693681d20783",
+    "at": "2026-08-13T17:41:09.757Z"
+   },
+   "readback": {
+    "keySatMax": 1,
+    "tuneKeySatMax": 1,
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6938717612856897,
+     "b": 0.3515325994898463
+    },
+    "sat": 0.6484674005101537,
+    "uKeyIntensity": 3.3
+   },
+   "ordinal": 1,
+   "at": "2026-08-13T17:48:58.609Z"
+  },
+  {
+   "shot": "hero",
+   "arm": "on",
+   "file": "hero.on.png",
+   "sha256": "63db9107572d1c6a6441e5876b563131ef46a709888bd69a295c5343a6cfbef4",
+   "tree": {
+    "src": "2052d5642163f62e",
+    "head": "693681d20783",
+    "at": "2026-08-13T17:41:09.757Z"
+   },
+   "readback": {
+    "keySatMax": 0.45,
+    "tuneKeySatMax": 1,
+    "uKeyColor": {
+     "r": 0.9002690484088895,
+     "g": 0.709019650098777,
+     "b": 0.4951479766248892
+    },
+    "sat": 0.45000000000000007,
+    "uKeyIntensity": 3.3
+   },
+   "ordinal": 2,
+   "at": "2026-08-13T17:49:36.689Z"
+  },
+  {
+   "shot": "hero",
+   "arm": "back",
+   "file": "hero.back.png",
+   "sha256": "4f928e617b3b3f51711569881fe45c73ed6065fbfa204c37e49de01c31866b55",
+   "tree": {
+    "src": "2052d5642163f62e",
+    "head": "693681d20783",
+    "at": "2026-08-13T17:41:09.757Z"
+   },
+   "readback": {
+    "keySatMax": 1,
+    "tuneKeySatMax": 1,
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6938717612856897,
+     "b": 0.3515325994898463
+    },
+    "sat": 0.6484674005101537,
+    "uKeyIntensity": 3.3
+   },
+   "ordinal": 3,
+   "at": "2026-08-13T17:50:19.222Z"
+  },
+  {
+   "shot": "kaykit",
+   "arm": "off",
+   "file": "kaykit.off.png",
+   "sha256": "52f8345db45fcc426b2060d1265940c5ff4a124c2096e9303aaff81e6346d9be",
+   "tree": {
+    "src": "2052d5642163f62e",
+    "head": "693681d20783",
+    "at": "2026-08-13T17:41:09.757Z"
+   },
+   "readback": {
+    "keySatMax": 1,
+    "tuneKeySatMax": 1,
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6938717612856897,
+     "b": 0.3515325994898463
+    },
+    "sat": 0.6484674005101537,
+    "uKeyIntensity": 3.3
+   },
+   "ordinal": 4,
+   "at": "2026-08-13T17:54:35.948Z"
+  },
+  {
+   "shot": "kaykit",
+   "arm": "on",
+   "file": "kaykit.on.png",
+   "sha256": "521f3877f358729bd36efe7933c3bc6fe082ec83974cf7aca83481403cfbc6ab",
+   "tree": {
+    "src": "2052d5642163f62e",
+    "head": "693681d20783",
+    "at": "2026-08-13T17:41:09.757Z"
+   },
+   "readback": {
+    "keySatMax": 0.45,
+    "tuneKeySatMax": 1,
+    "uKeyColor": {
+     "r": 0.9002690484088895,
+     "g": 0.709019650098777,
+     "b": 0.4951479766248892
+    },
+    "sat": 0.45000000000000007,
+    "uKeyIntensity": 3.3
+   },
+   "ordinal": 5,
+   "at": "2026-08-13T17:55:00.801Z"
+  },
+  {
+   "shot": "kaykit",
+   "arm": "back",
+   "file": "kaykit.back.png",
+   "sha256": "52f8345db45fcc426b2060d1265940c5ff4a124c2096e9303aaff81e6346d9be",
+   "tree": {
+    "src": "2052d5642163f62e",
+    "head": "693681d20783",
+    "at": "2026-08-13T17:41:09.757Z"
+   },
+   "readback": {
+    "keySatMax": 1,
+    "tuneKeySatMax": 1,
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6938717612856897,
+     "b": 0.3515325994898463
+    },
+    "sat": 0.6484674005101537,
+    "uKeyIntensity": 3.3
+   },
+   "ordinal": 6,
+   "at": "2026-08-13T17:55:26.135Z"
+  },
+  {
+   "shot": "temple",
+   "arm": "off",
+   "file": "temple.off.png",
+   "sha256": "3e5c5521eb2fc77b59ac87437013bdc02fdaca6305a1dae730991fc065ac1a99",
+   "tree": {
+    "src": "2052d5642163f62e",
+    "head": "693681d20783",
+    "at": "2026-08-13T17:41:09.757Z"
+   },
+   "readback": {
+    "keySatMax": 1,
+    "tuneKeySatMax": 1,
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.714747834424304,
+     "b": 0.390709082134271
+    },
+    "sat": 0.609290917865729,
+    "uKeyIntensity": 3.38068510897729
+   },
+   "ordinal": 7,
+   "at": "2026-08-13T17:59:28.049Z"
+  },
+  {
+   "shot": "temple",
+   "arm": "on",
+   "file": "temple.on.png",
+   "sha256": "141a25bf413451820b9cc24b9fece2bf167d1c100ff030697fb6e05e9fc2ae90",
+   "tree": {
+    "src": "2052d5642163f62e",
+    "head": "693681d20783",
+    "at": "2026-08-13T17:41:09.757Z"
+   },
+   "readback": {
+    "keySatMax": 0.45,
+    "tuneKeySatMax": 1,
+    "uKeyColor": {
+     "r": 0.9206239031151475,
+     "g": 0.7266697845572899,
+     "b": 0.5063431467133311
+    },
+    "sat": 0.45,
+    "uKeyIntensity": 3.38068510897729
+   },
+   "ordinal": 8,
+   "at": "2026-08-13T17:59:57.385Z"
+  },
+  {
+   "shot": "temple",
+   "arm": "back",
+   "file": "temple.back.png",
+   "sha256": "3e5c5521eb2fc77b59ac87437013bdc02fdaca6305a1dae730991fc065ac1a99",
+   "tree": {
+    "src": "2052d5642163f62e",
+    "head": "693681d20783",
+    "at": "2026-08-13T17:41:09.757Z"
+   },
+   "readback": {
+    "keySatMax": 1,
+    "tuneKeySatMax": 1,
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.714747834424304,
+     "b": 0.390709082134271
+    },
+    "sat": 0.609290917865729,
+    "uKeyIntensity": 3.38068510897729
+   },
+   "ordinal": 9,
+   "at": "2026-08-13T18:00:30.401Z"
+  },
+  {
+   "shot": "sly-closeup",
+   "arm": "off",
+   "file": "sly-closeup.off.png",
+   "sha256": "31b5692640608ec98e944cd0142fe2d15f715c9a2e5b7a72eb92880d705caf23",
+   "tree": {
+    "src": "2052d5642163f62e",
+    "head": "693681d20783",
+    "at": "2026-08-13T17:41:09.757Z"
+   },
+   "readback": {
+    "keySatMax": 1,
+    "tuneKeySatMax": 1,
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6918947072370671,
+     "b": 0.3501375437924764
+    },
+    "sat": 0.6498624562075236,
+    "uKeyIntensity": 3.2859172324293913
+   },
+   "ordinal": 10,
+   "at": "2026-08-13T18:06:31.292Z"
+  },
+  {
+   "shot": "sly-closeup",
+   "arm": "on",
+   "file": "sly-closeup.on.png",
+   "sha256": "3b7126d904b7008a90023c88c3fa36a7ed1c1f6a1632094b935babf413b61bfa",
+   "tree": {
+    "src": "2052d5642163f62e",
+    "head": "693681d20783",
+    "at": "2026-08-13T17:41:09.757Z"
+   },
+   "readback": {
+    "keySatMax": 0.45,
+    "tuneKeySatMax": 1,
+    "uKeyColor": {
+     "r": 0.8991316815036476,
+     "g": 0.7073030071554557,
+     "b": 0.49452242482700626
+    },
+    "sat": 0.44999999999999996,
+    "uKeyIntensity": 3.2859172324293913
+   },
+   "ordinal": 11,
+   "at": "2026-08-13T18:07:07.504Z"
+  },
+  {
+   "shot": "sly-closeup",
+   "arm": "back",
+   "file": "sly-closeup.back.png",
+   "sha256": "31b5692640608ec98e944cd0142fe2d15f715c9a2e5b7a72eb92880d705caf23",
+   "tree": {
+    "src": "2052d5642163f62e",
+    "head": "693681d20783",
+    "at": "2026-08-13T17:41:09.757Z"
+   },
+   "readback": {
+    "keySatMax": 1,
+    "tuneKeySatMax": 1,
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6918947072370671,
+     "b": 0.3501375437924764
+    },
+    "sat": 0.6498624562075236,
+    "uKeyIntensity": 3.2859172324293913
+   },
+   "ordinal": 12,
+   "at": "2026-08-13T18:07:43.637Z"
+  },
+  {
+   "shot": "sly-startle",
+   "arm": "off",
+   "file": "sly-startle.off.png",
+   "sha256": "473979d9481042cde96d0ec767e3bcb69c7dae5fdbafed8d78ab9c3fae3af8c8",
+   "tree": {
+    "src": "2052d5642163f62e",
+    "head": "693681d20783",
+    "at": "2026-08-13T17:41:09.757Z"
+   },
+   "readback": {
+    "keySatMax": 1,
+    "tuneKeySatMax": 1,
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6918947072370671,
+     "b": 0.3501375437924764
+    },
+    "sat": 0.6498624562075236,
+    "uKeyIntensity": 3.2859172324293913
+   },
+   "ordinal": 13,
+   "at": "2026-08-13T18:11:11.925Z"
+  },
+  {
+   "shot": "sly-startle",
+   "arm": "on",
+   "file": "sly-startle.on.png",
+   "sha256": "044b1782e9ac2d0d59e40e3359ff4d327237b810375bd8f9236270ba18420242",
+   "tree": {
+    "src": "2052d5642163f62e",
+    "head": "693681d20783",
+    "at": "2026-08-13T17:41:09.757Z"
+   },
+   "readback": {
+    "keySatMax": 0.45,
+    "tuneKeySatMax": 1,
+    "uKeyColor": {
+     "r": 0.8991316815036476,
+     "g": 0.7073030071554557,
+     "b": 0.49452242482700626
+    },
+    "sat": 0.44999999999999996,
+    "uKeyIntensity": 3.2859172324293913
+   },
+   "ordinal": 14,
+   "at": "2026-08-13T18:11:37.006Z"
+  },
+  {
+   "shot": "sly-startle",
+   "arm": "back",
+   "file": "sly-startle.back.png",
+   "sha256": "473979d9481042cde96d0ec767e3bcb69c7dae5fdbafed8d78ab9c3fae3af8c8",
+   "tree": {
+    "src": "2052d5642163f62e",
+    "head": "693681d20783",
+    "at": "2026-08-13T17:41:09.757Z"
+   },
+   "readback": {
+    "keySatMax": 1,
+    "tuneKeySatMax": 1,
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6918947072370671,
+     "b": 0.3501375437924764
+    },
+    "sat": 0.6498624562075236,
+    "uKeyIntensity": 3.2859172324293913
+   },
+   "ordinal": 15,
+   "at": "2026-08-13T18:12:05.176Z"
+  },
+  {
+   "shot": "sly-perch",
+   "arm": "off",
+   "file": "sly-perch.off.png",
+   "sha256": "d68778de83816c9417ded873750334bb0f2d4710a6cf76b60cdf00db380750f6",
+   "tree": {
+    "src": "2052d5642163f62e",
+    "head": "693681d20783",
+    "at": "2026-08-13T17:41:09.757Z"
+   },
+   "readback": {
+    "keySatMax": 1,
+    "tuneKeySatMax": 1,
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6918947072370671,
+     "b": 0.3501375437924764
+    },
+    "sat": 0.6498624562075236,
+    "uKeyIntensity": 3.2859172324293913
+   },
+   "ordinal": 16,
+   "at": "2026-08-13T18:18:03.587Z"
+  },
+  {
+   "shot": "sly-perch",
+   "arm": "on",
+   "file": "sly-perch.on.png",
+   "sha256": "dfc46603a51f46f1fe6980677d2cd5a35993b7e920f13e9220fded6d874e643e",
+   "tree": {
+    "src": "2052d5642163f62e",
+    "head": "693681d20783",
+    "at": "2026-08-13T17:41:09.757Z"
+   },
+   "readback": {
+    "keySatMax": 0.45,
+    "tuneKeySatMax": 1,
+    "uKeyColor": {
+     "r": 0.8991316815036476,
+     "g": 0.7073030071554557,
+     "b": 0.49452242482700626
+    },
+    "sat": 0.44999999999999996,
+    "uKeyIntensity": 3.2859172324293913
+   },
+   "ordinal": 17,
+   "at": "2026-08-13T18:18:39.104Z"
+  },
+  {
+   "shot": "sly-perch",
+   "arm": "back",
+   "file": "sly-perch.back.png",
+   "sha256": "d68778de83816c9417ded873750334bb0f2d4710a6cf76b60cdf00db380750f6",
+   "tree": {
+    "src": "2052d5642163f62e",
+    "head": "693681d20783",
+    "at": "2026-08-13T17:41:09.757Z"
+   },
+   "readback": {
+    "keySatMax": 1,
+    "tuneKeySatMax": 1,
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6918947072370671,
+     "b": 0.3501375437924764
+    },
+    "sat": 0.6498624562075236,
+    "uKeyIntensity": 3.2859172324293913
+   },
+   "ordinal": 18,
+   "at": "2026-08-13T18:19:18.170Z"
+  },
+  {
+   "shot": "sly-arm",
+   "arm": "off",
+   "file": "sly-arm.off.png",
+   "sha256": "434979fe472ee10d6f1301bdab71327743ee851d2dc9f68774ed388a8a4c5e8a",
+   "tree": {
+    "src": "2052d5642163f62e",
+    "head": "693681d20783",
+    "at": "2026-08-13T17:41:09.757Z"
+   },
+   "readback": {
+    "keySatMax": 1,
+    "tuneKeySatMax": 1,
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6918947072370671,
+     "b": 0.3501375437924764
+    },
+    "sat": 0.6498624562075236,
+    "uKeyIntensity": 3.2859172324293913
+   },
+   "ordinal": 19,
+   "at": "2026-08-13T18:21:35.088Z"
+  },
+  {
+   "shot": "sly-arm",
+   "arm": "on",
+   "file": "sly-arm.on.png",
+   "sha256": "508732e1b2024f68249ed02f156d36c50e58d596fecaa0adb1b35112b83bc9de",
+   "tree": {
+    "src": "2052d5642163f62e",
+    "head": "693681d20783",
+    "at": "2026-08-13T17:41:09.757Z"
+   },
+   "readback": {
+    "keySatMax": 0.45,
+    "tuneKeySatMax": 1,
+    "uKeyColor": {
+     "r": 0.8991316815036476,
+     "g": 0.7073030071554557,
+     "b": 0.49452242482700626
+    },
+    "sat": 0.44999999999999996,
+    "uKeyIntensity": 3.2859172324293913
+   },
+   "ordinal": 20,
+   "at": "2026-08-13T18:21:51.929Z"
+  },
+  {
+   "shot": "sly-arm",
+   "arm": "ko",
+   "file": "sly-arm.ko.png",
+   "sha256": "0b683a01d381c774a7c18844d34961a4625d32fe7a13914723f7812c2663a16b",
+   "tree": {
+    "src": "2052d5642163f62e",
+    "head": "693681d20783",
+    "at": "2026-08-13T17:41:09.757Z"
+   },
+   "readback": {
+    "keySatMax": 0.35,
+    "tuneKeySatMax": 1,
+    "uKeyColor": {
+     "r": 0.8559336779955913,
+     "g": 0.7139017866716603,
+     "b": 0.5563568906971345
+    },
+    "sat": 0.34999999999999987,
+    "uKeyIntensity": 3.2859172324293913
+   },
+   "ordinal": 21,
+   "at": "2026-08-13T18:22:08.474Z"
+  },
+  {
+   "shot": "sly-arm",
+   "arm": "back",
+   "file": "sly-arm.back.png",
+   "sha256": "434979fe472ee10d6f1301bdab71327743ee851d2dc9f68774ed388a8a4c5e8a",
+   "tree": {
+    "src": "2052d5642163f62e",
+    "head": "693681d20783",
+    "at": "2026-08-13T17:41:09.757Z"
+   },
+   "readback": {
+    "keySatMax": 1,
+    "tuneKeySatMax": 1,
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6918947072370671,
+     "b": 0.3501375437924764
+    },
+    "sat": 0.6498624562075236,
+    "uKeyIntensity": 3.2859172324293913
+   },
+   "ordinal": 22,
+   "at": "2026-08-13T18:22:25.062Z"
+  },
+  {
+   "shot": "courtyard",
+   "arm": "off",
+   "file": "courtyard.off.png",
+   "sha256": "d7e154792518fecc6e9ac92d24bbab6732538a569787ee32cc709b54dd7c21f6",
+   "tree": {
+    "src": "2052d5642163f62e",
+    "head": "693681d20783",
+    "at": "2026-08-13T17:41:09.757Z"
+   },
+   "readback": {
+    "keySatMax": 1,
+    "tuneKeySatMax": 1,
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6969082810149427,
+     "b": 0.35723099696539895
+    },
+    "sat": 0.642769003034601,
+    "uKeyIntensity": 3.3117360158512423
+   },
+   "ordinal": 23,
+   "at": "2026-08-13T18:28:30.875Z"
+  },
+  {
+   "shot": "courtyard",
+   "arm": "on",
+   "file": "courtyard.on.png",
+   "sha256": "144d22aa481cb32ff14a704bfe9b7469a5f8164be5a3ade921a8ae8c541bc651",
+   "tree": {
+    "src": "2052d5642163f62e",
+    "head": "693681d20783",
+    "at": "2026-08-13T17:41:09.757Z"
+   },
+   "readback": {
+    "keySatMax": 0.45,
+    "tuneKeySatMax": 1,
+    "uKeyColor": {
+     "r": 0.9032442091932624,
+     "g": 0.711581843038642,
+     "b": 0.4967843150562944
+    },
+    "sat": 0.44999999999999996,
+    "uKeyIntensity": 3.3117360158512423
+   },
+   "ordinal": 24,
+   "at": "2026-08-13T18:29:07.940Z"
+  },
+  {
+   "shot": "courtyard",
+   "arm": "back",
+   "file": "courtyard.back.png",
+   "sha256": "d7e154792518fecc6e9ac92d24bbab6732538a569787ee32cc709b54dd7c21f6",
+   "tree": {
+    "src": "2052d5642163f62e",
+    "head": "693681d20783",
+    "at": "2026-08-13T17:41:09.757Z"
+   },
+   "readback": {
+    "keySatMax": 1,
+    "tuneKeySatMax": 1,
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6969082810149427,
+     "b": 0.35723099696539895
+    },
+    "sat": 0.642769003034601,
+    "uKeyIntensity": 3.3117360158512423
+   },
+   "ordinal": 25,
+   "at": "2026-08-13T18:29:45.402Z"
+  },
+  {
+   "shot": "dunes",
+   "arm": "off",
+   "file": "dunes.off.png",
+   "sha256": "ff8a10b02c482c652996f6588951f8ccc73c02422b912d1e4a1fed4955328a10",
+   "tree": {
+    "src": "2052d5642163f62e",
+    "head": "693681d20783",
+    "at": "2026-08-13T17:41:09.757Z"
+   },
+   "readback": {
+    "keySatMax": 1,
+    "tuneKeySatMax": 1,
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6206961795328749,
+     "b": 0.2998981930841452
+    },
+    "sat": 0.7001018069158548,
+    "uKeyIntensity": 2.7787625
+   },
+   "ordinal": 26,
+   "at": "2026-08-13T18:34:32.972Z"
+  },
+  {
+   "shot": "dunes",
+   "arm": "on",
+   "file": "dunes.on.png",
+   "sha256": "8ea6767626048002716d1bcfdc876ec7e1511858f9d6b9965dd07e746ef1c0c8",
+   "tree": {
+    "src": "2052d5642163f62e",
+    "head": "693681d20783",
+    "at": "2026-08-13T17:41:09.757Z"
+   },
+   "readback": {
+    "keySatMax": 0.45,
+    "tuneKeySatMax": 1,
+    "uKeyColor": {
+     "r": 0.8550477724195611,
+     "g": 0.6465848066043176,
+     "b": 0.4702762748307586
+    },
+    "sat": 0.44999999999999996,
+    "uKeyIntensity": 2.7787625
+   },
+   "ordinal": 27,
+   "at": "2026-08-13T18:35:01.433Z"
+  },
+  {
+   "shot": "dunes",
+   "arm": "back",
+   "file": "dunes.back.png",
+   "sha256": "ff8a10b02c482c652996f6588951f8ccc73c02422b912d1e4a1fed4955328a10",
+   "tree": {
+    "src": "2052d5642163f62e",
+    "head": "693681d20783",
+    "at": "2026-08-13T17:41:09.757Z"
+   },
+   "readback": {
+    "keySatMax": 1,
+    "tuneKeySatMax": 1,
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6206961795328749,
+     "b": 0.2998981930841452
+    },
+    "sat": 0.7001018069158548,
+    "uKeyIntensity": 2.7787625
+   },
+   "ordinal": 28,
+   "at": "2026-08-13T18:35:30.228Z"
+  },
+  {
+   "shot": "interior",
+   "arm": "off",
+   "file": "interior.off.png",
+   "sha256": "6ea1f07a0a39c241358a83efb6aa46f09a01f48955a29c067504facda2d4a3c5",
+   "tree": {
+    "src": "2052d5642163f62e",
+    "head": "693681d20783",
+    "at": "2026-08-13T17:41:09.757Z"
+   },
+   "readback": {
+    "keySatMax": 1,
+    "tuneKeySatMax": 1,
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.8879231178794776,
+     "b": 0.7156935005005721
+    },
+    "sat": 0.2843064994994279,
+    "uKeyIntensity": 4.05
+   },
+   "ordinal": 29,
+   "at": "2026-08-13T18:37:39.603Z"
+  },
+  {
+   "shot": "interior",
+   "arm": "on",
+   "file": "interior.on.png",
+   "sha256": "6ea1f07a0a39c241358a83efb6aa46f09a01f48955a29c067504facda2d4a3c5",
+   "tree": {
+    "src": "2052d5642163f62e",
+    "head": "693681d20783",
+    "at": "2026-08-13T17:41:09.757Z"
+   },
+   "readback": {
+    "keySatMax": 0.45,
+    "tuneKeySatMax": 1,
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.8879231178794776,
+     "b": 0.7156935005005721
+    },
+    "sat": 0.2843064994994279,
+    "uKeyIntensity": 4.05
+   },
+   "ordinal": 30,
+   "at": "2026-08-13T18:37:54.940Z"
+  },
+  {
+   "shot": "interior",
+   "arm": "back",
+   "file": "interior.back.png",
+   "sha256": "6ea1f07a0a39c241358a83efb6aa46f09a01f48955a29c067504facda2d4a3c5",
+   "tree": {
+    "src": "2052d5642163f62e",
+    "head": "693681d20783",
+    "at": "2026-08-13T17:41:09.757Z"
+   },
+   "readback": {
+    "keySatMax": 1,
+    "tuneKeySatMax": 1,
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.8879231178794776,
+     "b": 0.7156935005005721
+    },
+    "sat": 0.2843064994994279,
+    "uKeyIntensity": 4.05
+   },
+   "ordinal": 31,
+   "at": "2026-08-13T18:38:10.425Z"
+  },
+  {
+   "shot": "night",
+   "arm": "off",
+   "file": "night.off.png",
+   "sha256": "e45e744fb99de0cb5f8f4030fef2ec8bd8c5dd793daa3f1bcd93689ec63363df",
+   "tree": {
+    "src": "2052d5642163f62e",
+    "head": "693681d20783",
+    "at": "2026-08-13T17:41:09.757Z"
+   },
+   "readback": {
+    "keySatMax": 1,
+    "tuneKeySatMax": 1,
+    "uKeyColor": {
+     "r": 0.34191442489801843,
+     "g": 0.55201140150344,
+     "b": 1
+    },
+    "sat": 0.6580855751019816,
+    "uKeyIntensity": 0.62
+   },
+   "ordinal": 32,
+   "at": "2026-08-13T18:44:32.632Z"
+  },
+  {
+   "shot": "night",
+   "arm": "on",
+   "file": "night.on.png",
+   "sha256": "e45e744fb99de0cb5f8f4030fef2ec8bd8c5dd793daa3f1bcd93689ec63363df",
+   "tree": {
+    "src": "2052d5642163f62e",
+    "head": "693681d20783",
+    "at": "2026-08-13T17:41:09.757Z"
+   },
+   "readback": {
+    "keySatMax": 0.45,
+    "tuneKeySatMax": 1,
+    "uKeyColor": {
+     "r": 0.34191442489801843,
+     "g": 0.55201140150344,
+     "b": 1
+    },
+    "sat": 0.6580855751019816,
+    "uKeyIntensity": 0.62
+   },
+   "ordinal": 33,
+   "at": "2026-08-13T18:45:10.822Z"
+  },
+  {
+   "shot": "night",
+   "arm": "back",
+   "file": "night.back.png",
+   "sha256": "e45e744fb99de0cb5f8f4030fef2ec8bd8c5dd793daa3f1bcd93689ec63363df",
+   "tree": {
+    "src": "2052d5642163f62e",
+    "head": "693681d20783",
+    "at": "2026-08-13T17:41:09.757Z"
+   },
+   "readback": {
+    "keySatMax": 1,
+    "tuneKeySatMax": 1,
+    "uKeyColor": {
+     "r": 0.34191442489801843,
+     "g": 0.55201140150344,
+     "b": 1
+    },
+    "sat": 0.6580855751019816,
+    "uKeyIntensity": 0.62
+   },
+   "ordinal": 34,
+   "at": "2026-08-13T18:45:49.759Z"
+  },
+  {
+   "shot": "traversal",
+   "arm": "off",
+   "file": "traversal.off.png",
+   "sha256": "4a5745683053ea9104094a03cc8e1699ebff62cd2739ceed324618591db58487",
+   "tree": {
+    "src": "2052d5642163f62e",
+    "head": "693681d20783",
+    "at": "2026-08-13T17:41:09.757Z"
+   },
+   "readback": {
+    "keySatMax": 1,
+    "tuneKeySatMax": 1,
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6956019860015465,
+     "b": 0.35477957597348103
+    },
+    "sat": 0.6452204240265189,
+    "uKeyIntensity": 3.3066872427983536
+   },
+   "ordinal": 35,
+   "at": "2026-08-13T18:52:07.634Z"
+  },
+  {
+   "shot": "traversal",
+   "arm": "on",
+   "file": "traversal.on.png",
+   "sha256": "f385adba50a184c4dfbd4ae75430913a613ab38bc2c556d070a491f51aee29ca",
+   "tree": {
+    "src": "2052d5642163f62e",
+    "head": "693681d20783",
+    "at": "2026-08-13T17:41:09.757Z"
+   },
+   "readback": {
+    "keySatMax": 0.45,
+    "tuneKeySatMax": 1,
+    "uKeyColor": {
+     "r": 0.9019648808072073,
+     "g": 0.7104793997443022,
+     "b": 0.4960806844439639
+    },
+    "sat": 0.45000000000000007,
+    "uKeyIntensity": 3.3066872427983536
+   },
+   "ordinal": 36,
+   "at": "2026-08-13T18:52:42.067Z"
+  },
+  {
+   "shot": "traversal",
+   "arm": "back",
+   "file": "traversal.back.png",
+   "sha256": "4a5745683053ea9104094a03cc8e1699ebff62cd2739ceed324618591db58487",
+   "tree": {
+    "src": "2052d5642163f62e",
+    "head": "693681d20783",
+    "at": "2026-08-13T17:41:09.757Z"
+   },
+   "readback": {
+    "keySatMax": 1,
+    "tuneKeySatMax": 1,
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6956019860015465,
+     "b": 0.35477957597348103
+    },
+    "sat": 0.6452204240265189,
+    "uKeyIntensity": 3.3066872427983536
+   },
+   "ordinal": 37,
+   "at": "2026-08-13T18:53:16.674Z"
+  },
+  {
+   "shot": "combat",
+   "arm": "off",
+   "file": "combat.off.png",
+   "sha256": "8cd7ef15898ce669cb73bc0aa64641f87eabd755d0f52a6e76fc5efe8ed4eb81",
+   "tree": {
+    "src": "2052d5642163f62e",
+    "head": "693681d20783",
+    "at": "2026-08-13T17:41:09.757Z"
+   },
+   "readback": {
+    "keySatMax": 1,
+    "tuneKeySatMax": 1,
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.7040617866555196,
+     "b": 0.3706554177227912
+    },
+    "sat": 0.6293445822772088,
+    "uKeyIntensity": 3.339384002057613
+   },
+   "ordinal": 38,
+   "at": "2026-08-13T18:57:40.191Z"
+  },
+  {
+   "shot": "combat",
+   "arm": "on",
+   "file": "combat.on.png",
+   "sha256": "79682d350ce12497d368d56699d10a42dc1739f0951468ea2936f0180b5b08c5",
+   "tree": {
+    "src": "2052d5642163f62e",
+    "head": "693681d20783",
+    "at": "2026-08-13T17:41:09.757Z"
+   },
+   "readback": {
+    "keySatMax": 0.45,
+    "tuneKeySatMax": 1,
+    "uKeyColor": {
+     "r": 0.9102343174685258,
+     "g": 0.7176245670233912,
+     "b": 0.5006288746076892
+    },
+    "sat": 0.44999999999999996,
+    "uKeyIntensity": 3.339384002057613
+   },
+   "ordinal": 39,
+   "at": "2026-08-13T18:58:12.595Z"
+  },
+  {
+   "shot": "combat",
+   "arm": "back",
+   "file": "combat.back.png",
+   "sha256": "8cd7ef15898ce669cb73bc0aa64641f87eabd755d0f52a6e76fc5efe8ed4eb81",
+   "tree": {
+    "src": "2052d5642163f62e",
+    "head": "693681d20783",
+    "at": "2026-08-13T17:41:09.757Z"
+   },
+   "readback": {
+    "keySatMax": 1,
+    "tuneKeySatMax": 1,
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.7040617866555196,
+     "b": 0.3706554177227912
+    },
+    "sat": 0.6293445822772088,
+    "uKeyIntensity": 3.339384002057613
+   },
+   "ordinal": 40,
+   "at": "2026-08-13T18:58:48.838Z"
+  },
+  {
+   "shot": "guard",
+   "arm": "off",
+   "file": "guard.off.png",
+   "sha256": "24b7247850002458f3d3f53f6a8833a8cc5836f7a36985ed0793924292e114eb",
+   "tree": {
+    "src": "2052d5642163f62e",
+    "head": "693681d20783",
+    "at": "2026-08-13T17:41:09.757Z"
+   },
+   "readback": {
+    "keySatMax": 1,
+    "tuneKeySatMax": 1,
+    "uKeyColor": {
+     "r": 0.34191442489801843,
+     "g": 0.55201140150344,
+     "b": 1
+    },
+    "sat": 0.6580855751019816,
+    "uKeyIntensity": 0.62
+   },
+   "ordinal": 41,
+   "at": "2026-08-13T19:01:35.932Z"
+  },
+  {
+   "shot": "guard",
+   "arm": "on",
+   "file": "guard.on.png",
+   "sha256": "24b7247850002458f3d3f53f6a8833a8cc5836f7a36985ed0793924292e114eb",
+   "tree": {
+    "src": "2052d5642163f62e",
+    "head": "693681d20783",
+    "at": "2026-08-13T17:41:09.757Z"
+   },
+   "readback": {
+    "keySatMax": 0.45,
+    "tuneKeySatMax": 1,
+    "uKeyColor": {
+     "r": 0.34191442489801843,
+     "g": 0.55201140150344,
+     "b": 1
+    },
+    "sat": 0.6580855751019816,
+    "uKeyIntensity": 0.62
+   },
+   "ordinal": 42,
+   "at": "2026-08-13T19:01:56.169Z"
+  },
+  {
+   "shot": "guard",
+   "arm": "back",
+   "file": "guard.back.png",
+   "sha256": "24b7247850002458f3d3f53f6a8833a8cc5836f7a36985ed0793924292e114eb",
+   "tree": {
+    "src": "2052d5642163f62e",
+    "head": "693681d20783",
+    "at": "2026-08-13T17:41:09.757Z"
+   },
+   "readback": {
+    "keySatMax": 1,
+    "tuneKeySatMax": 1,
+    "uKeyColor": {
+     "r": 0.34191442489801843,
+     "g": 0.55201140150344,
+     "b": 1
+    },
+    "sat": 0.6580855751019816,
+    "uKeyIntensity": 0.62
+   },
+   "ordinal": 43,
+   "at": "2026-08-13T19:02:16.506Z"
+  },
+  {
+   "shot": "sly-profile",
+   "arm": "off",
+   "file": "sly-profile.off.png",
+   "sha256": "426698a2dae074ed4ad157a128ea3ce065d239d3bce91bb1fbe96b6388cb3670",
+   "tree": {
+    "src": "2052d5642163f62e",
+    "head": "693681d20783",
+    "at": "2026-08-13T17:41:09.757Z"
+   },
+   "readback": {
+    "keySatMax": 1,
+    "tuneKeySatMax": 1,
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6918947072370671,
+     "b": 0.3501375437924764
+    },
+    "sat": 0.6498624562075236,
+    "uKeyIntensity": 3.2859172324293913
+   },
+   "ordinal": 44,
+   "at": "2026-08-13T19:06:16.785Z"
+  },
+  {
+   "shot": "sly-profile",
+   "arm": "on",
+   "file": "sly-profile.on.png",
+   "sha256": "af1653750d9f98bac9b07161e2148c39997ed9a7c15e065ac245686c6b114993",
+   "tree": {
+    "src": "2052d5642163f62e",
+    "head": "693681d20783",
+    "at": "2026-08-13T17:41:09.757Z"
+   },
+   "readback": {
+    "keySatMax": 0.45,
+    "tuneKeySatMax": 1,
+    "uKeyColor": {
+     "r": 0.8991316815036476,
+     "g": 0.7073030071554557,
+     "b": 0.49452242482700626
+    },
+    "sat": 0.44999999999999996,
+    "uKeyIntensity": 3.2859172324293913
+   },
+   "ordinal": 45,
+   "at": "2026-08-13T19:06:45.970Z"
+  },
+  {
+   "shot": "sly-profile",
+   "arm": "back",
+   "file": "sly-profile.back.png",
+   "sha256": "426698a2dae074ed4ad157a128ea3ce065d239d3bce91bb1fbe96b6388cb3670",
+   "tree": {
+    "src": "2052d5642163f62e",
+    "head": "693681d20783",
+    "at": "2026-08-13T17:41:09.757Z"
+   },
+   "readback": {
+    "keySatMax": 1,
+    "tuneKeySatMax": 1,
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6918947072370671,
+     "b": 0.3501375437924764
+    },
+    "sat": 0.6498624562075236,
+    "uKeyIntensity": 3.2859172324293913
+   },
+   "ordinal": 46,
+   "at": "2026-08-13T19:07:15.364Z"
+  },
+  {
+   "shot": "sly-key",
+   "arm": "off",
+   "file": "sly-key.off.png",
+   "sha256": "4ce7e77e1c57f7ba50201d9f30bf44cf68e1e94bb5e276bd5724e8be52d77fc8",
+   "tree": {
+    "src": "2052d5642163f62e",
+    "head": "693681d20783",
+    "at": "2026-08-13T17:41:09.757Z"
+   },
+   "readback": {
+    "keySatMax": 1,
+    "tuneKeySatMax": 1,
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6918947072370671,
+     "b": 0.3501375437924764
+    },
+    "sat": 0.6498624562075236,
+    "uKeyIntensity": 3.2859172324293913
+   },
+   "ordinal": 47,
+   "at": "2026-08-13T19:13:13.944Z"
+  },
+  {
+   "shot": "sly-key",
+   "arm": "on",
+   "file": "sly-key.on.png",
+   "sha256": "e3803359bdb1c3c83c3e5d3bf96bd824fcbe9e7b364bd60dfc1c7cbeb18dcc20",
+   "tree": {
+    "src": "2052d5642163f62e",
+    "head": "693681d20783",
+    "at": "2026-08-13T17:41:09.757Z"
+   },
+   "readback": {
+    "keySatMax": 0.45,
+    "tuneKeySatMax": 1,
+    "uKeyColor": {
+     "r": 0.8991316815036476,
+     "g": 0.7073030071554557,
+     "b": 0.49452242482700626
+    },
+    "sat": 0.44999999999999996,
+    "uKeyIntensity": 3.2859172324293913
+   },
+   "ordinal": 48,
+   "at": "2026-08-13T19:13:48.954Z"
+  },
+  {
+   "shot": "sly-key",
+   "arm": "back",
+   "file": "sly-key.back.png",
+   "sha256": "4ce7e77e1c57f7ba50201d9f30bf44cf68e1e94bb5e276bd5724e8be52d77fc8",
+   "tree": {
+    "src": "2052d5642163f62e",
+    "head": "693681d20783",
+    "at": "2026-08-13T17:41:09.757Z"
+   },
+   "readback": {
+    "keySatMax": 1,
+    "tuneKeySatMax": 1,
+    "uKeyColor": {
+     "r": 1,
+     "g": 0.6918947072370671,
+     "b": 0.3501375437924764
+    },
+    "sat": 0.6498624562075236,
+    "uKeyIntensity": 3.2859172324293913
+   },
+   "ordinal": 49,
+   "at": "2026-08-13T19:14:24.029Z"
+  }
+ ]
+}

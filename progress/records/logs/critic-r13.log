@@ -1,0 +1,25 @@
+· review set "r13" at 1280x720 q=high
+  ✓ hero          draws  253  tris 2299k
+  ✓ kaykit        draws  230  tris 2195k
+  ✓ temple        draws  227  tris 2001k
+  ✓ sly-closeup   draws  256  tris 2247k
+  ✓ sly-startle   draws  171  tris 1391k
+  ✓ sly-perch     draws  258  tris 2247k
+  ✓ sly-arm       draws  166  tris 1390k
+  ✓ courtyard     draws  276  tris 2427k
+  ✓ dunes         draws  261  tris 2307k
+  ✓ interior      draws  150  tris 840k
+  ✓ night         draws  283  tris 2568k
+  ✓ traversal     draws  239  tris 2175k
+  ✓ combat        draws  205  tris 1801k
+  ✓ guard         draws  189  tris 1730k
+  ✓ sly-profile   draws  218  tris 1880k
+  ✓ sly-key       draws  250  tris 2187k
+· 5 runtime warning(s):
+    ! textures: prewarm 23 recipes in 2.15s at size 1024 on 3 workers (125 MB, 23 baked / 0 generated)
+    ! KayKit (props): 36 placed from 11 models, 0 failed, 31064 tris, 29 colliders, 36 contact decals, 0 hulls
+    ! SlyModelDLRig: relaxed 6070 glove vertices, max move 17.8 (asset units)
+    ! SlyModelDLRig: staff submesh dropped (258 tris), sly-cane.glb (§294) socketed to handR (grip 22.2 mm, 258 tris)
+    ! setShot("hero") was called without opts.dt, so the world clock is LIVE: each call advances engine.time by 0.283 s over its 17 settle frames. That clock is this 
+
+→ shots/r13/  (16 frames)

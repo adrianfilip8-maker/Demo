@@ -1,0 +1,1912 @@
+{
+ "seals": [
+  "PREREG-fxghost",
+  "PREREG-fxink",
+  "PREREG-seamglint"
+ ],
+ "head": "693681d2078350c80d4d4935c986d5ad4de09ede",
+ "pins": {
+  "base": "35f7d36fcaff06a8412cc4734dcf3d07823282aaf86d1fe2c38de457a8ed8b49",
+  "cand": "1bb7d7be7e3453a82360187fa09cbd103d3d102e15e474ec9efd88116ebffc43"
+ },
+ "expect": {
+  "cand": "ccd5fc7dbc2035b6",
+  "head": "2052d5642163f62e"
+ },
+ "launchedAt": "2026-08-13T17:41:25.317Z",
+ "pid": 5533,
+ "rows": [
+  {
+   "shot": "hero",
+   "arm": "off",
+   "file": "hero.off.png",
+   "sha256": "dd61344dcb1509d41897749e32e034d52297a20c2600f9df0beee01b0042296f",
+   "tree": {
+    "src": "ccd5fc7dbc2035b6",
+    "head": "671b00521bc8"
+   },
+   "readback": {
+    "uLitMix": 0.52,
+    "sandVis": true,
+    "sandLive": 900,
+    "fxRootVis": true,
+    "uFxInkCut": 0,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "t": 0.2876000000005588
+   },
+   "ordinal": 1,
+   "at": "2026-08-13T19:22:43.332Z"
+  },
+  {
+   "shot": "hero",
+   "arm": "ahide",
+   "file": "hero.ahide.png",
+   "sha256": "73c683ed9f31640e1d203e113f1b9010e0e6dcf9418ee9dd11a205f73558810f",
+   "tree": {
+    "src": "ccd5fc7dbc2035b6",
+    "head": "671b00521bc8"
+   },
+   "readback": {
+    "uLitMix": 0.52,
+    "sandVis": false,
+    "sandLive": 900,
+    "fxRootVis": true,
+    "uFxInkCut": 0,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "t": 0.2876000000005588
+   },
+   "ordinal": 2,
+   "at": "2026-08-13T19:23:22.354Z"
+  },
+  {
+   "shot": "hero",
+   "arm": "a26",
+   "file": "hero.a26.png",
+   "sha256": "6e2f520bfbd652181511031c39a09720aa36555162e2006e60f79e2621c61a04",
+   "tree": {
+    "src": "ccd5fc7dbc2035b6",
+    "head": "671b00521bc8"
+   },
+   "readback": {
+    "uLitMix": 0.26,
+    "sandVis": true,
+    "sandLive": 900,
+    "fxRootVis": true,
+    "uFxInkCut": 0,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "t": 0.2876000000005588
+   },
+   "ordinal": 3,
+   "at": "2026-08-13T19:24:01.555Z"
+  },
+  {
+   "shot": "hero",
+   "arm": "a13",
+   "file": "hero.a13.png",
+   "sha256": "ca1ccd5f997a9dd4a4f0cd250201939584addef433453fd510970be5d58de257",
+   "tree": {
+    "src": "ccd5fc7dbc2035b6",
+    "head": "0cf47538f527"
+   },
+   "readback": {
+    "uLitMix": 0.13,
+    "sandVis": true,
+    "sandLive": 900,
+    "fxRootVis": true,
+    "uFxInkCut": 0,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "t": 0.2876000000005588
+   },
+   "ordinal": 4,
+   "at": "2026-08-13T19:24:53.913Z"
+  },
+  {
+   "shot": "hero",
+   "arm": "a00",
+   "file": "hero.a00.png",
+   "sha256": "8014138756e95c7354b3495a856c7f9ac9aac6af21a7bb9c36abbbc31bc38459",
+   "tree": {
+    "src": "ccd5fc7dbc2035b6",
+    "head": "0cf47538f527"
+   },
+   "readback": {
+    "uLitMix": 0,
+    "sandVis": true,
+    "sandLive": 900,
+    "fxRootVis": true,
+    "uFxInkCut": 0,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "t": 0.2876000000005588
+   },
+   "ordinal": 5,
+   "at": "2026-08-13T19:25:33.173Z"
+  },
+  {
+   "shot": "hero",
+   "arm": "bfx0",
+   "file": "hero.bfx0.png",
+   "sha256": "f2034adf7487611bbe1a789deac272af3410e08c14c962890a5c01910befffd2",
+   "tree": {
+    "src": "ccd5fc7dbc2035b6",
+    "head": "0cf47538f527"
+   },
+   "readback": {
+    "uLitMix": 0.52,
+    "sandVis": true,
+    "sandLive": 900,
+    "fxRootVis": false,
+    "uFxInkCut": 0,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "t": 0.2876000000005588
+   },
+   "ordinal": 6,
+   "at": "2026-08-13T19:26:37.050Z"
+  },
+  {
+   "shot": "hero",
+   "arm": "bon",
+   "file": "hero.bon.png",
+   "sha256": "a7ae46386c94844b79c1b6158c34b24807e70044be805e0f63710a3245a37e21",
+   "tree": {
+    "src": "ccd5fc7dbc2035b6",
+    "head": "0cf47538f527"
+   },
+   "readback": {
+    "uLitMix": 0.52,
+    "sandVis": true,
+    "sandLive": 900,
+    "fxRootVis": true,
+    "uFxInkCut": 1,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "t": 0.2876000000005588
+   },
+   "ordinal": 7,
+   "at": "2026-08-13T19:27:23.387Z"
+  },
+  {
+   "shot": "hero",
+   "arm": "c20",
+   "file": "hero.c20.png",
+   "sha256": "e1377036dcc2d4d2e82ca9dd22a9083ed388e713a831a0f5ece53c88a9a5e41f",
+   "tree": {
+    "src": "ccd5fc7dbc2035b6",
+    "head": "0cf47538f527"
+   },
+   "readback": {
+    "uLitMix": 0.52,
+    "sandVis": true,
+    "sandLive": 900,
+    "fxRootVis": true,
+    "uFxInkCut": 0,
+    "uRimShadowFloorArch": 0.2,
+    "uRimShadowFloor": 0.45,
+    "t": 0.2876000000005588
+   },
+   "ordinal": 8,
+   "at": "2026-08-13T19:28:01.889Z"
+  },
+  {
+   "shot": "hero",
+   "arm": "c10",
+   "file": "hero.c10.png",
+   "sha256": "018f405ae516b37ce7b031dc3708b3746e0dcadad72d3a3acc0ee851e415b6f1",
+   "tree": {
+    "src": "ccd5fc7dbc2035b6",
+    "head": "0cf47538f527"
+   },
+   "readback": {
+    "uLitMix": 0.52,
+    "sandVis": true,
+    "sandLive": 900,
+    "fxRootVis": true,
+    "uFxInkCut": 0,
+    "uRimShadowFloorArch": 0.1,
+    "uRimShadowFloor": 0.45,
+    "t": 0.2876000000005588
+   },
+   "ordinal": 9,
+   "at": "2026-08-13T19:28:45.354Z"
+  },
+  {
+   "shot": "hero",
+   "arm": "back",
+   "file": "hero.back.png",
+   "sha256": "dd61344dcb1509d41897749e32e034d52297a20c2600f9df0beee01b0042296f",
+   "tree": {
+    "src": "ccd5fc7dbc2035b6",
+    "head": "515c7cd252b9"
+   },
+   "readback": {
+    "uLitMix": 0.52,
+    "sandVis": true,
+    "sandLive": 900,
+    "fxRootVis": true,
+    "uFxInkCut": 0,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "t": 0.2876000000005588
+   },
+   "ordinal": 10,
+   "at": "2026-08-13T19:29:24.331Z"
+  },
+  {
+   "shot": "temple",
+   "arm": "off",
+   "file": "temple.off.png",
+   "sha256": "98c1174fbc5fd46b755b9da6f38ea0d007d3f4d8654623a40316f13318e8447d",
+   "tree": {
+    "src": "ccd5fc7dbc2035b6",
+    "head": "515c7cd252b9"
+   },
+   "readback": {
+    "uLitMix": 0.52,
+    "sandVis": true,
+    "sandLive": 900,
+    "fxRootVis": true,
+    "uFxInkCut": 0,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "t": 0.2876000000005588
+   },
+   "ordinal": 11,
+   "at": "2026-08-13T19:33:29.910Z"
+  },
+  {
+   "shot": "temple",
+   "arm": "ahide",
+   "file": "temple.ahide.png",
+   "sha256": "be5d0e77d777ad429d07d018dd4b7899ddeb03034a8f99adf8e80f42fc62276e",
+   "tree": {
+    "src": "ccd5fc7dbc2035b6",
+    "head": "515c7cd252b9"
+   },
+   "readback": {
+    "uLitMix": 0.52,
+    "sandVis": false,
+    "sandLive": 900,
+    "fxRootVis": true,
+    "uFxInkCut": 0,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "t": 0.2876000000005588
+   },
+   "ordinal": 12,
+   "at": "2026-08-13T19:33:59.418Z"
+  },
+  {
+   "shot": "temple",
+   "arm": "a26",
+   "file": "temple.a26.png",
+   "sha256": "53b7a631ddde42df03e146289ce3693bcad9c050d6558ce2143d9bf99187f5c7",
+   "tree": {
+    "src": "ccd5fc7dbc2035b6",
+    "head": "515c7cd252b9"
+   },
+   "readback": {
+    "uLitMix": 0.26,
+    "sandVis": true,
+    "sandLive": 900,
+    "fxRootVis": true,
+    "uFxInkCut": 0,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "t": 0.2876000000005588
+   },
+   "ordinal": 13,
+   "at": "2026-08-13T19:34:29.250Z"
+  },
+  {
+   "shot": "temple",
+   "arm": "a13",
+   "file": "temple.a13.png",
+   "sha256": "0e866cce98deb5b054fe3202b6c00b5e56bc3f4abaa09533aae341682ab0a006",
+   "tree": {
+    "src": "ccd5fc7dbc2035b6",
+    "head": "515c7cd252b9"
+   },
+   "readback": {
+    "uLitMix": 0.13,
+    "sandVis": true,
+    "sandLive": 900,
+    "fxRootVis": true,
+    "uFxInkCut": 0,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "t": 0.2876000000005588
+   },
+   "ordinal": 14,
+   "at": "2026-08-13T19:34:59.126Z"
+  },
+  {
+   "shot": "temple",
+   "arm": "a00",
+   "file": "temple.a00.png",
+   "sha256": "e9622da9382c6e4db2b895ce3732c52be2fe15004b191c97bc3932f1b6f5b9fa",
+   "tree": {
+    "src": "ccd5fc7dbc2035b6",
+    "head": "515c7cd252b9"
+   },
+   "readback": {
+    "uLitMix": 0,
+    "sandVis": true,
+    "sandLive": 900,
+    "fxRootVis": true,
+    "uFxInkCut": 0,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "t": 0.2876000000005588
+   },
+   "ordinal": 15,
+   "at": "2026-08-13T19:35:29.003Z"
+  },
+  {
+   "shot": "temple",
+   "arm": "bfx0",
+   "file": "temple.bfx0.png",
+   "sha256": "32ebd44327000784d5336882558f4f8e7c3866bb2b43ab8ac6d0f0de4363d9a5",
+   "tree": {
+    "src": "ccd5fc7dbc2035b6",
+    "head": "515c7cd252b9"
+   },
+   "readback": {
+    "uLitMix": 0.52,
+    "sandVis": true,
+    "sandLive": 900,
+    "fxRootVis": false,
+    "uFxInkCut": 0,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "t": 0.2876000000005588
+   },
+   "ordinal": 16,
+   "at": "2026-08-13T19:35:58.078Z"
+  },
+  {
+   "shot": "temple",
+   "arm": "bon",
+   "file": "temple.bon.png",
+   "sha256": "1d8b227b2259b39e90a431a8f425ad1d749efc4b124a95486cbf9d3587a5885a",
+   "tree": {
+    "src": "ccd5fc7dbc2035b6",
+    "head": "515c7cd252b9"
+   },
+   "readback": {
+    "uLitMix": 0.52,
+    "sandVis": true,
+    "sandLive": 900,
+    "fxRootVis": true,
+    "uFxInkCut": 1,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "t": 0.2876000000005588
+   },
+   "ordinal": 17,
+   "at": "2026-08-13T19:36:28.035Z"
+  },
+  {
+   "shot": "temple",
+   "arm": "back",
+   "file": "temple.back.png",
+   "sha256": "98c1174fbc5fd46b755b9da6f38ea0d007d3f4d8654623a40316f13318e8447d",
+   "tree": {
+    "src": "ccd5fc7dbc2035b6",
+    "head": "515c7cd252b9"
+   },
+   "readback": {
+    "uLitMix": 0.52,
+    "sandVis": true,
+    "sandLive": 900,
+    "fxRootVis": true,
+    "uFxInkCut": 0,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "t": 0.2876000000005588
+   },
+   "ordinal": 18,
+   "at": "2026-08-13T19:36:58.194Z"
+  },
+  {
+   "shot": "sly-closeup",
+   "arm": "off",
+   "file": "sly-closeup.off.png",
+   "sha256": "5b95493cac60cc20fdd5829c1e4342b995eb120fcd60af392d31ad88bee4c8dd",
+   "tree": {
+    "src": "ccd5fc7dbc2035b6",
+    "head": "515c7cd252b9"
+   },
+   "readback": {
+    "uLitMix": 0.52,
+    "sandVis": true,
+    "sandLive": 900,
+    "fxRootVis": true,
+    "uFxInkCut": 0,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "t": 0.2876000000005588
+   },
+   "ordinal": 19,
+   "at": "2026-08-13T19:43:06.878Z"
+  },
+  {
+   "shot": "sly-closeup",
+   "arm": "bfx0",
+   "file": "sly-closeup.bfx0.png",
+   "sha256": "45f01a1e7e3accfdab5d006565586b58f067b8863271fc0c2793442cff8d4933",
+   "tree": {
+    "src": "ccd5fc7dbc2035b6",
+    "head": "515c7cd252b9"
+   },
+   "readback": {
+    "uLitMix": 0.52,
+    "sandVis": true,
+    "sandLive": 900,
+    "fxRootVis": false,
+    "uFxInkCut": 0,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "t": 0.2876000000005588
+   },
+   "ordinal": 20,
+   "at": "2026-08-13T19:43:46.327Z"
+  },
+  {
+   "shot": "sly-closeup",
+   "arm": "bon",
+   "file": "sly-closeup.bon.png",
+   "sha256": "60249942527b153b947dba316ef3ec61257227e8f386fc8cf10aaf578d14a3b8",
+   "tree": {
+    "src": "ccd5fc7dbc2035b6",
+    "head": "515c7cd252b9"
+   },
+   "readback": {
+    "uLitMix": 0.52,
+    "sandVis": true,
+    "sandLive": 900,
+    "fxRootVis": true,
+    "uFxInkCut": 1,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "t": 0.2876000000005588
+   },
+   "ordinal": 21,
+   "at": "2026-08-13T19:44:21.922Z"
+  },
+  {
+   "shot": "sly-closeup",
+   "arm": "c20",
+   "file": "sly-closeup.c20.png",
+   "sha256": "61c871d04d4478f7053573213c1305a29398c6f276a07455beadd1cfd9970fd6",
+   "tree": {
+    "src": "ccd5fc7dbc2035b6",
+    "head": "515c7cd252b9"
+   },
+   "readback": {
+    "uLitMix": 0.52,
+    "sandVis": true,
+    "sandLive": 900,
+    "fxRootVis": true,
+    "uFxInkCut": 0,
+    "uRimShadowFloorArch": 0.2,
+    "uRimShadowFloor": 0.45,
+    "t": 0.2876000000005588
+   },
+   "ordinal": 22,
+   "at": "2026-08-13T19:44:57.954Z"
+  },
+  {
+   "shot": "sly-closeup",
+   "arm": "c10",
+   "file": "sly-closeup.c10.png",
+   "sha256": "82afa3d388a5003afbc4b564972db6cfe2d48881b8fe2313ea729b835cec6c4b",
+   "tree": {
+    "src": "ccd5fc7dbc2035b6",
+    "head": "515c7cd252b9"
+   },
+   "readback": {
+    "uLitMix": 0.52,
+    "sandVis": true,
+    "sandLive": 900,
+    "fxRootVis": true,
+    "uFxInkCut": 0,
+    "uRimShadowFloorArch": 0.1,
+    "uRimShadowFloor": 0.45,
+    "t": 0.2876000000005588
+   },
+   "ordinal": 23,
+   "at": "2026-08-13T19:45:33.826Z"
+  },
+  {
+   "shot": "sly-closeup",
+   "arm": "back",
+   "file": "sly-closeup.back.png",
+   "sha256": "5b95493cac60cc20fdd5829c1e4342b995eb120fcd60af392d31ad88bee4c8dd",
+   "tree": {
+    "src": "ccd5fc7dbc2035b6",
+    "head": "515c7cd252b9"
+   },
+   "readback": {
+    "uLitMix": 0.52,
+    "sandVis": true,
+    "sandLive": 900,
+    "fxRootVis": true,
+    "uFxInkCut": 0,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "t": 0.2876000000005588
+   },
+   "ordinal": 24,
+   "at": "2026-08-13T19:46:10.268Z"
+  },
+  {
+   "shot": "courtyard",
+   "arm": "off",
+   "file": "courtyard.off.png",
+   "sha256": "0a3c3a069956c78f9cff3682eef0b1587d222faf14f227f9ebea8984706cb3ff",
+   "tree": {
+    "src": "ccd5fc7dbc2035b6",
+    "head": "515c7cd252b9"
+   },
+   "readback": {
+    "uLitMix": 0.52,
+    "sandVis": true,
+    "sandLive": 900,
+    "fxRootVis": true,
+    "uFxInkCut": 0,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "t": 0.2876000000005588
+   },
+   "ordinal": 25,
+   "at": "2026-08-13T19:52:29.209Z"
+  },
+  {
+   "shot": "courtyard",
+   "arm": "ahide",
+   "file": "courtyard.ahide.png",
+   "sha256": "c6d61bf1048fc74a38b2e120471991dffe1af9314f709bb394bdcdcedff65df7",
+   "tree": {
+    "src": "ccd5fc7dbc2035b6",
+    "head": "515c7cd252b9"
+   },
+   "readback": {
+    "uLitMix": 0.52,
+    "sandVis": false,
+    "sandLive": 900,
+    "fxRootVis": true,
+    "uFxInkCut": 0,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "t": 0.2876000000005588
+   },
+   "ordinal": 26,
+   "at": "2026-08-13T19:53:07.341Z"
+  },
+  {
+   "shot": "courtyard",
+   "arm": "a26",
+   "file": "courtyard.a26.png",
+   "sha256": "f0f050fe6875d5f8bec17bed6399bed5809771b5332be9cb47185ebcd2f4f1ee",
+   "tree": {
+    "src": "ccd5fc7dbc2035b6",
+    "head": "515c7cd252b9"
+   },
+   "readback": {
+    "uLitMix": 0.26,
+    "sandVis": true,
+    "sandLive": 900,
+    "fxRootVis": true,
+    "uFxInkCut": 0,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "t": 0.2876000000005588
+   },
+   "ordinal": 27,
+   "at": "2026-08-13T19:53:45.729Z"
+  },
+  {
+   "shot": "courtyard",
+   "arm": "a13",
+   "file": "courtyard.a13.png",
+   "sha256": "42cb2554babd6079b87efdc9cd2b9d6396ad7d5a330293789ba4938d6a1d16b6",
+   "tree": {
+    "src": "ccd5fc7dbc2035b6",
+    "head": "515c7cd252b9"
+   },
+   "readback": {
+    "uLitMix": 0.13,
+    "sandVis": true,
+    "sandLive": 900,
+    "fxRootVis": true,
+    "uFxInkCut": 0,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "t": 0.2876000000005588
+   },
+   "ordinal": 28,
+   "at": "2026-08-13T19:54:23.859Z"
+  },
+  {
+   "shot": "courtyard",
+   "arm": "a00",
+   "file": "courtyard.a00.png",
+   "sha256": "b77b2355e38d40670ceb42b63f701602a98a12e0c8d9cd23a99dface6e9e8591",
+   "tree": {
+    "src": "ccd5fc7dbc2035b6",
+    "head": "515c7cd252b9"
+   },
+   "readback": {
+    "uLitMix": 0,
+    "sandVis": true,
+    "sandLive": 900,
+    "fxRootVis": true,
+    "uFxInkCut": 0,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "t": 0.2876000000005588
+   },
+   "ordinal": 29,
+   "at": "2026-08-13T19:55:02.478Z"
+  },
+  {
+   "shot": "courtyard",
+   "arm": "bfx0",
+   "file": "courtyard.bfx0.png",
+   "sha256": "cfdfb14e927f444a80ea8911907daa050516d3a9ae21e60852160b1727a74339",
+   "tree": {
+    "src": "ccd5fc7dbc2035b6",
+    "head": "515c7cd252b9"
+   },
+   "readback": {
+    "uLitMix": 0.52,
+    "sandVis": true,
+    "sandLive": 900,
+    "fxRootVis": false,
+    "uFxInkCut": 0,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "t": 0.2876000000005588
+   },
+   "ordinal": 30,
+   "at": "2026-08-13T19:55:38.972Z"
+  },
+  {
+   "shot": "courtyard",
+   "arm": "bon",
+   "file": "courtyard.bon.png",
+   "sha256": "e6d90915e2f4c0d5f28a8ffbaa87570dbf15b1d80e5c2254cbc59a2bf22ad7e5",
+   "tree": {
+    "src": "ccd5fc7dbc2035b6",
+    "head": "515c7cd252b9"
+   },
+   "readback": {
+    "uLitMix": 0.52,
+    "sandVis": true,
+    "sandLive": 900,
+    "fxRootVis": true,
+    "uFxInkCut": 1,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "t": 0.2876000000005588
+   },
+   "ordinal": 31,
+   "at": "2026-08-13T19:56:17.509Z"
+  },
+  {
+   "shot": "courtyard",
+   "arm": "c20",
+   "file": "courtyard.c20.png",
+   "sha256": "e2f452c571c773837a383fac0a3a034d1322fefc3a3c8b8497738fd017ad298f",
+   "tree": {
+    "src": "ccd5fc7dbc2035b6",
+    "head": "515c7cd252b9"
+   },
+   "readback": {
+    "uLitMix": 0.52,
+    "sandVis": true,
+    "sandLive": 900,
+    "fxRootVis": true,
+    "uFxInkCut": 0,
+    "uRimShadowFloorArch": 0.2,
+    "uRimShadowFloor": 0.45,
+    "t": 0.2876000000005588
+   },
+   "ordinal": 32,
+   "at": "2026-08-13T19:56:59.669Z"
+  },
+  {
+   "shot": "courtyard",
+   "arm": "c10",
+   "file": "courtyard.c10.png",
+   "sha256": "4fc6c1e8a7d6b2a3e9d432ce45661cc3e6dba11e3418d5305a012a4cd047f0cf",
+   "tree": {
+    "src": "ccd5fc7dbc2035b6",
+    "head": "515c7cd252b9"
+   },
+   "readback": {
+    "uLitMix": 0.52,
+    "sandVis": true,
+    "sandLive": 900,
+    "fxRootVis": true,
+    "uFxInkCut": 0,
+    "uRimShadowFloorArch": 0.1,
+    "uRimShadowFloor": 0.45,
+    "t": 0.2876000000005588
+   },
+   "ordinal": 33,
+   "at": "2026-08-13T19:57:38.189Z"
+  },
+  {
+   "shot": "courtyard",
+   "arm": "back",
+   "file": "courtyard.back.png",
+   "sha256": "0a3c3a069956c78f9cff3682eef0b1587d222faf14f227f9ebea8984706cb3ff",
+   "tree": {
+    "src": "ccd5fc7dbc2035b6",
+    "head": "515c7cd252b9"
+   },
+   "readback": {
+    "uLitMix": 0.52,
+    "sandVis": true,
+    "sandLive": 900,
+    "fxRootVis": true,
+    "uFxInkCut": 0,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "t": 0.2876000000005588
+   },
+   "ordinal": 34,
+   "at": "2026-08-13T19:58:20.406Z"
+  },
+  {
+   "shot": "dunes",
+   "arm": "off",
+   "file": "dunes.off.png",
+   "sha256": "fd8be69c7588f8b368662f17280b8ff24d09c91ba2ae6ef2100d7b25b8bcdf12",
+   "tree": {
+    "src": "ccd5fc7dbc2035b6",
+    "head": "515c7cd252b9"
+   },
+   "readback": {
+    "uLitMix": 0.52,
+    "sandVis": true,
+    "sandLive": 900,
+    "fxRootVis": true,
+    "uFxInkCut": 0,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "t": 0.2876000000005588
+   },
+   "ordinal": 35,
+   "at": "2026-08-13T20:03:06.262Z"
+  },
+  {
+   "shot": "dunes",
+   "arm": "ahide",
+   "file": "dunes.ahide.png",
+   "sha256": "bc61a79d6d8d53fde2ab1df4e808ecbf78d9b511cf052512686bf2f0f6dfb380",
+   "tree": {
+    "src": "ccd5fc7dbc2035b6",
+    "head": "515c7cd252b9"
+   },
+   "readback": {
+    "uLitMix": 0.52,
+    "sandVis": false,
+    "sandLive": 900,
+    "fxRootVis": true,
+    "uFxInkCut": 0,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "t": 0.2876000000005588
+   },
+   "ordinal": 36,
+   "at": "2026-08-13T20:03:37.975Z"
+  },
+  {
+   "shot": "dunes",
+   "arm": "a26",
+   "file": "dunes.a26.png",
+   "sha256": "bd0e8293ebbaa908e46eb03e51bbfee23df0aba93d139f576558396cb4feaca9",
+   "tree": {
+    "src": "ccd5fc7dbc2035b6",
+    "head": "515c7cd252b9"
+   },
+   "readback": {
+    "uLitMix": 0.26,
+    "sandVis": true,
+    "sandLive": 900,
+    "fxRootVis": true,
+    "uFxInkCut": 0,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "t": 0.2876000000005588
+   },
+   "ordinal": 37,
+   "at": "2026-08-13T20:04:09.861Z"
+  },
+  {
+   "shot": "dunes",
+   "arm": "a13",
+   "file": "dunes.a13.png",
+   "sha256": "0d37ccd5b559210601f4a71aa0d00b3a675a6426095f286b68f17509c89d7f61",
+   "tree": {
+    "src": "ccd5fc7dbc2035b6",
+    "head": "515c7cd252b9"
+   },
+   "readback": {
+    "uLitMix": 0.13,
+    "sandVis": true,
+    "sandLive": 900,
+    "fxRootVis": true,
+    "uFxInkCut": 0,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "t": 0.2876000000005588
+   },
+   "ordinal": 38,
+   "at": "2026-08-13T20:04:39.087Z"
+  },
+  {
+   "shot": "dunes",
+   "arm": "a00",
+   "file": "dunes.a00.png",
+   "sha256": "bc8fce557fdfc4a5f98dd0618d92f6ba59a1d989c6b49f60c6542b8e6ebc4a01",
+   "tree": {
+    "src": "ccd5fc7dbc2035b6",
+    "head": "515c7cd252b9"
+   },
+   "readback": {
+    "uLitMix": 0,
+    "sandVis": true,
+    "sandLive": 900,
+    "fxRootVis": true,
+    "uFxInkCut": 0,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "t": 0.2876000000005588
+   },
+   "ordinal": 39,
+   "at": "2026-08-13T20:05:08.166Z"
+  },
+  {
+   "shot": "dunes",
+   "arm": "bfx0",
+   "file": "dunes.bfx0.png",
+   "sha256": "cc57d05f31bbd06774d1535e74acaad38746fe3311c193d23f0bd6543eec65df",
+   "tree": {
+    "src": "ccd5fc7dbc2035b6",
+    "head": "515c7cd252b9"
+   },
+   "readback": {
+    "uLitMix": 0.52,
+    "sandVis": true,
+    "sandLive": 900,
+    "fxRootVis": false,
+    "uFxInkCut": 0,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "t": 0.2876000000005588
+   },
+   "ordinal": 40,
+   "at": "2026-08-13T20:05:36.885Z"
+  },
+  {
+   "shot": "dunes",
+   "arm": "bon",
+   "file": "dunes.bon.png",
+   "sha256": "a264731b1f9d99ebef197c421fabc423e48c8d39df4fae11439536cb0144ba1b",
+   "tree": {
+    "src": "ccd5fc7dbc2035b6",
+    "head": "515c7cd252b9"
+   },
+   "readback": {
+    "uLitMix": 0.52,
+    "sandVis": true,
+    "sandLive": 900,
+    "fxRootVis": true,
+    "uFxInkCut": 1,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "t": 0.2876000000005588
+   },
+   "ordinal": 41,
+   "at": "2026-08-13T20:06:08.499Z"
+  },
+  {
+   "shot": "dunes",
+   "arm": "c20",
+   "file": "dunes.c20.png",
+   "sha256": "7390ec6030393064ef94963e25b6afb84fc226c6488bb799d7e8d002dfa0f879",
+   "tree": {
+    "src": "ccd5fc7dbc2035b6",
+    "head": "515c7cd252b9"
+   },
+   "readback": {
+    "uLitMix": 0.52,
+    "sandVis": true,
+    "sandLive": 900,
+    "fxRootVis": true,
+    "uFxInkCut": 0,
+    "uRimShadowFloorArch": 0.2,
+    "uRimShadowFloor": 0.45,
+    "t": 0.2876000000005588
+   },
+   "ordinal": 42,
+   "at": "2026-08-13T20:06:37.562Z"
+  },
+  {
+   "shot": "dunes",
+   "arm": "c10",
+   "file": "dunes.c10.png",
+   "sha256": "8505a45157019f97f3640d41c129549392ae21e15737585efe0ffced5932365b",
+   "tree": {
+    "src": "ccd5fc7dbc2035b6",
+    "head": "515c7cd252b9"
+   },
+   "readback": {
+    "uLitMix": 0.52,
+    "sandVis": true,
+    "sandLive": 900,
+    "fxRootVis": true,
+    "uFxInkCut": 0,
+    "uRimShadowFloorArch": 0.1,
+    "uRimShadowFloor": 0.45,
+    "t": 0.2876000000005588
+   },
+   "ordinal": 43,
+   "at": "2026-08-13T20:07:06.705Z"
+  },
+  {
+   "shot": "dunes",
+   "arm": "s10",
+   "file": "dunes.s10.png",
+   "sha256": "4cd12819546ba0c9cf93f5f93374730dfdfc9e09491fd15b3892206d2667e88f",
+   "tree": {
+    "src": "ccd5fc7dbc2035b6",
+    "head": "515c7cd252b9"
+   },
+   "readback": {
+    "uLitMix": 0.52,
+    "sandVis": true,
+    "sandLive": 900,
+    "fxRootVis": true,
+    "uFxInkCut": 0,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.1,
+    "t": 0.2876000000005588
+   },
+   "ordinal": 44,
+   "at": "2026-08-13T20:07:35.687Z"
+  },
+  {
+   "shot": "dunes",
+   "arm": "back",
+   "file": "dunes.back.png",
+   "sha256": "fd8be69c7588f8b368662f17280b8ff24d09c91ba2ae6ef2100d7b25b8bcdf12",
+   "tree": {
+    "src": "ccd5fc7dbc2035b6",
+    "head": "515c7cd252b9"
+   },
+   "readback": {
+    "uLitMix": 0.52,
+    "sandVis": true,
+    "sandLive": 900,
+    "fxRootVis": true,
+    "uFxInkCut": 0,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "t": 0.2876000000005588
+   },
+   "ordinal": 45,
+   "at": "2026-08-13T20:08:04.604Z"
+  },
+  {
+   "shot": "interior",
+   "arm": "off",
+   "file": "interior.off.png",
+   "sha256": "969824037dda21e383cbfeb99aee8f1d7ec5386ac525b00524a0a73042402bca",
+   "tree": {
+    "src": "ccd5fc7dbc2035b6",
+    "head": "515c7cd252b9"
+   },
+   "readback": {
+    "uLitMix": 0.52,
+    "sandVis": true,
+    "sandLive": 900,
+    "fxRootVis": true,
+    "uFxInkCut": 0,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "t": 0.2876000000005588
+   },
+   "ordinal": 46,
+   "at": "2026-08-13T20:10:11.315Z"
+  },
+  {
+   "shot": "interior",
+   "arm": "ahide",
+   "file": "interior.ahide.png",
+   "sha256": "23bc87ffe8ec64488ab01ee54600d6cbfcdcf5c55a3155666a3e6b7ad5c35d15",
+   "tree": {
+    "src": "ccd5fc7dbc2035b6",
+    "head": "515c7cd252b9"
+   },
+   "readback": {
+    "uLitMix": 0.52,
+    "sandVis": false,
+    "sandLive": 900,
+    "fxRootVis": true,
+    "uFxInkCut": 0,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "t": 0.2876000000005588
+   },
+   "ordinal": 47,
+   "at": "2026-08-13T20:10:26.896Z"
+  },
+  {
+   "shot": "interior",
+   "arm": "a26",
+   "file": "interior.a26.png",
+   "sha256": "e13493d084c1ef47347cc397088143587ef643b96e5becb28d5f808eaa1bf0fa",
+   "tree": {
+    "src": "ccd5fc7dbc2035b6",
+    "head": "515c7cd252b9"
+   },
+   "readback": {
+    "uLitMix": 0.26,
+    "sandVis": true,
+    "sandLive": 900,
+    "fxRootVis": true,
+    "uFxInkCut": 0,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "t": 0.2876000000005588
+   },
+   "ordinal": 48,
+   "at": "2026-08-13T20:10:42.444Z"
+  },
+  {
+   "shot": "interior",
+   "arm": "a13",
+   "file": "interior.a13.png",
+   "sha256": "210577966b6cde44329d3aa28ff62348132b36dc953e3c2754febb86f489c87c",
+   "tree": {
+    "src": "ccd5fc7dbc2035b6",
+    "head": "515c7cd252b9"
+   },
+   "readback": {
+    "uLitMix": 0.13,
+    "sandVis": true,
+    "sandLive": 900,
+    "fxRootVis": true,
+    "uFxInkCut": 0,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "t": 0.2876000000005588
+   },
+   "ordinal": 49,
+   "at": "2026-08-13T20:10:59.678Z"
+  },
+  {
+   "shot": "interior",
+   "arm": "a00",
+   "file": "interior.a00.png",
+   "sha256": "b0dafa3c7935c1d3531c796c43cea0a5753d0af254cfe1845b9698b54da1249c",
+   "tree": {
+    "src": "ccd5fc7dbc2035b6",
+    "head": "515c7cd252b9"
+   },
+   "readback": {
+    "uLitMix": 0,
+    "sandVis": true,
+    "sandLive": 900,
+    "fxRootVis": true,
+    "uFxInkCut": 0,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "t": 0.2876000000005588
+   },
+   "ordinal": 50,
+   "at": "2026-08-13T20:11:15.250Z"
+  },
+  {
+   "shot": "interior",
+   "arm": "bfx0",
+   "file": "interior.bfx0.png",
+   "sha256": "76624ac7a00f96d5ac0a6d2aaaa17f612f1a5ef9caae0fabfe9d651a904acc98",
+   "tree": {
+    "src": "ccd5fc7dbc2035b6",
+    "head": "515c7cd252b9"
+   },
+   "readback": {
+    "uLitMix": 0.52,
+    "sandVis": true,
+    "sandLive": 900,
+    "fxRootVis": false,
+    "uFxInkCut": 0,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "t": 0.2876000000005588
+   },
+   "ordinal": 51,
+   "at": "2026-08-13T20:11:30.403Z"
+  },
+  {
+   "shot": "interior",
+   "arm": "bon",
+   "file": "interior.bon.png",
+   "sha256": "1cf9d7492fa74bbc46096db350f35c5968c26d7d23d0b6ead4eff97e8a7b145f",
+   "tree": {
+    "src": "ccd5fc7dbc2035b6",
+    "head": "515c7cd252b9"
+   },
+   "readback": {
+    "uLitMix": 0.52,
+    "sandVis": true,
+    "sandLive": 900,
+    "fxRootVis": true,
+    "uFxInkCut": 1,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "t": 0.2876000000005588
+   },
+   "ordinal": 52,
+   "at": "2026-08-13T20:11:45.966Z"
+  },
+  {
+   "shot": "interior",
+   "arm": "back",
+   "file": "interior.back.png",
+   "sha256": "969824037dda21e383cbfeb99aee8f1d7ec5386ac525b00524a0a73042402bca",
+   "tree": {
+    "src": "ccd5fc7dbc2035b6",
+    "head": "515c7cd252b9"
+   },
+   "readback": {
+    "uLitMix": 0.52,
+    "sandVis": true,
+    "sandLive": 900,
+    "fxRootVis": true,
+    "uFxInkCut": 0,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "t": 0.2876000000005588
+   },
+   "ordinal": 53,
+   "at": "2026-08-13T20:12:01.597Z"
+  },
+  {
+   "shot": "night",
+   "arm": "off",
+   "file": "night.off.png",
+   "sha256": "a5f4701594d458463768582cfd53fd2469309580847dd6dc4df628b468c0a4cf",
+   "tree": {
+    "src": "ccd5fc7dbc2035b6",
+    "head": "515c7cd252b9"
+   },
+   "readback": {
+    "uLitMix": 0.52,
+    "sandVis": true,
+    "sandLive": 900,
+    "fxRootVis": true,
+    "uFxInkCut": 0,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "t": 0.2876000000005588
+   },
+   "ordinal": 54,
+   "at": "2026-08-13T20:18:24.954Z"
+  },
+  {
+   "shot": "night",
+   "arm": "ahide",
+   "file": "night.ahide.png",
+   "sha256": "3487c23f7d5ffb496ca88d7a7ad60d788067dc5a900325351bf9f3686ad0298c",
+   "tree": {
+    "src": "ccd5fc7dbc2035b6",
+    "head": "515c7cd252b9"
+   },
+   "readback": {
+    "uLitMix": 0.52,
+    "sandVis": false,
+    "sandLive": 900,
+    "fxRootVis": true,
+    "uFxInkCut": 0,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "t": 0.2876000000005588
+   },
+   "ordinal": 55,
+   "at": "2026-08-13T20:19:03.243Z"
+  },
+  {
+   "shot": "night",
+   "arm": "a26",
+   "file": "night.a26.png",
+   "sha256": "ccffd65b33048b32eae8b9bc177c5da15d31803cefd0752e8fa72647a53a897c",
+   "tree": {
+    "src": "ccd5fc7dbc2035b6",
+    "head": "515c7cd252b9"
+   },
+   "readback": {
+    "uLitMix": 0.26,
+    "sandVis": true,
+    "sandLive": 900,
+    "fxRootVis": true,
+    "uFxInkCut": 0,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "t": 0.2876000000005588
+   },
+   "ordinal": 56,
+   "at": "2026-08-13T20:19:41.894Z"
+  },
+  {
+   "shot": "night",
+   "arm": "a13",
+   "file": "night.a13.png",
+   "sha256": "e7224e1fa24cd6fcd06843a4045f567e5ea50836b3022fab2434273c1ade94c9",
+   "tree": {
+    "src": "ccd5fc7dbc2035b6",
+    "head": "515c7cd252b9"
+   },
+   "readback": {
+    "uLitMix": 0.13,
+    "sandVis": true,
+    "sandLive": 900,
+    "fxRootVis": true,
+    "uFxInkCut": 0,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "t": 0.2876000000005588
+   },
+   "ordinal": 57,
+   "at": "2026-08-13T20:20:20.568Z"
+  },
+  {
+   "shot": "night",
+   "arm": "a00",
+   "file": "night.a00.png",
+   "sha256": "d3b1eff63ea38b31a82e6319d5abd0e44289777b2786d62c5b191a1e4b34f3a6",
+   "tree": {
+    "src": "ccd5fc7dbc2035b6",
+    "head": "515c7cd252b9"
+   },
+   "readback": {
+    "uLitMix": 0,
+    "sandVis": true,
+    "sandLive": 900,
+    "fxRootVis": true,
+    "uFxInkCut": 0,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "t": 0.2876000000005588
+   },
+   "ordinal": 58,
+   "at": "2026-08-13T20:20:59.675Z"
+  },
+  {
+   "shot": "night",
+   "arm": "bfx0",
+   "file": "night.bfx0.png",
+   "sha256": "657de6d0aa386785c1853997aa621c4b92eb169bd0ea71eda8a46fe3563f6019",
+   "tree": {
+    "src": "ccd5fc7dbc2035b6",
+    "head": "515c7cd252b9"
+   },
+   "readback": {
+    "uLitMix": 0.52,
+    "sandVis": true,
+    "sandLive": 900,
+    "fxRootVis": false,
+    "uFxInkCut": 0,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "t": 0.2876000000005588
+   },
+   "ordinal": 59,
+   "at": "2026-08-13T20:21:37.853Z"
+  },
+  {
+   "shot": "night",
+   "arm": "bon",
+   "file": "night.bon.png",
+   "sha256": "781568910a18ed992d27506c1ed02362f5a0852aa012d5f50dcc286f7da06344",
+   "tree": {
+    "src": "ccd5fc7dbc2035b6",
+    "head": "515c7cd252b9"
+   },
+   "readback": {
+    "uLitMix": 0.52,
+    "sandVis": true,
+    "sandLive": 900,
+    "fxRootVis": true,
+    "uFxInkCut": 1,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "t": 0.2876000000005588
+   },
+   "ordinal": 60,
+   "at": "2026-08-13T20:22:16.226Z"
+  },
+  {
+   "shot": "night",
+   "arm": "c20",
+   "file": "night.c20.png",
+   "sha256": "02ba49f578defc4dccc97ab68c67963137e04960876aa0beaa084f071118b161",
+   "tree": {
+    "src": "ccd5fc7dbc2035b6",
+    "head": "515c7cd252b9"
+   },
+   "readback": {
+    "uLitMix": 0.52,
+    "sandVis": true,
+    "sandLive": 900,
+    "fxRootVis": true,
+    "uFxInkCut": 0,
+    "uRimShadowFloorArch": 0.2,
+    "uRimShadowFloor": 0.45,
+    "t": 0.2876000000005588
+   },
+   "ordinal": 61,
+   "at": "2026-08-13T20:22:58.711Z"
+  },
+  {
+   "shot": "night",
+   "arm": "c10",
+   "file": "night.c10.png",
+   "sha256": "654e9a919d64b608ba10db275ddd11b63d97e28392c491ac8e5314856d77b095",
+   "tree": {
+    "src": "ccd5fc7dbc2035b6",
+    "head": "515c7cd252b9"
+   },
+   "readback": {
+    "uLitMix": 0.52,
+    "sandVis": true,
+    "sandLive": 900,
+    "fxRootVis": true,
+    "uFxInkCut": 0,
+    "uRimShadowFloorArch": 0.1,
+    "uRimShadowFloor": 0.45,
+    "t": 0.2876000000005588
+   },
+   "ordinal": 62,
+   "at": "2026-08-13T20:23:37.149Z"
+  },
+  {
+   "shot": "night",
+   "arm": "s10",
+   "file": "night.s10.png",
+   "sha256": "5319525aad06e7df22b25746e7404fab8c995598c57efac9332ece7891a86388",
+   "tree": {
+    "src": "ccd5fc7dbc2035b6",
+    "head": "515c7cd252b9"
+   },
+   "readback": {
+    "uLitMix": 0.52,
+    "sandVis": true,
+    "sandLive": 900,
+    "fxRootVis": true,
+    "uFxInkCut": 0,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.1,
+    "t": 0.2876000000005588
+   },
+   "ordinal": 63,
+   "at": "2026-08-13T20:24:15.715Z"
+  },
+  {
+   "shot": "night",
+   "arm": "back",
+   "file": "night.back.png",
+   "sha256": "a5f4701594d458463768582cfd53fd2469309580847dd6dc4df628b468c0a4cf",
+   "tree": {
+    "src": "ccd5fc7dbc2035b6",
+    "head": "515c7cd252b9"
+   },
+   "readback": {
+    "uLitMix": 0.52,
+    "sandVis": true,
+    "sandLive": 900,
+    "fxRootVis": true,
+    "uFxInkCut": 0,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "t": 0.2876000000005588
+   },
+   "ordinal": 64,
+   "at": "2026-08-13T20:24:53.795Z"
+  },
+  {
+   "shot": "traversal",
+   "arm": "off",
+   "file": "traversal.off.png",
+   "sha256": "89cf7a4294dc976d446a830a2afc2712cebd65fabb236e31b2ea03faf9811c79",
+   "tree": {
+    "src": "ccd5fc7dbc2035b6",
+    "head": "515c7cd252b9"
+   },
+   "readback": {
+    "uLitMix": 0.52,
+    "sandVis": true,
+    "sandLive": 900,
+    "fxRootVis": true,
+    "uFxInkCut": 0,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "t": 0.2876000000005588
+   },
+   "ordinal": 65,
+   "at": "2026-08-13T20:30:48.044Z"
+  },
+  {
+   "shot": "traversal",
+   "arm": "bfx0",
+   "file": "traversal.bfx0.png",
+   "sha256": "5595025a788c1191ab123a2ea5fcaebbefcf6e3491c347fc664f1804b71bc34f",
+   "tree": {
+    "src": "ccd5fc7dbc2035b6",
+    "head": "515c7cd252b9"
+   },
+   "readback": {
+    "uLitMix": 0.52,
+    "sandVis": true,
+    "sandLive": 900,
+    "fxRootVis": false,
+    "uFxInkCut": 0,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "t": 0.2876000000005588
+   },
+   "ordinal": 66,
+   "at": "2026-08-13T20:31:22.115Z"
+  },
+  {
+   "shot": "traversal",
+   "arm": "bon",
+   "file": "traversal.bon.png",
+   "sha256": "18705d54d7737d8ad67c8f139803d08d2c09d57d8017c538d48feb2820b3f9d8",
+   "tree": {
+    "src": "ccd5fc7dbc2035b6",
+    "head": "515c7cd252b9"
+   },
+   "readback": {
+    "uLitMix": 0.52,
+    "sandVis": true,
+    "sandLive": 900,
+    "fxRootVis": true,
+    "uFxInkCut": 1,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "t": 0.2876000000005588
+   },
+   "ordinal": 67,
+   "at": "2026-08-13T20:31:56.891Z"
+  },
+  {
+   "shot": "traversal",
+   "arm": "back",
+   "file": "traversal.back.png",
+   "sha256": "89cf7a4294dc976d446a830a2afc2712cebd65fabb236e31b2ea03faf9811c79",
+   "tree": {
+    "src": "ccd5fc7dbc2035b6",
+    "head": "515c7cd252b9"
+   },
+   "readback": {
+    "uLitMix": 0.52,
+    "sandVis": true,
+    "sandLive": 900,
+    "fxRootVis": true,
+    "uFxInkCut": 0,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "t": 0.2876000000005588
+   },
+   "ordinal": 68,
+   "at": "2026-08-13T20:32:31.188Z"
+  },
+  {
+   "shot": "guard",
+   "arm": "off",
+   "file": "guard.off.png",
+   "sha256": "05421cbdff6a92257a89fb93ee9f38ff2969d75f03caf44191273947684a6d99",
+   "tree": {
+    "src": "ccd5fc7dbc2035b6",
+    "head": "515c7cd252b9"
+   },
+   "readback": {
+    "uLitMix": 0.52,
+    "sandVis": true,
+    "sandLive": 900,
+    "fxRootVis": true,
+    "uFxInkCut": 0,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "t": 0.2876000000005588
+   },
+   "ordinal": 69,
+   "at": "2026-08-13T20:35:18.643Z"
+  },
+  {
+   "shot": "guard",
+   "arm": "bfx0",
+   "file": "guard.bfx0.png",
+   "sha256": "af605e9a88b210e3c31f0a5c403935de63d2eb1c23d8e09c1bd4714d559ced5d",
+   "tree": {
+    "src": "ccd5fc7dbc2035b6",
+    "head": "515c7cd252b9"
+   },
+   "readback": {
+    "uLitMix": 0.52,
+    "sandVis": true,
+    "sandLive": 900,
+    "fxRootVis": false,
+    "uFxInkCut": 0,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "t": 0.2876000000005588
+   },
+   "ordinal": 70,
+   "at": "2026-08-13T20:35:38.167Z"
+  },
+  {
+   "shot": "guard",
+   "arm": "bon",
+   "file": "guard.bon.png",
+   "sha256": "740e0fc13d0927de137f57de58ecbe4158e1a390f1bb062cff159dbdbabc1978",
+   "tree": {
+    "src": "ccd5fc7dbc2035b6",
+    "head": "515c7cd252b9"
+   },
+   "readback": {
+    "uLitMix": 0.52,
+    "sandVis": true,
+    "sandLive": 900,
+    "fxRootVis": true,
+    "uFxInkCut": 1,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "t": 0.2876000000005588
+   },
+   "ordinal": 71,
+   "at": "2026-08-13T20:35:58.556Z"
+  },
+  {
+   "shot": "guard",
+   "arm": "c20",
+   "file": "guard.c20.png",
+   "sha256": "869ca0538a979606f0e7192f47bdf9ab45076c28018ffc0c3e875af8d5bcbc88",
+   "tree": {
+    "src": "ccd5fc7dbc2035b6",
+    "head": "515c7cd252b9"
+   },
+   "readback": {
+    "uLitMix": 0.52,
+    "sandVis": true,
+    "sandLive": 900,
+    "fxRootVis": true,
+    "uFxInkCut": 0,
+    "uRimShadowFloorArch": 0.2,
+    "uRimShadowFloor": 0.45,
+    "t": 0.2876000000005588
+   },
+   "ordinal": 72,
+   "at": "2026-08-13T20:36:18.674Z"
+  },
+  {
+   "shot": "guard",
+   "arm": "c10",
+   "file": "guard.c10.png",
+   "sha256": "15ca89463b43ea06fe35096e6cee0634cd59727e56ecee04c9f0319c2e00fc38",
+   "tree": {
+    "src": "ccd5fc7dbc2035b6",
+    "head": "515c7cd252b9"
+   },
+   "readback": {
+    "uLitMix": 0.52,
+    "sandVis": true,
+    "sandLive": 900,
+    "fxRootVis": true,
+    "uFxInkCut": 0,
+    "uRimShadowFloorArch": 0.1,
+    "uRimShadowFloor": 0.45,
+    "t": 0.2876000000005588
+   },
+   "ordinal": 73,
+   "at": "2026-08-13T20:36:38.971Z"
+  },
+  {
+   "shot": "guard",
+   "arm": "back",
+   "file": "guard.back.png",
+   "sha256": "05421cbdff6a92257a89fb93ee9f38ff2969d75f03caf44191273947684a6d99",
+   "tree": {
+    "src": "ccd5fc7dbc2035b6",
+    "head": "515c7cd252b9"
+   },
+   "readback": {
+    "uLitMix": 0.52,
+    "sandVis": true,
+    "sandLive": 900,
+    "fxRootVis": true,
+    "uFxInkCut": 0,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "t": 0.2876000000005588
+   },
+   "ordinal": 74,
+   "at": "2026-08-13T20:36:59.308Z"
+  },
+  {
+   "shot": "sly-profile",
+   "arm": "off",
+   "file": "sly-profile.off.png",
+   "sha256": "f09a12f438f6ba67a00609fe0c014beae615169705824473daf4b3be7387b729",
+   "tree": {
+    "src": "ccd5fc7dbc2035b6",
+    "head": "515c7cd252b9"
+   },
+   "readback": {
+    "uLitMix": 0.52,
+    "sandVis": true,
+    "sandLive": 900,
+    "fxRootVis": true,
+    "uFxInkCut": 0,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "t": 0.2876000000005588
+   },
+   "ordinal": 75,
+   "at": "2026-08-13T20:40:57.963Z"
+  },
+  {
+   "shot": "sly-profile",
+   "arm": "ahide",
+   "file": "sly-profile.ahide.png",
+   "sha256": "b2747884390ef765310bb37781ac0782f39da97477eeb42817488930250f807f",
+   "tree": {
+    "src": "ccd5fc7dbc2035b6",
+    "head": "515c7cd252b9"
+   },
+   "readback": {
+    "uLitMix": 0.52,
+    "sandVis": false,
+    "sandLive": 900,
+    "fxRootVis": true,
+    "uFxInkCut": 0,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "t": 0.2876000000005588
+   },
+   "ordinal": 76,
+   "at": "2026-08-13T20:41:26.845Z"
+  },
+  {
+   "shot": "sly-profile",
+   "arm": "a26",
+   "file": "sly-profile.a26.png",
+   "sha256": "3e4ab39d67cddcc750acb8fb974beee345530ffc97642ce6368e31d6143b2225",
+   "tree": {
+    "src": "ccd5fc7dbc2035b6",
+    "head": "515c7cd252b9"
+   },
+   "readback": {
+    "uLitMix": 0.26,
+    "sandVis": true,
+    "sandLive": 900,
+    "fxRootVis": true,
+    "uFxInkCut": 0,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "t": 0.2876000000005588
+   },
+   "ordinal": 77,
+   "at": "2026-08-13T20:41:55.799Z"
+  },
+  {
+   "shot": "sly-profile",
+   "arm": "a13",
+   "file": "sly-profile.a13.png",
+   "sha256": "8aa5946537d4c0e1ed6c0bb5a43225eb16a0372a0f251a7ba9830bd99a767513",
+   "tree": {
+    "src": "ccd5fc7dbc2035b6",
+    "head": "515c7cd252b9"
+   },
+   "readback": {
+    "uLitMix": 0.13,
+    "sandVis": true,
+    "sandLive": 900,
+    "fxRootVis": true,
+    "uFxInkCut": 0,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "t": 0.2876000000005588
+   },
+   "ordinal": 78,
+   "at": "2026-08-13T20:42:24.912Z"
+  },
+  {
+   "shot": "sly-profile",
+   "arm": "a00",
+   "file": "sly-profile.a00.png",
+   "sha256": "84efcbbd5c2c1d1363e9223e3e7a89b4402494ab95c3172dd56ed47684e3c29e",
+   "tree": {
+    "src": "ccd5fc7dbc2035b6",
+    "head": "515c7cd252b9"
+   },
+   "readback": {
+    "uLitMix": 0,
+    "sandVis": true,
+    "sandLive": 900,
+    "fxRootVis": true,
+    "uFxInkCut": 0,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "t": 0.2876000000005588
+   },
+   "ordinal": 79,
+   "at": "2026-08-13T20:42:54.194Z"
+  },
+  {
+   "shot": "sly-profile",
+   "arm": "bfx0",
+   "file": "sly-profile.bfx0.png",
+   "sha256": "86c72f7cb31950c14cc02c86cda20f9f571ec46c33798b4ecf92a47c819b879b",
+   "tree": {
+    "src": "ccd5fc7dbc2035b6",
+    "head": "515c7cd252b9"
+   },
+   "readback": {
+    "uLitMix": 0.52,
+    "sandVis": true,
+    "sandLive": 900,
+    "fxRootVis": false,
+    "uFxInkCut": 0,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "t": 0.2876000000005588
+   },
+   "ordinal": 80,
+   "at": "2026-08-13T20:43:23.156Z"
+  },
+  {
+   "shot": "sly-profile",
+   "arm": "bon",
+   "file": "sly-profile.bon.png",
+   "sha256": "0fcb8df33193480439265d6f3202b867459df7f746a4b1aa8c55d555e46a84d3",
+   "tree": {
+    "src": "ccd5fc7dbc2035b6",
+    "head": "515c7cd252b9"
+   },
+   "readback": {
+    "uLitMix": 0.52,
+    "sandVis": true,
+    "sandLive": 900,
+    "fxRootVis": true,
+    "uFxInkCut": 1,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "t": 0.2876000000005588
+   },
+   "ordinal": 81,
+   "at": "2026-08-13T20:43:52.609Z"
+  },
+  {
+   "shot": "sly-profile",
+   "arm": "back",
+   "file": "sly-profile.back.png",
+   "sha256": "f09a12f438f6ba67a00609fe0c014beae615169705824473daf4b3be7387b729",
+   "tree": {
+    "src": "ccd5fc7dbc2035b6",
+    "head": "515c7cd252b9"
+   },
+   "readback": {
+    "uLitMix": 0.52,
+    "sandVis": true,
+    "sandLive": 900,
+    "fxRootVis": true,
+    "uFxInkCut": 0,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "t": 0.2876000000005588
+   },
+   "ordinal": 82,
+   "at": "2026-08-13T20:44:21.716Z"
+  },
+  {
+   "shot": "combat",
+   "arm": "off",
+   "file": "combat.off.png",
+   "sha256": "02c76432564dda367f30620a736a5d95025f75c752f5552a88a0d9c717cd57a8",
+   "tree": {
+    "src": "ccd5fc7dbc2035b6",
+    "head": "515c7cd252b9"
+   },
+   "readback": {
+    "uLitMix": 0.52,
+    "sandVis": true,
+    "sandLive": 900,
+    "fxRootVis": true,
+    "uFxInkCut": 0,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "t": 0.2833333333333333
+   },
+   "ordinal": 83,
+   "at": "2026-08-13T20:49:22.670Z"
+  },
+  {
+   "shot": "combat",
+   "arm": "bfx0",
+   "file": "combat.bfx0.png",
+   "sha256": "d44e66bc9bb2381fa287ffcadb619eaf1e911917d8a8eeeda184b9a5f084a3af",
+   "tree": {
+    "src": "ccd5fc7dbc2035b6",
+    "head": "515c7cd252b9"
+   },
+   "readback": {
+    "uLitMix": 0.52,
+    "sandVis": true,
+    "sandLive": 900,
+    "fxRootVis": false,
+    "uFxInkCut": 0,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "t": 0.2833333333333333
+   },
+   "ordinal": 84,
+   "at": "2026-08-13T20:49:54.100Z"
+  },
+  {
+   "shot": "combat",
+   "arm": "bon",
+   "file": "combat.bon.png",
+   "sha256": "2fa0452acfc2f7786f78f1ef3fc0d715bb8d5e02fa15777ee80845207e3d3089",
+   "tree": {
+    "src": "ccd5fc7dbc2035b6",
+    "head": "515c7cd252b9"
+   },
+   "readback": {
+    "uLitMix": 0.52,
+    "sandVis": true,
+    "sandLive": 900,
+    "fxRootVis": true,
+    "uFxInkCut": 1,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "t": 0.2833333333333333
+   },
+   "ordinal": 85,
+   "at": "2026-08-13T20:50:26.405Z"
+  },
+  {
+   "shot": "combat",
+   "arm": "back",
+   "file": "combat.back.png",
+   "sha256": "02c76432564dda367f30620a736a5d95025f75c752f5552a88a0d9c717cd57a8",
+   "tree": {
+    "src": "ccd5fc7dbc2035b6",
+    "head": "515c7cd252b9"
+   },
+   "readback": {
+    "uLitMix": 0.52,
+    "sandVis": true,
+    "sandLive": 900,
+    "fxRootVis": true,
+    "uFxInkCut": 0,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "t": 0.2833333333333333
+   },
+   "ordinal": 86,
+   "at": "2026-08-13T20:50:58.993Z"
+  }
+ ]
+}

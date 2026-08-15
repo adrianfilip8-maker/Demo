@@ -1,0 +1,108 @@
+HEAD 8562e87908ad verified (three inert mechanisms present); expected src hash 0ff46d1cb8457d8b
+frames -> /home/user/Demo/progress/records/gradetrio1
+HEAD tree verified under the lock — src 0ff46d1cb8457d8b (no install; the three mechanisms are inert in HEAD)
+renderer: ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)
+-- staged hero (1/16, 51s)
+  # 1 hero.off               sha 44b8061ff64ca70e  tomb=1 rake=0 nfloor=0.125 amb=0.3901 scB=0.53672 camY=10.28 na=0
+  # 2 hero.bon               sha 44b8061ff64ca70e  tomb=0.3 rake=0 nfloor=0.125 amb=0.3901 scB=0.53672 camY=10.28 na=0
+  # 3 hero.con               sha 16752d66b870b0be  tomb=1 rake=1 nfloor=0.125 amb=0.3901 scB=0.53672 camY=10.28 na=0
+  # 4 hero.cko               sha b113855e7bb42591  tomb=1 rake=0.5 nfloor=0.125 amb=0.3901 scB=0.53672 camY=10.28 na=0
+  # 5 hero.don               sha 44b8061ff64ca70e  tomb=1 rake=0 nfloor=0.14 amb=0.3901 scB=0.53672 camY=10.28 na=0
+  # 6 hero.back              sha 44b8061ff64ca70e  tomb=1 rake=0 nfloor=0.125 amb=0.3901 scB=0.53672 camY=10.28 na=0
+-- staged kaykit (2/16, 11s)
+  # 7 kaykit.off             sha 5359980866e4d39a  tomb=1 rake=0 nfloor=0.125 amb=0.3901 scB=0.53672 camY=14.00 na=0
+  # 8 kaykit.bon             sha 5359980866e4d39a  tomb=0.3 rake=0 nfloor=0.125 amb=0.3901 scB=0.53672 camY=14.00 na=0
+  # 9 kaykit.con             sha 2e567ae69dc20556  tomb=1 rake=1 nfloor=0.125 amb=0.3901 scB=0.53672 camY=14.00 na=0
+  #10 kaykit.don             sha 5359980866e4d39a  tomb=1 rake=0 nfloor=0.14 amb=0.3901 scB=0.53672 camY=14.00 na=0
+  #11 kaykit.back            sha 5359980866e4d39a  tomb=1 rake=0 nfloor=0.125 amb=0.3901 scB=0.53672 camY=14.00 na=0
+-- staged temple (3/16, 0s)
+  #12 temple.off             sha 9ddc8e93eb9c0bd8  tomb=1 rake=0 nfloor=0.125 amb=0.4093 scB=0.56327 camY=2.60 na=0
+  #13 temple.bon             sha 9ddc8e93eb9c0bd8  tomb=0.3 rake=0 nfloor=0.125 amb=0.4093 scB=0.56327 camY=2.60 na=0
+  #14 temple.con             sha b1e7365c6ae70c17  tomb=1 rake=1 nfloor=0.125 amb=0.4093 scB=0.56327 camY=2.60 na=0
+  #15 temple.don             sha 9ddc8e93eb9c0bd8  tomb=1 rake=0 nfloor=0.14 amb=0.4093 scB=0.56327 camY=2.60 na=0
+  #16 temple.back            sha 9ddc8e93eb9c0bd8  tomb=1 rake=0 nfloor=0.125 amb=0.4093 scB=0.56327 camY=2.60 na=0
+-- staged sly-closeup (4/16, 16s)
+  #17 sly-closeup.off        sha dedb0a8820aad113  tomb=1 rake=0 nfloor=0.125 amb=0.3876 scB=0.53333 camY=1.45 na=0
+  #18 sly-closeup.bon        sha dedb0a8820aad113  tomb=0.3 rake=0 nfloor=0.125 amb=0.3876 scB=0.53333 camY=1.45 na=0
+  #19 sly-closeup.con        sha 23bc34def8799b80  tomb=1 rake=1 nfloor=0.125 amb=0.3876 scB=0.53333 camY=1.45 na=0
+  #20 sly-closeup.don        sha dedb0a8820aad113  tomb=1 rake=0 nfloor=0.14 amb=0.3876 scB=0.53333 camY=1.45 na=0
+  #21 sly-closeup.back       sha dedb0a8820aad113  tomb=1 rake=0 nfloor=0.125 amb=0.3876 scB=0.53333 camY=1.45 na=0
+-- staged sly-startle (5/16, 0s)
+  #22 sly-startle.off        sha c95435efb43a169a  tomb=1 rake=0 nfloor=0.125 amb=0.3876 scB=0.53333 camY=1.60 na=0
+  #23 sly-startle.bon        sha c95435efb43a169a  tomb=0.3 rake=0 nfloor=0.125 amb=0.3876 scB=0.53333 camY=1.60 na=0
+  #24 sly-startle.con        sha 9a5fff076883e78d  tomb=1 rake=1 nfloor=0.125 amb=0.3876 scB=0.53333 camY=1.60 na=0
+  #25 sly-startle.don        sha c95435efb43a169a  tomb=1 rake=0 nfloor=0.14 amb=0.3876 scB=0.53333 camY=1.60 na=0
+  #26 sly-startle.back       sha c95435efb43a169a  tomb=1 rake=0 nfloor=0.125 amb=0.3876 scB=0.53333 camY=1.60 na=0
+-- staged sly-perch (6/16, 32s)
+  #27 sly-perch.off          sha 74d3ca0b151dedbc  tomb=1 rake=0 nfloor=0.125 amb=0.3876 scB=0.53333 camY=1.15 na=0
+  #28 sly-perch.bon          sha 74d3ca0b151dedbc  tomb=0.3 rake=0 nfloor=0.125 amb=0.3876 scB=0.53333 camY=1.15 na=0
+  #29 sly-perch.con          sha d3f24b1bb7f094ab  tomb=1 rake=1 nfloor=0.125 amb=0.3876 scB=0.53333 camY=1.15 na=0
+  #30 sly-perch.don          sha 74d3ca0b151dedbc  tomb=1 rake=0 nfloor=0.14 amb=0.3876 scB=0.53333 camY=1.15 na=0
+  #31 sly-perch.back         sha 74d3ca0b151dedbc  tomb=1 rake=0 nfloor=0.125 amb=0.3876 scB=0.53333 camY=1.15 na=0
+-- staged sly-arm (7/16, 0s)
+  #32 sly-arm.off            sha 881d37c61ca8261e  tomb=1 rake=0 nfloor=0.125 amb=0.3876 scB=0.53333 camY=1.45 na=0
+  #33 sly-arm.bon            sha 881d37c61ca8261e  tomb=0.3 rake=0 nfloor=0.125 amb=0.3876 scB=0.53333 camY=1.45 na=0
+  #34 sly-arm.con            sha 55b59d806da56198  tomb=1 rake=1 nfloor=0.125 amb=0.3876 scB=0.53333 camY=1.45 na=0
+  #35 sly-arm.don            sha 881d37c61ca8261e  tomb=1 rake=0 nfloor=0.14 amb=0.3876 scB=0.53333 camY=1.45 na=0
+  #36 sly-arm.back           sha 881d37c61ca8261e  tomb=1 rake=0 nfloor=0.125 amb=0.3876 scB=0.53333 camY=1.45 na=0
+-- staged courtyard (8/16, 32s)
+  #37 courtyard.off          sha 374ee24599a99b42  tomb=1 rake=0 nfloor=0.125 amb=0.3929 scB=0.54054 camY=4.00 na=0
+  #38 courtyard.bon          sha 374ee24599a99b42  tomb=0.3 rake=0 nfloor=0.125 amb=0.3929 scB=0.54054 camY=4.00 na=0
+  #39 courtyard.con          sha fc415ab47366b7d3  tomb=1 rake=1 nfloor=0.125 amb=0.3929 scB=0.54054 camY=4.00 na=0
+  #40 courtyard.don          sha 374ee24599a99b42  tomb=1 rake=0 nfloor=0.14 amb=0.3929 scB=0.54054 camY=4.00 na=0
+  #41 courtyard.back         sha 374ee24599a99b42  tomb=1 rake=0 nfloor=0.125 amb=0.3929 scB=0.54054 camY=4.00 na=0
+-- staged dunes (9/16, 16s)
+  #42 dunes.off              sha ad13b792a1919255  tomb=1 rake=0 nfloor=0.125 amb=0.3034 scB=0.41748 camY=19.50 na=0
+  #43 dunes.bon              sha ad13b792a1919255  tomb=0.3 rake=0 nfloor=0.125 amb=0.3034 scB=0.41748 camY=19.50 na=0
+  #44 dunes.con              sha 1e5e6e24b2a4056e  tomb=1 rake=1 nfloor=0.125 amb=0.3034 scB=0.41748 camY=19.50 na=0
+  #45 dunes.don              sha ad13b792a1919255  tomb=1 rake=0 nfloor=0.14 amb=0.3034 scB=0.41748 camY=19.50 na=0
+  #46 dunes.back             sha ad13b792a1919255  tomb=1 rake=0 nfloor=0.125 amb=0.3034 scB=0.41748 camY=19.50 na=0
+-- staged interior (10/16, 0s)
+  #47 interior.off           sha 388ea93f4cde0ba6  tomb=1 rake=0 nfloor=0.125 amb=0.5864 scB=0.59339 camY=-9.20 na=0
+  #48 interior.bon           sha 54c7090bf2887360  tomb=0.3 rake=0 nfloor=0.125 amb=0.1759 scB=0.24257 camY=-9.20 na=0
+  #49 interior.bko           sha 68d154e2a6ce6863  tomb=0.15 rake=0 nfloor=0.125 amb=0.0880 scB=0.12129 camY=-9.20 na=0
+  #50 interior.con           sha 388ea93f4cde0ba6  tomb=1 rake=1 nfloor=0.125 amb=0.5864 scB=0.59339 camY=-9.20 na=0
+  #51 interior.don           sha 388ea93f4cde0ba6  tomb=1 rake=0 nfloor=0.14 amb=0.5864 scB=0.59339 camY=-9.20 na=0
+  #52 interior.back          sha 388ea93f4cde0ba6  tomb=1 rake=0 nfloor=0.125 amb=0.5864 scB=0.59339 camY=-9.20 na=0
+-- staged night (11/16, 34s)
+  #53 night.off              sha 934d47890d29b5ba  tomb=1 rake=0 nfloor=0.125 amb=0.1000 scB=0.07805 camY=8.40 na=1
+  #54 night.bon              sha 934d47890d29b5ba  tomb=0.3 rake=0 nfloor=0.125 amb=0.1000 scB=0.07805 camY=8.40 na=1
+  #55 night.con              sha 934d47890d29b5ba  tomb=1 rake=1 nfloor=0.125 amb=0.1000 scB=0.07805 camY=8.40 na=1
+  #56 night.don              sha 65bee414e75f944d  tomb=1 rake=0 nfloor=0.14 amb=0.1000 scB=0.08742 camY=8.40 na=1
+  #57 night.dko              sha 062abd1412b77017  tomb=1 rake=0 nfloor=0.18 amb=0.1000 scB=0.11240 camY=8.40 na=1
+  #58 night.back             sha 934d47890d29b5ba  tomb=1 rake=0 nfloor=0.125 amb=0.1000 scB=0.07805 camY=8.40 na=1
+-- staged traversal (12/16, 0s)
+  #59 traversal.off          sha c7721b21a5c1984c  tomb=1 rake=0 nfloor=0.125 amb=0.3917 scB=0.53889 camY=14.00 na=0
+  #60 traversal.bon          sha c7721b21a5c1984c  tomb=0.3 rake=0 nfloor=0.125 amb=0.3917 scB=0.53889 camY=14.00 na=0
+  #61 traversal.con          sha 9582cefc3b6a1e70  tomb=1 rake=1 nfloor=0.125 amb=0.3917 scB=0.53889 camY=14.00 na=0
+  #62 traversal.don          sha c7721b21a5c1984c  tomb=1 rake=0 nfloor=0.14 amb=0.3917 scB=0.53889 camY=14.00 na=0
+  #63 traversal.back         sha c7721b21a5c1984c  tomb=1 rake=0 nfloor=0.125 amb=0.3917 scB=0.53889 camY=14.00 na=0
+-- staged combat (13/16, 0s)
+  #64 combat.off             sha 417125310db34d41  tomb=1 rake=0 nfloor=0.125 amb=0.3994 scB=0.54960 camY=2.35 na=0
+  #65 combat.bon             sha 417125310db34d41  tomb=0.3 rake=0 nfloor=0.125 amb=0.3994 scB=0.54960 camY=2.35 na=0
+  #66 combat.con             sha d565b945128845a7  tomb=1 rake=1 nfloor=0.125 amb=0.3994 scB=0.54960 camY=2.35 na=0
+  #67 combat.don             sha 417125310db34d41  tomb=1 rake=0 nfloor=0.14 amb=0.3994 scB=0.54960 camY=2.35 na=0
+  #68 combat.back            sha 417125310db34d41  tomb=1 rake=0 nfloor=0.125 amb=0.3994 scB=0.54960 camY=2.35 na=0
+-- staged guard (14/16, 0s)
+  #69 guard.off              sha 7b15b4d57182883f  tomb=1 rake=0 nfloor=0.125 amb=0.1000 scB=0.07805 camY=2.60 na=1
+  #70 guard.bon              sha 7b15b4d57182883f  tomb=0.3 rake=0 nfloor=0.125 amb=0.1000 scB=0.07805 camY=2.60 na=1
+  #71 guard.con              sha 7b15b4d57182883f  tomb=1 rake=1 nfloor=0.125 amb=0.1000 scB=0.07805 camY=2.60 na=1
+  #72 guard.don              sha 10f0c06a06d5d22f  tomb=1 rake=0 nfloor=0.14 amb=0.1000 scB=0.08742 camY=2.60 na=1
+  #73 guard.back             sha 7b15b4d57182883f  tomb=1 rake=0 nfloor=0.125 amb=0.1000 scB=0.07805 camY=2.60 na=1
+-- staged sly-profile (15/16, 0s)
+  #74 sly-profile.off        sha 5306ce00030a19d7  tomb=1 rake=0 nfloor=0.125 amb=0.3876 scB=0.53333 camY=1.70 na=0
+  #75 sly-profile.bon        sha 5306ce00030a19d7  tomb=0.3 rake=0 nfloor=0.125 amb=0.3876 scB=0.53333 camY=1.70 na=0
+  #76 sly-profile.con        sha 5e8db78b931c2e40  tomb=1 rake=1 nfloor=0.125 amb=0.3876 scB=0.53333 camY=1.70 na=0
+  #77 sly-profile.don        sha 5306ce00030a19d7  tomb=1 rake=0 nfloor=0.14 amb=0.3876 scB=0.53333 camY=1.70 na=0
+  #78 sly-profile.back       sha 5306ce00030a19d7  tomb=1 rake=0 nfloor=0.125 amb=0.3876 scB=0.53333 camY=1.70 na=0
+-- staged sly-key (16/16, 30s)
+  #79 sly-key.off            sha fa120122c6638f76  tomb=1 rake=0 nfloor=0.125 amb=0.3876 scB=0.53333 camY=1.45 na=0
+  #80 sly-key.bon            sha fa120122c6638f76  tomb=0.3 rake=0 nfloor=0.125 amb=0.3876 scB=0.53333 camY=1.45 na=0
+  #81 sly-key.con            sha ace234199b8d54d5  tomb=1 rake=1 nfloor=0.125 amb=0.3876 scB=0.53333 camY=1.45 na=0
+  #82 sly-key.don            sha fa120122c6638f76  tomb=1 rake=0 nfloor=0.14 amb=0.3876 scB=0.53333 camY=1.45 na=0
+  #83 sly-key.back           sha fa120122c6638f76  tomb=1 rake=0 nfloor=0.125 amb=0.3876 scB=0.53333 camY=1.45 na=0
+src/ clean at release (nothing was installed).
+DONE. Score with:
+  node progress/records/gradetrio/tombdim-score.mjs
+  node progress/records/gradetrio/goldenrake-score.mjs
+  node progress/records/gradetrio/nightfloor-score.mjs

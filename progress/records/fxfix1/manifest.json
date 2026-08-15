@@ -1,0 +1,2357 @@
+{
+ "seals": [
+  "PREREG-fxghost2",
+  "PREREG-rimfloor2"
+ ],
+ "head": "a81b989422325d9a27428b64f077a19b1486d0fc",
+ "installs": "none — both mechanisms ship inert in HEAD; every arm is a live uniform poke",
+ "launchedAt": "2026-08-14T22:16:11.549Z",
+ "pid": 6309,
+ "consoleErrors": [],
+ "rows": [
+  {
+   "shot": "hero",
+   "arm": "off",
+   "file": "hero.off.png",
+   "sha256": "293b7979c6667b8696405d555b8aa75e8058f5aee435b17539ce9b544722a39e",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "1d94776f9232"
+   },
+   "readback": {
+    "uAmbGain": 1,
+    "uAlphaGain": 1,
+    "sandVis": true,
+    "sandLive": 900,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "uRimFloorOffCut": 0,
+    "postfxOk": true,
+    "strayGains": [],
+    "t": 0.33479999999981375
+   },
+   "consoleErrors": 0,
+   "ordinal": 1,
+   "at": "2026-08-14T22:23:56.189Z"
+  },
+  {
+   "shot": "hero",
+   "arm": "ahide",
+   "file": "hero.ahide.png",
+   "sha256": "352307ab104a3a2b258be1fcda2fc9636f79256ce6a8ff02fd82115a3ac1ec43",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "1d94776f9232"
+   },
+   "readback": {
+    "uAmbGain": 1,
+    "uAlphaGain": 1,
+    "sandVis": false,
+    "sandLive": 900,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "uRimFloorOffCut": 0,
+    "postfxOk": true,
+    "strayGains": [],
+    "t": 0.33479999999981375
+   },
+   "consoleErrors": 0,
+   "ordinal": 2,
+   "at": "2026-08-14T22:24:33.913Z"
+  },
+  {
+   "shot": "hero",
+   "arm": "g25",
+   "file": "hero.g25.png",
+   "sha256": "bd355e1ce463c40c81fff01dd4fb85841db409638ee01819aada1ae31d4eaa0a",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "1d94776f9232"
+   },
+   "readback": {
+    "uAmbGain": 0.25,
+    "uAlphaGain": 1,
+    "sandVis": true,
+    "sandLive": 900,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "uRimFloorOffCut": 0,
+    "postfxOk": true,
+    "strayGains": [],
+    "t": 0.33479999999981375
+   },
+   "consoleErrors": 0,
+   "ordinal": 3,
+   "at": "2026-08-14T22:25:08.383Z"
+  },
+  {
+   "shot": "hero",
+   "arm": "g00",
+   "file": "hero.g00.png",
+   "sha256": "8307156bcc3c6fb89da05fb6044f32dbdc58e8660e60e6aa68c3ce752dbf4fe4",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "1d94776f9232"
+   },
+   "readback": {
+    "uAmbGain": 0,
+    "uAlphaGain": 1,
+    "sandVis": true,
+    "sandLive": 900,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "uRimFloorOffCut": 0,
+    "postfxOk": true,
+    "strayGains": [],
+    "t": 0.33479999999981375
+   },
+   "consoleErrors": 0,
+   "ordinal": 4,
+   "at": "2026-08-14T22:25:42.654Z"
+  },
+  {
+   "shot": "hero",
+   "arm": "t30",
+   "file": "hero.t30.png",
+   "sha256": "4c27cf45db28536106b8c8e13846b5e8e2db9fd0fd4e43a3a291825377acd0ef",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "1d94776f9232"
+   },
+   "readback": {
+    "uAmbGain": 1,
+    "uAlphaGain": 0.3,
+    "sandVis": true,
+    "sandLive": 900,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "uRimFloorOffCut": 0,
+    "postfxOk": true,
+    "strayGains": [],
+    "t": 0.33479999999981375
+   },
+   "consoleErrors": 0,
+   "ordinal": 5,
+   "at": "2026-08-14T22:26:16.971Z"
+  },
+  {
+   "shot": "hero",
+   "arm": "t18",
+   "file": "hero.t18.png",
+   "sha256": "bf4c61eadfd0440d37182d7ce9cc94e952aff221f335afaf04cc4a19760a2497",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "1d94776f9232"
+   },
+   "readback": {
+    "uAmbGain": 1,
+    "uAlphaGain": 0.18,
+    "sandVis": true,
+    "sandLive": 900,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "uRimFloorOffCut": 0,
+    "postfxOk": true,
+    "strayGains": [],
+    "t": 0.33479999999981375
+   },
+   "consoleErrors": 0,
+   "ordinal": 6,
+   "at": "2026-08-14T22:26:51.435Z"
+  },
+  {
+   "shot": "hero",
+   "arm": "k10",
+   "file": "hero.k10.png",
+   "sha256": "56ee97f8052e0a3a96fa540da77751750b0175d214ca570c4449eb3c2c2c9832",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "1d94776f9232"
+   },
+   "readback": {
+    "uAmbGain": 1,
+    "uAlphaGain": 1,
+    "sandVis": true,
+    "sandLive": 900,
+    "uRimShadowFloorArch": 0.1,
+    "uRimShadowFloor": 0.45,
+    "uRimFloorOffCut": 0,
+    "postfxOk": true,
+    "strayGains": [],
+    "t": 0.33479999999981375
+   },
+   "consoleErrors": 0,
+   "ordinal": 7,
+   "at": "2026-08-14T22:27:25.843Z"
+  },
+  {
+   "shot": "hero",
+   "arm": "rimz",
+   "file": "hero.rimz.png",
+   "sha256": "2d1a2cb0fc38b856941e6c8a96069006e45d16bc225c22eea204f9939bca5bb1",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "1d94776f9232"
+   },
+   "readback": {
+    "uAmbGain": 1,
+    "uAlphaGain": 1,
+    "sandVis": true,
+    "sandLive": 900,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0,
+    "uRimFloorOffCut": 0,
+    "postfxOk": true,
+    "strayGains": [],
+    "t": 0.33479999999981375
+   },
+   "consoleErrors": 0,
+   "ordinal": 8,
+   "at": "2026-08-14T22:28:00.198Z"
+  },
+  {
+   "shot": "hero",
+   "arm": "w35",
+   "file": "hero.w35.png",
+   "sha256": "bbcc37c01e71fbced2d947d0547b30543ab37c9d2638fca51ef531c6a4c7d837",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "1d94776f9232"
+   },
+   "readback": {
+    "uAmbGain": 1,
+    "uAlphaGain": 1,
+    "sandVis": true,
+    "sandLive": 900,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "uRimFloorOffCut": 0.35,
+    "postfxOk": true,
+    "strayGains": [],
+    "t": 0.33479999999981375
+   },
+   "consoleErrors": 0,
+   "ordinal": 9,
+   "at": "2026-08-14T22:28:34.803Z"
+  },
+  {
+   "shot": "hero",
+   "arm": "w45",
+   "file": "hero.w45.png",
+   "sha256": "bacd4836af747241b3bd963d6d580fdb104a38ad0a7f1d588e1aed212a29e456",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "1d94776f9232"
+   },
+   "readback": {
+    "uAmbGain": 1,
+    "uAlphaGain": 1,
+    "sandVis": true,
+    "sandLive": 900,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "uRimFloorOffCut": 0.45,
+    "postfxOk": true,
+    "strayGains": [],
+    "t": 0.33479999999981375
+   },
+   "consoleErrors": 0,
+   "ordinal": 10,
+   "at": "2026-08-14T22:29:09.357Z"
+  },
+  {
+   "shot": "hero",
+   "arm": "b35",
+   "file": "hero.b35.png",
+   "sha256": "eadf576a12851c675995c2052a2e63507cc1d2cb1c77505ed08ea5bcb3fee52f",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "1d94776f9232"
+   },
+   "readback": {
+    "uAmbGain": 1,
+    "uAlphaGain": 1,
+    "sandVis": true,
+    "sandLive": 900,
+    "uRimShadowFloorArch": 0.1,
+    "uRimShadowFloor": 0.45,
+    "uRimFloorOffCut": 0.35,
+    "postfxOk": true,
+    "strayGains": [],
+    "t": 0.33479999999981375
+   },
+   "consoleErrors": 0,
+   "ordinal": 11,
+   "at": "2026-08-14T22:29:43.494Z"
+  },
+  {
+   "shot": "hero",
+   "arm": "b45",
+   "file": "hero.b45.png",
+   "sha256": "5e893bef09f3691e3893a57e50463cc8687955b64c8b6142a7e762c6d4ab6424",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "1d94776f9232"
+   },
+   "readback": {
+    "uAmbGain": 1,
+    "uAlphaGain": 1,
+    "sandVis": true,
+    "sandLive": 900,
+    "uRimShadowFloorArch": 0.1,
+    "uRimShadowFloor": 0.45,
+    "uRimFloorOffCut": 0.45,
+    "postfxOk": true,
+    "strayGains": [],
+    "t": 0.33479999999981375
+   },
+   "consoleErrors": 0,
+   "ordinal": 12,
+   "at": "2026-08-14T22:30:17.835Z"
+  },
+  {
+   "shot": "hero",
+   "arm": "back",
+   "file": "hero.back.png",
+   "sha256": "293b7979c6667b8696405d555b8aa75e8058f5aee435b17539ce9b544722a39e",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "1d94776f9232"
+   },
+   "readback": {
+    "uAmbGain": 1,
+    "uAlphaGain": 1,
+    "sandVis": true,
+    "sandLive": 900,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "uRimFloorOffCut": 0,
+    "postfxOk": true,
+    "strayGains": [],
+    "t": 0.33479999999981375
+   },
+   "consoleErrors": 0,
+   "ordinal": 13,
+   "at": "2026-08-14T22:30:52.466Z"
+  },
+  {
+   "shot": "temple",
+   "arm": "off",
+   "file": "temple.off.png",
+   "sha256": "be29e222b68023a7e1393d4eb15940d5711a53d392672246d3d3655eef88657e",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "1d94776f9232"
+   },
+   "readback": {
+    "uAmbGain": 1,
+    "uAlphaGain": 1,
+    "sandVis": true,
+    "sandLive": 900,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "uRimFloorOffCut": 0,
+    "postfxOk": true,
+    "strayGains": [],
+    "t": 0.33479999999981375
+   },
+   "consoleErrors": 0,
+   "ordinal": 14,
+   "at": "2026-08-14T22:34:30.718Z"
+  },
+  {
+   "shot": "temple",
+   "arm": "ahide",
+   "file": "temple.ahide.png",
+   "sha256": "7d8920c5cd6bc5b48fb252115271ac92e65d0f258abe38cf6afd58bfdcad29e7",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "1d94776f9232"
+   },
+   "readback": {
+    "uAmbGain": 1,
+    "uAlphaGain": 1,
+    "sandVis": false,
+    "sandLive": 900,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "uRimFloorOffCut": 0,
+    "postfxOk": true,
+    "strayGains": [],
+    "t": 0.33479999999981375
+   },
+   "consoleErrors": 0,
+   "ordinal": 15,
+   "at": "2026-08-14T22:34:57.368Z"
+  },
+  {
+   "shot": "temple",
+   "arm": "g25",
+   "file": "temple.g25.png",
+   "sha256": "1bbb0ef74faa3a191f014baefe08ab7c01606dfa1c97f5adc8b2584e1545bd3a",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "1d94776f9232"
+   },
+   "readback": {
+    "uAmbGain": 0.25,
+    "uAlphaGain": 1,
+    "sandVis": true,
+    "sandLive": 900,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "uRimFloorOffCut": 0,
+    "postfxOk": true,
+    "strayGains": [],
+    "t": 0.33479999999981375
+   },
+   "consoleErrors": 0,
+   "ordinal": 16,
+   "at": "2026-08-14T22:35:23.915Z"
+  },
+  {
+   "shot": "temple",
+   "arm": "g00",
+   "file": "temple.g00.png",
+   "sha256": "94e835e9a33ba35c12559ef82327744be944ae7178298952582cbede32caed48",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "1d94776f9232"
+   },
+   "readback": {
+    "uAmbGain": 0,
+    "uAlphaGain": 1,
+    "sandVis": true,
+    "sandLive": 900,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "uRimFloorOffCut": 0,
+    "postfxOk": true,
+    "strayGains": [],
+    "t": 0.33479999999981375
+   },
+   "consoleErrors": 0,
+   "ordinal": 17,
+   "at": "2026-08-14T22:35:53.372Z"
+  },
+  {
+   "shot": "temple",
+   "arm": "t30",
+   "file": "temple.t30.png",
+   "sha256": "c3acf55a280825369a324c4c976a5bec1833415df63a0fa3437d6467b7f95c96",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "1d94776f9232"
+   },
+   "readback": {
+    "uAmbGain": 1,
+    "uAlphaGain": 0.3,
+    "sandVis": true,
+    "sandLive": 900,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "uRimFloorOffCut": 0,
+    "postfxOk": true,
+    "strayGains": [],
+    "t": 0.33479999999981375
+   },
+   "consoleErrors": 0,
+   "ordinal": 18,
+   "at": "2026-08-14T22:36:19.974Z"
+  },
+  {
+   "shot": "temple",
+   "arm": "t18",
+   "file": "temple.t18.png",
+   "sha256": "4fa7bd52ac434cf79ddda45ba1cc5e9b956ecfad3230ca91e530e70699b49044",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "1d94776f9232"
+   },
+   "readback": {
+    "uAmbGain": 1,
+    "uAlphaGain": 0.18,
+    "sandVis": true,
+    "sandLive": 900,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "uRimFloorOffCut": 0,
+    "postfxOk": true,
+    "strayGains": [],
+    "t": 0.33479999999981375
+   },
+   "consoleErrors": 0,
+   "ordinal": 19,
+   "at": "2026-08-14T22:36:46.792Z"
+  },
+  {
+   "shot": "temple",
+   "arm": "back",
+   "file": "temple.back.png",
+   "sha256": "be29e222b68023a7e1393d4eb15940d5711a53d392672246d3d3655eef88657e",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "1d94776f9232"
+   },
+   "readback": {
+    "uAmbGain": 1,
+    "uAlphaGain": 1,
+    "sandVis": true,
+    "sandLive": 900,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "uRimFloorOffCut": 0,
+    "postfxOk": true,
+    "strayGains": [],
+    "t": 0.33479999999981375
+   },
+   "consoleErrors": 0,
+   "ordinal": 20,
+   "at": "2026-08-14T22:37:13.483Z"
+  },
+  {
+   "shot": "sly-closeup",
+   "arm": "off",
+   "file": "sly-closeup.off.png",
+   "sha256": "c50dab73bc6f55fd8b2202f54911102110c940303ed49c1c2632ddc94a8cb943",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "1d94776f9232"
+   },
+   "readback": {
+    "uAmbGain": 1,
+    "uAlphaGain": 1,
+    "sandVis": true,
+    "sandLive": 900,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "uRimFloorOffCut": 0,
+    "postfxOk": true,
+    "strayGains": [],
+    "t": 0.33479999999981375
+   },
+   "consoleErrors": 0,
+   "ordinal": 21,
+   "at": "2026-08-14T22:42:45.155Z"
+  },
+  {
+   "shot": "sly-closeup",
+   "arm": "k10",
+   "file": "sly-closeup.k10.png",
+   "sha256": "e3f1878cbb4feda68cd6efa4a4e579eda25614b203ad0d0cf682e3503eb44bd6",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "1d94776f9232"
+   },
+   "readback": {
+    "uAmbGain": 1,
+    "uAlphaGain": 1,
+    "sandVis": true,
+    "sandLive": 900,
+    "uRimShadowFloorArch": 0.1,
+    "uRimShadowFloor": 0.45,
+    "uRimFloorOffCut": 0,
+    "postfxOk": true,
+    "strayGains": [],
+    "t": 0.33479999999981375
+   },
+   "consoleErrors": 0,
+   "ordinal": 22,
+   "at": "2026-08-14T22:43:17.509Z"
+  },
+  {
+   "shot": "sly-closeup",
+   "arm": "rimz",
+   "file": "sly-closeup.rimz.png",
+   "sha256": "578bddc716d4a63c114d3782d66621f89bca65e1aa1df82b7cc70b09de04a7b9",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "1d94776f9232"
+   },
+   "readback": {
+    "uAmbGain": 1,
+    "uAlphaGain": 1,
+    "sandVis": true,
+    "sandLive": 900,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0,
+    "uRimFloorOffCut": 0,
+    "postfxOk": true,
+    "strayGains": [],
+    "t": 0.33479999999981375
+   },
+   "consoleErrors": 0,
+   "ordinal": 23,
+   "at": "2026-08-14T22:43:50.111Z"
+  },
+  {
+   "shot": "sly-closeup",
+   "arm": "w35",
+   "file": "sly-closeup.w35.png",
+   "sha256": "af3b99bc1a4f2e18627bb4031f6eb6af0c5d0be352458c2b7da1f8b5f3ea3682",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "1d94776f9232"
+   },
+   "readback": {
+    "uAmbGain": 1,
+    "uAlphaGain": 1,
+    "sandVis": true,
+    "sandLive": 900,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "uRimFloorOffCut": 0.35,
+    "postfxOk": true,
+    "strayGains": [],
+    "t": 0.33479999999981375
+   },
+   "consoleErrors": 0,
+   "ordinal": 24,
+   "at": "2026-08-14T22:44:22.542Z"
+  },
+  {
+   "shot": "sly-closeup",
+   "arm": "w45",
+   "file": "sly-closeup.w45.png",
+   "sha256": "17d12ea5ecf478c6b267054a53cf6859c54f17c94182e617286b0c4c124cae1e",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "1d94776f9232"
+   },
+   "readback": {
+    "uAmbGain": 1,
+    "uAlphaGain": 1,
+    "sandVis": true,
+    "sandLive": 900,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "uRimFloorOffCut": 0.45,
+    "postfxOk": true,
+    "strayGains": [],
+    "t": 0.33479999999981375
+   },
+   "consoleErrors": 0,
+   "ordinal": 25,
+   "at": "2026-08-14T22:44:58.335Z"
+  },
+  {
+   "shot": "sly-closeup",
+   "arm": "b35",
+   "file": "sly-closeup.b35.png",
+   "sha256": "bb82ac39f7c57db175f999cc4ed5007866d46f9bf0ef8a069dea4275b9468040",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "1d94776f9232"
+   },
+   "readback": {
+    "uAmbGain": 1,
+    "uAlphaGain": 1,
+    "sandVis": true,
+    "sandLive": 900,
+    "uRimShadowFloorArch": 0.1,
+    "uRimShadowFloor": 0.45,
+    "uRimFloorOffCut": 0.35,
+    "postfxOk": true,
+    "strayGains": [],
+    "t": 0.33479999999981375
+   },
+   "consoleErrors": 0,
+   "ordinal": 26,
+   "at": "2026-08-14T22:45:30.663Z"
+  },
+  {
+   "shot": "sly-closeup",
+   "arm": "b45",
+   "file": "sly-closeup.b45.png",
+   "sha256": "80a8b8b2a0f535ee54fbecce558e10d1ebe8785598b3fbb56be243ae68e8480f",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "1d94776f9232"
+   },
+   "readback": {
+    "uAmbGain": 1,
+    "uAlphaGain": 1,
+    "sandVis": true,
+    "sandLive": 900,
+    "uRimShadowFloorArch": 0.1,
+    "uRimShadowFloor": 0.45,
+    "uRimFloorOffCut": 0.45,
+    "postfxOk": true,
+    "strayGains": [],
+    "t": 0.33479999999981375
+   },
+   "consoleErrors": 0,
+   "ordinal": 27,
+   "at": "2026-08-14T22:46:06.205Z"
+  },
+  {
+   "shot": "sly-closeup",
+   "arm": "back",
+   "file": "sly-closeup.back.png",
+   "sha256": "c50dab73bc6f55fd8b2202f54911102110c940303ed49c1c2632ddc94a8cb943",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "1d94776f9232"
+   },
+   "readback": {
+    "uAmbGain": 1,
+    "uAlphaGain": 1,
+    "sandVis": true,
+    "sandLive": 900,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "uRimFloorOffCut": 0,
+    "postfxOk": true,
+    "strayGains": [],
+    "t": 0.33479999999981375
+   },
+   "consoleErrors": 0,
+   "ordinal": 28,
+   "at": "2026-08-14T22:46:38.298Z"
+  },
+  {
+   "shot": "courtyard",
+   "arm": "off",
+   "file": "courtyard.off.png",
+   "sha256": "02bf36937285cc8d4073e0f3009e0b4afd8a5dba28d3ccdfbf1259d6cb09f12c",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "1d94776f9232"
+   },
+   "readback": {
+    "uAmbGain": 1,
+    "uAlphaGain": 1,
+    "sandVis": true,
+    "sandLive": 900,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "uRimFloorOffCut": 0,
+    "postfxOk": true,
+    "strayGains": [],
+    "t": 0.33479999999981375
+   },
+   "consoleErrors": 0,
+   "ordinal": 29,
+   "at": "2026-08-14T22:52:14.094Z"
+  },
+  {
+   "shot": "courtyard",
+   "arm": "ahide",
+   "file": "courtyard.ahide.png",
+   "sha256": "929aa30836d2ef7f233ed5191e533b2e0053ae874e1cfb8986bd1fc30cf2e1f6",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "1d94776f9232"
+   },
+   "readback": {
+    "uAmbGain": 1,
+    "uAlphaGain": 1,
+    "sandVis": false,
+    "sandLive": 900,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "uRimFloorOffCut": 0,
+    "postfxOk": true,
+    "strayGains": [],
+    "t": 0.33479999999981375
+   },
+   "consoleErrors": 0,
+   "ordinal": 30,
+   "at": "2026-08-14T22:52:48.330Z"
+  },
+  {
+   "shot": "courtyard",
+   "arm": "g25",
+   "file": "courtyard.g25.png",
+   "sha256": "95d9281ef85091da1c2eb599b3d5262c3aeadef7f11a39092f38a859649fd874",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "1d94776f9232"
+   },
+   "readback": {
+    "uAmbGain": 0.25,
+    "uAlphaGain": 1,
+    "sandVis": true,
+    "sandLive": 900,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "uRimFloorOffCut": 0,
+    "postfxOk": true,
+    "strayGains": [],
+    "t": 0.33479999999981375
+   },
+   "consoleErrors": 0,
+   "ordinal": 31,
+   "at": "2026-08-14T22:53:22.669Z"
+  },
+  {
+   "shot": "courtyard",
+   "arm": "g00",
+   "file": "courtyard.g00.png",
+   "sha256": "a42f8d41069f798779c6a4f52996f09c03d752d260d00f575f70d62ab7397a52",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "1d94776f9232"
+   },
+   "readback": {
+    "uAmbGain": 0,
+    "uAlphaGain": 1,
+    "sandVis": true,
+    "sandLive": 900,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "uRimFloorOffCut": 0,
+    "postfxOk": true,
+    "strayGains": [],
+    "t": 0.33479999999981375
+   },
+   "consoleErrors": 0,
+   "ordinal": 32,
+   "at": "2026-08-14T22:53:56.631Z"
+  },
+  {
+   "shot": "courtyard",
+   "arm": "t30",
+   "file": "courtyard.t30.png",
+   "sha256": "ab81f247a41acf53f54b50c035a08424c070fdd61231f21463bff737e22e62b3",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "1d94776f9232"
+   },
+   "readback": {
+    "uAmbGain": 1,
+    "uAlphaGain": 0.3,
+    "sandVis": true,
+    "sandLive": 900,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "uRimFloorOffCut": 0,
+    "postfxOk": true,
+    "strayGains": [],
+    "t": 0.33479999999981375
+   },
+   "consoleErrors": 0,
+   "ordinal": 33,
+   "at": "2026-08-14T22:54:30.908Z"
+  },
+  {
+   "shot": "courtyard",
+   "arm": "t18",
+   "file": "courtyard.t18.png",
+   "sha256": "6ac7d5f8dad862d4f535d91f988662343452144f940ba63b137dd0c35c1b4ce1",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "1d94776f9232"
+   },
+   "readback": {
+    "uAmbGain": 1,
+    "uAlphaGain": 0.18,
+    "sandVis": true,
+    "sandLive": 900,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "uRimFloorOffCut": 0,
+    "postfxOk": true,
+    "strayGains": [],
+    "t": 0.33479999999981375
+   },
+   "consoleErrors": 0,
+   "ordinal": 34,
+   "at": "2026-08-14T22:55:05.052Z"
+  },
+  {
+   "shot": "courtyard",
+   "arm": "k10",
+   "file": "courtyard.k10.png",
+   "sha256": "83bee4750af405747191c4a9c2032418acabe715e8c50f67ad544a246471d1cf",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "1d94776f9232"
+   },
+   "readback": {
+    "uAmbGain": 1,
+    "uAlphaGain": 1,
+    "sandVis": true,
+    "sandLive": 900,
+    "uRimShadowFloorArch": 0.1,
+    "uRimShadowFloor": 0.45,
+    "uRimFloorOffCut": 0,
+    "postfxOk": true,
+    "strayGains": [],
+    "t": 0.33479999999981375
+   },
+   "consoleErrors": 0,
+   "ordinal": 35,
+   "at": "2026-08-14T22:55:39.149Z"
+  },
+  {
+   "shot": "courtyard",
+   "arm": "rimz",
+   "file": "courtyard.rimz.png",
+   "sha256": "38f487b39e73074f11d664071ddad5ceb467226bc8eb61480d7e456d17c5d995",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "1d94776f9232"
+   },
+   "readback": {
+    "uAmbGain": 1,
+    "uAlphaGain": 1,
+    "sandVis": true,
+    "sandLive": 900,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0,
+    "uRimFloorOffCut": 0,
+    "postfxOk": true,
+    "strayGains": [],
+    "t": 0.33479999999981375
+   },
+   "consoleErrors": 0,
+   "ordinal": 36,
+   "at": "2026-08-14T22:56:13.192Z"
+  },
+  {
+   "shot": "courtyard",
+   "arm": "w35",
+   "file": "courtyard.w35.png",
+   "sha256": "259952f57e61b6caca6a2c39280442e92179545f7499b707908c6175183a2018",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "1d94776f9232"
+   },
+   "readback": {
+    "uAmbGain": 1,
+    "uAlphaGain": 1,
+    "sandVis": true,
+    "sandLive": 900,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "uRimFloorOffCut": 0.35,
+    "postfxOk": true,
+    "strayGains": [],
+    "t": 0.33479999999981375
+   },
+   "consoleErrors": 0,
+   "ordinal": 37,
+   "at": "2026-08-14T22:56:47.607Z"
+  },
+  {
+   "shot": "courtyard",
+   "arm": "w45",
+   "file": "courtyard.w45.png",
+   "sha256": "b9a8548ccd76d9f9705bfd8fc8457bb5950dfc7fadfa11f5b66e2fbc1ec989a0",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "1d94776f9232"
+   },
+   "readback": {
+    "uAmbGain": 1,
+    "uAlphaGain": 1,
+    "sandVis": true,
+    "sandLive": 900,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "uRimFloorOffCut": 0.45,
+    "postfxOk": true,
+    "strayGains": [],
+    "t": 0.33479999999981375
+   },
+   "consoleErrors": 0,
+   "ordinal": 38,
+   "at": "2026-08-14T22:57:21.700Z"
+  },
+  {
+   "shot": "courtyard",
+   "arm": "b35",
+   "file": "courtyard.b35.png",
+   "sha256": "4caf32b50ad6338b77158de6db842a4b0e4a2cbc4e4af570d2a5d80a943d8ec0",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "1d94776f9232"
+   },
+   "readback": {
+    "uAmbGain": 1,
+    "uAlphaGain": 1,
+    "sandVis": true,
+    "sandLive": 900,
+    "uRimShadowFloorArch": 0.1,
+    "uRimShadowFloor": 0.45,
+    "uRimFloorOffCut": 0.35,
+    "postfxOk": true,
+    "strayGains": [],
+    "t": 0.33479999999981375
+   },
+   "consoleErrors": 0,
+   "ordinal": 39,
+   "at": "2026-08-14T22:57:55.879Z"
+  },
+  {
+   "shot": "courtyard",
+   "arm": "b45",
+   "file": "courtyard.b45.png",
+   "sha256": "17ca79edd7e268bc3a46200ad0fc6e255dee102cc1775f880410db1ad970e6f4",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "1d94776f9232"
+   },
+   "readback": {
+    "uAmbGain": 1,
+    "uAlphaGain": 1,
+    "sandVis": true,
+    "sandLive": 900,
+    "uRimShadowFloorArch": 0.1,
+    "uRimShadowFloor": 0.45,
+    "uRimFloorOffCut": 0.45,
+    "postfxOk": true,
+    "strayGains": [],
+    "t": 0.33479999999981375
+   },
+   "consoleErrors": 0,
+   "ordinal": 40,
+   "at": "2026-08-14T22:58:33.796Z"
+  },
+  {
+   "shot": "courtyard",
+   "arm": "back",
+   "file": "courtyard.back.png",
+   "sha256": "02bf36937285cc8d4073e0f3009e0b4afd8a5dba28d3ccdfbf1259d6cb09f12c",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "1d94776f9232"
+   },
+   "readback": {
+    "uAmbGain": 1,
+    "uAlphaGain": 1,
+    "sandVis": true,
+    "sandLive": 900,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "uRimFloorOffCut": 0,
+    "postfxOk": true,
+    "strayGains": [],
+    "t": 0.33479999999981375
+   },
+   "consoleErrors": 0,
+   "ordinal": 41,
+   "at": "2026-08-14T22:59:14.502Z"
+  },
+  {
+   "shot": "dunes",
+   "arm": "off",
+   "file": "dunes.off.png",
+   "sha256": "9a8df7e8923a952a07ca0ee52a011a448f8893b1c20219be862a1dbeeec54e1c",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "1d94776f9232"
+   },
+   "readback": {
+    "uAmbGain": 1,
+    "uAlphaGain": 1,
+    "sandVis": true,
+    "sandLive": 900,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "uRimFloorOffCut": 0,
+    "postfxOk": true,
+    "strayGains": [],
+    "t": 0.33479999999981375
+   },
+   "consoleErrors": 0,
+   "ordinal": 42,
+   "at": "2026-08-14T23:03:36.716Z"
+  },
+  {
+   "shot": "dunes",
+   "arm": "ahide",
+   "file": "dunes.ahide.png",
+   "sha256": "20cf9257b07e609f36085dda1941883928585086795e5e6b054589f41ed153e6",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "1d94776f9232"
+   },
+   "readback": {
+    "uAmbGain": 1,
+    "uAlphaGain": 1,
+    "sandVis": false,
+    "sandLive": 900,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "uRimFloorOffCut": 0,
+    "postfxOk": true,
+    "strayGains": [],
+    "t": 0.33479999999981375
+   },
+   "consoleErrors": 0,
+   "ordinal": 43,
+   "at": "2026-08-14T23:04:05.708Z"
+  },
+  {
+   "shot": "dunes",
+   "arm": "g25",
+   "file": "dunes.g25.png",
+   "sha256": "4c49dd5b5f9e9628255901022adabaec0c0c12fff86642921c4589cfafc4ecbb",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "1d94776f9232"
+   },
+   "readback": {
+    "uAmbGain": 0.25,
+    "uAlphaGain": 1,
+    "sandVis": true,
+    "sandLive": 900,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "uRimFloorOffCut": 0,
+    "postfxOk": true,
+    "strayGains": [],
+    "t": 0.33479999999981375
+   },
+   "consoleErrors": 0,
+   "ordinal": 44,
+   "at": "2026-08-14T23:04:32.158Z"
+  },
+  {
+   "shot": "dunes",
+   "arm": "g00",
+   "file": "dunes.g00.png",
+   "sha256": "3623f3e9f4800ef8f224195e8e893dfe40b0482ca1b353e7f78e96ab71da930a",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "1d94776f9232"
+   },
+   "readback": {
+    "uAmbGain": 0,
+    "uAlphaGain": 1,
+    "sandVis": true,
+    "sandLive": 900,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "uRimFloorOffCut": 0,
+    "postfxOk": true,
+    "strayGains": [],
+    "t": 0.33479999999981375
+   },
+   "consoleErrors": 0,
+   "ordinal": 45,
+   "at": "2026-08-14T23:04:58.288Z"
+  },
+  {
+   "shot": "dunes",
+   "arm": "t30",
+   "file": "dunes.t30.png",
+   "sha256": "eb10213e70c99f1fe492c0ab5f00b47d0437df2f05054c3ac4fa82f04a191ee1",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "1d94776f9232"
+   },
+   "readback": {
+    "uAmbGain": 1,
+    "uAlphaGain": 0.3,
+    "sandVis": true,
+    "sandLive": 900,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "uRimFloorOffCut": 0,
+    "postfxOk": true,
+    "strayGains": [],
+    "t": 0.33479999999981375
+   },
+   "consoleErrors": 0,
+   "ordinal": 46,
+   "at": "2026-08-14T23:05:24.522Z"
+  },
+  {
+   "shot": "dunes",
+   "arm": "t18",
+   "file": "dunes.t18.png",
+   "sha256": "98754c04b6c7345a165480323e24933b1c3f353cc3ac52ffb759021a69a5f2fe",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "1d94776f9232"
+   },
+   "readback": {
+    "uAmbGain": 1,
+    "uAlphaGain": 0.18,
+    "sandVis": true,
+    "sandLive": 900,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "uRimFloorOffCut": 0,
+    "postfxOk": true,
+    "strayGains": [],
+    "t": 0.33479999999981375
+   },
+   "consoleErrors": 0,
+   "ordinal": 47,
+   "at": "2026-08-14T23:05:50.541Z"
+  },
+  {
+   "shot": "dunes",
+   "arm": "k10",
+   "file": "dunes.k10.png",
+   "sha256": "8df08651079e41f5e9d519fbc2a44b22ad27291c2ed041590d26a0ccef223067",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "1d94776f9232"
+   },
+   "readback": {
+    "uAmbGain": 1,
+    "uAlphaGain": 1,
+    "sandVis": true,
+    "sandLive": 900,
+    "uRimShadowFloorArch": 0.1,
+    "uRimShadowFloor": 0.45,
+    "uRimFloorOffCut": 0,
+    "postfxOk": true,
+    "strayGains": [],
+    "t": 0.33479999999981375
+   },
+   "consoleErrors": 0,
+   "ordinal": 48,
+   "at": "2026-08-14T23:06:19.107Z"
+  },
+  {
+   "shot": "dunes",
+   "arm": "rimz",
+   "file": "dunes.rimz.png",
+   "sha256": "7b43d4a0486f590af97a485b764bae23941af694f144a3a14cf7041ff4fceb98",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "1d94776f9232"
+   },
+   "readback": {
+    "uAmbGain": 1,
+    "uAlphaGain": 1,
+    "sandVis": true,
+    "sandLive": 900,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0,
+    "uRimFloorOffCut": 0,
+    "postfxOk": true,
+    "strayGains": [],
+    "t": 0.33479999999981375
+   },
+   "consoleErrors": 0,
+   "ordinal": 49,
+   "at": "2026-08-14T23:06:45.364Z"
+  },
+  {
+   "shot": "dunes",
+   "arm": "w35",
+   "file": "dunes.w35.png",
+   "sha256": "1f574f4f9352bdf45c4d4f609915a8ef8587f529ed90e11949a7ff2ea8a55a1d",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "1d94776f9232"
+   },
+   "readback": {
+    "uAmbGain": 1,
+    "uAlphaGain": 1,
+    "sandVis": true,
+    "sandLive": 900,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "uRimFloorOffCut": 0.35,
+    "postfxOk": true,
+    "strayGains": [],
+    "t": 0.33479999999981375
+   },
+   "consoleErrors": 0,
+   "ordinal": 50,
+   "at": "2026-08-14T23:07:11.816Z"
+  },
+  {
+   "shot": "dunes",
+   "arm": "w45",
+   "file": "dunes.w45.png",
+   "sha256": "5a986023587d6cbd7a6603c81345baf3ed4801e83dfd76d7fc69c9e73b75bb8e",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "1d94776f9232"
+   },
+   "readback": {
+    "uAmbGain": 1,
+    "uAlphaGain": 1,
+    "sandVis": true,
+    "sandLive": 900,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "uRimFloorOffCut": 0.45,
+    "postfxOk": true,
+    "strayGains": [],
+    "t": 0.33479999999981375
+   },
+   "consoleErrors": 0,
+   "ordinal": 51,
+   "at": "2026-08-14T23:07:38.170Z"
+  },
+  {
+   "shot": "dunes",
+   "arm": "b35",
+   "file": "dunes.b35.png",
+   "sha256": "d646d5a4ac7a6f0e28b4d7753c34a9bbb11e1d9cf9bdbf25f417bc2a413f2861",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "1d94776f9232"
+   },
+   "readback": {
+    "uAmbGain": 1,
+    "uAlphaGain": 1,
+    "sandVis": true,
+    "sandLive": 900,
+    "uRimShadowFloorArch": 0.1,
+    "uRimShadowFloor": 0.45,
+    "uRimFloorOffCut": 0.35,
+    "postfxOk": true,
+    "strayGains": [],
+    "t": 0.33479999999981375
+   },
+   "consoleErrors": 0,
+   "ordinal": 52,
+   "at": "2026-08-14T23:08:07.230Z"
+  },
+  {
+   "shot": "dunes",
+   "arm": "b45",
+   "file": "dunes.b45.png",
+   "sha256": "a1deb22ae43b2583cd9b048718a796d23bea5ad64bd5ed407f52f20fd9c37487",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "1d94776f9232"
+   },
+   "readback": {
+    "uAmbGain": 1,
+    "uAlphaGain": 1,
+    "sandVis": true,
+    "sandLive": 900,
+    "uRimShadowFloorArch": 0.1,
+    "uRimShadowFloor": 0.45,
+    "uRimFloorOffCut": 0.45,
+    "postfxOk": true,
+    "strayGains": [],
+    "t": 0.33479999999981375
+   },
+   "consoleErrors": 0,
+   "ordinal": 53,
+   "at": "2026-08-14T23:08:34.010Z"
+  },
+  {
+   "shot": "dunes",
+   "arm": "back",
+   "file": "dunes.back.png",
+   "sha256": "9a8df7e8923a952a07ca0ee52a011a448f8893b1c20219be862a1dbeeec54e1c",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "1d94776f9232"
+   },
+   "readback": {
+    "uAmbGain": 1,
+    "uAlphaGain": 1,
+    "sandVis": true,
+    "sandLive": 900,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "uRimFloorOffCut": 0,
+    "postfxOk": true,
+    "strayGains": [],
+    "t": 0.33479999999981375
+   },
+   "consoleErrors": 0,
+   "ordinal": 54,
+   "at": "2026-08-14T23:09:00.306Z"
+  },
+  {
+   "shot": "interior",
+   "arm": "off",
+   "file": "interior.off.png",
+   "sha256": "52494433a02546dfbcfd3b9aa7edf164dd1b33a78bff6927f1ae0c697ea23d30",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "1d94776f9232"
+   },
+   "readback": {
+    "uAmbGain": 1,
+    "uAlphaGain": 1,
+    "sandVis": true,
+    "sandLive": 900,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "uRimFloorOffCut": 0,
+    "postfxOk": true,
+    "strayGains": [],
+    "t": 0.33479999999981375
+   },
+   "consoleErrors": 0,
+   "ordinal": 55,
+   "at": "2026-08-14T23:10:54.291Z"
+  },
+  {
+   "shot": "interior",
+   "arm": "ahide",
+   "file": "interior.ahide.png",
+   "sha256": "7b467c0b0ac20b1cf463dba48e0e7a72d3571db2fbf1ebc6521eeef7b5c72c4b",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "1d94776f9232"
+   },
+   "readback": {
+    "uAmbGain": 1,
+    "uAlphaGain": 1,
+    "sandVis": false,
+    "sandLive": 900,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "uRimFloorOffCut": 0,
+    "postfxOk": true,
+    "strayGains": [],
+    "t": 0.33479999999981375
+   },
+   "consoleErrors": 0,
+   "ordinal": 56,
+   "at": "2026-08-14T23:11:07.971Z"
+  },
+  {
+   "shot": "interior",
+   "arm": "g25",
+   "file": "interior.g25.png",
+   "sha256": "c2d62d9f4de52e1c1dc7cfaf60cf68f350ff82e9a79dfedd0c73b9b1004657c6",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "1d94776f9232"
+   },
+   "readback": {
+    "uAmbGain": 0.25,
+    "uAlphaGain": 1,
+    "sandVis": true,
+    "sandLive": 900,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "uRimFloorOffCut": 0,
+    "postfxOk": true,
+    "strayGains": [],
+    "t": 0.33479999999981375
+   },
+   "consoleErrors": 0,
+   "ordinal": 57,
+   "at": "2026-08-14T23:11:21.726Z"
+  },
+  {
+   "shot": "interior",
+   "arm": "g00",
+   "file": "interior.g00.png",
+   "sha256": "6ab38205145e8010ebcbe201a95730bc87e60fb816dcd645197d2072693c8e87",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "1d94776f9232"
+   },
+   "readback": {
+    "uAmbGain": 0,
+    "uAlphaGain": 1,
+    "sandVis": true,
+    "sandLive": 900,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "uRimFloorOffCut": 0,
+    "postfxOk": true,
+    "strayGains": [],
+    "t": 0.33479999999981375
+   },
+   "consoleErrors": 0,
+   "ordinal": 58,
+   "at": "2026-08-14T23:11:35.604Z"
+  },
+  {
+   "shot": "interior",
+   "arm": "t30",
+   "file": "interior.t30.png",
+   "sha256": "3e91bd414be8c83ee34640afa4a35b252b07b0b0dd7a0279d3dd01aed7f79ac1",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "1d94776f9232"
+   },
+   "readback": {
+    "uAmbGain": 1,
+    "uAlphaGain": 0.3,
+    "sandVis": true,
+    "sandLive": 900,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "uRimFloorOffCut": 0,
+    "postfxOk": true,
+    "strayGains": [],
+    "t": 0.33479999999981375
+   },
+   "consoleErrors": 0,
+   "ordinal": 59,
+   "at": "2026-08-14T23:11:49.399Z"
+  },
+  {
+   "shot": "interior",
+   "arm": "t18",
+   "file": "interior.t18.png",
+   "sha256": "0e4535ea771c3b98f106fdc02fb371ed1b0624ac0bca11217a9badb16bfd402c",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "1d94776f9232"
+   },
+   "readback": {
+    "uAmbGain": 1,
+    "uAlphaGain": 0.18,
+    "sandVis": true,
+    "sandLive": 900,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "uRimFloorOffCut": 0,
+    "postfxOk": true,
+    "strayGains": [],
+    "t": 0.33479999999981375
+   },
+   "consoleErrors": 0,
+   "ordinal": 60,
+   "at": "2026-08-14T23:12:03.163Z"
+  },
+  {
+   "shot": "interior",
+   "arm": "back",
+   "file": "interior.back.png",
+   "sha256": "52494433a02546dfbcfd3b9aa7edf164dd1b33a78bff6927f1ae0c697ea23d30",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "1d94776f9232"
+   },
+   "readback": {
+    "uAmbGain": 1,
+    "uAlphaGain": 1,
+    "sandVis": true,
+    "sandLive": 900,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "uRimFloorOffCut": 0,
+    "postfxOk": true,
+    "strayGains": [],
+    "t": 0.33479999999981375
+   },
+   "consoleErrors": 0,
+   "ordinal": 61,
+   "at": "2026-08-14T23:12:18.784Z"
+  },
+  {
+   "shot": "night",
+   "arm": "off",
+   "file": "night.off.png",
+   "sha256": "4c12691d2d8566085f51e4a9661a2de4f5d9409eb36ae1bdd93a42437de8d627",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "1d94776f9232"
+   },
+   "readback": {
+    "uAmbGain": 1,
+    "uAlphaGain": 1,
+    "sandVis": true,
+    "sandLive": 900,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "uRimFloorOffCut": 0,
+    "postfxOk": true,
+    "strayGains": [],
+    "t": 0.33479999999981375
+   },
+   "consoleErrors": 0,
+   "ordinal": 62,
+   "at": "2026-08-14T23:17:54.985Z"
+  },
+  {
+   "shot": "night",
+   "arm": "ahide",
+   "file": "night.ahide.png",
+   "sha256": "8df928005a1313b3ca02748f422e45a3135f08cfa2b096e012a1fe30bad23510",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "1d94776f9232"
+   },
+   "readback": {
+    "uAmbGain": 1,
+    "uAlphaGain": 1,
+    "sandVis": false,
+    "sandLive": 900,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "uRimFloorOffCut": 0,
+    "postfxOk": true,
+    "strayGains": [],
+    "t": 0.33479999999981375
+   },
+   "consoleErrors": 0,
+   "ordinal": 63,
+   "at": "2026-08-14T23:18:29.272Z"
+  },
+  {
+   "shot": "night",
+   "arm": "g25",
+   "file": "night.g25.png",
+   "sha256": "3c663cd41284c81677076df76da25a15e55a8a8c96c49ec323eca335b66eccd7",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "1d94776f9232"
+   },
+   "readback": {
+    "uAmbGain": 0.25,
+    "uAlphaGain": 1,
+    "sandVis": true,
+    "sandLive": 900,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "uRimFloorOffCut": 0,
+    "postfxOk": true,
+    "strayGains": [],
+    "t": 0.33479999999981375
+   },
+   "consoleErrors": 0,
+   "ordinal": 64,
+   "at": "2026-08-14T23:19:06.905Z"
+  },
+  {
+   "shot": "night",
+   "arm": "g00",
+   "file": "night.g00.png",
+   "sha256": "a84e7fcb6d9effbe691afcfc60b7f42d5895b6ccc27f5bb2eebe486e50786d44",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "1d94776f9232"
+   },
+   "readback": {
+    "uAmbGain": 0,
+    "uAlphaGain": 1,
+    "sandVis": true,
+    "sandLive": 900,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "uRimFloorOffCut": 0,
+    "postfxOk": true,
+    "strayGains": [],
+    "t": 0.33479999999981375
+   },
+   "consoleErrors": 0,
+   "ordinal": 65,
+   "at": "2026-08-14T23:19:41.203Z"
+  },
+  {
+   "shot": "night",
+   "arm": "t30",
+   "file": "night.t30.png",
+   "sha256": "d9fc956779e04b70eb8aa5c42f70a58535567213bf448e70c83ee8d760eb7803",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "1d94776f9232"
+   },
+   "readback": {
+    "uAmbGain": 1,
+    "uAlphaGain": 0.3,
+    "sandVis": true,
+    "sandLive": 900,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "uRimFloorOffCut": 0,
+    "postfxOk": true,
+    "strayGains": [],
+    "t": 0.33479999999981375
+   },
+   "consoleErrors": 0,
+   "ordinal": 66,
+   "at": "2026-08-14T23:20:15.271Z"
+  },
+  {
+   "shot": "night",
+   "arm": "t18",
+   "file": "night.t18.png",
+   "sha256": "e094c8eb0d00b6680308a7a89b1fa767e8cf6cc077c04b12ace809ec5ef5edac",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "1d94776f9232"
+   },
+   "readback": {
+    "uAmbGain": 1,
+    "uAlphaGain": 0.18,
+    "sandVis": true,
+    "sandLive": 900,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "uRimFloorOffCut": 0,
+    "postfxOk": true,
+    "strayGains": [],
+    "t": 0.33479999999981375
+   },
+   "consoleErrors": 0,
+   "ordinal": 67,
+   "at": "2026-08-14T23:20:53.182Z"
+  },
+  {
+   "shot": "night",
+   "arm": "k10",
+   "file": "night.k10.png",
+   "sha256": "82b95599141d1c4194e25a47451929b598f78deec7f961e670b038528f2f2697",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "1d94776f9232"
+   },
+   "readback": {
+    "uAmbGain": 1,
+    "uAlphaGain": 1,
+    "sandVis": true,
+    "sandLive": 900,
+    "uRimShadowFloorArch": 0.1,
+    "uRimShadowFloor": 0.45,
+    "uRimFloorOffCut": 0,
+    "postfxOk": true,
+    "strayGains": [],
+    "t": 0.33479999999981375
+   },
+   "consoleErrors": 0,
+   "ordinal": 68,
+   "at": "2026-08-14T23:21:27.060Z"
+  },
+  {
+   "shot": "night",
+   "arm": "rimz",
+   "file": "night.rimz.png",
+   "sha256": "173ee9583bf59cc50143b71b132a0df65723abf2235f34dfc7b55502dd9374e2",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "1d94776f9232"
+   },
+   "readback": {
+    "uAmbGain": 1,
+    "uAlphaGain": 1,
+    "sandVis": true,
+    "sandLive": 900,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0,
+    "uRimFloorOffCut": 0,
+    "postfxOk": true,
+    "strayGains": [],
+    "t": 0.33479999999981375
+   },
+   "consoleErrors": 0,
+   "ordinal": 69,
+   "at": "2026-08-14T23:22:01.148Z"
+  },
+  {
+   "shot": "night",
+   "arm": "w35",
+   "file": "night.w35.png",
+   "sha256": "fd01b8ee0657e2698ea46440885e84f74fb34d652a58b000eba2de69cdf9e4c2",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "1d94776f9232"
+   },
+   "readback": {
+    "uAmbGain": 1,
+    "uAlphaGain": 1,
+    "sandVis": true,
+    "sandLive": 900,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "uRimFloorOffCut": 0.35,
+    "postfxOk": true,
+    "strayGains": [],
+    "t": 0.33479999999981375
+   },
+   "consoleErrors": 0,
+   "ordinal": 70,
+   "at": "2026-08-14T23:22:35.149Z"
+  },
+  {
+   "shot": "night",
+   "arm": "w45",
+   "file": "night.w45.png",
+   "sha256": "888107e114592bc30ecd99aaf1684567bb54f8eb8e9ec876cfa6c1d54c1a9552",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "1d94776f9232"
+   },
+   "readback": {
+    "uAmbGain": 1,
+    "uAlphaGain": 1,
+    "sandVis": true,
+    "sandLive": 900,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "uRimFloorOffCut": 0.45,
+    "postfxOk": true,
+    "strayGains": [],
+    "t": 0.33479999999981375
+   },
+   "consoleErrors": 0,
+   "ordinal": 71,
+   "at": "2026-08-14T23:23:09.186Z"
+  },
+  {
+   "shot": "night",
+   "arm": "b35",
+   "file": "night.b35.png",
+   "sha256": "78a06feca3029162243bb32f28e61e28108a70b9225f9839c3c6862b4b5006c3",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "1d94776f9232"
+   },
+   "readback": {
+    "uAmbGain": 1,
+    "uAlphaGain": 1,
+    "sandVis": true,
+    "sandLive": 900,
+    "uRimShadowFloorArch": 0.1,
+    "uRimShadowFloor": 0.45,
+    "uRimFloorOffCut": 0.35,
+    "postfxOk": true,
+    "strayGains": [],
+    "t": 0.33479999999981375
+   },
+   "consoleErrors": 0,
+   "ordinal": 72,
+   "at": "2026-08-14T23:23:43.386Z"
+  },
+  {
+   "shot": "night",
+   "arm": "b45",
+   "file": "night.b45.png",
+   "sha256": "66cc77cec24b2a5fe274c42d8686546d46f9489888ef225f214a898be8110e12",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "1d94776f9232"
+   },
+   "readback": {
+    "uAmbGain": 1,
+    "uAlphaGain": 1,
+    "sandVis": true,
+    "sandLive": 900,
+    "uRimShadowFloorArch": 0.1,
+    "uRimShadowFloor": 0.45,
+    "uRimFloorOffCut": 0.45,
+    "postfxOk": true,
+    "strayGains": [],
+    "t": 0.33479999999981375
+   },
+   "consoleErrors": 0,
+   "ordinal": 73,
+   "at": "2026-08-14T23:24:17.675Z"
+  },
+  {
+   "shot": "night",
+   "arm": "back",
+   "file": "night.back.png",
+   "sha256": "4c12691d2d8566085f51e4a9661a2de4f5d9409eb36ae1bdd93a42437de8d627",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "1d94776f9232"
+   },
+   "readback": {
+    "uAmbGain": 1,
+    "uAlphaGain": 1,
+    "sandVis": true,
+    "sandLive": 900,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "uRimFloorOffCut": 0,
+    "postfxOk": true,
+    "strayGains": [],
+    "t": 0.33479999999981375
+   },
+   "consoleErrors": 0,
+   "ordinal": 74,
+   "at": "2026-08-14T23:24:51.681Z"
+  },
+  {
+   "shot": "guard",
+   "arm": "off",
+   "file": "guard.off.png",
+   "sha256": "5e85356a7f60debf8bcd0e379badb5c7c3bafd71fbf12689d9035b1ac164599b",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "1d94776f9232"
+   },
+   "readback": {
+    "uAmbGain": 1,
+    "uAlphaGain": 1,
+    "sandVis": true,
+    "sandLive": 900,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "uRimFloorOffCut": 0,
+    "postfxOk": true,
+    "strayGains": [],
+    "t": 0.33479999999981375
+   },
+   "consoleErrors": 0,
+   "ordinal": 75,
+   "at": "2026-08-14T23:27:18.276Z"
+  },
+  {
+   "shot": "guard",
+   "arm": "k10",
+   "file": "guard.k10.png",
+   "sha256": "6c730f012ab73ece48881b91941c503d95b1a3cb862ad992ae2c7a7d893e5a73",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "1d94776f9232"
+   },
+   "readback": {
+    "uAmbGain": 1,
+    "uAlphaGain": 1,
+    "sandVis": true,
+    "sandLive": 900,
+    "uRimShadowFloorArch": 0.1,
+    "uRimShadowFloor": 0.45,
+    "uRimFloorOffCut": 0,
+    "postfxOk": true,
+    "strayGains": [],
+    "t": 0.33479999999981375
+   },
+   "consoleErrors": 0,
+   "ordinal": 76,
+   "at": "2026-08-14T23:27:36.345Z"
+  },
+  {
+   "shot": "guard",
+   "arm": "rimz",
+   "file": "guard.rimz.png",
+   "sha256": "0cd0e660dbd86c78839f6a2265702549bf62de2a4d4850fc360b90a203c102af",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "1d94776f9232"
+   },
+   "readback": {
+    "uAmbGain": 1,
+    "uAlphaGain": 1,
+    "sandVis": true,
+    "sandLive": 900,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0,
+    "uRimFloorOffCut": 0,
+    "postfxOk": true,
+    "strayGains": [],
+    "t": 0.33479999999981375
+   },
+   "consoleErrors": 0,
+   "ordinal": 77,
+   "at": "2026-08-14T23:27:54.598Z"
+  },
+  {
+   "shot": "guard",
+   "arm": "w35",
+   "file": "guard.w35.png",
+   "sha256": "b4b7b42da7c45e4eef0b33ffc37248a4c5cc2a3891741a15cf3eb47d6ec41c85",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "1d94776f9232"
+   },
+   "readback": {
+    "uAmbGain": 1,
+    "uAlphaGain": 1,
+    "sandVis": true,
+    "sandLive": 900,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "uRimFloorOffCut": 0.35,
+    "postfxOk": true,
+    "strayGains": [],
+    "t": 0.33479999999981375
+   },
+   "consoleErrors": 0,
+   "ordinal": 78,
+   "at": "2026-08-14T23:28:12.558Z"
+  },
+  {
+   "shot": "guard",
+   "arm": "w45",
+   "file": "guard.w45.png",
+   "sha256": "48417ad8ab34fc89bd77f3914531f10352007b95de11925becb0402aea7ac2f1",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "1d94776f9232"
+   },
+   "readback": {
+    "uAmbGain": 1,
+    "uAlphaGain": 1,
+    "sandVis": true,
+    "sandLive": 900,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "uRimFloorOffCut": 0.45,
+    "postfxOk": true,
+    "strayGains": [],
+    "t": 0.33479999999981375
+   },
+   "consoleErrors": 0,
+   "ordinal": 79,
+   "at": "2026-08-14T23:28:30.540Z"
+  },
+  {
+   "shot": "guard",
+   "arm": "b35",
+   "file": "guard.b35.png",
+   "sha256": "bd0f95418fa4f7d42dfdf531f03e14254a76d4c4890d1a776ec3eacbad1dc56e",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "1d94776f9232"
+   },
+   "readback": {
+    "uAmbGain": 1,
+    "uAlphaGain": 1,
+    "sandVis": true,
+    "sandLive": 900,
+    "uRimShadowFloorArch": 0.1,
+    "uRimShadowFloor": 0.45,
+    "uRimFloorOffCut": 0.35,
+    "postfxOk": true,
+    "strayGains": [],
+    "t": 0.33479999999981375
+   },
+   "consoleErrors": 0,
+   "ordinal": 80,
+   "at": "2026-08-14T23:28:48.466Z"
+  },
+  {
+   "shot": "guard",
+   "arm": "b45",
+   "file": "guard.b45.png",
+   "sha256": "b8e70c93c0ae140858f0e52b768f9c03a10f3cb897261db70461b70b01a85854",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "1d94776f9232"
+   },
+   "readback": {
+    "uAmbGain": 1,
+    "uAlphaGain": 1,
+    "sandVis": true,
+    "sandLive": 900,
+    "uRimShadowFloorArch": 0.1,
+    "uRimShadowFloor": 0.45,
+    "uRimFloorOffCut": 0.45,
+    "postfxOk": true,
+    "strayGains": [],
+    "t": 0.33479999999981375
+   },
+   "consoleErrors": 0,
+   "ordinal": 81,
+   "at": "2026-08-14T23:29:06.404Z"
+  },
+  {
+   "shot": "guard",
+   "arm": "back",
+   "file": "guard.back.png",
+   "sha256": "5e85356a7f60debf8bcd0e379badb5c7c3bafd71fbf12689d9035b1ac164599b",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "1d94776f9232"
+   },
+   "readback": {
+    "uAmbGain": 1,
+    "uAlphaGain": 1,
+    "sandVis": true,
+    "sandLive": 900,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "uRimFloorOffCut": 0,
+    "postfxOk": true,
+    "strayGains": [],
+    "t": 0.33479999999981375
+   },
+   "consoleErrors": 0,
+   "ordinal": 82,
+   "at": "2026-08-14T23:29:24.307Z"
+  },
+  {
+   "shot": "sly-profile",
+   "arm": "off",
+   "file": "sly-profile.off.png",
+   "sha256": "67011aca831832d1e02f02cfe7df90a02913b2f8bd87eb9f881173fe28aacdb8",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "1d94776f9232"
+   },
+   "readback": {
+    "uAmbGain": 1,
+    "uAlphaGain": 1,
+    "sandVis": true,
+    "sandLive": 900,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "uRimFloorOffCut": 0,
+    "postfxOk": true,
+    "strayGains": [],
+    "t": 0.33479999999981375
+   },
+   "consoleErrors": 0,
+   "ordinal": 83,
+   "at": "2026-08-14T23:32:54.800Z"
+  },
+  {
+   "shot": "sly-profile",
+   "arm": "ahide",
+   "file": "sly-profile.ahide.png",
+   "sha256": "66b4c1175824ade4698143e21d459f839cdc2f565d274ed13cef68da63497ab0",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "1d94776f9232"
+   },
+   "readback": {
+    "uAmbGain": 1,
+    "uAlphaGain": 1,
+    "sandVis": false,
+    "sandLive": 900,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "uRimFloorOffCut": 0,
+    "postfxOk": true,
+    "strayGains": [],
+    "t": 0.33479999999981375
+   },
+   "consoleErrors": 0,
+   "ordinal": 84,
+   "at": "2026-08-14T23:33:20.640Z"
+  },
+  {
+   "shot": "sly-profile",
+   "arm": "g00",
+   "file": "sly-profile.g00.png",
+   "sha256": "e51ba998a6c80091f16c08173130055c87d22cc84326a9e63b67603c3ef24ca0",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "1d94776f9232"
+   },
+   "readback": {
+    "uAmbGain": 0,
+    "uAlphaGain": 1,
+    "sandVis": true,
+    "sandLive": 900,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "uRimFloorOffCut": 0,
+    "postfxOk": true,
+    "strayGains": [],
+    "t": 0.33479999999981375
+   },
+   "consoleErrors": 0,
+   "ordinal": 85,
+   "at": "2026-08-14T23:33:46.040Z"
+  },
+  {
+   "shot": "sly-profile",
+   "arm": "t18",
+   "file": "sly-profile.t18.png",
+   "sha256": "13be983076779a49ffa0ffe3c7f38ac2fe22dc4d535394dc8e1849f6a481c4bc",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "1d94776f9232"
+   },
+   "readback": {
+    "uAmbGain": 1,
+    "uAlphaGain": 0.18,
+    "sandVis": true,
+    "sandLive": 900,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "uRimFloorOffCut": 0,
+    "postfxOk": true,
+    "strayGains": [],
+    "t": 0.33479999999981375
+   },
+   "consoleErrors": 0,
+   "ordinal": 86,
+   "at": "2026-08-14T23:34:11.711Z"
+  },
+  {
+   "shot": "sly-profile",
+   "arm": "k10",
+   "file": "sly-profile.k10.png",
+   "sha256": "e89f6cfe9c8a67f8f2ffda1b217cd458278883e0a0ba89945d883511dd87dac0",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "1d94776f9232"
+   },
+   "readback": {
+    "uAmbGain": 1,
+    "uAlphaGain": 1,
+    "sandVis": true,
+    "sandLive": 900,
+    "uRimShadowFloorArch": 0.1,
+    "uRimShadowFloor": 0.45,
+    "uRimFloorOffCut": 0,
+    "postfxOk": true,
+    "strayGains": [],
+    "t": 0.33479999999981375
+   },
+   "consoleErrors": 0,
+   "ordinal": 87,
+   "at": "2026-08-14T23:34:37.488Z"
+  },
+  {
+   "shot": "sly-profile",
+   "arm": "rimz",
+   "file": "sly-profile.rimz.png",
+   "sha256": "5f9ddb467dd3f02cc62c21e94f7f700a15bf816e2fdbed8eac38f48421f303ce",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "1d94776f9232"
+   },
+   "readback": {
+    "uAmbGain": 1,
+    "uAlphaGain": 1,
+    "sandVis": true,
+    "sandLive": 900,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0,
+    "uRimFloorOffCut": 0,
+    "postfxOk": true,
+    "strayGains": [],
+    "t": 0.33479999999981375
+   },
+   "consoleErrors": 0,
+   "ordinal": 88,
+   "at": "2026-08-14T23:35:02.912Z"
+  },
+  {
+   "shot": "sly-profile",
+   "arm": "w35",
+   "file": "sly-profile.w35.png",
+   "sha256": "f2ef1501c4e3d48f34c0c1d930b95353183e7183afd5ea2fb5b175429cdb2e08",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "1d94776f9232"
+   },
+   "readback": {
+    "uAmbGain": 1,
+    "uAlphaGain": 1,
+    "sandVis": true,
+    "sandLive": 900,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "uRimFloorOffCut": 0.35,
+    "postfxOk": true,
+    "strayGains": [],
+    "t": 0.33479999999981375
+   },
+   "consoleErrors": 0,
+   "ordinal": 89,
+   "at": "2026-08-14T23:35:28.807Z"
+  },
+  {
+   "shot": "sly-profile",
+   "arm": "w45",
+   "file": "sly-profile.w45.png",
+   "sha256": "71110b63e3edc05aada6607ed73a691d61afdd62c17e21c4ebbbc4169225e0e4",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "1d94776f9232"
+   },
+   "readback": {
+    "uAmbGain": 1,
+    "uAlphaGain": 1,
+    "sandVis": true,
+    "sandLive": 900,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "uRimFloorOffCut": 0.45,
+    "postfxOk": true,
+    "strayGains": [],
+    "t": 0.33479999999981375
+   },
+   "consoleErrors": 0,
+   "ordinal": 90,
+   "at": "2026-08-14T23:35:54.627Z"
+  },
+  {
+   "shot": "sly-profile",
+   "arm": "b35",
+   "file": "sly-profile.b35.png",
+   "sha256": "0e4ae7d6718ef1bf763966d6d623baf0a3645330f7f1963a4a5e0cf089d55707",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "1d94776f9232"
+   },
+   "readback": {
+    "uAmbGain": 1,
+    "uAlphaGain": 1,
+    "sandVis": true,
+    "sandLive": 900,
+    "uRimShadowFloorArch": 0.1,
+    "uRimShadowFloor": 0.45,
+    "uRimFloorOffCut": 0.35,
+    "postfxOk": true,
+    "strayGains": [],
+    "t": 0.33479999999981375
+   },
+   "consoleErrors": 0,
+   "ordinal": 91,
+   "at": "2026-08-14T23:36:23.797Z"
+  },
+  {
+   "shot": "sly-profile",
+   "arm": "b45",
+   "file": "sly-profile.b45.png",
+   "sha256": "3f43b30ea1cb62f92135dd099738309a176ae03920664513b511a8cad7cb2f98",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "1d94776f9232"
+   },
+   "readback": {
+    "uAmbGain": 1,
+    "uAlphaGain": 1,
+    "sandVis": true,
+    "sandLive": 900,
+    "uRimShadowFloorArch": 0.1,
+    "uRimShadowFloor": 0.45,
+    "uRimFloorOffCut": 0.45,
+    "postfxOk": true,
+    "strayGains": [],
+    "t": 0.33479999999981375
+   },
+   "consoleErrors": 0,
+   "ordinal": 92,
+   "at": "2026-08-14T23:36:49.469Z"
+  },
+  {
+   "shot": "sly-profile",
+   "arm": "back",
+   "file": "sly-profile.back.png",
+   "sha256": "67011aca831832d1e02f02cfe7df90a02913b2f8bd87eb9f881173fe28aacdb8",
+   "tree": {
+    "src": "2b5c7c49ad9c4668",
+    "head": "1d94776f9232"
+   },
+   "readback": {
+    "uAmbGain": 1,
+    "uAlphaGain": 1,
+    "sandVis": true,
+    "sandLive": 900,
+    "uRimShadowFloorArch": 0.55,
+    "uRimShadowFloor": 0.45,
+    "uRimFloorOffCut": 0,
+    "postfxOk": true,
+    "strayGains": [],
+    "t": 0.33479999999981375
+   },
+   "consoleErrors": 0,
+   "ordinal": 93,
+   "at": "2026-08-14T23:37:15.015Z"
+  }
+ ],
+ "probe": {
+  "postfxOk": true,
+  "hasAmbGain": true,
+  "hasAlphaGain": true,
+  "hasOffCut": true,
+  "hasTuneOffCut": true,
+  "sandLive": 900,
+  "batches": [
+   "dust",
+   "smoke",
+   "spark",
+   "ring",
+   "sandLow",
+   "sandHigh",
+   "airMotes",
+   "shimmer",
+   "motes"
+  ]
+ }
+}
