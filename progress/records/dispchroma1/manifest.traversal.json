@@ -1,0 +1,77 @@
+{
+  "seal": "PREREG-dispchroma",
+  "warmup": 2,
+  "shot": "traversal",
+  "head": "29e662609447cc28bd0ad916ae4c23f04115b2ec",
+  "srcHash": "b3852e39472ed68f",
+  "staging": "setShot(name, {}) — dt UNDEFINED, live settle, roster-faithful (§328)",
+  "doses": {
+    "OFF": 0,
+    "ON": 2,
+    "KO": 1
+  },
+  "expectRowsTotal": 9,
+  "capturedAt": "2026-08-15T11:31:15.604Z",
+  "rows": [
+    {
+      "shot": "traversal",
+      "arm": "off",
+      "file": "traversal.off.png",
+      "sha256": "a3226c9526f2d77ed863b6469f9cdca24ff895f2a6ebbb08e0fa92247ac735ec",
+      "readback": {
+        "uDispChromaHold": 0,
+        "uDebugTerm": 0,
+        "debugRaw": null,
+        "camY": 14
+      }
+    },
+    {
+      "shot": "traversal",
+      "arm": "on",
+      "file": "traversal.on.png",
+      "sha256": "754d1919d35bf8c27152689d2cc85a9610984e98b87ccbd6460bbcad0084459d",
+      "readback": {
+        "uDispChromaHold": 2,
+        "uDebugTerm": 0,
+        "debugRaw": null,
+        "camY": 14
+      }
+    },
+    {
+      "shot": "traversal",
+      "arm": "ko",
+      "file": "traversal.ko.png",
+      "sha256": "450202af0ef016babca3e6dc4f0df72c2e2bf466333ed28d1ae098a61063f95b",
+      "readback": {
+        "uDispChromaHold": 1,
+        "uDebugTerm": 0,
+        "debugRaw": null,
+        "camY": 14
+      }
+    },
+    {
+      "shot": "traversal",
+      "arm": "back",
+      "file": "traversal.back.png",
+      "sha256": "a3226c9526f2d77ed863b6469f9cdca24ff895f2a6ebbb08e0fa92247ac735ec",
+      "readback": {
+        "uDispChromaHold": 0,
+        "uDebugTerm": 0,
+        "debugRaw": null,
+        "camY": 14
+      }
+    },
+    {
+      "shot": "traversal",
+      "arm": "msk",
+      "file": "traversal.msk.png",
+      "sha256": "e7f1a22115b55a032ebf25e556326ed57ddd0767d599b689fa4d5636b2f19be2",
+      "readback": {
+        "uDispChromaHold": 0,
+        "uDebugTerm": 1,
+        "debugRaw": null,
+        "camY": 14
+      }
+    }
+  ]
+}
