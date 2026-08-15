@@ -1,0 +1,5 @@
+HEAD 4b022506658c verified (subjLitHold inert in HEAD); expected src hash 2b5c7c49ad9c4668
+frames -> /home/user/Demo/progress/records/litbleach1
+HEAD tree verified under the lock — src 2b5c7c49ad9c4668 (no install; subjLitHold inert in HEAD)
+renderer: ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)
+-- staged sly-key LIVE (dt undefined, roster path); 5 warning(s)
