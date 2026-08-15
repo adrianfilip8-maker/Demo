@@ -24587,3 +24587,36 @@ using the character mask `bloomSubjectCut` already consumes (normal prepass alph
 because it does not put the whole look at risk.
 
 Nothing ships; this was a measurement seal proposing no candidate. subjLitHold stays 0.0.
+
+## §334 — live-settle staging is MORE cross-boot reproducible than dt:0, which is the opposite of the naive expectation
+
+Surfaced by a cross-lane contradiction, and both sides turned out to be right about different
+runners. The guardcone lane measured runs 4 and 5 capturing the same four shots on the **same src
+tree** (`2b5c7c49ad9c4668`) in two boots with **0 of 12 frames byte-identical** (verified
+independently here: `hero.off` 1a8009c6a956 vs c0fad6bce218, and so on for all 12). Meanwhile the
+litbleach arc measured `traversal.off` as **a3226c9526f2d77e in three separate boots hours apart**
+— litbleach chunk 1, litbleach2 chunk 1, and linchroma.
+
+The difference is the staging call, and it is the same axis §328 identified:
+
+```
+guardcone            setShot(name, { dt: 0 })   clock frozen THROUGH staging   0/12 match
+litbleach2/linchroma setShot(name, {})          live settle, roster path       bit-identical x3
+```
+
+**`dt: 0` sounds like the deterministic option and is not.** Freezing the clock through staging
+leaves the character wherever the live world clock happened to be when that boot reached the call,
+and that varies boot to boot. Live-settling advances the world to a *convergent* state, so it
+lands in the same place every time. §328 established that live-settle staging is what reproduces
+the roster's defect; this adds that it is also what reproduces the *frames*.
+
+Three consequences:
+1. **No pixel bar may cross a chunk in a `dt:0`-staged seal** — guardcone's AMENDMENT A2 audit
+   confirms none of its bars does, but the constraint is real and was not free.
+2. **A live-settle seal may legitimately compare frames across boots**, which §302 said was
+   unachievable. §302 was measured on `dt:0`-era captures; it is narrowed rather than wrong.
+   Do not build a cross-boot bar on this without re-measuring for that seal, but stop assuming it
+   is impossible.
+3. Combined with §331's warm-up (discard the unconverged first render), a live-settled, warmed-up
+   capture on an unchanged tree appears to be **bit-reproducible**, which is a much stronger
+   instrument than this project has been assuming it has.
