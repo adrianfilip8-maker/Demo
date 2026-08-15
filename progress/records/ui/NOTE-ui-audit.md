@@ -253,3 +253,185 @@ so the next reader of that file cannot re-apply half of it by accident.
   list fails the census exactly as a dead one missing from it does.
 
 `node --test "tests/*.test.mjs"` — **549 passing, 0 failing.**
+
+---
+
+# Continuation — 2026-08-15: the deferred list, re-scored against a moveset that moved
+
+Same lane, same scope (`src/ui/**` only). This pass exists because §3 above is a list of *"the
+mechanic does not exist"* verdicts, and MOVEMENT has since built three of the mechanics. Every
+entry was re-read against the current source rather than against the note, and the source was
+re-read again at the end because that lane was editing while this one ran.
+
+## C1. What actually changed under the old verdicts
+
+| Verdict in §3 | What the code says NOW | Still stands? |
+|---|---|---|
+| Pickpocket ring: *"a 0.55 s one-shot with no timing window and no failure state"* | `Moveset.Pickpocket` is now **two phases**: `creep` (up to `pickCreepMax` 2.2 s, abortable by steering away past `pickBreakDot`, given up on if the mark walks) then `reach` (`pickTime` 0.55, **unchanged, still no window and still no failure**). `Controller.pickMark()` resolves at `pickApproach` **4.6 m**. | **Partly.** No ring — see C3. But the approach needed something else entirely, and got it (C2.1). |
+| Shadow meter: *"`_light` is a global term"* | `Guards._readPlayer` still sets `this._light` from `_lightTarget(debug.timeOfDay)` alone, and its own comment still says *"Time of day is the whole of it"*. Still no per-position query, still no `playerHidden`. | **Yes, unchanged.** |
+| Sneak badge: *"the state is player-initiated by a held key"* | **False for half the set.** `Tiptoe.canEnter` is `grounded && narrowGround()` and `Crawl.canEnter` is `inVent()` — both engage with no input at all — and `Guard._readPlayer` reads exactly `sneak\|tiptoe` → `sneakGain` 0.40 and `crouch\|crawl\|roll` → `crouchGain` 0.55. | **No.** Implemented, C2.2. |
+| Full-screen alarm frame | `.sly-vig` still owns red at the frame edge for damage. | **Yes, unchanged.** |
+| Permanent treasure waypoints | `TREASURES` is still three hand-placed entries; nothing added a discovery concept. | **Yes, unchanged.** |
+| Minimap | Nothing new in the level or `CameraRig`. | **Yes, unchanged.** |
+
+One thing not on the old list turned up on the way and is the most consequential single line in
+this pass: **the prompt's range was half the move's range.** `HUD._tickAffordancePrompt` asked
+`Guards.nearestPickpocketTarget(pos, undefined, yaw)`, whose default is `TUNE.pocketRange` **2.4 m**
+— arm's length, the width of the *grab*. `Pickpocket.canEnter` asks `Controller.pickMark()`, which
+resolves at `pickApproach` **4.6 m**. So E started an approach from four and a half metres and the
+HUD only said so from two, which means **the approach MOVEMENT had just built was undiscoverable**:
+the player is told to press E only after walking the two metres the move exists to walk for him.
+Leaving the range to GUARDS was right when the reach was the whole move; it stopped being right the
+moment the reach acquired a run-up.
+
+## C2. What I implemented
+
+### 2.1 The pocket mark — `.sly-pocket`
+
+A world-space mark on `Guard.pocketPosition`, which GUARDS puts on the **back of the guard's belt**
+(*"the thing Sly's hand actually reaches for"*). Two facts the player had no way to get:
+
+- **Which guard.** Pressing E now hands Sly's steering to the game for up to 2.2 s while he walks
+  himself at a mark chosen by proximity-and-facing score. That is the `lockOn` failure again,
+  verbatim: committed to a target he could not identify. The mark sits *behind* the guard, so the
+  highlight and the lesson — approach from behind — are the same shape.
+- **That the window is still open, and the instant it shuts.** `canBePickpocketed` is re-checked
+  every frame on top of the ~10 Hz identity poll, so the mark dies on the frame the guard notices
+  something rather than up to a tenth of a second later.
+
+Art: AGENTS.md §2.1.6 names *pickpocket targets* among the things that must carry the blue-white
+diamond sparkle, `#8fd8ff` core / `#2a7fd4` glow, and nothing in the build drew one on a guard —
+`Controller._thiefVision` publishes `thiefTargets` from `collision.query` over traversal tags only,
+so no guard was ever marked by anything. `Icons.pocketMark()` is that spec literally: sparkle core,
+dashed ring (`pathLength="100"`, `11 14` → four even segments at any radius), `#2a7fd4` drop-shadow.
+
+Available reads as an **invitation** (spark, ring turning); once `playerState === 'pickpocket'` it
+reads as a **statement** (gold, ring closed, no spin) — the same split `.sly-mark` already has
+against `.sly-lock`, so it needs no new grammar learned.
+
+**Resolution is now single-sourced.** `_resolvePocket()` asks `MOVEMENT.pickMark()` first — its own
+doc comment names *the prompt* as a caller, it is memoised on MOVEMENT's frame counter so it costs
+nothing MOVEMENT is not already paying, and it carries `pickApproach` — falling back to
+`Guards.nearestPickpocketTarget` only when `pickMark` is absent, in which case 2.4 m is the honest
+number because a build without `pickMark` has no approach either. **Neither range is restated in
+`src/ui/`.** The prompt and the mark read the same answer, so they cannot name two different guards.
+
+### 2.2 The stealth mark — `.sly-stealth`, inside the threat chip
+
+The rejected "sneak badge", rebuilt on the half of the argument that broke. Shows the state name —
+`SNEAKING` / `TIPTOE` / `CROUCHED` / `CRAWLING` — whenever MOVEMENT is in one of the four states
+GUARDS counts as quiet, driven off `playerState` (already live in both directions; FX subscribes it,
+so this adds a subscriber and changes nothing in the census).
+
+Three decisions worth the words:
+
+- **It sits *inside* the exposure chip, not beside it.** The chip answers "is anybody looking", the
+  lash arc answers "how close is anybody to deciding", this answers "and how fast will it fill if
+  they do". Three readings of one quantity belong to one instrument; a fifth stacked element in that
+  corner would be a separate thing to check, which is exactly the noise the original verdict feared.
+- **No multiplier is drawn.** 0.40 and 0.55 live in another lane's `DETECT` and restating them is the
+  duplicated-tunable failure. The player needs the binary plus the name.
+- **`roll` is in GUARDS' crouching list and deliberately not in ours.** It lasts `TUNE.rollTime`; a
+  badge that appears for a third of a second is a flicker, not a readout. Omitting a state
+  under-promises, which is the safe direction — this can never claim a discount Sly is not getting.
+
+Colour is TURQUOISE `#2fa8a0` (§2.2) with a documented 35 % lift to `#73beb2` for type — 6.35:1 and
+8.56:1 on ink. It is a hue **nothing else in the HUD owns**: cream/amber/red is the exposure ladder,
+gold is loot, spark is a traversal affordance. A stealth mark in any of those would have read as a
+rung on a ladder it is not on. The table lives in `Alert.js` beside `CONE`, for the same reason
+`CONE` is there: it is pinned to another lane's literal and must not drift from it silently.
+
+### 2.3 Pause-screen control reference — three rows were wrong
+
+The pause screen's own comment says *"the game ships 25 moves and no tutorial, so the pause screen
+**is** the tutorial"*, and MOVEMENT's pole/rail work had left it lying:
+
+- **Pole swing was documented as Space. It is Left Mouse** (`PoleClimb.update`: `if
+  (c.pressed('attack')) return 'poleSwing'`). Space *jumps off* the pole. Now a row of its own, with
+  W/S, A/D and Ctrl spelled out.
+- **Rail walk was documented as Shift.** `RailWalk.canEnter` is *"grounded, on a rail"*, and
+  `RailSlide` degrades into it below `railWalk * 0.85`. You balance a rail by slowing down.
+- Pickpocket now says the approach exists and points at the sparkle; the hook row gains Ctrl.
+- **Circle-strafe had no row at all.** `CombatStrafe` rebinds the entire stick — A/D become tangent,
+  W/S become radius — and that is a control-scheme change that appeared nowhere on screen.
+
+## C3. What I left, and the verified reason
+
+| Candidate | Verdict | Reason, re-checked against today's source |
+|---|---|---|
+| **Pickpocket timing ring** | Still no | The *reach* still has no window and no failure — `Pickpocket.update` runs `pickTime` and returns `'idle'`. The *creep* does have a deadline, but `_creep` is a private field on a state instance with no publisher and `pickCreepMax` lives in MOVEMENT's `TUNE`, so a countdown ring could only be drawn by restating 2.2 in `src/ui/` — the exact duplicated-tunable failure §2.4 refused for `pocketRange`. What the approach was actually missing was *identity*, not a clock, and that is C2.1. |
+| **Shadow-concealment meter** | Still no | `Guards._light` is one global scalar eased toward `_lightTarget(debug.timeOfDay)`; the only per-player term is `beamLit`, applied per guard from last frame's `sawThisFrame` flags. There is still no per-position concealment to draw, and drawing one would be a lie about a mechanic the level does not have. |
+| **Full-screen "detected" alarm frame** | Still no | Unchanged: `.sly-vig` owns red at the frame edge for *damage*. A second red edge treatment makes hurt and seen indistinguishable. |
+| **Permanent treasure waypoints** | Still no | `TREASURES` is still three authored entries with no discovery state. Marking un-found loot turns a heist into a checklist; the goal marker still only ever points at something currently actionable. |
+| **Minimap / compass** | Still no | Nothing in the level or `CameraRig` supports one, and it competes for the peripheral read the alert badges own. |
+| **Orbit radius band for `combatStrafe`** | No | `strafeNear` / `strafeFar` are MOVEMENT tunables and drawing the band would restate them. The reticle already answers the question the player has (*which mark*); the radius is felt, because pushing into the limit is refused by rejecting input rather than by clamping position, which is exactly the design that makes a drawn band unnecessary. |
+| **Banked-treasure counter (0/3)** | No | It is score, not a decision. Nothing on screen changes what the player does next. |
+
+## C4. Interfaces — the one gap to route, and what it needs
+
+**`Health.purse` is still not published, and reading it is not enough on its own.** This is the item
+§5.1 carried forward; here is the precise version, because the first statement of it was half the
+problem.
+
+- **Where:** `src/player/Health.js`, `PlayerHealth._publish()` — currently
+  `this.engine.emit('health', { hp: this.hp, max: this.hpMax, charms: this.charms, down: this.down })`.
+- **What is missing:** the **numerator and the denominator**. `this.purse` is a plain public field
+  and could in principle be read off `engine.get('health')` the way `Pickups.fence` is — but the
+  price it is counted against is `CHARM.charmCoins` (100), which lives in a module-scope `const`
+  and is reachable only by importing `src/player/Health.js` into `src/ui/`, which §3 forbids, or by
+  hardcoding 100 in the HUD, which is the duplicated-tunable failure. **One of the two is reachable;
+  a progress readout needs both.**
+- **The ask, in one line:** add `purse: this.purse, charmCost: CHARM.charmCoins` to the existing
+  `_publish()` payload. No new event, no new subscriber, no census change — the HUD already
+  subscribes `health` and already discards fields it does not use.
+- **What it would buy:** "you are 40 coins from another charm" — a real, tuned economy
+  (`bank()` rolls charms at 100 coins, from both `coin` and `guardPickpocket`, and toasts on
+  completion) whose *progress* is currently invisible. The coin counter shows the wallet total,
+  which is a different number. Until then: **worked around by showing nothing.** No fake meter.
+
+Two smaller ones, both worked around rather than patched:
+
+1. **No pickpocket-window event.** Nothing announces when a guard becomes (un)pickpocketable, so the
+   HUD polls. It is now a *much* better poll — `MOVEMENT.pickMark()` is memoised per frame, so the
+   HUD's ~10 Hz identity poll costs a memo hit rather than a second walk of the garrison — plus a
+   per-frame `canBePickpocketed` re-check, which is one boolean. Acceptable; still a poll.
+2. **No stealth-factor accessor on GUARDS.** `Guards._sense.sneaking/.crouching` is private, so the
+   four state names in `STEALTH_STATES` mirror `Guard._readPlayer`'s two literal lists. Pinned with a
+   comment at the declaration site, and it fails in the safe direction: a state added to GUARDS' list
+   and not to ours shows nothing rather than showing a discount that is not being given.
+
+`prompt` is untouched, in both directions. `_sawPrompt` stays wholesale as instructed, MOVEMENT still
+does not publish (its own comment at the reverted `_pushPrompt` site now says so at length), and the
+§6 recommendation stands unapplied. Note that the **world-space pocket mark is a different channel**
+and deliberately keeps running if MOVEMENT ever does publish `prompt`: that event is a claim about a
+verb and a keycap, not about what is highlighted in the world.
+
+## C5. Provenance
+
+**Nothing external, again.** No dependency, no CDN, no webfont, no image file, no runtime fetch. The
+two new glyphs (`pocketMark`, `stealthMark`) are inline SVG authored in `src/ui/Icons.js`; every
+colour is §2.2 (`TURQUOISE #2fa8a0`, `SPARK #8fd8ff`, `LAPIS #2a7fd4`, `GOLD #ffe9a8`) or a stated
+blend of two of them. `public/assets/kaykit/PROVENANCE.md` is therefore not triggered — there is
+nothing to record, and **there is no asset in this pass whose licence I cannot state.**
+`tests/hud.test.mjs`'s self-containment assertion still passes over all four `src/ui/*` files.
+
+Resolution independence: every new size is in `--u`; the pocket mark positions itself from
+`engine.width/height`; `transform-origin: 32px 32px` on the ring is **SVG user units inside a
+`0 0 64 64` viewBox**, not CSS pixels — the same idiom the shipped `.sly-x-ring` uses on the
+crosshair's `0 0 200 200` box — so it stays centred at any render size. New text runs are 0.74u,
+above M6's 0.68u floor. Nothing assumes 1280×720.
+
+## C6. Files touched
+
+- `src/ui/HUD.js` — `_resolvePocket` / `_tickPocket` / pocket projection, `playerState` subscription
+  and `_onPlayerState`, prompt now single-sourced through the pocket resolver, three corrected and
+  two new pause-reference rows, `_lock`/`_pocket` released in `dispose()`
+- `src/ui/Icons.js` — `pocketMark()`, `stealthMark()`
+- `src/ui/Alert.js` — `STEALTH_STATES` + `stealthFor()`, pinned to `Guard._readPlayer`
+- `src/ui/hud.css.js` — `--turq` / `--turq-l`, `.sly-pocket` (+ commit state), `.sly-stealth`
+
+**No test file was touched this pass.** `tests/eventbus.test.mjs` needed no census correction:
+`playerState` was already live in both directions (the census asserts it by name), and adding a
+second subscriber changes neither list.
+
+`node --test "tests/*.test.mjs"` — **549 passing, 0 failing.**

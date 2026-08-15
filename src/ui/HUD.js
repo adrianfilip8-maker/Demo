@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { HUD_CSS } from './hud.css.js';
 import * as Ico from './Icons.js';
-import { alertFor, threatFor, suspicionColour, ALERT_STATES } from './Alert.js';
+import { alertFor, threatFor, suspicionColour, stealthFor, ALERT_STATES } from './Alert.js';
 
 /**
  * HUD — Sly's interface. Registered as module key 'hud' (AGENTS.md §4.3).
@@ -53,6 +53,17 @@ const TUNE = {
   /** Below this the arc is not drawn at all — a meter that never rests at zero is noise. */
   susFloor: 0.04,
   goalTick: 5,            // frames between objective-distance recomputes (~12 Hz)
+  /**
+   * Frames between pocket-mark resolutions. The same ~10 Hz the affordance prompt runs at, and
+   * for the same reason — it is a loop over eleven guards, not a per-frame cost worth paying.
+   *
+   * The mark's POSITION is not on this clock: the resolver hands back the guard, and his
+   * `pocketPosition` is a live vector re-derived every frame by GUARDS, so the mark tracks a
+   * walking guard smoothly and only the *identity* of the mark is polled. Same split the alert
+   * badges use, and for the same reason: a marker that remembers where a thing was points at
+   * nothing.
+   */
+  pocketTick: 6,
   bustHold: 1.6,          // s the CAUGHT stamp holds; PlayerHealth.CHARM.downTime is 1.15
   markMax: 16,
   shakeDecay: 9.5,
@@ -92,9 +103,10 @@ const CONTROLS = [
     rows: [
       { k: ['Space'], note: 'at a wall', d: 'Wall run', s: 'Space again — wall jump · hold into it — cling' },
       { k: ['Space'], note: 'under a ledge', d: 'Ledge hang', s: 'A / D — shimmy · W — climb up' },
-      { k: ['E'], note: 'at a hook ring', d: 'Cane hook + swing', s: 'Space releases with the swing' },
-      { k: ['E'], note: 'on a rail', d: 'Rail slide', s: 'Shift — rail walk (balance)' },
-      { k: ['E'], note: 'on a pole', d: 'Pole climb', s: 'Ctrl — slide down · Space — pole swing' },
+      { k: ['E'], note: 'at a hook ring', d: 'Cane hook + swing', s: 'Space releases with the swing · Ctrl drops off' },
+      { k: ['E'], note: 'on a rail', d: 'Rail slide', s: 'Slow to a walk and you balance it · Space hops off' },
+      { k: ['E'], note: 'on a pole', d: 'Pole climb', s: 'W / S — up and down · A / D — round the shaft · Ctrl — slide · Space — jump off' },
+      { k: [M('left')], note: 'on a pole', d: 'Pole swing', s: 'Whip round the shaft and let go' },
       { k: ['Space'], note: 'onto a spire tip', d: 'Ninja Spire Landing', s: 'Jumping off a spire goes 25% higher' },
     ],
   },
@@ -104,8 +116,9 @@ const CONTROLS = [
       { k: [M('left')], d: 'Cane combo', s: 'Three hits — the third one staggers' },
       { k: [M('left')], note: 'in the air', d: 'Dive attack', s: 'The Cane Slam — 1.2 m shockwave' },
       { k: ['Space'], note: 'onto a guard', d: 'Enemy bounce' },
-      { k: ['E'], note: 'behind a guard', d: 'Pickpocket', s: 'Take the coins, stay unseen' },
+      { k: ['E'], note: 'near a guard', d: 'Pickpocket', s: 'From a few paces back he creeps in on his own — follow the sparkle' },
       { k: [M('right')], note: 'hold', d: 'Thief-o-Vision', s: 'Highlights every affordance · hook lock-on · slow-mo' },
+      { k: [M('right'), 'A', 'D'], note: 'near a guard', d: 'Circle-strafe', s: 'Hold the lock and orbit him · W / S tighten or open it' },
     ],
   },
   {
@@ -147,21 +160,23 @@ const AFF_TAGS = Object.keys(AFF_VERB);
 const AFF_RANGE = 4.4;
 
 /**
- * The pocket, when nobody else is announcing it. `Guards.nearestPickpocketTarget(pos, maxDist,
- * facing)` is documented public API on the registered `guards` module — the same standing as
- * `collision.query` above, and the sibling of `Guards.nearest`, whose own comment names the HUD
- * as a consumer.
+ * The pocket, when nobody else is announcing it.
  *
  * This is the one affordance in the game with a CLOSING WINDOW: `canBePickpocketed` goes false the
  * moment a guard is alerted or already looted, and the roster carries 45–150 coins a head. The
  * whole authored economy was reachable only by a player who already knew to walk up behind a
- * guard and press E. Range is left to the guards module's own `TUNE.pocketRange` rather than
- * restated here, so the prompt cannot promise a reach Sly does not have.
+ * guard and press E.
+ *
+ * The mark itself is resolved by `_resolvePocket()`, which asks MOVEMENT before GUARDS and does
+ * not restate either module's range — see the note there for why that mattered once the reach
+ * became an approach.
  *
  * Retired with the rest of the fallback the first time an external `prompt` arrives, which is
  * correct in both directions: if MOVEMENT owns the pocket, the HUD must not hold a second
  * opinion about it — `Controller.pickMark` knows `pickApproach`, whether the state machine is
- * busy and whether Sly is grounded, and this does not.
+ * busy and whether Sly is grounded, and this does not. The world-space pocket MARK is a separate
+ * channel with no publisher and keeps running: `prompt` is a claim about a verb and a keycap, not
+ * about what is highlighted in the world.
  */
 const STEAL_VERB = 'Pickpocket';
 
@@ -227,6 +242,10 @@ export class HUD {
     this._wasLocked = false;
     this._sawPrompt = false;    // a real `prompt` event retires the affordance fallback
     this._lock = null;          // MOVEMENT's current lock-on mark
+    this._pocket = null;        // the guard whose pouch is currently reachable
+    this._pocketCount = 0;
+    this._pstate = '';          // MOVEMENT's current state name, from `playerState`
+    this._stealth = '';
     this._affDead = false;
     this._pickDead = false;
     this._affCount = 0;
@@ -285,6 +304,7 @@ export class HUD {
 
       <div class="sly-marks">
         <div class="sly-lock">${Ico.lockOn()}</div>
+        <div class="sly-pocket">${Ico.pocketMark()}</div>
         <div class="sly-goal">
           <div class="sly-goal-pin">${Ico.goalPin()}</div>
           <div class="sly-goal-ring"><div class="sly-goal-arrow">${Ico.goalArrow()}</div></div>
@@ -307,6 +327,10 @@ export class HUD {
             <span class="sly-threat-eye">${Ico.threatEye()}</span>
             <span class="sly-threat-lbl sly-ink sly-ink-s">HIDDEN</span>
             <span class="sly-threat-num sly-ink sly-ink-s"></span>
+            <span class="sly-stealth">
+              <span class="sly-stealth-ic">${Ico.stealthMark()}</span>
+              <span class="sly-stealth-lbl sly-ink sly-ink-s"></span>
+            </span>
           </div>
           <div class="sly-carry">
             <span class="sly-carry-ic sly-drop">${Ico.glyph('goal')}</span>
@@ -363,10 +387,13 @@ export class HUD {
       threatNum: q('.sly-threat-num'),
       threatFill: q('.sly-eye-fill'),
       threatFillInk: q('.sly-eye-fill-ink'),
+      stealth: q('.sly-stealth'),
+      stealthLbl: q('.sly-stealth-lbl'),
       carry: q('.sly-carry'),
       carryName: q('.sly-carry-name'),
       carryVal: q('.sly-carry-val'),
       lock: q('.sly-lock'),
+      pocket: q('.sly-pocket'),
       goal: q('.sly-goal'),
       goalRing: q('.sly-goal-ring'),
       goalLbl: q('.sly-goal-lbl'),
@@ -491,6 +518,18 @@ export class HUD {
      * The reticle art already existed for Thief-o-Vision; this points it at the mark.
      */
     on('lockOn', (p) => this.setLockOn(p));
+    /**
+     * MOVEMENT's state name, one emit per transition (`Controller.onStateChanged`). Already live
+     * on the bus — FX drives its skid dust and landing puffs off it — so this adds a subscriber
+     * to an existing event and changes nothing about the census.
+     *
+     * Two things read it, and both are facts the player is otherwise not told:
+     *   · `stealthFor()` — that he is in one of the four states GUARDS counts as quiet. Two of
+     *     them (`tiptoe`, `crawl`) he never asked for; see the note on STEALTH_STATES.
+     *   · the pocket mark — that MOVEMENT has committed him to the pickpocket approach, which is
+     *     up to `pickCreepMax` of Sly walking himself at a guard.
+     */
+    on('playerState', (s) => this._onPlayerState(s));
     on('toast', (p) => {
       if (!p) return;
       if (typeof p === 'string') this.toast(p);
@@ -821,6 +860,24 @@ export class HUD {
   }
 
   /**
+   * MOVEMENT changed state.
+   *
+   * The only thing rendered from it directly is the stealth mark on the exposure chip, and the
+   * write is guarded on a change because `playerState` fires on every transition — including the
+   * idle↔move flicker of a player nudging the stick — and repainting an unchanged label is two
+   * string allocations a transition against §5 for no pixel.
+   */
+  _onPlayerState(state) {
+    this._pstate = String(state ?? '');
+    if (!this._built) return;
+    const label = stealthFor(this._pstate);
+    if (label === this._stealth) return;
+    this._stealth = label;
+    this.el.stealthLbl.textContent = label;
+    this.el.stealth.classList.toggle('on', !!label);
+  }
+
+  /**
    * The fatal hit. `PlayerHealth` holds the world for `CHARM.downTime` before respawning, and
    * the stamp runs on its own timer rather than on the respawn so the beat cannot be cut short
    * by a fast checkpoint.
@@ -867,6 +924,7 @@ export class HUD {
     this._tickToasts(d);
     this._tickObjective(d);
     this._tickSuspicion(d);
+    this._tickPocket();
     this._tickWorldMarks();
     this._tickFx(d);
     this._tickBusted(d);
@@ -921,6 +979,61 @@ export class HUD {
     if (this._bustT <= 0) this.el.busted.classList.remove('on');
   }
 
+  /**
+   * Who Sly can rob right now — resolved ONCE, for both the prompt and the world mark.
+   *
+   * `MOVEMENT.pickMark()` is asked first and is the authority. Two reasons, and the second is a
+   * defect this closes rather than a preference:
+   *
+   *   · **Range.** The pickpocket is no longer a reach; it is an *approach*. `Moveset.Pickpocket`
+   *     now runs `creep` → `reach`, and `Controller.pickMark` resolves at `TUNE.pickApproach`
+   *     (4.6 m) because that is how far out E will start one. The HUD's own fallback asks GUARDS,
+   *     whose default is `TUNE.pocketRange` (2.4 m) — arm's length, the width of the *grab*. So
+   *     the prompt was appearing at half the distance the move actually works from, which made
+   *     the whole approach undiscoverable: a player is told "press E" only once he has already
+   *     walked the two metres the move was written to walk for him.
+   *   · **One source of truth.** `pickMark()` is memoised on MOVEMENT's own frame counter and its
+   *     doc comment names the prompt as a caller. Asking it costs nothing MOVEMENT is not already
+   *     paying, and it cannot disagree with the state machine about whether the pocket is there.
+   *
+   * Neither range is restated here. If `pickMark` is absent — an older Controller, or one being
+   * edited — the GUARDS fallback is the honest answer, because a build with no `pickMark` has no
+   * approach either and 2.4 m is then the real reach.
+   */
+  _resolvePocket() {
+    if (this._pickDead) return null;
+    const mv = this.engine.get?.('movement');
+    if (!mv?.position) return null;
+    try {
+      if (typeof mv.pickMark === 'function') return mv.pickMark()?.body ?? null;
+      const guards = this.engine.get?.('guards');
+      if (typeof guards?.nearestPickpocketTarget === 'function') {
+        return guards.nearestPickpocketTarget(mv.position, undefined, mv.yaw) || null;
+      }
+    } catch (err) {
+      this._pickDead = true;
+      this.engine.warn?.(`hud: pickpocket readouts disabled — ${err?.message || err}`);
+    }
+    return null;
+  }
+
+  /**
+   * The pocket mark's identity, on its own slow clock. Its *position* is not on this clock — see
+   * TUNE.pocketTick.
+   *
+   * `canBePickpocketed` is re-checked every frame on top of the poll, because that getter going
+   * false is the single most consequential moment in the move: the guard has noticed something,
+   * and the window Sly was creeping toward has just shut. Learning that a tenth of a second late
+   * is learning it after committing.
+   */
+  _tickPocket() {
+    if (this.pauseOn || this._bustT > 0 || this._pickDead) { this._pocket = null; return; }
+    if (this._pocket && this._pocket.canBePickpocketed === false) this._pocket = null;
+    if (--this._pocketCount > 0) return;
+    this._pocketCount = TUNE.pocketTick;
+    this._pocket = this._resolvePocket();
+  }
+
   /** Cheap stand-in prompt driver — see AFF_VERB. Retires itself the moment MOVEMENT speaks. */
   _tickAffordancePrompt() {
     if (this._sawPrompt || this._affDead || this.pauseOn || this._bustT > 0) return;
@@ -931,20 +1044,10 @@ export class HUD {
 
     /* The pocket outranks every traversal affordance, and the ranking is not a preference: a rail
        will still be a rail in ten seconds, and a guard's pocket closes the instant he turns round.
-       Its own failure is caught separately so a guards module that is not there yet cannot take
+       Read off `_tickPocket`'s answer rather than re-resolved, so the verb and the world mark can
+       never point at two different guards — and so its failure latch (`_pickDead`) cannot take
        the traversal prompts down with it. */
-    const guards = this.engine.get('guards');
-    if (!this._pickDead && typeof guards?.nearestPickpocketTarget === 'function') {
-      try {
-        if (guards.nearestPickpocketTarget(mv.position, undefined, mv.yaw)) {
-          this.prompt(STEAL_VERB, 'E', 'steal');
-          return;
-        }
-      } catch (err) {
-        this._pickDead = true;
-        this.engine.warn?.(`hud: pickpocket prompt disabled — ${err?.message || err}`);
-      }
-    }
+    if (this._pocket) { this.prompt(STEAL_VERB, 'E', 'steal'); return; }
 
     const col = this.engine.get('collision');
     if (!col?.query) { if (this._promptKind === 'steal') this.prompt(null); return; }
@@ -1044,6 +1147,34 @@ export class HUD {
           `translate(${p.x.toFixed(1)}px, ${p.y.toFixed(1)}px) scale(${p.s.toFixed(3)})`;
         this.el.lock.classList.add('on');
       } else this.el.lock.classList.remove('on');
+    }
+
+    /**
+     * The pocket.
+     *
+     * `Guard._updatePocket()` puts `pocketPosition` on the back of his belt every frame — *"the
+     * thing Sly's hand actually reaches for"* — so marking it does more than name the target: it
+     * puts the mark **behind** the guard, which is where the player has to be standing. The
+     * affordance and the lesson are the same shape.
+     *
+     * Not edge-clamped, same reason as the lock reticle: everything inside `pickApproach` is a
+     * few metres away, so off-screen means the camera is mid-swing, and a sparkle pinned to the
+     * frame edge during a pan is pointing at nothing.
+     */
+    const pocketAt = this._pocket?.pocketPosition;
+    const pp = pocketAt ? this._project(pocketAt, cam, W, H) : null;
+    if (pp?.ok) {
+      this.el.pocket.style.transform =
+        `translate(${pp.x.toFixed(1)}px, ${pp.y.toFixed(1)}px) scale(${pp.s.toFixed(3)})`;
+      /* Available is an invitation; committed is a statement. MOVEMENT drives Sly at the mark
+         for up to `pickCreepMax` once the approach starts, and the player who did not realise
+         he had started one is exactly the player who needs telling. */
+      this.el.pocket.classList.toggle('commit', this._pstate === 'pickpocket');
+      this.el.pocket.classList.add('on');
+    } else {
+      // Both classes, not just `on`: the close animation is `both`-filled, so a mark that comes
+      // back still wearing `commit` would reappear already closed and never play its own beat.
+      this.el.pocket.classList.remove('on', 'commit');
     }
 
     /* ---- Thief-o-Vision lock-ons ---- */
@@ -1363,6 +1494,8 @@ export class HUD {
     this._marks.length = 0;
     this._digits.length = 0;
     this._goal = null;
+    this._lock = null;
+    this._pocket = null;      // a live Guard reference; holding it past teardown pins the garrison
     this._carry = null;
     this._objBase = null;
     this.root?.remove();

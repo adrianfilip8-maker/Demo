@@ -121,6 +121,52 @@ export function alertFor(p) {
   return { state: 'patrol', ...ALERT_STATES.patrol };
 }
 
+/* --------------------------------------------------------- player stealth */
+
+/**
+ * The movement states that make Sly harder to see, and what each is called on screen.
+ *
+ * ── Why this exists, having been REFUSED once ─────────────────────────────────────────────────
+ * The first HUD pass rejected a "sneak badge" on the grounds that the state is player-initiated by
+ * a held key and fully carried by the animation — a badge for *"you are holding the key you are
+ * holding"*. That argument survives intact for `sneak` and `crouch`. It fails completely for the
+ * other two: `tiptoe` engages **by itself** the moment the ground underfoot goes narrow
+ * (`Controller.narrowGround()`, and the courtyard architrave at y = 9.0 is exactly that), and
+ * `crawl` engages **by itself** inside a vent (`Controller.inVent()`). Neither is asked for,
+ * both cut the rate at which every guard's meter fills, and nothing on screen said so. A discount
+ * the player is being given without being told is not "carried by the animation" — the animation
+ * shows him moving low, not that the world has become 2½× slower to notice him.
+ *
+ * ── What it is pinned to ──────────────────────────────────────────────────────────────────────
+ * `src/ai/Guard.js:_readPlayer` classifies the player from `mv.stateName` with two literal lists,
+ * and `src/ai/Patrol.js` then multiplies the fill by `DETECT.sneakGain` (0.40) or
+ * `DETECT.crouchGain` (0.55). So these four strings are not a HUD invention: they are the set
+ * GUARDS itself treats as quiet, read off the same `playerState` name GUARDS reads. This table
+ * must not drift from that line, which is why it sits here — beside `CONE`, for the same reason
+ * `CONE` does — rather than inline in the renderer.
+ *
+ * ── Two deliberate omissions ──────────────────────────────────────────────────────────────────
+ * `roll` **is** in GUARDS' crouching list and is deliberately absent here: it lasts `TUNE.rollTime`
+ * and a badge that appears for a third of a second is a flicker, not a readout. Omitting a state
+ * under-promises, which is the safe direction — this can never claim a discount Sly is not getting.
+ *
+ * And **no multiplier is shown**. Those two gain figures live in another lane's `DETECT` and
+ * restating them here is the duplicated-tunable failure this module exists to prevent. What the
+ * player needs is the binary — *am I moving quietly* — plus the state's name, because a word is
+ * read on first sight and a glyph has to have been learned (see the alert-label note in HUD.css).
+ */
+export const STEALTH_STATES = {
+  sneak:  'SNEAKING',
+  tiptoe: 'TIPTOE',
+  crouch: 'CROUCHED',
+  crawl:  'CRAWLING',
+};
+
+/** Label for a `playerState` name, or `''` when that state is not a quiet one. */
+export function stealthFor(state) {
+  return STEALTH_STATES[String(state ?? '').toLowerCase()] ?? '';
+}
+
 /* ------------------------------------------------------------------ threat */
 
 /**

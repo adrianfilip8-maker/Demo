@@ -344,6 +344,57 @@ export function lockOn(cls = '') {
   `, cls);
 }
 
+/**
+ * The pocket mark — a pickpocketable pouch, in world space.
+ *
+ * AGENTS.md §2.1.6 names the shape and the colours outright: *"Interactive traversal points —
+ * spire tips, hooks, rails, poles, **pickpocket targets** — carry the iconic blue-white diamond
+ * sparkle (`#8fd8ff` core, `#2a7fd4` glow). This is Sly's UI grammar and it must be present."*
+ * So the sparkle is not a choice, it is the spec; the ring around it is what makes the sparkle a
+ * *target* rather than a collectable, and it is dashed with the same idiom `crosshair()` uses.
+ *
+ * Drawn in `currentColor` so one piece of art carries both readings the mark has to make:
+ * spark-blue while the pocket is merely *available*, gold once MOVEMENT has committed Sly to the
+ * approach. Same invitation-vs-statement split as `.sly-mark` against `.sly-lock`.
+ *
+ * `pathLength="100"` normalises the dash arithmetic — 11 + 14 divides 100 exactly four times, so
+ * the ring is four even segments whatever radius this ends up rendering at.
+ */
+export function pocketMark(cls = '') {
+  const dash = 'pathLength="100" stroke-dasharray="11 14" stroke-linecap="round" fill="none"';
+  return wrap('0 0 64 64', `
+    <circle cx="32" cy="32" r="26" stroke="${C.ink}" stroke-width="9" ${dash} opacity=".6"/>
+    <circle cx="32" cy="32" r="26" stroke="currentColor" stroke-width="3.4" ${dash}
+            class="sly-pocket-ring"/>
+    <g transform="translate(12 12)">
+      <path d="M20 2c2 11 7 16 18 18-11 2-16 7-18 18-2-11-7-16-18-18 11-2 16-7 18-18z"
+            fill="currentColor" stroke="${C.ink}" stroke-width="3.4" stroke-linejoin="round"/>
+    </g>
+  `, cls);
+}
+
+/**
+ * A light footfall — the "you are moving quietly" mark on the exposure chip.
+ *
+ * A footprint rather than a crouched figure, because this renders at roughly 15 px on a 1280×720
+ * frame and a silhouette of a body loses its limbs at that size while a sole and a heel do not.
+ * Two shapes with a gap between them is a silhouette the eye resolves instantly, and the gap is
+ * what makes it read as a *print* — a mark left behind — rather than as a blob.
+ *
+ * `currentColor` again, so the chip owns the tint.
+ */
+export function stealthMark(cls = '') {
+  return wrap('0 0 36 46', `
+    <g fill="currentColor" stroke="${C.ink}" stroke-width="3.6" stroke-linejoin="round">
+      <path d="M11 9c7-3 14 0 15 7 1 7-3 11-8 12-5 1-9-2-10-6-1-4 0-11 3-13z"/>
+      <path d="M14 31c5-1 9 2 9 6.5 0 4-3 6.5-7 6.5s-6.5-2.5-6.5-6 1.5-6.5 4.5-7z"/>
+    </g>
+    <g fill="currentColor" stroke="${C.ink}" stroke-width="2.6">
+      <circle cx="28" cy="4.6" r="3"/><circle cx="5.6" cy="8.4" r="2.6"/>
+    </g>
+  `, cls);
+}
+
 /* ------------------------------------------------------------- emblems */
 
 /** The Cooper calling card: a masked raccoon struck on a gold coin. */

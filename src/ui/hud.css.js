@@ -26,6 +26,13 @@ export const HUD_CSS = /* css */ `
   --lapis-d: #1f4f96;
   --paint: #f2e8d4;
   --carn: #b8452c;
+  /* TURQUOISE from the §2.2 palette, plus a 35% lift toward --paint for type. Its own channel,
+     used by nothing else in the HUD: cream/amber/red is the exposure ladder, gold is loot, spark
+     is a traversal affordance — so "you are moving quietly" needed a hue none of those own, or it
+     would read as a fifth rung on a ladder it is not on. The lift is for legibility at the sizes
+     the stealth label renders at; #2fa8a0 measures 6.35:1 on ink and #73beb2 measures 8.56:1. */
+  --turq: #2fa8a0;
+  --turq-l: #73beb2;
 
   --pop: cubic-bezier(.16, 1.44, .38, 1);      /* overshoot — cartoon snap */
   --settle: cubic-bezier(.32, .9, .28, 1);
@@ -202,6 +209,45 @@ export const HUD_CSS = /* css */ `
 .sly-threat[data-state='hidden'] .sly-eye-fill {
   filter: drop-shadow(0 0 calc(var(--u) * .3) var(--sus-col, var(--gold)));
 }
+
+/* ------- the half the player controls: is he moving quietly ------- */
+
+/* Sits INSIDE the threat chip rather than beside it, and that placement is the argument.
+   The chip answers "is anybody looking"; the fill arc answers "how close is anybody to
+   deciding"; this answers "and how fast will it fill if they do" — three readings of one
+   quantity, so they belong to one instrument. As a fifth stacked element in the corner it
+   would have been a separate thing to check; as a mark on the eye it is read in the same
+   glance that was already being taken.
+
+   It appears only while a quiet state is live, so its resting state costs zero pixels — the
+   same rule as the carry chip and the goal marker. See STEALTH_STATES in Alert.js for which
+   four states earn it, and why roll deliberately does not. */
+.sly-stealth {
+  display: none;
+  align-items: center;
+  gap: calc(var(--u) * .26);
+  margin-left: calc(var(--u) * .1);
+  padding-left: calc(var(--u) * .42);
+  border-left: calc(var(--u) * .1) solid rgba(47, 168, 160, .5);
+}
+.sly-stealth.on { display: flex; animation: sly-stealth-in .26s var(--pop) both; }
+@keyframes sly-stealth-in {
+  from { opacity: 0; transform: translateY(calc(var(--u) * .3)) }
+  to   { opacity: 1; transform: translateY(0) }
+}
+.sly-stealth-ic { width: calc(var(--u) * .92); flex: none; color: var(--turq); display: block; }
+.sly-stealth-ic svg { width: 100%; height: auto; }
+.sly-stealth-lbl {
+  font-size: calc(var(--u) * .74);
+  letter-spacing: .15em;
+  color: var(--turq-l);
+  transform: skewX(-5deg);
+  white-space: nowrap;
+}
+/* A discount you are still being given while somebody is already looking is worth MORE, not
+   less — this is the state in which sneaking is the difference between NOTICED and SPOTTED.
+   So the mark brightens rather than receding once the chip goes loud. */
+#sly-hud:not([data-threat='hidden']) .sly-stealth-ic { color: var(--turq-l); }
 
 /* Escalation reads as urgency, not decoration: only the top rung pulses. */
 .sly-threat[data-state='spotted'] { animation: sly-threat-pulse .58s ease-in-out infinite alternate; }
@@ -580,6 +626,48 @@ export const HUD_CSS = /* css */ `
 .sly-lock.on { opacity: 1; }
 .sly-lock svg { width: 100%; height: 100%; animation: sly-lock-clamp .5s var(--pop) both; }
 @keyframes sly-lock-clamp { from { transform: scale(1.55) rotate(-14deg) } to { transform: scale(1) rotate(0) } }
+
+/* ---- the pocket ---- */
+
+/* AGENTS.md §2.1.6 lists pickpocket targets among the things that must carry Sly's blue-white
+   diamond sparkle, and until now nothing in the game drew one on a guard. It became urgent as
+   well as owed when MOVEMENT turned the pickpocket into an APPROACH: Moveset.Pickpocket runs
+   creep → reach, so pressing E from a few paces back hands Sly's steering to the game for up to
+   pickCreepMax — and the player was being walked at a target with nothing on screen saying
+   which guard, or that a move had started at all.
+
+   It sits on pocketPosition, which GUARDS puts on the back of the guard's belt. So the mark is
+   behind him, which is where the player has to be: the highlight and the lesson are one shape. */
+.sly-pocket {
+  position: absolute; left: 0; top: 0;
+  width: calc(var(--u) * 2.8); height: calc(var(--u) * 2.8);
+  margin: calc(var(--u) * -1.4) 0 0 calc(var(--u) * -1.4);
+  color: var(--spark);
+  opacity: 0; transition: opacity .14s ease;
+  will-change: transform;
+  /* The §2.1.6 glow, literally: #2a7fd4 under a #8fd8ff core. */
+  filter: drop-shadow(0 0 calc(var(--u) * .42) rgba(42, 127, 212, .95));
+}
+.sly-pocket.on { opacity: 1; }
+.sly-pocket svg { width: 100%; height: 100%; }
+/* The ring turns; the sparkle does not. Same reasoning as the goal marker's orbiting chevron —
+   during a pan the eye holds a stable shape and reads the motion off the part that moves. */
+.sly-pocket .sly-pocket-ring {
+  transform-origin: 32px 32px;
+  animation: sly-spin 5.5s linear infinite;
+}
+/* Committed. Gold, closed, and no longer turning: an invitation has become a statement, exactly
+   as .sly-mark becomes .sly-lock. The ring closing is the one bit of motion left, and it is the
+   move itself starting rather than an idle flourish. */
+.sly-pocket.commit { color: var(--gold-l); filter: drop-shadow(0 0 calc(var(--u) * .5) rgba(232, 185, 66, .9)); }
+.sly-pocket.commit .sly-pocket-ring {
+  animation: sly-pocket-close .34s var(--pop) both;
+  stroke-dasharray: 100 0;
+}
+@keyframes sly-pocket-close {
+  from { transform: scale(1.4) rotate(-20deg) }
+  to   { transform: scale(1) rotate(0) }
+}
 
 /* ---- objective marker ---- */
 
