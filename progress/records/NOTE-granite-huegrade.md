@@ -180,3 +180,87 @@ It does **not** license changing that field now. Two reasons, both standing rule
    > the stage that *originated* the value.
 
    `satHi` is not obviously the originating stage either. It is now merely the best-localised one.
+
+---
+
+# ADDENDUM — §336's sketched `R/G ≤ 0.90` bar is **out of reach of the texture lever**, and the bar imports another material's albedo
+
+Written immediately after §4 above, from §336's already-sealed frame numbers and §342's
+digest-proven albedo numbers. Pure arithmetic on committed values; no new capture.
+
+## The two inputs
+
+§342 gives the colossus's albedo side. §336 gives the frame side, and it gives a **within-frame
+control** — courtyard's own ground, measured in the same capture under the same wash:
+
+| surface | albedo lin R/G | × tint | = input | terminator (§336) | suppression |
+|---|---|---|---|---|---|
+| colossus | 4.260 | 1.489 `0x9c8278` | **6.344** | **3.74** | **0.589** |
+| courtyard ground | 1.910 | 1.775 `0xcfa068` | **3.390** | **0.52** | **0.153** |
+
+Ground assignment verified: `EgyptLevel.js:451` `A.mesh('paving_courtyard', K.pavingField(…))`,
+tinted by `Architecture.js:57`.
+
+**The wash suppresses the ground's R/G 3.84× harder than the colossus's, inside one frame.**
+
+## Two explanations for that gap, both ruled out
+
+1. **§336's own kill-gate — "the colossus rect is the *mid* band, not the shadow band."** Already
+   answered: §341's bandgate2 put that rect at **96.4 % shadow band**. Both surfaces are in the
+   same band.
+2. **An additive wash, which moves a dimmer surface's ratio further.** Refuted by sign. In linear,
+   the ground is brighter than the colossus in **both** channels (R 0.2653 vs 0.1635, G 0.0783 vs
+   0.0258), so an additive wash predicts the *ground* is suppressed **less**. It is suppressed
+   3.84× **more**. The mechanism is something else — sky/bounce occlusion, a `sh` difference, or
+   the rect's albedo diverging from the whole-texture mean. **Not distinguishable offline, and not
+   claimed.**
+
+## The reachability result
+
+Take the colossus's own observed suppression (0.589) as given and ask what input reaches the bar:
+
+```
+to land at R/G 0.90 at suppression 0.589, input must be   1.527
+  albedo x tint must fall                                 4.16x
+  albedo alone must fall to                               1.025   (from 4.260)
+```
+
+The **maximum** move available on the texture lever is deleting `hueGrade` from granite entirely —
+the A1 arm, albedo 2.690:
+
+```
+input        6.344 -> 4.006
+terminator   at suppression 0.589 -> 2.362
+bar 0.90     OVER BY 2.62x        -> DOES NOT REACH
+```
+
+And from the other side, holding the albedo and asking the shadow path to carry it alone requires
+suppression **0.142** — *harder than the ground actually achieves in the same frame* (0.153).
+
+**Neither lever alone reaches the bar. This is §332's failure shape — a lever that engages
+correctly and cannot reach its own bar — predicted before the seal rather than discovered by a
+capture.**
+
+## What is actually wrong with the bar
+
+§341 already called `R/G ≤ 0.90` a cross-material comparison. This says how far:
+
+The bar was read off **other shots' terminators** (hero 0.72, dunes 0.74, kaykit 0.78). Those
+surfaces have inputs near 3.4–3.8. The colossus's input is **6.344**. Asking a 6.3-input surface to
+land where a 3.4-input surface lands is not asking the shadow path to work correctly — it is asking
+it for a *different transform than it applies to anything else in the level*.
+
+**An absolute R/G bar silently imports the albedo of whatever material it was calibrated on.** The
+successor's bar should be **relative** — a suppression factor, or a hue-angle target — because those
+are properties of the shading path rather than of the material that happened to be under it. That is
+what §341's ADDENDUM was reaching for with "a relative rather than absolute ratio bar", and this is
+the number that forces it.
+
+## Caveat, stated plainly
+
+Every "input" above uses the **whole-texture mean** albedo as a proxy for the specific rect's
+albedo. §342 showed that proxy runs ~16 % high on the colossus's lit face. A 16 % error does not
+overturn a 3.84× or a 2.62×, but these are order-of-magnitude statements and must not be quoted as
+precision ones. The one measurement that would replace the proxy with the real thing is a
+**per-rect albedo readback** — the same shape as the `key` readback §336 asked for, and cheap on
+the same capture.

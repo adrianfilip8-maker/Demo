@@ -25041,3 +25041,51 @@ stage that originated the value.* `satHi` is not obviously the originating stage
 merely the best-localised one.
 
 Nothing ships; attribution seal, no candidate proposed.
+
+### §342.1 — and §336's sketched `R/G ≤ 0.90` bar is **out of reach of the texture lever**
+
+Same arithmetic, run immediately after and before anything was sealed. §342 supplies the albedo
+side; §336 supplies the frame side **and a within-frame control** — courtyard's own ground, in the
+same capture under the same wash (`EgyptLevel.js:451` → `Architecture.js:57`, verified):
+
+| surface | albedo | × tint | = input | terminator (§336) | suppression |
+|---|---|---|---|---|---|
+| colossus | 4.260 | 1.489 | **6.344** | **3.74** | **0.589** |
+| courtyard ground | 1.910 | 1.775 | **3.390** | **0.52** | **0.153** |
+
+**The wash suppresses the ground's R/G 3.84× harder than the colossus's, inside one frame.** Two
+explanations are ruled out: §336's own kill-gate ("the rect is the mid band") — §341's bandgate2
+already put it at **96.4 % shadow band**; and an additive wash — refuted **by sign**, because the
+ground is brighter than the colossus in *both* linear channels (R 0.2653 vs 0.1635, G 0.0783 vs
+0.0258), so additive predicts the ground moves **less** and it moves 3.84× **more**. The real
+mechanism is not distinguishable offline and is not claimed.
+
+**Reachability.** At the colossus's own observed suppression of 0.589, landing on `R/G ≤ 0.90`
+needs an input of 1.527 — albedo × tint must fall **4.16×**, albedo alone to **1.025** from 4.260.
+The *maximum* move the texture lever has is deleting granite's `hueGrade` entirely (the A1 arm,
+2.690):
+
+```
+input  6.344 -> 4.006      terminator at 0.589 -> 2.362      bar 0.90: OVER BY 2.62x
+```
+
+From the other side, holding the albedo and asking the shadow path to carry it alone needs
+suppression **0.142** — *harder than the ground actually achieves in the same frame* (0.153).
+**Neither lever alone reaches the bar.** §332's failure shape again, and this time predicted before
+the seal instead of discovered by a capture.
+
+**What is wrong with the bar.** §341 called it a cross-material comparison; this says how far. The
+bar was read off other shots' terminators (hero 0.72, dunes 0.74, kaykit 0.78), whose surfaces have
+inputs near 3.4–3.8. The colossus's is **6.344**. Asking a 6.3-input surface to land where a
+3.4-input surface lands is asking the shadow path for *a different transform than it applies to
+anything else in the level*. **An absolute R/G bar silently imports the albedo of whatever material
+it was calibrated on.** The successor's bar must be **relative** — a suppression factor or a
+hue-angle target — because those are properties of the shading path rather than of the material
+that happened to be under it.
+
+**Caveat.** Every "input" uses the whole-texture mean albedo as a proxy for the rect's albedo, which
+§342 showed runs ~16 % high on the lit face. That does not overturn a 3.84× or a 2.62×, but these
+are order-of-magnitude statements, not precision ones. The fix is a **per-rect albedo readback** —
+same shape as the `key` readback §336 already asked for, and cheap on the same capture.
+
+Nothing ships. This kills a seal that would have failed, before it was written.
