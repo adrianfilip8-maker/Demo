@@ -189,3 +189,92 @@ that reasoning is only ever available after the number is known. The bar was fix
 was missed; the verdict is unchanged. What a successor may legitimately do is seal a NEW bar in a
 new file, with its threshold derived and registered before its own candidate renders — and it now
 knows the axis to derive it on is luminance at the apex, not chroma.
+
+---
+
+## 7. ADDENDUM — the `sly-startle` containment escape: located, sized, and one reading refuted
+
+The successor's step 4 was "`sly-startle` containment escape, reason unknown". Offline read of the
+committed `sly-startle.off` / `.bon`, no capture and no `src`. **§141.1 again: this explains the
+failure and does not relitigate it.** `PROT-B` wanted `outside <= 900` and got **6087**; that stands.
+
+### 7.1 It is the frame's only uncovered region, and the escape fills it
+
+The container union (off ∪ bon, §4's rule) covers 853 808 of 921 600 px. The complement is
+**exactly** `{x < 446 ∧ y >= 568}` — 67 792 px, verified by enumeration, with zero corner pixels
+covered and zero uncovered pixels outside the corner. Its two edges are both container edges: `y=568`
+is the bottom of `g2`'s dilated `beamRect`, `x=446` the left edge of the spill rect. All 6087
+escaped pixels lie in it; 100 % fall in twelve 80-px cells.
+
+### 7.2 It is at the quantisation floor — and two orders of magnitude under the change it guards
+
+```
+max|Δch| histogram    =1: 6063     2-3: 24     4-8: 0     >8: 0
+outside   67792 px   flips 6087 (8.98%)   meanΔL over the WHOLE mask =  0.0238 codes
+inside   853808 px   flips 170167 (19.93%)  meanΔL                   = -2.7614 codes
+                     px with max|Δch| > 3 = 116602
+```
+
+99.6 % of the escape is a single code value in a single channel; nothing exceeds 3. Averaged over the
+region it lives in, it is **0.0238 of one code — about 1/42 of a least significant bit**, against a
+sanctioned inside-the-cone change 116× larger and of the opposite sign.
+
+It is nonetheless *the cone's* signal, not a neutral wobble: of the channels touched, **R moves up in
+3535 of 3636 cases and B moves down in 986 of 1214** — the warm axis `colPatrol 0xffd9a0` works on.
+
+### 7.3 It is specific to this shot — the obvious explanation is false
+
+The tempting reading is that every shot carries this bleed and the fourteen that scored `outside=0`
+merely had full container coverage. **That is refuted by the other fourteen shots**, measured the
+same way:
+
+```
+shot          uncovered px   flips    shot          uncovered px   flips
+dunes             618 440        0    temple            179 090        0
+traversal         314 543        0    hero              152 015        0
+night             283 516      664    kaykit            104 855        0
+sly-startle        67 792     6087    (7 shots)               0        0
+```
+
+`dunes` leaves **9.1× more of its frame uncovered** than `sly-startle` and leaks not one pixel.
+Eleven of fifteen shots are at exactly zero. `night`'s 664 is the only other non-zero and it carries
+the *opposite* sign (`meanΔL −0.0004`, B down 272 against R up 78). So the escape is a property of
+this shot, not of its container geometry.
+
+### 7.4 The falloff-tail reading is refuted, and widening the pad does not rescue it
+
+The natural mechanism — `g2`'s `beamRect` under-covering the cone's own vertical falloff — predicts a
+signal that **decays** with distance below `y=568`. Binned by y-band × luminance bucket, so that the
+floor's brightening toward camera cannot confound it, the flip rate **rises monotonically** across
+the full 152 px at three independent luminance levels:
+
+```
+y-band from the rect edge      568-592  592-616  616-640  640-664  664-688  688-720
+  L 32-48                         3.0%     5.0%      n/a    10.8%    13.8%    14.0%
+  L 48-64                         3.1%     3.6%     5.7%     7.6%    10.3%    12.4%
+  L 64-80                         2.7%     5.1%     4.9%     7.4%     9.8%    10.0%
+```
+
+Nor is it a halo hugging a container edge: the median escaped pixel is **76 px** from the nearest
+container, and re-running the containment with a wider pad leaves it substantially intact —
+`pad=32 → 5924`, `48 → 5566`, `64 → 5043`, `96 → 4070`, **`128 → 2623`**. At 5.3× the sealed pad it
+is still 2.9× over the bar.
+
+### 7.5 What the evidence does point at, and what a successor must not assume
+
+By x-band the escape is roughly flat at 6.8–8.2 % across `x 0-384` and then jumps to **18.76 %** in
+the 62 px immediately left of the spill rect's edge — consistent with the spill term's own gradient
+continuing past a hard axis-aligned boundary that has no counterpart in the light. But the profile is
+**not** a single gradient: it dips to 6.77 % at `x 192-256` and rises again to 8.20 % at the frame's
+left edge, so at least one further contribution is present and unaccounted for.
+
+**Not claimed: which uniform is responsible.** The `bon` arm moves seven at once (`shape`, `lampW`,
+`colPatrol`, `base`, `pool`, `core`, `glow`) and **`sly-startle` has no `blamp` row**, so the bundle
+cannot be split on this shot. Naming one here would repeat the error §347 records — three successive
+`lampW` theories, each written after a verdict and each wrong. Splitting it needs a shot captured
+with the isolating arm, which is a capture, not a re-read.
+
+**Incidental instrument note.** This shot's `ahead` disc projects to `[-1223,76,-1129,170]`, entirely
+off-screen; `dilate()` clamps `x0` to 0 but leaves `x1 = -1105`, yielding a degenerate rect that
+contains nothing. It is harmless here — the escape is nowhere near it — but a degenerate container is
+silently empty rather than loud, and a successor relying on `ahead` should know that.
