@@ -1,3 +1,13 @@
 HEAD a6e7db566f86 verified (subjLitHold inert in HEAD); expected src hash 2b5c7c49ad9c4668
 frames -> /home/user/Demo/progress/records/litbleach2
 HEAD tree verified under the lock — src 2b5c7c49ad9c4668 (no install; subjLitHold inert in HEAD)
+renderer: ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)
+-- staged sly-key LIVE (dt undefined, roster path); 5 warning(s)
+-- warm-up 2 render(s) discarded (§331: first render after staging is unconverged)
+  # 1 sly-key.off          sha 75991b4ed9a49ab3  hold=0 dbgTerm=0 raw=null
+  # 2 sly-key.on           sha da040dd528a29b32  hold=0.7 dbgTerm=0 raw=null
+  # 3 sly-key.ko           sha 5ee4fc193ba1c437  hold=0.4 dbgTerm=0 raw=null
+  # 4 sly-key.back         sha 75991b4ed9a49ab3  hold=0 dbgTerm=0 raw=null
+
+4 frames -> /home/user/Demo/progress/records/litbleach2  (9 across both chunks)
+score with: node progress/records/litbleach2seal/litbleach2-score.mjs
