@@ -24539,3 +24539,51 @@ off-subject pixel, so it is a genuine open item: mask edge feathering, or a leak
 
 Nothing ships. subjLitHold stays 0.0. Open: the linear-vs-display test; the 1-px leak; combat's
 costume-masked statistic (NOTE-litbleach2-aim.md addendum).
+
+## §333 — linchroma CONFIRMED: the costume leaves the shader blue, and the DISPLAY TRANSFORM takes the blue out
+
+Scored against PREREG-linchroma (e0f1f00). 4 frames, no `src` change, every validity gate passed:
+V_ROWS 4, **CAL (64,128,191) over 62.1%** of frame (5% floor — the debugRaw bypass proved itself
+in-boot as its own documentation demands), R 0 px, CLIP 3.7% (<5%).
+
+```
+DISPLAY chroma (off)   0.205      <- what litbleach2 measured as S
+LINEAR chroma (raw)    0.873
+albedo chroma          0.990
+ratio linear/albedo    0.882      CONFIRMED >= 0.792
+```
+
+**The pixel leaves the shader at 88.2% of its albedo's chroma and reaches the screen at 0.205 —
+AgX plus the grade's `saturation: 1.30` destroy 76.5% of it.** CLIP's bias runs the safe way:
+clipped pixels read LOWER chroma, so the true linear figure is if anything higher.
+
+**§277/§312 RE-ROUTES FROM SHADING TO POSTFX.** Three sealed attempts — lithold VOID, litbleach
+VOID, litbleach2 valid/DO-NOT-SHIP — aimed in-shader levers at a defect the shader does not
+produce. `subjLitHold` measures chroma loss in linear, finds little, and correctly declines; §332
+showed no legal dose reaches its bar, and this is why. Closed as the wrong lever, with the reason
+known rather than as an unexplained weakness.
+
+**§312's central claim is flagged for revision.** It concluded "the driver is ADDITIVE" from a fit
+performed in DISPLAY space. The adds are real, but the pixel is still chromatic in linear after
+they land, so their contribution is mediated by the transform rather than by the addition. Same
+error class as §326's calibration-vs-tree: a quantity derived in one space applied in another.
+
+**My own intermediate number was wrong and the conclusion still held.** NOTE-linear-vs-display
+inferred loss ≈ 0.02 by inverting the captured effect through the shader's arithmetic; the direct
+measurement gives **loss = 0.118**, ~6× larger (h ≈ 0.083 at dose 0.70 against the model's 0.35).
+The inference was directionally right for the right reason and numerically an artefact of treating
+the display delta as if it mapped linearly back through AgX — the exact trap this arc kept hitting.
+
+§7's forecast registered ~75/25 CONFIRMED and confirmed; modest credit, since the value lay in
+sealing the refutation band beforehand so a low reading would have forced me to drop a conclusion
+I had already written up.
+
+**Routing, including what NOT to do.** The obvious move is the grade's `saturation: 1.30`; §7
+forbade it in advance and the result does not change that. The grade is shared by every shot, so
+saturation is a whole-look control and any seal touching it needs a BLIND CRITIC ROUND as its LOOK
+gate — not a rect — with protections on the shots that read best (r13: sly-profile 6, courtyard 6,
+temple 6). The first candidate is instead a **subject-scoped** chroma hold at composite time,
+using the character mask `bloomSubjectCut` already consumes (normal prepass alpha = 1 − vSlySkin),
+because it does not put the whole look at risk.
+
+Nothing ships; this was a measurement seal proposing no candidate. subjLitHold stays 0.0.
