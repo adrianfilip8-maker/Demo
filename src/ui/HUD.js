@@ -217,6 +217,7 @@ export class HUD {
     this._goalDist = -1;
     this._sus = 0;              // smoothed Guards.alertLevel
     this._susCol = '';
+    this._susOff = -1;
     this._bustT = 0;
     this._shake = 0;
     this._vig = 0;
@@ -897,9 +898,15 @@ export class HUD {
     this._sus += (want - this._sus) * Math.min(1, TUNE.susLerp * dt);
 
     const f = this._sus < TUNE.susFloor ? 0 : Math.min(1, this._sus);
-    const off = (100 * (1 - f)).toFixed(1);
-    this.el.threatFill.style.strokeDashoffset = off;
-    this.el.threatFillInk.style.strokeDashoffset = off;
+    /* Quantised to a tenth of the arc and written only on change. The resting state of this meter
+       is zero for most of a run, and a style write per frame per path to restate that costs two
+       string allocations against §5 for no pixel. */
+    const off = Math.round((1 - f) * 1000) / 10;
+    if (off !== this._susOff) {
+      this._susOff = off;
+      this.el.threatFill.style.strokeDashoffset = String(off);
+      this.el.threatFillInk.style.strokeDashoffset = String(off);
+    }
 
     const col = suspicionColour(this._sus);
     if (col !== this._susCol) {
