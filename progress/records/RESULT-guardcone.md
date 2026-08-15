@@ -278,3 +278,72 @@ with the isolating arm, which is a capture, not a re-read.
 off-screen; `dilate()` clamps `x0` to 0 but leaves `x1 = -1105`, yielding a degenerate rect that
 contains nothing. It is harmless here — the escape is nowhere near it — but a degenerate container is
 silently empty rather than loud, and a successor relying on `ahead` should know that.
+
+---
+
+## 8. ADDENDUM — `PROT-MOON` and `PROT-LAMPS`: the named objects are barely touched, and the sign is backwards
+
+The successor's step 3, the last unexplained guardcone failure. Offline read of the committed
+`night.off` / `night.bon`. **§141.1: both bars failed and stay failed.** The rule was
+*disjoint → 0, else ≤ 400*; `probe-touches` was true for both, so both were scored in the ≤ 400
+branch and returned 5723 and 8028.
+
+### 8.1 `PROT-LAMPS`: the lamps do not move
+
+```
+ROI [640,0,1140,130]  area 65000       flips 8028 (12.4%)
+  inside a cone container   8028        outside   0  (of 34784 disjoint px)
+  column profile   x640:98%  660:82%  680:66%  700:47%  720:10%  740..1140: 0%
+  the lamps (off-L >= 150): 1222 px, bbox [685,7,1095,130]
+      moved  13 px = 1.06%,  and those 13 got BRIGHTER (meanΔL +0.341)
+```
+
+The bar is named for the lamps and the lamps are **essentially untouched**. Every changed pixel
+lies in the first ~100 px of a 500-px-wide ROI — the strip that falls inside the beam's own declared
+container, which reaches `x = 769` — and the remaining 400 px of ROI, where the lamps actually are,
+is **bit-identical**. Not one pixel of the ROI outside a cone container moved.
+
+### 8.2 `PROT-MOON`: the moon dims by a quarter of one code value
+
+```
+ROI [300,20,480,140]  area 21600       flips 5723 (26.5%)
+  inside a cone container   5112        outside 611 (7.28% of the disjoint region)
+  column profile   x300:0%  320:6%  340:8%  360:21%  380:20%  400:29%  420:38%  440:50%  460:66%
+  moon disc, centred on the ROI's brightest px (444,98) at L 239.9:
+      r= 6   meanL 221.87 -> 221.63   Δ = -0.247 codes
+      r=16   meanL 190.31 -> 189.47   Δ = -0.846 codes
+  bright object (off-L >= 200) moved 26.99%   vs   background moved 26.47%
+```
+
+The moon is **not preferentially hit**: it changes at the same rate as the ROI background, which is
+what a field-wide effect looks like and not what light landing on a disc looks like. And the amount
+is a quarter of a code value over the disc core. Unlike `PROT-LAMPS` there is a genuine residue
+outside the containers — 611 px — but 72 % of the ROI's whole change is exactly 1 LSB.
+
+### 8.3 The sign is backwards, and that is measured rather than argued
+
+Both bars read as protecting against the cone *adding* light. The measured change is a **darkening**:
+`meanΔL = -1.171` on `PROT-MOON` with 5200 of 5723 px darker, and `-4.466` on `PROT-LAMPS` with 7908
+of 8028 darker and real magnitude behind it (2576 px in the 9–32 band). On `PROT-LAMPS` the R channel
+moves *down* in 7656 of the 7709 pixels it touches.
+
+**It is local to the containers, not a global exposure response.** That alternative is refutable on
+this frame and is refuted: over `night`'s 283 516 px that lie outside every cone container, only 664
+move at all (0.23 %) at `meanΔL -0.0004`, against `meanΔL -2.080` inside. If enabling the cone were
+pulling a frame-wide exposure or tonemap term down, those 283 516 pixels would carry it. They do not.
+
+### 8.4 What actually failed is the ROI placement against a fixed allowance
+
+```
+PROT-MOON    ROI 21600 px,  overlap with a cone container 13212 px (61.2%)  — 400 is 3.0% of it
+PROT-LAMPS   ROI 65000 px,  overlap with a cone container 30216 px (46.5%)  — 400 is 1.3% of it
+```
+
+The `else` branch grants a flat 400 px however large the overlap is. Both ROIs were drawn across
+roughly half of the cone's own declared territory, so any cone that changes its own container at all
+spends the allowance immediately. That is the mechanism of the failure; whether 400 was the right
+number is a question for a new seal, not for this one.
+
+**Not claimed: which uniform, or why the sign is negative.** `bon` moves seven at once and `night`
+has **no `blamp` row** — the same limitation as `sly-startle` in §7. A mechanism named here would be
+the fourth post-hoc theory in this lineage, and §347 records what happened to the first three.
