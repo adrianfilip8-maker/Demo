@@ -3,3 +3,12 @@ frames -> /home/user/Demo/progress/records/litbleach2
 HEAD tree verified under the lock — src 2b5c7c49ad9c4668 (no install; subjLitHold inert in HEAD)
 renderer: ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)
 -- staged traversal LIVE (dt undefined, roster path); 5 warning(s)
+-- warm-up 2 render(s) discarded (§331: first render after staging is unconverged)
+  # 1 traversal.off        sha a3226c9526f2d77e  hold=0 dbgTerm=0 raw=null
+  # 2 traversal.on         sha b2f2c5cb69220fd1  hold=0.7 dbgTerm=0 raw=null
+  # 3 traversal.ko         sha a5f8e5a0b3bef3e1  hold=0.4 dbgTerm=0 raw=null
+  # 4 traversal.back       sha a3226c9526f2d77e  hold=0 dbgTerm=0 raw=null
+  # 5 traversal.msk        sha e7f1a22115b55a03  hold=0 dbgTerm=1 raw=null
+
+5 frames -> /home/user/Demo/progress/records/litbleach2  (expected 14)
+score with: node progress/records/litbleach/litbleach-score.mjs
