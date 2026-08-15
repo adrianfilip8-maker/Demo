@@ -104,6 +104,10 @@ export const HUD_CSS = /* css */ `
 .sly-pips > span:nth-child(3n)   { transform: translateY(calc(var(--u) * -.09)) rotate(-5deg); }
 .sly-pips > span:nth-child(5n)   { transform: translateY(calc(var(--u) * .06)) rotate(2.5deg); }
 .sly-pips > span.sly-pip-lost    { opacity: .92; }
+/* The calling card is the pip whose loss ends the run — see pipKind() in HUD.js. It is drawn as
+   a card among horseshoes so the silhouette carries that, and sized a shade larger so the row
+   reads as "Sly, plus two charms" rather than as a three-segment bar. */
+.sly-pips > span.sly-pip-life    { width: calc(var(--u) * 1.94); height: calc(var(--u) * 1.94); }
 
 /* ------- coin counter ------- */
 
@@ -195,7 +199,9 @@ export const HUD_CSS = /* css */ `
 .sly-eye-fill { stroke: var(--sus-col, var(--gold)); }
 /* Sub-threshold the arc is the only thing moving, so it gets its own presence; once the chip
    itself has gone loud the arc stops competing with it. */
-.sly-threat[data-state='hidden'] .sly-eye-fill { filter: drop-shadow(0 0 calc(var(--u) * .3) var(--sus-col)); }
+.sly-threat[data-state='hidden'] .sly-eye-fill {
+  filter: drop-shadow(0 0 calc(var(--u) * .3) var(--sus-col, var(--gold)));
+}
 
 /* Escalation reads as urgency, not decoration: only the top rung pulses. */
 .sly-threat[data-state='spotted'] { animation: sly-threat-pulse .58s ease-in-out infinite alternate; }

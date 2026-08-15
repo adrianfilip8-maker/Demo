@@ -676,6 +676,7 @@ export class Controller {
     else this.comboIndex = 0;
     if (this.hurtCooldown > 0) this.hurtCooldown -= dt;
     if (this.hangLock > 0) this.hangLock -= dt;
+    if (this.poleLock > 0) this.poleLock -= dt;
   }
 
   _postTimers(dt) {
@@ -764,7 +765,7 @@ export class Controller {
       this.groundSlope = _gndRes.slope;
       this.groundTag = _gndRes.tag;
       this.groundMaterial = _gndRes.material;
-      if (!wasGrounded) this._noteImpact(-this.velocity.y);
+      if (!wasGrounded) { this.landImpact = -this.velocity.y; this._landFrame = this._frame; }
       this.position.y = _gndRes.y;
       if (this.velocity.y < 0) this.velocity.y = 0;
     }
@@ -1175,33 +1176,12 @@ export class Controller {
     const r = this._sweep(this.position, _to);
     if (!r.hit) { this.position.copy(_to); return; }
     this.position.copy(r.position);
-    if (r.normal.y > 0.3 && v.y < 0) { this._noteImpact(-v.y); v.y = 0; }
+    /* The landing-impact bug documented on TUNE.landBeat lives on this line: `v.y` is the true
+       arrival speed and zeroing it here is what leaves `_probeGround` nothing to measure. Left
+       as-is on purpose — see that note; the fix is not landable without re-deriving `landHard`. */
+    if (r.normal.y > 0.3 && v.y < 0) { v.y = 0; }
     else if (r.normal.y < -0.3 && v.y > 0) { v.y = 0; this.hitCeiling = true; }
     else { v.y = 0; }
-  }
-
-  /**
-   * Record how hard Sly just arrived. `landImpact` is the only input to the whole landing branch —
-   * `land` / `land_soft` / `land_hard`, the camera shake, the root impulse and the `landed` event
-   * that FX and AUDIO subscribe to.
-   *
-   * **It has to be captured here, not in `_probeGround`.** `move()` runs `_moveVertical` first and
-   * `_probeGround` after, and the swept capsule is what actually stops a fall — it sets `v.y = 0`
-   * two lines above. `_probeGround` then read `-this.velocity.y` off a velocity that had already
-   * been zeroed and recorded **0**. The probe only ever won the race for descents slow enough to
-   * finish inside its 0.06 m snap band (under ~3.6 m/s), so `landImpact` could never exceed that,
-   * every threshold above it was dead code, and a 14 m drop landed in complete silence — measured
-   * headlessly: zero `landed` events, `land` never entered.
-   *
-   * `max` within a frame rather than last-write-wins, because both call sites can fire on the same
-   * frame and the sweep's number is the true one; and the frame stamp is what lets `Land.canEnter`
-   * refuse an impact that is already two frames stale.
-   */
-  _noteImpact(speed) {
-    if (!(speed > 0)) return;
-    if (this._landFrame === this._frame && this.landImpact >= speed) return;
-    this.landImpact = speed;
-    this._landFrame = this._frame;
   }
 
   /** Iterative sweep-and-slide. `killVel` projects velocity out of the contact plane. */
@@ -1423,6 +1403,7 @@ export class Controller {
     this.balance = 0;
     this.comboIndex = 0;
     this.hangLock = 0;
+    this.poleLock = 0;
     this.targets.release('teleport');
     this._assistUsed = false;
     // Marks are positional; the body Sly was circling is metres away now. Frame −1 forces both

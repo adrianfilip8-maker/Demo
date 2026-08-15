@@ -797,6 +797,10 @@ class RailWalk extends RailBase {
 class PoleClimb extends State {
   canEnter(c) {
     if (c.sm.group === 'attach') return false;
+    // Same guard, same reason, as `hangLock` on LedgeHang: a deliberate exit leaves Sly well
+    // inside `poleMount`, and the machine runs up to four passes per frame, so without this the
+    // top hop is re-grabbed before it has left the ground. See TUNE.poleLockout.
+    if (c.poleLock > 0) return false;
     const a = c.afford('pole');
     if (!a) return false;
     if (c.pressed('interact') && a.distance <= TUNE.poleMount * 1.5) return true;
@@ -874,7 +878,7 @@ class PoleClimb extends State {
     c.baseClip(clip, 0.16);
     return null;
   }
-  exit(c) { c.attached = null; }
+  exit(c) { c.attached = null; c.poleLock = TUNE.poleLockout; }
 }
 
 /** Pole swing — wind up around the shaft and let go for a long horizontal launch. */
@@ -892,7 +896,10 @@ class PoleSwing extends State {
     _a.set(Math.cos(p.angle), 0, -Math.sin(p.angle)).multiplyScalar(dir);
     c.yaw = Math.atan2(_a.x, _a.z);
     c.velocity.set(0, 0, 0);
-    if (c.sm.time >= TUNE.poleSwingTime || c.pressed('jump') || c.pressed('attack')) {
+    // The manual release needs the same minimum wind-up `hookMinSwing` gives the rope, or the
+    // press that STARTED the swing satisfies this test on its own first pass. See TUNE.poleSwingMin.
+    const bail = c.sm.time > TUNE.poleSwingMin && (c.pressed('jump') || c.pressed('attack'));
+    if (c.sm.time >= TUNE.poleSwingTime || bail) {
       const sp = Math.abs(w) * p.hold * TUNE.poleSwingLaunch + 5.0;
       c.velocity.set(_a.x * sp, 0, _a.z * sp);
       c.pendingLaunch = TUNE.jumpV0 * 0.8;
@@ -902,7 +909,7 @@ class PoleSwing extends State {
     c.baseClip('pole_swing', 0.12);
     return null;
   }
-  exit(c) { c.attached = null; }
+  exit(c) { c.attached = null; c.poleLock = TUNE.poleLockout; }
 }
 
 /* ====================================================================== */
