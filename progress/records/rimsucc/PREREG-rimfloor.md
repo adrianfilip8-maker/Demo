@@ -1,3 +1,205 @@
+# PREREG-rimfloor — **WITHDRAWN 2026-08-15, never registered**
+
+> **STATUS: WITHDRAWN.** This draft is not registered, never will be, and no frame of
+> `progress/records/rimfloor1/` will be captured against it. It is kept whole, below this banner,
+> because the reasoning is the audit trail and deleting it would destroy the record of what was
+> believed and when. **Nothing below this banner is in force.** The successor is
+> `progress/records/rimsucc/PREREG-rimink.md`.
+>
+> Withdrawn on a defect the draft itself did not have the material to see, and **not** on the
+> premise everybody expected: §347's denominator correction is *already in this file* (§0.1), and
+> §347's ink correction is *already in this file* (§0.2). This draft is where both came from. It
+> died on its **acceptance number**.
+
+## W. THE WITHDRAWAL — what died, what survived, and the one thing that killed it
+
+### W.1 The killing defect: A1 scores a PEAK statistic against an AREA bar (§346 Correction 2, committed a second time)
+
+**VERIFIED.** `rim-edges.mjs:18` — `RIM` is `max L over the RIMW px immediately inside i0`. So
+`spike = RIM − BODY` is a **peak**, and `R = shadowMean(spike) / keyMean(spike)` (§6.1) is a ratio
+of peaks, on both sides.
+
+**VERIFIED.** §6.3 derives A1's **0.112** from the 4000-sample quadrature **areas** — it prints
+them: *"areas 0.0276 / 0.2466"*, and 0.0276/0.2466 = 0.11193. `rim-offline.mjs:77/81` prints
+**both** statistics, and `antirim-profile.txt:698` states the pairing outright:
+
+```
+rim-offline §2 predicts    0.247 (peak)  |  0.112 (area, = PREREG §7 M2's DOWNSTREAM band)
+```
+
+§346 Correction 2 named this exact substitution as the error in `RESULT-rim` §3 — *"a peak
+statistic was scored against an area bar"*. **§6.3 makes the same substitution, in this seal's
+headline acceptance bar.** The bar's own sentence (*"whatever fraction of the lit-side rim the
+shading path's own constants declare a shadow-side rim is worth"*) is a statement about the
+statistic being scored; for a peak statistic the constants declare **0.247**, not 0.112.
+
+The draft cannot be blamed for not knowing this — but it is fatal anyway, because of W.2.
+
+### W.2 At the like-for-like number the lever is OUT OF RANGE, and the per-shot data now exists to prove it
+
+§1.2 named its own weak link honestly: *"`share_screen` and `Sscreen` exist in the record **pooled
+only** — there is no per-shot split."* **That is no longer true.** `antirim-profile.txt` §B carries
+the per-edge `PathB = spike(off) − spike(screenoff)` column, so every per-shot figure this draft had
+to substitute a pooled slope for is now measurable. **VERIFIED**, from §B:
+
+```
+                 KEY mean   SHADOW mean   R(off)    PathB(shadow)   slope = PathB/0.45
+hero              27.543       3.637      +0.1320       4.643            10.319
+sly-profile       29.370      −2.867      −0.0976       4.467             9.926
+pooled (SHADOW7)                                        3.870             8.600
+```
+
+The weak link closes **in the draft's favour** — both scoring shots run *above* the pooled 8.600,
+and §1.2's named fear (sly-profile below pooled, because `thin` suppresses the cap and tail) did
+not happen. The seal dies anyway, at the ceiling dose:
+
+```
+max reachable at F = 1.00, using each shot's own measured slope and b = 0 (the MOST favourable
+assumption available — any edge.b > 0 lowers the slope):
+
+hero          Δshadow = 4.643 × (0.55/0.45) = 5.675 L   →  ΔR = 5.675/27.543 = 0.206
+sly-profile   Δshadow = 4.467 × (0.55/0.45) = 5.459 L   →  ΔR = 5.459/29.370 = 0.186
+
+required for a like-for-like peak bar                    →  0.247
+F needed                     hero 1.109   sly-profile 1.181   — both ABOVE the semantic ceiling
+```
+
+**Every principled acceptance number that survives §346/§347 is out of this lever's range:**
+
+| candidate bar | source | F needed (hero / sly-profile) | reachable? |
+|---|---|---|---|
+| ΔR ≥ 0.247 (peak, like-for-like) | `rim-offline.mjs` §2 peak ratio | 1.109 / 1.181 | **no** |
+| R(dose) ≥ 0.247 as a LEVEL | same | 0.757 / 1.470 | **no** (sly-profile) |
+| `spike ≥ 20.0 L` (§11.1, "a rim is present") | `PREREG-rim` §1.3(b) | 2.036 / 2.754 | **no** |
+| Path B's own contract | §347 — **already met to 0.16 %** | — | not a bar for a change |
+| ΔR ≥ 0.112 (this draft's A1) | the **area** quadrature | 0.809 / 0.833 | yes — **and only because it is the wrong statistic's number** |
+
+**A bar that is reachable only through a known measurement error is worse than no bar.** That is
+the withdrawal, in one sentence.
+
+### W.3 What died with the refuted premises
+
+Three separate things, kept apart because they died for three different reasons.
+
+**(a) Died with §346's peak-vs-area correction — the "2×" claim, wherever it appears.**
+- **§3.1**: *"Path A emits 0.222 of its key band on the shadow side in linear — **twice its own
+  documented 0.112**"*. **WITHDRAWN.** Like-for-like: 0.222 measured against 0.247 documented,
+  i.e. **~90 % of its documented peak**. Path A delivers about what it was designed to.
+- **§11.2**: *"`RESULT-rim` established Path A already emits **2×** its documented shadow-side
+  band."* **WITHDRAWN.** The *conclusion* — do not touch `wrapRim` — survives; the reason changes
+  from "it over-delivers" to "it is on spec and the loss is downstream in a mark drawn over it"
+  (§346's own wording).
+- **§6.3 / §1.3 / §10 / §12.4** — every number derived from **0.112**: the acceptance fraction, the
+  two doses (0.8087 / 0.8325 break-evens, hence `d85` and `d100`), and the forecast probabilities
+  attached to them. **All void**, per W.1/W.2.
+
+**(b) Died with §347's denominator correction — but was already dead in this file.** §0.1 *is*
+§347 Correction 1. It is correct, it was written here first, and the only residue of the old
+reading left standing is **§11.1's third bullet**, which still computes *"reading `src`'s own
+sentence as 0.45 of the **whole** band needs `F = 1.87`"*. That reading is the denominator error
+§0.1 refutes four hundred lines earlier. It changes no bar (all three of §11.1's figures are out of
+range either way) but it is an **internal contradiction** and is struck.
+
+**(c) Died with §347's ink correction — but was likewise already here.** §0.2 *is* §347
+Correction 2. It survives intact, and it is the strongest thing in this file. It is carried into
+the successor unchanged, with the measurement §0.2 lacked now attached (W.4).
+
+**Survives untouched, and is inherited by `PREREG-rimink`:** the whole of §0.1 and §0.2; §4.1's
+`src` verification (re-checked at this sha, W.5); §5.1's validity gates; §5.3's four inherited
+pre-flight gates and the new `PF_RATIO`; §5.4's frozen-`i0` deviation (now load-bearing, not
+merely prudent); §6.1's argument that the statistic must be a **within-frame ratio** per
+§342.1/§342.2; §2.2's exclusion of `night` from any A-row; §2.3's staging and 0-px bracket;
+§2.4's chunking argument; §3.4's refusal to use `rimFloorOffCut`.
+
+### W.4 The measurement §0.2 stopped one step short of, and it is why the successor is not a dose
+
+§0.2 established that the RIM window sits inside the ink. `antirim-profile.txt` §D **quantifies it**
+(**VERIFIED**) — `inside50` counts, of the 5 px the RIM statistic maximises over, how many sit at
+least half-way down into the ink dip, on the `off` arm:
+
+```
+SHADOW edges   2, 2, 2, 3, 2, 4, 1   → mean 2.3 of 5   (46 % of the window is ink)
+KEY    edges   0, 1, 0, 2, 0         → mean 0.6 of 5   (12 % of the window is ink)
+```
+
+and it does **not** change between `off` and `screenoff` — 2→2, 2→2, 2→2, 3→3, 2→2, 4→4, 1→1.
+**Path B at the shipped floor does not pull the band out from under the ink; it only brightens what
+is under it.** Raising `F` scales the same narrow band in the same dip.
+
+Against that, §346 measured the ink removing **17.5 L** of shadow-side spike while Path B's *entire*
+shipped delivery is **3.87 L** and `F = 1.00` buys **4.73 L** more. **The draft doses the smaller of
+two live, equally pokeable POSTFX levers, at its ceiling, and reaches at most ~27 % of what the
+other one costs.** That is the case for an attribution seal before a dosing seal, and it is what
+`PREREG-rimink` is.
+
+### W.5 `src` re-verified at this sha — every "no edit needed" claim in this file still holds
+
+**VERIFIED by reading, not carried:**
+
+| line | what | per-frame? |
+|---|---|---|
+| `PostFX.js:2322` | `cu.uRimShadowFloor.value = this.tune.rimShadowFloor` | **yes** — composite-uniform block |
+| `PostFX.js:2321` | `cu.uRimStrength.value = … this.tune.rimStrength` | **yes** — same block |
+| `PostFX.js:2302` | `cu.uInkStrength.value = this.tune.inkStrength` | **yes** — same block |
+| `PostFX.js:2324` | `cu.uRimFloorOffCut.value = this.tune.rimFloorOffCut` | **yes** — same block |
+| `PostFX.js:2242` | `u.uRimRadius.value.set(rimInner, rimMid, rimOuter, rimTail)` | **yes** — inside `_renderChain` step 4, the edge pass |
+| `PostFX.js:2236-2238` | `u.uParams… this.tune.edgeThickness * inkResScale(this.size.h)` | **yes** — same block |
+
+So §4.1's conclusion holds and **extends**: not only `rimShadowFloor` but the **ink's strength**,
+the **crease thickness** and the **rim band's three radii** are all live-read `tune` fields. Every
+lever this lineage might want is pokeable with **no `src` change**. §4.2's fallback remains
+unneeded, and its statement *"that edit is already in HEAD"* is confirmed.
+
+**NOT CLAIMED:** the inverted-hull half of the ink is **not** in `tune`. `Outline.js` owns it
+(`INK_PX`, `inkPixels`), it is scene geometry, and `postfx.tune.inkStrength = 0` does not remove it.
+Any arm that needs the hull gone needs a SHADING-owned `src` change and a different owner.
+
+### W.6 One structural finding this file could not have had, recorded because it routes the successor
+
+**VERIFIED in `src`:** the ink's width is resolution-anchored and the rim band's is not.
+`Outline.js:inkPixels(rows) = clamp(2.5 × rows/1080, 0.9, 5.0)` sets the hull, and
+`PostFX.js:2238` multiplies the crease by `inkResScale(this.size.h)` — *"one function for the whole
+ink system"*. `TUNE.rimInner/rimMid/rimOuter = 1.2/2.6/4.4` (`PostFX.js:69-71`) are passed to
+`uRimRadius` **raw**, at every resolution.
+
+**INFERRED** (nominal radii, geometric; the crease pass's real footprint is `edge.r`'s falloff, not
+a hard-edged disc, so treat these as an upper bound on overlap):
+
+```
+rows   hull    crease   ink extent   band 1.2→4.4 px covered
+ 720   1.667   1.000      2.667        1.467 px  =  46 %
+ 900   2.083   1.250      3.333        2.133 px  =  67 %
+1080   2.500   1.500      4.000        2.800 px  =  88 %
+```
+
+The 720-row figure is where every number in this lineage was measured; **1080 is AGENTS §1's ship
+target**. If the arithmetic holds, the defect is *worse in the shipped frame than in the frame it
+was measured in*, and the cause is a res-scale present on one of two overlapping terms. That is a
+geometry lever, not an amplitude lever, and `PREREG-rimink` §8 names it as the successor candidate
+with its dose already derived.
+
+### W.7 `rimfloor-derive.mjs` is withdrawn with the file it derives
+
+`progress/records/rimsucc/rimfloor-derive.mjs` reproduces every number in the draft below, which is
+exactly what it was for and is now exactly the hazard: **it will still print `0.112`, the `0.8087`
+and `0.8325` break-evens and the `d85`/`d100` doses, all of which are void per W.1/W.2.** It is left
+on disk unrun, as the draft's own arithmetic of record. **Its output is not a live figure and must
+not be quoted.** The successor's derivations are re-derived from `antirim-profile.txt` §B/§D and
+`rim-offline.mjs`'s printed ratios in `PREREG-rimink.md` §1.1, and its own derive script is a
+registration requirement there (§12.1), not an inheritance from this one.
+
+### W.8 One thing this draft got right that the withdrawal must not bury
+
+Its §1.2 named its own weakest link out loud — *"the pooled-slope substitution"* — and gave `d85`
+only **0.35** of clearing its own bar because of it. That is the behaviour §348 credits: the
+pre-registered parts of this lineage have survived every re-derivation, and the honestly-flagged
+weakness is the one place the draft turned out to be **too pessimistic**, not too generous
+(W.2: both scoring shots run above pooled). **The draft did not die of carelessness.** It died
+because a number it had every reason to trust — `PREREG-rim` §7's own sealed 0.112 — turned out to
+be the wrong one of two the instrument prints, and no one had yet noticed which.
+
+---
+
 # PREREG-rimfloor — DRAFT — dosing `TUNE.rimShadowFloor`, the one rim term already in display space
 
 **Status: DRAFT. NOT YET REGISTERED.** Every band, threshold, dose, edge and rect below is
