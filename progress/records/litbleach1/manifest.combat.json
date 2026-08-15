@@ -1,0 +1,82 @@
+{
+  "seal": "PREREG-litbleach",
+  "amendment": "A1 (per-shot chunked capture)",
+  "shot": "combat",
+  "head": "f55e83e13d65a34dd7aa39a3a9e7f837f1b90c32",
+  "srcHash": "2b5c7c49ad9c4668",
+  "staging": "setShot(name, {}) — dt UNDEFINED, live settle, roster-faithful (§328)",
+  "doses": {
+    "OFF": 0,
+    "ON": 0.7,
+    "KO": 0.4
+  },
+  "expectRowsTotal": 14,
+  "capturedAt": "2026-08-15T06:24:30.369Z",
+  "rows": [
+    {
+      "shot": "combat",
+      "arm": "off",
+      "file": "combat.off.png",
+      "sha256": "529340b81834a5cc07a2710ec04ec32fb9c9d5461b3da15fc719daddd17e2cbd",
+      "readback": {
+        "uSubjLitHold": 0,
+        "uSubjShadowHold": 1,
+        "uDebugTerm": 0,
+        "debugRaw": null,
+        "camY": 2.35
+      }
+    },
+    {
+      "shot": "combat",
+      "arm": "on",
+      "file": "combat.on.png",
+      "sha256": "5dfb082bc9353674fb791aa6bcc452f3ce24e16ca1e7c7d2ef3cc79d7a704b5a",
+      "readback": {
+        "uSubjLitHold": 0.7,
+        "uSubjShadowHold": 1,
+        "uDebugTerm": 0,
+        "debugRaw": null,
+        "camY": 2.35
+      }
+    },
+    {
+      "shot": "combat",
+      "arm": "ko",
+      "file": "combat.ko.png",
+      "sha256": "436e8d72a8772c825c7f87eccf91920b0555e0de70c5c57a9811663cf90e77bf",
+      "readback": {
+        "uSubjLitHold": 0.4,
+        "uSubjShadowHold": 1,
+        "uDebugTerm": 0,
+        "debugRaw": null,
+        "camY": 2.35
+      }
+    },
+    {
+      "shot": "combat",
+      "arm": "back",
+      "file": "combat.back.png",
+      "sha256": "badfc30eb2da8cb4070d0d99cd47dcc77f9de8271197b1475981130a065fb24f",
+      "readback": {
+        "uSubjLitHold": 0,
+        "uSubjShadowHold": 1,
+        "uDebugTerm": 0,
+        "debugRaw": null,
+        "camY": 2.35
+      }
+    },
+    {
+      "shot": "combat",
+      "arm": "msk",
+      "file": "combat.msk.png",
+      "sha256": "47ef44ff4bc37fde4df60fc246ce6f2ef5b622a59cf5305c0cdb5aacb61e9c94",
+      "readback": {
+        "uSubjLitHold": 0,
+        "uSubjShadowHold": 1,
+        "uDebugTerm": 1,
+        "debugRaw": null,
+        "camY": 2.35
+      }
+    }
+  ]
+}

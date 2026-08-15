@@ -3,3 +3,11 @@ frames -> /home/user/Demo/progress/records/litbleach1
 HEAD tree verified under the lock — src 2b5c7c49ad9c4668 (no install; subjLitHold inert in HEAD)
 renderer: ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)
 -- staged combat LIVE (dt undefined, roster path); 5 warning(s)
+  # 1 combat.off           sha 529340b81834a5cc  hold=0 dbgTerm=0 raw=null
+  # 2 combat.on            sha 5dfb082bc9353674  hold=0.7 dbgTerm=0 raw=null
+  # 3 combat.ko            sha 436e8d72a8772c82  hold=0.4 dbgTerm=0 raw=null
+  # 4 combat.back          sha badfc30eb2da8cb4  hold=0 dbgTerm=0 raw=null
+  # 5 combat.msk           sha 47ef44ff4bc37fde  hold=0 dbgTerm=1 raw=null
+
+5 frames -> /home/user/Demo/progress/records/litbleach1  (expected 14)
+score with: node progress/records/litbleach/litbleach-score.mjs
