@@ -24679,3 +24679,75 @@ is gone is the ability to check them against the pixels.
 **Rule: force-add the frames of any capture whose measurements will be cited later, not only
 sealed A/B captures.** A blind critic round is exactly such a capture. The next critic round is
 force-added at capture time, and its cost (~33 files, ~60 MB) is worth one round of re-derivation.
+
+## §336 — the shadow-tint item is a SHADING defect after all, and the AgX hypothesis is refuted by a within-frame control
+
+The shadowtint lane's verdict, with its decisive control **verified independently here**.
+
+### The control that settles it
+
+I worried, after §333, that courtyard's 345° terminator might be another display-transform
+artefact — the same trap that cost three seals. It is not, and the test needs no model:
+
+```
+shots/r12/courtyard.png, saturated px binned by DISPLAY luminance
+  display L 65: 38822 px  |  cool 190-240deg: 46%   warm 300-30deg: 47%
+  display L 70: 41723 px  |  cool 190-240deg: 34%   warm 300-30deg: 64%
+  display L 75: 35563 px  |  cool 190-240deg: 29%   warm 300-30deg: 64%
+```
+
+**Both populations coexist at identical display luminance, inside one frame.** The display
+transform is a per-pixel function of colour with no shot, surface or spatial input; it cannot
+separate two populations by 130°+ at the same L. **The gap was made upstream, in the shader.**
+The lane reached the same conclusion from the other side — courtyard's terminator is not even
+brighter than the shots that pass (L 70.7 vs hero's passing shade at L 70.0), so there is no
+shoulder story to tell — and its forward check shows a linear `#2a3f66` displays at 213–232°
+across L 9–123, so the chain *cannot* produce 345.
+
+### The reframing that matters
+
+Measured in scene-linear, **the blue is not missing — the red is**:
+
+```
+                          R/G     B/G
+courtyard terminator     3.74    1.17     <- B/G already inside the passing band
+kaykit / hero / dunes    0.78 / 0.72 / 0.74
+courtyard's own ground   0.52    1.19
+```
+
+`B/G` at 1.17 is already where the passing shots sit. `R/G` is **~4.8x over**. A seal aimed at
+"add blue" would be aimed at the half that is already correct. That single ratio reorients the
+whole item.
+
+### The gate that could still kill it — recorded BEFORE any seal
+
+A PNG cannot distinguish the toon ramp's **shadow** band from its **mid** band. If the sampled
+colossus face is the mid band, it is 50% direct sun by construction and "345 → 218" is
+**unreachable at any legal dose** — which is §332's failure shape (a lever that engages correctly
+and cannot reach its own bar), predicted in advance this time rather than discovered by a capture.
+**The one measurement that settles it: a `key` (= `ramp * sh`) readback over the terminator rect,
+or a `uKeyIntensity = 0` arm.** Acceptance bars are sketched (E1 hue 215–225°, E2 linear
+R/G ≤ 0.90, E3 hold B/G, P1–P4) and are explicitly gated behind it. No seal until that is known.
+
+### Two code facts found while reading, both verified here
+
+- **`shadowBounceMix: 0.05` and `shadowBounceMixLit: 0.05` are equal**, so the shader's
+  shadow-depth blend is an **exact no-op today** — a free lever, or a trap for any seal that
+  assumes it is live.
+- **`shadowHold: 0.0`** on every prop and every piece of architecture (`subjShadowHold` is
+  `vSlySkin`-scoped, i.e. subject-only). The colossus is architecture, so no hold applies to it.
+
+### Method notes worth keeping
+
+The lane built an analytic inverse of the shipped chain, validated to **6.6e-12 L** against
+`tonecurve.mjs`'s independent forward over 3,119 colours, and did **not** use `lithold-model.mjs`
+(per §333's warning that it diverged 25x on a candidate response). It also found a real trap: the
+two rec2020 matrices in `Common.js` are inverse only to ~1e-4, so using one as the other's inverse
+leaves a systematic 0.03 L bias.
+
+### And a second independent hit on §335
+
+This lane also found `shots/r13/` gone and substituted `shots/r12/` — **checking** the
+substitution rather than assuming it (its r12 reading of the critic's lit hex matches at 2.2/255
+RGB distance). Two lanes independently losing the same capture is the strongest possible argument
+for §335's rule: force-add the frames of any capture whose measurements will be cited later.
