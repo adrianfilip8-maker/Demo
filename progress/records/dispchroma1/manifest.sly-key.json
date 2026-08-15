@@ -1,0 +1,65 @@
+{
+  "seal": "PREREG-dispchroma",
+  "warmup": 2,
+  "shot": "sly-key",
+  "head": "5dcc2a688d849b2a9b38f40ccd0536769a9a6199",
+  "srcHash": "b3852e39472ed68f",
+  "staging": "setShot(name, {}) — dt UNDEFINED, live settle, roster-faithful (§328)",
+  "doses": {
+    "OFF": 0,
+    "ON": 2,
+    "KO": 1
+  },
+  "expectRowsTotal": 9,
+  "capturedAt": "2026-08-15T11:40:54.950Z",
+  "rows": [
+    {
+      "shot": "sly-key",
+      "arm": "off",
+      "file": "sly-key.off.png",
+      "sha256": "5de78de5b687f87c96546c99445377db738a65bbe8fb53eab9b50248e772daf4",
+      "readback": {
+        "uDispChromaHold": 0,
+        "uDebugTerm": 0,
+        "debugRaw": null,
+        "camY": 1.45
+      }
+    },
+    {
+      "shot": "sly-key",
+      "arm": "on",
+      "file": "sly-key.on.png",
+      "sha256": "a540909ad6176e7ad65b0a8c6719171adf566d9803a413fc649d0055ecc911bc",
+      "readback": {
+        "uDispChromaHold": 2,
+        "uDebugTerm": 0,
+        "debugRaw": null,
+        "camY": 1.45
+      }
+    },
+    {
+      "shot": "sly-key",
+      "arm": "ko",
+      "file": "sly-key.ko.png",
+      "sha256": "e33cd2c718a385556c81dc40a96ec9a0625e55fd84f8e67f6c6dd219ac7709e8",
+      "readback": {
+        "uDispChromaHold": 1,
+        "uDebugTerm": 0,
+        "debugRaw": null,
+        "camY": 1.45
+      }
+    },
+    {
+      "shot": "sly-key",
+      "arm": "back",
+      "file": "sly-key.back.png",
+      "sha256": "5de78de5b687f87c96546c99445377db738a65bbe8fb53eab9b50248e772daf4",
+      "readback": {
+        "uDispChromaHold": 0,
+        "uDebugTerm": 0,
+        "debugRaw": null,
+        "camY": 1.45
+      }
+    }
+  ]
+}
