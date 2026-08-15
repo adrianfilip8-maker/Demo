@@ -347,6 +347,7 @@ class Bounce extends AirState {
     c.launch(c._bounceReq || TUNE.jumpV0 * TUNE.bounceUp);
     c._bounceReq = 0;
     c.airJumps = 1;             // a bounce refreshes the double jump — chains read as skill
+    c.freeWall();               // …and the walls, for the same reason: a head is a fresh contact
     c.oneShot('double_jump');
     c.engine.emit('shake', 0.1);
   }
@@ -368,15 +369,16 @@ class WallRun extends State {
     if (c.wallRunUsed >= 2 || c.velocity.y < -11) return false;
     if (c.speedXZ() < TUNE.wallRunEnter) return false;
     travelDir(c, _a);
-    if (c.probeWall(_a).ok) return true;
-    if (c.wishMag > 0.5 && c.probeWall(c.wishDir).ok) return true;
+    if (c.probeWall(_a).ok && !c.wallSpent(c.wall.rec, c.wall.nx, c.wall.nz)) return true;
+    if (c.wishMag > 0.5 && c.probeWall(c.wishDir).ok
+        && !c.wallSpent(c.wall.rec, c.wall.nx, c.wall.nz)) return true;
     return false;
   }
   enter(c) {
     const w = c.wall;
     this._nx = w.nx; this._nz = w.nz;
     c.wallRunUsed++;
-    c.lastWallRec = w.rec;
+    c.markWall(w.rec, w.nx, w.nz);
     travelDir(c, _a);
     // Head-on means "up"; glancing means "along". Both are Sly; the entry angle picks.
     const headOn = -dot2(_a.x, _a.z, this._nx, this._nz);
@@ -427,10 +429,15 @@ class WallCling extends State {
     if (c.grounded || c.sm.group !== 'air') return false;
     if (c.velocity.y > 1.2 || c.wishMag < 0.5) return false;
     if (!c.probeWall(c.wishDir).ok) return false;
+    /* The cling is the rung the free climb was built out of, so it carries the same "one face,
+       one bite" rule as the run: `wallJump` re-grants the double jump, the double jump carries
+       Sly back onto the face he just left, and the cling used to accept him every time. */
+    if (c.wallSpent(c.wall.rec, c.wall.nx, c.wall.nz)) return false;
     return -dot2(c.wishDir.x, c.wishDir.z, c.wall.nx, c.wall.nz) > 0.45;
   }
   enter(c) {
     this._nx = c.wall.nx; this._nz = c.wall.nz;
+    c.markWall(c.wall.rec, c.wall.nx, c.wall.nz);
     c.velocity.set(0, Math.min(0, c.velocity.y), 0);
     c.oneShot('wall_cling');
     c.wallRunUsed = Math.max(0, c.wallRunUsed - 1);   // clinging re-arms one wall run

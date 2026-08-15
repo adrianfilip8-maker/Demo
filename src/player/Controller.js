@@ -79,6 +79,25 @@ export const TUNE = {
   wallJumpUp:     0.94,  // × jumpV0
   wallProbe:      0.40,  // how far past the capsule to look for a wall
   wallNormalMax:  0.45,  // |n.y| below this counts as a wall — loose, the temple is battered
+  /* One face, one bite. ---------------------------------------------------------------------
+     Two contacts count as the SAME wall face when they share a collision rec and their outward
+     normals agree to better than this; a face already used this airborne period cannot be
+     *polled* into again (see `wallSpent`). Without it the moveset contains a free vertical
+     climb, which is the one thing §8.1's Pylon Ascent must not have — measured against the
+     shipped level, `wallJump → doubleJump → wallCling → wallJump` on a single flat face climbed
+     **17.81 m of the hall's 13 m front wall** and put Sly on top of the 26 m entry pylon, at
+     roughly +0.55 m every five frames, from a plain five-frame jump mash. `WallJump.enter`
+     re-grants `airJumps`, `WallCling` was freely re-enterable, and the two of them closed a loop
+     with no ceiling. `lastWallRec` has been written by `WallRun.enter` since the file was first
+     drafted and was never read anywhere: the guard existed, it was simply never wired up.
+
+     0.5 = 60°, and the number is a geometric statement rather than a taste one. It is the widest
+     cone that still separates two faces of a rectangular mass (90° apart, dot 0 — a pylon corner
+     stays a fresh face, which is what "up the pylon face" in §8.1 asks for), while still reading
+     the 45°-apart facets of an 8-segment cylinder proxy (dot 0.707) as one surface, so a column
+     cannot be laddered facet by facet. The battered temple faces drift by their own batter
+     (~5°) along a single run, which this swallows without noticing. */
+  wallFaceDot:    0.5,
 
   /* ---- ledge tech ---- */
   hangReach:  1.56,      // hand height above the feet
@@ -437,7 +456,11 @@ export class Controller {
     this.airJumps = 1;         // jumps left after leaving the ground
     this.jumpHeld = false;
     this.wallRunUsed = 0;      // wall runs since last ground contact
+    /* The wall face already spent this airborne period — rec plus its outward XZ normal, which
+       together name a *face* rather than a body. See TUNE.wallFaceDot and `wallSpent`. */
     this.lastWallRec = null;
+    this.lastWallNx = 0;
+    this.lastWallNz = 0;
     this.comboIndex = 0;
     this.comboTimer = 0;
     this.hurtCooldown = 0;
@@ -665,7 +688,7 @@ export class Controller {
       this.airTime = 0;
       this.airJumps = 1;
       this.wallRunUsed = 0;
-      this.lastWallRec = null;
+      this.freeWall();
       this._assistUsed = false;
       this.spireLaunch = false;
     } else {
@@ -792,6 +815,49 @@ export class Controller {
     w.tag = r.tag || 'wall';
     w.rec = r.rec || null;
     return w;
+  }
+
+  /**
+   * Wall-face bookkeeping — "one face, one bite".
+   *
+   * `wallSpent` answers *"has this exact face already carried Sly this airborne period?"* and is
+   * the predicate `WallRun`/`WallCling` poll on. It is deliberately a question about a **face**,
+   * not a body: a rec plus an outward normal, compared with `TUNE.wallFaceDot`. Two faces of the
+   * same pylon are two chances; the same face twice is one.
+   *
+   * Only the *polled* entries consult it. A forced handoff — `WallRun.update` returning
+   * `'wallCling'` when the run times out with Sly still pressed into the wall — goes through
+   * `sm.request()`, which never calls `canEnter`, so the move that this rule exists to preserve
+   * is untouched by it.
+   *
+   * A null rec is never spent. Under `FLAT` (or a COLLISION that answers without records) every
+   * wall would otherwise compare equal to every other and the wall run would vanish entirely —
+   * degrading to "no wall tech" is a far worse failure than degrading to "wall tech is free".
+   */
+  wallSpent(rec, nx, nz) {
+    const last = this.lastWallRec;
+    if (!last || !rec || rec !== last) return false;
+    return nx * this.lastWallNx + nz * this.lastWallNz > TUNE.wallFaceDot;
+  }
+
+  /** Stamp the face Sly has just taken. Called from `enter`, so a refused poll stamps nothing. */
+  markWall(rec, nx, nz) {
+    this.lastWallRec = rec || null;
+    const l = Math.hypot(nx, nz) || 1;
+    this.lastWallNx = nx / l;
+    this.lastWallNz = nz / l;
+  }
+
+  /**
+   * Give the walls back. Touching *anything else* — the floor, a ledge, a hook, a rail, a pole,
+   * a spire, a guard's head — re-arms every face, which is what makes §8.1's ascent read as the
+   * authored chain ("wall runs, spire tips, swinging hooks, up the pylon face") rather than as a
+   * lift: the wall carries you to the next hold, and the hold pays for the next wall.
+   */
+  freeWall() {
+    this.lastWallRec = null;
+    this.lastWallNx = 0;
+    this.lastWallNz = 0;
   }
 
   /**
@@ -1338,6 +1404,13 @@ export class Controller {
   onStateChanged(next, _prev) {
     this.stateName = next.name;
     this.height = next.capsule > 0 ? next.capsule : TUNE.height;
+    /* Every hold in the game is in the `attach` group — hook, rail, pole, spire, ledge, and an
+       authored magnet point. Taking one of them is Sly touching the world somewhere that is not
+       a wall, so it pays for the walls again. One hook on the way up is the difference between
+       the ascent §8.1 designs and the lift the wall face was. Done here rather than in seven
+       `enter`s because the group already says exactly this and the machine already funnels every
+       transition through this method. */
+    if (next.group === 'attach') this.freeWall();
     this.engine.emit('playerState', next.name);
   }
 
@@ -1399,6 +1472,9 @@ export class Controller {
     this.airTime = 0;
     this.airJumps = 1;
     this.wallRunUsed = 0;
+    // The face Sly last pushed off is metres away now; the shot harness must not arrive with a
+    // wall already spent, exactly as it must not arrive holding a stale mark.
+    this.freeWall();
     this.attached = null;
     this.balance = 0;
     this.comboIndex = 0;
