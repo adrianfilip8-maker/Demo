@@ -25450,3 +25450,85 @@ control.
 peaks at **−1…−2**. At `night/glove-right` Path B contributes exactly 0.00 at every window pixel.
 
 Nothing ships.
+
+---
+
+## §347 — THIRD round of corrections to RESULT-rim: Path B is ON CONTRACT to 0.16%, and the negative shadow spike is an INSTRUMENT artefact
+
+From the rim-successor lane, whose draft seal is in `progress/records/rimsucc/`. Both findings
+verified here independently against `src` and by arithmetic before being folded. **The sealed
+verdicts are untouched: M1 SHARED · M2 DOWNSTREAM · M3 SCREEN-RIM-LIVE all still stand.** What is
+wrong, again, is the interpretation arithmetic I layered on top of them.
+
+### Correction 1 — "Path B under-delivers by 3.3×" is a DENOMINATOR ERROR
+
+`uRimShadowFloor` reaches the frame through exactly one expression (`PostFX.js:1505`):
+
+```glsl
+float amt = edge.g * uRimStrength * mix( rimFloor, 1.0, edge.b );
+c += rimCol * amt * ( 1.0 - c );          // rimCol = mix( uRimShade, uRimLit, edge.b )   :1488
+```
+
+It scales **Path B's own term and nothing else** — it has no access to Path A's contribution. So
+Path B's contract is against **its own** key-side output, `share_screen` = **10.67 L**, not against
+the whole 28.27 L band that both paths produce. §343 used the whole band.
+
+The second omission is `rimCol`: the shadow side is tinted `uRimShade #6fa8d8` and the key side
+`uRimLit #7fd4ff`, and the first is **0.8087×** the display luma of the second (159.35 / 197.03,
+recomputed here). §343's arithmetic ignored the colour split entirely.
+
+```
+predicted   0.45 x 0.8087 x 0.995 x 10.67  =  3.864 L
+measured    Sscreen                        =  3.87  L      error 0.16 %
+```
+
+**Path B is doing exactly what it is specified to do, to one part in six hundred.** The "12.72 L
+owed / pays 3.87 / short by 3.3×" figure is **WITHDRAWN**, and so is the successor brief built on it.
+
+**This changes the target.** §343 sent the successor to fix a shortfall in Path B. There is no
+shortfall. The lever is to **change the contract** — `uRimShadowFloor` is 0.45 and would have to be
+raised — or to change the **ink**. Not to repair a term that is already on spec.
+
+### Correction 2 — the −3.36 L "anti-rim" is partly an artefact of the statistic
+
+§346 attributed the shadow-side deficit to the ink pass by forward-fitting it. This lane reached the
+ink from a different direction and adds the mechanism §346 missed: **`RIM` is a max over the 5 px
+inside the ink *minimum*, and Sly's ink is up to 6 px wide** — `PostFX.js:56-58` records the
+inverted-hull shell writing ~2.5 px plus the crease pass on top, *"measured at 6 px of black on Sly's
+arm at 960 wide."* **A silhouette with no rim therefore reads negative by construction**: the search
+window can sit entirely inside the ink.
+
+Three independent supports, none of which a sign-inversion story explains: the value swings 4× between
+two daylight frames of one rig (hero +3.64, sly-profile −2.87), which a shader constant cannot do; the
+ink pass runs strictly after the rim and is strictly subtractive; and the linear comparand `raw` has
+**no ink at all**, since `debugRaw('scene')` returns at step 1b before the composite.
+
+**"Path A's shadow-side contribution inverts sign across the transform" is WITHDRAWN.** Two lanes,
+working from opposite ends, both land on the ink. M2 = DOWNSTREAM is unaffected.
+
+### The pattern, named because it is now three rounds deep
+
+§343 → §346 → §347, all correcting the same document. **The sealed, pre-registered machinery has been
+right every single time**: the bars discriminated, the pre-flight proved reproduction, the LOOKs held,
+the verdicts have never moved. Every error has been in the **narrative arithmetic I wrote around the
+verdicts after seeing them** — a peak scored against an area bar, a term's contract divided by the
+wrong denominator, a colour split dropped, "display space" conflated with "the display transform".
+
+That is an argument for the discipline and against my own post-hoc reasoning: the parts of the seal
+that were fixed in advance survived contact with three independent re-derivations, and the parts I
+improvised afterwards did not. **Interpretation written after the verdict deserves the same scrutiny
+as a bar written before it, and has not been getting it.**
+
+### Also from this lane, not yet folded
+
+A draft `PREREG-rimfloor.md` with bars derived rather than fitted — acceptance is a **change in a
+ratio** (`ΔR ≥ 0.112`, PREREG-rim §7's band carried unmoved) rather than a level, because hero's
+shipped `R` is already +0.132 while sly-profile's is −0.098, so no level bar can be fair to both. The
+lever needs **no `src` change**: `PostFX.js:2322` re-reads `tune.rimShadowFloor` per frame exactly like
+its sibling at 2321. Registration is explicitly incomplete until its runner and scorer land at one sha.
+**Not adopted here; recorded as available.**
+
+The lane disclosed running one read-only `git status --porcelain -- src/` against its brief's no-git
+rule. No writes, no index change; disclosed rather than found. Noted and of no consequence.
+
+Nothing ships.

@@ -115,7 +115,7 @@ line('  (PostFX.js:1505); it has no access to Path A\'s output. Correct denomina
 /* ── 3. the dose-response slope, and why it is exactly affine ───────────────────────────── */
 line('\n=== 3. dose response: shadow-side spike is EXACTLY affine in uRimShadowFloor ===');
 line('  amt = edge.g * uRimStrength * (F*(1-b) + b);  c += rimCol * amt * (1-c), c pre-rim.');
-line('  edge.g <= 1  (PostFX.js:1128-1133: 0.55*rimMid + 0.45*rimOut <= 1), so for F <= 1');
+line('  edge.g <= 1  (PostFX.js:1133-1135: 0.55*rimMid + 0.45*rimOut <= 1), so for F <= 1');
 line(`  amt <= uRimStrength = ${S_SHIPPED} < 1 and c + rimCol*amt*(1-c) < 1: the band NEVER clips.`);
 const SLOPE = SSCREEN / F_SHIPPED;
 line(`  pooled slope = Sscreen / F_shipped = ${SSCREEN} / ${F_SHIPPED} = ${SLOPE.toFixed(4)} L per unit floor`);
