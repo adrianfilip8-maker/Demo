@@ -1006,6 +1006,10 @@ class SpireLand extends State {
   canEnter(c) {
     if (c.grounded || c.sm.group === 'attach') return false;
     if (c.velocity.y > 0.8) return false;
+    // Same guard, same reason, as `hangLock` on ledges and `poleLock` on poles: both of this
+    // state's deliberate exits leave Sly standing on the point at zero velocity, which satisfies
+    // every clause below, and the machine re-polls in the same frame. See TUNE.spireLockout.
+    if (c.spireLock > 0) return false;
     const a = c.afford('spire');
     if (!a) return false;
     // Only from above — a spire is a landing, not a wall grab.
@@ -1053,7 +1057,7 @@ class SpireLand extends State {
     c.baseClip(c.sm.time > 0.3 ? 'spire_balance' : 'spire_land', 0.2);
     return null;
   }
-  exit(c) { c.attached = null; c.balance = 0; this._off = 0; }
+  exit(c) { c.attached = null; c.balance = 0; this._off = 0; c.spireLock = TUNE.spireLockout; }
 }
 
 /* ====================================================================== */

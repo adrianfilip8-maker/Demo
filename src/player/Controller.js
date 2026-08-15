@@ -158,6 +158,25 @@ export const TUNE = {
   spireGrab:   3.4,
   spireJump:   1.25,     // × jumpV0
   spireWobble: 0.10,
+  /* Re-grab lockout after leaving a tip — the third member of a family this file already has two
+     of (`hangLock` on ledges, `poleLockout` on poles), and it was the one that was missing.
+
+     Without it a spire is fly-paper. `SpireLand.update`'s two deliberate exits both `return`, the
+     machine runs up to four passes per frame, and `SpireLand.canEnter` (priority 90, the highest
+     pollable move that is not the dive) re-took the tip on the very next pass — with Sly still
+     standing on the point, still at zero velocity, so every clause passed. `enter` then copies
+     `a.point` back into `c.position`. Measured on the pinnacle at (−6, 27, −50): **crouch held
+     for 240 frames left the tip 0 times, and the 0.16 s walk-off the code's own comment describes
+     never completed once.** Five `spire` bodies in §8.1 — the obelisk pyramidion and the four
+     pylon pinnacles — and the only exit that worked was one with enough vertical speed to fail
+     the `velocity.y > 0.8` clause on its own.
+
+     0.30 s is read straight off the predicate it has to outlive. `canEnter`'s "only from above"
+     clause is `point.y <= position.y + 1.0`, so the grab dies once Sly is more than 1.0 m below
+     the tip, and a fall of 1.0 m from rest at `gravity` −24 takes sqrt(2/24) = 0.289 s (clean
+     ballistic — `apexHang` only trims a *rising* vy). 0.30 puts the lock just past that, so both
+     exits clear their own re-grab window under gravity alone and nothing wider is claimed. */
+  spireLockout: 0.30,
 
   /* ---- combat ---- */
   comboWindow: 0.34,
@@ -442,6 +461,7 @@ export class Controller {
     this.pole = { rec: null, x: 0, z: 0, r: 0.5, bottom: 0, top: 0, hold: 0.77, angle: 0 };
     this.hangLock = 0;         // brief lockout after dropping off a ledge, so it can't re-grab
     this.poleLock = 0;         // …and its counterpart for poles. See TUNE.poleLockout.
+    this.spireLock = 0;        // …and for spire tips. See TUNE.spireLockout.
     this.pendingLaunch = 0;    // launch velocity handed to Jump by rail/pole/spire exits
 
     /* ---- intent ---- */
@@ -700,6 +720,7 @@ export class Controller {
     if (this.hurtCooldown > 0) this.hurtCooldown -= dt;
     if (this.hangLock > 0) this.hangLock -= dt;
     if (this.poleLock > 0) this.poleLock -= dt;
+    if (this.spireLock > 0) this.spireLock -= dt;
   }
 
   _postTimers(dt) {
@@ -1480,6 +1501,7 @@ export class Controller {
     this.comboIndex = 0;
     this.hangLock = 0;
     this.poleLock = 0;
+    this.spireLock = 0;
     this.targets.release('teleport');
     this._assistUsed = false;
     // Marks are positional; the body Sly was circling is metres away now. Frame −1 forces both
