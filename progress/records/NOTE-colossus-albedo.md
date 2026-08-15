@@ -71,3 +71,56 @@ Three candidate routes, and the seal should not be written until one is chosen o
 Route 2 is the one that matches the shape of the evidence: a material-specific defect wants a
 material-scoped lever. Route 3 deserves a paragraph in whatever seal follows, because §341's
 absolute target was inherited from a cross-material comparison that this note shows is unsound.
+
+---
+
+## ADDENDUM — route A.1 answered: it is the TEXTURE, and the item re-routes to TEXTURES
+
+Pure code reading, no boot.
+
+**`seatedColossus` (`src/world/Statues.js:289`) uses five materials and carnelian is not one of
+them.** Counting material tokens across its body: **19× `stone`, 6× `gold`, 2× `lapis`,
+1× `lime`, 1× `dark`.** The body is `stone`.
+
+```
+stone:  { tex: 'granite_pink', color: 0x9c8278, rough: 0.88, outline: 1.0 }
+```
+
+`0x9c8278` is **linear R/G ≈ 1.48** — barely warm, and in the same neighbourhood as hero's lit
+1.47. **The measured colossus lit is 5.48.** The base tint cannot produce that, and neither can
+the other materials present: `gold` `0xe8b942` is linear R/G ≈ 1.63, `lime` `0xd4c19a` is cooler
+still, and my lit rect measured `rgb(182,81,70)` — red, not the yellow gold would give.
+
+**So the red is coming from the `granite_pink` TEXTURE modulating that base**, and the item is a
+**TEXTURES** question, not a shading one.
+
+### Why this matters more than it looks
+
+Three routings have now been proposed for this defect and each was displaced by a measurement:
+1. **POSTFX / display transform** — refuted by §336's within-frame matched-luminance control.
+2. **SHADING / shadow-tint** — §341 unblocked it, and the top of this note showed its target was a
+   cross-material comparison.
+3. **TEXTURES / `granite_pink`** — where the evidence now points.
+
+The pattern is worth naming: every time, the defect was attributed to the last stage that *touched*
+the pixel rather than the stage that *originated* the value. §333 caught it once (shader vs
+transform) and this is the same error one stage further upstream — light vs material.
+
+### What is verified and what is inferred
+
+- **Verified:** the material list, the base hex values, and that base `stone` is linear R/G 1.48
+  against a measured lit 5.48. The arithmetic gap is real and large.
+- **Inferred:** that `granite_pink` supplies the difference. It is the only remaining multiplier on
+  that surface, but I have **not** read the texture generator. **The next step is to read
+  `src/textures/` for `granite_pink` and measure its mean texel R/G directly** — a pure offline
+  check that either confirms this or sends it somewhere else again.
+- **Not claimed:** that `granite_pink` is *wrong*. A pink granite that reads red in sun may be
+  exactly what was intended; the defect the critic saw is that its **shade** goes mauve at 345°
+  rather than to the bible's violet-teal. If the texture is deliberate, the fix is `shadowHold`
+  (§269) — the term that lets a material carry its own shade hue, verified at **0.0 on all
+  architecture** — and not a change to the texture at all.
+
+**Route 2 from the top of this note therefore survives, and gets sharper:** a red material whose
+shade should still read cool is precisely what a material-scoped hold exists for. But read the
+texture first — that check costs minutes and has now twice been the thing that stopped a seal
+aimed at the wrong stage.
