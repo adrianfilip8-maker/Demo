@@ -26054,3 +26054,73 @@ never committed, and not carried into any bar. §350's own test — *"is there a
 whose value the author cannot already derive?"* — is the one to apply, and the honest answer for
 `MIX` is now "an agent derived it once and did not write it down". Recorded here rather than left to
 be discovered, because a disclosure that only exists in a subagent transcript is not a disclosure.
+
+---
+
+## §357 — MOVEMENT closed out: the C1/C2 evidence, and a FOURTH instance of half-wired machinery
+
+Completes §355 with the lane's measurements and the independent checks behind commits `a05413b`,
+`e0385e9`, `c5e9464`.
+
+**Why this pass found them and the last one did not: the instrument changed.** Last pass measured
+against **stub** collision; this pass builds the shipped level plus a real BVH headlessly
+(`Architecture → buildEgyptLevel → Collision.build() → Controller`) — 248 colliders, 4030 tris — so
+every probe hits real temple geometry. A **167 000-frame** randomised fuzz over 133 spawn points
+returned 0 NaN, 0 respawns, 0 stuck runs, 0 warnings: last pass's repairs hold. **Both defects here
+are moves that complete and are then silently undone, which no warning count can see.** That is why a
+clean fuzz and a green suite had both missed them.
+
+Lane measurements, attributed as the lane's (the harness was not rebuilt here):
+
+```
+C1 elevator   17.81 m climbed on a 13 m wall · y 26.11 atop the 26 m pylon · 68.52 m over six faces
+              → 16.63 m with the single lever applied
+C1 control    ordinary tapped-jump wall tech Δ 0.00 on six cases; authored ladders byte-identical
+              (column poleClimb→jump→railSlide; obelisk ending exactly on (0,22,11); hooks 658/700)
+C2 spire      200/200 frames "left = never" on both pinnacles and the obelisk
+              → leaves at f13 (walk-off) / f4 (crouch); spire jump identical in both arms
+```
+
+The C1 control is the part that matters: a fix that removed the elevator *and* changed ordinary wall
+tech would be a nerf wearing a bug-fix label. Δ 0.00 on six cases with the authored ladders
+byte-identical is what makes it a repair.
+
+**Verified independently here:** both files `node --check` clean; the suite run twice, once per fix,
+549/0 each time; `TUNE.gravity -24` and the `+1.0 m` re-grab clause at `Moveset.js:1016`, giving
+`sqrt(2/24) = 0.2887 s` against the 0.30 lockout; and both dead-code claims by grep against the
+**pre-fix** tree.
+
+### §357.1 The pattern is now four deep, in one file
+
+```
+c.pole          read by two states, created by nobody          → SHIPPING BUG (soft-lock)
+lastWallRec     written since the draft, read nowhere          → SHIPPING BUG (free climb)
+spireLaunch     set by SpireLand's jump exit, read nowhere     → still write-only today
+hitWall         set on wall contact, read nowhere              → still write-only today
+```
+
+Two of the four were shipping bugs and both were invisible to every automated check the project has:
+the suite was green, the fuzz was clean, no warning fired. **Half-wired machinery is this file's
+characteristic defect**, and the useful generalisation is that *a guard that exists is not a guard
+that runs* — `lastWallRec` looked like protection in code review for as long as the file has existed.
+`C4` (a subsumed branch in `probeWall`) and `C5` (the two write-only flags) are recorded and
+deliberately untouched; they are harmless today and touching them is not this item's business.
+
+### §357.2 The sustained wall climb is DECLINED, not deferred, and the reason hardened
+
+All **75** registered `wall` recs carry `climbable: true`, so the flag carries no information.
+Independently of that, **§6's move list contains no wall climb at all** — the audit-table row that
+asked for one came from the Sly series' general vocabulary, not from AGENTS.md. So it is "not a gap"
+rather than "not yet done". §10 of the note leaves ARCHITECTURE an exact contract if it is ever
+wanted (a `handhold` opt on `wallProxy`, south faces of the three pylons only, with the `WallClimb`
+state MOVEMENT would build at priority 79).
+
+**No state was stubbed against a tag nothing sets** — which, given §357.1, is the right call and for
+the file's own recorded reasons rather than on taste.
+
+### §357.3 §8.1 reachability
+
+**Narrows only by removing what §8.1 never granted** — the 26 m entry pylon top and 17.81 m of the
+13 m hall wall are no longer free, so `wall` is a rung and not a lift, and Zone 4 is a set piece
+again. **Restores what §8.1 did grant:** the five `spire` bodies (obelisk pyramidion, four pinnacles)
+can be stepped off. Authored poles, rails, hooks and magnetism verified identical.
