@@ -1,7 +1,7 @@
 {
  "seal": "PREREG-guardcone + AMENDMENT A1 (cone-only; PREREG-guardart WAIVED-UNSCORED per §309) + AMENDMENT A2 (chunked)",
  "warmup": 2,
- "head": "53f1c27620bd076446cf65dbacf955c07b0eecdf",
+ "head": "a9055a97de1ba3922a8642243caee3da9c06eacb",
  "srcHash": "317fd7305bab0f01",
  "expect": {
   "head": "317fd7305bab0f01"
@@ -150,9 +150,17 @@
    "rows": 4,
    "staging": "setShot(name, { dt: 0 }) — clock frozen through staging (A2.8, sealed runner); then step(3,0) + renderFrame(0), uncaptured",
    "capturedAt": "2026-08-15T19:51:16.060Z"
+  },
+  {
+   "shot": "sly-profile",
+   "srcHash": "317fd7305bab0f01",
+   "head": "a9055a97de1ba3922a8642243caee3da9c06eacb",
+   "rows": 3,
+   "staging": "setShot(name, { dt: 0 }) — clock frozen through staging (A2.8, sealed runner); then step(3,0) + renderFrame(0), uncaptured",
+   "capturedAt": "2026-08-15T20:00:28.422Z"
   }
  ],
- "mergedAt": "2026-08-15T19:51:16.064Z",
+ "mergedAt": "2026-08-15T20:00:28.426Z",
  "rows": [
   {
    "shot": "hero",
@@ -17330,6 +17338,1107 @@
    },
    "ordinal": 4,
    "at": "2026-08-15T19:51:15.855Z"
+  },
+  {
+   "shot": "sly-profile",
+   "arm": "off",
+   "file": "sly-profile.off.png",
+   "sha256": "f9af17770200bd3064b87729541c9fa811a822a1286e6ba990c09991c7894df4",
+   "tree": {
+    "src": "317fd7305bab0f01",
+    "head": "1d1cd81bb3e7"
+   },
+   "readback": {
+    "park": {
+     "guardArt": 0,
+     "guardSkin": 0,
+     "painted": false,
+     "skinShift": false
+    },
+    "colPatrol": 16773314,
+    "beamBase": 0.3,
+    "poolMix": 0.24,
+    "beamCoreScale": 1,
+    "lampToon": 0,
+    "uConeShape": 0,
+    "uGlow": 0.34,
+    "coneShapeTune": 0,
+    "glowTune": 0.34,
+    "uConeAtten": 13,
+    "uConeCap": 1.3,
+    "uConeEdge": 0.35,
+    "uConeDust": 0.65,
+    "uConeGrad": 0.85,
+    "uGuardLampW": 0,
+    "uGuardLampColor": [
+     0,
+     0,
+     0
+    ],
+    "uLocalToon": 2.5,
+    "light": 0.5156671600283468,
+    "timeOfDay": 0.8
+   },
+   "probe": {
+    "subjIdx": 0,
+    "guards": [
+     {
+      "i": 0,
+      "type": "temple",
+      "state": "patrol",
+      "pos": [
+       0.53,
+       0,
+       -12.86
+      ],
+      "bbox": null,
+      "beamRect": null,
+      "poolRect": null,
+      "apexS": [
+       1354,
+       138,
+       1
+      ],
+      "farS": [
+       1876,
+       191,
+       1
+      ]
+     },
+     {
+      "i": 1,
+      "type": "temple",
+      "state": "patrol",
+      "pos": [
+       -18.23,
+       0,
+       28.13
+      ],
+      "bbox": null,
+      "beamRect": [
+       0,
+       0,
+       375,
+       436
+      ],
+      "poolRect": [
+       0,
+       206,
+       366,
+       246
+      ],
+      "apexS": [
+       -252,
+       141,
+       1
+      ],
+      "farS": [
+       138,
+       183,
+       1
+      ]
+     },
+     {
+      "i": 2,
+      "type": "heavy",
+      "state": "patrol",
+      "pos": [
+       17.34,
+       0,
+       -5.76
+      ],
+      "bbox": null,
+      "beamRect": null,
+      "poolRect": null,
+      "apexS": [
+       2262,
+       142,
+       1
+      ],
+      "farS": [
+       2704,
+       261,
+       1
+      ]
+     },
+     {
+      "i": 3,
+      "type": "temple",
+      "state": "patrol",
+      "pos": [
+       7.61,
+       2,
+       6.17
+      ],
+      "bbox": null,
+      "beamRect": [
+       874,
+       0,
+       1280,
+       450
+      ],
+      "poolRect": [
+       879,
+       117,
+       1280,
+       126
+      ],
+      "apexS": [
+       1760,
+       29,
+       1
+      ],
+      "farS": [
+       1178,
+       132,
+       1
+      ]
+     },
+     {
+      "i": 4,
+      "type": "temple",
+      "state": "patrol",
+      "pos": [
+       -4.52,
+       1.92,
+       31.6
+      ],
+      "bbox": null,
+      "beamRect": [
+       0,
+       0,
+       1280,
+       720
+      ],
+      "poolRect": [
+       0,
+       0,
+       1280,
+       78
+      ],
+      "apexS": [
+       -417,
+       -321,
+       1
+      ],
+      "farS": [
+       -242,
+       199,
+       1
+      ]
+     },
+     {
+      "i": 5,
+      "type": "temple",
+      "state": "patrol",
+      "pos": [
+       -0.11,
+       0,
+       -20.04
+      ],
+      "bbox": null,
+      "beamRect": [
+       1146,
+       0,
+       1280,
+       346
+      ],
+      "poolRect": [
+       1144,
+       166,
+       1280,
+       176
+      ],
+      "apexS": [
+       1328,
+       138,
+       1
+      ],
+      "farS": [
+       1341,
+       168,
+       1
+      ]
+     },
+     {
+      "i": 6,
+      "type": "heavy",
+      "state": "patrol",
+      "pos": [
+       -1.06,
+       0.04,
+       -43.41
+      ],
+      "bbox": null,
+      "beamRect": null,
+      "poolRect": null,
+      "apexS": [
+       1338,
+       138,
+       1
+      ],
+      "farS": [
+       1612,
+       165,
+       1
+      ]
+     },
+     {
+      "i": 7,
+      "type": "temple",
+      "state": "patrol",
+      "pos": [
+       3.69,
+       17,
+       -21.44
+      ],
+      "bbox": null,
+      "beamRect": null,
+      "poolRect": null,
+      "apexS": [
+       1529,
+       -328,
+       1
+      ],
+      "farS": [
+       2205,
+       -413,
+       1
+      ]
+     },
+     {
+      "i": 8,
+      "type": "heavy",
+      "state": "patrol",
+      "pos": [
+       9.1,
+       -9.86,
+       -64.45
+      ],
+      "bbox": null,
+      "beamRect": null,
+      "poolRect": null,
+      "apexS": [
+       1490,
+       276,
+       1
+      ],
+      "farS": [
+       1475,
+       277,
+       1
+      ]
+     },
+     {
+      "i": 9,
+      "type": "scarab",
+      "state": "patrol",
+      "pos": [
+       22.9,
+       9,
+       -7.29
+      ],
+      "bbox": null,
+      "beamRect": null,
+      "poolRect": null,
+      "apexS": [
+       2890,
+       -298,
+       1
+      ],
+      "farS": [
+       3223,
+       -361,
+       1
+      ]
+     },
+     {
+      "i": 10,
+      "type": "scarab",
+      "state": "patrol",
+      "pos": [
+       0.82,
+       -9.94,
+       -75.05
+      ],
+      "bbox": null,
+      "beamRect": [
+       1270,
+       175,
+       1280,
+       369
+      ],
+      "poolRect": [
+       1279,
+       262,
+       1280,
+       281
+      ],
+      "apexS": [
+       1345,
+       272,
+       1
+      ],
+      "farS": [
+       1286,
+       274,
+       1
+      ]
+     }
+    ],
+    "spill": {
+     "guard": 4,
+     "rect": [
+      0,
+      0,
+      1280,
+      720
+     ]
+    },
+    "ahead": {
+     "c": [
+      1406,
+      185
+     ],
+     "r": 21
+    }
+   },
+   "ordinal": 1,
+   "at": "2026-08-15T19:59:29.299Z"
+  },
+  {
+   "shot": "sly-profile",
+   "arm": "bon",
+   "file": "sly-profile.bon.png",
+   "sha256": "247281df494dc85381b4e929a27d22974418b407879edf19f59afad0d0f7b1be",
+   "tree": {
+    "src": "317fd7305bab0f01",
+    "head": "e213c254eb2e"
+   },
+   "readback": {
+    "park": {
+     "guardArt": 0,
+     "guardSkin": 0,
+     "painted": false,
+     "skinShift": false
+    },
+    "colPatrol": 16767392,
+    "beamBase": 0.26,
+    "poolMix": 0.3,
+    "beamCoreScale": 0.62,
+    "lampToon": 1,
+    "uConeShape": 1,
+    "uGlow": 0.42,
+    "coneShapeTune": 0,
+    "glowTune": 0.34,
+    "uConeAtten": 13,
+    "uConeCap": 1.3,
+    "uConeEdge": 0.35,
+    "uConeDust": 0.65,
+    "uConeGrad": 0.85,
+    "uGuardLampW": 8.5,
+    "uGuardLampColor": [
+     0.2662,
+     0.1847,
+     0.0936
+    ],
+    "uLocalToon": 2.5,
+    "light": 0.5156671600283468,
+    "timeOfDay": 0.8
+   },
+   "probe": {
+    "subjIdx": 0,
+    "guards": [
+     {
+      "i": 0,
+      "type": "temple",
+      "state": "patrol",
+      "pos": [
+       0.53,
+       0,
+       -12.86
+      ],
+      "bbox": null,
+      "beamRect": null,
+      "poolRect": null,
+      "apexS": [
+       1354,
+       138,
+       1
+      ],
+      "farS": [
+       1876,
+       191,
+       1
+      ]
+     },
+     {
+      "i": 1,
+      "type": "temple",
+      "state": "patrol",
+      "pos": [
+       -18.23,
+       0,
+       28.13
+      ],
+      "bbox": null,
+      "beamRect": [
+       0,
+       20,
+       282,
+       342
+      ],
+      "poolRect": [
+       0,
+       206,
+       366,
+       246
+      ],
+      "apexS": [
+       -252,
+       141,
+       1
+      ],
+      "farS": [
+       138,
+       183,
+       1
+      ]
+     },
+     {
+      "i": 2,
+      "type": "heavy",
+      "state": "patrol",
+      "pos": [
+       17.34,
+       0,
+       -5.76
+      ],
+      "bbox": null,
+      "beamRect": null,
+      "poolRect": null,
+      "apexS": [
+       2262,
+       142,
+       1
+      ],
+      "farS": [
+       2704,
+       261,
+       1
+      ]
+     },
+     {
+      "i": 3,
+      "type": "temple",
+      "state": "patrol",
+      "pos": [
+       7.61,
+       2,
+       6.17
+      ],
+      "bbox": null,
+      "beamRect": [
+       993,
+       0,
+       1280,
+       332
+      ],
+      "poolRect": [
+       879,
+       117,
+       1280,
+       126
+      ],
+      "apexS": [
+       1760,
+       29,
+       1
+      ],
+      "farS": [
+       1178,
+       132,
+       1
+      ]
+     },
+     {
+      "i": 4,
+      "type": "temple",
+      "state": "patrol",
+      "pos": [
+       -4.52,
+       1.92,
+       31.6
+      ],
+      "bbox": null,
+      "beamRect": [
+       0,
+       0,
+       1280,
+       720
+      ],
+      "poolRect": [
+       0,
+       0,
+       1280,
+       78
+      ],
+      "apexS": [
+       -417,
+       -321,
+       1
+      ],
+      "farS": [
+       -242,
+       199,
+       1
+      ]
+     },
+     {
+      "i": 5,
+      "type": "temple",
+      "state": "patrol",
+      "pos": [
+       -0.11,
+       0,
+       -20.04
+      ],
+      "bbox": null,
+      "beamRect": [
+       1216,
+       54,
+       1280,
+       279
+      ],
+      "poolRect": [
+       1144,
+       166,
+       1280,
+       176
+      ],
+      "apexS": [
+       1328,
+       138,
+       1
+      ],
+      "farS": [
+       1341,
+       168,
+       1
+      ]
+     },
+     {
+      "i": 6,
+      "type": "heavy",
+      "state": "patrol",
+      "pos": [
+       -1.06,
+       0.04,
+       -43.41
+      ],
+      "bbox": null,
+      "beamRect": null,
+      "poolRect": null,
+      "apexS": [
+       1338,
+       138,
+       1
+      ],
+      "farS": [
+       1612,
+       165,
+       1
+      ]
+     },
+     {
+      "i": 7,
+      "type": "temple",
+      "state": "patrol",
+      "pos": [
+       3.69,
+       17,
+       -21.44
+      ],
+      "bbox": null,
+      "beamRect": null,
+      "poolRect": null,
+      "apexS": [
+       1529,
+       -328,
+       1
+      ],
+      "farS": [
+       2205,
+       -413,
+       1
+      ]
+     },
+     {
+      "i": 8,
+      "type": "heavy",
+      "state": "patrol",
+      "pos": [
+       9.1,
+       -9.86,
+       -64.45
+      ],
+      "bbox": null,
+      "beamRect": null,
+      "poolRect": null,
+      "apexS": [
+       1490,
+       276,
+       1
+      ],
+      "farS": [
+       1475,
+       277,
+       1
+      ]
+     },
+     {
+      "i": 9,
+      "type": "scarab",
+      "state": "patrol",
+      "pos": [
+       22.9,
+       9,
+       -7.29
+      ],
+      "bbox": null,
+      "beamRect": null,
+      "poolRect": null,
+      "apexS": [
+       2890,
+       -298,
+       1
+      ],
+      "farS": [
+       3223,
+       -361,
+       1
+      ]
+     },
+     {
+      "i": 10,
+      "type": "scarab",
+      "state": "patrol",
+      "pos": [
+       0.82,
+       -9.94,
+       -75.05
+      ],
+      "bbox": null,
+      "beamRect": [
+       1276,
+       213,
+       1280,
+       333
+      ],
+      "poolRect": [
+       1279,
+       262,
+       1280,
+       281
+      ],
+      "apexS": [
+       1345,
+       272,
+       1
+      ],
+      "farS": [
+       1286,
+       274,
+       1
+      ]
+     }
+    ],
+    "spill": {
+     "guard": 4,
+     "rect": [
+      0,
+      0,
+      1280,
+      720
+     ]
+    },
+    "ahead": {
+     "c": [
+      1406,
+      185
+     ],
+     "r": 21
+    }
+   },
+   "ordinal": 2,
+   "at": "2026-08-15T19:59:58.173Z"
+  },
+  {
+   "shot": "sly-profile",
+   "arm": "back",
+   "file": "sly-profile.back.png",
+   "sha256": "f9af17770200bd3064b87729541c9fa811a822a1286e6ba990c09991c7894df4",
+   "tree": {
+    "src": "317fd7305bab0f01",
+    "head": "d18edf1a663c"
+   },
+   "readback": {
+    "park": {
+     "guardArt": 0,
+     "guardSkin": 0,
+     "painted": false,
+     "skinShift": false
+    },
+    "colPatrol": 16773314,
+    "beamBase": 0.3,
+    "poolMix": 0.24,
+    "beamCoreScale": 1,
+    "lampToon": 0,
+    "uConeShape": 0,
+    "uGlow": 0.34,
+    "coneShapeTune": 0,
+    "glowTune": 0.34,
+    "uConeAtten": 13,
+    "uConeCap": 1.3,
+    "uConeEdge": 0.35,
+    "uConeDust": 0.65,
+    "uConeGrad": 0.85,
+    "uGuardLampW": 0,
+    "uGuardLampColor": [
+     0,
+     0,
+     0
+    ],
+    "uLocalToon": 2.5,
+    "light": 0.5156671600283468,
+    "timeOfDay": 0.8
+   },
+   "probe": {
+    "subjIdx": 0,
+    "guards": [
+     {
+      "i": 0,
+      "type": "temple",
+      "state": "patrol",
+      "pos": [
+       0.53,
+       0,
+       -12.86
+      ],
+      "bbox": null,
+      "beamRect": null,
+      "poolRect": null,
+      "apexS": [
+       1354,
+       138,
+       1
+      ],
+      "farS": [
+       1876,
+       191,
+       1
+      ]
+     },
+     {
+      "i": 1,
+      "type": "temple",
+      "state": "patrol",
+      "pos": [
+       -18.23,
+       0,
+       28.13
+      ],
+      "bbox": null,
+      "beamRect": [
+       0,
+       0,
+       375,
+       436
+      ],
+      "poolRect": [
+       0,
+       206,
+       366,
+       246
+      ],
+      "apexS": [
+       -252,
+       141,
+       1
+      ],
+      "farS": [
+       138,
+       183,
+       1
+      ]
+     },
+     {
+      "i": 2,
+      "type": "heavy",
+      "state": "patrol",
+      "pos": [
+       17.34,
+       0,
+       -5.76
+      ],
+      "bbox": null,
+      "beamRect": null,
+      "poolRect": null,
+      "apexS": [
+       2262,
+       142,
+       1
+      ],
+      "farS": [
+       2704,
+       261,
+       1
+      ]
+     },
+     {
+      "i": 3,
+      "type": "temple",
+      "state": "patrol",
+      "pos": [
+       7.61,
+       2,
+       6.17
+      ],
+      "bbox": null,
+      "beamRect": [
+       874,
+       0,
+       1280,
+       450
+      ],
+      "poolRect": [
+       879,
+       117,
+       1280,
+       126
+      ],
+      "apexS": [
+       1760,
+       29,
+       1
+      ],
+      "farS": [
+       1178,
+       132,
+       1
+      ]
+     },
+     {
+      "i": 4,
+      "type": "temple",
+      "state": "patrol",
+      "pos": [
+       -4.52,
+       1.92,
+       31.6
+      ],
+      "bbox": null,
+      "beamRect": [
+       0,
+       0,
+       1280,
+       720
+      ],
+      "poolRect": [
+       0,
+       0,
+       1280,
+       78
+      ],
+      "apexS": [
+       -417,
+       -321,
+       1
+      ],
+      "farS": [
+       -242,
+       199,
+       1
+      ]
+     },
+     {
+      "i": 5,
+      "type": "temple",
+      "state": "patrol",
+      "pos": [
+       -0.11,
+       0,
+       -20.04
+      ],
+      "bbox": null,
+      "beamRect": [
+       1146,
+       0,
+       1280,
+       346
+      ],
+      "poolRect": [
+       1144,
+       166,
+       1280,
+       176
+      ],
+      "apexS": [
+       1328,
+       138,
+       1
+      ],
+      "farS": [
+       1341,
+       168,
+       1
+      ]
+     },
+     {
+      "i": 6,
+      "type": "heavy",
+      "state": "patrol",
+      "pos": [
+       -1.06,
+       0.04,
+       -43.41
+      ],
+      "bbox": null,
+      "beamRect": null,
+      "poolRect": null,
+      "apexS": [
+       1338,
+       138,
+       1
+      ],
+      "farS": [
+       1612,
+       165,
+       1
+      ]
+     },
+     {
+      "i": 7,
+      "type": "temple",
+      "state": "patrol",
+      "pos": [
+       3.69,
+       17,
+       -21.44
+      ],
+      "bbox": null,
+      "beamRect": null,
+      "poolRect": null,
+      "apexS": [
+       1529,
+       -328,
+       1
+      ],
+      "farS": [
+       2205,
+       -413,
+       1
+      ]
+     },
+     {
+      "i": 8,
+      "type": "heavy",
+      "state": "patrol",
+      "pos": [
+       9.1,
+       -9.86,
+       -64.45
+      ],
+      "bbox": null,
+      "beamRect": null,
+      "poolRect": null,
+      "apexS": [
+       1490,
+       276,
+       1
+      ],
+      "farS": [
+       1475,
+       277,
+       1
+      ]
+     },
+     {
+      "i": 9,
+      "type": "scarab",
+      "state": "patrol",
+      "pos": [
+       22.9,
+       9,
+       -7.29
+      ],
+      "bbox": null,
+      "beamRect": null,
+      "poolRect": null,
+      "apexS": [
+       2890,
+       -298,
+       1
+      ],
+      "farS": [
+       3223,
+       -361,
+       1
+      ]
+     },
+     {
+      "i": 10,
+      "type": "scarab",
+      "state": "patrol",
+      "pos": [
+       0.82,
+       -9.94,
+       -75.05
+      ],
+      "bbox": null,
+      "beamRect": [
+       1270,
+       175,
+       1280,
+       369
+      ],
+      "poolRect": [
+       1279,
+       262,
+       1280,
+       281
+      ],
+      "apexS": [
+       1345,
+       272,
+       1
+      ],
+      "farS": [
+       1286,
+       274,
+       1
+      ]
+     }
+    ],
+    "spill": {
+     "guard": 4,
+     "rect": [
+      0,
+      0,
+      1280,
+      720
+     ]
+    },
+    "ahead": {
+     "c": [
+      1406,
+      185
+     ],
+     "r": 21
+    }
+   },
+   "ordinal": 3,
+   "at": "2026-08-15T20:00:28.213Z"
   }
  ]
 }
