@@ -24620,3 +24620,62 @@ Three consequences:
 3. Combined with §331's warm-up (discard the unconverged first render), a live-settled, warmed-up
    capture on an unchanged tree appears to be **bit-reproducible**, which is a much stronger
    instrument than this project has been assuming it has.
+
+## §335 — G1 is an FX dust sprite, not a POSTFX flare; and shots/r13 is GONE, which is the more expensive finding
+
+### The attribution (g1 lane, `NOTE-g1-attribution.md`, e1cdf03) — verdict: **FX sprite**
+
+The POSTFX flare-ghost hypothesis is **dead on inspection, and I verified the code claim myself**:
+`getSunViewDirection` (`Sky.js:810`, commented *"for POSTFX god-rays / lens flare"*) has **exactly
+one hit in the entire tree — its own definition. Zero callers.** `PostFX.js`'s chain is scene → FX
+mask → normals → AO → ink → bloom pyramid → composite → FXAA; there is no ghost pass, no lens
+dirt, no light-screen-position uniform.
+
+Shape is what identified it, and it is not a close call: a 3–4 px rim onto a **dead-flat plateau**
+(`#e4ad7a` repeated pixel-for-pixel) then discrete steps 74.7 → 68.4 → 62 → 55, with a dark ink
+arc on the upper rim and a straight internal band boundary. No gaussian anywhere. The flare-axis
+test failed too: on `sly-profile` the nearest compact source is 3.45 disc radii off-axis, and the
+converse test is stronger — the brightest block anywhere on the locus a source would have to
+occupy is L 65.5, **dimmer than the disc it would have to be throwing** (76.56). `interior` is
+10.47 radii off. `combat` was correctly declared void rather than counted: its brightest feature
+is a frame-spanning swing trail, colinear with anything.
+
+The painter is `dustPainter` (`src/fx/Emitters.js:111-143`), whose own docstring is the
+measurement — *"a handful of overlapping discs, hard edge, two-band cel shade"* — with five terms
+mapping one-for-one. Oversize is **unclamped by construction**: `maxSize: key === 'air_motes' ?
+TUNE.moteMaxH : 0` (`Particles.js:2183`) — the ceiling exists and is used elsewhere
+(`flashMaxH 0.45`, added after `cane_flash` hit 113% of frame height) and the ambient dust pools
+pass 0 deliberately.
+
+**§327's unattributed 82% is explained, and one of its two guesses was impossible.** There is no
+emissive term in the particle shader — colour is `mix(aCol0,aCol1,u)` × lit tint × atlas. The
+residual is the **key leg**: `sand_haze` ships `litMix: 0.52`, and `Particles.js:682` states
+outright that *"uAmbGain scales the AMBIENT leg only; the key leg and uLitMix are untouched."* So
+§327's ambient sweep could not have moved it, which is exactly what §327 measured.
+
+Successor: one boot, two arms, `gain: 0` on `sand_haze` alone then `sand_drift` alone, to resolve
+which pool draws each instance. **Ship candidate is `maxSize`, not `gain`/`ambGain`** — it targets
+the oversized sprite while leaving population, opacity and tint alone, which is what the
+`F_dunes`/`F_hero`/`F_courtyard` bars failed on in §327.
+Flagged, not acted on: `Particles.js:606-607` still carries the superseded §306 claim that the
+sandHigh discs ride the ambient leg.
+
+### **shots/r13 is unrecoverable, and §329.1 did not cover it**
+
+Verified here: `shots/r13/` is **not on disk and was never committed**, while `shots/r12/`
+survives. A rollback took the r13 capture — 16 frames, 16 crops and its manifest — and the g1 lane
+correctly measured r12 instead, justified by §328's own finding that every `src` commit between
+the two captures is an inert mechanism plus a props dedupe. The cost is real but bounded: it could
+not reproduce the critic's exact backdrop numbers (+30 L instead of +50 L on `sly-profile`), and
+its identification never rested on the magnitude.
+
+**The lesson is mine.** §329.1 established force-adding chunk frames because a rollback wipes the
+working tree and `/tmp` — and I applied it faithfully to every *seal* capture while leaving the
+*critic* capture unprotected. r13 is the basis of the entire current queue: every routing decision
+in §328 and the whole r13 queue traces to those frames, and **nobody can now re-measure them.**
+The RESULT and §328 survive because folds are pushed immediately, so the findings are intact; what
+is gone is the ability to check them against the pixels.
+
+**Rule: force-add the frames of any capture whose measurements will be cited later, not only
+sealed A/B captures.** A blind critic round is exactly such a capture. The next critic round is
+force-added at capture time, and its cost (~33 files, ~60 MB) is worth one round of re-derivation.
