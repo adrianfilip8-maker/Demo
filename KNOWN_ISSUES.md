@@ -25532,3 +25532,66 @@ The lane disclosed running one read-only `git status --porcelain -- src/` agains
 rule. No writes, no index change; disclosed rather than found. Noted and of no consequence.
 
 Nothing ships.
+
+---
+
+## §348 — guardcone: **DO NOT SHIP**. Five bars fail or void; the 49-frame capture itself is clean
+
+The capture task #14 has been blocked behind all session finally ran to a verdict. 49 frames, 16
+chunks, all force-added. Full working in `RESULT-guardcone.md`, scorer output in
+`logs/guardcone-score.txt` (exit 1).
+
+```
+==> DO NOT SHIP — BS1 FAIL, BH1 VOID, PROT-MOON FAIL, PROT-LAMPS FAIL,
+    PROT-B_sly-startle FAIL   (VOID is not PASS — BH1 could not be evaluated)
+```
+
+**The candidate fails; the run does not.** `V_CHUNK_TREE` PASS (one src hash `317fd7305bab0f01`
+across 16 chunks and 49 rows), `V_CHUNKS` PASS, `PARK1` PASS (§309 levers inert in 49/49 rows), all
+**sixteen** `R_<shot>` brackets **exactly 0 px**, `BV1` PASS, plus `BF1`, `BL1`, `PROT-SPARK` and 14
+of 15 `PROT-B`.
+
+**The staging argument is now settled on evidence.** AMENDMENT-A2 specifies `{dt: 0}`; §334 had
+measured that mode at **0/12 byte-identical across boots**, so reverting to it — after the guardcone
+lane caught my briefing error — was a decision made on principle against an adverse measurement. The
+run returns **sixteen exact within-boot brackets**, including `sly-profile` at **99.94%** and `guard`
+at **98.5%** intermediate change. No guardcone bar compares across boots; the bracket that matters
+holds every time.
+
+**The five failures, as measured and without attributed cause:**
+
+- **`BS1` FAIL** — `apex [770,335] hot-warm px=0 maxL=196 (want >= 1)`. Zero qualifying pixels at the
+  registered apex. `maxL=196` says the region is bright, so this is not a missing beam but an apex
+  that does not satisfy the hot-warm classifier at all.
+- **`BH1` VOID** — `near hue=17.8 S=0.453 (516057px)` against `far … (0px)`. The far band is **empty**,
+  so the split cannot be computed. Not failed by the candidate — **not evaluable**, and the seal
+  treats that as VOID rather than PASS.
+- **`PROT-MOON` FAIL** (5723 px) and **`PROT-LAMPS` FAIL** (8028 px), both against a 400 px allowance
+  on the probe-touching branch — **14× and 20× over**. These are the two regions the seal exists to
+  protect from a cone change.
+- **`PROT-B_sly-startle` FAIL** — `outside=6087` against `<= 900`. Fourteen shots report `outside=0`
+  and `night` reports 664; only `sly-startle` escapes its containers.
+
+**On that last one, both halves of my own record stand.** At chunk 5 I registered in advance that
+`sly-startle` would be "the strongest test of `PROT-B` in the roster" because a zero-guard frame
+strips the cone's legitimate rendering. Both predictions I made there failed and I **withdrew the
+claim**, correctly, since `bon` moves seven uniforms and is not cone-only. It is nonetheless the one
+shot that fails containment. **The instinct was right and the reason I gave for it was wrong, and I
+still do not know the actual reason** — recorded that way rather than retro-fitted into a story,
+which is the failure mode §347 catalogued three times over.
+
+**Not claimed:** any cause for the five; `BF1`'s PASS as evidence (it cleared `<= 0.08` and
+`<= 0.5 × off` on `bon=0.0000 off=0.0000` — two zeros discriminate nothing); anything about `lampW`'s
+driver (BV1 reads a `_light` curve across all sixteen `bon` rows, and I logged `_light` for exactly
+one). **The §8.3 LOOK gate is still binding and has NOT been performed** — the scorer's own verdict
+line says so.
+
+**Task #14 is unblocked and answered in the negative.** The cone tuple as registered does not ship. A
+successor must address the apex classifier and both protection ROIs, and must first establish why
+`BH1`'s far band is empty — a bar that could not be evaluated is not a bar that passed.
+
+**Process note, on my own error.** I first reported this run as `exit=0`. That was `head`'s exit code
+from a `tee | head` pipeline, not the scorer's; the scorer exits **1** and printed 90 lines where I
+had captured 66, truncating the entire failing half of the bar list. Caught by noticing that `BS1`'s
+printed measurement (`px=0` against `want >= 1`) contradicted the all-PASS list I was looking at.
+**A pipeline's exit code is the last stage's, and `head` always succeeds.**
