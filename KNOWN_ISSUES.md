@@ -24964,3 +24964,80 @@ free lever or a trap, and which one must be established before building on it; a
 all and the chosen lever must be one that actually applies to architecture.
 
 Nothing ships; measurement seal, no candidate proposed.
+
+---
+
+## §342 — the colossus's red, attributed offline: half mineral mix, half a **sign-flipped** grade row
+
+Closes the step `NOTE-colossus-albedo.md`'s ADDENDUM named for itself. Full working in
+`progress/records/NOTE-granite-huegrade.md`; tool `progress/records/granite/granitab.mjs`. Pure CPU
+arithmetic — no frame, no browser, no capture lock, nothing staged.
+
+**The control is proven twice before any arm is read (§340).** `Bake.bake()` is THREE-free and
+importable in Node, and `granite_pink` is `nodeBakeable`. The CTL build is checked against both
+digests already committed in `baked.json` — the Node-vs-browser cross-checked `guard@256`
+(`0550b2bf6581d6e3`) and the shipped `slot@512` (`2c6622885483fbc9`). Both MATCH, so the fresh build
+and `textures.bin` are the same bytes. The script aborts and reports nothing if either fails.
+
+**1. `granite_pink` is the reddest albedo in the catalogue.** Mean linear R/G **4.260** — rank **1
+of 23**, 56 % above the next (`mudbrick` 2.737) and **2.06× `carnelian_inlay`**, the recipe named for
+being red. Measured twice by readers sharing no code: a pure-Python zlib decode straight out of
+`textures.bin` gives 4.2605, the Node bake gives 4.260. Linear, not sRGB, because `Textures.js:491`
+loads albedo as `SRGBColorSpace` — linear is what the shader multiplies.
+
+**This accounts for the frame.** The colossus's 19 stone parts are `Props.MAT.stone` → tex
+`granite_pink` × tint `0x9c8278` (linear R/G 1.489). `1.489 × 4.260 = 6.35` predicted against
+**5.48 measured** (§341) — 16 % high, consistent with the lit rect sampling one patch rather than the
+whole-texture mean. Hero's lit face is **1.47**, essentially its tint alone. §341's `R/G ≤ 0.90`
+target was a cross-material comparison; this is what the other material actually is.
+
+**2. The attribution splits in half.** `hueGrade` ships its own A/B lever (`abOff('huegrade')`) and
+`TEX_AB()` is read per call, never latched, *specifically* so one process can bake both arms:
+
+```
+CTL (shipped)    lin(0.4919,0.1155,0.0986)  linR/G 4.260
+A1 no huegrade   lin(0.3652,0.1357,0.0786)  linR/G 2.690
+                 hueGrade contributes +1.570  (48.2% of the excess over neutral)
+```
+
+Neither stage alone is "the" cause: the base mineral mix already lands at 2.690, and the grade adds
+another 58 % on top.
+
+**3. The finding is a SIGN FLIP, not a magnitude.** Same A/B across all 12 Node-bakeable recipes:
+**`granite_pink` is the only material in the catalogue that `hueGrade` pushes toward red** (+1.570).
+Every other graded recipe moves the other way, −0.010 to −0.396 (`gold_leaf` largest). Granite's move
+is 4× the biggest opposing one and the only one whose sign differs at all.
+
+Counted programmatically, `HUE.granite` is **1-of-11 on both** of the axes that would do this: the
+only row whose three hue rotations are all negative (`-16/-15/-7`; `mudbrick` is nearest at
+`-13/-8/0`), and the only row whose highlight saturation is **boosted rather than held or cut**
+(`satHi` 1.02; gold alone matches at exactly 1.0, the other nine run **0.66–0.88**). Every other
+material in the level desaturates as it goes toward the light — which is what sun does to stone, and
+what the `sandstone` row's own comment describes. Granite alone keeps full chroma at a hue rotated
+toward red, so on a 13 m figure under a full-strength key it is the one surface that does not bleach.
+
+**4. None of this is called a bug.** The sign flip is deliberate and the table says so: *"Aswan
+granite is **pink**. It measured at sandstone's hue, which is the single most obviously wrong number
+in the control table."* That table exists to break up a palette where 93 % of chromatic texels sat in
+one 30° bucket and eight of the ten largest surfaces shared a median hue of 23°. Pushing granite one
+way while sandstone/paving/sand/gold went the other is how that was fixed, and it worked. The sign
+should probably stay. What is *not* argued anywhere in the file is **`satHi: 1.02`** — unremarked,
+unique, and landing on the largest lit stone surface in `courtyard`.
+
+**5. Scope limits, stated.** 11 of 23 recipes are not Node-bakeable and are absent from the A/B —
+including `mudbrick`, whose *graded* 2.737 already exceeds granite's *ungraded* 2.690, so granite's
+ungraded rank is unestablished. And the chain albedo → tint → key → tonemap → frame is arithmetically
+consistent at both ends but **has not been run as a frame**; §333 on this same tree is the standing
+reminder that a value's fate at the display transform is not predictable from its linear value.
+
+**6. This does NOT license changing `satHi` now.** §141.1: I have measured the candidate's own axis,
+so a bar drawn after this is not a bar. Any change needs a PREREG sealed before the arm is baked,
+with a **frame-side** criterion. And the critic's complaint (§336, §341) was about the colossus's
+**shade** going mauve at 345°, not its lit face; a redder albedo is the input to a redder shade, but
+`shadowHold` (§269, **0.0 on all architecture**) is the term that decides shade hue and is still
+unmeasured here. Two candidate fixes at two different stages — and the ADDENDUM's warning applies to
+both: *every time, the defect was attributed to the last stage that touched the pixel rather than the
+stage that originated the value.* `satHi` is not obviously the originating stage either. It is now
+merely the best-localised one.
+
+Nothing ships; attribution seal, no candidate proposed.
