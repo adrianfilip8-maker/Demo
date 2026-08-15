@@ -50,3 +50,30 @@ test('the uniform is wired from TUNE, so the pin above actually reaches the shad
   assert.match(SRC, /uDispChromaHold:\s*\{\s*value:\s*this\.tune\.dispChromaHold\s*\}/);
   assert.match(SRC, /uniform float uDispChromaHold;/);
 });
+
+/* These two exist because the original pins asserted the uniform was DECLARED and that it was
+   WIRED, but not that both happened in the SAME material. A uniform declared in one shader and
+   wired into another compiles to a silent no-op or a boot-time GLSL error, and either way costs
+   a capture to discover. Caught while reading the wiring back, before the seal's first frame. */
+test('uDispChromaHold is declared in the SAME shader body that does the tonemap and encode', () => {
+  const decl = SRC.indexOf('uniform float uDispChromaHold;');
+  const brk = SRC.indexOf('if ( uDispChromaHold > 0.0 )');
+  assert.ok(decl > 0 && brk > decl, 'declaration must precede the branch');
+  const between = SRC.slice(decl, brk);
+  assert.ok(between.includes('c = slyAgX( c, 1.0, uToneShoulder );'),
+    'the tonemap must lie between the declaration and the branch — proves one contiguous shader');
+  assert.ok(between.includes('c = slyLinearToSrgb( c );'),
+    'the encode must lie between the declaration and the branch — proves one contiguous shader');
+  assert.ok(!between.includes("passMaterial('"),
+    'no other material may open between them, or declaration and branch are in different shaders');
+});
+
+test('uDispChromaHold is wired into the COMPOSITE material, not a neighbouring pass', () => {
+  const comp = SRC.indexOf("passMaterial('postfx.composite'");
+  assert.ok(comp > 0, 'composite material anchor present');
+  const wire = SRC.indexOf('uDispChromaHold: { value: this.tune.dispChromaHold }');
+  assert.ok(wire > comp, 'the wiring must come after the composite material opens');
+  const nextMat = SRC.indexOf("passMaterial('", comp + 10);
+  assert.ok(nextMat === -1 || wire < nextMat,
+    'the wiring must come before the next material opens, i.e. inside composite uniforms');
+});
