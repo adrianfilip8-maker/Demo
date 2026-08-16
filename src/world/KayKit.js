@@ -77,11 +77,18 @@ const GAP = 1.0;
  * (−8, −30)), which clears the 1.4 m footprint bar the camera block below grid-searched against.
  */
 const PLACEMENTS = [
-  /* ---- west colonnade: the store, where the processional way is not ---- */
+  /* ---- west colonnade: the store, where the processional way is not ----
+   * `barrel_small_stack` was at (-20.3, 2.6), 0.731 m inside the west OUTER gateway pylon. Unlike
+   * the camera placement further down it was invisible from all eighteen canonical cameras — 574
+   * seam points, none of them unoccluded — so nothing in a frame would ever have shown it. It is
+   * moved anyway, 1.15 m north to (-20.25, 3.75), because at this x the store line is inside the
+   * pylon's own footprint and the move costs nothing: same line, same neighbours, no camera. An
+   * invisible defect is still a defect when the fix is free; see the tomb hoard for the two where
+   * it is not. */
   ['crates_stacked',          -20.5, 0, -6.0,  0.32],
   ['barrel_large',            -19.2, 0, -3.4,  0.00],
   ['barrel_small',            -21.0, 0, -2.0,  1.10],
-  ['barrel_small_stack',      -20.3, 0,  2.6, -0.42],
+  ['barrel_small_stack',     -20.25, 0, 3.75, -0.42],   // was (-20.3, 2.6) — 0.731 m inside a pylon
   ['crates_stacked',          -20.8, 0,  6.5, -0.90],
   ['barrel_large_decorated',  -19.4, 0, 10.2,  0.60],
   ['barrel_small',            -21.2, 0, 12.0,  2.20],
@@ -103,7 +110,34 @@ const PLACEMENTS = [
   ['rubble_half',              19.2, 0, -43.0,  1.40],
   ['rubble_half',             -19.6, 0, -45.5, -0.60],
 
-  /* ---- the tomb: the hoard, around the sarcophagus at (0, −12, −72) ---- */
+  /* ---- the tomb: the hoard, around the sarcophagus at (0, −12, −72) ----
+   *
+   * TWO OF THESE ARE INSIDE CRYPT PIERS AND BOTH ARE ACCEPTED, for different reasons. §397.5
+   * measured four KayKit colliders inside `wall` proxies; the two in the courtyard are moved
+   * (see above) and these two stay. `tests/kaykit.test.mjs` A3b holds them as a named exception
+   * list, so a THIRD one cannot appear without failing the build.
+   *
+   *   `chest` at (-6.8, -74.2)   0.759 m into the west pier at (-5.5, -74). It does intersect the
+   *                              drawn granite — 446 seam points — and **not one of them is
+   *                              unoccluded from any of the eighteen cameras**, because the pier
+   *                              is between them and it. In the room it reads as a chest shoved
+   *                              against a pier, which is what a looted crypt should look like.
+   *                              Moving it costs the hoard's composition around the sarcophagus
+   *                              and buys a frame nobody will ever render.
+   *
+   *   `chest` at (4.6, -70.0)    0.097 m into the east pier at (5.5, -68) — and **the drawn pier
+   *                              is not touched at all**, zero seam points. This is not a
+   *                              placement defect, it is a PROXY defect, and it generalises past
+   *                              this chest: every crypt pier's `wallProxy` is an axis-aligned
+   *                              2.2 m box while the pier it stands for is a `masonryShell` under
+   *                              `cornerRolls` of radius 0.2 with batter and jitter, so the proxy
+   *                              is fatter than its own art by up to ~0.2 m at every corner.
+   *                              Recorded at the proxy in `EgyptLevel.js`, where it belongs.
+   *
+   * What the two cost in gameplay is measured rather than assumed, and it is small: 1.48 m² and
+   * 0.29 m² of crate top standing inside masonry — surface the collision hash offers and no
+   * capsule can occupy — plus a handful of `probeLedge` grabs that land the player 2-6 cm inside
+   * the pier. No snag, no wedge, no route. See A3d. */
   ['chest_gold',               -4.2, -12, -70.5,  0.50],
   ['chest',                     4.6, -12, -70.0, -0.40],
   ['coin_stack_large',         -2.4, -12, -68.6,  0.00],
@@ -150,11 +184,38 @@ const PLACEMENTS = [
    * stores — but only one of them had been considered. `Props.js` already settled the precedent in
    * its header: a handful of its props are positioned by eye for the canonical cameras specifically.
    *
-   * These eight are NOT positioned by eye. Each was grid-searched against three tests at once: on
+   * These six are NOT positioned by eye. Each was grid-searched against three tests at once: on
    * real paving, clear of every column and plinth footprint by 1.4 m, and inside its target shot's
    * frame at 6-26 m. All three matter — five positions chosen by eye first sat inside the obelisk
    * terrace or a colossus plinth, and two more inside nave columns (x +/-8, not the +/-11.4 I had
-   * assumed). Distances below are to the shot named. */
+   * assumed). Distances below are to the shot named.
+   *
+   * ── THAT CONSTRAINT LIST WAS SHORT BY TWO CATEGORIES, AND IT SHIPPED A CRATE INSIDE A PYLON ──
+   * `barrel_large` stood at (-11.5, 2.5) — **1.003 m inside the west inner processional gateway
+   * pylon**, deep enough that 140 of its 503 intersection-seam points were unoccluded in `night`,
+   * an 87 x 104 px patch in the lower-left of the frame. The search that placed it was not buggy.
+   * It passed every test it states: that position clears the nearest `pole` proxy — "every column"
+   * — by **14.30 m**. The gateway pylons are `wall` proxies, and `wall` was never in the list.
+   *
+   * The second category was found by the FIX. Moved to (-10.0, 3.75) the barrel cleared every wall
+   * proxy by 0.70 m and still cut 432 drawn masonry triangles: it was standing on courtyard paving
+   * at y 0 **underneath the obelisk terrace**, whose own paving top is 1.52 m up. "On real paving"
+   * had been asked as "is there a floor at y = 0", and a floor at y = 0 says nothing about what is
+   * above it — `tools/framelib.mjs`'s `groundColumn` documents exactly that trap.
+   *
+   * So the list this block is searched against is now four tests, and it is a check rather than a
+   * claim: `tests/kaykit.test.mjs` A3b re-derives it over every placement, not just these six.
+   *
+   *   1. on real paving  — and the prop's OWN HEIGHT clear of everything above that floor
+   *   2. clear of every `pole` proxy (columns) by 1.4 m
+   *   3. clear of every `wall` proxy (pylons, temenos, piers, gate jambs) — exact SAT, not AABB
+   *   4. inside its target shot's frame at 6-26 m, and >= 14 m from every `sly-*` close-up
+   *
+   * `barrel_large` now stands at (-9.0, 0.75): 1.035 m clear of the nearest wall proxy, nothing
+   * overhead, 22.93 m in `night`, and **zero** drawn-masonry seam points — measured after the
+   * move rather than inferred from the clearance, because the drawn pylon is a `masonryShell` at
+   * batter 0.095 under `cornerRolls` of radius 0.24 with its own jitter, while the proxy it was
+   * cleared against is a batter-0.085 hull with none. The art can stand outside its own proxy. */
   ['crates_stacked',            5.5, 0, -34.0,  0.30],   // temple    15.2 m
   ['barrel_large',             -6.5, 0, -34.0, -0.60],   // temple    18.1 m
   ['barrel_small_stack',      -12.5, 0, -33.5,  1.10],   // temple    21.7 m
@@ -189,7 +250,7 @@ const PLACEMENTS = [
    * The general lesson, which cost two candidates: "in frame" and "in frame at 7 m" are different
    * findings, and I checked the first while quoting the distance from a different shot. */
   ['crates_stacked',          -11.5, 0,   9.5,  0.50],   // hero      23.8 m
-  ['barrel_large',            -11.5, 0,   2.5, -1.20],   // night     21.0 m
+  ['barrel_large',             -9.0, 0,  0.75, -1.20],   // night     22.9 m
 ];
 
 /* Props Sly should bump into rather than walk through. Coins and rubble are deliberately absent:
@@ -207,12 +268,20 @@ export class KayKit {
     this.stats = { models: 0, placed: 0, failed: 0, tris: 0, colliders: 0, decals: 0 };
     /* Geometric ground contact. A screen-space contact term cannot reach these: `courtyard` holds
        all THIRTY-SIX of them in its cone, 35 of the 36 at 33.4–116.8 m, and at that near end
-       4.5 cm of world subtends 1.11 px (fov 55 over 900 px is 24.7 px/m at 35 m — that arithmetic
-       re-derives exactly). The count used to read "thirty" and the range "35–51 m": the count
-       predates the six camera placements below, and the range only ever described the eleven
-       colonnade props. The one placement that IS near — the courtyard crate at 11.8 m — is the
-       exception the camera block was added to create, and it does not weaken the argument, since
-       a term that cannot reach 35 m is not saved by one prop at 12 m.
+       4.5 cm of world subtends 1.166 px (fov 55 over 900 px is 25.90 px/m at 33.37 m — that
+       arithmetic re-derives exactly). The count used to read "thirty" and the range "35–51 m":
+       the count predates the six camera placements below, and the range only ever described the
+       eleven colonnade props. The one placement that IS near — the courtyard crate at 11.8 m — is
+       the exception the camera block was added to create, and it does not weaken the argument,
+       since a term that cannot reach 33 m is not saved by one prop at 12 m.
+
+       THE px FIGURE HERE WAS THE THIRD COPY OF ONE STALE NUMBER. It read "1.11 px … 24.7 px/m at
+       35 m", which is the arithmetic of the OLD 35–51 m band — corrected two sentences above and
+       left standing in the number derived from it. `Decals.js`'s header carried the same 1.11 and
+       its own `hero` figure was stale too. A corrected range and an uncorrected number derived
+       from it is the most durable kind of stale comment, because the sentence reads as if it had
+       been checked. Re-derived by `tests/decalstat.test.mjs`, which reads both figures out of the
+       comment text rather than out of this file's history.
        See `Decals.js` for the measured defect and for why the shape is a hard-edged ellipse. */
     this.decals = new ContactDecals(engine, { name: 'kaykit' });
   }

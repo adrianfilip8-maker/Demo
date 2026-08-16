@@ -368,21 +368,35 @@ test('C2: the "near ~40 % of the cast shadow" claim, under the shader\'s own geo
  * count is asserted.
  */
 const PX_TABLE = (() => {
-  const s = /4\.5 cm subtends([\s\S]*?)— below the texel floor/.exec(DECALS_SRC);
+  const s = /4\.5 cm subtends([\s\S]*?)—\s*(?:at or )?below the texel floor/.exec(DECALS_SRC);
   assert.ok(s, 'the px table sentence is no longer in Decals.js — this arm must be re-anchored');
-  return [...s[1].matchAll(/\*{0,2}([\d.]+) px\*{0,2}\s*(?:\n\s*\*\s*)?at `([a-z-]+)`/g)]
+  /* Strip the block-comment furniture and collapse the wrap BEFORE matching, so the pattern reads
+     prose rather than prose-as-laid-out.
+     The first repair here only tolerated a break between `px` and `at`, which is where the wrap
+     happened to fall that day. Correcting the two stale figures re-flowed the paragraph, the break
+     moved to between `at` and the shot name, and the same class of failure silently dropped
+     `sly-closeup` instead of `hero`. **A pattern that depends on where a line breaks will keep
+     being wrong in a new place every time the comment is edited** — which is the general form of
+     §397.6, and the reason this normalises the text instead of adding another optional group. */
+  const flat = s[1].replace(/\n\s*\*/g, ' ').replace(/\s+/g, ' ');
+  return [...flat.matchAll(/\*{0,2}([\d.]+) px\*{0,2} at `([a-z-]+)`/g)]
     .map((m) => ({ shot: m[2], px: +m[1] }));
 })();
 const PX_H = 900;                                   // `tools/shot.mjs` defaults to 1600x900
 const dFor = (fov, px) => (0.045 * PX_H) / (2 * px * Math.tan(THREE.MathUtils.degToRad(fov / 2)));
 const pxFor = (fov, d) => (0.045 * PX_H) / (2 * d * Math.tan(THREE.MathUtils.degToRad(fov / 2)));
 
-test('C3: the px table is 900p at each shot\'s nearest contact decal — TWO entries are stale', () => {
-  /* "4.5 cm subtends 12.57 px at `sly-closeup`, 5.02 px at `interior`, 3.43 px at `hero`, 2.48 px
-     at `temple` and 1.11 px at `courtyard`." Each inverts to a distance, and the basis is the
+test('C3: every figure in the px table re-derives from the shot\'s nearest contact decal', () => {
+  /* "4.5 cm subtends 12.57 px at `sly-closeup`, 5.02 px at `interior`, 1.98 px at `hero`, 2.48 px
+     at `temple` and 3.46 px at `courtyard`." Each inverts to a distance, and the basis is the
      nearest CONTACT DECAL in that shot's frustum — Props' and KayKit's alike, since both feed the
-     same batch. Three of the five still reproduce. Two do not, and they are RECORDED rather than
-     asserted true, because a bar that fails on HEAD is a broken build and not a bar (§395.4). */
+     same batch.
+
+     LAST ROUND THREE OF FIVE REPRODUCED. `hero` was 42 % out and `courtyard` 212 % out, and both
+     were recorded rather than barred, because a bar that fails on HEAD is a broken build (§395.4).
+     Both are now corrected at source, so this is a bar: all five, to 6 %. The two figures that
+     moved are additionally pinned to their new values, so a revert of the comment fails here with
+     the number it should have carried rather than with a generic mismatch. */
   assert.equal(PX_TABLE.length, 5, `the header table now states ${PX_TABLE.length} figures, not five`);
   assert.deepEqual(PX_TABLE.map((r) => r.shot), ['sly-closeup', 'interior', 'hero', 'temple', 'courtyard'],
     'the shots the px table names have changed');
@@ -411,50 +425,64 @@ test('C3: the px table is 900p at each shot\'s nearest contact decal — TWO ent
     assert.ok(Number.isFinite(r.near), `${r.shot} has no contact decal in frustum — inspected nothing`);
     assert.ok(r.implied > 1 && r.implied < 120, `${r.shot}'s ${r.px} px implies ${r.implied.toFixed(1)} m, which is not a plausible prop distance`);
   }
-  /* the three that hold */
-  for (const s of ['sly-closeup', 'interior', 'temple']) {
-    const r = rows.find((q) => q.shot === s);
-    assert.ok(r.err < 6, `${s} was within 6 % of its nearest decal and is now ${r.err.toFixed(1)} % out — `
-      + 'a fourth entry has gone stale and the header note needs it');
+  /* all five, now that the two corrections have landed */
+  for (const r of rows) {
+    assert.ok(r.err < 6,
+      `${r.shot} states ${r.px} px, which implies ${r.implied.toFixed(2)} m, but its nearest contact `
+      + `decal is at ${r.near.toFixed(2)} m — ${r.err.toFixed(0)} % out. The figure should be `
+      + `${r.now.toFixed(2)} px. (Both \`hero\` and \`courtyard\` reached this state once already, `
+      + 'by the placement table moving under a comment nobody re-derived.)');
   }
-  /* and the two that do not, pinned with the corrected figures so the src fix is a one-liner */
+  /* the two that were corrected this round, pinned to their new values */
   const court = rows.find((r) => r.shot === 'courtyard');
   const hero = rows.find((r) => r.shot === 'hero');
-  agrees(court.implied, 35.04, 0.1, 'the courtyard figure still derives from a 35 m prop distance');
-  agrees(court.near, 11.25, 0.2, 'the nearest contact decal in `courtyard`');
-  agrees(court.now, 3.46, 0.05, 'what 4.5 cm ACTUALLY subtends at courtyard\'s nearest decal');
-  agrees(hero.implied, 13.91, 0.1, 'the hero figure still derives from a 13.9 m prop distance');
-  agrees(hero.near, 24.10, 0.2, 'the nearest contact decal in `hero`');
-  agrees(hero.now, 1.98, 0.05, 'what 4.5 cm ACTUALLY subtends at hero\'s nearest decal');
-  /* `courtyard`'s is inherited from the "35-51 m" band §395.3 corrected in KayKit.js and did NOT
-     correct here. When that sentence is fixed the 1.11 has to move with it, and this fails first. */
-  assert.match(DECALS_SRC, /35[–-]51 m/,
-    'the "35-51 m" band has been corrected here — so the 1.11 px derived from its near end must be '
-    + 'corrected too, and this arm rewritten to assert the new figure rather than record the old');
+  agrees(court.px, 3.46, 0.005, 'the corrected `courtyard` figure — it was 1.11, inherited from a 35 m band');
+  agrees(hero.px, 1.98, 0.005, 'the corrected `hero` figure — it was 3.43, implying 13.91 m');
+  assert.doesNotMatch(DECALS_SRC.slice(0, DECALS_SRC.indexOf('two of those five were stale')), /35[–-]51 m/,
+    'the stale "35-51 m" band is back in the px paragraph — that band is the eleven colonnade props '
+    + 'alone and every px figure derived from its near end has been wrong twice now');
   /* the argument the table exists to make survives both corrections, and that is worth asserting
-     rather than assuming: even at the CORRECTED near distances, no figure reaches the ~4 px a
-     screen-space contact term would need. */
-  assert.ok(Math.max(court.now, hero.now) < 4.0,
+     rather than assuming: even at the CORRECTED distances, no figure the header leans on reaches
+     the ~4 px a screen-space contact term would need. */
+  assert.ok(Math.max(court.px, hero.px) < 4.0,
     'a corrected px figure now exceeds 4 px, which weakens the header\'s "below the texel floor" '
     + 'argument rather than merely restating it — that is a design question, not a comment fix');
+  /* and the header must still say WHICH quantity the table is measured at, since the two stale
+     figures were both produced by measuring it against something else */
+  assert.match(DECALS_SRC, /at each camera's NEAREST CONTACT DECAL/,
+    'the header no longer states what the px table is measured at, which is the ambiguity that '
+    + 'let two of its five figures describe distances to a different set of props');
 });
 
 test('C3 CALIBRATION: the regex this arm used to carry still mis-reads the same file', () => {
   /* MUST FIRE. C3's parse was replaced, and a replaced parse is only a fix if the old one is
-     demonstrably wrong on the shipped text. Run the old pattern here: it must still drop `hero`
-     and must still return an `interior` that the header's table does not state. */
+     demonstrably wrong on the shipped text.
+
+     THIS ARM NAMED AN ENTRY ONCE AND WAS WRONG TO. It asserted specifically that `hero` was
+     missing from the old parse. Correcting the two stale figures re-flowed the paragraph, the line
+     break moved, and `hero` became reachable while `sly-closeup` fell out instead — so the arm
+     failed while the defect it exists to record was entirely intact. The defect was never "hero is
+     dropped"; it is "SOME entry is dropped, and which one is a function of the line breaks". It is
+     asserted in that form now, which is the form that stays true. */
   const old = Object.fromEntries([...DECALS_SRC.matchAll(/([\d.]+) px at `([a-z-]+)`/g)].map((m) => [m[2], +m[1]]));
   const good = Object.fromEntries(PX_TABLE.map((r) => [r.shot, r.px]));
+  const dropped = Object.keys(good).filter((k) => !(k in old));
+  const wrong = Object.keys(good).filter((k) => k in old && old[k] !== good[k]);
   console.log(`  C3 calib: the old whole-file regex yields ${JSON.stringify(old)}`);
   console.log(`  C3 calib: the table sentence yields      ${JSON.stringify(good)}`);
-  assert.ok(!('hero' in old),
-    '`hero` is now reachable by the old whole-file regex, so the line wrap that hid it is gone and '
-    + 'this calibration no longer demonstrates the defect it records');
-  assert.ok('hero' in good, 'the new parse has itself lost `hero`');
-  assert.notEqual(old.interior, good.interior,
-    'the old regex now agrees with the table on `interior`, so the prose that overwrote it has been '
-    + 'reworded and this calibration is dead');
+  console.log(`  C3 calib: it drops [${dropped.join(', ') || 'nothing'}] and mis-values [${wrong.join(', ') || 'nothing'}]`);
+
+  assert.equal(Object.keys(good).length, 5, 'the new parse no longer reads all five figures');
+  assert.ok(dropped.length + wrong.length > 0,
+    'the old whole-file regex now agrees with the table exactly. Either the paragraph has been '
+    + 'reflowed onto one line and the prose match 135 lines below has been reworded — in which case '
+    + 'retire this arm — or the new parse has quietly degraded into the old one');
+  /* the value substitution is the half that does NOT depend on formatting: it comes from a
+     different paragraph entirely, so it stays demonstrable however this sentence is laid out */
   assert.equal(good.interior, 5.02, 'the header no longer states 5.02 px at `interior`');
+  assert.equal(old.interior, 2,
+    'the old regex no longer picks up `TUNE.soft`\'s "0.03 ~ 2 px at `interior`" as this table\'s '
+    + 'value — that comment has been reworded, so this half of the calibration is dead');
   assert.match(DECALS_SRC, /0\.03 ~ 2 px at `interior`/,
     'the TUNE.soft comment that overwrote the table entry has been reworded — good, and this arm '
     + 'must then be retired rather than left asserting a defect that is gone');

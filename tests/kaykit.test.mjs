@@ -370,16 +370,36 @@ test('A-CALIB: the AABB screen A1/A2 refuse to trust is the one that reports ove
   assert.equal(exactSelf + exactPole, 0, 'A1/A2 disagree with themselves');
 });
 
-test('A3: the four crates buried in colonnade walls — held in round 12, decided here', () => {
+/**
+ * The exception list, and it is now a BAR rather than a pin.
+ *
+ * Round 12 held four penetrations; round 14 decided them; this round acts on them. Two were in
+ * the courtyard and are moved. Two are in the tomb and are ACCEPTED, each with its reason written
+ * beside the placement in `KayKit.js` — one because it is invisible from every canonical camera
+ * and moving it costs the hoard's composition, one because the drawn pier is not touched at all
+ * and the overlap is against a proxy that is fatter than its own art.
+ *
+ * Naming them here is what turns the finding into a check. §395.4's rule is that a seal failing on
+ * HEAD is a broken build, not a seal — so the seal is written as "no penetration EXCEPT these two,
+ * at these depths", which holds today and fails the moment a third appears or one of the two
+ * deepens. That is the shape a decided finding should leave behind.
+ */
+const ACCEPTED_PENETRATIONS = [
+  { file: 'chest', x: -6.8, z: -74.2, depth: 0.759, why: 'W crypt pier; 446 drawn seam points, 0 unoccluded from any camera' },
+  { file: 'chest', x: 4.6, z: -70.0, depth: 0.097, why: 'E crypt pier; proxy-only — 0 drawn seam points, the pier art is untouched' },
+];
+
+test('A3: no KayKit collider is inside a wall proxy except the two accepted in the tomb', () => {
   /* ROUND 12 HELD THIS AND SAID WHY: `proxy:wall` is general `BufferGeometry` and might be
      non-convex, so a face-normal SAT could only bound the answer, not give it. Both halves of
      that are now settled — the axis set is complete (see `separation`) and convexity is measured
-     rather than assumed, below — so the penetrations are real numbers and are pinned.
+     rather than assumed, below — so the penetrations are real numbers.
 
-     It is a PIN, not a bar. Two solids overlapping do not make a hole: the player cannot enter
-     either, and nothing here claims a crate half-inside a colonnade wall is wrong. What the pin
-     buys is that the depth cannot grow, or a fifth appear, without somebody saying so. Whether
-     the visible art clips needs a frame, and this lane has not rendered one. */
+     Two solids overlapping still do not make a hole, and this arm does not claim they do: A3d
+     measures what the burial actually costs and the answer is dead surface, not a trap. What
+     changed is that the two that could be fixed HAVE been, so the remaining two are decisions
+     rather than a backlog, and a decision belongs in an allowlist where the next one has to
+     join it explicitly. */
   const walls = OTHER.filter((r) => r.opts?.tag === 'wall');
   assert.ok(walls.length > 0, 'inspected 0 wall proxies — Architecture did not boot');
 
@@ -407,10 +427,23 @@ test('A3: the four crates buried in colonnade walls — held in round 12, decide
   hits.sort((a, b) => b.depth - a.depth);
   console.log(`  A3: ${hits.length} crate-into-wall penetrations — `
     + hits.map((h) => `${h.depth.toFixed(3)} m @(${h.at.x.toFixed(1)}, ${h.at.z.toFixed(1)})`).join(' · '));
-  assert.equal(hits.length, 4, 'the number of KayKit colliders inside a wall proxy has changed');
-  assert.ok(Math.abs(hits[0].depth - 1.003) < 0.005, `deepest is ${hits[0].depth.toFixed(3)} m, recorded 1.003 m`);
-  assert.ok(Math.abs(hits[3].depth - 0.097) < 0.005, `shallowest is ${hits[3].depth.toFixed(3)} m, recorded 0.097 m`);
-  assert.ok(hits[0].depth < 1.1, 'a crate has gone deeper into a wall than anything measured so far');
+
+  /* every hit must be on the list, and every entry on the list must still be a hit */
+  const unexpected = hits.filter((h) => !ACCEPTED_PENETRATIONS.some((a) =>
+    Math.hypot(h.at.x - a.x, h.at.z - a.z) < 0.05));
+  assert.deepEqual(unexpected.map((h) => `${h.depth.toFixed(3)} m @(${h.at.x.toFixed(2)}, ${h.at.z.toFixed(2)})`), [],
+    'a KayKit collider is inside a wall proxy that is not on ACCEPTED_PENETRATIONS. Either move the '
+    + 'placement, or add it to that list WITH the reason and the visibility measurement A3c produces '
+    + '— the list is the record of a decision, not a snooze button');
+  for (const a of ACCEPTED_PENETRATIONS) {
+    const h = hits.find((q) => Math.hypot(q.at.x - a.x, q.at.z - a.z) < 0.05);
+    assert.ok(h, `${a.file} at (${a.x}, ${a.z}) is no longer inside a wall — good, and it should come `
+      + 'off ACCEPTED_PENETRATIONS rather than be left as an exception nothing exercises');
+    assert.ok(Math.abs(h.depth - a.depth) < 0.005,
+      `${a.file} at (${a.x}, ${a.z}) is now ${h.depth.toFixed(3)} m in, accepted at ${a.depth} m`);
+  }
+  assert.equal(hits.length, ACCEPTED_PENETRATIONS.length, 'hit count and allowlist length disagree');
+  assert.ok(hits[0].depth < 0.8, 'an accepted penetration has deepened past anything measured so far');
 });
 
 /* ── section 2b support: naming the four, and asking whether they are on screen ─────────────────
@@ -510,10 +543,26 @@ const PEN = (() => {
   return hits.sort((a, b) => b.depth - a.depth);
 })();
 
-test('A3b: the four are NAMED — which placement, and which wall it is inside', () => {
-  /* §397.5 published four depths and no identities, which is a finding nobody can act on: "1.003 m"
-     does not tell a level author which row to move. The collider-to-row map is the one thing here
-     that could silently be wrong, so it is asserted by POSITION rather than assumed from ordering. */
+test('A3b: the camera block\'s four-part constraint list, enforced over EVERY placement', () => {
+  /* THE FINDING THIS ARM EXISTS FOR. The camera block used to state its grid search as three
+     tests: "on real paving, clear of every column and plinth footprint by 1.4 m, and inside its
+     target shot's frame at 6-26 m." That search was not buggy — it passed every test it names.
+     `barrel_large` at (-11.5, 2.5) cleared the nearest `pole` proxy, which is what "every column"
+     means, by 14.30 m. It was also 1.003 m inside a gateway pylon, because the pylons are `wall`
+     proxies and `wall` was never in the list. **A search is only as good as its constraint set**,
+     and a constraint set written in prose is a claim nobody re-runs.
+
+     The repair is not a longer sentence. It is that the list is checked here, over all 36 rows
+     rather than the six it was written for, so the next placement cannot pass a test that is not
+     being run. Two of the four constraints below caught something on the shipped tree:
+
+       · `wall` clearance     the finding above, and the reason this arm exists
+       · nothing overhead     found by the FIX. The first replacement cleared every wall proxy by
+                              0.70 m and still cut 432 drawn masonry triangles — it stood on
+                              courtyard paving at y 0 underneath the obelisk terrace, whose own
+                              paving is 1.52 m up. "On real paving" had been asked as "is there a
+                              floor at y = 0", which `framelib.groundColumn` documents as the
+                              wrong shape of question. */
   assert.equal(SOLID_ROWS.length, KK.length, 'the SOLID row list and the collider list are different lengths');
   for (let i = 0; i < KK.length; i++) {
     const m = KK[i].mesh, r = SOLID_ROWS[i];
@@ -521,179 +570,212 @@ test('A3b: the four are NAMED — which placement, and which wall it is inside',
       `collider ${i} is at (${m.position.x.toFixed(2)}, ${m.position.z.toFixed(2)}) but SOLID row ${i} `
       + `is ${r.file} at (${r.x}, ${r.z}) — the row-to-collider map is wrong and every name below with it`);
   }
+  /* the comment must still state the list this arm enforces, or the two have drifted apart */
+  for (const [re, what] of [
+    [/clear of every `pole` proxy \(columns\) by 1\.4 m/, 'the pole constraint'],
+    [/clear of every `wall` proxy \(pylons, temenos, piers, gate jambs\)/, 'the wall constraint'],
+    [/the prop's OWN HEIGHT clear of everything above that floor/, 'the overhead constraint'],
+  ]) assert.match(KAYKIT_SRC, re, `the camera block no longer states ${what}, which this arm enforces`);
 
-  assert.equal(PEN.length, 4, 'the number of KayKit colliders inside a wall proxy has changed');
-  const named = PEN.map((h) => {
-    const wb = aabbOf(h.w.mesh);
-    return {
-      file: h.row.file, row: h.row.row, x: h.row.x, z: h.row.z, depth: +h.depth.toFixed(3),
-      wall: `x ${wb.min.x.toFixed(1)}..${wb.max.x.toFixed(1)} z ${wb.min.z.toFixed(1)}..${wb.max.z.toFixed(1)}`,
-    };
-  });
-  console.log('  A3b:\n' + named.map((n) => `     ${n.depth} m  ${n.file} row ${n.row} @(${n.x}, ${n.z})  into wall ${n.wall}`).join('\n'));
-
-  /* the pin. Two gateway pylons in the courtyard, two crypt piers in the tomb. */
-  assert.deepEqual(named.map((n) => `${n.file}@${n.x},${n.z}`), [
-    'barrel_large@-11.5,2.5',            // W-inner processional gateway pylon, EgyptLevel `foreground`
-    'chest@-6.8,-74.2',                  // W crypt pier at (-5.5, -74)
-    'barrel_small_stack@-20.3,2.6',      // W-outer processional gateway pylon
-    'chest@4.6,-70',                     // E crypt pier at (5.5, -68)
-  ], 'the identity of at least one of the four penetrating placements has changed');
-  assert.deepEqual(named.map((n) => n.row), [35, 26, 3, 21],
-    'a penetrating placement has moved to a different row of the PLACEMENTS table');
-
-  /* THE CAUSE, and it is readable in the module's own comment. The camera block states its grid
-     search as "on real paving, clear of every column and plinth footprint by 1.4 m, and inside its
-     target shot's frame at 6-26 m". `barrel_large` at (-11.5, 2.5) clears the nearest `pole` proxy
-     — the columns — by 14.3 m, so the stated test PASSED. The gateway pylons are `wall` proxies
-     and were never in the constraint set. The search is sound; the constraint list is short. */
   const poles = OTHER.filter((r) => r.opts?.tag === 'pole');
-  assert.ok(poles.length > 0, 'inspected 0 pole proxies');
-  const deep = PEN[0].row;
-  let nearestPole = Infinity;
-  for (const p of poles) {
-    const c = aabbOf(p.mesh).getCenter(new THREE.Vector3());
-    nearestPole = Math.min(nearestPole, Math.hypot(deep.x - c.x, deep.z - c.z));
+  const walls = OTHER.filter((r) => r.opts?.tag === 'wall');
+  assert.ok(poles.length > 0 && walls.length > 0, 'inspected 0 pole or 0 wall proxies');
+
+  /* 1+2: `wall` clearance, exact, over every placement — A3 owns the allowlist, so here it is
+     only reported; what this arm adds is the MARGIN, so a near-miss is visible before it lands. */
+  const margins = [];
+  const kAabb = KK.map((r) => aabbOf(r.mesh));
+  for (let i = 0; i < KK.length; i++) {
+    let m = Infinity, who = null;
+    for (const w of walls) {
+      const wb = aabbOf(w.mesh);
+      if (kAabb[i].max.y < wb.min.y - 0.5 || kAabb[i].min.y > wb.max.y + 0.5) continue;
+      const cx = Math.max(wb.min.x, Math.min(KK[i].mesh.position.x, wb.max.x));
+      const cz = Math.max(wb.min.z, Math.min(KK[i].mesh.position.z, wb.max.z));
+      if (Math.hypot(KK[i].mesh.position.x - cx, KK[i].mesh.position.z - cz) > 6) continue;
+      const s = separation(KK[i].mesh, w.mesh);
+      if (s < m) { m = s; who = w; }
+    }
+    if (who) margins.push({ row: SOLID_ROWS[i], sep: m });
   }
-  assert.match(KAYKIT_SRC, /clear of every column and plinth footprint by 1\.4 m/,
-    'the camera block no longer states the grid search that this arm attributes the defect to');
-  assert.ok(nearestPole > 1.4,
-    `the deepest penetrating placement is ${nearestPole.toFixed(2)} m from the nearest column, so it `
-    + 'no longer passes the stated grid search and the cause recorded here is wrong');
-  console.log(`  A3b: the deepest one clears the nearest \`pole\` (column) by ${nearestPole.toFixed(2)} m — `
-    + 'the stated 1.4 m constraint PASSED; the pylons it is inside are `wall` proxies, never in that list');
-});
+  margins.sort((a, b) => a.sep - b.sep);
+  console.log('  A3b: tightest crate-to-wall margins — '
+    + margins.slice(0, 5).map((q) => `${q.row.file}@(${q.row.x}, ${q.row.z}) ${q.sep >= 0 ? '+' : ''}${q.sep.toFixed(3)}`).join(' · '));
+  assert.ok(margins.length > 0, 'inspected 0 crate-to-wall pairs');
 
-test('A3c: only ONE of the four is visible, and it is visible in `night`', () => {
-  /* The question §395.5 held the finding for ("whether the visible art clips needs a frame") asked
-     of geometry rather than of a capture. A prop standing BEHIND a pylon corner is occluded along
-     the pylon's own silhouette edge and has no seam; a prop INSIDE it has an intersection curve.
-     So the curve is computed — every prop edge crossing a drawn masonry triangle and every masonry
-     edge crossing a prop triangle — and each point is ray-tested against the drawn level.
+  /* the two placements moved this round, asserted at their new coordinates with real margin —
+     because "it no longer penetrates" and "it has room to spare" are different claims, and the
+     drawn pylon stands outside its own proxy by up to the corner-roll radius. */
+  for (const [file, x, z, floor] of [['barrel_large', -9.0, 0.75, 0.6], ['barrel_small_stack', -20.25, 3.75, 0.35]]) {
+    const q = margins.find((r) => r.row.file === file && Math.abs(r.row.x - x) < 0.01 && Math.abs(r.row.z - z) < 0.01);
+    assert.ok(q, `${file} is no longer at (${x}, ${z}) — it was moved there this round out of a pylon, `
+      + 'and moving it again needs the same four checks re-run');
+    assert.ok(q.sep > floor,
+      `${file} at (${x}, ${z}) clears its nearest wall proxy by only ${q.sep.toFixed(3)} m; it was placed `
+      + `with ${floor} m of margin deliberately, because the drawn pylon stands outside this proxy`);
+  }
 
-     Sub-sampled at stride 6 for runtime. That biases the COUNT and cannot invent or destroy a
-     verdict: a seam either has unoccluded points or it does not, and stride only thins them. */
-  const STRIDE = 6;
+  /* 3: nothing overhead. The prop's own height must be clear above the floor it stands on. */
   const scene = ENGINE.scene;
   scene.updateMatrixWorld(true);
-  const rows = [];
-  for (const h of PEN) {
-    const p = h.row;
-    const tris = propTris(p);
-    const bb = new THREE.Box3();
-    for (const t of tris) for (let k = 0; k < 9; k += 3) bb.expandByPoint(new THREE.Vector3(t[k], t[k + 1], t[k + 2]));
-    const near = trisIn(scene, bb.clone().expandByScalar(0.6)).filter((T) => isMasonry(T.name));
-    const seam = [];
-    for (let ti = 0; ti < tris.length; ti += STRIDE) {
-      const t = tris[ti];
-      const a = new THREE.Vector3(t[0], t[1], t[2]), b = new THREE.Vector3(t[3], t[4], t[5]), c = new THREE.Vector3(t[6], t[7], t[8]);
-      for (const [q0, q1] of [[a, b], [b, c], [c, a]]) {
-        for (const T of near) { const q = segTri(q0, q1, T.t); if (q) { seam.push(q); break; } }
-      }
+  const buried = [];
+  for (let i = 0; i < KK.length; i++) {
+    const r = SOLID_ROWS[i], g = KK[i].mesh.geometry.parameters;
+    const colBox = new THREE.Box3(
+      new THREE.Vector3(r.x - 0.35, r.y - 3, r.z - 0.35), new THREE.Vector3(r.x + 0.35, r.y + 40, r.z + 0.35));
+    const tris = trisIn(scene, colBox).filter((T) => /^(paving|arch):/.test(T.name));
+    let over = null;
+    for (const T of tris) {
+      const t = rayTri(r.x, r.y + 35, r.z, 0, -1, 0, T.t);
+      if (t < 0) continue;
+      const y = r.y + 35 - t;
+      if (y > r.y + 0.05 && y < r.y + g.height + 0.20 && (!over || y < over.y)) over = { y, who: T.name };
     }
-    let bestShot = '', bestVis = 0;
-    if (seam.length) {
-      for (const [name, s] of Object.entries(SHOTS)) {
-        const cam = camOf(s);
-        const inF = seam.filter((q) => inNdc(q.clone().project(cam)));
-        if (!inF.length) continue;
-        const box = new THREE.Box3().setFromPoints([cam.position.clone(), bb.min.clone(), bb.max.clone()]).expandByScalar(1.0);
-        const arch = trisIn(scene, box);
-        let v = 0;
-        for (const q of inF) {
-          const d = new THREE.Vector3().subVectors(q, cam.position), len = d.length();
-          d.multiplyScalar(1 / len);
-          let blocked = false;
-          for (const T of arch) {
-            const t = rayTri(cam.position.x, cam.position.y, cam.position.z, d.x, d.y, d.z, T.t);
-            /* 0.03 m back-off: a seam point LIES ON a masonry triangle, so its own host must not
-               be counted as its occluder. */
-            if (t > 0.05 && t < len - 0.03) { blocked = true; break; }
-          }
-          if (!blocked) v++;
-        }
-        if (v > bestVis) { bestVis = v; bestShot = name; }
-      }
-    }
-    rows.push({ file: p.file, x: p.x, z: p.z, depth: h.depth, seam: seam.length, vis: bestVis, shot: bestShot });
+    if (over) buried.push(`${r.file}@(${r.x}, ${r.z}) has ${over.who} at y ${over.y.toFixed(2)}, `
+      + `inside its own ${g.height.toFixed(2)} m height above floor ${r.y}`);
   }
-  console.log('  A3c:\n' + rows.map((r) => `     ${r.depth.toFixed(3)} m  ${r.file}@(${r.x}, ${r.z})  `
-    + `${String(r.seam).padStart(4)} sampled masonry-seam pts, ${String(r.vis).padStart(4)} unoccluded`
-    + (r.vis ? ` in "${r.shot}"` : ' from any of the 18 cameras')).join('\n'));
+  console.log(`  A3b: ${KK.length} placements checked for architecture inside their own height — ${buried.length} buried`);
+  assert.deepEqual(buried, [],
+    'a placement stands under architecture that occupies its own volume:\n  ' + buried.join('\n  '));
 
-  assert.equal(rows.length, 4, 'inspected the wrong number of penetrations');
-  const visible = rows.filter((r) => r.vis > 0);
-  assert.equal(visible.length, 1,
-    `${visible.length} of the four now show an unoccluded masonry seam (${visible.map((v) => `${v.file}@${v.x},${v.z} in ${v.shot}`).join(', ')}); `
-    + 'one did when this was measured, and which ones are visible is the whole content of the finding');
-  assert.equal(`${visible[0].file}@${visible[0].x},${visible[0].z}`, 'barrel_large@-11.5,2.5',
-    'a different placement is now the visible one');
-  assert.equal(visible[0].shot, 'night', 'the visible one is no longer visible in `night`');
-
-  /* the shallowest is a PROXY-ONLY overlap: its collider is 0.097 m inside the crypt pier's
-     `wallProxy` box while the DRAWN pier — a `masonryShell` under `cornerRolls` of radius 0.2 m,
-     with its own batter and jitter, none of which the axis-aligned proxy carries — is not touched
-     at all. That is a different defect from the other three and must not be reported with them. */
-  const shallow = rows.find((r) => r.file === 'chest' && r.x === 4.6);
-  assert.ok(shallow, 'the shallowest penetration is no longer the chest at (4.6, -70)');
-  assert.equal(shallow.seam, 0,
-    `the chest at (4.6, -70) now intersects ${shallow.seam} drawn masonry triangles — it used to be `
-    + 'a proxy-only overlap, which is the reason it is graded differently from the other three');
-  const deepSeams = rows.filter((r) => r.file !== 'chest' || r.x !== 4.6).map((r) => r.seam);
-  assert.ok(deepSeams.every((n) => n > 0), 'the other three no longer intersect drawn masonry at all');
+  /* 4: the camera six stay out of the close-ups, which is the constraint that shaped that block */
+  const sly = Object.keys(SHOTS).filter((s) => s.startsWith('sly-') && s !== 'sly-profile');
+  const cameraSix = PLACE.slice(30);
+  assert.equal(cameraSix.length, 6, 'the camera block is no longer six rows');
+  for (const p of cameraSix) {
+    for (const s of sly) {
+      const cam = camOf(SHOTS[s]);
+      if (!seenBy(cam, p)) continue;
+      const d = cam.position.distanceTo(midOf(p));
+      assert.ok(d >= 14,
+        `${p.file} at (${p.x}, ${p.z}) is ${d.toFixed(1)} m into "${s}" — the camera block's whole `
+        + 'argument is that these stay out of the character close-ups');
+    }
+  }
 });
 
-test('A3c CALIBRATION: the visibility test can say YES for a prop nobody can see', () => {
-  /* MUST FIRE. A3c's headline is that three of the four are invisible, and an absence-arm that
-     cannot detect a presence is worth nothing. The lever: take the placement A3c reports as
-     invisible from all eighteen cameras — `barrel_small_stack` inside the west OUTER pylon — and
-     point a camera at it from three metres away in the open. Its seam must come back visible
-     through the SAME code path, or "invisible from every canonical camera" means only that the
-     canonical cameras are elsewhere and the test never worked. */
+/** Seam and visibility for one placement, against DRAWN masonry. Shared by A3c and its lever. */
+function seamOf(p, { stride = 6 } = {}) {
   const scene = ENGINE.scene;
-  const p = PEN.find((h) => h.row.file === 'barrel_small_stack')?.row;
-  assert.ok(p, 'the barrel_small_stack penetration is gone; this calibration must be re-anchored');
+  scene.updateMatrixWorld(true);
   const tris = propTris(p);
   const bb = new THREE.Box3();
   for (const t of tris) for (let k = 0; k < 9; k += 3) bb.expandByPoint(new THREE.Vector3(t[k], t[k + 1], t[k + 2]));
   const near = trisIn(scene, bb.clone().expandByScalar(0.6)).filter((T) => isMasonry(T.name));
   const seam = [];
-  for (let ti = 0; ti < tris.length; ti += 6) {
+  for (let ti = 0; ti < tris.length; ti += stride) {
     const t = tris[ti];
     const a = new THREE.Vector3(t[0], t[1], t[2]), b = new THREE.Vector3(t[3], t[4], t[5]), c = new THREE.Vector3(t[6], t[7], t[8]);
     for (const [q0, q1] of [[a, b], [b, c], [c, a]]) {
       for (const T of near) { const q = segTri(q0, q1, T.t); if (q) { seam.push(q); break; } }
     }
   }
-  assert.ok(seam.length > 0, 'inspected 0 seam points');
-  /* stand in the open north-east of it, at eye height, looking at the seam's own centroid */
-  const ctr = seam.reduce((a, q) => a.add(q), new THREE.Vector3()).multiplyScalar(1 / seam.length);
-  const eye = new THREE.Vector3(ctr.x + 2.6, 1.7, ctr.z + 2.2);
-  const cam = camOf({ fov: 55, pos: eye.toArray(), target: ctr.toArray() });
-  const box = new THREE.Box3().setFromPoints([eye.clone(), bb.min.clone(), bb.max.clone()]).expandByScalar(1.0);
-  const arch = trisIn(scene, box);
-  let vis = 0, inF = 0;
-  for (const q of seam) {
-    if (!inNdc(q.clone().project(cam))) continue;
-    inF++;
-    const d = new THREE.Vector3().subVectors(q, eye), len = d.length();
-    d.multiplyScalar(1 / len);
-    let blocked = false;
-    for (const T of arch) {
-      const t = rayTri(eye.x, eye.y, eye.z, d.x, d.y, d.z, T.t);
-      if (t > 0.05 && t < len - 0.03) { blocked = true; break; }
+  let bestShot = '', bestVis = 0;
+  if (seam.length) {
+    for (const [name, s] of Object.entries(SHOTS)) {
+      const cam = camOf(s);
+      const inF = seam.filter((q) => inNdc(q.clone().project(cam)));
+      if (!inF.length) continue;
+      const box = new THREE.Box3().setFromPoints([cam.position.clone(), bb.min.clone(), bb.max.clone()]).expandByScalar(1.0);
+      const arch = trisIn(scene, box);
+      let v = 0;
+      for (const q of inF) {
+        const d = new THREE.Vector3().subVectors(q, cam.position), len = d.length();
+        d.multiplyScalar(1 / len);
+        let blocked = false;
+        for (const T of arch) {
+          const t = rayTri(cam.position.x, cam.position.y, cam.position.z, d.x, d.y, d.z, T.t);
+          /* 0.03 m back-off: a seam point LIES ON a masonry triangle, so its own host must not
+             be counted as its occluder. */
+          if (t > 0.05 && t < len - 0.03) { blocked = true; break; }
+        }
+        if (!blocked) v++;
+      }
+      if (v > bestVis) { bestVis = v; bestShot = name; }
     }
-    if (!blocked) vis++;
   }
-  console.log(`  A3c calib: from a lens 3.4 m away in the open, ${vis} of ${inF} in-frame seam points are `
-    + 'unoccluded — the same path that reports 0 from all eighteen canonical cameras');
-  assert.ok(inF > 0, 'the calibration camera does not even have the seam in frame');
-  assert.ok(vis > 0,
-    'a camera standing three metres from the seam in the open reports it fully occluded, so A3c\'s '
-    + '"invisible from every canonical camera" is a property of the test rather than of the level');
+  return { seam: seam.length, vis: bestVis, shot: bestShot };
+}
+
+test('A3c: nothing clips any more — the two that were visible are moved, the two that stay are not', () => {
+  /* The question §395.5 held the finding for ("whether the visible art clips needs a frame") asked
+     of geometry rather than of a capture. A prop standing BEHIND a pylon corner is occluded along
+     the pylon's own silhouette edge and has no seam; a prop INSIDE it has an intersection curve.
+     So the curve is computed — every prop edge crossing a drawn masonry triangle — and each point
+     is ray-tested against the drawn level from all eighteen cameras.
+
+     THE STATE THIS ARM NOW PINS is the outcome of acting on it: no placement in the level shows an
+     unoccluded masonry seam from any canonical camera. Four rows are checked by name rather than
+     just the two that still penetrate, because the two that were MOVED are the ones a careless
+     revert would put back, and "it was moved for a reason" is only enforceable if the reason is
+     still measured at the new coordinates.
+
+     Sub-sampled at stride 6 for runtime. That biases the COUNT and cannot invent or destroy a
+     verdict: a seam either has unoccluded points or it does not, and stride only thins them. */
+  const WATCH = [
+    { file: 'barrel_large', x: -9.0, z: 0.75, want: 0, note: 'MOVED out of the W-inner gateway pylon' },
+    { file: 'barrel_small_stack', x: -20.25, z: 3.75, want: 0, note: 'MOVED out of the W-outer gateway pylon' },
+    { file: 'chest', x: -6.8, z: -74.2, want: 'some', note: 'accepted: cuts the W crypt pier, no camera sees it' },
+    { file: 'chest', x: 4.6, z: -70.0, want: 0, note: 'accepted: proxy-only, the drawn pier is untouched' },
+  ];
+  const rows = WATCH.map((w) => {
+    const p = PLACE.find((q) => q.file === w.file && Math.abs(q.x - w.x) < 0.01 && Math.abs(q.z - w.z) < 0.01);
+    assert.ok(p, `${w.file} is no longer at (${w.x}, ${w.z}) — ${w.note}, and moving it again means `
+      + 're-running this measurement rather than re-pointing this arm at wherever it landed');
+    return { ...w, ...seamOf(p) };
+  });
+  console.log('  A3c:\n' + rows.map((r) => `     ${r.file}@(${r.x}, ${r.z})  ${String(r.seam).padStart(4)} sampled `
+    + `masonry-seam pts, ${String(r.vis).padStart(4)} unoccluded${r.vis ? ` in "${r.shot}"` : ''}   ${r.note}`).join('\n'));
+
+  /* the headline: nothing clips, anywhere */
+  const visible = rows.filter((r) => r.vis > 0);
+  assert.deepEqual(visible.map((v) => `${v.file}@(${v.x}, ${v.z}) in ${v.shot}`), [],
+    'a placement shows an unoccluded masonry seam again. If it is one of the two moved rows, the '
+    + 'move has been reverted or undone; if it is one of the accepted two, the reason recorded '
+    + 'beside it in KayKit.js no longer holds and the acceptance must be revisited');
+
+  /* and the distinctions the acceptances rest on, each asserted rather than restated */
+  for (const r of rows.filter((q) => q.want === 0)) {
+    assert.equal(r.seam, 0,
+      `${r.file}@(${r.x}, ${r.z}) now cuts ${r.seam} drawn masonry triangles where it cut none — `
+      + `${r.note}, and that grading is what this arm exists to keep honest`);
+  }
+  const cut = rows.find((r) => r.want === 'some');
+  assert.ok(cut.seam > 0,
+    'the W crypt-pier chest no longer intersects drawn granite at all, so it has become the same '
+    + 'proxy-only case as the east one and should be re-graded rather than left described as a cut');
 });
 
-test('A3d: the foothold each buried crate adds, and the part of it that is inside the wall', () => {
+test('A3c CALIBRATION: the barrel at its PRE-MOVE coordinates still reads as visible in `night`', () => {
+  /* MUST FIRE, and this is the best lever available for it: A3c now asserts an absence across the
+     whole level, and an absence-arm that cannot detect a presence is worth nothing. Rather than
+     invent a synthetic clash, put `barrel_large` back at (-11.5, 0, 2.5) — the coordinates it
+     actually shipped at until this round — and run A3c's own `seamOf` on it. The defect must come
+     back, in `night`, through the identical code path.
+
+     That makes this arm do two jobs at once. It proves the instrument fires, and it pins WHY the
+     placement moved: if someone reverts the coordinate, A3c goes red and this arm explains it. A
+     calibration drawn from the real history of the file beats one drawn from a synthetic case,
+     because it cannot drift away from the thing it is calibrating. */
+  const before = { file: 'barrel_large', x: -11.5, y: 0, z: 2.5, ry: -1.2 };
+  const now = PLACE.find((p) => p.file === 'barrel_large' && Math.abs(p.x + 9.0) < 0.01 && Math.abs(p.z - 0.75) < 0.01);
+  assert.ok(now, 'barrel_large is not at its post-move (-9.0, 0.75); this lever describes a move that '
+    + 'no longer exists and must be re-anchored to whatever the current placement is');
+
+  const was = seamOf(before);
+  console.log(`  A3c calib: at the pre-move (-11.5, 2.5) the same instrument reports ${was.seam} sampled `
+    + `masonry-seam points and ${was.vis} unoccluded in "${was.shot}" — the defect this round removed`);
+  assert.ok(was.seam > 0, 'the pre-move position no longer intersects drawn masonry at all, so either '
+    + 'the pylon moved or the instrument stopped detecting seams; A3c cannot be trusted either way');
+  assert.ok(was.vis > 0,
+    'the pre-move position now reports NO unoccluded seam, so A3c\'s all-clear may simply be an '
+    + 'instrument that has stopped saying yes — the move it certifies is no longer demonstrated');
+  assert.equal(was.shot, 'night',
+    `the pre-move defect is now visible in "${was.shot}" rather than \`night\`; the record of what was `
+    + 'fixed and the measurement no longer agree');
+});
+
+test('A3d: what the two accepted burials cost — dead crate-top, and nothing else', () => {
   /* The gameplay half. §393.1 established that `probeWall`/`probeLedge` gate on the surface normal
      and not on the tag, so a crate face is wall-runnable and its lip is grabbable exactly like
      masonry — which means a crate at a wall base is a foothold whether or not it is buried.
@@ -741,24 +823,29 @@ test('A3d: the foothold each buried crate adds, and the part of it that is insid
   console.log('  A3d:\n' + rows.map((r) => `     ${r.file}@(${r.x}, ${r.z})  top face ${r.top.toFixed(2)} m², `
     + `${r.dead.toFixed(2)} m² of it stands a capsule up to ${r.worst.toFixed(2)} m inside the wall`).join('\n'));
 
-  assert.equal(rows.length, 4, 'inspected the wrong number of penetrations');
+  assert.equal(rows.length, ACCEPTED_PENETRATIONS.length, 'inspected the wrong number of penetrations');
   for (const r of rows) assert.ok(r.top > 0.4, `${r.file}@(${r.x}, ${r.z}) has a ${r.top.toFixed(2)} m² top face — inspected almost nothing`);
-  /* every one of them DOES add a real foothold, which is the half that is not a defect */
+  /* both of them DO add a real foothold, which is the half that is not a defect */
   for (const r of rows) {
     assert.ok(r.top - r.dead > 0.2,
       `${r.file}@(${r.x}, ${r.z}) offers only ${(r.top - r.dead).toFixed(2)} m² of occupiable top — it has `
       + 'become a foothold nobody can use, which is a bigger claim than the one recorded here');
   }
-  /* and every one of them wastes some of it inside the masonry, which is the half that is */
+  /* and both waste some of it inside the masonry, which is the half that is — and is the whole
+     price of the two acceptances, stated as a number so the next reader can weigh it */
   const dead = rows.reduce((s, r) => s + r.dead, 0);
   assert.ok(rows.every((r) => r.dead > 0),
-    'a penetrating crate no longer puts any of its top face inside the wall, which would mean the '
-    + 'burial has stopped costing anything and this arm should be retired with it');
-  assert.ok(Math.abs(dead - 4.25) < 0.35,
-    `${dead.toFixed(2)} m² of crate top now stands inside masonry across the four; measured 4.25 m² — `
-    + '1.48 + 1.48 + 1.01 + 0.29, deepest first');
-  /* NOT a snag and NOT a trap: the deepest a capsule stands inside a wall is under half its own
-     height, so there is no wedge a player can enter and no floor they can fall through. */
+    'an accepted burial no longer puts any of its top face inside the wall, which would mean it has '
+    + 'stopped costing anything — take it off ACCEPTED_PENETRATIONS rather than leave it there');
+  assert.ok(Math.abs(dead - 1.77) < 0.25,
+    `${dead.toFixed(2)} m² of crate top now stands inside masonry across the two accepted burials; `
+    + 'measured 1.77 m² — 1.48 at the west pier and 0.29 at the east. The two moved this round used '
+    + 'to add 1.48 and 1.01 on top of that');
+  /* NOT a snag and NOT a trap: the deepest a capsule stands inside a wall is under its own height,
+     so there is no wedge a player can enter and no floor they can fall through. Driven against a
+     real `Controller` and a real `Collision` this reproduces as a handful of `probeLedge` grabs
+     landing 2-6 cm inside the pier and no route change at all; that run needs Terrain and two full
+     worlds, so it is reported in the ledger rather than repeated here every suite. */
   assert.ok(Math.max(...rows.map((r) => r.worst)) < 1.3,
     'a crate top now stands a capsule more than 1.3 m inside a wall, which is deep enough to be a '
     + 'containment question rather than a wasted surface');

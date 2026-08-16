@@ -2312,6 +2312,23 @@ function tomb(A) {
          slot is a black rectangle; the rolls give it four lit arrises against the torchlight. */
       A.add('tomb', 'granite_pink', K.place(
         K.cornerRolls({ w: 2.2, d: 2.2, h: ph - 0.12, r: 0.2, batter: 0.025, rng: R }), { x: sx * 5.5, y: F + 0.06, z: pz }));
+      /* THIS PROXY IS FATTER THAN THE PIER IT STANDS FOR, and by a knowable amount.
+         The drawn pier is a `masonryShell` with `batter: 0.025` under `cornerRolls` of radius
+         0.2, placed with `ry`/`rz` jitter. The proxy is an axis-aligned 2.2 x 2.2 box with no
+         batter, no corner radius and no jitter, so at every corner it claims up to ~0.2 m of
+         space the art does not occupy, and it claims more of it the higher you go.
+
+         That is the RIGHT trade for collision — a player who brushes a rounded arris should stop
+         on it, and a proxy inset to the art would let them clip the corner — but it means a
+         proxy overlap here is not evidence of a visible one. Measured: a KayKit `chest` at
+         (4.6, -70) is 0.097 m inside this proxy at (5.5, -68) and does not touch a single drawn
+         triangle of it (`tests/kaykit.test.mjs` A3c). **Anything reporting an intersection
+         against these proxies must say whether it measured the proxy or the art**, because for
+         the crypt piers those are different questions with different answers.
+
+         The same gap exists wherever `wallProxy` stands in for `cornerRolls` geometry — the
+         processional gateway pylons are the other family — and it runs the other way for the
+         pylons, whose `proxyBattered` hull is built at batter 0.085 against the shell's 0.095. */
       wallProxy(A, sx * 5.5 - 1.1, sx * 5.5 + 1.1, F, C - 1.2, pz - 1.1, pz + 1.1);
     }
     A.add('tomb', 'hieroglyph_gilded', K.place(K.beam(15.6, 1.2, 2.4, { rng: R, pieces: 5, crack: 0.04, chip: 0.14, roll: 0.13 }), { x: sx * 5.5, y: C - 0.6, z: -68, ry: Math.PI / 2 }));

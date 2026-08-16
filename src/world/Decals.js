@@ -7,12 +7,34 @@ import * as THREE from 'three';
  *
  * POSTFX ships a quantised screen-space contact term whose radius is 4.5 cm of world. That
  * radius is a *pixel* radius once projected, and it dies with distance: measured off the
- * shipped shot table, 4.5 cm subtends 12.57 px at `sly-closeup`, 5.02 px at `interior`, 3.43 px
- * at `hero`, 2.48 px at `temple` and **1.11 px at `courtyard`** — below the texel floor, where
- * every tap lands in the centre texel and the term returns a null indistinguishable from a
- * decision. `courtyard` is the shot that holds thirty of this level's props, at 35–51 m. No
- * screen-space term reaches them, so grounding them is geometry's job, and geometry is this
- * agent's.
+ * shipped shot table at each camera's NEAREST CONTACT DECAL, 4.5 cm subtends 12.57 px at
+ * `sly-closeup`, 5.02 px at `interior`, 1.98 px at `hero`, 2.48 px at `temple` and
+ * **3.46 px at `courtyard`** — at or below the texel floor, where every tap lands in the centre
+ * texel and the term returns a null indistinguishable from a decision. `courtyard` holds all
+ * thirty-six of this level's KayKit props, thirty-five of them at 33.4–116.8 m. No screen-space
+ * term reaches those, so grounding them is geometry's job, and geometry is this agent's.
+ *
+ * ── two of those five were stale, and one of them nothing could have caught ───────────────────
+ * Re-derived by `tests/decalstat.test.mjs` (§401), which now reads this table out of this
+ * sentence and measures each figure against the nearest decal Props or KayKit actually placed:
+ *
+ *   `hero`       3.43 px  ->  **1.98 px**   the figure implied 13.91 m; the nearest decal is at
+ *                                           24.10 m. The correction makes the argument STRONGER.
+ *   `courtyard`  1.11 px  ->  **3.46 px**   1.11 px is 35.04 m — the near end of the "35–51 m"
+ *                                           band KNOWN_ISSUES §395.3 corrected in `KayKit.js`
+ *                                           and did not correct here. The nearest decal is a
+ *                                           `Props` one at 11.25 m. Weaker, and still under 4 px.
+ *
+ * The `hero` entry survived because the arm that checks this table could not see it: its regex
+ * needed `px at \`shot\`` adjacent, and the line wrap between `3.43 px` and `` `hero` `` dropped
+ * the entry silently — §397.6's shape, one round after it was fixed in `shotsee.mjs`. The same
+ * pattern also matched `TUNE.soft`'s "0.03 ~ 2 px at `interior`" 135 lines below and overwrote
+ * this table's `interior`. **Do not reformat this sentence onto more lines without checking that
+ * arm**, and if you reword `TUNE.soft`'s comment its calibration will tell you so.
+ *
+ * The conclusion is unchanged by both corrections and that is the point of stating them: no
+ * figure in the table reaches the ~4 px a screen-space term would need, so nothing here rests on
+ * the two numbers that were wrong.
  *
  * The defect the decal answers is not "no shadow", it is worse than that. Measured on the
  * shipped `interior` frame (1280x720), profiling median luminance in 1 px rings outward from
