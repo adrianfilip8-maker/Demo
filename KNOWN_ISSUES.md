@@ -29213,3 +29213,97 @@ work at the bottom. The world lane's list:
 That is the second lane in two rounds to rank its own headline work last, unprompted, and it points
 at the same conclusion the FX lane reached from the other side: **what has been examined is fine, and
 the exposure is in what nobody looked at.**
+
+---
+
+## §391 — The reverb claim is measured, and the first protocol in this project that is not blocked
+
+### §391.1 SETTLED — routing is measured; the tail remains unmeasurable
+
+§383.1 established from source that every voice reaches the room. §389.4 flagged it as a **source
+reading the harness could not confirm**, because `Convolver` is a pass-through. I asked whether a
+stand-in could separate *routing* from *tail*, since they are different claims and only one needs a
+real reverb.
+
+**The stand-in was unnecessary.** `OfflineCtx.render(seconds, node)` takes any node, so rendering
+`audio.reverb.input` measures exactly what reached the send. No convolution, no reimplementation, no
+new code in the graph. And everything is a ratio, so `wet`, the space, the recipe's gain and the
+whole downstream chain cancel — the only thing under test is `_placeVoice`'s two branches:
+
+```
+far/near   measured 2.286    formula (0.35 + 0.45)/0.35 = 2.286    a constant send would give 1.00
+flat/near  measured 0.800    formula      0.28/0.35     = 0.800
+```
+
+Verified here against the formulas: **exact to three decimals, both**, against a null of 1.00. So the
+load-bearing half of §383.1 — **no class of cue is outside the room**, including the head-space ones
+— is now measured rather than read.
+
+**And the boundary is written into the file:** this says the signal is routed to the room at the
+right level and says *nothing* about what the room does with it. Decay, HRTF and limiter behaviour
+need a real `AudioContext`.
+
+### §391.2 The right quantity was also the cheap one, which is unusual
+
+Both new bars are **drive-and-observe rather than render**. Behavioural questions — did the right cue
+fire at the right rung, did the room change when he walked in — do not need audio at all, and
+`render()` is the expensive, superlinear part.
+
+```
+ladder   explore → sneak → alert → chase · alert peaked 3, ENDED 0
+         all five cues: alert_sting, search_call, guard_shout, guard_grunt, guard_confused
+spaces   courtyard → tomb → courtyard   (wet 0.24 → 0.44 → 0.24)
+```
+
+The **descent is asserted separately from the climb**, because a stealth game that can only escalate
+never tells the player the room became safe again. The space bar drives `_autoSpace` by moving the
+listener against §8.1's coordinate contract rather than calling `setSpace`, and carries a must-fire
+arm: **a 0.2 s dip into the tomb must NOT switch the room**, or the two-sample vote is not holding
+and a doorway would flap.
+
+### §391.3 The first registered protocol in this project that is not blocked
+
+Recorded beside the instrument that produces the wav. What matters most about it is not its contents:
+
+> **It is not blocked on anything but an ear.** The wav comes out of `node --test`, takes no capture
+> lock, and contends with no lane. §379.4 waits on §186; this one could be run this afternoon by
+> anyone with headphones.
+
+**And it can be stricter than the visual protocol, because the medium allows a controlled pair.** A
+frame cannot easily be re-rendered differing in exactly one authored idea. This session can: **A as
+it ships, B with every contact's `material` forced to `stone`** — the game as it sounded before
+§383/§389, one field different. So the material question is a **forced-choice discrimination**
+rather than an impression. That is a property of audio, not of the writing.
+
+```
+Q1 belonging   "Describe the space this was recorded in. Then: is everything you hear in that
+                space, or is some of it somewhere else?"
+               Routing is now settled, so a listener placing something outside the room CANNOT be
+               hearing a routing fault — it must be spectrum, dynamics or timing.
+Q2 forced      "How many different materials do you hear? Name them." then
+   choice      "Which recording has more variety in what he is touching?"   (A vs B)
+Q3 stealth     "When does the guard notice him? When does he stop looking?"
+Q4 negative    "Is there a moment where something clearly happens and you hear nothing?"
+   control     — enemyBounce in critic form (§384.1)
+```
+
+**Q2 is the sharpest thing here.** The render proves the four rail materials **differ** — 1.63×
+against a 1.000× control. It cannot prove they are **discriminable**:
+
+> The gap between those two words is the whole reason the protocol exists. If A and B are
+> indistinguishable, the material layer is real, measurable and **inaudible** — which is an
+> instruction to raise its level, not a refutation, and is worth more than the fix that produced it.
+
+**Q4 turns §384.1's census blind spot into a critic question.** A reported hole makes
+`enemyBounce`'s silence audible and stops it being a design call; four passes with nobody noticing
+keeps it one.
+
+### §391.4 Still uncovered, and named by its author
+
+Pole-climb scuffs, paraglide, and **guard chatter over distance** — the last being the one where
+`_trackGuards`' distance culling and the voice budget would actually be exercised. The ladder bar
+asserts from the play ledger and `_section`, not from rendered audio, so **a cue that fires into a
+misconfigured voice would still pass**: the ledger closed the "loud bed" hole (§389.2), not a
+"played but inaudible" one. The A/B pair the protocol describes **does not exist yet** — described,
+not built, *"because building an arm nobody can score is the shape of work this project has learned
+to avoid."*
