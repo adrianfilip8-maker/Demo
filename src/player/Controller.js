@@ -1348,8 +1348,20 @@ export class Controller {
       _p3.copy(this.position);
       _p3.y -= drop;
       const dn = this._sweep(this.position, _p3);
-      if (dn.hit) this.position.y -= drop * dn.toi;
-      else this.position.y -= TUNE.stepHeight;   // walked off an edge: give the lift back
+      if (dn.hit) {
+        /* Descend by the time-of-impact, but never further than the resolve actually moved him
+           down. `toi` alone is not enough: `capsuleSweep` also reports `hit` when DEPENETRATION
+           pushed the capsule clear without the sweep contacting anything, and on that path it
+           sets `toi = 1`. Taking that at face value dropped him the whole `stepHeight +
+           groundSnap` at a summit lip and he fell off the top of the ladder — measured as
+           "ended airborne in fall at y 0.00". Both quantities come from the same result, so the
+           min is a bound rather than a tuning constant. */
+        const byToi = drop * dn.toi;
+        const byResolve = Math.max(0, this.position.y - dn.position.y);
+        this.position.y -= Math.min(byToi, byResolve);
+      } else {
+        this.position.y -= TUNE.stepHeight;   // walked off an edge: give the lift back
+      }
     }
   }
 

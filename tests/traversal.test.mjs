@@ -1596,9 +1596,17 @@ test('reach: the attach states are reachable through play in the shipped level',
   const M = (arch.api.targets || []).find((t) => String(t.id).includes('mouth'));
 
   /* Script A — walk at the pylon's south elevation from the desert and jump. Aimed at the
-     authored ladder entry; also the run that produces toTarget, wallClimb and wallCling. */
+     authored ladder entry; also the run that produces toTarget, wallClimb and wallCling.
+
+     The 4 m standoff is not arbitrary and it used to be 2 m. That 2 m was tuned against a
+     character who DRIFTED on the way in: with the ground-snap slide removed he walks straight,
+     arrives closer and faster, and goes to `wallClimb@18` without ever entering the target
+     volume. Measured across a range rather than stopping at the first value that passed —
+     2 m misses, 3/4/5 m all reach `toTarget` at closest approach 0.00 m — so this sits in the
+     middle of a working band rather than on its edge. The arm's claim is unchanged; only the
+     approach that tests it moved. */
   if (M) {
-    const s = standAt(M.point.x, M.point.z + 2.0);
+    const s = standAt(M.point.x, M.point.z + 4.0);
     if (s) {
       const r = await driveRoute(engine, c, V(s.x, s.y + 0.05, s.z), Math.atan2(0, -1), 150,
         (inp, i) => { inp.move.y = 1; if (i >= 18 && i < 24) inp.hold('jump'); else inp.let_go('jump'); }, null);
@@ -2610,15 +2618,29 @@ test('crawl: reachable by traversal — the walk-in failed on lateral drift, not
   console.log(`\n[vent] pure -X stick:      inVent ${naive.ventFrames} frames, crawl@${naive.crawlAt}, drifted to z ${naive.maxZ.toFixed(2)}`);
   console.log(`[vent] steering at mouth:  inVent ${steered.ventFrames} frames, crawl@${steered.crawlAt}, held z ${steered.maxZ.toFixed(2)}`);
 
-  /* The route exists. */
+  /* The route exists, steered. */
   assert.ok(steered.crawlAt >= 0, 'crawl is no longer reachable by walking at the vent mouth');
   assert.ok(steered.ventFrames > 100, `only ${steered.ventFrames} frames inside the vent volume`);
-  /* …and the calibration: the naive walk must still fail, or the drift explanation is wrong and
-     this arm has stopped measuring what it claims to. */
-  assert.equal(naive.crawlAt, -1,
-    'the uncorrected walk now reaches the vent too — the lateral-drift explanation no longer holds');
-  assert.ok(naive.maxZ > steered.maxZ + 2.0,
-    `uncorrected drift was only ${(naive.maxZ - steered.maxZ).toFixed(2)} m — too small to explain the miss`);
+
+  /* ── AND THE UNCORRECTED WALK NOW WORKS TOO, which is this arm's finding being fixed ────────
+     This used to assert `naive.crawlAt === -1` — the pure −X stick MISSED the vent, drifting
+     4.6 m in +z on the way. The cause was the ground-snap step-down in `_moveHorizontal`
+     importing the collision resolve's downhill component (arm 18). With that removed the naive
+     walk holds its line to within 0.10 m and reaches `crawl@11`.
+     So the calibration inverts: a plain cardinal stick must now get in on its own, and the two
+     approaches must agree rather than differ by metres. If this reddens with the naive walk
+     failing again, the drift is back — check the snap before anything in this file. */
+  assert.ok(naive.crawlAt >= 0,
+    `the uncorrected cardinal walk misses the vent again (crawl@${naive.crawlAt}) — the ground-snap ` +
+    'drift has returned; arm 18 measures it directly');
+  assert.ok(Math.abs(naive.maxZ - steered.maxZ) < 0.5,
+    `the two approaches now diverge by ${Math.abs(naive.maxZ - steered.maxZ).toFixed(2)} m in z — ` +
+    'the uncorrected walk is drifting off line again');
+  /* The lever: "both reach it" is also satisfied by a vent so generous that anything gets in.
+     The walk must still be a walk — it has to travel the approach, not start on top of it. */
+  assert.ok(naive.ventFrames > 20 && steered.ventFrames > 100,
+    `inVent ${naive.ventFrames}/${steered.ventFrames} frames — one of these barely entered, so ` +
+    '"both reach it" is not evidence about the approach');
 });
 
 /* ====================================================================== */
