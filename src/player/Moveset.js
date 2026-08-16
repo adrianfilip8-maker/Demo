@@ -113,6 +113,20 @@ class Roll extends State {
     c.velocity.z = _a.z * TUNE.rollSpeed;
   }
   update(c, dt) {
+    /* Roll-cancel into a jump. Roll is priority 70 — above `DoubleJump` 66 and `Jump` 64 — so
+       nothing can preempt it, and this method polled everything EXCEPT jump. Measured on the
+       shipped moveset: the roll runs 0.44 s, and a jump pressed 6 or 15 frames in was silently
+       dropped, because the 140 ms buffer expires inside the roll; only a press in the last
+       ~8 frames survived to fire at the exit. A dropped input is a bug, not a difficulty
+       choice, and roll-cancel is standard vocabulary for this character.
+
+       Same shape `WallRun`, `WallCling` and `LedgeHang` already use (:398, :446, :523). The
+       returned name forces the transition — `request()` does not consult `canEnter`, and
+       `set()` is an unconditional switch — so `Jump.canEnter`'s `jumpBuffered()` clause is
+       bypassed on a fresh press, which is the intent: `Jump.enter` calls `takeJump()` (a no-op
+       on an empty buffer) and then launches. `c.grounded` is the guard that matters, since
+       `canGroundJump()` is `grounded || coyote` and Roll's group is `ground`, never `attach`. */
+    if (c.grounded && (c.pressed('jump') || c.jumpBuffered())) return 'jump';
     if (c.wishMag > 0.2) c.turnToward(c.wishDir, TUNE.rollTurn, dt);
     _a.set(Math.sin(c.yaw), 0, Math.cos(c.yaw));
     const k = 1 - c.sm.time / TUNE.rollTime;
