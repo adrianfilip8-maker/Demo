@@ -525,27 +525,31 @@ if (args.includes('--search')) {
         const g = score('', base, { quiet: true, stopEarly: true, skipClear: true });
         if (g.faults.length) { tally(g.faults); continue; }
         geomPass++;
-        /* Geometry admits this (d, h, fov) at EVERY azimuth. Only occlusion can reject one. */
+        /* ── THE AZIMUTH LOOP TESTS OCCLUSION AND NOTHING ELSE ─────────────────────────
+           Geometry admits this (d, h, fov) at every azimuth — that is the symmetry
+           `assertAzimuthFree()` re-derives each run, to 1.3e-4 inside a 3.0e-4 bound. So
+           re-running `score()` per azimuth recomputes 360 projections that provably do not
+           vary, 48 times over. The first version did exactly that and spent 524 s reaching
+           cell 4,000 of 9,450.
+           Only `clear()` varies, so only `clear()` runs. The geometry carried into each
+           survivor is `g`, the value computed once above — not a fresh one that happens to
+           match, which would be the same waste wearing a different shape. */
         for (let i = 0; i < AZ_N; i++) {
           const azDeg = i * AZ_STEP, a = azDeg * Math.PI / 180;
-          const cand = {
-            pos: [AT[0] + Math.cos(a) * d, hh, AT[2] + Math.sin(a) * d],
-            target: [AT[0], 0.6, AT[2]], fov, tod: 0.78, player: P,
-          };
+          const pos = [AT[0] + Math.cos(a) * d, hh, AT[2] + Math.sin(a) * d];
+          const cam = camFor({ pos, target: [AT[0], 0.6, AT[2]], fov });
           azTested++;
-          const r = score('', cand, { quiet: true });
-          if (!r.faults.length) {
-            cleanTotal++;
-            if (survivors.length < KEEP || r.rank > worstKept) {
-              survivors.push({ pos: cand.pos, fov, d, hh, azDeg, rank: r.rank, flat: r.flat, slyH: r.slyH });
-              if (survivors.length > KEEP) {
-                survivors.sort((x, y) => y.rank - x.rank);
-                survivors.length = KEEP;
-                worstKept = survivors[KEEP - 1].rank;
-              }
+          if (!clearAt(cam, { x: AT[0], y: AT[1] + 0.5, z: AT[2] })) continue;
+          if (!clearAt(cam, { x: AT[0], y: ringPlaneY(AT[1]), z: AT[2] })) continue;
+          cleanTotal++;
+          if (survivors.length < KEEP || g.rank > worstKept) {
+            survivors.push({ pos, fov, d, hh, azDeg, rank: g.rank, flat: g.flat, slyH: g.slyH });
+            if (survivors.length > KEEP) {
+              survivors.sort((x, y) => y.rank - x.rank);
+              survivors.length = KEEP;
+              worstKept = survivors[KEEP - 1].rank;
             }
           }
-          else tally(r.faults);
         }
       }
     }
