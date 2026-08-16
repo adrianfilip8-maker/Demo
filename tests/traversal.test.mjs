@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import * as THREE from 'three';
 import { Controller, TUNE } from '../src/player/Controller.js';
 
@@ -76,7 +77,7 @@ function stubEngine() {
  * end point against the solid. See the note inside it: the point-in-solid version produced a
  * convincing fake engine bug.
  */
-function stubCollision({ points = [], wall = null } = {}) {
+function stubCollision({ points = [], wall = null, groundTag = 'ground', narrow = 0 } = {}) {
   const sweep = { hit: false, position: new THREE.Vector3(), normal: new THREE.Vector3(0, 1, 0), distance: 0 };
   const gnd = { hit: false, y: 0, normal: new THREE.Vector3(0, 1, 0), tag: 'ground', material: 'stone', rec: { id: 'floor' } };
   return {
@@ -108,7 +109,10 @@ function stubCollision({ points = [], wall = null } = {}) {
     groundCheck(pos, _r, maxDist) {
       // Standing ON the block counts as ground, so a ladder can top out onto something.
       gnd.y = (wall && pos.z <= wall.z) ? wall.top : 0;
-      gnd.hit = pos.y - gnd.y <= maxDist + 1e-4;
+      gnd.tag = typeof groundTag === 'function' ? groundTag(pos) : groundTag;
+      // `narrow` makes the floor a beam along z, so `narrowGround()` (which probes ±0.64 m to
+      // either side) answers true and `tiptoe` becomes reachable.
+      gnd.hit = (narrow ? Math.abs(pos.x) <= narrow : true) && pos.y - gnd.y <= maxDist + 1e-4;
       return gnd;
     },
     raycast(o, d, maxDist) {
@@ -142,8 +146,19 @@ function stubCollision({ points = [], wall = null } = {}) {
   };
 }
 
+/** A minimal GUARDS stand-in, so `mark()` and `pickMark()` resolve and the two lock-on states
+ *  can be exercised rather than exiting on "there is nobody to look at". */
+function stubGuards(at) {
+  const body = { position: at.clone(), pocketPosition: at.clone(), headY: at.y + 1.6, state: 'patrol' };
+  return {
+    nearest: () => body,
+    nearestPickpocketTarget: () => body,
+  };
+}
+
 async function makeSim(colOpts = {}) {
   const engine = stubEngine();
+  if (colOpts.guards) engine.get = (m) => (m === 'guards' ? colOpts.guards : null);
   const c = new Controller(engine);
   await c.init();
   c.col = stubCollision(colOpts);
@@ -894,6 +909,293 @@ test('rope: a sagging rope is our rail with a curved spline, not a mechanic we l
      authored in the level, and landing a knob nothing sets is the mirror of the `handholds`
      situation MOVEMENT has just spent two rounds fixing from the other side. */
   assert.ok(TUNE.railSpeed > 8, 'railSpeed is no longer the mount floor this arm is about');
+});
+
+/* ====================================================================== */
+/* 8 — the exit census: every state in buildMoveset(), driven             */
+/* ====================================================================== */
+
+/**
+ * Four states you could enter and not leave were found by comparing this moveset against a
+ * reference that happened to have a counterpart for them. That method cannot see the rest. This
+ * arm drives **every** state the machine holds — read off `sm.ordered`, so a state a future lane
+ * adds is covered the day it lands — and answers, for each: what leaves it, on what input, in
+ * how many frames.
+ *
+ * Forced entry via `sm.set()` rather than natural entry, because `set()` is unconditional and
+ * therefore cannot be defeated by a `canEnter` that happens to be false in the test world; the
+ * per-state setup below exists to give each `enter()` the context it reads, so what runs is the
+ * real state and not a degenerate one. Where a state needs an affordance, a wall, a vent tag, a
+ * guard or an authored target, it gets exactly that and nothing else — one world per state, so
+ * a hook in range cannot answer a question asked about a rail.
+ */
+const CENSUS_MAX = 600;                     // 10 s. Anything slower is a finding, not a pass.
+const VENT_HALF = 2.5;                      // half-width of the census vent — see `censusSetup`
+
+const BATTERY = [
+  ['(none)',   () => {}],
+  ['forward',  (inp) => { inp.move.y = 1; }],
+  ['back',     (inp) => { inp.move.y = -1; }],
+  ['strafe',   (inp) => { inp.move.x = 1; }],
+  ['jump',     (inp, i) => { if (i % 15 === 0) inp.hold('jump'); else inp.let_go('jump'); }],
+  ['jump+fwd', (inp, i) => { inp.move.y = 1; if (i % 15 === 0) inp.hold('jump'); else inp.let_go('jump'); }],
+  ['crouch',   (inp) => inp.hold('crouch')],
+  ['attack',   (inp, i) => { if (i % 15 === 0) inp.hold('attack'); else inp.let_go('attack'); }],
+  ['interact', (inp, i) => { if (i % 15 === 0) inp.hold('interact'); else inp.let_go('interact'); }],
+  ['sneak',    (inp) => inp.hold('sneak')],
+  ['focus',    (inp) => inp.hold('focus')],
+  ['glide',    (inp) => inp.hold('glide')],
+];
+
+function hookItem() {
+  return { tag: 'hook', rec: { id: 'ring', mesh: { userData: {} } }, point: () => V(0, 8, -6), tangent: V(0, 1, 0) };
+}
+function poleItem() {
+  return {
+    tag: 'pole',
+    rec: { id: 'pole', mesh: { userData: { bottom: 0, top: 12 }, geometry: { parameters: { radiusTop: 0.5 } } } },
+    point: (p) => V(0, Math.min(12, Math.max(0, p.y)), -6), tangent: V(0, 1, 0),
+  };
+}
+function spireItem() {
+  return { tag: 'spire', rec: { id: 'tip', mesh: { userData: {} } }, point: () => V(0, 6, -6), tangent: V(0, 1, 0) };
+}
+const BLANK_WALL = () => ({ z: -10, top: 40, rec: { id: 'blank-face' } });
+const LEDGE_WALL = () => ({ z: -10, top: 4, rec: { id: 'lip' } });
+
+/** One world and one starting pose per state. */
+function censusSetup(name) {
+  const air = (y = 10) => ({ col: {}, place(c) { c.position.set(0, y, 0); c.velocity.set(0, 0, 0); c.grounded = false; } });
+  const ground = () => ({ col: {}, place(c) { c.position.set(0, 0, 0); c.velocity.set(0, 0, 0); c.grounded = true; } });
+  switch (name) {
+    case 'hookSwing':
+      return { col: { points: [hookItem()] }, place(c) { c.position.set(0, 5.9, -6); c.velocity.set(4, 0, 0); c.grounded = false; } };
+    case 'railSlide': case 'railWalk':
+      return {
+        col: { points: railPoints(V(-14, 5, -6), V(14, 5, -6), 28) },
+        place(c) { c.position.set(0, 5, -6); c.velocity.set(6, 0, 0); c.grounded = false; },
+      };
+    case 'poleClimb': case 'poleSwing':
+      return { col: { points: [poleItem()] }, place(c) { c.position.set(0, 4, -5.2); c.velocity.set(0, 0, 0); c.grounded = false; } };
+    case 'spireLand':
+      return { col: { points: [spireItem()] }, place(c) { c.position.set(0, 6.2, -6); c.velocity.set(0, -1, 0); c.grounded = false; } };
+    case 'ledgeHang': case 'ledgeClimb':
+      return {
+        col: { wall: LEDGE_WALL() },
+        place(c) {
+          c.position.set(0, 4 - TUNE.hangDrop, -9.67); c.velocity.set(0, 0, 0); c.grounded = false;
+          c.probeLedge(V(0, 0, -1));
+        },
+      };
+    case 'wallClimb':
+      return {
+        col: { wall: ladderWall({ rungs: 6 }).wall },
+        place(c) {
+          c.position.set(0, PITCH - TUNE.hangReach, -9.61); c.velocity.set(0, 0, 0); c.grounded = false;
+          c.probeWall(V(0, 0, -1));
+        },
+      };
+    case 'wallRun': case 'wallCling': case 'wallJump':
+      return {
+        col: { wall: BLANK_WALL() },
+        place(c) {
+          c.position.set(0, 5, -9.6); c.velocity.set(0, 2, -5); c.grounded = false;
+          c.probeWall(V(0, 0, -1));
+        },
+      };
+    case 'toTarget':
+      return {
+        col: {},
+        place(c) {
+          c.position.set(0, 7, -3); c.velocity.set(0, 0, -6); c.grounded = false;
+          c.addTarget({ id: 'census', point: V(0, 6, -6), volume: 6, catch: 6 });
+          c.targets.acquire();
+        },
+      };
+    /* A FINITE vent, because that is what the level authors — the four shipped vent colliders
+       are tunnels (1.35 × 1.20 × 10.60 m and smaller), not regions. An infinite one reports
+       `crawl` as a trap, which is a statement about the harness and not about the moveset. */
+    case 'crawl':
+      return {
+        col: { groundTag: (p) => (Math.abs(p.x) <= VENT_HALF && Math.abs(p.z) <= VENT_HALF ? 'vent' : 'ground') },
+        place: ground().place,
+      };
+    case 'tiptoe':  return { col: { narrow: 0.5 }, place: ground().place };
+    case 'combatStrafe': case 'pickpocket':
+      return { col: { guards: stubGuards(V(0, 0, -2.0)) }, place: ground().place };
+    case 'land':
+      return { col: {}, place(c) { c.position.set(0, 0, 0); c.velocity.set(0, 0, 0); c.grounded = true; c.landImpact = 6; } };
+    case 'skid':
+      return { col: {}, place(c) { c.position.set(0, 0, 0); c.velocity.set(0, 0, 6); c.grounded = true; } };
+    case 'roll': case 'combo':
+      return { col: {}, place(c) { c.position.set(0, 0, 0); c.velocity.set(0, 0, -6); c.grounded = true; } };
+    case 'dive': case 'fall': case 'jump': case 'doubleJump': case 'paraglide': case 'bounce': case 'hurt':
+      return air(12);
+    default:
+      return ground();
+  }
+}
+
+/** Drive one (state, input) pair. Returns the frame the state changed, or -1. */
+async function censusRun(name, script) {
+  const setup = censusSetup(name);
+  const { engine, c } = await makeSim(setup.col);
+  setup.place(c);
+  c.sm.set(name);
+  let left = -1, into = '';
+  for (let i = 0; i < CENSUS_MAX && left < 0; i++) {
+    engine.input.beginFrame(DT);
+    engine.input.move.x = 0; engine.input.move.y = 0;
+    script(engine.input, i);
+    engine.time = i * DT;
+    c.update(DT, i * DT);
+    if (c.stateName !== name) { left = i; into = c.stateName; }
+  }
+  return { left, into };
+}
+
+test('census: every state in buildMoveset() can be left, and none of them only by jump', async () => {
+  const probe = await makeSim({});
+  const states = probe.c.sm.ordered.map((s) => ({ name: s.name, group: s.group, onRequest: s.onRequest }));
+  const rows = [];
+  for (const s of states) {
+    const exits = [];
+    for (const [label, script] of BATTERY) {
+      const r = await censusRun(s.name, script);
+      if (r.left >= 0) exits.push({ label, frames: r.left, into: r.into });
+    }
+    exits.sort((a, b) => a.frames - b.frames);
+    rows.push({ ...s, exits });
+  }
+
+  const pad = (v, n) => String(v).padEnd(n);
+  console.log(`\n[census] ${states.length} states × ${BATTERY.length} input scripts, ${CENSUS_MAX} frames each\n`);
+  console.log(`  ${pad('state', 15)}${pad('grp', 8)}${pad('fastest exit', 26)}every input that leaves`);
+  console.log(`  ${'-'.repeat(95)}`);
+  for (const r of rows) {
+    const best = r.exits[0];
+    const bestTxt = best ? `${best.label} @${best.frames}f -> ${best.into}` : '*** NONE ***';
+    console.log(`  ${pad(r.name, 15)}${pad(r.group, 8)}${pad(bestTxt, 26)}${r.exits.map((e) => e.label).join(', ') || '—'}`);
+  }
+
+  // 1. Nothing is a trap.
+  const trapped = rows.filter((r) => r.exits.length === 0);
+  assert.deepEqual(trapped.map((r) => r.name), [], `states with no exit at all: ${trapped.map((r) => r.name).join(', ')}`);
+
+  // 2. Nothing depends on jump alone. This is the shape `hookSwing`, `poleSwing` and `roll` all
+  //    had: an exit that reads as fine until the player is holding something that eats the button.
+  const jumpOnly = rows.filter((r) => r.exits.length > 0 && r.exits.every((e) => e.label.startsWith('jump')));
+  assert.deepEqual(jumpOnly.map((r) => r.name), [], `states whose only exit is jump: ${jumpOnly.map((r) => r.name).join(', ')}`);
+
+  /* 3. Every state is REACHABLE. A pollable state is reachable by definition — the machine walks
+        it every frame. An `onRequest` state is not: it exists only if something names it, and a
+        state nothing names is dead in a way no grep for its class finds, because the class IS
+        still constructed in `buildMoveset`.
+
+        So: count the name as a string literal across both files that can name one, with comments
+        stripped first. The registration itself contributes exactly one occurrence, so an
+        onRequest state needs at least two. Comments must go or prose keeps a dead state looking
+        alive — the same failure `tests/eventbus.test.mjs` was changed to avoid this session, in
+        both directions. */
+  const strip = (t) => t.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
+  const src = strip(readFileSync(new URL('../src/player/Moveset.js', import.meta.url), 'utf8'))
+            + strip(readFileSync(new URL('../src/player/Controller.js', import.meta.url), 'utf8'));
+  const named = (n) => (src.match(new RegExp(`'${n}'`, 'g')) || []).length;
+  // The check has to be able to fail: a pollable state with one mention is fine, an onRequest
+  // one is dead. Assert both halves so this cannot quietly become a tautology.
+  const dead = states.filter((s) => s.onRequest && named(s.name) < 2);
+  assert.deepEqual(dead.map((s) => s.name), [],
+    `onRequest states nothing ever requests: ${dead.map((s) => s.name).join(', ')}`);
+  const req = states.filter((s) => s.onRequest);
+  assert.ok(req.length >= 4, `only ${req.length} onRequest states — this check is not exercising anything`);
+  console.log(`  ${req.length} onRequest states, each named elsewhere: ` +
+              req.map((s) => `${s.name}×${named(s.name)}`).join(', '));
+
+  // 4. Slow exits are findings, not passes. Any state whose FASTEST exit is over 300 frames has
+  //    to be named here on purpose.
+  const slow = rows.filter((r) => r.exits[0].frames > 300).map((r) => `${r.name}@${r.exits[0].frames}f`);
+  assert.deepEqual(slow, [], `states that take over 5 s to leave: ${slow.join(', ')}`);
+  console.log(`\n[census] no traps, no jump-only exits, no exit slower than ` +
+              `${Math.max(...rows.map((r) => r.exits[0].frames))} frames`);
+});
+
+test('census: crawl is the one state whose only exit is geometry, and the level must hold it up', async () => {
+  /* The census's most interesting row. `Crawl.update`'s only exit is `!c.inVent()` — it polls no
+     button at all, and at priority 68 it sits ABOVE `jump` 64, so jump does not even reach the
+     machine while Sly is in a vent. That is correct rather than broken: a vent is a tunnel, and
+     a state that let you jump out of one would put Sly through the level. But it means the
+     moveset makes **no guarantee** that this state can be left — the guarantee lives entirely in
+     level data, which is a different place from every other state in the file, and worth saying
+     out loud.
+     Run against an infinite vent, `crawl` is a hard trap: 12 input scripts × 600 frames, nothing
+     leaves. That was the first result this census produced and it was my harness, not the game.
+     What the level actually authors is four tunnels. */
+  const half = VENT_HALF;
+  const { engine, c } = await makeSim({
+    col: undefined,
+    groundTag: (p) => (Math.abs(p.x) <= half && Math.abs(p.z) <= half ? 'vent' : 'ground'),
+  });
+  c.position.set(0, 0, 0); c.grounded = true;
+  c.sm.set('crawl');
+  let left = -1;
+  run(engine, c, 600, (i, inp) => { inp.move.y = 1; }, (i) => { if (left < 0 && c.stateName !== 'crawl') left = i; });
+  assert.ok(left > 0, 'could not crawl out of a finite vent');
+  const expect = half / TUNE.crawlSpeed * 60;
+  console.log(`\n[census] crawl out of a ${(half * 2).toFixed(1)} m vent: ${left} frames ` +
+              `(${(left / 60).toFixed(2)} s; ${half} m at crawlSpeed ${TUNE.crawlSpeed} predicts ${expect.toFixed(0)})`);
+  assert.ok(left < expect * 2.5, `took ${left} frames to cover ${half} m`);
+
+  // …and the shipped vents are bounded, so the geometric exit is always within a few seconds.
+  const { Architecture } = await import('../src/world/Architecture.js');
+  const recs = [];
+  const eng = {
+    scene: new THREE.Scene(), warnings: [], debug: {}, quality: 'high',
+    get() { return null; }, has() { return false; }, warn() {}, on() { return () => {}; },
+    emit() {}, registerCollider(mesh, opts) { recs.push({ mesh, ...opts }); },
+  };
+  const A = new Architecture(eng);
+  await A.init();
+  const vents = recs.filter((r) => r.tag === 'vent');
+  assert.ok(vents.length > 0, 'the level authors no vents, so this contract is untested');
+  let longest = 0;
+  for (const v of vents) {
+    const g = v.mesh?.geometry;
+    if (!g) continue;
+    g.computeBoundingBox();
+    const b = g.boundingBox, s = v.mesh.scale;
+    longest = Math.max(longest, (b.max.x - b.min.x) * s.x, (b.max.z - b.min.z) * s.z);
+  }
+  const worst = longest / TUNE.crawlSpeed;
+  console.log(`[census] ${vents.length} shipped vents, longest run ${longest.toFixed(2)} m ` +
+              `=> worst-case crawl out ${worst.toFixed(1)} s`);
+  assert.ok(worst < 15, `a vent takes ${worst.toFixed(1)} s to crawl out of`);
+});
+
+test('census: the one state with no self-timeout is dive, and a void is its worst case', async () => {
+  /* `DiveAttack.update` has exactly one exit — `if (c.grounded)` — and no clock. Over ground that
+     is instant; over a hole it is bounded only by `Controller._safetyNet`'s `voidY`. That is an
+     exit, so the census above passes it, but "you get your character back when the respawn
+     catches you" is not the same as a state that ends. Measured rather than asserted from
+     reading, because the fall is at a clamped `maxFall`, not at `diveSpeed`. */
+  const { engine, c } = await makeSim({});
+  c.position.set(0, 12, 0); c.velocity.set(0, 0, 0); c.grounded = false;
+  c.col.groundCheck = () => ({ hit: false, y: -1e9, normal: V(0, 1, 0), tag: 'ground', material: 'stone', rec: null });
+  c.col.capsuleSweep = (from, to) => ({ hit: false, position: to.clone(), normal: V(0, 1, 0), distance: to.distanceTo(from) });
+  c.sm.set('dive');
+  let left = -1;
+  for (let i = 0; i < 4000 && left < 0; i++) {
+    engine.input.beginFrame(DT);
+    engine.input.move.x = 0; engine.input.move.y = 0;
+    engine.time = i * DT;
+    c.update(DT, i * DT);
+    if (c.stateName !== 'dive') left = i;
+  }
+  assert.ok(left > 0, 'dive over a void never ended at all');
+  console.log(`\n[census] dive over a bottomless void: ${left} frames (${(left / 60).toFixed(2)} s) ` +
+              `before the safety net at voidY returned control`);
+  // It is bounded, and the bound is the void floor — not a design timeout. Pinned so that a
+  // change to `voidY` or `maxFall` shows up here rather than as a mystery hang.
+  assert.ok(left < 1200, `dive over a void took ${left} frames to end`);
 });
 
 test('wallClimb: proximity alone does not snag a player who is not reaching for it', async () => {
