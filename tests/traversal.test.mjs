@@ -2625,7 +2625,7 @@ test('crawl: reachable by traversal — the walk-in failed on lateral drift, not
 /* 18 — lateral drift on slopes: a movement fact, not a vent fact          */
 /* ====================================================================== */
 
-test('slopes: a pure cardinal stick drifts sideways downhill, and it is the slide not the move vector', async () => {
+test('slopes: a pure cardinal stick holds its line — the ground snap no longer travels', async () => {
   /* Arm 17 found the vent walk-in failing because a pure −X stick slid Sly 4.6 m in +z. That is
    * not a vent fact. Three questions, all driven:
    *
@@ -2652,11 +2652,39 @@ test('slopes: a pure cardinal stick drifts sideways downhill, and it is the slid
    * the plane-tangent component, and for a horizontal input on a slope that component is partly
    * downhill.
    *
-   * **What a player feels:** at 3–8°, the gentle grades this level uses for approaches, ~0.11 m
-   * sideways per metre forward — hold one direction for 10 m and you are over a metre off line.
-   * At 8–15° it is 0.44 m/m. That is the largest-blast-radius finding this lane has produced and
-   * it is REPORTED, NOT FIXED: it is a `Controller._moveHorizontal` change touching every slope
-   * in the game, and whether some downhill slide is wanted is a design question. */
+   * **What a player felt:** at 3–8°, the gentle grades this level uses for approaches, ~0.11 m
+   * sideways per metre forward — hold one direction for 10 m and you were over a metre off line.
+   * At 8–15° it was 0.44 m/m.
+   *
+   * ── FIXED, and the cause was not where this arm first said it was ───────────────────────────
+   * The original diagnosis — "the collision response, not the move vector" — was right about the
+   * layer and wrong about the site. It is not the horizontal slide's projection. Instrumenting
+   * every `capsuleSweep` in one frame on a 12.3° grade:
+   *
+   *     115 sweeps: summed REQUESTED lateral 0.0140 m, summed RESOLVED lateral -1.0693 m
+   *     the hits doing it:  ny 0.982  toi 0.215  reqLat 0.00000 -> gotLat -0.07488
+   *                         ny 0.982  toi 0.231  reqLat 0.00000 -> gotLat -0.07337
+   *
+   * Those sweeps request **zero horizontal motion** and resolve 0.07 m downhill apiece. They are
+   * the ground-snap step-down in `_moveHorizontal`: lift by `stepHeight`, slide horizontally,
+   * then sweep straight down to re-seat. `Collision.capsuleSweep` clips leftover motion into the
+   * contact plane — and downward motion clipped into a TILTED plane is downhill motion. The snap
+   * was walking him down the gradient every frame, which is why he covered 0.53 m forward while
+   * sliding 1.07 m sideways.
+   *
+   * The repair is that a snap answers "how far down is the floor", which has a distance and not a
+   * direction, so it may only move him on y. Measured, level-wide:
+   *
+   *     drift ratio      0.3180 -> 0.0121        mean lateral  0.8069 m -> 0.0359 m
+   *     shedding gate    27/40 at mean drop 0.4179 m -> 27/40 at mean drop 0.4179 m, unchanged
+   *
+   * ── The SECOND site, measured and deliberately not fixed here ────────────────────────────────
+   * `_moveVertical` has the same shape — `position.copy(r.position)` on a purely vertical
+   * request — and standing still on a 3–15° grade in the real level drifts a mean of 0.2816 m and
+   * a maximum of 2.1644 m in 90 frames with no input at all. It is NOT folded in here because
+   * that clip is also how a steep face sheds you: the discriminator would have to be walkability,
+   * and gating on it makes every 15–50° grade in this level standable, which changes what the
+   * level is climbable-by rather than fixing a defect. That is a design call and it is routed. */
   const { engine, c, collision } = await realWorld();
   hardReset(engine, c, V(0, 0, 30));
   for (let i = 0; i < 4; i++) {
@@ -2736,8 +2764,22 @@ test('slopes: a pure cardinal stick drifts sideways downhill, and it is the slid
   const signOK = walkable.filter((r) => Math.sign(r.across) === r.downSign).length;
   console.log(`[slope] walkable 3–15°: n=${walkable.length}, mean |across|/|along| ${ratio.toFixed(3)}, ` +
               `sign follows downhill ${signOK}/${walkable.length}`);
-  assert.ok(ratio > 0.05, `drift ratio ${ratio.toFixed(3)} — the slope effect has gone, retire this arm`);
-  assert.ok(signOK >= walkable.length - 1, 'drift no longer follows the downhill direction — mechanism changed');
+  /* THE FIX, asserted: the drift is gone. Pre-fix this ratio was 0.3180 with 14/14 following the
+     downhill aspect, and the mean lateral was 0.8069 m over a ~3 m walk. */
+  assert.ok(ratio < 0.05,
+    `drift ratio ${ratio.toFixed(4)} — a cardinal stick is bending downhill again (pre-fix 0.3180). ` +
+    'The ground snap in Controller._moveHorizontal has gone back to copying the resolved position ' +
+    'instead of taking `drop * dn.toi` on y alone.');
+
+  /* THE LEVER, and it is the half that matters. "No drift" is satisfied perfectly by a character
+     who never moves, and this file has shipped a tautology before. So the same samples must also
+     show real forward travel, and the flat control above must still be a control. */
+  const meanAlong = walkable.reduce((a, r) => a + Math.abs(r.along), 0) / walkable.length;
+  assert.ok(meanAlong > 1.0,
+    `the walkable samples advanced a mean of ${meanAlong.toFixed(3)} m — a frozen character also has ` +
+    'zero drift, so this arm proves nothing unless he is actually walking');
+  assert.ok(walkable.every((r) => Math.abs(r.along) > 0.5),
+    'a sample barely moved; drift measured against near-zero travel is a ratio of noise');
 
   /* The split: intent clean, resolution dirty. This is the assertion that localises the cause. */
   /* Localising the cause, stated as the aggregate rather than a per-sample bound — because a
@@ -2752,10 +2794,24 @@ test('slopes: a pure cardinal stick drifts sideways downhill, and it is the slid
   const zeroReq = walkable.filter((r) => Math.abs(r.reqLat) < 1e-6).length;
   console.log(`[slope] walkable band: ${zeroReq}/${walkable.length} samples request ZERO lateral; ` +
               `summed |requested| ${sumReq.toFixed(3)} m vs summed |resolved| ${sumRes.toFixed(3)} m`);
+  /* The request was always clean and still is — that half of the original finding was right, and
+     it is what said the cause had to be downstream of the move vector. */
   assert.ok(zeroReq >= Math.ceil(walkable.length / 2),
-    `only ${zeroReq}/${walkable.length} samples request zero lateral — the drift is moving upstream`);
-  assert.ok(sumRes > sumReq * 3,
-    `resolved lateral ${sumRes.toFixed(3)} is no longer dominated by the response (requested ${sumReq.toFixed(3)})`);
+    `only ${zeroReq}/${walkable.length} samples request zero lateral — the intent has stopped being clean`);
+
+  /* ── And this pair is what localises the fix to the CONTROLLER rather than to collision ─────
+     The sweep still OFFERS a laterally-displaced resolved position — 35.8 m of it across these
+     samples, because `Collision.capsuleSweep` still clips leftover motion into the contact plane
+     exactly as it always did. What changed is that the ground snap no longer takes it. Asserting
+     both halves matters: if someone "fixes" this by editing the collision layer instead, the
+     drift would also go to zero, and this arm would tell them they changed a module that guards
+     and the camera share rather than the one that had the defect. */
+  assert.ok(sumRes > 1.0,
+    `the sweep now reports only ${sumRes.toFixed(3)} m of resolved lateral. Collision has been ` +
+    'changed, not the Controller — and Collision.capsuleSweep is shared with GUARDS and the ' +
+    'camera boom, so that is a much wider blast radius than this defect needed.');
+  assert.ok(ratio < 0.05,
+    'the character is importing the sweep lateral again — see the ground snap in _moveHorizontal');
 });
 
 test('wallClimb: proximity alone does not snag a player who is not reaching for it', async () => {

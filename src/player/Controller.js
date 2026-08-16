@@ -384,7 +384,7 @@ const TAGS_HAZARD = ['hazard'];
 const TAGS_VISION = ['hook', 'rail', 'pole', 'spire', 'ledge', 'vent'];
 
 /** My own copy of a sweep result — the module's pooled object may be reused mid-loop. */
-const _swRes = { hit: false, position: new THREE.Vector3(), normal: new THREE.Vector3(), distance: 0, tag: '', material: 'stone', rec: null };
+const _swRes = { hit: false, position: new THREE.Vector3(), normal: new THREE.Vector3(), distance: 0, toi: 1, tag: '', material: 'stone', rec: null };
 const _rayRes = { hit: false, point: new THREE.Vector3(), normal: new THREE.Vector3(), distance: 0, tag: '', rec: null };
 const _gndRes = { hit: false, y: 0, normal: new THREE.Vector3(0, 1, 0), slope: 0, tag: 'ground', material: 'stone', rec: null };
 
@@ -1325,10 +1325,30 @@ export class Controller {
     this._slide(_disp, 4, true);
 
     if (stepping) {
+      /* Re-seat on the floor, VERTICALLY ONLY.
+       *
+       * This is where the downhill slide lived. The snap requests a purely vertical drop, but
+       * `Collision.capsuleSweep` clips leftover motion into the contact plane — and downward
+       * motion clipped into a TILTED plane is downhill motion. Copying the resolved position
+       * therefore imported that slide into `x/z` every single frame: measured 0.07 m per frame
+       * on a 12.3 deg grade, from sweeps whose requested horizontal displacement was exactly
+       * 0.00000. Standing still on a 10 deg ramp drifted 0.1026 m downhill in 90 frames with no
+       * input at all.
+       *
+       * A snap answers "how far down is the floor". That question has a distance, not a
+       * direction, so any horizontal component in its answer is by construction not a snap.
+       * `toi` is the fraction of the original (vertical) direction travelled before first
+       * contact, so `drop * toi` re-seats him on the surface directly beneath where the
+       * horizontal slide already put him, and `x/z` are left exactly as that slide decided.
+       *
+       * This does NOT touch shedding: a steep face sheds through gravity, `_moveVertical` and
+       * `groundCheck`'s walkability gate, none of which run through here — verified on a
+       * synthetic 55 deg and 65 deg ramp rather than assumed. */
+      const drop = TUNE.stepHeight + TUNE.groundSnap;
       _p3.copy(this.position);
-      _p3.y -= TUNE.stepHeight + TUNE.groundSnap;
+      _p3.y -= drop;
       const dn = this._sweep(this.position, _p3);
-      if (dn.hit) this.position.copy(dn.position);
+      if (dn.hit) this.position.y -= drop * dn.toi;
       else this.position.y -= TUNE.stepHeight;   // walked off an edge: give the lift back
     }
   }
@@ -1393,6 +1413,10 @@ export class Controller {
       _swRes.position.copy(r.position); _swRes.position.y -= o;
       _swRes.normal.copy(r.normal && r.normal.lengthSq() > 0.1 ? r.normal : UP);
       _swRes.distance = r.distance ?? 0;
+      /* Fraction of the ORIGINAL direction travelled before first contact. The ground snap needs
+         this rather than the resolved position, because the resolved position has already been
+         slid along the contact plane and a snap must not travel. */
+      _swRes.toi = Number.isFinite(r.toi) ? r.toi : 1;
       _swRes.tag = r.tag || '';
       _swRes.material = r.material || 'stone';
       _swRes.rec = r.rec || null;
@@ -1400,7 +1424,7 @@ export class Controller {
       _swRes.hit = false;
       _swRes.position.copy(to);
       _swRes.normal.set(0, 1, 0);
-      _swRes.tag = ''; _swRes.rec = null; _swRes.distance = 0;
+      _swRes.tag = ''; _swRes.rec = null; _swRes.distance = 0; _swRes.toi = 1;
     }
     return _swRes;
   }
