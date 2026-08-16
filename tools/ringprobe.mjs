@@ -33,6 +33,63 @@ import { withGame } from './harness.mjs';
 import { treeState } from './treestate.mjs';
 import { writeFileSync, mkdirSync } from 'node:fs';
 
+/**
+ * `--counts` — WHY THERE WERE TWO RINGS, asked of the catalogue instead of the buffers.
+ *
+ * Boots nothing and takes no lock. Runs before the harness import does any work.
+ *
+ * The two `dive_ring` instances share birth, life, tile and position and differ only in their
+ * per-particle draws, which is one `_emit` call whose loop ran twice — not two stagings. The
+ * count comes from
+ *
+ *     n = Math.round( R.range( count[0], count[1] + 0.999 ) * countScale )
+ *
+ * and the `+ 0.999` idiom is built for `Math.floor`: `floor(range(a, b+0.999))` is uniform on
+ * the integers a..b, which is plainly what was meant. With `Math.round` the whole distribution
+ * shifts half a count upward — `count: [a, b]` yields a..b+1, and `count: [n, n]` is a coin
+ * flip between n and n+1. `Rand.js` already exports the correct primitive, `f.int(lo, hi)` =
+ * `floor(lo + f()*(hi-lo+1))`, and this call site does not use it.
+ *
+ * Reported, not repaired: it is `src/**`, other lanes are in that tree, and the population size
+ * of every emitter in the game is a decision about the look and the budget, not a typo to fix
+ * inside an FX measurement tool.
+ */
+if (process.argv.includes('--counts')) {
+  const { EMITTERS } = await import('../src/fx/Emitters.js');
+  const draw = (c0, c1) => {
+    /* The exact distribution, integrated rather than sampled: R.range is uniform on
+       [c0, c1+0.999), so P(n = k) is the length of the sub-interval that rounds to k. */
+    const lo = c0, hi = c1 + 0.999, span = hi - lo;
+    const out = new Map();
+    for (let k = Math.round(lo); k <= Math.round(hi); k++) {
+      const a = Math.max(lo, k - 0.5), b = Math.min(hi, k + 0.5);
+      if (b > a) out.set(Math.max(1, k), (out.get(Math.max(1, k)) || 0) + (b - a) / span);
+    }
+    return out;
+  };
+  console.log('emitter count draws — declared vs what `_emit` actually yields\n');
+  console.log(`  ${'emitter'.padEnd(20)} ${'declared'.padEnd(10)} yields`);
+  let over = 0, total = 0, exact = 0;
+  for (const [name, def] of Object.entries(EMITTERS)) {
+    if (!def.count) continue;
+    total++;
+    const d = draw(def.count[0], def.count[1]);
+    const keys = [...d.keys()].sort((a, b) => a - b);
+    const mean = keys.reduce((s, k) => s + k * d.get(k), 0);
+    const beyond = keys.filter((k) => k > def.count[1]).reduce((s, k) => s + d.get(k), 0);
+    if (beyond > 1e-9) over++;
+    if (keys.length === 1 && keys[0] === def.count[0] && def.count[0] === def.count[1]) exact++;
+    console.log(`  ${name.padEnd(20)} ${`[${def.count[0]}, ${def.count[1]}]`.padEnd(10)} `
+      + `${keys.map((k) => `${k}:${(d.get(k) * 100).toFixed(0)}%`).join(' ')}   mean ${mean.toFixed(3)}`
+      + (beyond > 1e-9 ? `   ${(beyond * 100).toFixed(0)}% ABOVE the declared max` : ''));
+  }
+  console.log(`\n  ${over} of ${total} emitters can exceed their own declared maximum.`);
+  console.log('  `count: [n, n]` is a coin flip between n and n+1, which is where the second');
+  console.log('  `dive_ring` came from. `Rand.js` exports `f.int(lo, hi)` and this call site');
+  console.log('  does not use it. Reported, not repaired — see the header.');
+  process.exit(0);
+}
+
 const SHOT = process.argv[2] || 'impact';
 const OUT = process.env.SANDS_OUT || `shots/ringprobe-${SHOT}`;
 mkdirSync(OUT, { recursive: true });
