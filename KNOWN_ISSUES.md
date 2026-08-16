@@ -26294,3 +26294,115 @@ does at §352). The ledger is the record; the board is a convenience that decays
 **Not claimed:** that the task list should be retired, or that the investigations were wasted — two
 of the three produced numbers worth keeping, and `#17`'s closure only became defensible because the
 metric was re-run rather than taken on the work order's word.
+
+---
+
+## §361 — blind critic round on r13: three observers converge on the character, and one headline claim is REFUTED
+
+Two frames captured at `2d16446` (`shots/r13/`, `dirty:false`, force-added), judged by two blind
+sub-agent critics — an AAA art director and a Sly-franchise specialist — neither told what changed,
+what the project had been working on, or what I thought. **Every load-bearing claim below was
+re-derived here before it was accepted, and one of the strongest was refuted.**
+
+### §361.1 VERIFIED — the value range is compressed and there are no highlights
+
+```
+                p1    p99   median   >220 luma
+hero            15    183      72      0.005%
+courtyard       23    181      96      0.032%
+```
+
+The art director's figures were `15-183` and `23-181` with "0.01% and 0.03% above 220". Reproduced
+essentially exactly. **Nothing in either frame is sun-struck.** Both live in a mid band, which is
+the mechanical reason both read muddy despite the colour work being sound.
+
+### §361.2 VERIFIED — the character does not separate from what is behind him
+
+Character box mean luma **66.2**, the slab behind him **52.8** — **13.4 levels of separation out of
+255** (claimed: 66 / 54 / 12). At `hero`, the frame whose own comment calls it *"if one frame has to
+sell the game, this is it"*, the subject is nearly the same value as its backdrop.
+
+### §361.3 VERIFIED — no contact shadow, and it is visible at 8×
+
+Cropped the boot/ledge contact at 8×: the boot terminates against the orange ledge with **zero
+occlusion darkening** — no AO, no blob, no contact shadow. Nothing anchors him. Confirmed by eye,
+not inferred.
+
+### §361.4 VERIFIED, and it retro-corrects task #10 — the cane is planted but ILLEGIBLE
+
+Both critics independently flagged the cane: *"functionally absent… a hairline dark hook"* and
+*"whatever he is holding resolves to an unreadable dark smear… reads as a rendering fault"*. At 4×
+this is correct and precise: **the visible glove is open and splayed, holding nothing**, and the
+cane is thin dark geometry down by the shin.
+
+Task #10 reads *"DONE — cane planted, verified in GPU geometry; the aim was never the lever"*, and
+the r13 boot log confirms `sly-cane.glb` socketed to `handR`. **Both are true.** The geometry is
+there; what was never measured is whether it READS. That is §357.1's shape a fourth time — verified
+at one end, failing at the other — and it is the most expensive instance yet, because the cane is
+the character's primary silhouette element.
+
+Also verified at 4×: **the eyes render as opaque black lenses with no sclera**, so the mask-and-eye
+graphic that is the character's second identifier is not reading either.
+
+### §361.5 REFUTED — the two frames are NOT running different ink treatments
+
+The franchise critic's second-ranked finding was that *"`hero.png` has essentially no ink on the
+architecture"* while *"`courtyard.png` does have black outlines, and they're the strongest element"*,
+concluding **"the look hasn't been decided"**. That is a serious accusation and it is **false**.
+
+A near-black pixel count appears to support it and is the wrong instrument — it is confounded by
+`hero` simply being a darker frame (median 72 vs 96), the same wrong-quantity trap as §342.2's
+ramp-for-`sh` and §346's peak-for-area. Measured properly, as local max gradient:
+
+```
+region                          meanGrad   %grad>40
+hero  architecture (wall+hall)     12.47      7.44%
+hero  foreground ledge             12.69      8.29%
+courtyard right statue             13.93      8.52%
+courtyard left statue              10.30      5.91%
+```
+
+**Comparable everywhere.** Both frames came from one commit and one pipeline, and they carry
+comparable edge density. What the critic correctly *perceived* — that the frames don't look like the
+same game — is real, but its cause is the palette and value split (median 72 vs 96, different `tod`),
+**not** an undecided ink model. Sending someone to hunt a pipeline inconsistency here would waste the
+lane.
+
+### §361.6 OVERSTATED — the "completely blank" centre slabs
+
+The art director called `courtyard`'s central stack *"completely blank… no texture, no glyphs, no
+damage"*. That region measures the **highest** strong-edge fraction of any sampled (10.75%), so
+seams and block joints are present. The defensible claim is "no glyph or damage detail", not "no
+texture". The compositional point — the focal centre is the least-informed area of the frame —
+stands.
+
+### §361.7 The one thing three independent observers agree on
+
+**The colossi do not read as statues.** Recorded in my own read *before* the critics reported, then
+independently by both: *"stacks of chamfered boxes — no face, no nemes headdress, no anatomy"* and
+*"you cannot identify what they are at thumbnail size"*.
+
+This reframes the §336 → §342.2 lineage. Those seals spent four captures and several sections
+measuring the colossus's **R/G ratio** — the redness, the shadow-tint authority, `keyprobe`'s `K1` —
+and §358 then found the headline 3.74 was not even attributable. The blind round says the object's
+**form**, not its colour, is what fails. Grading a box more accurately does not make it a colossus.
+*Not claimed:* that the shading work was wrong — §359.2 keeps what survives. Claimed only that the
+lineage optimised a surface property of an object whose silhouette is the actual defect, and that no
+colour bar would ever have detected that.
+
+### §361.8 Unresolved disagreement, recorded rather than adjudicated
+
+The critics **contradict each other on the character's red**. The franchise specialist calls it
+off-model (*"Sly's palette is blue tunic, gold cuffs… no red anywhere"*) and says delete it; the art
+director lists *"blue/gold/red on tan fur"* under **protect** and warns against redesigning him. One
+of them is wrong about the series and I have not established which. **No action either way** until
+it is settled against reference — this is exactly the kind of confident-and-opposed pair that gets
+acted on by whoever is read last.
+
+### §361.9 What both agree to protect
+
+The `hero` camera (three-quarter down-angle, character on the left third, doorway on the right third,
+the traversal line connecting them — it states the verb of the game); the teal/sage against
+terracotta hue relationships; the courtyard's monumental tiered massing; and the strung lamp wires
+as the best route-language gesture in either frame. **The colour choices are not the problem — the
+value spread is.**
