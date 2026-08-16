@@ -204,15 +204,19 @@ const DEAD_BY_DECISION = ['binocucom'];
  *
  *   objective         the HUD renders an objective card and `HUD.init` sets the only one that ever
  *                     appears, by direct call. The event is the hook a mission script would use.
- *   propSmashed       FX and AUDIO both draw a prop breaking — chips, puff, contact mark, and a
- *                     grind cue — and **nothing in the game can break a prop**. This is a half
- *                     built deliberately and in the open: the destruction itself (hiding meshes,
- *                     disabling colliders, emitting drops, respawning) is `src/world/`'s and has
- *                     an owner. Both subscribers also expose a direct call, so the world half can
- *                     skip the bus entirely if it would rather. When it lands, delete this line.
- *                     Reference note for whoever takes it: `smashable.gd`'s one non-obvious idea
- *                     is a respawn raycast guard — do not un-hide a prop while something occupies
- *                     its volume.
+ *   propSmashed       both FX halves of a prop coming apart exist and **nothing breaks props yet**.
+ *                     `Particles.smash()` throws the debris, the contact puff and (on metal) the
+ *                     sparks, and leaves a `dust_ring` — or a `scorch`, metal only; `Audio._onSmash()`
+ *                     lays the material transient over `stone_grind`. Between them they are the
+ *                     second end of three catalogue entries that had no reader at all. The missing
+ *                     half is the mechanic: hiding meshes, disabling colliders, spawning drops and
+ *                     respawning, which is `src/world/`'s and has an owner. Payload
+ *                     `{ pos, material, scale, normal, dir }`, `material` being COLLISION's own tag
+ *                     so a caller holding a hit holds the key. Both subscribers also expose a direct
+ *                     call, so the world half may skip the bus entirely. When it lands, delete this.
+ *                     One thing worth carrying from `smashable.gd` and nothing else: it fans five
+ *                     raycasts before respawning and restarts the timer if any is colliding, so a
+ *                     crate never rematerialises around the player or another prop.
  *   prompt            contextual "press E to …" prompts, and a trap. `HUD.js:383` sets `_sawPrompt`
  *                     on the first one and *permanently* retires its affordance-detection fallback,
  *                     so **the first module to publish this silently kills every contextual verb in
