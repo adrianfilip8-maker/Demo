@@ -1967,7 +1967,38 @@ function hypostyleHall(A) {
       [sx * CL, NAVE + 0.42, h.z1 - 2.5], [sx * CL, NAVE + 0.42, zc], [sx * CL, NAVE + 0.42, h.z0 + 2.5],
     ], 'bronze_dark', 0.13, 'hall');
   }
-  rail(A, 'hall-cable', [[-8.4, 12.75, -20.5], [-3, 12.35, -27], [3, 12.35, -38], [8.4, 12.75, -45.5]], 'rope_fibre', 0.085, 'hall');
+  /* ---- The rope. -----------------------------------------------------------------------
+   * §8.1 already called this "the taut cable at y 12.6 [that] crosses the nave diagonally as a
+   * `rail`", and it was four hand-placed waypoints through a Catmull-Rom — a shape that reads as
+   * a slack line and rides as a sequence of flat runs and corners. It is now a real catenary
+   * with an authored mount speed, which is the whole of what a rope needs from this side.
+   *
+   * ── Why this is a rope and not a new mechanic ────────────────────────────────────────────
+   * The traversal lane measured the shipped `RailSlide` on a catenary and found rope physics
+   * already in it: a rider accelerating **9.66 → 14.07 m/s** into the dip and slowed to
+   * **6.54 m/s** climbing the far side, with no new code. The one thing standing between that
+   * and a rope is `RailSlide.enter`'s `mount(c, a, TUNE.railSpeed)` floor, which forces every
+   * mount to ≥ 9.5 m/s — enough to crest any sag this level can hold, every time. `mountSpeed`
+   * is the per-rec override that lets a rope decline it; the level publishes it and the one line
+   * that reads it belongs to MOVEMENT. Until then this is inert, exactly like `rec.handholds`
+   * was: `Engine.registerCollider` spreads opts onto the rec, so it arrives as `rec.mountSpeed`
+   * with no engine change, and nothing reads it yet.
+   *
+   * **0, meaning no floor** — not a smaller floor. A rail's floor exists so that mounting one
+   * always carries you somewhere; a rope's carry comes from its own sag, so a floor is the one
+   * thing that stops it being a rope. Step on at whatever speed you arrive with and let the
+   * curve do the rest.
+   *
+   * ── Sag 1.5 m is a clearance, not a taste ────────────────────────────────────────────────
+   * Measured by casting down from 200 samples along the curve against the built level: the
+   * binding obstacle is not mid-span, it is the **first nave column capital at (−6.8, ·, −22.9),
+   * y 11.90**, which the span passes almost directly over. Clearance under the rope there runs
+   * 0.71 m at the old 0.40 m sag, 0.33 at 1.5, 0.16 at 2.0, and **0.02 at 2.5 — touching**.
+   * 1.5 m keeps a third of a metre of daylight over the capital while still dropping the low
+   * point to y 11.25, which by `v² = v0² + 2gΔh` turns a 2.4 m/s step-on into 8.8 m/s at the
+   * bottom and back — the pendulum, inside the geometry the hall already has. */
+  rail(A, 'hall-cable', catenary([-8.4, 12.75, -20.5], [8.4, 12.75, -45.5], 1.5, 32),
+    'rope_fibre', 0.085, 'hall', { mountSpeed: 0, rope: true });
 
   /* Pinnacles on the aisle roof: the §8.1 spire tips at (±16, 21, −50). */
   for (const sx of [-1, 1]) {

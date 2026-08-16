@@ -43,6 +43,7 @@ class StubInput {
     this._buf = new Map(); this.t = 0;
   }
   beginFrame(dt) { this.t += dt; this._pressed.clear(); this._released.clear(); }
+  clear() { this._down.clear(); this._pressed.clear(); this._released.clear(); this._buf.clear(); }
   hold(a) { if (!this._down.has(a)) { this._down.add(a); this._pressed.add(a); this._buf.set(a, this.t); } }
   let_go(a) { if (this._down.delete(a)) this._released.add(a); }
   down(a) { return this._down.has(a); }
@@ -1196,6 +1197,195 @@ test('census: the one state with no self-timeout is dive, and a void is its wors
   // It is bounded, and the bound is the void floor — not a design timeout. Pinned so that a
   // change to `voidY` or `maxFall` shows up here rather than as a mystery hang.
   assert.ok(left < 1200, `dive over a void took ${left} frames to end`);
+});
+
+/* ====================================================================== */
+/* 9 — reachability through play, against the real level                  */
+/* ====================================================================== */
+
+/**
+ * The census proved every state can be LEFT. This proves states can be REACHED, which is the
+ * one member of this project's dead-content family still unchecked — it has already shipped an
+ * emitter with no caller, a sound with no publisher, a flag with no reader and four states with
+ * no exit.
+ *
+ * Real `Architecture`, real `Collision` BVH (248 colliders, ~4,030 tris), real `Controller`,
+ * scripted input. Positions are DERIVED from the built level at run time rather than written
+ * down, because the world lane is actively editing this geometry and a test full of hard-coded
+ * coordinates would be measuring last week's level.
+ */
+async function realWorld() {
+  const { Architecture } = await import('../src/world/Architecture.js');
+  const { Collision } = await import('../src/world/Collision.js');
+  const engine = stubEngine();
+  const queued = [];
+  let collision = null, arch = null;
+  const guardBody = { position: V(0, 0, 28), pocketPosition: V(0, 1, 28), headY: 1.6, state: 'patrol' };
+  engine.get = (m) => (m === 'collision' ? collision : m === 'architecture' ? arch
+    : m === 'guards' ? { nearest: () => guardBody, nearestPickpocketTarget: () => guardBody } : null);
+  engine.registerCollider = (mesh, opts = {}) => {
+    const rec = { mesh, tag: opts.tag || 'ground', climbable: !!opts.climbable, material: opts.material || 'stone', oneWay: !!opts.oneWay, ...opts };
+    if (collision?.add) collision.add(rec); else queued.push(rec);
+    return rec;
+  };
+  arch = new Architecture(engine);
+  await arch.init();
+  collision = new Collision(engine);
+  for (const r of queued) collision.add(r);
+  await collision.init();
+  const c = new Controller(engine);
+  await c.init();
+  return { engine, c, arch, collision };
+}
+
+/** Reset every scrap of per-run state, including the guards this lane added to the states. */
+function hardReset(engine, c, pos, yaw = Math.PI) {
+  c.teleport(pos.clone(), yaw);
+  c.velocity.set(0, 0, 0);
+  c.airJumps = 1; c.wallRunUsed = 0; c.freeWall();
+  c.hangLock = 0; c.poleLock = 0; c.spireLock = 0; c.landImpact = 0;
+  c.comboIndex = 0; c.comboTimer = 0;
+  c.targets.release('probe');
+  for (const t of c.targets.list) t.cooldown = 0;
+  /* The state instances hold guards of their own — `WallClimb._left/_line`, `HookSwing._spent`,
+     `RailSlide._offRec`. Leaving them set between probes made a standoff sweep read as
+     alternating success/failure and cost me an hour before I recognised the shape. A player
+     never teleports between rungs; a probe harness does. */
+  const wc = c.sm.get('wallClimb'); if (wc) { wc._left = null; wc._line = null; wc._hold = null; wc._pick = null; }
+  const hs = c.sm.get('hookSwing'); if (hs) hs._spent = false;
+  const rs = c.sm.get('railSlide'); if (rs) rs._offRec = null;
+  engine.input.clear?.();
+  engine.events.length = 0;
+}
+
+test('reach: the ground and air moveset is reachable from spawn with plain input', async () => {
+  const { engine, c } = await realWorld();
+  const SPAWN = V(0, 0, 30);
+  const routes = [
+    ['move', 60, (inp) => { inp.move.y = 1; }],
+    ['jump', 60, (inp, i) => { inp.move.y = 1; if (i > 20) inp.hold('jump'); }],
+    ['fall', 60, (inp, i) => { inp.move.y = 1; if (i > 20) inp.hold('jump'); }],
+    ['doubleJump', 90, (inp, i) => { inp.move.y = 1; if (i === 20) inp.hold('jump'); if (i === 21) inp.let_go('jump'); if (i === 40) inp.hold('jump'); }],
+    // `land` is deliberately absent here — see the arm below. It is reachable only on some
+    // sub-frame phases, and that is a documented Controller defect, not a route problem.
+    ['paraglide', 120, (inp, i) => { inp.move.y = 1; if (i === 20) inp.hold('jump'); if (i > 35) inp.hold('glide'); }],
+    ['dive', 90, (inp, i) => { inp.move.y = 1; if (i === 20) inp.hold('jump'); if (i === 40) inp.hold('attack'); }],
+    ['roll', 90, (inp, i) => { inp.move.y = 1; if (i === 40) inp.hold('crouch'); }],
+    ['skid', 90, (inp, i) => { inp.move.y = i < 40 ? 1 : -1; }],
+    ['crouch', 60, (inp) => inp.hold('crouch')],
+    ['sneak', 60, (inp) => { inp.move.y = 1; inp.hold('sneak'); }],
+    ['combo', 60, (inp, i) => { if (i === 10) inp.hold('attack'); }],
+    ['combatStrafe', 60, (inp) => { inp.hold('focus'); inp.move.x = 1; }],
+    ['pickpocket', 90, (inp, i) => { if (i === 10) inp.hold('interact'); }],
+  ];
+  const found = [];
+  for (const [name, frames, script] of routes) {
+    hardReset(engine, c, SPAWN);
+    let first = -1;
+    for (let i = 0; i < frames && first < 0; i++) {
+      engine.input.beginFrame(DT);
+      engine.input.move.x = 0; engine.input.move.y = 0;
+      script(engine.input, i);
+      engine.time = i * DT;
+      c.update(DT, i * DT);
+      if (c.stateName === name) first = i;
+    }
+    found.push({ name, first });
+  }
+  console.log(`\n[reach] from spawn (0,0,30), real BVH:`);
+  for (const f of found) console.log(`  ${f.name.padEnd(14)} ${f.first >= 0 ? `frame ${f.first}` : '*** NOT REACHED ***'}`);
+  const missed = found.filter((f) => f.first < 0).map((f) => f.name);
+  assert.deepEqual(missed, [], `not reachable from spawn: ${missed.join(', ')}`);
+});
+
+test('reach: land is reachable only on some sub-frame phases — the landImpact race, from the outside', async () => {
+  /* `land` was the one state a plain jump from spawn did not reach, and the cause is already
+     written down in `Controller.TUNE`'s landing block: `landImpact` is read in `_probeGround`
+     as `-velocity.y` on the frame Sly first grounds, but `move()` runs `_moveVertical` first and
+     the swept capsule zeroes `v.y` before the probe ever looks. The probe only wins when the
+     frame before touchdown leaves Sly inside its 0.06 m snap band. That note measured the race
+     from the inside — 12 wins in 40 sub-frame phases. This measures the same defect from the
+     outside, as reachability: how often does the LAND STATE actually happen?
+     Not a bug in this lane's files, and not fixed here. Pinned so that whoever fixes the race
+     sees this number move. */
+  const { engine, c } = await realWorld();
+  let hits = 0, tried = 0;
+  const frames = [];
+  for (let jumpAt = 20; jumpAt < 44; jumpAt++) {
+    hardReset(engine, c, V(0, 0, 30));
+    tried++;
+    let got = -1;
+    for (let i = 0; i < 140 && got < 0; i++) {
+      engine.input.beginFrame(DT);
+      engine.input.move.x = 0; engine.input.move.y = 1;
+      if (i >= jumpAt && i < jumpAt + 6) engine.input.hold('jump'); else engine.input.let_go('jump');
+      engine.time = i * DT;
+      c.update(DT, i * DT);
+      if (c.stateName === 'land') got = i;
+    }
+    if (got >= 0) { hits++; frames.push(got - jumpAt); }
+  }
+  const pct = (hits / tried * 100).toFixed(0);
+  console.log(`\n[reach] land: reached on ${hits}/${tried} take-off phases (${pct}%), ` +
+              `${frames.length ? `${Math.min(...frames)}–${Math.max(...frames)} frames after take-off` : 'never'}`);
+  assert.ok(hits > 0, 'the land state was unreachable on every take-off phase tried');
+  assert.ok(hits < tried, 'land now fires on every phase — the landImpact race is fixed, update this arm');
+});
+
+test('reach: wallClimb works on the shipped ladder, but has no floor to start from', async () => {
+  const { engine, c, arch, collision } = await realWorld();
+  const holds = (arch.api.handholds || []).slice().sort((a, b) => a.point.y - b.point.y);
+  assert.ok(holds.length > 0, 'the level authored no handholds — nothing to test reachability of');
+
+  /* 1. The mechanic works against real level data. Placed at the lowest rung's own hang pose,
+        Sly climbs the real battered pylon face. This is the control: if it failed, everything
+        below would be a story about a broken state rather than about missing floor. */
+  const r0 = holds[0];
+  hardReset(engine, c, V(r0.point.x, r0.point.y - TUNE.hangReach, r0.point.z + 0.45), 0);
+  c.grounded = false; c.velocity.set(0, -0.2, 0); c.sm.set('fall');
+  const caught = [];
+  let prev = null, onRung = 0;
+  for (let i = 0; i < 900; i++) {
+    engine.input.beginFrame(DT);
+    engine.input.move.x = 0; engine.input.move.y = 1;
+    if (c.stateName === 'wallClimb') { onRung++; if (onRung === 1) engine.input.let_go('jump'); else engine.input.hold('jump'); }
+    else { onRung = 0; engine.input.hold('jump'); }
+    engine.time = i * DT;
+    c.update(DT, i * DT);
+    const h = c.sm.get('wallClimb')._hold;
+    if (h && h !== prev) caught.push(h.point.y);
+    prev = h;
+  }
+  console.log(`\n[reach] real ladder: ${caught.length} rungs caught, ` +
+              `y ${Math.min(...caught).toFixed(2)} -> ${Math.max(...caught).toFixed(2)}`);
+  assert.ok(caught.length >= 5, `only caught ${caught.length} rungs on the shipped ladder`);
+
+  /* 2. …and now the finding. The ladder's outward normal is +z; its face sits at z 34.4..36.8.
+        Ask the built level where a player could stand to begin. */
+  const n = r0.normal;
+  const outward = new THREE.Vector3(n.x, 0, n.z).normalize();
+  let standable = null;
+  for (let d = 0.4; d <= 4.0 && !standable; d += 0.2) {
+    for (const lat of [-0.6, -0.3, 0, 0.3, 0.6]) {
+      const x = r0.point.x + outward.x * d + lat * outward.z;
+      const z = r0.point.z + outward.z * d - lat * outward.x;
+      const g = collision.groundCheck(V(x, 80, z), TUNE.radius, 240);
+      // A start is only a start if it is close enough under the rung to jump to it.
+      if (g?.hit && g.y <= r0.point.y - TUNE.hangReach + 0.1 && g.y > r0.point.y - TUNE.hangReach - 3.0) {
+        standable = { x, y: g.y, z, tag: g.tag, d };
+        break;
+      }
+    }
+  }
+  console.log(`[reach] lowest rung ${r0.point.toArray().map((v) => v.toFixed(2)).join(',')} ` +
+              `outward (${outward.x.toFixed(2)}, ${outward.z.toFixed(2)})`);
+  console.log(`[reach] standable ground in front of it: ${standable ? JSON.stringify(standable) : 'NONE within 4 m'}`);
+  /* This is a level-authoring fact, not a moveset bug, so it is REPORTED rather than asserted:
+     asserting "there is no floor" would land red the moment the world lane adds one, which is
+     exactly the outcome we want. What is asserted is the pair that makes the report meaningful —
+     the ladder exists and the state can climb it — so if this ever becomes reachable the only
+     thing that changes is this log line. */
+  assert.ok(holds.length >= 10, 'the ladder shrank; the reachability question has changed');
 });
 
 test('wallClimb: proximity alone does not snag a player who is not reaching for it', async () => {
