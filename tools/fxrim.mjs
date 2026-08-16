@@ -94,7 +94,8 @@ mkdirSync(OUT, { recursive: true });
  * Each arm records the live instance count of every batch, so "this population was empty" can
  * never be mistaken for "this population carries no ink" (§211.1).
  */
-const ARMS = [
+const ONLY_ARMS = (process.env.SANDS_ARMS || '').split(',').map((t) => t.trim()).filter(Boolean);
+const ARMS_ALL = [
   { tag: 'A-ship',     crease: null, hull: 'on',     fx: true,  sly: true,  batch: null },
   { tag: 'B-nocrease', crease: 0,    hull: 'on',     fx: true,  sly: true,  batch: null },
   { tag: 'C-noink',    crease: 0,    hull: 'layers', fx: true,  sly: true,  batch: null },
@@ -104,7 +105,20 @@ const ARMS = [
   { tag: 'P-nodust',   crease: null, hull: 'on',     fx: true,  sly: true,  batch: 'dust'  },
   { tag: 'P-nospark',  crease: null, hull: 'on',     fx: true,  sly: true,  batch: 'spark' },
   { tag: 'Z-null',     crease: null, hull: 'on',     fx: true,  sly: true,  batch: null },
+  /* §408 / item #30. The ring's light reaches past its own quad in the AXIS directions, where
+     geometry cannot put it — the quad's edge is exactly `sz` at azimuth 0 and only its corners
+     reach `sz*sqrt2`. These two arms separate the quad from the spill: with bloom defeated,
+     `G − PG` is the ring's contribution with no pyramid in it, and its radial profile either
+     stops at `sz` (the spill was bloom) or does not (it is something else). `bloomIntensity` is
+     copied into `uBloomIntensity` every frame from `tune`, so it is a live lever exactly like
+     `inkStrength`. */
+  { tag: 'G-nobloom',  crease: null, hull: 'on',     fx: true,  sly: true,  batch: null,   bloom: 0 },
+  { tag: 'PG-noring-nobloom', crease: null, hull: 'on', fx: true, sly: true, batch: 'ring', bloom: 0 },
 ];
+/* SANDS_ARMS selects a subset. The lock is a shared resource and a run that needs three arms
+   should not render nine; every arm still restores all four channels before applying its own,
+   so a subset cannot inherit state from an arm that was skipped. */
+const ARMS = ONLY_ARMS.length ? ARMS_ALL.filter((a) => ONLY_ARMS.includes(a.tag)) : ARMS_ALL;
 
 /**
  * ── SANDS_CENSUS=1: the hull half of §379.1, asked of the scene graph instead of the pixels ──
@@ -191,13 +205,22 @@ if (process.env.SANDS_CENSUS === '1') {
 }
 
 let tree = null;
+let subject = null;
 const got = await withGame({
   width: 1280, height: 720, quality: 'high', timeout: 900000,
   /* Read inside `onLocked`, so it describes the tree vite is about to bundle rather than the
      tree at queue time — on this FIFO those can be an hour apart (harness.mjs's own note). */
   onLocked: () => { tree = treeState(); },
 }, async ({ page, info }) => {
-  await page.evaluate(async (s) => { await window.__GAME.setShot(s, { dt: 0 }); }, SHOT);
+  /* `subject` is `Debug._subject`: where the character was asked to stand, where staging put
+     him, and where he actually was. `setShot` has always returned it and every consumer threw
+     it away (fixed in `grab()` for the critic path; this is the same fix for this tool). It is
+     the discriminator for whether an offset lives above the character root or below it. */
+  subject = await page.evaluate(async (s) => {
+    const r = await window.__GAME.setShot(s, { dt: 0 });
+    return r?.subject ?? null;
+  }, SHOT);
+  console.log(`subject: ${JSON.stringify(subject)}`);
   const out = [];
   for (const a of ARMS) {
     out.push(await page.evaluate(async (arm) => {
@@ -208,6 +231,9 @@ const got = await withGame({
       /* Every arm restores all three channels before applying its own, so arm order cannot
          leak. PostFX copies tune.inkStrength into its uniform every frame. */
       postfx.tune.inkStrength = (arm.crease === null) ? 0.95 : arm.crease;
+      /* Restored to the shipped value on every arm before being overridden, same as the crease
+         lever, so arm order cannot leak. */
+      postfx.tune.bloomIntensity = (arm.bloom == null) ? 0.50 : arm.bloom;
 
       let hulls = 0;
       eng.scene.traverse((o) => {
@@ -249,7 +275,7 @@ const got = await withGame({
       return {
         tag: arm.tag,
         applied: {
-          inkStrength: postfx.tune.inkStrength, hullDefeat: arm.hull, hulls,
+          inkStrength: postfx.tune.inkStrength, bloomIntensity: postfx.tune.bloomIntensity, hullDefeat: arm.hull, hulls,
           fxRootFound: !!fxRoot, fxVisible: fxRoot ? fxRoot.visible : null,
           slyRootFound: !!slyRoot, slyVisible: slyRoot ? slyRoot.visible : null,
           batchHidden: arm.batch ?? null, batchFound, live,
@@ -258,7 +284,7 @@ const got = await withGame({
       };
     }, a));
   }
-  return { arms: out, renderer: info.renderer, warnings: info.warnings };
+  return { arms: out, renderer: info.renderer, warnings: info.warnings, subject };
 });
 
 /* ── PER-ARM tree stamping (§398, applied to this tool) ──────────────────────────────────────
@@ -285,20 +311,46 @@ for (const r of got.arms) {
     + (moved ? `  §186 TREE MOVED ${tree.src} → ${now.src}` : ''));
 }
 if (straddled) {
-  console.log(`\n!! §186: src/** moved while this set was capturing. The arms are UNATTRIBUTABLE`);
-  console.log(`   as a set — re-take in a quiet window, or score only questions that cannot turn`);
-  console.log(`   on the files that moved, and say which in the write-up.`);
+  /* A move relative to LOCK TIME is not the same fault as a move BETWEEN FRAMES, and the first
+     version of this warning could not tell them apart — it condemned a set whose arms all
+     carried one identical post-move hash, which is a homogeneous set captured from a tree that
+     changed before the first frame existed. Under `SANDS_NO_HMR=1` the page bundles once at
+     boot, so that set is attributable to the tree the arms agree on. Only a disagreement AMONG
+     the arms is a straddle. */
+  const armTrees = [...new Set(rows.map((r) => r.tree?.src))];
+  if (armTrees.length === 1) {
+    console.log(`\n!! §186: src/** moved between lock time (${tree?.src}) and the first frame.`);
+    console.log(`   Every arm carries ${armTrees[0]}, so the SET IS HOMOGENEOUS and is attributable`);
+    console.log(`   to that tree — not to the one recorded at lock time. No arm straddles an edit.`);
+  } else {
+    console.log(`\n!! §186: src/** moved BETWEEN FRAMES — the arms carry ${armTrees.length} different trees:`);
+    console.log(`   ${armTrees.join(', ')}`);
+    console.log(`   The set is UNATTRIBUTABLE. Re-take it in a quiet window, or score only`);
+    console.log(`   questions that cannot turn on the files that moved, and say which.`);
+  }
 }
 writeFileSync(`${OUT}/arms.json`, JSON.stringify({
-  shot: SHOT, at: new Date().toISOString(), tree, renderer: got.renderer,
+  shot: SHOT, at: new Date().toISOString(), tree, renderer: got.renderer, subject: got.subject,
   warnings: got.warnings, arms: rows,
 }, null, 2));
 
-/* The two instrument checks that can be made from shas alone, printed here so a killed scoring
-   run still leaves the verdict on them in the log. */
+/* The instrument checks that can be made from shas alone, printed here so a killed scoring run
+   still leaves the verdict on them in the log.
+   GUARDED ON PRESENCE. The first version printed all four unconditionally, and with SANDS_ARMS
+   selecting a subset the absent arms compared `undefined !== <sha>` and printed YES — three
+   false confirmations in the alert run's log, on levers that had not been exercised at all. A
+   check that passes when it was never run is the §210.2 shape and it was mine. */
 const sha = (t) => rows.find((r) => r.arm === t)?.sha;
-console.log(`\nZ == A  ${sha('Z-null') === sha('A-ship') ? 'YES — the renderer is deterministic across arms' : 'NO — EVERY MASK BELOW IS NOISE'}`);
-console.log(`C != A  ${sha('C-noink') !== sha('A-ship') ? 'YES — the ink levers move pixels' : 'NO — the ink defeat is dead, the ink map would be empty'}`);
-console.log(`N != A  ${sha('N-nofx') !== sha('A-ship') ? 'YES — the FX lever moves pixels' : 'NO — the FX defeat is dead, the presence probe cannot fire'}`);
-console.log(`S != A  ${sha('S-nosly') !== sha('A-ship') ? 'YES — the Sly lever moves pixels' : 'NO — the hero locator is dead, the MUST-FIND probe cannot fire'}`);
+const check = (a, b, yes, no) => {
+  if (sha(a) === undefined || sha(b) === undefined) {
+    console.log(`${a} vs ${b}: not captured in this run — no verdict`);
+    return;
+  }
+  console.log(sha(a) === sha(b) ? yes : no);
+};
+check('Z-null', 'A-ship', '\nZ == A  YES — the renderer is deterministic across arms',
+  '\nZ == A  NO — EVERY MASK BELOW IS NOISE');
+check('C-noink', 'A-ship', 'C != A  NO — the ink defeat is dead, the ink map would be empty', 'C != A  YES — the ink levers move pixels');
+check('N-nofx', 'A-ship', 'N != A  NO — the FX defeat is dead, the presence probe cannot fire', 'N != A  YES — the FX lever moves pixels');
+check('S-nosly', 'A-ship', 'S != A  NO — the hero locator is dead, the MUST-FIND probe cannot fire', 'S != A  YES — the Sly lever moves pixels');
 console.log(`\n→ ${OUT}/  · score with:  node tools/fxrimscore.mjs ${OUT}`);
