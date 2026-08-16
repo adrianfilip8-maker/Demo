@@ -1214,28 +1214,51 @@ test('census: the one state with no self-timeout is dive, and a void is its wors
  * down, because the world lane is actively editing this geometry and a test full of hard-coded
  * coordinates would be measuring last week's level.
  */
+/**
+ * The whole world, in MANIFEST order — `terrain`, `architecture`, `props`, then `collision`.
+ *
+ * **Architecture alone is not the level, and believing it was cost this lane a whole round.**
+ * `Terrain.js:1071` registers the desert sand as a plain `ground` collider and `Props.js`
+ * registers the banner masts as `pole`s. With only `Architecture` built, the courtyard
+ * `groundProxy` is the sole floor in the world, so a grid search for "nearest standable ground"
+ * to a target just outside the entry pylon's south face lands on the FAR side of the pylon and
+ * reports 6.45 m of solid masonry in between. Every number in that finding was produced
+ * correctly, by a correct method, about a game that does not exist.
+ *
+ * The habit this encodes: a harness that omits a module does not fail. It runs, it returns, and
+ * its numbers are plausible. So the collider count is asserted against the shipped total rather
+ * than trusted — if a module stops loading here, this fails instead of quietly lying.
+ */
 async function realWorld() {
+  const { Terrain } = await import('../src/world/Terrain.js');
   const { Architecture } = await import('../src/world/Architecture.js');
+  const { Props } = await import('../src/world/Props.js');
   const { Collision } = await import('../src/world/Collision.js');
   const engine = stubEngine();
   const queued = [];
-  let collision = null, arch = null;
+  const mods = {};
+  let collision = null;
   const guardBody = { position: V(0, 0, 28), pocketPosition: V(0, 1, 28), headY: 1.6, state: 'patrol' };
-  engine.get = (m) => (m === 'collision' ? collision : m === 'architecture' ? arch
-    : m === 'guards' ? { nearest: () => guardBody, nearestPickpocketTarget: () => guardBody } : null);
+  engine.get = (m) => (m === 'collision' ? collision
+    : m === 'guards' ? { nearest: () => guardBody, nearestPickpocketTarget: () => guardBody }
+    : mods[m] || null);
   engine.registerCollider = (mesh, opts = {}) => {
     const rec = { mesh, tag: opts.tag || 'ground', climbable: !!opts.climbable, material: opts.material || 'stone', oneWay: !!opts.oneWay, ...opts };
     if (collision?.add) collision.add(rec); else queued.push(rec);
     return rec;
   };
-  arch = new Architecture(engine);
-  await arch.init();
+  mods.terrain = new Terrain(engine);
+  await mods.terrain.init();
+  mods.architecture = new Architecture(engine);
+  await mods.architecture.init();
+  mods.props = new Props(engine);
+  await mods.props.init();
   collision = new Collision(engine);
   for (const r of queued) collision.add(r);
   await collision.init();
   const c = new Controller(engine);
   await c.init();
-  return { engine, c, arch, collision };
+  return { engine, c, arch: mods.architecture, collision, mods };
 }
 
 /** Reset every scrap of per-run state, including the guards this lane added to the states. */
