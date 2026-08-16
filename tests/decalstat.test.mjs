@@ -32,8 +32,9 @@ import * as THREE from 'three';
 import { SHOTS } from '../src/core/Shots.js';
 import {
   TUNE, contactDiscGeometry, tintMultiplier, reachFor, shadowLengthOf, SHADOW_LEN_MAX,
-  groundFootprint, baseRadiusOf,
+  groundFootprint, baseRadiusOf, ContactDecals,
 } from '../src/world/Decals.js';
+import { primeKayKitAssets } from './_kaykitboot.mjs';
 import { Props } from '../src/world/Props.js';
 import * as STATUES from '../src/world/Statues.js';
 import { rng } from '../src/core/Rand.js';
@@ -83,10 +84,28 @@ const engine = {
   get: () => null, has: () => false, on: () => () => {}, emit: () => {},
   registerCollider: (m, o) => REG.push({ mesh: m, opts: o }),
 };
+/**
+ * Every contact decal in the level, with its centre.
+ *
+ * The px table in `Decals.js`'s header is a statement about CONTACT DECALS, and both `Props` and
+ * `KayKit` feed the same `ContactDecals`. Measuring it against KayKit props alone reproduces
+ * three of the five figures and misattributes the other two, so both producers are booted.
+ * KayKit needs no DOM here — `_kaykitboot`'s cache priming is the whole seam (§395.1).
+ */
+const DECALS = [];
+const origDecalAdd = ContactDecals.prototype.add;
+ContactDecals.prototype.add = function (x, y, z, r, h = 0) {
+  DECALS.push({ x, y, z, r, owner: this.name || '?' });
+  return origDecalAdd.call(this, x, y, z, r, h);
+};
 await new Architecture(engine).init();
 const P = new Props(engine);
 await P.init();
 Props.prototype._absorb = origAbsorb;
+primeKayKitAssets();
+const { KayKit } = await import('../src/world/KayKit.js');
+await new KayKit(engine).init();
+ContactDecals.prototype.add = origDecalAdd;
 
 const SPHINX = BAGS.filter((b) => b.label === '_sphinxAvenue' && b.tris > 1000);
 const FALLEN = BAGS.filter((b) => b.label === '_sphinxAvenue' && b.tris <= 1000);
@@ -327,38 +346,118 @@ test('C2: the "near ~40 % of the cast shadow" claim, under the shader\'s own geo
     + 'distinguishes which quantity the comment meant');
 });
 
-test('C3: the px table is 900p at each shot\'s nearest prop — and one entry is inherited stale', () => {
-  /* "4.5 cm subtends 12.57 px at sly-closeup, 5.02 at interior, 3.43 at hero, 2.48 at temple and
-     1.11 px at courtyard." Solving each for its distance at 1600x900 (`tools/shot.mjs`'s default)
-     gives 4.68 / 8.27 / 13.91 / 15.69 / 35.04 m — every one within a few percent of that shot's
-     nearest KayKit prop, which is the basis. The arm pins the arithmetic, not the distances,
-     because the placement table has moved under them since. */
-  const px = Object.fromEntries([...DECALS_SRC.matchAll(/([\d.]+) px at `([a-z-]+)`/g)].map((m) => [m[2], +m[1]]));
-  const inline = /subtends ([\d.]+) px at `([a-z-]+)`, ([\d.]+) px at `([a-z-]+)`, ([\d.]+) px\s*\n?\s*\*?\s*at `([a-z-]+)`, ([\d.]+) px at `([a-z-]+)`/.exec(DECALS_SRC);
-  assert.ok(inline || Object.keys(px).length >= 2, 'the px table is no longer parseable from the header');
-  const H = 900;
-  const rows = [];
-  for (const [shot, claimed] of Object.entries(px)) {
-    if (!SHOTS[shot]) continue;
-    const tan = Math.tan(THREE.MathUtils.degToRad(SHOTS[shot].fov / 2));
-    rows.push({ shot, claimed, d: (0.045 * H) / (2 * claimed * tan) });
-  }
-  console.log('  C3: ' + rows.map((r) => `${r.shot} ${r.claimed}px -> ${r.d.toFixed(2)} m`).join(' · '));
-  assert.ok(rows.length >= 2, `parsed only ${rows.length} px claims from the header`);
+/**
+ * The px table, parsed from the SENTENCE that states it.
+ *
+ * ── the previous parse was wrong, and it was wrong in the way §397.6 had just been fixed ──────
+ * This arm used to build its table with `/([\d.]+) px at \`([a-z-]+)\`/g` over the WHOLE FILE.
+ * Two failures, and the arm passed through both:
+ *
+ *   · `3.43 px\n * at \`hero\`` wraps between the number and the shot, so **`hero` was never in
+ *     the table at all** — the same silent-drop shape `shotsee.mjs` had (§397.6), one round after
+ *     I fixed it there, in an arm of my own.
+ *   · The pattern also matches prose. `TUNE.soft`'s docblock 135 lines below reads *"0.03 ~ 2 px
+ *     at `interior`"*, and being later in the file it **overwrote `interior` 5.02 with 2**. The
+ *     arm then verified 2, a number the header does not state about a quantity it is not about.
+ *
+ * Neither could fail, because the only per-entry check was a round trip that is algebraically an
+ * identity: `d = k/px` then `px = k/d` returns whatever went in, for any input. **A check that
+ * inverts its own formula tests nothing** — §396.2's "wrong call that cannot fail" again.
+ *
+ * So the table is now read from the one sentence that is the table, line-wrap tolerantly, and the
+ * count is asserted.
+ */
+const PX_TABLE = (() => {
+  const s = /4\.5 cm subtends([\s\S]*?)— below the texel floor/.exec(DECALS_SRC);
+  assert.ok(s, 'the px table sentence is no longer in Decals.js — this arm must be re-anchored');
+  return [...s[1].matchAll(/\*{0,2}([\d.]+) px\*{0,2}\s*(?:\n\s*\*\s*)?at `([a-z-]+)`/g)]
+    .map((m) => ({ shot: m[2], px: +m[1] }));
+})();
+const PX_H = 900;                                   // `tools/shot.mjs` defaults to 1600x900
+const dFor = (fov, px) => (0.045 * PX_H) / (2 * px * Math.tan(THREE.MathUtils.degToRad(fov / 2)));
+const pxFor = (fov, d) => (0.045 * PX_H) / (2 * d * Math.tan(THREE.MathUtils.degToRad(fov / 2)));
+
+test('C3: the px table is 900p at each shot\'s nearest contact decal — TWO entries are stale', () => {
+  /* "4.5 cm subtends 12.57 px at `sly-closeup`, 5.02 px at `interior`, 3.43 px at `hero`, 2.48 px
+     at `temple` and 1.11 px at `courtyard`." Each inverts to a distance, and the basis is the
+     nearest CONTACT DECAL in that shot's frustum — Props' and KayKit's alike, since both feed the
+     same batch. Three of the five still reproduce. Two do not, and they are RECORDED rather than
+     asserted true, because a bar that fails on HEAD is a broken build and not a bar (§395.4). */
+  assert.equal(PX_TABLE.length, 5, `the header table now states ${PX_TABLE.length} figures, not five`);
+  assert.deepEqual(PX_TABLE.map((r) => r.shot), ['sly-closeup', 'interior', 'hero', 'temple', 'courtyard'],
+    'the shots the px table names have changed');
+  assert.ok(DECALS.length > 0, 'inspected 0 contact decals');
+
+  const rows = PX_TABLE.map(({ shot, px }) => {
+    const s = SHOTS[shot];
+    assert.ok(s, `the px table names "${shot}", which is not in Shots.js`);
+    const cam = camOf(s);
+    let near = Infinity, owner = null;
+    for (const d of DECALS) {
+      const p = new THREE.Vector3(d.x, d.y + 0.02, d.z);
+      const n = p.clone().project(cam);
+      if (!(n.x >= -1 && n.x <= 1 && n.y >= -1 && n.y <= 1 && n.z >= -1 && n.z <= 1)) continue;
+      const dist = cam.position.distanceTo(p);
+      if (dist < near) { near = dist; owner = d.owner; }
+    }
+    const implied = dFor(s.fov, px);
+    return { shot, px, implied, near, owner, err: 100 * Math.abs(implied - near) / near, now: pxFor(s.fov, near) };
+  });
+  console.log('  C3:\n' + rows.map((r) => `     ${r.shot.padEnd(12)} ${String(r.px).padStart(5)} px -> ${r.implied.toFixed(2).padStart(6)} m · `
+    + `nearest decal ${r.near.toFixed(2).padStart(6)} m (${r.owner}) = ${r.now.toFixed(2)} px · `
+    + (r.err < 6 ? `holds (${r.err.toFixed(1)} %)` : `STALE by ${r.err.toFixed(0)} %`)).join('\n'));
+
   for (const r of rows) {
-    assert.ok(r.d > 1 && r.d < 120, `${r.shot}'s ${r.claimed} px implies ${r.d.toFixed(1)} m, which is not a plausible prop distance`);
-    /* and each must invert: the stated px is what 4.5 cm subtends at that distance */
-    const back = (0.045 * H) / (2 * r.d * Math.tan(THREE.MathUtils.degToRad(SHOTS[r.shot].fov / 2)));
-    agrees(back, r.claimed, 0.01, `${r.shot} px round-trip`);
+    assert.ok(Number.isFinite(r.near), `${r.shot} has no contact decal in frustum — inspected nothing`);
+    assert.ok(r.implied > 1 && r.implied < 120, `${r.shot}'s ${r.px} px implies ${r.implied.toFixed(1)} m, which is not a plausible prop distance`);
   }
-  /* `courtyard` is the one the rest of the file leans on, and it derives from the 35 m that is
-     the near end of the "35-51 m" band §395.3 corrected in KayKit.js and did NOT correct here. */
+  /* the three that hold */
+  for (const s of ['sly-closeup', 'interior', 'temple']) {
+    const r = rows.find((q) => q.shot === s);
+    assert.ok(r.err < 6, `${s} was within 6 % of its nearest decal and is now ${r.err.toFixed(1)} % out — `
+      + 'a fourth entry has gone stale and the header note needs it');
+  }
+  /* and the two that do not, pinned with the corrected figures so the src fix is a one-liner */
   const court = rows.find((r) => r.shot === 'courtyard');
-  assert.ok(court, 'the courtyard px figure is gone from the header');
-  agrees(court.d, 35.0, 0.1, 'the courtyard px figure derives from a 35 m prop distance');
+  const hero = rows.find((r) => r.shot === 'hero');
+  agrees(court.implied, 35.04, 0.1, 'the courtyard figure still derives from a 35 m prop distance');
+  agrees(court.near, 11.25, 0.2, 'the nearest contact decal in `courtyard`');
+  agrees(court.now, 3.46, 0.05, 'what 4.5 cm ACTUALLY subtends at courtyard\'s nearest decal');
+  agrees(hero.implied, 13.91, 0.1, 'the hero figure still derives from a 13.9 m prop distance');
+  agrees(hero.near, 24.10, 0.2, 'the nearest contact decal in `hero`');
+  agrees(hero.now, 1.98, 0.05, 'what 4.5 cm ACTUALLY subtends at hero\'s nearest decal');
+  /* `courtyard`'s is inherited from the "35-51 m" band §395.3 corrected in KayKit.js and did NOT
+     correct here. When that sentence is fixed the 1.11 has to move with it, and this fails first. */
   assert.match(DECALS_SRC, /35[–-]51 m/,
-    'the "35-51 m" band has been corrected here — if so, the 1.11 px figure derived from its near '
-    + 'end needs re-deriving with it, and this arm needs rewriting');
+    'the "35-51 m" band has been corrected here — so the 1.11 px derived from its near end must be '
+    + 'corrected too, and this arm rewritten to assert the new figure rather than record the old');
+  /* the argument the table exists to make survives both corrections, and that is worth asserting
+     rather than assuming: even at the CORRECTED near distances, no figure reaches the ~4 px a
+     screen-space contact term would need. */
+  assert.ok(Math.max(court.now, hero.now) < 4.0,
+    'a corrected px figure now exceeds 4 px, which weakens the header\'s "below the texel floor" '
+    + 'argument rather than merely restating it — that is a design question, not a comment fix');
+});
+
+test('C3 CALIBRATION: the regex this arm used to carry still mis-reads the same file', () => {
+  /* MUST FIRE. C3's parse was replaced, and a replaced parse is only a fix if the old one is
+     demonstrably wrong on the shipped text. Run the old pattern here: it must still drop `hero`
+     and must still return an `interior` that the header's table does not state. */
+  const old = Object.fromEntries([...DECALS_SRC.matchAll(/([\d.]+) px at `([a-z-]+)`/g)].map((m) => [m[2], +m[1]]));
+  const good = Object.fromEntries(PX_TABLE.map((r) => [r.shot, r.px]));
+  console.log(`  C3 calib: the old whole-file regex yields ${JSON.stringify(old)}`);
+  console.log(`  C3 calib: the table sentence yields      ${JSON.stringify(good)}`);
+  assert.ok(!('hero' in old),
+    '`hero` is now reachable by the old whole-file regex, so the line wrap that hid it is gone and '
+    + 'this calibration no longer demonstrates the defect it records');
+  assert.ok('hero' in good, 'the new parse has itself lost `hero`');
+  assert.notEqual(old.interior, good.interior,
+    'the old regex now agrees with the table on `interior`, so the prose that overwrote it has been '
+    + 'reworded and this calibration is dead');
+  assert.equal(good.interior, 5.02, 'the header no longer states 5.02 px at `interior`');
+  assert.match(DECALS_SRC, /0\.03 ~ 2 px at `interior`/,
+    'the TUNE.soft comment that overwrote the table entry has been reworded — good, and this arm '
+    + 'must then be retired rather than left asserting a defect that is gone');
 });
 
 /* ============================ 3. Statues ============================ */
@@ -448,6 +547,108 @@ test('T3: the avenue is uniform BY DESIGN — measured, and not the rope-coil de
   }
   console.log(`  T3: worst frame is "${worstShot}" with ${worst} identical silhouettes (basketvary A1 bar is 2)`);
   assert.ok(worst <= 2, `${worstShot} sees ${worst} sphinxes of one silhouette; basketvary's bar for the same defect is 2`);
+});
+
+test('T3b: the avenue does not PASS `basketvary` A1 so much as GRAZE it, and the graze is the quantiser', () => {
+  /* T3 above transfers `basketvary`'s A1 — no camera sees more than two identical silhouettes —
+     and the shipped avenue scores exactly 2. Passing at the bar is not the same as passing, so
+     this arm asks what the 2 is made of. Three measurements, and all three say the bar is
+     reporting the 5 cm BUCKET rather than the avenue:
+
+       · the two sphinxes that collide are not identical. They differ by up to 3.8 cm and share a
+         bucket only because 5 cm is wider than that. At a 4 cm bucket the whole level scores 1.
+       · `sly-arm` sees THREE sphinxes and sorts them into two buckets, so "two in one bucket" is
+         forced by the pigeonhole and not by the art.
+       · the largest bucket globally holds FOUR of the sixteen. The bar holds only because those
+         four have never yet shared a frame, which is a fact about camera placement.
+
+     None of that makes the avenue wrong — T3's finding stands, the uniformity is deliberate. It
+     makes the BAR the wrong instrument for this object, and the right response is to say so in
+     the arm rather than to keep a number that will go red for a reason nobody can act on. */
+  const S5 = (v) => Math.round(v / 0.05);
+  const sizeOf = (b) => { const s = new THREE.Vector3(); b.bb.getSize(s); return s; };
+  const sigAt = (b, q) => { const s = sizeOf(b); return `${Math.round(s.x / q)}x${Math.round(s.y / q)}x${Math.round(s.z / q)}`; };
+  assert.ok(SPHINX.length > 0, 'inspected 0 sphinxes');
+
+  /* 1. which frames sit at the bar, and which pair does it */
+  const atBar = [];
+  for (const [name, s] of Object.entries(SHOTS)) {
+    const cam = camOf(s);
+    const f = new THREE.Frustum().setFromProjectionMatrix(
+      new THREE.Matrix4().multiplyMatrices(cam.projectionMatrix, cam.matrixWorldInverse));
+    const groups = {};
+    let seen = 0;
+    for (let i = 0; i < SPHINX.length; i++) {
+      if (!f.intersectsBox(SPHINX[i].bb)) continue;
+      seen++;
+      (groups[sigAt(SPHINX[i], 0.05)] ||= []).push(i);
+    }
+    const worst = Math.max(0, ...Object.values(groups).map((g) => g.length));
+    if (worst >= 2) atBar.push({ name, seen, buckets: Object.keys(groups).length, worst, groups });
+  }
+  console.log('  T3b: frames at the bar — ' + atBar.map((a) => `${a.name} (sees ${a.seen} in ${a.buckets} buckets, worst ${a.worst})`).join(' · '));
+  assert.ok(atBar.length > 0, 'no frame reaches 2 any more — T3\'s "worst 2" has moved and this arm with it');
+  assert.deepEqual(atBar.map((a) => a.name).sort(), ['dunes', 'sly-arm'],
+    'a different set of frames now sits at the bar; T3 names sly-arm and reports whichever it finds first');
+
+  /* 2. the colliding pair is CO-BUCKETED, not identical */
+  const arm = atBar.find((a) => a.name === 'sly-arm');
+  assert.equal(arm.seen, 3, `sly-arm sees ${arm.seen} sphinxes; with 3 into 2 buckets a pair is forced`);
+  const pair = Object.values(arm.groups).find((g) => g.length === 2);
+  const [a0, a1] = pair.map((i) => sizeOf(SPHINX[i]));
+  const delta = Math.max(Math.abs(a0.x - a1.x), Math.abs(a0.y - a1.y), Math.abs(a0.z - a1.z));
+  console.log(`  T3b: sly-arm's pair differs by ${(delta * 100).toFixed(2)} cm at worst — bucket width is 5 cm`);
+  assert.ok(delta > 0.005,
+    `the pair differs by ${(delta * 1000).toFixed(1)} mm; they have become genuinely identical, which is a `
+    + 'real clone family and a different finding from the one recorded here');
+  assert.ok(delta < 0.05, `the pair differs by ${(delta * 100).toFixed(1)} cm, so they no longer share a 5 cm bucket`);
+
+  /* 3. the bucket sweep: the number the bar reads is set by the bucket width */
+  const worstAt = (q) => {
+    let w = 0;
+    for (const s of Object.values(SHOTS)) {
+      const cam = camOf(s);
+      const f = new THREE.Frustum().setFromProjectionMatrix(
+        new THREE.Matrix4().multiplyMatrices(cam.projectionMatrix, cam.matrixWorldInverse));
+      const g = {};
+      for (const b of SPHINX) if (f.intersectsBox(b.bb)) g[sigAt(b, q)] = (g[sigAt(b, q)] || 0) + 1;
+      w = Math.max(w, 0, ...Object.values(g));
+    }
+    return w;
+  };
+  const sweep = [0.02, 0.03, 0.04, 0.05, 0.08, 0.10, 0.15].map((q) => ({ q, w: worstAt(q) }));
+  console.log('  T3b: bucket sweep — ' + sweep.map((s) => `${(s.q * 100).toFixed(0)}cm:${s.w}`).join(' '));
+  assert.equal(worstAt(0.04), 1,
+    'at a 4 cm bucket the avenue no longer scores 1, so the graze at 5 cm is not purely a rounding '
+    + 'artifact any more and the reading recorded here needs revisiting');
+  assert.ok(worstAt(0.10) >= 3, 'at a 10 cm bucket the avenue no longer exceeds the bar, so the '
+    + 'sensitivity this arm records has gone');
+
+  /* 4. the fragility, stated as a distance rather than as an opinion: the largest bucket holds
+     four, and `dunes` — which already sees nine of the sixteen — has a fifth member of a full
+     bucket sitting just outside its frustum. A camera nudge, not an art change, turns T3 red. */
+  const glob = {};
+  for (let i = 0; i < SPHINX.length; i++) (glob[sigAt(SPHINX[i], 0.05)] ||= []).push(i);
+  const biggest = Math.max(...Object.values(glob).map((g) => g.length));
+  const dunes = atBar.find((a) => a.name === 'dunes');
+  const dunesCam = camOf(SHOTS.dunes);
+  let nearestOutside = Infinity;
+  for (const [k, g] of Object.entries(dunes.groups)) {
+    if (g.length < 2) continue;
+    for (const i of (glob[k] || [])) {
+      if (g.includes(i)) continue;
+      const n = SPHINX[i].bb.getCenter(new THREE.Vector3()).project(dunesCam);
+      nearestOutside = Math.min(nearestOutside, Math.max(Math.abs(n.x), Math.abs(n.y)) - 1);
+    }
+  }
+  console.log(`  T3b: largest 5 cm bucket holds ${biggest} of ${SPHINX.length}; the nearest sphinx that would `
+    + `take \`dunes\` to 3 is ${nearestOutside.toFixed(2)} NDC outside its frame`);
+  assert.ok(biggest >= 3,
+    `the largest 5 cm bucket now holds ${biggest}, so no frame could reach 3 however the cameras move — `
+    + 'the fragility this arm records is gone and T3\'s bar has become safe');
+  assert.ok(nearestOutside < 1.0,
+    `the nearest out-of-frame member of a full \`dunes\` bucket is ${nearestOutside.toFixed(2)} NDC out; `
+    + 'it was 0.35, and if it has moved far away the fragility recorded here no longer holds');
 });
 
 test('T3 CALIBRATION: the isolated-builder measurement that would have called this a clone family', () => {
