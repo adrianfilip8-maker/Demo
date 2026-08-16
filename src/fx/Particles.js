@@ -182,6 +182,33 @@ export const TUNE = {
      PLANAR rings are exempt by construction in the shader — `cane_ring` reaches frac 1.89
      and is the standing second suspect, deliberately NOT changed here so that one lever
      moves at a time. */
+  /* ── `d = 4.906 m`: the one input in the arithmetic above that is INHERITED ──────────────
+     Everything else in the 1.134 derivation is re-derivable from committed source: `P11` from
+     `SHOTS.combat.fov` 40, `heavy` 1.35 from `_onCaneHit`, `size0` 1.5 from the catalogue, and
+     the identity itself from PARTICLE_VERT's `uMaxSize` clamp. `d` is not. It comes from
+     PREREG-combatrecipient §0.2 and it is the view depth of the impact ANCHOR, which
+     `_stageShot` builds from `mv.position` plus a 1.05 m push along the swing axis — so it
+     exists only once a character is posed.
+
+     TO RE-DERIVE IT you need, and only need: a boot with `SHOTS.combat` applied (so the camera
+     is at [4.6, 2.35, 31.4] looking at [-0.6, 1.5, 27.0] and the player is posed at
+     [0, 0, 28.0]), then the anchor `_stageShot` computes, transformed into view space —
+     `-(viewMatrix * anchor).z`. No capture and no lock: it is a scene-graph read, and a headless
+     boot that can pose the character can print it. Nothing in `tests/` poses one today, which is
+     why it is still inherited.
+
+     WHAT DEPENDS ON IT: the 1.134 / 817 px emission figure, the 0.9199 / 662 px capture figure,
+     and the ceiling's own 324 px. All three scale as 1/d, so a 10% error in `d` moves all three
+     by 10% TOGETHER — it cannot change which is larger, so the VERDICT that produced
+     `flashMaxH` (the flash is wider than the hero) is insensitive to it. What `d` does control
+     is whether 0.45 is the right ceiling VALUE.
+
+     The circumstantial support is strong and it is worth stating precisely, because
+     circumstantial is the right word: at this `d`, the capture-age prediction 0.9199 matches the
+     halo measured on `goldlobe1/combat.base.png` (0.9170) to 0.32%, and independently
+     `cane_ring`'s recorded 1.55 m half-extent at capture age reproduces to 4 s.f. from the same
+     latency. Two figures taken for unrelated purposes agree with it. That is evidence `d` is
+     close to right; it is not a derivation, and one boot would replace it with one. */
   flashMaxH: 0.45,
 
   /* light shafts (rendered from lighting.shafts) --------------------------------------
@@ -1607,6 +1634,46 @@ export const STAGE_LATENCY = 3 / 60;
  * and 19% is — a verdict reached from two blank rectangles was already void, so there was no
  * live comparison here to protect. Every age is under its emitter's SHORTEST life, so `_emit`
  * drops none of the population.
+ */
+/**
+ * PRE-REGISTERED, UNRUN — the check that closes the re-age and the un-doubling.
+ *
+ * Written before any capture exists, because it costs nothing now and is worth a great deal
+ * the first time the tree is quiet. §186 held the lock for this whole lineage; three lanes were
+ * editing `src/**` and a capture would have been unreconstructible.
+ *
+ * **The open question.** Until `2215d77` every staged effect reached the film twice
+ * (`_stageShot` ran twice per capture and rebased `_t` to 0 on both calls, so the first set was
+ * re-born under the second rather than aging out). Additive blending is linear in coincident
+ * sprites, so `combat`'s additive staging carried 105.40 alpha-units where gameplay carries
+ * 52.70 — every frame anyone has formed an opinion on was twice as bright as the game. It now
+ * looks *correct*, which is not the same as looking *right*, and nobody has seen it.
+ *
+ *   SHOT      `combat`. It has the most staged additive energy of any canonical shot and it is
+ *             the one the halving moves furthest.
+ *   REGION    (a) the impact annulus — the `cane_ring` / `cane_flash` disc centred on the hit
+ *             anchor; RESULT-fxshape2 already isolated it by differencing `base` against a
+ *             `noring` arm, which is the same instrument to reuse.
+ *             (b) CONTROL: the right third of the frame, which RESULT-fxshape2 measured as
+ *             bit-stable across arms. If (b) moves, the run is void and (a) means nothing.
+ *   QUANTITY  mean luma lift of (a), base minus `noring`, in the same units as the sealed
+ *             +0.0985. NOT a pixel count: a threshold-crossing count moves with brightness in a
+ *             way that depends on the falloff shape, and this needs a linear quantity.
+ *
+ * **Registered prediction, both bounds.** Pre-tonemap radiance halves exactly; AgX is
+ * compressive, so the *displayed* lift halves at most and by less where the curve is bending.
+ * The contribution must therefore land in **[0.049, 0.0985)**:
+ *
+ *   >= 0.0985   the un-doubling did not take. Something still stages twice.
+ *   <  0.049    IT WENT TOO FAR. A linear halving is the floor; below it, the clear removed
+ *               more than the duplicate — a real regression, not a repair.
+ *   in between  as predicted, and the gap from 0.049 tells you how hard AgX is compressing.
+ *
+ * **Second, independent read-failure bar.** §7.2's failure state for `interior` was `heroWarm`
+ * at exactly 0.00% — not one pixel of 921 600 simultaneously warm, bright and saturated. If
+ * `combat`'s `heroWarm` reaches 0.00% after the halving, the flash has stopped registering as
+ * fire at all, and that is a FAIL whatever the luma arithmetic says. A frame can be numerically
+ * correct and read as nothing; this is the bar that catches it.
  */
 const STAGE_CANE = {
   cane_flash: 0.001, cane_ring: 0.045, cane_spark: 0.002, cane_debris: 0.079,
