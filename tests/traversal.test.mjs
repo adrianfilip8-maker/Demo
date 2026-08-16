@@ -1332,7 +1332,7 @@ test('reach: land is reachable only on some sub-frame phases — the landImpact 
   assert.ok(hits < tried, 'land now fires on every phase — the landImpact race is fixed, update this arm');
 });
 
-test('reach: wallClimb works on the shipped ladder, but has no floor to start from', async () => {
+test('reach: wallClimb climbs the shipped ladder, but its authored entry is out of range', async () => {
   const { engine, c, arch, collision } = await realWorld();
   const holds = (arch.api.handholds || []).slice().sort((a, b) => a.point.y - b.point.y);
   assert.ok(holds.length > 0, 'the level authored no handholds — nothing to test reachability of');
@@ -1360,32 +1360,98 @@ test('reach: wallClimb works on the shipped ladder, but has no floor to start fr
               `y ${Math.min(...caught).toFixed(2)} -> ${Math.max(...caught).toFixed(2)}`);
   assert.ok(caught.length >= 5, `only caught ${caught.length} rungs on the shipped ladder`);
 
-  /* 2. …and now the finding. The ladder's outward normal is +z; its face sits at z 34.4..36.8.
-        Ask the built level where a player could stand to begin. */
-  const n = r0.normal;
-  const outward = new THREE.Vector3(n.x, 0, n.z).normalize();
-  let standable = null;
-  for (let d = 0.4; d <= 4.0 && !standable; d += 0.2) {
-    for (const lat of [-0.6, -0.3, 0, 0.3, 0.6]) {
-      const x = r0.point.x + outward.x * d + lat * outward.z;
-      const z = r0.point.z + outward.z * d - lat * outward.x;
-      const g = collision.groundCheck(V(x, 80, z), TUNE.radius, 240);
-      // A start is only a start if it is close enough under the rung to jump to it.
-      if (g?.hit && g.y <= r0.point.y - TUNE.hangReach + 0.1 && g.y > r0.point.y - TUNE.hangReach - 3.0) {
-        standable = { x, y: g.y, z, tag: g.tag, d };
-        break;
-      }
+  /* 2. The entry. The ladder is not meant to be walked to — there is an authored magnetism
+        target at its foot, `notch-pylon-e-mouth`, `arrive: 'wallClimb'`. So the question is not
+        "is there floor under it" (my first pass asked that, with an acceptance window that
+        rejected any surface ABOVE the rung's hang height, and got a wrong answer). The question
+        is whether a player can get inside the target's `volume` from anywhere they can stand.
+
+        "Can stand" is decided by DRIVING, not by `groundCheck`: the battered pylon face is an 84°
+        slope and `groundCheck` reports a `y` for it, so a hit is not a foothold. Teleport, settle
+        for 8 frames, and ask `Controller` itself whether it grounded. */
+  const targets = (arch.api.targets || []).filter((t) => String(t.id).includes('mouth'));
+  if (!targets.length) { console.log('\n[reach] no mouth target authored; entry question is moot'); return; }
+  const M = targets[0];
+  const standable = (x, z) => {
+    const g = collision.groundCheck(V(x, 80, z), TUNE.radius, 240);
+    if (!g?.hit) return null;
+    hardReset(engine, c, V(x, g.y + 0.05, z));
+    for (let i = 0; i < 8; i++) {
+      engine.input.beginFrame(DT); engine.input.move.x = 0; engine.input.move.y = 0;
+      engine.time = i * DT; c.update(DT, i * DT);
     }
+    return (c.grounded && Math.abs(c.position.y - g.y) < 1.5) ? { x, y: c.position.y, z } : null;
+  };
+  let nearest = null;
+  for (let dx = -12; dx <= 12; dx += 1) for (let dz = -12; dz <= 12; dz += 1) {
+    const s = standable(M.point.x + dx, M.point.z + dz);
+    if (!s) continue;
+    s.d = Math.hypot(s.x - M.point.x, s.y - M.point.y, s.z - M.point.z);
+    if (!nearest || s.d < nearest.d) nearest = s;
   }
-  console.log(`[reach] lowest rung ${r0.point.toArray().map((v) => v.toFixed(2)).join(',')} ` +
-              `outward (${outward.x.toFixed(2)}, ${outward.z.toFixed(2)})`);
-  console.log(`[reach] standable ground in front of it: ${standable ? JSON.stringify(standable) : 'NONE within 4 m'}`);
-  /* This is a level-authoring fact, not a moveset bug, so it is REPORTED rather than asserted:
-     asserting "there is no floor" would land red the moment the world lane adds one, which is
-     exactly the outcome we want. What is asserted is the pair that makes the report meaningful —
-     the ladder exists and the state can climb it — so if this ever becomes reachable the only
-     thing that changes is this log line. */
+  const vol = M.volume ?? TUNE.magVolume;
+  console.log(`\n[reach] entry target ${M.id} at ${M.point.toArray().map((v) => v.toFixed(2)).join(',')} ` +
+              `arrive=${M.arrive} volume=${vol} catch=${M.catch ?? TUNE.magCatch}`);
+  console.log(`[reach] nearest STANDABLE ground: ${nearest ? `(${nearest.x.toFixed(1)}, ${nearest.y.toFixed(2)}, ${nearest.z.toFixed(1)}) at ${nearest.d.toFixed(2)} m` : 'none within 12 m'}`);
+  if (nearest) {
+    console.log(`[reach] acquisition needs the player within volume ${vol} m; the gap is ` +
+                `${(nearest.d - vol).toFixed(2)} m of ${nearest.d > vol ? 'unreachable' : 'reachable'} air`);
+  }
+  /* Reported, not asserted, in both directions: asserting "unreachable" would land red the day
+     the world lane adds an approach, which is the outcome we want. What IS asserted is the pair
+     that makes the report mean anything — the ladder exists, and the state climbs it. */
   assert.ok(holds.length >= 10, 'the ladder shrank; the reachability question has changed');
+});
+
+test('rope: the authored hall-cable is crossed under the player\'s own power', async () => {
+  /* §371.2 predicted a rope needs no new state, only that `RailSlide.enter`'s hard
+     `TUNE.railSpeed` mount floor come from the rail instead. The world lane authored the rail —
+     `hall-cable`, a real catenary — and this is that one line, measured on it.
+     One lever: `rec.mountSpeed`. */
+  const { engine, c, collision } = await realWorld();
+  const rope = collision.recs.find((r) => r.tag === 'rail' && Number.isFinite(r.mountSpeed));
+  if (!rope) { console.log('\n[rope] no rail authors mountSpeed yet; nothing to measure'); return; }
+  const spline = rope.mesh.userData?.spline;
+  assert.ok(spline?.getLength, `${rope.mesh.name} carries mountSpeed but no spline`);
+  const len = spline.getLength();
+  const sag = (spline.getPointAt(0).y + spline.getPointAt(1).y) / 2 - spline.getPointAt(0.5).y;
+
+  function ride(holdForward) {
+    const a = spline.getPointAt(0.06);
+    hardReset(engine, c, V(a.x, a.y + 0.6, a.z));
+    c.position.set(a.x, a.y + 0.6, a.z);
+    c.grounded = false; c.velocity.set(0, -1, 0); c._needSpawnSnap = false;
+    c.sm.set('fall');
+    const tr = [];
+    for (let i = 0; i < 900; i++) {
+      engine.input.beginFrame(DT);
+      engine.input.move.x = 0; engine.input.move.y = holdForward ? 1 : 0;
+      engine.time = i * DT; c.update(DT, i * DT);
+      if (c.stateName.startsWith('rail')) tr.push({ u: c.rail.u, sp: c.rail.speed, st: c.stateName });
+    }
+    return tr;
+  }
+
+  const slack = ride(true);
+  const saved = rope.mountSpeed;
+  delete rope.mountSpeed;                       // ← the lever: back to the hard railSpeed floor
+  const hard = ride(true);
+  rope.mountSpeed = saved;
+
+  const span = (t) => Math.max(...t.map((x) => x.u)) - Math.min(...t.map((x) => x.u));
+  console.log(`\n[rope] ${rope.mesh.name}: ${len.toFixed(2)} m span, ${sag.toFixed(2)} m sag, mountSpeed ${saved}`);
+  console.log(`[rope] mountSpeed ${saved}: ${[...new Set(slack.map((t) => t.st))].join('+')}, ` +
+              `speed ${Math.min(...slack.map((t) => t.sp)).toFixed(2)}..${Math.max(...slack.map((t) => t.sp)).toFixed(2)} m/s, ` +
+              `${slack.length}/900 frames aboard, crossed ${(span(slack) * 100).toFixed(0)}% of the span`);
+  console.log(`[rope] hard floor ${TUNE.railSpeed}: ${[...new Set(hard.map((t) => t.st))].join('+')}, ` +
+              `speed ${Math.min(...hard.map((t) => t.sp)).toFixed(2)}..${Math.max(...hard.map((t) => t.sp)).toFixed(2)} m/s, ` +
+              `${hard.length}/900 frames aboard`);
+  // The lever must move, and in the direction that makes a cable a rope rather than a zip-line.
+  assert.ok(hard.length < 300, `calibration did not move: still aboard ${hard.length} frames with the hard floor`);
+  assert.ok(slack.length > 600, `authored rope threw the player off after ${slack.length} frames`);
+  assert.ok(Math.max(...slack.map((t) => t.sp)) < TUNE.railSpeed * 0.5,
+    'the authored rope is still being ridden at slide speed');
+  assert.ok(span(slack) > 0.8, `only crossed ${(span(slack) * 100).toFixed(0)}% of the rope under own power`);
 });
 
 test('wallClimb: proximity alone does not snag a player who is not reaching for it', async () => {

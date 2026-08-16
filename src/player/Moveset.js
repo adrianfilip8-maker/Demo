@@ -1012,7 +1012,20 @@ class RailBase extends State {
     this.tangentAt(c, r.u, _tan);
     const along = c.velocity.dot(_tan);
     const sign = Math.abs(along) > 0.6 ? Math.sign(along) : (_tan.y > 0 ? -1 : 1);
-    r.speed = sign * Math.max(Math.abs(along), minSpeed);
+    /* The mount FLOOR comes from the rail when the rail states one, and only then.
+     *
+     * This is the one line §371.2 predicted, and the measurement behind it is worth keeping: our
+     * `advance()` already carries `speed += gravity · tangent.y · dt`, so a rail on a catenary is
+     * rope physics with no new state — on a 21 m test rope it mounted at 9.66 m/s, accelerated to
+     * 14.07 at the bottom and was slowed to 6.54 climbing out. What separated it from a rope was
+     * `RailSlide.enter`'s hard `TUNE.railSpeed` floor of 9.5 m/s, which is exactly enough energy
+     * to crest a sag every time; a rope wants to be able to settle INTO one and swing.
+     * `rec.mountSpeed` lets the level say so — `EgyptLevel`'s `hall-cable` (span 30.32 m, sag
+     * 1.50 m) is the first and only rail that does, and `registerCollider` spreads it onto the rec
+     * exactly as it does `handholds`. Absent, `minSpeed` is unchanged, so the other five rails in
+     * the level are bit-identical. */
+    const floor = Number.isFinite(a.rec?.mountSpeed) ? a.rec.mountSpeed : minSpeed;
+    r.speed = sign * Math.max(Math.abs(along), floor);
     c.attached = a.rec;
     c.velocity.set(0, 0, 0);
   }
