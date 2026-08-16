@@ -2404,6 +2404,80 @@ test('ledgeHang drop / poleSwing: the other two raw-stick axes, driven', async (
   assert.equal(pright, pent, 'not every pole swing orbited to his right');
 });
 
+/* ====================================================================== */
+/* 17 — the vent walk-in: two refuted hypotheses and a route               */
+/* ====================================================================== */
+
+test('crawl: reachable by traversal — the walk-in failed on lateral drift, not the capsule', async () => {
+  /* The last open item, and both of my hypotheses were wrong.
+   *
+   * **Refuted 1 — the sweep pushing a too-tall capsule clear.** Wrapping `capsuleSweep` and
+   * recording its resolution vector through the crossing: the largest |dy| per frame is a flat
+   * ~0.35 m at every x, near the vent and far from it alike — that is `_moveHorizontal`'s
+   * step-up/step-down probe, not a vent interaction. And the STANDING case that succeeds resolves
+   * too (0.013 m). The tell that killed it: the standing hit is at a HIGHER y (0.859) than the
+   * walking misses (0.844), so nothing was being pushed up.
+   *
+   * **Refuted 2 — tunnelling past a narrow trigger.** Sampling `inVent()` every 0.02 m along the
+   * approach line gives a window 1.680 m wide in x. One frame of travel at `runSpeed` is 0.120 m,
+   * so the trigger is 14 frames wide. Nothing is being skipped.
+   *
+   * **The actual cause: lateral drift.** The floor rises along the approach, and walking a pure
+   * −X stick across it slides Sly in +z — 0.61 m over 35 frames, 4.6 m over 300. The vent's
+   * z-extent ends at −49.26 and the approach starts at −49.40, i.e. **0.14 m of margin**, so he
+   * leaves the z window long before reaching the x window. Static probes at the drive's own x and
+   * y, with only z held at −49.40, all return true.
+   *
+   * So the two findings are NOT one finding. The 0.60 m aperture (arm 14) is about whether the
+   * capsule FITS once inside; `inVent()` gates on an overlap sphere at the feet and engages
+   * regardless. And `crawl` is reachable through play — it just needs the steering any player
+   * watching the mouth would apply. This retires "reached by placement only". */
+  const { engine, c, collision } = await realWorld();
+  hardReset(engine, c, V(0, 0, 30));
+  for (let i = 0; i < 4; i++) {
+    engine.input.beginFrame(DT); engine.input.move.x = 0; engine.input.move.y = 0;
+    engine.time = i * DT; c.update(DT, i * DT);
+  }
+  const floorAt = (x, z) => {
+    const g = collision.groundCheck(V(x, 5, z), TUNE.radius, 300);
+    return g?.hit ? g.y : null;
+  };
+  const start = V(-19.3, (floorAt(-19.3, -49.4) ?? 0) + 0.05, -49.4);
+  const TARGET = V(-21.0, 0, -49.6);
+
+  function walk(correct) {
+    hardReset(engine, c, start.clone(), -Math.PI / 2);
+    let ventFrames = 0, crawlAt = -1, maxZ = -1e9;
+    for (let i = 0; i < 300; i++) {
+      engine.input.beginFrame(DT);
+      if (correct) {
+        const dx = TARGET.x - c.position.x, dz = TARGET.z - c.position.z, l = Math.hypot(dx, dz) || 1;
+        engine.input.move.x = dx / l; engine.input.move.y = -dz / l;
+      } else { engine.input.move.x = -1; engine.input.move.y = 0; }
+      engine.time = i * DT; c.update(DT, i * DT);
+      maxZ = Math.max(maxZ, c.position.z);
+      if (c.inVent()) ventFrames++;
+      if (crawlAt < 0 && c.stateName === 'crawl') crawlAt = i;
+    }
+    return { ventFrames, crawlAt, maxZ, end: c.position.clone() };
+  }
+
+  const naive = walk(false);
+  const steered = walk(true);
+  console.log(`\n[vent] pure -X stick:      inVent ${naive.ventFrames} frames, crawl@${naive.crawlAt}, drifted to z ${naive.maxZ.toFixed(2)}`);
+  console.log(`[vent] steering at mouth:  inVent ${steered.ventFrames} frames, crawl@${steered.crawlAt}, held z ${steered.maxZ.toFixed(2)}`);
+
+  /* The route exists. */
+  assert.ok(steered.crawlAt >= 0, 'crawl is no longer reachable by walking at the vent mouth');
+  assert.ok(steered.ventFrames > 100, `only ${steered.ventFrames} frames inside the vent volume`);
+  /* …and the calibration: the naive walk must still fail, or the drift explanation is wrong and
+     this arm has stopped measuring what it claims to. */
+  assert.equal(naive.crawlAt, -1,
+    'the uncorrected walk now reaches the vent too — the lateral-drift explanation no longer holds');
+  assert.ok(naive.maxZ > steered.maxZ + 2.0,
+    `uncorrected drift was only ${(naive.maxZ - steered.maxZ).toFixed(2)} m — too small to explain the miss`);
+});
+
 test('wallClimb: proximity alone does not snag a player who is not reaching for it', async () => {
   /* `wall_notch.gd` commits on `elif player.direction:` — a hold acts when it is being reached
      for. Fly past the face with no stick input and nothing may take control. */
