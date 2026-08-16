@@ -1592,6 +1592,56 @@ test('reach: the attach states are reachable through play in the shipped level',
     (inp, i, cc) => { inp.move.y = 1; if (i === 10) inp.hold('jump'); if (i === 40) cc.hurt(new THREE.Vector3(0, 0, 1), 8); }, null);
   runs.push({ script: 'D hurt() while airborne', path: rD.path });
 
+  /* Script F — run AND JUMP at a wall with a flat approach. `wallRun` is an air move
+     (`canEnter` opens `if (c.grounded || c.sm.group !== 'air') return false`), which is why three
+     earlier ground-only approach scripts produced `tiptoe`/`wallCling` and never this: they never
+     left the floor. The approach is derived by scanning wall recs for standable ground 3–7 m out
+     whose run-up stays within 0.25 m of level, so it does not depend on one hand-picked spot.
+     This run is also the one that measures the `wallRun`/`wallJump` material payloads, which were
+     verified-by-construction for two rounds. */
+  {
+    const dirs = [[1, 0], [-1, 0], [0, 1], [0, -1], [0.707, 0.707], [-0.707, 0.707], [0.707, -0.707], [-0.707, -0.707]];
+    let approach = null;
+    for (const w of collision.recs.filter((r) => r.tag === 'wall')) {
+      const p = w.mesh.position;
+      for (let dx = -9; dx <= 9 && !approach; dx += 1.5) for (let dz = -9; dz <= 9 && !approach; dz += 1.5) {
+        const s = standAt(p.x + dx, p.z + dz);
+        if (!s) continue;
+        for (const [ux, uz] of dirs) {
+          const o = V(s.x, s.y + TUNE.height * 0.55, s.z);
+          const hit = collision.raycast(o, V(ux, 0, uz), 7.5);
+          if (!hit?.hit || hit.tag !== 'wall' || Math.abs(hit.normal.y) > TUNE.wallNormalMax) continue;
+          if (hit.distance < 3.0) continue;
+          let flat = true;
+          for (let t = 0.5; t < hit.distance - 0.5; t += 0.5) {
+            const q = standAt(s.x + ux * t, s.z + uz * t);
+            if (!q || Math.abs(q.y - s.y) > 0.25) { flat = false; break; }
+          }
+          if (flat) { approach = { s, ux, uz, d: hit.distance }; break; }
+        }
+      }
+      if (approach) break;
+    }
+    if (approach) {
+      const { s, ux, uz, d } = approach;
+      for (const jf of [10, 14, 18, 22, 26]) {
+        const r = await driveRoute(engine, c, V(s.x, s.y + 0.05, s.z), Math.atan2(ux, uz), 140,
+          (inp, i, cc) => {
+            inp.move.x = ux; inp.move.y = -uz;
+            if (i >= jf && i < jf + 5) inp.hold('jump');
+            else if (cc.stateName === 'wallRun' && i % 9 === 0) inp.hold('jump');
+            else inp.let_go('jump');
+          }, 'wallRun');
+        if (r.first >= 0) {
+          const mat = (e) => { const x = engine.events.filter((y) => y.evt === e).pop(); return x ? (x.payload?.material ?? '(absent)') : null; };
+          runs.push({ script: `F run+jump at wall from (${s.x.toFixed(1)}, ${s.y.toFixed(2)}, ${s.z.toFixed(1)}), wall ${d.toFixed(2)} m, take-off f${jf}`, path: r.path });
+          console.log(`\n[attach] script F materials: wallRun -> ${mat('wallRun')}, wallJump -> ${mat('wallJump')}`);
+          break;
+        }
+      }
+    }
+  }
+
   /* Script E — the enemy-bounce entry point GUARDS drives. */
   const rE = await driveRoute(engine, c, V(0, 0, 30), Math.PI, 90,
     (inp, i, cc) => { if (i === 5) { cc.grounded = false; cc.bounce(); } }, null);
@@ -1607,7 +1657,7 @@ test('reach: the attach states are reachable through play in the shipped level',
       if (!seen.has(name)) seen.set(name, r.script.slice(0, 1));
     }
   }
-  const want = ['hookSwing', 'poleClimb', 'wallClimb', 'wallCling', 'toTarget', 'tiptoe', 'hurt', 'bounce'];
+  const want = ['hookSwing', 'poleClimb', 'wallClimb', 'wallCling', 'toTarget', 'tiptoe', 'hurt', 'bounce', 'wallRun', 'wallJump'];
   console.log('\n[attach] state -> script that reached it:');
   for (const w of want) console.log(`  ${w.padEnd(12)} ${seen.has(w) ? `script ${seen.get(w)}` : 'NOT REACHED by these scripts'}`);
   const missing = want.filter((w) => !seen.has(w));
