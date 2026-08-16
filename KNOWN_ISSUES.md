@@ -27927,3 +27927,104 @@ Measured with `Props` in the collision set (277 colliders, 21 poles): the mast a
 the wall at −Z while the mast sits behind him at +Z. A directional accident, not clearance: a player
 approaching off-axis, or letting the stick swing anywhere over y 0–11, is 0.70 m from a `poleClimb`
 at priority 82 — **three above `wallClimb` at 79**. Recorded, unchanged, and now a live question.
+
+---
+
+## §378 — The doubled-measurement sweep, and a finding I stopped before it became a work order
+
+### §378.1 The triage rule needed three axes, not the one I gave it
+
+§376.3 framed the audit class as *"brightness rather than extent"*. Necessary, not sufficient:
+
+```
+1. extent vs brightness   sz · P11 / d has no term for count or alpha.  Immune.
+2. absolute vs relative   a ratio between two populations that were BOTH doubled survives
+                          untouched — which is why sealed A/B DIRECTIONS stand (§370.4).
+3. DIRECTION OF THE CLAIM doubling only ever INFLATES. So "does not exceed / not enough /
+                          too dim / absent" was reached on a frame brighter than gameplay and
+                          is MORE true at 1x. The at-risk class is "exceeds / washes /
+                          dominates".
+```
+
+Axis 3 is the one that makes the corpus triageable without re-deriving it: **the failure mode is
+one-sided.**
+
+**What was actually doubled**, measured rather than assumed: `_prerollFires` **217 → 434 particles**
+across the six tomb sconces — the largest doubled population in the project, present in `interior`,
+`night`, `guard` and `temple` — plus `_prerollCrests`, the `cane_*` branch emissions, `coin_sparkle`
+and their decals. **Not doubled:** all four looping ambient fields, `LightShafts`, `FlameField`,
+`SparkleField`, `Trails` — built once at init or rebuilt wholesale each frame by a `begin()`/`end()`
+pair.
+
+### §378.2 The one record that does not transfer
+
+`RESULT-fxshape2` seals `cane_ring`'s own contribution — **184,126 px (20% of frame), meanLift
++0.0985, peak 0.588**, covering 57.7% of the D4 hero box. Every one of those is an absolute
+brightness figure on a doubled additive sprite. Pre-tonemap radiance halves exactly and AgX
+compresses, so the true gameplay lift is in **[0.049, 0.0985)** — the case for clamping the ring was
+built on a number overstating it by up to 2×.
+
+Two figures in the same sentence are immune and the distinction is worth keeping: the
+`10–90 edge rise 80 px` (scaling a profile linearly leaves its crossing *positions* unchanged), and
+the half-extent as a class.
+
+**A third independent confirmation of the 3-frame latency fell out of checking it.** That record's
+`1.55 m half-extent at capture age` reproduces to 4 s.f. from `mix(0.25, 2.5, 0.2381^0.38)` —
+but it omits the `heavy` 1.35 that `_onCaneHit(3, …)` applies, so the true half-extent is
+**2.0982 m, frac 1.175**, 35% larger than recorded. Two records taken months apart for unrelated
+purposes now both reproduce only at the 3-frame reading.
+
+### §378.3 Coverage, stated as the lane stated it
+
+30 of 708 records mention a doubled population. **Ten headline verdicts read, two numeric entries
+fully re-derived, twenty classified by mechanism only** — whether a doubled population is in the
+measured region and whether the sealed quantity is brightness or extent. That is the deliverable and
+it is explicitly *not* the same as having checked them. Next in order:
+`RESULT-torchlight{,2,3}`, `RESULT-tombdim2`, `RESULT-hilite2`, `RESULT-decalsign`.
+
+### §378.4 A pre-registered check, written before the lock exists
+
+Recorded above `STAGE_CANE`. `combat`, the impact annulus differenced against a `noring` arm, with
+the right third of the frame as a **control that voids the run if it moves**. The quantity is mean
+luma lift in the sealed units — deliberately *not* a pixel count, because a threshold-crossing count
+moves with brightness in a way that depends on falloff shape.
+
+Both bounds registered: **≥ 0.0985** means the un-doubling did not take; **< 0.049** means it went
+too far and the clear removed more than the duplicate. Plus an independent read-failure bar — if
+`heroWarm` reaches 0.00% the flash has stopped reading as fire at all, whatever the arithmetic says.
+A frame can be numerically correct and read as nothing.
+
+### §378.5 STOPPED — `wallClimb is unreachable` is probably instrument error six
+
+The traversal lane's reachability instrument returned: `wallClimb` **not reachable in the shipped
+level** — ground search in front of the ladder face finds none within 4 m, the courtyard floor stops
+at z ≈ 30.7, the face is at z 34.4–36.8. It classified this as an authoring gap and asked me to
+route it to WORLD.
+
+**I did not route it.** Checked against the built data first:
+
+```
+api.targets                     15 entries
+notch-pylon-e-mouth   (10.87, 2.64, 37.11)
+lowest rung   notch-pylon-e-w-0 (10.74, 2.10, 36.78)     0.55 m apart
+```
+
+There is an authored **magnetism target** at the ladder's mouth, which the world lane measured as
+reachable from the paving with 1.353 m to spare. A magnetism target is exactly the mechanism for
+reaching a place with no floor under it — that is what `catch` and `predictMiss` exist for, and it
+is what `tests/targets.test.mjs` was built to prove.
+
+The tell was in the lane's own report: *"`toTarget` fired incidentally at frame 1 of the ladder
+climb."* The entry path announced itself while the probe was looking somewhere else.
+
+**Searching for ground under a state whose whole purpose is to be entered off a leap is the same
+species as the other five** — a probe simpler than the world it stands for — and it is the one that
+lane did not catch, having correctly caught five others including two in the same round. Sent back
+with three outcomes, all of which are worth more than the finding as it stands: it works and the
+finding retracts; the target is acquired but `wallClimb` does not follow, which is a sharper bug
+than "no floor"; or the jump genuinely cannot reach, which is an authoring gap *with a number
+attached*.
+
+**The general rule this earns:** in a game with authored assists, **"no floor" is not "no route"**.
+A reachability instrument has to model what the level *intends* as the approach, not only what a
+walking player can stand on.
