@@ -114,6 +114,43 @@ export function discOf(cam, x, y, z, r, segments = 24) {
   };
 }
 
+/**
+ * Pixel box of a CAMERA-FACING upright rectangle of world size `w` x `h`, centred laterally on
+ * (x, z) and spanning `yLo`..`yHi` about `y`.
+ *
+ * ── Why this exists, and it cost a bar ──────────────────────────────────────────────────────
+ * `boxOf` builds a ground-anchored CUBE — extent `w` in x AND in z — so its widest projected
+ * corners are the *near-bottom* ones, which sit `w/2 * sqrt(2)` closer to the lens than the
+ * subject's centre. On an upright figure at a distance that error is small. On `dive_impact` —
+ * a crouched sprawl seen from a low camera — it is 20%: `SLY_SLAM = 1.31 x 1.30 m` was sized
+ * from the measured 197 x 195 px and projects back as **236 x 245 px** (§407.2).
+ *
+ * A character silhouette and a cloud of billboards are both *flat things that face the lens*.
+ * Neither has depth that the projection should fan out. This models them as what they are.
+ *
+ * `yLo`/`yHi` are relative to `y` and are NOT symmetric by default, because the things this
+ * measures are not: a slam pose reaches below the contact plane (sprites do not clip to the
+ * floor) and further above it than below.
+ */
+export function plateOf(cam, x, y, z, { w, yLo, yHi }) {
+  const right = new THREE.Vector3().setFromMatrixColumn(cam.matrixWorld, 0);
+  right.y = 0;
+  if (right.lengthSq() < 1e-9) return null;      // camera looking straight down: no lateral basis
+  right.normalize();
+  const pts = [];
+  for (const s of [-1, 1]) {
+    for (const dy of [yLo, yHi]) {
+      const p = project(cam, x + right.x * (w / 2) * s, y + dy, z + right.z * (w / 2) * s);
+      if (!p) return null;
+      pts.push(p);
+    }
+  }
+  return {
+    x0: Math.min(...pts.map((p) => p.px)), x1: Math.max(...pts.map((p) => p.px)),
+    y0: Math.min(...pts.map((p) => p.py)), y1: Math.max(...pts.map((p) => p.py)),
+  };
+}
+
 export const overlapArea = (a, b) => {
   if (!a || !b) return 0;
   const w = Math.min(a.x1, b.x1) - Math.max(a.x0, b.x0);

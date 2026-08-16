@@ -7,124 +7,226 @@
  *
  *   node tools/impactframe.mjs                 # score the built-in candidate set
  *   node tools/impactframe.mjs --shot impact   # score the entry already in SHOTS
+ *   node tools/impactframe.mjs --search        # sweep the camera domain for survivors
  *
- * ── What `_stageImpact` actually puts on the floor, measured not guessed ────────────────────
- * `Particles._stageImpact()` emits four sprites plus two decals at the player's feet, all
- * scaled by `TUNE.impactScale` (1.25):
+ * ── EVERY EXTENT HERE IS MEASURED IN A FRAME, AND THAT IS THE POINT (§407) ───────────────────
+ * The first version of this tool sized its subjects from the emitter recipes and from an upright
+ * box, and every one of those numbers was wrong — one by 2.69x, one by 2.85x, one by 20%. The
+ * numbers below come from differencing the shipped A/B arms in `shots/fxrim2-impact/`, and each
+ * one is projected back through the camera it was measured in and shown to reproduce its own
+ * pixels every time this tool runs. See `assertExtents()`.
  *
+ * ── What `_stageImpact` puts on the floor ───────────────────────────────────────────────────
  *   dive_ring    size 0.4 -> 5.0 over a 0.34 s life, staged at age 0.088 (97.6% of peak ink)
- *   dive_dust    16-22 puffs, 3.5-7.5 m/s disc, staged at 0.279  → reaches ~2.1 m of travel
- *   dive_debris  10-14 at 4-9 m/s in a cone, staged at 0.012
+ *   dive_dust    16-22 puffs, 3.5-7.5 m/s disc, staged at 0.279
+ *   dive_debris  10-14 at 4-9 m/s in a cone, staged at 0.012   (shares the `dust` batch)
  *   dive_spark   14-18 at 7-13 m/s disc, staged at 0.002
  *   decal crack  2.2 x scale = 2.75 m across
- *   decal scuff  3.4 x scale = 4.25 m across      ← the widest thing on the ground
+ *   decal scuff  3.4 x scale = 4.25 m across      <- the widest ground mark
  *
- * `_stageImpact` returns `radius: 1.2 * scale` = 1.50 m as the ring's own reach. The FOOTPRINT
- * this tool frames is the scuff at 2.13 m radius, because that is the outermost mark a viewer
- * sees and cropping it is cropping the impact.
+ * ── THE BAR THAT WAS REMOVED, AND WHY THAT IS NOT §141.1 ────────────────────────────────────
+ * This tool used to gate on FIGURE SWALLOWED: the fraction of Sly's box covered by the ring's
+ * box, barred at 55%. **It is a tautology and no camera has ever been able to pass it.** Swept
+ * over 727,608 cameras — distance 3-30 m, height 0.5-20 m, 24 azimuths, 7 lenses — 605,304 pass
+ * the ellipse bar, 50,680 pass the coverage bar, and **0 pass both**.
  *
- * ── Why a disc and not a box ────────────────────────────────────────────────────────────────
- * `boxOf` projects the eight corners of an upright box. A ground ring has no height, and its
- * silhouette is not its bounding square: from the low camera this shot wants, a circle projects
- * to a wide flat ellipse whose extremes are on the rim, not at the corners of a square around
- * it. `framelib.discOf` samples the rim. Using `boxOf` here would over-report the ring's
- * vertical extent and under-report its near/far spread, and both errors point toward "it fits"
- * — the direction that ships a cropped frame.
+ *   h  1 m  elev  4.8°  ellipse 0.083  ring covers  44.8%
+ *   h  3 m  elev 14.0°  ellipse 0.245  ring covers  88.1%
+ *   h  4 m  elev 18.4°  ellipse 0.320  ring covers 100.0%   <- and 100.0% everywhere above
  *
- * ── The three faults this exists to catch ───────────────────────────────────────────────────
+ * The header this replaces claimed the two "pull opposite ways, which is the entire difficulty
+ * of this frame". They do not. They move together, and past ~18° of elevation the coverage
+ * figure is the constant 100% — because the ring is an **annulus 8 m across and the figure
+ * stands in its hole**, so asking whether his box is inside the rectangle bounding the ring is
+ * asking whether a man in the middle of a circle is inside that circle's bounding square.
  *
- *   RING CROPPED    the largest sprite in the game (`dive_ring`'s peak projected ink is 104x
- *                   `alert_spot`'s, 7.6x the next largest) running off an edge. This is the
- *                   whole reason the shot is hard: the impulse is to get close, and close is
- *                   exactly what crops it.
- *   FIGURE SWALLOWED  Sly's box entirely inside the ring's box. A slam is a thing a CHARACTER
- *                   does; a frame where the character is a detail inside his own effect has
- *                   lost the subject. Measured as the fraction of Sly's box the ring covers.
- *   NO GROUND       the camera so low that the ring is seen edge-on. A ring read at 3° of
- *                   elevation is a line, and the shot depicts a line. Measured as the ellipse's
- *                   height:width ratio, which is `sin(elevation)` for a circle.
+ * A metric that returns one value across the whole admissible domain cannot gate and cannot
+ * rank. **§141.1 forbids moving a threshold after seeing which side a result landed on, and it
+ * stands** — the claim here is not that 55% is too strict, it is that the quantity compared to
+ * it is constant, which is provable without reference to any candidate. A bar may be replaced
+ * when it is shown to carry no information; never when it is merely failed.
  *
- * ── What it CANNOT tell you ─────────────────────────────────────────────────────────────────
- * Everything `framelib`'s header says: architecture triangles only, boxes not meshes, and
- * nothing at all about light. It also cannot tell you whether the dust READS — that is a
- * capture's question, and per KNOWN_ISSUES §367 FX is one of the few systems that renders live
- * in a shot, so a capture can answer it.
+ * ── AND THE REPLACEMENT WAS MEASURED AND REJECTED TOO ───────────────────────────────────────
+ * The obvious repair is to ask the question the old bar's NAME asks: what fraction of the
+ * figure's silhouette has the ring's bright annulus (r = 3.0-4.5 m, measured) directly behind
+ * it? Built it, swept it over 324,720 cameras, and **it ranges 0.0% to 16.7%.** A bar anywhere
+ * in that range is either unfirable or a number picked to make something fail; at the 35% that
+ * looked natural it admitted all 324,720. That is the same defect wearing the opposite sign, so
+ * it is recorded here rather than shipped — the next person to have this idea should know it has
+ * been measured.
  *
- * ── THE FIGURE BOX IS A PROXY, AND ON THIS POSE IT IS WRONG IN BOTH DIRECTIONS ───────────────
- * `boxOf` projects an upright 0.62 x 1.80 m box. `dive_impact` is a SLAM: a crouched, sprawling
- * pose that is wider than a stance and shorter than one. Measured against the shipped frame
- * (`shots/fxrim-impact/impact-{A-ship,S-nosly}.png`, src tree 2b06133ddf675387 — the figure is
- * the pixels that vanish when the character root is hidden, taken at the |dL| > 12 plateau which
- * is stable from 12 through 48):
+ * **Legibility of the figure against the ink is a capture's question, not a projection's**, and
+ * there is already an instrument for it: the `S-nosly` arm isolates the figure in pixels and
+ * `fxrimscore` measures ink. It belongs there, where it can be measured instead of modelled.
  *
- *              x            rows        w x h
- *   proxy box  583..697     202..451    115 x 249      <- what this tool computes
- *   measured   502..699     303..498    197 x 195      <- what the renderer draws
- *
- * So the proxy is **83 px too narrow, 54 px too tall, and its crown sits 101 px above his head.**
- * It is not a silhouette and must never be quoted as one.
- *
- * **This changes a verdict, and the verdict is this file's.** FIGURE SWALLOWED divides the
- * ring/subject box overlap by the subject's own box area, so it inherits the proxy's error
- * whole: on the proxy the ring covers **44.2%** of him and passes the 55% bar; on the measured
- * figure it covers **80.6%** and does not. `impact` is admitted on that bar by an artefact of
- * the box. The `sly only N px tall` bar is unaffected — 195 px clears 110 either way.
- *
- * ── AND `RING_R` IS THE AUTHORED FOOTPRINT, NOT THE DRAWN SPRITE ────────────────────────────
- * `RING_R = 1.2 * S` = 1.50 m is what `_stageImpact` returns. The sprite `dive_ring` draws has
- * a half-extent of **4.035 m** — `mix(0.5, 6.25, (0.088/0.34)^0.36)`, an 8.07 m quad, and
- * PLANAR sprites are exempt from the shader's screen-size ceiling. Measured in the shipped
- * frame by unprojecting the `ring` batch's own light onto the impact plane: the bright annulus
- * is at r = 3.0-4.5 m, the light ends at 4.75-5.0 m, and 1.50 m is the dim inner shoulder.
- *
- *   RING CROPPED at 1.50 m   margins l460 r460 t341 b198   no fault
- *   RING CROPPED at 4.035 m  margins l112 r112 t249 b-102   cropped, 18.5% of the rim off-frame
- *
- * So this tool's second admission bar also turns on a number that is 2.69x too small, and it
- * certifies "clear" on a ring the renderer crops. Same treatment as the figure box: flagged,
- * not repaired, because the number is minted in `Particles._stageImpact`'s return and three
- * consumers plus a shipped seal read it. See that function's header.
- *
- * Not silently repaired, for two reasons. Re-scoring a shipped shot against a rule it now fails
- * is a decision about the shot, not about the tool, and §141.1 says a bar is not re-scoped by
- * whoever happens to be holding the file. And the obvious repair — CPU-skin the pose and project
- * it, which `charvis.mjs` already has the machinery for — **does not currently agree with the
- * renderer**: the skinned `dive_impact` extent comes out x 528..727 / rows 292..499, the right
- * width and height but shifted ~26 px (~0.22 m) in +x against the measured figure, and the cause
- * is not the clip's root motion (0, -0.6885, +0.1). The ring reproduces its certificate exactly
- * through the same camera, so the projection is sound and the disagreement is in the character's
- * model-to-world placement. Wiring in a second wrong number would be worse than labelling the
- * first. See KNOWN_ISSUES §379.4's round-17 report.
+ * ── What this still CANNOT tell you ─────────────────────────────────────────────────────────
+ * Everything `framelib`'s header says: architecture triangles only, no props, no FX, no decals,
+ * no terrain, no self-occlusion, and nothing at all about light.
  */
 import { SHOTS } from '../src/core/Shots.js';
 import { TUNE as FX_TUNE } from '../src/fx/Particles.js';
+import { writeFileSync, mkdirSync } from 'node:fs';
 import {
-  W, H, SLY, provenance, camFor, boxOf, discOf, overlapArea, margins, clear, assertOccluded,
+  W, H, provenance, camFor, project, plateOf, discOf, margins, clear, assertOccluded,
   assertVisible, groundColumn, groundUnder,
 } from './framelib.mjs';
 
 const S = FX_TUNE.impactScale;
 const SCUFF_R = 3.4 * S / 2;      // the widest ground mark: Particles._stageImpact
-const RING_R = 1.2 * S;           // what _stageImpact itself reports as the ring's reach
-const DUST_H = 1.5 * S;           // dive_dust's end size — how high the cloud reads
+
+/* ── THE REFERENCE CAMERA — PINNED, NOT READ FROM `SHOTS` ───────────────────────────────────
+ * Every measured constant below is a count of pixels, and pixels only mean a world extent
+ * through a specific camera. This is that camera: the one `shots/fxrim2-impact/` was captured
+ * with, which at the time was `SHOTS.impact`.
+ *
+ * It is a literal here and must stay one. Reading it from `SHOTS.impact` would mean the
+ * calibration silently re-based itself the moment the shot is re-staged — which is the whole
+ * purpose of this tool — and every constant would then "reproduce" against a camera it was
+ * never measured in. A calibration that follows the thing it calibrates is not one. */
+const REF = {
+  pos: [5.4, 4.4, -2.6], target: [0.0, 0.6, -8.0], fov: 38,
+  at: [0, 0, -8],
+  src: 'shots/fxrim2-impact, src tree 2b06133ddf675387',
+};
+
+/* ── MEASURED EXTENTS ───────────────────────────────────────────────────────────────────────
+ * `A-ship` minus each isolation arm, |dL| bbox, taken on the plateau where the bbox is stable
+ * across thresholds rather than at a chosen one.
+ *
+ *   arm         plateau        drawn extent                    what it is
+ *   S-nosly     |dL| 8..64     x 502..699, rows 303..498       the figure
+ *   P-nodust    |dL| 4..16     x 404..930, rows 248..521       dive_dust + dive_debris
+ *   P-noring    |dL| 4..64     x 0..1272,  rows 216..719       the ring's light, clipped l/r/b
+ *
+ * The impact point (0, 0, -8) projects to px 640.0, py 423.8 in that camera, which is what
+ * converts these to world extents about the contact. */
+const MEASURED = {
+  sly:  { x0: 502, x1: 699, y0: 303, y1: 498 },
+  dust: { x0: 404, x1: 930, y0: 248, y1: 521 },
+};
+
+/* The figure, as a camera-facing plate. 197 x 195 px at the reference camera's depth.
+ *
+ * NOT ground-anchored: the measured figure spans 121 px above the contact point's projection
+ * and 74 px below it. A slam reaches under the contact plane, and the pose's own root motion
+ * is (0, -0.6885, +0.1). Modelling it from the ground up put its crown 101 px above his head. */
+const SLY_SLAM = { w: 1.565, yLo: -0.746, yHi: 1.106 };
+
+/* The dust cloud, likewise. Half-width 2.44 m, -0.82 to +1.48 m about the contact.
+ *
+ * Sized to CONTAIN the measurement rather than fit it, because the consumer is a cropping test
+ * and an extent that under-covers certifies "in frame" about pixels that are not. The drawn
+ * cloud is not centred on the contact — it reaches 290 px right of it and 236 px left, the
+ * asymmetry being wind (`dive_dust` carries wind 0.5) — so the symmetric plate takes the
+ * greater reach.
+ *
+ * Cross-checked against the recipe rather than substituted for it: at speed <= 7.5 m/s under
+ * drag 3.4, `v*(1-e^-kt)/k` = 1.35 m of travel by the staged age of 0.279 s, and the puffs reach
+ * 1.70 m of half-extent, so the population's outer edge is at <= 3.05 m in the worst draw
+ * against 2.44 m measured. The recipe bounds the measurement and the measurement lands inside
+ * it. Neither number is quoted as the other. */
+const DUST = { w: 4.878, yLo: -0.989, yHi: 1.569 };
+
+/* ── TWO RING EXTENTS, AND THE SHOT IS ADMITTED ON THE DRAWN ONE (§405) ─────────────────────
+ * `RING_R_DECLARED` is what `_stageImpact` returns and four consumers read. `RING_R_DRAWN` is
+ * what the sprite covers: `sz = mix(0.5, 6.25, (0.088/0.34)^0.36) = 4.035 m`, since
+ * PARTICLE_VERT's `corner` spans [-1,1] so the half-extent IS `sz`, and the shader exempts
+ * PLANAR from the `uMaxSize` ceiling. **2.69x apart.**
+ *
+ * Cropping is checked against the DRAWN one. The declared radius is kept and printed so the gap
+ * stays visible rather than being quietly resolved in the tool's favour; which number
+ * `_stageImpact` should RETURN is a separate decision with four consumers on it.
+ *
+ * The ring's LIGHT in the frame is wider still — it reads as an effective ~5 m radius, the quad
+ * plus bloom spill. Framing is done to the quad, because bloom is a postfx radius and a shot is
+ * not composed to one. */
+const RING_R_DECLARED = 1.2 * S;                                          // 1.50 m
+const RING_R_DRAWN = 0.5 + (6.25 - 0.5) * Math.pow(0.088 / 0.34, 0.36);   // 4.035 m
+
+/* The drawn figure's centre sits 39.5 px left of the contact point's projection. Part is the
+   pose — a dive sprawls away from its contact — and part is the unexplained placement offset
+   under investigation (`Debug._subject`'s `drift`/`final`). Rather than bake a number that may
+   be half bug, the uncertainty is carried where it bites: the figure must clear the frame edge
+   by the ordinary margin PLUS this, so a re-stage stays valid whichever way that resolves. */
+const FIGURE_PLACEMENT_SLOP = 40;
+const EDGE = 24;
 
 console.log(`impactframe · ${W}x${H} · tree ${provenance}`);
-console.log(`impactScale ${S} · scuff r${SCUFF_R.toFixed(2)} m · ring r${RING_R.toFixed(2)} m · dust h${DUST_H.toFixed(2)} m`);
+console.log(`impactScale ${S} · scuff r${SCUFF_R.toFixed(2)} m · ring drawn r${RING_R_DRAWN.toFixed(2)} m (declared ${RING_R_DECLARED.toFixed(2)})`);
 /* Every `clear` verdict below depends on a ray test that silently returned "visible" for the
-   whole life of `alertframe`. Prove it can say no before printing a single one. */
+   whole life of `alertframe`. Prove it can say no — and that it can say yes — before printing
+   a single one. */
 console.log(assertOccluded());
 console.log(assertVisible());
 
-function score(name, c) {
+/**
+ * §407.2 — a constant derived from a measurement must be projected back and shown to reproduce
+ * it, in the tool, printed every run.
+ *
+ * `SLY_SLAM` was documented as "the measured pixels converted back through this shot's own
+ * camera" and was never once converted back. It projected to 236 x 245 px against a measurement
+ * of 197 x 195. The claim was in a comment, where nothing executes it. This is the same claim in
+ * a place that runs.
+ *
+ * ── The two subjects are checked by DIFFERENT criteria, and saying which is the point ───────
+ * `dust` is checked by CONTAINMENT: it feeds a cropping test, its spread is what matters, and
+ * the drawn cloud is not centred on the contact (`dive_dust` carries wind 0.5, and the measured
+ * cloud reaches 290 px right of the contact against 236 px left). A symmetric plate must cover
+ * the greater reach, so slack on the other side is expected and is printed rather than hidden.
+ *
+ * `sly` is checked by SIZE. It cannot be checked by containment, because the drawn figure's
+ * centre sits **39.5 px left of the contact point's projection** — part pose, part the
+ * unexplained placement offset still open in `Debug._subject`. Forcing a symmetric plate to
+ * contain it inflates the figure to 2.32 m wide and 292 px, which would then be quoted as the
+ * width of a character who is 1.57 m across. **A number inflated to satisfy a check is a worse
+ * number than the one the check was protecting.** So the size is checked here, exactly, and the
+ * offset is carried by `FIGURE_PLACEMENT_SLOP` in the margin test — where it actually bites.
+ */
+function assertExtents() {
+  const cam = camFor(REF);
+  const [ax, ay, az] = REF.at;
+  const c = project(cam, ax, ay, az);
+  const lines = [`extents CALIBRATED against ${REF.src}`,
+    `   contact (${REF.at.join(', ')}) projects to px ${c.px.toFixed(1)}, py ${c.py.toFixed(1)}`];
+  let bad = 0;
+  for (const [name, dims, how] of [['sly', SLY_SLAM, 'size'], ['dust', DUST, 'contain']]) {
+    const p = plateOf(cam, ax, ay, az, dims);
+    const m = MEASURED[name];
+    let ok = false, verdict;
+    if (!p) verdict = 'BEHIND THE LENS';
+    else if (how === 'contain') {
+      ok = p.x0 <= m.x0 + 0.5 && p.x1 >= m.x1 - 0.5 && p.y0 <= m.y0 + 0.5 && p.y1 >= m.y1 - 0.5;
+      verdict = ok
+        ? `contains it (slack l${(m.x0 - p.x0).toFixed(0)} r${(p.x1 - m.x1).toFixed(0)} t${(m.y0 - p.y0).toFixed(0)} b${(p.y1 - m.y1).toFixed(0)})`
+        : 'DOES NOT COVER ITS OWN MEASUREMENT';
+    } else {
+      const dw = Math.abs((p.x1 - p.x0) - (m.x1 - m.x0)), dh = Math.abs((p.y1 - p.y0) - (m.y1 - m.y0));
+      ok = dw <= 1 && dh <= 1;
+      verdict = ok
+        ? `reproduces its size to ${Math.max(dw, dh).toFixed(1)} px (centre offset ${(((m.x0 + m.x1) / 2) - c.px).toFixed(1)} px, carried by the ${FIGURE_PLACEMENT_SLOP} px slop)`
+        : `DOES NOT REPRODUCE ITS OWN SIZE — off by ${dw.toFixed(1)} x ${dh.toFixed(1)} px`;
+    }
+    if (!ok) bad++;
+    lines.push(`   ${name.padEnd(4)} ${dims.w.toFixed(2)} m wide, ${dims.yLo.toFixed(2)}..${dims.yHi.toFixed(2)} m`
+      + ` -> ${p ? `${(p.x1 - p.x0).toFixed(0)} x ${(p.y1 - p.y0).toFixed(0)} px, rows ${p.y0.toFixed(0)}..${p.y1.toFixed(0)}` : '—'}`
+      + ` · measured ${m.x1 - m.x0} x ${m.y1 - m.y0} px, rows ${m.y0}..${m.y1}`
+      + ` · ${verdict}`);
+  }
+  if (bad) lines.push('   *** an extent above does not reproduce the pixels it was derived from;'
+    + ' every margin this tool prints is a claim about the wrong subject ***');
+  return lines.join('\n');
+}
+console.log(assertExtents());
+
+function score(name, c, { quiet = false } = {}) {
   const cam = camFor(c);
   const [px, py, pz] = c.player.pos;
 
-  const sly = boxOf(cam, px, py, pz, SLY);
+  const sly = plateOf(cam, px, py, pz, SLY_SLAM);
+  const dust = plateOf(cam, px, py, pz, DUST);
   const scuff = discOf(cam, px, py + 0.02, pz, SCUFF_R);
-  const ring = discOf(cam, px, py + 0.06, pz, RING_R);
-  /* The dust is a dome, not a disc: it travels outward AND the puffs are 1.9 m across at the
-     staged age. Framed as an upright box of that height over the ring's own radius. */
-  const dust = boxOf(cam, px, py, pz, { w: RING_R * 2, h: DUST_H });
+  const ring = discOf(cam, px, py + 0.06, pz, RING_R_DRAWN);
+  const ringDecl = discOf(cam, px, py + 0.06, pz, RING_R_DECLARED);
 
   const faults = [];
   if (!sly) faults.push('SLY BEHIND LENS');
@@ -132,23 +234,14 @@ function score(name, c) {
   if (!ring) faults.push('RING BEHIND LENS');
 
   const ms = margins(sly), mk = margins(scuff), mr = margins(ring), md = margins(dust);
-  for (const [who, m] of [['sly', ms], ['scuff', mk], ['ring', mr], ['dust', md]]) {
+  for (const [who, m, floor] of [['sly', ms, EDGE + FIGURE_PLACEMENT_SLOP], ['scuff', mk, EDGE],
+    ['ring', mr, EDGE], ['dust', md, EDGE]]) {
     if (!m) continue;
     for (const [edge, v] of Object.entries(m)) {
       if (v < 0) faults.push(`${who} CROPPED ${edge} by ${(-v).toFixed(0)} px`);
-      else if (v < 24) faults.push(`${who} within ${v.toFixed(0)} px of ${edge}`);
+      else if (v < floor) faults.push(`${who} within ${v.toFixed(0)} px of ${edge}`);
     }
   }
-
-  /* SWALLOWED. Not overlap-as-merge (`alertframe`'s test, which is about two figures becoming
-     one silhouette) — here the two subjects are SUPPOSED to overlap, and the question is
-     whether the figure survives it. Scored as the fraction of Sly's own box the ring covers. */
-  const area = (b) => (b ? (b.x1 - b.x0) * (b.y1 - b.y0) : 0);
-  /* Computed on the PROXY box, and that is not a detail: see the header. On `impact` the same
-     ratio against the measured figure is 80.6%, which does not pass. The number below is what
-     this tool can compute; it is not what the renderer draws. */
-  const swallowed = sly && ring ? overlapArea(sly, ring) / Math.max(1, area(sly)) : 0;
-  if (swallowed > 0.55) faults.push(`FIGURE SWALLOWED — the ring covers ${(swallowed * 100).toFixed(0)}% of Sly's box`);
 
   /* GROUND READ. For a circle on the floor the projected ellipse's height:width ratio is
      sin(camera elevation above the plane). Bar 0.22 — about 12.7° — derived rather than picked:
@@ -162,47 +255,53 @@ function score(name, c) {
   const slyH = sly ? sly.y1 - sly.y0 : 0;
   if (slyH < 110) faults.push(`sly only ${slyH.toFixed(0)} px tall — a slam needs a body, not a token`);
 
-  const slyClear = clear(cam, { x: px, y: py + 0.9, z: pz });
+  const slyClear = clear(cam, { x: px, y: py + 0.5, z: pz });
   const ringClear = clear(cam, { x: px, y: py + 0.06, z: pz });
   if (!slyClear) faults.push('SLY OCCLUDED by architecture');
   if (!ringClear) faults.push('RING OCCLUDED by architecture');
 
   /* Is he actually standing on the floor the shot claims? A slam 1.4 m above the paving is a
-     slam on nothing, and this is the check `sly-profile` records as the one that would have
-     caught three shipped feet-below-frame defects.
-
-     The ceiling is `py + 1.0` and it is passed rather than defaulted: over most of this
-     courtyard there is a terrace or a roof somewhere above, and a query that takes the topmost
-     surface in the column answers about THAT — at (0, 30) it returns 18.12 while the paving the
-     character stands on is at 0. The whole column is printed alongside so the number can be
-     read in context instead of trusted. */
+     slam on nothing. The ceiling is `py + 1.0` and it is PASSED rather than defaulted: over most
+     of this courtyard there is a terrace or a roof somewhere above, and a query that takes the
+     topmost surface in the column answers about THAT — at (0, 30) it returns 18.12 while the
+     paving the character stands on is at 0. */
   const col = groundColumn(px, pz);
   const g = groundUnder(px, pz, py + 1.0);
   if (g === null) faults.push(`NO ARCHITECTURE FLOOR at or below y ${(py + 1).toFixed(2)} (column: ${col.map((v) => v.toFixed(2)).join(', ') || 'empty'}) — may be terrain, which this tool cannot see`);
   else if (Math.abs(g - py) > 0.25) faults.push(`FLOATING — floor is at y ${g.toFixed(2)}, the impact is staged at ${py.toFixed(2)}`);
 
-  console.log(`\n── ${name}`);
-  console.log(`   cam ${c.pos.map((v) => v.toFixed(2)).join(', ')} -> ${c.target.join(', ')} · fov ${c.fov} · tod ${c.tod}`);
-  if (sly) console.log(`   sly    rows ${sly.y0.toFixed(0)}..${sly.y1.toFixed(0)} (${slyH.toFixed(0)} px) · margins l${ms.l.toFixed(0)} r${ms.r.toFixed(0)} t${ms.t.toFixed(0)} b${ms.b.toFixed(0)} · ${slyClear ? 'clear' : 'OCCLUDED'}   [UPRIGHT-BOX PROXY, not a silhouette — see header]`);
-  if (ring) console.log(`   ring   ${(ring.x1 - ring.x0).toFixed(0)} x ${(ring.y1 - ring.y0).toFixed(0)} px · margins l${mr.l.toFixed(0)} r${mr.r.toFixed(0)} t${mr.t.toFixed(0)} b${mr.b.toFixed(0)} · ${ringClear ? 'clear' : 'OCCLUDED'}   [AUTHORED FOOTPRINT r${RING_R.toFixed(2)}m, not the drawn sprite — see header]`);
-  if (scuff) console.log(`   scuff  ${(scuff.x1 - scuff.x0).toFixed(0)} x ${(scuff.y1 - scuff.y0).toFixed(0)} px · margins l${mk.l.toFixed(0)} r${mk.r.toFixed(0)} t${mk.t.toFixed(0)} b${mk.b.toFixed(0)}`);
-  if (dust) console.log(`   dust   margins l${md.l.toFixed(0)} r${md.r.toFixed(0)} t${md.t.toFixed(0)} b${md.b.toFixed(0)}`);
-  /* TIEBREAK, and it is a tiebreak rather than a bar — say which is which.
-     The bars above decide ADMISSION and every one of them is derived: cropping is cropping,
-     0.22 comes from the shipped shot that looks most steeply down the ground plane, 55% and
-     110 px are the points at which a subject stops being one. Four candidates can pass all of
-     them, and something still has to order the survivors.
-     This is that something: the product of the two quantities the shot must deliver at once —
-     the ring READING AS A RING (ellipse ratio) and the figure READING AS A FIGURE (pixel
-     height). They pull opposite ways, which is the entire difficulty of this frame: elevation
-     rounds the ring and shrinks the man. A composite is not evidence and is not treated as
-     any; it is a stated rule for ranking things the evidence has already admitted. */
   const rank = flat * slyH;
-  console.log(`   ellipse ratio ${flat.toFixed(3)} (bar 0.22) · ring covers ${(swallowed * 100).toFixed(0)}% of Sly (bar 55%) · rank ${rank.toFixed(1)}`);
-  console.log(`   column over the impact point: ${col.map((v) => v.toFixed(2)).join(', ') || '(empty)'} · standing on ${g === null ? 'NOTHING architectural' : g.toFixed(2)}`);
-  console.log(faults.length ? `   FAULTS: ${faults.join(' | ')}` : '   no faults');
-  return faults.length;
+  if (!quiet) {
+    console.log(`\n── ${name}`);
+    console.log(`   cam ${c.pos.map((v) => v.toFixed(2)).join(', ')} -> ${c.target.join(', ')} · fov ${c.fov} · tod ${c.tod}`);
+    if (sly) console.log(`   sly    ${(sly.x1 - sly.x0).toFixed(0)} x ${slyH.toFixed(0)} px · margins l${ms.l.toFixed(0)} r${ms.r.toFixed(0)} t${ms.t.toFixed(0)} b${ms.b.toFixed(0)} · ${slyClear ? 'clear' : 'OCCLUDED'}   [measured plate; edge floor ${EDGE}+${FIGURE_PLACEMENT_SLOP} px]`);
+    if (ring) console.log(`   ring   ${(ring.x1 - ring.x0).toFixed(0)} x ${(ring.y1 - ring.y0).toFixed(0)} px · margins l${mr.l.toFixed(0)} r${mr.r.toFixed(0)} t${mr.t.toFixed(0)} b${mr.b.toFixed(0)} · ${ringClear ? 'clear' : 'OCCLUDED'}   [DRAWN r${RING_R_DRAWN.toFixed(2)}m; _stageImpact declares ${RING_R_DECLARED.toFixed(2)}m]`);
+    if (scuff) console.log(`   scuff  ${(scuff.x1 - scuff.x0).toFixed(0)} x ${(scuff.y1 - scuff.y0).toFixed(0)} px · margins l${mk.l.toFixed(0)} r${mk.r.toFixed(0)} t${mk.t.toFixed(0)} b${mk.b.toFixed(0)}`);
+    if (dust) console.log(`   dust   ${(dust.x1 - dust.x0).toFixed(0)} x ${(dust.y1 - dust.y0).toFixed(0)} px · margins l${md.l.toFixed(0)} r${md.r.toFixed(0)} t${md.t.toFixed(0)} b${md.b.toFixed(0)}   [measured plate]`);
+    /* TIEBREAK, and it is a tiebreak rather than a bar — say which is which. The bars above
+       decide ADMISSION and every one is derived: cropping is cropping, 0.22 comes from the
+       shipped shot that looks most steeply down the ground plane, 110 px is where a subject
+       stops being one. Many cameras pass all of them and something must order the survivors.
+       This is that something: the product of the two quantities the shot must deliver at once —
+       the ring reading as a ring, and the figure reading as a figure. A composite is not
+       evidence and is not treated as any. */
+    console.log(`   ellipse ratio ${flat.toFixed(3)} (bar 0.22) · rank ${rank.toFixed(1)}`
+      + (ringDecl && ring ? ` · declared-radius ring would read ${(ringDecl.x1 - ringDecl.x0).toFixed(0)} px, drawn reads ${(ring.x1 - ring.x0).toFixed(0)}` : ''));
+    console.log(`   column over the impact point: ${col.map((v) => v.toFixed(2)).join(', ') || '(empty)'} · standing on ${g === null ? 'NOTHING architectural' : g.toFixed(2)}`);
+    console.log(faults.length ? `   FAULTS: ${faults.join(' | ')}` : '   no faults');
+  }
+  return { faults, rank, flat, slyH };
 }
+
+/* (0, 0, -8), and the two rejected before it are why this constant carries a comment. The first
+   draft slammed at (0, 0, 20) — under the obelisk terrace, with architecture at 1.56, 1.63, 2.00
+   and 2.92 m directly overhead, i.e. a slam in a 1.56 m crawlspace. The second tried (0, 0, -6),
+   which the tool reported as having NO architecture floor at all: a gap in the paving, so the
+   crack and scuff decals — half the staged event — would have landed on terrain this tool cannot
+   see and possibly on nothing. Both were found by the column print rather than by looking, and
+   both would have rendered a plausible frame. */
+const AT = [0, 0, -8];
+const P = { pos: AT, yaw: 0.35, pose: 'dive_impact' };
 
 const args = process.argv.slice(2);
 const shotArg = args.indexOf('--shot');
@@ -211,27 +310,80 @@ if (shotArg >= 0) {
   const s = SHOTS[name];
   if (!s) { console.error(`no shot "${name}" in SHOTS`); process.exit(2); }
   if (!s.player?.pos) { console.error(`shot "${name}" stages no player — nothing to slam`); process.exit(2); }
-  process.exit(score(name, s) ? 1 : 0);
+  process.exit(score(name, s).faults.length ? 1 : 0);
+}
+
+if (args.includes('--search')) {
+  /**
+   * Sweep the camera domain and keep the survivors.
+   *
+   * The sweep is over the shot's actual free variables — where the lens is and how long it is —
+   * and nothing else: the impact point is fixed by the floor check, and the target is fixed at
+   * the contact so every candidate is framing the same event. Ranked by the stated composite,
+   * which orders survivors and admits none.
+   */
+  const t0 = Date.now();
+  const survivors = [];
+  let n = 0, behind = 0;
+  const faultTally = new Map();
+  for (let d = 5; d <= 22; d += 0.5) {
+    for (let hh = 1.0; hh <= 12; hh += 0.25) {
+      for (let azDeg = 0; azDeg < 360; azDeg += 7.5) {
+        for (const fov of [26, 30, 34, 38, 44, 50]) {
+          const a = azDeg * Math.PI / 180;
+          const cand = {
+            pos: [AT[0] + Math.cos(a) * d, hh, AT[2] + Math.sin(a) * d],
+            target: [AT[0], 0.6, AT[2]], fov, tod: 0.78, player: P,
+          };
+          n++;
+          const r = score('', cand, { quiet: true });
+          if (!r.faults.length) survivors.push({ ...cand, d, hh, azDeg, ...r });
+          else for (const f of r.faults) {
+            const key = f.replace(/ by [\d.]+ px/, '').replace(/ [\d.]+ px of /, ' N px of ')
+              .replace(/ratio [\d.]+/, 'ratio N').replace(/only [\d.]+/, 'only N')
+              .replace(/y [-\d.]+/g, 'y N').replace(/column: [^)]*/, 'column: …');
+            faultTally.set(key, (faultTally.get(key) ?? 0) + 1);
+          }
+        }
+      }
+    }
+  }
+  survivors.sort((x, y) => y.rank - x.rank);
+  console.log(`\n══ SEARCH · ${n} cameras · ${survivors.length} with no faults · ${((Date.now() - t0) / 1000).toFixed(1)} s`);
+  console.log(`   domain: distance 5-22 m, height 1-12 m, 48 azimuths, 6 lenses, target fixed at the contact`);
+  if (behind) console.log(`   ${behind} unusable (subject behind the lens)`);
+  console.log(`\n   why the rest were rejected:`);
+  for (const [f, k] of [...faultTally.entries()].sort((x, y) => y[1] - x[1]).slice(0, 12)) {
+    console.log(`     ${String(k).padStart(7)}  ${f}`);
+  }
+  console.log(`\n   top survivors by rank (ellipse ratio x figure height):`);
+  for (const s of survivors.slice(0, 12)) {
+    console.log(`     rank ${s.rank.toFixed(1).padStart(6)} · d ${String(s.d).padStart(4)} m h ${String(s.hh).padStart(5)} m az ${String(s.azDeg).padStart(5)}° fov ${String(s.fov).padStart(2)}`
+      + ` · ellipse ${s.flat.toFixed(3)} · sly ${s.slyH.toFixed(0)} px`
+      + ` · pos ${s.pos.map((v) => v.toFixed(2)).join(', ')}`);
+  }
+  try {
+    mkdirSync('progress/records', { recursive: true });
+    writeFileSync('progress/records/impact-search.json', JSON.stringify({
+      tree: provenance, when: new Date().toISOString(), swept: n,
+      domain: 'd 5-22 by 0.5, h 1-12 by 0.25, az 0-360 by 7.5, fov [26,30,34,38,44,50]',
+      bars: { edge: EDGE, figureSlop: FIGURE_PLACEMENT_SLOP, ellipse: 0.22, slyPx: 110 },
+      extents: { SLY_SLAM, DUST, RING_R_DRAWN, RING_R_DECLARED, SCUFF_R },
+      survivors: survivors.length,
+      rejections: [...faultTally.entries()].sort((x, y) => y[1] - x[1]),
+      top: survivors.slice(0, 40),
+    }, null, 2));
+    console.log(`\n   -> progress/records/impact-search.json`);
+  } catch (e) { console.log(`   (could not persist: ${e.message})`); }
+  process.exit(survivors.length ? 0 : 1);
 }
 
 /**
  * Candidates.
  *
- * All in the courtyard, on paving, because that is where the crack and scuff decals read: a
- * slam on sand leaves a mark nobody can see, and the two decals are half the staged event.
- * The variable being swept is CAMERA ELEVATION AND DISTANCE, which is the whole difficulty —
- * the ring wants distance and the figure wants closeness, and those pull opposite ways.
+ * All in the courtyard, on paving, because that is where the crack and scuff decals read: a slam
+ * on sand leaves a mark nobody can see, and the two decals are half the staged event.
  */
-/* (0, 0, -8), and the two rejected before it are the reason this constant carries a comment.
-   The first draft slammed at (0, 0, 20) — under the obelisk terrace, with architecture at 1.56,
-   1.63, 2.00 and 2.92 m directly overhead, i.e. a slam in a 1.56 m crawlspace. The second tried
-   (0, 0, -6), which the tool reported as having NO architecture floor at all: it is a gap in the
-   paving, so the crack and scuff decals — half the staged event — would have landed on terrain
-   this tool cannot see and possibly on nothing. Both were found by the column print rather than
-   by looking, and both would have rendered a plausible frame. */
-const AT = [0, 0, -8];
-const P = { pos: AT, yaw: 0.35, pose: 'dive_impact' };
-
 const CANDIDATES = {
   /* CALIBRATION, and it must fault. Four candidates that all pass tell you nothing about the
      tool — the first version of this file scored 4/4 and I had learned nothing from it. This is
@@ -241,14 +393,18 @@ const CANDIDATES = {
   'CALIB close and low — the instinct, and it must fault': {
     pos: [1.6, 0.9, -5.4], target: [0.0, 0.8, -8.0], fov: 52, tod: 0.78, player: P,
   },
+  /* SECOND CALIBRATION, and it must also fault, for a DIFFERENT reason: this is the camera the
+     shipped `impact` used, and the ring it crops is the fault that survived §407's audit. If
+     this ever passes, either the ring's drawn extent has been re-scoped or the crop test has
+     stopped working — and the first is a decision, not a fix. */
+  'CALIB the shipped camera — must still fault on the ring crop': {
+    pos: [5.4, 4.4, -2.6], target: [0.0, 0.6, -8.0], fov: 38, tod: 0.78, player: P,
+  },
   'A three-quarter, lifted': {
     pos: [4.6, 3.4, -3.4], target: [0.0, 0.7, -8.0], fov: 44, tod: 0.78, player: P,
   },
   'B higher and further — the ring reads, does the figure?': {
     pos: [6.4, 5.4, -1.6], target: [0.0, 0.5, -8.0], fov: 42, tod: 0.78, player: P,
-  },
-  'C lifted, tighter lens to buy the figure back': {
-    pos: [5.4, 4.4, -2.6], target: [0.0, 0.6, -8.0], fov: 38, tod: 0.78, player: P,
   },
   'D low three-quarter — the most ground the ellipse bar allows': {
     pos: [4.2, 2.3, -4.2], target: [0.0, 0.8, -8.0], fov: 46, tod: 0.78, player: P,
@@ -256,5 +412,5 @@ const CANDIDATES = {
 };
 
 let clean = 0;
-for (const [name, c] of Object.entries(CANDIDATES)) if (score(name, c) === 0) clean++;
+for (const [name, c] of Object.entries(CANDIDATES)) if (score(name, c).faults.length === 0) clean++;
 console.log(`\n${clean}/${Object.keys(CANDIDATES).length} candidates with no faults`);
