@@ -31741,6 +31741,81 @@ than the decision needed. **A measurement can be correct, precise, and about the
 and nothing in the number itself says so. What caught it was verifying the change rather than
 trusting the gate that approved it.
 
+### §411.19 The recovery fix withdrew the evidence for a decision made two rounds earlier
+
+`recoverSpeed` 2.4 → 6.0 landed on the measured trade. Then it did something the trade did not
+predict: **it invalidated the reasoning that sized the speed dolly.**
+
+#32 chose `distSpeedGain` 0.30 over the authored ladder's 1.60 on one load-bearing argument —
+*"the level refuses +1.60"* — measured as 11.6 % of nave sprint frames cut past 50 cm. Re-measured
+with the recovery keeping up:
+
+```
+gain    lane 0 cut past 2 x camRadius     worst cut
+0.30              0.0 %                     0.036 m
+0.90              0.0 %                     0.050 m
+1.60              0.0 %                     0.072 m      (was 7.4 % / 1.346 m)
+```
+
+and the centre-line does not object at **any** size until the boom passes 11 m — past `distMax`
+and past anything shippable. **The level never refused the dolly. It refused the recovery
+constant**, and the columns were being blamed for a lag that happened to be worst where they were.
+
+`camspeed` C2's upper bracket went red on the change, which is the arm working: it said in its own
+failure message that the reason for choosing 0.30 over 1.60 no longer held. Rebuilt on a bound that
+survives — `distMax`, the furthest the **player** may zoom, since a dolly past it puts the camera
+somewhere unasked that the player may not choose. A gain of 4.00 reaches it; 0.30 delivers 5.670 m
+against 9.0.
+
+**0.30 is retained, not re-tuned.** The size is a feel question, its evidence has been withdrawn,
+and the lane that found the error is the wrong one to quietly resize on the strength of it. Both
+the constant's comment and the arm's docblock now say the justification is stale rather than
+carrying a claim that reads as measured and is not.
+
+> **A fix can withdraw the evidence for a decision made while the defect was present.** The nave
+> measurement was correct when it was taken. It became false when a constant three screens away
+> changed — and nothing connected them, because the dependency ran through the *level's response*
+> to the camera rather than through any call graph. Neither the commit nor the arm recorded that
+> the measurement had a precondition. The arm caught it only because it re-measured rather than
+> asserting a stored number, which is the argument for bars that compute their own comparison
+> every run.
+
+### §411.20 The rule and its limit, together
+
+Stated as a pair on purpose, because the first without the second is a talisman.
+
+> **A rule against a defect class is not a defence against writing one. It is only a defence
+> against shipping one, and only if it is executed.**
+>
+> **And executing it catches instruments that LIE. It does not catch instruments that answer
+> honestly about something else — a measurement can be correct, precise, and about the wrong
+> quantity, and nothing in the number itself says so. For those, the defence is to verify the
+> CHANGE, not the gate.**
+
+The four instances this round, and which half of the pair each needed:
+
+```
+§411.5   1 cm called a graze an occlusion          lied; caught by re-scoring
+§411.12  a bbox grew as the subject receded        lied; caught by an impossible sign
+§411.14  a gap could not tell blocked from
+         recovering                                lied; caught by replaying the rig's own loop
+§411.18  a gate measured the river's screen
+         presence, not the frame change moving
+         it would cause                            DID NOT LIE. Correct, precise, wrong
+                                                   quantity. Caught only by verifying the
+                                                   change it had approved.
+```
+
+The first three announce themselves to anyone who looks twice. The fourth passes review, passes
+re-scoring, and passes a second opinion, because every number in it is right. The only thing that
+catches it is doing the change and measuring what actually moved — which is why "verify the
+change, not the gate" is a separate discipline and not a restatement of the first rule.
+
+Three lanes each found a defect in their own instruments today: four instrument defects against
+five bar defects. **The instruments are the harder half**, because a bar that cannot discriminate
+is a property of the bar and can be reasoned about from the bar alone, while an instrument
+measuring the wrong quantity is only visible from outside the measurement.
+
 ---
 
 ## §414 — The fourth instance, and the first where the vacuity was in the SAMPLING
