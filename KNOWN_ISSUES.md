@@ -31529,7 +31529,7 @@ sampling. That is what a passing calibration should look like. **5e-16 was never
 Past the bound the message says the asymmetry is REAL — a subject no longer centred on the
 contact — rather than reporting a generic failure, because those are different repairs.
 
-## §410 — The `capsuleSweep` census, done properly: my own §409.2 was incomplete and its rate was wrong
+## §412 — The `capsuleSweep` census, done properly: my own §409.2 was incomplete and its rate was wrong
 
 §409.2 called itself a census: *"Every consumer that reads `hit` from a capsule sweep, because a
 defect found by accident says nothing about its own blast radius."* It listed six consumers,
@@ -31544,7 +31544,7 @@ This entry is §409's own generalisation turned on §409: a census that can only
 happened to think of" is an enumeration too small for its question, which is the same shape as a
 flag too small for its answer set.
 
-### §410.1 The missed caller, and it is the worst-placed one
+### §412.1 The missed caller, and it is the worst-placed one
 
 The six in §409.2 are all reached through `Controller._sweep`, the wrapper. **`Controller._calibrate`
 (`src/player/Controller.js:697`) calls `col.capsuleSweep` directly**, and reads `hit` as a bare
@@ -31564,20 +31564,26 @@ of the binding. Every other site gets a fresh answer next frame.
 It is nevertheless safe, and by structure rather than by luck: the probe drops from `floor + 3.0`
 to `floor - 0.5` where `floor` came from `groundCheck`, so a 3.5 m descent that starts 3 m above
 known ground **must** cross it, and the sweep loop cannot come back empty. Measured on the real
-level it reports `sweepHit=true, depenHit=true, depenDepth=0.0026`, i.e. a genuine contact with
-skin-scale residual overlap, and `_capOff = 0`. An arm now pins that, and says in its own message
-that if the probe geometry ever stops guaranteeing the crossing the answer is the bound, not a
-wider acceptance window.
+level it reports **`sweepHit=true`** and `_capOff = 0` (the residual `depenHit` varies with where
+he is standing — skin-scale, 0.0026 m at the walk's last position, absent at the arm's — and it is
+`sweepHit` that carries the safety). An arm now pins that, and says in its own message that if the
+probe geometry ever stops guaranteeing the crossing the answer is the bound, not a wider window.
+
+Writing that arm cost a second finding worth the line: a freshly built `Controller` has bound
+nothing, so `_calibrate` answers from the `FLAT` stand-in and the probe came back `undefined`. The
+arm now re-binds first and asserts it reached the real layer at all — **an instrument reading the
+stub instead of the level is §11's oldest failure in this ledger**, and it very nearly got recorded
+here as a measurement.
 
 *(Noted, not landed, because it is a different defect and this round is not its round:
 `_calibrate` sets `this._calibrated = true` on entry, so a probe that returns no hit at all latches
 "calibration done" with `_capOff = 0` and never retries. Currently unreachable for the same reason
 the above is safe.)*
 
-### §410.2 The rate, measured across every site instead of one
+### §412.2 The rate, measured across every site instead of one
 
 §409.2 measured the step-up probe at **"0 depenetration-only hits in 305 sweeps"** and generalised
-from it. 305 was too small. `Collision.capsuleSweep` now publishes which path set `hit` (§410.3), so
+from it. 305 was too small. `Collision.capsuleSweep` now publishes which path set `hit` (§412.3), so
 the count is exact rather than inferred; over 7,830 controller frames of real-level locomotion —
 174 routes, four compass directions from a 10 m grid, jumping on a cycle:
 
@@ -31597,7 +31603,7 @@ the step-up probe is among them at 3. A second run over 9,450 frames gives 134 i
 is not rare and it is not confined to one lip. §409.2's *"nowhere in ordinary locomotion"* was an
 artefact of sampling one site for 305 sweeps.
 
-### §410.3 So why was only one site ever damaged — the enumeration, with the answer per caller
+### §412.3 So why was only one site ever damaged — the enumeration, with the answer per caller
 
 Because of **how each caller reads the result**, which is a structural property and not a fact
 about this level's geometry. That is a better reason than the one §409.2 gave, and it is the reason
@@ -31615,15 +31621,17 @@ ledgeAssist                     hit + position     NOT NEEDED       rejects the 
 _moveHorizontal step-up probe   hit, BARE          NO               disables the step-up. FAIL-SAFE:
                                                                     the direction is "don't lift",
                                                                     never "drop him"
-_calibrate                      hit, BARE          NO               unreachable — see §410.1
+_calibrate                      hit, BARE          NO               unreachable — see §412.1
 CameraRig._sweep                distance           NOT NEEDED       depen sets distance = totalLen,
                                                                     so the boom shortens by exactly
                                                                     one camPad (0.12 m), not a jam
 ```
 
-Two read `toi`, and `toi = 1` on the depenetration path is the whole defect — both are bounded.
-Three read `position`, which is *correct under either meaning of `hit`*, because where the capsule
-ended up is a fact regardless of why it stopped. One is fail-safe. One is unreachable.
+Seven callers, and they partition exactly: **two** read `toi` — and `toi = 1` on the depenetration
+path is the whole defect — so both are bounded. **Two** read `position`, which is *correct under
+either meaning of `hit`*, because where the capsule ended up is a fact regardless of why it stopped.
+**One** reads `distance`, where the depenetration value costs the boom a single `camPad`. **One** is
+fail-safe. **One** is unreachable. Only the first group could ever have been damaged, and it was.
 
 The two flag side-effects `_slide` sets on a push-out — `hitWall`, `lastHitNormal`/`lastHitTag` —
 were checked rather than assumed: all three are **written and never read** (`Controller.js:514`
@@ -31633,7 +31641,7 @@ Guards were checked too, because a test comment claims `Collision.capsuleSweep` 
 It is not: `Guard.js` uses `raycast` and `groundCheck`, and **neither depenetrates** — `_depenetrate`
 has exactly one call site, inside `capsuleSweep`. The class is confined to the player.
 
-### §410.4 The repair, and its blast radius, which is zero
+### §412.4 The repair, and its blast radius, which is zero
 
 `hit` is a **disjunction**, and the repair is to publish its disjuncts rather than to widen the flag:
 
@@ -31654,7 +31662,7 @@ contact" would be wrong 1,360 times in 9,925 sweeps.
 the three fields are additive on a pooled object that already carried eight. `Controller._sweep`
 carries them through with `sweepHit` defaulting to `true` when the collision module predates the
 split, so `FLAT` and every test stub keep the behaviour they had. I did **not** convert any call
-site to read the new flags, because §410.3 is the argument that none needs to — the two that could
+site to read the new flags, because §412.3 is the argument that none needs to — the two that could
 be damaged are fixed by bound, and a bound is better than a flag: it is correct under *either*
 meaning, so it cannot be defeated by a third path being added to `capsuleSweep` later.
 
@@ -31662,7 +31670,7 @@ The signature change I was told to price before landing — threading a reason c
 caller — is therefore **not proposed**. It would touch seven sites to give six of them information
 they demonstrably do not use.
 
-### §410.5 The arms, and what makes them able to fail
+### §412.5 The arms, and what makes them able to fail
 
 Three arms, in `tests/traversal.test.mjs`:
 
@@ -31676,28 +31684,45 @@ Three arms, in `tests/traversal.test.mjs`:
    census of the codebase rather than of the walk — the walk can only see callers it happens to
    run, and `CameraRig` never runs in it.
 3. **The summit lip as a minimal pair.** Both arms return `hit: true` *and* `toi: 1` — identical on
-   every field the pre-fix code read — differing only in where the sweep resolved. One must descend
-   `stepHeight + groundSnap` and one must not descend at all.
+   every field the pre-fix code read — differing only in where the sweep resolved:
 
-   Both arms on the bar, and the second is the one that matters: *"a snap that has been deleted also
-   never drops him."* A third checks he actually walked, because a character pinned in place never
-   falls either. The same lever the ramp arm carries, for the same reason.
+   ```
+                          lift          snap                       net        checked against
+   depenetration-only    +0.42   -min(0.76·1, 0.00) = 0.00       -0.42 m      -stepHeight
+   genuine contact       +0.42   -min(0.76·1, 0.76) = 0.76       +0.34 m      +groundSnap
+                                                       difference  0.76 m  =  the fall itself
+   ```
 
-A short real-level walk runs alongside them and checks one thing only: that no **uncensused** caller
-name reaches `capsuleSweep` during ordinary locomotion. It deliberately does **not** assert
-`depenOnly > 0`. The rate is ~1 in 76 sweeps, and a few hundred frames is too small a sample to make
-that a bar rather than a coin flip — which is the same error §409.2 made in the other direction, and
-committing it again inside the arm that corrects it would be a poor joke. The lever showing the
-class fires at all is the depenetration quadrant in arm 1, which is deterministic. The rate lives in
-`tools/sweepcensus.mjs` (~6 s on an idle box, `--grid` / `--frames` to resize), where re-measuring
-it costs one command and no lock.
+   Three assertions, each an equality within 1 cm on a **derived** quantity, plus the pair's own
+   difference — that last one is the arm that notices if `sweepHit` is ever collapsed back into
+   `hit`, which neither single arm would. And the lever, the one that matters: *"a snap that has
+   been deleted also never drops him"*, so the contact arm must descend or arm (1) proves nothing.
+   A fourth checks he actually walked, because a character pinned in place never falls either.
+
+   **Verified to fail:** reverting `min(byToi, byResolve)` to `drop * dn.toi` turns the −0.42 m into
+   +0.34 m and the arm goes red with the right message. An arm that has never been seen red is a
+   claim, not a check — which is this section's whole subject.
+
+   *And my first version of this arm asserted the wrong numbers,* expecting the contact arm to
+   descend the full 0.76 m: I had forgotten that `_moveHorizontal` lifts by `stepHeight` before it
+   snaps. The behaviour was right and the expectation was wrong. Recorded because the temptation at
+   that moment is to loosen the bar until it passes, and the correct move — derive the expected
+   value from the mechanism and write the derivation into the test — made it *tighter* (two
+   one-sided inequalities became three equalities).
+
+The rate is **not** measured in the suite. `tools/sweepcensus.mjs` does it in ~6 s standalone
+(`--grid` / `--frames` to resize), and a short in-suite walk was tried and removed: it can only
+census callers it happens to reach — never `CameraRig` — so the static scan strictly dominates it,
+and asserting `depenOnly > 0` on a few hundred frames at a 1-in-76 rate is a coin flip dressed as a
+bar. That is §409.2's error in the other direction, and committing it inside the arm that corrects
+it would have been a poor joke.
 
 *Sizing note, recorded because it cost me two false diagnoses:* the walk was first written into the
 suite at 7,830 frames and appeared to hang. It was not hanging and the test runner was not at fault
 — the box was at **load average 8.8** with three other lanes running captures and suites, and every
-number I took while diagnosing was contended. `uptime` before concluding anything about performance.
+timing I took while diagnosing was contended. `uptime` before concluding anything about performance.
 
-### §410.6 The generalisation
+### §412.6 The generalisation
 
 > **An enumeration is a predicate too. "These are all the callers" is a claim that can be wrong in
 > exactly one direction, and reasoning cannot bound it — only the compiler can.**
@@ -31711,5 +31736,89 @@ The same correction applies to the measurement. "0 in 305" was a sample, reporte
 Publishing `sweepHit` turned the same question into a count over 21,595 sweeps for the cost of one
 assignment, and the count disagreed with the sample by two orders of magnitude while leaving the
 conclusion standing. **A conclusion that survives its evidence being corrected by 100× was resting
-on something other than that evidence** — here, on the structural argument in §410.3, which is the
+on something other than that evidence** — here, on the structural argument in §412.3, which is the
 one worth keeping.
+
+---
+
+## §413 — The `perch_idle` pixel verification at `hero` is unsatisfiable, and the lock was free
+
+Commissioned: *"the pose is confirmed in `poseprobe` bone space and has NEVER been confirmed to
+survive projection into the `hero` shot. That needs the capture lock."* The lock **was** free —
+holder pid 9661 dead, queue empty, no live capture under `pgrep`. I did not take it, and this is
+why.
+
+### §413.1 `hero` cannot answer the question, and the arithmetic takes one command
+
+`tools/charview.mjs`, re-run today against the shipped shots, independently of any prior number:
+
+```
+shot         view    px (1600x900)   px/m    frontal factor    3.66 cm excursion    vs 2.5 px hull
+hero         73.4°       295         173.5       0.2857            1.81 px              0.73x
+sly-perch    33.0°       619         364.1       0.8387           11.18 px              4.47x
+```
+
+At `hero` the lateral line of action arrives **narrower than the ink line drawn over it**. The shot
+returns a null whether or not the lean exists, so a capture there cannot distinguish "the pose does
+not survive projection" from "the instrument cannot see it". That is §407's shape exactly — a bar
+that cannot be passed — and §408.3's check applied before spending rather than after: *can this
+discriminate, in both directions?* No.
+
+Spending a 2–5 minute lock slot to obtain an uninformative null, on a box already at load average
+8.8 with three lanes queued behind it, is the expensive version of the mistake §205 records.
+
+### §413.2 And the premise had already been refuted — this is #17's pattern a fourth time
+
+**§345 (2026-08-15) reached this same conclusion and went further**, and I reproduced its two
+numbers to the digit by a different route before finding it — `charview` + `poseprobe`'s 3.7 cm
+against §345's rig-metric 3.66 cm, giving 1.81/1.83 px and 11.18/11.30 px. Independent agreement,
+not a citation.
+
+§345 also establishes two things that make the commission's own framing too weak:
+
+- **The pose is not confirmed merely "in `poseprobe` bone space."** §345 ran the lane's `latEx`
+  metric across all 52 clips and the whole 3.2 s loop: `perch_idle` scores 3.66 cm on the legacy rig
+  and **6.19 cm on the rig that ships**, 2nd of 5 idles on legacy and **1st on `RIG3`**, 11th–13th
+  of 52 overall against a median of ~1.7–2.6 cm, holding 3.35–3.96 cm across the loop with no
+  orphaned-key collapse. That is a stronger confirmation than a single frozen probe.
+- **What `hero` does show is the wrong axis.** Its ~17.5 px of screen-lateral excursion is ~90 %
+  **sagittal** — the fore/aft crouch, not the lateral line. A pixel measurement there would not be
+  a weak measurement of the right thing; it would be a strong measurement of a different thing.
+
+§345 also priced the only change that could make `hero` see it: **+17° of torso Z-roll**, 2.8× the
+shipped span, and `latEx` flips sign before you get there. *"That is a figure falling over."*
+
+This is now the **fourth** time the `perch_idle` line item has been actioned from text that the
+ledger had already superseded — #17 itself, §204, §345, and this. The item is not open, was not
+open, and the standing correction at `KNOWN_ISSUES.md:797` has been struck through since
+2026-08-02.
+
+### §413.3 What IS open, stated precisely so it is not re-commissioned as this again
+
+The *rendered-pixel* confirmation at **`sly-perch`** — the twin authored for exactly this, where the
+excursion is 11.2 px against a 2.5 px hull, 4.5× — has, as far as this ledger records, never been
+taken. §345 verified the pose in rig space and settled `hero` by arithmetic; neither of those is a
+per-row centroid measured off a real frame.
+
+**It is worth one lock slot and it is not worth more than that,** because no decision hangs on it:
+§345 already priced the only keyframe change and refused it, so the measurement can confirm but
+cannot change anything. It is registered here rather than done because this round's commission was
+the `capsuleSweep` census (§412) and the honest thing to hand back is the refusal plus the correct
+target, not a capture taken against a shot that cannot answer.
+
+If someone wants "does the perch pose *read* at `hero`" — a different and legitimate question, and
+possibly the one behind the original *"reads as a mannequin from off-profile azimuths"* — then it is
+a critic-scored composition question, not a pixel verification of #17, and it needs its own
+registered bar. It must not be run as this one: at 0.73× the hull, `hero` will return a null and the
+null will be read as a missing lean. It already has been, three times.
+
+### §413.4 The generalisation, which is §407's with the cost attached
+
+> **Ask whether the instrument can resolve the quantity BEFORE you queue for it, not after you
+> have the null.** The check costs one command here — a shot's own `px/m` times the cosine of its
+> bearing — and it is the difference between a capture and a wasted lock slot.
+
+Every element of the refusal was available without a boot, a render, or the lock: `charview` runs in
+about a second, `poseprobe` in seconds, and the ledger's own §345 was three sections up. The lock
+was free the whole time I was establishing that I should not use it, which is the cheapest possible
+version of this outcome and the reason to do the arithmetic first every time.

@@ -1,5 +1,5 @@
 /**
- * The §409/§410 census: how often does `Collision.capsuleSweep` report `hit` for DEPENETRATION
+ * The §409/§412 census: how often does `Collision.capsuleSweep` report `hit` for DEPENETRATION
  * rather than for a swept contact, and which caller asked?
  *
  * `capsuleSweep` sets `hit` on two occasions that mean opposite things — the swept capsule

@@ -4050,7 +4050,7 @@ test('slopes: standing still does not travel, and a face too steep to stand on s
  *                                             "clear to the far end" minus one camPad, not a jam
  */
 test('§409 census: capsuleSweep says WHY it hit, and every caller in src is enumerated', async () => {
-  const { engine, c, collision } = await realWorld();
+  const { c, collision } = await realWorld();
 
   /* ---- 1. the discriminator, all four quadrants on the REAL collision layer -------------- */
   /* A flag that cannot say one of its answers is not a flag (§409.3), so `sweepHit` is shown
@@ -4133,114 +4133,42 @@ test('§409 census: capsuleSweep says WHY it hit, and every caller in src is enu
     `Controller routes ${fanout} consumers through _sweep; the census enumerated 5 (step-up probe, ` +
     'ground snap, _moveVertical, _slide, ledgeAssist). A sixth must be censused before this number moves.');
 
-  /* ---- 3. the rate, on the real level, attributed ---------------------------------------- */
+  /* ---- 3. the rate, and why it is NOT measured here --------------------------------------- */
   /* §409.2 measured the step-up probe at "0 depenetration-only hits in 305 sweeps" and concluded
      the class was geometry-specific. 305 was too small a sample: over 7,830 controller frames the
      class fires 283 times in 21,595 sweeps — about 1 in 76 — at four of the six sites. The
      conclusion that only ONE site was damaged survives, but because of how the other five READ the
-     result (§410.3), not because the situation is rare.
+     result (§412.3), not because the situation is rare.
 
-     The FULL census lives in `tools/sweepcensus.mjs`, which runs it in ~6 s outside the harness.
-     It is not run here: under the test runner the same walk costs minutes rather than seconds, and
-     the arm that actually guarantees completeness is the static scan above — it sees `CameraRig`,
-     which no controller walk ever reaches. What runs here is a short walk whose only jobs are to
-     show that no UNCENSUSED caller appears, and that the class does fire through real frames. */
-  const stats = new Map();
-  const realSweep = collision.capsuleSweep.bind(collision);
-  let recording = false;
-  /* Capture only the frames the attribution reads. Under the test runner the live stack is ~40
-     frames deep and `Error.stack` formats all of them, which turned a 6 s walk into minutes. */
-  const stackLimit = Error.stackTraceLimit;
-  collision.capsuleSweep = function (from, to, r, h, o, out) {
-    const res = realSweep(from, to, r, h, o, out);
-    if (recording) {
-      // Caller NAME from the stack (robust); the two sites inside `_moveHorizontal` are separated
-      // by the SHAPE of the request, because they ask opposite questions — up, versus down.
-      let fn = '?';
-      const st = new Error().stack.split('\n');
-      for (let i = 2; i < st.length; i++) {
-        const m = /at (?:async )?(?:Object\.)?([A-Za-z_$][\w$.]*)/.exec(st[i]);
-        if (!m) continue;
-        const n = m[1].replace(/^Controller\./, '');
-        if (n === 'capsuleSweep' || n === '_sweep') continue;
-        fn = n; break;
-      }
-      if (fn === '_moveHorizontal') fn = (to.y - from.y) > 0 ? '_moveHorizontal step-up' : '_moveHorizontal snap';
-      let e = stats.get(fn);
-      if (!e) { e = { calls: 0, depenOnly: 0, maxDepth: 0 }; stats.set(fn, e); }
-      e.calls++;
-      if (res.hit && !res.sweepHit) { e.depenOnly++; e.maxDepth = Math.max(e.maxDepth, res.depenDepth); }
-    }
-    return res;
-  };
+     That measurement lives in `tools/sweepcensus.mjs` and is deliberately not run here.
 
-  const DIRS = [[0, 1], [0, -1], [1, 0], [-1, 0]];
-  let routes = 0, frames = 0;
-  Error.stackTraceLimit = 6;
-  recording = true;
-  for (const [x, z] of [[0, 30], [0, 0], [-20, 20], [20, -20]]) {
-    const gq = collision.groundCheck(V(x, 90, z), TUNE.radius, 300);
-    if (!gq?.hit) continue;
-    for (const [mx, my] of DIRS) {
-      // The stub engine keeps every event and warning forever; over thousands of frames that
-      // buffer, not the physics, becomes the cost. Nothing here reads them.
-      engine.events.length = 0; engine.warnings.length = 0;
-      hardReset(engine, c, V(x, gq.y + 0.05, z));
-      for (let i = 0; i < 3; i++) {
-        engine.input.beginFrame(DT); engine.input.move.x = 0; engine.input.move.y = 0;
-        engine.time = i * DT; c.update(DT, i * DT);
-      }
-      if (!c.grounded) continue;
-      routes++;
-      for (let i = 0; i < 24; i++) {
-        engine.input.beginFrame(DT);
-        engine.input.move.x = mx; engine.input.move.y = my;
-        // jump on a cycle so airborne motion, landings and ledgeAssist are all exercised
-        if (i % 12 === 5) engine.input.hold('jump'); else engine.input.let_go('jump');
-        engine.time = i * DT; c.update(DT, i * DT);
-        frames++;
-      }
-    }
-  }
-  recording = false;
-  Error.stackTraceLimit = stackLimit;
-  collision.capsuleSweep = realSweep;
+       · A RATE needs thousands of controller frames. They cost seconds standalone and minutes
+         under `node --test` on a box shared with other lanes, and this suite is run constantly.
+       · A walk can only census the callers it happens to reach — never `CameraRig`, whose boom
+         does not run in a headless controller probe. The **static scan above is strictly
+         stronger**: it finds a new caller by finding the CALL, anywhere in `src`, exercised or not.
+       · A short walk would give a small count, and asserting `depenOnly > 0` on a small count is
+         a coin flip dressed as a bar — which is the error §409.2 made in the other direction. The
+         lever that shows the class fires at all is the depenetration quadrant in part 1, and that
+         one is deterministic. */
 
-  let totalCalls = 0, totalDepen = 0;
-  console.log(`\n[§409] walk: ${routes} routes · ${frames} controller frames on the real level`);
-  console.log('[§409] site                      calls   depen-only   max push (m)');
-  for (const [s, e] of [...stats.entries()].sort()) {
-    totalCalls += e.calls; totalDepen += e.depenOnly;
-    console.log(`[§409]   ${s.padEnd(26)}${String(e.calls).padStart(5)}${String(e.depenOnly).padStart(13)}` +
-      `${e.maxDepth.toFixed(4).padStart(15)}`);
-  }
-  console.log(`[§409]   ${'TOTAL'.padEnd(26)}${String(totalCalls).padStart(5)}${String(totalDepen).padStart(13)}`);
-
-  assert.ok(frames > 200, `the walk only ran ${frames} frames — it is not exercising the level`);
-  const seen = [...stats.keys()].sort();
-  const ENUMERATED = ['_calibrate', '_moveHorizontal snap', '_moveHorizontal step-up',
-    '_moveVertical', '_slide', 'ledgeAssist'];
-  for (const s of seen) {
-    assert.ok(ENUMERATED.includes(s),
-      `an UNCENSUSED caller reached capsuleSweep during ordinary locomotion: "${s}". Enumerate it — ` +
-      'does it distinguish a swept contact from a push-out, and what does it do when it cannot? ' +
-      '§410.3 is the table it belongs in.');
-  }
-  for (const must of ['_moveHorizontal snap', '_moveHorizontal step-up', '_moveVertical', '_slide']) {
-    assert.ok(seen.includes(must), `"${must}" never swept in ${frames} frames — the attribution broke`);
-  }
-  /* Deliberately NOT asserting depenOnly > 0 on this short walk: the rate is ~1 in 76 sweeps and a
-     few hundred frames is too few to make that a reliable bar rather than a flaky one. The lever
-     that shows the class fires at all is the depenetration quadrant in part 1 above, which is
-     deterministic; the rate belongs to `tools/sweepcensus.mjs`, not to this suite. */
-
-  /* And the one that runs once, at bind time, whose answer is LATCHED into every later sweep. */
-  c._calibrated = false;
+  /* ---- 4. the caller §409.2 missed, and it is the worst-placed one ------------------------ */
+  /* `_calibrate` calls `capsuleSweep` DIRECTLY rather than through `_sweep`, which is exactly the
+     shape of the blind spot: §409.2 was assembled by recalling consumers of the wrapper. It reads
+     `hit` bare and its answer is LATCHED into `_capOff` for every subsequent sweep, where every
+     other site gets a fresh answer next frame. */
+  /* Stand him on known ground and re-bind, so the probe runs against the REAL layer. Skipping the
+     re-bind was worth catching: a freshly built Controller has not bound anything yet and answers
+     from `FLAT`, so the probe reported `undefined` — an arm that had been reading the stand-in. */
+  c.teleport(V(0, gy + 0.05, 30), Math.PI);
   let cal = null;
-  const spy = collision.capsuleSweep.bind(collision);
-  collision.capsuleSweep = (...a) => (cal = spy(...a));
-  c._calibrate();
+  const realSweep = collision.capsuleSweep.bind(collision);
+  collision.capsuleSweep = (...a) => (cal = realSweep(...a));
+  c._colReal = null; c._calibrated = false;
+  c._bindCollision();
   collision.capsuleSweep = realSweep;
+  assert.ok(cal, 'the calibration probe never reached the real collision layer — it answered from ' +
+    'the FLAT stand-in, so everything below would be measuring the stub instead of the level');
   console.log(`[§409] _calibrate: hit=${cal?.hit} sweepHit=${cal?.sweepHit} depenHit=${cal?.depenHit} -> _capOff=${c._capOff}`);
   assert.equal(cal?.sweepHit, true,
     'the origin-convention probe got a depenetration-only answer. It reads `hit` bare and LATCHES ' +
@@ -4315,23 +4243,46 @@ test('§409: the summit-lip pair — same hit, same toi, opposite correct answer
     `(travelled ${real.moved.toFixed(4)} m)`);
   console.log(`[§409] the drop at stake: stepHeight + groundSnap = ${DROP.toFixed(4)} m`);
 
+  /* Both expectations are DERIVED, because the first version of this arm asserted the wrong ones.
+     `_moveHorizontal` lifts by `stepHeight` before it slides and only then snaps down, so the NET
+     descent is not the snap distance:
+
+       lift  +stepHeight            (0.42)          both arms, the step-up probe reports clear
+       snap  -min(drop·toi, byResolve),  drop = stepHeight + groundSnap  (0.76)
+
+       depenetration-only:  byResolve = 0     -> net  -stepHeight  = -0.42  (he KEEPS the lift)
+       genuine contact:     byResolve = drop  -> net  +groundSnap  = +0.34
+
+     Their difference is exactly `drop`, 0.76 m — which is the fall the defect caused, so the gap
+     between these two arms IS the bug, measured. */
+
   /* (1) The defect. A push-out reports `toi = 1`, which reads as "you travelled the whole way";
      taking it at face value dropped Sly off the top of the ladder. The bound is `byResolve`, and
      the resolve moved him nowhere, so the snap must move him nowhere. */
-  assert.ok(depen.descended < 0.01,
-    `a depenetration-only sweep dropped him ${depen.descended.toFixed(4)} m. The push-out resolved ` +
-    `to the position it started from, so the snap had no vertical distance to honour — this is the ` +
-    'summit lip, and `drop * toi` alone is what walks off it.');
+  assert.ok(Math.abs(depen.descended + TUNE.stepHeight) < 0.01,
+    `a depenetration-only sweep left him ${(-depen.descended).toFixed(4)} m above his start; he must ` +
+    `be exactly the ${TUNE.stepHeight.toFixed(2)} m step-up lift above it, having taken NO drop. The ` +
+    'push-out resolved to the position it started from, so the snap had no vertical distance to ' +
+    'honour — this is the summit lip, and `drop * toi` alone is what walks off it.');
 
   /* (2) THE LEVER, and it is the whole reason (1) means anything: a snap that has been deleted,
      or bounded to nothing, also never drops him. The same frame with a REAL contact — identical
      `hit`, identical `toi`, differing only in where the sweep resolved — must re-seat him. */
-  assert.ok(Math.abs(real.descended - DROP) < 0.01,
-    `a genuine contact ${DROP.toFixed(4)} m below re-seated him by only ${real.descended.toFixed(4)} m — ` +
-    'the ground snap has stopped snapping, and with it (1) passes on a controller that can no ' +
-    'longer descend at all. Do not relax (1); the two arms are one bar.');
+  assert.ok(Math.abs(real.descended - TUNE.groundSnap) < 0.01,
+    `a genuine contact ${DROP.toFixed(4)} m below left him ${real.descended.toFixed(4)} m lower, not ` +
+    `the ${TUNE.groundSnap.toFixed(2)} m the lift-then-snap arithmetic requires — the ground snap has ` +
+    'stopped snapping, and with it (1) passes on a controller that can no longer descend at all. ' +
+    'Do not relax (1); the two arms are one bar.');
 
-  /* (3) And he must actually have walked, because a character pinned in place also never falls. */
+  /* (3) And the pair, stated as the defect itself: two results identical on `hit` and on `toi`
+     must differ in outcome by the whole drop. This is the assertion that fails if `sweepHit` is
+     ever collapsed back into `hit` — neither arm alone would notice. */
+  assert.ok(Math.abs((real.descended - depen.descended) - DROP) < 0.01,
+    `the two arms differ by ${(real.descended - depen.descended).toFixed(4)} m where the defect is ` +
+    `worth ${DROP.toFixed(4)} m. Same hit, same toi, opposite correct answers — if that gap has ` +
+    'closed, the controller has stopped telling the two apart.');
+
+  /* (4) And he must actually have walked, because a character pinned in place also never falls. */
   assert.ok(depen.moved > 0.01 && real.moved > 0.01,
     `he travelled ${depen.moved.toFixed(4)} / ${real.moved.toFixed(4)} m horizontally — the ` +
     'horizontal slide is not running, so neither arm is testing the frame it claims to test');
