@@ -1,0 +1,639 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import * as THREE from 'three';
+import { Controller, TUNE } from '../src/player/Controller.js';
+
+/**
+ * traversal.test.mjs — the attach states, and the four ways out of them that did not exist.
+ *
+ * Every bug pinned here was the same bug: **a state Sly could enter and not leave.** Four of
+ * them, in `hookSwing` and `railSlide`, survived the entire project. They passed every test,
+ * warned nobody, and could not have been caught by a capture — `Controller.js:641` returns
+ * before `sm.update` whenever `debug.freeCam` is set, which is how every shot in `shots/` is
+ * taken, so `Moveset.js` has never contributed a pixel to a single frame in this repository's
+ * history. A headless run of the real controller is not *a* way to see this code; it is the
+ * only way.
+ *
+ * ── The instrument ──────────────────────────────────────────────────────────────────────────
+ * The same one `tests/targets.test.mjs` established and for the same reason: the real
+ * `Controller`, the real `buildMoveset()`, a fixed dt, scripted input, and a stub COLLISION that
+ * answers `raycast` / `capsuleSweep` / `nearest` for one flat floor, one vertical wall and a
+ * registry of point affordances. `Controller.js`, `Moveset.js`, `States.js` and `Targets.js` all
+ * import in plain Node, so the whole machine runs here.
+ *
+ * ── Why every arm carries a lever ───────────────────────────────────────────────────────────
+ * `tests/targets.test.mjs`'s header states the rule this file obeys: *a calibration arm must
+ * move, or the instrument proved nothing.* An assertion that "Sly leaves the hook" is equally
+ * consistent with a hook he was never really on. So each regression arm below runs the SAME
+ * scenario twice with ONE lever moved, and asserts the broken behaviour is still reproducible
+ * when the guard is removed. The levers are the guards themselves, reached through the state
+ * instances — `buildMoveset()` is called per `Controller` (`Controller.js:597`), so patching one
+ * simulation's state object cannot leak into another's.
+ */
+
+/* ====================================================================== */
+/* harness                                                                 */
+/* ====================================================================== */
+
+class StubInput {
+  constructor() {
+    this.move = { x: 0, y: 0 };
+    this._down = new Set(); this._pressed = new Set(); this._released = new Set();
+    this._buf = new Map(); this.t = 0;
+  }
+  beginFrame(dt) { this.t += dt; this._pressed.clear(); this._released.clear(); }
+  hold(a) { if (!this._down.has(a)) { this._down.add(a); this._pressed.add(a); this._buf.set(a, this.t); } }
+  let_go(a) { if (this._down.delete(a)) this._released.add(a); }
+  down(a) { return this._down.has(a); }
+  pressed(a) { return this._pressed.has(a); }
+  released(a) { return this._released.has(a); }
+  bufferedPeek(a, ms) { const t = this._buf.get(a); return t != null && (this.t - t) * 1000 <= ms; }
+  buffered(a, ms) { const ok = this.bufferedPeek(a, ms); if (ok) this._buf.delete(a); return ok; }
+}
+
+function stubEngine() {
+  const listeners = new Map();
+  return {
+    input: new StubInput(),
+    camera: new THREE.PerspectiveCamera(60, 1, 0.1, 100),   // default look direction is −Z
+    scene: new THREE.Scene(), renderer: null,
+    time: 0, dt: 0, timeScale: 1, width: 1920, height: 1080, quality: 'high',
+    warnings: [], events: [],
+    debug: { freeCam: false, showColliders: false, wireframe: false },
+    get() { return null; }, has() { return false; },
+    warn(m) { this.warnings.push(String(m)); },
+    on(e, f) { if (!listeners.has(e)) listeners.set(e, new Set()); listeners.get(e).add(f); return () => listeners.get(e).delete(f); },
+    emit(e, p) { this.events.push({ evt: e, payload: p }); for (const f of listeners.get(e) || []) f(p); },
+    registerCollider() {},
+  };
+}
+
+/**
+ * Floor at y = 0, plus optionally the solid half-space `z <= wall.z, y <= wall.top` and a
+ * registry of point affordances for `afford()`.
+ *
+ * The wall clamp in `capsuleSweep` uses a STRICT inequality on purpose: a capsule resting
+ * exactly on `wall.z + radius` must not report a hit, or the vertical sweep — which passes the
+ * same z through — would read the wall as a floor and kill every climb.
+ */
+function stubCollision({ points = [], wall = null } = {}) {
+  const sweep = { hit: false, position: new THREE.Vector3(), normal: new THREE.Vector3(0, 1, 0), distance: 0 };
+  const gnd = { hit: false, y: 0, normal: new THREE.Vector3(0, 1, 0), tag: 'ground', material: 'stone', rec: { id: 'floor' } };
+  const inWall = (p) => wall && p.y <= wall.top;
+  return {
+    ready: true, fallback: false,
+    SLOPE: { walkable: 50 * Math.PI / 180, wall: 70 * Math.PI / 180 },
+    capsuleSweep(from, to, radius) {
+      const r = radius ?? TUNE.radius;
+      sweep.position.copy(to); sweep.normal.set(0, 1, 0); sweep.hit = false;
+      if (to.y < 0) { sweep.position.y = 0; sweep.hit = true; }
+      if (inWall(sweep.position) && sweep.position.z < wall.z + r) {
+        sweep.position.z = wall.z + r; sweep.hit = true; sweep.normal.set(0, 0, 1);
+      }
+      sweep.distance = sweep.position.distanceTo(from);
+      return sweep;
+    },
+    groundCheck(pos, _r, maxDist) { gnd.y = 0; gnd.hit = pos.y <= maxDist + 1e-4; return gnd; },
+    raycast(o, d, maxDist) {
+      if (wall && d.z < -0.5 && o.y <= wall.top) {
+        const dist = o.z - wall.z;
+        if (dist > 0 && dist <= maxDist) {
+          return { hit: true, point: new THREE.Vector3(o.x, o.y, wall.z), normal: new THREE.Vector3(0, 0, 1), distance: dist, tag: 'wall', rec: wall.rec };
+        }
+      }
+      if (d.y < -0.5) {
+        if (wall && o.z <= wall.z && o.y > wall.top && o.y - wall.top <= maxDist) {
+          return { hit: true, point: new THREE.Vector3(o.x, wall.top, o.z), normal: new THREE.Vector3(0, 1, 0), distance: o.y - wall.top, tag: 'ledge', rec: wall.rec };
+        }
+        if (o.y > 0 && o.y <= maxDist) {
+          return { hit: true, point: new THREE.Vector3(o.x, 0, o.z), normal: new THREE.Vector3(0, 1, 0), distance: o.y, tag: 'ground', rec: { id: 'floor' } };
+        }
+      }
+      return { hit: false };
+    },
+    overlap() { return []; }, query() { return []; },
+    nearest(pos, tag, maxDist) {
+      let best = null, bd = Infinity;
+      for (const it of points) {
+        if (it.tag !== tag) continue;
+        const p = it.point(pos);
+        const d = p.distanceTo(pos);
+        if (d <= maxDist && d < bd) { bd = d; best = { point: p, distance: d, rec: it.rec, tangent: it.tangent, t: it.t?.(pos) ?? 0 }; }
+      }
+      return best;
+    },
+  };
+}
+
+async function makeSim(colOpts = {}) {
+  const engine = stubEngine();
+  const c = new Controller(engine);
+  await c.init();
+  c.col = stubCollision(colOpts);
+  c._colReal = c.col;
+  c._calibrated = true;
+  c._bindCollision = () => {};              // the stub is the collision; do not let init swap it
+  c.teleport(new THREE.Vector3(0, 0, 0), Math.PI);
+  c._needSpawnSnap = false;
+  return { engine, c };
+}
+
+const V = (x, y, z) => new THREE.Vector3(x, y, z);
+const DT = 1 / 60;
+
+/** Drive the sim. `script(i, input, c)` sets input for frame i; `probe(i, c)` observes. */
+function run(engine, c, frames, script, probe) {
+  for (let i = 0; i < frames; i++) {
+    engine.input.beginFrame(DT);
+    engine.input.move.x = 0; engine.input.move.y = 0;
+    script(i, engine.input, c);
+    engine.time = i * DT;
+    c.update(DT, i * DT);
+    if (probe) probe(i, c);
+  }
+}
+
+const countEvents = (engine, name) => engine.events.filter((e) => e.evt === name).length;
+
+/* ====================================================================== */
+/* 1 — the hook was a one-way door                                         */
+/* ====================================================================== */
+
+const RING = V(0, 8, -6);
+const hookPoints = () => [{
+  tag: 'hook', rec: { id: 'ring0', mesh: { userData: {} } },
+  point: () => RING.clone(), tangent: V(0, 1, 0),
+}];
+
+/** Fly into the ring, then tap jump every 20 frames for 4 seconds. */
+async function hookRun({ defeatGuard = false } = {}) {
+  const { engine, c } = await makeSim({ points: hookPoints() });
+  if (defeatGuard) c.sm.get('hookSwing').spent = () => false;   // ← the lever
+  c.position.set(0, 6.5, -3.0);
+  c.velocity.set(0, 2.0, -7.0);
+  c.grounded = false;
+  c.sm.set('fall');
+  let grabbed = -1;
+  run(engine, c, 240, (i, inp) => {
+    if (grabbed >= 0 && i > grabbed && (i - grabbed) % 20 === 0) inp.hold('jump'); else inp.let_go('jump');
+  }, (i) => { if (grabbed < 0 && c.stateName === 'hookSwing') grabbed = i; });
+  return {
+    engine, c, grabbed,
+    grabs: countEvents(engine, 'hookGrab'),
+    releases: countEvents(engine, 'hookRelease'),
+    away: c.position.distanceTo(RING),
+  };
+}
+
+test('hook: the geometry that made the release a no-op is still real', () => {
+  /* Calibration for the whole section, and the reason the guard cannot be deleted as
+     "defensive". `afford('hook')` measures from the eye, `TUNE.radius`-agnostic, 1.15 m up the
+     capsule, so at swing angle θ the distance it reports is |2.2·u + 1.15·ŷ| =
+     √(hookL² + 1.15² − 2·hookL·1.15·cos θ). If that is inside `hookAuto` across the whole
+     reachable arc, the fly-through clause re-takes Sly on the release frame — every time. */
+  const L = TUNE.hookL, E = 1.15;
+  const at = (deg) => Math.hypot(L * Math.sin(deg * Math.PI / 180), L * Math.cos(deg * Math.PI / 180) - E);
+  assert.ok(at(0) < TUNE.hookAuto, `hanging straight down: ${at(0).toFixed(3)} m is outside hookAuto`);
+  assert.ok(at(90) < TUNE.hookAuto, `horizontal: ${at(90).toFixed(3)} m is outside hookAuto`);
+  // The threshold is only crossed past horizontal, which a pendulum starting below its anchor
+  // cannot reach — so there is no release position that survives its own frame unaided.
+  const cross = Math.acos((L * L + E * E - TUNE.hookAuto ** 2) / (2 * L * E)) * 180 / Math.PI;
+  console.log(`\n[hook] eye→anchor ${at(0).toFixed(3)} m down, ${at(90).toFixed(3)} m level; ` +
+              `reaches hookAuto ${TUNE.hookAuto} only at θ ${cross.toFixed(1)}°`);
+  assert.ok(cross > 90, `hookAuto is escaped at ${cross.toFixed(1)}°, which is reachable`);
+});
+
+test('hook: with the release guard removed, Sly can never leave the ring (calibration)', async () => {
+  const r = await hookRun({ defeatGuard: true });
+  assert.ok(r.grabbed >= 0, 'the scenario never grabbed the hook at all');
+  assert.ok(r.releases >= 5, `only ${r.releases} release attempts — the scenario is not exercising the bail`);
+  assert.ok(r.away < 0.01 + TUNE.hookL, `expected Sly pinned on the rope sphere, was ${r.away.toFixed(3)} m out`);
+  assert.ok(r.grabs > 1, `re-grab never happened (${r.grabs} grabs) — the lever did not move`);
+  console.log(`[hook] guard OFF: ${r.grabs} grabs / ${r.releases} releases / ${r.away.toFixed(3)} m from the ring`);
+});
+
+test('hook: one release leaves, and leaves for good', async () => {
+  const r = await hookRun();
+  assert.equal(r.grabs, 1, `expected exactly one grab, got ${r.grabs}`);
+  assert.equal(r.releases, 1, `expected exactly one release, got ${r.releases}`);
+  assert.ok(r.away > 10, `Sly only got ${r.away.toFixed(2)} m from the ring`);
+  assert.notEqual(r.c.stateName, 'hookSwing');
+  console.log(`[hook] guard ON:  ${r.grabs} grabs / ${r.releases} releases / ${r.away.toFixed(2)} m from the ring`);
+});
+
+/* ====================================================================== */
+/* 2 — the hook swallowed jump for eleven frames                           */
+/* ====================================================================== */
+
+test('hook: the bail window starts where hookMinSwing and the jump buffer say it does', async () => {
+  /* `hookMinSwing` 0.18 s deliberately exceeds `jumpBufferMs` 0.14 s so that the press which
+     STARTS a swing can never be the press that ends it. A buffered poll must respect that, so
+     the earliest presses stay dropped BY DESIGN and everything after them must be honoured.
+     Both halves are asserted; only asserting the recovered half would pass on a state that had
+     simply dropped the gate. */
+  const seen = [];
+  for (let f = 0; f <= 12; f++) {
+    const { engine, c } = await makeSim({ points: hookPoints() });
+    c.position.set(0, 6.5, -3.0); c.velocity.set(0, 2.0, -7.0); c.grounded = false; c.sm.set('fall');
+    let grabbed = -1;
+    run(engine, c, 120, (i, inp) => {
+      if (grabbed >= 0 && i === grabbed + f) inp.hold('jump'); else inp.let_go('jump');
+    }, (i) => { if (grabbed < 0 && c.stateName === 'hookSwing') grabbed = i; });
+    seen.push(countEvents(engine, 'hookRelease') > 0);
+  }
+  const firstHonoured = seen.indexOf(true);
+  const gateFrames = Math.ceil(TUNE.hookMinSwing * 60);
+  const bufferFrames = Math.floor(TUNE.jumpBufferMs / 1000 * 60);
+  console.log(`[hook] first honoured tap: +${firstHonoured} frames ` +
+              `(gate ${gateFrames}, buffer ${bufferFrames}) — before: +${gateFrames}`);
+  // A press whose buffer is dead before the gate opens cannot be honoured, and must not be.
+  assert.equal(seen[0], false, 'the press that started the swing also ended it');
+  assert.ok(firstHonoured > 0 && firstHonoured <= gateFrames - bufferFrames + 1,
+    `first honoured tap at +${firstHonoured} does not match gate ${gateFrames} − buffer ${bufferFrames}`);
+  // Everything from there to the gate is what the buffer recovered — 8 frames on shipped numbers.
+  for (let f = firstHonoured; f <= 12; f++) assert.equal(seen[f], true, `tap at +${f} frames was dropped`);
+  assert.ok(gateFrames - firstHonoured >= 6, 'the recovered window is smaller than the measurement claimed');
+});
+
+/* ====================================================================== */
+/* 3 — the rail could not be ridden off its own end, or crouched off       */
+/* ====================================================================== */
+
+function railPoints(a, b, len) {
+  const spline = new THREE.LineCurve3(a, b);
+  const rec = { id: 'rail0', mesh: { userData: { spline } } };
+  const u = (p) => Math.min(1, Math.max(0, (p.x - a.x) / len));
+  return [{ tag: 'rail', rec, point: (p) => spline.getPointAt(u(p)), t: u, tangent: V(1, 0, 0) }];
+}
+
+async function railRun({ len, from, vel, hold = null, frames = 200, defeatGuard = false }) {
+  const a = V(-len / 2, 5, -6), b = V(len / 2, 5, -6);
+  const { engine, c } = await makeSim({ points: railPoints(a, b, len) });
+  if (defeatGuard) c.sm.get('railSlide').stepOff = () => {};   // ← the lever
+  c.position.copy(from); c.velocity.copy(vel); c.grounded = false; c.sm.set('fall');
+  let mounted = -1;
+  const states = new Map();
+  run(engine, c, frames, (i, inp) => {
+    if (hold && mounted >= 0 && i > mounted + 5) inp.hold(hold);
+    if (hold === null) inp.move.y = 1;
+  }, (i) => {
+    if (mounted < 0 && c.stateName.startsWith('rail')) mounted = i;
+    states.set(c.stateName, (states.get(c.stateName) || 0) + 1);
+  });
+  return { engine, c, mounted, states, mounts: countEvents(engine, 'railMount') };
+}
+
+test('rail: with the step-off guard removed, the end of a rail is a permanent lock (calibration)', async () => {
+  const r = await railRun({ len: 8, from: V(2.0, 5.4, -6), vel: V(1, -1, 0), defeatGuard: true, frames: 180 });
+  assert.ok(r.mounted >= 0, 'never mounted the rail');
+  assert.equal(r.states.get('railSlide'), 180, 'expected every frame stuck in railSlide');
+  assert.ok(r.mounts > 100, `only ${r.mounts} re-mounts — the lever did not move`);
+  assert.ok(Math.abs(r.c.rail.u - 1) < 1e-6, 'expected to be pinned at the far end of the spline');
+  console.log(`\n[rail] guard OFF: ${r.mounts} railMount events, 180/180 frames in railSlide, pinned at u=1`);
+});
+
+test('rail: rides off its own end and keeps going', async () => {
+  const r = await railRun({ len: 8, from: V(2.0, 5.4, -6), vel: V(1, -1, 0), frames: 180 });
+  assert.equal(r.mounts, 1, `expected one mount, got ${r.mounts}`);
+  assert.ok(r.states.get('railSlide') < 40, 'still spending most of the run on the rail');
+  assert.ok(r.states.get('fall') > 10, 'never left the rail into a fall');
+  assert.ok(r.c.position.x > 5, `only reached x ${r.c.position.x.toFixed(2)} — did not leave the rail end`);
+  console.log(`[rail] guard ON:  ${r.mounts} railMount event, railSlide ${r.states.get('railSlide')} frames, ` +
+              `ran on to x ${r.c.position.x.toFixed(2)}`);
+});
+
+test('rail: crouch steps off cleanly instead of stuttering down the mount envelope', async () => {
+  const broken = await railRun({ len: 28, from: V(-6, 5.4, -6), vel: V(4, -1, 0), hold: 'crouch', defeatGuard: true });
+  const fixed = await railRun({ len: 28, from: V(-6, 5.4, -6), vel: V(4, -1, 0), hold: 'crouch' });
+  assert.ok(broken.mounts > 20, `calibration did not move: ${broken.mounts} mounts`);
+  assert.equal(fixed.mounts, 1, `expected one mount, got ${fixed.mounts}`);
+  // The stutter also threw the momentum away: each re-mount zeroes velocity.
+  assert.ok(fixed.c.position.x > broken.c.position.x + 1.5,
+    `crouch-off kept no momentum: ${fixed.c.position.x.toFixed(2)} vs ${broken.c.position.x.toFixed(2)}`);
+  console.log(`[rail] crouch off — guard OFF ${broken.mounts} mounts, ended x ${broken.c.position.x.toFixed(2)}; ` +
+              `guard ON ${fixed.mounts} mount, ended x ${fixed.c.position.x.toFixed(2)}`);
+});
+
+/* ====================================================================== */
+/* 4 — the pole swing swallowed jump for eight frames                      */
+/* ====================================================================== */
+
+test('pole: a jump tapped during the wind-up is honoured when the gate opens', async () => {
+  const polePoints = () => [{
+    tag: 'pole',
+    rec: { id: 'p0', mesh: { userData: { bottom: 0, top: 12 }, geometry: { parameters: { radiusTop: 0.5 } } } },
+    point: (p) => V(0, Math.min(12, Math.max(0, p.y)), -6),
+    tangent: V(0, 1, 0),
+  }];
+  const ends = [];
+  for (let f = 0; f <= 10; f++) {
+    const { engine, c } = await makeSim({ points: polePoints() });
+    c.position.set(0, 4, -5.0); c.velocity.set(0, 0, -3); c.grounded = false; c.sm.set('fall');
+    let swing = -1, left = -1;
+    run(engine, c, 90, (i, inp) => {
+      inp.move.y = 1;
+      if (c.stateName === 'poleClimb' && swing < 0) inp.hold('attack');
+      if (swing >= 0 && i === swing + f) inp.hold('jump');
+    }, (i) => {
+      if (swing < 0 && c.stateName === 'poleSwing') { swing = i; return; }
+      if (swing >= 0 && left < 0 && c.stateName !== 'poleSwing') left = i;
+    });
+    assert.ok(swing >= 0, `frame offset ${f}: never entered poleSwing`);
+    ends.push(left - swing);
+  }
+  const full = Math.round(TUNE.poleSwingTime * 60);
+  const gate = Math.ceil(TUNE.poleSwingMin * 60);
+  console.log(`\n[pole] swing ends at +${ends.join(', +')} frames (full wind-up ${full}, gate ${gate})`);
+  // `sm.time` crosses `poleSwingTime` between frames, so the full wind-up ends on `full` or the
+  // frame after it; what matters is that the +0 tap bought nothing.
+  assert.ok(ends[0] >= full, `the attack press that started the swing also released it (+${ends[0]})`);
+  for (let f = 1; f <= 10; f++) {
+    assert.ok(ends[f] < full, `tap at +${f} frames was dropped: swing ran the full ${full}`);
+    assert.ok(ends[f] >= gate, `tap at +${f} released before the ${gate}-frame wind-up gate`);
+  }
+});
+
+/* ====================================================================== */
+/* 5 — an authored target could not hand off to a ledge or notch state     */
+/* ====================================================================== */
+
+test('targets: arrive hands off directly instead of sitting out magHold', async () => {
+  const WALL = { z: -10, top: 4, rec: { id: 'block' } };
+  const P = V(0, 2.30, -9.40);
+  async function arrive(name) {
+    const { engine, c } = await makeSim({ wall: WALL });
+    c.position.set(0, 3.6, -7.2); c.velocity.set(0, 0.5, -5.0); c.grounded = false; c.sm.set('fall');
+    c.addTarget({ id: 'ledge-notch', point: P.clone(), volume: 3.3, catch: 2.0, arrive: name });
+    const first = new Map();
+    run(engine, c, 90, () => {}, (i) => { if (!first.has(c.stateName)) first.set(c.stateName, i); });
+    return { c, first, reason: c.targets.lastRelease };
+  }
+  /* One lever: `arrive`. Unset, the arrival must fall through to `magHold` and be picked up by
+     the opportunistic poll; set, it must hand off. Both arms reach `ledgeHang` — which is the
+     point. The defect was never that the state was unreachable, it was that reaching it cost
+     the full hold. An arm that only asserted "ledgeHang happens" would have passed on the bug. */
+  const none = await arrive(null);
+  const hand = await arrive('ledgeHang');
+  assert.ok(none.first.has('ledgeHang'), 'control arm never reached ledgeHang at all');
+  assert.ok(hand.first.has('ledgeHang'), 'handoff arm never reached ledgeHang');
+  assert.equal(none.reason, 'held', `control released for "${none.reason}", not the hold timeout`);
+  assert.equal(hand.reason, 'handoff', `handoff released for "${hand.reason}"`);
+  const slow = none.first.get('ledgeHang') - none.first.get('toTarget');
+  const fast = hand.first.get('ledgeHang') - hand.first.get('toTarget');
+  const holdFrames = Math.round(TUNE.magHold * 60);
+  console.log(`\n[targets] lock→ledgeHang: ${slow} frames held vs ${fast} handed off (magHold ${holdFrames})`);
+  assert.ok(slow - fast >= holdFrames - 1, `the stall was only ${slow - fast} frames, expected ~${holdFrames}`);
+});
+
+/* ====================================================================== */
+/* 6 — WallClimb: the vertical route, on authored holds only               */
+/* ====================================================================== */
+
+/**
+ * The rung pitch is WORLD's number (`EgyptLevel.NOTCH.pitch`), derived from MOVEMENT's. It is
+ * restated here from `TUNE` alone so that a change to `jumpV0`, `wallJumpUp` or `gravity` fails
+ * this file rather than silently making the level's ladder unclimbable.
+ */
+const PITCH = 2.10;
+const launchV = () => TUNE.jumpV0 * TUNE.wallJumpUp;
+const apexOf = (v) => (v * v) / (2 * -TUNE.gravity);
+
+function ladderWall({ rungs = 10, pitch = PITCH, z = -10, holds = true } = {}) {
+  const batter = 0.105, nz = 1 / Math.hypot(batter, 1);
+  const rec = { id: 'pylon-face', handholds: null };
+  const list = [];
+  for (let i = 0; i < rungs; i++) {
+    list.push({
+      id: `notch-${i}`, point: V(0, pitch * (i + 1), z), normal: V(0, batter * nz, nz),
+      mesh: null, rung: i, pitch, face: 'south',
+    });
+  }
+  if (holds) rec.handholds = list;
+  return { wall: { z, top: 40, rec }, rec, list };
+}
+
+/**
+ * Run at the wall holding forward, and climb.
+ *
+ * The jump script is the fiddly part and it is fiddly for a real reason: `Fall.air()` runs
+ * `applyJumpCut`, so letting go of jump while still rising costs 55% of the launch and the next
+ * rung goes out of reach. A held button, though, never registers a second `pressed`. So the only
+ * safe place to re-arm is **on the rung**, where `WallClimb.update` has pinned velocity to zero
+ * and a release cannot cut anything: release on the first frame of the hold, press on the
+ * second. That is exactly what a player does — you land on a notch and press jump again.
+ */
+async function climb({ holds = true, rungs = 10, frames = 600 } = {}) {
+  const { wall, rec } = ladderWall({ rungs, holds });
+  const { engine, c } = await makeSim({ wall });
+  c.position.set(0, 0, -8.0);
+  c.grounded = true;
+  const caught = [];
+  let prev = null, onRung = 0;
+  run(engine, c, frames, (i, inp) => {
+    inp.move.y = 1;                       // camera looks −Z, so this is "into the wall"
+    if (c.stateName === 'wallClimb') {
+      onRung++;
+      if (onRung === 1) inp.let_go('jump'); else inp.hold('jump');
+    } else { onRung = 0; inp.hold('jump'); }
+  }, () => {
+    const h = c.sm.get('wallClimb')._hold;
+    if (h && h !== prev) caught.push(h);
+    prev = h;
+  });
+  return { engine, c, rec, caught, top: c.position.y };
+}
+
+test('wallClimb: the 2.10 m rung pitch is inside one plain wall jump, derived from TUNE', () => {
+  const v = launchV();
+  const apex = apexOf(v);
+  const clingGate = (v * v - 1.2 * 1.2) / (2 * -TUNE.gravity);
+  const atRung = Math.sqrt(v * v - 2 * -TUNE.gravity * PITCH);
+  console.log(`\n[wallClimb] launch ${v.toFixed(2)} m/s · apex ${apex.toFixed(4)} m · ` +
+              `cling gate at ${clingGate.toFixed(4)} m · still rising ${atRung.toFixed(3)} m/s at the rung`);
+  assert.ok(Math.abs(v - 10.34) < 1e-9, `launch is ${v}, not the 10.34 the pitch was derived from`);
+  assert.ok(Math.abs(apex - 2.2274) < 5e-4, `apex ${apex} is not 2.2274`);
+  assert.ok(Math.abs(clingGate - 2.1974) < 5e-4, `cling gate ${clingGate} is not 2.1974`);
+  // The contract WallClimb actually honours is the apex, not WallCling's velocity gate — a hold
+  // state catches while rising. Both are recorded so the reading that moved is visible.
+  assert.ok(PITCH < apex, `pitch ${PITCH} exceeds the apex ${apex.toFixed(4)}: the ladder is unclimbable`);
+  assert.ok(atRung > 1.2, 'the rung is reached below the cling gate — the apex reading is not the binding one');
+});
+
+test('wallClimb: reach cannot span two rungs', () => {
+  const reach = TUNE.radius + launchV() / 30;
+  console.log(`[wallClimb] reach ${reach.toFixed(4)} m vs pitch ${PITCH} m`);
+  assert.ok(reach < PITCH / 2, `reach ${reach.toFixed(3)} could take two rungs at once`);
+  // …and it must still be wide enough that a rung cannot pass between two frames of the launch.
+  assert.ok(reach > launchV() / 60, 'reach is narrower than one 60 Hz frame of the launch');
+});
+
+test('wallClimb: with no handholds on the rec, the face is unclimbable (calibration)', async () => {
+  const bare = await climb({ holds: false });
+  assert.equal(bare.rec.handholds, null);
+  assert.ok(!bare.engine.events.some((e) => e.evt === 'playerState' && e.payload === 'wallClimb'),
+    'entered wallClimb on a rec carrying no handholds');
+  assert.ok(bare.top < 3.0, `climbed to y ${bare.top.toFixed(2)} with no holds authored`);
+  console.log(`[wallClimb] holds OFF: reached y ${bare.top.toFixed(2)}, wallClimb never entered`);
+});
+
+test('wallClimb: an authored ladder is climbed rung by rung, and never downward', async () => {
+  const RUNGS = 10;
+  const up = await climb({ rungs: RUNGS });
+  const ys = up.caught.map((h) => h.point.y);
+  const distinct = [...new Set(ys)];
+  /* Non-decreasing rather than strictly increasing, and the difference is a design decision
+     worth pinning rather than papering over: `spent()` releases the rung Sly just left once he
+     is out of reach of it, so a jump off the TOP rung that finds nothing above re-catches the
+     top rung on the way back down. That is a recovery, not a hover — it gains no height, and
+     the ceiling arm below is what proves the gain is bounded. The assertion that matters here
+     is that the ladder never hands back a LOWER rung than one already taken. */
+  for (let i = 1; i < ys.length; i++) {
+    assert.ok(ys[i] >= ys[i - 1], `rung ${i} (y ${ys[i]}) is below rung ${i - 1} (y ${ys[i - 1]})`);
+  }
+  assert.ok(distinct.length >= 5, `only ${distinct.length} distinct rungs taken`);
+  assert.equal(Math.max(...ys), PITCH * RUNGS, 'the ascent did not reach the top rung');
+  const gained = Math.max(...ys) - Math.min(...ys);
+  console.log(`[wallClimb] holds ON:  ${up.caught.length} catches over ${distinct.length} distinct rungs, ` +
+              `y ${Math.min(...ys).toFixed(2)} → ${Math.max(...ys).toFixed(2)} (+${gained.toFixed(2)} m)`);
+  assert.ok(gained > 8, `only gained ${gained.toFixed(2)} m of authored ladder`);
+});
+
+test('wallClimb: taking a rung SPENDS the face — wallSpent is reinforced, not defeated', async () => {
+  const { wall } = ladderWall({ rungs: 6 });
+  const { engine, c } = await makeSim({ wall });
+  c.position.set(0, 0, -8.0);
+  c.grounded = true;
+  let checked = null;
+  run(engine, c, 200, (i, inp) => { inp.move.y = 1; inp.hold('jump'); }, () => {
+    if (!checked && c.stateName === 'wallClimb') {
+      checked = {
+        spent: c.wallSpent(c.wall.rec, c.wall.nx, c.wall.nz),
+        cling: c.sm.get('wallCling').canEnter(c),
+        run: c.sm.get('wallRun').canEnter(c),
+        attached: c.attached === wall.rec,
+      };
+    }
+  });
+  assert.ok(checked, 'never entered wallClimb');
+  /* This is the trap WORLD refused to walk into, checked from the other side. If `enter` had
+     called `freeWall()` as briefed, `spent` would be false here and a rung would buy a cling on
+     bare stone between rungs — the §357.1 loop with an authored first step. */
+  assert.equal(checked.spent, true, 'holding a rung did not mark the face: freeWall path is open');
+  assert.equal(checked.cling, false, 'wallCling is still enterable on a face a rung was taken from');
+  assert.equal(checked.run, false, 'wallRun is still enterable on a face a rung was taken from');
+  assert.equal(checked.attached, true, 'wallClimb did not attach to the wall rec');
+  console.log(`[wallClimb] on a rung: wallSpent ${checked.spent}, wallCling.canEnter ${checked.cling}, ` +
+              `wallRun.canEnter ${checked.run}`);
+});
+
+test('wallClimb: the ladder has a ceiling, and it is the top rung', async () => {
+  const three = await climb({ rungs: 3, frames: 400 });
+  const ten = await climb({ rungs: 10, frames: 600 });
+  const topOf = (n) => PITCH * n;
+  // A climb may overshoot its last rung by one launch apex and no more; nothing above the
+  // authored data is reachable, which is what makes this a route rather than a lift.
+  const ceiling3 = topOf(3) + apexOf(launchV());
+  assert.ok(three.top <= ceiling3, `3-rung ladder reached y ${three.top.toFixed(2)} above its ceiling ${ceiling3.toFixed(2)}`);
+  assert.ok(ten.top > three.top + 8, 'a longer ladder did not climb higher — the ceiling is not the data');
+  console.log(`[wallClimb] 3 rungs → y ${three.top.toFixed(2)} (ceiling ${ceiling3.toFixed(2)}); ` +
+              `10 rungs → y ${ten.top.toFixed(2)}`);
+});
+
+test('wallClimb: both exits work — this is a hold, not a trap', async () => {
+  for (const [label, key] of [['jump', 'jump'], ['crouch', 'crouch']]) {
+    const { wall } = ladderWall({ rungs: 4 });
+    const { engine, c } = await makeSim({ wall });
+    c.position.set(0, 0, -8.0);
+    c.grounded = true;
+    let entered = -1, left = -1;
+    run(engine, c, 300, (i, inp) => {
+      inp.move.y = 1;
+      if (entered < 0) { inp.hold('jump'); return; }   // get onto a rung
+      inp.let_go('jump');                              // safe: velocity is pinned on the rung
+      if (i > entered + 4) inp.hold(key);              // then a fresh press of the exit button
+    }, (i) => {
+      if (entered < 0 && c.stateName === 'wallClimb') entered = i;
+      else if (entered >= 0 && left < 0 && c.stateName !== 'wallClimb') left = i;
+    });
+    assert.ok(entered >= 0, `${label}: never entered wallClimb`);
+    assert.ok(left > 0, `${label}: entered wallClimb at frame ${entered} and never left`);
+    console.log(`[wallClimb] exit by ${label}: entered f${entered}, left f${left}`);
+  }
+});
+
+test('wallClimb: the shipped level\'s own holds satisfy every contract this state relies on', async () => {
+  /* The synthetic ladder above proves the state; this proves the DATA, and it is the half that
+     can rot silently. `find()` reads `rec.handholds` off whatever `probeWall` returned, so three
+     properties of WORLD's authoring are load-bearing, and none of them is checked anywhere else:
+     if the batter ever tips a hold's face out of `wallNormalMax`, `probeWall` stops calling it a
+     wall and the ladder dies with no error; if a pitch ever exceeds one launch apex the ladder
+     becomes unclimbable at that rung; if two ladders ever come within `reach` of each other they
+     become one. */
+  const { Architecture } = await import('../src/world/Architecture.js');
+  const recs = [];
+  const engine = {
+    scene: new THREE.Scene(), warnings: [], debug: {}, quality: 'high',
+    get() { return null; }, has() { return false; }, warn(m) { this.warnings.push(String(m)); },
+    on() { return () => {}; }, emit() {}, registerCollider(mesh, opts) { recs.push({ mesh, ...opts }); },
+  };
+  const A = new Architecture(engine);
+  await A.init();
+  const holds = A.api.handholds || [];
+  assert.ok(holds.length > 0, 'the level authored no handholds at all');
+
+  const laddered = recs.filter((r) => r.handholds?.length);
+  assert.ok(laddered.length >= 1, 'no collision rec carries handholds — probeWall could never find one');
+  assert.equal(laddered[0].handholds[0], holds[0], 'rec.handholds is not the same object as api.handholds');
+
+  const maxNy = Math.max(...holds.map((h) => Math.abs(h.normal.y)));
+  assert.ok(maxNy < TUNE.wallNormalMax,
+    `a hold's face tilts ${maxNy.toFixed(4)} — probeWall would refuse it above ${TUNE.wallNormalMax}`);
+
+  // Group by ladder (the id prefix before the rung index) and check the rise between rungs.
+  const apex = apexOf(launchV());
+  const byLadder = new Map();
+  for (const h of holds) {
+    const k = h.id.replace(/-\d+$/, '');
+    (byLadder.get(k) || byLadder.set(k, []).get(k)).push(h);
+  }
+  const spans = [];
+  for (const [k, list] of byLadder) {
+    list.sort((a, b) => a.point.y - b.point.y);
+    for (let i = 1; i < list.length; i++) {
+      const rise = list[i].point.y - list[i - 1].point.y;
+      assert.ok(rise <= apex,
+        `${k}: rung ${i} rises ${rise.toFixed(3)} m, beyond one launch apex ${apex.toFixed(4)} m`);
+    }
+    spans.push(`${k} ${list.length}×, y ${list[0].point.y.toFixed(2)}..${list[list.length - 1].point.y.toFixed(2)}`);
+  }
+
+  // Distinct ladders must not be inside each other's reach, or `find()` would mix them.
+  const R = TUNE.radius + launchV() / 30;
+  const keys = [...byLadder.keys()];
+  for (let i = 0; i < keys.length; i++) {
+    for (let j = i + 1; j < keys.length; j++) {
+      for (const a of byLadder.get(keys[i])) for (const b of byLadder.get(keys[j])) {
+        assert.ok(a.point.distanceTo(b.point) > R,
+          `${keys[i]} and ${keys[j]} have holds ${a.point.distanceTo(b.point).toFixed(3)} m apart, inside reach ${R.toFixed(3)}`);
+      }
+    }
+  }
+  const top = Math.max(...holds.map((h) => h.point.y));
+  console.log(`\n[wallClimb] level: ${holds.length} holds on ${laddered.length} rec(s), |n.y| max ${maxNy.toFixed(4)}, ` +
+              `top rung y ${top.toFixed(2)} (+apex ${(top + apex).toFixed(2)})\n            ${spans.join('\n            ')}`);
+});
+
+test('wallClimb: proximity alone does not snag a player who is not reaching for it', async () => {
+  /* `wall_notch.gd` commits on `elif player.direction:` — a hold acts when it is being reached
+     for. Fly past the face with no stick input and nothing may take control. */
+  const { wall } = ladderWall({ rungs: 10 });
+  const { engine, c } = await makeSim({ wall });
+  c.position.set(0, 4.0, -9.5);
+  c.velocity.set(6, 6, 0);
+  c.grounded = false;
+  c.sm.set('fall');
+  const seen = new Set();
+  run(engine, c, 120, () => {}, () => seen.add(c.stateName));
+  assert.ok(!seen.has('wallClimb'), 'a rung grabbed a player who gave no input');
+  console.log(`[wallClimb] no-input pass: states ${[...seen].join(', ')}`);
+});

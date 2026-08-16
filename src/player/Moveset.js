@@ -438,6 +438,196 @@ class WallRun extends State {
   }
 }
 
+/**
+ * WallClimb — the sustained vertical route, on AUTHORED holds and nothing else.
+ *
+ * §357.2 declined this move "for the want of a tag that distinguishes a handhold from a blank
+ * wall". WORLD landed the tag (`EgyptLevel.notchLadder`, 19 rungs up the east entry pylon's two
+ * south flagstaff niches, y 2.100…21.000) and left it inert: nothing in `src/player/**` read
+ * `rec.handholds`. This reads it.
+ *
+ * ── What it is ────────────────────────────────────────────────────────────────────────────
+ * A hold state, not a climb-anywhere state. Sly catches an authored rung, hangs on it, and
+ * jump takes him **straight up the face** at `jumpV0 × wallJumpUp` = 10.34 m/s — the exact
+ * launch WORLD derived the 2.10 m rung pitch from. The ladder is therefore a chain of plain
+ * wall jumps between authored points, and its ceiling is the top rung, not the player's
+ * patience. `find()` returns null on all 74 other `wall` recs in the level, so on every surface
+ * WORLD did not ladder this state cannot fire at all.
+ *
+ * ── It does NOT defeat `wallSpent`, and this is the part to read ──────────────────────────
+ * The trap WORLD refused to walk into (their words: a rung-rec would be "a *different* rec from
+ * the pylon face, so `wallSpent`'s one-face-one-bite would not fire and the level would have
+ * shipped a de-facto free climb up 21 m") is closed here from the other side, in two decisions
+ * that are deliberately the opposite of the brief I was handed:
+ *
+ *   · **`enter` calls `markWall`, not `freeWall`.** I was asked for `freeWall()`. `freeWall`
+ *     hands the blank face back, which would let a rung pay for a `wallCling` on bare stone
+ *     between rungs — the §357.1 loop with an authored first step. Marking instead means
+ *     catching a rung *spends* the face: `WallRun.canEnter` and `WallCling.canEnter` both poll
+ *     `wallSpent` and both then refuse it for the rest of the airborne period. The only way up
+ *     a laddered face is the ladder.
+ *   · **`group: 'air'`, not `'attach'`.** Forced by the above: `Controller.onStateChanged` runs
+ *     `if (next.group === 'attach') this.freeWall()` *after* `enter`, so an attach-group climb
+ *     would have its own `markWall` undone one line later by the machine. 'air' also matches
+ *     its two neighbours in the ladder, `wallRun` 80 and `wallCling` 78.
+ *
+ * The net is strictly tighter than what shipped: before this state, the pylon's south face was
+ * worth one wall run plus one cling; after it, taking a rung costs you both.
+ *
+ * ── The pitch contract, and the one number in it that I moved ─────────────────────────────
+ * WORLD derived `pitch` 2.10 against `WallCling.canEnter`'s `velocity.y > 1.2` gate, which a
+ * 10.34 m/s launch crosses at 2.1974 m. **This state does not use that gate**, and the honest
+ * consequence has to be stated rather than inherited: at the rung itself, 2.10 m up, a 10.34
+ * launch is still travelling `√(10.34² − 2·24·2.10)` = **2.473 m/s**, so a cling-gated catch
+ * would have refused every rung on the way up and only taken it falling back. The binding
+ * constraint for a hold state is the **apex, 2.2274 m**, not the cling gate — 2.10 m clears it
+ * by 0.1274 m rather than by 0.0974 m. WORLD's number stays correct under both readings, which
+ * is why it needed no change; what changed is which inequality it is correct *against*.
+ * `tests/traversal.test.mjs` asserts the apex form directly off `TUNE`.
+ *
+ * ── Reference ─────────────────────────────────────────────────────────────────────────────
+ * `Scripts/wall_notch.gd` (NoahChase/Sly-Cooper--A-Thief-in-Godot, HEAD 6479957 at
+ * /home/user/ref-godot; **licence: none stated** — no LICENSE, no COPYING, no licence section,
+ * no README, verified in that tree, fan work derived from Sucker Punch/Sony). Adapted, never
+ * pasted, and only one behaviour is taken: their notch commits on `elif player.direction:` —
+ * a hold acts when the player is *steering into it*, never on mere proximity. That is the
+ * `wishMag`/facing gate below, and it is why flying past the pylon does not snag you. Their
+ * `magnet_force` pull and `auto_jump` are deliberately not taken: we have `Targets.js` for
+ * assistance and an auto-jump would make the ladder play itself.
+ */
+class WallClimb extends State {
+  constructor(n, o) {
+    super(n, o);
+    this._hold = null;      // the rung being held
+    this._pick = null;      // what `canEnter` found, handed to `enter`
+    this._left = null;      // the rung just released — see `spent()`
+  }
+
+  /**
+   * Reach around the hand. Derived, not chosen: a hold must not be able to pass between two
+   * frames of the fastest approach this state can produce. That approach is its own launch,
+   * 10.34 m/s, and the slowest frame rate this file reasons about elsewhere is 30 fps, so the
+   * worst single-frame step is 0.345 m; `TUNE.radius` 0.34 covers the capsule's own standoff
+   * from the face plane the hold is published on. 0.685 m total, against a 2.10 m pitch — it
+   * cannot span two rungs, and the two niches are 6.8 m apart laterally.
+   */
+  reach() { return TUNE.radius + TUNE.jumpV0 * TUNE.wallJumpUp / 30; }
+
+  /**
+   * The rung just released, refused until Sly is clear of it — the same guard `HookSwing.spent`
+   * carries, for the same reason and designed in this time rather than measured out. A launch
+   * starts *at* the hold it leaves, so without this the first frame of the ascent re-catches the
+   * rung it just left and the ladder is a hover. Cleared once out of reach, so a mistimed jump
+   * that falls back onto the same rung is a recovery rather than a 21 m drop.
+   */
+  spent(h, handY, c, R) {
+    if (this._left !== h) return false;
+    const p = h.point;
+    const d = Math.hypot(p.x - c.position.x, p.y - handY, p.z - c.position.z);
+    if (d > R) { this._left = null; return false; }
+    return true;
+  }
+
+  /** Nearest takeable rung on the wall `w`, or null. Null on every un-laddered rec in the game. */
+  find(c, w) {
+    const holds = w.rec?.handholds;
+    if (!holds || !holds.length) return null;
+    const R = this.reach();
+    const handY = c.position.y + TUNE.hangReach;
+    let best = null, bd = Infinity;
+    for (let i = 0; i < holds.length; i++) {
+      const h = holds[i];
+      if (!h || !h.point) continue;
+      if (this.spent(h, handY, c, R)) continue;
+      const d = Math.hypot(h.point.x - c.position.x, h.point.y - handY, h.point.z - c.position.z);
+      if (d <= R && d < bd) { bd = d; best = h; }
+    }
+    return best;
+  }
+
+  canEnter(c) {
+    if (c.grounded || c.sm.group !== 'air') return false;
+    // Intent, exactly as `WallCling` demands it and for the reference's own reason: a hold acts
+    // when it is being reached for. Proximity alone must never take control off a player.
+    if (c.wishMag < 0.5) return false;
+    const w = c.probeWall(c.wishDir);
+    if (!w.ok || !w.rec) return false;
+    if (-dot2(c.wishDir.x, c.wishDir.z, w.nx, w.nz) < 0.45) return false;
+    this._pick = this.find(c, w);
+    return !!this._pick;
+  }
+
+  enter(c) {
+    const h = this._pick || this.find(c, c.wall);
+    if (!h) { c.sm.request('fall'); return; }
+    this._hold = h;
+    this._left = null;
+    _a.set(h.normal?.x ?? c.wall.nx, 0, h.normal?.z ?? c.wall.nz);
+    if (_a.lengthSq() < 1e-6) _a.set(-c.faceDir.x, 0, -c.faceDir.z);
+    _a.normalize();
+    // The hand goes on the hold; the feet hang `hangReach` below it, same as a ledge.
+    c.position.set(
+      h.point.x + _a.x * (TUNE.radius + 0.05),
+      h.point.y - TUNE.hangReach,
+      h.point.z + _a.z * (TUNE.radius + 0.05)
+    );
+    c.velocity.set(0, 0, 0);
+    c.grounded = false;
+    c.yaw = Math.atan2(-_a.x, -_a.z);
+    c.attached = c.wall.rec || h.mesh || null;
+    /* NOT `freeWall()`. See the header — this is the line that keeps the free climb closed. */
+    c.markWall(c.wall.rec, c.wall.nx, c.wall.nz);
+    c.oneShot('wall_cling');
+    /* `ledgeGrab`, deliberately not a new event: `tests/eventbus.test.mjs` pins the exact
+       publisher/subscriber census and a new name would land red. It is also the honest one —
+       FX subscribes it as "the moment Sly catches something", which is precisely this. */
+    c.engine.emit('ledgeGrab', { pos: c.position });
+  }
+
+  update(c, dt) {
+    const h = this._hold;
+    if (!h) return 'fall';
+    c.velocity.set(0, 0, 0);
+
+    _a.set(h.normal?.x ?? 0, 0, h.normal?.z ?? 0);
+    if (_a.lengthSq() < 1e-6) _a.set(-c.faceDir.x, 0, -c.faceDir.z);
+    _a.normalize();
+
+    if (c.pressed('jump') || c.jumpBuffered()) {
+      c.takeJump();
+      /* Straight up the face at the launch WORLD's pitch was derived from, with a light press
+         INTO the wall (not out of it, as `WallJump` does at `wallJumpOut` 7.2) so the capsule
+         stays inside `probeWall`'s reach for the whole rise and the next rung is catchable.
+         `Fall`'s own `applyJumpCut` still applies, so a tapped jump climbs short exactly as a
+         tapped jump does everywhere else in this file. */
+      c.velocity.set(-_a.x * 0.9, TUNE.jumpV0 * TUNE.wallJumpUp, -_a.z * 0.9);
+      c.wallRunUsed = 0;
+      c.coyote = 99;
+      return 'fall';
+    }
+    if (c.down('crouch')) {
+      // Let go, nudged clear of the face — the same drop `LedgeHang` performs.
+      c.position.x += _a.x * 0.06;
+      c.position.z += _a.z * 0.06;
+      return 'fall';
+    }
+    // The face going away underneath a hold means the level changed; do not hang on nothing.
+    _b.set(-_a.x, 0, -_a.z);
+    if (!c.probeWall(_b).ok) return 'fall';
+
+    c.turnToYaw(Math.atan2(-_a.x, -_a.z), 12, dt);
+    c.baseClip('wall_cling', 0.14);
+    return null;
+  }
+
+  exit(c) {
+    this._left = this._hold;
+    this._hold = null;
+    this._pick = null;
+    c.attached = null;
+  }
+}
+
 class WallCling extends State {
   canEnter(c) {
     if (c.grounded || c.sm.group !== 'air') return false;
@@ -1480,6 +1670,11 @@ export function buildMoveset() {
     new PoleClimb('poleClimb', { priority: 82, group: 'attach' }),
     new PoleSwing('poleSwing', { priority: 81, group: 'attach', onRequest: true }),
     new WallRun('wallRun', { priority: 80, group: 'air' }),
+    /* Between the wall run and the cling, where §357.2 put it. Above `wallCling` so an authored
+       rung always beats a bare-stone grab at the same contact; below `wallRun` so a run in
+       progress is never interrupted by a rung it happens to sweep past. `group: 'air'` is
+       load-bearing — see the class header. */
+    new WallClimb('wallClimb', { priority: 79, group: 'air' }),
     new WallCling('wallCling', { priority: 78, group: 'air' }),
     new Bounce('bounce', { priority: 76, group: 'air', onRequest: true }),
     new Roll('roll', { priority: 70, group: 'ground', crouching: true, capsule: TUNE.crouchHeight }),
