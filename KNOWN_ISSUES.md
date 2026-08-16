@@ -30609,3 +30609,93 @@ Two of the five faults are real and were measured independently:
 
 `impact` is therefore still not shippable, but for **one** reason rather than five, and the reason
 is the ring's crop. The re-stage remains open; what it is blocked on is a bar that can be passed.
+
+## §408 — A decided instruction, refused on four measured grounds; and the dune inside the hall
+
+Round 17 of the world lane. Two results, one of which is a refusal.
+
+### §408.1 "Open the aperture, 0.6 → 1.2" was wrong four ways, each measured
+
+The instruction was dispatched as decided: the vent mouth proxy is `BoxGeometry(2.2, 0.6, 1.9)`
+and `Controller.TUNE.crawlHeight` is 0.64, so open it up. It was not applied, and the four reasons
+are worth keeping because each is a different *class* of error in the same sentence:
+
+1. **`vent` is a VOLUME tag.** `Collision.overlap` tests volume recs as boxes and never as
+   triangles; `Controller.inVent()` is a proximity test on the capsule BASE POINT against a
+   `radius + 0.05` = 0.39 m sphere. **No capsule ever passes through this box.** Its height gates
+   `Crawl.canEnter`, not passage — so comparing it against a capsule height compares two
+   quantities that never meet. A ceiling probe over the whole mouth footprint reads OPEN: there is
+   no solid aperture there to be too short.
+2. **The mouth is 0.759 m under the walkable surface.** The column at (−21, −49.4) is sand 0.86 /
+   hall paving 0.00 / −1.00. A single downward ray reports the sand and hides the floor the vent
+   was authored against — `framelib.groundColumn`'s documented trap, walked into once already this
+   session and therefore looked for.
+3. **`A.proxy` fixes the box CENTRE**, so half of every metre added digs downward. Centre −0.2 plus
+   half of 1.2 puts the top at 0.40; the `inVent()` threshold is sand − 0.39 = 0.47. **1.2 m misses
+   by 0.07 m** — a fix that reads as landed in a diff and changes nothing in the game.
+4. **The mouth is inert regardless.** What makes `inVent()` true today is the *next* segment, the
+   1.2 m sloped run at z −54.5, whose top corner reaches 0.59. It fires in a 0.5 m band at
+   z −49.50…−49.75 and nowhere else.
+
+**My own first derivation of (3) was wrong in the same class**, and is recorded in the arm rather
+than corrected away: it held the box FLOOR fixed and produced 0.97 m, which made the
+sibling-matching fix look sufficient. An arm that hides its author's near-miss is a worse witness
+than one that shows it.
+
+**For the traversal lane, specifically.** Your `crawl` arms rest on the premise that a vent is
+tighter than the capsule — *"the walk-in failed on lateral drift, not the capsule"* still frames
+the capsule as the thing that could have failed. It never could: the box is a volume tag and no
+capsule is ever tested against it. Whatever your arms are catching, it is not aperture. The
+rewrite that needs is larger than a number, and it should be done with this lane in the room.
+
+### §408.2 The dune is inside the hypostyle hall, and the cause is the pyramid plateau
+
+Scoping §408.1 by measurement rather than extrapolation turned a vent defect into a level one.
+**30.8 % of the hall floor carries sand above y = 0, up to 1.170 m**, in a wedge centred on the
+north-west corner. The courtyard — open-air, where the sheet is intended — is 5.6 % and 0.459 m
+worst, at its outer edges. The drawn portal frames that exist *"so the crawl reads as built, not as
+a hole in the maths"* are **60.6 % under sand**: the assembly is not doing the one job it was drawn
+for.
+
+Two plausible causes are wrong and both were checked at the source rather than from the docblock:
+`drift` returns 0 inside the pad rect (`outsideRect` really does return 0 inside), and `paveDrift`
+is capped at `padLip` 0.30 m against a 1.170 m burial.
+
+The cause is **`pyramidPlateau`**, whose weight `1 - smoothstep(r, r + 110, d)` with
+`r = halfBase * 1.3` still bites at **d = 186.9 m** — where the hall's north-west corner stands —
+and which is applied as `h = lerp(h, baseY, w)` **after** `h *= 1 - cm`. The complex mask whose
+entire job is holding the complex flush at y = 0 is overridden two lines later.
+`approachRidge` on the line above is weighted `* (1 - cm)` and behaves.
+
+The control makes it attribution rather than correlation: the hall's two north corners have
+identical pad geometry mirrored in x; west is 186.9 m from pyr1 and inside the falloff, east is
+222.1 m and outside it. West reads 1.170 m, east reads −0.032 flush. And the prediction closes it —
+lerping the east corner's flush height toward `baseY` by the west corner's own weight gives 1.142
+against a measured 1.170, **2.4 % apart**.
+
+The fix is one line and matches the file's own convention: `_plateau[1] * (1 - cm)`. **Held, not
+unknown** — a capture held the lock (pid 24858, verified alive) and §186 forbids the edit while it
+does. `vegwater` T3 asserts the unfixed line, so it fails the moment the fix lands.
+
+### §408.3 CROSS-REFERENCE to §407: ask whether a bar *can* discriminate, not whether it *did*
+
+`basketvary` A1 barred, per frame, the number of visible rope coils sharing a 10 cm bbox signature,
+at `<= 2`. **It could not fail.** A2b asserts all six signatures are DISTINCT at 10 cm, and
+distinctness means no two coils anywhere share one, so every frame's count is at most 1 — for every
+possible camera, not just the eighteen. Measured over all 63 subsets of the six coils, a superset
+of anything a camera can select: max count **1**, against a bar of 2. A1 was a strict logical
+consequence of A2b.
+
+§407 is the same shape from the other side: a bar that could not be *passed*, unsatisfiable across
+a 727,608-cell sweep. Mine was unfirable by entailment; that one was unsatisfiable by exhaustion.
+**Together they give the check to run on any bar: can this discriminate, in both directions?** A
+seal that cannot fail and a seal that cannot pass are the same defect — a predicate carrying no
+information — and neither is visible from a green suite. A1 now measures a scale-free relative
+size difference with a floor DERIVED from A2b's own quantum (5.47 %), the shipped level clears it
+at 14.76 %, and its new calibration proves the bar's position in **both** directions: rejected at
+0.8× the floor, accepted at 1.5×.
+
+The transfer defect underneath it: **10 cm is an ABSOLUTE quantum applied to objects an order of
+magnitude apart in size** — "within 8 %" on a 1.86 m coil, "within 1 %" on a 5 m sphinx. That is
+how `decalstat` T3's avenue came to sit exactly on a limit while the coils cleared it without the
+bar ever engaging.
