@@ -1860,6 +1860,90 @@ test('feasibility: sweeping the level finds where spireLand and ledgeHang are po
     `ledgeHang ${report.ledgeHang} is not commoner than spireLand ${report.spireLand} — sweep is suspect`);
 });
 
+/* ====================================================================== */
+/* 12 — the two spire beats, driven end to end                             */
+/* ====================================================================== */
+
+/**
+ * Two authored spire landings, driven from a standing start in the shipped level. What is
+ * asserted here is not the routes — those are level content and will move — but the two findings
+ * the routes exposed, each of which is an interaction between systems that would otherwise fail
+ * silently.
+ *
+ * ── Two input contracts, because the next person to drive a pole will get both wrong ────────
+ *   · **Do not press `interact` near a hook ring.** E is overloaded and `HookSwing` is priority
+ *     86 against `PoleClimb` 82, with `hookGrab` 9.0 m against `poleMount` 1.9. From the kiosk
+ *     lintel a ring is 4.2 m away, so pressing E to mount the obelisk grabs the rope instead —
+ *     `hookSwing@0`, every time. Let the pole auto-grab by walking into it.
+ *   · **`PoleClimb` reads RAW stick, not camera-relative.** It gates the climb on `wishRaw.z`,
+ *     the same raw-axes idiom `CombatStrafe` uses, because the world defines up-the-shaft rather
+ *     than the camera. A world-space steering vector aimed at the shaft feeds it a NEGATIVE
+ *     `wishRaw.z` and slides Sly straight back down: `poleClimb@21 -> move@51`. Once mounted the
+ *     script has to switch to raw forward.
+ * Neither is visible to the feasibility pre-check (arm 11): both are about what `update()` reads,
+ * not what `canEnter` demands. A state can be enterable and still unusable.
+ */
+test('spire: a double jump fired inside the toTarget lock breaks it — the dead window', async () => {
+  /* Route A, east pinnacle: stand on the aisle roof, hold forward into the shaft, climb, let the
+     top hop fire, then tap jump. Most timings land. The ones fired just after `toTarget` acquires
+     do not — the double jump takes the lock's own airborne frames and drops to `fall`. That is a
+     real interaction between magnetism and the air moveset, and if either changes this should say
+     so rather than quietly becoming "all timings land". */
+  const { engine, c } = await realWorld();
+  const start = V(16.0, 13.50, -50.0);
+  const landed = [], missed = [];
+  for (const dj of [0, 6, 10, 13, 17, 24, 28]) {
+    let hopAt = -1;
+    const r = await driveRoute(engine, c, start, Math.PI, 320, (inp, i, cc) => {
+      inp.move.y = 1;
+      if (hopAt < 0 && cc.stateName === 'jump') hopAt = i;
+      if (dj > 0 && hopAt >= 0 && i === hopAt + dj) inp.hold('jump');
+      else if (i < 3) inp.hold('interact');
+      else inp.let_go('jump');
+    }, 'spireLand');
+    (r.first >= 0 ? landed : missed).push(dj);
+  }
+  console.log(`\n[spire] Route A east pinnacle — landed at dj ${landed.join(', ')} | missed at dj ${missed.join(', ') || 'none'}`);
+  assert.ok(landed.length >= 4, `only ${landed.length} of 7 take-off timings landed the pinnacle`);
+  assert.ok(missed.length > 0,
+    'every double-jump timing now lands: the toTarget dead window is gone — confirm that was intended');
+  // The window is early, not late: a late double jump is harmless because the lock has resolved.
+  assert.ok(Math.max(...missed) < 20, `the dead window reaches dj ${Math.max(...missed)}, further than measured`);
+});
+
+test('spire: spireGrab catches the obelisk hop, not magnetism — the ordering proves which', async () => {
+  /* Route B, obelisk. `EgyptLevel` documents this beat's bare hop as deliberately unrescued —
+     1.090 m of miss against `catch` 1.008 — and that is true about the MAGNET and irrelevant to
+     the outcome. `SpireLand.canEnter` has its own opportunistic grab at `TUNE.spireGrab` 3.4 m,
+     which subsumes the magnet's catch entirely, so the bare hop lands anyway.
+     The evidence is the ORDERING: `spireLand` fires before `toTarget`, so the state's own
+     affordance is what caught him. `peakY` proves nothing here — `SpireLand.enter` snaps position
+     to the tip, so a landing manufactures its own apex reading.
+     The consequence, which is the part worth failing on: `spireGrab` is a `Controller.TUNE`
+     constant, so a level cannot author strictness this way at all. If someone tightens it to make
+     the beat strict, this arm tells them exactly what they changed. */
+  const { engine, c } = await realWorld();
+  const S = V(2.2, 9.00, 8.4), P = V(0, 13.3, 11);
+  const dx = P.x - S.x, dz = P.z - S.z, L = Math.hypot(dx, dz);
+  let hopAt = -1;
+  const r = await driveRoute(engine, c, S, Math.PI, 420, (inp, i, cc) => {
+    if (cc.stateName === 'poleClimb') { inp.move.x = 0; inp.move.y = 1; }   // RAW forward: see header
+    else { inp.move.x = dx / L; inp.move.y = -dz / L; }                     // no interact: see header
+    if (hopAt < 0 && cc.stateName === 'jump' && i > 40) hopAt = i;
+    inp.let_go('jump');                                                     // BARE hop, no double jump
+  }, 'spireLand');
+  const frameOf = (n) => { const e = r.path.find((p) => p.startsWith(`${n}@`)); return e ? Number(e.split('@')[1]) : -1; };
+  const sl = frameOf('spireLand'), tt = frameOf('toTarget');
+  console.log(`\n[spire] Route B obelisk, BARE hop: spireLand@${sl} toTarget@${tt}  ` +
+              `spireGrab ${TUNE.spireGrab} vs magCatch ${TUNE.magCatch}`);
+  console.log(`        ${r.path.slice(0, 7).join(' ')}`);
+  assert.ok(sl >= 0, 'the bare hop no longer lands the obelisk — spireGrab may have been tightened');
+  assert.ok(TUNE.spireGrab > TUNE.magCatch,
+    'spireGrab no longer subsumes magCatch — the beat can now be authored strict, retire this arm');
+  assert.ok(tt < 0 || sl < tt,
+    `toTarget@${tt} preceded spireLand@${sl}: magnetism caught him, not the spire's own grab`);
+});
+
 test('wallClimb: proximity alone does not snag a player who is not reaching for it', async () => {
   /* `wall_notch.gd` commits on `elif player.direction:` — a hold acts when it is being reached
      for. Fly past the face with no stick input and nothing may take control. */
