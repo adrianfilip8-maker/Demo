@@ -31330,6 +31330,15 @@ overhead probes are catching columns and architraves that the sightline itself c
 whisker system doing exactly what it was built to do — *"the boom shortens continuously as a pillar
 approaches the sightline"* — at a density of pillars its tuning was never checked against.
 
+> **CORRECTED by §411.14.** The attribution above — *"the whiskers are cutting, not occlusion of
+> the character"* — is **wrong**, and it is wrong in the defect class I spent this whole round
+> naming. Replaying the rig's own whisker loop at every cut frame finds **no whisker binding at
+> all** on most of them (88 of 88 at lane 0, 144 of 233 at lane 4, 199 of 271 at lane 12). Nothing
+> is firing. The boom is mid-**recovery** from an earlier, genuine occlusion. My metric
+> `_boomWant − boom > 0` could not tell "blocked now" from "still climbing back out after being
+> blocked", so I read the second and reported the first. The observation (nothing is there) was
+> right; the inference (therefore the whiskers fired on nothing) was not. See §411.14.
+
 The dolly is neither the cause nor a meaningful contributor, and is still delivered on those lanes:
 
 ```
@@ -31435,6 +31444,67 @@ Two properties that make it safe: `update-index` never touches the working tree,
 lanes' edits are still sitting there afterwards exactly as they were; and the `git diff --cached`
 step is a real check rather than a formality — it is where you find out your edit script matched
 an anchor inside somebody else's section.
+
+### §411.14 The whiskers are not firing on empty space. Nothing is firing — the boom is still climbing back.
+
+§411.11 asked why the boom is cut where a ray along it hits nothing, and answered "the whiskers".
+Measured properly, that is wrong, and the real answer is better.
+
+**Method, corrected twice over.** The first probe used a zero-radius `raycast`; the rig uses
+`capsuleSweep` with a 0.34 m sphere from five offset origins. So the replay here calls the *same*
+sweep from the *same* five origins with the *same* `CAM_SWEEP_OPTS`, and re-runs `_castBoom` itself
+at each cut frame. (The shape difference turned out not to matter — where the centre whisker
+binds, a bare ray on the same line sees it too, 19 of 19 at lane 4 and 69 of 72 at lane 12. The
+sphere was not the story.)
+
+```
+lane   cut frames   _recovering   boomHold>0   REAL current block   mean gap
+   0        88          93 %          0 %             0 %            0.132 m
+   4       233          94 %         14 %            38 %            1.588 m
+   8       284         100 %         74 %           100 %            5.526 m
+  12       271          99 %         15 %            27 %            2.405 m
+```
+
+**Lane 0 settles it: 88 cut frames and _not one_ of them has anything blocking the boom.** Lane 8,
+inside the colonnade, is 100 % genuinely blocked and the camera is right to be jammed. In between,
+lanes 4 and 12 are two-thirds recovery and one-third real.
+
+**The mechanism is a rate mismatch, and both rates are in the source.** Nave columns stand every
+8 m; at `runSpeed` 7.2 m/s that is **one column every 1.11 s**. Recovery is `recoverDelay` 0.22 s of
+hold, then a `smoothDamp` with `recoverTime` 0.62 s — about 1.9 s to 95 % — under a
+`recoverSpeed` 2.4 m/s ceiling. **The boom needs roughly twice as long to climb back out as the
+level gives it between columns**, so from the first real occlusion onward it never returns to
+length; it lives in permanent deficit and every frame reads as "cut".
+
+That is why lane 8 sits at `distHardMin` with the camera inside Sly, and it is a live gameplay
+defect rather than a staging one.
+
+**What the tuning is worth**, geometry untouched, mean delivered boom over the hall sprint:
+
+```
+recoverTime  recoverSpeed  delay    lane 0   lane 4   lane 12
+   0.62          2.4       0.22      5.660    4.669    3.681    <- shipped
+   0.30          2.4       0.22      5.692    4.815    3.786
+   0.30          6.0       0.22      5.700    4.921    4.579
+   0.15          9.0       0.10      5.700    5.020    4.870
+```
+
+The `recoverSpeed` ceiling is the dominant term — 2.4 → 6.0 alone is worth **+0.79 m** at lane 12.
+The fastest setting tried recovers **+0.35 m at lane 4 and +1.19 m at lane 12**, a third of the
+boom, while lane 0 barely moves because it was never really blocked.
+
+**ROUTED, not tuned.** `recoverTime` is commented *"slow on purpose"* and `recoverDelay` exists to
+kill corner flicker. **I can measure the benefit and I cannot measure the cost** — I have no
+instrument for flicker, and speeding up the very constants that were slowed down to suppress it is
+exactly the trade someone with the frames in hand should make. The lever is the recovery tuning,
+not the whisker geometry, and that is the correction §411.11 needed.
+
+**And the personal pattern, since this is the third time in one round.** §411.5 was a metric that
+called a graze an occlusion. §411.12 was a bbox that grew when the subject moved away. This was a
+gap that could not tell blocked from recovering. Every one is §409.3 — *the answer carries less
+information than the caller needs* — arriving in my own instruments rather than in the code I was
+measuring. The rule from §411.10 held each time, but only because it was **run**; knowing it did
+not stop me writing the metric.
 
 ---
 
