@@ -30885,3 +30885,216 @@ Third instance this session of the same shape: §406.3 (stashing a lane's live e
 deletion, and both times the destroyed work was indistinguishable from an environment failure
 afterward. **Every one of them happened while tidying the tree rather than while doing the work.**
 
+
+---
+
+## §411 — The dune cut, the bar that replaced three, and what the camera actually does with speed
+
+Round 18 of the world lane, after rollback #7. §408.2's fix was held under a capture lock; the
+container restart cleared it (`pgrep` for a live capture: none), so it landed.
+
+### §411.1 The plateau fix, and the control that makes it surgical
+
+One line, exactly as §408.2 derived it — `h = lerp(h, _plateau[0], _plateau[1] * (1 - cm))`,
+which is the weighting `approachRidge` one line above already carries.
+
+Measured on EgyptLevel's own hall paving footprint (x −23..23, z −51..−17, 0.5 m grid):
+
+```
+                            before      after
+  above y = 0               31.5 %      0.45 %
+  worst in-footprint       1.050 m     0.015 m
+  mean depth              0.0803 m    0.0000 m
+  NW corner (−24,−52)     1.1700 m    0.0026 m
+  NE corner ( 24,−52)    −0.0319 m   −0.0319 m    control, bit-identical
+  vent mouth column       0.8594 m   −0.0522 m
+```
+
+§408 recorded 30.8 %; this grid reads 31.5 % on the pre-fix tree, a sampling difference and not a
+drift — both corners reproduce to four decimals, so the terrain was bit-identical to when it was
+first measured.
+
+**The residual is 0.45 % of samples and 0.015 m, and it is NOT plateau.** It sits at x = 23, where
+the plateau weight is already 0, and the courtyard reads the same 0.45 % / 0.010 m both before and
+after. It is the paving-edge `paveDrift` blend, which was there all along.
+
+**The half a one-sided measurement cannot see.** Booting the pre-fix and post-fix `Terrain` side by
+side and differencing the field: **zero movement across 27,775 sample points** in five zones outside
+the complex — both pyramid bodies, the approach ridge, the Nile corridor, the horizon ring — max
+|Δ| exactly 0.0000 m. Every metre that moved is inside the pad or its 16 m fade band. The plateau
+still flattens its own pads: pyr2 reads 4.000 m against a `baseY` of 4.
+
+Full suite 743/743.
+
+### §411.2 Three arms retired into one that holds in both directions
+
+T1, T2 and T3 each went red on the same run, and each failure message said the same thing: the
+defect I was written for is gone, retire me rather than relax me. Three arms measuring one defect
+from three angles is right while hunting a cause and wrong afterwards — a future regression trips
+all three and reads as three problems.
+
+The replacement uses the plateau weight as a **lever**, because "the hall is flush" is half an
+instrument: the hall would also read flush if somebody deleted `pyramidPlateau` or shortened its
+falloff, and then the next person to lengthen it re-buries the hall with nothing red.
+
+```
+A  shipped field is flush                       PASSES   0.45 % above y=0, worst 0.0147 m
+B  same field, mask weighting removed           FAILS    31.5 % above y=0, worst 1.0501 m
+C  plateau still reaches the hall               0.165 at (−23,−51), d 188.3 m from pyr1
+D  plateau still flattens pyr2's own pad        4.000 m against baseY 4
+```
+
+**B is not synthetic.** Inside the hall `complexMask` is exactly 1, so the masked lerp contributes
+nothing and the shipped height IS the pre-plateau height; re-applying the unmasked lerp
+reconstructs the field this branch shipped at `5d53b3c`. Verified against that tree: 31.5 % /
+1.0501 m from the reconstruction against 31.5 % / 1.0501 m measured on the real pre-fix build,
+agreeing everywhere to 1.3 cm — `heightAt` grid interpolation, well under the 5.5 cm sink. A and B
+run through the **same predicate**, which is §408.3 and §409.3 applied to my own bar.
+
+Neither bar was chosen after seeing the result (§141.1). The depth bar is `cm * 0.055` read out of
+`Terrain.js` — the file's own statement of how far under the paving it holds the sand. The fraction
+bar is the **courtyard, surveyed live in the same run**: the open-air half of the same pad, which
+the plateau never reached and which read 0.45 % before and after. The predicate absorbs 4.0 % of
+the plateau term before firing.
+
+**And one assertion was removed from my own new bar for being entailed.** The first draft asserted
+the k-sweep "flips somewhere above 0". That is a strict consequence of A passing and B failing —
+precisely the defect that retired `basketvary` A1 in §408.3, reintroduced by me one round later,
+in the arm written to demonstrate the lesson. The flip point is now reported as a number and
+carries no assertion.
+
+### §411.3 The vent: two of my four grounds dissolved, and one REVERSED — by my own fix
+
+§408.1 refused "open the aperture, 0.6 → 1.2" on four measured grounds. Cutting the dune changed
+three of them, and that is recorded rather than quietly dropped:
+
+```
+(1) `vent` is a VOLUME tag; no capsule is ever tested through it     STANDS, untouched
+(2) the mouth is 0.759 m under the walkable surface                  GONE  (sand 0.859 → −0.052)
+(3) `A.proxy` fixes the CENTRE, so 1.2 m misses by 0.07 m            MOOT  (thr 0.47 → −0.44)
+(4) "the mouth is inert regardless"                                  REVERSED
+```
+
+The mouth's top is at 0.100 against a −0.442 m `inVent()` threshold: **at its shipped 0.6 m height
+it now satisfies the probe on its own**, where before it contributed nothing at any height under
+0.97 m. The instruction's *goal* was reached without touching the geometry it named, by removing
+the sand that was the actual cause.
+
+Ground (1) is why the resize would still have been the wrong change, and it is the only ground that
+never depended on the dune. **A refusal that rests on four grounds is only as durable as its
+best one** — three of these four were contingent on a defect I then fixed myself.
+
+### §411.4 #32 — what the shipped rig does with running speed, measured
+
+Routed here by round 20's census, which found `move → idle` and explicitly declined to settle it:
+*"Wiring one is a design decision about how the camera should feel, not a defect fix."* This is the
+evidence for that decision. **Nothing was shipped.**
+
+**The premise needs one correction.** "A sprint reads at the same scale as a stand" is not quite
+true. Driving the real rig at real ground speeds (`Controller.TUNE.runSpeed` 7.2 m/s):
+
+```
+speed m/s   frameKey   boom m   fov deg   lead m
+   0.0      idle        5.400    52.00    0.000
+   2.6      idle        5.400    53.94    0.155
+   5.6      idle        5.400    56.20    0.333
+   7.2      idle        5.400    57.40    0.428
+```
+
+The **boom is bit-identical at every speed** — 5.400 m from a stand to a full sprint. But the rig is
+not speed-blind: `fovSpeedGain` reads the smoothed actual velocity and gives **+5.40°** at run
+speed, continuously. Net apparent scale, half-frame height at Sly's distance: a sprint reads
+**12.2 % wider** than a stand. **The dolly is what is flat, not the framing** — and the rig already
+contains a working, shipped, continuous speed channel. That matters for the decision.
+
+**What the authored ladder would give, if reached:** boom 5.4 → 7.0 (+1.60 m), fov 52 → 62.0
+(+10.0°), lead 0 → 1.75 m (clamped at `leadMax`), apparent scale **+59.7 %**.
+
+That +10.0° is the first reason "just wire up the table" is not safe: `FRAMES.run_fast.fov` (+4.6)
+and `fovSpeedGain` (+5.4) are **two independent speed couplings that have never been live at the
+same time**, and `_fovTarget` adds them. Wiring the table naively double-counts speed.
+
+**The second reason is the level.** Sprinting the hypostyle nave at 7.2 m/s, rig settled on a
+courtyard run-up, scoring only z −17..−51, by how far the boom is actually cut:
+
+```
+   add    boom    mean cut   >25 cm    >50 cm    worst
+  0.00    5.40      0.032      3.2 %     0.0 %   0.356
+  0.20    5.60      0.039      4.9 %     0.0 %   0.439
+  0.40    5.80      0.048      6.7 %     0.7 %   0.537
+  0.60    6.00      0.059      8.5 %     2.5 %   0.653
+  1.00    6.40      0.088     12.3 %     6.3 %   0.943
+  1.60    7.00      0.154     18.0 %    11.6 %   1.506
+```
+
+At the shipped boom the nave centre-line is effectively clear: **0.0 %** of frames cut by more than
+50 cm. The authored +1.60 m puts that at **11.6 %**, with the mean cut up 5×. The columns take back
+most of what the dolly asks for, and they take it back intermittently, which is a stutter rather
+than a pull-back. **The room you sprint in is the room that says no.**
+
+**Third: there is nothing to key on.** The moveset has exactly one ground locomotion state, `move`,
+accelerating to `runSpeed` in 0.189 s. Reaching `walk`/`run`/`run_fast` means adding speed tiers to
+`Moveset.js` for a camera reason — three states in the wrong module, with tier-boundary hysteresis
+the `tau` blend only partly hides.
+
+**Recommendation — yes, but as one number on the existing channel, sized by the level and not by
+the table.**
+
+- Add `distSpeedGain` to `_boomWant` from the already-smoothed `_speedSm`, mirroring the FOV term
+  exactly. That is one constant and one line, reuses a channel proven in the shipped build, needs
+  no moveset change, and is continuous, so there are no tier boundaries to pop across.
+- Size it at **+0.20 to +0.40 m** at full run, not +1.60. +0.20 m is free in the nave (0.0 % of
+  frames cut past 50 cm, identical to shipped); +0.40 m is where cutting begins. That the level's
+  budget lands on the authored **`walk`** row's `dist` and not the `run_fast` row's is the finding:
+  the hall tolerates a walk-sized dolly at run speed.
+- Do **not** wire up the FRAMES speed rows to get there. Their `fov` column double-counts against
+  `fovSpeedGain`, and the boom column is 4–8× what the hall absorbs.
+
+The dynamics, for whoever takes it: stepped to the authored ladder, the boom spends 90 % of its
+travel in 0.97 s while the player reaches full speed in 0.189 s — a 5:1 lag, so it reads as drift
+after the sprint rather than response to it. Peak dolly rate 2.62 m/s, against the occlusion
+`recoverSpeed` cap of 2.4 m/s; the two systems move at the same speed and would contend directly.
+
+**No arm was added.** The decision is open, and a bar here would freeze one answer to it. The
+measurement belongs in the ledger until somebody chooses.
+
+### §411.5 The methodological error I nearly shipped as a finding
+
+The first version of the occlusion measurement reported **0.0 % occlusion at the nave centre-line
+and 76–100 % one lane over** — a dramatic result about level geometry. It was an artefact.
+
+The rig eases its orbit yaw toward the direction of travel, and that settle takes ~2–3 s. The hall
+run is 4.7 s. **Most of my scored frames were the transient**, with the camera swung up to 4.8 m
+off the lane and parked inside a column — so I was measuring my own harness's startup, and it
+produced a clean monotonic story across lanes that looked exactly like a finding.
+
+Caught by instrumenting *what* was occluding rather than *how much*: the camera x-coordinate was
+wandering when the player's was not. Corrected with a courtyard run-up before the scored section
+(lateral wander then 0.00 m), the centre-line reads 29.6 % at a 1 cm threshold — and re-scored by
+magnitude, 0.0 % past 50 cm.
+
+Two lessons, and the second is the one worth keeping:
+
+1. A harness that has to reach steady state must be **shown** to have reached it. The run-up is
+   part of the measurement, not preamble to it.
+2. **A threshold of 1 cm turned a shave into an occlusion.** The first table was not only
+   contaminated, it was scored on a predicate too sensitive to mean what its column header said.
+   Both numbers were "correct" and neither was true. §409.3's rule — the answer carries less
+   information than the caller needs — applies to *metrics* as much as to flags: `cut > 0.01`
+   could technically say both of its answers and still could not tell a shave from a jam.
+
+### §411.6 Two leads, measured but not chased
+
+- **pyr1's pad is overridden by the Nile lerp, which is the defect I just fixed wearing different
+  clothes.** `nileWeight` spans x −66..−272 and pyr1 sits at x −150, so `h = lerp(h, nileBed, nw)`
+  runs *after* the plateau and overrides it exactly as the plateau was overriding the complex mask.
+  Terrain at pyr1's centre reads **−5.446 m against a `baseY` of 6.5** — the flat pad the plateau
+  exists to build is 11.9 m below the pyramid. The control is the same shape as the hall's: pyr2,
+  outside the river, reads **4.000 against its `baseY` of 4**. Whether it matters visually depends
+  on the pyramid mesh's own base, which I did not measure — so this is a measured lead, not a
+  diagnosis. Note the pattern: **`rawHeight` is a sequence of lerps, each of which can silently
+  override every intent above it, and two of the three have now been caught doing it.**
+- **The camera is heavily occluded in the hypostyle hall away from the nave centre-line, at the
+  SHIPPED boom.** Mean boom cut 1.222 m at x = 4 and 2.120 m at x = 12, with >50 cm cuts on 47.5 %
+  and 62.0 % of frames — before any dolly. That is a pre-existing condition in the level's
+  signature room and it is independent of #32.
