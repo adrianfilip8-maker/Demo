@@ -28028,3 +28028,107 @@ attached*.
 **The general rule this earns:** in a game with authored assists, **"no floor" is not "no route"**.
 A reachability instrument has to model what the level *intends* as the approach, not only what a
 walking player can stand on.
+
+---
+
+## §379 — THE INK HYPOTHESIS: particles are the only visible class carrying neither mandatory ink treatment
+
+The most consequential thing produced this session, and it came from asking a lane for its
+**judgement** rather than a measurement.
+
+### §379.1 The structural fact, verified in code here
+
+§2.1 point 2 makes ink non-negotiable and specifies **two** treatments: inverted-hull shells on
+characters and hero props, and a post-process edge detect on **depth and normals** for everything
+else. Checked against the source rather than accepted:
+
+```
+depthWrite: false     Particles.js:1468, 1800, 2041, 2193, 2405 (also depthTest:false), 
+                      Decals.js:128, Trails.js:130
+                      and :1800's own comment: "don't write depth from additive particles —
+                      nor alpha ones", so it is deliberate
+Outline.js:381        if (!mesh || !mesh.isMesh) return false
+Outline.js:527, :589  same gate; the hull system walks meshes
+PostFX.js:25-26       edgeDepth / edgeNormal — the edge pass keys off depth and normals
+```
+
+Particles write no depth, so **the edge-detect pass cannot see them**. They are instanced quads,
+not meshes in the hull system, so **they get no shell**. Therefore:
+
+> **Particles are the only class of visible object in this game that carries neither of the two
+> mandatory ink treatments.**
+
+That is a verified structural fact. What follows from it is a hypothesis, and the lane framed it as
+one.
+
+### §379.2 The hypothesis — the tuned variable was never the variable
+
+Six rounds of reading the FX layer surfaced the same sentence in different words, over and over:
+*"it measured as drawing and read as absent."* `sand_drift`/`sand_haze` at 460 live sprites with two
+review passes reporting no airborne particulate. Shaft motes: *"not absent, sub-pixel."* `air_motes`:
+*"the batch draws, the sprites are the right thing, and there are simply far too few."* The flame at
+1.9% warm with `heroWarm` exactly 0.00%.
+
+Each time the answer was a parameter — more count, bigger size, another hue — and each time the next
+pass either repeated the complaint or produced its opposite, that it washes.
+
+> **The FX reads as a different medium from the rest of the picture, and no amount of count or hue
+> will fix that, because the cause is compositing.**
+
+The atlas painter goes to real trouble for *"chunky, closed, hard-edged silhouettes… nothing here is
+a Gaussian blob"* — and the frame then composites those sprites with a soft depth fade and no line.
+**Hard in the atlas, un-inked in the picture.** In a cel-shaded world where every other object is a
+banded shape inside a dark warm line, an un-inked soft sprite does not read as a thing *in* the
+world; it reads as a layer *over* it.
+
+**This explains both halves of a contradiction density cannot.** Invisible when quiet and washy when
+loud is exactly what a wrong-medium overlay does. A density explanation predicts a working middle,
+and six rounds of tuning have not found one.
+
+### §379.3 Why no arithmetic can settle it
+
+Projected area, ink, alpha, hue separation, screen fraction — every one measures *how much sprite is
+in the buffer*, and the question is *what kind of object the viewer believes it is*. That is a read,
+and reads need eyes. This is the same boundary §366.7 drew for the camera and §367 drew for the
+whole gameplay layer, arrived at from the opposite direction.
+
+### §379.4 The registered frame test, with both outcomes named in advance
+
+**Shot: `impact`** — the one frame where FX is unambiguously present and large (`dive_ring` at 104×
+the alert puff, the biggest sprite in the catalogue, plus dust column, chunk debris and hot sparks)
+sitting directly on Sly, who carries the full inverted-hull shell. Same frame, same lighting, same
+grade: hero geometry with both ink treatments and FX with neither, a hand's width apart.
+**Control: `interior`**, whose entire history is "measured as drawing, read as absent", and which
+will also be the first frame ever rendered with fires at 1× (§378.1: 217 → 434).
+
+**The question to a blind critic — and it is deliberately not about visibility:**
+
+> *"Which elements of this image are made of the same material as the rest of the picture, and which
+> look laid on top of it?"*
+
+- **Ring and dust described as belonging to the scene** → the hypothesis is wrong, density really
+  was the variable, and six rounds of parameter work were correct.
+- **Only the geometry named, with *overlay*, *fog*, *haze*, *glow*, *screen* or *smoke machine*
+  reached for** → every count, size and hue change optimised the wrong variable, and the fix is not
+  a number: write depth from the opaque core so the edge pass can find them, or extend the hull
+  system to the sprite quads.
+
+Nobody starts that work on a hunch. But it is a **one-frame question**, and it is the only question
+in this project that arithmetic cannot touch.
+
+### §379.5 Also this round
+
+- **`d` is closed at 4.9065 m** — the inherited 4.906 was right to 0.01%, and it needed no posed
+  character: `Debug.js:141` teleports the player *before* `:176` emits `shot`, so the anchor is a
+  pure function of `SHOTS.combat`. T12 derives it by **running the shipped branch** rather than
+  restating the recipe, which is what stops it becoming a second copy that drifts.
+- **The two capture defects are disjoint in the corpus, by luck.** 21 sealed records ran at
+  `dt = 0`; exactly one also measured an FX emitter, and its arms were the sparkle preroll and
+  interior motes — precisely the populations that back-date or loop and therefore *do* render at
+  `dt = 0`. Every FX-measuring A/B used `dt 1/60`. **Where FX was blank nobody was measuring it;
+  where it was measured it was doubled.** So §373's damage is the doubling alone.
+- **`RESULT-tombdim2`'s `W2` is the one at-risk bar**: dark field `R−B +0.7` against a `≤ −8` bar,
+  and doubled warm additive pushes `R−B` up. Gameplay is `+0.7 − ΔW`, so **the FAIL requires
+  `ΔW < 8.7` to stand.** The DO-NOT-SHIP verdict survives on `W1` alone, but W2 is not evidence
+  anyone can lean on until re-run. `H1` (`GOLD−VAULT +16.4 L`) could not be classified without the
+  region masks, and the lane said so rather than guessing.
