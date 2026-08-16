@@ -30637,6 +30637,20 @@ are worth keeping because each is a different *class* of error in the same sente
    1.2 m sloped run at z −54.5, whose top corner reaches 0.59. It fires in a 0.5 m band at
    z −49.50…−49.75 and nowhere else.
 
+> **AMENDED by §411.3 (round 18).** Cutting the dune changed three of these four grounds, and
+> the record must not keep credit for reasons that later evaporated:
+>
+> * **(1) SURVIVED.** `vent` is a volume tag; no capsule is ever tested through it. Independent of
+>   the dune, and the only ground that was.
+> * **(2) GONE.** The sand at the mouth went 0.859 → −0.052 m. There is no burial left to clear.
+> * **(3) MOOT.** The `inVent()` threshold moved with the sand, 0.47 → −0.44.
+> * **(4) REVERSED.** The mouth's top at 0.100 now clears a −0.442 threshold, so at its shipped
+>   0.6 m height it satisfies the probe on its own — the opposite of "inert regardless".
+>
+> The refusal was correct and the instruction was wrong, but **for one reason, not four.** A
+> refusal that lists four grounds and loses three is only as durable as its best one, and the
+> best one here was never the one that made the argument feel strong.
+
 **My own first derivation of (3) was wrong in the same class**, and is recorded in the arm rather
 than corrected away: it held the box FLOOR fixed and produced 0.97 m, which made the
 sibling-matching fix look sufficient. An arm that hides its author's near-miss is a worse witness
@@ -31126,6 +31140,140 @@ Two lessons, and the second is the one worth keeping:
   SHIPPED boom.** Mean boom cut 1.222 m at x = 4 and 2.120 m at x = 12, with >50 cm cuts on 47.5 %
   and 62.0 % of frames — before any dolly. That is a pre-existing condition in the level's
   signature room and it is independent of #32.
+
+---
+
+
+### §411.7 The dolly landed, at the size the level chose
+
+`distSpeedGain` 0.30 m on `_boomWant`, continuous in the smoothed ground speed. Boom 5.400 m at a
+stand, 5.670 m at `runSpeed` (the gain saturates at `speedRef` 8.0 and the player tops out at 7.2,
+so 0.9 of it lands). A sprint now reads **17.9 %** wider than a stand, against 12.2 % before.
+
+`fovSpeedRef` became `speedRef`: it had one consumer and now has two, and the two channels are the
+same physical read. `_speedSm` is eased once per frame in a new `_speedTrack` step rather than
+inside `_write`, because `_boomLength` consumes it and runs five calls earlier — **easing a shared
+value inside whichever consumer happens to run last makes the coupling depend on method order**,
+which is a defect that would have shown up as a one-frame lag nobody could attribute.
+
+`tests/camspeed.test.mjs` brackets 0.30 from both sides, because one bound is not a bracket:
+
+```
+LOW   plant distSpeedGain 0 — the state that shipped for the life of the rig   REJECTED
+HIGH  plant the authored FRAMES.run_fast.dist 1.60, read out of the table      REJECTED
+      shipped 0.30                                                            ACCEPTED
+```
+
+The measured dolly is checked against its closed form (0.2700 against 0.2700) rather than against a
+number I once recorded, and the occlusion bucket is derived a priori as `2 * camRadius` — the
+camera pushed in by more than its own collision diameter — so it tracks the constant.
+
+**Live hazard, deliberately not taken:** lighting the `run_fast` framing row. Its `fov` +4.6 **adds**
+to `fovSpeedGain` +5.4 in `_write`, and the two have never been live simultaneously. Anyone who
+makes that row reachable gets +10.0° and a **59.7 %** wider frame, which is a different change with
+its own risk. The double-count is in the code today, dormant only because the row is unreachable.
+
+### §411.8 The audit the third instance earned: every stage of `rawHeight`, measured
+
+Two stages have now been caught overriding an intent above them, so the question stopped being
+"what is wrong with the plateau" and became "what is the shape of this function". Method: take the
+**real** `Terrain.js`, neutralise exactly one stage, diff the field. Nothing is re-implemented, so
+nothing is measured about a paraphrase.
+
+```
+stage             position   HALL     pad    courtyard  avenue    pyr1     pyr2
+baseSwell         before        ·       ·        ·       0.354    0.003    0.009
+dunes             before        ·       ·        ·       1.049    0.047    0.034
+transverse        before        ·       ·        ·       0.102    0.003    0.019
+megaRipples       before        ·       ·        ·       0.014       ·        ·
+approachRidge     before        ·       ·        ·      17.595       ·        ·
+horizonSwell      before        ·       ·        ·          ·        ·        ·
+drift             AFTER         ·    (edge)      ·       1.221       ·        ·
+sphinxDrift       AFTER         ·    0.478       ·       0.556       ·        ·
+paveDrift         AFTER      0.070   0.207    0.065      0.105       ·        ·
+pavingSink        AFTER      0.055   0.055    0.055      0.055       ·        ·
+pyramidPlateau    AFTER         ·       ·        ·          ·      4.703    3.343
+nileBed           AFTER         ·       ·        ·          ·     12.678       ·
+```
+
+**The finding is about position, not about masks.** Six stages sit before `h *= 1 - cm` and are
+neutralised by it *whether or not they carry a mask of their own* — `horizonSwell` carries none and
+is perfectly safe, because the flush multiplies everything accumulated so far. Six sit after it,
+and every one of those must carry its own mask or be provably zero where a mask above claims
+authority. Of those six:
+
+* `drift` — **provably zero inside the pad**, confirmed rather than assumed: the 1.63 m that showed
+  at the pad boundary is a `heightAt` grid-interpolation edge effect and falls to **0.0000 at 1 m
+  of inset**. Safe by construction.
+* `sphinxDrift` — reaches **~5 m inside** the pad boundary at up to 0.478 m (0.0000 by 5 m inset).
+  It bites, it is bounded, and it is at the edge only. Harmless today; unmasked in principle.
+* `paveDrift` / `pavingSink` — both act inside deliberately (0.070 and exactly 0.055 in the hall)
+  and both are capped. Intentional, and they are the whole of the 0.45 % / 0.015 m residual §411.1
+  reported.
+* `pyramidPlateau` — was unmasked, now masked, and the audit confirms it structurally: hall and pad
+  both flat, effect confined to the two pyramid pads.
+* `nileBed` — unmasked, **and it is the last stage, so it overrides everything including the
+  plateau.** 0.0000 m in the complex, the avenue and the hall; 12.678 m at pyr1.
+
+> **The generalisation worth keeping: additive stages compose, lerp stages overwrite.** A `lerp`
+> with weight *w* silently discards *(1 − w)* of every intent computed above it, so the danger in
+> this chain is concentrated entirely in its two `lerp` calls — and both have now been caught doing
+> exactly that. The nine additive stages are all bounded; neither lerp was. That is a structural
+> property of the function, not a coincidence of two bugs.
+
+### §411.9 pyr1 floats, and it is the same defect one lerp further down
+
+Routed, not fixed — it is a level-design decision, not a defect fix, and §411.4's rule applies.
+
+`nileWeight` spans x −66..−272 and pyr1 stands at x −150, dead in the channel. The nile lerp is the
+final stage, so it discards the plateau entirely:
+
+```
+                          pyr1 (in the channel)     pyr2 (control, outside it)
+mean terrain over pad          −5.330 m                   4.000 m  = baseY exactly
+shortfall below baseY          11.830 m mean              0.000 m
+footprint below baseY−0.5       100.0 %                     0.0 %
+footprint below waterY −3        97.1 %                     0.0 %
+mesh bottom (baseY − 1.5)         5.000 m                   2.500 m
+gap, mesh bottom to terrain      10.330 m                  −1.500 m  = buried, as intended
+```
+
+With the nile lerp removed, pyr1's shortfall is **0.000 m** — the plateau does its job perfectly and
+the nile erases it. pyr2 shows what the design intends: the pad flattened to `baseY` and the mesh's
+1.5 m skirt buried in it. **pyr1 instead hangs 10.3 m over the riverbed with 8.0 m of clear air
+between its base and the Nile's surface**, and the water collider (x −272..−60, z −420..340) does
+cover it.
+
+The fix is **not** masking the nile by the plateau: that would carve a 164 m dry island into the
+middle of the river, which is a level-design statement rather than a bug fix. The real question is
+whether a 105 m landmark is meant to be in the channel at all, and that belongs to whoever owns the
+level's composition.
+
+### §411.10 Two rules, sharpened, and a numbering collision
+
+**On the entailed clause I put in my own bar (§411.2):** the lesson is not "watch for entailment",
+which I already knew and had just written a section about. It is that
+
+> **knowing the defect class does not protect you from it. Only checking each bar for entailment
+> does.**
+
+I wrote §408.3 naming the class, then reproduced it one round later inside the arm built to
+demonstrate it. The check has to be a step that is actually performed on each bar, not a thing one
+is aware of.
+
+**On the false occlusion finding (§411.5):**
+
+> **when a metric is surprising, instrument the mechanism before believing the magnitude.**
+
+Both numbers in that table were computed correctly and neither was true — one because the harness
+was scoring a transient, one because a 1 cm threshold called a graze an occlusion. What caught it
+was asking *what* was occluding rather than *how much*, and the answer (the camera's x-coordinate
+was moving when the player's was not) had nothing to do with the quantity being reported.
+
+**Numbering:** this ledger now contains **two §411 sections** — this one, and "The fourth instance,
+and the first where the vacuity was in the SAMPLING" below it. Both are in `HEAD`. I have not
+renumbered either: mine is cited by §-number in commits already pushed, and the other is not mine to
+move. Flagging it for arbitration rather than silently resolving it.
 
 ---
 
