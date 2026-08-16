@@ -2076,16 +2076,21 @@ function hypostyleHall(A) {
    * 4.75²/48 = **0.470 m**. With the ends at 12.90 and 13.40 the low point is
    * `(12.90 + 13.40)/2 − sag`, so the drop from the south anchor is `sag − 0.25`:
    *
-   *     sag 1.0 → drop 0.75 → 6.00 m/s   over
-   *     sag 0.8 → drop 0.55 → 5.14 m/s   over
-   *     sag 0.7 → drop 0.45 → 4.65 m/s   inside, by 0.10
-   *     sag 0.6 → drop 0.35 → 4.10 m/s   inside, by 0.65   ← shipped
+   * A first pass shipped sag 1.0 and failed at 6.00 m/s. **Shrinking the sag did not fix it** —
+   * 1.0, 0.6 and 0.45 all measured 4.86 m/s, pinned, which said the speed was not coming from
+   * the sag depth at all. It came from the **end-height difference**: their harness drops the
+   * rider onto the rope and the rope's own slope converts that fall into along-rail speed, so a
+   * 0.50 m rise from south anchor to north was doing the work. Levelling the ends to a 0.20 m
+   * difference took it to **4.57 m/s** with the sag unchanged.
    *
-   * 0.6 rather than 0.7 because the boarding step-on adds its own speed on top of the drop and
-   * a 0.10 m/s margin is not one. This is the one number in the rope the level does not get to
-   * choose on its own: MOVEMENT owns what "ridden like a rope" means and the ceiling is theirs.
-   * A first pass shipped 1.0 and failed that assertion at 6.00 m/s — caught by their test, not
-   * by me. */
+   * Both ends then went up 0.23 m together — keeping the difference, and so the speed — because
+   * at 13.10 the curve grazed the hall's south wall head (top 13.00) with **0.02 m** of
+   * clearance, which for an 0.085 m tube is the rope lying inside the stone. At 13.33/13.53 the
+   * shipped curve has **0 of 301 samples inside a solid**, and the only remaining 0.00 m reading
+   * is at the north anchor itself, where the rope touches the roof it is tied to.
+   *
+   * This is the one number in the rope the level does not choose on its own: MOVEMENT owns what
+   * "ridden like a rope" means and the ceiling is theirs. Caught by their test, not by me. */
   rail(A, 'hall-cable', catenary([-8.0, 13.33, -16.4], [11.3, 13.53, -45.5], 0.45, 32),
     'rope_fibre', 0.085, 'hall', { mountSpeed: 0, rope: true });
 
