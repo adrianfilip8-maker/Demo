@@ -38,6 +38,7 @@ import * as THREE from 'three';
 import { readFileSync } from 'node:fs';
 
 import { SHOTS } from '../src/core/Shots.js';
+import { EMITTERS, ALERT_LADDER } from '../src/fx/Emitters.js';
 import { Particles, TUNE as FX_TUNE } from '../src/fx/Particles.js';
 import { TUNE as TOON_TUNE } from '../src/render/ToonMaterial.js';
 import { TUNE as POSTFX_TUNE } from '../src/render/PostFX.js';
@@ -373,6 +374,102 @@ test('T8: the hull system counts an FX-shaped mesh as MISSING ink, not as refusi
     'buildOutlineShell now returns a shell for an FX-shaped instanced quad — particles would be '
     + 'getting inverted-hull ink, and §379.1 would need re-testing on that basis');
   assert.equal(fxLike.userData.slyShell, undefined, 'a shell was stamped on the FX mesh anyway');
+});
+
+/* ═════ T9 — `alertframe`'s MARK_R is the same kind of proxy as `_stageImpact`'s radius ══ */
+
+test('T9: MARK_R does not contain even one alert_spot puff, let alone the cluster', () => {
+  /* §379.4 round 18 found `_stageImpact` returning 1.50 m for a sprite drawn at 4.035 m, and
+     four consumers reading it. `alertframe` mints the same kind of number: `MARK_R = 0.55`,
+     commented "the mark's own radius, so \"in frame\" means all of it". It is not.
+
+     Derived from the emitters' own data and PARTICLE_VERT's own expressions — the standing this
+     project already gives the staged AGES, which `fxfeel.test.mjs` T8 re-derives the same way:
+
+       sz   = mix( size0 * s, size1 * s, u^sizeExp ),  s = rand(0.8, 1.25) * rung scale
+       dc   = ( 1 - exp( -drag * age ) ) / drag        travel = speed * dc
+       `_emit`'s speedScale is opts.speed ?? 1 and `_stageAlert` passes none, so the rung's
+       1.15 scales SIZE only, never travel.
+
+     At rung 3 on the dt=1/60 path a SINGLE puff's half-extent is 0.769 m — already 1.4x
+     MARK_R — and the 8-11 puff cluster's outer envelope reaches 1.33 m, 2.42x. This arm
+     asserts the weakest and least assumption-laden half: one puff does not fit.
+
+     Two of `alertframe`'s bars read MARK_R and they fail in opposite directions. CROPPING is
+     the dangerous one: under-measuring lets the tool certify "in frame" a mark that is
+     cropped. The 30 px readability bar errs safe, rejecting frames whose mark actually reads.
+
+     DERIVED, NOT MEASURED. This is geometric extent; a soft sprite's visible extent is smaller
+     than its quad. Round 18 measured the ring's light reaching ~sz, but that is the ring's
+     atlas tile and not the dust's. Confirming it wants an `alert` capture, and that should
+     wait for the re-stage rather than precede it. */
+  const src = readFileSync(new URL('../src/fx/Particles.js', import.meta.url), 'utf8');
+  const blk = src.slice(src.indexOf('const STAGE_RUNGS = ['));
+  const rungs = [...blk.slice(0, blk.indexOf('];')).matchAll(
+    /ALERT_LADDER\.(\w+),\s*scale:\s*([\d.]+),\s*age:\s*([\d.]+)/g)]
+    .map((m) => ({ state: m[1], scale: Number(m[2]), age: Number(m[3]) }));
+  assert.ok(rungs.length >= 1, 'STAGE_RUNGS is no longer parseable — this arm cannot derive anything');
+
+  /* THE CONSTANT HAS SINCE BEEN CORRECTED, AND THIS ARM FIRED WHEN IT WAS — which is what it
+     was written to do. `alertframe` now carries `MARK_R3` and `MARK_R2`, the per-rung envelopes
+     derived below, because a single number fitted to a typical rung-2 puff was being applied to
+     both rungs. So the claim this arm defends is no longer "0.55 is too small"; it is the
+     successor claim: **whatever the tool frames a mark with must contain at least one puff of
+     the rung it frames.** The old 0.55 is kept in the message as the reason the arm exists.
+
+     It caught a real frame. The `alert` re-stage was certified "no faults" against the proxy and
+     re-certified as `mark CROPPED l by 32 px · mark CROPPED b by 26 px` against these numbers,
+     before it was committed. That is the dangerous direction of the bug arriving exactly once. */
+  const markSrc = readFileSync(new URL('../tools/alertframe.mjs', import.meta.url), 'utf8');
+  const m3 = markSrc.match(/const MARK_R3 = ([\d.]+)/);
+  assert.ok(m3, 'alertframe no longer states a MARK_R3 for this arm to check');
+  const MARK_R = Number(m3[1]);
+  assert.ok(MARK_R > 0, '§211.1: MARK_R3 parsed to zero');
+
+  const rung3 = rungs.find((r) => r.state === 'chase');
+  assert.ok(rung3, 'STAGE_RUNGS no longer stages a `chase` rung');
+  const def = EMITTERS[ALERT_LADDER[rung3.state].emitter];
+  assert.ok(def?.size && def?.life, `no emitter data for ${ALERT_LADDER[rung3.state].emitter}`);
+
+  /* The capture latency is 3 frames after the SECOND staging — `_stageShot` runs twice
+     (Debug.js: applyShot -> step(14) -> applyShot -> step(3)), which is what the ages are
+     derived against. Both paths, and the arm takes the smaller (dt = 0). */
+  const age = rung3.age;
+  const u = Math.min(1, age / def.life[0]);            // shortest life -> largest u -> largest sz
+  const s = 1.25 * rung3.scale;                        // max size jitter
+  const sz = (def.size[0] * s) + ((def.size[1] * s) - (def.size[0] * s)) * Math.pow(u, def.sizeExp);
+
+  /* THE SUCCESSOR CLAIM. The old assertion was `sz > MARK_R` — one puff does not fit — and it
+     was true of 0.55 and is false of 1.333, because the constant was corrected. Asserting the
+     old direction now would be pinning a defect that no longer exists, which is the failure the
+     traversal lane's rewritten arms avoided by restating rather than sign-flipping. So:
+
+       the framing radius must CONTAIN at least one puff of the rung it frames,
+       and must be DERIVED from that rung's emitter rather than fitted to another's. */
+  assert.ok(sz <= MARK_R,
+    `one rung-3 puff is ${sz.toFixed(3)} m and MARK_R3 is ${MARK_R} — the framing circle does not `
+    + 'contain a single sprite, which is what 0.55 did for its whole life (a rung-2-sized number '
+    + 'applied to both rungs). Whatever replaced it has reintroduced the same defect.');
+
+  /* And the cluster, not just one member. Travel is NOT scaled by the rung — `_emit`'s
+     speedScale is `opts.speed ?? 1` and `_stageAlert` passes none — so rung 3's 1.15 grows the
+     sprite and leaves the spread where it was, which is the asymmetry that made rung 3 out by
+     2.42x while rung 2 was out by 1.56x. The envelope is travel + half-extent. */
+  const dc = (1 - Math.exp(-def.drag * age)) / def.drag;
+  const envelope = def.speed[1] * dc + sz;
+  assert.ok(envelope <= MARK_R * 1.02,
+    `the rung-3 envelope is ${envelope.toFixed(3)} m against MARK_R3 ${MARK_R} — the framing circle `
+    + 'is back to under-measuring the mark, and CROPPING is the bar that reads it, so a frame with '
+    + 'a cropped mark can be certified in-frame again');
+
+  /* Rung 2 is framed by its OWN number, which is the whole point of splitting them: 0.55 was
+     within 4% of a typical rung-2 puff and 59% short of a rung-3 one, so a single constant had
+     to be wrong for at least one rung whatever value it took. */
+  const m2 = markSrc.match(/const MARK_R2 = ([\d.]+)/);
+  assert.ok(m2, 'alertframe no longer states a separate MARK_R2 — the rungs share a constant again');
+  assert.ok(Number(m2[1]) < MARK_R,
+    `MARK_R2 ${m2[1]} is not smaller than MARK_R3 ${MARK_R}; rung 2 is the quieter rung and a `
+    + 'framing radius that does not reflect that is not derived from the emitters');
 });
 
 /* ═══════════════════════ T6 — the build the measurement describes ══ */
