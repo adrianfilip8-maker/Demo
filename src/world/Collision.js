@@ -792,6 +792,26 @@ export class Collision {
    * `isPoint`" is a plausible change, since that is what I assumed it already did. `kind` is the
    * answer from the affordance itself and cannot disagree with it.
    *
+   * ── HOW A CONSUMER SHOULD USE IT (this is the whole recommendation) ──────────────────────
+   * **Prefer `kind`, and KEEP the existing derivation as the fallback** — precisely the shape
+   * `pinnedAffordance`'s spline half already has, and for the reason written there: a result
+   * field that is absent on an older `query()` must not be read as "box", or the guard fails
+   * closed on every rail in the level the day the two modules are out of step. So:
+   *
+   *     const kind = e.kind || null;
+   *     if (kind) return kind !== 'box';
+   *     …existing userData derivation, unchanged…
+   *
+   * Not `e.kind !== 'box'` on its own. `kind` is `''` on a slot from a build that predates this
+   * field, and `'' !== 'box'` is **true** — which would turn every box hit in the level into a
+   * sparkle, the exact smearing defect the guard exists to prevent, and it would do it silently.
+   * The empty string is deliberate rather than `null` for that reason: it is falsy, so the
+   * guard-clause form above is the natural thing to write and the dangerous form has to be
+   * chosen on purpose.
+   *
+   * WORLD does not need this to change. The guard as it stands is correct on this level and
+   * measured so; this is a hardening against skew, not a bug report.
+   *
    * Cost is one reference copy, one number and one interned string per hit — `e.curve`, `e.len`
    * and `e.type` are already resolved on the affordance entry, so nothing new is computed.
    */
