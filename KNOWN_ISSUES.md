@@ -31506,6 +31506,95 @@ information than the caller needs* — arriving in my own instruments rather tha
 measuring. The rule from §411.10 held each time, but only because it was **run**; knowing it did
 not stop me writing the metric.
 
+### §411.15 The river is not load-bearing, and the shift that clears pyr1 is −200 m
+
+Gate first, as with the pyramid. **Like for like**, same 64×36 screen-cell metric over both
+subjects, terrain-occluded:
+
+```
+shot          pyr1 cells   Nile cells   ratio
+dunes             240          112       2.1x
+traversal         331           95       3.5x
+hero              261           71       3.7x
+courtyard         179            0       pyramid only
+combat            295            0       pyramid only
+```
+
+The Nile is visible in **3 of 18 canonical shots**, at 3.1–4.9 % of frame, and pyr1 outweighs it
+**2.1–3.7×** wherever both appear — plus two more shots where the pyramid appears and the river does
+not. Nothing here contradicts the decision: the river is background in every frame it is in.
+
+**The shift.** pyr1 stays at x −150 with `halfBase` 82, so its footprint's west edge is x −232, and
+the plateau is at full weight across the whole footprint (`r0` = 106.6 > 82), which means the pad
+needs `nileWeight` = 0 out to −232. Sweeping the channel offset, with `nileWeight` evaluated at its
+**worst case over the whole ±7 noise range** rather than at the mean:
+
+```
+shift   channel east edge   clearance to footprint   worst nw over footprint | dunes traversal hero
+    0        −59.5              −172.5  (overlapped)         1.0            |  112    95    71
+ −160       −219.5               −12.5  (overlapped)         0.81           |   41    42    50
+ −180       −239.5                +7.5                       0              |   32    34    40
+ −200       −259.5               +27.5                       0              |   22    21    26
+ −220       −279.5               +47.5                       0              |    0     0     0
+```
+
+**−180 is the §411.8 trap again** — it reaches zero, but on 7.5 m of clearance against a term whose
+own noise amplitude is ±7 m. **−220 is a different failure: the river vanishes from all three
+shots**, which is not "moving the background", it is deleting it.
+
+**−200 is the answer**: 27.5 m of clearance (about 4× the noise amplitude), worst-case weight
+exactly 0 across the footprint, and the Nile still on screen in all three frames. It costs the
+river 70–80 % of its screen presence — `dunes` 112 cells → 22, i.e. 4.9 % of frame → 0.95 % — and
+that is the honest price of the decision, stated rather than buried: the river does not move for
+free, it just moves for much less than the pyramid would have.
+
+Arithmetic for the result: with `nw` = 0 and plateau weight 1 across the footprint, the pad becomes
+`lerp(h, 6.5, 1)` = **exactly `baseY`**, so the mesh's 1.5 m skirt buries as it does at pyr2 and the
+10.330 m float resolves with no mask and no island. To be verified by measurement, not left as
+arithmetic, once the lock clears.
+
+**Held on §186.** The FX lane's capture is live (`impactframe.mjs --search` driving Chromium), so
+no `src/**` edit. The measurement is the result; the edit follows when the lock does.
+
+### §411.16 The pattern is mine, not the codebase's: three defective instruments in one round
+
+Stated once, properly, because it happened three times in a single round and every instance was in
+**my own measurement** rather than in the code being measured.
+
+```
+§411.5   "the camera is occluded 29.6 % of the nave run"
+         -> a 1 cm threshold counted a graze as an occlusion. Re-scored by magnitude: 0.0 %
+            past 50 cm. Also scoring the rig's yaw transient rather than the run.
+
+§411.12  "pyr1 GROWS 145 % in courtyard when moved 250 m away"
+         -> a pixel bbox computed from silhouette points that had left the frame. The sign was
+            physically impossible, which is the only reason it was caught.
+
+§411.14  "the whiskers are cutting where nothing is there"
+         -> `_boomWant − boom > 0` cannot tell "blocked now" from "still climbing back out after
+            being blocked". 88 of 88 cut frames at lane 0 had nothing binding at all.
+```
+
+Each is §409.3 — *the answer carries less information than the caller needs* — and each was
+produced by someone who had written that section. The lesson is not "watch for it":
+
+> **A rule against a defect class is not a defence against writing one. It is only a defence
+> against shipping one, and only if it is executed.**
+
+Knowing the class did not stop me writing any of the three. What stopped each from shipping was
+running the check — instrument the mechanism before believing the magnitude — as a **step**, on
+that particular number, at the moment it looked interesting. §411.12's was caught by an impossible
+sign; §411.14's only by replaying the rig's own loop instead of a paraphrase of it.
+
+And the repair that generalises, from §411.12: when a metric lies, **replace it with one that is
+structurally incapable of the lie** rather than patching the one that told it. A pixel bbox can be
+corrupted by off-frame points; a subtended angle cannot. That is a stronger fix than clamping the
+bbox, because it does not depend on remembering why the clamp is there.
+
+This is the same lesson the FX lane hit from its side today, and the one behind a symmetry probe
+that agreed to 5e-16 while measuring nothing at all. Three lanes, one round, one defect class,
+all of it in the instruments.
+
 ---
 
 ## §414 — The fourth instance, and the first where the vacuity was in the SAMPLING
