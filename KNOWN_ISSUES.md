@@ -28132,3 +28132,93 @@ in this project that arithmetic cannot touch.
   `ΔW < 8.7` to stand.** The DO-NOT-SHIP verdict survives on `W1` alone, but W2 is not evidence
   anyone can lean on until re-run. `H1` (`GOLD−VAULT +16.4 L`) could not be classified without the
   region masks, and the lane said so rather than guessing.
+
+---
+
+## §380 — CORRECTION: the gap was never structural, and the authorised collider was handed back
+
+### §380.1 The conclusion I recorded was wrong, and the ceiling was the reason
+
+§377.2 called the cornice gap **structural**: hands peak 27.47, or 27.75 with a double jump, against
+a 28.92 lip, and re-granting `airJumps` on launch does not close it. Every one of those numbers is
+right. The conclusion is not, because all of it treats **hand height as the ceiling**. The actual
+gate is `Controller.js:987`, verified at source here:
+
+```js
+if (ty > hy + 0.62 || ty < hy - 0.55) return L;
+```
+
+**The catch window reaches 0.62 m ABOVE the hands, not to them.** The world lane had carried the
+wrong ceiling for four rounds, and so had I when I wrote §377.2 down and authorised a seal move on
+the strength of it.
+
+From a top rung at 26.25 the hands make 28.48, and the window catches the 28.92 lip with **0.18 m to
+spare**. Flown on the real controller: **13 rungs, lands on the deck, peak y 32.70**, no perch inside
+the cornice anywhere in the run.
+
+### §380.2 THE AUTHORISATION WAS HANDED BACK
+
+§377.1 authorised one collider against the sealed 272, with a long argument for why doing so was
+legitimate. **It was not needed.** Two changes to the *existing* proxy plus two rungs did it:
+`capTop: false` (safe rather than a hole — the deck's `groundProxy` covers the identical column) and
+height `ph − 0.4` → `deckY − 0.36`, whose extension is battered **inward** while the cavetto flares
+**outward**, so every added triangle is strictly inside the drawn cornice.
+
+```
+colliders 272, histogram unchanged, P-A1b untouched
+```
+
+The lane's own words: *"I'd rather hand the authorisation back than spend it because it was
+offered."*
+
+**This is the most useful thing that happened to the seal.** §369.5 refused to move it, §377.1
+argued its way to moving it, and the correct answer was that the problem was never the seal — it was
+a misread constant two files away. A permission granted is not a problem solved, and an agent that
+spends an authorisation because it has one will never find that out. Recorded prominently because
+the pressure runs the other way: I had already written the justification.
+
+The price is real and was stated rather than buried: two of twenty-six corbels sit at z 34.244
+against a cavetto surface at z 34.723, so they are **buried and never drawn**. The alternative was
+drawing them on the cavetto 0.48 m off their own hold — the promise-kept-elsewhere defect this file
+keeps refusing.
+
+### §380.3 The masts no longer rely on an input gate
+
+§377.5 recorded that the banner masts miss the climb only because `dot2(wishDir, dirToPole) > 0.4`
+happens to point the wrong way — a directional accident, with `PoleClimb` at 82 outranking
+`WallClimb` at 79 on an 11 m mast that dead-ends a third of the way up a 26 m route.
+
+Moved 1.0 m inboard, and **solved rather than picked**: the pair moves together, so outboard
+clearance bought on one mast is spent on the other, and the minimum over both against all thirteen
+cling positions is a genuine optimum.
+
+```
+offset 1.2 → 1.881 m (inside poleMount)   1.4 → 2.048   1.6 → 1.950   1.8 → 1.752 (inside)
+shipped minimum 2.05 m, clearing poleMount 1.9 by 0.15
+```
+
+### §380.4 The rope had nowhere to step on, and an instrument that lied about sag
+
+Asked "is there anywhere a player naturally arrives with the 2.4 m/s step-on your arithmetic
+assumes", the answer was **no**: nearest standable surface to the old curve was **2.39 m** against
+`railMount` 1.35. The arithmetic assumed a boarding that corresponded to nothing a player could do.
+Both ends were also tied to nothing — **the same defect §368 fixed for the lower hook chain,
+reintroduced by the same lane without noticing.**
+
+Both ends now land on surfaces the route already uses: south onto the great doorway's cornice ledge,
+which is §8.1 step 3's own landing where the hook chain puts you (**nearest stand 0.00 m**), north
+onto the east aisle roof at y 13.50.
+
+**An instrument flaw worth keeping:** larger sags *read* as more clearance and are not. Once the
+curve sinks below a capital the downward ray stops hitting it and the metric jumps. A property of the
+probe, not the rope. That is instrument error seven by this session's count, and the first one found
+by disbelieving a number that moved the *right* way.
+
+### §380.5 The rope is asymmetric, and that is what makes the one line matter
+
+The ends differ by 0.70 m, so a 2.4 m/s step-on reaches 6.20 m/s at the low point, and cresting the
+1.38 m climb to the north anchor needs **8.14 m/s** there. He does not crest — **he swings.** The
+shipped `railSpeed` floor would give 11.08 m/s and carry him over every time.
+
+That floor is exactly what `mountSpeed: 0` declines, so the traversal lane's one line (§371.2, landed
+`2e34297`) is now the difference between a rail and a rope **on a rope you can actually get onto.**
