@@ -1201,3 +1201,81 @@ test('T11: a shot that asks for a continuous preroll and cannot get one says so'
   }
   assert.deepEqual(w5, [], `an ordinary shot now warns: ${w5.join(' | ')}`);
 });
+
+/* ════════════════════════════════ T12 — retiring an inherited constant ══
+ *
+ * `d = 4.906 m`, the view depth of `combat`'s impact anchor, was the one input in the
+ * `cane_flash` derivation that could not be re-derived from committed source. It came from
+ * PREREG-combatrecipient §0.2 and was believed to need a posed character, so it sat as a number
+ * three shipped figures depended on and nobody could check.
+ *
+ * It does not need a posed character. `Debug.js` teleports the player to `shot.player.pos`
+ * BEFORE `applyShot` emits `shot` (Debug.js:141-142, then :176), so by the time `_stageShot`
+ * runs, `mv.position` IS the authored position — and the anchor is a function of committed
+ * constants alone. No rig, no capture, no lock.
+ */
+
+import { SHOTS } from '../src/core/Shots.js';
+
+test('T12: combat\'s impact depth d is derived from source, not inherited', () => {
+  const shot = SHOTS.combat;
+  assert.ok(shot?.player?.pos, 'SHOTS.combat no longer poses a player — the anchor is undefined');
+
+  /* The camera exactly as `applyShot` builds it (Shots.js:552-559). */
+  const cam = new THREE.PerspectiveCamera(shot.fov, 1280 / 720, 0.1, 1000);
+  cam.position.fromArray(shot.pos);
+  cam.up.set(0, 1, 0);
+  cam.lookAt(new THREE.Vector3().fromArray(shot.target));
+  cam.updateProjectionMatrix();
+  cam.updateMatrixWorld(true);
+
+  /* The anchor is taken by RUNNING the shipped branch, not by restating its arithmetic here.
+     A test that re-implements the recipe is a second copy of it, and the two drift the first
+     time somebody moves the 1.05 m push — which is the whole failure class this suite exists
+     for. `_stageShot` emits every cane sprite at the anchor, so the first emission IS it. */
+  let anchor = null;
+  const host = {
+    engine: { warn: () => {}, get: (k) => (k === 'movement' ? { position: new THREE.Vector3().fromArray(shot.player.pos) } : null) },
+    _t: 0, _t0: 0, rand: makeRng(1), decals: { _t: 0 }, sparkles: null,
+    _updateWind: () => {}, _prerollFires: () => {}, _prerollCrests: () => {},
+    _prerollContinuous: () => 0, _clearStaged: () => {}, _motesBuilt: 0, _sparkleTimer: 0,
+    _onCaneHit: Particles.prototype._onCaneHit,
+    _stageShot: Particles.prototype._stageShot,
+    _emit: (n, p) => { if (!anchor) anchor = p.clone(); },
+    decal: () => {},
+  };
+  host._stageShot('combat');
+  assert.ok(anchor, 'staging combat emitted nothing — the anchor could not be read');
+
+  const d = -anchor.clone().applyMatrix4(cam.matrixWorldInverse).z;
+  const P11 = cam.projectionMatrix.elements[5];
+
+  console.log(`  T12: anchor (${anchor.x.toFixed(3)}, ${anchor.y.toFixed(3)}, ${anchor.z.toFixed(3)}) -> d = ${d.toFixed(4)} m, P11 = ${P11.toFixed(4)}`);
+
+  /* The inherited value, now checkable. 1 cm of tolerance: the recorded figure carries three
+     decimals, so anything inside 0.01 m is agreement rather than luck. */
+  assert.ok(Math.abs(d - 4.906) < 0.01,
+    `d re-derives to ${d.toFixed(4)} m against the inherited 4.906 m. That is a real difference, `
+    + 'not a rounding one. All three dependent figures scale as 1/d TOGETHER, so the flashMaxH '
+    + 'verdict (the flash is wider than the hero) survives either way — but the ceiling VALUE '
+    + '0.45 was set at the old d and needs re-deriving at this one.');
+  assert.ok(Math.abs(P11 - 2.7475) < 0.001, `P11 re-derives to ${P11.toFixed(4)}, not 2.7475`);
+
+  /* And the three figures that depend on it, so a change to the shot's framing turns this red
+     rather than silently invalidating the note in TUNE.flashMaxH. */
+  const frac = (sz) => (sz * P11) / d;
+  const emission = frac(EMITTERS.cane_flash.size[0] * 1.35);
+  assert.ok(Math.abs(emission - 1.134) < 0.002, `emission frac ${emission.toFixed(4)}, recorded 1.1340`);
+
+  const f = EMITTERS.cane_flash;
+  const u = STAGE_LATENCY / meanOf(f.life);
+  const szc = (f.size[0] + (f.size[1] - f.size[0]) * Math.pow(u, f.sizeExp)) * 1.35;
+  const capture = frac(szc);
+  assert.ok(Math.abs(capture - 0.9199) < 0.002, `capture frac ${capture.toFixed(4)}, recorded 0.9199`);
+  /* The independent one: goldlobe1/combat.base.png measured 0.9170. Two instruments sharing no
+     machinery, and the agreement is what makes d credible rather than merely self-consistent. */
+  assert.ok(Math.abs(capture - 0.9170) / 0.9170 < 0.01,
+    `the capture prediction ${capture.toFixed(4)} is more than 1% from the measured 0.9170`);
+
+  console.log(`  T12: emission ${emission.toFixed(4)} (rec 1.1340) · capture ${capture.toFixed(4)} (rec 0.9199, measured 0.9170)`);
+});
