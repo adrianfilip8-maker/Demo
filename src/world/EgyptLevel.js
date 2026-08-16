@@ -1354,7 +1354,7 @@ function entryPylons(A) {
       const up = (n, first) => Array.from({ length: n }, (_, i) => first + i * P);
       holds.push(...notchLadder(A, {
         id: 'notch-pylon-e-w', zone: 'court', cx, cz: p.z, w: p.w, d: p.d, batter: B,
-        a: -3.4, ys: up(12, P),                       // 2.10 … 25.20
+        a: -3.4, ys: [...up(12, P), P * 12.5],        // 2.10 … 25.20, then 26.25
       }));
       /* The east line closes with 24.15 → 25.20, a 1.05 m half-pitch step, so both niches finish
          at the same height and which line `WallClimb.find()` commits you to stops being a thing
@@ -1370,7 +1370,7 @@ function entryPylons(A) {
          A rung in the wrong id family is a rule turned on in another file. */
       holds.push(...notchLadder(A, {
         id: 'notch-pylon-e-e', zone: 'court', cx, cz: p.z, w: p.w, d: p.d, batter: B,
-        a: 3.4, ys: [...up(11, P * 1.5), P * 12],     // 3.15 … 24.15, then 25.20
+        a: 3.4, ys: [...up(11, P * 1.5), P * 12, P * 12.5],   // 3.15 … 24.15, 25.20, 26.25
       }));
     }
 
@@ -1412,7 +1412,7 @@ function entryPylons(A) {
      * ascent that ends in mid-air. Kept, deliberately, and written up rather than chosen quietly.
      * Closing it properly needs a collider on the cornice itself — which is where Sly should be
      * standing — and that is one registration against a sealed total of 272. Reported. */
-    const face = A.proxy(K.proxyBattered(p.w, p.d, ph - 0.4, B, A._proxyMat()),
+    const face = A.proxy(K.proxyBattered(p.w, p.d, deckY - 0.36, B, A._proxyMat(), { capTop: false }),
       { tag: 'wall', material: 'stone', climbable: true, batter: B, handholds: holds.length ? holds : null },
       { x: cx, y: 0, z: p.z });
     if (holds.length) {

@@ -2029,8 +2029,16 @@ export function proxyBox(w, h, d, mat) {
   return m;
 }
 
-/** Battered wall proxy: tapered box whose faces carry the real lean. */
-export function proxyBattered(w, d, h, batter, mat) {
+/**
+ * Battered wall proxy: tapered box whose faces carry the real lean.
+ *
+ * `capTop: false` omits the top quad. A capped proxy is a mass you can stand on; use the option
+ * wherever the proxy's head is not a place anybody should end up — a mass whose drawn silhouette
+ * continues past the collider is the case it exists for, because capping there leaves an
+ * invisible floor part-way up a piece of architecture. Only omit the cap where something else
+ * already covers the same column, or this is a hole rather than a fix.
+ */
+export function proxyBattered(w, d, h, batter, mat, { capTop = true } = {}) {
   const top = new THREE.Vector2(Math.max(0.4, w - 2 * batter * h), Math.max(0.4, d - 2 * batter * h));
   const g = new THREE.BufferGeometry();
   const hw = w * 0.5, hd = d * 0.5, tw = top.x * 0.5, td = top.y * 0.5;
@@ -2041,8 +2049,10 @@ export function proxyBattered(w, d, h, batter, mat) {
     -hw, 0, -hd, -hw, 0, hd, -tw, h, td, -tw, h, -td, // -X
     -tw, h, td, tw, h, td, tw, h, -td, -tw, h, -td,   // top
   ];
+  if (!capTop) v.length = 16 * 3;                     // drop the top quad's four vertices
   const idx = [];
-  for (let f = 0; f < 5; f++) { const a = f * 4; idx.push(a, a + 1, a + 2, a, a + 2, a + 3); }
+  const faces = capTop ? 5 : 4;
+  for (let f = 0; f < faces; f++) { const a = f * 4; idx.push(a, a + 1, a + 2, a, a + 2, a + 3); }
   g.setAttribute('position', new THREE.Float32BufferAttribute(v, 3));
   g.setIndex(idx);
   g.computeVertexNormals();
