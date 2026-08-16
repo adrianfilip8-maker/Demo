@@ -2291,6 +2291,119 @@ test('ledgeHang: stick RIGHT shimmies Sly LEFT — the raw-stick idiom is sign-i
   assert.equal(left, total, `${left} of ${total} went left; the inversion is no longer uniform`);
 });
 
+/* ====================================================================== */
+/* 16 — finishing the axis: the ledge drop, and poleSwing                  */
+/* ====================================================================== */
+
+test('ledgeHang drop / poleSwing: the other two raw-stick axes, driven', async () => {
+  /* Arm 15 found `ledgeHang`'s shimmy sign-inverted. These are the two axes next to it, and the
+   * question each answers is different:
+   *   · the DROP shares the state — if its z-axis were also inverted, stick-back would climb.
+   *   · `poleSwing` shares the AXIS (`wishRaw.x`) but not the state — if the convention had been
+   *     copied, this is a second instance; if it is clean, the shimmy was a local slip rather than
+   *     a shared misunderstanding, which is the more useful answer.
+   * Both sampled across the real level, per arm 15's lesson: a single ledge there produced a
+   * confident wrong answer in the OPPOSITE direction from the real bug. */
+  const { engine, c, collision } = await realWorld();
+  hardReset(engine, c, V(0, 0, 30));
+  for (let i = 0; i < 4; i++) {
+    engine.input.beginFrame(DT); engine.input.move.x = 0; engine.input.move.y = 0;
+    engine.time = i * DT; c.update(DT, i * DT);
+  }
+
+  /* ---- the drop: stick BACK must release, and release outward ---- */
+  const spots = [];
+  for (const r of collision.recs.filter((x) => x.tag === 'ledge')) {
+    const g = r.mesh.geometry;
+    if (!g) continue;
+    g.computeBoundingBox();
+    const bb = g.boundingBox.clone().applyMatrix4(r.mesh.matrixWorld);
+    for (const [ux, uz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) for (const s of [0.25, 0.5, 0.75]) {
+      const px = ux !== 0 ? (bb.min.x + bb.max.x) / 2 + ux * ((bb.max.x - bb.min.x) / 2 + 0.45)
+                          : bb.min.x + (bb.max.x - bb.min.x) * s;
+      const pz = uz !== 0 ? (bb.min.z + bb.max.z) / 2 + uz * ((bb.max.z - bb.min.z) / 2 + 0.45)
+                          : bb.min.z + (bb.max.z - bb.min.z) * s;
+      spots.push({ px, pz, ux, uz, top: bb.max.y });
+    }
+    if (spots.length > 240) break;
+  }
+  let ent = 0, released = 0, climbed = 0, away = 0, into = 0;
+  for (const s of spots) {
+    c.position.set(s.px, s.top - TUNE.hangReach + 0.4, s.pz);
+    c.grounded = false; c._frame++;
+    if (!c.probeLedge(V(-s.ux, 0, -s.uz)).ok) continue;
+    hardReset(engine, c, V(s.px, s.top - TUNE.hangReach + 0.4, s.pz));
+    c.position.set(s.px, s.top - TUNE.hangReach + 0.4, s.pz);
+    c.grounded = false; c._needSpawnSnap = false; c._frame++;
+    c.probeLedge(V(-s.ux, 0, -s.uz));
+    c.sm.set('ledgeHang');
+    if (c.stateName !== 'ledgeHang') continue;
+    ent++;
+    const LH = c.sm.get('ledgeHang');
+    const n = new THREE.Vector3(LH._nx, 0, LH._nz).normalize();   // the state's OWN stored normal
+    const p0 = c.position.clone();
+    let left = false;
+    for (let i = 0; i < 30 && !left; i++) {
+      engine.input.beginFrame(DT); engine.input.move.x = 0; engine.input.move.y = -1;  // stick BACK
+      engine.time = i * DT; c.update(DT, i * DT);
+      if (c.stateName !== 'ledgeHang') left = true;
+    }
+    if (!left) continue;
+    if (c.stateName === 'ledgeClimb') { climbed++; continue; }
+    released++;
+    const d = c.position.clone().sub(p0); d.y = 0;
+    if (d.dot(n) > 0) away++; else into++;
+  }
+  console.log(`\n[drop] ${ent} hang poses; stick BACK -> released ${released}, climbed ${climbed}`);
+  console.log(`[drop]   away from the wall ${away}   into the wall ${into}`);
+  /* The z-axis is NOT inverted: stick back releases, it never climbs. That is the claim. */
+  assert.ok(ent >= 10, `only ${ent} hang poses to sample`);
+  assert.equal(climbed, 0, `stick BACK sent ${climbed} poses to ledgeClimb — the drop axis is inverted too`);
+  assert.equal(released, ent, 'stick BACK did not release from every hang pose');
+  assert.ok(away > into * 3, `only ${away} of ${released} released outward — the drop nudge may be inverted`);
+  /* The `into` minority is NOT claimed as correct-or-buggy. The drop nudge itself is outward by
+     construction (`position += normal * 0.06`), and one frame of `Fall` cannot overcome 0.06 m
+     with air control alone. The untested hypothesis is `ledgeAssist()`, which `Fall.air()` runs
+     as soon as `velocity.y < 0` and which pulls horizontally TOWARD a ledge — i.e. possibly back
+     toward the one just released. `hangLock` blocks re-GRABBING but not the assist. Not
+     confirmed, so it is bounded here rather than asserted either way. */
+
+  /* ---- poleSwing: same axis as the inverted shimmy, different state ---- */
+  let pent = 0, pright = 0, pleft = 0;
+  for (const r of collision.recs.filter((x) => x.tag === 'pole')) {
+    const ud = r.mesh.userData || {}, p = r.mesh.position;
+    const y = ((ud.bottom ?? p.y) + (ud.top ?? p.y)) / 2;
+    for (const off of [[1.2, 0], [-1.2, 0], [0, 1.2], [0, -1.2]]) {
+      hardReset(engine, c, V(p.x + off[0], y, p.z + off[1]));
+      c.position.set(p.x + off[0], y, p.z + off[1]);
+      c.grounded = false; c._needSpawnSnap = false; c._frame++;
+      if (!c.afford('pole')) continue;
+      c.sm.set('poleClimb');
+      if (c.stateName !== 'poleClimb') continue;
+      c.sm.set('poleSwing');
+      if (c.stateName !== 'poleSwing') continue;
+      pent++;
+      const yaw0 = c.yaw, p0 = c.position.clone();
+      const rv = new THREE.Vector3(Math.cos(yaw0), 0, -Math.sin(yaw0));
+      for (let i = 0; i < 8; i++) {
+        engine.input.beginFrame(DT); engine.input.move.x = 1; engine.input.move.y = 0;  // stick RIGHT
+        engine.time = i * DT; c.update(DT, i * DT);
+        if (c.stateName !== 'poleSwing') break;
+      }
+      const d = c.position.clone().sub(p0); d.y = 0;
+      if (d.length() < 1e-4) continue;
+      if (d.dot(rv) > 0) pright++; else pleft++;
+    }
+    if (pent >= 12) break;
+  }
+  console.log(`[poleSwing] entered ${pent}; stick RIGHT -> his right ${pright}, his left ${pleft}`);
+  assert.ok(pent >= 8, `only ${pent} pole poses entered poleSwing`);
+  assert.equal(pleft, 0,
+    `${pleft} of ${pent} pole swings go to Sly's LEFT on stick RIGHT — the shimmy inversion is shared, ` +
+    'not local, and both should be fixed together');
+  assert.equal(pright, pent, 'not every pole swing orbited to his right');
+});
+
 test('wallClimb: proximity alone does not snag a player who is not reaching for it', async () => {
   /* `wall_notch.gd` commits on `elif player.direction:` — a hold acts when it is being reached
      for. Fly past the face with no stick input and nothing may take control. */
