@@ -32009,3 +32009,98 @@ Every element of the refusal was available without a boot, a render, or the lock
 about a second, `poseprobe` in seconds, and the ledger's own §345 was three sections up. The lock
 was free the whole time I was establishing that I should not use it, which is the cheapest possible
 version of this outcome and the reason to do the arithmetic first every time.
+
+## §415 — A test, a catalogue and a ledger agreed for months, and none of them had looked at the draw
+
+`_emit` sized every burst in the game with
+
+```
+n = Math.round( R.range( count[0], count[1] + 0.999 ) * countScale )
+```
+
+The `+ 0.999` idiom is built for `Math.floor`: `floor(range(a, b+0.999))` is uniform on the
+integers a..b, which is plainly what was meant. Paired with `Math.round` the whole distribution
+shifts half a count upward. **All 34 emitters with a count could exceed their own declared
+maximum**, and `count: [n, n]` was a coin flip between n and n+1.
+
+### §415.1 The instance
+
+Found from the far end, and only from there. `tools/ringprobe.mjs` read the `ring` batch's
+instance buffers for the `impact` frame and found **two live `dive_ring` instances against
+`count: [1, 1]`** — identical birth, life, tile and position, differing only in their
+per-particle draws. That is one `_emit` call whose loop ran twice, which is what a 50% coin flip
+looks like from inside a single frame.
+
+Repaired with the primitive `Rand.js` has exported all along, one line from `range`:
+`f.int(lo, hi) = floor(lo + f()*(hi-lo+1))`.
+
+### §415.2 The part that matters: three documents agreed, and the renderer agreed with none
+
+`tests/fxfeel.test.mjs` T3 grades the stealth ladder on `meanOf(count) × meanOf(alpha) × size²`
+with `meanOf = (r) => (r[0] + r[1]) / 2` — **the declared midpoint**. The renderer was drawing
+`(r[0] + r[1])/2 + 0.5`. So T3 has been asserting a ladder computed from counts the build never
+emitted, and passing, for as long as both have existed.
+
+```
+              renderer drew   catalogue/test/ledger say
+  patrol         0.00439              0.00366
+  suspicious     0.02083              0.01852
+  searching      0.06515              0.06014
+  chase          0.22661              0.21529
+```
+
+The right-hand column is T3's published ladder **and this ledger's own quoted figures** (§ the
+`alert` staging entry: *"patrol 0.00366 → suspicious 0.01852 → searching 0.06014 → chase
+0.21529, steps 5.06× · 3.25× · 3.58×"*) to five decimal places. The fix does not move the
+ladder. **It moves the renderer onto the ladder the test and the ledger have always published.**
+
+So the defect was never "the counts are slightly high". It was:
+
+> **The catalogue, the test and the ledger agreed with each other, and the renderer agreed with
+> none of them.**
+
+A disagreement three documents wide, invisible to the suite, because **every one of those three
+reads the catalogue and not one of them reads the draw.** T3 re-derives loudness from
+`EMITTERS`; the ledger quotes T3; the catalogue is the source both consult. Their agreement is
+not three witnesses, it is one witness quoted three times.
+
+### §415.3 The generalisation
+
+> **§415 — When a test, a catalogue and a ledger agree, check whether any of them has ever
+> looked at the output.** Corroboration requires independent access to the thing being claimed.
+> Documents that all read the same source and never read the artefact are one source wearing
+> three costumes, and their agreement is evidence about the source, not about the build.
+
+This is the deepest form of the class §407/§408.3/§409 have been circling all session. Those were
+bars that could not fail, predicates that could not discriminate, and samplings that could not
+vary — defects in ONE instrument. This is the same defect distributed across a whole consistent
+literature, and it is worse in one specific way: **every local check is correct.** T3 computes
+its formula correctly. The ledger quotes T3 correctly. The catalogue states what its author
+intended. Nothing is wrong except that no member of the set has ever been compared to a rendered
+frame, and no amount of internal consistency can supply that.
+
+The instrument that found it is the one that reads buffers rather than source. That is the
+whole of the remedy: **at least one member of any agreeing set must be a measurement of the
+output**, and if none is, the set's agreement should be treated as unverified regardless of its
+size.
+
+### §415.4 And the reason no still ever caught the companion defect
+
+The same round measured the PLANAR normal drift — `p = aP0 + aV0 * dc` integrating a plane
+normal as a velocity, so every ground ring flies off its own surface at 1 m/s. Its magnitude:
+
+```
+  land_ring   0.420 m at end of life   13.1% of its own radius — a GROUND ring 42 cm up
+  dive_ring   0.340 m                   5.4%
+  cane_ring   0.210 m                   6.2%   (its normal is the SWING dir — it goes sideways)
+```
+
+**It is largest at the ages a player sees and smallest at the ages we capture**, because every
+`STAGE_*` age is chosen early in the sprite's life to catch its peak ink. A staged still is
+therefore systematically blind to any defect that grows with age — and this project verifies
+almost everything with staged stills.
+
+> **§415.4 — A staged still samples one age, and every age in `STAGE_*` is early. Any defect
+> that accumulates over a sprite's life is under-sampled by exactly the verification method this
+> project relies on most.** When a still is the instrument, ask what the frame would look like at
+> the other end of the life you are not photographing.
