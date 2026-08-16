@@ -29,7 +29,7 @@
  *           node tools/canegold3.mjs --score-only  # re-score result.json, no boot, no lock
  */
 import { writeFileSync, mkdirSync, existsSync, readdirSync, readFileSync } from 'node:fs';
-import { execSync } from 'node:child_process';
+import { treeHash } from './_srctree.mjs';
 import * as path from 'node:path';
 import { withGame } from './harness.mjs';
 import { shipVerdict, verdictLine, guardState } from './gate.mjs';
@@ -46,10 +46,13 @@ const SCORE_ONLY = process.argv.includes('--score-only');
  * mid-boot move does not invalidate the run by itself, but an unstamped one is unfalsifiable,
  * and this lane's arms are all runtime pokes, so a moving tree can only enter as a common-mode
  * term across every arm. Both stamps land in result.json. */
-const treeHash = () => execSync(
-  "cd /home/user/Demo && find src -name '*.js' | sort | xargs sha256sum | sha256sum | cut -c1-16",
-  { encoding: 'utf8' },
-).trim();
+/* `treeHash` moved to `tools/_srctree.mjs` when `critic.mjs` needed the same stamp, and the
+   hardcoded absolute path went with it — the shared version resolves ROOT from its own
+   location and passes it as `cwd` instead. Same command, same 16 characters: verified
+   byte-identical against the implementation that used to sit here, on the live tree, before
+   this line was removed. That check is the whole point of extracting rather than copying — a
+   stamp written before the move has to stay comparable with one written after, or the §296
+   convention this file established is worth nothing across tools. */
 
 /* Gate shot first. `sly-closeup` carries every G-bar (it is the shot PREREG-charmat's G1/G2
    were always registered on, and the shot RESULT-caneswap2 derived the mask ceiling on).
