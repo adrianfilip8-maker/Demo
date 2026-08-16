@@ -39,6 +39,7 @@ import { readFileSync } from 'node:fs';
 
 import { SHOTS } from '../src/core/Shots.js';
 import { EMITTERS, ALERT_LADDER } from '../src/fx/Emitters.js';
+import { rng } from '../src/core/Rand.js';
 import { Particles, TUNE as FX_TUNE } from '../src/fx/Particles.js';
 import { TUNE as TOON_TUNE } from '../src/render/ToonMaterial.js';
 import { TUNE as POSTFX_TUNE } from '../src/render/PostFX.js';
@@ -641,4 +642,76 @@ test('T10b: no file re-derives the ring size ramp with its own copy of the expre
   assert.equal(offenders.join(', '), '',
     `${offenders.join(', ')} re-derives dive_ring's size ramp in executable code. Import it from `
     + 'tools/ringextent.mjs — that expression has been wrong in five places at once (§405, §407).');
+});
+
+/* ═════ T11 — a burst may not exceed the count the catalogue declares ══════════════════════ */
+
+test('T11: _emit draws an integer count on [count0, count1], both ends inclusive, neither exceeded', () => {
+  /* `_emit` sized every burst in the game with
+   *
+   *     n = Math.round( R.range( count0, count1 + 0.999 ) * countScale )
+   *
+   * and the `+ 0.999` idiom is built for `Math.floor` — `floor(range(a, b+0.999))` is uniform on
+   * the integers a..b, which is plainly what was meant. Paired with `Math.round` the whole
+   * distribution shifts half a count upward: ALL 34 emitters with a count could exceed their own
+   * declared maximum, and `count: [n, n]` was a coin flip between n and n+1.
+   *
+   * It was found from the other end. `tools/ringprobe.mjs` read the `ring` batch's instance
+   * buffers for the `impact` frame and found TWO live `dive_ring` instances against
+   * `count: [1, 1]` — same birth, same life, same tile, same position, differing only in their
+   * per-particle draws, which is one `_emit` call whose loop ran twice.
+   *
+   * BOTH ARMS, because a count bar that can only say one thing is the §409 defect:
+   *   a planted [1, 1] must yield exactly 1 and nothing else   — the bug's own signature
+   *   a planted [3, 5] must still span 3, 4 AND 5              — the over-correction's signature
+   * The second is not decoration. `floor(range(a, b))` — the other obvious "fix" — never returns
+   * b at all, so it would pass the first arm and silently narrow every range in the catalogue. */
+  /* THE ARMS RUN THE SHIPPED EXPRESSION, NOT A COPY OF IT. A version of this arm that called
+     `R.int` directly would pass whether or not `_emit` used it — `Rand.js` was never the broken
+     part — and a check that cannot fail on the defect it names is §409's shape. So the burst-size
+     line is lifted out of the source and evaluated with a planted `def.count`: if `_emit` regresses
+     to `Math.round(R.range(...))`, these two arms go red on the behaviour rather than on a grep. */
+  const psrc = readFileSync(new URL('../src/fx/Particles.js', import.meta.url), 'utf8');
+  /* Anchored to `countScale`, not to `let n` — the file has another `let n = 0` hundreds of lines
+     earlier, and the first draft of this arm lifted THAT one and still went red, for the wrong
+     reason. A check that fails on the right input for the wrong reason is not evidence. */
+  const line = psrc.match(/^\s*let n = ([^;]*countScale[^;]*);\s*$/m);
+  assert.ok(line, '_emit no longer states its burst size as one `let n = ... countScale ...` this arm can lift');
+  assert.ok(/def\.count/.test(line[1]),
+    `the burst-size line this arm lifted does not read def.count: \`${line[1]}\``);
+  const burst = new Function('R', 'def', 'countScale', 'batch', `let n = ${line[1]}; return n;`);
+  const cap = { capacity: 1000 };
+
+  const R = rng(0x5c17c00);
+  const draws = (lo, hi, n = 60000) => {
+    const h = new Map();
+    for (let i = 0; i < n; i++) { const v = burst(R, { count: [lo, hi] }, 1, cap); h.set(v, (h.get(v) || 0) + 1); }
+    return h;
+  };
+
+  const one = draws(1, 1);
+  assert.deepEqual([...one.keys()], [1],
+    `a planted count of [1, 1] drew ${[...one.keys()].sort().join(', ')} — the burst size still `
+    + 'exceeds its own declared maximum, which is what put two dive_rings in the impact frame');
+
+  const span = draws(3, 5);
+  assert.deepEqual([...span.keys()].sort((a, b) => a - b), [3, 4, 5],
+    `a planted count of [3, 5] drew ${[...span.keys()].sort().join(', ')} — a range that no longer `
+    + 'spans its own declared ends is the over-correction, not the fix (floor(range(a,b)) never '
+    + 'returns b)');
+  for (const k of [3, 4, 5]) {
+    const share = span.get(k) / 60000;
+    assert.ok(share > 0.25 && share < 0.42,
+      `count [3, 5] returns ${k} on ${(share * 100).toFixed(1)}% of draws — the integer draw is not uniform`);
+  }
+
+  /* And the call site actually uses that primitive, so the arms above are about shipped code
+     rather than about `Rand.js` in isolation. Source-level because `_emit` needs a live engine. */
+  const src = readFileSync(new URL('../src/fx/Particles.js', import.meta.url), 'utf8');
+  assert.ok(/R\.int\(\s*def\.count\[0\]\s*,\s*def\.count\[1\]\s*\)/.test(src),
+    '_emit no longer draws its burst size with R.int(def.count[0], def.count[1])');
+  const code = src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+  assert.ok(!/Math\.round\(\s*R\.range\(\s*def\.count/.test(code),
+    '_emit is back to Math.round(R.range(count0, count1 + 0.999)) — every emitter in the '
+    + 'catalogue can exceed its declared maximum again');
 });

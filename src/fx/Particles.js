@@ -3055,7 +3055,45 @@ export class Particles {
     // Density scales the *count*, never the size: a low-end machine gets a thinner cloud,
     // not a smaller one.
     const countScale = (opts?.count ?? 1) * density;
-    let n = Math.round(R.range(def.count[0], def.count[1] + 0.999) * countScale);
+    /* THE BURST SIZE IS AN INTEGER DRAW ON [count0, count1], AND IT USED TO OVERSHOOT IT.
+     *
+     * This read `Math.round( R.range(count0, count1 + 0.999) * countScale )`. The `+ 0.999`
+     * idiom is built for `Math.floor` — `floor(range(a, b+0.999))` is uniform on the integers
+     * a..b, which is plainly what was meant. Paired with `Math.round` the whole distribution
+     * shifts half a count upward, and the mean of every burst in the game was
+     * `(count0 + count1)/2 + 0.5`:
+     *
+     *   count: [1, 1]   ->  1 at 50%, 2 at 50%                      mean 1.499
+     *   count: [8, 11]  ->  8:13% 9:25% 10:25% 11:25% 12:12%        mean 9.999
+     *
+     * All 34 emitters with a count could exceed their own declared maximum, and every
+     * `count: [n, n]` was a coin flip between n and n+1. That is where the SECOND `dive_ring`
+     * in the `impact` frame came from — one `_emit` call whose loop ran twice, which is why
+     * both instances shared birth, life, tile and position and differed only in their
+     * per-particle draws. Measured off the buffers by `tools/ringprobe.mjs`; the distribution
+     * above is `--counts`, computed exactly rather than sampled.
+     *
+     * `R.int(lo, hi)` = `floor(lo + f()*(hi-lo+1))` is the correct primitive and `Rand.js`
+     * has exported it all along, one line from `range` — this call site simply did not use it.
+     *
+     * WHAT THIS CHANGES ABOUT LIVE POPULATIONS, because anything tuned against the old
+     * behaviour moves with it:
+     *   - Every burst loses ~0.5 particles of expectation. Single-sprite emitters
+     *     (`dive_ring`, `land_ring`, `cane_ring`, `cane_flash`, `fire_core`, `fire_body`,
+     *     `torch_smoke`) go from "1 or 2, evenly" to exactly 1 — a HALVING of their worst
+     *     case, and the visible change is largest there because those are the big sprites.
+     *   - `R.int` and `R.range` each consume exactly one `f()`, so the stream position at this
+     *     call is unchanged. The COUNT is not: fewer particles means fewer per-particle draws
+     *     inside the loop, so every emitter staged AFTER one whose count dropped sees a
+     *     different slice of the stream. Staged frames will differ in the populations that
+     *     follow a shrunk burst, `dive_dust` in `impact` first among them. That is a real
+     *     re-draw of those frames and not a no-op; it is the price of the counts being the
+     *     counts the catalogue declares.
+     *   - Budget reservations and `fxfeel`'s loudness ladder are built on `mean(count)`, which
+     *     was overstated by 0.5 on EVERY rung uniformly — so the ladder's ratios survive and
+     *     its absolute values come down.
+     */
+    let n = Math.round(R.int(def.count[0], def.count[1]) * countScale);
     n = Math.max(1, Math.min(n, batch.capacity));
 
     // Base direction: caller's normal, else up.
