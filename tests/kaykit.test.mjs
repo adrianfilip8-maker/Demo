@@ -34,6 +34,7 @@ import assert from 'node:assert/strict';
 import * as THREE from 'three';
 import { SHOTS } from '../src/core/Shots.js';
 import { trisIn, rayTri } from '../tools/lvl.mjs';
+import { TUNE as PICK } from '../src/world/Pickups.js';
 import { bootKayKit, readPlacements, KAYKIT_SRC } from './_kaykitboot.mjs';
 
 const { kaykit: K, lib: LIB, REG: ALLREG, engine: ENGINE } = await bootKayKit({ withLevel: true });
@@ -849,6 +850,251 @@ test('A3d: what the two accepted burials cost — dead crate-top, and nothing el
   assert.ok(Math.max(...rows.map((r) => r.worst)) < 1.3,
     'a crate top now stands a capsule more than 1.3 m inside a wall, which is deep enough to be a '
     + 'containment question rather than a wasted surface');
+});
+
+/* ============================ 2c. the category nothing had measured ============================
+   A1 covers KayKit against KayKit and A2 KayKit against `pole`. Neither looks at `Props.js`, which
+   draws the colossi, the hoard, the rope coils and the collectibles. The row-21 chest turned out to
+   sit near 3887 triangles of `props_gold`, and that number is what prompted these arms.
+
+   IT IS ALSO THE FIRST THING THEY CORRECT. 3887 is an AABB-PROXIMITY count — triangles whose
+   bounding box overlaps the chest's — and the exact count inside the chest's own oriented box is
+   615, of which 555 are within 0.15 m of the floor. That is a chest standing in a coin hoard, and
+   a hoard is what it is supposed to look like. A-CALIB's lesson, arriving in my own flag.
+
+   Every arm here states which pair of representations it measured, because §401 established those
+   diverge: Architecture's crypt-pier proxy claims ~0.2 m its art does not occupy, and one of the
+   four wall findings was entirely an artefact of not saying which. */
+
+const PROPS = ALLREG.filter((r) => r.owner === 'props');
+
+/** Exact oriented-box vs triangle (Akenine-Möller), in the box's own frame. */
+function triBox(h, inv, T) {
+  const v = [];
+  for (let k = 0; k < 9; k += 3) v.push(new THREE.Vector3(T[k], T[k + 1], T[k + 2]).applyMatrix4(inv));
+  for (let a = 0; a < 3; a++) {
+    const c = ['x', 'y', 'z'][a];
+    if (Math.min(v[0][c], v[1][c], v[2][c]) > h[a] || Math.max(v[0][c], v[1][c], v[2][c]) < -h[a]) return false;
+  }
+  const e0 = new THREE.Vector3().subVectors(v[1], v[0]);
+  const e1 = new THREE.Vector3().subVectors(v[2], v[1]);
+  const n = new THREE.Vector3().crossVectors(e0, e1);
+  if (n.lengthSq() > 1e-20) {
+    const d = n.dot(v[0]);
+    const r = h[0] * Math.abs(n.x) + h[1] * Math.abs(n.y) + h[2] * Math.abs(n.z);
+    if (d > r || d < -r) return false;
+  }
+  const e2 = new THREE.Vector3().subVectors(v[0], v[2]);
+  const ax3 = [new THREE.Vector3(1, 0, 0), new THREE.Vector3(0, 1, 0), new THREE.Vector3(0, 0, 1)];
+  for (const e of [e0, e1, e2]) for (let a = 0; a < 3; a++) {
+    const ax = new THREE.Vector3().crossVectors(ax3[a], e);
+    if (ax.lengthSq() < 1e-20) continue;
+    let lo = Infinity, hi = -Infinity;
+    for (const p of v) { const d = p.dot(ax); if (d < lo) lo = d; if (d > hi) hi = d; }
+    const r = h[0] * Math.abs(ax.x) + h[1] * Math.abs(ax.y) + h[2] * Math.abs(ax.z);
+    if (lo > r || hi < -r) return false;
+  }
+  return true;
+}
+/**
+ * Box against triangle soup, NOT the edge-cross SAT `separation()` uses.
+ *
+ * That one is O(edges_A x edges_B) and is exactly right for two convex proxies. Props registers
+ * `ground` colliders of up to 24,136 triangles, where it does not terminate — the first attempt
+ * at this category ran past ten minutes before being killed. Tri-box SAT is 13 axes per triangle
+ * and is exact for this pair, which is the whole reason to check the shape of a problem before
+ * reaching for the instrument that solved the last one.
+ */
+function meshTris(o) {
+  const g = o.geometry, pos = g.attributes.position, idx = g.index;
+  const n = idx ? idx.count : pos.count, inst = o.isInstancedMesh ? o.count : 1, out = [];
+  const v = new THREE.Vector3();
+  for (let ii = 0; ii < inst; ii++) {
+    const m = new THREE.Matrix4();
+    if (o.isInstancedMesh) { o.getMatrixAt(ii, m); m.premultiply(o.matrixWorld); } else m.copy(o.matrixWorld);
+    for (let i = 0; i < n; i += 3) {
+      const t = [];
+      let lox = 1e9, loy = 1e9, loz = 1e9, hix = -1e9, hiy = -1e9, hiz = -1e9;
+      for (let k = 0; k < 3; k++) {
+        const vi = idx ? idx.getX(i + k) : i + k;
+        v.fromBufferAttribute(pos, vi).applyMatrix4(m);
+        t.push(v.x, v.y, v.z);
+        lox = Math.min(lox, v.x); loy = Math.min(loy, v.y); loz = Math.min(loz, v.z);
+        hix = Math.max(hix, v.x); hiy = Math.max(hiy, v.y); hiz = Math.max(hiz, v.z);
+      }
+      out.push({ t, lox, loy, loz, hix, hiy, hiz, who: o.name });
+    }
+  }
+  return out;
+}
+const PROPS_DRAWN = (() => {
+  ENGINE.scene.updateMatrixWorld(true);
+  const out = [];
+  ENGINE.scene.traverse((o) => {
+    if (o.isMesh && o.visible && /^(props_|coins|clue_bottles|ruin:|hooks:)/.test(o.name)) out.push(o);
+  });
+  return out;
+})();
+/** The oriented box `_collider` builds for a placement — solid or not, so all 36 can be asked. */
+function placementBox(p) {
+  const e = LIB.get(p.file), s = new THREE.Vector3();
+  e.bb.getSize(s);
+  const m = new THREE.Mesh(new THREE.BoxGeometry(s.x, s.y, s.z));
+  m.position.set(p.x, p.y + s.y / 2, p.z);
+  m.rotation.y = p.ry;
+  m.updateMatrixWorld(true);
+  return { mesh: m, size: s };
+}
+
+test('P1: Props\' `ground` colliders ARE its drawn art — the opposite of Architecture', () => {
+  /* THE STRUCTURAL FACT EVERY OTHER PROP-VS-PROP FINDING DEPENDS ON, and it is not the same fact
+     as for Architecture. `EgyptLevel.wallProxy` builds a separate axis-aligned box that stands in
+     for a `masonryShell`, and §401 measured that stand-in claiming up to ~0.2 m the art does not
+     occupy. `Props` does not do that for its ground: it hands COLLISION the merged draw bucket
+     itself, the same `BufferGeometry` the frame rasterises.
+
+     So the disclaimer that finding needs — "say whether you measured the proxy or the art" — has
+     a different answer per module, and asserting it here means nobody has to guess:
+       against a Props `ground` collider   proxy IS art, the two questions have one answer
+       against a Props `ledge` / `hazard`  a separate proxy, and the divergence is open again
+       against an Architecture `wall`      a separate proxy, measured divergence up to ~0.2 m */
+  assert.ok(PROPS.length > 0, 'inspected 0 Props colliders — Props did not boot');
+  assert.ok(PROPS_DRAWN.length > 0, 'inspected 0 drawn Props meshes');
+  const drawnGeo = new Set(PROPS_DRAWN.map((m) => m.geometry.uuid));
+  const split = {};
+  for (const r of PROPS) {
+    const isArt = drawnGeo.has(r.mesh.geometry.uuid);
+    const k = `${r.opts?.tag}${isArt ? ':is-drawn-art' : ':separate-proxy'}`;
+    split[k] = (split[k] || 0) + 1;
+  }
+  console.log(`  P1: ${PROPS_DRAWN.length} drawn Props meshes · ${PROPS.length} colliders — ${JSON.stringify(split)}`);
+  assert.equal(PROPS.length, 20, 'the Props collider count has moved');
+  assert.deepEqual(split, {
+    'ground:is-drawn-art': 9,
+    'ground:separate-proxy': 1,
+    'ledge:separate-proxy': 2,
+    'hazard:separate-proxy': 8,
+  }, 'the split between Props colliders that ARE drawn art and those that stand in for it has '
+   + 'changed — every prop-vs-prop overlap number below is a different claim once it does');
+});
+
+test('P2: KayKit against Props art — seven placements, and six of them are floor contact', () => {
+  /* ART into ART, stated as such. Measured exactly, on each placement's own yaw-rotated bounds
+     against every drawn Props triangle, and split at 0.15 m above the placement's floor because
+     a prop RESTING on something intersects it and that is not a finding. Getting that split wrong
+     is what made the first wall-seam count 665 instead of 503.
+
+     None of this is called a defect. A chest standing in a coin hoard is what a hoard looks like;
+     the pin is here so the census cannot drift, and so the one placement that is BOTH deep and
+     near a camera stays visible as the only one worth a frame. */
+  const ALL = [];
+  for (const m of PROPS_DRAWN) ALL.push(...meshTris(m));
+  assert.ok(ALL.length > 0, 'gathered 0 drawn Props triangles');
+  const rows = [];
+  for (let i = 0; i < PLACE.length; i++) {
+    const p = PLACE[i], { mesh, size } = placementBox(p);
+    const b = aabbOf(mesh), inv = new THREE.Matrix4().copy(mesh.matrixWorld).invert();
+    const h = [size.x / 2, size.y / 2, size.z / 2];
+    let base = 0, body = 0, bodyHi = 0;
+    const who = {};
+    for (const T of ALL) {
+      if (T.hix < b.min.x || T.lox > b.max.x || T.hiy < b.min.y || T.loy > b.max.y || T.hiz < b.min.z || T.loz > b.max.z) continue;
+      if (!triBox(h, inv, T.t)) continue;
+      who[T.who] = (who[T.who] || 0) + 1;
+      if (T.hiy - p.y < 0.15) base++;
+      else { body++; bodyHi = Math.max(bodyHi, T.hiy - p.y); }
+    }
+    if (base + body) rows.push({ i, p, base, body, bodyHi, who: Object.keys(who).join(',') });
+  }
+  rows.sort((a, b) => (b.base + b.body) - (a.base + a.body));
+  console.log(`  P2: ${ALL.length} drawn Props triangles · ${rows.length} of ${PLACE.length} placements touch them\n`
+    + rows.map((r) => `     row ${String(r.i).padStart(2)} ${r.p.file.padEnd(18)} @(${r.p.x}, ${r.p.z})  `
+      + `${String(r.base).padStart(4)} base + ${String(r.body).padStart(4)} body (to ${r.bodyHi.toFixed(2)} m)  [${r.who}]`).join('\n'));
+
+  assert.equal(rows.length, 7, 'the number of KayKit placements touching drawn Props art has changed');
+  assert.deepEqual(rows.map((r) => r.i), [18, 21, 33, 4, 16, 22, 7], 'a different set of placements now touches Props art');
+
+  /* the one the whole category was opened over, and the correction to it */
+  const chest = rows.find((r) => r.i === 21);
+  assert.ok(chest.base > 8 * chest.body,
+    `the row-21 chest is now ${chest.base} base / ${chest.body} body; it was 555/60, which is what `
+    + 'makes it a chest standing in a hoard rather than a chest buried in one');
+  assert.ok(chest.bodyHi < 0.30,
+    `the row-21 chest now has Props art up to ${chest.bodyHi.toFixed(2)} m up its side, against 0.19 m`);
+
+  /* and the only one that is both deep and near a camera — 0.52 m of body at 8 m in `sly-profile`,
+     which is the same placement C4 pins. If anything here ever earns a frame, it is this. */
+  const near = rows.find((r) => r.i === 33);
+  assert.ok(near, 'the courtyard camera crate no longer touches Props art');
+  assert.ok(near.body > 100 && near.bodyHi > 0.3,
+    `the courtyard crate's overlap has shrunk to ${near.body} body triangles reaching ${near.bodyHi.toFixed(2)} m; `
+    + 'good, and this arm should then stop calling it the one worth looking at');
+});
+
+test('P3: the coin scatter has no clearance test, and misses a barrel by 20 mm', () => {
+  /* THE ONE OVERLAP WITH A GAMEPLAY OBJECT ON ONE SIDE, and the reason to ask about Props art at
+     all rather than only about Props colliders. `Props._collectibles` places 34 coins at
+     `R.range(-22, 22) x R.range(0.6, 1.2) x R.range(-14, 32)` — scatter, with no test against
+     anything, and KayKit's solid props were placed years of commits later.
+
+     Measured: no collectible CENTRE is inside a KayKit solid. The nearest misses by 0.020 m, and
+     a coin is drawn at radius 0.16, so most of that disc is inside a barrel. The consequence is
+     measured rather than assumed, and it is not what it looks like: `Pickups.stepPickup` magnets
+     a coin at 2.40 m and moves it with NO collision test, while a capsule pressed against a 1.8 m
+     barrel stands about 1.2 m from its centre. So the coin is still collected — it is pulled out
+     THROUGH the staves. The cost is a look cost, not a lost pickup, and saying which is the whole
+     job of this arm. */
+  const sets = [];
+  ENGINE.scene.traverse((o) => { if (o.isInstancedMesh && (o.name === 'coins' || o.name === 'clue_bottles')) sets.push(o); });
+  assert.ok(sets.length > 0, 'inspected 0 collectible instance meshes');
+  const centres = [];
+  for (const s of sets) {
+    const m = new THREE.Matrix4(), p = new THREE.Vector3();
+    for (let i = 0; i < s.count; i++) {
+      s.getMatrixAt(i, m); m.premultiply(s.matrixWorld);
+      centres.push({ set: s.name, i, pos: p.setFromMatrixPosition(m).clone() });
+    }
+  }
+  assert.ok(centres.length > 0, 'inspected 0 collectible instances');
+
+  let nearest = Infinity, who = null, host = null, insideCount = 0;
+  for (const c of centres) {
+    for (const r of KK) {
+      const g = r.mesh.geometry.parameters;
+      const l = c.pos.clone().applyMatrix4(new THREE.Matrix4().copy(r.mesh.matrixWorld).invert());
+      const dx = Math.abs(l.x) - g.width / 2, dy = Math.abs(l.y) - g.height / 2, dz = Math.abs(l.z) - g.depth / 2;
+      if (dx < 0 && dy < 0 && dz < 0) insideCount++;
+      const d = Math.hypot(Math.max(0, dx), Math.max(0, dy), Math.max(0, dz));
+      if (d < nearest) { nearest = d; who = c; host = r; }
+    }
+  }
+  const g = host.mesh.geometry.parameters;
+  const standoff = Math.hypot(g.width, g.depth) / 2 + PICK.playerRadius;
+  const reach = Math.hypot(standoff, Math.abs(who.pos.y - PICK.grabHeight));
+  console.log(`  P3: ${centres.length} collectibles · ${insideCount} with their centre inside a KayKit solid · `
+    + `closest ${who.set}#${who.i} at ${nearest.toFixed(3)} m from the collider at `
+    + `(${host.mesh.position.x.toFixed(1)}, ${host.mesh.position.z.toFixed(1)})`);
+  console.log(`  P3: a capsule pressed against that prop stands ${standoff.toFixed(2)} m out; centre-to-coin `
+    + `${reach.toFixed(2)} m against a ${PICK.magnet} m magnet — collectible, pulled through the prop`);
+
+  assert.equal(insideCount, 0,
+    `${insideCount} collectible(s) now sit with their centre inside a solid KayKit collider. That is `
+    + 'still collectible — the magnet moves them with no collision test — but it is a pickup the '
+    + 'player cannot see until it flies out of a barrel, and the scatter that placed it tests nothing');
+  assert.ok(nearest < 0.05,
+    `the closest collectible is now ${nearest.toFixed(3)} m from a solid prop; it was 0.020 m, and the `
+    + 'point of this arm is that 20 mm is luck rather than clearance — if the number has GROWN, a '
+    + 'clearance test has appeared somewhere and this should be re-read, not just re-pinned');
+  assert.ok(nearest < PICK.coinRadius,
+    `the nearest collectible clears every solid by ${nearest.toFixed(3)} m, which now exceeds the coin's `
+    + `own ${PICK.coinRadius} m radius — the disc no longer intersects the prop and the look defect is gone`);
+  /* the reachability arithmetic, asserted so "still collectible" is not an opinion */
+  assert.ok(reach <= PICK.magnet,
+    `a capsule pressed against that prop is ${reach.toFixed(2)} m from the coin against a ${PICK.magnet} m `
+    + 'magnet — the coin has become genuinely unreachable and this is a lost pickup, not a look defect');
+  assert.ok(reach > PICK.collect,
+    'the coin is now within the collect radius from outside the prop, so it is taken without the '
+    + 'magnet ever running and the pull-through this arm describes does not happen');
 });
 
 /* ============================ 3. the comments, re-derived ============================ */

@@ -172,13 +172,27 @@ const PLACEMENTS = [
    *                                     sets.
    *   "`interior` is the only shot      THREE shots are inside it, over the eighteen canonical
    *    with a prop inside 25 m"         cameras that exist today: interior 8.09 m, `alert`
-   *                                     23.35 m, `sly-key` 24.99 m. Two of those cameras
+   *                                     14.22 m, `sly-key` 24.99 m. Two of those cameras
    *                                     (`alert`, `impact`) landed after this banner was written
    *                                     and `sly-key` is 13 mm inside the bar, so this is a claim
    *                                     that other files retired rather than one that was wrong
    *                                     when made — which is the more common way a comment dies.
    *                                     The sentence now states the gap it exists to convey:
-   *                                     interior at 8.09 m, then 15.3 m of nothing.
+   *                                     interior at 8.09 m, then 6.13 m of nothing.
+   *
+   *                                     THAT GAP WAS 15.3 m UNTIL `alert` WAS RE-STAGED
+   *                                     (KNOWN_ISSUES §401/§406). Its first camera framed the
+   *                                     west colonnade from the courtyard's east side with a
+   *                                     `sandstone_block` wall in between; the repaired one sits
+   *                                     at (-14, 3, 22) among the stores, and its nearest prop
+   *                                     is 14 m rather than 23.35. So the second-nearest camera
+   *                                     is now `alert` at 14.22 m, not `sly-key` at 24.99, and
+   *                                     the level's props are one shot closer to being read at
+   *                                     detail range than they were.
+   *
+   *                                     Kept as a measured gap rather than restored to the old
+   *                                     number: this arm caught a camera move within minutes of
+   *                                     it landing, which is what it is for.
    *
    * Both aims are legitimate — a follow camera passes within a couple of metres of the colonnade
    * stores — but only one of them had been considered. `Props.js` already settled the precedent in

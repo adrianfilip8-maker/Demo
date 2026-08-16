@@ -679,6 +679,90 @@ test('T3b: the avenue does not PASS `basketvary` A1 so much as GRAZE it, and the
     + 'it was 0.35, and if it has moved far away the fragility recorded here no longer holds');
 });
 
+test('T3c: the 5 cm bucket is the wrong quantiser, and a scale-free one separates 28x', () => {
+  /* T3b established that the "2" T3 reports is set by the bucket width. This arm answers the
+     follow-up — is the bucket the right instrument at all — and the answer is no, for a reason
+     that is about the TRANSFER rather than about either object.
+
+     **5 cm is an ABSOLUTE quantum applied to objects an order of magnitude apart in size.** On a
+     5 m sphinx it means "within 1 %"; on a 0.5 m rope coil it means "within 10 %". So the same
+     sentence — "no camera sees two identical silhouettes" — is a far stricter demand on the coils
+     than on the avenue, and the bucket count cannot compare them. Measured: the coils score 1 at
+     EVERY width from 2 cm to 15 cm, so the bar `basketvary` enforces never fires on the object it
+     was written for, while the avenue crosses it at 5 cm purely on scale.
+
+     The scale-free measure is the maximum per-axis relative size difference between the two most
+     alike props in a frame. Unitless, continuous, no threshold inside it, and no cliff:
+
+       sphinx avenue, worst frame (`dunes`)   0.52 %
+       rope coils,    worst frame (`sly-arm`) 14.76 %      — 28x apart
+
+     AND THE TWO OBJECTS WANT OPPOSITE ASSERTIONS, which is the real reason one transferred bar
+     was wrong for both. `basketvary` wants a FLOOR: the coils must differ, because the complaint
+     was that they did not. This file wants a PIN: the avenue is matched on purpose (T3), and what
+     is worth catching is the number moving without anyone saying so. A single bar cannot be both,
+     and dressing a pin up as a bar is how the avenue came to sit exactly on a limit it was never
+     meant to be measured against. */
+  assert.ok(SPHINX.length > 1, 'inspected fewer than two sphinxes');
+  const sizeOf = (b) => { const s = new THREE.Vector3(); b.bb.getSize(s); return s; };
+  const relDiff = (a, b) => {
+    const sa = sizeOf(a), sb = sizeOf(b);
+    let m = 0;
+    for (const ax of ['x', 'y', 'z']) m = Math.max(m, Math.abs(sa[ax] - sb[ax]) / ((sa[ax] + sb[ax]) / 2));
+    return m;
+  };
+  let worst = Infinity, worstShot = '', frames = 0;
+  for (const [name, s] of Object.entries(SHOTS)) {
+    const cam = camOf(s);
+    const f = new THREE.Frustum().setFromProjectionMatrix(
+      new THREE.Matrix4().multiplyMatrices(cam.projectionMatrix, cam.matrixWorldInverse));
+    const seen = SPHINX.filter((b) => f.intersectsBox(b.bb));
+    if (seen.length < 2) continue;
+    frames++;
+    for (let i = 0; i < seen.length; i++) {
+      for (let j = i + 1; j < seen.length; j++) {
+        const d = relDiff(seen[i], seen[j]);
+        if (d < worst) { worst = d; worstShot = name; }
+      }
+    }
+  }
+  console.log(`  T3c: ${frames} frames see two or more sphinxes; the most-alike pair anywhere is in `
+    + `"${worstShot}" at ${(100 * worst).toFixed(2)} % apart (scale-free, no bucket)`);
+  assert.ok(frames > 0, 'no frame sees two sphinxes — inspected nothing');
+
+  /* THE PIN. Not a floor: the avenue is supposed to match, and a number that drifts UP means the
+     placement jitter changed, which is a design change and should be said out loud. */
+  assert.ok(Math.abs(100 * worst - 0.52) < 0.15,
+    `the avenue's most-alike pair now differs by ${(100 * worst).toFixed(2)} %, pinned at 0.52 %. `
+    + 'Up means the per-instance jitter grew and the row has stopped being a matched avenue; down '
+    + 'means it has become more of a clone family than T3 describes. Either way it is a decision');
+  assert.equal(worstShot, 'dunes',
+    `the most-alike pair is now framed by "${worstShot}" rather than \`dunes\` — the avenue's own `
+    + 'geometry has not necessarily moved, but a camera has, and T3b\'s fragility argument is about '
+    + 'exactly that');
+
+  /* and the property that makes this the better instrument: it does not move with a parameter. */
+  const sigAt = (b, q) => { const s = sizeOf(b); return `${Math.round(s.x / q)}x${Math.round(s.y / q)}x${Math.round(s.z / q)}`; };
+  const bucketWorst = (q) => {
+    let w = 0;
+    for (const s of Object.values(SHOTS)) {
+      const cam = camOf(s);
+      const f = new THREE.Frustum().setFromProjectionMatrix(
+        new THREE.Matrix4().multiplyMatrices(cam.projectionMatrix, cam.matrixWorldInverse));
+      const g = {};
+      for (const b of SPHINX) if (f.intersectsBox(b.bb)) g[sigAt(b, q)] = (g[sigAt(b, q)] || 0) + 1;
+      w = Math.max(w, 0, ...Object.values(g));
+    }
+    return w;
+  };
+  const sweep = [0.02, 0.05, 0.10, 0.15].map(bucketWorst);
+  console.log(`  T3c: the bucket count over widths 2/5/10/15 cm is ${sweep.join('/')} — a 6x swing on a `
+    + 'parameter nobody chose on evidence; the relative measure has no such parameter');
+  assert.ok(Math.max(...sweep) >= 3 * Math.min(...sweep),
+    'the bucket count has stopped swinging with its own width, which would make T3\'s quantiser '
+    + 'defensible again and this arm\'s argument obsolete');
+});
+
 test('T3 CALIBRATION: the isolated-builder measurement that would have called this a clone family', () => {
   /* MUST FIRE, and it is a calibration of the METHOD rather than of a bar. Calling the builder
      directly — no `Props`, no placement jitter — collapses the avenue to one silhouette. That is

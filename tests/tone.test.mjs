@@ -70,14 +70,23 @@ test('night: the moon-keyed shots fail by DIFFERENT mechanisms (§214.1)', () =>
                is ~166° from it and N·L is strongly NEGATIVE. Nothing visible is moonlit.
        guard — side-lit. Its camera-facing walls sit at N·L +0.1652, which is 0.0012 from the
                low terminator's upper edge — the §210.1 speckle mechanism, on walls.
-       alert — a THIRD mechanism, and the mildest of the three. N·L −0.2365: weakly backlit,
-               so its camera-facing walls sit in the shadow band like `night`'s — but nowhere
-               near a terminator (the shadow band closes at 0.116, and −0.2365 is 0.352 clear of
-               it), and nowhere near `night`'s −0.9476 either. It has neither shot's defect.
+       alert — a THIRD mechanism, and the middle of the three. N·L −0.5879: backlit, so its
+               camera-facing walls sit in the shadow band like `night`'s — but nowhere near a
+               terminator (the shadow band closes at 0.116, and −0.5879 is 0.704 clear of it),
+               and still well short of `night`'s −0.9476. It has neither shot's defect.
                That is the useful thing to pin: `alert` shares tod 0.10 with `guard` and shares
                its FLOOR margin exactly, yet its WALLS are in a different regime entirely,
-               because the two cameras face 26.4° apart. A tod does not determine a mechanism;
+               because the two cameras face 52.7° apart. A tod does not determine a mechanism;
                the camera azimuth does.
+
+               RE-DERIVED, NOT WIDENED. This read −0.2365 with a bound of `> −0.5`, and the
+               camera then MOVED: §401 found the original `alert` lens framing its subjects
+               through a wall, and §406 re-staged it, taking the camera azimuth from 230.8° to
+               257.1°. The bound did not fail because the claim was wrong — it fired because the
+               object it describes was replaced, which is a seal working rather than a seal
+               being inconvenient. The number below is a fresh measurement of the new camera and
+               the bounds are set around it the same way the old ones were: strictly negative,
+               and strictly short of `night`'s deep backlight.
 
      Goes red if the moon track moves, if any of the three cameras is re-aimed, or if a fourth
      moon-keyed shot appears; all three change what critic defect 12 means. */
@@ -91,8 +100,8 @@ test('night: the moon-keyed shots fail by DIFFERENT mechanisms (§214.1)', () =>
     `the moon-keyed set changed; §214.1's per-shot diagnosis is about these:\n  ${rows}`);
 
   const a = seen.get('alert');
-  assert.ok(a < 0 && a > -0.5,
-    `alert camera-facing wall N·L is ${a.toFixed(4)}; §214.1 records it as WEAKLY negative — not ` +
+  assert.ok(a < 0 && a > -0.75,
+    `alert camera-facing wall N·L is ${a.toFixed(4)}; §214.1 records it as negative but not deep — not ` +
     `night's deep backlight and not guard's positive terminator sit. If it has moved into either ` +
     `neighbour's regime, this shot has acquired that shot's defect:\n  ${rows}`);
   assert.ok(Math.abs(a - (TOON_TUNE.termLo - TOON_TUNE.termSoft)) > 0.10,

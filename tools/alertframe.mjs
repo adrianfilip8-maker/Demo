@@ -61,7 +61,37 @@ console.log(assertOccluded());
 console.log(assertVisible());
 
 const MARK_Y = 1.55;              // Particles.js _onGuardAlert
-const MARK_R = 0.55;              // the mark's own radius, so "in frame" means all of it
+
+/* ── MARK_R WAS 0.55 FOR BOTH RUNGS, AND IT IS A PROXY (§405's defect, third instance) ──────
+ * Derived from the emitters' own data and `PARTICLE_VERT`'s expressions, at the staged ages:
+ *
+ *   rung 3  alert_spot    travel 0.483 + puff sz 0.769  ->  envelope 1.333 m   2.42x 0.55
+ *   rung 2  alert_search  travel 0.267 + puff sz 0.530  ->  envelope 0.857 m   1.56x 0.55
+ *
+ * The sharpest form needs no cluster argument: **a single rung-3 puff's half-extent is 0.769 m,
+ * 1.4x the old constant.** The framing circle did not contain one sprite, let alone the 8-11 the
+ * emitter stages.
+ *
+ * The asymmetry is the tell. `_emit`'s `speedScale` is `opts.speed ?? 1` and `_stageAlert` passes
+ * none, so the rung's `scale: 1.15` multiplies SIZE ONLY, never travel — which is why rung 3 is
+ * out by 2.4x while rung 2, at scale 1.0, is out by 1.4x, and why rung 2's typical member
+ * (0.52-0.58 m) lands almost exactly on 0.55. **0.55 looks fitted to a typical rung-2 puff and
+ * then applied to both rungs.**
+ *
+ * Two bars read this and they failed in OPPOSITE directions. Cropping under-measured, so the tool
+ * could certify "in frame" a mark that is cropped — the dangerous direction, and the reason this
+ * is corrected before a re-certification rather than after. The 30 px readability bar erred safe,
+ * rejecting candidates whose mark actually reads at ~2.4x the measured width. `markClear` casts to
+ * the centre and is unaffected.
+ *
+ * The dt = 1/60 figures are used, not dt = 0: `Debug.setShot` without `opts.dt` runs a LIVE clock
+ * (§370), and a cropping check should be made against the larger of the two paths.
+ *
+ * DERIVED, NOT MEASURED, and the difference matters: this is geometric extent, and a soft
+ * sprite's visible extent is smaller than its quad. §405 measured the RING's light reaching ~sz,
+ * but that is the ring's atlas tile and not the dust's. Confirming it wants an `alert` capture. */
+const MARK_R3 = 1.333;            // rung 3, alert_spot at scale 1.15
+const MARK_R2 = 0.857;            // rung 2, alert_search at scale 1.0
 
 /* ---------------------------------------------------------------------- */
 
@@ -95,14 +125,14 @@ function score(name, c, quiet = false, tally = null, rank = null) {
   const sly = boxOf(cam, c.player.pos[0], c.player.pos[1], c.player.pos[2], SLY);
   const grd = boxOf(cam, c.guard[0], c.guard[1], c.guard[2], GUARD);
   const markC = project(cam, c.guard[0], c.guard[1] + MARK_Y, c.guard[2]);
-  const markBox = boxOf(cam, c.guard[0], c.guard[1] + MARK_Y - MARK_R, c.guard[2],
-    { w: MARK_R * 2, h: MARK_R * 2 });
+  const markBox = boxOf(cam, c.guard[0], c.guard[1] + MARK_Y - MARK_R3, c.guard[2],
+    { w: MARK_R3 * 2, h: MARK_R3 * 2 });
 
   /* The second guard and its rung-2 mark, if the candidate stages one. */
   const g2 = c.guard2 || null;
   const grd2 = g2 ? boxOf(cam, g2[0], g2[1], g2[2], GUARD) : null;
   const mark2Box = g2
-    ? boxOf(cam, g2[0], g2[1] + MARK_Y - MARK_R, g2[2], { w: MARK_R * 2, h: MARK_R * 2 })
+    ? boxOf(cam, g2[0], g2[1] + MARK_Y - MARK_R2, g2[2], { w: MARK_R2 * 2, h: MARK_R2 * 2 })
     : null;
 
   const faults = [];
@@ -303,7 +333,7 @@ if (args.includes('--calibrate')) {
 }
 
 console.log(`alertframe · ${W}x${H} · tree ${provenance}`);
-console.log(`sly ${SLY.w}x${SLY.h} m · guard ${GUARD.w}x${GUARD.h} m · mark at guard.y+${MARK_Y} r${MARK_R}`);
+console.log(`sly ${SLY.w}x${SLY.h} m · guard ${GUARD.w}x${GUARD.h} m · marks at guard.y+${MARK_Y}, r${MARK_R3}/${MARK_R2}`);
 
 if (shotArg >= 0) {
   const name = args[shotArg + 1];

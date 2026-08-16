@@ -607,10 +607,55 @@ export const SHOTS = {
      The numbers above stand; the certificate they came with did not, until it was re-earned.
 
      Before this entry, `Particles._stageAlert` and `_stageImpact` existed, were correct, and
-     had never run: nothing in this file was ever named `alert`. */
+     had never run: nothing in this file was ever named `alert`.
+
+     ══ RE-STAGED, AND THE FIRST STAGING WAS BEHIND A WALL (§401) ═══════════════════════════
+     Everything above this line describes the ORIGINAL camera and stand, and every framing
+     number in it was correct arithmetic about a frame with masonry in front of it. Once
+     `clear()` was repaired, `--shot alert` reported all five subjects OCCLUDED — first hit
+     2.76–4.52 m from a lens whose subjects were 9.5–30.1 m away — and re-running the
+     hand-authored candidate sweep gave **0 of 4 clean**. "Candidate H, the only one of four
+     with no faults" was an artefact of the broken check.
+
+     THE ROOT CAUSE WAS THE STAND, NOT THE LENS. At (−9.5, 20.5) a `sandstone_worn` block sits
+     **1.07 m from Sly** and cuts his line to `guard2` entirely: the two subjects could not see
+     each other, so no camera was ever going to frame both. Two sweeps returned 0 of 158 and 0
+     of 148 and told me to widen the lens, because I was sweeping cameras against a stand that
+     was itself wrong.
+
+     62 stands on open paving have clear lines to both guards, and all of them are on the west
+     run BETWEEN the two — which is a better frame than the original anyway: Sly crouched
+     between two patrolling guards, one of whom has just seen him. From (−15.5, 9.5) the sweep
+     finds **535 camera cells that see all three subjects and 338 that also frame clean**.
+
+     THIS IS THE TOP OF THOSE 338, by the same tiebreak form `impactframe` uses — the
+     separation of the thing the shot depicts, times the legibility of the figure. For `impact`
+     that was ellipse-ratio × figure-height; here it is rung-separation × figure-height. Chosen
+     by analogy to an existing precedent rather than fitted to this data, reported so the
+     ordering is inspectable, and never used to admit anything:
+
+       rung separation  5.06x  (509 : 101 px)    against the retired H's 1.73x (76 : 44)
+       sly              152 px                   bar 90
+       group span       58%w x 62%h              shipped single-subject median 11.1%
+       marks            rung2 at 101 px          bar 30
+
+     The rung-2 mark is 101 px across against H's 44, so the rung this shot exists to show is
+     more than twice as legible, on top of tripling the separation. Sly is smaller than H's
+     188 px and comfortably clear of the bar.
+
+     AND THESE ARE THE FIRST `alert` NUMBERS MEASURED AGAINST A TRUE MARK RADIUS. An earlier
+     pick from this same sweep — (-14, 3, 22) at fov 40 — was certified "no faults" and then
+     re-certified as `mark CROPPED l by 32 px · mark CROPPED b by 26 px` when `MARK_R` was
+     corrected from a fitted 0.55 to the emitters' derived 1.333 / 0.857 (§407). The sweep's
+     clean set went 338 -> 254 under the correction. So this shot has now been staged twice
+     against a framing constant that turned out to be a proxy, and the second time it was caught
+     before the commit rather than after.
+
+     The guards did not move — both stands are still their own `courtyard_ring` waypoints. Only
+     Sly and the lens did. */
   alert: {
-    pos: [-4.0, 4.2, 27.5], target: [-15.0, 2.0, 14.0], fov: 46, tod: 0.10,
-    player: { pos: [-9.5, 0, 20.5], yaw: 4.05, pose: 'crouch_idle' },
+    pos: [-14.0, 3.0, 24.0], target: [-17.50, 1.34, 8.70], fov: 34, tod: 0.10,
+    player: { pos: [-15.5, 0, 9.5], yaw: 5.916, pose: 'crouch_idle' },
     /* The staging lives HERE, in the shot, and not in `Guard.js`'s `SHOT_POSE` where the
        `guard` shot's solver spec lives — because the tool that certified this frame has to be
        able to re-certify the shipped one. Put these two positions in the AI module and
@@ -626,9 +671,9 @@ export const SHOTS = {
     guard2: [-18.0, 0, 1.0],
     stage: [
       { index: 1, at: [-18.0, 16.0], state: 'chase', clip: 'alert', t: 0.62,
-        lookAt: [-9.5, 20.5], look: [0.12, -0.04] },
+        lookAt: [-15.5, 9.5], look: [0.12, -0.04] },
       { index: 2, at: [-18.0, 1.0], state: 'searching', clip: 'look_around', t: 1.15,
-        lookAt: [-9.5, 20.5], look: [0.26, 0.0] },
+        lookAt: [-15.5, 9.5], look: [0.26, 0.0] },
     ],
   },
 
