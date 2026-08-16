@@ -26579,3 +26579,94 @@ Before deleting anything in this repo, three tests, all of them:
 
 **Not claimed:** that the ~105 MB freed was worth this. It was not — the disk was never short. What
 the exercise was worth is §363.2 and §363.3, and both were free only because they were caught.
+
+---
+
+## §364 — Godot reference repo, surveyed in full: what to take, what NOT to, and a THIRD critic diagnosis refuted
+
+`Sly-Cooper--A-Thief-in-Godot` (NoahChase, HEAD `6479957`) is cloned locally as a **treeless
+(`blob:none`) partial clone** — the worktree is not checked out and every blob is fetched on demand,
+so `git ls-tree -l` hangs the terminal fetching sizes. Read it with `git show HEAD:<path>`; list with
+`git ls-tree -r --name-only`. 720 files: 552 Assets, 94 Scripts, 57 Scenes — 124 `.glb`, 64 `.png`,
+45 `.gd`, 16 `.res`, 7 `.gdshader`.
+
+**Already taken, and it is four files:** the Sly mesh (`Assets/Temp Imports/tempsly/
+SlyCooper_Anims4.gltf`) plus two textures and an anims glb, in `public/assets/sly-godot/`. Its
+`PROVENANCE.md` records the licence status correctly and this section does not disturb it.
+
+### §364.1 WORTH TAKING — the scripts, because several map onto OPEN problems here
+
+```
+wall_notch.gd, thief_moves_wall_notch.gd  -> §357.2 declined a sustained wall climb because all 75
+                                             `wall` recs carry climbable:true and no tag distinguishes
+                                             a handhold. This is that tag, implemented.
+sly_tail_ik.gd, sly_tail.gd, easy_tail.gd -> task #20's "tail unresolved" on the ?char=dl rig
+pole.gd, hook_swing.gd, rope.gd,
+  auto_rope_path.gd, bounce_pad.gd        -> the "zero vertical route" the franchise critic named,
+                                             and the c.pole soft-lock's own subject
+spotlight_detection.gd,
+  enemy_base_flashlight.gd                -> the guardcone detection lineage (§348-§354)
+pickup_coin.gd, hp_container.gd           -> Health.purse, still unpublished
+```
+
+These are **design references**, adapted not pasted: GDScript→JS is a rewrite regardless.
+
+### §364.2 DO NOT TAKE — the 124 models, and the reason is not licence
+
+They are a **Paris rooftop level**: `EiffelTower.glb`, `ParisCroissant.glb`, `ParisWineBottle.glb`,
+`p-bld-*.glb`, `paris_window_*.glb`. This project is Ancient Egypt. The handful that look
+setting-neutral — `Crate.glb`, `Modern_Lamp_Post.glb`, `Modern_Lamp_Hanging.glb` — are the *worst*
+candidates, because the blind round's specific complaint was that props already *"read as a plastic
+toolbox"* and *"generic-modern"*. Importing a modern lamp post would deepen a measured defect.
+
+### §364.3 DO NOT TAKE — the audio, and this one is a different kind of line
+
+```
+Assets/Music/Sly 2 Soundtrack - Museum.mp3
+Assets/Music/Sly_2_OST_Episode_Menu_1_KLICKAUD.mp3     ("KLICKAUD" is a soundtrack-rip site)
+Assets/Music/Black Chateau {Chase,Normal,Sneaking} Looped *.wav   (Black Chateau is a Sly 2 level)
+Assets/Effects/sly 2 footstep.mp3
+```
+
+These are not the fan project's own work — they are **unmodified commercial recordings from Sucker
+Punch/Sony's Sly 2 soundtrack**, redistributed. That is categorically different from referencing a
+fan-authored controller script, and it is different from the mesh import too. This project already
+ships its own audio with `public/assets/audio/PROVENANCE.md`. **Not integrated, and the reason is
+recorded here rather than left to be rediscovered.**
+
+### §364.4 REFUTED — the ink diagnosis, by reading our own source
+
+The rendering critic's defect #2 (§362.1) proposed that the outline pass is *"a post-process
+Sobel/Laplacian keyed off luminance or albedo rather than linear depth + view-space normals, with a
+hard binary threshold and no width normalisation"*, and prescribed *"depth+normal input, a
+depth-derived width term… either an inverted-hull pass"*. Checked against the pipeline:
+
+```
+PostFX.js:16    "Order: scene (HDR) -> normals -> AO -> ink edges -> bloom -> composite"
+PostFX.js:2099  "view-space normals, for AO and for the crease pass"
+PostFX.js:25-26 edgeDepth 1.05 "depth discontinuity, view-distance normalised"
+                edgeNormal 0.62 "normal discontinuity (cos threshold)"
+PostFX.js:36-38 edgeNearMul 1.8 / edgeFarMul 0.70 / edgeNearZ 7   <- depth-derived width
+Outline.js:5    "inverted-hull ink shells. One ink system, one width."
+Outline.js:9    "Screen-constant thickness. Handled in the vertex shader"
+```
+
+**Every prescribed fix is already implemented.** The pass reads depth and a dedicated view-space
+normals prepass, the width is depth-scaled by three registered constants, and the inverted hull
+exists with screen-constant thickness. The stipple **observation** stands — I measured 47.8 % / 45.8 %
+single-pixel ink runs myself — but its stated cause is false on all three counts, so the fix it
+implies would change nothing.
+
+**This is the third critic diagnosis to fail verification** (§361.5's undecided ink model, §362.3's
+caster-set bug, now this), against convergent observations that have survived every time. The rule
+from §362.4 holds and is now three for three.
+
+**Consequence for integration:** `Assets/Shaders/outline.gdshader` is an inverted hull with
+screen-constant width — *the technique we already run*, and without our depth-scaled width term.
+Adopting it would be a regression. Its one idea we lack is a smoothstep distance FADE
+(`fade_near 8 → fade_far 20`); ours approximates that with `edgeNearMul`/`edgeFarMul`. Worth a look,
+not worth a swap. **Note also that `rim_light.gdshader` is buggy**: `rim = max(dot(V,N),0.0)` peaks
+*facing* the camera, the inverse of a fresnel rim, so anyone copying it verbatim lights the wrong
+pixels. Its own credit line points at `godotshaders.com/shader/pixel-perfect-outline-shader/`
+(author "axilirate") — that shader has a stated third-party origin and its licence is that site's,
+NOT this repository's none-stated status. Recorded because the two must not be conflated.
