@@ -28732,3 +28732,109 @@ has been wrong this session, I'm flagging it rather than counting it."*
 > runs, the probe returns, the numbers look like numbers. The defence isn't more care, it's a
 > different question — **what is this world missing?** — asked before trusting any of it. That's now
 > encoded as an assertion rather than a habit, which is the only form that survives me.
+
+---
+
+## §386 — CORRECTION to my own §385.3 ruling, and a real gameplay bug the reachability census found
+
+### §386.1 I retired an instrument on a miscount and an over-correction
+
+§385.3 concluded, as a decision rather than an observation, that *"the static walk should be retired
+as evidence"*, on the grounds that it had reported 9/9 on a route doing something else **three
+times**.
+
+**It has been wrong twice, not three times, and the third was my error compounding a lane's.**
+
+The world lane's round-7 "correction" of hop 8 — that the courtyard hook chain intercepts the
+`pylon-drop` descent for 576 frames so the y 9 circuit is never reached — was itself wrong. Re-driven
+with the aim point advancing past the rail head:
+
+```
+aim at the terminus       rail mounted true   hookSwing frames 0   y9 reached f134 (22.8, 9.00, 25.4)
+aim past it, southward    rail mounted true   hookSwing frames 0   y9 reached f134
+aim past it, northward    rail mounted true   hookSwing frames 0   y9 reached f134
+```
+
+**Zero `hookSwing` frames.** The interception was the *driver* holding a stale aim point after the
+rail ended and flying the player into the chain. **The geometric claim was accurate; the driven
+refutation was the broken instrument.**
+
+The lane's own sentence is the lesson and it is a correction to my ruling, not a footnote to it:
+
+> A bad instrument lies in both directions, and **preferring "driven" over "geometric" as a rule
+> would have concealed this one.**
+
+So the demotion stands but the framing does not. The static walk is demoted to what it can actually
+support — *a FAIL is proof of impossibility; a PASS is only "not yet ruled out"* — and **that is a
+statement about what a class of instrument can prove, not a ranking of driven over geometric.** I
+had reached for the ranking, and the ranking is wrong.
+
+### §386.2 Instrument error ten — a grep for a name that does not exist
+
+The same lane had justified keeping an unreferenced `_pole` helper by noting that `_ledge` was also
+unreferenced, so dead helpers were a pre-existing pattern. **There is no `_ledge`.** The method is
+`_maybeLedge` and it has a caller.
+
+A grep for a name that does not exist returned empty, and the empty result was read as evidence of a
+pattern. Same species as *"a ray hit is not a foothold"*: **an instrument that cannot fail returning
+a comfortable answer.** Counted properly, `_pole` was the only unreferenced method in the file. It
+is now removed, with the histogram unchanged at 268 because it was already dead.
+
+### §386.3 The whole loop is driven, and the earlier navigator failure was a wall
+
+All three previously-unverified claims closed:
+
+```
+stays on the deck    YES — stick released, 10 s, grounded 28.92, lowest y 28.92, never falls
+y 9 ledge circuit    REACHED at (22.8, 9.00, 25.4), walked both ways to z -7.4 and z +12.3
+spawn -> pylon foot  REACHED in four segmented legs, arriving (12.3, 0.38, 38.3)
+```
+
+The approach must go around the tower's **east** side — it fills x 8.5…19.5, z 31…37, so any
+straight leg from the courtyard to the sand behind it is a wall. The earlier *"the navigator can't
+cross the courtyard"* was a pathing failure whose leg-2 waypoint routed the player **through the
+pylon**.
+
+### §386.4 FIXED — taking a hit while standing still played nothing at all
+
+The reachability census's real prize, and nothing in the exit census could have found it: **`hurt`
+has an exit, and the exit works.** The question that found it was *can this state be entered.*
+
+```
+Controller.hurt()        request('hurt') → _pending, and sets grounded = false for the knock-back
+States.js update()       runs current.update() FIRST
+                         every grounded locomotion state now returns 'fall' — it is not grounded
+                         if (forced) this.request(forced)   ← OVERWRITES the hurt request
+```
+
+**The hurt request was destroyed by the knock-back it had just caused**, and `hurt` is `onRequest`,
+so `request()` is the only door in. In the shipped game `_hazards` runs *after* `sm.update`, so the
+request always landed on the next frame's forced `'fall'`.
+
+```
+before   airborne → hurt at frame 40      grounded → NEVER, in 60 frames
+after    airborne → hurt at frame 40      grounded → hurt at frame 5
+```
+
+No hurt state, no `hurt` clip, no shake — and **taking a hit standing still is the common case.**
+
+Fixed in `States.js request()` with the narrowest rule that works: **an outstanding request survives
+a lower-priority one arriving in the same frame.** Equal or higher still wins, so a genuinely more
+urgent forced transition is unaffected and nothing reachable becomes unreachable — 631 pass
+confirms it.
+
+**The arm that caught it is retired as a bug-pin and kept as a regression guard.** It was written to
+assert the broken behaviour and its own failure message read *"retire this arm"* — so it went red
+the moment the fix landed, which is exactly what a well-built pin does.
+
+### §386.5 The attach-state routes, labelled by script
+
+Eight reachable in the full world: `toTarget`, `wallClimb`, `wallCling`, `hookSwing`, `poleClimb`,
+`tiptoe`, `hurt`, `bounce`. **Two were reached incidentally** — `hookSwing` by a script aimed at a
+pole, `wallCling` by one aimed at the ladder — and the lane labelled which run produced them rather
+than presenting them as their own routes, which is the §385.2 warning applied.
+
+Still open and explicitly unclaimed: `wallRun`/`wallJump` never fired (so their `material` payload
+stays verified-by-construction), `railSlide` **boarding** on `hall-cable` not achieved, and `crawl`
+defeated by a degenerate approach vector — *"not a finding about the level; a finding about my
+script."*
