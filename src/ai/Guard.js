@@ -1242,13 +1242,17 @@ export class Guards {
     this.playerPos = new THREE.Vector3(0, 0, 30);
     this._sawCount = 0;
 
-    this._assets = null;
+    /* No `_assets` field. There was one, assigned from `buildGuardAssets()` and never read —
+       what the loop below it actually keeps is `_geoms`, `stats.tris` and the material list, all
+       of which are read. Holding the whole asset bundle as well kept every source geometry alive
+       for the process lifetime for the sake of a register nothing consulted. */
     this._materials = [];
     this._geoms = [];
     this._lights = [];
     this._offs = [];
     this._hazards = [];
-    this._shot = null;
+    /* No `_shot` field either — `_poseForShot` wrote the shot name and nothing ever read it back.
+       `_shotLock` below is the one that does the work, and it is read. */
     this._shotLock = null;
     this._light = 0.3;
     this.TUNE = TUNE;        // so the capture harness can bracket a value (Lighting.js precedent)
@@ -1273,7 +1277,6 @@ export class Guards {
       this.engine.warn(`guards: buildGuardAssets() failed — ${err?.message || err}`);
       return;
     }
-    this._assets = assets;
     for (const k in assets) {
       this._geoms.push(assets[k].geometry);
       this.stats.tris += assets[k].tris | 0;
@@ -2134,7 +2137,6 @@ export class Guards {
    * all read, with the beam raking off across the pavement rather than into the barrel.
    */
   _poseForShot(name) {
-    this._shot = name;
     this._shotLock = null;
     const spec = name ? SHOT_POSE[name] : null;
     if (!spec) {

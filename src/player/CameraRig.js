@@ -478,7 +478,13 @@ export class CameraRig {
     this._shakeDur = 0;
     this._shakeT = 0;
     this._shakeSeed = 0;
-    this._lastShakeAt = -1;
+    /* No `_lastShakeAt` here. There was one — initialised to -1, written at the end of `shake()`,
+       read by nothing, in either direction, anywhere in src/ tools/ or tests/. It is the same
+       write-only register `Controller.js` keeps a list of (`c.pole`, `lastWallRec`, `spireLaunch`,
+       `hitWall`) and the same defect as the `jumpHeld`/`_hurtReq` pair removed from it. The
+       "don't stomp a big shake with a small one" rule below needs the shake's *remaining
+       amplitude*, which `_shakeAmp * _shakeEnv()` already gives exactly; a timestamp answers a
+       question nothing asks. */
 
     /* ---- wall side probe ---- */
     this._wallSide = 0;
@@ -568,7 +574,6 @@ export class CameraRig {
     } else {
       this._shakeDur = Math.max(this._shakeDur, this._shakeT + d * 0.5);
     }
-    this._lastShakeAt = this.engine.time;
   }
 
   /**
