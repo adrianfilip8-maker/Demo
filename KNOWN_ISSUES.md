@@ -28438,3 +28438,100 @@ The clean fix is dropping their `poleProxy` and leaving them as banner masts. Th
 colliders (272 → 268)**, and the lane flagged that this needs the same conversation as adding one.
 **That instinct is right and worth stating as a rule: a seal is not a ceiling, it is a pin.** Moving
 it downward without a reason is the same failure as moving it upward.
+
+---
+
+## §383 — Material identity is severed at the event boundary, and this one is SETTLED
+
+Asked for the audio equivalent of §379's ink hypothesis. The answer is not a parallel — it is a
+sharper claim, and unlike the ink one it is **closed by this project's own instruments, with no
+lock and no ears.**
+
+### §383.1 Three of my four starting points were refused, with evidence
+
+Worth recording because a manufactured parallel would have been worse than nothing.
+
+- **Reverb reaches everything.** `_buildPool` wires all 44 voices `gain → shelf → send →
+  reverb.input` *unconditionally*. Even head-space cues (`binocucom`, `alert_sting`, `thief_on`) sit
+  in the room at `wet × 0.28`. Music reaches it too via `musicDuck → musicSend` at 0.10. **No class
+  is outside the room.**
+- **The dynamics path is shared.** `sfxBus` and `musicBus` both land on
+  `preMaster → subCut → limiter → masterGain`. One limiter across both, which is the glue that makes
+  two sources read as one space.
+- **Ducking runs in the right direction.** Nine recipes declare `duck`; `play()` fires
+  `duckMusic(def.duck)`. **The world pushes the score aside and the score never pushes the world
+  aside** — the correct asymmetry for a stealth game.
+
+The audio module is not where the problem is. That is itself the finding: it is one file upstream.
+
+### §383.2 The vocabulary exists, is worth reaching, and is measured
+
+`Sfx.js`'s `STEP` table gives six surfaces their own band, Q, duration, attack, high-pass, body,
+ring and tick. Rendered through `tests/webaudio.mjs` — the project's own offline renderer — spectral
+centroid:
+
+```
+water 197 Hz   wood 446 Hz   stone 1033 Hz   sand 1189 Hz   metal 1849 Hz   cloth 2238 Hz
+spread 11.34x
+```
+
+Not shades of one sound. Six different sounds. And every collider in the level carries a `material`
+tag; `stepFor()` already routes it.
+
+### §383.3 Of ten contact events, exactly ONE carries the surface
+
+Verified at source here:
+
+```
+Moveset.js:181   emit('landed', { pos, force, surface: c.groundMaterial })   ← the only one
+:347 caneSlam {pos,radius}   :409 wallRun {pos,normal}   :627 ledgeGrab {pos}
+:734 wallJump {pos}          :771 ledgeGrab {pos}        :919 hookGrab {pos}
+:1149 railMount {pos}        :1237 poleMount {pos}       :1446 spireLand {pos}
+:1500 caneHit {index,pos,dir}
+```
+
+**Nine of ten contacts arrive at AUDIO with no idea what was touched.** Its only possible response
+is a hardcoded guess per event, and `Audio.js` makes one:
+
+```
+:1307 spireLand → step_metal (1849 Hz)   the level tags it 'stone'      1.79x wrong
+:1310 ledgeGrab → step_cloth (2238 Hz)   the level tags it 'stone'      2.17x wrong
+:1305 railMount → hook_catch             tagged 'metal' OR 'cloth'      cannot distinguish
+:1308 wallRun   → step_stone             tagged 'stone'                 correct BY LUCK
+```
+
+The rope case is not hypothetical: `EgyptLevel.js` authors three `rope_fibre` rails (`:1532`,
+`:1605`, `:2051`) tagged `cloth`, and **every one mounts with a metal sound.**
+
+**`ledgeGrab → step_cloth` is the tell.** Cloth is the *glove*, not the ledge. A designer with no
+surface available voiced the hand instead of the thing grabbed — which is the only move left when
+you cannot know what was grabbed.
+
+> The world's material identity is present in the geometry, present in the collision tags, present
+> in the synthesis vocabulary, and **severed at the event payload**. Sly is in contact with this
+> world almost continuously, and it sounds the same everywhere he touches it — except when he lands.
+
+### §383.4 Weaker than the ink hypothesis in one way, stronger in another
+
+**Weaker:** §379 earned its standing by explaining a contradiction in the review record. Audio has
+**no review record at all** — `Audio.js:1265` stops every loop on `shot`, so no capture has ever
+contained sound. This explains nothing anyone has observed, because nobody has observed anything.
+
+**Stronger: it is settled, not hypothesised.** The 11.34× spread is rendered offline. The
+one-of-ten count is read from source. The substitution errors are the measured centroid of what
+plays against the tagged material of what was struck. **No step in that chain needs a frame or an
+ear.** It is the first structural claim in this project its own instruments can close.
+
+What it does *not* settle is whether a listener notices. That needs ears, and there is no path to
+ears at all.
+
+### §383.5 The fix is one field at nine sites, and it is not the finder's to make
+
+Routed to TRAVERSAL. `nearest()` and `query()` already return `material` on every result, and
+`railMount`/`poleMount`/`ledgeGrab`/`spireLand`/`hookGrab` all resolve through a hit that has it in
+hand. AUDIO's side needs no change — `stepFor()` exists, the recipes exist, and nine `on(...)`
+handlers become one-line edits the day the field arrives.
+
+**Named as unverified by the finder, and it is the right caveat:** that a hit is actually in scope at
+emit time was confirmed for the field's existence, not traced through all nine call paths. If a
+contact resolves without a hit, that site needs a different source.
