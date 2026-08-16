@@ -27643,3 +27643,26 @@ the spread collapses to 0.10 m.
 without that event having fired produces nothing and looks unstaged. That is §357.1 **with a delay
 fuse**: it will fire on whoever authors the first rail shot. A silent no-op in staging is the exact
 failure this entire pass has been about, so it is to be made loud or made unnecessary.
+
+---
+
+## §374 — CORRECTION: two wrong test counts in commit messages, and the pattern is the point
+
+```
+8be0293  says "basketvary 9/9"                 — the file has 8 tests (6 before, 8 after)
+081478b  says "arms 24 -> 26"                  — the file went 24 -> 27
+```
+
+Both pushed, both fixed forward per §314, both harmless in isolation: every test named passes, and
+the work each commit describes is real and verified. §369.1 already recorded the first.
+
+**The pattern is what this section is for.** Two arithmetic slips in commit messages, in a project
+whose entire discipline is that a number without an instrument is not a measurement — and both
+occurred in commits arguing for exactly that. The cause is not mystery, it is that I typed a count
+from memory instead of reading it back, twice, while moving fast between lanes.
+
+It belongs beside §371's four instrument errors rather than apart from them, because it is the same
+failure at a smaller scale: **the number you did not re-derive is the one that is wrong.** The
+difference is only that a commit message has no test to catch it, which makes it *more* exposed than
+a measurement, not less. The rule that would have caught both: a count that appears in prose gets
+read from `grep -c` in the same command that writes it, never from the line above.
