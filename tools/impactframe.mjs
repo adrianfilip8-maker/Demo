@@ -68,6 +68,7 @@ import { TUNE as FX_TUNE } from '../src/fx/Particles.js';
 import { RING_R_CROP, RING_R_DECLARED, ringPlaneY, RING_PLANE_LIFT, summary as ringSummary }
   from './ringextent.mjs';
 import { writeFileSync, mkdirSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
 import { treeHash } from './_srctree.mjs';
 import {
   W, H, provenance, camFor, project, plateOf, discOf, margins, clear, assertOccluded,
@@ -249,11 +250,36 @@ function assertExtents() {
   try {
     const now = treeHash();
     const at = REF.src.match(/src tree ([0-9a-f]+)/)?.[1];
-    lines.push(now === at
-      ? `   src tree ${now} — UNCHANGED since the capture, so the measurement still describes this renderer`
-      : `   *** src tree is ${now}, the capture was taken at ${at} — the extents above reproduce `
-        + 'their recorded pixels, but those pixels may no longer be what the renderer draws. '
-        + 'Re-capture before treating any margin as tight. ***');
+    if (now === at) {
+      lines.push(`   src tree ${now} — UNCHANGED since the capture, so the measurement still describes this renderer`);
+    } else {
+      /* ── NAME THE FILES, DO NOT JUST SAY THE HASH MOVED ──────────────────────────────────
+         The FX lane flagged this and was right: whole-`src` scope on a branch with several
+         concurrent lanes means the hash differs essentially always, and **a warning that is on
+         by default is read as noise.** It would then be a check that cannot discriminate in
+         practice while discriminating perfectly in principle — today's defect class wearing a
+         duty cycle instead of a tautology.
+         Naming the files restores the signal: `src/fx/Particles.js` moving is a reason to
+         re-capture, `src/hud/Hud.js` moving is not, and only the reader can tell which. Scope
+         stays whole-`src` because this frame's pixels really do depend on the character, the
+         level, the lighting and the post chain — narrowing it would trade a noisy true warning
+         for a quiet false one. */
+      let moved = [];
+      try {
+        moved = execFileSync('git', ['log', '--format=', '--name-only', '-40', '--', 'src/'],
+          { encoding: 'utf8' }).split('\n').filter(Boolean);
+        moved = [...new Set(moved)];
+      } catch { /* fall through to the bare hash */ }
+      const fx = moved.filter((f) => f.startsWith('src/fx/'));
+      lines.push(`   *** src tree is ${now}, the capture was taken at ${at}. `
+        + (moved.length
+          ? `Recently moved under src/: ${moved.slice(0, 8).join(', ')}${moved.length > 8 ? ` (+${moved.length - 8} more)` : ''}. `
+            + (fx.length
+              ? `${fx.length} of them under src/fx/ — THE EMITTERS THIS FRAME IS MADE OF. Re-capture before trusting any margin.`
+              : 'None under src/fx/, so the emitters are unchanged; the risk is indirect (lighting, character, post).')
+          : 'Could not list what moved.')
+        + ' ***');
+    }
   } catch (e) { lines.push(`   (could not hash the src tree: ${e.message})`); }
   if (bad) lines.push('   *** an extent above does not reproduce the pixels it was derived from;'
     + ' every margin this tool prints is a claim about the wrong subject ***');
