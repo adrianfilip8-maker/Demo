@@ -93,6 +93,32 @@ const MARK_Y = 1.55;              // Particles.js _onGuardAlert
 const MARK_R3 = 1.333;            // rung 3, alert_spot at scale 1.15
 const MARK_R2 = 0.857;            // rung 2, alert_search at scale 1.0
 
+/* ── AND ONE CONSTANT CANNOT SERVE BOTH BARS, WHICH THE MEASUREMENT NOW SHOWS ────────────────
+ * Rung 3's drawn light was measured (`tools/markradius.mjs`, against `shots/fxalert`):
+ * r50 0.50, r90 0.75, **r99 0.90**, outermost 0.95 m. The derivation above is a geometric
+ * envelope and said so; the measurement lands between it and the old 0.55, which is where an
+ * upper bound belongs.
+ *
+ * The two bars that read this number want it to err in OPPOSITE directions:
+ *
+ *   CROPPING     "is all of the mark in frame" — an under-sized radius certifies a cropped
+ *                mark. Erring LARGE is safe. 1.333 is safe. 0.55 was not.
+ *   READABILITY  "is the mark ≥ 30 px across" — an OVER-sized radius certifies a mark whose
+ *                readable part is smaller than the bar. Erring large is UNSAFE. 1.333 is
+ *                unsafe by 1.78x against the measured r90, and 0.55 was the safe one.
+ *
+ * §407 corrected 0.55 → 1.333 and fixed cropping while silently inverting readability. That is
+ * the §405.2 shape a third time — a bar passing on a proxy — so it is FLAGGED here and not
+ * repaired: which radius each bar should read is a decision about the shot, and `alert` ships
+ * against the 30 px bar today. `--markr` prints the whole sensitivity so the decision is made
+ * against numbers rather than against this paragraph, and `ALERT_MARK_R3` / `ALERT_MARK_R2`
+ * override for one run without moving what is shipped (§141.1: the sweep is reported in full,
+ * no radius is selected after seeing which side a candidate landed on).
+ *
+ * Defaults are the constants above, so an un-overridden run is byte-identical to before. */
+let R3 = Number(process.env.ALERT_MARK_R3 || MARK_R3);
+let R2 = Number(process.env.ALERT_MARK_R2 || MARK_R2);
+
 /* ---------------------------------------------------------------------- */
 
 /**
@@ -125,14 +151,14 @@ function score(name, c, quiet = false, tally = null, rank = null) {
   const sly = boxOf(cam, c.player.pos[0], c.player.pos[1], c.player.pos[2], SLY);
   const grd = boxOf(cam, c.guard[0], c.guard[1], c.guard[2], GUARD);
   const markC = project(cam, c.guard[0], c.guard[1] + MARK_Y, c.guard[2]);
-  const markBox = boxOf(cam, c.guard[0], c.guard[1] + MARK_Y - MARK_R3, c.guard[2],
-    { w: MARK_R3 * 2, h: MARK_R3 * 2 });
+  const markBox = boxOf(cam, c.guard[0], c.guard[1] + MARK_Y - R3, c.guard[2],
+    { w: R3 * 2, h: R3 * 2 });
 
   /* The second guard and its rung-2 mark, if the candidate stages one. */
   const g2 = c.guard2 || null;
   const grd2 = g2 ? boxOf(cam, g2[0], g2[1], g2[2], GUARD) : null;
   const mark2Box = g2
-    ? boxOf(cam, g2[0], g2[1] + MARK_Y - MARK_R2, g2[2], { w: MARK_R2 * 2, h: MARK_R2 * 2 })
+    ? boxOf(cam, g2[0], g2[1] + MARK_Y - R2, g2[2], { w: R2 * 2, h: R2 * 2 })
     : null;
 
   const faults = [];
@@ -333,7 +359,117 @@ if (args.includes('--calibrate')) {
 }
 
 console.log(`alertframe · ${W}x${H} · tree ${provenance}`);
-console.log(`sly ${SLY.w}x${SLY.h} m · guard ${GUARD.w}x${GUARD.h} m · marks at guard.y+${MARK_Y}, r${MARK_R3}/${MARK_R2}`);
+console.log(`sly ${SLY.w}x${SLY.h} m · guard ${GUARD.w}x${GUARD.h} m · marks at guard.y+${MARK_Y}, r${R3}/${R2}`);
+
+/**
+ * `--markr` — RE-CERTIFY every frame this tool has ever admitted, at every mark radius the
+ * project has held, and report which verdicts change.
+ *
+ * `alert` has now been staged against THREE different values of one constant: a fitted 0.55, a
+ * derived envelope 1.333, and a measured 0.90. A shot certified under one of them is not
+ * certified under the others, and until this ran nobody knew whether that mattered. Both bars
+ * are scored at every radius in ONE process against ONE copy of `score()`, so no verdict here
+ * can come from a second scorer disagreeing with the first.
+ *
+ * The radii are stated before any of them is scored, and all of them are printed whatever they
+ * say — §141.1 forbids choosing one after seeing which side a candidate lands on, and the only
+ * defence against choosing is publishing the whole sweep.
+ *
+ *   0.55   the fitted proxy §407 replaced          — what `alert`'s first certificate used
+ *   0.75   measured r90, the mark's readable core  — the honest input to the 30 px bar
+ *   0.90   measured r99                            — the honest input to the cropping bar
+ *   0.95   measured outermost lit pixel            — containment with nothing left over
+ *   1.333  the derived envelope, shipped today     — a valid upper bound, and 1.48x r99
+ */
+if (args.includes('--markr')) {
+  const RADII = [0.55, 0.75, 0.90, 0.95, 1.333];
+  /* Rung 2 is HELD at its shipped value throughout: it was never measured (its component at
+     `alert_search`'s centre is 1 px, and the `dust` batch's other 136 sprites cannot be
+     separated from it), so sweeping it would be sweeping a number with nothing behind it.
+     Only the measured rung moves, and the rung-2 faults below are therefore constant by
+     construction — printed anyway, because a row that cannot change is evidence the sweep is
+     moving what it says it is moving. */
+  const frames = [];
+  if (SHOTS.alert?.guard) frames.push(['SHOTS.alert (shipped)', SHOTS.alert]);
+  for (const [n, c] of Object.entries(CANDIDATES)) frames.push([n, c]);
+  /* ── THE CONTROL, AND WITHOUT IT THIS SWEEP CANNOT BE READ ────────────────────────────────
+   * A sensitivity sweep in which nothing changes is worth exactly as much as the sweep's
+   * ability to change something, and §407/§409 are three records of a bar that could only ever
+   * give one answer being mistaken for a bar that was passed. So the sweep carries the ONE
+   * camera known to flip: §407's retired pick, `(-14, 3, 22)` at fov 40, certified "no faults"
+   * at 0.55 and re-certified `mark CROPPED l · mark CROPPED b` at 1.333, on the same stand and
+   * the same two guards as the shipped shot. If this row does not move, the instrument is
+   * broken and nothing else in the table means anything. */
+  if (SHOTS.alert?.guard) {
+    frames.push(['RETIRED §407 pick (-14,3,22) fov 40 — the control', {
+      ...SHOTS.alert, pos: [-14.0, 3.0, 22.0], fov: 40,
+    }]);
+  }
+
+  const table = new Map();
+  for (const r of RADII) {
+    R3 = r;
+    for (const [name, c] of frames) {
+      const faults = [];
+      /* score() prints; capture its fault list by re-deriving it from a quiet run's tally. */
+      const tally = new Map();
+      const n = score(name, c, true, tally);
+      for (const f of tally.keys()) faults.push(f);
+      if (!table.has(name)) table.set(name, new Map());
+      table.get(name).set(r, { n, faults: faults.sort() });
+    }
+  }
+  R3 = Number(process.env.ALERT_MARK_R3 || MARK_R3);
+
+  console.log(`\n── mark-radius sensitivity · rung 3 swept, rung 2 held at ${R2} m\n`);
+  console.log(`   ${'frame'.padEnd(46)} ${RADII.map((r) => String(r).padStart(7)).join('')}`);
+  for (const [name, byR] of table) {
+    console.log(`   ${name.slice(0, 46).padEnd(46)} ${RADII.map((r) => String(byR.get(r).n).padStart(7)).join('')}   faults`);
+  }
+
+  console.log('\n   verdicts that CHANGE across the sweep:\n');
+  let changed = 0;
+  for (const [name, byR] of table) {
+    const sets = RADII.map((r) => byR.get(r).faults.join(' | '));
+    if (new Set(sets).size === 1) continue;
+    changed++;
+    console.log(`   ${name}`);
+    let prev = null;
+    for (const r of RADII) {
+      const v = byR.get(r);
+      const line = v.faults.length ? v.faults.join(' · ') : 'no faults';
+      const mark = prev === null ? ' ' : (line === prev ? ' ' : '*');
+      console.log(`     ${mark} r ${String(r).padEnd(6)} ${String(v.n).padStart(2)} faults  ${line}`);
+      prev = line;
+    }
+    console.log('');
+  }
+  if (!changed) {
+    console.log('   NONE. Every frame carries the same fault set at every radius from 0.55 to 1.333,');
+    console.log('   so no certificate this tool has issued turns on which value was in force.');
+    console.log('   That is a real result and not a null one: it means the mark bars were never');
+    console.log('   the binding constraint on any frame that was ever scored.\n');
+  }
+
+  /* THE HALF A FAULT COUNT CANNOT SHOW: the readability bar is a margin, not a boolean, and a
+     frame can clear 30 px at 1.333 with 17 px of readable mark and never raise a fault. */
+  console.log('   rung-3 mark WIDTH in px, which is what the 30 px bar actually reads:\n');
+  console.log(`   ${'frame'.padEnd(46)} ${RADII.map((r) => String(r).padStart(7)).join('')}`);
+  for (const [name, c] of frames) {
+    const px = [];
+    for (const r of RADII) {
+      R3 = r;
+      const rank = {};
+      score(name, c, true, null, rank);
+      px.push(rank.last ? rank.last.m3px.toFixed(0) : '-');
+    }
+    console.log(`   ${name.slice(0, 46).padEnd(46)} ${px.map((v) => String(v).padStart(7)).join('')}`);
+  }
+  R3 = Number(process.env.ALERT_MARK_R3 || MARK_R3);
+  console.log('\n   A frame reading 30-53 px at 1.333 is reading UNDER the bar at the measured');
+  console.log('   r90 of 0.75 m, because the bar is linear in the radius it is handed.');
+  process.exit(0);
+}
 
 if (shotArg >= 0) {
   const name = args[shotArg + 1];
