@@ -151,7 +151,19 @@ export async function grab(page, name, { mime = 'image/png', quality = 0.92, max
   return page.evaluate(
     async ([n, m, q, w, d]) => {
       const r = await window.__GAME.setShot(n, Number.isFinite(d) ? { dt: d } : {});
-      return { stats: r.stats, warnings: r.warnings.length, dataUrl: window.__GAME.capture(m, q, w) };
+      /* `subject` was computed on every capture this project has ever taken and discarded
+         here. `Debug._subject` records `asked` / `staged` / `final` / `drift` and its own
+         comment states the purpose — "capturing this in the report means the next such
+         question is answered by reading the record instead of re-running the investigation" —
+         and no report has ever carried it. §357.1 for the ninth time: computed at one end,
+         read at neither.
+         It is the instrument for "is the character where the shot says he is": `drift` is
+         non-zero exactly when the settle steps moved him, and `final` is where the renderer
+         actually drew him. The open ~26 px CPU-skin discrepancy is that question. */
+      return {
+        stats: r.stats, warnings: r.warnings.length, subject: r.subject,
+        dataUrl: window.__GAME.capture(m, q, w),
+      };
     },
     [name, mime, quality, maxWidth, dt]
   );

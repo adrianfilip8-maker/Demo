@@ -86,8 +86,18 @@ async function main() {
 
           const srcTree = treeHash();
           const moved = srcTree !== treeAtBoot;
-          entries.push({ name, file: `${name}.png`, crop, ms: Date.now() - t0, srcTree, treeMoved: moved, ...r.stats });
-          process.stdout.write(`  ${moved ? '!' : '✓'} ${name.padEnd(13)} draws ${String(r.stats.drawCalls).padStart(4)}  tris ${(r.stats.triangles / 1000).toFixed(0)}k${moved ? `  §186 TREE MOVED ${treeAtBoot} → ${srcTree}` : ''}\n`);
+          /* `subject` — where the character was ASKED to stand, where staging put him, and
+             where he actually was when the frame was taken. `Debug._subject` has computed it
+             on every capture this project has ever run and the harness discarded it at the
+             boundary; that is fixed in `grab()` and this is the other end. `drift` is
+             non-zero exactly when the settle steps moved him after staging, which is the
+             question "is the character where the shot says he is" — asked by hand at least
+             twice this session and answerable from the record from here on. */
+          const subj = r.subject ?? null;
+          entries.push({ name, file: `${name}.png`, crop, ms: Date.now() - t0, srcTree, treeMoved: moved, subject: subj, ...r.stats });
+          const drift = subj?.drift;
+          const drifted = Number.isFinite(drift) && drift > 0.001;
+          process.stdout.write(`  ${moved ? '!' : '✓'} ${name.padEnd(13)} draws ${String(r.stats.drawCalls).padStart(4)}  tris ${(r.stats.triangles / 1000).toFixed(0)}k${moved ? `  §186 TREE MOVED ${treeAtBoot} → ${srcTree}` : ''}${drifted ? `  DRIFT ${drift} m from the staged stand` : ''}${subj && subj.present === false ? '  NO CHARACTER' : ''}\n`);
         } catch (err) {
           entries.push({ name, error: err.message.split('\n')[0], srcTree: treeHash() });
           process.stdout.write(`  ✗ ${name}: ${err.message.split('\n')[0]}\n`);
