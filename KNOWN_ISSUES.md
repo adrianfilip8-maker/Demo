@@ -27555,3 +27555,91 @@ All twelve then pass three tests: a real surface under it, within the 2.40 m pic
 somewhere a player can be, and **not** reachable from the courtyard floor — so each one costs the
 traversal it marks. One other placement moved: 6.26 m off the route line, on the surface but not on
 the route.
+
+---
+
+## §373 — The other capture path renders staged one-shot FX as nothing at all
+
+§370 found the live path doubling staged FX. This is the same instrument's other half, and it is
+worse: **the A/B path renders those effects as literally zero pixels.** Both capture paths were
+systematically wrong, in opposite directions, for the whole life of the project.
+
+### §373.1 The mechanism, verified at source
+
+`Engine.renderFrame(forcedDt)` takes `const raw = forcedDt ?? this.clock.getDelta()`, so
+`renderFrame(0)` gives `this.dt = 0` and the world clock genuinely stops — which is exactly what
+§195 *requires* of any within-boot A/B (`step(n, 0)`). `Particles.update` then holds `_t` at 0
+forever, so a particle staged at `age = 0` has `u = 0`, and `smoothstep(0, fadeIn, 0)` is exactly
+zero.
+
+**Every emitter the existing branches stage at age 0 has `fadeIn > 0`:**
+
+```
+shot          emitter        dt = 1/60    dt = 0    best age    would give
+combat        cane_flash        20.0%       0.0%     0.001 s       19.0%
+combat        cane_ring         96.4%       0.0%     0.045 s       93.6%
+combat        cane_spark        37.9%       0.0%     0.002 s       36.2%
+combat        cane_debris       90.5%       0.0%     0.079 s       98.2%
+traversal     cane_arc          62.9%       0.0%     0.003 s       60.7%
+night/guard   coin_sparkle      58.3%       0.0%     0.074 s       89.8%
+```
+
+(% of each sprite's own peak projected ink.) Fires, crests and sparkles are unaffected — they
+already back-date through their prerolls. It is precisely the un-aged one-shot bursts.
+
+**So every A/B seal taken with `{dt: 0}` that involved staged one-shot FX compared two blank
+frames.** Not doubled. Absent.
+
+### §373.2 DECIDED — re-age, and the argument is not the one either of us reached for
+
+The lane escalated rather than acting, correctly, noting this is the category of decision §368.5
+reserved. The trade it laid out honestly: minimax ages *cost* 1–3 percentage points on four of the
+six on the live path, gain on two, and rescue the A/B path from zero. That is a real trade, not a
+free repair — which is why it needed deciding rather than doing.
+
+**The deciding argument: you cannot break a measurement that never measured anything.**
+
+Whatever those `{dt: 0}` seals concluded about a staged effect, they concluded it from two blank
+rectangles. The verdicts are not doubtful, they are **void**. So re-aging cannot invalidate them; it
+can only make the next one mean something. That is precisely what separates this from §368.5 —
+declining to restage `guard` protected comparisons that were real, and there is nothing here to
+protect.
+
+And on the trade itself: **0% is not a measurement and 19% instead of 20% is.**
+
+Two conditions attached: every changed age carries its before/after at the use site, because someone
+will diff a `combat` frame against a pre-fix one and must find the reason without reading this; and
+ages only — no emitter swaps, no scale changes, no additions to existing branches. New staging goes
+in `alert` and `impact`.
+
+### §373.3 §370's fix, verified
+
+`_clearStaged()` now runs at the top of `_stageShot`. Verified on real `Batch`/`Decals` objects
+through the shipped factory, populations read off `_used` exactly as `commit()` does:
+
+```
+alert   19 sprites once, 19 twice     impact  49 / 49     combat  43 / 43
+ambient field 460 -> 460 (exempt, and correctly: _used is its size, not a write cursor)
+calibration, _clearStaged removed:  alert 19 -> 38, combat 43 -> 86, decals 1 -> 2
+```
+
+The calibration arm is what makes it worth having — the assertion cannot pass on a build that never
+had the bug.
+
+### §373.4 A hazard closed rather than noted, and one I was wrong about
+
+`_prerollContinuous()` landed, and with it the correction to §370.6's guess: `rail_spark` at 9.8
+live sprites and `skid_scuff` at 27.5 were never illegible in a still, they were illegible
+**unstaged**. Measured after the doubling was gone, as instructed: 9 ticks → 11 live sparks against
+an analytic 9.8; 14 → 28 against 27.5.
+
+The part `_prerollFires` could not be copied for: a brazier does not travel, so its back-dated ticks
+all spawn at one point, but a grind's sparks read *because* they trail the shoe. Spawn is now offset
+by `−velocity × age` — 2.76 m of spread across 9 ticks at 9 m/s. Calibration: remove the offset and
+the spread collapses to 0.10 m.
+
+**Its gating hazard is commissioned closed, not just recorded.** The preroll keys off
+`this._playerState`, learned from the `playerState` event, so a shot posing the player into a grind
+without that event having fired produces nothing and looks unstaged. That is §357.1 **with a delay
+fuse**: it will fire on whoever authors the first rail shot. A silent no-op in staging is the exact
+failure this entire pass has been about, so it is to be made loud or made unnecessary.
