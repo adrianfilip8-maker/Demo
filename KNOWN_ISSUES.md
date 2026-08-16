@@ -27259,3 +27259,118 @@ That is a sharper statement of §357.1 than this ledger had, and it correctly se
   real music no player could reach — peak 0.367 / rms 0.0363, comparable to `explore`'s 0.363 /
   0.0415. Verified byte-identical across the deletion: five sections, sha256 over the rendered
   Float32Array, 10 s at 22050 Hz.
+
+---
+
+## §370 — Every canonical capture has rendered staged FX at 2× density, since staging existed
+
+The largest instrument defect this project has found, and it was found by asking a sub-agent a
+narrow follow-up question — "what does the double invocation do to your emission counts" — which it
+answered by looking past the question.
+
+### §370.1 The mechanism
+
+§369.4 established that `applyShot` runs twice (`Debug.js:176` and `:189`), so `_stageShot` runs
+twice per capture. The part that matters is what `_stageShot` does on each call
+(`Particles.js:3096-3097`):
+
+```js
+this._t0 = this.engine.time;
+this._t  = 0;                 // ← both stagings are born at clock ORIGIN
+```
+
+The first set is not stale, not superseded, and not aged out by the 14 settle frames. **It is
+coincident with the second.** Both populations are alive in the captured frame.
+
+### §370.2 Executed, not inferred — and the boundary between the two is stated
+
+The lane reported this and flagged the particle-level half as reasoned rather than run. I executed
+the emission level here, driving `_stageShot('alert')` twice the way `Debug.js` does against a
+recording `_emit` and a two-guard stub:
+
+```
+first staging : 3 emissions
+second staging: 3 emissions
+identical sequence AND positions: true      (emitter, world position, scale, age all equal)
+_t reset to 0 on both: true
+total reaching one capture: 6
+```
+
+**Still reasoned, by both of us:** that the particles *within* each emission land identically.
+`_stageShot` re-seeds `this.rand` from the shot name before the prerolls, and neither the fire set
+nor the camera changes across the settle, so the draw counts should match — but neither of us
+instrumented the RNG through the real preroll paths. If some consumer's draw count differs between
+the two calls, the result is two different populations rather than one doubled. **That changes the
+severity, not the existence:** it is 2× the particles either way, and only "2× alpha at the same
+points" depends on the unexecuted step.
+
+### §370.3 Scope — this is not an `alert` problem
+
+Every shot that stages anything. `combat`'s four `cane_*` emitters, `traversal`'s `cane_arc`,
+`night` and `guard`'s `coin_sparkle`, and every fire and crest through `_prerollFires` /
+`_prerollCrests`, which `_stageShot` calls unconditionally. Alpha dust composites as `1−(1−a)²`
+(0.62 → 0.856 for `alert_spot`); additive sparks are exactly 2× energy.
+
+It may also explain a recorded oddity: `cane_flash` was measured at *"113% of frame height before
+the ceiling landed"*, and staged additive doubling is exactly the shape that produces a combat
+frame hotter than gameplay ever is. Worth re-deriving after the fix; not claimed here.
+
+### §370.4 DECIDED — fix it, and the consistency argument
+
+**`_stageShot` becomes idempotent within a capture: the second staging replaces the first.**
+
+Not the alternative fix (drop the second `applyShot`'s FX staging), because the second `applyShot`
+is the one whose 3-frame distance the emitter ages are now derived against; staging only on the
+first would put every effect 17 frames old with no correct way to age it.
+
+**Why this is not inconsistent with §368.5 declining to restage `guard`.** Restaging changes what a
+shot *depicts* — an authored choice, and moving it breaks comparisons deliberately built on it.
+This repairs an *instrument* that has been rendering something no player will ever see. Changing
+the subject and repairing the lens are different acts, and only the first is the §144 hazard.
+
+**What the fix invalidates, stated precisely — because my first instinct overclaimed.** I reached
+for "A/B seals are unaffected, the 2× cancels". That is **too strong**. Both arms of any A/B did go
+through the same doubling, so the *direction* of every sealed comparison survives. But `1−(1−a)²`
+is not linear in `a`, so the *magnitude* of an effect measured in those seals is not its magnitude
+in gameplay. **Sealed verdicts stand; sealed effect sizes were measured on a doubled composite and
+do not transfer.**
+
+### §370.5 A second §357.1, in the hardest place to notice
+
+My instruction to re-age the staging said "aged 3 frames". Taken literally that sets `age = 0.05`,
+and the lane found what a literal reading costs. `age` back-dates birth, so the rule is *maximise
+legibility at capture, then subtract the latency* — not *set age to the latency*. Measured against
+the shader's own `sz²·alpha`, on the worse of the two capture paths:
+
+```
+age rule                          alert_spot   alert_search   alert_spot_spark
+pass 0 (let the latency age it)        0.0%           0.0%               0.0%
+pass 0.05 (the latency, literally)    67.0%          66.1%              14.0%
+minimax per emitter (shipped)         99.6%          99.4%              44.4%
+```
+
+The 0.0% row is the trap. On the `dt = 0` A/B path §195 requires, `smoothstep(0, fadeIn, 0)` is
+exactly zero — **all three sprites draw literally nothing in every A/B capture.** Machinery present,
+correct, and invisible: §357.1 where it would be hardest to ever notice. A must-fire arm now guards
+it.
+
+**My brief gave a number where it should have given a rule**, and the lane was right to convert one
+into the other rather than follow it.
+
+### §370.6 Accepted — `impact` is the shot after `alert`
+
+The lane ranked all 22 capture-unreachable emitters by peak ink × mean count against `alert_spot`.
+`dive_ring` is **104×** — the largest thing in the catalogue by a factor of 7.6 — and a Cane Slam
+covers four unreachable emitters plus two unreachable decal uses in one frame, on a hero move whose
+whole meaning is the frozen instant of impact.
+
+Its refusals are accepted as written and are the better half of the answer: footsteps are a
+*sequence* and one puff is a smudge (`footstep_wood` at 0.03× is the smallest thing in the
+catalogue); `target_jump` would show departure streaks leaving a static figure; rungs 0 and 1 are
+*authored* not to pull the eye, so staging them evidences nothing.
+
+And one correction to my own hypothesis, which is the useful part: I guessed the traversal
+vocabulary was correctly invisible. Wrong for the two continuous emitters — `rail_spark` holds 9.8
+live sprites and `skid_scuff` 27.5 at steady state. They are not single-frame illegible, they are
+illegible **unstaged**, for exactly the reason braziers were dark before `_prerollFires` existed.
+`_prerollContinuous()` is commissioned.
