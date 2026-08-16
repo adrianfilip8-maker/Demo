@@ -525,11 +525,18 @@ function notchTarget(A, id, mesh, hold) {
   );
   /* The collider carries the same point the target does — `tests/level.test.mjs` asserts the
      coincidence, and the reason it asserts it is that §2.1.6's marker is drawn from COLLISION's
-     affordance query. Note what this does NOT buy: `Collision._buildAffordances` classifies by
-     `tag === 'hook' || tag === 'spire'`, so a `wall` rec resolves AFF_BOX whatever its userData
-     says, and the marker would track the player rather than sit on the notch. That is why
-     `query()` now publishes `kind` — see the note there. This point is honest data; it is not
-     yet a sparkle, and saying so is cheaper than discovering it in a frame. */
+     affordance query.
+
+     This does more than satisfy the test, and the extra is worth knowing before anyone moves
+     it: `Collision._buildAffordances` takes its point branch on `ud.point` for ANY tag (the
+     `hook`/`spire` test beside it only governs deriving one from bounds), so this single line
+     promotes the east pylon's whole south elevation from a BOX affordance to a POINT one.
+     `query('wall')` on that rec now answers with the notch instead of with the nearest bit of a
+     25.6 m box that slides as the player walks. Checked before relying on it: nothing outside
+     `src/world/` reads a `wall` affordance at all — `wall` is in none of CameraRig's
+     `ROUTE_TAGS`, HUD's `AFF_TAGS` or FX's `sparkleTags` — and `Controller.probeWall` goes
+     through `raycast` against the BVH, which is a different structure and is untouched. So the
+     promotion is free today, and it is what would make `wall` safe to sparkle tomorrow. */
   mesh.userData.point = pt.clone();
   return magnet(A, {
     id,

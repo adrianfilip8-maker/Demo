@@ -772,15 +772,25 @@ export class Collision {
    * `kind` is `'point' | 'spline' | 'box'` — **which of `_buildAffordances`' three routes this
    * hit resolved through**, which is a different question from its tag and the only one that
    * answers "does this point stay put, or is it the nearest bit of a box that tracks the
-   * player". It exists because `src/fx/Particles.js:pinnedAffordance` has to ask exactly that
-   * and could only ask it of the *authoring* fields. Its spline half already prefers this
-   * class's result field for the reason given there; its point half could not, because
-   * `slot.point` is populated on all three routes — so it falls back to
-   * `rec.mesh.userData.point`, and **that is a false positive waiting to happen.** The
-   * classification is `isPoint = tag === 'hook' || tag === 'spire'` (below): a `wall`, `ledge`
-   * or `ground` rec that carries a `userData.point` — which is a perfectly reasonable thing for
-   * a level to author, and this level now does — passes that guard and still resolves AFF_BOX.
-   * `kind` is the authoritative answer and cannot disagree with the affordance it came from.
+   * player". `src/fx/Particles.js:pinnedAffordance` has to ask exactly that, and its spline half
+   * already prefers this class's result field over `userData.spline` for the reason given there.
+   *
+   * I WROTE A SHARPER JUSTIFICATION THAN THE CODE SUPPORTS AND IT WAS WRONG. The claim here was
+   * that the guard's point half is a false positive waiting to happen — that a `wall`/`ledge`/
+   * `ground` rec carrying a `userData.point` would pass it and still resolve AFF_BOX, because
+   * the classification is `isPoint = tag === 'hook' || tag === 'spire'`. **It is not.** Line 909
+   * reads `ud.point` for *every* rec whatever its tag; `isPoint` only decides whether a point is
+   * DERIVED from bounds when userData has none. So a wall with an authored point really does
+   * resolve AFF_POINT, and the guard is right. Measured after authoring exactly that case — 583
+   * query hits over six stations on the shipped level, `pinnedAffordance` against this field:
+   * **0 disagreements**, including the 4 hits on the one `wall` rec that now carries a point.
+   *
+   * What survives is narrower, and is the same argument the spline half already won: the guard
+   * currently *re-derives* the classification by reading the two authoring fields this method
+   * reads, so it agrees because it mirrors the logic rather than because it is told. A mirror
+   * diverges silently the day the original changes — and "someone gates the point branch on
+   * `isPoint`" is a plausible change, since that is what I assumed it already did. `kind` is the
+   * answer from the affordance itself and cannot disagree with it.
    *
    * Cost is one reference copy, one number and one interned string per hit — `e.curve`, `e.len`
    * and `e.type` are already resolved on the affordance entry, so nothing new is computed.
