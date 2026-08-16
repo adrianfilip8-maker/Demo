@@ -28919,3 +28919,80 @@ Told not to rank driven above geometric as a class, it came back with the sharpe
 That is the correction landing properly: not "geometric is also valid" but a specific, cheap,
 geometric pre-check that would have saved a driven round. §386.1 said a bad instrument lies in both
 directions; this says what to do about it.
+
+---
+
+## §388 — The pre-check, and an honest answer about what it saved
+
+### §388.1 It calls `canEnter`; it does not read it
+
+The §387.5 commission, built, and the design constraint is the finding. A table of what each state
+requires would be **a second copy that drifts** the first time `Moveset.js` is edited — the failure
+this project has hit with `_emit` wrappers, with restated shader recipes, and with `_stageShot`
+re-implementations. So it **calls the real predicate** under an envelope of things a *player*
+controls: grounded/airborne, machine group, facing, speed, vertical velocity, which button is down.
+**Nothing in it knows what any state wants.**
+
+Calibrated in both directions, which is what makes it a filter rather than a rubber stamp:
+
+```
+wall approach     wallRun     YES at 5.14 m — needs no button, air, speed 7.2    11 ms
+desert flat       wallClimb   YES at 2.18 m — needs no button, air, speed 0.0    16 ms
+courtyard spawn   railSlide   no                                                 41 ms
+courtyard spawn   poleClimb   no                                                 25 ms
+courtyard spawn   crawl       no                                                 90 ms
+```
+
+Accepts the two starts independently **driven** to success; rejects three states from open paving.
+
+### §388.2 The version nearly shipped was wrong in the one direction that matters
+
+The first build probed **only at the fixed start**, and reported `wallRun` infeasible **at the exact
+start where `wallRun@27` had been driven the round before** — because `probeWall` runs at the current
+position and the wall was 3.48 m away. *Position changes during play.*
+
+> A false negative suppresses the driven run that would have found the truth.
+
+That is the one failure mode that makes a pre-check **worse than nothing**, and it is the direction a
+filter naturally fails in. Fixed by sweeping a neighbourhood out to one full-speed jump's reach; both
+false negatives disappeared and the true rejections survived. **The pair is what makes it an
+instrument** — a filter that only ever accepts is a rubber stamp, and one that rejects too eagerly
+destroys the evidence it exists to prioritise.
+
+### §388.3 It would have saved 0 by rejection and 3 by diagnosis, and the lane said so
+
+Asked what it would have saved on the three rounds it was commissioned to prevent:
+
+> It would **not** have rejected any of my three failed runs — `wall approach → wallRun` is correctly
+> `YES`. My starts were fine; my *scripts* were wrong. What it gives is the second column,
+> **`needs ... air, speed 7.2`** — precisely the fact I was missing for three rounds. The value is
+> diagnostic, not a gate. I'd rather report that than claim a saving it didn't make.
+
+**And the verdict follows from it:** *"it belongs where I put it — as a filter with a stated blind
+spot, not as a gate. If it had been a gate on rejection alone, it would have cost me the `wallRun`
+result rather than saving it."*
+
+Residual unsoundness recorded at the site: rejections are only as sound as the 6.60 m radius and the
+1.5 m sample step. An affordance 8 m out, or falling between samples, is still a false negative. **A
+filter that saves driving, never a proof of unreachability.**
+
+### §388.4 `hall-cable` has been re-cut four times, and three assertions were measuring the week
+
+```
+30.32 m / 1.50 sag  →  31.63 / 1.00  →  35.00 / 1.00  →  34.95 / 0.60
+```
+
+The rope arm went red mid-round, and three thresholds written against it turned out to be
+**measuring the week rather than the mechanic.** Two replacement discriminators were tried and both
+failed for the same reason: **peak speed is not a discriminator**, because gravity along 35 m of
+tangent legitimately winds a slack mount past 4 m/s by mid-span. *That is the rope working.*
+
+It now asserts only the two claims that survived every recut — **frames aboard (647 vs 232, 2.8×)**
+and **93% of span crossed under the player's own power** — with all four geometries in the comment
+so the next reader sees why the obvious assertion is absent.
+
+**This is a coordination cost worth naming.** One lane re-cut a rope four times in a session while
+another was writing assertions against it. Neither was wrong; the geometry was being improved and
+the arms were being tightened. But an assertion written against a number another lane is actively
+tuning measures the schedule, and the defence is to assert the *invariant* rather than the value —
+which is what the surviving two do.
