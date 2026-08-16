@@ -3689,3 +3689,105 @@ test('CameraRig: the five consumers of `right`, two of which must not move', asy
   assert.ok(Math.abs(fly) > 1, `the free-fly camera moved ${fly.toFixed(4)} — it is not strafing, so C5 measures nothing`);
   assert.ok(Math.abs(shoulder.base) < 1e-6, `the no-aim baseline is ${shoulder.base.toFixed(4)}, not 0 — C2b is not isolating the aim term`);
 });
+
+/* ====================================================================== */
+/* 24 — the camera's routing table is keyed on the wrong namespace         */
+/* ====================================================================== */
+
+test('CameraRig: which framing every state actually gets, and the entries nothing can reach', async () => {
+  /* Round 20 fixed the wall-run BANK so it leans into the wall. This is why that bank has never
+   * fired during a wall run at all, and it is a bigger defect than the sign was.
+   *
+   * ── The mechanism ───────────────────────────────────────────────────────────────────────────
+   * `_resolveFrame` lowercases the STATE name and takes the first `STATE_RULES` entry that is a
+   * substring of it. The state names are camelCase (`wallRun`, `railWalk`, `ledgeHang`); a third
+   * of the rule keys are snake_case (`wall_run`… no — `rail_walk`, `rail_slide`, `ledge_hang`,
+   * `ledge_climb`, `run_fast`, `apex`, `cane`). **Lowercasing camelCase never inserts an
+   * underscore**, so those keys cannot match any state name, ever. The table is a CLIP-name table
+   * being fed STATE names — two namespaces that overlap enough to look like one.
+   *
+   * That is the §357.1 shape in a lookup table: dead entries that look alive. 14 of the 34 rules
+   * are unreachable, and the arm below derives that rather than listing it.
+   *
+   * ── What it costs, in the three cases where a state lands on a framing that contradicts it ──
+   *   `wallRun`   -> `run`   because 'wallrun'.indexOf('run') === 4 and `['run','run']` sits at
+   *                          index 2, far above `['wall','wall_run']`. So the `wall_run` framing
+   *                          — the one with `side 0.35` and `vtrack 1` — is reached by
+   *                          `wallClimb`, `wallCling` and `wallJump`, and never by the move it is
+   *                          named for. `_blendFrame` gates the wall-side probe on
+   *                          `_frameKey === 'wall_run'`, so **the bank is dead during a wall run.**
+   *   `railWalk`  -> `walk`  because 'railwalk'.indexOf('walk') === 4. The `balance` framing it
+   *                          wants (`dist 2.10`, `pitch +5°` — the one that reads as a tightrope)
+   *                          is reached by nothing at all.
+   *   `ledgeHang` -> `idle`  because the key is `ledge_hang`. The `ledge_hang` framing exists and
+   *                          is authored with intent — *"drop under the lip and look up past it —
+   *                          the point is what's above"* — and it has never once been applied.
+   *
+   * ── And the one this arm reports rather than fixes ──────────────────────────────────────────
+   * `move` -> `idle`. The only locomotion state this moveset has is called `move`, and it matches
+   * neither `walk` nor `run`, so **`walk`, `run` and `run_fast` are unreachable and ordinary
+   * running uses the idle framing**. That is not a routing typo: the FRAMES table clearly wants a
+   * speed-tiered framing (`dist` 0.20 / 0.90 / 1.60) and there is no speed tiering anywhere in
+   * the rig to drive it. Wiring one is a design decision about how the camera should feel, not a
+   * defect fix, so it is measured here and routed, not decided. */
+  const { CameraRig } = await import('../src/player/CameraRig.js');
+  const rig = new CameraRig(stubEngine());
+  const { buildMoveset } = await import('../src/player/Moveset.js');
+  const states = buildMoveset().map((s) => s.name);
+
+  const routed = new Map();
+  for (const n of states) {
+    rig._lastResolved = null;
+    rig._resolveFrame(n, false);
+    routed.set(n, rig._frameKey);
+  }
+  console.log('\n[frame] state -> framing key');
+  for (const [n, k] of routed) console.log(`  ${n.padEnd(14)} -> ${k}`);
+
+  /* The rule table and the framing table, read out of the source rather than restated — the
+     §388 rule: a second copy of either would drift the first time somebody edits the rig. */
+  const src = readFileSync(new URL('../src/player/CameraRig.js', import.meta.url), 'utf8');
+  const rulesBlock = src.slice(src.indexOf('const STATE_RULES'), src.indexOf('];', src.indexOf('const STATE_RULES')));
+  const ruleKeys = [...rulesBlock.matchAll(/\['([a-z_]+)',\s*'([a-z_]+)'\]/g)].map((m) => m[1]);
+  const framesBlock = src.slice(src.indexOf('const FRAMES = {'), src.indexOf('\n};', src.indexOf('const FRAMES = {')));
+  const frameKeys = [...framesBlock.matchAll(/^\s{2}([a-z_]+):\s*\{/gm)].map((m) => m[1]);
+  assert.ok(ruleKeys.length > 25 && frameKeys.length > 15,
+    `parsed ${ruleKeys.length} rules and ${frameKeys.length} framings — the source scan has stopped working`);
+
+  const reachedRules = new Set();
+  for (const n of states) {
+    const s = n.toLowerCase();
+    for (const k of ruleKeys) if (s.indexOf(k) !== -1) { reachedRules.add(k); break; }
+  }
+  const deadRules = ruleKeys.filter((k) => !reachedRules.has(k));
+  const usedFramings = new Set(routed.values());
+  const deadFramings = frameKeys.filter((k) => !usedFramings.has(k));
+  console.log(`\n[frame] rules no state name can reach (${deadRules.length}/${ruleKeys.length}): ${deadRules.join(', ')}`);
+  console.log(`[frame] framings no state reaches (${deadFramings.length}/${frameKeys.length}): ${deadFramings.join(', ')}`);
+
+  /* THE FINDINGS, pinned at their current values so each reddens the moment it is corrected.
+     Every one of these says what the fix looks like, because an arm that only says "this is
+     wrong" makes the next reader re-derive what right would be. */
+  assert.equal(routed.get('wallRun'), 'run',
+    `wallRun now routes to '${routed.get('wallRun')}'. If that is 'wall_run', the fix has landed — ` +
+    'and the wall-side probe and the bank are live during a wall run for the first time.');
+  assert.equal(routed.get('railWalk'), 'walk',
+    `railWalk now routes to '${routed.get('railWalk')}' — if that is 'balance', the fix has landed`);
+  assert.equal(routed.get('ledgeHang'), 'idle',
+    `ledgeHang now routes to '${routed.get('ledgeHang')}' — if that is 'ledge_hang', the fix has landed`);
+  assert.equal(routed.get('move'), 'idle',
+    `move now routes to '${routed.get('move')}'. This one is a DESIGN change, not a defect fix: ` +
+    'it means somebody wired speed-tiered framing, and the walk/run/run_fast entries are live.');
+
+  /* The dead sets, as counts rather than lists, so adding a state or a rule does not redden this
+     for the wrong reason — only a change in how MUCH is unreachable does. */
+  assert.ok(deadRules.length >= 10,
+    `only ${deadRules.length} rules are unreachable now (was 14): ${deadRules.join(', ')} — if that ` +
+    'dropped, the namespace mismatch is being repaired and this arm should say so');
+  assert.ok(deadFramings.includes('balance') && deadFramings.includes('ledge_hang'),
+    `balance and ledge_hang are no longer unreachable (dead: ${deadFramings.join(', ')}) — the fix has landed`);
+  /* The lever: this arm is worthless if `_resolveFrame` answers the same thing for everything. */
+  assert.ok(usedFramings.size >= 10,
+    `only ${usedFramings.size} distinct framings are reachable — the resolver is not discriminating, ` +
+    'so the dead-set above is a statement about the prober rather than about the table');
+});
