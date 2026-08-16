@@ -26255,3 +26255,42 @@ cannot serve as levels. Several of those sections argue structurally too, and ea
 against §359.1 on its own terms rather than being retired in a batch. The audit trail stays; no
 historical section is edited. What has changed is that a reader who reaches one of those numbers
 now has a section telling them what it can and cannot be used for.
+
+---
+
+## §360 — the task list is not evidence: three "open" items were finished work, and checking cost more than the work would have
+
+With §359 the board is empty — all 23 tasks closed. Three of the last four were **already done when
+they were read as open**, and each was investigated from scratch this session before that surfaced:
+
+```
+#14  guard cone night grade   read as blocked on a staging2 re-seal that §348 had superseded
+#17  perch_idle line of action  closed by §204 on measurement; §345 found the work order had
+                                propagated the stale premise THREE times
+#21  staging4                   all three parts shipped at §201 — floor measured, base gate
+                                re-anchored, guard camera moved 1.75 m west and SHIPPED
+```
+
+None was a small check. `#17` needed the lane's `latEx` metric re-run across 52 clips to establish
+that the pose was 1st of 5 on the shipped rig rather than "zero"; `#21` needed §201 read end to end
+to confirm all three clauses landed. The investigation was correct work — the numbers now sit in
+the task records — but it was spent proving that finished work was finished.
+
+**This is the session's third artifact-that-looks-live.** §357.1 found guards written and never read
+(`lastWallRec`, `spireLaunch`, `hitWall` — two of them shipping bugs). §358 found a frame carrying a
+headline figure through five sections on a tree nobody can reconstruct. Here, work orders describing
+completed work. The shape is identical each time: **a thing that presents as authoritative, is
+consulted as authoritative, and has quietly stopped being backed by anything.** Green suites, clean
+fuzzes and full task boards do not distinguish these from the real thing — that is exactly what
+makes them expensive.
+
+**The rule, and it is cheap:** a task line is a pointer, not a finding. Before working an item,
+grep `KNOWN_ISSUES.md` for a `RESULT-` or a `§` that closes it. Both §345 and §201 said plainly that
+their items were finished; the cost was entirely in not looking first. The reverse is also true and
+matters more — §349.3's "step 3 remains open" was accurate when written and wrong forty minutes
+later, so **when a section is superseded, edit the stale line and point it forward** (as §349.3 now
+does at §352). The ledger is the record; the board is a convenience that decays.
+
+**Not claimed:** that the task list should be retired, or that the investigations were wasted — two
+of the three produced numbers worth keeping, and `#17`'s closure only became defensible because the
+metric was re-run rather than taken on the work order's word.
