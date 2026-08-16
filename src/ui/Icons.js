@@ -134,11 +134,27 @@ function charmPip(filled, cls) {
             stroke-linecap="round" opacity=".8" fill="none"/>
     `, cls);
   }
+  /**
+   * The empty shoe carries the charm you are part-way through PAYING for.
+   *
+   * `.sly-charm-fill` is the same carnelian stroke, at the same 6.4 weight the filled pip uses,
+   * traced from heel to heel by `HUD.setCharmProgress()`. So the pip does not sprout a second
+   * widget when the player starts saving — it fills in and becomes its own finished form, which
+   * is the one shape in the row that already means "a charm". `PlayerHealth` banks coins toward
+   * this at `CHARM.charmCoins`, and before this existed 99 coins and 1 coin looked identical.
+   *
+   * `pathLength="100"` normalises the dash arithmetic exactly as `threatEye`'s lash does, so the
+   * driver writes a percentage and never has to know the curve's real length. It rests at 100
+   * (nothing drawn) so a pip nobody is saving toward is indistinguishable from the old art.
+   */
   return wrap('0 0 46 46', `
     <path d="${shoe}" stroke="${C.ink}" stroke-width="11.6" stroke-linecap="round" fill="none"
           opacity=".62"/>
     <path d="${shoe}" stroke="${C.carn}" stroke-width="2.2" stroke-linecap="round" fill="none"
           opacity=".45"/>
+    <path class="sly-charm-fill" d="${shoe}" stroke="${C.carn}" stroke-width="6.4"
+          stroke-linecap="round" fill="none"
+          pathLength="100" stroke-dasharray="100" stroke-dashoffset="100"/>
   `, cls);
 }
 

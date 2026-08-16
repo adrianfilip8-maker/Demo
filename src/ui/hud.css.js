@@ -115,6 +115,13 @@ export const HUD_CSS = /* css */ `
    a card among horseshoes so the silhouette carries that, and sized a shade larger so the row
    reads as "Sly, plus two charms" rather than as a three-segment bar. */
 .sly-pips > span.sly-pip-life    { width: calc(var(--u) * 1.94); height: calc(var(--u) * 1.94); }
+/* The charm being paid for — setCharmProgress() in HUD.js traces this stroke from heel to heel as
+   Health.purse fills. Eased, because the driver is a coin PICKUP and coins arrive in ones, threes
+   and fives (COIN_VALUE in Pickups.js): unsmoothed, a pile would step the arc 5% in a single frame
+   and read as a glitch rather than as money going in. Slower than --pop on purpose — this is an
+   accrual, not an impact, and it is the one thing in this corner that should not snap.
+   (No backticks anywhere in this file: the whole stylesheet is one template literal.) */
+.sly-charm-fill { transition: stroke-dashoffset .3s var(--settle); }
 
 /* ------- coin counter ------- */
 

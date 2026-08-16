@@ -42,8 +42,10 @@
  *                  i-frames, and would have desynced from the truth on the very first hit.
  *   `hurt`    OUT. The *physical* consequence: knockback and the hurt animation. `Controller.js`
  *                  has subscribed to this since before there was anything to publish it.
- *   `health`  OUT. The absolute state, `{ hp, max, charms, down }`. The HUD renders it and owns
- *                  no opinion of its own about what the number should be.
+ *   `health`  OUT. The absolute state, `{ hp, max, charms, down, purse, charmCoins,
+ *                  charmProgress }`. The HUD renders it and owns no opinion of its own about
+ *                  what the number should be. Fields are only ever ADDED to this payload — see
+ *                  `_publish` for why renaming one is a different and much worse kind of edit.
  *
  * It also listens to `coin` and `guardPickpocket` to bank charms, and to `guardAlert` so that a
  * checkpoint is never taken somewhere a guard is standing over — a respawn point recorded mid-
@@ -114,6 +116,30 @@ export class Health {
   /** `1 + charms`, or 0 while down. Sly himself is the last pip. */
   get hp() { return this.down ? 0 : 1 + this.charms; }
   get hpMax() { return 1 + CHARM.maxCharms; }
+
+  /**
+   * How full the next charm is, 0..1 — or **−1 when there is no next charm to buy**.
+   *
+   * That sentinel is the whole reason this is computed here instead of being left to whoever
+   * renders it. At `maxCharms` the purse is CLAMPED to `charmCoins - 1` by `bank()`, so the
+   * obvious `purse / charmCoins` a view would write sits at 0.99 for the rest of the run and
+   * reads as "one coin away" while the row is already full. Both naive readings are lies: 0.99
+   * says a charm is one coin off, 1.0 says one is about to arrive, and what is actually true is
+   * that nothing is accruing at all. The module that owns the clamp is the only thing that can
+   * say that without a second copy of the clamp living somewhere else.
+   *
+   * −1 rather than `null` because every consumer here guards numbers with `Number.isFinite` (or
+   * the `num()` helper that wraps it), and `null` fails that guard and silently becomes whatever
+   * default the reader supplied — a wrong number rather than a refused one. `HUD._goalDist` uses
+   * the same −1 idiom for the same reason.
+   *
+   * The `min` is belt-and-braces: `bank()`'s loop only exits with `purse >= charmCoins` when it
+   * has hit the cap, and that case returns above.
+   */
+  get charmProgress() {
+    if (this.charms >= CHARM.maxCharms) return -1;
+    return Math.min(1, this.purse / CHARM.charmCoins);
+  }
 
   async init() {
     const on = (evt, fn) => { this._offs.push(this.engine.on(evt, fn)); };
@@ -199,8 +225,24 @@ export class Health {
        out the instant a charm is spent — a charm you did not see arrive is a charm you do not
        know you have, which is worse than not having it. */
     if (this.charms >= CHARM.maxCharms) this.purse = Math.min(this.purse, CHARM.charmCoins - 1);
+
+    /**
+     * Published on EVERY banked coin, not only on the ones that complete a charm.
+     *
+     * This `_publish()` used to sit inside the `if (gained)` below, which is §357.1's shape —
+     * machinery wired at one end only. The purse moved on every single coin and the bus was told
+     * about it exactly twice a run, at the two instants it reset to zero, so anything trying to
+     * draw "progress toward the next charm" could only ever observe 0. Publishing the number is
+     * the cheap half of that feature; it is worth anything at all only because somebody can now
+     * watch it move.
+     *
+     * The cost is one emit per `coin`, and `coin` is per PICKUP, not per frame:
+     * `Pickups._collectCoin` fires once per coin taken and `COIN_VALUE` tops out at 5, so a
+     * player running the densest trail in the level produces single figures a second against one
+     * subscriber. `guardPickpocket` is one emit per steal. Nothing here is on the frame clock.
+     */
+    this._publish();
     if (gained) {
-      this._publish();
       this.engine.emit('toast', { text: gained > 1 ? `${gained} lucky charms` : 'Lucky charm', icon: 'health' });
     }
     return gained;
@@ -271,8 +313,23 @@ export class Health {
     this._publish();
   }
 
+  /**
+   * The absolute state, on the one event the HUD renders.
+   *
+   * Seven call sites reach this and exactly one subscriber reads it (`HUD.js:564`), so ADDING a
+   * field is free and RENAMING one is not: a renamed field is a silent `undefined` at the far
+   * end, which every guard in the HUD converts into a plausible default rather than an error.
+   *
+   * `purse` and `charmCoins` are the raw pair — anything that wants to print "43 / 100" has what
+   * it needs and does not have to import `CHARM` to learn the price. `charmProgress` is the
+   * INTERPRETATION of that pair, and it exists because the pair alone cannot express the capped
+   * case without restating `bank()`'s clamp; see the getter.
+   */
   _publish() {
-    this.engine.emit('health', { hp: this.hp, max: this.hpMax, charms: this.charms, down: this.down });
+    this.engine.emit('health', {
+      hp: this.hp, max: this.hpMax, charms: this.charms, down: this.down,
+      purse: this.purse, charmCoins: CHARM.charmCoins, charmProgress: this.charmProgress,
+    });
   }
 
   dispose() {

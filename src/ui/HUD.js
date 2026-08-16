@@ -212,6 +212,7 @@ export class HUD {
     this._coinsShown = 0;
     this.health = 5;
     this.healthMax = 5;
+    this._charmP = -1;          // 0..1 toward the next lucky charm; −1 = no next charm to buy
     this.binocOn = false;
     this.tovOn = false;
     this.pauseOn = false;
@@ -565,6 +566,10 @@ export class HUD {
       if (typeof p === 'number') { this.setHealth(p, this.healthMax); return; }
       if (!p) return;
       this.setHealth(num(p.hp ?? p.current ?? p.value, this.health), num(p.max, this.healthMax));
+      /* AFTER `setHealth`, never before: `setHealth` repaints the pips it needs to, and a repaint
+         replaces a pip's inner SVG — including the stroke the progress is drawn on. Writing the
+         arc first would put it on art that is about to be thrown away. */
+      this.setCharmProgress(num(p.charmProgress, -1));
       /* `down` is the fatal hit, not a hit. `PlayerHealth` publishes it on the same payload the
          pips already read, so telling "caught" apart from "hurt" costs no new interface — only
          the decision to stop discarding a field that was always there. */
@@ -745,6 +750,66 @@ export class HUD {
   /** Take damage: pips, flash, vignette punch and a shake in one call. */
   damage(amount = 1) {
     this.setHealth(this.health - Math.max(1, Math.round(num(amount, 1))), this.healthMax);
+  }
+
+  /**
+   * Progress toward the next lucky charm, drawn INTO the pip it is going to become.
+   *
+   * `PlayerHealth` banks coins toward a charm at `CHARM.charmCoins` (100), and until this existed
+   * the only thing the player ever saw of that economy was the finished charm appearing. 99 coins
+   * and 1 coin looked exactly the same, which makes the level's one economic decision — is it
+   * worth going back past that guard for the coins on the ledge — unanswerable.
+   *
+   * Drawn as the empty horseshoe filling in with its own stroke rather than as a meter somewhere
+   * else, for two reasons:
+   *   · the pip row already means "what you are carrying", and the thing being bought is the next
+   *     item in that row. A separate bar would have to be read and then related back to it.
+   *   · a second NUMBER beside the coin counter would be worse than no readout at all. That
+   *     counter is the player's coin purse; this is `Health.purse`, coins banked toward a charm,
+   *     and `Health.js:95` says in as many words that the two are not the same quantity. Two
+   *     numbers that disagree and are never explained is a bug report, not a HUD.
+   *
+   * `frac < 0` — the charm cap, or a payload with no `charmProgress` at all from an older
+   * `Health.js` — draws NOTHING. At the cap there is no next charm, and see `Health.charmProgress`
+   * for why 0.99 and 1.0 are both lies there; the absence is unambiguous beside a full row, which
+   * already says every charm there is. An older publisher gets no arc rather than a wrong one.
+   */
+  setCharmProgress(frac) {
+    if (!this._built) return;
+    const p = Number.isFinite(frac) && frac >= 0 ? Math.min(1, frac) : -1;
+    const next = p < 0 ? -1 : this._nextCharmIndex();
+    const kids = this.el.pips.children;
+    /**
+     * Written across the whole row rather than onto a remembered element, and that is a
+     * correctness choice rather than laziness.
+     *
+     * Spending a charm moves the mark DOWN the row, and the pip it moved off is NOT repainted by
+     * `setHealth` — it was already unlit and it still is, so the `filled === wasFilled` fast path
+     * skips it — which leaves the arc it was carrying sitting there. A cached target renders two
+     * charms in progress at once. That is §357.1's shape yet again, and the loop that cannot have
+     * it runs over at most `maxCharms` elements on an event that fires per coin picked up, never
+     * per frame.
+     */
+    for (let i = 1; i < kids.length; i++) {
+      const path = kids[i].querySelector('.sly-charm-fill');
+      if (!path) continue;                       // a lit pip is finished art and carries no stroke
+      path.style.strokeDashoffset = i === next ? String(Math.round((1 - p) * 1000) / 10) : '100';
+    }
+    this._charmP = p;
+  }
+
+  /**
+   * Which pip the next charm will fill, or −1 if none will.
+   *
+   * The FIRST unlit charm pip, read off the row itself rather than off a charm count, so the mark
+   * and the pips can never disagree about which one is being bought. Index 0 is skipped because
+   * it is Sly himself and not a charm (see `pipKind`) — while he is down that pip is unlit too,
+   * and the charm he is still saving for is the one at index 1.
+   */
+  _nextCharmIndex() {
+    const kids = this.el.pips.children;
+    for (let i = 1; i < kids.length; i++) if (kids[i].classList.contains('sly-pip-lost')) return i;
+    return -1;
   }
 
   binocucom(on) {
