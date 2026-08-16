@@ -1,8 +1,16 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync, existsSync, mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+import { spawnSync } from 'node:child_process';
 import * as THREE from 'three';
 import { Controller, TUNE } from '../src/player/Controller.js';
+/* Arm 20's recorder. Imported HERE, at the top, rather than inside the arm: it wraps
+   `StateMachine.prototype.set`, and an entry made before the wrapper is installed is invisible.
+   Importing it from the arm would census only the arms that ran after it. */
+import { record as SM_RECORD } from './_smtrace.mjs';
 
 /**
  * traversal.test.mjs — the attach states, and the four ways out of them that did not exist.
@@ -2201,47 +2209,52 @@ test('crawl: the vent column, enumerated rather than cast — and one aperture t
 });
 
 /* ====================================================================== */
-/* 15 — the ledge shimmy is inverted                                       */
+/* 15 — the lateral basis, and the shimmy finding it retracts              */
 /* ====================================================================== */
 
-test('ledgeHang: stick RIGHT shimmies Sly LEFT — the raw-stick idiom is sign-inverted', async () => {
-  /* §393 flagged `ledgeHang` as an unexamined raw-stick reader that I had judged correct **on
-   * inspection**, in a file whose own header records that inspection missed all four instrument
-   * errors catalogued there. Put under load, the inspection was wrong.
-   *
-   * ── The measurement ─────────────────────────────────────────────────────────────────────
-   * Real level ledges, not a synthetic box (the census showed that probing without the affordance
-   * hides everything behind an `afford()` gate). 252 candidate hang poses across the `ledge` recs,
-   * 26 of which `ledgeHang` accepts; hold stick RIGHT for 45 frames and measure displacement
-   * against Sly's own right vector — `(cos yaw, 0, -sin yaw)`, which is the convention
-   * `WallRun.enter` already uses to decide which side a wall is on.
-   *
-   *     shimmied at all      23/26      mean displacement 0.621 m
-   *     moved to HIS RIGHT    0
-   *     moved to HIS LEFT    23
-   *
-   * ── Why ─────────────────────────────────────────────────────────────────────────────────
-   * The step is taken along `_b = up × n = (nz, 0, -nx)`. Sly hangs facing the wall, so his yaw is
-   * `atan2(-nx, -nz)` and his right vector is `(-nz, 0, nx)` — which is exactly `-_b`. So
-   * `sh = +1` moves along his left. The corroborating tell is the clip: the same branch plays
-   * `ledge_shimmy_r` while moving left, so the animation and the motion already disagree with each
-   * other, which is what makes this a sign error rather than a deliberate convention.
-   *
-   * ── Camera independence, which is the part §393 asked about ─────────────────────────────
-   * `wishRaw` is the raw stick, so this is invariant under camera yaw — the inversion is the same
-   * at 0°, 90°, 180° and −90°. The raw idiom is not itself the defect; the sign is. A
-   * camera-relative reader would have been wrong in a camera-dependent way instead.
-   *
-   * **Reported, not fixed.** Flipping it is a one-character `Moveset.js` change with a design
-   * question attached — whether the clip or the motion is the thing that is backwards — and this
-   * is an instrument round. This arm pins the CURRENT behaviour so it reddens the moment someone
-   * corrects it, and the failure message says which way to take the result. */
-  const { engine, c, collision } = await realWorld();
-  hardReset(engine, c, V(0, 0, 30));
-  for (let i = 0; i < 4; i++) {
-    engine.input.beginFrame(DT); engine.input.move.x = 0; engine.input.move.y = 0;
-    engine.time = i * DT; c.update(DT, i * DT);
-  }
+/**
+ * Sly's own right-hand direction, taken from the engine rather than written down.
+ *
+ * **This helper exists because getting it wrong is instrument error five.** The previous version
+ * of arm 15 measured shimmy displacement against `(cos yaw, 0, -sin yaw)` — copied in good faith
+ * from `WallRun.enter` (`Moveset.js:405`) and `Controller.narrowGround` (`Controller.js:1182`),
+ * where it is written as if it were the right vector. **It is the LEFT vector**, so every
+ * direction that arm reported came out backwards, and a state that works was filed as broken.
+ *
+ * `aimCamera` + `_readInput` is the way to ask without a formula: point the camera along the
+ * facing in question, push the stick right, and read what the game's own input pipeline produces.
+ * That is `_rgt.crossVectors(_fwd, UP)` (`Controller.js:721`) — the definition every metre Sly
+ * has ever strafed already obeys — reached through the pipeline instead of restated.
+ */
+function aimCamera(engine, dir) {
+  const cam = engine.camera;
+  cam.position.set(0, 0, 0);
+  cam.lookAt(dir.x, 0, dir.z);
+  cam.updateMatrixWorld(true);
+}
+/**
+ * The world direction a stick-RIGHT produces for a player whose camera looks along `face`.
+ *
+ * **Restores the camera**, which is not fussiness. The first version left it wherever the last
+ * query pointed it, and the next thing to drive with `move.y = 1` — `wishDir` is camera-relative
+ * — ran off at whatever angle the probe had last asked about and never reached the wall it was
+ * aimed at. A measuring instrument that moves the thing it measures from is the same family of
+ * error as everything else in this file's header.
+ */
+function stickRightFor(engine, c, face) {
+  const keep = engine.camera.quaternion.clone();
+  aimCamera(engine, face);
+  engine.input.beginFrame(DT); engine.input.move.x = 1; engine.input.move.y = 0;
+  c._readInput();
+  const out = c.wishDir.clone();
+  engine.camera.quaternion.copy(keep);
+  engine.camera.updateMatrixWorld(true);
+  return out;
+}
+const faceOf = (yaw) => V(Math.sin(yaw), 0, Math.cos(yaw));
+
+/** The 26 real-level hang poses `ledgeHang` accepts. Shared by arms 15 and 16. */
+function hangSpots(collision) {
   const spots = [];
   for (const r of collision.recs.filter((x) => x.tag === 'ledge')) {
     const g = r.mesh.geometry;
@@ -2257,38 +2270,134 @@ test('ledgeHang: stick RIGHT shimmies Sly LEFT — the raw-stick idiom is sign-i
     }
     if (spots.length > 240) break;
   }
-  let entered = 0, right = 0, left = 0, total = 0;
-  for (const s of spots) {
-    c.position.set(s.px, s.top - TUNE.hangReach + 0.4, s.pz);
-    c.grounded = false; c._frame++;
-    if (!c.probeLedge(V(-s.ux, 0, -s.uz)).ok) continue;
-    hardReset(engine, c, V(s.px, s.top - TUNE.hangReach + 0.4, s.pz));
-    c.position.set(s.px, s.top - TUNE.hangReach + 0.4, s.pz);
-    c.grounded = false; c._needSpawnSnap = false; c._frame++;
-    c.probeLedge(V(-s.ux, 0, -s.uz));
-    c.sm.set('ledgeHang');
-    if (c.stateName !== 'ledgeHang') continue;
-    entered++;
-    const p0 = c.position.clone(), yaw0 = c.yaw;
-    for (let i = 0; i < 45; i++) {
-      engine.input.beginFrame(DT); engine.input.move.x = 1; engine.input.move.y = 0;
-      engine.time = i * DT; c.update(DT, i * DT);
-      if (c.stateName !== 'ledgeHang') break;
-    }
-    const d = c.position.clone().sub(p0);
-    if (d.length() <= 0.02) continue;
-    total++;
-    const rv = new THREE.Vector3(Math.cos(yaw0), 0, -Math.sin(yaw0));
-    if (d.dot(rv) > 0) right++; else left++;
+  return spots;
+}
+
+test('basis: "right" is faceDir x UP, and (cos yaw, 0, -sin yaw) is its exact negation', async () => {
+  /* The calibration the next three arms stand on, and the one that must fire: if this project's
+   * handedness ever changes, this reddens first and every direction claim below is re-derived
+   * rather than silently re-interpreted.
+   *
+   * Three independent legs, because a single derivation is what produced the wrong answer:
+   *   1. DRIVEN — the input pipeline's own answer for stick-right at five yaws (below).
+   *   2. THE RIG — `SlyModel.js:812` puts `shoulderL` at local x +0.052 and `shoulderR` at
+   *      −0.052, and `_pushCharacter` applies `rotation.set(0, yaw, 0)` with no offset, so the
+   *      model's left is +X. A body whose left is +X and whose forward is +Z has its right at −X,
+   *      which is `faceDir × UP`, not its negation.
+   *   3. THE FALLBACK — `Controller.js:719` substitutes `(sin yaw, 0, cos yaw)` for the camera
+   *      forward when the camera collapses, so `faceDir` and the camera axis are the same idiom.
+   *   4. ANIMATION AGREES, in the opposite direction — `Animation.js:773` picks
+   *      `turnRate > 0 ? 'turn_l' : 'turn_r'`, and `turnRate` is `dyaw/dt`. The derivative of
+   *      `faceDir` with respect to yaw is exactly `(cos yaw, 0, -sin yaw)`, so that line is
+   *      already treating this vector as the direction Sly turns TOWARD when yaw rises — his
+   *      LEFT — and gets its clip right. The same expression is used as his right in
+   *      `Moveset.js:405`. One of the two files is wrong about it and it is not this one. */
+  const { engine, c } = await realWorld();
+  hardReset(engine, c, V(0, 0, 30));
+  for (let i = 0; i < 4; i++) {
+    engine.input.beginFrame(DT); engine.input.move.x = 0; engine.input.move.y = 0;
+    engine.time = i * DT; c.update(DT, i * DT);
   }
-  console.log(`\n[shimmy] ${entered} hang poses entered ledgeHang; ${total} moved on stick RIGHT`);
-  console.log(`[shimmy] to his right: ${right}   to his left: ${left}`);
-  assert.ok(entered >= 10, `only ${entered} hang poses entered ledgeHang — the sample is too small to conclude`);
-  assert.ok(total >= 10, `only ${total} of ${entered} shimmied at all — cannot judge direction`);
-  assert.equal(right, 0,
-    `${right} of ${total} shimmies now go to Sly's RIGHT on stick RIGHT. If the sign was corrected in ` +
-    'Moveset.js this is the fix landing — invert this arm to assert right===total and drop the left check.');
-  assert.equal(left, total, `${left} of ${total} went left; the inversion is no longer uniform`);
+  console.log('\n[basis] yaw     stick-right ->    dot(faceDir x UP)  dot(cos yaw,0,-sin yaw)');
+  for (const yaw of [0, Math.PI / 2, Math.PI, -Math.PI / 2, 0.7]) {
+    hardReset(engine, c, V(0, 0, 30), yaw);
+    const got = stickRightFor(engine, c, faceOf(yaw));
+    const cross = new THREE.Vector3().crossVectors(faceOf(yaw), new THREE.Vector3(0, 1, 0)).normalize();
+    const written = V(Math.cos(yaw), 0, -Math.sin(yaw));
+    console.log(`  ${yaw.toFixed(2).padStart(5)}   (${got.x.toFixed(2)}, ${got.z.toFixed(2)})` +
+                `        ${got.dot(cross).toFixed(3).padStart(6)}            ${got.dot(written).toFixed(3).padStart(6)}`);
+    assert.ok(got.dot(cross) > 0.999, `stick-right at yaw ${yaw} is not faceDir x UP`);
+    assert.ok(got.dot(written) < -0.999,
+      `(cos yaw, 0, -sin yaw) is no longer the exact negation of right at yaw ${yaw} — ` +
+      're-derive arms 15, 16 and 18 before believing any of them');
+  }
+});
+
+test('ledgeHang: the shimmy is NOT inverted — RETRACTING my own §393 finding', async () => {
+  /* ── RETRACTION ─────────────────────────────────────────────────────────────────────────────
+   * This arm used to assert `right === 0, left === total` and read that as "stick RIGHT shimmies
+   * Sly LEFT". **The counts reproduce exactly and the conclusion was backwards**, because the
+   * basis vector it projected onto was Sly's left (see the arm above). The step is taken along
+   * `_b = up × n` (`Moveset.js:788`); Sly hangs facing the wall so `faceDir = -n`, and
+   * `up × n = -n × up = faceDir × up` = **his right**. The code was correct all along.
+   *
+   * That is the fourth time this session a correct measurement was made against the wrong world,
+   * and the first one where the wrong world was a single unit vector. The header's four defences
+   * did not cover it, so this one gets a fifth: **do not restate a basis vector — drive it.**
+   *
+   * ── The three-way question, answered ────────────────────────────────────────────────────────
+   * Is the MOTION backwards, is the CLIP mirrored, or both? Neither. Measured against what the
+   * same stick does through the walk pipeline with the camera behind Sly — no formula anywhere in
+   * the comparison — the shimmy agrees with the walk in both directions, and the clip agrees with
+   * the motion:
+   *
+   *     stick RIGHT   23/23 the way a stick-right walk goes, 0 opposite    ledge_shimmy_r
+   *     stick LEFT    23/23 the way a stick-left  walk goes, 0 opposite    ledge_shimmy_l
+   *
+   * There is no design decision to make here and nothing in `src/**` to change. The one thing
+   * that IS backwards is in arm 18, which found the same constant used where it decides a clip. */
+  const { engine, c, collision } = await realWorld();
+  hardReset(engine, c, V(0, 0, 30));
+  for (let i = 0; i < 4; i++) {
+    engine.input.beginFrame(DT); engine.input.move.x = 0; engine.input.move.y = 0;
+    engine.time = i * DT; c.update(DT, i * DT);
+  }
+  const spots = hangSpots(collision);
+  const realBaseClip = c.baseClip.bind(c);
+
+  /** Hold `mx` for 45 frames from every hang pose, against a walk with the same stick. */
+  function sweep(mx) {
+    let entered = 0, agree = 0, oppose = 0, moved = 0;
+    const clips = new Map();
+    for (const s of spots) {
+      c.position.set(s.px, s.top - TUNE.hangReach + 0.4, s.pz);
+      c.grounded = false; c._frame++;
+      if (!c.probeLedge(V(-s.ux, 0, -s.uz)).ok) continue;
+      hardReset(engine, c, V(s.px, s.top - TUNE.hangReach + 0.4, s.pz));
+      c.position.set(s.px, s.top - TUNE.hangReach + 0.4, s.pz);
+      c.grounded = false; c._needSpawnSnap = false; c._frame++;
+      c.probeLedge(V(-s.ux, 0, -s.uz));
+      c.sm.set('ledgeHang');
+      if (c.stateName !== 'ledgeHang') continue;
+      entered++;
+      /* The reference: camera behind Sly looking the way he faces, which is what the
+         `ledge_hang` framing does (`CameraRig.js:265` shortens the boom by 0.70 m; `dist` is
+         metres ADDED to it, and the boom is clamped at `distHardMin` 0.55, so it never crosses
+         to the far side). Then ask the pipeline what this stick means. */
+      const walk = stickRightFor(engine, c, faceOf(c.yaw)).multiplyScalar(Math.sign(mx));
+      const p0 = c.position.clone();
+      const seen = [];
+      c.baseClip = (n, b) => { seen.push(n); return realBaseClip(n, b); };
+      for (let i = 0; i < 45; i++) {
+        engine.input.beginFrame(DT); engine.input.move.x = mx; engine.input.move.y = 0;
+        engine.time = i * DT; c.update(DT, i * DT);
+        if (c.stateName !== 'ledgeHang') break;
+      }
+      c.baseClip = realBaseClip;
+      const d = c.position.clone().sub(p0); d.y = 0;
+      if (d.length() <= 0.02) continue;
+      moved++;
+      if (d.normalize().dot(walk) > 0) agree++; else oppose++;
+      for (const n of new Set(seen)) if (n.includes('shimmy')) clips.set(n, (clips.get(n) || 0) + 1);
+    }
+    return { entered, moved, agree, oppose, clips };
+  }
+
+  const R = sweep(1), L = sweep(-1);
+  console.log(`\n[shimmy] ${R.entered} hang poses entered ledgeHang`);
+  for (const [tag, r] of [['RIGHT', R], ['LEFT ', L]]) {
+    console.log(`[shimmy] stick ${tag}: ${r.moved} moved — with the walk ${r.agree}, against it ${r.oppose}` +
+                `   clips ${[...r.clips.keys()].join('+') || '—'}`);
+  }
+  assert.ok(R.entered >= 10, `only ${R.entered} hang poses entered ledgeHang — the sample is too small`);
+  assert.ok(R.moved >= 10 && L.moved >= 10, `only ${R.moved}/${L.moved} shimmied at all — cannot judge direction`);
+  assert.equal(R.oppose, 0, `${R.oppose} of ${R.moved} shimmies go against a stick-right walk — the sign HAS inverted`);
+  assert.equal(L.oppose, 0, `${L.oppose} of ${L.moved} shimmies go against a stick-left walk — the sign HAS inverted`);
+  /* The clip half of the three-way question. `ledge_shimmy_l` is authored as "reach with the left
+     glove" (`Clips.js:1566`) and `_r` is its mirror through `defMirror`, so the name is the
+     direction; a swap here is the moonwalk case and it is not present. */
+  assert.deepEqual([...R.clips.keys()], ['ledge_shimmy_r'], 'stick RIGHT no longer plays ledge_shimmy_r');
+  assert.deepEqual([...L.clips.keys()], ['ledge_shimmy_l'], 'stick LEFT no longer plays ledge_shimmy_l');
 });
 
 /* ====================================================================== */
@@ -2296,14 +2405,27 @@ test('ledgeHang: stick RIGHT shimmies Sly LEFT — the raw-stick idiom is sign-i
 /* ====================================================================== */
 
 test('ledgeHang drop / poleSwing: the other two raw-stick axes, driven', async () => {
-  /* Arm 15 found `ledgeHang`'s shimmy sign-inverted. These are the two axes next to it, and the
-   * question each answers is different:
-   *   · the DROP shares the state — if its z-axis were also inverted, stick-back would climb.
-   *   · `poleSwing` shares the AXIS (`wishRaw.x`) but not the state — if the convention had been
-   *     copied, this is a second instance; if it is clean, the shimmy was a local slip rather than
-   *     a shared misunderstanding, which is the more useful answer.
-   * Both sampled across the real level, per arm 15's lesson: a single ledge there produced a
-   * confident wrong answer in the OPPOSITE direction from the real bug. */
+  /* The two axes next to the shimmy, and the question each answers is different:
+   *   · the DROP shares the state — if its z-axis were inverted, stick-back would climb. It is
+   *     measured against the state's OWN stored normal, so it never depended on the left/right
+   *     basis and survives the arm-15 retraction unchanged.
+   *   · `poleSwing` shares the AXIS (`wishRaw.x`) but not the state.
+   *
+   * ── CORRECTION, and it inverts the previous verdict ─────────────────────────────────────────
+   * This arm used to report `poleSwing` CLEAN — 12/12 orbiting to his right on stick right — and
+   * that was used to argue the shimmy defect was local rather than shared. Both halves of that
+   * were wrong, from the one cause: `rv` was `(cos yaw, 0, -sin yaw)`, Sly's LEFT (arm 15's
+   * calibration). Re-measured against what the same stick does through the walk pipeline:
+   *
+   *     stick RIGHT   0/12 the way a stick-right walk goes    12/12 opposite
+   *
+   * **`poleSwing` is the inverted one.** `PoleSwing.update` takes `dir = -sign(wishRaw.x)`
+   * (`Moveset.js:1292`), and at the moment of the press Sly faces the pole, so his right is the
+   * increasing-`angle` tangent — which `dir = -1` walks away from. The old figure reproduces
+   * exactly; only its label was wrong, so this is one error in one place, read three ways.
+   *
+   * The measurement excludes frame 1, which snaps him onto the orbit radius; including it gives
+   * the same 12/0, so the snap is not what decides this. */
   const { engine, c, collision } = await realWorld();
   hardReset(engine, c, V(0, 0, 30));
   for (let i = 0; i < 4; i++) {
@@ -2312,21 +2434,7 @@ test('ledgeHang drop / poleSwing: the other two raw-stick axes, driven', async (
   }
 
   /* ---- the drop: stick BACK must release, and release outward ---- */
-  const spots = [];
-  for (const r of collision.recs.filter((x) => x.tag === 'ledge')) {
-    const g = r.mesh.geometry;
-    if (!g) continue;
-    g.computeBoundingBox();
-    const bb = g.boundingBox.clone().applyMatrix4(r.mesh.matrixWorld);
-    for (const [ux, uz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) for (const s of [0.25, 0.5, 0.75]) {
-      const px = ux !== 0 ? (bb.min.x + bb.max.x) / 2 + ux * ((bb.max.x - bb.min.x) / 2 + 0.45)
-                          : bb.min.x + (bb.max.x - bb.min.x) * s;
-      const pz = uz !== 0 ? (bb.min.z + bb.max.z) / 2 + uz * ((bb.max.z - bb.min.z) / 2 + 0.45)
-                          : bb.min.z + (bb.max.z - bb.min.z) * s;
-      spots.push({ px, pz, ux, uz, top: bb.max.y });
-    }
-    if (spots.length > 240) break;
-  }
+  const spots = hangSpots(collision);
   let ent = 0, released = 0, climbed = 0, away = 0, into = 0;
   for (const s of spots) {
     c.position.set(s.px, s.top - TUNE.hangReach + 0.4, s.pz);
@@ -2368,8 +2476,8 @@ test('ledgeHang drop / poleSwing: the other two raw-stick axes, driven', async (
      toward the one just released. `hangLock` blocks re-GRABBING but not the assist. Not
      confirmed, so it is bounded here rather than asserted either way. */
 
-  /* ---- poleSwing: same axis as the inverted shimmy, different state ---- */
-  let pent = 0, pright = 0, pleft = 0;
+  /* ---- poleSwing: same axis, different state, and this is the one that is backwards ---- */
+  let pent = 0, pwith = 0, pagainst = 0, pold = 0;
   for (const r of collision.recs.filter((x) => x.tag === 'pole')) {
     const ud = r.mesh.userData || {}, p = r.mesh.position;
     const y = ((ud.bottom ?? p.y) + (ud.top ?? p.y)) / 2;
@@ -2383,25 +2491,40 @@ test('ledgeHang drop / poleSwing: the other two raw-stick axes, driven', async (
       c.sm.set('poleSwing');
       if (c.stateName !== 'poleSwing') continue;
       pent++;
-      const yaw0 = c.yaw, p0 = c.position.clone();
-      const rv = new THREE.Vector3(Math.cos(yaw0), 0, -Math.sin(yaw0));
-      for (let i = 0; i < 8; i++) {
+      const yaw0 = c.yaw;                            // facing at the moment of the press: the pole
+      const walkRight = stickRightFor(engine, c, faceOf(yaw0));
+      const oldBasis = V(Math.cos(yaw0), 0, -Math.sin(yaw0));   // what this arm used to project on
+      /* Frame 1 snaps him from `hold`-ish onto exactly `hold`; the ARC is frames 1..10. */
+      engine.input.beginFrame(DT); engine.input.move.x = 1; engine.input.move.y = 0;
+      engine.time = 0; c.update(DT, 0);
+      const p1 = c.position.clone();
+      for (let i = 1; i < 10; i++) {
         engine.input.beginFrame(DT); engine.input.move.x = 1; engine.input.move.y = 0;  // stick RIGHT
         engine.time = i * DT; c.update(DT, i * DT);
         if (c.stateName !== 'poleSwing') break;
       }
-      const d = c.position.clone().sub(p0); d.y = 0;
+      const d = c.position.clone().sub(p1); d.y = 0;
       if (d.length() < 1e-4) continue;
-      if (d.dot(rv) > 0) pright++; else pleft++;
+      d.normalize();
+      if (d.dot(walkRight) > 0) pwith++; else pagainst++;
+      if (d.dot(oldBasis) > 0) pold++;
     }
     if (pent >= 12) break;
   }
-  console.log(`[poleSwing] entered ${pent}; stick RIGHT -> his right ${pright}, his left ${pleft}`);
+  console.log(`[poleSwing] entered ${pent}; stick RIGHT -> with a stick-right walk ${pwith}, against it ${pagainst}`);
+  console.log(`[poleSwing]   (on the retracted basis this same arc reads "his right" ${pold}/${pent})`);
   assert.ok(pent >= 8, `only ${pent} pole poses entered poleSwing`);
-  assert.equal(pleft, 0,
-    `${pleft} of ${pent} pole swings go to Sly's LEFT on stick RIGHT — the shimmy inversion is shared, ` +
-    'not local, and both should be fixed together');
-  assert.equal(pright, pent, 'not every pole swing orbited to his right');
+  /* THE FINDING, pinned in its current (broken) state so it reddens when someone fixes it. */
+  assert.equal(pwith, 0,
+    `${pwith} of ${pent} pole swings now orbit the way a stick-right walk goes. If \`dir\` in ` +
+    'PoleSwing.update (Moveset.js:1292) lost its minus sign, that is the fix landing — invert this ' +
+    'arm to assert pwith === pent and drop the pagainst check.');
+  assert.equal(pagainst, pent, `only ${pagainst} of ${pent} orbited against the stick — the inversion is not uniform`);
+  /* The lever that proves the two bases really are opposite, on this arm's own data rather than
+     on arm 15's: the retracted basis must label every one of these the other way. */
+  assert.equal(pold, pent,
+    'the retracted basis no longer mirrors the calibrated one here — arm 15 and this arm disagree ' +
+    'about handedness, and one of them is now wrong');
 });
 
 /* ====================================================================== */
@@ -2628,4 +2751,325 @@ test('wallClimb: proximity alone does not snag a player who is not reaching for 
   run(engine, c, 120, () => {}, () => seen.add(c.stateName));
   assert.ok(!seen.has('wallClimb'), 'a rung grabbed a player who gave no input');
   console.log(`[wallClimb] no-input pass: states ${[...seen].join(', ')}`);
+});
+
+/* ====================================================================== */
+/* 19 — the same constant, where it picks a clip                           */
+/* ====================================================================== */
+
+test('wallRun: the clip side is inverted — Sly banks away from the wall he is running on', async () => {
+  /* Arm 15's calibration found `(cos yaw, 0, -sin yaw)` written as if it were Sly's right in two
+   * places in `src/**`. One of them, `Controller.narrowGround` (`Controller.js:1182`), probes
+   * `s = -1` and `s = +1` symmetrically, so naming the axis backwards there cannot change an
+   * answer. **The other one decides which of two mirrored clips plays.**
+   *
+   *     Moveset.js:405   _d.set(Math.cos(c.yaw), 0, -Math.sin(c.yaw));
+   *     Moveset.js:406   this._side = dot2(this._nx, this._nz, _d.x, _d.z) < 0 ? 'r' : 'l';
+   *
+   * `c.wall.n` points OUT of the face, from the wall toward Sly (`WallRun.update` re-probes along
+   * `-n` to keep contact), so the wall lies along `-n` and it is on his right exactly when
+   * `n · right < 0`. With `_d` being his LEFT, `n · left < 0` means `n · right > 0` means the wall
+   * is on his **left** — and the line returns `'r'`.
+   *
+   * `Clips.js:1446` is unambiguous about what the name means: *"Wall run, wall on his LEFT. Feet
+   * strike the vertical surface, the body is banked hard into it, the inside (left) hand slaps
+   * along the stone"*, mirrored into `wall_run_r` by `defMirror`. So the consequence is not
+   * cosmetic bookkeeping: **Sly banks away from the wall he is running on and slaps empty air.**
+   *
+   * ── THE ONE-LINE FIX ────────────────────────────────────────────────────────────────────────
+   *     Moveset.js:405   _d.set(-Math.cos(c.yaw), 0, Math.sin(c.yaw));
+   * (or equivalently flip the `'r'`/`'l'` on :406). Not applied here — this lane does not edit
+   * `src/**` — and this arm pins the CURRENT behaviour so it reddens the moment it is.
+   *
+   * ── Why the sweep excludes head-on approaches ───────────────────────────────────────────────
+   * When the wall is straight ahead or straight behind, `n · right` is ~0 and there is no side to
+   * be right or wrong about; the line still picks one and it is a coin flip. Those samples are
+   * excluded by `|n · right| >= 0.30` rather than counted as agreements, which is what an earlier
+   * build of this sweep did: 3 of its 30 samples "agreed" and all three were head-on. A filter
+   * that lets a coin flip count as a pass is how a uniform inversion reads as 90%. */
+  const { engine, c, collision } = await realWorld();
+  hardReset(engine, c, V(0, 0, 30));
+  for (let i = 0; i < 4; i++) {
+    engine.input.beginFrame(DT); engine.input.move.x = 0; engine.input.move.y = 0;
+    engine.time = i * DT; c.update(DT, i * DT);
+  }
+
+  /** Enter `wallRun` with a chosen facing and a chosen wall normal; return the clip it asked for. */
+  function sideFor(yaw, nx, nz) {
+    hardReset(engine, c, V(0, 12, 30), yaw);
+    c.grounded = false;
+    c.velocity.set(0, 0, 0);
+    const n = V(nx, 0, nz).normalize();
+    c.wall.nx = n.x; c.wall.nz = n.z; c.wall.rec = { id: 'probe-face' }; c.wall.ok = true;
+    const clips = [];
+    const realOneShot = c.oneShot.bind(c);
+    c.oneShot = (name, ...a) => { clips.push(name); return realOneShot(name, ...a); };
+    c.sm.set('wallRun');
+    c.oneShot = realOneShot;
+    const clip = clips.find((x) => String(x).startsWith('wall_run_'));
+    if (!clip) return null;
+    const right = stickRightFor(engine, c, faceOf(yaw));
+    const lateral = n.dot(right);
+    return { clip, lateral, side: lateral < 0 ? 'r' : 'l' };
+  }
+
+  let clean = 0, agree = 0, disagree = 0, degenerate = 0, sawL = 0, sawR = 0;
+  for (const yaw of [0, Math.PI / 4, Math.PI / 2, Math.PI, -Math.PI / 2, -2.2]) {
+    for (const [nx, nz] of [[1, 0], [-1, 0], [0, 1], [0, -1], [0.7, 0.7], [-0.7, 0.7]]) {
+      const r = sideFor(yaw, nx, nz);
+      if (!r) continue;
+      if (Math.abs(r.lateral) < 0.30) { degenerate++; continue; }
+      clean++;
+      if (r.clip.endsWith('l')) sawL++; else sawR++;
+      if (r.clip.endsWith(r.side)) agree++; else disagree++;
+    }
+  }
+  console.log(`\n[wallRun] ${clean} non-degenerate approaches (+${degenerate} head-on, excluded)`);
+  console.log(`[wallRun]   clip matches the side the wall is really on: ${agree}   mismatched: ${disagree}`);
+
+  /* The lever: the sweep must be capable of producing BOTH clips, or "always mismatched" is just
+     "always the same clip" wearing a costume. */
+  assert.ok(clean >= 20, `only ${clean} non-degenerate approaches — the sweep is too thin to conclude`);
+  assert.ok(sawL > 0 && sawR > 0, `the sweep only ever produced one clip (l ${sawL}, r ${sawR}) — no side is being chosen`);
+  assert.equal(agree, 0,
+    `${agree} of ${clean} wall runs now play the clip for the side the wall is actually on. If ` +
+    'Moveset.js:405 was corrected, that is the fix landing — invert this arm to assert ' +
+    'agree === clean and drop the disagree check.');
+  assert.equal(disagree, clean, `${disagree} of ${clean} mismatched — the inversion is no longer uniform`);
+
+  /* And the same thing in a DRIVEN run, because a forced entry sets `c.wall` by hand and a
+     reviewer is entitled to ask whether the real `probeWall` produces a different normal. The
+     approach finder is script F's from the reachability arm: standable ground 3–7 m out from a
+     wall rec, run-up within 0.25 m of level, run AND jump (wallRun is an air move). */
+  const standAt = (x, z) => {
+    const g = collision.groundCheck(V(x, 90, z), TUNE.radius, 300);
+    if (!g?.hit) return null;
+    hardReset(engine, c, V(x, g.y + 0.05, z));
+    for (let i = 0; i < 8; i++) {
+      engine.input.beginFrame(DT); engine.input.move.x = 0; engine.input.move.y = 0;
+      engine.time = i * DT; c.update(DT, i * DT);
+    }
+    return (c.grounded && Math.abs(c.position.y - g.y) < 1.5) ? { x, y: c.position.y, z } : null;
+  };
+  let approach = null;
+  for (const w of collision.recs.filter((r) => r.tag === 'wall')) {
+    const p = w.mesh.position;
+    for (let dx = -9; dx <= 9 && !approach; dx += 1.5) for (let dz = -9; dz <= 9 && !approach; dz += 1.5) {
+      const s = standAt(p.x + dx, p.z + dz);
+      if (!s) continue;
+      for (const [ux, uz] of [[1, 0], [-1, 0], [0, 1], [0, -1], [0.707, 0.707], [-0.707, 0.707], [0.707, -0.707], [-0.707, -0.707]]) {
+        const o = V(s.x, s.y + TUNE.height * 0.55, s.z);
+        const hit = collision.raycast(o, V(ux, 0, uz), 7.5);
+        if (!hit?.hit || hit.tag !== 'wall' || Math.abs(hit.normal.y) > TUNE.wallNormalMax) continue;
+        if (hit.distance < 3.0) continue;
+        let flat = true;
+        for (let t = 0.5; t < hit.distance - 0.5; t += 0.5) {
+          const q = standAt(s.x + ux * t, s.z + uz * t);
+          if (!q || Math.abs(q.y - s.y) > 0.25) { flat = false; break; }
+        }
+        if (flat) { approach = { s, ux, uz, d: hit.distance }; break; }
+      }
+    }
+    if (approach) break;
+  }
+  assert.ok(approach, 'no flat run-up to a wall in the level — the driven half cannot run');
+  const { s } = approach;
+  /* The run-up is swept through a fan of headings, because a HEAD-ON approach cannot decide this
+     and script F's is head-on. Sly turns to face his travel, so arriving perpendicular puts the
+     wall dead ahead and `n · right` comes out 0.000 — measured, not assumed: the 0° run below
+     reaches `wallRun` and reports exactly that. A wall run at a real angle to the face is the
+     only one with a side, and the level's own approach has one at 55°. */
+  const fan = [55, -55, 35, -35, 70, -70, 25, -25, 0];
+  const driven = [];
+  for (const deg of fan) {
+    const th = deg * Math.PI / 180;
+    const ux = approach.ux * Math.cos(th) - approach.uz * Math.sin(th);
+    const uz = approach.ux * Math.sin(th) + approach.uz * Math.cos(th);
+    let hit = null;
+    for (const jf of [10, 14, 18, 22, 26, 30]) {
+      aimCamera(engine, V(ux, 0, uz));                       // camera behind him, along the run-up
+      hardReset(engine, c, V(s.x, s.y + 0.05, s.z), Math.atan2(ux, uz));
+      const clips = [];
+      const realOneShot = c.oneShot.bind(c);
+      c.oneShot = (name, ...a) => { clips.push({ name, yaw: c.yaw, nx: c.wall.nx, nz: c.wall.nz }); return realOneShot(name, ...a); };
+      for (let i = 0; i < 160; i++) {
+        engine.input.beginFrame(DT);
+        engine.input.move.x = 0; engine.input.move.y = 1;    // straight ahead, camera-relative
+        if (i >= jf && i < jf + 5) engine.input.hold('jump'); else engine.input.let_go('jump');
+        engine.time = i * DT; c.update(DT, i * DT);
+        if (c.stateName === 'wallRun') break;
+      }
+      c.oneShot = realOneShot;
+      hit = clips.find((x) => String(x.name).startsWith('wall_run_'));
+      if (hit) break;
+    }
+    if (!hit) continue;
+    const n = V(hit.nx, 0, hit.nz).normalize();
+    const lateral = n.dot(stickRightFor(engine, c, faceOf(hit.yaw)));
+    driven.push({ deg, clip: hit.name, lateral, side: lateral < 0 ? 'r' : 'l' });
+  }
+  for (const d of driven) {
+    console.log(`[wallRun] driven at ${String(d.deg).padStart(4)}° from (${s.x.toFixed(1)}, ${s.z.toFixed(1)}): ` +
+                `n·right ${d.lateral.toFixed(3)} -> wall on his ${d.side.toUpperCase()}, clip ${d.clip}` +
+                `${Math.abs(d.lateral) < 0.30 ? '   (head-on: no side to be wrong about)' : ''}`);
+  }
+  const decisive = driven.filter((d) => Math.abs(d.lateral) >= 0.30);
+  assert.ok(driven.length > 0, 'no heading in the fan reached wallRun — the driven half found nothing');
+  assert.ok(decisive.length > 0,
+    'every driven wall run arrived head-on, so none of them has a side — the driven half cannot decide this');
+  for (const d of decisive) {
+    assert.ok(!d.clip.endsWith(d.side),
+      `the driven wall run at ${d.deg}° now plays ${d.clip} for a wall on his ${d.side.toUpperCase()} — ` +
+      'the fix has landed in a real approach; invert this check too');
+  }
+});
+
+/* ====================================================================== */
+/* 20 — the coverage census: what has anything in tests/ ever ENTERED?     */
+/* ====================================================================== */
+
+test('census: which of the 32 states any test in this project has ever entered', async () => {
+  /* Arm 8 asks whether a state can be LEFT. Arm 11 asks whether its `canEnter` is satisfiable.
+   * Arm 13 asks what it READS. None of them answers the question a coverage owner would ask
+   * first: **has anything in `tests/` ever put Sly in this state at all, and did the machine
+   * choose it or did a test reach in and set it?**
+   *
+   * ── Method ──────────────────────────────────────────────────────────────────────────────────
+   * `tests/_smtrace.mjs` wraps `StateMachine.prototype.set` — the single funnel every entry goes
+   * through, on both branches of `update()` and for every external caller — and buckets each
+   * entry by whether the machine was mid-resolution:
+   *
+   *     driven  the machine's own poll, or a state's returned transition, chose it
+   *     forced  something outside called `set`: a test's `sm.set`, or `Controller.teleport`
+   *
+   * The distinction is the whole census. Arm 8 deliberately FORCES all 32 states, so a flat "was
+   * it ever entered" answers "yes, 32 of 32" and measures nothing.
+   *
+   * This file traces itself in-process (the import at the top of this file installs the wrapper
+   * before any Controller exists), and spawns one child `node --test` under the same module as a
+   * preload for every OTHER test file that could possibly hold a state machine.
+   *
+   * ── Why the file list is sound, and how it stays sound ──────────────────────────────────────
+   * A test file that never loads `src/player/States.js` cannot construct a `StateMachine`, so it
+   * cannot enter a state. The candidate list is therefore the transitive-import closure of each
+   * `tests/*.test.mjs`, computed here at run time — **not written down** — so a file another lane
+   * adds tomorrow is covered the day it lands. Today that is 5 of 64 files.
+   *
+   * ── What this CANNOT see, stated the way arm 13's lower bound is ────────────────────────────
+   * · "driven" means the machine chose the transition. It does NOT mean the run reached that
+   *   state from spawn under plain input — many driven entries here follow a forced `sm.set` two
+   *   frames earlier. Arm 12 is the arm that answers the from-spawn question, and for a shorter
+   *   list of states.
+   * · Attribution is per FILE, not per arm. "Only traversal drives it" does not distinguish one
+   *   arm from twenty.
+   * · If another lane's test file is red and dies early, its trace is short and this census
+   *   over-reports. The child's own pass/fail is printed for exactly that reason. */
+  const here = path.dirname(fileURLToPath(import.meta.url));
+  const MINE = 'traversal.test.mjs';
+
+  /* ---- 1. the candidate set, from the import graph ---- */
+  const closure = (file, seen = new Set()) => {
+    if (seen.has(file)) return seen;
+    seen.add(file);
+    let text = '';
+    try { text = readFileSync(file, 'utf8'); } catch { return seen; }
+    const re = /(?:from|import)\s*\(?\s*['"](\.[^'"]+)['"]/g;
+    let m;
+    while ((m = re.exec(text))) {
+      const p = path.resolve(path.dirname(file), m[1]);
+      if (existsSync(p)) closure(p, seen);
+    }
+    return seen;
+  };
+  const allTests = readdirSync(here).filter((f) => f.endsWith('.test.mjs')).sort();
+  const candidates = allTests.filter((f) =>
+    [...closure(path.join(here, f))].some((p) => p.endsWith(`${path.sep}player${path.sep}States.js`)));
+  console.log(`\n[entered] ${candidates.length} of ${allTests.length} test files can hold a state machine: ${candidates.join(', ')}`);
+  assert.ok(candidates.includes(MINE), 'the import scanner cannot even see this file — it is not sound');
+
+  /* ---- 2. the child run, plus the canary that proves the channel works ---- */
+  const dir = mkdtempSync(path.join(tmpdir(), 'smtrace-'));
+  const others = candidates.filter((f) => f !== MINE).map((f) => path.join(here, f));
+  /* `NODE_TEST_CONTEXT` must be stripped. This arm already runs inside a `node --test` child, so
+     it is set, and a grandchild that inherits it switches its reporter to the v8-serialised
+     stream a parent runner expects — the run still happens, but `# pass N` never appears and the
+     tally silently reads −1. Cost half an hour; it is the same shape as everything else in this
+     file's header — a correct call against a world that was not the one intended. */
+  const env = { ...process.env, SM_TRACE_DIR: dir };
+  delete env.NODE_TEST_CONTEXT;
+  const child = spawnSync(process.execPath,
+    ['--test', '--import', pathToFileURL(path.join(here, '_smtrace.mjs')).href,
+      path.join(here, '_smcanary.mjs'), ...others],
+    { cwd: path.dirname(here), env, encoding: 'utf8', timeout: 600000 });
+  const tally = (s) => Number((child.stdout || '').match(new RegExp(`^# ${s} (\\d+)$`, 'm'))?.[1] ?? -1);
+  console.log(`[entered] child run: ${tally('pass')} pass, ${tally('fail')} fail over ${others.length + 1} files`);
+
+  const perFile = new Map();
+  for (const f of readdirSync(dir)) {
+    const j = JSON.parse(readFileSync(path.join(dir, f), 'utf8'));
+    perFile.set(j.file, j.states);
+  }
+  rmSync(dir, { recursive: true, force: true });
+
+  /* CALIBRATION, and it must fire. If the preload did not attach, or the trace files were not
+     written, or they were written and not parsed, every state reads "never entered" and this arm
+     reports a spectacular finding that is entirely an instrument failure. The canary drives a
+     private machine into one state by `set` and another by `update`, and never touches a third. */
+  const can = perFile.get('_smcanary.mjs');
+  assert.ok(can, 'the canary produced no trace at all — the census channel is broken, not the coverage');
+  assert.ok(can.canary_forced?.forced === 1 && !can.canary_forced?.driven,
+    `canary_forced came back as ${JSON.stringify(can.canary_forced)} — the forced bucket is wrong`);
+  assert.ok(can.canary_driven?.driven === 1 && !can.canary_driven?.forced,
+    `canary_driven came back as ${JSON.stringify(can.canary_driven)} — the driven bucket is wrong`);
+  assert.ok(!can.canary_absent, 'the recorder invented an entry for a state the canary never entered');
+  for (const f of others) {
+    assert.ok(perFile.has(path.basename(f)), `${path.basename(f)} produced no trace — it did not run`);
+  }
+
+  /* ---- 3. merge, including this file's own in-process record ---- */
+  perFile.set(MINE, Object.fromEntries([...SM_RECORD].map(([k, v]) =>
+    [k, { driven: v.driven, forced: v.forced, dfrom: [...v.dfrom] }])));
+  perFile.delete('_smcanary.mjs');
+
+  const agg = new Map();
+  for (const [file, states] of perFile) {
+    for (const [name, v] of Object.entries(states)) {
+      let r = agg.get(name);
+      if (!r) { r = { driven: 0, forced: 0, files: new Set() }; agg.set(name, r); }
+      r.driven += v.driven; r.forced += v.forced;
+      if (v.driven > 0) r.files.add(file.replace('.test.mjs', ''));
+    }
+  }
+  /* The state list is read off a real machine, not written down, so a state a future lane adds
+     is censused the day it lands. Built last so its own `set('idle')` cannot skew the tally it
+     is about to print — it is one forced entry of `idle`, which is already in the thousands. */
+  const { c: c0 } = await makeSim();
+  const ordered = c0.sm.ordered.map((s) => s.name);
+  console.log('\n[entered] state          driven   forced   driven by');
+  for (const n of ordered) {
+    const r = agg.get(n) || { driven: 0, forced: 0, files: new Set() };
+    console.log(`  ${n.padEnd(14)} ${String(r.driven).padStart(7)} ${String(r.forced).padStart(8)}   ${[...r.files].join(', ') || '— NOTHING'}`);
+  }
+  const never = ordered.filter((n) => !(agg.get(n)?.driven > 0));
+  const onlyMine = ordered.filter((n) => { const f = agg.get(n)?.files; return f && f.size === 1 && f.has('traversal'); });
+  const elsewhere = ordered.filter((n) => { const f = agg.get(n)?.files; return f && [...f].some((x) => x !== 'traversal'); });
+  console.log(`\n[entered] never driven by anything:  ${never.join(', ') || '(none — all 32 are driven somewhere)'}`);
+  console.log(`[entered] driven by any other file:  ${elsewhere.join(', ') || '(none)'}`);
+  console.log(`[entered] delete this ONE file and ${onlyMine.length}/${ordered.length} states go dark:`);
+  console.log(`            ${onlyMine.join(', ')}`);
+
+  /* THE FINDING, and it is not the one expected. Every state is driven somewhere — but delete
+     this one file and the project's 63 other test files drive 6 of 32 between them, including
+     none of the attach states, none of the wall tech and neither crouch state. The moves a
+     player uses most are covered by exactly one file, and it is an instrument file. */
+  assert.ok(ordered.length >= 32, `only ${ordered.length} states in the machine — the census lost some`);
+  assert.deepEqual(never, [],
+    `${never.length} states are entered by nothing in tests/: ${never.join(', ')}. That is a real ` +
+    'coverage hole; add a driven route or record why there cannot be one.');
+  assert.ok(elsewhere.length <= 8,
+    `${elsewhere.length} states are now driven outside traversal.test.mjs (was 6) — coverage has ` +
+    `spread, which is good: update this bound. ${elsewhere.join(', ')}`);
+  assert.ok(onlyMine.length >= 20,
+    `only ${onlyMine.length} states are traversal-only — if that dropped, other lanes have started ` +
+    'driving the moveset and this arm should say so rather than assert the old concentration');
 });
