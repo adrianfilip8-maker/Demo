@@ -417,3 +417,128 @@ test('D3 CALIBRATION: a grove of clones IS caught by the same statistic', () => 
   assert.ok(cv < 0.12, `a uniform grove scored CV ${cv.toFixed(4)}, which D3's bar would ACCEPT`);
   assert.ok(real >= 0.12, 'the shipped grove should be on the passing side of the same bar');
 });
+
+/* ============================ 5. what TERRAIN buries ============================
+   These arms are not about Vegetation or Water. They are here because this is the file that
+   boots a real `Terrain`, and the defect they measure is a TERRAIN-against-ARCHITECTURE one that
+   no instrument in the project could see: `EgyptLevel` authors against y = 0 — "everything in
+   this file is authored against y = 0, which is right inside the stylobate" — and TERRAIN lays
+   sand over the world afterwards. Nothing compares the two. */
+
+const { Architecture } = await import('../src/world/Architecture.js');
+const ARCH_ENGINE = {
+  quality: 'high', scene: new THREE.Scene(), debug: {}, stats: {}, warn: () => {},
+  get: () => null, has: () => false, on: () => () => {}, emit: () => {},
+  registerCollider: (mesh, opts) => ARCH_REG.push({ mesh, opts }),
+};
+const ARCH_REG = [];
+const ARCH = new Architecture(ARCH_ENGINE);
+await ARCH.init();
+for (const r of ARCH_REG) r.mesh.updateMatrixWorld(true);
+
+test('T1: the vent mouth is buried under the dune, and its height is not what makes it so', () => {
+  /* THE DIAGNOSIS THIS ARM WAS WRITTEN TO CORRECT. The mouth proxy at (-21, -0.2, -49.4) is
+     `BoxGeometry(2.2, 0.6, 1.9)` while `Controller.TUNE.crawlHeight` is 0.64, and the obvious
+     reading is that the aperture is 0.04 m too short for the capsule meant to pass through it.
+     Measured, that reading is wrong twice over:
+
+       1. `vent` is a VOLUME tag. `Collision.overlap` tests volume recs as boxes and never as
+          triangles, and `Controller.inVent()` is a proximity test on the capsule BASE POINT
+          against a `radius + 0.05` = 0.39 m sphere. **No capsule ever has to fit through this
+          box.** Its height gates `Crawl.canEnter`, not passage, so comparing it to a capsule
+          height is comparing two things that never meet. A ceiling probe over the whole mouth
+          footprint reads OPEN — there is no solid aperture here at all.
+
+       2. The mouth is 0.761 m UNDER the walkable surface. The column at (-21, -49.4) is
+          sand 0.86 / hall paving 0.00, and the mouth's top face is at y 0.10. Raising it
+          0.6 -> 1.2 lifts the top to 0.40 — still 0.46 m below the sand. The proposed fix does
+          not reach, and would have looked like it landed because the arm that checks this did
+          not exist.
+
+     What actually makes `inVent()` true today is the NEXT segment down, the 1.2 m sloped run at
+     z -54.5, whose top corner reaches y 0.59 — inside the 0.39 m sphere of a player standing on
+     0.86 m sand. It fires in a 0.5 m band at z -49.50..-49.75 and nowhere else. The mouth proxy
+     is inert: it contributes to nothing, at any height under 0.97 m. */
+  const vents = ARCH_REG.filter((r) => r.opts?.tag === 'vent')
+    .map((r) => ({ r, b: new THREE.Box3().setFromObject(r.mesh), h: r.mesh.geometry.parameters.height }));
+  assert.ok(vents.length > 0, 'inspected 0 vent proxies — Architecture did not boot');
+  assert.equal(vents.length, 4, 'the vent chain is no longer four segments');
+
+  const mouth = vents.find((v) => Math.abs(v.r.mesh.position.z + 49.4) < 0.01);
+  assert.ok(mouth, 'the vent mouth is no longer at z -49.4');
+  const sand = T.heightAt(mouth.r.mesh.position.x, mouth.r.mesh.position.z);
+  const gap = sand - mouth.b.max.y;
+  console.log(`  T1: mouth top y ${mouth.b.max.y.toFixed(2)} (h ${mouth.h}) · sand ${sand.toFixed(3)} · `
+    + `buried by ${gap.toFixed(3)} m · a 1.2 m mouth would still be ${(gap - 0.3).toFixed(3)} m under`);
+  assert.ok(gap > 0,
+    'the vent mouth now breaks the sand surface. That is the fix this arm was written to ask for — '
+    + 'retire it and pin the new geometry instead of leaving it asserting a defect that is gone');
+  assert.ok(gap > 0.3,
+    `the mouth is only ${gap.toFixed(3)} m under the sand, so raising it to match its 1.2 m siblings `
+    + 'would now surface it and that IS the cheap fix — this arm exists to say when that becomes true');
+
+  /* The number a height-only fix would have to reach, derived under the convention the CODE uses.
+     `A.proxy(geo, opts, { y })` fixes the box CENTRE, so growing the height grows it downward as
+     much as upward — half of every metre added is spent digging. The first version of this line
+     derived 0.97 m by holding the box FLOOR fixed, which is not what the call does, and it made a
+     1.2 m mouth look like it would clear. It does not: centre -0.2 plus half of 1.2 puts the top
+     at 0.40, and the threshold is sand - 0.39 = 0.47. It misses by 0.07 m — which is exactly the
+     kind of near-miss that reads as a fix in a diff and changes nothing in the game. */
+  const centreY = mouth.r.mesh.position.y;
+  const threshold = sand - 0.39;
+  const need = 2 * (threshold - centreY);
+  console.log(`  T1: centre held at y ${centreY} · top must reach ${threshold.toFixed(2)} · `
+    + `so a height-only fix needs >= ${need.toFixed(2)} m, and 1.2 m tops out at `
+    + `${(centreY + 0.6).toFixed(2)} — short by ${(threshold - centreY - 0.6).toFixed(2)} m`);
+  assert.ok(need > 1.2,
+    `a ${need.toFixed(2)} m mouth would now reach, so matching the 1.2 m siblings has become a real fix `
+    + 'and the recommendation recorded here is out of date');
+  assert.ok(centreY + 0.6 < threshold,
+    'a 1.2 m mouth now clears the inVent() threshold, so the cheap sibling-matching fix works and '
+    + 'this arm should be saying so instead of warning against it');
+
+  /* and the segment that is actually carrying the entrance */
+  const slope = vents.find((v) => Math.abs(v.r.mesh.position.z + 54.5) < 0.01);
+  assert.ok(slope, 'the sloped vent run is no longer at z -54.5');
+  assert.ok(slope.b.max.y > sand - 0.39,
+    `the sloped run's top is at ${slope.b.max.y.toFixed(2)} against a ${(sand - 0.39).toFixed(2)} m threshold — `
+    + 'if it has dropped below, NOTHING makes inVent() true at the entrance and the crawl is unreachable');
+});
+
+test('T2: the drawn portal frames are 62 % under sand — the burial is the whole assembly', () => {
+  /* The mouth proxy being low could be a proxy bug. The frames beside it exist "so the crawl reads
+     as built, not as a hole in the maths", they are authored from y = 0, and if they are under the
+     same sand then the authored intent was floor level and TERRAIN covered the lot. That is the
+     difference between a wrong number and a module boundary nobody measured across. */
+  const box = new THREE.Box3(new THREE.Vector3(-22.5, -1, -50.6), new THREE.Vector3(-19.4, 2.0, -48.4));
+  let below = 0, above = 0;
+  const names = {};
+  ARCH.root.updateMatrixWorld(true);
+  ARCH.root.traverse((o) => {
+    if (!o.isMesh || o.visible === false) return;
+    const g = o.geometry;
+    if (!g?.attributes?.position) return;
+    if (!g.boundingBox) g.computeBoundingBox();
+    if (!o.isInstancedMesh && !g.boundingBox.clone().applyMatrix4(o.matrixWorld).intersectsBox(box)) return;
+    const pos = g.attributes.position, v = new THREE.Vector3();
+    for (let i = 0; i < pos.count; i++) {
+      v.fromBufferAttribute(pos, i).applyMatrix4(o.matrixWorld);
+      if (!box.containsPoint(v)) continue;
+      names[o.name] = (names[o.name] || 0) + 1;
+      if (v.y <= T.heightAt(v.x, v.z)) below++; else above++;
+    }
+  });
+  const frac = below / (below + above);
+  console.log(`  T2: ${below + above} drawn vertices in the mouth's box (${Object.keys(names).join(', ')}) — `
+    + `${(100 * frac).toFixed(1)} % under sand`);
+  assert.ok(below + above > 100, 'inspected too few drawn vertices to say anything');
+  assert.ok(frac > 0.4,
+    `only ${(100 * frac).toFixed(1)} % of the mouth's drawn geometry is under sand. If the dune has been `
+    + 'cut back, this defect is fixed and both T1 and T2 should be retired rather than relaxed');
+  /* and the dune never lets go of it: there is no z along the axis where the sand reaches y = 0 */
+  let clear = null;
+  for (let z = -46; z >= -60; z -= 0.25) if (clear === null && T.heightAt(-21, z) <= 0) clear = z;
+  console.log(`  T2: sand along x = -21 first reaches y <= 0 at z = ${clear ?? 'nowhere in -46..-60'}`);
+  assert.equal(clear, null,
+    `the dune now drops to the hall floor at z ${clear}, so the mouth has daylight and this arm is stale`);
+});
