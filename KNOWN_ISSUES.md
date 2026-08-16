@@ -29556,3 +29556,97 @@ guard.
 And the ladder's *played-but-inaudible* hole is closed with isolated per-rung renders — suspicious
 0.084, searching 0.064, chase 0.170. The ledger arm closed "the window was loud"; this closes "the
 cue reached a voice that makes no sound". Both halves now have a bar.
+
+## §395 — The module nothing could measure could be measured all along
+
+Round 12 of the world lane, taking §393's own ranking from the top. §393.2 closed with a hard
+claim: `KayKit.js:180` is `new THREE.TextureLoader().loadAsync(...)`, "which needs `document`",
+therefore **"KayKit cannot be booted headless at all."** That was offered as the explanation for
+why the file had accumulated a false comment — nothing could check it.
+
+**The explanation was itself an unchecked claim, and it is false.** KayKit now boots in plain Node,
+with no source change, no DOM, and no network. `tests/_kaykitboot.mjs` is the seam and
+`tests/kaykit.test.mjs` is the first instrument that has ever exercised the module: 15 arms.
+
+### §395.1 The seam was in three's own loaders, one line above the line that was cited
+
+Both loaders consult `Cache` *before* they reach for the DOM or the network:
+
+```
+ImageLoader.js:53    const cached = Cache.get( `image:${url}` );   // returns here
+ImageLoader.js:86    const image = createElementNS( 'img' );       // ...never reaches here
+FileLoader.js:86     const cached = Cache.get( `file:${url}` );
+FileLoader.js:141    fetch( req )
+```
+
+A primed `THREE.Cache` short-circuits both. Verified with `typeof document === 'undefined'`
+asserted inside the suite. One global is still needed and it is not the DOM: `GLTFLoader.js:3301`
+reads `self.URL` unconditionally for every glTF image, and `globalThis.self = globalThis` settles
+it — the same line `tools/_domshim.mjs` has shipped for other loaders since before this round.
+
+**The reading is not "somebody was careless".** §393.2's claim was true of the API as documented and
+false of the API as implemented, and the distance between those two is one line of vendor source.
+The rule §393.3 already states — *a harness missing a module returns plausible numbers* — gains a
+companion: **"this cannot be measured" is a claim with the same shelf life as any other, and it is
+the one claim that, believed, guarantees nothing downstream of it gets checked.** It bought a false
+comment eleven rounds of cover.
+
+### §395.2 What the booted module actually registers
+
+36 placements from 11 models, 0 failed. **29 colliders, every one `misc` / `wood`** — 29 because
+`SOLID` covers 29 of the 36 rows, derived from the table rather than counted by hand. The scene
+group is two visible draws (`kaykit:props` and the `world.decals.kaykit` batch), 29 invisible
+collider boxes, and `stats.hulls` 0.
+
+Overlap, measured on oriented boxes rather than world AABBs: **no KayKit collider overlaps another**
+(closest approach 0.353 m) and **none intrudes on a climbable `pole`**. Both negatives are real
+results and one of them nearly was not. The AABB screen reports two overlaps — a crate against an
+aisle column's `pole` proxy at 4.5x volume ratio, which would have been a route silently taken away
+— and **both are artifacts**: the world-AABB of a yaw-rotated 2.09 x 2.25 m box overstates it by up
+to 0.48 m per side. A separating axis was found for both pairs, which is proof. That demonstration
+is kept as an arm rather than a note, because the wrong version of it was a finding for an hour.
+
+### §395.3 Five more comment claims that the code does not keep — in the same file as §393.1
+
+All five corrected in place, with the measurement, and all five now re-derived by an arm that reads
+the number **out of the comment text** and fails if the comment and the world disagree:
+
+| claim | measured |
+|---|---|
+| "and **eight** placed FOR THE CAMERAS" | the block holds **six**; six shipped, two were dropped, the count never came back down |
+| "both chests **0.355 m** in z" | **0.0229 m**. 0.355 is the union of raw accessor bounds *without* the node transform — `chest_lid` carries `translation:[0,0.5,−0.5648832]` — and the loader applies `matrixWorld` before measuring |
+| "`courtyard` has all thirty in its cone at **35-51 m**" | all thirty ✓, at **34.6–116.8 m**. 35–51 m is the eleven colonnade props alone; count and range described different sets in one sentence |
+| "appears in **no character frustum at all**" | it is in `sly-profile` at **8.17 m**, 4 of 8 corners in NDC, 9.0 % of frame width and 60.5 % of frame height, unoccluded |
+| "the whole set costs one draw plus its **ink shell**" | there is no ink shell; `_maybeHull` is off by default and the second draw is the contact decals |
+
+Plus a false premise carrying a true conclusion, which is §393.1's exact shape: "Every x below is
+outboard of the aisle columns" — **16 of 36 have |x| ≤ 16.5** — while "nothing lands in a column"
+holds, at 4.27 m clearance.
+
+The `sly-profile` one is worth separating out. The *decision* it justifies is sound: that placement
+is 36.3° off-axis at the frame edge, against the 10–11° that got both rejected candidates thrown
+out for sitting behind Sly. **The decision survived; the reason given for it did not.** That is the
+third instance in one file of a correct call defended by a claim nobody could check.
+
+### §395.4 The clone family, recorded and deliberately not sealed
+
+`crates_stacked` x9, `barrel_small` x6, `barrel_large` x5, and `_buildProps` composes every
+placement at `new THREE.Vector3(1, 1, 1)` — repeats differ in **yaw alone**, same geometry, same
+size. `courtyard` and `dunes` each see all nine crates; `hero` six; `night` and `combat` five.
+`PREREG-basketvary`'s bar for the same defect in rope coils is **two**.
+
+This is pinned, not enforced, and the reason is a rule rather than a dodge: **a seal that fails on
+HEAD is not a seal, it is a broken build.** Whether nine identical crates at 35–117 m read as
+autopilot is a look question and no frame has been rendered here. What the pin buys is that the
+number cannot move without somebody saying so. It is the `ropeCoil` complaint, one file over,
+un-adjudicated.
+
+### §395.5 Held, with the reason
+
+**Four KayKit colliders penetrate Architecture `wall` proxies by 0.097–1.009 m**, and three of the
+four have their own mesh vertices inside a wall proxy's AABB by 0.65–0.99 m. This is reported and
+**not** called a defect. Two reasons, both disqualifying on their own: `proxy:wall` is general
+`BufferGeometry` and may be non-convex, so the face-normal SAT that is exact for the boxes and
+cylinders above is only conservative for it; and whether a store crate should be flush against a
+colonnade wall is a look question that needs a frame. A held finding with a stated reason beats a
+claimed one — which is the whole lesson of §393 and now of §394.

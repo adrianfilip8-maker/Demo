@@ -20,8 +20,14 @@
  *
  * ONE DRAW CALL. Every prop shares the single 1024² atlas, so all placements are baked into one
  * merged geometry rather than instanced or added as separate meshes. That is the same strategy
- * `Architecture.js` uses for its merge buckets and the reason the whole set costs one draw plus
- * its ink shell, against §1's 250-call budget that ARCHITECTURE has already mostly spent.
+ * `Architecture.js` uses for its merge buckets, against §1's 250-call budget that ARCHITECTURE
+ * has already mostly spent.
+ *
+ * This used to end "…the reason the whole set costs one draw plus its ink shell". There is no ink
+ * shell. Measured on the booted module (`tests/kaykit.test.mjs`): the group holds TWO visible
+ * meshes — `kaykit:props` and the `world.decals.kaykit` contact batch — plus 29 invisible collider
+ * boxes, and `stats.hulls` is 0 because `_maybeHull` is off by default (its own docblock, below,
+ * says so and says why). The second draw is the contact decals, which `init()` already calls out.
  *
  * The models load from `public/` rather than through `src/`: each `.gltf` references its `.bin`
  * and the atlas by RELATIVE uri, and vite hashes anything imported through `src/`, which would
@@ -59,8 +65,16 @@ const GAP = 1.0;
  * Floors, from the §8.1 table: courtyard paving y = 0 (x ±26, z −16…34, holes only at the
  * obelisk terrace z 2.2…19.8, the colossi plinths z 21.4…28.6 and the pylon feet z 30.6…34);
  * hypostyle floor y = 0 with nave columns at z −22/−30/−38/−46 and aisle columns at x ±16.5,
- * z −26/−38; tomb paving y = −12 over x ±14, z −78…−59. Every x below is outboard of the aisle
- * columns and inboard of the walls, so nothing lands in a column or on a route.
+ * z −26/−38; tomb paving y = −12 over x ±14, z −78…−59.
+ *
+ * This used to end "Every x below is outboard of the aisle columns and inboard of the walls, so
+ * nothing lands in a column or on a route." The conclusion is true and the premise is not.
+ * Measured over the shipped table (`tests/kaykit.test.mjs`): **16 of the 36 placements have
+ * |x| ≤ 16.5** — the ten tomb entries, which are in a different room where the aisle grid does not
+ * apply, and the six camera entries at the bottom, which are deliberately inboard and say so.
+ * What survives is the part worth keeping: nothing lands in a column. The closest any placement
+ * comes to a column CENTRE is 4.27 m (`barrel_large` at (−6.5, −34), against the nave column at
+ * (−8, −30)), which clears the 1.4 m footprint bar the camera block below grid-searched against.
  */
 const PLACEMENTS = [
   /* ---- west colonnade: the store, where the processional way is not ---- */
@@ -101,13 +115,31 @@ const PLACEMENTS = [
   ['barrel_small',             -8.5, -12, -65.0,  0.70],
   ['crates_stacked',            8.6, -12, -64.4, -1.30],
 
-  /* ---- and eight placed FOR THE CAMERAS, because the thirty above were placed for the player ----
+  /* ---- and six placed FOR THE CAMERAS, because the thirty above were placed for the player ----
    *
    * The first capture of this set showed the tomb hoard reading beautifully and the courtyard and
    * hall showing nothing at all. `tools/shotsee.mjs` says why: of the thirty above, `interior` is
-   * the only shot with a prop inside 25 m. `temple` has ONE in its cone, at 35 m, because it looks
-   * down the nave while the stores are against the aisle walls; `courtyard` has all thirty in its
-   * cone at 35-51 m, behind the colossi.
+   * far and away the nearest shot, at 8.09 m. `temple` has ONE in its cone, at 35.2 m, because it
+   * looks down the nave while the stores are against the aisle walls; `courtyard` has all thirty
+   * in its cone, behind the colossi.
+   *
+   * ── three numbers in this banner were wrong. They are corrected above, and recorded here ────
+   * Measured by `tests/kaykit.test.mjs`, the first instrument that has ever booted this module —
+   * KNOWN_ISSUES §393.2 recorded that none could, and that turned out to be untrue.
+   *
+   *   "eight placed FOR THE CAMERAS"    the block below holds SIX. Six shipped; two were dropped,
+   *                                     and they are the two named further down. The count was
+   *                                     never brought back down after they went.
+   *   "all thirty ... at 35-51 m"       all thirty ARE in courtyard's cone — that half is exact —
+   *                                     but at 34.6–116.8 m. 35–51 m is the range of the ELEVEN
+   *                                     colonnade props alone (34.6–50.9 m); the hypostyle stores
+   *                                     reach 88.7 m and the tomb hoard 107.5–116.8 m. One
+   *                                     sentence, and its count and its range described different
+   *                                     sets.
+   *   "`interior` is the only shot      `sly-key`'s nearest is 24.99 m. That is 13 mm inside the
+   *    with a prop inside 25 m"         bar, i.e. a rounding coin-flip rather than a finding, so
+   *                                     the sentence now states the gap it exists to convey:
+   *                                     interior at 8.09 m, then 16 m of nothing.
    *
    * Both aims are legitimate — a follow camera passes within a couple of metres of the colonnade
    * stores — but only one of them had been considered. `Props.js` already settled the precedent in
@@ -121,7 +153,7 @@ const PLACEMENTS = [
   ['crates_stacked',            5.5, 0, -34.0,  0.30],   // temple    15.2 m
   ['barrel_large',             -6.5, 0, -34.0, -0.60],   // temple    18.1 m
   ['barrel_small_stack',      -12.5, 0, -33.5,  1.10],   // temple    21.7 m
-  ['crates_stacked',           -5.5, 0,  30.5, -0.40],   // courtyard 11.8 m, seen by NO character shot
+  ['crates_stacked',           -5.5, 0,  30.5, -0.40],   // courtyard 11.8 m, sly-profile edge — see below
   /* THE COURTYARD GETS EXACTLY ONE NEAR PROP, and the reason is structural rather than taste.
    *
    * All six `sly-*` cameras sit 8.7-13.5 m from the courtyard camera and all aim at spawn, so
@@ -137,9 +169,17 @@ const PLACEMENTS = [
    *               job is reading the cane arc. Every east-side alternative tested lands in
    *               `sly-arm` at 7-10 m too.
    *
-   * The crates above are the one position that reads near in `courtyard` and appears in no
-   * character frustum at all. The resulting east/west asymmetry is not a defect — mirrored pairs
-   * are a complaint this level has already had.
+   * The crates above are the one position that reads near in `courtyard` while staying out of the
+   * close-up frames both dropped candidates fell into. The resulting east/west asymmetry is not a
+   * defect — mirrored pairs are a complaint this level has already had.
+   *
+   * NOT "appears in no character frustum at all", which is what this used to say. Measured at 16:9
+   * on the placement's own eight box corners (`tests/kaykit.test.mjs`): the crate IS in
+   * `sly-profile`, at 8.17 m, with four of eight corners inside NDC, occupying the leftmost 9.0 %
+   * of frame width and 60.5 % of frame height, and unoccluded by any registered Architecture or
+   * Props collider. What actually distinguishes it from the two rejects is WHERE in frame: it is
+   * 36.3° off-axis, hard against the left edge, rather than behind Sly. So the decision stands and
+   * the reason given for it did not — which is the §393.1 shape a third time, in this same file.
    *
    * The general lesson, which cost two candidates: "in frame" and "in frame at 7 m" are different
    * findings, and I checked the first while quoting the distance from a different shot. */
@@ -160,8 +200,14 @@ export class KayKit {
     this.group.name = 'kaykit';
     this.mode = 'props';
     this.stats = { models: 0, placed: 0, failed: 0, tris: 0, colliders: 0, decals: 0 };
-    /* Geometric ground contact. A screen-space contact term cannot reach these: `courtyard`
-       holds all thirty of these props at 35–51 m, where 4.5 cm of world subtends 1.11 px.
+    /* Geometric ground contact. A screen-space contact term cannot reach these: `courtyard` holds
+       all THIRTY-SIX of them in its cone, 35 of the 36 at 33.4–116.8 m, and at that near end
+       4.5 cm of world subtends 1.11 px (fov 55 over 900 px is 24.7 px/m at 35 m — that arithmetic
+       re-derives exactly). The count used to read "thirty" and the range "35–51 m": the count
+       predates the six camera placements below, and the range only ever described the eleven
+       colonnade props. The one placement that IS near — the courtyard crate at 11.8 m — is the
+       exception the camera block was added to create, and it does not weaken the argument, since
+       a term that cannot reach 35 m is not saved by one prop at 12 m.
        See `Decals.js` for the measured defect and for why the shape is a hard-edged ellipse. */
     this.decals = new ContactDecals(engine, { name: 'kaykit' });
   }
@@ -236,11 +282,21 @@ export class KayKit {
 
         /* Re-centre on the model's own XZ centre, ONCE, here.
          *
-         * These models are not authored around their origin and the amounts are not small:
-         * `rubble_half` sits 2.000 m off in x (it is a wall-segment piece, origin at one end)
-         * and both chests 0.355 m in z. A placement rotates about the origin, so without this
-         * a rotated prop swings that far off the coordinate the table names — and the collider,
-         * which is built at the named coordinate, would not follow it.
+         * These models are not authored around their origin, and for one of them the amount is
+         * large: `rubble_half` sits 2.000 m off in x (it is a wall-segment piece, origin at one
+         * end). A placement rotates about the origin, so without this a rotated prop swings that
+         * far off the coordinate the table names — and the collider, which is built at the named
+         * coordinate, would not follow it.
+         *
+         * This used to add "and both chests 0.355 m in z", and that number does not describe
+         * anything this code ever sees. Measured: **both chests are 0.0229 m off in z.** 0.355 m
+         * is what you get by unioning the raw accessor bounds WITHOUT applying the node transform
+         * — `chest_lid` carries `translation: [0, 0.5, −0.5648832]`, the raw union spans
+         * z −0.6000…1.3107, centre 0.3554 — and the `applyMatrix4(o.matrixWorld)` a dozen lines
+         * above has already folded that translation in before any of this runs. So `rubble_half`
+         * is the entire case for this block and the chests are a rounding error. The lesson is
+         * narrower than "the number was stale": it was measured on geometry the loader does not
+         * produce, which is a class of error a comment cannot show and a harness can.
          *
          * Y is deliberately NOT touched: `bb.min.y` is what sets each prop down on its floor,
          * and it is the one axis where the asset's own authoring is the useful reference. */
