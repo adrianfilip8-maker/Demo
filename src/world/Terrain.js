@@ -365,7 +365,13 @@ function rawHeight(x, z) {
   h -= cm * 0.055;                          // 5 cm under their paving: no z-fighting
 
   pyramidPlateau(x, z, _plateau);
-  if (_plateau[1] > 0.002) h = lerp(h, _plateau[0], _plateau[1]);
+  /* Weighted by the complex mask, exactly as `approachRidge` above is. Without the `(1 - cm)`
+     this lerp runs AFTER the `h *= 1 - cm` whose whole job is holding the complex flush at
+     y = 0, and silently overrides it: pyr1's falloff (`r = halfBase * 1.3` plus 110 m) still
+     carries weight 0.18 at d = 186.9 m, which is where the hypostyle hall's north-west corner
+     stands, and it lerped that corner 1.170 m up toward `baseY` 6.5. `cm` is 0 outside the
+     paving, so the plateau is unchanged everywhere it was actually authored to act. */
+  if (_plateau[1] > 0.002) h = lerp(h, _plateau[0], _plateau[1] * (1 - cm));
 
   const nw = nileWeight(x, z);
   if (nw > 0.002) h = lerp(h, nileBed(x, z), nw);
