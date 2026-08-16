@@ -29,8 +29,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
+import { readFileSync } from 'node:fs';
 
-import { SHOTS } from '../src/core/Shots.js';
+import { SHOTS, SHOT_NAMES } from '../src/core/Shots.js';
 import { Particles, TUNE as FX_TUNE } from '../src/fx/Particles.js';
 import { Guards } from '../src/ai/Guard.js';
 
@@ -317,4 +318,64 @@ test('impact CALIBRATION: with no MOVEMENT the branch still stages, at the docum
   assert.equal(emits.length, 4, 'with no MOVEMENT the slam staged nothing — the branch IS a no-op');
   assert.equal(out.point.y, 0.06, 'the documented fallback height moved');
   assert.ok(emits.every((e) => e.age > 0), 'the fallback path lost its staged ages');
+});
+
+/* ── 5. the shot count, read out of the banner rather than restated here ──────────────── */
+
+test('shots: the SHOT COUNT banner still describes the file it is in', () => {
+  /* Four entries in `Shots.js` used to announce their own ordinal and the count that came with
+     it — "this is the eleventh shot, and a default critic run now scores eleven" — and ALL FOUR
+     WERE WRONG. Two were mine, arrived at by reading the entry above and adding one, which is
+     precisely how a stale number propagates.
+
+     So the claim is now made once, in a banner, and this arm READS THE NUMBERS OUT OF THAT
+     BANNER and re-derives them. Hard-coding 18 here would be a second copy that goes stale
+     independently, and the world lane proved that failure mode empirically this session: their
+     first version pinned the numbers in the test, a planted edit to the source comment left the
+     suite green, and they rewrote it to parse. This is that pattern.
+
+     `critic.mjs` takes its list from `info.shots`, which is `Debug.js:76` publishing
+     `SHOT_NAMES.slice()` — so the banner's headline number is simply `SHOT_NAMES.length`, and
+     there is no curated subset for it to drift against. */
+  const src = readFileSync(new URL('../src/core/Shots.js', import.meta.url), 'utf8');
+  const banner = src.slice(src.indexOf('══ SHOT COUNT'));
+  assert.ok(banner.length > 200, 'the SHOT COUNT banner is gone from Shots.js');
+
+  const headline = banner.match(/captures \*\*(\d+) shots\*\*/);
+  assert.ok(headline, 'the banner no longer states a shot count in the form it is parsed from');
+  assert.equal(Number(headline[1]), SHOT_NAMES.length,
+    `the banner says ${headline[1]} shots and SHOT_NAMES holds ${SHOT_NAMES.length} — a default ` +
+    'critic.mjs run captures the second number, so the comment is stale');
+
+  /* And the three group counts, each re-derived from the names the banner itself lists.
+
+     Continuation lines are folded in rather than forbidden: a group's names wrap, and a parser
+     that demanded one line would be a formatting rule masquerading as a check — it would fail
+     on a reflow that changed nothing and pass on a wrong name that fitted. A continuation is
+     `*` followed by deep indentation and no leading count. */
+  const groups = [];
+  for (const line of banner.split('\n')) {
+    const head = line.match(/^\s*\*\s+(\d+)\s+\S[\S ]*?\s{2,}(.*)$/);
+    if (head) { groups.push({ n: Number(head[1]), names: head[2].trim().split(/\s+/) }); continue; }
+    const cont = line.match(/^\s*\*\s{10,}(\S[\S ]*)$/);
+    if (cont && groups.length) groups[groups.length - 1].names.push(...cont[1].trim().split(/\s+/));
+  }
+  assert.ok(groups.length >= 3, `the banner lists ${groups.length} groups; expected at least 3`);
+
+  let grouped = 0;
+  const seen = new Set();
+  for (const g of groups) {
+    assert.equal(g.names.length, g.n,
+      `the banner lists ${g.names.length} names (${g.names.join(' ')}) in a group claiming ${g.n}`);
+    for (const name of g.names) {
+      assert.ok(SHOT_NAMES.includes(name), `the banner names "${name}", which is not a shot`);
+      assert.ok(!seen.has(name), `the banner lists "${name}" in two groups`);
+      seen.add(name);
+    }
+    grouped += g.n;
+  }
+  assert.equal(grouped, SHOT_NAMES.length,
+    `the banner's groups account for ${grouped} of ${SHOT_NAMES.length} shots — one is uncategorised`);
+  const missing = SHOT_NAMES.filter((n) => !seen.has(n));
+  assert.deepEqual(missing, [], `the banner never names ${missing.join(', ')}`);
 });

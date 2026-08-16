@@ -493,10 +493,17 @@ export const SHOTS = {
      his boots for the contact shadow. Checked with `camclear` (clear), `charvis` (100% of 481
      samples, no occluder at all) and a landmark projection at 1280x720.
 
-     **This is the eleventh shot, and a default `node tools/critic.mjs` with no shot names now
-     scores eleven.** The standing 4.2 baseline is over ten; compare against it by passing the
-     ten names explicitly, or re-baseline deliberately. Nothing here changes any existing
-     entry. */
+     The standing 4.2 baseline is over the ten environment shots; compare against it by passing
+     those ten names explicitly, or re-baseline deliberately. Nothing here changes any existing
+     entry.
+
+     CORRECTION. This used to read *"This is the eleventh shot, and a default
+     `node tools/critic.mjs` with no shot names now scores eleven."* `critic.mjs` takes its list
+     from `info.shots`, which is `Debug.js:76` → `SHOT_NAMES.slice()` — **every entry in this
+     file, not a curated subset.** The count was already wrong when written and the ordinal was
+     never checkable, because this file is organised by kind rather than by the order entries
+     were added. Retired rather than re-stated: `tests/alertshot.test.mjs` now pins the live
+     count by reading it out of the banner below, so it can go stale exactly once. */
   'sly-profile': {
     pos: [2.21, 1.70, 33.13], target: [0.0, 0.88, 30.0], fov: 38, tod: 0.80,
     player: { pos: [0, 0, 30], yaw: 5.24, pose: 'idle_confident' },
@@ -530,16 +537,21 @@ export const SHOTS = {
      123…639 (identical to `sly-closeup`'s, as translation guarantees), 123 px of headroom,
      81 px of contact ground under his boots, 0 of 4746 vertices clipped.
 
-     **This is the twelfth shot, and a default `node tools/critic.mjs` with no shot names now
-     scores twelve.** The standing baseline is over ten (see `sly-profile`, the eleventh);
-     compare against it by passing the ten names explicitly, or re-baseline deliberately.
-     Nothing here changes any existing entry. */
+     The standing baseline is over the ten environment shots; compare against it by passing
+     those ten names explicitly, or re-baseline deliberately. Nothing here changes any existing
+     entry.
+
+     CORRECTION, the same one as `sly-profile`'s: this claimed to be "the twelfth shot" with a
+     default critic run scoring twelve. See that entry. */
   'sly-key': {
     pos: [2.4, 1.45, 33.2], target: [4.0, 0.95, 30.0], fov: 38, tod: 0.80,
     player: { pos: [4.0, 0, 30], yaw: 5.24, pose: 'idle_confident' },
   },
 
   /* The first shot in this file that frames a RELATIONSHIP rather than a subject.
+     (For "which number shot is this", see the SHOT COUNT banner at the end of this object —
+     the ordinals that used to be written into individual entries were unverifiable and two of
+     them were wrong.)
      ────────────────────────────────────────────────────────────────────────────────────────
      Every entry above stages one thing — Sly, or a guard, or the architecture — and every
      staging tool this project has answers a one-subject question. `charvis` asks "is the
@@ -606,6 +618,7 @@ export const SHOTS = {
   },
 
   /* The Cane Slam — the loudest thing in the FX catalogue, and unseen until now.
+     (See the SHOT COUNT banner at the end of this object rather than an ordinal here.)
      ────────────────────────────────────────────────────────────────────────────────────────
      `Particles._stageImpact()` was written, is correct, and had never run: this file had no
      entry named `impact`, so its dispatcher branch was unreachable, exactly as `alert`'s was.
@@ -657,6 +670,34 @@ export const SHOTS = {
     player: { pos: [0, 0, -8], yaw: 0.35, pose: 'dive_impact' },
   },
 };
+
+/* ══ SHOT COUNT ═══════════════════════════════════════════════════════════════════════════
+ * A default `node tools/critic.mjs` with no shot names captures **18 shots**: every key in
+ * `SHOTS`, because `critic.mjs` reads `info.shots` and `Debug.js:76` publishes
+ * `SHOT_NAMES.slice()`. There is no curated subset anywhere.
+ *
+ *   10 environment/gameplay  hero kaykit temple courtyard dunes interior night traversal
+ *                            combat guard
+ *    6 character sheets      sly-closeup sly-startle sly-perch sly-arm sly-profile sly-key
+ *    2 staged-FX             alert impact
+ *
+ * WHY THIS IS A BANNER AND NOT AN ORDINAL IN EACH ENTRY. Four entries used to announce their
+ * own position — "this is the eleventh shot", "the twelfth", "the thirteenth", "the
+ * fourteenth" — and **every one of those four was wrong**, in both directions and for two
+ * different reasons. The ordinal was unverifiable because this file is organised by KIND
+ * rather than by the order entries were added, so an author counting down the file gets a
+ * different answer from an author counting their own history. And the count that came with it
+ * ("a default critic run now scores twelve") was a checkable claim that nobody re-checked, so
+ * it stayed frozen at the moment it was written while four more entries landed around it.
+ *
+ * The last two were mine, inherited by reading the entry above and adding one — which is
+ * exactly how a stale number propagates, and why the repair is a single claim in one place
+ * with a test that re-derives it from this text (`tests/alertshot.test.mjs`) rather than a
+ * convention everyone is trusted to maintain.
+ *
+ * The standing 4.2 critic baseline is over the TEN environment shots. Compare against it by
+ * passing those ten names explicitly, or re-baseline deliberately.
+ * ═══════════════════════════════════════════════════════════════════════════════════════ */
 
 export const SHOT_NAMES = Object.keys(SHOTS);
 
