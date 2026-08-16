@@ -125,6 +125,7 @@ export class Trails {
       },
       vertexShader: TRAIL_VERT,
       fragmentShader: TRAIL_FRAG,
+      userData: { outline: 0 },   // §381.3: FX takes no hull — see the Batch material's note
       transparent: true,
       depthTest: true,
       depthWrite: false,

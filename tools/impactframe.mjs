@@ -70,6 +70,21 @@
  * figure it covers **80.6%** and does not. `impact` is admitted on that bar by an artefact of
  * the box. The `sly only N px tall` bar is unaffected — 195 px clears 110 either way.
  *
+ * ── AND `RING_R` IS THE AUTHORED FOOTPRINT, NOT THE DRAWN SPRITE ────────────────────────────
+ * `RING_R = 1.2 * S` = 1.50 m is what `_stageImpact` returns. The sprite `dive_ring` draws has
+ * a half-extent of **4.035 m** — `mix(0.5, 6.25, (0.088/0.34)^0.36)`, an 8.07 m quad, and
+ * PLANAR sprites are exempt from the shader's screen-size ceiling. Measured in the shipped
+ * frame by unprojecting the `ring` batch's own light onto the impact plane: the bright annulus
+ * is at r = 3.0-4.5 m, the light ends at 4.75-5.0 m, and 1.50 m is the dim inner shoulder.
+ *
+ *   RING CROPPED at 1.50 m   margins l460 r460 t341 b198   no fault
+ *   RING CROPPED at 4.035 m  margins l112 r112 t249 b-102   cropped, 18.5% of the rim off-frame
+ *
+ * So this tool's second admission bar also turns on a number that is 2.69x too small, and it
+ * certifies "clear" on a ring the renderer crops. Same treatment as the figure box: flagged,
+ * not repaired, because the number is minted in `Particles._stageImpact`'s return and three
+ * consumers plus a shipped seal read it. See that function's header.
+ *
  * Not silently repaired, for two reasons. Re-scoring a shipped shot against a rule it now fails
  * is a decision about the shot, not about the tool, and §141.1 says a bar is not re-scoped by
  * whoever happens to be holding the file. And the obvious repair — CPU-skin the pose and project
@@ -169,7 +184,7 @@ function score(name, c) {
   console.log(`\n── ${name}`);
   console.log(`   cam ${c.pos.map((v) => v.toFixed(2)).join(', ')} -> ${c.target.join(', ')} · fov ${c.fov} · tod ${c.tod}`);
   if (sly) console.log(`   sly    rows ${sly.y0.toFixed(0)}..${sly.y1.toFixed(0)} (${slyH.toFixed(0)} px) · margins l${ms.l.toFixed(0)} r${ms.r.toFixed(0)} t${ms.t.toFixed(0)} b${ms.b.toFixed(0)} · ${slyClear ? 'clear' : 'OCCLUDED'}   [UPRIGHT-BOX PROXY, not a silhouette — see header]`);
-  if (ring) console.log(`   ring   ${(ring.x1 - ring.x0).toFixed(0)} x ${(ring.y1 - ring.y0).toFixed(0)} px · margins l${mr.l.toFixed(0)} r${mr.r.toFixed(0)} t${mr.t.toFixed(0)} b${mr.b.toFixed(0)} · ${ringClear ? 'clear' : 'OCCLUDED'}`);
+  if (ring) console.log(`   ring   ${(ring.x1 - ring.x0).toFixed(0)} x ${(ring.y1 - ring.y0).toFixed(0)} px · margins l${mr.l.toFixed(0)} r${mr.r.toFixed(0)} t${mr.t.toFixed(0)} b${mr.b.toFixed(0)} · ${ringClear ? 'clear' : 'OCCLUDED'}   [AUTHORED FOOTPRINT r${RING_R.toFixed(2)}m, not the drawn sprite — see header]`);
   if (scuff) console.log(`   scuff  ${(scuff.x1 - scuff.x0).toFixed(0)} x ${(scuff.y1 - scuff.y0).toFixed(0)} px · margins l${mk.l.toFixed(0)} r${mk.r.toFixed(0)} t${mk.t.toFixed(0)} b${mk.b.toFixed(0)}`);
   if (dust) console.log(`   dust   margins l${md.l.toFixed(0)} r${md.r.toFixed(0)} t${md.t.toFixed(0)} b${md.b.toFixed(0)}`);
   /* TIEBREAK, and it is a tiebreak rather than a bar — say which is which.

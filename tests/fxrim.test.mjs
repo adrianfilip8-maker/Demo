@@ -343,11 +343,27 @@ test('T8: the hull system counts an FX-shaped mesh as MISSING ink, not as refusi
   const audit = inkAudit(root);
   assert.ok(audit && typeof audit.missing === 'number', 'inkAudit no longer returns a census');
   assert.equal(audit.refused, 0,
-    'an FX-shaped material now REFUSES ink — someone has annotated it `outline: 0`, which is the '
-    + 'right fix and makes the "silently missing" finding stale; withdraw it rather than leave it');
+    'an UNDECLARED material now reads as refusing ink — the house default has been inverted, and '
+    + '`outline: 0` has stopped being the thing that carries the decision');
   assert.equal(audit.missing, 1,
     `the audit counts ${audit.missing} missing for a shell-less, undeclared FX mesh — if this is 0 `
-    + 'the classification changed and the 14 false defects predicted above will not appear');
+    + 'the classification changed and annotating the FX materials buys nothing');
+
+  /* And the repair, executed: the SAME mesh with the SAME absent shell reads as a deliberate
+     opt-out once its material declares `outline: 0`. That is the whole of the fix — no change
+     to `inkAudit`, just the FX materials saying in the shipped vocabulary what
+     `Particles.js`'s prose already said. Both halves are asserted because a fix whose "before"
+     is not demonstrated is a fix nobody can tell is working. */
+  const declared = new THREE.Mesh(new THREE.InstancedBufferGeometry(), new THREE.ShaderMaterial());
+  declared.material.userData.outline = 0;
+  const root2 = new THREE.Object3D();
+  root2.add(declared);
+  const audit2 = inkAudit(root2);
+  assert.equal(audit2.refused, 1,
+    'a material declaring `outline: 0` is still not counted as refusing ink, so annotating the '
+    + 'FX materials does not clear them from the audit and the 14 false defects remain');
+  assert.equal(audit2.missing, 0,
+    `the declared mesh is still counted as ${audit2.missing} missing — the annotation does not work`);
 
   /* And the gate that actually denies the shell. An instanced quad IS `isMesh`, so §379.1's
      "not meshes in the hull system" is loose: what excludes them is that nothing ever offers

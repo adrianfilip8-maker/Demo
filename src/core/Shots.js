@@ -682,6 +682,21 @@ export const SHOTS = {
      the pose, which `charvis.mjs` already does — currently disagrees with the renderer by ~26 px
      in x on this pose for reasons nobody has run down. See `tools/impactframe.mjs`'s header.
 
+     AND THE `ring` LINE IS THE WRONG CIRCLE, WHICH IS THE SECOND BAR ON THIS FRAME. The 360 x
+     181 px above is `_stageImpact`'s returned `radius` of 1.2 * 1.25 = 1.50 m. The sprite the
+     renderer draws has a half-extent of 4.035 m — `mix(0.5, 6.25, (0.088/0.34)^0.36)`, an 8.07 m
+     quad — and PLANAR sprites are exempt from the screen-size ceiling. Measured in this frame by
+     unprojecting the `ring` batch's own light onto the impact plane: the bright annulus sits at
+     r = 3.0-4.5 m and the light ends at 4.75-5.0 m, while 1.50 m is the dim inner shoulder.
+
+       ring (MEASURED, r = 4.035 m)  margins l112 r112 t249 b-102 · 18.5% of the rim OUT OF FRAME
+
+     So "ring ... margins l460 r460 t341 b198 · clear" describes a circle 2.69x too small, and
+     the drawn ring is CROPPED at the bottom. Both this and the `sly` line are flagged rather
+     than repaired for the same reason, and the number itself is minted in
+     `Particles._stageImpact`'s return — see its header, where the derivation and the full list
+     of consumers live.
+
      Chosen over three other candidates that also passed every bar, by a stated tiebreak rather
      than by taste: the product of the ring reading as a RING (the ellipse ratio) and the figure
      reading as a FIGURE (its pixel height). Those pull opposite ways — elevation rounds the

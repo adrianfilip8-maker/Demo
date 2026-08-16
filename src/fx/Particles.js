@@ -1463,6 +1463,7 @@ class LightShafts {
       },
       vertexShader: SHAFT_VERT,
       fragmentShader: SHAFT_FRAG,
+      userData: { outline: 0 },   // §381.3: FX takes no hull — see the Batch material's note
       transparent: true,
       depthTest: true,
       depthWrite: false,
@@ -1802,6 +1803,24 @@ class Batch {
       side: THREE.DoubleSide,
       fog: !opts.additive,
       toneMapped: false,          // POSTFX tonemaps once, at the end of the chain
+      /* ── FX declines the inverted hull, and now says so where a checker can read it ──────
+         `outline: 0` is the shipped vocabulary for "this surface does not take a line", and
+         `Outline.js` states the default it overrides: "an unannotated group is a surface
+         nobody made a decision about, and the house default is that a surface is inked".
+         Every FX mesh used to declare nothing, so `Outline.inkAudit()` classified all
+         fourteen of them as `missing` — a defect — when the truth is a decision. §381.3
+         rejected per-sprite inverted hulls on the image rather than the cost: 900 dust puffs
+         wearing individual 2.5 px rings is chainmail, not cel shading. The intent was real
+         and recorded only in prose, here and at `depthWrite` above.
+
+         Inert for rendering, which is why it is safe: the only other consumer is the shelling
+         walk, and `userData.outline > 0` was already false for `undefined` exactly as it is
+         for 0 — nothing under `fx.root` has ever been offered a shell. Measured: 0 of 14 FX
+         meshes carry one (`SANDS_CENSUS=1 node tools/fxrim.mjs impact`).
+
+         It does NOT pre-empt §381.2. That route generates ink FROM the FX coverage mask and
+         never builds a shell, so it is untouched by this declaration. */
+      userData: { outline: 0 },
     });
 
     this.mesh = new THREE.Mesh(geo, this.material);
@@ -2036,6 +2055,7 @@ class SparkleField {
       },
       vertexShader: SPARKLE_VERT,
       fragmentShader: SPARKLE_FRAG,
+      userData: { outline: 0 },   // §381.3: FX takes no hull — see the Batch material's note
       transparent: true,
       depthTest: true,
       depthWrite: false,
@@ -2188,6 +2208,7 @@ class FlameField {
       },
       vertexShader: FLAME_VERT,
       fragmentShader: FLAME_FRAG,
+      userData: { outline: 0 },   // §381.3: FX takes no hull — see the Batch material's note
       transparent: true,
       depthTest: true,
       depthWrite: false,
@@ -3452,8 +3473,37 @@ export class Particles {
    * The two decals are placed at the contact, not aged — `Decals` has its own `hold` ramp and
    * no fade-in, so a mark is full strength the moment it lands.
    *
+   * ── THE RETURNED `radius` IS NOT THE DRAWN RING, AND EVERYTHING DOWNSTREAM BELIEVED IT ─────
+   * `radius: 1.2 * impactScale` = 1.50 m. The sprite `dive_ring` actually draws is **4.035 m**
+   * of half-extent — 2.69x in radius, 7.2x in area — and that is arithmetic from this file's
+   * own data, not an estimate:
+   *
+   *   sz = mix(size[0]*s, size[1]*s, u^sizeExp) = mix(0.5, 6.25, 0.2588^0.36) = 4.035 m
+   *   with u = age/life = 0.088/0.34, and PARTICLE_VERT's `corner` spanning [-1, 1],
+   *   so the quad is 2*sz = 8.07 m across. PLANAR is exempt from the `uMaxSize` screen
+   *   ceiling by construction — the shader says so — so nothing caps it.
+   *
+   * Measured in the frame, not just derived: unprojecting every pixel the `ring` batch lights
+   * onto the impact plane puts the bright annulus at **r = 3.0-4.5 m** (mean +58 to +63 L) and
+   * the cutoff at 4.75-5.0 m, while r = 1.50 m sits on the dim inner shoulder at +19.7 L.
+   * Hiding the batch changes 521,510 px — 56.6% of the frame — because an 8 m additive quad
+   * lying flat under a low camera projects past three edges of it.
+   *
+   * WHAT BELIEVED THE WRONG NUMBER. `tools/impactframe.mjs` frames RING CROPPED on a 1.50 m
+   * disc and certifies "margins l460 r460 t341 b198 · clear"; at the drawn radius the ring is
+   * **cropped 102 px off the bottom with 18.5% of its rim out of frame**. `SHOTS.impact`'s
+   * certificate repeats it, `tests/alertshot.test.mjs` seals it, and KNOWN_ISSUES §379.4's rim
+   * measurement was taken at 1.50 m — on the shoulder rather than on the ring. (That result
+   * survives: re-swept at every radius from 0.75 m to 5.75 m, the crease-ink median is 0.00 L
+   * throughout, including straight across the annulus.)
+   *
+   * NOT CHANGED HERE. Three consumers and a shipped seal turn on this value, so which number
+   * it should return — the drawn extent, the authored footprint, or both — is a decision about
+   * the shot and the tool, not one to make silently inside the emitter (§141.1).
+   *
    * @returns {{point: THREE.Vector3, radius: number}} where the impact was staged, so the shot
-   *   author can frame it. Same contract as `_stageAlert`.
+   *   author can frame it. Same contract as `_stageAlert`. **`radius` is the authored footprint,
+   *   NOT the drawn sprite** — see above before framing anything on it.
    */
   _stageImpact() {
     const mv = this.engine.get('movement');

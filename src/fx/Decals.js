@@ -123,6 +123,7 @@ export class Decals {
       uniforms: { uTime: { value: 0 }, uAtlas: { value: atlas } },
       vertexShader: DECAL_VERT,
       fragmentShader: DECAL_FRAG,
+      userData: { outline: 0 },   // §381.3: FX takes no hull — see the Batch material's note
       transparent: true,
       depthTest: true,
       depthWrite: false,
