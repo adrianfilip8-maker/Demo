@@ -31595,6 +31595,58 @@ This is the same lesson the FX lane hit from its side today, and the one behind 
 that agreed to 5e-16 while measuring nothing at all. Three lanes, one round, one defect class,
 all of it in the instruments.
 
+### §411.17 The flicker constant is over-slowed: measured, and the vacuity check that made it mean something
+
+§411.14 routed the recovery tuning because I could measure the benefit and not the cost. This is
+the cost, measured headlessly — boom-length oscillation around the corners the constant exists
+for. It does not replace the frames the decision asked for; it says what the frames should show.
+
+**The check that had to come first.** `recoverSpeed` is a **cap**. If the boom never wants to move
+faster than 2.4 m/s on a path, raising the cap to 6.0 changes nothing there, and a "no extra
+flicker" result would be the §411.16 defect for a fourth time — a comparison between two
+identical runs. So the cap's saturation was counted before anything was concluded:
+
+```
+path                          frames   recovering   CAP SATURATED
+hall SW exterior corner         1062        1062         72
+hall S wall, past doorway        462         282         73
+into the hall doorway            508           0          0   <- VACUOUS, discarded
+hall E exterior corner          1062         775         72
+courtyard N colonnade            924         922        125
+courtyard axis                   785         511         22
+past the obelisk                 416         416         62
+pylon approach                   416         171         17
+```
+
+The cap binds on seven of eight. **One path was vacuous and is thrown out rather than averaged in**
+— the doorway never recovers at all, so it can say nothing about recovery.
+
+**The result, walk pace, on the seven where the cap binds.** Flicker as boom-direction reversals
+(quantum `camPad`/4) and total variation:
+
+```
+path                       reversals/s  2.4 -> 6.0     TV/s  2.4 -> 6.0
+hall SW exterior corner        0.11    ->  0.11       0.65  ->  0.70
+hall E exterior corner         0.11    ->  0.17       1.28  ->  1.32
+courtyard N colonnade          0.06    ->  0.06       1.62  ->  1.70
+past the obelisk               0.14    ->  0.14       1.56  ->  1.58
+```
+
+**Three of the four flicker-prone paths are unchanged to two decimals.** The worst movement is the
+hall's east corner, 2 reversals to 3 over a 17 s traverse. Total variation rises 2–5 %.
+
+Against that: §411.14 measured **+0.79 m of delivered boom at lane 12** from the same change, and
+the camera currently spends a hall sprint at `distHardMin` — inside the character.
+
+> On this evidence the constant is **over-slowed**: it is buying a difference of one reversal per
+> traverse and paying for it with a third of the boom in the level's signature room.
+
+**Two limits, stated rather than left for someone to find.** This measures *boom-length
+oscillation*, not perceived flicker in pixels — a viewer sees camera position, and the mapping is
+not linear. And only `recoverSpeed` was varied; `recoverTime` 0.62 is the other half of the same
+mechanism and is untouched here. **The side-by-side frames are still owed** and are blocked on
+§186: a capture has held the lock continuously through this round.
+
 ---
 
 ## §414 — The fourth instance, and the first where the vacuity was in the SAMPLING
