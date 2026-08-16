@@ -86,7 +86,48 @@ if (process.argv.includes('--counts')) {
   console.log(`\n  ${over} of ${total} emitters can exceed their own declared maximum.`);
   console.log('  `count: [n, n]` is a coin flip between n and n+1, which is where the second');
   console.log('  `dive_ring` came from. `Rand.js` exports `f.int(lo, hi)` and this call site');
-  console.log('  does not use it. Reported, not repaired — see the header.');
+  console.log('  does not use it.');
+
+  /* ── AND THE TEST SUITE WAS ALREADY SCORING THE FIXED BEHAVIOUR ──────────────────────────
+   * `fxfeel.test.mjs` T3 grades the stealth ladder on `meanOf(count) * meanOf(alpha) * size^2`
+   * with `meanOf = (r) => (r[0] + r[1]) / 2` — the DECLARED midpoint. The renderer was drawing
+   * `(r[0] + r[1])/2 + 0.5`. So T3 has been asserting a ladder computed from counts the build
+   * never emitted: the test was right, the renderer was wrong, and the fix makes them agree
+   * rather than moving the ladder.
+   *
+   * This also corrects the commit that landed the fix, which said the shift was "uniform on
+   * every rung". It is not — it runs 0.833x on a [2,3] rung to 0.950x on an [8,11] one, because
+   * the half-count is a larger share of a smaller burst. The conclusion drawn from it survives
+   * and gets stronger: the STEPS between rungs all WIDEN, so T3's 1.6x bar gains headroom
+   * instead of losing it. Second time §407.2 has turned on one of my own commit messages this
+   * session; printed here so the correction lives with the numbers rather than in prose. */
+  const { ALERT_LADDER } = await import('../src/fx/Emitters.js');
+  const meanOf = (r) => (r[0] + r[1]) / 2;
+  const oldMean = (c) => {
+    const lo = c[0], hi = c[1] + 0.999, span = hi - lo; let s = 0;
+    for (let k = Math.round(lo); k <= Math.round(hi); k++) {
+      const a = Math.max(lo, k - 0.5), b = Math.min(hi, k + 0.5);
+      if (b > a) s += Math.max(1, k) * (b - a) / span;
+    }
+    return s;
+  };
+  const loud = (d, m) => m(d.count) * meanOf(d.alpha) * d.size[0] ** 2;
+  const RUNGS = ['patrol', 'suspicious', 'searching', 'chase'];
+  console.log('\n  the stealth ladder (fxfeel T3), old renderer vs declared counts:\n');
+  const rows = [];
+  for (const k of RUNGS) {
+    const d = EMITTERS[ALERT_LADDER[k]?.emitter];
+    if (!d?.count) continue;
+    rows.push({ k, lo: loud(d, oldMean), ln: loud(d, meanOf) });
+    console.log(`    ${k.padEnd(11)} loudness ${rows[rows.length - 1].lo.toFixed(5)} -> ${rows[rows.length - 1].ln.toFixed(5)}   x${(rows[rows.length - 1].ln / rows[rows.length - 1].lo).toFixed(4)}`);
+  }
+  console.log('\n    step ratios (T3 requires strictly increasing, >= 1.6x):');
+  for (let i = 1; i < rows.length; i++) {
+    const so = rows[i].lo / rows[i - 1].lo, sn = rows[i].ln / rows[i - 1].ln;
+    console.log(`    ${rows[i - 1].k} -> ${rows[i].k}   OLD ${so.toFixed(4)}x   NEW ${sn.toFixed(4)}x   ${sn > so ? 'WIDENED' : 'narrowed'}`);
+  }
+  console.log('\n    The NEW column is T3\'s own published ladder and the ledger\'s, to five places.');
+  console.log('    The fix does not move the ladder — it makes the build agree with its documentation.');
   process.exit(0);
 }
 
