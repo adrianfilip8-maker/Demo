@@ -30796,3 +30796,60 @@ Neither gate was widened to make a half pass. The steep half is tested on a **sy
 the arm says so and says why: this level contains no unwalkable ground at all — steepest face
 47.9° against a 50° limit — so a gate resting on level geometry would rest on geometry that does
 not exist.
+
+---
+
+## §410 — Rollback seven, and the one thing it cost was the thing §406 was written to prevent
+
+Container rollback **#7**, ~1 h after #6, same landing point (`de3080d`, 309 commits behind). The
+§325 runbook worked verbatim and is now routine enough to state as a procedure rather than an
+incident:
+
+```
+git fetch origin <branch>
+rm -rf <untracked debris the rollback restored>     # `git checkout -B` refuses over these
+git checkout -B <branch> origin/<branch>
+```
+
+**Zero durable loss, for the seventh time.** Everything that was committed came back, including
+three lanes' work pushed while I was mid-round — the walkability gate, the measured mark radius,
+and §409.
+
+### §410.1 What it did cost, and the lesson is not the one I expected
+
+One thing was lost: **an uncommitted optimisation to `impactframe --search`.** It cost about five
+minutes to re-apply, and that is the whole point — §406 says push the moment a result exists, and
+I had a working, verified change sitting in the tree because it did not feel like "a result". It
+was a tooling change in service of a result I had not got yet.
+
+> **§410.2 — "Not a result yet" is not a reason to hold a commit.** The rule is not *push
+> findings*, it is *push work*. A verified edit that survives a syntax check and a run is a
+> commit, whether or not the thing it was made for has finished. The cost of pushing early is a
+> commit somebody has to read; the cost of not pushing is the whole edit.
+
+That is the same shape as §406.3 from the other direction. There I destroyed a lane's work by
+stashing it; here the container destroyed mine because I had not landed it. **Both were work
+sitting outside git for no better reason than that a round was still in progress.**
+
+### §410.3 And the task list lied again, exactly as §400.1 predicted
+
+The rollback restored a **§198-era task list** — thirty entries describing a tree that stopped
+existing weeks ago. §400.1 already recorded that this happens and that "a task list restored from
+a rollback is actively misleading: it does not merely lack recent entries, it asserts stale ones."
+
+This time it had already cost something before I noticed. Two items were dispatched to lanes off
+that stale text:
+
+- **#17 `perch_idle` has zero lateral line of action.** Struck through in this ledger on
+  2026-08-02. The traversal lane checked the item rather than the brief, found the correction, and
+  stopped — the entry's own warning is that acting on the stale figure "would have authored a
+  second lateral lean on top of the first and doubled it."
+- **#21 staging4.** Closed at §201; the restored list snapshot predates that by three sections.
+  The world lane verified it closed three ways rather than working it.
+
+**Both lanes refused their assignment by reading the ledger at the item.** That is the behaviour
+that makes a stale task list survivable, and it is worth naming as the defence rather than
+treating each catch as luck: **a task line is a pointer, not a finding — grep for a `§` that
+closes it before doing the work** (§360, now earning its keep twice in one session).
+
+The list has been rebuilt from the ledger rather than repaired entry by entry.
