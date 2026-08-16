@@ -34,11 +34,39 @@ import net from 'node:net';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
 
-/** Short SHA plus a dirty flag, or null outside a git checkout. Never throws. */
+/**
+ * The build inputs that determine the pixels. Scoped deliberately: an unscoped
+ * `git status --porcelain` reports every untracked `progress/records/` directory, none of
+ * which a render depends on. A guard that fires on noise gets switched off, and a guard that
+ * is switched off is the defect it was meant to prevent (§357.1).
+ */
+const BUILD_INPUTS = ['src/', 'index.html', 'vite.config.js', 'package.json', 'package-lock.json'];
+
+/**
+ * Short SHA plus exactly which build inputs are uncommitted. Null outside a git checkout.
+ * Never throws.
+ *
+ * The path LIST is the point, not the boolean. `shots/r12/manifest.json` recorded
+ * `dirty: true` and nothing more; when §358 tried to attribute its numbers two days later
+ * there was no way to say *what* had been uncommitted, only that something was — so the frame
+ * that §336's headline 3.74 rested on turned out to describe a tree nobody can reconstruct.
+ * The list is the difference between "unreconstructible" and "reconstructible by re-applying
+ * these three files".
+ */
 function gitDesc() {
   try {
-    const run = (a) => execFileSync('git', a, { cwd: ROOT, encoding: 'utf8' }).trim();
-    return { sha: run(['rev-parse', '--short', 'HEAD']), dirty: run(['status', '--porcelain']) !== '' };
+    const run = (a) => execFileSync('git', a, { cwd: ROOT, encoding: 'utf8' });
+    /* Do NOT trim the blob before splitting: porcelain lines open with a two-column status
+       field, so the first line's leading space is significant and trimming shifts that one
+       path left by a character. `tools/charvis.mjs:58` records the same trap after it printed
+       `rc/player/Cane.js`. */
+    const dirtyPaths = run(['status', '--porcelain', '--', ...BUILD_INPUTS])
+      .split('\n').filter((l) => l.length > 3).map((l) => l.slice(3).trim());
+    return {
+      sha: run(['rev-parse', '--short', 'HEAD']).trim(),
+      dirty: dirtyPaths.length > 0,
+      dirtyPaths,
+    };
   } catch { return null; }
 }
 
@@ -70,6 +98,8 @@ const TIMEOUT = parseInt(opt('timeout', '240000'), 10);
 const SHOT_TIMEOUT = parseInt(opt('shotTimeout', String(15 * 60 * 1000)), 10);
 const KEEP = flag('keep');
 const VERBOSE = flag('verbose');
+/* Render anyway with build inputs uncommitted. See the guard at the top of main(). */
+const ALLOW_DIRTY = flag('allow-dirty');
 const requested = argv.filter((a) => !a.startsWith('--'));
 
 /* --------------------------- dev server -------------------------------- */
@@ -122,7 +152,52 @@ async function startServer(port) {
 }
 
 /* ------------------------------- main ---------------------------------- */
+
+/**
+ * Refuse to render from a tree whose build inputs are uncommitted, unless told to.
+ *
+ * This runs FIRST — before the output directory exists and before the capture lock is
+ * requested — so a tree that cannot produce evidence never joins the FIFO and never makes
+ * anyone else wait behind it.
+ *
+ * Why it fails instead of annotating. `gitDesc()` has always computed `dirty`, and the
+ * manifest has always recorded it, and **nothing has ever read it**. `shots/r12/` was rendered
+ * from `0525d5e` + uncommitted changes on 2026-08-13; its frames then carried §336's headline
+ * `R/G 3.74` through §341, §342, §342.1 and §342.2 before §358 established that the tree could
+ * not be reconstructed and the number was therefore unattributable — not wrong, which is
+ * recoverable, but unattributable, which for a project that seals bars against shas is worse.
+ * A flag that is computed and never consulted is precisely §357.1's pattern: a guard that
+ * exists is not a guard that runs.
+ *
+ * Why an escape hatch exists. This file's own header (:167) notes that agent work is routinely
+ * uncommitted when a capture runs, and that is legitimate for iteration — you change a shader,
+ * you look at a frame. Making that impossible would get the guard deleted. So the unsafe path
+ * stays open and becomes *loud and recorded*: `--allow-dirty` renders, and the manifest says
+ * the operator knew. What is no longer possible is producing an unreconstructible frame
+ * silently and discovering two days later that a lineage was built on it.
+ */
+function assertReconstructible(desc) {
+  if (!desc || !desc.dirty || ALLOW_DIRTY) return;
+  process.stderr.write(
+    `\nREFUSING TO RENDER — ${desc.dirtyPaths.length} build input(s) uncommitted at ${desc.sha}:\n`
+    + desc.dirtyPaths.map((p) => `    ${p}\n`).join('')
+    + '\nFrames from this tree cannot be reconstructed by anyone, including you, so they cannot\n'
+    + 'be cited as evidence later (§358: shots/r12/ is exactly this, and it cost a lineage).\n\n'
+    + '  commit the changes  → the frames become attributable to a sha, or\n'
+    + '  re-run with --allow-dirty → renders anyway and records the choice in the manifest.\n\n'
+    + 'Scope is src/, index.html, vite.config.js, package*.json. Untracked records are ignored.\n',
+  );
+  process.exit(2);
+}
+
 async function main() {
+  const provenance = gitDesc();
+  assertReconstructible(provenance);
+  if (provenance?.dirty) {
+    process.stdout.write(`· WARNING: rendering DIRTY (--allow-dirty) — ${provenance.dirtyPaths.length} uncommitted build input(s)\n`);
+    for (const p of provenance.dirtyPaths) process.stdout.write(`    ${p}\n`);
+  }
+
   await mkdir(OUTDIR, { recursive: true });
 
   // Serialise with other capture runs — software rendering doesn't parallelise, it thrashes.
@@ -169,7 +244,13 @@ async function main() {
      runs. */
   const report = {
     at: new Date().toISOString(),
-    commit: gitDesc(),
+    /* The SAME object the guard in main() ruled on — not a second gitDesc() call. Re-reading
+       git here would let a mid-run edit produce a manifest that disagrees with the tree the
+       guard actually cleared, which is the reconstructibility hole this whole change closes. */
+    commit: provenance,
+    /* Present and true only when the operator overrode the guard. Its absence is a positive
+       claim: the build inputs were committed when these frames were rendered. */
+    ...(provenance?.dirty ? { allowDirty: true } : {}),
     width: WIDTH, height: HEIGHT, quality: QUALITY, shots: {}, errors: [],
   };
   let failures = 0;
