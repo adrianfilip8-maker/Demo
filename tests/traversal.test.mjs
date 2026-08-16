@@ -3046,18 +3046,32 @@ test('census: which of the 32 states any test in this project has ever entered',
     assert.ok(perFile.has(path.basename(f)), `${path.basename(f)} produced no trace — it did not run`);
   }
 
+  /* The placement flag, calibrated on the canary rather than asserted. The canary forces
+     `canary_forced` — not a reset state — and then lets the machine choose `canary_driven`. So
+     the driven entry MUST come back with an empty `clean` set: it is downstream of a placement.
+     If this ever reads non-empty, `__placed` is not tracking and the "player could get here"
+     column below is worthless in the direction that matters — it would over-report coverage. */
+  assert.deepEqual(can.canary_driven?.clean, [],
+    'the canary drove a state after PLACING Sly and the recorder still called it clean — the ' +
+    'placement flag is not tracking, so every "reached without placement" claim below is unsound');
+  assert.ok((can.canary_driven?.arms || []).some((a) => a.includes('smcanary')),
+    `the canary's arm name never reached the trace (${JSON.stringify(can.canary_driven?.arms)}) — ` +
+    'per-arm attribution is not working and the thinness counts below are meaningless');
+
   /* ---- 3. merge, including this file's own in-process record ---- */
   perFile.set(MINE, Object.fromEntries([...SM_RECORD].map(([k, v]) =>
-    [k, { driven: v.driven, forced: v.forced, dfrom: [...v.dfrom] }])));
+    [k, { driven: v.driven, forced: v.forced, dfrom: [...v.dfrom], arms: [...v.arms], clean: [...v.clean] }])));
   perFile.delete('_smcanary.mjs');
 
   const agg = new Map();
   for (const [file, states] of perFile) {
     for (const [name, v] of Object.entries(states)) {
       let r = agg.get(name);
-      if (!r) { r = { driven: 0, forced: 0, files: new Set() }; agg.set(name, r); }
+      if (!r) { r = { driven: 0, forced: 0, files: new Set(), arms: new Set(), clean: new Set() }; agg.set(name, r); }
       r.driven += v.driven; r.forced += v.forced;
       if (v.driven > 0) r.files.add(file.replace('.test.mjs', ''));
+      for (const a of v.arms || []) r.arms.add(`${file}::${a}`);
+      for (const a of v.clean || []) r.clean.add(`${file}::${a}`);
     }
   }
   /* The state list is read off a real machine, not written down, so a state a future lane adds
@@ -3065,18 +3079,31 @@ test('census: which of the 32 states any test in this project has ever entered',
      is about to print — it is one forced entry of `idle`, which is already in the thousands. */
   const { c: c0 } = await makeSim();
   const ordered = c0.sm.ordered.map((s) => s.name);
-  console.log('\n[entered] state          driven   forced   driven by');
+  const blank = { driven: 0, forced: 0, files: new Set(), arms: new Set(), clean: new Set() };
+  console.log('\n[entered] state          driven   forced  arms  unplaced   driven by');
   for (const n of ordered) {
-    const r = agg.get(n) || { driven: 0, forced: 0, files: new Set() };
-    console.log(`  ${n.padEnd(14)} ${String(r.driven).padStart(7)} ${String(r.forced).padStart(8)}   ${[...r.files].join(', ') || '— NOTHING'}`);
+    const r = agg.get(n) || blank;
+    console.log(`  ${n.padEnd(14)} ${String(r.driven).padStart(7)} ${String(r.forced).padStart(8)}` +
+                `${String(r.arms.size).padStart(6)}${String(r.clean.size).padStart(10)}   ${[...r.files].join(', ') || '— NOTHING'}`);
   }
   const never = ordered.filter((n) => !(agg.get(n)?.driven > 0));
   const onlyMine = ordered.filter((n) => { const f = agg.get(n)?.files; return f && f.size === 1 && f.has('traversal'); });
   const elsewhere = ordered.filter((n) => { const f = agg.get(n)?.files; return f && [...f].some((x) => x !== 'traversal'); });
+  /* The two columns the file-level census could not produce, and they are the ones that say how
+     exposed this is. `arms` is how many test arms anywhere drive the state — one is a single
+     point of failure regardless of how many times that arm drives it. `unplaced` is how many of
+     those did it in a run where **nobody had called `sm.set`**: the machine chose the state on
+     its own, from a teleport and input alone, which is the closest thing here to a player. */
+  const oneArm = ordered.filter((n) => (agg.get(n)?.arms.size || 0) === 1);
+  const placedOnly = ordered.filter((n) => (agg.get(n)?.driven > 0) && (agg.get(n)?.clean.size || 0) === 0);
   console.log(`\n[entered] never driven by anything:  ${never.join(', ') || '(none — all 32 are driven somewhere)'}`);
   console.log(`[entered] driven by any other file:  ${elsewhere.join(', ') || '(none)'}`);
   console.log(`[entered] delete this ONE file and ${onlyMine.length}/${ordered.length} states go dark:`);
   console.log(`            ${onlyMine.join(', ')}`);
+  console.log(`\n[entered] driven by exactly ONE arm in the whole project (${oneArm.length}):`);
+  for (const n of oneArm) console.log(`            ${n.padEnd(13)} <- ${[...(agg.get(n)?.arms || [])][0]}`);
+  console.log(`\n[entered] NEVER reached without a test placing Sly first (${placedOnly.length}/${ordered.length}):`);
+  console.log(`            ${placedOnly.join(', ') || '(none)'}`);
 
   /* THE FINDING, and it is not the one expected. Every state is driven somewhere — but delete
      this one file and the project's 63 other test files drive 6 of 32 between them, including
@@ -3092,6 +3119,15 @@ test('census: which of the 32 states any test in this project has ever entered',
   assert.ok(onlyMine.length >= 20,
     `only ${onlyMine.length} states are traversal-only — if that dropped, other lanes have started ` +
     'driving the moveset and this arm should say so rather than assert the old concentration');
+  /* The thinness pins. Both are stated as "no worse than", so widening coverage never reddens
+     them — only losing coverage does, which is the direction that matters for a regression.
+     Measured: exactly ONE state (`bounce`) hangs on a single arm, and ZERO are placement-only. */
+  assert.ok(oneArm.length <= 12,
+    `${oneArm.length} states now hang on a single arm (${oneArm.join(', ')}) — that is worse than the ` +
+    'measured baseline; a state whose only exercise is one arm dies with that arm');
+  assert.ok(placedOnly.length <= 14,
+    `${placedOnly.length} states are only ever reached by a test PLACING Sly there ` +
+    `(${placedOnly.join(', ')}). Nothing in tests/ shows a player can get to them.`);
 });
 
 /* ====================================================================== */
@@ -3152,15 +3188,17 @@ test('basis: narrowGround is genuinely side-blind, so its backwards axis cannot 
     'WHICH side matched, so the backwards axis at Controller.js:1182 is no longer harmless');
 });
 
-test('basis: every hand-written lateral basis in src, and one that is still backwards', async () => {
-  /* The guard against the next instance, and it found one on its first run.
+test('basis: every hand-written lateral basis in src, and what each one is for', async () => {
+  /* The guard against the next instance, and it found one on its first run — the third and last
+   * site of the inversion, now fixed.
    *
    * ── Why a census of SITES and not a shared `RIGHT_OF(yaw)` helper ───────────────────────────
    * The obvious response to "this expression was written by hand in three files" is to export it
    * once. I do not think that is the fix, and I am not building it:
    *
-   *   · after the fix there is exactly ONE site that wants a right vector (`Moveset.js:415`).
-   *     A named export with a single consumer is ceremony;
+   *   · there are now exactly TWO sites that want a right vector (`Moveset.js:415`,
+   *     `CameraRig._buildBasis`) and one that wants a side-blind lateral axis. A named export
+   *     with two consumers, one of which stores it on a field, is ceremony;
    *   · the failure was never that a helper was wrong. It was that a hand-written vector **agrees
    *     with itself** everywhere it is used, so a self-consistent wrong answer survives review.
    *     A helper does not stop the next person writing the vector out by hand — only something
@@ -3168,27 +3206,21 @@ test('basis: every hand-written lateral basis in src, and one that is still back
    *   · §388's rule applies: a table of what the code should say is a second copy that drifts.
    *     This stores no value. It stores nothing but a list of places, with a reason each.
    *
-   * ── What it found ───────────────────────────────────────────────────────────────────────────
-   * A third site the first pass missed, because the line contains no `Math.` at all:
+   * ── What it found, and the first pass had missed it because the line contains no `Math.` ────
    *
    *     CameraRig.js:1127   const sy = Math.sin(yaw), cy = Math.cos(yaw);
    *     CameraRig.js:1128   this.forward.set(sy, 0, cy);
-   *     CameraRig.js:1129   this.right.set(cy, 0, -sy);      // ← this is LEFT
+   *     CameraRig.js:1129   this.right.set(cy, 0, -sy);      // ← this was LEFT
    *
-   * Driven below: `rig.right · (rig.forward × up) = -1.000` at every yaw. A field named `right`
-   * holding the left vector. Its consumers split, and the split is the finding:
+   * A field named `right` holding the left vector, measured at `-1.000` for every yaw. **Now
+   * fixed**, and the reason it needed a whole round rather than a sign flip is that its five
+   * consumers do not move together: two use `right` twice — once to derive a sign, once to apply
+   * it — so the error cancelled and the shipped framing was always correct, while three use it
+   * once and were wrong. Arm 23 holds all five as numbers, before and after.
    *
-   *   SELF-CANCELLING — `_sideSign` (`:763`) derives the sign by projecting velocity ON `right`
-   *     and `_pivotGoal` (`:1161`) applies it back along `right`, so the framing offset lands on
-   *     the travel side whichever vector it is. The whiskers (`:1307`) take ±, like `narrowGround`.
-   *   NOT CANCELLING — `_freeFly` (`:1530`) strafes `mv.x` along `right`, so the debug camera
-   *     moves opposite the stick; the `aim ? 0.45` shoulder offset (`:1160`) is unpaired, so
-   *     aiming shifts over the wrong shoulder; and `_probeWallSide` (`:774`) labels its two casts
-   *     `hitR`/`hitL` from it, feeding `_wallSide` and hence the bank in `_roll` (`:759`).
-   *
-   * **Routed, not fixed.** `CameraRig.js` is FRAMES' file, the roll sign feeds every shot in
-   * `shots/`, and flipping it during a capture is the §186 situation. This arm measures it and
-   * pins it so the decision is someone's to make rather than nobody's to notice. */
+   * The site list below survives the fix because it is a list of PLACES, not of values: all three
+   * sites still write a lateral basis by hand, and being listed has never meant "wrong". It means
+   * somebody wrote the expression that faked two findings, and said which one they meant. */
   const srcDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', 'src');
   const walk = (dir, out = []) => {
     for (const e of readdirSync(dir, { withFileTypes: true })) {
@@ -3229,9 +3261,9 @@ test('basis: every hand-written lateral basis in src, and one that is still back
      listed is not approval, it is an acknowledgement with a reason and an owner. A NEW one fails
      this arm, and the message says what to do about it. */
   const KNOWN = {
-    'player/Controller.js': 'narrowGround — backwards, but side-blind: proved by the arm above',
-    'player/Moveset.js':    'WallRun._side — his RIGHT, fixed this round, pinned by arm 19',
-    'player/CameraRig.js':  'rig.right — backwards, live, ROUTED TO FRAMES (see this arm)',
+    'player/Controller.js': 'narrowGround — still backwards, but side-blind: proved by the arm above',
+    'player/Moveset.js':    'WallRun._side — his RIGHT, corrected, pinned by arm 19',
+    'player/CameraRig.js':  'rig.right — his RIGHT, corrected, all five consumers pinned by arm 23',
   };
   const unknown = found.filter((f) => !KNOWN[f.rel]);
   assert.deepEqual(unknown.map((f) => `${f.rel}:${f.line}`), [],
@@ -3245,22 +3277,24 @@ test('basis: every hand-written lateral basis in src, and one that is still back
     'exact site it was written to catch');
   assert.ok(found.length >= 3, `only ${found.length} sites found — the scanner has stopped matching`);
 
-  /* And the CameraRig claim itself, driven rather than read off the source. */
+  /* And the CameraRig field itself, driven rather than read off the source. It is the only one of
+     the three sites that carries the word `right` on a stored field rather than in a local, so it
+     is the one a reader is most entitled to trust — which is exactly why it was the most wrong. */
   const { CameraRig } = await import('../src/player/CameraRig.js');
   const rig = new CameraRig(stubEngine());
   const UP = V(0, 1, 0);
-  let neg = 0, n = 0;
+  let pos = 0, n = 0;
   for (const yaw of [0, 0.7, Math.PI / 2, -1.2, Math.PI]) {
     rig._buildBasis(yaw);
     const dot = rig.right.dot(new THREE.Vector3().crossVectors(rig.forward, UP));
     n++;
-    if (dot < -0.999) neg++;
+    if (dot > 0.999) pos++;
     console.log(`[sites] CameraRig yaw ${yaw.toFixed(2)}: right · (forward × up) = ${dot.toFixed(3)}`);
   }
-  assert.equal(neg, n,
-    `CameraRig.right is no longer the exact negation of forward × up (${neg}/${n}). If FRAMES ` +
-    'corrected it, drop this half and re-check `_wallSide`, the aim shoulder and the free-fly ' +
-    'strafe, which are the three consumers that do not cancel.');
+  assert.equal(pos, n,
+    `CameraRig.right is not forward × up (${pos}/${n} yaws agree). It held the exact negation for ` +
+    'most of this project\'s life; if it has gone back, re-check the three consumers that do not ' +
+    'cancel — the bank, the aim shoulder and the free-fly strafe. Arm 23 measures all five.');
 });
 
 /* ====================================================================== */
@@ -3446,4 +3480,212 @@ test('roll / bounce: two moves with one driven entry each, checked against what 
     assert.equal(c.airJumps, 1, 'bounce did not refresh the double jump — "chains read as skill" is false');
     assert.ok(freshWall, 'bounce did not free the wall — the second half of its own comment is false');
   }
+});
+
+/* ====================================================================== */
+/* 23 — CameraRig.right: every consumer, before and after                  */
+/* ====================================================================== */
+
+/**
+ * A real `CameraRig` on a stub engine. The rig's `update` needs only `engine.get('movement')`
+ * (a plain position/velocity/stateName/yaw bag) and `engine.get('collision')`, so the whole
+ * chain — frame resolution, the wall-side probe, the boom, the written quaternion — runs
+ * headlessly. That matters here: this is the one basis inversion that could change what a player
+ * sees, so nothing about it is argued from the source.
+ */
+function rigEngine(mv, col, focus = false) {
+  const listeners = new Map();
+  return {
+    input: {
+      move: { x: 0, y: 0 }, look: { x: 0, y: 0 },
+      down: (a) => (a === 'focus' ? focus : false),
+      pressed: () => false, released: () => false, bufferedPeek: () => false, buffered: () => false,
+    },
+    camera: new THREE.PerspectiveCamera(60, 16 / 9, 0.1, 500),
+    scene: new THREE.Scene(), renderer: null,
+    time: 0, dt: DT, timeScale: 1, width: 1920, height: 1080, quality: 'high',
+    warnings: [], debug: { freeCam: false },
+    get(m) { return m === 'movement' ? mv : m === 'collision' ? col : null; },
+    has() { return false; },
+    warn(m) { this.warnings.push(String(m)); },
+    on(e, f) { if (!listeners.has(e)) listeners.set(e, new Set()); listeners.get(e).add(f); return () => listeners.get(e).delete(f); },
+    emit() {}, registerCollider() {},
+  };
+}
+/** A wall whose outward normal (wall -> Sly) is `n`. Only rays pointing INTO the face hit. */
+function rigWall(n, d = 0.9) {
+  const N = n.clone().normalize();
+  return {
+    ready: true, SLOPE: { walkable: 0.9, wall: 1.2 },
+    raycast(o, dir, maxDist) {
+      const into = -dir.x * N.x - dir.z * N.z;
+      if (into > 0.5 && d <= maxDist) {
+        return { hit: true, point: o.clone().addScaledVector(dir, d), normal: N.clone(), distance: d, tag: 'wall', rec: { id: 'probe-wall' } };
+      }
+      return { hit: false };
+    },
+    capsuleSweep(from, to) { return { hit: false, position: to.clone(), normal: V(0, 1, 0), distance: 0 }; },
+    overlap() { return []; }, query() { return []; }, nearest() { return null; },
+  };
+}
+/** An occluder on ONE side only, so a non-symmetric whisker pair would show up. */
+function rigSlab() {
+  return {
+    ready: true, SLOPE: { walkable: 0.9, wall: 1.2 },
+    raycast() { return { hit: false }; },
+    capsuleSweep(from, to) {
+      if (to.x > 1.0) { const p = V(1.0, to.y, to.z); return { hit: true, position: p, normal: V(-1, 0, 0), distance: from.distanceTo(p) }; }
+      return { hit: false, position: to.clone(), normal: V(0, 1, 0), distance: from.distanceTo(to) };
+    },
+    overlap() { return []; }, query() { return []; }, nearest() { return null; },
+  };
+}
+
+test('CameraRig: the five consumers of `right`, two of which must not move', async () => {
+  /* `CameraRig._buildBasis` set `this.right` to `(cos yaw, 0, -sin yaw)` — the exact negation of
+   * `forward × up`, a field named `right` holding the LEFT vector, and the third and last site of
+   * the basis inversion that faked two findings in `Moveset.js`.
+   *
+   * ── Why this took a round and not a sign flip ───────────────────────────────────────────────
+   * `right` has five consumers and they do NOT all move together. Two use it twice — once to
+   * derive a sign, once to apply it — so the error cancelled and the shipped framing was correct
+   * the whole time. Three use it once. **The fix is therefore behaviour-preserving for two
+   * consumers and behaviour-changing for three, and the only honest way to land it is to be able
+   * to say which is which afterwards.** So every row below is a number, measured through the real
+   * rig, and the two invariants are HARD EQUALITIES — a tolerance would hide the one outcome
+   * worth catching, which is an "identical" that quietly drifted.
+   *
+   *   C1/C2  `_sideSign` (`:763`) projects velocity ON `right`; `_pivotGoal` (`:1161`) applies
+   *          `f.side · _sideSign` back ALONG `right`. Both signs flip.        DID NOT MOVE.
+   *   C4     whiskers `[+1, 0.55]` and `[-1, 0.55]` — equal offsets, equal authority, combined
+   *          with `min`, so the probe SET is invariant under `right → -right`. DID NOT MOVE.
+   *   C3     `_probeWallSide` (`:774`) names its casts `hitR`/`hitL` from `right`, feeding
+   *          `_wallSide` and the bank in `_roll` (`:759`).                     CHANGED.
+   *   C2b    the `aim ? 0.45` shoulder (`:1160`) is an unpaired constant.      CHANGED.
+   *   C5     `_freeFly` (`:1530`) strafes `mv.x` along `right`.                CHANGED.
+   *
+   * ── The roll convention, measured rather than derived ───────────────────────────────────────
+   * "Bank into the wall" is a physical claim, so it is tested as one: does the camera's up-vector
+   * acquire a component TOWARD the wall? That needs no handedness convention at all, which is the
+   * point — a hand-derived basis is what caused this whole family of bugs. Separately, forcing
+   * `_roll = +0.30` and reading the quaternion the rig's own `_write` produces gives
+   * `camUp · camRight₀ = -0.2745`, i.e. positive roll banks LEFT.
+   *
+   * Pre-fix the camera banked AWAY from the wall on BOTH sides (−0.0957 each). Away on both sides
+   * is the signature of an inverted INPUT rather than a wrong constant: a wrong constant banks the
+   * same way regardless of side, an inverted input banks away from whichever side it is. That is
+   * what made the fix a correction to a stated intent rather than a coin flip.
+   *
+   * ── The fix, and exactly three numbers moved ────────────────────────────────────────────────
+   *   C3   -0.0957  ->  +0.0957   (both sides: AWAY -> INTO, matching the comment)
+   *   C2b  -0.4500  ->  +0.4500   (the aim shoulder swaps to his right)
+   *   C5   -3.0000  ->  +3.0000   (the debug strafe follows the stick)
+   * while C1/C2's |offset| stayed 0.847196 with `rig.yaw` identical at -0.1624 — that second part
+   * is what rules out the yaw path reading `right` on the quiet — and C4's booms stayed
+   * 5.00000 / 0.88000 / 5.00000.
+   *
+   * ── And it cannot have touched a shipped frame ──────────────────────────────────────────────
+   * `CameraRig.update` returns immediately when `engine.debug.freeCam` is set (`:644`), and
+   * `Debug.js:132` sets exactly that to "take the camera away from the gameplay rig" for every
+   * capture. So no shot in `shots/` runs this code at all; the change is live gameplay only. */
+  const YAW = 0.6;
+  const FWD = V(Math.sin(YAW), 0, Math.cos(YAW));
+  const TRUE_RIGHT = new THREE.Vector3().crossVectors(FWD, V(0, 1, 0)).normalize();
+  const { CameraRig } = await import('../src/player/CameraRig.js');
+  const spin = (rig, engine, n) => { for (let i = 0; i < n; i++) { engine.time = i * DT; rig.update(DT, i * DT); } };
+
+  /* ---- C1/C2: the self-cancelling pair. The observable is the offset VECTOR and its magnitude,
+     not a projection onto a basis that is itself under suspicion. ---- */
+  const mvSwing = { position: V(0, 2, 0), velocity: TRUE_RIGHT.clone().multiplyScalar(6), grounded: false, stateName: 'hookSwing', yaw: YAW };
+  const eSwing = rigEngine(mvSwing, null);
+  const rSwing = new CameraRig(eSwing);
+  rSwing.init?.();
+  spin(rSwing, eSwing, 120);
+  const withSide = new THREE.Vector3(); rSwing._pivotGoal(withSide, 1);
+  const keptSide = rSwing._frame.side;
+  rSwing._frame.side = 0;
+  const noSide = new THREE.Vector3(); rSwing._pivotGoal(noSide, 1);
+  rSwing._frame.side = keptSide;
+  const offset = withSide.clone().sub(noSide);
+  console.log(`\n[rig] C1/C2 framing offset  |offset| ${offset.length().toFixed(6)}  ` +
+              `_sideSign ${rSwing._sideSign.toFixed(3)}  f.side ${keptSide.toFixed(3)}  rig.yaw ${rSwing.yaw.toFixed(4)}`);
+
+  /* ---- C4: whiskers over a one-sided occluder ---- */
+  const eSlab = rigEngine({ position: V(0, 2, 0), velocity: V(0, 0, 0), grounded: true, stateName: 'idle', yaw: YAW }, rigSlab());
+  const rSlab = new CameraRig(eSlab);
+  rSlab.init?.();
+  spin(rSlab, eSlab, 30);
+  const booms = [V(0, 0, 1), V(1, 0, 0), V(-0.4, 0.2, 0.9).normalize()].map((d) => rSlab._castBoom(5.0, d));
+  console.log(`[rig] C4 whiskers           _castBoom over a one-sided slab: ${booms.map((b) => b.toFixed(5)).join(', ')}`);
+
+  /* ---- C3: the bank, on `wallCling` (which does resolve to the wall_run framing) ---- */
+  const banks = {};
+  for (const side of [+1, -1]) {
+    const toWall = TRUE_RIGHT.clone().multiplyScalar(side);
+    const mv = { position: V(0, 2, 0), velocity: FWD.clone().multiplyScalar(7), grounded: false, stateName: 'wallCling', yaw: YAW };
+    const e = rigEngine(mv, rigWall(toWall.clone().negate()));
+    const r = new CameraRig(e);
+    r.init?.();
+    spin(r, e, 90);
+    e.camera.updateMatrixWorld(true);
+    const camUp = V(0, 1, 0).applyQuaternion(e.camera.quaternion);
+    banks[side] = { toward: camUp.dot(toWall), wallSide: r._wallSide, roll: r._roll };
+    console.log(`[rig] C3 bank wall-on-${side > 0 ? 'RIGHT' : 'LEFT '}  _wallSide ${String(r._wallSide).padStart(2)}  ` +
+                `roll ${(r._roll * 180 / Math.PI).toFixed(2)}°  camUp·toWall ${banks[side].toward.toFixed(4)}  ` +
+                `${banks[side].toward > 0.002 ? 'INTO' : banks[side].toward < -0.002 ? 'AWAY' : 'none'}`);
+  }
+
+  /* ---- C2b: the aim shoulder ---- */
+  const shoulder = {};
+  for (const focus of [false, true]) {
+    const e = rigEngine({ position: V(0, 2, 0), velocity: V(0, 0, 0), grounded: true, stateName: 'idle', yaw: YAW }, null, focus);
+    const r = new CameraRig(e);
+    r.init?.();
+    spin(r, e, 60);
+    const out = new THREE.Vector3(); r._pivotGoal(out, 1);
+    shoulder[focus ? 'aim' : 'base'] = out.clone().sub(V(0, 2, 0)).dot(TRUE_RIGHT);
+  }
+  console.log(`[rig] C2b aim shoulder      no-aim ${shoulder.base.toFixed(4)}  aiming ${shoulder.aim.toFixed(4)} along his true right`);
+
+  /* ---- C5: the free-fly strafe ---- */
+  const eFly = rigEngine({ position: V(0, 2, 0), velocity: V(0, 0, 0), grounded: true, stateName: 'idle', yaw: YAW }, null);
+  const rFly = new CameraRig(eFly);
+  rFly.init?.();
+  spin(rFly, eFly, 10);
+  rFly.setMode('free');
+  eFly.input.move.x = 1; eFly.input.move.y = 0;
+  const flyFrom = rFly._freePos.clone();
+  spin(rFly, eFly, 20);
+  const flyD = rFly._freePos.clone().sub(flyFrom);
+  const camFwd = new THREE.Vector3(); eFly.camera.getWorldDirection(camFwd); camFwd.y = 0; camFwd.normalize();
+  const screenRight = new THREE.Vector3().crossVectors(camFwd, V(0, 1, 0)).normalize();
+  const fly = flyD.dot(screenRight);
+  console.log(`[rig] C5 free-fly strafe    stick RIGHT -> ${fly.toFixed(4)} along screen-right  ` +
+              `(${fly > 0.001 ? 'RIGHT, correct' : fly < -0.001 ? 'LEFT, inverted' : 'no move'})`);
+
+  /* ── the two that MUST NOT MOVE, as hard equalities ─────────────────────────────────────── */
+  assert.ok(Math.abs(offset.length() - 0.847196) < 1e-4,
+    `the framing offset is now ${offset.length().toFixed(6)}, not 0.847196. C1/C2 were classified ` +
+    'as self-cancelling and they are not — something else reads `right` on the way to the pivot.');
+  assert.deepEqual(booms.map((b) => b.toFixed(5)), ['5.00000', '0.88000', '5.00000'],
+    'the whisker booms moved. The lateral pair was classified as symmetric (±1, both authority ' +
+    '0.55, combined with min); if that changed, the boom now depends on which side `right` names.');
+
+  /* ── the three the fix CHANGED, at their corrected values ───────────────────────────────── */
+  assert.ok(banks[+1].toward > 0.002 && banks[-1].toward > 0.002,
+    `the bank goes ${banks[+1].toward.toFixed(4)} / ${banks[-1].toward.toFixed(4)} — it must lean ` +
+    'INTO the wall on both sides, which is what `_blendFrame`\'s own comment claims. Negative on ' +
+    'both sides is the pre-fix signature: an inverted `_wallSide`, not a wrong constant.');
+  assert.ok(shoulder.aim > 0,
+    `aiming offsets ${shoulder.aim.toFixed(4)} along his true right — it must be positive, i.e. over ` +
+    'his right shoulder. This term is an unpaired constant, so it is the one `_pivotGoal` cannot self-correct.');
+  assert.ok(fly > 0,
+    `the free-fly strafe goes ${fly.toFixed(4)} along screen-right on a stick-RIGHT — the debug camera ` +
+    'is moving opposite the stick again.');
+
+  /* The lever. Every "changed" row is only meaningful if the rig is really banking and really
+     strafing; a rig that did nothing would satisfy three sign assertions by doing nothing. */
+  assert.ok(Math.abs(banks[+1].roll) > 0.05, `roll is ${banks[+1].roll.toFixed(4)} rad — the bank never engaged, so C3 measures nothing`);
+  assert.ok(Math.abs(fly) > 1, `the free-fly camera moved ${fly.toFixed(4)} — it is not strafing, so C5 measures nothing`);
+  assert.ok(Math.abs(shoulder.base) < 1e-6, `the no-aim baseline is ${shoulder.base.toFixed(4)}, not 0 — C2b is not isolating the aim term`);
 });

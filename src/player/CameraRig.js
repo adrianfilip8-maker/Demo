@@ -1123,10 +1123,40 @@ export class CameraRig {
     this.yaw = wrapPi(this.yaw + (Math.abs(step) > Math.abs(err) ? err : step));
   }
 
+  /**
+   * The rig's own frame. `right` is `forward × up`, which is the definition the whole project
+   * strafes on (`Controller._readInput`, `_rgt.crossVectors(_fwd, UP)`).
+   *
+   * It was `(cy, 0, -sy)` — the exact negation, measured at −1.000 for every yaw. A field named
+   * `right` holding the left vector, and the third and last site of a basis inversion that faked
+   * two findings in `Moveset.js` across two rounds before it was caught.
+   *
+   * **Two of the five consumers could not see it and three could**, which is why this took a
+   * measured before/after rather than a sign flip:
+   *
+   *   unaffected  `_sideSign` projects velocity ON `right` and `_pivotGoal` applies the result
+   *               back ALONG `right`, so both signs flipped together and the framing offset was
+   *               always correct. Verified unchanged, to the digit: |offset| 0.847196 either way,
+   *               and `rig.yaw` identical at −0.1624, which is what rules out the yaw path
+   *               reading `right` on the quiet. The whisker pair is ±1 at equal authority
+   *               combined with `min`, so the probe set is invariant under `right → -right`;
+   *               also verified unchanged at 5.00000 / 0.88000 / 5.00000.
+   *   corrected   the bank now leans INTO the wall (camUp·toWall −0.0957 → +0.0957 on BOTH
+   *               sides), as `_blendFrame`'s comment always said it did. The `aim` shoulder now
+   *               offsets over his right (−0.4500 → +0.4500). The debug fly-cam now strafes the
+   *               way the stick points (−3.0000 → +3.0000).
+   *
+   * `tests/traversal.test.mjs` holds all five as numbers, with the two invariants as hard
+   * equalities. Nothing here is derived: the roll convention was taken by forcing `_roll` and
+   * reading the quaternion `_write` produces, and "bank into the wall" was tested as the physical
+   * claim it is — does `camUp` tip toward the wall — because a hand-derived basis is what caused
+   * this whole family of bugs. Banking AWAY on both sides was the tell: a wrong constant banks
+   * the same way regardless of side, an inverted input banks away from whichever side it is.
+   */
   _buildBasis(yaw) {
     const sy = Math.sin(yaw), cy = Math.cos(yaw);
     this.forward.set(sy, 0, cy);
-    this.right.set(cy, 0, -sy);
+    this.right.set(-cy, 0, sy);
   }
 
   /* ---------------------------------------------------------------- follow -- */

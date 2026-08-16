@@ -40,19 +40,41 @@
  */
 import { writeFileSync, mkdirSync } from 'node:fs';
 import path from 'node:path';
+import { beforeEach } from 'node:test';
 import { StateMachine } from '../src/player/States.js';
 
-/** name -> { driven, forced, dfrom: Set<string> } — `dfrom` is the DRIVEN predecessors only. */
+/**
+ * name -> { driven, forced, dfrom, arms, clean }
+ *   dfrom  DRIVEN predecessors only
+ *   arms   the test arms that DROVE it, by name (see the `beforeEach` below)
+ *   clean  the arms that drove it in a run where **nobody had placed Sly** (see `__placed`)
+ */
 export const record = new Map();
 
 let depth = 0;
 let installed = false;
+let arm = '(outside any arm)';
 
-function note(name, kind, from) {
+/**
+ * The two states `Controller.teleport` forces on its way through (`Controller.js:1596`). A forced
+ * entry into either of these is a RESET, not a placement — every probe harness in this project
+ * starts by teleporting — so they clear the placement flag rather than setting it.
+ *
+ * **The limit this creates, stated because it flatters coverage:** a test that deliberately drops
+ * Sly into a forced `fall` at altitude reads as unplaced. That can only ever flatter the air and
+ * ground families; the attach states need a real affordance no forced `fall` supplies.
+ */
+const RESET_STATES = new Set(['idle', 'fall']);
+
+function note(name, kind, from, placed) {
   let r = record.get(name);
-  if (!r) { r = { driven: 0, forced: 0, dfrom: new Set() }; record.set(name, r); }
+  if (!r) { r = { driven: 0, forced: 0, dfrom: new Set(), arms: new Set(), clean: new Set() }; record.set(name, r); }
   r[kind]++;
-  if (kind === 'driven') r.dfrom.add(from);
+  if (kind === 'driven') {
+    r.dfrom.add(from);
+    r.arms.add(arm);
+    if (!placed) r.clean.add(arm);
+  }
 }
 
 export function install() {
@@ -64,20 +86,35 @@ export function install() {
     const from = this.current ? this.current.name : '(none)';
     const took = realSet.call(this, name);
     // `set` returns false for an unknown name or a no-op re-entry; neither is an entry.
-    if (took) note(name, depth > 0 ? 'driven' : 'forced', from);
+    if (took) {
+      const driven = depth > 0;
+      note(name, driven ? 'driven' : 'forced', from, !!this.__placed);
+      /* The placement flag, per machine. A test that reaches in and calls `sm.set('hookSwing')`
+         has PLACED Sly; everything the machine then chooses is downstream of that placement and
+         is not evidence that a player could get there. A teleport resets the run and clears it.
+         This is what separates "the machine chose it" from "the machine chose it on its own". */
+      if (!driven) this.__placed = !RESET_STATES.has(name);
+    }
     return took;
   };
   StateMachine.prototype.update = function (dt) {
     depth++;
     try { return realUpdate.call(this, dt); } finally { depth--; }
   };
+  /* Per-arm attribution, for free and without touching a single `test()` call. A root-level
+     `beforeEach` registered here applies to every top-level test in the process — including from
+     a `--import` preload, which is verified rather than assumed: the census's calibration asserts
+     the canary's arm name reaches the trace. */
+  try { beforeEach((t) => { arm = (t && t.name) || '(unnamed arm)'; }); } catch { /* not under node:test */ }
   return record;
 }
 
 /** Plain object, JSON-safe. */
 export function snapshot() {
   const out = {};
-  for (const [k, v] of record) out[k] = { driven: v.driven, forced: v.forced, dfrom: [...v.dfrom] };
+  for (const [k, v] of record) {
+    out[k] = { driven: v.driven, forced: v.forced, dfrom: [...v.dfrom], arms: [...v.arms], clean: [...v.clean] };
+  }
   return out;
 }
 
