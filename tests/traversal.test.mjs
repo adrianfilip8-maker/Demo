@@ -1500,6 +1500,153 @@ test('rope: the authored hall-cable is crossed under the player\'s own power', a
   assert.ok(span(slack) > 0.8, `only crossed ${(span(slack) * 100).toFixed(0)}% of the rope under own power`);
 });
 
+/* ====================================================================== */
+/* 10 — the attach states, driven in the real world                        */
+/* ====================================================================== */
+
+/**
+ * Reachability for the attach half of the moveset, against `realWorld()` — terrain, architecture,
+ * props, collision. Start positions are DERIVED here, not written down: every position this lane
+ * previously located for these states was found in a world missing Terrain and Props, so all of
+ * them had to be re-derived anyway.
+ *
+ * Each route below records the script that produced it. That labelling is not decoration — the
+ * world lane lost a round to presenting a failure from one script beside climbing results from
+ * another as though they were one result, and several states here are reached *incidentally* by
+ * a script aimed at something else (which is a real answer, but only if you can say which run it
+ * came from).
+ */
+async function driveRoute(engine, c, start, yaw, frames, drive, watch) {
+  hardReset(engine, c, start, yaw);
+  let first = -1, last = '', path = [];
+  for (let i = 0; i < frames; i++) {
+    engine.input.beginFrame(DT);
+    engine.input.move.x = 0; engine.input.move.y = 0;
+    drive(engine.input, i, c);
+    engine.time = i * DT;
+    c.update(DT, i * DT);
+    if (c.stateName !== last) { path.push(`${c.stateName}@${i}`); last = c.stateName; }
+    if (first < 0 && c.stateName === watch) first = i;
+  }
+  return { first, path };
+}
+
+test('reach: the attach states are reachable through play in the shipped level', async () => {
+  const { engine, c, arch, collision } = await realWorld();
+  const standAt = (x, z) => {
+    const g = collision.groundCheck(V(x, 90, z), TUNE.radius, 300);
+    if (!g?.hit) return null;
+    hardReset(engine, c, V(x, g.y + 0.05, z));
+    for (let i = 0; i < 8; i++) {
+      engine.input.beginFrame(DT); engine.input.move.x = 0; engine.input.move.y = 0;
+      engine.time = i * DT; c.update(DT, i * DT);
+    }
+    return (c.grounded && Math.abs(c.position.y - g.y) < 1.5) ? { x, y: c.position.y, z } : null;
+  };
+  const nearestStand = (P, rmax = 6, step = 0.5) => {
+    let best = null;
+    for (let dx = -rmax; dx <= rmax; dx += step) for (let dz = -rmax; dz <= rmax; dz += step) {
+      const s = standAt(P.x + dx, P.z + dz);
+      if (!s) continue;
+      s.d = Math.hypot(s.x - P.x, s.y - P.y, s.z - P.z);
+      if (!best || s.d < best.d) best = s;
+    }
+    return best;
+  };
+
+  const runs = [];
+  const M = (arch.api.targets || []).find((t) => String(t.id).includes('mouth'));
+
+  /* Script A — walk at the pylon's south elevation from the desert and jump. Aimed at the
+     authored ladder entry; also the run that produces toTarget, wallClimb and wallCling. */
+  if (M) {
+    const s = standAt(M.point.x, M.point.z + 2.0);
+    if (s) {
+      const r = await driveRoute(engine, c, V(s.x, s.y + 0.05, s.z), Math.atan2(0, -1), 150,
+        (inp, i) => { inp.move.y = 1; if (i >= 18 && i < 24) inp.hold('jump'); else inp.let_go('jump'); }, null);
+      runs.push({ script: `A walk-in at pylon face from (${s.x.toFixed(1)}, ${s.y.toFixed(2)}, ${s.z.toFixed(1)})`, path: r.path });
+    }
+  }
+
+  /* Script B — walk to a pole with standable ground at its foot and press interact. */
+  for (const rec of collision.recs.filter((r) => r.tag === 'pole')) {
+    const ud = rec.mesh.userData || {}, p = rec.mesh.position;
+    const s = nearestStand(V(p.x, ud.bottom ?? p.y, p.z), 4, 0.5);
+    if (!s || s.d > 3.0) continue;
+    const dx = p.x - s.x, dz = p.z - s.z, l = Math.hypot(dx, dz) || 1;
+    const r = await driveRoute(engine, c, V(s.x, s.y + 0.05, s.z), Math.atan2(dx, dz), 150,
+      (inp, i) => { if (l > 0.05) { inp.move.x = dx / l; inp.move.y = -dz / l; } if (i === 20 || i === 60) inp.hold('interact'); else inp.let_go('interact'); }, null);
+    runs.push({ script: `B walk-to-pole ${rec.mesh.name} from (${s.x.toFixed(1)}, ${s.y.toFixed(2)}, ${s.z.toFixed(1)}) d=${s.d.toFixed(2)}`, path: r.path });
+    break;
+  }
+
+  /* Script C — stand on a narrow ledge. */
+  const narrow = standAt(16.8, -1.2);
+  if (narrow) {
+    const r = await driveRoute(engine, c, V(narrow.x, narrow.y + 0.05, narrow.z), Math.PI, 60, () => {}, null);
+    runs.push({ script: `C stand on narrow ledge (${narrow.x}, ${narrow.y.toFixed(2)}, ${narrow.z})`, path: r.path });
+  }
+
+  /* Script D — take damage while already airborne. See the arm below for why that matters. */
+  const rD = await driveRoute(engine, c, V(0, 0, 30), Math.PI, 90,
+    (inp, i, cc) => { inp.move.y = 1; if (i === 10) inp.hold('jump'); if (i === 40) cc.hurt(new THREE.Vector3(0, 0, 1), 8); }, null);
+  runs.push({ script: 'D hurt() while airborne', path: rD.path });
+
+  /* Script E — the enemy-bounce entry point GUARDS drives. */
+  const rE = await driveRoute(engine, c, V(0, 0, 30), Math.PI, 90,
+    (inp, i, cc) => { if (i === 5) { cc.grounded = false; cc.bounce(); } }, null);
+  runs.push({ script: 'E Controller.bounce() [enemyBounce]', path: rE.path });
+
+  console.log('\n[attach] routes driven in the full world:');
+  const seen = new Map();
+  for (const r of runs) {
+    console.log(`  ${r.script}`);
+    console.log(`      ${r.path.slice(0, 8).join(' ')}`);
+    for (const step of r.path) {
+      const name = step.split('@')[0];
+      if (!seen.has(name)) seen.set(name, r.script.slice(0, 1));
+    }
+  }
+  const want = ['hookSwing', 'poleClimb', 'wallClimb', 'wallCling', 'toTarget', 'tiptoe', 'hurt', 'bounce'];
+  console.log('\n[attach] state -> script that reached it:');
+  for (const w of want) console.log(`  ${w.padEnd(12)} ${seen.has(w) ? `script ${seen.get(w)}` : 'NOT REACHED by these scripts'}`);
+  const missing = want.filter((w) => !seen.has(w));
+  assert.deepEqual(missing, [], `not reached: ${missing.join(', ')}`);
+});
+
+test('reach: hurt fires from the ground as well as the air — the request survives its own knock-back', async () => {
+  /* ── RETIRED AS A BUG-PIN, KEPT AS A REGRESSION GUARD ──────────────────────────────────────
+     This arm was written to pin a live defect and it did its job: it went red the moment
+     `StateMachine.request` was fixed, and its own failure message said "retire this arm". What
+     follows is the defect it caught, kept because the guard is only legible with it.
+
+     A real ordering defect, found by driving, and it is in `Controller`/`States`, not this lane.
+     `Controller.hurt()` ends in `sm.request('hurt')`, which parks the name in `_pending`. But
+     `StateMachine.update` runs `current.update()` FIRST and does `if (forced) this.request(forced)`
+     — overwriting `_pending`. And `hurt()` sets `grounded = false`, so every grounded locomotion
+     state's very next `update` returns `'fall'`. The hurt request is therefore destroyed by the
+     knock-back it just caused. `hurt` is `onRequest`, so `request()` is the only way in at all.
+     Measured: airborne, `hurt` is entered at frame 40. Grounded, it is never entered in 60
+     frames — Sly is knocked into `fall` with no hurt state, no `hurt` clip and no shake.
+
+     Fixed in `States.js:request()`: an outstanding request survives a LOWER-priority one arriving
+     in the same frame. Equal or higher still wins, so a genuinely more urgent forced transition is
+     unaffected and nothing reachable became unreachable. Both arms now assert the good state, so
+     this fails again the day the ordering regresses — which is the whole point of keeping it. */
+  const { engine, c } = await realWorld();
+  const ground = await driveRoute(engine, c, V(0, 0, 30), Math.PI, 60,
+    (inp, i, cc) => { if (i === 5) cc.hurt(new THREE.Vector3(0, 0, 1), 8); }, 'hurt');
+  const air = await driveRoute(engine, c, V(0, 0, 30), Math.PI, 90,
+    (inp, i, cc) => { inp.move.y = 1; if (i === 10) inp.hold('jump'); if (i === 40) cc.hurt(new THREE.Vector3(0, 0, 1), 8); }, 'hurt');
+  console.log(`\n[attach] hurt() grounded -> ${ground.first < 0 ? 'NEVER' : `frame ${ground.first}`}  (${ground.path.slice(0, 4).join(' ')})`);
+  console.log(`[attach] hurt() airborne -> ${air.first < 0 ? 'NEVER' : `frame ${air.first}`}  (${air.path.slice(0, 5).join(' ')})`);
+  assert.ok(air.first >= 0, 'hurt is unreachable from the air');
+  assert.ok(ground.first >= 0,
+    'hurt is unreachable from the GROUND again — a forced transition is clobbering the request that '
+    + 'caused it, so taking a hit standing still plays no state, no clip and no shake. See '
+    + 'States.js request().');
+});
+
 test('wallClimb: proximity alone does not snag a player who is not reaching for it', async () => {
   /* `wall_notch.gd` commits on `elif player.direction:` — a hold acts when it is being reached
      for. Fly past the face with no stick input and nothing may take control. */

@@ -79,8 +79,33 @@ export class StateMachine {
   get priority() { return this.current ? this.current.priority : -1; }
 
   /** Ask for a transition regardless of priority. The owning state's decision wins. */
+  /**
+   * Ask for a transition on the next resolution pass.
+   *
+   * **A request must not be downgraded by the consequence it caused.** This used to assign
+   * `_pending` unconditionally, and that destroyed `hurt` in the one case it matters most:
+   * `Controller.hurt()` calls `request('hurt')` and sets `grounded = false` for the knock-back,
+   * so the very next `current.update()` of any grounded locomotion state returns `'fall'` — and
+   * `update()`'s `if (forced) this.request(forced)` then overwrote the hurt request with the
+   * fall that the hurt itself had just produced.
+   *
+   * Measured before the fix: **airborne → `hurt` at frame 40; grounded → never, in 60 frames.**
+   * No hurt state, no hurt clip, no shake. In the shipped game `_hazards` runs *after*
+   * `sm.update`, so the request always landed on the next frame's forced `'fall'` — which means
+   * **taking a hit while standing still, the common case, played nothing at all.**
+   *
+   * The rule is the narrowest one that fixes it: an outstanding request survives a *lower*
+   * priority one arriving in the same frame. Equal or higher still wins, so a genuinely more
+   * urgent forced transition is unaffected, and nothing that was reachable becomes unreachable.
+   */
   request(name) {
-    if (this.states.has(name)) this._pending = name;
+    if (!this.states.has(name)) return null;
+    if (this._pending && this._pending !== name) {
+      const held = this.states.get(this._pending);
+      const want = this.states.get(name);
+      if (held && want && want.priority < held.priority) return null;
+    }
+    this._pending = name;
     return null;
   }
 
