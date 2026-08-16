@@ -29650,3 +29650,101 @@ four have their own mesh vertices inside a wall proxy's AABB by 0.65–0.99 m. T
 cylinders above is only conservative for it; and whether a store crate should be flush against a
 colonnade wall is a look question that needs a frame. A held finding with a stated reason beats a
 claimed one — which is the whole lesson of §393 and now of §394.
+
+## §396 — Two staging branches that had never run, and the occlusion check that could never say no
+
+`alert` (`22af953`) and `impact` (`fd5db83`) are the thirteenth and fourteenth canonical shots.
+Both existed already on the FX side: `Particles._stageAlert` and `_stageImpact` were written,
+were correct, carried derived per-sprite ages and returned framing points *"so the shot author
+can frame it"* — and **neither had ever executed once**, because nothing in `Shots.js` was named
+`alert` or `impact` and `_stageShot`'s dispatcher never reached either branch.
+
+That is the §357.1 shape — **machinery wired at one end only** — for the sixth and seventh time
+this session, and this pair is the clearest specimen yet: not a half-built feature, but two
+finished ones, complete with their own tuning tables, waiting on a key that was never added to a
+map in another file.
+
+### §396.1 The frame, and a tiebreak that must never be a bar
+
+`alert` is `alertframe` candidate H (rungs 76 px against 44 px, group span 31%w x 48%h, 0.0%
+overlap), chosen over the equally clean J because the shot exists to show a LADDER and H
+separates the rungs 1.73x against J's 1.42x.
+
+`impact` needed a second tool, because a figure standing inside a flat ring on the floor fails
+in ways a two-figure frame does not. The instructive part is the ranking. Four candidates passed
+every derived bar, so something had to order them, and the rule was stated rather than felt: the
+product of the ring reading as a **ring** (the projected ellipse's height:width, which is
+`sin(elevation)` for a circle) and the figure reading as a **figure** (its pixel height). Those
+pull opposite ways — elevation rounds the ring and shrinks the man.
+
+```
+CALIB close and low   rank 199.9   ← the highest of all five
+A three-quarter       rank 122.6
+B higher, further     rank  97.0
+C lifted, fov 38      rank 127.4   ← shipped
+D low three-quarter   rank 114.4
+```
+
+**The calibration candidate ranks first and is disqualified on six crop faults.** That is the
+entry: a composite score is for ordering things the evidence has already admitted, and the
+moment it is used as a gate it selects exactly the frame the bars exist to reject. The
+calibration arm earned its place by being the best-scoring candidate in the set.
+
+### §396.2 A wrong call that could not fail, in the tool that had just certified a shot
+
+Writing the second tool meant extracting the shared primitives, and the extraction exposed this:
+
+```
+lvl.mjs     trisIn() returns { t: [ax, ay, az, bx, …], name }
+lvl.mjs     rayTri(ox, oy, oz, dx, dy, dz, T)   — wants the nine-number ARRAY
+alertframe  const t = rayTri(o.x, o.y, o.z, d.x, d.y, d.z, T);   ← the RECORD
+```
+
+Passed the record, `T[3]` is `undefined`, `det` is `NaN`, and **every** `NaN < x` and `NaN > x`
+guard is false — so no early return fires, control reaches `return t > 1e-6 ? t : -1` with
+`t = NaN`, and the answer is `-1` for every triangle in the level. **`clear()` returned `true`
+unconditionally, for its whole life.** `lvl.mjs`'s own `firstHit` passes `tr.t` correctly, which
+is why nothing else in the project carried it.
+
+Every "clear" that tool has printed was vacuous, **including the five on the `alert`
+certificate.** Those claims are withdrawn and re-earned: with the fix, `--shot alert` reports all
+five subjects clear and `--shot impact` reports both.
+
+The rule, and it is the sharpest form of one this session keeps rediscovering: **there was no
+exception, no zero, and no implausible number.** A visibility check that always answers "visible"
+agrees with a correct one on every frame that happens to be unoccluded, which is most of them.
+Neither inspection nor a green suite could catch it. The only thing that can is pointing the
+check at something that MUST be occluded and requiring it to say so — `framelib.assertOccluded()`
+fires a ray from inside the level to the far side of it, and `impactframe` runs it before
+printing a single verdict.
+
+### §396.3 The ground query, replaced rather than patched
+
+`groundAt(x, z)` was the fifth instance of the cast-origin defect, committed by me *in the same
+file whose header states the rule*. Over the courtyard at (0, 30) it returns **18.12** — the roof
+— while the paving the character stands on is at 0.
+
+It is now `groundColumn(x, z)`, which returns the whole stack, and `groundUnder(x, z, ceiling)`,
+where **`ceiling` is a required argument**. That is the general repair for this class: a query
+whose answer depends on an assumption should not let the caller omit the assumption. Printing the
+column rejected two impact sites that would each have rendered a plausible picture — one under a
+terrace with 1.56 m of headroom, one over a hole in the paving with no floor at all.
+
+### §396.4 A citation corrected, and where it came from
+
+`alertframe`'s header cited *"rung 3 at loudness 0.0177 against rung 2's 0.00949, a 1.9x step"*.
+The FX lane could not reproduce the pair; recomputing from the catalogue under `fxfeel` T3's own
+`loudness` (`mean(count) × mean(alpha) × size[0]²`):
+
+```
+patrol 0.00366 → suspicious 0.01852 → searching 0.06014 → chase 0.21529
+steps 5.06x · 3.25x · 3.58x
+```
+
+`0.0177` is `Particles.js:3577`'s figure — a different quantity, which **also does not reproduce
+from the catalogue under T3's formula** (that comment is a live open question). `0.00949` appears
+nowhere in the tree at all. The real rung2→rung3 step is **3.58x, not 1.9x**, which makes every
+argument that leaned on it stronger — and a citation that happens to argue in your favour is
+still a citation you have to be able to produce. The 30 px mark bar is therefore left exactly
+where it was set rather than loosened to match its now-wider justification (§141.1: a bar is
+re-scoped when nothing depends on the answer, and `alert` now ships against this one).
