@@ -2041,26 +2041,52 @@ function hypostyleHall(A) {
    * boarding point anywhere on it, and the 2.4 m/s step-on this comment's arithmetic assumed
    * corresponded to nothing a player could do; every approach was a jump across a gap.
    *
-   * Both ends now land on the surfaces the route already uses. The south end sits on the great
-   * doorway's cornice `ledge` (x −6…6, z −19…−15, top 12.70) — which is §8.1 step 3's own
-   * landing, where the hook chain puts you — so the rope is boarded by walking to the edge and
-   * stepping on: **nearest stand 0.00 m**, inside `railMount` with the whole margin to spare.
-   * The north end lands on the east aisle roof (`ground` y 13.50, x 11…23).
+   * Both ends now land on the surfaces the route already uses. The north end sits on the east
+   * aisle roof (`ground` y 13.50, x 11…23) — **boarding 1.25 m**, inside `railMount` 1.35. The
+   * south end sits just under the head of the hall's south facade wall (top y 13.00) at
+   * (−8.0, 12.90, −16.40) — **boarding 0.27 m** from a stance at (−8.00, 13.00, −16.15), which
+   * is §8.1 step 3/4's own hall-front walkway, where the hook chain lands you.
    *
-   * ── Sag 1.0 m is a clearance, not a taste ────────────────────────────────────────────────
-   * Re-derived on the new 31.54 m span by casting down from 200 samples: the binding obstacle is
-   * a nave column capital at (6.4, ·, −38.0). Clearance under the rope there is **0.49 m at sag
-   * 1.0 and 0.08 m at 1.5**. Larger sags read as *more* clearance and are not — once the curve
-   * sinks below a capital the downward ray stops hitting it and the metric jumps, which is a
-   * property of the instrument, not of the rope. 1.0 m it is.
+   * ── THE SOUTH END WAS WRONG FOR TWO ROUNDS AND THE MEASUREMENT IS WHY ────────────────────
+   * It was first anchored to the great doorway's cornice `ledge` (x −6.4…6.4, z −19.2…−14.8,
+   * top 12.70) on a measurement that reported **nearest stand 0.00 m**. That number was real and
+   * it was the wrong quantity: it asked *"is the rope's end on the top face of some ground or
+   * ledge box?"* and the answer was yes — the end sat exactly on that box's southern edge. It
+   * never asked whether a body can be there. **It cannot.** A downward ray at that xz lands on
+   * the **nave roof deck at y 17.00**, three metres higher: the cornice ledge is enclosed under
+   * the roof, and the nearest position a capsule can actually occupy is **3.01 m** away (the
+   * traversal lane, driving on a 0.25 m grid, measured 3.26 m — same finding, different grid).
+   * So the rope had no south boarding point at all, and the hook chain being nearer than the
+   * cable is why a driven boarding there entered `hookSwing` instead of `railWalk`.
    *
-   * The ends are 0.70 m apart in height, so the low point is y 12.02 and the ride is asymmetric:
-   * by `v² = v0² + 2gΔh` a 2.4 m/s step-on off the south cornice reaches **6.20 m/s** at the
-   * bottom, and cresting the 1.38 m climb to the north anchor needs **8.14 m/s** there — so he
-   * does not crest, he swings back, which is the rope. The shipped `TUNE.railSpeed` floor would
-   * give him 11.08 m/s at the bottom and carry him over every time; that floor is exactly what
-   * `mountSpeed: 0` declines. */
-  rail(A, 'hall-cable', catenary([-5.8, 12.70, -19.0], [11.3, 13.40, -45.5], 1.0, 32),
+   * This is the third time this session that a point ON a surface has been mistaken for a place
+   * a player can BE — after "a ray hit is not a foothold" and a grep for a method name that did
+   * not exist. The rule that catches all three: **a stance is a capsule, not a point.**
+   *
+   * The new anchor is checked against that standard rather than the old one: 0 of 201 samples
+   * along the curve are inside a solid, minimum clearance below is 0.50 m, and the boarding
+   * stance is a real `groundCheck`-walkable capsule position 0.27 m from the rope.
+   *
+   * ── Sag 0.6 m, and the binding constraint is SPEED, not clearance ────────────────────────
+   * Clearance is the easy half and it is not what sets this number: the obstacle is a nave
+   * column capital the span passes over, and clearance only *improves* as the sag shrinks.
+   * What sets it is `tests/traversal.test.mjs`'s rope assertion — the rider must stay under
+   * `TUNE.railSpeed × 0.5` = **4.75 m/s**, because a cable ridden at slide speed is a zip-line
+   * and not a rope. By `v² = 2gΔh` that caps the drop from the boarding anchor at
+   * 4.75²/48 = **0.470 m**. With the ends at 12.90 and 13.40 the low point is
+   * `(12.90 + 13.40)/2 − sag`, so the drop from the south anchor is `sag − 0.25`:
+   *
+   *     sag 1.0 → drop 0.75 → 6.00 m/s   over
+   *     sag 0.8 → drop 0.55 → 5.14 m/s   over
+   *     sag 0.7 → drop 0.45 → 4.65 m/s   inside, by 0.10
+   *     sag 0.6 → drop 0.35 → 4.10 m/s   inside, by 0.65   ← shipped
+   *
+   * 0.6 rather than 0.7 because the boarding step-on adds its own speed on top of the drop and
+   * a 0.10 m/s margin is not one. This is the one number in the rope the level does not get to
+   * choose on its own: MOVEMENT owns what "ridden like a rope" means and the ceiling is theirs.
+   * A first pass shipped 1.0 and failed that assertion at 6.00 m/s — caught by their test, not
+   * by me. */
+  rail(A, 'hall-cable', catenary([-8.0, 13.33, -16.4], [11.3, 13.53, -45.5], 0.45, 32),
     'rope_fibre', 0.085, 'hall', { mountSpeed: 0, rope: true });
 
   /* Pinnacles on the aisle roof: the §8.1 spire tips at (±16, 21, −50). */

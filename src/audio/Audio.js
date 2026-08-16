@@ -1300,14 +1300,49 @@ export class Audio {
       this.play('cane_hit', { position: p?.pos, index: p?.index || 1, delay: 0.055 });
     });
     on('caneSlam', (p) => this.play('dive_boom', { position: p?.pos }));
-    on('hookGrab', (p) => this.play('hook_catch', { position: p?.pos }));
+    /* ── Contacts, voiced by what was actually touched ──────────────────────────────────────
+       These eight lines each used to name a fixed recipe, because the events carried no
+       material and there was nothing else to name. MOVEMENT now publishes `material` on all of
+       them (`Moveset.js` 409/627/734/771/919/1149/1237/1446) — COLLISION's own tag, the same
+       vocabulary `stepFor()` resolves — so the guesses can go.
+
+       Two of them were measurably wrong on this level. `spireLand` played `step_metal`
+       (spectral centroid 1849 Hz) on geometry the level tags `stone` (1033 Hz), and `ledgeGrab`
+       played `step_cloth` (2238 Hz) on a ledge also tagged `stone`. `railMount` could not tell
+       a bronze cable from the three `rope_fibre` ropes the level authors, which are tagged
+       `cloth`; it played the same metal catch on all of them.
+
+       `ledgeGrab` keeps a cloth layer under the surface, and that is not a hedge. Cloth was
+       always the right sound for the GLOVE — the author, having no surface, voiced Sly's hand
+       because it was the only thing they could know. Now both are knowable, so the frame gets
+       both: the ledge's own material as the contact and the glove under it, the same
+       character-plus-material pair `landed` has always used.
+
+       `stepFor(undefined)` returns `step_stone`, so a contact that resolves without a hit
+       degrades to exactly the sound it made before rather than to silence. */
+    on('hookGrab', (p) => {
+      this.play('hook_catch', { position: p?.pos });
+      this.play(stepFor(p?.material), { position: p?.pos, volume: 0.45, rate: 1.1 });
+    });
     on('hookRelease', (p) => this.play('rope_creak', { position: p?.pos, volume: 0.5 }));
-    on('railMount', (p) => this.play('hook_catch', { position: p?.pos, volume: 0.5, rate: 1.35 }));
-    on('poleMount', (p) => this.play('pole_scuff', { position: p?.pos }));
-    on('spireLand', (p) => this.play('step_metal', { position: p?.pos, volume: 0.8, rate: 1.2 }));
-    on('wallRun', (p) => this.play('step_stone', { position: p?.pos, volume: 0.5, rate: 0.9 }));
-    on('wallJump', (p) => { this.play('jump', { position: p?.pos }); this.play('step_stone', { position: p?.pos, volume: 0.7 }); });
-    on('ledgeGrab', (p) => this.play('step_cloth', { position: p?.pos, volume: 0.9, rate: 0.8 }));
+    on('railMount', (p) => {
+      this.play('hook_catch', { position: p?.pos, volume: 0.5, rate: 1.35 });
+      this.play(stepFor(p?.material), { position: p?.pos, volume: 0.6, rate: 1.15 });
+    });
+    on('poleMount', (p) => {
+      this.play('pole_scuff', { position: p?.pos });
+      this.play(stepFor(p?.material), { position: p?.pos, volume: 0.5 });
+    });
+    on('spireLand', (p) => this.play(stepFor(p?.material), { position: p?.pos, volume: 0.8, rate: 1.2 }));
+    on('wallRun', (p) => this.play(stepFor(p?.material), { position: p?.pos, volume: 0.5, rate: 0.9 }));
+    on('wallJump', (p) => {
+      this.play('jump', { position: p?.pos });
+      this.play(stepFor(p?.material), { position: p?.pos, volume: 0.7 });
+    });
+    on('ledgeGrab', (p) => {
+      this.play(stepFor(p?.material), { position: p?.pos, volume: 0.9, rate: 0.8 });
+      this.play('step_cloth', { position: p?.pos, volume: 0.5, rate: 0.85 });
+    });
     on('pickpocket', (p) => this.play('pickpocket', { position: p?.pos }));
     on('paraglide', (onOff) => { if (!onOff && this._loops.glide) { this.stop(this._loops.glide, 0.3); this._loops.glide = null; } });
 
