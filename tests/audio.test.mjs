@@ -812,3 +812,86 @@ test('the superseded guard listeners are gone, not merely unpublished', () => {
     assert.ok(new RegExp(`play\\(\\s*['"]${n}['"]`).test(src), `nothing plays "${n}" any more`);
   }
 });
+
+/* ==========================================================================
+   The renderer's own stop() semantics (§393)
+   ==========================================================================
+   `webaudio.mjs` is the instrument every audio verdict in this project rests on, and one of its
+   two source nodes had a bug that erased sound rather than truncating it: `stop()` with no
+   argument left `_stop` undefined, `Math.round(undefined * sr)` is NaN, and the render loop
+   `for (i = i0; i < NaN)` never executed. `Audio._release` calls `stop()` with no argument on
+   every reclaimed voice — so a rendered session lost every one-shot cue it had already played,
+   retroactively, and three rounds of harness-side workarounds were built on top of that before
+   anyone read the mock. The spec says `stop()` means "stop at currentTime". These are the bars
+   that hold it, on both source nodes, because only one of them was ever exercised by the bug.
+========================================================================== */
+
+function stopArm(makeSource) {
+  const ctx = new OfflineCtx(SR);
+  const g = ctx.createGain();
+  g.gain.value = 1;
+  g.connect(ctx.destination);
+  const src = makeSource(ctx);
+  src.connect(g);
+  src.start(0);
+  ctx.currentTime = 0.1;      // the clock as it stands when the voice is reclaimed
+  src.stop();                 // no argument — the spec's "stop now"
+  const d = ctx.render(0.3);
+  const before = rms(d.subarray(0, Math.round(0.1 * SR)));
+  const after = rms(d.subarray(Math.round(0.12 * SR)));
+  return { before, after };
+}
+
+test('a source stopped with no argument TRUNCATES at currentTime, it does not vanish', () => {
+  const cases = [
+    ['OscillatorNode', (ctx) => { const o = ctx.createOscillator(); o.type = 'sine'; o.frequency.value = 440; return o; }],
+    ['BufferSourceNode', (ctx) => {
+      const b = ctx.createBuffer(1, SR, SR);
+      const ch = b.getChannelData(0);
+      for (let i = 0; i < ch.length; i++) ch[i] = Math.sin((2 * Math.PI * 440 * i) / SR) * 0.5;
+      const s = ctx.createBufferSource(); s.buffer = b; return s;
+    }],
+  ];
+  let checked = 0;
+  for (const [name, make] of cases) {
+    const { before, after } = stopArm(make);
+    console.log(`  ${name}: rms before stop ${before.toFixed(5)}, after ${after.toFixed(5)}`);
+    /* The half that the bug destroyed: everything before the stop must survive. */
+    assert.ok(before > 0.01,
+      `${name} rendered ${before.toFixed(6)} before its stop — stop() is still erasing the whole `
+      + 'source instead of truncating it, which is the §393 defect');
+    /* And the half that proves it is a stop at all rather than a no-op. */
+    assert.ok(after < before * 1e-3,
+      `${name} is still sounding after its stop (${after.toFixed(6)} against ${before.toFixed(6)}) — `
+      + 'stop() defaulted to something later than currentTime, or to Infinity');
+    checked++;
+  }
+  assert.equal(checked, cases.length, 'did not check both source nodes');
+});
+
+test('CALIBRATION: the arm fires against the pre-fix stop(t)', () => {
+  /* MUST FIRE. `stop(undefined)` cannot reproduce the defect any more, and that is itself worth
+     recording: a JS default parameter fires on an explicit `undefined`, so the fix is robust
+     against a caller that passes one. The defect has to be reproduced at the FIELD — which is
+     exactly the state the old `stop(t) { this._stop = t; }` left behind when called bare. */
+  const ctx = new OfflineCtx(SR);
+  const g = ctx.createGain(); g.gain.value = 1; g.connect(ctx.destination);
+  const o = ctx.createOscillator(); o.type = 'sine'; o.frequency.value = 440;
+  o.connect(g); o.start(0);
+  o._stop = undefined;        // the pre-fix state: i1 = Math.round(NaN) -> the loop never runs
+  const erased = rms(ctx.render(0.3));
+  console.log(`  calibration: _stop = undefined renders rms ${erased.toFixed(6)} — the defect erased the source`);
+  assert.equal(erased, 0,
+    'an undefined _stop no longer erases the source, so the truncation bar above cannot tell the '
+    + 'fix from the defect it was written for');
+
+  /* And the spec default does fire on an explicit undefined, so a caller passing one is safe. */
+  const ctx2 = new OfflineCtx(SR);
+  const g2 = ctx2.createGain(); g2.gain.value = 1; g2.connect(ctx2.destination);
+  const o2 = ctx2.createOscillator(); o2.type = 'sine'; o2.frequency.value = 440;
+  o2.connect(g2); o2.start(0);
+  ctx2.currentTime = 0.1;
+  o2.stop(undefined);
+  const survived = rms(ctx2.render(0.3).subarray(0, Math.round(0.1 * SR)));
+  assert.ok(survived > 0.01, `stop(undefined) erased the source (rms ${survived.toFixed(6)}) — the default did not fire`);
+});

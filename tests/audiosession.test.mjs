@@ -8,6 +8,7 @@ import { OfflineCtx, rms, peak, centroid } from './webaudio.mjs';
 import { Audio, TUNE } from '../src/audio/Audio.js';
 import { SECTION_NAMES } from '../src/audio/Music.js';
 import { SPACES } from '../src/audio/Reverb.js';
+import { stepFor } from '../src/audio/Sfx.js';
 
 /** Just the wet levels, for the space-transition log line. */
 const SPACES_WET = Object.fromEntries(Object.entries(SPACES).map(([k, v]) => [k, v.wet]));
@@ -219,32 +220,13 @@ function renderSession({ forceMaterial = null } = {}) {
   audio.unlock(ctx);                       // the documented offline entry — skips the track fetch
   assert.ok(audio.ready, 'the shipped audio graph did not build on the offline context');
 
-  /* ── The reclamation override, and why it is legitimate ────────────────────────────────
-     `Audio.update` reclaims a voice once its `end` passes, and `_release` calls `stop()` and
-     `disconnect()` on every source. In a live context that is a RESOURCE operation on samples
-     the device has already played. In this shim `stop()` with no argument stores `_stop =
-     undefined` and the source is erased from the WHOLE render — so reclamation becomes
-     retroactive and un-plays the past.
-
-     Left alone, a 9-second session renders its loops and its score and **not one of its
-     one-shot cues**, because every one of them is reclaimed before `render()` is called. That
-     is exactly what happened here: the fingerprint and the per-beat rms bars were measuring the
-     wind and brazier beds, and the B arm is what caught it — two sessions playing demonstrably
-     different recipes rendered to `mean |A−B| = 0.00e+0`.
-
-     So the harness overrides the one thing that is a renderer artefact and nothing else: the
-     bookkeeping still runs (the voice is freed, `_uncount` still fires, the pool still turns
-     over, `max`/`gap` still bite), and only the retroactive teardown of already-scheduled
-     sources is skipped. `renderContact` solves the same problem by driving only past the event;
-     a full session cannot, because it has to keep running. */
-  const realRelease = audio._release.bind(audio);
-  audio._release = (v) => {
-    if (!v.active) return;
-    const srcs = v.srcs;
-    v.srcs = [];                       // hide them from the teardown, keep them in the graph
-    try { realRelease(v); } finally { v.srcs = srcs.length ? [] : v.srcs; }
-    void srcs;
-  };
+  /* No reclamation override here any more, and that is the point.
+     Rounds 11-13 worked around `Audio._release` erasing already-rendered sound. The defect was
+     never in `_release`, which does exactly the right thing: it was `webaudio.mjs`'s `stop()`
+     missing the spec's `currentTime` default, so a bare `stop()` set `_stop = undefined` and the
+     render loop `for (i = i0; i < NaN)` never ran. Fixed at the mock (§393, and held by two arms
+     in `tests/audio.test.mjs`), so the SHIPPED reclamation path now renders correctly and this
+     harness drives it unmodified. Everything below measures the real thing. */
 
   /* The ledger. Wrapping the shipped `play` is the only way to know a cue was REACHED rather
      than that the window was loud; the bed clears an absolute threshold on its own. */
@@ -294,14 +276,18 @@ function renderContact(evt, payload, seconds = 0.9) {
   const DT = 1 / 60;
   const FIRE = 6;
   /* Drive only just past the event, then render the full window.
-     `Audio.update` reclaims a voice once its `end` has passed, and `_release` calls `stop()` on
-     every source with no argument — which this shim stores as `_stop = undefined` and which
-     erases the source from the WHOLE render rather than truncating it at that instant. So a
-     harness that keeps stepping to the end of the window renders silence and reports it as a
-     cue that made no sound. That is a property of the renderer, not of the game: in a live
-     context the samples have already reached the device by the time the voice is reclaimed.
-     Stopping the driver early is the fix, and the scheduled sources still play out in full
-     because everything downstream was scheduled in absolute time. */
+     This was a workaround for §393 — `stop()` with no argument erasing a source from the whole
+     render — and that defect is fixed at the mock now, so reclamation truncates instead. It is
+     kept because it is still the right shape: it keeps the driver's cost proportional to the
+     event rather than to the window, and it means these bars never depend on where a voice's
+     `end` happens to fall. What it is NOT any more is load-bearing.
+
+     One consequence of the fix is visible in these numbers and is worth knowing: `emit('shot')`
+     stops the beds via `Audio.stop`, which sets `v.end = t + fade + 0.02`, so the loop voices
+     are reclaimed 0.22 s later. Before §393 that erased them retroactively and these isolated
+     renders contained NO bed at all; now they carry the real 0.2 s fade-out. Absolute rms here
+     rose ~0.8% as a result. Every ratio below is unchanged to three decimals, because the bed
+     is common to both sides of every one — which is why they are ratios. */
   const drive = Math.min(seconds, (FIRE * DT) + 0.20);
   for (let f = 0; f * DT <= drive; f++) {
     const t = f * DT;
@@ -790,4 +776,75 @@ test('the ladder cues are not merely played — each one renders as sound', () =
     checked++;
   }
   assert.equal(checked, 3, 'did not check every rung');
+});
+
+test('the §383 mapping itself: the old guesses are measurably the wrong material', () => {
+  /* The A/B pair asks "is material variety audible". It does NOT ask "was the new mapping an
+     improvement on the old hardcoded guesses", because B is "everything is stone", not "what the
+     code did before".
+
+     A full C arm is NOT BUILDABLE HONESTLY and that is worth stating rather than fudging. The
+     old behaviour was different HANDLER CODE, not a different payload: `railMount` played
+     `hook_catch` with no step layer at all, and no value of `material` reproduces that. Rendering
+     C would mean reimplementing three handlers in the test — a second copy of shipped logic,
+     which is the failure mode this project has hit with `_emit` wrappers, restated shader
+     recipes and re-implemented staging. So the two events whose old guess WAS a step recipe are
+     measured here, and the third is named as unreachable.
+
+     `stepFor` is the shipped resolver, so this compares the recipe the level's tag selects
+     against the recipe the old code hardcoded — no reimplementation, just two lookups. */
+  const spec = (d) => { const c = centroid(d, SR, { size: 1024, hop: 256 }); return typeof c === 'number' ? c : c.hz; };
+
+  const cases = [
+    { evt: 'ledgeGrab', tagged: 'stone', oldGuess: 'cloth', note: 'a stone ledge voiced as the glove' },
+    { evt: 'spireLand', tagged: 'stone', oldGuess: 'metal', note: 'a stone spire voiced as bronze' },
+  ];
+  let checked = 0;
+  for (const c of cases) {
+    const now = spec(renderContact(c.evt, { material: c.tagged }));
+    const then = spec(renderContact(c.evt, { material: c.oldGuess }));
+    const ratio = Math.max(now, then) / Math.min(now, then);
+    console.log(`  ${c.evt}: tagged ${c.tagged} → ${now.toFixed(0)} Hz · old guess ${c.oldGuess} → ${then.toFixed(0)} Hz · ${ratio.toFixed(2)}× apart (${c.note})`);
+    assert.ok(ratio > 1.05,
+      `${c.evt} renders its tagged material and its old hardcoded guess only ${ratio.toFixed(3)}× apart — `
+      + 'either the mapping is not being applied or the two recipes are indistinguishable');
+    checked++;
+  }
+  assert.equal(checked, cases.length, 'did not check both reproducible cases');
+
+  /* And `stepFor` must actually route the level's own tags apart, or the above is measuring
+     recipe differences that no tag can reach. */
+  assert.notEqual(stepFor('stone'), stepFor('cloth'), 'stepFor collapses stone and cloth');
+  assert.notEqual(stepFor('stone'), stepFor('metal'), 'stepFor collapses stone and metal');
+});
+
+test('the two continuous movement states are voiced, and stop when the state does', () => {
+  /* The last items on the uncovered list I have carried since round 11. `_trackStateLoops` is
+     the only path in AUDIO driven by movement STATE rather than by an event: `paraglide` opens a
+     loop, and `poleClimb`/`hookSwing` fire a repeated one-shot on a timer because "a scuff every
+     third of a second reads as hand-over-hand, a sustained drone reads as a lift". Neither has
+     ever been exercised. Drive-and-observe — these are ledger questions. */
+  const run = (state, seconds) => drive([
+    { at: 0.2, act: (w) => { w.player.speed = 6; w.player.velocity.set(0, 0, -6); w.engine.emit('playerState', state); } },
+    { at: seconds - 0.6, act: (w) => w.engine.emit('playerState', 'idle') },
+  ], seconds);
+
+  const climb = run('poleClimb', 2.4);
+  const scuffs = climb.played.filter((p) => p.ok && p.n === 'pole_scuff');
+  console.log(`  poleClimb: ${scuffs.length} pole_scuff over 1.6s of state (TUNE says one per 0.34s)`);
+  assert.ok(scuffs.length >= 3, `a pole climb fired ${scuffs.length} scuffs — the hand-over-hand timer is not running`);
+  /* And it must STOP: a scuff after the state ended is a sound with no cause on screen. */
+  const lastScuff = scuffs[scuffs.length - 1].t;
+  assert.ok(lastScuff < 2.0, `a pole scuff fired at ${lastScuff.toFixed(2)}s, after the state ended at 1.8s`);
+
+  const swing = run('hookSwing', 2.4);
+  const creaks = swing.played.filter((p) => p.ok && p.n === 'rope_creak');
+  console.log(`  hookSwing: ${creaks.length} rope_creak (slower cadence, one per 0.9s)`);
+  assert.ok(creaks.length >= 1, 'a rope swing made no sound at all');
+  assert.ok(creaks.length < scuffs.length, 'a rope swing creaks as often as a pole climb scuffs');
+
+  const glide = run('paraglide', 2.4);
+  const glides = glide.played.filter((p) => p.ok && p.n === 'paraglide');
+  console.log(`  paraglide: ${glides.length} loop start(s)`);
+  assert.equal(glides.length, 1, `paraglide opened ${glides.length} loops for one glide — it should open exactly one`);
 });

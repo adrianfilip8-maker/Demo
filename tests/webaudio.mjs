@@ -373,7 +373,16 @@ class OscillatorNode extends Node {
   set type(v) { this._type = v; this._wave = null; }
   setPeriodicWave(w) { this._wave = w; this._type = 'custom'; }
   start(t = 0) { this._start = t; }
-  stop(t) { this._stop = t; }
+  /* Spec: `stop()` with no argument means stop at `currentTime`. The default is evaluated when
+     stop() is CALLED, which is the moment that has to be captured — this renderer resolves the
+     graph afterwards, so reading the clock at render time would give the end of the session
+     instead. Without the default, `_stop` was `undefined`, `Math.round(undefined * sr)` was NaN,
+     `i1` was NaN, and `for (i = i0; i < NaN)` never ran: a source stopped with no argument was
+     erased from the WHOLE render rather than truncated. `Audio._release` calls exactly that, so
+     every reclaimed voice vanished retroactively and a rendered session contained only its
+     loops. See §391/§393 — this cost three rounds of harness-side workarounds before anyone
+     read the mock. */
+  stop(t = this.context.currentTime) { this._stop = t; }
 
   _render(ctx, len) {
     const sr = ctx.sampleRate;
@@ -434,7 +443,8 @@ class BufferSourceNode extends Node {
     this._stop = Infinity;
   }
   start(t = 0, offset = 0) { this._start = t; this._offset = offset; }
-  stop(t) { this._stop = t; }
+  /** Spec default, as on OscillatorNode above — see the note there. */
+  stop(t = this.context.currentTime) { this._stop = t; }
 
   _render(ctx, len) {
     const out = new Float32Array(len);
