@@ -27830,3 +27830,100 @@ it could support.
 
 Routed to both lanes; the world lane decides first whether 0.130 m is authored or accidental,
 because that determines whether the assertion changes or the geometry does.
+
+---
+
+## §377 — The 272 seal moves, and why this is not the move §369.5 refused
+
+### §377.1 The decision
+
+**One collider is authorised on the entry pylon's cornice, and P-A1's pin re-pins to match.**
+
+§369.5 refused to move it. Three things changed, and the first two would be enough on their own:
+
+1. **P-A1b exists and holds the actual claim.** It was built at the moment of refusing — a direct,
+   per-coil measurement that no collider is attributable to a rope coil, calibrated by planting a
+   coil-sized collider and confirming rejection at 1.00× against a real minimum of 40×. Green for
+   five rounds. The global count was always a **proxy**; the claim is now measured directly, so
+   re-pinning the proxy weakens nothing.
+2. **It blocks a defect a critic can actually see.** §367 established that captures show the art and
+   almost nothing else. Sly's torso and head inside gilded stone, at the perch the entire ascent
+   depends on, is precisely the class of thing frames *can* evidence — unlike every other defect
+   this fan-out has fixed.
+3. The alternative is measured and worse.
+
+**What §369.5 refused was moving a bar while it was refusing a candidate, on the argument that it
+measured the wrong thing.** That argument was correct then and is still correct — which is exactly
+why the right response was to build the successor and leave the pin alone. Doing it in that order is
+the whole difference between re-scoping a seal and rationalising past one.
+
+### §377.2 The defect, and why the obvious fix was built, flown and reverted
+
+The `− 0.4` on the wall proxy is the **cornice's springing line**: `K.cornice` grows from
+5.62 × 0.62 m to 9.12 × 4.12 m, and a battered box *narrows* as it rises, so it cannot approximate a
+flaring cavetto in any direction. The shell's last 0.4 m runs up **behind** the cornice — buried
+inside its footprint by 0.031 m in both axes, never rendered. None of that is the bug.
+
+**The bug is the cap**: an invisible floor at y 25.60, at the springing of a 3.32 m cavetto
+occupying 25.60…28.92. §372.4 understated it — the cornice flares outward and reaches his standing z
+at **y 26.21**, so from mid-shin up his **torso and head are inside gilded stone**, not 0.40 m of it.
+
+Removing the cap is geometrically safe: the frustum's top face is 5.6240 × 0.6240 and the deck's
+`groundProxy` directly above is **bit-identical**, so no hole opens. **The lane built it, flew it and
+reverted it**, because it breaks the route:
+
+```
+from either top rung at 25.20:  hands peak 27.47 (no double jump) / 27.75 (with one)
+the lip is at 28.92             short by 1.45 m / 1.17 m
+a WallClimb re-granting airJumps on launch: still 27.75 — the gap is STRUCTURAL
+```
+
+A launch lifts the hands 2.2274 m, the top hold can be no higher than the collider carrying it
+(25.60), and the nearest thing above is the cornice lip at 28.56. **The trade was a one-second pose
+inside a cavetto against an ascent that ends in mid-air**, and keeping the working route was right.
+Closing it properly needs a collider where Sly should actually be standing.
+
+### §377.3 The break was an id family, not geometry
+
+§376.4's two-ladders-at-0.130 m was an authoring bug, and the traversal lane's assertion was correct
+as written. `notchLadder` spaced rungs uniformly, so a deliberate short 1.05 m twelfth east step
+could not be expressed and was authored as a **second call** — giving it the id family
+`notch-pylon-e-e-top`, and `traversal.test.mjs` groups by `id.replace(/-\d+$/,'')`. One physical line
+read as two ladders.
+
+**The rungs were exactly where intended; the family was wrong.** Worth recording because moving the
+rungs would have turned the test green on a level that was subtly wrong — the fix was to make
+`notchLadder` take an explicit `ys` list so the short step lives in the east family. Re-measured
+here: 24 holds, 12 + 12, closest approach **3.529 m**, outside the 0.563 m budget by 6.3×.
+
+The level's rule, recorded now that it has been asked: **one route per face.** Two ladders are a
+staggered *pair* read as a single climbing line, never a choice. Co-reachable ladders should be
+merged, not arbitrated.
+
+### §377.4 A rope exists, and its sag is a clearance
+
+`hall-cable` re-authored as a catenary with **zero new colliders** — it was already a `rope_fibre`
+rail. Span 30.12 m, length 30.32, ends level at 12.75, low point 11.25, **sag 1.50 m**.
+
+The sag is not a taste. The binding obstacle is not mid-span but the **first nave column capital at
+(−6.8, ·, −22.9), y 11.90**, almost directly under the line:
+
+```
+clearance under the rope there:  0.71 m @ sag 0.40   0.33 @ 1.5   0.16 @ 2.0   0.02 @ 2.5 (touching)
+```
+
+`mountSpeed: 0` on the rec — **no floor, not a smaller one**. A rail's floor exists so mounting
+always carries you; a rope's carry comes from its sag, so the floor is the one thing that stops it
+being a rope. `v² = v₀² + 2gΔh` turns a 2.4 m/s step-on into **8.82 m/s** at the low point and back.
+Inert until MOVEMENT reads it, exactly like `rec.handholds` — and §371.2 says that read is one line.
+
+### §377.5 The masts do not intercept, and the reason is luck
+
+Measured with `Props` in the collision set (277 colliders, 21 poles): the mast at x 11.4, z 37.4 is
+**0.70 m** horizontally from the cling line at rung `notch-pylon-e-w-1` — well inside `poleMount`
+1.9 m. Results are identical with and without Props.
+
+**But only because the facing gate saves it.** `dot2(wishDir, dirToPole) > 0.4`, and Sly presses into
+the wall at −Z while the mast sits behind him at +Z. A directional accident, not clearance: a player
+approaching off-axis, or letting the stick swing anywhere over y 0–11, is 0.70 m from a `poleClimb`
+at priority 82 — **three above `wallClimb` at 79**. Recorded, unchanged, and now a live question.
