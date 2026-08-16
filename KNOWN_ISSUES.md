@@ -28328,3 +28328,113 @@ alpha batches, and add one term to a shader that already samples the texture.**
 That is worth knowing *before* the capture rather than after — and it is the second time this
 session that the answer to "what would this cost" was "someone already built most of it for another
 reason".
+
+---
+
+## §382 — CORRECTION: `wallClimb` was reachable all along; the harness had no desert
+
+### §382.1 What I committed and recorded, and why it is wrong
+
+`2e34297`'s message and §378.5/§380 carry these figures for the `wallClimb` entry:
+
+```
+nearest genuinely standable ground   7.48 m from the target
+acquisition needs the player within  volume 3.30 m
+shortfall                            4.18 m
+between them                         6.45 m of solid pylon
+```
+
+**All of it is an artifact of a Terrain-less harness.** Verified at source here:
+
+```
+Terrain.js:1071            this.engine.registerCollider(mesh, { tag: 'ground', material: 'sand' })
+tests/traversal.test.mjs   imports Architecture and ONLY Architecture — Terrain is never built
+```
+
+The desert sand is a registered `ground` collider. Without it the courtyard `groundProxy`
+(z −16…34) is the only floor in the world, so the nearest standable ground to a target at z 37.1
+lands on the **far side of the pylon** — which is exactly where "6.45 m of solid pylon in between"
+and the 22.21 m pylon-top figure came from. Grid-probed *with* Terrain, the nearest standable ground
+is **2.47 m**, comfortably inside `volume` 3.30.
+
+**Instrument error nine**, and the second this session where a probe was missing an entire module.
+
+### §382.2 My guess about the OTHER instrument was right, and it is the same species
+
+I guessed the world lane's round-3 "reachable from the paving with 1.353 m to spare" came from a
+straight-line measure ignoring the pylon. Close: `loop.mjs` hop 2 cast **straight down from the
+mouth's own x/z**, took `needed = mouth.y − floor.y`, and compared that to jump+double. Two
+compounding errors — the distance is 3-D, not vertical, and **the probe never asked whether that
+spot was standable.** Re-run with a capsule check:
+
+```
+[round-3 instrument] floor straight down from the mouth: y 0.14
+   reported "needed" = 2.497 m, a PURELY VERTICAL gap
+   is that spot standable?  NO
+```
+
+**A ray hit is not a foothold** — the same lesson as the `tag=wall` "floor" at 1.88 m (§378.5) and
+the sag probe that lied (§380.4). A number that looks right because the instrument cannot represent
+the failure.
+
+So: **both lanes' figures for this entry were wrong, in opposite directions, for related reasons.**
+Neither was reporting the level.
+
+### §382.3 The entry WAS broken — for a completely different reason, and only driving found it
+
+This is why the round still matters. Driving from genuinely standable sand with the entry on the
+**west** niche:
+
+```
+506 frames in poleClimb, 0 of 26 rungs
+```
+
+**The banner masts steal the approach.** §380.3's fix cleared the ladder's *cling line* to 2.05 m,
+and that was the wrong corridor — the one that decides the route is the **walk-in on the ground**,
+where the mast at x 8.6 comes within **1.90 m** of a player who drifts half a metre, with
+`dot(wishDir, dirToPole)` at **0.43 against a 0.4 gate**. `PoleClimb` is priority 82; `WallClimb`
+is 79.
+
+The masts cannot be moved far enough: a pair 4.4 m apart, and clearing a 2 m corridor at x 10.9
+needs one at ≤ 8.0 and the other at ≥ 13.8 — 5.8 m apart, which puts one on the tower's centre line
+and the other off its face.
+
+**So the entry moved instead**, to the east niche at x ≈ 17.1 — 4.2 m from the nearer mast, twice
+`poleMount`, with no mast between it and the sand it is approached from. Rung 1 rather than rung 0,
+because the point sits `drop` 1.56 below its rung and rung 0 would land at y 1.59 where a running
+player is still grounded, and `acquire` refuses a grounded player without `fromGround`.
+
+```
+(17.1, 38.0) d 3.69   13 rungs   maxY 32.70   CLIMBS
+(17.1, 39.0) d 4.03   13 rungs   maxY 32.70   CLIMBS
+(17.1, 40.0) d 4.56   13 rungs   maxY 32.70   CLIMBS
+(17.1, 41.5) d 5.66   12 rungs   maxY 32.70   CLIMBS  (acquired via the target)
+(18.5, 39.0) d 4.27    6 rungs                partial, off-axis
+(19.5, 38.5) d 4.53    0 rungs                fails, off-axis
+```
+
+Both entry paths work: close in, a plain jump into the face and `WallClimb` catches a rung unaided;
+further out, the magnetism target acquires and hands off. Deck reached at 32.70 against a 28.92 lip.
+**No collider needed — the §377.1 authorisation is still unspent.**
+
+### §382.4 The loop is NOT verified end to end, and the lane said so
+
+> *"I did not close the loop under one continuous driven run, and I am not going to claim I did."*
+
+The navigator cannot cross the courtyard — 2,900 frames of `move` without arriving, plus `hurt`
+frames from walking into props. That is a navigator failure, not evidence about the level, **but it
+is also not evidence for it.** The loop is verified **segment-wise**: approach → ladder → deck
+driven; deck → `pylon-drop` → y 9 → spawn only ever geometric. Given §372.3, geometric 9/9 is
+precisely the claim not to lean on. **The return half is unverified.**
+
+### §382.5 OPEN — the masts now lead nowhere, and removing them is also a seal question
+
+The masts remain a live hazard for any approach to that face: 11 m climbable poles standing 0.4 m
+off it, outranking the move the player is performing, and **leading nowhere now that the ladder
+exists.** Their authoring comment — *"a banner pole by a pylon is a legitimate route up"* — was
+written when they **were** the route up.
+
+The clean fix is dropping their `poleProxy` and leaving them as banner masts. That **removes four
+colliders (272 → 268)**, and the lane flagged that this needs the same conversation as adding one.
+**That instinct is right and worth stating as a rule: a seal is not a ceiling, it is a pin.** Moving
+it downward without a reason is the same failure as moving it upward.
