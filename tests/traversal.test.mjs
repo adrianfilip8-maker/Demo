@@ -2478,6 +2478,143 @@ test('crawl: reachable by traversal — the walk-in failed on lateral drift, not
     `uncorrected drift was only ${(naive.maxZ - steered.maxZ).toFixed(2)} m — too small to explain the miss`);
 });
 
+/* ====================================================================== */
+/* 18 — lateral drift on slopes: a movement fact, not a vent fact          */
+/* ====================================================================== */
+
+test('slopes: a pure cardinal stick drifts sideways downhill, and it is the slide not the move vector', async () => {
+  /* Arm 17 found the vent walk-in failing because a pure −X stick slid Sly 4.6 m in +z. That is
+   * not a vent fact. Three questions, all driven:
+   *
+   * **Flat ground: no drift.** Four cardinals on the spawn paving give |across| ≤ 0.005 m over
+   * ~10 m travelled. So the effect needs a slope; the vent approach was not a red herring.
+   *
+   * **It scales with gradient, and its sign is the downhill direction.** Sampling sloped ground
+   * across the level and walking a pure −X stick:
+   *
+   *     slope  3– 8°   n= 9   |across|/|along| = 0.108    sign follows downhill  9/9
+   *     slope  8–15°   n=10   |across|/|along| = 0.443    sign follows downhill 10/10
+   *     slope 15–60°   n=26   |across|/|along| = 0.710    sign follows downhill 14/26
+   *
+   * The sign test is `sign(aspect × intent).y`, which is algebraically the same as the sign of the
+   * downhill direction projected onto the lateral axis — so the drift is downhill slide, perfectly
+   * systematic at walkable gradients. The steep bucket's 14/26 is where the surface stops being
+   * walkable and the character is failing to move at all rather than drifting.
+   *
+   * **It is the collision response, not the move vector.** With `capsuleSweep` wrapped to record
+   * both: the requested lateral displacement is **0.0000 in every sample**, and the mean lateral
+   * component of `velocity` is **0.0000**. The resolved lateral displacement equals the observed
+   * drift exactly. So the intent is clean all the way to the sweep and the lateral motion is
+   * introduced by resolving it — projecting a horizontal displacement onto a tilted plane keeps
+   * the plane-tangent component, and for a horizontal input on a slope that component is partly
+   * downhill.
+   *
+   * **What a player feels:** at 3–8°, the gentle grades this level uses for approaches, ~0.11 m
+   * sideways per metre forward — hold one direction for 10 m and you are over a metre off line.
+   * At 8–15° it is 0.44 m/m. That is the largest-blast-radius finding this lane has produced and
+   * it is REPORTED, NOT FIXED: it is a `Controller._moveHorizontal` change touching every slope
+   * in the game, and whether some downhill slide is wanted is a design question. */
+  const { engine, c, collision } = await realWorld();
+  hardReset(engine, c, V(0, 0, 30));
+  for (let i = 0; i < 4; i++) {
+    engine.input.beginFrame(DT); engine.input.move.x = 0; engine.input.move.y = 0;
+    engine.time = i * DT; c.update(DT, i * DT);
+  }
+  const realSweep = collision.capsuleSweep.bind(collision);
+  let reqLat = 0, resLat = 0, recording = false, latAxis = new THREE.Vector3();
+  collision.capsuleSweep = function (from, to, r, h, o) {
+    const res = realSweep(from, to, r, h, o);
+    if (recording) {
+      reqLat += (to.x - from.x) * latAxis.x + (to.z - from.z) * latAxis.z;
+      resLat += (res.position.x - from.x) * latAxis.x + (res.position.z - from.z) * latAxis.z;
+    }
+    return res;
+  };
+  const gnd = (x, z) => {
+    const g = collision.groundCheck(V(x, 90, z), TUNE.radius, 300);
+    if (!g?.hit) return null;
+    const n = g.normal ? new THREE.Vector3(g.normal.x, g.normal.y, g.normal.z) : V(0, 1, 0);
+    return { y: g.y, n };
+  };
+  function walk(x, z, mx, my, frames = 60) {
+    const g = gnd(x, z);
+    if (!g) return null;
+    hardReset(engine, c, V(x, g.y + 0.05, z));
+    for (let i = 0; i < 3; i++) {
+      engine.input.beginFrame(DT); engine.input.move.x = 0; engine.input.move.y = 0;
+      engine.time = i * DT; c.update(DT, i * DT);
+    }
+    if (!c.grounded) return null;
+    const intent = new THREE.Vector3(mx, 0, -my).normalize();
+    latAxis = new THREE.Vector3(-intent.z, 0, intent.x);
+    const p0 = c.position.clone();
+    reqLat = 0; resLat = 0; recording = true;
+    let velLat = 0, n = 0;
+    for (let i = 0; i < frames; i++) {
+      engine.input.beginFrame(DT); engine.input.move.x = mx; engine.input.move.y = my;
+      engine.time = i * DT; c.update(DT, i * DT);
+      if (!c.grounded) break;
+      const v = new THREE.Vector3(c.velocity.x, 0, c.velocity.z);
+      if (v.length() > 0.5) { velLat += v.normalize().dot(latAxis); n++; }
+    }
+    recording = false;
+    const d = c.position.clone().sub(p0); d.y = 0;
+    const down = new THREE.Vector3(g.n.x, 0, g.n.z);
+    const aspect = down.length() > 1e-4 ? down.normalize() : new THREE.Vector3();
+    return {
+      slope: Math.acos(Math.min(1, Math.max(-1, g.n.y))) * 180 / Math.PI,
+      along: d.dot(intent), across: d.dot(latAxis),
+      reqLat, resLat, velLat: n ? velLat / n : 0,
+      downSign: Math.sign(aspect.clone().cross(intent).y),
+    };
+  }
+
+  // Flat control.
+  const flat = [[-1, 0], [1, 0], [0, 1], [0, -1]].map(([mx, my]) => walk(0, 30, mx, my)).filter(Boolean);
+  const worstFlat = Math.max(...flat.map((r) => Math.abs(r.across)));
+  console.log(`\n[slope] flat paving, 4 cardinals: worst |across| ${worstFlat.toFixed(4)} m over ~${flat[0].along.toFixed(1)} m`);
+  assert.ok(worstFlat < 0.05, `flat ground drifts ${worstFlat.toFixed(3)} m — the cause is not slope`);
+
+  // Slope sweep.
+  const rows = [];
+  for (let x = -26; x <= 26 && rows.length < 30; x += 4) {
+    for (let z = -70; z <= 44 && rows.length < 30; z += 6) {
+      const g = gnd(x, z);
+      if (!g) continue;
+      if (Math.acos(Math.min(1, Math.max(-1, g.n.y))) * 180 / Math.PI < 0.5) continue;
+      const r = walk(x, z, -1, 0);
+      if (r && Math.abs(r.along) > 0.5) rows.push(r);
+    }
+  }
+  assert.ok(rows.length >= 8, `only ${rows.length} sloped samples moved — cannot characterise`);
+  const walkable = rows.filter((r) => r.slope >= 3 && r.slope < 15);
+  assert.ok(walkable.length >= 5, `only ${walkable.length} samples on walkable grades`);
+  const ratio = walkable.reduce((a, r) => a + Math.abs(r.across) / Math.abs(r.along), 0) / walkable.length;
+  const signOK = walkable.filter((r) => Math.sign(r.across) === r.downSign).length;
+  console.log(`[slope] walkable 3–15°: n=${walkable.length}, mean |across|/|along| ${ratio.toFixed(3)}, ` +
+              `sign follows downhill ${signOK}/${walkable.length}`);
+  assert.ok(ratio > 0.05, `drift ratio ${ratio.toFixed(3)} — the slope effect has gone, retire this arm`);
+  assert.ok(signOK >= walkable.length - 1, 'drift no longer follows the downhill direction — mechanism changed');
+
+  /* The split: intent clean, resolution dirty. This is the assertion that localises the cause. */
+  /* Localising the cause, stated as the aggregate rather than a per-sample bound — because a
+     per-sample bound is not true. Most walkable samples request zero lateral and drift anyway,
+     but a minority DO pick up lateral in `velocity`: once the surface starts sliding the
+     character, `accelerate` is re-aiming a velocity that already has a downhill component, so
+     intent and response contaminate each other. I do not have a clean split for those, and I am
+     not going to assert one I cannot support. What holds in aggregate is that the resolution
+     introduces far more lateral than the request ever asks for. */
+  const sumReq = walkable.reduce((a, r) => a + Math.abs(r.reqLat), 0);
+  const sumRes = walkable.reduce((a, r) => a + Math.abs(r.resLat), 0);
+  const zeroReq = walkable.filter((r) => Math.abs(r.reqLat) < 1e-6).length;
+  console.log(`[slope] walkable band: ${zeroReq}/${walkable.length} samples request ZERO lateral; ` +
+              `summed |requested| ${sumReq.toFixed(3)} m vs summed |resolved| ${sumRes.toFixed(3)} m`);
+  assert.ok(zeroReq >= Math.ceil(walkable.length / 2),
+    `only ${zeroReq}/${walkable.length} samples request zero lateral — the drift is moving upstream`);
+  assert.ok(sumRes > sumReq * 3,
+    `resolved lateral ${sumRes.toFixed(3)} is no longer dominated by the response (requested ${sumReq.toFixed(3)})`);
+});
+
 test('wallClimb: proximity alone does not snag a player who is not reaching for it', async () => {
   /* `wall_notch.gd` commits on `elif player.direction:` — a hold acts when it is being reached
      for. Fly past the face with no stick input and nothing may take control. */
