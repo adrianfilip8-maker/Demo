@@ -97,15 +97,23 @@ export const TUNE = {
   /* The speed dolly. Metres of boom added at `speedRef`, continuous in the smoothed ground
      speed, so a sprint reads at a different scale from a stand.
 
-     THE SIZE IS THE LEVEL'S ANSWER, NOT THE FRAMING TABLE'S. `FRAMES` carries an authored
-     speed ladder (walk/run/run_fast dist 0.20/0.90/1.60) that nothing reaches, because the
-     moveset's only ground locomotion state is `move`. Wiring it up would ask for +1.60 m —
-     and measured sprinting the hypostyle nave at runSpeed, +1.60 m puts 11.6 % of frames into
-     boom cuts deeper than 50 cm, against 0.0 % at the shipped length. The columns take back
-     most of what that dolly asks for, intermittently, which reads as a stutter rather than a
-     pull-back. The nave absorbs +0.20 m for free and starts cutting at +0.40; 0.30 is the
-     middle of that band. It lands on the authored `walk` row's dist rather than `run_fast`'s,
-     which is the level answering a camera question — the right authority for this number.
+     `FRAMES` carries an authored speed ladder (walk/run/run_fast dist 0.20/0.90/1.60) that
+     nothing reaches, because the moveset's only ground locomotion state is `move`.
+
+     THE ORIGINAL JUSTIFICATION FOR 0.30 IS STALE, AND SAYING SO HERE IS THE POINT. It was
+     chosen because sprinting the hypostyle nave with +1.60 m put 11.6 % of frames into boom
+     cuts past 50 cm against 0.0 % at the shipped length — the columns appearing to take back
+     what the dolly asked for. That measurement was taken with `recoverSpeed` at 2.4, and it
+     was measuring the RECOVERY LAG, not the geometry: the boom needed ~1.9 s to climb back
+     out against a column every 1.11 s, so cuts accumulated and never cleared. With
+     `recoverSpeed` at 6.0 the nave centre-line takes +1.60 m at 0.0 % of frames past
+     2 x camRadius, worst cut 0.072 m against 1.346 m before, and does not object at ANY
+     size until the boom passes 11 m. **The level never refused the dolly; it refused the
+     recovery constant.**
+
+     0.30 is therefore retained as a conservative value, NOT as a level-derived one, and it is
+     flagged for re-decision rather than quietly re-tuned here — the size is a feel question
+     and the evidence that settled it has been withdrawn.
 
      Deliberately NOT done here: lighting the `run_fast` framing row as well. Its `fov` +4.6
      ADDS to `fovSpeedGain` +5.4 in `_write`, and the two have never been live at once; that
@@ -173,7 +181,25 @@ export const TUNE = {
   distHardMin: 0.55,            // absolute floor; below this we're inside Sly
   recoverDelay: 0.22,           // hold before creeping back out (kills corner flicker)
   recoverTime: 0.62,            // slow on purpose
-  recoverSpeed: 2.4,            // m/s cap while recovering
+  /* Raised from 2.4, because 2.4 could not keep up with the level.
+     The hypostyle nave has a column every 8 m; at `runSpeed` 7.2 m/s that is one occlusion
+     event every 1.11 s, against a recovery of 0.22 s of hold plus a 0.62 s tau — about 1.9 s
+     to 95 %. The boom needed roughly twice as long to climb back out as the level gave it
+     between columns, so from the first genuine occlusion onward it never returned to length:
+     measured, a hall sprint one lane off the nave centre spent its whole run with the boom
+     cut, and along the colonnade it sat at `distHardMin` — the camera inside the character.
+
+     The cost was measured before this moved, on the corner traverses these constants exist
+     for, and only after checking the cap actually SATURATES on them (72-125 frames per path;
+     one candidate path never recovered at all and was discarded rather than averaged in — a
+     cap tested where it does not bind compares two identical runs). At 6.0, three of the four
+     flicker-prone traverses are unchanged to two decimals in boom-direction reversals, and
+     the worst goes from 2 reversals to 3 across a 17 s walk. Against that: +0.79 m of
+     delivered boom at the lane where it was worst.
+
+     `recoverTime` is deliberately NOT touched. Only this constant was varied, so the result
+     stays attributable to it; moving both would make neither measurable. */
+  recoverSpeed: 6.0,            // m/s cap while recovering
   collisionPoll: 0.5,           // seconds between re-checks for a late COLLISION module
 
   /* ---- ceiling settle (adapted from camera_parent.gd, see the provenance note) ------------- */

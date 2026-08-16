@@ -4,9 +4,9 @@
  * ── why this is not in camera.test.mjs ─────────────────────────────────────────────────────
  * That file states its design and defends it: *"the player is a stub, not the real Controller …
  * driving the real controller would couple every camera assertion to `Moveset.js`'s tuning."*
- * That is right, and it is why the dolly's SIZE cannot be settled there. The size was chosen by
- * the level — the hypostyle nave's column spacing against the boom length — so the arm that pins
- * it needs real terrain, architecture, props and collision. Rather than drag a real world into a
+ * That is right, and it is why the dolly cannot be bounded there alone: whether a boom length is
+ * survivable is a question about the level's column spacing, not about the rig, so the arm that
+ * pins it needs real terrain, architecture, props and collision. Rather than drag a real world into a
  * file whose whole premise is that it does not have one, the boom-vs-speed half runs on the same
  * stub camera.test.mjs uses, and the level half boots the world here.
  *
@@ -14,17 +14,28 @@
  * `FRAMES` carries an authored speed ladder (walk/run/run_fast `dist` 0.20/0.90/1.60) that
  * nothing reaches: the moveset's only ground locomotion state is `move`, which matches no
  * `STATE_RULES` key and falls to the `idle` default. So the shipped boom was 5.400 m at a stand
- * and 5.400 m at a full sprint. The fix is NOT to light up that ladder — measured, its +1.60 m
- * asks for more boom than the room it is spent in will give — but a continuous `distSpeedGain`
- * on the smoothed ground speed, sized at 0.30 m by what the nave absorbs.
+ * and 5.400 m at a full sprint. The fix is a continuous `distSpeedGain` on the smoothed ground
+ * speed rather than lighting up that ladder, which would also double-count against
+ * `fovSpeedGain` — the two speed couplings have never been live at once.
+ *
+ * **The 0.30 is conservative, not derived.** It was originally sized by what the hypostyle nave
+ * appeared to absorb, and that measurement has since been withdrawn: it was taken under
+ * `recoverSpeed` 2.4 and was measuring recovery lag, not column clearance. The size is flagged
+ * for re-decision; this file pins the mechanism and the bounds, not the feel.
  *
  * ── both directions, because one bound is not a bracket ───────────────────────────────────
  *   LOW   the boom must actually move with speed.  Planted: `distSpeedGain` 0 — the state that
  *         shipped for the whole life of the rig — must be REJECTED by the same predicate.
- *   HIGH  and must not move so far the columns take it back. Planted: the authored ladder's own
- *         1.60 m must be REJECTED by the same predicate.
- * The shipped 0.30 must sit inside both. A bar with only the low arm would accept +1.60; a bar
- * with only the high arm would accept 0, which is the defect being fixed. §408.3 / §409.3.
+ *   HIGH  and must not carry the boom past `distMax`, the furthest the PLAYER may zoom.
+ *
+ * The HIGH arm used to plant the authored ladder's 1.60 m and require the hypostyle nave to
+ * reject it. It no longer does, and that is a finding rather than a maintenance chore: the nave
+ * never objected to 1.60 on its geometry, it objected under `recoverSpeed` 2.4, where the boom
+ * needed ~1.9 s to recover against a column every 1.11 s. Once the recovery keeps up, the
+ * centre-line takes 1.60 at 0.0 %. See the note on `distSpeedGain`.
+ * The shipped 0.30 sits well inside both. A bar with only the low arm would accept a dolly that
+ * flings the camera past the player's own zoom limit; a bar with only the high arm would accept
+ * 0, which is the defect being fixed. §408.3 / §409.3.
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -210,7 +221,7 @@ function naveSprint(bucket, lane = 0) {
   return { n, over: over / n, worst, boom: boomSum / n, lateral };
 }
 
-test('C2: and not far enough for the nave to take it back', () => {
+test('C2: the nave stays clear, and the dolly stays inside the player\'s own zoom range', () => {
   /* THE BUCKET IS DERIVED, NOT FITTED (§141.1). A cut is counted when it exceeds `2 * camRadius`
      — the camera pushed in by more than its own collision diameter, which is where a graze along
      a column becomes a distinct camera move. `camRadius` is the rig's own sphere-cast radius and
@@ -231,29 +242,38 @@ test('C2: and not far enough for the nave to take it back', () => {
   console.log(`  C2: shipped gain ${TUNE.distSpeedGain} -> ${(100 * shipped.over).toFixed(1)} % of frames `
     + `cut past ${BUCKET.toFixed(2)} m · worst ${shipped.worst.toFixed(3)} m · mean boom ${shipped.boom.toFixed(3)} m`);
 
-  /* ── the HIGH bracket. The authored ladder's own number, read out of the framing table so it
-     cannot drift away from what it is checking, must be rejected by this predicate. ────────── */
-  const SRC = readFileSync(new URL('../src/player/CameraRig.js', import.meta.url), 'utf8');
-  const rf = /^\s{2}run_fast:\s*\{ dist:\s*(-?[\d.]+)/m.exec(SRC);
-  assert.ok(rf, 'could not read FRAMES.run_fast.dist out of CameraRig.js — re-anchor this arm');
-  const LADDER = Number(rf[1]);
-  const ladder = withGain(LADDER, () => naveSprint(BUCKET));
-  console.log(`  C2: authored ladder ${LADDER} -> ${(100 * ladder.over).toFixed(1)} % of frames cut past `
-    + `${BUCKET.toFixed(2)} m · worst ${ladder.worst.toFixed(3)} m`);
-  assert.ok(ladder.over > 0,
-    `the authored ladder's ${LADDER} m dolly costs nothing in the nave either. Then this arm cannot `
-    + 'distinguish the shipped size from the one that was rejected, the bracket has no upper bound, '
-    + 'and the reason recorded for choosing 0.30 over 1.60 no longer holds — re-measure before '
-    + 'trusting either');
-  assert.ok(shipped.over < ladder.over,
-    `the shipped dolly cuts as hard as the authored ${LADDER} m one, so it was not sized by the level `
-    + 'at all and the argument in `distSpeedGain` is wrong');
-
-  /* ── the shipped size must sit under the budget outright, not merely under the ladder ────── */
+  /* ── the shipped size must keep the nave clear outright ─────────────────────────────────── */
   assert.equal(shipped.over, 0,
-    `${(100 * shipped.over).toFixed(1)} % of nave sprint frames are now cut past ${BUCKET.toFixed(2)} m. `
-    + 'The dolly was sized at 0.30 m precisely because that fraction was zero — the columns take '
-    + 'back anything larger. Either the gain grew, the boom grew under it, or the hall changed');
+    `${(100 * shipped.over).toFixed(1)} % of nave sprint frames are cut past ${BUCKET.toFixed(2)} m. `
+    + 'A sprint down the level\'s signature room should not be fighting the columns for boom length');
+
+  /* ── the HIGH bracket, RE-DERIVED. ───────────────────────────────────────────────────────
+     This arm used to plant `FRAMES.run_fast.dist` 1.60 and require the nave to reject it. That
+     bracket is GONE, and it is worth saying why rather than swapping the number quietly: the
+     nave never rejected 1.60 on its geometry. It rejected it under `recoverSpeed` 2.4, where
+     the boom needed ~1.9 s to recover against a column every 1.11 s and cuts accumulated. With
+     the recovery keeping up, the centre-line takes 1.60 at 0.0 % and does not object at any
+     size until the boom passes 11 m — past `distMax` and past anything anyone would ship.
+
+     So the upper bound comes from the rig's own declared range instead. `distMax` is the
+     furthest the PLAYER may zoom; a speed dolly that pushes the boom beyond it would put the
+     camera, unasked, somewhere the player is not allowed to put it. That is a real bound, it
+     is read from TUNE, and the predicate can still say both of its answers. */
+  const overshoot = (TUNE.distMax - TUNE.distDefault) / (RUN / TUNE.speedRef);
+  const sprintBoom = TUNE.distDefault + TUNE.distSpeedGain * Math.min(RUN / TUNE.speedRef, 1);
+  console.log(`  C2: sprint boom ${sprintBoom.toFixed(3)} m against distMax ${TUNE.distMax} · `
+    + `a gain of ${overshoot.toFixed(2)} would reach distMax exactly`);
+  assert.ok(sprintBoom <= TUNE.distMax,
+    `the speed dolly takes the boom to ${sprintBoom.toFixed(2)} m at a sprint, past distMax `
+    + `${TUNE.distMax} — the furthest the player may zoom. The camera would be put somewhere on its `
+    + 'own that the player is not allowed to choose');
+  assert.ok(TUNE.distSpeedGain < overshoot,
+    `distSpeedGain ${TUNE.distSpeedGain} is at or past the ${overshoot.toFixed(2)} that reaches distMax`);
+  /* and the bound is shown to be able to fire, on a gain that breaches it */
+  const tooBig = overshoot * 1.1;
+  const breached = TUNE.distDefault + tooBig * Math.min(RUN / TUNE.speedRef, 1);
+  assert.ok(breached > TUNE.distMax,
+    'the planted over-large gain does not actually breach distMax, so this bound cannot fire');
 
   /* ── the LOW bracket, on the same run: turning the dolly off must be visible here too, or the
      level half is measuring a constant. ───────────────────────────────────────────────────── */
