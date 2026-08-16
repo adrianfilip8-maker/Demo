@@ -44,6 +44,8 @@ import { TUNE as TOON_TUNE } from '../src/render/ToonMaterial.js';
 import { TUNE as POSTFX_TUNE } from '../src/render/PostFX.js';
 import { W, H, SLY, camFor, discOf, project, boxOf, plateOf, overlapArea } from '../tools/framelib.mjs';
 import { inkAudit, buildOutlineShell } from '../src/render/Outline.js';
+import { RING_R_CROP, RING_SZ_MIN, RING_SZ_MAX, RING_SZ_NOJITTER, ATLAS_WINDOW }
+  from '../tools/ringextent.mjs';
 import { BAND_R, bandOfPolyline, bandOfPixels, boundaryOf, stamp, countOf, density }
   from '../tools/fxrimlib.mjs';
 
@@ -265,8 +267,10 @@ test('T5: density is a fraction of the REGION, and ink outside it cannot raise t
  */
 const MEASURED_FIGURE = { x0: 502, x1: 699, y0: 303, y1: 498 };
 
-/** The quad `dive_ring` actually draws (§405). `_stageImpact` returns 1.50 m; this is 2.69x it. */
-const RING_R_DRAWN = 0.5 + (6.25 - 0.5) * Math.pow(0.088 / 0.34, 0.36);
+/* The ring's drawn extent, IMPORTED rather than recomputed. This file used to carry its own
+   copy of the size-ramp expression, and that copy was wrong for the same reason every other
+   copy was: `sz` is a random variable over `_emit`'s `R.range(0.8, 1.25)` jitter, and the
+   expression evaluates it at jitter exactly 1.0. See `tools/ringextent.mjs`. */
 
 /** `impactframe`'s measured figure plate — the world extent that reproduces 197 x 195 px. */
 const SLY_SLAM = { w: 1.565, yLo: -0.746, yHi: 1.106 };
@@ -300,7 +304,7 @@ test('T7: ring/figure box coverage saturates at 100%, so no bar on it can discri
       target: [AT[0], 0.6, AT[2]], fov: 38,
     });
     const fig = plateOf(cam, ...AT, SLY_SLAM);
-    const ring = discOf(cam, AT[0], AT[1] + 0.06, AT[2], RING_R_DRAWN);
+    const ring = discOf(cam, AT[0], AT[1] + 0.06, AT[2], RING_R_CROP);
     const scuff = discOf(cam, AT[0], AT[1] + 0.02, AT[2], SCUFF_R);
     assert.ok(fig && ring && scuff, `§211.1: nothing projected at h ${h}`);
     ladder.push({
@@ -572,4 +576,69 @@ test('T6: the FX ink-cut pass still ships OFF, so the capture describes the ship
   assert.equal(TOON_TUNE.inkShade, 0x161022, '§2.1.2 violet ink colour moved');
   assert.equal(H, 720);
   assert.equal(W, 1280);
+});
+
+/* ════════════ T10 — the ring's extent is a RANGE, and no file may re-derive it ════════════ */
+
+/**
+ * `dive_ring`'s drawn size had been written down five separate times in this repo — in
+ * `Particles._stageImpact`'s header, in §405, in `impactframe.mjs`, in `ringspill.mjs` and in
+ * THIS FILE — as the single constant 4.035 m. It is not a constant. `_emit` computes
+ * `const s = R.range(0.8, 1.25) * scale`, so `sz` spans 3.228 to 5.043 m per particle, and
+ * 4.035 m is its value at jitter exactly 1.0: **what you get by leaving the jitter term out.**
+ *
+ * Two arms, because the two failure modes are different and only one of them is about the number.
+ */
+test('T10: the ring extent is derived from the shipped recipe and spans the jitter draw', () => {
+  /* Derived, not transcribed: these come out of `EMITTERS.dive_ring` and `TUNE.impactScale`, so
+     a recipe edit moves them. The bar is that the range is a RANGE — if min and max ever collapse
+     together, the jitter term has been dropped again and every extent downstream is a point
+     estimate wearing a measurement's clothes. */
+  assert.ok(RING_SZ_MAX > RING_SZ_MIN * 1.2,
+    `the ring's size draw spans only ${RING_SZ_MIN.toFixed(3)}..${RING_SZ_MAX.toFixed(3)} m — the `
+    + '_emit jitter term looks to have been dropped; see §405 and tools/ringextent.mjs');
+  assert.ok(RING_SZ_NOJITTER > RING_SZ_MIN && RING_SZ_NOJITTER < RING_SZ_MAX,
+    `the historical 4.035 m figure (${RING_SZ_NOJITTER.toFixed(3)}) no longer sits inside the draw`);
+
+  /* The cropping radius must exceed the largest draw, never merely match the old constant.
+     Under-reporting extent is the PERMISSIVE direction for a crop test. */
+  assert.ok(RING_R_CROP >= RING_SZ_MAX,
+    `the crop radius ${RING_R_CROP.toFixed(3)} m is under the largest size draw `
+    + `${RING_SZ_MAX.toFixed(3)} m — a cropping bar that under-reports extent certifies "in frame" `
+    + 'about a rim that is not');
+  assert.ok(ATLAS_WINDOW > 0 && ATLAS_WINDOW < 1, `nonsense atlas window ${ATLAS_WINDOW}`);
+
+  /* MUST FIRE: the superseded constant must NOT satisfy the crop bar, or this arm cannot tell
+     the corrected extent from the one it replaced. */
+  assert.ok(RING_SZ_NOJITTER < RING_SZ_MAX,
+    'CALIBRATION FAILED: the no-jitter figure is not smaller than the largest draw, so this arm '
+    + 'would pass on the very constant it exists to have replaced');
+});
+
+test('T10b: no file re-derives the ring size ramp with its own copy of the expression', () => {
+  /* `framelib`'s header states the rule this seals: a second copy is a second thing to keep
+     true, and the copy is always the one that goes stale. Five copies of this expression existed
+     and the one in THIS FILE was among them.
+
+     Scoped to executable re-derivations — a `Math.pow(0.088 / 0.34, ...)` in live code — and NOT
+     to prose. The ledger and the module headers must stay free to quote 4.035 m while explaining
+     why it is wrong; forbidding the number outright would forbid recording the error. */
+  const files = [
+    'tools/impactframe.mjs', 'tools/framelib.mjs', 'tools/fxrim.mjs', 'tools/fxrimscore.mjs',
+    'tests/fxrim.test.mjs', 'tests/alertshot.test.mjs',
+  ];
+  const offenders = [];
+  let inspected = 0;
+  for (const f of files) {
+    let src;
+    try { src = readFileSync(new URL(`../${f}`, import.meta.url), 'utf8'); } catch { continue; }
+    inspected++;
+    /* Strip block comments and line comments — prose may discuss the expression freely. */
+    const code = src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+    if (/Math\.pow\(\s*0\.088\s*\/\s*0\.34/.test(code)) offenders.push(f);
+  }
+  assert.ok(inspected >= 4, `§211.1: only ${inspected} files inspected`);
+  assert.equal(offenders.join(', '), '',
+    `${offenders.join(', ')} re-derives dive_ring's size ramp in executable code. Import it from `
+    + 'tools/ringextent.mjs — that expression has been wrong in five places at once (§405, §407).');
 });
