@@ -26735,3 +26735,144 @@ The reference repo's value is **not** as code to import into systems that exist 
 `wall_notch.gd` have not been read line-by-line yet, and the traversal gap is real. Claimed only that
 three-for-three on the systems we have built is a strong enough prior to stop treating "integrate
 everything" as the goal, and to treat *"find what we do not have"* as the goal instead.
+
+---
+
+## §366 — Container rollback #10, and the camera instrument that shows why no screenshot could ever have caught any of this
+
+### §366.1 Rollback #10: the reference clone was untracked, and untracked did not survive
+
+The `Sly-Cooper--A-Thief-in-Godot` clone surveyed in §364 was **gone** on resume. Two running lanes
+had briefs citing paths inside it. Re-cloned and verified against §364's own recorded figures before
+being trusted:
+
+```
+git clone --filter=blob:none --no-checkout \
+    https://github.com/NoahChase/Sly-Cooper--A-Thief-in-Godot.git /home/user/ref-godot
+HEAD 6479957 · 720 files · 45 .gd      ← §364 recorded 6479957 / 720 / 45. Identical.
+```
+
+It now lives at **`/home/user/ref-godot`**, not wherever it was before. Read method unchanged and
+still mandatory: `git show HEAD:<path>` to read, `git ls-tree -r --name-only HEAD` to list, and
+**never** `git ls-tree -l`, which hangs fetching blob sizes on a treeless clone.
+
+This is the corrected §325 rule biting exactly where it was predicted to: **untracked files survive
+`git reset --hard` but do NOT survive a container rollback.** The tracked repo came back at
+`0c6a807` with `0 0` against origin and lost nothing. The untracked clone was simply absent. Nothing
+was corrupted and nothing needed recovery — but two lanes were briefed against paths that had
+stopped existing, and neither of them reported it, which is worth knowing about lane failure modes:
+a subagent that cannot read a reference file tends to route around it silently.
+
+### §366.2 The camera has never been in a screenshot — not once, at any resolution
+
+`CameraRig.js:630`, the first executable line of `update()`:
+
+```js
+if (engine.debug.freeCam) { this._shotHeld = true; return; }
+```
+
+`engine.debug.freeCam` is set by `Debug.js:132` for the duration of every canonical shot and cleared
+at `:250`. The bypass is correct — the rig would fight every staged frame otherwise — but the
+consequence had never been written down anywhere, and it is total:
+
+> **No capture, of any shot, at any resolution, in the entire history of this project, has contained
+> a single pixel produced by `CameraRig.js`.**
+
+The follow spring, the vertical leash, the whiskers, the ceiling settle, the yaw assist and the whole
+route telegraph are invisible to the visual review loop. Every blind critic round that praised or
+faulted "the camera" was reading `Shots.js` staging, not the rig. This is not a defect to fix; it is
+a **measurement boundary** that had been sitting unlabelled, and labelling it is most of the value
+here. `tests/camera.test.mjs` arm 0 now asserts it as a fact rather than leaving it as prose.
+
+### §366.3 The instrument, and the arm that certifies it
+
+`tests/camera.test.mjs` (7 arms, suite 549 → **556**). The rig imports nothing but `three`, so it
+runs headless at a fixed dt against a scripted player path.
+
+**The player is a stub, not the real `Controller`, and that is deliberate.** `tests/targets.test.mjs`
+drives the real controller because its question is a controller question. Here the subject is the
+camera and the player is a boundary condition — driving the real controller would couple every
+camera assertion to `Moveset.js`, so a jump retune in the TRAVERSAL lane would redden this file for
+reasons that have nothing to do with the camera. The stub publishes exactly the five fields
+`_readPlayer()` (`:673`) consumes and nothing else.
+
+**The trap this had to be built around, and it is §357.1 again in a new costume.** `_pickRoute`
+reaches `col.query()` only via `_solidCollision()` (`:1356`), which returns `null` unless the module
+exposes `capsuleSweep` **or** `raycast`. A stub carrying only `query()` — the obvious thing to write,
+since `query()` is the method under test — makes the entire route telegraph sense nothing, and every
+route assertion then **passes by measuring zero against zero**. The certification arm exists solely
+to catch that:
+
+```
+[certification] deaf 0 queries / routeUpW 0.0000 · hearing 8 queries / routeUpW 0.3386
+```
+
+Without that arm this file would have been six green assertions proving nothing, which is precisely
+the state `RESULT-cel1.md` voided itself over.
+
+### §366.4 What the seven arms measured
+
+```
+[telegraph] Δfov 1.388° (ceiling 1.6) · Δpivot.y 0.676 m (1.05) · Δboom 0.483 m (0.55)
+[channels]  level rail → up 0.0000 side 0.7592 · 9 m pole → up 0.8932 side 0.0000
+[route]     parapet 4.0 m @ 4.63 m dead ahead → 0.3689 · kerb 0.2 m → 0.0000
+[leash]     1.5 s @ −40 m/s → 39.90 m lag unleashed · 1.75 m leashed
+[softness]  0.458 s jump ascent → _vHold 0.433 s against followHoldMin 0.55
+```
+
+- **The route telegraph is wired at both ends.** All three Δ figures are read off `engine.camera`,
+  not off the rig's internals, with the route as the single lever against an identical control run.
+  Three separate consumers (`_pivotGoal` +`routeLift`, `_boomLength` +`routeDist`, `_write`
+  +`routeFov`) all spend the weight. Given how many times §357.1 has recurred, this was the outcome
+  least safe to assume.
+- **The two channels really are independent.** A chest-height rail contributes 0.000 to UP while
+  scoring 0.759 on SIDE; a pole is the exact mirror. If the ramps were multiplied — which the first
+  version of `_pickRoute` did — the rail would score 0 on both.
+- **A 0.2 m kerb scores exactly 0.** The level is *made* of the `ledge` tag, so this single
+  assertion is what stops the camera twitching at every step in the game.
+
+### §366.5 Two committed comments corrected — same fault, twice: a number without its instrument
+
+This is the §342.2 / §346 family again, in its mildest form. Neither number was *wrong*; both were
+**unreproducible as written**, which for a load-bearing constant is nearly as bad.
+
+1. `_pickRoute` recorded *"4 m parapet → 0.369"*. A score is a function of crest height **and**
+   distance, and only the height was recorded — so nobody could re-derive it. Now states the full
+   scenario (origin, dead ahead, 4.63 m), and the test derives the expected value from
+   `routeNear`/`routeRange`/`routeRiseMin`/`routeRiseFull`/`ROUTE_WEIGHT` rather than pasting it, so
+   it survives a retune of any of them.
+
+   **Honesty note, recorded because it limits the claim:** 4.63 m was obtained by *inverting* the
+   formula against the recorded 0.369, so "0.369 reproduces" is circular and is **not** claimed. The
+   non-circular half is what the test asserts — that at any distance, the code's score equals the
+   value derived independently from the constants. Whether the original measurement was taken at
+   4.63 m is unknown and unknowable from what was written down.
+
+2. `followLeashV` recorded *"measured 9.85 m behind after 1.5 s of falling"* without its fall
+   profile, and the profile is most of the answer — an accelerating drop and a sustained one give
+   very different lags over the same 1.5 s. The test pins the **worst** case instead: 1.5 s held at
+   a sustained −40 m/s gives **39.90 m** of lag with the leash lifted out of the way. Leashed, the
+   same fall settles at **exactly 1.75 m**, and that is a saturation value rather than an approach
+   to one: the leash bounds `_goal.y − pivot.y` to 2.6, and `_goal` already carries −1.0 m of
+   `fallLeadMax` plus FRAMES.air's +0.15 height, so 2.6 − 1.0 + 0.15 = 1.75 m above the character,
+   to the centimetre. Two ends of the same constant.
+
+### §366.6 One instrument bug worth recording, because it is the whole project's failure mode in miniature
+
+Arm 0 first failed asserting `camera.quaternion.angleTo(saved) === 0` — it read **4.2e-8 rad** for a
+quaternion the rig provably never touched. `Quaternion.angleTo` is `2·acos(|dot|)`, and a unit
+quaternion's dot with *itself* lands a hair under 1 in float64. The instrument was reporting its own
+rounding as a 2-microdegree camera drift, and a slightly less suspicious version of this test would
+have "found" a bug in `CameraRig` that does not exist. Fixed by comparing components, which are
+bit-identical when the rig returns early. **Wrong quantity, fourth instance** — after peak-for-area
+(§346), ramp-for-`sh` (§342.2) and near-black-count-for-edge-strength.
+
+### §366.7 What this does NOT establish
+
+The rig is now **verified against its own constants**, which is not the same as verified to feel
+good. Every arm here asks "does the code do what the comment says", and none of them asks "is that
+the right thing to do". The route telegraph provably reaches the lens; whether opening the lens
+1.4° on approach to a pole reads as *"climb here"* to a player is a question no headless test can
+answer and no capture can answer either, given §366.2. That remains open and needs a playtest.
+
+Committed `eab10ed`.
